@@ -448,6 +448,7 @@ static irqreturn_t rcar_i2c_irq(int irq, void *ptr)
 	/* Arbitration lost */
 	if (msr & MAL) {
 		rcar_i2c_flags_set(priv, (ID_DONE | ID_ARBLOST));
+		rcar_i2c_write(priv, ICMSR, 0);
 		goto out;
 	}
 
@@ -463,6 +464,7 @@ static irqreturn_t rcar_i2c_irq(int irq, void *ptr)
 	/* Stop */
 	if (msr & MST) {
 		rcar_i2c_flags_set(priv, ID_DONE);
+		rcar_i2c_write(priv, ICMSR, 0);
 		goto out;
 	}
 
@@ -474,7 +476,6 @@ static irqreturn_t rcar_i2c_irq(int irq, void *ptr)
 out:
 	if (rcar_i2c_flags_has(priv, ID_DONE)) {
 		rcar_i2c_write(priv, ICMIER, 0);
-		rcar_i2c_write(priv, ICMSR, 0);
 		wake_up(&priv->wait);
 	}
 
