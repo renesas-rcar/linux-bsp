@@ -100,6 +100,9 @@
  */
 #define TMIO_MMC_CLK_ACTUAL		(1 << 10)
 
+/* The start or stop of SD clock don't wait 10msec. */
+#define TMIO_MMC_CLK_NO_SLEEP		(1 << 8)
+
 int tmio_core_mmc_enable(void __iomem *cnf, int shift, unsigned long base);
 int tmio_core_mmc_resume(void __iomem *cnf, int shift, unsigned long base);
 void tmio_core_mmc_pwr(void __iomem *cnf, int shift, int state);

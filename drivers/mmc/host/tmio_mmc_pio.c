@@ -180,24 +180,28 @@ static void tmio_mmc_clk_stop(struct tmio_mmc_host *host)
 	/* implicit BUG_ON(!res) */
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
 		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0000);
-		msleep(10);
+		if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
+			msleep(10);
 	}
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~0x0100 &
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
-	msleep(10);
+	if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
+		msleep(10);
 }
 
 static void tmio_mmc_clk_start(struct tmio_mmc_host *host)
 {
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, 0x0100 |
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
-	msleep(10);
+	if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
+		msleep(10);
 
 	/* implicit BUG_ON(!res) */
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
 		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0100);
-		msleep(10);
+		if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
+			msleep(10);
 	}
 }
 
