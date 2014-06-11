@@ -136,6 +136,16 @@ static void sh_mobile_sdhi_clk_disable(struct platform_device *pdev)
 	clk_disable_unprepare(priv->clk);
 }
 
+#define SH_MOBILE_SDHI_DAT0	0x0080
+static int sh_mobile_sdhi_card_busy(struct tmio_mmc_host *host)
+{
+	u16 dat0;
+
+	/* check to see DAT[3:0] */
+	dat0 = sd_ctrl_read16(host, CTL_STATUS2);
+	return !(dat0 & SH_MOBILE_SDHI_DAT0);
+}
+
 static int sh_mobile_sdhi_wait_idle(struct tmio_mmc_host *host)
 {
 	int timeout = 1000;
