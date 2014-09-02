@@ -221,6 +221,7 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 						  delayed_reset_work.work);
 	struct mmc_request *mrq;
 	unsigned long flags;
+	u16 clk;
 
 	spin_lock_irqsave(&host->lock, flags);
 	mrq = host->mrq;
@@ -254,7 +255,9 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
+	clk = sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL) & 0x0ff;
 	tmio_mmc_reset(host);
+	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, clk | 0x100);
 
 	/* Ready for new calls */
 	host->mrq = NULL;
