@@ -26,6 +26,7 @@
 #include <linux/of_platform.h>
 #include <linux/pci.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/slab.h>
 
 #define DRV_NAME "rcar-pcie"
@@ -991,6 +992,9 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, pcie);
 
 	INIT_LIST_HEAD(&pcie->resources);
+
+	pm_runtime_enable(pcie->dev);
+	pm_runtime_get_sync(pcie->dev);
 
 	rcar_pcie_parse_request_of_pci_ranges(pcie);
 
