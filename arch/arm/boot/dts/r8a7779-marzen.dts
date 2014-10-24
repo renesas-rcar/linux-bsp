@@ -170,7 +170,7 @@
 
 	du_pins: du {
 		du0 {
-			groups = "du0_rgb888", "du0_sync_1", "du0_clk_out_0", "du0_clk_in";
+			groups = "du0_rgb888", "du0_sync_1", "du0_clk_out_0", "du0_clk_out_1", "du0_clk_in";
 			function = "du0";
 		};
 		du1 {
@@ -249,3 +249,5 @@
 	pinctrl-names = "default";
 	status = "okay";
 };
+
+#include "r8a77xx-aa104xd12-panel.dtsi"
