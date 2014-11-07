@@ -528,7 +528,17 @@ static struct platform_driver gpio_rcar_device_driver = {
 	}
 };
 
-module_platform_driver(gpio_rcar_device_driver);
+static int __init gpio_rcar_init(void)
+{
+	return platform_driver_register(&gpio_rcar_device_driver);
+}
+subsys_initcall(gpio_rcar_init);
+
+static void __exit gpio_rcar_exit(void)
+{
+	platform_driver_unregister(&gpio_rcar_device_driver);
+}
+module_exit(gpio_rcar_exit);
 
 MODULE_AUTHOR("Magnus Damm");
 MODULE_DESCRIPTION("Renesas R-Car GPIO Driver");
