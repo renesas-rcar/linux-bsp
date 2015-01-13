@@ -1,6 +1,7 @@
 /*
  * xhci-plat.c - xHCI host controller driver platform Bus Glue.
  *
+ * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com
  * Author: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  *
@@ -39,12 +40,18 @@ static const struct xhci_driver_overrides xhci_plat_overrides __initconst = {
 
 static void xhci_plat_quirks(struct device *dev, struct xhci_hcd *xhci)
 {
+	struct usb_hcd *hcd = xhci->main_hcd;
+
 	/*
 	 * As of now platform drivers don't provide MSI support so we ensure
 	 * here that the generic code does not try to make a pci_dev from our
 	 * dev struct in order to setup MSI
 	 */
 	xhci->quirks |= XHCI_PLAT;
+
+	if (xhci_plat_type_is(hcd, XHCI_PLAT_TYPE_RENESAS_RCAR_GEN2) ||
+	    xhci_plat_type_is(hcd, XHCI_PLAT_TYPE_RENESAS_RCAR_GEN3))
+		xhci->quirks |= XHCI_NO_64BIT;
 }
 
 /* called during probe() after chip reset completes */
