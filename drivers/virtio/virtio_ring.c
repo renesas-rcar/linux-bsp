@@ -500,6 +500,15 @@ int virtqueue_add_outbuf(struct virtqueue *vq,
 }
 EXPORT_SYMBOL_GPL(virtqueue_add_outbuf);
 
+int dma_virtqueue_add_outbuf(struct virtqueue *vq,
+			     struct scatterlist *sg, unsigned int num,
+			     void *data,
+			     gfp_t gfp)
+{
+	return virtqueue_add(vq, &sg, num, 1, 0, data, gfp, true);
+}
+EXPORT_SYMBOL_GPL(dma_virtqueue_add_outbuf);
+
 /**
  * virtqueue_add_inbuf - expose input buffers to other end
  * @vq: the struct virtqueue we're talking about.
@@ -521,6 +530,15 @@ int virtqueue_add_inbuf(struct virtqueue *vq,
 	return virtqueue_add(vq, &sg, num, 0, 1, data, gfp, false);
 }
 EXPORT_SYMBOL_GPL(virtqueue_add_inbuf);
+
+int dma_virtqueue_add_inbuf(struct virtqueue *vq,
+			    struct scatterlist *sg, unsigned int num,
+			    void *data,
+			    gfp_t gfp)
+{
+	return virtqueue_add(vq, &sg, num, 0, 1, data, gfp, true);
+}
+EXPORT_SYMBOL_GPL(dma_virtqueue_add_inbuf);
 
 /**
  * virtqueue_kick_prepare - first half of split virtqueue_kick call.
