@@ -2,6 +2,7 @@
  * R-Car SYSC Power management support
  *
  * Copyright (C) 2014  Magnus Damm
+ * Copyright (C) 2015-2016 Glider bvba
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
@@ -11,9 +12,14 @@
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/mm.h>
+#include <linux/of_address.h>
+#include <linux/pm_domain.h>
+#include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
 #include <linux/soc/renesas/rcar-sysc.h>
+
+#include "rcar-sysc.h"
 
 /* SYSC Common */
 #define SYSCSR			0x00	/* SYSC Status Register */
@@ -162,3 +168,205 @@ void __iomem *rcar_sysc_init(phys_addr_t base)
 
 	return rcar_sysc_base;
 }
+
+struct rcar_sysc_pd {
+	struct generic_pm_domain genpd;
+	struct rcar_sysc_ch ch;
+	unsigned int flags;
+	char name[0];
+};
+
+static inline struct rcar_sysc_pd *to_rcar_pd(struct generic_pm_domain *d)
+{
+	return container_of(d, struct rcar_sysc_pd, genpd);
+}
+
+static bool rcar_sysc_active_wakeup(struct device *dev)
+{
+	return true;
+}
+
+static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
+{
+	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
+
+	pr_debug("%s: %s\n", __func__, genpd->name);
+
+	if (pd->flags & PD_NO_CR) {
+		pr_debug("%s: Cannot control %s\n", __func__, genpd->name);
+		return -EBUSY;
+	}
+
+	if (pd->flags & PD_BUSY) {
+		pr_debug("%s: %s busy\n", __func__, genpd->name);
+		return -EBUSY;
+	}
+
+	return rcar_sysc_power_down(&pd->ch);
+}
+
+static int rcar_sysc_pd_power_on(struct generic_pm_domain *genpd)
+{
+	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
+
+	pr_debug("%s: %s\n", __func__, genpd->name);
+
+	if (pd->flags & PD_NO_CR) {
+		pr_debug("%s: Cannot control %s\n", __func__, genpd->name);
+		return 0;
+	}
+
+	return rcar_sysc_power_up(&to_rcar_pd(genpd)->ch);
+}
+
+static void __init rcar_sysc_pd_setup(struct device_node *np,
+				      struct rcar_sysc_pd *pd)
+{
+	struct generic_pm_domain *genpd = &pd->genpd;
+	const char *name = pd->genpd.name;
+	struct dev_power_governor *gov = &simple_qos_governor;
+
+	if (pd->flags & PD_CPU) {
+		/*
+		 * This domain contains a CPU core and therefore it should
+		 * only be turned off if the CPU is not in use.
+		 */
+		pr_debug("PM domain %s contains CPU\n", name);
+		pd->flags |= PD_BUSY;
+		gov = &pm_domain_always_on_gov;
+	} else if (pd->flags & PD_SCU) {
+		/*
+		 * This domain contains an SCU and cache-controller, and
+		 * therefore it should only be turned off if the CPU cores are
+		 * not in use.
+		 */
+		pr_debug("PM domain %s contains SCU\n", name);
+		pd->flags |= PD_BUSY;
+		gov = &pm_domain_always_on_gov;
+	} else if (pd->flags & PD_NO_CR) {
+		/*
+		 * This domain cannot be turned off.
+		 */
+		pd->flags |= PD_BUSY;
+		gov = &pm_domain_always_on_gov;
+	}
+
+	pm_genpd_init(genpd, gov, false);
+	genpd->dev_ops.active_wakeup = rcar_sysc_active_wakeup;
+	genpd->power_off = rcar_sysc_pd_power_off;
+	genpd->power_on = rcar_sysc_pd_power_on;
+
+	if (pd->flags & (PD_CPU | PD_NO_CR)) {
+		/* Skip CPUs (handled by SMP code) and areas without control */
+		pr_debug("%s: Not touching %s\n", __func__, genpd->name);
+		return;
+	}
+
+	if (!rcar_sysc_power_is_off(&pd->ch)) {
+		pr_debug("%s: %s is already powered\n", __func__, genpd->name);
+		return;
+	}
+
+	rcar_sysc_power_up(&pd->ch);
+}
+
+static const struct of_device_id rcar_sysc_matches[] = {
+	{ /* sentinel */ }
+};
+
+struct rcar_pm_domains {
+	struct genpd_onecell_data onecell_data;
+	struct generic_pm_domain *domains[0];
+};
+
+static int __init rcar_sysc_pd_init(void)
+{
+	const struct rcar_sysc_info *info;
+	const struct of_device_id *match;
+	struct rcar_pm_domains *domains;
+	struct device_node *np;
+	unsigned int i, n = 0;
+	u32 syscier, syscimr;
+	void __iomem *base;
+	int error;
+
+	np = of_find_matching_node_and_match(NULL, rcar_sysc_matches, &match);
+	if (!np)
+		return -ENODEV;
+
+	info = match->data;
+
+	base = of_iomap(np, 0);
+	if (!base) {
+		pr_warn("%s cannot map reg 0\n", np->full_name);
+		error = -ENOMEM;
+		goto fail_put;
+	}
+
+	rcar_sysc_base = base;
+
+	for (i = 0, syscier = 0; i < info->num_areas; i++) {
+		n = max_t(unsigned int, n, info->areas[i].isr_bit + 1);
+		syscier |= BIT(info->areas[i].isr_bit);
+	}
+
+	/*
+	 * SYSC needs all interrupt sources enabled to control power.
+	 */
+	pr_debug("%s: syscier = 0x%08x\n", np->full_name, syscier);
+	iowrite32(syscier, base + SYSCIER);
+
+	/*
+	 * Mask all interrupt sources to prevent the CPU from receiving them.
+	 * Make sure not to clear reserved bits that were set before.
+	 */
+	syscimr = ioread32(base + SYSCIMR);
+	syscimr |= syscier;
+	iowrite32(syscimr, base + SYSCIMR);
+
+	domains = kzalloc(sizeof(*domains) + n * sizeof(domains->domains[0]),
+			  GFP_KERNEL);
+	if (!domains) {
+		error = -ENOMEM;
+		goto fail_unmap;
+	}
+
+	for (i = 0; i < info->num_areas; i++) {
+		const struct rcar_sysc_area *area = &info->areas[i];
+		struct rcar_sysc_pd *pd;
+
+		pd = kzalloc(sizeof(*pd) + strlen(area->name) + 1, GFP_KERNEL);
+		if (!pd) {
+			error = -ENOMEM;
+			goto fail_unmap;
+		}
+
+		strcpy(pd->name, area->name);
+		pd->genpd.name = pd->name;
+		pd->ch.chan_offs = area->chan_offs;
+		pd->ch.chan_bit = area->chan_bit;
+		pd->ch.isr_bit = area->isr_bit;
+		pd->flags = area->flags;
+
+		rcar_sysc_pd_setup(np, pd);
+		if (area->parent >= 0)
+			pm_genpd_add_subdomain(domains->domains[area->parent],
+					       &pd->genpd);
+
+		domains->domains[area->isr_bit] = &pd->genpd;
+	}
+
+	domains->onecell_data.domains = domains->domains;
+	domains->onecell_data.num_domains = n;
+	of_genpd_add_provider_onecell(np, &domains->onecell_data);
+	of_node_put(np);
+	return 0;
+
+fail_unmap:
+	iounmap(base);
+fail_put:
+	of_node_put(np);
+	return error;
+}
+
+early_initcall(rcar_sysc_pd_init);
