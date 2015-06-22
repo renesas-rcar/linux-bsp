@@ -21,7 +21,7 @@
 	};
 
 	chosen {
-		bootargs = "ignore_loglevel";
+		bootargs = "console=ttySC0,115200 ignore_loglevel";
 		stdout-path = &scif2;
 	};
 
