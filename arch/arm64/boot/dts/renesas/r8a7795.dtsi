@@ -16,6 +16,11 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "smc";
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -25,6 +30,7 @@
 			compatible = "arm,cortex-a57", "arm,armv8";
 			reg = <0x0>;
 			device_type = "cpu";
+			enable-method = "psci";
 		};
 	};
 
