@@ -2197,12 +2197,17 @@ static void sci_shutdown(struct uart_port *port)
 {
 	struct sci_port *s = to_sci_port(port);
 	unsigned long flags;
+	u16 scr;
 
 	dev_dbg(port->dev, "%s(%d)\n", __func__, port->line);
 
 	spin_lock_irqsave(&port->lock, flags);
 	sci_stop_rx(port);
 	sci_stop_tx(port);
+	/* Stop RX and TX, disable related interrupts, keep clock source */
+	scr = serial_port_in(port, SCSCR);
+	serial_port_out(port, SCSCR, scr & (SCSCR_CKE1 | SCSCR_CKE0));
+
 	spin_unlock_irqrestore(&port->lock, flags);
 
 #ifdef CONFIG_SERIAL_SH_SCI_DMA
