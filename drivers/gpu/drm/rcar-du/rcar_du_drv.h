@@ -19,6 +19,7 @@
 
 #include "rcar_du_crtc.h"
 #include "rcar_du_group.h"
+#include "rcar_du_vsp.h"
 
 struct clk;
 struct device;
@@ -69,6 +70,7 @@ struct rcar_du_device_info {
 #define RCAR_DU_MAX_CRTCS		3
 #define RCAR_DU_MAX_GROUPS		DIV_ROUND_UP(RCAR_DU_MAX_CRTCS, 2)
 #define RCAR_DU_MAX_LVDS		2
+#define RCAR_DU_MAX_VSPS		4
 
 struct rcar_du_device {
 	struct device *dev;
@@ -83,6 +85,7 @@ struct rcar_du_device {
 	unsigned int num_crtcs;
 
 	struct rcar_du_group groups[RCAR_DU_MAX_GROUPS];
+	struct rcar_du_vsp vsps[RCAR_DU_MAX_VSPS];
 
 	struct {
 		struct drm_property *alpha;
