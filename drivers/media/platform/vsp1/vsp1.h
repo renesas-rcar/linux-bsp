@@ -53,6 +53,7 @@ struct vsp1_platform_data {
 
 struct vsp1_device_info {
 	unsigned int num_bru_inputs;
+	bool uapi;
 };
 
 struct vsp1_device {
