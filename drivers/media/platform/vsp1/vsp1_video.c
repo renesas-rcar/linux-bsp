@@ -185,9 +185,9 @@ static int vsp1_video_verify_format(struct vsp1_video *video)
 	if (ret < 0)
 		return ret == -ENOIOCTLCMD ? -EINVAL : ret;
 
-	if (video->fmtinfo->mbus != fmt.format.code ||
-	    video->format.height != fmt.format.height ||
-	    video->format.width != fmt.format.width)
+	if (video->rwpf->fmtinfo->mbus != fmt.format.code ||
+	    video->rwpf->format.height != fmt.format.height ||
+	    video->rwpf->format.width != fmt.format.width)
 		return -EINVAL;
 
 	return 0;
@@ -805,7 +805,7 @@ vsp1_video_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
 
 		format = &pix_mp;
 	} else {
-		format = &video->format;
+		format = &video->rwpf->format;
 	}
 
 	*nplanes = format->num_planes;
@@ -822,7 +822,7 @@ static int vsp1_video_buffer_prepare(struct vb2_buffer *vb)
 {
 	struct vsp1_video *video = vb2_get_drv_priv(vb->vb2_queue);
 	struct vsp1_video_buffer *buf = to_vsp1_video_buffer(vb);
-	const struct v4l2_pix_format_mplane *format = &video->format;
+	const struct v4l2_pix_format_mplane *format = &video->rwpf->format;
 	unsigned int i;
 
 	if (vb->num_planes < format->num_planes)
@@ -904,7 +904,7 @@ static int vsp1_video_start_streaming(struct vb2_queue *vq, unsigned int count)
 				struct vsp1_rwpf *rpf =
 					to_rwpf(&pipe->uds_input->subdev);
 
-				uds->scale_alpha = rpf->video.fmtinfo->alpha;
+				uds->scale_alpha = rpf->fmtinfo->alpha;
 			}
 		}
 
@@ -1008,7 +1008,7 @@ vsp1_video_get_format(struct file *file, void *fh, struct v4l2_format *format)
 		return -EINVAL;
 
 	mutex_lock(&video->lock);
-	format->fmt.pix_mp = video->format;
+	format->fmt.pix_mp = video->rwpf->format;
 	mutex_unlock(&video->lock);
 
 	return 0;
@@ -1048,8 +1048,8 @@ vsp1_video_set_format(struct file *file, void *fh, struct v4l2_format *format)
 		goto done;
 	}
 
-	video->format = format->fmt.pix_mp;
-	video->fmtinfo = info;
+	video->rwpf->format = format->fmt.pix_mp;
+	video->rwpf->fmtinfo = info;
 
 done:
 	mutex_unlock(&video->lock);
@@ -1226,17 +1226,17 @@ int vsp1_video_init(struct vsp1_video *video, struct vsp1_rwpf *rwpf)
 		return ret;
 
 	/* ... and the format ... */
-	video->fmtinfo = vsp1_get_format_info(VSP1_VIDEO_DEF_FORMAT);
-	video->format.pixelformat = video->fmtinfo->fourcc;
-	video->format.colorspace = V4L2_COLORSPACE_SRGB;
-	video->format.field = V4L2_FIELD_NONE;
-	video->format.width = VSP1_VIDEO_DEF_WIDTH;
-	video->format.height = VSP1_VIDEO_DEF_HEIGHT;
-	video->format.num_planes = 1;
-	video->format.plane_fmt[0].bytesperline =
-		video->format.width * video->fmtinfo->bpp[0] / 8;
-	video->format.plane_fmt[0].sizeimage =
-		video->format.plane_fmt[0].bytesperline * video->format.height;
+	rwpf->fmtinfo = vsp1_get_format_info(VSP1_VIDEO_DEF_FORMAT);
+	rwpf->format.pixelformat = rwpf->fmtinfo->fourcc;
+	rwpf->format.colorspace = V4L2_COLORSPACE_SRGB;
+	rwpf->format.field = V4L2_FIELD_NONE;
+	rwpf->format.width = VSP1_VIDEO_DEF_WIDTH;
+	rwpf->format.height = VSP1_VIDEO_DEF_HEIGHT;
+	rwpf->format.num_planes = 1;
+	rwpf->format.plane_fmt[0].bytesperline =
+		rwpf->format.width * rwpf->fmtinfo->bpp[0] / 8;
+	rwpf->format.plane_fmt[0].sizeimage =
+		rwpf->format.plane_fmt[0].bytesperline * rwpf->format.height;
 
 	/* ... and the video node... */
 	video->video.v4l2_dev = &video->vsp1->v4l2_dev;
