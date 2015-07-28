@@ -134,6 +134,17 @@ static int vsp1_create_links(struct vsp1_device *vsp1)
 			return ret;
 	}
 
+	if (vsp1->pdata.features & VSP1_HAS_LIF) {
+		ret = media_entity_create_link(
+			&vsp1->wpf[0]->entity.subdev.entity, RWPF_PAD_SOURCE,
+			&vsp1->lif->entity.subdev.entity, LIF_PAD_SINK, 0);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (!vsp1->info->uapi)
+		return 0;
+
 	for (i = 0; i < vsp1->pdata.rpf_count; ++i) {
 		struct vsp1_rwpf *rpf = vsp1->rpf[i];
 
@@ -161,14 +172,6 @@ static int vsp1_create_links(struct vsp1_device *vsp1)
 					       RWPF_PAD_SOURCE,
 					       &wpf->video->video.entity,
 					       0, flags);
-		if (ret < 0)
-			return ret;
-	}
-
-	if (vsp1->pdata.features & VSP1_HAS_LIF) {
-		ret = media_entity_create_link(
-			&vsp1->wpf[0]->entity.subdev.entity, RWPF_PAD_SOURCE,
-			&vsp1->lif->entity.subdev.entity, LIF_PAD_SINK, 0);
 		if (ret < 0)
 			return ret;
 	}
@@ -268,7 +271,6 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	}
 
 	for (i = 0; i < vsp1->pdata.rpf_count; ++i) {
-		struct vsp1_video *video;
 		struct vsp1_rwpf *rpf;
 
 		rpf = vsp1_rpf_create(vsp1, i);
@@ -280,13 +282,16 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 		vsp1->rpf[i] = rpf;
 		list_add_tail(&rpf->entity.list_dev, &vsp1->entities);
 
-		video = vsp1_video_create(vsp1, rpf);
-		if (IS_ERR(video)) {
-			ret = PTR_ERR(video);
-			goto done;
-		}
+		if (vsp1->info->uapi) {
+			struct vsp1_video *video = vsp1_video_create(vsp1, rpf);
 
-		list_add_tail(&video->list, &vsp1->videos);
+			if (IS_ERR(video)) {
+				ret = PTR_ERR(video);
+				goto done;
+			}
+
+			list_add_tail(&video->list, &vsp1->videos);
+		}
 	}
 
 	if (vsp1->pdata.features & VSP1_HAS_SRU) {
@@ -313,7 +318,6 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	}
 
 	for (i = 0; i < vsp1->pdata.wpf_count; ++i) {
-		struct vsp1_video *video;
 		struct vsp1_rwpf *wpf;
 
 		wpf = vsp1_wpf_create(vsp1, i);
@@ -325,14 +329,17 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 		vsp1->wpf[i] = wpf;
 		list_add_tail(&wpf->entity.list_dev, &vsp1->entities);
 
-		video = vsp1_video_create(vsp1, wpf);
-		if (IS_ERR(video)) {
-			ret = PTR_ERR(video);
-			goto done;
-		}
+		if (vsp1->info->uapi) {
+			struct vsp1_video *video = vsp1_video_create(vsp1, wpf);
 
-		list_add_tail(&video->list, &vsp1->videos);
-		wpf->entity.sink = &video->video.entity;
+			if (IS_ERR(video)) {
+				ret = PTR_ERR(video);
+				goto done;
+			}
+
+			list_add_tail(&video->list, &vsp1->videos);
+			wpf->entity.sink = &video->video.entity;
+		}
 	}
 
 	/* Create links. */
@@ -348,7 +355,8 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 			goto done;
 	}
 
-	ret = v4l2_device_register_subdev_nodes(&vsp1->v4l2_dev);
+	if (vsp1->info->uapi)
+		ret = v4l2_device_register_subdev_nodes(&vsp1->v4l2_dev);
 
 done:
 	if (ret < 0)
@@ -613,6 +621,7 @@ static int vsp1_remove(struct platform_device *pdev)
 
 static const struct vsp1_device_info vsp1_gen2_info = {
 	.num_bru_inputs = 4,
+	.uapi = true,
 };
 
 static const struct of_device_id vsp1_of_match[] = {
