@@ -94,7 +94,7 @@ static inline struct vsp1_pipeline *to_vsp1_pipeline(struct media_entity *e)
 		return NULL;
 }
 
-struct vsp1_video_buffer {
+struct vsp1_vb2_buffer {
 	struct vb2_buffer buf;
 	struct list_head queue;
 
@@ -102,10 +102,9 @@ struct vsp1_video_buffer {
 	unsigned int length[3];
 };
 
-static inline struct vsp1_video_buffer *
-to_vsp1_video_buffer(struct vb2_buffer *vb)
+static inline struct vsp1_vb2_buffer *to_vsp1_vb2_buffer(struct vb2_buffer *vb)
 {
-	return container_of(vb, struct vsp1_video_buffer, buf);
+	return container_of(vb, struct vsp1_vb2_buffer, buf);
 }
 
 struct vsp1_video {
