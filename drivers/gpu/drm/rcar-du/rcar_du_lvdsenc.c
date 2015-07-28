@@ -40,7 +40,7 @@ static void rcar_lvds_write(struct rcar_du_lvdsenc *lvds, u32 reg, u32 data)
 	iowrite32(data, lvds->mmio + reg);
 }
 
-static int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
+int rcar_du_lvdsenc_start_gen2(struct rcar_du_lvdsenc *lvds,
 				 struct rcar_du_crtc *rcrtc)
 {
 	const struct drm_display_mode *mode = &rcrtc->crtc.mode;
@@ -119,6 +119,82 @@ static int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 	return 0;
 }
 
+int rcar_du_lvdsenc_start_gen3(struct rcar_du_lvdsenc *lvds,
+				 struct rcar_du_crtc *rcrtc)
+{
+	struct rcar_du_device *rcdu = lvds->dev;
+	const struct drm_display_mode *mode = &rcrtc->crtc.mode;
+	unsigned int freq = mode->clock;
+	u32 lvdcr0;
+	u32 lvdhcr;
+	u32 pllcr;
+	int ret;
+
+	if (lvds->enabled)
+		return 0;
+
+	if (gpio_is_valid(lvds->gpio_pd))
+		gpio_set_value(lvds->gpio_pd, 1);
+
+	ret = clk_prepare_enable(lvds->clock);
+	if (ret < 0)
+		return ret;
+
+	rcrtc->lvds_ch = lvds->index;
+
+	/* PLL clock configuration */
+	if ((freq >= 25175) && (freq < 42000))
+		pllcr = LVDPLLCR_PLLDLYCNT_42M;
+	else if (freq < 85000)
+		pllcr = LVDPLLCR_PLLDLYCNT_85M;
+	else if (freq < 128000)
+		pllcr = LVDPLLCR_PLLDLYCNT_128M;
+	else if (freq < 148500)
+		pllcr = LVDPLLCR_PLLDLYCNT_148M;
+	else {
+		dev_err(rcdu->dev, "Dotclock %dkHz is not supported.\n", freq);
+		return -EINVAL;
+	}
+
+	rcar_lvds_write(lvds, LVDPLLCR, pllcr);
+
+	/* Hardcode the channels and control signals routing for now.
+	 *
+	 * HSYNC -> CTRL0
+	 * VSYNC -> CTRL1
+	 * DISP  -> CTRL2
+	 * 0     -> CTRL3
+	 */
+	rcar_lvds_write(lvds, LVDCTRCR, LVDCTRCR_CTR3SEL_ZERO |
+			LVDCTRCR_CTR2SEL_DISP | LVDCTRCR_CTR1SEL_VSYNC |
+			LVDCTRCR_CTR0SEL_HSYNC);
+
+	lvdhcr = LVDCHCR_CHSEL_CH(0, 0) | LVDCHCR_CHSEL_CH(1, 1)
+	       | LVDCHCR_CHSEL_CH(2, 2) | LVDCHCR_CHSEL_CH(3, 3);
+
+	rcar_lvds_write(lvds, LVDCHCR, lvdhcr);
+
+	/* Select the input, hardcode mode 0, enable LVDS operation and turn
+	 * bias circuitry on.
+	 */
+	lvdcr0 = LVDCR0_PLLON;
+	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+	lvdcr0 |= LVDCR0_PWD;
+	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+	usleep_range(100, 150);
+
+	lvdcr0 |= LVDCR0_LVRES;
+	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+	/* Turn all the channels on. */
+	rcar_lvds_write(lvds, LVDCR1, 0x00000155);
+
+	lvds->enabled = true;
+	return 0;
+}
+
 static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 {
 	if (!lvds->enabled)
@@ -140,12 +216,17 @@ static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds, struct drm_crtc *crtc,
 			   bool enable)
 {
+	struct rcar_du_device *rcdu = lvds->dev;
+
 	if (!enable) {
 		rcar_du_lvdsenc_stop(lvds);
 		return 0;
 	} else if (crtc) {
 		struct rcar_du_crtc *rcrtc = to_rcar_crtc(crtc);
-		return rcar_du_lvdsenc_start(lvds, rcrtc);
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS))
+			return rcar_du_lvdsenc_start_gen3(lvds, rcrtc);
+		else
+			return rcar_du_lvdsenc_start_gen2(lvds, rcrtc);
 	} else
 		return -EINVAL;
 }
