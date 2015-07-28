@@ -880,32 +880,28 @@
 		renesas,#wpf = <4>;
 	};
 
-	vsp1@fe930000 {
-		compatible = "renesas,vsp1";
+	vsp1d0: vsp1@fe930000 {
+		compatible = "renesas,vsp1d";
 		reg = <0 0xfe930000 0 0x8000>;
 		interrupts = <0 246 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&mstp1_clks R8A7791_CLK_VSP1_DU0>;
 		power-domains = <&cpg_clocks>;
 
 		renesas,has-lif;
-		renesas,has-lut;
 		renesas,#rpf = <4>;
-		renesas,#uds = <1>;
-		renesas,#wpf = <4>;
+		renesas,#wpf = <1>;
 	};
 
-	vsp1@fe938000 {
-		compatible = "renesas,vsp1";
+	vsp1d1: vsp1@fe938000 {
+		compatible = "renesas,vsp1d";
 		reg = <0 0xfe938000 0 0x8000>;
 		interrupts = <0 247 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&mstp1_clks R8A7791_CLK_VSP1_DU1>;
 		power-domains = <&cpg_clocks>;
 
 		renesas,has-lif;
-		renesas,has-lut;
 		renesas,#rpf = <4>;
-		renesas,#uds = <1>;
-		renesas,#wpf = <4>;
+		renesas,#wpf = <1>;
 	};
 
 	du: display@feb00000 {
@@ -920,6 +916,8 @@
 			 <&mstp7_clks R8A7791_CLK_LVDS0>;
 		clock-names = "du.0", "du.1", "lvds.0";
 		status = "disabled";
+
+		vsps = <&vsp1d0 &vsp1d1>;
 
 		ports {
 			#address-cells = <1>;
