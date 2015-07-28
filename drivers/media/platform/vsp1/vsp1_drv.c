@@ -28,6 +28,7 @@
 #include "vsp1_rwpf.h"
 #include "vsp1_sru.h"
 #include "vsp1_uds.h"
+#include "vsp1_video.h"
 
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
@@ -117,12 +118,17 @@ static int vsp1_create_links(struct vsp1_device *vsp1, struct vsp1_entity *sink)
 
 static void vsp1_destroy_entities(struct vsp1_device *vsp1)
 {
-	struct vsp1_entity *entity;
-	struct vsp1_entity *next;
+	struct vsp1_entity *entity, *_entity;
+	struct vsp1_video *video, *_video;
 
-	list_for_each_entry_safe(entity, next, &vsp1->entities, list_dev) {
+	list_for_each_entry_safe(entity, _entity, &vsp1->entities, list_dev) {
 		list_del(&entity->list_dev);
 		vsp1_entity_destroy(entity);
+	}
+
+	list_for_each_entry_safe(video, _video, &vsp1->videos, list) {
+		list_del(&video->list);
+		vsp1_video_cleanup(video);
 	}
 
 	v4l2_device_unregister(&vsp1->v4l2_dev);
@@ -202,6 +208,7 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	}
 
 	for (i = 0; i < vsp1->pdata.rpf_count; ++i) {
+		struct vsp1_video *video;
 		struct vsp1_rwpf *rpf;
 
 		rpf = vsp1_rpf_create(vsp1, i);
@@ -212,6 +219,14 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 
 		vsp1->rpf[i] = rpf;
 		list_add_tail(&rpf->entity.list_dev, &vsp1->entities);
+
+		video = vsp1_video_create(vsp1, rpf);
+		if (IS_ERR(video)) {
+			ret = PTR_ERR(video);
+			goto done;
+		}
+
+		list_add_tail(&video->list, &vsp1->videos);
 	}
 
 	if (vsp1->pdata.features & VSP1_HAS_SRU) {
@@ -238,6 +253,7 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	}
 
 	for (i = 0; i < vsp1->pdata.wpf_count; ++i) {
+		struct vsp1_video *video;
 		struct vsp1_rwpf *wpf;
 
 		wpf = vsp1_wpf_create(vsp1, i);
@@ -248,6 +264,15 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 
 		vsp1->wpf[i] = wpf;
 		list_add_tail(&wpf->entity.list_dev, &vsp1->entities);
+
+		video = vsp1_video_create(vsp1, wpf);
+		if (IS_ERR(video)) {
+			ret = PTR_ERR(video);
+			goto done;
+		}
+
+		list_add_tail(&video->list, &vsp1->videos);
+		wpf->entity.sink = &video->video.entity;
 	}
 
 	/* Create links. */
@@ -257,6 +282,37 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 			continue;
 
 		ret = vsp1_create_links(vsp1, entity);
+		if (ret < 0)
+			goto done;
+	}
+
+	for (i = 0; i < vsp1->pdata.rpf_count; ++i) {
+		struct vsp1_rwpf *rpf = vsp1->rpf[i];
+
+		ret = media_entity_create_link(&rpf->entity.video->video.entity,
+					       0, &rpf->entity.subdev.entity,
+					       RWPF_PAD_SINK,
+					       MEDIA_LNK_FL_ENABLED |
+					       MEDIA_LNK_FL_IMMUTABLE);
+		if (ret < 0)
+			goto done;
+	}
+
+	for (i = 0; i < vsp1->pdata.wpf_count; ++i) {
+		/* Connect the video device to the WPF. All connections are
+		 * immutable except for the WPF0 source link if a LIF is
+		 * present.
+		 */
+		struct vsp1_rwpf *wpf = vsp1->wpf[i];
+		unsigned int flags = MEDIA_LNK_FL_ENABLED;
+
+		if (!(vsp1->pdata.features & VSP1_HAS_LIF) || i != 0)
+			flags |= MEDIA_LNK_FL_IMMUTABLE;
+
+		ret = media_entity_create_link(&wpf->entity.subdev.entity,
+					       RWPF_PAD_SOURCE,
+					       &wpf->entity.video->video.entity,
+					       0, flags);
 		if (ret < 0)
 			goto done;
 	}
@@ -486,6 +542,7 @@ static int vsp1_probe(struct platform_device *pdev)
 	vsp1->dev = &pdev->dev;
 	mutex_init(&vsp1->lock);
 	INIT_LIST_HEAD(&vsp1->entities);
+	INIT_LIST_HEAD(&vsp1->videos);
 
 	ret = vsp1_parse_dt(vsp1);
 	if (ret < 0)
