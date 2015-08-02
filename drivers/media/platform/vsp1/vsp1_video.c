@@ -308,9 +308,9 @@ vsp1_video_format_adjust(struct vsp1_video *video,
  * Pipeline Management
  */
 
-static int vsp1_pipeline_validate_branch(struct vsp1_pipeline *pipe,
-					 struct vsp1_rwpf *input,
-					 struct vsp1_rwpf *output)
+static int vsp1_video_pipeline_validate_branch(struct vsp1_pipeline *pipe,
+					       struct vsp1_rwpf *input,
+					       struct vsp1_rwpf *output)
 {
 	struct vsp1_entity *entity;
 	unsigned int entities = 0;
@@ -384,8 +384,8 @@ static int vsp1_pipeline_validate_branch(struct vsp1_pipeline *pipe,
 	return 0;
 }
 
-static int vsp1_pipeline_validate(struct vsp1_pipeline *pipe,
-				  struct vsp1_video *video)
+static int vsp1_video_pipeline_validate(struct vsp1_pipeline *pipe,
+					struct vsp1_video *video)
 {
 	struct media_entity_graph graph;
 	struct media_entity *entity = &video->video.entity;
@@ -437,8 +437,8 @@ static int vsp1_pipeline_validate(struct vsp1_pipeline *pipe,
 	 * contains no loop and that all branches end at the output WPF.
 	 */
 	for (i = 0; i < pipe->num_inputs; ++i) {
-		ret = vsp1_pipeline_validate_branch(pipe, pipe->inputs[i],
-						    pipe->output);
+		ret = vsp1_video_pipeline_validate_branch(pipe, pipe->inputs[i],
+							  pipe->output);
 		if (ret < 0)
 			goto error;
 	}
@@ -450,8 +450,8 @@ error:
 	return ret;
 }
 
-static int vsp1_pipeline_init(struct vsp1_pipeline *pipe,
-			      struct vsp1_video *video)
+static int vsp1_video_pipeline_init(struct vsp1_pipeline *pipe,
+				    struct vsp1_video *video)
 {
 	int ret;
 
@@ -459,7 +459,7 @@ static int vsp1_pipeline_init(struct vsp1_pipeline *pipe,
 
 	/* If we're the first user validate and initialize the pipeline. */
 	if (pipe->use_count == 0) {
-		ret = vsp1_pipeline_validate(pipe, video);
+		ret = vsp1_video_pipeline_validate(pipe, video);
 		if (ret < 0)
 			goto done;
 	}
@@ -472,7 +472,7 @@ done:
 	return ret;
 }
 
-static void vsp1_pipeline_cleanup(struct vsp1_pipeline *pipe)
+static void vsp1_video_pipeline_cleanup(struct vsp1_pipeline *pipe)
 {
 	mutex_lock(&pipe->lock);
 
@@ -742,7 +742,7 @@ static void vsp1_video_stop_streaming(struct vb2_queue *vq)
 	}
 	mutex_unlock(&pipe->lock);
 
-	vsp1_pipeline_cleanup(pipe);
+	vsp1_video_pipeline_cleanup(pipe);
 	media_entity_pipeline_stop(&video->video.entity);
 
 	/* Remove all buffers from the IRQ queue. */
@@ -883,7 +883,7 @@ vsp1_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 	if (ret < 0)
 		goto err_stop;
 
-	ret = vsp1_pipeline_init(pipe, video);
+	ret = vsp1_video_pipeline_init(pipe, video);
 	if (ret < 0)
 		goto err_stop;
 
@@ -895,7 +895,7 @@ vsp1_video_streamon(struct file *file, void *fh, enum v4l2_buf_type type)
 	return 0;
 
 err_cleanup:
-	vsp1_pipeline_cleanup(pipe);
+	vsp1_video_pipeline_cleanup(pipe);
 err_stop:
 	media_entity_pipeline_stop(&video->video.entity);
 	return ret;
