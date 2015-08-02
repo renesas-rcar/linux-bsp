@@ -25,6 +25,7 @@
 
 #include "vsp1.h"
 #include "vsp1_bru.h"
+#include "vsp1_drm.h"
 #include "vsp1_hsit.h"
 #include "vsp1_lif.h"
 #include "vsp1_lut.h"
@@ -120,7 +121,7 @@ static int vsp1_create_sink_links(struct vsp1_device *vsp1,
 	return 0;
 }
 
-static int vsp1_create_links(struct vsp1_device *vsp1)
+static int vsp1_uapi_create_links(struct vsp1_device *vsp1)
 {
 	struct vsp1_entity *entity;
 	unsigned int i;
@@ -143,9 +144,6 @@ static int vsp1_create_links(struct vsp1_device *vsp1)
 		if (ret < 0)
 			return ret;
 	}
-
-	if (!vsp1->info->uapi)
-		return 0;
 
 	for (i = 0; i < vsp1->pdata.rpf_count; ++i) {
 		struct vsp1_rwpf *rpf = vsp1->rpf[i];
@@ -353,7 +351,10 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	}
 
 	/* Create links. */
-	ret = vsp1_create_links(vsp1);
+	if (vsp1->info->uapi)
+		ret = vsp1_uapi_create_links(vsp1);
+	else
+		ret = vsp1_drm_create_links(vsp1);
 	if (ret < 0)
 		goto done;
 
@@ -367,6 +368,8 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 
 	if (vsp1->info->uapi)
 		ret = v4l2_device_register_subdev_nodes(&vsp1->v4l2_dev);
+	else
+		ret = vsp1_drm_init(vsp1);
 
 done:
 	if (ret < 0)
