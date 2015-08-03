@@ -17,6 +17,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/videodev2.h>
 
@@ -510,6 +511,8 @@ static int vsp1_parse_dt(struct vsp1_device *vsp1)
 	struct device_node *np = vsp1->dev->of_node;
 	struct vsp1_platform_data *pdata = &vsp1->pdata;
 
+	vsp1->info = of_device_get_match_data(vsp1->dev);
+
 	if (of_property_read_bool(np, "renesas,has-lif"))
 		pdata->features |= VSP1_HAS_LIF;
 	if (of_property_read_bool(np, "renesas,has-lut"))
@@ -608,8 +611,12 @@ static int vsp1_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct vsp1_device_info vsp1_gen2_info = {
+	.num_bru_inputs = 4,
+};
+
 static const struct of_device_id vsp1_of_match[] = {
-	{ .compatible = "renesas,vsp1" },
+	{ .compatible = "renesas,vsp1", .data = &vsp1_gen2_info },
 	{ },
 };
 
