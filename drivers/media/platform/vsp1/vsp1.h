@@ -50,9 +50,14 @@ struct vsp1_platform_data {
 	unsigned int wpf_count;
 };
 
+struct vsp1_device_info {
+	unsigned int num_bru_inputs;
+};
+
 struct vsp1_device {
 	struct device *dev;
 	struct vsp1_platform_data pdata;
+	const struct vsp1_device_info *info;
 
 	void __iomem *mmio;
 	struct clk *clock;
