@@ -21,6 +21,8 @@
 #include <linux/platform_device.h>
 #include <linux/videodev2.h>
 
+#include <media/v4l2-subdev.h>
+
 #include "vsp1.h"
 #include "vsp1_bru.h"
 #include "vsp1_hsit.h"
@@ -216,6 +218,14 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 			ret);
 		return ret;
 	}
+
+	vsp1->media_ops.link_setup = vsp1_entity_link_setup;
+	/* Don't perform link validation when the userspace API is disabled as
+	 * the pipeline is configured internally by the driver in that case, and
+	 * its configuration can thus be trusted.
+	 */
+	if (vsp1->pdata.uapi)
+		vsp1->media_ops.link_validate = v4l2_subdev_link_validate;
 
 	vdev->mdev = mdev;
 	ret = v4l2_device_register(vsp1->dev, vdev);
