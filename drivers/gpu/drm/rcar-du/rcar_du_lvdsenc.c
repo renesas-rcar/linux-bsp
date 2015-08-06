@@ -60,6 +60,8 @@ int rcar_du_lvdsenc_start_gen2(struct rcar_du_lvdsenc *lvds,
 	if (ret < 0)
 		return ret;
 
+	rcrtc->lvds_ch = lvds->index;
+
 	/* PLL clock configuration */
 	if (freq <= 38000)
 		pllcr = LVDPLLCR_CEEN | LVDPLLCR_COSEL | LVDPLLCR_PLLDLYCNT_38M;
@@ -195,10 +197,10 @@ int rcar_du_lvdsenc_start_gen3(struct rcar_du_lvdsenc *lvds,
 	return 0;
 }
 
-static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
+int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 {
 	if (!lvds->enabled)
-		return;
+		return -1;
 
 	rcar_lvds_write(lvds, LVDCR0, 0);
 	rcar_lvds_write(lvds, LVDCR1, 0);
@@ -211,6 +213,23 @@ static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 		gpio_set_value(lvds->gpio_pd, 0);
 
 	return 0;
+}
+
+static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
+{
+	int ret;
+	unsigned int i;
+
+	if (!lvds->enabled)
+		return;
+
+	ret = rcar_du_lvdsenc_stop_suspend(lvds);
+	if (ret < 0)
+		return;
+
+	for (i = 0; i < lvds->dev->num_crtcs; ++i)
+		if (lvds->index == lvds->dev->crtcs[i].lvds_ch)
+			lvds->dev->crtcs[i].lvds_ch = -1;
 }
 
 int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds, struct drm_crtc *crtc,

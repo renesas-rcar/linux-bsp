@@ -34,6 +34,7 @@ int rcar_du_lvdsenc_start_gen2(struct rcar_du_lvdsenc *lvds,
 				 struct rcar_du_crtc *rcrtc);
 int rcar_du_lvdsenc_start_gen3(struct rcar_du_lvdsenc *lvds,
 				 struct rcar_du_crtc *rcrtc);
+int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds);
 #else
 static inline int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 {
@@ -51,6 +52,10 @@ static inline int rcar_du_lvdsenc_start_gen2(struct rcar_du_lvdsenc *lvds,
 }
 static inline int rcar_du_lvdsenc_start_gen3(struct rcar_du_lvdsenc *lvds,
 				 struct rcar_du_crtc *rcrtc)
+{
+	return 0;
+}
+static inline int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 {
 	return 0;
 }

@@ -54,6 +54,7 @@ struct rcar_du_crtc {
 
 	struct rcar_du_group *group;
 	struct rcar_du_vsp *vsp;
+	int lvds_ch;
 };
 
 struct dpll_info {

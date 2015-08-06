@@ -23,12 +23,16 @@
 
 #include <drm/drmP.h>
 #include <drm/drm_crtc_helper.h>
+#include <drm/drm_encoder_slave.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 
 #include "rcar_du_crtc.h"
 #include "rcar_du_drv.h"
+#include "rcar_du_encoder.h"
+#include "rcar_du_hdmicon.h"
 #include "rcar_du_kms.h"
+#include "rcar_du_lvdsenc.h"
 #include "rcar_du_regs.h"
 
 /* -----------------------------------------------------------------------------
@@ -340,13 +344,37 @@ static struct drm_driver rcar_du_driver = {
  * Power management
  */
 
+#define to_slave_funcs(e)	(to_rcar_encoder(e)->slave.slave_funcs)
+
 #ifdef CONFIG_PM_SLEEP
 static int rcar_du_pm_suspend(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+	int i;
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	struct drm_encoder *encoder;
+#endif
 
 	drm_kms_helper_poll_disable(rcdu->ddev);
-	/* TODO Suspend the CRTC */
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	list_for_each_entry(encoder,
+			 &rcdu->ddev->mode_config.encoder_list, head) {
+		if ((encoder->encoder_type == DRM_MODE_ENCODER_TMDS) &&
+			(to_slave_funcs(encoder)->dpms))
+			to_slave_funcs(encoder)->dpms(encoder,
+						 DRM_MODE_DPMS_OFF);
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+	for (i = 0; i < rcdu->info->num_lvds; ++i) {
+		if (rcdu->lvds[i])
+			rcar_du_lvdsenc_stop_suspend(rcdu->lvds[i]);
+	}
+#endif
+	for (i = 0; i < rcdu->num_crtcs; ++i)
+		rcar_du_crtc_suspend(&rcdu->crtcs[i]);
 
 	return 0;
 }
@@ -354,9 +382,38 @@ static int rcar_du_pm_suspend(struct device *dev)
 static int rcar_du_pm_resume(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+	struct drm_encoder *encoder;
+	int i;
 
-	/* TODO Resume the CRTC */
+	encoder = NULL;
 
+	for (i = 0; i < rcdu->num_crtcs; ++i)
+		rcar_du_crtc_resume(&rcdu->crtcs[i]);
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].lvds_ch >= 0) {
+			if (rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS))
+				rcar_du_lvdsenc_start_gen3(
+					rcdu->lvds[rcdu->crtcs[i].lvds_ch],
+					&rcdu->crtcs[i]);
+			else
+				rcar_du_lvdsenc_start_gen2(
+					rcdu->lvds[rcdu->crtcs[i].lvds_ch],
+					&rcdu->crtcs[i]);
+		}
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	list_for_each_entry(encoder,
+			 &rcdu->ddev->mode_config.encoder_list, head) {
+		if ((encoder->encoder_type == DRM_MODE_ENCODER_TMDS) &&
+			(to_slave_funcs(encoder)->dpms))
+			to_slave_funcs(encoder)->dpms(encoder,
+						 DRM_MODE_DPMS_ON);
+	}
+#endif
 	drm_kms_helper_poll_enable(rcdu->ddev);
 	return 0;
 }
