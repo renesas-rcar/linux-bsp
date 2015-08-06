@@ -89,7 +89,7 @@ get_current_crtc_for_encoder(struct drm_device *dev,
 
 	WARN_ON(!drm_modeset_is_locked(&config->connection_mutex));
 
-	list_for_each_entry(connector, &config->connector_list, head) {
+	drm_for_each_connector(connector, dev) {
 		if (connector->state->best_encoder != encoder)
 			continue;
 
@@ -667,10 +667,16 @@ drm_atomic_helper_update_legacy_modeset_state(struct drm_device *dev,
 
 	/* set legacy state in the crtc structure */
 	for_each_crtc_in_state(old_state, crtc, old_crtc_state, i) {
+		struct drm_plane *primary = crtc->primary;
+
 		crtc->mode = crtc->state->mode;
 		crtc->enabled = crtc->state->enable;
-		crtc->x = crtc->primary->state->src_x >> 16;
-		crtc->y = crtc->primary->state->src_y >> 16;
+
+		if (drm_atomic_get_existing_plane_state(old_state, primary) &&
+		    primary->state->crtc == crtc) {
+			crtc->x = primary->state->src_x >> 16;
+			crtc->y = primary->state->src_y >> 16;
+		}
 
 		if (crtc->state->enable)
 			drm_calc_timestamping_constants(crtc,
@@ -1917,10 +1923,6 @@ retry:
 	if (ret != 0)
 		goto fail;
 
-	/* TODO: ->page_flip is the only driver callback where the core
-	 * doesn't update plane->fb. For now patch it up here. */
-	plane->fb = plane->state->fb;
-
 	/* Driver takes ownership of state on successful async commit. */
 	return 0;
 fail:
@@ -1988,7 +1990,7 @@ retry:
 
 	WARN_ON(!drm_modeset_is_locked(&config->connection_mutex));
 
-	list_for_each_entry(tmp_connector, &config->connector_list, head) {
+	drm_for_each_connector(tmp_connector, connector->dev) {
 		if (tmp_connector->state->crtc != crtc)
 			continue;
 
