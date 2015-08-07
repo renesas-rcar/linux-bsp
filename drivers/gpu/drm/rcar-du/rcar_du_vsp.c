@@ -319,7 +319,7 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 	  * 4 RPFs. Limit the number of planes to 4 for now to test VSP-KMS
 	  * support on Gen2.
 	  */
-	vsp->num_planes = 4;
+	vsp->num_planes = rcdu->info->vsp_num;
 
 	vsp->planes = devm_kcalloc(rcdu->dev, vsp->num_planes,
 				   sizeof(*vsp->planes), GFP_KERNEL);
