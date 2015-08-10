@@ -43,7 +43,7 @@ static int vsp1_drm_pipeline_run(struct vsp1_pipeline *pipe)
 				struct vsp1_rwpf *rpf =
 					to_rwpf(&entity->subdev);
 
-				if (!rpf->fmtinfo)
+				if (!pipe->inputs[rpf->entity.index])
 					continue;
 			}
 
@@ -132,6 +132,13 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 			dev_err(vsp1->dev, "DRM pipeline stop timeout\n");
 
 		media_entity_pipeline_stop(&pipe->output->entity.subdev.entity);
+
+		for (i = 0; i < bru->entity.source_pad; ++i) {
+			bru->inputs[i].rpf = NULL;
+			pipe->inputs[i] = NULL;
+		}
+
+		pipe->num_inputs = 0;
 
 		vsp1_device_put(vsp1);
 
@@ -306,7 +313,6 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		/* Remove the RPF from the pipeline. */
 		vsp1->bru->inputs[rpf_index].rpf = NULL;
 		pipe->inputs[rpf_index] = NULL;
-		rpf->fmtinfo = NULL;
 
 		vsp1->drm->update = true;
 		start_stop = --pipe->num_inputs == 0;
