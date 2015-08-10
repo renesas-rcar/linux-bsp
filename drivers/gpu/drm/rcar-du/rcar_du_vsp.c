@@ -228,7 +228,7 @@ static int rcar_du_vsp_plane_atomic_set_property(struct drm_plane *plane,
 	uint64_t val)
 {
 	struct rcar_du_vsp_plane_state *rstate = to_rcar_vsp_plane_state(state);
-	struct rcar_du_device *rcdu = to_rcar_plane(plane)->group->dev;
+	struct rcar_du_device *rcdu = to_rcar_vsp_plane(plane)->vsp->dev;
 
 	if (property == rcdu->props.alpha)
 		rstate->alpha = val;
