@@ -1371,6 +1371,24 @@ struct i2c_adapter *of_find_i2c_adapter_by_node(struct device_node *node)
 	return adapter;
 }
 EXPORT_SYMBOL(of_find_i2c_adapter_by_node);
+
+/* must call i2c_put_adapter() when done with returned i2c_adapter device */
+struct i2c_adapter *of_get_i2c_adapter_by_node(struct device_node *node)
+{
+	struct i2c_adapter *adapter;
+
+	adapter = of_find_i2c_adapter_by_node(node);
+	if (!adapter)
+		return NULL;
+
+	if (!try_module_get(adapter->owner)) {
+		put_device(&adapter->dev);
+		adapter = NULL;
+	}
+
+	return adapter;
+}
+EXPORT_SYMBOL(of_get_i2c_adapter_by_node);
 #else
 static void of_i2c_register_devices(struct i2c_adapter *adap) { }
 #endif /* CONFIG_OF */
@@ -2413,9 +2431,15 @@ struct i2c_adapter *i2c_get_adapter(int nr)
 
 	mutex_lock(&core_lock);
 	adapter = idr_find(&i2c_adapter_idr, nr);
-	if (adapter && !try_module_get(adapter->owner))
+	if (!adapter)
+		goto exit;
+
+	if (try_module_get(adapter->owner))
+		get_device(&adapter->dev);
+	else
 		adapter = NULL;
 
+ exit:
 	mutex_unlock(&core_lock);
 	return adapter;
 }
@@ -2423,8 +2447,11 @@ EXPORT_SYMBOL(i2c_get_adapter);
 
 void i2c_put_adapter(struct i2c_adapter *adap)
 {
-	if (adap)
-		module_put(adap->owner);
+	if (!adap)
+		return;
+
+	put_device(&adap->dev);
+	module_put(adap->owner);
 }
 EXPORT_SYMBOL(i2c_put_adapter);
 
