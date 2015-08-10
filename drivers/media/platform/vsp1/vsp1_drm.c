@@ -265,7 +265,8 @@ EXPORT_SYMBOL_GPL(vsp1_du_setup_lif);
  *
  * Image format as stored in memory is expressed as a V4L2 @pixelformat value.
  * As a special case, setting the pixel format to 0 will disable the RPF. The
- * @pitch, @mem, @src and @dst parameters are ignored in that case.
+ * @pitch, @mem, @src and @dst parameters are ignored in that case. Calling the
+ * function on a disabled RPF is allowed.
  *
  * The memory pitch is configurable to allow for padding at end of lines, or
  * simple for images that extend beyond the crop rectangle boundaries. The
@@ -296,7 +297,7 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 	struct vsp1_rwpf_memory memory;
 	struct vsp1_rwpf *rpf;
 	unsigned long flags;
-	bool start_stop;
+	bool start_stop = false;
 	int ret;
 
 	if (rpf_index >= vsp1->pdata.rpf_count)
@@ -310,12 +311,16 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 
 		spin_lock_irqsave(&pipe->irqlock, flags);
 
-		/* Remove the RPF from the pipeline. */
-		vsp1->bru->inputs[rpf_index].rpf = NULL;
-		pipe->inputs[rpf_index] = NULL;
+		if (pipe->inputs[rpf_index]) {
+			/* Remove the RPF from the pipeline if it was previously
+			 * enabled.
+			 */
+			vsp1->bru->inputs[rpf_index].rpf = NULL;
+			pipe->inputs[rpf_index] = NULL;
 
-		vsp1->drm->update = true;
-		start_stop = --pipe->num_inputs == 0;
+			vsp1->drm->update = true;
+			start_stop = --pipe->num_inputs == 0;
+		}
 
 		spin_unlock_irqrestore(&pipe->irqlock, flags);
 
@@ -440,8 +445,6 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		vsp1->bru->inputs[rpf_index].rpf = rpf;
 		pipe->inputs[rpf->entity.index] = rpf;
 		start_stop = pipe->num_inputs++ == 0;
-	} else {
-		start_stop = false;
 	}
 
 	/* Start the pipeline if it's currently stopped. */
