@@ -433,7 +433,7 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 
 	spin_lock_irqsave(&pipe->irqlock, flags);
 
-	/* If the RPF was previously stopped tet the BRU input to the RPF and
+	/* If the RPF was previously stopped set the BRU input to the RPF and
 	 * store the RPF in the pipeline inputs array.
 	 */
 	if (!pipe->inputs[rpf->entity.index]) {
