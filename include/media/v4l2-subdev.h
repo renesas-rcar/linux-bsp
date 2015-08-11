@@ -44,6 +44,7 @@
 
 struct v4l2_device;
 struct v4l2_ctrl_handler;
+struct v4l2_event;
 struct v4l2_event_subscription;
 struct v4l2_fh;
 struct v4l2_subdev;
@@ -605,6 +606,8 @@ struct v4l2_subdev {
 	struct video_device *devnode;
 	/* pointer to the physical device, if any */
 	struct device *dev;
+	/* The device_node of the subdev, usually the same as dev->of_node. */
+	struct device_node *of_node;
 	/* Links this subdev to a global subdev_list or @notifier->done list. */
 	struct list_head async_list;
 	/* Pointer to respective struct v4l2_async_subdev. */
@@ -692,5 +695,8 @@ void v4l2_subdev_init(struct v4l2_subdev *sd,
 
 #define v4l2_subdev_has_op(sd, o, f) \
 	((sd)->ops->o && (sd)->ops->o->f)
+
+void v4l2_subdev_notify_event(struct v4l2_subdev *sd,
+			      const struct v4l2_event *ev);
 
 #endif
