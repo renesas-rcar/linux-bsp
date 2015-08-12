@@ -53,6 +53,7 @@
 #include <linux/platform_device.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/pm_runtime.h>
 
 /** Defines ********************************************************************
 *******************************************************************************/
@@ -117,6 +118,8 @@
 #define I2SR_CLR_OPCODE_W1C	(I2SR_IAL | I2SR_IIF)
 #define I2CR_IEN_OPCODE_0	0x0
 #define I2CR_IEN_OPCODE_1	I2CR_IEN
+
+#define I2C_PM_TIMEOUT		10 /* ms */
 
 /** Variables ******************************************************************
 *******************************************************************************/
@@ -520,9 +523,6 @@ static int i2c_imx_start(struct imx_i2c_struct *i2c_imx)
 
 	i2c_imx_set_clk(i2c_imx);
 
-	result = clk_prepare_enable(i2c_imx->clk);
-	if (result)
-		return result;
 	imx_i2c_write_reg(i2c_imx->ifdr, i2c_imx, IMX_I2C_IFDR);
 	/* Enable I2C controller */
 	imx_i2c_write_reg(i2c_imx->hwdata->i2sr_clr_opcode, i2c_imx, IMX_I2C_I2SR);
@@ -575,7 +575,6 @@ static void i2c_imx_stop(struct imx_i2c_struct *i2c_imx)
 	/* Disable I2C controller */
 	temp = i2c_imx->hwdata->i2cr_ien_opcode ^ I2CR_IEN,
 	imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2CR);
-	clk_disable_unprepare(i2c_imx->clk);
 }
 
 static irqreturn_t i2c_imx_isr(int irq, void *dev_id)
@@ -894,6 +893,10 @@ static int i2c_imx_xfer(struct i2c_adapter *adapter,
 
 	dev_dbg(&i2c_imx->adapter.dev, "<%s>\n", __func__);
 
+	result = pm_runtime_get_sync(i2c_imx->adapter.dev.parent);
+	if (result < 0)
+		goto out;
+
 	/* Start I2C transfer */
 	result = i2c_imx_start(i2c_imx);
 	if (result)
@@ -949,6 +952,10 @@ static int i2c_imx_xfer(struct i2c_adapter *adapter,
 fail0:
 	/* Stop I2C transfer */
 	i2c_imx_stop(i2c_imx);
+
+out:
+	pm_runtime_mark_last_busy(i2c_imx->adapter.dev.parent);
+	pm_runtime_put_autosuspend(i2c_imx->adapter.dev.parent);
 
 	dev_dbg(&i2c_imx->adapter.dev, "<%s> exit with: %s: %d\n", __func__,
 		(result < 0) ? "error" : "success msg",
@@ -1020,9 +1027,10 @@ static int i2c_imx_probe(struct platform_device *pdev)
 
 	ret = clk_prepare_enable(i2c_imx->clk);
 	if (ret) {
-		dev_err(&pdev->dev, "can't enable I2C clock\n");
+		dev_err(&pdev->dev, "can't enable I2C clock, ret=%d\n", ret);
 		return ret;
 	}
+
 	/* Request IRQ */
 	ret = devm_request_irq(&pdev->dev, irq, i2c_imx_isr, 0,
 				pdev->name, i2c_imx);
@@ -1036,6 +1044,13 @@ static int i2c_imx_probe(struct platform_device *pdev)
 
 	/* Set up adapter data */
 	i2c_set_adapdata(&i2c_imx->adapter, i2c_imx);
+
+	/* Set up platform driver data */
+	platform_set_drvdata(pdev, i2c_imx);
+
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_set_autosuspend_delay(&pdev->dev, I2C_PM_TIMEOUT);
+	pm_runtime_use_autosuspend(&pdev->dev);
 
 	/* Set up clock divider */
 	i2c_imx->bitrate = IMX_I2C_BIT_RATE;
@@ -1056,9 +1071,8 @@ static int i2c_imx_probe(struct platform_device *pdev)
 		goto clk_disable;
 	}
 
-	/* Set up platform driver data */
-	platform_set_drvdata(pdev, i2c_imx);
-	clk_disable_unprepare(i2c_imx->clk);
+	pm_runtime_mark_last_busy(&pdev->dev);
+	pm_runtime_put_autosuspend(&pdev->dev);
 
 	dev_dbg(&i2c_imx->adapter.dev, "claimed irq %d\n", irq);
 	dev_dbg(&i2c_imx->adapter.dev, "device resources: %pR\n", res);
@@ -1079,6 +1093,11 @@ clk_disable:
 static int i2c_imx_remove(struct platform_device *pdev)
 {
 	struct imx_i2c_struct *i2c_imx = platform_get_drvdata(pdev);
+	int ret;
+
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0)
+		return ret;
 
 	/* remove adapter */
 	dev_dbg(&i2c_imx->adapter.dev, "adapter removed\n");
@@ -1093,17 +1112,52 @@ static int i2c_imx_remove(struct platform_device *pdev)
 	imx_i2c_write_reg(0, i2c_imx, IMX_I2C_I2CR);
 	imx_i2c_write_reg(0, i2c_imx, IMX_I2C_I2SR);
 
+	pm_runtime_put_sync(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+
 	return 0;
 }
+
+#ifdef CONFIG_PM
+static int i2c_imx_runtime_suspend(struct device *dev)
+{
+	struct imx_i2c_struct *i2c_imx  = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(i2c_imx->clk);
+
+	return 0;
+}
+
+static int i2c_imx_runtime_resume(struct device *dev)
+{
+	struct imx_i2c_struct *i2c_imx  = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_prepare_enable(i2c_imx->clk);
+	if (ret)
+		dev_err(dev, "can't enable I2C clock, ret=%d\n", ret);
+
+	return ret;
+}
+
+static const struct dev_pm_ops i2c_imx_pm_ops = {
+	SET_RUNTIME_PM_OPS(i2c_imx_runtime_suspend,
+			   i2c_imx_runtime_resume, NULL)
+};
+#define I2C_IMX_PM_OPS (&i2c_imx_pm_ops)
+#else
+#define I2C_IMX_PM_OPS NULL
+#endif /* CONFIG_PM */
 
 static struct platform_driver i2c_imx_driver = {
 	.probe = i2c_imx_probe,
 	.remove = i2c_imx_remove,
-	.driver	= {
-		.name	= DRIVER_NAME,
+	.driver = {
+		.name = DRIVER_NAME,
+		.pm = I2C_IMX_PM_OPS,
 		.of_match_table = i2c_imx_dt_ids,
 	},
-	.id_table	= imx_i2c_devtype,
+	.id_table = imx_i2c_devtype,
 };
 
 static int __init i2c_adap_imx_init(void)
