@@ -234,13 +234,15 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	}
 
 	/* Instantiate all the entities. */
-	vsp1->bru = vsp1_bru_create(vsp1);
-	if (IS_ERR(vsp1->bru)) {
-		ret = PTR_ERR(vsp1->bru);
-		goto done;
-	}
+	if (vsp1->pdata.features & VSP1_HAS_BRU) {
+		vsp1->bru = vsp1_bru_create(vsp1);
+		if (IS_ERR(vsp1->bru)) {
+			ret = PTR_ERR(vsp1->bru);
+			goto done;
+		}
 
-	list_add_tail(&vsp1->bru->entity.list_dev, &vsp1->entities);
+		list_add_tail(&vsp1->bru->entity.list_dev, &vsp1->entities);
+	}
 
 	vsp1->hsi = vsp1_hsit_create(vsp1, true);
 	if (IS_ERR(vsp1->hsi)) {
@@ -534,6 +536,8 @@ static int vsp1_parse_dt(struct vsp1_device *vsp1)
 
 	vsp1->info = of_device_get_match_data(vsp1->dev);
 
+	if (of_property_read_bool(np, "renesas,has-bru"))
+		pdata->features |= VSP1_HAS_BRU;
 	if (of_property_read_bool(np, "renesas,has-lif"))
 		pdata->features |= VSP1_HAS_LIF;
 	if (of_property_read_bool(np, "renesas,has-lut"))
@@ -562,6 +566,13 @@ static int vsp1_parse_dt(struct vsp1_device *vsp1)
 			pdata->wpf_count);
 		return -EINVAL;
 	}
+
+	/* Backward compatibility: all Gen2 VSP instances have a BRU, the
+	 * renesas,has-bru property was thus not available. Set the HAS_BRU
+	 * feature automatically in that case.
+	 */
+	if (vsp1->info->num_bru_inputs == 4)
+		pdata->features |= VSP1_HAS_BRU;
 
 	return 0;
 }
