@@ -961,11 +961,39 @@
 			dma-channels = <2>;
 		};
 
+		vspbc: vsp@fe920000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfe920000 0 0x8000>;
+			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 624>;
+
+			renesas,fcp = <&fcpvb1>;
+
+			renesas,has-lut;
+			renesas,has-sru;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <1>;
+			status = "disabled";
+		};
+
 		fcpvb1: fcp@fe92f000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xfe92f000 0 0x200>;
 			clocks = <&cpg CPG_MOD 606>;
 			power-domains = <&cpg>;
+		};
+
+		vspbd: vsp@fe960000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfe960000 0 0x8000>;
+			interrupts = <GIC_SPI 465 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 626>;
+
+			renesas,fcp = <&fcpvb0>;
+
+			renesas,#rpf = <5>;
+			renesas,#wpf = <1>;
+			status = "disabled";
 		};
 
 		fcpvb0: fcp@fe96f000 {
@@ -975,11 +1003,43 @@
 			power-domains = <&cpg>;
 		};
 
+		vspi0: vsp@fe9a0000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfe9a0000 0 0x8000>;
+			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 631>;
+
+			renesas,fcp = <&fcpvi0>;
+
+			renesas,has-lut;
+			renesas,has-sru;
+			renesas,#rpf = <1>;
+			renesas,#uds = <3>;
+			renesas,#wpf = <1>;
+			status = "disabled";
+		};
+
 		fcpvi0: fcp@fe9af000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xfe9af000 0 0x200>;
 			clocks = <&cpg CPG_MOD 611>;
 			power-domains = <&cpg>;
+		};
+
+		vspi1: vsp@fe9b0000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfe9b0000 0 0x8000>;
+			interrupts = <GIC_SPI 445 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 630>;
+
+			renesas,fcp = <&fcpvi1>;
+
+			renesas,has-lut;
+			renesas,has-sru;
+			renesas,#rpf = <1>;
+			renesas,#uds = <1>;
+			renesas,#wpf = <1>;
+			status = "disabled";
 		};
 
 		fcpvi1: fcp@fe9bf000 {
@@ -989,11 +1049,40 @@
 			power-domains = <&cpg>;
 		};
 
+		vspi2: vsp@fe9c0000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfe9c0000 0 0x8000>;
+			interrupts = <GIC_SPI 446 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 629>;
+
+			renesas,fcp = <&fcpvi2>;
+
+			renesas,has-lut;
+			renesas,has-sru;
+			renesas,#rpf = <1>;
+			renesas,#uds = <1>;
+			renesas,#wpf = <1>;
+			status = "disabled";
+		};
+
 		fcpvi2: fcp@fe9cf000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xfe9cf000 0 0x200>;
 			clocks = <&cpg CPG_MOD 609>;
 			power-domains = <&cpg>;
+		};
+
+		vspd0: vsp@fea20000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfea20000 0 0x4000>;
+			interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 623>;
+
+			renesas,fcp = <&fcpvd0>;
+
+			renesas,has-lif;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <2>;
 		};
 
 		fcpvd0: fcp@fea27000 {
@@ -1003,6 +1092,19 @@
 			power-domains = <&cpg>;
 		};
 
+		vspd1: vsp@fea28000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfea28000 0 0x4000>;
+			interrupts = <GIC_SPI 467 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 622>;
+
+			renesas,fcp = <&fcpvd1>;
+
+			renesas,has-lif;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <2>;
+		};
+
 		fcpvd1: fcp@fea2f000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xfea2f000 0 0x200>;
@@ -1010,11 +1112,37 @@
 			power-domains = <&cpg>;
 		};
 
+		vspd2: vsp@fea30000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfea30000 0 0x4000>;
+			interrupts = <GIC_SPI 468 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 621>;
+
+			renesas,fcp = <&fcpvd2>;
+
+			renesas,has-lif;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <2>;
+		};
+
 		fcpvd2: fcp@fea37000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xfea37000 0 0x200>;
 			clocks = <&cpg CPG_MOD 601>;
 			power-domains = <&cpg>;
+		};
+
+		vspd3: vsp@fea38000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfea38000 0 0x4000>;
+			interrupts = <GIC_SPI 469 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 620>;
+
+			renesas,fcp = <&fcpvd3>;
+
+			renesas,has-lif;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <2>;
 		};
 
 		fcpvd3: fcp@fea3f000 {
