@@ -642,9 +642,15 @@ static const struct vsp1_device_info vsp1_gen2_vspd_info = {
 	.uapi = false,
 };
 
+static const struct vsp1_device_info vsp2_gen3_vspd_info = {
+	.num_bru_inputs = 5,
+	.uapi = false,
+};
+
 static const struct of_device_id vsp1_of_match[] = {
 	{ .compatible = "renesas,vsp1", .data = &vsp1_gen2_info },
 	{ .compatible = "renesas,vsp1d", .data = &vsp1_gen2_vspd_info },
+	{ .compatible = "renesas,vsp2d", .data = &vsp2_gen3_vspd_info },
 	{ },
 };
 

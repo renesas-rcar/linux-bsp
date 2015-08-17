@@ -42,3 +42,17 @@ Example: R8A7790 (R-Car H2) VSP1-S node
 		renesas,#uds = <3>;
 		renesas,#wpf = <4>;
 	};
+
+Example: R8A7795 (R-Car H3) VSPD node
+
+	vsp2d0: vsp2@fea20000 {
+		compatible = "renesas,vsp2d";
+		reg = <0 0xfea20000 0 0x8000>;
+		interrupts = <0 466 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&mstp6_clks R8A7795_CLK_VSPD0>;
+
+		renesas,has-lif;
+		renesas,#rpf = <5>;
+		renesas,#wpf = <1>;
+	};
+
