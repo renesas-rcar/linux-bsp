@@ -265,10 +265,10 @@ int ipu_irq_unmap(unsigned int source)
 	return ret;
 }
 
-/* Chained IRQ handler for IPU error interrupt */
-static void ipu_irq_err(unsigned int irq, struct irq_desc *desc)
+/* Chained IRQ handler for IPU function and error interrupt */
+static void ipu_irq_handler(unsigned int __irq, struct irq_desc *desc)
 {
-	struct ipu *ipu = irq_get_handler_data(irq);
+	struct ipu *ipu = irq_desc_get_handler_data(desc);
 	u32 status;
 	int i, line;
 
@@ -286,43 +286,7 @@ static void ipu_irq_err(unsigned int irq, struct irq_desc *desc)
 		raw_spin_unlock(&bank_lock);
 		while ((line = ffs(status))) {
 			struct ipu_irq_map *map;
-
-			line--;
-			status &= ~(1UL << line);
-
-			raw_spin_lock(&bank_lock);
-			map = src2map(32 * i + line);
-			if (map)
-				irq = map->irq;
-			raw_spin_unlock(&bank_lock);
-
-			if (!map) {
-				pr_err("IPU: Interrupt on unmapped source %u bank %d\n",
-				       line, i);
-				continue;
-			}
-			generic_handle_irq(irq);
-		}
-	}
-}
-
-/* Chained IRQ handler for IPU function interrupt */
-static void ipu_irq_fn(unsigned int irq, struct irq_desc *desc)
-{
-	struct ipu *ipu = irq_desc_get_handler_data(desc);
-	u32 status;
-	int i, line;
-
-	for (i = 0; i < IPU_IRQ_NR_FN_BANKS; i++) {
-		struct ipu_irq_bank *bank = irq_bank + i;
-
-		raw_spin_lock(&bank_lock);
-		status = ipu_read_reg(ipu, bank->status);
-		/* Not clearing all interrupts, see above */
-		status &= ipu_read_reg(ipu, bank->control);
-		raw_spin_unlock(&bank_lock);
-		while ((line = ffs(status))) {
-			struct ipu_irq_map *map;
+			unsigned int irq;
 
 			line--;
 			status &= ~(1UL << line);
@@ -382,11 +346,9 @@ int __init ipu_irq_attach_irq(struct ipu *ipu, struct platform_device *dev)
 #endif
 	}
 
-	irq_set_handler_data(ipu->irq_fn, ipu);
-	irq_set_chained_handler(ipu->irq_fn, ipu_irq_fn);
+	irq_set_chained_handler_and_data(ipu->irq_fn, ipu_irq_handler, ipu);
 
-	irq_set_handler_data(ipu->irq_err, ipu);
-	irq_set_chained_handler(ipu->irq_err, ipu_irq_err);
+	irq_set_chained_handler_and_data(ipu->irq_err, ipu_irq_handler, ipu);
 
 	ipu->irq_base = irq_base;
 
@@ -399,11 +361,9 @@ void ipu_irq_detach_irq(struct ipu *ipu, struct platform_device *dev)
 
 	irq_base = ipu->irq_base;
 
-	irq_set_chained_handler(ipu->irq_fn, NULL);
-	irq_set_handler_data(ipu->irq_fn, NULL);
+	irq_set_chained_handler_and_data(ipu->irq_fn, NULL, NULL);
 
-	irq_set_chained_handler(ipu->irq_err, NULL);
-	irq_set_handler_data(ipu->irq_err, NULL);
+	irq_set_chained_handler_and_data(ipu->irq_err, NULL, NULL);
 
 	for (irq = irq_base; irq < irq_base + CONFIG_MX3_IPU_IRQS; irq++) {
 #ifdef CONFIG_ARM
