@@ -1185,16 +1185,35 @@ static const struct ethtool_ops ravb_ethtool_ops = {
 static int ravb_open(struct net_device *ndev)
 {
 	struct ravb_private *priv = netdev_priv(ndev);
+	struct platform_device *pdev = priv->pdev;
+	struct device *dev = &pdev->dev;
 	int error;
 
 	napi_enable(&priv->napi[RAVB_BE]);
 	napi_enable(&priv->napi[RAVB_NC]);
 
-	error = request_irq(ndev->irq, ravb_interrupt, IRQF_SHARED, ndev->name,
-			    ndev);
-	if (error) {
-		netdev_err(ndev, "cannot request IRQ\n");
-		goto out_napi_off;
+	if (of_device_is_compatible(dev->of_node,
+				    "renesas,etheravb-r8a7795")) {
+		error = request_irq(ndev->irq, ravb_interrupt, IRQF_SHARED,
+				    ndev->name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ\n");
+			goto out_napi_off;
+		}
+		error = request_irq(priv->emac_irq, ravb_interrupt, IRQF_SHARED,
+				    ndev->name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ\n");
+			free_irq(ndev->irq, ndev);
+			goto out_napi_off;
+		}
+	} else {
+		error = request_irq(ndev->irq, ravb_interrupt, IRQF_SHARED,
+				    ndev->name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ\n");
+			goto out_napi_off;
+		}
 	}
 
 	/* Device init */
@@ -1219,7 +1238,11 @@ out_ptp_stop:
 	/* Stop PTP Clock driver */
 	ravb_ptp_stop(ndev);
 out_free_irq:
-	free_irq(ndev->irq, ndev);
+	if (of_device_is_compatible(dev->of_node,
+				    "renesas,etheravb-r8a7795"))
+		free_irq(priv->emac_irq, ndev);
+	else
+		free_irq(ndev->irq, ndev);
 out_napi_off:
 	napi_disable(&priv->napi[RAVB_NC]);
 	napi_disable(&priv->napi[RAVB_BE]);
@@ -1688,6 +1711,16 @@ static int ravb_probe(struct platform_device *pdev)
 	priv->avb_link_active_low =
 		of_property_read_bool(np, "renesas,ether-link-active-low");
 
+	if (of_device_is_compatible(np,
+				    "renesas,etheravb-r8a7795")) {
+		irq = platform_get_irq(pdev, 1);
+		if (irq < 0) {
+			error = -ENODEV;
+			goto out_release;
+		}
+		priv->emac_irq = irq;
+	}
+
 	/* Set function */
 	ndev->netdev_ops = &ravb_netdev_ops;
 	ndev->ethtool_ops = &ravb_ethtool_ops;
@@ -1821,6 +1854,7 @@ static const struct dev_pm_ops ravb_dev_pm_ops = {
 static const struct of_device_id ravb_match_table[] = {
 	{ .compatible = "renesas,etheravb-r8a7790" },
 	{ .compatible = "renesas,etheravb-r8a7794" },
+	{ .compatible = "renesas,etheravb-r8a7795" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, ravb_match_table);

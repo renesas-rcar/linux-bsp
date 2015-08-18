@@ -6,8 +6,12 @@ interface contains.
 Required properties:
 - compatible: "renesas,etheravb-r8a7790" if the device is a part of R8A7790 SoC.
 	      "renesas,etheravb-r8a7794" if the device is a part of R8A7794 SoC.
+	      "renesas,etheravb-r8a7795" if the device is a part of R8A7795 SoC.
 - reg: offset and length of (1) the register block and (2) the stream buffer.
-- interrupts: interrupt specifier for the sole interrupt.
+- interrupts: if the device is a part of R8A7790/R8A7794 SoC
+              interrupt specifier for the sole interrupt.
+              if the device is a part of R8A7795 SoC
+              interrupt specifier for the two interrupts.
 - phy-mode: see ethernet.txt file in the same directory.
 - phy-handle: see ethernet.txt file in the same directory.
 - #address-cells: number of address cells for the MDIO bus, must be equal to 1.
