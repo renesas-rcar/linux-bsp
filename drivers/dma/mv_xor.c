@@ -26,6 +26,7 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/irqdomain.h>
+#include <linux/cpumask.h>
 #include <linux/platform_data/dma-mv_xor.h>
 
 #include "dmaengine.h"
@@ -1128,12 +1129,15 @@ static const struct of_device_id mv_xor_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, mv_xor_dt_ids);
 
+static unsigned int mv_xor_engine_count;
+
 static int mv_xor_probe(struct platform_device *pdev)
 {
 	const struct mbus_dram_target_info *dram;
 	struct mv_xor_device *xordev;
 	struct mv_xor_platform_data *pdata = dev_get_platdata(&pdev->dev);
 	struct resource *res;
+	unsigned int max_engines, max_channels;
 	int i, ret;
 	int op_in_desc;
 
@@ -1177,6 +1181,21 @@ static int mv_xor_probe(struct platform_device *pdev)
 	if (!IS_ERR(xordev->clk))
 		clk_prepare_enable(xordev->clk);
 
+	/*
+	 * We don't want to have more than one channel per CPU in
+	 * order for async_tx to perform well. So we limit the number
+	 * of engines and channels so that we take into account this
+	 * constraint. Note that we also want to use channels from
+	 * separate engines when possible.
+	 */
+	max_engines = num_present_cpus();
+	max_channels = min_t(unsigned int,
+			     MV_XOR_MAX_CHANNELS,
+			     DIV_ROUND_UP(num_present_cpus(), 2));
+
+	if (mv_xor_engine_count >= max_engines)
+		return 0;
+
 	if (pdev->dev.of_node) {
 		struct device_node *np;
 		int i = 0;
@@ -1190,13 +1209,13 @@ static int mv_xor_probe(struct platform_device *pdev)
 			int irq;
 			op_in_desc = (int)of_id->data;
 
+			if (i >= max_channels)
+				continue;
+
 			dma_cap_zero(cap_mask);
-			if (of_property_read_bool(np, "dmacap,memcpy"))
-				dma_cap_set(DMA_MEMCPY, cap_mask);
-			if (of_property_read_bool(np, "dmacap,xor"))
-				dma_cap_set(DMA_XOR, cap_mask);
-			if (of_property_read_bool(np, "dmacap,interrupt"))
-				dma_cap_set(DMA_INTERRUPT, cap_mask);
+			dma_cap_set(DMA_MEMCPY, cap_mask);
+			dma_cap_set(DMA_XOR, cap_mask);
+			dma_cap_set(DMA_INTERRUPT, cap_mask);
 
 			irq = irq_of_parse_and_map(np, 0);
 			if (!irq) {
@@ -1216,7 +1235,7 @@ static int mv_xor_probe(struct platform_device *pdev)
 			i++;
 		}
 	} else if (pdata && pdata->channels) {
-		for (i = 0; i < MV_XOR_MAX_CHANNELS; i++) {
+		for (i = 0; i < max_channels; i++) {
 			struct mv_xor_channel_data *cd;
 			struct mv_xor_chan *chan;
 			int irq;
