@@ -939,6 +939,8 @@ static int sci_handle_breaks(struct uart_port *port)
 	return copied;
 }
 
+static void sci_submit_rx(struct sci_port *s);
+
 static irqreturn_t sci_rx_interrupt(int irq, void *ptr)
 {
 #ifdef CONFIG_SERIAL_SH_SCI_DMA
@@ -955,6 +957,7 @@ static irqreturn_t sci_rx_interrupt(int irq, void *ptr)
 			scr |= SCSCR_RDRQE;
 		} else {
 			scr &= ~SCSCR_RIE;
+			sci_submit_rx(s);
 		}
 		serial_port_out(port, SCSCR, scr);
 		/* Clear current interrupt */
@@ -1672,7 +1675,8 @@ static void rx_timer_fn(unsigned long arg)
 
 	spin_unlock_irqrestore(&port->lock, flags);
 
-	sci_submit_rx(s);
+	if (port->type == PORT_SCIFA || port->type == PORT_SCIFB)
+		sci_submit_rx(s);
 }
 
 static void sci_request_dma(struct uart_port *port)
@@ -1758,7 +1762,8 @@ static void sci_request_dma(struct uart_port *port)
 
 		setup_timer(&s->rx_timer, rx_timer_fn, (unsigned long)s);
 
-		sci_submit_rx(s);
+		if (port->type == PORT_SCIFA || port->type == PORT_SCIFB)
+			sci_submit_rx(s);
 	}
 }
 
