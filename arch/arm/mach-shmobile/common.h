@@ -1,10 +1,7 @@
 #ifndef __ARCH_MACH_COMMON_H
 #define __ARCH_MACH_COMMON_H
 
-extern void shmobile_earlytimer_init(void);
 extern void shmobile_init_delay(void);
-struct twd_local_timer;
-extern void shmobile_setup_console(void);
 extern void shmobile_boot_vector(void);
 extern unsigned long shmobile_boot_fn;
 extern unsigned long shmobile_boot_arg;
