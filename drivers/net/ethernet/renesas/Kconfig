@@ -4,6 +4,8 @@
 
 config NET_VENDOR_RENESAS
 	bool "Renesas devices"
+	depends on ARCH_RCAR_GEN3 || ARCH_SHMOBILE
+	select RAVB
 	default y
 	---help---
 	  If you have a network (Ethernet) card belonging to this class, say Y.
