@@ -287,7 +287,7 @@ EXPORT_SYMBOL_GPL(vsp1_du_setup_lif);
 int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		      u32 pixelformat, unsigned int pitch,
 		      dma_addr_t mem[2], const struct v4l2_rect *src,
-		      const struct v4l2_rect *dst)
+		      const struct v4l2_rect *dst, u8 alpha)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
@@ -304,6 +304,7 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		return -EINVAL;
 
 	rpf = vsp1->rpf[rpf_index];
+	rpf->alpha->cur.val = alpha;
 
 	if (pixelformat == 0) {
 		dev_dbg(vsp1->dev, "%s: RPF%u: disable requested\n", __func__,
