@@ -551,7 +551,10 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 		 * planes 0-3 with CRTC 0 and planes 4-7 with CRTC 1 to minimize
 		 * flicker occurring when the association is changed.
 		 */
-		rgrp->dptsr_planes = rgrp->num_crtcs > 1 ? 0xf0 : 0;
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS))
+			rgrp->dptsr_planes = 0x00;
+		else
+			rgrp->dptsr_planes = rgrp->num_crtcs > 1 ? 0xf0 : 0;
 
 		if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
 			ret = rcar_du_planes_init(rgrp);

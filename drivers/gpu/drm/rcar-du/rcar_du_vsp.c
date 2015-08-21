@@ -31,6 +31,7 @@
 void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 {
 	const struct drm_display_mode *mode = &crtc->crtc.state->adjusted_mode;
+	struct rcar_du_device *rcdu = crtc->group->dev;
 	struct rcar_du_plane_state state = {
 		.state = {
 			.crtc = &crtc->crtc,
@@ -44,12 +45,16 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 			.src_h = mode->vdisplay << 16,
 		},
 		.format = rcar_du_format_info(DRM_FORMAT_ARGB8888),
-		.hwindex = crtc->index % 2,
 		.source = RCAR_DU_PLANE_VSPD1,
 		.alpha = 255,
 		.colorkey = 0,
 		.zpos = 0,
 	};
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS))
+		state.hwindex = (crtc->index % 2) ? 2 : 0;
+	else
+		state.hwindex = crtc->index % 2;
 
 	__rcar_du_plane_setup(crtc->group, &state);
 
