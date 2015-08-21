@@ -402,6 +402,12 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		format.format.code, rpf->entity.index);
 
 	format.pad = rpf->entity.index;
+	format.format.code = fmtinfo->mbus;
+
+	ret = v4l2_subdev_call(&rpf->entity.subdev, pad, set_fmt, NULL,
+			       &format);
+	if (ret < 0)
+		return ret;
 
 	ret = v4l2_subdev_call(&vsp1->bru->entity.subdev, pad, set_fmt, NULL,
 			       &format);
