@@ -1,7 +1,7 @@
 /*
  * rcar_du_plane.c  --  R-Car Display Unit Planes
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -458,6 +458,7 @@ static void rcar_du_plane_setup_format(struct rcar_du_group *rgrp,
 				       unsigned int index,
 				       const struct rcar_du_plane_state *state)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
 	u32 ddcr2 = PnDDCR2_CODE;
 	u32 ddcr4;
 
@@ -484,7 +485,8 @@ static void rcar_du_plane_setup_format(struct rcar_du_group *rgrp,
 		}
 	}
 
-	rcar_du_plane_write(rgrp, index, PnDDCR2, ddcr2);
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS))
+		rcar_du_plane_write(rgrp, index, PnDDCR2, ddcr2);
 
 	ddcr4 = state->format->edf | PnDDCR4_CODE;
 	if (state->source != RCAR_DU_PLANE_MEMORY)
@@ -498,11 +500,13 @@ static void rcar_du_plane_setup_format(struct rcar_du_group *rgrp,
 	rcar_du_plane_write(rgrp, index, PnDPXR, state->state.crtc_x);
 	rcar_du_plane_write(rgrp, index, PnDPYR, state->state.crtc_y);
 
-	/* Wrap-around and blinking, disabled */
-	rcar_du_plane_write(rgrp, index, PnWASPR, 0);
-	rcar_du_plane_write(rgrp, index, PnWAMWR, 4095);
-	rcar_du_plane_write(rgrp, index, PnBTR, 0);
-	rcar_du_plane_write(rgrp, index, PnMLR, 0);
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS)) {
+		/* Wrap-around and blinking, disabled */
+		rcar_du_plane_write(rgrp, index, PnWASPR, 0);
+		rcar_du_plane_write(rgrp, index, PnWAMWR, 4095);
+		rcar_du_plane_write(rgrp, index, PnBTR, 0);
+		rcar_du_plane_write(rgrp, index, PnMLR, 0);
+	}
 }
 
 void __rcar_du_plane_setup(struct rcar_du_group *rgrp,

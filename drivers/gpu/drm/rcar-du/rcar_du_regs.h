@@ -260,6 +260,21 @@
 #define DIDSR_PDCS_CLK(n, clk)	(clk << ((n) * 2))
 #define DIDSR_PDCS_MASK(n)	(3 << ((n) * 2))
 
+#define DEF10R			0x20038
+#define DEF10R_CODE		(0x7795 << 16)
+#define DEF10R_VSPF1_RGB	(0 << 14)
+#define DEF10R_VSPF1_YC		(1 << 14)
+#define DEF10R_DOCF1_RGB	(0 << 12)
+#define DEF10R_DOCF1_YC		(1 << 12)
+#define DEF10R_VCDF0_YCBCR444	(0 << 11)
+#define DEF10R_VCDF0_YCBCR422	(1 << 11)
+#define DEF10R_VSPF0_RGB	(0 << 10)
+#define DEF10R_VSPF0_YC		(1 << 10)
+#define DEF10R_DOCF0_RGB	(0 << 8)
+#define DEF10R_DOCF0_YC		(1 << 8)
+#define DEF10R_TSEL_H3_TCON1	(0 << 1) /* DEF10R2 register only (DU2/DU3) */
+#define DEF10R_DEFE10		(1 << 0)
+
 #define DPLLCR			0x20044
 #define DPLLCR_CODE		(0x95 << 24)
 #define DPLLCR_PLCS1		(1 << 23)
