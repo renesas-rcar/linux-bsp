@@ -106,7 +106,7 @@ static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 	struct v4l2_rect src;
 	struct v4l2_rect dst;
 	dma_addr_t paddr[2] = { 0, };
-	u32 pixelformat;
+	u32 pixelformat = 0;
 	unsigned int i;
 
 	src.left = state->state.src_x >> 16;
@@ -134,7 +134,7 @@ static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 		}
 	}
 
-	vsp1_du_setup_rpf(plane->vsp->vsp, plane->index, state->format->fourcc,
+	vsp1_du_setup_rpf(plane->vsp->vsp, plane->index, pixelformat,
 			  fb->pitches[0], paddr, &src, &dst);
 }
 
