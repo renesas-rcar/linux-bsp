@@ -34,6 +34,7 @@
 /* MSTP5 */
 
 /* MSTP7 */
+#define R8A7795_CLK_HSUSB		4
 
 /* MSTP8 */
 #define R8A7795_CLK_AVB			12
