@@ -46,6 +46,7 @@ struct cma *find_largest_nondefault_cma(void)
 }
 
 struct cma *rcar_gen3_dma_contiguous;
+EXPORT_SYMBOL(rcar_gen3_dma_contiguous);
 
 static void __init salvator_x_board_staging_init(void)
 {
