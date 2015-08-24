@@ -556,6 +556,37 @@
 			status = "disabled";
 		};
 
+		usb2_phy0: usb-phy@ee080200 {
+			compatible = "renesas,usb2-phy-r8a7795";
+			reg = <0 0xee080200 0 0x6ff>, <0 0xe6590100 0 0x100>;
+			reg-names = "usb2", "hsusb";
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI0>,
+				 <&mstp7_clks R8A7795_CLK_HSUSB>;
+			clock-names = "usb2", "hsusb";
+			#phy-cells = <0>;
+			status = "disabled";
+		};
+
+		usb2_phy1: usb-phy@ee0a0200 {
+			compatible = "renesas,usb2-phy-r8a7795";
+			reg = <0 0xee0a0200 0 0x6ff>;
+			reg-names = "usb2";
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI1>;
+			clock-names = "usb2";
+			#phy-cells = <0>;
+			status = "disabled";
+		};
+
+		usb2_phy2: usb-phy@ee0c0200 {
+			compatible = "renesas,usb2-phy-r8a7795";
+			reg = <0 0xee0c0200 0 0x6ff>;
+			reg-names = "usb2";
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI2>;
+			clock-names = "usb2";
+			#phy-cells = <0>;
+			status = "disabled";
+		};
+
 		i2c0: i2c@e6500000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
