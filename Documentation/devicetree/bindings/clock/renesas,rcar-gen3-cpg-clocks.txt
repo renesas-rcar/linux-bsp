@@ -1,0 +1,31 @@
+* Renesas R-Car Gen3 Clock Pulse Generator (CPG)
+
+The CPG generates core clocks for the R-Car Gen3 SoCs. It includes three PLLs
+and several fixed ratio dividers.
+
+Required Properties:
+
+  - compatible: Must be one of
+    - "renesas,r8a7795-cpg-clocks" for the r8a7795 CPG
+    - "renesas,rcar-gen3-cpg-clocks" for the generic R-Car Gen3 CPG
+
+  - reg: Base address and length of the memory resource used by the CPG
+
+  - clocks: References to the parent clocks: first to the EXTAL clock
+  - #clock-cells: Must be 1
+  - clock-output-names: The names of the clocks. Supported clocks are
+    "main", "pll0", "pll1", "pll2", "pll3", "pll4"
+
+
+Example
+-------
+
+	cpg_clocks: cpg_clocks@e6150000 {
+		compatible = "renesas,r8a7795-cpg-clocks",
+			     "renesas,rcar-gen3-cpg-clocks";
+		reg = <0 0xe6150000 0 0x1000>;
+		clocks = <&extal_clk>;
+		#clock-cells = <1>;
+		clock-output-names = "main", "pll0", "pll1","pll2",
+				     "pll3", "pll4";
+	};
