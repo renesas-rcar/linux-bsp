@@ -1801,7 +1801,8 @@ static int ravb_probe(struct platform_device *pdev)
 		   CCC);
 
 	/* Set GTI value */
-	ravb_write(ndev, ((1000 << 20) / 130) & GTI_TIV, GTI);
+	ravb_write(ndev, ((1000000000ULL << 20ULL) / 66666666ULL) & GTI_TIV,
+		   GTI);
 
 	/* Request GTI loading */
 	ravb_write(ndev, ravb_read(ndev, GCCR) | GCCR_LTI, GCCR);
