@@ -1,0 +1,303 @@
+next/fixes-non-critical
+	samsung/non-critical
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-non-critical-1
+	brcm/maintainers
+		http://github.com/broadcom/stblinux tags/arm-soc/for-4.3/maintainers
+	mvebu/fixes
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.2-1
+
+next/cleanup
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup-for-v4.3
+	renesas/pm-domain
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-pm-domain-for-v4.3
+	clkevt/set-state
+		git://git.kernel.org/pub/scm/linux/kernel/git/vireshk/linux ARM/clkevt/set-state-4.3
+	mvebu/cleanup
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.3-1
+	brcm/soc
+		http://github.com/broadcom/stblinux tags/arm-soc/for-4.3/soc
+	ep93xx/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/ep93xx-cleanup
+	omap/legacy-removal
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/legacy-v2-signed
+	renesas/cleanup2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup2-for-v4.3
+	patch
+		ARM: appropriate __init annotation for const data
+		ARM: kill off set_irq_flags usage
+	generic/cleanup-irq
+		git://git.kernel.org/pub/scm/linux/kernel/git/tip/tip queue/irq/arm
+	renesas/marzen-removal
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-marzen-board-removal-for-v4.3
+	<no branch> (bf64dd262eaaece2ff560e86fabf94c6725f3b5c)
+		Merge branch 'fixes' into next/cleanup
+	patch
+		ARM: ux500: simplify secondary CPU boot
+		ARM: shmobile: Fix mismerges
+	samsung/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-cleanup
+	patch
+		ARM: nomadik: move hog code to use DT hogs
+		ARM: nomadik: selectively enable UART0 on boards
+		ARM: nomadik: move l2x0 setup to device tree
+		ARM: nomadik: push accelerometer down to boards
+		ARM: ep93xx/timer: Migrate to new 'set-state' interface
+		ARM: gemini: Add missing register definitions for gemini timer
+		ARM: gemini: Use timer1 for clockevent
+		ARM: gemini: Setup timer3 as free running timer
+		ARM/fb: ep93xx: switch framebuffer to use modedb only
+	tegra/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.3-cleanup
+
+next/soc
+	rockchip/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-soc1
+	sti/soc
+		https://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/sti tags/sti-soc-for-v4.3-1
+	reneass/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-for-v4.3
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/soc-signed
+	pxa/soc
+		https://github.com/rjarzmik/linux tags/pxa-for-4.3-v2
+	patch
+		MAINTAINERS: add entries for UniPhier device trees and drivers
+	mtk/soc
+		https://github.com/mbgg/linux-mediatek tags/v4.2-next-soc
+	socfpga/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_updates_for_v4.3
+	patch
+		ARM: zx: Add power domains for ZX296702
+		ARM: at91/soc: add basic support for new sama5d2 SoC
+	zynq/soc
+		https://github.com/Xilinx/linux-xlnx tags/zynq-soc-for-4.3
+	mvebu/soc
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.3-1
+	patch
+		soc: mediatek: Fix SCPSYS compilation
+		ARM: davinci: cp_intc: use IRQCHIP_SKIP_SET_WAKE instead of irq_set_wake callback
+		ARM: BCM: Enable ARM erratum 798181 for BRCMSTB
+		ARM: brcmstb: select ARCH_DMA_ADDR_T_64BIT for LPAE
+		ARM: uniphier: drop v7_invalidate_l1 call at secondary entry
+	rockchip/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-soc2
+	patch
+		clk: ti: fix for definition movement
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.3
+	omap/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/soc-pt2
+	patch
+		ARM: imx: mach-imx6ul: Fix allmodconfig build
+	rockchip/soc3
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-soc3
+
+next/boards
+
+next/dt
+	patch
+		ARM: digicolor: enable watchdog device
+		ARM: digicolor: dts: use stdout-path for console configuration
+		ARM: dts: UniPhier: add on-chip UART device nodes
+		ARM: dts: UniPhier: add USB EHCI device nodes
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.3
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/dt-pt1
+	lpc18xx/dt
+		https://github.com/manabian/linux-lpc lpc18xx_43xx_dts_4.3
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.3-1
+	brcm/dts
+		http://github.com/broadcom/stblinux tags/arm-soc/for-4.3/dts
+	rockchip/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-dts1
+	pxa/dt
+		https://github.com/rjarzmik/linux tags/tags/pxa-dt-4.3
+	omap/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/dt-pt2
+	sti/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/sti tags/sti-dt-for-v4.3-1
+	stm32/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/stm32 tags/stm32-dt-for-v4.3-1b
+	renesas/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v4.3
+	omap/dt-dm814x
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/dt-dm814x
+	patch
+		ARM: dts: UniPhier: add pinctrl device nodes
+		ARM: dts: UniPhier: add UART and USB pinmux nodes
+	mtk/dt
+		https://github.com/mbgg/linux-mediatek tags/v4.2-next-dts
+	socfgpa/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.3
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-dt
+	qcom/dt
+		git://codeaurora.org/quic/kernel/agross-msm tags/qcom-dt-for-4.3
+	zynq/dt
+		https://github.com/Xilinx/linux-xlnx tags/zynq-dt-for-4.3
+	mvevu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.3-2
+	patch
+		ARM: dts: lpc18xx: add usb otg phy node
+		ARM: dts: lpc18xx: add pl111 lcd controller node
+		ARM: dts: lpc18xx: add pl172 memory-controller node
+		ARM: dts: lpc4357-ea4357: add usb0
+		ARM: dts: lpc4357-ea4357: add emc pins and static memory devices
+		ARM: dts: lpc4357-ea4357: add mmio-gpio leds
+		ARM: dts: lpc4350-hitex-eval: add pinctrl and uart0 muxing
+		ARM: dts: lpc4350-hitex-eval: add ethernet
+		ARM: dts: lpc4350-hitex-eval: add emc pins and static memory devices
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.3
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt-1
+	patch
+		ARM: dts: uniphier: add I2C controller device nodes
+		ARM: dts: uniphier: add PH1-Pro5 SoC support
+		ARM: dts: uniphier: add ProXstream2 and PH1-LD6b SoC/board support
+	csr/sirf-dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/baohua/linux tags/sirf-dts-for-4.3
+	patch
+		ARM: BCM5301X: activate some additional options in pl310 cache controller
+		ARM: BCM5301X: Add profiling support
+		ARM: dts: brcmstb: add BCM7445 GPIO nodes
+		ARM: dts: UniPhier: add reference daughter board
+	omap/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/dt-pt3
+	renesas/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt3-for-v4.3
+	at91/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-dt2
+	mvebu/dt3
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.3-3
+	rockchip/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-dts2
+	socfpga/dts2
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.3_part_2
+	brcm/rpi-dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/rpi/linux-rpi tags/rpi-dt-for-armsoc-4.3
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.3
+	patch
+		ARM: dts: vexpress: Use assigned-clock-parents for sp810
+	renesas/dt4
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt4-for-v4.3
+		contains renesas/clk
+	omap/dt4
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/dt-pt4-v2
+	patch
+		ARM: dts: UniPhier: fix PPI interrupt CPU mask of timer nodes
+		ARM: dts: zynq: Add devicetree entry for Xilinx Zynq reset controller.
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.3-dt
+	rockchip/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.3-rockchip32-dts3
+
+next/drivers
+	patch
+		memory: add ARM PL172 MultiPort Memory Controller driver
+		doc: dt: add documentation for pl172 memory bindings
+		memory: pl172: fix modular build
+	mvebu/soc2
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.3-2
+		contains mvebu/soc
+	qcom/soc
+		git://codeaurora.org/quic/kernel/agross-msm tags/qcom-soc-for-4.3
+	renesas/clk
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-clk-for-v4.3
+	drivers/reset
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.3
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.3-soc
+	tegra/cpufreq
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.3-cpufreq
+	tegra/memory
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.3-memory
+
+next/defconfig
+	patch
+		ARM: multi_v7_defconfig: enable Conexant Digicolor watchdog
+		ARM: multi_v7_defconfig: enable UniPhier UART driver
+	mvebu/config
+		git://git.infradead.org/linux-mvebu tags/mvebu-config-4.3-1
+	ep93xx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/ep93xx-defconfig
+	omap/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/defconfig-signed
+	sti/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/sti tags/sti-defconfig-for-v4.3-1
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v4.3
+	prima2/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/baohua/linux tags/prima2-defconfig-for-4.2
+	patch
+		ARM: multi_v7_defconfig: Select MX6UL and MX7D
+	renesas/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig2-for-v4.3
+	patch
+		ARM: at91: at91_dt_defconfig: enable ISI and ov2640 support
+	qcom/defconfig
+		git://codeaurora.org/quic/kernel/agross-msm tags/qcom-defconfig-for-4.3
+	mvebu/config2
+		git://git.infradead.org/linux-mvebu tags/mvebu-config-4.3-2
+	sunxi/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-defconfig-for-4.3
+	patch
+		ARM: at91/defconfig: at91_dt: enable DRM hlcdc support
+		ARM: at91/defconfig: at91_dt: remove ARM_AT91_ETHER
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.3
+	patch
+		ARM: add TC2 PM support to multi_v7_defconfig
+	tegra/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.3-defconfig
+
+next/arm64
+	patch
+		arm64: dts: sprd: adding ETM entries to Spreadtrum SC9836
+		arm64: Split out platform options to separate Kconfig
+		arm64: add Rockchip architecture entry
+		arm64: defconfig: enable ARCH_ROCKCHIP
+	depends/clk-rk3368
+		Merge branch 'depends/clk-rk3368' into next/arm64
+	patch
+		arm64: dts: add Rockchip rk3368 core dtsi and board dts for the r88 board
+		arm64: fix Kconfig include path
+	mtk/arm64
+		https://github.com/mbgg/linux-mediatek tags/v4.2-next-arm64
+	patch
+		PCI: iproc: enable arm64 support for iProc PCIe
+		PCI: iproc: Fix ARM64 dependency in Kconfig
+		arm64: Add Broadcom iProc family support
+		arm64: dts: Add Broadcom North Star 2 support
+		PCI: iproc: Fix BCMA dependency in Kconfig
+	qcom/arm64
+		git://codeaurora.org/quic/kernel/agross-msm tags/qcom-arm64-for-4.3
+	zynq/mp-dt
+		https://github.com/Xilinx/linux-xlnx tags/zynqmp-dt-for-4.3
+	patch
+		arm64: Enable Marvell Berlin SoC family in Kconfig
+		arm64: Enable Marvell Berlin SoC family in defconfig
+	mtk/arm64-2
+		https://github.com/mbgg/linux-mediatek tags/v4.2-next-arm64-2
+	mvebu/berlin64-dts
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-for-v4.3-1
+	patch
+		ARM64: dts: vexpress: Use assigned-clock-parents for sp810
+
+next/late
+	samsung/clk-driver
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-clk-driver
+	samsung/late-dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-late-dt
+		contains samsung/dt
+	samsung/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-soc
+	samsung/late-cpufreq
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-late-cpufreq-driver
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-defconfig-new
+
