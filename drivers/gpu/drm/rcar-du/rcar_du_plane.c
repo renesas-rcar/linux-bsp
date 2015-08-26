@@ -154,7 +154,8 @@ int rcar_du_atomic_check_planes(struct drm_device *dev,
 		plane_state = to_rcar_plane_state(state->plane_states[i]);
 
 		dev_dbg(rcdu->dev, "%s: checking plane (%u,%u)\n", __func__,
-			plane->group->index, plane - plane->group->planes);
+			plane->group->index,
+			(u32)(plane - plane->group->planes));
 
 		/* If the plane is being disabled we don't need to go through
 		 * the full reallocation procedure. Just mark the hardware
@@ -223,7 +224,7 @@ int rcar_du_atomic_check_planes(struct drm_device *dev,
 				dev_dbg(rcdu->dev,
 					"%s: plane (%u,%u) has been freed, skipping\n",
 					__func__, plane->group->index,
-					plane - plane->group->planes);
+					(u32)(plane - plane->group->planes));
 				continue;
 			}
 
@@ -233,7 +234,7 @@ int rcar_du_atomic_check_planes(struct drm_device *dev,
 			dev_dbg(rcdu->dev,
 				"%s: plane (%u,%u) uses %u hwplanes (index %d)\n",
 				__func__, plane->group->index,
-				plane - plane->group->planes,
+				(u32)(plane - plane->group->planes),
 				plane_state->format ?
 				plane_state->format->planes : 0,
 				plane_state->hwindex);
@@ -261,7 +262,8 @@ int rcar_du_atomic_check_planes(struct drm_device *dev,
 		plane_state = to_rcar_plane_state(state->plane_states[i]);
 
 		dev_dbg(rcdu->dev, "%s: allocating plane (%u,%u)\n", __func__,
-			plane->group->index, plane - plane->group->planes);
+			plane->group->index,
+			(u32)(plane - plane->group->planes));
 
 		/* Skip planes that are being disabled or don't need to be
 		 * reallocated.
