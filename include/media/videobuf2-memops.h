@@ -18,7 +18,8 @@
 #include <linux/mm.h>
 
 /**
- * vb2_vmarea_handler - common vma refcount tracking handler
+ * struct vb2_vmarea_handler - common vma refcount tracking handler
+ *
  * @refcount:	pointer to refcount entry in the buffer
  * @put:	callback to function that decreases buffer refcount
  * @arg:	argument for @put callback
