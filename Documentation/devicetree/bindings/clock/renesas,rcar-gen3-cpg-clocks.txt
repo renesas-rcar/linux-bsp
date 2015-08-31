@@ -2,6 +2,8 @@
 
 The CPG generates core clocks for the R-Car Gen3 SoCs. It includes three PLLs
 and several fixed ratio dividers.
+The CPG also provides a Clock Domain for SoC devices, in combination with the
+CPG Module Stop (MSTP) Clocks.
 
 Required Properties:
 
@@ -15,10 +17,17 @@ Required Properties:
   - #clock-cells: Must be 1
   - clock-output-names: The names of the clocks. Supported clocks are
     "main", "pll0", "pll1", "pll2", "pll3", "pll4"
+  - #power-domain-cells: Must be 0
 
+SoC devices that are part of the CPG/MSTP Clock Domain and can be power-managed
+through an MSTP clock should refer to the CPG device node in their
+"power-domains" property, as documented by the generic PM domain bindings in
+Documentation/devicetree/bindings/power/power_domain.txt.
 
-Example
--------
+Examples
+--------
+
+  - CPG device node:
 
 	cpg_clocks: cpg_clocks@e6150000 {
 		compatible = "renesas,r8a7795-cpg-clocks",
@@ -28,4 +37,16 @@ Example
 		#clock-cells = <1>;
 		clock-output-names = "main", "pll0", "pll1","pll2",
 				     "pll3", "pll4";
+		#power-domain-cells = <0>;
+	};
+
+  - CPG/MSTP Clock Domain member device node:
+
+	scif2: serial@e6e88000 {
+		compatible = "renesas,scif-r8a7795", "renesas,scif";
+		reg = <0 0xe6e88000 0 64>;
+		interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&mstp3_clks RCAR_R8A7795_CLK_SCIF2>;
+		clock-names = "sci_ick";
+		power-domains = <&cpg_clocks>;
 	};
