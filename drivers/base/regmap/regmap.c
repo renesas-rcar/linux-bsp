@@ -93,6 +93,9 @@ bool regmap_writeable(struct regmap *map, unsigned int reg)
 
 bool regmap_readable(struct regmap *map, unsigned int reg)
 {
+	if (!map->reg_read)
+		return false;
+
 	if (map->max_register && reg > map->max_register)
 		return false;
 
@@ -573,8 +576,9 @@ struct regmap *regmap_init(struct device *dev,
 		map->reg_stride = config->reg_stride;
 	else
 		map->reg_stride = 1;
-	map->use_single_rw = config->use_single_rw;
-	map->can_multi_write = config->can_multi_write;
+	map->use_single_read = config->use_single_rw || !bus || !bus->read;
+	map->use_single_write = config->use_single_rw || !bus || !bus->write;
+	map->can_multi_write = config->can_multi_write && bus && bus->write;
 	map->dev = dev;
 	map->bus = bus;
 	map->bus_context = bus_context;
@@ -763,7 +767,7 @@ struct regmap *regmap_init(struct device *dev,
 		if ((reg_endian != REGMAP_ENDIAN_BIG) ||
 		    (val_endian != REGMAP_ENDIAN_BIG))
 			goto err_map;
-		map->use_single_rw = true;
+		map->use_single_write = true;
 	}
 
 	if (!map->format.format_write &&
@@ -1677,9 +1681,15 @@ int regmap_bulk_write(struct regmap *map, unsigned int reg, const void *val,
 
 	/*
 	 * Some devices don't support bulk write, for
-	 * them we have a series of single write operations.
+	 * them we have a series of single write operations in the first two if
+	 * blocks.
+	 *
+	 * The first if block is used for memory mapped io. It does not allow
+	 * val_bytes of 3 for example.
+	 * The second one is used for busses which do not have this limitation
+	 * and can write arbitrary value lengths.
 	 */
-	if (!map->bus || map->use_single_rw) {
+	if (!map->bus) {
 		map->lock(map->lock_arg);
 		for (i = 0; i < val_count; i++) {
 			unsigned int ival;
@@ -1710,6 +1720,17 @@ int regmap_bulk_write(struct regmap *map, unsigned int reg, const void *val,
 				goto out;
 		}
 out:
+		map->unlock(map->lock_arg);
+	} else if (map->use_single_write) {
+		map->lock(map->lock_arg);
+		for (i = 0; i < val_count; i++) {
+			ret = _regmap_raw_write(map,
+						reg + (i * map->reg_stride),
+						val + (i * val_bytes),
+						val_bytes);
+			if (ret)
+				break;
+		}
 		map->unlock(map->lock_arg);
 	} else {
 		void *wval;
@@ -2097,8 +2118,6 @@ static int _regmap_read(struct regmap *map, unsigned int reg,
 	int ret;
 	void *context = _regmap_map_get_context(map);
 
-	WARN_ON(!map->reg_read);
-
 	if (!map->cache_bypass) {
 		ret = regcache_read(map, reg, val);
 		if (ret == 0)
@@ -2178,6 +2197,8 @@ int regmap_raw_read(struct regmap *map, unsigned int reg, void *val,
 	if (val_len % map->format.val_bytes)
 		return -EINVAL;
 	if (reg % map->reg_stride)
+		return -EINVAL;
+	if (val_count == 0)
 		return -EINVAL;
 
 	map->lock(map->lock_arg);
@@ -2297,7 +2318,7 @@ int regmap_bulk_read(struct regmap *map, unsigned int reg, void *val,
 		 * Some devices does not support bulk read, for
 		 * them we have a series of single read operations.
 		 */
-		if (map->use_single_rw) {
+		if (map->use_single_read) {
 			for (i = 0; i < val_count; i++) {
 				ret = regmap_raw_read(map,
 						reg + (i * map->reg_stride),
@@ -2322,7 +2343,34 @@ int regmap_bulk_read(struct regmap *map, unsigned int reg, void *val,
 					  &ival);
 			if (ret != 0)
 				return ret;
-			map->format.format_val(val + (i * val_bytes), ival, 0);
+
+			if (map->format.format_val) {
+				map->format.format_val(val + (i * val_bytes), ival, 0);
+			} else {
+				/* Devices providing read and write
+				 * operations can use the bulk I/O
+				 * functions if they define a val_bytes,
+				 * we assume that the values are native
+				 * endian.
+				 */
+				u32 *u32 = val;
+				u16 *u16 = val;
+				u8 *u8 = val;
+
+				switch (map->format.val_bytes) {
+				case 4:
+					u32[i] = ival;
+					break;
+				case 2:
+					u16[i] = ival;
+					break;
+				case 1:
+					u8[i] = ival;
+					break;
+				default:
+					return -EINVAL;
+				}
+			}
 		}
 	}
 
