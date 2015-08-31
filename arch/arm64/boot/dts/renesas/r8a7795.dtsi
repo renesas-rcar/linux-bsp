@@ -70,6 +70,14 @@
 			#clock-cells = <1>;
 			ranges;
 
+			cp_clk: cp_clk {
+				compatible = "fixed-factor-clock";
+				clocks = <&extal_clk>;
+				#clock-cells = <0>;
+				clock-div = <2>;
+				clock-mult = <1>;
+			};
+
 			zt_clk: zt {
 				compatible = "fixed-factor-clock";
 				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
@@ -273,6 +281,22 @@
 					clocks =  <&s3d4_clk>;
 					#clock-cells = <1>;
 					clock-indices = <R8A7795_CLK_SCIF2>;
+				};
+
+				mstp9_clks: mstp9_clks@e6150994 {
+					compatible = "renesas,r8a7795-mstp-clocks",
+						     "renesas,cpg-mstp-clocks";
+					reg = <0 0xe6150994 0 4>, <0 0xe61509a4 0 4>;
+					clocks = <&cp_clk>, <&cp_clk>, <&cp_clk>,
+						 <&cp_clk>, <&cp_clk>, <&cp_clk>,
+						 <&cp_clk>, <&cp_clk>;
+					#clock-cells = <1>;
+					clock-indices = <
+						R8A7795_CLK_GPIO7 R8A7795_CLK_GPIO6
+						R8A7795_CLK_GPIO5 R8A7795_CLK_GPIO4
+						R8A7795_CLK_GPIO3 R8A7795_CLK_GPIO2
+						R8A7795_CLK_GPIO1 R8A7795_CLK_GPIO0
+					>;
 				};
 			};
 		};
