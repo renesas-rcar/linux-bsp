@@ -22,6 +22,7 @@
 #include <linux/of_platform.h>
 #include <linux/videodev2.h>
 
+#define VSP1_DL_SUPPORT
 #include <media/vsp1.h>
 
 #include "rcar_du_drv.h"
@@ -66,12 +67,18 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 	 */
 	crtc->group->need_restart = true;
 
+#ifdef VSP1_DL_SUPPORT
+	vsp1_du_setup_dl(crtc->vsp->vsp, 2, 2);
+#endif
 	vsp1_du_setup_lif(crtc->vsp->vsp, mode->hdisplay, mode->vdisplay);
 }
 
 void rcar_du_vsp_disable(struct rcar_du_crtc *crtc)
 {
 	vsp1_du_setup_lif(crtc->vsp->vsp, 0, 0);
+#ifdef VSP1_DL_SUPPORT
+	vsp1_du_reset_dl(crtc->vsp->vsp);
+#endif
 }
 
 static const u32 formats_xlate[][2] = {
