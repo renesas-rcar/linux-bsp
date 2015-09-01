@@ -26,6 +26,7 @@
 struct clk;
 struct device;
 
+struct vsp1_drm;
 struct vsp1_platform_data;
 struct vsp1_bru;
 struct vsp1_hsit;
@@ -50,9 +51,15 @@ struct vsp1_platform_data {
 	unsigned int wpf_count;
 };
 
+struct vsp1_device_info {
+	unsigned int num_bru_inputs;
+	bool uapi;
+};
+
 struct vsp1_device {
 	struct device *dev;
 	struct vsp1_platform_data pdata;
+	const struct vsp1_device_info *info;
 
 	void __iomem *mmio;
 	struct clk *clock;
@@ -71,9 +78,12 @@ struct vsp1_device {
 	struct vsp1_rwpf *wpf[VSP1_MAX_WPF];
 
 	struct list_head entities;
+	struct list_head videos;
 
 	struct v4l2_device v4l2_dev;
 	struct media_device media_dev;
+	struct media_entity_operations media_ops;
+	struct vsp1_drm *drm;
 };
 
 int vsp1_device_get(struct vsp1_device *vsp1);
