@@ -191,6 +191,7 @@ static struct snd_soc_codec_conf mt8173_rt5650_rt5676_codec_conf[] = {
 
 static struct snd_soc_card mt8173_rt5650_rt5676_card = {
 	.name = "mtk-rt5650-rt5676",
+	.owner = THIS_MODULE,
 	.dai_link = mt8173_rt5650_rt5676_dais,
 	.num_links = ARRAY_SIZE(mt8173_rt5650_rt5676_dais),
 	.codec_conf = mt8173_rt5650_rt5676_codec_conf,
@@ -245,19 +246,11 @@ static int mt8173_rt5650_rt5676_dev_probe(struct platform_device *pdev)
 	card->dev = &pdev->dev;
 	platform_set_drvdata(pdev, card);
 
-	ret = snd_soc_register_card(card);
+	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret)
 		dev_err(&pdev->dev, "%s snd_soc_register_card fail %d\n",
 			__func__, ret);
 	return ret;
-}
-
-static int mt8173_rt5650_rt5676_dev_remove(struct platform_device *pdev)
-{
-	struct snd_soc_card *card = platform_get_drvdata(pdev);
-
-	snd_soc_unregister_card(card);
-	return 0;
 }
 
 static const struct of_device_id mt8173_rt5650_rt5676_dt_match[] = {
@@ -269,14 +262,12 @@ MODULE_DEVICE_TABLE(of, mt8173_rt5650_rt5676_dt_match);
 static struct platform_driver mt8173_rt5650_rt5676_driver = {
 	.driver = {
 		   .name = "mtk-rt5650-rt5676",
-		   .owner = THIS_MODULE,
 		   .of_match_table = mt8173_rt5650_rt5676_dt_match,
 #ifdef CONFIG_PM
 		   .pm = &snd_soc_pm_ops,
 #endif
 	},
 	.probe = mt8173_rt5650_rt5676_dev_probe,
-	.remove = mt8173_rt5650_rt5676_dev_remove,
 };
 
 module_platform_driver(mt8173_rt5650_rt5676_driver);
