@@ -238,22 +238,22 @@ err_free:
 	return ERR_PTR(ret);
 }
 
-struct exynos_drm_gem_buf *exynos_drm_fb_buffer(struct drm_framebuffer *fb,
-						int index)
+struct exynos_drm_gem_obj *exynos_drm_fb_gem_obj(struct drm_framebuffer *fb,
+						 int index)
 {
 	struct exynos_drm_fb *exynos_fb = to_exynos_fb(fb);
-	struct exynos_drm_gem_buf *buffer;
+	struct exynos_drm_gem_obj *obj;
 
 	if (index >= MAX_FB_BUFFER)
 		return NULL;
 
-	buffer = exynos_fb->exynos_gem_obj[index]->buffer;
-	if (!buffer)
+	obj = exynos_fb->exynos_gem_obj[index];
+	if (!obj)
 		return NULL;
 
-	DRM_DEBUG_KMS("dma_addr = 0x%lx\n", (unsigned long)buffer->dma_addr);
+	DRM_DEBUG_KMS("dma_addr = 0x%lx\n", (unsigned long)obj->dma_addr);
 
-	return buffer;
+	return obj;
 }
 
 static void exynos_drm_output_poll_changed(struct drm_device *dev)
@@ -265,41 +265,6 @@ static void exynos_drm_output_poll_changed(struct drm_device *dev)
 		drm_fb_helper_hotplug_event(fb_helper);
 	else
 		exynos_drm_fbdev_init(dev);
-}
-
-static int exynos_atomic_commit(struct drm_device *dev,
-				struct drm_atomic_state *state,
-				bool async)
-{
-	int ret;
-
-	ret = drm_atomic_helper_prepare_planes(dev, state);
-	if (ret)
-		return ret;
-
-	/* This is the point of no return */
-
-	drm_atomic_helper_swap_state(dev, state);
-
-	drm_atomic_helper_commit_modeset_disables(dev, state);
-
-	drm_atomic_helper_commit_modeset_enables(dev, state);
-
-	/*
-	 * Exynos can't update planes with CRTCs and encoders disabled,
-	 * its updates routines, specially for FIMD, requires the clocks
-	 * to be enabled. So it is necessary to handle the modeset operations
-	 * *before* the commit_planes() step, this way it will always
-	 * have the relevant clocks enabled to perform the update.
-	 */
-
-	drm_atomic_helper_commit_planes(dev, state);
-
-	drm_atomic_helper_cleanup_planes(dev, state);
-
-	drm_atomic_state_free(state);
-
-	return 0;
 }
 
 static const struct drm_mode_config_funcs exynos_drm_mode_config_funcs = {
