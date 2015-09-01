@@ -38,6 +38,14 @@
 /* MSTP8 */
 
 /* MSTP9 */
+#define R8A7795_CLK_GPIO0		12
+#define R8A7795_CLK_GPIO1		11
+#define R8A7795_CLK_GPIO2		10
+#define R8A7795_CLK_GPIO3		9
+#define R8A7795_CLK_GPIO4		8
+#define R8A7795_CLK_GPIO5		7
+#define R8A7795_CLK_GPIO6		6
+#define R8A7795_CLK_GPIO7		5
 
 /* MSTP10 */
 
