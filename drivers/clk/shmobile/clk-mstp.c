@@ -199,14 +199,9 @@ static void __init cpg_mstp_clocks_init(struct device_node *np)
 	for (i = 0; i < MSTP_MAX_CLOCKS; ++i) {
 		const char *parent_name;
 		const char *name;
+		bool allocated_name;
 		u32 clkidx;
 		int ret;
-
-		/* Skip clocks with no name. */
-		ret = of_property_read_string_index(np, "clock-output-names",
-						    i, &name);
-		if (ret < 0 || strlen(name) == 0)
-			continue;
 
 		parent_name = of_clk_get_parent_name(np, i);
 		ret = of_property_read_u32_index(np, idxname, i, &clkidx);
@@ -214,9 +209,17 @@ static void __init cpg_mstp_clocks_init(struct device_node *np)
 			break;
 
 		if (clkidx >= MSTP_MAX_CLOCKS) {
-			pr_err("%s: invalid clock %s %s index %u)\n",
-			       __func__, np->name, name, clkidx);
+			pr_err("%s: invalid clock %s index %u)\n",
+			       __func__, np->name, clkidx);
 			continue;
+		}
+
+		if (of_property_read_string_index(np, "clock-output-names",
+						  i, &name) == 0) {
+			allocated_name = false;
+		} else {
+			name = kasprintf(GFP_KERNEL, "%s.%u", np->name, clkidx);
+			allocated_name = true;
 		}
 
 		clks[clkidx] = cpg_mstp_clock_register(name, parent_name,
@@ -231,12 +234,19 @@ static void __init cpg_mstp_clocks_init(struct device_node *np)
 			 *
 			 * FIXME: Remove this when all devices that require a
 			 * clock will be instantiated from DT.
+			 *
+			 * We currently register clkdev only when the DT
+			 * property clock-output-names is present.
 			 */
-			clk_register_clkdev(clks[clkidx], name, NULL);
+			if (!allocated_name)
+				clk_register_clkdev(clks[clkidx], name, NULL);
 		} else {
 			pr_err("%s: failed to register %s %s clock (%ld)\n",
 			       __func__, np->name, name, PTR_ERR(clks[clkidx]));
 		}
+
+		if (allocated_name)
+			kfree(name);
 	}
 
 	of_clk_add_provider(np, of_clk_src_onecell_get, &group->data);
