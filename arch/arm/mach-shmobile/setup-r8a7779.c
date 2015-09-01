@@ -102,7 +102,7 @@ static void __init r8a7779_init_time(void)
 	clocksource_of_init();
 }
 
-static const char *r8a7779_compat_dt[] __initdata = {
+static const char *const r8a7779_compat_dt[] __initconst = {
 	"renesas,r8a7779",
 	NULL,
 };
