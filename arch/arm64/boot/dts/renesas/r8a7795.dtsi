@@ -526,11 +526,15 @@
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150990 0 4>, <0 0xe61509a0 0 4>;
-					clocks = <&s3d2_clk>, <&s3d2_clk>;
+					clocks = <&s3d2_clk>, <&s3d2_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_AVB R8A7795_CLK_SATA
+						R8A7795_CLK_VIN1 R8A7795_CLK_VIN0
 					>;
+					clock-output-names =
+						"avb", "sata", "vin1", "vin0";
 				};
 
 				mstp9_clks: mstp9_clks@e6150994 {
