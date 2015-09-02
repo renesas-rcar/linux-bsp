@@ -30,6 +30,8 @@
 		spi4 = &msiof3;
 		vin0 = &vin0;
 		vin1 = &vin1;
+		csi2_0 = &csi2_0;
+		csi2_1 = &csi2_1;
 	};
 
 	psci {
@@ -975,6 +977,22 @@
 			renesas,has-lif;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <1>;
+		};
+
+		csi2_0: csi2@feaa0000 {
+			compatible = "renesas,csi2-r8a7795";
+			clocks = <&mstp7_clks R8A7795_CLK_CSI40>;
+			reg = <0 0xfeaa0000 0 0x10000>;
+			interrupts = <0 246 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		csi2_1: csi2@fea80000 {
+			compatible = "renesas,csi2-r8a7795";
+			clocks = <&mstp7_clks R8A7795_CLK_CSI20>;
+			reg = <0 0xfea80000 0 0x10000>;
+			interrupts = <0 184 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
 		};
 
 		hdmi0: hdmi0@fead0000 {
