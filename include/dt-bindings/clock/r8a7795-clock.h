@@ -20,6 +20,7 @@
 /* MSTP0 */
 
 /* MSTP1 */
+#define R8A7795_CLK_3DGE		12
 
 /* MSTP2 */
 #define R8A7795_CLK_SCIF5		2
