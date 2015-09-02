@@ -489,6 +489,38 @@
 	};
 };
 
+&vin0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin0ep0: endpoint {
+				remote-endpoint = <&adv7482_hdmi_in>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+};
+
+&vin1 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin1ep0: endpoint@0 {
+				remote-endpoint = <&adv7482_sdp_in>;
+				data-lanes = <1>;
+			};
+		};
+	};
+};
+
 &sdhi0 {
 	pinctrl-0 = <&sdhi0_pins>;
 	pinctrl-names = "default";
