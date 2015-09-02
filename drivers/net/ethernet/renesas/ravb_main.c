@@ -1667,9 +1667,9 @@ static int ravb_mdio_release(struct ravb_private *priv)
 static int ravb_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
-	struct ravb_private *priv;
-	struct net_device *ndev;
-	int error, irq, q;
+	struct ravb_private *priv = NULL;
+	struct net_device *ndev = NULL;
+	int error = 0, irq, q;
 	struct resource *res;
 	u32 data;
 	void __iomem *p;
