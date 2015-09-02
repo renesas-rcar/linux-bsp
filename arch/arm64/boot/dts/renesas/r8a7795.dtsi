@@ -388,6 +388,42 @@
 				clock-output-names = "hdmi";
 			};
 
+			sd0_clk: sd0_clk@e6150074 {
+				compatible = "fixed-factor-clock";
+				reg = <0 0xe6150074 0 4>;
+				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
+				#clock-cells = <0>;
+				clock-div = <16>;
+				clock-mult = <1>;
+			};
+
+			sd1_clk: sd0_clk@e6150078 {
+				compatible = "fixed-factor-clock";
+				reg = <0 0xe6150078 0 4>;
+				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
+				#clock-cells = <0>;
+				clock-div = <16>;
+				clock-mult = <1>;
+			};
+
+			sd2_clk: sd0_clk@e6150268 {
+				compatible = "fixed-factor-clock";
+				reg = <0 0xe6150268 0 4>;
+				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
+				#clock-cells = <0>;
+				clock-div = <16>;
+				clock-mult = <1>;
+			};
+
+			sd3_clk: sd0_clk@e615026c {
+				compatible = "fixed-factor-clock";
+				reg = <0 0xe615026c 0 4>;
+				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
+				#clock-cells = <0>;
+				clock-div = <16>;
+				clock-mult = <1>;
+			};
+
 			cpg_clocks: cpg_clocks@e6150000 {
 				#address-cells = <2>;
 				#size-cells = <2>;
@@ -425,9 +461,16 @@
 					compatible = "renesas,r8a7795-mstp-clocks",
 					             "renesas,cpg-mstp-clocks";
 					reg = <0 0xe615013c 0 4>, <0 0xe6150048 0 4>;
-					clocks =  <&s3d4_clk>;
+					clocks =  <&s3d4_clk>, <&sd3_clk>, <&sd2_clk>,
+						  <&sd1_clk>, <&sd0_clk>;
 					#clock-cells = <1>;
-					clock-indices = <R8A7795_CLK_SCIF2>;
+					clock-indices = <
+						R8A7795_CLK_SCIF2
+						R8A7795_CLK_SD3
+						R8A7795_CLK_SD2
+						R8A7795_CLK_SD1
+						R8A7795_CLK_SD0
+					>;
 				};
 
 				mstp6_clks: mstp6_clks@e6150148 {
@@ -762,6 +805,42 @@
 			phy-mode = "rgmii-id";
 			#address-cells = <1>;
 			#size-cells = <0>;
+		};
+
+		sdhi0: sd@ee100000 {
+			compatible = "renesas,sdhi-r8a7795";
+			reg = <0 0xee100000 0 0x880>;
+			interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp3_clks R8A7795_CLK_SD0>;
+			renesas,clk-rate = <50000000>;
+			status = "disabled";
+		};
+
+		sdhi1: sd@ee120000 {
+			compatible = "renesas,sdhi-r8a7795";
+			reg = <0 0xee120000 0 0x880>;
+			interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp3_clks R8A7795_CLK_SD1>;
+			renesas,clk-rate = <50000000>;
+			status = "disabled";
+		};
+
+		sdhi2: sd@ee140000 {
+			compatible = "renesas,sdhi-r8a7795";
+			reg = <0 0xee140000 0 0x880>;
+			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp3_clks R8A7795_CLK_SD2>;
+			renesas,clk-rate = <50000000>;
+			status = "disabled";
+		};
+
+		sdhi3: sd@ee160000 {
+			compatible = "renesas,sdhi-r8a7795";
+			reg = <0 0xee160000 0 0x880>;
+			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp3_clks R8A7795_CLK_SD3>;
+			renesas,clk-rate = <50000000>;
+			status = "disabled";
 		};
 
 		vsp2d0: vsp2@fea20000 {

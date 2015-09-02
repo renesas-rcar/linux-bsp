@@ -29,6 +29,10 @@
 #define R8A7795_CLK_SCIF0		7
 
 /* MSTP3 */
+#define R8A7795_CLK_SD0			14
+#define R8A7795_CLK_SD1			13
+#define R8A7795_CLK_SD2			12
+#define R8A7795_CLK_SD3			11
 #define R8A7795_CLK_SCIF2		10
 
 /* MSTP5 */
