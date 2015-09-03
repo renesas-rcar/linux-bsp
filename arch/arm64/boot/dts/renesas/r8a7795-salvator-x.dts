@@ -402,6 +402,49 @@
 &i2c4 {
 	status = "okay";
 	clock-frequency = <400000>;
+
+	composite-in@70 {
+		compatible = "adi,adv7482";
+		reg = <0x70>;
+
+		adi,input-interface = "ycbcr422";
+		adi,input-hdmi = "on";
+		adi,input-sdp = "on";
+		adi,sw-reset = "on";
+		port {
+			adv7482_sdp_in: endpoint@1 {
+				clock-lanes = <0>;
+				data-lanes = <1>;
+				remote-endpoint = <&vin1ep0>;
+
+				adv7482_rxb_out: endpoint@ {
+					remote-endpoint = <&csi2_1_in_ep>;
+				};
+			};
+		};
+	};
+
+	hdmi-in@70 {
+		compatible = "adi,adv7482";
+		reg = <0x34>;
+
+		adi,input-interface = "rgb888";
+		adi,input-hdmi = "on";
+		adi,input-sdp = "on";
+		adi,sw-reset = "on";
+		port {
+			adv7482_hdmi_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin0ep0>;
+
+				adv7482_rxa_out: endpoint@ {
+					remote-endpoint = <&csi2_0_in_ep>;
+				};
+			};
+		};
+	};
+
 };
 
 &avb {
@@ -549,10 +592,45 @@
 
 &csi2_0 {
 	status = "okay";
+
+	adi,input-interface = "rgb888";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		csi2_0_ep: endpoint@0 {
+			remote-endpoint = <&vin0ep0>;
+			clock-lanes = <0>;
+			data-lanes = <1 2 3 4>;
+		};
+
+		csi2_0_in_ep: endpoint@1 {
+			remote-endpoint = <&adv7482_rxa_out>;
+		};
+	};
 };
 
 &csi2_1 {
 	status = "okay";
+
+	adi,input-interface = "ycbcr422";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		csi2_1_ep: endpoint@0 {
+			remote-endpoint = <&vin1ep0>;
+			clock-lanes = <0>;
+			data-lanes = <1>;
+		};
+
+		csi2_1_in_ep: endpoint@1 {
+			remote-endpoint = <&adv7482_rxb_out>;
+		};
+
+	};
 };
 
 &du {
