@@ -141,6 +141,12 @@ enum {
 	FN_SEL_VSP_0,		FN_SEL_VSP_1,		FN_SEL_VSP_2,		FN_SEL_VSP_3,
 	FN_SEL_VIN4_0,		FN_SEL_VIN4_1,
 
+	/* EthernetAVB */
+	FN_AVB_MDC,		FN_AVB_MAGIC,		FN_AVB_PHY_INT,		FN_AVB_LINK,
+	FN_AVB_AVTP_PPS,
+	FN_AVB_AVTP_MATCH_A,	FN_AVB_AVTP_CAPTURE_A,
+	FN_AVB_AVTP_MATCH_B,	FN_AVB_AVTP_CAPTURE_B,
+
 	/* SCIF0 */
 	FN_RX0,		FN_TX0,		FN_SCK0,	FN_RTS0_N_TANS,		FN_CTS0_N,
 	/* SCIF1 */
@@ -270,6 +276,12 @@ enum {
 	SEL_VSP_0_MARK,		SEL_VSP_1_MARK,		SEL_VSP_2_MARK,		SEL_VSP_3_MARK,
 	SEL_VIN4_0_MARK,	SEL_VIN4_1_MARK,
 
+	/* EthernetAVB */
+	AVB_MDC_MARK,		AVB_MAGIC_MARK,		AVB_PHY_INT_MARK,	AVB_LINK_MARK,
+	AVB_AVTP_PPS_MARK,
+	AVB_AVTP_MATCH_A_MARK,	AVB_AVTP_CAPTURE_A_MARK,
+	AVB_AVTP_MATCH_B_MARK,	AVB_AVTP_CAPTURE_B_MARK,
+
 	/* SCIF0 */
 	RX0_MARK,	TX0_MARK,	SCK0_MARK,	RTS0_N_TANS_MARK,	CTS0_N_MARK,
 	/* SCIF1 */
@@ -295,33 +307,43 @@ static const u16 pinmux_data[] = {
 	PINMUX_DATA_GP_ALL(),
 
 	/* IPSR0 */
-	PINMUX_IPSR_MODS(IP0_7_4,	SCK4_A,		SEL_SCIF4_0),
+	PINMUX_IPSR_DATA(IP0_3_0,	AVB_MDC),
 
-	PINMUX_IPSR_MODS(IP0_11_8,	RX4_A,		SEL_SCIF4_0),
+	PINMUX_IPSR_DATA(IP0_7_4,	AVB_MAGIC),
+	PINMUX_IPSR_MODS(IP0_7_4,	SCK4_A,			SEL_SCIF4_0),
 
-	PINMUX_IPSR_MODS(IP0_15_12,	TX4_A,		SEL_SCIF4_0),
+	PINMUX_IPSR_DATA(IP0_11_8,	AVB_PHY_INT),
+	PINMUX_IPSR_MODS(IP0_11_8,	RX4_A,			SEL_SCIF4_0),
 
-	PINMUX_IPSR_MODS(IP0_19_16,	CTS4_N_A,	SEL_SCIF4_0),
+	PINMUX_IPSR_DATA(IP0_15_12,	AVB_LINK),
+	PINMUX_IPSR_MODS(IP0_15_12,	TX4_A,			SEL_SCIF4_0),
 
-	PINMUX_IPSR_MODS(IP0_23_20,	RTS4_N_TANS_A,	SEL_SCIF4_0),
+	PINMUX_IPSR_MODS(IP0_19_16,	AVB_AVTP_MATCH_A,	SEL_ETHERAVB_0),
+	PINMUX_IPSR_MODS(IP0_19_16,	CTS4_N_A,		SEL_SCIF4_0),
+
+	PINMUX_IPSR_MODS(IP0_23_20,	AVB_AVTP_CAPTURE_A,	SEL_ETHERAVB_0),
+	PINMUX_IPSR_MODS(IP0_23_20,	RTS4_N_TANS_A,		SEL_SCIF4_0),
 
 	/* IPSR1 */
+	PINMUX_IPSR_DATA(IP1_19_16,	AVB_AVTP_PPS),
 
 	/* IPSR2 */
-	PINMUX_IPSR_MODS(IP2_19_16,	SCK4_B,		SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP2_19_16,	SCK4_B,			SEL_SCIF4_1),
 
-	PINMUX_IPSR_MODS(IP2_23_20,	RX4_B,		SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP2_23_20,	RX4_B,			SEL_SCIF4_1),
 
-	PINMUX_IPSR_MODS(IP2_27_24,	TX4_B,		SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP2_27_24,	TX4_B,			SEL_SCIF4_1),
 
-	PINMUX_IPSR_MODS(IP2_31_28,	RX3_B,		SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP2_31_28,	RX3_B,			SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP2_31_28,	AVB_AVTP_MATCH_B,	SEL_ETHERAVB_1),
 
 	/* IPSR3 */
-	PINMUX_IPSR_MODS(IP3_3_0,	CTS4_N_B,	SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP3_3_0,	CTS4_N_B,		SEL_SCIF4_1),
 
-	PINMUX_IPSR_MODS(IP3_7_4,	RTS4_N_TANS_B,	SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP3_7_4,	RTS4_N_TANS_B,		SEL_SCIF4_1),
 
-	PINMUX_IPSR_MODS(IP3_11_8,	TX3_B,		SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP3_11_8,	TX3_B,			SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP3_11_8,	AVB_AVTP_CAPTURE_B,	SEL_ETHERAVB_1),
 
 	/* IPSR4 */
 	PINMUX_IPSR_DATA(IP4_23_20,	SCK3),
@@ -406,6 +428,70 @@ static const struct sh_pfc_pin pinmux_pins[] = {
 	PINMUX_GPIO_GP_ALL(),
 };
 
+/* - EtherAVB --------------------------------------------------------------- */
+static const unsigned int avb_link_pins[] = {
+	/* AVB_LINK */
+	RCAR_GP_PIN(2, 12),
+};
+static const unsigned int avb_link_mux[] = {
+	AVB_LINK_MARK,
+};
+static const unsigned int avb_magic_pins[] = {
+	/* AVB_MAGIC_ */
+	RCAR_GP_PIN(2, 10),
+};
+static const unsigned int avb_magic_mux[] = {
+	AVB_MAGIC_MARK,
+};
+static const unsigned int avb_phy_int_pins[] = {
+	/* AVB_PHY_INT */
+	RCAR_GP_PIN(2, 11),
+};
+static const unsigned int avb_phy_int_mux[] = {
+	AVB_PHY_INT_MARK,
+};
+static const unsigned int avb_mdc_pins[] = {
+	/* AVB_MDC */
+	RCAR_GP_PIN(2, 9),
+};
+static const unsigned int avb_mdc_mux[] = {
+	AVB_MDC_MARK,
+};
+static const unsigned int avb_avtp_pps_pins[] = {
+	/* AVB_AVTP_PPS */
+	RCAR_GP_PIN(2, 6),
+};
+static const unsigned int avb_avtp_pps_mux[] = {
+	AVB_AVTP_PPS_MARK,
+};
+static const unsigned int avb_avtp_match_a_pins[] = {
+	/* AVB_AVTP_MATCH_A */
+	RCAR_GP_PIN(2, 14),
+};
+static const unsigned int avb_avtp_match_a_mux[] = {
+	AVB_AVTP_MATCH_A_MARK,
+};
+static const unsigned int avb_avtp_capture_a_pins[] = {
+	/* AVB_AVTP_CAPTURE_A */
+	RCAR_GP_PIN(2, 13),
+};
+static const unsigned int avb_avtp_capture_a_mux[] = {
+	AVB_AVTP_CAPTURE_A_MARK,
+};
+static const unsigned int avb_avtp_match_b_pins[] = {
+	/*  AVB_AVTP_MATCH_B */
+	RCAR_GP_PIN(1, 8),
+};
+static const unsigned int avb_avtp_match_b_mux[] = {
+	AVB_AVTP_MATCH_B_MARK,
+};
+static const unsigned int avb_avtp_capture_b_pins[] = {
+	/* AVB_AVTP_CAPTURE_B */
+	RCAR_GP_PIN(1, 11),
+};
+static const unsigned int avb_avtp_capture_b_mux[] = {
+	AVB_AVTP_CAPTURE_B_MARK,
+};
 /* - SCIF0 ------------------------------------------------------------------ */
 static const unsigned int scif0_data_pins[] = {
 	/* RX, TX */
@@ -590,6 +676,15 @@ static const unsigned int scif5_clk_mux[] = {
 };
 
 static const struct sh_pfc_pin_group pinmux_groups[] = {
+	SH_PFC_PIN_GROUP(avb_link),
+	SH_PFC_PIN_GROUP(avb_magic),
+	SH_PFC_PIN_GROUP(avb_phy_int),
+	SH_PFC_PIN_GROUP(avb_mdc),
+	SH_PFC_PIN_GROUP(avb_avtp_pps),
+	SH_PFC_PIN_GROUP(avb_avtp_match_a),
+	SH_PFC_PIN_GROUP(avb_avtp_capture_a),
+	SH_PFC_PIN_GROUP(avb_avtp_match_b),
+	SH_PFC_PIN_GROUP(avb_avtp_capture_b),
 	SH_PFC_PIN_GROUP(scif0_data),
 	SH_PFC_PIN_GROUP(scif0_clk),
 	SH_PFC_PIN_GROUP(scif0_ctrl),
@@ -615,6 +710,18 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(scif4_ctrl_c),
 	SH_PFC_PIN_GROUP(scif5_data),
 	SH_PFC_PIN_GROUP(scif5_clk),
+};
+
+static const char * const avb_groups[] = {
+	"avb_link",
+	"avb_magic",
+	"avb_phy_int",
+	"avb_mdc",
+	"avb_avtp_pps",
+	"avb_avtp_match_a",
+	"avb_avtp_capture_a",
+	"avb_avtp_match_b",
+	"avb_avtp_capture_b",
 };
 
 static const char * const scif0_groups[] = {
@@ -661,6 +768,7 @@ static const char * const scif5_groups[] = {
 };
 
 static const struct sh_pfc_function pinmux_functions[] = {
+	SH_PFC_FUNCTION(avb),
 	SH_PFC_FUNCTION(scif0),
 	SH_PFC_FUNCTION(scif1),
 	SH_PFC_FUNCTION(scif2),
@@ -954,32 +1062,32 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_23_20 [4] */
-		0, 0, 0, FN_RTS4_N_TANS_A,
+		FN_AVB_AVTP_CAPTURE_A, 0, 0, FN_RTS4_N_TANS_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_19_16 [4] */
-		0, 0, 0, FN_CTS4_N_A,
+		FN_AVB_AVTP_MATCH_A, 0, 0, FN_CTS4_N_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_15_12 [4] */
-		0, 0, 0, FN_TX4_A,
+		FN_AVB_LINK, 0, 0, FN_TX4_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_11_8 [4] */
-		0, 0, 0, FN_RX4_A,
+		FN_AVB_PHY_INT, 0, 0, FN_RX4_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_7_4 [4] */
-		0, 0, 0, FN_SCK4_A,
+		FN_AVB_MAGIC, 0, 0, FN_SCK4_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_3_0 [4] */
-		0, 0, 0, 0,
+		FN_AVB_MDC, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
@@ -1001,7 +1109,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_19_16 [4] */
-		0, 0, 0, 0,
+		0, FN_AVB_AVTP_PPS, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
