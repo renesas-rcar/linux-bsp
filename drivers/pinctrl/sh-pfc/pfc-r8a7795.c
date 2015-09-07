@@ -165,6 +165,9 @@ enum {
 	FN_DU_EXVSYNC_DU_VSYNC,			FN_DU_EXHSYNC_DU_HSYNC,
 	FN_DU_EXODDF_DU_ODDF_DISP_CDE,
 
+	/* HDMI */
+	FN_HDMI0_CEC,		FN_HDMI1_CEC,
+
 	/* SCIF0 */
 	FN_RX0,		FN_TX0,		FN_SCK0,	FN_RTS0_N_TANS,		FN_CTS0_N,
 	/* SCIF1 */
@@ -317,6 +320,9 @@ enum {
 	DU_DISP_MARK,				DU_CDE_MARK,
 	DU_EXVSYNC_DU_VSYNC_MARK,		DU_EXHSYNC_DU_HSYNC_MARK,
 	DU_EXODDF_DU_ODDF_DISP_CDE_MARK,
+
+	/* HDMI */
+	HDMI0_CEC_MARK,		HDMI1_CEC_MARK,
 
 	/* SCIF0 */
 	RX0_MARK,	TX0_MARK,	SCK0_MARK,	RTS0_N_TANS_MARK,	CTS0_N_MARK,
@@ -649,6 +655,21 @@ static const unsigned int du_disp_pins[] = {
 static const unsigned int du_disp_mux[] = {
 	DU_DISP_MARK,
 };
+/* - HDMI ------------------------------------------------------------------- */
+static const unsigned int hdmi0_cec_pins[] = {
+	/* HDMI0_CEC */
+	RCAR_GP_PIN(7, 2),
+};
+static const unsigned int hdmi0_cec_mux[] = {
+	HDMI0_CEC_MARK,
+};
+static const unsigned int hdmi1_cec_pins[] = {
+	/* HDMI0_CEC */
+	RCAR_GP_PIN(7, 3),
+};
+static const unsigned int hdmi1_cec_mux[] = {
+	HDMI1_CEC_MARK,
+};
 /* - SCIF0 ------------------------------------------------------------------ */
 static const unsigned int scif0_data_pins[] = {
 	/* RX, TX */
@@ -849,6 +870,8 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(du_oddf),
 	SH_PFC_PIN_GROUP(du_cde),
 	SH_PFC_PIN_GROUP(du_disp),
+	SH_PFC_PIN_GROUP(hdmi0_cec),
+	SH_PFC_PIN_GROUP(hdmi1_cec),
 	SH_PFC_PIN_GROUP(scif0_data),
 	SH_PFC_PIN_GROUP(scif0_clk),
 	SH_PFC_PIN_GROUP(scif0_ctrl),
@@ -898,6 +921,14 @@ static const char * const du_groups[] = {
 	"du_disp",
 };
 
+static const char * const hdmi0_groups[] = {
+	"hdmi0_cec",
+};
+
+static const char * const hdmi1_groups[] = {
+	"hdmi1_cec",
+};
+
 static const char * const scif0_groups[] = {
 	"scif0_data",
 	"scif0_clk",
@@ -944,6 +975,8 @@ static const char * const scif5_groups[] = {
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(avb),
 	SH_PFC_FUNCTION(du),
+	SH_PFC_FUNCTION(hdmi0),
+	SH_PFC_FUNCTION(hdmi1),
 	SH_PFC_FUNCTION(scif0),
 	SH_PFC_FUNCTION(scif1),
 	SH_PFC_FUNCTION(scif2),
