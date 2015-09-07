@@ -6,7 +6,10 @@ It can be found in the Renesas R-Car second generation SoCs.
 
 Required properties:
 
-  - compatible: Must contain "renesas,vsp1"
+  - compatible: Must contain one of the following values
+    - "renesas,vsp1" for the R-Car Gen2 VSP1
+    - "renesas,vsp2" for the R-Car Gen3 VSP2BC, VSP2BD or VSP2I
+    - "renesas,vsp2d" for the R-Car Gen3 VSP2D
 
   - reg: Base address and length of the registers block for the VSP1.
   - interrupts: VSP1 interrupt specifier.
