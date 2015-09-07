@@ -1,7 +1,7 @@
 /*
  * rcar_du_regs.h  --  R-Car Display Unit Registers Definitions
  *
- * Copyright (C) 2013 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -259,6 +259,25 @@
 #define DIDSR_LCDS_MASK(n)	(3 << (8 + (n) * 2))
 #define DIDSR_PDCS_CLK(n, clk)	(clk << ((n) * 2))
 #define DIDSR_PDCS_MASK(n)	(3 << ((n) * 2))
+
+#define DPLLCR			0x20044
+#define DPLLCR_CODE		(0x95 << 24)
+#define DPLLCR_PLCS1		(1 << 23)
+#define DPLLCR_PLCS0		(1 << 20)
+#define DPLLCR_CLKE		(1 << 18)
+#define DPLLCR_FDPLL(n)		((n) << 12)	/* n=0 Setting prohibited */
+/* H'00 to H'26, H'78 to H'7F: Setting prohibited.*/
+#define DPLLCR_N(n)		((n) << 5)
+#define DPLLCR_M(n)		((n) << 3)
+#define DPLLCR_STBY		(1 << 2)
+#define DPLLCR_INCS_DPLL01_DOTCLKIN02	(0 << 0)
+#define DPLLCR_INCS_DPLL01_DOTCLKIN13	(1 << 1)
+
+#define DPLLC2R			0x20048
+#define DPLLC2R_CODE		(0x95 << 24)
+#define DPLLC2R_SELC		(1 << 12)
+#define DPLLC2R_M(n)		((n) << 8)
+#define DPLLC2R_FDPLL(n)	((n) << 0)	/* n=0 Setting prohibited */
 
 /* -----------------------------------------------------------------------------
  * Display Timing Generation Registers
