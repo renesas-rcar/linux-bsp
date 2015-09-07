@@ -1,6 +1,7 @@
 /*
  * DesignWare High-Definition Multimedia Interface (HDMI) driver
  *
+ * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2013-2015 Mentor Graphics Inc.
  * Copyright (C) 2011-2013 Freescale Semiconductor, Inc.
  * Copyright (C) 2010, Guennadi Liakhovetski <g.liakhovetski at gmx.de>
@@ -21,6 +22,7 @@
 #include <linux/of_device.h>
 #include <linux/spinlock.h>
 
+#include <drm/drm_atomic_helper.h>
 #include <drm/drm_of.h>
 #include <drm/drmP.h>
 #include <drm/drm_crtc_helper.h>
@@ -140,6 +142,7 @@ struct dw_hdmi {
 	struct device *dev;
 	struct clk *isfr_clk;
 	struct clk *iahb_clk;
+
 	struct dw_hdmi_i2c *i2c;
 
 	struct hdmi_data_info hdmi_data;
@@ -168,6 +171,10 @@ struct dw_hdmi {
 	unsigned int audio_n;
 	bool audio_enable;
 	int ratio;
+	bool interlaced;
+	bool isfr_use;
+	bool iahb_use;
+	int num;
 
 	void (*write)(struct dw_hdmi *hdmi, u8 val, int offset);
 	u8 (*read)(struct dw_hdmi *hdmi, int offset);
@@ -615,7 +622,7 @@ static void hdmi_set_clk_regenerator(struct dw_hdmi *hdmi,
 
 	n = hdmi_compute_n(sample_rate, pixel_clk, ratio);
 	cts = hdmi_compute_cts(sample_rate, pixel_clk, ratio);
-	if (!cts) {
+	if ((!cts) && (hdmi->dev_type != RCAR_HDMI)) {
 		dev_err(hdmi->dev,
 			"%s: pixel clock/sample rate not supported: %luMHz / %ukHz\n",
 			__func__, pixel_clk, sample_rate);
@@ -1067,6 +1074,7 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, unsigned char prep,
 	const struct dw_hdmi_mpll_config *mpll_config = pdata->mpll_cfg;
 	const struct dw_hdmi_curr_ctrl *curr_ctrl = pdata->cur_ctr;
 	const struct dw_hdmi_phy_config *phy_config = pdata->phy_config;
+	const struct dw_hdmi_multi_div *multi_div = pdata->multi_div;
 
 	if (prep)
 		return -EINVAL;
@@ -1102,9 +1110,23 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, unsigned char prep,
 		    phy_config->mpixelclock)
 			break;
 
+	if (hdmi->dev_type == RCAR_HDMI) {
+		for (; multi_div->mpixelclock != (~0UL); multi_div++)
+			if (hdmi->hdmi_data.video_mode.mpixelclock <=
+			    multi_div->mpixelclock)
+				break;
+	}
+
 	if (mpll_config->mpixelclock == ~0UL ||
 	    curr_ctrl->mpixelclock == ~0UL ||
 	    phy_config->mpixelclock == ~0UL) {
+		dev_err(hdmi->dev, "Pixel clock %d - unsupported by HDMI\n",
+			hdmi->hdmi_data.video_mode.mpixelclock);
+		return -EINVAL;
+	}
+
+	if ((multi_div->mpixelclock == ~0UL) &&
+		(hdmi->dev_type == RCAR_HDMI)) {
 		dev_err(hdmi->dev, "Pixel clock %d - unsupported by HDMI\n",
 			hdmi->hdmi_data.video_mode.mpixelclock);
 		return -EINVAL;
@@ -1136,21 +1158,27 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, unsigned char prep,
 	hdmi_phy_test_clear(hdmi, 0);
 
 	hdmi_phy_i2c_write(hdmi, mpll_config->res[res_idx].cpce, 0x06);
-	hdmi_phy_i2c_write(hdmi, mpll_config->res[res_idx].gmp, 0x15);
+	if (hdmi->dev_type != RCAR_HDMI)
+		hdmi_phy_i2c_write(hdmi, mpll_config->res[res_idx].gmp, 0x15);
 
 	/* CURRCTRL */
 	hdmi_phy_i2c_write(hdmi, curr_ctrl->curr[res_idx], 0x10);
 
-	hdmi_phy_i2c_write(hdmi, 0x0000, 0x13);  /* PLLPHBYCTRL */
-	hdmi_phy_i2c_write(hdmi, 0x0006, 0x17);
+	if (hdmi->dev_type == RCAR_HDMI)
+		hdmi_phy_i2c_write(hdmi, multi_div->multi[res_idx], 0x11);
 
-	hdmi_phy_i2c_write(hdmi, phy_config->term, 0x19);  /* TXTERM */
-	hdmi_phy_i2c_write(hdmi, phy_config->sym_ctr, 0x09); /* CKSYMTXCTRL */
-	hdmi_phy_i2c_write(hdmi, phy_config->vlev_ctr, 0x0E); /* VLEVCTRL */
+	if (hdmi->dev_type != RCAR_HDMI) {
+		hdmi_phy_i2c_write(hdmi, 0x0000, 0x13);  /* PLLPHBYCTRL */
+		hdmi_phy_i2c_write(hdmi, 0x0006, 0x17);
 
-	/* REMOVE CLK TERM */
-	hdmi_phy_i2c_write(hdmi, 0x8000, 0x05);  /* CKCALCTRL */
-
+		hdmi_phy_i2c_write(hdmi, phy_config->term, 0x19);  /* TXTERM */
+		hdmi_phy_i2c_write(hdmi, phy_config->sym_ctr,
+						 0x09); /* CKSYMTXCTRL */
+		hdmi_phy_i2c_write(hdmi, phy_config->vlev_ctr,
+						 0x0E); /* VLEVCTRL */
+		/* REMOVE CLK TERM */
+		hdmi_phy_i2c_write(hdmi, 0x8000, 0x05);  /* CKCALCTRL */
+	}
 	dw_hdmi_phy_enable_powerdown(hdmi, false);
 
 	/* toggle TMDS enable */
@@ -1161,7 +1189,8 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, unsigned char prep,
 	dw_hdmi_phy_gen2_txpwron(hdmi, 1);
 	dw_hdmi_phy_gen2_pddq(hdmi, 0);
 
-	if (hdmi->dev_type == RK3288_HDMI)
+	if ((hdmi->dev_type == RK3288_HDMI) ||
+		(hdmi->dev_type == RCAR_HDMI))
 		dw_hdmi_phy_enable_spare(hdmi, 1);
 
 	/*Wait for PHY PLL lock */
@@ -1764,6 +1793,16 @@ static struct drm_connector_funcs dw_hdmi_connector_funcs = {
 	.destroy = dw_hdmi_connector_destroy,
 };
 
+static struct drm_connector_funcs dw_hdmi_rcar_connector_funcs = {
+	.dpms = drm_atomic_helper_connector_dpms,
+	.fill_modes = drm_helper_probe_single_connector_modes,
+	.detect = dw_hdmi_connector_detect,
+	.destroy = dw_hdmi_connector_destroy,
+	.reset = drm_atomic_helper_connector_reset,
+	.atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
+	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
+};
+
 static struct drm_connector_helper_funcs dw_hdmi_connector_helper_funcs = {
 	.get_modes = dw_hdmi_connector_get_modes,
 	.mode_valid = dw_hdmi_connector_mode_valid,
@@ -1880,12 +1919,26 @@ static int dw_hdmi_register(struct drm_device *drm, struct dw_hdmi *hdmi)
 	encoder->bridge = bridge;
 	hdmi->connector.polled = DRM_CONNECTOR_POLL_HPD;
 
+	if (hdmi->interlaced)
+		hdmi->connector.interlace_allowed = true;
+
 	drm_connector_helper_add(&hdmi->connector,
 				 &dw_hdmi_connector_helper_funcs);
-	drm_connector_init(drm, &hdmi->connector, &dw_hdmi_connector_funcs,
-			   DRM_MODE_CONNECTOR_HDMIA);
 
-	hdmi->connector.encoder = encoder;
+	if (hdmi->dev_type == RCAR_HDMI) {
+		drm_connector_init(drm, &hdmi->connector,
+				   &dw_hdmi_rcar_connector_funcs,
+				   DRM_MODE_CONNECTOR_HDMIA);
+		ret = drm_connector_register(&hdmi->connector);
+		if (ret < 0)
+			return ret;
+	} else {
+		drm_connector_init(drm, &hdmi->connector,
+				   &dw_hdmi_connector_funcs,
+				   DRM_MODE_CONNECTOR_HDMIA);
+
+		hdmi->connector.encoder = encoder;
+	}
 
 	drm_mode_connector_attach_encoder(&hdmi->connector, encoder);
 
@@ -1936,6 +1989,11 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 		return -EINVAL;
 	}
 
+	if (of_property_read_u32(np, "interlaced", &val) == 0)
+		hdmi->interlaced = val;
+	else
+		hdmi->interlaced = false;
+
 	ddc_node = of_parse_phandle(np, "ddc-i2c-bus", 0);
 	if (ddc_node) {
 		hdmi->ddc = of_find_i2c_adapter_by_node(ddc_node);
@@ -1953,30 +2011,59 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 	if (IS_ERR(hdmi->regs))
 		return PTR_ERR(hdmi->regs);
 
-	hdmi->isfr_clk = devm_clk_get(hdmi->dev, "isfr");
-	if (IS_ERR(hdmi->isfr_clk)) {
-		ret = PTR_ERR(hdmi->isfr_clk);
-		dev_err(hdmi->dev, "Unable to get HDMI isfr clk: %d\n", ret);
-		return ret;
+	if (of_property_read_u32(np, "clock-isfr", &val) == 0)
+		hdmi->isfr_use = val;
+	else
+		hdmi->isfr_use = true;
+
+	if (hdmi->isfr_use) {
+		if (of_property_read_u32(np, "hdmi-num", &val) == 0)
+			hdmi->num = val;
+		else
+			hdmi->num = -1;
+
+		if (hdmi->num > 1) {
+			char name[7];
+
+			sprintf(name, "isfr.%u", hdmi->plat_data->index);
+			hdmi->isfr_clk = devm_clk_get(hdmi->dev, name);
+		} else
+			hdmi->isfr_clk = devm_clk_get(hdmi->dev, "isfr");
+		if (IS_ERR(hdmi->isfr_clk)) {
+			ret = PTR_ERR(hdmi->isfr_clk);
+			dev_err(hdmi->dev,
+				 "Unable to get HDMI isfr clk: %d\n", ret);
+			return ret;
+		}
+
+		ret = clk_prepare_enable(hdmi->isfr_clk);
+		if (ret) {
+			dev_err(hdmi->dev,
+				 "Cannot enable HDMI isfr clock: %d\n", ret);
+			return ret;
+		}
 	}
 
-	ret = clk_prepare_enable(hdmi->isfr_clk);
-	if (ret) {
-		dev_err(hdmi->dev, "Cannot enable HDMI isfr clock: %d\n", ret);
-		return ret;
-	}
+	if (of_property_read_u32(np, "clock-iahb", &val) == 0)
+		hdmi->iahb_use = val;
+	else
+		hdmi->iahb_use = true;
 
-	hdmi->iahb_clk = devm_clk_get(hdmi->dev, "iahb");
-	if (IS_ERR(hdmi->iahb_clk)) {
-		ret = PTR_ERR(hdmi->iahb_clk);
-		dev_err(hdmi->dev, "Unable to get HDMI iahb clk: %d\n", ret);
-		goto err_isfr;
-	}
+	if (hdmi->iahb_use) {
+		hdmi->iahb_clk = devm_clk_get(hdmi->dev, "iahb");
+		if (IS_ERR(hdmi->iahb_clk)) {
+			ret = PTR_ERR(hdmi->iahb_clk);
+			dev_err(hdmi->dev,
+				 "Unable to get HDMI iahb clk: %d\n", ret);
+			goto err_isfr;
+		}
 
-	ret = clk_prepare_enable(hdmi->iahb_clk);
-	if (ret) {
-		dev_err(hdmi->dev, "Cannot enable HDMI iahb clock: %d\n", ret);
-		goto err_isfr;
+		ret = clk_prepare_enable(hdmi->iahb_clk);
+		if (ret) {
+			dev_err(hdmi->dev,
+				 "Cannot enable HDMI iahb clock: %d\n", ret);
+			goto err_isfr;
+		}
 	}
 
 	/* Product and revision IDs */
@@ -2040,9 +2127,11 @@ err_iahb:
 	if (hdmi->i2c)
 		i2c_del_adapter(&hdmi->i2c->adap);
 
-	clk_disable_unprepare(hdmi->iahb_clk);
+	if (hdmi->iahb_use)
+		clk_disable_unprepare(hdmi->iahb_clk);
 err_isfr:
-	clk_disable_unprepare(hdmi->isfr_clk);
+	if (hdmi->isfr_use)
+		clk_disable_unprepare(hdmi->isfr_clk);
 
 	return ret;
 }
@@ -2058,8 +2147,11 @@ void dw_hdmi_unbind(struct device *dev, struct device *master, void *data)
 	hdmi->connector.funcs->destroy(&hdmi->connector);
 	hdmi->encoder->funcs->destroy(hdmi->encoder);
 
-	clk_disable_unprepare(hdmi->iahb_clk);
-	clk_disable_unprepare(hdmi->isfr_clk);
+	if (hdmi->iahb_use)
+		clk_disable_unprepare(hdmi->iahb_clk);
+
+	if (hdmi->isfr_use)
+		clk_disable_unprepare(hdmi->isfr_clk);
 
 	if (hdmi->i2c)
 		i2c_del_adapter(&hdmi->i2c->adap);
