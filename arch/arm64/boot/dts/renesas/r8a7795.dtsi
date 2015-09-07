@@ -378,6 +378,16 @@
 				clock-mult = <1>;
 			};
 
+			hdmi_clk: hdmi_clk@e6150250 {
+				compatible = "renesas,cpg-div6-clock";
+				reg = <0 0xe6150250 0 4>;
+				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
+				#clock-cells = <0>;
+				clock-div = <16>;
+				clock-mult = <1>;
+				clock-output-names = "hdmi";
+			};
+
 			cpg_clocks: cpg_clocks@e6150000 {
 				#address-cells = <2>;
 				#size-cells = <2>;
@@ -420,18 +430,43 @@
 					clock-indices = <R8A7795_CLK_SCIF2>;
 				};
 
+				mstp6_clks: mstp6_clks@e6150148 {
+					compatible = "renesas,r8a7795-mstp-clocks",
+						     "renesas,cpg-mstp-clocks";
+					reg = <0 0xe6150148 0 4>, <0 0xe61501c0 0 4>;
+					clocks = <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
+						 <&s2d1_clk>;
+					#clock-cells = <1>;
+					clock-indices = <
+						R8A7795_CLK_VSPD3 R8A7795_CLK_VSPD2
+						R8A7795_CLK_VSPD1 R8A7795_CLK_VSPD0
+					>;
+					clock-output-names = "vsp1-du3", "vsp1-du2",
+							     "vsp1-du1", "vsp1-du0";
+				};
+
 				mstp7_clks: mstp7_clks@e615014c {
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe615014c 0 4>, <0 0xe61501c4 0 4>;
-					clocks =  <&s3d4_clk>, <&s3d4_clk>, <&s3d4_clk>,
-						  <&s3d4_clk>;
+					clocks = <&s3d4_clk>, <&s3d4_clk>, <&s3d4_clk>,
+						 <&s3d4_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>, <&hdmi_clk>,
+						 <&hdmi_clk>;
 					#clock-cells = <1>;
-					renesas,clock-indices = <R8A7795_CLK_HSUSB
-								 R8A7795_CLK_EHCI0
-								 R8A7795_CLK_EHCI1
-								 R8A7795_CLK_EHCI2>;
-					clock-output-names = "hsusb", "ehci0", "ehci1", "ehci2";
+					renesas,clock-indices = <
+						R8A7795_CLK_HSUSB R8A7795_CLK_EHCI0
+						R8A7795_CLK_EHCI1 R8A7795_CLK_EHCI2
+						R8A7795_CLK_DU3 R8A7795_CLK_DU2
+						R8A7795_CLK_DU1 R8A7795_CLK_DU0
+						R8A7795_CLK_LVDS R8A7795_CLK_HDMI1
+						R8A7795_CLK_HDMI0
+					>;
+					clock-output-names =
+						"hsusb", "ehci0", "ehci1", "ehci2",
+						"du3", "du2", "du1", "du0", "lvds",
+						"isfr1","isfr0";
 				};
 
 				mstp8_clks: mstp8_clks@e6150990 {
@@ -727,6 +762,115 @@
 			phy-mode = "rgmii-id";
 			#address-cells = <1>;
 			#size-cells = <0>;
+		};
+
+		vsp2d0: vsp2@fea20000 {
+			compatible = "renesas,vsp2d";
+			reg = <0 0xfea20000 0 0x8000>;
+			interrupts = <0 466 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPD0>;
+
+			renesas,has-lif;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <1>;
+		};
+
+		vsp2d1: vsp2@fea28000 {
+			compatible = "renesas,vsp2d";
+			reg = <0 0xfea28000 0 0x8000>;
+			interrupts = <0 467 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPD1>;
+
+			renesas,has-lif;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <1>;
+		};
+
+		vsp2d2: vsp2@fea30000 {
+			compatible = "renesas,vsp2d";
+			reg = <0 0xfea30000 0 0x8000>;
+			interrupts = <0 468 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPD2>;
+
+			renesas,has-lif;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <1>;
+		};
+
+		vsp2d3: vsp2@fea38000 {
+			compatible = "renesas,vsp2d";
+			reg = <0 0xfea38000 0 0x8000>;
+			interrupts = <0 469 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPD3>;
+
+			renesas,has-lif;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <1>;
+		};
+
+		hdmi0: hdmi0@fead0000 {
+			compatible = "renesas,hdmi0";
+			reg = <0 0xfead0000 0 0x10000>;
+			interrupts = <0 389 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp7_clks R8A7795_CLK_HDMI0>;
+		};
+
+		hdmi1: hdmi1@feae0000 {
+			compatible = "renesas,hdmi1";
+			reg = <0 0xfeae0000 0 0x10000>;
+			interrupts = <0 436 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp7_clks R8A7795_CLK_HDMI1>;
+		};
+
+		du: display@feb00000 {
+			compatible = "renesas,du-r8a7795";
+			reg = <0 0xfeb00000 0 0x80000>,
+				<0 0xfeb90000 0 0x1c>;
+			reg-names = "du", "lvds";
+			interrupts = <0 256 IRQ_TYPE_LEVEL_HIGH>,
+				<0 268 IRQ_TYPE_LEVEL_HIGH>,
+				<0 269 IRQ_TYPE_LEVEL_HIGH>,
+				<0 270 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp7_clks R8A7795_CLK_DU0>,
+				<&mstp7_clks R8A7795_CLK_DU1>,
+				<&mstp7_clks R8A7795_CLK_DU2>,
+				<&mstp7_clks R8A7795_CLK_DU3>,
+				<&mstp7_clks R8A7795_CLK_LVDS>;
+			clock-names = "du.0", "du.1", "du.2", "du.3", "lvds";
+			status = "disabled";
+
+			vsps = <&vsp2d0 &vsp2d1 &vsp2d2 &vsp2d3>;
+
+			hdmi = <&hdmi0 &hdmi1>;
+			interlaced = <1>;
+			clock-iahb = <0>;
+			hdmi-num = <2>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					du_out_rgb: endpoint {
+					};
+				};
+				port@1 {
+					reg = <1>;
+					du_out_hdmi0: endpoint {
+					};
+				};
+				port@2 {
+					reg = <2>;
+					du_out_hdmi1: endpoint {
+					};
+				};
+				port@3 {
+					reg = <3>;
+					du_out_lvds: endpoint {
+					};
+				};
+			};
 		};
 	};
 };
