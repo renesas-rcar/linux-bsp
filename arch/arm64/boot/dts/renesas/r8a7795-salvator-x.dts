@@ -431,6 +431,10 @@
 	status = "okay";
 };
 
+&sata {
+	status = "okay";
+};
+
 &du {
 	pinctrl-0 = <&du_pins>;
 	pinctrl-names = "default";
