@@ -352,11 +352,8 @@
 					     "renesas,rcar-gen3-cpg-clocks";
 				reg = <0 0xe6150000 0 0x1000>;
 				clocks = <&extal_clk>;
-				clock-indices = <
-					R8A7795_CLK_MAIN R8A7795_CLK_PLL0
-					R8A7795_CLK_PLL1 R8A7795_CLK_PLL2
-					R8A7795_CLK_PLL3 R8A7795_CLK_PLL4
-				>;
+				clock-output-names = "main", "pll0", "pll1","pll2",
+						     "pll3", "pll4";
 				#power-domain-cells = <0>;
 
 				mstp2_clks: mstp2_clks@e6150138 {
