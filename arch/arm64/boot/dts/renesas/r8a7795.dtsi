@@ -516,9 +516,11 @@
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150990 0 4>, <0 0xe61509a0 0 4>;
-					clocks = <&s3d2_clk>;
+					clocks = <&s3d2_clk>, <&s3d2_clk>;
 					#clock-cells = <1>;
-					clock-indices = <R8A7795_CLK_AVB>;
+					clock-indices = <
+						R8A7795_CLK_AVB R8A7795_CLK_SATA
+					>;
 				};
 
 				mstp9_clks: mstp9_clks@e6150994 {
@@ -840,6 +842,14 @@
 			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp3_clks R8A7795_CLK_SD3>;
 			renesas,clk-rate = <50000000>;
+			status = "disabled";
+		};
+
+		sata: sata@ee300000 {
+			compatible = "renesas,sata-r8a7795";
+			reg = <0 0xee300000 0 0x1fff>;
+			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp8_clks R8A7795_CLK_SATA>;
 			status = "disabled";
 		};
 
