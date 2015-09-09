@@ -221,6 +221,11 @@ enum {
 	/* USB2 */
 	FN_USB2_PWEN,	FN_USB2_OVC,
 
+	/* USB30 */
+	FN_USB30_PWEN,	FN_USB30_OVC,
+	/* USB31 */
+	FN_USB31_PWEN,	FN_USB31_OVC,
+
 	PINMUX_FUNCTION_END,
 
 	PINMUX_MARK_BEGIN,
@@ -411,6 +416,11 @@ enum {
 	USB1_PWEN_MARK,	USB1_OVC_MARK,
 	/* USB2 */
 	USB2_PWEN_MARK,	USB2_OVC_MARK,
+
+	/* USB30 */
+	USB30_PWEN_MARK, USB30_OVC_MARK,
+	/* USB31 */
+	USB31_PWEN_MARK, USB31_OVC_MARK,
 
 	PINMUX_MARK_END,
 };
@@ -666,7 +676,14 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_IPSR_DATA(IP16_23_20,	USB1_OVC),
 
+	PINMUX_IPSR_DATA(IP16_27_24,	USB30_PWEN),
+
+	PINMUX_IPSR_DATA(IP16_31_28,	USB30_OVC),
+
 	/* IPSR17 */
+	PINMUX_IPSR_DATA(IP17_3_0,	USB31_PWEN),
+
+	PINMUX_IPSR_DATA(IP17_7_4,	USB31_OVC),
 };
 
 static const struct sh_pfc_pin pinmux_pins[] = {
@@ -1231,6 +1248,22 @@ static const unsigned int usb2_pins[] = {
 static const unsigned int usb2_mux[] = {
 	USB2_PWEN_MARK, USB2_OVC_MARK,
 };
+/* - USB30 ------------------------------------------------------------------ */
+static const unsigned int usb30_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 28), RCAR_GP_PIN(6, 29),
+};
+static const unsigned int usb30_mux[] = {
+	USB30_PWEN_MARK, USB30_OVC_MARK,
+};
+/* - USB31 ------------------------------------------------------------------ */
+static const unsigned int usb31_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 30), RCAR_GP_PIN(6, 31),
+};
+static const unsigned int usb31_mux[] = {
+	USB31_PWEN_MARK, USB31_OVC_MARK,
+};
 
 static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(avb_link),
@@ -1305,6 +1338,8 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(usb0),
 	SH_PFC_PIN_GROUP(usb1),
 	SH_PFC_PIN_GROUP(usb2),
+	SH_PFC_PIN_GROUP(usb30),
+	SH_PFC_PIN_GROUP(usb31),
 };
 
 static const char * const avb_groups[] = {
@@ -1430,6 +1465,14 @@ static const char * const usb2_groups[] = {
 	"usb2",
 };
 
+static const char * const usb30_groups[] = {
+	"usb30",
+};
+
+static const char * const usb31_groups[] = {
+	"usb31",
+};
+
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(avb),
 	SH_PFC_FUNCTION(du),
@@ -1448,6 +1491,8 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(usb0),
 	SH_PFC_FUNCTION(usb1),
 	SH_PFC_FUNCTION(usb2),
+	SH_PFC_FUNCTION(usb30),
+	SH_PFC_FUNCTION(usb31),
 };
 
 static const struct pinmux_cfg_reg pinmux_config_regs[] = {
@@ -2397,12 +2442,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 	},
 	{ PINMUX_CFG_REG("IPSR16", 0xe6060240, 32, 4) {
 		/* IP16_31_28 [4] */
-		0, 0, 0, 0,
+		FN_USB30_OVC, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_27_24 [4] */
-		0, 0, 0, 0,
+		FN_USB30_PWEN, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -2469,12 +2514,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP17_7_4 [4] */
-		0, 0, 0, 0,
+		FN_USB31_OVC, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP17_3_0 [4] */
-		0, 0, 0, 0,
+		FN_USB31_PWEN, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
