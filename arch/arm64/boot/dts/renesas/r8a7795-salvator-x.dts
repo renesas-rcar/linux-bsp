@@ -81,6 +81,16 @@
 	status = "okay";
 };
 
+&i2c2 {
+	status = "okay";
+	clock-frequency = <400000>;
+};
+
+&i2c4 {
+	status = "okay";
+	clock-frequency = <400000>;
+};
+
 &avb {
 	pinctrl-0 = <&avb_pins>;
 	pinctrl-names = "default";
