@@ -770,6 +770,7 @@
 			interrupts = <0 466 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp6_clks R8A7795_CLK_VSPD0>;
 
+			renesas,has-bru;
 			renesas,has-lif;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <1>;
@@ -781,6 +782,7 @@
 			interrupts = <0 467 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp6_clks R8A7795_CLK_VSPD1>;
 
+			renesas,has-bru;
 			renesas,has-lif;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <1>;
@@ -792,6 +794,7 @@
 			interrupts = <0 468 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp6_clks R8A7795_CLK_VSPD2>;
 
+			renesas,has-bru;
 			renesas,has-lif;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <1>;
@@ -803,6 +806,7 @@
 			interrupts = <0 469 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp6_clks R8A7795_CLK_VSPD3>;
 
+			renesas,has-bru;
 			renesas,has-lif;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <1>;
