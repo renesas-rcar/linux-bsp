@@ -168,6 +168,17 @@ enum {
 	/* HDMI */
 	FN_HDMI0_CEC,		FN_HDMI1_CEC,
 
+	/* I2C1 */
+	FN_SCL1_A,		FN_SDA1_A,
+	FN_SCL1_B,		FN_SDA1_B,
+	/* I2C2 */
+	FN_SCL2_A,		FN_SDA2_A,
+	FN_SCL2_B,		FN_SDA2_B,
+	/* I2C6 */
+	FN_SCL6_A,		FN_SDA6_A,
+	FN_SCL6_B,		FN_SDA6_B,
+	FN_SCL6_C,		FN_SDA6_C,
+
 	/* MSIOF0 */
 	FN_MSIOF0_SCK,		FN_MSIOF0_SYNC,		FN_MSIOF0_SS1,		FN_MSIOF0_SS2,
 	FN_MSIOF0_TXD,		FN_MSIOF0_RXD,
@@ -400,6 +411,17 @@ enum {
 	/* HDMI */
 	HDMI0_CEC_MARK,		HDMI1_CEC_MARK,
 
+	/* I2C1 */
+	SCL1_A_MARK,		SDA1_A_MARK,
+	SCL1_B_MARK,		SDA1_B_MARK,
+	/* I2C2 */
+	SCL2_A_MARK,		SDA2_A_MARK,
+	SCL2_B_MARK,		SDA2_B_MARK,
+	/* I2C6 */
+	SCL6_A_MARK,		SDA6_A_MARK,
+	SCL6_B_MARK,		SDA6_B_MARK,
+	SCL6_C_MARK,		SDA6_C_MARK,
+
 	/* MSIOF0 */
 	MSIOF0_SCK_MARK,	MSIOF0_SYNC_MARK,	MSIOF0_SS1_MARK,	MSIOF0_SS2_MARK,
 	MSIOF0_TXD_MARK,	MSIOF0_RXD_MARK,
@@ -582,6 +604,7 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_IPSR_MODS(IP2_31_28,	MSIOF2_SYNC_A,		SEL_MSIOF2_0),
 	PINMUX_IPSR_MODS(IP2_31_28,	RX3_B,			SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP2_31_28,	SDA6_A,			SEL_I2C6_0),
 	PINMUX_IPSR_MODS(IP2_31_28,	AVB_AVTP_MATCH_B,	SEL_ETHERAVB_1),
 
 	/* IPSR3 */
@@ -593,6 +616,7 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_IPSR_MODS(IP3_11_8,	MSIOF2_TXD_A,		SEL_MSIOF2_0),
 	PINMUX_IPSR_MODS(IP3_11_8,	TX3_B,			SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP3_11_8,	SCL6_A,			SEL_I2C6_0),
 	PINMUX_IPSR_MODS(IP3_11_8,	AVB_AVTP_CAPTURE_B,	SEL_ETHERAVB_1),
 
 	PINMUX_IPSR_MODS(IP3_15_12,	MSIOF3_SCK_C,		SEL_MSIOF3_2),
@@ -628,9 +652,11 @@ static const u16 pinmux_data[] = {
 	/* IPSR5 */
 	PINMUX_IPSR_MODS(IP5_3_0,	MSIOF3_TXD_D,	SEL_MSIOF3_3),
 	PINMUX_IPSR_DATA(IP5_3_0,	CTS3_N),
+	PINMUX_IPSR_MODS(IP5_3_0,	SCL6_B,		SEL_I2C6_1),
 
 	PINMUX_IPSR_MODS(IP5_7_4,	MSIOF3_SS1_D,	SEL_MSIOF3_3),
 	PINMUX_IPSR_DATA(IP5_7_4,	RTS3_N_TANS),
+	PINMUX_IPSR_MODS(IP5_7_4,	SDA6_B,		SEL_I2C6_1),
 
 	PINMUX_IPSR_DATA(IP5_11_8,	DU_DOTCLKOUT0),
 
@@ -679,9 +705,11 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_IPSR_MODS(IP7_7_4,	MSIOF3_SS1_A,	SEL_MSIOF3_0),
 	PINMUX_IPSR_DATA(IP7_7_4,	DU_DR6),
+	PINMUX_IPSR_MODS(IP7_7_4,	SCL6_C,		SEL_I2C6_2),
 
 	PINMUX_IPSR_MODS(IP7_11_8,	MSIOF3_SS2_A,	SEL_MSIOF3_0),
 	PINMUX_IPSR_DATA(IP7_11_8,	DU_DR7),
+	PINMUX_IPSR_MODS(IP7_11_8,	SDA6_C,		SEL_I2C6_2),
 
 	PINMUX_IPSR_DATA(IP7_19_16,	SD0_CLK),
 	PINMUX_IPSR_MODS(IP7_19_16,	MSIOF1_SCK_E,	SEL_MSIOF1_4),
@@ -749,8 +777,10 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_DATA(IP10_7_4,	SD3_WP),
 
 	PINMUX_IPSR_DATA(IP10_11_8,	SD0_CD),
+	PINMUX_IPSR_MODS(IP10_11_8,	SCL2_B,		SEL_I2C2_1),
 
 	PINMUX_IPSR_DATA(IP10_15_12,	SD0_WP),
+	PINMUX_IPSR_MODS(IP10_15_12,	SDA2_B,		SEL_I2C2_1),
 
 	PINMUX_IPSR_DATA(IP10_19_16,	SD1_CD),
 
@@ -758,6 +788,7 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_IPSR_DATA(IP10_27_24,	SCK0),
 	PINMUX_IPSR_MODS(IP10_27_24,	MSIOF1_SS2_B,	SEL_MSIOF1_1),
+	PINMUX_IPSR_MODS(IP10_27_24,	SDA2_A,		SEL_I2C2_0),
 
 	PINMUX_IPSR_DATA(IP10_31_28,	RX0),
 
@@ -769,6 +800,7 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_IPSR_DATA(IP11_11_8,	RTS0_N_TANS),
 	PINMUX_IPSR_MODS(IP11_11_8,	MSIOF1_SS1_B,	SEL_MSIOF1_1),
+	PINMUX_IPSR_MODS(IP11_11_8,	SCL2_A,		SEL_I2C2_0),
 
 	PINMUX_IPSR_MODS(IP11_15_12,	RX1_A,		SEL_SCIF1_0),
 
@@ -786,9 +818,11 @@ static const u16 pinmux_data[] = {
 	/* IPSR12 */
 	PINMUX_IPSR_MODS(IP12_3_0,	TX2_A,		SEL_SCIF2_0),
 	PINMUX_IPSR_MODS(IP12_3_0,	SD2_CD_B,	SEL_SDHI2_1),
+	PINMUX_IPSR_MODS(IP12_3_0,	SCL1_A,		SEL_I2C1_0),
 
 	PINMUX_IPSR_MODS(IP12_7_4,	RX2_A,		SEL_SCIF2_0),
 	PINMUX_IPSR_MODS(IP12_7_4,	SD2_WP_B,	SEL_SDHI2_1),
+	PINMUX_IPSR_MODS(IP12_7_4,	SDA1_A,		SEL_I2C1_0),
 
 	PINMUX_IPSR_MODS(IP12_11_8,	MSIOF1_SCK_D,	SEL_MSIOF1_3),
 
@@ -813,9 +847,11 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_DATA(IP13_7_4,	TX5),
 
 	PINMUX_IPSR_MODS(IP13_11_8,	MSIOF1_SCK_F,	SEL_MSIOF1_5),
+	PINMUX_IPSR_MODS(IP13_11_8,	SCL1_B,		SEL_I2C1_1),
 
 	PINMUX_IPSR_MODS(IP13_15_12,	RX1_B,		SEL_SCIF1_1),
 	PINMUX_IPSR_MODS(IP13_15_12,	MSIOF1_SYNC_F,	SEL_MSIOF1_5),
+	PINMUX_IPSR_MODS(IP13_15_12,	SDA1_B,		SEL_I2C1_1),
 
 	PINMUX_IPSR_MODS(IP13_19_16,	TX1_B,		SEL_SCIF1_1),
 	PINMUX_IPSR_MODS(IP13_19_16,	MSIOF1_RXD_F,	SEL_MSIOF1_5),
@@ -1025,6 +1061,58 @@ static const unsigned int hdmi1_cec_pins[] = {
 };
 static const unsigned int hdmi1_cec_mux[] = {
 	HDMI1_CEC_MARK,
+};
+/* - I2C1 ------------------------------------------------------------------- */
+static const unsigned int i2c1_a_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(5, 10), RCAR_GP_PIN(5, 11),
+};
+static const unsigned int i2c1_a_mux[] = {
+	SCL1_A_MARK, SDA1_A_MARK,
+};
+static const unsigned int i2c1_b_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(5, 23), RCAR_GP_PIN(5, 24),
+};
+static const unsigned int i2c1_b_mux[] = {
+	SCL1_B_MARK, SDA1_B_MARK,
+};
+/* - I2C2 ------------------------------------------------------------------- */
+static const unsigned int i2c2_a_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(5, 4), RCAR_GP_PIN(5, 0),
+};
+static const unsigned int i2c2_a_mux[] = {
+	SCL2_A_MARK, SDA2_A_MARK,
+};
+static const unsigned int i2c2_b_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(3, 12), RCAR_GP_PIN(3, 13),
+};
+static const unsigned int i2c2_b_mux[] = {
+	SCL2_B_MARK, SDA2_B_MARK,
+};
+/* - I2C6 ------------------------------------------------------------------- */
+static const unsigned int i2c6_a_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(1, 11), RCAR_GP_PIN(1, 8),
+};
+static const unsigned int i2c6_a_mux[] = {
+	SCL6_A_MARK, SDA6_A_MARK,
+};
+static const unsigned int i2c6_b_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(1, 25), RCAR_GP_PIN(1, 26),
+};
+static const unsigned int i2c6_b_mux[] = {
+	SCL6_B_MARK, SDA6_B_MARK,
+};
+static const unsigned int i2c6_c_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(0, 14), RCAR_GP_PIN(0, 15),
+};
+static const unsigned int i2c6_c_mux[] = {
+	SCL6_C_MARK, SDA6_C_MARK,
 };
 /* - MSIOF0 ----------------------------------------------------------------- */
 static const unsigned int msiof0_clk_pins[] = {
@@ -2129,6 +2217,13 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(du_disp),
 	SH_PFC_PIN_GROUP(hdmi0_cec),
 	SH_PFC_PIN_GROUP(hdmi1_cec),
+	SH_PFC_PIN_GROUP(i2c1_a),
+	SH_PFC_PIN_GROUP(i2c1_b),
+	SH_PFC_PIN_GROUP(i2c2_a),
+	SH_PFC_PIN_GROUP(i2c2_b),
+	SH_PFC_PIN_GROUP(i2c6_a),
+	SH_PFC_PIN_GROUP(i2c6_b),
+	SH_PFC_PIN_GROUP(i2c6_c),
 	SH_PFC_PIN_GROUP(msiof0_clk),
 	SH_PFC_PIN_GROUP(msiof0_sync),
 	SH_PFC_PIN_GROUP(msiof0_ss1),
@@ -2308,6 +2403,22 @@ static const char * const hdmi0_groups[] = {
 
 static const char * const hdmi1_groups[] = {
 	"hdmi1_cec",
+};
+
+static const char * const i2c1_groups[] = {
+	"i2c1_a",
+	"i2c1_b",
+};
+
+static const char * const i2c2_groups[] = {
+	"i2c2_a",
+	"i2c2_b",
+};
+
+static const char * const i2c6_groups[] = {
+	"i2c6_a",
+	"i2c6_b",
+	"i2c6_c",
 };
 
 static const char * const msiof0_groups[] = {
@@ -2525,6 +2636,9 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(msiof1),
 	SH_PFC_FUNCTION(msiof2),
 	SH_PFC_FUNCTION(msiof3),
+	SH_PFC_FUNCTION(i2c1),
+	SH_PFC_FUNCTION(i2c2),
+	SH_PFC_FUNCTION(i2c6),
 	SH_PFC_FUNCTION(scif0),
 	SH_PFC_FUNCTION(scif1),
 	SH_PFC_FUNCTION(scif2),
@@ -2902,7 +3016,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 	{ PINMUX_CFG_REG("IPSR2", 0xe6060208, 32, 4) {
 		/* IP2_31_28 [4] */
 		0, FN_RX3_B, FN_MSIOF2_SYNC_A, 0,
-		0, 0, 0, 0,
+		0, 0, 0, FN_SDA6_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_27_24 [4] */
@@ -2969,7 +3083,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		/* IP3_11_8 [4] */
 		0, FN_TX3_B, FN_MSIOF2_TXD_B, 0,
-		0, 0, 0, 0,
+		0, 0, 0, FN_SCL6_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP3_7_4 [4] */
@@ -3058,12 +3172,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		/* IP5_7_4 [4] */
 		0, 0, FN_MSIOF3_SS1_D, FN_RTS3_N_TANS,
-		0, 0, 0, 0,
+		0, 0, 0, FN_SDA6_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP5_3_0 [4] */
 		0, 0, FN_MSIOF3_TXD_D, FN_CTS3_N,
-		0, 0, 0, 0,
+		0, 0, 0, FN_SCL6_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
@@ -3137,12 +3251,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		/* IP7_11_8 [4] */
 		0, 0, FN_MSIOF3_SS2_A, 0,
-		0, 0, FN_DU_DR7, 0,
+		0, 0, FN_DU_DR7, FN_SDA6_C,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP7_7_4 [4] */
 		0, 0, FN_MSIOF3_SS1_A, 0,
-		0, 0, FN_DU_DR6, 0,
+		0, 0, FN_DU_DR6, FN_SCL6_C,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP7_3_0 [4] */
@@ -3243,7 +3357,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		/* IP10_27_24 [4] */
 		FN_SCK0, 0, FN_MSIOF1_SS2_B, 0,
-		0, 0, 0, 0,
+		FN_SDA2_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_23_20 [4] */
@@ -3258,12 +3372,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		/* IP10_15_12 [4] */
 		FN_SD0_WP, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_SDA2_B, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_11_8 [4] */
 		FN_SD0_CD, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_SCL2_B, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_7_4 [4] */
@@ -3305,7 +3419,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		/* IP11_11_8 [4] */
 		FN_RTS0_N_TANS, 0, FN_MSIOF1_SS1_B, 0,
-		0, 0, 0, 0,
+		FN_SCL2_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP11_7_4 [4] */
@@ -3352,12 +3466,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		/* IP12_7_4 [4] */
 		FN_RX2_A, 0, 0, FN_SD2_WP_B,
-		0, 0, 0, 0,
+		FN_SDA1_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_3_0 [4] */
 		FN_TX2_A, 0, 0, FN_SD2_CD_B,
-		0, 0, 0, 0,
+		FN_SCL1_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
@@ -3384,12 +3498,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		/* IP13_15_12 [4] */
 		0, FN_RX1_B, FN_MSIOF1_SYNC_F, 0,
-		0, 0, 0, 0,
+		FN_SDA1_B, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_11_8 [4] */
 		0, 0, FN_MSIOF1_SCK_F, 0,
-		0, 0, 0, 0,
+		FN_SCL1_B, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_7_4 [4] */
