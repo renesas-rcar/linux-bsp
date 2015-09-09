@@ -20,7 +20,7 @@
 #include "vsp1_lif.h"
 
 #define LIF_MIN_SIZE				2U
-#define LIF_MAX_SIZE				2048U
+#define LIF_MAX_SIZE				4096U
 
 /* -----------------------------------------------------------------------------
  * Device Access
