@@ -360,7 +360,7 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 	format.pad = RWPF_PAD_SINK;
 	format.format.width = src->width + src->left;
 	format.format.height = src->height + src->top;
-	format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
+	format.format.code = fmtinfo->mbus;
 	format.format.field = V4L2_FIELD_NONE;
 
 	ret = v4l2_subdev_call(&rpf->entity.subdev, pad, set_fmt, NULL,
@@ -389,6 +389,9 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		__func__, sel.r.left, sel.r.top, sel.r.width, sel.r.height,
 		rpf->entity.index);
 
+	/* RPF source, hardcode the format to ARGB8888 to turn on format
+	 * conversion if needed.
+	 */
 	format.pad = RWPF_PAD_SOURCE;
 
 	ret = v4l2_subdev_call(&rpf->entity.subdev, pad, get_fmt, NULL,
@@ -401,13 +404,15 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		__func__, format.format.width, format.format.height,
 		format.format.code, rpf->entity.index);
 
-	format.pad = rpf->entity.index;
-	format.format.code = fmtinfo->mbus;
+	format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
 
 	ret = v4l2_subdev_call(&rpf->entity.subdev, pad, set_fmt, NULL,
 			       &format);
 	if (ret < 0)
 		return ret;
+
+	/* BRU sink, propagate the format from the RPF source. */
+	format.pad = rpf->entity.index;
 
 	ret = v4l2_subdev_call(&vsp1->bru->entity.subdev, pad, set_fmt, NULL,
 			       &format);
@@ -474,6 +479,10 @@ int vsp1_drm_create_links(struct vsp1_device *vsp1)
 	const u32 flags = MEDIA_LNK_FL_ENABLED | MEDIA_LNK_FL_IMMUTABLE;
 	unsigned int i;
 	int ret;
+
+	/* VSPD instances require a BRU to perform composition. */
+	if (!vsp1->bru)
+		return -ENXIO;
 
 	for (i = 0; i < vsp1->pdata.rpf_count; ++i) {
 		struct vsp1_rwpf *rpf = vsp1->rpf[i];
