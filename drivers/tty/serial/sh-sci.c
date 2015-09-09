@@ -937,7 +937,9 @@ static int sci_handle_breaks(struct uart_port *port)
 	return copied;
 }
 
+#ifdef CONFIG_SERIAL_SH_SCI_DMA
 static void sci_submit_rx(struct sci_port *s);
+#endif
 
 static irqreturn_t sci_rx_interrupt(int irq, void *ptr)
 {
