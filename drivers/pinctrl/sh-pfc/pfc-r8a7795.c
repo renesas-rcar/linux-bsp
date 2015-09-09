@@ -214,6 +214,13 @@ enum {
 	FN_SD3_DS,
 	FN_SD3_CD,	FN_SD3_WP,
 
+	/* USB0 */
+	FN_USB0_PWEN,	FN_USB0_OVC,
+	/* USB1 */
+	FN_USB1_PWEN,	FN_USB1_OVC,
+	/* USB2 */
+	FN_USB2_PWEN,	FN_USB2_OVC,
+
 	PINMUX_FUNCTION_END,
 
 	PINMUX_MARK_BEGIN,
@@ -397,6 +404,13 @@ enum {
 	SD3_DAT6_MARK,	SD3_DAT7_MARK,
 	SD3_DS_MARK,
 	SD3_CD_MARK,	SD3_WP_MARK,
+
+	/* USB0 */
+	USB0_PWEN_MARK,	USB0_OVC_MARK,
+	/* USB1 */
+	USB1_PWEN_MARK,	USB1_OVC_MARK,
+	/* USB2 */
+	USB2_PWEN_MARK,	USB2_OVC_MARK,
 
 	PINMUX_MARK_END,
 };
@@ -636,10 +650,21 @@ static const u16 pinmux_data[] = {
 	/* IPSR14 */
 
 	/* IPSR15 */
+	PINMUX_IPSR_DATA(IP15_3_0,	USB2_PWEN),
+
+	PINMUX_IPSR_DATA(IP15_7_4,	USB2_OVC),
+
 	PINMUX_IPSR_DATA(IP15_31_28,	SCK1),
 	PINMUX_IPSR_DATA(IP15_31_28,	SCK5),
 
 	/* IPSR16 */
+	PINMUX_IPSR_DATA(IP16_11_8,	USB0_PWEN),
+
+	PINMUX_IPSR_DATA(IP16_15_12,	USB0_OVC),
+
+	PINMUX_IPSR_DATA(IP16_19_16,	USB1_PWEN),
+
+	PINMUX_IPSR_DATA(IP16_23_20,	USB1_OVC),
 
 	/* IPSR17 */
 };
@@ -1182,6 +1207,30 @@ static const unsigned int sdhi3_ds_pins[] = {
 static const unsigned int sdhi3_ds_mux[] = {
 	SD3_DS_MARK,
 };
+/* - USB0 ------------------------------------------------------------------- */
+static const unsigned int usb0_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 24), RCAR_GP_PIN(6, 25),
+};
+static const unsigned int usb0_mux[] = {
+	USB0_PWEN_MARK, USB0_OVC_MARK,
+};
+/* - USB1 ------------------------------------------------------------------- */
+static const unsigned int usb1_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 26), RCAR_GP_PIN(6, 27),
+};
+static const unsigned int usb1_mux[] = {
+	USB1_PWEN_MARK, USB1_OVC_MARK,
+};
+/* - USB2 ------------------------------------------------------------------- */
+static const unsigned int usb2_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 14), RCAR_GP_PIN(6, 15),
+};
+static const unsigned int usb2_mux[] = {
+	USB2_PWEN_MARK, USB2_OVC_MARK,
+};
 
 static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(avb_link),
@@ -1253,6 +1302,9 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(sdhi3_cd),
 	SH_PFC_PIN_GROUP(sdhi3_wp),
 	SH_PFC_PIN_GROUP(sdhi3_ds),
+	SH_PFC_PIN_GROUP(usb0),
+	SH_PFC_PIN_GROUP(usb1),
+	SH_PFC_PIN_GROUP(usb2),
 };
 
 static const char * const avb_groups[] = {
@@ -1366,6 +1418,18 @@ static const char * const sdhi3_groups[] = {
 	"sdhi3_ds",
 };
 
+static const char * const usb0_groups[] = {
+	"usb0",
+};
+
+static const char * const usb1_groups[] = {
+	"usb1",
+};
+
+static const char * const usb2_groups[] = {
+	"usb2",
+};
+
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(avb),
 	SH_PFC_FUNCTION(du),
@@ -1381,6 +1445,9 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(sdhi1),
 	SH_PFC_FUNCTION(sdhi2),
 	SH_PFC_FUNCTION(sdhi3),
+	SH_PFC_FUNCTION(usb0),
+	SH_PFC_FUNCTION(usb1),
+	SH_PFC_FUNCTION(usb2),
 };
 
 static const struct pinmux_cfg_reg pinmux_config_regs[] = {
@@ -2318,12 +2385,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP15_7_4 [4] */
-		0, 0, 0, 0,
+		0, FN_USB0_OVC, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP15_3_0 [4] */
-		0, 0, 0, 0,
+		0, FN_USB2_PWEN, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
@@ -2340,22 +2407,22 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_23_20 [4] */
-		0, 0, 0, 0,
+		FN_USB1_OVC, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_19_16 [4] */
-		0, 0, 0, 0,
+		FN_USB1_PWEN, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_15_12 [4] */
-		0, 0, 0, 0,
+		FN_USB0_OVC, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_11_8 [4] */
-		0, 0, 0, 0,
+		FN_USB0_PWEN, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
