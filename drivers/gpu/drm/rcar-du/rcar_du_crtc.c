@@ -538,6 +538,9 @@ static void rcar_du_crtc_atomic_begin(struct drm_crtc *crtc,
 		rcrtc->event = event;
 		spin_unlock_irqrestore(&dev->event_lock, flags);
 	}
+
+	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
+		rcar_du_vsp_atomic_begin(rcrtc);
 }
 
 static void rcar_du_crtc_atomic_flush(struct drm_crtc *crtc,
@@ -546,6 +549,9 @@ static void rcar_du_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct rcar_du_crtc *rcrtc = to_rcar_crtc(crtc);
 
 	rcar_du_crtc_update_planes(rcrtc);
+
+	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
+		rcar_du_vsp_atomic_flush(rcrtc);
 }
 
 static const struct drm_crtc_helper_funcs crtc_helper_funcs = {
