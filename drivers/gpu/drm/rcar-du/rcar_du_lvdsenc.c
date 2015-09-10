@@ -253,10 +253,15 @@ int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds, struct drm_crtc *crtc,
 static int rcar_du_lvdsenc_get_resources(struct rcar_du_lvdsenc *lvds,
 					 struct platform_device *pdev)
 {
+	struct rcar_du_device *rcdu = lvds->dev;
 	struct resource *mem;
 	char name[7];
 
-	sprintf(name, "lvds.%u", lvds->index);
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS) &&
+		(rcdu->info->num_lvds <= 1))
+		sprintf(name, "lvds");
+	else
+		sprintf(name, "lvds.%u", lvds->index);
 
 	mem = platform_get_resource_byname(pdev, IORESOURCE_MEM, name);
 	lvds->mmio = devm_ioremap_resource(&pdev->dev, mem);
