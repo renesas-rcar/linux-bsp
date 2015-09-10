@@ -19,8 +19,8 @@
 #include "vsp1_rwpf.h"
 #include "vsp1_video.h"
 
-#define WPF_MAX_WIDTH				2048
-#define WPF_MAX_HEIGHT				2048
+#define WPF_MAX_WIDTH				4096
+#define WPF_MAX_HEIGHT				4096
 
 /* -----------------------------------------------------------------------------
  * Device Access
