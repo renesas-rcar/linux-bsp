@@ -63,10 +63,14 @@ to_rcar_vsp_plane_state(struct drm_plane_state *state)
 int rcar_du_vsp_init(struct rcar_du_vsp *vsp);
 void rcar_du_vsp_enable(struct rcar_du_crtc *crtc);
 void rcar_du_vsp_disable(struct rcar_du_crtc *crtc);
+void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc);
+void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc);
 #else
 static inline int rcar_du_vsp_init(struct rcar_du_vsp *vsp) { return 0; };
 static inline void rcar_du_vsp_enable(struct rcar_du_crtc *crtc) { };
 static inline void rcar_du_vsp_disable(struct rcar_du_crtc *crtc) { };
+static inline void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc) { };
+static inline void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc) { };
 #endif
 
 #endif /* __RCAR_DU_VSP_H__ */
