@@ -33,6 +33,9 @@
 #include "vsp1_sru.h"
 #include "vsp1_uds.h"
 #include "vsp1_video.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#endif
 
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
@@ -61,6 +64,20 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 			vsp1_pipeline_frame_end(pipe);
 			ret = IRQ_HANDLED;
 		}
+
+#ifdef VSP1_DL_SUPPORT
+		if ((i != 0) || (!pipe->lif))
+			continue;
+
+		status = vsp1_read(vsp1, VI6_DISP_IRQ_STA);
+		vsp1_write(vsp1, VI6_DISP_IRQ_STA,
+				 ~status & VI6_DISP_IRQ_STA_DSE);
+
+		if (status & VI6_DISP_IRQ_STA_DSE) {
+			vsp1_pipeline_display_start(pipe);
+			ret = IRQ_HANDLED;
+		}
+#endif
 	}
 
 	return ret;
@@ -372,6 +389,13 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 		ret = v4l2_device_register_subdev_nodes(&vsp1->v4l2_dev);
 	else
 		ret = vsp1_drm_init(vsp1);
+
+#ifdef VSP1_DL_SUPPORT
+	if (ret < 0)
+		goto done;
+
+	ret = vsp1_dl_create(vsp1);
+#endif
 
 done:
 	if (ret < 0)

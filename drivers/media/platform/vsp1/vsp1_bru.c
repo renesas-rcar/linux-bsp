@@ -20,6 +20,9 @@
 #include "vsp1_bru.h"
 #include "vsp1_rwpf.h"
 #include "vsp1_video.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#endif
 
 #define BRU_MIN_SIZE				1U
 #define BRU_MAX_SIZE				8190U
@@ -35,7 +38,14 @@ static inline u32 vsp1_bru_read(struct vsp1_bru *bru, u32 reg)
 
 static inline void vsp1_bru_write(struct vsp1_bru *bru, u32 reg, u32 data)
 {
+#ifdef VSP1_DL_SUPPORT
+	if (vsp1_dl_is_use(bru->entity.vsp1))
+		vsp1_dl_set(bru->entity.vsp1, reg, data);
+	else
+		vsp1_write(bru->entity.vsp1, reg, data);
+#else
 	vsp1_write(bru->entity.vsp1, reg, data);
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -52,6 +62,9 @@ static int bru_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_BG_COLOR:
+#ifdef VSP1_DL_SUPPORT
+	/* TODO	vsp1_dl_get(bru->entity.vsp1, DL_BODY_BRU);*/
+#endif
 		vsp1_bru_write(bru, VI6_BRU_VIRRPF_COL, ctrl->val |
 			       (0xff << VI6_BRU_VIRRPF_COL_A_SHIFT));
 		break;
@@ -83,6 +96,10 @@ static int bru_s_stream(struct v4l2_subdev *subdev, int enable)
 
 	if (!enable)
 		return 0;
+
+#ifdef VSP1_DL_SUPPORT
+	vsp1_dl_get(bru->entity.vsp1, DL_BODY_BRU);
+#endif
 
 	format = &bru->entity.formats[bru->entity.source_pad];
 

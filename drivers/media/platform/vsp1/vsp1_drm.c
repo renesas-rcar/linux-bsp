@@ -24,6 +24,9 @@
 #include "vsp1_lif.h"
 #include "vsp1_pipe.h"
 #include "vsp1_rwpf.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#endif
 
 /* -----------------------------------------------------------------------------
  * Runtime Handling
@@ -61,6 +64,10 @@ static int vsp1_drm_pipeline_run(struct vsp1_pipeline *pipe)
 
 		vsp1->drm->update = false;
 	}
+
+#ifdef VSP1_DL_SUPPORT
+	vsp1_dl_set_stream(vsp1);
+#endif
 
 	vsp1_pipeline_run(pipe);
 
@@ -248,6 +255,19 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(vsp1_du_setup_lif);
+
+
+#ifdef VSP1_DL_SUPPORT
+int vsp1_du_setup_dl(struct device *dev, int mode, int repeat)
+{
+	return vsp1_dl_setup_control(dev_get_drvdata(dev), mode, repeat);
+}
+
+void vsp1_du_reset_dl(struct device *dev)
+{
+	vsp1_dl_reset(dev_get_drvdata(dev));
+}
+#endif
 
 /**
  * vsp1_du_setup_rpf - Setup one RPF input of the VSP pipeline
@@ -461,7 +481,11 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 
 	/* Start the pipeline if it's currently stopped. */
 	vsp1->drm->update = true;
+#ifdef VSP1_DL_SUPPORT
+	if (start_stop || vsp1_dl_is_use(vsp1))
+#else
 	if (start_stop)
+#endif
 		vsp1_drm_pipeline_run(pipe);
 
 	spin_unlock_irqrestore(&pipe->irqlock, flags);

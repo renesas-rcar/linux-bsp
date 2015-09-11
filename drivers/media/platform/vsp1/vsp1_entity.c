@@ -20,6 +20,9 @@
 
 #include "vsp1.h"
 #include "vsp1_entity.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#endif
 
 bool vsp1_entity_is_streaming(struct vsp1_entity *entity)
 {
@@ -66,8 +69,19 @@ void vsp1_entity_route_setup(struct vsp1_entity *source)
 		return;
 
 	sink = container_of(source->sink, struct vsp1_entity, subdev.entity);
+#ifdef VSP1_DL_SUPPORT
+	if (vsp1_dl_is_use(source->vsp1)) {
+		vsp1_dl_get(source->vsp1, DL_BODY_DPR);
+		vsp1_dl_set(source->vsp1, source->route->reg,
+			sink->route->inputs[source->sink_pad]);
+	} else {
+		vsp1_write(source->vsp1, source->route->reg,
+		   sink->route->inputs[source->sink_pad]);
+	}
+#else
 	vsp1_write(source->vsp1, source->route->reg,
 		   sink->route->inputs[source->sink_pad]);
+#endif
 }
 
 /* -----------------------------------------------------------------------------

@@ -23,6 +23,10 @@
 #include "vsp1_pipe.h"
 #include "vsp1_rwpf.h"
 #include "vsp1_uds.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#include <linux/delay.h>
+#endif
 
 /* -----------------------------------------------------------------------------
  * Helper Functions
@@ -176,8 +180,16 @@ void vsp1_pipeline_run(struct vsp1_pipeline *pipe)
 {
 	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
 
+#ifdef VSP1_DL_SUPPORT
+	if (pipe->state == VSP1_PIPELINE_STOPPED) {
+		vsp1_write(vsp1, VI6_CMD(pipe->output->entity.index),
+					VI6_CMD_STRCMD);
+		pipe->state = VSP1_PIPELINE_RUNNING;
+	}
+#else
 	vsp1_write(vsp1, VI6_CMD(pipe->output->entity.index), VI6_CMD_STRCMD);
 	pipe->state = VSP1_PIPELINE_RUNNING;
+#endif
 	pipe->buffers_ready = 0;
 }
 
@@ -204,9 +216,49 @@ int vsp1_pipeline_stop(struct vsp1_pipeline *pipe)
 		pipe->state = VSP1_PIPELINE_STOPPING;
 	spin_unlock_irqrestore(&pipe->irqlock, flags);
 
+#ifdef VSP1_DL_SUPPORT
+	if (vsp1_dl_is_auto_repeat(pipe->output->entity.vsp1)) {
+		unsigned int timeout;
+		u32 status;
+
+		ret = -ETIMEDOUT;
+
+		status = vsp1_read(pipe->output->entity.vsp1, VI6_STATUS);
+		if (!(status &
+			VI6_STATUS_SYS_ACT(pipe->output->entity.index))) {
+			ret = 0;
+			goto done;
+		}
+
+		vsp1_write(pipe->output->entity.vsp1, VI6_SRESET,
+				VI6_SRESET_SRTS(pipe->output->entity.index));
+		for (timeout = 10; timeout > 0; --timeout) {
+			status = vsp1_read(pipe->output->entity.vsp1,
+							 VI6_STATUS);
+			if (!(status &
+			     VI6_STATUS_SYS_ACT(pipe->output->entity.index))) {
+				ret = 0;
+				break;
+			}
+
+			usleep_range(1000, 2000);
+		}
+done:
+		if (ret == 0) {
+			spin_lock_irqsave(&pipe->irqlock, flags);
+			pipe->state = VSP1_PIPELINE_STOPPED;
+			spin_unlock_irqrestore(&pipe->irqlock, flags);
+		}
+	} else {
+		ret = wait_event_timeout(pipe->wq, vsp1_pipeline_stopped(pipe),
+					 msecs_to_jiffies(500));
+		ret = ret == 0 ? -ETIMEDOUT : 0;
+	}
+#else
 	ret = wait_event_timeout(pipe->wq, vsp1_pipeline_stopped(pipe),
 				 msecs_to_jiffies(500));
 	ret = ret == 0 ? -ETIMEDOUT : 0;
+#endif
 
 	list_for_each_entry(entity, &pipe->entities, list_pipe) {
 		if (entity->route && entity->route->reg)
@@ -238,13 +290,23 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 	if (pipe == NULL)
 		return;
 
+#ifdef VSP1_DL_SUPPORT
+	vsp1_dl_irq_dl_frame_end(pipe->output->entity.vsp1);
+#endif
+
 	/* Signal frame end to the pipeline handler. */
 	pipe->frame_end(pipe);
 
 	spin_lock_irqsave(&pipe->irqlock, flags);
 
 	state = pipe->state;
+
+#ifdef VSP1_DL_SUPPORT
+	if (!vsp1_dl_is_auto_repeat(pipe->output->entity.vsp1))
+		pipe->state = VSP1_PIPELINE_STOPPED;
+#else
 	pipe->state = VSP1_PIPELINE_STOPPED;
+#endif
 
 	/* If a stop has been requested, mark the pipeline as stopped and
 	 * return.
@@ -260,6 +322,16 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 
 done:
 	spin_unlock_irqrestore(&pipe->irqlock, flags);
+}
+
+void vsp1_pipeline_display_start(struct vsp1_pipeline *pipe)
+{
+#ifdef VSP1_DL_SUPPORT
+	if (!pipe->lif)
+		return;
+
+	vsp1_dl_irq_display_start(pipe->output->entity.vsp1);
+#endif
 }
 
 /*

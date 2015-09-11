@@ -18,6 +18,9 @@
 #include "vsp1.h"
 #include "vsp1_rwpf.h"
 #include "vsp1_video.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#endif
 
 #define RPF_MAX_WIDTH				8190
 #define RPF_MAX_HEIGHT				8190
@@ -34,8 +37,18 @@ static inline u32 vsp1_rpf_read(struct vsp1_rwpf *rpf, u32 reg)
 
 static inline void vsp1_rpf_write(struct vsp1_rwpf *rpf, u32 reg, u32 data)
 {
+#ifdef VSP1_DL_SUPPORT
+	if (vsp1_dl_is_use(rpf->entity.vsp1)) {
+		vsp1_dl_set(rpf->entity.vsp1,
+			reg + rpf->entity.index * VI6_RPF_OFFSET, data);
+	} else {
+		vsp1_write(rpf->entity.vsp1,
+		   reg + rpf->entity.index * VI6_RPF_OFFSET, data);
+	}
+#else
 	vsp1_write(rpf->entity.vsp1,
 		   reg + rpf->entity.index * VI6_RPF_OFFSET, data);
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -53,6 +66,13 @@ static int rpf_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_ALPHA_COMPONENT:
+#ifdef VSP1_DL_SUPPORT
+/* TODO
+		vsp1_dl_get(rpf->entity.vsp1,
+			DL_BODY_RPF0 + rpf->entity.index);
+*/
+#endif
+
 		vsp1_rpf_write(rpf, VI6_RPF_VRTCOL_SET,
 			       ctrl->val << VI6_RPF_VRTCOL_SET_LAYA_SHIFT);
 
@@ -91,6 +111,10 @@ static int rpf_s_stream(struct v4l2_subdev *subdev, int enable)
 
 	if (!enable)
 		return 0;
+
+#ifdef VSP1_DL_SUPPORT
+	vsp1_dl_get(rpf->entity.vsp1, DL_BODY_RPF0 + rpf->entity.index);
+#endif
 
 	/* Source size, stride and crop offsets.
 	 *
@@ -222,6 +246,10 @@ static void rpf_set_memory(struct vsp1_rwpf *rpf, struct vsp1_rwpf_memory *mem)
 
 	if (!vsp1_entity_is_streaming(&rpf->entity))
 		return;
+
+#ifdef VSP1_DL_SUPPORT
+	vsp1_dl_get(rpf->entity.vsp1, DL_BODY_RPF0 + rpf->entity.index);
+#endif
 
 	vsp1_rpf_write(rpf, VI6_RPF_SRCM_ADDR_Y,
 		       mem->addr[0] + rpf->offsets[0]);

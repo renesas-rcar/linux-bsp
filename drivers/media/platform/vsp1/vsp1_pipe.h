@@ -91,6 +91,7 @@ struct vsp1_pipeline {
 	unsigned int num_inputs;
 	struct vsp1_rwpf *inputs[VSP1_MAX_RPF];
 	struct vsp1_rwpf *output;
+
 	struct vsp1_entity *bru;
 	struct vsp1_entity *lif;
 	struct vsp1_entity *uds;
@@ -116,6 +117,7 @@ int vsp1_pipeline_stop(struct vsp1_pipeline *pipe);
 bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe);
 
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe);
+void vsp1_pipeline_display_start(struct vsp1_pipeline *pipe);
 
 void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
 				   struct vsp1_entity *input,

@@ -28,4 +28,9 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf, u32 pixelformat,
 		      const struct v4l2_rect *src, const struct v4l2_rect *dst,
 		      u8 alpha);
 
+#ifdef VSP1_DL_SUPPORT
+int vsp1_du_setup_dl(struct device *dev, int mode, int repeat);
+void vsp1_du_reset_dl(struct device *dev);
+#endif
+
 #endif /* __MEDIA_VSP1_H__ */

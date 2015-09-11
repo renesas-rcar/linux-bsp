@@ -23,6 +23,8 @@
 
 #include "vsp1_regs.h"
 
+#define VSP1_DL_SUPPORT 1
+
 struct clk;
 struct device;
 
@@ -35,6 +37,9 @@ struct vsp1_lut;
 struct vsp1_rwpf;
 struct vsp1_sru;
 struct vsp1_uds;
+#ifdef VSP1_DL_SUPPORT
+struct vsp1_dl;
+#endif
 
 #define VSP1_MAX_RPF		5
 #define VSP1_MAX_UDS		3
@@ -77,6 +82,9 @@ struct vsp1_device {
 	struct vsp1_sru *sru;
 	struct vsp1_uds *uds[VSP1_MAX_UDS];
 	struct vsp1_rwpf *wpf[VSP1_MAX_WPF];
+#ifdef VSP1_DL_SUPPORT
+	struct vsp1_dl *dl;
+#endif
 
 	struct list_head entities;
 	struct list_head videos;
