@@ -2256,11 +2256,6 @@ static int sci_init_clocks(struct sci_port *sci_port, struct device *dev)
 	if (!IS_ERR(sci_port->fclk))
 		return 0;
 
-	/* SH has historically named the clock "sci_fck". */
-	sci_port->fclk = clk_get(dev, "sci_fck");
-	if (!IS_ERR(sci_port->fclk))
-		return 0;
-
 	/*
 	 * Not all SH platforms declare a clock lookup entry for SCI devices,
 	 * in which case we need to get the global "peripheral_clk" clock.
