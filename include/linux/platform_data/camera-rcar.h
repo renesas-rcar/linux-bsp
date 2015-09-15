@@ -1,6 +1,7 @@
 /*
  * Platform data for Renesas R-Car VIN soc-camera driver
  *
+ * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  *
@@ -17,6 +18,7 @@
 #define RCAR_VIN_VSYNC_ACTIVE_LOW	(1 << 1)
 #define RCAR_VIN_BT601			(1 << 2)
 #define RCAR_VIN_BT656			(1 << 3)
+#define RCAR_VIN_CSI2			(1 << 4)
 
 struct rcar_vin_platform_data {
 	unsigned int flags;

@@ -28,6 +28,10 @@
 		spi2 = &msiof1;
 		spi3 = &msiof2;
 		spi4 = &msiof3;
+		vin0 = &vin0;
+		vin1 = &vin1;
+		csi2_0 = &csi2_0;
+		csi2_1 = &csi2_1;
 	};
 
 	psci {
@@ -506,7 +510,8 @@
 						 <&s3d4_clk>,
 						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
 						 <&s2d1_clk>, <&s2d1_clk>, <&hdmi_clk>,
-						 <&hdmi_clk>;
+						 <&hdmi_clk>, <&s2d1_clk>, <&s2d1_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>;
 					#clock-cells = <1>;
 					renesas,clock-indices = <
 						R8A7795_CLK_HSUSB R8A7795_CLK_EHCI0
@@ -514,23 +519,30 @@
 						R8A7795_CLK_DU3 R8A7795_CLK_DU2
 						R8A7795_CLK_DU1 R8A7795_CLK_DU0
 						R8A7795_CLK_LVDS R8A7795_CLK_HDMI1
-						R8A7795_CLK_HDMI0
+						R8A7795_CLK_HDMI0 R8A7795_CLK_CSI40
+						R8A7795_CLK_CSI41 R8A7795_CLK_CSI20
+						R8A7795_CLK_CSI21
 					>;
 					clock-output-names =
 						"hsusb", "ehci0", "ehci1", "ehci2",
 						"du3", "du2", "du1", "du0", "lvds",
-						"isfr1","isfr0";
+						"isfr1","isfr0","csi40", "csi41",
+						"csi20", "csi21";
 				};
 
 				mstp8_clks: mstp8_clks@e6150990 {
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150990 0 4>, <0 0xe61509a0 0 4>;
-					clocks = <&s3d2_clk>, <&s3d2_clk>;
+					clocks = <&s3d2_clk>, <&s3d2_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_AVB R8A7795_CLK_SATA
+						R8A7795_CLK_VIN1 R8A7795_CLK_VIN0
 					>;
+					clock-output-names =
+						"avb", "sata", "vin1", "vin0";
 				};
 
 				mstp9_clks: mstp9_clks@e6150994 {
@@ -859,6 +871,22 @@
 			status = "disabled";
 		};
 
+		vin0: video@e6ef0000 {
+			compatible = "renesas,vin-r8a7795";
+			clocks = <&mstp8_clks R8A7795_CLK_VIN0>;
+			reg = <0 0xe6ef0000 0 0x1000>;
+			interrupts = <0 188 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		vin1: video@e6ef1000 {
+			compatible = "renesas,vin-r8a7795";
+			clocks = <&mstp8_clks R8A7795_CLK_VIN1>;
+			reg = <0 0xe6ef1000 0 0x1000>;
+			interrupts = <0 189 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
 		sdhi0: sd@ee100000 {
 			compatible = "renesas,sdhi-r8a7795";
 			reg = <0 0xee100000 0 0x880>;
@@ -949,6 +977,22 @@
 			renesas,has-lif;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <1>;
+		};
+
+		csi2_0: csi2@feaa0000 {
+			compatible = "renesas,csi2-r8a7795";
+			clocks = <&mstp7_clks R8A7795_CLK_CSI40>;
+			reg = <0 0xfeaa0000 0 0x10000>;
+			interrupts = <0 246 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		csi2_1: csi2@fea80000 {
+			compatible = "renesas,csi2-r8a7795";
+			clocks = <&mstp7_clks R8A7795_CLK_CSI20>;
+			reg = <0 0xfea80000 0 0x10000>;
+			interrupts = <0 184 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
 		};
 
 		hdmi0: hdmi0@fead0000 {

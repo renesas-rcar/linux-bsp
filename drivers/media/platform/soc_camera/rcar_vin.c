@@ -1,6 +1,7 @@
 /*
  * SoC-camera host driver for Renesas R-Car VIN unit
  *
+ * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  *
@@ -36,6 +37,8 @@
 #include <media/v4l2-of.h>
 #include <media/v4l2-subdev.h>
 #include <media/videobuf2-dma-contig.h>
+
+#include <media/rcar_csi2.h>
 
 #include "soc_scale_crop.h"
 
@@ -91,6 +94,8 @@
 
 /* Register bit fields for R-Car VIN */
 /* Video n Main Control Register bits */
+#define VNMC_DPINE		(1 << 27)
+#define VNMC_SCLE		(1 << 26)
 #define VNMC_FOC		(1 << 21)
 #define VNMC_YCAL		(1 << 19)
 #define VNMC_INF_YUV8_BT656	(0 << 16)
@@ -99,6 +104,7 @@
 #define VNMC_INF_YUV10_BT601	(3 << 16)
 #define VNMC_INF_YUV16		(5 << 16)
 #define VNMC_INF_RGB888		(6 << 16)
+#define VNMC_INF_MASK		(7 << 16)
 #define VNMC_VUP		(1 << 10)
 #define VNMC_IM_ODD		(0 << 3)
 #define VNMC_IM_ODD_EVEN	(1 << 3)
@@ -133,12 +139,28 @@
 #define VNDMR2_FTEV		(1 << 17)
 #define VNDMR2_VLV(n)		((n & 0xf) << 12)
 
+/* setting CSI2 on R-Car Gen3*/
+#define VNCSI_IFMD_REG	0x20	/* Video n CSI2 Interface Mode Register */
+
+#define VNCSI_IFMD_DES2		(1 << 27) /* CSI40/CSI41 Input Data */
+#define VNCSI_IFMD_DES1		(1 << 26) /* CSI20 Input Data) */
+#define VNCSI_IFMD_DES0		(1 << 25) /* CSI21 Input Data) */
+
+/* UDS */
+#define VNUDS_CTRL_REG			0x80	/* Scaling Control Registers */
+#define VNUDS_SCALE_REG			0x84	/* Scaling Factor Registers  */
+#define VNUDS_PASS_BWIDTH_REG	0x90	/* Passband Registers */
+#define VNUDS_IPC_REG			0x98	/* 2D IPC Setting Register */
+#define VNUDS_CLIP_SIZE_REG		0xA4
+			/* UDS Output Size Clipping Registers */
+
 #define VIN_MAX_WIDTH		2048
 #define VIN_MAX_HEIGHT		2048
 
 #define TIMEOUT_MS		100
 
 enum chip_id {
+	RCAR_GEN3,
 	RCAR_GEN2,
 	RCAR_H1,
 	RCAR_M1,
@@ -487,6 +509,17 @@ struct rcar_vin_priv {
 	bool				request_to_stop;
 	struct completion		capture_stop;
 	enum chip_id			chip;
+
+	/* Asynchronous CSI2 linking */
+	struct v4l2_async_subdev *csi2_asd;
+	struct v4l2_subdev *csi2_sd;
+	/* Synchronous probing compatibility */
+	struct platform_device *csi2_pdev;
+
+	/* VIN_UDS */
+	unsigned long alpha;
+	unsigned long flag;
+
 };
 
 #define is_continuous_transfer(priv)	(priv->vb_count > MAX_BUFFER_NUM)
@@ -671,7 +704,8 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 		dmr = 0;
 		break;
 	case V4L2_PIX_FMT_RGB32:
-		if (priv->chip == RCAR_GEN2 || priv->chip == RCAR_H1 ||
+		if (priv->chip == RCAR_GEN3 ||
+		    priv->chip == RCAR_GEN2 || priv->chip == RCAR_H1 ||
 		    priv->chip == RCAR_E1) {
 			dmr = VNDMR_EXRGB;
 			break;
@@ -688,6 +722,16 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 	/* If input and output use the same colorspace, use bypass mode */
 	if (input_is_yuv == output_is_yuv)
 		vnmc |= VNMC_BPS;
+
+	if (priv->chip == RCAR_GEN3) {
+		if (priv->pdata_flags & RCAR_VIN_CSI2)
+			vnmc &= ~VNMC_DPINE;
+		else
+			vnmc |= VNMC_DPINE;
+
+		if ((vnmc & VNMC_INF_MASK) == VNMC_INF_RGB888)
+			iowrite32(0x06000000, priv->base + VNCSI_IFMD_REG);
+	}
 
 	/* progressive or interlaced mode */
 	interrupts = progressive ? VNIE_FIE : VNIE_EFE;
@@ -943,6 +987,34 @@ done:
 	return IRQ_RETVAL(handled);
 }
 
+static struct v4l2_subdev *find_csi2(struct rcar_vin_priv *pcdev)
+{
+	struct v4l2_subdev *sd;
+
+	if (pcdev->csi2_sd)
+		return pcdev->csi2_sd;
+
+	if (pcdev->csi2_asd) {
+		char name[] = "rcar-csi2";
+
+		v4l2_device_for_each_subdev(sd, &pcdev->ici.v4l2_dev)
+			if (!strncmp(name, sd->name, sizeof(name) - 1)) {
+				pcdev->csi2_sd = sd;
+				return sd;
+			}
+	}
+
+	return NULL;
+}
+
+static struct v4l2_subdev *csi2_subdev(struct rcar_vin_priv *pcdev,
+				       struct soc_camera_device *icd)
+{
+	struct v4l2_subdev *sd = pcdev->csi2_sd;
+
+	return sd && sd->grp_id == soc_camera_grp_id(icd) ? sd : NULL;
+}
+
 static int rcar_vin_add_device(struct soc_camera_device *icd)
 {
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
@@ -954,8 +1026,34 @@ static int rcar_vin_add_device(struct soc_camera_device *icd)
 
 	pm_runtime_get_sync(ici->v4l2_dev.dev);
 
-	dev_dbg(icd->parent, "R-Car VIN driver attached to camera %d\n",
-		icd->devnum);
+	if (priv->chip == RCAR_GEN3) {
+		struct v4l2_subdev *csi2_sd = find_csi2(priv);
+		int ret;
+
+		if (csi2_sd) {
+			csi2_sd->grp_id = soc_camera_grp_id(icd);
+			v4l2_set_subdev_hostdata(csi2_sd, icd);
+		}
+
+		ret = v4l2_subdev_call(csi2_sd, core, s_power, 1);
+		if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+			return ret;
+
+		/*
+		 * -ENODEV is special:
+		 * either csi2_sd == NULL or the CSI-2 driver
+		 * has not found this soc-camera device among its clients
+		 */
+		if (csi2_sd && ret == -ENODEV)
+			csi2_sd->grp_id = 0;
+
+		dev_dbg(icd->parent,
+			"R-Car VIN/CSI-2 driver attached to camera %d\n",
+			icd->devnum);
+
+	} else
+		dev_dbg(icd->parent, "R-Car VIN driver attached to camera %d\n",
+			icd->devnum);
 
 	return 0;
 }
@@ -988,8 +1086,207 @@ static void rcar_vin_remove_device(struct soc_camera_device *icd)
 
 	pm_runtime_put(ici->v4l2_dev.dev);
 
+	if (priv->chip == RCAR_GEN3) {
+		struct v4l2_subdev *csi2_sd = find_csi2(priv);
+
+		v4l2_subdev_call(csi2_sd, core, s_power, 0);
+	}
+
 	dev_dbg(icd->parent, "R-Car VIN driver detached from camera %d\n",
 		icd->devnum);
+}
+
+struct rcar_vin_uds_regs {
+	unsigned long ctrl;
+	unsigned long scale;
+	unsigned long pass_bwidth;
+	unsigned long clip_size;
+	unsigned long vphase;
+};
+
+/* flags */
+#define VIN_UDS_FLAG_PREMUL_ALPH		(1 << 0)
+#define VIN_UDS_FLAG_VIRTUAL		(1 << 1)
+#define VIN_UDS_FLAG_COLOR_CONV_BT601	(0 << 2) /* for RGB <-> YUV */
+#define VIN_UDS_FLAG_COLOR_CONV_BT709	(1 << 2) /* for RGB <-> YUV */
+ #define VIN_UDS_FLAG_COLOR_CONV_MASK	(1 << 2)
+#define  VIN_UDS_FLAG_PROGRESSIVE		(0 << 3)
+#define  VIN_UDS_FLAG_INTERLACE_TOP	(1 << 3)
+#define  VIN_UDS_FLAG_INTERLACE_BOTTOM	(2 << 3)
+ #define VIN_UDS_FLAG_IP_MASK		(3 << 3)
+
+/* Up Down Scaler */
+/* index:0-2 */
+#define VIN_UDSn_CTRL(index)		(0x0080 + (index * 0x1000))
+ #define VIN_UDSn_CTRL_AMD		(1 << 30)
+ #define VIN_UDSn_CTRL_AON		(1 << 25)
+ #define VIN_UDSn_CTRL_BC		(1 << 20)
+ #define VIN_UDSn_CTRL_TDIPC		(1 << 1)
+#define VIN_UDSn_SCALE(index)		(0x0084 + (index * 0x1000))
+#define VIN_UDSn_PASS_BWIDTH(index)	(0x0090 + (index * 0x1000))
+#define VIN_UDSn_IPC(index)		(0x0098 + (index * 0x1000))
+ #define VIN_UDSn_IPC_FIELD_TOP		(0 << 27)
+ #define VIN_UDSn_IPC_FIELD_BOTTOM	(1 << 27)
+#define VIN_UDSn_CLIP_SIZE(index)	(0x00A4 + (index * 0x1000))
+
+static inline int is_scaling(struct rcar_vin_cam *cam)
+{
+	struct v4l2_rect *cam_subrect = &cam->subrect;
+
+	if ((cam_subrect->height != cam->out_width) ||
+	    (cam_subrect->width != cam->out_height))
+		return 1;
+
+	return 0;
+}
+
+static unsigned long rcar_vin_get_bwidth(unsigned long ratio)
+{
+	unsigned long bwidth;
+	unsigned long mant, frac;
+
+	mant = (ratio & 0xF000) >> 12;
+	frac = ratio & 0x0FFF;
+	if (mant)
+		bwidth = 64 * 4096 * mant / (4096 * mant + frac);
+	else
+		bwidth = 64;
+
+	return bwidth;
+}
+
+static unsigned long rcar_vin_compute_ratio(unsigned int input,
+		unsigned int output)
+{
+#ifdef DISABLE_UDS_CTRL_AMD
+	return (input - 1) * 4096 / (output - 1);
+#else
+	if (output > input)
+		return input * 4096 / output;
+	else
+		return (input - 1) * 4096 / (output - 1);
+#endif
+}
+
+static int check_uds_param(struct rcar_vin_cam *cam,
+		struct rcar_vin_uds_regs *regs, unsigned long alpha,
+		unsigned long in_flag)
+{
+	unsigned long ratio_h, ratio_v;
+	unsigned long bwidth_h, bwidth_v;
+	unsigned long ctrl;
+	unsigned long vphase = 0;
+	unsigned long clip_size;
+	unsigned long ip_flag = in_flag & VIN_UDS_FLAG_IP_MASK;
+	struct v4l2_rect *cam_subrect = &cam->subrect;
+
+	ratio_h = rcar_vin_compute_ratio(cam_subrect->width, cam->out_width);
+	ratio_v = rcar_vin_compute_ratio(cam_subrect->height, cam->out_height);
+
+	bwidth_h = rcar_vin_get_bwidth(ratio_h);
+	bwidth_v = rcar_vin_get_bwidth(ratio_v);
+
+	ctrl = (alpha ? VIN_UDSn_CTRL_AON : 0) | VIN_UDSn_CTRL_AMD;
+
+	/* scaling & progressive -> interlace */
+	if (ip_flag != VIN_UDS_FLAG_PROGRESSIVE) {
+		unsigned long vfrac = ratio_v & 0x0FFF;
+
+		ctrl |= VIN_UDSn_CTRL_TDIPC;
+
+		if (ratio_v <= 1365) {
+			/* 3 <= scale */
+
+			if (ip_flag == VIN_UDS_FLAG_INTERLACE_TOP) {
+				vphase = (((4096 - vfrac) / 2) & 0xFFF) << 16;
+			} else {
+				vphase = (((4096 - (vfrac * 3)) / 2) & 0xFFF)
+						<< 16;
+			}
+			vphase |= ((4096 - vfrac) / 2) & 0xFFF;
+
+			clip_size = (cam->out_height / 2);
+		} else if (ratio_v < 4096) {
+			/* 1 < scale < 3 */
+
+			if (ip_flag == VIN_UDS_FLAG_INTERLACE_TOP) {
+				clip_size = (cam->out_height / 2);
+				vphase = (((4096 - vfrac) / 2) & 0xFFF) << 16;
+			} else {
+				clip_size = (cam->out_height / 2 + 1);
+				vphase = (((4096 + vfrac) / 2) & 0xFFF) << 16;
+			}
+			vphase |= ((4096 - vfrac) / 2) & 0xFFF;
+		} else if (ratio_v == 4096) {
+			vphase = 0;
+			clip_size = (cam->out_height / 2);
+		} else if (ratio_v < 8192) {
+			/* 1/2 < scale < 1 */
+
+			if (ip_flag == VIN_UDS_FLAG_INTERLACE_TOP)
+				vphase = 0;
+			else
+				vphase = (4096 - vfrac) << 16;
+
+			clip_size = (cam->out_height / 2);
+
+			/* If you want to reducing in the */
+			/* IP conversion, set MultiTap.   */
+			/* Can not be reducing if you use */
+			/* Bilinear/NearestNeighbor.      */
+			ctrl |= VIN_UDSn_CTRL_BC;
+		} else {
+			return -EINVAL;
+		}
+
+		clip_size |= (cam->out_width << 16);
+		ratio_v *= 2;
+	} else {
+		clip_size = (cam->out_width << 16) | cam->out_height;
+	}
+
+	if ((alpha < 0xff) && (ratio_h >= 8192 || ratio_v >= 8192))
+		;
+	else
+		ctrl |= VIN_UDSn_CTRL_BC;
+
+
+	regs->ctrl = ctrl;
+	regs->scale = (ratio_h << 16) | ratio_v;
+	regs->pass_bwidth = (bwidth_h << 16) | bwidth_v;
+	regs->clip_size = clip_size;
+	regs->vphase = vphase;
+
+	return 0;
+}
+
+int rcar_vin_uds_to_dl(struct rcar_vin_priv *priv, struct rcar_vin_cam *cam)
+{
+	struct rcar_vin_uds_regs regs;
+	unsigned long alpha = priv->alpha;
+	unsigned long in_flag = priv->flag;
+
+	if (is_scaling(cam)) {
+		u32 vnmc;
+
+		if (check_uds_param(cam, &regs, alpha, in_flag)) {
+				dev_err(priv->ici.v4l2_dev.dev,
+					"parameter error\n");
+			return -EINVAL;
+		}
+
+		vnmc = ioread32(priv->base + VNMC_REG);
+		iowrite32(vnmc | VNMC_SCLE, priv->base + VNMC_REG);
+
+		iowrite32(regs.ctrl, priv->base + VNUDS_CTRL_REG);
+		iowrite32(regs.scale, priv->base + VNUDS_SCALE_REG);
+		iowrite32(regs.pass_bwidth, priv->base + VNUDS_PASS_BWIDTH_REG);
+		iowrite32(regs.clip_size, priv->base + VNUDS_CLIP_SIZE_REG);
+		iowrite32(regs.vphase, priv->base + VNUDS_IPC_REG);
+
+	}
+
+	return 0;
 }
 
 static void set_coeff(struct rcar_vin_priv *priv, unsigned short xs)
@@ -1067,6 +1364,8 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 	    priv->chip == RCAR_E1)
 		dsize = 1;
 
+	/* FIXME : Add CSI2 special configuration */
+
 	dev_dbg(icd->parent, "Cam %ux%u@%u:%u\n",
 		cam->width, cam->height, cam->vin_left, cam->vin_top);
 	dev_dbg(icd->parent, "Cam subrect %ux%u@%u:%u\n",
@@ -1084,52 +1383,62 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 		iowrite32(top_offset / 2, priv->base + VNSLPRC_REG);
 		iowrite32((top_offset + cam_subrect->height) / 2 - 1,
 			  priv->base + VNELPRC_REG);
+		priv->flag = VIN_UDS_FLAG_INTERLACE_TOP;
 		break;
 	default:
 		iowrite32(top_offset, priv->base + VNSLPRC_REG);
 		iowrite32(top_offset + cam_subrect->height - 1,
 			  priv->base + VNELPRC_REG);
+		priv->flag = VIN_UDS_FLAG_PROGRESSIVE;
 		break;
 	}
 
-	/* Set scaling coefficient */
-	value = 0;
-	if (cam_subrect->height != cam->out_height)
-		value = (4096 * cam_subrect->height) / cam->out_height;
-	dev_dbg(icd->parent, "YS Value: %x\n", value);
-	iowrite32(value, priv->base + VNYS_REG);
+	if (priv->chip == RCAR_GEN3)
+		rcar_vin_uds_to_dl(priv, cam); /* FIXME */
+	else {
+		/* Set scaling coefficient */
+		value = 0;
+		if (cam_subrect->height != cam->out_height)
+			value = (4096 * cam_subrect->height) / cam->out_height;
+		dev_dbg(icd->parent, "YS Value: %x\n", value);
+		iowrite32(value, priv->base + VNYS_REG);
 
-	value = 0;
-	if (cam_subrect->width != cam->out_width)
-		value = (4096 * cam_subrect->width) / cam->out_width;
+		value = 0;
+		if (cam_subrect->width != cam->out_width)
+			value = (4096 * cam_subrect->width) / cam->out_width;
 
-	/* Horizontal upscaling is up to double size */
-	if (0 < value && value < 2048)
-		value = 2048;
+		/* Horizontal upscaling is up to double size */
+		if (0 < value && value < 2048)
+			value = 2048;
 
-	dev_dbg(icd->parent, "XS Value: %x\n", value);
-	iowrite32(value, priv->base + VNXS_REG);
+		dev_dbg(icd->parent, "XS Value: %x\n", value);
+		iowrite32(value, priv->base + VNXS_REG);
 
-	/* Horizontal upscaling is carried out by scaling down from double size */
-	if (value < 4096)
-		value *= 2;
+		/* Horizontal upscaling is carried out
+			by scaling down from double size */
+		if (value < 4096)
+			value *= 2;
 
-	set_coeff(priv, value);
+		set_coeff(priv, value);
 
-	/* Set Start/End Pixel/Line Post-Clip */
-	iowrite32(0, priv->base + VNSPPOC_REG);
-	iowrite32(0, priv->base + VNSLPOC_REG);
-	iowrite32((cam->out_width - 1) << dsize, priv->base + VNEPPOC_REG);
-	switch (priv->field) {
-	case V4L2_FIELD_INTERLACED:
-	case V4L2_FIELD_INTERLACED_TB:
-	case V4L2_FIELD_INTERLACED_BT:
-		iowrite32(cam->out_height / 2 - 1,
-			  priv->base + VNELPOC_REG);
-		break;
-	default:
-		iowrite32(cam->out_height - 1, priv->base + VNELPOC_REG);
-		break;
+		/* Set Start/End Pixel/Line Post-Clip */
+		iowrite32(0, priv->base + VNSPPOC_REG);
+		iowrite32(0, priv->base + VNSLPOC_REG);
+		iowrite32((cam->out_width - 1) << dsize,
+			priv->base + VNEPPOC_REG);
+		switch (priv->field) {
+		case V4L2_FIELD_INTERLACED:
+		case V4L2_FIELD_INTERLACED_TB:
+		case V4L2_FIELD_INTERLACED_BT:
+			iowrite32(cam->out_height / 2 - 1,
+				  priv->base + VNELPOC_REG);
+			break;
+		default:
+			iowrite32(cam->out_height - 1,
+				priv->base + VNELPOC_REG);
+			break;
+		}
+
 	}
 
 	iowrite32(ALIGN(cam->out_width, 0x10), priv->base + VNIS_REG);
@@ -1163,6 +1472,13 @@ static void capture_restore(struct rcar_vin_priv *priv, u32 vnmc)
 	}
 
 	iowrite32(vnmc, priv->base + VNMC_REG);
+}
+
+/* Find the bus subdevice driver, e.g., CSI2 */
+static struct v4l2_subdev *find_bus_subdev(struct rcar_vin_priv *pcdev,
+					   struct soc_camera_device *icd)
+{
+	return csi2_subdev(pcdev, icd) ? : soc_camera_to_subdev(icd);
 }
 
 #define VIN_MBUS_FLAGS	(V4L2_MBUS_MASTER |		\
@@ -1222,6 +1538,19 @@ static int rcar_vin_set_bus_param(struct soc_camera_device *icd)
 	ret = v4l2_subdev_call(sd, video, s_mbus_config, &cfg);
 	if (ret < 0 && ret != -ENOIOCTLCMD)
 		return ret;
+
+	if (priv->chip == RCAR_GEN3) {
+		sd = find_bus_subdev(priv, icd);
+
+		ret = v4l2_subdev_call(sd, video, s_mbus_config, &cfg);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			return ret;
+
+		if (cfg.type == V4L2_MBUS_CSI2)
+			vnmc &= ~VNMC_DPINE;
+		else
+			vnmc |= VNMC_DPINE;
+	}
 
 	val = VNDMR2_FTEV | VNDMR2_VLV(1);
 	if (!(common_flags & V4L2_MBUS_VSYNC_ACTIVE_LOW))
@@ -1834,6 +2163,7 @@ static struct soc_camera_host_ops rcar_vin_host_ops = {
 
 #ifdef CONFIG_OF
 static const struct of_device_id rcar_vin_of_table[] = {
+	{ .compatible = "renesas,vin-r8a7795", .data = (void *)RCAR_GEN3 },
 	{ .compatible = "renesas,vin-r8a7794", .data = (void *)RCAR_GEN2 },
 	{ .compatible = "renesas,vin-r8a7793", .data = (void *)RCAR_GEN2 },
 	{ .compatible = "renesas,vin-r8a7791", .data = (void *)RCAR_GEN2 },
@@ -1846,6 +2176,7 @@ MODULE_DEVICE_TABLE(of, rcar_vin_of_table);
 #endif
 
 static struct platform_device_id rcar_vin_id_table[] = {
+	{ "r8a7795-vin",  RCAR_GEN3 },
 	{ "r8a7791-vin",  RCAR_GEN2 },
 	{ "r8a7790-vin",  RCAR_GEN2 },
 	{ "r8a7779-vin",  RCAR_H1 },
@@ -1885,6 +2216,8 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 		if (ep.bus_type == V4L2_MBUS_BT656)
 			pdata_flags = RCAR_VIN_BT656;
+		else if (ep.bus_type == V4L2_MBUS_CSI2)
+			pdata_flags = RCAR_VIN_BT656 | RCAR_VIN_CSI2;
 		else {
 			pdata_flags = 0;
 			if (ep.bus.parallel.flags & V4L2_MBUS_HSYNC_ACTIVE_LOW)
