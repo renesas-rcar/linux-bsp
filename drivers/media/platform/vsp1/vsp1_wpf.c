@@ -18,9 +18,12 @@
 #include "vsp1.h"
 #include "vsp1_rwpf.h"
 #include "vsp1_video.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#endif
 
-#define WPF_MAX_WIDTH				2048
-#define WPF_MAX_HEIGHT				2048
+#define WPF_MAX_WIDTH				4096
+#define WPF_MAX_HEIGHT				4096
 
 /* -----------------------------------------------------------------------------
  * Device Access
@@ -34,8 +37,19 @@ static inline u32 vsp1_wpf_read(struct vsp1_rwpf *wpf, u32 reg)
 
 static inline void vsp1_wpf_write(struct vsp1_rwpf *wpf, u32 reg, u32 data)
 {
+#ifdef VSP1_DL_SUPPORT
+	if (vsp1_dl_is_use(wpf->entity.vsp1)) {
+		vsp1_dl_set(wpf->entity.vsp1,
+			reg + wpf->entity.index * VI6_WPF_OFFSET,
+			data);
+	} else {
+		vsp1_write(wpf->entity.vsp1,
+		   reg + wpf->entity.index * VI6_WPF_OFFSET, data);
+	}
+#else
 	vsp1_write(wpf->entity.vsp1,
 		   reg + wpf->entity.index * VI6_WPF_OFFSET, data);
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -53,6 +67,9 @@ static int wpf_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_ALPHA_COMPONENT:
+#ifdef VSP1_DL_SUPPORT
+/* TODO		vsp1_dl_get(wpf->entity.vsp1, DL_BODY_WPF);*/
+#endif
 		value = vsp1_wpf_read(wpf, VI6_WPF_OUTFMT);
 		value &= ~VI6_WPF_OUTFMT_PDV_MASK;
 		value |= ctrl->val << VI6_WPF_OUTFMT_PDV_SHIFT;
@@ -85,6 +102,10 @@ static int wpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	ret = vsp1_entity_set_streaming(&wpf->entity, enable);
 	if (ret < 0)
 		return ret;
+
+#ifdef VSP1_DL_SUPPORT
+	vsp1_dl_get(wpf->entity.vsp1, DL_BODY_WPF);
+#endif
 
 	if (!enable) {
 		vsp1_write(vsp1, VI6_WPF_IRQ_ENB(wpf->entity.index), 0);
@@ -167,7 +188,16 @@ static int wpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	vsp1_write(vsp1, VI6_WPF_WRBCK_CTRL, 0);
 
 	/* Enable interrupts */
+#ifdef VSP1_DL_SUPPORT
+	if ((vsp1_dl_is_use(vsp1) == 2) && vsp1_dl_is_auto_repeat(vsp1)) {
+		vsp1_write(vsp1, VI6_WPF_IRQ_STA(wpf->entity.index),
+			VI6_DISP_IRQ_STA_DSE);
+	} else {
+		vsp1_write(vsp1, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
+	}
+#else
 	vsp1_write(vsp1, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
+#endif
 	vsp1_write(vsp1, VI6_WPF_IRQ_ENB(wpf->entity.index),
 		   VI6_WFP_IRQ_ENB_FREE);
 
@@ -202,6 +232,10 @@ static struct v4l2_subdev_ops wpf_ops = {
 
 static void wpf_set_memory(struct vsp1_rwpf *wpf, struct vsp1_rwpf_memory *mem)
 {
+#ifdef VSP1_DL_SUPPORT
+	vsp1_dl_get(wpf->entity.vsp1, DL_BODY_WPF);
+#endif
+
 	vsp1_wpf_write(wpf, VI6_WPF_DSTM_ADDR_Y, mem->addr[0]);
 	if (mem->num_planes > 1)
 		vsp1_wpf_write(wpf, VI6_WPF_DSTM_ADDR_C0, mem->addr[1]);

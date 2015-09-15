@@ -1,7 +1,7 @@
 /*
  * vsp1_regs.h  --  R-Car VSP1 Registers Definitions
  *
- * Copyright (C) 2013 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -506,10 +506,10 @@
 
 #define VI6_BRU_CTRL(n)			(0x2c10 + (n) * 8 + ((n) <= 3 ? 0 : 4))
 #define VI6_BRU_CTRL_RBC		(1 << 31)
-#define VI6_BRU_CTRL_DSTSEL_BRUIN(n)	((n) << 20)
+#define VI6_BRU_CTRL_DSTSEL_BRUIN(n)	(((n) <= 3 ? (n) : (n)+1) << 20)
 #define VI6_BRU_CTRL_DSTSEL_VRPF	(4 << 20)
 #define VI6_BRU_CTRL_DSTSEL_MASK	(7 << 20)
-#define VI6_BRU_CTRL_SRCSEL_BRUIN(n)	((n) << 16)
+#define VI6_BRU_CTRL_SRCSEL_BRUIN(n)	(((n) <= 3 ? (n) : (n)+1) << 16)
 #define VI6_BRU_CTRL_SRCSEL_VRPF	(4 << 16)
 #define VI6_BRU_CTRL_SRCSEL_MASK	(7 << 16)
 #define VI6_BRU_CTRL_CROP(rop)		((rop) << 4)
@@ -551,7 +551,7 @@
 #define VI6_BRU_BLD_COEFY_SHIFT		0
 
 #define VI6_BRU_ROP			0x2c30
-#define VI6_BRU_ROP_DSTSEL_BRUIN(n)	((n) << 20)
+#define VI6_BRU_ROP_DSTSEL_BRUIN(n)	(((n) <= 3 ? (n) : (n)+1) << 20)
 #define VI6_BRU_ROP_DSTSEL_VRPF		(4 << 20)
 #define VI6_BRU_ROP_DSTSEL_MASK		(7 << 20)
 #define VI6_BRU_ROP_CROP(rop)		((rop) << 4)

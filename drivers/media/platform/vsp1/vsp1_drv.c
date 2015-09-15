@@ -33,6 +33,9 @@
 #include "vsp1_sru.h"
 #include "vsp1_uds.h"
 #include "vsp1_video.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#endif
 
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
@@ -61,6 +64,20 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 			vsp1_pipeline_frame_end(pipe);
 			ret = IRQ_HANDLED;
 		}
+
+#ifdef VSP1_DL_SUPPORT
+		if ((i != 0) || (!pipe->lif))
+			continue;
+
+		status = vsp1_read(vsp1, VI6_DISP_IRQ_STA);
+		vsp1_write(vsp1, VI6_DISP_IRQ_STA,
+				 ~status & VI6_DISP_IRQ_STA_DSE);
+
+		if (status & VI6_DISP_IRQ_STA_DSE) {
+			vsp1_pipeline_display_start(pipe);
+			ret = IRQ_HANDLED;
+		}
+#endif
 	}
 
 	return ret;
@@ -234,13 +251,15 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	}
 
 	/* Instantiate all the entities. */
-	vsp1->bru = vsp1_bru_create(vsp1);
-	if (IS_ERR(vsp1->bru)) {
-		ret = PTR_ERR(vsp1->bru);
-		goto done;
-	}
+	if (vsp1->pdata.features & VSP1_HAS_BRU) {
+		vsp1->bru = vsp1_bru_create(vsp1);
+		if (IS_ERR(vsp1->bru)) {
+			ret = PTR_ERR(vsp1->bru);
+			goto done;
+		}
 
-	list_add_tail(&vsp1->bru->entity.list_dev, &vsp1->entities);
+		list_add_tail(&vsp1->bru->entity.list_dev, &vsp1->entities);
+	}
 
 	vsp1->hsi = vsp1_hsit_create(vsp1, true);
 	if (IS_ERR(vsp1->hsi)) {
@@ -370,6 +389,13 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 		ret = v4l2_device_register_subdev_nodes(&vsp1->v4l2_dev);
 	else
 		ret = vsp1_drm_init(vsp1);
+
+#ifdef VSP1_DL_SUPPORT
+	if (ret < 0)
+		goto done;
+
+	ret = vsp1_dl_create(vsp1);
+#endif
 
 done:
 	if (ret < 0)
@@ -534,6 +560,8 @@ static int vsp1_parse_dt(struct vsp1_device *vsp1)
 
 	vsp1->info = of_device_get_match_data(vsp1->dev);
 
+	if (of_property_read_bool(np, "renesas,has-bru"))
+		pdata->features |= VSP1_HAS_BRU;
 	if (of_property_read_bool(np, "renesas,has-lif"))
 		pdata->features |= VSP1_HAS_LIF;
 	if (of_property_read_bool(np, "renesas,has-lut"))
@@ -562,6 +590,13 @@ static int vsp1_parse_dt(struct vsp1_device *vsp1)
 			pdata->wpf_count);
 		return -EINVAL;
 	}
+
+	/* Backward compatibility: all Gen2 VSP instances have a BRU, the
+	 * renesas,has-bru property was thus not available. Set the HAS_BRU
+	 * feature automatically in that case.
+	 */
+	if (vsp1->info->num_bru_inputs == 4)
+		pdata->features |= VSP1_HAS_BRU;
 
 	return 0;
 }
@@ -642,9 +677,15 @@ static const struct vsp1_device_info vsp1_gen2_vspd_info = {
 	.uapi = false,
 };
 
+static const struct vsp1_device_info vsp2_gen3_vspd_info = {
+	.num_bru_inputs = 5,
+	.uapi = false,
+};
+
 static const struct of_device_id vsp1_of_match[] = {
 	{ .compatible = "renesas,vsp1", .data = &vsp1_gen2_info },
 	{ .compatible = "renesas,vsp1d", .data = &vsp1_gen2_vspd_info },
+	{ .compatible = "renesas,vsp2d", .data = &vsp2_gen3_vspd_info },
 	{ },
 };
 

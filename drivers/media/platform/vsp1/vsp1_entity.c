@@ -1,7 +1,7 @@
 /*
  * vsp1_entity.c  --  R-Car VSP1 Base Entity
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -20,6 +20,9 @@
 
 #include "vsp1.h"
 #include "vsp1_entity.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#endif
 
 bool vsp1_entity_is_streaming(struct vsp1_entity *entity)
 {
@@ -66,8 +69,19 @@ void vsp1_entity_route_setup(struct vsp1_entity *source)
 		return;
 
 	sink = container_of(source->sink, struct vsp1_entity, subdev.entity);
+#ifdef VSP1_DL_SUPPORT
+	if (vsp1_dl_is_use(source->vsp1)) {
+		vsp1_dl_get(source->vsp1, DL_BODY_DPR);
+		vsp1_dl_set(source->vsp1, source->route->reg,
+			sink->route->inputs[source->sink_pad]);
+	} else {
+		vsp1_write(source->vsp1, source->route->reg,
+		   sink->route->inputs[source->sink_pad]);
+	}
+#else
 	vsp1_write(source->vsp1, source->route->reg,
 		   sink->route->inputs[source->sink_pad]);
+#endif
 }
 
 /* -----------------------------------------------------------------------------
@@ -165,7 +179,8 @@ int vsp1_entity_link_setup(struct media_entity *entity,
 static const struct vsp1_route vsp1_routes[] = {
 	{ VSP1_ENTITY_BRU, 0, VI6_DPR_BRU_ROUTE,
 	  { VI6_DPR_NODE_BRU_IN(0), VI6_DPR_NODE_BRU_IN(1),
-	    VI6_DPR_NODE_BRU_IN(2), VI6_DPR_NODE_BRU_IN(3), } },
+	    VI6_DPR_NODE_BRU_IN(2), VI6_DPR_NODE_BRU_IN(3),
+	    VI6_DPR_NODE_BRU_IN(4), } },
 	{ VSP1_ENTITY_HSI, 0, VI6_DPR_HSI_ROUTE, { VI6_DPR_NODE_HSI, } },
 	{ VSP1_ENTITY_HST, 0, VI6_DPR_HST_ROUTE, { VI6_DPR_NODE_HST, } },
 	{ VSP1_ENTITY_LIF, 0, 0, { VI6_DPR_NODE_LIF, } },

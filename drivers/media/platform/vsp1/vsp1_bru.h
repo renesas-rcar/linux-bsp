@@ -1,7 +1,7 @@
 /*
  * vsp1_bru.h  --  R-Car VSP1 Blend ROP Unit
  *
- * Copyright (C) 2013 Renesas Corporation
+ * Copyright (C) 2013-2015 Renesas Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -23,7 +23,7 @@ struct vsp1_device;
 struct vsp1_rwpf;
 
 #define BRU_PAD_SINK(n)				(n)
-#define BRU_MAX_INPUTS				4
+#define BRU_MAX_INPUTS				5
 
 struct vsp1_bru {
 	struct vsp1_entity entity;

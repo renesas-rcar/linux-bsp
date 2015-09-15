@@ -24,6 +24,9 @@
 #include "vsp1_lif.h"
 #include "vsp1_pipe.h"
 #include "vsp1_rwpf.h"
+#ifdef VSP1_DL_SUPPORT
+#include "vsp1_dl.h"
+#endif
 
 /* -----------------------------------------------------------------------------
  * Runtime Handling
@@ -61,6 +64,10 @@ static int vsp1_drm_pipeline_run(struct vsp1_pipeline *pipe)
 
 		vsp1->drm->update = false;
 	}
+
+#ifdef VSP1_DL_SUPPORT
+	vsp1_dl_set_stream(vsp1);
+#endif
 
 	vsp1_pipeline_run(pipe);
 
@@ -249,6 +256,19 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 }
 EXPORT_SYMBOL_GPL(vsp1_du_setup_lif);
 
+
+#ifdef VSP1_DL_SUPPORT
+int vsp1_du_setup_dl(struct device *dev, int mode, int repeat)
+{
+	return vsp1_dl_setup_control(dev_get_drvdata(dev), mode, repeat);
+}
+
+void vsp1_du_reset_dl(struct device *dev)
+{
+	vsp1_dl_reset(dev_get_drvdata(dev));
+}
+#endif
+
 /**
  * vsp1_du_setup_rpf - Setup one RPF input of the VSP pipeline
  * @dev: the VSP device
@@ -287,7 +307,7 @@ EXPORT_SYMBOL_GPL(vsp1_du_setup_lif);
 int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		      u32 pixelformat, unsigned int pitch,
 		      dma_addr_t mem[2], const struct v4l2_rect *src,
-		      const struct v4l2_rect *dst)
+		      const struct v4l2_rect *dst, u8 alpha)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
@@ -304,6 +324,7 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		return -EINVAL;
 
 	rpf = vsp1->rpf[rpf_index];
+	rpf->alpha->cur.val = alpha;
 
 	if (pixelformat == 0) {
 		dev_dbg(vsp1->dev, "%s: RPF%u: disable requested\n", __func__,
@@ -359,7 +380,7 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 	format.pad = RWPF_PAD_SINK;
 	format.format.width = src->width + src->left;
 	format.format.height = src->height + src->top;
-	format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
+	format.format.code = fmtinfo->mbus;
 	format.format.field = V4L2_FIELD_NONE;
 
 	ret = v4l2_subdev_call(&rpf->entity.subdev, pad, set_fmt, NULL,
@@ -388,6 +409,9 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		__func__, sel.r.left, sel.r.top, sel.r.width, sel.r.height,
 		rpf->entity.index);
 
+	/* RPF source, hardcode the format to ARGB8888 to turn on format
+	 * conversion if needed.
+	 */
 	format.pad = RWPF_PAD_SOURCE;
 
 	ret = v4l2_subdev_call(&rpf->entity.subdev, pad, get_fmt, NULL,
@@ -400,6 +424,14 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 		__func__, format.format.width, format.format.height,
 		format.format.code, rpf->entity.index);
 
+	format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
+
+	ret = v4l2_subdev_call(&rpf->entity.subdev, pad, set_fmt, NULL,
+			       &format);
+	if (ret < 0)
+		return ret;
+
+	/* BRU sink, propagate the format from the RPF source. */
 	format.pad = rpf->entity.index;
 
 	ret = v4l2_subdev_call(&vsp1->bru->entity.subdev, pad, set_fmt, NULL,
@@ -449,7 +481,11 @@ int vsp1_du_setup_rpf(struct device *dev, unsigned int rpf_index,
 
 	/* Start the pipeline if it's currently stopped. */
 	vsp1->drm->update = true;
+#ifdef VSP1_DL_SUPPORT
+	if (start_stop || vsp1_dl_is_use(vsp1))
+#else
 	if (start_stop)
+#endif
 		vsp1_drm_pipeline_run(pipe);
 
 	spin_unlock_irqrestore(&pipe->irqlock, flags);
@@ -467,6 +503,10 @@ int vsp1_drm_create_links(struct vsp1_device *vsp1)
 	const u32 flags = MEDIA_LNK_FL_ENABLED | MEDIA_LNK_FL_IMMUTABLE;
 	unsigned int i;
 	int ret;
+
+	/* VSPD instances require a BRU to perform composition. */
+	if (!vsp1->bru)
+		return -ENXIO;
 
 	for (i = 0; i < vsp1->pdata.rpf_count; ++i) {
 		struct vsp1_rwpf *rpf = vsp1->rpf[i];
