@@ -16,15 +16,39 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "smc";
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		/* 1core only at this point */
 		a57_0: cpu@0 {
 			compatible = "arm,cortex-a57", "arm,armv8";
 			reg = <0x0>;
 			device_type = "cpu";
+			enable-method = "psci";
+		};
+
+		a57_1: cpu@1 {
+			compatible = "arm,cortex-a57","arm,armv8";
+			reg = <0x1>;
+			device_type = "cpu";
+			enable-method = "psci";
+		};
+		a57_2: cpu@2 {
+			compatible = "arm,cortex-a57","arm,armv8";
+			reg = <0x2>;
+			device_type = "cpu";
+			enable-method = "psci";
+		};
+		a57_3: cpu@3 {
+			compatible = "arm,cortex-a57","arm,armv8";
+			reg = <0x3>;
+			device_type = "cpu";
+			enable-method = "psci";
 		};
 	};
 
@@ -37,6 +61,7 @@
 	soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
+
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
@@ -49,7 +74,7 @@
 			reg = <0x0 0xf1010000 0 0x1000>,
 			      <0x0 0xf1020000 0 0x2000>;
 			interrupts = <GIC_PPI 9
-					(GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_HIGH)>;
+					(GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
 		};
 
 		gpio0: gpio@e6050000 {
@@ -159,13 +184,14 @@
 		timer {
 			compatible = "arm,armv8-timer";
 			interrupts = <GIC_PPI 13
-					(GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_LOW)>,
+					(GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
 				     <GIC_PPI 14
-					(GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_LOW)>,
+					(GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
 				     <GIC_PPI 11
-					(GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_LOW)>,
+					(GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
 				     <GIC_PPI 10
-					(GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_LOW)>;
+					(GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
+			clock-frequency = <8333333>;
 		};
 
 		clock {
@@ -352,11 +378,8 @@
 					     "renesas,rcar-gen3-cpg-clocks";
 				reg = <0 0xe6150000 0 0x1000>;
 				clocks = <&extal_clk>;
-				clock-indices = <
-					R8A7795_CLK_MAIN R8A7795_CLK_PLL0
-					R8A7795_CLK_PLL1 R8A7795_CLK_PLL2
-					R8A7795_CLK_PLL3 R8A7795_CLK_PLL4
-				>;
+				clock-output-names = "main", "pll0", "pll1","pll2",
+						     "pll3", "pll4";
 				#power-domain-cells = <0>;
 
 				mstp2_clks: mstp2_clks@e6150138 {

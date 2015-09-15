@@ -11,36 +11,19 @@
  */
 
 #include <linux/clk-provider.h>
+#include <linux/clkdev.h>
 #include <linux/clk/shmobile.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/math64.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#include <linux/slab.h>
 #include <linux/spinlock.h>
-
-#define RCAR_GEN3_CLK_MAIN	0
-#define RCAR_GEN3_CLK_PLL0	1
-#define RCAR_GEN3_CLK_PLL1	2
-#define RCAR_GEN3_CLK_PLL2	3
-#define RCAR_GEN3_CLK_PLL3	4
-#define RCAR_GEN3_CLK_PLL4	5
-#define RCAR_GEN3_CLK_NR	6
-
-static const char * const rcar_gen3_clk_names[RCAR_GEN3_CLK_NR] = {
-	[RCAR_GEN3_CLK_MAIN] = "main",
-	[RCAR_GEN3_CLK_PLL0] = "pll0",
-	[RCAR_GEN3_CLK_PLL1] = "pll1",
-	[RCAR_GEN3_CLK_PLL2] = "pll2",
-	[RCAR_GEN3_CLK_PLL3] = "pll3",
-	[RCAR_GEN3_CLK_PLL4] = "pll4",
-};
 
 struct rcar_gen3_cpg {
 	struct clk_onecell_data data;
 	spinlock_t lock;
 	void __iomem *reg;
-	struct clk *clks[RCAR_GEN3_CLK_NR];
 };
 
 #define CPG_PLL0CR	0x00d8
@@ -49,7 +32,7 @@ struct rcar_gen3_cpg {
 /*
  * common function
  */
-#define rcar_clk_readl(cpg, _reg) readl(cpg->reg + _reg)
+#define rcar_clk_readl(cpg, _reg) clk_readl(cpg->reg + _reg)
 
 /*
  * Reset register definitions.
@@ -136,79 +119,85 @@ static const struct cpg_pll_config cpg_pll_configs[16] __initconst = {
  * Initialization
  */
 
+static u32 cpg_mode __initdata;
+
 static struct clk * __init
 rcar_gen3_cpg_register_clock(struct device_node *np, struct rcar_gen3_cpg *cpg,
 			     const struct cpg_pll_config *config,
-			     unsigned int gen3_clk)
+			     const char *name)
 {
-	const char *parent_name = rcar_gen3_clk_names[RCAR_GEN3_CLK_MAIN];
+	const char *parent_name;
 	unsigned int mult = 1;
 	unsigned int div = 1;
-	u32 value;
 
-	switch (gen3_clk) {
-	case RCAR_GEN3_CLK_MAIN:
+	if (!strcmp(name, "main")) {
 		parent_name = of_clk_get_parent_name(np, 0);
 		div = config->extal_div;
-		break;
-	case RCAR_GEN3_CLK_PLL0:
+	} else if (!strcmp(name, "pll0")) {
 		/* PLL0 is a configurable multiplier clock. Register it as a
 		 * fixed factor clock for now as there's no generic multiplier
 		 * clock implementation and we currently have no need to change
 		 * the multiplier value.
 		 */
-		value = rcar_clk_readl(cpg, CPG_PLL0CR);
+		u32 value = rcar_clk_readl(cpg, CPG_PLL0CR);
+
+		parent_name = "main";
 		mult = ((value >> 24) & ((1 << 7) - 1)) + 1;
-		break;
-	case RCAR_GEN3_CLK_PLL1:
+	} else if (!strcmp(name, "pll1")) {
+		parent_name = "main";
 		mult = config->pll1_mult / 2;
-		break;
-	case RCAR_GEN3_CLK_PLL2:
+	} else if (!strcmp(name, "pll2")) {
 		/* PLL2 is a configurable multiplier clock. Register it as a
 		 * fixed factor clock for now as there's no generic multiplier
 		 * clock implementation and we currently have no need to change
 		 * the multiplier value.
 		 */
-		value = rcar_clk_readl(cpg, CPG_PLL2CR);
+		u32 value = rcar_clk_readl(cpg, CPG_PLL2CR);
+
+		parent_name = "main";
 		mult = ((value >> 24) & ((1 << 7) - 1)) + 1;
-		break;
-	case RCAR_GEN3_CLK_PLL3:
+	} else if (!strcmp(name, "pll3")) {
+		parent_name = "main";
 		mult = config->pll3_mult;
-		break;
-	case RCAR_GEN3_CLK_PLL4:
+	} else if (!strcmp(name, "pll4")) {
+		parent_name = "main";
 		mult = config->pll4_mult;
-		break;
-	default:
+	} else {
 		return ERR_PTR(-EINVAL);
 	}
 
-	return clk_register_fixed_factor(NULL, rcar_gen3_clk_names[gen3_clk],
-					 parent_name, 0, mult, div);
+	return clk_register_fixed_factor(NULL, name, parent_name, 0, mult, div);
 }
 
 static void __init rcar_gen3_cpg_clocks_init(struct device_node *np)
 {
 	const struct cpg_pll_config *config;
 	struct rcar_gen3_cpg *cpg;
-	u32 cpg_mode;
+	struct clk **clks;
 	unsigned int i;
 	int num_clks;
 
 	cpg_mode = rcar_gen3_read_mode_pins();
 
-	num_clks = of_property_count_u32_elems(np, "clock-indices");
+	num_clks = of_property_count_strings(np, "clock-output-names");
 	if (num_clks < 0) {
 		pr_err("%s: failed to count clocks\n", __func__);
 		return;
 	}
 
 	cpg = kzalloc(sizeof(*cpg), GFP_KERNEL);
-	if (!cpg)
+	clks = kzalloc((num_clks * sizeof(*clks)), GFP_KERNEL);
+	if (cpg == NULL || clks == NULL) {
+		/* We're leaking memory on purpose, there's no point in cleaning
+		 * up as the system won't boot anyway.
+		 */
+		pr_err("%s: failed to allocate cpg\n", __func__);
 		return;
+	}
 
 	spin_lock_init(&cpg->lock);
 
-	cpg->data.clks = cpg->clks;
+	cpg->data.clks = clks;
 	cpg->data.clk_num = num_clks;
 
 	cpg->reg = of_iomap(np, 0);
@@ -223,20 +212,18 @@ static void __init rcar_gen3_cpg_clocks_init(struct device_node *np)
 	}
 
 	for (i = 0; i < num_clks; ++i) {
+		const char *name;
 		struct clk *clk;
-		u32 idx;
-		int ret;
 
-		ret = of_property_read_u32_index(np, "clock-indices", i, &idx);
-		if (ret < 0)
-			break;
+		of_property_read_string_index(np, "clock-output-names", i,
+					      &name);
 
-		clk = rcar_gen3_cpg_register_clock(np, cpg, config, idx);
+		clk = rcar_gen3_cpg_register_clock(np, cpg, config, name);
 		if (IS_ERR(clk))
-			pr_err("%s: failed to register %s %u clock (%ld)\n",
-			       __func__, np->name, idx, PTR_ERR(clk));
+			pr_err("%s: failed to register %s %s clock (%ld)\n",
+			       __func__, np->name, name, PTR_ERR(clk));
 		else
-			cpg->data.clks[idx] = clk;
+			cpg->data.clks[i] = clk;
 	}
 
 	of_clk_add_provider(np, of_clk_src_onecell_get, &cpg->data);

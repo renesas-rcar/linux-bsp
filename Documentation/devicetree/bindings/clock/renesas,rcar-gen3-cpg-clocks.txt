@@ -15,7 +15,8 @@ Required Properties:
 
   - clocks: References to the parent clocks: first to the EXTAL clock
   - #clock-cells: Must be 1
-  - clock-indices: Indices of the exported clocks
+  - clock-output-names: The names of the clocks. Supported clocks are
+    "main", "pll0", "pll1", "pll2", "pll3", "pll4"
   - #power-domain-cells: Must be 0
 
 SoC devices that are part of the CPG/MSTP Clock Domain and can be power-managed
@@ -34,11 +35,8 @@ Examples
 		reg = <0 0xe6150000 0 0x1000>;
 		clocks = <&extal_clk>;
 		#clock-cells = <1>;
-                clock-indices = <
-                             R8A7795_CLK_MAIN R8A7795_CLK_PLL0
-                             R8A7795_CLK_PLL1 R8A7795_CLK_PLL2
-                             R8A7795_CLK_PLL3 R8A7795_CLK_PLL4
-                >;
+		clock-output-names = "main", "pll0", "pll1","pll2",
+				     "pll3", "pll4";
 		#power-domain-cells = <0>;
 	};
 
