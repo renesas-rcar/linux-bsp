@@ -141,6 +141,80 @@ enum {
 	FN_SEL_VSP_0,		FN_SEL_VSP_1,		FN_SEL_VSP_2,		FN_SEL_VSP_3,
 	FN_SEL_VIN4_0,		FN_SEL_VIN4_1,
 
+	/* EthernetAVB */
+	FN_AVB_MDC,		FN_AVB_MAGIC,		FN_AVB_PHY_INT,		FN_AVB_LINK,
+	FN_AVB_AVTP_PPS,
+	FN_AVB_AVTP_MATCH_A,	FN_AVB_AVTP_CAPTURE_A,
+	FN_AVB_AVTP_MATCH_B,	FN_AVB_AVTP_CAPTURE_B,
+
+	/* DU */
+	FN_DU_DR7,				FN_DU_DR6,
+	FN_DU_DR5,				FN_DU_DR4,
+	FN_DU_DR3,				FN_DU_DR2,
+	FN_DU_DR1,				FN_DU_DR0,
+	FN_DU_DG7,				FN_DU_DG6,
+	FN_DU_DG5,				FN_DU_DG4,
+	FN_DU_DG3,				FN_DU_DG2,
+	FN_DU_DG1,				FN_DU_DG0,
+	FN_DU_DB7,				FN_DU_DB6,
+	FN_DU_DB5,				FN_DU_DB4,
+	FN_DU_DB3,				FN_DU_DB2,
+	FN_DU_DB1,				FN_DU_DB0,
+	FN_DU_DOTCLKOUT0,			FN_DU_DOTCLKOUT1,
+	FN_DU_DISP,				FN_DU_CDE,
+	FN_DU_EXVSYNC_DU_VSYNC,			FN_DU_EXHSYNC_DU_HSYNC,
+	FN_DU_EXODDF_DU_ODDF_DISP_CDE,
+
+	/* HDMI */
+	FN_HDMI0_CEC,		FN_HDMI1_CEC,
+
+	/* I2C1 */
+	FN_SCL1_A,		FN_SDA1_A,
+	FN_SCL1_B,		FN_SDA1_B,
+	/* I2C2 */
+	FN_SCL2_A,		FN_SDA2_A,
+	FN_SCL2_B,		FN_SDA2_B,
+	/* I2C6 */
+	FN_SCL6_A,		FN_SDA6_A,
+	FN_SCL6_B,		FN_SDA6_B,
+	FN_SCL6_C,		FN_SDA6_C,
+
+	/* MSIOF0 */
+	FN_MSIOF0_SCK,		FN_MSIOF0_SYNC,		FN_MSIOF0_SS1,		FN_MSIOF0_SS2,
+	FN_MSIOF0_TXD,		FN_MSIOF0_RXD,
+	/* MSIOF1  */
+	FN_MSIOF1_SCK_A,	FN_MSIOF1_SYNC_A,	FN_MSIOF1_SS1_A,	FN_MSIOF1_SS2_A,
+	FN_MSIOF1_TXD_A,	FN_MSIOF1_RXD_A,
+	FN_MSIOF1_SCK_B,	FN_MSIOF1_SYNC_B,	FN_MSIOF1_SS1_B,	FN_MSIOF1_SS2_B,
+	FN_MSIOF1_TXD_B,	FN_MSIOF1_RXD_B,
+	FN_MSIOF1_SCK_C,	FN_MSIOF1_SYNC_C,	FN_MSIOF1_SS1_C,	FN_MSIOF1_SS2_C,
+	FN_MSIOF1_TXD_C,	FN_MSIOF1_RXD_C,
+	FN_MSIOF1_SCK_D,	FN_MSIOF1_SYNC_D,	FN_MSIOF1_SS1_D,	FN_MSIOF1_SS2_D,
+	FN_MSIOF1_TXD_D,	FN_MSIOF1_RXD_D,
+	FN_MSIOF1_SCK_E,	FN_MSIOF1_SYNC_E,	FN_MSIOF1_SS1_E,	FN_MSIOF1_SS2_E,
+	FN_MSIOF1_TXD_E,	FN_MSIOF1_RXD_E,
+	FN_MSIOF1_SCK_F,	FN_MSIOF1_SYNC_F,	FN_MSIOF1_SS1_F,	FN_MSIOF1_SS2_F,
+	FN_MSIOF1_TXD_F,	FN_MSIOF1_RXD_F,
+	FN_MSIOF1_SCK_G,	FN_MSIOF1_SYNC_G,	FN_MSIOF1_SS1_G,	FN_MSIOF1_SS2_G,
+	FN_MSIOF1_TXD_G,	FN_MSIOF1_RXD_G,
+	/* MSIOF2  */
+	FN_MSIOF2_SCK_A,	FN_MSIOF2_SYNC_A,	FN_MSIOF2_SS1_A,	FN_MSIOF2_SS2_A,
+	FN_MSIOF2_TXD_A,	FN_MSIOF2_RXD_A,
+	FN_MSIOF2_SCK_B,	FN_MSIOF2_SYNC_B,	FN_MSIOF2_SS1_B,	FN_MSIOF2_SS2_B,
+	FN_MSIOF2_TXD_B,	FN_MSIOF2_RXD_B,
+	FN_MSIOF2_SCK_C,	FN_MSIOF2_SYNC_C,	FN_MSIOF2_SS1_C,	FN_MSIOF2_SS2_C,
+	FN_MSIOF2_TXD_C,	FN_MSIOF2_RXD_C,
+	FN_MSIOF2_SCK_D,	FN_MSIOF2_SYNC_D,	FN_MSIOF2_SS1_D,	FN_MSIOF2_SS2_D,
+	FN_MSIOF2_TXD_D,	FN_MSIOF2_RXD_D,
+	/* MSIOF3 */
+	FN_MSIOF3_SCK_A,	FN_MSIOF3_SYNC_A,	FN_MSIOF3_SS1_A,	FN_MSIOF3_SS2_A,
+	FN_MSIOF3_TXD_A,	FN_MSIOF3_RXD_A,
+	FN_MSIOF3_SCK_B,	FN_MSIOF3_SYNC_B,	FN_MSIOF3_SS1_B,	FN_MSIOF3_SS2_B,
+	FN_MSIOF3_TXD_B,	FN_MSIOF3_RXD_B,
+	FN_MSIOF3_SCK_C,	FN_MSIOF3_SYNC_C,	FN_MSIOF3_TXD_C,	FN_MSIOF3_RXD_C,
+	FN_MSIOF3_SCK_D,	FN_MSIOF3_SYNC_D,	FN_MSIOF3_SS1_D,	FN_MSIOF3_TXD_D,
+	FN_MSIOF3_RXD_D,
+
 	/* SCIF0 */
 	FN_RX0,		FN_TX0,		FN_SCK0,	FN_RTS0_N_TANS,		FN_CTS0_N,
 	/* SCIF1 */
@@ -158,6 +232,46 @@ enum {
 	FN_RX4_C,	FN_TX4_C,	FN_SCK4_C,	FN_RTS4_N_TANS_C,	FN_CTS4_N_C,
 	/* SCIF5 */
 	FN_RX5,		FN_TX5,		FN_SCK5,
+
+	/* SDHI0 */
+	FN_SD0_CLK,	FN_SD0_CMD,
+	FN_SD0_DAT0,	FN_SD0_DAT1,
+	FN_SD0_DAT2,	FN_SD0_DAT3,
+	FN_SD0_CD,	FN_SD0_WP,
+	/* SDHI1 */
+	FN_SD1_CLK,	FN_SD1_CMD,
+	FN_SD1_DAT0,	FN_SD1_DAT1,
+	FN_SD1_DAT2,	FN_SD1_DAT3,
+	FN_SD1_CD,	FN_SD1_WP,
+	/* SDHI2 */
+	FN_SD2_CMD,	FN_SD2_CLK,
+	FN_SD2_DAT0,	FN_SD2_DAT1,
+	FN_SD2_DAT2,	FN_SD2_DAT3,
+	FN_SD2_DAT4,	FN_SD2_DAT5,
+	FN_SD2_DAT6,	FN_SD2_DAT7,
+	FN_SD2_DS,
+	FN_SD2_CD_A,	FN_SD2_WP_A,
+	FN_SD2_CD_B,	FN_SD2_WP_B,
+	/* SDHI3 */
+	FN_SD3_CMD,	FN_SD3_CLK,
+	FN_SD3_DAT0,	FN_SD3_DAT1,
+	FN_SD3_DAT2,	FN_SD3_DAT3,
+	FN_SD3_DAT4,	FN_SD3_DAT5,
+	FN_SD3_DAT6,	FN_SD3_DAT7,
+	FN_SD3_DS,
+	FN_SD3_CD,	FN_SD3_WP,
+
+	/* USB0 */
+	FN_USB0_PWEN,	FN_USB0_OVC,
+	/* USB1 */
+	FN_USB1_PWEN,	FN_USB1_OVC,
+	/* USB2 */
+	FN_USB2_PWEN,	FN_USB2_OVC,
+
+	/* USB30 */
+	FN_USB30_PWEN,	FN_USB30_OVC,
+	/* USB31 */
+	FN_USB31_PWEN,	FN_USB31_OVC,
 
 	PINMUX_FUNCTION_END,
 
@@ -270,6 +384,80 @@ enum {
 	SEL_VSP_0_MARK,		SEL_VSP_1_MARK,		SEL_VSP_2_MARK,		SEL_VSP_3_MARK,
 	SEL_VIN4_0_MARK,	SEL_VIN4_1_MARK,
 
+	/* EthernetAVB */
+	AVB_MDC_MARK,		AVB_MAGIC_MARK,		AVB_PHY_INT_MARK,	AVB_LINK_MARK,
+	AVB_AVTP_PPS_MARK,
+	AVB_AVTP_MATCH_A_MARK,	AVB_AVTP_CAPTURE_A_MARK,
+	AVB_AVTP_MATCH_B_MARK,	AVB_AVTP_CAPTURE_B_MARK,
+
+	/* DU */
+	DU_DR7_MARK,				DU_DR6_MARK,
+	DU_DR5_MARK,				DU_DR4_MARK,
+	DU_DR3_MARK,				DU_DR2_MARK,
+	DU_DR1_MARK,				DU_DR0_MARK,
+	DU_DG7_MARK,				DU_DG6_MARK,
+	DU_DG5_MARK,				DU_DG4_MARK,
+	DU_DG3_MARK,				DU_DG2_MARK,
+	DU_DG1_MARK,				DU_DG0_MARK,
+	DU_DB7_MARK,				DU_DB6_MARK,
+	DU_DB5_MARK,				DU_DB4_MARK,
+	DU_DB3_MARK,				DU_DB2_MARK,
+	DU_DB1_MARK,				DU_DB0_MARK,
+	DU_DOTCLKOUT0_MARK,			DU_DOTCLKOUT1_MARK,
+	DU_DISP_MARK,				DU_CDE_MARK,
+	DU_EXVSYNC_DU_VSYNC_MARK,		DU_EXHSYNC_DU_HSYNC_MARK,
+	DU_EXODDF_DU_ODDF_DISP_CDE_MARK,
+
+	/* HDMI */
+	HDMI0_CEC_MARK,		HDMI1_CEC_MARK,
+
+	/* I2C1 */
+	SCL1_A_MARK,		SDA1_A_MARK,
+	SCL1_B_MARK,		SDA1_B_MARK,
+	/* I2C2 */
+	SCL2_A_MARK,		SDA2_A_MARK,
+	SCL2_B_MARK,		SDA2_B_MARK,
+	/* I2C6 */
+	SCL6_A_MARK,		SDA6_A_MARK,
+	SCL6_B_MARK,		SDA6_B_MARK,
+	SCL6_C_MARK,		SDA6_C_MARK,
+
+	/* MSIOF0 */
+	MSIOF0_SCK_MARK,	MSIOF0_SYNC_MARK,	MSIOF0_SS1_MARK,	MSIOF0_SS2_MARK,
+	MSIOF0_TXD_MARK,	MSIOF0_RXD_MARK,
+	/* MSIOF1  */
+	MSIOF1_SCK_A_MARK,	MSIOF1_SYNC_A_MARK,	MSIOF1_SS1_A_MARK,	MSIOF1_SS2_A_MARK,
+	MSIOF1_TXD_A_MARK,	MSIOF1_RXD_A_MARK,
+	MSIOF1_SCK_B_MARK,	MSIOF1_SYNC_B_MARK,	MSIOF1_SS1_B_MARK,	MSIOF1_SS2_B_MARK,
+	MSIOF1_TXD_B_MARK,	MSIOF1_RXD_B_MARK,
+	MSIOF1_SCK_C_MARK,	MSIOF1_SYNC_C_MARK,	MSIOF1_SS1_C_MARK,	MSIOF1_SS2_C_MARK,
+	MSIOF1_TXD_C_MARK,	MSIOF1_RXD_C_MARK,
+	MSIOF1_SCK_D_MARK,	MSIOF1_SYNC_D_MARK,	MSIOF1_SS1_D_MARK,	MSIOF1_SS2_D_MARK,
+	MSIOF1_TXD_D_MARK,	MSIOF1_RXD_D_MARK,
+	MSIOF1_SCK_E_MARK,	MSIOF1_SYNC_E_MARK,	MSIOF1_SS1_E_MARK,	MSIOF1_SS2_E_MARK,
+	MSIOF1_TXD_E_MARK,	MSIOF1_RXD_E_MARK,
+	MSIOF1_SCK_F_MARK,	MSIOF1_SYNC_F_MARK,	MSIOF1_SS1_F_MARK,	MSIOF1_SS2_F_MARK,
+	MSIOF1_TXD_F_MARK,	MSIOF1_RXD_F_MARK,
+	MSIOF1_SCK_G_MARK,	MSIOF1_SYNC_G_MARK,	MSIOF1_SS1_G_MARK,	MSIOF1_SS2_G_MARK,
+	MSIOF1_TXD_G_MARK,	MSIOF1_RXD_G_MARK,
+	/* MSIOF2  */
+	MSIOF2_SCK_A_MARK,	MSIOF2_SYNC_A_MARK,	MSIOF2_SS1_A_MARK,	MSIOF2_SS2_A_MARK,
+	MSIOF2_TXD_A_MARK,	MSIOF2_RXD_A_MARK,
+	MSIOF2_SCK_B_MARK,	MSIOF2_SYNC_B_MARK,	MSIOF2_SS1_B_MARK,	MSIOF2_SS2_B_MARK,
+	MSIOF2_TXD_B_MARK,	MSIOF2_RXD_B_MARK,
+	MSIOF2_SCK_C_MARK,	MSIOF2_SYNC_C_MARK,	MSIOF2_SS1_C_MARK,	MSIOF2_SS2_C_MARK,
+	MSIOF2_TXD_C_MARK,	MSIOF2_RXD_C_MARK,
+	MSIOF2_SCK_D_MARK,	MSIOF2_SYNC_D_MARK,	MSIOF2_SS1_D_MARK,	MSIOF2_SS2_D_MARK,
+	MSIOF2_TXD_D_MARK,	MSIOF2_RXD_D_MARK,
+	/* MSIOF3 */
+	MSIOF3_SCK_A_MARK,	MSIOF3_SYNC_A_MARK,	MSIOF3_SS1_A_MARK,	MSIOF3_SS2_A_MARK,
+	MSIOF3_TXD_A_MARK,	MSIOF3_RXD_A_MARK,
+	MSIOF3_SCK_B_MARK,	MSIOF3_SYNC_B_MARK,	MSIOF3_SS1_B_MARK,	MSIOF3_SS2_B_MARK,
+	MSIOF3_TXD_B_MARK,	MSIOF3_RXD_B_MARK,
+	MSIOF3_SCK_C_MARK,	MSIOF3_SYNC_C_MARK,	MSIOF3_TXD_C_MARK,	MSIOF3_RXD_C_MARK,
+	MSIOF3_SCK_D_MARK,	MSIOF3_SYNC_D_MARK,	MSIOF3_SS1_D_MARK,	MSIOF3_TXD_D_MARK,
+	MSIOF3_RXD_D_MARK,
+
 	/* SCIF0 */
 	RX0_MARK,	TX0_MARK,	SCK0_MARK,	RTS0_N_TANS_MARK,	CTS0_N_MARK,
 	/* SCIF1 */
@@ -288,124 +476,1299 @@ enum {
 	/* SCIF5 */
 	RX5_MARK,	TX5_MARK,	SCK5_MARK,
 
+	/* SDHI0 */
+	SD0_CLK_MARK,	SD0_CMD_MARK,
+	SD0_DAT0_MARK,	SD0_DAT1_MARK,
+	SD0_DAT2_MARK,	SD0_DAT3_MARK,
+	SD0_CD_MARK,	SD0_WP_MARK,
+	/* SDHI1 */
+	SD1_CLK_MARK,	SD1_CMD_MARK,
+	SD1_DAT0_MARK,	SD1_DAT1_MARK,
+	SD1_DAT2_MARK,	SD1_DAT3_MARK,
+	SD1_CD_MARK,	SD1_WP_MARK,
+	/* SDHI2 */
+	SD2_CMD_MARK,	SD2_CLK_MARK,
+	SD2_DAT0_MARK,	SD2_DAT1_MARK,
+	SD2_DAT2_MARK,	SD2_DAT3_MARK,
+	SD2_DAT4_MARK,	SD2_DAT5_MARK,
+	SD2_DAT6_MARK,	SD2_DAT7_MARK,
+	SD2_DS_MARK,
+	SD2_CD_A_MARK,	SD2_WP_A_MARK,
+	SD2_CD_B_MARK,	SD2_WP_B_MARK,
+	/* SDHI3 */
+	SD3_CMD_MARK,	SD3_CLK_MARK,
+	SD3_DAT0_MARK,	SD3_DAT1_MARK,
+	SD3_DAT2_MARK,	SD3_DAT3_MARK,
+	SD3_DAT4_MARK,	SD3_DAT5_MARK,
+	SD3_DAT6_MARK,	SD3_DAT7_MARK,
+	SD3_DS_MARK,
+	SD3_CD_MARK,	SD3_WP_MARK,
+
+	/* USB0 */
+	USB0_PWEN_MARK,	USB0_OVC_MARK,
+	/* USB1 */
+	USB1_PWEN_MARK,	USB1_OVC_MARK,
+	/* USB2 */
+	USB2_PWEN_MARK,	USB2_OVC_MARK,
+
+	/* USB30 */
+	USB30_PWEN_MARK, USB30_OVC_MARK,
+	/* USB31 */
+	USB31_PWEN_MARK, USB31_OVC_MARK,
+
 	PINMUX_MARK_END,
 };
 
 static const u16 pinmux_data[] = {
 	PINMUX_DATA_GP_ALL(),
 
+	/* NOIP */
+	PINMUX_IPSR_NOGP(0, SD2_CMD),	/* GP_4_1  */
+	PINMUX_IPSR_NOGP(0, SD3_CLK),	/* GP_4_7  */
+	PINMUX_IPSR_NOGP(0, SD3_CMD),	/* GP_4_8  */
+	PINMUX_IPSR_NOGP(0, SD3_DAT0),	/* GP_4_9  */
+	PINMUX_IPSR_NOGP(0, SD3_DAT1),	/* GP_4_10 */
+	PINMUX_IPSR_NOGP(0, SD3_DAT2),	/* GP_4_11 */
+	PINMUX_IPSR_NOGP(0, SD3_DAT3),	/* GP_4_12 */
+	PINMUX_IPSR_NOGP(0, SD3_DS),	/* GP_4_17 */
+	PINMUX_IPSR_NOGP(0, MSIOF0_RXD),/* GP_5_22 */
+	PINMUX_IPSR_NOGP(0, MSIOF0_TXD),/* GP_5_20 */
+	PINMUX_IPSR_NOGP(0, MSIOF0_SCK),/* GP_5_17 */
+
 	/* IPSR0 */
-	PINMUX_IPSR_MODS(IP0_7_4,	SCK4_A,		SEL_SCIF4_0),
+	PINMUX_IPSR_DATA(IP0_3_0,	AVB_MDC),
+	PINMUX_IPSR_MODS(IP0_3_0,	MSIOF2_SS2_C,		SEL_MSIOF2_3),
 
-	PINMUX_IPSR_MODS(IP0_11_8,	RX4_A,		SEL_SCIF4_0),
+	PINMUX_IPSR_DATA(IP0_7_4,	AVB_MAGIC),
+	PINMUX_IPSR_MODS(IP0_7_4,	MSIOF2_SS1_C,		SEL_MSIOF2_3),
+	PINMUX_IPSR_MODS(IP0_7_4,	SCK4_A,			SEL_SCIF4_0),
 
-	PINMUX_IPSR_MODS(IP0_15_12,	TX4_A,		SEL_SCIF4_0),
+	PINMUX_IPSR_DATA(IP0_11_8,	AVB_PHY_INT),
+	PINMUX_IPSR_MODS(IP0_11_8,	MSIOF2_SYNC_C,		SEL_MSIOF2_3),
+	PINMUX_IPSR_MODS(IP0_11_8,	RX4_A,			SEL_SCIF4_0),
 
-	PINMUX_IPSR_MODS(IP0_19_16,	CTS4_N_A,	SEL_SCIF4_0),
+	PINMUX_IPSR_DATA(IP0_15_12,	AVB_LINK),
+	PINMUX_IPSR_MODS(IP0_15_12,	MSIOF2_SCK_C,		SEL_MSIOF2_3),
+	PINMUX_IPSR_MODS(IP0_15_12,	TX4_A,			SEL_SCIF4_0),
 
-	PINMUX_IPSR_MODS(IP0_23_20,	RTS4_N_TANS_A,	SEL_SCIF4_0),
+	PINMUX_IPSR_MODS(IP0_19_16,	AVB_AVTP_MATCH_A,	SEL_ETHERAVB_0),
+	PINMUX_IPSR_MODS(IP0_19_16,	MSIOF2_RXD_C,		SEL_MSIOF2_3),
+	PINMUX_IPSR_MODS(IP0_19_16,	CTS4_N_A,		SEL_SCIF4_0),
+
+	PINMUX_IPSR_MODS(IP0_23_20,	AVB_AVTP_CAPTURE_A,	SEL_ETHERAVB_0),
+	PINMUX_IPSR_MODS(IP0_23_20,	MSIOF2_TXD_C,		SEL_MSIOF2_3),
+	PINMUX_IPSR_MODS(IP0_23_20,	RTS4_N_TANS_A,		SEL_SCIF4_0),
+
+	PINMUX_IPSR_DATA(IP0_27_24,	DU_CDE),
+
+	PINMUX_IPSR_DATA(IP0_31_28,	DU_DISP),
 
 	/* IPSR1 */
+	PINMUX_IPSR_DATA(IP1_3_0,	DU_EXODDF_DU_ODDF_DISP_CDE),
+
+	PINMUX_IPSR_DATA(IP1_7_4,	DU_DOTCLKOUT1),
+
+	PINMUX_IPSR_DATA(IP1_19_16,	AVB_AVTP_PPS),
+
+	PINMUX_IPSR_DATA(IP1_11_8,	DU_EXHSYNC_DU_HSYNC),
+
+	PINMUX_IPSR_DATA(IP1_15_12,	DU_EXVSYNC_DU_VSYNC),
+
+	PINMUX_IPSR_DATA(IP1_31_28,	DU_DB0),
+	PINMUX_IPSR_MODS(IP1_31_28,	MSIOF3_SYNC_B,		SEL_MSIOF3_1),
 
 	/* IPSR2 */
-	PINMUX_IPSR_MODS(IP2_19_16,	SCK4_B,		SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP2_3_0,	MSIOF3_TXD_B,		SEL_MSIOF3_1),
+	PINMUX_IPSR_DATA(IP2_3_0,	DU_DB1),
 
-	PINMUX_IPSR_MODS(IP2_23_20,	RX4_B,		SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP2_7_4,	MSIOF3_SCK_B,		SEL_MSIOF3_1),
+	PINMUX_IPSR_DATA(IP2_7_4,	DU_DB2),
 
-	PINMUX_IPSR_MODS(IP2_27_24,	TX4_B,		SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP2_11_8,	MSIOF3_RXD_B,		SEL_MSIOF3_1),
+	PINMUX_IPSR_DATA(IP2_11_8,	DU_DB3),
 
-	PINMUX_IPSR_MODS(IP2_31_28,	RX3_B,		SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP2_15_12,	MSIOF3_SS1_B,		SEL_MSIOF3_1),
+	PINMUX_IPSR_DATA(IP2_15_12,	DU_DB4),
+
+	PINMUX_IPSR_MODS(IP2_19_16,	MSIOF3_SS2_B,		SEL_MSIOF3_1),
+	PINMUX_IPSR_MODS(IP2_19_16,	SCK4_B,			SEL_SCIF4_1),
+	PINMUX_IPSR_DATA(IP2_19_16,	DU_DB5),
+
+	PINMUX_IPSR_MODS(IP2_23_20,	MSIOF2_SS1_A,		SEL_MSIOF2_0),
+	PINMUX_IPSR_MODS(IP2_23_20,	RX4_B,			SEL_SCIF4_1),
+	PINMUX_IPSR_DATA(IP2_23_20,	DU_DB6),
+
+	PINMUX_IPSR_MODS(IP2_27_24,	MSIOF2_SS2_A,		SEL_MSIOF2_0),
+	PINMUX_IPSR_MODS(IP2_27_24,	TX4_B,			SEL_SCIF4_1),
+	PINMUX_IPSR_DATA(IP2_27_24,	DU_DB7),
+
+	PINMUX_IPSR_MODS(IP2_31_28,	MSIOF2_SYNC_A,		SEL_MSIOF2_0),
+	PINMUX_IPSR_MODS(IP2_31_28,	RX3_B,			SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP2_31_28,	SDA6_A,			SEL_I2C6_0),
+	PINMUX_IPSR_MODS(IP2_31_28,	AVB_AVTP_MATCH_B,	SEL_ETHERAVB_1),
 
 	/* IPSR3 */
-	PINMUX_IPSR_MODS(IP3_3_0,	CTS4_N_B,	SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP3_3_0,	MSIOF2_SCK_A,		SEL_MSIOF2_0),
+	PINMUX_IPSR_MODS(IP3_3_0,	CTS4_N_B,		SEL_SCIF4_1),
 
-	PINMUX_IPSR_MODS(IP3_7_4,	RTS4_N_TANS_B,	SEL_SCIF4_1),
+	PINMUX_IPSR_MODS(IP3_7_4,	MSIOF2_RXD_A,		SEL_MSIOF2_0),
+	PINMUX_IPSR_MODS(IP3_7_4,	RTS4_N_TANS_B,		SEL_SCIF4_1),
 
-	PINMUX_IPSR_MODS(IP3_11_8,	TX3_B,		SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP3_11_8,	MSIOF2_TXD_A,		SEL_MSIOF2_0),
+	PINMUX_IPSR_MODS(IP3_11_8,	TX3_B,			SEL_SCIF3_1),
+	PINMUX_IPSR_MODS(IP3_11_8,	SCL6_A,			SEL_I2C6_0),
+	PINMUX_IPSR_MODS(IP3_11_8,	AVB_AVTP_CAPTURE_B,	SEL_ETHERAVB_1),
+
+	PINMUX_IPSR_MODS(IP3_15_12,	MSIOF3_SCK_C,		SEL_MSIOF3_2),
+	PINMUX_IPSR_DATA(IP3_15_12,	DU_DG4),
+
+	PINMUX_IPSR_MODS(IP3_19_16,	MSIOF3_SYNC_C,		SEL_MSIOF3_2),
+	PINMUX_IPSR_DATA(IP3_19_16,	DU_DG5),
+
+	PINMUX_IPSR_MODS(IP3_23_20,	MSIOF3_RXD_C,		SEL_MSIOF3_2),
+	PINMUX_IPSR_DATA(IP3_23_20,	DU_DG6),
+
+	PINMUX_IPSR_MODS(IP3_27_24,	MSIOF3_TXD_C,		SEL_MSIOF3_2),
+	PINMUX_IPSR_DATA(IP3_27_24,	DU_DG7),
+
+	PINMUX_IPSR_DATA(IP3_31_28,	DU_DG0),
 
 	/* IPSR4 */
+	PINMUX_IPSR_DATA(IP4_3_0,	DU_DG1),
+
+	PINMUX_IPSR_DATA(IP4_7_4,	DU_DG2),
+
+	PINMUX_IPSR_DATA(IP4_11_8,	DU_DG3),
+
+	PINMUX_IPSR_MODS(IP4_23_20,	MSIOF3_SCK_D,	SEL_MSIOF3_3),
 	PINMUX_IPSR_DATA(IP4_23_20,	SCK3),
 
+	PINMUX_IPSR_MODS(IP4_27_24,	MSIOF3_SYNC_D,	SEL_MSIOF3_3),
 	PINMUX_IPSR_MODS(IP4_27_24,	RX3_A,		SEL_SCIF3_0),
 
+	PINMUX_IPSR_MODS(IP4_31_28,	MSIOF3_RXD_D,	SEL_MSIOF3_3),
 	PINMUX_IPSR_MODS(IP4_31_28,	TX3_A,		SEL_SCIF3_0),
 
 	/* IPSR5 */
+	PINMUX_IPSR_MODS(IP5_3_0,	MSIOF3_TXD_D,	SEL_MSIOF3_3),
 	PINMUX_IPSR_DATA(IP5_3_0,	CTS3_N),
+	PINMUX_IPSR_MODS(IP5_3_0,	SCL6_B,		SEL_I2C6_1),
 
+	PINMUX_IPSR_MODS(IP5_7_4,	MSIOF3_SS1_D,	SEL_MSIOF3_3),
 	PINMUX_IPSR_DATA(IP5_7_4,	RTS3_N_TANS),
+	PINMUX_IPSR_MODS(IP5_7_4,	SDA6_B,		SEL_I2C6_1),
+
+	PINMUX_IPSR_DATA(IP5_11_8,	DU_DOTCLKOUT0),
+
+	PINMUX_IPSR_MODS(IP5_15_12,	MSIOF2_SS1_B,	SEL_MSIOF2_1),
+	PINMUX_IPSR_MODS(IP5_15_12,	MSIOF3_SCK_A,	SEL_MSIOF3_0),
+
+	PINMUX_IPSR_MODS(IP5_19_16,	MSIOF2_SS2_B,	SEL_MSIOF2_1),
+	PINMUX_IPSR_MODS(IP5_19_16,	MSIOF3_SYNC_A,	SEL_MSIOF3_0),
+
+	PINMUX_IPSR_MODS(IP5_23_20,	MSIOF3_RXD_A,	SEL_MSIOF3_0),
+
+	PINMUX_IPSR_MODS(IP5_27_24,	MSIOF3_TXD_A,	SEL_MSIOF3_0),
+
+	PINMUX_IPSR_MODS(IP5_31_28,	MSIOF2_SCK_B,	SEL_MSIOF2_1),
 
 	/* IPSR6 */
+	PINMUX_IPSR_MODS(IP6_3_0,	MSIOF2_SYNC_B,	SEL_MSIOF2_1),
+
+	PINMUX_IPSR_MODS(IP6_7_4,	MSIOF2_RXD_B,	SEL_MSIOF2_1),
+
+	PINMUX_IPSR_MODS(IP6_11_8,	MSIOF2_TXD_B,	SEL_MSIOF2_1),
+
+	PINMUX_IPSR_MODS(IP6_15_12,	MSIOF2_SCK_D,	SEL_MSIOF2_3),
 	PINMUX_IPSR_MODS(IP6_15_12,	SCK4_C,		SEL_SCIF4_2),
+	PINMUX_IPSR_DATA(IP6_15_12,	DU_DR0),
 
+	PINMUX_IPSR_MODS(IP6_19_16,	MSIOF2_SYNC_D,	SEL_MSIOF2_3),
+	PINMUX_IPSR_DATA(IP6_19_16,	DU_DR1),
+
+	PINMUX_IPSR_MODS(IP6_23_20,	MSIOF2_RXD_D,	SEL_MSIOF2_3),
 	PINMUX_IPSR_MODS(IP6_23_20,	CTS4_N_C,	SEL_SCIF4_2),
+	PINMUX_IPSR_DATA(IP6_23_20,	DU_DR2),
 
+	PINMUX_IPSR_MODS(IP6_27_24,	MSIOF2_TXD_D,	SEL_MSIOF2_3),
 	PINMUX_IPSR_MODS(IP6_27_24,	RTS4_N_TANS_C,	SEL_SCIF4_2),
+	PINMUX_IPSR_DATA(IP6_27_24,	DU_DR3),
 
+	PINMUX_IPSR_MODS(IP6_31_28,	MSIOF2_SS1_D,	SEL_MSIOF2_3),
 	PINMUX_IPSR_MODS(IP6_31_28,	RX4_C,		SEL_SCIF4_2),
+	PINMUX_IPSR_DATA(IP6_31_28,	DU_DR4),
 
 	/* IPSR7 */
+	PINMUX_IPSR_MODS(IP7_3_0,	MSIOF2_SS2_D,	SEL_MSIOF2_3),
 	PINMUX_IPSR_MODS(IP7_3_0,	TX4_C,		SEL_SCIF4_2),
+	PINMUX_IPSR_DATA(IP7_3_0,	DU_DR5),
+
+	PINMUX_IPSR_MODS(IP7_7_4,	MSIOF3_SS1_A,	SEL_MSIOF3_0),
+	PINMUX_IPSR_DATA(IP7_7_4,	DU_DR6),
+	PINMUX_IPSR_MODS(IP7_7_4,	SCL6_C,		SEL_I2C6_2),
+
+	PINMUX_IPSR_MODS(IP7_11_8,	MSIOF3_SS2_A,	SEL_MSIOF3_0),
+	PINMUX_IPSR_DATA(IP7_11_8,	DU_DR7),
+	PINMUX_IPSR_MODS(IP7_11_8,	SDA6_C,		SEL_I2C6_2),
+
+	PINMUX_IPSR_DATA(IP7_19_16,	SD0_CLK),
+	PINMUX_IPSR_MODS(IP7_19_16,	MSIOF1_SCK_E,	SEL_MSIOF1_4),
+
+	PINMUX_IPSR_DATA(IP7_23_20,	SD0_CMD),
+	PINMUX_IPSR_MODS(IP7_23_20,	MSIOF1_SYNC_E,	SEL_MSIOF1_4),
+
+	PINMUX_IPSR_DATA(IP7_27_24,	SD0_DAT0),
+	PINMUX_IPSR_MODS(IP7_27_24,	MSIOF1_RXD_E,	SEL_MSIOF1_4),
+
+	PINMUX_IPSR_DATA(IP7_31_28,	SD0_DAT1),
+	PINMUX_IPSR_MODS(IP7_31_28,	MSIOF1_TXD_E,	SEL_MSIOF1_4),
 
 	/* IPSR8 */
+	PINMUX_IPSR_DATA(IP8_3_0,	SD0_DAT2),
+	PINMUX_IPSR_MODS(IP8_3_0,	MSIOF1_SS1_E,	SEL_MSIOF1_4),
+
+	PINMUX_IPSR_DATA(IP8_7_4,	SD0_DAT3),
+	PINMUX_IPSR_MODS(IP8_7_4,	MSIOF1_SS2_E,	SEL_MSIOF1_4),
+
+	PINMUX_IPSR_DATA(IP8_11_8,	SD1_CLK),
+	PINMUX_IPSR_MODS(IP8_11_8,	MSIOF1_SCK_G,	SEL_MSIOF1_6),
+
+	PINMUX_IPSR_DATA(IP8_15_12,	SD1_CMD),
+	PINMUX_IPSR_MODS(IP8_15_12,	MSIOF1_SYNC_G,	SEL_MSIOF1_6),
+
+	PINMUX_IPSR_DATA(IP8_19_16,	SD1_DAT0),
+	PINMUX_IPSR_DATA(IP8_19_16,	SD2_DAT4),
+	PINMUX_IPSR_MODS(IP8_19_16,	MSIOF1_RXD_G,	SEL_MSIOF1_6),
+
+	PINMUX_IPSR_DATA(IP8_23_20,	SD1_DAT1),
+	PINMUX_IPSR_DATA(IP8_23_20,	SD2_DAT5),
+	PINMUX_IPSR_MODS(IP8_23_20,	MSIOF1_TXD_G,	SEL_MSIOF1_6),
+
+	PINMUX_IPSR_DATA(IP8_27_24,	SD1_DAT2),
+	PINMUX_IPSR_DATA(IP8_27_24,	SD2_DAT6),
+	PINMUX_IPSR_MODS(IP8_27_24,	MSIOF1_SS1_G,	SEL_MSIOF1_6),
+
+	PINMUX_IPSR_DATA(IP8_31_28,	SD1_DAT3),
+	PINMUX_IPSR_DATA(IP8_31_28,	SD2_DAT7),
+	PINMUX_IPSR_MODS(IP8_31_28,	MSIOF1_SS2_G,	SEL_MSIOF1_6),
 
 	/* IPSR9 */
+	PINMUX_IPSR_DATA(IP9_7_4,	SD2_DAT0),
+
+	PINMUX_IPSR_DATA(IP9_11_8,	SD2_DAT1),
+
+	PINMUX_IPSR_DATA(IP9_15_12,	SD2_DAT2),
+
+	PINMUX_IPSR_DATA(IP9_19_16,	SD2_DAT3),
+
+	PINMUX_IPSR_DATA(IP9_23_20,	SD2_DS),
+
+	PINMUX_IPSR_DATA(IP9_27_24,	SD3_DAT4),
+	PINMUX_IPSR_MODS(IP9_27_24,	SD2_CD_A,	SEL_SDHI2_0),
+
+	PINMUX_IPSR_DATA(IP9_31_28,	SD3_DAT5),
+	PINMUX_IPSR_MODS(IP9_31_28,	SD2_WP_A,	SEL_SDHI2_0),
 
 	/* IPSR10 */
+	PINMUX_IPSR_DATA(IP10_3_0,	SD3_DAT6),
+	PINMUX_IPSR_DATA(IP10_3_0,	SD3_CD),
+
+	PINMUX_IPSR_DATA(IP10_7_4,	SD3_DAT7),
+	PINMUX_IPSR_DATA(IP10_7_4,	SD3_WP),
+
+	PINMUX_IPSR_DATA(IP10_11_8,	SD0_CD),
+	PINMUX_IPSR_MODS(IP10_11_8,	SCL2_B,		SEL_I2C2_1),
+
+	PINMUX_IPSR_DATA(IP10_15_12,	SD0_WP),
+	PINMUX_IPSR_MODS(IP10_15_12,	SDA2_B,		SEL_I2C2_1),
+
+	PINMUX_IPSR_DATA(IP10_19_16,	SD1_CD),
+
+	PINMUX_IPSR_DATA(IP10_23_20,	SD1_WP),
+
 	PINMUX_IPSR_DATA(IP10_27_24,	SCK0),
+	PINMUX_IPSR_MODS(IP10_27_24,	MSIOF1_SS2_B,	SEL_MSIOF1_1),
+	PINMUX_IPSR_MODS(IP10_27_24,	SDA2_A,		SEL_I2C2_0),
 
 	PINMUX_IPSR_DATA(IP10_31_28,	RX0),
 
 	/* IPSR11 */
 	PINMUX_IPSR_DATA(IP11_3_0,	TX0),
 
+	PINMUX_IPSR_MODS(IP11_7_4,	MSIOF1_SYNC_B,	SEL_MSIOF1_1),
 	PINMUX_IPSR_DATA(IP11_7_4,	CTS0_N),
 
 	PINMUX_IPSR_DATA(IP11_11_8,	RTS0_N_TANS),
+	PINMUX_IPSR_MODS(IP11_11_8,	MSIOF1_SS1_B,	SEL_MSIOF1_1),
+	PINMUX_IPSR_MODS(IP11_11_8,	SCL2_A,		SEL_I2C2_0),
 
 	PINMUX_IPSR_MODS(IP11_15_12,	RX1_A,		SEL_SCIF1_0),
 
 	PINMUX_IPSR_MODS(IP11_19_16,	TX1_A,		SEL_SCIF1_0),
 
 	PINMUX_IPSR_DATA(IP11_23_20,	CTS1_N),
+	PINMUX_IPSR_MODS(IP11_23_20,	MSIOF1_RXD_B,	SEL_MSIOF1_1),
 
 	PINMUX_IPSR_DATA(IP11_27_24,	RTS1_N_TANS),
+	PINMUX_IPSR_MODS(IP11_27_24,	MSIOF1_TXD_B,	SEL_MSIOF1_1),
 
 	PINMUX_IPSR_DATA(IP11_31_28,	SCK2),
+	PINMUX_IPSR_MODS(IP11_31_28,	MSIOF1_SCK_B,	SEL_MSIOF1_1),
 
 	/* IPSR12 */
 	PINMUX_IPSR_MODS(IP12_3_0,	TX2_A,		SEL_SCIF2_0),
+	PINMUX_IPSR_MODS(IP12_3_0,	SD2_CD_B,	SEL_SDHI2_1),
+	PINMUX_IPSR_MODS(IP12_3_0,	SCL1_A,		SEL_I2C1_0),
 
 	PINMUX_IPSR_MODS(IP12_7_4,	RX2_A,		SEL_SCIF2_0),
+	PINMUX_IPSR_MODS(IP12_7_4,	SD2_WP_B,	SEL_SDHI2_1),
+	PINMUX_IPSR_MODS(IP12_7_4,	SDA1_A,		SEL_I2C1_0),
+
+	PINMUX_IPSR_MODS(IP12_11_8,	MSIOF1_SCK_D,	SEL_MSIOF1_3),
+
+	PINMUX_IPSR_MODS(IP12_15_12,	MSIOF1_RXD_D,	SEL_MSIOF1_3),
+
+	PINMUX_IPSR_MODS(IP12_19_16,	MSIOF1_TXD_D,	SEL_MSIOF1_3),
 
 	PINMUX_IPSR_MODS(IP12_23_20,	RX2_B,		SEL_SCIF2_1),
+	PINMUX_IPSR_MODS(IP12_23_20,	MSIOF1_SYNC_D,	SEL_MSIOF1_3),
 
 	PINMUX_IPSR_MODS(IP12_27_24,	TX2_B,		SEL_SCIF2_1),
+	PINMUX_IPSR_MODS(IP12_27_24,	MSIOF1_SS1_D,	SEL_MSIOF1_3),
+
+	PINMUX_IPSR_DATA(IP12_31_28,	MSIOF0_SYNC),
 
 	/* IPSR13 */
+	PINMUX_IPSR_DATA(IP13_3_0,	MSIOF0_SS1),
 	PINMUX_IPSR_DATA(IP13_3_0,	RX5),
 
+	PINMUX_IPSR_DATA(IP13_7_4,	MSIOF0_SS2),
+	PINMUX_IPSR_MODS(IP13_7_4,	MSIOF1_SS2_D,	SEL_MSIOF1_3),
 	PINMUX_IPSR_DATA(IP13_7_4,	TX5),
 
+	PINMUX_IPSR_MODS(IP13_11_8,	MSIOF1_SCK_F,	SEL_MSIOF1_5),
+	PINMUX_IPSR_MODS(IP13_11_8,	SCL1_B,		SEL_I2C1_1),
+
 	PINMUX_IPSR_MODS(IP13_15_12,	RX1_B,		SEL_SCIF1_1),
+	PINMUX_IPSR_MODS(IP13_15_12,	MSIOF1_SYNC_F,	SEL_MSIOF1_5),
+	PINMUX_IPSR_MODS(IP13_15_12,	SDA1_B,		SEL_I2C1_1),
 
 	PINMUX_IPSR_MODS(IP13_19_16,	TX1_B,		SEL_SCIF1_1),
+	PINMUX_IPSR_MODS(IP13_19_16,	MSIOF1_RXD_F,	SEL_MSIOF1_5),
+
+	PINMUX_IPSR_MODS(IP13_23_20,	MSIOF1_TXD_F,	SEL_MSIOF1_5),
+
+	PINMUX_IPSR_MODS(IP13_27_24,	MSIOF1_SS1_F,	SEL_MSIOF1_5),
+
+	PINMUX_IPSR_MODS(IP13_31_28,	MSIOF1_SS2_F,	SEL_MSIOF1_5),
 
 	/* IPSR14 */
+	PINMUX_IPSR_MODS(IP14_11_8,	MSIOF1_SS1_A,	SEL_MSIOF1_0),
+
+	PINMUX_IPSR_MODS(IP14_15_12,	MSIOF1_SS2_A,	SEL_MSIOF1_0),
+
+	PINMUX_IPSR_MODS(IP14_19_16,	MSIOF1_TXD_A,	SEL_MSIOF1_0),
+
+	PINMUX_IPSR_MODS(IP14_23_20,	MSIOF1_SCK_A,	SEL_MSIOF1_0),
+
+	PINMUX_IPSR_MODS(IP14_27_24,	MSIOF1_SYNC_A,	SEL_MSIOF1_0),
+
+	PINMUX_IPSR_MODS(IP14_31_28,	MSIOF1_RXD_A,	SEL_MSIOF1_0),
 
 	/* IPSR15 */
+	PINMUX_IPSR_DATA(IP15_3_0,	USB2_PWEN),
+
+	PINMUX_IPSR_DATA(IP15_7_4,	USB2_OVC),
+
+	PINMUX_IPSR_MODS(IP15_15_12,	MSIOF1_SCK_C,	SEL_MSIOF1_2),
+
+	PINMUX_IPSR_MODS(IP15_19_16,	MSIOF1_SYNC_C,	SEL_MSIOF1_2),
+
+	PINMUX_IPSR_MODS(IP15_23_20,	MSIOF1_RXD_C,	SEL_MSIOF1_2),
+
+	PINMUX_IPSR_MODS(IP15_27_24,	MSIOF1_TXD_C,	SEL_MSIOF1_2),
+
+	PINMUX_IPSR_MODS(IP15_31_28,	MSIOF1_SS1_C,	SEL_MSIOF1_2),
 	PINMUX_IPSR_DATA(IP15_31_28,	SCK1),
 	PINMUX_IPSR_DATA(IP15_31_28,	SCK5),
 
 	/* IPSR16 */
+	PINMUX_IPSR_DATA(IP16_11_8,	USB0_PWEN),
+
+	PINMUX_IPSR_DATA(IP16_15_12,	USB0_OVC),
+
+	PINMUX_IPSR_DATA(IP16_19_16,	USB1_PWEN),
+
+	PINMUX_IPSR_DATA(IP16_23_20,	USB1_OVC),
+	PINMUX_IPSR_MODS(IP16_23_20,	MSIOF1_SS2_C,	SEL_MSIOF1_2),
+
+	PINMUX_IPSR_DATA(IP16_27_24,	USB30_PWEN),
+
+	PINMUX_IPSR_DATA(IP16_31_28,	USB30_OVC),
 
 	/* IPSR17 */
+	PINMUX_IPSR_DATA(IP17_3_0,	USB31_PWEN),
+
+	PINMUX_IPSR_DATA(IP17_7_4,	USB31_OVC),
 };
 
 static const struct sh_pfc_pin pinmux_pins[] = {
 	PINMUX_GPIO_GP_ALL(),
 };
 
+/* - EtherAVB --------------------------------------------------------------- */
+static const unsigned int avb_link_pins[] = {
+	/* AVB_LINK */
+	RCAR_GP_PIN(2, 12),
+};
+static const unsigned int avb_link_mux[] = {
+	AVB_LINK_MARK,
+};
+static const unsigned int avb_magic_pins[] = {
+	/* AVB_MAGIC_ */
+	RCAR_GP_PIN(2, 10),
+};
+static const unsigned int avb_magic_mux[] = {
+	AVB_MAGIC_MARK,
+};
+static const unsigned int avb_phy_int_pins[] = {
+	/* AVB_PHY_INT */
+	RCAR_GP_PIN(2, 11),
+};
+static const unsigned int avb_phy_int_mux[] = {
+	AVB_PHY_INT_MARK,
+};
+static const unsigned int avb_mdc_pins[] = {
+	/* AVB_MDC */
+	RCAR_GP_PIN(2, 9),
+};
+static const unsigned int avb_mdc_mux[] = {
+	AVB_MDC_MARK,
+};
+static const unsigned int avb_avtp_pps_pins[] = {
+	/* AVB_AVTP_PPS */
+	RCAR_GP_PIN(2, 6),
+};
+static const unsigned int avb_avtp_pps_mux[] = {
+	AVB_AVTP_PPS_MARK,
+};
+static const unsigned int avb_avtp_match_a_pins[] = {
+	/* AVB_AVTP_MATCH_A */
+	RCAR_GP_PIN(2, 14),
+};
+static const unsigned int avb_avtp_match_a_mux[] = {
+	AVB_AVTP_MATCH_A_MARK,
+};
+static const unsigned int avb_avtp_capture_a_pins[] = {
+	/* AVB_AVTP_CAPTURE_A */
+	RCAR_GP_PIN(2, 13),
+};
+static const unsigned int avb_avtp_capture_a_mux[] = {
+	AVB_AVTP_CAPTURE_A_MARK,
+};
+static const unsigned int avb_avtp_match_b_pins[] = {
+	/*  AVB_AVTP_MATCH_B */
+	RCAR_GP_PIN(1, 8),
+};
+static const unsigned int avb_avtp_match_b_mux[] = {
+	AVB_AVTP_MATCH_B_MARK,
+};
+static const unsigned int avb_avtp_capture_b_pins[] = {
+	/* AVB_AVTP_CAPTURE_B */
+	RCAR_GP_PIN(1, 11),
+};
+static const unsigned int avb_avtp_capture_b_mux[] = {
+	AVB_AVTP_CAPTURE_B_MARK,
+};
+/* - DU --------------------------------------------------------------------- */
+static const unsigned int du_rgb888_pins[] = {
+	/* R[7:0] */
+	RCAR_GP_PIN(0, 15), RCAR_GP_PIN(0, 14), RCAR_GP_PIN(0, 13),
+	RCAR_GP_PIN(0, 12), RCAR_GP_PIN(0, 11), RCAR_GP_PIN(0, 10),
+	RCAR_GP_PIN(0, 9),  RCAR_GP_PIN(3, 8),
+
+	/* G[7:0] */
+	RCAR_GP_PIN(1, 15), RCAR_GP_PIN(1, 14), RCAR_GP_PIN(1, 13),
+	RCAR_GP_PIN(1, 12), RCAR_GP_PIN(1, 19), RCAR_GP_PIN(1, 18),
+	RCAR_GP_PIN(1, 17), RCAR_GP_PIN(1, 16),
+
+	/* B[7:0] */
+	RCAR_GP_PIN(1, 7),  RCAR_GP_PIN(1, 6),  RCAR_GP_PIN(1, 5),
+	RCAR_GP_PIN(1, 4),  RCAR_GP_PIN(1, 3),  RCAR_GP_PIN(1, 2),
+	RCAR_GP_PIN(1, 1),  RCAR_GP_PIN(1, 0),
+};
+static const unsigned int du_rgb888_mux[] = {
+	DU_DR7_MARK, DU_DR6_MARK, DU_DR5_MARK, DU_DR4_MARK,
+	DU_DR3_MARK, DU_DR2_MARK, DU_DR1_MARK, DU_DR0_MARK,
+	DU_DG7_MARK, DU_DG6_MARK, DU_DG5_MARK, DU_DG4_MARK,
+	DU_DG3_MARK, DU_DG2_MARK, DU_DG1_MARK, DU_DG0_MARK,
+	DU_DB7_MARK, DU_DB6_MARK, DU_DB5_MARK, DU_DB4_MARK,
+	DU_DB3_MARK, DU_DB2_MARK, DU_DB1_MARK, DU_DB0_MARK,
+};
+static const unsigned int du_clk_out_0_pins[] = {
+	/* CLKOUT */
+	RCAR_GP_PIN(1, 27),
+};
+static const unsigned int du_clk_out_0_mux[] = {
+	DU_DOTCLKOUT0_MARK
+};
+static const unsigned int du_clk_out_1_pins[] = {
+	/* CLKOUT */
+	RCAR_GP_PIN(2, 3),
+};
+static const unsigned int du_clk_out_1_mux[] = {
+	DU_DOTCLKOUT1_MARK
+};
+static const unsigned int du_sync_pins[] = {
+	/* EXVSYNC/VSYNC, EXHSYNC/HSYNC */
+	RCAR_GP_PIN(2, 5), RCAR_GP_PIN(2, 4),
+};
+static const unsigned int du_sync_mux[] = {
+	DU_EXVSYNC_DU_VSYNC_MARK, DU_EXHSYNC_DU_HSYNC_MARK
+};
+static const unsigned int du_oddf_pins[] = {
+	/* EXDISP/EXODDF/EXCDE */
+	RCAR_GP_PIN(2, 2),
+};
+static const unsigned int du_oddf_mux[] = {
+	DU_EXODDF_DU_ODDF_DISP_CDE_MARK,
+};
+static const unsigned int du_cde_pins[] = {
+	/* CDE */
+	RCAR_GP_PIN(2, 0),
+};
+static const unsigned int du_cde_mux[] = {
+	DU_CDE_MARK,
+};
+static const unsigned int du_disp_pins[] = {
+	/* DISP */
+	RCAR_GP_PIN(2, 1),
+};
+static const unsigned int du_disp_mux[] = {
+	DU_DISP_MARK,
+};
+/* - HDMI ------------------------------------------------------------------- */
+static const unsigned int hdmi0_cec_pins[] = {
+	/* HDMI0_CEC */
+	RCAR_GP_PIN(7, 2),
+};
+static const unsigned int hdmi0_cec_mux[] = {
+	HDMI0_CEC_MARK,
+};
+static const unsigned int hdmi1_cec_pins[] = {
+	/* HDMI0_CEC */
+	RCAR_GP_PIN(7, 3),
+};
+static const unsigned int hdmi1_cec_mux[] = {
+	HDMI1_CEC_MARK,
+};
+/* - I2C1 ------------------------------------------------------------------- */
+static const unsigned int i2c1_a_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(5, 10), RCAR_GP_PIN(5, 11),
+};
+static const unsigned int i2c1_a_mux[] = {
+	SCL1_A_MARK, SDA1_A_MARK,
+};
+static const unsigned int i2c1_b_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(5, 23), RCAR_GP_PIN(5, 24),
+};
+static const unsigned int i2c1_b_mux[] = {
+	SCL1_B_MARK, SDA1_B_MARK,
+};
+/* - I2C2 ------------------------------------------------------------------- */
+static const unsigned int i2c2_a_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(5, 4), RCAR_GP_PIN(5, 0),
+};
+static const unsigned int i2c2_a_mux[] = {
+	SCL2_A_MARK, SDA2_A_MARK,
+};
+static const unsigned int i2c2_b_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(3, 12), RCAR_GP_PIN(3, 13),
+};
+static const unsigned int i2c2_b_mux[] = {
+	SCL2_B_MARK, SDA2_B_MARK,
+};
+/* - I2C6 ------------------------------------------------------------------- */
+static const unsigned int i2c6_a_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(1, 11), RCAR_GP_PIN(1, 8),
+};
+static const unsigned int i2c6_a_mux[] = {
+	SCL6_A_MARK, SDA6_A_MARK,
+};
+static const unsigned int i2c6_b_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(1, 25), RCAR_GP_PIN(1, 26),
+};
+static const unsigned int i2c6_b_mux[] = {
+	SCL6_B_MARK, SDA6_B_MARK,
+};
+static const unsigned int i2c6_c_pins[] = {
+	/* SCL, SDA */
+	RCAR_GP_PIN(0, 14), RCAR_GP_PIN(0, 15),
+};
+static const unsigned int i2c6_c_mux[] = {
+	SCL6_C_MARK, SDA6_C_MARK,
+};
+/* - MSIOF0 ----------------------------------------------------------------- */
+static const unsigned int msiof0_clk_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(5, 17),
+};
+static const unsigned int msiof0_clk_mux[] = {
+	MSIOF0_SCK_MARK,
+};
+static const unsigned int msiof0_sync_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(5, 18),
+};
+static const unsigned int msiof0_sync_mux[] = {
+	MSIOF0_SYNC_MARK,
+};
+static const unsigned int msiof0_ss1_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(5, 19),
+};
+static const unsigned int msiof0_ss1_mux[] = {
+	MSIOF0_SS1_MARK,
+};
+static const unsigned int msiof0_ss2_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(5, 21),
+};
+static const unsigned int msiof0_ss2_mux[] = {
+	MSIOF0_SS2_MARK,
+};
+static const unsigned int msiof0_txd_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(5, 20),
+};
+static const unsigned int msiof0_txd_mux[] = {
+	MSIOF0_TXD_MARK,
+};
+static const unsigned int msiof0_rxd_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(5, 22),
+};
+static const unsigned int msiof0_rxd_mux[] = {
+	MSIOF0_RXD_MARK,
+};
+/* - MSIOF1 ----------------------------------------------------------------- */
+static const unsigned int msiof1_clk_a_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(6, 8),
+};
+static const unsigned int msiof1_clk_a_mux[] = {
+	MSIOF1_SCK_A_MARK,
+};
+static const unsigned int msiof1_sync_a_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(6, 9),
+};
+static const unsigned int msiof1_sync_a_mux[] = {
+	MSIOF1_SYNC_A_MARK,
+};
+static const unsigned int msiof1_ss1_a_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(6, 5),
+};
+static const unsigned int msiof1_ss1_a_mux[] = {
+	MSIOF1_SS1_A_MARK,
+};
+static const unsigned int msiof1_ss2_a_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(6, 6),
+};
+static const unsigned int msiof1_ss2_a_mux[] = {
+	MSIOF1_SS2_A_MARK,
+};
+static const unsigned int msiof1_txd_a_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(6, 7),
+};
+static const unsigned int msiof1_txd_a_mux[] = {
+	MSIOF1_TXD_A_MARK,
+};
+static const unsigned int msiof1_rxd_a_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(6, 10),
+};
+static const unsigned int msiof1_rxd_a_mux[] = {
+	MSIOF1_RXD_A_MARK,
+};
+static const unsigned int msiof1_clk_b_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(5, 9),
+};
+static const unsigned int msiof1_clk_b_mux[] = {
+	MSIOF1_SCK_B_MARK,
+};
+static const unsigned int msiof1_sync_b_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(5, 3),
+};
+static const unsigned int msiof1_sync_b_mux[] = {
+	MSIOF1_SYNC_B_MARK,
+};
+static const unsigned int msiof1_ss1_b_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(5, 4),
+};
+static const unsigned int msiof1_ss1_b_mux[] = {
+	MSIOF1_SS1_B_MARK,
+};
+static const unsigned int msiof1_ss2_b_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(5, 0),
+};
+static const unsigned int msiof1_ss2_b_mux[] = {
+	MSIOF1_SS2_B_MARK,
+};
+static const unsigned int msiof1_txd_b_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(5, 8),
+};
+static const unsigned int msiof1_txd_b_mux[] = {
+	MSIOF1_TXD_B_MARK,
+};
+static const unsigned int msiof1_rxd_b_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(5, 7),
+};
+static const unsigned int msiof1_rxd_b_mux[] = {
+	MSIOF1_RXD_B_MARK,
+};
+static const unsigned int msiof1_clk_c_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(6, 17),
+};
+static const unsigned int msiof1_clk_c_mux[] = {
+	MSIOF1_SCK_C_MARK,
+};
+static const unsigned int msiof1_sync_c_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(6, 18),
+};
+static const unsigned int msiof1_sync_c_mux[] = {
+	MSIOF1_SYNC_C_MARK,
+};
+static const unsigned int msiof1_ss1_c_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(6, 21),
+};
+static const unsigned int msiof1_ss1_c_mux[] = {
+	MSIOF1_SS1_C_MARK,
+};
+static const unsigned int msiof1_ss2_c_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(6, 27),
+};
+static const unsigned int msiof1_ss2_c_mux[] = {
+	MSIOF1_SS2_C_MARK,
+};
+static const unsigned int msiof1_txd_c_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(6, 20),
+};
+static const unsigned int msiof1_txd_c_mux[] = {
+	MSIOF1_TXD_C_MARK,
+};
+static const unsigned int msiof1_rxd_c_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(6, 19),
+};
+static const unsigned int msiof1_rxd_c_mux[] = {
+	MSIOF1_RXD_C_MARK,
+};
+static const unsigned int msiof1_clk_d_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(5, 12),
+};
+static const unsigned int msiof1_clk_d_mux[] = {
+	MSIOF1_SCK_D_MARK,
+};
+static const unsigned int msiof1_sync_d_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(5, 15),
+};
+static const unsigned int msiof1_sync_d_mux[] = {
+	MSIOF1_SYNC_D_MARK,
+};
+static const unsigned int msiof1_ss1_d_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(5, 16),
+};
+static const unsigned int msiof1_ss1_d_mux[] = {
+	MSIOF1_SS1_D_MARK,
+};
+static const unsigned int msiof1_ss2_d_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(5, 21),
+};
+static const unsigned int msiof1_ss2_d_mux[] = {
+	MSIOF1_SS2_D_MARK,
+};
+static const unsigned int msiof1_txd_d_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(5, 14),
+};
+static const unsigned int msiof1_txd_d_mux[] = {
+	MSIOF1_TXD_D_MARK,
+};
+static const unsigned int msiof1_rxd_d_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(5, 13),
+};
+static const unsigned int msiof1_rxd_d_mux[] = {
+	MSIOF1_RXD_D_MARK,
+};
+static const unsigned int msiof1_clk_e_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(3, 0),
+};
+static const unsigned int msiof1_clk_e_mux[] = {
+	MSIOF1_SCK_E_MARK,
+};
+static const unsigned int msiof1_sync_e_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(3, 1),
+};
+static const unsigned int msiof1_sync_e_mux[] = {
+	MSIOF1_SYNC_E_MARK,
+};
+static const unsigned int msiof1_ss1_e_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(3, 4),
+};
+static const unsigned int msiof1_ss1_e_mux[] = {
+	MSIOF1_SS1_E_MARK,
+};
+static const unsigned int msiof1_ss2_e_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(3, 5),
+};
+static const unsigned int msiof1_ss2_e_mux[] = {
+	MSIOF1_SS2_E_MARK,
+};
+static const unsigned int msiof1_txd_e_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(3, 3),
+};
+static const unsigned int msiof1_txd_e_mux[] = {
+	MSIOF1_TXD_E_MARK,
+};
+static const unsigned int msiof1_rxd_e_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(3, 2),
+};
+static const unsigned int msiof1_rxd_e_mux[] = {
+	MSIOF1_RXD_E_MARK,
+};
+static const unsigned int msiof1_clk_f_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(5, 23),
+};
+static const unsigned int msiof1_clk_f_mux[] = {
+	MSIOF1_SCK_F_MARK,
+};
+static const unsigned int msiof1_sync_f_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(5, 24),
+};
+static const unsigned int msiof1_sync_f_mux[] = {
+	MSIOF1_SYNC_F_MARK,
+};
+static const unsigned int msiof1_ss1_f_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(6, 1),
+};
+static const unsigned int msiof1_ss1_f_mux[] = {
+	MSIOF1_SS1_F_MARK,
+};
+static const unsigned int msiof1_ss2_f_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(6, 2),
+};
+static const unsigned int msiof1_ss2_f_mux[] = {
+	MSIOF1_SS2_F_MARK,
+};
+static const unsigned int msiof1_txd_f_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(6, 0),
+};
+static const unsigned int msiof1_txd_f_mux[] = {
+	MSIOF1_TXD_F_MARK,
+};
+static const unsigned int msiof1_rxd_f_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(5, 25),
+};
+static const unsigned int msiof1_rxd_f_mux[] = {
+	MSIOF1_RXD_F_MARK,
+};
+static const unsigned int msiof1_clk_g_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(3, 6),
+};
+static const unsigned int msiof1_clk_g_mux[] = {
+	MSIOF1_SCK_G_MARK,
+};
+static const unsigned int msiof1_sync_g_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(3, 7),
+};
+static const unsigned int msiof1_sync_g_mux[] = {
+	MSIOF1_SYNC_G_MARK,
+};
+static const unsigned int msiof1_ss1_g_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(3, 10),
+};
+static const unsigned int msiof1_ss1_g_mux[] = {
+	MSIOF1_SS1_G_MARK,
+};
+static const unsigned int msiof1_ss2_g_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(3, 11),
+};
+static const unsigned int msiof1_ss2_g_mux[] = {
+	MSIOF1_SS2_G_MARK,
+};
+static const unsigned int msiof1_txd_g_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(3, 9),
+};
+static const unsigned int msiof1_txd_g_mux[] = {
+	MSIOF1_TXD_G_MARK,
+};
+static const unsigned int msiof1_rxd_g_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(3, 8),
+};
+static const unsigned int msiof1_rxd_g_mux[] = {
+	MSIOF1_RXD_G_MARK,
+};
+/* - MSIOF2 ----------------------------------------------------------------- */
+static const unsigned int msiof2_clk_a_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(1, 9),
+};
+static const unsigned int msiof2_clk_a_mux[] = {
+	MSIOF2_SCK_A_MARK,
+};
+static const unsigned int msiof2_sync_a_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(1, 8),
+};
+static const unsigned int msiof2_sync_a_mux[] = {
+	MSIOF2_SYNC_A_MARK,
+};
+static const unsigned int msiof2_ss1_a_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(1, 6),
+};
+static const unsigned int msiof2_ss1_a_mux[] = {
+	MSIOF2_SS1_A_MARK,
+};
+static const unsigned int msiof2_ss2_a_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(1, 7),
+};
+static const unsigned int msiof2_ss2_a_mux[] = {
+	MSIOF2_SS2_A_MARK,
+};
+static const unsigned int msiof2_txd_a_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(1, 11),
+};
+static const unsigned int msiof2_txd_a_mux[] = {
+	MSIOF2_TXD_A_MARK,
+};
+static const unsigned int msiof2_rxd_a_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(1, 10),
+};
+static const unsigned int msiof2_rxd_a_mux[] = {
+	MSIOF2_RXD_A_MARK,
+};
+static const unsigned int msiof2_clk_b_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(0, 4),
+};
+static const unsigned int msiof2_clk_b_mux[] = {
+	MSIOF2_SCK_B_MARK,
+};
+static const unsigned int msiof2_sync_b_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(0, 5),
+};
+static const unsigned int msiof2_sync_b_mux[] = {
+	MSIOF2_SYNC_B_MARK,
+};
+static const unsigned int msiof2_ss1_b_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(0, 0),
+};
+static const unsigned int msiof2_ss1_b_mux[] = {
+	MSIOF2_SS1_B_MARK,
+};
+static const unsigned int msiof2_ss2_b_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(0, 1),
+};
+static const unsigned int msiof2_ss2_b_mux[] = {
+	MSIOF2_SS2_B_MARK,
+};
+static const unsigned int msiof2_txd_b_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(0, 7),
+};
+static const unsigned int msiof2_txd_b_mux[] = {
+	MSIOF2_TXD_B_MARK,
+};
+static const unsigned int msiof2_rxd_b_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(0, 6),
+};
+static const unsigned int msiof2_rxd_b_mux[] = {
+	MSIOF2_RXD_B_MARK,
+};
+static const unsigned int msiof2_clk_c_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(2, 12),
+};
+static const unsigned int msiof2_clk_c_mux[] = {
+	MSIOF2_SCK_C_MARK,
+};
+static const unsigned int msiof2_sync_c_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(2, 11),
+};
+static const unsigned int msiof2_sync_c_mux[] = {
+	MSIOF2_SYNC_C_MARK,
+};
+static const unsigned int msiof2_ss1_c_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(2, 10),
+};
+static const unsigned int msiof2_ss1_c_mux[] = {
+	MSIOF2_SS1_C_MARK,
+};
+static const unsigned int msiof2_ss2_c_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(2, 9),
+};
+static const unsigned int msiof2_ss2_c_mux[] = {
+	MSIOF2_SS2_C_MARK,
+};
+static const unsigned int msiof2_txd_c_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(2, 14),
+};
+static const unsigned int msiof2_txd_c_mux[] = {
+	MSIOF2_TXD_C_MARK,
+};
+static const unsigned int msiof2_rxd_c_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(2, 13),
+};
+static const unsigned int msiof2_rxd_c_mux[] = {
+	MSIOF2_RXD_C_MARK,
+};
+static const unsigned int msiof2_clk_d_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(0, 8),
+};
+static const unsigned int msiof2_clk_d_mux[] = {
+	MSIOF2_SCK_D_MARK,
+};
+static const unsigned int msiof2_sync_d_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(0, 9),
+};
+static const unsigned int msiof2_sync_d_mux[] = {
+	MSIOF2_SYNC_D_MARK,
+};
+static const unsigned int msiof2_ss1_d_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(0, 12),
+};
+static const unsigned int msiof2_ss1_d_mux[] = {
+	MSIOF2_SS1_D_MARK,
+};
+static const unsigned int msiof2_ss2_d_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(0, 13),
+};
+static const unsigned int msiof2_ss2_d_mux[] = {
+	MSIOF2_SS2_D_MARK,
+};
+static const unsigned int msiof2_txd_d_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(0, 11),
+};
+static const unsigned int msiof2_txd_d_mux[] = {
+	MSIOF2_TXD_D_MARK,
+};
+static const unsigned int msiof2_rxd_d_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(0, 10),
+};
+static const unsigned int msiof2_rxd_d_mux[] = {
+	MSIOF2_RXD_D_MARK,
+};
+/* - MSIOF3 ----------------------------------------------------------------- */
+static const unsigned int msiof3_clk_a_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(0, 0),
+};
+static const unsigned int msiof3_clk_a_mux[] = {
+	MSIOF3_SCK_A_MARK,
+};
+static const unsigned int msiof3_sync_a_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(0, 1),
+};
+static const unsigned int msiof3_sync_a_mux[] = {
+	MSIOF3_SYNC_A_MARK,
+};
+static const unsigned int msiof3_ss1_a_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(0, 14),
+};
+static const unsigned int msiof3_ss1_a_mux[] = {
+	MSIOF3_SS1_A_MARK,
+};
+static const unsigned int msiof3_ss2_a_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(0, 15),
+};
+static const unsigned int msiof3_ss2_a_mux[] = {
+	MSIOF3_SS2_A_MARK,
+};
+static const unsigned int msiof3_txd_a_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(0, 3),
+};
+static const unsigned int msiof3_txd_a_mux[] = {
+	MSIOF3_TXD_A_MARK,
+};
+static const unsigned int msiof3_rxd_a_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(0, 2),
+};
+static const unsigned int msiof3_rxd_a_mux[] = {
+	MSIOF3_RXD_A_MARK,
+};
+static const unsigned int msiof3_clk_b_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(1, 2),
+};
+static const unsigned int msiof3_clk_b_mux[] = {
+	MSIOF3_SCK_B_MARK,
+};
+static const unsigned int msiof3_sync_b_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(1, 0),
+};
+static const unsigned int msiof3_sync_b_mux[] = {
+	MSIOF3_SYNC_B_MARK,
+};
+static const unsigned int msiof3_ss1_b_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(1, 4),
+};
+static const unsigned int msiof3_ss1_b_mux[] = {
+	MSIOF3_SS1_B_MARK,
+};
+static const unsigned int msiof3_ss2_b_pins[] = {
+	/* SS2 */
+	RCAR_GP_PIN(1, 5),
+};
+static const unsigned int msiof3_ss2_b_mux[] = {
+	MSIOF3_SS2_B_MARK,
+};
+static const unsigned int msiof3_txd_b_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(1, 1),
+};
+static const unsigned int msiof3_txd_b_mux[] = {
+	MSIOF3_TXD_B_MARK,
+};
+static const unsigned int msiof3_rxd_b_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(1, 3),
+};
+static const unsigned int msiof3_rxd_b_mux[] = {
+	MSIOF3_RXD_B_MARK,
+};
+static const unsigned int msiof3_clk_c_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(1, 12),
+};
+static const unsigned int msiof3_clk_c_mux[] = {
+	MSIOF3_SCK_C_MARK,
+};
+static const unsigned int msiof3_sync_c_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(1, 13),
+};
+static const unsigned int msiof3_sync_c_mux[] = {
+	MSIOF3_SYNC_C_MARK,
+};
+static const unsigned int msiof3_txd_c_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(1, 15),
+};
+static const unsigned int msiof3_txd_c_mux[] = {
+	MSIOF3_TXD_C_MARK,
+};
+static const unsigned int msiof3_rxd_c_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(1, 14),
+};
+static const unsigned int msiof3_rxd_c_mux[] = {
+	MSIOF3_RXD_C_MARK,
+};
+static const unsigned int msiof3_clk_d_pins[] = {
+	/* SCK */
+	RCAR_GP_PIN(1, 22),
+};
+static const unsigned int msiof3_clk_d_mux[] = {
+	MSIOF3_SCK_D_MARK,
+};
+static const unsigned int msiof3_sync_d_pins[] = {
+	/* SYNC */
+	RCAR_GP_PIN(1, 23),
+};
+static const unsigned int msiof3_sync_d_mux[] = {
+	MSIOF3_SYNC_D_MARK,
+};
+static const unsigned int msiof3_ss1_d_pins[] = {
+	/* SS1 */
+	RCAR_GP_PIN(1, 26),
+};
+static const unsigned int msiof3_ss1_d_mux[] = {
+	MSIOF3_SS1_D_MARK,
+};
+static const unsigned int msiof3_txd_d_pins[] = {
+	/* TXD */
+	RCAR_GP_PIN(1, 25),
+};
+static const unsigned int msiof3_txd_d_mux[] = {
+	MSIOF3_TXD_D_MARK,
+};
+static const unsigned int msiof3_rxd_d_pins[] = {
+	/* RXD */
+	RCAR_GP_PIN(1, 24),
+};
+static const unsigned int msiof3_rxd_d_mux[] = {
+	MSIOF3_RXD_D_MARK,
+};
 /* - SCIF0 ------------------------------------------------------------------ */
 static const unsigned int scif0_data_pins[] = {
 	/* RX, TX */
@@ -588,8 +1951,372 @@ static const unsigned int scif5_clk_pins[] = {
 static const unsigned int scif5_clk_mux[] = {
 	SCK5_MARK,
 };
+/* - SDHI0 ------------------------------------------------------------------ */
+static const unsigned int sdhi0_data1_pins[] = {
+	/* D0 */
+	RCAR_GP_PIN(3, 2),
+};
+static const unsigned int sdhi0_data1_mux[] = {
+	SD0_DAT0_MARK,
+};
+static const unsigned int sdhi0_data4_pins[] = {
+	/* D[0:3] */
+	RCAR_GP_PIN(3, 2), RCAR_GP_PIN(3, 3),
+	RCAR_GP_PIN(3, 4), RCAR_GP_PIN(3, 5),
+};
+static const unsigned int sdhi0_data4_mux[] = {
+	SD0_DAT0_MARK, SD0_DAT1_MARK,
+	SD0_DAT2_MARK, SD0_DAT3_MARK,
+};
+static const unsigned int sdhi0_ctrl_pins[] = {
+	/* CLK, CMD */
+	RCAR_GP_PIN(3, 0), RCAR_GP_PIN(3, 1),
+};
+static const unsigned int sdhi0_ctrl_mux[] = {
+	SD0_CLK_MARK, SD0_CMD_MARK,
+};
+static const unsigned int sdhi0_cd_pins[] = {
+	/* CD */
+	RCAR_GP_PIN(3, 12),
+};
+static const unsigned int sdhi0_cd_mux[] = {
+	SD0_CD_MARK,
+};
+static const unsigned int sdhi0_wp_pins[] = {
+	/* WP */
+	RCAR_GP_PIN(3, 13),
+};
+static const unsigned int sdhi0_wp_mux[] = {
+	SD0_WP_MARK,
+};
+/* - SDHI1 ------------------------------------------------------------------ */
+static const unsigned int sdhi1_data1_pins[] = {
+	/* D0 */
+	RCAR_GP_PIN(3, 8),
+};
+static const unsigned int sdhi1_data1_mux[] = {
+	SD1_DAT0_MARK,
+};
+static const unsigned int sdhi1_data4_pins[] = {
+	/* D[0:3] */
+	RCAR_GP_PIN(3, 8),  RCAR_GP_PIN(3, 9),
+	RCAR_GP_PIN(3, 10), RCAR_GP_PIN(3, 11),
+};
+static const unsigned int sdhi1_data4_mux[] = {
+	SD1_DAT0_MARK, SD1_DAT1_MARK,
+	SD1_DAT2_MARK, SD1_DAT3_MARK,
+};
+static const unsigned int sdhi1_ctrl_pins[] = {
+	/* CLK, CMD */
+	RCAR_GP_PIN(3, 6), RCAR_GP_PIN(3, 7),
+};
+static const unsigned int sdhi1_ctrl_mux[] = {
+	SD1_CLK_MARK, SD1_CMD_MARK,
+};
+static const unsigned int sdhi1_cd_pins[] = {
+	/* CD */
+	RCAR_GP_PIN(3, 14),
+};
+static const unsigned int sdhi1_cd_mux[] = {
+	SD1_CD_MARK,
+};
+static const unsigned int sdhi1_wp_pins[] = {
+	/* WP */
+	RCAR_GP_PIN(3, 15),
+};
+static const unsigned int sdhi1_wp_mux[] = {
+	SD1_WP_MARK,
+};
+/* - SDHI2 ------------------------------------------------------------------ */
+static const unsigned int sdhi2_data1_pins[] = {
+	/* D0 */
+	RCAR_GP_PIN(4, 2),
+};
+static const unsigned int sdhi2_data1_mux[] = {
+	SD2_DAT0_MARK,
+};
+static const unsigned int sdhi2_data4_pins[] = {
+	/* D[0:3] */
+	RCAR_GP_PIN(4, 2), RCAR_GP_PIN(4, 3),
+	RCAR_GP_PIN(4, 4), RCAR_GP_PIN(4, 5),
+};
+static const unsigned int sdhi2_data4_mux[] = {
+	SD2_DAT0_MARK, SD2_DAT1_MARK,
+	SD2_DAT2_MARK, SD2_DAT3_MARK,
+};
+static const unsigned int sdhi2_data8_pins[] = {
+	/* D[0:7] */
+	RCAR_GP_PIN(4, 2),  RCAR_GP_PIN(4, 3),
+	RCAR_GP_PIN(4, 4),  RCAR_GP_PIN(4, 5),
+	RCAR_GP_PIN(3, 8),  RCAR_GP_PIN(3, 9),
+	RCAR_GP_PIN(3, 10), RCAR_GP_PIN(3, 11),
+};
+static const unsigned int sdhi2_data8_mux[] = {
+	SD2_DAT0_MARK, SD2_DAT1_MARK,
+	SD2_DAT2_MARK, SD2_DAT3_MARK,
+	SD2_DAT4_MARK, SD2_DAT5_MARK,
+	SD2_DAT6_MARK, SD2_DAT7_MARK,
+};
+static const unsigned int sdhi2_ctrl_pins[] = {
+	/* CLK, CMD */
+	RCAR_GP_PIN(4, 0), RCAR_GP_PIN(4, 1),
+};
+static const unsigned int sdhi2_ctrl_mux[] = {
+	SD2_CLK_MARK, SD2_CMD_MARK,
+};
+static const unsigned int sdhi2_cd_a_pins[] = {
+	/* CD */
+	RCAR_GP_PIN(4, 13),
+};
+static const unsigned int sdhi2_cd_a_mux[] = {
+	SD2_CD_A_MARK,
+};
+static const unsigned int sdhi2_cd_b_pins[] = {
+	/* CD */
+	RCAR_GP_PIN(5, 10),
+};
+static const unsigned int sdhi2_cd_b_mux[] = {
+	SD2_CD_B_MARK,
+};
+static const unsigned int sdhi2_wp_a_pins[] = {
+	/* WP */
+	RCAR_GP_PIN(4, 14),
+};
+static const unsigned int sdhi2_wp_a_mux[] = {
+	SD2_WP_A_MARK,
+};
+static const unsigned int sdhi2_wp_b_pins[] = {
+	/* WP */
+	RCAR_GP_PIN(5, 11),
+};
+static const unsigned int sdhi2_wp_b_mux[] = {
+	SD2_WP_B_MARK,
+};
+static const unsigned int sdhi2_ds_pins[] = {
+	/* DS */
+	RCAR_GP_PIN(4, 6),
+};
+static const unsigned int sdhi2_ds_mux[] = {
+	SD2_DS_MARK,
+};
+/* - SDHI3 ------------------------------------------------------------------ */
+static const unsigned int sdhi3_data1_pins[] = {
+	/* D0 */
+	RCAR_GP_PIN(4, 9),
+};
+static const unsigned int sdhi3_data1_mux[] = {
+	SD3_DAT0_MARK,
+};
+static const unsigned int sdhi3_data4_pins[] = {
+	/* D[0:3] */
+	RCAR_GP_PIN(4, 9),  RCAR_GP_PIN(4, 10),
+	RCAR_GP_PIN(4, 11), RCAR_GP_PIN(4, 12),
+};
+static const unsigned int sdhi3_data4_mux[] = {
+	SD3_DAT0_MARK, SD3_DAT1_MARK,
+	SD3_DAT2_MARK, SD3_DAT3_MARK,
+};
+static const unsigned int sdhi3_data8_pins[] = {
+	/* D[0:7] */
+	RCAR_GP_PIN(4, 9),  RCAR_GP_PIN(4, 10),
+	RCAR_GP_PIN(4, 11), RCAR_GP_PIN(4, 12),
+	RCAR_GP_PIN(4, 13), RCAR_GP_PIN(4, 14),
+	RCAR_GP_PIN(4, 15), RCAR_GP_PIN(4, 16),
+};
+static const unsigned int sdhi3_data8_mux[] = {
+	SD3_DAT0_MARK, SD3_DAT1_MARK,
+	SD3_DAT2_MARK, SD3_DAT3_MARK,
+	SD3_DAT4_MARK, SD3_DAT5_MARK,
+	SD3_DAT6_MARK, SD3_DAT7_MARK,
+};
+static const unsigned int sdhi3_ctrl_pins[] = {
+	/* CLK, CMD */
+	RCAR_GP_PIN(4, 7), RCAR_GP_PIN(4, 8),
+};
+static const unsigned int sdhi3_ctrl_mux[] = {
+	SD3_CLK_MARK, SD3_CMD_MARK,
+};
+static const unsigned int sdhi3_cd_pins[] = {
+	/* CD */
+	RCAR_GP_PIN(4, 15),
+};
+static const unsigned int sdhi3_cd_mux[] = {
+	SD3_CD_MARK,
+};
+static const unsigned int sdhi3_wp_pins[] = {
+	/* WP */
+	RCAR_GP_PIN(4, 16),
+};
+static const unsigned int sdhi3_wp_mux[] = {
+	SD3_WP_MARK,
+};
+static const unsigned int sdhi3_ds_pins[] = {
+	/* DS */
+	RCAR_GP_PIN(4, 17),
+};
+static const unsigned int sdhi3_ds_mux[] = {
+	SD3_DS_MARK,
+};
+/* - USB0 ------------------------------------------------------------------- */
+static const unsigned int usb0_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 24), RCAR_GP_PIN(6, 25),
+};
+static const unsigned int usb0_mux[] = {
+	USB0_PWEN_MARK, USB0_OVC_MARK,
+};
+/* - USB1 ------------------------------------------------------------------- */
+static const unsigned int usb1_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 26), RCAR_GP_PIN(6, 27),
+};
+static const unsigned int usb1_mux[] = {
+	USB1_PWEN_MARK, USB1_OVC_MARK,
+};
+/* - USB2 ------------------------------------------------------------------- */
+static const unsigned int usb2_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 14), RCAR_GP_PIN(6, 15),
+};
+static const unsigned int usb2_mux[] = {
+	USB2_PWEN_MARK, USB2_OVC_MARK,
+};
+/* - USB30 ------------------------------------------------------------------ */
+static const unsigned int usb30_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 28), RCAR_GP_PIN(6, 29),
+};
+static const unsigned int usb30_mux[] = {
+	USB30_PWEN_MARK, USB30_OVC_MARK,
+};
+/* - USB31 ------------------------------------------------------------------ */
+static const unsigned int usb31_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 30), RCAR_GP_PIN(6, 31),
+};
+static const unsigned int usb31_mux[] = {
+	USB31_PWEN_MARK, USB31_OVC_MARK,
+};
 
 static const struct sh_pfc_pin_group pinmux_groups[] = {
+	SH_PFC_PIN_GROUP(avb_link),
+	SH_PFC_PIN_GROUP(avb_magic),
+	SH_PFC_PIN_GROUP(avb_phy_int),
+	SH_PFC_PIN_GROUP(avb_mdc),
+	SH_PFC_PIN_GROUP(avb_avtp_pps),
+	SH_PFC_PIN_GROUP(avb_avtp_match_a),
+	SH_PFC_PIN_GROUP(avb_avtp_capture_a),
+	SH_PFC_PIN_GROUP(avb_avtp_match_b),
+	SH_PFC_PIN_GROUP(avb_avtp_capture_b),
+	SH_PFC_PIN_GROUP(du_rgb888),
+	SH_PFC_PIN_GROUP(du_clk_out_0),
+	SH_PFC_PIN_GROUP(du_clk_out_1),
+	SH_PFC_PIN_GROUP(du_sync),
+	SH_PFC_PIN_GROUP(du_oddf),
+	SH_PFC_PIN_GROUP(du_cde),
+	SH_PFC_PIN_GROUP(du_disp),
+	SH_PFC_PIN_GROUP(hdmi0_cec),
+	SH_PFC_PIN_GROUP(hdmi1_cec),
+	SH_PFC_PIN_GROUP(i2c1_a),
+	SH_PFC_PIN_GROUP(i2c1_b),
+	SH_PFC_PIN_GROUP(i2c2_a),
+	SH_PFC_PIN_GROUP(i2c2_b),
+	SH_PFC_PIN_GROUP(i2c6_a),
+	SH_PFC_PIN_GROUP(i2c6_b),
+	SH_PFC_PIN_GROUP(i2c6_c),
+	SH_PFC_PIN_GROUP(msiof0_clk),
+	SH_PFC_PIN_GROUP(msiof0_sync),
+	SH_PFC_PIN_GROUP(msiof0_ss1),
+	SH_PFC_PIN_GROUP(msiof0_ss2),
+	SH_PFC_PIN_GROUP(msiof0_txd),
+	SH_PFC_PIN_GROUP(msiof0_rxd),
+	SH_PFC_PIN_GROUP(msiof1_clk_a),
+	SH_PFC_PIN_GROUP(msiof1_sync_a),
+	SH_PFC_PIN_GROUP(msiof1_ss1_a),
+	SH_PFC_PIN_GROUP(msiof1_ss2_a),
+	SH_PFC_PIN_GROUP(msiof1_txd_a),
+	SH_PFC_PIN_GROUP(msiof1_rxd_a),
+	SH_PFC_PIN_GROUP(msiof1_clk_b),
+	SH_PFC_PIN_GROUP(msiof1_sync_b),
+	SH_PFC_PIN_GROUP(msiof1_ss1_b),
+	SH_PFC_PIN_GROUP(msiof1_ss2_b),
+	SH_PFC_PIN_GROUP(msiof1_txd_b),
+	SH_PFC_PIN_GROUP(msiof1_rxd_b),
+	SH_PFC_PIN_GROUP(msiof1_clk_c),
+	SH_PFC_PIN_GROUP(msiof1_sync_c),
+	SH_PFC_PIN_GROUP(msiof1_ss1_c),
+	SH_PFC_PIN_GROUP(msiof1_ss2_c),
+	SH_PFC_PIN_GROUP(msiof1_txd_c),
+	SH_PFC_PIN_GROUP(msiof1_rxd_c),
+	SH_PFC_PIN_GROUP(msiof1_clk_d),
+	SH_PFC_PIN_GROUP(msiof1_sync_d),
+	SH_PFC_PIN_GROUP(msiof1_ss1_d),
+	SH_PFC_PIN_GROUP(msiof1_ss2_d),
+	SH_PFC_PIN_GROUP(msiof1_txd_d),
+	SH_PFC_PIN_GROUP(msiof1_rxd_d),
+	SH_PFC_PIN_GROUP(msiof1_clk_e),
+	SH_PFC_PIN_GROUP(msiof1_sync_e),
+	SH_PFC_PIN_GROUP(msiof1_ss1_e),
+	SH_PFC_PIN_GROUP(msiof1_ss2_e),
+	SH_PFC_PIN_GROUP(msiof1_txd_e),
+	SH_PFC_PIN_GROUP(msiof1_rxd_e),
+	SH_PFC_PIN_GROUP(msiof1_clk_f),
+	SH_PFC_PIN_GROUP(msiof1_sync_f),
+	SH_PFC_PIN_GROUP(msiof1_ss1_f),
+	SH_PFC_PIN_GROUP(msiof1_ss2_f),
+	SH_PFC_PIN_GROUP(msiof1_txd_f),
+	SH_PFC_PIN_GROUP(msiof1_rxd_f),
+	SH_PFC_PIN_GROUP(msiof1_clk_g),
+	SH_PFC_PIN_GROUP(msiof1_sync_g),
+	SH_PFC_PIN_GROUP(msiof1_ss1_g),
+	SH_PFC_PIN_GROUP(msiof1_ss2_g),
+	SH_PFC_PIN_GROUP(msiof1_txd_g),
+	SH_PFC_PIN_GROUP(msiof1_rxd_g),
+	SH_PFC_PIN_GROUP(msiof2_clk_a),
+	SH_PFC_PIN_GROUP(msiof2_sync_a),
+	SH_PFC_PIN_GROUP(msiof2_ss1_a),
+	SH_PFC_PIN_GROUP(msiof2_ss2_a),
+	SH_PFC_PIN_GROUP(msiof2_txd_a),
+	SH_PFC_PIN_GROUP(msiof2_rxd_a),
+	SH_PFC_PIN_GROUP(msiof2_clk_b),
+	SH_PFC_PIN_GROUP(msiof2_sync_b),
+	SH_PFC_PIN_GROUP(msiof2_ss1_b),
+	SH_PFC_PIN_GROUP(msiof2_ss2_b),
+	SH_PFC_PIN_GROUP(msiof2_txd_b),
+	SH_PFC_PIN_GROUP(msiof2_rxd_b),
+	SH_PFC_PIN_GROUP(msiof2_clk_c),
+	SH_PFC_PIN_GROUP(msiof2_sync_c),
+	SH_PFC_PIN_GROUP(msiof2_ss1_c),
+	SH_PFC_PIN_GROUP(msiof2_ss2_c),
+	SH_PFC_PIN_GROUP(msiof2_txd_c),
+	SH_PFC_PIN_GROUP(msiof2_rxd_c),
+	SH_PFC_PIN_GROUP(msiof2_clk_d),
+	SH_PFC_PIN_GROUP(msiof2_sync_d),
+	SH_PFC_PIN_GROUP(msiof2_ss1_d),
+	SH_PFC_PIN_GROUP(msiof2_ss2_d),
+	SH_PFC_PIN_GROUP(msiof2_txd_d),
+	SH_PFC_PIN_GROUP(msiof2_rxd_d),
+	SH_PFC_PIN_GROUP(msiof3_clk_a),
+	SH_PFC_PIN_GROUP(msiof3_sync_a),
+	SH_PFC_PIN_GROUP(msiof3_ss1_a),
+	SH_PFC_PIN_GROUP(msiof3_ss2_a),
+	SH_PFC_PIN_GROUP(msiof3_txd_a),
+	SH_PFC_PIN_GROUP(msiof3_rxd_a),
+	SH_PFC_PIN_GROUP(msiof3_clk_b),
+	SH_PFC_PIN_GROUP(msiof3_sync_b),
+	SH_PFC_PIN_GROUP(msiof3_ss1_b),
+	SH_PFC_PIN_GROUP(msiof3_ss2_b),
+	SH_PFC_PIN_GROUP(msiof3_txd_b),
+	SH_PFC_PIN_GROUP(msiof3_rxd_b),
+	SH_PFC_PIN_GROUP(msiof3_clk_c),
+	SH_PFC_PIN_GROUP(msiof3_sync_c),
+	SH_PFC_PIN_GROUP(msiof3_txd_c),
+	SH_PFC_PIN_GROUP(msiof3_rxd_c),
+	SH_PFC_PIN_GROUP(msiof3_clk_d),
+	SH_PFC_PIN_GROUP(msiof3_sync_d),
+	SH_PFC_PIN_GROUP(msiof3_ss1_d),
+	SH_PFC_PIN_GROUP(msiof3_txd_d),
+	SH_PFC_PIN_GROUP(msiof3_rxd_d),
 	SH_PFC_PIN_GROUP(scif0_data),
 	SH_PFC_PIN_GROUP(scif0_clk),
 	SH_PFC_PIN_GROUP(scif0_ctrl),
@@ -615,6 +2342,188 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(scif4_ctrl_c),
 	SH_PFC_PIN_GROUP(scif5_data),
 	SH_PFC_PIN_GROUP(scif5_clk),
+	SH_PFC_PIN_GROUP(sdhi0_data1),
+	SH_PFC_PIN_GROUP(sdhi0_data4),
+	SH_PFC_PIN_GROUP(sdhi0_ctrl),
+	SH_PFC_PIN_GROUP(sdhi0_cd),
+	SH_PFC_PIN_GROUP(sdhi0_wp),
+	SH_PFC_PIN_GROUP(sdhi1_data1),
+	SH_PFC_PIN_GROUP(sdhi1_data4),
+	SH_PFC_PIN_GROUP(sdhi1_ctrl),
+	SH_PFC_PIN_GROUP(sdhi1_cd),
+	SH_PFC_PIN_GROUP(sdhi1_wp),
+	SH_PFC_PIN_GROUP(sdhi2_data1),
+	SH_PFC_PIN_GROUP(sdhi2_data4),
+	SH_PFC_PIN_GROUP(sdhi2_data8),
+	SH_PFC_PIN_GROUP(sdhi2_ctrl),
+	SH_PFC_PIN_GROUP(sdhi2_cd_a),
+	SH_PFC_PIN_GROUP(sdhi2_wp_a),
+	SH_PFC_PIN_GROUP(sdhi2_cd_b),
+	SH_PFC_PIN_GROUP(sdhi2_wp_b),
+	SH_PFC_PIN_GROUP(sdhi2_ds),
+	SH_PFC_PIN_GROUP(sdhi3_data1),
+	SH_PFC_PIN_GROUP(sdhi3_data4),
+	SH_PFC_PIN_GROUP(sdhi3_data8),
+	SH_PFC_PIN_GROUP(sdhi3_ctrl),
+	SH_PFC_PIN_GROUP(sdhi3_cd),
+	SH_PFC_PIN_GROUP(sdhi3_wp),
+	SH_PFC_PIN_GROUP(sdhi3_ds),
+	SH_PFC_PIN_GROUP(usb0),
+	SH_PFC_PIN_GROUP(usb1),
+	SH_PFC_PIN_GROUP(usb2),
+	SH_PFC_PIN_GROUP(usb30),
+	SH_PFC_PIN_GROUP(usb31),
+};
+
+static const char * const avb_groups[] = {
+	"avb_link",
+	"avb_magic",
+	"avb_phy_int",
+	"avb_mdc",
+	"avb_avtp_pps",
+	"avb_avtp_match_a",
+	"avb_avtp_capture_a",
+	"avb_avtp_match_b",
+	"avb_avtp_capture_b",
+};
+
+static const char * const du_groups[] = {
+	"du_rgb888",
+	"du_clk_out_0",
+	"du_clk_out_1",
+	"du_sync",
+	"du_oddf",
+	"du_cde",
+	"du_disp",
+};
+
+static const char * const hdmi0_groups[] = {
+	"hdmi0_cec",
+};
+
+static const char * const hdmi1_groups[] = {
+	"hdmi1_cec",
+};
+
+static const char * const i2c1_groups[] = {
+	"i2c1_a",
+	"i2c1_b",
+};
+
+static const char * const i2c2_groups[] = {
+	"i2c2_a",
+	"i2c2_b",
+};
+
+static const char * const i2c6_groups[] = {
+	"i2c6_a",
+	"i2c6_b",
+	"i2c6_c",
+};
+
+static const char * const msiof0_groups[] = {
+	"msiof0_clk",
+	"msiof0_sync",
+	"msiof0_ss1",
+	"msiof0_ss2",
+	"msiof0_txd",
+	"msiof0_rxd",
+};
+
+static const char * const msiof1_groups[] = {
+	"msiof1_clk_a",
+	"msiof1_sync_a",
+	"msiof1_ss1_a",
+	"msiof1_ss2_a",
+	"msiof1_txd_a",
+	"msiof1_rxd_a",
+	"msiof1_clk_b",
+	"msiof1_sync_b",
+	"msiof1_ss1_b",
+	"msiof1_ss2_b",
+	"msiof1_txd_b",
+	"msiof1_rxd_b",
+	"msiof1_clk_c",
+	"msiof1_sync_c",
+	"msiof1_ss1_c",
+	"msiof1_ss2_c",
+	"msiof1_txd_c",
+	"msiof1_rxd_c",
+	"msiof1_clk_d",
+	"msiof1_sync_d",
+	"msiof1_ss1_d",
+	"msiof1_ss2_d",
+	"msiof1_txd_d",
+	"msiof1_rxd_d",
+	"msiof1_clk_e",
+	"msiof1_sync_e",
+	"msiof1_ss1_e",
+	"msiof1_ss2_e",
+	"msiof1_txd_e",
+	"msiof1_rxd_e",
+	"msiof1_clk_f",
+	"msiof1_sync_f",
+	"msiof1_ss1_f",
+	"msiof1_ss2_f",
+	"msiof1_txd_f",
+	"msiof1_rxd_f",
+	"msiof1_clk_g",
+	"msiof1_sync_g",
+	"msiof1_ss1_g",
+	"msiof1_ss2_g",
+	"msiof1_txd_g",
+	"msiof1_rxd_g",
+};
+
+static const char * const msiof2_groups[] = {
+	"msiof2_clk_a",
+	"msiof2_sync_a",
+	"msiof2_ss1_a",
+	"msiof2_ss2_a",
+	"msiof2_txd_a",
+	"msiof2_rxd_a",
+	"msiof2_clk_b",
+	"msiof2_sync_b",
+	"msiof2_ss1_b",
+	"msiof2_ss2_b",
+	"msiof2_txd_b",
+	"msiof2_rxd_b",
+	"msiof2_clk_c",
+	"msiof2_sync_c",
+	"msiof2_ss1_c",
+	"msiof2_ss2_c",
+	"msiof2_txd_c",
+	"msiof2_rxd_c",
+	"msiof2_clk_d",
+	"msiof2_sync_d",
+	"msiof2_ss1_d",
+	"msiof2_ss2_d",
+	"msiof2_txd_d",
+	"msiof2_rxd_d",
+};
+
+static const char * const msiof3_groups[] = {
+	"msiof3_clk_a",
+	"msiof3_sync_a",
+	"msiof3_ss1_a",
+	"msiof3_ss2_a",
+	"msiof3_txd_a",
+	"msiof3_rxd_a",
+	"msiof3_clk_b",
+	"msiof3_sync_b",
+	"msiof3_ss1_b",
+	"msiof3_ss2_b",
+	"msiof3_txd_b",
+	"msiof3_rxd_b",
+	"msiof3_clk_c",
+	"msiof3_sync_c",
+	"msiof3_txd_c",
+	"msiof3_rxd_c",
+	"msiof3_clk_d",
+	"msiof3_sync_d",
+	"msiof3_ss1_d",
+	"msiof3_txd_d",
+	"msiof3_rxd_d",
 };
 
 static const char * const scif0_groups[] = {
@@ -660,13 +2569,91 @@ static const char * const scif5_groups[] = {
 	"scif5_clk",
 };
 
+static const char * const sdhi0_groups[] = {
+	"sdhi0_data1",
+	"sdhi0_data4",
+	"sdhi0_ctrl",
+	"sdhi0_cd",
+	"sdhi0_wp",
+};
+
+static const char * const sdhi1_groups[] = {
+	"sdhi1_data1",
+	"sdhi1_data4",
+	"sdhi1_ctrl",
+	"sdhi1_cd",
+	"sdhi1_wp",
+};
+
+static const char * const sdhi2_groups[] = {
+	"sdhi2_data1",
+	"sdhi2_data4",
+	"sdhi2_data8",
+	"sdhi2_ctrl",
+	"sdhi2_cd_a",
+	"sdhi2_wp_a",
+	"sdhi2_cd_b",
+	"sdhi2_wp_b",
+	"sdhi2_ds",
+};
+
+static const char * const sdhi3_groups[] = {
+	"sdhi3_data1",
+	"sdhi3_data4",
+	"sdhi3_data8",
+	"sdhi3_ctrl",
+	"sdhi3_cd",
+	"sdhi3_wp",
+	"sdhi3_ds",
+};
+
+static const char * const usb0_groups[] = {
+	"usb0",
+};
+
+static const char * const usb1_groups[] = {
+	"usb1",
+};
+
+static const char * const usb2_groups[] = {
+	"usb2",
+};
+
+static const char * const usb30_groups[] = {
+	"usb30",
+};
+
+static const char * const usb31_groups[] = {
+	"usb31",
+};
+
 static const struct sh_pfc_function pinmux_functions[] = {
+	SH_PFC_FUNCTION(avb),
+	SH_PFC_FUNCTION(du),
+	SH_PFC_FUNCTION(hdmi0),
+	SH_PFC_FUNCTION(hdmi1),
+	SH_PFC_FUNCTION(msiof0),
+	SH_PFC_FUNCTION(msiof1),
+	SH_PFC_FUNCTION(msiof2),
+	SH_PFC_FUNCTION(msiof3),
+	SH_PFC_FUNCTION(i2c1),
+	SH_PFC_FUNCTION(i2c2),
+	SH_PFC_FUNCTION(i2c6),
 	SH_PFC_FUNCTION(scif0),
 	SH_PFC_FUNCTION(scif1),
 	SH_PFC_FUNCTION(scif2),
 	SH_PFC_FUNCTION(scif3),
 	SH_PFC_FUNCTION(scif4),
 	SH_PFC_FUNCTION(scif5),
+	SH_PFC_FUNCTION(sdhi0),
+	SH_PFC_FUNCTION(sdhi1),
+	SH_PFC_FUNCTION(sdhi2),
+	SH_PFC_FUNCTION(sdhi3),
+	SH_PFC_FUNCTION(usb0),
+	SH_PFC_FUNCTION(usb1),
+	SH_PFC_FUNCTION(usb2),
+	SH_PFC_FUNCTION(usb30),
+	SH_PFC_FUNCTION(usb31),
 };
 
 static const struct pinmux_cfg_reg pinmux_config_regs[] = {
@@ -944,50 +2931,50 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 	},
 	{ PINMUX_CFG_REG("IPSR0", 0xe6060200, 32, 4) {
 		/* IP0_31_28 [4] */
-		0, 0, 0, 0,
+		0, 0, 0, FN_DU_DISP,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_27_24 [4] */
-		0, 0, 0, 0,
+		0, 0, 0, FN_DU_CDE,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_23_20 [4] */
-		0, 0, 0, FN_RTS4_N_TANS_A,
+		FN_AVB_AVTP_CAPTURE_A, 0, FN_MSIOF2_TXD_C, FN_RTS4_N_TANS_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_19_16 [4] */
-		0, 0, 0, FN_CTS4_N_A,
+		FN_AVB_AVTP_MATCH_A, 0, FN_MSIOF2_RXD_C, FN_CTS4_N_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_15_12 [4] */
-		0, 0, 0, FN_TX4_A,
+		FN_AVB_LINK, 0, FN_MSIOF2_SCK_C, FN_TX4_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_11_8 [4] */
-		0, 0, 0, FN_RX4_A,
+		FN_AVB_PHY_INT, 0, FN_MSIOF2_SYNC_C, FN_RX4_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_7_4 [4] */
-		0, 0, 0, FN_SCK4_A,
+		FN_AVB_MAGIC, 0, FN_MSIOF2_SS1_C, FN_SCK4_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_3_0 [4] */
-		0, 0, 0, 0,
+		FN_AVB_MDC, 0, FN_MSIOF2_SS2_C, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR1", 0xe6060204, 32, 4) {
 		/* IP1_31_28 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_SYNC_B, 0,
+		0, 0, FN_DU_DB0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_27_24 [4] */
@@ -1001,128 +2988,128 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_19_16 [4] */
-		0, 0, 0, 0,
+		0, FN_AVB_AVTP_PPS, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_15_12 [4] */
-		0, 0, 0, 0,
+		0, 0, 0, FN_DU_EXVSYNC_DU_VSYNC,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_11_8 [4] */
-		0, 0, 0, 0,
+		0, 0, 0, FN_DU_EXHSYNC_DU_HSYNC,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_7_4 [4] */
-		0, 0, 0, 0,
+		0, 0, 0, FN_DU_DOTCLKOUT1,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_3_0 [4] */
-		0, 0, 0, 0,
+		0, 0, 0, FN_DU_EXODDF_DU_ODDF_DISP_CDE,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR2", 0xe6060208, 32, 4) {
 		/* IP2_31_28 [4] */
-		0, FN_RX3_B, 0, 0,
-		0, 0, 0, 0,
+		0, FN_RX3_B, FN_MSIOF2_SYNC_A, 0,
+		0, 0, 0, FN_SDA6_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_27_24 [4] */
-		0, 0, 0, FN_TX4_B,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF2_SS2_A, FN_TX4_B,
+		0, 0, FN_DU_DB7, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_23_20 [4] */
-		0, 0, 0, FN_RX4_B,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF2_SS1_A, FN_RX4_B,
+		0, 0, FN_DU_DB6, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_19_16 [4] */
-		0, 0, 0, FN_SCK4_B,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_SS1_B, FN_SCK4_B,
+		0, 0, FN_DU_DB5, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_15_12 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_SS1_B, 0,
+		0, 0, FN_DU_DB4, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_11_8 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_RXD_B, 0,
+		0, 0, FN_DU_DB3, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_7_4 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_SCK_B, 0,
+		0, 0, FN_DU_DB2, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_3_0 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_TXD_B, 0,
+		0, 0, FN_DU_DB1, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR3", 0xe606020c, 32, 4) {
 		/* IP3_31_28 [4] */
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_DU_DG0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP3_27_24 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_TXD_C, 0,
+		0, 0, FN_DU_DG7, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP3_23_20 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_RXD_C, 0,
+		0, 0, FN_DU_DG6, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP3_19_16 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_SYNC_C, 0,
+		0, 0, FN_DU_DG5, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP3_15_12 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_SCK_C, 0,
+		0, 0, FN_DU_DG4, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP3_11_8 [4] */
-		0, FN_TX3_B, 0, 0,
-		0, 0, 0, 0,
+		0, FN_TX3_B, FN_MSIOF2_TXD_B, 0,
+		0, 0, 0, FN_SCL6_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP3_7_4 [4] */
-		0, 0, 0, FN_RTS4_N_TANS_B,
+		0, 0, FN_MSIOF2_RXD_A, FN_RTS4_N_TANS_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP3_3_0 [4] */
-		0, 0, 0, FN_CTS4_N_B,
+		0, 0, FN_MSIOF2_SCK_A, FN_CTS4_N_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR4", 0xe6060210, 32, 4) {
 		/* IP4_31_28 [4] */
-		0, 0, 0, FN_TX3_A,
+		0, 0, FN_MSIOF3_RXD_D, FN_TX3_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP4_27_24 [4] */
-		0, 0, 0, FN_RX3_A,
+		0, 0, FN_MSIOF3_SYNC_D, FN_RX3_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP4_23_20 [4] */
-		0, 0, 0, FN_SCK3,
+		0, 0, FN_MSIOF3_SCK_D, FN_SCK3,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -1138,122 +3125,122 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		/* IP4_11_8 [4] */
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_DU_DG3, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP4_7_4 [4] */
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_DU_DG2, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP4_3_0 [4] */
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_DU_DG1, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR5", 0xe6060214, 32, 4) {
 		/* IP5_31_28 [4] */
-		0, 0, 0, 0,
+		0, FN_MSIOF2_SCK_B, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP5_27_24 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_TXD_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP5_23_20 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_RXD_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP5_19_16 [4] */
-		0, 0, 0, 0,
+		0, FN_MSIOF2_SS2_B, FN_MSIOF3_SYNC_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP5_15_12 [4] */
-		0, 0, 0, 0,
+		0, FN_MSIOF2_SS1_B, FN_MSIOF3_SCK_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP5_11_8 [4] */
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_DU_DOTCLKOUT0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP5_7_4 [4] */
-		0, 0, 0, FN_RTS3_N_TANS,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_SS1_D, FN_RTS3_N_TANS,
+		0, 0, 0, FN_SDA6_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP5_3_0 [4] */
-		0, 0, 0, FN_CTS3_N,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_TXD_D, FN_CTS3_N,
+		0, 0, 0, FN_SCL6_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR6", 0xe6060218, 32, 4) {
 		/* IP6_31_28 [4] */
-		0, 0, 0, FN_RX4_C,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF2_SS1_D, FN_RX4_C,
+		0, 0, FN_DU_DR4, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP6_27_24 [4] */
-		0, 0, 0, 0,
-		0, FN_RTS4_N_TANS_C, 0, 0,
+		0, 0, FN_MSIOF2_TXD_D, 0,
+		0, FN_RTS4_N_TANS_C, FN_DU_DR3, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP6_23_20 [4] */
-		0, 0, 0, 0,
-		0, FN_CTS4_N_C, 0, 0,
+		0, 0, FN_MSIOF2_RXD_D, 0,
+		0, FN_CTS4_N_C, FN_DU_DR2, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP6_19_16 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF2_SYNC_D, 0,
+		0, 0, FN_DU_DR1, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP6_15_12 [4] */
-		0, 0, 0, FN_SCK4_C,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF2_SCK_D, FN_SCK4_C,
+		0, 0, FN_DU_DR0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP6_11_8 [4] */
-		0, 0, 0, 0,
+		0, FN_MSIOF2_TXD_B, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP6_7_4 [4] */
-		0, 0, 0, 0,
+		0, FN_MSIOF2_RXD_B, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP6_3_0 [4] */
-		0, 0, 0, 0,
+		0, FN_MSIOF2_SYNC_B, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR7", 0xe606021c, 32, 4) {
 		/* IP7_31_28 [4] */
-		0, 0, 0, 0,
+		FN_SD0_DAT1, 0, FN_MSIOF1_TXD_E, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP7_27_24 [4] */
-		0, 0, 0, 0,
+		FN_SD0_DAT0, 0, FN_MSIOF1_RXD_E, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP7_23_20 [4] */
-		0, 0, 0, 0,
+		FN_SD0_CMD, 0, FN_MSIOF1_SYNC_E, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP7_19_16 [4] */
-		0, 0, 0, 0,
+		FN_SD0_CLK, 0, FN_MSIOF1_SCK_E, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -1263,101 +3250,101 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP7_11_8 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_SS2_A, 0,
+		0, 0, FN_DU_DR7, FN_SDA6_C,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP7_7_4 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF3_SS1_A, 0,
+		0, 0, FN_DU_DR6, FN_SCL6_C,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP7_3_0 [4] */
-		0, 0, 0, FN_TX4_C,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF2_SS2_D, FN_TX4_C,
+		0, 0, FN_DU_DR5, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR8", 0xe6060220, 32, 4) {
 		/* IP8_31_28 [4] */
-		0, 0, 0, 0,
+		FN_SD1_DAT3, FN_SD2_DAT7, FN_MSIOF1_SS2_G, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP8_27_24 [4] */
-		0, 0, 0, 0,
+		FN_SD1_DAT2, FN_SD2_DAT6, FN_MSIOF1_SS1_G, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP8_23_20 [4] */
-		0, 0, 0, 0,
+		FN_SD1_DAT1, FN_SD2_DAT5, FN_MSIOF1_TXD_G, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP8_19_16 [4] */
-		0, 0, 0, 0,
+		FN_SD1_DAT0, FN_SD2_DAT4, FN_MSIOF1_RXD_G, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP8_15_12 [4] */
-		0, 0, 0, 0,
+		FN_SD1_CMD, 0, FN_MSIOF1_SYNC_G, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP8_11_8 [4] */
-		0, 0, 0, 0,
+		FN_SD1_CLK, 0, FN_MSIOF1_SCK_G, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP8_7_4 [4] */
-		0, 0, 0, 0,
+		FN_SD0_DAT3, 0, FN_MSIOF1_SS2_E, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP8_3_0 [4] */
-		0, 0, 0, 0,
+		FN_SD0_DAT2, 0, FN_MSIOF1_SS1_E, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR9", 0xe6060224, 32, 4) {
 		/* IP9_31_28 [4] */
-		0, 0, 0, 0,
+		FN_SD3_DAT5, FN_SD2_WP_A, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP9_27_24 [4] */
-		0, 0, 0, 0,
+		FN_SD3_DAT4, FN_SD2_CD_A, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP9_23_20 [4] */
-		0, 0, 0, 0,
+		FN_SD2_DS, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP9_19_16 [4] */
-		0, 0, 0, 0,
+		FN_SD2_DAT3, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP9_15_12 [4] */
-		0, 0, 0, 0,
+		FN_SD2_DAT2, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP9_11_8 [4] */
-		0, 0, 0, 0,
+		FN_SD2_DAT1, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP9_7_4 [4] */
-		0, 0, 0, 0,
+		FN_SD2_DAT0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP9_3_0 [4] */
-		0, 0, 0, 0,
+		FN_SD2_CLK, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
@@ -1369,54 +3356,54 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_27_24 [4] */
-		FN_SCK0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_SCK0, 0, FN_MSIOF1_SS2_B, 0,
+		FN_SDA2_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_23_20 [4] */
-		0, 0, 0, 0,
+		FN_SD1_WP, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_19_16 [4] */
-		0, 0, 0, 0,
+		FN_SD1_CD, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_15_12 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_SD0_WP, 0, 0, 0,
+		FN_SDA2_B, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_11_8 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_SD0_CD, 0, 0, 0,
+		FN_SCL2_B, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_7_4 [4] */
-		0, 0, 0, 0,
+		FN_SD3_DAT7, FN_SD3_WP, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_3_0 [4] */
-		0, 0, 0, 0,
+		FN_SD3_DAT6, FN_SD3_CD, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR11", 0xe606022c, 32, 4) {
 		/* IP11_31_28 [4] */
-		FN_SCK2, 0, 0, 0,
+		FN_SCK2, 0, FN_MSIOF1_SCK_B, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP11_27_24 [4] */
-		FN_RTS1_N_TANS, 0, 0, 0,
+		FN_RTS1_N_TANS, 0, FN_MSIOF1_TXD_B, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP11_23_20 [4] */
-		FN_CTS1_N, 0, 0, 0,
+		FN_CTS1_N, 0, FN_MSIOF1_RXD_B, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -1431,12 +3418,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP11_11_8 [4] */
-		FN_RTS0_N_TANS, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_RTS0_N_TANS, 0, FN_MSIOF1_SS1_B, 0,
+		FN_SCL2_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP11_7_4 [4] */
-		FN_CTS0_N, 0, 0, 0,
+		FN_CTS0_N, 0, FN_MSIOF1_SYNC_B, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -1448,116 +3435,116 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 	},
 	{ PINMUX_CFG_REG("IPSR12", 0xe6060230, 32, 4) {
 		/* IP12_31_28 [4] */
-		0, 0, 0, 0,
+		FN_MSIOF0_SYNC, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_27_24 [4] */
-		0, FN_TX2_B, 0, 0,
+		0, FN_TX2_B, FN_MSIOF1_SS1_D, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_23_20 [4] */
-		0, FN_RX2_B, 0, 0,
+		0, FN_RX2_B, FN_MSIOF1_SYNC_D, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_19_16 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_TXD_D, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_15_12 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_RXD_D, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_11_8 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SCK_D, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_7_4 [4] */
-		FN_RX2_A, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_RX2_A, 0, 0, FN_SD2_WP_B,
+		FN_SDA1_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_3_0 [4] */
-		FN_TX2_A, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_TX2_A, 0, 0, FN_SD2_CD_B,
+		FN_SCL1_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR13", 0xe6060234, 32, 4) {
 		/* IP13_31_28 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SS2_F, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_27_24 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SS1_F, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_23_20 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_TXD_F, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_19_16 [4] */
-		0, FN_TX1_B, 0, 0,
+		0, FN_TX1_B, FN_MSIOF1_RXD_F, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_15_12 [4] */
-		0, FN_RX1_B, 0, 0,
-		0, 0, 0, 0,
+		0, FN_RX1_B, FN_MSIOF1_SYNC_F, 0,
+		FN_SDA1_B, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_11_8 [4] */
-		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SCK_F, 0,
+		FN_SCL1_B, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_7_4 [4] */
-		0, FN_TX5, 0, 0,
+		FN_MSIOF0_SS2, FN_TX5, FN_MSIOF1_SS2_D, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_3_0 [4] */
-		0, FN_RX5, 0, 0,
+		FN_MSIOF0_SS1, FN_RX5, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR14", 0xe6060238, 32, 4) {
 		/* IP14_31_28 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SYNC_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP14_27_24 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SYNC_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP14_23_20 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SCK_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP14_19_16 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_TXD_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP14_15_12 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SS2_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP14_11_8 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SS1_A, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -1574,27 +3561,27 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 	},
 	{ PINMUX_CFG_REG("IPSR15", 0xe606023c, 32, 4) {
 		/* IP15_31_28 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SS1_C, 0,
 		0, FN_SCK1, 0, FN_SCK5,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP15_27_24 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_TXD_C, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP15_23_20 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_RXD_C, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP15_19_16 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SYNC_C, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP15_15_12 [4] */
-		0, 0, 0, 0,
+		0, 0, FN_MSIOF1_SCK_C, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -1604,44 +3591,44 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP15_7_4 [4] */
-		0, 0, 0, 0,
+		0, FN_USB0_OVC, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP15_3_0 [4] */
-		0, 0, 0, 0,
+		0, FN_USB2_PWEN, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR16", 0xe6060240, 32, 4) {
 		/* IP16_31_28 [4] */
-		0, 0, 0, 0,
+		FN_USB30_OVC, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_27_24 [4] */
-		0, 0, 0, 0,
+		FN_USB30_PWEN, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_23_20 [4] */
-		0, 0, 0, 0,
+		FN_USB1_OVC, 0, FN_MSIOF1_SS2_C, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_19_16 [4] */
-		0, 0, 0, 0,
+		FN_USB1_PWEN, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_15_12 [4] */
-		0, 0, 0, 0,
+		FN_USB0_OVC, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_11_8 [4] */
-		0, 0, 0, 0,
+		FN_USB0_PWEN, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -1688,12 +3675,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP17_7_4 [4] */
-		0, 0, 0, 0,
+		FN_USB31_OVC, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP17_3_0 [4] */
-		0, 0, 0, 0,
+		FN_USB31_PWEN, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
