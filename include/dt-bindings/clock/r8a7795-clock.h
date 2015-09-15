@@ -34,6 +34,10 @@
 /* MSTP5 */
 
 /* MSTP7 */
+#define R8A7795_CLK_HSUSB		4
+#define R8A7795_CLK_EHCI0		3
+#define R8A7795_CLK_EHCI1		2
+#define R8A7795_CLK_EHCI2		1
 
 /* MSTP8 */
 #define R8A7795_CLK_AVB			12

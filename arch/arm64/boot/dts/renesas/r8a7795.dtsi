@@ -420,6 +420,20 @@
 					clock-indices = <R8A7795_CLK_SCIF2>;
 				};
 
+				mstp7_clks: mstp7_clks@e615014c {
+					compatible = "renesas,r8a7795-mstp-clocks",
+						     "renesas,cpg-mstp-clocks";
+					reg = <0 0xe615014c 0 4>, <0 0xe61501c4 0 4>;
+					clocks =  <&s3d4_clk>, <&s3d4_clk>, <&s3d4_clk>,
+						  <&s3d4_clk>;
+					#clock-cells = <1>;
+					renesas,clock-indices = <R8A7795_CLK_HSUSB
+								 R8A7795_CLK_EHCI0
+								 R8A7795_CLK_EHCI1
+								 R8A7795_CLK_EHCI2>;
+					clock-output-names = "hsusb", "ehci0", "ehci1", "ehci2";
+				};
+
 				mstp8_clks: mstp8_clks@e6150990 {
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
@@ -539,6 +553,97 @@
 			dmas = <&dmac1 0x5b>, <&dmac1 0x5a>;
 			dma-names = "tx", "rx";
 			power-domains = <&cpg_clocks>;
+			status = "disabled";
+		};
+
+		usb2_phy0: usb-phy@ee080200 {
+			compatible = "renesas,usb2-phy-r8a7795";
+			reg = <0 0xee080200 0 0x6ff>, <0 0xe6590100 0 0x100>;
+			reg-names = "usb2", "hsusb";
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI0>,
+				 <&mstp7_clks R8A7795_CLK_HSUSB>;
+			clock-names = "usb2", "hsusb";
+			#phy-cells = <0>;
+			status = "disabled";
+		};
+
+		usb2_phy1: usb-phy@ee0a0200 {
+			compatible = "renesas,usb2-phy-r8a7795";
+			reg = <0 0xee0a0200 0 0x6ff>;
+			reg-names = "usb2";
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI1>;
+			clock-names = "usb2";
+			#phy-cells = <0>;
+			status = "disabled";
+		};
+
+		usb2_phy2: usb-phy@ee0c0200 {
+			compatible = "renesas,usb2-phy-r8a7795";
+			reg = <0 0xee0c0200 0 0x6ff>;
+			reg-names = "usb2";
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI2>;
+			clock-names = "usb2";
+			#phy-cells = <0>;
+			status = "disabled";
+		};
+
+		ehci0: usb@ee080100 {
+			compatible = "renesas,ehci-r8a7795", "generic-ehci";
+			reg = <0 0xee080100 0 0xff>;
+			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI0>;
+			phys = <&usb2_phy0>;
+			phy-names = "usb";
+			status = "disabled";
+		};
+
+		ehci1: usb@ee0a0100 {
+			compatible = "renesas,ehci-r8a7795", "generic-ehci";
+			reg = <0 0xee0a0100 0 0xff>;
+			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI1>;
+			phys = <&usb2_phy1>;
+			phy-names = "usb";
+			status = "disabled";
+		};
+
+		ehci2: usb@ee0c0100 {
+			compatible = "renesas,ehci-r8a7795", "generic-ehci";
+			reg = <0 0xee0c0100 0 0xff>;
+			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI2>;
+			phys = <&usb2_phy2>;
+			phy-names = "usb";
+			status = "disabled";
+		};
+
+		ohci0: usb@ee080000 {
+			compatible = "renesas,ohci-r8a7795", "generic-ohci";
+			reg = <0 0xee080000 0 0xff>;
+			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI0>;
+			phys = <&usb2_phy0>;
+			phy-names = "usb";
+			status = "disabled";
+		};
+
+		ohci1: usb@ee0a0000 {
+			compatible = "renesas,ohci-r8a7795", "generic-ohci";
+			reg = <0 0xee0a0000 0 0xff>;
+			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI1>;
+			phys = <&usb2_phy1>;
+			phy-names = "usb";
+			status = "disabled";
+		};
+
+		ohci2: usb@ee0c0000 {
+			compatible = "renesas,ohci-r8a7795", "generic-ohci";
+			reg = <0 0xee0c0000 0 0xff>;
+			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp7_clks R8A7795_CLK_EHCI2>;
+			phys = <&usb2_phy2>;
+			phy-names = "usb";
 			status = "disabled";
 		};
 
