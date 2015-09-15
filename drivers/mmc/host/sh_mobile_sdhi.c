@@ -1,6 +1,7 @@
 /*
  * SuperH Mobile SDHI
  *
+ * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2009 Magnus Damm
  *
  * This program is free software; you can redistribute it and/or modify
@@ -65,6 +66,12 @@ static const struct sh_mobile_sdhi_of_data of_rcar_gen2_compatible = {
 	.dma_rx_offset	= 0x2000,
 };
 
+static const struct sh_mobile_sdhi_of_data of_rcar_gen3_compatible = {
+	.tmio_flags	= TMIO_MMC_CLK_NO_SLEEP | TMIO_MMC_HAS_IDLE_WAIT |
+			  TMIO_MMC_WRPROTECT_DISABLE | TMIO_MMC_CLK_ACTUAL,
+	.capabilities	= MMC_CAP_SD_HIGHSPEED,
+};
+
 static const struct of_device_id sh_mobile_sdhi_of_match[] = {
 	{ .compatible = "renesas,sdhi-shmobile" },
 	{ .compatible = "renesas,sdhi-sh7372" },
@@ -78,6 +85,7 @@ static const struct of_device_id sh_mobile_sdhi_of_match[] = {
 	{ .compatible = "renesas,sdhi-r8a7792", .data = &of_rcar_gen2_compatible, },
 	{ .compatible = "renesas,sdhi-r8a7793", .data = &of_rcar_gen2_compatible, },
 	{ .compatible = "renesas,sdhi-r8a7794", .data = &of_rcar_gen2_compatible, },
+	{ .compatible = "renesas,sdhi-r8a7795", .data = &of_rcar_gen3_compatible, },
 	{},
 };
 MODULE_DEVICE_TABLE(of, sh_mobile_sdhi_of_match);
@@ -102,6 +110,15 @@ static void sh_mobile_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
 		break;
 	case 0xCB0D:
 		val = (width == 32) ? 0x0000 : 0x0001;
+		break;
+	case 0xCC10:
+	case 0xCD10:
+		if (width == 64)
+			val = 0x0000;
+		else if (width == 32)
+			val = 0x0081;
+		else	/* width = 16 */
+			val = 0x0001;
 		break;
 	default:
 		/* nothing to do */
@@ -136,6 +153,16 @@ static void sh_mobile_sdhi_clk_disable(struct platform_device *pdev)
 	clk_disable_unprepare(priv->clk);
 }
 
+#define SH_MOBILE_SDHI_DAT0	0x0080
+static int sh_mobile_sdhi_card_busy(struct tmio_mmc_host *host)
+{
+	u16 dat0;
+
+	/* check to see DAT[3:0] */
+	dat0 = sd_ctrl_read16(host, CTL_STATUS2);
+	return !(dat0 & SH_MOBILE_SDHI_DAT0);
+}
+
 static int sh_mobile_sdhi_wait_idle(struct tmio_mmc_host *host)
 {
 	int timeout = 1000;
@@ -163,6 +190,7 @@ static int sh_mobile_sdhi_write16_hook(struct tmio_mmc_host *host, int addr)
 	case CTL_SD_MEM_CARD_OPT:
 	case CTL_TRANSACTION_CTL:
 	case CTL_DMA_ENABLE:
+	case EXT_ACC:
 		return sh_mobile_sdhi_wait_idle(host);
 	}
 
@@ -238,9 +266,12 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	host->write16_hook	= sh_mobile_sdhi_write16_hook;
 	host->clk_enable	= sh_mobile_sdhi_clk_enable;
 	host->clk_disable	= sh_mobile_sdhi_clk_disable;
+	host->card_busy		= sh_mobile_sdhi_card_busy;
 	host->multi_io_quirk	= sh_mobile_sdhi_multi_io_quirk;
-	/* SD control register space size is 0x100, 0x200 for bus_shift=1 */
-	if (resource_size(res) > 0x100)
+	/* SD control register space size */
+	if (resource_size(res) > 0x400) /* 0x400 for bus_shift=2 */
+		host->bus_shift = 2;
+	else if (resource_size(res) > 0x100) /* 0x100, 0x200 for bus_shift=1 */
 		host->bus_shift = 1;
 	else
 		host->bus_shift = 0;
