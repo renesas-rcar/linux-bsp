@@ -58,6 +58,7 @@
 
 /* MSTP8 */
 #define R8A7795_CLK_AVB			12
+#define R8A7795_CLK_SATA		15
 
 /* MSTP9 */
 #define R8A7795_CLK_I2C0		31
