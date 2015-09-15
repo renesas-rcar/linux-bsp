@@ -31,6 +31,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/of_gpio.h>
 
 #include "ravb.h"
 
@@ -201,7 +202,7 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 	if (priv->rx_ring[q]) {
 		ring_size = sizeof(struct ravb_ex_rx_desc) *
 			    (priv->num_rx_ring[q] + 1);
-		dma_free_coherent(NULL, ring_size, priv->rx_ring[q],
+		dma_free_coherent(ndev->dev.parent, ring_size, priv->rx_ring[q],
 				  priv->rx_desc_dma[q]);
 		priv->rx_ring[q] = NULL;
 	}
@@ -209,7 +210,7 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 	if (priv->tx_ring[q]) {
 		ring_size = sizeof(struct ravb_tx_desc) *
 			    (priv->num_tx_ring[q] * NUM_TX_DESC + 1);
-		dma_free_coherent(NULL, ring_size, priv->tx_ring[q],
+		dma_free_coherent(ndev->dev.parent, ring_size, priv->tx_ring[q],
 				  priv->tx_desc_dma[q]);
 		priv->tx_ring[q] = NULL;
 	}
@@ -240,13 +241,14 @@ static void ravb_ring_format(struct net_device *ndev, int q)
 		rx_desc = &priv->rx_ring[q][i];
 		/* The size of the buffer should be on 16-byte boundary. */
 		rx_desc->ds_cc = cpu_to_le16(ALIGN(PKT_BUF_SZ, 16));
-		dma_addr = dma_map_single(&ndev->dev, priv->rx_skb[q][i]->data,
+		dma_addr = dma_map_single(ndev->dev.parent,
+					  priv->rx_skb[q][i]->data,
 					  ALIGN(PKT_BUF_SZ, 16),
 					  DMA_FROM_DEVICE);
 		/* We just set the data size to 0 for a failed mapping which
 		 * should prevent DMA from happening...
 		 */
-		if (dma_mapping_error(&ndev->dev, dma_addr))
+		if (dma_mapping_error(ndev->dev.parent, dma_addr))
 			rx_desc->ds_cc = cpu_to_le16(0);
 		rx_desc->dptr = cpu_to_le32(dma_addr);
 		rx_desc->die_dt = DT_FEMPTY;
@@ -309,7 +311,7 @@ static int ravb_ring_init(struct net_device *ndev, int q)
 
 	/* Allocate all RX descriptors. */
 	ring_size = sizeof(struct ravb_ex_rx_desc) * (priv->num_rx_ring[q] + 1);
-	priv->rx_ring[q] = dma_alloc_coherent(NULL, ring_size,
+	priv->rx_ring[q] = dma_alloc_coherent(ndev->dev.parent, ring_size,
 					      &priv->rx_desc_dma[q],
 					      GFP_KERNEL);
 	if (!priv->rx_ring[q])
@@ -320,7 +322,7 @@ static int ravb_ring_init(struct net_device *ndev, int q)
 	/* Allocate all TX descriptors. */
 	ring_size = sizeof(struct ravb_tx_desc) *
 		    (priv->num_tx_ring[q] * NUM_TX_DESC + 1);
-	priv->tx_ring[q] = dma_alloc_coherent(NULL, ring_size,
+	priv->tx_ring[q] = dma_alloc_coherent(ndev->dev.parent, ring_size,
 					      &priv->tx_desc_dma[q],
 					      GFP_KERNEL);
 	if (!priv->tx_ring[q])
@@ -408,8 +410,6 @@ static int ravb_dmac_init(struct net_device *ndev)
 	/* Interrupt enable: */
 	/* Frame receive */
 	ravb_write(ndev, RIC0_FRE0 | RIC0_FRE1, RIC0);
-	/* Receive FIFO full warning */
-	ravb_write(ndev, RIC1_RFWE, RIC1);
 	/* Receive FIFO full error, descriptor empty */
 	ravb_write(ndev, RIC2_QFE0 | RIC2_QFE1 | RIC2_RFFE, RIC2);
 	/* Frame transmitted, timestamp FIFO updated */
@@ -443,7 +443,8 @@ static int ravb_tx_free(struct net_device *ndev, int q)
 		size = le16_to_cpu(desc->ds_tagl) & TX_DS;
 		/* Free the original skb. */
 		if (priv->tx_skb[q][entry / NUM_TX_DESC]) {
-			dma_unmap_single(&ndev->dev, le32_to_cpu(desc->dptr),
+			dma_unmap_single(ndev->dev.parent,
+					 le32_to_cpu(desc->dptr),
 					 size, DMA_TO_DEVICE);
 			/* Last packet descriptor? */
 			if (entry % NUM_TX_DESC == NUM_TX_DESC - 1) {
@@ -546,7 +547,8 @@ static bool ravb_rx(struct net_device *ndev, int *quota, int q)
 
 			skb = priv->rx_skb[q][entry];
 			priv->rx_skb[q][entry] = NULL;
-			dma_unmap_single(&ndev->dev, le32_to_cpu(desc->dptr),
+			dma_unmap_single(ndev->dev.parent,
+					 le32_to_cpu(desc->dptr),
 					 ALIGN(PKT_BUF_SZ, 16),
 					 DMA_FROM_DEVICE);
 			get_ts &= (q == RAVB_NC) ?
@@ -586,14 +588,14 @@ static bool ravb_rx(struct net_device *ndev, int *quota, int q)
 			if (!skb)
 				break;	/* Better luck next round. */
 			ravb_set_buffer_align(skb);
-			dma_addr = dma_map_single(&ndev->dev, skb->data,
+			dma_addr = dma_map_single(ndev->dev.parent, skb->data,
 						  le16_to_cpu(desc->ds_cc),
 						  DMA_FROM_DEVICE);
 			skb_checksum_none_assert(skb);
 			/* We just set the data size to 0 for a failed mapping
 			 * which should prevent DMA  from happening...
 			 */
-			if (dma_mapping_error(&ndev->dev, dma_addr))
+			if (dma_mapping_error(ndev->dev.parent, dma_addr))
 				desc->ds_cc = cpu_to_le16(0);
 			desc->dptr = cpu_to_le32(dma_addr);
 			priv->rx_skb[q][entry] = skb;
@@ -733,8 +735,10 @@ static irqreturn_t ravb_interrupt(int irq, void *dev_id)
 			    ((tis  & tic)  & BIT(q))) {
 				if (napi_schedule_prep(&priv->napi[q])) {
 					/* Mask RX and TX interrupts */
-					ravb_write(ndev, ric0 & ~BIT(q), RIC0);
-					ravb_write(ndev, tic  & ~BIT(q), TIC);
+					ric0 &= ~BIT(q);
+					tic &= ~BIT(q);
+					ravb_write(ndev, ric0, RIC0);
+					ravb_write(ndev, tic, TIC);
 					__napi_schedule(&priv->napi[q]);
 				} else {
 					netdev_warn(ndev,
@@ -1185,16 +1189,35 @@ static const struct ethtool_ops ravb_ethtool_ops = {
 static int ravb_open(struct net_device *ndev)
 {
 	struct ravb_private *priv = netdev_priv(ndev);
+	struct platform_device *pdev = priv->pdev;
+	struct device *dev = &pdev->dev;
 	int error;
 
 	napi_enable(&priv->napi[RAVB_BE]);
 	napi_enable(&priv->napi[RAVB_NC]);
 
-	error = request_irq(ndev->irq, ravb_interrupt, IRQF_SHARED, ndev->name,
-			    ndev);
-	if (error) {
-		netdev_err(ndev, "cannot request IRQ\n");
-		goto out_napi_off;
+	if (of_device_is_compatible(dev->of_node,
+				    "renesas,etheravb-r8a7795")) {
+		error = request_irq(ndev->irq, ravb_interrupt, IRQF_SHARED,
+				    ndev->name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ\n");
+			goto out_napi_off;
+		}
+		error = request_irq(priv->emac_irq, ravb_interrupt, IRQF_SHARED,
+				    ndev->name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ\n");
+			free_irq(ndev->irq, ndev);
+			goto out_napi_off;
+		}
+	} else {
+		error = request_irq(ndev->irq, ravb_interrupt, IRQF_SHARED,
+				    ndev->name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ\n");
+			goto out_napi_off;
+		}
 	}
 
 	/* Device init */
@@ -1219,7 +1242,11 @@ out_ptp_stop:
 	/* Stop PTP Clock driver */
 	ravb_ptp_stop(ndev);
 out_free_irq:
-	free_irq(ndev->irq, ndev);
+	if (of_device_is_compatible(dev->of_node,
+				    "renesas,etheravb-r8a7795"))
+		free_irq(priv->emac_irq, ndev);
+	else
+		free_irq(ndev->irq, ndev);
 out_napi_off:
 	napi_disable(&priv->napi[RAVB_NC]);
 	napi_disable(&priv->napi[RAVB_BE]);
@@ -1299,9 +1326,12 @@ static netdev_tx_t ravb_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	buffer = PTR_ALIGN(priv->tx_align[q], DPTR_ALIGN) +
 		 entry / NUM_TX_DESC * DPTR_ALIGN;
 	len = PTR_ALIGN(skb->data, DPTR_ALIGN) - skb->data;
+	/* quick fix */
+	if (len == 0)
+		len = 4;
 	memcpy(buffer, skb->data, len);
-	dma_addr = dma_map_single(&ndev->dev, buffer, len, DMA_TO_DEVICE);
-	if (dma_mapping_error(&ndev->dev, dma_addr))
+	dma_addr = dma_map_single(ndev->dev.parent, buffer, len, DMA_TO_DEVICE);
+	if (dma_mapping_error(ndev->dev.parent, dma_addr))
 		goto drop;
 
 	desc = &priv->tx_ring[q][entry];
@@ -1310,8 +1340,8 @@ static netdev_tx_t ravb_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	buffer = skb->data + len;
 	len = skb->len - len;
-	dma_addr = dma_map_single(&ndev->dev, buffer, len, DMA_TO_DEVICE);
-	if (dma_mapping_error(&ndev->dev, dma_addr))
+	dma_addr = dma_map_single(ndev->dev.parent, buffer, len, DMA_TO_DEVICE);
+	if (dma_mapping_error(ndev->dev.parent, dma_addr))
 		goto unmap;
 
 	desc++;
@@ -1323,7 +1353,7 @@ static netdev_tx_t ravb_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		ts_skb = kmalloc(sizeof(*ts_skb), GFP_ATOMIC);
 		if (!ts_skb) {
 			desc--;
-			dma_unmap_single(&ndev->dev, dma_addr, len,
+			dma_unmap_single(ndev->dev.parent, dma_addr, len,
 					 DMA_TO_DEVICE);
 			goto unmap;
 		}
@@ -1358,7 +1388,7 @@ exit:
 	return NETDEV_TX_OK;
 
 unmap:
-	dma_unmap_single(&ndev->dev, le32_to_cpu(desc->dptr),
+	dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
 			 le16_to_cpu(desc->ds_tagl), DMA_TO_DEVICE);
 drop:
 	dev_kfree_skb_any(skb);
@@ -1625,14 +1655,74 @@ static int ravb_mdio_release(struct ravb_private *priv)
 	return 0;
 }
 
+#define	PFC_PMMR_BASE	0xE6060000	/* LSI Multiplexed Pin Setting Mask */
+#define	PFC_PMMR	0x0 /* LSI Multiplexed Pin Setting Mask */
+#define	PFC_DRVCTRL2	0x308 /* DRV control register2 */
+#define	PFC_DRVCTRL3	0x30C /* DRV control register3 */
+#define	PFC_PUEN0	0x400 /* LSI pin pull-enable register 0 */
+#define	PFC_PUEN1	0x404 /* LSI pin pull-enable register 1 */
+#define BIT0		0x0000000000000001
+#define BIT31_15	0x00000000FFFF8000
+
 static int ravb_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
-	struct ravb_private *priv;
-	struct net_device *ndev;
-	int error, irq, q;
+	struct ravb_private *priv = NULL;
+	struct net_device *ndev = NULL;
+	int error = 0, irq, q;
 	struct resource *res;
+	u32 data;
+	void __iomem *p;
+	int phy_reset;
 
+	/* drv setting for r8a7795 */
+	if (of_device_is_compatible(np,
+				    "renesas,etheravb-r8a7795")) {
+		p = ioremap_nocache(PFC_PMMR_BASE, 0x500);
+
+		data = ioread32(p + PFC_PUEN0);
+
+		data &= ~(BIT31_15);
+		iowrite32(~data, p + PFC_PMMR);
+		iowrite32(~data, p + PFC_PUEN0);
+
+		data = ioread32(p + PFC_PUEN1);
+		data &= ~(BIT0);
+		iowrite32(~data, p + PFC_PMMR);
+		iowrite32(~data, p + PFC_PUEN1);
+
+		data = ioread32(p + PFC_DRVCTRL2);
+
+		data &= ~0x00000777;
+		data |=  0x00000333;
+		iowrite32(~data, p + PFC_PMMR);
+		iowrite32(data, p + PFC_DRVCTRL2);
+
+		data = ioread32(p + PFC_DRVCTRL3);
+		data &= ~0x77700000;
+		data |=  0x33300000;
+		iowrite32(~data, p + PFC_PMMR);
+		iowrite32(data, p + PFC_DRVCTRL3);
+		iounmap(p);
+
+		/* phy reset */
+		phy_reset = of_get_named_gpio(np, "phy-reset-gpio", 0);
+		if (!gpio_is_valid(phy_reset))
+			goto out_dma_free;
+		error = devm_gpio_request_one(&pdev->dev, phy_reset,
+					      GPIOF_OUT_INIT_HIGH,
+					      "phy-reset");
+		if (error) {
+			dev_err(&pdev->dev,
+				"failed to get phy-reset-gpios: %d\n", error);
+			goto out_dma_free;
+		}
+		msleep(20);
+		gpio_set_value(phy_reset, 0);
+		msleep(20);
+		gpio_set_value(phy_reset, 1);
+		msleep(20);
+	}
 	if (!np) {
 		dev_err(&pdev->dev,
 			"this driver is required to be instantiated from device tree\n");
@@ -1688,6 +1778,16 @@ static int ravb_probe(struct platform_device *pdev)
 	priv->avb_link_active_low =
 		of_property_read_bool(np, "renesas,ether-link-active-low");
 
+	if (of_device_is_compatible(np,
+				    "renesas,etheravb-r8a7795")) {
+		irq = platform_get_irq(pdev, 1);
+		if (irq < 0) {
+			error = -ENODEV;
+			goto out_release;
+		}
+		priv->emac_irq = irq;
+	}
+
 	/* Set function */
 	ndev->netdev_ops = &ravb_netdev_ops;
 	ndev->ethtool_ops = &ravb_ethtool_ops;
@@ -1701,14 +1801,20 @@ static int ravb_probe(struct platform_device *pdev)
 		   CCC);
 
 	/* Set GTI value */
-	ravb_write(ndev, ((1000 << 20) / 130) & GTI_TIV, GTI);
+	ravb_write(ndev, ((1000000000ULL << 20ULL) / 66666666ULL) & GTI_TIV,
+		   GTI);
 
 	/* Request GTI loading */
 	ravb_write(ndev, ravb_read(ndev, GCCR) | GCCR_LTI, GCCR);
 
+	/* clk setting */
+	if (of_device_is_compatible(np, "renesas,etheravb-r8a7795"))
+		ravb_write(ndev, ravb_read(ndev, APSR) | 0x00004000, APSR);
+
 	/* Allocate descriptor base address table */
 	priv->desc_bat_size = sizeof(struct ravb_desc) * DBAT_ENTRY_NUM;
-	priv->desc_bat = dma_alloc_coherent(NULL, priv->desc_bat_size,
+	priv->desc_bat = dma_alloc_coherent(ndev->dev.parent,
+					    priv->desc_bat_size,
 					    &priv->desc_bat_dma, GFP_KERNEL);
 	if (!priv->desc_bat) {
 		dev_err(&ndev->dev,
@@ -1763,7 +1869,7 @@ out_napi_del:
 	netif_napi_del(&priv->napi[RAVB_BE]);
 	ravb_mdio_release(priv);
 out_dma_free:
-	dma_free_coherent(NULL, priv->desc_bat_size, priv->desc_bat,
+	dma_free_coherent(ndev->dev.parent, priv->desc_bat_size, priv->desc_bat,
 			  priv->desc_bat_dma);
 out_release:
 	if (ndev)
@@ -1779,7 +1885,7 @@ static int ravb_remove(struct platform_device *pdev)
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct ravb_private *priv = netdev_priv(ndev);
 
-	dma_free_coherent(NULL, priv->desc_bat_size, priv->desc_bat,
+	dma_free_coherent(ndev->dev.parent, priv->desc_bat_size, priv->desc_bat,
 			  priv->desc_bat_dma);
 	/* Set reset mode */
 	ravb_write(ndev, CCC_OPC_RESET, CCC);
@@ -1821,6 +1927,7 @@ static const struct dev_pm_ops ravb_dev_pm_ops = {
 static const struct of_device_id ravb_match_table[] = {
 	{ .compatible = "renesas,etheravb-r8a7790" },
 	{ .compatible = "renesas,etheravb-r8a7794" },
+	{ .compatible = "renesas,etheravb-r8a7795" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, ravb_match_table);

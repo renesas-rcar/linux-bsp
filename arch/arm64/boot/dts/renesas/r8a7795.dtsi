@@ -410,6 +410,15 @@
 					clock-indices = <R8A7795_CLK_SCIF2>;
 				};
 
+				mstp8_clks: mstp8_clks@e6150990 {
+					compatible = "renesas,r8a7795-mstp-clocks",
+						     "renesas,cpg-mstp-clocks";
+					reg = <0 0xe6150990 0 4>, <0 0xe61509a0 0 4>;
+					clocks = <&s3d2_clk>;
+					#clock-cells = <1>;
+					clock-indices = <R8A7795_CLK_AVB>;
+				};
+
 				mstp9_clks: mstp9_clks@e6150994 {
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
@@ -515,6 +524,16 @@
 			dma-names = "tx", "rx";
 			power-domains = <&cpg_clocks>;
 			status = "disabled";
+		};
+
+		avb: ethernet@e6800000 {
+			compatible = "renesas,etheravb-r8a7795";
+			reg = <0 0xe6800000 0 0x800>, <0 0xe6a00000 0 0x10000>;
+			interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp8_clks R8A7795_CLK_AVB>;
+			phy-mode = "rgmii-id";
+			#address-cells = <1>;
+			#size-cells = <0>;
 		};
 	};
 };

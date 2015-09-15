@@ -36,6 +36,7 @@
 /* MSTP7 */
 
 /* MSTP8 */
+#define R8A7795_CLK_AVB			12
 
 /* MSTP9 */
 #define R8A7795_CLK_GPIO0		12
