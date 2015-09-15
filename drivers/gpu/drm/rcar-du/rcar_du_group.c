@@ -1,7 +1,7 @@
 /*
  * rcar_du_group.c  --  R-Car Display Unit Channels Pair
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -46,17 +46,27 @@ void rcar_du_group_write(struct rcar_du_group *rgrp, u32 reg, u32 data)
 
 static void rcar_du_group_setup_defr8(struct rcar_du_group *rgrp)
 {
-	u32 defr8 = DEFR8_CODE | DEFR8_DEFE8;
+	struct rcar_du_device *rcdu = rgrp->dev;
+	u32 defr8;
 
-	/* The DEFR8 register for the first group also controls RGB output
-	 * routing to DPAD0 and VSPD1 routing to DU0/1/2 for DU instances that
-	 * support it.
-	 */
-	if (rgrp->index == 0) {
-		if (rgrp->dev->info->routes[RCAR_DU_OUTPUT_DPAD0].possible_crtcs > 1)
-			defr8 |= DEFR8_DRGBS_DU(rgrp->dev->dpad0_source);
-		if (rgrp->dev->vspd1_sink == 2)
-			defr8 |= DEFR8_VSCS;
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS)) {
+		defr8 = DEFR8_CODE;
+		if (rgrp->index == 1)
+			defr8 |= DEFR8_DRGBS_DU(DU_CH_3);
+	} else {
+		/* The DEFR8 register for the first group also controls RGB
+		 * output routing to DPAD0 and VSPD1 routing to DU0/1/2 for
+		 * DU instances that support it.
+		 */
+		defr8 = DEFR8_CODE | DEFR8_DEFE8;
+		if (rgrp->index == 0) {
+			if (rgrp->dev->info->routes
+				[RCAR_DU_OUTPUT_DPAD0].possible_crtcs > 1)
+				defr8 |=
+				   DEFR8_DRGBS_DU(rgrp->dev->dpad0_source);
+			if (rgrp->dev->vspd1_sink == 2)
+				defr8 |= DEFR8_VSCS;
+		}
 	}
 
 	rcar_du_group_write(rgrp, DEFR8, defr8);
@@ -64,12 +74,22 @@ static void rcar_du_group_setup_defr8(struct rcar_du_group *rgrp)
 
 static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
+
 	/* Enable extended features */
 	rcar_du_group_write(rgrp, DEFR, DEFR_CODE | DEFR_DEFE);
-	rcar_du_group_write(rgrp, DEFR2, DEFR2_CODE | DEFR2_DEFE2G);
-	rcar_du_group_write(rgrp, DEFR3, DEFR3_CODE | DEFR3_DEFE3);
-	rcar_du_group_write(rgrp, DEFR4, DEFR4_CODE);
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS)) {
+		rcar_du_group_write(rgrp, DEFR2, DEFR2_CODE | DEFR2_DEFE2G);
+		rcar_du_group_write(rgrp, DEFR3, DEFR3_CODE | DEFR3_DEFE3);
+		rcar_du_group_write(rgrp, DEFR4, DEFR4_CODE);
+	}
 	rcar_du_group_write(rgrp, DEFR5, DEFR5_CODE | DEFR5_DEFE5);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS)) {
+		rcar_du_group_write(rgrp, DEFR6, DEFR6_CODE |
+					  DEFR6_ODPM22_DISP);
+		rcar_du_group_write(rgrp, DEF10R, DEF10R_CODE | DEF10R_DEFE10);
+	}
 
 	if (rcar_du_has(rgrp->dev, RCAR_DU_FEATURE_EXT_CTRL_REGS)) {
 		rcar_du_group_setup_defr8(rgrp);

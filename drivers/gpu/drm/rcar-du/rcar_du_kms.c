@@ -1,7 +1,7 @@
 /*
  * rcar_du_kms.c  --  R-Car Display Unit Mode Setting
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -96,6 +96,40 @@ static const struct rcar_du_format_info rcar_du_format_infos[] = {
 		.planes = 2,
 		.pnmr = PnMR_SPIM_TP_OFF | PnMR_DDDF_YC,
 		.edf = PnDDCR4_EDF_NONE,
+	}, {
+		.fourcc = DRM_FORMAT_NV61,
+		.bpp = 16,
+		.planes = 2,
+		.pnmr = PnMR_SPIM_TP_OFF | PnMR_DDDF_YC,
+		.edf = PnDDCR4_EDF_NONE,
+	},
+};
+
+static const struct rcar_du_format_info rcar_vsp_format_infos[] = {
+	{
+		.fourcc = DRM_FORMAT_RGB332,
+		.bpp = 8,
+	}, {
+		.fourcc = DRM_FORMAT_ARGB4444,
+		.bpp = 16,
+	}, {
+		.fourcc = DRM_FORMAT_XRGB4444,
+		.bpp = 16,
+	}, {
+		.fourcc = DRM_FORMAT_BGR888,
+		.bpp = 24,
+	}, {
+		.fourcc = DRM_FORMAT_RGB888,
+		.bpp = 24,
+	}, {
+		.fourcc = DRM_FORMAT_BGRA8888,
+		.bpp = 32,
+	}, {
+		.fourcc = DRM_FORMAT_BGRX8888,
+		.bpp = 32,
+	}, {
+		.fourcc = DRM_FORMAT_YVYU,
+		.bpp = 16,
 	},
 };
 
@@ -106,6 +140,18 @@ const struct rcar_du_format_info *rcar_du_format_info(u32 fourcc)
 	for (i = 0; i < ARRAY_SIZE(rcar_du_format_infos); ++i) {
 		if (rcar_du_format_infos[i].fourcc == fourcc)
 			return &rcar_du_format_infos[i];
+	}
+
+	return NULL;
+}
+
+const struct rcar_du_format_info *rcar_vsp_format_info(u32 fourcc)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(rcar_vsp_format_infos); ++i) {
+		if (rcar_vsp_format_infos[i].fourcc == fourcc)
+			return &rcar_vsp_format_infos[i];
 	}
 
 	return NULL;
@@ -146,6 +192,15 @@ rcar_du_fb_create(struct drm_device *dev, struct drm_file *file_priv,
 	unsigned int bpp;
 
 	format = rcar_du_format_info(mode_cmd->pixel_format);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE) &&
+		(format == NULL)) {
+		format = rcar_vsp_format_info(mode_cmd->pixel_format);
+	}
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE) && (format != NULL))
+		goto done;
+
 	if (format == NULL) {
 		dev_dbg(dev->dev, "unsupported pixel format %08x\n",
 			mode_cmd->pixel_format);
@@ -178,7 +233,7 @@ rcar_du_fb_create(struct drm_device *dev, struct drm_file *file_priv,
 			return ERR_PTR(-EINVAL);
 		}
 	}
-
+done:
 	return drm_fb_cma_create(dev, file_priv, mode_cmd);
 }
 
@@ -246,7 +301,6 @@ static void rcar_du_atomic_work(struct work_struct *work)
 {
 	struct rcar_du_commit *commit =
 		container_of(work, struct rcar_du_commit, work);
-
 	rcar_du_atomic_complete(commit);
 }
 
@@ -329,6 +383,7 @@ static int rcar_du_encoders_init_one(struct rcar_du_device *rcdu,
 	} encoders[] = {
 		{ "adi,adv7123", RCAR_DU_ENCODER_VGA },
 		{ "adi,adv7511w", RCAR_DU_ENCODER_HDMI },
+		{ "rockchip,rcar-dw-hdmi", RCAR_DU_ENCODER_HDMI },
 		{ "thine,thc63lvdm83d", RCAR_DU_ENCODER_LVDS },
 	};
 
@@ -339,6 +394,7 @@ static int rcar_du_encoders_init_one(struct rcar_du_device *rcdu,
 	struct device_node *entity_ep_node;
 	struct device_node *entity;
 	int ret;
+	const char *enc_name = NULL;
 
 	/*
 	 * Locate the connected entity and infer its type from the number of
@@ -390,6 +446,7 @@ static int rcar_du_encoders_init_one(struct rcar_du_device *rcdu,
 			if (of_device_is_compatible(encoder,
 						    encoders[i].compatible)) {
 				enc_type = encoders[i].type;
+				enc_name = encoders[i].compatible;
 				break;
 			}
 		}
@@ -410,7 +467,8 @@ static int rcar_du_encoders_init_one(struct rcar_du_device *rcdu,
 		connector = entity;
 	}
 
-	ret = rcar_du_encoder_init(rcdu, enc_type, output, encoder, connector);
+	ret = rcar_du_encoder_init(rcdu, enc_type, output, encoder, connector,
+					enc_name);
 	of_node_put(encoder);
 	of_node_put(connector);
 
@@ -520,8 +578,8 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 
 	dev->mode_config.min_width = 0;
 	dev->mode_config.min_height = 0;
-	dev->mode_config.max_width = 4095;
-	dev->mode_config.max_height = 2047;
+	dev->mode_config.max_width = 4096;
+	dev->mode_config.max_height = 2160;
 	dev->mode_config.funcs = &rcar_du_mode_config_funcs;
 
 	rcdu->num_crtcs = rcdu->info->num_crtcs;
@@ -547,7 +605,10 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 		 * planes 0-3 with CRTC 0 and planes 4-7 with CRTC 1 to minimize
 		 * flicker occurring when the association is changed.
 		 */
-		rgrp->dptsr_planes = rgrp->num_crtcs > 1 ? 0xf0 : 0;
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS))
+			rgrp->dptsr_planes = 0x00;
+		else
+			rgrp->dptsr_planes = rgrp->num_crtcs > 1 ? 0xf0 : 0;
 
 		if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
 			ret = rcar_du_planes_init(rgrp);

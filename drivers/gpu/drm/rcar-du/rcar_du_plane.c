@@ -1,7 +1,7 @@
 /*
  * rcar_du_plane.c  --  R-Car Display Unit Planes
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -154,7 +154,8 @@ int rcar_du_atomic_check_planes(struct drm_device *dev,
 		plane_state = to_rcar_plane_state(state->plane_states[i]);
 
 		dev_dbg(rcdu->dev, "%s: checking plane (%u,%u)\n", __func__,
-			plane->group->index, plane - plane->group->planes);
+			plane->group->index,
+			(u32)(plane - plane->group->planes));
 
 		/* If the plane is being disabled we don't need to go through
 		 * the full reallocation procedure. Just mark the hardware
@@ -223,7 +224,7 @@ int rcar_du_atomic_check_planes(struct drm_device *dev,
 				dev_dbg(rcdu->dev,
 					"%s: plane (%u,%u) has been freed, skipping\n",
 					__func__, plane->group->index,
-					plane - plane->group->planes);
+					(u32)(plane - plane->group->planes));
 				continue;
 			}
 
@@ -233,7 +234,7 @@ int rcar_du_atomic_check_planes(struct drm_device *dev,
 			dev_dbg(rcdu->dev,
 				"%s: plane (%u,%u) uses %u hwplanes (index %d)\n",
 				__func__, plane->group->index,
-				plane - plane->group->planes,
+				(u32)(plane - plane->group->planes),
 				plane_state->format ?
 				plane_state->format->planes : 0,
 				plane_state->hwindex);
@@ -261,7 +262,8 @@ int rcar_du_atomic_check_planes(struct drm_device *dev,
 		plane_state = to_rcar_plane_state(state->plane_states[i]);
 
 		dev_dbg(rcdu->dev, "%s: allocating plane (%u,%u)\n", __func__,
-			plane->group->index, plane - plane->group->planes);
+			plane->group->index,
+			(u32)(plane - plane->group->planes));
 
 		/* Skip planes that are being disabled or don't need to be
 		 * reallocated.
@@ -458,6 +460,7 @@ static void rcar_du_plane_setup_format(struct rcar_du_group *rgrp,
 				       unsigned int index,
 				       const struct rcar_du_plane_state *state)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
 	u32 ddcr2 = PnDDCR2_CODE;
 	u32 ddcr4;
 
@@ -484,10 +487,13 @@ static void rcar_du_plane_setup_format(struct rcar_du_group *rgrp,
 		}
 	}
 
-	rcar_du_plane_write(rgrp, index, PnDDCR2, ddcr2);
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS))
+		rcar_du_plane_write(rgrp, index, PnDDCR2, ddcr2);
 
 	ddcr4 = state->format->edf | PnDDCR4_CODE;
-	if (state->source != RCAR_DU_PLANE_MEMORY)
+
+	if ((state->source != RCAR_DU_PLANE_MEMORY)
+		&& (!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS)))
 		ddcr4 |= PnDDCR4_VSPS;
 
 	rcar_du_plane_write(rgrp, index, PnDDCR4, ddcr4);
@@ -498,11 +504,13 @@ static void rcar_du_plane_setup_format(struct rcar_du_group *rgrp,
 	rcar_du_plane_write(rgrp, index, PnDPXR, state->state.crtc_x);
 	rcar_du_plane_write(rgrp, index, PnDPYR, state->state.crtc_y);
 
-	/* Wrap-around and blinking, disabled */
-	rcar_du_plane_write(rgrp, index, PnWASPR, 0);
-	rcar_du_plane_write(rgrp, index, PnWAMWR, 4095);
-	rcar_du_plane_write(rgrp, index, PnBTR, 0);
-	rcar_du_plane_write(rgrp, index, PnMLR, 0);
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS)) {
+		/* Wrap-around and blinking, disabled */
+		rcar_du_plane_write(rgrp, index, PnWASPR, 0);
+		rcar_du_plane_write(rgrp, index, PnWAMWR, 4095);
+		rcar_du_plane_write(rgrp, index, PnBTR, 0);
+		rcar_du_plane_write(rgrp, index, PnMLR, 0);
+	}
 }
 
 void __rcar_du_plane_setup(struct rcar_du_group *rgrp,

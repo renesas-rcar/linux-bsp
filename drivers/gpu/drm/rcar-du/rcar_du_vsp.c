@@ -22,6 +22,7 @@
 #include <linux/of_platform.h>
 #include <linux/videodev2.h>
 
+#define VSP1_DL_SUPPORT
 #include <media/vsp1.h>
 
 #include "rcar_du_drv.h"
@@ -31,6 +32,7 @@
 void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 {
 	const struct drm_display_mode *mode = &crtc->crtc.state->adjusted_mode;
+	struct rcar_du_device *rcdu = crtc->group->dev;
 	struct rcar_du_plane_state state = {
 		.state = {
 			.crtc = &crtc->crtc,
@@ -44,12 +46,16 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 			.src_h = mode->vdisplay << 16,
 		},
 		.format = rcar_du_format_info(DRM_FORMAT_ARGB8888),
-		.hwindex = crtc->index % 2,
 		.source = RCAR_DU_PLANE_VSPD1,
 		.alpha = 255,
 		.colorkey = 0,
 		.zpos = 0,
 	};
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS))
+		state.hwindex = (crtc->index % 2) ? 2 : 0;
+	else
+		state.hwindex = crtc->index % 2;
 
 	__rcar_du_plane_setup(crtc->group, &state);
 
@@ -61,12 +67,18 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 	 */
 	crtc->group->need_restart = true;
 
+#ifdef VSP1_DL_SUPPORT
+	vsp1_du_setup_dl(crtc->vsp->vsp, 2, 2);
+#endif
 	vsp1_du_setup_lif(crtc->vsp->vsp, mode->hdisplay, mode->vdisplay);
 }
 
 void rcar_du_vsp_disable(struct rcar_du_crtc *crtc)
 {
 	vsp1_du_setup_lif(crtc->vsp->vsp, 0, 0);
+#ifdef VSP1_DL_SUPPORT
+	vsp1_du_reset_dl(crtc->vsp->vsp);
+#endif
 }
 
 static const u32 formats_xlate[][2] = {
@@ -83,7 +95,6 @@ static const u32 formats_xlate[][2] = {
 	{ DRM_FORMAT_ARGB8888, V4L2_PIX_FMT_ABGR32 },
 	{ DRM_FORMAT_XRGB8888, V4L2_PIX_FMT_XBGR32 },
 	{ DRM_FORMAT_UYVY, V4L2_PIX_FMT_UYVY },
-	{ DRM_FORMAT_VYUY, V4L2_PIX_FMT_VYUY },
 	{ DRM_FORMAT_YUYV, V4L2_PIX_FMT_YUYV },
 	{ DRM_FORMAT_YVYU, V4L2_PIX_FMT_YVYU },
 	{ DRM_FORMAT_NV12, V4L2_PIX_FMT_NV12M },
@@ -101,7 +112,7 @@ static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 	struct v4l2_rect src;
 	struct v4l2_rect dst;
 	dma_addr_t paddr[2] = { 0, };
-	u32 pixelformat;
+	u32 pixelformat = 0;
 	unsigned int i;
 
 	src.left = state->state.src_x >> 16;
@@ -129,8 +140,8 @@ static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 		}
 	}
 
-	vsp1_du_setup_rpf(plane->vsp->vsp, plane->index, state->format->fourcc,
-			  fb->pitches[0], paddr, &src, &dst);
+	vsp1_du_setup_rpf(plane->vsp->vsp, plane->index, pixelformat,
+			  fb->pitches[0], paddr, &src, &dst, state->alpha);
 }
 
 static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
@@ -152,6 +163,11 @@ static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
 	}
 
 	rstate->format = rcar_du_format_info(state->fb->pixel_format);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE) &&
+			 (rstate->format == NULL))
+		rstate->format = rcar_vsp_format_info(state->fb->pixel_format);
+
 	if (rstate->format == NULL) {
 		dev_dbg(rcdu->dev, "%s: unsupported format %08x\n", __func__,
 			state->fb->pixel_format);
@@ -170,7 +186,7 @@ static void rcar_du_vsp_plane_atomic_update(struct drm_plane *plane,
 		rcar_du_vsp_plane_setup(rplane);
 	else
 		vsp1_du_setup_rpf(rplane->vsp->vsp, rplane->index, 0, 0, 0,
-				  NULL, NULL);
+				  NULL, NULL, 255);
 }
 
 static const struct drm_plane_helper_funcs rcar_du_vsp_plane_helper_funcs = {
@@ -280,7 +296,6 @@ static const uint32_t formats[] = {
 	DRM_FORMAT_ARGB8888,
 	DRM_FORMAT_XRGB8888,
 	DRM_FORMAT_UYVY,
-	DRM_FORMAT_VYUY,
 	DRM_FORMAT_YUYV,
 	DRM_FORMAT_YVYU,
 	DRM_FORMAT_NV12,
@@ -319,7 +334,7 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 	  * 4 RPFs. Limit the number of planes to 4 for now to test VSP-KMS
 	  * support on Gen2.
 	  */
-	vsp->num_planes = 4;
+	vsp->num_planes = rcdu->info->vsp_num;
 
 	vsp->planes = devm_kcalloc(rcdu->dev, vsp->num_planes,
 				   sizeof(*vsp->planes), GFP_KERNEL);

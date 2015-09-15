@@ -1,7 +1,7 @@
 /*
  * rcar_lvds_regs.h  --  R-Car LVDS Interface Registers Definitions
  *
- * Copyright (C) 2013 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -22,6 +22,9 @@
 #define LVDCR0_BEN			(1 << 2)
 #define LVDCR0_LVEN			(1 << 1)
 #define LVDCR0_LVRES			(1 << 0)
+/* Gen3 */
+#define LVDCR0_PLLON			(1 << 4)
+#define LVDCR0_PWD			(1 << 2)
 
 #define LVDCR1				0x0004
 #define LVDCR1_CKSEL			(1 << 15)
@@ -37,6 +40,11 @@
 #define LVDPLLCR_PLLDLYCNT_60M		(0x77b << 0)
 #define LVDPLLCR_PLLDLYCNT_38M		(0x69a << 0)
 #define LVDPLLCR_PLLDLYCNT_MASK		(0x7ff << 0)
+/* Gen3 */
+#define LVDPLLCR_PLLDLYCNT_42M		(0x14cb << 0)
+#define LVDPLLCR_PLLDLYCNT_85M		(0x0a45 << 0)
+#define LVDPLLCR_PLLDLYCNT_128M		(0x06c3 << 0)
+#define LVDPLLCR_PLLDLYCNT_148M		(0x46c1 << 0)
 
 #define LVDCTRCR			0x000c
 #define LVDCTRCR_CTR3SEL_ZERO		(0 << 12)

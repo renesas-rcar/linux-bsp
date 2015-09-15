@@ -1,7 +1,7 @@
 /*
  * rcar_du_regs.h  --  R-Car Display Unit Registers Definitions
  *
- * Copyright (C) 2013 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -16,6 +16,7 @@
 #define DU0_REG_OFFSET		0x00000
 #define DU1_REG_OFFSET		0x30000
 #define DU2_REG_OFFSET		0x40000
+#define DU3_REG_OFFSET		0x70000
 
 /* -----------------------------------------------------------------------------
  * Display Control Registers
@@ -259,6 +260,40 @@
 #define DIDSR_LCDS_MASK(n)	(3 << (8 + (n) * 2))
 #define DIDSR_PDCS_CLK(n, clk)	(clk << ((n) * 2))
 #define DIDSR_PDCS_MASK(n)	(3 << ((n) * 2))
+
+#define DEF10R			0x20038
+#define DEF10R_CODE		(0x7795 << 16)
+#define DEF10R_VSPF1_RGB	(0 << 14)
+#define DEF10R_VSPF1_YC		(1 << 14)
+#define DEF10R_DOCF1_RGB	(0 << 12)
+#define DEF10R_DOCF1_YC		(1 << 12)
+#define DEF10R_VCDF0_YCBCR444	(0 << 11)
+#define DEF10R_VCDF0_YCBCR422	(1 << 11)
+#define DEF10R_VSPF0_RGB	(0 << 10)
+#define DEF10R_VSPF0_YC		(1 << 10)
+#define DEF10R_DOCF0_RGB	(0 << 8)
+#define DEF10R_DOCF0_YC		(1 << 8)
+#define DEF10R_TSEL_H3_TCON1	(0 << 1) /* DEF10R2 register only (DU2/DU3) */
+#define DEF10R_DEFE10		(1 << 0)
+
+#define DPLLCR			0x20044
+#define DPLLCR_CODE		(0x95 << 24)
+#define DPLLCR_PLCS1		(1 << 23)
+#define DPLLCR_PLCS0		(1 << 20)
+#define DPLLCR_CLKE		(1 << 18)
+#define DPLLCR_FDPLL(n)		((n) << 12)	/* n=0 Setting prohibited */
+/* H'00 to H'26, H'78 to H'7F: Setting prohibited.*/
+#define DPLLCR_N(n)		((n) << 5)
+#define DPLLCR_M(n)		((n) << 3)
+#define DPLLCR_STBY		(1 << 2)
+#define DPLLCR_INCS_DPLL01_DOTCLKIN02	(0 << 0)
+#define DPLLCR_INCS_DPLL01_DOTCLKIN13	(1 << 1)
+
+#define DPLLC2R			0x20048
+#define DPLLC2R_CODE		(0x95 << 24)
+#define DPLLC2R_SELC		(1 << 12)
+#define DPLLC2R_M(n)		((n) << 8)
+#define DPLLC2R_FDPLL(n)	((n) << 0)	/* n=0 Setting prohibited */
 
 /* -----------------------------------------------------------------------------
  * Display Timing Generation Registers
