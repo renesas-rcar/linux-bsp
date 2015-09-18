@@ -1141,6 +1141,18 @@
 			renesas,#wpf = <1>;
 		};
 
+		vcp4: vcp4@fe8f0000 {
+			compatible = "renesas,vcp4";
+			reg = <0 0xfe910000 0 0x200>, <0 0xfe910200 0 0x200>,
+				<0 0xfe8f0000 0 0x200>, <0 0xfe8f0200 0 0x200>,
+				<0 0xfe900000 0 0x200>, <0 0xfe900200 0 0x200>,
+				<0 0xfe90f000 0 0x200>,
+				<0 0xfe8ff000 0 0x200>;
+			interrupts = <0 260 IRQ_TYPE_LEVEL_HIGH>, <0 261 IRQ_TYPE_LEVEL_HIGH>,
+				<0 258 IRQ_TYPE_LEVEL_HIGH>, <0 259 IRQ_TYPE_LEVEL_HIGH>,
+				<0 240 IRQ_TYPE_LEVEL_HIGH>, <0 241 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
 		csi2_0: csi2@feaa0000 {
 			compatible = "renesas,csi2-r8a7795";
 			clocks = <&mstp7_clks R8A7795_CLK_CSI40>;
