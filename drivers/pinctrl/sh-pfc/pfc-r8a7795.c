@@ -141,6 +141,15 @@ enum {
 	FN_SEL_VSP_0,		FN_SEL_VSP_1,		FN_SEL_VSP_2,		FN_SEL_VSP_3,
 	FN_SEL_VIN4_0,		FN_SEL_VIN4_1,
 
+	/* AUDIO CLOCK */
+	FN_AUDIO_CLKA_A,	FN_AUDIO_CLKA_B,	FN_AUDIO_CLKA_C,
+	FN_AUDIO_CLKB_A,	FN_AUDIO_CLKB_B,
+	FN_AUDIO_CLKC_A,	FN_AUDIO_CLKC_B,
+	FN_AUDIO_CLKOUT_A,	FN_AUDIO_CLKOUT_B,	FN_AUDIO_CLKOUT_C,	FN_AUDIO_CLKOUT_D,
+	FN_AUDIO_CLKOUT1_A,	FN_AUDIO_CLKOUT1_B,
+	FN_AUDIO_CLKOUT2_A,	FN_AUDIO_CLKOUT2_B,
+	FN_AUDIO_CLKOUT3_A,	FN_AUDIO_CLKOUT3_B,
+
 	/* EthernetAVB */
 	FN_AVB_MDC,		FN_AVB_MAGIC,		FN_AVB_PHY_INT,		FN_AVB_LINK,
 	FN_AVB_AVTP_PPS,
@@ -383,6 +392,15 @@ enum {
 	SEL_I2C_0_0_MARK,	SEL_I2C_0_1_MARK,
 	SEL_VSP_0_MARK,		SEL_VSP_1_MARK,		SEL_VSP_2_MARK,		SEL_VSP_3_MARK,
 	SEL_VIN4_0_MARK,	SEL_VIN4_1_MARK,
+
+	/* AUDIO CLOCK */
+	AUDIO_CLKA_A_MARK,	AUDIO_CLKA_B_MARK,	AUDIO_CLKA_C_MARK,
+	AUDIO_CLKB_A_MARK,	AUDIO_CLKB_B_MARK,
+	AUDIO_CLKC_A_MARK,	AUDIO_CLKC_B_MARK,
+	AUDIO_CLKOUT_A_MARK,	AUDIO_CLKOUT_B_MARK,	AUDIO_CLKOUT_C_MARK,	AUDIO_CLKOUT_D_MARK,
+	AUDIO_CLKOUT1_A_MARK,	AUDIO_CLKOUT1_B_MARK,
+	AUDIO_CLKOUT2_A_MARK,	AUDIO_CLKOUT2_B_MARK,
+	AUDIO_CLKOUT3_A_MARK,	AUDIO_CLKOUT3_B_MARK,
 
 	/* EthernetAVB */
 	AVB_MDC_MARK,		AVB_MAGIC_MARK,		AVB_PHY_INT_MARK,	AVB_LINK_MARK,
@@ -788,6 +806,7 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_IPSR_DATA(IP10_27_24,	SCK0),
 	PINMUX_IPSR_MODS(IP10_27_24,	MSIOF1_SS2_B,	SEL_MSIOF1_1),
+	PINMUX_IPSR_MODS(IP10_27_24,	AUDIO_CLKC_B,	SEL_ADG_1),
 	PINMUX_IPSR_MODS(IP10_27_24,	SDA2_A,		SEL_I2C2_0),
 
 	PINMUX_IPSR_DATA(IP10_31_28,	RX0),
@@ -797,9 +816,11 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_IPSR_MODS(IP11_7_4,	MSIOF1_SYNC_B,	SEL_MSIOF1_1),
 	PINMUX_IPSR_DATA(IP11_7_4,	CTS0_N),
+	PINMUX_IPSR_MODS(IP11_7_4,	AUDIO_CLKOUT_C,	SEL_ADG_2),
 
 	PINMUX_IPSR_DATA(IP11_11_8,	RTS0_N_TANS),
 	PINMUX_IPSR_MODS(IP11_11_8,	MSIOF1_SS1_B,	SEL_MSIOF1_1),
+	PINMUX_IPSR_MODS(IP11_11_8,	AUDIO_CLKA_B,	SEL_ADG_1),
 	PINMUX_IPSR_MODS(IP11_11_8,	SCL2_A,		SEL_I2C2_0),
 
 	PINMUX_IPSR_MODS(IP11_15_12,	RX1_A,		SEL_SCIF1_0),
@@ -825,6 +846,7 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_MODS(IP12_7_4,	SDA1_A,		SEL_I2C1_0),
 
 	PINMUX_IPSR_MODS(IP12_11_8,	MSIOF1_SCK_D,	SEL_MSIOF1_3),
+	PINMUX_IPSR_MODS(IP12_11_8,	AUDIO_CLKB_A,	SEL_ADG_0),
 
 	PINMUX_IPSR_MODS(IP12_15_12,	MSIOF1_RXD_D,	SEL_MSIOF1_3),
 
@@ -832,19 +854,26 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_IPSR_MODS(IP12_23_20,	RX2_B,		SEL_SCIF2_1),
 	PINMUX_IPSR_MODS(IP12_23_20,	MSIOF1_SYNC_D,	SEL_MSIOF1_3),
+	PINMUX_IPSR_MODS(IP12_23_20,	AUDIO_CLKOUT1_A,	SEL_ADG_0),
 
 	PINMUX_IPSR_MODS(IP12_27_24,	TX2_B,		SEL_SCIF2_1),
 	PINMUX_IPSR_MODS(IP12_27_24,	MSIOF1_SS1_D,	SEL_MSIOF1_3),
+	PINMUX_IPSR_MODS(IP12_27_24,	AUDIO_CLKOUT2_A,	SEL_ADG_0),
 
 	PINMUX_IPSR_DATA(IP12_31_28,	MSIOF0_SYNC),
+	PINMUX_IPSR_MODS(IP12_31_28,	AUDIO_CLKOUT_A,	SEL_ADG_0),
 
 	/* IPSR13 */
 	PINMUX_IPSR_DATA(IP13_3_0,	MSIOF0_SS1),
 	PINMUX_IPSR_DATA(IP13_3_0,	RX5),
+	PINMUX_IPSR_MODS(IP13_3_0,	AUDIO_CLKA_C,	SEL_ADG_2),
+	PINMUX_IPSR_MODS(IP13_3_0,	AUDIO_CLKOUT3_A,	SEL_ADG_0),
 
 	PINMUX_IPSR_DATA(IP13_7_4,	MSIOF0_SS2),
 	PINMUX_IPSR_MODS(IP13_7_4,	MSIOF1_SS2_D,	SEL_MSIOF1_3),
+	PINMUX_IPSR_MODS(IP13_7_4,	AUDIO_CLKC_A,	SEL_ADG_0),
 	PINMUX_IPSR_DATA(IP13_7_4,	TX5),
+	PINMUX_IPSR_MODS(IP13_7_4,	AUDIO_CLKOUT_D,	SEL_ADG_3),
 
 	PINMUX_IPSR_MODS(IP13_11_8,	MSIOF1_SCK_F,	SEL_MSIOF1_5),
 	PINMUX_IPSR_MODS(IP13_11_8,	SCL1_B,		SEL_I2C1_1),
@@ -893,6 +922,10 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_DATA(IP15_31_28,	SCK5),
 
 	/* IPSR16 */
+	PINMUX_IPSR_MODS(IP16_3_0,	AUDIO_CLKA_A,	SEL_ADG_0),
+
+	PINMUX_IPSR_MODS(IP16_7_4,	AUDIO_CLKB_B,	SEL_ADG_1),
+
 	PINMUX_IPSR_DATA(IP16_11_8,	USB0_PWEN),
 
 	PINMUX_IPSR_DATA(IP16_15_12,	USB0_OVC),
@@ -903,19 +936,144 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_MODS(IP16_23_20,	MSIOF1_SS2_C,	SEL_MSIOF1_2),
 
 	PINMUX_IPSR_DATA(IP16_27_24,	USB30_PWEN),
+	PINMUX_IPSR_MODS(IP16_27_24,	AUDIO_CLKOUT_B,	SEL_ADG_1),
 
 	PINMUX_IPSR_DATA(IP16_31_28,	USB30_OVC),
+	PINMUX_IPSR_MODS(IP16_31_28,	AUDIO_CLKOUT1_B,	SEL_ADG_1),
 
 	/* IPSR17 */
 	PINMUX_IPSR_DATA(IP17_3_0,	USB31_PWEN),
+	PINMUX_IPSR_MODS(IP17_3_0,	AUDIO_CLKOUT2_B,	SEL_ADG_1),
 
 	PINMUX_IPSR_DATA(IP17_7_4,	USB31_OVC),
+	PINMUX_IPSR_MODS(IP17_7_4,	AUDIO_CLKOUT3_B,	SEL_ADG_1),
 };
 
 static const struct sh_pfc_pin pinmux_pins[] = {
 	PINMUX_GPIO_GP_ALL(),
 };
 
+/* - AUDIO CLOCK ------------------------------------------------------------ */
+static const unsigned int audio_clk_a_a_pins[] = {
+	/* CLK A */
+	RCAR_GP_PIN(6, 22),
+};
+static const unsigned int audio_clk_a_a_mux[] = {
+	AUDIO_CLKA_A_MARK,
+};
+static const unsigned int audio_clk_a_b_pins[] = {
+	/* CLK A */
+	RCAR_GP_PIN(5, 4),
+};
+static const unsigned int audio_clk_a_b_mux[] = {
+	AUDIO_CLKA_B_MARK,
+};
+static const unsigned int audio_clk_a_c_pins[] = {
+	/* CLK A */
+	RCAR_GP_PIN(5, 19),
+};
+static const unsigned int audio_clk_a_c_mux[] = {
+	AUDIO_CLKA_C_MARK,
+};
+static const unsigned int audio_clk_b_a_pins[] = {
+	/* CLK B */
+	RCAR_GP_PIN(5, 12),
+};
+static const unsigned int audio_clk_b_a_mux[] = {
+	AUDIO_CLKB_A_MARK,
+};
+static const unsigned int audio_clk_b_b_pins[] = {
+	/* CLK B */
+	RCAR_GP_PIN(6, 23),
+};
+static const unsigned int audio_clk_b_b_mux[] = {
+	AUDIO_CLKB_B_MARK,
+};
+static const unsigned int audio_clk_c_a_pins[] = {
+	/* CLK C */
+	RCAR_GP_PIN(5, 21),
+};
+static const unsigned int audio_clk_c_a_mux[] = {
+	AUDIO_CLKC_A_MARK,
+};
+static const unsigned int audio_clk_c_b_pins[] = {
+	/* CLK C */
+	RCAR_GP_PIN(5, 0),
+};
+static const unsigned int audio_clk_c_b_mux[] = {
+	AUDIO_CLKC_B_MARK,
+};
+static const unsigned int audio_clkout_a_pins[] = {
+	/* CLKOUT */
+	RCAR_GP_PIN(5, 18),
+};
+static const unsigned int audio_clkout_a_mux[] = {
+	AUDIO_CLKOUT_A_MARK,
+};
+static const unsigned int audio_clkout_b_pins[] = {
+	/* CLKOUT */
+	RCAR_GP_PIN(6, 28),
+};
+static const unsigned int audio_clkout_b_mux[] = {
+	AUDIO_CLKOUT_B_MARK,
+};
+static const unsigned int audio_clkout_c_pins[] = {
+	/* CLKOUT */
+	RCAR_GP_PIN(5, 3),
+};
+static const unsigned int audio_clkout_c_mux[] = {
+	AUDIO_CLKOUT_C_MARK,
+};
+static const unsigned int audio_clkout_d_pins[] = {
+	/* CLKOUT */
+	RCAR_GP_PIN(5, 21),
+};
+static const unsigned int audio_clkout_d_mux[] = {
+	AUDIO_CLKOUT_D_MARK,
+};
+static const unsigned int audio_clkout1_a_pins[] = {
+	/* CLKOUT1 */
+	RCAR_GP_PIN(5, 15),
+};
+static const unsigned int audio_clkout1_a_mux[] = {
+	AUDIO_CLKOUT1_A_MARK,
+};
+static const unsigned int audio_clkout1_b_pins[] = {
+	/* CLKOUT1 */
+	RCAR_GP_PIN(6, 29),
+};
+static const unsigned int audio_clkout1_b_mux[] = {
+	AUDIO_CLKOUT1_B_MARK,
+};
+static const unsigned int audio_clkout2_a_pins[] = {
+	/* CLKOUT2 */
+	RCAR_GP_PIN(5, 16),
+};
+static const unsigned int audio_clkout2_a_mux[] = {
+	AUDIO_CLKOUT2_A_MARK,
+};
+static const unsigned int audio_clkout2_b_pins[] = {
+	/* CLKOUT2 */
+	RCAR_GP_PIN(6, 30),
+};
+static const unsigned int audio_clkout2_b_mux[] = {
+	AUDIO_CLKOUT2_B_MARK,
+};
+
+static const unsigned int audio_clkout3_a_pins[] = {
+	/* CLKOUT3 */
+	RCAR_GP_PIN(5, 19),
+};
+static const unsigned int audio_clkout3_a_mux[] = {
+	AUDIO_CLKOUT3_A_MARK,
+};
+static const unsigned int audio_clkout3_b_pins[] = {
+	/* CLKOUT3 */
+	RCAR_GP_PIN(6, 31),
+};
+static const unsigned int audio_clkout3_b_mux[] = {
+	AUDIO_CLKOUT3_B_MARK,
+};
 /* - EtherAVB --------------------------------------------------------------- */
 static const unsigned int avb_link_pins[] = {
 	/* AVB_LINK */
@@ -2199,6 +2357,23 @@ static const unsigned int usb31_mux[] = {
 };
 
 static const struct sh_pfc_pin_group pinmux_groups[] = {
+	SH_PFC_PIN_GROUP(audio_clk_a_a),
+	SH_PFC_PIN_GROUP(audio_clk_a_b),
+	SH_PFC_PIN_GROUP(audio_clk_a_c),
+	SH_PFC_PIN_GROUP(audio_clk_b_a),
+	SH_PFC_PIN_GROUP(audio_clk_b_b),
+	SH_PFC_PIN_GROUP(audio_clk_c_a),
+	SH_PFC_PIN_GROUP(audio_clk_c_b),
+	SH_PFC_PIN_GROUP(audio_clkout_a),
+	SH_PFC_PIN_GROUP(audio_clkout_b),
+	SH_PFC_PIN_GROUP(audio_clkout_c),
+	SH_PFC_PIN_GROUP(audio_clkout_d),
+	SH_PFC_PIN_GROUP(audio_clkout1_a),
+	SH_PFC_PIN_GROUP(audio_clkout1_b),
+	SH_PFC_PIN_GROUP(audio_clkout2_a),
+	SH_PFC_PIN_GROUP(audio_clkout2_b),
+	SH_PFC_PIN_GROUP(audio_clkout3_a),
+	SH_PFC_PIN_GROUP(audio_clkout3_b),
 	SH_PFC_PIN_GROUP(avb_link),
 	SH_PFC_PIN_GROUP(avb_magic),
 	SH_PFC_PIN_GROUP(avb_phy_int),
@@ -2403,6 +2578,26 @@ static const char * const hdmi0_groups[] = {
 
 static const char * const hdmi1_groups[] = {
 	"hdmi1_cec",
+};
+
+static const char * const audio_clk_groups[] = {
+	"audio_clk_a_a",
+	"audio_clk_a_b",
+	"audio_clk_a_c",
+	"audio_clk_b_a",
+	"audio_clk_b_b",
+	"audio_clk_c_a",
+	"audio_clk_c_b",
+	"audio_clkout_a",
+	"audio_clkout_b",
+	"audio_clkout_c",
+	"audio_clkout_d",
+	"audio_clkout1_a",
+	"audio_clkout1_b",
+	"audio_clkout2_a",
+	"audio_clkout2_b",
+	"audio_clkout3_a",
+	"audio_clkout3_b",
 };
 
 static const char * const i2c1_groups[] = {
@@ -2628,6 +2823,7 @@ static const char * const usb31_groups[] = {
 };
 
 static const struct sh_pfc_function pinmux_functions[] = {
+	SH_PFC_FUNCTION(audio_clk),
 	SH_PFC_FUNCTION(avb),
 	SH_PFC_FUNCTION(du),
 	SH_PFC_FUNCTION(hdmi0),
@@ -3356,7 +3552,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP10_27_24 [4] */
-		FN_SCK0, 0, FN_MSIOF1_SS2_B, 0,
+		FN_SCK0, 0, FN_MSIOF1_SS2_B, FN_AUDIO_CLKC_B,
 		FN_SDA2_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -3418,14 +3614,14 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP11_11_8 [4] */
-		FN_RTS0_N_TANS, 0, FN_MSIOF1_SS1_B, 0,
+		FN_RTS0_N_TANS, 0, FN_MSIOF1_SS1_B, FN_AUDIO_CLKA_B,
 		FN_SCL2_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP11_7_4 [4] */
 		FN_CTS0_N, 0, FN_MSIOF1_SYNC_B, 0,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_AUDIO_CLKOUT_C, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP11_3_0 [4] */
 		FN_TX0, 0, 0, 0,
@@ -3437,17 +3633,17 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP12_31_28 [4] */
 		FN_MSIOF0_SYNC, 0, 0, 0,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_AUDIO_CLKOUT_A, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_27_24 [4] */
 		0, FN_TX2_B, FN_MSIOF1_SS1_D, 0,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_AUDIO_CLKOUT2_A, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_23_20 [4] */
 		0, FN_RX2_B, FN_MSIOF1_SYNC_D, 0,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_AUDIO_CLKOUT1_A, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_19_16 [4] */
 		0, 0, FN_MSIOF1_TXD_D, 0,
@@ -3460,7 +3656,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP12_11_8 [4] */
-		0, 0, FN_MSIOF1_SCK_D, 0,
+		0, 0, FN_MSIOF1_SCK_D, FN_AUDIO_CLKB_A,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -3507,14 +3703,14 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_7_4 [4] */
-		FN_MSIOF0_SS2, FN_TX5, FN_MSIOF1_SS2_D, 0,
+		FN_MSIOF0_SS2, FN_TX5, FN_MSIOF1_SS2_D, FN_AUDIO_CLKC_A,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_AUDIO_CLKOUT_D, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP13_3_0 [4] */
-		FN_MSIOF0_SS1, FN_RX5, 0, 0,
+		FN_MSIOF0_SS1, FN_RX5, 0, FN_AUDIO_CLKA_C,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_AUDIO_CLKOUT3_A, 0, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR14", 0xe6060238, 32, 4) {
@@ -3603,12 +3799,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 	},
 	{ PINMUX_CFG_REG("IPSR16", 0xe6060240, 32, 4) {
 		/* IP16_31_28 [4] */
-		FN_USB30_OVC, 0, 0, 0,
+		FN_USB30_OVC, 0, 0, FN_AUDIO_CLKOUT1_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_27_24 [4] */
-		FN_USB30_PWEN, 0, 0, 0,
+		FN_USB30_PWEN, 0, 0, FN_AUDIO_CLKOUT_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -3633,12 +3829,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_7_4 [4] */
-		0, 0, 0, 0,
+		FN_AUDIO_CLKB_B, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP16_3_0 [4] */
-		0, 0, 0, 0,
+		FN_AUDIO_CLKA_A, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
@@ -3675,12 +3871,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP17_7_4 [4] */
-		FN_USB31_OVC, 0, 0, 0,
+		FN_USB31_OVC, 0, 0, FN_AUDIO_CLKOUT3_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP17_3_0 [4] */
-		FN_USB31_PWEN, 0, 0, 0,
+		FN_USB31_PWEN, 0, 0, FN_AUDIO_CLKOUT2_B,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0, }
