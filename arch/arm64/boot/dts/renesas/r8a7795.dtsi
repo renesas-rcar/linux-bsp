@@ -840,6 +840,24 @@
 			clocks = <&cpg CPG_MOD 112>;
 		};
 
+		vcp4: vcp4@fe8f0000 {
+			compatible = "renesas,vcp4";
+			reg = <0 0xfe910000 0 0x200>,
+			      <0 0xfe910200 0 0x200>,
+			      <0 0xfe8f0000 0 0x200>,
+			      <0 0xfe8f0200 0 0x200>,
+			      <0 0xfe900000 0 0x200>,
+			      <0 0xfe900200 0 0x200>,
+			      <0 0xfe90f000 0 0x200>,
+			      <0 0xfe8ff000 0 0x200>;
+			interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
 		vspbc: vsp@fe920000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xfe920000 0 0x8000>;
