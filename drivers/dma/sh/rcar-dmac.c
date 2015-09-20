@@ -327,7 +327,8 @@ static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 	struct rcar_dmac_desc *desc = chan->desc.running;
 	u32 chcr = desc->chcr;
 
-	WARN_ON_ONCE(rcar_dmac_chan_is_busy(chan));
+	WARN_ON_ONCE(rcar_dmac_chan_is_busy(chan) ||
+			rcar_dmac_last_tx_complete(chan));
 
 	if (chan->mid_rid >= 0)
 		rcar_dmac_chan_write(chan, RCAR_DMARS, chan->mid_rid);
