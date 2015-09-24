@@ -535,7 +535,8 @@
 					             "renesas,cpg-mstp-clocks";
 					reg = <0 0xe615013c 0 4>, <0 0xe6150048 0 4>;
 					clocks =  <&s3d4_clk>, <&sd3_clk>, <&sd2_clk>,
-						  <&sd1_clk>, <&sd0_clk>;
+						  <&sd1_clk>, <&sd0_clk>,
+						  <&s3d1_clk>, <&s3d1_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_SCIF2
@@ -543,10 +544,14 @@
 						R8A7795_CLK_SD2
 						R8A7795_CLK_SD1
 						R8A7795_CLK_SD0
+						R8A7795_CLK_PCIEC1
+						R8A7795_CLK_PCIEC0
 					>;
 					clock-output-names =
 						"scif2",
-						"sdhi3", "sdhi2", "sdhi1", "sdhi0";
+						"sdhi3", "sdhi2",
+						"sdhi1", "sdhi0",
+						"pcie1", "pcie0";
 				};
 
 				mstp5_clks: mstp5_clks@e6150144 {
