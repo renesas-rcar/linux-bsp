@@ -32,6 +32,8 @@
 #define R8A7795_CLK_SCIF2		310
 
 /* MSTP5 */
+#define R8A7795_CLK_AUDIO_DMAC1		1
+#define R8A7795_CLK_AUDIO_DMAC0		2
 
 /* MSTP7 */
 
