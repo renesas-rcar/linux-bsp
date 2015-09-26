@@ -116,6 +116,13 @@ struct thermal_zone_device_ops {
 	int (*set_emul_temp) (struct thermal_zone_device *, int);
 	int (*get_trend) (struct thermal_zone_device *, int,
 			  enum thermal_trend *);
+	int (*get_threshold_temp)(struct thermal_zone_device *, int,
+				  int *);
+	int (*set_threshold_temp)(struct thermal_zone_device *, int,
+				  int);
+	int (*set_notification_status)(struct thermal_zone_device *,
+				       bool status);
+	bool (*check_notification_support)(struct thermal_zone_device *);
 	int (*notify) (struct thermal_zone_device *, int,
 		       enum thermal_trip_type);
 };
@@ -149,6 +156,8 @@ struct thermal_attr {
 	struct device_attribute attr;
 	char name[THERMAL_NAME_LENGTH];
 };
+
+struct iio_dev;
 
 /**
  * struct thermal_zone_device - structure for a thermal zone
@@ -184,6 +193,7 @@ struct thermal_attr {
  * @lock:	lock to protect thermal_instances list
  * @node:	node in thermal_tz_list (in thermal_core.c)
  * @poll_queue:	delayed work for polling
+ * @indio_dev:	pointer to instance of an IIO dev for this zone
  */
 struct thermal_zone_device {
 	int id;
@@ -210,6 +220,9 @@ struct thermal_zone_device {
 	struct mutex lock;
 	struct list_head node;
 	struct delayed_work poll_queue;
+#if defined(CONFIG_THERMAL_IIO)
+	struct iio_dev *indio_dev;
+#endif
 };
 
 /**
