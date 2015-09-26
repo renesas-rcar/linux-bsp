@@ -43,6 +43,7 @@
 
 #include "thermal_core.h"
 #include "thermal_hwmon.h"
+#include "thermal_iio.h"
 
 MODULE_AUTHOR("Zhang Rui");
 MODULE_DESCRIPTION("Generic thermal management sysfs support");
@@ -544,6 +545,7 @@ void thermal_zone_device_update(struct thermal_zone_device *tz,
 	if (!tz->ops->get_temp)
 		return;
 
+	thermal_iio_sensor_notify(tz, event);
 	update_temperature(tz);
 
 	for (count = 0; count < tz->trips; count++)
@@ -1886,10 +1888,15 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 
 	mutex_unlock(&thermal_governor_lock);
 
+	if (thermal_iio_sensor_register(tz))
+		goto unregister;
+
 	if (!tz->tzp || !tz->tzp->no_hwmon) {
 		result = thermal_add_hwmon_sysfs(tz);
-		if (result)
+		if (result) {
+			thermal_iio_sensor_unregister(tz);
 			goto unregister;
+		}
 	}
 
 	mutex_lock(&thermal_list_lock);
@@ -1971,6 +1978,7 @@ void thermal_zone_device_unregister(struct thermal_zone_device *tz)
 	remove_trip_attrs(tz);
 	thermal_set_governor(tz, NULL);
 
+	thermal_iio_sensor_unregister(tz);
 	thermal_remove_hwmon_sysfs(tz);
 	release_idr(&thermal_tz_idr, &thermal_idr_lock, tz->id);
 	idr_destroy(&tz->idr);
