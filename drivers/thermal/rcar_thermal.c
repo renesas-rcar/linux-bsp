@@ -308,7 +308,8 @@ static void rcar_thermal_work(struct work_struct *work)
 
 	rcar_thermal_get_temp(priv->zone, &nctemp);
 	if (nctemp != cctemp)
-		thermal_zone_device_update(priv->zone);
+		thermal_zone_device_update(priv->zone,
+					   THERMAL_DEVICE_EVENT_NONE);
 }
 
 static u32 rcar_thermal_had_changed(struct rcar_thermal_priv *priv, u32 status)
