@@ -1028,6 +1028,9 @@ static int ravb_phy_init(struct net_device *ndev)
 		return -ENOENT;
 	}
 
+	/* 10BASE is not supported */
+	phydev->supported &= ~(SUPPORTED_10baseT_Half | SUPPORTED_10baseT_Full);
+
 	netdev_info(ndev, "attached PHY %d (IRQ %d) to driver %s\n",
 		    phydev->addr, phydev->irq, phydev->drv->name);
 
