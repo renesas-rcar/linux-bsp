@@ -333,6 +333,14 @@ static bool rcar_dmac_chan_is_busy(struct rcar_dmac_chan *chan)
 	return !!(chcr & (RCAR_DMACHCR_DE | RCAR_DMACHCR_TE));
 }
 
+/* Transfer completed but not yet handled */
+static bool rcar_dmac_last_tx_complete(struct rcar_dmac_chan *chan)
+{
+	u32 chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
+
+	return (chcr & RCAR_DMACHCR_TE) == RCAR_DMACHCR_TE;
+}
+
 static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 {
 	struct rcar_dmac_desc *desc = chan->desc.running;
@@ -1338,6 +1346,10 @@ static enum dma_status rcar_dmac_tx_status(struct dma_chan *chan,
 	enum dma_status status;
 	unsigned long flags;
 	unsigned int residue;
+
+	/* Interrupt not yet serviced */
+	if (rcar_dmac_last_tx_complete(rchan))
+		return DMA_COMPLETE;
 
 	status = dma_cookie_status(chan, cookie, txstate);
 	if (status == DMA_COMPLETE || !txstate)
