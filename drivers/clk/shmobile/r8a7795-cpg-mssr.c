@@ -20,6 +20,7 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/of.h>
+#include <linux/slab.h>
 
 #include <dt-bindings/clock/r8a7795-cpg-mssr.h>
 
@@ -61,6 +62,10 @@ enum r8a7795_clk_types {
 	CLK_TYPE_GEN3_PLL2,
 	CLK_TYPE_GEN3_PLL3,
 	CLK_TYPE_GEN3_PLL4,
+	CLK_TYPE_GEN3_SD0,
+	CLK_TYPE_GEN3_SD1,
+	CLK_TYPE_GEN3_SD2,
+	CLK_TYPE_GEN3_SD3,
 };
 
 static const struct cpg_core_clk r8a7795_core_clks[] __initconst = {
@@ -82,6 +87,7 @@ static const struct cpg_core_clk r8a7795_core_clks[] __initconst = {
 	DEF_FIXED(".s1",        CLK_S1,            CLK_PLL1_DIV2,  3, 1),
 	DEF_FIXED(".s2",        CLK_S2,            CLK_PLL1_DIV2,  4, 1),
 	DEF_FIXED(".s3",        CLK_S3,            CLK_PLL1_DIV2,  6, 1),
+	DEF_FIXED(".sdsrc",     CLK_SDSRC,         CLK_PLL1_DIV2,  2, 1),
 
 	/* Core Clock Outputs */
 	DEF_FIXED("ztr",        R8A7795_CLK_ZTR,   CLK_PLL1_DIV2,  6, 1),
@@ -101,6 +107,11 @@ static const struct cpg_core_clk r8a7795_core_clks[] __initconst = {
 	DEF_FIXED("s3d4",       R8A7795_CLK_S3D4,  CLK_S3,         4, 1),
 	DEF_FIXED("cl",         R8A7795_CLK_CL,    CLK_PLL1_DIV2, 48, 1),
 	DEF_FIXED("cp",         R8A7795_CLK_CP,    CLK_EXTAL,      2, 1),
+
+	DEF_BASE("sd0",         R8A7795_CLK_SD0, CLK_TYPE_GEN3_SD0, CLK_SDSRC),
+	DEF_BASE("sd1",         R8A7795_CLK_SD1, CLK_TYPE_GEN3_SD1, CLK_SDSRC),
+	DEF_BASE("sd2",         R8A7795_CLK_SD2, CLK_TYPE_GEN3_SD2, CLK_SDSRC),
+	DEF_BASE("sd3",         R8A7795_CLK_SD3, CLK_TYPE_GEN3_SD3, CLK_SDSRC),
 
 	DEF_DIV6P1("mso",       R8A7795_CLK_MSO,   CLK_PLL1_DIV4, 0x014),
 	DEF_DIV6P1("hdmi",      R8A7795_CLK_HDMI,  CLK_PLL1_DIV2, 0x250),
@@ -203,6 +214,248 @@ static const unsigned int r8a7795_crit_mod_clks[] __initconst = {
 #define CPG_PLL0CR	0x00d8
 #define CPG_PLL2CR	0x002c
 #define CPG_PLL4CR	0x01f4
+#define CPG_SD0CKCR	0x0074
+#define CPG_SD1CKCR	0x0078
+#define CPG_SD2CKCR	0x0268
+#define CPG_SD3CKCR	0x026c
+
+/* -----------------------------------------------------------------------------
+ * SDn Clock
+ *
+ */
+#define CPG_SD_STP_N_HCK	BIT(9)
+#define CPG_SD_STP_N_CK		BIT(8)
+#define CPG_SD_SD_N_SRCFC_MASK	(0x7 << CPG_SD_SD_N_SRCFC_SHIFT)
+#define CPG_SD_SD_N_SRCFC_SHIFT	2
+#define CPG_SD_SD_N_FC_MASK	(0x3 << CPG_SD_SD_N_FC_SHIFT)
+#define CPG_SD_SD_N_FC_SHIFT	0
+
+#define CPG_SD_STP_MASK		(CPG_SD_STP_N_HCK | CPG_SD_STP_N_CK)
+#define CPG_SD_FC_MASK		(CPG_SD_SD_N_SRCFC_MASK | CPG_SD_SD_N_FC_MASK)
+
+/* CPG_SD_DIV_TABLE_DATA(stp_n_hck, stp_n_ck, sd_n_srcfc, sd_n_fc, div) */
+#define CPG_SD_DIV_TABLE_DATA(_a, _b, _c, _d, _e) \
+{ \
+	.val = ((_a) ? CPG_SD_STP_N_HCK : 0) | \
+	       ((_b) ? CPG_SD_STP_N_CK : 0) | \
+	       (((_c) << CPG_SD_SD_N_SRCFC_SHIFT) & CPG_SD_SD_N_SRCFC_MASK) | \
+	       (((_d) << CPG_SD_SD_N_FC_SHIFT) & CPG_SD_SD_N_FC_MASK), \
+	.div = (_e), \
+}
+
+struct sd_div_table {
+	u32 val;
+	unsigned int div;
+};
+
+struct sd_clock {
+	struct clk_hw hw;
+	void __iomem *reg;
+	const struct sd_div_table *div_table;
+	int div_num;
+	unsigned int div_min;
+	unsigned int div_max;
+};
+
+/* SDn divider
+ *                     sd_n_srcfc sd_n_fc   div
+ * stp_n_hck stp_n_ck  (div)      (div)     = sd_n_srcfc x sd_n_fc
+ *-------------------------------------------------------------------
+ *  0         0         0 (1)      1 (4)      4
+ *  0         0         1 (2)      1 (4)      8
+ *  1         0         2 (4)      1 (4)     16
+ *  1         0         3 (8)      1 (4)     32
+ *  1         0         4 (16)     1 (4)     64
+ *  0         0         0 (1)      0 (2)      2
+ *  0         0         1 (2)      0 (2)      4
+ *  1         0         2 (4)      0 (2)      8
+ *  1         0         3 (8)      0 (2)     16
+ *  1         0         4 (16)     0 (2)     32
+ */
+static const struct sd_div_table cpg_sd_div_table[] = {
+/*	CPG_SD_DIV_TABLE_DATA(stp_n_hck, stp_n_ck, sd_n_srcfc, sd_n_fc, div) */
+	CPG_SD_DIV_TABLE_DATA(0,         0,        0,          1,         4),
+	CPG_SD_DIV_TABLE_DATA(0,         0,        1,          1,         8),
+	CPG_SD_DIV_TABLE_DATA(1,         0,        2,          1,        16),
+	CPG_SD_DIV_TABLE_DATA(1,         0,        3,          1,        32),
+	CPG_SD_DIV_TABLE_DATA(1,         0,        4,          1,        64),
+	CPG_SD_DIV_TABLE_DATA(0,         0,        0,          0,         2),
+	CPG_SD_DIV_TABLE_DATA(0,         0,        1,          0,         4),
+	CPG_SD_DIV_TABLE_DATA(1,         0,        2,          0,         8),
+	CPG_SD_DIV_TABLE_DATA(1,         0,        3,          0,        16),
+	CPG_SD_DIV_TABLE_DATA(1,         0,        4,          0,        32),
+};
+
+#define to_sd_clock(_hw) container_of(_hw, struct sd_clock, hw)
+
+static int cpg_sd_clock_endisable(struct clk_hw *hw, bool enable)
+{
+	struct sd_clock *clock = to_sd_clock(hw);
+	u32 val, sd_fc;
+	int i;
+
+	val = clk_readl(clock->reg);
+
+	if (enable) {
+		sd_fc = val & CPG_SD_FC_MASK;
+		for (i = 0; i < clock->div_num; i++)
+			if (sd_fc == (clock->div_table[i].val & CPG_SD_FC_MASK))
+				break;
+
+		if (i >= clock->div_num) {
+			pr_err("%s: 0x%4x is not support of division ratio.\n",
+				__func__, sd_fc);
+			return -ENODATA;
+		}
+
+		val &= ~(CPG_SD_STP_MASK);
+		val |= clock->div_table[i].val & CPG_SD_STP_MASK;
+	} else
+		val |= CPG_SD_STP_MASK;
+
+	clk_writel(val, clock->reg);
+
+	return 0;
+}
+
+static int cpg_sd_clock_enable(struct clk_hw *hw)
+{
+	return cpg_sd_clock_endisable(hw, true);
+}
+
+static void cpg_sd_clock_disable(struct clk_hw *hw)
+{
+	cpg_sd_clock_endisable(hw, false);
+}
+
+static int cpg_sd_clock_is_enabled(struct clk_hw *hw)
+{
+	struct sd_clock *clock = to_sd_clock(hw);
+
+	return !(clk_readl(clock->reg) & CPG_SD_STP_MASK);
+}
+
+static unsigned long cpg_sd_clock_recalc_rate(struct clk_hw *hw,
+						unsigned long parent_rate)
+{
+	struct sd_clock *clock = to_sd_clock(hw);
+	u32 rate = parent_rate;
+	u32 val, sd_fc;
+	int i;
+
+	val = clk_readl(clock->reg);
+
+	sd_fc = val & CPG_SD_FC_MASK;
+	for (i = 0; i < clock->div_num; i++)
+		if (sd_fc == (clock->div_table[i].val & CPG_SD_FC_MASK))
+			break;
+
+	if (i >= clock->div_num) {
+		pr_err("%s: 0x%4x is not support of division ratio.\n",
+			__func__, sd_fc);
+		return 0;
+	}
+
+	do_div(rate, clock->div_table[i].div);
+
+	return rate;
+}
+
+static unsigned int cpg_sd_clock_calc_div(struct sd_clock *clock,
+					  unsigned long rate,
+					  unsigned long parent_rate)
+{
+	unsigned int div;
+
+	if (!rate)
+		rate = 1;
+
+	div = DIV_ROUND_CLOSEST(parent_rate, rate);
+
+	return clamp_t(unsigned int, div, clock->div_min, clock->div_max);
+}
+
+static long cpg_sd_clock_round_rate(struct clk_hw *hw, unsigned long rate,
+				      unsigned long *parent_rate)
+{
+	struct sd_clock *clock = to_sd_clock(hw);
+	unsigned int div = cpg_sd_clock_calc_div(clock, rate, *parent_rate);
+
+	return *parent_rate / div;
+}
+
+static int cpg_sd_clock_set_rate(struct clk_hw *hw, unsigned long rate,
+				   unsigned long parent_rate)
+{
+	struct sd_clock *clock = to_sd_clock(hw);
+	unsigned int div = cpg_sd_clock_calc_div(clock, rate, parent_rate);
+	u32 val;
+	int i;
+
+	for (i = 0; i < clock->div_num; i++)
+		if (div == clock->div_table[i].div)
+			break;
+
+	if (i >= clock->div_num) {
+		pr_err("%s: Not support divider range : div=%d (%lu/%lu).\n",
+			__func__, div, parent_rate, rate);
+		return -EINVAL;
+	}
+
+	val = clk_readl(clock->reg);
+	val &= ~(CPG_SD_STP_MASK | CPG_SD_FC_MASK);
+	val |= clock->div_table[i].val & (CPG_SD_STP_MASK | CPG_SD_FC_MASK);
+	clk_writel(val, clock->reg);
+
+	return 0;
+}
+
+static const struct clk_ops cpg_sd_clock_ops = {
+	.enable = cpg_sd_clock_enable,
+	.disable = cpg_sd_clock_disable,
+	.is_enabled = cpg_sd_clock_is_enabled,
+	.recalc_rate = cpg_sd_clock_recalc_rate,
+	.round_rate = cpg_sd_clock_round_rate,
+	.set_rate = cpg_sd_clock_set_rate,
+};
+
+static struct clk * __init cpg_sd_clk_register(const char *name,
+					       const char *parent_name,
+					       void __iomem *reg)
+{
+	struct clk_init_data init;
+	struct sd_clock *clock;
+	struct clk *clk;
+	int i;
+
+	clock = kzalloc(sizeof(*clock), GFP_KERNEL);
+	if (!clock)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = name;
+	init.ops = &cpg_sd_clock_ops;
+	init.flags = CLK_IS_BASIC | CLK_SET_RATE_PARENT;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+
+	clock->reg = reg;
+	clock->hw.init = &init;
+	clock->div_table = cpg_sd_div_table;
+	clock->div_num = ARRAY_SIZE(cpg_sd_div_table);
+
+	clock->div_max = clock->div_table[0].div;
+	clock->div_min = clock->div_max;
+	for (i = 1; i < clock->div_num; i++) {
+		clock->div_max = max(clock->div_max, clock->div_table[i].div);
+		clock->div_min = min(clock->div_min, clock->div_table[i].div);
+	}
+
+	clk = clk_register(NULL, &clock->hw);
+	if (IS_ERR(clk))
+		kfree(clock);
+
+	return clk;
+}
 
 /*
  * CPG Clock Data
@@ -323,6 +576,22 @@ struct clk * __init r8a7795_cpg_clk_register(struct device *dev,
 		value = readl(base + CPG_PLL4CR);
 		mult = (((value >> 24) & 0x7f) + 1) * 2;
 		break;
+
+	case CLK_TYPE_GEN3_SD0:
+		return cpg_sd_clk_register(core->name, __clk_get_name(parent),
+					   base + CPG_SD0CKCR);
+
+	case CLK_TYPE_GEN3_SD1:
+		return cpg_sd_clk_register(core->name, __clk_get_name(parent),
+					   base + CPG_SD1CKCR);
+
+	case CLK_TYPE_GEN3_SD2:
+		return cpg_sd_clk_register(core->name, __clk_get_name(parent),
+					   base + CPG_SD2CKCR);
+
+	case CLK_TYPE_GEN3_SD3:
+		return cpg_sd_clk_register(core->name, __clk_get_name(parent),
+					   base + CPG_SD3CKCR);
 
 	default:
 		return ERR_PTR(-EINVAL);
