@@ -552,19 +552,33 @@
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150148 0 4>, <0 0xe61501c0 0 4>;
-					clocks = <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
+					clocks = <&s2d1_clk>, <&s2d1_clk>,
 						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
-						 <&s2d1_clk>;
+						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
+						 <&s2d1_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
+						R8A7795_CLK_FCPVB1 R8A7795_CLK_FCPVB0
+						R8A7795_CLK_FCPVI2 R8A7795_CLK_FCPVI1
+						R8A7795_CLK_FCPVI0
 						R8A7795_CLK_FCPF2 R8A7795_CLK_FCPF1
 						R8A7795_CLK_FCPF0
 						R8A7795_CLK_VSPD3 R8A7795_CLK_VSPD2
 						R8A7795_CLK_VSPD1 R8A7795_CLK_VSPD0
+						R8A7795_CLK_VSPBC R8A7795_CLK_VSPBD
+						R8A7795_CLK_VSPI2 R8A7795_CLK_VSPI1
+						R8A7795_CLK_VSPI0
 					>;
-					clock-output-names = "fcpf2", "fcpf1", "fcpf0",
+					clock-output-names = "fcpvb1", "fcpvb0",
+								 "fcpvi2", "fcpvi1", "fcpvi0",
+								 "fcpf2", "fcpf1", "fcpf0",
 							     "vsp1-du3", "vsp1-du2",
-							     "vsp1-du1", "vsp1-du0";
+							     "vsp1-du1", "vsp1-du0",
+								 "vspbc", "vspbd",
+								 "vspi2", "vspi1", "vspi0";
 				};
 
 				mstp7_clks: mstp7_clks@e615014c {
@@ -1100,6 +1114,99 @@
 			reg = <0 0xfd000000 0 0x3ffff>;
 			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp1_clks R8A7795_CLK_3DGE>;
+		};
+
+		vspi0: vspm@fe9a0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe9a0000 0 0x8000>, <0 0xfe9af000 0 0x200>;
+			interrupts = <0 444 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPI0>, <&mstp6_clks R8A7795_CLK_FCPVI0>;
+			renesas,#ch = <0>;
+			renesas,#rpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
+		};
+
+		vspi1: vspm@fe9b0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe9b0000 0 0x8000>, <0 0xfe9bf000 0 0x200>;
+			interrupts = <0 445 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPI1>, <&mstp6_clks R8A7795_CLK_FCPVI1>;
+			renesas,#ch = <1>;
+			renesas,#rpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
+		};
+
+		vspi2: vspm@fe9c0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe9c0000 0 0x8000>, <0 0xfe9cf000 0 0x200>;
+			interrupts = <0 446 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPI2>, <&mstp6_clks R8A7795_CLK_FCPVI2>;
+			renesas,#ch = <2>;
+			renesas,#rpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
+		};
+
+		vspbd: vspm@fe960000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
+			interrupts = <0 266 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPBD>, <&mstp6_clks R8A7795_CLK_FCPVB0>;
+			renesas,#ch = <3>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <4>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-bru;
+			renesas,has-drc;
+			renesas,#read_outstanding = <0>;
+		};
+
+		vspbc: vspm@fe920000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe920000 0 0x8000>, <0 0xfe92f000 0 0x200>;
+			interrupts = <0 465 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPBC>, <&mstp6_clks R8A7795_CLK_FCPVB1>;
+			renesas,#ch = <4>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <4>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,has-bru;
+			renesas,#read_outstanding = <0>;
 		};
 
 		fdp0: fdpm@fe940000 {
