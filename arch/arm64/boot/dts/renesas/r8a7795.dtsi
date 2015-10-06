@@ -858,16 +858,21 @@
 				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
-		vspbc: vsp@fe920000 {
-			compatible = "renesas,vsp2";
-			reg = <0 0xfe920000 0 0x8000>;
-			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 624>;
+		vspbc: vspm@fe920000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe920000 0 0x8000>, <0 0xfe92f000 0 0x200>;
+			interrupts = <0 465 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 624>, <&cpg CPG_MOD 606>;
 
+			renesas,#ch = <4>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <4>;
+			renesas,#wpf_rot = <0>;
 			renesas,has-lut;
-			renesas,has-sru;
-			renesas,#rpf = <5>;
-			renesas,#wpf = <1>;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,has-bru;
+			renesas,#read_outstanding = <0>;
 		};
 
 		fdp0: fdpm@fe940000 {
@@ -897,53 +902,86 @@
 			renesas,#ch = <2>;
 		};
 
-		vspbd: vsp@fe960000 {
-			compatible = "renesas,vsp2";
-			reg = <0 0xfe960000 0 0x8000>;
-			interrupts = <GIC_SPI 465 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 626>;
+		vspbd: vspm@fe960000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
+			interrupts = <0 266 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 626>, <&cpg CPG_MOD 607>;
 
-			renesas,#rpf = <5>;
-			renesas,#wpf = <1>;
+			renesas,#ch = <3>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <4>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-bru;
+			renesas,has-drc;
+			renesas,#read_outstanding = <0>;
 		};
 
-		vspi0: vsp@fe9a0000 {
-			compatible = "renesas,vsp2";
-			reg = <0 0xfe9a0000 0 0x8000>;
-			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 631>;
 
-			renesas,has-lut;
-			renesas,has-sru;
+		vspi0: vspm@fe9a0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe9a0000 0 0x8000>, <0 0xfe9af000 0 0x200>;
+			interrupts = <0 444 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 631>, <&cpg CPG_MOD 611>;
+
+			renesas,#ch = <0>;
 			renesas,#rpf = <1>;
-			renesas,#uds = <3>;
-			renesas,#wpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
 		};
 
-		vspi1: vsp@fe9b0000 {
-			compatible = "renesas,vsp2";
-			reg = <0 0xfe9b0000 0 0x8000>;
-			interrupts = <GIC_SPI 445 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 630>;
+		vspi1: vspm@fe9b0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe9b0000 0 0x8000>, <0 0xfe9bf000 0 0x200>;
+			interrupts = <0 445 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 630>, <&cpg CPG_MOD 610>;
 
-			renesas,has-lut;
-			renesas,has-sru;
+			renesas,#ch = <1>;
 			renesas,#rpf = <1>;
-			renesas,#uds = <1>;
-			renesas,#wpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
 		};
 
-		vspi2: vsp@fe9c0000 {
-			compatible = "renesas,vsp2";
-			reg = <0 0xfe9c0000 0 0x8000>;
-			interrupts = <GIC_SPI 446 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 629>;
+		vspi2: vspm@fe9c0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe9c0000 0 0x8000>, <0 0xfe9cf000 0 0x200>;
+			interrupts = <0 446 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 629>, <&cpg CPG_MOD 609>;
 
-			renesas,has-lut;
-			renesas,has-sru;
+			renesas,#ch = <2>;
 			renesas,#rpf = <1>;
-			renesas,#uds = <1>;
-			renesas,#wpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
 		};
 
 		vspd0: vsp@fea20000 {
