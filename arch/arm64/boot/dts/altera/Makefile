@@ -1,4 +1,4 @@
-dtb-$(CONFIG_ARCH_HISI) += hi6220-hikey.dtb hip05-d02.dtb
+dtb-$(CONFIG_ARCH_STRATIX10) += socfpga_stratix10_socdk.dtb
 
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
