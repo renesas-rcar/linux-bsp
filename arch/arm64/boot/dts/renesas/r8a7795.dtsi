@@ -476,12 +476,17 @@
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150134 0 4>, <0 0xe6150038 0 4>;
-					clocks = <&zg_clk>;
+					clocks = <&zg_clk>,
+						<&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>;
 					#clock-cells = <1>;
 					renesas,clock-indices = <
 						R8A7795_CLK_3DGE
+						R8A7795_CLK_FDP2
+						R8A7795_CLK_FDP1
+						R8A7795_CLK_FDP0
 					>;
-					clock-output-names = "3dge";
+					clock-output-names = "3dge",
+							"fdp2", "fdp1", "fdp0";
 				};
 
 				mstp2_clks: mstp2_clks@e6150138 {
@@ -548,13 +553,17 @@
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150148 0 4>, <0 0xe61501c0 0 4>;
 					clocks = <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
 						 <&s2d1_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
+						R8A7795_CLK_FCPF2 R8A7795_CLK_FCPF1
+						R8A7795_CLK_FCPF0
 						R8A7795_CLK_VSPD3 R8A7795_CLK_VSPD2
 						R8A7795_CLK_VSPD1 R8A7795_CLK_VSPD0
 					>;
-					clock-output-names = "vsp1-du3", "vsp1-du2",
+					clock-output-names = "fcpf2", "fcpf1", "fcpf0",
+							     "vsp1-du3", "vsp1-du2",
 							     "vsp1-du1", "vsp1-du0";
 				};
 
@@ -1091,6 +1100,30 @@
 			reg = <0 0xfd000000 0 0x3ffff>;
 			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp1_clks R8A7795_CLK_3DGE>;
+		};
+
+		fdp0: fdpm@fe940000 {
+			compatible = "renesas,fdpm";
+			reg = <0 0xfe940000 0 0x2400>, <0 0xfe950000 0 0x200>;
+			interrupts = <0 262 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp1_clks R8A7795_CLK_FDP0>, <&mstp6_clks R8A7795_CLK_FCPF0>;
+			renesas,#ch = <0>;
+		};
+
+		fdp1: fdpm@fe944000 {
+			compatible = "renesas,fdpm";
+			reg = <0 0xfe944000 0 0x2400>, <0 0xfe951000 0 0x200>;
+			interrupts = <0 263 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp1_clks R8A7795_CLK_FDP1>, <&mstp6_clks R8A7795_CLK_FCPF1>;
+			renesas,#ch = <1>;
+		};
+
+		fdp2: fdpm@fe948000 {
+			compatible = "renesas,fdpm";
+			reg = <0 0xfe948000 0 0x2400>, <0 0xfe952000 0 0x200>;
+			interrupts = <0 264 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp1_clks R8A7795_CLK_FDP2>, <&mstp6_clks R8A7795_CLK_FCPF2>;
+			renesas,#ch = <2>;
 		};
 
 		vsp2d0: vsp2@fea20000 {
