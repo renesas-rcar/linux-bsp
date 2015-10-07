@@ -558,6 +558,8 @@
 					clock-indices = <
 						R8A7795_CLK_AUDIO_DMAC0 R8A7795_CLK_AUDIO_DMAC1
 					>;
+					clock-output-names =
+						"audio_dmac0", "audio_dmac1";
 				};
 
 				mstp6_clks: mstp6_clks@e6150148 {
@@ -691,6 +693,15 @@
 						R8A7795_CLK_SCU_SRC9 R8A7795_CLK_SCU_SRC8 R8A7795_CLK_SCU_SRC7 R8A7795_CLK_SCU_SRC6 R8A7795_CLK_SCU_SRC5
 						R8A7795_CLK_SCU_SRC4 R8A7795_CLK_SCU_SRC3 R8A7795_CLK_SCU_SRC2 R8A7795_CLK_SCU_SRC1 R8A7795_CLK_SCU_SRC0
 					>;
+					clock-output-names =
+						"ssi_all",
+						"ssi9", "ssi8", "ssi7", "ssi6", "ssi5",
+						"ssi4", "ssi3", "ssi2", "ssi1", "ssi0",
+						"scu_all",
+						"scu_dvc1", "scu_dvc0",
+						"scu_ctu1", "scu_ctu0",
+						"scu9", "scu8", "scu7", "scu6", "scu5",
+						"scu4", "scu3", "scu2", "scu1", "scu0";
 				};
 			};
 		};
