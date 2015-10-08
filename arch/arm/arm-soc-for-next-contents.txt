@@ -10,6 +10,12 @@ fixes
 	<no branch> (56e86dd4bbeb66a7ad67e20fa045c6f51b4da571)
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-fixes-for-v4.3
 
+next/fixes-non-critical
+	patch
+		ARM: cns3xxx: pci: avoid potential stack overflow
+	davinci/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.4/fixes
+
 next/cleanup
 	renesas/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup-for-v4.4
@@ -36,6 +42,16 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.4
 	patch
 		arm64: dts: add all hi6220 uart nodes
+	renesas/cleanup
+		Merge branch 'renesas/cleanup' into next/dt
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.4
+	patch
+		of: documentation: Add vendor prefix for Tronfy
+		of: documentation: add bindings documentation for Meson8b
+		ARM: meson: Add DTS for Odroid-C1 and Tronfy MXQ boards
+	keystone/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-dts
 
 next/defconfig
 	renesas/defconfig
@@ -49,8 +65,12 @@ next/defconfig
 		ARM: multi_v7_defconfig: Enable Rockchip display support
 		ARM: multi_v7_defconfig: Enable the Rockchip USB 2.0 phy
 		ARM: multi_v7_defconfig: Support RTC devices commonly used on Rockchip boards
+	keystone/config
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-config
 
 next/drivers
 	renesas/clk
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-clk-for-v4.4
+	at91/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-cleanup-4.4
 
