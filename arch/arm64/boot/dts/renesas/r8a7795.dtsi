@@ -51,6 +51,29 @@
 		clock-frequency = <0>;
 	};
 
+	/*
+	 * The external audio clocks are configured as 0 Hz fixed frequency
+	 * clocks by default.
+	 * Boards that provide audio clocks should override them.
+	 */
+	audio_clk_a: audio_clk_a {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	audio_clk_b: audio_clk_b {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	audio_clk_c: audio_clk_c {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -227,9 +250,9 @@
 					"ch4", "ch5", "ch6", "ch7",
 					"ch8", "ch9", "ch10", "ch11",
 					"ch12", "ch13", "ch14", "ch15";
-			clocks = <&mstp5_clks R8A7795_CLK_AUDIO_DMAC0>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 502>;
 			clock-names = "fck";
+			power-domains = <&cpg>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
@@ -259,9 +282,9 @@
 					"ch4", "ch5", "ch6", "ch7",
 					"ch8", "ch9", "ch10", "ch11",
 					"ch12", "ch13", "ch14", "ch15";
-			clocks = <&mstp5_clks R8A7795_CLK_AUDIO_DMAC1>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 501>;
 			clock-names = "fck";
+			power-domains = <&cpg>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
@@ -310,8 +333,8 @@
 					  "ch16", "ch17", "ch18", "ch19",
 					  "ch20", "ch21", "ch22", "ch23",
 					  "ch24";
-			clocks = <&mstp8_clks R8A7795_CLK_ETHERAVB>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 812>;
+			power-domains = <&cpg>;
 			phy-mode = "rgmii-id";
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -403,8 +426,8 @@
 			compatible = "renesas,i2c-r8a7795";
 			reg = <0 0xe6500000 0 0x40>;
 			interrupts = <GIC_SPI 287 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp9_clks R8A7795_CLK_I2C0>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 931>;
+			power-domains = <&cpg>;
 			status = "disabled";
 		};
 
@@ -414,8 +437,8 @@
 			compatible = "renesas,i2c-r8a7795";
 			reg = <0 0xe6508000 0 0x40>;
 			interrupts = <GIC_SPI 288 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp9_clks R8A7795_CLK_I2C1>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 930>;
+			power-domains = <&cpg>;
 			status = "disabled";
 		};
 
@@ -425,8 +448,8 @@
 			compatible = "renesas,i2c-r8a7795";
 			reg = <0 0xe6510000 0 0x40>;
 			interrupts = <GIC_SPI 286 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp9_clks R8A7795_CLK_I2C2>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 929>;
+			power-domains = <&cpg>;
 			status = "disabled";
 		};
 
@@ -436,8 +459,8 @@
 			compatible = "renesas,i2c-r8a7795";
 			reg = <0 0xe66d0000 0 0x40>;
 			interrupts = <GIC_SPI 290 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp9_clks R8A7795_CLK_I2C3>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 928>;
+			power-domains = <&cpg>;
 			status = "disabled";
 		};
 
@@ -447,8 +470,8 @@
 			compatible = "renesas,i2c-r8a7795";
 			reg = <0 0xe66d8000 0 0x40>;
 			interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp9_clks R8A7795_CLK_I2C4>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 927>;
+			power-domains = <&cpg>;
 			status = "disabled";
 		};
 
@@ -458,8 +481,8 @@
 			compatible = "renesas,i2c-r8a7795";
 			reg = <0 0xe66e0000 0 0x40>;
 			interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp9_clks R8A7795_CLK_I2C5>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 919>;
+			power-domains = <&cpg>;
 			status = "disabled";
 		};
 
@@ -469,8 +492,8 @@
 			compatible = "renesas,i2c-r8a7795";
 			reg = <0 0xe66e8000 0 0x40>;
 			interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp9_clks R8A7795_CLK_I2C6>;
-			power-domains = <&cpg_clocks>;
+			clocks = <&cpg CPG_MOD 918>;
+			power-domains = <&cpg>;
 			status = "disabled";
 		};
 
@@ -495,31 +518,35 @@
 				<0 0xec740000 0 0x200>;  /* Audio DMAC peri peri*/
 			reg-names = "scu", "adg", "ssiu", "ssi", "audmapp";
 
-			clocks = <&mstp10_clks R8A7795_CLK_SSI_ALL>,
-				<&mstp10_clks R8A7795_CLK_SSI9>, <&mstp10_clks R8A7795_CLK_SSI8>,
-				<&mstp10_clks R8A7795_CLK_SSI7>, <&mstp10_clks R8A7795_CLK_SSI6>,
-				<&mstp10_clks R8A7795_CLK_SSI5>, <&mstp10_clks R8A7795_CLK_SSI4>,
-				<&mstp10_clks R8A7795_CLK_SSI3>, <&mstp10_clks R8A7795_CLK_SSI2>,
-				<&mstp10_clks R8A7795_CLK_SSI1>, <&mstp10_clks R8A7795_CLK_SSI0>,
-				<&mstp10_clks R8A7795_CLK_SCU_SRC9>, <&mstp10_clks R8A7795_CLK_SCU_SRC8>,
-				<&mstp10_clks R8A7795_CLK_SCU_SRC7>, <&mstp10_clks R8A7795_CLK_SCU_SRC6>,
-				<&mstp10_clks R8A7795_CLK_SCU_SRC5>, <&mstp10_clks R8A7795_CLK_SCU_SRC4>,
-				<&mstp10_clks R8A7795_CLK_SCU_SRC3>, <&mstp10_clks R8A7795_CLK_SCU_SRC2>,
-				<&mstp10_clks R8A7795_CLK_SCU_SRC1>, <&mstp10_clks R8A7795_CLK_SCU_SRC0>,
-				<&mstp10_clks R8A7795_CLK_SCU_CTU0_MIX0>, <&mstp10_clks R8A7795_CLK_SCU_CTU1_MIX1>,
-				<&mstp10_clks R8A7795_CLK_SCU_CTU0_MIX0>, <&mstp10_clks R8A7795_CLK_SCU_CTU1_MIX1>,
-				<&mstp10_clks R8A7795_CLK_SCU_DVC0>, <&mstp10_clks R8A7795_CLK_SCU_DVC1>,
-				<&audio_clk_a>, <&audio_clk_b>, <&audio_clk_c>, <&s0d4_clk>;
+			clocks = <&cpg CPG_MOD 1005>,
+				 <&cpg CPG_MOD 1006>, <&cpg CPG_MOD 1007>,
+				 <&cpg CPG_MOD 1008>, <&cpg CPG_MOD 1009>,
+				 <&cpg CPG_MOD 1010>, <&cpg CPG_MOD 1011>,
+				 <&cpg CPG_MOD 1012>, <&cpg CPG_MOD 1013>,
+				 <&cpg CPG_MOD 1014>, <&cpg CPG_MOD 1015>,
+				 <&cpg CPG_MOD 1022>, <&cpg CPG_MOD 1023>,
+				 <&cpg CPG_MOD 1024>, <&cpg CPG_MOD 1025>,
+				 <&cpg CPG_MOD 1026>, <&cpg CPG_MOD 1027>,
+				 <&cpg CPG_MOD 1028>, <&cpg CPG_MOD 1029>,
+				 <&cpg CPG_MOD 1030>, <&cpg CPG_MOD 1031>,
+				 <&cpg CPG_MOD 1021>, <&cpg CPG_MOD 1020>,
+				 <&cpg CPG_MOD 1021>, <&cpg CPG_MOD 1020>,
+				 <&cpg CPG_MOD 1019>, <&cpg CPG_MOD 1018>,
+				 <&audio_clk_a>, <&audio_clk_b>,
+				 <&audio_clk_c>,
+				 <&cpg CPG_CORE R8A7795_CLK_S0D4>;
 			clock-names = "ssi-all",
-					"ssi.9", "ssi.8", "ssi.7", "ssi.6", "ssi.5",
-					"ssi.4", "ssi.3", "ssi.2", "ssi.1", "ssi.0",
-					"src.9", "src.8", "src.7", "src.6", "src.5",
-					"src.4", "src.3", "src.2", "src.1", "src.0",
-					"ctu.0", "ctu.1",
-					"mix.0", "mix.1",
-					"dvc.0", "dvc.1",
-					"clk_a", "clk_b", "clk_c", "clk_i";
-			power-domains = <&cpg_clocks>;
+				      "ssi.9", "ssi.8", "ssi.7", "ssi.6",
+				      "ssi.5", "ssi.4", "ssi.3", "ssi.2",
+				      "ssi.1", "ssi.0",
+				      "src.9", "src.8", "src.7", "src.6",
+				      "src.5", "src.4", "src.3", "src.2",
+				      "src.1", "src.0",
+				      "ctu.0", "ctu.1",
+				      "mix.0", "mix.1",
+				      "dvc.0", "dvc.1",
+				      "clk_a", "clk_b", "clk_c", "clk_i";
+			power-domains = <&cpg>;
 			status = "disabled";
 
 			rcar_sound,dvc {
