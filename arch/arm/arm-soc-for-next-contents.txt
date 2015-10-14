@@ -1,20 +1,14 @@
 fixes
-	<no branch> (0af822110871400908d5b6f83a8908c45f881d8f)
-		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.3
-	patch
-		arm-cci500: Don't enable PMU driver by default
-	<no branch> (4776dbb3583d10969f991cc89da781884c15979d)
-		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-fixes
-	<no branch> (f594297830b29c8204c421fafe66001178ac0f9a)
-		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-fixes-for-4.3
-	<no branch> (56e86dd4bbeb66a7ad67e20fa045c6f51b4da571)
-		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-fixes-for-v4.3
+	<no branch> (d836ace65ee98d7079bc3c5afdbcc0e27dca20a3)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.3-1
 
 next/fixes-non-critical
 	patch
 		ARM: cns3xxx: pci: avoid potential stack overflow
 	davinci/fixes
 		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.4/fixes
+	patch
+		soc: ti: reset irq affinity before freeing irq
 
 next/cleanup
 	renesas/cleanup
@@ -28,6 +22,8 @@ next/soc
 		contains renesas/clk
 	at91/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-soc
+	patch
+		ARM: meson: Enable Meson8b SoCs
 
 next/dt
 	hisi/dt
@@ -52,6 +48,28 @@ next/dt
 		ARM: meson: Add DTS for Odroid-C1 and Tronfy MXQ boards
 	keystone/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-dts
+	rockchip/dts32
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-dts32-1
+	bcm/dt
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.4/devicetree
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.4-1
+	berlin/dt
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-dt-for-4.4-1
+	berlin/dt64
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-dt-for-4.4-1
+	lpc18xx/dt
+		https://github.com/manabian/linux-lpc tags/lpc18xx_dts_for_4.4
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.4
+	patch
+		ARM: meson6: DTS: Fix wrong reg mapping and IRQ numbers
+	<no branch> (14317946d1da07424dec5d6be3459c393bdf578d)
+		git://github.com/hisilicon/linux-hisi tags/hisi-soc-dt-for-4.4
+	patch
+		ARM64: dts: vexpress: Use a symlink to vexpress-v2m-rs1.dtsi from arch=arm
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt-1
 
 next/defconfig
 	renesas/defconfig
@@ -73,4 +91,9 @@ next/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-clk-for-v4.4
 	at91/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-cleanup-4.4
+	rockchip/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-drivers1
+	drivers/scpi
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/arm-scpi-for-v4.4
+
 
