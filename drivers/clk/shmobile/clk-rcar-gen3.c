@@ -77,6 +77,31 @@ static u32 rcar_gen3_read_mode_pins(void)
 #define CPG_FRQCRC_ZFC_MASK		(0x1f << 8)
 #define CPG_FRQCRC_ZFC_SHIFT		8
 
+#define GEN3_PRR			0xFFF00044 /* Product register */
+#define PRODUCT_ID_MASK		(0x7f << 8) /* R-Car H3: PRODUCT[14:8] bits */
+#define RCAR_H3_PRODUCT_ID		(0x4f << 8) /* 0b1001111 */
+#define PRODUCT_VERSION_MASK	0xff	/* R-Car H3: CUT[7:0] bits*/
+#define PRODUCT_VERSION_WS1_0	0
+
+int check_product_version(u32 product_bits)
+{
+	static u32 prr_value;
+	int ret;
+	void __iomem *prr = ioremap_nocache(GEN3_PRR, 4);
+
+	BUG_ON(!prr);
+	prr_value = ioread32(prr);
+	prr_value &= PRODUCT_ID_MASK | PRODUCT_VERSION_MASK;
+	if (product_bits == prr_value)
+		ret = 0;
+	else if (product_bits < prr_value)
+		ret = -1;
+	else
+		ret = 1;
+	iounmap(prr);
+
+	return ret;
+}
 
 struct cpg_z_clk {
 	struct clk_hw hw;
@@ -535,6 +560,12 @@ rcar_gen3_cpg_register_clock(struct device_node *np, struct rcar_gen3_cpg *cpg,
 
 		parent_name = "main";
 		mult = ((value >> 24) & ((1 << 7) - 1)) + 1;
+		/* Start clock issue W/A */
+		if (!check_product_version(
+			RCAR_H3_PRODUCT_ID|PRODUCT_VERSION_WS1_0)) {
+			mult *= 2; /* Don't divide PLL0 output for 2 */
+		}
+		/* End clock issue W/A */
 	} else if (!strcmp(name, "pll1")) {
 		parent_name = "main";
 		mult = config->pll1_mult / 2;
