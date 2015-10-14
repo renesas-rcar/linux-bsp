@@ -572,9 +572,13 @@
 						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
 						 <&s2d1_clk>,
 						 <&s2d1_clk>, <&s2d1_clk>,
-						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>;
+						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
+						 <&s2d1_clk>, <&s2d1_clk>, <&s2d1_clk>,
+						 <&s2d1_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
+						R8A7795_CLK_FCPVD3 R8A7795_CLK_FCPVD2
+						R8A7795_CLK_FCPVD1 R8A7795_CLK_FCPVD0
 						R8A7795_CLK_FCPVB1 R8A7795_CLK_FCPVB0
 						R8A7795_CLK_FCPVI2 R8A7795_CLK_FCPVI1
 						R8A7795_CLK_FCPVI0
@@ -586,7 +590,9 @@
 						R8A7795_CLK_VSPI2 R8A7795_CLK_VSPI1
 						R8A7795_CLK_VSPI0
 					>;
-					clock-output-names = "fcpvb1", "fcpvb0",
+					clock-output-names = "fcpvd3", "fcpvd2",
+							     "fcpvd1", "fcpvd0",
+							     "fcpvb1", "fcpvb0",
 								 "fcpvi2", "fcpvi1", "fcpvi0",
 								 "fcpf2", "fcpf1", "fcpf0",
 							     "vsp1-du3", "vsp1-du2",
@@ -1260,7 +1266,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea20000 0 0x8000>;
 			interrupts = <0 466 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp6_clks R8A7795_CLK_VSPD0>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPD0>, <&mstp6_clks R8A7795_CLK_FCPVD0>;
 
 			renesas,has-bru;
 			renesas,has-lif;
@@ -1272,7 +1278,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea28000 0 0x8000>;
 			interrupts = <0 467 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp6_clks R8A7795_CLK_VSPD1>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPD1>, <&mstp6_clks R8A7795_CLK_FCPVD1>;
 
 			renesas,has-bru;
 			renesas,has-lif;
@@ -1284,7 +1290,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea30000 0 0x8000>;
 			interrupts = <0 468 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp6_clks R8A7795_CLK_VSPD2>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPD2>, <&mstp6_clks R8A7795_CLK_FCPVD2>;
 
 			renesas,has-bru;
 			renesas,has-lif;
@@ -1296,7 +1302,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea38000 0 0x8000>;
 			interrupts = <0 469 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp6_clks R8A7795_CLK_VSPD3>;
+			clocks = <&mstp6_clks R8A7795_CLK_VSPD3>, <&mstp6_clks R8A7795_CLK_FCPVD3>;
 
 			renesas,has-bru;
 			renesas,has-lif;
