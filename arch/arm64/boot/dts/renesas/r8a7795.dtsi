@@ -48,6 +48,7 @@
 			reg = <0x0>;
 			device_type = "cpu";
 			enable-method = "psci";
+			clocks = <&cpg_clocks R8A7795_CLK_Z>;
 		};
 
 		a57_1: cpu@1 {
@@ -481,7 +482,8 @@
 				reg = <0 0xe6150000 0 0x1000>;
 				clocks = <&extal_clk>;
 				clock-output-names = "main", "pll0", "pll1","pll2",
-						     "pll3", "pll4";
+						     "pll3", "pll4",
+						     "z";
 				#power-domain-cells = <0>;
 
 				mstp1_clks: mstp1_clks@e6150134 {
