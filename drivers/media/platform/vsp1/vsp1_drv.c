@@ -477,9 +477,17 @@ int vsp1_device_get(struct vsp1_device *vsp1)
 	if (ret < 0)
 		goto done;
 
+	ret = clk_prepare_enable(vsp1->fcpvd_clock);
+	if (ret < 0) {
+		clk_disable_unprepare(vsp1->clock);
+		goto done;
+	}
+
 	ret = vsp1_device_init(vsp1);
 	if (ret < 0) {
 		clk_disable_unprepare(vsp1->clock);
+		if (vsp1->info->fcpvd)
+			clk_disable_unprepare(vsp1->fcpvd_clock);
 		goto done;
 	}
 
@@ -501,9 +509,11 @@ void vsp1_device_put(struct vsp1_device *vsp1)
 {
 	mutex_lock(&vsp1->lock);
 
-	if (--vsp1->ref_count == 0)
+	if (--vsp1->ref_count == 0) {
 		clk_disable_unprepare(vsp1->clock);
-
+		if (vsp1->info->fcpvd)
+			clk_disable_unprepare(vsp1->fcpvd_clock);
+	}
 	mutex_unlock(&vsp1->lock);
 }
 
@@ -524,6 +534,8 @@ static int vsp1_pm_suspend(struct device *dev)
 	vsp1_pipelines_suspend(vsp1);
 
 	clk_disable_unprepare(vsp1->clock);
+	if (vsp1->info->fcpvd)
+		clk_disable_unprepare(vsp1->fcpvd_clock);
 
 	return 0;
 }
@@ -538,6 +550,8 @@ static int vsp1_pm_resume(struct device *dev)
 		return 0;
 
 	clk_prepare_enable(vsp1->clock);
+	if (vsp1->info->fcpvd)
+		clk_prepare_enable(vsp1->fcpvd_clock);
 
 	vsp1_pipelines_resume(vsp1);
 
@@ -627,10 +641,18 @@ static int vsp1_probe(struct platform_device *pdev)
 	if (IS_ERR(vsp1->mmio))
 		return PTR_ERR(vsp1->mmio);
 
-	vsp1->clock = devm_clk_get(&pdev->dev, NULL);
+	vsp1->clock = of_clk_get(vsp1->dev->of_node, 0);
 	if (IS_ERR(vsp1->clock)) {
 		dev_err(&pdev->dev, "failed to get clock\n");
 		return PTR_ERR(vsp1->clock);
+	}
+
+	if (vsp1->info->fcpvd) {
+		vsp1->fcpvd_clock = of_clk_get(vsp1->dev->of_node, 1);
+		if (IS_ERR(vsp1->fcpvd_clock)) {
+			dev_err(&pdev->dev, "failed to get fcpvd clock\n");
+			return PTR_ERR(vsp1->fcpvd_clock);
+		}
 	}
 
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
@@ -670,16 +692,19 @@ static int vsp1_remove(struct platform_device *pdev)
 static const struct vsp1_device_info vsp1_gen2_info = {
 	.num_bru_inputs = 4,
 	.uapi = true,
+	.fcpvd = false,
 };
 
 static const struct vsp1_device_info vsp1_gen2_vspd_info = {
 	.num_bru_inputs = 4,
 	.uapi = false,
+	.fcpvd = false,
 };
 
 static const struct vsp1_device_info vsp2_gen3_vspd_info = {
 	.num_bru_inputs = 5,
 	.uapi = false,
+	.fcpvd = true,
 };
 
 static const struct of_device_id vsp1_of_match[] = {
