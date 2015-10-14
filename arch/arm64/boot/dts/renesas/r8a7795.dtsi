@@ -40,6 +40,7 @@
 			reg = <0x0>;
 			device_type = "cpu";
 			enable-method = "psci";
+			clocks =<&cpg CPG_CORE R8A7795_CLK_Z>;
 		};
 
 		a57_1: cpu@1 {
