@@ -37,16 +37,50 @@
 #include "vsp1_dl.h"
 #endif
 
+#define VSP1_UT_IRQ	0x01
+
+static unsigned int vsp1_debug;	/* 1 to enable debug output */
+module_param_named(debug, vsp1_debug, int, 0600);
+static int underrun_vspd[4];
+module_param_array(underrun_vspd, int, NULL, 0600);
+
+#ifdef CONFIG_VIDEO_RENESAS_DEBUG
+#define VSP1_IRQ_DEBUG(fmt, args...)					\
+	do {								\
+		if (unlikely(vsp1_debug & VSP1_UT_IRQ))			\
+			vsp1_ut_debug_printk(__func__, fmt, ##args);	\
+	} while (0)
+#else
+#define VSP1_IRQ_DEBUG(fmt, args...)
+#endif
+
+void vsp1_ut_debug_printk(const char *function_name, const char *format, ...)
+{
+	struct va_format vaf;
+	va_list args;
+
+	va_start(args, format);
+	vaf.fmt = format;
+	vaf.va = &args;
+
+	printk(KERN_DEBUG "[" "vsp1" ":%s] %pV", function_name, &vaf);
+
+	va_end(args);
+}
+
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
  */
 
 static irqreturn_t vsp1_irq_handler(int irq, void *data)
 {
-	u32 mask = VI6_WFP_IRQ_STA_DFE | VI6_WFP_IRQ_STA_FRE;
+	u32 mask = VI6_WFP_IRQ_STA_DFE | VI6_WFP_IRQ_STA_FRE
+				       | VI6_WFP_IRQ_STA_UND;
+
 	struct vsp1_device *vsp1 = data;
 	irqreturn_t ret = IRQ_NONE;
 	unsigned int i;
+	unsigned int vsp_und_cnt = 0;
 
 	for (i = 0; i < vsp1->pdata.wpf_count; ++i) {
 		struct vsp1_rwpf *wpf = vsp1->wpf[i];
@@ -59,6 +93,14 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		pipe = to_vsp1_pipeline(&wpf->entity.subdev.entity);
 		status = vsp1_read(vsp1, VI6_WPF_IRQ_STA(i));
 		vsp1_write(vsp1, VI6_WPF_IRQ_STA(i), ~status & mask);
+
+		if (vsp1_debug && (status & VI6_WFP_IRQ_STA_UND)) {
+			vsp_und_cnt = ++underrun_vspd[vsp1->index];
+
+			VSP1_IRQ_DEBUG(
+				"Under flow occurred num[%d] at VSPD (%s)\n",
+				vsp_und_cnt, dev_name(vsp1->dev));
+		}
 
 		if (status & VI6_WFP_IRQ_STA_FRE) {
 			vsp1_pipeline_frame_end(pipe);
@@ -674,6 +716,17 @@ static int vsp1_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to create entities\n");
 		return ret;
 	}
+
+	if (strcmp(dev_name(vsp1->dev), "fea20000.vsp2") == 0)
+		vsp1->index = 0;
+	else if (strcmp(dev_name(vsp1->dev), "fea28000.vsp2") == 0)
+		vsp1->index = 1;
+	else if (strcmp(dev_name(vsp1->dev), "fea30000.vsp2") == 0)
+		vsp1->index = 2;
+	else if (strcmp(dev_name(vsp1->dev), "fea38000.vsp2") == 0)
+		vsp1->index = 3;
+
+	vsp1_debug = 0;
 
 	platform_set_drvdata(pdev, vsp1);
 
