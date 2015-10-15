@@ -1262,6 +1262,59 @@
 			renesas,#ch = <2>;
 		};
 
+		vsp2@vspmvspb0 {
+			compatible = "renesas,vsp2";
+			renesas,has-bru;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,#rpf = <5>;
+			renesas,#uds = <0>;
+			renesas,#wpf = <1>;
+		};
+
+		vsp2@vspmvspb1 {
+			compatible = "renesas,vsp2";
+			renesas,has-bru;
+			renesas,#rpf = <5>;
+			renesas,#rbu = <1>;
+			renesas,#uds = <0>;
+			renesas,#wpf = <1>;
+		};
+
+		vsp2@vspmvspi0 {
+			compatible = "renesas,vsp2";
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,#rpf = <1>;
+			renesas,#uds = <1>;
+			renesas,#wpf = <1>;
+		};
+
+		vsp2@vspmvspi1 {
+			compatible = "renesas,vsp2";
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,#rpf = <1>;
+			renesas,#uds = <1>;
+			renesas,#wpf = <1>;
+		};
+
+		vsp2@vspmvspi2 {
+			compatible = "renesas,vsp2";
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,#rpf = <1>;
+			renesas,#uds = <1>;
+			renesas,#wpf = <1>;
+		};
+
 		vsp2d0: vsp2@fea20000 {
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea20000 0 0x8000>;
