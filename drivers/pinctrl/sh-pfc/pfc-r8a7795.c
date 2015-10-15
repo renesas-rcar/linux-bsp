@@ -241,6 +241,9 @@ enum {
 	FN_MSIOF3_SCK_D,	FN_MSIOF3_SYNC_D,	FN_MSIOF3_SS1_D,	FN_MSIOF3_TXD_D,
 	FN_MSIOF3_RXD_D,
 
+	/* SATA */
+	FN_SATA_DEVSLP_A,	FN_SATA_DEVSLP_B,
+
 	/* SCIF0 */
 	FN_RX0,		FN_TX0,		FN_SCK0,	FN_RTS0_N_TANS,		FN_CTS0_N,
 	/* SCIF1 */
@@ -533,6 +536,9 @@ enum {
 	MSIOF3_SCK_C_MARK,	MSIOF3_SYNC_C_MARK,	MSIOF3_TXD_C_MARK,	MSIOF3_RXD_C_MARK,
 	MSIOF3_SCK_D_MARK,	MSIOF3_SYNC_D_MARK,	MSIOF3_SS1_D_MARK,	MSIOF3_TXD_D_MARK,
 	MSIOF3_RXD_D_MARK,
+
+	/* SATA */
+	SATA_DEVSLP_A_MARK,	SATA_DEVSLP_B_MARK,
 
 	/* SCIF0 */
 	RX0_MARK,	TX0_MARK,	SCK0_MARK,	RTS0_N_TANS_MARK,	CTS0_N_MARK,
@@ -884,6 +890,7 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_DATA(IP9_19_16,	SD2_DAT3),
 
 	PINMUX_IPSR_DATA(IP9_23_20,	SD2_DS),
+	PINMUX_IPSR_MODS(IP9_23_20,	SATA_DEVSLP_B,		SEL_SCIF_1),
 
 	PINMUX_IPSR_DATA(IP9_27_24,	SD3_DAT4),
 	PINMUX_IPSR_MODS(IP9_27_24,	SD2_CD_A,	SEL_SDHI2_0),
@@ -1056,6 +1063,7 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_DATA(IP15_7_4,	USB2_OVC),
 
 	PINMUX_IPSR_DATA(IP15_11_8,	SSI_SDATA6),
+	PINMUX_IPSR_MODS(IP15_11_8,	SATA_DEVSLP_A,		SEL_SCIF_0),
 
 	PINMUX_IPSR_DATA(IP15_15_12,	SSI_SCK78),
 	PINMUX_IPSR_MODS(IP15_15_12,	HRX2_B,			SEL_HSCIF2_1),
@@ -2266,6 +2274,21 @@ static const unsigned int msiof3_rxd_d_pins[] = {
 static const unsigned int msiof3_rxd_d_mux[] = {
 	MSIOF3_RXD_D_MARK,
 };
+/* - SATA --------------------------------------------------------------------*/
+static const unsigned int sata0_devslp_a_pins[] = {
+	/* DEVSLP */
+	RCAR_GP_PIN(6, 16),
+};
+static const unsigned int sata0_devslp_a_mux[] = {
+	SATA_DEVSLP_A_MARK,
+};
+static const unsigned int sata0_devslp_b_pins[] = {
+	/* DEVSLP */
+	RCAR_GP_PIN(4, 6),
+};
+static const unsigned int sata0_devslp_b_mux[] = {
+	SATA_DEVSLP_B_MARK,
+};
 /* - SCIF0 ------------------------------------------------------------------ */
 static const unsigned int scif0_data_pins[] = {
 	/* RX, TX */
@@ -3032,6 +3055,8 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(msiof3_ss1_d),
 	SH_PFC_PIN_GROUP(msiof3_txd_d),
 	SH_PFC_PIN_GROUP(msiof3_rxd_d),
+	SH_PFC_PIN_GROUP(sata0_devslp_a),
+	SH_PFC_PIN_GROUP(sata0_devslp_b),
 	SH_PFC_PIN_GROUP(scif0_data),
 	SH_PFC_PIN_GROUP(scif0_clk),
 	SH_PFC_PIN_GROUP(scif0_ctrl),
@@ -3325,6 +3350,11 @@ static const char * const msiof3_groups[] = {
 	"msiof3_rxd_d",
 };
 
+static const char * const sata0_groups[] = {
+	"sata0_devslp_a",
+	"sata0_devslp_b",
+};
+
 static const char * const scif0_groups[] = {
 	"scif0_data",
 	"scif0_clk",
@@ -3472,6 +3502,7 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(i2c1),
 	SH_PFC_FUNCTION(i2c2),
 	SH_PFC_FUNCTION(i2c6),
+	SH_PFC_FUNCTION(sata0),
 	SH_PFC_FUNCTION(scif0),
 	SH_PFC_FUNCTION(scif1),
 	SH_PFC_FUNCTION(scif2),
@@ -4155,7 +4186,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP9_23_20 [4] */
 		FN_SD2_DS, 0, 0, 0,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_SATA_DEVSLP_B, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP9_19_16 [4] */
 		FN_SD2_DAT3, 0, 0, 0,
@@ -4422,7 +4453,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP15_11_8 [4] */
 		FN_SSI_SDATA6, 0, 0, 0,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		FN_SATA_DEVSLP_A, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP15_7_4 [4] */
 		FN_SSI_WS6, FN_USB0_OVC, 0, 0,
