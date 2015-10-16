@@ -553,13 +553,16 @@
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150144 0 4>, <0 0xe615003c 0 4>;
-					clocks = <&s3d4_clk>, <&s3d4_clk>;
+					clocks = <&s3d4_clk>, <&s3d4_clk>,
+						<&extal_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_AUDIO_DMAC0 R8A7795_CLK_AUDIO_DMAC1
+						R8A7795_CLK_THERMAL
 					>;
 					clock-output-names =
-						"audio_dmac0", "audio_dmac1";
+						"audio_dmac0", "audio_dmac1",
+						"thermal";
 				};
 
 				mstp6_clks: mstp6_clks@e6150148 {
@@ -1451,6 +1454,89 @@
 				port@3 {
 					reg = <3>;
 					du_out_lvds: endpoint {
+					};
+				};
+			};
+		};
+
+		tsc1: thermal@0xe6198000 {
+			compatible = "renesas,thermal-r8a7795",
+					"renesas,rcar-thermal";
+			reg = <0 0xe6198000 0 0x5c>;
+			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp5_clks R8A7795_CLK_THERMAL>;
+			#thermal-sensor-cells = <0>;
+			id = <0>;
+			status = "okay";
+		};
+
+		tsc2: thermal@0xe61A0000 {
+			compatible = "renesas,thermal-r8a7795",
+					"renesas,rcar-thermal";
+			reg = <0 0xe61A0000 0 0x5c>;
+			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp5_clks R8A7795_CLK_THERMAL>;
+			#thermal-sensor-cells = <0>;
+			id = <1>;
+			status = "okay";
+		};
+
+		tsc3: thermal@0xe61A8000 {
+			compatible = "renesas,thermal-r8a7795",
+					"renesas,rcar-thermal";
+			reg = <0 0xe61A8000 0 0x5c>;
+			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp5_clks R8A7795_CLK_THERMAL>;
+			#thermal-sensor-cells = <0>;
+			id = <2>;
+			status = "okay";
+		};
+
+		thermal-zones {
+			sensor1_thermal: cpu1-thermal {
+				polling-delay-passive = <250>;
+				polling-delay = <1000>;
+
+				/* sensor ID */
+				thermal-sensors = <&tsc1>;
+
+				trips {
+					sensor1_crit: sensor1-crit {
+						temperature = <90000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+
+			sensor2_thermal: cpu2-thermal {
+				polling-delay-passive = <250>;
+				polling-delay = <1000>;
+
+				/* sensor ID */
+				thermal-sensors = <&tsc2>;
+
+				trips {
+					sensor2_crit: sensor2-crit {
+						temperature = <90000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+			};
+
+			sensor3_thermal: cpu3-thermal {
+				polling-delay-passive = <250>;
+				polling-delay = <1000>;
+
+				/* sensor ID */
+				thermal-sensors = <&tsc3>;
+
+				trips {
+					sensor3_crit: sensor3-crit {
+						temperature = <90000>;
+						hysteresis = <2000>;
+						type = "critical";
 					};
 				};
 			};
