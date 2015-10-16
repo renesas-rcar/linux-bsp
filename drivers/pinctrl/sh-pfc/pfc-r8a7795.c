@@ -205,6 +205,10 @@ enum {
 	FN_SCL6_B,		FN_SDA6_B,
 	FN_SCL6_C,		FN_SDA6_C,
 
+	/* INTC */
+	FN_IRQ0,	FN_IRQ1,	FN_IRQ2,
+	FN_IRQ3,	FN_IRQ4,	FN_IRQ5,
+
 	/* MSIOF0 */
 	FN_MSIOF0_SCK,		FN_MSIOF0_SYNC,		FN_MSIOF0_SS1,		FN_MSIOF0_SS2,
 	FN_MSIOF0_TXD,		FN_MSIOF0_RXD,
@@ -516,6 +520,10 @@ enum {
 	SCL6_B_MARK,		SDA6_B_MARK,
 	SCL6_C_MARK,		SDA6_C_MARK,
 
+	/* INTC */
+	IRQ0_MARK,	IRQ1_MARK,	IRQ2_MARK,
+	IRQ3_MARK,	IRQ4_MARK,	IRQ5_MARK,
+
 	/* MSIOF0 */
 	MSIOF0_SCK_MARK,	MSIOF0_SYNC_MARK,	MSIOF0_SS1_MARK,	MSIOF0_SS2_MARK,
 	MSIOF0_TXD_MARK,	MSIOF0_RXD_MARK,
@@ -698,22 +706,28 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_MODS(IP0_23_20,	MSIOF2_TXD_C,		SEL_MSIOF2_3),
 	PINMUX_IPSR_MODS(IP0_23_20,	RTS4_N_TANS_A,		SEL_SCIF4_0),
 
+	PINMUX_IPSR_DATA(IP0_27_24,	IRQ0),
 	PINMUX_IPSR_DATA(IP0_27_24,	DU_CDE),
 
+	PINMUX_IPSR_DATA(IP0_31_28,	IRQ1),
 	PINMUX_IPSR_DATA(IP0_31_28,	DU_DISP),
 
 	/* IPSR1 */
+	PINMUX_IPSR_DATA(IP1_3_0,	IRQ2),
 	PINMUX_IPSR_DATA(IP1_3_0,	DU_EXODDF_DU_ODDF_DISP_CDE),
 	PINMUX_IPSR_MODS(IP1_3_0,	PWM3_B,			SEL_PWM3_1),
 
+	PINMUX_IPSR_DATA(IP1_7_4,	IRQ3),
 	PINMUX_IPSR_DATA(IP1_7_4,	DU_DOTCLKOUT1),
 	PINMUX_IPSR_MODS(IP1_7_4,	PWM4_B,			SEL_PWM4_1),
 
 	PINMUX_IPSR_DATA(IP1_19_16,	AVB_AVTP_PPS),
 
+	PINMUX_IPSR_DATA(IP1_11_8,	IRQ4),
 	PINMUX_IPSR_DATA(IP1_11_8,	DU_EXHSYNC_DU_HSYNC),
 	PINMUX_IPSR_MODS(IP1_11_8,	PWM5_B,			SEL_PWM5_1),
 
+	PINMUX_IPSR_DATA(IP1_15_12,	IRQ5),
 	PINMUX_IPSR_DATA(IP1_15_12,	DU_EXVSYNC_DU_VSYNC),
 	PINMUX_IPSR_MODS(IP1_15_12,	PWM6_B,			SEL_PWM6_1),
 
@@ -1662,6 +1676,49 @@ static const unsigned int i2c6_c_pins[] = {
 };
 static const unsigned int i2c6_c_mux[] = {
 	SCL6_C_MARK, SDA6_C_MARK,
+};
+/* - INTC ------------------------------------------------------------------- */
+static const unsigned int intc_irq0_pins[] = {
+	/* IRQ */
+	RCAR_GP_PIN(2, 0),
+};
+static const unsigned int intc_irq0_mux[] = {
+	IRQ0_MARK,
+};
+static const unsigned int intc_irq1_pins[] = {
+	/* IRQ */
+	RCAR_GP_PIN(2, 1),
+};
+static const unsigned int intc_irq1_mux[] = {
+	IRQ1_MARK,
+};
+static const unsigned int intc_irq2_pins[] = {
+	/* IRQ */
+	RCAR_GP_PIN(2, 2),
+};
+static const unsigned int intc_irq2_mux[] = {
+	IRQ2_MARK,
+};
+static const unsigned int intc_irq3_pins[] = {
+	/* IRQ */
+	RCAR_GP_PIN(2, 3),
+};
+static const unsigned int intc_irq3_mux[] = {
+	IRQ3_MARK,
+};
+static const unsigned int intc_irq4_pins[] = {
+	/* IRQ */
+	RCAR_GP_PIN(2, 4),
+};
+static const unsigned int intc_irq4_mux[] = {
+	IRQ4_MARK,
+};
+static const unsigned int intc_irq5_pins[] = {
+	/* IRQ */
+	RCAR_GP_PIN(2, 5),
+};
+static const unsigned int intc_irq5_mux[] = {
+	IRQ5_MARK,
 };
 /* - MSIOF0 ----------------------------------------------------------------- */
 static const unsigned int msiof0_clk_pins[] = {
@@ -3104,6 +3161,12 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(i2c6_a),
 	SH_PFC_PIN_GROUP(i2c6_b),
 	SH_PFC_PIN_GROUP(i2c6_c),
+	SH_PFC_PIN_GROUP(intc_irq0),
+	SH_PFC_PIN_GROUP(intc_irq1),
+	SH_PFC_PIN_GROUP(intc_irq2),
+	SH_PFC_PIN_GROUP(intc_irq3),
+	SH_PFC_PIN_GROUP(intc_irq4),
+	SH_PFC_PIN_GROUP(intc_irq5),
 	SH_PFC_PIN_GROUP(msiof0_clk),
 	SH_PFC_PIN_GROUP(msiof0_sync),
 	SH_PFC_PIN_GROUP(msiof0_ss1),
@@ -3400,6 +3463,15 @@ static const char * const i2c6_groups[] = {
 	"i2c6_c",
 };
 
+static const char * const intc_groups[] = {
+	"intc_irq0",
+	"intc_irq1",
+	"intc_irq2",
+	"intc_irq3",
+	"intc_irq4",
+	"intc_irq5",
+};
+
 static const char * const msiof0_groups[] = {
 	"msiof0_clk",
 	"msiof0_sync",
@@ -3691,6 +3763,7 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(i2c1),
 	SH_PFC_FUNCTION(i2c2),
 	SH_PFC_FUNCTION(i2c6),
+	SH_PFC_FUNCTION(intc),
 	SH_PFC_FUNCTION(pwm0),
 	SH_PFC_FUNCTION(pwm1),
 	SH_PFC_FUNCTION(pwm2),
@@ -3992,12 +4065,12 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 	},
 	{ PINMUX_CFG_REG("IPSR0", 0xe6060200, 32, 4) {
 		/* IP0_31_28 [4] */
-		0, 0, 0, FN_DU_DISP,
+		FN_IRQ1, 0, 0, FN_DU_DISP,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP0_27_24 [4] */
-		0, 0, 0, FN_DU_CDE,
+		FN_IRQ0, 0, 0, FN_DU_CDE,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -4054,22 +4127,22 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_15_12 [4] */
-		0, 0, 0, FN_DU_EXVSYNC_DU_VSYNC,
+		FN_IRQ5, 0, 0, FN_DU_EXVSYNC_DU_VSYNC,
 		0, 0, 0, 0,
 		0, FN_PWM6_B, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_11_8 [4] */
-		0, 0, 0, FN_DU_EXHSYNC_DU_HSYNC,
+		FN_IRQ4, 0, 0, FN_DU_EXHSYNC_DU_HSYNC,
 		0, 0, 0, 0,
 		0, FN_PWM5_B, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_7_4 [4] */
-		0, 0, 0, FN_DU_DOTCLKOUT1,
+		FN_IRQ3, 0, 0, FN_DU_DOTCLKOUT1,
 		0, 0, 0, 0,
 		0, FN_PWM4_B, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_3_0 [4] */
-		0, 0, 0, FN_DU_EXODDF_DU_ODDF_DISP_CDE,
+		FN_IRQ2, 0, 0, FN_DU_EXODDF_DU_ODDF_DISP_CDE,
 		0, 0, 0, 0,
 		0, FN_PWM3_B, 0, 0,
 		0, 0, 0, 0, }
