@@ -241,6 +241,21 @@ enum {
 	FN_MSIOF3_SCK_D,	FN_MSIOF3_SYNC_D,	FN_MSIOF3_SS1_D,	FN_MSIOF3_TXD_D,
 	FN_MSIOF3_RXD_D,
 
+	/* PWM0 */
+	FN_PWM0,
+	/* PWM1 */
+	FN_PWM1_A,	FN_PWM1_B,
+	/* PWM2 */
+	FN_PWM2_A,	FN_PWM2_B,
+	/* PWM3 */
+	FN_PWM3_A,	FN_PWM3_B,
+	/* PWM4 */
+	FN_PWM4_A,	FN_PWM4_B,
+	/* PWM5 */
+	FN_PWM5_A,	FN_PWM5_B,
+	/* PWM6 */
+	FN_PWM6_A,	FN_PWM6_B,
+
 	/* SATA */
 	FN_SATA_DEVSLP_A,	FN_SATA_DEVSLP_B,
 
@@ -537,6 +552,21 @@ enum {
 	MSIOF3_SCK_D_MARK,	MSIOF3_SYNC_D_MARK,	MSIOF3_SS1_D_MARK,	MSIOF3_TXD_D_MARK,
 	MSIOF3_RXD_D_MARK,
 
+	/* PWM0 */
+	PWM0_MARK,
+	/* PWM1 */
+	PWM1_A_MARK,	PWM1_B_MARK,
+	/* PWM2 */
+	PWM2_A_MARK,	PWM2_B_MARK,
+	/* PWM3 */
+	PWM3_A_MARK,	PWM3_B_MARK,
+	/* PWM4 */
+	PWM4_A_MARK,	PWM4_B_MARK,
+	/* PWM5 */
+	PWM5_A_MARK,	PWM5_B_MARK,
+	/* PWM6 */
+	PWM6_A_MARK,	PWM6_B_MARK,
+
 	/* SATA */
 	SATA_DEVSLP_A_MARK,	SATA_DEVSLP_B_MARK,
 
@@ -674,31 +704,43 @@ static const u16 pinmux_data[] = {
 
 	/* IPSR1 */
 	PINMUX_IPSR_DATA(IP1_3_0,	DU_EXODDF_DU_ODDF_DISP_CDE),
+	PINMUX_IPSR_MODS(IP1_3_0,	PWM3_B,			SEL_PWM3_1),
 
 	PINMUX_IPSR_DATA(IP1_7_4,	DU_DOTCLKOUT1),
+	PINMUX_IPSR_MODS(IP1_7_4,	PWM4_B,			SEL_PWM4_1),
 
 	PINMUX_IPSR_DATA(IP1_19_16,	AVB_AVTP_PPS),
 
 	PINMUX_IPSR_DATA(IP1_11_8,	DU_EXHSYNC_DU_HSYNC),
+	PINMUX_IPSR_MODS(IP1_11_8,	PWM5_B,			SEL_PWM5_1),
 
 	PINMUX_IPSR_DATA(IP1_15_12,	DU_EXVSYNC_DU_VSYNC),
+	PINMUX_IPSR_MODS(IP1_15_12,	PWM6_B,			SEL_PWM6_1),
 
+	PINMUX_IPSR_DATA(IP1_19_16,	PWM0),
+
+	PINMUX_IPSR_MODS(IP1_23_20,	PWM1_A,			SEL_PWM1_0),
 	PINMUX_IPSR_MODS(IP1_23_20,	HRX3_D,			SEL_HSCIF3_3),
 
+	PINMUX_IPSR_MODS(IP1_27_24,	PWM2_A,			SEL_PWM2_0),
 	PINMUX_IPSR_MODS(IP1_27_24,	HTX3_D,			SEL_HSCIF3_3),
 
 	PINMUX_IPSR_DATA(IP1_31_28,	DU_DB0),
 	PINMUX_IPSR_MODS(IP1_31_28,	MSIOF3_SYNC_B,		SEL_MSIOF3_1),
+	PINMUX_IPSR_MODS(IP1_31_28,	PWM3_A,			SEL_PWM3_0),
 
 	/* IPSR2 */
 	PINMUX_IPSR_MODS(IP2_3_0,	MSIOF3_TXD_B,		SEL_MSIOF3_1),
 	PINMUX_IPSR_DATA(IP2_3_0,	DU_DB1),
+	PINMUX_IPSR_MODS(IP2_3_0,	PWM4_A,			SEL_PWM4_0),
 
 	PINMUX_IPSR_MODS(IP2_7_4,	MSIOF3_SCK_B,		SEL_MSIOF3_1),
 	PINMUX_IPSR_DATA(IP2_7_4,	DU_DB2),
+	PINMUX_IPSR_MODS(IP2_7_4,	PWM5_A,			SEL_PWM5_0),
 
 	PINMUX_IPSR_MODS(IP2_11_8,	MSIOF3_RXD_B,		SEL_MSIOF3_1),
 	PINMUX_IPSR_DATA(IP2_11_8,	DU_DB3),
+	PINMUX_IPSR_MODS(IP2_11_8,	PWM6_A,			SEL_PWM6_0),
 
 	PINMUX_IPSR_MODS(IP2_15_12,	MSIOF3_SS1_B,		SEL_MSIOF3_1),
 	PINMUX_IPSR_DATA(IP2_15_12,	DU_DB4),
@@ -720,6 +762,7 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_MODS(IP2_31_28,	HRX4_B,			SEL_HSCIF4_1),
 	PINMUX_IPSR_MODS(IP2_31_28,	SDA6_A,			SEL_I2C6_0),
 	PINMUX_IPSR_MODS(IP2_31_28,	AVB_AVTP_MATCH_B,	SEL_ETHERAVB_1),
+	PINMUX_IPSR_MODS(IP2_31_28,	PWM1_B,			SEL_PWM1_1),
 
 	/* IPSR3 */
 	PINMUX_IPSR_MODS(IP3_3_0,	MSIOF2_SCK_A,		SEL_MSIOF2_0),
@@ -733,6 +776,7 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_MODS(IP3_11_8,	HTX4_B,			SEL_HSCIF4_1),
 	PINMUX_IPSR_MODS(IP3_11_8,	SCL6_A,			SEL_I2C6_0),
 	PINMUX_IPSR_MODS(IP3_11_8,	AVB_AVTP_CAPTURE_B,	SEL_ETHERAVB_1),
+	PINMUX_IPSR_MODS(IP3_11_8,	PWM2_B,			SEL_PWM2_1),
 
 	PINMUX_IPSR_MODS(IP3_15_12,	MSIOF3_SCK_C,		SEL_MSIOF3_2),
 	PINMUX_IPSR_MODS(IP3_15_12,	HRX4_A,			SEL_HSCIF4_0),
@@ -2274,6 +2318,104 @@ static const unsigned int msiof3_rxd_d_pins[] = {
 static const unsigned int msiof3_rxd_d_mux[] = {
 	MSIOF3_RXD_D_MARK,
 };
+/* - PWM0 --------------------------------------------------------------------*/
+static const unsigned int pwm0_pins[] = {
+	/* DEVSLP */
+	RCAR_GP_PIN(2, 6),
+};
+static const unsigned int pwm0_mux[] = {
+	PWM0_MARK,
+};
+/* - PWM1 --------------------------------------------------------------------*/
+static const unsigned int pwm1_a_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(2, 7),
+};
+static const unsigned int pwm1_a_mux[] = {
+	PWM1_A_MARK,
+};
+static const unsigned int pwm1_b_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(1, 8),
+};
+static const unsigned int pwm1_b_mux[] = {
+	PWM1_B_MARK,
+};
+/* - PWM2 --------------------------------------------------------------------*/
+static const unsigned int pwm2_a_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(2, 8),
+};
+static const unsigned int pwm2_a_mux[] = {
+	PWM2_A_MARK,
+};
+static const unsigned int pwm2_b_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(1, 11),
+};
+static const unsigned int pwm2_b_mux[] = {
+	PWM2_B_MARK,
+};
+/* - PWM3 --------------------------------------------------------------------*/
+static const unsigned int pwm3_a_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(1, 0),
+};
+static const unsigned int pwm3_a_mux[] = {
+	PWM3_A_MARK,
+};
+static const unsigned int pwm3_b_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(2, 2),
+};
+static const unsigned int pwm3_b_mux[] = {
+	PWM3_B_MARK,
+};
+/* - PWM4 --------------------------------------------------------------------*/
+static const unsigned int pwm4_a_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(1, 1),
+};
+static const unsigned int pwm4_a_mux[] = {
+	PWM4_A_MARK,
+};
+static const unsigned int pwm4_b_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(2, 3),
+};
+static const unsigned int pwm4_b_mux[] = {
+	PWM4_B_MARK,
+};
+/* - PWM5 --------------------------------------------------------------------*/
+static const unsigned int pwm5_a_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(1, 2),
+};
+static const unsigned int pwm5_a_mux[] = {
+	PWM5_A_MARK,
+};
+static const unsigned int pwm5_b_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(2, 4),
+};
+static const unsigned int pwm5_b_mux[] = {
+	PWM5_B_MARK,
+};
+/* - PWM6 --------------------------------------------------------------------*/
+static const unsigned int pwm6_a_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(1, 3),
+};
+static const unsigned int pwm6_a_mux[] = {
+	PWM6_A_MARK,
+};
+static const unsigned int pwm6_b_pins[] = {
+	/* PWM */
+	RCAR_GP_PIN(2, 5),
+};
+static const unsigned int pwm6_b_mux[] = {
+	PWM6_B_MARK,
+};
 /* - SATA --------------------------------------------------------------------*/
 static const unsigned int sata0_devslp_a_pins[] = {
 	/* DEVSLP */
@@ -3055,6 +3197,19 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(msiof3_ss1_d),
 	SH_PFC_PIN_GROUP(msiof3_txd_d),
 	SH_PFC_PIN_GROUP(msiof3_rxd_d),
+	SH_PFC_PIN_GROUP(pwm0),
+	SH_PFC_PIN_GROUP(pwm1_a),
+	SH_PFC_PIN_GROUP(pwm1_b),
+	SH_PFC_PIN_GROUP(pwm2_a),
+	SH_PFC_PIN_GROUP(pwm2_b),
+	SH_PFC_PIN_GROUP(pwm3_a),
+	SH_PFC_PIN_GROUP(pwm3_b),
+	SH_PFC_PIN_GROUP(pwm4_a),
+	SH_PFC_PIN_GROUP(pwm4_b),
+	SH_PFC_PIN_GROUP(pwm5_a),
+	SH_PFC_PIN_GROUP(pwm5_b),
+	SH_PFC_PIN_GROUP(pwm6_a),
+	SH_PFC_PIN_GROUP(pwm6_b),
 	SH_PFC_PIN_GROUP(sata0_devslp_a),
 	SH_PFC_PIN_GROUP(sata0_devslp_b),
 	SH_PFC_PIN_GROUP(scif0_data),
@@ -3350,6 +3505,40 @@ static const char * const msiof3_groups[] = {
 	"msiof3_rxd_d",
 };
 
+static const char * const pwm0_groups[] = {
+	"pwm0",
+};
+
+static const char * const pwm1_groups[] = {
+	"pwm1_a",
+	"pwm1_b",
+};
+
+static const char * const pwm2_groups[] = {
+	"pwm2_a",
+	"pwm2_b",
+};
+
+static const char * const pwm3_groups[] = {
+	"pwm3_a",
+	"pwm3_b",
+};
+
+static const char * const pwm4_groups[] = {
+	"pwm4_a",
+	"pwm4_b",
+};
+
+static const char * const pwm5_groups[] = {
+	"pwm5_a",
+	"pwm5_b",
+};
+
+static const char * const pwm6_groups[] = {
+	"pwm6_a",
+	"pwm6_b",
+};
+
 static const char * const sata0_groups[] = {
 	"sata0_devslp_a",
 	"sata0_devslp_b",
@@ -3502,6 +3691,13 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(i2c1),
 	SH_PFC_FUNCTION(i2c2),
 	SH_PFC_FUNCTION(i2c6),
+	SH_PFC_FUNCTION(pwm0),
+	SH_PFC_FUNCTION(pwm1),
+	SH_PFC_FUNCTION(pwm2),
+	SH_PFC_FUNCTION(pwm3),
+	SH_PFC_FUNCTION(pwm4),
+	SH_PFC_FUNCTION(pwm5),
+	SH_PFC_FUNCTION(pwm6),
 	SH_PFC_FUNCTION(sata0),
 	SH_PFC_FUNCTION(scif0),
 	SH_PFC_FUNCTION(scif1),
@@ -3840,7 +4036,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP1_31_28 [4] */
 		0, 0, FN_MSIOF3_SYNC_B, 0,
 		0, 0, FN_DU_DB0, 0,
-		0, 0, 0, 0,
+		0, FN_PWM3_A, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_27_24 [4] */
 		0, 0, 0, FN_HTX3_D,
@@ -3848,44 +4044,44 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_23_20 [4] */
-		0, 0, 0, FN_HRX3_D,
+		FN_PWM1_A, 0, 0, FN_HRX3_D,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_19_16 [4] */
-		0, FN_AVB_AVTP_PPS, 0, 0,
+		FN_PWM0, FN_AVB_AVTP_PPS, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_15_12 [4] */
 		0, 0, 0, FN_DU_EXVSYNC_DU_VSYNC,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, FN_PWM6_B, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_11_8 [4] */
 		0, 0, 0, FN_DU_EXHSYNC_DU_HSYNC,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, FN_PWM5_B, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_7_4 [4] */
 		0, 0, 0, FN_DU_DOTCLKOUT1,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, FN_PWM4_B, 0, 0,
 		0, 0, 0, 0,
 		/* IP1_3_0 [4] */
 		0, 0, 0, FN_DU_EXODDF_DU_ODDF_DISP_CDE,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, FN_PWM3_B, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR2", 0xe6060208, 32, 4) {
 		/* IP2_31_28 [4] */
 		0, FN_RX3_B, FN_MSIOF2_SYNC_A, FN_HRX4_B,
 		0, 0, 0, FN_SDA6_A,
-		0, 0, 0, 0,
+		0, FN_PWM1_B, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_27_24 [4] */
-		0, 0, FN_MSIOF2_SS2_A, FN_TX4_B,
+		FN_PWM2_A, 0, FN_MSIOF2_SS2_A, FN_TX4_B,
 		0, 0, FN_DU_DB7, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -3907,17 +4103,17 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP2_11_8 [4] */
 		0, 0, FN_MSIOF3_RXD_B, 0,
 		0, 0, FN_DU_DB3, 0,
-		0, 0, 0, 0,
+		0, FN_PWM6_A, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_7_4 [4] */
 		0, 0, FN_MSIOF3_SCK_B, 0,
 		0, 0, FN_DU_DB2, 0,
-		0, 0, 0, 0,
+		0, FN_PWM5_A, 0, 0,
 		0, 0, 0, 0,
 		/* IP2_3_0 [4] */
 		0, 0, FN_MSIOF3_TXD_B, 0,
 		0, 0, FN_DU_DB1, 0,
-		0, 0, 0, 0,
+		0, FN_PWM4_A, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR3", 0xe606020c, 32, 4) {
@@ -3949,7 +4145,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP3_11_8 [4] */
 		0, FN_TX3_B, FN_MSIOF2_TXD_B, FN_HTX4_B,
 		0, 0, 0, FN_SCL6_A,
-		0, 0, 0, 0,
+		FN_PWM2_B, 0, 0, 0,
 		0, 0, 0, 0,
 		/* IP3_7_4 [4] */
 		0, 0, FN_MSIOF2_RXD_A, FN_RTS4_N_TANS_B,
