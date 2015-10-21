@@ -1482,12 +1482,19 @@ static netdev_tx_t ravb_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (skb_put_padto(skb, ETH_ZLEN))
 		goto drop;
 
-	buffer = PTR_ALIGN(priv->tx_buffers[q][entry], RAVB_ALIGN);
-	memcpy(buffer, skb->data, skb->len);
 	desc = &priv->tx_ring[q][entry];
 	desc->ds_tagl = cpu_to_le16(skb->len);
-	dma_addr = dma_map_single(ndev->dev.parent, buffer, skb->len,
-				  DMA_TO_DEVICE);
+
+	if (priv->chip_id == RCAR_GEN3) {
+		dma_addr = dma_map_single(ndev->dev.parent, skb->data, skb->len,
+					  DMA_TO_DEVICE);
+	} else {
+		buffer = PTR_ALIGN(priv->tx_buffers[q][entry], RAVB_ALIGN);
+		memcpy(buffer, skb->data, skb->len);
+		dma_addr = dma_map_single(ndev->dev.parent, skb->data, skb->len,
+					  DMA_TO_DEVICE);
+	}
+
 	if (dma_mapping_error(&ndev->dev, dma_addr))
 		goto drop;
 	desc->dptr = cpu_to_le32(dma_addr);
