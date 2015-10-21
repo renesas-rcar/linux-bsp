@@ -28,6 +28,7 @@ struct rcar_gen3_cpg {
 
 #define CPG_PLL0CR	0x00d8
 #define CPG_PLL2CR	0x002c
+#define CPG_RCKCR	0x0240
 #define CPG_SD0CKCR	0x0074
 #define CPG_SD1CKCR	0x0078
 #define CPG_SD2CKCR	0x0268
@@ -300,6 +301,19 @@ static struct clk * __init cpg_sd_clk_register(const char *name,
 }
 
 /* -----------------------------------------------------------------------------
+ * RCLK Clock Data
+ */
+static const struct clk_div_table cpg_rclk_div_table[] = {
+			/*                  MD     EXTAL  RCLK  (EXTAL/div)  */
+			/* val       div  : 14 13  (MHz)  (KHz)              */
+	{ 0x0f, 512  },	/* B'00_1111 512  :  0  0  16.66  32.55 (16666/512)  */
+	{ 0x12, 608  },	/* B'01_0010 608  :  0  1  20.00  32.89 (20000/608)  */
+	{ 0x17, 768  },	/* B'01_0111 768  :  1  0  25.00  32.55 (25000/768)  */
+	{ 0x1f, 1024 },	/* B'01_1111 1024 :  1  1  33.33  32.55 (33333/1024) */
+	{ 0, 0 },
+};
+
+/* -----------------------------------------------------------------------------
  * CPG Clock Data
  */
 
@@ -413,6 +427,11 @@ rcar_gen3_cpg_register_clock(struct device_node *np, struct rcar_gen3_cpg *cpg,
 		return cpg_sd_clk_register(name, cpg->reg + CPG_SD2CKCR, np);
 	} else if (!strcmp(name, "sd3")) {
 		return cpg_sd_clk_register(name, cpg->reg + CPG_SD3CKCR, np);
+	} else if (!strcmp(name, "rclk")) {
+		parent_name = of_clk_get_parent_name(np, 0);
+		return clk_register_divider_table(NULL, name, parent_name, 0,
+						  cpg->reg + CPG_RCKCR, 0, 6, 0,
+						  cpg_rclk_div_table, NULL);
 	} else {
 		return ERR_PTR(-EINVAL);
 	}
