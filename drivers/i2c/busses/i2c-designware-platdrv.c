@@ -261,8 +261,10 @@ static int dw_i2c_plat_probe(struct platform_device *pdev)
 	}
 
 	r = i2c_dw_probe(dev);
-	if (r)
+	if (r) {
+		pm_runtime_disable(&pdev->dev);
 		return r;
+	}
 
 	return 0;
 }
