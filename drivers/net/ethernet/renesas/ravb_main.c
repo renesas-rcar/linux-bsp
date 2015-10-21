@@ -205,8 +205,12 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 	priv->tx_skb[q] = NULL;
 
 	/* Free aligned TX buffers */
-	kfree(priv->tx_align[q]);
-	priv->tx_align[q] = NULL;
+	if (priv->tx_buffers[q]) {
+		for (i = 0; i < priv->num_tx_ring[q]; i++)
+			kfree(priv->tx_buffers[q][i]);
+	}
+	kfree(priv->tx_buffers[q]);
+	priv->tx_buffers[q] = NULL;
 
 	if (priv->rx_ring[q]) {
 		ring_size = sizeof(struct ravb_ex_rx_desc) *
@@ -218,7 +222,7 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 
 	if (priv->tx_ring[q]) {
 		ring_size = sizeof(struct ravb_tx_desc) *
-			    (priv->num_tx_ring[q] * NUM_TX_DESC + 1);
+			    (priv->num_tx_ring[q] + 1);
 		dma_free_coherent(ndev->dev.parent, ring_size, priv->tx_ring[q],
 				  priv->tx_desc_dma[q]);
 		priv->tx_ring[q] = NULL;
@@ -233,8 +237,7 @@ static void ravb_ring_format(struct net_device *ndev, int q)
 	struct ravb_tx_desc *tx_desc;
 	struct ravb_desc *desc;
 	int rx_ring_size = sizeof(*rx_desc) * priv->num_rx_ring[q];
-	int tx_ring_size = sizeof(*tx_desc) * priv->num_tx_ring[q] *
-			   NUM_TX_DESC;
+	int tx_ring_size = sizeof(*tx_desc) * priv->num_tx_ring[q];
 	dma_addr_t dma_addr;
 	int i;
 
@@ -268,12 +271,11 @@ static void ravb_ring_format(struct net_device *ndev, int q)
 
 	memset(priv->tx_ring[q], 0, tx_ring_size);
 	/* Build TX ring buffer */
-	for (i = 0, tx_desc = priv->tx_ring[q]; i < priv->num_tx_ring[q];
-	     i++, tx_desc++) {
-		tx_desc->die_dt = DT_EEMPTY;
-		tx_desc++;
+	for (i = 0; i < priv->num_tx_ring[q]; i++) {
+		tx_desc = &priv->tx_ring[q][i];
 		tx_desc->die_dt = DT_EEMPTY;
 	}
+	tx_desc = &priv->tx_ring[q][i];
 	tx_desc->dptr = cpu_to_le32((u32)priv->tx_desc_dma[q]);
 	tx_desc->die_dt = DT_LINKFIX; /* type */
 
@@ -294,6 +296,7 @@ static int ravb_ring_init(struct net_device *ndev, int q)
 	struct ravb_private *priv = netdev_priv(ndev);
 	struct sk_buff *skb;
 	int ring_size;
+	void *buffer;
 	int i;
 
 	/* Allocate RX and TX skb rings */
@@ -313,10 +316,18 @@ static int ravb_ring_init(struct net_device *ndev, int q)
 	}
 
 	/* Allocate rings for the aligned buffers */
-	priv->tx_align[q] = kmalloc(DPTR_ALIGN * priv->num_tx_ring[q] +
-				    DPTR_ALIGN - 1, GFP_KERNEL);
-	if (!priv->tx_align[q])
+	priv->tx_buffers[q] = kcalloc(priv->num_tx_ring[q],
+				      sizeof(*priv->tx_buffers[q]), GFP_KERNEL);
+	if (!priv->tx_buffers[q])
 		goto error;
+
+	for (i = 0; i < priv->num_tx_ring[q]; i++) {
+		buffer = kmalloc(PKT_BUF_SZ + RAVB_ALIGN - 1, GFP_KERNEL);
+		if (!buffer)
+			goto error;
+		/* Aligned TX buffer */
+		priv->tx_buffers[q][i] = buffer;
+	}
 
 	/* Allocate all RX descriptors. */
 	ring_size = sizeof(struct ravb_ex_rx_desc) * (priv->num_rx_ring[q] + 1);
@@ -329,8 +340,7 @@ static int ravb_ring_init(struct net_device *ndev, int q)
 	priv->dirty_rx[q] = 0;
 
 	/* Allocate all TX descriptors. */
-	ring_size = sizeof(struct ravb_tx_desc) *
-		    (priv->num_tx_ring[q] * NUM_TX_DESC + 1);
+	ring_size = sizeof(struct ravb_tx_desc) * (priv->num_tx_ring[q] + 1);
 	priv->tx_ring[q] = dma_alloc_coherent(ndev->dev.parent, ring_size,
 					      &priv->tx_desc_dma[q],
 					      GFP_KERNEL);
@@ -457,8 +467,7 @@ static int ravb_tx_free(struct net_device *ndev, int q)
 	u32 size;
 
 	for (; priv->cur_tx[q] - priv->dirty_tx[q] > 0; priv->dirty_tx[q]++) {
-		entry = priv->dirty_tx[q] % (priv->num_tx_ring[q] *
-					     NUM_TX_DESC);
+		entry = priv->dirty_tx[q] % priv->num_tx_ring[q];
 		desc = &priv->tx_ring[q][entry];
 		if (desc->die_dt != DT_FEMPTY)
 			break;
@@ -466,19 +475,15 @@ static int ravb_tx_free(struct net_device *ndev, int q)
 		dma_rmb();
 		size = le16_to_cpu(desc->ds_tagl) & TX_DS;
 		/* Free the original skb. */
-		if (priv->tx_skb[q][entry / NUM_TX_DESC]) {
+		if (priv->tx_skb[q][entry]) {
 			dma_unmap_single(ndev->dev.parent,
 					 le32_to_cpu(desc->dptr),
 					 size, DMA_TO_DEVICE);
-			/* Last packet descriptor? */
-			if (entry % NUM_TX_DESC == NUM_TX_DESC - 1) {
-				entry /= NUM_TX_DESC;
-				dev_kfree_skb_any(priv->tx_skb[q][entry]);
-				priv->tx_skb[q][entry] = NULL;
-				stats->tx_packets++;
-			}
+			dev_kfree_skb_any(priv->tx_skb[q][entry]);
+			priv->tx_skb[q][entry] = NULL;
 			free_num++;
 		}
+		stats->tx_packets++;
 		stats->tx_bytes += size;
 		desc->die_dt = DT_EEMPTY;
 	}
@@ -1462,56 +1467,38 @@ static netdev_tx_t ravb_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	u32 dma_addr;
 	void *buffer;
 	u32 entry;
-	u32 len;
 
 	spin_lock_irqsave(&priv->lock, flags);
-	if (priv->cur_tx[q] - priv->dirty_tx[q] > (priv->num_tx_ring[q] - 1) *
-	    NUM_TX_DESC) {
+	if (priv->cur_tx[q] - priv->dirty_tx[q] >= priv->num_tx_ring[q]) {
 		netif_err(priv, tx_queued, ndev,
 			  "still transmitting with the full ring!\n");
 		netif_stop_subqueue(ndev, q);
 		spin_unlock_irqrestore(&priv->lock, flags);
 		return NETDEV_TX_BUSY;
 	}
-	entry = priv->cur_tx[q] % (priv->num_tx_ring[q] * NUM_TX_DESC);
-	priv->tx_skb[q][entry / NUM_TX_DESC] = skb;
+	entry = priv->cur_tx[q] % priv->num_tx_ring[q];
+	priv->tx_skb[q][entry] = skb;
 
 	if (skb_put_padto(skb, ETH_ZLEN))
 		goto drop;
 
-	buffer = PTR_ALIGN(priv->tx_align[q], DPTR_ALIGN) +
-		 entry / NUM_TX_DESC * DPTR_ALIGN;
-	len = PTR_ALIGN(skb->data, DPTR_ALIGN) - skb->data;
-	/* quick fix */
-	if (len == 0)
-		len = 4;
-	memcpy(buffer, skb->data, len);
-	dma_addr = dma_map_single(ndev->dev.parent, buffer, len, DMA_TO_DEVICE);
-	if (dma_mapping_error(ndev->dev.parent, dma_addr))
-		goto drop;
-
+	buffer = PTR_ALIGN(priv->tx_buffers[q][entry], RAVB_ALIGN);
+	memcpy(buffer, skb->data, skb->len);
 	desc = &priv->tx_ring[q][entry];
-	desc->ds_tagl = cpu_to_le16(len);
-	desc->dptr = cpu_to_le32(dma_addr);
-
-	buffer = skb->data + len;
-	len = skb->len - len;
-	dma_addr = dma_map_single(ndev->dev.parent, buffer, len, DMA_TO_DEVICE);
-	if (dma_mapping_error(ndev->dev.parent, dma_addr))
-		goto unmap;
-
-	desc++;
-	desc->ds_tagl = cpu_to_le16(len);
+	desc->ds_tagl = cpu_to_le16(skb->len);
+	dma_addr = dma_map_single(ndev->dev.parent, buffer, skb->len,
+				  DMA_TO_DEVICE);
+	if (dma_mapping_error(&ndev->dev, dma_addr))
+		goto drop;
 	desc->dptr = cpu_to_le32(dma_addr);
 
 	/* TX timestamp required */
 	if (q == RAVB_NC) {
 		ts_skb = kmalloc(sizeof(*ts_skb), GFP_ATOMIC);
 		if (!ts_skb) {
-			desc--;
-			dma_unmap_single(ndev->dev.parent, dma_addr, len,
+			dma_unmap_single(ndev->dev.parent, dma_addr, skb->len,
 					 DMA_TO_DEVICE);
-			goto unmap;
+			goto drop;
 		}
 		ts_skb->skb = skb;
 		ts_skb->tag = priv->ts_skb_tag++;
@@ -1527,15 +1514,13 @@ static netdev_tx_t ravb_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	/* Descriptor type must be set after all the above writes */
 	dma_wmb();
-	desc->die_dt = DT_FEND;
-	desc--;
-	desc->die_dt = DT_FSTART;
+	desc->die_dt = DT_FSINGLE;
 
 	ravb_write(ndev, ravb_read(ndev, TCCR) | (TCCR_TSRQ0 << q), TCCR);
 
-	priv->cur_tx[q] += NUM_TX_DESC;
-	if (priv->cur_tx[q] - priv->dirty_tx[q] >
-	    (priv->num_tx_ring[q] - 1) * NUM_TX_DESC && !ravb_tx_free(ndev, q))
+	priv->cur_tx[q]++;
+	if (priv->cur_tx[q] - priv->dirty_tx[q] >= priv->num_tx_ring[q] &&
+	    !ravb_tx_free(ndev, q))
 		netif_stop_subqueue(ndev, q);
 
 exit:
@@ -1543,12 +1528,9 @@ exit:
 	spin_unlock_irqrestore(&priv->lock, flags);
 	return NETDEV_TX_OK;
 
-unmap:
-	dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
-			 le16_to_cpu(desc->ds_tagl), DMA_TO_DEVICE);
 drop:
 	dev_kfree_skb_any(skb);
-	priv->tx_skb[q][entry / NUM_TX_DESC] = NULL;
+	priv->tx_skb[q][entry] = NULL;
 	goto exit;
 }
 
