@@ -553,13 +553,16 @@
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150144 0 4>, <0 0xe615003c 0 4>;
-					clocks = <&s3d4_clk>, <&s3d4_clk>;
+					clocks = <&s3d4_clk>, <&s3d4_clk>,
+						 <&s3d4_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_AUDIO_DMAC0 R8A7795_CLK_AUDIO_DMAC1
+						R8A7795_CLK_PWM
 					>;
 					clock-output-names =
-						"audio_dmac0", "audio_dmac1";
+						"audio_dmac0", "audio_dmac1",
+						"pwm";
 				};
 
 				mstp6_clks: mstp6_clks@e6150148 {
