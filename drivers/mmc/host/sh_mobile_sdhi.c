@@ -44,6 +44,8 @@ struct sh_mobile_sdhi_of_data {
 	unsigned long capabilities2;
 	enum dma_slave_buswidth dma_buswidth;
 	dma_addr_t dma_rx_offset;
+	unsigned int max_blk_count;
+	unsigned short max_segs;
 };
 
 static const struct sh_mobile_sdhi_of_data sh_mobile_sdhi_of_cfg[] = {
@@ -70,6 +72,9 @@ static const struct sh_mobile_sdhi_of_data of_rcar_gen3_compatible = {
 	.tmio_flags	= TMIO_MMC_CLK_NO_SLEEP | TMIO_MMC_HAS_IDLE_WAIT |
 			  TMIO_MMC_WRPROTECT_DISABLE | TMIO_MMC_CLK_ACTUAL,
 	.capabilities	= MMC_CAP_SD_HIGHSPEED,
+	/* Gen3 SDHI DMAC can handle 0xffffffff blk count, but seg = 1 */
+	.max_blk_count	= 0xffffffff,
+	.max_segs = 1,
 };
 
 static const struct of_device_id sh_mobile_sdhi_of_match[] = {
@@ -312,6 +317,8 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		mmc_data->capabilities |= of_data->capabilities;
 		mmc_data->capabilities2 |= of_data->capabilities2;
 		mmc_data->dma_rx_offset = of_data->dma_rx_offset;
+		mmc_data->max_blk_count	= of_data->max_blk_count;
+		mmc_data->max_segs = of_data->max_segs;
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 	}
 
