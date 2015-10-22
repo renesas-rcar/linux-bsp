@@ -555,6 +555,7 @@ config MMC_SDHI
 	depends on SUPERH || ARCH_RENESAS || COMPILE_TEST
 	select MMC_TMIO_CORE
 	select MMC_SDHI_SYS_DMAC if (SUPERH || ARM)
+	select MMC_SDHI_INTERNAL_DMA if ARM64
 	help
 	  This provides support for the SDHI SD/SDIO controller found in
 	  SuperH and ARM SH-Mobile SoCs

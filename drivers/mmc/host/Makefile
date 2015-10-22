@@ -41,6 +41,9 @@ obj-$(CONFIG_MMC_SDHI)		+= sh_mobile_sdhi.o
 ifeq ($(subst m,y,$(CONFIG_MMC_SDHI_SYS_DMAC)),y)
 obj-$(CONFIG_MMC_SDHI)		+= renesas_sdhi_sys_dmac.o
 endif
+ifeq ($(subst m,y,$(CONFIG_MMC_SDHI_INTERNAL_DMA)),y)
+obj-$(CONFIG_MMC_SDHI)		+= renesas_sdhi_internal_dmac.o
+endif
 obj-$(CONFIG_MMC_CB710)		+= cb710-mmc.o
 obj-$(CONFIG_MMC_VIA_SDMMC)	+= via-sdmmc.o
 obj-$(CONFIG_SDH_BFIN)		+= bfin_sdh.o
