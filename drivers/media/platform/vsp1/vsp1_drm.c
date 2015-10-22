@@ -229,6 +229,9 @@ void vsp1_du_atomic_begin(struct device *dev)
 	vsp1->drm->num_inputs = pipe->num_inputs;
 
 	spin_unlock_irqrestore(&pipe->irqlock, flags);
+
+	/* Prepare the display list. */
+	vsp1_dl_begin(vsp1->drm->dl);
 }
 EXPORT_SYMBOL_GPL(vsp1_du_atomic_begin);
 
@@ -453,9 +456,6 @@ void vsp1_du_atomic_flush(struct device *dev)
 	unsigned long flags;
 	bool stop = false;
 	int ret;
-
-	/* Prepare the display list. */
-	vsp1_dl_begin(vsp1->drm->dl);
 
 	list_for_each_entry(entity, &pipe->entities, list_pipe) {
 		/* Disconnect unused RPFs from the pipeline. */
