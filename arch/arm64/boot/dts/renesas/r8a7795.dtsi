@@ -683,8 +683,6 @@
 				 <&cpg CPG_CORE R8A7795_CLK_S3D1>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			dmas = <&dmac1 0x13>, <&dmac1 0x12>;
-			dma-names = "tx", "rx";
 			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
