@@ -834,8 +834,6 @@
 			interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp3_clks R8A7795_CLK_SCIF2>;
 			clock-names = "sci_ick";
-			dmas = <&dmac0 0x55>, <&dmac0 0x54>;
-			dma-names = "tx", "rx";
 			power-domains = <&cpg_clocks>;
 			status = "disabled";
 		};
