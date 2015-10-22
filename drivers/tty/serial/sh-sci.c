@@ -1469,8 +1469,7 @@ static void sci_request_dma(struct uart_port *port)
 
 	dev_dbg(port->dev, "%s: port %d\n", __func__, port->line);
 
-	if (!port->dev->of_node &&
-	    (s->cfg->dma_slave_tx <= 0 || s->cfg->dma_slave_rx <= 0))
+	if (s->cfg->dma_slave_tx <= 0 || s->cfg->dma_slave_rx <= 0)
 		return;
 
 	s->cookie_tx = -EINVAL;
@@ -2979,7 +2978,8 @@ sci_parse_dt(struct platform_device *pdev, unsigned int *dev_id)
 	struct device_node *np = pdev->dev.of_node;
 	const struct of_device_id *match;
 	struct plat_sci_port *p;
-	int id;
+	int id, index;
+	struct of_phandle_args dma_spec;
 
 	if (!IS_ENABLED(CONFIG_OF) || !np)
 		return NULL;
@@ -3008,6 +3008,20 @@ sci_parse_dt(struct platform_device *pdev, unsigned int *dev_id)
 
 	if (of_find_property(np, "uart-has-rtscts", NULL))
 		p->capabilities |= SCIx_HAVE_RTSCTS;
+
+	index = of_property_match_string(np, "dma-names", "tx");
+	if (index >= 0)
+		index = of_parse_phandle_with_args(np, "dmas", "#dma-cells",
+						   index, &dma_spec);
+	if (index >= 0)
+		p->dma_slave_tx = dma_spec.args[0];
+
+	index = of_property_match_string(np, "dma-names", "rx");
+	if (index >= 0)
+		index = of_parse_phandle_with_args(np, "dmas", "#dma-cells",
+						   index, &dma_spec);
+	if (index >= 0)
+		p->dma_slave_rx = dma_spec.args[0];
 
 	return p;
 }
