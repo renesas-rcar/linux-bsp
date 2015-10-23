@@ -24,6 +24,8 @@ next/cleanup
 	patch
 		ARM: Remove open-coded version of IRQCHIP_DECLARE
 		ARM: Remove __ref on hotplug cpu die path
+	mvebu/cleanup2
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.4-2
 
 next/soc
 	renesas/soc
@@ -120,6 +122,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.4_part_2
 	socfpga/dt-cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_for_v4.4_cleanup
+	mvebu/dt2
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.4-2
 
 next/defconfig
 	renesas/defconfig
@@ -165,8 +169,10 @@ next/drivers
 		git://codeaurora.org/quic/kernel/agross-msm tags/qcom-soc-for-4.4
 	patch
 		soc: qcom/smem: add HWSPINLOCK dependency
-	<no branch> (faf7ec4a92c0231d1079177095077c162eb9b466)
+	drivers/psci
 		git://git.kernel.org/pub/scm/linux/kernel/git/lpieralisi/linux tags/firmware/psci-1.0
+	drivers/psci2
+		Merge branch 'drivers/psci2' into next/drivers
 
 next/arm64
 
