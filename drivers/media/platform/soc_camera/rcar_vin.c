@@ -511,10 +511,10 @@ struct rcar_vin_priv {
 	enum chip_id			chip;
 
 	/* Asynchronous CSI2 linking */
-	struct v4l2_async_subdev *csi2_asd;
-	struct v4l2_subdev *csi2_sd;
+	struct v4l2_async_subdev	*csi2_asd;
+	struct v4l2_subdev		*csi2_sd;
 	/* Synchronous probing compatibility */
-	struct platform_device *csi2_pdev;
+	struct platform_device		*csi2_pdev;
 
 	/* VIN_UDS */
 	unsigned long alpha;
@@ -1364,8 +1364,6 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 	    priv->chip == RCAR_E1)
 		dsize = 1;
 
-	/* FIXME : Add CSI2 special configuration */
-
 	dev_dbg(icd->parent, "Cam %ux%u@%u:%u\n",
 		cam->width, cam->height, cam->vin_left, cam->vin_top);
 	dev_dbg(icd->parent, "Cam subrect %ux%u@%u:%u\n",
@@ -1535,6 +1533,7 @@ static int rcar_vin_set_bus_param(struct soc_camera_device *icd)
 	}
 
 	cfg.flags = common_flags;
+
 	ret = v4l2_subdev_call(sd, video, s_mbus_config, &cfg);
 	if (ret < 0 && ret != -ENOIOCTLCMD)
 		return ret;
@@ -1552,7 +1551,10 @@ static int rcar_vin_set_bus_param(struct soc_camera_device *icd)
 			vnmc |= VNMC_DPINE;
 	}
 
-	val = VNDMR2_FTEV | VNDMR2_VLV(1);
+	if (priv->chip == RCAR_GEN3)
+		val = VNDMR2_FTEV;
+	else
+		val = VNDMR2_FTEV | VNDMR2_VLV(1);
 	if (!(common_flags & V4L2_MBUS_VSYNC_ACTIVE_LOW))
 		val |= VNDMR2_VPS;
 	if (!(common_flags & V4L2_MBUS_HSYNC_ACTIVE_LOW))
@@ -2090,6 +2092,7 @@ static int rcar_vin_try_fmt(struct soc_camera_device *icd,
 			 */
 			mf->width = VIN_MAX_WIDTH;
 			mf->height = VIN_MAX_HEIGHT;
+
 			ret = v4l2_device_call_until_err(sd->v4l2_dev,
 							 soc_camera_grp_id(icd),
 							 pad, set_fmt, &pad_cfg,
@@ -2327,3 +2330,4 @@ module_platform_driver(rcar_vin_driver);
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:rcar_vin");
 MODULE_DESCRIPTION("Renesas R-Car VIN camera host driver");
+MODULE_AUTHOR("Koji Matsuoka <koji.matsuoka.xm@renesas.com>");
