@@ -55,6 +55,8 @@ next/soc
 		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-core-for-4.4
 	mediatek/soc
 		https://github.com/mbgg/linux-mediatek tags/v4.3-next-soc
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.4
 
 next/boards
 
@@ -136,6 +138,9 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-dts32-2
 	mediatek/dt
 		https://github.com/mbgg/linux-mediatek tags/v4.3-next-dts
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.4
+		contains depends/imx-clk
 
 next/defconfig
 	renesas/defconfig
@@ -166,6 +171,8 @@ next/defconfig
 		git://git.infradead.org/linux-mvebu tags/mvebu-config-4.4-1
 	sunxi/defconfig
 		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-defconfig-for-4.4
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.4
 
 next/drivers
 	renesas/clk
