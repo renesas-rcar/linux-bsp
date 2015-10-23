@@ -55,7 +55,7 @@
 #define RCAR_CSI2_INTEN			0x30
 #define RCAR_CSI2_INTCLOSE		0x34
 #define RCAR_CSI2_INTSTATE		0x38
-#define RCAR_CSI2_INTERRSTATE	0x3C
+#define RCAR_CSI2_INTERRSTATE		0x3C
 
 #define RCAR_CSI2_SHPDAT		0x40
 #define RCAR_CSI2_SHPCNT		0x44
@@ -69,18 +69,18 @@
 #define RCAR_CSI2_PHCLM			0x78
 #define RCAR_CSI2_PHDLM			0x7C
 
-#define RCAR_CSI2_PHYCNT_SHUTDOWNZ	(1 << 17)
-#define RCAR_CSI2_PHYCNT_RSTZ		(1 << 16)
-#define RCAR_CSI2_PHYCNT_ENABLECLK	(1 << 4)
-#define RCAR_CSI2_PHYCNT_ENABLE_3	(1 << 3)
-#define RCAR_CSI2_PHYCNT_ENABLE_2	(1 << 2)
-#define RCAR_CSI2_PHYCNT_ENABLE_1	(1 << 1)
-#define RCAR_CSI2_PHYCNT_ENABLE_0	(1 << 0)
+#define RCAR_CSI2_PHYCNT_SHUTDOWNZ		(1 << 17)
+#define RCAR_CSI2_PHYCNT_RSTZ			(1 << 16)
+#define RCAR_CSI2_PHYCNT_ENABLECLK		(1 << 4)
+#define RCAR_CSI2_PHYCNT_ENABLE_3		(1 << 3)
+#define RCAR_CSI2_PHYCNT_ENABLE_2		(1 << 2)
+#define RCAR_CSI2_PHYCNT_ENABLE_1		(1 << 1)
+#define RCAR_CSI2_PHYCNT_ENABLE_0		(1 << 0)
 
-#define RCAR_CSI2_VCDT_VCDTN_EN		(1 << 15)
-#define RCAR_CSI2_VCDT_SEL_VCN		(1 << 8)
-#define RCAR_CSI2_VCDT_SEL_DTN_ON	(1 << 6)
-#define RCAR_CSI2_VCDT_SEL_DTN		(1 << 0)
+#define RCAR_CSI2_VCDT_VCDTN_EN			(1 << 15)
+#define RCAR_CSI2_VCDT_SEL_VCN			(1 << 8)
+#define RCAR_CSI2_VCDT_SEL_DTN_ON		(1 << 6)
+#define RCAR_CSI2_VCDT_SEL_DTN			(1 << 0)
 
 #define RCAR_CSI2_LINKCNT_MONITOR_EN		(1 << 31)
 #define RCAR_CSI2_LINKCNT_REG_MONI_PACT_EN	(1 << 25)
@@ -105,51 +105,51 @@
 #define RCAR_CSI2_LSWAP_L0SEL_PLANE2		(2 << 0)
 #define RCAR_CSI2_LSWAP_L0SEL_PLANE3		(3 << 0)
 
-#define RCAR_CSI2_PHTC_TESTCLR				(1 << 0)
+#define RCAR_CSI2_PHTC_TESTCLR			(1 << 0)
 
 /* interrupt status registers */
-#define RCAR_CSI2_INTSTATE_EBD_CH1			(1 << 29)
+#define RCAR_CSI2_INTSTATE_EBD_CH1		(1 << 29)
 #define RCAR_CSI2_INTSTATE_LESS_THAN_WC		(1 << 28)
-#define RCAR_CSI2_INTSTATE_AFIFO_OF			(1 << 27)
+#define RCAR_CSI2_INTSTATE_AFIFO_OF		(1 << 27)
 #define RCAR_CSI2_INTSTATE_VD4_START		(1 << 26)
-#define RCAR_CSI2_INTSTATE_VD4_END			(1 << 25)
+#define RCAR_CSI2_INTSTATE_VD4_END		(1 << 25)
 #define RCAR_CSI2_INTSTATE_VD3_START		(1 << 24)
-#define RCAR_CSI2_INTSTATE_VD3_END			(1 << 23)
+#define RCAR_CSI2_INTSTATE_VD3_END		(1 << 23)
 #define RCAR_CSI2_INTSTATE_VD2_START		(1 << 22)
-#define RCAR_CSI2_INTSTATE_VD2_END			(1 << 21)
+#define RCAR_CSI2_INTSTATE_VD2_END		(1 << 21)
 #define RCAR_CSI2_INTSTATE_VD1_START		(1 << 20)
-#define RCAR_CSI2_INTSTATE_VD1_END			(1 << 19)
-#define RCAR_CSI2_INTSTATE_SHP				(1 << 18)
-#define RCAR_CSI2_INTSTATE_FSFE				(1 << 17)
-#define RCAR_CSI2_INTSTATE_LNP				(1 << 16)
-#define RCAR_CSI2_INTSTATE_CRC_ERR			(1 << 15)
+#define RCAR_CSI2_INTSTATE_VD1_END		(1 << 19)
+#define RCAR_CSI2_INTSTATE_SHP			(1 << 18)
+#define RCAR_CSI2_INTSTATE_FSFE			(1 << 17)
+#define RCAR_CSI2_INTSTATE_LNP			(1 << 16)
+#define RCAR_CSI2_INTSTATE_CRC_ERR		(1 << 15)
 #define RCAR_CSI2_INTSTATE_HD_WC_ZERO		(1 << 14)
 #define RCAR_CSI2_INTSTATE_FRM_SEQ_ERR1		(1 << 13)
 #define RCAR_CSI2_INTSTATE_FRM_SEQ_ERR2		(1 << 12)
-#define RCAR_CSI2_INTSTATE_ECC_ERR			(1 << 11)
+#define RCAR_CSI2_INTSTATE_ECC_ERR		(1 << 11)
 #define RCAR_CSI2_INTSTATE_ECC_CRCT_ERR		(1 << 10)
 #define RCAR_CSI2_INTSTATE_LPDT_START		(1 << 9)
-#define RCAR_CSI2_INTSTATE_LPDT_END			(1 << 8)
+#define RCAR_CSI2_INTSTATE_LPDT_END		(1 << 8)
 #define RCAR_CSI2_INTSTATE_ULPS_START		(1 << 7)
-#define RCAR_CSI2_INTSTATE_ULPS_END			(1 << 6)
-#define RCAR_CSI2_INTSTATE_RESERVED			(1 << 5)
-#define RCAR_CSI2_INTSTATE_ERRSOTHS			(1 << 4)
+#define RCAR_CSI2_INTSTATE_ULPS_END		(1 << 6)
+#define RCAR_CSI2_INTSTATE_RESERVED		(1 << 5)
+#define RCAR_CSI2_INTSTATE_ERRSOTHS		(1 << 4)
 #define RCAR_CSI2_INTSTATE_ERRSOTSYNCCHS	(1 << 3)
-#define RCAR_CSI2_INTSTATE_ERRESC			(1 << 2)
+#define RCAR_CSI2_INTSTATE_ERRESC		(1 << 2)
 #define RCAR_CSI2_INTSTATE_ERRSYNCESC		(1 << 1)
 #define RCAR_CSI2_INTSTATE_ERRCONTROL		(1 << 0)
 
 /* monitoring registers of interrupt error status */
-#define RCAR_CSI2_INTSTATE_ECC_ERR			(1 << 11)
+#define RCAR_CSI2_INTSTATE_ECC_ERR		(1 << 11)
 #define RCAR_CSI2_INTSTATE_ECC_CRCT_ERR		(1 << 10)
 #define RCAR_CSI2_INTSTATE_LPDT_START		(1 << 9)
-#define RCAR_CSI2_INTSTATE_LPDT_END			(1 << 8)
+#define RCAR_CSI2_INTSTATE_LPDT_END		(1 << 8)
 #define RCAR_CSI2_INTSTATE_ULPS_START		(1 << 7)
-#define RCAR_CSI2_INTSTATE_ULPS_END			(1 << 6)
-#define RCAR_CSI2_INTSTATE_RESERVED			(1 << 5)
-#define RCAR_CSI2_INTSTATE_ERRSOTHS			(1 << 4)
+#define RCAR_CSI2_INTSTATE_ULPS_END		(1 << 6)
+#define RCAR_CSI2_INTSTATE_RESERVED		(1 << 5)
+#define RCAR_CSI2_INTSTATE_ERRSOTHS		(1 << 4)
 #define RCAR_CSI2_INTSTATE_ERRSOTSYNCCHS	(1 << 3)
-#define RCAR_CSI2_INTSTATE_ERRESC			(1 << 2)
+#define RCAR_CSI2_INTSTATE_ERRESC		(1 << 2)
 #define RCAR_CSI2_INTSTATE_ERRSYNCESC		(1 << 1)
 #define RCAR_CSI2_INTSTATE_ERRCONTROL		(1 << 0)
 
@@ -292,6 +292,7 @@ static irqreturn_t rcar_csi2_irq(int irq, void *data)
 	int_status = ioread32(priv->base + RCAR_CSI2_INTSTATE);
 	if (!int_status)
 		goto done;
+
 	/* ack interrupts */
 	iowrite32(int_status, priv->base + RCAR_CSI2_INTSTATE);
 	handled = 1;
@@ -533,36 +534,6 @@ static const struct v4l2_subdev_pad_ops rcar_csi2_pad_ops = {
 	.get_fmt = rcar_csi2_get_pad_format,
 };
 
-/* FIXME */
-static void rcar_csi2_clock_init(struct rcar_csi2 *priv)
-{
-	void __iomem *cpgwrp_reg; /* CPG Write Protect Register */
-	void __iomem *cpg_reg;
-	uint32_t dataL;
-
-	cpgwrp_reg = ioremap_nocache(0xE6150900, 0x04);
-
-	/* Set CSI0CKCR */
-	dataL = 0x0000011F;
-/*	dataL = 0x0000010F; */
-	writel(~dataL, cpgwrp_reg);
-	cpg_reg = ioremap_nocache(0xe615000C, 0x04);
-	writel((readl(cpg_reg) & 0xFFFFFE00) | dataL, cpg_reg);
-	dataL &= 0xFFFFFEFF;
-	writel(~dataL, cpgwrp_reg);
-	writel((readl(cpg_reg) & 0xFFFFFE00) | dataL, cpg_reg);
-
-	/* Set CSIREFCKCR */
-	dataL = 0x00000107;
-/*	dataL = 0x00000103; */
-	writel(~dataL, cpgwrp_reg);
-	cpg_reg = ioremap_nocache(0xe6150034, 0x04);
-	writel((readl(cpg_reg) & 0xFFFFFE00) | dataL, cpg_reg);
-	dataL &= 0xFFFFFEFF;
-	writel(~dataL, cpgwrp_reg);
-	writel(((readl(cpg_reg) & 0xFFFFFE00) | dataL), cpg_reg);
-}
-
 #if 1 /* FIXME */
 static int rcar_csi2_hwinit_tmp(struct rcar_csi2 *priv,
 			struct rcar_csi2_link_config *link_config)
@@ -573,9 +544,6 @@ static int rcar_csi2_hwinit_tmp(struct rcar_csi2 *priv,
 	__u32 vcdt2 = 0;
 
 	pm_runtime_get_sync(&priv->pdev->dev);
-
-	/* initialize the clock of csi2 */
-	rcar_csi2_clock_init(priv);
 
 	/* Reflect registers immediately */
 	iowrite32(0x00000001, priv->base + RCAR_CSI2_TREF);
@@ -614,57 +582,51 @@ static int rcar_csi2_hwinit_tmp(struct rcar_csi2 *priv,
 		/* Enable lanes */
 		iowrite32(tmp, priv->base + RCAR_CSI2_PHYCNT);
 
-		/* */
 		iowrite32(tmp | RCAR_CSI2_PHYCNT_SHUTDOWNZ,
 					priv->base + RCAR_CSI2_PHYCNT);
 		iowrite32(tmp | (RCAR_CSI2_PHYCNT_SHUTDOWNZ |
 					RCAR_CSI2_PHYCNT_RSTZ),
 					priv->base + RCAR_CSI2_PHYCNT);
-
 	}
 
-	tmp = 0x3;
-	iowrite32(tmp, priv->base + RCAR_CSI2_CHKSUM);
-
+	iowrite32(0x00000003, priv->base + RCAR_CSI2_CHKSUM);
 	iowrite32(vcdt, priv->base + RCAR_CSI2_VCDT);
 	iowrite32(vcdt2, priv->base + RCAR_CSI2_VCDT2);
-
 	iowrite32(0x00010000, priv->base + RCAR_CSI2_FRDT);
-
 	udelay(10);
-
 	iowrite32(0x82000000, priv->base + RCAR_CSI2_LINKCNT);
-
 	iowrite32(0x000000e4, priv->base + RCAR_CSI2_LSWAP);
 
-	/* FIXME : wait until video decoder power off */
+	/* wait until video decoder power off */
 	msleep(10);
-
 	{
 		int timeout = 100;
 
 		/* Read the PHY clock lane monitor register (PHCLM). */
 		while (!(ioread32(priv->base + RCAR_CSI2_PHCLM) & 0x01)
-			&& timeout){
+			&& timeout) {
 			timeout--;
 		}
 		if (timeout == 0)
 			dev_err(&priv->pdev->dev,
-				"Error: Timeout of reading the PHY clock lane\n");
+				"Timeout of reading the PHY clock lane\n");
 		else
-			dev_err(&priv->pdev->dev, "Detected the PHY clock lane\n");
+			dev_dbg(&priv->pdev->dev,
+				"Detected the PHY clock lane\n");
 
 		timeout = 100;
+
 		/* Read the PHY data lane monitor register (PHDLM). */
 		while (!(ioread32(priv->base + RCAR_CSI2_PHDLM) & 0x01)
-			&& timeout){
+			&& timeout) {
 			timeout--;
 		}
 		if (timeout == 0)
 			dev_err(&priv->pdev->dev,
-				"Error: Timeout of reading the PHY data lane\n");
+				"Timeout of reading the PHY data lane\n");
 		else
-			dev_err(&priv->pdev->dev, "Detected the PHY data lane\n");
+			dev_dbg(&priv->pdev->dev,
+				"Detected the PHY data lane\n");
 	}
 
 	return 0;
@@ -776,14 +738,14 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 	{ .compatible = "renesas,csi2-r8a7795", .data = (void *)RCAR_GEN3 },
 	{ },
 };
-MODULE_DEVICE_TABLE(of, rcar_vin_of_table);
+MODULE_DEVICE_TABLE(of, rcar_csi2_of_table);
 #endif
 
 static struct platform_device_id rcar_csi2_id_table[] = {
 	{ "r8a7795-csi2",  RCAR_GEN3 },
 	{},
 };
-MODULE_DEVICE_TABLE(platform, rcar_vin_id_table);
+MODULE_DEVICE_TABLE(platform, rcar_csi2_id_table);
 
 static int rcar_csi2_parse_dt(struct device_node *np,
 			struct rcar_csi2_link_config *config)
@@ -825,16 +787,15 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	INIT_RCAR_CSI2_LINK_CONFIG(link_config);
 
 	if (pdev->dev.of_node) {
-		/* FIXME */
 		ret = rcar_csi2_parse_dt(pdev->dev.of_node, &link_config);
 		if (ret)
 			return ret;
 
 		if (link_config.lanes == 4)
-			dev_err(&pdev->dev,
+			dev_info(&pdev->dev,
 				"Detected rgb888 in rcar_csi2_parse_dt\n");
 		else
-			dev_err(&pdev->dev,
+			dev_info(&pdev->dev,
 				"Detected YCbCr422 in rcar_csi2_parse_dt\n");
 	} else {
 		pdata = pdev->dev.platform_data;
@@ -928,24 +889,9 @@ static struct platform_driver __refdata rcar_csi2_pdrv = {
 	.id_table	= rcar_csi2_id_table,
 };
 
-#if 1/* FIXME */
 module_platform_driver(rcar_csi2_pdrv);
-#else
-static int __init rcar_csi2_adap_init(void)
-{
-	return platform_driver_register(&rcar_csi2_pdrv);
-}
-
-static void __exit rcar_csi2_adap_exit(void)
-{
-	platform_driver_unregister(&rcar_csi2_pdrv);
-}
-
-subsys_initcall(rcar_csi2_adap_init);
-module_exit(rcar_csi2_adap_exit);
-#endif
 
 MODULE_DESCRIPTION("Renesas R-Car MIPI CSI-2 driver");
-MODULE_AUTHOR("Guennadi Liakhovetski <g.liakhovetski@gmx.de>");
+MODULE_AUTHOR("Koji Matsuoka <koji.matsuoka.xm@renesas.com>");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:rcar-csi2");
