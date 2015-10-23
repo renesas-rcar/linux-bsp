@@ -26,6 +26,8 @@ next/cleanup
 		ARM: Remove __ref on hotplug cpu die path
 	mvebu/cleanup2
 		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.4-2
+	pxa/for-4.4
+		https://github.com/rjarzmik/linux tags/pxa-for-4.4
 
 next/soc
 	renesas/soc
@@ -49,6 +51,10 @@ next/soc
 		ARM: digicolor: select pinctrl/gpio driver
 	berlin/soc2
 		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-soc-for-4.4-2
+	sunxi/core
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-core-for-4.4
+	mediatek/soc
+		https://github.com/mbgg/linux-mediatek tags/v4.3-next-soc
 
 next/boards
 
@@ -124,6 +130,12 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_for_v4.4_cleanup
 	mvebu/dt2
 		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.4-2
+	sunxi/dt2
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.4-2
+	rockchip/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-dts32-2
+	mediatek/dt
+		https://github.com/mbgg/linux-mediatek tags/v4.3-next-dts
 
 next/defconfig
 	renesas/defconfig
@@ -150,6 +162,10 @@ next/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig2-for-v4.4
 	socfpga/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_defconfig_for_v4.4
+	mvebu/config
+		git://git.infradead.org/linux-mvebu tags/mvebu-config-4.4-1
+	sunxi/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-defconfig-for-4.4
 
 next/drivers
 	renesas/clk
@@ -173,8 +189,12 @@ next/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/lpieralisi/linux tags/firmware/psci-1.0
 	drivers/psci2
 		Merge branch 'drivers/psci2' into next/drivers
+	rockchip/drivers2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-drivers2
 
 next/arm64
+	mediatek/arm64
+		https://github.com/mbgg/linux-mediatek tags/v4.3-next-arm64
 
 next/late
 
