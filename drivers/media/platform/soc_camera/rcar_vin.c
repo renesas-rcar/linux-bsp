@@ -147,12 +147,15 @@
 #define VNCSI_IFMD_DES0		(1 << 25) /* CSI21 Input Data) */
 
 /* UDS */
-#define VNUDS_CTRL_REG			0x80	/* Scaling Control Registers */
-#define VNUDS_SCALE_REG			0x84	/* Scaling Factor Registers  */
+#define VNUDS_CTRL_REG		0x80	/* Scaling Control Registers */
+#define VNUDS_CTRL_AMD		(1 << 30)
+#define VNUDS_CTRL_BC		(1 << 20)
+#define VNUDS_CTRL_TDIPC	(1 << 1)
+
+#define VNUDS_SCALE_REG		0x84	/* Scaling Factor Register */
 #define VNUDS_PASS_BWIDTH_REG	0x90	/* Passband Registers */
-#define VNUDS_IPC_REG			0x98	/* 2D IPC Setting Register */
-#define VNUDS_CLIP_SIZE_REG		0xA4
-			/* UDS Output Size Clipping Registers */
+#define VNUDS_IPC_REG		0x98	/* 2D IPC Setting Register */
+#define VNUDS_CLIP_SIZE_REG	0xA4	/* UDS Output Size Clipping Register */
 
 #define VIN_MAX_WIDTH		2048
 #define VIN_MAX_HEIGHT		2048
@@ -515,11 +518,6 @@ struct rcar_vin_priv {
 	struct v4l2_subdev		*csi2_sd;
 	/* Synchronous probing compatibility */
 	struct platform_device		*csi2_pdev;
-
-	/* VIN_UDS */
-	unsigned long alpha;
-	unsigned long flag;
-
 };
 
 #define is_continuous_transfer(priv)	(priv->vb_count > MAX_BUFFER_NUM)
@@ -553,6 +551,14 @@ struct rcar_vin_cam {
 	struct v4l2_rect		rect;
 	const struct soc_mbus_pixelfmt	*extra_fmt;
 };
+
+static inline int is_scaling(struct rcar_vin_cam *cam)
+{
+	if ((cam->width != cam->out_width) || (cam->height != cam->out_height))
+		return 1;
+
+	return 0;
+}
 
 /*
  * .queue_setup() is called to check whether the driver can accept the requested
@@ -731,6 +737,9 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 
 		if ((vnmc & VNMC_INF_MASK) == VNMC_INF_RGB888)
 			iowrite32(0x06000000, priv->base + VNCSI_IFMD_REG);
+
+		if (is_scaling(cam))
+			vnmc |= VNMC_SCLE;
 	}
 
 	/* progressive or interlaced mode */
@@ -1101,44 +1110,7 @@ struct rcar_vin_uds_regs {
 	unsigned long scale;
 	unsigned long pass_bwidth;
 	unsigned long clip_size;
-	unsigned long vphase;
 };
-
-/* flags */
-#define VIN_UDS_FLAG_PREMUL_ALPH		(1 << 0)
-#define VIN_UDS_FLAG_VIRTUAL		(1 << 1)
-#define VIN_UDS_FLAG_COLOR_CONV_BT601	(0 << 2) /* for RGB <-> YUV */
-#define VIN_UDS_FLAG_COLOR_CONV_BT709	(1 << 2) /* for RGB <-> YUV */
- #define VIN_UDS_FLAG_COLOR_CONV_MASK	(1 << 2)
-#define  VIN_UDS_FLAG_PROGRESSIVE		(0 << 3)
-#define  VIN_UDS_FLAG_INTERLACE_TOP	(1 << 3)
-#define  VIN_UDS_FLAG_INTERLACE_BOTTOM	(2 << 3)
- #define VIN_UDS_FLAG_IP_MASK		(3 << 3)
-
-/* Up Down Scaler */
-/* index:0-2 */
-#define VIN_UDSn_CTRL(index)		(0x0080 + (index * 0x1000))
- #define VIN_UDSn_CTRL_AMD		(1 << 30)
- #define VIN_UDSn_CTRL_AON		(1 << 25)
- #define VIN_UDSn_CTRL_BC		(1 << 20)
- #define VIN_UDSn_CTRL_TDIPC		(1 << 1)
-#define VIN_UDSn_SCALE(index)		(0x0084 + (index * 0x1000))
-#define VIN_UDSn_PASS_BWIDTH(index)	(0x0090 + (index * 0x1000))
-#define VIN_UDSn_IPC(index)		(0x0098 + (index * 0x1000))
- #define VIN_UDSn_IPC_FIELD_TOP		(0 << 27)
- #define VIN_UDSn_IPC_FIELD_BOTTOM	(1 << 27)
-#define VIN_UDSn_CLIP_SIZE(index)	(0x00A4 + (index * 0x1000))
-
-static inline int is_scaling(struct rcar_vin_cam *cam)
-{
-	struct v4l2_rect *cam_subrect = &cam->subrect;
-
-	if ((cam_subrect->height != cam->out_width) ||
-	    (cam_subrect->width != cam->out_height))
-		return 1;
-
-	return 0;
-}
 
 static unsigned long rcar_vin_get_bwidth(unsigned long ratio)
 {
@@ -1168,17 +1140,15 @@ static unsigned long rcar_vin_compute_ratio(unsigned int input,
 #endif
 }
 
-static int check_uds_param(struct rcar_vin_cam *cam,
-		struct rcar_vin_uds_regs *regs, unsigned long alpha,
-		unsigned long in_flag)
+int rcar_vin_uds_set(struct rcar_vin_priv *priv, struct rcar_vin_cam *cam)
 {
+	struct rcar_vin_uds_regs regs;
 	unsigned long ratio_h, ratio_v;
 	unsigned long bwidth_h, bwidth_v;
 	unsigned long ctrl;
-	unsigned long vphase = 0;
 	unsigned long clip_size;
-	unsigned long ip_flag = in_flag & VIN_UDS_FLAG_IP_MASK;
 	struct v4l2_rect *cam_subrect = &cam->subrect;
+	u32 vnmc;
 
 	ratio_h = rcar_vin_compute_ratio(cam_subrect->width, cam->out_width);
 	ratio_v = rcar_vin_compute_ratio(cam_subrect->height, cam->out_height);
@@ -1186,105 +1156,20 @@ static int check_uds_param(struct rcar_vin_cam *cam,
 	bwidth_h = rcar_vin_get_bwidth(ratio_h);
 	bwidth_v = rcar_vin_get_bwidth(ratio_v);
 
-	ctrl = (alpha ? VIN_UDSn_CTRL_AON : 0) | VIN_UDSn_CTRL_AMD;
+	ctrl = VNUDS_CTRL_AMD;
+	clip_size = (cam->out_width << 16) | cam->out_height;
 
-	/* scaling & progressive -> interlace */
-	if (ip_flag != VIN_UDS_FLAG_PROGRESSIVE) {
-		unsigned long vfrac = ratio_v & 0x0FFF;
+	regs.ctrl = ctrl;
+	regs.scale = (ratio_h << 16) | ratio_v;
+	regs.pass_bwidth = (bwidth_h << 16) | bwidth_v;
+	regs.clip_size = clip_size;
 
-		ctrl |= VIN_UDSn_CTRL_TDIPC;
-
-		if (ratio_v <= 1365) {
-			/* 3 <= scale */
-
-			if (ip_flag == VIN_UDS_FLAG_INTERLACE_TOP) {
-				vphase = (((4096 - vfrac) / 2) & 0xFFF) << 16;
-			} else {
-				vphase = (((4096 - (vfrac * 3)) / 2) & 0xFFF)
-						<< 16;
-			}
-			vphase |= ((4096 - vfrac) / 2) & 0xFFF;
-
-			clip_size = (cam->out_height / 2);
-		} else if (ratio_v < 4096) {
-			/* 1 < scale < 3 */
-
-			if (ip_flag == VIN_UDS_FLAG_INTERLACE_TOP) {
-				clip_size = (cam->out_height / 2);
-				vphase = (((4096 - vfrac) / 2) & 0xFFF) << 16;
-			} else {
-				clip_size = (cam->out_height / 2 + 1);
-				vphase = (((4096 + vfrac) / 2) & 0xFFF) << 16;
-			}
-			vphase |= ((4096 - vfrac) / 2) & 0xFFF;
-		} else if (ratio_v == 4096) {
-			vphase = 0;
-			clip_size = (cam->out_height / 2);
-		} else if (ratio_v < 8192) {
-			/* 1/2 < scale < 1 */
-
-			if (ip_flag == VIN_UDS_FLAG_INTERLACE_TOP)
-				vphase = 0;
-			else
-				vphase = (4096 - vfrac) << 16;
-
-			clip_size = (cam->out_height / 2);
-
-			/* If you want to reducing in the */
-			/* IP conversion, set MultiTap.   */
-			/* Can not be reducing if you use */
-			/* Bilinear/NearestNeighbor.      */
-			ctrl |= VIN_UDSn_CTRL_BC;
-		} else {
-			return -EINVAL;
-		}
-
-		clip_size |= (cam->out_width << 16);
-		ratio_v *= 2;
-	} else {
-		clip_size = (cam->out_width << 16) | cam->out_height;
-	}
-
-	if ((alpha < 0xff) && (ratio_h >= 8192 || ratio_v >= 8192))
-		;
-	else
-		ctrl |= VIN_UDSn_CTRL_BC;
-
-
-	regs->ctrl = ctrl;
-	regs->scale = (ratio_h << 16) | ratio_v;
-	regs->pass_bwidth = (bwidth_h << 16) | bwidth_v;
-	regs->clip_size = clip_size;
-	regs->vphase = vphase;
-
-	return 0;
-}
-
-int rcar_vin_uds_to_dl(struct rcar_vin_priv *priv, struct rcar_vin_cam *cam)
-{
-	struct rcar_vin_uds_regs regs;
-	unsigned long alpha = priv->alpha;
-	unsigned long in_flag = priv->flag;
-
-	if (is_scaling(cam)) {
-		u32 vnmc;
-
-		if (check_uds_param(cam, &regs, alpha, in_flag)) {
-				dev_err(priv->ici.v4l2_dev.dev,
-					"parameter error\n");
-			return -EINVAL;
-		}
-
-		vnmc = ioread32(priv->base + VNMC_REG);
-		iowrite32(vnmc | VNMC_SCLE, priv->base + VNMC_REG);
-
-		iowrite32(regs.ctrl, priv->base + VNUDS_CTRL_REG);
-		iowrite32(regs.scale, priv->base + VNUDS_SCALE_REG);
-		iowrite32(regs.pass_bwidth, priv->base + VNUDS_PASS_BWIDTH_REG);
-		iowrite32(regs.clip_size, priv->base + VNUDS_CLIP_SIZE_REG);
-		iowrite32(regs.vphase, priv->base + VNUDS_IPC_REG);
-
-	}
+	vnmc = ioread32(priv->base + VNMC_REG);
+	iowrite32(vnmc | VNMC_SCLE, priv->base + VNMC_REG);
+	iowrite32(regs.ctrl, priv->base + VNUDS_CTRL_REG);
+	iowrite32(regs.scale, priv->base + VNUDS_SCALE_REG);
+	iowrite32(regs.pass_bwidth, priv->base + VNUDS_PASS_BWIDTH_REG);
+	iowrite32(regs.clip_size, priv->base + VNUDS_CLIP_SIZE_REG);
 
 	return 0;
 }
@@ -1353,6 +1238,7 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 	unsigned char dsize = 0;
 	struct v4l2_rect *cam_subrect = &cam->subrect;
 	u32 value;
+	int ret;
 
 	dev_dbg(icd->parent, "Crop %ux%u@%u:%u\n",
 		icd->user_width, icd->user_height, cam->vin_left, cam->vin_top);
@@ -1381,19 +1267,23 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 		iowrite32(top_offset / 2, priv->base + VNSLPRC_REG);
 		iowrite32((top_offset + cam_subrect->height) / 2 - 1,
 			  priv->base + VNELPRC_REG);
-		priv->flag = VIN_UDS_FLAG_INTERLACE_TOP;
 		break;
 	default:
 		iowrite32(top_offset, priv->base + VNSLPRC_REG);
 		iowrite32(top_offset + cam_subrect->height - 1,
 			  priv->base + VNELPRC_REG);
-		priv->flag = VIN_UDS_FLAG_PROGRESSIVE;
 		break;
 	}
 
-	if (priv->chip == RCAR_GEN3)
-		rcar_vin_uds_to_dl(priv, cam); /* FIXME */
-	else {
+	if (priv->chip == RCAR_GEN3) {
+		if (is_scaling(cam)) {
+			ret = rcar_vin_uds_set(priv, cam);
+			if (ret < 0)
+				return ret;
+			iowrite32(ALIGN(cam->out_width, 0x20),
+					 priv->base + VNIS_REG);
+		}
+	} else {
 		/* Set scaling coefficient */
 		value = 0;
 		if (cam_subrect->height != cam->out_height)
@@ -1437,9 +1327,8 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 			break;
 		}
 
+		iowrite32(ALIGN(cam->out_width, 0x10), priv->base + VNIS_REG);
 	}
-
-	iowrite32(ALIGN(cam->out_width, 0x10), priv->base + VNIS_REG);
 
 	return 0;
 }
