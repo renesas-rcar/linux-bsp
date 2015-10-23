@@ -141,6 +141,31 @@ next/dt
 	imx/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.4
 		contains depends/imx-clk
+	patch
+		ARM: dts: TI-Nspire: fix cpu compatible value
+		ARM: dts: WM8750: fix cpu compatible value
+	sti/dt2
+		https://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/sti tags/sti-dt-for-v4.4-2
+	patch
+		ARM: dts: uniphier: use stdout-path instead of console
+		ARM: dts: uniphier: add ProXstream2 Gentil board support
+		ARM: dts: uniphier: add ProXstream2 Vodka board support
+	omap/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/dt-pt2
+	at91/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-dt2
+	patch
+		arm64: Use generic Layerscape SoC family naming
+		arm64: Rename FSL LS2085A SoC support code to LS2080A
+		Documentation: DT: Add entry for FSL LS2080A QDS and RDB boards
+		Documentation/dts: Move FSL board-specific bindings out of /powerpc
+		doc/bindings: Update GPIO devicetree binding documentation for LS2080A
+		doc: DTS: Update DWC3 binding to provide reference to generic bindings
+		dts/ls2080a: Update DTSI to add support of various peripherals
+		dts/ls2080a: Remove text about writing to Free Software Foundation
+		dts/ls2080a: Update Simulator DTS to add support of various peripherals
+		dts/ls2080a: Add DTS support for LS2080a QDS & RDB boards
+		dts/Makefile: Add build support for LS2080a QDS & RDB board DTS
 
 next/defconfig
 	renesas/defconfig
