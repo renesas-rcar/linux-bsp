@@ -1,19 +1,21 @@
 /*
- * Device Tree Source for UniPhier PH1-Pro4 Reference Board
+ * Device Tree file for Freescale LS2080a RDB Board.
  *
- * Copyright (C) 2015 Masahiro Yamada <yamada.masahiro@socionext.com>
+ * Copyright (C) 2015, Freescale Semiconductor
+ *
+ * Bhupesh Sharma <bhupesh.sharma@freescale.com>
  *
  * This file is dual-licensed: you can use it either under the terms
- * of the GPL or the X11 license, at your option. Note that this dual
+ * of the GPLv2 or the X11 license, at your option. Note that this dual
  * licensing only applies to this file, and not this project as a
  * whole.
  *
- *  a) This file is free software; you can redistribute it and/or
+ *  a) This library is free software; you can redistribute it and/or
  *     modify it under the terms of the GNU General Public License as
  *     published by the Free Software Foundation; either version 2 of the
  *     License, or (at your option) any later version.
  *
- *     This file is distributed in the hope that it will be useful,
+ *     This library is distributed in the hope that it will be useful,
  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
@@ -43,69 +45,122 @@
  */
 
 /dts-v1/;
-/include/ "uniphier-ph1-pro4.dtsi"
-/include/ "uniphier-ref-daughter.dtsi"
-/include/ "uniphier-support-card.dtsi"
+
+/include/ "fsl-ls2080a.dtsi"
 
 / {
-	model = "UniPhier PH1-Pro4 Reference Board";
-	compatible = "socionext,ph1-pro4-ref", "socionext,ph1-pro4";
-
-	memory {
-		device_type = "memory";
-		reg = <0x80000000 0x40000000>;
-	};
-
-	chosen {
-		stdout-path = "serial0:115200n8";
-	};
+	model = "Freescale Layerscape 2080a RDB Board";
+	compatible = "fsl,ls2080a-rdb", "fsl,ls2080a";
 
 	aliases {
 		serial0 = &serial0;
 		serial1 = &serial1;
-		serial2 = &serial2;
-		serial3 = &serial3;
-		i2c0 = &i2c0;
-		i2c1 = &i2c1;
-		i2c2 = &i2c2;
-		i2c3 = &i2c3;
-		i2c5 = &i2c5;
-		i2c6 = &i2c6;
 	};
 };
 
-&extbus {
-	ranges = <1 0x00000000 0x42000000 0x02000000>;
-};
-
-&support_card {
-	ranges = <0x00000000 1 0x01f00000 0x00100000>;
-};
-
-&ethsc {
-	interrupts = <0 50 4>;
-};
-
-&serial0 {
+&esdhc {
 	status = "okay";
 };
 
-&serial1 {
+&ifc {
 	status = "okay";
-};
+	#address-cells = <2>;
+	#size-cells = <1>;
+	ranges = <0x0 0x0 0x5 0x80000000 0x08000000
+		  0x2 0x0 0x5 0x30000000 0x00010000
+		  0x3 0x0 0x5 0x20000000 0x00010000>;
 
-&serial2 {
-	status = "okay";
+	nor@0,0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "cfi-flash";
+		reg = <0x0 0x0 0x8000000>;
+		bank-width = <2>;
+		device-width = <1>;
+	};
+
+	nand@2,0 {
+	     compatible = "fsl,ifc-nand";
+	     reg = <0x2 0x0 0x10000>;
+	};
+
+	cpld@3,0 {
+	     reg = <0x3 0x0 0x10000>;
+	     compatible = "fsl,ls2080aqds-fpga", "fsl,fpga-qixis";
+	};
+
 };
 
 &i2c0 {
 	status = "okay";
+	pca9547@75 {
+		compatible = "nxp,pca9547";
+		reg = <0x75>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x01>;
+			rtc@68 {
+				compatible = "dallas,ds3232";
+				reg = <0x68>;
+			};
+		};
+
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3>;
+
+			adt7481@4c {
+				compatible = "adi,adt7461";
+				reg = <0x4c>;
+			};
+		};
+	};
 };
 
-&usb2 {
+&i2c1 {
+	status = "disabled";
+};
+
+&i2c2 {
+	status = "disabled";
+};
+
+&i2c3 {
+	status = "disabled";
+};
+
+&dspi {
+	status = "okay";
+	dflash0: n25q512a {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "st,m25p80";
+		spi-max-frequency = <3000000>;
+		reg = <0>;
+	};
+};
+
+&qspi {
+	status = "disabled";
+};
+
+&sata0 {
 	status = "okay";
 };
 
-&usb3 {
+&sata1 {
+	status = "okay";
+};
+
+&usb0 {
+	status = "okay";
+};
+
+&usb1 {
 	status = "okay";
 };

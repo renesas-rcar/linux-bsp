@@ -1,7 +1,7 @@
 /*
- * Device Tree file for Freescale LS2085a software Simulator model
+ * Device Tree file for Freescale LS2080a software Simulator model
  *
- * Copyright (C) 2014, Freescale Semiconductor
+ * Copyright (C) 2014-2015, Freescale Semiconductor
  *
  * Bhupesh Sharma <bhupesh.sharma@freescale.com>
  *
@@ -19,11 +19,6 @@
  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public
- *     License along with this library; if not, write to the Free
- *     Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
- *     MA 02110-1301 USA
  *
  * Or, alternatively,
  *
@@ -51,11 +46,16 @@
 
 /dts-v1/;
 
-/include/ "fsl-ls2085a.dtsi"
+/include/ "fsl-ls2080a.dtsi"
 
 / {
-	model = "Freescale Layerscape 2085a software Simulator model";
-	compatible = "fsl,ls2085a-simu", "fsl,ls2085a";
+	model = "Freescale Layerscape 2080a software Simulator model";
+	compatible = "fsl,ls2080a-simu", "fsl,ls2080a";
+
+	aliases {
+		serial0 = &serial0;
+		serial1 = &serial1;
+	};
 
 	ethernet@2210000 {
 		compatible = "smsc,lan91c111";
@@ -63,3 +63,8 @@
 		interrupts = <0 58 0x1>;
 	};
 };
+
+&ifc {
+	status = "okay";
+};
+

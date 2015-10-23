@@ -481,6 +481,7 @@ dtb-$(CONFIG_SOC_AM43XX) += \
 	am437x-gp-evm.dtb
 dtb-$(CONFIG_SOC_OMAP5) += \
 	omap5-cm-t54.dtb \
+	omap5-igep0050.dtb \
 	omap5-sbc-t54.dtb \
 	omap5-uevm.dtb
 dtb-$(CONFIG_SOC_DRA7XX) += \
@@ -699,7 +700,9 @@ dtb-$(CONFIG_ARCH_UNIPHIER) += \
 	uniphier-ph1-ld6b-ref.dtb \
 	uniphier-ph1-pro4-ref.dtb \
 	uniphier-ph1-sld3-ref.dtb \
-	uniphier-ph1-sld8-ref.dtb 
+	uniphier-ph1-sld8-ref.dtb \
+	uniphier-proxstream2-gentil.dtb \
+	uniphier-proxstream2-vodka.dtb
 dtb-$(CONFIG_ARCH_VERSATILE) += \
 	versatile-ab.dtb \
 	versatile-pb.dtb

@@ -1,5 +1,5 @@
 /*
- * Device Tree Source for UniPhier PH1-Pro4 Reference Board
+ * Device Tree Source for UniPhier ProXstream2 Vodka Board
  *
  * Copyright (C) 2015 Masahiro Yamada <yamada.masahiro@socionext.com>
  *
@@ -43,55 +43,26 @@
  */
 
 /dts-v1/;
-/include/ "uniphier-ph1-pro4.dtsi"
-/include/ "uniphier-ref-daughter.dtsi"
-/include/ "uniphier-support-card.dtsi"
+/include/ "uniphier-proxstream2.dtsi"
 
 / {
-	model = "UniPhier PH1-Pro4 Reference Board";
-	compatible = "socionext,ph1-pro4-ref", "socionext,ph1-pro4";
+	model = "UniPhier ProXstream2 Vodka Board";
+	compatible = "socionext,proxstream2-vodka", "socionext,proxstream2";
 
 	memory {
 		device_type = "memory";
-		reg = <0x80000000 0x40000000>;
+		reg = <0x80000000 0x80000000>;
 	};
 
 	chosen {
-		stdout-path = "serial0:115200n8";
+		stdout-path = "serial2:115200n8";
 	};
 
 	aliases {
 		serial0 = &serial0;
 		serial1 = &serial1;
 		serial2 = &serial2;
-		serial3 = &serial3;
-		i2c0 = &i2c0;
-		i2c1 = &i2c1;
-		i2c2 = &i2c2;
-		i2c3 = &i2c3;
-		i2c5 = &i2c5;
-		i2c6 = &i2c6;
 	};
-};
-
-&extbus {
-	ranges = <1 0x00000000 0x42000000 0x02000000>;
-};
-
-&support_card {
-	ranges = <0x00000000 1 0x01f00000 0x00100000>;
-};
-
-&ethsc {
-	interrupts = <0 50 4>;
-};
-
-&serial0 {
-	status = "okay";
-};
-
-&serial1 {
-	status = "okay";
 };
 
 &serial2 {
@@ -99,13 +70,5 @@
 };
 
 &i2c0 {
-	status = "okay";
-};
-
-&usb2 {
-	status = "okay";
-};
-
-&usb3 {
 	status = "okay";
 };
