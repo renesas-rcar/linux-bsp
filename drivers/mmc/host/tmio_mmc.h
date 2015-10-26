@@ -101,6 +101,7 @@ struct tmio_mmc_host;
 
 struct tmio_mmc_dma {
 	enum dma_slave_buswidth dma_buswidth;
+	bool sdbuf_64bit;
 	bool (*filter)(struct dma_chan *chan, void *arg);
 	void (*enable)(struct tmio_mmc_host *host, bool enable);
 };

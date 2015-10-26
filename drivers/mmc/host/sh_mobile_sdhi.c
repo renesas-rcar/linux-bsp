@@ -50,6 +50,7 @@ struct sh_mobile_sdhi_of_data {
 	unsigned bus_shift;
 	unsigned int max_blk_count;
 	unsigned short max_segs;
+	bool sdbuf_64bit;
 };
 
 static const struct sh_mobile_sdhi_of_data of_default_cfg = {
@@ -79,6 +80,7 @@ static const struct sh_mobile_sdhi_of_data of_rcar_gen3_compatible = {
 	/* Gen3 SDHI DMAC can handle 0xffffffff blk count, but seg = 1 */
 	.max_blk_count	= 0xffffffff,
 	.max_segs = 1,
+	.sdbuf_64bit = true,
 };
 
 static const struct of_device_id sh_mobile_sdhi_of_match[] = {
@@ -311,10 +313,12 @@ static int sh_mobile_sdhi_multi_io_quirk(struct mmc_card *card,
 
 static void sh_mobile_sdhi_enable_dma(struct tmio_mmc_host *host, bool enable)
 {
+	int dma_width = host->dma->sdbuf_64bit ? 64 : 32;
+
 	sd_ctrl_write16(host, CTL_DMA_ENABLE, enable ? 2 : 0);
 
 	/* enable 32bit access if DMA mode if possibile */
-	sh_mobile_sdhi_sdbuf_width(host, enable ? 32 : 16);
+	sh_mobile_sdhi_sdbuf_width(host, enable ? dma_width : 16);
 }
 
 static int sh_mobile_sdhi_probe(struct platform_device *pdev)
