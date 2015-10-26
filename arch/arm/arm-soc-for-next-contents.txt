@@ -263,6 +263,8 @@ next/arm64
 		https://github.com/mbgg/linux-mediatek tags/v4.3-next-arm64
 	samsung/dt64
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt64
+	arm/juno-pcie
+		git://linux-arm.org/linux-ld for-upstream/juno-pcie
 
 next/late
 
