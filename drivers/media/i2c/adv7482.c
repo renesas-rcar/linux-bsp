@@ -450,6 +450,8 @@ static const struct adv7482_reg_value adv7482_init_txb_1lane[] = {
 
 	{ADV7482_I2C_SDP, 0x17, 0x41},	/* Select SH1 */
 	{ADV7482_I2C_SDP, 0x31, 0x12},	/* ADI Required Write */
+	{ADV7482_I2C_SDP, 0xE6, 0x4F},
+		/* Set V bit end position manually in NTSC mode */
 
 #ifdef REL_DGB_FORCE_TO_SEND_COLORBAR
 	{ADV7482_I2C_SDP, 0x0C, 0x01},	/* ColorBar */
