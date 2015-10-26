@@ -104,6 +104,7 @@ void tmio_mmc_start_dma(struct tmio_mmc_host *host, struct mmc_data *data)
 	/* This DMAC cannot handle if buffer is not 8-bytes alignment */
 	if (!IS_ALIGNED(sg->offset, 8)) {
 		host->force_pio = true;
+		tmio_mmc_enable_dma(host, false);
 		return;
 	}
 
@@ -160,6 +161,7 @@ static void tmio_mmc_complete_tasklet_fn(unsigned long arg)
 	else
 		dir = DMA_TO_DEVICE;
 
+	tmio_mmc_enable_dma(host, false);
 	dma_unmap_sg(&host->pdev->dev, host->sg_ptr, host->sg_len, dir);
 	tmio_mmc_do_data_irq(host);
 }
