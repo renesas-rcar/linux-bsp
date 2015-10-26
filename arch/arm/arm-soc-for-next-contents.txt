@@ -185,6 +185,10 @@ next/dt
 	broadcom/rpi-dt
 		https://github.com/Broadcom/stblinux tags/arm/soc/for-4.4/rpi-dt-v2
 		contains depends/clk-bcm2835
+	depends/sunxi-clocks
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-clocks-for-4.4
+	sunxi/dt3
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.4-3
 
 next/defconfig
 	renesas/defconfig
