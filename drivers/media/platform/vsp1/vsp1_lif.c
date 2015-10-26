@@ -44,9 +44,9 @@ static int lif_s_stream(struct v4l2_subdev *subdev, int enable)
 {
 	const struct v4l2_mbus_framefmt *format;
 	struct vsp1_lif *lif = to_lif(subdev);
-	unsigned int hbth = 1300;
-	unsigned int obth = 400;
-	unsigned int lbth = 200;
+	unsigned int hbth = 0;
+	unsigned int obth = 3000;
+	unsigned int lbth = 0;
 
 	if (!enable) {
 		vsp1_lif_write(lif, VI6_LIF_CTRL, 0);
