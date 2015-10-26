@@ -39,6 +39,7 @@
 #include <media/v4l2-of.h>
 
 #define DRV_NAME "rcar_csi2"
+#define CONNECT_SLAVE_NAME "adv7482"
 
 #define RCAR_CSI2_TREF		0x00
 #define RCAR_CSI2_SRST		0x04
@@ -185,20 +186,18 @@ struct rcar_csi_irq_counter_log {
 
 struct rcar_csi2 {
 	struct v4l2_subdev		subdev;
+	struct v4l2_mbus_framefmt	*mf;
 	unsigned int			irq;
 	unsigned long			mipi_flags;
 	void __iomem			*base;
 	struct platform_device		*pdev;
 	struct rcar_csi2_client_config	*client;
 
+	unsigned int			field;
+	unsigned int			code;
+	unsigned int			lanes;
 	spinlock_t			lock;
 };
-
-static void rcar_csi2_hwinit(struct rcar_csi2 *priv);
-#if 1 /* FIXME */
-static int rcar_csi2_hwinit_tmp(struct rcar_csi2 *priv,
-	struct rcar_csi2_link_config *link_config);
-#endif
 
 #define RCAR_CSI_80MBPS		0
 #define RCAR_CSI_90MBPS		1
@@ -244,9 +243,9 @@ static int rcar_csi2_hwinit_tmp(struct rcar_csi2 *priv,
 #define RCAR_CSI_1450MBPS	41
 #define RCAR_CSI_1500MBPS	42
 
-static int rcar_csi2_set_phy_freq(struct rcar_csi2 *priv, unsigned char lanes)
+static int rcar_csi2_set_phy_freq(struct rcar_csi2 *priv)
 {
-	const uint32_t const HSFREQRANGE[43] = {
+	const uint32_t const hs_freq_range[43] = {
 		0x00, 0x10, 0x20, 0x30, 0x01,  /* 0-4   */
 		0x11, 0x21, 0x31, 0x02, 0x12,  /* 5-9   */
 		0x22, 0x32, 0x03, 0x13, 0x23,  /* 10-14 */
@@ -257,28 +256,66 @@ static int rcar_csi2_set_phy_freq(struct rcar_csi2 *priv, unsigned char lanes)
 		0x0B, 0x1B, 0x2B, 0x3B, 0x0C,  /* 35-39 */
 		0x1C, 0x2C, 0x3C               /* 40-42 */
 	};
+	uint32_t bps_per_lane = RCAR_CSI_190MBPS;
 
-	uint32_t bps_per_lane = 0;
+	dev_dbg(&priv->pdev->dev, "Input size (%dx%d%c)\n",
+			 priv->mf->width, priv->mf->height,
+			 (priv->mf->field == V4L2_FIELD_NONE) ? 'p' : 'i');
 
-    /* [FIXME] */
-	switch (lanes) {
+	switch (priv->lanes) {
 	case 1:
 		bps_per_lane = RCAR_CSI_400MBPS;
-/*		bps_per_lane = CSI_220MBPS; */
 		break;
 	case 4:
-/*		bps_per_lane = CSI_900MBPS; */
-		bps_per_lane = RCAR_CSI_190MBPS;
+		if (priv->mf->field == V4L2_FIELD_NONE) {
+			if ((priv->mf->width == 1920) &&
+				(priv->mf->height == 1080))
+				bps_per_lane = RCAR_CSI_900MBPS;
+			else if ((priv->mf->width == 1280) &&
+				 (priv->mf->height == 720))
+				bps_per_lane = RCAR_CSI_450MBPS;
+			else if ((priv->mf->width == 720) &&
+				 (priv->mf->height == 480))
+				bps_per_lane = RCAR_CSI_190MBPS;
+			else if ((priv->mf->width == 720) &&
+				 (priv->mf->height == 576))
+				bps_per_lane = RCAR_CSI_190MBPS;
+			else if ((priv->mf->width == 640) &&
+				 (priv->mf->height == 480))
+				bps_per_lane = RCAR_CSI_100MBPS;
+			else
+				goto error;
+		} else {
+			if ((priv->mf->width == 1920) &&
+				(priv->mf->height == 1080))
+				bps_per_lane = RCAR_CSI_450MBPS;
+			else if ((priv->mf->width == 720) &&
+				 (priv->mf->height == 480))
+				bps_per_lane = RCAR_CSI_100MBPS;
+			else if ((priv->mf->width == 720) &&
+				 (priv->mf->height == 576))
+				bps_per_lane = RCAR_CSI_100MBPS;
+			else
+				goto error;
+		}
 		break;
 	default:
-		dev_err(NULL, "ERROR: lanes is invalid (%d)\n", lanes);
-		return -1;
+		dev_err(&priv->pdev->dev, "ERROR: lanes is invalid (%d)\n",
+								 priv->lanes);
+		return -EINVAL;
 	}
 
-	iowrite32((HSFREQRANGE[bps_per_lane] << 16),
-				priv->base + RCAR_CSI2_PHYPLL);
+	dev_dbg(&priv->pdev->dev, "bps_per_lane (%d)\n", bps_per_lane);
 
+	iowrite32((hs_freq_range[bps_per_lane] << 16),
+				priv->base + RCAR_CSI2_PHYPLL);
 	return 0;
+
+error:
+	dev_err(&priv->pdev->dev, "Not support resolution (%dx%d%c)\n",
+		 priv->mf->width, priv->mf->height,
+		 (priv->mf->field == V4L2_FIELD_NONE) ? 'p' : 'i');
+	return -EINVAL;
 }
 
 static irqreturn_t rcar_csi2_irq(int irq, void *data)
@@ -304,246 +341,22 @@ done:
 
 }
 
-static int rcar_csi2_enum_mbus_code(struct v4l2_subdev *sd,
-				  struct v4l2_subdev_pad_config *cfg,
-				  struct v4l2_subdev_mbus_code_enum *code)
+static void rcar_csi2_hwdeinit(struct rcar_csi2 *priv)
 {
-	struct rcar_csi2 *priv = container_of(sd, struct rcar_csi2, subdev);
-	struct rcar_csi2_pdata *pdata = priv->pdev->dev.platform_data;
+	iowrite32(0, priv->base + RCAR_CSI2_PHYCNT);
 
-	/* FIXME */
-	dev_dbg(sd->v4l2_dev->dev, "%s\n", __func__);
-
-	switch (pdata->type) {
-	case RCAR_CSI2_CSI2X:
-		switch (code->code) {
-		case MEDIA_BUS_FMT_UYVY8_2X8:		/* YUV422 */
-		case MEDIA_BUS_FMT_YUYV8_1_5X8:		/* YUV420 */
-		case MEDIA_BUS_FMT_Y8_1X8:		/* RAW8 */
-		case MEDIA_BUS_FMT_SBGGR8_1X8:
-		case MEDIA_BUS_FMT_SGRBG8_1X8:
-			break;
-		default:
-		/* All MIPI CSI-2 devices must support one of primary formats */
-			code->code = MEDIA_BUS_FMT_YUYV8_2X8;
-		}
-		break;
-	case RCAR_CSI2_CSI4X:
-		switch (code->code) {
-		case MEDIA_BUS_FMT_RGB888_1X24:
-		/* FIXME */
-		case MEDIA_BUS_FMT_Y8_1X8:		/* RAW8 */
-		case MEDIA_BUS_FMT_SBGGR8_1X8:
-		case MEDIA_BUS_FMT_SGRBG8_1X8:
-			break;
-		default:
-		/* All MIPI CSI-2 devices must support one of primary formats */
-			code->code = MEDIA_BUS_FMT_SBGGR8_1X8;
-		}
-		break;
-	}
-
-	return 0;
+	/* reset CSI2 hardware */
+	iowrite32(0x00000001, priv->base + RCAR_CSI2_SRST);
+	udelay(5);
+	iowrite32(0x00000000, priv->base + RCAR_CSI2_SRST);
 }
 
-static int rcar_csi2_get_pad_format(struct v4l2_subdev *sd,
-				  struct v4l2_subdev_pad_config *cfg,
-				  struct v4l2_subdev_format *format)
-{
-	struct rcar_csi2 *priv = container_of(sd, struct rcar_csi2, subdev);
-	struct rcar_csi2_pdata *pdata = priv->pdev->dev.platform_data;
-	struct v4l2_mbus_framefmt *mf = &format->format;
-
-	switch (pdata->type) {
-	case RCAR_CSI2_CSI2X:
-		switch (mf->code) {
-		case MEDIA_BUS_FMT_UYVY8_2X8:		/* YUV422 */
-		case MEDIA_BUS_FMT_YUYV8_1_5X8:		/* YUV420 */
-		case MEDIA_BUS_FMT_Y8_1X8:		/* RAW8 */
-		case MEDIA_BUS_FMT_SBGGR8_1X8:
-		case MEDIA_BUS_FMT_SGRBG8_1X8:
-			break;
-		default:
-			/* All MIPI CSI-2 devices must support
-		      one of primary formats */
-			mf->code = MEDIA_BUS_FMT_YUYV8_2X8;
-		}
-		break;
-	case RCAR_CSI2_CSI4X:
-		switch (mf->code) {
-		case MEDIA_BUS_FMT_RGB888_1X24:
-		/* FIXME */
-		case MEDIA_BUS_FMT_Y8_1X8:		/* RAW8 */
-		case MEDIA_BUS_FMT_SBGGR8_1X8:
-		case MEDIA_BUS_FMT_SGRBG8_1X8:
-			break;
-		default:
-			/* All MIPI CSI-2 devices must support
-			  one of primary formats */
-			mf->code = MEDIA_BUS_FMT_SBGGR8_1X8;
-		}
-		break;
-	}
-
-	dev_dbg(sd->v4l2_dev->dev, "%s(%u)\n", __func__, mf->code);
-
-	return 0;
-}
-
-static int rcar_csi2_set_pad_format(struct v4l2_subdev *sd,
-				  struct v4l2_subdev_pad_config *cfg,
-				  struct v4l2_subdev_format *format)
-{
-	struct rcar_csi2 *priv = container_of(sd, struct rcar_csi2, subdev);
-	u32 tmp = (priv->client->channel & 3) << 8;
-	struct v4l2_mbus_framefmt *mf = &format->format;
-
-	dev_dbg(sd->v4l2_dev->dev, "%s(%u)\n", __func__, mf->code);
-
-	switch (mf->code) {
-	case MEDIA_BUS_FMT_UYVY8_2X8:
-		tmp |= 0x1e;	/* YUV422 8 bit */
-		break;
-	case MEDIA_BUS_FMT_YUYV8_1_5X8:
-		tmp |= 0x18;	/* YUV420 8 bit */
-		break;
-	case MEDIA_BUS_FMT_RGB555_2X8_PADHI_BE:
-		tmp |= 0x21;	/* RGB555 */
-		break;
-	case MEDIA_BUS_FMT_RGB565_2X8_BE:
-		tmp |= 0x22;	/* RGB565 */
-		break;
-	case MEDIA_BUS_FMT_RGB888_1X24:
-		tmp |= 0x24;	/* RGB888 */
-		break;
-	case MEDIA_BUS_FMT_Y8_1X8:
-	case MEDIA_BUS_FMT_SBGGR8_1X8:
-	case MEDIA_BUS_FMT_SGRBG8_1X8:
-		tmp |= 0x2a;	/* RAW8 */
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	tmp |= (RCAR_CSI2_VCDT_VCDTN_EN | RCAR_CSI2_VCDT_SEL_DTN_ON);
-
-	if (priv->client->phy == RCAR_CSI2_PHY_CSI20)
-		tmp = tmp << 16;
-
-	iowrite32(tmp, priv->base + RCAR_CSI2_VCDT);
-
-	return 0;
-}
-
-static int rcar_csi2_g_mbus_config(struct v4l2_subdev *sd,
-				 struct v4l2_mbus_config *cfg)
-{
-	struct rcar_csi2 *priv = container_of(sd, struct rcar_csi2, subdev);
-
-	if (!priv->mipi_flags) {
-		struct soc_camera_device *icd = v4l2_get_subdev_hostdata(sd);
-		struct v4l2_subdev *client_sd = soc_camera_to_subdev(icd);
-		struct rcar_csi2_pdata *pdata = priv->pdev->dev.platform_data;
-		unsigned long common_flags, csi2_flags;
-		struct v4l2_mbus_config client_cfg = {.type = V4L2_MBUS_CSI2,};
-		int ret;
-
-		/* Check if we can support this camera */
-		csi2_flags = V4L2_MBUS_CSI2_CONTINUOUS_CLOCK |
-			V4L2_MBUS_CSI2_1_LANE;
-
-		switch (pdata->type) {
-		case RCAR_CSI2_CSI2X:
-			if (priv->client->lanes != 1)
-				csi2_flags |= V4L2_MBUS_CSI2_2_LANE;
-			break;
-		case RCAR_CSI2_CSI4X:
-			switch (priv->client->lanes) {
-			default:
-				csi2_flags |= V4L2_MBUS_CSI2_4_LANE;
-			case 3:
-				csi2_flags |= V4L2_MBUS_CSI2_3_LANE;
-			case 2:
-				csi2_flags |= V4L2_MBUS_CSI2_2_LANE;
-			}
-		}
-
-		ret = v4l2_subdev_call(client_sd, video, g_mbus_config,
-				&client_cfg);
-		if (ret == -ENOIOCTLCMD)
-			common_flags = csi2_flags;
-		else if (!ret)
-			common_flags = soc_mbus_config_compatible(&client_cfg,
-				csi2_flags);
-		else
-			common_flags = 0;
-
-		if (!common_flags)
-			return -EINVAL;
-
-		/* All good: camera MIPI configuration supported */
-		priv->mipi_flags = common_flags;
-	}
-
-	if (cfg) {
-		cfg->flags = V4L2_MBUS_PCLK_SAMPLE_RISING |
-			V4L2_MBUS_HSYNC_ACTIVE_HIGH |
-			V4L2_MBUS_VSYNC_ACTIVE_HIGH |
-			V4L2_MBUS_MASTER |
-			V4L2_MBUS_DATA_ACTIVE_HIGH;
-		cfg->type = V4L2_MBUS_PARALLEL;
-	}
-
-	return 0;
-}
-
-static int rcar_csi2_s_mbus_config(struct v4l2_subdev *sd,
-				 const struct v4l2_mbus_config *cfg)
-{
-	struct rcar_csi2 *priv = container_of(sd, struct rcar_csi2, subdev);
-	struct soc_camera_device *icd = v4l2_get_subdev_hostdata(sd);
-	struct v4l2_subdev *client_sd = soc_camera_to_subdev(icd);
-	struct v4l2_mbus_config client_cfg = {.type = V4L2_MBUS_CSI2,};
-	int ret = rcar_csi2_g_mbus_config(sd, NULL);
-
-	if (ret < 0)
-		return ret;
-
-	pm_runtime_get_sync(&priv->pdev->dev);
-
-	rcar_csi2_hwinit(priv);
-
-	client_cfg.flags = priv->mipi_flags;
-
-	return v4l2_subdev_call(client_sd, video, s_mbus_config,
-								&client_cfg);
-}
-
-static struct v4l2_subdev_video_ops rcar_csi2_subdev_video_ops = {
-#if 0 /* FIXME */
-	.s_mbus_fmt	= rcar_csi2_s_fmt,
-	.try_mbus_fmt	= rcar_csi2_try_fmt,
-#endif
-	.g_mbus_config	= rcar_csi2_g_mbus_config,
-	.s_mbus_config	= rcar_csi2_s_mbus_config,
-};
-
-static const struct v4l2_subdev_pad_ops rcar_csi2_pad_ops = {
-	.enum_mbus_code = rcar_csi2_enum_mbus_code,
-	.set_fmt = rcar_csi2_set_pad_format,
-	.get_fmt = rcar_csi2_get_pad_format,
-};
-
-#if 1 /* FIXME */
-static int rcar_csi2_hwinit_tmp(struct rcar_csi2 *priv,
-			struct rcar_csi2_link_config *link_config)
+static int rcar_csi2_hwinit(struct rcar_csi2 *priv)
 {
 	int ret;
 	__u32 tmp = 0x10; /* Enable MIPI CSI clock lane */
 	__u32 vcdt = 0;
 	__u32 vcdt2 = 0;
-
-	pm_runtime_get_sync(&priv->pdev->dev);
 
 	/* Reflect registers immediately */
 	iowrite32(0x00000001, priv->base + RCAR_CSI2_TREF);
@@ -556,7 +369,7 @@ static int rcar_csi2_hwinit_tmp(struct rcar_csi2 *priv,
 
 	/* setting HS reception frequency */
 	{
-		switch (link_config->lanes) {
+		switch (priv->lanes) {
 		case 1:
 			tmp |= 0x1;
 			vcdt |= (0x1e | RCAR_CSI2_VCDT_VCDTN_EN);
@@ -569,13 +382,13 @@ static int rcar_csi2_hwinit_tmp(struct rcar_csi2 *priv,
 			break;
 		default:
 			dev_err(&priv->pdev->dev,
-				"ERROR: link_config->lanes is invalid (%d)\n",
-				link_config->lanes);
-			return -1;
+				"ERROR: lanes is invalid (%d)\n",
+				priv->lanes);
+			return -EINVAL;
 		}
 
 		/* set PHY frequency */
-		ret = rcar_csi2_set_phy_freq(priv, link_config->lanes);
+		ret = rcar_csi2_set_phy_freq(priv);
 		if (ret < 0)
 			return ret;
 
@@ -631,96 +444,38 @@ static int rcar_csi2_hwinit_tmp(struct rcar_csi2 *priv,
 
 	return 0;
 }
-#endif
-static void rcar_csi2_hwinit(struct rcar_csi2 *priv)
-{
-	struct rcar_csi2_pdata *pdata = priv->pdev->dev.platform_data;
-	__u32 tmp = 0x10; /* Enable MIPI CSI clock lane */
-
-	/* Reflect registers immediately */
-	iowrite32(0x00000001, priv->base + RCAR_CSI2_TREF);
-	/* reset CSI2 hardware */
-	iowrite32(0x00000001, priv->base + RCAR_CSI2_SRST);
-	udelay(5);
-	iowrite32(0x00000000, priv->base + RCAR_CSI2_SRST);
-
-	switch (pdata->type) {
-	case RCAR_CSI2_CSI2X:
-		if (priv->client->lanes == 1)
-			tmp |= 1;
-		else
-			/* Default - both lanes */
-			tmp |= 3;
-		break;
-	case RCAR_CSI2_CSI4X:
-		if (!priv->client->lanes || priv->client->lanes > 4)
-			/* Default - all 4 lanes */
-			tmp |= 0xf;
-		else
-			tmp |= (1 << priv->client->lanes) - 1;
-	}
-
-	iowrite32(tmp, priv->base + RCAR_CSI2_PHYCNT);
-
-    /* comfirmation of PHY start */
-    /* FIXME */
-
-	tmp = 0;
-	if (pdata->flags & RCAR_CSI2_ECC)
-		tmp |= 2;
-	if (pdata->flags & RCAR_CSI2_CRC)
-		tmp |= 1;
-	iowrite32(tmp, priv->base + RCAR_CSI2_CHKSUM);
-}
-
-static int rcar_csi2_client_connect(struct rcar_csi2 *priv)
-{
-	struct device *dev = v4l2_get_subdevdata(&priv->subdev);
-	struct rcar_csi2_pdata *pdata = dev->platform_data;
-	struct soc_camera_device *icd =
-					v4l2_get_subdev_hostdata(&priv->subdev);
-	int i;
-
-	if (priv->client)
-		return -EBUSY;
-
-	for (i = 0; i < pdata->num_clients; i++)
-		if ((pdata->clients[i].pdev &&
-		     &pdata->clients[i].pdev->dev == icd->pdev) ||
-		    (icd->control &&
-		     strcmp(pdata->clients[i].name, dev_name(icd->control))))
-			break;
-
-	dev_dbg(dev, "%s(%p): found #%d\n", __func__, dev, i);
-
-	if (i == pdata->num_clients)
-		return -ENODEV;
-
-	priv->client = pdata->clients + i;
-
-	return 0;
-}
-
-static void rcar_csi2_client_disconnect(struct rcar_csi2 *priv)
-{
-
-	if (!priv->client)
-		return;
-
-	priv->client = NULL;
-
-	pm_runtime_put(v4l2_get_subdevdata(&priv->subdev));
-}
 
 static int rcar_csi2_s_power(struct v4l2_subdev *sd, int on)
 {
 	struct rcar_csi2 *priv = container_of(sd, struct rcar_csi2, subdev);
+	struct v4l2_subdev *tmp_sd;
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
+	struct v4l2_mbus_framefmt *mf = &fmt.format;
+	int ret = 0;
 
-	if (on)
-		return rcar_csi2_client_connect(priv);
+	if (on) {
+		v4l2_device_for_each_subdev(tmp_sd, sd->v4l2_dev) {
+			if (strncmp(tmp_sd->name, CONNECT_SLAVE_NAME,
+				sizeof(CONNECT_SLAVE_NAME) - 1) == 0) {
+				v4l2_subdev_call(tmp_sd, pad, get_fmt,
+							 NULL, &fmt);
+				if (ret < 0)
+					return ret;
+			}
+		}
+		priv->mf = mf;
+		pm_runtime_get_sync(&priv->pdev->dev);
+		ret = rcar_csi2_hwinit(priv);
+		if (ret < 0)
+			return ret;
+	} else {
+		rcar_csi2_hwdeinit(priv);
+		pm_runtime_put_sync(&priv->pdev->dev);
+	}
 
-	rcar_csi2_client_disconnect(priv);
-	return 0;
+	return ret;
 }
 
 static struct v4l2_subdev_core_ops rcar_csi2_subdev_core_ops = {
@@ -729,8 +484,6 @@ static struct v4l2_subdev_core_ops rcar_csi2_subdev_core_ops = {
 
 static struct v4l2_subdev_ops rcar_csi2_subdev_ops = {
 	.core	= &rcar_csi2_subdev_core_ops,
-	.video	= &rcar_csi2_subdev_video_ops,
-	.pad = &rcar_csi2_pad_ops,
 };
 
 #ifdef CONFIG_OF
@@ -830,13 +583,14 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	priv->pdev = pdev;
 	priv->subdev.owner = THIS_MODULE;
 	priv->subdev.dev = &pdev->dev;
+	priv->lanes = link_config.lanes;
 
 	platform_set_drvdata(pdev, &priv->subdev);
 
 	v4l2_subdev_init(&priv->subdev, &rcar_csi2_subdev_ops);
 	v4l2_set_subdevdata(&priv->subdev, &pdev->dev);
 
-	snprintf(priv->subdev.name, V4L2_SUBDEV_NAME_SIZE, "%s.mipi-csi",
+	snprintf(priv->subdev.name, V4L2_SUBDEV_NAME_SIZE, "rcar_csi2.%s",
 		 dev_name(&pdev->dev));
 
 	ret = v4l2_async_register_subdev(&priv->subdev);
@@ -848,22 +602,6 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	pm_runtime_enable(&pdev->dev);
 
 	dev_dbg(&pdev->dev, "CSI2 probed.\n");
-
-    /* [FIXME] The following codes is trial */
-	{
-#if 0
-		/* FIXME: The following is a original code */
-		struct v4l2_subdev_format format;
-
-		rcar_csi2_hwinit(priv);
-		format.format.code = MEDIA_BUS_FMT_UYVY8_2X8;
-		rcar_csi2_set_pad_format(&priv->subdev, NULL, &format);
-#else
-		ret = rcar_csi2_hwinit_tmp(priv, &link_config);
-		if (ret < 0)
-			return ret;
-#endif
-	}
 
 	return 0;
 }
