@@ -61,6 +61,10 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-soc2
 	tegra/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.4-soc
+	mvebu/soc2
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.4-2
+	samsung/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-soc
 
 next/boards
 
@@ -172,6 +176,8 @@ next/dt
 		dts/Makefile: Add build support for LS2080a QDS & RDB board DTS
 	tegra/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.4-dt
+	samsung/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt-2
 
 next/defconfig
 	renesas/defconfig
@@ -208,6 +214,8 @@ next/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-defconfig
 	tegra/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.4-defconfig
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-defconfig
 
 next/drivers
 	renesas/clk
@@ -233,10 +241,15 @@ next/drivers
 		Merge branch 'drivers/psci2' into next/drivers
 	rockchip/drivers2
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-drivers2
+	patch
+		bus: sunxi-rsb: Add Allwinner Reduced Serial Bus (RSB) controller bindings
+		bus: sunxi-rsb: Add driver for Allwinner Reduced Serial Bus
 
 next/arm64
 	mediatek/arm64
 		https://github.com/mbgg/linux-mediatek tags/v4.3-next-arm64
+	samsung/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt64
 
 next/late
 
