@@ -627,6 +627,10 @@ static void dl_set_header_less(struct vsp1_dl *dl)
 	dl_write(dl, VI6_DL_BODY_SIZE,
 			(body->reg_count * 8) | VI6_DL_BODY_SIZE_UPD);
 
+#ifdef VSP1_UNDERRUN_WORKAROUND
+	dl->vsp1->dl_addr = body->paddr;
+	dl->vsp1->dl_body = (body->reg_count * 8) | VI6_DL_BODY_SIZE_UPD;
+#endif
 	spin_lock_irqsave(&dl->lock, flags);
 	dl->setting_body = NULL;
 	dl_free_body(dl->next_body);

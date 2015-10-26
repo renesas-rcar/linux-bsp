@@ -23,6 +23,7 @@
 
 #include "vsp1_regs.h"
 
+#define VSP1_UNDERRUN_WORKAROUND
 #define VSP1_DL_SUPPORT 1
 
 struct clk;
@@ -86,6 +87,10 @@ struct vsp1_device {
 	struct vsp1_rwpf *wpf[VSP1_MAX_WPF];
 #ifdef VSP1_DL_SUPPORT
 	struct vsp1_dl *dl;
+#ifdef VSP1_UNDERRUN_WORKAROUND
+	dma_addr_t dl_addr;
+	u32 dl_body;
+#endif
 #endif
 
 	struct list_head entities;

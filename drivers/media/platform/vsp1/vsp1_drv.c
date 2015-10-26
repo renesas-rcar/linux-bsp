@@ -68,10 +68,85 @@ void vsp1_ut_debug_printk(const char *function_name, const char *format, ...)
 	va_end(args);
 }
 
+#ifdef VSP1_UNDERRUN_WORKAROUND
+#define SRCR7_REG		0xe61501cc
+#define	FCPVD0_REG		0xfea27000
+#define	FCPVD1_REG		0xfea2f000
+#define	FCPVD2_REG		0xfea37000
+#define	FCPVD3_REG		0xfea3f000
+
+#define FCP_RST_REG		0x0010
+#define FCP_RST_SOFTRST		0x00000001
+#define FCP_RST_WORKAROUND	0x00000010
+
+#define FCP_STA_REG		0x0018
+#define FCP_STA_ACT		0x00000001
+
+static void __iomem *fcpv_reg[4];
+static const unsigned int fcpvd_offset[] = {
+	FCPVD0_REG, FCPVD1_REG, FCPVD2_REG, FCPVD3_REG
+};
+
+static void vsp1_underrun_workaround(struct vsp1_device *vsp1)
+{
+	unsigned int timeout = 0;
+
+	/* 1. Disable clock stop of VSP */
+	vsp1_write(vsp1, VI6_CLK_CTRL0, VI6_CLK_CTRL0_WORKAROUND);
+	vsp1_write(vsp1, VI6_CLK_CTRL1, VI6_CLK_CTRL1_WORKAROUND);
+	vsp1_write(vsp1, VI6_CLK_DCSWT, VI6_CLK_DCSWT_WORKAROUND1);
+	vsp1_write(vsp1, VI6_CLK_DCSM0, VI6_CLK_DCSM0_WORKAROUND);
+	vsp1_write(vsp1, VI6_CLK_DCSM1, VI6_CLK_DCSM1_WORKAROUND);
+
+	/* 2. Stop operation of VSP except bus access with module reset */
+	vsp1_write(vsp1, VI6_MRESET_ENB0, VI6_MRESET_ENB0_WORKAROUND1);
+	vsp1_write(vsp1, VI6_MRESET_ENB1, VI6_MRESET_ENB1_WORKAROUND);
+	vsp1_write(vsp1, VI6_MRESET, VI6_MRESET_WORKAROUND);
+
+	/* 3. Stop operation of FCPV with software reset */
+	iowrite32(FCP_RST_SOFTRST, fcpv_reg[vsp1->index] + FCP_RST_REG);
+
+	/* 4. Wait until FCP_STA.ACT become 0. */
+	while (1) {
+		if ((ioread32(fcpv_reg[vsp1->index] + FCP_STA_REG) &
+			FCP_STA_ACT) != FCP_STA_ACT)
+			break;
+
+		if (timeout == 100)
+			break;
+		timeout++;
+		udelay(1);
+	}
+
+	/* 5. Initialize the whole FCPV with module reset */
+	iowrite32(FCP_RST_WORKAROUND, fcpv_reg[vsp1->index] + FCP_RST_REG);
+
+	/* 6. Stop the whole operation of VSP with module reset
+	      (note that register setting is not cleared) */
+	vsp1_write(vsp1, VI6_MRESET_ENB0, VI6_MRESET_ENB0_WORKAROUND2);
+	vsp1_write(vsp1, VI6_MRESET_ENB1, VI6_MRESET_ENB1_WORKAROUND);
+	vsp1_write(vsp1, VI6_MRESET, VI6_MRESET_WORKAROUND);
+
+	/* 7. Enable clock stop of VSP */
+	vsp1_write(vsp1, VI6_CLK_CTRL0, 0);
+	vsp1_write(vsp1, VI6_CLK_CTRL1, 0);
+	vsp1_write(vsp1, VI6_CLK_DCSWT, VI6_CLK_DCSWT_WORKAROUND2);
+	vsp1_write(vsp1, VI6_CLK_DCSM0, 0);
+	vsp1_write(vsp1, VI6_CLK_DCSM1, 0);
+
+	/* 8. Restart VSPD */
+#ifdef VSP1_DL_SUPPORT
+	/* Necessary when headerless display list */
+	vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), vsp1->dl_addr);
+	vsp1_write(vsp1, VI6_DL_BODY_SIZE, vsp1->dl_body);
+#endif
+	vsp1_write(vsp1, VI6_CMD(0), VI6_CMD_STRCMD);
+}
+#endif
+
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
  */
-
 static irqreturn_t vsp1_irq_handler(int irq, void *data)
 {
 	u32 mask = VI6_WFP_IRQ_STA_DFE | VI6_WFP_IRQ_STA_FRE
@@ -101,6 +176,11 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 				"Under flow occurred num[%d] at VSPD (%s)\n",
 				vsp_und_cnt, dev_name(vsp1->dev));
 		}
+
+#ifdef VSP1_UNDERRUN_WORKAROUND
+		if (status & VI6_WFP_IRQ_STA_UND)
+			vsp1_underrun_workaround(vsp1);
+#endif
 
 		if (status & VI6_WFP_IRQ_STA_FRE) {
 			vsp1_pipeline_frame_end(pipe);
@@ -730,6 +810,9 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, vsp1);
 
+#ifdef VSP1_UNDERRUN_WORKAROUND
+	fcpv_reg[vsp1->index] = ioremap(fcpvd_offset[vsp1->index], 0x20);
+#endif
 	return 0;
 }
 
@@ -739,6 +822,9 @@ static int vsp1_remove(struct platform_device *pdev)
 
 	vsp1_destroy_entities(vsp1);
 
+#ifdef VSP1_UNDERRUN_WORKAROUND
+	iounmap(fcpv_reg[vsp1->index]);
+#endif
 	return 0;
 }
 
