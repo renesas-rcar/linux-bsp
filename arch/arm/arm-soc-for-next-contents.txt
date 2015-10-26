@@ -5,7 +5,7 @@ next/fixes-non-critical
 		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.4/fixes
 	patch
 		soc: ti: reset irq affinity before freeing irq
-	<no branch> (63f37ddf5c221c5a86ea9e45625bd0381feabc13)
+	broadcom/maintainers
 		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.4/maintainers
 	patch
 		MAINTAINERS: update lpc18xx entry with more drivers
@@ -17,7 +17,7 @@ next/cleanup
 		git://git.pengutronix.de/git/ukl/linux tags/efm32-for-4.4-rc1
 	mvebu/cleanup
 		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.4-1
-	<no branch> (d42f265a5d7a352d40fa2911666cd5236bc3ccaf)
+	omap/cleanup
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/cleanup-pt1
 	renesas/cleanup2
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup2-for-v4.4
@@ -178,6 +178,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.4-dt
 	samsung/dt2
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt-2
+	patch
+		ARM: dts: uniphier: add I2C aliases for ProXstream2 boards
 
 next/defconfig
 	renesas/defconfig
@@ -244,6 +246,8 @@ next/drivers
 	patch
 		bus: sunxi-rsb: Add Allwinner Reduced Serial Bus (RSB) controller bindings
 		bus: sunxi-rsb: Add driver for Allwinner Reduced Serial Bus
+	broadcom/rpi-drivers
+		https://github.com/Broadcom/stblinux tags/arm/soc/for-4.4/rpi-drivers
 
 next/arm64
 	mediatek/arm64
