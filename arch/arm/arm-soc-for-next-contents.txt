@@ -28,6 +28,8 @@ next/cleanup
 		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.4-2
 	pxa/for-4.4
 		https://github.com/rjarzmik/linux tags/pxa-for-4.4
+	omap/cleanup2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/soc-clean-up
 
 next/soc
 	renesas/soc
@@ -180,6 +182,9 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt-2
 	patch
 		ARM: dts: uniphier: add I2C aliases for ProXstream2 boards
+	broadcom/rpi-dt
+		https://github.com/Broadcom/stblinux tags/arm/soc/for-4.4/rpi-dt-v2
+		contains depends/clk-bcm2835
 
 next/defconfig
 	renesas/defconfig
