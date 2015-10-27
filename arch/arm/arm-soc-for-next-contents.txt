@@ -1,0 +1,304 @@
+next/fixes-non-critical
+	patch
+		ARM: cns3xxx: pci: avoid potential stack overflow
+	davinci/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.4/fixes
+	patch
+		soc: ti: reset irq affinity before freeing irq
+	broadcom/maintainers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.4/maintainers
+	patch
+		MAINTAINERS: update lpc18xx entry with more drivers
+
+next/cleanup
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup-for-v4.4
+	efm32/cleanup
+		git://git.pengutronix.de/git/ukl/linux tags/efm32-for-4.4-rc1
+	mvebu/cleanup
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.4-1
+	omap/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/cleanup-pt1
+	renesas/cleanup2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup2-for-v4.4
+	patch
+		ARM: Remove open-coded version of IRQCHIP_DECLARE
+		ARM: Remove __ref on hotplug cpu die path
+	mvebu/cleanup2
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.4-2
+	pxa/for-4.4
+		https://github.com/rjarzmik/linux tags/pxa-for-4.4
+	omap/cleanup2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/soc-clean-up
+
+next/soc
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-for-v4.4
+		contains renesas/clk
+	at91/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-soc
+	patch
+		ARM: meson: Enable Meson8b SoCs
+	mvebu/soc
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.4-1
+	berlin/soc64
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-soc-for-4.4-1
+	berlin/soc
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-soc-for-4.4-1
+	broadcom/soc
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.4/soc
+	<no branch> (045016902bf7abeeb2a86fc9284c30dce228f055)
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-driver-soc_v2
+	patch
+		ARM: digicolor: select pinctrl/gpio driver
+	berlin/soc2
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-soc-for-4.4-2
+	sunxi/core
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-core-for-4.4
+	mediatek/soc
+		https://github.com/mbgg/linux-mediatek tags/v4.3-next-soc
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.4
+	at91/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-soc2
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.4-soc
+	mvebu/soc2
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.4-2
+	samsung/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-soc
+	patch
+		ARM: uniphier: add outer cache support
+		ARM: uniphier: rework SMP operations to use trampoline code
+
+next/boards
+
+next/dt
+	hisi/dt
+		git://github.com/hisilicon/linux-hisi tags/hip05-dt-for-4.3
+	st/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/sti tags/sti-dt-for-v4.4-1
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-dt
+	xgene/dt
+		https://github.com/AppliedMicro/xgene-next tags/xgene-dts-for-v4.4-1
+	socfpga/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.4
+	patch
+		arm64: dts: add all hi6220 uart nodes
+	renesas/cleanup
+		Merge branch 'renesas/cleanup' into next/dt
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.4
+	patch
+		of: documentation: Add vendor prefix for Tronfy
+		of: documentation: add bindings documentation for Meson8b
+		ARM: meson: Add DTS for Odroid-C1 and Tronfy MXQ boards
+	keystone/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-dts
+	rockchip/dts32
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-dts32-1
+	bcm/dt
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.4/devicetree
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.4-1
+	berlin/dt
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-dt-for-4.4-1
+	berlin/dt64
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-dt-for-4.4-1
+	lpc18xx/dt
+		https://github.com/manabian/linux-lpc tags/lpc18xx_dts_for_4.4
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.4
+	patch
+		ARM: meson6: DTS: Fix wrong reg mapping and IRQ numbers
+	hisi/dt2
+		git://github.com/hisilicon/linux-hisi tags/hisi-soc-dt-for-4.4
+	patch
+		ARM64: dts: vexpress: Use a symlink to vexpress-v2m-rs1.dtsi from arch=arm
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt-1
+	patch
+		ARM: dts: uniphier: change the external bus address mapping
+	renesas/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v4.4
+	patch
+		ARM64: juno: add NOR flash to device tree
+	qcom/dt
+		git://codeaurora.org/quic/kernel/agross-msm tags/qcom-dt-for-4.4
+	berlin/dt-cpuclk
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-dt-cpuclk-for-4.4-1
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/dt-pt1
+	keystone/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-dts-part2
+	patch
+		ARM: digicolor: add pinctrl module device node
+		ARM: digicolor: dts: add uart pin configuration
+	juno/scpi
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/juno-scpi-for-v4.4
+	<no branch> (00a9e053da0b9e150b7f8fefa3c409d7e71ce48f)
+		git://codeaurora.org/quic/kernel/agross-msm tags/qcom-arm64-for-4.4
+	socfpga/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.4_part_2
+	socfpga/dt-cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_for_v4.4_cleanup
+	mvebu/dt2
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.4-2
+	sunxi/dt2
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.4-2
+	rockchip/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-dts32-2
+	mediatek/dt
+		https://github.com/mbgg/linux-mediatek tags/v4.3-next-dts
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.4
+		contains depends/imx-clk
+	patch
+		ARM: dts: TI-Nspire: fix cpu compatible value
+		ARM: dts: WM8750: fix cpu compatible value
+	sti/dt2
+		https://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/sti tags/sti-dt-for-v4.4-2
+	patch
+		ARM: dts: uniphier: use stdout-path instead of console
+		ARM: dts: uniphier: add ProXstream2 Gentil board support
+		ARM: dts: uniphier: add ProXstream2 Vodka board support
+	omap/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/dt-pt2
+	at91/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-dt2
+	patch
+		arm64: Use generic Layerscape SoC family naming
+		arm64: Rename FSL LS2085A SoC support code to LS2080A
+		Documentation: DT: Add entry for FSL LS2080A QDS and RDB boards
+		Documentation/dts: Move FSL board-specific bindings out of /powerpc
+		doc/bindings: Update GPIO devicetree binding documentation for LS2080A
+		doc: DTS: Update DWC3 binding to provide reference to generic bindings
+		dts/ls2080a: Update DTSI to add support of various peripherals
+		dts/ls2080a: Remove text about writing to Free Software Foundation
+		dts/ls2080a: Update Simulator DTS to add support of various peripherals
+		dts/ls2080a: Add DTS support for LS2080a QDS & RDB boards
+		dts/Makefile: Add build support for LS2080a QDS & RDB board DTS
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.4-dt
+	samsung/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt-2
+	patch
+		ARM: dts: uniphier: add I2C aliases for ProXstream2 boards
+	broadcom/rpi-dt
+		https://github.com/Broadcom/stblinux tags/arm/soc/for-4.4/rpi-dt-v2
+		contains depends/clk-bcm2835
+	depends/sunxi-clocks
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-clocks-for-4.4
+	sunxi/dt3
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.4-3
+	patch
+		ARM: dts: uniphier: add outer cache controller nodes
+
+next/defconfig
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v4.4
+	broadcom/defconfig
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.4/defconfig
+	patch
+		ARM: multi_v7_defconfig: Add missing QCOM APQ8064 configs
+		ARM: multi_v7_defconfig: Enable common Rockchip devices/busses
+		ARM: multi_v7_defconfig: Enable common regulators for rockchip boards
+		ARM: multi_v7_defconfig: Enable Rockchip display support
+		ARM: multi_v7_defconfig: Enable the Rockchip USB 2.0 phy
+		ARM: multi_v7_defconfig: Support RTC devices commonly used on Rockchip boards
+	keystone/config
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone-config
+	patch
+		arm64: defconfig: Enable devices for MSM8916
+		ARM: configs: update lpc18xx defconfig
+		ARM: configs: Enable FIXED_PHY in multi_v7 defconfig
+		ARM: multi_v7_defconfig: improve multi_v7_defconfig support for Berlin
+	qcom/defconfig
+		git://codeaurora.org/quic/kernel/agross-msm tags/qcom-defconfig-for-4.4
+	renesas/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig2-for-v4.4
+	socfpga/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_defconfig_for_v4.4
+	mvebu/config
+		git://git.infradead.org/linux-mvebu tags/mvebu-config-4.4-1
+	sunxi/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-defconfig-for-4.4
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.4
+	at91/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-defconfig
+	tegra/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.4-defconfig
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-defconfig
+
+next/drivers
+	renesas/clk
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-clk-for-v4.4
+	at91/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-cleanup-4.4
+	rockchip/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-drivers1
+	drivers/scpi
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/arm-scpi-for-v4.4
+	drivers/pl172
+		https://github.com/manabian/linux-lpc tags/drivers_pl172_for_4.4
+	berlin/cpuclk
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-new-cpuclk-for-4.4-1
+		contains berlin/dt-cpuclk
+	qcom/soc
+		git://codeaurora.org/quic/kernel/agross-msm tags/qcom-soc-for-4.4
+	patch
+		soc: qcom/smem: add HWSPINLOCK dependency
+	drivers/psci
+		git://git.kernel.org/pub/scm/linux/kernel/git/lpieralisi/linux tags/firmware/psci-1.0
+	drivers/psci2
+		Merge branch 'drivers/psci2' into next/drivers
+	rockchip/drivers2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.4-rockchip-drivers2
+	patch
+		bus: sunxi-rsb: Add Allwinner Reduced Serial Bus (RSB) controller bindings
+		bus: sunxi-rsb: Add driver for Allwinner Reduced Serial Bus
+	broadcom/rpi-drivers
+		https://github.com/Broadcom/stblinux tags/arm/soc/for-4.4/rpi-drivers
+
+next/arm64
+	mediatek/arm64
+		https://github.com/mbgg/linux-mediatek tags/v4.3-next-arm64
+	samsung/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-dt64
+	arm/juno-pcie
+		git://linux-arm.org/linux-ld for-upstream/juno-pcie
+
+next/late
+
+fixes
+	<no branch> (d836ace65ee98d7079bc3c5afdbcc0e27dca20a3)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.3-1
+	<no branch> (1f744fd317dc55cadd7132c57c499e3117aea01d)
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-fixes-for-4.3-1
+	<no branch> (178b2d09afc05a46f68b190c6594f3a429bc2385)
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.3-2
+	patch
+		ARM: pxa: fix pxa3xx DFI lockup hack
+		ARM: ux500: modify initial levelshifter status
+		MAINTAINERS: Update Allwinner entry and add new maintainer
+		ARM: meson6: DTS: Fix wrong reg mapping and IRQ numbers
+		bus: arm-ccn: Handle correctly no-more-cpus case
+		bus: arm-ccn: Fix irq affinity setting on CPU migration
+		drivers/perf: arm_pmu: avoid CPU device_node reference leak
+		ARM: dts: uniphier: fix IRQ number for devices on PH1-LD6b ref board
+	<no branch> (d8e1f5ed11a39a68da00f05000466c4f6db4456e)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/fixes-rc5
+	patch
+		ARM: tegra: Comment out gpio-ranges properties
+	<no branch> (57df5380853460bc66b59a46273ce113c923d39c)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.3/fixes-rc6
+	<no branch> (b28fec1324bf8f5010d2c3c5d57db4115bda66d4)
+		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-fixes-2
+	<no branch> (db347f1a5304d68c68c52f19971924b1e5842f3c)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.3-2
+	patch
+		ARM: dts: fix gpio-keys wakeup-source property
+
