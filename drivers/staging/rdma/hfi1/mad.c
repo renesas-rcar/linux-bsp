@@ -1438,7 +1438,7 @@ static int __subn_set_opa_pkeytable(struct opa_smp *smp, u32 am, u8 *data,
 
 static int get_sc2vlt_tables(struct hfi1_devdata *dd, void *data)
 {
-	u64 *val = (u64 *)data;
+	u64 *val = data;
 
 	*val++ = read_csr(dd, SEND_SC2VLT0);
 	*val++ = read_csr(dd, SEND_SC2VLT1);
@@ -1457,7 +1457,7 @@ static int get_sc2vlt_tables(struct hfi1_devdata *dd, void *data)
 static void filter_sc2vlt(void *data)
 {
 	int i;
-	u8 *pd = (u8 *)data;
+	u8 *pd = data;
 
 	for (i = 0; i < OPA_MAX_SCS; i++) {
 		if (i == 15)
@@ -1469,7 +1469,7 @@ static void filter_sc2vlt(void *data)
 
 static int set_sc2vlt_tables(struct hfi1_devdata *dd, void *data)
 {
-	u64 *val = (u64 *)data;
+	u64 *val = data;
 
 	filter_sc2vlt(data);
 
@@ -1478,7 +1478,7 @@ static int set_sc2vlt_tables(struct hfi1_devdata *dd, void *data)
 	write_csr(dd, SEND_SC2VLT2, *val++);
 	write_csr(dd, SEND_SC2VLT3, *val++);
 	write_seqlock_irq(&dd->sc2vl_lock);
-	memcpy(dd->sc2vl, (u64 *)data, sizeof(dd->sc2vl));
+	memcpy(dd->sc2vl, data, sizeof(dd->sc2vl));
 	write_sequnlock_irq(&dd->sc2vl_lock);
 	return 0;
 }
@@ -1488,7 +1488,7 @@ static int __subn_get_opa_sl_to_sc(struct opa_smp *smp, u32 am, u8 *data,
 				   u32 *resp_len)
 {
 	struct hfi1_ibport *ibp = to_iport(ibdev, port);
-	u8 *p = (u8 *)data;
+	u8 *p = data;
 	size_t size = ARRAY_SIZE(ibp->sl_to_sc); /* == 32 */
 	unsigned i;
 
@@ -1511,7 +1511,7 @@ static int __subn_set_opa_sl_to_sc(struct opa_smp *smp, u32 am, u8 *data,
 				   u32 *resp_len)
 {
 	struct hfi1_ibport *ibp = to_iport(ibdev, port);
-	u8 *p = (u8 *)data;
+	u8 *p = data;
 	int i;
 
 	if (am) {
@@ -1530,7 +1530,7 @@ static int __subn_get_opa_sc_to_sl(struct opa_smp *smp, u32 am, u8 *data,
 				   u32 *resp_len)
 {
 	struct hfi1_ibport *ibp = to_iport(ibdev, port);
-	u8 *p = (u8 *)data;
+	u8 *p = data;
 	size_t size = ARRAY_SIZE(ibp->sc_to_sl); /* == 32 */
 	unsigned i;
 
@@ -1553,7 +1553,7 @@ static int __subn_set_opa_sc_to_sl(struct opa_smp *smp, u32 am, u8 *data,
 				   u32 *resp_len)
 {
 	struct hfi1_ibport *ibp = to_iport(ibdev, port);
-	u8 *p = (u8 *)data;
+	u8 *p = data;
 	int i;
 
 	if (am) {

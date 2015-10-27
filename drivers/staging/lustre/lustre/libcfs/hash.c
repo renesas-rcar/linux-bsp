@@ -588,13 +588,13 @@ EXPORT_SYMBOL(cfs_hash_bd_move_locked);
 
 enum {
 	/** always set, for sanity (avoid ZERO intent) */
-	CFS_HS_LOOKUP_MASK_FIND     = 1 << 0,
+	CFS_HS_LOOKUP_MASK_FIND     = BIT(0),
 	/** return entry with a ref */
-	CFS_HS_LOOKUP_MASK_REF      = 1 << 1,
+	CFS_HS_LOOKUP_MASK_REF      = BIT(1),
 	/** add entry if not existing */
-	CFS_HS_LOOKUP_MASK_ADD      = 1 << 2,
+	CFS_HS_LOOKUP_MASK_ADD      = BIT(2),
 	/** delete entry, ignore other masks */
-	CFS_HS_LOOKUP_MASK_DEL      = 1 << 3,
+	CFS_HS_LOOKUP_MASK_DEL      = BIT(3),
 };
 
 typedef enum cfs_hash_lookup_intent {
@@ -677,8 +677,8 @@ cfs_hash_bd_findadd_locked(struct cfs_hash *hs, struct cfs_hash_bd *bd,
 			   int noref)
 {
 	return cfs_hash_bd_lookup_intent(hs, bd, key, hnode,
-					 CFS_HS_LOOKUP_IT_ADD |
-					 (!noref * CFS_HS_LOOKUP_MASK_REF));
+					 (!noref * CFS_HS_LOOKUP_MASK_REF) |
+					 CFS_HS_LOOKUP_IT_ADD);
 }
 EXPORT_SYMBOL(cfs_hash_bd_findadd_locked);
 
@@ -756,7 +756,7 @@ cfs_hash_multi_bd_findadd_locked(struct cfs_hash *hs,
 	unsigned	   i;
 
 	LASSERT(hnode != NULL);
-	intent = CFS_HS_LOOKUP_IT_PEEK | (!noref * CFS_HS_LOOKUP_MASK_REF);
+	intent = (!noref * CFS_HS_LOOKUP_MASK_REF) | CFS_HS_LOOKUP_IT_PEEK;
 
 	cfs_hash_for_each_bd(bds, n, i) {
 		ehnode = cfs_hash_bd_lookup_intent(hs, &bds[i], key,
@@ -1623,8 +1623,12 @@ cfs_hash_for_each_relax(struct cfs_hash *hs, cfs_hash_for_each_cb_t func,
 				if (rc) /* callback wants to break iteration */
 					break;
 			}
+			if (rc) /* callback wants to break iteration */
+				break;
 		}
 		cfs_hash_bd_unlock(hs, &bd, 0);
+		if (rc) /* callback wants to break iteration */
+			break;
 	}
 	cfs_hash_unlock(hs, 0);
 

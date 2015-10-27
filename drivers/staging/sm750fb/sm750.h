@@ -7,7 +7,6 @@
 /* please use revision id to distinguish sm750le and sm750*/
 #define SPC_SM750 0
 
-#define MB(x) ((x)<<20)
 #define MHZ(x) ((x) * 1000000)
 /* align should be 2,4,8,16 */
 #define PADDING(align, data) (((data)+(align)-1)&(~((align) - 1)))
@@ -63,9 +62,6 @@ struct lynx_share {
 	unsigned char __iomem *pvMem;
 	/* locks*/
 	spinlock_t slock;
-	/* function pointers */
-	void (*suspend)(struct lynx_share *);
-	void (*resume)(struct lynx_share *);
 };
 
 struct lynx_cursor {
@@ -108,17 +104,6 @@ struct lynxfb_crtc {
 
 	void *priv;
 
-	int (*proc_setMode)(struct lynxfb_crtc*,
-						struct fb_var_screeninfo*,
-						struct fb_fix_screeninfo*);
-
-	int (*proc_checkMode)(struct lynxfb_crtc*, struct fb_var_screeninfo*);
-	int (*proc_setColReg)(struct lynxfb_crtc*, ushort, ushort, ushort, ushort);
-	void (*clear)(struct lynxfb_crtc *);
-	/* pan display */
-	int (*proc_panDisplay)(struct lynxfb_crtc *,
-			       const struct fb_var_screeninfo *,
-			       const struct fb_info *);
 	/* cursor information */
 	struct lynx_cursor cursor;
 };
@@ -140,13 +125,7 @@ struct lynxfb_output {
 	*/
 	void *priv;
 
-	int (*proc_setMode)(struct lynxfb_output*,
-						struct fb_var_screeninfo*,
-						struct fb_fix_screeninfo*);
-
-	int (*proc_checkMode)(struct lynxfb_output*, struct fb_var_screeninfo*);
 	int (*proc_setBLANK)(struct lynxfb_output*, int);
-	void  (*clear)(struct lynxfb_output *);
 };
 
 struct lynxfb_par {
@@ -158,17 +137,6 @@ struct lynxfb_par {
 	struct fb_info *info;
 	struct lynx_share *share;
 };
-
-#ifndef offsetof
-#define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
-#endif
-
-
-#define PS_TO_HZ(ps)	\
-			({ \
-			unsigned long long hz = 1000*1000*1000*1000ULL;	\
-			do_div(hz, ps);	\
-			(unsigned long)hz; })
 
 static inline unsigned long ps_to_hz(unsigned int psvalue)
 {

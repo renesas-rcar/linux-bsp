@@ -473,7 +473,7 @@ int vnt_ofdm_min_rate(struct vnt_private *priv)
 	int ii;
 
 	for (ii = RATE_54M; ii >= RATE_6M; ii--) {
-		if ((priv->basic_rates) & ((u16)(1 << ii)))
+		if ((priv->basic_rates) & ((u16)BIT(ii)))
 			return true;
 	}
 
@@ -508,7 +508,7 @@ u8 vnt_get_pkt_type(struct vnt_private *priv)
 u64 vnt_get_tsf_offset(u8 rx_rate, u64 tsf1, u64 tsf2)
 {
 	u64 tsf_offset = 0;
-	u16 rx_bcn_offset = 0;
+	u16 rx_bcn_offset;
 
 	rx_bcn_offset = cwRXBCNTSFOff[rx_rate % MAX_RATE];
 

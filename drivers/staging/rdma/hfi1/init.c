@@ -134,11 +134,8 @@ int hfi1_create_ctxts(struct hfi1_devdata *dd)
 	dd->assigned_node_id = local_node_id;
 
 	dd->rcd = kcalloc(dd->num_rcv_contexts, sizeof(*dd->rcd), GFP_KERNEL);
-	if (!dd->rcd) {
-		dd_dev_err(dd,
-			"Unable to allocate receive context array, failing\n");
+	if (!dd->rcd)
 		goto nomem;
-	}
 
 	/* create one or more kernel contexts */
 	for (i = 0; i < dd->first_user_ctxt; ++i) {
@@ -293,12 +290,14 @@ struct hfi1_ctxtdata *hfi1_create_ctxtdata(struct hfi1_pportdata *ppd, u32 ctxt)
 		 * The resulting value will be rounded down to the closest
 		 * multiple of dd->rcv_entries.group_size.
 		 */
-		rcd->egrbufs.buffers = kzalloc(sizeof(*rcd->egrbufs.buffers) *
-					       rcd->egrbufs.count, GFP_KERNEL);
+		rcd->egrbufs.buffers = kcalloc(rcd->egrbufs.count,
+					       sizeof(*rcd->egrbufs.buffers),
+					       GFP_KERNEL);
 		if (!rcd->egrbufs.buffers)
 			goto bail;
-		rcd->egrbufs.rcvtids = kzalloc(sizeof(*rcd->egrbufs.rcvtids) *
-					       rcd->egrbufs.count, GFP_KERNEL);
+		rcd->egrbufs.rcvtids = kcalloc(rcd->egrbufs.count,
+					       sizeof(*rcd->egrbufs.rcvtids),
+					       GFP_KERNEL);
 		if (!rcd->egrbufs.rcvtids)
 			goto bail;
 		rcd->egrbufs.size = eager_buffer_size;
@@ -318,12 +317,8 @@ struct hfi1_ctxtdata *hfi1_create_ctxtdata(struct hfi1_pportdata *ppd, u32 ctxt)
 		if (ctxt < dd->first_user_ctxt) { /* N/A for PSM contexts */
 			rcd->opstats = kzalloc(sizeof(*rcd->opstats),
 				GFP_KERNEL);
-			if (!rcd->opstats) {
-				dd_dev_err(dd,
-					   "ctxt%u: Unable to allocate per ctxt stats buffer\n",
-					   rcd->ctxt);
+			if (!rcd->opstats)
 				goto bail;
-			}
 		}
 	}
 	return rcd;
@@ -1050,8 +1045,8 @@ struct hfi1_devdata *hfi1_alloc_devdata(struct pci_dev *pdev, size_t extra)
 	if (!hfi1_cpulist_count) {
 		u32 count = num_online_cpus();
 
-		hfi1_cpulist = kzalloc(BITS_TO_LONGS(count) *
-				      sizeof(long), GFP_KERNEL);
+		hfi1_cpulist = kcalloc(BITS_TO_LONGS(count), sizeof(long),
+				       GFP_KERNEL);
 		if (hfi1_cpulist)
 			hfi1_cpulist_count = count;
 		else
