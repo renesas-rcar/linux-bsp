@@ -192,19 +192,16 @@ void rsnd_mod_interrupt(struct rsnd_mod *mod,
 	struct rsnd_priv *priv = rsnd_mod_to_priv(mod);
 	struct rsnd_dai_stream *io;
 	struct rsnd_dai *rdai;
-	int i, j;
+	int i;
 
-	for_each_rsnd_dai(rdai, priv, j) {
+	for_each_rsnd_dai(rdai, priv, i) {
+		io = &rdai->playback;
+		if (mod == io->mod[mod->type])
+			callback(mod, io);
 
-		for (i = 0; i < RSND_MOD_MAX; i++) {
-			io = &rdai->playback;
-			if (mod == io->mod[i])
-				callback(mod, io);
-
-			io = &rdai->capture;
-			if (mod == io->mod[i])
-				callback(mod, io);
-		}
+		io = &rdai->capture;
+		if (mod == io->mod[mod->type])
+			callback(mod, io);
 	}
 }
 
@@ -300,20 +297,22 @@ u32 rsnd_get_dalign(struct rsnd_mod *mod, struct rsnd_dai_stream *io)
 /*
  *	rsnd_dai functions
  */
-#define rsnd_mod_call(mod, io, func, param...)			\
+#define rsnd_mod_call(idx, io, func, param...)			\
 ({								\
 	struct rsnd_priv *priv = rsnd_mod_to_priv(mod);		\
+	struct rsnd_mod *mod = (io)->mod[idx];			\
 	struct device *dev = rsnd_priv_to_dev(priv);		\
+	u32 *status = (io)->mod_status + idx;			\
 	u32 mask = 0xF << __rsnd_mod_shift_##func;			\
-	u8 val  = (mod->status >> __rsnd_mod_shift_##func) & 0xF;	\
+	u8 val  = (*status >> __rsnd_mod_shift_##func) & 0xF;		\
 	u8 add  = ((val + __rsnd_mod_add_##func) & 0xF);		\
 	int ret = 0;							\
 	int call = (val == __rsnd_mod_call_##func) && (mod)->ops->func;	\
-	mod->status = (mod->status & ~mask) +				\
+	*status = (*status & ~mask) +					\
 		(add << __rsnd_mod_shift_##func);			\
 	dev_dbg(dev, "%s[%d]\t0x%08x %s\n",				\
 		rsnd_mod_name(mod), rsnd_mod_id(mod),			\
-		mod->status, call ? #func : "");			\
+		*status, call ? #func : "");				\
 	if (call)							\
 		ret = (mod)->ops->func(mod, io, param);			\
 	ret;								\
@@ -327,13 +326,14 @@ u32 rsnd_get_dalign(struct rsnd_mod *mod, struct rsnd_dai_stream *io)
 		mod = (io)->mod[i];				\
 		if (!mod)					\
 			continue;				\
-		ret |= rsnd_mod_call(mod, io, fn, param);	\
+		ret |= rsnd_mod_call(i, io, fn, param);		\
 	}							\
 	ret;							\
 })
 
-static int rsnd_dai_connect(struct rsnd_mod *mod,
-			    struct rsnd_dai_stream *io)
+int rsnd_dai_connect(struct rsnd_mod *mod,
+		     struct rsnd_dai_stream *io,
+		     enum rsnd_mod_type type)
 {
 	struct rsnd_priv *priv;
 	struct device *dev;
@@ -344,7 +344,7 @@ static int rsnd_dai_connect(struct rsnd_mod *mod,
 	priv = rsnd_mod_to_priv(mod);
 	dev = rsnd_priv_to_dev(priv);
 
-	io->mod[mod->type] = mod;
+	io->mod[type] = mod;
 
 	dev_dbg(dev, "%s[%d] is connected to io (%s)\n",
 		rsnd_mod_name(mod), rsnd_mod_id(mod),
@@ -354,9 +354,10 @@ static int rsnd_dai_connect(struct rsnd_mod *mod,
 }
 
 static void rsnd_dai_disconnect(struct rsnd_mod *mod,
-				struct rsnd_dai_stream *io)
+				struct rsnd_dai_stream *io,
+				enum rsnd_mod_type type)
 {
-	io->mod[mod->type] = NULL;
+	io->mod[type] = NULL;
 }
 
 struct rsnd_dai *rsnd_rdai_get(struct rsnd_priv *priv, int id)
@@ -572,108 +573,21 @@ static const struct snd_soc_dai_ops rsnd_soc_dai_ops = {
 	.set_fmt	= rsnd_soc_dai_set_fmt,
 };
 
-#define rsnd_path_add(priv, io, type)				\
+#define rsnd_path_add(priv, io, _type)				\
 ({								\
 	struct rsnd_mod *mod;					\
 	int ret = 0;						\
 	int id = -1;						\
 								\
-	if (rsnd_is_enable_path(io, type)) {			\
-		id = rsnd_info_id(priv, io, type);		\
+	if (rsnd_is_enable_path(io, _type)) {			\
+		id = rsnd_info_id(priv, io, _type);		\
 		if (id >= 0) {					\
-			mod = rsnd_##type##_mod_get(priv, id);	\
-			ret = rsnd_dai_connect(mod, io);	\
+			mod = rsnd_##_type##_mod_get(priv, id);	\
+			ret = rsnd_dai_connect(mod, io, mod->type);\
 		}						\
 	}							\
 	ret;							\
 })
-
-#define rsnd_path_remove(priv, io, type)			\
-{								\
-	struct rsnd_mod *mod;					\
-	int id = -1;						\
-								\
-	if (rsnd_is_enable_path(io, type)) {			\
-		id = rsnd_info_id(priv, io, type);		\
-		if (id >= 0) {					\
-			mod = rsnd_##type##_mod_get(priv, id);	\
-			rsnd_dai_disconnect(mod, io);		\
-		}						\
-	}							\
-}
-
-void rsnd_path_parse(struct rsnd_priv *priv,
-		     struct rsnd_dai_stream *io)
-{
-	struct rsnd_mod *dvc = rsnd_io_to_mod_dvc(io);
-	struct rsnd_mod *mix = rsnd_io_to_mod_mix(io);
-	struct rsnd_mod *src = rsnd_io_to_mod_src(io);
-	struct rsnd_mod *cmd;
-	struct device *dev = rsnd_priv_to_dev(priv);
-	u32 data;
-
-	/* Gen1 is not supported */
-	if (rsnd_is_gen1(priv))
-		return;
-
-	if (!mix && !dvc)
-		return;
-
-	if (mix) {
-		struct rsnd_dai *rdai;
-		int i;
-		u32 path[] = {
-			[0] = 0,
-			[1] = 1 << 0,
-			[2] = 0,
-			[3] = 0,
-			[4] = 0,
-			[5] = 1 << 8
-		};
-
-		/*
-		 * it is assuming that integrater is well understanding about
-		 * data path. Here doesn't check impossible connection,
-		 * like src2 + src5
-		 */
-		data = 0;
-		for_each_rsnd_dai(rdai, priv, i) {
-			io = &rdai->playback;
-			if (mix == rsnd_io_to_mod_mix(io))
-				data |= path[rsnd_mod_id(src)];
-
-			io = &rdai->capture;
-			if (mix == rsnd_io_to_mod_mix(io))
-				data |= path[rsnd_mod_id(src)];
-		}
-
-		/*
-		 * We can't use ctu = rsnd_io_ctu() here.
-		 * Since, ID of dvc/mix are 0 or 1 (= same as CMD number)
-		 * but ctu IDs are 0 - 7 (= CTU00 - CTU13)
-		 */
-		cmd = mix;
-	} else {
-		u32 path[] = {
-			[0] = 0x30000,
-			[1] = 0x30001,
-			[2] = 0x40000,
-			[3] = 0x10000,
-			[4] = 0x20000,
-			[5] = 0x40100
-		};
-
-		data = path[rsnd_mod_id(src)];
-
-		cmd = dvc;
-	}
-
-	dev_dbg(dev, "ctu/mix path = 0x%08x", data);
-
-	rsnd_mod_write(cmd, CMD_ROUTE_SLCT, data);
-
-	rsnd_mod_write(cmd, CMD_CTRL, 0x10);
-}
 
 static int rsnd_path_init(struct rsnd_priv *priv,
 			  struct rsnd_dai *rdai,
@@ -1161,6 +1075,9 @@ static int rsnd_rdai_continuance_probe(struct rsnd_priv *priv,
 
 	ret = rsnd_dai_call(probe, io, priv);
 	if (ret == -EAGAIN) {
+		struct rsnd_mod *ssi_mod = rsnd_io_to_mod_ssi(io);
+		int i;
+
 		/*
 		 * Fallback to PIO mode
 		 */
@@ -1175,10 +1092,12 @@ static int rsnd_rdai_continuance_probe(struct rsnd_priv *priv,
 		rsnd_dai_call(remove, io, priv);
 
 		/*
-		 * remove SRC/DVC from DAI,
+		 * remove all mod from io
+		 * and, re connect ssi
 		 */
-		rsnd_path_remove(priv, io, src);
-		rsnd_path_remove(priv, io, dvc);
+		for (i = 0; i < RSND_MOD_MAX; i++)
+			rsnd_dai_disconnect((io)->mod[i], io, i);
+		rsnd_dai_connect(ssi_mod, io, RSND_MOD_SSI);
 
 		/*
 		 * fallback
@@ -1212,10 +1131,12 @@ static int rsnd_probe(struct platform_device *pdev)
 		rsnd_gen_probe,
 		rsnd_dma_probe,
 		rsnd_ssi_probe,
+		rsnd_ssiu_probe,
 		rsnd_src_probe,
 		rsnd_ctu_probe,
 		rsnd_mix_probe,
 		rsnd_dvc_probe,
+		rsnd_cmd_probe,
 		rsnd_adg_probe,
 		rsnd_dai_probe,
 	};
@@ -1300,10 +1221,12 @@ static int rsnd_remove(struct platform_device *pdev)
 	void (*remove_func[])(struct platform_device *pdev,
 			      struct rsnd_priv *priv) = {
 		rsnd_ssi_remove,
+		rsnd_ssiu_remove,
 		rsnd_src_remove,
 		rsnd_ctu_remove,
 		rsnd_mix_remove,
 		rsnd_dvc_remove,
+		rsnd_cmd_remove,
 	};
 	int ret = 0, i;
 

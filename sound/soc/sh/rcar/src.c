@@ -22,6 +22,7 @@
 struct rsnd_src {
 	struct rsnd_src_platform_info *info; /* rcar_snd.h */
 	struct rsnd_mod mod;
+	struct rsnd_mod *dma;
 	struct rsnd_kctrl_cfg_s sen;  /* sync convert enable */
 	struct rsnd_kctrl_cfg_s sync; /* sync convert */
 	u32 convert_rate; /* sampling rate convert */
@@ -30,6 +31,7 @@ struct rsnd_src {
 
 #define RSND_SRC_NAME_SIZE 16
 
+#define rsnd_src_to_dma(src) ((src)->dma)
 #define rsnd_src_nr(priv) ((priv)->src_nr)
 #define rsnd_enable_sync_convert(src) ((src)->sen.val)
 #define rsnd_src_of_node(priv) \
@@ -141,99 +143,6 @@ static struct dma_chan *rsnd_src_dma_req(struct rsnd_dai_stream *io,
 	return rsnd_dma_request_channel(rsnd_src_of_node(priv),
 					mod,
 					is_play ? "rx" : "tx");
-}
-
-int rsnd_src_ssiu_start(struct rsnd_mod *ssi_mod,
-			struct rsnd_dai_stream *io,
-			int use_busif)
-{
-	struct rsnd_dai *rdai = rsnd_io_to_rdai(io);
-	int ssi_id = rsnd_mod_id(ssi_mod);
-
-	/*
-	 * SSI_MODE0
-	 */
-	rsnd_mod_bset(ssi_mod, SSI_MODE0, (1 << ssi_id),
-		      !use_busif << ssi_id);
-
-	/*
-	 * SSI_MODE1
-	 */
-	if (rsnd_ssi_is_pin_sharing(io)) {
-		int shift = -1;
-		switch (ssi_id) {
-		case 1:
-			shift = 0;
-			break;
-		case 2:
-			shift = 2;
-			break;
-		case 4:
-			shift = 16;
-			break;
-		}
-
-		if (shift >= 0)
-			rsnd_mod_bset(ssi_mod, SSI_MODE1,
-				      0x3 << shift,
-				      rsnd_rdai_is_clk_master(rdai) ?
-				      0x2 << shift : 0x1 << shift);
-	}
-
-	/*
-	 * DMA settings for SSIU
-	 */
-	if (use_busif) {
-		u32 val = rsnd_get_dalign(ssi_mod, io);
-
-		rsnd_mod_write(ssi_mod, SSI_BUSIF_ADINR,
-			       rsnd_get_adinr_bit(ssi_mod, io));
-		rsnd_mod_write(ssi_mod, SSI_BUSIF_MODE,  1);
-		rsnd_mod_write(ssi_mod, SSI_CTRL, 0x1);
-
-		rsnd_mod_write(ssi_mod, SSI_BUSIF_DALIGN, val);
-	}
-
-	return 0;
-}
-
-int rsnd_src_ssiu_stop(struct rsnd_mod *ssi_mod,
-		       struct rsnd_dai_stream *io)
-{
-	/*
-	 * DMA settings for SSIU
-	 */
-	rsnd_mod_write(ssi_mod, SSI_CTRL, 0);
-
-	return 0;
-}
-
-int rsnd_src_ssi_irq_enable(struct rsnd_mod *ssi_mod)
-{
-	struct rsnd_priv *priv = rsnd_mod_to_priv(ssi_mod);
-
-	if (rsnd_is_gen1(priv))
-		return 0;
-
-	/* enable SSI interrupt if Gen2 */
-	rsnd_mod_write(ssi_mod, SSI_INT_ENABLE,
-		       rsnd_ssi_is_dma_mode(ssi_mod) ?
-		       0x0e000000 : 0x0f000000);
-
-	return 0;
-}
-
-int rsnd_src_ssi_irq_disable(struct rsnd_mod *ssi_mod)
-{
-	struct rsnd_priv *priv = rsnd_mod_to_priv(ssi_mod);
-
-	if (rsnd_is_gen1(priv))
-		return 0;
-
-	/* disable SSI interrupt if Gen2 */
-	rsnd_mod_write(ssi_mod, SSI_INT_ENABLE, 0x00000000);
-
-	return 0;
 }
 
 static u32 rsnd_src_convert_rate(struct rsnd_dai_stream *io,
@@ -658,8 +567,9 @@ static bool rsnd_src_error_record_gen2(struct rsnd_mod *mod)
 	return ret;
 }
 
-static int _rsnd_src_start_gen2(struct rsnd_mod *mod,
-				struct rsnd_dai_stream *io)
+static int rsnd_src_start_gen2(struct rsnd_mod *mod,
+			       struct rsnd_dai_stream *io,
+			       struct rsnd_priv *priv)
 {
 	struct rsnd_src *src = rsnd_mod_to_src(mod);
 	u32 val;
@@ -687,21 +597,39 @@ static int _rsnd_src_start_gen2(struct rsnd_mod *mod,
 	return 0;
 }
 
-static int _rsnd_src_stop_gen2(struct rsnd_mod *mod)
+static int rsnd_src_stop_gen2(struct rsnd_mod *mod,
+			      struct rsnd_dai_stream *io,
+			      struct rsnd_priv *priv)
 {
 	rsnd_src_irq_disable_gen2(mod);
 
-	rsnd_mod_write(mod, SRC_CTRL, 0);
+	/*
+	 * stop SRC output only
+	 * see rsnd_src_quit_gen2
+	 */
+	rsnd_mod_write(mod, SRC_CTRL, 0x01);
 
 	rsnd_src_error_record_gen2(mod);
 
 	return rsnd_src_stop(mod);
 }
 
+static int rsnd_src_quit_gen2(struct rsnd_mod *mod,
+			      struct rsnd_dai_stream *io,
+			      struct rsnd_priv *priv)
+{
+	/* stop both out/in */
+	rsnd_mod_write(mod, SRC_CTRL, 0);
+
+	return 0;
+}
+
 static void __rsnd_src_interrupt_gen2(struct rsnd_mod *mod,
 				      struct rsnd_dai_stream *io)
 {
 	struct rsnd_priv *priv = rsnd_mod_to_priv(mod);
+	struct rsnd_src *src = rsnd_mod_to_src(mod);
+	struct device *dev = rsnd_priv_to_dev(priv);
 
 	spin_lock(&priv->lock);
 
@@ -710,18 +638,19 @@ static void __rsnd_src_interrupt_gen2(struct rsnd_mod *mod,
 		goto rsnd_src_interrupt_gen2_out;
 
 	if (rsnd_src_error_record_gen2(mod)) {
-		struct rsnd_priv *priv = rsnd_mod_to_priv(mod);
-		struct rsnd_src *src = rsnd_mod_to_src(mod);
-		struct device *dev = rsnd_priv_to_dev(priv);
 
 		dev_dbg(dev, "%s[%d] restart\n",
 			rsnd_mod_name(mod), rsnd_mod_id(mod));
 
-		_rsnd_src_stop_gen2(mod);
-		if (src->err < 1024)
-			_rsnd_src_start_gen2(mod, io);
-		else
-			dev_warn(dev, "no more SRC restart\n");
+		rsnd_src_stop_gen2(mod, io, priv);
+		rsnd_src_start_gen2(mod, io, priv);
+	}
+
+	if (src->err > 1024) {
+		rsnd_src_irq_disable_gen2(mod);
+
+		dev_warn(dev, "no more %s[%d] restart\n",
+			 rsnd_mod_name(mod), rsnd_mod_id(mod));
 	}
 
 rsnd_src_interrupt_gen2_out:
@@ -839,20 +768,11 @@ static int rsnd_src_probe_gen2(struct rsnd_mod *mod,
 			return ret;
 	}
 
-	ret = rsnd_dma_init(io,
-			    rsnd_mod_to_dma(mod),
-			    src->info->dma_id);
+	src->dma = rsnd_dma_attach(io, mod, src->info->dma_id);
+	if (IS_ERR(src->dma))
+		return PTR_ERR(src->dma);
 
 	return ret;
-}
-
-static int rsnd_src_remove_gen2(struct rsnd_mod *mod,
-				struct rsnd_dai_stream *io,
-				struct rsnd_priv *priv)
-{
-	rsnd_dma_quit(io, rsnd_mod_to_dma(mod));
-
-	return 0;
 }
 
 static int rsnd_src_init_gen2(struct rsnd_mod *mod,
@@ -874,28 +794,6 @@ static int rsnd_src_init_gen2(struct rsnd_mod *mod,
 		return ret;
 
 	return 0;
-}
-
-static int rsnd_src_start_gen2(struct rsnd_mod *mod,
-			       struct rsnd_dai_stream *io,
-			       struct rsnd_priv *priv)
-{
-	rsnd_dma_start(io, rsnd_mod_to_dma(mod));
-
-	return _rsnd_src_start_gen2(mod, io);
-}
-
-static int rsnd_src_stop_gen2(struct rsnd_mod *mod,
-			      struct rsnd_dai_stream *io,
-			      struct rsnd_priv *priv)
-{
-	int ret;
-
-	ret = _rsnd_src_stop_gen2(mod);
-
-	rsnd_dma_stop(io, rsnd_mod_to_dma(mod));
-
-	return ret;
 }
 
 static void rsnd_src_reconvert_update(struct rsnd_dai_stream *io,
@@ -962,9 +860,8 @@ static struct rsnd_mod_ops rsnd_src_gen2_ops = {
 	.name	= SRC_NAME,
 	.dma_req = rsnd_src_dma_req,
 	.probe	= rsnd_src_probe_gen2,
-	.remove	= rsnd_src_remove_gen2,
 	.init	= rsnd_src_init_gen2,
-	.quit	= rsnd_src_quit,
+	.quit	= rsnd_src_quit_gen2,
 	.start	= rsnd_src_start_gen2,
 	.stop	= rsnd_src_stop_gen2,
 	.hw_params = rsnd_src_hw_params,
