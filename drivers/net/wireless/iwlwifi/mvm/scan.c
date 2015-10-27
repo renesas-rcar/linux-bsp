@@ -750,8 +750,6 @@ static inline bool iwl_mvm_scan_use_ebs(struct iwl_mvm *mvm,
 	 */
 	return ((capa->flags & IWL_UCODE_TLV_FLAGS_EBS_SUPPORT) &&
 		mvm->last_ebs_successful &&
-		(n_iterations > 1 ||
-		 fw_has_api(capa, IWL_UCODE_TLV_API_SINGLE_SCAN_EBS)) &&
 		vif->type != NL80211_IFTYPE_P2P_DEVICE);
 }
 
@@ -1273,12 +1271,12 @@ int iwl_mvm_sched_scan_start(struct iwl_mvm *mvm,
 
 	params.type = iwl_mvm_get_scan_type(mvm, vif, &params);
 
-	if (req->interval > U16_MAX) {
+	if (req->scan_plans[0].interval > U16_MAX) {
 		IWL_DEBUG_SCAN(mvm,
 			       "interval value is > 16-bits, set to max possible\n");
 		params.interval = U16_MAX;
 	} else {
-		params.interval = req->interval / MSEC_PER_SEC;
+		params.interval = req->scan_plans[0].interval;
 	}
 
 	/* In theory, LMAC scans can handle a 32-bit delay, but since
