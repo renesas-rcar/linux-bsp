@@ -67,6 +67,9 @@ next/soc
 		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.4-2
 	samsung/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/kgene/linux-samsung tags/samsung-soc
+	patch
+		ARM: uniphier: add outer cache support
+		ARM: uniphier: rework SMP operations to use trampoline code
 
 next/boards
 
@@ -189,6 +192,8 @@ next/dt
 		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-clocks-for-4.4
 	sunxi/dt3
 		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.4-3
+	patch
+		ARM: dts: uniphier: add outer cache controller nodes
 
 next/defconfig
 	renesas/defconfig
