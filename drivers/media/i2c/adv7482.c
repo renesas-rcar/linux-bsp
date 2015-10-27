@@ -445,7 +445,7 @@ static const struct adv7482_reg_value adv7482_init_txb_1lane[] = {
 
 	{ADV7482_I2C_SDP, 0x03, 0x42},
 		/* Tri-S Output Drivers, PwrDwn 656 pads */
-	{ADV7482_I2C_SDP, 0x04, 0x07},	/* Power-up INTRQ pad, & Enable SFL */
+	{ADV7482_I2C_SDP, 0x04, 0xB5},	/* ITU-R BT.656-4 compatible */
 	{ADV7482_I2C_SDP, 0x13, 0x00},	/* ADI Required Write */
 
 	{ADV7482_I2C_SDP, 0x17, 0x41},	/* Select SH1 */
