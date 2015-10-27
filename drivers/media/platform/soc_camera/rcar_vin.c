@@ -2349,6 +2349,32 @@ static int rcar_vin_get_selection(struct soc_camera_device *icd,
 	return 0;
 }
 
+static int rcar_vin_cropcap(struct soc_camera_device *icd,
+			    struct v4l2_cropcap *crop)
+{
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
+	struct v4l2_mbus_framefmt *mf = &fmt.format;
+	int ret;
+
+	ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt);
+	if (ret < 0)
+		return ret;
+
+	crop->bounds.left = 0;
+	crop->bounds.top  = 0;
+	crop->bounds.width = mf->width;
+	crop->bounds.height = mf->height;
+
+	/* default cropping rectangle */
+	crop->defrect = crop->bounds;
+	crop->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	return 0;
+}
+
 static struct soc_camera_host_ops rcar_vin_host_ops = {
 	.owner		= THIS_MODULE,
 	.add		= rcar_vin_add_device,
@@ -2364,6 +2390,7 @@ static struct soc_camera_host_ops rcar_vin_host_ops = {
 	.set_bus_param	= rcar_vin_set_bus_param,
 	.init_videobuf2	= rcar_vin_init_videobuf2,
 	.get_selection	= rcar_vin_get_selection,
+	.cropcap	= rcar_vin_cropcap,
 };
 
 #ifdef CONFIG_OF
