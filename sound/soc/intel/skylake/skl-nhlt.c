@@ -25,7 +25,7 @@ static u8 OSC_UUID[16] = {0x6E, 0x88, 0x9F, 0xA6, 0xEB, 0x6C, 0x94, 0x45,
 
 #define DSDT_NHLT_PATH "\\_SB.PCI0.HDAS"
 
-void __iomem *skl_nhlt_init(struct device *dev)
+void *skl_nhlt_init(struct device *dev)
 {
 	acpi_handle handle;
 	union acpi_object *obj;
@@ -40,17 +40,17 @@ void __iomem *skl_nhlt_init(struct device *dev)
 	if (obj && obj->type == ACPI_TYPE_BUFFER) {
 		nhlt_ptr = (struct nhlt_resource_desc  *)obj->buffer.pointer;
 
-		return ioremap_cache(nhlt_ptr->min_addr, nhlt_ptr->length);
+		return memremap(nhlt_ptr->min_addr, nhlt_ptr->length,
+				MEMREMAP_WB);
 	}
 
 	dev_err(dev, "device specific method to extract NHLT blob failed\n");
 	return NULL;
 }
 
-void skl_nhlt_free(void __iomem *addr)
+void skl_nhlt_free(void *addr)
 {
-	iounmap(addr);
-	addr = NULL;
+	memunmap(addr);
 }
 
 static struct nhlt_specific_cfg *skl_get_specific_cfg(
@@ -115,7 +115,7 @@ struct nhlt_specific_cfg
 	struct device *dev = bus->dev;
 	struct nhlt_specific_cfg *sp_config;
 	struct nhlt_acpi_table *nhlt = (struct nhlt_acpi_table *)skl->nhlt;
-	u16 bps = num_ch * s_fmt;
+	u16 bps = (s_fmt == 16) ? 16 : 32;
 	u8 j;
 
 	dump_config(dev, instance, link_type, s_fmt, num_ch, s_rate, dirn, bps);

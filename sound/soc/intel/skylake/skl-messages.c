@@ -54,6 +54,24 @@ static int skl_free_dma_buf(struct device *dev, struct snd_dma_buffer *dmab)
 	return 0;
 }
 
+#define NOTIFICATION_PARAM_ID 3
+#define NOTIFICATION_MASK 0xf
+
+/* disable notfication for underruns/overruns from firmware module */
+static void skl_dsp_enable_notification(struct skl_sst *ctx, bool enable)
+{
+	struct notification_mask mask;
+	struct skl_ipc_large_config_msg	msg = {0};
+
+	mask.notify = NOTIFICATION_MASK;
+	mask.enable = enable;
+
+	msg.large_param_id = NOTIFICATION_PARAM_ID;
+	msg.param_data_size = sizeof(mask);
+
+	skl_ipc_set_large_config(&ctx->ipc, &msg, (u32 *)&mask);
+}
+
 int skl_init_dsp(struct skl *skl)
 {
 	void __iomem *mmio_base;
@@ -79,7 +97,10 @@ int skl_init_dsp(struct skl *skl)
 
 	ret = skl_sst_dsp_init(bus->dev, mmio_base, irq,
 			loader_ops, &skl->skl_sst);
+	if (ret < 0)
+		return ret;
 
+	skl_dsp_enable_notification(skl->skl_sst, false);
 	dev_dbg(bus->dev, "dsp registration status=%d\n", ret);
 
 	return ret;
@@ -122,6 +143,7 @@ int skl_suspend_dsp(struct skl *skl)
 int skl_resume_dsp(struct skl *skl)
 {
 	struct skl_sst *ctx = skl->skl_sst;
+	int ret;
 
 	/* if ppcap is not supported return 0 */
 	if (!skl->ebus.ppcap)
@@ -131,7 +153,12 @@ int skl_resume_dsp(struct skl *skl)
 	snd_hdac_ext_bus_ppcap_enable(&skl->ebus, true);
 	snd_hdac_ext_bus_ppcap_int_enable(&skl->ebus, true);
 
-	return skl_dsp_wake(ctx->dsp);
+	ret = skl_dsp_wake(ctx->dsp);
+	if (ret < 0)
+		return ret;
+
+	skl_dsp_enable_notification(skl->skl_sst, false);
+	return ret;
 }
 
 enum skl_bitdepth skl_get_bit_depth(int params)
@@ -294,6 +321,7 @@ static void skl_copy_copier_caps(struct skl_module_cfg *mconfig,
 			(mconfig->formats_config.caps_size) / 4;
 }
 
+#define SKL_NON_GATEWAY_CPR_NODE_ID 0xFFFFFFFF
 /*
  * Calculate the gatewat settings required for copier module, type of
  * gateway and index of gateway to use
@@ -303,6 +331,7 @@ static void skl_setup_cpr_gateway_cfg(struct skl_sst *ctx,
 			struct skl_cpr_cfg *cpr_mconfig)
 {
 	union skl_connector_node_id node_id = {0};
+	union skl_ssp_dma_node ssp_node  = {0};
 	struct skl_pipe_params *params = mconfig->pipe->p_params;
 
 	switch (mconfig->dev_type) {
@@ -320,9 +349,9 @@ static void skl_setup_cpr_gateway_cfg(struct skl_sst *ctx,
 			(SKL_CONN_SOURCE == mconfig->hw_conn_type) ?
 			SKL_DMA_I2S_LINK_OUTPUT_CLASS :
 			SKL_DMA_I2S_LINK_INPUT_CLASS;
-		node_id.node.vindex = params->host_dma_id +
-					 (mconfig->time_slot << 1) +
-					 (mconfig->vbus_id << 3);
+		ssp_node.dma_node.time_slot_index = mconfig->time_slot;
+		ssp_node.dma_node.i2s_instance = mconfig->vbus_id;
+		node_id.node.vindex = ssp_node.val;
 		break;
 
 	case SKL_DEVICE_DMIC:
@@ -339,13 +368,18 @@ static void skl_setup_cpr_gateway_cfg(struct skl_sst *ctx,
 		node_id.node.vindex = params->link_dma_id;
 		break;
 
-	default:
+	case SKL_DEVICE_HDAHOST:
 		node_id.node.dma_type =
 			(SKL_CONN_SOURCE == mconfig->hw_conn_type) ?
 			SKL_DMA_HDA_HOST_OUTPUT_CLASS :
 			SKL_DMA_HDA_HOST_INPUT_CLASS;
 		node_id.node.vindex = params->host_dma_id;
 		break;
+
+	default:
+		cpr_mconfig->gtw_cfg.node_id = SKL_NON_GATEWAY_CPR_NODE_ID;
+		cpr_mconfig->cpr_feature_mask = 0;
+		return;
 	}
 
 	cpr_mconfig->gtw_cfg.node_id = node_id.val;
@@ -537,10 +571,10 @@ static int skl_get_queue_index(struct skl_module_pin *mpin,
  * In static, the pin_index is fixed based on module_id and instance id
  */
 static int skl_alloc_queue(struct skl_module_pin *mpin,
-			struct skl_module_inst_id id, int max)
+			struct skl_module_cfg *tgt_cfg, int max)
 {
 	int i;
-
+	struct skl_module_inst_id id = tgt_cfg->id;
 	/*
 	 * if pin in dynamic, find first free pin
 	 * otherwise find match module and instance id pin as topology will
@@ -549,16 +583,23 @@ static int skl_alloc_queue(struct skl_module_pin *mpin,
 	 */
 	for (i = 0; i < max; i++)  {
 		if (mpin[i].is_dynamic) {
-			if (!mpin[i].in_use) {
+			if (!mpin[i].in_use &&
+				mpin[i].pin_state == SKL_PIN_UNBIND) {
+
 				mpin[i].in_use = true;
 				mpin[i].id.module_id = id.module_id;
 				mpin[i].id.instance_id = id.instance_id;
+				mpin[i].tgt_mcfg = tgt_cfg;
 				return i;
 			}
 		} else {
 			if (mpin[i].id.module_id == id.module_id &&
-				mpin[i].id.instance_id == id.instance_id)
+				mpin[i].id.instance_id == id.instance_id &&
+				mpin[i].pin_state == SKL_PIN_UNBIND) {
+
+				mpin[i].tgt_mcfg = tgt_cfg;
 				return i;
+			}
 		}
 	}
 
@@ -572,6 +613,28 @@ static void skl_free_queue(struct skl_module_pin *mpin, int q_index)
 		mpin[q_index].id.module_id = 0;
 		mpin[q_index].id.instance_id = 0;
 	}
+	mpin[q_index].pin_state = SKL_PIN_UNBIND;
+	mpin[q_index].tgt_mcfg = NULL;
+}
+
+/* Module state will be set to unint, if all the out pin state is UNBIND */
+
+static void skl_clear_module_state(struct skl_module_pin *mpin, int max,
+						struct skl_module_cfg *mcfg)
+{
+	int i;
+	bool found = false;
+
+	for (i = 0; i < max; i++)  {
+		if (mpin[i].pin_state == SKL_PIN_UNBIND)
+			continue;
+		found = true;
+		break;
+	}
+
+	if (!found)
+		mcfg->m_state = SKL_MODULE_UNINIT;
+	return;
 }
 
 /*
@@ -648,37 +711,30 @@ int skl_unbind_modules(struct skl_sst *ctx,
 	struct skl_module_inst_id dst_id = dst_mcfg->id;
 	int in_max = dst_mcfg->max_in_queue;
 	int out_max = src_mcfg->max_out_queue;
-	int src_index, dst_index;
+	int src_index, dst_index, src_pin_state, dst_pin_state;
 
 	skl_dump_bind_info(ctx, src_mcfg, dst_mcfg);
-
-	if (src_mcfg->m_state != SKL_MODULE_BIND_DONE)
-		return 0;
-
-	/*
-	 * if intra module unbind, check if both modules are BIND,
-	 * then send unbind
-	 */
-	if ((src_mcfg->pipe->ppl_id != dst_mcfg->pipe->ppl_id) &&
-				dst_mcfg->m_state != SKL_MODULE_BIND_DONE)
-		return 0;
-	else if (src_mcfg->m_state < SKL_MODULE_INIT_DONE &&
-				 dst_mcfg->m_state < SKL_MODULE_INIT_DONE)
-		return 0;
 
 	/* get src queue index */
 	src_index = skl_get_queue_index(src_mcfg->m_out_pin, dst_id, out_max);
 	if (src_index < 0)
 		return -EINVAL;
 
-	msg.src_queue = src_mcfg->m_out_pin[src_index].pin_index;
+	msg.src_queue = src_index;
 
 	/* get dst queue index */
 	dst_index  = skl_get_queue_index(dst_mcfg->m_in_pin, src_id, in_max);
 	if (dst_index < 0)
 		return -EINVAL;
 
-	msg.dst_queue = dst_mcfg->m_in_pin[dst_index].pin_index;
+	msg.dst_queue = dst_index;
+
+	src_pin_state = src_mcfg->m_out_pin[src_index].pin_state;
+	dst_pin_state = dst_mcfg->m_in_pin[dst_index].pin_state;
+
+	if (src_pin_state != SKL_PIN_BIND_DONE ||
+		dst_pin_state != SKL_PIN_BIND_DONE)
+		return 0;
 
 	msg.module_id = src_mcfg->id.module_id;
 	msg.instance_id = src_mcfg->id.instance_id;
@@ -688,10 +744,15 @@ int skl_unbind_modules(struct skl_sst *ctx,
 
 	ret = skl_ipc_bind_unbind(&ctx->ipc, &msg);
 	if (!ret) {
-		src_mcfg->m_state = SKL_MODULE_UNINIT;
 		/* free queue only if unbind is success */
 		skl_free_queue(src_mcfg->m_out_pin, src_index);
 		skl_free_queue(dst_mcfg->m_in_pin, dst_index);
+
+		/*
+		 * check only if src module bind state, bind is
+		 * always from src -> sink
+		 */
+		skl_clear_module_state(src_mcfg->m_out_pin, out_max, src_mcfg);
 	}
 
 	return ret;
@@ -710,8 +771,6 @@ int skl_bind_modules(struct skl_sst *ctx,
 {
 	int ret;
 	struct skl_ipc_bind_unbind_msg msg;
-	struct skl_module_inst_id src_id = src_mcfg->id;
-	struct skl_module_inst_id dst_id = dst_mcfg->id;
 	int in_max = dst_mcfg->max_in_queue;
 	int out_max = src_mcfg->max_out_queue;
 	int src_index, dst_index;
@@ -722,18 +781,18 @@ int skl_bind_modules(struct skl_sst *ctx,
 		dst_mcfg->m_state < SKL_MODULE_INIT_DONE)
 		return 0;
 
-	src_index = skl_alloc_queue(src_mcfg->m_out_pin, dst_id, out_max);
+	src_index = skl_alloc_queue(src_mcfg->m_out_pin, dst_mcfg, out_max);
 	if (src_index < 0)
 		return -EINVAL;
 
-	msg.src_queue = src_mcfg->m_out_pin[src_index].pin_index;
-	dst_index = skl_alloc_queue(dst_mcfg->m_in_pin, src_id, in_max);
+	msg.src_queue = src_index;
+	dst_index = skl_alloc_queue(dst_mcfg->m_in_pin, src_mcfg, in_max);
 	if (dst_index < 0) {
 		skl_free_queue(src_mcfg->m_out_pin, src_index);
 		return -EINVAL;
 	}
 
-	msg.dst_queue = dst_mcfg->m_in_pin[dst_index].pin_index;
+	msg.dst_queue = dst_index;
 
 	dev_dbg(ctx->dev, "src queue = %d dst queue =%d\n",
 			 msg.src_queue, msg.dst_queue);
@@ -748,6 +807,8 @@ int skl_bind_modules(struct skl_sst *ctx,
 
 	if (!ret) {
 		src_mcfg->m_state = SKL_MODULE_BIND_DONE;
+		src_mcfg->m_out_pin[src_index].pin_state = SKL_PIN_BIND_DONE;
+		dst_mcfg->m_in_pin[dst_index].pin_state = SKL_PIN_BIND_DONE;
 	} else {
 		/* error case , if IPC fails, clear the queue index */
 		skl_free_queue(src_mcfg->m_out_pin, src_index);

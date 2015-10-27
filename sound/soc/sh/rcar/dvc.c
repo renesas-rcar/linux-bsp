@@ -134,9 +134,16 @@ static void rsnd_dvc_volume_update(struct rsnd_dai_stream *io,
 	rsnd_mod_write(mod, DVC_DVUER, 1);
 }
 
-static int rsnd_dvc_remove_gen2(struct rsnd_mod *mod,
-				struct rsnd_dai_stream *io,
-				struct rsnd_priv *priv)
+static int rsnd_dvc_probe_(struct rsnd_mod *mod,
+			   struct rsnd_dai_stream *io,
+			   struct rsnd_priv *priv)
+{
+	return rsnd_cmd_attach(io, rsnd_mod_id(mod));
+}
+
+static int rsnd_dvc_remove_(struct rsnd_mod *mod,
+			    struct rsnd_dai_stream *io,
+			    struct rsnd_priv *priv)
 {
 	struct rsnd_dvc *dvc = rsnd_mod_to_dvc(mod);
 
@@ -153,13 +160,11 @@ static int rsnd_dvc_init(struct rsnd_mod *mod,
 			 struct rsnd_dai_stream *io,
 			 struct rsnd_priv *priv)
 {
-	rsnd_mod_hw_start(mod);
+	rsnd_mod_power_on(mod);
 
 	rsnd_dvc_soft_reset(mod);
 
 	rsnd_dvc_initialize_lock(mod);
-
-	rsnd_path_parse(priv, io);
 
 	rsnd_mod_write(mod, DVC_ADINR, rsnd_get_adinr_bit(mod, io));
 
@@ -175,7 +180,7 @@ static int rsnd_dvc_quit(struct rsnd_mod *mod,
 			 struct rsnd_dai_stream *io,
 			 struct rsnd_priv *priv)
 {
-	rsnd_mod_hw_stop(mod);
+	rsnd_mod_power_off(mod);
 
 	return 0;
 }
@@ -269,7 +274,8 @@ static struct dma_chan *rsnd_dvc_dma_req(struct rsnd_dai_stream *io,
 static struct rsnd_mod_ops rsnd_dvc_ops = {
 	.name		= DVC_NAME,
 	.dma_req	= rsnd_dvc_dma_req,
-	.remove		= rsnd_dvc_remove_gen2,
+	.probe		= rsnd_dvc_probe_,
+	.remove		= rsnd_dvc_remove_,
 	.init		= rsnd_dvc_init,
 	.quit		= rsnd_dvc_quit,
 	.start		= rsnd_dvc_start,
@@ -282,7 +288,7 @@ struct rsnd_mod *rsnd_dvc_mod_get(struct rsnd_priv *priv, int id)
 	if (WARN_ON(id < 0 || id >= rsnd_dvc_nr(priv)))
 		id = 0;
 
-	return &((struct rsnd_dvc *)(priv->dvc) + id)->mod;
+	return rsnd_mod_get((struct rsnd_dvc *)(priv->dvc) + id);
 }
 
 static void rsnd_of_parse_dvc(struct platform_device *pdev,
@@ -333,10 +339,8 @@ int rsnd_dvc_probe(struct platform_device *pdev,
 	int i, nr, ret;
 
 	/* This driver doesn't support Gen1 at this point */
-	if (rsnd_is_gen1(priv)) {
-		dev_warn(dev, "CMD is not supported on Gen1\n");
-		return -EINVAL;
-	}
+	if (rsnd_is_gen1(priv))
+		return 0;
 
 	rsnd_of_parse_dvc(pdev, of_data, priv);
 
@@ -361,7 +365,7 @@ int rsnd_dvc_probe(struct platform_device *pdev,
 
 		dvc->info = &info->dvc_info[i];
 
-		ret = rsnd_mod_init(priv, &dvc->mod, &rsnd_dvc_ops,
+		ret = rsnd_mod_init(priv, rsnd_mod_get(dvc), &rsnd_dvc_ops,
 			      clk, RSND_MOD_DVC, i);
 		if (ret)
 			return ret;
@@ -377,6 +381,6 @@ void rsnd_dvc_remove(struct platform_device *pdev,
 	int i;
 
 	for_each_rsnd_dvc(dvc, priv, i) {
-		rsnd_mod_quit(&dvc->mod);
+		rsnd_mod_quit(rsnd_mod_get(dvc));
 	}
 }
