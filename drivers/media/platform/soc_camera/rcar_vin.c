@@ -681,7 +681,7 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 	/* output format */
 	switch (icd->current_fmt->host_fmt->fourcc) {
 	case V4L2_PIX_FMT_NV16:
-		iowrite32(ALIGN(ALIGN(cam->width, 0x20) * cam->height, 0x80),
+		iowrite32(ALIGN((cam->out_width * cam->out_height), 0x80),
 			  priv->base + VNUVAOF_REG);
 		dmr = VNDMR_DTMD_YCSEP;
 		output_is_yuv = true;
@@ -1284,9 +1284,14 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 			ret = rcar_vin_uds_set(priv, cam);
 			if (ret < 0)
 				return ret;
-			iowrite32(ALIGN(cam->out_width, 0x20),
-					 priv->base + VNIS_REG);
 		}
+		if (is_scaling(cam) ||
+		   (icd->current_fmt->host_fmt->fourcc == V4L2_PIX_FMT_NV16))
+			iowrite32(ALIGN(cam->out_width, 0x20),
+				 priv->base + VNIS_REG);
+		else
+			iowrite32(ALIGN(cam->out_width, 0x10),
+				 priv->base + VNIS_REG);
 	} else {
 		/* Set scaling coefficient */
 		value = 0;
@@ -2163,6 +2168,7 @@ static int rcar_vin_set_fmt(struct soc_camera_device *icd,
 	case V4L2_PIX_FMT_YUYV:
 	case V4L2_PIX_FMT_RGB565:
 	case V4L2_PIX_FMT_RGB555X:
+	case V4L2_PIX_FMT_NV16:
 		can_scale = true;
 		break;
 	default:
