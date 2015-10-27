@@ -19,14 +19,11 @@
 #include <linux/serial.h>
 #include <linux/platform_data/macb.h>
 
- /* USB Device */
-struct at91_udc_data {
-	int	vbus_pin;		/* high == host powering us */
-	u8	vbus_active_low;	/* vbus polarity */
-	u8	vbus_polled;		/* Use polling, not interrupt */
-	int	pullup_pin;		/* active == D+ pulled up */
-	u8	pullup_active_low;	/* true == pullup_pin is active low */
-};
+/*
+ * at91: 6 USARTs and one DBGU port (SAM9260)
+ * avr32: 4
+ */
+#define ATMEL_MAX_UART	7
 
  /* Compact Flash */
 struct at91_cf_data {
