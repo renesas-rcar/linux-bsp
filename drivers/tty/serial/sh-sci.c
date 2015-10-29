@@ -1265,11 +1265,17 @@ static void sci_set_mctrl(struct uart_port *port, unsigned int mctrl)
 
 static unsigned int sci_get_mctrl(struct uart_port *port)
 {
+	struct sci_port *s = to_sci_port(port);
+	unsigned int mctrl = TIOCM_DSR | TIOCM_CAR;
+
 	/*
 	 * CTS/RTS is handled in hardware when supported, while nothing
 	 * else is wired up. Keep it simple and simply assert DSR/CAR.
 	 */
-	return TIOCM_DSR | TIOCM_CAR;
+	if (s->cfg->capabilities & SCIx_HAVE_RTSCTS)
+		mctrl |= TIOCM_CTS;
+
+	return mctrl;
 }
 
 #ifdef CONFIG_SERIAL_SH_SCI_DMA
@@ -2628,6 +2634,8 @@ sci_parse_dt(struct platform_device *pdev, unsigned int *dev_id)
 	p->type = info->type;
 	p->regtype = info->regtype;
 	p->scscr = SCSCR_RE | SCSCR_TE;
+	if (of_property_read_bool(np, "ctsrts"))
+		p->capabilities = SCIx_HAVE_RTSCTS;
 
 	index = of_property_match_string(np, "dma-names", "tx");
 	if (index >= 0)
