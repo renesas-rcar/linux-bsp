@@ -268,16 +268,18 @@ static int rcar_gen3_thermal_update_temp(struct rcar_thermal_priv *priv)
 
 	mutex_lock(&priv->lock);
 
-	/*
-	 * enable IRQ
-	 */
-	for (i = 0; i < 8; i++) {
-		udelay(300);
+	for (i = 0; i < 256; i++) {
 		ctemp = rcar_thermal_read(priv, GEN3_TEMP) & GEN3_CTEMP_MASK;
-		if (rcar_gen3_has_irq_support(priv))
+		if (rcar_gen3_has_irq_support(priv)) {
 			_rcar_thermal_write(priv,
 					REG_GEN3_IRQTEMP1 + (priv->id * 4),
 					ctemp);
+			if (rcar_thermal_read(priv, GEN3_IRQSTR) != 0)
+				break;
+		} else
+			break;
+
+		udelay(300);
 	}
 
 	dev_dbg(dev, "thermal%d  %d -> %d\n", priv->id, priv->ctemp, ctemp);
