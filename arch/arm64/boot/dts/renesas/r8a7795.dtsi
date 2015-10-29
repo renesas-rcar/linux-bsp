@@ -541,10 +541,10 @@
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_SCIF2
-						R8A7795_CLK_SD3
-						R8A7795_CLK_SD2
-						R8A7795_CLK_SD1
-						R8A7795_CLK_SD0
+						R8A7795_CLK_SDHI3
+						R8A7795_CLK_SDHI2
+						R8A7795_CLK_SDHI1
+						R8A7795_CLK_SDHI0
 					>;
 					clock-output-names =
 						"scif2",
@@ -1100,7 +1100,7 @@
 			compatible = "renesas,sdhi-r8a7795";
 			reg = <0 0xee100000 0 0x880>;
 			interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp3_clks R8A7795_CLK_SD0>;
+			clocks = <&mstp3_clks R8A7795_CLK_SDHI0>;
 			renesas,clk-rate = <50000000>;
 			status = "disabled";
 		};
@@ -1109,7 +1109,7 @@
 			compatible = "renesas,sdhi-r8a7795";
 			reg = <0 0xee120000 0 0x880>;
 			interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp3_clks R8A7795_CLK_SD1>;
+			clocks = <&mstp3_clks R8A7795_CLK_SDHI1>;
 			renesas,clk-rate = <50000000>;
 			status = "disabled";
 		};
@@ -1118,7 +1118,7 @@
 			compatible = "renesas,sdhi-r8a7795";
 			reg = <0 0xee140000 0 0x880>;
 			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp3_clks R8A7795_CLK_SD2>;
+			clocks = <&mstp3_clks R8A7795_CLK_SDHI2>;
 			renesas,clk-rate = <50000000>;
 			status = "disabled";
 		};
@@ -1127,7 +1127,7 @@
 			compatible = "renesas,sdhi-r8a7795";
 			reg = <0 0xee160000 0 0x880>;
 			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp3_clks R8A7795_CLK_SD3>;
+			clocks = <&mstp3_clks R8A7795_CLK_SDHI3>;
 			renesas,clk-rate = <50000000>;
 			status = "disabled";
 		};
