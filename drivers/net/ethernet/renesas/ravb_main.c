@@ -1387,7 +1387,8 @@ static int ravb_open(struct net_device *ndev)
 	ravb_emac_init(ndev);
 
 	/* Initialise PTP Clock driver */
-	ravb_ptp_init(ndev, priv->pdev);
+	if (priv->chip_id == RCAR_GEN2)
+		ravb_ptp_init(ndev, priv->pdev);
 
 	netif_tx_start_all_queues(ndev);
 
@@ -1400,7 +1401,8 @@ static int ravb_open(struct net_device *ndev)
 
 out_ptp_stop:
 	/* Stop PTP Clock driver */
-	ravb_ptp_stop(ndev);
+	if (priv->chip_id == RCAR_GEN2)
+		ravb_ptp_stop(ndev);
 out_free_irq:
 	free_irq(ndev->irq, ndev);
 	free_irq(priv->emac_irq, ndev);
@@ -1627,7 +1629,8 @@ static int ravb_close(struct net_device *ndev)
 		ravb_write(ndev, RAVB_TIx_ALL, TID);
 	}
 	/* Stop PTP Clock driver */
-	ravb_ptp_stop(ndev);
+	if (priv->chip_id == RCAR_GEN2)
+		ravb_ptp_stop(ndev);
 
 	/* Set the config mode to stop the AVB-DMAC's processes */
 	if (ravb_stop_dma(ndev) < 0)
@@ -1917,8 +1920,16 @@ static int ravb_probe(struct platform_device *pdev)
 	ndev->ethtool_ops = &ravb_ethtool_ops;
 
 	/* Set AVB config mode */
-	ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) | CCC_OPC_CONFIG,
-		   CCC);
+	if (chip_id == RCAR_GEN2) {
+		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
+			   CCC_OPC_CONFIG, CCC);
+		/* Set CSEL value */
+		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_CSEL) |
+			   CCC_CSEL_HPB, CCC);
+	} else {
+		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
+			   CCC_OPC_CONFIG | CCC_GAC | CCC_CSEL_HPB, CCC);
+	}
 
 	/* Set CSEL value */
 	ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_CSEL) | CCC_CSEL_HPB,
@@ -1949,6 +1960,10 @@ static int ravb_probe(struct platform_device *pdev)
 
 	/* Initialise HW timestamp list */
 	INIT_LIST_HEAD(&priv->ts_skb_list);
+
+	/* Initialise PTP Clock driver */
+	if (chip_id != RCAR_GEN2)
+		ravb_ptp_init(ndev, pdev);
 
 	/* Debug message level */
 	priv->msg_enable = RAVB_DEF_MSG_ENABLE;
@@ -1992,6 +2007,10 @@ out_dma_free:
 	dma_free_coherent(ndev->dev.parent, priv->desc_bat_size, priv->desc_bat,
 			  priv->desc_bat_dma);
 out_release:
+	/* Stop PTP Clock driver */
+	if (chip_id != RCAR_GEN2)
+		ravb_ptp_stop(ndev);
+
 	if (ndev)
 		free_netdev(ndev);
 
@@ -2004,6 +2023,10 @@ static int ravb_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct ravb_private *priv = netdev_priv(ndev);
+
+	/* Stop PTP Clock driver */
+	if (priv->chip_id != RCAR_GEN2)
+		ravb_ptp_stop(ndev);
 
 	dma_free_coherent(ndev->dev.parent, priv->desc_bat_size, priv->desc_bat,
 			  priv->desc_bat_dma);
