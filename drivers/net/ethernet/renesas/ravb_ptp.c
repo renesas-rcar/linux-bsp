@@ -196,11 +196,15 @@ static int ravb_ptp_extts(struct ptp_clock_info *ptp,
 
 	spin_lock_irqsave(&priv->lock, flags);
 	gic = ravb_read(ndev, GIC);
-	if (on)
-		gic |= GIC_PTCE;
-	else
-		gic &= ~GIC_PTCE;
-	ravb_write(ndev, gic, GIC);
+	if (priv->chip_id == RCAR_GEN2) {
+		if (on)
+			gic |= GIC_PTCE;
+		else
+			gic &= ~GIC_PTCE;
+		ravb_write(ndev, gic, GIC);
+	} else {
+		ravb_write(ndev, GIC_PTCE, (on) ? GIE : GID);
+	}
 	mmiowb();
 	spin_unlock_irqrestore(&priv->lock, flags);
 
@@ -216,7 +220,7 @@ static int ravb_ptp_perout(struct ptp_clock_info *ptp,
 	struct ravb_ptp_perout *perout;
 	unsigned long flags;
 	int error = 0;
-	u32 gic;
+	u32 gic = 0;
 
 	if (req->index)
 		return -EINVAL;
@@ -248,9 +252,13 @@ static int ravb_ptp_perout(struct ptp_clock_info *ptp,
 		error = ravb_ptp_update_compare(priv, (u32)start_ns);
 		if (!error) {
 			/* Unmask interrupt */
-			gic = ravb_read(ndev, GIC);
-			gic |= GIC_PTME;
-			ravb_write(ndev, gic, GIC);
+			if (priv->chip_id == RCAR_GEN2) {
+				gic = ravb_read(ndev, GIC);
+				gic |= GIC_PTME;
+				ravb_write(ndev, gic, GIC);
+			} else {
+				ravb_write(ndev, GIC_PTME, GIE);
+			}
 		}
 	} else	{
 		spin_lock_irqsave(&priv->lock, flags);
@@ -259,9 +267,13 @@ static int ravb_ptp_perout(struct ptp_clock_info *ptp,
 		perout->period = 0;
 
 		/* Mask interrupt */
-		gic = ravb_read(ndev, GIC);
-		gic &= ~GIC_PTME;
-		ravb_write(ndev, gic, GIC);
+		if (priv->chip_id == RCAR_GEN2) {
+			gic = ravb_read(ndev, GIC);
+			gic &= ~GIC_PTME;
+			ravb_write(ndev, gic, GIC);
+		} else {
+			ravb_write(ndev, GIC_PTME, GID);
+		}
 	}
 	mmiowb();
 	spin_unlock_irqrestore(&priv->lock, flags);
@@ -352,7 +364,11 @@ void ravb_ptp_stop(struct net_device *ndev)
 {
 	struct ravb_private *priv = netdev_priv(ndev);
 
-	ravb_write(ndev, 0, GIC);
+	if (priv->chip_id == RCAR_GEN2)
+		ravb_write(ndev, 0, GIC);
+	else
+		ravb_write(ndev, RAVB_GIx_ALL, GID);
+
 	ravb_write(ndev, 0, GIS);
 
 	ptp_clock_unregister(priv->ptp.clock);
