@@ -1134,6 +1134,53 @@ static int adv7482_mbus_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
+/*
+ * adv7482_cropcap() - V4L2 decoder i/f handler for cropcap
+ * @sd: pointer to standard V4L2 sub-device structure
+ * @a: pointer to standard V4L2 cropcap structure
+ *
+ * Gets cropping limits, default cropping rectangle and pixel aspect.
+ */
+static int adv7482_cropcap(struct v4l2_subdev *sd, struct v4l2_cropcap *a)
+{
+	struct adv7482_state *state = to_state(sd);
+	u8 progressive;
+	u32 width;
+	u32 height;
+	int ret;
+	struct adv7482_link_config *config = &state->mipi_csi2_link[0];
+
+	/* cropping limits */
+	a->bounds.left = 0;
+	a->bounds.top  = 0;
+
+	if (config->input_interface == DECODER_INPUT_INTERFACE_YCBCR422) {
+		a->bounds.width  = 720;
+		a->bounds.height = 480;
+	} else {
+		/* Get video information */
+		ret = adv7482_get_vid_info(sd, &progressive,
+						 &width, &height, NULL);
+		if (ret < 0) {
+			a->bounds.width  = ADV7482_MAX_WIDTH;
+			a->bounds.height = ADV7482_MAX_HEIGHT;
+		} else {
+			a->bounds.width  = width;
+			a->bounds.height = height;
+		}
+	}
+
+	/* default cropping rectangle */
+	a->defrect = a->bounds;
+
+	/* does not support scaling */
+	a->pixelaspect.numerator   = 1;
+	a->pixelaspect.denominator = 1;
+	a->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	return 0;
+}
+
 static int adv7482_set_field_mode(struct adv7482_state *state)
 {
 	/* FIXME */
@@ -1444,6 +1491,7 @@ static const struct v4l2_subdev_core_ops adv7482_core_ops = {
 static const struct v4l2_subdev_video_ops adv7482_video_ops = {
 	.querystd	= adv7482_querystd,
 	.g_input_status = adv7482_g_input_status,
+	.cropcap	= adv7482_cropcap,
 	.g_mbus_config	= adv7482_g_mbus_config,
 };
 
