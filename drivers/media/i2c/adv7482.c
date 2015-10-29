@@ -1420,6 +1420,11 @@ static int adv7482_sdp_s_ctrl(struct v4l2_ctrl *ctrl, struct i2c_client *client)
 {
 	int ret;
 
+	ret = adv7482_write_register(client, ADV7482_I2C_SDP,
+			ADV7482_SDP_REG_CTRL, ADV7482_SDP_MAIN_MAP_RW);
+	if (ret < 0)
+		return ret;
+
 	switch (ctrl->id) {
 	case V4L2_CID_BRIGHTNESS:
 		if ((ctrl->val < ADV7482_SDP_BRI_MIN) ||
@@ -1446,18 +1451,24 @@ static int adv7482_sdp_s_ctrl(struct v4l2_ctrl *ctrl, struct i2c_client *client)
 			ret = adv7482_write_register(client, ADV7482_I2C_SDP,
 					ADV7482_SDP_REG_CON, ctrl->val);
 		break;
-#if 0 /* [FIXME] */
 	case V4L2_CID_SATURATION:
 		/*
 		 *This could be V4L2_CID_BLUE_BALANCE/V4L2_CID_RED_BALANCE
 		 *Let's not confuse the user, everybody understands saturation
 		 */
-		ret = adv7180_write(state, ADV7180_REG_SD_SAT_CB, val);
-		if (ret < 0)
-			break;
-		ret = adv7180_write(state, ADV7180_REG_SD_SAT_CR, val);
+		if ((ctrl->val < ADV7482_SDP_SAT_MIN) ||
+					(ctrl->val > ADV7482_SDP_SAT_MAX))
+			ret = -ERANGE;
+		else {
+			ret = adv7482_write_register(client, ADV7482_I2C_SDP,
+					ADV7482_SDP_REG_SD_SAT_CB, ctrl->val);
+			if (ret < 0)
+				break;
+
+			ret = adv7482_write_register(client, ADV7482_I2C_SDP,
+					ADV7482_SDP_REG_SD_SAT_CR, ctrl->val);
+		}
 		break;
-#endif
 	default:
 		ret = -EINVAL;
 	}
