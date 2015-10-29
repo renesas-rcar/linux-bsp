@@ -564,13 +564,23 @@
 					compatible = "renesas,r8a7795-mstp-clocks",
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150144 0 4>, <0 0xe615003c 0 4>;
-					clocks = <&s3d4_clk>, <&s3d4_clk>;
+					clocks = <&s3d4_clk>, <&s3d4_clk>,
+						<&s3d1_clk>, <&s3d1_clk>,
+						<&s3d1_clk>, <&s3d1_clk>,
+						<&s3d1_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_AUDIO_DMAC0 R8A7795_CLK_AUDIO_DMAC1
+						R8A7795_CLK_HSCIF4
+						R8A7795_CLK_HSCIF3
+						R8A7795_CLK_HSCIF2
+						R8A7795_CLK_HSCIF1
+						R8A7795_CLK_HSCIF0
 					>;
 					clock-output-names =
-						"audio_dmac0", "audio_dmac1";
+						"audio_dmac0", "audio_dmac1",
+						"hscif4", "hscif3", "hscif2",
+						"hscif1", "hscif0";
 				};
 
 				mstp6_clks: mstp6_clks@e6150148 {
@@ -869,6 +879,66 @@
 			clocks = <&mstp2_clks R8A7795_CLK_SCIF5>;
 			clock-names = "sci_ick";
 			dmas = <&dmac1 0x5b>, <&dmac1 0x5a>;
+			dma-names = "tx", "rx";
+			power-domains = <&cpg_clocks>;
+			status = "disabled";
+		};
+
+		hscif0: serial@e6540000 {
+			compatible = "renesas,hscif-r8a7795", "renesas,hscif";
+			reg = <0 0xe6540000 0 64>;
+			interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp5_clks R8A7795_CLK_HSCIF0>;
+			clock-names = "sci_ick";
+			dmas = <&dmac1 0x31>, <&dmac1 0x30>;
+			dma-names = "tx", "rx";
+			power-domains = <&cpg_clocks>;
+			status = "disabled";
+		};
+
+		hscif1: serial@e6550000 {
+			compatible = "renesas,hscif-r8a7795", "renesas,hscif";
+			reg = <0 0xe6550000 0 64>;
+			interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp5_clks R8A7795_CLK_HSCIF1>;
+			clock-names = "sci_ick";
+			dmas = <&dmac1 0x33>, <&dmac1 0x32>;
+			dma-names = "tx", "rx";
+			power-domains = <&cpg_clocks>;
+			status = "disabled";
+		};
+
+		hscif2: serial@e6560000 {
+			compatible = "renesas,hscif-r8a7795", "renesas,hscif";
+			reg = <0 0xe6560000 0 64>;
+			interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp5_clks R8A7795_CLK_HSCIF2>;
+			clock-names = "sci_ick";
+			dmas = <&dmac1 0x35>, <&dmac1 0x34>;
+			dma-names = "tx", "rx";
+			power-domains = <&cpg_clocks>;
+			status = "disabled";
+		};
+
+		hscif3: serial@e66a0000 {
+			compatible = "renesas,hscif-r8a7795", "renesas,hscif";
+			reg = <0 0xe66a0000 0 64>;
+			interrupts = <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp5_clks R8A7795_CLK_HSCIF3>;
+			clock-names = "sci_ick";
+			dmas = <&dmac1 0x37>, <&dmac1 0x36>;
+			dma-names = "tx", "rx";
+			power-domains = <&cpg_clocks>;
+			status = "disabled";
+		};
+
+		hscif4: serial@e66b0000 {
+			compatible = "renesas,hscif-r8a7795", "renesas,hscif";
+			reg = <0 0xe66b0000 0 64>;
+			interrupts = <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&mstp5_clks R8A7795_CLK_HSCIF4>;
+			clock-names = "sci_ick";
+			dmas = <&dmac1 0x39>, <&dmac1 0x38>;
 			dma-names = "tx", "rx";
 			power-domains = <&cpg_clocks>;
 			status = "disabled";
