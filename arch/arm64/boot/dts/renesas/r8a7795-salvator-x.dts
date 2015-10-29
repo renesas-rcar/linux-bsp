@@ -344,6 +344,11 @@
 		renesas,function = "scif2";
 	};
 
+	hscif1_pins: hscif1 {
+		renesas,groups = "hscif1_data_a", "hscif1_ctrl_a";
+		renesas,function = "hscif1";
+	};
+
 	usb0_pins: usb0 {
 		renesas,groups = "usb0";
 		renesas,function = "usb0";
@@ -418,7 +423,7 @@
 &scif1 {
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
-
+	/* this node is exclusive hscif1 node */
 	status = "okay";
 };
 
@@ -428,6 +433,13 @@
 	status = "okay";
 
 	clock-frequency = <100000>;
+};
+
+&hscif1 {
+	pinctrl-0 = <&hscif1_pins>;
+	pinctrl-names = "default";
+	/* this node is exclusive scif1 node */
+	/* status = "okay"; */
 };
 
 &rcar_sound {
