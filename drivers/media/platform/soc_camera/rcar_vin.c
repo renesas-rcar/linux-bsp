@@ -187,6 +187,8 @@ void vin_ut_debug_printk(const char *function_name, const char *format, ...)
 #define VNCSI_IFMD_DES1		(1 << 26) /* CSI20 Input Data) */
 #define VNCSI_IFMD_DES0		(1 << 25) /* CSI21 Input Data) */
 
+#define VNCSI_IFMD_CSI_CHSEL(n)	(n << 0)
+
 /* UDS */
 #define VNUDS_CTRL_REG		0x80	/* Scaling Control Registers */
 #define VNUDS_CTRL_AMD		(1 << 30)
@@ -209,6 +211,18 @@ enum chip_id {
 	RCAR_H1,
 	RCAR_M1,
 	RCAR_E1,
+};
+
+enum csi2_ch {
+	RCAR_CSI_CH_NONE = -1,
+	RCAR_CSI40,
+	RCAR_CSI20,
+};
+
+enum csi2_fmt {
+	RCAR_CSI_FMT_NONE = -1,
+	RCAR_CSI_RGB888,
+	RCAR_CSI_YCBCR422,
 };
 
 struct vin_coeff {
@@ -555,6 +569,8 @@ struct rcar_vin_priv {
 	enum chip_id			chip;
 	bool				error_flag;
 	unsigned int			index;
+	enum csi2_ch			csi_ch;
+	enum csi2_fmt			csi_fmt;
 
 	/* Asynchronous CSI2 linking */
 	struct v4l2_subdev		*csi2_sd;
@@ -791,17 +807,39 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 		vnmc |= VNMC_BPS;
 
 	if (priv->chip == RCAR_GEN3) {
+		u32 imfd = 0;
+
 		if (priv->pdata_flags & RCAR_VIN_CSI2)
 			vnmc &= ~VNMC_DPINE;
 		else
 			vnmc |= VNMC_DPINE;
 
-		if ((vnmc & VNMC_INF_MASK) == VNMC_INF_RGB888)
-			iowrite32(0x06000000, priv->base + VNCSI_IFMD_REG);
-
 		if ((icd->current_fmt->host_fmt->fourcc != V4L2_PIX_FMT_NV12)
 			&& is_scaling(cam))
 			vnmc |= VNMC_SCLE;
+
+		/* virtual channel 0 use */
+		if (priv->csi_ch == RCAR_CSI40)
+			imfd |= VNCSI_IFMD_CSI_CHSEL(0);
+		else if (priv->csi_ch == RCAR_CSI20)
+			imfd |= VNCSI_IFMD_CSI_CHSEL(1);
+		else {
+			dev_err(icd->parent, "Invalid csi2 channel(%d)\n",
+				priv->csi_ch);
+			return -EINVAL;
+		}
+
+		if (priv->csi_fmt == RCAR_CSI_RGB888)
+			imfd |= 0x00000000;
+		else if (priv->csi_fmt == RCAR_CSI_YCBCR422)
+			imfd |= (VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0);
+		else {
+			dev_err(icd->parent, "Invalid csi2 format(%d)\n",
+				priv->csi_fmt);
+			return -EINVAL;
+		}
+
+		iowrite32(imfd, priv->base + VNCSI_IFMD_REG);
 	}
 
 	/* progressive or interlaced mode */
@@ -2672,6 +2710,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	struct rcar_vin_platform_data *pdata;
 	unsigned int pdata_flags;
 	int irq, ret;
+	const char *str, *csi_str;
 	unsigned int i;
 	struct device_node *np = NULL, *epn = NULL, *ren = NULL;
 	bool csi_use = false;
@@ -2772,6 +2811,35 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	priv->ici.v4l2_dev.dev = &pdev->dev;
 	priv->ici.drv_name = dev_name(&pdev->dev);
 	priv->ici.ops = &rcar_vin_host_ops;
+
+	if (priv->chip == RCAR_GEN3) {
+		ret = of_property_read_string(np, "csi,select", &str);
+		if (ret) {
+			dev_err(&pdev->dev, "could not parse csi,select\n");
+			return ret;
+		}
+
+		if (strcmp(str, "csi40") == 0)
+			priv->csi_ch = RCAR_CSI40;
+		else if (strcmp(str, "csi20") == 0)
+			priv->csi_ch = RCAR_CSI20;
+		else
+			priv->csi_ch = RCAR_CSI_CH_NONE;
+
+		ret = of_property_read_string(ren->parent,
+					 "adi,input-interface", &csi_str);
+		if (ret) {
+			dev_err(&pdev->dev, "could not parse adi,input-interface\n");
+			return ret;
+		}
+
+		if (strcmp(csi_str, "rgb888") == 0)
+			priv->csi_fmt = RCAR_CSI_RGB888;
+		else if (strcmp(csi_str, "ycbcr422") == 0)
+			priv->csi_fmt = RCAR_CSI_YCBCR422;
+		else
+			priv->csi_fmt = RCAR_CSI_FMT_NONE;
+	}
 
 	if (strcmp(dev_name(priv->ici.v4l2_dev.dev), "e6ef0000.video") == 0)
 		priv->index = VIDEO_0;
