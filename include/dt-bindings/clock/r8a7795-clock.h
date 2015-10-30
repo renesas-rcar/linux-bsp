@@ -17,6 +17,10 @@
 #define R8A7795_CLK_PLL3		4
 #define R8A7795_CLK_PLL4		5
 #define R8A7795_CLK_Z			6
+#define R8A7795_CLK_SD0			7
+#define R8A7795_CLK_SD1			8
+#define R8A7795_CLK_SD2			9
+#define R8A7795_CLK_SD3			10
 
 /* MSTP0 */
 

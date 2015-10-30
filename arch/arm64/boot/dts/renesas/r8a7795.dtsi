@@ -480,10 +480,11 @@
 				compatible = "renesas,r8a7795-cpg-clocks",
 					     "renesas,rcar-gen3-cpg-clocks";
 				reg = <0 0xe6150000 0 0x1000>;
-				clocks = <&extal_clk>;
+				clocks = <&extal_clk>, <&sdsrc_clk>;
 				clock-output-names = "main", "pll0", "pll1","pll2",
 						     "pll3", "pll4",
-						     "z";
+						     "z",
+						     "sd0", "sd1", "sd2", "sd3";
 				#power-domain-cells = <0>;
 
 				mstp1_clks: mstp1_clks@e6150134 {
