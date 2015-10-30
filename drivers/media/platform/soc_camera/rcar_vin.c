@@ -132,6 +132,7 @@
 #define VNDMR_BPSM		(1 << 4)
 #define VNDMR_DTMD_YCSEP	(1 << 1)
 #define VNDMR_DTMD_ARGB		(1 << 0)
+#define VNDMR_DTMD_YCSEP_YCBCR420	(3 << 0)
 
 /* Video n Data Mode Register 2 bits */
 #define VNDMR2_VPS		(1 << 30)
@@ -690,6 +691,17 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 
 	/* output format */
 	switch (icd->current_fmt->host_fmt->fourcc) {
+	case V4L2_PIX_FMT_NV12:
+		if (priv->chip == RCAR_GEN3) {
+			iowrite32(ALIGN((cam->out_width * cam->out_height),
+					 0x80), priv->base + VNUVAOF_REG);
+			dmr = VNDMR_DTMD_YCSEP_YCBCR420;
+			output_is_yuv = true;
+		} else {
+			dev_warn(icd->parent, "Not support format\n");
+			return -EINVAL;
+		}
+		break;
 	case V4L2_PIX_FMT_NV16:
 		iowrite32(ALIGN((cam->out_width * cam->out_height), 0x80),
 			  priv->base + VNUVAOF_REG);
@@ -747,7 +759,8 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 		if ((vnmc & VNMC_INF_MASK) == VNMC_INF_RGB888)
 			iowrite32(0x06000000, priv->base + VNCSI_IFMD_REG);
 
-		if (is_scaling(cam))
+		if ((icd->current_fmt->host_fmt->fourcc != V4L2_PIX_FMT_NV12)
+			&& is_scaling(cam))
 			vnmc |= VNMC_SCLE;
 	}
 
@@ -1250,7 +1263,7 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 	unsigned char dsize = 0;
 	struct v4l2_rect *cam_subrect = &cam->subrect;
 	u32 value;
-	int ret;
+	int ret = 0;
 
 	dev_dbg(icd->parent, "Crop %ux%u@%u:%u\n",
 		icd->user_width, icd->user_height, cam->vin_left, cam->vin_top);
@@ -1288,13 +1301,15 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 	}
 
 	if (priv->chip == RCAR_GEN3) {
-		if (is_scaling(cam)) {
+		if ((icd->current_fmt->host_fmt->fourcc != V4L2_PIX_FMT_NV12)
+			&& is_scaling(cam)) {
 			ret = rcar_vin_uds_set(priv, cam);
 			if (ret < 0)
 				return ret;
 		}
 		if (is_scaling(cam) ||
-		   (icd->current_fmt->host_fmt->fourcc == V4L2_PIX_FMT_NV16))
+		   (icd->current_fmt->host_fmt->fourcc == V4L2_PIX_FMT_NV16) ||
+		   (icd->current_fmt->host_fmt->fourcc == V4L2_PIX_FMT_NV12))
 			iowrite32(ALIGN(cam->out_width, 0x20),
 				 priv->base + VNIS_REG);
 		else
@@ -1347,7 +1362,7 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 		iowrite32(ALIGN(cam->out_width, 0x10), priv->base + VNIS_REG);
 	}
 
-	return 0;
+	return ret;
 }
 
 static void capture_stop_preserve(struct rcar_vin_priv *priv, u32 *vnmc)
@@ -1512,6 +1527,14 @@ static bool rcar_vin_packing_supported(const struct soc_mbus_pixelfmt *fmt)
 }
 
 static const struct soc_mbus_pixelfmt rcar_vin_formats[] = {
+	{
+		.fourcc			= V4L2_PIX_FMT_NV12,
+		.name			= "NV12",
+		.bits_per_sample	= 8,
+		.packing		= SOC_MBUS_PACKING_2X8_PADHI,
+		.order			= SOC_MBUS_ORDER_LE,
+		.layout			= SOC_MBUS_LAYOUT_PLANAR_Y_C,
+	},
 	{
 		.fourcc			= V4L2_PIX_FMT_NV16,
 		.name			= "NV16",
@@ -2121,9 +2144,11 @@ static int rcar_vin_set_fmt(struct soc_camera_device *icd,
 	if (priv->error_flag == false)
 		priv->error_flag = true;
 	else {
-		if ((pixfmt == V4L2_PIX_FMT_NV16) && (pix->width & 0x1F)) {
+		if (((pixfmt == V4L2_PIX_FMT_NV16) ||
+			(pixfmt == V4L2_PIX_FMT_NV12)) &&
+			(pix->width & 0x1F)) {
 			dev_dbg(icd->parent,
-			 "specified width error in NV16 format.\n");
+			 "specify width of 32 multiple in separate format.\n");
 			return -EINVAL;
 		}
 	}
@@ -2174,6 +2199,7 @@ static int rcar_vin_set_fmt(struct soc_camera_device *icd,
 	case V4L2_PIX_FMT_NV16:
 		can_scale = true;
 		break;
+	case V4L2_PIX_FMT_NV12:
 	default:
 		can_scale = false;
 		break;
