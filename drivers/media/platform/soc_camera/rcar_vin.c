@@ -43,6 +43,39 @@
 #include "soc_scale_crop.h"
 
 #define DRV_NAME "rcar_vin"
+#define VIDEO_0		0
+#define VIDEO_1		1
+
+#define VIN_UT_IRQ	0x01
+
+static unsigned int vin_debug;
+module_param_named(debug, vin_debug, int, 0600);
+static int overflow_video[2];
+module_param_array(overflow_video, int, NULL, 0600);
+
+#ifdef CONFIG_VIDEO_RCAR_VIN_DEBUG
+#define VIN_IRQ_DEBUG(fmt, args...)					\
+	do {								\
+		if (unlikely(vin_debug & VIN_UT_IRQ))			\
+			vin_ut_debug_printk(__func__, fmt, ##args);	\
+	} while (0)
+#else
+#define VIN_IRQ_DEBUG(fmt, args...)
+#endif
+
+void vin_ut_debug_printk(const char *function_name, const char *format, ...)
+{
+	struct va_format vaf;
+	va_list args;
+
+	va_start(args, format);
+	vaf.fmt = format;
+	vaf.va = &args;
+
+	printk(KERN_DEBUG "[" DRV_NAME ":%s] %pV", function_name, &vaf);
+
+	va_end(args);
+}
 
 /* Register offsets for R-Car VIN */
 #define VNMC_REG	0x00	/* Video n Main Control Register */
@@ -126,6 +159,12 @@
 /* Video n Interrupt Enable Register bits */
 #define VNIE_FIE		(1 << 4)
 #define VNIE_EFE		(1 << 1)
+#define VNIE_FOE		(1 << 0)
+
+/* Video n Interrupt Status Register bits */
+#define VNINTS_FIS		(1 << 4)
+#define VNINTS_EFS		(1 << 1)
+#define VNINTS_FOS		(1 << 0)
 
 /* Video n Data Mode Register bits */
 #define VNDMR_EXRGB		(1 << 8)
@@ -514,6 +553,7 @@ struct rcar_vin_priv {
 	struct completion		capture_stop;
 	enum chip_id			chip;
 	bool				error_flag;
+	unsigned int			index;
 
 	/* Asynchronous CSI2 linking */
 	struct v4l2_async_subdev	*csi2_asd;
@@ -767,6 +807,10 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 	/* progressive or interlaced mode */
 	interrupts = progressive ? VNIE_FIE : VNIE_EFE;
 
+	/* Enable Overflow */
+	if (vin_debug)
+		interrupts |= VNIE_FOE;
+
 	/* ack interrupts */
 	iowrite32(interrupts, priv->base + VNINTS_REG);
 	/* enable interrupts */
@@ -959,15 +1003,24 @@ static irqreturn_t rcar_vin_irq(int irq, void *data)
 	bool can_run = false, hw_stopped;
 	int slot;
 	unsigned int handled = 0;
+	int vin_ovr_cnt = 0;
 
 	spin_lock(&priv->lock);
 
 	int_status = ioread32(priv->base + VNINTS_REG);
 	if (!int_status)
 		goto done;
+
 	/* ack interrupts */
 	iowrite32(int_status, priv->base + VNINTS_REG);
 	handled = 1;
+
+	/* overflow occurs */
+	if (vin_debug && (int_status & VNINTS_FOS)) {
+		vin_ovr_cnt = ++overflow_video[priv->index];
+		VIN_IRQ_DEBUG("overflow occurrs num[%d] at VIN (%s)\n",
+				vin_ovr_cnt, dev_name(priv->ici.v4l2_dev.dev));
+	}
 
 	/* nothing to do if capture status is 'STOPPED' */
 	if (priv->state == STOPPED)
@@ -2525,6 +2578,12 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	priv->ici.drv_name = dev_name(&pdev->dev);
 	priv->ici.ops = &rcar_vin_host_ops;
 
+	if (strcmp(dev_name(priv->ici.v4l2_dev.dev), "e6ef0000.video") == 0)
+		priv->index = VIDEO_0;
+	else if (strcmp(dev_name(priv->ici.v4l2_dev.dev),
+					"e6ef4000.video") == 0)
+		priv->index = VIDEO_1;
+
 	priv->pdata_flags = pdata_flags;
 	if (!match) {
 		priv->ici.nr = pdev->id;
@@ -2545,6 +2604,8 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	ret = soc_camera_host_register(&priv->ici);
 	if (ret)
 		goto cleanup;
+
+	vin_debug = 0;
 
 	return 0;
 

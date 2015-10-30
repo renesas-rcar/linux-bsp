@@ -43,6 +43,12 @@ config VIDEO_RCAR_VIN
 	---help---
 	  This is a v4l2 driver for the R-Car VIN Interface
 
+config VIDEO_RCAR_VIN_DEBUG
+	bool "Renesas VIN overflow debug messages"
+	depends on VIDEO_RCAR_VIN
+	---help---
+	  Enable debug overflow messages on R-Car Video Input driver.
+
 config VIDEO_RCAR_CSI2
 	tristate "R-Car MIPI CSI-2 Interface driver"
 	depends on VIDEO_DEV && SOC_CAMERA && HAVE_CLK
