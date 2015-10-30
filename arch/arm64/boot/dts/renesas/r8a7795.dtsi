@@ -456,7 +456,8 @@
 				clock-output-names = "main", "pll0", "pll1","pll2",
 						     "pll3", "pll4",
 						     "z",
-						     "sd0", "sd1", "sd2", "sd3";
+						     "sd0", "sd1", "sd2", "sd3",
+						     "rclk";
 				#power-domain-cells = <0>;
 
 				mstp1_clks: mstp1_clks@e6150134 {
