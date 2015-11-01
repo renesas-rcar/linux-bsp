@@ -1,8 +1,7 @@
 /*
- * Device Tree Source for the Henninger board
+ * Device Tree Source for the Porter board
  *
- * Copyright (C) 2014 Renesas Solutions Corp.
- * Copyright (C) 2014 Cogent Embedded, Inc.
+ * Copyright (C) 2015 Cogent Embedded, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -14,15 +13,15 @@
 #include <dt-bindings/gpio/gpio.h>
 
 / {
-	model = "Henninger";
-	compatible = "renesas,henninger", "renesas,r8a7791";
+	model = "Porter";
+	compatible = "renesas,porter", "renesas,r8a7791";
 
 	aliases {
 		serial0 = &scif0;
 	};
 
 	chosen {
-		bootargs = "console=ttySC0,38400 ignore_loglevel rw root=/dev/nfs ip=dhcp";
+		bootargs = "ignore_loglevel rw root=/dev/nfs ip=dhcp";
 		stdout-path = &scif0;
 	};
 
@@ -111,20 +110,14 @@
 		renesas,function = "sdhi2";
 	};
 
-	i2c2_pins: i2c2 {
-		renesas,groups = "i2c2";
-		renesas,function = "i2c2";
-	};
-
 	qspi_pins: spi0 {
 		renesas,groups = "qspi_ctrl", "qspi_data4";
 		renesas,function = "qspi";
 	};
 
-	msiof0_pins: spi1 {
-		renesas,groups = "msiof0_clk", "msiof0_sync", "msiof0_rx",
-				 "msiof0_tx";
-		renesas,function = "msiof0";
+	i2c2_pins: i2c2 {
+		renesas,groups = "i2c2";
+		renesas,function = "i2c2";
 	};
 
 	usb0_pins: usb0 {
@@ -161,7 +154,7 @@
 
 	phy-handle = <&phy1>;
 	renesas,ether-link-active-low;
-	status = "okay";
+	status = "ok";
 
 	phy1: ethernet-phy@1 {
 		reg = <1>;
@@ -169,10 +162,6 @@
 		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
 		micrel,led-mode = <1>;
 	};
-};
-
-&sata0 {
-	status = "okay";
 };
 
 &sdhi0 {
@@ -194,27 +183,6 @@
 	vqmmc-supply = <&vccq_sdhi2>;
 	cd-gpios = <&gpio6 22 GPIO_ACTIVE_LOW>;
 	status = "okay";
-};
-
-&i2c2 {
-	pinctrl-0 = <&i2c2_pins>;
-	pinctrl-names = "default";
-
-	status = "okay";
-	clock-frequency = <400000>;
-
-	composite-in@20 {
-		compatible = "adi,adv7180";
-		reg = <0x20>;
-		remote = <&vin0>;
-
-		port {
-			adv7180: endpoint {
-				bus-width = <8>;
-				remote-endpoint = <&vin0ep>;
-			};
-		};
-	};
 };
 
 &qspi {
@@ -250,37 +218,67 @@
 	};
 };
 
-&msiof0 {
-	pinctrl-0 = <&msiof0_pins>;
+&i2c2 {
+	pinctrl-0 = <&i2c2_pins>;
 	pinctrl-names = "default";
 
 	status = "okay";
+	clock-frequency = <400000>;
 
-	pmic@0 {
-		compatible = "renesas,r2a11302ft";
-		reg = <0>;
-		spi-max-frequency = <6000000>;
-		spi-cpol;
-		spi-cpha;
+	composite-in@20 {
+		compatible = "adi,adv7180";
+		reg = <0x20>;
+		remote = <&vin0>;
+
+		port {
+			adv7180: endpoint {
+				bus-width = <8>;
+				remote-endpoint = <&vin0ep>;
+			};
+		};
+	};
+};
+
+&sata0 {
+	status = "okay";
+};
+
+/* composite video input */
+&vin0 {
+	status = "ok";
+	pinctrl-0 = <&vin0_pins>;
+	pinctrl-names = "default";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		vin0ep: endpoint {
+			remote-endpoint = <&adv7180>;
+			bus-width = <8>;
+		};
 	};
 };
 
 &pci0 {
-	status = "okay";
 	pinctrl-0 = <&usb0_pins>;
 	pinctrl-names = "default";
+
+	status = "okay";
 };
 
 &pci1 {
-	status = "okay";
 	pinctrl-0 = <&usb1_pins>;
 	pinctrl-names = "default";
+
+	status = "okay";
 };
 
 &hsusb {
-	status = "okay";
 	pinctrl-0 = <&usb0_pins>;
 	pinctrl-names = "default";
+
+	status = "okay";
 	renesas,enable-gpio = <&gpio5 31 GPIO_ACTIVE_HIGH>;
 };
 
@@ -296,25 +294,9 @@
 	status = "okay";
 };
 
-/* composite video input */
-&vin0 {
-	status = "okay";
-	pinctrl-0 = <&vin0_pins>;
-	pinctrl-names = "default";
-
-	port {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		vin0ep: endpoint {
-			remote-endpoint = <&adv7180>;
-			bus-width = <8>;
-		};
-	};
-};
-
 &can0 {
 	pinctrl-0 = <&can0_pins>;
 	pinctrl-names = "default";
+
 	status = "okay";
 };

@@ -1713,6 +1713,15 @@ static void i9xx_enable_pll(struct intel_crtc *crtc)
 			   I915_READ(DPLL(!crtc->pipe)) | DPLL_DVO_2X_MODE);
 	}
 
+	/*
+	 * Apparently we need to have VGA mode enabled prior to changing
+	 * the P1/P2 dividers. Otherwise the DPLL will keep using the old
+	 * dividers, even though the register value does change.
+	 */
+	I915_WRITE(reg, 0);
+
+	I915_WRITE(reg, dpll);
+
 	/* Wait for the clocks to stabilize. */
 	POSTING_READ(reg);
 	udelay(150);
@@ -14139,6 +14148,11 @@ static int intel_user_framebuffer_create_handle(struct drm_framebuffer *fb,
 {
 	struct intel_framebuffer *intel_fb = to_intel_framebuffer(fb);
 	struct drm_i915_gem_object *obj = intel_fb->obj;
+
+	if (obj->userptr.mm) {
+		DRM_DEBUG("attempting to use a userptr for a framebuffer, denied\n");
+		return -EINVAL;
+	}
 
 	return drm_gem_handle_create(file, &obj->base, handle);
 }
