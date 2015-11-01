@@ -1915,7 +1915,8 @@ static void hci_cs_le_create_conn(struct hci_dev *hdev, u8 status)
 
 	hci_dev_lock(hdev);
 
-	conn = hci_conn_hash_lookup_ba(hdev, LE_LINK, &cp->peer_addr);
+	conn = hci_conn_hash_lookup_le(hdev, &cp->peer_addr,
+				       cp->peer_addr_type);
 	if (!conn)
 		goto unlock;
 
@@ -4724,6 +4725,27 @@ static void process_adv_report(struct hci_dev *hdev, u8 type, bdaddr_t *bdaddr,
 	struct hci_conn *conn;
 	bool match;
 	u32 flags;
+	u8 *ptr, real_len;
+
+	/* Find the end of the data in case the report contains padded zero
+	 * bytes at the end causing an invalid length value.
+	 *
+	 * When data is NULL, len is 0 so there is no need for extra ptr
+	 * check as 'ptr < data + 0' is already false in such case.
+	 */
+	for (ptr = data; ptr < data + len && *ptr; ptr += *ptr + 1) {
+		if (ptr + 1 + *ptr > data + len)
+			break;
+	}
+
+	real_len = ptr - data;
+
+	/* Adjust for actual length */
+	if (len != real_len) {
+		BT_ERR_RATELIMITED("%s advertising data length corrected",
+				   hdev->name);
+		len = real_len;
+	}
 
 	/* If the direct address is present, then this report is from
 	 * a LE Direct Advertising Report event. In that case it is

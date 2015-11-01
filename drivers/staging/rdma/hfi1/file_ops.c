@@ -168,7 +168,7 @@ enum mmap_types {
 	HFI1_MMAP_TOKEN_SET(TYPE, type) | \
 	HFI1_MMAP_TOKEN_SET(CTXT, ctxt) | \
 	HFI1_MMAP_TOKEN_SET(SUBCTXT, subctxt) | \
-	HFI1_MMAP_TOKEN_SET(OFFSET, ((unsigned long)addr & ~PAGE_MASK)))
+	HFI1_MMAP_TOKEN_SET(OFFSET, (offset_in_page(addr))))
 
 #define EXP_TID_SET(field, value)			\
 	(((value) & EXP_TID_TID##field##_MASK) <<	\
@@ -508,7 +508,7 @@ static int hfi1_file_mmap(struct file *fp, struct vm_area_struct *vma)
 	case PIO_BUFS_SOP:
 		memaddr = ((dd->physaddr + TXE_PIO_SEND) +
 				/* chip pio base */
-			   (uctxt->sc->hw_context * (1 << 16))) +
+			   (uctxt->sc->hw_context * BIT(16))) +
 				/* 64K PIO space / ctxt */
 			(type == PIO_BUFS_SOP ?
 				(TXE_PIO_SIZE / 2) : 0); /* sop? */
@@ -1335,9 +1335,9 @@ static int get_base_info(struct file *fp, void __user *ubase, __u32 len)
 	 */
 	binfo.user_regbase = HFI1_MMAP_TOKEN(UREGS, uctxt->ctxt,
 					    subctxt_fp(fp), 0);
-	offset = ((((uctxt->ctxt - dd->first_user_ctxt) *
+	offset = offset_in_page((((uctxt->ctxt - dd->first_user_ctxt) *
 		    HFI1_MAX_SHARED_CTXTS) + subctxt_fp(fp)) *
-		  sizeof(*dd->events)) & ~PAGE_MASK;
+		  sizeof(*dd->events));
 	binfo.events_bufbase = HFI1_MMAP_TOKEN(EVENTS, uctxt->ctxt,
 					      subctxt_fp(fp),
 					      offset);
@@ -1573,7 +1573,7 @@ static int exp_tid_setup(struct file *fp, struct hfi1_tid_info *tinfo)
 
 	vaddr = tinfo->vaddr;
 
-	if (vaddr & ~PAGE_MASK) {
+	if (offset_in_page(vaddr)) {
 		ret = -EINVAL;
 		goto bail;
 	}
@@ -2066,6 +2066,7 @@ static const struct file_operations ui_file_ops = {
 	.open = ui_open,
 	.release = ui_release,
 };
+
 #define UI_OFFSET 192	/* device minor offset for UI devices */
 static int create_ui = 1;
 

@@ -378,20 +378,14 @@ int hfi1_user_sdma_alloc_queues(struct hfi1_ctxtdata *uctxt, struct file *fp)
 	dd = uctxt->dd;
 
 	pq = kzalloc(sizeof(*pq), GFP_KERNEL);
-	if (!pq) {
-		dd_dev_err(dd,
-			   "[%u:%u] Failed to allocate SDMA request struct\n",
-			   uctxt->ctxt, subctxt_fp(fp));
+	if (!pq)
 		goto pq_nomem;
-	}
+
 	memsize = sizeof(*pq->reqs) * hfi1_sdma_comp_ring_size;
 	pq->reqs = kmalloc(memsize, GFP_KERNEL);
-	if (!pq->reqs) {
-		dd_dev_err(dd,
-			   "[%u:%u] Failed to allocate SDMA request queue (%u)\n",
-			   uctxt->ctxt, subctxt_fp(fp), memsize);
+	if (!pq->reqs)
 		goto pq_reqs_nomem;
-	}
+
 	INIT_LIST_HEAD(&pq->list);
 	pq->dd = dd;
 	pq->ctxt = uctxt->ctxt;
@@ -417,22 +411,15 @@ int hfi1_user_sdma_alloc_queues(struct hfi1_ctxtdata *uctxt, struct file *fp)
 	}
 	user_sdma_pkt_fp(fp) = pq;
 	cq = kzalloc(sizeof(*cq), GFP_KERNEL);
-	if (!cq) {
-		dd_dev_err(dd,
-			   "[%u:%u] Failed to allocate SDMA completion queue\n",
-			   uctxt->ctxt, subctxt_fp(fp));
+	if (!cq)
 		goto cq_nomem;
-	}
 
 	memsize = ALIGN(sizeof(*cq->comps) * hfi1_sdma_comp_ring_size,
 			PAGE_SIZE);
 	cq->comps = vmalloc_user(memsize);
-	if (!cq->comps) {
-		dd_dev_err(dd,
-		      "[%u:%u] Failed to allocate SDMA completion queue entries\n",
-		      uctxt->ctxt, subctxt_fp(fp));
+	if (!cq->comps)
 		goto cq_comps_nomem;
-	}
+
 	cq->nentries = hfi1_sdma_comp_ring_size;
 	user_sdma_comp_fp(fp) = cq;
 
@@ -486,8 +473,7 @@ int hfi1_user_sdma_free_queues(struct hfi1_filedata *fd)
 			}
 			kfree(pq->reqs);
 		}
-		if (pq->txreq_cache)
-			kmem_cache_destroy(pq->txreq_cache);
+		kmem_cache_destroy(pq->txreq_cache);
 		kfree(pq);
 		fd->pq = NULL;
 	}
@@ -1051,8 +1037,8 @@ static int pin_vector_pages(struct user_sdma_request *req,
 	unsigned pinned;
 
 	iovec->npages = num_user_pages(&iovec->iov);
-	iovec->pages = kzalloc(sizeof(*iovec->pages) *
-			       iovec->npages, GFP_KERNEL);
+	iovec->pages = kcalloc(iovec->npages, sizeof(*iovec->pages),
+			       GFP_KERNEL);
 	if (!iovec->pages) {
 		SDMA_DBG(req, "Failed page array alloc");
 		ret = -ENOMEM;

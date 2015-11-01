@@ -22,14 +22,6 @@
 
 #include <phy.h>
 
-#define read_next_pair(array, v1, v2, i)		\
-	 do {						\
-		i += 2;					\
-		v1 = array[i];				\
-		v2 = array[i+1];			\
-	 } while (0)
-
-
 /* AGC_TAB_1T.TXT */
 
 static u32 array_agc_tab_1t_8188e[] = {
@@ -166,12 +158,12 @@ static u32 array_agc_tab_1t_8188e[] = {
 static bool set_baseband_agc_config(struct adapter *adapt)
 {
 	u32 i;
-	u32 arraylen = sizeof(array_agc_tab_1t_8188e)/sizeof(u32);
+	const u32 arraylen = ARRAY_SIZE(array_agc_tab_1t_8188e);
 	u32 *array = array_agc_tab_1t_8188e;
 
 	for (i = 0; i < arraylen; i += 2) {
 		u32 v1 = array[i];
-		u32 v2 = array[i+1];
+		u32 v2 = array[i + 1];
 
 		if (v1 < 0xCDCDCDCD) {
 			phy_set_bb_reg(adapt, v1, bMaskDWord, v2);
@@ -401,12 +393,12 @@ static void rtl_bb_delay(struct adapter *adapt, u32 addr, u32 data)
 static bool set_baseband_phy_config(struct adapter *adapt)
 {
 	u32 i;
-	u32 arraylen = sizeof(array_phy_reg_1t_8188e)/sizeof(u32);
+	const u32 arraylen = ARRAY_SIZE(array_phy_reg_1t_8188e);
 	u32 *array = array_phy_reg_1t_8188e;
 
 	for (i = 0; i < arraylen; i += 2) {
 		u32 v1 = array[i];
-		u32 v2 = array[i+1];
+		u32 v2 = array[i + 1];
 
 		if (v1 < 0xCDCDCDCD)
 			rtl_bb_delay(adapt, v1, v2);
@@ -582,14 +574,14 @@ static void rtl_addr_delay(struct adapter *adapt,
 
 static bool config_bb_with_pgheader(struct adapter *adapt)
 {
-	u32 i = 0;
-	u32 arraylen = sizeof(array_phy_reg_pg_8188e) / sizeof(u32);
+	u32 i;
+	const u32 arraylen = ARRAY_SIZE(array_phy_reg_pg_8188e);
 	u32 *array = array_phy_reg_pg_8188e;
 
 	for (i = 0; i < arraylen; i += 3) {
 		u32 v1 = array[i];
-		u32 v2 = array[i+1];
-		u32 v3 = array[i+2];
+		u32 v2 = array[i + 1];
+		u32 v3 = array[i + 2];
 
 		if (v1 < 0xCDCDCDCD)
 			rtl_addr_delay(adapt, v1, v2, v3);
@@ -713,7 +705,7 @@ bool rtl88eu_phy_bb_config(struct adapter *adapt)
 
 	/*  Enable BB and RF */
 	regval = usb_read16(adapt, REG_SYS_FUNC_EN);
-	usb_write16(adapt, REG_SYS_FUNC_EN, (u16)(regval|BIT13|BIT0|BIT1));
+	usb_write16(adapt, REG_SYS_FUNC_EN, (u16)(regval | BIT(13) | BIT(0) | BIT(1)));
 
 	usb_write8(adapt, REG_RF_CTRL, RF_EN|RF_RSTB|RF_SDMRSTB);
 

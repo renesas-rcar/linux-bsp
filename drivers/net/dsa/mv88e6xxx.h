@@ -226,12 +226,12 @@
 #define GLOBAL_ATU_OP		0x0b
 #define GLOBAL_ATU_OP_BUSY	BIT(15)
 #define GLOBAL_ATU_OP_NOP		(0 << 12)
-#define GLOBAL_ATU_OP_FLUSH_ALL		((1 << 12) | GLOBAL_ATU_OP_BUSY)
-#define GLOBAL_ATU_OP_FLUSH_NON_STATIC	((2 << 12) | GLOBAL_ATU_OP_BUSY)
+#define GLOBAL_ATU_OP_FLUSH_MOVE_ALL		((1 << 12) | GLOBAL_ATU_OP_BUSY)
+#define GLOBAL_ATU_OP_FLUSH_MOVE_NON_STATIC	((2 << 12) | GLOBAL_ATU_OP_BUSY)
 #define GLOBAL_ATU_OP_LOAD_DB		((3 << 12) | GLOBAL_ATU_OP_BUSY)
 #define GLOBAL_ATU_OP_GET_NEXT_DB	((4 << 12) | GLOBAL_ATU_OP_BUSY)
-#define GLOBAL_ATU_OP_FLUSH_DB		((5 << 12) | GLOBAL_ATU_OP_BUSY)
-#define GLOBAL_ATU_OP_FLUSH_NON_STATIC_DB ((6 << 12) | GLOBAL_ATU_OP_BUSY)
+#define GLOBAL_ATU_OP_FLUSH_MOVE_ALL_DB		((5 << 12) | GLOBAL_ATU_OP_BUSY)
+#define GLOBAL_ATU_OP_FLUSH_MOVE_NON_STATIC_DB ((6 << 12) | GLOBAL_ATU_OP_BUSY)
 #define GLOBAL_ATU_OP_GET_CLR_VIOLATION	  ((7 << 12) | GLOBAL_ATU_OP_BUSY)
 #define GLOBAL_ATU_DATA		0x0c
 #define GLOBAL_ATU_DATA_TRUNK			BIT(15)
@@ -402,18 +402,10 @@ struct mv88e6xxx_priv_state {
 	int		id; /* switch product id */
 	int		num_ports;	/* number of switch ports */
 
-	/* hw bridging */
-
-	DECLARE_BITMAP(fid_bitmap, VLAN_N_VID);	/* FIDs 1 to 4095 available */
-	u16 fid[DSA_MAX_PORTS];			/* per (non-bridged) port FID */
-	u16 bridge_mask[DSA_MAX_PORTS];		/* br groups (indexed by FID) */
-
 	unsigned long port_state_update_mask;
 	u8 port_state[DSA_MAX_PORTS];
 
 	struct work_struct bridge_work;
-
-	struct dentry *dbgfs;
 };
 
 struct mv88e6xxx_hw_stat {
@@ -442,7 +434,6 @@ void mv88e6xxx_ppu_state_init(struct dsa_switch *ds);
 int mv88e6xxx_phy_read_ppu(struct dsa_switch *ds, int addr, int regnum);
 int mv88e6xxx_phy_write_ppu(struct dsa_switch *ds, int addr,
 			    int regnum, u16 val);
-void mv88e6xxx_poll_link(struct dsa_switch *ds);
 void mv88e6xxx_get_strings(struct dsa_switch *ds, int port, uint8_t *data);
 void mv88e6xxx_get_ethtool_stats(struct dsa_switch *ds, int port,
 				 uint64_t *data);
@@ -465,8 +456,6 @@ int mv88e6xxx_phy_write_indirect(struct dsa_switch *ds, int addr, int regnum,
 int mv88e6xxx_get_eee(struct dsa_switch *ds, int port, struct ethtool_eee *e);
 int mv88e6xxx_set_eee(struct dsa_switch *ds, int port,
 		      struct phy_device *phydev, struct ethtool_eee *e);
-int mv88e6xxx_join_bridge(struct dsa_switch *ds, int port, u32 br_port_mask);
-int mv88e6xxx_leave_bridge(struct dsa_switch *ds, int port, u32 br_port_mask);
 int mv88e6xxx_port_stp_update(struct dsa_switch *ds, int port, u8 state);
 int mv88e6xxx_port_pvid_get(struct dsa_switch *ds, int port, u16 *vid);
 int mv88e6xxx_port_pvid_set(struct dsa_switch *ds, int port, u16 vid);
@@ -475,12 +464,17 @@ int mv88e6xxx_port_vlan_add(struct dsa_switch *ds, int port, u16 vid,
 int mv88e6xxx_port_vlan_del(struct dsa_switch *ds, int port, u16 vid);
 int mv88e6xxx_vlan_getnext(struct dsa_switch *ds, u16 *vid,
 			   unsigned long *ports, unsigned long *untagged);
+int mv88e6xxx_port_fdb_prepare(struct dsa_switch *ds, int port,
+			       const struct switchdev_obj_port_fdb *fdb,
+			       struct switchdev_trans *trans);
 int mv88e6xxx_port_fdb_add(struct dsa_switch *ds, int port,
-			   const unsigned char *addr, u16 vid);
+			   const struct switchdev_obj_port_fdb *fdb,
+			   struct switchdev_trans *trans);
 int mv88e6xxx_port_fdb_del(struct dsa_switch *ds, int port,
-			   const unsigned char *addr, u16 vid);
-int mv88e6xxx_port_fdb_getnext(struct dsa_switch *ds, int port,
-			       unsigned char *addr, u16 *vid, bool *is_static);
+			   const struct switchdev_obj_port_fdb *fdb);
+int mv88e6xxx_port_fdb_dump(struct dsa_switch *ds, int port,
+			    struct switchdev_obj_port_fdb *fdb,
+			    int (*cb)(struct switchdev_obj *obj));
 int mv88e6xxx_phy_page_read(struct dsa_switch *ds, int port, int page, int reg);
 int mv88e6xxx_phy_page_write(struct dsa_switch *ds, int port, int page,
 			     int reg, int val);

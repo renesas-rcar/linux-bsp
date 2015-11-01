@@ -1309,7 +1309,7 @@ static void slic_cmdq_addcmdpage(struct adapter *adapter, u32 *page)
 	unsigned long flags;
 
 	cmdaddr = page;
-	cmd = (struct slic_hostcmd *)cmdaddr;
+	cmd = cmdaddr;
 	cmdcnt = 0;
 
 	phys_addr = virt_to_bus((void *)page);
@@ -1342,7 +1342,7 @@ static void slic_cmdq_addcmdpage(struct adapter *adapter, u32 *page)
 		phys_addrl += SLIC_HOSTCMD_SIZE;
 		cmdaddr += SLIC_HOSTCMD_SIZE;
 
-		cmd = (struct slic_hostcmd *)cmdaddr;
+		cmd = cmdaddr;
 		cmdcnt++;
 	}
 
@@ -1717,14 +1717,14 @@ static u32 slic_rcvqueue_reinsert(struct adapter *adapter, struct sk_buff *skb)
  * will also complete asynchronously.
  *
  */
-static void slic_link_event_handler(struct adapter *adapter)
+static int slic_link_event_handler(struct adapter *adapter)
 {
 	int status;
 	struct slic_shmem *pshmem;
 
 	if (adapter->state != ADAPT_UP) {
 		/* Adapter is not operational.  Ignore.  */
-		return;
+		return -ENODEV;
 	}
 
 	pshmem = (struct slic_shmem *)(unsigned long)adapter->phys_shmem;
@@ -1740,6 +1740,7 @@ static void slic_link_event_handler(struct adapter *adapter)
 		(u32) &pshmem->linkstatus,	/* no 4GB wrap guaranteed */
 				  0, 0, 0);
 #endif
+	return status;
 }
 
 static void slic_init_cleanup(struct adapter *adapter)
@@ -2054,7 +2055,6 @@ static void slic_xmit_complete(struct adapter *adapter)
 		*/
 		slic_handle_word.handle_token = rspbuf->hosthandle;
 		hcmd =
-		    (struct slic_hostcmd *)
 			adapter->slic_handles[slic_handle_word.handle_index].
 									address;
 /*      hcmd = (struct slic_hostcmd *) rspbuf->hosthandle; */
@@ -2109,7 +2109,8 @@ static void slic_interrupt_card_up(u32 isr, struct adapter *adapter,
 
 		if (isr & ISR_LEVENT) {
 			adapter->linkevent_interrupts++;
-			slic_link_event_handler(adapter);
+			if (slic_link_event_handler(adapter))
+				adapter->linkevent_interrupts--;
 		}
 
 		if ((isr & ISR_UPC) || (isr & ISR_UPCERR) ||
@@ -2133,7 +2134,7 @@ static void slic_interrupt_card_up(u32 isr, struct adapter *adapter,
 
 static irqreturn_t slic_interrupt(int irq, void *dev_id)
 {
-	struct net_device *dev = (struct net_device *)dev_id;
+	struct net_device *dev = dev_id;
 	struct adapter *adapter = netdev_priv(dev);
 	u32 isr;
 
@@ -2378,7 +2379,22 @@ static int slic_if_init(struct adapter *adapter, unsigned long *flags)
 	slic_reg32_write(&slic_regs->slic_icr, ICR_INT_ON, FLUSH);
 
 	slic_link_config(adapter, LINK_AUTOSPEED, LINK_AUTOD);
-	slic_link_event_handler(adapter);
+	rc = slic_link_event_handler(adapter);
+	if (rc) {
+		/* disable interrupts then clear pending events */
+		slic_reg32_write(&slic_regs->slic_icr, ICR_INT_OFF, FLUSH);
+		slic_reg32_write(&slic_regs->slic_isr, 0, FLUSH);
+		if (adapter->pingtimerset) {
+			del_timer(&adapter->pingtimer);
+			adapter->pingtimerset = 0;
+		}
+		if (card->loadtimerset) {
+			del_timer(&card->loadtimer);
+			card->loadtimerset = 0;
+		}
+		adapter->state = ADAPT_DOWN;
+		slic_adapter_freeresources(adapter);
+	}
 
 err:
 	return rc;
@@ -2608,7 +2624,8 @@ static int slic_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 				else
 					duplex = 0;
 				slic_link_config(adapter, speed, duplex);
-				slic_link_event_handler(adapter);
+				if (slic_link_event_handler(adapter))
+					return -EFAULT;
 			}
 		}
 		return 0;
@@ -2863,7 +2880,7 @@ static void slic_init_adapter(struct net_device *netdev,
 	adapter->busnumber = pcidev->bus->number;
 	adapter->slotnumber = ((pcidev->devfn >> 3) & 0x1F);
 	adapter->functionnumber = (pcidev->devfn & 0x7);
-	adapter->slic_regs = (__iomem struct slic_regs *)memaddr;
+	adapter->slic_regs = memaddr;
 	adapter->irq = pcidev->irq;
 /*	adapter->netdev = netdev;*/
 	adapter->chipid = chip_idx;

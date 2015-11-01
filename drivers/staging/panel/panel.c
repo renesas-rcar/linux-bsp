@@ -909,8 +909,10 @@ static void lcd_gotoxy(void)
 {
 	lcd_write_cmd(LCD_CMD_SET_DDRAM_ADDR
 		      | (lcd.addr.y ? lcd.hwidth : 0)
-		      /* we force the cursor to stay at the end of the
-			 line if it wants to go farther */
+		      /*
+		       * we force the cursor to stay at the end of the
+		       * line if it wants to go farther
+		       */
 		      | ((lcd.addr.x < lcd.bwidth) ? lcd.addr.x &
 			 (lcd.hwidth - 1) : lcd.bwidth - 1));
 }
@@ -918,7 +920,7 @@ static void lcd_gotoxy(void)
 static void lcd_print(char c)
 {
 	if (lcd.addr.x < lcd.bwidth) {
-		if (lcd_char_conv != NULL)
+		if (lcd_char_conv)
 			c = lcd_char_conv[(unsigned char)c];
 		lcd_write_data(c);
 		lcd.addr.x++;
@@ -1116,7 +1118,7 @@ static inline int handle_lcd_special_code(void)
 		break;
 	case '*':
 		/* flash back light using the keypad timer */
-		if (scan_timer.function != NULL) {
+		if (scan_timer.function) {
 			if (lcd.light_tempo == 0
 					&& ((lcd.flags & LCD_FLAG_L) == 0))
 				lcd_backlight(1);
@@ -1198,7 +1200,7 @@ static inline int handle_lcd_special_code(void)
 		char value;
 		int addr;
 
-		if (strchr(esc, ';') == NULL)
+		if (!strchr(esc, ';'))
 			break;
 
 		esc++;
@@ -1244,7 +1246,7 @@ static inline int handle_lcd_special_code(void)
 	}
 	case 'x':	/* gotoxy : LxXXX[yYYY]; */
 	case 'y':	/* gotoxy : LyYYY[xXXX]; */
-		if (strchr(esc, ';') == NULL)
+		if (!strchr(esc, ';'))
 			break;
 
 		while (*esc) {
@@ -1294,8 +1296,10 @@ static inline int handle_lcd_special_code(void)
 			if (lcd.flags & (LCD_FLAG_L))
 				lcd_backlight(1);
 			else if (lcd.light_tempo == 0)
-				/* switch off the light only when the tempo
-				   lighting is gone */
+				/*
+				 * switch off the light only when the tempo
+				 * lighting is gone
+				 */
 				lcd_backlight(0);
 		}
 	}
@@ -1323,8 +1327,10 @@ static void lcd_write_char(char c)
 		case '\b':
 			/* go back one char and clear it */
 			if (lcd.addr.x > 0) {
-				/* check if we're not at the
-				   end of the line */
+				/*
+				 * check if we're not at the
+				 * end of the line
+				 */
 				if (lcd.addr.x < lcd.bwidth)
 					/* back one char */
 					lcd_write_cmd(LCD_CMD_SHIFT);
@@ -1340,8 +1346,10 @@ static void lcd_write_char(char c)
 			lcd_clear_fast();
 			break;
 		case '\n':
-			/* flush the remainder of the current line and
-			   go to the beginning of the next line */
+			/*
+			 * flush the remainder of the current line and
+			 * go to the beginning of the next line
+			 */
 			for (; lcd.addr.x < lcd.bwidth; lcd.addr.x++)
 				lcd_write_data(' ');
 			lcd.addr.x = 0;
@@ -1364,8 +1372,10 @@ static void lcd_write_char(char c)
 		}
 	}
 
-	/* now we'll see if we're in an escape mode and if the current
-	   escape sequence can be understood. */
+	/*
+	 * now we'll see if we're in an escape mode and if the current
+	 * escape sequence can be understood.
+	 */
 	if (lcd.esc_seq.len >= 2) {
 		int processed = 0;
 
@@ -1388,8 +1398,10 @@ static void lcd_write_char(char c)
 		}
 
 		/* LCD special escape codes */
-		/* flush the escape sequence if it's been processed
-		   or if it is getting too long. */
+		/*
+		 * flush the escape sequence if it's been processed
+		 * or if it is getting too long.
+		 */
 		if (processed || (lcd.esc_seq.len >= LCD_ESCAPE_LEN))
 			lcd.esc_seq.len = -1;
 	} /* escape codes */
@@ -1403,8 +1415,10 @@ static ssize_t lcd_write(struct file *file,
 
 	for (; count-- > 0; (*ppos)++, tmp++) {
 		if (!in_interrupt() && (((count + 1) & 0x1f) == 0))
-			/* let's be a little nice with other processes
-			   that need some CPU */
+			/*
+			 * let's be a little nice with other processes
+			 * that need some CPU
+			 */
 			schedule();
 
 		if (get_user(c, tmp))
@@ -1459,8 +1473,10 @@ static void panel_lcd_print(const char *s)
 	if (lcd.enabled && lcd.initialized) {
 		for (; count-- > 0; tmp++) {
 			if (!in_interrupt() && (((count + 1) & 0x1f) == 0))
-				/* let's be a little nice with other processes
-				   that need some CPU */
+				/*
+				 * let's be a little nice with other processes
+				 * that need some CPU
+				 */
 				schedule();
 
 			lcd_write_char(*tmp);
@@ -1634,9 +1650,11 @@ static void lcd_init(void)
 	pin_to_bits(lcd.pins.da, lcd_bits[LCD_PORT_D][LCD_BIT_DA],
 		    lcd_bits[LCD_PORT_C][LCD_BIT_DA]);
 
-	/* before this line, we must NOT send anything to the display.
+	/*
+	 * before this line, we must NOT send anything to the display.
 	 * Since lcd_init_display() needs to write data, we have to
-	 * enable mark the LCD initialized just before. */
+	 * enable mark the LCD initialized just before.
+	 */
 	lcd.initialized = true;
 	lcd_init_display();
 
@@ -1770,12 +1788,13 @@ static void phys_scan_contacts(void)
 	phys_read |= (pmask_t) gndmask << 40;
 
 	if (bitmask != gndmask) {
-		/* since clearing the outputs changed some inputs, we know
+		/*
+		 * since clearing the outputs changed some inputs, we know
 		 * that some input signals are currently tied to some outputs.
 		 * So we'll scan them.
 		 */
 		for (bit = 0; bit < 8; bit++) {
-			bitval = 1 << bit;
+			bitval = BIT(bit);
 
 			if (!(scan_mask_o & bitval))	/* skip unused bits */
 				continue;
@@ -1786,8 +1805,10 @@ static void phys_scan_contacts(void)
 		}
 		w_dtr(pprt, oldval);	/* disable all outputs */
 	}
-	/* this is easy: use old bits when they are flapping,
-	 * use new ones when stable */
+	/*
+	 * this is easy: use old bits when they are flapping,
+	 * use new ones when stable
+	 */
 	phys_curr = (phys_prev & (phys_read ^ phys_read_prev)) |
 		    (phys_read & ~(phys_read ^ phys_read_prev));
 }
@@ -1823,7 +1844,7 @@ static inline int input_state_high(struct logical_input *input)
 		if ((input->type == INPUT_TYPE_STD) &&
 		    (input->high_timer == 0)) {
 			input->high_timer++;
-			if (input->u.std.press_fct != NULL)
+			if (input->u.std.press_fct)
 				input->u.std.press_fct(input->u.std.press_data);
 		} else if (input->type == INPUT_TYPE_KBD) {
 			/* will turn on the light */
@@ -1903,7 +1924,7 @@ static inline void input_state_falling(struct logical_input *input)
 		if (input->type == INPUT_TYPE_STD) {
 			void (*release_fct)(int) = input->u.std.release_fct;
 
-			if (release_fct != NULL)
+			if (release_fct)
 				release_fct(input->u.std.release_data);
 		} else if (input->type == INPUT_TYPE_KBD) {
 			char *release_str = input->u.kbd.release_str;
@@ -2004,7 +2025,7 @@ static void panel_scan_timer(void)
 
 static void init_scan_timer(void)
 {
-	if (scan_timer.function != NULL)
+	if (scan_timer.function)
 		return;		/* already started */
 
 	setup_timer(&scan_timer, (void *)&panel_scan_timer, 0);
@@ -2039,12 +2060,12 @@ static int input_name2mask(const char *name, pmask_t *mask, pmask_t *value,
 			return 0;	/* input name not found */
 		neg = (in & 1);	/* odd (lower) names are negated */
 		in >>= 1;
-		im |= (1 << in);
+		im |= BIT(in);
 
 		name++;
 		if (isdigit(*name)) {
 			out = *name - '0';
-			om |= (1 << out);
+			om |= BIT(out);
 		} else if (*name == '-') {
 			out = 8;
 		} else {
@@ -2208,7 +2229,7 @@ static void panel_attach(struct parport *port)
 	/* panel_cb.flags = 0 should be PARPORT_DEV_EXCL? */
 
 	pprt = parport_register_dev_model(port, "panel", &panel_cb, 0);
-	if (pprt == NULL) {
+	if (!pprt) {
 		pr_err("%s: port->number=%d parport=%d, parport_register_device() failed\n",
 		       __func__, port->number, parport);
 		return;
@@ -2255,10 +2276,10 @@ static void panel_detach(struct parport *port)
 		       __func__, port->number, parport);
 		return;
 	}
-	if (scan_timer.function != NULL)
+	if (scan_timer.function)
 		del_timer_sync(&scan_timer);
 
-	if (pprt != NULL) {
+	if (pprt) {
 		if (keypad.enabled) {
 			misc_deregister(&keypad_dev);
 			keypad_initialized = 0;

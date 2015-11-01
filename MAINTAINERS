@@ -788,6 +788,11 @@ S:	Maintained
 F:	drivers/net/appletalk/
 F:	net/appletalk/
 
+APPLIED MICRO (APM) X-GENE DEVICE TREE SUPPORT
+M:	Duc Dang <dhdang@apm.com>
+S:	Supported
+F:	arch/arm64/boot/dts/apm/
+
 APPLIED MICRO (APM) X-GENE SOC ETHERNET DRIVER
 M:	Iyappan Subramanian <isubramanian@apm.com>
 M:	Keyur Chudgar <kchudgar@apm.com>
@@ -822,12 +827,13 @@ F:	arch/arm/include/asm/floppy.h
 
 ARM PMU PROFILING AND DEBUGGING
 M:	Will Deacon <will.deacon@arm.com>
+R:	Mark Rutland <mark.rutland@arm.com>
 S:	Maintained
-F:	arch/arm/kernel/perf_*
+F:	arch/arm*/kernel/perf_*
 F:	arch/arm/oprofile/common.c
-F:	arch/arm/kernel/hw_breakpoint.c
-F:	arch/arm/include/asm/hw_breakpoint.h
-F:	arch/arm/include/asm/perf_event.h
+F:	arch/arm*/kernel/hw_breakpoint.c
+F:	arch/arm*/include/asm/hw_breakpoint.h
+F:	arch/arm*/include/asm/perf_event.h
 F:	drivers/perf/arm_pmu.c
 F:	include/linux/perf/arm_pmu.h
 
@@ -918,7 +924,7 @@ M:	Tsahee Zidenberg <tsahee@annapurnalabs.com>
 S:	Maintained
 F:	arch/arm/mach-alpine/
 
-ARM/ATMEL AT91RM9200 AND AT91SAM ARM ARCHITECTURES
+ARM/ATMEL AT91RM9200, AT91SAM9 AND SAMA5 SOC SUPPORT
 M:	Nicolas Ferre <nicolas.ferre@atmel.com>
 M:	Alexandre Belloni <alexandre.belloni@free-electrons.com>
 M:	Jean-Christophe Plagniol-Villard <plagnioj@jcrosoft.com>
@@ -1231,6 +1237,13 @@ ARM/LPC18XX ARCHITECTURE
 M:	Joachim Eastwood <manabian@gmail.com>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
+F:	arch/arm/boot/dts/lpc43*
+F:	drivers/clk/nxp/clk-lpc18xx*
+F:	drivers/clocksource/time-lpc32xx.c
+F:	drivers/i2c/busses/i2c-lpc2k.c
+F:	drivers/memory/pl172.c
+F:	drivers/mtd/spi-nor/nxp-spifi.c
+F:	drivers/rtc/rtc-lpc24xx.c
 N:	lpc18xx
 
 ARM/MAGICIAN MACHINE SUPPORT
@@ -1297,6 +1310,13 @@ F:	arch/arm/boot/dts/mt8*
 F:	arch/arm/mach-mediatek/
 N:	mtk
 K:	mediatek
+
+ARM/Mediatek USB3 PHY DRIVER
+M:	Chunfeng Yun <chunfeng.yun@mediatek.com>
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+L:	linux-mediatek@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+F:	drivers/phy/phy-mt65xx-usb3.c
 
 ARM/MICREL KS8695 ARCHITECTURE
 M:	Greg Ungerer <gerg@uclinux.org>
@@ -1399,6 +1419,15 @@ M:	Lennert Buytenhek <kernel@wantstofly.org>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 
+ARM/RENESAS ARM64 ARCHITECTURE
+M:	Simon Horman <horms@verge.net.au>
+M:	Magnus Damm <magnus.damm@gmail.com>
+L:	linux-sh@vger.kernel.org
+Q:	http://patchwork.kernel.org/project/linux-sh/list/
+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas.git next
+S:	Supported
+F:	arch/arm64/boot/dts/renesas/
+
 ARM/RISCPC ARCHITECTURE
 M:	Russell King <linux@arm.linux.org.uk>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
@@ -1446,6 +1475,10 @@ F:	drivers/*/*s3c2410*
 F:	drivers/*/*/*s3c2410*
 F:	drivers/spi/spi-s3c*
 F:	sound/soc/samsung/*
+F:	Documentation/arm/Samsung/
+F:	Documentation/devicetree/bindings/arm/samsung/
+F:	Documentation/devicetree/bindings/sram/samsung-sram.txt
+F:	Documentation/devicetree/bindings/power/pd-samsung.txt
 N:	exynos
 
 ARM/SAMSUNG MOBILE MACHINE SUPPORT
@@ -1612,7 +1645,10 @@ M:	Masahiro Yamada <yamada.masahiro@socionext.com>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 F:	arch/arm/boot/dts/uniphier*
+F:	arch/arm/include/asm/hardware/cache-uniphier.h
 F:	arch/arm/mach-uniphier/
+F:	arch/arm/mm/cache-uniphier.c
+F:	drivers/i2c/busses/i2c-uniphier*
 F:	drivers/pinctrl/uniphier/
 F:	drivers/tty/serial/8250/8250_uniphier.c
 N:	uniphier
@@ -2366,19 +2402,27 @@ L:	linux-scsi@vger.kernel.org
 S:	Supported
 F:	drivers/scsi/bnx2i/
 
-BROADCOM CYGNUS/IPROC ARM ARCHITECTURE
+BROADCOM IPROC ARM ARCHITECTURE
 M:	Ray Jui <rjui@broadcom.com>
 M:	Scott Branden <sbranden@broadcom.com>
+M:	Jon Mason <jonmason@broadcom.com>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 L:	bcm-kernel-feedback-list@broadcom.com
 T:	git git://github.com/broadcom/cygnus-linux.git
 S:	Maintained
 N:	iproc
 N:	cygnus
+N:	nsp
 N:	bcm9113*
 N:	bcm9583*
-N:	bcm583*
+N:	bcm9585*
+N:	bcm9586*
+N:	bcm988312
 N:	bcm113*
+N:	bcm583*
+N:	bcm585*
+N:	bcm586*
+N:	bcm88312
 
 BROADCOM BRCMSTB GPIO DRIVER
 M:	Gregory Fong <gregory.0xf0@gmail.com>
@@ -3373,6 +3417,7 @@ M:	Support Opensource <support.opensource@diasemi.com>
 W:	http://www.dialog-semiconductor.com/products
 S:	Supported
 F:	Documentation/hwmon/da90??
+F:	Documentation/devicetree/bindings/sound/da[79]*.txt
 F:	drivers/gpio/gpio-da90??.c
 F:	drivers/hwmon/da90??-hwmon.c
 F:	drivers/iio/adc/da91??-*.c
@@ -5568,7 +5613,7 @@ F:	drivers/net/wireless/iwlegacy/
 INTEL WIRELESS WIFI LINK (iwlwifi)
 M:	Johannes Berg <johannes.berg@intel.com>
 M:	Emmanuel Grumbach <emmanuel.grumbach@intel.com>
-M:	Intel Linux Wireless <ilw@linux.intel.com>
+M:	Intel Linux Wireless <linuxwifi@intel.com>
 L:	linux-wireless@vger.kernel.org
 W:	http://intellinuxwireless.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/iwlwifi/iwlwifi.git
@@ -6114,6 +6159,13 @@ S:	Maintained
 F:	Documentation/auxdisplay/ks0108
 F:	drivers/auxdisplay/ks0108.c
 F:	include/linux/ks0108.h
+
+L3MDEV
+M:	David Ahern <dsa@cumulusnetworks.com>
+L:	netdev@vger.kernel.org
+S:	Maintained
+F:	net/l3mdev
+F:	include/net/l3mdev.h
 
 LAPB module
 L:	linux-x25@vger.kernel.org
@@ -6704,6 +6756,12 @@ W:	http://linuxtv.org
 S:	Maintained
 F:	drivers/media/radio/radio-maxiradio*
 
+MCP4531 MICROCHIP DIGITAL POTENTIOMETER DRIVER
+M:	Peter Rosin <peda@axentia.se>
+L:	linux-iio@vger.kernel.org
+S:	Maintained
+F:	drivers/iio/potentiometer/mcp4531.c
+
 MEDIA DRIVERS FOR RENESAS - VSP1
 M:	Laurent Pinchart <laurent.pinchart@ideasonboard.com>
 L:	linux-media@vger.kernel.org
@@ -6939,6 +6997,13 @@ S:	Supported
 F:	include/linux/mlx5/
 F:	drivers/infiniband/hw/mlx5/
 
+MELEXIS MLX90614 DRIVER
+M:	Crt Mori <cmo@melexis.com>
+L:	linux-iio@vger.kernel.org
+W:	http://www.melexis.com
+S:	Supported
+F:	drivers/iio/temperature/mlx90614.c
+
 MN88472 MEDIA DRIVER
 M:	Antti Palosaari <crope@iki.fi>
 L:	linux-media@vger.kernel.org
@@ -6992,6 +7057,7 @@ M:	Alan Ott <alan@signal11.us>
 L:	linux-wpan@vger.kernel.org
 S:	Maintained
 F:	drivers/net/ieee802154/mrf24j40.c
+F:	Documentation/devicetree/bindings/net/ieee802154/mrf24j40.txt
 
 MSI LAPTOP SUPPORT
 M:	"Lee, Chun-Yi" <jlee@suse.com>
@@ -7326,7 +7392,6 @@ S:	Odd Fixes
 F:	drivers/net/
 F:	include/linux/if_*
 F:	include/linux/netdevice.h
-F:	include/linux/arcdevice.h
 F:	include/linux/etherdevice.h
 F:	include/linux/fcdevice.h
 F:	include/linux/fddidevice.h
@@ -7419,10 +7484,10 @@ NOKIA N900 POWER SUPPLY DRIVERS
 M:	Pali Rohár <pali.rohar@gmail.com>
 S:	Maintained
 F:	include/linux/power/bq2415x_charger.h
-F:	include/linux/power/bq27x00_battery.h
+F:	include/linux/power/bq27xxx_battery.h
 F:	include/linux/power/isp1704_charger.h
 F:	drivers/power/bq2415x_charger.c
-F:	drivers/power/bq27x00_battery.c
+F:	drivers/power/bq27xxx_battery.c
 F:	drivers/power/isp1704_charger.c
 F:	drivers/power/rx51_battery.c
 
@@ -8178,6 +8243,13 @@ M:	Jean-Christophe Plagniol-Villard <plagnioj@jcrosoft.com>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 F:	drivers/pinctrl/pinctrl-at91.*
+
+PIN CONTROLLER - ATMEL AT91 PIO4
+M:	Ludovic Desroches <ludovic.desroches@atmel.com>
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+L:	linux-gpio@vger.kernel.org
+S:	Supported
+F:	drivers/pinctrl/pinctrl-at91-pio4.*
 
 PIN CONTROLLER - INTEL
 M:	Mika Westerberg <mika.westerberg@linux.intel.com>
@@ -8964,6 +9036,13 @@ F:	drivers/s390/net/*iucv*
 F:	include/net/iucv/
 F:	net/iucv/
 
+S390 IOMMU (PCI)
+M:	Gerald Schaefer <gerald.schaefer@de.ibm.com>
+L:	linux-s390@vger.kernel.org
+W:	http://www.ibm.com/developerworks/linux/linux390/
+S:	Supported
+F:	drivers/iommu/s390-iommu.c
+
 S3C24XX SD/MMC Driver
 M:	Ben Dooks <ben-linux@fluff.org>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
@@ -9182,6 +9261,16 @@ M:	Lennox Wu <lennox.wu@gmail.com>
 W:	http://www.sunplus.com
 S:	Supported
 F:	arch/score/
+
+SYSTEM CONTROL & POWER INTERFACE (SCPI) Message Protocol drivers
+M:	Sudeep Holla <sudeep.holla@arm.com>
+L:	linux-arm-kernel@lists.infradead.org
+S:	Maintained
+F:	Documentation/devicetree/bindings/arm/arm,scpi.txt
+F:	drivers/clk/clk-scpi.c
+F:	drivers/cpufreq/scpi-cpufreq.c
+F:	drivers/firmware/arm_scpi.c
+F:	include/linux/scpi_protocol.h
 
 SCSI CDROM DRIVER
 M:	Jens Axboe <axboe@kernel.dk>
@@ -10008,8 +10097,10 @@ F:	drivers/staging/vt665?/
 STAGING - WILC1000 WIFI DRIVER
 M:	Johnny Kim <johnny.kim@atmel.com>
 M:	Rachel Kim <rachel.kim@atmel.com>
-M:	Dean Lee <dean.lee@atmel.com>
 M:	Chris Park <chris.park@atmel.com>
+M:	Tony Cho <tony.cho@atmel.com>
+M:	Glen Lee <glen.lee@atmel.com>
+M:	Leo Kim <leo.kim@atmel.com>
 L:	linux-wireless@vger.kernel.org
 S:	Supported
 F:	drivers/staging/wilc1000/
@@ -11099,6 +11190,12 @@ S:	Maintained
 F:	Documentation/fb/uvesafb.txt
 F:	drivers/video/fbdev/uvesafb.*
 
+VF610 NAND DRIVER
+M:	Stefan Agner <stefan@agner.ch>
+L:	linux-mtd@lists.infradead.org
+S:	Supported
+F:	drivers/mtd/nand/vf610_nfc.c
+
 VFAT/FAT/MSDOS FILESYSTEM
 M:	OGAWA Hirofumi <hirofumi@mail.parknet.co.jp>
 S:	Maintained
@@ -11294,7 +11391,6 @@ M:	Shrijeet Mukherjee <shm@cumulusnetworks.com>
 L:	netdev@vger.kernel.org
 S:	Maintained
 F:	drivers/net/vrf.c
-F:	include/net/vrf.h
 F:	Documentation/networking/vrf.txt
 
 VT1211 HARDWARE MONITOR DRIVER

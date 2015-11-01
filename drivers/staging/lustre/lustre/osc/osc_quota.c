@@ -35,7 +35,7 @@ static inline struct osc_quota_info *osc_oqi_alloc(u32 id)
 {
 	struct osc_quota_info *oqi;
 
-	OBD_SLAB_ALLOC_PTR(oqi, osc_quota_kmem);
+	oqi = kmem_cache_alloc(osc_quota_kmem, GFP_NOFS | __GFP_ZERO);
 	if (oqi != NULL)
 		oqi->oqi_id = id;
 
@@ -104,7 +104,7 @@ int osc_quota_setdq(struct client_obd *cli, const unsigned int qid[],
 			/* race with others? */
 			if (rc == -EALREADY) {
 				rc = 0;
-				OBD_SLAB_FREE_PTR(oqi, osc_quota_kmem);
+				kmem_cache_free(osc_quota_kmem, oqi);
 			}
 
 			CDEBUG(D_QUOTA, "%s: setdq to insert for %s %d (%d)\n",
@@ -120,7 +120,7 @@ int osc_quota_setdq(struct client_obd *cli, const unsigned int qid[],
 			oqi = cfs_hash_del_key(cli->cl_quota_hash[type],
 					       &qid[type]);
 			if (oqi)
-				OBD_SLAB_FREE_PTR(oqi, osc_quota_kmem);
+				kmem_cache_free(osc_quota_kmem, oqi);
 
 			CDEBUG(D_QUOTA, "%s: setdq to remove for %s %d (%p)\n",
 			       cli->cl_import->imp_obd->obd_name,
@@ -158,6 +158,7 @@ static void *
 oqi_key(struct hlist_node *hnode)
 {
 	struct osc_quota_info *oqi;
+
 	oqi = hlist_entry(hnode, struct osc_quota_info, oqi_hash);
 	return &oqi->oqi_id;
 }
@@ -185,7 +186,7 @@ oqi_exit(struct cfs_hash *hs, struct hlist_node *hnode)
 
 	oqi = hlist_entry(hnode, struct osc_quota_info, oqi_hash);
 
-	OBD_SLAB_FREE_PTR(oqi, osc_quota_kmem);
+	kmem_cache_free(osc_quota_kmem, oqi);
 }
 
 #define HASH_QUOTA_BKT_BITS 5

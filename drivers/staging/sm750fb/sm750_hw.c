@@ -1,23 +1,24 @@
 #include <linux/version.h>
-#include<linux/module.h>
-#include<linux/kernel.h>
-#include<linux/errno.h>
-#include<linux/string.h>
-#include<linux/mm.h>
-#include<linux/slab.h>
-#include<linux/delay.h>
-#include<linux/fb.h>
-#include<linux/ioport.h>
-#include<linux/init.h>
-#include<linux/pci.h>
-#include<linux/vmalloc.h>
-#include<linux/pagemap.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/errno.h>
+#include <linux/string.h>
+#include <linux/mm.h>
+#include <linux/slab.h>
+#include <linux/delay.h>
+#include <linux/fb.h>
+#include <linux/ioport.h>
+#include <linux/init.h>
+#include <linux/pci.h>
+#include <linux/vmalloc.h>
+#include <linux/pagemap.h>
 #include <linux/console.h>
 #ifdef CONFIG_MTRR
 #include <asm/mtrr.h>
 #endif
-#include<linux/platform_device.h>
-#include<linux/screen_info.h>
+#include <linux/platform_device.h>
+#include <linux/screen_info.h>
+#include <linux/sizes.h>
 
 #include "sm750.h"
 #include "sm750_hw.h"
@@ -34,7 +35,7 @@ int hw_sm750_map(struct lynx_share *share, struct pci_dev *pdev)
 	ret = 0;
 
 	share->vidreg_start  = pci_resource_start(pdev, 1);
-	share->vidreg_size = MB(2);
+	share->vidreg_size = SZ_2M;
 
 	pr_info("mmio phyAddr = %lx\n", share->vidreg_start);
 
@@ -76,14 +77,6 @@ int hw_sm750_map(struct lynx_share *share, struct pci_dev *pdev)
 	share->vidmem_start, share->vidmem_size);
 
 	/* reserve the vidmem space of smi adaptor */
-#if 0
-	ret = pci_request_region(pdev, 0, _moduleName_);
-	if (ret) {
-		pr_err("Can not request PCI regions.\n");
-		goto exit;
-	}
-#endif
-
 	share->pvMem = ioremap_wc(share->vidmem_start, share->vidmem_size);
 
 	if (!share->pvMem) {
@@ -122,12 +115,6 @@ int hw_sm750_inithw(struct lynx_share *share, struct pci_dev *pdev)
 		POKE32(SYSTEM_CTRL,
 				FIELD_SET(PEEK32(SYSTEM_CTRL), SYSTEM_CTRL, PCI_BURST, ON));
 	}
-
-	/* sm750 use sii164, it can be setup with default value
-	 * by on power, so initDVIDisp can be skipped */
-#if 0
-	ddk750_initDVIDisp();
-#endif
 
 	if (getChipType() != SM750LE) {
 		/* does user need CRT ?*/
@@ -169,20 +156,20 @@ int hw_sm750_inithw(struct lynx_share *share, struct pci_dev *pdev)
 		/* Set up GPIO for software I2C to program DVI chip in the
 		   Xilinx SP605 board, in order to have video signal.
 		 */
-	swI2CInit(0, 1);
+	sm750_sw_i2c_init(0, 1);
 
 
 	/* Customer may NOT use CH7301 DVI chip, which has to be
 	   initialized differently.
 	*/
-	if (swI2CReadReg(0xec, 0x4a) == 0x95) {
+	if (sm750_sw_i2c_read_reg(0xec, 0x4a) == 0x95) {
 		/* The following register values for CH7301 are from
 		   Chrontel app note and our experiment.
 		*/
 			pr_info("yes,CH7301 DVI chip found\n");
-		swI2CWriteReg(0xec, 0x1d, 0x16);
-		swI2CWriteReg(0xec, 0x21, 0x9);
-		swI2CWriteReg(0xec, 0x49, 0xC0);
+		sm750_sw_i2c_write_reg(0xec, 0x1d, 0x16);
+		sm750_sw_i2c_write_reg(0xec, 0x21, 0x9);
+		sm750_sw_i2c_write_reg(0xec, 0x49, 0xC0);
 			pr_info("okay,CH7301 DVI chip setup done\n");
 	}
 	}
@@ -202,15 +189,6 @@ resource_size_t hw_sm750_getVMSize(struct lynx_share *share)
 	ret = ddk750_getVMSize();
 	return ret;
 }
-
-
-
-int hw_sm750_output_checkMode(struct lynxfb_output *output, struct fb_var_screeninfo *var)
-{
-
-	return 0;
-}
-
 
 int hw_sm750_output_setMode(struct lynxfb_output *output,
 									struct fb_var_screeninfo *var, struct fb_fix_screeninfo *fix)
@@ -252,12 +230,6 @@ int hw_sm750_output_setMode(struct lynxfb_output *output,
 
 	pr_info("ddk setlogicdispout done\n");
 	return ret;
-}
-
-void hw_sm750_output_clear(struct lynxfb_output *output)
-{
-
-	return;
 }
 
 int hw_sm750_crtc_checkMode(struct lynxfb_crtc *crtc, struct fb_var_screeninfo *var)
@@ -304,7 +276,7 @@ int hw_sm750_crtc_setMode(struct lynxfb_crtc *crtc,
 	ret = 0;
 	par = container_of(crtc, struct lynxfb_par, crtc);
 	share = par->share;
-#if 1
+
 	if (!share->accel_off) {
 		/* set 2d engine pixel format according to mode bpp */
 		switch (var->bits_per_pixel) {
@@ -321,7 +293,6 @@ int hw_sm750_crtc_setMode(struct lynxfb_crtc *crtc,
 		}
 		hw_set2dformat(&share->accel, fmt);
 	}
-#endif
 
 	/* set timing */
 	modparm.pixel_clock = ps_to_hz(var->pixclock);
@@ -409,12 +380,6 @@ exit:
 	return ret;
 }
 
-void hw_sm750_crtc_clear(struct lynxfb_crtc *crtc)
-{
-
-	return;
-}
-
 int hw_sm750_setColReg(struct lynxfb_crtc *crtc, ushort index,
 								ushort red, ushort green, ushort blue)
 {
@@ -429,41 +394,23 @@ int hw_sm750le_setBLANK(struct lynxfb_output *output, int blank)
 	int dpms, crtdb;
 
 	switch (blank) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_UNBLANK:
-#else
-	case VESA_NO_BLANKING:
-#endif
 		dpms = CRT_DISPLAY_CTRL_DPMS_0;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_OFF;
 		break;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_NORMAL:
 		dpms = CRT_DISPLAY_CTRL_DPMS_0;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_ON;
 		break;
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_VSYNC_SUSPEND:
-#else
-	case VESA_VSYNC_SUSPEND:
-#endif
 		dpms = CRT_DISPLAY_CTRL_DPMS_2;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_ON;
 		break;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_HSYNC_SUSPEND:
-#else
-	case VESA_HSYNC_SUSPEND:
-#endif
 		dpms = CRT_DISPLAY_CTRL_DPMS_1;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_ON;
 		break;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_POWERDOWN:
-#else
-	case VESA_POWERDOWN:
-#endif
 		dpms = CRT_DISPLAY_CTRL_DPMS_3;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_ON;
 		break;
@@ -485,47 +432,29 @@ int hw_sm750_setBLANK(struct lynxfb_output *output, int blank)
 	dpms = pps = crtdb = 0;
 
 	switch (blank) {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_UNBLANK:
-#else
-	case VESA_NO_BLANKING:
-#endif
 		pr_info("flag = FB_BLANK_UNBLANK\n");
 		dpms = SYSTEM_CTRL_DPMS_VPHP;
 		pps = PANEL_DISPLAY_CTRL_DATA_ENABLE;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_OFF;
 		break;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_NORMAL:
 		pr_info("flag = FB_BLANK_NORMAL\n");
 		dpms = SYSTEM_CTRL_DPMS_VPHP;
 		pps = PANEL_DISPLAY_CTRL_DATA_DISABLE;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_ON;
 		break;
-#endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_VSYNC_SUSPEND:
-#else
-	case VESA_VSYNC_SUSPEND:
-#endif
 		dpms = SYSTEM_CTRL_DPMS_VNHP;
 		pps = PANEL_DISPLAY_CTRL_DATA_DISABLE;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_ON;
 		break;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_HSYNC_SUSPEND:
-#else
-	case VESA_HSYNC_SUSPEND:
-#endif
 		dpms = SYSTEM_CTRL_DPMS_VPHN;
 		pps = PANEL_DISPLAY_CTRL_DATA_DISABLE;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_ON;
 		break;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 10)
 	case FB_BLANK_POWERDOWN:
-#else
-	case VESA_POWERDOWN:
-#endif
 		dpms = SYSTEM_CTRL_DPMS_VNHN;
 		pps = PANEL_DISPLAY_CTRL_DATA_DISABLE;
 		crtdb = CRT_DISPLAY_CTRL_BLANK_ON;

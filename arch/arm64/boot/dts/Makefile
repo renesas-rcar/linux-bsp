@@ -1,3 +1,4 @@
+dts-dirs += altera
 dts-dirs += amd
 dts-dirs += apm
 dts-dirs += arm
@@ -9,6 +10,7 @@ dts-dirs += hisilicon
 dts-dirs += marvell
 dts-dirs += mediatek
 dts-dirs += qcom
+dts-dirs += renesas
 dts-dirs += rockchip
 dts-dirs += sprd
 dts-dirs += xilinx

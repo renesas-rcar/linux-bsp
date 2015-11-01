@@ -597,16 +597,6 @@ static const struct pinctrl_desc intel_pinctrl_desc = {
 	.owner = THIS_MODULE,
 };
 
-static int intel_gpio_request(struct gpio_chip *chip, unsigned offset)
-{
-	return pinctrl_request_gpio(chip->base + offset);
-}
-
-static void intel_gpio_free(struct gpio_chip *chip, unsigned offset)
-{
-	pinctrl_free_gpio(chip->base + offset);
-}
-
 static int intel_gpio_get(struct gpio_chip *chip, unsigned offset)
 {
 	struct intel_pinctrl *pctrl = gpiochip_to_pinctrl(chip);
@@ -654,8 +644,8 @@ static int intel_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 
 static const struct gpio_chip intel_gpio_chip = {
 	.owner = THIS_MODULE,
-	.request = intel_gpio_request,
-	.free = intel_gpio_free,
+	.request = gpiochip_generic_request,
+	.free = gpiochip_generic_free,
 	.direction_input = intel_gpio_direction_input,
 	.direction_output = intel_gpio_direction_output,
 	.get = intel_gpio_get,
@@ -860,26 +850,6 @@ static struct irq_chip intel_gpio_irqchip = {
 	.irq_set_type = intel_gpio_irq_type,
 	.irq_set_wake = intel_gpio_irq_wake,
 };
-
-static void intel_gpio_irq_init(struct intel_pinctrl *pctrl)
-{
-	size_t i;
-
-	for (i = 0; i < pctrl->ncommunities; i++) {
-		const struct intel_community *community;
-		void __iomem *base;
-		unsigned gpp;
-
-		community = &pctrl->communities[i];
-		base = community->regs;
-
-		for (gpp = 0; gpp < community->ngpps; gpp++) {
-			/* Mask and clear all interrupts */
-			writel(0, base + community->ie_offset + gpp * 4);
-			writel(0xffff, base + GPI_IS + gpp * 4);
-		}
-	}
-}
 
 static int intel_gpio_probe(struct intel_pinctrl *pctrl, int irq)
 {
@@ -1086,6 +1056,26 @@ int intel_pinctrl_suspend(struct device *dev)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(intel_pinctrl_suspend);
+
+static void intel_gpio_irq_init(struct intel_pinctrl *pctrl)
+{
+	size_t i;
+
+	for (i = 0; i < pctrl->ncommunities; i++) {
+		const struct intel_community *community;
+		void __iomem *base;
+		unsigned gpp;
+
+		community = &pctrl->communities[i];
+		base = community->regs;
+
+		for (gpp = 0; gpp < community->ngpps; gpp++) {
+			/* Mask and clear all interrupts */
+			writel(0, base + community->ie_offset + gpp * 4);
+			writel(0xffff, base + GPI_IS + gpp * 4);
+		}
+	}
+}
 
 int intel_pinctrl_resume(struct device *dev)
 {

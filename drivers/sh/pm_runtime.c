@@ -36,7 +36,10 @@ static int __init sh_pm_runtime_init(void)
 {
 	if (IS_ENABLED(CONFIG_ARCH_SHMOBILE)) {
 		if (!of_find_compatible_node(NULL, NULL,
-					     "renesas,cpg-mstp-clocks"))
+					     "renesas,cpg-mstp-clocks") &&
+		    (IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS_OF) ||
+		     !of_find_compatible_node(NULL, NULL,
+					     "renesas,r8a7795-cpg-mssr")))
 			return 0;
 		if (IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS_OF) &&
 		    of_find_node_with_property(NULL, "#power-domain-cells"))

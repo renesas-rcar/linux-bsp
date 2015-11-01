@@ -145,7 +145,7 @@ static int spinand_read_id(struct spi_device *spi_nand, u8 *id)
  *    Once the status turns to be ready, the other status bits also are
  *    valid status bits.
  */
-static int spinand_read_status(struct spi_device *spi_nand, uint8_t *status)
+static int spinand_read_status(struct spi_device *spi_nand, u8 *status)
 {
 	struct spinand_cmd cmd = {0};
 	int ret;
@@ -186,6 +186,7 @@ static int wait_till_ready(struct spi_device *spi_nand)
 
 	return -1;
 }
+
 /**
  * spinand_get_otp- send command 0xf to read the SPI Nand OTP register
  * Description:
@@ -477,7 +478,7 @@ static int spinand_program_page(struct spi_device *spi_nand,
 {
 	int retval;
 	u8 status = 0;
-	uint8_t *wbuf;
+	u8 *wbuf;
 #ifdef CONFIG_MTD_SPINAND_ONDIEECC
 	unsigned int i, j;
 
@@ -594,7 +595,7 @@ static int spinand_erase_block(struct spi_device *spi_nand, u16 block_id)
 		if (retval < 0) {
 			dev_err(&spi_nand->dev,
 					"error %d reading status register\n",
-					(int) retval);
+					retval);
 			return retval;
 		}
 
@@ -612,9 +613,10 @@ static int spinand_erase_block(struct spi_device *spi_nand, u16 block_id)
 
 #ifdef CONFIG_MTD_SPINAND_ONDIEECC
 static int spinand_write_page_hwecc(struct mtd_info *mtd,
-		struct nand_chip *chip, const uint8_t *buf, int oob_required)
+		struct nand_chip *chip, const u8 *buf, int oob_required,
+		int page)
 {
-	const uint8_t *p = buf;
+	const u8 *p = buf;
 	int eccsize = chip->ecc.size;
 	int eccsteps = chip->ecc.steps;
 
@@ -624,11 +626,11 @@ static int spinand_write_page_hwecc(struct mtd_info *mtd,
 }
 
 static int spinand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
-		uint8_t *buf, int oob_required, int page)
+		u8 *buf, int oob_required, int page)
 {
 	int retval;
 	u8 status;
-	uint8_t *p = buf;
+	u8 *p = buf;
 	int eccsize = chip->ecc.size;
 	int eccsteps = chip->ecc.steps;
 	struct spinand_info *info = (struct spinand_info *)chip->priv;
@@ -659,7 +661,6 @@ static int spinand_read_page_hwecc(struct mtd_info *mtd, struct nand_chip *chip,
 		}
 	}
 	return 0;
-
 }
 #endif
 
@@ -667,7 +668,7 @@ static void spinand_select_chip(struct mtd_info *mtd, int dev)
 {
 }
 
-static uint8_t spinand_read_byte(struct mtd_info *mtd)
+static u8 spinand_read_byte(struct mtd_info *mtd)
 {
 	struct spinand_state *state = mtd_to_state(mtd);
 	u8 data;
@@ -676,7 +677,6 @@ static uint8_t spinand_read_byte(struct mtd_info *mtd)
 	state->buf_ptr++;
 	return data;
 }
-
 
 static int spinand_wait(struct mtd_info *mtd, struct nand_chip *chip)
 {
@@ -708,16 +708,15 @@ static int spinand_wait(struct mtd_info *mtd, struct nand_chip *chip)
 	return 0;
 }
 
-static void spinand_write_buf(struct mtd_info *mtd, const uint8_t *buf, int len)
+static void spinand_write_buf(struct mtd_info *mtd, const u8 *buf, int len)
 {
-
 	struct spinand_state *state = mtd_to_state(mtd);
 
 	memcpy(state->buf + state->buf_ptr, buf, len);
 	state->buf_ptr += len;
 }
 
-static void spinand_read_buf(struct mtd_info *mtd, uint8_t *buf, int len)
+static void spinand_read_buf(struct mtd_info *mtd, u8 *buf, int len)
 {
 	struct spinand_state *state = mtd_to_state(mtd);
 
@@ -738,7 +737,7 @@ static void spinand_reset(struct spi_device *spi_nand)
 		pr_info("spinand reset failed!\n");
 
 	/* elapse 1ms before issuing any other command */
-	udelay(1000);
+	usleep_range(1000, 2000);
 
 	if (wait_till_ready(spi_nand))
 		dev_err(&spi_nand->dev, "wait timedout!\n");
@@ -804,7 +803,7 @@ static void spinand_cmdfunc(struct mtd_info *mtd, unsigned int command,
 		if (wait_till_ready(info->spi))
 			dev_err(&info->spi->dev, "WAIT timedout!!!\n");
 		/* a minimum of 250us must elapse before issuing RESET cmd*/
-		udelay(250);
+		usleep_range(250, 1000);
 		spinand_reset(info->spi);
 		break;
 	default:
@@ -839,6 +838,7 @@ static int spinand_lock_block(struct spi_device *spi_nand, u8 lock)
 
 	return ret;
 }
+
 /*
  * spinand_probe - [spinand Interface]
  * @spi_nand: registered device driver.
@@ -912,8 +912,7 @@ static int spinand_probe(struct spi_device *spi_nand)
 	dev_set_drvdata(&spi_nand->dev, mtd);
 
 	mtd->priv = chip;
-	mtd->name = dev_name(&spi_nand->dev);
-	mtd->owner = THIS_MODULE;
+	mtd->dev.parent = &spi_nand->dev;
 	mtd->oobsize = 64;
 
 	if (nand_scan(mtd, 1))
@@ -941,6 +940,7 @@ static const struct of_device_id spinand_dt[] = {
 	{ .compatible = "spinand,mt29f", },
 	{}
 };
+MODULE_DEVICE_TABLE(of, spinand_dt);
 
 /*
  * Device name structure description
