@@ -145,6 +145,7 @@ static const struct mssr_mod_clk r8a7795_mod_clks[] __initconst = {
 	{ "du2",		722,	R8A7795_CLK_S2D1	},
 	{ "du1",		723,	R8A7795_CLK_S2D1	},
 	{ "du0",		724,	R8A7795_CLK_S2D1	},
+	{ "lvds",		727,	R8A7795_CLK_S2D1	},
 	{ "hdmi1",		728,	R8A7795_CLK_HDMI	},
 	{ "hdmi0",		729,	R8A7795_CLK_HDMI	},
 	{ "etheravb",		812,	R8A7795_CLK_S3D2	},
