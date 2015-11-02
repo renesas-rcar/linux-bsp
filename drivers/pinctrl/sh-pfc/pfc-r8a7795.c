@@ -333,6 +333,12 @@ enum {
 	FN_SSI_SCK9_A,		FN_SSI_WS9_A,
 	FN_SSI_SCK9_B,		FN_SSI_WS9_B,
 
+	/* TMU */
+	FN_TCLK1_A,
+	FN_TCLK1_B,
+	FN_TCLK2_A,
+	FN_TCLK2_B,
+
 	/* USB0 */
 	FN_USB0_PWEN,	FN_USB0_OVC,
 	/* USB1 */
@@ -666,6 +672,12 @@ enum {
 	SSI_SCK78_MARK,		SSI_WS78_MARK,
 	SSI_SCK9_A_MARK,	SSI_WS9_A_MARK,
 	SSI_SCK9_B_MARK,	SSI_WS9_B_MARK,
+
+	/* TMU1 */
+	TCLK1_A_MARK,
+	TCLK1_B_MARK,
+	TCLK2_A_MARK,
+	TCLK2_B_MARK,
 
 	/* USB0 */
 	USB0_PWEN_MARK,	USB0_OVC_MARK,
@@ -1155,6 +1167,7 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_MODS(IP13_3_0,	AUDIO_CLKA_C,	SEL_ADG_2),
 	PINMUX_IPSR_MODS(IP13_3_0,	SSI_SCK2_A,	SEL_SSI_0),
 	PINMUX_IPSR_MODS(IP13_3_0,	AUDIO_CLKOUT3_A,	SEL_ADG_0),
+	PINMUX_IPSR_MODS(IP13_3_0,	TCLK1_B,	SEL_TIMER_TMU_1),
 
 	PINMUX_IPSR_DATA(IP13_7_4,	MSIOF0_SS2),
 	PINMUX_IPSR_MODS(IP13_7_4,	MSIOF1_SS2_D,	SEL_MSIOF1_3),
@@ -1232,6 +1245,7 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_DATA(IP15_23_20,	SSI_SDATA7),
 	PINMUX_IPSR_MODS(IP15_23_20,	HCTS2_N_B,		SEL_HSCIF2_1),
 	PINMUX_IPSR_MODS(IP15_23_20,	MSIOF1_RXD_C,	SEL_MSIOF1_2),
+	PINMUX_IPSR_MODS(IP15_23_20,	TCLK2_A,	SEL_TIMER_TMU_0),
 
 	PINMUX_IPSR_DATA(IP15_27_24,	SSI_SDATA8),
 	PINMUX_IPSR_MODS(IP15_27_24,	HRTS2_N_B,		SEL_HSCIF2_1),
@@ -1249,6 +1263,7 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_MODS(IP16_3_0,	AUDIO_CLKA_A,	SEL_ADG_0),
 
 	PINMUX_IPSR_MODS(IP16_7_4,	AUDIO_CLKB_B,	SEL_ADG_1),
+	PINMUX_IPSR_MODS(IP16_7_4,	TCLK1_A,	SEL_TIMER_TMU_0),
 
 	PINMUX_IPSR_DATA(IP16_11_8,	USB0_PWEN),
 
@@ -1264,6 +1279,7 @@ static const u16 pinmux_data[] = {
 	PINMUX_IPSR_DATA(IP16_27_24,	USB30_PWEN),
 	PINMUX_IPSR_MODS(IP16_27_24,	AUDIO_CLKOUT_B,	SEL_ADG_1),
 	PINMUX_IPSR_MODS(IP16_27_24,	SSI_SCK2_B,	SEL_SSI_1),
+	PINMUX_IPSR_MODS(IP16_27_24,	TCLK2_B,	SEL_TIMER_TMU_1),
 
 	PINMUX_IPSR_DATA(IP16_31_28,	USB30_OVC),
 	PINMUX_IPSR_MODS(IP16_31_28,	AUDIO_CLKOUT1_B,	SEL_ADG_1),
@@ -2974,6 +2990,35 @@ static const unsigned int sdhi3_ds_pins[] = {
 static const unsigned int sdhi3_ds_mux[] = {
 	SD3_DS_MARK,
 };
+/* - TMU -------------------------------------------------------------------- */
+static const unsigned int tmu_tclk1_a_pins[] = {
+	/* TCLK */
+	RCAR_GP_PIN(6, 23),
+};
+static const unsigned int tmu_tclk1_a_mux[] = {
+	TCLK1_A_MARK,
+};
+static const unsigned int tmu_tclk1_b_pins[] = {
+	/* TCLK */
+	RCAR_GP_PIN(5, 19),
+};
+static const unsigned int tmu_tclk1_b_mux[] = {
+	TCLK1_B_MARK,
+};
+static const unsigned int tmu_tclk2_a_pins[] = {
+	/* TCLK */
+	RCAR_GP_PIN(6, 19),
+};
+static const unsigned int tmu_tclk2_a_mux[] = {
+	TCLK2_A_MARK,
+};
+static const unsigned int tmu_tclk2_b_pins[] = {
+	/* TCLK */
+	RCAR_GP_PIN(6, 28),
+};
+static const unsigned int tmu_tclk2_b_mux[] = {
+	TCLK2_B_MARK,
+};
 /* - USB0 ------------------------------------------------------------------- */
 static const unsigned int usb0_pins[] = {
 	/* PWEN, OVC */
@@ -3722,6 +3767,10 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(ssi9_data_b),
 	SH_PFC_PIN_GROUP(ssi9_ctrl_a),
 	SH_PFC_PIN_GROUP(ssi9_ctrl_b),
+	SH_PFC_PIN_GROUP(tmu_tclk1_a),
+	SH_PFC_PIN_GROUP(tmu_tclk1_b),
+	SH_PFC_PIN_GROUP(tmu_tclk2_a),
+	SH_PFC_PIN_GROUP(tmu_tclk2_b),
 	SH_PFC_PIN_GROUP(usb0),
 	SH_PFC_PIN_GROUP(usb1),
 	SH_PFC_PIN_GROUP(usb2),
@@ -4116,6 +4165,13 @@ static const char * const ssi_groups[] = {
 	"ssi9_ctrl_b",
 };
 
+static const char * const tmu_groups[] = {
+	"tmu_tclk1_a",
+	"tmu_tclk1_b",
+	"tmu_tclk2_a",
+	"tmu_tclk2_b",
+};
+
 static const char * const usb0_groups[] = {
 	"usb0",
 };
@@ -4199,6 +4255,7 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(sdhi1),
 	SH_PFC_FUNCTION(sdhi2),
 	SH_PFC_FUNCTION(sdhi3),
+	SH_PFC_FUNCTION(tmu),
 	SH_PFC_FUNCTION(usb0),
 	SH_PFC_FUNCTION(usb1),
 	SH_PFC_FUNCTION(usb2),
@@ -5067,7 +5124,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP13_3_0 [4] */
 		FN_MSIOF0_SS1, FN_RX5, 0, FN_AUDIO_CLKA_C,
 		FN_SSI_SCK2_A, 0, 0, 0,
-		FN_AUDIO_CLKOUT3_A, 0, 0, 0,
+		FN_AUDIO_CLKOUT3_A, FN_TCLK1_B, 0, 0,
 		0, 0, 0, 0, }
 	},
 	{ PINMUX_CFG_REG("IPSR14", 0xe6060238, 32, 4) {
@@ -5126,7 +5183,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP15_23_20 [4] */
 		FN_SSI_SDATA7, FN_HCTS2_N_B, FN_MSIOF1_RXD_C, 0,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_TCLK2_A, 0,
 		0, 0, 0, 0,
 		/* IP15_19_16 [4] */
 		FN_SSI_WS78, FN_HTX2_B, FN_MSIOF1_SYNC_C, 0,
@@ -5163,7 +5220,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP16_27_24 [4] */
 		FN_USB30_PWEN, 0, 0, FN_AUDIO_CLKOUT_B,
 		FN_SSI_SCK2_B, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_TCLK2_B, 0,
 		0, 0, 0, 0,
 		/* IP16_23_20 [4] */
 		FN_USB1_OVC, 0, FN_MSIOF1_SS2_C, 0,
@@ -5188,7 +5245,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		/* IP16_7_4 [4] */
 		FN_AUDIO_CLKB_B, 0, 0, 0,
 		0, 0, 0, 0,
-		0, 0, 0, 0,
+		0, 0, FN_TCLK1_A, 0,
 		0, 0, 0, 0,
 		/* IP16_3_0 [4] */
 		FN_AUDIO_CLKA_A, 0, 0, 0,
