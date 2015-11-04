@@ -120,6 +120,13 @@
 					(GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_HIGH)>;
 		};
 
+		wdt0: wdt@e6020000 {
+			compatible = "renesas,rwdt-r8a7795", "renesas,rwdt";
+			reg = <0 0xe6020000 0 0x0c>;
+			clocks = <&mstp4_clks R8A7795_CLK_RWDT>;
+			status = "disabled";
+		};
+
 		gpio0: gpio@e6050000 {
 			compatible = "renesas,gpio-r8a7795",
 				     "renesas,gpio-rcar";
@@ -558,6 +565,17 @@
 					clock-output-names =
 						"scif2",
 						"sdhi3", "sdhi2", "sdhi1", "sdhi0";
+				};
+
+				mstp4_clks: mstp4@e6150140 {
+					compatible = "renesas,r8a7795-mstp-clocks",
+						     "renesas,cpg-mstp-clocks";
+					reg = <0 0xe6150140 0 4>, <0 0xe615004c 0 4>;
+					clocks =  <&cpg_clocks R8A7795_CLK_RCLK>;
+					#clock-cells = <1>;
+					clock-indices = <R8A7795_CLK_RWDT>;
+					clock-output-names =
+						"rwdt";
 				};
 
 				mstp5_clks: mstp5_clks@e6150144 {
