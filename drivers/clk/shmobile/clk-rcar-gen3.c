@@ -583,6 +583,13 @@ rcar_gen3_cpg_register_clock(struct device_node *np, struct rcar_gen3_cpg *cpg,
 
 		parent_name = "main";
 		mult = ((value >> 24) & ((1 << 7) - 1)) + 1;
+		/* Start clock issue W/A */
+		if (!check_product_version(
+			RCAR_H3_PRODUCT_ID|PRODUCT_VERSION_WS1_0)) {
+			mult *= 2; /* Don't divide PLL2 output for 2 */
+		}
+		/* End clock issue W/A */
+
 	} else if (!strcmp(name, "pll3")) {
 		parent_name = "main";
 		mult = config->pll3_mult;
