@@ -175,7 +175,11 @@ static int rwdt_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, priv);
 	watchdog_set_drvdata(&priv->wdev, priv);
 	watchdog_set_nowayout(&priv->wdev, nowayout);
-	ret = watchdog_init_timeout(&priv->wdev, timeout, &pdev->dev);
+	/* First, Try setting from timeout of DT */
+	ret = watchdog_init_timeout(&priv->wdev, 0, &pdev->dev);
+	if (ret)
+		ret = watchdog_init_timeout(&priv->wdev, timeout, &pdev->dev);
+
 	if (ret)
 		dev_warn(&pdev->dev, "Specified timeout value invalid, using default\n");
 
