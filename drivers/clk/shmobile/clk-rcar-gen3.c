@@ -61,9 +61,9 @@ static u32 rcar_gen3_read_mode_pins(void)
 	return mode;
 }
 
-/** Modify for Z-clock
+/** Modify for Z-clock and Z2-clock
 / -----------------------------------------------------------------------------
- * Z Clock
+ * Z Clock & Z2 Clock
  *
  * Traits of this clock:
  * prepare - clk_prepare only ensures that parents are prepared
@@ -76,6 +76,7 @@ static u32 rcar_gen3_read_mode_pins(void)
 #define CPG_FRQCRC			0x000000e0
 #define CPG_FRQCRC_ZFC_MASK		(0x1f << 8)
 #define CPG_FRQCRC_ZFC_SHIFT		8
+#define CPG_FRQCRC_Z2FC_MASK		0x1f
 
 #define GEN3_PRR			0xFFF00044 /* Product register */
 #define PRODUCT_ID_MASK		(0x7f << 8) /* R-Car H3: PRODUCT[14:8] bits */
@@ -121,6 +122,23 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 
 	val = (clk_readl(zclk->reg) & CPG_FRQCRC_ZFC_MASK)
 	    >> CPG_FRQCRC_ZFC_SHIFT;
+	mult = 32 - val;
+
+	rate = div_u64((u64)parent_rate * mult + 16, 32);
+	/* Round to closest value at 100MHz unit */
+	rate = 100000000*DIV_ROUND_CLOSEST(rate, 100000000);
+	return rate;
+}
+
+static unsigned long cpg_z2_clk_recalc_rate(struct clk_hw *hw,
+					   unsigned long parent_rate)
+{
+	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned int mult;
+	unsigned int val;
+	unsigned long rate;
+
+	val = (clk_readl(zclk->reg) & CPG_FRQCRC_Z2FC_MASK);
 	mult = 32 - val;
 
 	rate = div_u64((u64)parent_rate * mult + 16, 32);
@@ -190,10 +208,23 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	return -ETIMEDOUT;
 }
 
+static int cpg_z2_clk_set_rate(struct clk_hw *hw, unsigned long rate,
+			      unsigned long parent_rate)
+{
+	pr_info("Do not support Z2 clock changing\n");
+	return 0;
+}
+
 static const struct clk_ops cpg_z_clk_ops = {
 	.recalc_rate = cpg_z_clk_recalc_rate,
 	.round_rate = cpg_z_clk_round_rate,
 	.set_rate = cpg_z_clk_set_rate,
+};
+
+static const struct clk_ops cpg_z2_clk_ops = {
+	.recalc_rate = cpg_z2_clk_recalc_rate,
+	.round_rate = cpg_z_clk_round_rate,
+	.set_rate = cpg_z2_clk_set_rate,
 };
 
 static struct clk * __init cpg_z_clk_register(struct rcar_gen3_cpg *cpg)
@@ -223,7 +254,35 @@ static struct clk * __init cpg_z_clk_register(struct rcar_gen3_cpg *cpg)
 
 	return clk;
 }
-/** End of modifying for Z-clock */
+
+static struct clk * __init cpg_z2_clk_register(struct rcar_gen3_cpg *cpg)
+{
+	static const char *parent_name = "pll2";
+	struct clk_init_data init;
+	struct cpg_z_clk *zclk;
+	struct clk *clk;
+
+	zclk = kzalloc(sizeof(*zclk), GFP_KERNEL);
+	if (!zclk)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = "z2";
+	init.ops = &cpg_z2_clk_ops;
+	init.flags = 0;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+
+	zclk->reg = cpg->reg + CPG_FRQCRC;
+	zclk->kick_reg = cpg->reg + CPG_FRQCRB;
+	zclk->hw.init = &init;
+
+	clk = clk_register(NULL, &zclk->hw);
+	if (IS_ERR(clk))
+		kfree(zclk);
+
+	return clk;
+}
+/** End of modifying for Z-clock and Z2-clock */
 
 /* -----------------------------------------------------------------------------
  * SDn Clock
@@ -611,6 +670,8 @@ rcar_gen3_cpg_register_clock(struct device_node *np, struct rcar_gen3_cpg *cpg,
 						  cpg_rclk_div_table, NULL);
 	} else if (!strcmp(name, "z")) {
 		return cpg_z_clk_register(cpg);
+	} else if (!strcmp(name, "z2")) {
+		return cpg_z2_clk_register(cpg);
 	} else {
 		return ERR_PTR(-EINVAL);
 	}
