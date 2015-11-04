@@ -953,7 +953,7 @@
 					"ch12", "ch13", "ch14", "ch15";
 			clocks = <&mstp2_clks R8A7795_CLK_SYS_DMAC0>;
 			clock-names = "fck";
-			power-domains = <&cpg_clocks>;
+			power-domains = <&pd_always_on>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
@@ -985,7 +985,7 @@
 					"ch12", "ch13", "ch14", "ch15";
 			clocks = <&mstp2_clks R8A7795_CLK_SYS_DMAC1>;
 			clock-names = "fck";
-			power-domains = <&cpg_clocks>;
+			power-domains = <&pd_always_on>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
@@ -1120,7 +1120,7 @@
 			clock-names = "sci_ick";
 			dmas = <&dmac1 0x31>, <&dmac1 0x30>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg_clocks>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -1132,7 +1132,7 @@
 			clock-names = "sci_ick";
 			dmas = <&dmac1 0x33>, <&dmac1 0x32>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg_clocks>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -1144,7 +1144,7 @@
 			clock-names = "sci_ick";
 			dmas = <&dmac1 0x35>, <&dmac1 0x34>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg_clocks>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -1156,7 +1156,7 @@
 			clock-names = "sci_ick";
 			dmas = <&dmac1 0x37>, <&dmac1 0x36>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg_clocks>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -1168,7 +1168,7 @@
 			clock-names = "sci_ick";
 			dmas = <&dmac1 0x39>, <&dmac1 0x38>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg_clocks>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -2184,7 +2184,7 @@
 			clocks = <&mstp3_clks R8A7795_CLK_PCIEC0>,
 				 <&pcie_bus_clk>;
 			clock-names = "pcie", "pcie_bus";
-			power-domains = <&cpg_clocks>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -2217,7 +2217,7 @@
 			clocks = <&mstp3_clks R8A7795_CLK_PCIEC1>,
 				 <&pcie_bus_clk>;
 			clock-names = "pcie", "pcie_bus";
-			power-domains = <&cpg_clocks>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 	};
