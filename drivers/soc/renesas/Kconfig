@@ -1,0 +1,8 @@
+config RCAR_PM_SYSC
+	bool "Renesas R-Car Gen3 PM runtime/Power Domains Control" if ARCH_RENESAS
+	depends on ARCH_R8A7795
+	select PM_GENERIC_DOMAINS if PM
+	default y
+	help
+	  This enables runtime power management support for R-Car Gen3.
+	  It will help control for both power domains and module clocks.
