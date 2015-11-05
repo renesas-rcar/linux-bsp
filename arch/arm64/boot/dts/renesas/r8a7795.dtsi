@@ -612,15 +612,15 @@
 						     "renesas,cpg-mstp-clocks";
 					reg = <0 0xe6150144 0 4>, <0 0xe615003c 0 4>;
 					clocks = <&s3d4_clk>, <&s3d4_clk>,
-						<&extal_clk>;
+						<&extal_clk>, <&s3d4_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_AUDIO_DMAC0 R8A7795_CLK_AUDIO_DMAC1
-						R8A7795_CLK_THERMAL
+						R8A7795_CLK_THERMAL R8A7795_CLK_PWM
 					>;
 					clock-output-names =
 						"audio_dmac0", "audio_dmac1",
-						"thermal";
+						"thermal", "pwm";
 				};
 
 				mstp6_clks: mstp6_clks@e6150148 {
@@ -897,6 +897,54 @@
 
 		dmac2: dma-controller@e7310000 {
 			/* Empty node for now */
+		};
+
+		pwm1: pwm@e6e31000 {
+			compatible = "renesas,pwm-r8a7795", "renesas,pwm-rcar";
+			reg = <0 0xe6e31000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&mstp5_clks R8A7795_CLK_PWM>;
+			status = "disabled";
+		};
+
+		pwm2: pwm@e6e32000 {
+			compatible = "renesas,pwm-r8a7795", "renesas,pwm-rcar";
+			reg = <0 0xe6e32000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&mstp5_clks R8A7795_CLK_PWM>;
+			status = "disabled";
+		};
+
+		pwm3: pwm@e6e33000 {
+			compatible = "renesas,pwm-r8a7795", "renesas,pwm-rcar";
+			reg = <0 0xe6e33000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&mstp5_clks R8A7795_CLK_PWM>;
+			status = "disabled";
+		};
+
+		pwm4: pwm@e6e34000 {
+			compatible = "renesas,pwm-r8a7795", "renesas,pwm-rcar";
+			reg = <0 0xe6e34000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&mstp5_clks R8A7795_CLK_PWM>;
+			status = "disabled";
+		};
+
+		pwm5: pwm@e6e35000 {
+			compatible = "renesas,pwm-r8a7795", "renesas,pwm-rcar";
+			reg = <0 0xe6e35000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&mstp5_clks R8A7795_CLK_PWM>;
+			status = "disabled";
+		};
+
+		pwm6: pwm@e6e36000 {
+			compatible = "renesas,pwm-r8a7795", "renesas,pwm-rcar";
+			reg = <0 0xe6e36000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&mstp5_clks R8A7795_CLK_PWM>;
+			status = "disabled";
 		};
 
 		scif0: serial@e6e60000 {
