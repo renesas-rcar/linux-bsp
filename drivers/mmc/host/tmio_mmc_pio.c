@@ -362,7 +362,8 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	unsigned long flags;
 
 	if (ios->timing != MMC_TIMING_UHS_SDR50 &&
-	    ios->timing != MMC_TIMING_UHS_SDR104)
+	    ios->timing != MMC_TIMING_UHS_SDR104 &&
+	    ios->timing != MMC_TIMING_MMC_HS200)
 		return 0;
 
 	if ((host->inquiry_tuning && !host->inquiry_tuning(host)) ||
@@ -522,6 +523,8 @@ static int tmio_mmc_start_command(struct tmio_mmc_host *host, struct mmc_command
 	switch (mmc_resp_type(cmd)) {
 	case MMC_RSP_NONE: c |= RESP_NONE; break;
 	case MMC_RSP_R1:   c |= RESP_R1;   break;
+	case MMC_RSP_R1 & ~MMC_RSP_CRC:
+			   c |= RESP_R1;   break;
 	case MMC_RSP_R1B:  c |= RESP_R1B;  break;
 	case MMC_RSP_R2:   c |= RESP_R2;   break;
 	case MMC_RSP_R3:   c |= RESP_R3;   break;
@@ -1006,8 +1009,7 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	if (host->inquiry_tuning && host->inquiry_tuning(host) &&
 	    !host->done_tuning) {
 		/* Start retuning */
-		ret = tmio_mmc_execute_tuning(mmc,
-					      MMC_SEND_TUNING_BLOCK);
+		ret = tmio_mmc_execute_tuning(mmc, host->tuning_command);
 		if (ret)
 			goto fail;
 		/* Restore request */
@@ -1033,7 +1035,7 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		    !host->done_tuning) {
 			/* Start retuning */
 			ret = tmio_mmc_execute_tuning(mmc,
-						      MMC_SEND_TUNING_BLOCK);
+						      host->tuning_command);
 			if (ret)
 				goto fail;
 			/* Restore request */

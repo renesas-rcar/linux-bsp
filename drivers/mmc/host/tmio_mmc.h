@@ -97,6 +97,7 @@ struct tmio_mmc_host {
 	bool			sdio_irq_enabled;
 	u32			scc_tapnum;
 	bool			done_tuning;
+	int			tuning_command;
 	struct completion	completion;
 
 	int (*write16_hook)(struct tmio_mmc_host *host, int addr);
