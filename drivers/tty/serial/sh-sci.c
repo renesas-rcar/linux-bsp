@@ -1265,11 +1265,17 @@ static void sci_set_mctrl(struct uart_port *port, unsigned int mctrl)
 
 static unsigned int sci_get_mctrl(struct uart_port *port)
 {
+	struct sci_port *s = to_sci_port(port);
+	unsigned int mctrl = TIOCM_DSR | TIOCM_CAR;
+
 	/*
 	 * CTS/RTS is handled in hardware when supported, while nothing
 	 * else is wired up. Keep it simple and simply assert DSR/CAR.
 	 */
-	return TIOCM_DSR | TIOCM_CAR;
+	if (s->cfg->capabilities & SCIx_HAVE_RTSCTS)
+		mctrl |= TIOCM_CTS;
+
+	return mctrl;
 }
 
 #ifdef CONFIG_SERIAL_SH_SCI_DMA
@@ -1718,8 +1724,7 @@ static void sci_request_dma(struct uart_port *port)
 
 	dev_dbg(port->dev, "%s: port %d\n", __func__, port->line);
 
-	if (!port->dev->of_node &&
-	    (s->cfg->dma_slave_tx <= 0 || s->cfg->dma_slave_rx <= 0))
+	if (s->cfg->dma_slave_tx <= 0 || s->cfg->dma_slave_rx <= 0)
 		return;
 
 	s->cookie_tx = -EINVAL;
@@ -1772,7 +1777,7 @@ static void sci_request_dma(struct uart_port *port)
 			sg_init_table(sg, 1);
 			s->rx_buf[i] = buf;
 			sg_dma_address(sg) = dma;
-			sg->length = s->buf_len_rx;
+			sg_dma_len(sg) = s->buf_len_rx;
 
 			buf += s->buf_len_rx;
 			dma += s->buf_len_rx;
@@ -1889,10 +1894,10 @@ static void sci_baud_calc_hscif(unsigned int bps, unsigned long freq,
 		for (c = 0; c <= 3; c++) {
 			/* integerized formulas from HSCIF documentation */
 			br = DIV_ROUND_CLOSEST(freq, (sr *
-					      (1 << (2 * c + 1)) * bps)) - 1;
+					      (1ULL << (2 * c + 1)) * bps)) - 1;
 			br = clamp(br, 0, 255);
 			err = DIV_ROUND_CLOSEST(freq, ((br + 1) * bps * sr *
-					       (1 << (2 * c + 1)) / 1000)) -
+					       (1ULL << (2 * c + 1)) / 1000)) -
 					       1000;
 			/* Calc recv margin
 			 * M: Receive margin (%)
@@ -2600,7 +2605,8 @@ sci_parse_dt(struct platform_device *pdev, unsigned int *dev_id)
 	const struct of_device_id *match;
 	const struct sci_port_info *info;
 	struct plat_sci_port *p;
-	int id;
+	int id, index;
+	struct of_phandle_args dma_spec;
 
 	if (!IS_ENABLED(CONFIG_OF) || !np)
 		return NULL;
@@ -2628,6 +2634,22 @@ sci_parse_dt(struct platform_device *pdev, unsigned int *dev_id)
 	p->type = info->type;
 	p->regtype = info->regtype;
 	p->scscr = SCSCR_RE | SCSCR_TE;
+	if (of_property_read_bool(np, "ctsrts"))
+		p->capabilities = SCIx_HAVE_RTSCTS;
+
+	index = of_property_match_string(np, "dma-names", "tx");
+	if (index >= 0)
+		index = of_parse_phandle_with_args(np, "dmas", "#dma-cells",
+						   index, &dma_spec);
+	if (index >= 0)
+		p->dma_slave_tx = dma_spec.args[0];
+
+	index = of_property_match_string(np, "dma-names", "rx");
+	if (index >= 0)
+		index = of_parse_phandle_with_args(np, "dmas", "#dma-cells",
+						   index, &dma_spec);
+	if (index >= 0)
+		p->dma_slave_rx = dma_spec.args[0];
 
 	return p;
 }
