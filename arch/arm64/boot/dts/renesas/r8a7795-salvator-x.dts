@@ -558,7 +558,7 @@
 			adv7482_sdp_in: endpoint@1 {
 				clock-lanes = <0>;
 				data-lanes = <1>;
-				remote-endpoint = <&vin1ep0>;
+				remote-endpoint = <&vin4ep0>;
 
 				adv7482_rxb_out: endpoint@ {
 					remote-endpoint = <&csi2_1_in_ep>;
@@ -684,14 +684,20 @@
 
 		port@0 {
 			vin0ep0: endpoint {
+				csi,select = "csi40";
 				remote-endpoint = <&adv7482_hdmi_in>;
 				data-lanes = <1 2 3 4>;
+			};
+		};
+		port@1 {
+			csi0ep0: endpoint {
+				remote-endpoint = <&csi2_0_ep>;
 			};
 		};
 	};
 };
 
-&vin1 {
+&vin4 {
 	status = "okay";
 
 	ports {
@@ -699,9 +705,15 @@
 		#size-cells = <0>;
 
 		port@0 {
-			vin1ep0: endpoint@0 {
+			vin4ep0: endpoint@0 {
+				csi,select = "csi20";
 				remote-endpoint = <&adv7482_sdp_in>;
 				data-lanes = <1>;
+			};
+		};
+		port@1 {
+			csi1ep0: endpoint {
+				remote-endpoint = <&csi2_1_ep>;
 			};
 		};
 	};
@@ -764,7 +776,7 @@
 		#size-cells = <0>;
 
 		csi2_1_ep: endpoint@0 {
-			remote-endpoint = <&vin1ep0>;
+			remote-endpoint = <&vin4ep0>;
 			clock-lanes = <0>;
 			data-lanes = <1>;
 		};
