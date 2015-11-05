@@ -76,7 +76,6 @@ enum ravb_reg {
 	CDAR20	= 0x0060,
 	CDAR21	= 0x0064,
 	ESR	= 0x0088,
-	APSR	= 0x008c,
 	RCR	= 0x0090,
 	RQC0	= 0x0094,
 	RQC1	= 0x0098,
@@ -158,6 +157,7 @@ enum ravb_reg {
 	TIC	= 0x0378,
 	TIS	= 0x037C,
 	ISS	= 0x0380,
+	CIE	= 0x0384,
 	GCCR	= 0x0390,
 	GMTT	= 0x0394,
 	GPTC	= 0x0398,
@@ -171,6 +171,15 @@ enum ravb_reg {
 	GCT0	= 0x03B8,
 	GCT1	= 0x03BC,
 	GCT2	= 0x03C0,
+	GIE	= 0x03CC,
+	GID	= 0x03D0,
+	DIL	= 0x0440,
+	RIE0	= 0x0460,
+	RID0	= 0x0464,
+	RIE2	= 0x0470,
+	RID2	= 0x0474,
+	TIE	= 0x0478,
+	TID	= 0x047c,
 
 	/* E-MAC registers */
 	ECMR	= 0x0500,
@@ -207,6 +216,7 @@ enum CCC_BIT {
 	CCC_OPC_RESET	= 0x00000000,
 	CCC_OPC_CONFIG	= 0x00000001,
 	CCC_OPC_OPERATION = 0x00000002,
+	CCC_GAC		= 0x00000080,
 	CCC_DTSR	= 0x00000100,
 	CCC_CSEL	= 0x00030000,
 	CCC_CSEL_HPB	= 0x00010000,
@@ -556,6 +566,16 @@ enum ISS_BIT {
 	ISS_DPS15	= 0x80000000,
 };
 
+/* CIE */
+enum CIE_BIT {
+	CIE_CRIE	= 0x00000001, /* Common Receive Interrupt Enable */
+	CIE_CTIE	= 0x00000100, /* Common Transmit Interrupt Enable */
+	CIE_RQFM	= 0x00010000, /* Reception Queue Full Mode */
+	CIE_CL0M	= 0x00020000, /* Common Line 0 Mode */
+	CIE_RFWL	= 0x00040000, /* Rx-FIFO Warning interrupt Line */
+	CIE_RFFL	= 0x00080000, /* Rx-FIFO Full interrupt Line */
+};
+
 /* GCCR */
 enum GCCR_BIT {
 	GCCR_TCR	= 0x00000003,
@@ -588,6 +608,18 @@ enum GIS_BIT {
 	GIS_PTCF	= 0x00000001,	/* Undocumented? */
 	GIS_PTMF	= 0x00000004,
 };
+
+/* GIx */
+#define RAVB_GIx_ALL	0xffff03ff
+
+/* RIx0 */
+#define RAVB_RIx0_ALL	0x0003ffff
+
+/* RIx2 */
+#define RAVB_RIx2_ALL	0x8003ffff
+
+/* TIx */
+#define RAVB_TIx_ALL	0x000fffff
 
 /* ECMR */
 enum ECMR_BIT {
@@ -658,8 +690,6 @@ struct ravb_desc {
 	u8 die_dt;	/* Descriptor interrupt enable and type */
 	__le32 dptr;	/* Descriptor pointer */
 };
-
-#define DPTR_ALIGN	4	/* Required descriptor pointer alignment */
 
 enum DIE_DT {
 	/* Frame data */
@@ -742,7 +772,6 @@ enum RAVB_QUEUE {
 #define RX_QUEUE_OFFSET	4
 #define NUM_RX_QUEUE	2
 #define NUM_TX_QUEUE	2
-#define NUM_TX_DESC	2	/* TX descriptors per packet */
 
 struct ravb_tstamp_skb {
 	struct list_head list;
@@ -767,6 +796,11 @@ struct ravb_ptp {
 	struct ravb_ptp_perout perout[N_PER_OUT];
 };
 
+enum ravb_chip_id {
+	RCAR_GEN2,
+	RCAR_GEN3,
+};
+
 struct ravb_private {
 	struct net_device *ndev;
 	struct platform_device *pdev;
@@ -781,9 +815,9 @@ struct ravb_private {
 	dma_addr_t tx_desc_dma[NUM_TX_QUEUE];
 	struct ravb_ex_rx_desc *rx_ring[NUM_RX_QUEUE];
 	struct ravb_tx_desc *tx_ring[NUM_TX_QUEUE];
-	void *tx_align[NUM_TX_QUEUE];
 	struct sk_buff **rx_skb[NUM_RX_QUEUE];
 	struct sk_buff **tx_skb[NUM_TX_QUEUE];
+	void **tx_buffers[NUM_TX_QUEUE];
 	u32 rx_over_errors;
 	u32 rx_fifo_errors;
 	struct net_device_stats stats[NUM_RX_QUEUE];
@@ -807,10 +841,13 @@ struct ravb_private {
 	int msg_enable;
 	int speed;
 	int duplex;
+	enum ravb_chip_id chip_id;
 
 	unsigned no_avb_link:1;
 	unsigned avb_link_active_low:1;
 	int emac_irq;
+	int rx_irqs[NUM_RX_QUEUE];
+	int tx_irqs[NUM_TX_QUEUE];
 };
 
 static inline u32 ravb_read(struct net_device *ndev, enum ravb_reg reg)
