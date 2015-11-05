@@ -78,24 +78,28 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			clocks = <&cpg_clocks R8A7795_CLK_Z2>;
+			operating-points-v2 = <&group1_opp_table>;
 		};
 		a53_1: cpu@101 {
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x101>;
 			device_type = "cpu";
 			enable-method = "psci";
+			operating-points-v2 = <&group1_opp_table>;
 		};
 		a53_2: cpu@102 {
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x102>;
 			device_type = "cpu";
 			enable-method = "psci";
+			operating-points-v2 = <&group1_opp_table>;
 		};
 		a53_3: cpu@103 {
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x103>;
 			device_type = "cpu";
 			enable-method = "psci";
+			operating-points-v2 = <&group1_opp_table>;
 		};
 	};
 
@@ -115,6 +119,17 @@
 		};
 		opp02 {
 			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <830000>;
+			clock-latency-ns = <300000>;
+		};
+	};
+
+	group1_opp_table: group1_opp_tb0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp00 {
+			opp-hz = /bits/ 64 <1200000000>;
 			opp-microvolt = <830000>;
 			clock-latency-ns = <300000>;
 		};
