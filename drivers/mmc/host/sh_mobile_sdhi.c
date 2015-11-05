@@ -130,6 +130,7 @@ static const struct of_device_id sh_mobile_sdhi_of_match[] = {
 	{ .compatible = "renesas,sdhi-r8a7793", .data = &of_rcar_gen2_compatible, },
 	{ .compatible = "renesas,sdhi-r8a7794", .data = &of_rcar_gen2_compatible, },
 	{ .compatible = "renesas,sdhi-r8a7795", .data = &of_rcar_gen3_compatible, },
+	{ .compatible = "renesas,mmc-r8a7795", .data = &of_rcar_gen3_compatible, },
 	{},
 };
 MODULE_DEVICE_TABLE(of, sh_mobile_sdhi_of_match);
@@ -437,11 +438,12 @@ static inline void sd_scc_write32(struct tmio_mmc_host *host, int addr,
 
 static bool sh_mobile_sdhi_inquiry_tuning(struct tmio_mmc_host *host)
 {
-	/* SDHI should be tuning only SDR104 */
-	if (host->mmc->ios.timing == MMC_TIMING_UHS_SDR104)
+	/* SDHI should be tuning only SDR104 and HS200 */
+	if (host->mmc->ios.timing == MMC_TIMING_UHS_SDR104 ||
+	    host->mmc->ios.timing == MMC_TIMING_MMC_HS200)
 		return true;
-	else
-		return false;
+
+	return false;
 }
 
 static void sh_mobile_sdhi_init_tuning(struct tmio_mmc_host *host,
