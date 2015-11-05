@@ -487,6 +487,14 @@
 				clock-mult = <1>;
 			};
 
+			mso_clk: mso_clk@e6150014 {
+				compatible = "renesas,cpg-div6-clock";
+				reg = <0 0xe6150014 0 4>;
+				clocks = <&pll1_div4_clk>;
+				#clock-cells = <0>;
+				clock-output-names = "mso";
+			};
+
 			hdmi_clk: hdmi_clk@e6150250 {
 				compatible = "renesas,cpg-div6-clock";
 				reg = <0 0xe6150250 0 4>;
@@ -589,10 +597,10 @@
 					      <0 0xe6150040 0 4>;
 					clocks = <&s3d4_clk>, <&s3d4_clk>,
 						 <&s3d4_clk>, <&s3d4_clk>,
-						 <&s3d4_clk>, <&s3d4_clk>,
-						 <&s3d4_clk>, <&s3d4_clk>,
-						 <&s3d4_clk>,
-						 <&s3d1_clk>, <&s3d1_clk>;
+						 <&s3d4_clk>, <&mso_clk>,
+						 <&mso_clk>, <&mso_clk>,
+						 <&mso_clk>, <&s3d1_clk>,
+						 <&s3d1_clk>;
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_SCIF5
