@@ -98,6 +98,17 @@ config ARM_S3C_CPUFREQ
 	help
 	  Internal configuration node for common cpufreq on Samsung SoC
 
+config ARM_RCAR_CPUFREQ
+	bool "Renesas R-Car Gen3 CPUfreq driver"
+	depends on ARCH_RENESAS && CPUFREQ_DT
+	default y
+	help
+	  This enables CPUfreq driver for R-Car Gen3.
+	  It need be enabled to control CPU frequency.
+	  This gets frequency tables from DT.
+
+	  If in doubt, say N.
+
 config ARM_S3C24XX_CPUFREQ
 	bool "CPUfreq driver for Samsung S3C24XX series CPUs (EXPERIMENTAL)"
 	depends on ARCH_S3C24XX
