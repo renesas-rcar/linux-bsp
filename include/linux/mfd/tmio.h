@@ -95,13 +95,13 @@
  */
 #define TMIO_MMC_SDIO_STATUS_QUIRK	(1 << 8)
 
+/* The start or stop of SD clock don't wait 10msec. */
+#define TMIO_MMC_CLK_NO_SLEEP		(1 << 9)
+
 /*
  * Some controllers allows to set SDx actual clock
  */
 #define TMIO_MMC_CLK_ACTUAL		(1 << 10)
-
-/* The start or stop of SD clock don't wait 10msec. */
-#define TMIO_MMC_CLK_NO_SLEEP		(1 << 8)
 
 int tmio_core_mmc_enable(void __iomem *cnf, int shift, unsigned long base);
 int tmio_core_mmc_resume(void __iomem *cnf, int shift, unsigned long base);
