@@ -48,6 +48,7 @@
 			reg = <0x0>;
 			device_type = "cpu";
 			enable-method = "psci";
+			clocks = <&cpg_clocks R8A7795_CLK_Z>;
 		};
 
 		a57_1: cpu@1 {
@@ -440,39 +441,11 @@
 				clock-output-names = "hdmi";
 			};
 
-			sd0_clk: sd0@e6150074 {
+			sdsrc_clk: sdsrc {
 				compatible = "fixed-factor-clock";
-				reg = <0 0xe6150074 0 4>;
 				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
 				#clock-cells = <0>;
-				clock-div = <16>;
-				clock-mult = <1>;
-			};
-
-			sd1_clk: sd1@e6150078 {
-				compatible = "fixed-factor-clock";
-				reg = <0 0xe6150078 0 4>;
-				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
-				#clock-cells = <0>;
-				clock-div = <16>;
-				clock-mult = <1>;
-			};
-
-			sd2_clk: sd2@e6150268 {
-				compatible = "fixed-factor-clock";
-				reg = <0 0xe6150268 0 4>;
-				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
-				#clock-cells = <0>;
-				clock-div = <16>;
-				clock-mult = <1>;
-			};
-
-			sd3_clk: sd3@e615026c {
-				compatible = "fixed-factor-clock";
-				reg = <0 0xe615026c 0 4>;
-				clocks = <&cpg_clocks R8A7795_CLK_PLL1>;
-				#clock-cells = <0>;
-				clock-div = <16>;
+				clock-div = <2>;
 				clock-mult = <1>;
 			};
 
@@ -511,9 +484,12 @@
 				compatible = "renesas,r8a7795-cpg-clocks",
 					     "renesas,rcar-gen3-cpg-clocks";
 				reg = <0 0xe6150000 0 0x1000>;
-				clocks = <&extal_clk>;
+				clocks = <&extal_clk>, <&sdsrc_clk>;
 				clock-output-names = "main", "pll0", "pll1","pll2",
-						     "pll3", "pll4";
+						     "pll3", "pll4",
+						     "z",
+						     "sd0", "sd1", "sd2", "sd3",
+						     "rclk";
 				#power-domain-cells = <0>;
 
 				mstp1_clks: mstp1_clks@e6150134 {
@@ -566,15 +542,18 @@
 					compatible = "renesas,r8a7795-mstp-clocks",
 					             "renesas,cpg-mstp-clocks";
 					reg = <0 0xe615013c 0 4>, <0 0xe6150048 0 4>;
-					clocks =  <&s3d4_clk>, <&sd3_clk>, <&sd2_clk>,
-						  <&sd1_clk>, <&sd0_clk>;
+					clocks =  <&s3d4_clk>,
+						  <&cpg_clocks R8A7795_CLK_SD3>,
+						  <&cpg_clocks R8A7795_CLK_SD2>,
+						  <&cpg_clocks R8A7795_CLK_SD1>,
+						  <&cpg_clocks R8A7795_CLK_SD0>;
 					#clock-cells = <1>;
 					clock-indices = <
 						R8A7795_CLK_SCIF2
-						R8A7795_CLK_SD3
-						R8A7795_CLK_SD2
-						R8A7795_CLK_SD1
-						R8A7795_CLK_SD0
+						R8A7795_CLK_SDHI3
+						R8A7795_CLK_SDHI2
+						R8A7795_CLK_SDHI1
+						R8A7795_CLK_SDHI0
 					>;
 					clock-output-names =
 						"scif2",
@@ -1130,7 +1109,7 @@
 			compatible = "renesas,sdhi-r8a7795";
 			reg = <0 0xee100000 0 0x880>;
 			interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp3_clks R8A7795_CLK_SD0>;
+			clocks = <&mstp3_clks R8A7795_CLK_SDHI0>;
 			renesas,clk-rate = <50000000>;
 			status = "disabled";
 		};
@@ -1139,7 +1118,7 @@
 			compatible = "renesas,sdhi-r8a7795";
 			reg = <0 0xee120000 0 0x880>;
 			interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp3_clks R8A7795_CLK_SD1>;
+			clocks = <&mstp3_clks R8A7795_CLK_SDHI1>;
 			renesas,clk-rate = <50000000>;
 			status = "disabled";
 		};
@@ -1148,7 +1127,7 @@
 			compatible = "renesas,sdhi-r8a7795";
 			reg = <0 0xee140000 0 0x880>;
 			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp3_clks R8A7795_CLK_SD2>;
+			clocks = <&mstp3_clks R8A7795_CLK_SDHI2>;
 			renesas,clk-rate = <50000000>;
 			status = "disabled";
 		};
@@ -1157,7 +1136,7 @@
 			compatible = "renesas,sdhi-r8a7795";
 			reg = <0 0xee160000 0 0x880>;
 			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&mstp3_clks R8A7795_CLK_SD3>;
+			clocks = <&mstp3_clks R8A7795_CLK_SDHI3>;
 			renesas,clk-rate = <50000000>;
 			status = "disabled";
 		};
