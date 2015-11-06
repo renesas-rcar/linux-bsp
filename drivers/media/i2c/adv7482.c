@@ -935,20 +935,10 @@ static int adv7482_set_vid_info(struct v4l2_subdev *sd)
 			dev_info(state->dev,
 				 "Changed active resolution to 720x480p\n");
 		} else if ((width == 720) &&
-			(height == 480) && (progressive == 0)) {
-			val = ADV7482_IO_CP_VID_STD_480I;
-			dev_info(state->dev,
-				 "Changed active resolution to 720x480i\n");
-		} else if ((width == 720) &&
 			(height == 576) && (progressive == 1)) {
 			val = ADV7482_IO_CP_VID_STD_576P;
 			dev_info(state->dev,
 				 "Changed active resolution to 720x576p\n");
-		} else if ((width == 720) &&
-			(height == 576) && (progressive == 0)) {
-			val = ADV7482_IO_CP_VID_STD_576I;
-			dev_info(state->dev,
-				 "Changed active resolution to 720x576i\n");
 		} else if ((width == 1280) &&
 			(height == 720) && (progressive == 1)) {
 			val = ADV7482_IO_CP_VID_STD_720P;
