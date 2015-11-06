@@ -1507,6 +1507,7 @@
 		vin4: video@e6ef4000 {
 			compatible = "renesas,vin-r8a7795";
 			clocks = <&mstp8_clks R8A7795_CLK_VIN4>;
+			power-domains = <&pd_always_on>;
 			reg = <0 0xe6ef4000 0 0x1000>;
 			interrupts = <0 174 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
@@ -1577,6 +1578,7 @@
 			reg = <0 0xee140000 0 0x2000>;
 			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp3_clks R8A7795_CLK_SDHI2>;
+			power-domains = <&pd_always_on>;
 			renesas,clk-rate = <200000000>;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
@@ -1590,6 +1592,7 @@
 			reg = <0 0xee160000 0 0x2000>;
 			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&mstp3_clks R8A7795_CLK_SDHI3>;
+			power-domains = <&pd_always_on>;
 			renesas,clk-rate = <200000000>;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
