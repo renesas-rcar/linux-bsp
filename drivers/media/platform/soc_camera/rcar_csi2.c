@@ -289,12 +289,6 @@ static int rcar_csi2_set_phy_freq(struct rcar_csi2 *priv)
 			if ((priv->mf->width == 1920) &&
 				(priv->mf->height == 1080))
 				bps_per_lane = RCAR_CSI_450MBPS;
-			else if ((priv->mf->width == 720) &&
-				 (priv->mf->height == 480))
-				bps_per_lane = RCAR_CSI_100MBPS;
-			else if ((priv->mf->width == 720) &&
-				 (priv->mf->height == 576))
-				bps_per_lane = RCAR_CSI_100MBPS;
 			else
 				goto error;
 		}
