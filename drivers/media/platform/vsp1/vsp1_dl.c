@@ -421,6 +421,9 @@ static int dl_irq_dl_frame_end_header_mode(struct vsp1_dl *dl)
 		dl->next_header = NULL;
 		dl_write(dl, VI6_DL_HDR_ADDR(0),
 				dl->active_header->paddr);
+#ifdef VSP1_UNDERRUN_WORKAROUND
+		dl->vsp1->dl_addr = dl->active_header->paddr;
+#endif
 		break;
 
 	case DL_REPEAT_NONE:
@@ -513,6 +516,10 @@ int vsp1_dl_irq_display_start(struct vsp1_device *vsp1)
 		dl_write(dl, VI6_DL_HDR_ADDR(0), next_body->paddr);
 		dl_write(dl, VI6_DL_BODY_SIZE,
 			(next_body->reg_count * 8) | VI6_DL_BODY_SIZE_UPD);
+#ifdef VSP1_UNDERRUN_WORKAROUND
+		dl->vsp1->dl_addr = next_body->paddr;
+		dl->vsp1->dl_body = (next_body->reg_count * 8) | VI6_DL_BODY_SIZE_UPD;
+#endif
 	}
 
 	return 0;

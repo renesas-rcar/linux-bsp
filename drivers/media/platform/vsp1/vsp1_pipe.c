@@ -229,9 +229,12 @@ int vsp1_pipeline_stop(struct vsp1_pipeline *pipe)
 			ret = 0;
 			goto done;
 		}
-
+#ifdef VSP1_UNDERRUN_WORKAROUND
+		vsp1_underrun_workaround(pipe->output->entity.vsp1, true);
+#else
 		vsp1_write(pipe->output->entity.vsp1, VI6_SRESET,
 				VI6_SRESET_SRTS(pipe->output->entity.index));
+#endif
 		for (timeout = 10; timeout > 0; --timeout) {
 			status = vsp1_read(pipe->output->entity.vsp1,
 							 VI6_STATUS);

@@ -87,7 +87,7 @@ static const unsigned int fcpvd_offset[] = {
 	FCPVD0_REG, FCPVD1_REG, FCPVD2_REG, FCPVD3_REG
 };
 
-static void vsp1_underrun_workaround(struct vsp1_device *vsp1)
+void vsp1_underrun_workaround(struct vsp1_device *vsp1, bool reset)
 {
 	unsigned int timeout = 0;
 
@@ -114,6 +114,7 @@ static void vsp1_underrun_workaround(struct vsp1_device *vsp1)
 
 		if (timeout == 100)
 			break;
+
 		timeout++;
 		udelay(1);
 	}
@@ -135,12 +136,14 @@ static void vsp1_underrun_workaround(struct vsp1_device *vsp1)
 	vsp1_write(vsp1, VI6_CLK_DCSM1, 0);
 
 	/* 8. Restart VSPD */
+	if (!reset) {
 #ifdef VSP1_DL_SUPPORT
-	/* Necessary when headerless display list */
-	vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), vsp1->dl_addr);
-	vsp1_write(vsp1, VI6_DL_BODY_SIZE, vsp1->dl_body);
+		/* Necessary when headerless display list */
+		vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), vsp1->dl_addr);
+		vsp1_write(vsp1, VI6_DL_BODY_SIZE, vsp1->dl_body);
 #endif
-	vsp1_write(vsp1, VI6_CMD(0), VI6_CMD_STRCMD);
+		vsp1_write(vsp1, VI6_CMD(0), VI6_CMD_STRCMD);
+	}
 }
 #endif
 
@@ -177,11 +180,6 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 				vsp_und_cnt, dev_name(vsp1->dev));
 		}
 
-#ifdef VSP1_UNDERRUN_WORKAROUND
-		if (status & VI6_WFP_IRQ_STA_UND)
-			vsp1_underrun_workaround(vsp1);
-#endif
-
 		if (status & VI6_WFP_IRQ_STA_FRE) {
 			vsp1_pipeline_frame_end(pipe);
 			ret = IRQ_HANDLED;
@@ -199,6 +197,10 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 			vsp1_pipeline_display_start(pipe);
 			ret = IRQ_HANDLED;
 		}
+#endif
+#ifdef VSP1_UNDERRUN_WORKAROUND
+		if (status & VI6_WFP_IRQ_STA_UND)
+			vsp1_underrun_workaround(vsp1, false);
 #endif
 	}
 
@@ -540,7 +542,11 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
 		if (!(status & VI6_STATUS_SYS_ACT(i)))
 			continue;
 
+#ifdef VSP1_UNDERRUN_WORKAROUND
+		vsp1_underrun_workaround(vsp1, true);
+#else
 		vsp1_write(vsp1, VI6_SRESET, VI6_SRESET_SRTS(i));
+#endif
 		for (timeout = 10; timeout > 0; --timeout) {
 			status = vsp1_read(vsp1, VI6_STATUS);
 			if (!(status & VI6_STATUS_SYS_ACT(i)))
