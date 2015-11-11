@@ -764,13 +764,25 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 		goto stop_dma;
 	}
 
-	/* wait for tx fifo to be emptied / rx fifo to be filled */
+	/* wait for Tx/Rx DMA completion */
 	if (tx) {
 		ret = wait_for_completion_timeout(&p->done_dma_tx, timeout);
 		if (!ret) {
 			dev_err(&p->pdev->dev, "Tx DMA timeout\n");
 			ret = -ETIMEDOUT;
 			goto stop_reset;
+		}
+		if (!rx) {
+			ier_bits = IER_TEOFE;
+			sh_msiof_write(p, IER, ier_bits);
+
+			/* wait for tx fifo to be emptied */
+			if (!wait_for_completion_timeout(&p->done, timeout)) {
+				dev_err(&p->pdev->dev,
+					"Tx fifo to be emptied timeout\n");
+				ret = -ETIMEDOUT;
+				goto stop_reset;
+			}
 		}
 	}
 	if (rx) {
