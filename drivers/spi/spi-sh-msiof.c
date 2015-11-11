@@ -793,11 +793,20 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 		goto stop_dma;
 	}
 
-	/* wait for tx fifo to be emptied / rx fifo to be filled */
+	/* wait for Tx/Rx DMA completion */
 	if (tx) {
 		ret = sh_msiof_wait_for_completion(p, &p->done_dma_tx);
 		if (ret)
 			goto stop_reset;
+
+		if (!rx) {
+			ier_bits = IER_TEOFE;
+			sh_msiof_write(p, IER, ier_bits);
+
+			/* wait for tx fifo to be emptied */
+			if (sh_msiof_wait_for_completion(p, &p->done))
+				goto stop_reset;
+		}
 	}
 	if (rx) {
 		ret = sh_msiof_wait_for_completion(p, &p->done_dma_rx);
