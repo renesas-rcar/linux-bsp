@@ -22,6 +22,7 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
@@ -118,8 +119,18 @@ struct rcar_thermal_data {
 #define rcar_gen3_has_irq_support(priv)	((priv)->common->irq)
 #define rcar_id_to_shift(priv)		((priv)->id * 8)
 
-/* Temperature conversion  */
-#define TEMP_CONVERT(ctemp)	(((1000 * MCELSIUS(ctemp)) - 2536700) / 7468)
+/*
+ * Temperature conversion
+ *
+ * temp = (THCODE - 2536.7) / 7.468
+ *
+ * Firstly, multiply each operand with 1000 to avoid float number.
+ * Then, to convert to Mili-Celsius and round up later,
+ * this formula will be multiplied with 10000 instead of 1000.
+ */
+
+#define TEMP_CONVERT(ctemp)	\
+	((10000L * ((1000L * ctemp) - 2536700L)) / 7468L)
 
 #ifdef DEBUG
 # define rcar_force_update_temp(priv)	1
@@ -251,13 +262,14 @@ static int _round_temp(int i)
 	int tmp1, tmp2;
 	int result = 0;
 
-	tmp1 = i % 10;
-	tmp2 = i / 10;
+	tmp1 = abs(i) % 10;
+	tmp2 = abs(i) / 10;
 	if (tmp1 < 5)
 		result = tmp2;
 	else
 		result = tmp2 + 1;
-	return result;
+
+	return ((i < 0) ? (result*(-1)) : result);
 }
 
 static int rcar_gen3_thermal_update_temp(struct rcar_thermal_priv *priv)
