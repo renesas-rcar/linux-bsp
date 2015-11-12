@@ -30,6 +30,7 @@ struct vsp1_drm;
 struct vsp1_entity;
 struct vsp1_platform_data;
 struct vsp1_bru;
+struct vsp1_clu;
 struct vsp1_hsit;
 struct vsp1_lif;
 struct vsp1_lut;
@@ -45,6 +46,7 @@ struct vsp1_uds;
 #define VSP1_HAS_LUT		(1 << 1)
 #define VSP1_HAS_SRU		(1 << 2)
 #define VSP1_HAS_BRU		(1 << 3)
+#define VSP1_HAS_CLU		(1 << 4)
 
 struct vsp1_device_info {
 	u32 version;
@@ -65,6 +67,7 @@ struct vsp1_device {
 	struct clk *clock;
 
 	struct vsp1_bru *bru;
+	struct vsp1_clu *clu;
 	struct vsp1_hsit *hsi;
 	struct vsp1_hsit *hst;
 	struct vsp1_lif *lif;
