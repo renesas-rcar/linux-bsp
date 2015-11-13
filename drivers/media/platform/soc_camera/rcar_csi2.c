@@ -365,11 +365,17 @@ static int rcar_csi2_hwinit(struct rcar_csi2 *priv)
 	{
 		switch (priv->lanes) {
 		case 1:
+			/* First field number setting */
+			iowrite32(0x00010001, priv->base + RCAR_CSI2_FLD);
+
 			tmp |= 0x1;
 			vcdt |= (0x1e | RCAR_CSI2_VCDT_VCDTN_EN);
 				/* YUV422 8 bit */
 			break;
 		case 4:
+			/* First field number setting */
+			iowrite32(0x00020001, priv->base + RCAR_CSI2_FLD);
+
 			tmp |= 0xF;
 			vcdt |= (0x24 | RCAR_CSI2_VCDT_VCDTN_EN);
 				/* RGB888 */
