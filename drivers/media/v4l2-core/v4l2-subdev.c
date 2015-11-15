@@ -83,6 +83,12 @@ static int subdev_open(struct file *file)
 	}
 #endif
 
+#if defined(CONFIG_VIDEO_V4L2_SUBDEV_API)
+	ret = v4l2_subdev_call(sd, pad, init_cfg, subdev_fh->pad);
+	if (ret < 0 && ret != -ENOIOCTLCMD)
+		goto err;
+#endif
+
 	if (sd->internal_ops && sd->internal_ops->open) {
 		ret = sd->internal_ops->open(sd, subdev_fh);
 		if (ret < 0)
