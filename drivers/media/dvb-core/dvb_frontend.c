@@ -899,14 +899,13 @@ static void dvb_frontend_stop(struct dvb_frontend *fe)
  */
 void dvb_frontend_sleep_until(ktime_t *waketime, u32 add_usec)
 {
-	s32 delta, newdelta;
+	s32 delta;
 
-	ktime_add_us(*waketime, add_usec);
+	*waketime = ktime_add_us(*waketime, add_usec);
 	delta = ktime_us_delta(ktime_get_real(), *waketime);
 	if (delta > 2500) {
 		msleep((delta - 1500) / 1000);
-		newdelta = ktime_us_delta(ktime_get_real(), *waketime);
-		delta = (newdelta > delta) ? 0 : newdelta;
+		delta = ktime_us_delta(ktime_get_real(), *waketime);
 	}
 	if (delta > 0)
 		udelay(delta);
@@ -2314,9 +2313,9 @@ static int dvb_frontend_ioctl_legacy(struct file *file,
 		dev_dbg(fe->dvb->device, "%s: current delivery system on cache: %d, V3 type: %d\n",
 				 __func__, c->delivery_system, fe->ops.info.type);
 
-		/* Force the CAN_INVERSION_AUTO bit on. If the frontend doesn't
-		 * do it, it is done for it. */
-		info->caps |= FE_CAN_INVERSION_AUTO;
+		/* Set CAN_INVERSION_AUTO bit on in other than oneshot mode */
+		if (!(fepriv->tune_mode_flags & FE_TUNE_MODE_ONESHOT))
+			info->caps |= FE_CAN_INVERSION_AUTO;
 		err = 0;
 		break;
 	}
