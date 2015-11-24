@@ -596,11 +596,10 @@ int mtd_add_partition(struct mtd_info *master, const char *name,
 	if (length <= 0)
 		return -EINVAL;
 
+	memset(&part, 0, sizeof(part));
 	part.name = name;
 	part.size = length;
 	part.offset = offset;
-	part.mask_flags = 0;
-	part.ecclayout = NULL;
 
 	new = allocate_partition(master, &part, -1, offset);
 	if (IS_ERR(new))
@@ -704,13 +703,17 @@ static struct mtd_part_parser *get_partition_parser(const char *name)
 
 #define put_partition_parser(p) do { module_put((p)->owner); } while (0)
 
-void register_mtd_parser(struct mtd_part_parser *p)
+int __register_mtd_parser(struct mtd_part_parser *p, struct module *owner)
 {
+	p->owner = owner;
+
 	spin_lock(&part_parser_lock);
 	list_add(&p->list, &part_parsers);
 	spin_unlock(&part_parser_lock);
+
+	return 0;
 }
-EXPORT_SYMBOL_GPL(register_mtd_parser);
+EXPORT_SYMBOL_GPL(__register_mtd_parser);
 
 void deregister_mtd_parser(struct mtd_part_parser *p)
 {

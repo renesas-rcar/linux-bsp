@@ -37,10 +37,8 @@ static int parse_ofpart_partitions(struct mtd_info *master,
 	bool dedicated = true;
 
 
-	if (!data)
-		return 0;
-
-	mtd_node = data->of_node;
+	/* Pull of_node from the master device node */
+	mtd_node = mtd_get_of_node(master);
 	if (!mtd_node)
 		return 0;
 
@@ -133,7 +131,6 @@ ofpart_none:
 }
 
 static struct mtd_part_parser ofpart_parser = {
-	.owner = THIS_MODULE,
 	.parse_fn = parse_ofpart_partitions,
 	.name = "ofpart",
 };
@@ -149,10 +146,8 @@ static int parse_ofoldpart_partitions(struct mtd_info *master,
 	} *part;
 	const char *names;
 
-	if (!data)
-		return 0;
-
-	dp = data->of_node;
+	/* Pull of_node from the master device node */
+	dp = mtd_get_of_node(master);
 	if (!dp)
 		return 0;
 
@@ -195,7 +190,6 @@ static int parse_ofoldpart_partitions(struct mtd_info *master,
 }
 
 static struct mtd_part_parser ofoldpart_parser = {
-	.owner = THIS_MODULE,
 	.parse_fn = parse_ofoldpart_partitions,
 	.name = "ofoldpart",
 };

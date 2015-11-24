@@ -1067,8 +1067,7 @@ static void preset_v3(struct mtd_info *mtd)
 
 	/* Blocks to be unlocked */
 	for (i = 0; i < NAND_MAX_CHIPS; i++)
-		writel(0x0 |	(0xffff << 16),
-				NFC_V3_WRPROT_UNLOCK_BLK_ADD0 + (i << 2));
+		writel(0xffff << 16, NFC_V3_WRPROT_UNLOCK_BLK_ADD0 + (i << 2));
 
 	writel(0, NFC_V3_IPC);
 
@@ -1524,6 +1523,7 @@ static int mxcnd_probe(struct platform_device *pdev)
 	this->chip_delay = 5;
 
 	this->priv = host;
+	nand_set_flash_node(this, pdev->dev.of_node),
 	this->dev_ready = mxc_nand_dev_ready;
 	this->cmdfunc = mxc_nand_command;
 	this->read_byte = mxc_nand_read_byte;
@@ -1683,9 +1683,7 @@ static int mxcnd_probe(struct platform_device *pdev)
 
 	/* Register the partitions */
 	mtd_device_parse_register(mtd, part_probes,
-			&(struct mtd_part_parser_data){
-				.of_node = pdev->dev.of_node,
-			},
+			NULL,
 			host->pdata.parts,
 			host->pdata.nr_parts);
 

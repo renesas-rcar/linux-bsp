@@ -1232,7 +1232,6 @@ static int sunxi_nand_chip_init(struct device *dev, struct sunxi_nfc *nfc,
 {
 	const struct nand_sdr_timings *timings;
 	struct sunxi_nand_chip *chip;
-	struct mtd_part_parser_data ppdata;
 	struct mtd_info *mtd;
 	struct nand_chip *nand;
 	int nsels;
@@ -1330,7 +1329,7 @@ static int sunxi_nand_chip_init(struct device *dev, struct sunxi_nfc *nfc,
 	 * in the DT.
 	 */
 	nand->ecc.mode = NAND_ECC_HW;
-	nand->flash_node = np;
+	nand_set_flash_node(nand, np);
 	nand->select_chip = sunxi_nfc_select_chip;
 	nand->cmd_ctrl = sunxi_nfc_cmd_ctrl;
 	nand->read_buf = sunxi_nfc_read_buf;
@@ -1366,8 +1365,7 @@ static int sunxi_nand_chip_init(struct device *dev, struct sunxi_nfc *nfc,
 		return ret;
 	}
 
-	ppdata.of_node = np;
-	ret = mtd_device_parse_register(mtd, NULL, &ppdata, NULL, 0);
+	ret = mtd_device_register(mtd, NULL, 0);
 	if (ret) {
 		dev_err(dev, "failed to register mtd device: %d\n", ret);
 		nand_release(mtd);

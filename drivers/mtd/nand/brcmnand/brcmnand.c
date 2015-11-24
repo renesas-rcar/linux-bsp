@@ -134,7 +134,7 @@ struct brcmnand_controller {
 	dma_addr_t		dma_pa;
 
 	/* in-memory cache of the FLASH_CACHE, used only for some commands */
-	u32			flash_cache[FC_WORDS];
+	u8			flash_cache[FC_BYTES];
 
 	/* Controller revision details */
 	const u16		*reg_offsets;
@@ -1188,6 +1188,8 @@ static void brcmnand_cmdfunc(struct mtd_info *mtd, unsigned command,
 
 	if (native_cmd == CMD_PARAMETER_READ ||
 			native_cmd == CMD_PARAMETER_CHANGE_COL) {
+		/* Copy flash cache word-wise */
+		u32 *flash_cache = (u32 *)ctrl->flash_cache;
 		int i;
 
 		brcmnand_soc_data_bus_prepare(ctrl->soc);
@@ -1197,7 +1199,11 @@ static void brcmnand_cmdfunc(struct mtd_info *mtd, unsigned command,
 		 * SECTOR_SIZE_1K may invalidate it
 		 */
 		for (i = 0; i < FC_WORDS; i++)
-			ctrl->flash_cache[i] = brcmnand_read_fc(ctrl, i);
+			/*
+			 * Flash cache is big endian for parameter pages, at
+			 * least on STB SoCs
+			 */
+			flash_cache[i] = be32_to_cpu(brcmnand_read_fc(ctrl, i));
 
 		brcmnand_soc_data_bus_unprepare(ctrl->soc);
 
@@ -1250,8 +1256,7 @@ static uint8_t brcmnand_read_byte(struct mtd_info *mtd)
 		if (host->last_byte > 0 && offs == 0)
 			chip->cmdfunc(mtd, NAND_CMD_RNDOUT, addr, -1);
 
-		ret = ctrl->flash_cache[offs >> 2] >>
-					(24 - ((offs & 0x03) << 3));
+		ret = ctrl->flash_cache[offs];
 		break;
 	case NAND_CMD_GET_FEATURES:
 		if (host->last_byte >= ONFI_SUBFEATURE_PARAM_LEN) {
@@ -1546,16 +1551,6 @@ static int brcmnand_read_oob_raw(struct mtd_info *mtd, struct nand_chip *chip,
 	return 0;
 }
 
-static int brcmnand_read_subpage(struct mtd_info *mtd, struct nand_chip *chip,
-				 uint32_t data_offs, uint32_t readlen,
-				 uint8_t *bufpoi, int page)
-{
-	struct brcmnand_host *host = chip->priv;
-
-	return brcmnand_read(mtd, chip, host->last_addr + data_offs,
-			readlen >> FC_SHIFT, (u32 *)bufpoi, NULL);
-}
-
 static int brcmnand_write(struct mtd_info *mtd, struct nand_chip *chip,
 			  u64 addr, const u32 *buf, u8 *oob)
 {
@@ -1816,7 +1811,7 @@ static int brcmnand_setup_dev(struct brcmnand_host *host)
 
 	memset(cfg, 0, sizeof(*cfg));
 
-	ret = of_property_read_u32(chip->flash_node,
+	ret = of_property_read_u32(nand_get_flash_node(chip),
 				   "brcm,nand-oob-sector-size",
 				   &oob_sector);
 	if (ret) {
@@ -1914,7 +1909,6 @@ static int brcmnand_init_cs(struct brcmnand_host *host)
 	struct nand_chip *chip;
 	int ret;
 	u16 cfg_offs;
-	struct mtd_part_parser_data ppdata = { .of_node = dn };
 
 	ret = of_property_read_u32(dn, "reg", &host->cs);
 	if (ret) {
@@ -1925,7 +1919,7 @@ static int brcmnand_init_cs(struct brcmnand_host *host)
 	mtd = &host->mtd;
 	chip = &host->chip;
 
-	chip->flash_node = dn;
+	nand_set_flash_node(chip, dn);
 	chip->priv = host;
 	mtd->priv = chip;
 	mtd->name = devm_kasprintf(&pdev->dev, GFP_KERNEL, "brcmnand.%d",
@@ -1945,7 +1939,6 @@ static int brcmnand_init_cs(struct brcmnand_host *host)
 
 	chip->ecc.mode = NAND_ECC_HW;
 	chip->ecc.read_page = brcmnand_read_page;
-	chip->ecc.read_subpage = brcmnand_read_subpage;
 	chip->ecc.write_page = brcmnand_write_page;
 	chip->ecc.read_page_raw = brcmnand_read_page_raw;
 	chip->ecc.write_page_raw = brcmnand_write_page_raw;
@@ -1993,7 +1986,7 @@ static int brcmnand_init_cs(struct brcmnand_host *host)
 	if (nand_scan_tail(mtd))
 		return -ENXIO;
 
-	return mtd_device_parse_register(mtd, NULL, &ppdata, NULL, 0);
+	return mtd_device_register(mtd, NULL, 0);
 }
 
 static void brcmnand_save_restore_cs_config(struct brcmnand_host *host,
