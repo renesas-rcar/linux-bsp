@@ -27,6 +27,8 @@ enum {
 	HSSRR,				/* Sampling Rate Register */
 	SCPCR,				/* Serial Port Control Register */
 	SCPDR,				/* Serial Port Data Register */
+	SCDL,				/* BRG Frequency Division Register */
+	SCCKS,				/* BRG Clock Select Register */
 
 	SCIx_NR_REGS,
 };
@@ -109,6 +111,9 @@ enum {
 #define SCPDR_RTSD	BIT(4)	/* Serial Port RTS Output Pin Data */
 #define SCPDR_CTSD	BIT(3)	/* Serial Port CTS Input Pin Data */
 
+/* BRG Clock Select Register (Some SCIF and HSCIF) */
+#define SCCKS_CKS	BIT(15)	/* Select SCK (1) or SC_CLK (0) */
+#define SCCKS_XIN	BIT(14)	/* SC_CLK uses bus clock (1) or SCIF_CLK (0) */
 
 #define SCxSR_TEND(port)	(((port)->type == PORT_SCI) ? SCI_TEND   : SCIF_TEND)
 #define SCxSR_RDxF(port)	(((port)->type == PORT_SCI) ? SCI_RDRF   : SCIF_RDF)
