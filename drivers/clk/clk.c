@@ -1944,7 +1944,7 @@ bool clk_is_match(const struct clk *p, const struct clk *q)
 	if (p == q)
 		return true;
 
-	/* true if clk->core pointers match. Avoid derefing garbage */
+	/* true if clk->core pointers match. Avoid dereferencing garbage */
 	if (!IS_ERR_OR_NULL(p) && !IS_ERR_OR_NULL(q))
 		if (p->core == q->core)
 			return true;
@@ -2482,7 +2482,7 @@ struct clk *__clk_create_clk(struct clk_hw *hw, const char *dev_id,
 	struct clk *clk;
 
 	/* This is to allow this function to be chained to others */
-	if (!hw || IS_ERR(hw))
+	if (IS_ERR_OR_NULL(hw))
 		return (struct clk *) hw;
 
 	clk = kzalloc(sizeof(*clk), GFP_KERNEL);
@@ -3061,9 +3061,6 @@ const char *of_clk_get_parent_name(struct device_node *np, int index)
 	int rc;
 	int count;
 	struct clk *clk;
-
-	if (index < 0)
-		return NULL;
 
 	rc = of_parse_phandle_with_args(np, "clocks", "#clock-cells", index,
 					&clkspec);
