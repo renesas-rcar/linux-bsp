@@ -354,13 +354,25 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 		return -EINVAL;
 	}
 
-	if ((tx && sai->synchronous[TX]) || (!tx && !sai->synchronous[RX])) {
+	/*
+	 * 1) For Asynchronous mode, we must set RCR2 register for capture, and
+	 *    set TCR2 register for playback.
+	 * 2) For Tx sync with Rx clock, we must set RCR2 register for playback
+	 *    and capture.
+	 * 3) For Rx sync with Tx clock, we must set TCR2 register for playback
+	 *    and capture.
+	 * 4) For Tx and Rx are both Synchronous with another SAI, we just
+	 *    ignore it.
+	 */
+	if ((sai->synchronous[TX] && !sai->synchronous[RX]) ||
+	    (!tx && !sai->synchronous[RX])) {
 		regmap_update_bits(sai->regmap, FSL_SAI_RCR2,
 				   FSL_SAI_CR2_MSEL_MASK,
 				   FSL_SAI_CR2_MSEL(sai->mclk_id[tx]));
 		regmap_update_bits(sai->regmap, FSL_SAI_RCR2,
 				   FSL_SAI_CR2_DIV_MASK, savediv - 1);
-	} else {
+	} else if ((sai->synchronous[RX] && !sai->synchronous[TX]) ||
+		   (tx && !sai->synchronous[TX])) {
 		regmap_update_bits(sai->regmap, FSL_SAI_TCR2,
 				   FSL_SAI_CR2_MSEL_MASK,
 				   FSL_SAI_CR2_MSEL(sai->mclk_id[tx]));
@@ -415,6 +427,35 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 
 	val_cr4 |= FSL_SAI_CR4_FRSZ(channels);
 
+	/*
+	 * For SAI master mode, when Tx(Rx) sync with Rx(Tx) clock, Rx(Tx) will
+	 * generate bclk and frame clock for Tx(Rx), we should set RCR4(TCR4),
+	 * RCR5(TCR5) and RMR(TMR) for playback(capture), or there will be sync
+	 * error.
+	 */
+
+	if (!sai->is_slave_mode) {
+		if (!sai->synchronous[TX] && sai->synchronous[RX] && !tx) {
+			regmap_update_bits(sai->regmap, FSL_SAI_TCR4,
+				FSL_SAI_CR4_SYWD_MASK | FSL_SAI_CR4_FRSZ_MASK,
+				val_cr4);
+			regmap_update_bits(sai->regmap, FSL_SAI_TCR5,
+				FSL_SAI_CR5_WNW_MASK | FSL_SAI_CR5_W0W_MASK |
+				FSL_SAI_CR5_FBT_MASK, val_cr5);
+			regmap_write(sai->regmap, FSL_SAI_TMR,
+				~0UL - ((1 << channels) - 1));
+		} else if (!sai->synchronous[RX] && sai->synchronous[TX] && tx) {
+			regmap_update_bits(sai->regmap, FSL_SAI_RCR4,
+				FSL_SAI_CR4_SYWD_MASK | FSL_SAI_CR4_FRSZ_MASK,
+				val_cr4);
+			regmap_update_bits(sai->regmap, FSL_SAI_RCR5,
+				FSL_SAI_CR5_WNW_MASK | FSL_SAI_CR5_W0W_MASK |
+				FSL_SAI_CR5_FBT_MASK, val_cr5);
+			regmap_write(sai->regmap, FSL_SAI_RMR,
+				~0UL - ((1 << channels) - 1));
+		}
+	}
+
 	regmap_update_bits(sai->regmap, FSL_SAI_xCR4(tx),
 			   FSL_SAI_CR4_SYWD_MASK | FSL_SAI_CR4_FRSZ_MASK,
 			   val_cr4);
@@ -454,7 +495,8 @@ static int fsl_sai_trigger(struct snd_pcm_substream *substream, int cmd,
 	 * Rx sync with Tx clocks: Clear SYNC for Tx, set it for Rx.
 	 * Tx sync with Rx clocks: Clear SYNC for Rx, set it for Tx.
 	 */
-	regmap_update_bits(sai->regmap, FSL_SAI_TCR2, FSL_SAI_CR2_SYNC, 0);
+	regmap_update_bits(sai->regmap, FSL_SAI_TCR2, FSL_SAI_CR2_SYNC,
+		           sai->synchronous[TX] ? FSL_SAI_CR2_SYNC : 0);
 	regmap_update_bits(sai->regmap, FSL_SAI_RCR2, FSL_SAI_CR2_SYNC,
 			   sai->synchronous[RX] ? FSL_SAI_CR2_SYNC : 0);
 
@@ -608,6 +650,22 @@ static const struct snd_soc_component_driver fsl_component = {
 	.name           = "fsl-sai",
 };
 
+static struct reg_default fsl_sai_reg_defaults[] = {
+	{FSL_SAI_TCR1, 0},
+	{FSL_SAI_TCR2, 0},
+	{FSL_SAI_TCR3, 0},
+	{FSL_SAI_TCR4, 0},
+	{FSL_SAI_TCR5, 0},
+	{FSL_SAI_TDR,  0},
+	{FSL_SAI_TMR,  0},
+	{FSL_SAI_RCR1, 0},
+	{FSL_SAI_RCR2, 0},
+	{FSL_SAI_RCR3, 0},
+	{FSL_SAI_RCR4, 0},
+	{FSL_SAI_RCR5, 0},
+	{FSL_SAI_RMR,  0},
+};
+
 static bool fsl_sai_readable_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
@@ -641,13 +699,11 @@ static bool fsl_sai_volatile_reg(struct device *dev, unsigned int reg)
 	case FSL_SAI_RCSR:
 	case FSL_SAI_TFR:
 	case FSL_SAI_RFR:
-	case FSL_SAI_TDR:
 	case FSL_SAI_RDR:
 		return true;
 	default:
 		return false;
 	}
-
 }
 
 static bool fsl_sai_writeable_reg(struct device *dev, unsigned int reg)
@@ -680,6 +736,8 @@ static const struct regmap_config fsl_sai_regmap_config = {
 	.val_bits = 32,
 
 	.max_register = FSL_SAI_RMR,
+	.reg_defaults = fsl_sai_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(fsl_sai_reg_defaults),
 	.readable_reg = fsl_sai_readable_reg,
 	.volatile_reg = fsl_sai_volatile_reg,
 	.writeable_reg = fsl_sai_writeable_reg,

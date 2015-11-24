@@ -211,8 +211,7 @@ static int _rsnd_gen_regmap_init(struct rsnd_priv *priv,
 /*
  *		Gen2
  */
-static int rsnd_gen2_probe(struct platform_device *pdev,
-			   struct rsnd_priv *priv)
+static int rsnd_gen2_probe(struct rsnd_priv *priv)
 {
 	struct rsnd_regmap_field_conf conf_ssiu[] = {
 		RSND_GEN_S_REG(SSI_MODE0,	0x800),
@@ -235,7 +234,7 @@ static int rsnd_gen2_probe(struct platform_device *pdev,
 		RSND_GEN_S_REG(SCU_SYS_STATUS0,	0x1c8),
 		RSND_GEN_S_REG(SCU_SYS_INT_EN0,	0x1cc),
 		RSND_GEN_S_REG(SCU_SYS_STATUS1,	0x1d0),
-		RSND_GEN_S_REG(SCU_SYS_INT_EN1,	0x1c4),
+		RSND_GEN_S_REG(SCU_SYS_INT_EN1,	0x1d4),
 		RSND_GEN_M_REG(SRC_SWRSR,	0x200,	0x40),
 		RSND_GEN_M_REG(SRC_SRCIR,	0x204,	0x40),
 		RSND_GEN_M_REG(SRC_ADINR,	0x214,	0x40),
@@ -317,46 +316,14 @@ static int rsnd_gen2_probe(struct platform_device *pdev,
  *		Gen1
  */
 
-static int rsnd_gen1_probe(struct platform_device *pdev,
-			   struct rsnd_priv *priv)
+static int rsnd_gen1_probe(struct rsnd_priv *priv)
 {
-	struct rsnd_regmap_field_conf conf_sru[] = {
-		RSND_GEN_S_REG(SRC_ROUTE_SEL,	0x00),
-		RSND_GEN_S_REG(SRC_TMG_SEL0,	0x08),
-		RSND_GEN_S_REG(SRC_TMG_SEL1,	0x0c),
-		RSND_GEN_S_REG(SRC_TMG_SEL2,	0x10),
-		RSND_GEN_S_REG(SRC_ROUTE_CTRL,	0xc0),
-		RSND_GEN_S_REG(SSI_MODE0,	0xD0),
-		RSND_GEN_S_REG(SSI_MODE1,	0xD4),
-		RSND_GEN_M_REG(SRC_BUSIF_MODE,	0x20,	0x4),
-		RSND_GEN_M_REG(SRC_ROUTE_MODE0,	0x50,	0x8),
-		RSND_GEN_M_REG(SRC_SWRSR,	0x200,	0x40),
-		RSND_GEN_M_REG(SRC_SRCIR,	0x204,	0x40),
-		RSND_GEN_M_REG(SRC_ADINR,	0x214,	0x40),
-		RSND_GEN_M_REG(SRC_IFSCR,	0x21c,	0x40),
-		RSND_GEN_M_REG(SRC_IFSVR,	0x220,	0x40),
-		RSND_GEN_M_REG(SRC_SRCCR,	0x224,	0x40),
-		RSND_GEN_M_REG(SRC_MNFSR,	0x228,	0x40),
-		/*
-		 * ADD US
-		 *
-		 * SRC_STATUS
-		 * SRC_INT_EN
-		 * SCU_SYS_STATUS0
-		 * SCU_SYS_STATUS1
-		 * SCU_SYS_INT_EN0
-		 * SCU_SYS_INT_EN1
-		 */
-	};
 	struct rsnd_regmap_field_conf conf_adg[] = {
 		RSND_GEN_S_REG(BRRA,		0x00),
 		RSND_GEN_S_REG(BRRB,		0x04),
 		RSND_GEN_S_REG(SSICKR,		0x08),
 		RSND_GEN_S_REG(AUDIO_CLK_SEL0,	0x0c),
 		RSND_GEN_S_REG(AUDIO_CLK_SEL1,	0x10),
-		RSND_GEN_S_REG(AUDIO_CLK_SEL3,	0x18),
-		RSND_GEN_S_REG(AUDIO_CLK_SEL4,	0x1c),
-		RSND_GEN_S_REG(AUDIO_CLK_SEL5,	0x20),
 	};
 	struct rsnd_regmap_field_conf conf_ssi[] = {
 		RSND_GEN_M_REG(SSICR,		0x00,	0x40),
@@ -365,17 +332,14 @@ static int rsnd_gen1_probe(struct platform_device *pdev,
 		RSND_GEN_M_REG(SSIRDR,		0x0c,	0x40),
 		RSND_GEN_M_REG(SSIWSR,		0x20,	0x40),
 	};
-	int ret_sru;
 	int ret_adg;
 	int ret_ssi;
 
-	ret_sru  = rsnd_gen_regmap_init(priv, 9, RSND_GEN1_SRU, "sru", conf_sru);
 	ret_adg  = rsnd_gen_regmap_init(priv, 9, RSND_GEN1_ADG, "adg", conf_adg);
 	ret_ssi  = rsnd_gen_regmap_init(priv, 9, RSND_GEN1_SSI, "ssi", conf_ssi);
-	if (ret_sru  < 0 ||
-	    ret_adg  < 0 ||
+	if (ret_adg  < 0 ||
 	    ret_ssi  < 0)
-		return ret_sru | ret_adg | ret_ssi;
+		return ret_adg | ret_ssi;
 
 	return 0;
 }
@@ -383,27 +347,11 @@ static int rsnd_gen1_probe(struct platform_device *pdev,
 /*
  *		Gen
  */
-static void rsnd_of_parse_gen(struct platform_device *pdev,
-			      const struct rsnd_of_data *of_data,
-			      struct rsnd_priv *priv)
-{
-	struct rcar_snd_info *info = priv->info;
-
-	if (!of_data)
-		return;
-
-	info->flags = of_data->flags;
-}
-
-int rsnd_gen_probe(struct platform_device *pdev,
-		   const struct rsnd_of_data *of_data,
-		   struct rsnd_priv *priv)
+int rsnd_gen_probe(struct rsnd_priv *priv)
 {
 	struct device *dev = rsnd_priv_to_dev(priv);
 	struct rsnd_gen *gen;
 	int ret;
-
-	rsnd_of_parse_gen(pdev, of_data, priv);
 
 	gen = devm_kzalloc(dev, sizeof(*gen), GFP_KERNEL);
 	if (!gen) {
@@ -415,9 +363,9 @@ int rsnd_gen_probe(struct platform_device *pdev,
 
 	ret = -ENODEV;
 	if (rsnd_is_gen1(priv))
-		ret = rsnd_gen1_probe(pdev, priv);
+		ret = rsnd_gen1_probe(priv);
 	else if (rsnd_is_gen2(priv))
-		ret = rsnd_gen2_probe(pdev, priv);
+		ret = rsnd_gen2_probe(priv);
 
 	if (ret < 0)
 		dev_err(dev, "unknown generation R-Car sound device\n");
