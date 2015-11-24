@@ -265,8 +265,11 @@ static void dma_chan_put(struct dma_chan *chan)
 	module_put(dma_chan_to_owner(chan));
 
 	/* This channel is not in use anymore, free it */
-	if (!chan->client_count && chan->device->device_free_chan_resources)
+	if (!chan->client_count && chan->device->device_free_chan_resources) {
+		/* Make sure all operations have completed */
+		dmaengine_synchronize(chan);
 		chan->device->device_free_chan_resources(chan);
+	}
 
 	/* If the channel is used via a DMA request router, free the mapping */
 	if (chan->router && chan->router->route_free) {
@@ -493,6 +496,7 @@ int dma_get_slave_caps(struct dma_chan *chan, struct dma_slave_caps *caps)
 	caps->dst_addr_widths = device->dst_addr_widths;
 	caps->directions = device->directions;
 	caps->residue_granularity = device->residue_granularity;
+	caps->descriptor_reuse = device->descriptor_reuse;
 
 	/*
 	 * Some devices implement only pause (e.g. to get residuum) but no
