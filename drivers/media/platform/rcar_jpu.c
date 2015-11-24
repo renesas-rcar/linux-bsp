@@ -1300,16 +1300,16 @@ static int jpu_release(struct file *file)
 	struct jpu *jpu = video_drvdata(file);
 	struct jpu_ctx *ctx = fh_to_ctx(file->private_data);
 
-	mutex_lock(&jpu->mutex);
-	if (--jpu->ref_count == 0)
-		clk_disable_unprepare(jpu->clk);
-	mutex_unlock(&jpu->mutex);
-
 	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
 	v4l2_ctrl_handler_free(&ctx->ctrl_handler);
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
 	kfree(ctx);
+
+	mutex_lock(&jpu->mutex);
+	if (--jpu->ref_count == 0)
+		clk_disable_unprepare(jpu->clk);
+	mutex_unlock(&jpu->mutex);
 
 	return 0;
 }
@@ -1563,9 +1563,6 @@ static irqreturn_t jpu_irq_handler(int irq, void *dev_id)
 		dst_buf->timestamp = src_buf->timestamp;
 		if (src_buf->flags & V4L2_BUF_FLAG_TIMECODE)
 			dst_buf->timecode = src_buf->timecode;
-		dst_buf->flags &= ~V4L2_BUF_FLAG_TSTAMP_SRC_MASK;
-		dst_buf->flags |= src_buf->flags &
-					V4L2_BUF_FLAG_TSTAMP_SRC_MASK;
 		dst_buf->flags = src_buf->flags &
 			(V4L2_BUF_FLAG_TIMECODE | V4L2_BUF_FLAG_KEYFRAME |
 			 V4L2_BUF_FLAG_PFRAME | V4L2_BUF_FLAG_BFRAME |
