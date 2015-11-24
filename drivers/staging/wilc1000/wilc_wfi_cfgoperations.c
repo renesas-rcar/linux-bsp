@@ -21,8 +21,6 @@
 #define IS_MGMT_STATUS_SUCCES			0x040
 #define GET_PKT_OFFSET(a) (((a) >> 22) & 0x1ff)
 
-extern int linux_wlan_get_firmware(perInterface_wlan_t *p_nic);
-
 extern int mac_open(struct net_device *ndev);
 extern int mac_close(struct net_device *ndev);
 
@@ -507,8 +505,6 @@ int WILC_WFI_Set_PMKSA(u8 *bssid, struct wilc_priv *priv)
 
 
 }
-int linux_wlan_set_bssid(struct net_device *wilc_netdev, u8 *pBSSID);
-
 
 /**
  *  @brief      CfgConnectResult
@@ -564,7 +560,7 @@ static void CfgConnectResult(enum conn_event enuConnDisconnEvent,
 			eth_zero_addr(u8ConnectedSSID);
 
 			/*Invalidate u8WLANChannel value on wlan0 disconnect*/
-			if (!pstrWFIDrv->u8P2PConnect)
+			if (!pstrWFIDrv->p2p_connect)
 				u8WLANChannel = INVALID_CHANNEL;
 
 			PRINT_ER("Unspecified failure: Connection status %d : MAC status = %d\n", u16ConnectStatus, u8MacStatus);
@@ -623,7 +619,7 @@ static void CfgConnectResult(enum conn_event enuConnDisconnEvent,
 		eth_zero_addr(u8ConnectedSSID);
 
 		/*Invalidate u8WLANChannel value on wlan0 disconnect*/
-		if (!pstrWFIDrv->u8P2PConnect)
+		if (!pstrWFIDrv->p2p_connect)
 			u8WLANChannel = INVALID_CHANNEL;
 		/*Incase "P2P CLIENT Connected" send deauthentication reason by 3 to force the WPA_SUPPLICANT to directly change
 		 *      virtual interface to station*/
@@ -804,9 +800,10 @@ static int connect(struct wiphy *wiphy, struct net_device *dev,
 	PRINT_D(CFG80211_DBG, "Connecting to SSID [%s] on netdev [%p] host if [%p]\n", sme->ssid, dev, priv->hWILCWFIDrv);
 	if (!(strncmp(sme->ssid, "DIRECT-", 7))) {
 		PRINT_D(CFG80211_DBG, "Connected to Direct network,OBSS disabled\n");
-		pstrWFIDrv->u8P2PConnect = 1;
-	} else
-		pstrWFIDrv->u8P2PConnect = 0;
+		pstrWFIDrv->p2p_connect = 1;
+	} else {
+		pstrWFIDrv->p2p_connect = 0;
+	}
 	PRINT_INFO(CFG80211_DBG, "Required SSID = %s\n , AuthType = %d\n", sme->ssid, sme->auth_type);
 
 	for (i = 0; i < u32LastScannedNtwrksCountShadow; i++) {
@@ -997,9 +994,8 @@ static int connect(struct wiphy *wiphy, struct net_device *dev,
 
 	curr_channel = pstrNetworkInfo->u8channel;
 
-	if (!pstrWFIDrv->u8P2PConnect) {
+	if (!pstrWFIDrv->p2p_connect)
 		u8WLANChannel = pstrNetworkInfo->u8channel;
-	}
 
 	linux_wlan_set_bssid(dev, pstrNetworkInfo->au8bssid);
 
@@ -1041,7 +1037,7 @@ static int disconnect(struct wiphy *wiphy, struct net_device *dev, u16 reason_co
 
 	/*Invalidate u8WLANChannel value on wlan0 disconnect*/
 	pstrWFIDrv = (struct host_if_drv *)priv->hWILCWFIDrv;
-	if (!pstrWFIDrv->u8P2PConnect)
+	if (!pstrWFIDrv->p2p_connect)
 		u8WLANChannel = INVALID_CHANNEL;
 	linux_wlan_set_bssid(priv->dev, NullBssid);
 
@@ -1050,7 +1046,7 @@ static int disconnect(struct wiphy *wiphy, struct net_device *dev, u16 reason_co
 	u8P2Plocalrandom = 0x01;
 	u8P2Precvrandom = 0x00;
 	bWilc_ie = false;
-	pstrWFIDrv->u64P2p_MgmtTimeout = 0;
+	pstrWFIDrv->p2p_timeout = 0;
 
 	s32Error = host_int_disconnect(priv->hWILCWFIDrv, reason_code);
 	if (s32Error != 0) {
@@ -1412,7 +1408,7 @@ static int del_key(struct wiphy *wiphy, struct net_device *netdev,
 		g_key_gtk_params.seq = NULL;
 
 		/*Reset WILC_CHANGING_VIR_IF register to allow adding futrue keys to CE H/W*/
-		Set_machw_change_vir_if(netdev, false);
+		set_machw_change_vir_if(netdev, false);
 	}
 
 	if (key_index >= 0 && key_index <= 3) {
@@ -1566,16 +1562,17 @@ static int get_station(struct wiphy *wiphy, struct net_device *dev,
 						BIT(NL80211_STA_INFO_TX_FAILED) |
 						BIT(NL80211_STA_INFO_TX_BITRATE);
 
-		sinfo->signal		=  strStatistics.s8RSSI;
-		sinfo->rx_packets   =  strStatistics.u32RxCount;
-		sinfo->tx_packets   =  strStatistics.u32TxCount + strStatistics.u32TxFailureCount;
-		sinfo->tx_failed	=  strStatistics.u32TxFailureCount;
-		sinfo->txrate.legacy = strStatistics.u8LinkSpeed * 10;
+		sinfo->signal = strStatistics.rssi;
+		sinfo->rx_packets = strStatistics.rx_cnt;
+		sinfo->tx_packets = strStatistics.tx_cnt + strStatistics.tx_fail_cnt;
+		sinfo->tx_failed = strStatistics.tx_fail_cnt;
+		sinfo->txrate.legacy = strStatistics.link_speed * 10;
 
-		if ((strStatistics.u8LinkSpeed > TCP_ACK_FILTER_LINK_SPEED_THRESH) && (strStatistics.u8LinkSpeed != DEFAULT_LINK_SPEED))
-			Enable_TCP_ACK_Filter(true);
-		else if (strStatistics.u8LinkSpeed != DEFAULT_LINK_SPEED)
-			Enable_TCP_ACK_Filter(false);
+		if ((strStatistics.link_speed > TCP_ACK_FILTER_LINK_SPEED_THRESH) &&
+		    (strStatistics.link_speed != DEFAULT_LINK_SPEED))
+			enable_tcp_ack_filter(true);
+		else if (strStatistics.link_speed != DEFAULT_LINK_SPEED)
+			enable_tcp_ack_filter(false);
 
 		PRINT_D(CORECONFIG_DBG, "*** stats[%d][%d][%d][%d][%d]\n", sinfo->signal, sinfo->rx_packets, sinfo->tx_packets,
 			sinfo->tx_failed, sinfo->txrate.legacy);
@@ -1957,7 +1954,7 @@ void WILC_WFI_p2p_rx (struct net_device *dev, u8 *buff, u32 size)
 		if (ieee80211_is_action(buff[FRAME_TYPE_ID])) {
 			PRINT_D(GENERIC_DBG, "Rx Action Frame Type: %x %x\n", buff[ACTION_SUBTYPE_ID], buff[P2P_PUB_ACTION_SUBTYPE]);
 
-			if (priv->bCfgScanning && time_after_eq(jiffies, (unsigned long)pstrWFIDrv->u64P2p_MgmtTimeout)) {
+			if (priv->bCfgScanning && time_after_eq(jiffies, (unsigned long)pstrWFIDrv->p2p_timeout)) {
 				PRINT_D(GENERIC_DBG, "Receiving action frames from wrong channels\n");
 				return;
 			}
@@ -2330,14 +2327,14 @@ static int mgmt_tx(struct wiphy *wiphy,
 			}
 
 			PRINT_D(GENERIC_DBG, "TX: ACTION FRAME Type:%x : Chan:%d\n", buf[ACTION_SUBTYPE_ID], chan->hw_value);
-			pstrWFIDrv->u64P2p_MgmtTimeout = (jiffies + msecs_to_jiffies(wait));
+			pstrWFIDrv->p2p_timeout = (jiffies + msecs_to_jiffies(wait));
 
-			PRINT_D(GENERIC_DBG, "Current Jiffies: %lu Timeout:%llu\n", jiffies, pstrWFIDrv->u64P2p_MgmtTimeout);
-
+			PRINT_D(GENERIC_DBG, "Current Jiffies: %lu Timeout:%llu\n",
+				jiffies, pstrWFIDrv->p2p_timeout);
 		}
 
-		wilc_wlan_txq_add_mgmt_pkt(mgmt_tx, mgmt_tx->buff,
-					   mgmt_tx->size,
+		wilc_wlan_txq_add_mgmt_pkt(wdev->netdev, mgmt_tx,
+					   mgmt_tx->buff, mgmt_tx->size,
 					   WILC_WFI_mgmt_tx_complete);
 	} else {
 		PRINT_D(GENERIC_DBG, "This function transmits only management frames\n");
@@ -2357,7 +2354,7 @@ static int mgmt_tx_cancel_wait(struct wiphy *wiphy,
 
 
 	PRINT_D(GENERIC_DBG, "Tx Cancel wait :%lu\n", jiffies);
-	pstrWFIDrv->u64P2p_MgmtTimeout = jiffies;
+	pstrWFIDrv->p2p_timeout = jiffies;
 
 	if (!priv->bInP2PlistenState) {
 		cfg80211_remain_on_channel_expired(priv->wdev,
@@ -2551,7 +2548,7 @@ static int change_virtual_intf(struct wiphy *wiphy, struct net_device *dev,
 	PRINT_D(GENERIC_DBG, "Changing virtual interface, enable scan\n");
 	/*Set WILC_CHANGING_VIR_IF register to disallow adding futrue keys to CE H/W*/
 	if (g_ptk_keys_saved && g_gtk_keys_saved) {
-		Set_machw_change_vir_if(dev, true);
+		set_machw_change_vir_if(dev, true);
 	}
 
 	switch (type) {
@@ -2713,7 +2710,7 @@ static int change_virtual_intf(struct wiphy *wiphy, struct net_device *dev,
 
 			/*Refresh scan, to refresh the scan results to the wpa_supplicant. Set MachHw to false to enable further key installments*/
 			refresh_scan(priv, 1, true);
-			Set_machw_change_vir_if(dev, false);
+			set_machw_change_vir_if(dev, false);
 
 			if (wl->initialized)	{
 				for (i = 0; i < num_reg_frame; i++) {
@@ -2736,7 +2733,7 @@ static int change_virtual_intf(struct wiphy *wiphy, struct net_device *dev,
 		PRINT_D(CORECONFIG_DBG, "priv->hWILCWFIDrv[%p]\n", priv->hWILCWFIDrv);
 
 		PRINT_D(HOSTAPD_DBG, "Downloading AP firmware\n");
-		linux_wlan_get_firmware(nic);
+		linux_wlan_get_firmware(dev);
 		/*If wilc is running, then close-open to actually get new firmware running (serves P2P)*/
 		if (wl->initialized)	{
 			nic->iftype = AP_MODE;
@@ -2994,42 +2991,53 @@ static int add_station(struct wiphy *wiphy, struct net_device *dev,
 	nic = netdev_priv(dev);
 
 	if (nic->iftype == AP_MODE || nic->iftype == GO_MODE) {
-		memcpy(strStaParams.au8BSSID, mac, ETH_ALEN);
+		memcpy(strStaParams.bssid, mac, ETH_ALEN);
 		memcpy(priv->assoc_stainfo.au8Sta_AssociatedBss[params->aid], mac, ETH_ALEN);
-		strStaParams.u16AssocID = params->aid;
-		strStaParams.u8NumRates = params->supported_rates_len;
-		strStaParams.pu8Rates = params->supported_rates;
+		strStaParams.aid = params->aid;
+		strStaParams.rates_len = params->supported_rates_len;
+		strStaParams.rates = params->supported_rates;
 
 		PRINT_D(CFG80211_DBG, "Adding station parameters %d\n", params->aid);
 
 		PRINT_D(CFG80211_DBG, "BSSID = %x%x%x%x%x%x\n", priv->assoc_stainfo.au8Sta_AssociatedBss[params->aid][0], priv->assoc_stainfo.au8Sta_AssociatedBss[params->aid][1], priv->assoc_stainfo.au8Sta_AssociatedBss[params->aid][2], priv->assoc_stainfo.au8Sta_AssociatedBss[params->aid][3], priv->assoc_stainfo.au8Sta_AssociatedBss[params->aid][4],
 			priv->assoc_stainfo.au8Sta_AssociatedBss[params->aid][5]);
-		PRINT_D(HOSTAPD_DBG, "ASSOC ID = %d\n", strStaParams.u16AssocID);
-		PRINT_D(HOSTAPD_DBG, "Number of supported rates = %d\n", strStaParams.u8NumRates);
+		PRINT_D(HOSTAPD_DBG, "ASSOC ID = %d\n", strStaParams.aid);
+		PRINT_D(HOSTAPD_DBG, "Number of supported rates = %d\n",
+			strStaParams.rates_len);
 
 		if (params->ht_capa == NULL) {
-			strStaParams.bIsHTSupported = false;
+			strStaParams.ht_supported = false;
 		} else {
-			strStaParams.bIsHTSupported = true;
-			strStaParams.u16HTCapInfo = params->ht_capa->cap_info;
-			strStaParams.u8AmpduParams = params->ht_capa->ampdu_params_info;
-			memcpy(strStaParams.au8SuppMCsSet, &params->ht_capa->mcs, WILC_SUPP_MCS_SET_SIZE);
-			strStaParams.u16HTExtParams = params->ht_capa->extended_ht_cap_info;
-			strStaParams.u32TxBeamformingCap = params->ht_capa->tx_BF_cap_info;
-			strStaParams.u8ASELCap = params->ht_capa->antenna_selection_info;
+			strStaParams.ht_supported = true;
+			strStaParams.ht_capa_info = params->ht_capa->cap_info;
+			strStaParams.ht_ampdu_params = params->ht_capa->ampdu_params_info;
+			memcpy(strStaParams.ht_supp_mcs_set,
+			       &params->ht_capa->mcs,
+			       WILC_SUPP_MCS_SET_SIZE);
+			strStaParams.ht_ext_params = params->ht_capa->extended_ht_cap_info;
+			strStaParams.ht_tx_bf_cap = params->ht_capa->tx_BF_cap_info;
+			strStaParams.ht_ante_sel = params->ht_capa->antenna_selection_info;
 		}
 
-		strStaParams.u16FlagsMask = params->sta_flags_mask;
-		strStaParams.u16FlagsSet = params->sta_flags_set;
+		strStaParams.flags_mask = params->sta_flags_mask;
+		strStaParams.flags_set = params->sta_flags_set;
 
-		PRINT_D(HOSTAPD_DBG, "IS HT supported = %d\n", strStaParams.bIsHTSupported);
-		PRINT_D(HOSTAPD_DBG, "Capability Info = %d\n", strStaParams.u16HTCapInfo);
-		PRINT_D(HOSTAPD_DBG, "AMPDU Params = %d\n", strStaParams.u8AmpduParams);
-		PRINT_D(HOSTAPD_DBG, "HT Extended params = %d\n", strStaParams.u16HTExtParams);
-		PRINT_D(HOSTAPD_DBG, "Tx Beamforming Cap = %d\n", strStaParams.u32TxBeamformingCap);
-		PRINT_D(HOSTAPD_DBG, "Antenna selection info = %d\n", strStaParams.u8ASELCap);
-		PRINT_D(HOSTAPD_DBG, "Flag Mask = %d\n", strStaParams.u16FlagsMask);
-		PRINT_D(HOSTAPD_DBG, "Flag Set = %d\n", strStaParams.u16FlagsSet);
+		PRINT_D(HOSTAPD_DBG, "IS HT supported = %d\n",
+			strStaParams.ht_supported);
+		PRINT_D(HOSTAPD_DBG, "Capability Info = %d\n",
+			strStaParams.ht_capa_info);
+		PRINT_D(HOSTAPD_DBG, "AMPDU Params = %d\n",
+			strStaParams.ht_ampdu_params);
+		PRINT_D(HOSTAPD_DBG, "HT Extended params = %d\n",
+			strStaParams.ht_ext_params);
+		PRINT_D(HOSTAPD_DBG, "Tx Beamforming Cap = %d\n",
+			strStaParams.ht_tx_bf_cap);
+		PRINT_D(HOSTAPD_DBG, "Antenna selection info = %d\n",
+			strStaParams.ht_ante_sel);
+		PRINT_D(HOSTAPD_DBG, "Flag Mask = %d\n",
+			strStaParams.flags_mask);
+		PRINT_D(HOSTAPD_DBG, "Flag Set = %d\n",
+			strStaParams.flags_set);
 
 		s32Error = host_int_add_station(priv->hWILCWFIDrv, &strStaParams);
 		if (s32Error)
@@ -3108,40 +3116,52 @@ static int change_station(struct wiphy *wiphy, struct net_device *dev,
 	nic = netdev_priv(dev);
 
 	if (nic->iftype == AP_MODE || nic->iftype == GO_MODE) {
-		memcpy(strStaParams.au8BSSID, mac, ETH_ALEN);
-		strStaParams.u16AssocID = params->aid;
-		strStaParams.u8NumRates = params->supported_rates_len;
-		strStaParams.pu8Rates = params->supported_rates;
+		memcpy(strStaParams.bssid, mac, ETH_ALEN);
+		strStaParams.aid = params->aid;
+		strStaParams.rates_len = params->supported_rates_len;
+		strStaParams.rates = params->supported_rates;
 
-		PRINT_D(HOSTAPD_DBG, "BSSID = %x%x%x%x%x%x\n", strStaParams.au8BSSID[0], strStaParams.au8BSSID[1], strStaParams.au8BSSID[2], strStaParams.au8BSSID[3], strStaParams.au8BSSID[4],
-			strStaParams.au8BSSID[5]);
-		PRINT_D(HOSTAPD_DBG, "ASSOC ID = %d\n", strStaParams.u16AssocID);
-		PRINT_D(HOSTAPD_DBG, "Number of supported rates = %d\n", strStaParams.u8NumRates);
+		PRINT_D(HOSTAPD_DBG, "BSSID = %x%x%x%x%x%x\n",
+			strStaParams.bssid[0], strStaParams.bssid[1],
+			strStaParams.bssid[2], strStaParams.bssid[3],
+			strStaParams.bssid[4], strStaParams.bssid[5]);
+		PRINT_D(HOSTAPD_DBG, "ASSOC ID = %d\n", strStaParams.aid);
+		PRINT_D(HOSTAPD_DBG, "Number of supported rates = %d\n",
+			strStaParams.rates_len);
 
 		if (params->ht_capa == NULL) {
-			strStaParams.bIsHTSupported = false;
+			strStaParams.ht_supported = false;
 		} else {
-			strStaParams.bIsHTSupported = true;
-			strStaParams.u16HTCapInfo = params->ht_capa->cap_info;
-			strStaParams.u8AmpduParams = params->ht_capa->ampdu_params_info;
-			memcpy(strStaParams.au8SuppMCsSet, &params->ht_capa->mcs, WILC_SUPP_MCS_SET_SIZE);
-			strStaParams.u16HTExtParams = params->ht_capa->extended_ht_cap_info;
-			strStaParams.u32TxBeamformingCap = params->ht_capa->tx_BF_cap_info;
-			strStaParams.u8ASELCap = params->ht_capa->antenna_selection_info;
-
+			strStaParams.ht_supported = true;
+			strStaParams.ht_capa_info = params->ht_capa->cap_info;
+			strStaParams.ht_ampdu_params = params->ht_capa->ampdu_params_info;
+			memcpy(strStaParams.ht_supp_mcs_set,
+			       &params->ht_capa->mcs,
+			       WILC_SUPP_MCS_SET_SIZE);
+			strStaParams.ht_ext_params = params->ht_capa->extended_ht_cap_info;
+			strStaParams.ht_tx_bf_cap = params->ht_capa->tx_BF_cap_info;
+			strStaParams.ht_ante_sel = params->ht_capa->antenna_selection_info;
 		}
 
-		strStaParams.u16FlagsMask = params->sta_flags_mask;
-		strStaParams.u16FlagsSet = params->sta_flags_set;
+		strStaParams.flags_mask = params->sta_flags_mask;
+		strStaParams.flags_set = params->sta_flags_set;
 
-		PRINT_D(HOSTAPD_DBG, "IS HT supported = %d\n", strStaParams.bIsHTSupported);
-		PRINT_D(HOSTAPD_DBG, "Capability Info = %d\n", strStaParams.u16HTCapInfo);
-		PRINT_D(HOSTAPD_DBG, "AMPDU Params = %d\n", strStaParams.u8AmpduParams);
-		PRINT_D(HOSTAPD_DBG, "HT Extended params = %d\n", strStaParams.u16HTExtParams);
-		PRINT_D(HOSTAPD_DBG, "Tx Beamforming Cap = %d\n", strStaParams.u32TxBeamformingCap);
-		PRINT_D(HOSTAPD_DBG, "Antenna selection info = %d\n", strStaParams.u8ASELCap);
-		PRINT_D(HOSTAPD_DBG, "Flag Mask = %d\n", strStaParams.u16FlagsMask);
-		PRINT_D(HOSTAPD_DBG, "Flag Set = %d\n", strStaParams.u16FlagsSet);
+		PRINT_D(HOSTAPD_DBG, "IS HT supported = %d\n",
+			strStaParams.ht_supported);
+		PRINT_D(HOSTAPD_DBG, "Capability Info = %d\n",
+			strStaParams.ht_capa_info);
+		PRINT_D(HOSTAPD_DBG, "AMPDU Params = %d\n",
+			strStaParams.ht_ampdu_params);
+		PRINT_D(HOSTAPD_DBG, "HT Extended params = %d\n",
+			strStaParams.ht_ext_params);
+		PRINT_D(HOSTAPD_DBG, "Tx Beamforming Cap = %d\n",
+			strStaParams.ht_tx_bf_cap);
+		PRINT_D(HOSTAPD_DBG, "Antenna selection info = %d\n",
+			strStaParams.ht_ante_sel);
+		PRINT_D(HOSTAPD_DBG, "Flag Mask = %d\n",
+			strStaParams.flags_mask);
+		PRINT_D(HOSTAPD_DBG, "Flag Set = %d\n",
+			strStaParams.flags_set);
 
 		s32Error = host_int_edit_station(priv->hWILCWFIDrv, &strStaParams);
 		if (s32Error)

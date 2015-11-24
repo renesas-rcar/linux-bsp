@@ -225,7 +225,9 @@ cfs_wi_scheduler (void *arg)
 
 	/* CPT affinity scheduler? */
 	if (sched->ws_cptab != NULL)
-		cfs_cpt_bind(sched->ws_cptab, sched->ws_cpt);
+		if (cfs_cpt_bind(sched->ws_cptab, sched->ws_cpt) != 0)
+			CWARN("Failed to bind %s on CPT %d\n",
+			      sched->ws_name, sched->ws_cpt);
 
 	spin_lock(&cfs_wi_data.wi_glock);
 
@@ -325,7 +327,7 @@ cfs_wi_sched_destroy(struct cfs_wi_sched *sched)
 
 	spin_lock(&cfs_wi_data.wi_glock);
 	while (sched->ws_nthreads > 0) {
-		CDEBUG(IS_PO2(++i) ? D_WARNING : D_NET,
+		CDEBUG(is_power_of_2(++i) ? D_WARNING : D_NET,
 		       "waiting for %d threads of WI sched[%s] to terminate\n",
 		       sched->ws_nthreads, sched->ws_name);
 
@@ -360,8 +362,8 @@ cfs_wi_sched_create(char *name, struct cfs_cpt_table *cptab,
 	if (sched == NULL)
 		return -ENOMEM;
 
-	strncpy(sched->ws_name, name, CFS_WS_NAME_LEN);
-	sched->ws_name[CFS_WS_NAME_LEN - 1] = '\0';
+	strlcpy(sched->ws_name, name, CFS_WS_NAME_LEN);
+
 	sched->ws_cptab = cptab;
 	sched->ws_cpt = cpt;
 

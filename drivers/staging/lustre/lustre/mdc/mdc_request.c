@@ -447,9 +447,11 @@ static int mdc_unpack_acl(struct ptlrpc_request *req, struct lustre_md *md)
 #define mdc_unpack_acl(req, md) 0
 #endif
 
-int mdc_get_lustre_md(struct obd_export *exp, struct ptlrpc_request *req,
-		      struct obd_export *dt_exp, struct obd_export *md_exp,
-		      struct lustre_md *md)
+static int mdc_get_lustre_md(struct obd_export *exp,
+			     struct ptlrpc_request *req,
+			     struct obd_export *dt_exp,
+			     struct obd_export *md_exp,
+			     struct lustre_md *md)
 {
 	struct req_capsule *pill = &req->rq_pill;
 	int rc;
@@ -573,7 +575,7 @@ out:
 	return rc;
 }
 
-int mdc_free_lustre_md(struct obd_export *exp, struct lustre_md *md)
+static int mdc_free_lustre_md(struct obd_export *exp, struct lustre_md *md)
 {
 	return 0;
 }
@@ -737,8 +739,8 @@ static void mdc_free_open(struct md_open_data *mod)
 		ptlrpc_request_committed(mod->mod_close_req, committed);
 }
 
-int mdc_clear_open_replay_data(struct obd_export *exp,
-			       struct obd_client_handle *och)
+static int mdc_clear_open_replay_data(struct obd_export *exp,
+				      struct obd_client_handle *och)
 {
 	struct md_open_data *mod = och->och_mod;
 
@@ -2460,59 +2462,59 @@ static int mdc_get_remote_perm(struct obd_export *exp, const struct lu_fid *fid,
 }
 
 static struct obd_ops mdc_obd_ops = {
-	.o_owner	    = THIS_MODULE,
-	.o_setup	    = mdc_setup,
-	.o_precleanup       = mdc_precleanup,
-	.o_cleanup	  = mdc_cleanup,
-	.o_add_conn	 = client_import_add_conn,
-	.o_del_conn	 = client_import_del_conn,
-	.o_connect          = client_connect_import,
-	.o_disconnect       = client_disconnect_export,
-	.o_iocontrol	= mdc_iocontrol,
-	.o_set_info_async   = mdc_set_info_async,
-	.o_statfs	   = mdc_statfs,
-	.o_fid_init	    = client_fid_init,
-	.o_fid_fini	    = client_fid_fini,
-	.o_fid_alloc	= mdc_fid_alloc,
-	.o_import_event     = mdc_import_event,
-	.o_get_info	 = mdc_get_info,
-	.o_process_config   = mdc_process_config,
-	.o_get_uuid	 = mdc_get_uuid,
-	.o_quotactl	 = mdc_quotactl,
-	.o_quotacheck       = mdc_quotacheck
+	.owner          = THIS_MODULE,
+	.setup          = mdc_setup,
+	.precleanup     = mdc_precleanup,
+	.cleanup        = mdc_cleanup,
+	.add_conn       = client_import_add_conn,
+	.del_conn       = client_import_del_conn,
+	.connect        = client_connect_import,
+	.disconnect     = client_disconnect_export,
+	.iocontrol      = mdc_iocontrol,
+	.set_info_async = mdc_set_info_async,
+	.statfs         = mdc_statfs,
+	.fid_init       = client_fid_init,
+	.fid_fini       = client_fid_fini,
+	.fid_alloc      = mdc_fid_alloc,
+	.import_event   = mdc_import_event,
+	.get_info       = mdc_get_info,
+	.process_config = mdc_process_config,
+	.get_uuid       = mdc_get_uuid,
+	.quotactl       = mdc_quotactl,
+	.quotacheck     = mdc_quotacheck
 };
 
 static struct md_ops mdc_md_ops = {
-	.m_getstatus	= mdc_getstatus,
-	.m_null_inode	    = mdc_null_inode,
-	.m_find_cbdata      = mdc_find_cbdata,
-	.m_close	    = mdc_close,
-	.m_create	   = mdc_create,
-	.m_done_writing     = mdc_done_writing,
-	.m_enqueue	  = mdc_enqueue,
-	.m_getattr	  = mdc_getattr,
-	.m_getattr_name     = mdc_getattr_name,
-	.m_intent_lock      = mdc_intent_lock,
-	.m_link	     = mdc_link,
-	.m_is_subdir	= mdc_is_subdir,
-	.m_rename	   = mdc_rename,
-	.m_setattr	  = mdc_setattr,
-	.m_setxattr	 = mdc_setxattr,
-	.m_getxattr	 = mdc_getxattr,
-	.m_sync	     = mdc_sync,
-	.m_readpage	 = mdc_readpage,
-	.m_unlink	   = mdc_unlink,
-	.m_cancel_unused    = mdc_cancel_unused,
-	.m_init_ea_size     = mdc_init_ea_size,
-	.m_set_lock_data    = mdc_set_lock_data,
-	.m_lock_match       = mdc_lock_match,
-	.m_get_lustre_md    = mdc_get_lustre_md,
-	.m_free_lustre_md   = mdc_free_lustre_md,
-	.m_set_open_replay_data = mdc_set_open_replay_data,
-	.m_clear_open_replay_data = mdc_clear_open_replay_data,
-	.m_get_remote_perm  = mdc_get_remote_perm,
-	.m_intent_getattr_async = mdc_intent_getattr_async,
-	.m_revalidate_lock      = mdc_revalidate_lock
+	.getstatus		= mdc_getstatus,
+	.null_inode		= mdc_null_inode,
+	.find_cbdata		= mdc_find_cbdata,
+	.close			= mdc_close,
+	.create			= mdc_create,
+	.done_writing		= mdc_done_writing,
+	.enqueue		= mdc_enqueue,
+	.getattr		= mdc_getattr,
+	.getattr_name		= mdc_getattr_name,
+	.intent_lock		= mdc_intent_lock,
+	.link			= mdc_link,
+	.is_subdir		= mdc_is_subdir,
+	.rename			= mdc_rename,
+	.setattr		= mdc_setattr,
+	.setxattr		= mdc_setxattr,
+	.getxattr		= mdc_getxattr,
+	.sync			= mdc_sync,
+	.readpage		= mdc_readpage,
+	.unlink			= mdc_unlink,
+	.cancel_unused		= mdc_cancel_unused,
+	.init_ea_size		= mdc_init_ea_size,
+	.set_lock_data		= mdc_set_lock_data,
+	.lock_match		= mdc_lock_match,
+	.get_lustre_md		= mdc_get_lustre_md,
+	.free_lustre_md		= mdc_free_lustre_md,
+	.set_open_replay_data	= mdc_set_open_replay_data,
+	.clear_open_replay_data	= mdc_clear_open_replay_data,
+	.get_remote_perm	= mdc_get_remote_perm,
+	.intent_getattr_async	= mdc_intent_getattr_async,
+	.revalidate_lock	= mdc_revalidate_lock
 };
 
 static int __init mdc_init(void)
@@ -2530,7 +2532,7 @@ static void /*__exit*/ mdc_exit(void)
 	class_unregister_type(LUSTRE_MDC_NAME);
 }
 
-MODULE_AUTHOR("Sun Microsystems, Inc. <http://www.lustre.org/>");
+MODULE_AUTHOR("OpenSFS, Inc. <http://www.lustre.org/>");
 MODULE_DESCRIPTION("Lustre Metadata Client");
 MODULE_LICENSE("GPL");
 

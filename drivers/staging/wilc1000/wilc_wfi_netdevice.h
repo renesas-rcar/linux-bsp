@@ -213,9 +213,11 @@ void linux_wlan_mac_indicate(struct wilc *wilc, int flag);
 void linux_wlan_rx_complete(void);
 void linux_wlan_dbg(u8 *buff);
 int linux_wlan_lock_timeout(void *vp, u32 timeout);
-void wl_wlan_cleanup(void);
+void wl_wlan_cleanup(struct wilc *wilc);
 int wilc_netdev_init(struct wilc **wilc);
 void wilc1000_wlan_deinit(struct net_device *dev);
 void WILC_WFI_mgmt_rx(struct wilc *wilc, u8 *buff, u32 size);
-u16 Set_machw_change_vir_if(struct net_device *dev, bool bValue);
+u16 set_machw_change_vir_if(struct net_device *dev, bool value);
+int linux_wlan_get_firmware(struct net_device *dev);
+int linux_wlan_set_bssid(struct net_device *wilc_netdev, u8 *bssid);
 #endif

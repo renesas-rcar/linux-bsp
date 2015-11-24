@@ -146,7 +146,7 @@ static void linux_sdio_remove(struct sdio_func *func)
 	struct wilc_sdio *wl_sdio;
 
 	wl_sdio = sdio_get_drvdata(func);
-	wl_wlan_cleanup();
+	wl_wlan_cleanup(wl_sdio->wilc);
 	kfree(wl_sdio);
 }
 
@@ -214,7 +214,7 @@ static int linux_sdio_get_speed(void)
 	return local_sdio_func->card->host->ios.clock;
 }
 
-int linux_sdio_init(void *pv)
+int linux_sdio_init(void)
 {
 
 	/**

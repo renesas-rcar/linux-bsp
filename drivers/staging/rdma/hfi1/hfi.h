@@ -100,6 +100,12 @@ extern unsigned long hfi1_cap_mask;
 			HFI1_CAP_MISC_MASK)
 
 /*
+ * Control context is always 0 and handles the error packets.
+ * It also handles the VL15 and multicast packets.
+ */
+#define HFI1_CTRL_CTXT    0
+
+/*
  * per driver stats, either not device nor port-specific, or
  * summed over all of the devices and ports.
  * They are described by name via ipathfs filesystem, so layout
@@ -138,15 +144,6 @@ extern const struct pci_error_handlers hfi1_pci_err_handler;
 #ifdef CONFIG_DEBUG_FS
 struct hfi1_opcode_stats_perctx;
 #endif
-
-/*
- * struct ps_state keeps state associated with RX queue "prescanning"
- * (prescanning for FECNs, and BECNs), if prescanning is in use.
- */
-struct ps_state {
-	u32 ps_head;
-	int initialized;
-};
 
 struct ctxt_eager_bufs {
 	ssize_t size;            /* total size of eager buffers */
@@ -243,7 +240,7 @@ struct hfi1_ctxtdata {
 	/* chip offset of PIO buffers for this ctxt */
 	u32 piobufs;
 	/* per-context configuration flags */
-	u16 flags;
+	u32 flags;
 	/* per-context event flags for fileops/intr communication */
 	unsigned long event_flags;
 	/* WAIT_RCV that timed out, no interrupt */
@@ -301,10 +298,6 @@ struct hfi1_ctxtdata {
 	struct task_struct *progress;
 	struct list_head sdma_queues;
 	spinlock_t sdma_qlock;
-
-#ifdef CONFIG_PRESCAN_RXQ
-	struct ps_state ps_state;
-#endif /* CONFIG_PRESCAN_RXQ */
 
 	/*
 	 * The interrupt handler for a particular receive context can vary
@@ -1061,12 +1054,10 @@ struct hfi1_devdata {
 	 * Handlers for outgoing data so that snoop/capture does not
 	 * have to have its hooks in the send path
 	 */
-	int (*process_pio_send)(struct hfi1_qp *qp, struct ahg_ib_header *ibhdr,
-				u32 hdrwords, struct hfi1_sge_state *ss,
-				u32 len, u32 plen, u32 dwords, u64 pbc);
-	int (*process_dma_send)(struct hfi1_qp *qp, struct ahg_ib_header *ibhdr,
-				u32 hdrwords, struct hfi1_sge_state *ss,
-				u32 len, u32 plen, u32 dwords, u64 pbc);
+	int (*process_pio_send)(struct hfi1_qp *qp, struct hfi1_pkt_state *ps,
+				u64 pbc);
+	int (*process_dma_send)(struct hfi1_qp *qp, struct hfi1_pkt_state *ps,
+				u64 pbc);
 	void (*pio_inline_send)(struct hfi1_devdata *dd, struct pio_buf *pbuf,
 				u64 pbc, const void *from, size_t count);
 
@@ -1084,6 +1075,10 @@ struct hfi1_devdata {
 	/* Save the enabled LCB error bits */
 	u64 lcb_err_en;
 	u8 dc_shutdown;
+
+	/* receive context tail dummy address */
+	__le64 *rcvhdrtail_dummy_kvaddr;
+	dma_addr_t rcvhdrtail_dummy_physaddr;
 };
 
 /* 8051 firmware version helper */
@@ -1414,26 +1409,12 @@ void reset_link_credits(struct hfi1_devdata *dd);
 void assign_remote_cm_au_table(struct hfi1_devdata *dd, u8 vcu);
 
 int snoop_recv_handler(struct hfi1_packet *packet);
-int snoop_send_dma_handler(struct hfi1_qp *qp, struct ahg_ib_header *ibhdr,
-			   u32 hdrwords, struct hfi1_sge_state *ss, u32 len,
-			   u32 plen, u32 dwords, u64 pbc);
-int snoop_send_pio_handler(struct hfi1_qp *qp, struct ahg_ib_header *ibhdr,
-			   u32 hdrwords, struct hfi1_sge_state *ss, u32 len,
-			   u32 plen, u32 dwords, u64 pbc);
+int snoop_send_dma_handler(struct hfi1_qp *qp, struct hfi1_pkt_state *ps,
+			   u64 pbc);
+int snoop_send_pio_handler(struct hfi1_qp *qp, struct hfi1_pkt_state *ps,
+			   u64 pbc);
 void snoop_inline_pio_send(struct hfi1_devdata *dd, struct pio_buf *pbuf,
 			   u64 pbc, const void *from, size_t count);
-
-/* for use in system calls, where we want to know device type, etc. */
-#define ctxt_fp(fp) \
-	(((struct hfi1_filedata *)(fp)->private_data)->uctxt)
-#define subctxt_fp(fp) \
-	(((struct hfi1_filedata *)(fp)->private_data)->subctxt)
-#define tidcursor_fp(fp) \
-	(((struct hfi1_filedata *)(fp)->private_data)->tidcursor)
-#define user_sdma_pkt_fp(fp) \
-	(((struct hfi1_filedata *)(fp)->private_data)->pq)
-#define user_sdma_comp_fp(fp) \
-	(((struct hfi1_filedata *)(fp)->private_data)->cq)
 
 static inline struct hfi1_devdata *dd_from_ppd(struct hfi1_pportdata *ppd)
 {
@@ -1612,7 +1593,6 @@ void hfi1_pcie_flr(struct hfi1_devdata *);
 int pcie_speeds(struct hfi1_devdata *);
 void request_msix(struct hfi1_devdata *, u32 *, struct hfi1_msix_entry *);
 void hfi1_enable_intx(struct pci_dev *);
-void hfi1_nomsix(struct hfi1_devdata *);
 void restore_pci_variables(struct hfi1_devdata *dd);
 int do_pcie_gen3_transition(struct hfi1_devdata *dd);
 int parse_platform_config(struct hfi1_devdata *dd);

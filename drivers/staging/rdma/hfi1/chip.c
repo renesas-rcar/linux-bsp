@@ -121,8 +121,8 @@ struct flag_table {
 #define SEC_SC_HALTED		0x4	/* per-context only */
 #define SEC_SPC_FREEZE		0x8	/* per-HFI only */
 
-#define VL15CTXT                  1
 #define MIN_KERNEL_KCTXTS         2
+#define FIRST_KERNEL_KCTXT        1
 #define NUM_MAP_REGS             32
 
 /* Bit offset into the GUID which carries HFI id information */
@@ -4774,13 +4774,25 @@ int read_lcb_csr(struct hfi1_devdata *dd, u32 addr, u64 *data)
  */
 static int write_lcb_via_8051(struct hfi1_devdata *dd, u32 addr, u64 data)
 {
+	u32 regno;
+	int ret;
 
-	if (acquire_lcb_access(dd, 0) == 0) {
-		write_csr(dd, addr, data);
-		release_lcb_access(dd, 0);
-		return 0;
+	if (dd->icode == ICODE_FUNCTIONAL_SIMULATOR ||
+	    (dd->dc8051_ver < dc8051_ver(0, 20))) {
+		if (acquire_lcb_access(dd, 0) == 0) {
+			write_csr(dd, addr, data);
+			release_lcb_access(dd, 0);
+			return 0;
+		}
+		return -EBUSY;
 	}
-	return -EBUSY;
+
+	/* register is an index of LCB registers: (offset - base) / 8 */
+	regno = (addr - DC_LCB_CFG_RUN) >> 3;
+	ret = do_8051_command(dd, HCMD_WRITE_LCB_CSR, regno, &data);
+	if (ret != HCMD_SUCCESS)
+		return -EBUSY;
+	return 0;
 }
 
 /*
@@ -4860,6 +4872,26 @@ static int do_8051_command(
 	 * If there is no timeout, then the 8051 command interface is
 	 * waiting for a command.
 	 */
+
+	/*
+	 * When writing a LCB CSR, out_data contains the full value to
+	 * to be written, while in_data contains the relative LCB
+	 * address in 7:0.  Do the work here, rather than the caller,
+	 * of distrubting the write data to where it needs to go:
+	 *
+	 * Write data
+	 *   39:00 -> in_data[47:8]
+	 *   47:40 -> DC8051_CFG_EXT_DEV_0.RETURN_CODE
+	 *   63:48 -> DC8051_CFG_EXT_DEV_0.RSP_DATA
+	 */
+	if (type == HCMD_WRITE_LCB_CSR) {
+		in_data |= ((*out_data) & 0xffffffffffull) << 8;
+		reg = ((((*out_data) >> 40) & 0xff) <<
+				DC_DC8051_CFG_EXT_DEV_0_RETURN_CODE_SHIFT)
+		      | ((((*out_data) >> 48) & 0xffff) <<
+				DC_DC8051_CFG_EXT_DEV_0_RSP_DATA_SHIFT);
+		write_csr(dd, DC_DC8051_CFG_EXT_DEV_0, reg);
+	}
 
 	/*
 	 * Do two writes: the first to stabilize the type and req_data, the
@@ -7748,11 +7780,22 @@ void hfi1_rcvctrl(struct hfi1_devdata *dd, unsigned int op, int ctxt)
 					& RCV_TID_CTRL_TID_BASE_INDEX_MASK)
 				<< RCV_TID_CTRL_TID_BASE_INDEX_SHIFT);
 		write_kctxt_csr(dd, ctxt, RCV_TID_CTRL, reg);
-		if (ctxt == VL15CTXT)
-			write_csr(dd, RCV_VL15, VL15CTXT);
+		if (ctxt == HFI1_CTRL_CTXT)
+			write_csr(dd, RCV_VL15, HFI1_CTRL_CTXT);
 	}
 	if (op & HFI1_RCVCTRL_CTXT_DIS) {
 		write_csr(dd, RCV_VL15, 0);
+		/*
+		 * When receive context is being disabled turn on tail
+		 * update with a dummy tail address and then disable
+		 * receive context.
+		 */
+		if (dd->rcvhdrtail_dummy_physaddr) {
+			write_kctxt_csr(dd, ctxt, RCV_HDR_TAIL_ADDR,
+					dd->rcvhdrtail_dummy_physaddr);
+			rcvctrl |= RCV_CTXT_CTRL_TAIL_UPD_SMASK;
+		}
+
 		rcvctrl &= ~RCV_CTXT_CTRL_ENABLE_SMASK;
 	}
 	if (op & HFI1_RCVCTRL_INTRAVAIL_ENB)
@@ -7822,10 +7865,11 @@ void hfi1_rcvctrl(struct hfi1_devdata *dd, unsigned int op, int ctxt)
 	if (op & (HFI1_RCVCTRL_TAILUPD_DIS | HFI1_RCVCTRL_CTXT_DIS))
 		/*
 		 * If the context has been disabled and the Tail Update has
-		 * been cleared, clear the RCV_HDR_TAIL_ADDR CSR so
-		 * it doesn't contain an address that is invalid.
+		 * been cleared, set the RCV_HDR_TAIL_ADDR CSR to dummy address
+		 * so it doesn't contain an address that is invalid.
 		 */
-		write_kctxt_csr(dd, ctxt, RCV_HDR_TAIL_ADDR, 0);
+		write_kctxt_csr(dd, ctxt, RCV_HDR_TAIL_ADDR,
+				dd->rcvhdrtail_dummy_physaddr);
 }
 
 u32 hfi1_read_cntrs(struct hfi1_devdata *dd, loff_t pos, char **namep,
@@ -8785,7 +8829,7 @@ static void clean_up_interrupts(struct hfi1_devdata *dd)
 	/* turn off interrupts */
 	if (dd->num_msix_entries) {
 		/* MSI-X */
-		hfi1_nomsix(dd);
+		pci_disable_msix(dd->pcidev);
 	} else {
 		/* INTx */
 		disable_intx(dd->pcidev);
@@ -8840,12 +8884,6 @@ static void remap_sdma_interrupts(struct hfi1_devdata *dd,
 		msix_intr);
 }
 
-static void remap_receive_available_interrupt(struct hfi1_devdata *dd,
-					      int rx, int msix_intr)
-{
-	remap_intr(dd, IS_RCVAVAIL_START + rx, msix_intr);
-}
-
 static int request_intx_irq(struct hfi1_devdata *dd)
 {
 	int ret;
@@ -8870,7 +8908,7 @@ static int request_msix_irqs(struct hfi1_devdata *dd)
 	int first_general, last_general;
 	int first_sdma, last_sdma;
 	int first_rx, last_rx;
-	int first_cpu, restart_cpu, curr_cpu;
+	int first_cpu, curr_cpu;
 	int rcv_cpu, sdma_cpu;
 	int i, ret = 0, possible;
 	int ht;
@@ -8909,22 +8947,19 @@ static int request_msix_irqs(struct hfi1_devdata *dd)
 			topology_sibling_cpumask(cpumask_first(local_mask)));
 	for (i = possible/ht; i < possible; i++)
 		cpumask_clear_cpu(i, def);
-	/* reset possible */
-	possible = cpumask_weight(def);
 	/* def now has full cores on chosen node*/
 	first_cpu = cpumask_first(def);
 	if (nr_cpu_ids >= first_cpu)
 		first_cpu++;
-	restart_cpu = first_cpu;
-	curr_cpu = restart_cpu;
+	curr_cpu = first_cpu;
 
-	for (i = first_cpu; i < dd->n_krcv_queues + first_cpu; i++) {
+	/*  One context is reserved as control context */
+	for (i = first_cpu; i < dd->n_krcv_queues + first_cpu - 1; i++) {
 		cpumask_clear_cpu(curr_cpu, def);
 		cpumask_set_cpu(curr_cpu, rcv);
-		if (curr_cpu >= possible)
-			curr_cpu = restart_cpu;
-		else
-			curr_cpu++;
+		curr_cpu = cpumask_next(curr_cpu, def);
+		if (curr_cpu >= nr_cpu_ids)
+			break;
 	}
 	/* def mask has non-rcv, rcv has recv mask */
 	rcv_cpu = cpumask_first(rcv);
@@ -8983,7 +9018,7 @@ static int request_msix_irqs(struct hfi1_devdata *dd)
 			snprintf(me->name, sizeof(me->name),
 				DRIVER_NAME"_%d kctxt%d", dd->unit, idx);
 			err_info = "receive context";
-			remap_receive_available_interrupt(dd, idx, i);
+			remap_intr(dd, IS_RCVAVAIL_START + idx, i);
 		} else {
 			/* not in our expected range - complain, then
 			   ignore it */
@@ -9018,17 +9053,26 @@ static int request_msix_irqs(struct hfi1_devdata *dd)
 		if (handler == sdma_interrupt) {
 			dd_dev_info(dd, "sdma engine %d cpu %d\n",
 				sde->this_idx, sdma_cpu);
+			sde->cpu = sdma_cpu;
 			cpumask_set_cpu(sdma_cpu, dd->msix_entries[i].mask);
 			sdma_cpu = cpumask_next(sdma_cpu, def);
 			if (sdma_cpu >= nr_cpu_ids)
 				sdma_cpu = cpumask_first(def);
 		} else if (handler == receive_context_interrupt) {
-			dd_dev_info(dd, "rcv ctxt %d cpu %d\n",
-				rcd->ctxt, rcv_cpu);
-			cpumask_set_cpu(rcv_cpu, dd->msix_entries[i].mask);
-			rcv_cpu = cpumask_next(rcv_cpu, rcv);
-			if (rcv_cpu >= nr_cpu_ids)
-				rcv_cpu = cpumask_first(rcv);
+			dd_dev_info(dd, "rcv ctxt %d cpu %d\n", rcd->ctxt,
+				    (rcd->ctxt == HFI1_CTRL_CTXT) ?
+					    cpumask_first(def) : rcv_cpu);
+			if (rcd->ctxt == HFI1_CTRL_CTXT) {
+				/* map to first default */
+				cpumask_set_cpu(cpumask_first(def),
+						dd->msix_entries[i].mask);
+			} else {
+				cpumask_set_cpu(rcv_cpu,
+						dd->msix_entries[i].mask);
+				rcv_cpu = cpumask_next(rcv_cpu, rcv);
+				if (rcv_cpu >= nr_cpu_ids)
+					rcv_cpu = cpumask_first(rcv);
+			}
 		} else {
 			/* otherwise first def */
 			dd_dev_info(dd, "%s cpu %d\n",
@@ -9161,11 +9205,18 @@ static int set_up_context_variables(struct hfi1_devdata *dd)
 	/*
 	 * Kernel contexts: (to be fixed later):
 	 * - min or 2 or 1 context/numa
-	 * - Context 0 - default/errors
-	 * - Context 1 - VL15
+	 * - Context 0 - control context (VL15/multicast/error)
+	 * - Context 1 - default context
 	 */
 	if (n_krcvqs)
-		num_kernel_contexts = n_krcvqs + MIN_KERNEL_KCTXTS;
+		/*
+		 * Don't count context 0 in n_krcvqs since
+		 * is isn't used for normal verbs traffic.
+		 *
+		 * krcvqs will reflect number of kernel
+		 * receive contexts above 0.
+		 */
+		num_kernel_contexts = n_krcvqs + MIN_KERNEL_KCTXTS - 1;
 	else
 		num_kernel_contexts = num_online_nodes();
 	num_kernel_contexts =
@@ -9455,7 +9506,7 @@ static void reset_asic_csrs(struct hfi1_devdata *dd)
 	/* We might want to retain this state across FLR if we ever use it */
 	write_csr(dd, ASIC_CFG_DRV_STR, 0);
 
-	write_csr(dd, ASIC_CFG_THERM_POLL_EN, 0);
+	/* ASIC_CFG_THERM_POLL_EN leave alone */
 	/* ASIC_STS_THERM read-only */
 	/* ASIC_CFG_RESET leave alone */
 
@@ -9929,19 +9980,16 @@ static void init_chip(struct hfi1_devdata *dd)
 		setextled(dd, 0);
 	/*
 	 * Clear the QSFP reset.
-	 * A0 leaves the out lines floating on power on, then on an FLR
-	 * enforces a 0 on all out pins.  The driver does not touch
+	 * An FLR enforces a 0 on all out pins. The driver does not touch
 	 * ASIC_QSFPn_OUT otherwise.  This leaves RESET_N low and
-	 * anything  plugged constantly in reset, if it pays attention
+	 * anything plugged constantly in reset, if it pays attention
 	 * to RESET_N.
-	 * A prime example of this is SiPh. For now, set all pins high.
+	 * Prime examples of this are optical cables. Set all pins high.
 	 * I2CCLK and I2CDAT will change per direction, and INT_N and
 	 * MODPRS_N are input only and their value is ignored.
 	 */
-	if (is_a0(dd)) {
-		write_csr(dd, ASIC_QSFP1_OUT, 0x1f);
-		write_csr(dd, ASIC_QSFP2_OUT, 0x1f);
-	}
+	write_csr(dd, ASIC_QSFP1_OUT, 0x1f);
+	write_csr(dd, ASIC_QSFP2_OUT, 0x1f);
 }
 
 static void init_early_variables(struct hfi1_devdata *dd)
@@ -10017,12 +10065,6 @@ static void init_qpmap_table(struct hfi1_devdata *dd,
 	u64 ctxt = first_ctxt;
 
 	for (i = 0; i < 256;) {
-		if (ctxt == VL15CTXT) {
-			ctxt++;
-			if (ctxt > last_ctxt)
-				ctxt = first_ctxt;
-			continue;
-		}
 		reg |= ctxt << (8 * (i % 8));
 		i++;
 		ctxt++;
@@ -10135,19 +10177,13 @@ static void init_qos(struct hfi1_devdata *dd, u32 first_ctxt)
 	/* Enable RSM */
 	add_rcvctrl(dd, RCV_CTRL_RCV_RSM_ENABLE_SMASK);
 	kfree(rsmmap);
-	/* map everything else (non-VL15) to context 0 */
-	init_qpmap_table(
-		dd,
-		0,
-		0);
+	/* map everything else to first context */
+	init_qpmap_table(dd, FIRST_KERNEL_KCTXT, MIN_KERNEL_KCTXTS - 1);
 	dd->qos_shift = n + 1;
 	return;
 bail:
 	dd->qos_shift = 1;
-	init_qpmap_table(
-		dd,
-		dd->n_krcv_queues > MIN_KERNEL_KCTXTS ? MIN_KERNEL_KCTXTS : 0,
-		dd->n_krcv_queues - 1);
+	init_qpmap_table(dd, FIRST_KERNEL_KCTXT, dd->n_krcv_queues - 1);
 }
 
 static void init_rxe(struct hfi1_devdata *dd)
@@ -10803,7 +10839,9 @@ static int thermal_init(struct hfi1_devdata *dd)
 
 	acquire_hw_mutex(dd);
 	dd_dev_info(dd, "Initializing thermal sensor\n");
-
+	/* Disable polling of thermal readings */
+	write_csr(dd, ASIC_CFG_THERM_POLL_EN, 0x0);
+	msleep(100);
 	/* Thermal Sensor Initialization */
 	/*    Step 1: Reset the Thermal SBus Receiver */
 	ret = sbus_request_slow(dd, SBUS_THERMAL, 0x0,

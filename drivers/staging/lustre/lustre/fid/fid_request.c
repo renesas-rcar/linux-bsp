@@ -142,27 +142,6 @@ out_req:
 	return rc;
 }
 
-/* Request sequence-controller node to allocate new super-sequence. */
-int seq_client_alloc_super(struct lu_client_seq *seq,
-			   const struct lu_env *env)
-{
-	int rc;
-
-	mutex_lock(&seq->lcs_mutex);
-
-	/* Check whether the connection to seq controller has been
-	 * setup (lcs_exp != NULL) */
-	if (!seq->lcs_exp) {
-		mutex_unlock(&seq->lcs_mutex);
-		return -EINPROGRESS;
-	}
-
-	rc = seq_client_rpc(seq, &seq->lcs_space,
-			    SEQ_ALLOC_SUPER, "super");
-	mutex_unlock(&seq->lcs_mutex);
-	return rc;
-}
-
 /* Request sequence-controller node to allocate new meta-sequence. */
 static int seq_client_alloc_meta(const struct lu_env *env,
 				 struct lu_client_seq *seq)
@@ -483,7 +462,7 @@ static void __exit fid_mod_exit(void)
 		ldebugfs_remove(&seq_debugfs_dir);
 }
 
-MODULE_AUTHOR("Sun Microsystems, Inc. <http://www.lustre.org/>");
+MODULE_AUTHOR("OpenSFS, Inc. <http://www.lustre.org/>");
 MODULE_DESCRIPTION("Lustre FID Module");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.1.0");

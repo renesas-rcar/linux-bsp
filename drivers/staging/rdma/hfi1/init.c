@@ -60,6 +60,7 @@
 #include "hfi.h"
 #include "device.h"
 #include "common.h"
+#include "trace.h"
 #include "mad.h"
 #include "sdma.h"
 #include "debugfs.h"
@@ -89,7 +90,7 @@ MODULE_PARM_DESC(
 u8 krcvqs[RXE_NUM_DATA_VL];
 int krcvqsset;
 module_param_array(krcvqs, byte, &krcvqsset, S_IRUGO);
-MODULE_PARM_DESC(krcvqs, "Array of the number of kernel receive queues by VL");
+MODULE_PARM_DESC(krcvqs, "Array of the number of non-control kernel receive queues by VL");
 
 /* computed based on above array */
 unsigned n_krcvqs;
@@ -129,6 +130,9 @@ int hfi1_create_ctxts(struct hfi1_devdata *dd)
 	int ret;
 	int local_node_id = pcibus_to_node(dd->pcidev->bus);
 
+	/* Control context has to be always 0 */
+	BUILD_BUG_ON(HFI1_CTRL_CTXT != 0);
+
 	if (local_node_id < 0)
 		local_node_id = numa_node_id();
 	dd->assigned_node_id = local_node_id;
@@ -158,6 +162,10 @@ int hfi1_create_ctxts(struct hfi1_devdata *dd)
 			HFI1_CAP_KGET(NODROP_RHQ_FULL) |
 			HFI1_CAP_KGET(NODROP_EGR_FULL) |
 			HFI1_CAP_KGET(DMA_RTAIL);
+
+		/* Control context must use DMA_RTAIL */
+		if (rcd->ctxt == HFI1_CTRL_CTXT)
+			rcd->flags |= HFI1_CAP_DMA_RTAIL;
 		rcd->seq_cnt = 1;
 
 		rcd->sc = sc_alloc(dd, SC_ACK, rcd->rcvhdrqentsize, dd->node);
@@ -208,7 +216,7 @@ struct hfi1_ctxtdata *hfi1_create_ctxtdata(struct hfi1_pportdata *ppd, u32 ctxt)
 	if (rcd) {
 		u32 rcvtids, max_entries;
 
-		dd_dev_info(dd, "%s: setting up context %u\n", __func__, ctxt);
+		hfi1_cdbg(PROC, "setting up context %u\n", ctxt);
 
 		INIT_LIST_HEAD(&rcd->qp_wait_list);
 		rcd->ppd = ppd;
@@ -279,8 +287,9 @@ struct hfi1_ctxtdata *hfi1_create_ctxtdata(struct hfi1_pportdata *ppd, u32 ctxt)
 				   rcd->ctxt);
 			rcd->egrbufs.count = MAX_EAGER_ENTRIES;
 		}
-		dd_dev_info(dd, "ctxt%u: max Eager buffer RcvArray entries: %u\n",
-			    rcd->ctxt, rcd->egrbufs.count);
+		hfi1_cdbg(PROC,
+			  "ctxt%u: max Eager buffer RcvArray entries: %u\n",
+			  rcd->ctxt, rcd->egrbufs.count);
 
 		/*
 		 * Allocate array that will hold the eager buffer accounting
@@ -308,8 +317,8 @@ struct hfi1_ctxtdata *hfi1_create_ctxtdata(struct hfi1_pportdata *ppd, u32 ctxt)
 		 */
 		if (rcd->egrbufs.size < hfi1_max_mtu) {
 			rcd->egrbufs.size = __roundup_pow_of_two(hfi1_max_mtu);
-			dd_dev_info(dd,
-				    "ctxt%u: eager bufs size too small. Adjusting to %zu\n",
+			hfi1_cdbg(PROC,
+				  "ctxt%u: eager bufs size too small. Adjusting to %zu\n",
 				    rcd->ctxt, rcd->egrbufs.size);
 		}
 		rcd->egrbufs.rcvtid_size = HFI1_MAX_EAGER_BUFFER_SIZE;
@@ -601,20 +610,19 @@ static int create_workqueues(struct hfi1_devdata *dd)
 	for (pidx = 0; pidx < dd->num_pports; ++pidx) {
 		ppd = dd->pport + pidx;
 		if (!ppd->hfi1_wq) {
-			char wq_name[8]; /* 3 + 2 + 1 + 1 + 1 */
-
-			snprintf(wq_name, sizeof(wq_name), "hfi%d_%d",
-				 dd->unit, pidx);
 			ppd->hfi1_wq =
-				create_singlethread_workqueue(wq_name);
+				alloc_workqueue(
+				    "hfi%d_%d",
+				    WQ_SYSFS | WQ_HIGHPRI | WQ_CPU_INTENSIVE,
+				    dd->num_sdma,
+				    dd->unit, pidx);
 			if (!ppd->hfi1_wq)
 				goto wq_error;
 		}
 	}
 	return 0;
 wq_error:
-	pr_err("create_singlethread_workqueue failed for port %d\n",
-		pidx + 1);
+	pr_err("alloc_workqueue failed for port %d\n", pidx + 1);
 	for (pidx = 0; pidx < dd->num_pports; ++pidx) {
 		ppd = dd->pport + pidx;
 		if (ppd->hfi1_wq) {
@@ -690,6 +698,18 @@ int hfi1_init(struct hfi1_devdata *dd, int reinit)
 		ret = loadtime_init(dd);
 	if (ret)
 		goto done;
+
+	/* allocate dummy tail memory for all receive contexts */
+	dd->rcvhdrtail_dummy_kvaddr = dma_zalloc_coherent(
+		&dd->pcidev->dev, sizeof(u64),
+		&dd->rcvhdrtail_dummy_physaddr,
+		GFP_KERNEL);
+
+	if (!dd->rcvhdrtail_dummy_kvaddr) {
+		dd_dev_err(dd, "cannot allocate dummy tail memory\n");
+		ret = -ENOMEM;
+		goto done;
+	}
 
 	/* dd->rcd can be NULL if early initialization failed */
 	for (i = 0; dd->rcd && i < dd->first_user_ctxt; ++i) {
@@ -1266,6 +1286,14 @@ static void cleanup_device_data(struct hfi1_devdata *dd)
 	tmp = dd->rcd;
 	dd->rcd = NULL;
 	spin_unlock_irqrestore(&dd->uctxt_lock, flags);
+
+	if (dd->rcvhdrtail_dummy_kvaddr) {
+		dma_free_coherent(&dd->pcidev->dev, sizeof(u64),
+				  (void *)dd->rcvhdrtail_dummy_kvaddr,
+				  dd->rcvhdrtail_dummy_physaddr);
+				  dd->rcvhdrtail_dummy_kvaddr = NULL;
+	}
+
 	for (ctxt = 0; tmp && ctxt < dd->num_rcv_contexts; ctxt++) {
 		struct hfi1_ctxtdata *rcd = tmp[ctxt];
 
@@ -1521,6 +1549,14 @@ int hfi1_create_rcvhdrq(struct hfi1_devdata *dd, struct hfi1_ctxtdata *rcd)
 	reg = (dd->rcvhdrsize & RCV_HDR_SIZE_HDR_SIZE_MASK)
 		<< RCV_HDR_SIZE_HDR_SIZE_SHIFT;
 	write_kctxt_csr(dd, rcd->ctxt, RCV_HDR_SIZE, reg);
+
+	/*
+	 * Program dummy tail address for every receive context
+	 * before enabling any receive context
+	 */
+	write_kctxt_csr(dd, rcd->ctxt, RCV_HDR_TAIL_ADDR,
+			dd->rcvhdrtail_dummy_physaddr);
+
 	return 0;
 
 bail_free:
@@ -1660,9 +1696,11 @@ int hfi1_setup_eagerbufs(struct hfi1_ctxtdata *rcd)
 	rcd->egrbufs.numbufs = idx;
 	rcd->egrbufs.size = alloced_bytes;
 
-	dd_dev_info(dd, "ctxt%u: Alloced %u rcv tid entries @ %uKB, total %zuKB\n",
-		rcd->ctxt, rcd->egrbufs.alloced, rcd->egrbufs.rcvtid_size,
-		rcd->egrbufs.size);
+	hfi1_cdbg(PROC,
+		  "ctxt%u: Alloced %u rcv tid entries @ %uKB, total %zuKB\n",
+		  rcd->ctxt, rcd->egrbufs.alloced, rcd->egrbufs.rcvtid_size,
+		  rcd->egrbufs.size);
+
 
 	/*
 	 * Set the contexts rcv array head update threshold to the closest
@@ -1683,13 +1721,14 @@ int hfi1_setup_eagerbufs(struct hfi1_ctxtdata *rcd)
 		rcd->expected_count = MAX_TID_PAIR_ENTRIES * 2;
 
 	rcd->expected_base = rcd->eager_base + egrtop;
-	dd_dev_info(dd, "ctxt%u: eager:%u, exp:%u, egrbase:%u, expbase:%u\n",
-		    rcd->ctxt, rcd->egrbufs.alloced, rcd->expected_count,
-		    rcd->eager_base, rcd->expected_base);
+	hfi1_cdbg(PROC, "ctxt%u: eager:%u, exp:%u, egrbase:%u, expbase:%u\n",
+		  rcd->ctxt, rcd->egrbufs.alloced, rcd->expected_count,
+		  rcd->eager_base, rcd->expected_base);
 
 	if (!hfi1_rcvbuf_validate(rcd->egrbufs.rcvtid_size, PT_EAGER, &order)) {
-		dd_dev_err(dd, "ctxt%u: current Eager buffer size is invalid %u\n",
-			   rcd->ctxt, rcd->egrbufs.rcvtid_size);
+		hfi1_cdbg(PROC,
+			  "ctxt%u: current Eager buffer size is invalid %u\n",
+			  rcd->ctxt, rcd->egrbufs.rcvtid_size);
 		ret = -EINVAL;
 		goto bail;
 	}
