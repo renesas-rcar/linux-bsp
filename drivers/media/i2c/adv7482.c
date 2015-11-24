@@ -581,6 +581,34 @@ static const struct adv7482_reg_value adv7482_enable_csi4_csi1[] = {
 	{ADV7482_I2C_EOR, 0xFF, 0xFF}	/* End of register table */
 };
 
+static const struct adv7482_reg_value adv7482_set_virtual_channel0[] = {
+
+	{ADV7482_I2C_TXB, 0x0D, 0x00},	/* Set virtual channel 0 */
+	{ADV7482_I2C_TXA, 0x0D, 0x00},	/* Set virtual channel 0 */
+	{ADV7482_I2C_EOR, 0xFF, 0xFF}	/* End of register table */
+};
+
+static const struct adv7482_reg_value adv7482_set_virtual_channel1[] = {
+
+	{ADV7482_I2C_TXB, 0x0D, 0x40},	/* Set virtual channel 1 */
+	{ADV7482_I2C_TXA, 0x0D, 0x40},	/* Set virtual channel 1 */
+	{ADV7482_I2C_EOR, 0xFF, 0xFF}	/* End of register table */
+};
+
+static const struct adv7482_reg_value adv7482_set_virtual_channel2[] = {
+
+	{ADV7482_I2C_TXB, 0x0D, 0x80},	/* Set virtual channel 2 */
+	{ADV7482_I2C_TXA, 0x0D, 0x80},	/* Set virtual channel 2 */
+	{ADV7482_I2C_EOR, 0xFF, 0xFF}	/* End of register table */
+};
+
+static const struct adv7482_reg_value adv7482_set_virtual_channel3[] = {
+
+	{ADV7482_I2C_TXB, 0x0D, 0xC0},	/* Set virtual channel 3 */
+	{ADV7482_I2C_TXA, 0x0D, 0xC0},	/* Set virtual channel 3 */
+	{ADV7482_I2C_EOR, 0xFF, 0xFF}	/* End of register table */
+};
+
 enum decoder_input_interface {
 	DECODER_INPUT_INTERFACE_RGB888,
 	DECODER_INPUT_INTERFACE_YCBCR422,
@@ -614,7 +642,7 @@ struct adv7482_link_config {
 	bool		sw_reset;
 	bool		hdmi_in;
 	bool		sdp_in;
-
+	int		vc_ch;
 };
 
 struct adv7482_state {
@@ -1686,6 +1714,7 @@ static int adv7482_parse_dt(struct device_node *np,
 	struct device_node *endpoint;
 	const char *str;
 	int ret;
+	int ch;
 
 	/* Parse the endpoint. */
 	endpoint = of_graph_get_next_endpoint(np, NULL);
@@ -1749,6 +1778,15 @@ static int adv7482_parse_dt(struct device_node *np,
 	else
 		config->sw_reset = 0;
 
+	ret = of_property_read_u32(np, "adi,virtual-channel", &ch);
+	if (ret < 0)
+		return ret;
+
+	if ((ch < 0) || (ch > 3))
+		return -EINVAL;
+
+	config->vc_ch = ch;
+
 	config->init_device    = NULL;
 	config->s_power        = NULL;
 	config->s_ctrl         = NULL;
@@ -1797,8 +1835,10 @@ static int adv7482_probe(struct i2c_client *client,
 	state->irq = client->irq;
 
 	ret = adv7482_parse_dt(dev->of_node, &link_config);
-	if (ret)
+	if (ret) {
+		dev_err(&client->dev, "adv7482 parse error\n");
 		return ret;
+	}
 
 	state->mipi_csi2_link[0].input_interface = link_config.input_interface;
 
@@ -1897,6 +1937,22 @@ static int adv7482_probe(struct i2c_client *client,
 	else
 		ret = adv7482_cp_init_controls(state);
 	if (ret)
+		goto err_unreg_subdev;
+
+	/* Setting virtual channel for ADV7482 */
+	if (link_config.vc_ch == 0)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel0);
+	else if (link_config.vc_ch == 1)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel1);
+	else if (link_config.vc_ch == 2)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel2);
+	else if (link_config.vc_ch == 3)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel3);
+	if (ret < 0)
 		goto err_unreg_subdev;
 
 	state->pad.flags = MEDIA_PAD_FL_SOURCE;
