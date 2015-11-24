@@ -743,6 +743,25 @@
 
 	adi,input-interface = "rgb888";
 
+	virtual,channel {
+		csi2_vc0 {
+			data,type = "rgb888";
+			receive,vc = <0>;
+		};
+		csi2_vc1 {
+			data,type = "rgb888";
+			receive,vc = <1>;
+		};
+		csi2_vc2 {
+			data,type = "rgb888";
+			receive,vc = <2>;
+		};
+		csi2_vc3 {
+			data,type = "rgb888";
+			receive,vc = <3>;
+		};
+	};
+
 	port {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -763,6 +782,25 @@
 	status = "okay";
 
 	adi,input-interface = "ycbcr422";
+
+	virtual,channel {
+		csi2_vc0 {
+			data,type = "ycbcr422";
+			receive,vc = <0>;
+		};
+		csi2_vc1 {
+			data,type = "ycbcr422";
+			receive,vc = <1>;
+		};
+		csi2_vc2 {
+			data,type = "ycbcr422";
+			receive,vc = <2>;
+		};
+		csi2_vc3 {
+			data,type = "ycbcr422";
+			receive,vc = <3>;
+		};
+	};
 
 	port {
 		#address-cells = <1>;
