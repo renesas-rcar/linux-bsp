@@ -138,18 +138,10 @@ static bool have_full_constraints(void)
  */
 static void regulator_lock_supply(struct regulator_dev *rdev)
 {
-	struct regulator *supply;
-	int i = 0;
+	int i;
 
-	while (1) {
-		mutex_lock_nested(&rdev->mutex, i++);
-		supply = rdev->supply;
-
-		if (!rdev->supply)
-			return;
-
-		rdev = supply->rdev;
-	}
+	for (i = 0; rdev->supply; rdev = rdev->supply->rdev, i++)
+		mutex_lock_nested(&rdev->mutex, i);
 }
 
 /**
@@ -3451,8 +3443,10 @@ int regulator_bulk_get(struct device *dev, int num_consumers,
 		consumers[i].consumer = NULL;
 
 	for (i = 0; i < num_consumers; i++) {
-		consumers[i].consumer = regulator_get(dev,
-						      consumers[i].supply);
+		consumers[i].consumer = _regulator_get(dev,
+						       consumers[i].supply,
+						       false,
+						       !consumers[i].optional);
 		if (IS_ERR(consumers[i].consumer)) {
 			ret = PTR_ERR(consumers[i].consumer);
 			dev_err(dev, "Failed to get supply '%s': %d\n",
