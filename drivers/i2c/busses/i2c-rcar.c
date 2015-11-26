@@ -434,6 +434,7 @@ static irqreturn_t rcar_i2c_irq(int irq, void *ptr)
 	struct rcar_i2c_priv *priv = ptr;
 	irqreturn_t result = IRQ_HANDLED;
 	u32 msr;
+	u32 flag;
 
 	/*-------------- spin lock -----------------*/
 	spin_lock(&priv->lock);
@@ -473,10 +474,14 @@ static irqreturn_t rcar_i2c_irq(int irq, void *ptr)
 		goto out;
 	}
 
-	if (rcar_i2c_is_recv(priv))
-		rcar_i2c_flags_set(priv, rcar_i2c_irq_recv(priv, msr));
-	else
-		rcar_i2c_flags_set(priv, rcar_i2c_irq_send(priv, msr));
+	/* recv/send */
+	if (rcar_i2c_is_recv(priv)) {
+		flag = rcar_i2c_irq_recv(priv, msr);
+		rcar_i2c_flags_set(priv, flag);
+	} else {
+		flag = rcar_i2c_irq_send(priv, msr);
+		rcar_i2c_flags_set(priv, flag);
+	}
 
 out:
 	if (rcar_i2c_flags_has(priv, ID_DONE)) {
