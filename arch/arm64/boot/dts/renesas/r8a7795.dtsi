@@ -1390,6 +1390,19 @@
 			};
 		};
 
+		adsp: adsp@ec800000 {
+			compatible = "renesas,r8a7795-adsp", "renesas,rcar-gen3-adsp";
+			reg = <0 0xec800000 0 0x80fc>,
+			      <0 0xece60000 0 0x10000>,
+			      <0 0xece78000 0 0x8000>,
+			      <0 0xece80000 0 0x10000>,
+			      <0 0xece90000 0 0x10000>,
+			      <0 0x41000000 0 0x1000000>;
+			interrupts = <GIC_SPI 237 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 506>;
+			status = "disabled";
+		};
+
 		gsx: gsx@fd000000 {
 			compatible = "renesas,gsx";
 			reg = <0 0xfd000000 0 0x3ffff>;
