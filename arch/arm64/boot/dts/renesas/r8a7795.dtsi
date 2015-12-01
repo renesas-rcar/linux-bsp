@@ -1001,7 +1001,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea20000 0 0x8000>;
 			interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 623>;
+			clocks = <&cpg CPG_MOD 623>, <&cpg CPG_MOD 603>;
 
 			renesas,has-bru;
 			renesas,has-lif;
@@ -1014,7 +1014,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea28000 0 0x8000>;
 			interrupts = <GIC_SPI 467 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 622>;
+			clocks = <&cpg CPG_MOD 622>, <&cpg CPG_MOD 602>;
 
 			renesas,has-bru;
 			renesas,has-lif;
@@ -1027,7 +1027,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea30000 0 0x8000>;
 			interrupts = <GIC_SPI 468 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 621>;
+			clocks = <&cpg CPG_MOD 621>, <&cpg CPG_MOD 601>;
 
 			renesas,has-bru;
 			renesas,has-lif;
@@ -1040,7 +1040,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea38000 0 0x8000>;
 			interrupts = <GIC_SPI 469 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 620>;
+			clocks = <&cpg CPG_MOD 620>, <&cpg CPG_MOD 600>;
 
 			renesas,has-bru;
 			renesas,has-lif;
