@@ -1164,6 +1164,18 @@
 			renesas,#wpf = <2>;
 		};
 
+		hdmi0: hdmi@fead0000 {
+			compatible = "renesas,hdmi0";
+			reg = <0 0xfead0000 0 0x10000>;
+			interrupts = <GIC_SPI 389 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		hdmi1: hdmi@feae0000 {
+			compatible = "renesas,hdmi1";
+			reg = <0 0xfeae0000 0 0x10000>;
+			interrupts = <GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
 		du: display@feb00000 {
 			compatible = "renesas,du-r8a7795";
 			reg = <0 0xfeb00000 0 0x80000>,
@@ -1177,13 +1189,21 @@
 				 <&cpg CPG_MOD 723>,
 				 <&cpg CPG_MOD 722>,
 				 <&cpg CPG_MOD 721>,
-				 <&cpg CPG_MOD 727>;
-			clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0";
+				 <&cpg CPG_MOD 727>,
+				 <&cpg CPG_MOD 729>,
+				 <&cpg CPG_MOD 728>;
+			clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0",
+				      "isfr.0", "isfr.1";
 			power-domains = <&pd_always_on>;
 
 			status = "disabled";
 
 			vsps = <&vspd0 &vspd1 &vspd2 &vspd3>;
+
+			hdmi = <&hdmi0 &hdmi1>;
+			clock-iahb = <0>;
+			hdmi-num = <2>;
+			hdmi-ifclk = <12500000>;
 
 			ports {
 				#address-cells = <1>;
