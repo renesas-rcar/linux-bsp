@@ -148,6 +148,16 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
 		},
+		[RCAR_DU_OUTPUT_HDMI0] = {
+			.possible_crtcs = BIT(1),
+			.encoder_type = DRM_MODE_ENCODER_TMDS,
+			.port = 1,
+		},
+		[RCAR_DU_OUTPUT_HDMI1] = {
+			.possible_crtcs = BIT(2),
+			.encoder_type = DRM_MODE_ENCODER_TMDS,
+			.port = 2,
+		},
 		[RCAR_DU_OUTPUT_LVDS0] = {
 			.possible_crtcs = BIT(0),
 			.encoder_type = DRM_MODE_ENCODER_LVDS,
