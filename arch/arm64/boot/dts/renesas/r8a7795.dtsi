@@ -1191,9 +1191,11 @@
 				 <&cpg CPG_MOD 721>,
 				 <&cpg CPG_MOD 727>,
 				 <&cpg CPG_MOD 729>,
-				 <&cpg CPG_MOD 728>;
+				 <&cpg CPG_MOD 728>,
+				 <&dclkin0>, <&dclkin1>, <&dclkin2>, <&dclkin3>;
 			clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0",
-				      "isfr.0", "isfr.1";
+				      "isfr.0", "isfr.1", "dclkin.0", "dclkin.1",
+				      "dclkin.2", "dclkin.3";
 			power-domains = <&pd_always_on>;
 
 			status = "disabled";
