@@ -99,7 +99,6 @@ static const u32 formats_kms[] = {
 	DRM_FORMAT_ARGB8888,
 	DRM_FORMAT_XRGB8888,
 	DRM_FORMAT_UYVY,
-	DRM_FORMAT_VYUY,
 	DRM_FORMAT_YUYV,
 	DRM_FORMAT_YVYU,
 	DRM_FORMAT_NV12,
@@ -117,12 +116,11 @@ static const u32 formats_v4l2[] = {
 	V4L2_PIX_FMT_RGB565,
 	V4L2_PIX_FMT_RGB24,
 	V4L2_PIX_FMT_BGR24,
-	V4L2_PIX_FMT_ARGB32,
-	V4L2_PIX_FMT_XRGB32,
 	V4L2_PIX_FMT_ABGR32,
 	V4L2_PIX_FMT_XBGR32,
+	V4L2_PIX_FMT_ARGB32,
+	V4L2_PIX_FMT_XRGB32,
 	V4L2_PIX_FMT_UYVY,
-	V4L2_PIX_FMT_VYUY,
 	V4L2_PIX_FMT_YUYV,
 	V4L2_PIX_FMT_YVYU,
 	V4L2_PIX_FMT_NV12M,
@@ -193,6 +191,11 @@ static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
 	}
 
 	rstate->format = rcar_du_format_info(state->fb->pixel_format);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE) &&
+			 (rstate->format == NULL))
+		rstate->format = rcar_vsp_format_info(state->fb->pixel_format);
+
 	if (rstate->format == NULL) {
 		dev_dbg(rcdu->dev, "%s: unsupported format %08x\n", __func__,
 			state->fb->pixel_format);
