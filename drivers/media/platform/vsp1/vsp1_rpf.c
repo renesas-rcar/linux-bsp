@@ -1,7 +1,7 @@
 /*
  * vsp1_rpf.c  --  R-Car VSP1 Read Pixel Formatter
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -76,6 +76,7 @@ static int rpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	const struct v4l2_rect *crop = &rpf->crop;
 	u32 pstride;
 	u32 infmt;
+	u32 alph_sel, laya;
 	int ret;
 
 	ret = vsp1_entity_set_streaming(&rpf->entity, enable);
@@ -147,14 +148,29 @@ static int rpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	 * alpha value set through the V4L2_CID_ALPHA_COMPONENT control
 	 * otherwise. Disable color keying.
 	 */
-	vsp1_rpf_write(rpf, VI6_RPF_ALPH_SEL, VI6_RPF_ALPH_SEL_AEXT_EXT |
-		       (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
-				       : VI6_RPF_ALPH_SEL_ASEL_FIXED));
-
+	switch (fmtinfo->fourcc) {
+	case V4L2_PIX_FMT_ARGB555:
+		if (CONFIG_VIDEO_RENESAS_VSP_ALPHA_BIT_ARGB1555 == 1)
+			alph_sel = (2 << 28) | (1 << 18) |
+				   (0xFF << 8) | (rpf->alpha->cur.val & 0xFF);
+		else
+			alph_sel = (2 << 28) | (1 << 18) |
+				   ((rpf->alpha->cur.val & 0xFF) << 8) | 0xFF;
+		laya = 0;
+		break;
+	case V4L2_PIX_FMT_ARGB32:
+		alph_sel = (1 << 18);
+		laya = 0;
+		break;
+	default:
+		alph_sel = (4 << 28) | (1 << 18);
+		laya = (rpf->alpha->cur.val & 0xFF) << 24;
+		break;
+	}
+	vsp1_rpf_write(rpf, VI6_RPF_ALPH_SEL, alph_sel);
 	if (vsp1->info->uapi)
 		mutex_lock(rpf->ctrls.lock);
-	vsp1_rpf_write(rpf, VI6_RPF_VRTCOL_SET,
-		       rpf->alpha->cur.val << VI6_RPF_VRTCOL_SET_LAYA_SHIFT);
+	vsp1_rpf_write(rpf, VI6_RPF_VRTCOL_SET, laya);
 	vsp1_pipeline_propagate_alpha(pipe, &rpf->entity, rpf->alpha->cur.val);
 	if (vsp1->info->uapi)
 		mutex_unlock(rpf->ctrls.lock);
