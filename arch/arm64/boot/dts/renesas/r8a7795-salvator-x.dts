@@ -33,6 +33,7 @@
 
 /dts-v1/;
 #include "r8a7795.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	model = "Renesas Salvator-X board based on r8a7795";
@@ -283,6 +284,7 @@
 
 &du {
 	status = "okay";
+	backlight-pin = <&gpio6 7 GPIO_ACTIVE_HIGH>;
 
 	ports {
 		port@0 {
