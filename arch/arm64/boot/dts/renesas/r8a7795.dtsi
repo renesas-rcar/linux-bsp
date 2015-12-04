@@ -75,6 +75,7 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			clocks = <&cpg CPG_CORE R8A7795_CLK_Z2>;
+			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
 		a53_1: cpu@101 {
@@ -82,6 +83,7 @@
 			reg = <0x101>;
 			device_type = "cpu";
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
 		a53_2: cpu@102 {
@@ -89,6 +91,7 @@
 			reg = <0x102>;
 			device_type = "cpu";
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
 		a53_3: cpu@103 {
@@ -96,6 +99,7 @@
 			reg = <0x103>;
 			device_type = "cpu";
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
 		idle-states {
