@@ -26,6 +26,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/videodev2.h>
+#include <linux/list.h>
 
 #include <media/soc_camera.h>
 #include <media/drv-intf/soc_mediabus.h>
@@ -497,6 +498,19 @@ enum rcar_vin_state {
 	STOPPING,
 };
 
+struct rcar_vin_async_client {
+	struct v4l2_async_subdev *sensor;
+	struct v4l2_async_notifier notifier;
+	struct platform_device *pdev;
+	struct list_head list;		/* needed for clean up */
+};
+
+struct soc_of_info {
+	struct soc_camera_async_subdev	sasd;
+	struct rcar_vin_async_client	sasc;
+	struct v4l2_async_subdev	*subdev;
+};
+
 struct rcar_vin_priv {
 	void __iomem			*base;
 	spinlock_t			lock;
@@ -521,8 +535,8 @@ struct rcar_vin_priv {
 	unsigned int			ratio_v;
 	bool				error_flag;
 
+	struct rcar_vin_async_client	*async_client;
 	/* Asynchronous CSI2 linking */
-	struct v4l2_async_subdev	*csi2_asd;
 	struct v4l2_subdev		*csi2_sd;
 	/* Synchronous probing compatibility */
 	struct platform_device		*csi2_pdev;
@@ -1012,29 +1026,16 @@ done:
 static struct v4l2_subdev *find_csi2(struct rcar_vin_priv *pcdev)
 {
 	struct v4l2_subdev *sd;
+	char name[] = "rcar_csi2";
 
-	if (pcdev->csi2_sd)
-		return pcdev->csi2_sd;
-
-	if (pcdev->csi2_asd) {
-		char name[] = "rcar-csi2";
-
-		v4l2_device_for_each_subdev(sd, &pcdev->ici.v4l2_dev)
-			if (!strncmp(name, sd->name, sizeof(name) - 1)) {
-				pcdev->csi2_sd = sd;
-				return sd;
-			}
+	v4l2_device_for_each_subdev(sd, &pcdev->ici.v4l2_dev) {
+		if (!strncmp(name, sd->name, sizeof(name) - 1)) {
+			pcdev->csi2_sd = sd;
+			return sd;
+		}
 	}
 
 	return NULL;
-}
-
-static struct v4l2_subdev *csi2_subdev(struct rcar_vin_priv *pcdev,
-				       struct soc_camera_device *icd)
-{
-	struct v4l2_subdev *sd = pcdev->csi2_sd;
-
-	return sd && sd->grp_id == soc_camera_grp_id(icd) ? sd : NULL;
 }
 
 static int rcar_vin_add_device(struct soc_camera_device *icd)
@@ -1055,12 +1056,11 @@ static int rcar_vin_add_device(struct soc_camera_device *icd)
 		if (csi2_sd) {
 			csi2_sd->grp_id = soc_camera_grp_id(icd);
 			v4l2_set_subdev_hostdata(csi2_sd, icd);
+
+			ret = v4l2_subdev_call(csi2_sd, core, s_power, 1);
+			if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+				return ret;
 		}
-
-		ret = v4l2_subdev_call(csi2_sd, core, s_power, 1);
-		if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
-			return ret;
-
 		/*
 		 * -ENODEV is special:
 		 * either csi2_sd == NULL or the CSI-2 driver
@@ -1087,6 +1087,7 @@ static void rcar_vin_remove_device(struct soc_camera_device *icd)
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct rcar_vin_priv *priv = ici->priv;
 	struct vb2_v4l2_buffer *vbuf;
+	struct v4l2_subdev *csi2_sd = find_csi2(priv);
 	int i;
 
 	/* disable capture, disable interrupts */
@@ -1111,11 +1112,8 @@ static void rcar_vin_remove_device(struct soc_camera_device *icd)
 
 	pm_runtime_put(ici->v4l2_dev.dev);
 
-	if (priv->chip == RCAR_GEN3) {
-		struct v4l2_subdev *csi2_sd = find_csi2(priv);
-
+	if (csi2_sd)
 		v4l2_subdev_call(csi2_sd, core, s_power, 0);
-	}
 
 	dev_dbg(icd->parent, "R-Car VIN driver detached from camera %d\n",
 		icd->devnum);
@@ -1385,13 +1383,6 @@ static void capture_restore(struct rcar_vin_priv *priv, u32 vnmc)
 	iowrite32(vnmc, priv->base + VNMC_REG);
 }
 
-/* Find the bus subdevice driver, e.g., CSI2 */
-static struct v4l2_subdev *find_bus_subdev(struct rcar_vin_priv *pcdev,
-					   struct soc_camera_device *icd)
-{
-	return csi2_subdev(pcdev, icd) ? : soc_camera_to_subdev(icd);
-}
-
 #define VIN_MBUS_FLAGS	(V4L2_MBUS_MASTER |		\
 			 V4L2_MBUS_PCLK_SAMPLE_RISING |	\
 			 V4L2_MBUS_HSYNC_ACTIVE_HIGH |	\
@@ -1451,12 +1442,6 @@ static int rcar_vin_set_bus_param(struct soc_camera_device *icd)
 		return ret;
 
 	if (priv->chip == RCAR_GEN3) {
-		sd = find_bus_subdev(priv, icd);
-
-		ret = v4l2_subdev_call(sd, video, s_mbus_config, &cfg);
-		if (ret < 0 && ret != -ENOIOCTLCMD)
-			return ret;
-
 		if (cfg.type == V4L2_MBUS_CSI2)
 			vnmc &= ~VNMC_DPINE;
 		else
@@ -2464,6 +2449,184 @@ static const struct of_device_id rcar_vin_of_table[] = {
 MODULE_DEVICE_TABLE(of, rcar_vin_of_table);
 #endif
 
+#define MAP_MAX_NUM 32
+static DECLARE_BITMAP(device_map, MAP_MAX_NUM);
+static DEFINE_MUTEX(list_lock);
+
+static int rcar_vin_dyn_pdev(struct soc_camera_desc *sdesc,
+			       struct rcar_vin_async_client *sasc)
+{
+	struct platform_device *pdev;
+	int ret, i;
+
+	mutex_lock(&list_lock);
+	i = find_first_zero_bit(device_map, MAP_MAX_NUM);
+	if (i < MAP_MAX_NUM)
+		set_bit(i, device_map);
+	mutex_unlock(&list_lock);
+	if (i >= MAP_MAX_NUM)
+		return -ENOMEM;
+
+	pdev = platform_device_alloc("soc-camera-pdrv", ((2 * i) + 1));
+	if (!pdev)
+		return -ENOMEM;
+
+	ret = platform_device_add_data(pdev, sdesc, sizeof(*sdesc));
+	if (ret < 0) {
+		platform_device_put(pdev);
+		return ret;
+	}
+
+	sasc->pdev = pdev;
+
+	return 0;
+}
+
+static int rcar_vin_async_bound(struct v4l2_async_notifier *notifier,
+				  struct v4l2_subdev *sd,
+				  struct v4l2_async_subdev *asd)
+{
+	/* None. */
+	return 0;
+}
+
+static void rcar_vin_async_unbind(struct v4l2_async_notifier *notifier,
+				    struct v4l2_subdev *sd,
+				    struct v4l2_async_subdev *asd)
+{
+	/* None. */
+}
+
+static int rcar_vin_async_probe(struct soc_camera_host *ici,
+			    struct soc_camera_device *icd)
+{
+	struct soc_camera_desc *sdesc = to_soc_camera_desc(icd);
+	struct soc_camera_host_desc *shd = &sdesc->host_desc;
+	struct device *control = NULL;
+	int ret;
+
+	ret = v4l2_ctrl_handler_init(&icd->ctrl_handler, 16);
+	if (ret < 0)
+		return ret;
+
+	if (shd->module_name)
+		ret = request_module(shd->module_name);
+
+	ret = shd->add_device(icd);
+
+	control = to_soc_camera_control(icd);
+	if (!control || !control->driver || !dev_get_drvdata(control) ||
+		!try_module_get(control->driver->owner)) {
+		shd->del_device(icd);
+		ret = -ENODEV;
+	}
+
+	return ret;
+}
+
+static int rcar_vin_async_complete(struct v4l2_async_notifier *notifier)
+{
+	struct rcar_vin_async_client *sasc = container_of(notifier,
+					struct rcar_vin_async_client, notifier);
+	struct soc_camera_device *icd = platform_get_drvdata(sasc->pdev);
+
+	if (to_soc_camera_control(icd)) {
+		struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+		int ret;
+
+		mutex_lock(&list_lock);
+		ret = rcar_vin_async_probe(ici, icd);
+		mutex_unlock(&list_lock);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
+}
+
+static struct soc_camera_device *rcar_vin_add_pdev(
+				struct rcar_vin_async_client *sasc)
+{
+	struct platform_device *pdev = sasc->pdev;
+	int ret;
+
+	ret = platform_device_add(pdev);
+
+	if (ret < 0 || !pdev->dev.driver)
+		return NULL;
+
+	return platform_get_drvdata(pdev);
+}
+
+static int rcar_vin_soc_of_bind(struct rcar_vin_priv *priv,
+		       struct soc_camera_host *ici,
+		       struct device_node *ep,
+		       struct device_node *remote)
+{
+	struct soc_camera_device *icd;
+	struct soc_camera_desc sdesc = {.host_desc.bus_id = ici->nr,};
+	struct rcar_vin_async_client *sasc;
+	struct soc_of_info *info;
+	struct i2c_client *client;
+	char clk_name[V4L2_SUBDEV_NAME_SIZE];
+	int ret;
+
+	/* allocate a new subdev and add match info to it */
+	info = devm_kzalloc(ici->v4l2_dev.dev, sizeof(struct soc_of_info),
+			    GFP_KERNEL);
+	if (!info)
+		return -ENOMEM;
+
+	info->sasd.asd.match.of.node = remote;
+	info->sasd.asd.match_type = V4L2_ASYNC_MATCH_OF;
+	info->subdev = &info->sasd.asd;
+
+	/* Or shall this be managed by the soc-camera device? */
+	sasc = &info->sasc;
+
+	ret = rcar_vin_dyn_pdev(&sdesc, sasc);
+	if (ret < 0)
+		goto eallocpdev;
+
+	sasc->sensor = &info->sasd.asd;
+
+	icd = rcar_vin_add_pdev(sasc);
+	if (!icd) {
+		ret = -ENOMEM;
+		goto eaddpdev;
+	}
+
+	sasc->notifier.subdevs = &info->subdev;
+	sasc->notifier.num_subdevs = 1;
+	sasc->notifier.bound = rcar_vin_async_bound;
+	sasc->notifier.unbind = rcar_vin_async_unbind;
+	sasc->notifier.complete = rcar_vin_async_complete;
+
+	priv->async_client = sasc;
+
+	client = of_find_i2c_device_by_node(remote);
+
+	if (client)
+		snprintf(clk_name, sizeof(clk_name), "%d-%04x",
+			 client->adapter->nr, client->addr);
+	else
+		snprintf(clk_name, sizeof(clk_name), "of-%s",
+			 of_node_full_name(remote));
+
+	ret = v4l2_async_notifier_register(&ici->v4l2_dev, &sasc->notifier);
+	if (!ret)
+		return 0;
+
+	platform_device_del(sasc->pdev);
+eaddpdev:
+	platform_device_put(sasc->pdev);
+eallocpdev:
+	devm_kfree(ici->v4l2_dev.dev, info);
+	dev_err(ici->v4l2_dev.dev, "group probe failed: %d\n", ret);
+
+	return ret;
+}
+
 static int rcar_vin_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match = NULL;
@@ -2473,6 +2636,9 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	struct resource *mem;
 	unsigned int pdata_flags;
 	int irq, ret;
+	unsigned int i;
+	struct device_node *epn = NULL, *ren = NULL;
+	bool csi_use = false;
 
 	match = of_match_device(of_match_ptr(rcar_vin_of_table), &pdev->dev);
 
@@ -2480,6 +2646,32 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (!np) {
 		dev_err(&pdev->dev, "could not find endpoint\n");
 		return -EINVAL;
+	}
+
+	for (i = 0; ; i++) {
+		epn = of_graph_get_next_endpoint(pdev->dev.of_node,
+								epn);
+		if (!epn)
+			break;
+
+		ren = of_graph_get_remote_port(epn);
+		if (!ren) {
+			dev_notice(&pdev->dev, "no remote for %s\n",
+					of_node_full_name(epn));
+			continue;
+		}
+
+		/* so we now have a remote node to connect */
+		dev_dbg(&pdev->dev, "node name:%s\n",
+			of_node_full_name(ren->parent));
+
+		if (strcmp(ren->parent->name, "csi2") == 0)
+			csi_use = true;
+
+		of_node_put(ren);
+
+		if (i)
+			break;
 	}
 
 	ret = v4l2_of_parse_endpoint(np, &ep);
@@ -2564,6 +2756,12 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (ret)
 		goto cleanup;
 
+	if (csi_use) {
+		ret = rcar_vin_soc_of_bind(priv, &priv->ici, epn, ren->parent);
+		if (ret)
+			goto cleanup;
+	}
+
 	return 0;
 
 cleanup:
@@ -2578,6 +2776,11 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	struct soc_camera_host *soc_host = to_soc_camera_host(&pdev->dev);
 	struct rcar_vin_priv *priv = container_of(soc_host,
 						  struct rcar_vin_priv, ici);
+
+	platform_device_del(priv->async_client->pdev);
+	platform_device_put(priv->async_client->pdev);
+
+	v4l2_async_notifier_unregister(&priv->async_client->notifier);
 
 	soc_camera_host_unregister(soc_host);
 	pm_runtime_disable(&pdev->dev);
