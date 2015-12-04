@@ -145,8 +145,16 @@
 #define VNCSI_IFMD_DES1		(1 << 26) /* CSI20 Input Data) */
 #define VNCSI_IFMD_DES0		(1 << 25) /* CSI21 Input Data) */
 
-#define VIN_MAX_WIDTH		2048
-#define VIN_MAX_HEIGHT		2048
+/* UDS */
+#define VNUDS_CTRL_REG		0x80	/* Scaling Control Registers */
+#define VNUDS_CTRL_AMD		(1 << 30)
+#define VNUDS_CTRL_BC		(1 << 20)
+#define VNUDS_CTRL_TDIPC	(1 << 1)
+
+#define VNUDS_SCALE_REG		0x84	/* Scaling Factor Register */
+#define VNUDS_PASS_BWIDTH_REG	0x90	/* Passband Registers */
+#define VNUDS_IPC_REG		0x98	/* 2D IPC Setting Register */
+#define VNUDS_CLIP_SIZE_REG	0xA4	/* UDS Output Size Clipping Register */
 
 #define TIMEOUT_MS		100
 
@@ -506,13 +514,14 @@ struct rcar_vin_priv {
 	bool				request_to_stop;
 	struct completion		capture_stop;
 	enum chip_id			chip;
+	unsigned int			max_width;
+	unsigned int			max_height;
 
 	/* Asynchronous CSI2 linking */
 	struct v4l2_async_subdev	*csi2_asd;
 	struct v4l2_subdev		*csi2_sd;
 	/* Synchronous probing compatibility */
 	struct platform_device		*csi2_pdev;
-
 };
 
 #define is_continuous_transfer(priv)	(priv->vb_count > MAX_BUFFER_NUM)
@@ -546,6 +555,17 @@ struct rcar_vin_cam {
 	struct v4l2_rect		rect;
 	const struct soc_mbus_pixelfmt	*extra_fmt;
 };
+
+static inline int is_scaling(struct rcar_vin_cam *cam)
+{
+	struct v4l2_rect *cam_subrect = &cam->subrect;
+
+	if ((cam_subrect->width != cam->out_width) ||
+		(cam_subrect->height != cam->out_height))
+		return 1;
+
+	return 0;
+}
 
 /*
  * .queue_setup() is called to check whether the driver can accept the requested
@@ -697,6 +717,9 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 
 		if ((vnmc & VNMC_INF_MASK) == VNMC_INF_RGB888)
 			iowrite32(0x06000000, priv->base + VNCSI_IFMD_REG);
+
+		if (is_scaling(cam))
+			vnmc |= VNMC_SCLE;
 	}
 
 	/* progressive or interlaced mode */
@@ -1065,6 +1088,71 @@ static void rcar_vin_remove_device(struct soc_camera_device *icd)
 		icd->devnum);
 }
 
+struct rcar_vin_uds_regs {
+	unsigned long ctrl;
+	unsigned long scale;
+	unsigned long pass_bwidth;
+	unsigned long clip_size;
+};
+
+static unsigned long rcar_vin_get_bwidth(unsigned long ratio)
+{
+	unsigned long bwidth;
+	unsigned long mant, frac;
+
+	mant = (ratio & 0xF000) >> 12;
+	frac = ratio & 0x0FFF;
+	if (mant)
+		bwidth = 64 * 4096 * mant / (4096 * mant + frac);
+	else
+		bwidth = 64;
+
+	return bwidth;
+}
+
+static unsigned long rcar_vin_compute_ratio(unsigned int input,
+		unsigned int output)
+{
+	if (output > input)
+		return input * 4096 / output;
+	else
+		return (input - 1) * 4096 / (output - 1);
+}
+
+int rcar_vin_uds_set(struct rcar_vin_priv *priv, struct rcar_vin_cam *cam)
+{
+	struct rcar_vin_uds_regs regs;
+	unsigned long ratio_h, ratio_v;
+	unsigned long bwidth_h, bwidth_v;
+	unsigned long ctrl;
+	unsigned long clip_size;
+	struct v4l2_rect *cam_subrect = &cam->subrect;
+	u32 vnmc;
+
+	ratio_h = rcar_vin_compute_ratio(cam_subrect->width, cam->out_width);
+	ratio_v = rcar_vin_compute_ratio(cam_subrect->height, cam->out_height);
+
+	bwidth_h = rcar_vin_get_bwidth(ratio_h);
+	bwidth_v = rcar_vin_get_bwidth(ratio_v);
+
+	ctrl = VNUDS_CTRL_AMD;
+	clip_size = (cam->out_width << 16) | cam->out_height;
+
+	regs.ctrl = ctrl;
+	regs.scale = (ratio_h << 16) | ratio_v;
+	regs.pass_bwidth = (bwidth_h << 16) | bwidth_v;
+	regs.clip_size = clip_size;
+
+	vnmc = ioread32(priv->base + VNMC_REG);
+	iowrite32(vnmc | VNMC_SCLE, priv->base + VNMC_REG);
+	iowrite32(regs.ctrl, priv->base + VNUDS_CTRL_REG);
+	iowrite32(regs.scale, priv->base + VNUDS_SCALE_REG);
+	iowrite32(regs.pass_bwidth, priv->base + VNUDS_PASS_BWIDTH_REG);
+	iowrite32(regs.clip_size, priv->base + VNUDS_CLIP_SIZE_REG);
+
+	return 0;
+}
+
 static void set_coeff(struct rcar_vin_priv *priv, unsigned short xs)
 {
 	int i;
@@ -1129,6 +1217,7 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 	unsigned char dsize = 0;
 	struct v4l2_rect *cam_subrect = &cam->subrect;
 	u32 value;
+	int ret;
 
 	dev_dbg(icd->parent, "Crop %ux%u@%u:%u\n",
 		icd->user_width, icd->user_height, cam->vin_left, cam->vin_top);
@@ -1165,47 +1254,60 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 		break;
 	}
 
-	/* Set scaling coefficient */
-	value = 0;
-	if (cam_subrect->height != cam->out_height)
-		value = (4096 * cam_subrect->height) / cam->out_height;
-	dev_dbg(icd->parent, "YS Value: %x\n", value);
-	iowrite32(value, priv->base + VNYS_REG);
+	if (priv->chip == RCAR_GEN3) {
+		if (is_scaling(cam)) {
+			ret = rcar_vin_uds_set(priv, cam);
+			if (ret < 0)
+				return ret;
+			iowrite32(ALIGN(cam->out_width, 0x20),
+					 priv->base + VNIS_REG);
+		}
+	} else {
+		/* Set scaling coefficient */
+		value = 0;
+		if (cam_subrect->height != cam->out_height)
+			value = (4096 * cam_subrect->height) / cam->out_height;
+		dev_dbg(icd->parent, "YS Value: %x\n", value);
+		iowrite32(value, priv->base + VNYS_REG);
 
-	value = 0;
-	if (cam_subrect->width != cam->out_width)
-		value = (4096 * cam_subrect->width) / cam->out_width;
+		value = 0;
+		if (cam_subrect->width != cam->out_width)
+			value = (4096 * cam_subrect->width) / cam->out_width;
 
-	/* Horizontal upscaling is up to double size */
-	if (0 < value && value < 2048)
-		value = 2048;
+		/* Horizontal upscaling is up to double size */
+		if (value < 2048)
+			value = 2048;
 
-	dev_dbg(icd->parent, "XS Value: %x\n", value);
-	iowrite32(value, priv->base + VNXS_REG);
+		dev_dbg(icd->parent, "XS Value: %x\n", value);
+		iowrite32(value, priv->base + VNXS_REG);
 
-	/* Horizontal upscaling is carried out by scaling down from double size */
-	if (value < 4096)
-		value *= 2;
+		/* Horizontal upscaling is carried out */
+		/* by scaling down from double size */
+		if (value < 4096)
+			value *= 2;
 
-	set_coeff(priv, value);
+		set_coeff(priv, value);
 
-	/* Set Start/End Pixel/Line Post-Clip */
-	iowrite32(0, priv->base + VNSPPOC_REG);
-	iowrite32(0, priv->base + VNSLPOC_REG);
-	iowrite32((cam->out_width - 1) << dsize, priv->base + VNEPPOC_REG);
-	switch (priv->field) {
-	case V4L2_FIELD_INTERLACED:
-	case V4L2_FIELD_INTERLACED_TB:
-	case V4L2_FIELD_INTERLACED_BT:
-		iowrite32(cam->out_height / 2 - 1,
-			  priv->base + VNELPOC_REG);
-		break;
-	default:
-		iowrite32(cam->out_height - 1, priv->base + VNELPOC_REG);
-		break;
+		/* Set Start/End Pixel/Line Post-Clip */
+		iowrite32(0, priv->base + VNSPPOC_REG);
+		iowrite32(0, priv->base + VNSLPOC_REG);
+		iowrite32((cam->out_width - 1) << dsize,
+			priv->base + VNEPPOC_REG);
+		switch (priv->field) {
+		case V4L2_FIELD_INTERLACED:
+		case V4L2_FIELD_INTERLACED_TB:
+		case V4L2_FIELD_INTERLACED_BT:
+			iowrite32(cam->out_height / 2 - 1,
+				  priv->base + VNELPOC_REG);
+			break;
+		default:
+			iowrite32(cam->out_height - 1,
+				priv->base + VNELPOC_REG);
+			break;
+		}
+
+		iowrite32(ALIGN(cam->out_width, 0x10), priv->base + VNIS_REG);
 	}
-
-	iowrite32(ALIGN(cam->out_width, 0x10), priv->base + VNIS_REG);
 
 	return 0;
 }
@@ -1429,6 +1531,8 @@ static int rcar_vin_get_formats(struct soc_camera_device *icd, unsigned int idx,
 	int ret, k, n;
 	int formats = 0;
 	struct rcar_vin_cam *cam;
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+	struct rcar_vin_priv *priv = ici->priv;
 	struct v4l2_subdev_mbus_code_enum code = {
 		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
 		.index = idx,
@@ -1479,8 +1583,8 @@ static int rcar_vin_get_formats(struct soc_camera_device *icd, unsigned int idx,
 		 * 1280x960, 640x480, 320x240
 		 */
 		for (shift = 0; shift < 3; shift++) {
-			if (mf->width <= VIN_MAX_WIDTH &&
-			    mf->height <= VIN_MAX_HEIGHT)
+			if (mf->width <= priv->max_width &&
+			    mf->height <= priv->max_height)
 				break;
 
 			mf->width = 1280 >> shift;
@@ -1614,7 +1718,7 @@ static int rcar_vin_set_crop(struct soc_camera_device *icd,
 	if (ret < 0)
 		return ret;
 
-	if (mf->width > VIN_MAX_WIDTH || mf->height > VIN_MAX_HEIGHT)
+	if (mf->width > priv->max_width || mf->height > priv->max_height)
 		return -EINVAL;
 
 	/* Cache camera output window */
@@ -1797,6 +1901,8 @@ static int rcar_vin_try_fmt(struct soc_camera_device *icd,
 			    struct v4l2_format *f)
 {
 	const struct soc_camera_format_xlate *xlate;
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+	struct rcar_vin_priv *priv = ici->priv;
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	struct v4l2_subdev_pad_config pad_cfg;
@@ -1819,8 +1925,8 @@ static int rcar_vin_try_fmt(struct soc_camera_device *icd,
 	}
 
 	/* FIXME: calculate using depth and bus width */
-	v4l_bound_align_image(&pix->width, 2, VIN_MAX_WIDTH, 1,
-			      &pix->height, 4, VIN_MAX_HEIGHT, 2, 0);
+	v4l_bound_align_image(&pix->width, 2, priv->max_width, 1,
+			      &pix->height, 4, priv->max_height, 2, 0);
 
 	width = pix->width;
 	height = pix->height;
@@ -1841,11 +1947,19 @@ static int rcar_vin_try_fmt(struct soc_camera_device *icd,
 	if (ret < 0)
 		return ret;
 
-	/* Adjust only if VIN cannot scale */
-	if (pix->width > mf->width * 2)
-		pix->width = mf->width * 2;
-	if (pix->height > mf->height * 3)
-		pix->height = mf->height * 3;
+	if (priv->chip == RCAR_GEN3) {
+		/* Adjust max scaling size for Gen3 */
+		if (pix->width > 4096)
+			pix->width = priv->max_width;
+		if (pix->height > 4096)
+			pix->height = priv->max_height;
+	} else {
+		/* Adjust only if VIN cannot scale */
+		if (pix->width > mf->width * 2)
+			pix->width = mf->width * 2;
+		if (pix->height > mf->height * 3)
+			pix->height = mf->height * 3;
+	}
 
 	pix->field = mf->field;
 	pix->colorspace = mf->colorspace;
@@ -1859,8 +1973,8 @@ static int rcar_vin_try_fmt(struct soc_camera_device *icd,
 			 * requested a bigger rectangle, it will not return a
 			 * smaller one.
 			 */
-			mf->width = VIN_MAX_WIDTH;
-			mf->height = VIN_MAX_HEIGHT;
+			mf->width = priv->max_width;
+			mf->height = priv->max_height;
 			ret = v4l2_device_call_until_err(sd->v4l2_dev,
 							 soc_camera_grp_id(icd),
 							 pad, set_fmt, &pad_cfg,
@@ -2016,6 +2130,14 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	priv->ici.v4l2_dev.dev = &pdev->dev;
 	priv->ici.drv_name = dev_name(&pdev->dev);
 	priv->ici.ops = &rcar_vin_host_ops;
+
+	if (priv->chip <= RCAR_GEN3) {
+		priv->max_width = 4096;
+		priv->max_height = 4096;
+	} else {
+		priv->max_width = 2048;
+		priv->max_height = 2048;
+	}
 
 	priv->pdata_flags = pdata_flags;
 	if (!match) {
