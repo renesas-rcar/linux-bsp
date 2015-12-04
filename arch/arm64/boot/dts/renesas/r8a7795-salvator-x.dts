@@ -273,6 +273,7 @@
 
 &du {
 	status = "okay";
+	backlight-pin = <&gpio6 7 GPIO_ACTIVE_HIGH>;
 
 	ports {
 		port@0 {
