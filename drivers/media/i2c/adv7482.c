@@ -918,9 +918,11 @@ static int adv7482_get_vid_info(struct v4l2_subdev *sd, u8 *progressive,
 static int adv7482_set_vid_info(struct v4l2_subdev *sd)
 {
 	struct adv7482_state *state = to_state(sd);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	u8 progressive;
 	u8 signal;
+	u8 val = ADV7482_IO_CP_VID_STD_480P;
 	u32 width;
 	u32 height;
 	int ret;
@@ -931,32 +933,84 @@ static int adv7482_set_vid_info(struct v4l2_subdev *sd)
 		width		= ADV7482_MAX_WIDTH;
 		height		= ADV7482_MAX_HEIGHT;
 		progressive	= 1;
-	}
-	/* FIXME : when hw detect active resolution, it's set it. */
-	else {
-		if ((width == 720) &&
-			(height == 480) && (progressive == 1))
+	} else {
+		if ((width == 640) &&
+			(height == 480) && (progressive == 1)) {
+			val = ADV7482_IO_CP_VID_STD_VGA60;
+			dev_info(state->dev,
+				 "Changed active resolution to 640x480p\n");
+		} else if ((width == 720) &&
+			(height == 480) && (progressive == 1)) {
+			val = ADV7482_IO_CP_VID_STD_480P;
 			dev_info(state->dev,
 				 "Changed active resolution to 720x480p\n");
-		else if ((width == 720) &&
-			(height == 480) && (progressive == 0))
+		} else if ((width == 720) &&
+			(height == 576) && (progressive == 1)) {
+			val = ADV7482_IO_CP_VID_STD_576P;
 			dev_info(state->dev,
-				 "Changed active resolution to 720x480i\n");
-		else if ((width == 1920) &&
-			(height == 1080) && (progressive == 1))
-			dev_info(state->dev,
-				 "Changed active resolution to 1920x1080p\n");
-		else if ((width == 1920) &&
-			(height == 1080) && (progressive == 0))
-			dev_info(state->dev,
-				 "Changed active resolution to 1920x1080i\n");
-		else if ((width == 1280) &&
-			(height == 720) && (progressive == 1))
+				 "Changed active resolution to 720x576p\n");
+		} else if ((width == 1280) &&
+			(height == 720) && (progressive == 1)) {
+			val = ADV7482_IO_CP_VID_STD_720P;
 			dev_info(state->dev,
 				 "Changed active resolution to 1280x720p\n");
+		} else if ((width == 1920) &&
+			(height == 1080) && (progressive == 1)) {
+			val = ADV7482_IO_CP_VID_STD_1080P;
+			dev_info(state->dev,
+				 "Changed active resolution to 1920x1080p\n");
+		} else if ((width == 1920) &&
+			(height == 1080) && (progressive == 0)) {
+			val = ADV7482_IO_CP_VID_STD_1080I;
+			dev_info(state->dev,
+				 "Changed active resolution to 1920x1080i\n");
+		} else {
+			dev_err(state->dev,
+				 "Not support resolution %dx%d%c\n",
+				  width, height, (progressive) ? 'p' : 'i');
+			return -EINVAL;
+		}
 	}
 
-	return 0;
+	/*
+	 * The resolution of 720p, 1080i and 1080p is Hsync width of 40 pixel
+	 * clock cycles. These resolutions must be shifted horizontally to
+	 * the left in active video mode.
+	 */
+	if ((val == ADV7482_IO_CP_VID_STD_1080I) ||
+		(val == ADV7482_IO_CP_VID_STD_1080P)) {
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8B, 0x43);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8C, 0xD4);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8B, 0x4F);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8D, 0xD4);
+	} else if (val == ADV7482_IO_CP_VID_STD_720P) {
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8B, 0x43);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8C, 0xD8);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8B, 0x4F);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8D, 0xD8);
+	} else {
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8B, 0x40);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8C, 0x00);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8B, 0x40);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8D, 0x00);
+	}
+
+	ret = adv7482_write_register(client, ADV7482_I2C_IO,
+				ADV7482_IO_CP_VID_STD_REG, val);
+
+	return ret;
 }
 
 /*****************************************************************************/
