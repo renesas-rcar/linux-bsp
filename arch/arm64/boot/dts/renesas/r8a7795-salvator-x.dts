@@ -291,3 +291,7 @@
 		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
 	};
 };
+
+&sata {
+	status = "okay";
+};
