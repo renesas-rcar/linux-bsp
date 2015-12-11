@@ -870,6 +870,33 @@
 			renesas,#wpf = <1>;
 		};
 
+		fdp0: fdpm@fe940000 {
+			compatible = "renesas,fdpm";
+			reg = <0 0xfe940000 0 0x2400>, <0 0xfe950000 0 0x200>;
+			interrupts = <0 262 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 119>, <&cpg CPG_MOD 615>;
+
+			renesas,#ch = <0>;
+		};
+
+		fdp1: fdpm@fe944000 {
+			compatible = "renesas,fdpm";
+			reg = <0 0xfe944000 0 0x2400>, <0 0xfe951000 0 0x200>;
+			interrupts = <0 263 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 118>, <&cpg CPG_MOD 614>;
+
+			renesas,#ch = <1>;
+		};
+
+		fdp2: fdpm@fe948000 {
+			compatible = "renesas,fdpm";
+			reg = <0 0xfe948000 0 0x2400>, <0 0xfe952000 0 0x200>;
+			interrupts = <0 264 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 117>, <&cpg CPG_MOD 613>;
+
+			renesas,#ch = <2>;
+		};
+
 		vspbd: vsp@fe960000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xfe960000 0 0x8000>;
