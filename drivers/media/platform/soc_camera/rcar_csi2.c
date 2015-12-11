@@ -405,7 +405,7 @@ static int rcar_csi2_hwinit(struct rcar_csi2 *priv)
 	iowrite32(vcdt2, priv->base + RCAR_CSI2_VCDT2);
 	iowrite32(0x00010000, priv->base + RCAR_CSI2_FRDT);
 	udelay(10);
-	iowrite32(0x82000000, priv->base + RCAR_CSI2_LINKCNT);
+	iowrite32(0x83000000, priv->base + RCAR_CSI2_LINKCNT);
 	iowrite32(0x000000e4, priv->base + RCAR_CSI2_LSWAP);
 
 	/* wait until video decoder power off */
