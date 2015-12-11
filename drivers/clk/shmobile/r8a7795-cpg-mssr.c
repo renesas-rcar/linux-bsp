@@ -125,6 +125,9 @@ static const struct cpg_core_clk r8a7795_core_clks[] __initconst = {
 
 static const struct mssr_mod_clk r8a7795_mod_clks[] __initconst = {
 	DEF_MOD("3dge",			 112,	R8A7795_CLK_ZG),
+	DEF_MOD("fdp2",			 117,	R8A7795_CLK_S2D1),
+	DEF_MOD("fdp1",			 118,	R8A7795_CLK_S2D1),
+	DEF_MOD("fdp0",			 119,	R8A7795_CLK_S2D1),
 	DEF_MOD("scif5",		 202,	R8A7795_CLK_S3D4),
 	DEF_MOD("scif4",		 203,	R8A7795_CLK_S3D4),
 	DEF_MOD("scif3",		 204,	R8A7795_CLK_S3D4),
@@ -148,6 +151,9 @@ static const struct mssr_mod_clk r8a7795_mod_clks[] __initconst = {
 	DEF_MOD("hscif2",		 518,	R8A7795_CLK_S3D1),
 	DEF_MOD("hscif1",		 519,	R8A7795_CLK_S3D1),
 	DEF_MOD("hscif0",		 520,	R8A7795_CLK_S3D1),
+	DEF_MOD("fcpf2",		 613,	R8A7795_CLK_S2D1),
+	DEF_MOD("fcpf1",		 614,	R8A7795_CLK_S2D1),
+	DEF_MOD("fcpf0",		 615,	R8A7795_CLK_S2D1),
 	DEF_MOD("vspd3",		 620,	R8A7795_CLK_S2D1),
 	DEF_MOD("vspd2",		 621,	R8A7795_CLK_S2D1),
 	DEF_MOD("vspd1",		 622,	R8A7795_CLK_S2D1),
