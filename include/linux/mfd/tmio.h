@@ -107,6 +107,9 @@
  */
 #define TMIO_MMC_CLK_ACTUAL		(1 << 10)
 
+/* Some controllers have UHS-I sampling clock controller */
+#define TMIO_MMC_HAS_UHS_SCC		(1 << 11)
+
 int tmio_core_mmc_enable(void __iomem *cnf, int shift, unsigned long base);
 int tmio_core_mmc_resume(void __iomem *cnf, int shift, unsigned long base);
 void tmio_core_mmc_pwr(void __iomem *cnf, int shift, int state);
