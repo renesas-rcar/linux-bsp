@@ -18,6 +18,7 @@
 #define TMIO_MMC_H
 
 #include <linux/dmaengine.h>
+#include <linux/completion.h>
 #include <linux/highmem.h>
 #include <linux/mmc/tmio.h>
 #include <linux/mutex.h>
@@ -95,6 +96,10 @@ struct tmio_mmc_host {
 	struct mutex		ios_lock;	/* protect set_ios() context */
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
+	u32			scc_tapnum;
+	u32			scc_tappos;
+	bool			done_tuning;
+	struct completion	completion;
 
 	int (*write16_hook)(struct tmio_mmc_host *host, int addr);
 	int (*clk_enable)(struct platform_device *pdev, unsigned int *f);
@@ -102,6 +107,14 @@ struct tmio_mmc_host {
 	int (*multi_io_quirk)(struct mmc_card *card,
 			      unsigned int direction, int blk_size);
 	int (*card_busy)(struct tmio_mmc_host *host);
+	int (*start_signal_voltage_switch)(struct tmio_mmc_host *host,
+						unsigned char signal_voltage);
+	bool (*inquiry_tuning)(struct tmio_mmc_host *host);
+	void (*init_tuning)(struct tmio_mmc_host *host, unsigned long *num);
+	int (*prepare_tuning)(struct tmio_mmc_host *host, unsigned long tap);
+	int (*select_tuning)(struct tmio_mmc_host *host, unsigned long *tap);
+	bool (*retuning)(struct tmio_mmc_host *host);
+	void (*hw_reset)(struct tmio_mmc_host *host);
 };
 
 struct tmio_mmc_host *tmio_mmc_host_alloc(struct platform_device *pdev);
