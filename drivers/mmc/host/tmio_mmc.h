@@ -1,6 +1,7 @@
 /*
  * linux/drivers/mmc/host/tmio_mmc.h
  *
+ * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
  *
@@ -99,6 +100,7 @@ struct tmio_mmc_host {
 	void (*clk_disable)(struct platform_device *pdev);
 	int (*multi_io_quirk)(struct mmc_card *card,
 			      unsigned int direction, int blk_size);
+	int (*card_busy)(struct tmio_mmc_host *host);
 };
 
 struct tmio_mmc_host *tmio_mmc_host_alloc(struct platform_device *pdev);
