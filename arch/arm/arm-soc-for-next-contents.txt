@@ -1,0 +1,153 @@
+fixes
+	patch
+		irqchip/versatile-fpga: Fix PCI IRQ mapping on Versatile PB
+		ARM: ixp4xx: fix read{b,w,l} return types
+	<no branch> (62f49ee26f14753bd7fa634f51d537a79061bf0f)
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-fixes-4.4
+	<no branch> (8423536fe453b3623f4ed7c2c3cca9b86af1ace5)
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-4.4-fixes-2
+	<no branch> (b5010d2081331e1c95358c4eb500bd30f5d532ce)
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-fixes-for-4.4-rc1-1
+	patch
+		ARM: pxa: use PWM lookup table for all machines
+	<no branch> (14054fb1da099fd89208b8b319a00e0b902c7645)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/fixes-rc4
+	patch
+		ARM64: dts: ls2080a: fix eSDHC endianness
+		dt-bindings: define little-endian property for QorIQ GPIO
+		ls2080a/dts: Add little endian property for GPIO IP block
+	<no branch> (9c17190595840b4ed30e8d5f286636ceb28aae4f)
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.4-2
+	<no branch> (43675ffafd3c3373f82691f539df3dc7403877fe)
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-fixes-for-4.4
+	patch
+		fsl-ifc: add missing include on ARM64
+
+next/fixes-non-critical
+	bcm/maintainers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/maintainers
+	omap/fixes-nc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/81xx-fixes-signed
+
+next/cleanup
+	treewide/cleanup
+		Merge branch 'treewide/cleanup' into next/cleanup
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup-for-v4.5
+	mvebu/cleanup
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.5-1
+	mtd/cleanup
+		git://git.infradead.org/linux-mtd tags/arm-soc/for-4.5/cleanup
+
+next/multiplatform
+	patch
+		ARM: pxa: make more mach/*.h files local
+		ARM: omap1: make headers more local
+		ARM: ks8695: make headers more local
+		ARM: davinci: make headers more local
+		ARM: iop13xx: make headers more local
+		ARM: w90x900: make headers more local
+		ARM: netx: remove unused mach/param.h
+	multiplatform/debug-ll
+		Merge branch 'multiplatform/debug-ll' into next/multiplatform
+	s3c64xx/multiplatform
+		Merge branch 's3c64xx/multiplatform' into next/multiplatform
+	mmp/multiplatform
+		Merge branch 'mmp/multiplatform' into next/multiplatform
+	patch
+		ARM: pxa: cm-x2xx: avoid duplicate macro warnings
+		ARM: pxa: mark raumfeld init functions as __maybe_unused
+		ARM: pxa: mark ezx structures as __maybe_unused
+	versatile/multiplatform
+		Merge branch 'versatile/multiplatform' into next/multiplatform
+	realview/multiplatform-base
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-base-armsoc-1-tag
+	mvebu/soc
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.5-1
+
+next/soc
+	bcm/soc
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/soc
+
+next/dt
+	lpc32xx/dt
+		https://github.com/vzapolskiy/linux lpc32xx-dts
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.5
+	renesas/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v4.5
+	ux500/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-dt-for-arm-soc
+	patch
+		ARM: dts: uniphier: change IRQ number of UART3 of PH1-Pro4 SoC
+		ARM: dts: uniphier: factor out common nodes to uniphier-common32.dtsi
+	rockchip/dt32
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts32-1
+	berlin/dt
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-dt-for-4.5-1
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.5-1
+	mvebu/dt2
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.5-2
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/dt-pt1
+	bcm/dt
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/devicetree
+	realview/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-base-armsoc-2-tag
+	socfpga/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.5
+
+next/dt64
+	renesas/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.5
+	renesas/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt2-for-v4.5
+	apm/dt64
+		https://github.com/AppliedMicro/xgene-next tags/xgene-dts-for-v4.5-v1
+	rockchip/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts64-1
+	berlin/dt64
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-dt-for-4.5-1
+	broadcom/dt64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/devicetree-arm64
+
+next/defconfig
+	patch
+		ARM: multi_v7_defconfig: Enable required QCOM SPMI/PMIC drivers
+		ARM: defconfig: multi_v7: Enable Qualcomm options for Honami
+	<no branch> (a0638365f6850855728a5ef5caf2aeab82a58035)
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-4.5-1
+	sunxi/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-defconfig-for-4.5
+	mvebu/defconfig
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-4.5-2
+	patch
+		ARM: multi_v7_defconfig: Enable some drivers for LS1021A
+		ARM: realview: refresh defconfig
+		ARM: realview: update SMP defconfig
+		ARM: realview: add generic config options
+		ARM: realview: add generic config options
+	<no branch> (93699220ecace65e5385511f9f7119fd49837adb)
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_defconfig_for_v4.5
+	patch
+		ARM: multi_v7_defconfig: Enable Rockchip generic power domain.
+
+next/config64
+	<no branch> (727e8d0126e3ecafce3ebc43eaa5a7d61af3bef0)
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.5
+	renesas/config64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig2-for-v4.5
+	patch
+		arm64: add Kconfig entry for Socionext UniPhier SoC family
+		arm64: defconfig: enable UniPhier SoCs support
+	berlin/soc64
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-soc-for-4.5-1
+
+next/drivers
+	drivers/reset
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.5
+	drivers/reset2
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.5-2
+	patch
+		reset: hi6220: fix modular build
