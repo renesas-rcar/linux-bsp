@@ -8,6 +8,7 @@
  * the Free Software Foundation; version 2 of the License.
  */
 
+#include <linux/bitmap.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
@@ -26,12 +27,16 @@
 
 #include "io-pgtable.h"
 
+#define IPMMU_CTX_MAX 1
+
 struct ipmmu_vmsa_device {
 	struct device *dev;
 	void __iomem *base;
 	struct list_head list;
 
 	unsigned int num_utlbs;
+	DECLARE_BITMAP(ctx, IPMMU_CTX_MAX);
+	struct ipmmu_vmsa_domain *domains[IPMMU_CTX_MAX];
 
 	struct dma_iommu_mapping *mapping;
 };
@@ -319,6 +324,7 @@ static struct iommu_gather_ops ipmmu_gather_ops = {
 static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 {
 	phys_addr_t ttbr;
+	int ret;
 
 	/*
 	 * Allocate the page table operations.
@@ -348,10 +354,16 @@ static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 		return -EINVAL;
 
 	/*
-	 * TODO: When adding support for multiple contexts, find an unused
-	 * context.
+	 * Find an unused context.
 	 */
-	domain->context_id = 0;
+	ret = bitmap_find_free_region(domain->mmu->ctx, IPMMU_CTX_MAX, 0);
+	if (ret < 0) {
+		free_io_pgtable_ops(domain->iop);
+		return ret;
+	}
+
+	domain->context_id = ret;
+	domain->mmu->domains[ret] = domain;
 
 	/* TTBR0 */
 	ttbr = domain->cfg.arm_lpae_s1_cfg.ttbr[0];
@@ -395,6 +407,8 @@ static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 
 static void ipmmu_domain_destroy_context(struct ipmmu_vmsa_domain *domain)
 {
+	bitmap_release_region(domain->mmu->ctx, domain->context_id, 0);
+
 	/*
 	 * Disable the context. Flush the TLB as required when modifying the
 	 * context registers.
@@ -460,16 +474,16 @@ static irqreturn_t ipmmu_domain_irq(struct ipmmu_vmsa_domain *domain)
 static irqreturn_t ipmmu_irq(int irq, void *dev)
 {
 	struct ipmmu_vmsa_device *mmu = dev;
-	struct iommu_domain *io_domain;
-	struct ipmmu_vmsa_domain *domain;
+	irqreturn_t status = IRQ_NONE;
+	unsigned int k;
 
-	if (!mmu->mapping)
-		return IRQ_NONE;
+	/* Check interrupts for all active contexts */
+	for (k = find_first_bit(mmu->ctx, IPMMU_CTX_MAX);
+	     k < IPMMU_CTX_MAX && status == IRQ_NONE;
+	     k = find_next_bit(mmu->ctx, IPMMU_CTX_MAX, k))
+		status = ipmmu_domain_irq(mmu->domains[k]);
 
-	io_domain = mmu->mapping->domain;
-	domain = to_vmsa_domain(io_domain);
-
-	return ipmmu_domain_irq(domain);
+	return status;
 }
 
 /* -----------------------------------------------------------------------------
@@ -788,6 +802,7 @@ static int ipmmu_probe(struct platform_device *pdev)
 
 	mmu->dev = &pdev->dev;
 	mmu->num_utlbs = 32;
+	bitmap_zero(mmu->ctx, IPMMU_CTX_MAX);
 
 	/* Map I/O memory and request IRQ. */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
