@@ -162,15 +162,17 @@ static int rcar_i2c_bus_barrier(struct rcar_i2c_priv *priv)
 	return -EBUSY;
 }
 
-static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv,
-				    u32 bus_speed,
-				    struct device *dev)
+static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv, struct i2c_timings *t)
 {
-	u32 scgd, cdf;
-	u32 round, ick;
-	u32 scl;
-	u32 cdf_width;
+	u32 scgd, cdf, round, ick, sum, scl, cdf_width;
 	unsigned long rate;
+	struct device *dev = rcar_i2c_priv_to_dev(priv);
+
+	/* Fall back to previously used values if not supplied */
+	t->bus_freq_hz = t->bus_freq_hz ?: 100000;
+	t->scl_fall_ns = t->scl_fall_ns ?: 35;
+	t->scl_rise_ns = t->scl_rise_ns ?: 200;
+	t->scl_int_delay_ns = t->scl_int_delay_ns ?: 50;
 
 	switch (priv->devtype) {
 	case I2C_RCAR_GEN1:
@@ -194,9 +196,9 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv,
 	 * SCL	= ick / (20 + SCGD * 8 + F[(ticf + tr + intd) * ick])
 	 *
 	 * ick  : I2C internal clock < 20 MHz
-	 * ticf : I2C SCL falling time  =  35 ns here
-	 * tr   : I2C SCL rising  time  = 200 ns here
-	 * intd : LSI internal delay    =  50 ns here
+	 * ticf : I2C SCL falling time
+	 * tr   : I2C SCL rising  time
+	 * intd : LSI internal delay
 	 * clkp : peripheral_clk
 	 * F[]  : integer up-valuation
 	 */
@@ -212,12 +214,12 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv,
 	 * it is impossible to calculate large scale
 	 * number on u32. separate it
 	 *
-	 * F[(ticf + tr + intd) * ick]
-	 *  = F[(35 + 200 + 50)ns * ick]
-	 *  = F[285 * ick / 1000000000]
-	 *  = F[(ick / 1000000) * 285 / 1000]
+	 * F[(ticf + tr + intd) * ick] with sum = (ticf + tr + intd)
+	 *  = F[sum * ick / 1000000000]
+	 *  = F[(ick / 1000000) * sum / 1000]
 	 */
-	round = (ick + 500000) / 1000000 * 285;
+	sum = t->scl_fall_ns + t->scl_rise_ns + t->scl_int_delay_ns;
+	round = (ick + 500000) / 1000000 * sum;
 	round = (round + 500) / 1000;
 
 	/*
@@ -234,7 +236,7 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv,
 	 */
 	for (scgd = 0; scgd < 0x40; scgd++) {
 		scl = ick / (20 + (scgd * 8) + round);
-		if (scl <= bus_speed)
+		if (scl <= t->bus_freq_hz)
 			goto scgd_find;
 	}
 	dev_err(dev, "it is impossible to calculate best SCL\n");
@@ -242,7 +244,7 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv,
 
 scgd_find:
 	dev_dbg(dev, "clk %d/%d(%lu), round %u, CDF:0x%x, SCGD: 0x%x\n",
-		scl, bus_speed, clk_get_rate(priv->clk), round, cdf, scgd);
+		scl, t->bus_freq_hz, clk_get_rate(priv->clk), round, cdf, scgd);
 
 	/* keep icccr value */
 	priv->icccr = scgd << cdf_width | cdf;
@@ -592,7 +594,7 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	struct i2c_adapter *adap;
 	struct resource *res;
 	struct device *dev = &pdev->dev;
-	u32 bus_speed;
+	struct i2c_timings i2c_t;
 	int irq, ret;
 
 	priv = devm_kzalloc(dev, sizeof(struct rcar_i2c_priv), GFP_KERNEL);
@@ -610,21 +612,7 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->io))
 		return PTR_ERR(priv->io);
 
-	bus_speed = 100000; /* default 100 kHz */
-	of_property_read_u32(dev->of_node, "clock-frequency", &bus_speed);
-
 	priv->devtype = (enum rcar_i2c_type)of_match_device(rcar_i2c_dt_ids, dev)->data;
-
-	pm_runtime_enable(dev);
-	pm_runtime_get_sync(dev);
-	ret = rcar_i2c_clock_calculate(priv, bus_speed, dev);
-	if (ret < 0)
-		goto out_pm_put;
-
-	rcar_i2c_init(priv);
-	pm_runtime_put(dev);
-
-	irq = platform_get_irq(pdev, 0);
 	init_waitqueue_head(&priv->wait);
 
 	adap = &priv->adap;
@@ -637,8 +625,19 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	i2c_set_adapdata(adap, priv);
 	strlcpy(adap->name, pdev->name, sizeof(adap->name));
 
-	ret = devm_request_irq(dev, irq, rcar_i2c_irq, 0,
-			       dev_name(dev), priv);
+	i2c_parse_fw_timings(dev, &i2c_t, false);
+
+	pm_runtime_enable(dev);
+	pm_runtime_get_sync(dev);
+	ret = rcar_i2c_clock_calculate(priv, &i2c_t);
+	if (ret < 0)
+		goto out_pm_put;
+
+	rcar_i2c_init(priv);
+	pm_runtime_put(dev);
+
+	irq = platform_get_irq(pdev, 0);
+	ret = devm_request_irq(dev, irq, rcar_i2c_irq, 0, dev_name(dev), priv);
 	if (ret < 0) {
 		dev_err(dev, "cannot get irq %d\n", irq);
 		goto out_pm_disable;
