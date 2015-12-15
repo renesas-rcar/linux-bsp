@@ -279,9 +279,18 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 static void ipmmu_utlb_disable(struct ipmmu_vmsa_domain *domain,
 			       unsigned int utlb)
 {
-	struct ipmmu_vmsa_device *mmu = domain->mmu;
+	ipmmu_write(domain->mmu, IMUCTR(utlb), 0);
+}
 
-	ipmmu_write(mmu, IMUCTR(utlb), 0);
+static void ipmmu_utlb_ctrl(struct ipmmu_vmsa_domain *domain,
+			    void (*fn)(struct ipmmu_vmsa_domain *,
+				       unsigned int utlb), struct device *dev)
+{
+	struct ipmmu_vmsa_dev_data *dev_data = get_dev_data(dev);
+	unsigned int i;
+
+	for (i = 0; i < dev_data->num_utlbs; ++i)
+		fn(domain, dev_data->utlbs[i]);
 }
 
 static void ipmmu_tlb_flush_all(void *cookie)
@@ -503,7 +512,6 @@ static int ipmmu_attach_device(struct iommu_domain *io_domain,
 	struct ipmmu_vmsa_device *mmu = dev_data->mmu;
 	struct ipmmu_vmsa_domain *domain = to_vmsa_domain(io_domain);
 	unsigned long flags;
-	unsigned int i;
 	int ret = 0;
 
 	if (!mmu) {
@@ -529,24 +537,16 @@ static int ipmmu_attach_device(struct iommu_domain *io_domain,
 
 	spin_unlock_irqrestore(&domain->lock, flags);
 
-	if (ret < 0)
-		return ret;
+	if (!ret)
+		ipmmu_utlb_ctrl(domain, ipmmu_utlb_enable, dev);
 
-	for (i = 0; i < dev_data->num_utlbs; ++i)
-		ipmmu_utlb_enable(domain, dev_data->utlbs[i]);
-
-	return 0;
+	return ret;
 }
 
 static void ipmmu_detach_device(struct iommu_domain *io_domain,
 				struct device *dev)
 {
-	struct ipmmu_vmsa_dev_data *dev_data = get_dev_data(dev);
-	struct ipmmu_vmsa_domain *domain = to_vmsa_domain(io_domain);
-	unsigned int i;
-
-	for (i = 0; i < dev_data->num_utlbs; ++i)
-		ipmmu_utlb_disable(domain, dev_data->utlbs[i]);
+	ipmmu_utlb_ctrl(to_vmsa_domain(io_domain), ipmmu_utlb_disable, dev);
 
 	/*
 	 * TODO: Optimize by disabling the context when no device is attached.
