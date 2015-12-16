@@ -68,8 +68,17 @@ struct rcar_thermal_priv {
 #define rcar_priv_to_dev(priv)		((priv)->dev)
 #define rcar_has_irq_support(priv)	((priv)->irq)
 
-/* Temperature conversion  */
-#define TEMP_CONVERT(ctemp)	(((1000 * MCELSIUS(ctemp)) - 2536700) / 7468)
+/*
+ * Temperature conversion
+ *
+ * temp = (THCODE - 2536.7) / 7.468
+ *
+ * First, multiply each operand with 1000 to avoid float number.
+ * Then, to convert to Mili-Celsius and round up later,
+ * this formula will be multiplied with 10000 instead of 1000.
+*/
+#define TEMP_CONVERT(ctemp)    \
+	((10000L * ((1000L * ctemp) - 2536700L)) / 7468L)
 
 #define rcar_thermal_read(p, r) _rcar_thermal_read(p, r)
 static u32 _rcar_thermal_read(struct rcar_thermal_priv *priv, u32 reg)
@@ -89,13 +98,14 @@ static int round_temp(int i)
 	int tmp1, tmp2;
 	int result = 0;
 
-	tmp1 = i % 10;
-	tmp2 = i / 10;
+	tmp1 = abs(i) % 10;
+	tmp2 = abs(i) / 10;
 	if (tmp1 < 5)
 		result = tmp2;
 	else
 		result = tmp2 + 1;
-	return result;
+
+	return ((i < 0) ? (result * (-1)) : result);
 }
 
 /*
