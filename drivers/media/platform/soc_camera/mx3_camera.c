@@ -23,9 +23,9 @@
 #include <media/v4l2-dev.h>
 #include <media/videobuf2-dma-contig.h>
 #include <media/soc_camera.h>
-#include <media/soc_mediabus.h>
+#include <media/drv-intf/soc_mediabus.h>
 
-#include <linux/platform_data/camera-mx3.h>
+#include <linux/platform_data/media/camera-mx3.h>
 #include <linux/platform_data/dma-imx.h>
 
 #define MX3_CAM_DRV_NAME "mx3-camera"

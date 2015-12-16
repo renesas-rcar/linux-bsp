@@ -29,8 +29,8 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-dv-timings.h>
-#include <media/adv7604.h>
-#include <media/adv7842.h>
+#include <media/i2c/adv7604.h>
+#include <media/i2c/adv7842.h>
 
 #include "cobalt-alsa.h"
 #include "cobalt-cpld.h"
@@ -649,7 +649,7 @@ static int cobalt_s_dv_timings(struct file *file, void *priv_fh,
 		return 0;
 	}
 
-	if (v4l2_match_dv_timings(timings, &s->timings, 0))
+	if (v4l2_match_dv_timings(timings, &s->timings, 0, false))
 		return 0;
 
 	if (vb2_is_busy(&s->q))
