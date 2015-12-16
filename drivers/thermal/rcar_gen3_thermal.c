@@ -129,7 +129,7 @@ static int rcar_gen3_thermal_update_temp(struct rcar_thermal_priv *priv)
 		} else
 			break;
 
-		udelay(300);
+		udelay(150);
 	}
 
 	priv->ctemp = round_temp(TEMP_CONVERT(ctemp));
