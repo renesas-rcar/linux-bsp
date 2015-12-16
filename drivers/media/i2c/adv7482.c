@@ -1466,17 +1466,17 @@ static int adv7482_cp_init_controls(struct adv7482_state *state)
 	v4l2_ctrl_handler_init(&state->ctrl_hdl, 4);
 
 	v4l2_ctrl_new_std(&state->ctrl_hdl, &adv7482_ctrl_ops,
-			  V4L2_CID_BRIGHTNESS, (s32)0x80000000,
-			  (s32)0x7fffffff, 1, ADV7482_CP_BRI_DEF);
+			  V4L2_CID_BRIGHTNESS, ADV7482_CP_BRI_MIN,
+			  ADV7482_CP_BRI_MAX, 1, ADV7482_CP_BRI_DEF);
 	v4l2_ctrl_new_std(&state->ctrl_hdl, &adv7482_ctrl_ops,
-			  V4L2_CID_CONTRAST, (s32)0x80000000,
-			  (s32)0x7fffffff, 1, ADV7482_CP_CON_DEF);
+			  V4L2_CID_CONTRAST, ADV7482_CP_CON_MIN,
+			  ADV7482_CP_CON_MAX, 1, ADV7482_CP_CON_DEF);
 	v4l2_ctrl_new_std(&state->ctrl_hdl, &adv7482_ctrl_ops,
-			  V4L2_CID_SATURATION, (s32)0x80000000,
-			  (s32)0x7fffffff, 1, ADV7482_CP_SAT_DEF);
+			  V4L2_CID_SATURATION, ADV7482_CP_SAT_MIN,
+			  ADV7482_CP_SAT_MAX, 1, ADV7482_CP_SAT_DEF);
 	v4l2_ctrl_new_std(&state->ctrl_hdl, &adv7482_ctrl_ops,
-			  V4L2_CID_HUE, (s32)0x80000000,
-			  (s32)0x7fffffff, 1, ADV7482_CP_HUE_DEF);
+			  V4L2_CID_HUE, ADV7482_CP_HUE_MIN,
+			  ADV7482_CP_HUE_MAX, 1, ADV7482_CP_HUE_DEF);
 	state->sd.ctrl_handler = &state->ctrl_hdl;
 	if (state->ctrl_hdl.error) {
 		int err = state->ctrl_hdl.error;
