@@ -110,11 +110,16 @@ static int rcar_gen3_thermal_update_temp(struct rcar_thermal_priv *priv)
 
 	spin_lock_irqsave(&priv->lock, flags);
 
-	for (i = 0; i < 8; i++) {
-		udelay(300);
+	for (i = 0; i < 256; i++) {
 		ctemp = rcar_thermal_read(priv, REG_GEN3_TEMP) & CTEMP_MASK;
-		if (rcar_has_irq_support(priv))
+		if (rcar_has_irq_support(priv)) {
 			rcar_thermal_write(priv, reg, ctemp);
+			if (rcar_thermal_read(priv, REG_GEN3_IRQSTR) != 0)
+				break;
+		} else
+			break;
+
+		udelay(300);
 	}
 
 	priv->ctemp = round_temp(TEMP_CONVERT(ctemp));
