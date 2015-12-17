@@ -247,6 +247,7 @@ static const struct mssr_mod_clk r8a7795_mod_clks[] __initconst = {
 	DEF_MOD("scu-src2",		1029,	MOD_CLK_ID(1017)),
 	DEF_MOD("scu-src1",		1030,	MOD_CLK_ID(1017)),
 	DEF_MOD("scu-src0",		1031,	MOD_CLK_ID(1017)),
+	DEF_MOD("sata",			815,	R8A7795_CLK_S3D2),
 };
 
 static const unsigned int r8a7795_crit_mod_clks[] __initconst = {
