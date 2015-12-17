@@ -375,6 +375,14 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 	ctemp = thermal_temp_converter(priv->coef, priv->ctemp);
 	spin_unlock_irqrestore(&priv->lock, flags);
 
+	if ((ctemp < MCELSIUS(-40)) || (ctemp > MCELSIUS(125))) {
+		struct device *dev = rcar_priv_to_dev(priv);
+
+		dev_err(dev, "Temperature is not measured correclty!\n");
+
+		return -EIO;
+	}
+
 	*temp = ctemp;
 
 	return 0;
