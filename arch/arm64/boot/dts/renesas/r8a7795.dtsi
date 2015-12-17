@@ -377,6 +377,14 @@
 			clock-frequency = <8333333>;
 		};
 
+		wdt0: wdt@e6020000 {
+			compatible = "renesas,rwdt-r8a7795", "renesas,rwdt";
+			reg = <0 0xe6020000 0 0x0c>;
+			clocks = <&cpg CPG_MOD 402>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			status = "disabled";
+		};
+
 		cpg: clock-controller@e6150000 {
 			compatible = "renesas,r8a7795-cpg-mssr";
 			reg = <0 0xe6150000 0 0x1000>;
