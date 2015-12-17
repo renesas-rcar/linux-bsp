@@ -38,6 +38,7 @@
 
 #define DRV_NAME "rcar_csi2"
 #define CONNECT_SLAVE_NAME "adv7482"
+#define VC_MAX_CHANNEL		4
 
 #define RCAR_CSI2_TREF		0x00
 #define RCAR_CSI2_SRST		0x04
@@ -170,6 +171,8 @@ enum decoder_input_interface {
 struct rcar_csi2_link_config {
 	enum decoder_input_interface input_interface;
 	unsigned char lanes;
+	unsigned long vcdt;
+	unsigned long vcdt2;
 };
 
 #define INIT_RCAR_CSI2_LINK_CONFIG(m) \
@@ -190,6 +193,8 @@ struct rcar_csi2 {
 	void __iomem			*base;
 	struct platform_device		*pdev;
 	struct rcar_csi2_client_config	*client;
+	unsigned long			vcdt;
+	unsigned long			vcdt2;
 
 	unsigned int			field;
 	unsigned int			code;
@@ -347,8 +352,6 @@ static int rcar_csi2_hwinit(struct rcar_csi2 *priv)
 {
 	int ret;
 	__u32 tmp = 0x10; /* Enable MIPI CSI clock lane */
-	__u32 vcdt = 0;
-	__u32 vcdt2 = 0;
 
 	/* Reflect registers immediately */
 	iowrite32(0x00000001, priv->base + RCAR_CSI2_TREF);
@@ -365,18 +368,12 @@ static int rcar_csi2_hwinit(struct rcar_csi2 *priv)
 		case 1:
 			/* First field number setting */
 			iowrite32(0x0001000f, priv->base + RCAR_CSI2_FLD);
-
 			tmp |= 0x1;
-			vcdt |= (0x1e | RCAR_CSI2_VCDT_VCDTN_EN);
-				/* YUV422 8 bit */
 			break;
 		case 4:
 			/* First field number setting */
 			iowrite32(0x0002000f, priv->base + RCAR_CSI2_FLD);
-
 			tmp |= 0xF;
-			vcdt |= (0x24 | RCAR_CSI2_VCDT_VCDTN_EN);
-				/* RGB888 */
 			break;
 		default:
 			dev_err(&priv->pdev->dev,
@@ -401,12 +398,17 @@ static int rcar_csi2_hwinit(struct rcar_csi2 *priv)
 	}
 
 	iowrite32(0x00000003, priv->base + RCAR_CSI2_CHKSUM);
-	iowrite32(vcdt, priv->base + RCAR_CSI2_VCDT);
-	iowrite32(vcdt2, priv->base + RCAR_CSI2_VCDT2);
+	iowrite32(priv->vcdt, priv->base + RCAR_CSI2_VCDT);
+	iowrite32(priv->vcdt2, priv->base + RCAR_CSI2_VCDT2);
 	iowrite32(0x00010000, priv->base + RCAR_CSI2_FRDT);
 	udelay(10);
 	iowrite32(0x83000000, priv->base + RCAR_CSI2_LINKCNT);
 	iowrite32(0x000000e4, priv->base + RCAR_CSI2_LSWAP);
+
+	dev_dbg(&priv->pdev->dev, "CSI2 VCDT:  0x%x\n",
+			 ioread32(priv->base + RCAR_CSI2_VCDT));
+	dev_dbg(&priv->pdev->dev, "CSI2 VCDT2: 0x%x\n",
+			 ioread32(priv->base + RCAR_CSI2_VCDT2));
 
 	/* wait until video decoder power off */
 	msleep(10);
@@ -503,8 +505,11 @@ static int rcar_csi2_parse_dt(struct device_node *np,
 {
 	struct v4l2_of_endpoint bus_cfg;
 	struct device_node *endpoint;
+	struct device_node *vc_np, *vc_ch;
 	const char *str;
+	char csi_name[9];
 	int ret;
+	int i, ch;
 
 	/* Parse the endpoint. */
 	endpoint = of_graph_get_next_endpoint(np, NULL);
@@ -519,6 +524,51 @@ static int rcar_csi2_parse_dt(struct device_node *np,
 	ret = of_property_read_string(np, "adi,input-interface", &str);
 	if (ret < 0)
 		return ret;
+
+	vc_np = of_get_child_by_name(np, "virtual,channel");
+
+	config->vcdt = 0;
+	config->vcdt2 = 0;
+	for (i = 0; i < VC_MAX_CHANNEL; i++) {
+		sprintf(csi_name, "csi2_vc%d", i);
+
+		vc_ch = of_get_child_by_name(vc_np, csi_name);
+		if (!vc_ch)
+			continue;
+		ret = of_property_read_string(vc_ch, "data,type", &str);
+		if (ret < 0)
+			return ret;
+		ret = of_property_read_u32(vc_ch, "receive,vc", &ch);
+		if (ret < 0)
+			return ret;
+
+		if (i < 2) {
+			if (!strcmp(str, "rgb888"))
+				config->vcdt |= (0x24 << (i * 16));
+			else if (!strcmp(str, "ycbcr422"))
+				config->vcdt |= (0x1e << (i * 16));
+			else
+				config->vcdt |= 0;
+
+			config->vcdt |= (ch << (8 + (i * 16)));
+			config->vcdt |= (RCAR_CSI2_VCDT_VCDTN_EN << (i * 16)) |
+					(RCAR_CSI2_VCDT_SEL_DTN_ON << (i * 16));
+		}
+		if (i >= 2) {
+			int j = (i - 2);
+
+			if (!strcmp(str, "rgb888"))
+				config->vcdt2 |= (0x24 << (j * 16));
+			else if (!strcmp(str, "ycbcr422"))
+				config->vcdt2 |= (0x1e << (j * 16));
+			else
+				config->vcdt2 |= 0;
+
+			config->vcdt2 |= (ch << (8 + (j * 16)));
+			config->vcdt2 |= (RCAR_CSI2_VCDT_VCDTN_EN << (j * 16)) |
+					(RCAR_CSI2_VCDT_SEL_DTN_ON << (j * 16));
+		}
+	}
 
 	return 0;
 }
@@ -582,6 +632,8 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	priv->subdev.owner = THIS_MODULE;
 	priv->subdev.dev = &pdev->dev;
 	priv->lanes = link_config.lanes;
+	priv->vcdt = link_config.vcdt;
+	priv->vcdt2 = link_config.vcdt2;
 
 	platform_set_drvdata(pdev, &priv->subdev);
 
