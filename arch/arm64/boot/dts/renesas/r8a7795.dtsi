@@ -24,6 +24,9 @@
 		i2c4 = &i2c4;
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
+		tsc0 = &tsc1;
+		tsc1 = &tsc2;
+		tsc2 = &tsc3;
 	};
 
 	psci {
@@ -1124,7 +1127,6 @@
 			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 522>;
 			#thermal-sensor-cells = <0>;
-			id = <0>;
 			status = "okay";
 		};
 
@@ -1135,7 +1137,6 @@
 			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 522>;
 			#thermal-sensor-cells = <0>;
-			id = <1>;
 			status = "okay";
 		};
 
@@ -1146,7 +1147,6 @@
 			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 522>;
 			#thermal-sensor-cells = <0>;
-			id = <2>;
 			status = "okay";
 		};
 
