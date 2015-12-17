@@ -36,6 +36,12 @@
 #define REG_GEN3_IRQTEMP2	0x18
 #define REG_GEN3_IRQTEMP3	0x1C
 #define REG_GEN3_TEMP		0x28
+#define REG_GEN3_FTHCODEH	0x48
+#define REG_GEN3_FTHCODET	0x4C
+#define REG_GEN3_FTHCODEL	0x50
+#define REG_GEN3_FPTATH		0x54
+#define REG_GEN3_FPTATT		0x58
+#define REG_GEN3_FPTATL		0x5C
 
 /* CTSR bit */
 #define PONSEQSTOP      (0x1 << 27)
@@ -52,33 +58,53 @@
 
 #define TEMP_IRQ_SHIFT(tsc_id)	(0x1 << tsc_id)
 #define TEMPD_IRQ_SHIFT(tsc_id)	(0x1 << (tsc_id + 3))
+#define GEN3_FUSE_MASK	0xFFF
+
+#define RCAR_H3_WS1		0x4F00
+
+/* Product register */
+#define GEN3_PRR	0xFFF00044
+#define GEN3_PRR_MASK	0x4FFF
+
+/* This struct is for quadratic equation.
+ * y = ax^2 + bx + c
+*/
+struct equation_coefs {
+	long a;
+	long b;
+	long c;
+};
+
+struct fuse_factors {
+	int fthcode_h;
+	int fthcode_t;
+	int fthcode_l;
+	int fptat_h;
+	int fptat_t;
+	int fptat_l;
+};
 
 struct rcar_thermal_priv {
 	void __iomem *base;
 	struct device *dev;
 	struct thermal_zone_device *zone;
 	struct delayed_work work;
+	struct fuse_factors factor;
+	struct equation_coefs coef;
 	spinlock_t lock;
 	int id;
 	int irq;
 	u32 ctemp;
 };
 
-#define MCELSIUS(temp)                  ((temp) * 1000)
 #define rcar_priv_to_dev(priv)		((priv)->dev)
 #define rcar_has_irq_support(priv)	((priv)->irq)
 
-/*
- * Temperature conversion
- *
- * temp = (THCODE - 2536.7) / 7.468
- *
- * First, multiply each operand with 1000 to avoid float number.
- * Then, to convert to Mili-Celsius and round up later,
- * this formula will be multiplied with 10000 instead of 1000.
-*/
-#define TEMP_CONVERT(ctemp)    \
-	((10000L * ((1000L * ctemp) - 2536700L)) / 7468L)
+/* Temperature calculation  */
+#define CODETSD(x)		((x) * 1000)
+#define TJ_H 96000L
+#define TJ_L (-41000L)
+#define PW2(x) ((x)*(x))
 
 #define rcar_thermal_read(p, r) _rcar_thermal_read(p, r)
 static u32 _rcar_thermal_read(struct rcar_thermal_priv *priv, u32 reg)
@@ -93,19 +119,127 @@ static void _rcar_thermal_write(struct rcar_thermal_priv *priv,
 	iowrite32(data, priv->base + reg);
 }
 
-static int round_temp(int i)
+static int round_temp(int temp)
 {
 	int tmp1, tmp2;
 	int result = 0;
 
-	tmp1 = abs(i) % 10;
-	tmp2 = abs(i) / 10;
-	if (tmp1 < 5)
-		result = tmp2;
-	else
-		result = tmp2 + 1;
+	tmp1 = abs(temp) % 1000;
+	tmp2 = abs(temp) / 1000;
 
-	return ((i < 0) ? (result * (-1)) : result);
+	if (tmp1 < 250)
+		result = CODETSD(tmp2);
+	else if (tmp1 < 750 && tmp1 >= 250)
+		result = CODETSD(tmp2) + 500;
+	else
+		result = CODETSD(tmp2) + 1000;
+
+	return ((temp < 0) ? (result * (-1)) : result);
+}
+
+static void thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
+{
+	u32  lsi_id;
+	void __iomem *product_register = ioremap_nocache(GEN3_PRR, 4);
+
+	/* For H3 WS1, these registers have not been programmed yet.
+	 * We will use fixed value as temporary solution.
+	 */
+	lsi_id = ioread32(product_register) & GEN3_PRR_MASK;
+	if (lsi_id != RCAR_H3_WS1) {
+		priv->factor.fthcode_h = rcar_thermal_read(priv,
+						REG_GEN3_FTHCODEH)
+				& GEN3_FUSE_MASK;
+		priv->factor.fthcode_t = rcar_thermal_read(priv,
+						REG_GEN3_FTHCODET)
+				& GEN3_FUSE_MASK;
+		priv->factor.fthcode_l = rcar_thermal_read(priv,
+						REG_GEN3_FTHCODEL)
+				& GEN3_FUSE_MASK;
+		priv->factor.fptat_h = rcar_thermal_read(priv, REG_GEN3_FPTATH)
+				& GEN3_FUSE_MASK;
+		priv->factor.fptat_t = rcar_thermal_read(priv, REG_GEN3_FPTATT)
+				& GEN3_FUSE_MASK;
+		priv->factor.fptat_l = rcar_thermal_read(priv, REG_GEN3_FPTATL)
+				& GEN3_FUSE_MASK;
+	} else {
+		priv->factor.fthcode_h = 3355;
+		priv->factor.fthcode_t = 2850;
+		priv->factor.fthcode_l = 2110;
+		priv->factor.fptat_h = 2320;
+		priv->factor.fptat_t = 1510;
+		priv->factor.fptat_l = 320;
+	}
+	iounmap(product_register);
+}
+
+static void thermal_coefficient_calculation(struct rcar_thermal_priv *priv)
+{
+	long tj_t = 0;
+	long a, b, c;
+	long num_a, num_a1, num_a2;
+	long den_a, den_a1, den_a2;
+	long num_b1, num_b2, num_b, den_b;
+	long para_c1, para_c2, para_c3;
+
+	tj_t = (CODETSD((priv->factor.fptat_t - priv->factor.fptat_l) * 137)
+		/ (priv->factor.fptat_h - priv->factor.fptat_l)) - CODETSD(41);
+
+	/*
+	 * The following code is to calculate coefficients
+	 * for quadratic equation.
+	 */
+	/* Coefficient a */
+	num_a1 = (CODETSD(priv->factor.fthcode_t)
+			- CODETSD(priv->factor.fthcode_l)) * (TJ_H - TJ_L);
+	num_a2 = (CODETSD(priv->factor.fthcode_h)
+		- CODETSD(priv->factor.fthcode_l)) * (tj_t - TJ_L);
+	num_a = num_a1 - num_a2;
+	den_a1 = (PW2(tj_t) - PW2(TJ_L)) * (TJ_H - TJ_L);
+	den_a2 = (PW2(TJ_H) - PW2(TJ_L)) * (tj_t - TJ_L);
+	den_a = (den_a1 - den_a2) / 1000;
+	a = (100000 * num_a) / den_a;
+
+	/* Coefficient b */
+	num_b1 = (CODETSD(priv->factor.fthcode_t)
+		- CODETSD(priv->factor.fthcode_l))
+			* (TJ_H - TJ_L);
+	num_b2 = ((PW2(tj_t) - PW2(TJ_L)) * (TJ_H - TJ_L) * a) / 1000;
+	num_b = 100000 * num_b1 - num_b2;
+	den_b = ((tj_t - TJ_L) * (TJ_H - TJ_L));
+	b = num_b / den_b;
+
+	/* Coefficient c */
+	para_c1 = 100000 * priv->factor.fthcode_l;
+	para_c2 = (PW2(TJ_L) * a) / PW2(1000);
+	para_c3 = (TJ_L * b) / 1000;
+	c = para_c1 - para_c2 - para_c3;
+
+	priv->coef.a = DIV_ROUND_CLOSEST(a, 10);
+	priv->coef.b = DIV_ROUND_CLOSEST(b, 10);
+	priv->coef.c = DIV_ROUND_CLOSEST(c, 10);
+}
+
+int thermal_temp_converter(struct equation_coefs coef, int temp_code)
+{
+	int temp, temp1, temp2;
+	long delta;
+
+	/* Multiply with 10000 to sync with coef a, coef b and coef c. */
+	delta = coef.b * coef.b - 4 * coef.a * (coef.c - 10000 * temp_code);
+
+	/* Multiply temp with 1000 to convert to Mili-Celsius */
+	temp1 = (CODETSD(-coef.b) + int_sqrt(1000000 * delta))
+				/ (2 * coef.a);
+	temp2 = (CODETSD(-coef.b) - int_sqrt(1000000 * delta))
+				/ (2 * coef.a);
+
+	if (temp1 > -45000000)
+		temp = temp1;
+	else
+		temp = temp2;
+
+	return round_temp(temp);
 }
 
 /*
@@ -149,7 +283,7 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 	 * temp = (THCODE - 2536.7) / 7.468
 	 */
 	ctemp = rcar_thermal_read(priv, REG_GEN3_TEMP) & CTEMP_MASK;
-	*temp = round_temp(TEMP_CONVERT(ctemp));
+	*temp = thermal_temp_converter(priv->coef, ctemp);
 	priv->ctemp = ctemp;
 	spin_unlock_irqrestore(&priv->lock, flags);
 
@@ -319,7 +453,10 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 
 	rcar_gen3_thermal_init(priv);
+	thermal_read_fuse_factor(priv);
+	thermal_coefficient_calculation(priv);
 	ret = rcar_gen3_thermal_update_temp(priv);
+
 	if (ret < 0)
 		goto error_unregister;
 
