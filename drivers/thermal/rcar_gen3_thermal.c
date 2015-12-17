@@ -132,7 +132,7 @@ static int rcar_gen3_thermal_update_temp(struct rcar_thermal_priv *priv)
 		udelay(150);
 	}
 
-	priv->ctemp = round_temp(TEMP_CONVERT(ctemp));
+	priv->ctemp = ctemp;
 	spin_unlock_irqrestore(&priv->lock, flags);
 
 	return 0;
@@ -150,7 +150,7 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 	 */
 	ctemp = rcar_thermal_read(priv, REG_GEN3_TEMP) & CTEMP_MASK;
 	*temp = round_temp(TEMP_CONVERT(ctemp));
-	priv->ctemp = *temp;
+	priv->ctemp = ctemp;
 	spin_unlock_irqrestore(&priv->lock, flags);
 
 	return 0;
