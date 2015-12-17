@@ -439,7 +439,6 @@ static void rcar_gen3_thermal_work(struct work_struct *work)
 
 	priv = container_of(work, struct rcar_thermal_priv, work.work);
 
-	rcar_gen3_thermal_update_temp(priv);
 	thermal_zone_device_update(priv->zone);
 
 	rcar_thermal_irq_enable(priv);
