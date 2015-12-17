@@ -64,6 +64,10 @@ next/multiplatform
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-base-armsoc-1-tag
 	mvebu/soc
 		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.5-1
+	patch
+		ARM: make default platform work for NOMMU
+		ARM: debug-ll: move DEBUG_LL_UART_EFM32 to correct Kconfig location
+		ARM: defconfig: use correct debug_ll settings
 
 next/soc
 	bcm/soc
