@@ -1225,13 +1225,14 @@ bool drm_mode_parse_command_line_for_connector(const char *mode_option,
 					       struct drm_cmdline_mode *mode)
 {
 	const char *name;
-	unsigned int namelen;
+	unsigned int namelen, digit_i;
 	bool res_specified = false, bpp_specified = false, refresh_specified = false;
 	unsigned int xres = 0, yres = 0, bpp = 32, refresh = 0;
 	bool yres_specified = false, cvt = false, rb = false;
 	bool interlace = false, margins = false, was_digit = false;
 	int i, err;
 	enum drm_connector_force force = DRM_FORCE_UNSPECIFIED;
+	char *digits;
 
 #ifdef CONFIG_FB
 	if (!mode_option)
@@ -1245,42 +1246,53 @@ bool drm_mode_parse_command_line_for_connector(const char *mode_option,
 
 	name = mode_option;
 	namelen = strlen(name);
+
+	digits = kzalloc(namelen, GFP_KERNEL);
+	if (!digits)
+		return false;
+	/* The last character must be the last 0 */
+	digit_i = namelen;
+
 	for (i = namelen-1; i >= 0; i--) {
 		switch (name[i]) {
 		case '@':
 			if (!refresh_specified && !bpp_specified &&
 			    !yres_specified && !cvt && !rb && was_digit) {
-				err = kstrtouint(&name[i + 1], 10, &refresh);
+				err = kstrtouint(&digits[digit_i], 10, &refresh);
 				if (err)
 					return false;
 				refresh_specified = true;
 				was_digit = false;
+				digit_i = namelen;
 			} else
 				goto done;
 			break;
 		case '-':
 			if (!bpp_specified && !yres_specified && !cvt &&
 			    !rb && was_digit) {
-				err = kstrtouint(&name[i + 1], 10, &bpp);
+				err = kstrtouint(&digits[digit_i], 10, &bpp);
 				if (err)
 					return false;
 				bpp_specified = true;
 				was_digit = false;
+				digit_i = namelen;
 			} else
 				goto done;
 			break;
 		case 'x':
 			if (!yres_specified && was_digit) {
-				err = kstrtouint(&name[i + 1], 10, &yres);
+				err = kstrtouint(&digits[digit_i], 10, &yres);
 				if (err)
 					return false;
 				yres_specified = true;
 				was_digit = false;
+				digit_i = namelen;
 			} else
 				goto done;
 			break;
 		case '0' ... '9':
 			was_digit = true;
+			digits[--digit_i] = name[i];
 			break;
 		case 'M':
 			if (yres_specified || cvt || was_digit)
@@ -1349,6 +1361,7 @@ done:
 			"parse error at position %i in video mode '%s'\n",
 			i, name);
 		mode->specified = false;
+		kfree(digits);
 		return false;
 	}
 
@@ -1373,6 +1386,7 @@ done:
 	mode->margins = margins;
 	mode->force = force;
 
+	kfree(digits);
 	return true;
 }
 EXPORT_SYMBOL(drm_mode_parse_command_line_for_connector);

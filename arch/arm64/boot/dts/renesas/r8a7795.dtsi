@@ -1001,7 +1001,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea20000 0 0x8000>;
 			interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 623>;
+			clocks = <&cpg CPG_MOD 623>, <&cpg CPG_MOD 603>;
 
 			renesas,has-bru;
 			renesas,has-lif;
@@ -1014,7 +1014,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea28000 0 0x8000>;
 			interrupts = <GIC_SPI 467 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 622>;
+			clocks = <&cpg CPG_MOD 622>, <&cpg CPG_MOD 602>;
 
 			renesas,has-bru;
 			renesas,has-lif;
@@ -1027,7 +1027,7 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea30000 0 0x8000>;
 			interrupts = <GIC_SPI 468 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 621>;
+			clocks = <&cpg CPG_MOD 621>, <&cpg CPG_MOD 601>;
 
 			renesas,has-bru;
 			renesas,has-lif;
@@ -1040,13 +1040,25 @@
 			compatible = "renesas,vsp2d";
 			reg = <0 0xfea38000 0 0x8000>;
 			interrupts = <GIC_SPI 469 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 620>;
+			clocks = <&cpg CPG_MOD 620>, <&cpg CPG_MOD 600>;
 
 			renesas,has-bru;
 			renesas,has-lif;
 			renesas,has-lut;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <2>;
+		};
+
+		hdmi0: hdmi@fead0000 {
+			compatible = "renesas,hdmi0";
+			reg = <0 0xfead0000 0 0x10000>;
+			interrupts = <GIC_SPI 389 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		hdmi1: hdmi@feae0000 {
+			compatible = "renesas,hdmi1";
+			reg = <0 0xfeae0000 0 0x10000>;
+			interrupts = <GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		du: display@feb00000 {
@@ -1062,11 +1074,21 @@
 				 <&cpg CPG_MOD 723>,
 				 <&cpg CPG_MOD 722>,
 				 <&cpg CPG_MOD 721>,
-				 <&cpg CPG_MOD 727>;
-			clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0";
+				 <&cpg CPG_MOD 727>,
+				 <&cpg CPG_MOD 729>,
+				 <&cpg CPG_MOD 728>,
+				 <&dclkin0>, <&dclkin1>, <&dclkin2>, <&dclkin3>;
+			clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0",
+				      "isfr.0", "isfr.1", "dclkin.0", "dclkin.1",
+				      "dclkin.2", "dclkin.3";
+
 			status = "disabled";
 
 			vsps = <&vspd0 &vspd1 &vspd2 &vspd3>;
+
+			hdmi = <&hdmi0 &hdmi1>;
+			clock-iahb = <0>;
+			hdmi-num = <2>;
 
 			ports {
 				#address-cells = <1>;
