@@ -423,12 +423,64 @@ static void handle_non_critical_trips(struct thermal_zone_device *tz,
 		       def_governor->throttle(tz, trip);
 }
 
+static void thermal_tripped_notify(struct thermal_zone_device *tz,
+				   int trip, enum thermal_trip_type trip_type,
+				   int trip_temp)
+{
+	char tuv_name[THERMAL_NAME_LENGTH + 15], tuv_temp[25],
+		tuv_ltemp[25], tuv_trip[25], tuv_type[25];
+	char *msg[6] = { tuv_name, tuv_temp, tuv_ltemp, tuv_trip, tuv_type,
+			NULL };
+	int upper_trip_hyst, upper_trip_temp, trip_hyst = 0;
+	int ret = 0;
+
+	snprintf(tuv_name, sizeof(tuv_name), "THERMAL_ZONE=%s", tz->type);
+	snprintf(tuv_temp, sizeof(tuv_temp), "TEMP=%d", tz->temperature);
+	snprintf(tuv_ltemp, sizeof(tuv_ltemp), "LAST_TEMP=%d",
+		 tz->last_temperature);
+	snprintf(tuv_trip, sizeof(tuv_trip), "TRIP=%d", trip);
+	snprintf(tuv_type, sizeof(tuv_type), "TRIP_TYPE=%d", trip_type);
+
+	mutex_lock(&tz->lock);
+
+	/* crossing up */
+	if (tz->last_temperature < trip_temp && trip_temp < tz->temperature)
+		kobject_uevent_env(&tz->device.kobj, KOBJ_CHANGE, msg);
+
+	if (tz->ops->get_trip_hyst)
+		tz->ops->get_trip_hyst(tz, trip, &trip_hyst);
+
+	/* crossing down, check for hyst */
+	trip_temp -= trip_hyst;
+	if (tz->last_temperature > trip_temp && trip_temp > tz->temperature) {
+		snprintf(tuv_trip, sizeof(tuv_trip), "TRIP=%d", trip - 1);
+		kobject_uevent_env(&tz->device.kobj, KOBJ_CHANGE, msg);
+	}
+
+	ret = tz->ops->get_trip_temp(tz, trip + 1, &upper_trip_temp);
+	if (ret)
+		goto unlock;
+
+	if (tz->ops->get_trip_hyst)
+		tz->ops->get_trip_hyst(tz, trip + 1, &upper_trip_hyst);
+
+	upper_trip_temp -= upper_trip_hyst;
+	if (tz->last_temperature > upper_trip_temp &&
+	    upper_trip_temp > tz->temperature)
+		kobject_uevent_env(&tz->device.kobj, KOBJ_CHANGE, msg);
+
+unlock:
+	mutex_unlock(&tz->lock);
+}
+
 static void handle_critical_trips(struct thermal_zone_device *tz,
 				int trip, enum thermal_trip_type trip_type)
 {
 	int trip_temp;
 
 	tz->ops->get_trip_temp(tz, trip, &trip_temp);
+
+	thermal_tripped_notify(tz, trip, trip_type, trip_temp);
 
 	/* If we have not crossed the trip_temp, we do not care. */
 	if (trip_temp <= 0 || tz->temperature < trip_temp)
