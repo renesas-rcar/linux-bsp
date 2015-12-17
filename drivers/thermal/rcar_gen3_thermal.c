@@ -366,17 +366,16 @@ static int rcar_gen3_thermal_update_temp(struct rcar_thermal_priv *priv)
 static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 {
 	struct rcar_thermal_priv *priv = devdata;
-	u32 ctemp;
+	int ctemp;
 	unsigned long flags;
 
+	rcar_gen3_thermal_update_temp(priv);
+
 	spin_lock_irqsave(&priv->lock, flags);
-	/*
-	 * temp = (THCODE - 2536.7) / 7.468
-	 */
-	ctemp = rcar_thermal_read(priv, REG_GEN3_TEMP) & CTEMP_MASK;
-	*temp = thermal_temp_converter(priv->coef, ctemp);
-	priv->ctemp = ctemp;
+	ctemp = thermal_temp_converter(priv->coef, priv->ctemp);
 	spin_unlock_irqrestore(&priv->lock, flags);
+
+	*temp = ctemp;
 
 	return 0;
 }
