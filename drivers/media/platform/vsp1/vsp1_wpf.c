@@ -19,8 +19,8 @@
 #include "vsp1_rwpf.h"
 #include "vsp1_video.h"
 
-#define WPF_MAX_WIDTH				2048
-#define WPF_MAX_HEIGHT				2048
+#define WPF_MAX_WIDTH				4096
+#define WPF_MAX_HEIGHT				4096
 
 /* -----------------------------------------------------------------------------
  * Device Access
@@ -170,7 +170,7 @@ static int wpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	/* Enable interrupts */
 	vsp1_write(vsp1, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
 	vsp1_write(vsp1, VI6_WPF_IRQ_ENB(wpf->entity.index),
-		   VI6_WFP_IRQ_ENB_FREE);
+		   VI6_WFP_IRQ_ENB_FREE | VI6_WFP_IRQ_ENB_UNDE);
 
 	return 0;
 }

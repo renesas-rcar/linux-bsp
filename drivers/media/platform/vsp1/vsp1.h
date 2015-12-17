@@ -38,6 +38,8 @@ struct vsp1_rwpf;
 struct vsp1_sru;
 struct vsp1_uds;
 
+#define VSP1_UNDERRUN_WORKAROUND	0x01
+
 #define VSP1_MAX_RPF		5
 #define VSP1_MAX_UDS		3
 #define VSP1_MAX_WPF		4
@@ -57,6 +59,8 @@ struct vsp1_platform_data {
 struct vsp1_device_info {
 	unsigned int num_bru_inputs;
 	bool uapi;
+	unsigned int  wc;
+	bool fcpvd;
 };
 
 struct vsp1_device {
@@ -66,6 +70,7 @@ struct vsp1_device {
 
 	void __iomem *mmio;
 	struct clk *clock;
+	struct clk *fcpvd_clock;
 
 	struct mutex lock;
 	int ref_count;
@@ -90,10 +95,15 @@ struct vsp1_device {
 	struct vsp1_drm *drm;
 
 	bool use_dl;
+	int index;
+
+	dma_addr_t dl_addr;
+	unsigned int dl_body;
 };
 
 int vsp1_device_get(struct vsp1_device *vsp1);
 void vsp1_device_put(struct vsp1_device *vsp1);
+void vsp1_underrun_workaround(struct vsp1_device *vsp1, bool reset);
 
 int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index);
 
