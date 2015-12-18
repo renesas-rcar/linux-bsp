@@ -938,6 +938,8 @@
 			reg = <0 0xe6e90000 0 0x64>;
 			interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 211>;
+			dmas = <&dmac1 0x41>, <&dmac1 0x40>;
+			dma-names = "tx", "rx";
 			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
@@ -949,6 +951,8 @@
 			reg = <0 0xe6ea0000 0 0x0064>;
 			interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 210>;
+			dmas = <&dmac1 0x43>, <&dmac1 0x42>;
+			dma-names = "tx", "rx";
 			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
@@ -960,6 +964,8 @@
 			reg = <0 0xe6c00000 0 0x0064>;
 			interrupts = <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 209>;
+			dmas = <&dmac0 0x45>, <&dmac0 0x44>;
+			dma-names = "tx", "rx";
 			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
@@ -971,6 +977,8 @@
 			reg = <0 0xe6c10000 0 0x0064>;
 			interrupts = <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 208>;
+			dmas = <&dmac0 0x47>, <&dmac0 0x46>;
+			dma-names = "tx", "rx";
 			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
