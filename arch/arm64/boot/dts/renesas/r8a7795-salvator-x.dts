@@ -546,6 +546,7 @@
 		compatible = "adi,adv7482";
 		reg = <0x70>;
 
+		adi,virtual-channel = <0>;
 		adi,input-interface = "ycbcr422";
 		adi,input-hdmi = "on";
 		adi,input-sdp = "on";
@@ -567,6 +568,7 @@
 		compatible = "adi,adv7482";
 		reg = <0x34>;
 
+		adi,virtual-channel = <0>;
 		adi,input-interface = "rgb888";
 		adi,input-hdmi = "on";
 		adi,input-sdp = "on";
