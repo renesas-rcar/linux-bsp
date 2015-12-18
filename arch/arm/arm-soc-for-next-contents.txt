@@ -65,9 +65,15 @@ next/multiplatform
 	mvebu/soc
 		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.5-1
 	patch
-		ARM: make default platform work for NOMMU
-		ARM: debug-ll: move DEBUG_LL_UART_EFM32 to correct Kconfig location
 		ARM: defconfig: use correct debug_ll settings
+		ARM: debug-ll: move DEBUG_LL_UART_EFM32 to correct Kconfig location
+		ARM: make default platform work for NOMMU
+	fixes
+		Merge branch 'fixes' into next/multiplatform
+	realview/multiplatform-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-multiplatform-tag
+	patch
+		ARM: realview: build realview-dt SMP support only when used
 
 next/soc
 	bcm/soc
@@ -136,6 +142,7 @@ next/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_defconfig_for_v4.5
 	patch
 		ARM: multi_v7_defconfig: Enable Rockchip generic power domain.
+		ARM: realview: select apropriate targets
 
 next/config64
 	<no branch> (727e8d0126e3ecafce3ebc43eaa5a7d61af3bef0)
