@@ -1,23 +1,4 @@
 fixes
-	patch
-		irqchip/versatile-fpga: Fix PCI IRQ mapping on Versatile PB
-		ARM: ixp4xx: fix read{b,w,l} return types
-	<no branch> (62f49ee26f14753bd7fa634f51d537a79061bf0f)
-		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-fixes-4.4
-	<no branch> (8423536fe453b3623f4ed7c2c3cca9b86af1ace5)
-		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-4.4-fixes-2
-	<no branch> (b5010d2081331e1c95358c4eb500bd30f5d532ce)
-		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-fixes-for-4.4-rc1-1
-	patch
-		ARM: pxa: use PWM lookup table for all machines
-	<no branch> (14054fb1da099fd89208b8b319a00e0b902c7645)
-		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/fixes-rc4
-	patch
-		ARM64: dts: ls2080a: fix eSDHC endianness
-		dt-bindings: define little-endian property for QorIQ GPIO
-		ls2080a/dts: Add little endian property for GPIO IP block
-	<no branch> (9c17190595840b4ed30e8d5f286636ceb28aae4f)
-		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.4-2
 	<no branch> (43675ffafd3c3373f82691f539df3dc7403877fe)
 		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-fixes-for-4.4
 	patch
@@ -74,10 +55,16 @@ next/multiplatform
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-multiplatform-tag
 	patch
 		ARM: realview: build realview-dt SMP support only when used
+	treewide/cleanup
+		Merge branch 'treewide/cleanup' into next/multiplatform
 
 next/soc
 	bcm/soc
 		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/soc
+	patch
+		ARM: uniphier: select PINCTRL
+
+next/boards
 
 next/dt
 	lpc32xx/dt
@@ -143,6 +130,7 @@ next/defconfig
 	patch
 		ARM: multi_v7_defconfig: Enable Rockchip generic power domain.
 		ARM: realview: select apropriate targets
+		ARM: multi_v7_defconfig: enable TPS65217 regulator
 
 next/config64
 	<no branch> (727e8d0126e3ecafce3ebc43eaa5a7d61af3bef0)
@@ -162,3 +150,4 @@ next/drivers
 		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.5-2
 	patch
 		reset: hi6220: fix modular build
+
