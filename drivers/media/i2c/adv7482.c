@@ -1405,8 +1405,12 @@ static int adv7482_set_pad_format(struct v4l2_subdev *sd,
 			adv7482_set_power(state, true);
 		}
 	} else {
-		framefmt = v4l2_subdev_get_try_format(sd, cfg, 0);
-		*framefmt = format->format;
+		adv7482_mbus_fmt(sd, &format->format);
+
+		if (format->format.field == V4L2_FIELD_ANY)
+			format->format.field = state->field;
+
+		return 0;
 	}
 
 	return adv7482_mbus_fmt(sd, framefmt);
