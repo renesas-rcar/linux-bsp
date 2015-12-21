@@ -1,7 +1,7 @@
 /*
  * linux/drivers/mmc/host/tmio_mmc_pio.c
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  * Copyright (C) 2011 Guennadi Liakhovetski
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
@@ -1023,7 +1023,7 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		if (ret)
 			goto fail;
 		ret = wait_for_completion_timeout(&host->completion,
-						       msecs_to_jiffies(5000));
+					msecs_to_jiffies(CMDREQ_TIMEOUT));
 		if (ret < 0)
 			goto fail;
 		if (!ret) {
