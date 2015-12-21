@@ -61,7 +61,8 @@
 #define TEMPD_IRQ_SHIFT(tsc_id)	(0x1 << (tsc_id + 3))
 #define GEN3_FUSE_MASK	0xFFF
 
-#define RCAR_H3_WS1		0x4F00
+#define RCAR_H3_WS10		0x4F00
+#define RCAR_H3_WS11		0x4F01
 
 /* Product register */
 #define GEN3_PRR	0xFFF00044
@@ -163,11 +164,12 @@ static void thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 	u32  lsi_id;
 	void __iomem *product_register = ioremap_nocache(GEN3_PRR, 4);
 
-	/* For H3 WS1, these registers have not been programmed yet.
+	/* For H3 WS1.0 and H3 WS1.1,
+	 * these registers have not been programmed yet.
 	 * We will use fixed value as temporary solution.
 	 */
 	lsi_id = ioread32(product_register) & GEN3_PRR_MASK;
-	if (lsi_id != RCAR_H3_WS1) {
+	if ((lsi_id != RCAR_H3_WS10) && (lsi_id != RCAR_H3_WS11)) {
 		priv->factor.fthcode_h = rcar_thermal_read(priv,
 						REG_GEN3_FTHCODEH)
 				& GEN3_FUSE_MASK;
