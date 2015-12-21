@@ -265,6 +265,7 @@ struct adv7482_sdp_main_info {
 
 #define ADV7482_SDP_R_REG_10			0x10
 #define ADV7482_SDP_R_REG_10_IN_LOCK		0x01
+#define ADV7482_SDP_R_REG_10_FSC_LOCK		0x04
 
 #define ADV7482_SDP_R_REG_10_AUTOD_MASK		0x70
 #define ADV7482_SDP_R_REG_10_AUTOD_NTSM_M_J	0x00
@@ -1149,10 +1150,14 @@ static int adv7482_mbus_fmt(struct v4l2_subdev *sd,
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	if (config->input_interface == DECODER_INPUT_INTERFACE_YCBCR422) {
+		ret = __adv7482_status(state, NULL, &state->curr_norm);
+		if (ret < 0)
+			return ret;
+
 		fmt->code = MEDIA_BUS_FMT_YUYV8_2X8;
 		fmt->colorspace = V4L2_COLORSPACE_SMPTE170M;
 		fmt->width = 720;
-		fmt->height = 480;
+		fmt->height = state->curr_norm & V4L2_STD_525_60 ? 480 : 576;
 
 		/* Get video information */
 		ret = adv7482_read_sdp_main_info(client, &sdp_info);
@@ -1166,6 +1171,24 @@ static int adv7482_mbus_fmt(struct v4l2_subdev *sd,
 				"Not detect any video input signal\n");
 		else {
 			if ((status_reg_10 & ADV7482_SDP_R_REG_10_IN_LOCK) &&
+				(status_reg_10 & ADV7482_SDP_R_REG_10_FSC_LOCK)
+				&& (((status_reg_10 &
+				ADV7482_SDP_R_REG_10_AUTOD_PAL_M) ==
+				ADV7482_SDP_R_REG_10_AUTOD_PAL_M) ||
+				((status_reg_10 &
+				ADV7482_SDP_R_REG_10_AUTOD_PAL_60) ==
+				ADV7482_SDP_R_REG_10_AUTOD_PAL_60) ||
+				((status_reg_10 &
+				ADV7482_SDP_R_REG_10_AUTOD_PAL_B_G) ==
+				ADV7482_SDP_R_REG_10_AUTOD_PAL_B_G) ||
+				((status_reg_10 &
+				ADV7482_SDP_R_REG_10_AUTOD_PAL_COMB) ==
+				ADV7482_SDP_R_REG_10_AUTOD_PAL_COMB)))
+				dev_info(state->dev,
+				   "Detected the PAL video input signal\n");
+			else if ((status_reg_10 & ADV7482_SDP_R_REG_10_IN_LOCK)
+				&& (status_reg_10 &
+				ADV7482_SDP_R_REG_10_FSC_LOCK) &&
 				(((status_reg_10 &
 				ADV7482_SDP_R_REG_10_AUTOD_NTSC_4_43) ==
 				ADV7482_SDP_R_REG_10_AUTOD_NTSC_4_43) ||
@@ -1176,7 +1199,7 @@ static int adv7482_mbus_fmt(struct v4l2_subdev *sd,
 				   "Detected the NTSC video input signal\n");
 			else
 				dev_info(state->dev,
-				   "Not detect any NTSC video input signal\n");
+				   "Not detect any video input signal\n");
 		}
 
 		state->width = fmt->width;
@@ -1237,8 +1260,13 @@ static int adv7482_cropcap(struct v4l2_subdev *sd, struct v4l2_cropcap *a)
 	a->bounds.top  = 0;
 
 	if (config->input_interface == DECODER_INPUT_INTERFACE_YCBCR422) {
+		ret = __adv7482_status(state, NULL, &state->curr_norm);
+		if (ret < 0)
+			return ret;
+
 		a->bounds.width  = 720;
-		a->bounds.height = 480;
+		a->bounds.height = state->curr_norm & V4L2_STD_525_60
+							 ? 480 : 576;
 	} else {
 		/* Get video information */
 		ret = adv7482_get_vid_info(sd, &progressive,
@@ -1284,8 +1312,13 @@ static int adv7482_g_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 	a->c.top  = 0;
 
 	if (config->input_interface == DECODER_INPUT_INTERFACE_YCBCR422) {
+		ret = __adv7482_status(state, NULL, &state->curr_norm);
+		if (ret < 0)
+			return ret;
+
 		a->c.width  = 720;
-		a->c.height = 480;
+		a->c.height = state->curr_norm & V4L2_STD_525_60
+							 ? 480 : 576;
 	} else {
 		/* Get video information */
 		ret = adv7482_get_vid_info(sd, &progressive,
