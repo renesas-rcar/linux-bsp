@@ -50,7 +50,8 @@ dtb-$(CONFIG_SOC_SAM_V7) += \
 	sama5d36ek.dtb \
 	at91-sama5d4_ma5d4evk.dtb \
 	at91-sama5d4_xplained.dtb \
-	at91-sama5d4ek.dtb
+	at91-sama5d4ek.dtb \
+	at91-vinco.dtb
 dtb-$(CONFIG_ARCH_ATLAS6) += \
 	atlas6-evb.dtb
 dtb-$(CONFIG_ARCH_ATLAS7) += \
@@ -274,7 +275,8 @@ dtb-$(CONFIG_SOC_IMX51) += \
 	imx51-apf51dev.dtb \
 	imx51-babbage.dtb \
 	imx51-digi-connectcore-jsk.dtb \
-	imx51-eukrea-mbimxsd51-baseboard.dtb
+	imx51-eukrea-mbimxsd51-baseboard.dtb \
+	imx51-ts4800.dtb
 dtb-$(CONFIG_SOC_IMX53) += \
 	imx53-ard.dtb \
 	imx53-m53evk.dtb \
@@ -331,6 +333,7 @@ dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6q-hummingboard.dtb \
 	imx6q-nitrogen6x.dtb \
 	imx6q-nitrogen6_max.dtb \
+	imx6q-novena.dtb \
 	imx6q-phytec-pbab01.dtb \
 	imx6q-rex-pro.dtb \
 	imx6q-sabreauto.dtb \
@@ -356,6 +359,8 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk.dtb
 dtb-$(CONFIG_SOC_IMX7D) += \
+	imx7d-cl-som-imx7.dtb \
+	imx7d-sbc-imx7.dtb \
 	imx7d-sdb.dtb
 dtb-$(CONFIG_SOC_LS1021A) += \
 	ls1021a-qds.dtb \
@@ -365,6 +370,7 @@ dtb-$(CONFIG_SOC_VF610) += \
 	vf610-colibri-eval-v3.dtb \
 	vf610m4-colibri.dtb \
 	vf610-cosmic.dtb \
+	vf610m4-cosmic.dtb \
 	vf610-twr.dtb
 dtb-$(CONFIG_ARCH_MXS) += \
 	imx23-evk.dtb \
@@ -473,6 +479,7 @@ dtb-$(CONFIG_SOC_AM33XX) += \
 	am335x-nano.dtb \
 	am335x-pepper.dtb \
 	am335x-shc.dtb \
+	am335x-sbc-t335.dtb \
 	am335x-sl50.dtb \
 	am335x-wega-rdk.dtb
 dtb-$(CONFIG_ARCH_OMAP4) += \
@@ -631,6 +638,7 @@ dtb-$(CONFIG_MACH_SUN5I) += \
 	sun5i-a10s-olinuxino-micro.dtb \
 	sun5i-a10s-r7-tv-dongle.dtb \
 	sun5i-a10s-wobo-i5.dtb \
+	sun5i-a13-empire-electronix-d709.dtb \
 	sun5i-a13-hsg-h702.dtb \
 	sun5i-a13-inet-98v-rev2.dtb \
 	sun5i-a13-olinuxino.dtb \
