@@ -57,12 +57,17 @@ next/multiplatform
 		ARM: realview: build realview-dt SMP support only when used
 	treewide/cleanup
 		Merge branch 'treewide/cleanup' into next/multiplatform
+	patch
+		iio: exynos-adc: fix irqf_oneshot.cocci warnings
 
 next/soc
 	bcm/soc
 		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/soc
 	patch
 		ARM: uniphier: select PINCTRL
+	samsung/soc
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-4.5
+		contains samsung/dt-syscon
 
 next/boards
 
@@ -94,6 +99,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-base-armsoc-2-tag
 	socfpga/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.5
+	samsung/dt-syscon
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-syscon-restart-4.5
 
 next/dt64
 	renesas/dt64
@@ -108,6 +115,10 @@ next/dt64
 		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-dt-for-4.5-1
 	broadcom/dt64
 		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/devicetree-arm64
+	patch
+		arm64: dts: uniphier: add PH1-LD10 SoC/board support
+	samsung/dt64
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-4.5
 
 next/defconfig
 	patch
@@ -131,6 +142,8 @@ next/defconfig
 		ARM: multi_v7_defconfig: Enable Rockchip generic power domain.
 		ARM: realview: select apropriate targets
 		ARM: multi_v7_defconfig: enable TPS65217 regulator
+	samsung/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.5
 
 next/config64
 	<no branch> (727e8d0126e3ecafce3ebc43eaa5a7d61af3bef0)
