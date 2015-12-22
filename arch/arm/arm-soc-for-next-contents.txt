@@ -91,6 +91,8 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/soc-initcall
 	imx/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.5
+	patch
+		ARM: tango4: Initial platform support
 
 next/boards
 
@@ -152,6 +154,8 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-4.5-dt2
 	sunxi/dt2
 		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.5-2
+	patch
+		ARM: dts: tango4: Initial device trees
 
 next/dt64
 	renesas/dt64
@@ -265,6 +269,6 @@ next/drivers
 		MAINTAINERS: Drop Kumar Gala from QCOM
 	mediatek/soc
 		https://github.com/mbgg/linux-mediatek tags/v4.4-next-soc
-	<no branch> (cdd5de500b2c90d5181ebc963826019a0a4234ba)
+	omap/wakeup-m3
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/wakeup-m3
 
