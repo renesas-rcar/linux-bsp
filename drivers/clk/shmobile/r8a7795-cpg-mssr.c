@@ -772,7 +772,7 @@ static const struct cpg_pll_config cpg_pll_configs[16] __initconst = {
 static const struct cpg_pll_config *cpg_pll_config __initdata;
 
 static
-struct clk * __init r8a7795_cpg_clk_register(struct device *dev,
+struct clk * __init r8a7795_cpg_clk_register(struct device_node *np,
 					     const struct cpg_core_clk *core,
 					     const struct cpg_mssr_info *info,
 					     struct clk **clks,
@@ -893,13 +893,13 @@ static u32 rcar_gen3_read_mode_pins(void)
 	return mode;
 }
 
-static int __init r8a7795_cpg_mssr_init(struct device *dev)
+static int __init r8a7795_cpg_mssr_init(struct device_node *np)
 {
 	u32 cpg_mode = rcar_gen3_read_mode_pins();
 
 	cpg_pll_config = &cpg_pll_configs[CPG_PLL_CONFIG_INDEX(cpg_mode)];
 	if (!cpg_pll_config->extal_div) {
-		dev_err(dev, "Prohibited setting (cpg_mode=0x%x)\n", cpg_mode);
+		pr_err("Prohibited setting (cpg_mode=0x%x)\n", cpg_mode);
 		return -EINVAL;
 	}
 
