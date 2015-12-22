@@ -7,6 +7,8 @@ fixes
 		bus: sunxi-rsb: Fix peripheral IC mapping runtime address
 	<no branch> (3a35e470bc6bc4ce34c19c410ebbe4e3bbf0bafe)
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.4-3
+	<no branch> (0b4d6972d7b052b23d33ff9bdbb52958664fbb26)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/fixes-rc6
 
 next/fixes-non-critical
 	bcm/maintainers
@@ -15,6 +17,9 @@ next/fixes-non-critical
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/81xx-fixes-signed
 	davinci/fixes
 		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.5/fixes
+	patch
+		ARM: scoop: Be sure to clamp return value
+		ARM: sa1100/simpad: Be sure to clamp return value
 
 next/cleanup
 	treewide/cleanup
@@ -82,6 +87,10 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-soc-1
 	treewide/cleanup
 		Merge branch 'treewide/cleanup' into next/soc
+	omap/soc-initcall
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/soc-initcall
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.5
 
 next/boards
 
@@ -133,6 +142,16 @@ next/dt
 		https://github.com/manabian/linux-lpc tags/lpc18xx_dts_for_4.5
 	rockchip/dt32-2
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts32-2
+	socfpga/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.5_part_2
+	omap/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/dt-pt2
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.5
+	at91/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-4.5-dt2
+	sunxi/dt2
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.5-2
 
 next/dt64
 	renesas/dt64
@@ -206,6 +225,12 @@ next/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-defconfig-for-4.5
 	lpc18xx/defconfig
 		https://github.com/manabian/linux-lpc tags/lpc18xx_defconfig_for_4.5
+	patch
+		ARM: multi_v7_defconfig: enable Rockchip io-domain driver
+		ARM: multi_v7_defconfig: enable rockchip crypto module
+		ARM: multi_v7_defconfig: enable rk808 clkout module
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.5
 
 next/config64
 	renesas/config64
@@ -240,3 +265,6 @@ next/drivers
 		MAINTAINERS: Drop Kumar Gala from QCOM
 	mediatek/soc
 		https://github.com/mbgg/linux-mediatek tags/v4.4-next-soc
+	<no branch> (cdd5de500b2c90d5181ebc963826019a0a4234ba)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/wakeup-m3
+
