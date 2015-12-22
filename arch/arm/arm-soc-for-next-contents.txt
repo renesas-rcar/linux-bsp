@@ -9,6 +9,8 @@ fixes
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.4-3
 	<no branch> (0b4d6972d7b052b23d33ff9bdbb52958664fbb26)
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/fixes-rc6
+	patch
+		ARM: tegra: Fix suspend hang on Tegra124 Chromebooks
 
 next/fixes-non-critical
 	bcm/maintainers
