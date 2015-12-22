@@ -527,10 +527,12 @@ dtb-$(CONFIG_ARCH_REALVIEW) += \
 	arm-realview-pb11mp.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3036-evb.dtb \
+	rk3036-kylin.dtb \
 	rk3066a-bqcurie2.dtb \
 	rk3066a-marsboard.dtb \
 	rk3066a-rayeager.dtb \
 	rk3188-radxarock.dtb \
+	rk3228-evb.dtb \
 	rk3288-evb-act8846.dtb \
 	rk3288-evb-rk808.dtb \
 	rk3288-firefly-beta.dtb \
@@ -791,6 +793,7 @@ dtb-$(CONFIG_MACH_DOVE) += \
 	dove-dove-db.dtb \
 	dove-sbc-a510.dtb
 dtb-$(CONFIG_ARCH_MEDIATEK) += \
+	mt2701-evb.dtb \
 	mt6580-evbp1.dtb \
 	mt6589-aquaris5.dtb \
 	mt6592-evb.dtb \
