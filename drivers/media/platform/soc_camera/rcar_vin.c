@@ -15,6 +15,10 @@
  * option) any later version.
  */
 
+#ifdef CONFIG_VIDEO_RCAR_VIN_DEBUG
+#define DEBUG
+#endif
+
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -126,6 +130,12 @@
 /* Video n Interrupt Enable Register bits */
 #define VNIE_FIE		(1 << 4)
 #define VNIE_EFE		(1 << 1)
+#define VNIE_FOE		(1 << 0)
+
+/* Video n Interrupt Status Register bits */
+#define VNINTS_FIS		(1 << 4)
+#define VNINTS_EFS		(1 << 1)
+#define VNINTS_FOS		(1 << 0)
 
 /* Video n Data Mode Register bits */
 #define VNDMR_EXRGB		(1 << 8)
@@ -672,6 +682,8 @@ struct rcar_vin_priv {
 	struct v4l2_subdev		*csi2_sd;
 	/* Synchronous probing compatibility */
 	struct platform_device		*csi2_pdev;
+
+	unsigned int			index;
 };
 
 #define is_continuous_transfer(priv)	(priv->vb_count > MAX_BUFFER_NUM)
@@ -705,6 +717,37 @@ struct rcar_vin_cam {
 	struct v4l2_rect		rect;
 	const struct soc_mbus_pixelfmt	*extra_fmt;
 };
+
+#define VIN_UT_IRQ	0x01
+
+static unsigned int vin_debug;
+module_param_named(debug, vin_debug, int, 0600);
+static int overflow_video[RCAR_VIDEO_MAX];
+module_param_array(overflow_video, int, NULL, 0600);
+
+#ifdef CONFIG_VIDEO_RCAR_VIN_DEBUG
+#define VIN_IRQ_DEBUG(fmt, args...)					\
+	do {								\
+		if (unlikely(vin_debug & VIN_UT_IRQ))			\
+			vin_ut_debug_printk(__func__, fmt, ##args);	\
+	} while (0)
+#else
+#define VIN_IRQ_DEBUG(fmt, args...)
+#endif
+
+void vin_ut_debug_printk(const char *function_name, const char *format, ...)
+{
+	struct va_format vaf;
+	va_list args;
+
+	va_start(args, format);
+	vaf.fmt = format;
+	vaf.va = &args;
+
+	pr_debug("[" DRV_NAME ":%s] %pV", function_name, &vaf);
+
+	va_end(args);
+}
 
 static void rcar_vin_cpg_enable_for_ifmd(unsigned int ch, bool enable)
 {
@@ -917,6 +960,10 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 	/* progressive or interlaced mode */
 	interrupts = progressive ? VNIE_FIE : VNIE_EFE;
 
+	/* Enable Overflow */
+	if (vin_debug)
+		interrupts |= VNIE_FOE;
+
 	/* ack interrupts */
 	iowrite32(interrupts, priv->base + VNINTS_REG);
 	/* enable interrupts */
@@ -1116,15 +1163,24 @@ static irqreturn_t rcar_vin_irq(int irq, void *data)
 	bool can_run = false, hw_stopped;
 	int slot;
 	unsigned int handled = 0;
+	int vin_ovr_cnt = 0;
 
 	spin_lock(&priv->lock);
 
 	int_status = ioread32(priv->base + VNINTS_REG);
 	if (!int_status)
 		goto done;
+
 	/* ack interrupts */
 	iowrite32(int_status, priv->base + VNINTS_REG);
 	handled = 1;
+
+	/* overflow occurs */
+	if (vin_debug && (int_status & VNINTS_FOS)) {
+		vin_ovr_cnt = ++overflow_video[priv->index];
+		VIN_IRQ_DEBUG("overflow occurrs num[%d] at VIN (%s)\n",
+				vin_ovr_cnt, dev_name(priv->ici.v4l2_dev.dev));
+	}
 
 	/* nothing to do if capture status is 'STOPPED' */
 	if (priv->state == STOPPED)
@@ -3065,6 +3121,8 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		if (ret)
 			goto cleanup;
 	}
+
+	vin_debug = 0;
 
 	return 0;
 
