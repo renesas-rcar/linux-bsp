@@ -68,6 +68,8 @@ next/soc
 	samsung/soc
 		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-4.5
 		contains samsung/dt-syscon
+	zynq/soc
+		https://github.com/Xilinx/linux-xlnx tags/zynq-soc-for-4.5
 
 next/boards
 
@@ -101,6 +103,10 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.5
 	samsung/dt-syscon
 		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-syscon-restart-4.5
+	zynq/dt
+		https://github.com/Xilinx/linux-xlnx tags/zynq-dt-for-4.5
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.5
 
 next/dt64
 	renesas/dt64
@@ -119,6 +125,17 @@ next/dt64
 		arm64: dts: uniphier: add PH1-LD10 SoC/board support
 	samsung/dt64
 		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-4.5
+	patch
+		Documentation: DT: Add entry for Freescale LS1043a-RDB board
+		arm64: dts: add Freescale LS1043a SoC support
+		arm64: dts: add LS1043a-RDB board support
+		arm64: dts: Added syscon-reboot node for FSL's LS2080A SoC
+		arm64: dts: juno: Add idle-states to device tree
+		arm64: dts: apq8016-sbc: enable UART0 on LS connector
+		arm64: dts: apq8016-sbc: add label properties for UART, I2C, and SPI
+		arm64: dts: hikey: add label properties to UARTs
+	zynq/dt64
+		https://github.com/Xilinx/linux-xlnx tags/zynqmp-dt-for-4.5
 
 next/defconfig
 	patch
@@ -136,7 +153,7 @@ next/defconfig
 		ARM: realview: update SMP defconfig
 		ARM: realview: add generic config options
 		ARM: realview: add generic config options
-	<no branch> (93699220ecace65e5385511f9f7119fd49837adb)
+	socfpga/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_defconfig_for_v4.5
 	patch
 		ARM: multi_v7_defconfig: Enable Rockchip generic power domain.
@@ -144,9 +161,12 @@ next/defconfig
 		ARM: multi_v7_defconfig: enable TPS65217 regulator
 	samsung/defconfig
 		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.5
+	patch
+		ARM: multi_v7_defconfig: Enable AM437x PMIC TPS65218
+		ARM: multi_v7_defconfig: Enable generic SoC internal OMAP regulators
 
 next/config64
-	<no branch> (727e8d0126e3ecafce3ebc43eaa5a7d61af3bef0)
+	renesas/config64
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.5
 	renesas/config64-2
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig2-for-v4.5
@@ -163,4 +183,5 @@ next/drivers
 		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.5-2
 	patch
 		reset: hi6220: fix modular build
+		bus: uniphier-system-bus: add UniPhier System Bus driver
 
