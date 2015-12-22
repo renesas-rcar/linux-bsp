@@ -121,8 +121,8 @@ struct cpg_mssr_info {
 	unsigned int num_core_pm_clks;
 
 	/* Callbacks */
-	int (*init)(struct device *dev);
-	struct clk *(*cpg_clk_register)(struct device *dev,
+	int (*init)(struct device_node *np);
+	struct clk *(*cpg_clk_register)(struct device_node *np,
 					const struct cpg_core_clk *core,
 					const struct cpg_mssr_info *info,
 					struct clk **clks, void __iomem *base);
