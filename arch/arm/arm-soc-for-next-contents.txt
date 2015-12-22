@@ -25,6 +25,8 @@ next/cleanup
 		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.5-1
 	mtd/cleanup
 		git://git.infradead.org/linux-mtd tags/arm-soc/for-4.5/cleanup
+	renesas/gic-cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-gic-cleanup-for-v4.5
 
 next/multiplatform
 	patch
@@ -76,6 +78,10 @@ next/soc
 		contains samsung/dt-syscon
 	zynq/soc
 		https://github.com/Xilinx/linux-xlnx tags/zynq-soc-for-4.5
+	rockchip/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-soc-1
+	treewide/cleanup
+		Merge branch 'treewide/cleanup' into next/soc
 
 next/boards
 
@@ -117,6 +123,16 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-dt
 	qcom/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-dt-for-4.5
+	renesas/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt3-for-v4.5
+	mvebu/dt3
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.5-3
+	mediatek/dt
+		https://github.com/mbgg/linux-mediatek tags/v4.4-next-dts
+	lpc18xx/dt
+		https://github.com/manabian/linux-lpc tags/lpc18xx_dts_for_4.5
+	rockchip/dt32-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts32-2
 
 next/dt64
 	renesas/dt64
@@ -148,6 +164,12 @@ next/dt64
 		https://github.com/Xilinx/linux-xlnx tags/zynqmp-dt-for-4.5
 	qcom/dt64
 		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-arm64-for-4.5
+	renesas/dt64-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt3-for-v4.5
+	mediatek/dt64
+		https://github.com/mbgg/linux-mediatek tags/v4.4-next-arm64
+	rockchip/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts64-2
 
 next/defconfig
 	patch
@@ -182,6 +204,8 @@ next/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v4.5
 	qcom/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-defconfig-for-4.5
+	lpc18xx/defconfig
+		https://github.com/manabian/linux-lpc tags/lpc18xx_defconfig_for_4.5
 
 next/config64
 	renesas/config64
@@ -195,6 +219,10 @@ next/config64
 		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-soc-for-4.5-1
 	tegra/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.5-defconfig
+	renesas/config64-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig3-for-v4.5
+	mediatek/config64
+		https://github.com/mbgg/linux-mediatek tags/v4.4-next-kconfig
 
 next/drivers
 	drivers/reset
@@ -210,4 +238,5 @@ next/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-soc-for-4.5
 	patch
 		MAINTAINERS: Drop Kumar Gala from QCOM
-
+	mediatek/soc
+		https://github.com/mbgg/linux-mediatek tags/v4.4-next-soc
