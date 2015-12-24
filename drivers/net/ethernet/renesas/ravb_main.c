@@ -1032,6 +1032,9 @@ static int ravb_phy_init(struct net_device *ndev)
 		}
 
 		netdev_info(ndev, "limited PHY to 100Mbit/s\n");
+		/* 10BASE is not supported */
+		phydev->supported &= ~(SUPPORTED_10baseT_Half |
+					SUPPORTED_10baseT_Full);
 	}
 
 	netdev_info(ndev, "attached PHY %d (IRQ %d) to driver %s\n",
