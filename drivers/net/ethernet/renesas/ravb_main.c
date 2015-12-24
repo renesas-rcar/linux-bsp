@@ -31,6 +31,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 
 #include <asm/div64.h>
 
@@ -1034,7 +1036,10 @@ static int ravb_phy_init(struct net_device *ndev)
 	 * at this time.
 	 */
 	if (priv->chip_id == RCAR_GEN3) {
-		int err;
+		struct platform_device *pdev = priv->pdev;
+		struct device *dev = &pdev->dev;
+		enum of_gpio_flags flags;
+		int err, gpio;
 
 		err = phy_set_max_speed(phydev, SPEED_100);
 		if (err) {
@@ -1047,6 +1052,20 @@ static int ravb_phy_init(struct net_device *ndev)
 		/* 10BASE is not supported */
 		phydev->supported &= ~(SUPPORTED_10baseT_Half |
 					SUPPORTED_10baseT_Full);
+
+		gpio = of_get_named_gpio_flags(np, "phy-int-gpio", 0, &flags);
+		if (gpio_is_valid(gpio)) {
+			err = devm_gpio_request_one(dev, gpio, GPIOF_DIR_IN,
+						    "phy-int-gpio");
+			if (err == 0 && (phydev->irq == gpio_to_irq(gpio))) {
+				if (flags & OF_GPIO_ACTIVE_LOW)
+					irq_set_irq_type(phydev->irq,
+							 IRQ_TYPE_LEVEL_LOW);
+				else
+					irq_set_irq_type(phydev->irq,
+							 IRQ_TYPE_LEVEL_HIGH);
+			}
+		}
 	}
 
 	netdev_info(ndev, "attached PHY %d (IRQ %d) to driver %s\n",
