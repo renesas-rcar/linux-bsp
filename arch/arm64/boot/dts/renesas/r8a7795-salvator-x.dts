@@ -737,3 +737,45 @@
 		};
 	};
 };
+
+&csi2_40 {
+	status = "okay";
+
+	adi,input-interface = "rgb888";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		csi2_40_ep: endpoint@0 {
+			remote-endpoint = <&vin0ep0>;
+			clock-lanes = <0>;
+			data-lanes = <1 2 3 4>;
+		};
+
+		csi2_40_in_ep: endpoint@1 {
+			remote-endpoint = <&adv7482_rxa_out>;
+		};
+	};
+};
+
+&csi2_20 {
+	status = "okay";
+
+	adi,input-interface = "ycbcr422";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		csi2_20_ep: endpoint@0 {
+			remote-endpoint = <&vin4ep0>;
+			clock-lanes = <0>;
+			data-lanes = <1>;
+		};
+
+		csi2_20_in_ep: endpoint@1 {
+			remote-endpoint = <&adv7482_rxb_out>;
+		};
+	};
+};
