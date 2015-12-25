@@ -392,14 +392,11 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 
 static int rcar_gen3_thermal_init(struct rcar_thermal_priv *priv)
 {
-	unsigned long status;
 	unsigned long flags;
 
 	spin_lock_irqsave(&priv->lock, flags);
-	status = rcar_thermal_read(priv, REG_GEN3_CTSR);
 
-	if ((status & PONSEQSTOP) == POWERON)
-		rcar_thermal_write(priv, REG_GEN3_CTSR,  0x0);
+	rcar_thermal_write(priv, REG_GEN3_CTSR,  0x0);
 
 	rcar_thermal_write(priv, REG_GEN3_CTSR,
 			PONM | AOUT | THBGR | VMEN);
@@ -413,6 +410,7 @@ static int rcar_gen3_thermal_init(struct rcar_thermal_priv *priv)
 						TEMPD_IRQ_SHIFT(priv->id));
 
 	spin_unlock_irqrestore(&priv->lock, flags);
+
 	return 0;
 }
 
