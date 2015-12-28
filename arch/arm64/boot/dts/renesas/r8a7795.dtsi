@@ -1123,7 +1123,12 @@
 			interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 314>;
 			power-domains = <&cpg>;
-			renesas,clk-rate = <50000000>;
+			renesas,clk-rate = <200000000>;
+			cap-sd-highspeed;
+			sd-uhs-sdr50;
+			renesas,mmc-scc-tapnum = <8>;
+			renesas,pfcs = <0xe6060000 0x380>;
+			renesas,id = <0 0x3f>;
 			status = "disabled";
 		};
 
@@ -1133,7 +1138,12 @@
 			interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 313>;
 			power-domains = <&cpg>;
-			renesas,clk-rate = <50000000>;
+			renesas,clk-rate = <200000000>;
+			cap-sd-highspeed;
+			sd-uhs-sdr50;
+			renesas,mmc-scc-tapnum = <8>;
+			renesas,pfcs = <0xe6060000 0x380>;
+			renesas,id = <6 0x3f>;
 			status = "disabled";
 		};
 
@@ -1143,7 +1153,12 @@
 			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 312>;
 			power-domains = <&cpg>;
-			renesas,clk-rate = <50000000>;
+			renesas,clk-rate = <200000000>;
+			cap-sd-highspeed;
+			sd-uhs-sdr50;
+			renesas,mmc-scc-tapnum = <8>;
+			renesas,pfcs = <0xe6060000 0x380>;
+			renesas,id = <12 0x7f>;
 			status = "disabled";
 		};
 
@@ -1153,7 +1168,12 @@
 			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 311>;
 			power-domains = <&cpg>;
-			renesas,clk-rate = <50000000>;
+			renesas,clk-rate = <200000000>;
+			cap-sd-highspeed;
+			sd-uhs-sdr50;
+			renesas,mmc-scc-tapnum = <8>;
+			renesas,pfcs = <0xe6060000 0x380>;
+			renesas,id = <19 0x7ff>;
 			status = "disabled";
 		};
 	};
