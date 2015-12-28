@@ -270,6 +270,15 @@
 		clock-frequency = <108000000>;
 	};
 
+	fixedregulator1v8: fixedregulator@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "fixed-1.8V";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
 	vcc_sdhi0: regulator@1 {
 		compatible = "regulator-fixed";
 
@@ -314,6 +323,20 @@
 
 		gpios = <&gpio3 14 GPIO_ACTIVE_HIGH>;
 		gpios-states = <1>;
+		states = <3300000 1
+			  1800000 0>;
+	};
+
+	vccq_mmc0: regulator@5 {
+		compatible = "regulator-gpio";
+
+		regulator-name = "MMC0 VccQ";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+
+		gpios = <&gpio5 3 GPIO_ACTIVE_HIGH>,
+			<&gpio5 9 GPIO_ACTIVE_HIGH>;
+		gpios-states = <0>, <0>;
 		states = <3300000 1
 			  1800000 0>;
 	};
@@ -462,6 +485,11 @@
 	sdhi3_pins: sd3 {
 		renesas,groups = "sdhi3_data4", "sdhi3_ctrl";
 		renesas,function = "sdhi3";
+	};
+
+	mmc0_pins: mmc0 {
+		renesas,groups = "sdhi2_data8", "sdhi2_ctrl";
+		renesas,function = "sdhi2";
 	};
 };
 
@@ -833,6 +861,17 @@
 	wp-gpios = <&gpio4 16 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
+
+&mmc0 {
+	pinctrl-0 = <&mmc0_pins>;
+	pinctrl-names = "default";
+
+	vmmc-supply = <&fixedregulator1v8>;
+	vqmmc-supply = <&vccq_mmc0>;
+	non-removable;
+	status = "okay";
+};
+
 &csi2_40 {
 	status = "okay";
 
