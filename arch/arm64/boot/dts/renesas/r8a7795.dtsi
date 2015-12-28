@@ -1563,6 +1563,36 @@
 			status = "disabled";
 		};
 
+		mmc0: mmc@ee140000 {
+			compatible = "renesas,mmc-r8a7795";
+			reg = <0 0xee140000 0 0x2000>;
+			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 312>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			renesas,clk-rate = <200000000>;
+			cap-mmc-highspeed;
+			mmc-hs200-1_8v;
+			renesas,mmc-scc-tapnum = <8>;
+			renesas,pfcs = <0xe6060000 0x380>;
+			renesas,id = <12 0x7f>;
+			status = "disabled";
+		};
+
+		mmc1: mmc@ee160000 {
+			compatible = "renesas,mmc-r8a7795";
+			reg = <0 0xee160000 0 0x2000>;
+			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 311>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			renesas,clk-rate = <200000000>;
+			cap-mmc-highspeed;
+			mmc-hs200-1_8v;
+			renesas,mmc-scc-tapnum = <8>;
+			renesas,pfcs = <0xe6060000 0x380>;
+			renesas,id = <19 0x7ff>;
+			status = "disabled";
+		};
+
 		usb2_phy0: usb-phy@ee080200 {
 			compatible = "renesas,usb2-phy-r8a7795";
 			reg = <0 0xee080200 0 0x700>;
