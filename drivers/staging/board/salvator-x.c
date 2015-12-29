@@ -13,7 +13,6 @@
  * GNU General Public License for more details.
  */
 
-
 #include <linux/kernel.h>
 #include <linux/cma.h>
 #include <linux/dma-contiguous.h>
@@ -61,7 +60,7 @@ static void __init salvator_x_board_staging_init(void)
 		cma_size = cma_get_size(rcar_gen3_dma_contiguous) / SZ_1M;
 
 		pr_info("%s: Located CMA at %pa, size %ld MiB\n",
-			 __func__, &cma_base, cma_size);
+			__func__, &cma_base, cma_size);
 	}
 }
 
