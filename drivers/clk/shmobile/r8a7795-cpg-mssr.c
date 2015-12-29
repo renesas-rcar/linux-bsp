@@ -142,6 +142,10 @@ static const struct mssr_mod_clk r8a7795_mod_clks[] __initconst = {
 	DEF_MOD("sys-dmac1",		 218,	R8A7795_CLK_S3D1),
 	DEF_MOD("sys-dmac0",		 219,	R8A7795_CLK_S3D1),
 	DEF_MOD("scif2",		 310,	R8A7795_CLK_S3D4),
+	DEF_MOD("sdhi3",		 311,	R8A7795_CLK_SD3),
+	DEF_MOD("sdhi2",		 312,	R8A7795_CLK_SD2),
+	DEF_MOD("sdhi1",		 313,	R8A7795_CLK_SD1),
+	DEF_MOD("sdhi0",		 314,	R8A7795_CLK_SD0),
 	DEF_MOD("pcie1",		 318,	R8A7795_CLK_S3D1),
 	DEF_MOD("pcie0",		 319,	R8A7795_CLK_S3D1),
 	DEF_MOD("intc-ap",		 408,	R8A7795_CLK_S3D1),
@@ -790,7 +794,7 @@ static const struct cpg_pll_config cpg_pll_configs[16] __initconst = {
 static const struct cpg_pll_config *cpg_pll_config __initdata;
 
 static
-struct clk * __init r8a7795_cpg_clk_register(struct device *dev,
+struct clk * __init r8a7795_cpg_clk_register(struct device_node *np,
 					     const struct cpg_core_clk *core,
 					     const struct cpg_mssr_info *info,
 					     struct clk **clks,
@@ -911,13 +915,13 @@ static u32 rcar_gen3_read_mode_pins(void)
 	return mode;
 }
 
-static int __init r8a7795_cpg_mssr_init(struct device *dev)
+static int __init r8a7795_cpg_mssr_init(struct device_node *np)
 {
 	u32 cpg_mode = rcar_gen3_read_mode_pins();
 
 	cpg_pll_config = &cpg_pll_configs[CPG_PLL_CONFIG_INDEX(cpg_mode)];
 	if (!cpg_pll_config->extal_div) {
-		dev_err(dev, "Prohibited setting (cpg_mode=0x%x)\n", cpg_mode);
+		pr_err("Prohibited setting (cpg_mode=0x%x)\n", cpg_mode);
 		return -EINVAL;
 	}
 
