@@ -884,6 +884,10 @@
 	status = "okay";
 };
 
+&sata {
+	status = "okay";
+};
+
 &csi2_40 {
 	status = "okay";
 
