@@ -26,6 +26,7 @@
 #include <linux/of_platform.h>
 #include <linux/pci.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/slab.h>
 
 #define DRV_NAME "rcar-pcie"
@@ -83,6 +84,14 @@
 #define MACSR			0x011054
 #define MACCTLR			0x011058
 #define  SCRAMBLE_DISABLE	(1 << 27)
+#define PMSR			0x01105c
+#define  L1FAEG			(1 << 31)
+#define  PM_ENTER_L1RX		(1 << 23)
+#define  PMSTATE		(7 << 16)
+#define  PMSTATE_L1		(3 << 16)
+#define PMCTLR			0x011060
+#define  L1_INIT		(1 << 31)
+
 
 /* R-Car H1 PHY */
 #define H1_PCIEPHYADRR		0x04000c
@@ -107,8 +116,6 @@
 
 #define RCAR_PCI_MAX_RESOURCES 4
 #define MAX_NR_INBOUND_MAPS 6
-
-static unsigned long global_io_offset;
 
 struct rcar_msi {
 	DECLARE_BITMAP(used, INT_PCI_MSI_NR);
@@ -138,8 +145,7 @@ struct rcar_pcie {
 #endif
 	struct device		*dev;
 	void __iomem		*base;
-	struct resource		res[RCAR_PCI_MAX_RESOURCES];
-	struct resource		busn;
+	struct list_head	resources;
 	int			root_bus_nr;
 	struct clk		*clk;
 	struct clk		*bus_clk;
@@ -187,6 +193,7 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 		unsigned int devfn, int where, u32 *data)
 {
 	int dev, func, reg, index;
+	u32 val;
 
 	dev = PCI_SLOT(devfn);
 	func = PCI_FUNC(devfn);
@@ -227,6 +234,22 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 
 	if (pcie->root_bus_nr < 0)
 		return PCIBIOS_DEVICE_NOT_FOUND;
+
+	/*
+	 * If we are not in L1 link state and we have received PM_ENTER_L1 DLLP,
+	 * transition to L1 link state. The HW will handle coming of of L1.
+	 */
+	val = rcar_pci_read_reg(pcie, PMSR);
+	if ((val & PM_ENTER_L1RX) && ((val & PMSTATE) != PMSTATE_L1)) {
+		rcar_pci_write_reg(pcie, L1_INIT, PMCTLR);
+
+		/* Wait until we are in L1 */
+		while (!(val & L1FAEG))
+			val = rcar_pci_read_reg(pcie, PMSR);
+
+		/* Clear flags indicating link has transitioned to L1 */
+		rcar_pci_write_reg(pcie, L1FAEG | PM_ENTER_L1RX, PMSR);
+	}
 
 	/* Clear errors */
 	rcar_pci_write_reg(pcie, rcar_pci_read_reg(pcie, PCIEERRFR), PCIEERRFR);
@@ -323,10 +346,9 @@ static struct pci_ops rcar_pcie_ops = {
 	.write	= rcar_pcie_write_conf,
 };
 
-static void rcar_pcie_setup_window(int win, struct rcar_pcie *pcie)
+static void rcar_pcie_setup_window(int win, struct rcar_pcie *pcie,
+				   struct resource *res)
 {
-	struct resource *res = &pcie->res[win];
-
 	/* Setup PCIe address space mappings for each resource */
 	resource_size_t size;
 	resource_size_t res_start;
@@ -359,31 +381,33 @@ static void rcar_pcie_setup_window(int win, struct rcar_pcie *pcie)
 	rcar_pci_write_reg(pcie, mask, PCIEPTCTLR(win));
 }
 
-static int rcar_pcie_setup(struct list_head *resource, struct rcar_pcie *pcie)
+static int rcar_pcie_setup(struct list_head *resource, struct rcar_pcie *pci)
 {
-	struct resource *res;
-	int i;
-
-	pcie->root_bus_nr = pcie->busn.start;
+	struct resource_entry *win;
+	int i = 0;
 
 	/* Setup PCI resources */
-	for (i = 0; i < RCAR_PCI_MAX_RESOURCES; i++) {
+	resource_list_for_each_entry(win, &pci->resources) {
+		struct resource *res = win->res;
 
-		res = &pcie->res[i];
 		if (!res->flags)
 			continue;
 
-		rcar_pcie_setup_window(i, pcie);
-
-		if (res->flags & IORESOURCE_IO) {
-			phys_addr_t io_start = pci_pio_to_address(res->start);
-			pci_ioremap_io(global_io_offset, io_start);
-			global_io_offset += SZ_64K;
+		switch (resource_type(res)) {
+		case IORESOURCE_IO:
+		case IORESOURCE_MEM:
+			rcar_pcie_setup_window(i, pci, res);
+			i++;
+			break;
+		case IORESOURCE_BUS:
+			pci->root_bus_nr = res->start;
+			break;
+		default:
+			continue;
 		}
 
 		pci_add_resource(resource, res);
 	}
-	pci_add_resource(resource, &pcie->busn);
 
 	return 1;
 }
@@ -919,18 +943,68 @@ static const struct of_device_id rcar_pcie_of_match[] = {
 	{ .compatible = "renesas,pcie-r8a7779", .data = rcar_pcie_hw_init_h1 },
 	{ .compatible = "renesas,pcie-r8a7790", .data = rcar_pcie_hw_init },
 	{ .compatible = "renesas,pcie-r8a7791", .data = rcar_pcie_hw_init },
+	{ .compatible = "renesas,pcie-r8a7795", .data = rcar_pcie_hw_init },
 	{},
 };
 MODULE_DEVICE_TABLE(of, rcar_pcie_of_match);
+
+static void rcar_pcie_release_of_pci_ranges(struct rcar_pcie *pci)
+{
+	pci_free_resource_list(&pci->resources);
+}
+
+static int rcar_pcie_parse_request_of_pci_ranges(struct rcar_pcie *pci)
+{
+	int err;
+	struct device *dev = pci->dev;
+	struct device_node *np = dev->of_node;
+	resource_size_t iobase;
+	struct resource_entry *win;
+
+	err = of_pci_get_host_bridge_resources(np, 0, 0xff, &pci->resources, &iobase);
+	if (err)
+		return err;
+
+	resource_list_for_each_entry(win, &pci->resources) {
+		struct resource *parent, *res = win->res;
+
+		switch (resource_type(res)) {
+		case IORESOURCE_IO:
+			parent = &ioport_resource;
+			err = pci_remap_iospace(res, iobase);
+			if (err) {
+				dev_warn(dev, "error %d: failed to map resource %pR\n",
+					 err, res);
+				continue;
+			}
+			break;
+		case IORESOURCE_MEM:
+			parent = &iomem_resource;
+			break;
+
+		case IORESOURCE_BUS:
+		default:
+			continue;
+		}
+
+		err = devm_request_resource(dev, parent, res);
+		if (err)
+			goto out_release_res;
+	}
+
+	return 0;
+
+out_release_res:
+	rcar_pcie_release_of_pci_ranges(pci);
+	return err;
+}
 
 static int rcar_pcie_probe(struct platform_device *pdev)
 {
 	struct rcar_pcie *pcie;
 	unsigned int data;
-	struct of_pci_range range;
-	struct of_pci_range_parser parser;
 	const struct of_device_id *of_id;
-	int err, win = 0;
+	int err;
 	int (*hw_init_fn)(struct rcar_pcie *);
 
 	pcie = devm_kzalloc(&pdev->dev, sizeof(*pcie), GFP_KERNEL);
@@ -940,31 +1014,17 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 	pcie->dev = &pdev->dev;
 	platform_set_drvdata(pdev, pcie);
 
-	/* Get the bus range */
-	if (of_pci_parse_bus_range(pdev->dev.of_node, &pcie->busn)) {
-		dev_err(&pdev->dev, "failed to parse bus-range property\n");
-		return -EINVAL;
-	}
+	INIT_LIST_HEAD(&pcie->resources);
 
-	if (of_pci_range_parser_init(&parser, pdev->dev.of_node)) {
-		dev_err(&pdev->dev, "missing ranges property\n");
-		return -EINVAL;
-	}
+	pm_runtime_enable(pcie->dev);
+	pm_runtime_get_sync(pcie->dev);
+
+	rcar_pcie_parse_request_of_pci_ranges(pcie);
 
 	err = rcar_pcie_get_resources(pdev, pcie);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to request resources: %d\n", err);
 		return err;
-	}
-
-	for_each_of_pci_range(&parser, &range) {
-		err = of_pci_range_to_resource(&range, pdev->dev.of_node,
-						&pcie->res[win++]);
-		if (err < 0)
-			return err;
-
-		if (win > RCAR_PCI_MAX_RESOURCES)
-			break;
 	}
 
 	 err = rcar_pcie_parse_map_dma_ranges(pcie, pdev->dev.of_node);
@@ -1008,6 +1068,34 @@ static struct platform_driver rcar_pcie_driver = {
 	.probe = rcar_pcie_probe,
 };
 module_platform_driver(rcar_pcie_driver);
+
+static int rcar_pcie_pci_notifier(struct notifier_block *nb,
+			    unsigned long action, void *data)
+{
+	struct device *dev = data;
+
+	switch (action) {
+	case BUS_NOTIFY_BOUND_DRIVER:
+		/* Force the DMA mask to lower 32-bits */
+		dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block device_nb = {
+	.notifier_call = rcar_pcie_pci_notifier,
+};
+
+static int __init register_rcar_pcie_pci_notifier(void)
+{
+	return bus_register_notifier(&pci_bus_type, &device_nb);
+}
+
+arch_initcall(register_rcar_pcie_pci_notifier);
 
 MODULE_AUTHOR("Phil Edworthy <phil.edworthy@renesas.com>");
 MODULE_DESCRIPTION("Renesas R-Car PCIe driver");
