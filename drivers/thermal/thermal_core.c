@@ -44,6 +44,7 @@
 
 #include "thermal_core.h"
 #include "thermal_hwmon.h"
+#include "thermal_iio.h"
 
 MODULE_AUTHOR("Zhang Rui");
 MODULE_DESCRIPTION("Generic thermal management sysfs support");
@@ -608,13 +609,15 @@ static void thermal_zone_device_reset(struct thermal_zone_device *tz)
 		pos->initialized = false;
 }
 
-void thermal_zone_device_update(struct thermal_zone_device *tz)
+void thermal_zone_device_update(struct thermal_zone_device *tz,
+				enum thermal_device_event_type event)
 {
 	int count;
 
 	if (atomic_read(&in_suspend))
 		return;
 
+	thermal_iio_sensor_notify(tz, event);
 	if (update_temperature(tz))
 		return;
 
@@ -634,7 +637,7 @@ static void thermal_zone_device_check(struct work_struct *work)
 	struct thermal_zone_device *tz = container_of(work, struct
 						      thermal_zone_device,
 						      poll_queue.work);
-	thermal_zone_device_update(tz);
+	thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
 }
 
 /* sys I/F for thermal zone */
@@ -873,7 +876,7 @@ passive_store(struct device *dev, struct device_attribute *attr,
 
 	tz->forced_passive = state;
 
-	thermal_zone_device_update(tz);
+	thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
 
 	return count;
 }
@@ -964,7 +967,7 @@ emul_temp_store(struct device *dev, struct device_attribute *attr,
 	}
 
 	if (!ret)
-		thermal_zone_device_update(tz);
+		thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
 
 	return ret ? ret : count;
 }
@@ -1558,7 +1561,8 @@ __thermal_cooling_device_register(struct device_node *np,
 	mutex_lock(&thermal_list_lock);
 	list_for_each_entry(pos, &thermal_tz_list, node)
 		if (atomic_cmpxchg(&pos->need_update, 1, 0))
-			thermal_zone_device_update(pos);
+			thermal_zone_device_update(pos,
+						   THERMAL_DEVICE_EVENT_NONE);
 	mutex_unlock(&thermal_list_lock);
 
 	return cdev;
@@ -1974,10 +1978,15 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 
 	mutex_unlock(&thermal_governor_lock);
 
+	if (thermal_iio_sensor_register(tz))
+		goto unregister;
+
 	if (!tz->tzp || !tz->tzp->no_hwmon) {
 		result = thermal_add_hwmon_sysfs(tz);
-		if (result)
+		if (result) {
+			thermal_iio_sensor_unregister(tz);
 			goto unregister;
+		}
 	}
 
 	mutex_lock(&thermal_list_lock);
@@ -1992,7 +2001,7 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 	thermal_zone_device_reset(tz);
 	/* Update the new thermal zone and mark it as already updated. */
 	if (atomic_cmpxchg(&tz->need_update, 1, 0))
-		thermal_zone_device_update(tz);
+		thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
 
 	return tz;
 
@@ -2062,6 +2071,7 @@ void thermal_zone_device_unregister(struct thermal_zone_device *tz)
 	remove_trip_attrs(tz);
 	thermal_set_governor(tz, NULL);
 
+	thermal_iio_sensor_unregister(tz);
 	thermal_remove_hwmon_sysfs(tz);
 	release_idr(&thermal_tz_idr, &thermal_idr_lock, tz->id);
 	idr_destroy(&tz->idr);
@@ -2249,7 +2259,8 @@ static int thermal_pm_notify(struct notifier_block *nb,
 		atomic_set(&in_suspend, 0);
 		list_for_each_entry(tz, &thermal_tz_list, node) {
 			thermal_zone_device_reset(tz);
-			thermal_zone_device_update(tz);
+			thermal_zone_device_update(tz,
+						   THERMAL_DEVICE_EVENT_NONE);
 		}
 		break;
 	default:

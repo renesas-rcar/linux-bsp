@@ -227,7 +227,8 @@ static irqreturn_t hisi_thermal_alarm_irq_thread(int irq, void *dev)
 	mutex_unlock(&data->thermal_lock);
 
 	for (i = 0; i < HISI_MAX_SENSORS; i++)
-		thermal_zone_device_update(data->sensors[i].tzd);
+		thermal_zone_device_update(data->sensors[i].tzd,
+					   THERMAL_DEVICE_EVENT_NONE);
 
 	return IRQ_HANDLED;
 }

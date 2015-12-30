@@ -29,6 +29,18 @@ config THERMAL_HWMON
 	  Say 'Y' here if you want all thermal sensors to
 	  have hwmon sysfs interface too.
 
+config THERMAL_IIO
+	bool
+	prompt "Thermal sensor from a zone as IIO sensor device"
+	select IIO
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	help
+	  This will register thermal sensor in a zone as an IIO temperature
+	  sensor device.
+	  This will help user space thermal controllers to use IIO ABI to
+	  get events and buffered acces to temperature samples.
+
 config THERMAL_OF
 	bool
 	prompt "APIs to parse thermal data out of device tree"
