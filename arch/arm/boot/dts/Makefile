@@ -62,7 +62,8 @@ dtb-$(CONFIG_ARCH_BCM2835) += \
 	bcm2835-rpi-b.dtb \
 	bcm2835-rpi-b-rev2.dtb \
 	bcm2835-rpi-b-plus.dtb \
-	bcm2835-rpi-a-plus.dtb
+	bcm2835-rpi-a-plus.dtb \
+	bcm2836-rpi-2-b.dtb
 dtb-$(CONFIG_ARCH_BCM_5301X) += \
 	bcm4708-asus-rt-ac56u.dtb \
 	bcm4708-asus-rt-ac68u.dtb \
@@ -464,7 +465,8 @@ dtb-$(CONFIG_ARCH_OMAP3) += \
 dtb-$(CONFIG_SOC_TI81XX) += \
 	dm8148-evm.dtb \
 	dm8148-t410.dtb \
-	dm8168-evm.dtb
+	dm8168-evm.dtb \
+	dra62x-j5eco-evm.dtb
 dtb-$(CONFIG_SOC_AM33XX) += \
 	am335x-baltos-ir5221.dtb \
 	am335x-base0033.dtb \
