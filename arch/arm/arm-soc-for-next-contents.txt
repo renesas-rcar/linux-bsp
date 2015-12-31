@@ -11,6 +11,7 @@ fixes
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/fixes-rc6
 	patch
 		ARM: tegra: Fix suspend hang on Tegra124 Chromebooks
+		ARM: Fix broken USB support in sunxi_defconfig
 
 next/fixes-non-critical
 	bcm/maintainers
@@ -22,6 +23,8 @@ next/fixes-non-critical
 	patch
 		ARM: scoop: Be sure to clamp return value
 		ARM: sa1100/simpad: Be sure to clamp return value
+	omap/fixes-nc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/81xx-fix-signed
 
 next/cleanup
 	treewide/cleanup
@@ -74,6 +77,8 @@ next/multiplatform
 		Merge branch 'treewide/cleanup' into next/multiplatform
 	patch
 		iio: exynos-adc: fix irqf_oneshot.cocci warnings
+		ARM: s3c64xx: fix pm-debug compilation
+		ARM: s3c: simplify s3c_irqwake_{e,}intallow definition
 
 next/soc
 	bcm/soc
@@ -95,8 +100,12 @@ next/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.5
 	patch
 		ARM: tango4: Initial platform support
-
-next/boards
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/81xx-soc-signed
+	depends/usb-fixes
+		Merge branch 'depends/usb-fixes' into next/soc
+	broadcom/bcm2835-soc
+		http://github.com/anholt/linux tags/bcm2835-soc-next-2015-12-28
 
 next/dt
 	lpc32xx/dt
@@ -158,6 +167,20 @@ next/dt
 		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.5-2
 	patch
 		ARM: dts: tango4: Initial device trees
+	omap/81xx-dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/81xx-dts-signed
+		contains omap/fixes-nc
+	davinci/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.5/dts
+	patch
+		ARM: realview: set up cache correctly on the PB11MPCore
+		ARM: bcm2835: Split the DT for peripherals from the DT for the CPU
+		ARM: bcm2835: Move the CPU/peripheral include out of common RPi DT.
+		ARM: bcm2835: Add devicetree for bcm2836 and Raspberry Pi 2 B
+		ARM: bcm2835: Add the auxiliary clocks to the device tree.
+		ARM: dts: uniphier: fix a typo in comment block
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.5-2
 
 next/dt64
 	renesas/dt64
@@ -195,6 +218,11 @@ next/dt64
 		https://github.com/mbgg/linux-mediatek tags/v4.4-next-arm64
 	rockchip/dt64-2
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts64-2
+	patch
+		Documentation: DT: Add entry for ARM SP805-WDT
+		dts/ls2080a: Update DTSI to add support of SP805 WDT
+	apm/dt64-2
+		https://github.com/AppliedMicro/xgene-next tags/xgene-dts-fixes-for-v4.5
 
 next/defconfig
 	patch
@@ -237,6 +265,10 @@ next/defconfig
 		ARM: multi_v7_defconfig: enable rk808 clkout module
 	imx/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.5
+	patch
+		ARM: default to multi_v7_defconfig
+		ARM: bcm2835: enable all bcm2835-relevant in defconfig
+		ARM: bcm2835: enable auxiliary spi driver in defconfig
 
 next/config64
 	renesas/config64
@@ -273,4 +305,7 @@ next/drivers
 		https://github.com/mbgg/linux-mediatek tags/v4.4-next-soc
 	omap/wakeup-m3
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/wakeup-m3
-
+	depends/usb-fixes
+		Merge branch 'depends/usb-fixes' into next/drivers
+	broadcom/bcm2835-drivers
+		http://github.com/anholt/linux tags/bcm2835-drivers-next-2015-12-28
