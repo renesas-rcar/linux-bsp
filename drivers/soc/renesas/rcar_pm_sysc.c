@@ -241,34 +241,66 @@ int rcar_power_on(struct generic_pm_domain *genpd)
 	return rcar_set_power_on_off(genpd, 1);
 }
 
+bool rcar_check_pm_clks(struct of_phandle_args *clkspec)
+{
+	if (!clkspec || !clkspec->np || !clkspec->np->name)
+		return false;
+
+	/* R-Car Gen3: get clocks only from cpg to support for pm */
+	if (!strcmp("clock-controller", clkspec->np->name))
+		return true;
+
+	/* R-Car Gen2: get clocks only from mstp driver and zb_clk */
+	if (of_device_is_compatible(clkspec->np,
+			 "renesas,cpg-mstp-clocks") ||
+		(!strcmp(clkspec->np->name, "zb_clk")))
+		return true;
+
+	return false;
+}
+
 static int rcar_clk_attach_dev(struct generic_pm_domain *genpd,
 				  struct device *dev)
 {
+	struct device_node *np = dev->of_node;
+	struct of_phandle_args clkspec;
 	struct clk *clk;
 	int i = 0;
 	int error;
 
-	dev_dbg(dev, "attaching to power domain '%s'\n", genpd->name);
-
 	error = pm_clk_create(dev);
 	if (error) {
-		dev_err(dev, "pm_clk_create failed %d\n", error);
+		pr_err("%s: pm_clk_create failed %d\n", __func__, error);
 		return error;
 	}
 
-	while ((clk = of_clk_get(dev->of_node, i++)) && !IS_ERR(clk)) {
-		dev_dbg(dev, "adding %s clock to PM clocks list\n",
-			 __clk_get_name(clk));
+	while (!of_parse_phandle_with_args(np, "clocks", "#clock-cells", i,
+					   &clkspec)) {
+
+		i++;
+		if (!rcar_check_pm_clks(&clkspec))
+			continue;
+
+		clk = of_clk_get_from_provider(&clkspec);
+		of_node_put(clkspec.np);
+
+		error = IS_ERR(clk);
+		if (error)
+			goto fail_destroy;
+
 		error = pm_clk_add_clk(dev, clk);
 		if (error) {
-			dev_err(dev, "pm_clk_add_clk failed %d\n", error);
-			clk_put(clk);
-			pm_clk_destroy(dev);
-			return error;
+			pr_err("%s: pm_clk_add_clk %pC failed %d\n",
+				__func__, clk, error);
+			goto fail_destroy;
 		}
 	}
 
 	return 0;
+
+fail_destroy:
+	pm_clk_destroy(dev);
+	return error;
 }
 
 static void rcar_clk_detach_dev(struct generic_pm_domain *genpd,
