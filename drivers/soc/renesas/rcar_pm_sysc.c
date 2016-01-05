@@ -241,6 +241,13 @@ int rcar_power_on(struct generic_pm_domain *genpd)
 	return rcar_set_power_on_off(genpd, 1);
 }
 
+bool rcar_check_supported_clk(struct clk *clk)
+{
+	if (!strcmp("clk_multiplier", __clk_get_name(clk)))
+		return false;
+	return true;
+}
+
 static int rcar_clk_attach_dev(struct generic_pm_domain *genpd,
 				  struct device *dev)
 {
@@ -257,6 +264,8 @@ static int rcar_clk_attach_dev(struct generic_pm_domain *genpd,
 	}
 
 	while ((clk = of_clk_get(dev->of_node, i++)) && !IS_ERR(clk)) {
+		if (!rcar_check_supported_clk(clk))
+			continue;
 		dev_dbg(dev, "adding %s clock to PM clocks list\n",
 			 __clk_get_name(clk));
 		error = pm_clk_add_clk(dev, clk);
