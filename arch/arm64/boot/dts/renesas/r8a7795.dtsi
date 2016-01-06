@@ -60,6 +60,7 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			clocks =<&cpg CPG_CORE R8A7795_CLK_Z>;
+			operating-points-v2 = <&group0_opp_tb0>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
@@ -68,6 +69,7 @@
 			reg = <0x1>;
 			device_type = "cpu";
 			enable-method = "psci";
+			operating-points-v2 = <&group0_opp_tb0>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
@@ -76,6 +78,7 @@
 			reg = <0x2>;
 			device_type = "cpu";
 			enable-method = "psci";
+			operating-points-v2 = <&group0_opp_tb0>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
@@ -84,6 +87,7 @@
 			reg = <0x3>;
 			device_type = "cpu";
 			enable-method = "psci";
+			operating-points-v2 = <&group0_opp_tb0>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
@@ -93,6 +97,7 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			clocks = <&cpg CPG_CORE R8A7795_CLK_Z2>;
+			operating-points-v2 = <&group1_opp_tb0>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
@@ -101,6 +106,7 @@
 			reg = <0x101>;
 			device_type = "cpu";
 			enable-method = "psci";
+			operating-points-v2 = <&group1_opp_tb0>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
@@ -109,6 +115,7 @@
 			reg = <0x102>;
 			device_type = "cpu";
 			enable-method = "psci";
+			operating-points-v2 = <&group1_opp_tb0>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
@@ -117,6 +124,7 @@
 			reg = <0x103>;
 			device_type = "cpu";
 			enable-method = "psci";
+			operating-points-v2 = <&group1_opp_tb0>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 		};
 
@@ -131,6 +139,38 @@
 				exit-latency-us = <680>;
 				min-residency-us = <1088>;
 			};
+		};
+	};
+
+	group0_opp_tb0: gp0_tb0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp@500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <830000>;
+			clock-latency-ns = <300000>;
+		};
+		opp@1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <830000>;
+			clock-latency-ns = <300000>;
+		};
+		opp@1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <830000>;
+			clock-latency-ns = <300000>;
+		};
+	};
+
+	group1_opp_tb0: gp1_tb0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp@1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <830000>;
+			clock-latency-ns = <300000>;
 		};
 	};
 
