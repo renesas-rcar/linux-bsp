@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a7795 SoC
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2015-2016 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -1168,12 +1168,16 @@
 			compatible = "renesas,hdmi0";
 			reg = <0 0xfead0000 0 0x10000>;
 			interrupts = <GIC_SPI 389 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 729>;
+			power-domains = <&pd_always_on>;
 		};
 
 		hdmi1: hdmi@feae0000 {
 			compatible = "renesas,hdmi1";
 			reg = <0 0xfeae0000 0 0x10000>;
 			interrupts = <GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 728>;
+			power-domains = <&pd_always_on>;
 		};
 
 		du: display@feb00000 {
