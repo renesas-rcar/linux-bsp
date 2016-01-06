@@ -825,10 +825,10 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, vsp1);
 
-	if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND) {
+	if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND)
 		fcpv_reg[vsp1->index] =
 			 ioremap(fcpvd_offset[vsp1->index], 0x20);
-}
+
 	return 0;
 }
 
