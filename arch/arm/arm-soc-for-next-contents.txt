@@ -1,17 +1,8 @@
 fixes
-	<no branch> (43675ffafd3c3373f82691f539df3dc7403877fe)
-		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-fixes-for-4.4
 	patch
-		fsl-ifc: add missing include on ARM64
-		bus: sunxi-rsb: Fix primary PMIC mapping hardware address
-		bus: sunxi-rsb: Fix peripheral IC mapping runtime address
-	<no branch> (3a35e470bc6bc4ce34c19c410ebbe4e3bbf0bafe)
-		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.4-3
-	<no branch> (0b4d6972d7b052b23d33ff9bdbb52958664fbb26)
-		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/fixes-rc6
-	patch
-		ARM: tegra: Fix suspend hang on Tegra124 Chromebooks
 		ARM: Fix broken USB support in sunxi_defconfig
+		ARM: nomadik: set latencies to 8 cycles
+		ARM: versatile: fix MMC/SD interrupt assignment
 
 next/fixes-non-critical
 	bcm/maintainers
@@ -79,6 +70,7 @@ next/multiplatform
 		iio: exynos-adc: fix irqf_oneshot.cocci warnings
 		ARM: s3c64xx: fix pm-debug compilation
 		ARM: s3c: simplify s3c_irqwake_{e,}intallow definition
+		ARM: realview: don't select SMP_ON_UP for UP builds
 
 next/soc
 	bcm/soc
@@ -106,6 +98,11 @@ next/soc
 		Merge branch 'depends/usb-fixes' into next/soc
 	broadcom/bcm2835-soc
 		http://github.com/anholt/linux tags/bcm2835-soc-next-2015-12-28
+	patch
+		ARM: tango: pass ARM arch level for smc.S
+		ARM: tango: Fix UP build issues
+
+next/boards
 
 next/dt
 	lpc32xx/dt
@@ -181,6 +178,9 @@ next/dt
 		ARM: dts: uniphier: fix a typo in comment block
 	samsung/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.5-2
+		contains samsung/clk-exynos
+	patch
+		ARM: dts: imx6q: clean up unused ipu2grp
 
 next/dt64
 	renesas/dt64
@@ -269,6 +269,8 @@ next/defconfig
 		ARM: default to multi_v7_defconfig
 		ARM: bcm2835: enable all bcm2835-relevant in defconfig
 		ARM: bcm2835: enable auxiliary spi driver in defconfig
+		ARM: multi_v7_defconfig: Enable fan, sensors and audio for Odroid XU3
+		ARM: versatile: select some defaults in defconfig
 
 next/config64
 	renesas/config64
@@ -309,3 +311,9 @@ next/drivers
 		Merge branch 'depends/usb-fixes' into next/drivers
 	broadcom/bcm2835-drivers
 		http://github.com/anholt/linux tags/bcm2835-drivers-next-2015-12-28
+	patch
+		ARM: bcm2835: clarify RASPBERRYPI_FIRMWARE dependency
+		bus: uniphier: allow only built-in driver
+	samsung/clk-exynos
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-clk-exynos4-4.5
+
