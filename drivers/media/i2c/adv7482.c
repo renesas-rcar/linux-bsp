@@ -1005,9 +1005,17 @@ static int adv7482_set_vid_info(struct v4l2_subdev *sd)
 	 * clock cycles. These resolutions must be shifted horizontally to
 	 * the left in active video mode.
 	 */
-	if ((val == ADV7482_IO_CP_VID_STD_720P) ||
-		(val == ADV7482_IO_CP_VID_STD_1080I) ||
+	if ((val == ADV7482_IO_CP_VID_STD_1080I) ||
 		(val == ADV7482_IO_CP_VID_STD_1080P)) {
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8B, 0x43);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8C, 0xD4);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8B, 0x4F);
+		ret = adv7482_write_register(client,
+					ADV7482_I2C_CP, 0x8D, 0xD4);
+	} else if (val == ADV7482_IO_CP_VID_STD_720P) {
 		ret = adv7482_write_register(client,
 					ADV7482_I2C_CP, 0x8B, 0x43);
 		ret = adv7482_write_register(client,
