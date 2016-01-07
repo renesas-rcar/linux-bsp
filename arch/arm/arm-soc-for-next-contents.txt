@@ -3,6 +3,8 @@ fixes
 		ARM: Fix broken USB support in sunxi_defconfig
 		ARM: nomadik: set latencies to 8 cycles
 		ARM: versatile: fix MMC/SD interrupt assignment
+		ARM: Fix broken USB support in multi_v7_defconfig for sunxi devices
+		dts: vt8500: Add SDHC node to DTS file for WM8650
 
 next/fixes-non-critical
 	bcm/maintainers
@@ -102,8 +104,6 @@ next/soc
 		ARM: tango: pass ARM arch level for smc.S
 		ARM: tango: Fix UP build issues
 
-next/boards
-
 next/dt
 	lpc32xx/dt
 		https://github.com/vzapolskiy/linux lpc32xx-dts
@@ -181,6 +181,7 @@ next/dt
 		contains samsung/clk-exynos
 	patch
 		ARM: dts: imx6q: clean up unused ipu2grp
+		dts: vt8500: Fix errors in SDHC node for WM8505
 
 next/dt64
 	renesas/dt64
@@ -316,4 +317,5 @@ next/drivers
 		bus: uniphier: allow only built-in driver
 	samsung/clk-exynos
 		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-clk-exynos4-4.5
+
 
