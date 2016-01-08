@@ -5,6 +5,8 @@ fixes
 		ARM: versatile: fix MMC/SD interrupt assignment
 		ARM: Fix broken USB support in multi_v7_defconfig for sunxi devices
 		dts: vt8500: Add SDHC node to DTS file for WM8650
+	<no branch> (e7b11dc7b77bfce0a351230a5feeadc1d0bba997)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/onenand-corruption
 
 next/fixes-non-critical
 	bcm/maintainers
@@ -284,6 +286,7 @@ next/defconfig
 		ARM: versatile: enable the right LEDs
 		ARM: zx_defconfig: remove CONFIG_MMC_DW_IDMAC
 		arm: multi_v7_defconfig: Add virtio drivers
+		ARM: multi_v7_defconfig: Add rockchip audio support
 
 next/config64
 	renesas/config64
