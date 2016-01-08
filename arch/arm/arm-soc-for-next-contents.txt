@@ -182,6 +182,11 @@ next/dt
 	patch
 		ARM: dts: imx6q: clean up unused ipu2grp
 		dts: vt8500: Fix errors in SDHC node for WM8505
+	meson/dt
+		https://github.com/carlocaione/linux-meson tags/meson-for-4.5/dts
+	patch
+		ARM: versatile: add the syscon LEDs to the DT
+		ARM: dts: compulab: add new board description
 
 next/dt64
 	renesas/dt64
@@ -272,6 +277,13 @@ next/defconfig
 		ARM: bcm2835: enable auxiliary spi driver in defconfig
 		ARM: multi_v7_defconfig: Enable fan, sensors and audio for Odroid XU3
 		ARM: versatile: select some defaults in defconfig
+	rockchip/pmdomain-fix-backmerge
+		Merge Rockchip pmdomain fix into next/defconfig
+	patch
+		ARM: pxa: add defconfig covering all the boards
+		ARM: versatile: enable the right LEDs
+		ARM: zx_defconfig: remove CONFIG_MMC_DW_IDMAC
+		arm: multi_v7_defconfig: Add virtio drivers
 
 next/config64
 	renesas/config64
@@ -317,5 +329,4 @@ next/drivers
 		bus: uniphier: allow only built-in driver
 	samsung/clk-exynos
 		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-clk-exynos4-4.5
-
 
