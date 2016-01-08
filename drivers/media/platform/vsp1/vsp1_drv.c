@@ -1,7 +1,7 @@
 /*
  * vsp1_drv.c  --  R-Car VSP1 Driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -646,6 +646,9 @@ done:
  */
 void vsp1_device_put(struct vsp1_device *vsp1)
 {
+	if (vsp1->ref_count == 0)
+		return;
+
 	mutex_lock(&vsp1->lock);
 
 	if (--vsp1->ref_count == 0) {
