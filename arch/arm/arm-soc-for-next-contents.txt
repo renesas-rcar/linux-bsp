@@ -1,12 +1,4 @@
 fixes
-	patch
-		ARM: Fix broken USB support in sunxi_defconfig
-		ARM: nomadik: set latencies to 8 cycles
-		ARM: versatile: fix MMC/SD interrupt assignment
-		ARM: Fix broken USB support in multi_v7_defconfig for sunxi devices
-		dts: vt8500: Add SDHC node to DTS file for WM8650
-	<no branch> (e7b11dc7b77bfce0a351230a5feeadc1d0bba997)
-		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.4/onenand-corruption
 
 next/fixes-non-critical
 	bcm/maintainers
@@ -189,6 +181,8 @@ next/dt
 	patch
 		ARM: versatile: add the syscon LEDs to the DT
 		ARM: dts: compulab: add new board description
+	renesas/dt-fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-fixes-for-v4.5
 
 next/dt64
 	renesas/dt64
@@ -332,4 +326,3 @@ next/drivers
 		bus: uniphier: allow only built-in driver
 	samsung/clk-exynos
 		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-clk-exynos4-4.5
-
