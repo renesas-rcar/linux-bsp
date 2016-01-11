@@ -52,9 +52,7 @@ void __init shmobile_init_delay(void)
 		if (!of_property_read_u32(np, "clock-frequency", &freq))
 			max_freq = max(max_freq, freq);
 
-		if (of_device_is_compatible(np, "arm,cortex-a8")) {
-			div = 2;
-		} else if (of_device_is_compatible(np, "arm,cortex-a9")) {
+		if (of_device_is_compatible(np, "arm,cortex-a9")) {
 			div = 1;
 		} else if (of_device_is_compatible(np, "arm,cortex-a7") ||
 			 of_device_is_compatible(np, "arm,cortex-a15")) {
