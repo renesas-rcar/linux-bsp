@@ -326,3 +326,12 @@ next/drivers
 		bus: uniphier: allow only built-in driver
 	samsung/clk-exynos
 		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-clk-exynos4-4.5
+
+late/tegra
+	treewide/cleanup
+		Merge branch 'treewide/cleanup' into late/tegra
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.5-soc
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.5-dt
+
