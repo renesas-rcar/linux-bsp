@@ -281,6 +281,7 @@ next/defconfig
 		ARM: zx_defconfig: remove CONFIG_MMC_DW_IDMAC
 		arm: multi_v7_defconfig: Add virtio drivers
 		ARM: multi_v7_defconfig: Add rockchip audio support
+		ARM: Add CONFIG_DEPRECATED_PARAM_STRUCT to netwinder_defconfig
 
 next/config64
 	renesas/config64
