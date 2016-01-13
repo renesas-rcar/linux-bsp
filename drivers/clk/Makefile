@@ -17,6 +17,7 @@ endif
 
 # hardware specific clock types
 # please keep this section sorted lexicographically by file/directory path name
+obj-$(CONFIG_COMMON_CLK_5P49V5923A)	+= clk-5p49v5923a.o
 obj-$(CONFIG_MACH_ASM9260)		+= clk-asm9260.o
 obj-$(CONFIG_COMMON_CLK_AXI_CLKGEN)	+= clk-axi-clkgen.o
 obj-$(CONFIG_ARCH_AXXIA)		+= clk-axm5516.o
