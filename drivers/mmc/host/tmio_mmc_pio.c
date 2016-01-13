@@ -312,6 +312,16 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 	if (mrq->cmd->error || (mrq->data && mrq->data->error))
 		tmio_mmc_abort_dma(host);
 
+	if (host->inquiry_tuning && host->inquiry_tuning(host) &&
+	     !host->done_tuning) {
+		/* call retuning() to clear SCC error bit */
+		if (host->retuning)
+			host->retuning(host);
+		/* finish processing tuning request */
+		complete(&host->completion);
+		return;
+	}
+
 	/* Check retuning */
 	if (host->retuning && host->done_tuning) {
 		result = host->retuning(host);
@@ -319,13 +329,10 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 			host->done_tuning = false;
 	}
 
-	if ((host->inquiry_tuning && host->inquiry_tuning(host) &&
-	     !host->done_tuning) || cmd == mrq->sbc) {
-		/* finish processing tuning request */
-		if (!host->done_tuning || cmd == mrq->sbc) {
-			complete(&host->completion);
-			return;
-		}
+	if (cmd == mrq->sbc) {
+		/* finish SET_BLOCK_COUNT request */
+		complete(&host->completion);
+		return;
 	}
 
 	mmc_request_done(host->mmc, mrq);
