@@ -45,6 +45,7 @@
 #define RST_RESERVED_BITS	GENMASK_ULL(32, 0)
 
 /* DM_CM_INFO1 and DM_CM_INFO1_MASK */
+#define INFO1_CLEAR		0
 #define INFO1_DTRANEND1		BIT(17)
 #define INFO1_DTRANEND0		BIT(16)
 
@@ -68,6 +69,9 @@ void tmio_mmc_enable_dma(struct tmio_mmc_host *host, bool enable)
 {
 	if (!host->chan_tx || !host->chan_rx)
 		return;
+
+	if (!enable)
+		tmio_dm_write(host, DM_CM_INFO1, INFO1_CLEAR);
 
 	if (host->dma->enable)
 		host->dma->enable(host, enable);
