@@ -267,7 +267,7 @@
 		};
 	};
 
-	dclkin0: programable_clock0 {
+	dclkin_p0: programmable_clock0 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <148500000>;
@@ -285,7 +285,7 @@
 		clock-frequency = <33000000>;
 	};
 
-	dclkin3: programable_clock1 {
+	dclkin_p3: programmable_clock1 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <108000000>;
@@ -713,6 +713,21 @@
 					remote-endpoint = <&csi2_40_in_ep>;
 				};
 			};
+		};
+	};
+
+	clk_5p49v5923a: programmable_clk@6a {
+		compatible = "idt,5p49v5923a";
+		reg = <0x6a>;
+
+		dclkin0: 5p49v5923a_clk1@6a {
+			#clock-cells = <0>;
+			clocks = <&dclkin_p0>;
+		};
+
+		dclkin3: 5p49v5923a_clk2@6a {
+			#clock-cells = <0>;
+			clocks = <&dclkin_p3>;
 		};
 	};
 };
