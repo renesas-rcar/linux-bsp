@@ -1301,40 +1301,68 @@
 			power-domains = <&pd_a3sg>;
 		};
 
-		ivdp1c: ivdp1c@fe8d0000 {
-			compatible = "renesas,ivdp1c";
-			reg = <0 0xfe8d0000 0 0x200>, <0 0xfe8d0200 0 0x200>,
-				<0 0xfe8df000 0 0x200>,
-				<0 0xfe8a0000 0 0x200>;
-			interrupts = <GIC_SPI 380 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 381 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 128>, <&cpg CPG_MOD 617>,
-				 <&cpg CPG_MOD 104>;
-			power-domains = <&pd_a2vc0>;
-		};
-
-		vcp4: vcp4@fe8f0000 {
+		vcp4 {
 			compatible = "renesas,vcp4";
-			reg = <0 0xfe910000 0 0x200>,
-			      <0 0xfe910200 0 0x200>,
-			      <0 0xfe8f0000 0 0x200>,
-			      <0 0xfe8f0200 0 0x200>,
-			      <0 0xfe900000 0 0x200>,
-			      <0 0xfe900200 0 0x200>,
-			      <0 0xfe90f000 0 0x200>,
-			      <0 0xfe8ff000 0 0x200>;
-			interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 130>, <&cpg CPG_MOD 129>,
-				 <&cpg CPG_MOD 128>,
-				 <&cpg CPG_MOD 619>, <&cpg CPG_MOD 616>;
-			power-domains = <&pd_a2vc0>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			vcplf@fe910000 {
+				reg = <0 0xfe910000 0 0x200>, <0 0xfe910200 0 0x200>;
+				interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&cpg CPG_MOD 130>;
+				power-domains = <&pd_a2vc1>;
+			};
+
+			vcpl4@fe8f0000 {
+				reg = <0 0xfe8f0000 0 0x200>, <0 0xfe8f0200 0 0x200>;
+				interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&cpg CPG_MOD 129>;
+				power-domains = <&pd_a2vc0>;
+			};
+
+			vdpb@fe900000 {
+				reg = <0 0xfe900000 0 0x200>, <0 0xfe900200 0 0x200>;
+				interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&cpg CPG_MOD 131>;
+				power-domains = <&pd_a2vc1>;
+			};
+
+			ivdp1c@fe8d0000 {
+				reg = <0 0xfe8d0000 0 0x200>, <0 0xfe8d0200 0 0x200>;
+				interrupts = <GIC_SPI 380 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 381 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&cpg CPG_MOD 128>;
+				power-domains = <&pd_a2vc0>;
+			};
+
+			fcpcs@fe90f000 {
+				reg = <0 0xfe90f000 0 0x200>;
+				clocks = <&cpg CPG_MOD 619>;
+				power-domains = <&pd_a3vc>;
+			};
+
+			fcpci0@fe8df000 {
+				reg = <0 0xfe8df000 0 0x200>;
+				clocks = <&cpg CPG_MOD 617>;
+				power-domains = <&pd_a3vc>;
+			};
+
+			fcpci1@fe8ff000 {
+				reg = <0 0xfe8ff000 0 0x200>;
+				clocks = <&cpg CPG_MOD 616>;
+				power-domains = <&pd_a3vc>;
+			};
+
+			stb@fe8a0000 {
+				reg = <0 0xfe8a0000 0 0x200>;
+				interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&cpg CPG_MOD 104>;
+				power-domains = <&pd_a3vc>;
+			};
 		};
 
 		vspbc@fe920000 {
