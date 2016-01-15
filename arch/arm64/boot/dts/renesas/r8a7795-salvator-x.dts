@@ -883,7 +883,7 @@
 	vmmc-supply = <&fixedregulator1v8>;
 	vqmmc-supply = <&vccq_mmc0>;
 	non-removable;
-	status = "disabled";
+	status = "okay";
 };
 
 &sata {
