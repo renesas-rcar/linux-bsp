@@ -79,7 +79,16 @@
 		clock-frequency = <24576000>;
 	};
 
-	fixedregulator1v8: fixedregulator@0 {
+	fixedregulator3v3: regulator@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "fixed-3.3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	fixedregulator1v8: regulator@1 {
 		compatible = "regulator-fixed";
 		regulator-name = "fixed-1.8V";
 		regulator-min-microvolt = <1800000>;
@@ -88,7 +97,7 @@
 		regulator-always-on;
 	};
 
-	vcc_sdhi0: regulator@1 {
+	vcc_sdhi0: regulator@2 {
 		compatible = "regulator-fixed";
 
 		regulator-name = "SDHI0 Vcc";
@@ -99,7 +108,7 @@
 		enable-active-high;
 	};
 
-	vccq_sdhi0: regulator@2 {
+	vccq_sdhi0: regulator@3 {
 		compatible = "regulator-gpio";
 
 		regulator-name = "SDHI0 VccQ";
@@ -112,7 +121,7 @@
 			  1800000 0>;
 	};
 
-	vcc_sdhi3: regulator@3 {
+	vcc_sdhi3: regulator@4 {
 		compatible = "regulator-fixed";
 
 		regulator-name = "SDHI3 Vcc";
@@ -123,7 +132,7 @@
 		enable-active-high;
 	};
 
-	vccq_sdhi3: regulator@4 {
+	vccq_sdhi3: regulator@5 {
 		compatible = "regulator-gpio";
 
 		regulator-name = "SDHI3 VccQ";
@@ -327,20 +336,6 @@
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <108000000>;
-	};
-
-	vccq_mmc0: regulator@5 {
-		compatible = "regulator-gpio";
-
-		regulator-name = "MMC0 VccQ";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <3300000>;
-
-		gpios = <&gpio5 3 GPIO_ACTIVE_HIGH>,
-			<&gpio5 9 GPIO_ACTIVE_HIGH>;
-		gpios-states = <0>, <0>;
-		states = <3300000 1
-			  1800000 0>;
 	};
 };
 
@@ -714,8 +709,8 @@
 	pinctrl-0 = <&mmc0_pins>;
 	pinctrl-names = "default";
 
-	vmmc-supply = <&fixedregulator1v8>;
-	vqmmc-supply = <&vccq_mmc0>;
+	vmmc-supply = <&fixedregulator3v3>;
+	vqmmc-supply = <&fixedregulator1v8>;
 	non-removable;
 	status = "okay";
 };
