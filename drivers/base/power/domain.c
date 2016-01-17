@@ -1339,8 +1339,8 @@ int pm_genpd_add_subdomain(struct generic_pm_domain *genpd,
 	if (!link)
 		return -ENOMEM;
 
+	mutex_lock(&subdomain->lock);
 	mutex_lock(&genpd->lock);
-	mutex_lock_nested(&subdomain->lock, SINGLE_DEPTH_NESTING);
 
 	if (genpd->status == GPD_STATE_POWER_OFF
 	    &&  subdomain->status != GPD_STATE_POWER_OFF) {
@@ -1363,8 +1363,8 @@ int pm_genpd_add_subdomain(struct generic_pm_domain *genpd,
 		genpd_sd_counter_inc(genpd);
 
  out:
-	mutex_unlock(&subdomain->lock);
 	mutex_unlock(&genpd->lock);
+	mutex_unlock(&subdomain->lock);
 	if (ret)
 		kfree(link);
 	return ret;
@@ -1385,6 +1385,7 @@ int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 	if (IS_ERR_OR_NULL(genpd) || IS_ERR_OR_NULL(subdomain))
 		return -EINVAL;
 
+	mutex_lock(&subdomain->lock);
 	mutex_lock(&genpd->lock);
 
 	if (!list_empty(&subdomain->slave_links) || subdomain->device_count) {
@@ -1398,15 +1399,11 @@ int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 		if (link->slave != subdomain)
 			continue;
 
-		mutex_lock_nested(&subdomain->lock, SINGLE_DEPTH_NESTING);
-
 		list_del(&link->master_node);
 		list_del(&link->slave_node);
 		kfree(link);
 		if (subdomain->status != GPD_STATE_POWER_OFF)
 			genpd_sd_counter_dec(genpd);
-
-		mutex_unlock(&subdomain->lock);
 
 		ret = 0;
 		break;
@@ -1414,6 +1411,7 @@ int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 
 out:
 	mutex_unlock(&genpd->lock);
+	mutex_unlock(&subdomain->lock);
 
 	return ret;
 }
