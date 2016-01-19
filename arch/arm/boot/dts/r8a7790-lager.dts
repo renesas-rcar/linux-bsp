@@ -715,3 +715,5 @@
 &ssi1 {
 	shared-pin;
 };
+
+#include "r8a77xx-aa104xd12-panel.dtsi"
