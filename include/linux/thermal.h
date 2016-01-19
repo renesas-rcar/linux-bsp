@@ -43,6 +43,9 @@
 /* Default weight of a bound cooling device */
 #define THERMAL_WEIGHT_DEFAULT 0
 
+/* use value, which < 0K, to indicate an invalid/uninitialized temperature */
+#define THERMAL_TEMP_INVALID	-274000
+
 /* Unit conversion macros */
 #define DECI_KELVIN_TO_CELSIUS(t)	({			\
 	long _t = (t);						\
@@ -89,6 +92,13 @@ enum thermal_trend {
 	THERMAL_TREND_DROP_FULL, /* apply lowest cooling action */
 };
 
+enum thermal_device_event_type {
+	THERMAL_DEVICE_EVENT_NONE, /* No specific reason */
+	THERMAL_DEVICE_EVENT_THRESHOLD, /* temp thereshold event */
+	THERMAL_DEVICE_EVENT_TEMP_SAMPLE, /* New temp sample notify */
+	THERMAL_DEVICE_TRIP_TEMP_CHANGE, /* trip temp change */
+};
+
 struct thermal_zone_device_ops {
 	int (*bind) (struct thermal_zone_device *,
 		     struct thermal_cooling_device *);
@@ -109,6 +119,13 @@ struct thermal_zone_device_ops {
 	int (*set_emul_temp) (struct thermal_zone_device *, int);
 	int (*get_trend) (struct thermal_zone_device *, int,
 			  enum thermal_trend *);
+	int (*get_threshold_temp)(struct thermal_zone_device *, int,
+				  int *);
+	int (*set_threshold_temp)(struct thermal_zone_device *, int,
+				  int);
+	int (*set_notification_status)(struct thermal_zone_device *,
+				       bool status);
+	bool (*check_notification_support)(struct thermal_zone_device *);
 	int (*notify) (struct thermal_zone_device *, int,
 		       enum thermal_trip_type);
 };
@@ -143,6 +160,8 @@ struct thermal_attr {
 	char name[THERMAL_NAME_LENGTH];
 };
 
+struct iio_dev;
+
 /**
  * struct thermal_zone_device - structure for a thermal zone
  * @id:		unique id number for each thermal zone
@@ -167,6 +186,7 @@ struct thermal_attr {
  * @forced_passive:	If > 0, temperature at which to switch on all ACPI
  *			processor cooling devices.  Currently only used by the
  *			step-wise governor.
+ * @need_update:	if equals 1, thermal_zone_device_update needs to be invoked.
  * @ops:	operations this &thermal_zone_device supports
  * @tzp:	thermal zone parameters
  * @governor:	pointer to the governor for this thermal zone
@@ -177,6 +197,7 @@ struct thermal_attr {
  * @lock:	lock to protect thermal_instances list
  * @node:	node in thermal_tz_list (in thermal_core.c)
  * @poll_queue:	delayed work for polling
+ * @indio_dev:	pointer to instance of an IIO dev for this zone
  */
 struct thermal_zone_device {
 	int id;
@@ -194,6 +215,7 @@ struct thermal_zone_device {
 	int emul_temperature;
 	int passive;
 	unsigned int forced_passive;
+	atomic_t need_update;
 	struct thermal_zone_device_ops *ops;
 	struct thermal_zone_params *tzp;
 	struct thermal_governor *governor;
@@ -203,6 +225,9 @@ struct thermal_zone_device {
 	struct mutex lock;
 	struct list_head node;
 	struct delayed_work poll_queue;
+#if defined(CONFIG_THERMAL_IIO)
+	struct iio_dev *indio_dev;
+#endif
 };
 
 /**
@@ -397,7 +422,8 @@ int thermal_zone_bind_cooling_device(struct thermal_zone_device *, int,
 				     unsigned int);
 int thermal_zone_unbind_cooling_device(struct thermal_zone_device *, int,
 				       struct thermal_cooling_device *);
-void thermal_zone_device_update(struct thermal_zone_device *);
+void thermal_zone_device_update(struct thermal_zone_device *,
+				enum thermal_device_event_type);
 
 struct thermal_cooling_device *thermal_cooling_device_register(char *, void *,
 		const struct thermal_cooling_device_ops *);
@@ -445,7 +471,8 @@ static inline int thermal_zone_unbind_cooling_device(
 	struct thermal_zone_device *tz, int trip,
 	struct thermal_cooling_device *cdev)
 { return -ENODEV; }
-static inline void thermal_zone_device_update(struct thermal_zone_device *tz)
+static inline void thermal_zone_device_update(struct thermal_zone_device *tz,
+					      enum thermal_device_event_type type)
 { }
 static inline struct thermal_cooling_device *
 thermal_cooling_device_register(char *type, void *devdata,

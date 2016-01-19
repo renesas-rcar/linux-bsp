@@ -292,7 +292,7 @@ static int of_thermal_set_mode(struct thermal_zone_device *tz,
 	mutex_unlock(&tz->lock);
 
 	data->mode = mode;
-	thermal_zone_device_update(tz);
+	thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
 
 	return 0;
 }

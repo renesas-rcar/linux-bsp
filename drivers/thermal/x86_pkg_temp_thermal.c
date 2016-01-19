@@ -273,12 +273,20 @@ static int sys_get_trip_type(struct thermal_zone_device *thermal,
 	return 0;
 }
 
+static bool sys_check_notify_support(struct thermal_zone_device *tz)
+{
+	return true;
+}
+
 /* Thermal zone callback registry */
 static struct thermal_zone_device_ops tzone_ops = {
 	.get_temp = sys_get_curr_temp,
 	.get_trip_temp = sys_get_trip_temp,
 	.get_trip_type = sys_get_trip_type,
 	.set_trip_temp = sys_set_trip_temp,
+	.get_threshold_temp = sys_get_trip_temp,
+	.set_threshold_temp = sys_set_trip_temp,
+	.check_notification_support = sys_check_notify_support,
 };
 
 static bool pkg_temp_thermal_platform_thermal_rate_control(void)
@@ -348,7 +356,8 @@ static void pkg_temp_thermal_threshold_work_fn(struct work_struct *work)
 	}
 	if (notify) {
 		pr_debug("thermal_zone_device_update\n");
-		thermal_zone_device_update(phdev->tzone);
+		thermal_zone_device_update(phdev->tzone,
+					   THERMAL_DEVICE_EVENT_THRESHOLD);
 	}
 }
 

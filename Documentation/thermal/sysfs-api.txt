@@ -494,3 +494,13 @@ platform data is provided, this uses the step_wise throttling policy.
 This function serves as an arbitrator to set the state of a cooling
 device. It sets the cooling device to the deepest cooling state if
 possible.
+
+5.5:thermal_zone_device_update:
+This function is used by thermal core and thermal client drivers to trigger
+temperature read and governor specific processing for thermal trip violation.
+Using event type parameter, the caller can specify the reason for this call.
+This reason can be
+THERMAL_DEVICE_EVENT_NONE for unspecified reason
+THERMAL_DEVICE_EVENT_THRESHOLD for temp threshold event
+THERMAL_DEVICE_EVENT_TEMP_SAMPLE for new temperature sample notification
+THERMAL_DEVICE_TRIP_TEMP_CHANGE for notifying trip point temperature change

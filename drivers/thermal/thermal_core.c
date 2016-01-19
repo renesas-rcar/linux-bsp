@@ -37,12 +37,14 @@
 #include <linux/of.h>
 #include <net/netlink.h>
 #include <net/genetlink.h>
+#include <linux/suspend.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/thermal.h>
 
 #include "thermal_core.h"
 #include "thermal_hwmon.h"
+#include "thermal_iio.h"
 
 MODULE_AUTHOR("Zhang Rui");
 MODULE_DESCRIPTION("Generic thermal management sysfs support");
@@ -58,6 +60,8 @@ static LIST_HEAD(thermal_governor_list);
 
 static DEFINE_MUTEX(thermal_list_lock);
 static DEFINE_MUTEX(thermal_governor_lock);
+
+static atomic_t in_suspend;
 
 static struct thermal_governor *def_governor;
 
@@ -423,12 +427,64 @@ static void handle_non_critical_trips(struct thermal_zone_device *tz,
 		       def_governor->throttle(tz, trip);
 }
 
+static void thermal_tripped_notify(struct thermal_zone_device *tz,
+				   int trip, enum thermal_trip_type trip_type,
+				   int trip_temp)
+{
+	char tuv_name[THERMAL_NAME_LENGTH + 15], tuv_temp[25],
+		tuv_ltemp[25], tuv_trip[25], tuv_type[25];
+	char *msg[6] = { tuv_name, tuv_temp, tuv_ltemp, tuv_trip, tuv_type,
+			NULL };
+	int upper_trip_hyst, upper_trip_temp, trip_hyst = 0;
+	int ret = 0;
+
+	snprintf(tuv_name, sizeof(tuv_name), "THERMAL_ZONE=%s", tz->type);
+	snprintf(tuv_temp, sizeof(tuv_temp), "TEMP=%d", tz->temperature);
+	snprintf(tuv_ltemp, sizeof(tuv_ltemp), "LAST_TEMP=%d",
+		 tz->last_temperature);
+	snprintf(tuv_trip, sizeof(tuv_trip), "TRIP=%d", trip);
+	snprintf(tuv_type, sizeof(tuv_type), "TRIP_TYPE=%d", trip_type);
+
+	mutex_lock(&tz->lock);
+
+	/* crossing up */
+	if (tz->last_temperature < trip_temp && trip_temp < tz->temperature)
+		kobject_uevent_env(&tz->device.kobj, KOBJ_CHANGE, msg);
+
+	if (tz->ops->get_trip_hyst)
+		tz->ops->get_trip_hyst(tz, trip, &trip_hyst);
+
+	/* crossing down, check for hyst */
+	trip_temp -= trip_hyst;
+	if (tz->last_temperature > trip_temp && trip_temp > tz->temperature) {
+		snprintf(tuv_trip, sizeof(tuv_trip), "TRIP=%d", trip - 1);
+		kobject_uevent_env(&tz->device.kobj, KOBJ_CHANGE, msg);
+	}
+
+	ret = tz->ops->get_trip_temp(tz, trip + 1, &upper_trip_temp);
+	if (ret)
+		goto unlock;
+
+	if (tz->ops->get_trip_hyst)
+		tz->ops->get_trip_hyst(tz, trip + 1, &upper_trip_hyst);
+
+	upper_trip_temp -= upper_trip_hyst;
+	if (tz->last_temperature > upper_trip_temp &&
+	    upper_trip_temp > tz->temperature)
+		kobject_uevent_env(&tz->device.kobj, KOBJ_CHANGE, msg);
+
+unlock:
+	mutex_unlock(&tz->lock);
+}
+
 static void handle_critical_trips(struct thermal_zone_device *tz,
 				int trip, enum thermal_trip_type trip_type)
 {
 	int trip_temp;
 
 	tz->ops->get_trip_temp(tz, trip, &trip_temp);
+
+	thermal_tripped_notify(tz, trip, trip_type, trip_temp);
 
 	/* If we have not crossed the trip_temp, we do not care. */
 	if (trip_temp <= 0 || tz->temperature < trip_temp)
@@ -457,11 +513,6 @@ static void handle_thermal_trip(struct thermal_zone_device *tz, int trip)
 		handle_critical_trips(tz, trip, type);
 	else
 		handle_non_critical_trips(tz, trip, type);
-	/*
-	 * Alright, we handled this trip successfully.
-	 * So, start monitoring again.
-	 */
-	monitor_thermal_zone(tz);
 }
 
 /**
@@ -477,18 +528,25 @@ static void handle_thermal_trip(struct thermal_zone_device *tz, int trip)
 int thermal_zone_get_temp(struct thermal_zone_device *tz, int *temp)
 {
 	int ret = -EINVAL;
-	int count;
-	int crit_temp = INT_MAX;
-	enum thermal_trip_type type;
+	int crit_temp = INT_MAX, real_temp = INT_MIN;
 
-	if (!tz || IS_ERR(tz) || !tz->ops->get_temp)
-		goto exit;
+	if (!tz || IS_ERR(tz))
+		return ret;
 
 	mutex_lock(&tz->lock);
 
-	ret = tz->ops->get_temp(tz, temp);
+	/* Allow emulation if .get_temp is still not available */
+	if (tz->ops->get_temp) {
+		ret = tz->ops->get_temp(tz, temp);
+		if (!ret)
+			real_temp = *temp;
+	}
 
 	if (IS_ENABLED(CONFIG_THERMAL_EMULATION) && tz->emul_temperature) {
+		enum thermal_trip_type type;
+		int count;
+
+		ret = 0;
 		for (count = 0; count < tz->trips; count++) {
 			ret = tz->ops->get_trip_type(tz, count, &type);
 			if (!ret && type == THERMAL_TRIP_CRITICAL) {
@@ -503,17 +561,17 @@ int thermal_zone_get_temp(struct thermal_zone_device *tz, int *temp)
 		 * is below the critical temperature so that the emulation code
 		 * cannot hide critical conditions.
 		 */
-		if (!ret && *temp < crit_temp)
+		if (!ret && real_temp < crit_temp)
 			*temp = tz->emul_temperature;
 	}
  
 	mutex_unlock(&tz->lock);
-exit:
+
 	return ret;
 }
 EXPORT_SYMBOL_GPL(thermal_zone_get_temp);
 
-static void update_temperature(struct thermal_zone_device *tz)
+static int update_temperature(struct thermal_zone_device *tz)
 {
 	int temp, ret;
 
@@ -523,7 +581,7 @@ static void update_temperature(struct thermal_zone_device *tz)
 			dev_warn(&tz->device,
 				 "failed to read out thermal zone (%d)\n",
 				 ret);
-		return;
+		return ret;
 	}
 
 	mutex_lock(&tz->lock);
@@ -532,21 +590,45 @@ static void update_temperature(struct thermal_zone_device *tz)
 	mutex_unlock(&tz->lock);
 
 	trace_thermal_temperature(tz);
-	dev_dbg(&tz->device, "last_temperature=%d, current_temperature=%d\n",
-				tz->last_temperature, tz->temperature);
+	if (tz->last_temperature == THERMAL_TEMP_INVALID)
+		dev_dbg(&tz->device, "last_temperature N/A, current_temperature=%d\n",
+			tz->temperature);
+	else
+		dev_dbg(&tz->device, "last_temperature=%d, current_temperature=%d\n",
+			tz->last_temperature, tz->temperature);
+	return 0;
 }
 
-void thermal_zone_device_update(struct thermal_zone_device *tz)
+static void thermal_zone_device_reset(struct thermal_zone_device *tz)
+{
+	struct thermal_instance *pos;
+
+	tz->temperature = THERMAL_TEMP_INVALID;
+	tz->passive = 0;
+	list_for_each_entry(pos, &tz->thermal_instances, tz_node)
+		pos->initialized = false;
+}
+
+void thermal_zone_device_update(struct thermal_zone_device *tz,
+				enum thermal_device_event_type event)
 {
 	int count;
 
-	if (!tz->ops->get_temp)
+	if (atomic_read(&in_suspend))
 		return;
 
-	update_temperature(tz);
+	thermal_iio_sensor_notify(tz, event);
+	if (update_temperature(tz))
+		return;
 
 	for (count = 0; count < tz->trips; count++)
 		handle_thermal_trip(tz, count);
+
+	/*
+	 * Alright, we handled these trips successfully.
+	 * So, start monitoring again.
+	 */
+	monitor_thermal_zone(tz);
 }
 EXPORT_SYMBOL_GPL(thermal_zone_device_update);
 
@@ -555,7 +637,7 @@ static void thermal_zone_device_check(struct work_struct *work)
 	struct thermal_zone_device *tz = container_of(work, struct
 						      thermal_zone_device,
 						      poll_queue.work);
-	thermal_zone_device_update(tz);
+	thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
 }
 
 /* sys I/F for thermal zone */
@@ -676,8 +758,12 @@ trip_point_temp_store(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 
 	ret = tz->ops->set_trip_temp(tz, trip, temperature);
+	if (ret)
+		return ret;
 
-	return ret ? ret : count;
+	thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
+
+	return count;
 }
 
 static ssize_t
@@ -794,7 +880,7 @@ passive_store(struct device *dev, struct device_attribute *attr,
 
 	tz->forced_passive = state;
 
-	thermal_zone_device_update(tz);
+	thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
 
 	return count;
 }
@@ -885,7 +971,7 @@ emul_temp_store(struct device *dev, struct device_attribute *attr,
 	}
 
 	if (!ret)
-		thermal_zone_device_update(tz);
+		thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
 
 	return ret ? ret : count;
 }
@@ -1321,6 +1407,7 @@ int thermal_zone_bind_cooling_device(struct thermal_zone_device *tz,
 	if (!result) {
 		list_add_tail(&dev->tz_node, &tz->thermal_instances);
 		list_add_tail(&dev->cdev_node, &cdev->thermal_instances);
+		atomic_set(&tz->need_update, 1);
 	}
 	mutex_unlock(&cdev->lock);
 	mutex_unlock(&tz->lock);
@@ -1430,6 +1517,7 @@ __thermal_cooling_device_register(struct device_node *np,
 				  const struct thermal_cooling_device_ops *ops)
 {
 	struct thermal_cooling_device *cdev;
+	struct thermal_zone_device *pos = NULL;
 	int result;
 
 	if (type && strlen(type) >= THERMAL_NAME_LENGTH)
@@ -1473,6 +1561,13 @@ __thermal_cooling_device_register(struct device_node *np,
 
 	/* Update binding information for 'this' new cdev */
 	bind_cdev(cdev);
+
+	mutex_lock(&thermal_list_lock);
+	list_for_each_entry(pos, &thermal_tz_list, node)
+		if (atomic_cmpxchg(&pos->need_update, 1, 0))
+			thermal_zone_device_update(pos,
+						   THERMAL_DEVICE_EVENT_NONE);
+	mutex_unlock(&thermal_list_lock);
 
 	return cdev;
 }
@@ -1806,6 +1901,8 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 	tz->trips = trips;
 	tz->passive_delay = passive_delay;
 	tz->polling_delay = polling_delay;
+	/* A new thermal zone needs to be updated anyway. */
+	atomic_set(&tz->need_update, 1);
 
 	dev_set_name(&tz->device, "thermal_zone%d", tz->id);
 	result = device_register(&tz->device);
@@ -1885,10 +1982,15 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 
 	mutex_unlock(&thermal_governor_lock);
 
+	if (thermal_iio_sensor_register(tz))
+		goto unregister;
+
 	if (!tz->tzp || !tz->tzp->no_hwmon) {
 		result = thermal_add_hwmon_sysfs(tz);
-		if (result)
+		if (result) {
+			thermal_iio_sensor_unregister(tz);
 			goto unregister;
+		}
 	}
 
 	mutex_lock(&thermal_list_lock);
@@ -1900,7 +2002,10 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 
 	INIT_DELAYED_WORK(&(tz->poll_queue), thermal_zone_device_check);
 
-	thermal_zone_device_update(tz);
+	thermal_zone_device_reset(tz);
+	/* Update the new thermal zone and mark it as already updated. */
+	if (atomic_cmpxchg(&tz->need_update, 1, 0))
+		thermal_zone_device_update(tz, THERMAL_DEVICE_EVENT_NONE);
 
 	return tz;
 
@@ -1970,6 +2075,7 @@ void thermal_zone_device_unregister(struct thermal_zone_device *tz)
 	remove_trip_attrs(tz);
 	thermal_set_governor(tz, NULL);
 
+	thermal_iio_sensor_unregister(tz);
 	thermal_remove_hwmon_sysfs(tz);
 	release_idr(&thermal_tz_idr, &thermal_idr_lock, tz->id);
 	idr_destroy(&tz->idr);
@@ -2140,6 +2246,37 @@ static void thermal_unregister_governors(void)
 	thermal_gov_power_allocator_unregister();
 }
 
+static int thermal_pm_notify(struct notifier_block *nb,
+				unsigned long mode, void *_unused)
+{
+	struct thermal_zone_device *tz;
+
+	switch (mode) {
+	case PM_HIBERNATION_PREPARE:
+	case PM_RESTORE_PREPARE:
+	case PM_SUSPEND_PREPARE:
+		atomic_set(&in_suspend, 1);
+		break;
+	case PM_POST_HIBERNATION:
+	case PM_POST_RESTORE:
+	case PM_POST_SUSPEND:
+		atomic_set(&in_suspend, 0);
+		list_for_each_entry(tz, &thermal_tz_list, node) {
+			thermal_zone_device_reset(tz);
+			thermal_zone_device_update(tz,
+						   THERMAL_DEVICE_EVENT_NONE);
+		}
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
+static struct notifier_block thermal_pm_nb = {
+	.notifier_call = thermal_pm_notify,
+};
+
 static int __init thermal_init(void)
 {
 	int result;
@@ -2160,6 +2297,11 @@ static int __init thermal_init(void)
 	if (result)
 		goto exit_netlink;
 
+	result = register_pm_notifier(&thermal_pm_nb);
+	if (result)
+		pr_warn("Thermal: Can not register suspend notifier, return %d\n",
+			result);
+
 	return 0;
 
 exit_netlink:
@@ -2179,6 +2321,7 @@ error:
 
 static void __exit thermal_exit(void)
 {
+	unregister_pm_notifier(&thermal_pm_nb);
 	of_thermal_destroy_zones();
 	genetlink_exit();
 	class_unregister(&thermal_class);
