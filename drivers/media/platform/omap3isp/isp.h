@@ -17,7 +17,6 @@
 #ifndef OMAP3_ISP_CORE_H
 #define OMAP3_ISP_CORE_H
 
-#include <media/media-entity.h>
 #include <media/v4l2-async.h>
 #include <media/v4l2-device.h>
 #include <linux/clk-provider.h>
@@ -153,7 +152,7 @@ struct isp_xclk {
  * @stat_lock: Spinlock for handling statistics
  * @isp_mutex: Mutex for serializing requests to ISP.
  * @stop_failure: Indicates that an entity failed to stop.
- * @crashed: Crashed ent_enum
+ * @crashed: Bitmask of crashed entities (indexed by entity ID)
  * @has_context: Context has been saved at least once and can be restored.
  * @ref_count: Reference count for handling multiple ISP requests.
  * @cam_ick: Pointer to camera interface clock structure.
@@ -177,7 +176,6 @@ struct isp_device {
 	struct v4l2_device v4l2_dev;
 	struct v4l2_async_notifier notifier;
 	struct media_device media_dev;
-	struct media_entity_graph pm_count_graph;
 	struct device *dev;
 	u32 revision;
 
@@ -196,7 +194,7 @@ struct isp_device {
 	spinlock_t stat_lock;	/* common lock for statistic drivers */
 	struct mutex isp_mutex;	/* For handling ref_count field */
 	bool stop_failure;
-	struct media_entity_enum crashed;
+	u32 crashed;
 	int has_context;
 	int ref_count;
 	unsigned int autoidle;
@@ -267,8 +265,7 @@ void omap3isp_subclk_enable(struct isp_device *isp,
 void omap3isp_subclk_disable(struct isp_device *isp,
 			     enum isp_subclk_resource res);
 
-int omap3isp_pipeline_pm_use(struct media_entity *entity, int use,
-			     struct media_entity_graph *graph);
+int omap3isp_pipeline_pm_use(struct media_entity *entity, int use);
 
 int omap3isp_register_entities(struct platform_device *pdev,
 			       struct v4l2_device *v4l2_dev);

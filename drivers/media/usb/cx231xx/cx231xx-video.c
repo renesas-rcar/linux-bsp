@@ -106,7 +106,7 @@ static int cx231xx_enable_analog_tuner(struct cx231xx *dev)
 	struct media_device *mdev = dev->media_dev;
 	struct media_entity  *entity, *decoder = NULL, *source;
 	struct media_link *link, *found_link = NULL;
-	int ret, active_links = 0;
+	int i, ret, active_links = 0;
 
 	if (!mdev)
 		return 0;
@@ -119,7 +119,7 @@ static int cx231xx_enable_analog_tuner(struct cx231xx *dev)
 	 * this should be enough for the actual needs.
 	 */
 	media_device_for_each_entity(entity, mdev) {
-		if (entity->function == MEDIA_ENT_F_ATV_DECODER) {
+		if (entity->type == MEDIA_ENT_T_V4L2_SUBDEV_DECODER) {
 			decoder = entity;
 			break;
 		}
@@ -127,7 +127,8 @@ static int cx231xx_enable_analog_tuner(struct cx231xx *dev)
 	if (!decoder)
 		return 0;
 
-	list_for_each_entry(link, &decoder->links, list) {
+	for (i = 0; i < decoder->num_links; i++) {
+		link = &decoder->links[i];
 		if (link->sink->entity == decoder) {
 			found_link = link;
 			if (link->flags & MEDIA_LNK_FL_ENABLED)
@@ -140,10 +141,11 @@ static int cx231xx_enable_analog_tuner(struct cx231xx *dev)
 		return 0;
 
 	source = found_link->source->entity;
-	list_for_each_entry(link, &source->links, list) {
+	for (i = 0; i < source->num_links; i++) {
 		struct media_entity *sink;
 		int flags = 0;
 
+		link = &source->links[i];
 		sink = link->sink->entity;
 
 		if (sink == entity)
@@ -2175,7 +2177,7 @@ int cx231xx_register_analog_devices(struct cx231xx *dev)
 	cx231xx_vdev_init(dev, &dev->vdev, &cx231xx_video_template, "video");
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	dev->video_pad.flags = MEDIA_PAD_FL_SINK;
-	ret = media_entity_pads_init(&dev->vdev.entity, 1, &dev->video_pad);
+	ret = media_entity_init(&dev->vdev.entity, 1, &dev->video_pad, 0);
 	if (ret < 0)
 		dev_err(dev->dev, "failed to initialize video media entity!\n");
 #endif
@@ -2202,7 +2204,7 @@ int cx231xx_register_analog_devices(struct cx231xx *dev)
 
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	dev->vbi_pad.flags = MEDIA_PAD_FL_SINK;
-	ret = media_entity_pads_init(&dev->vbi_dev.entity, 1, &dev->vbi_pad);
+	ret = media_entity_init(&dev->vbi_dev.entity, 1, &dev->vbi_pad, 0);
 	if (ret < 0)
 		dev_err(dev->dev, "failed to initialize vbi media entity!\n");
 #endif

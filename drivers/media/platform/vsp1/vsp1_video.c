@@ -160,7 +160,8 @@ vsp1_video_remote_subdev(struct media_pad *local, u32 *pad)
 	struct media_pad *remote;
 
 	remote = media_entity_remote_pad(local);
-	if (!remote || !is_media_entity_v4l2_subdev(remote->entity))
+	if (remote == NULL ||
+	    media_entity_type(remote->entity) != MEDIA_ENT_T_V4L2_SUBDEV)
 		return NULL;
 
 	if (pad)
@@ -282,35 +283,24 @@ static int vsp1_pipeline_validate_branch(struct vsp1_pipeline *pipe,
 					 struct vsp1_rwpf *output)
 {
 	struct vsp1_entity *entity;
-	struct media_entity_enum ent_enum;
+	unsigned int entities = 0;
 	struct media_pad *pad;
-	int rval;
 	bool bru_found = false;
 
 	input->location.left = 0;
 	input->location.top = 0;
 
-	rval = media_entity_enum_init(
-		&ent_enum, input->entity.pads[RWPF_PAD_SOURCE].graph_obj.mdev);
-	if (rval)
-		return rval;
-
 	pad = media_entity_remote_pad(&input->entity.pads[RWPF_PAD_SOURCE]);
 
 	while (1) {
-		if (pad == NULL) {
-			rval = -EPIPE;
-			goto out;
-		}
+		if (pad == NULL)
+			return -EPIPE;
 
 		/* We've reached a video node, that shouldn't have happened. */
-		if (!is_media_entity_v4l2_subdev(pad->entity)) {
-			rval = -EPIPE;
-			goto out;
-		}
+		if (media_entity_type(pad->entity) != MEDIA_ENT_T_V4L2_SUBDEV)
+			return -EPIPE;
 
-		entity = to_vsp1_entity(
-			media_entity_to_v4l2_subdev(pad->entity));
+		entity = to_vsp1_entity(media_entity_to_v4l2_subdev(pad->entity));
 
 		/* A BRU is present in the pipeline, store the compose rectangle
 		 * location in the input RPF for use when configuring the RPF.
@@ -333,18 +323,15 @@ static int vsp1_pipeline_validate_branch(struct vsp1_pipeline *pipe,
 			break;
 
 		/* Ensure the branch has no loop. */
-		if (media_entity_enum_test_and_set(&ent_enum,
-						   &entity->subdev.entity)) {
-			rval = -EPIPE;
-			goto out;
-		}
+		if (entities & (1 << entity->subdev.entity.id))
+			return -EPIPE;
+
+		entities |= 1 << entity->subdev.entity.id;
 
 		/* UDS can't be chained. */
 		if (entity->type == VSP1_ENTITY_UDS) {
-			if (pipe->uds) {
-				rval = -EPIPE;
-				goto out;
-			}
+			if (pipe->uds)
+				return -EPIPE;
 
 			pipe->uds = entity;
 			pipe->uds_input = bru_found ? pipe->bru
@@ -362,12 +349,9 @@ static int vsp1_pipeline_validate_branch(struct vsp1_pipeline *pipe,
 
 	/* The last entity must be the output WPF. */
 	if (entity != &output->entity)
-		rval = -EPIPE;
+		return -EPIPE;
 
-out:
-	media_entity_enum_cleanup(&ent_enum);
-
-	return rval;
+	return 0;
 }
 
 static void __vsp1_pipeline_cleanup(struct vsp1_pipeline *pipe)
@@ -396,19 +380,13 @@ static int vsp1_pipeline_validate(struct vsp1_pipeline *pipe,
 {
 	struct media_entity_graph graph;
 	struct media_entity *entity = &video->video.entity;
-	struct media_device *mdev = entity->graph_obj.mdev;
+	struct media_device *mdev = entity->parent;
 	unsigned int i;
 	int ret;
 
 	mutex_lock(&mdev->graph_mutex);
 
 	/* Walk the graph to locate the entities and video nodes. */
-	ret = media_entity_graph_walk_init(&graph, mdev);
-	if (ret) {
-		mutex_unlock(&mdev->graph_mutex);
-		return ret;
-	}
-
 	media_entity_graph_walk_start(&graph, entity);
 
 	while ((entity = media_entity_graph_walk_next(&graph))) {
@@ -416,7 +394,7 @@ static int vsp1_pipeline_validate(struct vsp1_pipeline *pipe,
 		struct vsp1_rwpf *rwpf;
 		struct vsp1_entity *e;
 
-		if (is_media_entity_v4l2_io(entity)) {
+		if (media_entity_type(entity) != MEDIA_ENT_T_V4L2_SUBDEV) {
 			pipe->num_video++;
 			continue;
 		}
@@ -441,8 +419,6 @@ static int vsp1_pipeline_validate(struct vsp1_pipeline *pipe,
 	}
 
 	mutex_unlock(&mdev->graph_mutex);
-
-	media_entity_graph_walk_cleanup(&graph);
 
 	/* We need one output and at least one input. */
 	if (pipe->num_inputs == 0 || !pipe->output) {
@@ -687,7 +663,7 @@ void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
 	pad = media_entity_remote_pad(&input->pads[RWPF_PAD_SOURCE]);
 
 	while (pad) {
-		if (!is_media_entity_v4l2_subdev(pad->entity))
+		if (media_entity_type(pad->entity) != MEDIA_ENT_T_V4L2_SUBDEV)
 			break;
 
 		entity = to_vsp1_entity(media_entity_to_v4l2_subdev(pad->entity));
@@ -1217,7 +1193,7 @@ int vsp1_video_init(struct vsp1_video *video, struct vsp1_entity *rwpf)
 	video->pipe.state = VSP1_PIPELINE_STOPPED;
 
 	/* Initialize the media entity... */
-	ret = media_entity_pads_init(&video->video.entity, 1, &video->pad);
+	ret = media_entity_init(&video->video.entity, 1, &video->pad, 0);
 	if (ret < 0)
 		return ret;
 

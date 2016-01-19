@@ -551,14 +551,10 @@ static int register_dvb(struct cx231xx_dvb *dvb,
 
 	/* register network adapter */
 	dvb_net_init(&dvb->adapter, &dvb->net, &dvb->demux.dmx);
-	result = dvb_create_media_graph(&dvb->adapter, false);
-	if (result < 0)
-		goto fail_create_graph;
+	dvb_create_media_graph(&dvb->adapter);
 
 	return 0;
 
-fail_create_graph:
-	dvb_net_release(&dvb->net);
 fail_fe_conn:
 	dvb->demux.dmx.remove_frontend(&dvb->demux.dmx, &dvb->fe_mem);
 fail_fe_mem:

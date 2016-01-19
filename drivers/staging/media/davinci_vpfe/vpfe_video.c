@@ -88,7 +88,7 @@ vpfe_video_remote_subdev(struct vpfe_video_device *video, u32 *pad)
 {
 	struct media_pad *remote = media_entity_remote_pad(&video->pad);
 
-	if (!remote || !is_media_entity_v4l2_subdev(remote->entity))
+	if (remote == NULL || remote->entity->type != MEDIA_ENT_T_V4L2_SUBDEV)
 		return NULL;
 	if (pad)
 		*pad = remote->index;
@@ -127,14 +127,13 @@ __vpfe_video_get_format(struct vpfe_video_device *video,
 }
 
 /* make a note of pipeline details */
-static int vpfe_prepare_pipeline(struct vpfe_video_device *video)
+static void vpfe_prepare_pipeline(struct vpfe_video_device *video)
 {
-	struct media_entity_graph graph;
 	struct media_entity *entity = &video->video_dev.entity;
-	struct media_device *mdev = entity->graph_obj.mdev;
+	struct media_device *mdev = entity->parent;
 	struct vpfe_pipeline *pipe = &video->pipe;
 	struct vpfe_video_device *far_end = NULL;
-	int ret;
+	struct media_entity_graph graph;
 
 	pipe->input_num = 0;
 	pipe->output_num = 0;
@@ -145,16 +144,11 @@ static int vpfe_prepare_pipeline(struct vpfe_video_device *video)
 		pipe->outputs[pipe->output_num++] = video;
 
 	mutex_lock(&mdev->graph_mutex);
-	ret = media_entity_graph_walk_init(&graph, entity->graph_obj.mdev);
-	if (ret) {
-		mutex_unlock(&video->lock);
-		return -ENOMEM;
-	}
 	media_entity_graph_walk_start(&graph, entity);
 	while ((entity = media_entity_graph_walk_next(&graph))) {
 		if (entity == &video->video_dev.entity)
 			continue;
-		if (!is_media_entity_v4l2_io(entity))
+		if (media_entity_type(entity) != MEDIA_ENT_T_DEVNODE)
 			continue;
 		far_end = to_vpfe_video(media_entity_to_video_device(entity));
 		if (far_end->type == V4L2_BUF_TYPE_VIDEO_OUTPUT)
@@ -162,10 +156,7 @@ static int vpfe_prepare_pipeline(struct vpfe_video_device *video)
 		else
 			pipe->outputs[pipe->output_num++] = far_end;
 	}
-	media_entity_graph_walk_cleanup(&graph);
 	mutex_unlock(&mdev->graph_mutex);
-
-	return 0;
 }
 
 /* update pipe state selected by user */
@@ -174,9 +165,7 @@ static int vpfe_update_pipe_state(struct vpfe_video_device *video)
 	struct vpfe_pipeline *pipe = &video->pipe;
 	int ret;
 
-	ret = vpfe_prepare_pipeline(video);
-	if (ret)
-		return ret;
+	vpfe_prepare_pipeline(video);
 
 	/* Find out if there is any input video
 	  if yes, it is single shot.
@@ -254,7 +243,8 @@ static int vpfe_video_validate_pipeline(struct vpfe_pipeline *pipe)
 
 		/* Retrieve the source format */
 		pad = media_entity_remote_pad(pad);
-		if (!pad || !is_media_entity_v4l2_subdev(pad->entity))
+		if (pad == NULL ||
+			pad->entity->type != MEDIA_ENT_T_V4L2_SUBDEV)
 			break;
 
 		subdev = media_entity_to_v4l2_subdev(pad->entity);
@@ -287,35 +277,29 @@ static int vpfe_video_validate_pipeline(struct vpfe_pipeline *pipe)
  */
 static int vpfe_pipeline_enable(struct vpfe_pipeline *pipe)
 {
+	struct media_entity_graph graph;
 	struct media_entity *entity;
 	struct v4l2_subdev *subdev;
 	struct media_device *mdev;
-	int ret;
+	int ret = 0;
 
 	if (pipe->state == VPFE_PIPELINE_STREAM_CONTINUOUS)
 		entity = vpfe_get_input_entity(pipe->outputs[0]);
 	else
 		entity = &pipe->inputs[0]->video_dev.entity;
 
-	mdev = entity->graph_obj.mdev;
+	mdev = entity->parent;
 	mutex_lock(&mdev->graph_mutex);
-	ret = media_entity_graph_walk_init(&pipe->graph,
-					   entity->graph_obj.mdev);
-	if (ret)
-		goto out;
-	media_entity_graph_walk_start(&pipe->graph, entity);
-	while ((entity = media_entity_graph_walk_next(&pipe->graph))) {
+	media_entity_graph_walk_start(&graph, entity);
+	while ((entity = media_entity_graph_walk_next(&graph))) {
 
-		if (!is_media_entity_v4l2_subdev(entity))
+		if (media_entity_type(entity) == MEDIA_ENT_T_DEVNODE)
 			continue;
 		subdev = media_entity_to_v4l2_subdev(entity);
 		ret = v4l2_subdev_call(subdev, video, s_stream, 1);
 		if (ret < 0 && ret != -ENOIOCTLCMD)
 			break;
 	}
-out:
-	if (ret)
-		media_entity_graph_walk_cleanup(&pipe->graph);
 	mutex_unlock(&mdev->graph_mutex);
 	return ret;
 }
@@ -333,6 +317,7 @@ out:
  */
 static int vpfe_pipeline_disable(struct vpfe_pipeline *pipe)
 {
+	struct media_entity_graph graph;
 	struct media_entity *entity;
 	struct v4l2_subdev *subdev;
 	struct media_device *mdev;
@@ -343,13 +328,13 @@ static int vpfe_pipeline_disable(struct vpfe_pipeline *pipe)
 	else
 		entity = &pipe->inputs[0]->video_dev.entity;
 
-	mdev = entity->graph_obj.mdev;
+	mdev = entity->parent;
 	mutex_lock(&mdev->graph_mutex);
-	media_entity_graph_walk_start(&pipe->graph, entity);
+	media_entity_graph_walk_start(&graph, entity);
 
-	while ((entity = media_entity_graph_walk_next(&pipe->graph))) {
+	while ((entity = media_entity_graph_walk_next(&graph))) {
 
-		if (!is_media_entity_v4l2_subdev(entity))
+		if (media_entity_type(entity) == MEDIA_ENT_T_DEVNODE)
 			continue;
 		subdev = media_entity_to_v4l2_subdev(entity);
 		ret = v4l2_subdev_call(subdev, video, s_stream, 0);
@@ -358,7 +343,6 @@ static int vpfe_pipeline_disable(struct vpfe_pipeline *pipe)
 	}
 	mutex_unlock(&mdev->graph_mutex);
 
-	media_entity_graph_walk_cleanup(&pipe->graph);
 	return ret ? -ETIMEDOUT : 0;
 }
 
@@ -1616,8 +1600,8 @@ int vpfe_video_init(struct vpfe_video_device *video, const char *name)
 	spin_lock_init(&video->irqlock);
 	spin_lock_init(&video->dma_queue_lock);
 	mutex_init(&video->lock);
-	ret = media_entity_pads_init(&video->video_dev.entity,
-				1, &video->pad);
+	ret = media_entity_init(&video->video_dev.entity,
+				1, &video->pad, 0);
 	if (ret < 0)
 		return ret;
 

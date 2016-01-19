@@ -512,11 +512,11 @@ static int adp1653_probe(struct i2c_client *client,
 	if (ret)
 		goto free_and_quit;
 
-	ret = media_entity_pads_init(&flash->subdev.entity, 0, NULL);
+	ret = media_entity_init(&flash->subdev.entity, 0, NULL, 0);
 	if (ret < 0)
 		goto free_and_quit;
 
-	flash->subdev.entity.function = MEDIA_ENT_F_FLASH;
+	flash->subdev.entity.type = MEDIA_ENT_T_V4L2_SUBDEV_FLASH;
 
 	return 0;
 

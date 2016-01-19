@@ -1172,7 +1172,6 @@ static void cx231xx_unregister_media_device(struct cx231xx *dev)
 #ifdef CONFIG_MEDIA_CONTROLLER
 	if (dev->media_dev) {
 		media_device_unregister(dev->media_dev);
-		media_device_cleanup(dev->media_dev);
 		kfree(dev->media_dev);
 		dev->media_dev = NULL;
 	}
@@ -1186,6 +1185,8 @@ static void cx231xx_unregister_media_device(struct cx231xx *dev)
 */
 void cx231xx_release_resources(struct cx231xx *dev)
 {
+	cx231xx_unregister_media_device(dev);
+
 	cx231xx_release_analog_resources(dev);
 
 	cx231xx_remove_from_devlist(dev);
@@ -1198,23 +1199,22 @@ void cx231xx_release_resources(struct cx231xx *dev)
 	/* delete v4l2 device */
 	v4l2_device_unregister(&dev->v4l2_dev);
 
-	cx231xx_unregister_media_device(dev);
-
 	usb_put_dev(dev->udev);
 
 	/* Mark device as unused */
 	clear_bit(dev->devno, &cx231xx_devused);
 }
 
-static int cx231xx_media_device_init(struct cx231xx *dev,
-				      struct usb_device *udev)
+static void cx231xx_media_device_register(struct cx231xx *dev,
+					  struct usb_device *udev)
 {
 #ifdef CONFIG_MEDIA_CONTROLLER
 	struct media_device *mdev;
+	int ret;
 
 	mdev = kzalloc(sizeof(*mdev), GFP_KERNEL);
 	if (!mdev)
-		return -ENOMEM;
+		return;
 
 	mdev->dev = dev->dev;
 	strlcpy(mdev->model, dev->board.name, sizeof(mdev->model));
@@ -1224,30 +1224,35 @@ static int cx231xx_media_device_init(struct cx231xx *dev,
 	mdev->hw_revision = le16_to_cpu(udev->descriptor.bcdDevice);
 	mdev->driver_version = LINUX_VERSION_CODE;
 
-	media_device_init(mdev);
+	ret = media_device_register(mdev);
+	if (ret) {
+		dev_err(dev->dev,
+			"Couldn't create a media device. Error: %d\n",
+			ret);
+		kfree(mdev);
+		return;
+	}
 
 	dev->media_dev = mdev;
 #endif
-	return 0;
 }
 
-static int cx231xx_create_media_graph(struct cx231xx *dev)
+static void cx231xx_create_media_graph(struct cx231xx *dev)
 {
 #ifdef CONFIG_MEDIA_CONTROLLER
 	struct media_device *mdev = dev->media_dev;
 	struct media_entity *entity;
 	struct media_entity *tuner = NULL, *decoder = NULL;
-	int ret;
 
 	if (!mdev)
-		return 0;
+		return;
 
 	media_device_for_each_entity(entity, mdev) {
-		switch (entity->function) {
-		case MEDIA_ENT_F_TUNER:
+		switch (entity->type) {
+		case MEDIA_ENT_T_V4L2_SUBDEV_TUNER:
 			tuner = entity;
 			break;
-		case MEDIA_ENT_F_ATV_DECODER:
+		case MEDIA_ENT_T_V4L2_SUBDEV_DECODER:
 			decoder = entity;
 			break;
 		}
@@ -1256,24 +1261,16 @@ static int cx231xx_create_media_graph(struct cx231xx *dev)
 	/* Analog setup, using tuner as a link */
 
 	if (!decoder)
-		return 0;
+		return;
 
-	if (tuner) {
-		ret = media_create_pad_link(tuner, TUNER_PAD_IF_OUTPUT, decoder, 0,
-					    MEDIA_LNK_FL_ENABLED);
-		if (ret < 0)
-			return ret;
-	}
-	ret = media_create_pad_link(decoder, 1, &dev->vdev.entity, 0,
-				    MEDIA_LNK_FL_ENABLED);
-	if (ret < 0)
-		return ret;
-	ret = media_create_pad_link(decoder, 2, &dev->vbi_dev.entity, 0,
-				    MEDIA_LNK_FL_ENABLED);
-	if (ret < 0)
-		return ret;
+	if (tuner)
+		media_entity_create_link(tuner, 0, decoder, 0,
+					 MEDIA_LNK_FL_ENABLED);
+	media_entity_create_link(decoder, 1, &dev->vdev.entity, 0,
+				 MEDIA_LNK_FL_ENABLED);
+	media_entity_create_link(decoder, 2, &dev->vbi_dev.entity, 0,
+				 MEDIA_LNK_FL_ENABLED);
 #endif
-	return 0;
 }
 
 /*
@@ -1663,12 +1660,8 @@ static int cx231xx_usb_probe(struct usb_interface *interface,
 	/* save our data pointer in this interface device */
 	usb_set_intfdata(interface, dev);
 
-	/* Initialize the media controller */
-	retval = cx231xx_media_device_init(dev, udev);
-	if (retval) {
-		dev_err(d, "cx231xx_media_device_init failed\n");
-		goto err_media_init;
-	}
+	/* Register the media controller */
+	cx231xx_media_device_register(dev, udev);
 
 	/* Create v4l2 device */
 #ifdef CONFIG_MEDIA_CONTROLLER
@@ -1739,19 +1732,9 @@ static int cx231xx_usb_probe(struct usb_interface *interface,
 	/* load other modules required */
 	request_modules(dev);
 
-	retval = cx231xx_create_media_graph(dev);
-	if (retval < 0)
-		goto done;
+	cx231xx_create_media_graph(dev);
 
-#ifdef CONFIG_MEDIA_CONTROLLER
-	retval = media_device_register(dev->media_dev);
-#endif
-
-done:
-	if (retval < 0)
-		cx231xx_release_resources(dev);
-	return retval;
-
+	return 0;
 err_video_alt:
 	/* cx231xx_uninit_dev: */
 	cx231xx_close_extension(dev);
@@ -1763,8 +1746,6 @@ err_video_alt:
 err_init:
 	v4l2_device_unregister(&dev->v4l2_dev);
 err_v4l2:
-	cx231xx_unregister_media_device(dev);
-err_media_init:
 	usb_set_intfdata(interface, NULL);
 err_if:
 	usb_put_dev(udev);
