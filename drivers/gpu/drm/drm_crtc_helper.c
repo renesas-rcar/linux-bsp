@@ -578,8 +578,6 @@ int drm_crtc_helper_set_config(struct drm_mode_set *set)
 		if (set->crtc->primary->fb == NULL) {
 			DRM_DEBUG_KMS("crtc has no fb, full mode set\n");
 			mode_changed = true;
-		} else if (set->fb == NULL) {
-			mode_changed = true;
 		} else if (set->fb->pixel_format !=
 			   set->crtc->primary->fb->pixel_format) {
 			mode_changed = true;
@@ -590,7 +588,7 @@ int drm_crtc_helper_set_config(struct drm_mode_set *set)
 	if (set->x != set->crtc->x || set->y != set->crtc->y)
 		fb_changed = true;
 
-	if (set->mode && !drm_mode_equal(set->mode, &set->crtc->mode)) {
+	if (!drm_mode_equal(set->mode, &set->crtc->mode)) {
 		DRM_DEBUG_KMS("modes are different, full mode set\n");
 		drm_mode_debug_printmodeline(&set->crtc->mode);
 		drm_mode_debug_printmodeline(set->mode);
