@@ -993,6 +993,7 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	unsigned long flags;
 	int ret;
+	u32 opcode;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1016,8 +1017,12 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	if (host->inquiry_tuning && host->inquiry_tuning(host) &&
 	    !host->done_tuning) {
+		if (mmc_card_mmc(host->mmc->card))
+			opcode = MMC_SEND_TUNING_BLOCK_HS200;
+		else
+			opcode = MMC_SEND_TUNING_BLOCK;
 		/* Start retuning */
-		ret = tmio_mmc_execute_tuning(mmc, host->tuning_command);
+		ret = tmio_mmc_execute_tuning(mmc, opcode);
 		if (ret)
 			goto fail;
 		/* Restore request */
@@ -1041,9 +1046,12 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		host->mrq = mrq;
 		if (host->inquiry_tuning && host->inquiry_tuning(host) &&
 		    !host->done_tuning) {
+			if (mmc_card_mmc(host->mmc->card))
+				opcode = MMC_SEND_TUNING_BLOCK_HS200;
+			else
+				opcode = MMC_SEND_TUNING_BLOCK;
 			/* Start retuning */
-			ret = tmio_mmc_execute_tuning(mmc,
-						      host->tuning_command);
+			ret = tmio_mmc_execute_tuning(mmc, opcode);
 			if (ret)
 				goto fail;
 			/* Restore request */

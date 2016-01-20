@@ -99,7 +99,6 @@ struct tmio_mmc_host {
 	u32			scc_tapnum;
 	u32			scc_tappos;
 	bool			done_tuning;
-	int			tuning_command;
 	struct completion	completion;
 
 	int (*write16_hook)(struct tmio_mmc_host *host, int addr);
