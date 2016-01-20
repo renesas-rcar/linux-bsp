@@ -2144,6 +2144,66 @@ static int ravb_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
+static int ravb_suspend(struct device *dev)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct ravb_private *priv = netdev_priv(ndev);
+	int ret = 0;
+
+	if (netif_running(ndev)) {
+		netif_device_detach(ndev);
+		ret = ravb_close(ndev);
+		if (priv->chip_id != RCAR_GEN2)
+			ravb_ptp_stop(ndev);
+	}
+
+	return ret;
+}
+
+static int ravb_resume(struct device *dev)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct ravb_private *priv = netdev_priv(ndev);
+	struct platform_device *pdev = priv->pdev;
+	int ret = 0;
+
+	if (netif_running(ndev)) {
+		/* Set AVB config mode */
+		if (priv->chip_id == RCAR_GEN2) {
+			ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
+				   CCC_OPC_CONFIG, CCC);
+		} else {
+			ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
+				   CCC_OPC_CONFIG | CCC_GAC, CCC);
+		}
+
+		/* Set CSEL value */
+		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_CSEL) |
+			   CCC_CSEL_HPB, CCC);
+
+		/* Set GTI value */
+		ravb_set_gti(ndev);
+
+		/* Request GTI loading */
+		ravb_write(ndev, ravb_read(ndev, GCCR) | GCCR_LTI, GCCR);
+
+		/* Set DBAT value */
+		ravb_write(ndev, priv->desc_bat_dma, DBAT);
+
+		if (priv->chip_id != RCAR_GEN2)
+			ravb_ptp_init(ndev, pdev);
+
+		ret = ravb_open(ndev);
+		if (ret < 0)
+			return ret;
+		netif_device_attach(ndev);
+	}
+
+	return ret;
+}
+#endif
+
 static int ravb_runtime_nop(struct device *dev)
 {
 	/* Runtime PM callback shared between ->runtime_suspend()
@@ -2159,6 +2219,7 @@ static int ravb_runtime_nop(struct device *dev)
 static const struct dev_pm_ops ravb_dev_pm_ops = {
 	.runtime_suspend = ravb_runtime_nop,
 	.runtime_resume = ravb_runtime_nop,
+	SET_SYSTEM_SLEEP_PM_OPS(ravb_suspend, ravb_resume)
 };
 
 #define RAVB_PM_OPS (&ravb_dev_pm_ops)
