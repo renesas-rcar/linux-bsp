@@ -1,7 +1,7 @@
 /*
  * SoC-camera host driver for Renesas R-Car VIN unit
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  *
@@ -640,6 +640,19 @@ enum rcar_vin_state {
 	STOPPING,
 };
 
+struct rcar_vin_async_client {
+	struct v4l2_async_subdev *sensor;
+	struct v4l2_async_notifier notifier;
+	struct platform_device *pdev;
+	struct list_head list;		/* needed for clean up */
+};
+
+struct soc_of_info {
+	struct soc_camera_async_subdev	sasd;
+	struct rcar_vin_async_client	sasc;
+	struct v4l2_async_subdev	*subdev;
+};
+
 struct rcar_vin_priv {
 	void __iomem			*base;
 	spinlock_t			lock;
@@ -663,6 +676,7 @@ struct rcar_vin_priv {
 	enum csi2_fmt			csi_fmt;
 	enum virtual_ch			vc;
 
+	struct rcar_vin_async_client	*async_client;
 	/* Asynchronous CSI2 linking */
 	struct v4l2_subdev		*csi2_sd;
 	/* Synchronous probing compatibility */
@@ -2670,19 +2684,6 @@ static const struct of_device_id rcar_vin_of_table[] = {
 MODULE_DEVICE_TABLE(of, rcar_vin_of_table);
 #endif
 
-struct rcar_vin_async_client {
-	struct v4l2_async_subdev *sensor;
-	struct v4l2_async_notifier notifier;
-	struct platform_device *pdev;
-	struct list_head list;		/* needed for clean up */
-};
-
-struct soc_of_info {
-	struct soc_camera_async_subdev	sasd;
-	struct rcar_vin_async_client	sasc;
-	struct v4l2_async_subdev	*subdev;
-};
-
 #define MAP_MAX_NUM 32
 static DECLARE_BITMAP(device_map, MAP_MAX_NUM);
 static DEFINE_MUTEX(list_lock);
@@ -2792,7 +2793,8 @@ static struct soc_camera_device *rcar_vin_add_pdev(
 	return platform_get_drvdata(pdev);
 }
 
-static int rcar_vin_soc_of_bind(struct soc_camera_host *ici,
+static int rcar_vin_soc_of_bind(struct rcar_vin_priv *priv,
+		       struct soc_camera_host *ici,
 		       struct device_node *ep,
 		       struct device_node *remote)
 {
@@ -2834,6 +2836,8 @@ static int rcar_vin_soc_of_bind(struct soc_camera_host *ici,
 	sasc->notifier.bound = rcar_vin_async_bound;
 	sasc->notifier.unbind = rcar_vin_async_unbind;
 	sasc->notifier.complete = rcar_vin_async_complete;
+
+	priv->async_client = sasc;
 
 	client = of_find_i2c_device_by_node(remote);
 
@@ -3131,7 +3135,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		goto cleanup;
 
 	if (csi_use) {
-		ret = rcar_vin_soc_of_bind(&priv->ici, epn, ren->parent);
+		ret = rcar_vin_soc_of_bind(priv, &priv->ici, epn, ren->parent);
 		if (ret)
 			goto cleanup;
 	}
@@ -3152,6 +3156,11 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	struct soc_camera_host *soc_host = to_soc_camera_host(&pdev->dev);
 	struct rcar_vin_priv *priv = container_of(soc_host,
 						  struct rcar_vin_priv, ici);
+
+	platform_device_del(priv->async_client->pdev);
+	platform_device_put(priv->async_client->pdev);
+
+	v4l2_async_notifier_unregister(&priv->async_client->notifier);
 
 	soc_camera_host_unregister(soc_host);
 	pm_runtime_disable(&pdev->dev);
