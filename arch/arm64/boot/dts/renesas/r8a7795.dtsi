@@ -1522,6 +1522,24 @@
 			status = "disabled";
 		};
 
+		xhci0: usb@ee000000 {
+			compatible = "renesas,xhci-r8a7795";
+			reg = <0 0xee000000 0 0xc00>;
+			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 328>;
+			power-domains = <&pd_always_on>;
+			status = "disabled";
+		};
+
+		xhci1: usb@ee0400000 {
+			compatible = "renesas,xhci-r8a7795";
+			reg = <0 0xee040000 0 0xc00>;
+			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 327>;
+			power-domains = <&pd_always_on>;
+			status = "disabled";
+		};
+
 		pciec0: pcie@fe000000 {
 			compatible = "renesas,pcie-r8a7795";
 			reg = <0 0xfe000000 0 0x80000>;
