@@ -34,8 +34,6 @@
 
 #include <asm/unaligned.h>
 
-#define MASTER_TRANSMISSION_WORKAROUND
-
 #undef HZ
 #define HZ MAX_SCHEDULE_TIMEOUT
 
@@ -92,7 +90,6 @@ struct sh_msiof_spi_priv {
 #define MDR1_SYNCMD_LR	 0x30000000 /*   L/R mode */
 #define MDR1_SYNCAC_SHIFT	 25 /* Sync Polarity (1 = Active-low) */
 #define MDR1_BITLSB_SHIFT	 24 /* MSB/LSB First (1 = LSB first) */
-#define MDR1_DTDL_MASK	 0x00700000 /* Data Pin Bit Delay Mask */
 #define MDR1_DTDL_SHIFT		 20 /* Data Pin Bit Delay for MSIOF_SYNC */
 #define MDR1_SYNCDL_SHIFT	 16 /* Frame Sync Signal Timing Delay */
 #define MDR1_FLD_MASK	 0x0000000c /* Frame Sync Signal Interval (0-3) */
@@ -322,13 +319,7 @@ static u32 sh_msiof_spi_get_dtdl_and_syncdl(struct sh_msiof_spi_priv *p)
 		return 0;
 	}
 
-#ifdef MASTER_TRANSMISSION_WORKAROUND
-	val = 0;
-	if (p->mode == SPI_MSIOF_MASTER)
-		val = sh_msiof_get_delay_bit(p->info->dtdl) << MDR1_DTDL_SHIFT;
-#else
 	val = sh_msiof_get_delay_bit(p->info->dtdl) << MDR1_DTDL_SHIFT;
-#endif
 	val |= sh_msiof_get_delay_bit(p->info->syncdl) << MDR1_SYNCDL_SHIFT;
 
 	return val;
@@ -356,12 +347,6 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 		sh_msiof_write(p, TMDR1, tmp | MDR1_TRMD | TMDR1_PCON);
 	else
 		sh_msiof_write(p, TMDR1, tmp | TMDR1_PCON);
-#ifdef MASTER_TRANSMISSION_WORKAROUND
-	if (p->mode == SPI_MSIOF_MASTER) {
-		tmp &= ~MDR1_DTDL_MASK;
-		tmp |= 2 << MDR1_DTDL_SHIFT;
-	}
-#endif
 	if (p->chipdata->master_flags & SPI_MASTER_MUST_TX) {
 		/* These bits are reserved if RX needs TX */
 		tmp &= ~0x0000ffff;
@@ -369,15 +354,8 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	sh_msiof_write(p, RMDR1, tmp);
 
 	tmp = 0;
-#ifdef MASTER_TRANSMISSION_WORKAROUND
-	if (p->mode == SPI_MSIOF_SLAVE) {
-		tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
-		tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
-	}
-#else
 	tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
 	tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
-#endif
 
 	edge = cpol ^ !cpha;
 
