@@ -188,7 +188,6 @@ MODULE_DEVICE_TABLE(of, rcar_du_of_table);
 /* -----------------------------------------------------------------------------
  * DRM operations
  */
-
 static void rcar_du_preclose(struct drm_device *dev, struct drm_file *file)
 {
 	struct rcar_du_device *rcdu = dev->dev_private;
@@ -269,7 +268,6 @@ static struct drm_driver rcar_du_driver = {
 /* -----------------------------------------------------------------------------
  * Power management
  */
-
 #ifdef CONFIG_PM_SLEEP
 static int rcar_du_pm_suspend(struct device *dev)
 {
@@ -344,17 +342,51 @@ static const struct dev_pm_ops rcar_du_pm_ops = {
 /* -----------------------------------------------------------------------------
  * Platform driver
  */
+static void rcar_du_remove_suspend(struct rcar_du_device *rcdu)
+{
+	int i;
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	struct drm_encoder *encoder;
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	list_for_each_entry(encoder,
+		&rcdu->ddev->mode_config.encoder_list, head) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
+			rcar_du_hdmienc_disable(encoder);
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+	for (i = 0; i < rcdu->info->num_lvds; ++i) {
+		if (rcdu->lvds[i])
+			rcar_du_lvdsenc_stop_suspend(rcdu->lvds[i]);
+	}
+#endif
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started)
+			rcar_du_crtc_remove_suspend(&rcdu->crtcs[i]);
+	}
+}
 
 static int rcar_du_remove(struct platform_device *pdev)
 {
 	struct rcar_du_device *rcdu = platform_get_drvdata(pdev);
 	struct drm_device *ddev = rcdu->ddev;
+	int i;
 
 	mutex_lock(&ddev->mode_config.mutex);
 	drm_connector_unplug_all(ddev);
 	mutex_unlock(&ddev->mode_config.mutex);
 
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started)
+			drm_crtc_vblank_off(&rcdu->crtcs[i].crtc);
+	}
+
 	drm_dev_unregister(ddev);
+
+	rcar_du_remove_suspend(rcdu);
 
 	if (rcdu->fbdev)
 		drm_fbdev_cma_fini(rcdu->fbdev);
