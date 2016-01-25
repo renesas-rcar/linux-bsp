@@ -2,7 +2,7 @@
  * drivers/media/i2c/adv7482.c
  *     This file is Analog Devices ADV7482 HDMI receiver driver.
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2
@@ -2023,9 +2023,7 @@ static int adv7482_remove(struct i2c_client *client)
 	media_entity_cleanup(&sd->entity);
 	adv7482_exit_controls(state);
 
-	v4l2_ctrl_handler_free(&state->ctrl_hdl);
 	mutex_destroy(&state->mutex);
-	v4l2_device_unregister_subdev(sd);
 	kfree(to_state(sd));
 	return 0;
 }
