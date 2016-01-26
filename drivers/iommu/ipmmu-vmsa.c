@@ -8,6 +8,7 @@
  * the Free Software Foundation; version 2 of the License.
  */
 
+#include <linux/bitmap.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
@@ -21,10 +22,14 @@
 #include <linux/sizes.h>
 #include <linux/slab.h>
 
+#ifdef CONFIG_ARM
 #include <asm/dma-iommu.h>
 #include <asm/pgalloc.h>
+#endif
 
 #include "io-pgtable.h"
+
+#define IPMMU_CTX_MAX 1
 
 struct ipmmu_vmsa_device {
 	struct device *dev;
@@ -32,8 +37,12 @@ struct ipmmu_vmsa_device {
 	struct list_head list;
 
 	unsigned int num_utlbs;
+	DECLARE_BITMAP(ctx, IPMMU_CTX_MAX);
+	struct ipmmu_vmsa_domain *domains[IPMMU_CTX_MAX];
 
+#ifdef CONFIG_ARM
 	struct dma_iommu_mapping *mapping;
+#endif
 };
 
 struct ipmmu_vmsa_domain {
@@ -47,7 +56,7 @@ struct ipmmu_vmsa_domain {
 	spinlock_t lock;			/* Protects mappings */
 };
 
-struct ipmmu_vmsa_archdata {
+struct ipmmu_vmsa_dev_data {
 	struct ipmmu_vmsa_device *mmu;
 	unsigned int *utlbs;
 	unsigned int num_utlbs;
@@ -182,6 +191,20 @@ static struct ipmmu_vmsa_domain *to_vmsa_domain(struct iommu_domain *dom)
 #define IMUASID_ASID0_SHIFT		0
 
 /* -----------------------------------------------------------------------------
+ * Consumer device side private data handling
+ */
+
+static struct ipmmu_vmsa_dev_data *get_dev_data(struct device *dev)
+{
+	return dev->archdata.iommu;
+}
+
+static void set_dev_data(struct device *dev, struct ipmmu_vmsa_dev_data *data)
+{
+	dev->archdata.iommu = data;
+}
+
+/* -----------------------------------------------------------------------------
  * Read/Write Access
  */
 
@@ -265,9 +288,18 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 static void ipmmu_utlb_disable(struct ipmmu_vmsa_domain *domain,
 			       unsigned int utlb)
 {
-	struct ipmmu_vmsa_device *mmu = domain->mmu;
+	ipmmu_write(domain->mmu, IMUCTR(utlb), 0);
+}
 
-	ipmmu_write(mmu, IMUCTR(utlb), 0);
+static void ipmmu_utlb_ctrl(struct ipmmu_vmsa_domain *domain,
+			    void (*fn)(struct ipmmu_vmsa_domain *,
+				       unsigned int utlb), struct device *dev)
+{
+	struct ipmmu_vmsa_dev_data *dev_data = get_dev_data(dev);
+	unsigned int i;
+
+	for (i = 0; i < dev_data->num_utlbs; ++i)
+		fn(domain, dev_data->utlbs[i]);
 }
 
 static void ipmmu_tlb_flush_all(void *cookie)
@@ -296,6 +328,7 @@ static struct iommu_gather_ops ipmmu_gather_ops = {
 static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 {
 	u64 ttbr;
+	int ret;
 
 	/*
 	 * Allocate the page table operations.
@@ -325,10 +358,16 @@ static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 		return -EINVAL;
 
 	/*
-	 * TODO: When adding support for multiple contexts, find an unused
-	 * context.
+	 * Find an unused context.
 	 */
-	domain->context_id = 0;
+	ret = bitmap_find_free_region(domain->mmu->ctx, IPMMU_CTX_MAX, 0);
+	if (ret < 0) {
+		free_io_pgtable_ops(domain->iop);
+		return ret;
+	}
+
+	domain->context_id = ret;
+	domain->mmu->domains[ret] = domain;
 
 	/* TTBR0 */
 	ttbr = domain->cfg.arm_lpae_s1_cfg.ttbr[0];
@@ -372,6 +411,8 @@ static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 
 static void ipmmu_domain_destroy_context(struct ipmmu_vmsa_domain *domain)
 {
+	bitmap_release_region(domain->mmu->ctx, domain->context_id, 0);
+
 	/*
 	 * Disable the context. Flush the TLB as required when modifying the
 	 * context registers.
@@ -437,16 +478,16 @@ static irqreturn_t ipmmu_domain_irq(struct ipmmu_vmsa_domain *domain)
 static irqreturn_t ipmmu_irq(int irq, void *dev)
 {
 	struct ipmmu_vmsa_device *mmu = dev;
-	struct iommu_domain *io_domain;
-	struct ipmmu_vmsa_domain *domain;
+	irqreturn_t status = IRQ_NONE;
+	unsigned int k;
 
-	if (!mmu->mapping)
-		return IRQ_NONE;
+	/* Check interrupts for all active contexts */
+	for (k = find_first_bit(mmu->ctx, IPMMU_CTX_MAX);
+	     k < IPMMU_CTX_MAX && status == IRQ_NONE;
+	     k = find_next_bit(mmu->ctx, IPMMU_CTX_MAX, k))
+		status = ipmmu_domain_irq(mmu->domains[k]);
 
-	io_domain = mmu->mapping->domain;
-	domain = to_vmsa_domain(io_domain);
-
-	return ipmmu_domain_irq(domain);
+	return status;
 }
 
 /* -----------------------------------------------------------------------------
@@ -485,11 +526,10 @@ static void ipmmu_domain_free(struct iommu_domain *io_domain)
 static int ipmmu_attach_device(struct iommu_domain *io_domain,
 			       struct device *dev)
 {
-	struct ipmmu_vmsa_archdata *archdata = dev->archdata.iommu;
-	struct ipmmu_vmsa_device *mmu = archdata->mmu;
+	struct ipmmu_vmsa_dev_data *dev_data = get_dev_data(dev);
+	struct ipmmu_vmsa_device *mmu = dev_data->mmu;
 	struct ipmmu_vmsa_domain *domain = to_vmsa_domain(io_domain);
 	unsigned long flags;
-	unsigned int i;
 	int ret = 0;
 
 	if (!mmu) {
@@ -515,24 +555,16 @@ static int ipmmu_attach_device(struct iommu_domain *io_domain,
 
 	spin_unlock_irqrestore(&domain->lock, flags);
 
-	if (ret < 0)
-		return ret;
+	if (!ret)
+		ipmmu_utlb_ctrl(domain, ipmmu_utlb_enable, dev);
 
-	for (i = 0; i < archdata->num_utlbs; ++i)
-		ipmmu_utlb_enable(domain, archdata->utlbs[i]);
-
-	return 0;
+	return ret;
 }
 
 static void ipmmu_detach_device(struct iommu_domain *io_domain,
 				struct device *dev)
 {
-	struct ipmmu_vmsa_archdata *archdata = dev->archdata.iommu;
-	struct ipmmu_vmsa_domain *domain = to_vmsa_domain(io_domain);
-	unsigned int i;
-
-	for (i = 0; i < archdata->num_utlbs; ++i)
-		ipmmu_utlb_disable(domain, archdata->utlbs[i]);
+	ipmmu_utlb_ctrl(to_vmsa_domain(io_domain), ipmmu_utlb_disable, dev);
 
 	/*
 	 * TODO: Optimize by disabling the context when no device is attached.
@@ -593,9 +625,63 @@ static int ipmmu_find_utlbs(struct ipmmu_vmsa_device *mmu, struct device *dev,
 	return 0;
 }
 
+#ifdef CONFIG_ARM
+static int ipmmu_map_attach(struct device *dev, struct ipmmu_vmsa_device *mmu)
+{
+	int ret;
+
+	/*
+	 * Create the ARM mapping, used by the ARM DMA mapping core to allocate
+	 * VAs. This will allocate a corresponding IOMMU domain.
+	 *
+	 * TODO:
+	 * - Create one mapping per context (TLB).
+	 * - Make the mapping size configurable ? We currently use a 2GB mapping
+	 *   at a 1GB offset to ensure that NULL VAs will fault.
+	 */
+	if (!mmu->mapping) {
+		struct dma_iommu_mapping *mapping;
+
+		mapping = arm_iommu_create_mapping(&platform_bus_type,
+						   SZ_1G, SZ_2G);
+		if (IS_ERR(mapping)) {
+			dev_err(mmu->dev, "failed to create ARM IOMMU mapping\n");
+			return PTR_ERR(mapping);
+		}
+
+		mmu->mapping = mapping;
+	}
+
+	/* Attach the ARM VA mapping to the device. */
+	ret = arm_iommu_attach_device(dev, mmu->mapping);
+	if (ret < 0) {
+		dev_err(dev, "Failed to attach device to VA mapping\n");
+		arm_iommu_release_mapping(mmu->mapping);
+	}
+
+	return ret;
+}
+static inline void ipmmu_detach(struct device *dev)
+{
+	arm_iommu_detach_device(dev);
+}
+static inline void ipmmu_release_mapping(struct ipmmu_vmsa_device *mmu)
+{
+	arm_iommu_release_mapping(mmu->mapping);
+}
+#else
+static inline int ipmmu_map_attach(struct device *dev,
+				   struct ipmmu_vmsa_device *mmu)
+{
+	return 0;
+}
+static inline void ipmmu_detach(struct device *dev) {}
+static inline void ipmmu_release_mapping(struct ipmmu_vmsa_device *mmu) {}
+#endif
+
 static int ipmmu_add_device(struct device *dev)
 {
-	struct ipmmu_vmsa_archdata *archdata;
+	struct ipmmu_vmsa_dev_data *dev_data = get_dev_data(dev);
 	struct ipmmu_vmsa_device *mmu;
 	struct iommu_group *group = NULL;
 	unsigned int *utlbs;
@@ -603,7 +689,7 @@ static int ipmmu_add_device(struct device *dev)
 	int num_utlbs;
 	int ret = -ENODEV;
 
-	if (dev->archdata.iommu) {
+	if (dev_data) {
 		dev_warn(dev, "IOMMU driver already assigned to device %s\n",
 			 dev_name(dev));
 		return -EINVAL;
@@ -662,56 +748,28 @@ static int ipmmu_add_device(struct device *dev)
 		goto error;
 	}
 
-	archdata = kzalloc(sizeof(*archdata), GFP_KERNEL);
-	if (!archdata) {
+	dev_data = kzalloc(sizeof(*dev_data), GFP_KERNEL);
+	if (!dev_data) {
 		ret = -ENOMEM;
 		goto error;
 	}
 
-	archdata->mmu = mmu;
-	archdata->utlbs = utlbs;
-	archdata->num_utlbs = num_utlbs;
-	dev->archdata.iommu = archdata;
+	dev_data->mmu = mmu;
+	dev_data->utlbs = utlbs;
+	dev_data->num_utlbs = num_utlbs;
+	set_dev_data(dev, dev_data);
 
-	/*
-	 * Create the ARM mapping, used by the ARM DMA mapping core to allocate
-	 * VAs. This will allocate a corresponding IOMMU domain.
-	 *
-	 * TODO:
-	 * - Create one mapping per context (TLB).
-	 * - Make the mapping size configurable ? We currently use a 2GB mapping
-	 *   at a 1GB offset to ensure that NULL VAs will fault.
-	 */
-	if (!mmu->mapping) {
-		struct dma_iommu_mapping *mapping;
-
-		mapping = arm_iommu_create_mapping(&platform_bus_type,
-						   SZ_1G, SZ_2G);
-		if (IS_ERR(mapping)) {
-			dev_err(mmu->dev, "failed to create ARM IOMMU mapping\n");
-			ret = PTR_ERR(mapping);
-			goto error;
-		}
-
-		mmu->mapping = mapping;
-	}
-
-	/* Attach the ARM VA mapping to the device. */
-	ret = arm_iommu_attach_device(dev, mmu->mapping);
-	if (ret < 0) {
-		dev_err(dev, "Failed to attach device to VA mapping\n");
+	ret = ipmmu_map_attach(dev, mmu);
+	if (ret < 0)
 		goto error;
-	}
 
 	return 0;
 
 error:
-	arm_iommu_release_mapping(mmu->mapping);
-
-	kfree(dev->archdata.iommu);
+	kfree(dev_data);
 	kfree(utlbs);
 
-	dev->archdata.iommu = NULL;
+	set_dev_data(dev, NULL);
 
 	if (!IS_ERR_OR_NULL(group))
 		iommu_group_remove_device(dev);
@@ -721,15 +779,15 @@ error:
 
 static void ipmmu_remove_device(struct device *dev)
 {
-	struct ipmmu_vmsa_archdata *archdata = dev->archdata.iommu;
+	struct ipmmu_vmsa_dev_data *dev_data = get_dev_data(dev);
 
-	arm_iommu_detach_device(dev);
+	ipmmu_detach(dev);
 	iommu_group_remove_device(dev);
 
-	kfree(archdata->utlbs);
-	kfree(archdata);
+	kfree(dev_data->utlbs);
+	kfree(dev_data);
 
-	dev->archdata.iommu = NULL;
+	set_dev_data(dev, NULL);
 }
 
 static const struct iommu_ops ipmmu_ops = {
@@ -766,11 +824,6 @@ static int ipmmu_probe(struct platform_device *pdev)
 	int irq;
 	int ret;
 
-	if (!IS_ENABLED(CONFIG_OF) && !pdev->dev.platform_data) {
-		dev_err(&pdev->dev, "missing platform data\n");
-		return -EINVAL;
-	}
-
 	mmu = devm_kzalloc(&pdev->dev, sizeof(*mmu), GFP_KERNEL);
 	if (!mmu) {
 		dev_err(&pdev->dev, "cannot allocate device data\n");
@@ -779,6 +832,7 @@ static int ipmmu_probe(struct platform_device *pdev)
 
 	mmu->dev = &pdev->dev;
 	mmu->num_utlbs = 32;
+	bitmap_zero(mmu->ctx, IPMMU_CTX_MAX);
 
 	/* Map I/O memory and request IRQ. */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -838,7 +892,7 @@ static int ipmmu_remove(struct platform_device *pdev)
 	list_del(&mmu->list);
 	spin_unlock(&ipmmu_devices_lock);
 
-	arm_iommu_release_mapping(mmu->mapping);
+	ipmmu_release_mapping(mmu);
 
 	ipmmu_device_reset(mmu);
 
