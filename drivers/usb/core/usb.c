@@ -241,7 +241,7 @@ static int __each_dev(struct device *dev, void *data)
 	if (!is_usb_device(dev))
 		return 0;
 
-	return arg->fn(container_of(dev, struct usb_device, dev), arg->data);
+	return arg->fn(to_usb_device(dev), arg->data);
 }
 
 /**
@@ -397,7 +397,7 @@ struct device_type usb_device_type = {
 /* Returns 1 if @usb_bus is WUSB, 0 otherwise */
 static unsigned usb_bus_is_wusb(struct usb_bus *bus)
 {
-	struct usb_hcd *hcd = container_of(bus, struct usb_hcd, self);
+	struct usb_hcd *hcd = bus_to_hcd(bus);
 	return hcd->wireless;
 }
 
