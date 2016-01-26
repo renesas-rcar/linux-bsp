@@ -314,12 +314,21 @@ static bool rcar_dmac_chan_is_busy(struct rcar_dmac_chan *chan)
 	return (chcr & (RCAR_DMACHCR_DE | RCAR_DMACHCR_TE)) == RCAR_DMACHCR_DE;
 }
 
+/* Transfer completed but not yet handled */
+static bool rcar_dmac_last_tx_complete(struct rcar_dmac_chan *chan)
+{
+	u32 chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
+
+	return (chcr & RCAR_DMACHCR_TE) == RCAR_DMACHCR_TE;
+}
+
 static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 {
 	struct rcar_dmac_desc *desc = chan->desc.running;
 	u32 chcr = desc->chcr;
 
-	WARN_ON_ONCE(rcar_dmac_chan_is_busy(chan));
+	WARN_ON_ONCE(rcar_dmac_chan_is_busy(chan) ||
+			rcar_dmac_last_tx_complete(chan));
 
 	if (chan->mid_rid >= 0)
 		rcar_dmac_chan_write(chan, RCAR_DMARS, chan->mid_rid);
@@ -716,14 +725,38 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 /* -----------------------------------------------------------------------------
  * Stop and reset
  */
-
-static void rcar_dmac_chan_halt(struct rcar_dmac_chan *chan)
+#define NR_READS_TO_WAIT 5 /* number of times to check if DE = 0 */
+static inline int rcar_dmac_wait_stop(struct rcar_dmac_chan *chan)
 {
-	u32 chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
+	unsigned int i = 0;
 
+	do {
+		u32 chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
+
+		if (!(chcr & RCAR_DMACHCR_DE))
+			return 0;
+		cpu_relax();
+		dev_dbg(chan->chan.device->dev, "DMA xfer couldn't be stopped");
+	} while (++i < NR_READS_TO_WAIT);
+
+	return -EBUSY;
+}
+
+/* Called with chan lock held */
+static int rcar_dmac_chan_halt(struct rcar_dmac_chan *chan)
+{
+	u32 chcr;
+	int ret;
+
+	chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
 	chcr &= ~(RCAR_DMACHCR_DSE | RCAR_DMACHCR_DSIE | RCAR_DMACHCR_IE |
 		  RCAR_DMACHCR_TE | RCAR_DMACHCR_DE);
 	rcar_dmac_chan_write(chan, RCAR_DMACHCR, chcr);
+	ret = rcar_dmac_wait_stop(chan);
+
+	WARN_ON(ret < 0);
+
+	return ret;
 }
 
 static void rcar_dmac_chan_reinit(struct rcar_dmac_chan *chan)
@@ -748,6 +781,26 @@ static void rcar_dmac_chan_reinit(struct rcar_dmac_chan *chan)
 		list_del(&desc->node);
 		rcar_dmac_desc_put(chan, desc);
 	}
+}
+
+static int rcar_dmac_chan_pause(struct dma_chan *chan)
+{
+	u32 chcr;
+	int ret;
+	unsigned long flags;
+	struct rcar_dmac_chan *rchan = to_rcar_dmac_chan(chan);
+
+	spin_lock_irqsave(&rchan->lock, flags);
+
+	chcr = rcar_dmac_chan_read(rchan, RCAR_DMACHCR);
+	chcr &= ~RCAR_DMACHCR_DE;
+	rcar_dmac_chan_write(rchan, RCAR_DMACHCR, chcr);
+	ret = rcar_dmac_wait_stop(rchan);
+
+	spin_unlock_irqrestore(&rchan->lock, flags);
+
+	WARN_ON(ret < 0);
+	return ret;
 }
 
 static void rcar_dmac_stop(struct rcar_dmac *dmac)
@@ -989,6 +1042,7 @@ static void rcar_dmac_free_chan_resources(struct dma_chan *chan)
 	list_splice_init(&rchan->desc.active, &list);
 	list_splice_init(&rchan->desc.done, &list);
 	list_splice_init(&rchan->desc.wait, &list);
+	rchan->desc.running = NULL;
 
 	list_for_each_entry(desc, &list, node)
 		rcar_dmac_realloc_hwdesc(rchan, desc, 0);
@@ -1222,6 +1276,10 @@ static enum dma_status rcar_dmac_tx_status(struct dma_chan *chan,
 	unsigned long flags;
 	unsigned int residue;
 
+	/* Interrupt not yet serviced */
+	if (rcar_dmac_last_tx_complete(rchan))
+		return DMA_COMPLETE;
+
 	status = dma_cookie_status(chan, cookie, txstate);
 	if (status == DMA_COMPLETE || !txstate)
 		return status;
@@ -1229,6 +1287,10 @@ static enum dma_status rcar_dmac_tx_status(struct dma_chan *chan,
 	spin_lock_irqsave(&rchan->lock, flags);
 	residue = rcar_dmac_chan_get_residue(rchan, cookie);
 	spin_unlock_irqrestore(&rchan->lock, flags);
+
+	/* if there's no residue, the cookie is complete */
+	if (!residue)
+		return DMA_COMPLETE;
 
 	dma_set_residue(txstate, residue);
 
@@ -1744,6 +1806,7 @@ static int rcar_dmac_probe(struct platform_device *pdev)
 	engine->device_prep_slave_sg = rcar_dmac_prep_slave_sg;
 	engine->device_prep_dma_cyclic = rcar_dmac_prep_dma_cyclic;
 	engine->device_config = rcar_dmac_device_config;
+	engine->device_pause = rcar_dmac_chan_pause;
 	engine->device_terminate_all = rcar_dmac_chan_terminate_all;
 	engine->device_tx_status = rcar_dmac_tx_status;
 	engine->device_issue_pending = rcar_dmac_issue_pending;
