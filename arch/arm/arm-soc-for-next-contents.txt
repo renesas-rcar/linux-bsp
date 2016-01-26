@@ -1,0 +1,338 @@
+fixes
+
+next/fixes-non-critical
+	bcm/maintainers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/maintainers
+	omap/fixes-nc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/81xx-fixes-signed
+	davinci/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.5/fixes
+	patch
+		ARM: scoop: Be sure to clamp return value
+		ARM: sa1100/simpad: Be sure to clamp return value
+	omap/fixes-nc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/81xx-fix-signed
+
+next/cleanup
+	treewide/cleanup
+		Merge branch 'treewide/cleanup' into next/cleanup
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup-for-v4.5
+	mvebu/cleanup
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.5-1
+	mtd/cleanup
+		git://git.infradead.org/linux-mtd tags/arm-soc/for-4.5/cleanup
+	renesas/gic-cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-gic-cleanup-for-v4.5
+
+next/multiplatform
+	patch
+		ARM: pxa: make more mach/*.h files local
+		ARM: omap1: make headers more local
+		ARM: ks8695: make headers more local
+		ARM: davinci: make headers more local
+		ARM: iop13xx: make headers more local
+		ARM: w90x900: make headers more local
+		ARM: netx: remove unused mach/param.h
+	multiplatform/debug-ll
+		Merge branch 'multiplatform/debug-ll' into next/multiplatform
+	s3c64xx/multiplatform
+		Merge branch 's3c64xx/multiplatform' into next/multiplatform
+	mmp/multiplatform
+		Merge branch 'mmp/multiplatform' into next/multiplatform
+	patch
+		ARM: pxa: cm-x2xx: avoid duplicate macro warnings
+		ARM: pxa: mark raumfeld init functions as __maybe_unused
+		ARM: pxa: mark ezx structures as __maybe_unused
+	versatile/multiplatform
+		Merge branch 'versatile/multiplatform' into next/multiplatform
+	realview/multiplatform-base
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-base-armsoc-1-tag
+	mvebu/soc
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.5-1
+	patch
+		ARM: defconfig: use correct debug_ll settings
+		ARM: debug-ll: move DEBUG_LL_UART_EFM32 to correct Kconfig location
+		ARM: make default platform work for NOMMU
+	<no branch> (c4aa1937b7f40adc93e2e0a901314a4bd8991174)
+		Merge branch 'fixes' into next/multiplatform
+	realview/multiplatform-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-multiplatform-tag
+	patch
+		ARM: realview: build realview-dt SMP support only when used
+	treewide/cleanup
+		Merge branch 'treewide/cleanup' into next/multiplatform
+	patch
+		iio: exynos-adc: fix irqf_oneshot.cocci warnings
+		ARM: s3c64xx: fix pm-debug compilation
+		ARM: s3c: simplify s3c_irqwake_{e,}intallow definition
+		ARM: realview: don't select SMP_ON_UP for UP builds
+
+next/soc
+	bcm/soc
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/soc
+	patch
+		ARM: uniphier: select PINCTRL
+	samsung/soc
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-4.5
+		contains samsung/dt-syscon
+	zynq/soc
+		https://github.com/Xilinx/linux-xlnx tags/zynq-soc-for-4.5
+	rockchip/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-soc-1
+	treewide/cleanup
+		Merge branch 'treewide/cleanup' into next/soc
+	omap/soc-initcall
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/soc-initcall
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.5
+	patch
+		ARM: tango4: Initial platform support
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/81xx-soc-signed
+	depends/usb-fixes
+		Merge branch 'depends/usb-fixes' into next/soc
+	broadcom/bcm2835-soc
+		http://github.com/anholt/linux tags/bcm2835-soc-next-2015-12-28
+	patch
+		ARM: tango: pass ARM arch level for smc.S
+		ARM: tango: Fix UP build issues
+
+next/dt
+	lpc32xx/dt
+		https://github.com/vzapolskiy/linux lpc32xx-dts
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.5
+	renesas/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v4.5
+	ux500/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-dt-for-arm-soc
+	patch
+		ARM: dts: uniphier: change IRQ number of UART3 of PH1-Pro4 SoC
+		ARM: dts: uniphier: factor out common nodes to uniphier-common32.dtsi
+	rockchip/dt32
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts32-1
+	berlin/dt
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin-dt-for-4.5-1
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.5-1
+	mvebu/dt2
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.5-2
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/dt-pt1
+	bcm/dt
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/devicetree
+	realview/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-base-armsoc-2-tag
+	socfpga/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.5
+	samsung/dt-syscon
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-syscon-restart-4.5
+	zynq/dt
+		https://github.com/Xilinx/linux-xlnx tags/zynq-dt-for-4.5
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.5
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-dt
+	qcom/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-dt-for-4.5
+	renesas/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt3-for-v4.5
+	mvebu/dt3
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.5-3
+	mediatek/dt
+		https://github.com/mbgg/linux-mediatek tags/v4.4-next-dts
+	lpc18xx/dt
+		https://github.com/manabian/linux-lpc tags/lpc18xx_dts_for_4.5
+	rockchip/dt32-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts32-2
+	socfpga/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.5_part_2
+	omap/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/dt-pt2
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.5
+	at91/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-4.5-dt2
+	sunxi/dt2
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.5-2
+	patch
+		ARM: dts: tango4: Initial device trees
+	omap/81xx-dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/81xx-dts-signed
+		contains omap/fixes-nc
+	davinci/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.5/dts
+	patch
+		ARM: realview: set up cache correctly on the PB11MPCore
+		ARM: bcm2835: Split the DT for peripherals from the DT for the CPU
+		ARM: bcm2835: Move the CPU/peripheral include out of common RPi DT.
+		ARM: bcm2835: Add devicetree for bcm2836 and Raspberry Pi 2 B
+		ARM: bcm2835: Add the auxiliary clocks to the device tree.
+		ARM: dts: uniphier: fix a typo in comment block
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.5-2
+		contains samsung/clk-exynos
+	patch
+		ARM: dts: imx6q: clean up unused ipu2grp
+		dts: vt8500: Fix errors in SDHC node for WM8505
+	meson/dt
+		https://github.com/carlocaione/linux-meson tags/meson-for-4.5/dts
+	patch
+		ARM: versatile: add the syscon LEDs to the DT
+		ARM: dts: compulab: add new board description
+	renesas/dt-fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-fixes-for-v4.5
+
+next/dt64
+	renesas/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.5
+	renesas/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt2-for-v4.5
+	apm/dt64
+		https://github.com/AppliedMicro/xgene-next tags/xgene-dts-for-v4.5-v1
+	rockchip/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts64-1
+	berlin/dt64
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-dt-for-4.5-1
+	broadcom/dt64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.5/devicetree-arm64
+	patch
+		arm64: dts: uniphier: add PH1-LD10 SoC/board support
+	samsung/dt64
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-4.5
+	patch
+		Documentation: DT: Add entry for Freescale LS1043a-RDB board
+		arm64: dts: add Freescale LS1043a SoC support
+		arm64: dts: add LS1043a-RDB board support
+		arm64: dts: Added syscon-reboot node for FSL's LS2080A SoC
+		arm64: dts: juno: Add idle-states to device tree
+		arm64: dts: apq8016-sbc: enable UART0 on LS connector
+		arm64: dts: apq8016-sbc: add label properties for UART, I2C, and SPI
+		arm64: dts: hikey: add label properties to UARTs
+	zynq/dt64
+		https://github.com/Xilinx/linux-xlnx tags/zynqmp-dt-for-4.5
+	qcom/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-arm64-for-4.5
+	renesas/dt64-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt3-for-v4.5
+	mediatek/dt64
+		https://github.com/mbgg/linux-mediatek tags/v4.4-next-arm64
+	rockchip/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.5-rockchip-dts64-2
+	patch
+		Documentation: DT: Add entry for ARM SP805-WDT
+		dts/ls2080a: Update DTSI to add support of SP805 WDT
+	apm/dt64-2
+		https://github.com/AppliedMicro/xgene-next tags/xgene-dts-fixes-for-v4.5
+
+next/defconfig
+	patch
+		ARM: multi_v7_defconfig: Enable required QCOM SPMI/PMIC drivers
+		ARM: defconfig: multi_v7: Enable Qualcomm options for Honami
+	<no branch> (a0638365f6850855728a5ef5caf2aeab82a58035)
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-4.5-1
+	sunxi/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-defconfig-for-4.5
+	mvebu/defconfig
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-4.5-2
+	patch
+		ARM: multi_v7_defconfig: Enable some drivers for LS1021A
+		ARM: realview: refresh defconfig
+		ARM: realview: update SMP defconfig
+		ARM: realview: add generic config options
+		ARM: realview: add generic config options
+	socfpga/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_defconfig_for_v4.5
+	patch
+		ARM: multi_v7_defconfig: Enable Rockchip generic power domain.
+		ARM: realview: select apropriate targets
+		ARM: multi_v7_defconfig: enable TPS65217 regulator
+	samsung/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.5
+	patch
+		ARM: multi_v7_defconfig: Enable AM437x PMIC TPS65218
+		ARM: multi_v7_defconfig: Enable generic SoC internal OMAP regulators
+	at91/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-defconfig
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v4.5
+	qcom/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-defconfig-for-4.5
+	lpc18xx/defconfig
+		https://github.com/manabian/linux-lpc tags/lpc18xx_defconfig_for_4.5
+	patch
+		ARM: multi_v7_defconfig: enable Rockchip io-domain driver
+		ARM: multi_v7_defconfig: enable rockchip crypto module
+		ARM: multi_v7_defconfig: enable rk808 clkout module
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.5
+	patch
+		ARM: default to multi_v7_defconfig
+		ARM: bcm2835: enable all bcm2835-relevant in defconfig
+		ARM: bcm2835: enable auxiliary spi driver in defconfig
+		ARM: multi_v7_defconfig: Enable fan, sensors and audio for Odroid XU3
+		ARM: versatile: select some defaults in defconfig
+	rockchip/pmdomain-fix-backmerge
+		Merge Rockchip pmdomain fix into next/defconfig
+	patch
+		ARM: pxa: add defconfig covering all the boards
+		ARM: versatile: enable the right LEDs
+		ARM: zx_defconfig: remove CONFIG_MMC_DW_IDMAC
+		arm: multi_v7_defconfig: Add virtio drivers
+		ARM: multi_v7_defconfig: Add rockchip audio support
+		ARM: Add CONFIG_DEPRECATED_PARAM_STRUCT to netwinder_defconfig
+
+next/config64
+	renesas/config64
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.5
+	renesas/config64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig2-for-v4.5
+	patch
+		arm64: add Kconfig entry for Socionext UniPhier SoC family
+		arm64: defconfig: enable UniPhier SoCs support
+	berlin/soc64
+		git://git.infradead.org/users/hesselba/linux-berlin tags/berlin64-soc-for-4.5-1
+	tegra/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.5-defconfig
+	renesas/config64-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig3-for-v4.5
+	mediatek/config64
+		https://github.com/mbgg/linux-mediatek tags/v4.4-next-kconfig
+
+next/drivers
+	drivers/reset
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.5
+	drivers/reset2
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.5-2
+	patch
+		reset: hi6220: fix modular build
+		bus: uniphier-system-bus: add UniPhier System Bus driver
+	tegra/memory
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.5-memory
+	qcom/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-soc-for-4.5
+	patch
+		MAINTAINERS: Drop Kumar Gala from QCOM
+	mediatek/soc
+		https://github.com/mbgg/linux-mediatek tags/v4.4-next-soc
+	omap/wakeup-m3
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.5/wakeup-m3
+	depends/usb-fixes
+		Merge branch 'depends/usb-fixes' into next/drivers
+	broadcom/bcm2835-drivers
+		http://github.com/anholt/linux tags/bcm2835-drivers-next-2015-12-28
+	patch
+		ARM: bcm2835: clarify RASPBERRYPI_FIRMWARE dependency
+		bus: uniphier: allow only built-in driver
+	samsung/clk-exynos
+		https://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-clk-exynos4-4.5
+
+late/tegra
+	treewide/cleanup
+		Merge branch 'treewide/cleanup' into late/tegra
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.5-soc
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.5-dt
+
