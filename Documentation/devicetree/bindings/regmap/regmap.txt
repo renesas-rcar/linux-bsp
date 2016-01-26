@@ -11,9 +11,10 @@ on different SoCs using the devicetree, we need one way to simplify
 this.
 
 Required properties:
-- {big,little}-endian: these are boolean properties, if absent
-  meaning that the CPU and the Device are in the same endianness mode,
-  these properties are for register values and all the buffers only.
+- {big,little}-endian: boolean properties, if absent the CPU and
+  the Device will be in the same endianness mode.
+  Note: they are only used for the device register values and the
+  buffers.
 
 Examples:
 Scenario 1 : CPU in LE mode & device in LE mode.
