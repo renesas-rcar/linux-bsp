@@ -64,7 +64,6 @@
 #define SSI_NAME "ssi"
 
 struct rsnd_ssi {
-	struct rsnd_ssi *parent;
 	struct rsnd_mod mod;
 	struct rsnd_mod *dma;
 
@@ -705,9 +704,8 @@ static int rsnd_ssi_dma_probe(struct rsnd_mod *mod,
 	if (ret)
 		return ret;
 
-	ssi->dma = rsnd_dma_attach(io, mod, dma_id);
-	if (IS_ERR(ssi->dma))
-		return PTR_ERR(ssi->dma);
+	/* SSI probe might be called many times in MUX multi path */
+	ret = rsnd_dma_attach(io, mod, &ssi->dma, dma_id);
 
 	return ret;
 }
@@ -858,6 +856,41 @@ int __rsnd_ssi_is_pin_sharing(struct rsnd_mod *mod)
 	return !!(rsnd_ssi_mode_flags(ssi) & RSND_SSI_CLK_PIN_SHARE);
 }
 
+static u32 *rsnd_ssi_get_status(struct rsnd_dai_stream *io,
+				struct rsnd_mod *mod,
+				enum rsnd_mod_type type)
+{
+	/*
+	 * SSIP (= SSI parent) needs to be special, otherwise,
+	 * 2nd SSI might doesn't start. see also rsnd_mod_call()
+	 *
+	 * We can't include parent SSI status on SSI, because we don't know
+	 * how many SSI requests parent SSI. Thus, it is localed on "io" now.
+	 * ex) trouble case
+	 *	Playback: SSI0
+	 *	Capture : SSI1 (needs SSI0)
+	 *
+	 * 1) start Capture  ->	SSI0/SSI1 are started.
+	 * 2) start Playback ->	SSI0 doesn't work, because it is already
+	 *			marked as "started" on 1)
+	 *
+	 * OTOH, using each mod's status is good for MUX case.
+	 * It doesn't need to start in 2nd start
+	 * ex)
+	 *	IO-0: SRC0 -> CTU1 -+-> MUX -> DVC -> SSIU -> SSI0
+	 *			    |
+	 *	IO-1: SRC1 -> CTU2 -+
+	 *
+	 * 1) start IO-0 ->	start SSI0
+	 * 2) start IO-1 ->	SSI0 doesn't need to start, because it is
+	 *			already started on 1)
+	 */
+	if (type == RSND_MOD_SSIP)
+		return &io->parent_ssi_status;
+
+	return rsnd_mod_get_status(io, mod, type);
+}
+
 int rsnd_ssi_probe(struct rsnd_priv *priv)
 {
 	struct device_node *node;
@@ -920,7 +953,7 @@ int rsnd_ssi_probe(struct rsnd_priv *priv)
 			ops = &rsnd_ssi_dma_ops;
 
 		ret = rsnd_mod_init(priv, rsnd_mod_get(ssi), ops, clk,
-				    RSND_MOD_SSI, i);
+				    rsnd_ssi_get_status, RSND_MOD_SSI, i);
 		if (ret)
 			goto rsnd_ssi_probe_done;
 

@@ -367,11 +367,7 @@ static int rsnd_src_stop(struct rsnd_mod *mod,
 			 struct rsnd_dai_stream *io,
 			 struct rsnd_priv *priv)
 {
-	/*
-	 * stop SRC output only
-	 * see rsnd_src_quit
-	 */
-	rsnd_mod_write(mod, SRC_CTRL, 0x01);
+	rsnd_mod_write(mod, SRC_CTRL, 0);
 
 	return 0;
 }
@@ -408,9 +404,6 @@ static int rsnd_src_quit(struct rsnd_mod *mod,
 	struct device *dev = rsnd_priv_to_dev(priv);
 
 	rsnd_src_irq_disable(mod);
-
-	/* stop both out/in */
-	rsnd_mod_write(mod, SRC_CTRL, 0);
 
 	rsnd_src_halt(mod);
 
@@ -495,9 +488,7 @@ static int rsnd_src_probe_(struct rsnd_mod *mod,
 			return ret;
 	}
 
-	src->dma = rsnd_dma_attach(io, mod, 0);
-	if (IS_ERR(src->dma))
-		return PTR_ERR(src->dma);
+	ret = rsnd_dma_attach(io, mod, &src->dma, 0);
 
 	return ret;
 }
@@ -622,7 +613,8 @@ int rsnd_src_probe(struct rsnd_priv *priv)
 		}
 
 		ret = rsnd_mod_init(priv, rsnd_mod_get(src),
-				    &rsnd_src_ops, clk, RSND_MOD_SRC, i);
+				    &rsnd_src_ops, clk, rsnd_mod_get_status,
+				    RSND_MOD_SRC, i);
 		if (ret)
 			goto rsnd_src_probe_done;
 
