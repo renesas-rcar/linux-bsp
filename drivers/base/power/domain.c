@@ -1345,7 +1345,7 @@ int pm_genpd_add_subdomain(struct generic_pm_domain *genpd,
 		return -ENOMEM;
 
 	mutex_lock(&subdomain->lock);
-	mutex_lock(&genpd->lock);
+	mutex_lock_nested(&genpd->lock, SINGLE_DEPTH_NESTING);
 
 	if (genpd->status == GPD_STATE_POWER_OFF
 	    &&  subdomain->status != GPD_STATE_POWER_OFF) {
@@ -1391,7 +1391,7 @@ int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 		return -EINVAL;
 
 	mutex_lock(&subdomain->lock);
-	mutex_lock(&genpd->lock);
+	mutex_lock_nested(&genpd->lock, SINGLE_DEPTH_NESTING);
 
 	if (!list_empty(&subdomain->slave_links) || subdomain->device_count) {
 		pr_warn("%s: unable to remove subdomain %s\n", genpd->name,
