@@ -265,6 +265,7 @@ struct adv7482_sdp_main_info {
 
 #define ADV7482_SDP_R_REG_10			0x10
 #define ADV7482_SDP_R_REG_10_IN_LOCK		0x01
+#define ADV7482_SDP_R_REG_10_FSC_LOCK		0x04
 
 #define ADV7482_SDP_R_REG_10_AUTOD_MASK		0x70
 #define ADV7482_SDP_R_REG_10_AUTOD_NTSM_M_J	0x00
@@ -1170,7 +1171,8 @@ static int adv7482_mbus_fmt(struct v4l2_subdev *sd,
 				"Not detect any video input signal\n");
 		else {
 			if ((status_reg_10 & ADV7482_SDP_R_REG_10_IN_LOCK) &&
-				(((status_reg_10 &
+				(status_reg_10 & ADV7482_SDP_R_REG_10_FSC_LOCK)
+				&& (((status_reg_10 &
 				ADV7482_SDP_R_REG_10_AUTOD_PAL_M) ==
 				ADV7482_SDP_R_REG_10_AUTOD_PAL_M) ||
 				((status_reg_10 &
@@ -1185,7 +1187,9 @@ static int adv7482_mbus_fmt(struct v4l2_subdev *sd,
 				dev_info(state->dev,
 				   "Detected the PAL video input signal\n");
 			else if ((status_reg_10 & ADV7482_SDP_R_REG_10_IN_LOCK)
-				&& (((status_reg_10 &
+				&& (status_reg_10 &
+				ADV7482_SDP_R_REG_10_FSC_LOCK) &&
+				(((status_reg_10 &
 				ADV7482_SDP_R_REG_10_AUTOD_NTSC_4_43) ==
 				ADV7482_SDP_R_REG_10_AUTOD_NTSC_4_43) ||
 				((status_reg_10 &
