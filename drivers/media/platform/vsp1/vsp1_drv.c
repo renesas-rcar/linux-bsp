@@ -323,6 +323,8 @@ static void vsp1_destroy_entities(struct vsp1_device *vsp1)
 	struct vsp1_entity *entity, *_entity;
 	struct vsp1_video *video, *_video;
 
+	v4l2_device_unregister(&vsp1->v4l2_dev);
+
 	list_for_each_entry_safe(entity, _entity, &vsp1->entities, list_dev) {
 		list_del(&entity->list_dev);
 		vsp1_entity_destroy(entity);
@@ -333,7 +335,6 @@ static void vsp1_destroy_entities(struct vsp1_device *vsp1)
 		vsp1_video_cleanup(video);
 	}
 
-	v4l2_device_unregister(&vsp1->v4l2_dev);
 	media_device_unregister(&vsp1->media_dev);
 
 	if (!vsp1->info->uapi)
@@ -839,6 +840,7 @@ static int vsp1_remove(struct platform_device *pdev)
 {
 	struct vsp1_device *vsp1 = platform_get_drvdata(pdev);
 
+	vsp1_device_put(vsp1);
 	vsp1_destroy_entities(vsp1);
 
 	if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND)
