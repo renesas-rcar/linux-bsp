@@ -792,6 +792,18 @@ static int rcar_vin_videobuf_setup(struct vb2_queue *vq,
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vq);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct rcar_vin_priv *priv = ici->priv;
+	struct rcar_vin_cam *cam = icd->host_priv;
+
+	if (priv->chip == RCAR_GEN3) {
+		if (is_scaling(cam) && (cam->out_width % 32)) {
+			dev_err(icd->parent, "Scaling parameter error\n");
+			return -EINVAL;
+		}
+		if (!is_scaling(cam) && (cam->out_width % 16)) {
+			dev_err(icd->parent, "Image stride parameter error\n");
+			return -EINVAL;
+		}
+	}
 
 	alloc_ctxs[0] = priv->alloc_ctx;
 
