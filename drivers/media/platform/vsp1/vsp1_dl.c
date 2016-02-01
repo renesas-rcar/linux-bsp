@@ -171,11 +171,6 @@ void vsp1_dl_commit(struct vsp1_dl *dl)
 	vsp1_write(vsp1, VI6_DL_BODY_SIZE, VI6_DL_BODY_SIZE_UPD |
 		   (list->reg_count * 8));
 
-	if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND) {
-		dl->vsp1->dl_addr = list->dma;
-		dl->vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
-					   (list->reg_count * 8);
-	}
 	vsp1_dl_free_list(dl->lists.queued);
 	dl->lists.queued = list;
 
@@ -235,11 +230,7 @@ void vsp1_dl_irq_frame_end(struct vsp1_dl *dl)
 		vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), list->dma);
 		vsp1_write(vsp1, VI6_DL_BODY_SIZE, VI6_DL_BODY_SIZE_UPD |
 			   (list->reg_count * 8));
-		if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND) {
-			dl->vsp1->dl_addr = list->dma;
-			dl->vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
-						   (list->reg_count * 8);
-		}
+
 		dl->lists.queued = list;
 		dl->lists.pending = NULL;
 	}

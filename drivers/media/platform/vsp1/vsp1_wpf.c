@@ -170,7 +170,7 @@ static int wpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	/* Enable interrupts */
 	vsp1_write(vsp1, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
 	vsp1_write(vsp1, VI6_WPF_IRQ_ENB(wpf->entity.index),
-		   VI6_WFP_IRQ_ENB_FREE | VI6_WFP_IRQ_ENB_UNDE);
+		   VI6_WFP_IRQ_ENB_FREE);
 
 	return 0;
 }
