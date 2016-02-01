@@ -60,6 +60,7 @@ static const struct rcar_du_device_info rcar_du_r8a7779_info = {
 		},
 	},
 	.num_lvds = 0,
+	.dpll_ch =  0,
 };
 
 static const struct rcar_du_device_info rcar_du_r8a7790_info = {
@@ -89,6 +90,7 @@ static const struct rcar_du_device_info rcar_du_r8a7790_info = {
 		},
 	},
 	.num_lvds = 2,
+	.dpll_ch =  0,
 };
 
 /* M2-W (r8a7791) and M2-N (r8a7793) are identical */
@@ -113,6 +115,7 @@ static const struct rcar_du_device_info rcar_du_r8a7791_info = {
 		},
 	},
 	.num_lvds = 1,
+	.dpll_ch =  0,
 };
 
 static const struct rcar_du_device_info rcar_du_r8a7794_info = {
@@ -136,6 +139,7 @@ static const struct rcar_du_device_info rcar_du_r8a7794_info = {
 		},
 	},
 	.num_lvds = 0,
+	.dpll_ch =  0,
 };
 
 static const struct rcar_du_device_info rcar_du_r8a7795_info = {
@@ -170,6 +174,7 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 		},
 	},
 	.num_lvds = 1,
+	.dpll_ch =  BIT(1) | BIT(2),
 };
 
 static const struct of_device_id rcar_du_of_table[] = {
