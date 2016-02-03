@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Salvator-X board
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2015-2016 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -532,6 +532,7 @@
 	renesas,no-ether-link;
 	phy-handle = <&phy0>;
 	status = "okay";
+	phy-int-gpio = <&gpio2 11 GPIO_ACTIVE_LOW>;
 
 	phy0: ethernet-phy@0 {
 		rxc-skew-ps = <900>;
