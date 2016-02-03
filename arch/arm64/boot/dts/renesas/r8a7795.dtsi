@@ -41,6 +41,9 @@
 		vin5 = &vin5;
 		vin6 = &vin6;
 		vin7 = &vin7;
+		tsc0 = &tsc1;
+		tsc1 = &tsc2;
+		tsc2 = &tsc3;
 	};
 
 	psci {
@@ -1969,7 +1972,6 @@
 			clocks = <&cpg CPG_MOD 522>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#thermal-sensor-cells = <0>;
-			id = <0>;
 			status = "okay";
 		};
 
@@ -1981,7 +1983,6 @@
 			clocks = <&cpg CPG_MOD 522>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#thermal-sensor-cells = <0>;
-			id = <1>;
 			status = "okay";
 		};
 
@@ -1993,7 +1994,6 @@
 			clocks = <&cpg CPG_MOD 522>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#thermal-sensor-cells = <0>;
-			id = <2>;
 			status = "okay";
 		};
 
