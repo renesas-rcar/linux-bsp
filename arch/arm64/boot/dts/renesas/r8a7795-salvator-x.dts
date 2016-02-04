@@ -744,7 +744,7 @@
 
 	vmmc-supply = <&fixedregulator3v3>;
 	vqmmc-supply = <&fixedregulator1v8>;
-	non-removable;
+	bus-width = <8>;
 	status = "okay";
 };
 
