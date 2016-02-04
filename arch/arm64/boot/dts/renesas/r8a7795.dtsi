@@ -1669,7 +1669,7 @@
 			mmc-hs200-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
 			renesas,pfcs = <0xe6060000 0x380>;
-			renesas,id = <12 0x7f>;
+			renesas,id = <6 0x1fff>;
 			status = "disabled";
 		};
 
