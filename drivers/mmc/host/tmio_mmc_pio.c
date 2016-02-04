@@ -367,10 +367,12 @@ static int _tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	u8 *data_buf;
 	unsigned int tm = CMDREQ_TIMEOUT;
 	unsigned long flags;
+	u8 data_size = 64;
 
 	if (ios->timing != MMC_TIMING_UHS_SDR50 &&
 	    ios->timing != MMC_TIMING_UHS_SDR104 &&
-	    ios->timing != MMC_TIMING_MMC_HS200)
+	    ios->timing != MMC_TIMING_MMC_HS200 &&
+	    ios->timing != MMC_TIMING_MMC_HS400)
 		return 0;
 
 	if ((host->inquiry_tuning && !host->inquiry_tuning(host)) ||
@@ -385,7 +387,10 @@ static int _tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		goto err_tap;
 	}
 
-	data_buf = kmalloc(64, GFP_KERNEL);
+	if (ios->timing == MMC_TIMING_MMC_HS200)
+		data_size = 128;
+
+	data_buf = kmalloc(data_size, GFP_KERNEL);
 	if (data_buf == NULL) {
 		ret = -ENOMEM;
 		goto err_data;
@@ -422,14 +427,14 @@ static int _tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		cmd.retries = 0;
 		cmd.error = 0;
 
-		data.blksz = 64;
+		data.blksz = data_size;
 		data.blocks = 1;
 		data.flags = MMC_DATA_READ;
 		data.sg = &sg;
 		data.sg_len = 1;
 		data.error = 0;
 
-		sg_init_one(&sg, data_buf, 64);
+		sg_init_one(&sg, data_buf, data_size);
 
 		host->mrq = &mrq;
 
@@ -1102,12 +1107,21 @@ static void tmio_mmc_power_off(struct tmio_mmc_host *host)
 static void tmio_mmc_set_bus_width(struct tmio_mmc_host *host,
 				unsigned char bus_width)
 {
+	sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, ~0xa000 &
+		sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT));
+
 	switch (bus_width) {
 	case MMC_BUS_WIDTH_1:
-		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x80e0);
+		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x8000 |
+			sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT));
 		break;
 	case MMC_BUS_WIDTH_4:
-		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x00e0);
+		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x0000 |
+			sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT));
+		break;
+	case MMC_BUS_WIDTH_8:
+		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x2000 |
+			sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT));
 		break;
 	}
 }
