@@ -1733,7 +1733,7 @@
 			renesas,has-lut;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <2>;
-			power-domains = <&pd_a3vp>;
+			power-domains = <&pd_always_on>;
 		};
 
 		vspd1: vsp@fea28000 {
@@ -1747,7 +1747,7 @@
 			renesas,has-lut;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <2>;
-			power-domains = <&pd_a3vp>;
+			power-domains = <&pd_always_on>;
 		};
 
 		vspd2: vsp@fea30000 {
@@ -1761,7 +1761,7 @@
 			renesas,has-lut;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <2>;
-			power-domains = <&pd_a3vp>;
+			power-domains = <&pd_always_on>;
 		};
 
 		vspd3: vsp@fea38000 {
@@ -1775,7 +1775,7 @@
 			renesas,has-lut;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <2>;
-			power-domains = <&pd_a3vp>;
+			power-domains = <&pd_always_on>;
 		};
 
 		hdmi0: hdmi@fead0000 {
