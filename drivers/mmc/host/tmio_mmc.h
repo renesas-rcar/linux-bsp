@@ -1,7 +1,7 @@
 /*
  * linux/drivers/mmc/host/tmio_mmc.h
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
  *
@@ -97,8 +97,8 @@ struct tmio_mmc_host {
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
 	u32			scc_tapnum;
+	u32			scc_tappos;
 	bool			done_tuning;
-	int			tuning_command;
 	struct completion	completion;
 
 	int (*write16_hook)(struct tmio_mmc_host *host, int addr);

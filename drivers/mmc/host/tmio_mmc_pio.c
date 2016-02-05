@@ -1,7 +1,7 @@
 /*
  * linux/drivers/mmc/host/tmio_mmc_pio.c
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  * Copyright (C) 2011 Guennadi Liakhovetski
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
@@ -312,6 +312,16 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 	if (mrq->cmd->error || (mrq->data && mrq->data->error))
 		tmio_mmc_abort_dma(host);
 
+	if (host->inquiry_tuning && host->inquiry_tuning(host) &&
+	     !host->done_tuning) {
+		/* call retuning() to clear SCC error bit */
+		if (host->retuning)
+			host->retuning(host);
+		/* finish processing tuning request */
+		complete(&host->completion);
+		return;
+	}
+
 	/* Check retuning */
 	if (host->retuning && host->done_tuning) {
 		result = host->retuning(host);
@@ -319,13 +329,10 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 			host->done_tuning = false;
 	}
 
-	if ((host->inquiry_tuning && host->inquiry_tuning(host) &&
-	     !host->done_tuning) || cmd == mrq->sbc) {
-		/* finish processing tuning request */
-		if (!host->done_tuning || cmd == mrq->sbc) {
-			complete(&host->completion);
-			return;
-		}
+	if (cmd == mrq->sbc) {
+		/* finish SET_BLOCK_COUNT request */
+		complete(&host->completion);
+		return;
 	}
 
 	mmc_request_done(host->mmc, mrq);
@@ -360,10 +367,12 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	u8 *data_buf;
 	unsigned int tm = 2000; /* 2000msec */
 	unsigned long flags;
+	u8 data_size = 64;
 
 	if (ios->timing != MMC_TIMING_UHS_SDR50 &&
 	    ios->timing != MMC_TIMING_UHS_SDR104 &&
-	    ios->timing != MMC_TIMING_MMC_HS200)
+	    ios->timing != MMC_TIMING_MMC_HS200 &&
+	    ios->timing != MMC_TIMING_MMC_HS400)
 		return 0;
 
 	if ((host->inquiry_tuning && !host->inquiry_tuning(host)) ||
@@ -378,7 +387,10 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		goto err_tap;
 	}
 
-	data_buf = kmalloc(64, GFP_KERNEL);
+	if (ios->timing == MMC_TIMING_MMC_HS200)
+		data_size = 128;
+
+	data_buf = kmalloc(data_size, GFP_KERNEL);
 	if (data_buf == NULL) {
 		ret = -ENOMEM;
 		goto err_data;
@@ -415,14 +427,14 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		cmd.retries = 0;
 		cmd.error = 0;
 
-		data.blksz = 64;
+		data.blksz = data_size;
 		data.blocks = 1;
 		data.flags = MMC_DATA_READ;
 		data.sg = &sg;
 		data.sg_len = 1;
 		data.error = 0;
 
-		sg_init_one(&sg, data_buf, 64);
+		sg_init_one(&sg, data_buf, data_size);
 
 		host->mrq = &mrq;
 
@@ -986,6 +998,7 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	unsigned long flags;
 	int ret;
+	u32 opcode;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1009,8 +1022,12 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	if (host->inquiry_tuning && host->inquiry_tuning(host) &&
 	    !host->done_tuning) {
+		if (mmc_card_mmc(host->mmc->card))
+			opcode = MMC_SEND_TUNING_BLOCK_HS200;
+		else
+			opcode = MMC_SEND_TUNING_BLOCK;
 		/* Start retuning */
-		ret = tmio_mmc_execute_tuning(mmc, host->tuning_command);
+		ret = tmio_mmc_execute_tuning(mmc, opcode);
 		if (ret)
 			goto fail;
 		/* Restore request */
@@ -1023,7 +1040,7 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		if (ret)
 			goto fail;
 		ret = wait_for_completion_timeout(&host->completion,
-						       msecs_to_jiffies(5000));
+					msecs_to_jiffies(CMDREQ_TIMEOUT));
 		if (ret < 0)
 			goto fail;
 		if (!ret) {
@@ -1034,9 +1051,12 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		host->mrq = mrq;
 		if (host->inquiry_tuning && host->inquiry_tuning(host) &&
 		    !host->done_tuning) {
+			if (mmc_card_mmc(host->mmc->card))
+				opcode = MMC_SEND_TUNING_BLOCK_HS200;
+			else
+				opcode = MMC_SEND_TUNING_BLOCK;
 			/* Start retuning */
-			ret = tmio_mmc_execute_tuning(mmc,
-						      host->tuning_command);
+			ret = tmio_mmc_execute_tuning(mmc, opcode);
 			if (ret)
 				goto fail;
 			/* Restore request */
@@ -1133,12 +1153,21 @@ static void tmio_mmc_power_off(struct tmio_mmc_host *host)
 static void tmio_mmc_set_bus_width(struct tmio_mmc_host *host,
 				unsigned char bus_width)
 {
+	sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, ~0xa000 &
+		sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT));
+
 	switch (bus_width) {
 	case MMC_BUS_WIDTH_1:
-		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x80e0);
+		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x8000 |
+			sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT));
 		break;
 	case MMC_BUS_WIDTH_4:
-		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x00e0);
+		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x0000 |
+			sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT));
+		break;
+	case MMC_BUS_WIDTH_8:
+		sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, 0x2000 |
+			sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT));
 		break;
 	}
 }

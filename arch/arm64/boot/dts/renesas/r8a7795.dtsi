@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a7795 SoC
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2015-2016 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -1569,7 +1569,7 @@
 			mmc-hs200-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
 			renesas,pfcs = <0xe6060000 0x380>;
-			renesas,id = <12 0x7f>;
+			renesas,id = <6 0x1fff>;
 			status = "disabled";
 		};
 

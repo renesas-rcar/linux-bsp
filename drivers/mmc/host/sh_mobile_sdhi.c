@@ -1,7 +1,7 @@
 /*
  * SuperH Mobile SDHI
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  * Copyright (C) 2009 Magnus Damm
  *
  * This program is free software; you can redistribute it and/or modify
@@ -366,14 +366,6 @@ static bool sh_mobile_sdhi_inquiry_tuning(struct tmio_mmc_host *host)
 static void sh_mobile_sdhi_init_tuning(struct tmio_mmc_host *host,
 							unsigned long *num)
 {
-	int i;
-	struct sh_mobile_sdhi_scc *taps;
-	struct platform_device *pdev = host->pdev;
-	struct mmc_host *mmc = dev_get_drvdata(&host->pdev->dev);
-	const struct of_device_id *of_id =
-		of_match_device(sh_mobile_sdhi_of_match, &pdev->dev);
-	const struct sh_mobile_sdhi_of_data *of_data = of_id->data;
-
 	/* set sampling clock selection range */
 	if (host->scc_tapnum)
 		sd_scc_write32(host, SH_MOBILE_SDHI_SCC_DTCNTL,
@@ -400,16 +392,7 @@ static void sh_mobile_sdhi_init_tuning(struct tmio_mmc_host *host,
 		~SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN &
 		sd_scc_read32(host, SH_MOBILE_SDHI_SCC_RVSCNTL));
 
-	for (i = 0, taps = of_data->taps; i < of_data->taps_num; i++, taps++) {
-		if (taps->clk == 0 || taps->clk == mmc->f_max) {
-			sd_scc_write32(host, SH_MOBILE_SDHI_SCC_DT2FF,
-				taps->tap);
-			break;
-		}
-	}
-
-	if (taps->clk != 0 && taps->clk != mmc->f_max)
-		dev_warn(&host->pdev->dev, "Unknown f_max for SDR104\n");
+	sd_scc_write32(host, SH_MOBILE_SDHI_SCC_DT2FF, host->scc_tappos);
 
 	/* Read TAPNUM */
 	*num = (sd_scc_read32(host, SH_MOBILE_SDHI_SCC_DTCNTL) >> 16) & 0xff;
@@ -594,13 +577,13 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	struct tmio_mmc_host *host;
 	struct resource *res;
 	const struct device_node *np = pdev->dev.of_node;
-	int irq, ret, i = 0;
+	int irq, ret, i;
 	bool multiplexed_isr = true;
 	struct tmio_mmc_dma *dma_priv;
 	int clk_rate;
 	struct sh_mobile_sdhi_vlt *vlt;
 	u32 pfcs[2], mask[2];
-	u32 num, tapnum = 0;
+	u32 num, tapnum = 0, tappos;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
@@ -709,6 +692,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 
 	if (of_id && of_id->data) {
 		const struct sh_mobile_sdhi_of_data *of_data = of_id->data;
+		const struct sh_mobile_sdhi_scc *taps = of_data->taps;
 		mmc_data->flags |= of_data->tmio_flags;
 		mmc_data->capabilities |= of_data->capabilities;
 		mmc_data->capabilities2 |= of_data->capabilities2;
@@ -717,6 +701,20 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		mmc_data->max_segs = of_data->max_segs;
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 		dma_priv->sdbuf_64bit = of_data->sdbuf_64bit;
+		if (np && !of_property_read_u32(np, "renesas,mmc-scc-tappos",
+						&tappos)) {
+			host->scc_tappos = tappos;
+		} else {
+			for (i = 0, taps = of_data->taps;
+			     i < of_data->taps_num; i++, taps++) {
+				if (taps->clk == 0 || taps->clk == clk_rate) {
+					host->scc_tappos = taps->tap;
+					break;
+				}
+			}
+			if (taps->clk != 0 && taps->clk != clk_rate)
+				dev_warn(&host->pdev->dev, "Unknown clock rate for SDR104 and HS200\n");
+		}
 	}
 
 	if (of_find_property(np, "sd-uhs-sdr50", NULL))
@@ -771,6 +769,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	}
 
 	if (multiplexed_isr) {
+		i = 0;
 		while (1) {
 			irq = platform_get_irq(pdev, i);
 			if (irq < 0)

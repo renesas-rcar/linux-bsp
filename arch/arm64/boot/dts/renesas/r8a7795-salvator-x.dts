@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Salvator-X board
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2015-2016 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -900,7 +900,7 @@
 
 	vmmc-supply = <&fixedregulator3v3>;
 	vqmmc-supply = <&fixedregulator1v8>;
-	non-removable;
+	bus-width = <8>;
 	status = "okay";
 };
 
