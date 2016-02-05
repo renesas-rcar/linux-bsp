@@ -2,7 +2,7 @@
  * drivers/media/i2c/adv7482.c
  *     This file is Analog Devices ADV7482 HDMI receiver driver.
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2
@@ -265,6 +265,7 @@ struct adv7482_sdp_main_info {
 
 #define ADV7482_SDP_R_REG_10			0x10
 #define ADV7482_SDP_R_REG_10_IN_LOCK		0x01
+#define ADV7482_SDP_R_REG_10_FSC_LOCK		0x04
 
 #define ADV7482_SDP_R_REG_10_AUTOD_MASK		0x70
 #define ADV7482_SDP_R_REG_10_AUTOD_NTSM_M_J	0x00
@@ -1170,7 +1171,8 @@ static int adv7482_mbus_fmt(struct v4l2_subdev *sd,
 				"Not detect any video input signal\n");
 		else {
 			if ((status_reg_10 & ADV7482_SDP_R_REG_10_IN_LOCK) &&
-				(((status_reg_10 &
+				(status_reg_10 & ADV7482_SDP_R_REG_10_FSC_LOCK)
+				&& (((status_reg_10 &
 				ADV7482_SDP_R_REG_10_AUTOD_PAL_M) ==
 				ADV7482_SDP_R_REG_10_AUTOD_PAL_M) ||
 				((status_reg_10 &
@@ -1185,7 +1187,9 @@ static int adv7482_mbus_fmt(struct v4l2_subdev *sd,
 				dev_info(state->dev,
 				   "Detected the PAL video input signal\n");
 			else if ((status_reg_10 & ADV7482_SDP_R_REG_10_IN_LOCK)
-				&& (((status_reg_10 &
+				&& (status_reg_10 &
+				ADV7482_SDP_R_REG_10_FSC_LOCK) &&
+				(((status_reg_10 &
 				ADV7482_SDP_R_REG_10_AUTOD_NTSC_4_43) ==
 				ADV7482_SDP_R_REG_10_AUTOD_NTSC_4_43) ||
 				((status_reg_10 &
@@ -2023,9 +2027,7 @@ static int adv7482_remove(struct i2c_client *client)
 	media_entity_cleanup(&sd->entity);
 	adv7482_exit_controls(state);
 
-	v4l2_ctrl_handler_free(&state->ctrl_hdl);
 	mutex_destroy(&state->mutex);
-	v4l2_device_unregister_subdev(sd);
 	kfree(to_state(sd));
 	return 0;
 }
