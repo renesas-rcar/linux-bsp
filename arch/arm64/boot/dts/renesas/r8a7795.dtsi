@@ -1301,68 +1301,70 @@
 			power-domains = <&pd_a3sg>;
 		};
 
-		vcp4 {
-			compatible = "renesas,vcp4";
-			#address-cells = <2>;
-			#size-cells = <2>;
+		stb: vcp4@fe8a0000 {
+			compatible = "renesas,vcp4-stb";
+			reg = <0 0xfe8a0000 0 0x200>;
+			interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 104>;
+			power-domains = <&pd_a3vc>;
+		};
 
-			vcplf@fe910000 {
-				reg = <0 0xfe910000 0 0x200>, <0 0xfe910200 0 0x200>;
-				interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
-					     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&cpg CPG_MOD 130>;
-				power-domains = <&pd_a2vc1>;
-			};
+		ivdp1c: vcp4@fe8d0000 {
+			compatible = "renesas,vcp4-ivdp1c";
+			reg = <0 0xfe8d0000 0 0x200>, <0 0xfe8d0200 0 0x200>;
+			interrupts = <GIC_SPI 380 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 381 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 128>;
+			power-domains = <&pd_a2vc0>;
+		};
 
-			vcpl4@fe8f0000 {
-				reg = <0 0xfe8f0000 0 0x200>, <0 0xfe8f0200 0 0x200>;
-				interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>,
-					     <GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&cpg CPG_MOD 129>;
-				power-domains = <&pd_a2vc0>;
-			};
+		fcpci0: vcp4@fe8df000 {
+			compatible = "renesas,vcp4-fcpci0";
+			reg = <0 0xfe8df000 0 0x200>;
+			clocks = <&cpg CPG_MOD 617>;
+			power-domains = <&pd_a3vc>;
+		};
 
-			vdpb@fe900000 {
-				reg = <0 0xfe900000 0 0x200>, <0 0xfe900200 0 0x200>;
-				interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
-					     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&cpg CPG_MOD 131>;
-				power-domains = <&pd_a2vc1>;
-			};
+		fcpci1: vcp4@fe8ff000 {
+			compatible = "renesas,vcp4-fcpci1";
+			reg = <0 0xfe8ff000 0 0x200>;
+			clocks = <&cpg CPG_MOD 616>;
+			power-domains = <&pd_a3vc>;
+		};
 
-			ivdp1c@fe8d0000 {
-				reg = <0 0xfe8d0000 0 0x200>, <0 0xfe8d0200 0 0x200>;
-				interrupts = <GIC_SPI 380 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 381 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&cpg CPG_MOD 128>;
-				power-domains = <&pd_a2vc0>;
-			};
+		fcpcs: vcp4@fe90f000 {
+			compatible = "renesas,vcp4-fcpcs";
+			reg = <0 0xfe90f000 0 0x200>;
+			clocks = <&cpg CPG_MOD 619>;
+			power-domains = <&pd_a3vc>;
+		};
 
-			fcpcs@fe90f000 {
-				reg = <0 0xfe90f000 0 0x200>;
-				clocks = <&cpg CPG_MOD 619>;
-				power-domains = <&pd_a3vc>;
-			};
+		vcpl4: vcp4@fe8f0000 {
+			compatible = "renesas,vcp4-vcpl4";
+			reg = <0 0xfe8f0000 0 0x200>, <0 0xfe8f0200 0 0x200>;
+			interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 129>;
+			power-domains = <&pd_a2vc0>;
+		};
 
-			fcpci0@fe8df000 {
-				reg = <0 0xfe8df000 0 0x200>;
-				clocks = <&cpg CPG_MOD 617>;
-				power-domains = <&pd_a3vc>;
-			};
+		vdpb: vcp4@fe900000 {
+			compatible = "renesas,vcp4-vdpb";
+			reg = <0 0xfe900000 0 0x200>, <0 0xfe900200 0 0x200>;
+			interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 131>;
+			power-domains = <&pd_a2vc1>;
+		};
 
-			fcpci1@fe8ff000 {
-				reg = <0 0xfe8ff000 0 0x200>;
-				clocks = <&cpg CPG_MOD 616>;
-				power-domains = <&pd_a3vc>;
-			};
-
-			stb@fe8a0000 {
-				reg = <0 0xfe8a0000 0 0x200>;
-				interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&cpg CPG_MOD 104>;
-				power-domains = <&pd_a3vc>;
-			};
+		vcplf: vcp4@fe910000 {
+			compatible = "renesas,vcp4-vcplf";
+			reg = <0 0xfe910000 0 0x200>, <0 0xfe910200 0 0x200>;
+			interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 130>;
+			power-domains = <&pd_a2vc1>;
 		};
 
 		vspbc@fe920000 {
@@ -1731,7 +1733,7 @@
 			renesas,has-lut;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <2>;
-			power-domains = <&pd_a3vp>;
+			power-domains = <&pd_always_on>;
 		};
 
 		vspd1: vsp@fea28000 {
@@ -1745,7 +1747,7 @@
 			renesas,has-lut;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <2>;
-			power-domains = <&pd_a3vp>;
+			power-domains = <&pd_always_on>;
 		};
 
 		vspd2: vsp@fea30000 {
@@ -1759,7 +1761,7 @@
 			renesas,has-lut;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <2>;
-			power-domains = <&pd_a3vp>;
+			power-domains = <&pd_always_on>;
 		};
 
 		vspd3: vsp@fea38000 {
@@ -1773,7 +1775,7 @@
 			renesas,has-lut;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <2>;
-			power-domains = <&pd_a3vp>;
+			power-domains = <&pd_always_on>;
 		};
 
 		hdmi0: hdmi@fead0000 {

@@ -92,6 +92,10 @@
 		};
 	};
 
+	mmngr {
+		compatible = "renesas,mmngr";
+	};
+
 	x12_clk: x12_clk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -154,6 +158,10 @@
 				remote-endpoint = <&adv7123_out>;
 			};
 		};
+	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
 	};
 
 	lvds-encoder {
