@@ -1,6 +1,6 @@
 /* Renesas Ethernet AVB device driver
  *
- * Copyright (C) 2014-2015 Renesas Electronics Corporation
+ * Copyright (C) 2014-2016 Renesas Electronics Corporation
  * Copyright (C) 2015 Renesas Solutions Corp.
  * Copyright (C) 2015 Cogent Embedded, Inc. <source@cogentembedded.com>
  *
@@ -829,11 +829,19 @@ static irqreturn_t ravb_multi_interrupt(int irq, void *dev_id)
 	struct net_device *ndev = dev_id;
 	struct ravb_private *priv = netdev_priv(ndev);
 	irqreturn_t result = IRQ_NONE;
-	u32 iss;
+	u32 iss, tis;
 
 	spin_lock(&priv->lock);
 	/* Get interrupt status */
 	iss = ravb_read(ndev, ISS);
+
+	/* Timestamp updated */
+	tis  = ravb_read(ndev, TIS);
+	if (tis & TIS_TFUF) {
+		ravb_write(ndev, TIS_TFUF, TID);
+		ravb_get_tx_tstamp(ndev);
+		result = IRQ_HANDLED;
+	}
 
 	/* Error status summary */
 	if (iss & ISS_ES) {
@@ -864,13 +872,6 @@ static irqreturn_t ravb_dmaq_interrupt(int irq, void *dev_id, int ravb_queue)
 	ric0 = ravb_read(ndev, RIC0);
 	tis  = ravb_read(ndev, TIS);
 	tic  = ravb_read(ndev, TIC);
-
-	/* Timestamp updated */
-	if (tis & TIS_TFUF) {
-		ravb_write(ndev, TIS_TFUF, TID);
-		ravb_get_tx_tstamp(ndev);
-		result = IRQ_HANDLED;
-	}
 
 	/* Best effort queue RX/TX */
 	if (((ris0 & ric0) & BIT(q)) ||
