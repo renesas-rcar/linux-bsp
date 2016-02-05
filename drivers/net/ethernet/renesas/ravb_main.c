@@ -838,7 +838,7 @@ static irqreturn_t ravb_multi_interrupt(int irq, void *dev_id)
 	/* Timestamp updated */
 	tis  = ravb_read(ndev, TIS);
 	if (tis & TIS_TFUF) {
-		ravb_write(ndev, TIS_TFUF, TID);
+		ravb_write(ndev, ~TIS_TFUF, TIS);
 		ravb_get_tx_tstamp(ndev);
 		result = IRQ_HANDLED;
 	}
