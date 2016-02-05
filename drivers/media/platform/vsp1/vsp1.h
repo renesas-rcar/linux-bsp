@@ -1,7 +1,7 @@
 /*
  * vsp1.h  --  R-Car VSP1 Driver
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -38,8 +38,6 @@ struct vsp1_rwpf;
 struct vsp1_sru;
 struct vsp1_uds;
 
-#define VSP1_UNDERRUN_WORKAROUND	0x01
-
 #define VSP1_MAX_RPF		5
 #define VSP1_MAX_UDS		3
 #define VSP1_MAX_WPF		4
@@ -59,7 +57,6 @@ struct vsp1_platform_data {
 struct vsp1_device_info {
 	unsigned int num_bru_inputs;
 	bool uapi;
-	unsigned int  wc;
 	bool fcpvd;
 };
 

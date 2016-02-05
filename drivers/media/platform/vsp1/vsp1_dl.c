@@ -1,7 +1,7 @@
 /*
  * vsp1_dl.h  --  R-Car VSP1 Display List
  *
- * Copyright (C) 2015 Renesas Corporation
+ * Copyright (C) 2015-2016 Renesas Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -14,6 +14,7 @@
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/gfp.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include "vsp1.h"
 #include "vsp1_dl.h"
@@ -171,7 +172,8 @@ void vsp1_dl_commit(struct vsp1_dl *dl)
 	vsp1_write(vsp1, VI6_DL_BODY_SIZE, VI6_DL_BODY_SIZE_UPD |
 		   (list->reg_count * 8));
 
-	if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND) {
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0)) {
 		dl->vsp1->dl_addr = list->dma;
 		dl->vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
 					   (list->reg_count * 8);
@@ -235,7 +237,8 @@ void vsp1_dl_irq_frame_end(struct vsp1_dl *dl)
 		vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), list->dma);
 		vsp1_write(vsp1, VI6_DL_BODY_SIZE, VI6_DL_BODY_SIZE_UPD |
 			   (list->reg_count * 8));
-		if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND) {
+		if (RCAR_PRR_IS_PRODUCT(H3) &&
+			(RCAR_PRR_CHK_CUT(H3, WS11) <= 0)) {
 			dl->vsp1->dl_addr = list->dma;
 			dl->vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
 						   (list->reg_count * 8);
@@ -276,6 +279,7 @@ struct vsp1_dl *vsp1_dl_create(struct vsp1_device *vsp1)
 {
 	struct vsp1_dl *dl;
 	unsigned int i;
+	int ret;
 
 	dl = kzalloc(sizeof(*dl), GFP_KERNEL);
 	if (!dl)
@@ -301,6 +305,12 @@ struct vsp1_dl *vsp1_dl_create(struct vsp1_device *vsp1)
 		list->in_use = false;
 		list->dma = dl->dma + VSP1_DL_BODY_SIZE * i;
 		list->body = dl->mem + VSP1_DL_BODY_SIZE * i;
+	}
+
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(dl->vsp1->dev, "product register init fail.\n");
+		return NULL;
 	}
 
 	return dl;

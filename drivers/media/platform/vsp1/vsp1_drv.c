@@ -1,7 +1,7 @@
 /*
  * vsp1_drv.c  --  R-Car VSP1 Driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -24,6 +24,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/videodev2.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <media/v4l2-subdev.h>
 
@@ -198,7 +199,8 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		ret = IRQ_HANDLED;
 	}
 
-	if (((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND) &&
+	if ((RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0)) &&
 		(status & VI6_WFP_IRQ_STA_UND))
 		vsp1_underrun_workaround(vsp1, false);
 
@@ -323,6 +325,8 @@ static void vsp1_destroy_entities(struct vsp1_device *vsp1)
 	struct vsp1_entity *entity, *_entity;
 	struct vsp1_video *video, *_video;
 
+	v4l2_device_unregister(&vsp1->v4l2_dev);
+
 	list_for_each_entry_safe(entity, _entity, &vsp1->entities, list_dev) {
 		list_del(&entity->list_dev);
 		vsp1_entity_destroy(entity);
@@ -333,7 +337,6 @@ static void vsp1_destroy_entities(struct vsp1_device *vsp1)
 		vsp1_video_cleanup(video);
 	}
 
-	v4l2_device_unregister(&vsp1->v4l2_dev);
 	media_device_unregister(&vsp1->media_dev);
 
 	if (!vsp1->info->uapi)
@@ -534,7 +537,8 @@ int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index)
 	if (!(status & VI6_STATUS_SYS_ACT(index)))
 		return 0;
 
-	if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND)
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
 		vsp1_underrun_workaround(vsp1, true);
 	else
 		vsp1_write(vsp1, VI6_SRESET, VI6_SRESET_SRTS(index));
@@ -646,6 +650,9 @@ done:
  */
 void vsp1_device_put(struct vsp1_device *vsp1)
 {
+	if (vsp1->ref_count == 0)
+		return;
+
 	mutex_lock(&vsp1->lock);
 
 	if (--vsp1->ref_count == 0) {
@@ -825,7 +832,14 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, vsp1);
 
-	if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND)
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(vsp1->dev, "product register init fail.\n");
+		return ret;
+	}
+
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
 		fcpv_reg[vsp1->index] =
 			 ioremap(fcpvd_offset[vsp1->index], 0x20);
 
@@ -836,9 +850,11 @@ static int vsp1_remove(struct platform_device *pdev)
 {
 	struct vsp1_device *vsp1 = platform_get_drvdata(pdev);
 
+	vsp1_device_put(vsp1);
 	vsp1_destroy_entities(vsp1);
 
-	if ((vsp1->info->wc) & VSP1_UNDERRUN_WORKAROUND)
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
 		iounmap(fcpv_reg[vsp1->index]);
 
 	return 0;
@@ -847,21 +863,18 @@ static int vsp1_remove(struct platform_device *pdev)
 static const struct vsp1_device_info vsp1_gen2_info = {
 	.num_bru_inputs = 4,
 	.uapi = true,
-	.wc = 0,
 	.fcpvd = false,
 };
 
 static const struct vsp1_device_info vsp1_gen3_info = {
 	.num_bru_inputs = 5,
 	.uapi = true,
-	.wc = 0,
 	.fcpvd = false,
 };
 
 static const struct vsp1_device_info vsp1_gen3_vspd_info = {
 	.num_bru_inputs = 5,
 	.uapi = false,
-	.wc = VSP1_UNDERRUN_WORKAROUND,
 	.fcpvd = true,
 };
 
