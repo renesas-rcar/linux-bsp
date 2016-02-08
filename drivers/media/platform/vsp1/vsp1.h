@@ -55,6 +55,7 @@ struct vsp1_device_info {
 	unsigned int wpf_count;
 	unsigned int num_bru_inputs;
 	bool uapi;
+	bool fcpvd;
 };
 
 struct vsp1_device {
@@ -63,6 +64,7 @@ struct vsp1_device {
 
 	void __iomem *mmio;
 	struct clk *clock;
+	struct clk *fcpvd_clock;
 
 	struct mutex lock;
 	int ref_count;
