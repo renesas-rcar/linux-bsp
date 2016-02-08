@@ -1,7 +1,7 @@
 /*
  * vsp1.h  --  R-Car VSP1 Driver
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -87,10 +87,15 @@ struct vsp1_device {
 	struct vsp1_drm *drm;
 
 	bool use_dl;
+	int index;
+
+	dma_addr_t dl_addr;
+	unsigned int dl_body;
 };
 
 int vsp1_device_get(struct vsp1_device *vsp1);
 void vsp1_device_put(struct vsp1_device *vsp1);
+void vsp1_underrun_workaround(struct vsp1_device *vsp1, bool reset);
 
 int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index);
 
