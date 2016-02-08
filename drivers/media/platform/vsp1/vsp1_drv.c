@@ -595,6 +595,9 @@ done:
  */
 void vsp1_device_put(struct vsp1_device *vsp1)
 {
+	if (vsp1->ref_count == 0)
+		return;
+
 	mutex_lock(&vsp1->lock);
 
 	if (--vsp1->ref_count == 0)
