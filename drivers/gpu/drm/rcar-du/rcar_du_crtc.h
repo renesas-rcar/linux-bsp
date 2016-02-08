@@ -75,6 +75,7 @@ void rcar_du_crtc_enable_vblank(struct rcar_du_crtc *rcrtc, bool enable);
 void rcar_du_crtc_cancel_page_flip(struct rcar_du_crtc *rcrtc,
 				   struct drm_file *file);
 void rcar_du_crtc_suspend(struct rcar_du_crtc *rcrtc);
+void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc);
 void rcar_du_crtc_resume(struct rcar_du_crtc *rcrtc);
 
 void rcar_du_crtc_route_output(struct drm_crtc *crtc,
