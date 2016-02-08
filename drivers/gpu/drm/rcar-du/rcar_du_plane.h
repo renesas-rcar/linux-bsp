@@ -1,7 +1,7 @@
 /*
  * rcar_du_plane.h  --  R-Car Display Unit Planes
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -33,6 +33,11 @@ enum rcar_du_plane_source {
 	RCAR_DU_PLANE_VSPD0,
 	RCAR_DU_PLANE_VSPD1,
 };
+
+#define DU_CH_0		0
+#define DU_CH_1		1
+#define DU_CH_2		2
+#define DU_CH_3		3
 
 struct rcar_du_plane {
 	struct drm_plane plane;

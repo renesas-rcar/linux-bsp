@@ -57,6 +57,14 @@ struct rcar_du_crtc {
 	int lvds_ch;
 };
 
+struct dpll_info {
+	unsigned int dpllclk;
+	unsigned int diff;
+	unsigned int fdpll;
+	unsigned int n;
+	unsigned int m;
+};
+
 #define to_rcar_crtc(c)	container_of(c, struct rcar_du_crtc, crtc)
 
 enum rcar_du_output {
