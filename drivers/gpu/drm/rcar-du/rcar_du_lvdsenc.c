@@ -1,7 +1,7 @@
 /*
  * rcar_du_lvdsenc.c  --  R-Car Display Unit LVDS Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -125,7 +125,7 @@ static void rcar_du_lvdsenc_start_gen3(struct rcar_du_lvdsenc *lvds,
 			LVDCR1_CLKSTBY_GEN3);
 }
 
-static int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
+int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 				 struct rcar_du_crtc *rcrtc)
 {
 	u32 lvdhcr;
@@ -164,15 +164,16 @@ static int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 	else
 		rcar_du_lvdsenc_start_gen3(lvds, rcrtc);
 
+	rcrtc->lvds_ch = lvds->index;
 	lvds->enabled = true;
 
 	return 0;
 }
 
-static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
+int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 {
 	if (!lvds->enabled)
-		return;
+		return -1;
 
 	rcar_lvds_write(lvds, LVDCR0, 0);
 	rcar_lvds_write(lvds, LVDCR1, 0);
@@ -180,6 +181,25 @@ static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 	clk_disable_unprepare(lvds->clock);
 
 	lvds->enabled = false;
+
+	return 0;
+}
+
+static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
+{
+	int ret;
+	unsigned int i;
+
+	if (!lvds->enabled)
+		return;
+
+	ret = rcar_du_lvdsenc_stop_suspend(lvds);
+	if (ret < 0)
+		return;
+
+	for (i = 0; i < lvds->dev->num_crtcs; ++i)
+		if (lvds->index == lvds->dev->crtcs[i].lvds_ch)
+			lvds->dev->crtcs[i].lvds_ch = -1;
 }
 
 int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds, struct drm_crtc *crtc,

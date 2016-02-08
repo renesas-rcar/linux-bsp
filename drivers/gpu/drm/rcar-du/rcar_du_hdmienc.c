@@ -36,7 +36,7 @@ struct rcar_du_hdmienc {
 #define to_rcar_hdmienc(e)	(to_rcar_encoder(e)->hdmi)
 #define to_slave_funcs(e)	(to_rcar_encoder(e)->slave.slave_funcs)
 
-static void rcar_du_hdmienc_disable(struct drm_encoder *encoder)
+void rcar_du_hdmienc_disable(struct drm_encoder *encoder)
 {
 	struct rcar_du_hdmienc *hdmienc = to_rcar_hdmienc(encoder);
 	const struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);
@@ -56,7 +56,7 @@ static void rcar_du_hdmienc_disable(struct drm_encoder *encoder)
 	hdmienc->enabled = false;
 }
 
-static void rcar_du_hdmienc_enable(struct drm_encoder *encoder)
+void rcar_du_hdmienc_enable(struct drm_encoder *encoder)
 {
 	struct rcar_du_hdmienc *hdmienc = to_rcar_hdmienc(encoder);
 	const struct drm_encoder_slave_funcs *sfuncs = to_slave_funcs(encoder);

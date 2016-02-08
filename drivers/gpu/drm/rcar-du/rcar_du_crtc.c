@@ -1,7 +1,7 @@
 /*
  * rcar_du_crtc.c  --  R-Car Display Unit CRTCs
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -649,6 +649,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	rcrtc->mmio_offset = mmio_offsets[index];
 	rcrtc->index = index;
 	rcrtc->enabled = false;
+	rcrtc->lvds_ch = -1;
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
 		primary = &rcrtc->vsp->planes[0].plane;
