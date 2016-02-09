@@ -59,12 +59,18 @@ struct gpio_rcar_priv {
 
 static inline u32 gpio_rcar_read(struct gpio_rcar_priv *p, int offs)
 {
+	WARN(pm_runtime_suspended(&p->pdev->dev),
+				  "%s: %s is runtime-suspended\n", __func__,
+				  dev_name(&p->pdev->dev));
 	return ioread32(p->base + offs);
 }
 
 static inline void gpio_rcar_write(struct gpio_rcar_priv *p, int offs,
 				   u32 value)
 {
+	WARN(pm_runtime_suspended(&p->pdev->dev),
+				  "%s: %s is runtime-suspended\n", __func__,
+				  dev_name(&p->pdev->dev));
 	iowrite32(value, p->base + offs);
 }
 
@@ -86,7 +92,11 @@ static void gpio_rcar_irq_disable(struct irq_data *d)
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
 	struct gpio_rcar_priv *p = gpiochip_get_data(gc);
 
+	if (pm_runtime_get_sync(&p->pdev->dev) < 0)
+		return;
+
 	gpio_rcar_write(p, INTMSK, ~BIT(irqd_to_hwirq(d)));
+	pm_runtime_put(&p->pdev->dev);
 }
 
 static void gpio_rcar_irq_enable(struct irq_data *d)
@@ -94,7 +104,11 @@ static void gpio_rcar_irq_enable(struct irq_data *d)
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
 	struct gpio_rcar_priv *p = gpiochip_get_data(gc);
 
+	if (pm_runtime_get_sync(&p->pdev->dev) < 0)
+		return;
+
 	gpio_rcar_write(p, MSKCLR, BIT(irqd_to_hwirq(d)));
+	pm_runtime_put(&p->pdev->dev);
 }
 
 static void gpio_rcar_config_interrupt_input_mode(struct gpio_rcar_priv *p,
@@ -104,6 +118,9 @@ static void gpio_rcar_config_interrupt_input_mode(struct gpio_rcar_priv *p,
 						  bool both)
 {
 	unsigned long flags;
+
+	if (pm_runtime_get_sync(&p->pdev->dev) < 0)
+		return;
 
 	/* follow steps in the GPIO documentation for
 	 * "Setting Edge-Sensitive Interrupt Input Mode" and
@@ -130,6 +147,8 @@ static void gpio_rcar_config_interrupt_input_mode(struct gpio_rcar_priv *p,
 		gpio_rcar_write(p, INTCLR, BIT(hwirq));
 
 	spin_unlock_irqrestore(&p->lock, flags);
+
+	pm_runtime_put(&p->pdev->dev);
 }
 
 static int gpio_rcar_irq_set_type(struct irq_data *d, unsigned int type)
@@ -194,6 +213,27 @@ static int gpio_rcar_irq_set_wake(struct irq_data *d, unsigned int on)
 		clk_disable(p->clk);
 
 	return 0;
+}
+
+static int gpio_rcar_irq_request_resources(struct irq_data *d)
+{
+	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
+	struct gpio_rcar_priv *p = gpiochip_get_data(gc);
+	int error;
+
+	error = pm_runtime_get_sync(&p->pdev->dev);
+	if (error < 0)
+		return error;
+
+	return 0;
+}
+
+static void gpio_rcar_irq_release_resources(struct irq_data *d)
+{
+	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
+	struct gpio_rcar_priv *p = gpiochip_get_data(gc);
+
+	pm_runtime_put(&p->pdev->dev);
 }
 
 static irqreturn_t gpio_rcar_irq_handler(int irq, void *dev_id)
@@ -450,6 +490,8 @@ static int gpio_rcar_probe(struct platform_device *pdev)
 	irq_chip->irq_unmask = gpio_rcar_irq_enable;
 	irq_chip->irq_set_type = gpio_rcar_irq_set_type;
 	irq_chip->irq_set_wake = gpio_rcar_irq_set_wake;
+	irq_chip->irq_request_resources = gpio_rcar_irq_request_resources;
+	irq_chip->irq_release_resources = gpio_rcar_irq_release_resources;
 	irq_chip->flags	= IRQCHIP_SET_TYPE_MASKED | IRQCHIP_MASK_ON_SUSPEND;
 
 	ret = gpiochip_add_data(gpio_chip, p);
