@@ -1,0 +1,51 @@
+fixes
+
+next/fixes-non-critical
+
+next/cleanup
+	patch
+		ARM: drop unused Makefile.boot of Multiplatform SoCs
+		ARM: integrator: remove redundant select in Kconfig
+		ARM: netx: remove redundant "depends on ARCH_NETX"
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup-for-v4.6
+	mvebu/cleanup
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.6-1
+
+next/soc
+	patch
+		ARM: debug: add support for Palmchip BK-310x UART
+	mvebu/drivers
+		git://git.infradead.org/linux-mvebu tags/mvebu-drivers-4.6-1
+
+next/arm64
+	patch
+		arm64: defconfig: add spmi and usb related configs
+
+next/dt
+
+next/dt64
+	patch
+		MAINTAINERS: Adding Maintainers for AMD Seattle Device Tree
+		dtb: amd: Fix GICv2 hypervisor and virtual interface sizes
+		dtb: amd: Fix DMA ranges in device tree
+		dtb: amd: Fix typo in SPI device nodes
+		dtb: amd: Misc changes for I2C device nodes
+		dtb: amd: Misc changes for SATA device tree nodes
+		dtb: amd: Misc changes for GPIO devices
+		dtb: amd: Add PERF CCN-504 device tree node
+		dtb: amd: Add KCS device tree node
+		dtb: amd: Add AMD XGBE device tree file
+		dtb: amd: Add support for new AMD Overdrive boards
+		dtb: amd: Add support for AMD/Linaro 96Boards Enterprise Edition Server board
+	renesas/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.6
+
+next/defconfig
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v4.6
+	mvebu/defconfig
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-4.6-1
+
+next/drivers
+
