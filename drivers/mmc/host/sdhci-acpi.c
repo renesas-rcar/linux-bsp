@@ -388,6 +388,8 @@ static int sdhci_acpi_probe(struct platform_device *pdev)
 		pm_runtime_enable(dev);
 	}
 
+	device_enable_async_suspend(dev);
+
 	return 0;
 
 err_free:
