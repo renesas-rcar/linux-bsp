@@ -3,257 +3,110 @@
 
 /* New register for SM750LE */
 #define DE_STATE1                                        0x100054
-#define DE_STATE1_DE_ABORT                               0:0
-#define DE_STATE1_DE_ABORT_OFF                           0
-#define DE_STATE1_DE_ABORT_ON                            1
+#define DE_STATE1_DE_ABORT                               BIT(0)
 
 #define DE_STATE2                                        0x100058
-#define DE_STATE2_DE_FIFO                                3:3
-#define DE_STATE2_DE_FIFO_NOTEMPTY                       0
-#define DE_STATE2_DE_FIFO_EMPTY                          1
-#define DE_STATE2_DE_STATUS                              2:2
-#define DE_STATE2_DE_STATUS_IDLE                         0
-#define DE_STATE2_DE_STATUS_BUSY                         1
-#define DE_STATE2_DE_MEM_FIFO                            1:1
-#define DE_STATE2_DE_MEM_FIFO_NOTEMPTY                   0
-#define DE_STATE2_DE_MEM_FIFO_EMPTY                      1
-#define DE_STATE2_DE_RESERVED                            0:0
-
-
+#define DE_STATE2_DE_FIFO_EMPTY                          BIT(3)
+#define DE_STATE2_DE_STATUS_BUSY                         BIT(2)
+#define DE_STATE2_DE_MEM_FIFO_EMPTY                      BIT(1)
 
 #define SYSTEM_CTRL                                   0x000000
-#define SYSTEM_CTRL_DPMS                              31:30
-#define SYSTEM_CTRL_DPMS_VPHP                         0
-#define SYSTEM_CTRL_DPMS_VPHN                         1
-#define SYSTEM_CTRL_DPMS_VNHP                         2
-#define SYSTEM_CTRL_DPMS_VNHN                         3
-#define SYSTEM_CTRL_PCI_BURST                         29:29
-#define SYSTEM_CTRL_PCI_BURST_OFF                     0
-#define SYSTEM_CTRL_PCI_BURST_ON                      1
-#define SYSTEM_CTRL_PCI_MASTER                        25:25
-#define SYSTEM_CTRL_PCI_MASTER_OFF                    0
-#define SYSTEM_CTRL_PCI_MASTER_ON                     1
-#define SYSTEM_CTRL_LATENCY_TIMER                     24:24
-#define SYSTEM_CTRL_LATENCY_TIMER_ON                  0
-#define SYSTEM_CTRL_LATENCY_TIMER_OFF                 1
-#define SYSTEM_CTRL_DE_FIFO                           23:23
-#define SYSTEM_CTRL_DE_FIFO_NOTEMPTY                  0
-#define SYSTEM_CTRL_DE_FIFO_EMPTY                     1
-#define SYSTEM_CTRL_DE_STATUS                         22:22
-#define SYSTEM_CTRL_DE_STATUS_IDLE                    0
-#define SYSTEM_CTRL_DE_STATUS_BUSY                    1
-#define SYSTEM_CTRL_DE_MEM_FIFO                       21:21
-#define SYSTEM_CTRL_DE_MEM_FIFO_NOTEMPTY              0
-#define SYSTEM_CTRL_DE_MEM_FIFO_EMPTY                 1
-#define SYSTEM_CTRL_CSC_STATUS                        20:20
-#define SYSTEM_CTRL_CSC_STATUS_IDLE                   0
-#define SYSTEM_CTRL_CSC_STATUS_BUSY                   1
-#define SYSTEM_CTRL_CRT_VSYNC                         19:19
-#define SYSTEM_CTRL_CRT_VSYNC_INACTIVE                0
-#define SYSTEM_CTRL_CRT_VSYNC_ACTIVE                  1
-#define SYSTEM_CTRL_PANEL_VSYNC                       18:18
-#define SYSTEM_CTRL_PANEL_VSYNC_INACTIVE              0
-#define SYSTEM_CTRL_PANEL_VSYNC_ACTIVE                1
-#define SYSTEM_CTRL_CURRENT_BUFFER                    17:17
-#define SYSTEM_CTRL_CURRENT_BUFFER_NORMAL             0
-#define SYSTEM_CTRL_CURRENT_BUFFER_FLIP_PENDING       1
-#define SYSTEM_CTRL_DMA_STATUS                        16:16
-#define SYSTEM_CTRL_DMA_STATUS_IDLE                   0
-#define SYSTEM_CTRL_DMA_STATUS_BUSY                   1
-#define SYSTEM_CTRL_PCI_BURST_READ                    15:15
-#define SYSTEM_CTRL_PCI_BURST_READ_OFF                0
-#define SYSTEM_CTRL_PCI_BURST_READ_ON                 1
-#define SYSTEM_CTRL_DE_ABORT                          13:13
-#define SYSTEM_CTRL_DE_ABORT_OFF                      0
-#define SYSTEM_CTRL_DE_ABORT_ON                       1
-#define SYSTEM_CTRL_PCI_SUBSYS_ID_LOCK                11:11
-#define SYSTEM_CTRL_PCI_SUBSYS_ID_LOCK_OFF            0
-#define SYSTEM_CTRL_PCI_SUBSYS_ID_LOCK_ON             1
-#define SYSTEM_CTRL_PCI_RETRY                         7:7
-#define SYSTEM_CTRL_PCI_RETRY_ON                      0
-#define SYSTEM_CTRL_PCI_RETRY_OFF                     1
-#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE         5:4
-#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE_1       0
-#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE_2       1
-#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE_4       2
-#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE_8       3
-#define SYSTEM_CTRL_CRT_TRISTATE                      3:3
-#define SYSTEM_CTRL_CRT_TRISTATE_OFF                  0
-#define SYSTEM_CTRL_CRT_TRISTATE_ON                   1
-#define SYSTEM_CTRL_PCIMEM_TRISTATE                   2:2
-#define SYSTEM_CTRL_PCIMEM_TRISTATE_OFF               0
-#define SYSTEM_CTRL_PCIMEM_TRISTATE_ON                1
-#define SYSTEM_CTRL_LOCALMEM_TRISTATE                 1:1
-#define SYSTEM_CTRL_LOCALMEM_TRISTATE_OFF             0
-#define SYSTEM_CTRL_LOCALMEM_TRISTATE_ON              1
-#define SYSTEM_CTRL_PANEL_TRISTATE                    0:0
-#define SYSTEM_CTRL_PANEL_TRISTATE_OFF                0
-#define SYSTEM_CTRL_PANEL_TRISTATE_ON                 1
+#define SYSTEM_CTRL_DPMS_MASK                         (0x3 << 30)
+#define SYSTEM_CTRL_DPMS_VPHP                         (0x0 << 30)
+#define SYSTEM_CTRL_DPMS_VPHN                         (0x1 << 30)
+#define SYSTEM_CTRL_DPMS_VNHP                         (0x2 << 30)
+#define SYSTEM_CTRL_DPMS_VNHN                         (0x3 << 30)
+#define SYSTEM_CTRL_PCI_BURST                         BIT(29)
+#define SYSTEM_CTRL_PCI_MASTER                        BIT(25)
+#define SYSTEM_CTRL_LATENCY_TIMER_OFF                 BIT(24)
+#define SYSTEM_CTRL_DE_FIFO_EMPTY                     BIT(23)
+#define SYSTEM_CTRL_DE_STATUS_BUSY                    BIT(22)
+#define SYSTEM_CTRL_DE_MEM_FIFO_EMPTY                 BIT(21)
+#define SYSTEM_CTRL_CSC_STATUS_BUSY                   BIT(20)
+#define SYSTEM_CTRL_CRT_VSYNC_ACTIVE                  BIT(19)
+#define SYSTEM_CTRL_PANEL_VSYNC_ACTIVE                BIT(18)
+#define SYSTEM_CTRL_CURRENT_BUFFER_FLIP_PENDING       BIT(17)
+#define SYSTEM_CTRL_DMA_STATUS_BUSY                   BIT(16)
+#define SYSTEM_CTRL_PCI_BURST_READ                    BIT(15)
+#define SYSTEM_CTRL_DE_ABORT                          BIT(13)
+#define SYSTEM_CTRL_PCI_SUBSYS_ID_LOCK                BIT(11)
+#define SYSTEM_CTRL_PCI_RETRY_OFF                     BIT(7)
+#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE_MASK    (0x3 << 4)
+#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE_1       (0x0 << 4)
+#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE_2       (0x1 << 4)
+#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE_4       (0x2 << 4)
+#define SYSTEM_CTRL_PCI_SLAVE_BURST_READ_SIZE_8       (0x3 << 4)
+#define SYSTEM_CTRL_CRT_TRISTATE                      BIT(3)
+#define SYSTEM_CTRL_PCIMEM_TRISTATE                   BIT(2)
+#define SYSTEM_CTRL_LOCALMEM_TRISTATE                 BIT(1)
+#define SYSTEM_CTRL_PANEL_TRISTATE                    BIT(0)
 
 #define MISC_CTRL                                     0x000004
-#define MISC_CTRL_DRAM_RERESH_COUNT                   27:27
-#define MISC_CTRL_DRAM_RERESH_COUNT_1ROW              0
-#define MISC_CTRL_DRAM_RERESH_COUNT_3ROW              1
-#define MISC_CTRL_DRAM_REFRESH_TIME                   26:25
-#define MISC_CTRL_DRAM_REFRESH_TIME_8                 0
-#define MISC_CTRL_DRAM_REFRESH_TIME_16                1
-#define MISC_CTRL_DRAM_REFRESH_TIME_32                2
-#define MISC_CTRL_DRAM_REFRESH_TIME_64                3
-#define MISC_CTRL_INT_OUTPUT                          24:24
-#define MISC_CTRL_INT_OUTPUT_NORMAL                   0
-#define MISC_CTRL_INT_OUTPUT_INVERT                   1
-#define MISC_CTRL_PLL_CLK_COUNT                       23:23
-#define MISC_CTRL_PLL_CLK_COUNT_OFF                   0
-#define MISC_CTRL_PLL_CLK_COUNT_ON                    1
-#define MISC_CTRL_DAC_POWER                           20:20
-#define MISC_CTRL_DAC_POWER_ON                        0
-#define MISC_CTRL_DAC_POWER_OFF                       1
-#define MISC_CTRL_CLK_SELECT                          16:16
-#define MISC_CTRL_CLK_SELECT_OSC                      0
-#define MISC_CTRL_CLK_SELECT_TESTCLK                  1
-#define MISC_CTRL_DRAM_COLUMN_SIZE                    15:14
-#define MISC_CTRL_DRAM_COLUMN_SIZE_256                0
-#define MISC_CTRL_DRAM_COLUMN_SIZE_512                1
-#define MISC_CTRL_DRAM_COLUMN_SIZE_1024               2
-#define MISC_CTRL_LOCALMEM_SIZE                       13:12
-#define MISC_CTRL_LOCALMEM_SIZE_8M                    3
-#define MISC_CTRL_LOCALMEM_SIZE_16M                   0
-#define MISC_CTRL_LOCALMEM_SIZE_32M                   1
-#define MISC_CTRL_LOCALMEM_SIZE_64M                   2
-#define MISC_CTRL_DRAM_TWTR                           11:11
-#define MISC_CTRL_DRAM_TWTR_2CLK                      0
-#define MISC_CTRL_DRAM_TWTR_1CLK                      1
-#define MISC_CTRL_DRAM_TWR                            10:10
-#define MISC_CTRL_DRAM_TWR_3CLK                       0
-#define MISC_CTRL_DRAM_TWR_2CLK                       1
-#define MISC_CTRL_DRAM_TRP                            9:9
-#define MISC_CTRL_DRAM_TRP_3CLK                       0
-#define MISC_CTRL_DRAM_TRP_4CLK                       1
-#define MISC_CTRL_DRAM_TRFC                           8:8
-#define MISC_CTRL_DRAM_TRFC_12CLK                     0
-#define MISC_CTRL_DRAM_TRFC_14CLK                     1
-#define MISC_CTRL_DRAM_TRAS                           7:7
-#define MISC_CTRL_DRAM_TRAS_7CLK                      0
-#define MISC_CTRL_DRAM_TRAS_8CLK                      1
-#define MISC_CTRL_LOCALMEM_RESET                      6:6
-#define MISC_CTRL_LOCALMEM_RESET_RESET                0
-#define MISC_CTRL_LOCALMEM_RESET_NORMAL               1
-#define MISC_CTRL_LOCALMEM_STATE                      5:5
-#define MISC_CTRL_LOCALMEM_STATE_ACTIVE               0
-#define MISC_CTRL_LOCALMEM_STATE_INACTIVE             1
-#define MISC_CTRL_CPU_CAS_LATENCY                     4:4
-#define MISC_CTRL_CPU_CAS_LATENCY_2CLK                0
-#define MISC_CTRL_CPU_CAS_LATENCY_3CLK                1
-#define MISC_CTRL_DLL                                 3:3
-#define MISC_CTRL_DLL_ON                              0
-#define MISC_CTRL_DLL_OFF                             1
-#define MISC_CTRL_DRAM_OUTPUT                         2:2
-#define MISC_CTRL_DRAM_OUTPUT_LOW                     0
-#define MISC_CTRL_DRAM_OUTPUT_HIGH                    1
-#define MISC_CTRL_LOCALMEM_BUS_SIZE                   1:1
-#define MISC_CTRL_LOCALMEM_BUS_SIZE_32                0
-#define MISC_CTRL_LOCALMEM_BUS_SIZE_64                1
-#define MISC_CTRL_EMBEDDED_LOCALMEM                   0:0
-#define MISC_CTRL_EMBEDDED_LOCALMEM_ON                0
-#define MISC_CTRL_EMBEDDED_LOCALMEM_OFF               1
+#define MISC_CTRL_DRAM_RERESH_COUNT                   BIT(27)
+#define MISC_CTRL_DRAM_REFRESH_TIME_MASK              (0x3 << 25)
+#define MISC_CTRL_DRAM_REFRESH_TIME_8                 (0x0 << 25)
+#define MISC_CTRL_DRAM_REFRESH_TIME_16                (0x1 << 25)
+#define MISC_CTRL_DRAM_REFRESH_TIME_32                (0x2 << 25)
+#define MISC_CTRL_DRAM_REFRESH_TIME_64                (0x3 << 25)
+#define MISC_CTRL_INT_OUTPUT_INVERT                   BIT(24)
+#define MISC_CTRL_PLL_CLK_COUNT                       BIT(23)
+#define MISC_CTRL_DAC_POWER_OFF                       BIT(20)
+#define MISC_CTRL_CLK_SELECT_TESTCLK                  BIT(16)
+#define MISC_CTRL_DRAM_COLUMN_SIZE_MASK               (0x3 << 14)
+#define MISC_CTRL_DRAM_COLUMN_SIZE_256                (0x0 << 14)
+#define MISC_CTRL_DRAM_COLUMN_SIZE_512                (0x1 << 14)
+#define MISC_CTRL_DRAM_COLUMN_SIZE_1024               (0x2 << 14)
+#define MISC_CTRL_LOCALMEM_SIZE_MASK                  (0x3 << 12)
+#define MISC_CTRL_LOCALMEM_SIZE_8M                    (0x3 << 12)
+#define MISC_CTRL_LOCALMEM_SIZE_16M                   (0x0 << 12)
+#define MISC_CTRL_LOCALMEM_SIZE_32M                   (0x1 << 12)
+#define MISC_CTRL_LOCALMEM_SIZE_64M                   (0x2 << 12)
+#define MISC_CTRL_DRAM_TWTR                           BIT(11)
+#define MISC_CTRL_DRAM_TWR                            BIT(10)
+#define MISC_CTRL_DRAM_TRP                            BIT(9)
+#define MISC_CTRL_DRAM_TRFC                           BIT(8)
+#define MISC_CTRL_DRAM_TRAS                           BIT(7)
+#define MISC_CTRL_LOCALMEM_RESET                      BIT(6)
+#define MISC_CTRL_LOCALMEM_STATE_INACTIVE             BIT(5)
+#define MISC_CTRL_CPU_CAS_LATENCY                     BIT(4)
+#define MISC_CTRL_DLL_OFF                             BIT(3)
+#define MISC_CTRL_DRAM_OUTPUT_HIGH                    BIT(2)
+#define MISC_CTRL_LOCALMEM_BUS_SIZE                   BIT(1)
+#define MISC_CTRL_EMBEDDED_LOCALMEM_OFF               BIT(0)
 
 #define GPIO_MUX                                      0x000008
-#define GPIO_MUX_31                                   31:31
-#define GPIO_MUX_31_GPIO                              0
-#define GPIO_MUX_31_I2C                               1
-#define GPIO_MUX_30                                   30:30
-#define GPIO_MUX_30_GPIO                              0
-#define GPIO_MUX_30_I2C                               1
-#define GPIO_MUX_29                                   29:29
-#define GPIO_MUX_29_GPIO                              0
-#define GPIO_MUX_29_SSP1                              1
-#define GPIO_MUX_28                                   28:28
-#define GPIO_MUX_28_GPIO                              0
-#define GPIO_MUX_28_SSP1                              1
-#define GPIO_MUX_27                                   27:27
-#define GPIO_MUX_27_GPIO                              0
-#define GPIO_MUX_27_SSP1                              1
-#define GPIO_MUX_26                                   26:26
-#define GPIO_MUX_26_GPIO                              0
-#define GPIO_MUX_26_SSP1                              1
-#define GPIO_MUX_25                                   25:25
-#define GPIO_MUX_25_GPIO                              0
-#define GPIO_MUX_25_SSP1                              1
-#define GPIO_MUX_24                                   24:24
-#define GPIO_MUX_24_GPIO                              0
-#define GPIO_MUX_24_SSP0                              1
-#define GPIO_MUX_23                                   23:23
-#define GPIO_MUX_23_GPIO                              0
-#define GPIO_MUX_23_SSP0                              1
-#define GPIO_MUX_22                                   22:22
-#define GPIO_MUX_22_GPIO                              0
-#define GPIO_MUX_22_SSP0                              1
-#define GPIO_MUX_21                                   21:21
-#define GPIO_MUX_21_GPIO                              0
-#define GPIO_MUX_21_SSP0                              1
-#define GPIO_MUX_20                                   20:20
-#define GPIO_MUX_20_GPIO                              0
-#define GPIO_MUX_20_SSP0                              1
-#define GPIO_MUX_19                                   19:19
-#define GPIO_MUX_19_GPIO                              0
-#define GPIO_MUX_19_PWM                               1
-#define GPIO_MUX_18                                   18:18
-#define GPIO_MUX_18_GPIO                              0
-#define GPIO_MUX_18_PWM                               1
-#define GPIO_MUX_17                                   17:17
-#define GPIO_MUX_17_GPIO                              0
-#define GPIO_MUX_17_PWM                               1
-#define GPIO_MUX_16                                   16:16
-#define GPIO_MUX_16_GPIO_ZVPORT                       0
-#define GPIO_MUX_16_TEST_DATA                         1
-#define GPIO_MUX_15                                   15:15
-#define GPIO_MUX_15_GPIO_ZVPORT                       0
-#define GPIO_MUX_15_TEST_DATA                         1
-#define GPIO_MUX_14                                   14:14
-#define GPIO_MUX_14_GPIO_ZVPORT                       0
-#define GPIO_MUX_14_TEST_DATA                         1
-#define GPIO_MUX_13                                   13:13
-#define GPIO_MUX_13_GPIO_ZVPORT                       0
-#define GPIO_MUX_13_TEST_DATA                         1
-#define GPIO_MUX_12                                   12:12
-#define GPIO_MUX_12_GPIO_ZVPORT                       0
-#define GPIO_MUX_12_TEST_DATA                         1
-#define GPIO_MUX_11                                   11:11
-#define GPIO_MUX_11_GPIO_ZVPORT                       0
-#define GPIO_MUX_11_TEST_DATA                         1
-#define GPIO_MUX_10                                   10:10
-#define GPIO_MUX_10_GPIO_ZVPORT                       0
-#define GPIO_MUX_10_TEST_DATA                         1
-#define GPIO_MUX_9                                    9:9
-#define GPIO_MUX_9_GPIO_ZVPORT                        0
-#define GPIO_MUX_9_TEST_DATA                          1
-#define GPIO_MUX_8                                    8:8
-#define GPIO_MUX_8_GPIO_ZVPORT                        0
-#define GPIO_MUX_8_TEST_DATA                          1
-#define GPIO_MUX_7                                    7:7
-#define GPIO_MUX_7_GPIO_ZVPORT                        0
-#define GPIO_MUX_7_TEST_DATA                          1
-#define GPIO_MUX_6                                    6:6
-#define GPIO_MUX_6_GPIO_ZVPORT                        0
-#define GPIO_MUX_6_TEST_DATA                          1
-#define GPIO_MUX_5                                    5:5
-#define GPIO_MUX_5_GPIO_ZVPORT                        0
-#define GPIO_MUX_5_TEST_DATA                          1
-#define GPIO_MUX_4                                    4:4
-#define GPIO_MUX_4_GPIO_ZVPORT                        0
-#define GPIO_MUX_4_TEST_DATA                          1
-#define GPIO_MUX_3                                    3:3
-#define GPIO_MUX_3_GPIO_ZVPORT                        0
-#define GPIO_MUX_3_TEST_DATA                          1
-#define GPIO_MUX_2                                    2:2
-#define GPIO_MUX_2_GPIO_ZVPORT                        0
-#define GPIO_MUX_2_TEST_DATA                          1
-#define GPIO_MUX_1                                    1:1
-#define GPIO_MUX_1_GPIO_ZVPORT                        0
-#define GPIO_MUX_1_TEST_DATA                          1
-#define GPIO_MUX_0                                    0:0
-#define GPIO_MUX_0_GPIO_ZVPORT                        0
-#define GPIO_MUX_0_TEST_DATA                          1
+#define GPIO_MUX_31                                   BIT(31)
+#define GPIO_MUX_30                                   BIT(30)
+#define GPIO_MUX_29                                   BIT(29)
+#define GPIO_MUX_28                                   BIT(28)
+#define GPIO_MUX_27                                   BIT(27)
+#define GPIO_MUX_26                                   BIT(26)
+#define GPIO_MUX_25                                   BIT(25)
+#define GPIO_MUX_24                                   BIT(24)
+#define GPIO_MUX_23                                   BIT(23)
+#define GPIO_MUX_22                                   BIT(22)
+#define GPIO_MUX_21                                   BIT(21)
+#define GPIO_MUX_20                                   BIT(20)
+#define GPIO_MUX_19                                   BIT(19)
+#define GPIO_MUX_18                                   BIT(18)
+#define GPIO_MUX_17                                   BIT(17)
+#define GPIO_MUX_16                                   BIT(16)
+#define GPIO_MUX_15                                   BIT(15)
+#define GPIO_MUX_14                                   BIT(14)
+#define GPIO_MUX_13                                   BIT(13)
+#define GPIO_MUX_12                                   BIT(12)
+#define GPIO_MUX_11                                   BIT(11)
+#define GPIO_MUX_10                                   BIT(10)
+#define GPIO_MUX_9                                    BIT(9)
+#define GPIO_MUX_8                                    BIT(8)
+#define GPIO_MUX_7                                    BIT(7)
+#define GPIO_MUX_6                                    BIT(6)
+#define GPIO_MUX_5                                    BIT(5)
+#define GPIO_MUX_4                                    BIT(4)
+#define GPIO_MUX_3                                    BIT(3)
+#define GPIO_MUX_2                                    BIT(2)
+#define GPIO_MUX_1                                    BIT(1)
+#define GPIO_MUX_0                                    BIT(0)
 
 #define LOCALMEM_ARBITRATION                          0x00000C
 #define LOCALMEM_ARBITRATION_ROTATE                   28:28
@@ -538,108 +391,64 @@
 #define INT_MASK_VGA_VSYNC_ENABLE                     1
 
 #define CURRENT_GATE                                  0x000040
-#define CURRENT_GATE_MCLK                             15:14
+#define CURRENT_GATE_MCLK_MASK                        (0x3 << 14)
 #ifdef VALIDATION_CHIP
-    #define CURRENT_GATE_MCLK_112MHZ                      0
-    #define CURRENT_GATE_MCLK_84MHZ                       1
-    #define CURRENT_GATE_MCLK_56MHZ                       2
-    #define CURRENT_GATE_MCLK_42MHZ                       3
+    #define CURRENT_GATE_MCLK_112MHZ                  (0x0 << 14)
+    #define CURRENT_GATE_MCLK_84MHZ                   (0x1 << 14)
+    #define CURRENT_GATE_MCLK_56MHZ                   (0x2 << 14)
+    #define CURRENT_GATE_MCLK_42MHZ                   (0x3 << 14)
 #else
-    #define CURRENT_GATE_MCLK_DIV_3                       0
-    #define CURRENT_GATE_MCLK_DIV_4                       1
-    #define CURRENT_GATE_MCLK_DIV_6                       2
-    #define CURRENT_GATE_MCLK_DIV_8                       3
+    #define CURRENT_GATE_MCLK_DIV_3                   (0x0 << 14)
+    #define CURRENT_GATE_MCLK_DIV_4                   (0x1 << 14)
+    #define CURRENT_GATE_MCLK_DIV_6                   (0x2 << 14)
+    #define CURRENT_GATE_MCLK_DIV_8                   (0x3 << 14)
 #endif
-#define CURRENT_GATE_M2XCLK                           13:12
+#define CURRENT_GATE_M2XCLK_MASK                      (0x3 << 12)
 #ifdef VALIDATION_CHIP
-    #define CURRENT_GATE_M2XCLK_336MHZ                    0
-    #define CURRENT_GATE_M2XCLK_168MHZ                    1
-    #define CURRENT_GATE_M2XCLK_112MHZ                    2
-    #define CURRENT_GATE_M2XCLK_84MHZ                     3
+    #define CURRENT_GATE_M2XCLK_336MHZ                (0x0 << 12)
+    #define CURRENT_GATE_M2XCLK_168MHZ                (0x1 << 12)
+    #define CURRENT_GATE_M2XCLK_112MHZ                (0x2 << 12)
+    #define CURRENT_GATE_M2XCLK_84MHZ                 (0x3 << 12)
 #else
-    #define CURRENT_GATE_M2XCLK_DIV_1                     0
-    #define CURRENT_GATE_M2XCLK_DIV_2                     1
-    #define CURRENT_GATE_M2XCLK_DIV_3                     2
-    #define CURRENT_GATE_M2XCLK_DIV_4                     3
+    #define CURRENT_GATE_M2XCLK_DIV_1                 (0x0 << 12)
+    #define CURRENT_GATE_M2XCLK_DIV_2                 (0x1 << 12)
+    #define CURRENT_GATE_M2XCLK_DIV_3                 (0x2 << 12)
+    #define CURRENT_GATE_M2XCLK_DIV_4                 (0x3 << 12)
 #endif
-#define CURRENT_GATE_VGA                              10:10
-#define CURRENT_GATE_VGA_OFF                          0
-#define CURRENT_GATE_VGA_ON                           1
-#define CURRENT_GATE_PWM                              9:9
-#define CURRENT_GATE_PWM_OFF                          0
-#define CURRENT_GATE_PWM_ON                           1
-#define CURRENT_GATE_I2C                              8:8
-#define CURRENT_GATE_I2C_OFF                          0
-#define CURRENT_GATE_I2C_ON                           1
-#define CURRENT_GATE_SSP                              7:7
-#define CURRENT_GATE_SSP_OFF                          0
-#define CURRENT_GATE_SSP_ON                           1
-#define CURRENT_GATE_GPIO                             6:6
-#define CURRENT_GATE_GPIO_OFF                         0
-#define CURRENT_GATE_GPIO_ON                          1
-#define CURRENT_GATE_ZVPORT                           5:5
-#define CURRENT_GATE_ZVPORT_OFF                       0
-#define CURRENT_GATE_ZVPORT_ON                        1
-#define CURRENT_GATE_CSC                              4:4
-#define CURRENT_GATE_CSC_OFF                          0
-#define CURRENT_GATE_CSC_ON                           1
-#define CURRENT_GATE_DE                               3:3
-#define CURRENT_GATE_DE_OFF                           0
-#define CURRENT_GATE_DE_ON                            1
-#define CURRENT_GATE_DISPLAY                          2:2
-#define CURRENT_GATE_DISPLAY_OFF                      0
-#define CURRENT_GATE_DISPLAY_ON                       1
-#define CURRENT_GATE_LOCALMEM                         1:1
-#define CURRENT_GATE_LOCALMEM_OFF                     0
-#define CURRENT_GATE_LOCALMEM_ON                      1
-#define CURRENT_GATE_DMA                              0:0
-#define CURRENT_GATE_DMA_OFF                          0
-#define CURRENT_GATE_DMA_ON                           1
+#define CURRENT_GATE_VGA                              BIT(10)
+#define CURRENT_GATE_PWM                              BIT(9)
+#define CURRENT_GATE_I2C                              BIT(8)
+#define CURRENT_GATE_SSP                              BIT(7)
+#define CURRENT_GATE_GPIO                             BIT(6)
+#define CURRENT_GATE_ZVPORT                           BIT(5)
+#define CURRENT_GATE_CSC                              BIT(4)
+#define CURRENT_GATE_DE                               BIT(3)
+#define CURRENT_GATE_DISPLAY                          BIT(2)
+#define CURRENT_GATE_LOCALMEM                         BIT(1)
+#define CURRENT_GATE_DMA                              BIT(0)
 
 #define MODE0_GATE                                    0x000044
-#define MODE0_GATE_MCLK                               15:14
-#define MODE0_GATE_MCLK_112MHZ                        0
-#define MODE0_GATE_MCLK_84MHZ                         1
-#define MODE0_GATE_MCLK_56MHZ                         2
-#define MODE0_GATE_MCLK_42MHZ                         3
-#define MODE0_GATE_M2XCLK                             13:12
-#define MODE0_GATE_M2XCLK_336MHZ                      0
-#define MODE0_GATE_M2XCLK_168MHZ                      1
-#define MODE0_GATE_M2XCLK_112MHZ                      2
-#define MODE0_GATE_M2XCLK_84MHZ                       3
-#define MODE0_GATE_VGA                                10:10
-#define MODE0_GATE_VGA_OFF                            0
-#define MODE0_GATE_VGA_ON                             1
-#define MODE0_GATE_PWM                                9:9
-#define MODE0_GATE_PWM_OFF                            0
-#define MODE0_GATE_PWM_ON                             1
-#define MODE0_GATE_I2C                                8:8
-#define MODE0_GATE_I2C_OFF                            0
-#define MODE0_GATE_I2C_ON                             1
-#define MODE0_GATE_SSP                                7:7
-#define MODE0_GATE_SSP_OFF                            0
-#define MODE0_GATE_SSP_ON                             1
-#define MODE0_GATE_GPIO                               6:6
-#define MODE0_GATE_GPIO_OFF                           0
-#define MODE0_GATE_GPIO_ON                            1
-#define MODE0_GATE_ZVPORT                             5:5
-#define MODE0_GATE_ZVPORT_OFF                         0
-#define MODE0_GATE_ZVPORT_ON                          1
-#define MODE0_GATE_CSC                                4:4
-#define MODE0_GATE_CSC_OFF                            0
-#define MODE0_GATE_CSC_ON                             1
-#define MODE0_GATE_DE                                 3:3
-#define MODE0_GATE_DE_OFF                             0
-#define MODE0_GATE_DE_ON                              1
-#define MODE0_GATE_DISPLAY                            2:2
-#define MODE0_GATE_DISPLAY_OFF                        0
-#define MODE0_GATE_DISPLAY_ON                         1
-#define MODE0_GATE_LOCALMEM                           1:1
-#define MODE0_GATE_LOCALMEM_OFF                       0
-#define MODE0_GATE_LOCALMEM_ON                        1
-#define MODE0_GATE_DMA                                0:0
-#define MODE0_GATE_DMA_OFF                            0
-#define MODE0_GATE_DMA_ON                             1
+#define MODE0_GATE_MCLK_MASK                          (0x3 << 14)
+#define MODE0_GATE_MCLK_112MHZ                        (0x0 << 14)
+#define MODE0_GATE_MCLK_84MHZ                         (0x1 << 14)
+#define MODE0_GATE_MCLK_56MHZ                         (0x2 << 14)
+#define MODE0_GATE_MCLK_42MHZ                         (0x3 << 14)
+#define MODE0_GATE_M2XCLK_MASK                        (0x3 << 12)
+#define MODE0_GATE_M2XCLK_336MHZ                      (0x0 << 12)
+#define MODE0_GATE_M2XCLK_168MHZ                      (0x1 << 12)
+#define MODE0_GATE_M2XCLK_112MHZ                      (0x2 << 12)
+#define MODE0_GATE_M2XCLK_84MHZ                       (0x3 << 12)
+#define MODE0_GATE_VGA                                BIT(10)
+#define MODE0_GATE_PWM                                BIT(9)
+#define MODE0_GATE_I2C                                BIT(8)
+#define MODE0_GATE_SSP                                BIT(7)
+#define MODE0_GATE_GPIO                               BIT(6)
+#define MODE0_GATE_ZVPORT                             BIT(5)
+#define MODE0_GATE_CSC                                BIT(4)
+#define MODE0_GATE_DE                                 BIT(3)
+#define MODE0_GATE_DISPLAY                            BIT(2)
+#define MODE0_GATE_LOCALMEM                           BIT(1)
+#define MODE0_GATE_DMA                                BIT(0)
 
 #define MODE1_GATE                                    0x000048
 #define MODE1_GATE_MCLK                               15:14
@@ -688,20 +497,14 @@
 
 #define POWER_MODE_CTRL                               0x00004C
 #ifdef VALIDATION_CHIP
-    #define POWER_MODE_CTRL_336CLK                    4:4
-    #define POWER_MODE_CTRL_336CLK_OFF                0
-    #define POWER_MODE_CTRL_336CLK_ON                 1
+    #define POWER_MODE_CTRL_336CLK                    BIT(4)
 #endif
-#define POWER_MODE_CTRL_OSC_INPUT                     3:3
-#define POWER_MODE_CTRL_OSC_INPUT_OFF                 0
-#define POWER_MODE_CTRL_OSC_INPUT_ON                  1
-#define POWER_MODE_CTRL_ACPI                          2:2
-#define POWER_MODE_CTRL_ACPI_OFF                      0
-#define POWER_MODE_CTRL_ACPI_ON                       1
-#define POWER_MODE_CTRL_MODE                          1:0
-#define POWER_MODE_CTRL_MODE_MODE0                    0
-#define POWER_MODE_CTRL_MODE_MODE1                    1
-#define POWER_MODE_CTRL_MODE_SLEEP                    2
+#define POWER_MODE_CTRL_OSC_INPUT                     BIT(3)
+#define POWER_MODE_CTRL_ACPI                          BIT(2)
+#define POWER_MODE_CTRL_MODE_MASK                     (0x3 << 0)
+#define POWER_MODE_CTRL_MODE_MODE0                    (0x0 << 0)
+#define POWER_MODE_CTRL_MODE_MODE1                    (0x1 << 0)
+#define POWER_MODE_CTRL_MODE_SLEEP                    (0x2 << 0)
 
 #define PCI_MASTER_BASE                               0x000050
 #define PCI_MASTER_BASE_ADDRESS                       7:0

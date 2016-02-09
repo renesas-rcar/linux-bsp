@@ -153,9 +153,9 @@ struct obd_ioctl_data {
 
 	/* buffers the kernel will treat as user pointers */
 	__u32  ioc_plen1;
-	char  *ioc_pbuf1;
+	void __user *ioc_pbuf1;
 	__u32  ioc_plen2;
-	char  *ioc_pbuf2;
+	void __user *ioc_pbuf2;
 
 	/* inline buffers for various arguments */
 	__u32  ioc_inllen1;
@@ -252,8 +252,8 @@ static inline int obd_ioctl_is_invalid(struct obd_ioctl_data *data)
 #include "obd_support.h"
 
 /* function defined in lustre/obdclass/<platform>/<platform>-module.c */
-int obd_ioctl_getdata(char **buf, int *len, void *arg);
-int obd_ioctl_popdata(void *arg, void *data, int len);
+int obd_ioctl_getdata(char **buf, int *len, void __user *arg);
+int obd_ioctl_popdata(void __user *arg, void *data, int len);
 
 static inline void obd_ioctl_freedata(char *buf, int len)
 {
@@ -365,10 +365,10 @@ static inline void obd_ioctl_freedata(char *buf, int len)
 /* OBD_IOC_LLOG_CATINFO is deprecated */
 #define OBD_IOC_LLOG_CATINFO	   _IOWR('f', 196, OBD_IOC_DATA_TYPE)
 
-#define ECHO_IOC_GET_STRIPE	    _IOWR('f', 200, OBD_IOC_DATA_TYPE)
-#define ECHO_IOC_SET_STRIPE	    _IOWR('f', 201, OBD_IOC_DATA_TYPE)
-#define ECHO_IOC_ENQUEUE	       _IOWR('f', 202, OBD_IOC_DATA_TYPE)
-#define ECHO_IOC_CANCEL		_IOWR('f', 203, OBD_IOC_DATA_TYPE)
+/*	#define ECHO_IOC_GET_STRIPE    _IOWR('f', 200, OBD_IOC_DATA_TYPE) */
+/*	#define ECHO_IOC_SET_STRIPE    _IOWR('f', 201, OBD_IOC_DATA_TYPE) */
+/*	#define ECHO_IOC_ENQUEUE       _IOWR('f', 202, OBD_IOC_DATA_TYPE) */
+/*	#define ECHO_IOC_CANCEL        _IOWR('f', 203, OBD_IOC_DATA_TYPE) */
 
 #define OBD_IOC_GET_OBJ_VERSION	_IOR('f', 210, OBD_IOC_DATA_TYPE)
 

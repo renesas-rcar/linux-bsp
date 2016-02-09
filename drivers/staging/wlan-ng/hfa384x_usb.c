@@ -145,11 +145,11 @@ enum cmd_mode {
 	DOASYNC
 };
 
-#define THROTTLE_JIFFIES	(HZ/8)
+#define THROTTLE_JIFFIES	(HZ / 8)
 #define URB_ASYNC_UNLINK 0
 #define USB_QUEUE_BULK 0
 
-#define ROUNDUP64(a) (((a)+63)&~63)
+#define ROUNDUP64(a) (((a) + 63) & ~63)
 
 #ifdef DEBUG_USB
 static void dbprint_urb(struct urb *urb);
@@ -2810,8 +2810,7 @@ void hfa384x_tx_timeout(wlandevice_t *wlandev)
 static void hfa384x_usbctlx_reaper_task(unsigned long data)
 {
 	hfa384x_t *hw = (hfa384x_t *)data;
-	struct list_head *entry;
-	struct list_head *temp;
+	hfa384x_usbctlx_t *ctlx, *temp;
 	unsigned long flags;
 
 	spin_lock_irqsave(&hw->ctlxq.lock, flags);
@@ -2819,10 +2818,7 @@ static void hfa384x_usbctlx_reaper_task(unsigned long data)
 	/* This list is guaranteed to be empty if someone
 	 * has unplugged the adapter.
 	 */
-	list_for_each_safe(entry, temp, &hw->ctlxq.reapable) {
-		hfa384x_usbctlx_t *ctlx;
-
-		ctlx = list_entry(entry, hfa384x_usbctlx_t, list);
+	list_for_each_entry_safe(ctlx, temp, &hw->ctlxq.reapable, list) {
 		list_del(&ctlx->list);
 		kfree(ctlx);
 	}
@@ -2847,8 +2843,7 @@ static void hfa384x_usbctlx_reaper_task(unsigned long data)
 static void hfa384x_usbctlx_completion_task(unsigned long data)
 {
 	hfa384x_t *hw = (hfa384x_t *)data;
-	struct list_head *entry;
-	struct list_head *temp;
+	hfa384x_usbctlx_t *ctlx, *temp;
 	unsigned long flags;
 
 	int reap = 0;
@@ -2858,11 +2853,7 @@ static void hfa384x_usbctlx_completion_task(unsigned long data)
 	/* This list is guaranteed to be empty if someone
 	 * has unplugged the adapter ...
 	 */
-	list_for_each_safe(entry, temp, &hw->ctlxq.completing) {
-		hfa384x_usbctlx_t *ctlx;
-
-		ctlx = list_entry(entry, hfa384x_usbctlx_t, list);
-
+	list_for_each_entry_safe(ctlx, temp, &hw->ctlxq.completing, list) {
 		/* Call the completion function that this
 		 * command was assigned, assuming it has one.
 		 */
@@ -3985,8 +3976,7 @@ static void hfa384x_usb_throttlefn(unsigned long data)
 	pr_debug("flags=0x%lx\n", hw->usb_flags);
 	if (!hw->wlandev->hwremoved &&
 	    ((test_and_clear_bit(THROTTLE_RX, &hw->usb_flags) &&
-	      !test_and_set_bit(WORK_RX_RESUME, &hw->usb_flags))
-	     |
+	      !test_and_set_bit(WORK_RX_RESUME, &hw->usb_flags)) |
 	     (test_and_clear_bit(THROTTLE_TX, &hw->usb_flags) &&
 	      !test_and_set_bit(WORK_TX_RESUME, &hw->usb_flags))
 	    )) {

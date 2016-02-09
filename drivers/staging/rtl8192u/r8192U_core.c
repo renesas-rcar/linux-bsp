@@ -1092,10 +1092,17 @@ static int rtl8192_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 static void rtl8192_tx_isr(struct urb *tx_urb)
 {
 	struct sk_buff *skb = (struct sk_buff *)tx_urb->context;
-	struct net_device *dev = (struct net_device *)(skb->cb);
+	struct net_device *dev;
 	struct r8192_priv *priv = NULL;
-	cb_desc *tcb_desc = (cb_desc *)(skb->cb + MAX_DEV_ADDR_SIZE);
-	u8  queue_index = tcb_desc->queue_index;
+	cb_desc *tcb_desc;
+	u8  queue_index;
+
+	if (!skb)
+		return;
+
+	dev = (struct net_device *)(skb->cb);
+	tcb_desc = (cb_desc *)(skb->cb + MAX_DEV_ADDR_SIZE);
+	queue_index = tcb_desc->queue_index;
 
 	priv = ieee80211_priv(dev);
 
@@ -1113,11 +1120,9 @@ static void rtl8192_tx_isr(struct urb *tx_urb)
 	}
 
 	/* free skb and tx_urb */
-	if (skb != NULL) {
-		dev_kfree_skb_any(skb);
-		usb_free_urb(tx_urb);
-		atomic_dec(&priv->tx_pending[queue_index]);
-	}
+	dev_kfree_skb_any(skb);
+	usb_free_urb(tx_urb);
+	atomic_dec(&priv->tx_pending[queue_index]);
 
 	/*
 	 * Handle HW Beacon:
@@ -1371,7 +1376,7 @@ short rtl819xU_tx_cmd(struct net_device *dev, struct sk_buff *skb)
 */
 static u8 MapHwQueueToFirmwareQueue(u8 QueueID)
 {
-	u8 QueueSelect = 0x0;       /* defualt set to */
+	u8 QueueSelect = 0x0;       /* default set to */
 
 	switch (QueueID) {
 	case BE_QUEUE:
@@ -3436,8 +3441,7 @@ static void rtl819x_update_rxcounts(struct r8192_priv *priv, u32 *TotalRxBcnNum,
 
 static void rtl819x_watchdog_wqcallback(struct work_struct *work)
 {
-	struct delayed_work *dwork = container_of(work,
-						  struct delayed_work, work);
+	struct delayed_work *dwork = to_delayed_work(work);
 	struct r8192_priv *priv = container_of(dwork,
 					       struct r8192_priv, watch_dog_wq);
 	struct net_device *dev = priv->ieee80211->dev;
@@ -4297,7 +4301,7 @@ static void rtl8192_query_rxphystatus(struct r8192_priv *priv,
 	if (is_cck_rate) {
 		/* (1)Hardware does not provide RSSI for CCK */
 
-		/* (2)PWDB, Average PWDB cacluated by hardware
+		/* (2)PWDB, Average PWDB calculated by hardware
 		 * (for rate adaptive)
 		 */
 		u8 report;
@@ -4398,7 +4402,7 @@ static void rtl8192_query_rxphystatus(struct r8192_priv *priv,
 		}
 
 
-		/* (2)PWDB, Average PWDB cacluated by hardware
+		/* (2)PWDB, Average PWDB calculated by hardware
 		 * (for rate adaptive)
 		 */
 		rx_pwr_all = (((pofdm_buf->pwdb_all) >> 1) & 0x7f) - 106;

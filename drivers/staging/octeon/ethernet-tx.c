@@ -126,7 +126,7 @@ static void cvm_oct_free_tx_skbs(struct net_device *dev)
 		}
 		total_remaining += skb_queue_len(&priv->tx_free_list[qos]);
 	}
-	if (total_freed >= 0 && netif_queue_stopped(dev))
+	if (total_remaining < MAX_OUT_QUEUE_DEPTH && netif_queue_stopped(dev))
 		netif_wake_queue(dev);
 	if (total_remaining)
 		cvm_oct_kick_tx_poll_watchdog();
@@ -403,7 +403,7 @@ dont_put_skbuff_in_hw:
 	    ((ip_hdr(skb)->protocol == IPPROTO_TCP) ||
 	     (ip_hdr(skb)->protocol == IPPROTO_UDP))) {
 		/* Use hardware checksum calc */
-		pko_command.s.ipoffp1 = sizeof(struct ethhdr) + 1;
+		pko_command.s.ipoffp1 = skb_network_offset(skb) + 1;
 	}
 
 	if (USE_ASYNC_IOBDMA) {

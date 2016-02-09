@@ -61,6 +61,9 @@ static int rnet_htable_size = LNET_REMOTE_NETS_HASH_DEFAULT;
 module_param(rnet_htable_size, int, 0444);
 MODULE_PARM_DESC(rnet_htable_size, "size of remote network hash table");
 
+static int lnet_ping(lnet_process_id_t id, int timeout_ms,
+		     lnet_process_id_t __user *ids, int n_ids);
+
 static char *
 lnet_get_routes(void)
 {
@@ -1313,17 +1316,8 @@ LNetNIFini(void)
 EXPORT_SYMBOL(LNetNIFini);
 
 /**
- * This is an ugly hack to export IOC_LIBCFS_DEBUG_PEER and
- * IOC_LIBCFS_PORTALS_COMPATIBILITY commands to users, by tweaking the LNet
- * internal ioctl handler.
+ * LNet ioctl handler.
  *
- * IOC_LIBCFS_PORTALS_COMPATIBILITY is now deprecated, don't use it.
- *
- * \param cmd IOC_LIBCFS_DEBUG_PEER to print debugging data about a peer.
- * The data will be printed to system console. Don't use it excessively.
- * \param arg A pointer to lnet_process_id_t, process ID of the peer.
- *
- * \return Always return 0 when called by users directly (i.e., not via ioctl).
  */
 int
 LNetCtl(unsigned int cmd, void *arg)
@@ -1364,10 +1358,6 @@ LNetCtl(unsigned int cmd, void *arg)
 		return lnet_notify(NULL, data->ioc_nid, data->ioc_flags,
 				   jiffies - secs_passed * HZ);
 
-	case IOC_LIBCFS_PORTALS_COMPATIBILITY:
-		/* This can be removed once lustre stops calling it */
-		return 0;
-
 	case IOC_LIBCFS_LNET_DIST:
 		rc = LNetDist(data->ioc_nid, &data->ioc_nid, &data->ioc_u32[1]);
 		if (rc < 0 && rc != -EHOSTUNREACH)
@@ -1386,35 +1376,12 @@ LNetCtl(unsigned int cmd, void *arg)
 		id.nid = data->ioc_nid;
 		id.pid = data->ioc_u32[0];
 		rc = lnet_ping(id, data->ioc_u32[1], /* timeout */
-			       (lnet_process_id_t *)data->ioc_pbuf1,
+			       data->ioc_pbuf1,
 			       data->ioc_plen1/sizeof(lnet_process_id_t));
 		if (rc < 0)
 			return rc;
 		data->ioc_count = rc;
 		return 0;
-
-	case IOC_LIBCFS_DEBUG_PEER: {
-		/* CAVEAT EMPTOR: this one designed for calling directly; not
-		 * via an ioctl */
-		id = *((lnet_process_id_t *) arg);
-
-		lnet_debug_peer(id.nid);
-
-		ni = lnet_net2ni(LNET_NIDNET(id.nid));
-		if (ni == NULL) {
-			CDEBUG(D_WARNING, "No NI for %s\n", libcfs_id2str(id));
-		} else {
-			if (ni->ni_lnd->lnd_ctl == NULL) {
-				CDEBUG(D_WARNING, "No ctl for %s\n",
-				       libcfs_id2str(id));
-			} else {
-				(void)ni->ni_lnd->lnd_ctl(ni, cmd, arg);
-			}
-
-			lnet_ni_decref(ni);
-		}
-		return 0;
-	}
 
 	default:
 		ni = lnet_net2ni(data->ioc_net);
@@ -1432,6 +1399,12 @@ LNetCtl(unsigned int cmd, void *arg)
 	/* not reached */
 }
 EXPORT_SYMBOL(LNetCtl);
+
+void LNetDebugPeer(lnet_process_id_t id)
+{
+	lnet_debug_peer(id.nid);
+}
+EXPORT_SYMBOL(LNetDebugPeer);
 
 /**
  * Retrieve the lnet_process_id_t ID of LNet interface at \a index. Note that
@@ -1672,8 +1645,8 @@ lnet_ping_target_fini(void)
 	cfs_restore_sigs(blocked);
 }
 
-int
-lnet_ping(lnet_process_id_t id, int timeout_ms, lnet_process_id_t *ids, int n_ids)
+static int lnet_ping(lnet_process_id_t id, int timeout_ms,
+		     lnet_process_id_t __user *ids, int n_ids)
 {
 	lnet_handle_eq_t eqh;
 	lnet_handle_md_t mdh;

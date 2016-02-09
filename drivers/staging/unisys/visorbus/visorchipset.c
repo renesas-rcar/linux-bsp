@@ -43,7 +43,7 @@
 #define POLLJIFFIES_CONTROLVMCHANNEL_FAST   1
 #define POLLJIFFIES_CONTROLVMCHANNEL_SLOW 100
 
-#define MAX_CONTROLVM_PAYLOAD_BYTES (1024*128)
+#define MAX_CONTROLVM_PAYLOAD_BYTES (1024 * 128)
 
 #define VISORCHIPSET_MMAP_CONTROLCHANOFFSET	0x00000000
 
@@ -537,8 +537,8 @@ static ssize_t toolaction_show(struct device *dev,
 	u8 tool_action;
 
 	visorchannel_read(controlvm_channel,
-		offsetof(struct spar_controlvm_channel_protocol,
-			 tool_action), &tool_action, sizeof(u8));
+			  offsetof(struct spar_controlvm_channel_protocol,
+				   tool_action), &tool_action, sizeof(u8));
 	return scnprintf(buf, PAGE_SIZE, "%u\n", tool_action);
 }
 
@@ -2310,13 +2310,8 @@ visorchipset_init(struct acpi_device *acpi_device)
 	}
 	most_recent_message_jiffies = jiffies;
 	poll_jiffies = POLLJIFFIES_CONTROLVMCHANNEL_FAST;
-	rc = queue_delayed_work(periodic_controlvm_workqueue,
-				&periodic_controlvm_work, poll_jiffies);
-	if (rc < 0) {
-		POSTCODE_LINUX_2(QUEUE_DELAYED_WORK_PC,
-				 DIAG_SEVERITY_ERR);
-		goto cleanup;
-	}
+	queue_delayed_work(periodic_controlvm_workqueue,
+			   &periodic_controlvm_work, poll_jiffies);
 
 	visorchipset_platform_device.dev.devt = major_dev;
 	if (platform_device_register(&visorchipset_platform_device) < 0) {

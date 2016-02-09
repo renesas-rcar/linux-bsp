@@ -108,31 +108,26 @@ int hw_sm750_inithw(struct sm750_dev *sm750_dev, struct pci_dev *pdev)
 	/* for sm718,open pci burst */
 	if (sm750_dev->devid == 0x718) {
 		POKE32(SYSTEM_CTRL,
-				FIELD_SET(PEEK32(SYSTEM_CTRL), SYSTEM_CTRL, PCI_BURST, ON));
+		       PEEK32(SYSTEM_CTRL) | SYSTEM_CTRL_PCI_BURST);
 	}
 
 	if (getChipType() != SM750LE) {
+		unsigned int val;
 		/* does user need CRT ?*/
 		if (sm750_dev->nocrt) {
 			POKE32(MISC_CTRL,
-					FIELD_SET(PEEK32(MISC_CTRL),
-					MISC_CTRL,
-					DAC_POWER, OFF));
+			       PEEK32(MISC_CTRL) | MISC_CTRL_DAC_POWER_OFF);
 			/* shut off dpms */
-			POKE32(SYSTEM_CTRL,
-					FIELD_SET(PEEK32(SYSTEM_CTRL),
-					SYSTEM_CTRL,
-					DPMS, VNHN));
+			val = PEEK32(SYSTEM_CTRL) & ~SYSTEM_CTRL_DPMS_MASK;
+			val |= SYSTEM_CTRL_DPMS_VPHN;
+			POKE32(SYSTEM_CTRL, val);
 		} else {
 			POKE32(MISC_CTRL,
-					FIELD_SET(PEEK32(MISC_CTRL),
-					MISC_CTRL,
-					DAC_POWER, ON));
+			       PEEK32(MISC_CTRL) & ~MISC_CTRL_DAC_POWER_OFF);
 			/* turn on dpms */
-			POKE32(SYSTEM_CTRL,
-					FIELD_SET(PEEK32(SYSTEM_CTRL),
-					SYSTEM_CTRL,
-					DPMS, VPHP));
+			val = PEEK32(SYSTEM_CTRL) & ~SYSTEM_CTRL_DPMS_MASK;
+			val |= SYSTEM_CTRL_DPMS_VPHP;
+			POKE32(SYSTEM_CTRL, val);
 		}
 
 		switch (sm750_dev->pnltype) {
@@ -147,7 +142,7 @@ int hw_sm750_inithw(struct sm750_dev *sm750_dev, struct pci_dev *pdev)
 		break;
 		}
 	} else {
-		/* for 750LE ,no DVI chip initilization makes Monitor no signal */
+		/* for 750LE ,no DVI chip initialization makes Monitor no signal */
 		/* Set up GPIO for software I2C to program DVI chip in the
 		   Xilinx SP605 board, in order to have video signal.
 		 */
@@ -448,8 +443,9 @@ int hw_sm750_setBLANK(struct lynxfb_output *output, int blank)
 	}
 
 	if (output->paths & sm750_crt) {
+		unsigned int val = PEEK32(SYSTEM_CTRL) & ~SYSTEM_CTRL_DPMS_MASK;
 
-		POKE32(SYSTEM_CTRL, FIELD_VALUE(PEEK32(SYSTEM_CTRL), SYSTEM_CTRL, DPMS, dpms));
+		POKE32(SYSTEM_CTRL, val | dpms);
 		POKE32(CRT_DISPLAY_CTRL, FIELD_VALUE(PEEK32(CRT_DISPLAY_CTRL), CRT_DISPLAY_CTRL, BLANK, crtdb));
 	}
 
@@ -468,21 +464,21 @@ void hw_sm750_initAccel(struct sm750_dev *sm750_dev)
 
 	if (getChipType() == SM750LE) {
 		reg = PEEK32(DE_STATE1);
-		reg = FIELD_SET(reg, DE_STATE1, DE_ABORT, ON);
+		reg |= DE_STATE1_DE_ABORT;
 		POKE32(DE_STATE1, reg);
 
 		reg = PEEK32(DE_STATE1);
-		reg = FIELD_SET(reg, DE_STATE1, DE_ABORT, OFF);
+		reg &= ~DE_STATE1_DE_ABORT;
 		POKE32(DE_STATE1, reg);
 
 	} else {
 		/* engine reset */
 		reg = PEEK32(SYSTEM_CTRL);
-	    reg = FIELD_SET(reg, SYSTEM_CTRL, DE_ABORT, ON);
+		reg |= SYSTEM_CTRL_DE_ABORT;
 		POKE32(SYSTEM_CTRL, reg);
 
 		reg = PEEK32(SYSTEM_CTRL);
-		reg = FIELD_SET(reg, SYSTEM_CTRL, DE_ABORT, OFF);
+		reg &= ~SYSTEM_CTRL_DE_ABORT;
 		POKE32(SYSTEM_CTRL, reg);
 	}
 
@@ -493,15 +489,15 @@ void hw_sm750_initAccel(struct sm750_dev *sm750_dev)
 int hw_sm750le_deWait(void)
 {
 	int i = 0x10000000;
+	unsigned int mask = DE_STATE2_DE_STATUS_BUSY | DE_STATE2_DE_FIFO_EMPTY |
+		DE_STATE2_DE_MEM_FIFO_EMPTY;
 
 	while (i--) {
-		unsigned int dwVal = PEEK32(DE_STATE2);
+		unsigned int val = PEEK32(DE_STATE2);
 
-		if ((FIELD_GET(dwVal, DE_STATE2, DE_STATUS) == DE_STATE2_DE_STATUS_IDLE) &&
-			(FIELD_GET(dwVal, DE_STATE2, DE_FIFO)  == DE_STATE2_DE_FIFO_EMPTY) &&
-			(FIELD_GET(dwVal, DE_STATE2, DE_MEM_FIFO) == DE_STATE2_DE_MEM_FIFO_EMPTY)) {
+		if ((val & mask) ==
+		    (DE_STATE2_DE_FIFO_EMPTY | DE_STATE2_DE_MEM_FIFO_EMPTY))
 			return 0;
-		}
 	}
 	/* timeout error */
 	return -1;
@@ -511,15 +507,16 @@ int hw_sm750le_deWait(void)
 int hw_sm750_deWait(void)
 {
 	int i = 0x10000000;
+	unsigned int mask = SYSTEM_CTRL_DE_STATUS_BUSY |
+		SYSTEM_CTRL_DE_FIFO_EMPTY |
+		SYSTEM_CTRL_DE_MEM_FIFO_EMPTY;
 
 	while (i--) {
-		unsigned int dwVal = PEEK32(SYSTEM_CTRL);
+		unsigned int val = PEEK32(SYSTEM_CTRL);
 
-		if ((FIELD_GET(dwVal, SYSTEM_CTRL, DE_STATUS) == SYSTEM_CTRL_DE_STATUS_IDLE) &&
-			(FIELD_GET(dwVal, SYSTEM_CTRL, DE_FIFO)  == SYSTEM_CTRL_DE_FIFO_EMPTY) &&
-			(FIELD_GET(dwVal, SYSTEM_CTRL, DE_MEM_FIFO) == SYSTEM_CTRL_DE_MEM_FIFO_EMPTY)) {
+		if ((val & mask) ==
+		    (SYSTEM_CTRL_DE_FIFO_EMPTY | SYSTEM_CTRL_DE_MEM_FIFO_EMPTY))
 			return 0;
-		}
 	}
 	/* timeout error */
 	return -1;

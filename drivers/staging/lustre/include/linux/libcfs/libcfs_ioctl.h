@@ -61,9 +61,9 @@ struct libcfs_ioctl_data {
 	char *ioc_inlbuf2;
 
 	__u32 ioc_plen1; /* buffers in userspace */
-	char *ioc_pbuf1;
+	void __user *ioc_pbuf1;
 	__u32 ioc_plen2; /* buffers in userspace */
-	char *ioc_pbuf2;
+	void __user *ioc_pbuf2;
 
 	char ioc_bulk[0];
 };
@@ -102,7 +102,6 @@ struct libcfs_ioctl_handler {
 /* FIXME check conflict with lustre_lib.h */
 #define LIBCFS_IOC_DEBUG_MASK	     _IOWR('f', 250, long)
 
-/* ioctls for manipulating snapshots 30- */
 #define IOC_LIBCFS_TYPE		   'e'
 #define IOC_LIBCFS_MIN_NR		 30
 /* libcfs ioctls */
@@ -118,12 +117,12 @@ struct libcfs_ioctl_handler {
 #define IOC_LIBCFS_GET_ROUTE	       _IOWR('e', 54, long)
 #define IOC_LIBCFS_NOTIFY_ROUTER	   _IOWR('e', 55, long)
 #define IOC_LIBCFS_UNCONFIGURE	     _IOWR('e', 56, long)
-#define IOC_LIBCFS_PORTALS_COMPATIBILITY   _IOWR('e', 57, long)
+/*	#define IOC_LIBCFS_PORTALS_COMPATIBILITY   _IOWR('e', 57, long) */
 #define IOC_LIBCFS_LNET_DIST	       _IOWR('e', 58, long)
 #define IOC_LIBCFS_CONFIGURE	       _IOWR('e', 59, long)
 #define IOC_LIBCFS_TESTPROTOCOMPAT	 _IOWR('e', 60, long)
 #define IOC_LIBCFS_PING		    _IOWR('e', 61, long)
-#define IOC_LIBCFS_DEBUG_PEER	      _IOWR('e', 62, long)
+/*	#define IOC_LIBCFS_DEBUG_PEER	      _IOWR('e', 62, long) */
 #define IOC_LIBCFS_LNETST		  _IOWR('e', 63, long)
 /* lnd ioctls */
 #define IOC_LIBCFS_REGISTER_MYNID	  _IOWR('e', 70, long)
@@ -207,7 +206,7 @@ static inline int libcfs_ioctl_is_invalid(struct libcfs_ioctl_data *data)
 
 int libcfs_register_ioctl(struct libcfs_ioctl_handler *hand);
 int libcfs_deregister_ioctl(struct libcfs_ioctl_handler *hand);
-int libcfs_ioctl_getdata(char *buf, char *end, void *arg);
-int libcfs_ioctl_popdata(void *arg, void *buf, int size);
+int libcfs_ioctl_getdata(char *buf, char *end, void __user *arg);
+int libcfs_ioctl_popdata(void __user *arg, void *buf, int size);
 
 #endif /* __LIBCFS_IOCTL_H__ */
