@@ -848,7 +848,7 @@ static struct usb_device *usbdev_lookup_by_devt(dev_t devt)
 			      (void *) (unsigned long) devt, match_devt);
 	if (!dev)
 		return NULL;
-	return container_of(dev, struct usb_device, dev);
+	return to_usb_device(dev);
 }
 
 /*
@@ -1378,11 +1378,10 @@ static int proc_do_submiturb(struct usb_dev_state *ps, struct usbdevfs_urb *uurb
 		number_of_packets = uurb->number_of_packets;
 		isofrmlen = sizeof(struct usbdevfs_iso_packet_desc) *
 				   number_of_packets;
-		isopkt = kmalloc(isofrmlen, GFP_KERNEL);
-		if (!isopkt)
-			return -ENOMEM;
-		if (copy_from_user(isopkt, iso_frame_desc, isofrmlen)) {
-			ret = -EFAULT;
+		isopkt = memdup_user(iso_frame_desc, isofrmlen);
+		if (IS_ERR(isopkt)) {
+			ret = PTR_ERR(isopkt);
+			isopkt = NULL;
 			goto error;
 		}
 		for (totlen = u = 0; u < number_of_packets; u++) {
@@ -1903,7 +1902,7 @@ static int proc_releaseinterface(struct usb_dev_state *ps, void __user *arg)
 	ret = releaseintf(ps, ifnum);
 	if (ret < 0)
 		return ret;
-	destroy_async_on_interface (ps, ifnum);
+	destroy_async_on_interface(ps, ifnum);
 	return 0;
 }
 
