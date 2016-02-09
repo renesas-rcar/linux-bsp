@@ -610,6 +610,7 @@ config SERIAL_UARTLITE_CONSOLE
 	bool "Support for console on Xilinx uartlite serial port"
 	depends on SERIAL_UARTLITE=y
 	select SERIAL_CORE_CONSOLE
+	select SERIAL_EARLYCON
 	help
 	  Say Y here if you wish to use a Xilinx uartlite as the system
 	  console (the system console is the device which receives all kernel
@@ -745,6 +746,12 @@ config SERIAL_SH_SCI_CONSOLE
 	depends on SERIAL_SH_SCI=y
 	select SERIAL_CORE_CONSOLE
 
+config SERIAL_SH_SCI_EARLYCON
+	bool "Support for early console on SuperH SCI(F)"
+	depends on SERIAL_SH_SCI=y
+	select SERIAL_CORE_CONSOLE
+	select SERIAL_EARLYCON
+
 config SERIAL_SH_SCI_DMA
 	bool "DMA support"
 	depends on SERIAL_SH_SCI && DMA_ENGINE
@@ -792,17 +799,6 @@ config SERIAL_CORE_CONSOLE
 
 config CONSOLE_POLL
 	bool
-
-config SERIAL_68328
-	bool "68328 serial support"
-	depends on M68328 || M68EZ328 || M68VZ328
-	help
-	  This driver supports the built-in serial port of the Motorola 68328
-	  (standard, EZ and VZ varieties).
-
-config SERIAL_68328_RTS_CTS
-	bool "Support RTS/CTS on 68328 serial port"
-	depends on SERIAL_68328
 
 config SERIAL_MCF
 	bool "Coldfire serial support"
