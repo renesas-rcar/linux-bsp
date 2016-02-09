@@ -32,9 +32,6 @@
 #include <sound/initval.h>
 #include <sound/tlv.h>
 
-#include <linux/mfd/arizona/registers.h>
-
-#include "arizona.h"
 #include "wm_adsp.h"
 
 #define adsp_crit(_dsp, fmt, ...) \
@@ -295,6 +292,8 @@ struct wm_adsp_compr {
 
 	u32 *raw_buf;
 	unsigned int copied_total;
+
+	unsigned int sample_rate;
 };
 
 #define WM_ADSP_DATA_WORD_SIZE         3
@@ -328,7 +327,7 @@ struct wm_adsp_buffer_region_def {
 	unsigned int size_offset;
 };
 
-static struct wm_adsp_buffer_region_def ez2control_regions[] = {
+static const struct wm_adsp_buffer_region_def default_regions[] = {
 	{
 		.mem_type = WMFW_ADSP2_XM,
 		.base_offset = HOST_BUFFER_FIELD(X_buf_base),
@@ -350,10 +349,10 @@ struct wm_adsp_fw_caps {
 	u32 id;
 	struct snd_codec_desc desc;
 	int num_regions;
-	struct wm_adsp_buffer_region_def *region_defs;
+	const struct wm_adsp_buffer_region_def *region_defs;
 };
 
-static const struct wm_adsp_fw_caps ez2control_caps[] = {
+static const struct wm_adsp_fw_caps ctrl_caps[] = {
 	{
 		.id = SND_AUDIOCODEC_BESPOKE,
 		.desc = {
@@ -362,8 +361,26 @@ static const struct wm_adsp_fw_caps ez2control_caps[] = {
 			.num_sample_rates = 1,
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
 		},
-		.num_regions = ARRAY_SIZE(ez2control_regions),
-		.region_defs = ez2control_regions,
+		.num_regions = ARRAY_SIZE(default_regions),
+		.region_defs = default_regions,
+	},
+};
+
+static const struct wm_adsp_fw_caps trace_caps[] = {
+	{
+		.id = SND_AUDIOCODEC_BESPOKE,
+		.desc = {
+			.max_ch = 8,
+			.sample_rates = {
+				4000, 8000, 11025, 12000, 16000, 22050,
+				24000, 32000, 44100, 48000, 64000, 88200,
+				96000, 176400, 192000
+			},
+			.num_sample_rates = 15,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+		},
+		.num_regions = ARRAY_SIZE(default_regions),
+		.region_defs = default_regions,
 	},
 };
 
@@ -382,11 +399,16 @@ static const struct {
 	[WM_ADSP_FW_CTRL] =     {
 		.file = "ctrl",
 		.compr_direction = SND_COMPRESS_CAPTURE,
-		.num_caps = ARRAY_SIZE(ez2control_caps),
-		.caps = ez2control_caps,
+		.num_caps = ARRAY_SIZE(ctrl_caps),
+		.caps = ctrl_caps,
 	},
 	[WM_ADSP_FW_ASR] =      { .file = "asr" },
-	[WM_ADSP_FW_TRACE] =    { .file = "trace" },
+	[WM_ADSP_FW_TRACE] =    {
+		.file = "trace",
+		.compr_direction = SND_COMPRESS_CAPTURE,
+		.num_caps = ARRAY_SIZE(trace_caps),
+		.caps = trace_caps,
+	},
 	[WM_ADSP_FW_SPK_PROT] = { .file = "spk-prot" },
 	[WM_ADSP_FW_MISC] =     { .file = "misc" },
 };
@@ -2123,29 +2145,8 @@ static void wm_adsp2_boot_work(struct work_struct *work)
 					   struct wm_adsp,
 					   boot_work);
 	int ret;
-	unsigned int val;
 
 	mutex_lock(&dsp->pwr_lock);
-
-	/*
-	 * For simplicity set the DSP clock rate to be the
-	 * SYSCLK rate rather than making it configurable.
-	 */
-	ret = regmap_read(dsp->regmap, ARIZONA_SYSTEM_CLOCK_1, &val);
-	if (ret != 0) {
-		adsp_err(dsp, "Failed to read SYSCLK state: %d\n", ret);
-		goto err_mutex;
-	}
-	val = (val & ARIZONA_SYSCLK_FREQ_MASK)
-		>> ARIZONA_SYSCLK_FREQ_SHIFT;
-
-	ret = regmap_update_bits_async(dsp->regmap,
-				       dsp->base + ADSP2_CLOCKING,
-				       ADSP2_CLK_SEL_MASK, val);
-	if (ret != 0) {
-		adsp_err(dsp, "Failed to set clock rate: %d\n", ret);
-		goto err_mutex;
-	}
 
 	ret = wm_adsp2_ena(dsp);
 	if (ret != 0)
@@ -2186,8 +2187,21 @@ err_mutex:
 	mutex_unlock(&dsp->pwr_lock);
 }
 
+static void wm_adsp2_set_dspclk(struct wm_adsp *dsp, unsigned int freq)
+{
+	int ret;
+
+	ret = regmap_update_bits_async(dsp->regmap,
+				       dsp->base + ADSP2_CLOCKING,
+				       ADSP2_CLK_SEL_MASK,
+				       freq << ADSP2_CLK_SEL_SHIFT);
+	if (ret != 0)
+		adsp_err(dsp, "Failed to set clock rate: %d\n", ret);
+}
+
 int wm_adsp2_early_event(struct snd_soc_dapm_widget *w,
-		   struct snd_kcontrol *kcontrol, int event)
+			 struct snd_kcontrol *kcontrol, int event,
+			 unsigned int freq)
 {
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct wm_adsp *dsps = snd_soc_codec_get_drvdata(codec);
@@ -2197,6 +2211,7 @@ int wm_adsp2_early_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
+		wm_adsp2_set_dspclk(dsp, freq);
 		queue_work(system_unbound_wq, &dsp->boot_work);
 		break;
 	default:
@@ -2470,6 +2485,8 @@ int wm_adsp_compr_set_params(struct snd_compr_stream *stream,
 	compr->raw_buf = kmalloc(size, GFP_DMA | GFP_KERNEL);
 	if (!compr->raw_buf)
 		return -ENOMEM;
+
+	compr->sample_rate = params->codec.sample_rate;
 
 	return 0;
 }
@@ -2810,7 +2827,6 @@ int wm_adsp_compr_handle_irq(struct wm_adsp *dsp)
 	mutex_lock(&dsp->pwr_lock);
 
 	if (!buf) {
-		adsp_err(dsp, "Spurious buffer IRQ\n");
 		ret = -ENODEV;
 		goto out;
 	}
@@ -2911,6 +2927,7 @@ int wm_adsp_compr_pointer(struct snd_compr_stream *stream,
 
 	tstamp->copied_total = compr->copied_total;
 	tstamp->copied_total += buf->avail * WM_ADSP_DATA_WORD_SIZE;
+	tstamp->sampling_rate = compr->sample_rate;
 
 out:
 	mutex_unlock(&dsp->pwr_lock);
