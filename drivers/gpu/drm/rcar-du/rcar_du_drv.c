@@ -26,6 +26,9 @@
 #include <drm/drm_encoder_slave.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
+#include <drm/rcar_du_drm.h>
+
+#include <media/vsp1.h>
 
 #include "rcar_du_crtc.h"
 #include "rcar_du_drv.h"
@@ -224,6 +227,37 @@ static void rcar_du_disable_vblank(struct drm_device *dev, unsigned int pipe)
 	rcar_du_crtc_enable_vblank(&rcdu->crtcs[pipe], false);
 }
 
+int rcar_du_set_vmute(struct drm_device *dev, void *data,
+		struct drm_file *file_priv)
+{
+	struct rcar_du_vmute *vmute =
+		(struct rcar_du_vmute *)data;
+	struct drm_mode_object *obj;
+	struct drm_crtc *crtc;
+	struct rcar_du_crtc *rcrtc;
+
+	dev_dbg(dev->dev, "CRTC[%d], display:%s\n",
+		vmute->crtc_id, vmute->on ? "off":"on");
+
+	obj = drm_mode_object_find(dev, vmute->crtc_id,
+					DRM_MODE_OBJECT_CRTC);
+	if (!obj)
+		return -EINVAL;
+	crtc = obj_to_crtc(obj);
+
+	rcrtc = to_rcar_crtc(crtc);
+
+	vsp1_du_if_set_mute(rcrtc->vsp->vsp, vmute->on);
+
+	return 0;
+}
+
+static const struct drm_ioctl_desc rcar_du_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(DRM_RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
+		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+};
+
+
 static const struct file_operations rcar_du_fops = {
 	.owner		= THIS_MODULE,
 	.open		= drm_open,
@@ -266,6 +300,8 @@ static struct drm_driver rcar_du_driver = {
 	.date			= "20130110",
 	.major			= 1,
 	.minor			= 0,
+	.ioctls			= rcar_du_ioctls,
+	.num_ioctls		= ARRAY_SIZE(rcar_du_ioctls),
 };
 
 /* -----------------------------------------------------------------------------
