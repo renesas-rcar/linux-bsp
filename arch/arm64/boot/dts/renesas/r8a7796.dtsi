@@ -521,5 +521,40 @@
 			i2c-scl-internal-delay-ns = <6>;
 			status = "disabled";
 		};
+
+		fcpvb0: fcp@fe96f000 {
+			compatible = "renesas,r8a7796-fcpv", "renesas,fcpv";
+			reg = <0 0xfe96f000 0 0x200>;
+			clocks = <&cpg CPG_MOD 607>;
+			power-domains = <&sysc R8A7796_PD_A3VC>;
+		};
+
+		fcpvi0: fcp@fe9af000 {
+			compatible = "renesas,r8a7796-fcpv", "renesas,fcpv";
+			reg = <0 0xfe9af000 0 0x200>;
+			clocks = <&cpg CPG_MOD 611>;
+			power-domains = <&sysc R8A7796_PD_A3VC>;
+		};
+
+		fcpvd0: fcp@fea27000 {
+			compatible = "renesas,r8a7796-fcpv", "renesas,fcpv";
+			reg = <0 0xfea27000 0 0x200>;
+			clocks = <&cpg CPG_MOD 603>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+		};
+
+		fcpvd1: fcp@fea2f000 {
+			compatible = "renesas,r8a7796-fcpv", "renesas,fcpv";
+			reg = <0 0xfea2f000 0 0x200>;
+			clocks = <&cpg CPG_MOD 602>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+		};
+
+		fcpvd2: fcp@fea37000 {
+			compatible = "renesas,r8a7796-fcpv", "renesas,fcpv";
+			reg = <0 0xfea37000 0 0x200>;
+			clocks = <&cpg CPG_MOD 601>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+		};
 	};
 };
