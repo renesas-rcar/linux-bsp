@@ -25,6 +25,7 @@
 
 struct clk;
 struct device;
+struct rcar_fcp_device;
 
 struct vsp1_dl;
 struct vsp1_drm;
@@ -63,6 +64,7 @@ struct vsp1_device {
 
 	void __iomem *mmio;
 	struct clk *clock;
+	struct rcar_fcp_device *fcp;
 
 	struct mutex lock;
 	int ref_count;
