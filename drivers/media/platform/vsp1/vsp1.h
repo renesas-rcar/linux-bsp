@@ -25,6 +25,7 @@
 
 struct clk;
 struct device;
+struct rcar_fcp_device;
 
 struct vsp1_drm;
 struct vsp1_entity;
@@ -67,6 +68,7 @@ struct vsp1_device {
 
 	void __iomem *mmio;
 	struct clk *clock;
+	struct rcar_fcp_device *fcp;
 
 	struct vsp1_bru *bru;
 	struct vsp1_clu *clu;

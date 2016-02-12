@@ -22,6 +22,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/videodev2.h>
 
+#include <media/rcar-fcp.h>
 #include <media/v4l2-subdev.h>
 
 #include "vsp1.h"
@@ -539,6 +540,7 @@ static int vsp1_pm_runtime_suspend(struct device *dev)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 
+	rcar_fcp_disable(vsp1->fcp);
 	clk_disable_unprepare(vsp1->clock);
 
 	return 0;
@@ -553,9 +555,12 @@ static int vsp1_pm_runtime_resume(struct device *dev)
 	if (ret < 0)
 		return ret;
 
+	rcar_fcp_enable(vsp1->fcp);
+
 	if (vsp1->info) {
 		ret = vsp1_device_init(vsp1);
 		if (ret < 0) {
+			rcar_fcp_disable(vsp1->fcp);
 			clk_disable_unprepare(vsp1->clock);
 			return ret;
 		}
@@ -652,6 +657,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 static int vsp1_probe(struct platform_device *pdev)
 {
 	struct vsp1_device *vsp1;
+	struct device_node *fcp_node;
 	struct resource *irq;
 	struct resource *io;
 	unsigned int i;
@@ -691,6 +697,18 @@ static int vsp1_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to request IRQ\n");
 		return ret;
+	}
+
+	/* FCP (optional) */
+	fcp_node = of_parse_phandle(pdev->dev.of_node, "renesas,fcp", 0);
+	if (fcp_node) {
+		vsp1->fcp = rcar_fcp_get(fcp_node);
+		of_node_put(fcp_node);
+		if (IS_ERR(vsp1->fcp)) {
+			dev_dbg(&pdev->dev, "FCP not found (%ld)\n",
+				PTR_ERR(vsp1->fcp));
+			return PTR_ERR(vsp1->fcp);
+		}
 	}
 
 	/* Configure device parameters based on the version register. */
@@ -738,6 +756,7 @@ static int vsp1_remove(struct platform_device *pdev)
 	struct vsp1_device *vsp1 = platform_get_drvdata(pdev);
 
 	vsp1_destroy_entities(vsp1);
+	rcar_fcp_put(vsp1->fcp);
 
 	pm_runtime_disable(&pdev->dev);
 
