@@ -9,6 +9,7 @@
  * for more details.
  */
 
+#include <linux/clk/renesas.h>
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/mm.h>
@@ -250,6 +251,15 @@ static void __init rcar_sysc_pd_setup(struct device_node *np,
 		pd->flags |= PD_BUSY;
 		gov = &pm_domain_always_on_gov;
 	}
+
+#ifdef CONFIG_ARCH_R8A7795
+	if (!(pd->flags & (PD_CPU | PD_SCU))) {
+		/* Enable Clock Domain for I/O devices */
+		genpd->flags = GENPD_FLAG_PM_CLK;
+		genpd->attach_dev = cpg_mssr_attach_dev;
+		genpd->detach_dev = cpg_mssr_detach_dev;
+	}
+#endif
 
 	pm_genpd_init(genpd, gov, false);
 	genpd->dev_ops.active_wakeup = rcar_sysc_active_wakeup;
