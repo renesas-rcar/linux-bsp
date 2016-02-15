@@ -27,9 +27,17 @@ struct acpi_device;
  * @id: numerical ID number for the GPIO chip
  * @dev: the GPIO device struct
  * @chrdev: character device for the GPIO device
+ * @mockdev: class device used by the deprecated sysfs interface (may be
+ * NULL)
  * @owner: helps prevent removal of modules exporting active GPIOs
  * @chip: pointer to the corresponding gpiochip, holding static
  * data for this device
+ * @descs: array of ngpio descriptors.
+ * @ngpio: the number of GPIO lines on this GPIO device, equal to the size
+ * of the @descs array.
+ * @base: GPIO base in the DEPRECATED global Linux GPIO numberspace, assigned
+ * at device creation time.
+ * @data: per-instance data assigned by the driver
  * @list: links gpio_device:s together for traversal
  *
  * This state container holds most of the runtime variable data
@@ -41,9 +49,24 @@ struct gpio_device {
 	int			id;
 	struct device		dev;
 	struct cdev		chrdev;
+	struct device		*mockdev;
 	struct module		*owner;
 	struct gpio_chip	*chip;
+	struct gpio_desc	*descs;
+	int			base;
+	u16			ngpio;
+	void			*data;
 	struct list_head        list;
+
+#ifdef CONFIG_PINCTRL
+	/*
+	 * If CONFIG_PINCTRL is enabled, then gpio controllers can optionally
+	 * describe the actual pin range which they serve in an SoC. This
+	 * information would be used by pinctrl subsystem to configure
+	 * corresponding pins for gpio usage.
+	 */
+	struct list_head pin_ranges;
+#endif
 };
 
 /**
@@ -120,7 +143,7 @@ extern struct spinlock gpio_lock;
 extern struct list_head gpio_devices;
 
 struct gpio_desc {
-	struct gpio_chip	*chip;
+	struct gpio_device	*gdev;
 	unsigned long		flags;
 /* flag symbols are bit numbers */
 #define FLAG_REQUESTED	0
@@ -149,7 +172,7 @@ int gpiod_hog(struct gpio_desc *desc, const char *name,
  */
 static int __maybe_unused gpio_chip_hwgpio(const struct gpio_desc *desc)
 {
-	return desc - &desc->chip->desc[0];
+	return desc - &desc->gdev->descs[0];
 }
 
 /* With descriptor prefix */
@@ -190,17 +213,17 @@ static int __maybe_unused gpio_chip_hwgpio(const struct gpio_desc *desc)
 
 #ifdef CONFIG_GPIO_SYSFS
 
-int gpiochip_sysfs_register(struct gpio_chip *chip);
-void gpiochip_sysfs_unregister(struct gpio_chip *chip);
+int gpiochip_sysfs_register(struct gpio_device *gdev);
+void gpiochip_sysfs_unregister(struct gpio_device *gdev);
 
 #else
 
-static inline int gpiochip_sysfs_register(struct gpio_chip *chip)
+static inline int gpiochip_sysfs_register(struct gpio_device *gdev)
 {
 	return 0;
 }
 
-static inline void gpiochip_sysfs_unregister(struct gpio_chip *chip)
+static inline void gpiochip_sysfs_unregister(struct gpio_device *gdev)
 {
 }
 
