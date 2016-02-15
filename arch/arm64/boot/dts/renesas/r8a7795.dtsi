@@ -1266,6 +1266,7 @@
 			reg = <0 0xfe920000 0 0x8000>;
 			interrupts = <GIC_SPI 465 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 624>;
+			power-domains = <&pd_a3vp>;
 
 			renesas,fcp = <&fcpvb1>;
 
@@ -1288,6 +1289,7 @@
 			reg = <0 0xfe960000 0 0x8000>;
 			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 626>;
+			power-domains = <&pd_a3vp>;
 
 			renesas,fcp = <&fcpvb0>;
 
@@ -1308,6 +1310,7 @@
 			reg = <0 0xfe9a0000 0 0x8000>;
 			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 631>;
+			power-domains = <&pd_a3vp>;
 
 			renesas,fcp = <&fcpvi0>;
 
@@ -1331,6 +1334,7 @@
 			reg = <0 0xfe9b0000 0 0x8000>;
 			interrupts = <GIC_SPI 445 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&pd_a3vp>;
 
 			renesas,fcp = <&fcpvi1>;
 
@@ -1354,6 +1358,7 @@
 			reg = <0 0xfe9c0000 0 0x8000>;
 			interrupts = <GIC_SPI 446 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 629>;
+			power-domains = <&pd_a3vp>;
 
 			renesas,fcp = <&fcpvi2>;
 
