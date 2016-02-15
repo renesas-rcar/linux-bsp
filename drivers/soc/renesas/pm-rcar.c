@@ -9,15 +9,19 @@
  * for more details.
  */
 
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/mm.h>
 #include <linux/of_address.h>
+#include <linux/pm_clock.h>
 #include <linux/pm_domain.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
 #include <linux/soc/renesas/pm-rcar.h>
+
+#include <dt-bindings/clock/renesas-cpg-mssr.h>
 
 /* SYSC Common */
 #define SYSCSR			0x00	/* SYSC Status Register */
@@ -248,11 +252,75 @@ static int rcar_pd_power_up(struct generic_pm_domain *genpd)
 	return rcar_sysc_power_up(&to_rcar_pd(genpd)->ch);
 }
 
+#ifdef CONFIG_ARCH_R8A7795
+static int rcar_clk_pd_attach_dev(struct generic_pm_domain *genpd,
+				  struct device *dev)
+{
+	struct device_node *np = dev->of_node;
+	struct of_phandle_args clkspec;
+	struct clk *clk;
+	int i = 0;
+	int error;
+
+	while (!of_parse_phandle_with_args(np, "clocks", "#clock-cells", i,
+					   &clkspec)) {
+		if (clkspec.args_count == 2 && clkspec.args[0] == CPG_MOD &&
+		    of_device_is_compatible(clkspec.np,
+					    "renesas,r8a7795-cpg-mssr"))
+			goto found;
+
+		of_node_put(clkspec.np);
+		i++;
+	}
+
+	return 0;
+
+found:
+	clk = of_clk_get_from_provider(&clkspec);
+	of_node_put(clkspec.np);
+
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
+
+	error = pm_clk_create(dev);
+	if (error) {
+		dev_err(dev, "pm_clk_create failed %d\n", error);
+		goto fail_put;
+	}
+
+	error = pm_clk_add_clk(dev, clk);
+	if (error) {
+		dev_err(dev, "pm_clk_add_clk %pC failed %d\n", clk, error);
+		goto fail_destroy;
+	}
+
+	return 0;
+
+fail_destroy:
+	pm_clk_destroy(dev);
+fail_put:
+	clk_put(clk);
+	return error;
+}
+
+static void rcar_clk_pd_detach_dev(struct generic_pm_domain *genpd,
+				   struct device *dev)
+{
+	if (!list_empty(&dev->power.subsys_data->clock_list))
+		pm_clk_destroy(dev);
+}
+#endif /* CONFIG_ARCH_R8A7795 */
+
 static void rcar_init_pm_domain(struct rcar_pm_domain *rcar_pd)
 {
 	struct generic_pm_domain *genpd = &rcar_pd->genpd;
 	struct dev_power_governor *gov = rcar_pd->gov;
 
+#ifdef CONFIG_ARCH_R8A7795
+	genpd->flags = GENPD_FLAG_PM_CLK;
+	genpd->attach_dev = rcar_clk_pd_attach_dev;
+	genpd->detach_dev = rcar_clk_pd_detach_dev;
+#endif
 	pm_genpd_init(genpd, gov ? : &simple_qos_governor, false);
 	genpd->dev_ops.active_wakeup	= rcar_pd_active_wakeup;
 	genpd->power_off		= rcar_pd_power_down;
