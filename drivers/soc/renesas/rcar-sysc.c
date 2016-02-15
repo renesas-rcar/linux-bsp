@@ -224,6 +224,36 @@ static int rcar_sysc_pd_power_on(struct generic_pm_domain *genpd)
 	return rcar_sysc_power_up(&pd->ch);
 }
 
+#ifdef CONFIG_ARCH_R8A7795
+static int rcar_sysc_attach_dev(struct generic_pm_domain *genpd,
+				struct device *dev)
+{
+	struct gpd_link *link;
+	int error;
+
+	/* Forward call to parent */
+	list_for_each_entry(link, &genpd->slave_links, slave_node)
+		if (link->master && link->master->attach_dev) {
+			error = link->master->attach_dev(link->master, dev);
+			if (error)
+				return error;
+		}
+
+	return 0;
+}
+
+static void rcar_sysc_detach_dev(struct generic_pm_domain *genpd,
+				 struct device *dev)
+{
+	struct gpd_link *link;
+
+	/* Forward call to parent */
+	list_for_each_entry(link, &genpd->slave_links, slave_node)
+		if (link->master && link->master->detach_dev)
+			link->master->detach_dev(link->master, dev);
+}
+#endif /* CONFIG_ARCH_R8A7795 */
+
 static void __init rcar_sysc_pd_setup(struct rcar_sysc_pd *pd)
 {
 	struct generic_pm_domain *genpd = &pd->genpd;
@@ -248,6 +278,15 @@ static void __init rcar_sysc_pd_setup(struct rcar_sysc_pd *pd)
 		pd->flags |= PD_BUSY;
 		gov = &pm_domain_always_on_gov;
 	}
+
+#ifdef CONFIG_ARCH_R8A7795
+	if (!(pd->flags & (PD_CPU | PD_SCU))) {
+		/* Enable Clock Domain for I/O devices */
+		genpd->flags = GENPD_FLAG_PM_CLK;
+		genpd->attach_dev = rcar_sysc_attach_dev;
+		genpd->detach_dev = rcar_sysc_detach_dev;
+	}
+#endif
 
 	pm_genpd_init(genpd, gov, false);
 	genpd->dev_ops.active_wakeup = rcar_sysc_active_wakeup;
