@@ -303,6 +303,8 @@ static inline void spi_unregister_driver(struct spi_driver *sdrv)
  * @min_speed_hz: Lowest supported transfer speed
  * @max_speed_hz: Highest supported transfer speed
  * @flags: other constraints relevant to this driver
+ * @max_transfer_size: function that returns the max transfer size for
+ *	a &spi_device; may be %NULL, so the default %SIZE_MAX will be used.
  * @bus_lock_spinlock: spinlock for SPI bus locking
  * @bus_lock_mutex: mutex for SPI bus locking
  * @bus_lock_flag: indicates that the SPI bus is locked for exclusive use
@@ -369,6 +371,9 @@ static inline void spi_unregister_driver(struct spi_driver *sdrv)
  * @dma_rx: DMA receive channel
  * @dummy_rx: dummy receive buffer for full-duplex devices
  * @dummy_tx: dummy transmit buffer for full-duplex devices
+ * @fw_translate_cs: If the boot firmware uses different numbering scheme
+ *	what Linux expects, this optional hook can be used to translate
+ *	between the two.
  *
  * Each SPI master controller can communicate with one or more @spi_device
  * children.  These make a small bus, sharing MOSI, MISO and SCK signals
@@ -537,6 +542,8 @@ struct spi_master {
 	/* dummy data for full duplex devices */
 	void			*dummy_rx;
 	void			*dummy_tx;
+
+	int (*fw_translate_cs)(struct spi_master *master, unsigned cs);
 };
 
 static inline void *spi_master_get_devdata(struct spi_master *master)
