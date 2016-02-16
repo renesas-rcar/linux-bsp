@@ -541,7 +541,6 @@ static int vsp1_pm_runtime_suspend(struct device *dev)
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 
 	rcar_fcp_disable(vsp1->fcp);
-	clk_disable_unprepare(vsp1->clock);
 
 	return 0;
 }
@@ -551,21 +550,13 @@ static int vsp1_pm_runtime_resume(struct device *dev)
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	int ret;
 
-	ret = clk_prepare_enable(vsp1->clock);
-	if (ret < 0)
-		return ret;
-
-	rcar_fcp_enable(vsp1->fcp);
-
 	if (vsp1->info) {
 		ret = vsp1_device_init(vsp1);
-		if (ret < 0) {
-			rcar_fcp_disable(vsp1->fcp);
-			clk_disable_unprepare(vsp1->clock);
+		if (ret < 0)
 			return ret;
-		}
 	}
 
+	rcar_fcp_enable(vsp1->fcp);
 	return 0;
 }
 
@@ -674,17 +665,11 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, vsp1);
 
-	/* I/O, IRQ and clock resources */
+	/* I/O and IRQ resources (clock managed by the clock PM domain) */
 	io = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	vsp1->mmio = devm_ioremap_resource(&pdev->dev, io);
 	if (IS_ERR(vsp1->mmio))
 		return PTR_ERR(vsp1->mmio);
-
-	vsp1->clock = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(vsp1->clock)) {
-		dev_err(&pdev->dev, "failed to get clock\n");
-		return PTR_ERR(vsp1->clock);
-	}
 
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!irq) {
