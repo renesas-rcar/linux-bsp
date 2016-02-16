@@ -89,6 +89,15 @@ struct media_device_info {
 #define MEDIA_ENT_F_IO_SWRADIO		(MEDIA_ENT_F_BASE + 33)
 
 /*
+ * Analog TV IF-PLL decoders
+ *
+ * It is a responsibility of the master/bridge drivers to create links
+ * for MEDIA_ENT_F_IF_VID_DECODER and MEDIA_ENT_F_IF_AUD_DECODER.
+ */
+#define MEDIA_ENT_F_IF_VID_DECODER	(MEDIA_ENT_F_BASE + 41)
+#define MEDIA_ENT_F_IF_AUD_DECODER	(MEDIA_ENT_F_BASE + 42)
+
+/*
  * Don't touch on those. The ranges MEDIA_ENT_F_OLD_BASE and
  * MEDIA_ENT_F_OLD_SUBDEV_BASE are kept to keep backward compatibility
  * with the legacy v1 API.The number range is out of range by purpose:
@@ -107,8 +116,12 @@ struct media_device_info {
 #define MEDIA_ENT_F_LENS		(MEDIA_ENT_F_OLD_SUBDEV_BASE + 3)
 #define MEDIA_ENT_F_ATV_DECODER		(MEDIA_ENT_F_OLD_SUBDEV_BASE + 4)
 /*
- * It is a responsibility of the entity drivers to add connectors and links
- *	for the tuner entities.
+ * It is a responsibility of the master/bridge drivers to add connectors
+ * and links for MEDIA_ENT_F_TUNER. Please notice that some old tuners
+ * may require the usage of separate I2C chips to decode analog TV signals,
+ * when the master/bridge chipset doesn't have its own TV standard decoder.
+ * On such cases, the IF-PLL staging is mapped via one or two entities:
+ * MEDIA_ENT_F_IF_VID_DECODER and/or MEDIA_ENT_F_IF_AUD_DECODER.
  */
 #define MEDIA_ENT_F_TUNER		(MEDIA_ENT_F_OLD_SUBDEV_BASE + 5)
 
@@ -286,7 +299,7 @@ struct media_links_enum {
  *	  later, before the adding this API upstream.
  */
 
-#if 0 /* Let's postpone it to Kernel 4.6 */
+
 struct media_v2_entity {
 	__u32 id;
 	char name[64];		/* FIXME: move to a property? (RFC says so) */
@@ -351,7 +364,6 @@ static inline void __user *media_get_uptr(__u64 arg)
 {
 	return (void __user *)(uintptr_t)arg;
 }
-#endif
 
 /* ioctls */
 
@@ -359,9 +371,6 @@ static inline void __user *media_get_uptr(__u64 arg)
 #define MEDIA_IOC_ENUM_ENTITIES		_IOWR('|', 0x01, struct media_entity_desc)
 #define MEDIA_IOC_ENUM_LINKS		_IOWR('|', 0x02, struct media_links_enum)
 #define MEDIA_IOC_SETUP_LINK		_IOWR('|', 0x03, struct media_link_desc)
-
-#if 0 /* Let's postpone it to Kernel 4.6 */
 #define MEDIA_IOC_G_TOPOLOGY		_IOWR('|', 0x04, struct media_v2_topology)
-#endif
 
 #endif /* __LINUX_MEDIA_H */
