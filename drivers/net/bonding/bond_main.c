@@ -618,8 +618,8 @@ static void bond_hw_addr_swap(struct bonding *bond, struct slave *new_active,
 static void bond_set_dev_addr(struct net_device *bond_dev,
 			      struct net_device *slave_dev)
 {
-	netdev_dbg(bond_dev, "bond_dev=%p slave_dev=%p slave_dev->addr_len=%d\n",
-		   bond_dev, slave_dev, slave_dev->addr_len);
+	netdev_dbg(bond_dev, "bond_dev=%p slave_dev=%p slave_dev->name=%s slave_dev->addr_len=%d\n",
+		   bond_dev, slave_dev, slave_dev->name, slave_dev->addr_len);
 	memcpy(bond_dev->dev_addr, slave_dev->dev_addr, slave_dev->addr_len);
 	bond_dev->addr_assign_type = NET_ADDR_STOLEN;
 	call_netdevice_notifiers(NETDEV_CHANGEADDR, bond_dev);
@@ -928,11 +928,10 @@ void bond_select_active_slave(struct bonding *bond)
 		if (!rv)
 			return;
 
-		if (netif_carrier_ok(bond->dev)) {
+		if (netif_carrier_ok(bond->dev))
 			netdev_info(bond->dev, "first active interface up!\n");
-		} else {
+		else
 			netdev_info(bond->dev, "now running without any active interface!\n");
-		}
 	}
 }
 
@@ -1178,9 +1177,8 @@ static rx_handler_result_t bond_handle_frame(struct sk_buff **pskb)
 		}
 	}
 
-	if (bond_should_deliver_exact_match(skb, slave, bond)) {
+	if (bond_should_deliver_exact_match(skb, slave, bond))
 		return RX_HANDLER_EXACT;
-	}
 
 	skb->dev = bond->dev;
 
@@ -1241,7 +1239,7 @@ static struct slave *bond_alloc_slave(struct bonding *bond)
 {
 	struct slave *slave = NULL;
 
-	slave = kzalloc(sizeof(struct slave), GFP_KERNEL);
+	slave = kzalloc(sizeof(*slave), GFP_KERNEL);
 	if (!slave)
 		return NULL;
 
@@ -1381,8 +1379,7 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev)
 	if (slave_dev->flags & IFF_UP) {
 		netdev_err(bond_dev, "%s is up - this may be due to an out of date ifenslave\n",
 			   slave_dev->name);
-		res = -EPERM;
-		goto err_undo_flags;
+		return -EPERM;
 	}
 
 	/* set bonding device ether type by slave - bonding netdevices are
@@ -1402,8 +1399,7 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev)
 			res = notifier_to_errno(res);
 			if (res) {
 				netdev_err(bond_dev, "refused to change device type\n");
-				res = -EBUSY;
-				goto err_undo_flags;
+				return -EBUSY;
 			}
 
 			/* Flush unicast and multicast addresses */
@@ -1423,8 +1419,7 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev)
 	} else if (bond_dev->type != slave_dev->type) {
 		netdev_err(bond_dev, "%s ether type (%d) is different from other slaves (%d), can not enslave it\n",
 			   slave_dev->name, slave_dev->type, bond_dev->type);
-		res = -EINVAL;
-		goto err_undo_flags;
+		return -EINVAL;
 	}
 
 	if (slave_ops->ndo_set_mac_address == NULL) {
@@ -3309,6 +3304,7 @@ static struct rtnl_link_stats64 *bond_get_stats(struct net_device *bond_dev,
 		stats->rx_bytes += sstats->rx_bytes - pstats->rx_bytes;
 		stats->rx_errors += sstats->rx_errors - pstats->rx_errors;
 		stats->rx_dropped += sstats->rx_dropped - pstats->rx_dropped;
+		stats->rx_nohandler += sstats->rx_nohandler - pstats->rx_nohandler;
 
 		stats->tx_packets += sstats->tx_packets - pstats->tx_packets;;
 		stats->tx_bytes += sstats->tx_bytes - pstats->tx_bytes;

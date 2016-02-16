@@ -1,4 +1,4 @@
-/* Copyright (C) 2009-2015 B.A.T.M.A.N. contributors:
+/* Copyright (C) 2009-2016  B.A.T.M.A.N. contributors:
  *
  * Marek Lindner
  *
@@ -28,6 +28,7 @@
 #include <linux/ip.h>
 #include <linux/ipv6.h>
 #include <linux/kernel.h>
+#include <linux/kref.h>
 #include <linux/list.h>
 #include <linux/netdevice.h>
 #include <linux/rculist.h>
@@ -59,12 +60,29 @@
  */
 #define BATADV_DHCP_CHADDR_OFFSET	28
 
+/**
+ * batadv_gw_node_release - release gw_node from lists and queue for free after
+ *  rcu grace period
+ * @ref: kref pointer of the gw_node
+ */
+static void batadv_gw_node_release(struct kref *ref)
+{
+	struct batadv_gw_node *gw_node;
+
+	gw_node = container_of(ref, struct batadv_gw_node, refcount);
+
+	batadv_orig_node_free_ref(gw_node->orig_node);
+	kfree_rcu(gw_node, rcu);
+}
+
+/**
+ * batadv_gw_node_free_ref - decrement the gw_node refcounter and possibly
+ *  release it
+ * @gw_node: gateway node to free
+ */
 static void batadv_gw_node_free_ref(struct batadv_gw_node *gw_node)
 {
-	if (atomic_dec_and_test(&gw_node->refcount)) {
-		batadv_orig_node_free_ref(gw_node->orig_node);
-		kfree_rcu(gw_node, rcu);
-	}
+	kref_put(&gw_node->refcount, batadv_gw_node_release);
 }
 
 static struct batadv_gw_node *
@@ -77,7 +95,7 @@ batadv_gw_get_selected_gw_node(struct batadv_priv *bat_priv)
 	if (!gw_node)
 		goto out;
 
-	if (!atomic_inc_not_zero(&gw_node->refcount))
+	if (!kref_get_unless_zero(&gw_node->refcount))
 		gw_node = NULL;
 
 out:
@@ -100,7 +118,7 @@ batadv_gw_get_selected_orig(struct batadv_priv *bat_priv)
 	if (!orig_node)
 		goto unlock;
 
-	if (!atomic_inc_not_zero(&orig_node->refcount))
+	if (!kref_get_unless_zero(&orig_node->refcount))
 		orig_node = NULL;
 
 unlock:
@@ -118,7 +136,7 @@ static void batadv_gw_select(struct batadv_priv *bat_priv,
 
 	spin_lock_bh(&bat_priv->gw.list_lock);
 
-	if (new_gw_node && !atomic_inc_not_zero(&new_gw_node->refcount))
+	if (new_gw_node && !kref_get_unless_zero(&new_gw_node->refcount))
 		new_gw_node = NULL;
 
 	curr_gw_node = rcu_dereference_protected(bat_priv->gw.curr_gw, 1);
@@ -170,7 +188,7 @@ batadv_gw_get_best_gw_node(struct batadv_priv *bat_priv)
 		if (!router_ifinfo)
 			goto next;
 
-		if (!atomic_inc_not_zero(&gw_node->refcount))
+		if (!kref_get_unless_zero(&gw_node->refcount))
 			goto next;
 
 		tq_avg = router_ifinfo->bat_iv.tq_avg;
@@ -188,7 +206,7 @@ batadv_gw_get_best_gw_node(struct batadv_priv *bat_priv)
 				if (curr_gw)
 					batadv_gw_node_free_ref(curr_gw);
 				curr_gw = gw_node;
-				atomic_inc(&curr_gw->refcount);
+				kref_get(&curr_gw->refcount);
 			}
 			break;
 
@@ -203,7 +221,7 @@ batadv_gw_get_best_gw_node(struct batadv_priv *bat_priv)
 				if (curr_gw)
 					batadv_gw_node_free_ref(curr_gw);
 				curr_gw = gw_node;
-				atomic_inc(&curr_gw->refcount);
+				kref_get(&curr_gw->refcount);
 			}
 			break;
 		}
@@ -423,7 +441,7 @@ static void batadv_gw_node_add(struct batadv_priv *bat_priv,
 	if (gateway->bandwidth_down == 0)
 		return;
 
-	if (!atomic_inc_not_zero(&orig_node->refcount))
+	if (!kref_get_unless_zero(&orig_node->refcount))
 		return;
 
 	gw_node = kzalloc(sizeof(*gw_node), GFP_ATOMIC);
@@ -436,7 +454,7 @@ static void batadv_gw_node_add(struct batadv_priv *bat_priv,
 	gw_node->orig_node = orig_node;
 	gw_node->bandwidth_down = ntohl(gateway->bandwidth_down);
 	gw_node->bandwidth_up = ntohl(gateway->bandwidth_up);
-	atomic_set(&gw_node->refcount, 1);
+	kref_init(&gw_node->refcount);
 
 	spin_lock_bh(&bat_priv->gw.list_lock);
 	hlist_add_head_rcu(&gw_node->list, &bat_priv->gw.list);
@@ -456,7 +474,7 @@ static void batadv_gw_node_add(struct batadv_priv *bat_priv,
  * @bat_priv: the bat priv with all the soft interface information
  * @orig_node: originator announcing gateway capabilities
  *
- * Returns gateway node if found or NULL otherwise.
+ * Return: gateway node if found or NULL otherwise.
  */
 static struct batadv_gw_node *
 batadv_gw_node_get(struct batadv_priv *bat_priv,
@@ -469,7 +487,7 @@ batadv_gw_node_get(struct batadv_priv *bat_priv,
 		if (gw_node_tmp->orig_node != orig_node)
 			continue;
 
-		if (!atomic_inc_not_zero(&gw_node_tmp->refcount))
+		if (!kref_get_unless_zero(&gw_node_tmp->refcount))
 			continue;
 
 		gw_node = gw_node_tmp;
@@ -655,13 +673,13 @@ out:
  * @chaddr: buffer where the client address will be stored. Valid
  *  only if the function returns BATADV_DHCP_TO_CLIENT
  *
- * Returns:
+ * This function may re-allocate the data buffer of the skb passed as argument.
+ *
+ * Return:
  * - BATADV_DHCP_NO if the packet is not a dhcp message or if there was an error
  *   while parsing it
  * - BATADV_DHCP_TO_SERVER if this is a message going to the DHCP server
  * - BATADV_DHCP_TO_CLIENT if this is a message going to a DHCP client
- *
- * This function may re-allocate the data buffer of the skb passed as argument.
  */
 enum batadv_dhcp_recipient
 batadv_gw_dhcp_recipient_get(struct sk_buff *skb, unsigned int *header_len,
@@ -776,11 +794,11 @@ batadv_gw_dhcp_recipient_get(struct sk_buff *skb, unsigned int *header_len,
  * server. Due to topology changes it may be the case that the GW server
  * previously selected is not the best one anymore.
  *
- * Returns true if the packet destination is unicast and it is not the best gw,
- * false otherwise.
- *
  * This call might reallocate skb data.
  * Must be invoked only when the DHCP packet is going TO a DHCP SERVER.
+ *
+ * Return: true if the packet destination is unicast and it is not the best gw,
+ * false otherwise.
  */
 bool batadv_gw_out_of_range(struct batadv_priv *bat_priv,
 			    struct sk_buff *skb)
