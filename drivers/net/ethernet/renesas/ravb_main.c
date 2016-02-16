@@ -2065,21 +2065,16 @@ static int ravb_probe(struct platform_device *pdev)
 	ndev->netdev_ops = &ravb_netdev_ops;
 	ndev->ethtool_ops = &ravb_ethtool_ops;
 
-	/* Set AVB config mode */
+	/* Set AVB config mode and CSEL value */
 	if (chip_id == RCAR_GEN2) {
 		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
 			   CCC_OPC_CONFIG, CCC);
-		/* Set CSEL value */
 		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_CSEL) |
 			   CCC_CSEL_HPB, CCC);
 	} else {
 		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
 			   CCC_OPC_CONFIG | CCC_GAC | CCC_CSEL_HPB, CCC);
 	}
-
-	/* Set CSEL value */
-	ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_CSEL) | CCC_CSEL_HPB,
-		   CCC);
 
 	/* Set GTI value */
 	error = ravb_set_gti(ndev);
