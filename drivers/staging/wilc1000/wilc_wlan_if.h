@@ -82,7 +82,7 @@ typedef struct {
 struct tx_complete_data {
 	int size;
 	void *buff;
-	u8 *pBssid;
+	u8 *bssid;
 	struct sk_buff *skb;
 };
 
@@ -298,6 +298,13 @@ enum wid_type {
 	WID_ADR			= 7,
 	WID_UNDEF		= 8,
 	WID_TYPE_FORCE_32BIT	= 0xFFFFFFFF
+};
+
+struct wid {
+	u16 id;
+	enum wid_type type;
+	s32 size;
+	s8 *val;
 };
 
 typedef enum {
@@ -761,6 +768,7 @@ typedef enum {
 	WID_DEL_BEACON			= 0x00CA,
 
 	WID_LOGTerminal_Switch		= 0x00CD,
+	WID_TX_POWER			= 0x00CE,
 	/*  EMAC Short WID list */
 	/*  RTS Threshold */
 	/*
@@ -832,7 +840,6 @@ typedef enum {
 
 	/* Custom Integer WID list */
 	WID_GET_INACTIVE_TIME		= 0x2084,
-	WID_SET_DRV_HANDLER		= 0X2085,
 	WID_SET_OPERATION_MODE		= 0X2086,
 	/* EMAC String WID list */
 	WID_SSID			= 0x3000,
@@ -865,6 +872,7 @@ typedef enum {
 	WID_MODEL_NAME			= 0x3027, /*Added for CAPI tool */
 	WID_MODEL_NUM			= 0x3028, /*Added for CAPI tool */
 	WID_DEVICE_NAME			= 0x3029, /*Added for CAPI tool */
+	WID_SET_DRV_HANDLER		= 0x3030,
 
 	/* NMAC String WID list */
 	WID_11N_P_ACTION_REQ		= 0x3080,
@@ -913,6 +921,6 @@ struct wilc;
 int wilc_wlan_init(struct net_device *dev);
 void wilc_bus_set_max_speed(void);
 void wilc_bus_set_default_speed(void);
-u32 wilc_get_chipid(struct wilc *wilc, u8 update);
+u32 wilc_get_chipid(struct wilc *wilc, bool update);
 
 #endif

@@ -21,7 +21,7 @@
 #include "netlink_k.h"
 
 #if !defined(NLMSG_HDRLEN)
-#define NLMSG_HDRLEN	 ((int) NLMSG_ALIGN(sizeof(struct nlmsghdr)))
+#define NLMSG_HDRLEN	 ((int)NLMSG_ALIGN(sizeof(struct nlmsghdr)))
 #endif
 
 #define ND_MAX_GROUP			30
@@ -151,6 +151,5 @@ int netlink_send(struct sock *sock, int group, u16 type, void *msg, int len)
 		pr_err("netlink_broadcast g=%d, t=%d, l=%d, r=%d\n",
 		       group, type, len, ret);
 	}
-	ret = 0;
-	return ret;
+	return 0;
 }

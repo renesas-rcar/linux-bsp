@@ -127,22 +127,15 @@ void _rtw_free_recv_priv(struct recv_priv *precvpriv)
 struct recv_frame *_rtw_alloc_recvframe(struct __queue *pfree_recv_queue)
 {
 	struct recv_frame *hdr;
-	struct list_head *plist, *phead;
 	struct adapter *padapter;
 	struct recv_priv *precvpriv;
 
-	if (list_empty(&pfree_recv_queue->queue)) {
-		hdr = NULL;
-	} else {
-		phead = get_list_head(pfree_recv_queue);
-
-		plist = phead->next;
-
-		hdr = container_of(plist, struct recv_frame, list);
-
+	hdr = list_first_entry_or_null(&pfree_recv_queue->queue,
+				       struct recv_frame, list);
+	if (hdr) {
 		list_del_init(&hdr->list);
 		padapter = hdr->adapter;
-		if (padapter != NULL) {
+		if (padapter) {
 			precvpriv = &padapter->recvpriv;
 			if (pfree_recv_queue == &precvpriv->free_recv_queue)
 				precvpriv->free_recvframe_cnt--;
@@ -1274,32 +1267,25 @@ static int validate_recv_frame(struct adapter *adapter,
 	/* Dump rx packets */
 	rtw_hal_get_def_var(adapter, HAL_DEF_DBG_DUMP_RXPKT, &(bDumpRxPkt));
 	if (bDumpRxPkt == 1) {/* dump all rx packets */
-		int i;
-		DBG_88E("#############################\n");
-
-		for (i = 0; i < 64; i += 8)
-			DBG_88E("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n", *(ptr+i),
-				*(ptr+i+1), *(ptr+i+2), *(ptr+i+3), *(ptr+i+4), *(ptr+i+5), *(ptr+i+6), *(ptr+i+7));
-		DBG_88E("#############################\n");
+		if (_drv_err_ <= GlobalDebugLevel) {
+			pr_info(DRIVER_PREFIX "#############################\n");
+			print_hex_dump(KERN_INFO, DRIVER_PREFIX, DUMP_PREFIX_NONE,
+					16, 1, ptr, 64, false);
+			pr_info(DRIVER_PREFIX "#############################\n");
+		}
 	} else if (bDumpRxPkt == 2) {
-		if (type == WIFI_MGT_TYPE) {
-			int i;
-			DBG_88E("#############################\n");
-
-			for (i = 0; i < 64; i += 8)
-				DBG_88E("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n", *(ptr+i),
-					*(ptr+i+1), *(ptr+i+2), *(ptr+i+3), *(ptr+i+4), *(ptr+i+5), *(ptr+i+6), *(ptr+i+7));
-			DBG_88E("#############################\n");
+		if ((_drv_err_ <= GlobalDebugLevel) && (type == WIFI_MGT_TYPE)) {
+			pr_info(DRIVER_PREFIX "#############################\n");
+			print_hex_dump(KERN_INFO, DRIVER_PREFIX, DUMP_PREFIX_NONE,
+					16, 1, ptr, 64, false);
+			pr_info(DRIVER_PREFIX "#############################\n");
 		}
 	} else if (bDumpRxPkt == 3) {
-		if (type == WIFI_DATA_TYPE) {
-			int i;
-			DBG_88E("#############################\n");
-
-			for (i = 0; i < 64; i += 8)
-				DBG_88E("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n", *(ptr+i),
-					*(ptr+i+1), *(ptr+i+2), *(ptr+i+3), *(ptr+i+4), *(ptr+i+5), *(ptr+i+6), *(ptr+i+7));
-			DBG_88E("#############################\n");
+		if ((_drv_err_ <= GlobalDebugLevel) && (type == WIFI_DATA_TYPE)) {
+			pr_info(DRIVER_PREFIX "#############################\n");
+			print_hex_dump(KERN_INFO, DRIVER_PREFIX, DUMP_PREFIX_NONE,
+					16, 1, ptr, 64, false);
+			pr_info(DRIVER_PREFIX "#############################\n");
 		}
 	}
 	switch (type) {

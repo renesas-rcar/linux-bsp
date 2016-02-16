@@ -767,7 +767,7 @@ static void dm_TXPowerTrackingCallback_ThermalMeter(struct net_device *dev)
 
 void dm_txpower_trackingcallback(struct work_struct *work)
 {
-	struct delayed_work *dwork = container_of(work, struct delayed_work, work);
+	struct delayed_work *dwork = to_delayed_work(work);
 	struct r8192_priv *priv = container_of(dwork, struct r8192_priv, txpower_tracking_wq);
 	struct net_device *dev = priv->ieee80211->dev;
 
@@ -2412,7 +2412,7 @@ static	void	dm_check_pbc_gpio(struct net_device *dev)
  *---------------------------------------------------------------------------*/
 void dm_rf_pathcheck_workitemcallback(struct work_struct *work)
 {
-	struct delayed_work *dwork = container_of(work, struct delayed_work, work);
+	struct delayed_work *dwork = to_delayed_work(work);
 	struct r8192_priv *priv = container_of(dwork, struct r8192_priv, rfpath_check_wq);
 	struct net_device *dev = priv->ieee80211->dev;
 	/*bool bactually_set = false;*/
@@ -2769,12 +2769,14 @@ void dm_fsync_timer_callback(unsigned long data)
 		if (bDoubleTimeInterval) {
 			if (timer_pending(&priv->fsync_timer))
 				del_timer_sync(&priv->fsync_timer);
-			priv->fsync_timer.expires = jiffies + MSECS(priv->ieee80211->fsync_time_interval*priv->ieee80211->fsync_multiple_timeinterval);
+			priv->fsync_timer.expires = jiffies +
+				msecs_to_jiffies(priv->ieee80211->fsync_time_interval*priv->ieee80211->fsync_multiple_timeinterval);
 			add_timer(&priv->fsync_timer);
 		} else {
 			if (timer_pending(&priv->fsync_timer))
 				del_timer_sync(&priv->fsync_timer);
-			priv->fsync_timer.expires = jiffies + MSECS(priv->ieee80211->fsync_time_interval);
+			priv->fsync_timer.expires = jiffies +
+				msecs_to_jiffies(priv->ieee80211->fsync_time_interval);
 			add_timer(&priv->fsync_timer);
 		}
 	} else {
@@ -2847,7 +2849,8 @@ static void dm_StartSWFsync(struct net_device *dev)
 	}
 	if (timer_pending(&priv->fsync_timer))
 		del_timer_sync(&priv->fsync_timer);
-	priv->fsync_timer.expires = jiffies + MSECS(priv->ieee80211->fsync_time_interval);
+	priv->fsync_timer.expires = jiffies +
+			msecs_to_jiffies(priv->ieee80211->fsync_time_interval);
 	add_timer(&priv->fsync_timer);
 
 	write_nic_dword(dev, rOFDM0_RxDetector2, 0x465c12cd);

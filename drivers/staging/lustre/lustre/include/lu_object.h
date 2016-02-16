@@ -488,7 +488,7 @@ enum lu_object_header_flags {
 	/**
 	 * Mark this object has already been taken out of cache.
 	 */
-	LU_OBJECT_UNHASHED = 1
+	LU_OBJECT_UNHASHED = 1,
 };
 
 enum lu_object_header_attr {
@@ -756,7 +756,7 @@ static inline const struct lu_fid *lu_object_fid(const struct lu_object *o)
 /**
  * return device operations vector for this object
  */
-static const inline struct lu_device_operations *
+static inline const struct lu_device_operations *
 lu_object_ops(const struct lu_object *o)
 {
 	return o->lo_dev->ld_ops;

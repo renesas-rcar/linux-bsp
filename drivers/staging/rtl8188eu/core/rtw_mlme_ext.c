@@ -1673,7 +1673,6 @@ static void issue_action_BA(struct adapter *padapter, unsigned char *raddr,
 	fctrl = &(pwlanhdr->frame_ctl);
 	*(fctrl) = 0;
 
-	/* memcpy(pwlanhdr->addr1, get_my_bssid(&(pmlmeinfo->network)), ETH_ALEN); */
 	memcpy(pwlanhdr->addr1, raddr, ETH_ALEN);
 	memcpy(pwlanhdr->addr2, myid(&(padapter->eeprompriv)), ETH_ALEN);
 	memcpy(pwlanhdr->addr3, pnetwork->MacAddress, ETH_ALEN);
@@ -3653,7 +3652,7 @@ static unsigned int on_action_spct(struct adapter *padapter,
 	struct sta_info *psta = NULL;
 	struct sta_priv *pstapriv = &padapter->stapriv;
 	u8 *pframe = precv_frame->rx_data;
-	u8 *frame_body = (u8 *)(pframe + sizeof(struct rtw_ieee80211_hdr_3addr));
+	u8 *frame_body = pframe + sizeof(struct rtw_ieee80211_hdr_3addr);
 	u8 category;
 	u8 action;
 
@@ -3740,10 +3739,10 @@ static unsigned int OnAction_back(struct adapter *padapter,
 			memcpy(&(pmlmeinfo->ADDBA_req), &(frame_body[2]), sizeof(struct ADDBA_request));
 			process_addba_req(padapter, (u8 *)&(pmlmeinfo->ADDBA_req), addr);
 
-			if (pmlmeinfo->bAcceptAddbaReq)
-				issue_action_BA(padapter, addr, RTW_WLAN_ACTION_ADDBA_RESP, 0);
-			else
-				issue_action_BA(padapter, addr, RTW_WLAN_ACTION_ADDBA_RESP, 37);/* reject ADDBA Req */
+			/* 37 = reject ADDBA Req */
+			issue_action_BA(padapter, addr,
+					RTW_WLAN_ACTION_ADDBA_RESP,
+					pmlmeinfo->accept_addba_req ? 0 : 37);
 			break;
 		case RTW_WLAN_ACTION_ADDBA_RESP: /* ADDBA response */
 			status = get_unaligned_le16(&frame_body[3]);
@@ -4150,7 +4149,7 @@ int	init_mlme_ext_priv(struct adapter *padapter)
 	pmlmeext->padapter = padapter;
 
 	init_mlme_ext_priv_value(padapter);
-	pmlmeinfo->bAcceptAddbaReq = pregistrypriv->bAcceptAddbaReq;
+	pmlmeinfo->accept_addba_req = pregistrypriv->accept_addba_req;
 
 	init_mlme_ext_timer(padapter);
 

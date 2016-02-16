@@ -120,8 +120,6 @@ static u8 crc7(u8 crc, const u8 *buffer, u32 len)
 
 #define USE_SPI_DMA     0
 
-static const struct wilc1000_ops wilc1000_spi_ops;
-
 static int wilc_bus_probe(struct spi_device *spi)
 {
 	int ret, gpio;
@@ -153,7 +151,7 @@ static const struct of_device_id wilc1000_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, wilc1000_of_match);
 
-struct spi_driver wilc1000_spi_driver = {
+static struct spi_driver wilc1000_spi_driver = {
 	.driver = {
 		.name = MODALIAS,
 		.of_match_table = wilc1000_of_match,
@@ -852,7 +850,7 @@ static int _wilc_spi_deinit(struct wilc *wilc)
 	return 1;
 }
 
-static int wilc_spi_init(struct wilc *wilc)
+static int wilc_spi_init(struct wilc *wilc, bool resume)
 {
 	struct spi_device *spi = to_spi_device(wilc->dev);
 	u32 reg;

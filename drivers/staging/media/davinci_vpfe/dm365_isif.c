@@ -1239,7 +1239,8 @@ static int isif_config_ycbcr(struct v4l2_subdev *sd, int mode)
 	 * a lot of registers that we didn't touch
 	 */
 	/* start with all bits zero */
-	ccdcfg = modeset = 0;
+	ccdcfg = 0;
+	modeset = 0;
 	pix_fmt = isif_get_pix_fmt(format->code);
 	if (pix_fmt < 0) {
 		pr_debug("Invalid pix_fmt(input mode)\n");
@@ -1570,7 +1571,7 @@ isif_pad_set_selection(struct v4l2_subdev *sd,
 		sel->r.height = format->height;
 	}
 	/* adjust the width to 16 pixel boundary */
-	sel->r.width = ((sel->r.width + 15) & ~0xf);
+	sel->r.width = (sel->r.width + 15) & ~0xf;
 	vpfe_isif->crop = sel->r;
 	if (sel->which == V4L2_SUBDEV_FORMAT_ACTIVE) {
 		isif_set_image_window(vpfe_isif);

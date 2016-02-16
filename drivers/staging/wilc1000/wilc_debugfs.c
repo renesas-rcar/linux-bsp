@@ -24,9 +24,10 @@ static struct dentry *wilc_dir;
  * --------------------------------------------------------------------------------
  */
 
-#define DBG_REGION_ALL	(GENERIC_DBG | HOSTAPD_DBG | HOSTINF_DBG | CORECONFIG_DBG | CFG80211_DBG | INT_DBG | TX_DBG | RX_DBG | LOCK_DBG | INIT_DBG | BUS_DBG | MEM_DBG)
+#define DBG_REGION_ALL	(HOSTAPD_DBG | CFG80211_DBG | INIT_DBG)
 #define DBG_LEVEL_ALL	(DEBUG | INFO | WRN | ERR)
-atomic_t WILC_REGION = ATOMIC_INIT(INIT_DBG | GENERIC_DBG | CFG80211_DBG | FIRM_DBG | HOSTAPD_DBG);
+atomic_t WILC_REGION = ATOMIC_INIT(INIT_DBG | CFG80211_DBG |
+				   HOSTAPD_DBG);
 EXPORT_SYMBOL_GPL(WILC_REGION);
 atomic_t WILC_DEBUG_LEVEL = ATOMIC_INIT(ERR);
 EXPORT_SYMBOL_GPL(WILC_DEBUG_LEVEL);
@@ -68,9 +69,9 @@ static ssize_t wilc_debug_level_write(struct file *filp, const char __user *buf,
 	atomic_set(&WILC_DEBUG_LEVEL, (int)flag);
 
 	if (flag == 0)
-		printk("Debug-level disabled\n");
+		printk(KERN_INFO "Debug-level disabled\n");
 	else
-		printk("Debug-level enabled\n");
+		printk(KERN_INFO "Debug-level enabled\n");
 
 	return count;
 }
@@ -89,7 +90,7 @@ static ssize_t wilc_debug_region_read(struct file *file, char __user *userbuf, s
 	return simple_read_from_buffer(userbuf, count, ppos, buf, res);
 }
 
-static ssize_t wilc_debug_region_write(struct file *filp, const char *buf, size_t count, loff_t *ppos)
+static ssize_t wilc_debug_region_write(struct file *filp, const char __user *buf, size_t count, loff_t *ppos)
 {
 	char buffer[128] = {};
 	int flag;
@@ -97,9 +98,8 @@ static ssize_t wilc_debug_region_write(struct file *filp, const char *buf, size_
 	if (count > sizeof(buffer))
 		return -EINVAL;
 
-	if (copy_from_user(buffer, buf, count)) {
+	if (copy_from_user(buffer, buf, count))
 		return -EFAULT;
-	}
 
 	flag = buffer[0] - '0';
 
@@ -135,7 +135,7 @@ struct wilc_debugfs_info_t {
 
 static struct wilc_debugfs_info_t debugfs_info[] = {
 	{ "wilc_debug_level",	0666,	(DEBUG | ERR), FOPS(NULL, wilc_debug_level_read, wilc_debug_level_write, NULL), },
-	{ "wilc_debug_region",	0666,	(INIT_DBG | GENERIC_DBG | CFG80211_DBG), FOPS(NULL, wilc_debug_region_read, wilc_debug_region_write, NULL), },
+	{ "wilc_debug_region",	0666,	(INIT_DBG | CFG80211_DBG), FOPS(NULL, wilc_debug_region_read, wilc_debug_region_write, NULL), },
 };
 
 static int __init wilc_debugfs_init(void)

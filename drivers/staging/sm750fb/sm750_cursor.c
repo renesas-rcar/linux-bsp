@@ -115,15 +115,6 @@ void hw_cursor_setData(struct lynx_cursor *cursor,
 	pstart = cursor->vstart;
 	pbuffer = pstart;
 
-/*
-	if(odd &1){
-		hw_cursor_setData2(cursor,rop,pcol,pmsk);
-	}
-	odd++;
-	if(odd > 0xfffffff0)
-		odd=0;
-*/
-
 	for (i = 0; i < count; i++) {
 		color = *pcol++;
 		mask = *pmsk++;
@@ -143,8 +134,7 @@ void hw_cursor_setData(struct lynx_cursor *cursor,
 		iowrite16(data, pbuffer);
 
 		/* assume pitch is 1,2,4,8,...*/
-		if ((i+1) % pitch == 0)
-		{
+		if ((i + 1) % pitch == 0) {
 			/* need a return */
 			pstart += offset;
 			pbuffer = pstart;

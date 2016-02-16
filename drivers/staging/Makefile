@@ -1,14 +1,9 @@
 # Makefile for staging directory
 
-# fix for build system bug...
-obj-$(CONFIG_STAGING)		+= staging.o
-
 obj-y				+= media/
 obj-$(CONFIG_SLICOSS)		+= slicoss/
 obj-$(CONFIG_PRISM2_USB)	+= wlan-ng/
 obj-$(CONFIG_COMEDI)		+= comedi/
-obj-$(CONFIG_FB_OLPC_DCON)	+= olpc_dcon/
-obj-$(CONFIG_PANEL)		+= panel/
 obj-$(CONFIG_RTL8192U)		+= rtl8192u/
 obj-$(CONFIG_RTL8192E)		+= rtl8192e/
 obj-$(CONFIG_R8712U)		+= rtl8712/
@@ -37,7 +32,6 @@ obj-$(CONFIG_FIREWIRE_SERIAL)	+= fwserial/
 obj-$(CONFIG_GOLDFISH)		+= goldfish/
 obj-$(CONFIG_LUSTRE_FS)		+= lustre/
 obj-$(CONFIG_DGNC)			+= dgnc/
-obj-$(CONFIG_DGAP)			+= dgap/
 obj-$(CONFIG_MTD_SPINAND_MT29F)	+= mt29f_spinand/
 obj-$(CONFIG_GS_FPGABOOT)	+= gs_fpgaboot/
 obj-$(CONFIG_CRYPTO_SKEIN)	+= skein/

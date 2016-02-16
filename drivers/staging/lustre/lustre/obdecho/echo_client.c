@@ -60,7 +60,6 @@ struct echo_device {
 	struct cl_site	  ed_site_myself;
 	struct cl_site	 *ed_site;
 	struct lu_device       *ed_next;
-	int		     ed_next_islov;
 };
 
 struct echo_object {
@@ -162,9 +161,6 @@ struct echo_object_conf *cl2echo_conf(const struct cl_object_conf *c)
 static struct echo_object *cl_echo_object_find(struct echo_device *d,
 					       struct lov_stripe_md **lsm);
 static int cl_echo_object_put(struct echo_object *eco);
-static int cl_echo_enqueue(struct echo_object *eco, u64 start,
-			   u64 end, int mode, __u64 *cookie);
-static int cl_echo_cancel(struct echo_device *d, __u64 cookie);
 static int cl_echo_object_brw(struct echo_object *eco, int rw, u64 offset,
 			      struct page **pages, int npages, int async);
 
@@ -582,13 +578,13 @@ static struct lu_object *echo_object_alloc(const struct lu_env *env,
 	return obj;
 }
 
-static struct lu_device_operations echo_device_lu_ops = {
+static const struct lu_device_operations echo_device_lu_ops = {
 	.ldo_object_alloc   = echo_object_alloc,
 };
 
 /** @} echo_lu_dev_ops */
 
-static struct cl_device_operations echo_device_cl_ops = {
+static const struct cl_device_operations echo_device_cl_ops = {
 };
 
 /** \defgroup echo_init Setup and teardown
@@ -770,14 +766,6 @@ static struct lu_device *echo_device_alloc(const struct lu_env *env,
 		if (rc)
 			goto out;
 
-		/* Tricky case, I have to determine the obd type since
-		 * CLIO uses the different parameters to initialize
-		 * objects for lov & osc. */
-		if (strcmp(tgt_type_name, LUSTRE_LOV_NAME) == 0)
-			ed->ed_next_islov = 1;
-		else
-			LASSERT(strcmp(tgt_type_name,
-				       LUSTRE_OSC_NAME) == 0);
 	} else {
 		LASSERT(strcmp(tgt_type_name, LUSTRE_OST_NAME) == 0);
 	}
@@ -963,20 +951,11 @@ static struct echo_object *cl_echo_object_find(struct echo_device *d,
 	info = echo_env_info(env);
 	conf = &info->eti_conf;
 	if (d->ed_next) {
-		if (!d->ed_next_islov) {
-			struct lov_oinfo *oinfo = lsm->lsm_oinfo[0];
+		struct lov_oinfo *oinfo = lsm->lsm_oinfo[0];
 
-			LASSERT(oinfo != NULL);
-			oinfo->loi_oi = lsm->lsm_oi;
-			conf->eoc_cl.u.coc_oinfo = oinfo;
-		} else {
-			struct lustre_md *md;
-
-			md = &info->eti_md;
-			memset(md, 0, sizeof(*md));
-			md->lsm = lsm;
-			conf->eoc_cl.u.coc_md = md;
-		}
+		LASSERT(oinfo);
+		oinfo->loi_oi = lsm->lsm_oi;
+		conf->eoc_cl.u.coc_oinfo = oinfo;
 	}
 	conf->eoc_md = lsmp;
 
@@ -1076,36 +1055,6 @@ static int cl_echo_enqueue0(struct lu_env *env, struct echo_object *eco,
 	return rc;
 }
 
-static int cl_echo_enqueue(struct echo_object *eco, u64 start, u64 end,
-			   int mode, __u64 *cookie)
-{
-	struct echo_thread_info *info;
-	struct lu_env *env;
-	struct cl_io *io;
-	int refcheck;
-	int result;
-
-	env = cl_env_get(&refcheck);
-	if (IS_ERR(env))
-		return PTR_ERR(env);
-
-	info = echo_env_info(env);
-	io = &info->eti_io;
-
-	io->ci_ignore_layout = 1;
-	result = cl_io_init(env, io, CIT_MISC, echo_obj2cl(eco));
-	if (result < 0)
-		goto out;
-	LASSERT(result == 0);
-
-	result = cl_echo_enqueue0(env, eco, start, end, mode, cookie, 0);
-	cl_io_fini(env, io);
-
-out:
-	cl_env_put(env, &refcheck);
-	return result;
-}
-
 static int cl_echo_cancel0(struct lu_env *env, struct echo_device *ed,
 			   __u64 cookie)
 {
@@ -1135,22 +1084,6 @@ static int cl_echo_cancel0(struct lu_env *env, struct echo_device *ed,
 
 	echo_lock_release(env, ecl, still_used);
 	return 0;
-}
-
-static int cl_echo_cancel(struct echo_device *ed, __u64 cookie)
-{
-	struct lu_env *env;
-	int refcheck;
-	int rc;
-
-	env = cl_env_get(&refcheck);
-	if (IS_ERR(env))
-		return PTR_ERR(env);
-
-	rc = cl_echo_cancel0(env, ed, cookie);
-
-	cl_env_put(env, &refcheck);
-	return rc;
 }
 
 static int cl_echo_async_brw(const struct lu_env *env, struct cl_io *io,
@@ -1268,61 +1201,8 @@ out:
 
 static u64 last_object_id;
 
-static int
-echo_copyout_lsm(struct lov_stripe_md *lsm, void *_ulsm, int ulsm_nob)
-{
-	struct lov_stripe_md *ulsm = _ulsm;
-	struct lov_oinfo **p;
-	int nob, i;
-
-	nob = offsetof(struct lov_stripe_md, lsm_oinfo[lsm->lsm_stripe_count]);
-	if (nob > ulsm_nob)
-		return -EINVAL;
-
-	if (copy_to_user(ulsm, lsm, sizeof(*ulsm)))
-		return -EFAULT;
-
-	for (i = 0, p = lsm->lsm_oinfo; i < lsm->lsm_stripe_count; i++, p++) {
-		struct lov_oinfo __user *up;
-		if (get_user(up, ulsm->lsm_oinfo + i) ||
-		    copy_to_user(up, *p, sizeof(struct lov_oinfo)))
-			return -EFAULT;
-	}
-	return 0;
-}
-
-static int
-echo_copyin_lsm(struct echo_device *ed, struct lov_stripe_md *lsm,
-		struct lov_stripe_md __user *ulsm, int ulsm_nob)
-{
-	struct echo_client_obd *ec = ed->ed_ec;
-	struct lov_oinfo **p;
-	int		     i;
-
-	if (ulsm_nob < sizeof(*lsm))
-		return -EINVAL;
-
-	if (copy_from_user(lsm, ulsm, sizeof(*lsm)))
-		return -EFAULT;
-
-	if (lsm->lsm_stripe_count > ec->ec_nstripes ||
-	    lsm->lsm_magic != LOV_MAGIC ||
-	    (lsm->lsm_stripe_size & (~CFS_PAGE_MASK)) != 0 ||
-	    ((__u64)lsm->lsm_stripe_size * lsm->lsm_stripe_count > ~0UL))
-		return -EINVAL;
-
-	for (i = 0, p = lsm->lsm_oinfo; i < lsm->lsm_stripe_count; i++, p++) {
-		struct lov_oinfo __user *up;
-		if (get_user(up, ulsm->lsm_oinfo + i) ||
-		    copy_from_user(*p, up, sizeof(struct lov_oinfo)))
-			return -EFAULT;
-	}
-	return 0;
-}
-
 static int echo_create_object(const struct lu_env *env, struct echo_device *ed,
-			      int on_target, struct obdo *oa, void *ulsm,
-			      int ulsm_nob, struct obd_trans_info *oti)
+			      struct obdo *oa, struct obd_trans_info *oti)
 {
 	struct echo_object     *eco;
 	struct echo_client_obd *ec = ed->ed_ec;
@@ -1330,10 +1210,10 @@ static int echo_create_object(const struct lu_env *env, struct echo_device *ed,
 	int		     rc;
 	int		     created = 0;
 
-	if ((oa->o_valid & OBD_MD_FLID) == 0 && /* no obj id */
-	    (on_target ||		       /* set_stripe */
-	     ec->ec_nstripes != 0)) {	   /* LOV */
-		CERROR("No valid oid\n");
+	if (!(oa->o_valid & OBD_MD_FLID) ||
+	    !(oa->o_valid & OBD_MD_FLGROUP) ||
+	    !fid_seq_is_echo(ostid_seq(&oa->o_oi))) {
+		CERROR("invalid oid " DOSTID "\n", POSTID(&oa->o_oi));
 		return -EINVAL;
 	}
 
@@ -1343,52 +1223,18 @@ static int echo_create_object(const struct lu_env *env, struct echo_device *ed,
 		goto failed;
 	}
 
-	if (ulsm != NULL) {
-		int i, idx;
-
-		rc = echo_copyin_lsm(ed, lsm, ulsm, ulsm_nob);
-		if (rc != 0)
-			goto failed;
-
-		if (lsm->lsm_stripe_count == 0)
-			lsm->lsm_stripe_count = ec->ec_nstripes;
-
-		if (lsm->lsm_stripe_size == 0)
-			lsm->lsm_stripe_size = PAGE_CACHE_SIZE;
-
-		idx = cfs_rand();
-
-		/* setup stripes: indices + default ids if required */
-		for (i = 0; i < lsm->lsm_stripe_count; i++) {
-			if (ostid_id(&lsm->lsm_oinfo[i]->loi_oi) == 0)
-				lsm->lsm_oinfo[i]->loi_oi = lsm->lsm_oi;
-
-			lsm->lsm_oinfo[i]->loi_ost_idx =
-				(idx + i) % ec->ec_nstripes;
-		}
-	}
-
-	/* setup object ID here for !on_target and LOV hint */
-	if (oa->o_valid & OBD_MD_FLID) {
-		LASSERT(oa->o_valid & OBD_MD_FLGROUP);
-		lsm->lsm_oi = oa->o_oi;
-	}
+	/* setup object ID here */
+	lsm->lsm_oi = oa->o_oi;
 
 	if (ostid_id(&lsm->lsm_oi) == 0)
 		ostid_set_id(&lsm->lsm_oi, ++last_object_id);
 
-	rc = 0;
-	if (on_target) {
-		/* Only echo objects are allowed to be created */
-		LASSERT((oa->o_valid & OBD_MD_FLGROUP) &&
-			(ostid_seq(&oa->o_oi) == FID_SEQ_ECHO));
-		rc = obd_create(env, ec->ec_exp, oa, &lsm, oti);
-		if (rc != 0) {
-			CERROR("Cannot create objects: rc = %d\n", rc);
-			goto failed;
-		}
-		created = 1;
+	rc = obd_create(env, ec->ec_exp, oa, &lsm, oti);
+	if (rc != 0) {
+		CERROR("Cannot create objects: rc = %d\n", rc);
+		goto failed;
 	}
+	created = 1;
 
 	/* See what object ID we were given */
 	oa->o_oi = lsm->lsm_oi;
@@ -1452,37 +1298,7 @@ static void echo_put_object(struct echo_object *eco)
 }
 
 static void
-echo_get_stripe_off_id(struct lov_stripe_md *lsm, u64 *offp, u64 *idp)
-{
-	unsigned long stripe_count;
-	unsigned long stripe_size;
-	unsigned long width;
-	unsigned long woffset;
-	int	   stripe_index;
-	u64       offset;
-
-	if (lsm->lsm_stripe_count <= 1)
-		return;
-
-	offset       = *offp;
-	stripe_size  = lsm->lsm_stripe_size;
-	stripe_count = lsm->lsm_stripe_count;
-
-	/* width = # bytes in all stripes */
-	width = stripe_size * stripe_count;
-
-	/* woffset = offset within a width; offset = whole number of widths */
-	woffset = do_div(offset, width);
-
-	stripe_index = woffset / stripe_size;
-
-	*idp = ostid_id(&lsm->lsm_oinfo[stripe_index]->loi_oi);
-	*offp = offset * stripe_size + woffset % stripe_size;
-}
-
-static void
-echo_client_page_debug_setup(struct lov_stripe_md *lsm,
-			     struct page *page, int rw, u64 id,
+echo_client_page_debug_setup(struct page *page, int rw, u64 id,
 			     u64 offset, u64 count)
 {
 	char    *addr;
@@ -1499,7 +1315,6 @@ echo_client_page_debug_setup(struct lov_stripe_md *lsm,
 		if (rw == OBD_BRW_WRITE) {
 			stripe_off = offset + delta;
 			stripe_id = id;
-			echo_get_stripe_off_id(lsm, &stripe_off, &stripe_id);
 		} else {
 			stripe_off = 0xdeadbeef00c0ffeeULL;
 			stripe_id = 0xdeadbeef00c0ffeeULL;
@@ -1511,8 +1326,7 @@ echo_client_page_debug_setup(struct lov_stripe_md *lsm,
 	kunmap(page);
 }
 
-static int echo_client_page_debug_check(struct lov_stripe_md *lsm,
-					struct page *page, u64 id,
+static int echo_client_page_debug_check(struct page *page, u64 id,
 					u64 offset, u64 count)
 {
 	u64	stripe_off;
@@ -1530,7 +1344,6 @@ static int echo_client_page_debug_check(struct lov_stripe_md *lsm,
 	for (rc = delta = 0; delta < PAGE_CACHE_SIZE; delta += OBD_ECHO_BLOCK_SIZE) {
 		stripe_off = offset + delta;
 		stripe_id = id;
-		echo_get_stripe_off_id(lsm, &stripe_off, &stripe_id);
 
 		rc2 = block_debug_check("test_brw",
 					addr + delta, OBD_ECHO_BLOCK_SIZE,
@@ -1550,7 +1363,6 @@ static int echo_client_kbrw(struct echo_device *ed, int rw, struct obdo *oa,
 			    u64 count, int async,
 			    struct obd_trans_info *oti)
 {
-	struct lov_stripe_md   *lsm = eco->eo_lsm;
 	u32	       npages;
 	struct brw_page	*pga;
 	struct brw_page	*pgp;
@@ -1569,8 +1381,6 @@ static int echo_client_kbrw(struct echo_device *ed, int rw, struct obdo *oa,
 	gfp_mask = ((ostid_id(&oa->o_oi) & 2) == 0) ? GFP_KERNEL : GFP_HIGHUSER;
 
 	LASSERT(rw == OBD_BRW_WRITE || rw == OBD_BRW_READ);
-	LASSERT(lsm != NULL);
-	LASSERT(ostid_id(&lsm->lsm_oi) == ostid_id(&oa->o_oi));
 
 	if (count <= 0 ||
 	    (count & (~CFS_PAGE_MASK)) != 0)
@@ -1609,7 +1419,7 @@ static int echo_client_kbrw(struct echo_device *ed, int rw, struct obdo *oa,
 		pgp->flag = brw_flags;
 
 		if (verify)
-			echo_client_page_debug_setup(lsm, pgp->pg, rw,
+			echo_client_page_debug_setup(pgp->pg, rw,
 						     ostid_id(&oa->o_oi), off,
 						     pgp->count);
 	}
@@ -1629,7 +1439,7 @@ static int echo_client_kbrw(struct echo_device *ed, int rw, struct obdo *oa,
 		if (verify) {
 			int vrc;
 
-			vrc = echo_client_page_debug_check(lsm, pgp->pg,
+			vrc = echo_client_page_debug_check(pgp->pg,
 							   ostid_id(&oa->o_oi),
 							   pgp->off, pgp->count);
 			if (vrc != 0 && rc == 0)
@@ -1649,7 +1459,6 @@ static int echo_client_prep_commit(const struct lu_env *env,
 				   u64 batch, struct obd_trans_info *oti,
 				   int async)
 {
-	struct lov_stripe_md *lsm = eco->eo_lsm;
 	struct obd_ioobj ioo;
 	struct niobuf_local *lnb;
 	struct niobuf_remote *rnb;
@@ -1657,8 +1466,7 @@ static int echo_client_prep_commit(const struct lu_env *env,
 	u64 npages, tot_pages;
 	int i, ret = 0, brw_flags = 0;
 
-	if (count <= 0 || (count & (~CFS_PAGE_MASK)) != 0 ||
-	    (lsm != NULL && ostid_id(&lsm->lsm_oi) != ostid_id(&oa->o_oi)))
+	if (count <= 0 || (count & (~CFS_PAGE_MASK)) != 0)
 		return -EINVAL;
 
 	npages = batch >> PAGE_CACHE_SHIFT;
@@ -1717,12 +1525,12 @@ static int echo_client_prep_commit(const struct lu_env *env,
 				continue;
 
 			if (rw == OBD_BRW_WRITE)
-				echo_client_page_debug_setup(lsm, page, rw,
+				echo_client_page_debug_setup(page, rw,
 							    ostid_id(&oa->o_oi),
 							     rnb[i].offset,
 							     rnb[i].len);
 			else
-				echo_client_page_debug_check(lsm, page,
+				echo_client_page_debug_check(page,
 							    ostid_id(&oa->o_oi),
 							     rnb[i].offset,
 							     rnb[i].len);
@@ -1805,55 +1613,8 @@ static int echo_client_brw_ioctl(const struct lu_env *env, int rw,
 }
 
 static int
-echo_client_enqueue(struct obd_export *exp, struct obdo *oa,
-		    int mode, u64 offset, u64 nob)
-{
-	struct echo_device     *ed = obd2echo_dev(exp->exp_obd);
-	struct lustre_handle   *ulh = &oa->o_handle;
-	struct echo_object     *eco;
-	u64		 end;
-	int		     rc;
-
-	if (ed->ed_next == NULL)
-		return -EOPNOTSUPP;
-
-	if (!(mode == LCK_PR || mode == LCK_PW))
-		return -EINVAL;
-
-	if ((offset & (~CFS_PAGE_MASK)) != 0 ||
-	    (nob & (~CFS_PAGE_MASK)) != 0)
-		return -EINVAL;
-
-	rc = echo_get_object(&eco, ed, oa);
-	if (rc != 0)
-		return rc;
-
-	end = (nob == 0) ? ((u64) -1) : (offset + nob - 1);
-	rc = cl_echo_enqueue(eco, offset, end, mode, &ulh->cookie);
-	if (rc == 0) {
-		oa->o_valid |= OBD_MD_FLHANDLE;
-		CDEBUG(D_INFO, "Cookie is %#llx\n", ulh->cookie);
-	}
-	echo_put_object(eco);
-	return rc;
-}
-
-static int
-echo_client_cancel(struct obd_export *exp, struct obdo *oa)
-{
-	struct echo_device *ed     = obd2echo_dev(exp->exp_obd);
-	__u64	       cookie = oa->o_handle.cookie;
-
-	if ((oa->o_valid & OBD_MD_FLHANDLE) == 0)
-		return -EINVAL;
-
-	CDEBUG(D_INFO, "Cookie is %#llx\n", cookie);
-	return cl_echo_cancel(ed, cookie);
-}
-
-static int
 echo_client_iocontrol(unsigned int cmd, struct obd_export *exp, int len,
-		      void *karg, void *uarg)
+		      void *karg, void __user *uarg)
 {
 	struct obd_device      *obd = exp->exp_obd;
 	struct echo_device     *ed = obd2echo_dev(obd);
@@ -1899,8 +1660,7 @@ echo_client_iocontrol(unsigned int cmd, struct obd_export *exp, int len,
 			goto out;
 		}
 
-		rc = echo_create_object(env, ed, 1, oa, data->ioc_pbuf1,
-					data->ioc_plen1, &dummy_oti);
+		rc = echo_create_object(env, ed, oa, &dummy_oti);
 		goto out;
 
 	case OBD_IOC_DESTROY:
@@ -1911,7 +1671,7 @@ echo_client_iocontrol(unsigned int cmd, struct obd_export *exp, int len,
 
 		rc = echo_get_object(&eco, ed, oa);
 		if (rc == 0) {
-			rc = obd_destroy(env, ec->ec_exp, oa, eco->eo_lsm,
+			rc = obd_destroy(env, ec->ec_exp, oa, NULL,
 					 &dummy_oti, NULL);
 			if (rc == 0)
 				eco->eo_deleted = 1;
@@ -1922,10 +1682,10 @@ echo_client_iocontrol(unsigned int cmd, struct obd_export *exp, int len,
 	case OBD_IOC_GETATTR:
 		rc = echo_get_object(&eco, ed, oa);
 		if (rc == 0) {
-			struct obd_info oinfo = { };
+			struct obd_info oinfo = {
+				.oi_oa = oa,
+			};
 
-			oinfo.oi_md = eco->eo_lsm;
-			oinfo.oi_oa = oa;
 			rc = obd_getattr(env, ec->ec_exp, &oinfo);
 			echo_put_object(eco);
 		}
@@ -1939,10 +1699,9 @@ echo_client_iocontrol(unsigned int cmd, struct obd_export *exp, int len,
 
 		rc = echo_get_object(&eco, ed, oa);
 		if (rc == 0) {
-			struct obd_info oinfo = { };
-
-			oinfo.oi_oa = oa;
-			oinfo.oi_md = eco->eo_lsm;
+			struct obd_info oinfo = {
+				.oi_oa = oa,
+			};
 
 			rc = obd_setattr(env, ec->ec_exp, &oinfo, NULL);
 			echo_put_object(eco);
@@ -1959,50 +1718,6 @@ echo_client_iocontrol(unsigned int cmd, struct obd_export *exp, int len,
 		/* fall through */
 	case OBD_IOC_BRW_READ:
 		rc = echo_client_brw_ioctl(env, rw, exp, data, &dummy_oti);
-		goto out;
-
-	case ECHO_IOC_GET_STRIPE:
-		rc = echo_get_object(&eco, ed, oa);
-		if (rc == 0) {
-			rc = echo_copyout_lsm(eco->eo_lsm, data->ioc_pbuf1,
-					      data->ioc_plen1);
-			echo_put_object(eco);
-		}
-		goto out;
-
-	case ECHO_IOC_SET_STRIPE:
-		if (!capable(CFS_CAP_SYS_ADMIN)) {
-			rc = -EPERM;
-			goto out;
-		}
-
-		if (data->ioc_pbuf1 == NULL) {  /* unset */
-			rc = echo_get_object(&eco, ed, oa);
-			if (rc == 0) {
-				eco->eo_deleted = 1;
-				echo_put_object(eco);
-			}
-		} else {
-			rc = echo_create_object(env, ed, 0, oa,
-						data->ioc_pbuf1,
-						data->ioc_plen1, &dummy_oti);
-		}
-		goto out;
-
-	case ECHO_IOC_ENQUEUE:
-		if (!capable(CFS_CAP_SYS_ADMIN)) {
-			rc = -EPERM;
-			goto out;
-		}
-
-		rc = echo_client_enqueue(exp, oa,
-					 data->ioc_conn1, /* lock mode */
-					 data->ioc_offset,
-					 data->ioc_count);/*extent*/
-		goto out;
-
-	case ECHO_IOC_CANCEL:
-		rc = echo_client_cancel(exp, oa);
 		goto out;
 
 	default:
@@ -2051,7 +1766,6 @@ static int echo_client_setup(const struct lu_env *env,
 	INIT_LIST_HEAD(&ec->ec_objects);
 	INIT_LIST_HEAD(&ec->ec_locks);
 	ec->ec_unique = 0;
-	ec->ec_nstripes = 0;
 
 	ocd = kzalloc(sizeof(*ocd), GFP_NOFS);
 	if (!ocd) {

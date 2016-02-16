@@ -2,42 +2,17 @@
 #define LINUX_WLAN_COMMON_H
 
 enum debug_region {
-	Generic_debug = 0,
-	Hostapd_debug,
-	Hostinf_debug,
+	Hostapd_debug = 0,
 	CFG80211_debug,
-	Coreconfig_debug,
-	Interrupt_debug,
-	TX_debug,
-	RX_debug,
-	Lock_debug,
-	Tcp_enhance,
-	Spin_debug,
-
 	Init_debug,
-	Bus_debug,
-	Mem_debug,
-	Firmware_debug,
 	COMP = 0xFFFFFFFF,
 };
 
-#define GENERIC_DBG             (1 << Generic_debug)
 #define HOSTAPD_DBG             (1 << Hostapd_debug)
-#define HOSTINF_DBG             (1 << Hostinf_debug)
-#define CORECONFIG_DBG          (1 << Coreconfig_debug)
 #define CFG80211_DBG            (1 << CFG80211_debug)
-#define INT_DBG                 (1 << Interrupt_debug)
-#define TX_DBG                  (1 << TX_debug)
-#define RX_DBG                  (1 << RX_debug)
-#define LOCK_DBG                (1 << Lock_debug)
-#define TCP_ENH                 (1 << Tcp_enhance)
-#define SPIN_DEBUG              (1 << Spin_debug)
 #define INIT_DBG                (1 << Init_debug)
-#define BUS_DBG                 (1 << Bus_debug)
-#define MEM_DBG                 (1 << Mem_debug)
-#define FIRM_DBG                (1 << Firmware_debug)
 
-#if defined (WILC_DEBUGFS)
+#if defined(WILC_DEBUGFS)
 extern atomic_t WILC_REGION;
 extern atomic_t WILC_DEBUG_LEVEL;
 
@@ -121,16 +96,13 @@ extern atomic_t WILC_DEBUG_LEVEL;
 
 #endif
 
-#define FN_IN   /* PRINT_D(">>> \n") */
-#define FN_OUT  /* PRINT_D("<<<\n") */
-
 #define LINUX_RX_SIZE	(96 * 1024)
 #define LINUX_TX_SIZE	(64 * 1024)
 
 
 #define WILC_MULTICAST_TABLE_SIZE	8
 
-#if defined (BEAGLE_BOARD)
+#if defined(BEAGLE_BOARD)
 	#define SPI_CHANNEL	4
 
 	#if SPI_CHANNEL == 4
@@ -143,7 +115,7 @@ extern atomic_t WILC_DEBUG_LEVEL;
 #elif defined(PLAT_WMS8304)             /* rachel */
 	#define MODALIAS	"wilc_spi"
 	#define GPIO_NUM	139
-#elif defined (PLAT_RKXXXX)
+#elif defined(PLAT_RKXXXX)
  #define MODALIAS	"WILC_IRQ"
  #define GPIO_NUM	RK30_PIN3_PD2 /* RK30_PIN3_PA1 */
 /* RK30_PIN3_PD2 */

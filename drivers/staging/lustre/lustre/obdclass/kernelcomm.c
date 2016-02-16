@@ -42,9 +42,8 @@
 #define DEBUG_SUBSYSTEM S_CLASS
 #define D_KUC D_OTHER
 
-#include "../../include/linux/libcfs/libcfs.h"
-
-/* This is the kernel side (liblustre as well). */
+#include "../include/obd_support.h"
+#include "../include/lustre_kernelcomm.h"
 
 /**
  * libcfs_kkuc_msg_put - send an message from kernel to userspace
@@ -58,14 +57,14 @@ int libcfs_kkuc_msg_put(struct file *filp, void *payload)
 	ssize_t count = kuch->kuc_msglen;
 	loff_t offset = 0;
 	mm_segment_t fs;
-	int rc = -ENOSYS;
+	int rc = -ENXIO;
 
-	if (filp == NULL || IS_ERR(filp))
+	if (IS_ERR_OR_NULL(filp))
 		return -EBADF;
 
 	if (kuch->kuc_magic != KUC_MAGIC) {
 		CERROR("KernelComm: bad magic %x\n", kuch->kuc_magic);
-		return -ENOSYS;
+		return rc;
 	}
 
 	fs = get_fs();
@@ -90,18 +89,20 @@ int libcfs_kkuc_msg_put(struct file *filp, void *payload)
 }
 EXPORT_SYMBOL(libcfs_kkuc_msg_put);
 
-/* Broadcast groups are global across all mounted filesystems;
+/*
+ * Broadcast groups are global across all mounted filesystems;
  * i.e. registering for a group on 1 fs will get messages for that
- * group from any fs */
+ * group from any fs
+ */
 /** A single group registration has a uid and a file pointer */
 struct kkuc_reg {
-	struct list_head	kr_chain;
-	int		kr_uid;
+	struct list_head kr_chain;
+	int		 kr_uid;
 	struct file	*kr_fp;
-	__u32		kr_data;
+	char		 kr_data[0];
 };
 
-static struct list_head kkuc_groups[KUC_GRP_MAX+1] = {};
+static struct list_head kkuc_groups[KUC_GRP_MAX + 1] = {};
 /* Protect message sending against remove and adds */
 static DECLARE_RWSEM(kg_sem);
 
@@ -109,9 +110,10 @@ static DECLARE_RWSEM(kg_sem);
  * @param filp pipe to write into
  * @param uid identifier for this receiver
  * @param group group number
+ * @param data user data
  */
 int libcfs_kkuc_group_add(struct file *filp, int uid, unsigned int group,
-			  __u32 data)
+			  void *data, size_t data_len)
 {
 	struct kkuc_reg *reg;
 
@@ -121,20 +123,20 @@ int libcfs_kkuc_group_add(struct file *filp, int uid, unsigned int group,
 	}
 
 	/* fput in group_rem */
-	if (filp == NULL)
+	if (!filp)
 		return -EBADF;
 
 	/* freed in group_rem */
-	reg = kmalloc(sizeof(*reg), 0);
-	if (reg == NULL)
+	reg = kmalloc(sizeof(*reg) + data_len, 0);
+	if (!reg)
 		return -ENOMEM;
 
 	reg->kr_fp = filp;
 	reg->kr_uid = uid;
-	reg->kr_data = data;
+	memcpy(reg->kr_data, data, data_len);
 
 	down_write(&kg_sem);
-	if (kkuc_groups[group].next == NULL)
+	if (!kkuc_groups[group].next)
 		INIT_LIST_HEAD(&kkuc_groups[group]);
 	list_add(&reg->kr_chain, &kkuc_groups[group]);
 	up_write(&kg_sem);
@@ -145,14 +147,14 @@ int libcfs_kkuc_group_add(struct file *filp, int uid, unsigned int group,
 }
 EXPORT_SYMBOL(libcfs_kkuc_group_add);
 
-int libcfs_kkuc_group_rem(int uid, int group)
+int libcfs_kkuc_group_rem(int uid, unsigned int group)
 {
 	struct kkuc_reg *reg, *next;
 
-	if (kkuc_groups[group].next == NULL)
+	if (!kkuc_groups[group].next)
 		return 0;
 
-	if (uid == 0) {
+	if (!uid) {
 		/* Broadcast a shutdown message */
 		struct kuc_hdr lh;
 
@@ -165,11 +167,11 @@ int libcfs_kkuc_group_rem(int uid, int group)
 
 	down_write(&kg_sem);
 	list_for_each_entry_safe(reg, next, &kkuc_groups[group], kr_chain) {
-		if ((uid == 0) || (uid == reg->kr_uid)) {
+		if (!uid || (uid == reg->kr_uid)) {
 			list_del(&reg->kr_chain);
 			CDEBUG(D_KUC, "Removed uid=%d fp=%p from group %d\n",
 			       reg->kr_uid, reg->kr_fp, group);
-			if (reg->kr_fp != NULL)
+			if (reg->kr_fp)
 				fput(reg->kr_fp);
 			kfree(reg);
 		}
@@ -180,28 +182,30 @@ int libcfs_kkuc_group_rem(int uid, int group)
 }
 EXPORT_SYMBOL(libcfs_kkuc_group_rem);
 
-int libcfs_kkuc_group_put(int group, void *payload)
+int libcfs_kkuc_group_put(unsigned int group, void *payload)
 {
 	struct kkuc_reg	*reg;
-	int		 rc = 0;
+	int rc = 0;
 	int one_success = 0;
 
-	down_read(&kg_sem);
+	down_write(&kg_sem);
 	list_for_each_entry(reg, &kkuc_groups[group], kr_chain) {
-		if (reg->kr_fp != NULL) {
+		if (reg->kr_fp) {
 			rc = libcfs_kkuc_msg_put(reg->kr_fp, payload);
-			if (rc == 0)
+			if (!rc) {
 				one_success = 1;
-			else if (rc == -EPIPE) {
+			} else if (rc == -EPIPE) {
 				fput(reg->kr_fp);
 				reg->kr_fp = NULL;
 			}
 		}
 	}
-	up_read(&kg_sem);
+	up_write(&kg_sem);
 
-	/* don't return an error if the message has been delivered
-	 * at least to one agent */
+	/*
+	 * don't return an error if the message has been delivered
+	 * at least to one agent
+	 */
 	if (one_success)
 		rc = 0;
 
@@ -213,9 +217,9 @@ EXPORT_SYMBOL(libcfs_kkuc_group_put);
  * Calls a callback function for each link of the given kuc group.
  * @param group the group to call the function on.
  * @param cb_func the function to be called.
- * @param cb_arg iextra argument to be passed to the callback function.
+ * @param cb_arg extra argument to be passed to the callback function.
  */
-int libcfs_kkuc_group_foreach(int group, libcfs_kkuc_cb_t cb_func,
+int libcfs_kkuc_group_foreach(unsigned int group, libcfs_kkuc_cb_t cb_func,
 			      void *cb_arg)
 {
 	struct kkuc_reg *reg;
@@ -227,15 +231,15 @@ int libcfs_kkuc_group_foreach(int group, libcfs_kkuc_cb_t cb_func,
 	}
 
 	/* no link for this group */
-	if (kkuc_groups[group].next == NULL)
+	if (!kkuc_groups[group].next)
 		return 0;
 
-	down_write(&kg_sem);
+	down_read(&kg_sem);
 	list_for_each_entry(reg, &kkuc_groups[group], kr_chain) {
-		if (reg->kr_fp != NULL)
+		if (reg->kr_fp)
 			rc = cb_func(reg->kr_data, cb_arg);
 	}
-	up_write(&kg_sem);
+	up_read(&kg_sem);
 
 	return rc;
 }

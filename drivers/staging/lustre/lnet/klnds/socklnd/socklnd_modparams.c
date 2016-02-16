@@ -41,8 +41,10 @@ static int peer_timeout = 180;
 module_param(peer_timeout, int, 0444);
 MODULE_PARM_DESC(peer_timeout, "Seconds without aliveness news to declare peer dead (<=0 to disable)");
 
-/* Number of daemons in each thread pool which is percpt,
- * we will estimate reasonable value based on CPUs if it's not set. */
+/*
+ * Number of daemons in each thread pool which is percpt,
+ * we will estimate reasonable value based on CPUs if it's not set.
+ */
 static unsigned int nscheds;
 module_param(nscheds, int, 0444);
 MODULE_PARM_DESC(nscheds, "# scheduler daemons in each pool while starting");
@@ -72,7 +74,7 @@ static int typed_conns = 1;
 module_param(typed_conns, int, 0444);
 MODULE_PARM_DESC(typed_conns, "use different sockets for bulk");
 
-static int min_bulk = 1<<10;
+static int min_bulk = 1 << 10;
 module_param(min_bulk, int, 0644);
 MODULE_PARM_DESC(min_bulk, "smallest 'large' message");
 

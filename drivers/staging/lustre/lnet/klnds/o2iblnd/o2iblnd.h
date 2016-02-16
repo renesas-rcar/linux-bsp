@@ -146,9 +146,9 @@ kiblnd_concurrent_sends_v1(void)
 #define IBLND_OOB_CAPABLE(v)       ((v) != IBLND_MSG_VERSION_1)
 #define IBLND_OOB_MSGS(v)	   (IBLND_OOB_CAPABLE(v) ? 2 : 0)
 
-#define IBLND_MSG_SIZE	      (4<<10)		 /* max size of queued messages (inc hdr) */
+#define IBLND_MSG_SIZE		(4 << 10)	 /* max size of queued messages (inc hdr) */
 #define IBLND_MAX_RDMA_FRAGS	 LNET_MAX_IOV	   /* max # of fragments supported */
-#define IBLND_CFG_RDMA_FRAGS       (*kiblnd_tunables.kib_map_on_demand != 0 ? \
+#define IBLND_CFG_RDMA_FRAGS       (*kiblnd_tunables.kib_map_on_demand ? \
 				    *kiblnd_tunables.kib_map_on_demand :      \
 				     IBLND_MAX_RDMA_FRAGS)  /* max # of fragments configured by user */
 #define IBLND_RDMA_FRAGS(v)	((v) == IBLND_MSG_VERSION_1 ? \
@@ -611,7 +611,7 @@ kiblnd_dev_can_failover(kib_dev_t *dev)
 	if (!list_empty(&dev->ibd_fail_list)) /* already scheduled */
 		return 0;
 
-	if (*kiblnd_tunables.kib_dev_failover == 0) /* disabled */
+	if (!*kiblnd_tunables.kib_dev_failover) /* disabled */
 		return 0;
 
 	if (*kiblnd_tunables.kib_dev_failover > 1) /* force failover */
@@ -691,7 +691,7 @@ kiblnd_send_keepalive(kib_conn_t *conn)
 {
 	return (*kiblnd_tunables.kib_keepalive > 0) &&
 		cfs_time_after(jiffies, conn->ibc_last_send +
-			       *kiblnd_tunables.kib_keepalive*HZ);
+			       *kiblnd_tunables.kib_keepalive * HZ);
 }
 
 static inline int
@@ -710,16 +710,16 @@ kiblnd_need_noop(kib_conn_t *conn)
 
 		/* No tx to piggyback NOOP onto or no credit to send a tx */
 		return (list_empty(&conn->ibc_tx_queue) ||
-			conn->ibc_credits == 0);
+			!conn->ibc_credits);
 	}
 
 	if (!list_empty(&conn->ibc_tx_noops) || /* NOOP already queued */
 	    !list_empty(&conn->ibc_tx_queue_nocred) || /* piggyback NOOP */
-	    conn->ibc_credits == 0)		    /* no credit */
+	    !conn->ibc_credits)		    /* no credit */
 		return 0;
 
 	if (conn->ibc_credits == 1 &&      /* last credit reserved for */
-	    conn->ibc_outstanding_credits == 0) /* giving back credits */
+	    !conn->ibc_outstanding_credits) /* giving back credits */
 		return 0;
 
 	/* No tx to piggyback NOOP onto or no credit to send a tx */
@@ -765,8 +765,8 @@ kiblnd_ptr2wreqid(void *ptr, int type)
 {
 	unsigned long lptr = (unsigned long)ptr;
 
-	LASSERT((lptr & IBLND_WID_MASK) == 0);
-	LASSERT((type & ~IBLND_WID_MASK) == 0);
+	LASSERT(!(lptr & IBLND_WID_MASK));
+	LASSERT(!(type & ~IBLND_WID_MASK));
 	return (__u64)(lptr | type);
 }
 
@@ -948,33 +948,33 @@ void kiblnd_peer_alive(kib_peer_t *peer);
 kib_peer_t *kiblnd_find_peer_locked(lnet_nid_t nid);
 void kiblnd_peer_connect_failed(kib_peer_t *peer, int active, int error);
 int  kiblnd_close_stale_conns_locked(kib_peer_t *peer,
-				      int version, __u64 incarnation);
+				     int version, __u64 incarnation);
 int  kiblnd_close_peer_conns_locked(kib_peer_t *peer, int why);
 
 void kiblnd_connreq_done(kib_conn_t *conn, int status);
 kib_conn_t *kiblnd_create_conn(kib_peer_t *peer, struct rdma_cm_id *cmid,
-				int state, int version);
+			       int state, int version);
 void kiblnd_destroy_conn(kib_conn_t *conn);
 void kiblnd_close_conn(kib_conn_t *conn, int error);
 void kiblnd_close_conn_locked(kib_conn_t *conn, int error);
 
 int  kiblnd_init_rdma(kib_conn_t *conn, kib_tx_t *tx, int type,
-		       int nob, kib_rdma_desc_t *dstrd, __u64 dstcookie);
+		      int nob, kib_rdma_desc_t *dstrd, __u64 dstcookie);
 
 void kiblnd_launch_tx(lnet_ni_t *ni, kib_tx_t *tx, lnet_nid_t nid);
 void kiblnd_queue_tx_locked(kib_tx_t *tx, kib_conn_t *conn);
 void kiblnd_queue_tx(kib_tx_t *tx, kib_conn_t *conn);
 void kiblnd_init_tx_msg(lnet_ni_t *ni, kib_tx_t *tx, int type, int body_nob);
 void kiblnd_txlist_done(lnet_ni_t *ni, struct list_head *txlist,
-			 int status);
-void kiblnd_check_sends (kib_conn_t *conn);
+			int status);
+void kiblnd_check_sends(kib_conn_t *conn);
 
 void kiblnd_qp_event(struct ib_event *event, void *arg);
 void kiblnd_cq_event(struct ib_event *event, void *arg);
 void kiblnd_cq_completion(struct ib_cq *cq, void *arg);
 
 void kiblnd_pack_msg(lnet_ni_t *ni, kib_msg_t *msg, int version,
-		      int credits, lnet_nid_t dstnid, __u64 dststamp);
+		     int credits, lnet_nid_t dstnid, __u64 dststamp);
 int  kiblnd_unpack_msg(kib_msg_t *msg, int nob);
 int  kiblnd_post_rx(kib_rx_t *rx, int credit);
 

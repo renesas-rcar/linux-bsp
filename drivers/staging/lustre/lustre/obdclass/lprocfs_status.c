@@ -261,7 +261,7 @@ struct dentry *ldebugfs_add_simple(struct dentry *root,
 	}
 	return entry;
 }
-EXPORT_SYMBOL(ldebugfs_add_simple);
+EXPORT_SYMBOL_GPL(ldebugfs_add_simple);
 
 static struct file_operations lprocfs_generic_fops = { };
 
@@ -294,14 +294,14 @@ int ldebugfs_add_vars(struct dentry *parent,
 	}
 	return 0;
 }
-EXPORT_SYMBOL(ldebugfs_add_vars);
+EXPORT_SYMBOL_GPL(ldebugfs_add_vars);
 
 void ldebugfs_remove(struct dentry **entryp)
 {
 	debugfs_remove_recursive(*entryp);
 	*entryp = NULL;
 }
-EXPORT_SYMBOL(ldebugfs_remove);
+EXPORT_SYMBOL_GPL(ldebugfs_remove);
 
 struct dentry *ldebugfs_register(const char *name,
 				 struct dentry *parent,
@@ -327,7 +327,7 @@ struct dentry *ldebugfs_register(const char *name,
 out:
 	return entry;
 }
-EXPORT_SYMBOL(ldebugfs_register);
+EXPORT_SYMBOL_GPL(ldebugfs_register);
 
 /* Generic callbacks */
 int lprocfs_rd_uint(struct seq_file *m, void *data)
@@ -642,21 +642,21 @@ int lprocfs_rd_import(struct seq_file *m, void *data)
 		     "    target: %s\n"
 		     "    state: %s\n"
 		     "    instance: %u\n"
-		     "    connect_flags: [",
+		     "    connect_flags: [ ",
 		     obd->obd_name,
 		     obd2cli_tgt(obd),
 		     ptlrpc_import_state_name(imp->imp_state),
 		     imp->imp_connect_data.ocd_instance);
 	obd_connect_seq_flags2str(m, imp->imp_connect_data.ocd_connect_flags, ", ");
 	seq_printf(m,
-		      "]\n"
-		      "    import_flags: [");
+		      " ]\n"
+		      "    import_flags: [ ");
 	obd_import_flags2str(imp, m);
 
 	seq_printf(m,
-		      "]\n"
+		      " ]\n"
 		      "    connection:\n"
-		      "       failover_nids: [");
+		      "       failover_nids: [ ");
 	spin_lock(&imp->imp_lock);
 	j = 0;
 	list_for_each_entry(conn, &imp->imp_conn_list, oic_item) {
@@ -671,7 +671,7 @@ int lprocfs_rd_import(struct seq_file *m, void *data)
 	else
 		strncpy(nidstr, "<none>", sizeof(nidstr));
 	seq_printf(m,
-		      "]\n"
+		      " ]\n"
 		      "       current_connection: %s\n"
 		      "       connection_attempts: %u\n"
 		      "       generation: %u\n"
@@ -795,7 +795,7 @@ int lprocfs_rd_state(struct seq_file *m, void *data)
 			&imp->imp_state_hist[(k + j) % IMP_STATE_HIST_LEN];
 		if (ish->ish_state == 0)
 			continue;
-		seq_printf(m, " - [%lld, %s]\n", (s64)ish->ish_time,
+		seq_printf(m, " - [ %lld, %s ]\n", (s64)ish->ish_time,
 			   ptlrpc_import_state_name(ish->ish_state));
 	}
 
@@ -942,7 +942,7 @@ int lprocfs_obd_setup(struct obd_device *obd, struct lprocfs_vars *list,
 
 	return rc;
 }
-EXPORT_SYMBOL(lprocfs_obd_setup);
+EXPORT_SYMBOL_GPL(lprocfs_obd_setup);
 
 int lprocfs_obd_cleanup(struct obd_device *obd)
 {
@@ -957,7 +957,7 @@ int lprocfs_obd_cleanup(struct obd_device *obd)
 
 	return 0;
 }
-EXPORT_SYMBOL(lprocfs_obd_cleanup);
+EXPORT_SYMBOL_GPL(lprocfs_obd_cleanup);
 
 int lprocfs_stats_alloc_one(struct lprocfs_stats *stats, unsigned int cpuid)
 {
@@ -1219,7 +1219,7 @@ int ldebugfs_register_stats(struct dentry *parent, const char *name,
 
 	return 0;
 }
-EXPORT_SYMBOL(ldebugfs_register_stats);
+EXPORT_SYMBOL_GPL(ldebugfs_register_stats);
 
 void lprocfs_counter_init(struct lprocfs_stats *stats, int index,
 			  unsigned conf, const char *name, const char *units)
@@ -1319,8 +1319,8 @@ int lprocfs_write_u64_helper(const char __user *buffer, unsigned long count,
 }
 EXPORT_SYMBOL(lprocfs_write_u64_helper);
 
-int lprocfs_write_frac_u64_helper(const char *buffer, unsigned long count,
-			      __u64 *val, int mult)
+int lprocfs_write_frac_u64_helper(const char __user *buffer,
+				  unsigned long count, __u64 *val, int mult)
 {
 	char kernbuf[22], *end, *pbuf;
 	__u64 whole, frac = 0, units;
@@ -1446,7 +1446,7 @@ int ldebugfs_seq_create(struct dentry *parent,
 
 	return 0;
 }
-EXPORT_SYMBOL(ldebugfs_seq_create);
+EXPORT_SYMBOL_GPL(ldebugfs_seq_create);
 
 int ldebugfs_obd_seq_create(struct obd_device *dev,
 			    const char *name,
@@ -1457,7 +1457,7 @@ int ldebugfs_obd_seq_create(struct obd_device *dev,
 	return ldebugfs_seq_create(dev->obd_debugfs_entry, name,
 				   mode, seq_fops, data);
 }
-EXPORT_SYMBOL(ldebugfs_obd_seq_create);
+EXPORT_SYMBOL_GPL(ldebugfs_obd_seq_create);
 
 void lprocfs_oh_tally(struct obd_histogram *oh, unsigned int value)
 {

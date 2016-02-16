@@ -58,7 +58,7 @@ brw_client_fini(sfw_test_instance_t *tsi)
 
 	list_for_each_entry(tsu, &tsi->tsi_units, tsu_list) {
 		bulk = tsu->tsu_private;
-		if (bulk == NULL)
+		if (!bulk)
 			continue;
 
 		srpc_free_bulk(bulk);
@@ -77,25 +77,29 @@ brw_client_init(sfw_test_instance_t *tsi)
 	srpc_bulk_t	 *bulk;
 	sfw_test_unit_t	 *tsu;
 
-	LASSERT(sn != NULL);
+	LASSERT(sn);
 	LASSERT(tsi->tsi_is_client);
 
-	if ((sn->sn_features & LST_FEAT_BULK_LEN) == 0) {
+	if (!(sn->sn_features & LST_FEAT_BULK_LEN)) {
 		test_bulk_req_t  *breq = &tsi->tsi_u.bulk_v0;
 
 		opc   = breq->blk_opc;
 		flags = breq->blk_flags;
 		npg   = breq->blk_npg;
-		/* NB: this is not going to work for variable page size,
-		 * but we have to keep it for compatibility */
+		/*
+		 * NB: this is not going to work for variable page size,
+		 * but we have to keep it for compatibility
+		 */
 		len   = npg * PAGE_CACHE_SIZE;
 
 	} else {
 		test_bulk_req_v1_t *breq = &tsi->tsi_u.bulk_v1;
 
-		/* I should never get this step if it's unknown feature
-		 * because make_session will reject unknown feature */
-		LASSERT((sn->sn_features & ~LST_FEATS_MASK) == 0);
+		/*
+		 * I should never get this step if it's unknown feature
+		 * because make_session will reject unknown feature
+		 */
+		LASSERT(!(sn->sn_features & ~LST_FEATS_MASK));
 
 		opc   = breq->blk_opc;
 		flags = breq->blk_flags;
@@ -116,7 +120,7 @@ brw_client_init(sfw_test_instance_t *tsi)
 	list_for_each_entry(tsu, &tsi->tsi_units, tsu_list) {
 		bulk = srpc_alloc_bulk(lnet_cpt_of_nid(tsu->tsu_dest.nid),
 				       npg, len, opc == LST_BRW_READ);
-		if (bulk == NULL) {
+		if (!bulk) {
 			brw_client_fini(tsi);
 			return -ENOMEM;
 		}
@@ -141,7 +145,7 @@ brw_inject_one_error(void)
 
 	ktime_get_ts64(&ts);
 
-	if (((ts.tv_nsec / NSEC_PER_USEC) & 1) == 0)
+	if (!((ts.tv_nsec / NSEC_PER_USEC) & 1))
 		return 0;
 
 	return brw_inject_errors--;
@@ -153,7 +157,7 @@ brw_fill_page(struct page *pg, int pattern, __u64 magic)
 	char *addr = page_address(pg);
 	int   i;
 
-	LASSERT(addr != NULL);
+	LASSERT(addr);
 
 	if (pattern == LST_BRW_CHECK_NONE)
 		return;
@@ -184,7 +188,7 @@ brw_check_page(struct page *pg, int pattern, __u64 magic)
 	__u64  data = 0; /* make compiler happy */
 	int    i;
 
-	LASSERT(addr != NULL);
+	LASSERT(addr);
 
 	if (pattern == LST_BRW_CHECK_NONE)
 		return 0;
@@ -216,7 +220,7 @@ brw_check_page(struct page *pg, int pattern, __u64 magic)
 
 bad_data:
 	CERROR("Bad data in page %p: %#llx, %#llx expected\n",
-		pg, data, magic);
+	       pg, data, magic);
 	return 1;
 }
 
@@ -240,9 +244,9 @@ brw_check_bulk(srpc_bulk_t *bk, int pattern, __u64 magic)
 
 	for (i = 0; i < bk->bk_niov; i++) {
 		pg = bk->bk_iovs[i].kiov_page;
-		if (brw_check_page(pg, pattern, magic) != 0) {
+		if (brw_check_page(pg, pattern, magic)) {
 			CERROR("Bulk page %p (%d/%d) is corrupted!\n",
-				pg, i, bk->bk_niov);
+			       pg, i, bk->bk_niov);
 			return 1;
 		}
 	}
@@ -252,7 +256,7 @@ brw_check_bulk(srpc_bulk_t *bk, int pattern, __u64 magic)
 
 static int
 brw_client_prep_rpc(sfw_test_unit_t *tsu,
-		     lnet_process_id_t dest, srpc_client_rpc_t **rpcpp)
+		    lnet_process_id_t dest, srpc_client_rpc_t **rpcpp)
 {
 	srpc_bulk_t *bulk = tsu->tsu_private;
 	sfw_test_instance_t *tsi = tsu->tsu_instance;
@@ -265,10 +269,10 @@ brw_client_prep_rpc(sfw_test_unit_t *tsu,
 	int opc;
 	int rc;
 
-	LASSERT(sn != NULL);
-	LASSERT(bulk != NULL);
+	LASSERT(sn);
+	LASSERT(bulk);
 
-	if ((sn->sn_features & LST_FEAT_BULK_LEN) == 0) {
+	if (!(sn->sn_features & LST_FEAT_BULK_LEN)) {
 		test_bulk_req_t *breq = &tsi->tsi_u.bulk_v0;
 
 		opc   = breq->blk_opc;
@@ -279,9 +283,11 @@ brw_client_prep_rpc(sfw_test_unit_t *tsu,
 	} else {
 		test_bulk_req_v1_t *breq = &tsi->tsi_u.bulk_v1;
 
-		/* I should never get this step if it's unknown feature
-		 * because make_session will reject unknown feature */
-		LASSERT((sn->sn_features & ~LST_FEATS_MASK) == 0);
+		/*
+		 * I should never get this step if it's unknown feature
+		 * because make_session will reject unknown feature
+		 */
+		LASSERT(!(sn->sn_features & ~LST_FEATS_MASK));
 
 		opc   = breq->blk_opc;
 		flags = breq->blk_flags;
@@ -290,7 +296,7 @@ brw_client_prep_rpc(sfw_test_unit_t *tsu,
 	}
 
 	rc = sfw_create_test_rpc(tsu, dest, sn->sn_features, npg, len, &rpc);
-	if (rc != 0)
+	if (rc)
 		return rc;
 
 	memcpy(&rpc->crpc_bulk, bulk, offsetof(srpc_bulk_t, bk_iovs[npg]));
@@ -318,11 +324,11 @@ brw_client_done_rpc(sfw_test_unit_t *tsu, srpc_client_rpc_t *rpc)
 	srpc_brw_reply_t *reply = &msg->msg_body.brw_reply;
 	srpc_brw_reqst_t *reqst = &rpc->crpc_reqstmsg.msg_body.brw_reqst;
 
-	LASSERT(sn != NULL);
+	LASSERT(sn);
 
-	if (rpc->crpc_status != 0) {
+	if (rpc->crpc_status) {
 		CERROR("BRW RPC to %s failed with %d\n",
-			libcfs_id2str(rpc->crpc_dest), rpc->crpc_status);
+		       libcfs_id2str(rpc->crpc_dest), rpc->crpc_status);
 		if (!tsi->tsi_stopping) /* rpc could have been aborted */
 			atomic_inc(&sn->sn_brw_errors);
 		goto out;
@@ -334,10 +340,10 @@ brw_client_done_rpc(sfw_test_unit_t *tsu, srpc_client_rpc_t *rpc)
 	}
 
 	CDEBUG(reply->brw_status ? D_WARNING : D_NET,
-		"BRW RPC to %s finished with brw_status: %d\n",
-		libcfs_id2str(rpc->crpc_dest), reply->brw_status);
+	       "BRW RPC to %s finished with brw_status: %d\n",
+	       libcfs_id2str(rpc->crpc_dest), reply->brw_status);
 
-	if (reply->brw_status != 0) {
+	if (reply->brw_status) {
 		atomic_inc(&sn->sn_brw_errors);
 		rpc->crpc_status = -(int)reply->brw_status;
 		goto out;
@@ -346,9 +352,9 @@ brw_client_done_rpc(sfw_test_unit_t *tsu, srpc_client_rpc_t *rpc)
 	if (reqst->brw_rw == LST_BRW_WRITE)
 		goto out;
 
-	if (brw_check_bulk(&rpc->crpc_bulk, reqst->brw_flags, magic) != 0) {
+	if (brw_check_bulk(&rpc->crpc_bulk, reqst->brw_flags, magic)) {
 		CERROR("Bulk data from %s is corrupted!\n",
-			libcfs_id2str(rpc->crpc_dest));
+		       libcfs_id2str(rpc->crpc_dest));
 		atomic_inc(&sn->sn_brw_errors);
 		rpc->crpc_status = -EBADMSG;
 	}
@@ -362,17 +368,17 @@ brw_server_rpc_done(struct srpc_server_rpc *rpc)
 {
 	srpc_bulk_t *blk = rpc->srpc_bulk;
 
-	if (blk == NULL)
+	if (!blk)
 		return;
 
-	if (rpc->srpc_status != 0)
+	if (rpc->srpc_status)
 		CERROR("Bulk transfer %s %s has failed: %d\n",
-			blk->bk_sink ? "from" : "to",
-			libcfs_id2str(rpc->srpc_peer), rpc->srpc_status);
+		       blk->bk_sink ? "from" : "to",
+		       libcfs_id2str(rpc->srpc_peer), rpc->srpc_status);
 	else
 		CDEBUG(D_NET, "Transferred %d pages bulk data %s %s\n",
-			blk->bk_niov, blk->bk_sink ? "from" : "to",
-			libcfs_id2str(rpc->srpc_peer));
+		       blk->bk_niov, blk->bk_sink ? "from" : "to",
+		       libcfs_id2str(rpc->srpc_peer));
 
 	sfw_free_pages(rpc);
 }
@@ -385,16 +391,16 @@ brw_bulk_ready(struct srpc_server_rpc *rpc, int status)
 	srpc_brw_reqst_t *reqst;
 	srpc_msg_t *reqstmsg;
 
-	LASSERT(rpc->srpc_bulk != NULL);
-	LASSERT(rpc->srpc_reqstbuf != NULL);
+	LASSERT(rpc->srpc_bulk);
+	LASSERT(rpc->srpc_reqstbuf);
 
 	reqstmsg = &rpc->srpc_reqstbuf->buf_msg;
 	reqst = &reqstmsg->msg_body.brw_reqst;
 
-	if (status != 0) {
+	if (status) {
 		CERROR("BRW bulk %s failed for RPC from %s: %d\n",
-			reqst->brw_rw == LST_BRW_READ ? "READ" : "WRITE",
-			libcfs_id2str(rpc->srpc_peer), status);
+		       reqst->brw_rw == LST_BRW_READ ? "READ" : "WRITE",
+		       libcfs_id2str(rpc->srpc_peer), status);
 		return -EIO;
 	}
 
@@ -404,9 +410,9 @@ brw_bulk_ready(struct srpc_server_rpc *rpc, int status)
 	if (reqstmsg->msg_magic != SRPC_MSG_MAGIC)
 		__swab64s(&magic);
 
-	if (brw_check_bulk(rpc->srpc_bulk, reqst->brw_flags, magic) != 0) {
+	if (brw_check_bulk(rpc->srpc_bulk, reqst->brw_flags, magic)) {
 		CERROR("Bulk data from %s is corrupted!\n",
-			libcfs_id2str(rpc->srpc_peer));
+		       libcfs_id2str(rpc->srpc_peer));
 		reply->brw_status = EBADMSG;
 	}
 
@@ -448,15 +454,15 @@ brw_server_handle(struct srpc_server_rpc *rpc)
 		return 0;
 	}
 
-	if ((reqstmsg->msg_ses_feats & ~LST_FEATS_MASK) != 0) {
+	if (reqstmsg->msg_ses_feats & ~LST_FEATS_MASK) {
 		replymsg->msg_ses_feats = LST_FEATS_MASK;
 		reply->brw_status = EPROTO;
 		return 0;
 	}
 
-	if ((reqstmsg->msg_ses_feats & LST_FEAT_BULK_LEN) == 0) {
+	if (!(reqstmsg->msg_ses_feats & LST_FEAT_BULK_LEN)) {
 		/* compat with old version */
-		if ((reqst->brw_len & ~CFS_PAGE_MASK) != 0) {
+		if (reqst->brw_len & ~CFS_PAGE_MASK) {
 			reply->brw_status = EINVAL;
 			return 0;
 		}
@@ -468,7 +474,7 @@ brw_server_handle(struct srpc_server_rpc *rpc)
 
 	replymsg->msg_ses_feats = reqstmsg->msg_ses_feats;
 
-	if (reqst->brw_len == 0 || npg > LNET_MAX_IOV) {
+	if (!reqst->brw_len || npg > LNET_MAX_IOV) {
 		reply->brw_status = EINVAL;
 		return 0;
 	}
@@ -476,7 +482,7 @@ brw_server_handle(struct srpc_server_rpc *rpc)
 	rc = sfw_alloc_pages(rpc, rpc->srpc_scd->scd_cpt, npg,
 			     reqst->brw_len,
 			     reqst->brw_rw == LST_BRW_WRITE);
-	if (rc != 0)
+	if (rc)
 		return rc;
 
 	if (reqst->brw_rw == LST_BRW_READ)
@@ -499,7 +505,6 @@ void brw_init_test_client(void)
 srpc_service_t brw_test_service;
 void brw_init_test_service(void)
 {
-
 	brw_test_service.sv_id         = SRPC_SERVICE_BRW;
 	brw_test_service.sv_name       = "brw_test";
 	brw_test_service.sv_handler    = brw_server_handle;

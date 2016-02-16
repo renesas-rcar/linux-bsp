@@ -172,8 +172,6 @@ static __u8 scan_mask_o;
 /* logical or of the input bits involved in the scan matrix */
 static __u8 scan_mask_i;
 
-typedef __u64 pmask_t;
-
 enum input_type {
 	INPUT_TYPE_STD,
 	INPUT_TYPE_KBD,
@@ -188,8 +186,8 @@ enum input_state {
 
 struct logical_input {
 	struct list_head list;
-	pmask_t mask;
-	pmask_t value;
+	__u64 mask;
+	__u64 value;
 	enum input_type type;
 	enum input_state state;
 	__u8 rise_time, fall_time;
@@ -219,19 +217,19 @@ static LIST_HEAD(logical_inputs);	/* list of all defined logical inputs */
  * corresponds to the ground.
  * Within each group, bits are stored in the same order as read on the port :
  * BAPSE (busy=4, ack=3, paper empty=2, select=1, error=0).
- * So, each __u64 (or pmask_t) is represented like this :
+ * So, each __u64 is represented like this :
  * 0000000000000000000BAPSEBAPSEBAPSEBAPSEBAPSEBAPSEBAPSEBAPSEBAPSE
  * <-----unused------><gnd><d07><d06><d05><d04><d03><d02><d01><d00>
  */
 
 /* what has just been read from the I/O ports */
-static pmask_t phys_read;
+static __u64 phys_read;
 /* previous phys_read */
-static pmask_t phys_read_prev;
+static __u64 phys_read_prev;
 /* stabilized phys_read (phys_read|phys_read_prev) */
-static pmask_t phys_curr;
+static __u64 phys_curr;
 /* previous phys_curr */
-static pmask_t phys_prev;
+static __u64 phys_prev;
 /* 0 means that at least one logical signal needs be computed */
 static char inputs_stable;
 
@@ -650,34 +648,28 @@ static const char nexcom_keypad_profile[][4][9] = {
 
 static const char (*keypad_profile)[4][9] = old_keypad_profile;
 
-/* FIXME: this should be converted to a bit array containing signals states */
-static struct {
-	unsigned char e;  /* parallel LCD E (data latch on falling edge) */
-	unsigned char rs; /* parallel LCD RS  (0 = cmd, 1 = data) */
-	unsigned char rw; /* parallel LCD R/W (0 = W, 1 = R) */
-	unsigned char bl; /* parallel LCD backlight (0 = off, 1 = on) */
-	unsigned char cl; /* serial LCD clock (latch on rising edge) */
-	unsigned char da; /* serial LCD data */
-} bits;
+static DECLARE_BITMAP(bits, LCD_BITS);
+
+static void lcd_get_bits(unsigned int port, int *val)
+{
+	unsigned int bit, state;
+
+	for (bit = 0; bit < LCD_BITS; bit++) {
+		state = test_bit(bit, bits) ? BIT_SET : BIT_CLR;
+		*val &= lcd_bits[port][bit][BIT_MSK];
+		*val |= lcd_bits[port][bit][state];
+	}
+}
 
 static void init_scan_timer(void);
 
 /* sets data port bits according to current signals values */
 static int set_data_bits(void)
 {
-	int val, bit;
+	int val;
 
 	val = r_dtr(pprt);
-	for (bit = 0; bit < LCD_BITS; bit++)
-		val &= lcd_bits[LCD_PORT_D][bit][BIT_MSK];
-
-	val |= lcd_bits[LCD_PORT_D][LCD_BIT_E][bits.e]
-	    | lcd_bits[LCD_PORT_D][LCD_BIT_RS][bits.rs]
-	    | lcd_bits[LCD_PORT_D][LCD_BIT_RW][bits.rw]
-	    | lcd_bits[LCD_PORT_D][LCD_BIT_BL][bits.bl]
-	    | lcd_bits[LCD_PORT_D][LCD_BIT_CL][bits.cl]
-	    | lcd_bits[LCD_PORT_D][LCD_BIT_DA][bits.da];
-
+	lcd_get_bits(LCD_PORT_D, &val);
 	w_dtr(pprt, val);
 	return val;
 }
@@ -685,19 +677,10 @@ static int set_data_bits(void)
 /* sets ctrl port bits according to current signals values */
 static int set_ctrl_bits(void)
 {
-	int val, bit;
+	int val;
 
 	val = r_ctr(pprt);
-	for (bit = 0; bit < LCD_BITS; bit++)
-		val &= lcd_bits[LCD_PORT_C][bit][BIT_MSK];
-
-	val |= lcd_bits[LCD_PORT_C][LCD_BIT_E][bits.e]
-	    | lcd_bits[LCD_PORT_C][LCD_BIT_RS][bits.rs]
-	    | lcd_bits[LCD_PORT_C][LCD_BIT_RW][bits.rw]
-	    | lcd_bits[LCD_PORT_C][LCD_BIT_BL][bits.bl]
-	    | lcd_bits[LCD_PORT_C][LCD_BIT_CL][bits.cl]
-	    | lcd_bits[LCD_PORT_C][LCD_BIT_DA][bits.da];
-
+	lcd_get_bits(LCD_PORT_C, &val);
 	w_ctr(pprt, val);
 	return val;
 }
@@ -793,12 +776,17 @@ static void lcd_send_serial(int byte)
 	 * LCD reads D0 on STROBE's rising edge.
 	 */
 	for (bit = 0; bit < 8; bit++) {
-		bits.cl = BIT_CLR;	/* CLK low */
+		clear_bit(LCD_BIT_CL, bits);	/* CLK low */
 		panel_set_bits();
-		bits.da = byte & 1;
+		if (byte & 1) {
+			set_bit(LCD_BIT_DA, bits);
+		} else {
+			clear_bit(LCD_BIT_DA, bits);
+		}
+
 		panel_set_bits();
 		udelay(2);  /* maintain the data during 2 us before CLK up */
-		bits.cl = BIT_SET;	/* CLK high */
+		set_bit(LCD_BIT_CL, bits);	/* CLK high */
 		panel_set_bits();
 		udelay(1);  /* maintain the strobe during 1 us */
 		byte >>= 1;
@@ -813,7 +801,10 @@ static void lcd_backlight(int on)
 
 	/* The backlight is activated by setting the AUTOFEED line to +5V  */
 	spin_lock_irq(&pprt_lock);
-	bits.bl = on;
+	if (on)
+		set_bit(LCD_BIT_BL, bits);
+	else
+		clear_bit(LCD_BIT_BL, bits);
 	panel_set_bits();
 	spin_unlock_irq(&pprt_lock);
 }
@@ -848,14 +839,14 @@ static void lcd_write_cmd_p8(int cmd)
 	w_dtr(pprt, cmd);
 	udelay(20);	/* maintain the data during 20 us before the strobe */
 
-	bits.e = BIT_SET;
-	bits.rs = BIT_CLR;
-	bits.rw = BIT_CLR;
+	set_bit(LCD_BIT_E, bits);
+	clear_bit(LCD_BIT_RS, bits);
+	clear_bit(LCD_BIT_RW, bits);
 	set_ctrl_bits();
 
 	udelay(40);	/* maintain the strobe during 40 us */
 
-	bits.e = BIT_CLR;
+	clear_bit(LCD_BIT_E, bits);
 	set_ctrl_bits();
 
 	udelay(120);	/* the shortest command takes at least 120 us */
@@ -870,14 +861,14 @@ static void lcd_write_data_p8(int data)
 	w_dtr(pprt, data);
 	udelay(20);	/* maintain the data during 20 us before the strobe */
 
-	bits.e = BIT_SET;
-	bits.rs = BIT_SET;
-	bits.rw = BIT_CLR;
+	set_bit(LCD_BIT_E, bits);
+	set_bit(LCD_BIT_RS, bits);
+	clear_bit(LCD_BIT_RW, bits);
 	set_ctrl_bits();
 
 	udelay(40);	/* maintain the strobe during 40 us */
 
-	bits.e = BIT_CLR;
+	clear_bit(LCD_BIT_E, bits);
 	set_ctrl_bits();
 
 	udelay(45);	/* the shortest data takes at least 45 us */
@@ -943,7 +934,8 @@ static void lcd_clear_fast_s(void)
 		lcd_send_serial(0x5F);	/* R/W=W, RS=1 */
 		lcd_send_serial(' ' & 0x0F);
 		lcd_send_serial((' ' >> 4) & 0x0F);
-		udelay(40);	/* the shortest data takes at least 40 us */
+		/* the shortest data takes at least 40 us */
+		udelay(40);
 	}
 	spin_unlock_irq(&pprt_lock);
 
@@ -969,15 +961,15 @@ static void lcd_clear_fast_p8(void)
 		/* maintain the data during 20 us before the strobe */
 		udelay(20);
 
-		bits.e = BIT_SET;
-		bits.rs = BIT_SET;
-		bits.rw = BIT_CLR;
+		set_bit(LCD_BIT_E, bits);
+		set_bit(LCD_BIT_RS, bits);
+		clear_bit(LCD_BIT_RW, bits);
 		set_ctrl_bits();
 
 		/* maintain the strobe during 40 us */
 		udelay(40);
 
-		bits.e = BIT_CLR;
+		clear_bit(LCD_BIT_E, bits);
 		set_ctrl_bits();
 
 		/* the shortest data takes at least 45 us */
@@ -1784,7 +1776,7 @@ static void phys_scan_contacts(void)
 	gndmask = PNL_PINPUT(r_str(pprt)) & scan_mask_i;
 
 	/* grounded inputs are signals 40-44 */
-	phys_read |= (pmask_t) gndmask << 40;
+	phys_read |= (__u64)gndmask << 40;
 
 	if (bitmask != gndmask) {
 		/*
@@ -1800,7 +1792,7 @@ static void phys_scan_contacts(void)
 
 			w_dtr(pprt, oldval & ~bitval);	/* enable this output */
 			bitmask = PNL_PINPUT(r_str(pprt)) & ~gndmask;
-			phys_read |= (pmask_t) bitmask << (5 * bit);
+			phys_read |= (__u64)bitmask << (5 * bit);
 		}
 		w_dtr(pprt, oldval);	/* disable all outputs */
 	}
@@ -2037,32 +2029,32 @@ static void init_scan_timer(void)
  * corresponding to out and in bits respectively.
  * returns 1 if ok, 0 if error (in which case, nothing is written).
  */
-static int input_name2mask(const char *name, pmask_t *mask, pmask_t *value,
-			   char *imask, char *omask)
+static u8 input_name2mask(const char *name, __u64 *mask, __u64 *value,
+			  u8 *imask, u8 *omask)
 {
-	static char sigtab[10] = "EeSsPpAaBb";
-	char im, om;
-	pmask_t m, v;
+	const char sigtab[] = "EeSsPpAaBb";
+	u8 im, om;
+	__u64 m, v;
 
-	om = 0ULL;
-	im = 0ULL;
+	om = 0;
+	im = 0;
 	m = 0ULL;
 	v = 0ULL;
 	while (*name) {
 		int in, out, bit, neg;
+		const char *idx;
 
-		for (in = 0; (in < sizeof(sigtab)) && (sigtab[in] != *name);
-		     in++)
-			;
-
-		if (in >= sizeof(sigtab))
+		idx = strchr(sigtab, *name);
+		if (!idx)
 			return 0;	/* input name not found */
+
+		in = idx - sigtab;
 		neg = (in & 1);	/* odd (lower) names are negated */
 		in >>= 1;
 		im |= BIT(in);
 
 		name++;
-		if (isdigit(*name)) {
+		if (*name >= '0' && *name <= '7') {
 			out = *name - '0';
 			om |= BIT(out);
 		} else if (*name == '-') {

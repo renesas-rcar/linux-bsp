@@ -1048,7 +1048,7 @@ static struct cvmx_usb_port_status cvmx_usb_get_status(
 	result.port_speed = usbc_hprt.s.prtspd;
 	result.connected = usbc_hprt.s.prtconnsts;
 	result.connect_change =
-		(result.connected != usb->port_status.connected);
+		result.connected != usb->port_status.connected;
 
 	return result;
 }
@@ -2006,7 +2006,8 @@ static void octeon_usb_urb_complete_callback(struct cvmx_usb_state *usb,
 	urb->hcpriv = NULL;
 
 	/* For Isochronous transactions we need to update the URB packet status
-	   list from data in our private copy */
+	 * list from data in our private copy
+	 */
 	if (usb_pipetype(urb->pipe) == PIPE_ISOCHRONOUS) {
 		int i;
 		/*
@@ -3593,9 +3594,12 @@ static int octeon_usb_probe(struct platform_device *pdev)
 	usbn_node = dev->of_node->parent;
 
 	i = of_property_read_u32(usbn_node,
-				 "refclk-frequency", &clock_rate);
+				 "clock-frequency", &clock_rate);
+	if (i)
+		i = of_property_read_u32(usbn_node,
+					 "refclk-frequency", &clock_rate);
 	if (i) {
-		dev_err(dev, "No USBN \"refclk-frequency\"\n");
+		dev_err(dev, "No USBN \"clock-frequency\"\n");
 		return -ENXIO;
 	}
 	switch (clock_rate) {
@@ -3609,14 +3613,17 @@ static int octeon_usb_probe(struct platform_device *pdev)
 		initialize_flags = CVMX_USB_INITIALIZE_FLAGS_CLOCK_48MHZ;
 		break;
 	default:
-		dev_err(dev, "Illebal USBN \"refclk-frequency\" %u\n",
+		dev_err(dev, "Illegal USBN \"clock-frequency\" %u\n",
 				clock_rate);
 		return -ENXIO;
 
 	}
 
 	i = of_property_read_string(usbn_node,
-				    "refclk-type", &clock_type);
+				    "cavium,refclk-type", &clock_type);
+	if (i)
+		i = of_property_read_string(usbn_node,
+					    "refclk-type", &clock_type);
 
 	if (!i && strcmp("crystal", clock_type) == 0)
 		is_crystal_clock = true;

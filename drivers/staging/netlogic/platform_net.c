@@ -86,7 +86,8 @@ static void xlr_resource_init(struct resource *res, int offset, int irq)
 
 	res++;
 	res->name = "gmac";
-	res->start = res->end = irq;
+	res->start = irq;
+	res->end = irq;
 	res->flags = IORESOURCE_IRQ;
 }
 
@@ -121,8 +122,8 @@ static struct platform_device *gmac_controller2_init(void *gmac0_addr)
 		ndata1.phy_addr[mac] = mac + 4 + 0x10;
 
 		xlr_resource_init(&xlr_net1_res[mac * 2],
-				xlr_gmac_offsets[mac + 4],
-				xlr_gmac_irqs[mac + 4]);
+				  xlr_gmac_offsets[mac + 4],
+				  xlr_gmac_irqs[mac + 4]);
 	}
 	xlr_net_dev1.num_resources = 8;
 
@@ -207,7 +208,6 @@ static void xlr_gmac_init(void)
 		.gmac_fmn_info	= &xlr_board_fmn_config.gmac[0],
 		.gpio_addr	= NULL,
 	};
-
 
 	static struct platform_device xlr_net_dev0 = {
 		.name		= "xlr-net",
