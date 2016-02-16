@@ -465,7 +465,8 @@ struct vsp1_hgo *vsp1_hgo_create(struct vsp1_device *vsp1)
 	hgo->entity.ops = &hgo_entity_ops;
 	hgo->entity.type = VSP1_ENTITY_HGO;
 
-	ret = vsp1_entity_init(vsp1, &hgo->entity, "hgo", 2, &hgo_ops);
+	ret = vsp1_entity_init(vsp1, &hgo->entity, "hgo", 2, &hgo_ops,
+			       MEDIA_ENT_F_PROC_VIDEO_STATISTICS);
 	if (ret < 0)
 		return ERR_PTR(ret);
 
