@@ -1,0 +1,31 @@
+Qualcomm SAW Regulators
+
+SAW (Subsystem Power Manager and Adaptive Voltage Scaling Wrapper) is a hardware
+block in the Qualcomm chipsets that regulates the power to the CPU cores on devices
+such as APQ8064, MSM8974, APQ8084 and others.
+
+- compatible:
+	Usage: required
+	Value type: <string>
+	Definition: must be one of:
+			"qcom,apq8064-saw2-v1.1-regulator"
+
+Example:
+                saw0: power-controller@2089000 {
+			compatible = "qcom,apq8064-saw2-v1.1-cpu", "qcom,saw2", "syscon", "simple-mfd";
+			reg = <0x02089000 0x1000>, <0x02009000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			saw0_regulator: regulator@2089000 {
+				compatible = "qcom,apq8064-saw2-v1.1-regulator";
+				regulator-always-on;
+				regulator-min-microvolt = <825000>;
+				regulator-max-microvolt = <1250000>;
+			};
+		};
+
+
+		&CPU0 {
+			cpu-supply = <&saw0_regulator>;
+		};

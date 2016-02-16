@@ -78,6 +78,15 @@ config REGULATOR_ACT8865
 	  This driver controls a active-semi act8865 voltage output
 	  regulator via I2C bus.
 
+config REGULATOR_ACT8945A
+	tristate "Active-semi ACT8945A voltage regulator"
+	depends on MFD_ACT8945A
+	help
+	  This driver controls a active-semi ACT8945A voltage regulator
+	  via I2C bus. The ACT8945A features three step-down DC/DC converters
+	  and four low-dropout linear regulators, along with a ActivePath
+	  battery charger.
+
 config REGULATOR_AD5398
 	tristate "Analog Devices AD5398/AD5821 regulators"
 	depends on I2C
@@ -260,6 +269,14 @@ config REGULATOR_HI6421
 	  Hi6421 is a multi-function device which, on regulator part, provides
 	  21 general purpose LDOs, 3 dedicated LDOs, and 5 BUCKs. All
 	  of them come with support to either ECO (idle) or sleep mode.
+
+config REGULATOR_HI655X
+	tristate "Hisilicon HI655X PMIC regulators support"
+	depends on ARCH_HISI || COMPILE_TEST
+	depends on MFD_HI655X_PMIC && OF
+	help
+	  This driver provides support for the voltage regulators of the
+	  Hisilicon Hi655x PMIC device.
 
 config REGULATOR_ISL9305
 	tristate "Intersil ISL9305 regulator"
@@ -548,6 +565,18 @@ config REGULATOR_QCOM_RPM
 	  Say M here if you want to include support for the regulators on the
 	  Qualcomm RPM as a module. The module will be named
 	  "qcom_rpm-regulator".
+
+config REGULATOR_QCOM_SAW
+	tristate "Qualcomm SAW regulator driver"
+	depends on (ARCH_QCOM || COMPILE_TEST) && MFD_SYSCON
+	help
+	  If you say yes to this option, support will be included for the
+	  regulators providing power to the CPU cores on devices such as
+	  APQ8064.
+
+	  Say M here if you want to include support for the CPU core voltage
+	  regulators as a module. The module will be named
+	  "qcom_saw-regulator".
 
 config REGULATOR_QCOM_SMD_RPM
 	tristate "Qualcomm SMD based RPM regulator driver"
