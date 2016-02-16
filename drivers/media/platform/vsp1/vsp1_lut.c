@@ -237,7 +237,9 @@ struct vsp1_lut *vsp1_lut_create(struct vsp1_device *vsp1)
 	subdev = &lut->entity.subdev;
 	v4l2_subdev_init(subdev, &lut_ops);
 
+	subdev->entity.function = MEDIA_ENT_F_PROC_VIDEO_GENERIC;
 	subdev->entity.ops = &vsp1->media_ops;
+
 	subdev->internal_ops = &vsp1_subdev_internal_ops;
 	snprintf(subdev->name, sizeof(subdev->name), "%s lut",
 		 dev_name(vsp1->dev));

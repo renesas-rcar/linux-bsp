@@ -424,7 +424,9 @@ struct vsp1_bru *vsp1_bru_create(struct vsp1_device *vsp1)
 	subdev = &bru->entity.subdev;
 	v4l2_subdev_init(subdev, &bru_ops);
 
+	subdev->entity.function = MEDIA_ENT_F_PROC_VIDEO_COMPOSER;
 	subdev->entity.ops = &vsp1->media_ops;
+
 	subdev->internal_ops = &vsp1_subdev_internal_ops;
 	snprintf(subdev->name, sizeof(subdev->name), "%s bru",
 		 dev_name(vsp1->dev));
