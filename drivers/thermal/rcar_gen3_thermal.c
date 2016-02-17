@@ -543,7 +543,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	spin_lock_init(&priv->lock);
 	INIT_DELAYED_WORK(&priv->work, rcar_gen3_thermal_work);
 
-	of_property_read_u32(dev->of_node, "id", &priv->id);
+	priv->id = of_alias_get_id(dev->of_node, "tsc");
 
 	priv->zone = thermal_zone_of_sensor_register(dev, 0, priv,
 				&rcar_gen3_tz_of_ops);
