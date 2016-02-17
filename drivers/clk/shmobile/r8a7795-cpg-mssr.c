@@ -834,7 +834,7 @@ struct clk * __init r8a7795_cpg_clk_register(struct device *dev,
 		 * the multiplier value.
 		 */
 		value = readl(base + CPG_PLL0CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		mult = ((value >> 24) & 0x7f) + 1;
 		/* Start clock issue W/A */
 		if (!check_product_version(
 			RCAR_H3_PRODUCT_ID|PRODUCT_VERSION_WS1_0)) {
@@ -855,7 +855,7 @@ struct clk * __init r8a7795_cpg_clk_register(struct device *dev,
 		 * the multiplier value.
 		 */
 		value = readl(base + CPG_PLL2CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		mult = ((value >> 24) & 0x7f) + 1;
 		/* Start clock issue W/A */
 		if (!check_product_version(
 			RCAR_H3_PRODUCT_ID|PRODUCT_VERSION_WS1_0)) {
