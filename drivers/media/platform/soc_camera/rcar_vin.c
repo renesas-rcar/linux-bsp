@@ -2074,8 +2074,8 @@ static int rcar_vin_set_crop(struct soc_camera_device *icd,
 	cam->width = mf->width;
 	cam->height = mf->height;
 
-	cam->vin_left = rect->left & ~1;
-	cam->vin_top = rect->top & ~1;
+	cam->vin_left = rect->left;
+	cam->vin_top = rect->top;
 
 	/* Use VIN cropping to crop to the new window. */
 	ret = rcar_vin_set_rect(icd);
@@ -2285,9 +2285,16 @@ static int rcar_vin_try_fmt(struct soc_camera_device *icd,
 		pix->colorspace = icd->colorspace;
 	}
 
-	/* FIXME: calculate using depth and bus width */
-	v4l_bound_align_image(&pix->width, 2, priv->max_width, 1,
-			      &pix->height, 4, priv->max_height, 2, 0);
+	/* When performing a YCbCr-422 format output, even if it performs */
+	/* odd number clipping by pixel post clip processing, */
+	/* it is outputted to a memory per even pixels. */
+	if ((pixfmt == V4L2_PIX_FMT_NV16) || (pixfmt == V4L2_PIX_FMT_NV12) ||
+		(pixfmt == V4L2_PIX_FMT_YUYV) || (pixfmt == V4L2_PIX_FMT_UYVY))
+		v4l_bound_align_image(&pix->width, 5, priv->max_width, 1,
+				      &pix->height, 2, priv->max_height, 0, 0);
+	else
+		v4l_bound_align_image(&pix->width, 5, priv->max_width, 0,
+				      &pix->height, 2, priv->max_height, 0, 0);
 
 	width = pix->width;
 	height = pix->height;
