@@ -2304,6 +2304,7 @@
 			sensor_thermal1: sensor-thermal1 {
 				polling-delay-passive = <250>;
 				polling-delay = <0>;
+				sustainable-power = <2000>;
 
 				/* sensor ID */
 				thermal-sensors = <&tsc1>;
@@ -2320,6 +2321,7 @@
 			sensor_thermal2: sensor-thermal2 {
 				polling-delay-passive = <250>;
 				polling-delay = <0>;
+				sustainable-power = <2000>;
 
 				/* sensor ID */
 				thermal-sensors = <&tsc2>;
