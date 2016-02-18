@@ -1,0 +1,18 @@
+Renesas RCLK Watchdog Timer (RWDT) Controller
+
+Required properties:
+- compatible : Should be "renesas,rwdt-r8a7795";
+- reg : Should contain WDT registers location and length
+- clocks : the clock feeding the watchdog timer.
+
+Optional properties:
+- timeout-sec : Contains the watchdog timeout in seconds
+
+Examples:
+
+	wdt0: wdt@e6020000 {
+		compatible = "renesas,rwdt-r8a7795";
+		reg = <0 0xe6020000 0 0x0c>;
+		clocks = <&cpg CPG_MOD 402>;
+		timeout-sec = <60>;
+	};
