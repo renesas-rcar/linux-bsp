@@ -62,7 +62,6 @@ config ARM_VIC_NR
 
 config ARMADA_370_XP_IRQ
 	bool
-	default y if ARCH_MVEBU
 	select GENERIC_IRQ_CHIP
 	select PCI_MSI_IRQ_DOMAIN if PCI_MSI
 
@@ -171,6 +170,7 @@ config TS4800_IRQ
 	tristate "TS-4800 IRQ controller"
 	select IRQ_DOMAIN
 	depends on HAS_IOMEM
+	depends on SOC_IMX51 || COMPILE_TEST
 	help
 	  Support for the TS-4800 FPGA IRQ controller
 
