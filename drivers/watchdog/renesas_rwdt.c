@@ -14,7 +14,6 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
-#include <linux/reboot.h>
 #include <linux/watchdog.h>
 
 #define RWTCNT		0
@@ -36,7 +35,6 @@ struct rwdt_priv {
 	void __iomem *base;
 	struct watchdog_device wdev;
 	struct clk *clk;
-	struct notifier_block restart_handler;
 	unsigned clks_per_sec;
 	u8 cks;
 };
@@ -95,6 +93,16 @@ static int rwdt_stop(struct watchdog_device *wdev)
 	return 0;
 }
 
+static int rwdt_restart_handler(struct watchdog_device *wdev)
+{
+	struct rwdt_priv *priv = watchdog_get_drvdata(wdev);
+
+	rwdt_start(&priv->wdev);
+	rwdt_write(priv, 0xffff, RWTCNT);
+
+	return 0;
+}
+
 static const struct watchdog_info rwdt_ident = {
 	.options = WDIOF_MAGICCLOSE | WDIOF_KEEPALIVEPING | WDIOF_SETTIMEOUT,
 	.identity = "Renesas RWDT Watchdog",
@@ -106,17 +114,8 @@ static const struct watchdog_ops rwdt_ops = {
 	.stop = rwdt_stop,
 	.ping = rwdt_init_timeout,
 	.set_timeout = rwdt_set_timeout,
+	.restart = rwdt_restart_handler,
 };
-
-static int rwdt_restart_handler(struct notifier_block *nb, unsigned long mode, void *cmd)
-{
-	struct rwdt_priv *priv = container_of(nb, struct rwdt_priv, restart_handler);
-
-	rwdt_start(&priv->wdev);
-	rwdt_write(priv, 0xffff, RWTCNT);
-
-	return NOTIFY_DONE;
-}
 
 static int rwdt_probe(struct platform_device *pdev)
 {
@@ -170,6 +169,7 @@ static int rwdt_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, priv);
 	watchdog_set_drvdata(&priv->wdev, priv);
 	watchdog_set_nowayout(&priv->wdev, nowayout);
+	watchdog_set_restart_priority(&priv->wdev, 192);
 
 	/* This overrides the default timeout only if DT configuration was found */
 	ret = watchdog_init_timeout(&priv->wdev, 0, &pdev->dev);
@@ -180,12 +180,6 @@ static int rwdt_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	priv->restart_handler.notifier_call = rwdt_restart_handler;
-	priv->restart_handler.priority = 192;
-	ret = register_restart_handler(&priv->restart_handler);
-	if (ret)
-		dev_warn(&pdev->dev, "Failed to register restart handler (err = %d)\n", ret);
-
 	return 0;
 }
 
@@ -193,7 +187,6 @@ static int rwdt_remove(struct platform_device *pdev)
 {
 	struct rwdt_priv *priv = platform_get_drvdata(pdev);
 
-	unregister_restart_handler(&priv->restart_handler);
 	watchdog_unregister_device(&priv->wdev);
 	return 0;
 }
