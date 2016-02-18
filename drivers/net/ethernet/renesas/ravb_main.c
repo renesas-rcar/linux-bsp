@@ -33,6 +33,7 @@
 #include <linux/spinlock.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <asm/div64.h>
 
@@ -1028,11 +1029,19 @@ static int ravb_phy_init(struct net_device *ndev)
 		enum of_gpio_flags flags;
 		int err, gpio;
 
-		err = phy_set_max_speed(phydev, SPEED_100);
-		if (err) {
-			netdev_err(ndev, "failed to limit PHY to 100Mbit/s\n");
-			phy_disconnect(phydev);
+		err = RCAR_PRR_INIT();
+		if (err)
 			return err;
+
+		if (RCAR_PRR_IS_PRODUCT(H3) &&
+		    (RCAR_PRR_CHK_CUT(H3, WS10) == 0)) {
+			err = phy_set_max_speed(phydev, SPEED_100);
+			if (err) {
+				netdev_err(ndev, "failed to limit PHY to 100Mbit/s\n");
+				phy_disconnect(phydev);
+				return err;
+			}
+			netdev_info(ndev, "limited PHY to 100Mbit/s\n");
 		}
 
 		gpio = of_get_named_gpio_flags(np, "phy-int-gpio", 0, &flags);
@@ -1049,7 +1058,6 @@ static int ravb_phy_init(struct net_device *ndev)
 			}
 		}
 
-		netdev_info(ndev, "limited PHY to 100Mbit/s\n");
 	}
 
 	/* 10BASE is not supported */
