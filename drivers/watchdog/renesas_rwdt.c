@@ -15,6 +15,7 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/watchdog.h>
+#include <linux/pm_runtime.h>
 
 #define RWTCNT		0
 #define RWTCSRA		4
@@ -70,7 +71,7 @@ static int rwdt_start(struct watchdog_device *wdev)
 {
 	struct rwdt_priv *priv = watchdog_get_drvdata(wdev);
 
-	clk_prepare_enable(priv->clk);
+	pm_runtime_get_sync(wdev->parent);
 
 	rwdt_write(priv, priv->cks, RWTCSRA);
 	rwdt_init_timeout(wdev);
@@ -88,7 +89,7 @@ static int rwdt_stop(struct watchdog_device *wdev)
 	struct rwdt_priv *priv = watchdog_get_drvdata(wdev);
 
 	rwdt_write(priv, priv->cks, RWTCSRA);
-	clk_disable_unprepare(priv->clk);
+	pm_runtime_put(wdev->parent);
 
 	return 0;
 }
@@ -97,7 +98,7 @@ static int rwdt_restart_handler(struct watchdog_device *wdev)
 {
 	struct rwdt_priv *priv = watchdog_get_drvdata(wdev);
 
-	rwdt_start(&priv->wdev);
+	rwdt_start(wdev);
 	rwdt_write(priv, 0xffff, RWTCNT);
 
 	return 0;
@@ -138,12 +139,14 @@ static int rwdt_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->clk))
 		return PTR_ERR(priv->clk);
 
-	clk_prepare_enable(priv->clk);
-	rate = clk_get_rate(priv->clk);
-	clk_disable_unprepare(priv->clk);
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
 
-	if (!rate)
-		return -ENOENT;
+	rate = clk_get_rate(priv->clk);
+	if (!rate) {
+		ret = -ENOENT;
+		goto err_clk;
+	}
 
 	for (i = ARRAY_SIZE(clk_divs); i >= 0; i--) {
 		clks_per_sec = rate / clk_divs[i];
@@ -156,7 +159,8 @@ static int rwdt_probe(struct platform_device *pdev)
 
 	if (!clks_per_sec) {
 		dev_err(&pdev->dev, "Can't find suitable clock divider!\n");
-		return -ERANGE;
+		ret = -ERANGE;
+		goto err_clk;
 	}
 
 	priv->wdev.info = &rwdt_ident,
@@ -178,15 +182,24 @@ static int rwdt_probe(struct platform_device *pdev)
 
 	ret = watchdog_register_device(&priv->wdev);
 	if (ret < 0)
-		return ret;
+		goto err_register;
 
+	pm_runtime_put(&pdev->dev);
 	return 0;
+
+err_register:
+err_clk:
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+	return ret;
 }
 
 static int rwdt_remove(struct platform_device *pdev)
 {
 	struct rwdt_priv *priv = platform_get_drvdata(pdev);
 
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
 	watchdog_unregister_device(&priv->wdev);
 	return 0;
 }
