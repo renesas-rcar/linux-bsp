@@ -68,6 +68,7 @@
 				<&group0_opp_tb1>, <&group0_opp_tb2>,
 				<&group0_opp_tb3>, <&group0_opp_tb4>,
 				<&group0_opp_tb5>, <&group0_opp_tb6>;
+			cpu-supply = <&vdd_dvfs>;
 		};
 
 		a57_1: cpu@1 {
