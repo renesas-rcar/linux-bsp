@@ -1,7 +1,7 @@
 /*
  * vsp1_rpf.c  --  R-Car VSP1 Read Pixel Formatter
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -159,7 +159,12 @@ static int rpf_s_stream(struct v4l2_subdev *subdev, int enable)
 		laya = 0;
 		break;
 	case V4L2_PIX_FMT_ARGB32:
+	case V4L2_PIX_FMT_ABGR32:
 		alph_sel = (1 << 18);
+		laya = 0;
+		break;
+	case V4L2_PIX_FMT_ARGB444:
+		alph_sel = (0 << 28) | (2 << 18);
 		laya = 0;
 		break;
 	default:
