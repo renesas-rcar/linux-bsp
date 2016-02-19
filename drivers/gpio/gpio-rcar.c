@@ -29,6 +29,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/spinlock.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/s2ram_ddr_backup.h>
 
 struct gpio_rcar_priv {
 	void __iomem *base;
@@ -56,6 +57,232 @@ struct gpio_rcar_priv {
 #define BOTHEDGE 0x4c	/* One Edge/Both Edge Select Register */
 
 #define RCAR_MAX_GPIO_PER_BANK		32
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+static struct hw_register gpio0_ip_regs[] = {
+	{"IOINTSEL",    0x0000, 32, 0},
+	{"INOUTSEL",    0x0004, 32, 0},
+	{"OUTDT",       0x0008, 32, 0},
+	{"INTCLR",      0x0014, 32, 0},
+	{"INTMSK",      0x0018, 32, 0},
+	{"MSKCLR",      0x001C, 32, 0},
+	{"POSNEG",      0x0020, 32, 0},
+	{"EDGLEVEL",    0x0024, 32, 0},
+	{"FILONOFF",    0x0028, 32, 0},
+	{"INTMSKS",     0x0038, 32, 0},
+	{"MSKCLRS",     0x003C, 32, 0},
+	{"OUTDTSEL",    0x0040, 32, 0},
+	{"OUTDTH",      0x0044, 32, 0},
+	{"OUTDTL",      0x0048, 32, 0},
+	{"BOTHEDGE",    0x004C, 32, 0},
+};
+
+static struct rcar_ip gpio0_ip = {
+	.ip_name   = "GPIO0",
+	.reg_count = ARRAY_SIZE(gpio0_ip_regs),
+	.ip_reg    = gpio0_ip_regs,
+};
+
+static struct hw_register gpio1_ip_regs[] = {
+	{"IOINTSEL",    0x0000, 32, 0},
+	{"INOUTSEL",    0x0004, 32, 0},
+	{"OUTDT",       0x0008, 32, 0},
+	{"INTCLR",      0x0014, 32, 0},
+	{"INTMSK",      0x0018, 32, 0},
+	{"MSKCLR",      0x001C, 32, 0},
+	{"POSNEG",      0x0020, 32, 0},
+	{"EDGLEVEL",    0x0024, 32, 0},
+	{"FILONOFF",    0x0028, 32, 0},
+	{"INTMSKS",     0x0038, 32, 0},
+	{"MSKCLRS",     0x003C, 32, 0},
+	{"OUTDTSEL",    0x0040, 32, 0},
+	{"OUTDTH",      0x0044, 32, 0},
+	{"OUTDTL",      0x0048, 32, 0},
+	{"BOTHEDGE",    0x004C, 32, 0},
+};
+
+static struct rcar_ip gpio1_ip = {
+	.ip_name   = "GPIO1",
+	.reg_count = ARRAY_SIZE(gpio1_ip_regs),
+	.ip_reg    = gpio1_ip_regs,
+};
+
+static struct hw_register gpio2_ip_regs[] = {
+	{"IOINTSEL",    0x0000, 32, 0},
+	{"INOUTSEL",    0x0004, 32, 0},
+	{"OUTDT",       0x0008, 32, 0},
+	{"INTCLR",      0x0014, 32, 0},
+	{"INTMSK",      0x0018, 32, 0},
+	{"MSKCLR",      0x001C, 32, 0},
+	{"POSNEG",      0x0020, 32, 0},
+	{"EDGLEVEL",    0x0024, 32, 0},
+	{"FILONOFF",    0x0028, 32, 0},
+	{"INTMSKS",     0x0038, 32, 0},
+	{"MSKCLRS",     0x003C, 32, 0},
+	{"OUTDTSEL",    0x0040, 32, 0},
+	{"OUTDTH",      0x0044, 32, 0},
+	{"OUTDTL",      0x0048, 32, 0},
+	{"BOTHEDGE",    0x004C, 32, 0},
+};
+
+static struct rcar_ip gpio2_ip = {
+	.ip_name   = "GPIO2",
+	.reg_count = ARRAY_SIZE(gpio2_ip_regs),
+	.ip_reg    = gpio2_ip_regs,
+};
+
+static struct hw_register gpio3_ip_regs[] = {
+	{"IOINTSEL",    0x0000, 32, 0},
+	{"INOUTSEL",    0x0004, 32, 0},
+	{"OUTDT",       0x0008, 32, 0},
+	{"INTCLR",      0x0014, 32, 0},
+	{"INTMSK",      0x0018, 32, 0},
+	{"MSKCLR",      0x001C, 32, 0},
+	{"POSNEG",      0x0020, 32, 0},
+	{"EDGLEVEL",    0x0024, 32, 0},
+	{"FILONOFF",    0x0028, 32, 0},
+	{"INTMSKS",     0x0038, 32, 0},
+	{"MSKCLRS",     0x003C, 32, 0},
+	{"OUTDTSEL",    0x0040, 32, 0},
+	{"OUTDTH",      0x0044, 32, 0},
+	{"OUTDTL",      0x0048, 32, 0},
+	{"BOTHEDGE",    0x004C, 32, 0},
+};
+
+static struct rcar_ip gpio3_ip = {
+	.ip_name   = "GPIO3",
+	.reg_count = ARRAY_SIZE(gpio3_ip_regs),
+	.ip_reg    = gpio3_ip_regs,
+};
+
+static struct hw_register gpio4_ip_regs[] = {
+	{"IOINTSEL",    0x0000, 32, 0},
+	{"INOUTSEL",    0x0004, 32, 0},
+	{"OUTDT",       0x0008, 32, 0},
+	{"INTCLR",      0x0014, 32, 0},
+	{"INTMSK",      0x0018, 32, 0},
+	{"MSKCLR",      0x001C, 32, 0},
+	{"POSNEG",      0x0020, 32, 0},
+	{"EDGLEVEL",    0x0024, 32, 0},
+	{"FILONOFF",    0x0028, 32, 0},
+	{"INTMSKS",     0x0038, 32, 0},
+	{"MSKCLRS",     0x003C, 32, 0},
+	{"OUTDTSEL",    0x0040, 32, 0},
+	{"OUTDTH",      0x0044, 32, 0},
+	{"OUTDTL",      0x0048, 32, 0},
+	{"BOTHEDGE",    0x004C, 32, 0},
+};
+
+static struct rcar_ip gpio4_ip = {
+	.ip_name   = "GPIO4",
+	.reg_count = ARRAY_SIZE(gpio4_ip_regs),
+	.ip_reg    = gpio4_ip_regs,
+};
+
+static struct hw_register gpio5_ip_regs[] = {
+	{"IOINTSEL",    0x0000, 32, 0},
+	{"INOUTSEL",    0x0004, 32, 0},
+	{"OUTDT",       0x0008, 32, 0},
+	{"INTCLR",      0x0014, 32, 0},
+	{"INTMSK",      0x0018, 32, 0},
+	{"MSKCLR",      0x001C, 32, 0},
+	{"POSNEG",      0x0020, 32, 0},
+	{"EDGLEVEL",    0x0024, 32, 0},
+	{"FILONOFF",    0x0028, 32, 0},
+	{"INTMSKS",     0x0038, 32, 0},
+	{"MSKCLRS",     0x003C, 32, 0},
+	{"OUTDTSEL",    0x0040, 32, 0},
+	{"OUTDTH",      0x0044, 32, 0},
+	{"OUTDTL",      0x0048, 32, 0},
+	{"BOTHEDGE",    0x004C, 32, 0},
+};
+
+static struct rcar_ip gpio5_ip = {
+	.ip_name   = "GPIO5",
+	.reg_count = ARRAY_SIZE(gpio5_ip_regs),
+	.ip_reg    = gpio5_ip_regs,
+};
+
+static struct hw_register gpio6_ip_regs[] = {
+	{"IOINTSEL",    0x0000, 32, 0},
+	{"INOUTSEL",    0x0004, 32, 0},
+	{"OUTDT",       0x0008, 32, 0},
+	{"INTCLR",      0x0014, 32, 0},
+	{"INTMSK",      0x0018, 32, 0},
+	{"MSKCLR",      0x001C, 32, 0},
+	{"POSNEG",      0x0020, 32, 0},
+	{"EDGLEVEL",    0x0024, 32, 0},
+	{"FILONOFF",    0x0028, 32, 0},
+	{"INTMSKS",     0x0038, 32, 0},
+	{"MSKCLRS",     0x003C, 32, 0},
+	{"OUTDTSEL",    0x0040, 32, 0},
+	{"OUTDTH",      0x0044, 32, 0},
+	{"OUTDTL",      0x0048, 32, 0},
+	{"BOTHEDGE",    0x004C, 32, 0},
+};
+
+static struct rcar_ip gpio6_ip = {
+	.ip_name   = "GPIO6",
+	.reg_count = ARRAY_SIZE(gpio6_ip_regs),
+	.ip_reg    = gpio6_ip_regs,
+};
+
+static struct hw_register gpio7_ip_regs[] = {
+	{"IOINTSEL",    0x0000, 32, 0},
+	{"INOUTSEL",    0x0004, 32, 0},
+	{"OUTDT",       0x0008, 32, 0},
+	{"INTCLR",      0x0014, 32, 0},
+	{"INTMSK",      0x0018, 32, 0},
+	{"MSKCLR",      0x001C, 32, 0},
+	{"POSNEG",      0x0020, 32, 0},
+	{"EDGLEVEL",    0x0024, 32, 0},
+	{"FILONOFF",    0x0028, 32, 0},
+	{"INTMSKS",     0x0038, 32, 0},
+	{"MSKCLRS",     0x003C, 32, 0},
+	{"OUTDTSEL",    0x0040, 32, 0},
+	{"OUTDTH",      0x0044, 32, 0},
+	{"OUTDTL",      0x0048, 32, 0},
+	{"BOTHEDGE",    0x004C, 32, 0},
+};
+
+static struct rcar_ip gpio7_ip = {
+	.ip_name   = "GPIO7",
+	.reg_count = ARRAY_SIZE(gpio7_ip_regs),
+	.ip_reg    = gpio7_ip_regs,
+};
+
+struct gpio_ip_info {
+	const char *name;
+	struct rcar_ip *ip;
+};
+
+static struct gpio_ip_info ip_info_tbl[] = {
+	{"e6050000.gpio", &gpio0_ip},
+	{"e6051000.gpio", &gpio1_ip},
+	{"e6052000.gpio", &gpio2_ip},
+	{"e6053000.gpio", &gpio3_ip},
+	{"e6054000.gpio", &gpio4_ip},
+	{"e6055000.gpio", &gpio5_ip},
+	{"e6055400.gpio", &gpio6_ip},
+	{"e6055800.gpio", &gpio7_ip},
+};
+
+static struct rcar_ip *gpio_rcar_get_ip(const char *name)
+{
+	struct gpio_ip_info *ip_info = ip_info_tbl;
+	struct rcar_ip *ip = NULL;
+
+	while (ip_info->name) {
+		if (!strcmp(ip_info->name, name)) {
+			ip = ip_info->ip;
+			break;
+		}
+		ip_info++;
+	}
+
+	return ip;
+}
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 static inline u32 gpio_rcar_read(struct gpio_rcar_priv *p, int offs)
 {
@@ -510,11 +737,60 @@ static int gpio_rcar_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int gpio_rcar_suspend(struct device *dev)
+{
+	int ret = 0;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_ip *ip = gpio_rcar_get_ip(pdev->name);
+
+	if (ip) {
+		struct gpio_rcar_priv *p = dev_get_drvdata(dev);
+
+		if (!ip->virt_addr)
+			ip->virt_addr = p->base;
+
+		ret = handle_registers(ip, DO_BACKUP);
+		pr_debug("%s: Backup %s register\n", __func__, ip->ip_name);
+	} else
+		pr_err("%s: Failed to backup %s register\n", __func__,
+			pdev->name);
+
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+	return ret;
+}
+
+static int gpio_rcar_resume(struct device *dev)
+{
+	int ret = 0;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_ip *ip = gpio_rcar_get_ip(pdev->name);
+
+	if (ip) {
+		ret = handle_registers(ip, DO_RESTORE);
+		pr_debug("%s: Restore %s register\n", __func__, ip->ip_name);
+	} else
+		pr_err("%s: Failed to restore %s register\n", __func__,
+			pdev->name);
+
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+	return ret;
+}
+static SIMPLE_DEV_PM_OPS(gpio_rcar_pm_ops,
+			gpio_rcar_suspend, gpio_rcar_resume);
+#define DEV_PM_OPS (&gpio_rcar_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver gpio_rcar_device_driver = {
 	.probe		= gpio_rcar_probe,
 	.remove		= gpio_rcar_remove,
 	.driver		= {
 		.name	= "gpio_rcar",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(gpio_rcar_of_table),
 	}
 };
