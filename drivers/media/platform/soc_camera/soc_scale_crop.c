@@ -1,6 +1,7 @@
 /*
  * soc-camera generic scaling-cropping manipulation functions
  *
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  * Copyright (C) 2013 Guennadi Liakhovetski <g.liakhovetski@gmx.de>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -405,3 +406,5 @@ void soc_camera_calc_client_output(struct soc_camera_device *icd,
 	mf->height = soc_camera_shift_scale(rect->height, shift, scale_v);
 }
 EXPORT_SYMBOL(soc_camera_calc_client_output);
+
+MODULE_LICENSE("GPL v2");
