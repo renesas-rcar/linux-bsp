@@ -503,11 +503,32 @@ static int gpio_rcar_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int gpio_rcar_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int gpio_rcar_resume(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(gpio_rcar_pm_ops,
+			gpio_rcar_suspend, gpio_rcar_resume);
+#define DEV_PM_OPS (&gpio_rcar_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver gpio_rcar_device_driver = {
 	.probe		= gpio_rcar_probe,
 	.remove		= gpio_rcar_remove,
 	.driver		= {
 		.name	= "gpio_rcar",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(gpio_rcar_of_table),
 	}
 };
