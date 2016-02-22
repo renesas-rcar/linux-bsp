@@ -207,9 +207,30 @@ static const struct of_device_id rwdt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, rwdt_ids);
 
+#ifdef CONFIG_PM_SLEEP
+static int rwdt_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int rwdt_resume(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rwdt_pm_ops,
+			rwdt_suspend, rwdt_resume);
+#define DEV_PM_OPS (&rwdt_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rwdt_driver = {
 	.driver = {
 		.name = "renesas_wdt",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rwdt_ids,
 	},
 	.probe = rwdt_probe,
