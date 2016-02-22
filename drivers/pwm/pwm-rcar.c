@@ -264,11 +264,32 @@ static const struct of_device_id rcar_pwm_of_table[] = {
 };
 MODULE_DEVICE_TABLE(of, rcar_pwm_of_table);
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_pwm_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int rcar_pwm_resume(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_pwm_pm_ops,
+			rcar_pwm_suspend, rcar_pwm_resume);
+#define DEV_PM_OPS (&rcar_pwm_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_pwm_driver = {
 	.probe = rcar_pwm_probe,
 	.remove = rcar_pwm_remove,
 	.driver = {
 		.name = "pwm-rcar",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(rcar_pwm_of_table),
 	}
 };
