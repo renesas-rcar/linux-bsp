@@ -30,11 +30,11 @@
 #include <linux/sh_dma.h>
 #include <linux/sys_soc.h>
 
+#include <linux/soc/renesas/s2ram_ddr_backup.h>
 #include <linux/spi/sh_msiof.h>
 #include <linux/spi/spi.h>
 
 #include <asm/unaligned.h>
-
 
 struct sh_msiof_chipdata {
 	u16 tx_fifo_size;
@@ -210,6 +210,146 @@ static int msiof_rcar_is_gen3(struct device *dev)
 	return of_device_is_compatible(node, "renesas,msiof-r8a7795") ||
 		of_device_is_compatible(node, "renesas,msiof-r8a7796");
 }
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+static struct hw_register msiof0_ip_regs[] = {
+	{"SITMDR1",	0x00, 32, 0},
+	{"SITMDR2",	0x04, 32, 0},
+	{"SITMDR3",	0x08, 32, 0},
+	{"SIRMDR1",	0x10, 32, 0},
+	{"SIRMDR2",	0x14, 32, 0},
+	{"SIRMDR3",	0x18, 32, 0},
+	{"SITSCR",	0x20, 32, 0},
+	{"SICTR",	0x28, 32, 0},
+	{"SIFCTR",	0x30, 32, 0},
+	{"SIIER",	0x44, 32, 0},
+};
+
+static struct rcar_ip msiof0_ip = {
+	.ip_name = "MSIOF0",
+	.reg_count = ARRAY_SIZE(msiof0_ip_regs),
+	.ip_reg = msiof0_ip_regs,
+};
+
+static struct hw_register msiof1_ip_regs[] = {
+	{"SITMDR1",	0x00, 32, 0},
+	{"SITMDR2",	0x04, 32, 0},
+	{"SITMDR3",	0x08, 32, 0},
+	{"SIRMDR1",	0x10, 32, 0},
+	{"SIRMDR2",	0x14, 32, 0},
+	{"SIRMDR3",	0x18, 32, 0},
+	{"SITSCR",	0x20, 32, 0},
+	{"SICTR",	0x28, 32, 0},
+	{"SIFCTR",	0x30, 32, 0},
+	{"SIIER",	0x44, 32, 0},
+};
+
+static struct rcar_ip msiof1_ip = {
+	.ip_name = "MSIOF1",
+	.reg_count = ARRAY_SIZE(msiof1_ip_regs),
+	.ip_reg = msiof1_ip_regs,
+};
+
+static struct hw_register msiof2_ip_regs[] = {
+	{"SITMDR1",	0x00, 32, 0},
+	{"SITMDR2",	0x04, 32, 0},
+	{"SITMDR3",	0x08, 32, 0},
+	{"SIRMDR1",	0x10, 32, 0},
+	{"SIRMDR2",	0x14, 32, 0},
+	{"SIRMDR3",	0x18, 32, 0},
+	{"SITSCR",	0x20, 32, 0},
+	{"SICTR",	0x28, 32, 0},
+	{"SIFCTR",	0x30, 32, 0},
+	{"SIIER",	0x44, 32, 0},
+};
+
+static struct rcar_ip msiof2_ip = {
+	.ip_name = "MSIO2",
+	.reg_count = ARRAY_SIZE(msiof2_ip_regs),
+	.ip_reg = msiof2_ip_regs,
+};
+
+static struct hw_register msiof3_ip_regs[] = {
+	{"SITMDR1",	0x00, 32, 0},
+	{"SITMDR2",	0x04, 32, 0},
+	{"SITMDR3",	0x08, 32, 0},
+	{"SIRMDR1",	0x10, 32, 0},
+	{"SIRMDR2",	0x14, 32, 0},
+	{"SIRMDR3",	0x18, 32, 0},
+	{"SITSCR",	0x20, 32, 0},
+	{"SICTR",	0x28, 32, 0},
+	{"SIFCTR",	0x30, 32, 0},
+	{"SIIER",	0x44, 32, 0},
+};
+
+static struct rcar_ip msiof3_ip = {
+	.ip_name = "MSIOF3",
+	.reg_count = ARRAY_SIZE(msiof3_ip_regs),
+	.ip_reg = msiof3_ip_regs,
+};
+
+struct msiof_ip_info {
+	const char *name;
+	struct rcar_ip *ip;
+};
+
+static struct msiof_ip_info ip_info_tbl[] = {
+	{"e6e90000.spi", &msiof0_ip},
+	{"e6ea0000.spi", &msiof1_ip},
+	{"e6c00000.spi", &msiof2_ip},
+	{"e6c10000.spi", &msiof3_ip},
+	{NULL, NULL},
+};
+
+static struct rcar_ip *msiof_get_ip(const char *name)
+{
+	struct msiof_ip_info *ip_info = ip_info_tbl;
+	struct rcar_ip *ip = NULL;
+
+	while (ip_info->name) {
+		if (!strcmp(ip_info->name, name)) {
+			ip = ip_info->ip;
+			break;
+		}
+		ip_info++;
+	}
+
+	return ip;
+}
+
+static int msiof_save_regs(struct platform_device *pdev)
+{
+	struct rcar_ip *ip = msiof_get_ip(pdev->name);
+	int ret = -ENODEV;
+
+	if (ip) {
+		struct sh_msiof_spi_priv *priv = platform_get_drvdata(pdev);
+
+		if (!ip->virt_addr)
+			ip->virt_addr = priv->mapbase;
+
+		ret = handle_registers(ip, DO_BACKUP);
+		pr_debug("%s: Backup %s register\n", __func__, ip->ip_name);
+	} else
+		pr_err("%s: Failed to find MSIOF device\n", __func__);
+
+	return ret;
+}
+
+static int msiof_restore_regs(struct platform_device *pdev)
+{
+	struct rcar_ip *ip = msiof_get_ip(pdev->name);
+	int ret = -ENODEV;
+
+	if (ip) {
+		ret = handle_registers(ip, DO_RESTORE);
+		pr_debug("%s: Restore %s register\n", __func__, ip->ip_name);
+	} else
+		pr_err("%s: Failed to find MSIOF device\n", __func__);
+
+	return ret;
+}
+#endif /* CONFIG_RCAR_DDR_BACKUP*/
 
 static u32 sh_msiof_read(struct sh_msiof_spi_priv *p, int reg_offs)
 {
@@ -1426,12 +1566,43 @@ static const struct platform_device_id spi_driver_ids[] = {
 };
 MODULE_DEVICE_TABLE(platform, spi_driver_ids);
 
+#ifdef CONFIG_PM_SLEEP
+static int sh_msiof_spi_suspend(struct device *dev)
+{
+	int ret = 0;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	struct platform_device *pdev = to_platform_device(dev);
+
+	ret = msiof_save_regs(pdev);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+	return ret;
+}
+
+static int sh_msiof_spi_resume(struct device *dev)
+{
+	int ret = 0;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	struct platform_device *pdev = to_platform_device(dev);
+
+	ret = msiof_restore_regs(pdev);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+	return ret;
+}
+
+static SIMPLE_DEV_PM_OPS(sh_msiof_spi_pm_ops,
+			sh_msiof_spi_suspend, sh_msiof_spi_resume);
+#define DEV_PM_OPS (&sh_msiof_spi_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver sh_msiof_spi_drv = {
 	.probe		= sh_msiof_spi_probe,
 	.remove		= sh_msiof_spi_remove,
 	.id_table	= spi_driver_ids,
 	.driver		= {
 		.name		= "spi_sh_msiof",
+		.pm		= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(sh_msiof_match),
 	},
 };
