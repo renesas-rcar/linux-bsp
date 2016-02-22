@@ -586,9 +586,32 @@ error_unregister:
 	return ret;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_gen3_thermal_suspend(struct device *dev)
+{
+	/* Empty functino for now */
+	return 0;
+}
+
+static int rcar_gen3_thermal_resume(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_gen3_thermal_pm_ops,
+			rcar_gen3_thermal_suspend,
+			rcar_gen3_thermal_resume);
+
+#define DEV_PM_OPS (&rcar_gen3_thermal_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_gen3_thermal_driver = {
 	.driver	= {
 		.name	= "rcar_gen3_thermal",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rcar_thermal_dt_ids,
 	},
 	.probe		= rcar_gen3_thermal_probe,
