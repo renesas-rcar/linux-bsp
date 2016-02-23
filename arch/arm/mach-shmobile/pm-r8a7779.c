@@ -9,9 +9,10 @@
  * for more details.
  */
 
+#include <linux/soc/renesas/pm-rcar.h>
+
 #include <asm/io.h>
 
-#include "pm-rcar.h"
 #include "r8a7779.h"
 
 /* SYSC */

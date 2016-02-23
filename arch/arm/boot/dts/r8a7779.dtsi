@@ -34,18 +34,21 @@
 			compatible = "arm,cortex-a9";
 			reg = <1>;
 			clock-frequency = <1000000000>;
+			power-domains = <&pd_arm1>;
 		};
 		cpu@2 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
 			reg = <2>;
 			clock-frequency = <1000000000>;
+			power-domains = <&pd_arm2>;
 		};
 		cpu@3 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a9";
 			reg = <3>;
 			clock-frequency = <1000000000>;
+			power-domains = <&pd_arm3>;
 		};
 	};
 
@@ -589,6 +592,51 @@
 			clock-output-names =
 				"sdhi3", "sdhi2", "sdhi1", "sdhi0",
 				"mmc1", "mmc0";
+		};
+	};
+
+	sysc: system-controller@ffd85000 {
+		compatible = "renesas,r8a7779-sysc";
+		reg = <0xffd85000 0x0200>;
+
+		pm-domains {
+			#address-cells = <2>;
+			#size-cells = <0>;
+
+			pd_arm1: cpu@1 {
+				reg = <1 0x41>;
+				#power-domain-cells = <0>;
+			};
+
+			pd_arm2: cpu@2 {
+				reg = <2 0x42>;
+				#power-domain-cells = <0>;
+			};
+
+			pd_arm3: cpu@3 {
+				reg = <3 0x43>;
+				#power-domain-cells = <0>;
+			};
+
+			pd_sh: sh@16 {
+				reg = <16 0x80>;
+				#power-domain-cells = <0>;
+			};
+
+			pd_sgx: sgx@20 {
+				reg = <20 0xc0>;
+				#power-domain-cells = <0>;
+			};
+
+			pd_vdp: vdp@21 {
+				reg = <21 0x100>;
+				#power-domain-cells = <0>;
+			};
+
+			pd_imp: imp@24 {
+				reg = <24 0x140>;
+				#power-domain-cells = <0>;
+			};
 		};
 	};
 };
