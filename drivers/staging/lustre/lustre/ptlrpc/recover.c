@@ -138,7 +138,7 @@ int ptlrpc_replay_next(struct obd_import *imp, int *inflight)
 
 	/* All the requests in committed list have been replayed, let's replay
 	 * the imp_replay_list */
-	if (req == NULL) {
+	if (!req) {
 		list_for_each_safe(tmp, pos, &imp->imp_replay_list) {
 			req = list_entry(tmp, struct ptlrpc_request,
 					 rq_replay_list);
@@ -153,14 +153,14 @@ int ptlrpc_replay_next(struct obd_import *imp, int *inflight)
 	 * has occurred), then stop on the matching req and send it again.
 	 * If, however, the last sent transno has been committed then we
 	 * continue replay from the next request. */
-	if (req != NULL && imp->imp_resend_replay)
+	if (req && imp->imp_resend_replay)
 		lustre_msg_add_flags(req->rq_reqmsg, MSG_RESENT);
 
 	spin_lock(&imp->imp_lock);
 	imp->imp_resend_replay = 0;
 	spin_unlock(&imp->imp_lock);
 
-	if (req != NULL) {
+	if (req) {
 		rc = ptlrpc_replay_req(req);
 		if (rc) {
 			CERROR("recovery replay error %d for req %llu\n",
@@ -260,7 +260,7 @@ void ptlrpc_request_handle_notconn(struct ptlrpc_request *failed_req)
  * Administratively active/deactive a client.
  * This should only be called by the ioctl interface, currently
  *  - the lctl deactivate and activate commands
- *  - echo 0/1 >> /proc/osc/XXX/active
+ *  - echo 0/1 >> /sys/fs/lustre/osc/XXX/active
  *  - client umount -f (ll_umount_begin)
  */
 int ptlrpc_set_import_active(struct obd_import *imp, int active)

@@ -13,11 +13,6 @@
  * General Public License version 2 for more details (a copy is included
  * in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 2 along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA
- *
  * GPL HEADER END
  */
 /*
@@ -56,8 +51,9 @@ cfs_cpt_table_alloc(unsigned int ncpt)
 	}
 
 	LIBCFS_ALLOC(cptab, sizeof(*cptab));
-	if (cptab != NULL) {
+	if (cptab) {
 		cptab->ctb_version = CFS_CPU_VERSION_MAGIC;
+		node_set(0, cptab->ctb_nodemask);
 		cptab->ctb_nparts  = ncpt;
 	}
 
@@ -110,6 +106,13 @@ cfs_cpt_online(struct cfs_cpt_table *cptab, int cpt)
 	return 1;
 }
 EXPORT_SYMBOL(cfs_cpt_online);
+
+nodemask_t *
+cfs_cpt_nodemask(struct cfs_cpt_table *cptab, int cpt)
+{
+	return &cptab->ctb_nodemask;
+}
+EXPORT_SYMBOL(cfs_cpt_cpumask);
 
 int
 cfs_cpt_set_cpu(struct cfs_cpt_table *cptab, int cpt, int cpu)
@@ -207,7 +210,7 @@ EXPORT_SYMBOL(cfs_cpt_bind);
 void
 cfs_cpu_fini(void)
 {
-	if (cfs_cpt_table != NULL) {
+	if (cfs_cpt_table) {
 		cfs_cpt_table_free(cfs_cpt_table);
 		cfs_cpt_table = NULL;
 	}
@@ -218,7 +221,7 @@ cfs_cpu_init(void)
 {
 	cfs_cpt_table = cfs_cpt_table_alloc(1);
 
-	return cfs_cpt_table != NULL ? 0 : -1;
+	return cfs_cpt_table ? 0 : -1;
 }
 
 #endif /* HAVE_LIBCFS_CPT */

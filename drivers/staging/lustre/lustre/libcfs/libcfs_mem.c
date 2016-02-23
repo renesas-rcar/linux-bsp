@@ -13,11 +13,6 @@
  * General Public License version 2 for more details (a copy is included
  * in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 2 along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA
- *
  * GPL HEADER END
  */
 /*
@@ -54,7 +49,7 @@ cfs_percpt_free(void *vars)
 	arr = container_of(vars, struct cfs_var_array, va_ptrs[0]);
 
 	for (i = 0; i < arr->va_count; i++) {
-		if (arr->va_ptrs[i] != NULL)
+		if (arr->va_ptrs[i])
 			LIBCFS_FREE(arr->va_ptrs[i], arr->va_size);
 	}
 
@@ -87,9 +82,10 @@ cfs_percpt_alloc(struct cfs_cpt_table *cptab, unsigned int size)
 	if (!arr)
 		return NULL;
 
-	arr->va_size	= size = L1_CACHE_ALIGN(size);
-	arr->va_count	= count;
-	arr->va_cptab	= cptab;
+	size = L1_CACHE_ALIGN(size);
+	arr->va_size = size;
+	arr->va_count = count;
+	arr->va_cptab = cptab;
 
 	for (i = 0; i < count; i++) {
 		LIBCFS_CPT_ALLOC(arr->va_ptrs[i], cptab, i, size);

@@ -227,29 +227,6 @@ void client_destroy_import(struct obd_import *imp)
 }
 EXPORT_SYMBOL(client_destroy_import);
 
-/**
- * Check whether or not the OSC is on MDT.
- * In the config log,
- * osc on MDT
- *	setup 0:{fsname}-OSTxxxx-osc[-MDTxxxx] 1:lustre-OST0000_UUID 2:NID
- * osc on client
- *	setup 0:{fsname}-OSTxxxx-osc 1:lustre-OST0000_UUID 2:NID
- *
- **/
-static int osc_on_mdt(char *obdname)
-{
-	char *ptr;
-
-	ptr = strrchr(obdname, '-');
-	if (ptr == NULL)
-		return 0;
-
-	if (strncmp(ptr + 1, "MDT", 3) == 0)
-		return 1;
-
-	return 0;
-}
-
 /* Configure an RPC client OBD device.
  *
  * lcfg parameters:
@@ -284,22 +261,6 @@ int client_obd_setup(struct obd_device *obddev, struct lustre_cfg *lcfg)
 		cli->cl_sp_me = LUSTRE_SP_CLI;
 		cli->cl_sp_to = LUSTRE_SP_MDT;
 		ns_type = LDLM_NS_TYPE_MDC;
-	} else if (!strcmp(name, LUSTRE_OSP_NAME)) {
-		if (strstr(lustre_cfg_buf(lcfg, 1), "OST") == NULL) {
-			/* OSP_on_MDT for other MDTs */
-			connect_op = MDS_CONNECT;
-			cli->cl_sp_to = LUSTRE_SP_MDT;
-			ns_type = LDLM_NS_TYPE_MDC;
-			rq_portal = OUT_PORTAL;
-		} else {
-			/* OSP on MDT for OST */
-			connect_op = OST_CONNECT;
-			cli->cl_sp_to = LUSTRE_SP_OST;
-			ns_type = LDLM_NS_TYPE_OSC;
-			rq_portal = OST_REQUEST_PORTAL;
-		}
-		rp_portal = OSC_REPLY_PORTAL;
-		cli->cl_sp_me = LUSTRE_SP_CLI;
 	} else if (!strcmp(name, LUSTRE_MGC_NAME)) {
 		rq_portal = MGS_REQUEST_PORTAL;
 		rp_portal = MGC_REPLY_PORTAL;
@@ -400,10 +361,7 @@ int client_obd_setup(struct obd_device *obddev, struct lustre_cfg *lcfg)
 	} else if (totalram_pages >> (20 - PAGE_CACHE_SHIFT) <= 512 /* MB */) {
 		cli->cl_max_rpcs_in_flight = 4;
 	} else {
-		if (osc_on_mdt(obddev->obd_name))
-			cli->cl_max_rpcs_in_flight = MDS_OSC_MAX_RIF_DEFAULT;
-		else
-			cli->cl_max_rpcs_in_flight = OSC_MAX_RIF_DEFAULT;
+		cli->cl_max_rpcs_in_flight = OSC_MAX_RIF_DEFAULT;
 	}
 	rc = ldlm_get_ref();
 	if (rc) {
@@ -415,7 +373,7 @@ int client_obd_setup(struct obd_device *obddev, struct lustre_cfg *lcfg)
 			   &obddev->obd_ldlm_client);
 
 	imp = class_new_import(obddev);
-	if (imp == NULL) {
+	if (!imp) {
 		rc = -ENOENT;
 		goto err_ldlm;
 	}
@@ -451,7 +409,7 @@ int client_obd_setup(struct obd_device *obddev, struct lustre_cfg *lcfg)
 						   LDLM_NAMESPACE_CLIENT,
 						   LDLM_NAMESPACE_GREEDY,
 						   ns_type);
-	if (obddev->obd_namespace == NULL) {
+	if (!obddev->obd_namespace) {
 		CERROR("Unable to create client namespace - %s\n",
 		       obddev->obd_name);
 		rc = -ENOMEM;
@@ -477,7 +435,7 @@ int client_obd_cleanup(struct obd_device *obddev)
 	ldlm_namespace_free_post(obddev->obd_namespace);
 	obddev->obd_namespace = NULL;
 
-	LASSERT(obddev->u.cli.cl_import == NULL);
+	LASSERT(!obddev->u.cli.cl_import);
 
 	ldlm_put_ref();
 	return 0;
@@ -528,7 +486,7 @@ int client_connect_import(const struct lu_env *env,
 		LASSERT(imp->imp_state == LUSTRE_IMP_DISCON);
 		goto out_ldlm;
 	}
-	LASSERT(*exp != NULL && (*exp)->exp_connection);
+	LASSERT(*exp && (*exp)->exp_connection);
 
 	if (data) {
 		LASSERTF((ocd->ocd_connect_flags & data->ocd_connect_flags) ==
@@ -597,7 +555,7 @@ int client_disconnect_export(struct obd_export *exp)
 	 * never added.) */
 	(void)ptlrpc_pinger_del_import(imp);
 
-	if (obd->obd_namespace != NULL) {
+	if (obd->obd_namespace) {
 		/* obd_force == local only */
 		ldlm_cli_cancel_unused(obd->obd_namespace, NULL,
 				       obd->obd_force ? LCF_LOCAL : 0, NULL);
@@ -684,14 +642,14 @@ void target_send_reply(struct ptlrpc_request *req, int rc, int fail_id)
 
 	svcpt = req->rq_rqbd->rqbd_svcpt;
 	rs = req->rq_reply_state;
-	if (rs == NULL || !rs->rs_difficult) {
+	if (!rs || !rs->rs_difficult) {
 		/* no notifiers */
 		target_send_reply_msg(req, rc, fail_id);
 		return;
 	}
 
 	/* must be an export if locks saved */
-	LASSERT(req->rq_export != NULL);
+	LASSERT(req->rq_export);
 	/* req/reply consistent */
 	LASSERT(rs->rs_svcpt == svcpt);
 
@@ -700,7 +658,7 @@ void target_send_reply(struct ptlrpc_request *req, int rc, int fail_id)
 	LASSERT(!rs->rs_scheduled_ever);
 	LASSERT(!rs->rs_handled);
 	LASSERT(!rs->rs_on_net);
-	LASSERT(rs->rs_export == NULL);
+	LASSERT(!rs->rs_export);
 	LASSERT(list_empty(&rs->rs_obd_list));
 	LASSERT(list_empty(&rs->rs_exp_list));
 

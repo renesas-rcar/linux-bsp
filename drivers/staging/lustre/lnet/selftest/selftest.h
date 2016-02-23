@@ -94,11 +94,11 @@ struct sfw_test_instance;
 #define SRPC_RDMA_PORTAL              52
 
 static inline srpc_msg_type_t
-srpc_service2request (int service)
+srpc_service2request(int service)
 {
 	switch (service) {
 	default:
-		LBUG ();
+		LBUG();
 	case SRPC_SERVICE_DEBUG:
 		return SRPC_MSG_DEBUG_REQST;
 
@@ -129,7 +129,7 @@ srpc_service2request (int service)
 }
 
 static inline srpc_msg_type_t
-srpc_service2reply (int service)
+srpc_service2reply(int service)
 {
 	return srpc_service2request(service) + 1;
 }
@@ -255,9 +255,9 @@ do {                                                                     \
 		srpc_destroy_client_rpc(rpc);                            \
 } while (0)
 
-#define srpc_event_pending(rpc)   ((rpc)->crpc_bulkev.ev_fired == 0 ||   \
-				   (rpc)->crpc_reqstev.ev_fired == 0 ||  \
-				   (rpc)->crpc_replyev.ev_fired == 0)
+#define srpc_event_pending(rpc)   (!(rpc)->crpc_bulkev.ev_fired ||	\
+				   !(rpc)->crpc_reqstev.ev_fired ||	\
+				   !(rpc)->crpc_replyev.ev_fired)
 
 /* CPU partition data of srpc service */
 struct srpc_service_cd {
@@ -427,7 +427,7 @@ void sfw_free_pages(struct srpc_server_rpc *rpc);
 void sfw_add_bulk_page(srpc_bulk_t *bk, struct page *pg, int i);
 int sfw_alloc_pages(struct srpc_server_rpc *rpc, int cpt, int npages, int len,
 		    int sink);
-int sfw_make_session (srpc_mksn_reqst_t *request, srpc_mksn_reply_t *reply);
+int sfw_make_session(srpc_mksn_reqst_t *request, srpc_mksn_reply_t *reply);
 
 srpc_client_rpc_t *
 srpc_create_client_rpc(lnet_process_id_t peer, int service,
@@ -502,26 +502,25 @@ void sfw_shutdown(void);
 void srpc_shutdown(void);
 
 static inline void
-srpc_destroy_client_rpc (srpc_client_rpc_t *rpc)
+srpc_destroy_client_rpc(srpc_client_rpc_t *rpc)
 {
-	LASSERT(rpc != NULL);
+	LASSERT(rpc);
 	LASSERT(!srpc_event_pending(rpc));
-	LASSERT(atomic_read(&rpc->crpc_refcount) == 0);
+	LASSERT(!atomic_read(&rpc->crpc_refcount));
 
-	if (rpc->crpc_fini == NULL) {
+	if (!rpc->crpc_fini)
 		LIBCFS_FREE(rpc, srpc_client_rpc_size(rpc));
-	} else {
+	else
 		(*rpc->crpc_fini) (rpc);
-	}
 
 	return;
 }
 
 static inline void
-srpc_init_client_rpc (srpc_client_rpc_t *rpc, lnet_process_id_t peer,
-		      int service, int nbulkiov, int bulklen,
-		      void (*rpc_done)(srpc_client_rpc_t *),
-		      void (*rpc_fini)(srpc_client_rpc_t *), void *priv)
+srpc_init_client_rpc(srpc_client_rpc_t *rpc, lnet_process_id_t peer,
+		     int service, int nbulkiov, int bulklen,
+		     void (*rpc_done)(srpc_client_rpc_t *),
+		     void (*rpc_fini)(srpc_client_rpc_t *), void *priv)
 {
 	LASSERT(nbulkiov <= LNET_MAX_IOV);
 
@@ -546,8 +545,8 @@ srpc_init_client_rpc (srpc_client_rpc_t *rpc, lnet_process_id_t peer,
 	LNetInvalidateHandle(&rpc->crpc_bulk.bk_mdh);
 
 	/* no event is expected at this point */
-	rpc->crpc_bulkev.ev_fired  =
-	rpc->crpc_reqstev.ev_fired =
+	rpc->crpc_bulkev.ev_fired = 1;
+	rpc->crpc_reqstev.ev_fired = 1;
 	rpc->crpc_replyev.ev_fired = 1;
 
 	rpc->crpc_reqstmsg.msg_magic   = SRPC_MSG_MAGIC;
@@ -557,7 +556,7 @@ srpc_init_client_rpc (srpc_client_rpc_t *rpc, lnet_process_id_t peer,
 }
 
 static inline const char *
-swi_state2str (int state)
+swi_state2str(int state)
 {
 #define STATE2STR(x) case x: return #x
 	switch (state) {
@@ -602,11 +601,11 @@ srpc_wait_service_shutdown(srpc_service_t *sv)
 
 	LASSERT(sv->sv_shuttingdown);
 
-	while (srpc_finish_service(sv) == 0) {
+	while (!srpc_finish_service(sv)) {
 		i++;
-		CDEBUG (((i & -i) == i) ? D_WARNING : D_NET,
-			"Waiting for %s service to shutdown...\n",
-			sv->sv_name);
+		CDEBUG(((i & -i) == i) ? D_WARNING : D_NET,
+		       "Waiting for %s service to shutdown...\n",
+		       sv->sv_name);
 		selftest_wait_events();
 	}
 }

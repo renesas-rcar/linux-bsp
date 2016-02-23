@@ -128,7 +128,7 @@ static inline void lustre_cfg_bufs_set(struct lustre_cfg_bufs *bufs,
 {
 	if (index >= LUSTRE_CFG_MAX_BUFCOUNT)
 		return;
-	if (bufs == NULL)
+	if (!bufs)
 		return;
 
 	if (bufs->lcfg_bufcount <= index)
@@ -158,7 +158,6 @@ static inline void *lustre_cfg_buf(struct lustre_cfg *lcfg, int index)
 	int offset;
 	int bufcount;
 
-	LASSERT (lcfg != NULL);
 	LASSERT (index >= 0);
 
 	bufcount = lcfg->lcfg_bufcount;
@@ -191,7 +190,7 @@ static inline char *lustre_cfg_string(struct lustre_cfg *lcfg, int index)
 		return NULL;
 
 	s = lustre_cfg_buf(lcfg, index);
-	if (s == NULL)
+	if (!s)
 		return NULL;
 
 	/*
@@ -252,10 +251,6 @@ static inline struct lustre_cfg *lustre_cfg_new(int cmd,
 
 static inline void lustre_cfg_free(struct lustre_cfg *lcfg)
 {
-	int len;
-
-	len = lustre_cfg_len(lcfg->lcfg_bufcount, lcfg->lcfg_buflens);
-
 	kfree(lcfg);
 	return;
 }

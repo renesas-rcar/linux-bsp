@@ -61,7 +61,7 @@ ping_client_init(sfw_test_instance_t *tsi)
 	sfw_session_t *sn = tsi->tsi_batch->bat_session;
 
 	LASSERT(tsi->tsi_is_client);
-	LASSERT(sn != NULL && (sn->sn_features & ~LST_FEATS_MASK) == 0);
+	LASSERT(sn && !(sn->sn_features & ~LST_FEATS_MASK));
 
 	spin_lock_init(&lst_ping_data.pnd_lock);
 	lst_ping_data.pnd_counter = 0;
@@ -75,7 +75,7 @@ ping_client_fini(sfw_test_instance_t *tsi)
 	sfw_session_t *sn = tsi->tsi_batch->bat_session;
 	int errors;
 
-	LASSERT(sn != NULL);
+	LASSERT(sn);
 	LASSERT(tsi->tsi_is_client);
 
 	errors = atomic_read(&sn->sn_ping_errors);
@@ -95,11 +95,11 @@ ping_client_prep_rpc(sfw_test_unit_t *tsu,
 	struct timespec64 ts;
 	int rc;
 
-	LASSERT(sn != NULL);
-	LASSERT((sn->sn_features & ~LST_FEATS_MASK) == 0);
+	LASSERT(sn);
+	LASSERT(!(sn->sn_features & ~LST_FEATS_MASK));
 
 	rc = sfw_create_test_rpc(tsu, dest, sn->sn_features, 0, 0, rpc);
-	if (rc != 0)
+	if (rc)
 		return rc;
 
 	req = &(*rpc)->crpc_reqstmsg.msg_body.ping_reqst;
@@ -126,14 +126,14 @@ ping_client_done_rpc(sfw_test_unit_t *tsu, srpc_client_rpc_t *rpc)
 	srpc_ping_reply_t *reply = &rpc->crpc_replymsg.msg_body.ping_reply;
 	struct timespec64 ts;
 
-	LASSERT(sn != NULL);
+	LASSERT(sn);
 
-	if (rpc->crpc_status != 0) {
+	if (rpc->crpc_status) {
 		if (!tsi->tsi_stopping) /* rpc could have been aborted */
 			atomic_inc(&sn->sn_ping_errors);
 		CERROR("Unable to ping %s (%d): %d\n",
-			libcfs_id2str(rpc->crpc_dest),
-			reqst->pnr_seq, rpc->crpc_status);
+		       libcfs_id2str(rpc->crpc_dest),
+		       reqst->pnr_seq, rpc->crpc_status);
 		return;
 	}
 
@@ -147,8 +147,8 @@ ping_client_done_rpc(sfw_test_unit_t *tsu, srpc_client_rpc_t *rpc)
 		rpc->crpc_status = -EBADMSG;
 		atomic_inc(&sn->sn_ping_errors);
 		CERROR("Bad magic %u from %s, %u expected.\n",
-			reply->pnr_magic, libcfs_id2str(rpc->crpc_dest),
-			LST_PING_TEST_MAGIC);
+		       reply->pnr_magic, libcfs_id2str(rpc->crpc_dest),
+		       LST_PING_TEST_MAGIC);
 		return;
 	}
 
@@ -156,8 +156,8 @@ ping_client_done_rpc(sfw_test_unit_t *tsu, srpc_client_rpc_t *rpc)
 		rpc->crpc_status = -EBADMSG;
 		atomic_inc(&sn->sn_ping_errors);
 		CERROR("Bad seq %u from %s, %u expected.\n",
-			reply->pnr_seq, libcfs_id2str(rpc->crpc_dest),
-			reqst->pnr_seq);
+		       reply->pnr_seq, libcfs_id2str(rpc->crpc_dest),
+		       reqst->pnr_seq);
 		return;
 	}
 
@@ -191,14 +191,14 @@ ping_server_handle(struct srpc_server_rpc *rpc)
 
 	if (req->pnr_magic != LST_PING_TEST_MAGIC) {
 		CERROR("Unexpected magic %08x from %s\n",
-			req->pnr_magic, libcfs_id2str(rpc->srpc_peer));
+		       req->pnr_magic, libcfs_id2str(rpc->srpc_peer));
 		return -EINVAL;
 	}
 
 	rep->pnr_seq   = req->pnr_seq;
 	rep->pnr_magic = LST_PING_TEST_MAGIC;
 
-	if ((reqstmsg->msg_ses_feats & ~LST_FEATS_MASK) != 0) {
+	if (reqstmsg->msg_ses_feats & ~LST_FEATS_MASK) {
 		replymsg->msg_ses_feats = LST_FEATS_MASK;
 		rep->pnr_status = EPROTO;
 		return 0;

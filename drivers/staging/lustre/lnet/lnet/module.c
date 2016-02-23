@@ -80,7 +80,7 @@ lnet_unconfigure(void)
 	mutex_unlock(&the_lnet.ln_api_mutex);
 
 	mutex_unlock(&lnet_config_mutex);
-	return (refcount == 0) ? 0 : -EBUSY;
+	return !refcount ? 0 : -EBUSY;
 }
 
 static int
@@ -96,9 +96,11 @@ lnet_ioctl(unsigned int cmd, struct libcfs_ioctl_data *data)
 		return lnet_unconfigure();
 
 	default:
-		/* Passing LNET_PID_ANY only gives me a ref if the net is up
+		/*
+		 * Passing LNET_PID_ANY only gives me a ref if the net is up
 		 * already; I'll need it to ensure the net can't go down while
-		 * I'm called into it */
+		 * I'm called into it
+		 */
 		rc = LNetNIInit(LNET_PID_ANY);
 		if (rc >= 0) {
 			rc = LNetCtl(cmd, data);
@@ -118,17 +120,19 @@ init_lnet(void)
 	mutex_init(&lnet_config_mutex);
 
 	rc = lnet_init();
-	if (rc != 0) {
+	if (rc) {
 		CERROR("lnet_init: error %d\n", rc);
 		return rc;
 	}
 
 	rc = libcfs_register_ioctl(&lnet_ioctl_handler);
-	LASSERT(rc == 0);
+	LASSERT(!rc);
 
 	if (config_on_load) {
-		/* Have to schedule a separate thread to avoid deadlocking
-		 * in modload */
+		/*
+		 * Have to schedule a separate thread to avoid deadlocking
+		 * in modload
+		 */
 		(void) kthread_run(lnet_configure, NULL, "lnet_initd");
 	}
 
@@ -141,7 +145,7 @@ fini_lnet(void)
 	int rc;
 
 	rc = libcfs_deregister_ioctl(&lnet_ioctl_handler);
-	LASSERT(rc == 0);
+	LASSERT(!rc);
 
 	lnet_fini();
 }

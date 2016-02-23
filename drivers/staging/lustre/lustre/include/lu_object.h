@@ -392,7 +392,7 @@ struct lu_device_type_operations {
 
 static inline int lu_device_is_md(const struct lu_device *d)
 {
-	return ergo(d != NULL, d->ld_type->ldt_tags & LU_DEVICE_MD);
+	return ergo(d, d->ld_type->ldt_tags & LU_DEVICE_MD);
 }
 
 /**
@@ -488,7 +488,7 @@ enum lu_object_header_flags {
 	/**
 	 * Mark this object has already been taken out of cache.
 	 */
-	LU_OBJECT_UNHASHED = 1
+	LU_OBJECT_UNHASHED = 1,
 };
 
 enum lu_object_header_attr {
@@ -756,7 +756,7 @@ static inline const struct lu_fid *lu_object_fid(const struct lu_object *o)
 /**
  * return device operations vector for this object
  */
-static const inline struct lu_device_operations *
+static inline const struct lu_device_operations *
 lu_object_ops(const struct lu_object *o)
 {
 	return o->lo_dev->ld_ops;
@@ -1119,7 +1119,7 @@ struct lu_context_key {
 		CLASSERT(PAGE_CACHE_SIZE >= sizeof (*value));       \
 								  \
 		value = kzalloc(sizeof(*value), GFP_NOFS);	\
-		if (value == NULL)				\
+		if (!value)				\
 			value = ERR_PTR(-ENOMEM);		 \
 								  \
 		return value;				     \
@@ -1174,7 +1174,7 @@ void  lu_context_key_revive  (struct lu_context_key *key);
 		do {						    \
 			LU_CONTEXT_KEY_INIT(key);		       \
 			key = va_arg(args, struct lu_context_key *);    \
-		} while (key != NULL);				  \
+		} while (key);				  \
 		va_end(args);					   \
 	}
 

@@ -54,7 +54,8 @@ int cfs_str2mask(const char *str, const char *(*bit2str)(int bit),
 	 * and optionally an operator ('+' or '-').  If an operator
 	 * appears first in <str>, '*oldmask' is used as the starting point
 	 * (relative), otherwise minmask is used (absolute).  An operator
-	 * applies to all following tokens up to the next operator. */
+	 * applies to all following tokens up to the next operator.
+	 */
 	while (*str != '\0') {
 		while (isspace(*str))
 			str++;
@@ -81,8 +82,7 @@ int cfs_str2mask(const char *str, const char *(*bit2str)(int bit),
 		found = 0;
 		for (i = 0; i < 32; i++) {
 			debugstr = bit2str(i);
-			if (debugstr != NULL &&
-			    strlen(debugstr) == len &&
+			if (debugstr && strlen(debugstr) == len &&
 			    strncasecmp(str, debugstr, len) == 0) {
 				if (op == '-')
 					newmask &= ~(1 << i);
@@ -175,7 +175,7 @@ cfs_gettok(struct cfs_lstr *next, char delim, struct cfs_lstr *res)
 {
 	char *end;
 
-	if (next->ls_str == NULL)
+	if (!next->ls_str)
 		return 0;
 
 	/* skip leading white spaces */
@@ -196,7 +196,7 @@ cfs_gettok(struct cfs_lstr *next, char delim, struct cfs_lstr *res)
 
 	res->ls_str = next->ls_str;
 	end = memchr(next->ls_str, delim, next->ls_len);
-	if (end == NULL) {
+	if (!end) {
 		/* there is no the delimeter in the string */
 		end = next->ls_str + next->ls_len;
 		next->ls_str = NULL;
@@ -229,17 +229,12 @@ int
 cfs_str2num_check(char *str, int nob, unsigned *num,
 		  unsigned min, unsigned max)
 {
-	char	*endp;
+	int rc;
 
 	str = cfs_trimwhite(str);
-	*num = simple_strtoul(str, &endp, 0);
-	if (endp == str)
+	rc = kstrtouint(str, 10, num);
+	if (rc)
 		return 0;
-
-	for (; endp < str + nob; endp++) {
-		if (!isspace(*endp))
-			return 0;
-	}
 
 	return (*num >= min && *num <= max);
 }
@@ -266,7 +261,7 @@ cfs_range_expr_parse(struct cfs_lstr *src, unsigned min, unsigned max,
 	struct cfs_lstr		tok;
 
 	LIBCFS_ALLOC(re, sizeof(*re));
-	if (re == NULL)
+	if (!re)
 		return -ENOMEM;
 
 	if (src->ls_len == 1 && src->ls_str[0] == '*') {
@@ -337,18 +332,19 @@ cfs_range_expr_print(char *buffer, int count, struct cfs_range_expr *expr,
 	char s[] = "[";
 	char e[] = "]";
 
-	if (bracketed)
-		s[0] = e[0] = '\0';
+	if (bracketed) {
+		s[0] = '\0';
+		e[0] = '\0';
+	}
 
 	if (expr->re_lo == expr->re_hi)
 		i = scnprintf(buffer, count, "%u", expr->re_lo);
 	else if (expr->re_stride == 1)
 		i = scnprintf(buffer, count, "%s%u-%u%s",
-				s, expr->re_lo, expr->re_hi, e);
+			      s, expr->re_lo, expr->re_hi, e);
 	else
 		i = scnprintf(buffer, count, "%s%u-%u/%u%s",
-				s, expr->re_lo, expr->re_hi,
-				expr->re_stride, e);
+			      s, expr->re_lo, expr->re_hi, expr->re_stride, e);
 	return i;
 }
 
@@ -442,7 +438,7 @@ cfs_expr_list_values(struct cfs_expr_list *expr_list, int max, __u32 **valpp)
 	}
 
 	LIBCFS_ALLOC(val, sizeof(val[0]) * count);
-	if (val == NULL)
+	if (!val)
 		return -ENOMEM;
 
 	count = 0;
@@ -470,7 +466,7 @@ cfs_expr_list_free(struct cfs_expr_list *expr_list)
 		struct cfs_range_expr *expr;
 
 		expr = list_entry(expr_list->el_exprs.next,
-				      struct cfs_range_expr, re_link);
+				  struct cfs_range_expr, re_link);
 		list_del(&expr->re_link);
 		LIBCFS_FREE(expr, sizeof(*expr));
 	}
@@ -495,7 +491,7 @@ cfs_expr_list_parse(char *str, int len, unsigned min, unsigned max,
 	int			rc;
 
 	LIBCFS_ALLOC(expr_list, sizeof(*expr_list));
-	if (expr_list == NULL)
+	if (!expr_list)
 		return -ENOMEM;
 
 	src.ls_str = str;
@@ -509,7 +505,7 @@ cfs_expr_list_parse(char *str, int len, unsigned min, unsigned max,
 		src.ls_len -= 2;
 
 		rc = -EINVAL;
-		while (src.ls_str != NULL) {
+		while (src.ls_str) {
 			struct cfs_lstr tok;
 
 			if (!cfs_gettok(&src, ',', &tok)) {
@@ -521,15 +517,12 @@ cfs_expr_list_parse(char *str, int len, unsigned min, unsigned max,
 			if (rc != 0)
 				break;
 
-			list_add_tail(&expr->re_link,
-					  &expr_list->el_exprs);
+			list_add_tail(&expr->re_link, &expr_list->el_exprs);
 		}
 	} else {
 		rc = cfs_range_expr_parse(&src, min, max, 0, &expr);
-		if (rc == 0) {
-			list_add_tail(&expr->re_link,
-					  &expr_list->el_exprs);
-		}
+		if (rc == 0)
+			list_add_tail(&expr->re_link, &expr_list->el_exprs);
 	}
 
 	if (rc != 0)
@@ -555,8 +548,7 @@ cfs_expr_list_free_list(struct list_head *list)
 	struct cfs_expr_list *el;
 
 	while (!list_empty(list)) {
-		el = list_entry(list->next,
-				    struct cfs_expr_list, el_link);
+		el = list_entry(list->next, struct cfs_expr_list, el_link);
 		list_del(&el->el_link);
 		cfs_expr_list_free(el);
 	}

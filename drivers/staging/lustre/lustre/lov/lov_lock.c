@@ -115,7 +115,7 @@ static void lov_sublock_adopt(const struct lu_env *env, struct lov_lock *lck,
 	/*
 	 * check that sub-lock doesn't have lock link to this top-lock.
 	 */
-	LASSERT(lov_lock_link_find(env, lck, lsl) == NULL);
+	LASSERT(!lov_lock_link_find(env, lck, lsl));
 	LASSERT(idx < lck->lls_nr);
 
 	lck->lls_sub[idx].sub_lock = lsl;
@@ -145,7 +145,7 @@ static struct cl_lock *lov_sublock_alloc(const struct lu_env *env,
 	LASSERT(idx < lck->lls_nr);
 
 	link = kmem_cache_alloc(lov_lock_link_kmem, GFP_NOFS | __GFP_ZERO);
-	if (link != NULL) {
+	if (link) {
 		struct lov_sublock_env *subenv;
 		struct lov_lock_sub  *lls;
 		struct cl_lock_descr *descr;
@@ -220,7 +220,7 @@ static int lov_sublock_lock(const struct lu_env *env,
 			LASSERT(!(lls->sub_flags & LSF_HELD));
 
 			link = lov_lock_link_find(env, lck, sublock);
-			LASSERT(link != NULL);
+			LASSERT(link);
 			lov_lock_unlink(env, link, sublock);
 			lov_sublock_unlock(env, sublock, closure, NULL);
 			lck->lls_cancel_race = 1;
@@ -309,14 +309,14 @@ static int lov_lock_sub_init(const struct lu_env *env,
 		 * XXX for wide striping smarter algorithm is desirable,
 		 * breaking out of the loop, early.
 		 */
-		if (likely(r0->lo_sub[i] != NULL) &&
+		if (likely(r0->lo_sub[i]) &&
 		    lov_stripe_intersects(loo->lo_lsm, i,
 					  file_start, file_end, &start, &end))
 			nr++;
 	}
 	LASSERT(nr > 0);
 	lck->lls_sub = libcfs_kvzalloc(nr * sizeof(lck->lls_sub[0]), GFP_NOFS);
-	if (lck->lls_sub == NULL)
+	if (!lck->lls_sub)
 		return -ENOMEM;
 
 	lck->lls_nr = nr;
@@ -328,14 +328,14 @@ static int lov_lock_sub_init(const struct lu_env *env,
 	 * top-lock.
 	 */
 	for (i = 0, nr = 0; i < r0->lo_nr; ++i) {
-		if (likely(r0->lo_sub[i] != NULL) &&
+		if (likely(r0->lo_sub[i]) &&
 		    lov_stripe_intersects(loo->lo_lsm, i,
 					  file_start, file_end, &start, &end)) {
 			struct cl_lock_descr *descr;
 
 			descr = &lck->lls_sub[nr].sub_descr;
 
-			LASSERT(descr->cld_obj == NULL);
+			LASSERT(!descr->cld_obj);
 			descr->cld_obj   = lovsub2cl(r0->lo_sub[i]);
 			descr->cld_start = cl_index(descr->cld_obj, start);
 			descr->cld_end   = cl_index(descr->cld_obj, end);
@@ -369,7 +369,6 @@ static int lov_sublock_release(const struct lu_env *env, struct lov_lock *lck,
 		struct cl_lock    *sublock;
 		int dying;
 
-		LASSERT(lck->lls_sub[i].sub_lock != NULL);
 		sublock = lck->lls_sub[i].sub_lock->lss_cl.cls_lock;
 		LASSERT(cl_lock_is_mutexed(sublock));
 
@@ -413,7 +412,6 @@ static void lov_sublock_hold(const struct lu_env *env, struct lov_lock *lck,
 	if (!(lck->lls_sub[i].sub_flags & LSF_HELD)) {
 		struct cl_lock *sublock;
 
-		LASSERT(lck->lls_sub[i].sub_lock != NULL);
 		sublock = lck->lls_sub[i].sub_lock->lss_cl.cls_lock;
 		LASSERT(cl_lock_is_mutexed(sublock));
 		LASSERT(sublock->cll_state != CLS_FREEING);
@@ -435,13 +433,13 @@ static void lov_lock_fini(const struct lu_env *env,
 
 	lck = cl2lov_lock(slice);
 	LASSERT(lck->lls_nr_filled == 0);
-	if (lck->lls_sub != NULL) {
+	if (lck->lls_sub) {
 		for (i = 0; i < lck->lls_nr; ++i)
 			/*
 			 * No sub-locks exists at this point, as sub-lock has
 			 * a reference on its parent.
 			 */
-			LASSERT(lck->lls_sub[i].sub_lock == NULL);
+			LASSERT(!lck->lls_sub[i].sub_lock);
 		kvfree(lck->lls_sub);
 	}
 	kmem_cache_free(lov_lock_kmem, lck);
@@ -515,7 +513,7 @@ static int lov_sublock_fill(const struct lu_env *env, struct cl_lock *parent,
 	if (!IS_ERR(sublock)) {
 		cl_lock_get_trust(sublock);
 		if (parent->cll_state == CLS_QUEUING &&
-		    lck->lls_sub[idx].sub_lock == NULL) {
+		    !lck->lls_sub[idx].sub_lock) {
 			lov_sublock_adopt(env, lck, sublock, idx, link);
 		} else {
 			kmem_cache_free(lov_lock_link_kmem, link);
@@ -574,7 +572,7 @@ static int lov_lock_enqueue(const struct lu_env *env,
 		 * Sub-lock might have been canceled, while top-lock was
 		 * cached.
 		 */
-		if (sub == NULL) {
+		if (!sub) {
 			result = lov_sublock_fill(env, lock, io, lck, i);
 			/* lov_sublock_fill() released @lock mutex,
 			 * restart. */
@@ -620,7 +618,7 @@ static int lov_lock_enqueue(const struct lu_env *env,
 					break;
 				}
 			} else {
-				LASSERT(sublock->cll_conflict == NULL);
+				LASSERT(!sublock->cll_conflict);
 				lov_sublock_unlock(env, sub, closure, subenv);
 			}
 		}
@@ -653,7 +651,7 @@ static int lov_lock_unuse(const struct lu_env *env,
 		LASSERT(slice->cls_lock->cll_state == CLS_INTRANSIT);
 		lls = &lck->lls_sub[i];
 		sub = lls->sub_lock;
-		if (sub == NULL)
+		if (!sub)
 			continue;
 
 		sublock = sub->lss_cl.cls_lock;
@@ -698,7 +696,7 @@ static void lov_lock_cancel(const struct lu_env *env,
 		 * to the completion. */
 		lls = &lck->lls_sub[i];
 		sub = lls->sub_lock;
-		if (sub == NULL)
+		if (!sub)
 			continue;
 
 		sublock = sub->lss_cl.cls_lock;
@@ -757,7 +755,6 @@ again:
 
 		lls = &lck->lls_sub[i];
 		sub = lls->sub_lock;
-		LASSERT(sub != NULL);
 		sublock = sub->lss_cl.cls_lock;
 		rc = lov_sublock_lock(env, lck, lls, closure, &subenv);
 		if (rc == 0) {
@@ -805,7 +802,7 @@ static int lov_lock_use(const struct lu_env *env,
 
 		lls = &lck->lls_sub[i];
 		sub = lls->sub_lock;
-		if (sub == NULL) {
+		if (!sub) {
 			/*
 			 * Sub-lock might have been canceled, while top-lock was
 			 * cached.
@@ -852,45 +849,6 @@ static int lov_lock_use(const struct lu_env *env,
 	return result;
 }
 
-#if 0
-static int lock_lock_multi_match()
-{
-	struct cl_lock	  *lock    = slice->cls_lock;
-	struct cl_lock_descr    *subneed = &lov_env_info(env)->lti_ldescr;
-	struct lov_object       *loo     = cl2lov(lov->lls_cl.cls_obj);
-	struct lov_layout_raid0 *r0      = lov_r0(loo);
-	struct lov_lock_sub     *sub;
-	struct cl_object	*subobj;
-	u64  fstart;
-	u64  fend;
-	u64  start;
-	u64  end;
-	int i;
-
-	fstart = cl_offset(need->cld_obj, need->cld_start);
-	fend   = cl_offset(need->cld_obj, need->cld_end + 1) - 1;
-	subneed->cld_mode = need->cld_mode;
-	cl_lock_mutex_get(env, lock);
-	for (i = 0; i < lov->lls_nr; ++i) {
-		sub = &lov->lls_sub[i];
-		if (sub->sub_lock == NULL)
-			continue;
-		subobj = sub->sub_descr.cld_obj;
-		if (!lov_stripe_intersects(loo->lo_lsm, sub->sub_stripe,
-					   fstart, fend, &start, &end))
-			continue;
-		subneed->cld_start = cl_index(subobj, start);
-		subneed->cld_end   = cl_index(subobj, end);
-		subneed->cld_obj   = subobj;
-		if (!cl_lock_ext_match(&sub->sub_got, subneed)) {
-			result = 0;
-			break;
-		}
-	}
-	cl_lock_mutex_put(env, lock);
-}
-#endif
-
 /**
  * Check if the extent region \a descr is covered by \a child against the
  * specific \a stripe.
@@ -922,10 +880,10 @@ static int lov_lock_stripe_is_matching(const struct lu_env *env,
 
 		idx = lov_stripe_number(lsm, start);
 		if (idx == stripe ||
-		    unlikely(lov_r0(lov)->lo_sub[idx] == NULL)) {
+		    unlikely(!lov_r0(lov)->lo_sub[idx])) {
 			idx = lov_stripe_number(lsm, end);
 			if (idx == stripe ||
-			    unlikely(lov_r0(lov)->lo_sub[idx] == NULL))
+			    unlikely(!lov_r0(lov)->lo_sub[idx]))
 				result = 1;
 		}
 	}
@@ -1074,7 +1032,7 @@ static void lov_lock_delete(const struct lu_env *env,
 		struct lov_lock_sub *lls = &lck->lls_sub[i];
 		struct lovsub_lock  *lsl = lls->sub_lock;
 
-		if (lsl == NULL) /* already removed */
+		if (!lsl) /* already removed */
 			continue;
 
 		rc = lov_sublock_lock(env, lck, lls, closure, NULL);
@@ -1090,9 +1048,9 @@ static void lov_lock_delete(const struct lu_env *env,
 			lov_sublock_release(env, lck, i, 1, 0);
 
 		link = lov_lock_link_find(env, lck, lsl);
-		LASSERT(link != NULL);
+		LASSERT(link);
 		lov_lock_unlink(env, link, lsl);
-		LASSERT(lck->lls_sub[i].sub_lock == NULL);
+		LASSERT(!lck->lls_sub[i].sub_lock);
 
 		lov_sublock_unlock(env, lsl, closure, NULL);
 	}
@@ -1112,7 +1070,7 @@ static int lov_lock_print(const struct lu_env *env, void *cookie,
 
 		sub = &lck->lls_sub[i];
 		(*p)(env, cookie, "    %d %x: ", i, sub->sub_flags);
-		if (sub->sub_lock != NULL)
+		if (sub->sub_lock)
 			cl_lock_print(env, cookie, p,
 				      sub->sub_lock->lss_cl.cls_lock);
 		else
@@ -1140,7 +1098,7 @@ int lov_lock_init_raid0(const struct lu_env *env, struct cl_object *obj,
 	int result;
 
 	lck = kmem_cache_alloc(lov_lock_kmem, GFP_NOFS | __GFP_ZERO);
-	if (lck != NULL) {
+	if (lck) {
 		cl_lock_slice_add(lock, &lck->lls_cl, obj, &lov_lock_ops);
 		result = lov_lock_sub_init(env, lck, io);
 	} else
@@ -1176,7 +1134,7 @@ int lov_lock_init_empty(const struct lu_env *env, struct cl_object *obj,
 	int result = -ENOMEM;
 
 	lck = kmem_cache_alloc(lov_lock_kmem, GFP_NOFS | __GFP_ZERO);
-	if (lck != NULL) {
+	if (lck) {
 		cl_lock_slice_add(lock, &lck->lls_cl, obj, &lov_empty_lock_ops);
 		lck->lls_orig = lock->cll_descr;
 		result = 0;

@@ -554,9 +554,9 @@ static int hmc5843_init(struct hmc5843_data *data)
 
 static const struct iio_info hmc5843_info = {
 	.attrs = &hmc5843_group,
-	.read_raw = &hmc5843_read_raw,
-	.write_raw = &hmc5843_write_raw,
-	.write_raw_get_fmt = &hmc5843_write_raw_get_fmt,
+	.read_raw = hmc5843_read_raw,
+	.write_raw = hmc5843_write_raw,
+	.write_raw_get_fmt = hmc5843_write_raw_get_fmt,
 	.driver_module = THIS_MODULE,
 };
 
@@ -565,14 +565,14 @@ static const unsigned long hmc5843_scan_masks[] = {0x7, 0};
 int hmc5843_common_suspend(struct device *dev)
 {
 	return hmc5843_set_mode(iio_priv(dev_get_drvdata(dev)),
-			HMC5843_MODE_CONVERSION_CONTINUOUS);
+				HMC5843_MODE_SLEEP);
 }
 EXPORT_SYMBOL(hmc5843_common_suspend);
 
 int hmc5843_common_resume(struct device *dev)
 {
 	return hmc5843_set_mode(iio_priv(dev_get_drvdata(dev)),
-				HMC5843_MODE_SLEEP);
+		HMC5843_MODE_CONVERSION_CONTINUOUS);
 }
 EXPORT_SYMBOL(hmc5843_common_resume);
 

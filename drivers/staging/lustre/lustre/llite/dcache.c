@@ -60,9 +60,9 @@ static void ll_release(struct dentry *de)
 {
 	struct ll_dentry_data *lld;
 
-	LASSERT(de != NULL);
+	LASSERT(de);
 	lld = ll_d2d(de);
-	if (lld == NULL) /* NFS copies the de->d_op methods (bug 4655) */
+	if (!lld) /* NFS copies the de->d_op methods (bug 4655) */
 		return;
 
 	if (lld->lld_it) {
@@ -131,7 +131,7 @@ static int find_cbdata(struct inode *inode)
 		return rc;
 
 	lsm = ccc_inode_lsm_get(inode);
-	if (lsm == NULL)
+	if (!lsm)
 		return rc;
 
 	rc = obd_find_cbdata(sbi->ll_dt_exp, lsm, return_if_equal, NULL);
@@ -178,19 +178,17 @@ static int ll_ddelete(const struct dentry *de)
 
 int ll_d_init(struct dentry *de)
 {
-	LASSERT(de != NULL);
-
 	CDEBUG(D_DENTRY, "ldd on dentry %pd (%p) parent %p inode %p refc %d\n",
 		de, de, de->d_parent, d_inode(de),
 		d_count(de));
 
-	if (de->d_fsdata == NULL) {
+	if (!de->d_fsdata) {
 		struct ll_dentry_data *lld;
 
 		lld = kzalloc(sizeof(*lld), GFP_NOFS);
 		if (likely(lld)) {
 			spin_lock(&de->d_lock);
-			if (likely(de->d_fsdata == NULL)) {
+			if (likely(!de->d_fsdata)) {
 				de->d_fsdata = lld;
 				__d_lustre_invalidate(de);
 			} else {
@@ -251,8 +249,6 @@ void ll_invalidate_aliases(struct inode *inode)
 {
 	struct dentry *dentry;
 
-	LASSERT(inode != NULL);
-
 	CDEBUG(D_INODE, "marking dentries for ino %lu/%u(%p) invalid\n",
 	       inode->i_ino, inode->i_generation, inode);
 
@@ -286,9 +282,7 @@ int ll_revalidate_it_finish(struct ptlrpc_request *request,
 
 void ll_lookup_finish_locks(struct lookup_intent *it, struct inode *inode)
 {
-	LASSERT(it != NULL);
-
-	if (it->d.lustre.it_lock_mode && inode != NULL) {
+	if (it->d.lustre.it_lock_mode && inode) {
 		struct ll_sb_info *sbi = ll_i2sbi(inode);
 
 		CDEBUG(D_DLMTRACE, "setting l_data to inode %p (%lu/%u)\n",
@@ -328,7 +322,7 @@ static int ll_revalidate_dentry(struct dentry *dentry,
 	if (lookup_flags & LOOKUP_RCU)
 		return -ECHILD;
 
-	do_statahead_enter(dir, &dentry, d_inode(dentry) == NULL);
+	do_statahead_enter(dir, &dentry, !d_inode(dentry));
 	ll_statahead_mark(dir, dentry);
 	return 1;
 }

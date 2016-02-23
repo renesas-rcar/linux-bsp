@@ -39,12 +39,12 @@
 
 #include "../../include/linux/libcfs/libcfs.h"
 
-typedef enum {
+enum cfs_trace_buf_type {
 	CFS_TCD_TYPE_PROC = 0,
 	CFS_TCD_TYPE_SOFTIRQ,
 	CFS_TCD_TYPE_IRQ,
 	CFS_TCD_TYPE_MAX
-} cfs_trace_buf_type_t;
+};
 
 /* trace file lock routines */
 
@@ -101,8 +101,10 @@ int cfs_trace_max_debug_mb(void);
 
 #define CFS_TRACEFILE_SIZE (500 << 20)
 
-/* Size of a buffer for sprinting console messages if we can't get a page
- * from system */
+/*
+ * Size of a buffer for sprinting console messages if we can't get a page
+ * from system
+ */
 #define CFS_TRACE_CONSOLE_BUFFER_SIZE   1024
 
 union cfs_trace_data_union {
@@ -185,66 +187,15 @@ union cfs_trace_data_union {
 extern union cfs_trace_data_union (*cfs_trace_data[TCD_MAX_TYPES])[NR_CPUS];
 
 #define cfs_tcd_for_each(tcd, i, j)				       \
-    for (i = 0; cfs_trace_data[i] != NULL; i++)			   \
-	for (j = 0, ((tcd) = &(*cfs_trace_data[i])[j].tcd);	       \
-	     j < num_possible_cpus();				 \
-	     j++, (tcd) = &(*cfs_trace_data[i])[j].tcd)
+	for (i = 0; cfs_trace_data[i]; i++)				\
+		for (j = 0, ((tcd) = &(*cfs_trace_data[i])[j].tcd);	\
+		     j < num_possible_cpus();				 \
+		     j++, (tcd) = &(*cfs_trace_data[i])[j].tcd)
 
 #define cfs_tcd_for_each_type_lock(tcd, i, cpu)			   \
-    for (i = 0; cfs_trace_data[i] &&				      \
-	 (tcd = &(*cfs_trace_data[i])[cpu].tcd) &&			\
-	 cfs_trace_lock_tcd(tcd, 1); cfs_trace_unlock_tcd(tcd, 1), i++)
-
-/* XXX nikita: this declaration is internal to tracefile.c and should probably
- * be moved there */
-struct page_collection {
-	struct list_head	pc_pages;
-	/*
-	 * if this flag is set, collect_pages() will spill both
-	 * ->tcd_daemon_pages and ->tcd_pages to the ->pc_pages. Otherwise,
-	 * only ->tcd_pages are spilled.
-	 */
-	int		pc_want_daemon_pages;
-};
-
-/* XXX nikita: this declaration is internal to tracefile.c and should probably
- * be moved there */
-struct tracefiled_ctl {
-	struct completion	tctl_start;
-	struct completion	tctl_stop;
-	wait_queue_head_t		tctl_waitq;
-	pid_t			tctl_pid;
-	atomic_t		tctl_shutdown;
-};
-
-/*
- * small data-structure for each page owned by tracefiled.
- */
-/* XXX nikita: this declaration is internal to tracefile.c and should probably
- * be moved there */
-struct cfs_trace_page {
-	/*
-	 * page itself
-	 */
-	struct page	  *page;
-	/*
-	 * linkage into one of the lists in trace_data_union or
-	 * page_collection
-	 */
-	struct list_head	   linkage;
-	/*
-	 * number of bytes used within this page
-	 */
-	unsigned int	 used;
-	/*
-	 * cpu that owns this page
-	 */
-	unsigned short       cpu;
-	/*
-	 * type(context) of this page
-	 */
-	unsigned short       type;
-};
+	for (i = 0; cfs_trace_data[i] &&				\
+	     (tcd = &(*cfs_trace_data[i])[cpu].tcd) &&			\
+	     cfs_trace_lock_tcd(tcd, 1); cfs_trace_unlock_tcd(tcd, 1), i++)
 
 void cfs_set_ptldebug_header(struct ptldebug_header *header,
 			     struct libcfs_debug_msg_data *m,
@@ -257,7 +208,7 @@ int cfs_trace_lock_tcd(struct cfs_trace_cpu_data *tcd, int walking);
 void cfs_trace_unlock_tcd(struct cfs_trace_cpu_data *tcd, int walking);
 
 extern char *cfs_trace_console_buffers[NR_CPUS][CFS_TCD_TYPE_MAX];
-cfs_trace_buf_type_t cfs_trace_buf_idx_get(void);
+enum cfs_trace_buf_type cfs_trace_buf_idx_get(void);
 
 static inline char *
 cfs_trace_get_console_buffer(void)
@@ -279,8 +230,7 @@ cfs_trace_get_tcd(void)
 	return tcd;
 }
 
-static inline void
-cfs_trace_put_tcd (struct cfs_trace_cpu_data *tcd)
+static inline void cfs_trace_put_tcd(struct cfs_trace_cpu_data *tcd)
 {
 	cfs_trace_unlock_tcd(tcd, 0);
 
@@ -289,9 +239,6 @@ cfs_trace_put_tcd (struct cfs_trace_cpu_data *tcd)
 
 int cfs_trace_refill_stock(struct cfs_trace_cpu_data *tcd, gfp_t gfp,
 			   struct list_head *stock);
-
-int cfs_tcd_owns_tage(struct cfs_trace_cpu_data *tcd,
-		      struct cfs_trace_page *tage);
 
 void cfs_trace_assertion_failed(const char *str,
 				struct libcfs_debug_msg_data *m);
@@ -308,8 +255,8 @@ do {								    \
 
 #define __LASSERT_TAGE_INVARIANT(tage)				  \
 do {								    \
-	__LASSERT(tage != NULL);					\
-	__LASSERT(tage->page != NULL);				  \
+	__LASSERT(tage);					\
+	__LASSERT(tage->page);				  \
 	__LASSERT(tage->used <= PAGE_CACHE_SIZE);			 \
 	__LASSERT(page_count(tage->page) > 0);		      \
 } while (0)

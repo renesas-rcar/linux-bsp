@@ -51,111 +51,12 @@ static int osc_lru_reserve(const struct lu_env *env, struct osc_object *obj,
  *  @{
  */
 
-/*
- * Comment out osc_page_protected because it may sleep inside the
- * the client_obd_list_lock.
- * client_obd_list_lock -> osc_ap_completion -> osc_completion ->
- *   -> osc_page_protected -> osc_page_is_dlocked -> osc_match_base
- *   -> ldlm_lock_match -> sptlrpc_import_check_ctx -> sleep.
- */
-#if 0
-static int osc_page_is_dlocked(const struct lu_env *env,
-			       const struct osc_page *opg,
-			       enum cl_lock_mode mode, int pending, int unref)
-{
-	struct cl_page	 *page;
-	struct osc_object      *obj;
-	struct osc_thread_info *info;
-	struct ldlm_res_id     *resname;
-	struct lustre_handle   *lockh;
-	ldlm_policy_data_t     *policy;
-	ldlm_mode_t	     dlmmode;
-	__u64                   flags;
-
-	might_sleep();
-
-	info = osc_env_info(env);
-	resname = &info->oti_resname;
-	policy = &info->oti_policy;
-	lockh = &info->oti_handle;
-	page = opg->ops_cl.cpl_page;
-	obj = cl2osc(opg->ops_cl.cpl_obj);
-
-	flags = LDLM_FL_TEST_LOCK | LDLM_FL_BLOCK_GRANTED;
-	if (pending)
-		flags |= LDLM_FL_CBPENDING;
-
-	dlmmode = osc_cl_lock2ldlm(mode) | LCK_PW;
-	osc_lock_build_res(env, obj, resname);
-	osc_index2policy(policy, page->cp_obj, page->cp_index, page->cp_index);
-	return osc_match_base(osc_export(obj), resname, LDLM_EXTENT, policy,
-			      dlmmode, &flags, NULL, lockh, unref);
-}
-
-/**
- * Checks an invariant that a page in the cache is covered by a lock, as
- * needed.
- */
-static int osc_page_protected(const struct lu_env *env,
-			      const struct osc_page *opg,
-			      enum cl_lock_mode mode, int unref)
-{
-	struct cl_object_header *hdr;
-	struct cl_lock	  *scan;
-	struct cl_page	  *page;
-	struct cl_lock_descr    *descr;
-	int result;
-
-	LINVRNT(!opg->ops_temp);
-
-	page = opg->ops_cl.cpl_page;
-	if (page->cp_owner != NULL &&
-	    cl_io_top(page->cp_owner)->ci_lockreq == CILR_NEVER)
-		/*
-		 * If IO is done without locks (liblustre, or lloop), lock is
-		 * not required.
-		 */
-		result = 1;
-	else
-		/* otherwise check for a DLM lock */
-	result = osc_page_is_dlocked(env, opg, mode, 1, unref);
-	if (result == 0) {
-		/* maybe this page is a part of a lockless io? */
-		hdr = cl_object_header(opg->ops_cl.cpl_obj);
-		descr = &osc_env_info(env)->oti_descr;
-		descr->cld_mode = mode;
-		descr->cld_start = page->cp_index;
-		descr->cld_end   = page->cp_index;
-		spin_lock(&hdr->coh_lock_guard);
-		list_for_each_entry(scan, &hdr->coh_locks, cll_linkage) {
-			/*
-			 * Lock-less sub-lock has to be either in HELD state
-			 * (when io is actively going on), or in CACHED state,
-			 * when top-lock is being unlocked:
-			 * cl_io_unlock()->cl_unuse()->...->lov_lock_unuse().
-			 */
-			if ((scan->cll_state == CLS_HELD ||
-			     scan->cll_state == CLS_CACHED) &&
-			    cl_lock_ext_match(&scan->cll_descr, descr)) {
-				struct osc_lock *olck;
-
-				olck = osc_lock_at(scan);
-				result = osc_lock_is_lockless(olck);
-				break;
-			}
-		}
-		spin_unlock(&hdr->coh_lock_guard);
-	}
-	return result;
-}
-#else
 static int osc_page_protected(const struct lu_env *env,
 			      const struct osc_page *opg,
 			      enum cl_lock_mode mode, int unref)
 {
 	return 1;
 }
-#endif
 
 /*****************************************************************************
  *
@@ -168,7 +69,7 @@ static void osc_page_fini(const struct lu_env *env,
 	struct osc_page *opg = cl2osc_page(slice);
 
 	CDEBUG(D_TRACE, "%p\n", opg);
-	LASSERT(opg->ops_lock == NULL);
+	LASSERT(!opg->ops_lock);
 }
 
 static void osc_page_transfer_get(struct osc_page *opg, const char *label)
@@ -234,7 +135,7 @@ static int osc_page_cache_add(const struct lu_env *env,
 	 * osc_io_end() is called, so release it earlier.
 	 * for mkwrite(), it's known there is no further pages. */
 	if (cl_io_is_sync_write(io) || cl_io_is_mkwrite(io)) {
-		if (oio->oi_active != NULL) {
+		if (oio->oi_active) {
 			osc_extent_release(env, oio->oi_active);
 			oio->oi_active = NULL;
 		}
@@ -258,7 +159,7 @@ static int osc_page_addref_lock(const struct lu_env *env,
 	struct osc_lock *olock;
 	int rc;
 
-	LASSERT(opg->ops_lock == NULL);
+	LASSERT(!opg->ops_lock);
 
 	olock = osc_lock_at(lock);
 	if (atomic_inc_return(&olock->ols_pageref) <= 0) {
@@ -278,7 +179,7 @@ static void osc_page_putref_lock(const struct lu_env *env,
 	struct cl_lock *lock = opg->ops_lock;
 	struct osc_lock *olock;
 
-	LASSERT(lock != NULL);
+	LASSERT(lock);
 	olock = osc_lock_at(lock);
 
 	atomic_dec(&olock->ols_pageref);
@@ -296,7 +197,7 @@ static int osc_page_is_under_lock(const struct lu_env *env,
 
 	lock = cl_lock_at_page(env, slice->cpl_obj, slice->cpl_page,
 			       NULL, 1, 0);
-	if (lock != NULL) {
+	if (lock) {
 		if (osc_page_addref_lock(env, cl2osc_page(slice), lock) == 0)
 			result = -EBUSY;
 		cl_lock_put(env, lock);
@@ -424,7 +325,7 @@ static void osc_page_delete(const struct lu_env *env,
 	}
 
 	spin_lock(&obj->oo_seatbelt);
-	if (opg->ops_submitter != NULL) {
+	if (opg->ops_submitter) {
 		LASSERT(!list_empty(&opg->ops_inflight));
 		list_del_init(&opg->ops_inflight);
 		opg->ops_submitter = NULL;
@@ -434,8 +335,8 @@ static void osc_page_delete(const struct lu_env *env,
 	osc_lru_del(osc_cli(obj), opg, true);
 }
 
-void osc_page_clip(const struct lu_env *env, const struct cl_page_slice *slice,
-		   int from, int to)
+static void osc_page_clip(const struct lu_env *env,
+			  const struct cl_page_slice *slice, int from, int to)
 {
 	struct osc_page *opg = cl2osc_page(slice);
 	struct osc_async_page *oap = &opg->ops_oap;
@@ -688,14 +589,14 @@ int osc_lru_shrink(struct client_obd *cli, int target)
 			continue;
 		}
 
-		LASSERT(page->cp_obj != NULL);
+		LASSERT(page->cp_obj);
 		if (clobj != page->cp_obj) {
 			struct cl_object *tmp = page->cp_obj;
 
 			cl_object_get(tmp);
 			client_obd_list_unlock(&cli->cl_lru_list_lock);
 
-			if (clobj != NULL) {
+			if (clobj) {
 				count -= discard_pagevec(env, io, pvec, index);
 				index = 0;
 
@@ -740,7 +641,7 @@ int osc_lru_shrink(struct client_obd *cli, int target)
 	}
 	client_obd_list_unlock(&cli->cl_lru_list_lock);
 
-	if (clobj != NULL) {
+	if (clobj) {
 		count -= discard_pagevec(env, io, pvec, index);
 
 		cl_io_fini(env, io);
@@ -819,7 +720,7 @@ static int osc_lru_reclaim(struct client_obd *cli)
 	int max_scans;
 	int rc;
 
-	LASSERT(cache != NULL);
+	LASSERT(cache);
 
 	rc = osc_lru_shrink(cli, lru_shrink_min);
 	if (rc != 0) {
@@ -875,7 +776,7 @@ static int osc_lru_reserve(const struct lu_env *env, struct osc_object *obj,
 	struct client_obd *cli = osc_cli(obj);
 	int rc = 0;
 
-	if (cli->cl_cache == NULL) /* shall not be in LRU */
+	if (!cli->cl_cache) /* shall not be in LRU */
 		return 0;
 
 	LASSERT(atomic_read(cli->cl_lru_left) >= 0);
