@@ -238,9 +238,8 @@ static void skl_copy_copier_caps(struct skl_module_cfg *mconfig,
  * Calculate the gatewat settings required for copier module, type of
  * gateway and index of gateway to use
  */
-static void skl_setup_cpr_gateway_cfg(struct skl_sst *ctx,
-			struct skl_module_cfg *mconfig,
-			struct skl_cpr_cfg *cpr_mconfig)
+static u32 skl_get_node_id(struct skl_sst *ctx,
+			struct skl_module_cfg *mconfig)
 {
 	union skl_connector_node_id node_id = {0};
 	union skl_ssp_dma_node ssp_node  = {0};
@@ -289,12 +288,23 @@ static void skl_setup_cpr_gateway_cfg(struct skl_sst *ctx,
 		break;
 
 	default:
-		cpr_mconfig->gtw_cfg.node_id = SKL_NON_GATEWAY_CPR_NODE_ID;
+		node_id.val = 0xFFFFFFFF;
+		break;
+	}
+
+	return node_id.val;
+}
+
+static void skl_setup_cpr_gateway_cfg(struct skl_sst *ctx,
+			struct skl_module_cfg *mconfig,
+			struct skl_cpr_cfg *cpr_mconfig)
+{
+	cpr_mconfig->gtw_cfg.node_id = skl_get_node_id(ctx, mconfig);
+
+	if (cpr_mconfig->gtw_cfg.node_id == SKL_NON_GATEWAY_CPR_NODE_ID) {
 		cpr_mconfig->cpr_feature_mask = 0;
 		return;
 	}
-
-	cpr_mconfig->gtw_cfg.node_id = node_id.val;
 
 	if (SKL_CONN_SOURCE == mconfig->hw_conn_type)
 		cpr_mconfig->gtw_cfg.dma_buffer_size = 2 * mconfig->obs;
@@ -305,6 +315,46 @@ static void skl_setup_cpr_gateway_cfg(struct skl_sst *ctx,
 	cpr_mconfig->gtw_cfg.config_length  = 0;
 
 	skl_copy_copier_caps(mconfig, cpr_mconfig);
+}
+
+#define DMA_CONTROL_ID 5
+
+int skl_dsp_set_dma_control(struct skl_sst *ctx, struct skl_module_cfg *mconfig)
+{
+	struct skl_dma_control *dma_ctrl;
+	struct skl_i2s_config_blob config_blob;
+	struct skl_ipc_large_config_msg msg = {0};
+	int err = 0;
+
+
+	/*
+	 * if blob size is same as capablity size, then no dma control
+	 * present so return
+	 */
+	if (mconfig->formats_config.caps_size == sizeof(config_blob))
+		return 0;
+
+	msg.large_param_id = DMA_CONTROL_ID;
+	msg.param_data_size = sizeof(struct skl_dma_control) +
+				mconfig->formats_config.caps_size;
+
+	dma_ctrl = kzalloc(msg.param_data_size, GFP_KERNEL);
+	if (dma_ctrl == NULL)
+		return -ENOMEM;
+
+	dma_ctrl->node_id = skl_get_node_id(ctx, mconfig);
+
+	/* size in dwords */
+	dma_ctrl->config_length = sizeof(config_blob) / 4;
+
+	memcpy(dma_ctrl->config_data, mconfig->formats_config.caps,
+				mconfig->formats_config.caps_size);
+
+	err = skl_ipc_set_large_config(&ctx->ipc, &msg, (u32 *)dma_ctrl);
+
+	kfree(dma_ctrl);
+
+	return err;
 }
 
 static void skl_setup_out_format(struct skl_sst *ctx,
