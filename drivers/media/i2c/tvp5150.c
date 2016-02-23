@@ -9,11 +9,14 @@
 #include <linux/slab.h>
 #include <linux/videodev2.h>
 #include <linux/delay.h>
+#include <linux/gpio/consumer.h>
 #include <linux/module.h>
 #include <media/v4l2-async.h>
 #include <media/v4l2-device.h>
 #include <media/i2c/tvp5150.h>
 #include <media/v4l2-ctrls.h>
+#include <media/v4l2-of.h>
+#include <media/v4l2-mc.h>
 
 #include "tvp5150_reg.h"
 
@@ -35,6 +38,9 @@ MODULE_PARM_DESC(debug, "Debug level (0-2)");
 
 struct tvp5150 {
 	struct v4l2_subdev sd;
+#ifdef CONFIG_MEDIA_CONTROLLER
+	struct media_pad pads[DEMOD_NUM_PADS];
+#endif
 	struct v4l2_ctrl_handler hdl;
 	struct v4l2_rect rect;
 
@@ -42,6 +48,8 @@ struct tvp5150 {
 	u32 input;
 	u32 output;
 	int enable;
+
+	enum v4l2_mbus_type mbus_type;
 };
 
 static inline struct tvp5150 *to_tvp5150(struct v4l2_subdev *sd)
@@ -772,6 +780,10 @@ static int tvp5150_reset(struct v4l2_subdev *sd, u32 val)
 	v4l2_ctrl_handler_setup(&decoder->hdl);
 
 	tvp5150_set_std(sd, decoder->norm);
+
+	if (decoder->mbus_type == V4L2_MBUS_PARALLEL)
+		tvp5150_write(sd, TVP5150_DATA_RATE_SEL, 0x40);
+
 	return 0;
 };
 
@@ -818,17 +830,6 @@ static v4l2_std_id tvp5150_read_std(struct v4l2_subdev *sd)
 	}
 }
 
-static int tvp5150_enum_mbus_code(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
-		struct v4l2_subdev_mbus_code_enum *code)
-{
-	if (code->pad || code->index)
-		return -EINVAL;
-
-	code->code = MEDIA_BUS_FMT_UYVY8_2X8;
-	return 0;
-}
-
 static int tvp5150_fill_fmt(struct v4l2_subdev *sd,
 		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_format *format)
@@ -844,10 +845,10 @@ static int tvp5150_fill_fmt(struct v4l2_subdev *sd,
 	tvp5150_reset(sd, 0);
 
 	f->width = decoder->rect.width;
-	f->height = decoder->rect.height;
+	f->height = decoder->rect.height / 2;
 
 	f->code = MEDIA_BUS_FMT_UYVY8_2X8;
-	f->field = V4L2_FIELD_SEQ_TB;
+	f->field = V4L2_FIELD_ALTERNATE;
 	f->colorspace = V4L2_COLORSPACE_SMPTE170M;
 
 	v4l2_dbg(1, debug, sd, "width = %d, height = %d\n", f->width,
@@ -948,9 +949,75 @@ static int tvp5150_cropcap(struct v4l2_subdev *sd, struct v4l2_cropcap *a)
 	return 0;
 }
 
+static int tvp5150_g_mbus_config(struct v4l2_subdev *sd,
+				 struct v4l2_mbus_config *cfg)
+{
+	struct tvp5150 *decoder = to_tvp5150(sd);
+
+	cfg->type = decoder->mbus_type;
+	cfg->flags = V4L2_MBUS_MASTER | V4L2_MBUS_PCLK_SAMPLE_RISING
+		   | V4L2_MBUS_FIELD_EVEN_LOW | V4L2_MBUS_DATA_ACTIVE_HIGH;
+
+	return 0;
+}
+
+/****************************************************************************
+			V4L2 subdev pad ops
+ ****************************************************************************/
+static int tvp5150_enum_mbus_code(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_mbus_code_enum *code)
+{
+	if (code->pad || code->index)
+		return -EINVAL;
+
+	code->code = MEDIA_BUS_FMT_UYVY8_2X8;
+	return 0;
+}
+
+static int tvp5150_enum_frame_size(struct v4l2_subdev *sd,
+				   struct v4l2_subdev_pad_config *cfg,
+				   struct v4l2_subdev_frame_size_enum *fse)
+{
+	struct tvp5150 *decoder = to_tvp5150(sd);
+
+	if (fse->index >= 8 || fse->code != MEDIA_BUS_FMT_UYVY8_2X8)
+		return -EINVAL;
+
+	fse->code = MEDIA_BUS_FMT_UYVY8_2X8;
+	fse->min_width = decoder->rect.width;
+	fse->max_width = decoder->rect.width;
+	fse->min_height = decoder->rect.height / 2;
+	fse->max_height = decoder->rect.height / 2;
+
+	return 0;
+}
+
 /****************************************************************************
 			I2C Command
  ****************************************************************************/
+
+static int tvp5150_s_stream(struct v4l2_subdev *sd, int enable)
+{
+	struct tvp5150 *decoder = to_tvp5150(sd);
+	/* Output format: 8-bit ITU-R BT.656 with embedded syncs */
+	int val = 0x09;
+
+	/* Output format: 8-bit 4:2:2 YUV with discrete sync */
+	if (decoder->mbus_type == V4L2_MBUS_PARALLEL)
+		val = 0x0d;
+
+	/* Initializes TVP5150 to its default values */
+	/* # set PCLK (27MHz) */
+	tvp5150_write(sd, TVP5150_CONF_SHARED_PIN, 0x00);
+
+	if (enable)
+		tvp5150_write(sd, TVP5150_MISC_CTL, val);
+	else
+		tvp5150_write(sd, TVP5150_MISC_CTL, 0x00);
+
+	return 0;
+}
 
 static int tvp5150_s_routing(struct v4l2_subdev *sd,
 			     u32 input, u32 output, u32 config)
@@ -1073,10 +1140,12 @@ static const struct v4l2_subdev_tuner_ops tvp5150_tuner_ops = {
 
 static const struct v4l2_subdev_video_ops tvp5150_video_ops = {
 	.s_std = tvp5150_s_std,
+	.s_stream = tvp5150_s_stream,
 	.s_routing = tvp5150_s_routing,
 	.s_crop = tvp5150_s_crop,
 	.g_crop = tvp5150_g_crop,
 	.cropcap = tvp5150_cropcap,
+	.g_mbus_config = tvp5150_g_mbus_config,
 };
 
 static const struct v4l2_subdev_vbi_ops tvp5150_vbi_ops = {
@@ -1088,6 +1157,7 @@ static const struct v4l2_subdev_vbi_ops tvp5150_vbi_ops = {
 
 static const struct v4l2_subdev_pad_ops tvp5150_pad_ops = {
 	.enum_mbus_code = tvp5150_enum_mbus_code,
+	.enum_frame_size = tvp5150_enum_frame_size,
 	.set_fmt = tvp5150_fill_fmt,
 	.get_fmt = tvp5150_fill_fmt,
 };
@@ -1105,63 +1175,167 @@ static const struct v4l2_subdev_ops tvp5150_ops = {
 			I2C Client & Driver
  ****************************************************************************/
 
+static int tvp5150_detect_version(struct tvp5150 *core)
+{
+	struct v4l2_subdev *sd = &core->sd;
+	struct i2c_client *c = v4l2_get_subdevdata(sd);
+	unsigned int i;
+	u16 dev_id;
+	u16 rom_ver;
+	u8 regs[4];
+	int res;
+
+	/*
+	 * Read consequent registers - TVP5150_MSB_DEV_ID, TVP5150_LSB_DEV_ID,
+	 * TVP5150_ROM_MAJOR_VER, TVP5150_ROM_MINOR_VER
+	 */
+	for (i = 0; i < 4; i++) {
+		res = tvp5150_read(sd, TVP5150_MSB_DEV_ID + i);
+		if (res < 0)
+			return res;
+		regs[i] = res;
+	}
+
+	dev_id = (regs[0] << 8) | regs[1];
+	rom_ver = (regs[2] << 8) | regs[3];
+
+	v4l2_info(sd, "tvp%04x (%u.%u) chip found @ 0x%02x (%s)\n",
+		  dev_id, regs[2], regs[3], c->addr << 1, c->adapter->name);
+
+	if (dev_id == 0x5150 && rom_ver == 0x0321) { /* TVP51510A */
+		v4l2_info(sd, "tvp5150a detected.\n");
+	} else if (dev_id == 0x5150 && rom_ver == 0x0400) { /* TVP5150AM1 */
+		v4l2_info(sd, "tvp5150am1 detected.\n");
+
+		/* ITU-T BT.656.4 timing */
+		tvp5150_write(sd, TVP5150_REV_SELECT, 0);
+	} else if (dev_id == 0x5151 && rom_ver == 0x0100) { /* TVP5151 */
+		v4l2_info(sd, "tvp5151 detected.\n");
+	} else {
+		v4l2_info(sd, "*** unknown tvp%04x chip detected.\n", dev_id);
+	}
+
+	return 0;
+}
+
+static int tvp5150_init(struct i2c_client *c)
+{
+	struct gpio_desc *pdn_gpio;
+	struct gpio_desc *reset_gpio;
+
+	pdn_gpio = devm_gpiod_get_optional(&c->dev, "pdn", GPIOD_OUT_HIGH);
+	if (IS_ERR(pdn_gpio))
+		return PTR_ERR(pdn_gpio);
+
+	if (pdn_gpio) {
+		gpiod_set_value_cansleep(pdn_gpio, 0);
+		/* Delay time between power supplies active and reset */
+		msleep(20);
+	}
+
+	reset_gpio = devm_gpiod_get_optional(&c->dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(reset_gpio))
+		return PTR_ERR(reset_gpio);
+
+	if (reset_gpio) {
+		/* RESETB pulse duration */
+		ndelay(500);
+		gpiod_set_value_cansleep(reset_gpio, 0);
+		/* Delay time between end of reset to I2C active */
+		usleep_range(200, 250);
+	}
+
+	return 0;
+}
+
+static int tvp5150_parse_dt(struct tvp5150 *decoder, struct device_node *np)
+{
+	struct v4l2_of_endpoint bus_cfg;
+	struct device_node *ep;
+	unsigned int flags;
+	int ret = 0;
+
+	ep = of_graph_get_next_endpoint(np, NULL);
+	if (!ep)
+		return -EINVAL;
+
+	ret = v4l2_of_parse_endpoint(ep, &bus_cfg);
+	if (ret)
+		goto err;
+
+	flags = bus_cfg.bus.parallel.flags;
+
+	if (bus_cfg.bus_type == V4L2_MBUS_PARALLEL &&
+	    !(flags & V4L2_MBUS_HSYNC_ACTIVE_HIGH &&
+	      flags & V4L2_MBUS_VSYNC_ACTIVE_HIGH &&
+	      flags & V4L2_MBUS_FIELD_EVEN_LOW))
+		return -EINVAL;
+
+	decoder->mbus_type = bus_cfg.bus_type;
+
+err:
+	of_node_put(ep);
+	return ret;
+}
+
 static int tvp5150_probe(struct i2c_client *c,
 			 const struct i2c_device_id *id)
 {
 	struct tvp5150 *core;
 	struct v4l2_subdev *sd;
-	int tvp5150_id[4];
-	int i, res;
+	struct device_node *np = c->dev.of_node;
+	int res;
 
 	/* Check if the adapter supports the needed features */
 	if (!i2c_check_functionality(c->adapter,
 	     I2C_FUNC_SMBUS_READ_BYTE | I2C_FUNC_SMBUS_WRITE_BYTE_DATA))
 		return -EIO;
 
+	res = tvp5150_init(c);
+	if (res)
+		return res;
+
 	core = devm_kzalloc(&c->dev, sizeof(*core), GFP_KERNEL);
 	if (!core)
 		return -ENOMEM;
+
 	sd = &core->sd;
-	v4l2_i2c_subdev_init(sd, c, &tvp5150_ops);
 
-	/* 
-	 * Read consequent registers - TVP5150_MSB_DEV_ID, TVP5150_LSB_DEV_ID,
-	 * TVP5150_ROM_MAJOR_VER, TVP5150_ROM_MINOR_VER 
-	 */
-	for (i = 0; i < 4; i++) {
-		res = tvp5150_read(sd, TVP5150_MSB_DEV_ID + i);
-		if (res < 0)
+	if (IS_ENABLED(CONFIG_OF) && np) {
+		res = tvp5150_parse_dt(core, np);
+		if (res) {
+			v4l2_err(sd, "DT parsing error: %d\n", res);
 			return res;
-		tvp5150_id[i] = res;
-	}
-
-	v4l_info(c, "chip found @ 0x%02x (%s)\n",
-		 c->addr << 1, c->adapter->name);
-
-	if (tvp5150_id[2] == 4 && tvp5150_id[3] == 0) { /* Is TVP5150AM1 */
-		v4l2_info(sd, "tvp%02x%02xam1 detected.\n",
-			  tvp5150_id[0], tvp5150_id[1]);
-
-		/* ITU-T BT.656.4 timing */
-		tvp5150_write(sd, TVP5150_REV_SELECT, 0);
-	} else {
-		/* Is TVP5150A */
-		if (tvp5150_id[2] == 3 || tvp5150_id[3] == 0x21) {
-			v4l2_info(sd, "tvp%02x%02xa detected.\n",
-				  tvp5150_id[0], tvp5150_id[1]);
-		} else {
-			v4l2_info(sd, "*** unknown tvp%02x%02x chip detected.\n",
-				  tvp5150_id[0], tvp5150_id[1]);
-			v4l2_info(sd, "*** Rom ver is %d.%d\n",
-				  tvp5150_id[2], tvp5150_id[3]);
 		}
+	} else {
+		/* Default to BT.656 embedded sync */
+		core->mbus_type = V4L2_MBUS_BT656;
 	}
+
+	v4l2_i2c_subdev_init(sd, c, &tvp5150_ops);
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+
+#if defined(CONFIG_MEDIA_CONTROLLER)
+	core->pads[DEMOD_PAD_IF_INPUT].flags = MEDIA_PAD_FL_SINK;
+	core->pads[DEMOD_PAD_VID_OUT].flags = MEDIA_PAD_FL_SOURCE;
+	core->pads[DEMOD_PAD_VBI_OUT].flags = MEDIA_PAD_FL_SOURCE;
+
+	sd->entity.function = MEDIA_ENT_F_ATV_DECODER;
+
+	res = media_entity_pads_init(&sd->entity, DEMOD_NUM_PADS, core->pads);
+	if (res < 0)
+		return res;
+#endif
+
+	res = tvp5150_detect_version(core);
+	if (res < 0)
+		return res;
 
 	core->norm = V4L2_STD_ALL;	/* Default is autodetect */
 	core->input = TVP5150_COMPOSITE1;
 	core->enable = 1;
 
-	v4l2_ctrl_handler_init(&core->hdl, 4);
+	v4l2_ctrl_handler_init(&core->hdl, 5);
 	v4l2_ctrl_new_std(&core->hdl, &tvp5150_ctrl_ops,
 			V4L2_CID_BRIGHTNESS, 0, 255, 1, 128);
 	v4l2_ctrl_new_std(&core->hdl, &tvp5150_ctrl_ops,
@@ -1170,6 +1344,9 @@ static int tvp5150_probe(struct i2c_client *c,
 			V4L2_CID_SATURATION, 0, 255, 1, 128);
 	v4l2_ctrl_new_std(&core->hdl, &tvp5150_ctrl_ops,
 			V4L2_CID_HUE, -128, 127, 1, 0);
+	v4l2_ctrl_new_std(&core->hdl, &tvp5150_ctrl_ops,
+			V4L2_CID_PIXEL_RATE, 27000000,
+			27000000, 1, 27000000);
 	sd->ctrl_handler = &core->hdl;
 	if (core->hdl.error) {
 		res = core->hdl.error;
@@ -1221,8 +1398,17 @@ static const struct i2c_device_id tvp5150_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, tvp5150_id);
 
+#if IS_ENABLED(CONFIG_OF)
+static const struct of_device_id tvp5150_of_match[] = {
+	{ .compatible = "ti,tvp5150", },
+	{ /* sentinel */ },
+};
+MODULE_DEVICE_TABLE(of, tvp5150_of_match);
+#endif
+
 static struct i2c_driver tvp5150_driver = {
 	.driver = {
+		.of_match_table = of_match_ptr(tvp5150_of_match),
 		.name	= "tvp5150",
 	},
 	.probe		= tvp5150_probe,

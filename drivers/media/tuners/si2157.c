@@ -364,8 +364,8 @@ static int si2157_get_if_frequency(struct dvb_frontend *fe, u32 *frequency)
 static const struct dvb_tuner_ops si2157_ops = {
 	.info = {
 		.name           = "Silicon Labs Si2146/2147/2148/2157/2158",
-		.frequency_min  = 55000000,
-		.frequency_max  = 862000000,
+		.frequency_min  = 42000000,
+		.frequency_max  = 870000000,
 	},
 
 	.init = si2157_init,
@@ -457,6 +457,9 @@ static int si2157_remove(struct i2c_client *client)
 	struct dvb_frontend *fe = dev->fe;
 
 	dev_dbg(&client->dev, "\n");
+
+	/* stop statistics polling */
+	cancel_delayed_work_sync(&dev->stat_work);
 
 	memset(&fe->ops.tuner_ops, 0, sizeof(struct dvb_tuner_ops));
 	fe->tuner_priv = NULL;
