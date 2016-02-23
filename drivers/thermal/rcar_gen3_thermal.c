@@ -310,10 +310,10 @@ int _quadratic_temp_converter(struct equation_coefs coef, int temp_code)
 	delta = coef.b * coef.b - 4 * coef.a * (coef.c - 10000 * temp_code);
 
 	/* Multiply temp with 1000 to convert to Mili-Celsius */
-	temp1 = (CODETSD(-coef.b) + int_sqrt(1000000 * delta))
-				/ (2 * coef.a);
-	temp2 = (CODETSD(-coef.b) - int_sqrt(1000000 * delta))
-				/ (2 * coef.a);
+	temp1 = (CODETSD(-coef.b) + int_sqrt(1000000 * delta)) / 2;
+	temp1 = temp1 / coef.a;
+	temp2 = (CODETSD(-coef.b) - int_sqrt(1000000 * delta)) / 2;
+	temp2 = temp2 / coef.a;
 
 	if (temp1 > -45000000)
 		temp = temp1;
