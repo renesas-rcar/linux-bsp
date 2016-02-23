@@ -1463,6 +1463,9 @@ static int be_vlan_rem_vid(struct net_device *netdev, __be16 proto, u16 vid)
 	if (lancer_chip(adapter) && vid == 0)
 		return 0;
 
+	if (!test_bit(vid, adapter->vids))
+		return 0;
+
 	clear_bit(vid, adapter->vids);
 	adapter->vlans_added--;
 
@@ -1914,8 +1917,7 @@ static u32 be_get_eq_delay_mult_enc(struct be_eq_obj *eqo)
 	if (!aic->enable)
 		return 0;
 
-	if (time_before_eq(now, aic->jiffies) ||
-	    jiffies_to_msecs(now - aic->jiffies) < 1)
+	if (jiffies_to_msecs(now - aic->jiffies) < 1)
 		eqd = aic->prev_eqd;
 	else
 		eqd = be_get_new_eqd(eqo);
@@ -3363,6 +3365,7 @@ done:
 
 static void be_rx_qs_destroy(struct be_adapter *adapter)
 {
+	struct rss_info *rss = &adapter->rss_info;
 	struct be_queue_info *q;
 	struct be_rx_obj *rxo;
 	int i;
@@ -3388,6 +3391,12 @@ static void be_rx_qs_destroy(struct be_adapter *adapter)
 			be_rxq_clean(rxo);
 		}
 		be_queue_free(adapter, q);
+	}
+
+	if (rss->rss_flags) {
+		rss->rss_flags = RSS_ENABLE_NONE;
+		be_cmd_rss_config(adapter, rss->rsstable, rss->rss_flags,
+				  128, rss->rss_hkey);
 	}
 }
 
@@ -3509,20 +3518,21 @@ static int be_rx_qs_create(struct be_adapter *adapter)
 		if (!BEx_chip(adapter))
 			rss->rss_flags |= RSS_ENABLE_UDP_IPV4 |
 				RSS_ENABLE_UDP_IPV6;
+
+		netdev_rss_key_fill(rss_key, RSS_HASH_KEY_LEN);
+		rc = be_cmd_rss_config(adapter, rss->rsstable, rss->rss_flags,
+				       RSS_INDIR_TABLE_LEN, rss_key);
+		if (rc) {
+			rss->rss_flags = RSS_ENABLE_NONE;
+			return rc;
+		}
+
+		memcpy(rss->rss_hkey, rss_key, RSS_HASH_KEY_LEN);
 	} else {
 		/* Disable RSS, if only default RX Q is created */
 		rss->rss_flags = RSS_ENABLE_NONE;
 	}
 
-	netdev_rss_key_fill(rss_key, RSS_HASH_KEY_LEN);
-	rc = be_cmd_rss_config(adapter, rss->rsstable, rss->rss_flags,
-			       RSS_INDIR_TABLE_LEN, rss_key);
-	if (rc) {
-		rss->rss_flags = RSS_ENABLE_NONE;
-		return rc;
-	}
-
-	memcpy(rss->rss_hkey, rss_key, RSS_HASH_KEY_LEN);
 
 	/* Post 1 less than RXQ-len to avoid head being equal to tail,
 	 * which is a queue empty condition
@@ -3789,18 +3799,15 @@ static u16 be_calculate_vf_qs(struct be_adapter *adapter, u16 num_vfs)
 	struct be_resources res = adapter->pool_res;
 	u16 num_vf_qs = 1;
 
-	/* Distribute the queue resources equally among the PF and it's VFs
+	/* Distribute the queue resources among the PF and it's VFs
 	 * Do not distribute queue resources in multi-channel configuration.
 	 */
 	if (num_vfs && !be_is_mc(adapter)) {
-		/* If number of VFs requested is 8 less than max supported,
-		 * assign 8 queue pairs to the PF and divide the remaining
-		 * resources evenly among the VFs
-		 */
-		if (num_vfs < (be_max_vfs(adapter) - 8))
-			num_vf_qs = (res.max_rss_qs - 8) / num_vfs;
-		else
-			num_vf_qs = res.max_rss_qs / num_vfs;
+		 /* Divide the qpairs evenly among the VFs and the PF, capped
+		  * at VF-EQ-count. Any remainder qpairs belong to the PF.
+		  */
+		num_vf_qs = min(SH_VF_MAX_NIC_EQS,
+				res.max_rss_qs / (num_vfs + 1));
 
 		/* Skyhawk-R chip supports only MAX_RSS_IFACES RSS capable
 		 * interfaces per port. Provide RSS on VFs, only if number
@@ -4082,6 +4089,7 @@ static void be_setup_init(struct be_adapter *adapter)
 	adapter->if_handle = -1;
 	adapter->be3_native = false;
 	adapter->if_flags = 0;
+	adapter->phy_state = BE_UNKNOWN_PHY_STATE;
 	if (be_physfn(adapter))
 		adapter->cmd_privileges = MAX_PRIVILEGES;
 	else
@@ -4265,10 +4273,10 @@ static void be_schedule_worker(struct be_adapter *adapter)
 	adapter->flags |= BE_FLAGS_WORKER_SCHEDULED;
 }
 
-static void be_schedule_err_detection(struct be_adapter *adapter)
+static void be_schedule_err_detection(struct be_adapter *adapter, u32 delay)
 {
 	schedule_delayed_work(&adapter->be_err_detection_work,
-			      msecs_to_jiffies(1000));
+			      msecs_to_jiffies(delay));
 	adapter->flags |= BE_FLAGS_ERR_DETECTION_SCHEDULED;
 }
 
@@ -4307,6 +4315,23 @@ err:
 	return status;
 }
 
+static int be_if_create(struct be_adapter *adapter)
+{
+	u32 en_flags = BE_IF_FLAGS_RSS | BE_IF_FLAGS_DEFQ_RSS;
+	u32 cap_flags = be_if_cap_flags(adapter);
+	int status;
+
+	if (adapter->cfg_num_qs == 1)
+		cap_flags &= ~(BE_IF_FLAGS_DEFQ_RSS | BE_IF_FLAGS_RSS);
+
+	en_flags &= cap_flags;
+	/* will enable all the needed filter flags in be_open() */
+	status = be_cmd_if_create(adapter, be_if_cap_flags(adapter), en_flags,
+				  &adapter->if_handle, 0);
+
+	return status;
+}
+
 int be_update_queues(struct be_adapter *adapter)
 {
 	struct net_device *netdev = adapter->netdev;
@@ -4324,12 +4349,19 @@ int be_update_queues(struct be_adapter *adapter)
 		be_msix_disable(adapter);
 
 	be_clear_queues(adapter);
+	status = be_cmd_if_destroy(adapter, adapter->if_handle,  0);
+	if (status)
+		return status;
 
 	if (!msix_enabled(adapter)) {
 		status = be_msix_enable(adapter);
 		if (status)
 			return status;
 	}
+
+	status = be_if_create(adapter);
+	if (status)
+		return status;
 
 	status = be_setup_queues(adapter);
 	if (status)
@@ -4395,7 +4427,6 @@ static int be_func_init(struct be_adapter *adapter)
 static int be_setup(struct be_adapter *adapter)
 {
 	struct device *dev = &adapter->pdev->dev;
-	u32 en_flags;
 	int status;
 
 	status = be_func_init(adapter);
@@ -4428,10 +4459,7 @@ static int be_setup(struct be_adapter *adapter)
 		goto err;
 
 	/* will enable all the needed filter flags in be_open() */
-	en_flags = BE_IF_FLAGS_RSS | BE_IF_FLAGS_DEFQ_RSS;
-	en_flags = en_flags & be_if_cap_flags(adapter);
-	status = be_cmd_if_create(adapter, be_if_cap_flags(adapter), en_flags,
-				  &adapter->if_handle, 0);
+	status = be_if_create(adapter);
 	if (status)
 		goto err;
 
@@ -4589,6 +4617,9 @@ static int be_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
 
 	/* BE and Lancer chips support VEB mode only */
 	if (BEx_chip(adapter) || lancer_chip(adapter)) {
+		/* VEB is disabled in non-SR-IOV profiles on BE3/Lancer */
+		if (!pci_sriov_get_totalvfs(adapter->pdev))
+			return 0;
 		hsw_mode = PORT_FWD_TYPE_VEB;
 	} else {
 		status = be_cmd_get_hsw_config(adapter, NULL, 0,
@@ -4804,7 +4835,7 @@ static void be_netdev_init(struct net_device *netdev)
 	netdev->hw_features |= NETIF_F_SG | NETIF_F_TSO | NETIF_F_TSO6 |
 		NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM | NETIF_F_RXCSUM |
 		NETIF_F_HW_VLAN_CTAG_TX;
-	if (be_multi_rxq(adapter))
+	if ((be_if_cap_flags(adapter) & BE_IF_FLAGS_RSS))
 		netdev->hw_features |= NETIF_F_RXHASH;
 
 	netdev->features |= netdev->hw_features |
@@ -4859,21 +4890,27 @@ static int be_resume(struct be_adapter *adapter)
 
 static int be_err_recover(struct be_adapter *adapter)
 {
-	struct device *dev = &adapter->pdev->dev;
 	int status;
+
+	/* Error recovery is supported only Lancer as of now */
+	if (!lancer_chip(adapter))
+		return -EIO;
+
+	/* Wait for adapter to reach quiescent state before
+	 * destroying queues
+	 */
+	status = be_fw_wait_ready(adapter);
+	if (status)
+		goto err;
+
+	be_cleanup(adapter);
 
 	status = be_resume(adapter);
 	if (status)
 		goto err;
 
-	dev_info(dev, "Adapter recovery successful\n");
 	return 0;
 err:
-	if (be_physfn(adapter))
-		dev_err(dev, "Adapter recovery failed\n");
-	else
-		dev_err(dev, "Re-trying adapter recovery\n");
-
 	return status;
 }
 
@@ -4882,21 +4919,43 @@ static void be_err_detection_task(struct work_struct *work)
 	struct be_adapter *adapter =
 				container_of(work, struct be_adapter,
 					     be_err_detection_work.work);
-	int status = 0;
+	struct device *dev = &adapter->pdev->dev;
+	int recovery_status;
+	int delay = ERR_DETECTION_DELAY;
 
 	be_detect_error(adapter);
 
-	if (be_check_error(adapter, BE_ERROR_HW)) {
-		be_cleanup(adapter);
+	if (be_check_error(adapter, BE_ERROR_HW))
+		recovery_status = be_err_recover(adapter);
+	else
+		goto reschedule_task;
 
-		/* As of now error recovery support is in Lancer only */
-		if (lancer_chip(adapter))
-			status = be_err_recover(adapter);
+	if (!recovery_status) {
+		adapter->recovery_retries = 0;
+		dev_info(dev, "Adapter recovery successful\n");
+		goto reschedule_task;
+	} else if (be_virtfn(adapter)) {
+		/* For VFs, check if PF have allocated resources
+		 * every second.
+		 */
+		dev_err(dev, "Re-trying adapter recovery\n");
+		goto reschedule_task;
+	} else if (adapter->recovery_retries++ <
+		   MAX_ERR_RECOVERY_RETRY_COUNT) {
+		/* In case of another error during recovery, it takes 30 sec
+		 * for adapter to come out of error. Retry error recovery after
+		 * this time interval.
+		 */
+		dev_err(&adapter->pdev->dev, "Re-trying adapter recovery\n");
+		delay = ERR_RECOVERY_RETRY_DELAY;
+		goto reschedule_task;
+	} else {
+		dev_err(dev, "Adapter recovery failed\n");
 	}
 
-	/* Always attempt recovery on VFs */
-	if (!status || be_virtfn(adapter))
-		be_schedule_err_detection(adapter);
+	return;
+reschedule_task:
+	be_schedule_err_detection(adapter, delay);
 }
 
 static void be_log_sfp_info(struct be_adapter *adapter)
@@ -4906,11 +4965,13 @@ static void be_log_sfp_info(struct be_adapter *adapter)
 	status = be_cmd_query_sfp_info(adapter);
 	if (!status) {
 		dev_err(&adapter->pdev->dev,
-			"Unqualified SFP+ detected on %c from %s part no: %s",
-			adapter->port_name, adapter->phy.vendor_name,
+			"Port %c: %s Vendor: %s part no: %s",
+			adapter->port_name,
+			be_misconfig_evt_port_state[adapter->phy_state],
+			adapter->phy.vendor_name,
 			adapter->phy.vendor_pn);
 	}
-	adapter->flags &= ~BE_FLAGS_EVT_INCOMPATIBLE_SFP;
+	adapter->flags &= ~BE_FLAGS_PHY_MISCONFIGURED;
 }
 
 static void be_worker(struct work_struct *work)
@@ -4954,7 +5015,7 @@ static void be_worker(struct work_struct *work)
 	if (!skyhawk_chip(adapter))
 		be_eqd_update(adapter, false);
 
-	if (adapter->flags & BE_FLAGS_EVT_INCOMPATIBLE_SFP)
+	if (adapter->flags & BE_FLAGS_PHY_MISCONFIGURED)
 		be_log_sfp_info(adapter);
 
 reschedule:
@@ -5292,7 +5353,7 @@ static int be_probe(struct pci_dev *pdev, const struct pci_device_id *pdev_id)
 
 	be_roce_dev_add(adapter);
 
-	be_schedule_err_detection(adapter);
+	be_schedule_err_detection(adapter, ERR_DETECTION_DELAY);
 
 	/* On Die temperature not supported for VF. */
 	if (be_physfn(adapter) && IS_ENABLED(CONFIG_BE2NET_HWMON)) {
@@ -5359,7 +5420,7 @@ static int be_pci_resume(struct pci_dev *pdev)
 	if (status)
 		return status;
 
-	be_schedule_err_detection(adapter);
+	be_schedule_err_detection(adapter, ERR_DETECTION_DELAY);
 
 	if (adapter->wol_en)
 		be_setup_wol(adapter, false);
@@ -5394,6 +5455,8 @@ static pci_ers_result_t be_eeh_err_detected(struct pci_dev *pdev,
 	struct be_adapter *adapter = pci_get_drvdata(pdev);
 
 	dev_err(&adapter->pdev->dev, "EEH error detected\n");
+
+	be_roce_dev_remove(adapter);
 
 	if (!be_check_error(adapter, BE_ERROR_EEH)) {
 		be_set_error(adapter, BE_ERROR_EEH);
@@ -5459,7 +5522,9 @@ static void be_eeh_resume(struct pci_dev *pdev)
 	if (status)
 		goto err;
 
-	be_schedule_err_detection(adapter);
+	be_roce_dev_add(adapter);
+
+	be_schedule_err_detection(adapter, ERR_DETECTION_DELAY);
 	return;
 err:
 	dev_err(&adapter->pdev->dev, "EEH resume failed\n");

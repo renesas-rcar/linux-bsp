@@ -89,6 +89,10 @@
 #define BE3_MAX_TX_QS		16
 #define BE3_MAX_EVT_QS		16
 #define BE3_SRIOV_MAX_EVT_QS	8
+#define SH_VF_MAX_NIC_EQS	3	/* Skyhawk VFs can have a max of 4 EQs
+					 * and at least 1 is granted to either
+					 * SURF/DPDK
+					 */
 
 #define MAX_RSS_IFACES		15
 #define MAX_RX_QS		32
@@ -110,6 +114,8 @@
 
 #define	RSS_INDIR_TABLE_LEN	128
 #define RSS_HASH_KEY_LEN	40
+
+#define BE_UNKNOWN_PHY_STATE	0xFF
 
 struct be_dma_mem {
 	void *va;
@@ -386,12 +392,16 @@ enum vf_state {
 #define BE_FLAGS_QNQ_ASYNC_EVT_RCVD		BIT(7)
 #define BE_FLAGS_VXLAN_OFFLOADS			BIT(8)
 #define BE_FLAGS_SETUP_DONE			BIT(9)
-#define BE_FLAGS_EVT_INCOMPATIBLE_SFP		BIT(10)
+#define BE_FLAGS_PHY_MISCONFIGURED		BIT(10)
 #define BE_FLAGS_ERR_DETECTION_SCHEDULED	BIT(11)
 #define BE_FLAGS_OS2BMC				BIT(12)
 
 #define BE_UC_PMAC_COUNT			30
 #define BE_VF_UC_PMAC_COUNT			2
+
+#define MAX_ERR_RECOVERY_RETRY_COUNT		3
+#define ERR_DETECTION_DELAY			1000
+#define ERR_RECOVERY_RETRY_DELAY		30000
 
 /* Ethtool set_dump flags */
 #define LANCER_INITIATE_FW_DUMP			0x1
@@ -530,6 +540,7 @@ struct be_adapter {
 	u16 work_counter;
 
 	struct delayed_work be_err_detection_work;
+	u8 recovery_retries;
 	u8 err_flags;
 	u32 flags;
 	u32 cmd_privileges;
@@ -594,6 +605,7 @@ struct be_adapter {
 	u32 bmc_filt_mask;
 	u32 fat_dump_len;
 	u16 serial_num[CNTL_SERIAL_NUM_WORDS];
+	u8 phy_state; /* state of sfp optics (functional, faulted, etc.,) */
 };
 
 #define be_physfn(adapter)		(!adapter->virtfn)
