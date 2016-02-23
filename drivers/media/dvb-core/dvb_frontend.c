@@ -140,9 +140,12 @@ struct dvb_frontend_private {
 
 static void dvb_frontend_wakeup(struct dvb_frontend *fe);
 static int dtv_get_frontend(struct dvb_frontend *fe,
+			    struct dtv_frontend_properties *c,
 			    struct dvb_frontend_parameters *p_out);
-static int dtv_property_legacy_params_sync(struct dvb_frontend *fe,
-					   struct dvb_frontend_parameters *p);
+static int
+dtv_property_legacy_params_sync(struct dvb_frontend *fe,
+				const struct dtv_frontend_properties *c,
+				struct dvb_frontend_parameters *p);
 
 static bool has_get_frontend(struct dvb_frontend *fe)
 {
@@ -202,6 +205,7 @@ static void dvb_frontend_add_event(struct dvb_frontend *fe,
 				   enum fe_status status)
 {
 	struct dvb_frontend_private *fepriv = fe->frontend_priv;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	struct dvb_fe_events *events = &fepriv->events;
 	struct dvb_frontend_event *e;
 	int wp;
@@ -209,7 +213,7 @@ static void dvb_frontend_add_event(struct dvb_frontend *fe,
 	dev_dbg(fe->dvb->device, "%s:\n", __func__);
 
 	if ((status & FE_HAS_LOCK) && has_get_frontend(fe))
-		dtv_get_frontend(fe, &fepriv->parameters_out);
+		dtv_get_frontend(fe, c, &fepriv->parameters_out);
 
 	mutex_lock(&events->mtx);
 
@@ -687,6 +691,7 @@ static int dvb_enable_media_tuner(struct dvb_frontend *fe)
 static int dvb_frontend_thread(void *data)
 {
 	struct dvb_frontend *fe = data;
+	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	struct dvb_frontend_private *fepriv = fe->frontend_priv;
 	enum fe_status s;
 	enum dvbfe_algo algo;
@@ -807,7 +812,7 @@ restart:
 					fepriv->algo_status |= DVBFE_ALGO_SEARCH_AGAIN;
 					fepriv->delay = HZ / 2;
 				}
-				dtv_property_legacy_params_sync(fe, &fepriv->parameters_out);
+				dtv_property_legacy_params_sync(fe, c, &fepriv->parameters_out);
 				fe->ops.read_status(fe, &s);
 				if (s != fepriv->status) {
 					dvb_frontend_add_event(fe, s); /* update event list */
@@ -1274,11 +1279,11 @@ static int dtv_property_cache_sync(struct dvb_frontend *fe,
 /* Ensure the cached values are set correctly in the frontend
  * legacy tuning structures, for the advanced tuning API.
  */
-static int dtv_property_legacy_params_sync(struct dvb_frontend *fe,
-					    struct dvb_frontend_parameters *p)
+static int
+dtv_property_legacy_params_sync(struct dvb_frontend *fe,
+				const struct dtv_frontend_properties *c,
+				struct dvb_frontend_parameters *p)
 {
-	const struct dtv_frontend_properties *c = &fe->dtv_property_cache;
-
 	p->frequency = c->frequency;
 	p->inversion = c->inversion;
 
@@ -1350,16 +1355,17 @@ static int dtv_property_legacy_params_sync(struct dvb_frontend *fe,
  * If p_out is not null, it will update the DVBv3 params pointed by it.
  */
 static int dtv_get_frontend(struct dvb_frontend *fe,
+			    struct dtv_frontend_properties *c,
 			    struct dvb_frontend_parameters *p_out)
 {
 	int r;
 
 	if (fe->ops.get_frontend) {
-		r = fe->ops.get_frontend(fe);
+		r = fe->ops.get_frontend(fe, c);
 		if (unlikely(r < 0))
 			return r;
 		if (p_out)
-			dtv_property_legacy_params_sync(fe, p_out);
+			dtv_property_legacy_params_sync(fe, c, p_out);
 		return 0;
 	}
 
@@ -2081,6 +2087,8 @@ static int dvb_frontend_ioctl_properties(struct file *file,
 			dev_dbg(fe->dvb->device, "%s: Property cache is full, tuning\n", __func__);
 
 	} else if (cmd == FE_GET_PROPERTY) {
+		struct dtv_frontend_properties getp = fe->dtv_property_cache;
+
 		dev_dbg(fe->dvb->device, "%s: properties.num = %d\n", __func__, tvps->num);
 		dev_dbg(fe->dvb->device, "%s: properties.props = %p\n", __func__, tvps->props);
 
@@ -2102,17 +2110,18 @@ static int dvb_frontend_ioctl_properties(struct file *file,
 		}
 
 		/*
-		 * Fills the cache out struct with the cache contents, plus
-		 * the data retrieved from get_frontend, if the frontend
-		 * is not idle. Otherwise, returns the cached content
+		 * Let's use our own copy of property cache, in order to
+		 * avoid mangling with DTV zigzag logic, as drivers might
+		 * return crap, if they don't check if the data is available
+		 * before updating the properties cache.
 		 */
 		if (fepriv->state != FESTATE_IDLE) {
-			err = dtv_get_frontend(fe, NULL);
+			err = dtv_get_frontend(fe, &getp, NULL);
 			if (err < 0)
 				goto out;
 		}
 		for (i = 0; i < tvps->num; i++) {
-			err = dtv_property_process_get(fe, c, tvp + i, file);
+			err = dtv_property_process_get(fe, &getp, tvp + i, file);
 			if (err < 0)
 				goto out;
 			(tvp + i)->result = err;
@@ -2147,7 +2156,7 @@ static int dtv_set_frontend(struct dvb_frontend *fe)
 	 * the user. FE_SET_FRONTEND triggers an initial frontend event
 	 * with status = 0, which copies output parameters to userspace.
 	 */
-	dtv_property_legacy_params_sync(fe, &fepriv->parameters_out);
+	dtv_property_legacy_params_sync(fe, c, &fepriv->parameters_out);
 
 	/*
 	 * Be sure that the bandwidth will be filled for all
@@ -2517,10 +2526,18 @@ static int dvb_frontend_ioctl_legacy(struct file *file,
 		err = dvb_frontend_get_event (fe, parg, file->f_flags);
 		break;
 
-	case FE_GET_FRONTEND:
-		err = dtv_get_frontend(fe, parg);
-		break;
+	case FE_GET_FRONTEND: {
+		struct dtv_frontend_properties getp = fe->dtv_property_cache;
 
+		/*
+		 * Let's use our own copy of property cache, in order to
+		 * avoid mangling with DTV zigzag logic, as drivers might
+		 * return crap, if they don't check if the data is available
+		 * before updating the properties cache.
+		 */
+		err = dtv_get_frontend(fe, &getp, parg);
+		break;
+	}
 	case FE_SET_FRONTEND_TUNE_MODE:
 		fepriv->tune_mode_flags = (unsigned long) parg;
 		err = 0;
