@@ -72,8 +72,8 @@
  * Default is using quadratic equation.
  * To switch to linear formula calculation,
  * please comment out APPLY_QUADRATIC_EQUATION macro.
- */
-#define APPLY_QUADRATIC_EQUATION
+*/
+/* #define APPLY_QUADRATIC_EQUATION */
 
 #ifdef APPLY_QUADRATIC_EQUATION
 /* This struct is for quadratic equation.
