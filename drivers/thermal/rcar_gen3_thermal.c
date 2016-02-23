@@ -186,12 +186,26 @@ static void thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 		priv->factor.fptat_l = rcar_thermal_read(priv, REG_GEN3_FPTATL)
 				& GEN3_FUSE_MASK;
 	} else {
-		priv->factor.fthcode_h = 3355;
-		priv->factor.fthcode_t = 2850;
-		priv->factor.fthcode_l = 2110;
-		priv->factor.fptat_h = 2320;
-		priv->factor.fptat_t = 1510;
-		priv->factor.fptat_l = 320;
+		priv->factor.fptat_h = 2351;
+		priv->factor.fptat_t = 1509;
+		priv->factor.fptat_l = 435;
+		switch (priv->id) {
+		case 0:
+			priv->factor.fthcode_h = 3248;
+			priv->factor.fthcode_t = 2800;
+			priv->factor.fthcode_l = 2221;
+			break;
+		case 1:
+			priv->factor.fthcode_h = 3245;
+			priv->factor.fthcode_t = 2795;
+			priv->factor.fthcode_l = 2216;
+			break;
+		case 2:
+			priv->factor.fthcode_h = 3250;
+			priv->factor.fthcode_t = 2805;
+			priv->factor.fthcode_l = 2237;
+			break;
+		}
 	}
 	iounmap(product_register);
 }
