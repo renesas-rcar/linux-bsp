@@ -154,7 +154,17 @@ struct vc4_v3d {
 struct vc4_hvs {
 	struct platform_device *pdev;
 	void __iomem *regs;
-	void __iomem *dlist;
+	u32 __iomem *dlist;
+
+	/* Memory manager for CRTCs to allocate space in the display
+	 * list.  Units are dwords.
+	 */
+	struct drm_mm dlist_mm;
+	/* Memory manager for the LBM memory used by HVS scaling. */
+	struct drm_mm lbm_mm;
+	spinlock_t mm_lock;
+
+	struct drm_mm_node mitchell_netravali_filter;
 };
 
 struct vc4_plane {
@@ -386,7 +396,6 @@ int vc4_bo_stats_debugfs(struct seq_file *m, void *arg);
 extern struct platform_driver vc4_crtc_driver;
 int vc4_enable_vblank(struct drm_device *dev, unsigned int crtc_id);
 void vc4_disable_vblank(struct drm_device *dev, unsigned int crtc_id);
-void vc4_cancel_page_flip(struct drm_crtc *crtc, struct drm_file *file);
 int vc4_crtc_debugfs_regs(struct seq_file *m, void *arg);
 
 /* vc4_debugfs.c */
