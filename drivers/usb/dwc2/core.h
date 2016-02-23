@@ -44,6 +44,26 @@
 #include <linux/usb/phy.h>
 #include "hw.h"
 
+/*
+ * Suggested defines for tracers:
+ * - no_printk:    Disable tracing
+ * - pr_info:      Print this info to the console
+ * - trace_printk: Print this info to trace buffer (good for verbose logging)
+ */
+
+#define DWC2_TRACE_SCHEDULER		no_printk
+#define DWC2_TRACE_SCHEDULER_VB		no_printk
+
+/* Detailed scheduler tracing, but won't overwhelm console */
+#define dwc2_sch_dbg(hsotg, fmt, ...)					\
+	DWC2_TRACE_SCHEDULER(pr_fmt("%s: SCH: " fmt),			\
+			     dev_name(hsotg->dev), ##__VA_ARGS__)
+
+/* Verbose scheduler tracing */
+#define dwc2_sch_vdbg(hsotg, fmt, ...)					\
+	DWC2_TRACE_SCHEDULER_VB(pr_fmt("%s: SCH: " fmt),		\
+				dev_name(hsotg->dev), ##__VA_ARGS__)
+
 static inline u32 dwc2_readl(const void __iomem *addr)
 {
 	u32 value = __raw_readl(addr);
@@ -572,6 +592,84 @@ struct dwc2_hregs_backup {
 	bool valid;
 };
 
+/*
+ * Constants related to high speed periodic scheduling
+ *
+ * We have a periodic schedule that is DWC2_HS_SCHEDULE_UFRAMES long.  From a
+ * reservation point of view it's assumed that the schedule goes right back to
+ * the beginning after the end of the schedule.
+ *
+ * What does that mean for scheduling things with a long interval?  It means
+ * we'll reserve time for them in every possible microframe that they could
+ * ever be scheduled in.  ...but we'll still only actually schedule them as
+ * often as they were requested.
+ *
+ * We keep our schedule in a "bitmap" structure.  This simplifies having
+ * to keep track of and merge intervals: we just let the bitmap code do most
+ * of the heavy lifting.  In a way scheduling is much like memory allocation.
+ *
+ * We schedule 100us per uframe or 80% of 125us (the maximum amount you're
+ * supposed to schedule for periodic transfers).  That's according to spec.
+ *
+ * Note that though we only schedule 80% of each microframe, the bitmap that we
+ * keep the schedule in is tightly packed (AKA it doesn't have 100us worth of
+ * space for each uFrame).
+ *
+ * Requirements:
+ * - DWC2_HS_SCHEDULE_UFRAMES must even divide 0x4000 (HFNUM_MAX_FRNUM + 1)
+ * - DWC2_HS_SCHEDULE_UFRAMES must be 8 times DWC2_LS_SCHEDULE_FRAMES (probably
+ *   could be any multiple of 8 times DWC2_LS_SCHEDULE_FRAMES, but there might
+ *   be bugs).  The 8 comes from the USB spec: number of microframes per frame.
+ */
+#define DWC2_US_PER_UFRAME		125
+#define DWC2_HS_PERIODIC_US_PER_UFRAME	100
+
+#define DWC2_HS_SCHEDULE_UFRAMES	8
+#define DWC2_HS_SCHEDULE_US		(DWC2_HS_SCHEDULE_UFRAMES * \
+					 DWC2_HS_PERIODIC_US_PER_UFRAME)
+
+/*
+ * Constants related to low speed scheduling
+ *
+ * For high speed we schedule every 1us.  For low speed that's a bit overkill,
+ * so we make up a unit called a "slice" that's worth 25us.  There are 40
+ * slices in a full frame and we can schedule 36 of those (90%) for periodic
+ * transfers.
+ *
+ * Our low speed schedule can be as short as 1 frame or could be longer.  When
+ * we only schedule 1 frame it means that we'll need to reserve a time every
+ * frame even for things that only transfer very rarely, so something that runs
+ * every 2048 frames will get time reserved in every frame.  Our low speed
+ * schedule can be longer and we'll be able to handle more overlap, but that
+ * will come at increased memory cost and increased time to schedule.
+ *
+ * Note: one other advantage of a short low speed schedule is that if we mess
+ * up and miss scheduling we can jump in and use any of the slots that we
+ * happened to reserve.
+ *
+ * With 25 us per slice and 1 frame in the schedule, we only need 4 bytes for
+ * the schedule.  There will be one schedule per TT.
+ *
+ * Requirements:
+ * - DWC2_US_PER_SLICE must evenly divide DWC2_LS_PERIODIC_US_PER_FRAME.
+ */
+#define DWC2_US_PER_SLICE	25
+#define DWC2_SLICES_PER_UFRAME	(DWC2_US_PER_UFRAME / DWC2_US_PER_SLICE)
+
+#define DWC2_ROUND_US_TO_SLICE(us) \
+				(DIV_ROUND_UP((us), DWC2_US_PER_SLICE) * \
+				 DWC2_US_PER_SLICE)
+
+#define DWC2_LS_PERIODIC_US_PER_FRAME \
+				900
+#define DWC2_LS_PERIODIC_SLICES_PER_FRAME \
+				(DWC2_LS_PERIODIC_US_PER_FRAME / \
+				 DWC2_US_PER_SLICE)
+
+#define DWC2_LS_SCHEDULE_FRAMES	1
+#define DWC2_LS_SCHEDULE_SLICES	(DWC2_LS_SCHEDULE_FRAMES * \
+				 DWC2_LS_PERIODIC_SLICES_PER_FRAME)
+
 /**
  * struct dwc2_hsotg - Holds the state of the driver, including the non-periodic
  * and periodic schedules
@@ -657,11 +755,14 @@ struct dwc2_hregs_backup {
  *                      periodic_sched_ready because it must be rescheduled for
  *                      the next frame. Otherwise, the item moves to
  *                      periodic_sched_inactive.
+ * @split_order:        List keeping track of channels doing splits, in order.
  * @periodic_usecs:     Total bandwidth claimed so far for periodic transfers.
  *                      This value is in microseconds per (micro)frame. The
  *                      assumption is that all periodic transfers may occur in
  *                      the same (micro)frame.
- * @frame_usecs:        Internal variable used by the microframe scheduler
+ * @hs_periodic_bitmap: Bitmap used by the microframe scheduler any time the
+ *                      host is in high speed mode; low speed schedules are
+ *                      stored elsewhere since we need one per TT.
  * @frame_number:       Frame number read from the core at SOF. The value ranges
  *                      from 0 to HFNUM_MAX_FRNUM.
  * @periodic_qh_count:  Count of periodic QHs, if using several eps. Used for
@@ -780,16 +881,19 @@ struct dwc2_hsotg {
 	struct list_head periodic_sched_ready;
 	struct list_head periodic_sched_assigned;
 	struct list_head periodic_sched_queued;
+	struct list_head split_order;
 	u16 periodic_usecs;
-	u16 frame_usecs[8];
+	unsigned long hs_periodic_bitmap[
+		DIV_ROUND_UP(DWC2_HS_SCHEDULE_US, BITS_PER_LONG)];
 	u16 frame_number;
 	u16 periodic_qh_count;
 	bool bus_suspended;
 	bool new_connection;
 
+	u16 last_frame_num;
+
 #ifdef CONFIG_USB_DWC2_TRACK_MISSED_SOFS
 #define FRAME_NUM_ARRAY_SIZE 1000
-	u16 last_frame_num;
 	u16 *frame_num_array;
 	u16 *last_frame_num_array;
 	int frame_num_idx;
@@ -1212,11 +1316,15 @@ static inline int dwc2_hsotg_set_test_mode(struct dwc2_hsotg *hsotg,
 
 #if IS_ENABLED(CONFIG_USB_DWC2_HOST) || IS_ENABLED(CONFIG_USB_DWC2_DUAL_ROLE)
 extern int dwc2_hcd_get_frame_number(struct dwc2_hsotg *hsotg);
+extern int dwc2_hcd_get_future_frame_number(struct dwc2_hsotg *hsotg, int us);
 extern void dwc2_hcd_connect(struct dwc2_hsotg *hsotg);
 extern void dwc2_hcd_disconnect(struct dwc2_hsotg *hsotg, bool force);
 extern void dwc2_hcd_start(struct dwc2_hsotg *hsotg);
 #else
 static inline int dwc2_hcd_get_frame_number(struct dwc2_hsotg *hsotg)
+{ return 0; }
+static inline int dwc2_hcd_get_future_frame_number(struct dwc2_hsotg *hsotg,
+						   int us)
 { return 0; }
 static inline void dwc2_hcd_connect(struct dwc2_hsotg *hsotg) {}
 static inline void dwc2_hcd_disconnect(struct dwc2_hsotg *hsotg, bool force) {}
