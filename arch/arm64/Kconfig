@@ -14,6 +14,7 @@ config ARM64
 	select ARCH_WANT_OPTIONAL_GPIOLIB
 	select ARCH_WANT_COMPAT_IPC_PARSE_VERSION
 	select ARCH_WANT_FRAME_POINTERS
+	select ARCH_HAS_UBSAN_SANITIZE_ALL
 	select ARM_AMBA
 	select ARM_ARCH_TIMER
 	select ARM_GIC
@@ -49,6 +50,7 @@ config ARM64
 	select HAVE_ALIGNED_STRUCT_PAGE if SLUB
 	select HAVE_ARCH_AUDITSYSCALL
 	select HAVE_ARCH_BITREVERSE
+	select HAVE_ARCH_HUGE_VMAP
 	select HAVE_ARCH_JUMP_LABEL
 	select HAVE_ARCH_KASAN if SPARSEMEM_VMEMMAP && !(ARM64_16K_PAGES && ARM64_VA_BITS_48)
 	select HAVE_ARCH_KGDB
@@ -537,6 +539,9 @@ config HOTPLUG_CPU
 source kernel/Kconfig.preempt
 source kernel/Kconfig.hz
 
+config ARCH_SUPPORTS_DEBUG_PAGEALLOC
+	def_bool y
+
 config ARCH_HAS_HOLES_MEMORYMODEL
 	def_bool y if SPARSEMEM
 
@@ -752,9 +757,39 @@ config ARM64_LSE_ATOMICS
 
 endmenu
 
+config ARM64_UAO
+	bool "Enable support for User Access Override (UAO)"
+	default y
+	help
+	  User Access Override (UAO; part of the ARMv8.2 Extensions)
+	  causes the 'unprivileged' variant of the load/store instructions to
+	  be overriden to be privileged.
+
+	  This option changes get_user() and friends to use the 'unprivileged'
+	  variant of the load/store instructions. This ensures that user-space
+	  really did have access to the supplied memory. When addr_limit is
+	  set to kernel memory the UAO bit will be set, allowing privileged
+	  access to kernel memory.
+
+	  Choosing this option will cause copy_to_user() et al to use user-space
+	  memory permissions.
+
+	  The feature is detected at runtime, the kernel will use the
+	  regular load/store instructions if the cpu does not implement the
+	  feature.
+
 endmenu
 
 menu "Boot options"
+
+config ARM64_ACPI_PARKING_PROTOCOL
+	bool "Enable support for the ARM64 ACPI parking protocol"
+	depends on ACPI
+	help
+	  Enable support for the ARM64 ACPI parking protocol. If disabled
+	  the kernel will not allow booting through the ARM64 ACPI parking
+	  protocol even if the corresponding data is present in the ACPI
+	  MADT table.
 
 config CMDLINE
 	string "Default kernel command string"

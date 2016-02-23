@@ -389,7 +389,7 @@ __create_page_tables:
 	 * Map the kernel image (starting with PHYS_OFFSET).
 	 */
 	mov	x0, x26				// swapper_pg_dir
-	mov	x5, #PAGE_OFFSET
+	ldr	x5, =KIMAGE_VADDR
 	create_pgd_entry x0, x5, x3, x6
 	ldr	x6, =KERNEL_END			// __va(KERNEL_END)
 	mov	x3, x24				// phys offset
@@ -421,13 +421,18 @@ __mmap_switched:
 	adr_l	x2, __bss_stop
 	sub	x2, x2, x0
 	bl	__pi_memset
+	dsb	ishst				// Make zero page visible to PTW
 
 	adr_l	sp, initial_sp, x4
 	mov	x4, sp
 	and	x4, x4, #~(THREAD_SIZE - 1)
 	msr	sp_el0, x4			// Save thread_info
 	str_l	x21, __fdt_pointer, x5		// Save FDT pointer
-	str_l	x24, memstart_addr, x6		// Save PHYS_OFFSET
+
+	ldr	x4, =KIMAGE_VADDR		// Save the offset between
+	sub	x4, x4, x24			// the kernel virtual and
+	str_l	x4, kimage_voffset, x5		// physical mappings
+
 	mov	x29, #0
 #ifdef CONFIG_KASAN
 	bl	kasan_early_init
