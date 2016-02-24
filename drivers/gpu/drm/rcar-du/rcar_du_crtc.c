@@ -561,9 +561,6 @@ void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc)
 
 void rcar_du_crtc_suspend(struct rcar_du_crtc *rcrtc)
 {
-	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
-		rcar_du_vsp_disable(rcrtc);
-
 	rcar_du_crtc_stop(rcrtc);
 	rcar_du_crtc_put(rcrtc);
 }
@@ -579,9 +576,7 @@ void rcar_du_crtc_resume(struct rcar_du_crtc *rcrtc)
 	rcar_du_crtc_start(rcrtc);
 
 	/* Commit the planes state. */
-	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE)) {
-		rcar_du_vsp_enable(rcrtc);
-	} else {
+	if (!rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE)) {
 		for (i = 0; i < rcrtc->group->num_planes; ++i) {
 			struct rcar_du_plane *plane = &rcrtc->group->planes[i];
 
