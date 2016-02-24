@@ -253,9 +253,9 @@ static void _quadratic_coef_calc(struct rcar_thermal_priv *priv)
 	para_c3 = (TJ_L * b) / 1000;
 	c = para_c1 - para_c2 - para_c3;
 
-	priv->coef.a = DIV_ROUND_CLOSEST(a, 10);
-	priv->coef.b = DIV_ROUND_CLOSEST(b, 10);
-	priv->coef.c = DIV_ROUND_CLOSEST(c, 10);
+	priv->coef.a = a;
+	priv->coef.b = b;
+	priv->coef.c = c;
 }
 #else
 static void _linear_coef_calc(struct rcar_thermal_priv *priv)
@@ -306,8 +306,8 @@ int _quadratic_temp_converter(struct equation_coefs coef, int temp_code)
 	int temp, temp1, temp2;
 	long delta;
 
-	/* Multiply with 10000 to sync with coef a, coef b and coef c. */
-	delta = coef.b * coef.b - 4 * coef.a * (coef.c - 10000 * temp_code);
+	/* Multiply with 100000 to sync with coef a, coef b and coef c. */
+	delta = coef.b * coef.b - 4 * coef.a * (coef.c - 100000 * temp_code);
 
 	/* Multiply temp with 1000 to convert to Mili-Celsius */
 	temp1 = (CODETSD(-coef.b) + int_sqrt(1000000 * delta)) / 2;
