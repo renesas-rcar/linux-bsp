@@ -29,6 +29,7 @@
 #include "vsp1_bru.h"
 #include "vsp1_dl.h"
 #include "vsp1_drm.h"
+#include "vsp1_hgo.h"
 #include "vsp1_hsit.h"
 #include "vsp1_lif.h"
 #include "vsp1_lut.h"
@@ -104,7 +105,8 @@ static int vsp1_create_sink_links(struct vsp1_device *vsp1,
 		if (source->type == sink->type)
 			continue;
 
-		if (source->type == VSP1_ENTITY_LIF ||
+		if (source->type == VSP1_ENTITY_HGO ||
+		    source->type == VSP1_ENTITY_LIF ||
 		    source->type == VSP1_ENTITY_WPF)
 			continue;
 
@@ -143,6 +145,16 @@ static int vsp1_uapi_create_links(struct vsp1_device *vsp1)
 			continue;
 
 		ret = vsp1_create_sink_links(vsp1, entity);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (vsp1->info->features & VSP1_HAS_HGO) {
+		ret = media_create_pad_link(&vsp1->hgo->entity.subdev.entity,
+					    HGO_PAD_SOURCE,
+					    &vsp1->hgo->histo.video.entity, 0,
+					    MEDIA_LNK_FL_ENABLED |
+					    MEDIA_LNK_FL_IMMUTABLE);
 		if (ret < 0)
 			return ret;
 	}
@@ -269,6 +281,16 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	}
 
 	list_add_tail(&vsp1->hst->entity.list_dev, &vsp1->entities);
+
+	if (vsp1->info->features & VSP1_HAS_HGO) {
+		vsp1->hgo = vsp1_hgo_create(vsp1);
+		if (IS_ERR(vsp1->hgo)) {
+			ret = PTR_ERR(vsp1->hgo);
+			goto done;
+		}
+
+		list_add_tail(&vsp1->hgo->entity.list_dev, &vsp1->entities);
+	}
 
 	if (vsp1->info->features & VSP1_HAS_LIF) {
 		vsp1->lif = vsp1_lif_create(vsp1);
@@ -549,7 +571,8 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 	{
 		.version = VI6_IP_VERSION_MODEL_VSPS_H2,
 		.gen = 2,
-		.features = VSP1_HAS_BRU | VSP1_HAS_LUT | VSP1_HAS_SRU,
+		.features = VSP1_HAS_BRU | VSP1_HAS_HGO | VSP1_HAS_LUT
+			  | VSP1_HAS_SRU,
 		.rpf_count = 5,
 		.uds_count = 3,
 		.wpf_count = 4,
@@ -567,7 +590,8 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPD_GEN2,
 		.gen = 2,
-		.features = VSP1_HAS_BRU | VSP1_HAS_LIF | VSP1_HAS_LUT,
+		.features = VSP1_HAS_BRU | VSP1_HAS_HGO | VSP1_HAS_LIF
+			  | VSP1_HAS_LUT,
 		.rpf_count = 4,
 		.uds_count = 1,
 		.wpf_count = 4,
@@ -576,7 +600,8 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPS_M2,
 		.gen = 2,
-		.features = VSP1_HAS_BRU | VSP1_HAS_LUT | VSP1_HAS_SRU,
+		.features = VSP1_HAS_BRU | VSP1_HAS_HGO | VSP1_HAS_LUT
+			  | VSP1_HAS_SRU,
 		.rpf_count = 5,
 		.uds_count = 3,
 		.wpf_count = 4,
@@ -585,7 +610,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPI_GEN3,
 		.gen = 3,
-		.features = VSP1_HAS_LUT | VSP1_HAS_SRU,
+		.features = VSP1_HAS_HGO | VSP1_HAS_LUT | VSP1_HAS_SRU,
 		.rpf_count = 1,
 		.uds_count = 1,
 		.wpf_count = 1,
@@ -601,7 +626,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPBC_GEN3,
 		.gen = 3,
-		.features = VSP1_HAS_BRU | VSP1_HAS_LUT,
+		.features = VSP1_HAS_BRU | VSP1_HAS_HGO | VSP1_HAS_LUT,
 		.rpf_count = 5,
 		.wpf_count = 1,
 		.num_bru_inputs = 5,

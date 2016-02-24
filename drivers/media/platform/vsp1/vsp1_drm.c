@@ -489,7 +489,7 @@ void vsp1_du_atomic_flush(struct device *dev)
 			}
 		}
 
-		vsp1_entity_route_setup(entity, pipe->dl);
+		vsp1_entity_route_setup(entity, pipe, pipe->dl);
 
 		if (entity->ops->configure)
 			entity->ops->configure(entity, pipe, pipe->dl);

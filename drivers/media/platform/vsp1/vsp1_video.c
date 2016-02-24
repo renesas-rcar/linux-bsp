@@ -31,6 +31,7 @@
 #include "vsp1_bru.h"
 #include "vsp1_dl.h"
 #include "vsp1_entity.h"
+#include "vsp1_hgo.h"
 #include "vsp1_pipe.h"
 #include "vsp1_rwpf.h"
 #include "vsp1_uds.h"
@@ -319,7 +320,11 @@ static int vsp1_video_pipeline_build_branch(struct vsp1_pipeline *pipe,
 	if (ret < 0)
 		return ret;
 
-	pad = media_entity_remote_pad(&input->entity.pads[RWPF_PAD_SOURCE]);
+	/* The main data path doesn't include the HGO, use
+	 * vsp1_entity_remote_pad() to traverse the graph.
+	 */
+
+	pad = vsp1_entity_remote_pad(&input->entity.pads[RWPF_PAD_SOURCE]);
 
 	while (1) {
 		if (pad == NULL) {
@@ -371,13 +376,9 @@ static int vsp1_video_pipeline_build_branch(struct vsp1_pipeline *pipe,
 					: &input->entity;
 		}
 
-		/* Follow the source link. The link setup operations ensure
-		 * that the output fan-out can't be more than one, there is thus
-		 * no need to verify here that only a single source link is
-		 * activated.
-		 */
+		/* Follow the source link, ignoring any HGO. */
 		pad = &entity->pads[entity->source_pad];
-		pad = media_entity_remote_pad(pad);
+		pad = vsp1_entity_remote_pad(pad);
 	}
 
 	/* The last entity must be the output WPF. */
@@ -432,6 +433,11 @@ static int vsp1_video_pipeline_build(struct vsp1_pipeline *pipe,
 			pipe->lif = e;
 		} else if (e->type == VSP1_ENTITY_BRU) {
 			pipe->bru = e;
+		} else if (e->type == VSP1_ENTITY_HGO) {
+			struct vsp1_hgo *hgo = to_hgo(subdev);
+
+			pipe->hgo = e;
+			hgo->histo.pipe = pipe;
 		}
 	}
 
@@ -629,7 +635,7 @@ static int vsp1_video_setup_pipeline(struct vsp1_pipeline *pipe)
 	}
 
 	list_for_each_entry(entity, &pipe->entities, list_pipe) {
-		vsp1_entity_route_setup(entity, pipe->dl);
+		vsp1_entity_route_setup(entity, pipe, pipe->dl);
 
 		if (entity->ops->configure)
 			entity->ops->configure(entity, pipe, pipe->dl);

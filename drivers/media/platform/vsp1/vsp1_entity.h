@@ -24,6 +24,7 @@ struct vsp1_pipeline;
 
 enum vsp1_entity_type {
 	VSP1_ENTITY_BRU,
+	VSP1_ENTITY_HGO,
 	VSP1_ENTITY_HSI,
 	VSP1_ENTITY_HST,
 	VSP1_ENTITY_LIF,
@@ -90,6 +91,7 @@ struct vsp1_entity {
 	struct media_pad *pads;
 	unsigned int source_pad;
 
+	struct media_entity **sources;
 	struct media_entity *sink;
 	unsigned int sink_pad;
 
@@ -128,8 +130,11 @@ vsp1_entity_get_pad_selection(struct vsp1_entity *entity,
 int vsp1_entity_init_cfg(struct v4l2_subdev *subdev,
 			 struct v4l2_subdev_pad_config *cfg);
 
-void vsp1_entity_route_setup(struct vsp1_entity *source,
+void vsp1_entity_route_setup(struct vsp1_entity *entity,
+			     struct vsp1_pipeline *pipe,
 			     struct vsp1_dl_list *dl);
+
+struct media_pad *vsp1_entity_remote_pad(struct media_pad *pad);
 
 int vsp1_subdev_get_pad_format(struct v4l2_subdev *subdev,
 			       struct v4l2_subdev_pad_config *cfg,
