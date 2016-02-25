@@ -85,6 +85,13 @@
 			reg = <0x00000000 0x54000000 0x0 0x03000000>;
 		};
 
+		/* For Audio DSP */
+		linux,adsp {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x57000000 0x0 0x01000000>;
+		};
+
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
 			compatible = "shared-dma-pool";
