@@ -676,6 +676,7 @@ struct rcar_vin_priv {
 	enum csi2_ch			csi_ch;
 	enum csi2_fmt			csi_fmt;
 	enum virtual_ch			vc;
+	bool				csi_sync;
 
 	struct rcar_vin_async_client	*async_client;
 	/* Asynchronous CSI2 linking */
@@ -1275,6 +1276,11 @@ static int rcar_vin_add_device(struct soc_camera_device *icd)
 			v4l2_set_subdev_hostdata(csi2_sd, icd);
 
 			ret = v4l2_subdev_call(csi2_sd, core, s_power, 1);
+			priv->csi_sync = true;
+
+			if (ret < 0 && ret != -EINVAL)
+				priv->csi_sync = false;
+
 			if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
 				return ret;
 		}
@@ -1329,7 +1335,7 @@ static void rcar_vin_remove_device(struct soc_camera_device *icd)
 
 	pm_runtime_put(ici->v4l2_dev.dev);
 
-	if (csi2_sd)
+	if ((csi2_sd) && (priv->csi_sync))
 		v4l2_subdev_call(csi2_sd, core, s_power, 0);
 
 	dev_dbg(icd->parent, "R-Car VIN driver detached from camera %d\n",
@@ -2945,6 +2951,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	priv->ici.v4l2_dev.dev = &pdev->dev;
 	priv->ici.drv_name = dev_name(&pdev->dev);
 	priv->ici.ops = &rcar_vin_host_ops;
+	priv->csi_sync = false;
 
 	priv->pdata_flags = pdata_flags;
 	if (!match) {
