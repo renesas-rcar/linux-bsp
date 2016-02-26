@@ -1012,7 +1012,27 @@ static int sh_mobile_i2c_runtime_nop(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int sh_mobile_i2c_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int sh_mobile_i2c_resume(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+#else
+#define sh_mobile_i2c_suspend	NULL
+#define sh_mobile_i2c_resume	NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static const struct dev_pm_ops sh_mobile_i2c_dev_pm_ops = {
+	.suspend = sh_mobile_i2c_suspend,
+	.resume = sh_mobile_i2c_resume,
 	.runtime_suspend = sh_mobile_i2c_runtime_nop,
 	.runtime_resume = sh_mobile_i2c_runtime_nop,
 };
