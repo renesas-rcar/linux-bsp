@@ -667,11 +667,32 @@ static int rcar_csi2_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_csi2_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int rcar_csi2_resume(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_csi2_pm_ops,
+			rcar_csi2_suspend, rcar_csi2_resume);
+#define DEV_PM_OPS (&rcar_csi2_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver __refdata rcar_csi2_pdrv = {
 	.remove	= rcar_csi2_remove,
 	.probe	= rcar_csi2_probe,
 	.driver	= {
 		.name	= DRV_NAME,
+		.pm	= DEV_PM_OPS,
 		.of_match_table	= of_match_ptr(rcar_csi2_of_table),
 	},
 	.id_table	= rcar_csi2_id_table,
