@@ -1246,9 +1246,32 @@ err_free_bridge:
 	return err;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_pcie_suspend(struct device *dev)
+{
+	/* Empty functino for now */
+	return 0;
+}
+
+static int rcar_pcie_resume(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_pcie_pm_ops,
+			rcar_pcie_suspend,
+			rcar_pcie_resume);
+
+#define DEV_PM_OPS (&rcar_pcie_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_pcie_driver = {
 	.driver = {
 		.name = "rcar-pcie",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rcar_pcie_of_match,
 		.suppress_bind_attrs = true,
 	},
