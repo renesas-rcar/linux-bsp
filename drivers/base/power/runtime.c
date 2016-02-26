@@ -1400,6 +1400,7 @@ void pm_runtime_init(struct device *dev)
 	pm_suspend_ignore_children(dev, false);
 	dev->power.runtime_auto = true;
 
+	dev->power.is_force_suspended = false;
 	dev->power.request_pending = false;
 	dev->power.request = RPM_REQ_NONE;
 	dev->power.deferred_resume = false;
@@ -1475,6 +1476,7 @@ int pm_runtime_force_suspend(struct device *dev)
 		goto err;
 
 	pm_runtime_set_suspended(dev);
+	dev->power.is_force_suspended = true;
 	return 0;
 err:
 	pm_runtime_enable(dev);
@@ -1483,13 +1485,13 @@ err:
 EXPORT_SYMBOL_GPL(pm_runtime_force_suspend);
 
 /**
- * pm_runtime_force_resume - Force a device into resume state.
+ * pm_runtime_force_resume - Force a device into resume state if needed.
  * @dev: Device to resume.
  *
  * Prior invoking this function we expect the user to have brought the device
  * into low power state by a call to pm_runtime_force_suspend(). Here we reverse
- * those actions and brings the device into full power. We update the runtime PM
- * status and re-enables runtime PM.
+ * those actions and bring the device back to its runtime PM state before forced
+ * suspension. We update the runtime PM status and re-enables runtime PM.
  *
  * Typically this function may be invoked from a system resume callback to make
  * sure the device is put into full power state.
@@ -1498,6 +1500,9 @@ int pm_runtime_force_resume(struct device *dev)
 {
 	int (*callback)(struct device *);
 	int ret = 0;
+
+	if (!dev->power.is_force_suspended)
+		goto out;
 
 	callback = RPM_GET_CALLBACK(dev, runtime_resume);
 
@@ -1510,6 +1515,7 @@ int pm_runtime_force_resume(struct device *dev)
 	if (ret)
 		goto out;
 
+	dev->power.is_force_suspended = false;
 	pm_runtime_set_active(dev);
 	pm_runtime_mark_last_busy(dev);
 out:
