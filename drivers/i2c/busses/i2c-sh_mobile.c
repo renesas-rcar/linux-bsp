@@ -34,6 +34,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/s2ram_ddr_backup.h>
 
 /* Transmit operation:                                                      */
 /*                                                                          */
@@ -152,6 +153,24 @@ struct sh_mobile_dt_config {
 	int clks_per_count;
 	void (*setup)(struct sh_mobile_i2c_data *pd);
 };
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+static struct hw_register i2c_dvfs_ip_regs[] = {
+	{"ICDR",   0x00, 8, 0},
+	{"ICCR",   0x04, 8, 0},
+	{"ICIC",   0x0C, 8, 0},
+	{"ICCL",   0x10, 8, 0},
+	{"ICCH",   0x14, 8, 0},
+	{"ICTC",   0x28, 8, 0},
+	{"ICVCON", 0x6C, 8, 0},
+};
+
+static struct rcar_ip i2c_dvfs_ip = {
+	.ip_name = "I2C_DVFS",
+	.reg_count = ARRAY_SIZE(i2c_dvfs_ip_regs),
+	.ip_reg = i2c_dvfs_ip_regs,
+};
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 #define IIC_FLAG_HAS_ICIC67	(1 << 0)
 
@@ -1012,7 +1031,37 @@ static int sh_mobile_i2c_runtime_nop(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int sh_mobile_i2c_suspend(struct device *dev)
+{
+	int ret = 0;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	struct sh_mobile_i2c_data *i2c_data = dev_get_drvdata(dev);
+
+	if (!i2c_dvfs_ip.virt_addr)
+		i2c_dvfs_ip.virt_addr = i2c_data->reg;
+	ret = handle_registers(&i2c_dvfs_ip, DO_BACKUP);
+#endif /* CONFIG_RCAR_DDR_BACKUP  */
+	return ret;
+}
+
+static int sh_mobile_i2c_resume(struct device *dev)
+{
+	int ret = 0;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	ret = handle_registers(&i2c_dvfs_ip, DO_RESTORE);
+#endif /* CONFIG_RCAR_DDR_BACKUP  */
+	return ret;
+}
+
+#else
+#define sh_mobile_i2c_suspend	NULL
+#define sh_mobile_i2c_resume	NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static const struct dev_pm_ops sh_mobile_i2c_dev_pm_ops = {
+	.suspend = sh_mobile_i2c_suspend,
+	.resume = sh_mobile_i2c_resume,
 	.runtime_suspend = sh_mobile_i2c_runtime_nop,
 	.runtime_resume = sh_mobile_i2c_runtime_nop,
 };
