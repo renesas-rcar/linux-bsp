@@ -293,9 +293,30 @@ static int clk_5p49_remove(struct i2c_client *client)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int clk_5p49_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int clk_5p49_resume(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(clk_5p49_pm_ops,
+			clk_5p49_suspend, clk_5p49_resume);
+#define DEV_PM_OPS (&clk_5p49_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct i2c_driver clk_5p49_driver = {
 	.driver = {
 		.name = "5p49v5923a",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = clk_5p49_of_match,
 	},
 	.probe		= clk_5p49_probe,
