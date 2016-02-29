@@ -2038,8 +2038,7 @@ static const struct i2c_device_id adv7482_id[] = {
 	{},
 };
 
-#if 0 /* FIXME */
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
 /*
  * adv7482_suspend - Suspend ADV7482 device
  * @client: pointer to i2c_client structure
@@ -2047,8 +2046,9 @@ static const struct i2c_device_id adv7482_id[] = {
  *
  * Power down the ADV7482 device
  */
-static int adv7482_suspend(struct i2c_client *client, pm_message_t state)
+static int adv7482_suspend(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
 	int ret;
 
 	ret = adv7482_write_register(client, ADV7482_I2C_IO,
@@ -2063,9 +2063,9 @@ static int adv7482_suspend(struct i2c_client *client, pm_message_t state)
  *
  * Power on and initialize the ADV7482 device
  */
-static int adv7482_resume(struct i2c_client *client)
+static int adv7482_resume(struct device *dev)
 {
-	struct device *dev = &client->dev;
+	struct i2c_client *client = to_i2c_client(dev);
 	struct adv7482_link_config link_config;
 	int ret;
 
@@ -2083,7 +2083,12 @@ static int adv7482_resume(struct i2c_client *client)
 
 	return ret;
 }
-#endif
+
+static SIMPLE_DEV_PM_OPS(adv7482_pm_ops, adv7482_suspend, adv7482_resume);
+#define ADV7482_PM_OPS (&adv7482_pm_ops)
+
+#else
+#define ADV7482_PM_OPS NULL
 #endif
 
 MODULE_DEVICE_TABLE(i2c, adv7482_id);
@@ -2097,16 +2102,11 @@ MODULE_DEVICE_TABLE(of, adv7482_of_ids);
 static struct i2c_driver adv7482_driver = {
 	.driver = {
 		.name	= DRIVER_NAME,
+		.pm = ADV7482_PM_OPS,
 		.of_match_table = adv7482_of_ids,
 	},
 	.probe		= adv7482_probe,
 	.remove		= adv7482_remove,
-#if 0 /* FIXME */
-#ifdef CONFIG_PM
-	.suspend = adv7482_suspend,
-	.resume = adv7482_resume,
-#endif
-#endif
 	.id_table	= adv7482_id,
 };
 
