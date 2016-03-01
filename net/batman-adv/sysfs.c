@@ -1,4 +1,4 @@
-/* Copyright (C) 2010-2015 B.A.T.M.A.N. contributors:
+/* Copyright (C) 2010-2016  B.A.T.M.A.N. contributors:
  *
  * Marek Lindner
  *
@@ -25,6 +25,7 @@
 #include <linux/fs.h>
 #include <linux/if.h>
 #include <linux/if_vlan.h>
+#include <linux/kref.h>
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
 #include <linux/printk.h>
@@ -64,7 +65,7 @@ static struct batadv_priv *batadv_kobj_to_batpriv(struct kobject *obj)
  * batadv_vlan_kobj_to_batpriv - convert a vlan kobj in the associated batpriv
  * @obj: kobject to covert
  *
- * Returns the associated batadv_priv struct.
+ * Return: the associated batadv_priv struct.
  */
 static struct batadv_priv *batadv_vlan_kobj_to_batpriv(struct kobject *obj)
 {
@@ -82,9 +83,10 @@ static struct batadv_priv *batadv_vlan_kobj_to_batpriv(struct kobject *obj)
 
 /**
  * batadv_kobj_to_vlan - convert a kobj in the associated softif_vlan struct
+ * @bat_priv: the bat priv with all the soft interface information
  * @obj: kobject to covert
  *
- * Returns the associated softif_vlan struct if found, NULL otherwise.
+ * Return: the associated softif_vlan struct if found, NULL otherwise.
  */
 static struct batadv_softif_vlan *
 batadv_kobj_to_vlan(struct batadv_priv *bat_priv, struct kobject *obj)
@@ -96,7 +98,7 @@ batadv_kobj_to_vlan(struct batadv_priv *bat_priv, struct kobject *obj)
 		if (vlan_tmp->kobj != obj)
 			continue;
 
-		if (!atomic_inc_not_zero(&vlan_tmp->refcount))
+		if (!kref_get_unless_zero(&vlan_tmp->refcount))
 			continue;
 
 		vlan = vlan_tmp;
@@ -214,7 +216,7 @@ ssize_t batadv_store_vlan_##_name(struct kobject *kobj,			\
 					      attr, &vlan->_name,	\
 					      bat_priv->soft_iface);	\
 									\
-	batadv_softif_vlan_free_ref(vlan);				\
+	batadv_softif_vlan_put(vlan);					\
 	return res;							\
 }
 
@@ -229,7 +231,7 @@ ssize_t batadv_show_vlan_##_name(struct kobject *kobj,			\
 			     atomic_read(&vlan->_name) == 0 ?		\
 			     "disabled" : "enabled");			\
 									\
-	batadv_softif_vlan_free_ref(vlan);				\
+	batadv_softif_vlan_put(vlan);					\
 	return res;							\
 }
 
@@ -491,7 +493,7 @@ static ssize_t batadv_store_gw_bwidth(struct kobject *kobj,
  * @attr: the batman-adv attribute the user is interacting with
  * @buff: the buffer that will contain the data to send back to the user
  *
- * Returns the number of bytes written into 'buff' on success or a negative
+ * Return: the number of bytes written into 'buff' on success or a negative
  * error code in case of failure
  */
 static ssize_t batadv_show_isolation_mark(struct kobject *kobj,
@@ -511,7 +513,7 @@ static ssize_t batadv_show_isolation_mark(struct kobject *kobj,
  * @buff: the buffer containing the user data
  * @count: number of bytes in the buffer
  *
- * Returns 'count' on success or a negative error code in case of failure
+ * Return: 'count' on success or a negative error code in case of failure
  */
 static ssize_t batadv_store_isolation_mark(struct kobject *kobj,
 					   struct attribute *attr, char *buff,
@@ -620,9 +622,7 @@ static struct batadv_attribute *batadv_mesh_attrs[] = {
 
 BATADV_ATTR_VLAN_BOOL(ap_isolation, S_IRUGO | S_IWUSR, NULL);
 
-/**
- * batadv_vlan_attrs - array of vlan specific sysfs attributes
- */
+/* array of vlan specific sysfs attributes */
 static struct batadv_attribute *batadv_vlan_attrs[] = {
 	&batadv_attr_vlan_ap_isolation,
 	NULL,
@@ -683,7 +683,7 @@ void batadv_sysfs_del_meshif(struct net_device *dev)
  * @dev: netdev of the mesh interface
  * @vlan: private data of the newly added VLAN interface
  *
- * Returns 0 on success and -ENOMEM if any of the structure allocations fails.
+ * Return: 0 on success and -ENOMEM if any of the structure allocations fails.
  */
 int batadv_sysfs_add_vlan(struct net_device *dev,
 			  struct batadv_softif_vlan *vlan)
@@ -771,7 +771,7 @@ static ssize_t batadv_show_mesh_iface(struct kobject *kobj,
 
 	length = sprintf(buff, "%s\n", ifname);
 
-	batadv_hardif_free_ref(hard_iface);
+	batadv_hardif_put(hard_iface);
 
 	return length;
 }
@@ -795,7 +795,7 @@ static ssize_t batadv_store_mesh_iface(struct kobject *kobj,
 	if (strlen(buff) >= IFNAMSIZ) {
 		pr_err("Invalid parameter for 'mesh_iface' setting received: interface name too long '%s'\n",
 		       buff);
-		batadv_hardif_free_ref(hard_iface);
+		batadv_hardif_put(hard_iface);
 		return -EINVAL;
 	}
 
@@ -829,7 +829,7 @@ static ssize_t batadv_store_mesh_iface(struct kobject *kobj,
 unlock:
 	rtnl_unlock();
 out:
-	batadv_hardif_free_ref(hard_iface);
+	batadv_hardif_put(hard_iface);
 	return ret;
 }
 
@@ -863,7 +863,7 @@ static ssize_t batadv_show_iface_status(struct kobject *kobj,
 		break;
 	}
 
-	batadv_hardif_free_ref(hard_iface);
+	batadv_hardif_put(hard_iface);
 
 	return length;
 }
