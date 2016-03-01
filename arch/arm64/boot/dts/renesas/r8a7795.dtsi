@@ -1283,11 +1283,6 @@
 					};
 				};
 
-				pd_a3sh: a3sh@16 {
-					reg = <16 0xc0>;
-					#power-domain-cells = <0>;
-				};
-
 				pd_3dg_a: 3dg@17 {
 					reg = <17 0x100>;
 					#address-cells = <2>;
