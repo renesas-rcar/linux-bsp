@@ -95,10 +95,10 @@ static void cvm_oct_free_tx_skbs(struct net_device *dev)
 	for (qos = 0; qos < queues_per_port; qos++) {
 		if (skb_queue_len(&priv->tx_free_list[qos]) == 0)
 			continue;
-		skb_to_free = cvmx_fau_fetch_and_add32(priv->fau+qos*4,
+		skb_to_free = cvmx_fau_fetch_and_add32(priv->fau + qos * 4,
 						       MAX_SKB_TO_FREE);
 		skb_to_free = cvm_oct_adjust_skb_to_free(skb_to_free,
-							 priv->fau+qos*4);
+							 priv->fau + qos * 4);
 
 
 		total_freed += skb_to_free;
@@ -126,7 +126,7 @@ static void cvm_oct_free_tx_skbs(struct net_device *dev)
 		}
 		total_remaining += skb_queue_len(&priv->tx_free_list[qos]);
 	}
-	if (total_freed >= 0 && netif_queue_stopped(dev))
+	if (total_remaining < MAX_OUT_QUEUE_DEPTH && netif_queue_stopped(dev))
 		netif_wake_queue(dev);
 	if (total_remaining)
 		cvm_oct_kick_tx_poll_watchdog();
@@ -403,7 +403,7 @@ dont_put_skbuff_in_hw:
 	    ((ip_hdr(skb)->protocol == IPPROTO_TCP) ||
 	     (ip_hdr(skb)->protocol == IPPROTO_UDP))) {
 		/* Use hardware checksum calc */
-		pko_command.s.ipoffp1 = sizeof(struct ethhdr) + 1;
+		pko_command.s.ipoffp1 = skb_network_offset(skb) + 1;
 	}
 
 	if (USE_ASYNC_IOBDMA) {
@@ -419,7 +419,8 @@ dont_put_skbuff_in_hw:
 		    cvmx_fau_fetch_and_add32(FAU_NUM_PACKET_BUFFERS_TO_FREE, 0);
 	}
 
-	skb_to_free = cvm_oct_adjust_skb_to_free(skb_to_free, priv->fau+qos*4);
+	skb_to_free = cvm_oct_adjust_skb_to_free(skb_to_free,
+						priv->fau + qos * 4);
 
 	/*
 	 * If we're sending faster than the receive can free them then
@@ -430,7 +431,7 @@ dont_put_skbuff_in_hw:
 
 	if (pko_command.s.dontfree) {
 		queue_type = QUEUE_CORE;
-		pko_command.s.reg0 = priv->fau+qos*4;
+		pko_command.s.reg0 = priv->fau + qos * 4;
 	} else {
 		queue_type = QUEUE_HW;
 	}

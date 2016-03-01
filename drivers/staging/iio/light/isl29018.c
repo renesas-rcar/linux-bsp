@@ -183,7 +183,7 @@ static int isl29018_read_sensor_input(struct isl29018_chip *chip, int mode)
 
 	/* Set mode */
 	status = regmap_write(chip->regmap, ISL29018_REG_ADD_COMMAND1,
-			mode << COMMMAND1_OPMODE_SHIFT);
+			      mode << COMMMAND1_OPMODE_SHIFT);
 	if (status) {
 		dev_err(chip->dev,
 			"Error in setting operating mode err %d\n", status);
@@ -241,7 +241,7 @@ static int isl29018_read_ir(struct isl29018_chip *chip, int *ir)
 }
 
 static int isl29018_read_proximity_ir(struct isl29018_chip *chip, int scheme,
-		int *near_ir)
+				      int *near_ir)
 {
 	int status;
 	int prox_data = -1;
@@ -249,15 +249,15 @@ static int isl29018_read_proximity_ir(struct isl29018_chip *chip, int scheme,
 
 	/* Do proximity sensing with required scheme */
 	status = regmap_update_bits(chip->regmap, ISL29018_REG_ADD_COMMANDII,
-			COMMANDII_SCHEME_MASK,
-			scheme << COMMANDII_SCHEME_SHIFT);
+				    COMMANDII_SCHEME_MASK,
+				    scheme << COMMANDII_SCHEME_SHIFT);
 	if (status) {
 		dev_err(chip->dev, "Error in setting operating mode\n");
 		return status;
 	}
 
 	prox_data = isl29018_read_sensor_input(chip,
-					COMMMAND1_OPMODE_PROX_ONCE);
+					       COMMMAND1_OPMODE_PROX_ONCE);
 	if (prox_data < 0)
 		return prox_data;
 
@@ -280,7 +280,7 @@ static int isl29018_read_proximity_ir(struct isl29018_chip *chip, int scheme,
 }
 
 static ssize_t show_scale_available(struct device *dev,
-			struct device_attribute *attr, char *buf)
+				    struct device_attribute *attr, char *buf)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct isl29018_chip *chip = iio_priv(indio_dev);
@@ -297,7 +297,7 @@ static ssize_t show_scale_available(struct device *dev,
 }
 
 static ssize_t show_int_time_available(struct device *dev,
-			struct device_attribute *attr, char *buf)
+				       struct device_attribute *attr, char *buf)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct isl29018_chip *chip = iio_priv(indio_dev);
@@ -314,18 +314,22 @@ static ssize_t show_int_time_available(struct device *dev,
 
 /* proximity scheme */
 static ssize_t show_prox_infrared_suppression(struct device *dev,
-			struct device_attribute *attr, char *buf)
+					      struct device_attribute *attr,
+					      char *buf)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct isl29018_chip *chip = iio_priv(indio_dev);
 
-	/* return the "proximity scheme" i.e. if the chip does on chip
-	infrared suppression (1 means perform on chip suppression) */
+	/*
+	 * return the "proximity scheme" i.e. if the chip does on chip
+	 * infrared suppression (1 means perform on chip suppression)
+	 */
 	return sprintf(buf, "%d\n", chip->prox_scheme);
 }
 
 static ssize_t store_prox_infrared_suppression(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+					       struct device_attribute *attr,
+					       const char *buf, size_t count)
 {
 	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct isl29018_chip *chip = iio_priv(indio_dev);
@@ -338,8 +342,10 @@ static ssize_t store_prox_infrared_suppression(struct device *dev,
 		return -EINVAL;
 	}
 
-	/* get the  "proximity scheme" i.e. if the chip does on chip
-	infrared suppression (1 means perform on chip suppression) */
+	/*
+	 * get the  "proximity scheme" i.e. if the chip does on chip
+	 * infrared suppression (1 means perform on chip suppression)
+	 */
 	mutex_lock(&chip->lock);
 	chip->prox_scheme = val;
 	mutex_unlock(&chip->lock);
@@ -413,7 +419,8 @@ static int isl29018_read_raw(struct iio_dev *indio_dev,
 			break;
 		case IIO_PROXIMITY:
 			ret = isl29018_read_proximity_ir(chip,
-					chip->prox_scheme, val);
+							 chip->prox_scheme,
+							 val);
 			break;
 		default:
 			break;
@@ -614,15 +621,15 @@ static int isl29018_chip_init(struct isl29018_chip *chip)
 static const struct iio_info isl29018_info = {
 	.attrs = &isl29018_group,
 	.driver_module = THIS_MODULE,
-	.read_raw = &isl29018_read_raw,
-	.write_raw = &isl29018_write_raw,
+	.read_raw = isl29018_read_raw,
+	.write_raw = isl29018_write_raw,
 };
 
 static const struct iio_info isl29023_info = {
 	.attrs = &isl29023_group,
 	.driver_module = THIS_MODULE,
-	.read_raw = &isl29018_read_raw,
-	.write_raw = &isl29018_write_raw,
+	.read_raw = isl29018_read_raw,
+	.write_raw = isl29018_write_raw,
 };
 
 static bool is_volatile_reg(struct device *dev, unsigned int reg)
@@ -699,13 +706,13 @@ static const char *isl29018_match_acpi_device(struct device *dev, int *data)
 	if (!id)
 		return NULL;
 
-	*data = (int) id->driver_data;
+	*data = (int)id->driver_data;
 
 	return dev_name(dev);
 }
 
 static int isl29018_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
+			  const struct i2c_device_id *id)
 {
 	struct isl29018_chip *chip;
 	struct iio_dev *indio_dev;

@@ -80,14 +80,14 @@ void libcfs_run_debug_log_upcall(char *file)
 
 	argv[0] = lnet_debug_log_upcall;
 
-	LASSERTF(file != NULL, "called on a null filename\n");
+	LASSERTF(file, "called on a null filename\n");
 	argv[1] = file; /* only need to pass the path of the file */
 
 	argv[2] = NULL;
 
 	rc = call_usermodehelper(argv[0], argv, envp, 1);
 	if (rc < 0 && rc != -ENOENT) {
-		CERROR("Error %d invoking LNET debug log upcall %s %s; check /proc/sys/lnet/debug_log_upcall\n",
+		CERROR("Error %d invoking LNET debug log upcall %s %s; check /sys/kernel/debug/lnet/debug_log_upcall\n",
 		       rc, argv[0], argv[1]);
 	} else {
 		CDEBUG(D_HA, "Invoked LNET debug log upcall %s %s\n",
@@ -106,14 +106,14 @@ void libcfs_run_upcall(char **argv)
 
 	argv[0] = lnet_upcall;
 	argc = 1;
-	while (argv[argc] != NULL)
+	while (argv[argc])
 		argc++;
 
 	LASSERT(argc >= 2);
 
 	rc = call_usermodehelper(argv[0], argv, envp, 1);
 	if (rc < 0 && rc != -ENOENT) {
-		CERROR("Error %d invoking LNET upcall %s %s%s%s%s%s%s%s%s; check /proc/sys/lnet/upcall\n",
+		CERROR("Error %d invoking LNET upcall %s %s%s%s%s%s%s%s%s; check /sys/kernel/debug/lnet/upcall\n",
 		       rc, argv[0], argv[1],
 		       argc < 3 ? "" : ",", argc < 3 ? "" : argv[2],
 		       argc < 4 ? "" : ",", argc < 4 ? "" : argv[3],
@@ -142,8 +142,9 @@ void libcfs_run_lbug_upcall(struct libcfs_debug_msg_data *msgdata)
 	argv[4] = buf;
 	argv[5] = NULL;
 
-	libcfs_run_upcall (argv);
+	libcfs_run_upcall(argv);
 }
+EXPORT_SYMBOL(libcfs_run_lbug_upcall);
 
 /* coverity[+kill] */
 void __noreturn lbug_with_loc(struct libcfs_debug_msg_data *msgdata)
@@ -166,9 +167,10 @@ void __noreturn lbug_with_loc(struct libcfs_debug_msg_data *msgdata)
 	while (1)
 		schedule();
 }
+EXPORT_SYMBOL(lbug_with_loc);
 
 static int panic_notifier(struct notifier_block *self, unsigned long unused1,
-			 void *unused2)
+			  void *unused2)
 {
 	if (libcfs_panic_in_progress)
 		return 0;
@@ -187,13 +189,12 @@ static struct notifier_block libcfs_panic_notifier = {
 
 void libcfs_register_panic_notifier(void)
 {
-	atomic_notifier_chain_register(&panic_notifier_list, &libcfs_panic_notifier);
+	atomic_notifier_chain_register(&panic_notifier_list,
+				       &libcfs_panic_notifier);
 }
 
 void libcfs_unregister_panic_notifier(void)
 {
-	atomic_notifier_chain_unregister(&panic_notifier_list, &libcfs_panic_notifier);
+	atomic_notifier_chain_unregister(&panic_notifier_list,
+					 &libcfs_panic_notifier);
 }
-
-EXPORT_SYMBOL(libcfs_run_lbug_upcall);
-EXPORT_SYMBOL(lbug_with_loc);

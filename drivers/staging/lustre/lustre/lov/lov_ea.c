@@ -101,7 +101,7 @@ struct lov_stripe_md *lsm_alloc_plain(__u16 stripe_count, int *size)
 
 	for (i = 0; i < stripe_count; i++) {
 		loi = kmem_cache_alloc(lov_oinfo_slab, GFP_NOFS | __GFP_ZERO);
-		if (loi == NULL)
+		if (!loi)
 			goto err;
 		lsm->lsm_oinfo[i] = loi;
 	}
@@ -162,12 +162,13 @@ static int lsm_destroy_plain(struct lov_stripe_md *lsm, struct obdo *oa,
 }
 
 /* Find minimum stripe maxbytes value.  For inactive or
- * reconnecting targets use LUSTRE_STRIPE_MAXBYTES. */
+ * reconnecting targets use LUSTRE_STRIPE_MAXBYTES.
+ */
 static void lov_tgt_maxbytes(struct lov_tgt_desc *tgt, __u64 *stripe_maxbytes)
 {
 	struct obd_import *imp = tgt->ltd_obd->u.cli.cl_import;
 
-	if (imp == NULL || !tgt->ltd_active) {
+	if (!imp || !tgt->ltd_active) {
 		*stripe_maxbytes = LUSTRE_STRIPE_MAXBYTES;
 		return;
 	}

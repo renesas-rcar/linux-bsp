@@ -17,7 +17,7 @@
 #define HCI_HEADER_SIZE		4
 #define HCI_VALUE_OFFS		(HCI_HEADER_SIZE)
 #define HCI_MAX_PACKET		2048
-#define HCI_MAX_PARAM		(HCI_MAX_PACKET-HCI_HEADER_SIZE)
+#define HCI_MAX_PARAM		(HCI_MAX_PACKET - HCI_HEADER_SIZE)
 #define HCI_MAX_TLV		32
 
 /* CMD-EVT */
@@ -159,7 +159,6 @@
 #define T_TX_POWER			(0x6a   | (1 << 16))
 #define T_CUR_FREQ			(0x7f	| (4 << 16))
 
-
 /* WIMAX */
 #define T_MAX_SUBSCRIPTION		(0xa1	| (1 << 16))
 #define T_MAX_SF			(0xa2	| (1 << 16))
@@ -199,10 +198,10 @@
 #define T_DUPLEX_MODE			(0xdb	| (4 << 16))
 
 /* T_CAPABILITY */
-#define T_CAPABILITY_MULTI_CS		(1 << 0)
-#define T_CAPABILITY_WIMAX		(1 << 1)
-#define T_CAPABILITY_QOS		(1 << 2)
-#define T_CAPABILITY_AGGREGATION	(1 << 3)
+#define T_CAPABILITY_MULTI_CS		BIT(0)
+#define T_CAPABILITY_WIMAX		BIT(1)
+#define T_CAPABILITY_QOS		BIT(2)
+#define T_CAPABILITY_AGGREGATION	BIT(3)
 
 struct hci_s {
 	__be16	cmd_evt;

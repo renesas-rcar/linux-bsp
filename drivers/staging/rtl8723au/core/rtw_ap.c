@@ -171,24 +171,20 @@ static u8 chk_sta_is_alive(struct sta_info *psta)
 	return ret;
 }
 
-void	expire_timeout_chk23a(struct rtw_adapter *padapter)
+void expire_timeout_chk23a(struct rtw_adapter *padapter)
 {
-	struct list_head *phead, *plist, *ptmp;
+	struct list_head *phead;
 	u8 updated = 0;
-	struct sta_info *psta;
+	struct sta_info *psta, *ptmp;
 	struct sta_priv *pstapriv = &padapter->stapriv;
 	u8 chk_alive_num = 0;
 	struct sta_info *chk_alive_list[NUM_STA];
 	int i;
 
 	spin_lock_bh(&pstapriv->auth_list_lock);
-
 	phead = &pstapriv->auth_list;
-
 	/* check auth_queue */
-	list_for_each_safe(plist, ptmp, phead) {
-		psta = container_of(plist, struct sta_info, auth_list);
-
+	list_for_each_entry_safe(psta, ptmp, phead, auth_list) {
 		if (psta->expire_to > 0) {
 			psta->expire_to--;
 			if (psta->expire_to == 0) {
@@ -206,19 +202,13 @@ void	expire_timeout_chk23a(struct rtw_adapter *padapter)
 				spin_lock_bh(&pstapriv->auth_list_lock);
 			}
 		}
-
 	}
-
 	spin_unlock_bh(&pstapriv->auth_list_lock);
 
 	spin_lock_bh(&pstapriv->asoc_list_lock);
-
 	phead = &pstapriv->asoc_list;
-
 	/* check asoc_queue */
-	list_for_each_safe(plist, ptmp, phead) {
-		psta = container_of(plist, struct sta_info, asoc_list);
-
+	list_for_each_entry_safe(psta, ptmp, phead, asoc_list) {
 		if (chk_sta_is_alive(psta) || !psta->expire_to) {
 			psta->expire_to = pstapriv->expire_to;
 			psta->keep_alive_trycnt = 0;
@@ -283,7 +273,6 @@ void	expire_timeout_chk23a(struct rtw_adapter *padapter)
 			}
 		}
 	}
-
 	spin_unlock_bh(&pstapriv->asoc_list_lock);
 
 	if (chk_alive_num) {
@@ -1059,7 +1048,7 @@ void rtw_set_macaddr_acl23a(struct rtw_adapter *padapter, int mode)
 
 int rtw_acl_add_sta23a(struct rtw_adapter *padapter, u8 *addr)
 {
-	struct list_head *plist, *phead;
+	struct list_head *phead;
 	u8 added = false;
 	int i, ret = 0;
 	struct rtw_wlan_acl_node *paclnode;
@@ -1073,12 +1062,8 @@ int rtw_acl_add_sta23a(struct rtw_adapter *padapter, u8 *addr)
 		return -1;
 
 	spin_lock_bh(&pacl_node_q->lock);
-
 	phead = get_list_head(pacl_node_q);
-
-	list_for_each(plist, phead) {
-		paclnode = container_of(plist, struct rtw_wlan_acl_node, list);
-
+	list_for_each_entry(paclnode, phead, list) {
 		if (!memcmp(paclnode->addr, addr, ETH_ALEN)) {
 			if (paclnode->valid == true) {
 				added = true;
@@ -1087,7 +1072,6 @@ int rtw_acl_add_sta23a(struct rtw_adapter *padapter, u8 *addr)
 			}
 		}
 	}
-
 	spin_unlock_bh(&pacl_node_q->lock);
 
 	if (added)
@@ -1121,8 +1105,8 @@ int rtw_acl_add_sta23a(struct rtw_adapter *padapter, u8 *addr)
 
 int rtw_acl_remove_sta23a(struct rtw_adapter *padapter, u8 *addr)
 {
-	struct list_head *plist, *phead, *ptmp;
-	struct rtw_wlan_acl_node *paclnode;
+	struct list_head *phead;
+	struct rtw_wlan_acl_node *paclnode, *ptmp;
 	struct sta_priv *pstapriv = &padapter->stapriv;
 	struct wlan_acl_pool *pacl_list = &pstapriv->acl_list;
 	struct rtw_queue *pacl_node_q = &pacl_list->acl_node_q;
@@ -1130,12 +1114,8 @@ int rtw_acl_remove_sta23a(struct rtw_adapter *padapter, u8 *addr)
 	DBG_8723A("%s(acl_num =%d) = %pM\n", __func__, pacl_list->num, addr);
 
 	spin_lock_bh(&pacl_node_q->lock);
-
 	phead = get_list_head(pacl_node_q);
-
-	list_for_each_safe(plist, ptmp, phead) {
-		paclnode = container_of(plist, struct rtw_wlan_acl_node, list);
-
+	list_for_each_entry_safe(paclnode, ptmp, phead, list) {
 		if (!memcmp(paclnode->addr, addr, ETH_ALEN)) {
 			if (paclnode->valid) {
 				paclnode->valid = false;
@@ -1146,7 +1126,6 @@ int rtw_acl_remove_sta23a(struct rtw_adapter *padapter, u8 *addr)
 			}
 		}
 	}
-
 	spin_unlock_bh(&pacl_node_q->lock);
 
 	DBG_8723A("%s, acl_num =%d\n", __func__, pacl_list->num);
@@ -1354,20 +1333,14 @@ void associated_clients_update23a(struct rtw_adapter *padapter, u8 updated)
 {
 	/* update associated stations cap. */
 	if (updated == true) {
-		struct list_head *phead, *plist, *ptmp;
-		struct sta_info *psta;
+		struct list_head *phead;
+		struct sta_info *psta, *ptmp;
 		struct sta_priv *pstapriv = &padapter->stapriv;
 
 		spin_lock_bh(&pstapriv->asoc_list_lock);
-
 		phead = &pstapriv->asoc_list;
-
-		list_for_each_safe(plist, ptmp, phead) {
-			psta = container_of(plist, struct sta_info, asoc_list);
-
+		list_for_each_entry_safe(psta, ptmp, phead, asoc_list)
 			VCS_update23a(padapter, psta);
-		}
-
 		spin_unlock_bh(&pstapriv->asoc_list_lock);
 	}
 }
@@ -1627,7 +1600,7 @@ u8 ap_free_sta23a(struct rtw_adapter *padapter, struct sta_info *psta, bool acti
 
 int rtw_ap_inform_ch_switch23a(struct rtw_adapter *padapter, u8 new_ch, u8 ch_offset)
 {
-	struct list_head *phead, *plist;
+	struct list_head *phead;
 	struct sta_info *psta = NULL;
 	struct sta_priv *pstapriv = &padapter->stapriv;
 	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
@@ -1642,10 +1615,7 @@ int rtw_ap_inform_ch_switch23a(struct rtw_adapter *padapter, u8 new_ch, u8 ch_of
 
 	spin_lock_bh(&pstapriv->asoc_list_lock);
 	phead = &pstapriv->asoc_list;
-
-	list_for_each(plist, phead) {
-		psta = container_of(plist, struct sta_info, asoc_list);
-
+	list_for_each_entry(psta, phead, asoc_list) {
 		issue_action_spct_ch_switch23a(padapter, psta->hwaddr, new_ch, ch_offset);
 		psta->expire_to = ((pstapriv->expire_to * 2) > 5) ? 5 : (pstapriv->expire_to * 2);
 	}
@@ -1658,8 +1628,8 @@ int rtw_ap_inform_ch_switch23a(struct rtw_adapter *padapter, u8 new_ch, u8 ch_of
 
 int rtw_sta_flush23a(struct rtw_adapter *padapter)
 {
-	struct list_head *phead, *plist, *ptmp;
-	struct sta_info *psta;
+	struct list_head *phead;
+	struct sta_info *psta, *ptmp;
 	struct sta_priv *pstapriv = &padapter->stapriv;
 	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
 	struct mlme_ext_info *pmlmeinfo = &pmlmeext->mlmext_info;
@@ -1675,10 +1645,7 @@ int rtw_sta_flush23a(struct rtw_adapter *padapter)
 
 	spin_lock_bh(&pstapriv->asoc_list_lock);
 	phead = &pstapriv->asoc_list;
-
-	list_for_each_safe(plist, ptmp, phead) {
-		psta = container_of(plist, struct sta_info, asoc_list);
-
+	list_for_each_entry_safe(psta, ptmp, phead, asoc_list) {
 		/* Remove sta from asoc_list */
 		list_del_init(&psta->asoc_list);
 		pstapriv->asoc_list_cnt--;
@@ -1744,9 +1711,9 @@ void rtw_ap_restore_network(struct rtw_adapter *padapter)
 	struct mlme_priv *mlmepriv = &padapter->mlmepriv;
 	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
 	struct sta_priv *pstapriv = &padapter->stapriv;
-	struct sta_info *psta;
+	struct sta_info *psta, *ptmp;
 	struct security_priv *psecuritypriv = &padapter->securitypriv;
-	struct list_head *phead, *plist, *ptmp;
+	struct list_head *phead;
 	u8 chk_alive_num = 0;
 	struct sta_info *chk_alive_list[NUM_STA];
 	int i;
@@ -1775,15 +1742,9 @@ void rtw_ap_restore_network(struct rtw_adapter *padapter)
 	}
 
 	spin_lock_bh(&pstapriv->asoc_list_lock);
-
 	phead = &pstapriv->asoc_list;
-
-	list_for_each_safe(plist, ptmp, phead) {
-		psta = container_of(plist, struct sta_info, asoc_list);
-
+	list_for_each_entry_safe(psta, ptmp, phead, asoc_list)
 		chk_alive_list[chk_alive_num++] = psta;
-	}
-
 	spin_unlock_bh(&pstapriv->asoc_list_lock);
 
 	for (i = 0; i < chk_alive_num; i++) {
@@ -1841,8 +1802,8 @@ void start_ap_mode23a(struct rtw_adapter *padapter)
 
 void stop_ap_mode23a(struct rtw_adapter *padapter)
 {
-	struct list_head *phead, *plist, *ptmp;
-	struct rtw_wlan_acl_node *paclnode;
+	struct list_head *phead;
+	struct rtw_wlan_acl_node *paclnode, *ptmp;
 	struct sta_info *psta = NULL;
 	struct sta_priv *pstapriv = &padapter->stapriv;
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
@@ -1864,15 +1825,10 @@ void stop_ap_mode23a(struct rtw_adapter *padapter)
 	/* for ACL */
 	spin_lock_bh(&pacl_node_q->lock);
 	phead = get_list_head(pacl_node_q);
-
-	list_for_each_safe(plist, ptmp, phead) {
-		paclnode = container_of(plist, struct rtw_wlan_acl_node, list);
-
+	list_for_each_entry_safe(paclnode, ptmp, phead, list) {
 		if (paclnode->valid == true) {
 			paclnode->valid = false;
-
 			list_del_init(&paclnode->list);
-
 			pacl_list->num--;
 		}
 	}

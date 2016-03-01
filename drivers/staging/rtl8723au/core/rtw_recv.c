@@ -85,16 +85,15 @@ int _rtw_init_recv_priv23a(struct recv_priv *precvpriv,
 	return res;
 }
 
-void _rtw_free_recv_priv23a (struct recv_priv *precvpriv)
+void _rtw_free_recv_priv23a(struct recv_priv *precvpriv)
 {
 	struct rtw_adapter *padapter = precvpriv->adapter;
-	struct recv_frame *precvframe;
-	struct list_head *plist, *ptmp;
+	struct recv_frame *precvframe, *ptmp;
 
 	rtw_free_uc_swdec_pending_queue23a(padapter);
 
-	list_for_each_safe(plist, ptmp, &precvpriv->free_recv_queue.queue) {
-		precvframe = container_of(plist, struct recv_frame, list);
+	list_for_each_entry_safe(precvframe, ptmp,
+				 &precvpriv->free_recv_queue.queue, list) {
 		list_del_init(&precvframe->list);
 		kfree(precvframe);
 	}
@@ -195,19 +194,13 @@ using spinlock to protect
 
 static void rtw_free_recvframe23a_queue(struct rtw_queue *pframequeue)
 {
-	struct recv_frame *hdr;
-	struct list_head *plist, *phead, *ptmp;
+	struct recv_frame *hdr, *ptmp;
+	struct list_head *phead;
 
 	spin_lock(&pframequeue->lock);
-
 	phead = get_list_head(pframequeue);
-	plist = phead->next;
-
-	list_for_each_safe(plist, ptmp, phead) {
-		hdr = container_of(plist, struct recv_frame, list);
+	list_for_each_entry_safe(hdr, ptmp, phead, list)
 		rtw_free_recvframe23a(hdr);
-	}
-
 	spin_unlock(&pframequeue->lock);
 }
 
@@ -361,33 +354,19 @@ int recvframe_chkmic(struct rtw_adapter *adapter,
 				int i;
 
 				RT_TRACE(_module_rtl871x_recv_c_, _drv_err_,
-					 "*(pframemic-8)-*(pframemic-1) =0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x\n",
-					 *(pframemic - 8), *(pframemic - 7),
-					 *(pframemic - 6), *(pframemic - 5),
-					 *(pframemic - 4), *(pframemic - 3),
-					 *(pframemic - 2), *(pframemic - 1));
+					 "*(pframemic-8)-*(pframemic-1) =%*phC\n",
+					 8, pframemic - 8);
 				RT_TRACE(_module_rtl871x_recv_c_, _drv_err_,
-					 "*(pframemic-16)-*(pframemic-9) =0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x\n",
-					 *(pframemic - 16), *(pframemic - 15),
-					 *(pframemic - 14), *(pframemic - 13),
-					 *(pframemic - 12), *(pframemic - 11),
-					 *(pframemic - 10), *(pframemic - 9));
+					 "*(pframemic-16)-*(pframemic-9) =%*phC\n",
+					 8, pframemic - 16);
 
 				RT_TRACE(_module_rtl871x_recv_c_, _drv_err_,
 					 "====== demp packet (len =%d) ======\n",
 					 precvframe->pkt->len);
 				for (i = 0; i < precvframe->pkt->len; i = i + 8) {
 					RT_TRACE(_module_rtl871x_recv_c_,
-						 _drv_err_,
-						 "0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x:0x%02x\n",
-						 *(precvframe->pkt->data+i),
-						 *(precvframe->pkt->data+i+1),
-						 *(precvframe->pkt->data+i+2),
-						 *(precvframe->pkt->data+i+3),
-						 *(precvframe->pkt->data+i+4),
-						 *(precvframe->pkt->data+i+5),
-						 *(precvframe->pkt->data+i+6),
-						 *(precvframe->pkt->data+i+7));
+						 _drv_err_, "%*phC\n",
+						 8, precvframe->pkt->data + i);
 				}
 				RT_TRACE(_module_rtl871x_recv_c_, _drv_err_,
 					 "====== demp packet end [len =%d]======\n",
@@ -1402,11 +1381,7 @@ static void dump_rx_pkt(struct sk_buff *skb, u16 type, int level)
 		DBG_8723A("#############################\n");
 
 		for (i = 0; i < 64; i = i + 8)
-			DBG_8723A("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X:\n",
-				  *(ptr + i), *(ptr + i + 1), *(ptr + i + 2),
-				  *(ptr + i + 3), *(ptr + i + 4),
-				  *(ptr + i + 5), *(ptr + i + 6),
-				  *(ptr + i + 7));
+			DBG_8723A("%*phC:\n", 8, ptr + i);
 		DBG_8723A("#############################\n");
 	}
 }
@@ -1567,15 +1542,13 @@ struct recv_frame *recvframe_defrag(struct rtw_adapter *adapter,
 struct recv_frame *recvframe_defrag(struct rtw_adapter *adapter,
 				    struct rtw_queue *defrag_q)
 {
-	struct list_head *plist, *phead, *ptmp;
-	u8	*data, wlanhdr_offset;
-	u8	curfragnum;
-	struct recv_frame *pnfhdr;
+	struct list_head *plist, *phead;
+	u8 wlanhdr_offset;
+	u8 curfragnum;
+	struct recv_frame *pnfhdr, *ptmp;
 	struct recv_frame *prframe, *pnextrframe;
-	struct rtw_queue	*pfree_recv_queue;
+	struct rtw_queue *pfree_recv_queue;
 	struct sk_buff *skb;
-
-
 
 	curfragnum = 0;
 	pfree_recv_queue = &adapter->recvpriv.free_recv_queue;
@@ -1597,12 +1570,7 @@ struct recv_frame *recvframe_defrag(struct rtw_adapter *adapter,
 
 	curfragnum++;
 
-	phead = get_list_head(defrag_q);
-
-	data = prframe->pkt->data;
-
-	list_for_each_safe(plist, ptmp, phead) {
-		pnfhdr = container_of(plist, struct recv_frame, list);
+	list_for_each_entry_safe(pnfhdr, ptmp, phead, list) {
 		pnextrframe = (struct recv_frame *)pnfhdr;
 		/* check the fragment sequence  (2nd ~n fragment frame) */
 
@@ -1643,8 +1611,6 @@ struct recv_frame *recvframe_defrag(struct rtw_adapter *adapter,
 
 	RT_TRACE(_module_rtl871x_recv_c_, _drv_info_,
 		 "Performance defrag!!!!!\n");
-
-
 
 	return prframe;
 }

@@ -54,11 +54,15 @@
 
 # define DEBUG_SUBSYSTEM S_LNET
 
+#define LNET_MAX_IOCTL_BUF_LEN (sizeof(struct lnet_ioctl_net_config) + \
+				sizeof(struct lnet_ioctl_config_data))
+
 #include "../../include/linux/libcfs/libcfs.h"
 #include <asm/div64.h>
 
 #include "../../include/linux/libcfs/libcfs_crypto.h"
 #include "../../include/linux/lnet/lib-lnet.h"
+#include "../../include/linux/lnet/lib-dlc.h"
 #include "../../include/linux/lnet/lnet.h"
 #include "tracefile.h"
 
@@ -68,142 +72,16 @@ MODULE_LICENSE("GPL");
 
 static struct dentry *lnet_debugfs_root;
 
-static void kportal_memhog_free(struct libcfs_device_userstate *ldu)
-{
-	struct page **level0p = &ldu->ldu_memhog_root_page;
-	struct page **level1p;
-	struct page **level2p;
-	int	   count1;
-	int	   count2;
-
-	if (*level0p != NULL) {
-
-		level1p = (struct page **)page_address(*level0p);
-		count1 = 0;
-
-		while (count1 < PAGE_CACHE_SIZE/sizeof(struct page *) &&
-		       *level1p != NULL) {
-
-			level2p = (struct page **)page_address(*level1p);
-			count2 = 0;
-
-			while (count2 < PAGE_CACHE_SIZE/sizeof(struct page *) &&
-			       *level2p != NULL) {
-
-				__free_page(*level2p);
-				ldu->ldu_memhog_pages--;
-				level2p++;
-				count2++;
-			}
-
-			__free_page(*level1p);
-			ldu->ldu_memhog_pages--;
-			level1p++;
-			count1++;
-		}
-
-		__free_page(*level0p);
-		ldu->ldu_memhog_pages--;
-
-		*level0p = NULL;
-	}
-
-	LASSERT(ldu->ldu_memhog_pages == 0);
-}
-
-static int kportal_memhog_alloc(struct libcfs_device_userstate *ldu, int npages,
-		     gfp_t flags)
-{
-	struct page **level0p;
-	struct page **level1p;
-	struct page **level2p;
-	int	   count1;
-	int	   count2;
-
-	LASSERT(ldu->ldu_memhog_pages == 0);
-	LASSERT(ldu->ldu_memhog_root_page == NULL);
-
-	if (npages < 0)
-		return -EINVAL;
-
-	if (npages == 0)
-		return 0;
-
-	level0p = &ldu->ldu_memhog_root_page;
-	*level0p = alloc_page(flags);
-	if (*level0p == NULL)
-		return -ENOMEM;
-	ldu->ldu_memhog_pages++;
-
-	level1p = (struct page **)page_address(*level0p);
-	count1 = 0;
-	memset(level1p, 0, PAGE_CACHE_SIZE);
-
-	while (ldu->ldu_memhog_pages < npages &&
-	       count1 < PAGE_CACHE_SIZE/sizeof(struct page *)) {
-
-		if (cfs_signal_pending())
-			return -EINTR;
-
-		*level1p = alloc_page(flags);
-		if (*level1p == NULL)
-			return -ENOMEM;
-		ldu->ldu_memhog_pages++;
-
-		level2p = (struct page **)page_address(*level1p);
-		count2 = 0;
-		memset(level2p, 0, PAGE_CACHE_SIZE);
-
-		while (ldu->ldu_memhog_pages < npages &&
-		       count2 < PAGE_CACHE_SIZE/sizeof(struct page *)) {
-
-			if (cfs_signal_pending())
-				return -EINTR;
-
-			*level2p = alloc_page(flags);
-			if (*level2p == NULL)
-				return -ENOMEM;
-			ldu->ldu_memhog_pages++;
-
-			level2p++;
-			count2++;
-		}
-
-		level1p++;
-		count1++;
-	}
-
-	return 0;
-}
-
 /* called when opening /dev/device */
 static int libcfs_psdev_open(unsigned long flags, void *args)
 {
-	struct libcfs_device_userstate *ldu;
-
 	try_module_get(THIS_MODULE);
-
-	LIBCFS_ALLOC(ldu, sizeof(*ldu));
-	if (ldu != NULL) {
-		ldu->ldu_memhog_pages = 0;
-		ldu->ldu_memhog_root_page = NULL;
-	}
-	*(struct libcfs_device_userstate **)args = ldu;
-
 	return 0;
 }
 
 /* called when closing /dev/device */
 static int libcfs_psdev_release(unsigned long flags, void *args)
 {
-	struct libcfs_device_userstate *ldu;
-
-	ldu = (struct libcfs_device_userstate *)args;
-	if (ldu != NULL) {
-		kportal_memhog_free(ldu);
-		LIBCFS_FREE(ldu, sizeof(*ldu));
-	}
-
 	module_put(THIS_MODULE);
 	return 0;
 }
@@ -241,10 +119,24 @@ int libcfs_deregister_ioctl(struct libcfs_ioctl_handler *hand)
 }
 EXPORT_SYMBOL(libcfs_deregister_ioctl);
 
-static int libcfs_ioctl_int(struct cfs_psdev_file *pfile, unsigned long cmd,
-			    void *arg, struct libcfs_ioctl_data *data)
+static int libcfs_ioctl_handle(struct cfs_psdev_file *pfile, unsigned long cmd,
+			       void *arg, struct libcfs_ioctl_hdr *hdr)
 {
+	struct libcfs_ioctl_data *data = NULL;
 	int err = -EINVAL;
+
+	/*
+	 * The libcfs_ioctl_data_adjust() function performs adjustment
+	 * operations on the libcfs_ioctl_data structure to make
+	 * it usable by the code.  This doesn't need to be called
+	 * for new data structures added.
+	 */
+	if (hdr->ioc_version == LIBCFS_IOCTL_VERSION) {
+		data = container_of(hdr, struct libcfs_ioctl_data, ioc_hdr);
+		err = libcfs_ioctl_data_adjust(data);
+		if (err)
+			return err;
+	}
 
 	switch (cmd) {
 	case IOC_LIBCFS_CLEAR_DEBUG:
@@ -255,24 +147,11 @@ static int libcfs_ioctl_int(struct cfs_psdev_file *pfile, unsigned long cmd,
 	 * Handled in arch/cfs_module.c
 	 */
 	case IOC_LIBCFS_MARK_DEBUG:
-		if (data->ioc_inlbuf1 == NULL ||
+		if (!data->ioc_inlbuf1 ||
 		    data->ioc_inlbuf1[data->ioc_inllen1 - 1] != '\0')
 			return -EINVAL;
 		libcfs_debug_mark_buffer(data->ioc_inlbuf1);
 		return 0;
-	case IOC_LIBCFS_MEMHOG:
-		if (pfile->private_data == NULL) {
-			err = -EINVAL;
-		} else {
-			kportal_memhog_free(pfile->private_data);
-			/* XXX The ioc_flags is not GFP flags now, need to be fixed */
-			err = kportal_memhog_alloc(pfile->private_data,
-						   data->ioc_count,
-						   data->ioc_flags);
-			if (err != 0)
-				kportal_memhog_free(pfile->private_data);
-		}
-		break;
 
 	default: {
 		struct libcfs_ioctl_handler *hand;
@@ -280,11 +159,11 @@ static int libcfs_ioctl_int(struct cfs_psdev_file *pfile, unsigned long cmd,
 		err = -EINVAL;
 		down_read(&ioctl_list_sem);
 		list_for_each_entry(hand, &ioctl_list, item) {
-			err = hand->handle_ioctl(cmd, data);
+			err = hand->handle_ioctl(cmd, hdr);
 			if (err != -EINVAL) {
 				if (err == 0)
 					err = libcfs_ioctl_popdata(arg,
-							data, sizeof(*data));
+							hdr, hdr->ioc_len);
 				break;
 			}
 		}
@@ -296,28 +175,41 @@ static int libcfs_ioctl_int(struct cfs_psdev_file *pfile, unsigned long cmd,
 	return err;
 }
 
-static int libcfs_ioctl(struct cfs_psdev_file *pfile, unsigned long cmd, void *arg)
+static int libcfs_ioctl(struct cfs_psdev_file *pfile, unsigned long cmd,
+			void __user *arg)
 {
-	char    *buf;
-	struct libcfs_ioctl_data *data;
+	struct libcfs_ioctl_hdr *hdr;
 	int err = 0;
+	__u32 buf_len;
 
-	LIBCFS_ALLOC_GFP(buf, 1024, GFP_KERNEL);
-	if (buf == NULL)
+	err = libcfs_ioctl_getdata_len(arg, &buf_len);
+	if (err)
+		return err;
+
+	/*
+	 * do a check here to restrict the size of the memory
+	 * to allocate to guard against DoS attacks.
+	 */
+	if (buf_len > LNET_MAX_IOCTL_BUF_LEN) {
+		CERROR("LNET: user buffer exceeds kernel buffer\n");
+		return -EINVAL;
+	}
+
+	LIBCFS_ALLOC_GFP(hdr, buf_len, GFP_KERNEL);
+	if (!hdr)
 		return -ENOMEM;
 
 	/* 'cmd' and permissions get checked in our arch-specific caller */
-	if (libcfs_ioctl_getdata(buf, buf + 800, arg)) {
-		CERROR("PORTALS ioctl: data error\n");
-		err = -EINVAL;
+	if (copy_from_user(hdr, arg, buf_len)) {
+		CERROR("LNET ioctl: data error\n");
+		err = -EFAULT;
 		goto out;
 	}
-	data = (struct libcfs_ioctl_data *)buf;
 
-	err = libcfs_ioctl_int(pfile, cmd, arg, data);
+	err = libcfs_ioctl_handle(pfile, cmd, arg, hdr);
 
 out:
-	LIBCFS_FREE(buf, 1024);
+	LIBCFS_FREE(hdr, buf_len);
 	return err;
 }
 
@@ -330,9 +222,9 @@ struct cfs_psdev_ops libcfs_psdev_ops = {
 };
 
 static int proc_call_handler(void *data, int write, loff_t *ppos,
-		void __user *buffer, size_t *lenp,
-		int (*handler)(void *data, int write,
-		loff_t pos, void __user *buffer, int len))
+			     void __user *buffer, size_t *lenp,
+			     int (*handler)(void *data, int write, loff_t pos,
+					    void __user *buffer, int len))
 {
 	int rc = handler(data, write, *ppos, buffer, *lenp);
 
@@ -467,11 +359,11 @@ static int __proc_cpt_table(void *data, int write,
 	if (write)
 		return -EPERM;
 
-	LASSERT(cfs_cpt_table != NULL);
+	LASSERT(cfs_cpt_table);
 
 	while (1) {
 		LIBCFS_ALLOC(buf, len);
-		if (buf == NULL)
+		if (!buf)
 			return -ENOMEM;
 
 		rc = cfs_cpt_table_print(cfs_cpt_table, buf, len);
@@ -493,23 +385,19 @@ static int __proc_cpt_table(void *data, int write,
 
 	rc = cfs_trace_copyout_string(buffer, nob, buf + pos, NULL);
  out:
-	if (buf != NULL)
+	if (buf)
 		LIBCFS_FREE(buf, len);
 	return rc;
 }
 
 static int proc_cpt_table(struct ctl_table *table, int write,
-			   void __user *buffer, size_t *lenp, loff_t *ppos)
+			  void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	return proc_call_handler(table->data, write, ppos, buffer, lenp,
 				 __proc_cpt_table);
 }
 
 static struct ctl_table lnet_table[] = {
-	/*
-	 * NB No .strategy entries have been provided since sysctl(8) prefers
-	 * to go via /proc for portability.
-	 */
 	{
 		.procname = "debug",
 		.data     = &libcfs_debug,
@@ -640,42 +528,63 @@ static ssize_t lnet_debugfs_write(struct file *filp, const char __user *buf,
 	return error;
 }
 
-static const struct file_operations lnet_debugfs_file_operations = {
+static const struct file_operations lnet_debugfs_file_operations_rw = {
 	.open		= simple_open,
 	.read		= lnet_debugfs_read,
 	.write		= lnet_debugfs_write,
 	.llseek		= default_llseek,
 };
 
+static const struct file_operations lnet_debugfs_file_operations_ro = {
+	.open		= simple_open,
+	.read		= lnet_debugfs_read,
+	.llseek		= default_llseek,
+};
+
+static const struct file_operations lnet_debugfs_file_operations_wo = {
+	.open		= simple_open,
+	.write		= lnet_debugfs_write,
+	.llseek		= default_llseek,
+};
+
+static const struct file_operations *lnet_debugfs_fops_select(umode_t mode)
+{
+	if (!(mode & S_IWUGO))
+		return &lnet_debugfs_file_operations_ro;
+
+	if (!(mode & S_IRUGO))
+		return &lnet_debugfs_file_operations_wo;
+
+	return &lnet_debugfs_file_operations_rw;
+}
+
 void lustre_insert_debugfs(struct ctl_table *table,
 			   const struct lnet_debugfs_symlink_def *symlinks)
 {
-	struct dentry *entry;
-
-	if (lnet_debugfs_root == NULL)
+	if (!lnet_debugfs_root)
 		lnet_debugfs_root = debugfs_create_dir("lnet", NULL);
 
 	/* Even if we cannot create, just ignore it altogether) */
 	if (IS_ERR_OR_NULL(lnet_debugfs_root))
 		return;
 
+	/* We don't save the dentry returned in next two calls, because
+	 * we don't call debugfs_remove() but rather remove_recursive()
+	 */
 	for (; table->procname; table++)
-		entry = debugfs_create_file(table->procname, table->mode,
-					    lnet_debugfs_root, table,
-					    &lnet_debugfs_file_operations);
+		debugfs_create_file(table->procname, table->mode,
+				    lnet_debugfs_root, table,
+				    lnet_debugfs_fops_select(table->mode));
 
 	for (; symlinks && symlinks->name; symlinks++)
-		entry = debugfs_create_symlink(symlinks->name,
-					       lnet_debugfs_root,
-					       symlinks->target);
-
+		debugfs_create_symlink(symlinks->name, lnet_debugfs_root,
+				       symlinks->target);
 }
 EXPORT_SYMBOL_GPL(lustre_insert_debugfs);
 
 static void lustre_remove_debugfs(void)
 {
-	if (lnet_debugfs_root != NULL)
-		debugfs_remove_recursive(lnet_debugfs_root);
+	debugfs_remove_recursive(lnet_debugfs_root);
 
 	lnet_debugfs_root = NULL;
 }

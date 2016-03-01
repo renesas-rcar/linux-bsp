@@ -46,18 +46,21 @@
 #define CFS_WS_NAME_LEN	 16
 
 struct cfs_wi_sched {
-	struct list_head		ws_list;	/* chain on global list */
+	/* chain on global list */
+	struct list_head		ws_list;
 	/** serialised workitems */
 	spinlock_t		ws_lock;
 	/** where schedulers sleep */
 	wait_queue_head_t		ws_waitq;
 	/** concurrent workitems */
 	struct list_head		ws_runq;
-	/** rescheduled running-workitems, a workitem can be rescheduled
+	/**
+	 * rescheduled running-workitems, a workitem can be rescheduled
 	 * while running in wi_action(), but we don't to execute it again
 	 * unless it returns from wi_action(), so we put it on ws_rerunq
 	 * while rescheduling, and move it to runq after it returns
-	 * from wi_action() */
+	 * from wi_action()
+	 */
 	struct list_head		ws_rerunq;
 	/** CPT-table for this scheduler */
 	struct cfs_cpt_table	*ws_cptab;
@@ -128,8 +131,6 @@ cfs_wi_exit(struct cfs_wi_sched *sched, cfs_workitem_t *wi)
 
 	wi->wi_scheduled = 1; /* LBUG future schedule attempts */
 	spin_unlock(&sched->ws_lock);
-
-	return;
 }
 EXPORT_SYMBOL(cfs_wi_exit);
 
@@ -163,7 +164,7 @@ cfs_wi_deschedule(struct cfs_wi_sched *sched, cfs_workitem_t *wi)
 		wi->wi_scheduled = 0;
 	}
 
-	LASSERT (list_empty(&wi->wi_list));
+	LASSERT(list_empty(&wi->wi_list));
 
 	spin_unlock(&sched->ws_lock);
 	return rc;
@@ -186,7 +187,7 @@ cfs_wi_schedule(struct cfs_wi_sched *sched, cfs_workitem_t *wi)
 	spin_lock(&sched->ws_lock);
 
 	if (!wi->wi_scheduled) {
-		LASSERT (list_empty(&wi->wi_list));
+		LASSERT(list_empty(&wi->wi_list));
 
 		wi->wi_scheduled = 1;
 		sched->ws_nscheduled++;
@@ -198,21 +199,19 @@ cfs_wi_schedule(struct cfs_wi_sched *sched, cfs_workitem_t *wi)
 		}
 	}
 
-	LASSERT (!list_empty(&wi->wi_list));
+	LASSERT(!list_empty(&wi->wi_list));
 	spin_unlock(&sched->ws_lock);
-	return;
 }
 EXPORT_SYMBOL(cfs_wi_schedule);
 
-static int
-cfs_wi_scheduler (void *arg)
+static int cfs_wi_scheduler(void *arg)
 {
 	struct cfs_wi_sched	*sched = (struct cfs_wi_sched *)arg;
 
 	cfs_block_allsigs();
 
 	/* CPT affinity scheduler? */
-	if (sched->ws_cptab != NULL)
+	if (sched->ws_cptab)
 		if (cfs_cpt_bind(sched->ws_cptab, sched->ws_cpt) != 0)
 			CWARN("Failed to bind %s on CPT %d\n",
 			      sched->ws_name, sched->ws_cpt);
@@ -234,8 +233,8 @@ cfs_wi_scheduler (void *arg)
 
 		while (!list_empty(&sched->ws_runq) &&
 		       nloops < CFS_WI_RESCHED) {
-			wi = list_entry(sched->ws_runq.next,
-					    cfs_workitem_t, wi_list);
+			wi = list_entry(sched->ws_runq.next, cfs_workitem_t,
+					wi_list);
 			LASSERT(wi->wi_scheduled && !wi->wi_running);
 
 			list_del_init(&wi->wi_list);
@@ -261,14 +260,16 @@ cfs_wi_scheduler (void *arg)
 
 			LASSERT(wi->wi_scheduled);
 			/* wi is rescheduled, should be on rerunq now, we
-			 * move it to runq so it can run action now */
+			 * move it to runq so it can run action now
+			 */
 			list_move_tail(&wi->wi_list, &sched->ws_runq);
 		}
 
 		if (!list_empty(&sched->ws_runq)) {
 			spin_unlock(&sched->ws_lock);
 			/* don't sleep because some workitems still
-			 * expect me to come back soon */
+			 * expect me to come back soon
+			 */
 			cond_resched();
 			spin_lock(&sched->ws_lock);
 			continue;
@@ -343,11 +344,11 @@ cfs_wi_sched_create(char *name, struct cfs_cpt_table *cptab,
 
 	LASSERT(cfs_wi_data.wi_init);
 	LASSERT(!cfs_wi_data.wi_stopping);
-	LASSERT(cptab == NULL || cpt == CFS_CPT_ANY ||
+	LASSERT(!cptab || cpt == CFS_CPT_ANY ||
 		(cpt >= 0 && cpt < cfs_cpt_number(cptab)));
 
 	LIBCFS_ALLOC(sched, sizeof(*sched));
-	if (sched == NULL)
+	if (!sched)
 		return -ENOMEM;
 
 	strlcpy(sched->ws_name, name, CFS_WS_NAME_LEN);
@@ -376,7 +377,7 @@ cfs_wi_sched_create(char *name, struct cfs_cpt_table *cptab,
 		sched->ws_starting++;
 		spin_unlock(&cfs_wi_data.wi_glock);
 
-		if (sched->ws_cptab != NULL && sched->ws_cpt >= 0) {
+		if (sched->ws_cptab && sched->ws_cpt >= 0) {
 			snprintf(name, sizeof(name), "%s_%02d_%02u",
 				 sched->ws_name, sched->ws_cpt,
 				 sched->ws_nthreads);
@@ -455,7 +456,7 @@ cfs_wi_shutdown(void)
 	}
 	while (!list_empty(&cfs_wi_data.wi_scheds)) {
 		sched = list_entry(cfs_wi_data.wi_scheds.next,
-				       struct cfs_wi_sched, ws_list);
+				   struct cfs_wi_sched, ws_list);
 		list_del(&sched->ws_list);
 		LIBCFS_FREE(sched, sizeof(*sched));
 	}

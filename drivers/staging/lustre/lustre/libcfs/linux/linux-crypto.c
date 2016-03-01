@@ -45,14 +45,14 @@ static int cfs_crypto_hash_alloc(unsigned char alg_id,
 
 	*type = cfs_crypto_hash_type(alg_id);
 
-	if (*type == NULL) {
+	if (!*type) {
 		CWARN("Unsupported hash algorithm id = %d, max id is %d\n",
 		      alg_id, CFS_HASH_ALG_MAX);
 		return -EINVAL;
 	}
 	desc->tfm = crypto_alloc_hash((*type)->cht_name, 0, 0);
 
-	if (desc->tfm == NULL)
+	if (!desc->tfm)
 		return -EINVAL;
 
 	if (IS_ERR(desc->tfm)) {
@@ -69,7 +69,7 @@ static int cfs_crypto_hash_alloc(unsigned char alg_id,
 	 * Skip this function for digest, because we use shash logic at
 	 * cfs_crypto_hash_alloc.
 	 */
-	if (key != NULL)
+	if (key)
 		err = crypto_hash_setkey(desc->tfm, key, key_len);
 	else if ((*type)->cht_key != 0)
 		err = crypto_hash_setkey(desc->tfm,
@@ -99,14 +99,14 @@ int cfs_crypto_hash_digest(unsigned char alg_id,
 	int			err;
 	const struct cfs_crypto_hash_type	*type;
 
-	if (buf == NULL || buf_len == 0 || hash_len == NULL)
+	if (!buf || buf_len == 0 || !hash_len)
 		return -EINVAL;
 
 	err = cfs_crypto_hash_alloc(alg_id, &type, &hdesc, key, key_len);
 	if (err != 0)
 		return err;
 
-	if (hash == NULL || *hash_len < type->cht_size) {
+	if (!hash || *hash_len < type->cht_size) {
 		*hash_len = type->cht_size;
 		crypto_free_hash(hdesc.tfm);
 		return -ENOSPC;
@@ -125,13 +125,12 @@ struct cfs_crypto_hash_desc *
 	cfs_crypto_hash_init(unsigned char alg_id,
 			     unsigned char *key, unsigned int key_len)
 {
-
 	struct  hash_desc       *hdesc;
 	int		     err;
 	const struct cfs_crypto_hash_type       *type;
 
 	hdesc = kmalloc(sizeof(*hdesc), 0);
-	if (hdesc == NULL)
+	if (!hdesc)
 		return ERR_PTR(-ENOMEM);
 
 	err = cfs_crypto_hash_alloc(alg_id, &type, hdesc, key, key_len);
@@ -175,16 +174,16 @@ int cfs_crypto_hash_final(struct cfs_crypto_hash_desc *hdesc,
 	int     err;
 	int     size = crypto_hash_digestsize(((struct hash_desc *)hdesc)->tfm);
 
-	if (hash_len == NULL) {
+	if (!hash_len) {
 		crypto_free_hash(((struct hash_desc *)hdesc)->tfm);
 		kfree(hdesc);
 		return 0;
 	}
-	if (hash == NULL || *hash_len < size) {
+	if (!hash || *hash_len < size) {
 		*hash_len = size;
 		return -ENOSPC;
 	}
-	err = crypto_hash_final((struct hash_desc *) hdesc, hash);
+	err = crypto_hash_final((struct hash_desc *)hdesc, hash);
 
 	if (err < 0) {
 		/* May be caller can fix error */
@@ -212,7 +211,6 @@ static void cfs_crypto_performance_test(unsigned char alg_id,
 					     hash, &hash_len);
 		if (err)
 			break;
-
 	}
 	end = jiffies;
 
@@ -235,8 +233,7 @@ int cfs_crypto_hash_speed(unsigned char hash_alg)
 {
 	if (hash_alg < CFS_HASH_ALG_MAX)
 		return cfs_crypto_hash_speeds[hash_alg];
-	else
-		return -1;
+	return -1;
 }
 EXPORT_SYMBOL(cfs_crypto_hash_speed);
 
@@ -249,11 +246,12 @@ static int cfs_crypto_test_hashes(void)
 	unsigned char	   *data;
 	unsigned int	    j;
 	/* Data block size for testing hash. Maximum
-	 * kmalloc size for 2.6.18 kernel is 128K */
+	 * kmalloc size for 2.6.18 kernel is 128K
+	 */
 	unsigned int	    data_len = 1 * 128 * 1024;
 
 	data = kmalloc(data_len, 0);
-	if (data == NULL) {
+	if (!data) {
 		CERROR("Failed to allocate mem\n");
 		return -ENOMEM;
 	}
@@ -285,6 +283,4 @@ void cfs_crypto_unregister(void)
 {
 	if (adler32 == 0)
 		cfs_crypto_adler32_unregister();
-
-	return;
 }

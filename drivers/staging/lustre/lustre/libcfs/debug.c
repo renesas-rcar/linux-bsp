@@ -47,15 +47,15 @@
 static char debug_file_name[1024];
 
 unsigned int libcfs_subsystem_debug = ~0;
+EXPORT_SYMBOL(libcfs_subsystem_debug);
 module_param(libcfs_subsystem_debug, int, 0644);
 MODULE_PARM_DESC(libcfs_subsystem_debug, "Lustre kernel debug subsystem mask");
-EXPORT_SYMBOL(libcfs_subsystem_debug);
 
 unsigned int libcfs_debug = (D_CANTMASK |
 			     D_NETERROR | D_HA | D_CONFIG | D_IOCTL);
+EXPORT_SYMBOL(libcfs_debug);
 module_param(libcfs_debug, int, 0644);
 MODULE_PARM_DESC(libcfs_debug, "Lustre kernel debug mask");
-EXPORT_SYMBOL(libcfs_debug);
 
 static int libcfs_param_debug_mb_set(const char *val,
 				     const struct kernel_param *kp)
@@ -82,7 +82,8 @@ static int libcfs_param_debug_mb_set(const char *val,
 
 /* While debug_mb setting look like unsigned int, in fact
  * it needs quite a bunch of extra processing, so we define special
- * debugmb parameter type with corresponding methods to handle this case */
+ * debugmb parameter type with corresponding methods to handle this case
+ */
 static struct kernel_param_ops param_ops_debugmb = {
 	.set = libcfs_param_debug_mb_set,
 	.get = param_get_uint,
@@ -227,8 +228,7 @@ MODULE_PARM_DESC(libcfs_debug_file_path,
 
 int libcfs_panic_in_progress;
 
-/* libcfs_debug_token2mask() expects the returned
- * string in lower-case */
+/* libcfs_debug_token2mask() expects the returned string in lower-case */
 static const char *
 libcfs_debug_subsys2str(int subsys)
 {
@@ -271,6 +271,8 @@ libcfs_debug_subsys2str(int subsys)
 		return "lquota";
 	case S_OSD:
 		return "osd";
+	case S_LFSCK:
+		return "lfsck";
 	case S_LMV:
 		return "lmv";
 	case S_SEC:
@@ -288,8 +290,7 @@ libcfs_debug_subsys2str(int subsys)
 	}
 }
 
-/* libcfs_debug_token2mask() expects the returned
- * string in lower-case */
+/* libcfs_debug_token2mask() expects the returned string in lower-case */
 static const char *
 libcfs_debug_dbg2str(int debug)
 {
@@ -376,7 +377,7 @@ libcfs_debug_mask2str(char *str, int size, int mask, int is_subsys)
 				continue;
 
 			token = fn(i);
-			if (token == NULL)	      /* unused bit */
+			if (!token)	      /* unused bit */
 				continue;
 
 			if (len > 0) {		  /* separator? */
@@ -416,7 +417,7 @@ libcfs_debug_str2mask(int *mask, const char *str, int is_subsys)
 	/* Allow a number for backwards compatibility */
 
 	for (n = strlen(str); n > 0; n--)
-		if (!isspace(str[n-1]))
+		if (!isspace(str[n - 1]))
 			break;
 	matched = n;
 	t = sscanf(str, "%i%n", &m, &matched);
@@ -446,8 +447,7 @@ void libcfs_debug_dumplog_internal(void *arg)
 		snprintf(debug_file_name, sizeof(debug_file_name) - 1,
 			 "%s.%lld.%ld", libcfs_debug_file_path_arr,
 			 (s64)ktime_get_real_seconds(), (long_ptr_t)arg);
-		pr_alert("LustreError: dumping log to %s\n",
-		       debug_file_name);
+		pr_alert("LustreError: dumping log to %s\n", debug_file_name);
 		cfs_tracefile_dump_all_pages(debug_file_name);
 		libcfs_run_debug_log_upcall(debug_file_name);
 	}
@@ -469,7 +469,8 @@ void libcfs_debug_dumplog(void)
 
 	/* we're being careful to ensure that the kernel thread is
 	 * able to set our state to running as it exits before we
-	 * get to schedule() */
+	 * get to schedule()
+	 */
 	init_waitqueue_entry(&wait, current);
 	set_current_state(TASK_INTERRUPTIBLE);
 	add_wait_queue(&debug_ctlwq, &wait);
@@ -503,14 +504,15 @@ int libcfs_debug_init(unsigned long bufsize)
 		libcfs_console_min_delay = CDEBUG_DEFAULT_MIN_DELAY;
 	}
 
-	if (libcfs_debug_file_path != NULL) {
+	if (libcfs_debug_file_path) {
 		strlcpy(libcfs_debug_file_path_arr,
 			libcfs_debug_file_path,
 			sizeof(libcfs_debug_file_path_arr));
 	}
 
 	/* If libcfs_debug_mb is set to an invalid value or uninitialized
-	 * then just make the total buffers smp_num_cpus * TCD_MAX_PAGES */
+	 * then just make the total buffers smp_num_cpus * TCD_MAX_PAGES
+	 */
 	if (max > cfs_trace_max_debug_mb() || max < num_possible_cpus()) {
 		max = TCD_MAX_PAGES;
 	} else {
@@ -540,8 +542,7 @@ int libcfs_debug_clear_buffer(void)
 	return 0;
 }
 
-/* Debug markers, although printed by S_LNET
- * should not be be marked as such. */
+/* Debug markers, although printed by S_LNET should not be be marked as such. */
 #undef DEBUG_SUBSYSTEM
 #define DEBUG_SUBSYSTEM S_UNDEFINED
 int libcfs_debug_mark_buffer(const char *text)

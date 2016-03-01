@@ -29,7 +29,7 @@ MODULE_DEVICE_TABLE(usb, id_table);
 #define TX_BUF_SIZE		2048
 
 #if defined(CONFIG_WIMAX_GDM72XX_WIMAX2)
-#define RX_BUF_SIZE		(128*1024)	/* For packet aggregation */
+#define RX_BUF_SIZE		(128 * 1024)	/* For packet aggregation */
 #else
 #define RX_BUF_SIZE		2048
 #endif
@@ -543,7 +543,6 @@ static int gdm_usb_probe(struct usb_interface *intf,
 	dev_info(&intf->dev, "Found GDM USB VID = 0x%04x PID = 0x%04x...\n",
 		 idVendor, idProduct);
 	dev_info(&intf->dev, "GCT WiMax driver version %s\n", DRIVER_VERSION);
-
 
 	if (idProduct == EMERGENCY_PID) {
 		ret = usb_emergency(usbdev);

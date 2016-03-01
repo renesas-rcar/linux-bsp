@@ -40,41 +40,10 @@
 
 #define LNET_MINOR 240
 
-int libcfs_ioctl_getdata(char *buf, char *end, void *arg)
+int libcfs_ioctl_data_adjust(struct libcfs_ioctl_data *data)
 {
-	struct libcfs_ioctl_hdr   *hdr;
-	struct libcfs_ioctl_data  *data;
-	int orig_len;
-
-	hdr = (struct libcfs_ioctl_hdr *)buf;
-	data = (struct libcfs_ioctl_data *)buf;
-
-	if (copy_from_user(buf, arg, sizeof(*hdr)))
-		return -EFAULT;
-
-	if (hdr->ioc_version != LIBCFS_IOCTL_VERSION) {
-		CERROR("PORTALS: version mismatch kernel vs application\n");
-		return -EINVAL;
-	}
-
-	if (hdr->ioc_len >= end - buf) {
-		CERROR("PORTALS: user buffer exceeds kernel buffer\n");
-		return -EINVAL;
-	}
-
-	if (hdr->ioc_len < sizeof(struct libcfs_ioctl_data)) {
-		CERROR("PORTALS: user buffer too small for ioctl\n");
-		return -EINVAL;
-	}
-
-	orig_len = hdr->ioc_len;
-	if (copy_from_user(buf, arg, hdr->ioc_len))
-		return -EFAULT;
-	if (orig_len != data->ioc_len)
-		return -EINVAL;
-
 	if (libcfs_ioctl_is_invalid(data)) {
-		CERROR("PORTALS: ioctl not correctly formatted\n");
+		CERROR("LNET: ioctl not correctly formatted\n");
 		return -EINVAL;
 	}
 
@@ -88,9 +57,29 @@ int libcfs_ioctl_getdata(char *buf, char *end, void *arg)
 	return 0;
 }
 
-int libcfs_ioctl_popdata(void *arg, void *data, int size)
+int libcfs_ioctl_getdata_len(const struct libcfs_ioctl_hdr __user *arg,
+			     __u32 *len)
 {
-	if (copy_to_user((char *)arg, data, size))
+	struct libcfs_ioctl_hdr hdr;
+
+	if (copy_from_user(&hdr, arg, sizeof(hdr)))
+		return -EFAULT;
+
+	if (hdr.ioc_version != LIBCFS_IOCTL_VERSION &&
+	    hdr.ioc_version != LIBCFS_IOCTL_VERSION2) {
+		CERROR("LNET: version mismatch expected %#x, got %#x\n",
+		       LIBCFS_IOCTL_VERSION, hdr.ioc_version);
+		return -EINVAL;
+	}
+
+	*len = hdr.ioc_len;
+
+	return 0;
+}
+
+int libcfs_ioctl_popdata(void __user *arg, void *data, int size)
+{
+	if (copy_to_user(arg, data, size))
 		return -EFAULT;
 	return 0;
 }
@@ -98,14 +87,12 @@ int libcfs_ioctl_popdata(void *arg, void *data, int size)
 static int
 libcfs_psdev_open(struct inode *inode, struct file *file)
 {
-	struct libcfs_device_userstate **pdu = NULL;
 	int    rc = 0;
 
 	if (!inode)
 		return -EINVAL;
-	pdu = (struct libcfs_device_userstate **)&file->private_data;
-	if (libcfs_psdev_ops.p_open != NULL)
-		rc = libcfs_psdev_ops.p_open(0, (void *)pdu);
+	if (libcfs_psdev_ops.p_open)
+		rc = libcfs_psdev_ops.p_open(0, NULL);
 	else
 		return -EPERM;
 	return rc;
@@ -115,14 +102,12 @@ libcfs_psdev_open(struct inode *inode, struct file *file)
 static int
 libcfs_psdev_release(struct inode *inode, struct file *file)
 {
-	struct libcfs_device_userstate *pdu;
 	int    rc = 0;
 
 	if (!inode)
 		return -EINVAL;
-	pdu = file->private_data;
-	if (libcfs_psdev_ops.p_close != NULL)
-		rc = libcfs_psdev_ops.p_close(0, (void *)pdu);
+	if (libcfs_psdev_ops.p_close)
+		rc = libcfs_psdev_ops.p_close(0, NULL);
 	else
 		rc = -EPERM;
 	return rc;
@@ -138,8 +123,8 @@ static long libcfs_ioctl(struct file *file,
 		return -EACCES;
 
 	if (_IOC_TYPE(cmd) != IOC_LIBCFS_TYPE ||
-	     _IOC_NR(cmd) < IOC_LIBCFS_MIN_NR  ||
-	     _IOC_NR(cmd) > IOC_LIBCFS_MAX_NR) {
+	    _IOC_NR(cmd) < IOC_LIBCFS_MIN_NR  ||
+	    _IOC_NR(cmd) > IOC_LIBCFS_MAX_NR) {
 		CDEBUG(D_IOCTL, "invalid ioctl ( type %d, nr %d, size %d )\n",
 		       _IOC_TYPE(cmd), _IOC_NR(cmd), _IOC_SIZE(cmd));
 		return -EINVAL;
@@ -152,16 +137,10 @@ static long libcfs_ioctl(struct file *file,
 			return -EPERM;
 		panic("debugctl-invoked panic");
 		return 0;
-	case IOC_LIBCFS_MEMHOG:
-		if (!capable(CFS_CAP_SYS_ADMIN))
-			return -EPERM;
-		/* go thought */
 	}
 
-	pfile.off = 0;
-	pfile.private_data = file->private_data;
-	if (libcfs_psdev_ops.p_ioctl != NULL)
-		rc = libcfs_psdev_ops.p_ioctl(&pfile, cmd, (void *)arg);
+	if (libcfs_psdev_ops.p_ioctl)
+		rc = libcfs_psdev_ops.p_ioctl(&pfile, cmd, (void __user *)arg);
 	else
 		rc = -EPERM;
 	return rc;

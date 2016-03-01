@@ -355,9 +355,9 @@ static inline struct sk_buff *rtllib_probe_req(struct rtllib_device *ieee)
 	req->header.frame_ctl = cpu_to_le16(RTLLIB_STYPE_PROBE_REQ);
 	req->header.duration_id = 0;
 
-	memset(req->header.addr1, 0xff, ETH_ALEN);
+	eth_broadcast_addr(req->header.addr1);
 	ether_addr_copy(req->header.addr2, ieee->dev->dev_addr);
-	memset(req->header.addr3, 0xff, ETH_ALEN);
+	eth_broadcast_addr(req->header.addr3);
 
 	tag = (u8 *) skb_put(skb, len + 2 + rate_len);
 
@@ -776,7 +776,7 @@ inline struct sk_buff *rtllib_authentication_req(struct rtllib_network *beacon,
 {
 	struct sk_buff *skb;
 	struct rtllib_authentication *auth;
-	int  len = 0;
+	int  len;
 
 	len = sizeof(struct rtllib_authentication) + challengelen +
 		     ieee->tx_headroom + 4;
@@ -3328,7 +3328,7 @@ static int rtllib_wpa_set_encryption(struct rtllib_device *ieee,
 			goto done;
 		}
 		new_crypt->ops = ops;
-		if (new_crypt->ops)
+		if (new_crypt->ops && try_module_get(new_crypt->ops->owner))
 			new_crypt->priv =
 				new_crypt->ops->init(param->u.crypt.idx);
 

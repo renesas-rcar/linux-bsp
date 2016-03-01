@@ -30,18 +30,19 @@ static const struct sdio_device_id wilc_sdio_ids[] = {
 
 #define WILC_SDIO_BLOCK_SIZE 512
 
-typedef struct {
+struct wilc_sdio {
 	bool irq_gpio;
 	u32 block_size;
 	int nint;
 #define MAX_NUN_INT_THRPT_ENH2 (5) /* Max num interrupts allowed in registers 0xf7, 0xf8 */
 	int has_thrpt_enh3;
-} wilc_sdio_t;
+};
 
-static wilc_sdio_t g_sdio;
+static struct wilc_sdio g_sdio;
 
 static int sdio_write_reg(struct wilc *wilc, u32 addr, u32 data);
 static int sdio_read_reg(struct wilc *wilc, u32 addr, u32 *data);
+static int sdio_init(struct wilc *wilc, bool resume);
 
 static void wilc_sdio_interrupt(struct sdio_func *func)
 {
@@ -142,11 +143,82 @@ static void linux_sdio_remove(struct sdio_func *func)
 	wilc_netdev_cleanup(sdio_get_drvdata(func));
 }
 
+static int sdio_reset(struct wilc *wilc)
+{
+	sdio_cmd52_t cmd;
+	int ret;
+	struct sdio_func *func = dev_to_sdio_func(wilc->dev);
+
+	cmd.read_write = 1;
+	cmd.function = 0;
+	cmd.raw = 0;
+	cmd.address = 0x6;
+	cmd.data = 0x8;
+	ret = wilc_sdio_cmd52(wilc, &cmd);
+	if (ret) {
+		dev_err(&func->dev, "Fail cmd 52, reset cmd ...\n");
+		return ret;
+	}
+	return 0;
+}
+
+static int wilc_sdio_suspend(struct device *dev)
+{
+	struct sdio_func *func = dev_to_sdio_func(dev);
+	struct wilc *wilc = sdio_get_drvdata(func);
+	int ret;
+
+	dev_info(dev, "sdio suspend\n");
+	chip_wakeup(wilc);
+
+	if (!wilc->suspend_event) {
+		wilc_chip_sleep_manually(wilc);
+	} else {
+		host_sleep_notify(wilc);
+		chip_allow_sleep(wilc);
+	}
+
+	ret = sdio_reset(wilc);
+	if (ret) {
+		dev_err(&func->dev, "Fail reset sdio\n");
+		return ret;
+	}
+	sdio_claim_host(func);
+
+	return 0;
+}
+
+static int wilc_sdio_resume(struct device *dev)
+{
+	struct sdio_func *func = dev_to_sdio_func(dev);
+	struct wilc *wilc = sdio_get_drvdata(func);
+
+	dev_info(dev, "sdio resume\n");
+	sdio_release_host(func);
+	chip_wakeup(wilc);
+	sdio_init(wilc, true);
+
+	if (wilc->suspend_event)
+		host_wakeup_notify(wilc);
+
+	chip_allow_sleep(wilc);
+
+	return 0;
+}
+
+static const struct dev_pm_ops wilc_sdio_pm_ops = {
+	.suspend = wilc_sdio_suspend,
+	.resume = wilc_sdio_resume,
+};
+
 static struct sdio_driver wilc1000_sdio_driver = {
 	.name		= SDIO_MODALIAS,
 	.id_table	= wilc_sdio_ids,
 	.probe		= linux_sdio_probe,
 	.remove		= linux_sdio_remove,
+	.drv = {
+		.pm = &wilc_sdio_pm_ops,
+	}
 };
 module_driver(wilc1000_sdio_driver,
 	      sdio_register_driver,
@@ -183,11 +255,6 @@ static void wilc_sdio_disable_interrupt(struct wilc *dev)
 	sdio_release_host(func);
 
 	dev_info(&func->dev, "wilc_sdio_disable_interrupt OUT\n");
-}
-
-static int wilc_sdio_init(void)
-{
-	return 1;
 }
 
 /********************************************
@@ -600,22 +667,16 @@ static int sdio_deinit(struct wilc *wilc)
 	return 1;
 }
 
-static int sdio_init(struct wilc *wilc)
+static int sdio_init(struct wilc *wilc, bool resume)
 {
 	struct sdio_func *func = dev_to_sdio_func(wilc->dev);
 	sdio_cmd52_t cmd;
 	int loop, ret;
 	u32 chipid;
 
-	memset(&g_sdio, 0, sizeof(wilc_sdio_t));
-
-	g_sdio.irq_gpio = (wilc->dev_irq_num);
-
-	if (!wilc_sdio_init()) {
-		dev_err(&func->dev, "Failed io init bus...\n");
-		return 0;
-	} else {
-		return 0;
+	if (!resume) {
+		memset(&g_sdio, 0, sizeof(struct wilc_sdio));
+		g_sdio.irq_gpio = wilc->dev_irq_num;
 	}
 
 	/**
@@ -706,16 +767,19 @@ static int sdio_init(struct wilc *wilc)
 	/**
 	 *      make sure can read back chip id correctly
 	 **/
-	if (!sdio_read_reg(wilc, 0x1000, &chipid)) {
-		dev_err(&func->dev, "Fail cmd read chip id...\n");
-		goto _fail_;
+	if (!resume) {
+		if (!sdio_read_reg(wilc, 0x1000, &chipid)) {
+			dev_err(&func->dev, "Fail cmd read chip id...\n");
+			goto _fail_;
+		}
+		dev_err(&func->dev, "chipid (%08x)\n", chipid);
+		if ((chipid & 0xfff) > 0x2a0)
+			g_sdio.has_thrpt_enh3 = 1;
+		else
+			g_sdio.has_thrpt_enh3 = 0;
+		dev_info(&func->dev, "has_thrpt_enh3 = %d...\n",
+			 g_sdio.has_thrpt_enh3);
 	}
-	dev_err(&func->dev, "chipid (%08x)\n", chipid);
-	if ((chipid & 0xfff) > 0x2a0)
-		g_sdio.has_thrpt_enh3 = 1;
-	else
-		g_sdio.has_thrpt_enh3 = 0;
-	dev_info(&func->dev, "has_thrpt_enh3 = %d...\n", g_sdio.has_thrpt_enh3);
 
 	return 1;
 

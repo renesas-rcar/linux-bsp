@@ -1270,18 +1270,14 @@ void rtw_cfg80211_indicate_scan_done(struct rtw_wdev_priv *pwdev_priv,
 
 void rtw_cfg80211_surveydone_event_callback(struct rtw_adapter *padapter)
 {
-	struct list_head *plist, *phead, *ptmp;
+	struct list_head *phead;
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	struct rtw_queue *queue = &pmlmepriv->scanned_queue;
-	struct wlan_network *pnetwork;
+	struct wlan_network *pnetwork, *ptmp;
 
 	spin_lock_bh(&pmlmepriv->scanned_queue.lock);
-
 	phead = get_list_head(queue);
-
-	list_for_each_safe(plist, ptmp, phead) {
-		pnetwork = container_of(plist, struct wlan_network, list);
-
+	list_for_each_entry_safe(pnetwork, ptmp, phead, list) {
 		/* report network only if the current channel set
 		   contains the channel to which this network belongs */
 		if (rtw_ch_set_search_ch23a
@@ -1289,7 +1285,6 @@ void rtw_cfg80211_surveydone_event_callback(struct rtw_adapter *padapter)
 		     pnetwork->network.DSConfig) >= 0)
 			rtw_cfg80211_inform_bss(padapter, pnetwork);
 	}
-
 	spin_unlock_bh(&pmlmepriv->scanned_queue.lock);
 
 	/* call this after other things have been done */
@@ -2850,9 +2845,9 @@ static int cfg80211_rtw_del_station(struct wiphy *wiphy,
 {
 	const u8 *mac = params->mac;
 	int ret = 0;
-	struct list_head *phead, *plist, *ptmp;
+	struct list_head *phead;
 	u8 updated = 0;
-	struct sta_info *psta;
+	struct sta_info *psta, *ptmp;
 	struct rtw_adapter *padapter = netdev_priv(ndev);
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	struct sta_priv *pstapriv = &padapter->stapriv;
@@ -2881,13 +2876,9 @@ static int cfg80211_rtw_del_station(struct wiphy *wiphy,
 		return -EINVAL;
 
 	spin_lock_bh(&pstapriv->asoc_list_lock);
-
 	phead = &pstapriv->asoc_list;
-
 	/* check asoc_queue */
-	list_for_each_safe(plist, ptmp, phead) {
-		psta = container_of(plist, struct sta_info, asoc_list);
-
+	list_for_each_entry_safe(psta, ptmp, phead, asoc_list) {
 		if (ether_addr_equal(mac, psta->hwaddr)) {
 			if (psta->dot8021xalg == 1 &&
 			    psta->bpairwise_key_installed == false) {
@@ -2912,7 +2903,6 @@ static int cfg80211_rtw_del_station(struct wiphy *wiphy,
 			}
 		}
 	}
-
 	spin_unlock_bh(&pstapriv->asoc_list_lock);
 
 	associated_clients_update23a(padapter, updated);

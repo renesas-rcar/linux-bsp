@@ -63,9 +63,8 @@ int cfs_tracefile_init_arch(void)
 		cfs_trace_data[i] =
 			kmalloc(sizeof(union cfs_trace_data_union) *
 				num_possible_cpus(), GFP_KERNEL);
-		if (cfs_trace_data[i] == NULL)
+		if (!cfs_trace_data[i])
 			goto out;
-
 	}
 
 	/* arch related info initialized */
@@ -82,7 +81,7 @@ int cfs_tracefile_init_arch(void)
 				kmalloc(CFS_TRACE_CONSOLE_BUFFER_SIZE,
 					GFP_KERNEL);
 
-			if (cfs_trace_console_buffers[i][j] == NULL)
+			if (!cfs_trace_console_buffers[i][j])
 				goto out;
 		}
 
@@ -105,7 +104,7 @@ void cfs_tracefile_fini_arch(void)
 			cfs_trace_console_buffers[i][j] = NULL;
 		}
 
-	for (i = 0; cfs_trace_data[i] != NULL; i++) {
+	for (i = 0; cfs_trace_data[i]; i++) {
 		kfree(cfs_trace_data[i]);
 		cfs_trace_data[i] = NULL;
 	}
@@ -131,14 +130,13 @@ void cfs_tracefile_write_unlock(void)
 	up_write(&cfs_tracefile_sem);
 }
 
-cfs_trace_buf_type_t cfs_trace_buf_idx_get(void)
+enum cfs_trace_buf_type cfs_trace_buf_idx_get(void)
 {
 	if (in_irq())
 		return CFS_TCD_TYPE_IRQ;
-	else if (in_softirq())
+	if (in_softirq())
 		return CFS_TCD_TYPE_SOFTIRQ;
-	else
-		return CFS_TCD_TYPE_PROC;
+	return CFS_TCD_TYPE_PROC;
 }
 
 /*
@@ -176,16 +174,6 @@ void cfs_trace_unlock_tcd(struct cfs_trace_cpu_data *tcd, int walking)
 		spin_unlock(&tcd->tcd_lock);
 }
 
-int cfs_tcd_owns_tage(struct cfs_trace_cpu_data *tcd,
-		      struct cfs_trace_page *tage)
-{
-	/*
-	 * XXX nikita: do NOT call portals_debug_msg() (CDEBUG/ENTRY/EXIT)
-	 * from here: this will lead to infinite recursion.
-	 */
-	return tcd->tcd_cpu == tage->cpu;
-}
-
 void
 cfs_set_ptldebug_header(struct ptldebug_header *header,
 			struct libcfs_debug_msg_data *msgdata,
@@ -200,14 +188,14 @@ cfs_set_ptldebug_header(struct ptldebug_header *header,
 	header->ph_cpu_id = smp_processor_id();
 	header->ph_type = cfs_trace_buf_idx_get();
 	/* y2038 safe since all user space treats this as unsigned, but
-	 * will overflow in 2106 */
+	 * will overflow in 2106
+	 */
 	header->ph_sec = (u32)ts.tv_sec;
 	header->ph_usec = ts.tv_nsec / NSEC_PER_USEC;
 	header->ph_stack = stack;
 	header->ph_pid = current->pid;
 	header->ph_line_num = msgdata->msg_line;
 	header->ph_extern_pid = 0;
-	return;
 }
 
 static char *
@@ -261,12 +249,11 @@ void cfs_print_to_console(struct ptldebug_header *hdr, int mask,
 		       hdr->ph_pid, hdr->ph_extern_pid, file, hdr->ph_line_num,
 		       fn, len, buf);
 	}
-	return;
 }
 
 int cfs_trace_max_debug_mb(void)
 {
 	int  total_mb = (totalram_pages >> (20 - PAGE_SHIFT));
 
-	return max(512, (total_mb * 80)/100);
+	return max(512, (total_mb * 80) / 100);
 }

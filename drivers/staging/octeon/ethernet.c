@@ -226,18 +226,7 @@ static struct net_device_stats *cvm_oct_common_get_stats(struct net_device *dev)
 		priv->stats.multicast += rx_status.multicast_packets;
 		priv->stats.rx_crc_errors += rx_status.inb_errors;
 		priv->stats.rx_frame_errors += rx_status.fcs_align_err_packets;
-
-		/*
-		 * The drop counter must be incremented atomically
-		 * since the RX tasklet also increments it.
-		 */
-#ifdef CONFIG_64BIT
-		atomic64_add(rx_status.dropped_packets,
-			     (atomic64_t *)&priv->stats.rx_dropped);
-#else
-		atomic_add(rx_status.dropped_packets,
-			     (atomic_t *)&priv->stats.rx_dropped);
-#endif
+		priv->stats.rx_dropped += rx_status.dropped_packets;
 	}
 
 	return &priv->stats;
@@ -601,8 +590,8 @@ static const struct net_device_ops cvm_oct_spi_netdev_ops = {
 #endif
 };
 static const struct net_device_ops cvm_oct_rgmii_netdev_ops = {
-	.ndo_init		= cvm_oct_rgmii_init,
-	.ndo_uninit		= cvm_oct_rgmii_uninit,
+	.ndo_init		= cvm_oct_common_init,
+	.ndo_uninit		= cvm_oct_common_uninit,
 	.ndo_open		= cvm_oct_rgmii_open,
 	.ndo_stop		= cvm_oct_common_stop,
 	.ndo_start_xmit		= cvm_oct_xmit,
@@ -790,7 +779,6 @@ static int cvm_oct_probe(struct platform_device *pdev)
 				cvmx_fau_atomic_write32(priv->fau + qos * 4, 0);
 
 			switch (priv->imode) {
-
 			/* These types don't support ports to IPD/PKO */
 			case CVMX_HELPER_INTERFACE_MODE_DISABLED:
 			case CVMX_HELPER_INTERFACE_MODE_PCIE:

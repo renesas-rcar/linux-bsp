@@ -148,7 +148,8 @@ static void lovsub_lock_descr_map(const struct cl_lock_descr *in,
 {
 	pgoff_t size; /* stripe size in pages */
 	pgoff_t skip; /* how many pages in every stripe are occupied by
-		       * "other" stripes */
+		       * "other" stripes
+		       */
 	pgoff_t start;
 	pgoff_t end;
 
@@ -284,7 +285,8 @@ static int lovsub_lock_delete_one(const struct lu_env *env,
 	switch (parent->cll_state) {
 	case CLS_ENQUEUED:
 		/* See LU-1355 for the case that a glimpse lock is
-		 * interrupted by signal */
+		 * interrupted by signal
+		 */
 		LASSERT(parent->cll_flags & CLF_CANCELLED);
 		break;
 	case CLS_QUEUING:
@@ -429,7 +431,7 @@ static int lovsub_lock_print(const struct lu_env *env, void *cookie,
 	list_for_each_entry(scan, &sub->lss_parents, lll_list) {
 		lov = scan->lll_super;
 		(*p)(env, cookie, "[%d %p ", scan->lll_idx, lov);
-		if (lov != NULL)
+		if (lov)
 			cl_lock_descr_print(env, cookie, p,
 					    &lov->lls_cl.cls_lock->cll_descr);
 		(*p)(env, cookie, "] ");
@@ -454,7 +456,7 @@ int lovsub_lock_init(const struct lu_env *env, struct cl_object *obj,
 	int result;
 
 	lsk = kmem_cache_alloc(lovsub_lock_kmem, GFP_NOFS | __GFP_ZERO);
-	if (lsk != NULL) {
+	if (lsk) {
 		INIT_LIST_HEAD(&lsk->lss_parents);
 		cl_lock_slice_add(lock, &lsk->lss_cl, obj, &lovsub_lock_ops);
 		result = 0;

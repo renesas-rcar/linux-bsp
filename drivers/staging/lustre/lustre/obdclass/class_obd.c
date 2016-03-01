@@ -42,7 +42,6 @@
 #include "../../include/linux/lnet/lnetctl.h"
 #include "../include/lustre_debug.h"
 #include "../include/lprocfs_status.h"
-#include "../include/lustre/lustre_build_version.h"
 #include <linux/list.h>
 #include "../include/cl_object.h"
 #include "llog_internal.h"
@@ -52,7 +51,7 @@ EXPORT_SYMBOL(obd_devs);
 struct list_head obd_types;
 DEFINE_RWLOCK(obd_dev_lock);
 
-/* The following are visible and mutable through /proc/sys/lustre/. */
+/* The following are visible and mutable through /sys/fs/lustre. */
 unsigned int obd_debug_peer_on_timeout;
 EXPORT_SYMBOL(obd_debug_peer_on_timeout);
 unsigned int obd_dump_on_timeout;
@@ -67,7 +66,7 @@ unsigned int obd_timeout = OBD_TIMEOUT_DEFAULT;   /* seconds */
 EXPORT_SYMBOL(obd_timeout);
 unsigned int obd_timeout_set;
 EXPORT_SYMBOL(obd_timeout_set);
-/* Adaptive timeout defs here instead of ptlrpc module for /proc/sys/ access */
+/* Adaptive timeout defs here instead of ptlrpc module for /sys/fs/ access */
 unsigned int at_min;
 EXPORT_SYMBOL(at_min);
 unsigned int at_max = 600;
@@ -180,7 +179,7 @@ int class_handle_ioctl(unsigned int cmd, unsigned long arg)
 	}
 
 	CDEBUG(D_IOCTL, "cmd = %x\n", cmd);
-	if (obd_ioctl_getdata(&buf, &len, (void *)arg)) {
+	if (obd_ioctl_getdata(&buf, &len, (void __user *)arg)) {
 		CERROR("OBD ioctl: data error\n");
 		return -EINVAL;
 	}
@@ -218,16 +217,16 @@ int class_handle_ioctl(unsigned int cmd, unsigned long arg)
 			goto out;
 		}
 
-		if (strlen(BUILD_VERSION) + 1 > data->ioc_inllen1) {
+		if (strlen(LUSTRE_VERSION_STRING) + 1 > data->ioc_inllen1) {
 			CERROR("ioctl buffer too small to hold version\n");
 			err = -EINVAL;
 			goto out;
 		}
 
-		memcpy(data->ioc_bulk, BUILD_VERSION,
-		       strlen(BUILD_VERSION) + 1);
+		memcpy(data->ioc_bulk, LUSTRE_VERSION_STRING,
+		       strlen(LUSTRE_VERSION_STRING) + 1);
 
-		err = obd_ioctl_popdata((void *)arg, data, len);
+		err = obd_ioctl_popdata((void __user *)arg, data, len);
 		if (err)
 			err = -EFAULT;
 		goto out;
@@ -246,7 +245,8 @@ int class_handle_ioctl(unsigned int cmd, unsigned long arg)
 			goto out;
 		}
 
-		err = obd_ioctl_popdata((void *)arg, data, sizeof(*data));
+		err = obd_ioctl_popdata((void __user *)arg, data,
+					sizeof(*data));
 		if (err)
 			err = -EFAULT;
 		goto out;
@@ -283,7 +283,8 @@ int class_handle_ioctl(unsigned int cmd, unsigned long arg)
 
 		CDEBUG(D_IOCTL, "device name %s, dev %d\n", data->ioc_inlbuf1,
 		       dev);
-		err = obd_ioctl_popdata((void *)arg, data, sizeof(*data));
+		err = obd_ioctl_popdata((void __user *)arg, data,
+					sizeof(*data));
 		if (err)
 			err = -EFAULT;
 		goto out;
@@ -330,7 +331,7 @@ int class_handle_ioctl(unsigned int cmd, unsigned long arg)
 			 (int)index, status, obd->obd_type->typ_name,
 			 obd->obd_name, obd->obd_uuid.uuid,
 			 atomic_read(&obd->obd_refcount));
-		err = obd_ioctl_popdata((void *)arg, data, len);
+		err = obd_ioctl_popdata((void __user *)arg, data, len);
 
 		err = 0;
 		goto out;
@@ -339,7 +340,7 @@ int class_handle_ioctl(unsigned int cmd, unsigned long arg)
 	}
 
 	if (data->ioc_dev == OBD_DEV_BY_DEVNAME) {
-		if (data->ioc_inllen4 <= 0 || data->ioc_inlbuf4 == NULL) {
+		if (data->ioc_inllen4 <= 0 || !data->ioc_inlbuf4) {
 			err = -EINVAL;
 			goto out;
 		}
@@ -356,7 +357,7 @@ int class_handle_ioctl(unsigned int cmd, unsigned long arg)
 		goto out;
 	}
 
-	if (obd == NULL) {
+	if (!obd) {
 		CERROR("OBD ioctl : No Device %d\n", data->ioc_dev);
 		err = -EINVAL;
 		goto out;
@@ -388,7 +389,7 @@ int class_handle_ioctl(unsigned int cmd, unsigned long arg)
 		if (err)
 			goto out;
 
-		err = obd_ioctl_popdata((void *)arg, data, len);
+		err = obd_ioctl_popdata((void __user *)arg, data, len);
 		if (err)
 			err = -EFAULT;
 		goto out;
@@ -479,7 +480,7 @@ static int __init init_obdclass(void)
 
 	int lustre_register_fs(void);
 
-	LCONSOLE_INFO("Lustre: Build Version: "BUILD_VERSION"\n");
+	LCONSOLE_INFO("Lustre: Build Version: " LUSTRE_VERSION_STRING "\n");
 
 	spin_lock_init(&obd_types_lock);
 	obd_zombie_impexp_init();
@@ -507,7 +508,8 @@ static int __init init_obdclass(void)
 
 	/* Default the dirty page cache cap to 1/2 of system memory.
 	 * For clients with less memory, a larger fraction is needed
-	 * for other purposes (mostly for BGL). */
+	 * for other purposes (mostly for BGL).
+	 */
 	if (totalram_pages <= 512 << (20 - PAGE_CACHE_SHIFT))
 		obd_max_dirty_pages = totalram_pages / 4;
 	else
@@ -542,8 +544,6 @@ static int __init init_obdclass(void)
 	return err;
 }
 
-/* liblustre doesn't call cleanup_obdclass, apparently.  we carry on in this
- * ifdef to the end of the file to cover module and versioning goo.*/
 static void cleanup_obdclass(void)
 {
 	int i;
@@ -577,7 +577,7 @@ static void cleanup_obdclass(void)
 }
 
 MODULE_AUTHOR("OpenSFS, Inc. <http://www.lustre.org/>");
-MODULE_DESCRIPTION("Lustre Class Driver Build Version: " BUILD_VERSION);
+MODULE_DESCRIPTION("Lustre Class Driver Build Version: " LUSTRE_VERSION_STRING);
 MODULE_LICENSE("GPL");
 MODULE_VERSION(LUSTRE_VERSION_STRING);
 

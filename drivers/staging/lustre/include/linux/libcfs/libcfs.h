@@ -51,8 +51,6 @@
 #define LERRCHKSUM(hexnum) (((hexnum) & 0xf) ^ ((hexnum) >> 4 & 0xf) ^ \
 			   ((hexnum) >> 8 & 0xf))
 
-#define LUSTRE_SRV_LNET_PID      LUSTRE_LNET_PID
-
 #include <linux/list.h>
 
 /* need both kernel and user-land acceptor */
@@ -77,7 +75,7 @@ struct cfs_psdev_ops {
 	int (*p_close)(unsigned long, void *);
 	int (*p_read)(struct cfs_psdev_file *, char *, unsigned long);
 	int (*p_write)(struct cfs_psdev_file *, char *, unsigned long);
-	int (*p_ioctl)(struct cfs_psdev_file *, unsigned long, void *);
+	int (*p_ioctl)(struct cfs_psdev_file *, unsigned long, void __user *);
 };
 
 /*
@@ -90,7 +88,6 @@ void cfs_enter_debugger(void);
  * Defined by platform
  */
 int unshare_fs_struct(void);
-sigset_t cfs_get_blocked_sigs(void);
 sigset_t cfs_block_allsigs(void);
 sigset_t cfs_block_sigs(unsigned long sigs);
 sigset_t cfs_block_sigsinv(unsigned long sigs);
@@ -115,7 +112,6 @@ void cfs_get_random_bytes(void *buf, int size);
 #include "libcfs_prim.h"
 #include "libcfs_time.h"
 #include "libcfs_string.h"
-#include "libcfs_kernelcomm.h"
 #include "libcfs_workitem.h"
 #include "libcfs_hash.h"
 #include "libcfs_fail.h"

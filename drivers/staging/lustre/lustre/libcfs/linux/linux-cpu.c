@@ -13,11 +13,6 @@
  * General Public License version 2 for more details (a copy is included
  * in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 2 along with this program; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 021110-1307, USA
- *
  * GPL HEADER END
  */
 /*
@@ -84,32 +79,32 @@ cfs_cpt_table_free(struct cfs_cpt_table *cptab)
 {
 	int	i;
 
-	if (cptab->ctb_cpu2cpt != NULL) {
+	if (cptab->ctb_cpu2cpt) {
 		LIBCFS_FREE(cptab->ctb_cpu2cpt,
 			    num_possible_cpus() *
 			    sizeof(cptab->ctb_cpu2cpt[0]));
 	}
 
-	for (i = 0; cptab->ctb_parts != NULL && i < cptab->ctb_nparts; i++) {
+	for (i = 0; cptab->ctb_parts && i < cptab->ctb_nparts; i++) {
 		struct cfs_cpu_partition *part = &cptab->ctb_parts[i];
 
-		if (part->cpt_nodemask != NULL) {
+		if (part->cpt_nodemask) {
 			LIBCFS_FREE(part->cpt_nodemask,
 				    sizeof(*part->cpt_nodemask));
 		}
 
-		if (part->cpt_cpumask != NULL)
+		if (part->cpt_cpumask)
 			LIBCFS_FREE(part->cpt_cpumask, cpumask_size());
 	}
 
-	if (cptab->ctb_parts != NULL) {
+	if (cptab->ctb_parts) {
 		LIBCFS_FREE(cptab->ctb_parts,
 			    cptab->ctb_nparts * sizeof(cptab->ctb_parts[0]));
 	}
 
-	if (cptab->ctb_nodemask != NULL)
+	if (cptab->ctb_nodemask)
 		LIBCFS_FREE(cptab->ctb_nodemask, sizeof(*cptab->ctb_nodemask));
-	if (cptab->ctb_cpumask != NULL)
+	if (cptab->ctb_cpumask)
 		LIBCFS_FREE(cptab->ctb_cpumask, cpumask_size());
 
 	LIBCFS_FREE(cptab, sizeof(*cptab));
@@ -123,7 +118,7 @@ cfs_cpt_table_alloc(unsigned int ncpt)
 	int	i;
 
 	LIBCFS_ALLOC(cptab, sizeof(*cptab));
-	if (cptab == NULL)
+	if (!cptab)
 		return NULL;
 
 	cptab->ctb_nparts = ncpt;
@@ -131,19 +126,19 @@ cfs_cpt_table_alloc(unsigned int ncpt)
 	LIBCFS_ALLOC(cptab->ctb_cpumask, cpumask_size());
 	LIBCFS_ALLOC(cptab->ctb_nodemask, sizeof(*cptab->ctb_nodemask));
 
-	if (cptab->ctb_cpumask == NULL || cptab->ctb_nodemask == NULL)
+	if (!cptab->ctb_cpumask || !cptab->ctb_nodemask)
 		goto failed;
 
 	LIBCFS_ALLOC(cptab->ctb_cpu2cpt,
 		     num_possible_cpus() * sizeof(cptab->ctb_cpu2cpt[0]));
-	if (cptab->ctb_cpu2cpt == NULL)
+	if (!cptab->ctb_cpu2cpt)
 		goto failed;
 
 	memset(cptab->ctb_cpu2cpt, -1,
 	       num_possible_cpus() * sizeof(cptab->ctb_cpu2cpt[0]));
 
 	LIBCFS_ALLOC(cptab->ctb_parts, ncpt * sizeof(cptab->ctb_parts[0]));
-	if (cptab->ctb_parts == NULL)
+	if (!cptab->ctb_parts)
 		goto failed;
 
 	for (i = 0; i < ncpt; i++) {
@@ -151,7 +146,7 @@ cfs_cpt_table_alloc(unsigned int ncpt)
 
 		LIBCFS_ALLOC(part->cpt_cpumask, cpumask_size());
 		LIBCFS_ALLOC(part->cpt_nodemask, sizeof(*part->cpt_nodemask));
-		if (part->cpt_cpumask == NULL || part->cpt_nodemask == NULL)
+		if (!part->cpt_cpumask || !part->cpt_nodemask)
 			goto failed;
 	}
 
@@ -359,8 +354,6 @@ cfs_cpt_unset_cpu(struct cfs_cpt_table *cptab, int cpt, int cpu)
 
 	if (i >= nr_cpu_ids)
 		node_clear(node, *cptab->ctb_nodemask);
-
-	return;
 }
 EXPORT_SYMBOL(cfs_cpt_unset_cpu);
 
@@ -530,7 +523,8 @@ cfs_cpt_current(struct cfs_cpt_table *cptab, int remap)
 			return cpt;
 
 		/* don't return negative value for safety of upper layer,
-		 * instead we shadow the unknown cpu to a valid partition ID */
+		 * instead we shadow the unknown cpu to a valid partition ID
+		 */
 		cpt = cpu % cptab->ctb_nparts;
 	}
 
@@ -618,7 +612,7 @@ cfs_cpt_choose_ncpus(struct cfs_cpt_table *cptab, int cpt,
 	/* allocate scratch buffer */
 	LIBCFS_ALLOC(socket, cpumask_size());
 	LIBCFS_ALLOC(core, cpumask_size());
-	if (socket == NULL || core == NULL) {
+	if (!socket || !core) {
 		rc = -ENOMEM;
 		goto out;
 	}
@@ -659,9 +653,9 @@ cfs_cpt_choose_ncpus(struct cfs_cpt_table *cptab, int cpt,
 	}
 
  out:
-	if (socket != NULL)
+	if (socket)
 		LIBCFS_FREE(socket, cpumask_size());
-	if (core != NULL)
+	if (core)
 		LIBCFS_FREE(core, cpumask_size());
 	return rc;
 }
@@ -682,7 +676,8 @@ cfs_cpt_num_estimate(void)
 
 	/* generate reasonable number of CPU partitions based on total number
 	 * of CPUs, Preferred N should be power2 and match this condition:
-	 * 2 * (N - 1)^2 < NCPUS <= 2 * N^2 */
+	 * 2 * (N - 1)^2 < NCPUS <= 2 * N^2
+	 */
 	for (ncpt = 2; ncpu > 2 * ncpt * ncpt; ncpt <<= 1)
 		;
 
@@ -700,7 +695,8 @@ cfs_cpt_num_estimate(void)
  out:
 #if (BITS_PER_LONG == 32)
 	/* config many CPU partitions on 32-bit system could consume
-	 * too much memory */
+	 * too much memory
+	 */
 	ncpt = min(2U, ncpt);
 #endif
 	while (ncpu % ncpt != 0)
@@ -735,7 +731,7 @@ cfs_cpt_table_create(int ncpt)
 	}
 
 	cptab = cfs_cpt_table_alloc(ncpt);
-	if (cptab == NULL) {
+	if (!cptab) {
 		CERROR("Failed to allocate CPU map(%d)\n", ncpt);
 		goto failed;
 	}
@@ -747,7 +743,7 @@ cfs_cpt_table_create(int ncpt)
 	}
 
 	LIBCFS_ALLOC(mask, cpumask_size());
-	if (mask == NULL) {
+	if (!mask) {
 		CERROR("Failed to allocate scratch cpumask\n");
 		goto failed;
 	}
@@ -793,10 +789,10 @@ cfs_cpt_table_create(int ncpt)
 	CERROR("Failed to setup CPU-partition-table with %d CPU-partitions, online HW nodes: %d, HW cpus: %d.\n",
 	       ncpt, num_online_nodes(), num_online_cpus());
 
-	if (mask != NULL)
+	if (mask)
 		LIBCFS_FREE(mask, cpumask_size());
 
-	if (cptab != NULL)
+	if (cptab)
 		cfs_cpt_table_free(cptab);
 
 	return NULL;
@@ -814,7 +810,7 @@ cfs_cpt_table_create_pattern(char *pattern)
 
 	for (ncpt = 0;; ncpt++) { /* quick scan bracket */
 		str = strchr(str, '[');
-		if (str == NULL)
+		if (!str)
 			break;
 		str++;
 	}
@@ -836,7 +832,7 @@ cfs_cpt_table_create_pattern(char *pattern)
 	high = node ? MAX_NUMNODES - 1 : nr_cpu_ids - 1;
 
 	cptab = cfs_cpt_table_alloc(ncpt);
-	if (cptab == NULL) {
+	if (!cptab) {
 		CERROR("Failed to allocate cpu partition table\n");
 		return NULL;
 	}
@@ -850,11 +846,12 @@ cfs_cpt_table_create_pattern(char *pattern)
 		int			i;
 		int			n;
 
-		if (bracket == NULL) {
+		if (!bracket) {
 			if (*str != 0) {
 				CERROR("Invalid pattern %s\n", str);
 				goto failed;
-			} else if (c != ncpt) {
+			}
+			if (c != ncpt) {
 				CERROR("expect %d partitions but found %d\n",
 				       ncpt, c);
 				goto failed;
@@ -885,7 +882,7 @@ cfs_cpt_table_create_pattern(char *pattern)
 		}
 
 		bracket = strchr(str, ']');
-		if (bracket == NULL) {
+		if (!bracket) {
 			CERROR("missing right bracket for cpt %d, %s\n",
 			       cpt, str);
 			goto failed;
@@ -943,6 +940,7 @@ cfs_cpu_notify(struct notifier_block *self, unsigned long action, void *hcpu)
 		spin_lock(&cpt_data.cpt_lock);
 		cpt_data.cpt_version++;
 		spin_unlock(&cpt_data.cpt_lock);
+		/* Fall through */
 	default:
 		if (action != CPU_DEAD && action != CPU_DEAD_FROZEN) {
 			CDEBUG(D_INFO, "CPU changed [cpu %u action %lx]\n",
@@ -975,25 +973,25 @@ static struct notifier_block cfs_cpu_notifier = {
 void
 cfs_cpu_fini(void)
 {
-	if (cfs_cpt_table != NULL)
+	if (cfs_cpt_table)
 		cfs_cpt_table_free(cfs_cpt_table);
 
 #ifdef CONFIG_HOTPLUG_CPU
 	unregister_hotcpu_notifier(&cfs_cpu_notifier);
 #endif
-	if (cpt_data.cpt_cpumask != NULL)
+	if (cpt_data.cpt_cpumask)
 		LIBCFS_FREE(cpt_data.cpt_cpumask, cpumask_size());
 }
 
 int
 cfs_cpu_init(void)
 {
-	LASSERT(cfs_cpt_table == NULL);
+	LASSERT(!cfs_cpt_table);
 
 	memset(&cpt_data, 0, sizeof(cpt_data));
 
 	LIBCFS_ALLOC(cpt_data.cpt_cpumask, cpumask_size());
-	if (cpt_data.cpt_cpumask == NULL) {
+	if (!cpt_data.cpt_cpumask) {
 		CERROR("Failed to allocate scratch buffer\n");
 		return -1;
 	}
@@ -1007,7 +1005,7 @@ cfs_cpu_init(void)
 
 	if (*cpu_pattern != 0) {
 		cfs_cpt_table = cfs_cpt_table_create_pattern(cpu_pattern);
-		if (cfs_cpt_table == NULL) {
+		if (!cfs_cpt_table) {
 			CERROR("Failed to create cptab from pattern %s\n",
 			       cpu_pattern);
 			goto failed;
@@ -1015,7 +1013,7 @@ cfs_cpu_init(void)
 
 	} else {
 		cfs_cpt_table = cfs_cpt_table_create(cpu_npartitions);
-		if (cfs_cpt_table == NULL) {
+		if (!cfs_cpt_table) {
 			CERROR("Failed to create ptable with npartitions %d\n",
 			       cpu_npartitions);
 			goto failed;

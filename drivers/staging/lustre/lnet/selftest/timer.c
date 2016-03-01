@@ -75,7 +75,7 @@ stt_add_timer(stt_timer_t *timer)
 
 	LASSERT(stt_data.stt_nthreads > 0);
 	LASSERT(!stt_data.stt_shuttingdown);
-	LASSERT(timer->stt_func != NULL);
+	LASSERT(timer->stt_func);
 	LASSERT(list_empty(&timer->stt_list));
 	LASSERT(timer->stt_expires > ktime_get_real_seconds());
 
@@ -218,7 +218,7 @@ stt_startup(void)
 	stt_data.stt_nthreads = 0;
 	init_waitqueue_head(&stt_data.stt_waitq);
 	rc = stt_start_timer_thread();
-	if (rc != 0)
+	if (rc)
 		CERROR("Can't spawn timer thread: %d\n", rc);
 
 	return rc;
@@ -237,7 +237,7 @@ stt_shutdown(void)
 	stt_data.stt_shuttingdown = 1;
 
 	wake_up(&stt_data.stt_waitq);
-	lst_wait_until(stt_data.stt_nthreads == 0, stt_data.stt_lock,
+	lst_wait_until(!stt_data.stt_nthreads, stt_data.stt_lock,
 		       "waiting for %d threads to terminate\n",
 		       stt_data.stt_nthreads);
 

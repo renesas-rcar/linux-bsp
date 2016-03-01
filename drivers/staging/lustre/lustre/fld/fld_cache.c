@@ -65,7 +65,7 @@ struct fld_cache *fld_cache_init(const char *name,
 {
 	struct fld_cache *cache;
 
-	LASSERT(name != NULL);
+	LASSERT(name);
 	LASSERT(cache_threshold < cache_size);
 
 	cache = kzalloc(sizeof(*cache), GFP_NOFS);
@@ -100,7 +100,7 @@ void fld_cache_fini(struct fld_cache *cache)
 {
 	__u64 pct;
 
-	LASSERT(cache != NULL);
+	LASSERT(cache);
 	fld_cache_flush(cache);
 
 	if (cache->fci_stat.fst_count > 0) {
@@ -183,7 +183,8 @@ restart_fixup:
 			}
 
 			/* we could have overlap over next
-			 * range too. better restart. */
+			 * range too. better restart.
+			 */
 			goto restart_fixup;
 		}
 
@@ -217,8 +218,6 @@ static int fld_cache_shrink(struct fld_cache *cache)
 	struct fld_cache_entry *flde;
 	struct list_head *curr;
 	int num = 0;
-
-	LASSERT(cache != NULL);
 
 	if (cache->fci_cache_count < cache->fci_cache_size)
 		return 0;
@@ -304,7 +303,8 @@ static void fld_cache_overlap_handle(struct fld_cache *cache,
 	const u32 mdt = range->lsr_index;
 
 	/* this is overlap case, these case are checking overlapping with
-	 * prev range only. fixup will handle overlapping with next range. */
+	 * prev range only. fixup will handle overlapping with next range.
+	 */
 
 	if (f_curr->fce_range.lsr_index == mdt) {
 		f_curr->fce_range.lsr_start = min(f_curr->fce_range.lsr_start,
@@ -319,7 +319,8 @@ static void fld_cache_overlap_handle(struct fld_cache *cache,
 	} else if (new_start <= f_curr->fce_range.lsr_start &&
 			f_curr->fce_range.lsr_end <= new_end) {
 		/* case 1: new range completely overshadowed existing range.
-		 *	 e.g. whole range migrated. update fld cache entry */
+		 *	 e.g. whole range migrated. update fld cache entry
+		 */
 
 		f_curr->fce_range = *range;
 		kfree(f_new);
@@ -414,7 +415,7 @@ static int fld_cache_insert_nolock(struct fld_cache *cache,
 		}
 	}
 
-	if (prev == NULL)
+	if (!prev)
 		prev = head;
 
 	CDEBUG(D_INFO, "insert range "DRANGE"\n", PRANGE(&f_new->fce_range));
@@ -499,7 +500,7 @@ int fld_cache_lookup(struct fld_cache *cache,
 	cache->fci_stat.fst_count++;
 	list_for_each_entry(flde, head, fce_list) {
 		if (flde->fce_range.lsr_start > seq) {
-			if (prev != NULL)
+			if (prev)
 				*range = prev->fce_range;
 			break;
 		}

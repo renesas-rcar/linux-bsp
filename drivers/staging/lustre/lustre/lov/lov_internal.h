@@ -43,7 +43,8 @@
 /* lov_do_div64(a, b) returns a % b, and a = a / b.
  * The 32-bit code is LOV-specific due to knowing about stripe limits in
  * order to reduce the divisor to a 32-bit number.  If the divisor is
- * already a 32-bit value the compiler handles this directly. */
+ * already a 32-bit value the compiler handles this directly.
+ */
 #if BITS_PER_LONG == 64
 # define lov_do_div64(n, base) ({					\
 	uint64_t __base = (base);					\
@@ -92,7 +93,8 @@ struct lov_request_set {
 	atomic_t			set_refcount;
 	struct obd_export		*set_exp;
 	/* XXX: There is @set_exp already, however obd_statfs gets obd_device
-	   only. */
+	 * only.
+	 */
 	struct obd_device		*set_obd;
 	int				set_count;
 	atomic_t			set_completes;
@@ -114,7 +116,6 @@ void lov_finish_set(struct lov_request_set *set);
 
 static inline void lov_get_reqset(struct lov_request_set *set)
 {
-	LASSERT(set != NULL);
 	LASSERT(atomic_read(&set->set_refcount) > 0);
 	atomic_inc(&set->set_refcount);
 }
@@ -197,7 +198,7 @@ int lov_packmd(struct obd_export *exp, struct lov_mds_md **lmm,
 int lov_unpackmd(struct obd_export *exp, struct lov_stripe_md **lsmp,
 		 struct lov_mds_md *lmm, int lmm_bytes);
 int lov_getstripe(struct obd_export *exp,
-		  struct lov_stripe_md *lsm, struct lov_user_md *lump);
+		  struct lov_stripe_md *lsm, struct lov_user_md __user *lump);
 int lov_alloc_memmd(struct lov_stripe_md **lsmp, __u16 stripe_count,
 		    int pattern, int magic);
 int lov_free_memmd(struct lov_stripe_md **lsmp);

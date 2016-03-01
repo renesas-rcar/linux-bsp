@@ -36,6 +36,7 @@
  *         = 163840 bytes
  */
 #define MAX_BUF 163840
+#define NAPI_WEIGHT 64
 
 static int visornic_probe(struct visor_device *dev);
 static void visornic_remove(struct visor_device *dev);
@@ -376,8 +377,8 @@ visornic_serverdown(struct visornic_devdata *devdata,
 			__func__);
 		spin_unlock_irqrestore(&devdata->priv_lock, flags);
 		return -EINVAL;
-	} else
-		spin_unlock_irqrestore(&devdata->priv_lock, flags);
+	}
+	spin_unlock_irqrestore(&devdata->priv_lock, flags);
 	return 0;
 }
 
@@ -1028,7 +1029,7 @@ visornic_set_multi(struct net_device *netdev)
 			cmdrsp->net.type = NET_RCV_PROMISC;
 			cmdrsp->net.enbdis.context = netdev;
 			cmdrsp->net.enbdis.enable =
-				(netdev->flags & IFF_PROMISC);
+				netdev->flags & IFF_PROMISC;
 			visorchannel_signalinsert(devdata->dev->visorchannel,
 						  IOCHAN_TO_IOPART,
 						  cmdrsp);
@@ -1218,8 +1219,9 @@ visornic_rx(struct uiscmdrsp *cmdrsp)
 		/* length rcvd is greater than firstfrag in this skb rcv buf  */
 		skb->tail += RCVPOST_BUF_SIZE;	/* amount in skb->data */
 		skb->data_len = skb->len - RCVPOST_BUF_SIZE;	/* amount that
-								   will be in
-								   frag_list */
+								 *  will be in
+								 * frag_list
+								 */
 	} else {
 		/* data fits in this skb - no chaining - do
 		 * PRECAUTIONARY check
@@ -1315,12 +1317,14 @@ visornic_rx(struct uiscmdrsp *cmdrsp)
 				}
 				if (found_mc)
 					break;	/* accept packet, dest
-						   matches a multicast
-						   address */
+						 * matches a multicast
+						 * address
+						 */
 			}
 		} else if (skb->pkt_type == PACKET_HOST) {
 			break;	/* accept packet, h_dest must match vnic
-				   mac address */
+				 *  mac address
+				 */
 		} else if (skb->pkt_type == PACKET_OTHERHOST) {
 			/* something is not right */
 			dev_err(&devdata->netdev->dev,
@@ -1363,7 +1367,6 @@ devdata_initialize(struct visornic_devdata *devdata, struct visor_device *dev)
 {
 	if (!devdata)
 		return NULL;
-	memset(devdata, '\0', sizeof(struct visornic_devdata));
 	devdata->dev = dev;
 	devdata->incarnation_id = get_jiffies_64();
 	return devdata;
@@ -1613,14 +1616,15 @@ drain_resp_queue(struct uiscmdrsp *cmdrsp, struct visornic_devdata *devdata)
  */
 static void
 service_resp_queue(struct uiscmdrsp *cmdrsp, struct visornic_devdata *devdata,
-		   int *rx_work_done)
+		   int *rx_work_done, int budget)
 {
 	unsigned long flags;
 	struct net_device *netdev;
 
+	while (*rx_work_done < budget) {
 	/* TODO: CLIENT ACQUIRE -- Don't really need this at the
-	 * moment */
-	for (;;) {
+	 * moment
+	 */
 		if (!visorchannel_signalremove(devdata->dev->visorchannel,
 					       IOCHAN_FROM_IOPART,
 					       cmdrsp))
@@ -1709,7 +1713,7 @@ static int visornic_poll(struct napi_struct *napi, int budget)
 	int rx_count = 0;
 
 	send_rcv_posts_if_needed(devdata);
-	service_resp_queue(devdata->cmdrsp, devdata, &rx_count);
+	service_resp_queue(devdata->cmdrsp, devdata, &rx_count, budget);
 
 	/*
 	 * If there aren't any more packets to receive
@@ -1768,7 +1772,7 @@ static int visornic_probe(struct visor_device *dev)
 	}
 
 	netdev->netdev_ops = &visornic_dev_ops;
-	netdev->watchdog_timeo = (5 * HZ);
+	netdev->watchdog_timeo = 5 * HZ;
 	SET_NETDEV_DEV(netdev, &dev->device);
 
 	/* Get MAC adddress from channel and read it into the device. */
@@ -1892,6 +1896,16 @@ static int visornic_probe(struct visor_device *dev)
 			__func__, err);
 		goto cleanup_napi_add;
 	}
+
+	/* Let's start our threads to get responses */
+	netif_napi_add(netdev, &devdata->napi, visornic_poll, NAPI_WEIGHT);
+
+	/*
+	 * Note: Interupts have to be enable before the while
+	 * loop below because the napi routine is responsible for
+	 * setting enab_dis_acked
+	 */
+	visorbus_enable_channel_interrupts(dev);
 
 	err = register_netdev(netdev);
 	if (err) {

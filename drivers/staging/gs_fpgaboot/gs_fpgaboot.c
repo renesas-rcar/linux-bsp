@@ -34,7 +34,7 @@
 #define DEVICE_NAME "device"
 #define CLASS_NAME  "fpgaboot"
 
-static uint8_t bits_magic[] = {
+static u8 bits_magic[] = {
 	0x0, 0x9, 0xf, 0xf0, 0xf, 0xf0,
 	0xf, 0xf0, 0xf, 0xf0, 0x0, 0x0, 0x1};
 
@@ -54,7 +54,7 @@ static void read_bitstream(char *bitdata, char *buf, int *offset, int rdsize)
 static void readinfo_bitstream(char *bitdata, char *buf, int *offset)
 {
 	char tbuf[64];
-	int32_t len;
+	s32 len;
 
 	/* read section char */
 	read_bitstream(bitdata, tbuf, offset, 1);
@@ -291,7 +291,7 @@ static int gs_fpgaboot(void)
 	int err;
 	struct fpgaimage	*fimage;
 
-	fimage = kmalloc(sizeof(struct fpgaimage), GFP_KERNEL);
+	fimage = kmalloc(sizeof(*fimage), GFP_KERNEL);
 	if (!fimage)
 		return -ENOMEM;
 
