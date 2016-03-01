@@ -163,11 +163,13 @@ acpi_status __init acpi_enable_subsystem(u32 flags)
 	 * installed before any AML code can be executed, especially any
 	 * module-level code (11/2015).
 	 */
-	status = acpi_ev_install_region_handlers();
-	if (ACPI_FAILURE(status)) {
-		ACPI_EXCEPTION((AE_INFO, status,
-				"During Region initialization"));
-		return_ACPI_STATUS(status);
+	if (!acpi_gbl_group_module_level_code) {
+		status = acpi_ev_install_region_handlers();
+		if (ACPI_FAILURE(status)) {
+			ACPI_EXCEPTION((AE_INFO, status,
+					"During Region initialization"));
+			return_ACPI_STATUS(status);
+		}
 	}
 #if (!ACPI_REDUCED_HARDWARE)
 
@@ -260,23 +262,6 @@ acpi_status __init acpi_initialize_objects(u32 flags)
 
 	ACPI_FUNCTION_TRACE(acpi_initialize_objects);
 
-	/*
-	 * Run all _REG methods
-	 *
-	 * Note: Any objects accessed by the _REG methods will be automatically
-	 * initialized, even if they contain executable AML (see the call to
-	 * acpi_ns_initialize_objects below).
-	 */
-	acpi_gbl_reg_methods_enabled = TRUE;
-	if (!(flags & ACPI_NO_ADDRESS_SPACE_INIT)) {
-		ACPI_DEBUG_PRINT((ACPI_DB_EXEC,
-				  "[Init] Executing _REG OpRegion methods\n"));
-
-		status = acpi_ev_initialize_op_regions();
-		if (ACPI_FAILURE(status)) {
-			return_ACPI_STATUS(status);
-		}
-	}
 #ifdef ACPI_EXEC_APP
 	/*
 	 * This call implements the "initialization file" option for acpi_exec.
@@ -316,15 +301,14 @@ acpi_status __init acpi_initialize_objects(u32 flags)
 		}
 	}
 
-	/*
-	 * Initialize all device objects in the namespace. This runs the device
-	 * _STA and _INI methods.
-	 */
-	if (!(flags & ACPI_NO_DEVICE_INIT)) {
-		ACPI_DEBUG_PRINT((ACPI_DB_EXEC,
-				  "[Init] Initializing ACPI Devices\n"));
+	acpi_gbl_namespace_initialized = TRUE;
 
-		status = acpi_ns_initialize_devices();
+	/*
+	 * Initialize all device/region objects in the namespace. This runs
+	 * the device _STA and _INI methods and region _REG methods.
+	 */
+	if (!(flags & (ACPI_NO_DEVICE_INIT | ACPI_NO_ADDRESS_SPACE_INIT))) {
+		status = acpi_ns_initialize_devices(flags);
 		if (ACPI_FAILURE(status)) {
 			return_ACPI_STATUS(status);
 		}
