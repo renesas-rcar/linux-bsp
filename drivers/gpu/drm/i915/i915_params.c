@@ -22,6 +22,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "i915_params.h"
 #include "i915_drv.h"
 
 struct i915_params i915 __read_mostly = {
@@ -126,7 +127,8 @@ MODULE_PARM_DESC(enable_execlists,
 	"(-1=auto [default], 0=disabled, 1=enabled)");
 
 module_param_named_unsafe(enable_psr, i915.enable_psr, int, 0600);
-MODULE_PARM_DESC(enable_psr, "Enable PSR (default: false)");
+MODULE_PARM_DESC(enable_psr, "Enable PSR "
+		 "(0=disabled [default], 1=enabled - link mode chosen per-platform, 2=force link-standby mode, 3=force link-off mode)");
 
 module_param_named_unsafe(preliminary_hw_support, i915.preliminary_hw_support, int, 0600);
 MODULE_PARM_DESC(preliminary_hw_support,

@@ -44,7 +44,6 @@ typedef uint64_t gen8_ppgtt_pml4e_t;
 
 #define gtt_total_entries(gtt) ((gtt).base.total >> PAGE_SHIFT)
 
-
 /* gen6-hsw has bit 11-4 for physical addr bit 39-32 */
 #define GEN6_GTT_ADDR_ENCODE(addr)	((addr) | (((addr) >> 28) & 0xff0))
 #define GEN6_PTE_ADDR_ENCODE(addr)	GEN6_GTT_ADDR_ENCODE(addr)
@@ -156,7 +155,7 @@ struct i915_ggtt_view {
 			u64 offset;
 			unsigned int size;
 		} partial;
-		struct intel_rotation_info rotation_info;
+		struct intel_rotation_info rotated;
 	} params;
 
 	struct sg_table *pages;
@@ -343,6 +342,8 @@ struct i915_gtt {
 
 	size_t stolen_size;		/* Total size of stolen memory */
 	size_t stolen_usable_size;	/* Total size minus BIOS reserved */
+	size_t stolen_reserved_base;
+	size_t stolen_reserved_size;
 	u64 mappable_end;		/* End offset that we can CPU map */
 	struct io_mapping *mappable;	/* Mapping to our CPU mappable region */
 	phys_addr_t mappable_base;	/* PA of our GMADR */

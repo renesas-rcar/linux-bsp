@@ -478,8 +478,8 @@ static void intel_dsi_pre_enable(struct intel_encoder *encoder)
 
 	DRM_DEBUG_KMS("\n");
 
-	intel_dsi_prepare(encoder);
 	intel_enable_dsi_pll(encoder);
+	intel_dsi_prepare(encoder);
 
 	/* Panel Enable over CRC PMIC */
 	if (intel_dsi->gpio_panel)
@@ -709,7 +709,7 @@ out:
 static void intel_dsi_get_config(struct intel_encoder *encoder,
 				 struct intel_crtc_state *pipe_config)
 {
-	u32 pclk = 0;
+	u32 pclk;
 	DRM_DEBUG_KMS("\n");
 
 	pipe_config->has_dsi_encoder = true;
@@ -720,12 +720,7 @@ static void intel_dsi_get_config(struct intel_encoder *encoder,
 	 */
 	pipe_config->dpll_hw_state.dpll_md = 0;
 
-	if (IS_BROXTON(encoder->base.dev))
-		pclk = bxt_get_dsi_pclk(encoder, pipe_config->pipe_bpp);
-	else if (IS_VALLEYVIEW(encoder->base.dev) ||
-		 IS_CHERRYVIEW(encoder->base.dev))
-		pclk = vlv_get_dsi_pclk(encoder, pipe_config->pipe_bpp);
-
+	pclk = intel_dsi_get_pclk(encoder, pipe_config->pipe_bpp);
 	if (!pclk)
 		return;
 
