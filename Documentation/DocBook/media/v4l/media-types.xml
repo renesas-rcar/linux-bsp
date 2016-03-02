@@ -155,6 +155,10 @@
 		   scaling can be supported in one direction only.
 	    </entry>
 	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_STATISTICS</constant></entry>
+	    <entry>Video statistics computation (histogram, 3A, ...)</entry>
+	  </row>
 	</tbody>
       </tgroup>
     </table>
