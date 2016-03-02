@@ -789,20 +789,20 @@ struct cpg_pll_config {
 static const struct cpg_pll_config cpg_pll_configs[16] __initconst = {
 	/* EXTAL div	PLL1 mult	PLL3 mult */
 	{ 1,		192,		192,	},
-	{ 1,		192,		128,	},
-	{ 0, /* Prohibited setting */		},
+	{ 1,		192,		168,	},
+	{ 1,		192,		144,	},
 	{ 1,		192,		192,	},
 	{ 1,		160,		160,	},
-	{ 1,		160,		106,	},
-	{ 0, /* Prohibited setting */		},
+	{ 1,		160,		140,	},
+	{ 1,		160,		120,	},
 	{ 1,		160,		160,	},
 	{ 1,		128,		128,	},
-	{ 1,		128,		84,	},
-	{ 0, /* Prohibited setting */		},
+	{ 1,		128,		112,	},
+	{ 1,		128,		96,	},
 	{ 1,		128,		128,	},
 	{ 2,		192,		192,	},
-	{ 2,		192,		128,	},
-	{ 0, /* Prohibited setting */		},
+	{ 2,		192,		168,	},
+	{ 2,		192,		144,	},
 	{ 2,		192,		192,	},
 };
 
