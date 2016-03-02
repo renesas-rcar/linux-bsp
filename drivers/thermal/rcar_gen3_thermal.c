@@ -23,6 +23,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/soc/renesas/rcar_prr.h>
 #include <linux/spinlock.h>
 #include <linux/thermal.h>
 
@@ -57,13 +58,6 @@
 #define TEMP_IRQ_SHIFT(tsc_id)	(0x1 << tsc_id)
 #define TEMPD_IRQ_SHIFT(tsc_id)	(0x1 << (tsc_id + 3))
 #define GEN3_FUSE_MASK	0xFFF
-
-#define RCAR_H3_WS10		0x4F00
-#define RCAR_H3_WS11		0x4F01
-
-/* Product register */
-#define GEN3_PRR	0xFFF00044
-#define GEN3_PRR_MASK	0x4FFF
 
 /* Quadratic and linear equation config
  * Default is using quadratic equation.
@@ -156,33 +150,19 @@ static int round_temp(int temp)
 	return ((temp < 0) ? (result * (-1)) : result);
 }
 
-static void thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
+static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 {
-	u32  lsi_id;
-	void __iomem *product_register = ioremap_nocache(GEN3_PRR, 4);
+	int err;
+
+	err = RCAR_PRR_INIT();
+	if (err)
+		return err;
 
 	/* For H3 WS1.0 and H3 WS1.1,
 	 * these registers have not been programmed yet.
 	 * We will use fixed value as temporary solution.
 	 */
-	lsi_id = ioread32(product_register) & GEN3_PRR_MASK;
-	if ((lsi_id != RCAR_H3_WS10) && (lsi_id != RCAR_H3_WS11)) {
-		priv->factor.thcode_1 = rcar_thermal_read(priv,
-						REG_GEN3_THCODE1)
-				& GEN3_FUSE_MASK;
-		priv->factor.thcode_2 = rcar_thermal_read(priv,
-						REG_GEN3_THCODE2)
-				& GEN3_FUSE_MASK;
-		priv->factor.thcode_3 = rcar_thermal_read(priv,
-						REG_GEN3_THCODE3)
-				& GEN3_FUSE_MASK;
-		priv->factor.ptat_1 = rcar_thermal_read(priv, REG_GEN3_PTAT1)
-				& GEN3_FUSE_MASK;
-		priv->factor.ptat_2 = rcar_thermal_read(priv, REG_GEN3_PTAT2)
-				& GEN3_FUSE_MASK;
-		priv->factor.ptat_3 = rcar_thermal_read(priv, REG_GEN3_PTAT3)
-				& GEN3_FUSE_MASK;
-	} else {
+	if (RCAR_PRR_IS_PRODUCT(H3) && (RCAR_PRR_CHK_CUT(H3, WS11) <= 0)) {
 		priv->factor.ptat_1 = 2351;
 		priv->factor.ptat_2 = 1509;
 		priv->factor.ptat_3 = 435;
@@ -203,8 +183,25 @@ static void thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 			priv->factor.thcode_3 = 2237;
 			break;
 		}
+	} else {
+		priv->factor.thcode_1 = rcar_thermal_read(priv,
+						REG_GEN3_THCODE1)
+				& GEN3_FUSE_MASK;
+		priv->factor.thcode_2 = rcar_thermal_read(priv,
+						REG_GEN3_THCODE2)
+				& GEN3_FUSE_MASK;
+		priv->factor.thcode_3 = rcar_thermal_read(priv,
+						REG_GEN3_THCODE3)
+				& GEN3_FUSE_MASK;
+		priv->factor.ptat_1 = rcar_thermal_read(priv, REG_GEN3_PTAT1)
+				& GEN3_FUSE_MASK;
+		priv->factor.ptat_2 = rcar_thermal_read(priv, REG_GEN3_PTAT2)
+				& GEN3_FUSE_MASK;
+		priv->factor.ptat_3 = rcar_thermal_read(priv, REG_GEN3_PTAT3)
+				& GEN3_FUSE_MASK;
 	}
-	iounmap(product_register);
+
+	return 0;
 }
 
 #ifdef APPLY_QUADRATIC_EQUATION
@@ -564,7 +561,9 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 
 	rcar_gen3_thermal_init(priv);
-	thermal_read_fuse_factor(priv);
+	ret = thermal_read_fuse_factor(priv);
+	if (ret)
+		goto error_unregister;
 	thermal_coefficient_calculation(priv);
 	ret = rcar_gen3_thermal_update_temp(priv);
 
