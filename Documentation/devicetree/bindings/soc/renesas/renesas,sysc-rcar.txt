@@ -1,0 +1,123 @@
+DT bindings for the Renesas R-Car System Controller/Power Domains Driver
+
+== System Controller Node ==
+
+The R-Car System Controller provides the following functions:
+  - Control power-shutoff and resume sequence of power domains.
+  - Call to clock driver to turn on/off module stop clock for
+	on-chip drivers (via pm_runtime apis.)
+
+Required properties:
+- compatible: Should be "renesas,rcar-gen3-sysc"
+		or "renesas,rcar-gen2-sysc" as fallback.
+
+- reg: Compose start address and address range blocks for the device.
+
+Optional nodes:
+- pm-domains: This node contains a hierarchy of PM domain nodes, which should
+  match the Power Area Hierarchy in the Power Domain Specifications section of
+  the device's datasheet.
+
+== PM Domain Nodes ==
+
+Each of the PM domain nodes represents a PM domain, as documented by the
+generic PM domain bindings in
+Documentation/devicetree/bindings/power/power_domain.txt.
+
+The nodes should be named by the real power area names, and thus their names
+should be unique.
+
+Required properties:
+  - #power-domain-cells: Must be 0.
+
+Optional properties:
+- reg: If the PM domain is not always-on, this property must contain the
+	the off-set of power domain's base address from sysc's base address.
+	Its parent node must contain the following two properties:
+	 - #address-cells: Must be 1,
+	 - #size-cells: Must be 0.
+       If the PM domain is always-on, this property must be omitted.
+
+Example:
+
+This shows a subset of the r8a7795 PM domain hierarchy, containing the
+"always-on" domain, 4 its power subdomains (a3sg, a3ir, a3vp, a3vc);
+and the a2vc0, a2vc1 domains; which are subdomains of a3vc.
+
+		sysc: system-controller@e6180000 {
+			compatible = "renesas,rcar-gen3-sysc";
+			reg = <0 0xe6180000 0 0x0400>;
+
+			pm-domains {
+				pd_always_on: always_on {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					#power-domain-cells = <0>;
+
+					pd_a3sg: a3sg {
+						reg = <0x0100>;
+						#power-domain-cells = <0>;
+					};
+
+					pd_a3ir: a3ir {
+						reg = <0x0180>;
+						#power-domain-cells = <0>;
+					};
+
+					pd_a3vp: a3vp {
+						reg = <0x0340>;
+						#power-domain-cells = <0>;
+					};
+
+					pd_a3vc: a3vc {
+						reg = <0x0380>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						#power-domain-cells = <0>;
+
+						pd_a2vc0: a2vc0 {
+							reg = <0x03C0>;
+							#power-domain-cells = <0>;
+						};
+
+						pd_a2vc1: a2vc1 {
+							reg = <0x03C0>;
+							#power-domain-cells = <0>;
+						};
+					};
+				};
+			};
+		};
+
+== PM Domain Consumers ==
+Hardware blocks belonging to a PM domain should contain a "power-domains"
+property that is a phandle pointing to the corresponding PM domain node.
+
+This way is also applied for hardware blocks that belong to "always-on" domain,
+they should be kept as "power-domains = <&pd_always_on>;
+
+Example:
+
+ - 3D-graphic hardware module belong to "a3sg" power domain, add "power-domains" field as:
+	gsx: gsx@fd000000 {
+		compatible = "renesas,gsx";
+		reg = <0 0xfd000000 0 0x3ffff>;
+		interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cpg CPG_MOD 112>;
+		power-domains = <&pd_a3sg>;
+	};
+
+ - GPO7 hardware module belong to "always-on" power domain, add "power-domains" field as:
+    gpio7: gpio@e6055800 {
+            compatible = "renesas,gpio-r8a7795",
+                         "renesas,gpio-rcar";
+            reg = <0 0xe6055800 0 0x50>;
+            interrupts = <GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>;
+            #gpio-cells = <2>;
+            gpio-controller;
+            gpio-ranges = <&pfc 0 224 4>;
+            #interrupt-cells = <2>;
+            interrupt-controller;
+            clocks = <&cpg CPG_MOD 905>;
+            power-domains = <&pd_always_on>;
+    };
