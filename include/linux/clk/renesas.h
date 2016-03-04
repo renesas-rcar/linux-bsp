@@ -28,4 +28,6 @@ void cpg_mstp_add_clk_domain(struct device_node *np);
 int cpg_mstp_attach_dev(struct generic_pm_domain *unused, struct device *dev);
 void cpg_mstp_detach_dev(struct generic_pm_domain *unused, struct device *dev);
 
+int cpg_mssr_attach_dev(struct generic_pm_domain *unused, struct device *dev);
+void cpg_mssr_detach_dev(struct generic_pm_domain *unused, struct device *dev);
 #endif
