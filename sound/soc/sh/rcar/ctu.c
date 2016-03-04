@@ -24,11 +24,17 @@ struct rsnd_ctu {
 	     i++)
 
 #define rsnd_ctu_get(priv, id) ((struct rsnd_ctu *)(priv->ctu) + id)
-#define rsnd_ctu_initialize_lock(mod)	__rsnd_ctu_initialize_lock(mod, 1)
-#define rsnd_ctu_initialize_unlock(mod)	__rsnd_ctu_initialize_lock(mod, 0)
-static void __rsnd_ctu_initialize_lock(struct rsnd_mod *mod, u32 enable)
+
+static void rsnd_ctu_activation(struct rsnd_mod *mod)
 {
-	rsnd_mod_write(mod, CTU_CTUIR, enable);
+	rsnd_mod_write(mod, CTU_SWRSR, 0);
+	rsnd_mod_write(mod, CTU_SWRSR, 1);
+}
+
+static void rsnd_ctu_halt(struct rsnd_mod *mod)
+{
+	rsnd_mod_write(mod, CTU_CTUIR, 1);
+	rsnd_mod_write(mod, CTU_SWRSR, 0);
 }
 
 static int rsnd_ctu_probe_(struct rsnd_mod *mod,
@@ -38,17 +44,63 @@ static int rsnd_ctu_probe_(struct rsnd_mod *mod,
 	return rsnd_cmd_attach(io, rsnd_mod_id(mod) / 4);
 }
 
+static void rsnd_ctu_value_init(struct rsnd_dai_stream *io,
+			       struct rsnd_mod *mod)
+{
+	rsnd_mod_write(mod, CTU_CTUIR, 1);
+
+	rsnd_mod_write(mod, CTU_ADINR, rsnd_get_adinr_chan(mod, io));
+
+	rsnd_mod_write(mod, CTU_CPMDR, 0);
+	rsnd_mod_write(mod, CTU_SCMDR, 0);
+	rsnd_mod_write(mod, CTU_SV00R, 0);
+	rsnd_mod_write(mod, CTU_SV01R, 0);
+	rsnd_mod_write(mod, CTU_SV02R, 0);
+	rsnd_mod_write(mod, CTU_SV03R, 0);
+	rsnd_mod_write(mod, CTU_SV04R, 0);
+	rsnd_mod_write(mod, CTU_SV05R, 0);
+	rsnd_mod_write(mod, CTU_SV06R, 0);
+	rsnd_mod_write(mod, CTU_SV07R, 0);
+
+	rsnd_mod_write(mod, CTU_SV10R, 0);
+	rsnd_mod_write(mod, CTU_SV11R, 0);
+	rsnd_mod_write(mod, CTU_SV12R, 0);
+	rsnd_mod_write(mod, CTU_SV13R, 0);
+	rsnd_mod_write(mod, CTU_SV14R, 0);
+	rsnd_mod_write(mod, CTU_SV15R, 0);
+	rsnd_mod_write(mod, CTU_SV16R, 0);
+	rsnd_mod_write(mod, CTU_SV17R, 0);
+
+	rsnd_mod_write(mod, CTU_SV20R, 0);
+	rsnd_mod_write(mod, CTU_SV21R, 0);
+	rsnd_mod_write(mod, CTU_SV22R, 0);
+	rsnd_mod_write(mod, CTU_SV23R, 0);
+	rsnd_mod_write(mod, CTU_SV24R, 0);
+	rsnd_mod_write(mod, CTU_SV25R, 0);
+	rsnd_mod_write(mod, CTU_SV26R, 0);
+	rsnd_mod_write(mod, CTU_SV27R, 0);
+
+	rsnd_mod_write(mod, CTU_SV30R, 0);
+	rsnd_mod_write(mod, CTU_SV31R, 0);
+	rsnd_mod_write(mod, CTU_SV32R, 0);
+	rsnd_mod_write(mod, CTU_SV33R, 0);
+	rsnd_mod_write(mod, CTU_SV34R, 0);
+	rsnd_mod_write(mod, CTU_SV35R, 0);
+	rsnd_mod_write(mod, CTU_SV36R, 0);
+	rsnd_mod_write(mod, CTU_SV37R, 0);
+
+	rsnd_mod_write(mod, CTU_CTUIR, 0);
+}
+
 static int rsnd_ctu_init(struct rsnd_mod *mod,
 			 struct rsnd_dai_stream *io,
 			 struct rsnd_priv *priv)
 {
 	rsnd_mod_power_on(mod);
 
-	rsnd_ctu_initialize_lock(mod);
+	rsnd_ctu_activation(mod);
 
-	rsnd_mod_write(mod, CTU_ADINR, rsnd_get_adinr_chan(mod, io));
-
-	rsnd_ctu_initialize_unlock(mod);
+	rsnd_ctu_value_init(io, mod);
 
 	return 0;
 }
@@ -57,6 +109,8 @@ static int rsnd_ctu_quit(struct rsnd_mod *mod,
 			 struct rsnd_dai_stream *io,
 			 struct rsnd_priv *priv)
 {
+	rsnd_ctu_halt(mod);
+
 	rsnd_mod_power_off(mod);
 
 	return 0;
@@ -129,7 +183,7 @@ int rsnd_ctu_probe(struct rsnd_priv *priv)
 		}
 
 		ret = rsnd_mod_init(priv, rsnd_mod_get(ctu), &rsnd_ctu_ops,
-				    clk, RSND_MOD_CTU, i);
+				    clk, rsnd_mod_get_status, RSND_MOD_CTU, i);
 		if (ret)
 			goto rsnd_ctu_probe_done;
 
