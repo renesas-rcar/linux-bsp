@@ -172,6 +172,7 @@ void vsp1_pipeline_init(struct vsp1_pipeline *pipe)
 
 	INIT_LIST_HEAD(&pipe->entities);
 	pipe->state = VSP1_PIPELINE_STOPPED;
+	pipe->vmute_flag = false;
 }
 
 void vsp1_pipeline_run(struct vsp1_pipeline *pipe)

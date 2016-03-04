@@ -1,7 +1,7 @@
 /*
  * vsp1_bru.c  --  R-Car VSP1 Blend ROP Unit
  *
- * Copyright (C) 2013 Renesas Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -80,6 +80,27 @@ static int bru_s_stream(struct v4l2_subdev *subdev, int enable)
 		return 0;
 
 	format = &bru->entity.formats[bru->entity.source_pad];
+
+	if (pipe->vmute_flag) {
+		if (pipe->vmute_flag) {
+			vsp1_bru_write(bru, VI6_BRU_INCTRL, 0);
+			vsp1_bru_write(bru, VI6_BRU_VIRRPF_SIZE,
+			  (format->width << VI6_BRU_VIRRPF_SIZE_HSIZE_SHIFT) |
+			  (format->height << VI6_BRU_VIRRPF_SIZE_VSIZE_SHIFT));
+			vsp1_bru_write(bru, VI6_BRU_VIRRPF_LOC, 0);
+			vsp1_bru_write(bru, VI6_BRU_VIRRPF_COL, (0xFF << 24));
+
+			for (i = 0; i < bru->entity.source_pad; ++i) {
+				vsp1_bru_write(bru, VI6_BRU_BLD(i),
+				VI6_BRU_BLD_CCMDX_255_SRC_A |
+				VI6_BRU_BLD_CCMDY_SRC_A |
+				VI6_BRU_BLD_ACMDX_255_SRC_A |
+				VI6_BRU_BLD_ACMDY_COEFY |
+				VI6_BRU_BLD_COEFY_MASK);
+			}
+		}
+		return 0;
+	}
 
 	/* The hardware is extremely flexible but we have no userspace API to
 	 * expose all the parameters, nor is it clear whether we would have use

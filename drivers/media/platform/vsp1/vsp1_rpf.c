@@ -77,11 +77,18 @@ static int rpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	u32 pstride;
 	u32 infmt;
 	u32 alph_sel, laya;
-	int ret;
+	int ret, i;
 
 	ret = vsp1_entity_set_streaming(&rpf->entity, enable);
 	if (ret < 0)
 		return ret;
+
+	if (pipe->vmute_flag) {
+		for (i = 0; i < vsp1->info->rpf_count; ++i)
+			vsp1_rpf_write(rpf, VI6_DPR_RPF_ROUTE(i),
+					    VI6_DPR_NODE_UNUSED);
+		return 0;
+	}
 
 	if (!enable)
 		return 0;

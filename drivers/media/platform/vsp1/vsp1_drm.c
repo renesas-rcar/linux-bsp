@@ -61,9 +61,9 @@ int vsp1_du_if_set_mute(struct device *dev, bool on)
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
 
 	if (on)
-		vsp1_pipeline_stop(pipe);
+		pipe->vmute_flag = true;
 	else
-		vsp1_pipeline_run(pipe);
+		pipe->vmute_flag = false;
 
 	return 0;
 }
