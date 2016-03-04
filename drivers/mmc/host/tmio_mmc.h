@@ -1,6 +1,7 @@
 /*
  * linux/drivers/mmc/host/tmio_mmc.h
  *
+ * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
  *
@@ -17,6 +18,7 @@
 #define TMIO_MMC_H
 
 #include <linux/dmaengine.h>
+#include <linux/completion.h>
 #include <linux/highmem.h>
 #include <linux/mmc/tmio.h>
 #include <linux/mutex.h>
@@ -44,6 +46,7 @@ struct tmio_mmc_host;
 
 struct tmio_mmc_dma {
 	enum dma_slave_buswidth dma_buswidth;
+	bool sdbuf_64bit;
 	bool (*filter)(struct dma_chan *chan, void *arg);
 	void (*enable)(struct tmio_mmc_host *host, bool enable);
 };
@@ -93,12 +96,25 @@ struct tmio_mmc_host {
 	struct mutex		ios_lock;	/* protect set_ios() context */
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
+	u32			scc_tapnum;
+	u32			scc_tappos;
+	bool			done_tuning;
+	struct completion	completion;
 
 	int (*write16_hook)(struct tmio_mmc_host *host, int addr);
 	int (*clk_enable)(struct platform_device *pdev, unsigned int *f);
 	void (*clk_disable)(struct platform_device *pdev);
 	int (*multi_io_quirk)(struct mmc_card *card,
 			      unsigned int direction, int blk_size);
+	int (*card_busy)(struct tmio_mmc_host *host);
+	int (*start_signal_voltage_switch)(struct tmio_mmc_host *host,
+						unsigned char signal_voltage);
+	bool (*inquiry_tuning)(struct tmio_mmc_host *host);
+	void (*init_tuning)(struct tmio_mmc_host *host, unsigned long *num);
+	int (*prepare_tuning)(struct tmio_mmc_host *host, unsigned long tap);
+	int (*select_tuning)(struct tmio_mmc_host *host, unsigned long *tap);
+	bool (*retuning)(struct tmio_mmc_host *host);
+	void (*hw_reset)(struct tmio_mmc_host *host);
 };
 
 struct tmio_mmc_host *tmio_mmc_host_alloc(struct platform_device *pdev);
@@ -164,6 +180,11 @@ static inline void tmio_mmc_abort_dma(struct tmio_mmc_host *host)
 #ifdef CONFIG_PM
 int tmio_mmc_host_runtime_suspend(struct device *dev);
 int tmio_mmc_host_runtime_resume(struct device *dev);
+#endif
+
+#ifdef CONFIG_PM_SLEEP
+int tmio_mmc_host_suspend(struct device *dev);
+int tmio_mmc_host_resume(struct device *dev);
 #endif
 
 static inline u16 sd_ctrl_read16(struct tmio_mmc_host *host, int addr)
