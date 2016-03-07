@@ -488,6 +488,7 @@ static struct v4l2_subdev_ops rcar_csi2_subdev_ops = {
 
 #ifdef CONFIG_OF
 static const struct of_device_id rcar_csi2_of_table[] = {
+	{ .compatible = "renesas,csi2-r8a7796", .data = (void *)RCAR_GEN3 },
 	{ .compatible = "renesas,csi2-r8a7795", .data = (void *)RCAR_GEN3 },
 	{ },
 };
@@ -495,6 +496,7 @@ MODULE_DEVICE_TABLE(of, rcar_csi2_of_table);
 #endif
 
 static struct platform_device_id rcar_csi2_id_table[] = {
+	{ "r8a7796-csi2",  RCAR_GEN3 },
 	{ "r8a7795-csi2",  RCAR_GEN3 },
 	{},
 };
