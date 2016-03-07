@@ -8,6 +8,7 @@
  * the Free Software Foundation; version 2 of the License.
  */
 
+#include <linux/io.h>
 #include <linux/kernel.h>
 
 #include "core.h"
@@ -17,8 +18,10 @@
 	PORT_GP_CFG_16(0, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH),	\
 	PORT_GP_CFG_28(1, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH),	\
 	PORT_GP_CFG_15(2, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH),	\
-	PORT_GP_CFG_16(3, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH),	\
-	PORT_GP_CFG_18(4, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH),	\
+	PORT_GP_CFG_16(3, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH |	\
+				   SH_PFC_PIN_CFG_IO_VOLTAGE),		\
+	PORT_GP_CFG_18(4, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH |	\
+				   SH_PFC_PIN_CFG_IO_VOLTAGE),		\
 	PORT_GP_CFG_26(5, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH),	\
 	PORT_GP_CFG_32(6, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH),	\
 	PORT_GP_CFG_4(7, fn, sfx, SH_PFC_PIN_CFG_DRIVE_STRENGTH)
@@ -4461,6 +4464,67 @@ static const char * const vin5_groups[] = {
 	"vin5_clk",
 };
 
+#define POCCTRL0	0x380
+#define PIN2POCCTRL0_SHIFT(a) ({ \
+	int _gp = (a) >> 5; \
+	int _bit = (a) & 0x1f; \
+	((_gp == 3) && (_bit < 12)) ? _bit : \
+	((_gp == 4) && (_bit < 18)) ? _bit + 12 : -1; \
+})
+
+static int r8a7795_get_io_voltage(struct sh_pfc *pfc, unsigned int pin)
+{
+	void __iomem *reg;
+	u32 data, mask;
+	int shift;
+
+	/* Bits in POCCTRL0 are numbered in opposite order to pins */
+	shift = PIN2POCCTRL0_SHIFT(pin);
+
+	if (WARN(shift < 0, "invalid pin %#x", pin))
+		return -EINVAL;
+
+	reg = pfc->windows->virt + POCCTRL0;
+	data = ioread32(reg);
+
+	mask = 0x1 << shift;
+
+	return (data & mask) ? 3300 : 1800;
+}
+
+static int r8a7795_set_io_voltage(struct sh_pfc *pfc, unsigned int pin, u16 mV)
+{
+	void __iomem *reg;
+	u32 data, mask;
+	int shift;
+
+	/* Bits in POCCTRL0 are numbered in opposite order to pins */
+	shift = PIN2POCCTRL0_SHIFT(pin);
+
+	if (WARN(shift < 0, "invalid pin %#x", pin))
+		return -EINVAL;
+
+	if (mV != 1800 && mV != 3300)
+		return -EINVAL;
+
+	reg = pfc->windows->virt + POCCTRL0;
+	data = ioread32(reg);
+
+	mask = 0x1 << shift;
+
+	if (mV == 3300)
+		data |= mask;
+	else
+		data &= ~mask;
+
+
+	iowrite32(~data, pfc->windows->virt +
+				(pfc->info->unlock_reg - pfc->windows->phys));
+	iowrite32(data, reg);
+
+	return 0;
+}
+
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(audio_clk),
 	SH_PFC_FUNCTION(avb),
@@ -5270,8 +5334,14 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 	{ },
 };
 
+static const struct sh_pfc_soc_operations pinmux_ops = {
+	.get_io_voltage = r8a7795_get_io_voltage,
+	.set_io_voltage = r8a7795_set_io_voltage,
+};
+
 const struct sh_pfc_soc_info r8a7795_pinmux_info = {
 	.name = "r8a77950_pfc",
+	.ops = &pinmux_ops,
 	.unlock_reg = 0xe6060000, /* PMMR */
 
 	.function = { PINMUX_FUNCTION_BEGIN, PINMUX_FUNCTION_END },
