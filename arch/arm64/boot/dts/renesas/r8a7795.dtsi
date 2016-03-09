@@ -1200,7 +1200,7 @@
 			interrupt-map = <0 0 0 0 &gic 0 116 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 319>, <&pcie_bus_clk>;
 			clock-names = "pcie", "pcie_bus";
-			power-domains = <&cpg>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
 
@@ -1225,7 +1225,7 @@
 			interrupt-map = <0 0 0 0 &gic 0 148 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 318>, <&pcie_bus_clk>;
 			clock-names = "pcie", "pcie_bus";
-			power-domains = <&cpg>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
 	};
