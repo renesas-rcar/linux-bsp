@@ -1248,7 +1248,7 @@
 			compatible = "renesas,fcpv";
 			reg = <0 0xfe92f000 0 0x200>;
 			clocks = <&cpg CPG_MOD 606>;
-			power-domains = <&pd_a3vp>, <&cpg>;
+			power-domains = <&sysc R8A7795_PD_A3VP>;
 		};
 
 		vspbd: vsp@fe960000 {
@@ -1268,7 +1268,7 @@
 			compatible = "renesas,fcpv";
 			reg = <0 0xfe96f000 0 0x200>;
 			clocks = <&cpg CPG_MOD 607>;
-			power-domains = <&pd_a3vp>, <&cpg>;
+			power-domains = <&sysc R8A7795_PD_A3VP>;
 		};
 
 		vspi0: vsp@fe9a0000 {
@@ -1291,7 +1291,7 @@
 			compatible = "renesas,fcpv";
 			reg = <0 0xfe9af000 0 0x200>;
 			clocks = <&cpg CPG_MOD 611>;
-			power-domains = <&pd_a3vp>, <&cpg>;
+			power-domains = <&sysc R8A7795_PD_A3VP>;
 		};
 
 		vspi1: vsp@fe9b0000 {
@@ -1314,7 +1314,7 @@
 			compatible = "renesas,fcpv";
 			reg = <0 0xfe9bf000 0 0x200>;
 			clocks = <&cpg CPG_MOD 610>;
-			power-domains = <&pd_a3vp>, <&cpg>;
+			power-domains = <&sysc R8A7795_PD_A3VP>;
 		};
 
 		vspi2: vsp@fe9c0000 {
@@ -1337,7 +1337,7 @@
 			compatible = "renesas,fcpv";
 			reg = <0 0xfe9cf000 0 0x200>;
 			clocks = <&cpg CPG_MOD 609>;
-			power-domains = <&pd_a3vp>, <&cpg>;
+			power-domains = <&sysc R8A7795_PD_A3VP>;
 		};
 
 		vspd0: vsp@fea20000 {
@@ -1358,7 +1358,7 @@
 			compatible = "renesas,fcpv";
 			reg = <0 0xfea27000 0 0x200>;
 			clocks = <&cpg CPG_MOD 603>;
-			power-domains = <&cpg>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 		};
 
 		vspd1: vsp@fea28000 {
@@ -1379,7 +1379,7 @@
 			compatible = "renesas,fcpv";
 			reg = <0 0xfea2f000 0 0x200>;
 			clocks = <&cpg CPG_MOD 602>;
-			power-domains = <&cpg>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 		};
 
 		vspd2: vsp@fea30000 {
@@ -1400,7 +1400,7 @@
 			compatible = "renesas,fcpv";
 			reg = <0 0xfea37000 0 0x200>;
 			clocks = <&cpg CPG_MOD 601>;
-			power-domains = <&cpg>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 		};
 
 		vspd3: vsp@fea38000 {
@@ -1421,7 +1421,7 @@
 			compatible = "renesas,fcpv";
 			reg = <0 0xfea3f000 0 0x200>;
 			clocks = <&cpg CPG_MOD 600>;
-			power-domains = <&cpg>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 		};
 
 		du: display@feb00000 {
