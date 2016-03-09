@@ -925,7 +925,7 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 		dmr = 0;
 		output_is_yuv = true;
 		break;
-	case V4L2_PIX_FMT_RGB555X:
+	case V4L2_PIX_FMT_ARGB555:
 		dmr = VNDMR_DTMD_ARGB;
 		break;
 	case V4L2_PIX_FMT_RGB565:
@@ -1767,7 +1767,7 @@ static const struct soc_mbus_pixelfmt rcar_vin_formats[] = {
 		.layout			= SOC_MBUS_LAYOUT_PACKED,
 	},
 	{
-		.fourcc			= V4L2_PIX_FMT_RGB555X,
+		.fourcc			= V4L2_PIX_FMT_ARGB555,
 		.name			= "ARGB1555",
 		.bits_per_sample	= 16,
 		.packing		= SOC_MBUS_PACKING_NONE,
@@ -2400,7 +2400,7 @@ static int rcar_vin_set_fmt(struct soc_camera_device *icd,
 	case V4L2_PIX_FMT_UYVY:
 	case V4L2_PIX_FMT_YUYV:
 	case V4L2_PIX_FMT_RGB565:
-	case V4L2_PIX_FMT_RGB555X:
+	case V4L2_PIX_FMT_ARGB555:
 	case V4L2_PIX_FMT_NV16:
 		can_scale = true;
 		break;
