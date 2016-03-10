@@ -493,9 +493,10 @@
 		power-source = <1800>;
 	};
 
-	mmc0_pins: mmc0 {
+	mmc0_pins_1v8: mmc0_1v8 {
 		renesas,groups = "sdhi2_data8", "sdhi2_ctrl";
 		renesas,function = "sdhi2";
+		power-source = <1800>;
 	};
 
 	msiof0_pins: spi1 {
@@ -772,8 +773,9 @@
 };
 
 &mmc0 {
-	pinctrl-0 = <&mmc0_pins>;
-	pinctrl-names = "default";
+	pinctrl-0 = <&mmc0_pins_1v8>;
+	pinctrl-1 = <&mmc0_pins_1v8>;
+	pinctrl-names = "default", "1v8";
 
 	vmmc-supply = <&fixedregulator3v3>;
 	vqmmc-supply = <&fixedregulator1v8>;
