@@ -2018,8 +2018,6 @@
 			cap-sd-highspeed;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
-			renesas,pfcs = <0xe6060000 0x380>;
-			renesas,id = <0 0x3f>;
 			status = "disabled";
 		};
 
@@ -2033,8 +2031,6 @@
 			cap-sd-highspeed;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
-			renesas,pfcs = <0xe6060000 0x380>;
-			renesas,id = <6 0x3f>;
 			status = "disabled";
 		};
 
@@ -2048,8 +2044,6 @@
 			cap-sd-highspeed;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
-			renesas,pfcs = <0xe6060000 0x380>;
-			renesas,id = <12 0x7f>;
 			status = "disabled";
 		};
 
@@ -2063,8 +2057,6 @@
 			cap-sd-highspeed;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
-			renesas,pfcs = <0xe6060000 0x380>;
-			renesas,id = <19 0x7ff>;
 			status = "disabled";
 		};
 
@@ -2078,8 +2070,6 @@
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
-			renesas,pfcs = <0xe6060000 0x380>;
-			renesas,id = <6 0x1fff>;
 			status = "disabled";
 		};
 
@@ -2093,8 +2083,6 @@
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
-			renesas,pfcs = <0xe6060000 0x380>;
-			renesas,id = <19 0x7ff>;
 			status = "disabled";
 		};
 
