@@ -2012,6 +2012,7 @@
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			renesas,clk-rate = <200000000>;
 			cap-sd-highspeed;
+			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
@@ -2025,6 +2026,7 @@
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			renesas,clk-rate = <200000000>;
 			cap-sd-highspeed;
+			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
@@ -2038,6 +2040,7 @@
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			renesas,clk-rate = <200000000>;
 			cap-sd-highspeed;
+			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
@@ -2051,6 +2054,7 @@
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			renesas,clk-rate = <200000000>;
 			cap-sd-highspeed;
+			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
