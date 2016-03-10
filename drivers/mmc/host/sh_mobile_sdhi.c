@@ -133,18 +133,12 @@ static const struct of_device_id sh_mobile_sdhi_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, sh_mobile_sdhi_of_match);
 
-struct sh_mobile_sdhi_vlt {
-	u32 base;		/* base address for IO voltage */
-	u32 offset;		/* offset value for IO voltage */
-	u32 mask;		/* bit mask position for IO voltage */
-	u32 size;		/* bit mask size for IO voltage */
-};
-
 struct sh_mobile_sdhi {
 	struct clk *clk;
 	struct tmio_mmc_data mmc_data;
 	struct tmio_mmc_dma dma_priv;
-	struct sh_mobile_sdhi_vlt vlt;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pinctrl_3v3, *pinctrl_1v8;
 };
 
 static void sh_mobile_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
@@ -230,39 +224,37 @@ static int sh_mobile_sdhi_card_busy(struct tmio_mmc_host *host)
 #define SH_MOBILE_SDHI_SIGNAL_180V	0
 #define SH_MOBILE_SDHI_SIGNAL_330V	1
 
-static void sh_mobile_sdhi_set_ioctrl(struct tmio_mmc_host *host, int state)
+static int sh_mobile_sdhi_set_ioctrl(struct tmio_mmc_host *host, int state)
 {
 	struct platform_device *pdev = host->pdev;
-	void __iomem *pmmr, *ioctrl;
-	unsigned int ctrl, mask;
 	struct sh_mobile_sdhi *priv =
 		container_of(host->pdata, struct sh_mobile_sdhi, mmc_data);
-	struct sh_mobile_sdhi_vlt *vlt = &priv->vlt;
+	struct pinctrl_state *pstate;
+	int ret;
 
-	if (!vlt)
-		return;
-
-	pmmr = ioremap(vlt->base, 0x04);
-	ioctrl = ioremap(vlt->base + vlt->offset, 0x04);
-
-	ctrl = ioread32(ioctrl);
-	/* Set 1.8V/3.3V */
-	mask = vlt->size << vlt->mask;
-
-	if (state == SH_MOBILE_SDHI_SIGNAL_330V)
-		ctrl |= mask;
-	else if (state == SH_MOBILE_SDHI_SIGNAL_180V)
-		ctrl &= ~mask;
-	else {
+	if (state == SH_MOBILE_SDHI_SIGNAL_330V) {
+		pstate = priv->pinctrl_3v3;
+	} else if (state == SH_MOBILE_SDHI_SIGNAL_180V) {
+		pstate = priv->pinctrl_1v8;
+	} else {
 		dev_err(&pdev->dev, "update_ioctrl: unknown state\n");
+		ret = -EINVAL;
 		goto err;
 	}
 
-	iowrite32(~ctrl, pmmr);
-	iowrite32(ctrl, ioctrl);
+	if (!pstate) {
+		ret = -EIO;
+		goto err;
+	}
+
+	ret = pinctrl_select_state(priv->pinctrl, pstate);
+	if (ret)
+		goto err;
+
+	return 0;
+
 err:
-	iounmap(pmmr);
-	iounmap(ioctrl);
+	return ret;
 }
 
 static int sh_mobile_sdhi_start_signal_voltage_switch(
@@ -275,8 +267,14 @@ static int sh_mobile_sdhi_start_signal_voltage_switch(
 		/* Enable 3.3V Signal */
 		if (!IS_ERR(mmc->supply.vqmmc)) {
 			/* ioctrl */
-			sh_mobile_sdhi_set_ioctrl(host,
-						  SH_MOBILE_SDHI_SIGNAL_330V);
+			ret = sh_mobile_sdhi_set_ioctrl(host,
+						SH_MOBILE_SDHI_SIGNAL_330V);
+			if (ret) {
+				dev_err(&host->pdev->dev,
+					"3.3V pin function control failed\n");
+				return -EIO;
+			}
+
 			ret = regulator_set_voltage(mmc->supply.vqmmc,
 						    3300000, 3300000);
 			if (ret) {
@@ -299,8 +297,13 @@ static int sh_mobile_sdhi_start_signal_voltage_switch(
 				return -EIO;
 			}
 			/* ioctrl */
-			sh_mobile_sdhi_set_ioctrl(host,
-						  SH_MOBILE_SDHI_SIGNAL_180V);
+			ret = sh_mobile_sdhi_set_ioctrl(host,
+						SH_MOBILE_SDHI_SIGNAL_180V);
+			if (ret) {
+				dev_err(&host->pdev->dev,
+					"1.8V pin function control failed\n");
+				return -EIO;
+			}
 		} else {
 			return -EIO;
 		}
@@ -576,13 +579,11 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	struct tmio_mmc_data *mmd = pdev->dev.platform_data;
 	struct tmio_mmc_host *host;
 	struct resource *res;
-	const struct device_node *np = pdev->dev.of_node;
+	struct device_node *np = pdev->dev.of_node;
 	int irq, ret, i;
 	bool multiplexed_isr = true;
 	struct tmio_mmc_dma *dma_priv;
 	int clk_rate;
-	struct sh_mobile_sdhi_vlt *vlt;
-	u32 pfcs[2], mask[2];
 	u32 num, tapnum = 0, tappos;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -597,7 +598,6 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 
 	mmc_data = &priv->mmc_data;
 	dma_priv = &priv->dma_priv;
-	vlt = &priv->vlt;
 
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(priv->clk)) {
@@ -618,20 +618,45 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (np && !of_property_read_u32_array(np, "renesas,pfcs", pfcs, 2)) {
-		if (pfcs[0]) {
-			vlt->base = pfcs[0];
-			vlt->offset = pfcs[1];
-		}
-	}
-
-	if (np && !of_property_read_u32_array(np, "renesas,id", mask, 2)) {
-		vlt->mask = mask[0];
-		vlt->size = mask[1];
-	}
-
 	if (np && !of_property_read_u32(np, "renesas,mmc-scc-tapnum", &num))
 		tapnum = num;
+
+	priv->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (!IS_ERR(priv->pinctrl)) {
+		const char *p;
+		struct pinctrl_state *pstate;
+
+		num = of_property_count_strings(np, "pinctrl-names");
+		if (num < 1) {
+			dev_err(&pdev->dev,
+				"not find pinctrl for voltage switch\n");
+			ret =  -ENODEV;
+			goto eprobe;
+		}
+
+		for (i = 0; i < num; i++) {
+			ret = of_property_read_string_index(np, "pinctrl-names",
+							    i, &p);
+			if (ret)
+				continue;
+
+			pstate = pinctrl_lookup_state(priv->pinctrl, p);
+			if (IS_ERR(pstate))
+				continue;
+
+			if (!strcmp(p, "3v3"))
+				priv->pinctrl_3v3 = pstate;
+			else if (!strcmp(p, "1v8"))
+				priv->pinctrl_1v8 = pstate;
+		}
+
+		if (!priv->pinctrl_3v3 && !priv->pinctrl_1v8) {
+			dev_err(&pdev->dev,
+				"not find pinctrl state for voltage switch\n");
+			ret =  -ENODEV;
+			goto eprobe;
+		}
+	}
 
 	host = tmio_mmc_host_alloc(pdev);
 	if (!host) {
