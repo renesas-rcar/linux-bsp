@@ -2016,6 +2016,7 @@
 			renesas,clk-rate = <200000000>;
 			cap-sd-highspeed;
 			sd-uhs-sdr50;
+			sd-uhs-sdr104;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
 		};
@@ -2029,6 +2030,7 @@
 			renesas,clk-rate = <200000000>;
 			cap-sd-highspeed;
 			sd-uhs-sdr50;
+			sd-uhs-sdr104;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
 		};
@@ -2042,6 +2044,7 @@
 			renesas,clk-rate = <200000000>;
 			cap-sd-highspeed;
 			sd-uhs-sdr50;
+			sd-uhs-sdr104;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
 		};
@@ -2055,6 +2058,7 @@
 			renesas,clk-rate = <200000000>;
 			cap-sd-highspeed;
 			sd-uhs-sdr50;
+			sd-uhs-sdr104;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
 		};
