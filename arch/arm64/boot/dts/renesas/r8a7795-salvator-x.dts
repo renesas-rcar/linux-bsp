@@ -469,14 +469,28 @@
 		function = "avb";
 	};
 
-	sdhi0_pins: sd0 {
+	sdhi0_pins_3v3: sd0_3v3 {
 		groups = "sdhi0_data4", "sdhi0_ctrl";
 		function = "sdhi0";
+		power-source = <3300>;
 	};
 
-	sdhi3_pins: sd3 {
+	sdhi0_pins_1v8: sd0_1v8 {
+		groups = "sdhi0_data4", "sdhi0_ctrl";
+		function = "sdhi0";
+		power-source = <1800>;
+	};
+
+	sdhi3_pins_3v3: sd3_3v3 {
 		groups = "sdhi3_data4", "sdhi3_ctrl";
 		function = "sdhi3";
+		power-source = <3300>;
+	};
+
+	sdhi3_pins_1v8: sd3_1v8 {
+		groups = "sdhi3_data4", "sdhi3_ctrl";
+		function = "sdhi3";
+		power-source = <1800>;
 	};
 
 	mmc0_pins: mmc0 {
@@ -730,8 +744,10 @@
 };
 
 &sdhi0 {
-	pinctrl-0 = <&sdhi0_pins>;
-	pinctrl-names = "default";
+	pinctrl-0 = <&sdhi0_pins_3v3>;
+	pinctrl-1 = <&sdhi0_pins_3v3>;
+	pinctrl-2 = <&sdhi0_pins_1v8>;
+	pinctrl-names = "default", "3v3", "1v8";
 
 	vmmc-supply = <&vcc_sdhi0>;
 	vqmmc-supply = <&vccq_sdhi0>;
@@ -742,8 +758,10 @@
 };
 
 &sdhi3 {
-	pinctrl-0 = <&sdhi3_pins>;
-	pinctrl-names = "default";
+	pinctrl-0 = <&sdhi3_pins_3v3>;
+	pinctrl-1 = <&sdhi3_pins_3v3>;
+	pinctrl-2 = <&sdhi3_pins_1v8>;
+	pinctrl-names = "default", "3v3", "1v8";
 
 	vmmc-supply = <&vcc_sdhi3>;
 	vqmmc-supply = <&vccq_sdhi3>;
