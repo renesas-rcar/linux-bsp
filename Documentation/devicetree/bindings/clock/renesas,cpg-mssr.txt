@@ -14,6 +14,7 @@ They provide the following functionalities:
 Required Properties:
   - compatible: Must be one of:
       - "renesas,r8a7795-cpg-mssr" for the r8a7795 SoC
+      - "renesas,r8a7796-cpg-mssr" for the r8a7796 SoC
 
   - reg: Base address and length of the memory resource used by the CPG/MSSR
     block
