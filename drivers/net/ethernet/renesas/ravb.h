@@ -76,6 +76,7 @@ enum ravb_reg {
 	CDAR20	= 0x0060,
 	CDAR21	= 0x0064,
 	ESR	= 0x0088,
+	APSR	= 0x008C,
 	RCR	= 0x0090,
 	RQC0	= 0x0094,
 	RQC1	= 0x0098,
@@ -83,6 +84,7 @@ enum ravb_reg {
 	RQC3	= 0x00A0,
 	RQC4	= 0x00A4,
 	RPC	= 0x00B0,
+	RTC	= 0x00B4,
 	UFCW	= 0x00BC,
 	UFCS	= 0x00C0,
 	UFCV0	= 0x00C4,
@@ -128,11 +130,52 @@ enum ravb_reg {
 	SFP29	= 0x0174,
 	SFP30	= 0x0178,
 	SFP31	= 0x017C,
+	SFV0	= 0x01B8,
+	SFV1	= 0x01BC,
 	SFM0	= 0x01C0,
 	SFM1	= 0x01C4,
+	SFL	= 0x01C8,
+	PCRC	= 0x01CC,
+	CIAR0	= 0x0200,
+	CIAR1	= 0x0204,
+	CIAR2	= 0x0208,
+	CIAR3	= 0x020C,
+	CIAR4	= 0x0210,
+	CIAR5	= 0x0214,
+	CIAR6	= 0x0218,
+	CIAR7	= 0x021C,
+	CIAR8	= 0x0220,
+	CIAR9	= 0x0224,
+	CIAR10	= 0x0228,
+	CIAR11	= 0x022C,
+	CIAR12	= 0x0230,
+	CIAR13	= 0x0234,
+	CIAR14	= 0x0238,
+	CIAR15	= 0x023C,
+	CIAR16	= 0x0240,
+	CIAR17	= 0x0244,
+	LIAR0	= 0x0280,
+	LIAR1	= 0x0284,
+	LIAR2	= 0x0288,
+	LIAR3	= 0x028C,
+	LIAR4	= 0x0290,
+	LIAR5	= 0x0294,
+	LIAR6	= 0x0298,
+	LIAR7	= 0x029C,
+	LIAR8	= 0x02A0,
+	LIAR9	= 0x02A4,
+	LIAR10	= 0x02A8,
+	LIAR11	= 0x02AC,
+	LIAR12	= 0x02B0,
+	LIAR13	= 0x02B4,
+	LIAR14	= 0x02B8,
+	LIAR15	= 0x02BC,
+	LIAR16	= 0x02C0,
+	LIAR17	= 0x02C4,
 	TGC	= 0x0300,
 	TCCR	= 0x0304,
 	TSR	= 0x0308,
+	MFA	= 0x030C,
 	TFA0	= 0x0310,
 	TFA1	= 0x0314,
 	TFA2	= 0x0318,
@@ -157,6 +200,9 @@ enum ravb_reg {
 	TIC	= 0x0378,
 	TIS	= 0x037C,
 	ISS	= 0x0380,
+	CIE	= 0x0384,
+	RIC3	= 0x0388,
+	RIS3	= 0x038C,
 	GCCR	= 0x0390,
 	GMTT	= 0x0394,
 	GPTC	= 0x0398,
@@ -170,6 +216,48 @@ enum ravb_reg {
 	GCT0	= 0x03B8,
 	GCT1	= 0x03BC,
 	GCT2	= 0x03C0,
+	GSR	= 0x03C4,
+	GIE	= 0x03CC,
+	GID	= 0x03D0,
+	GIL	= 0x03D4,
+	GACP	= 0x03DC,
+	GPTF0	= 0x03E0,
+	GPTF1	= 0x03E4,
+	GPTF2	= 0x03E8,
+	GPTF3	= 0x03EC,
+	GCAT0	= 0x0400,
+	GCAT1	= 0x0404,
+	GCAT2	= 0x0408,
+	GCAT3	= 0x040C,
+	GCAT4	= 0x0410,
+	GCAT5	= 0x0414,
+	GCAT6	= 0x0418,
+	GCAT7	= 0x041C,
+	GCAT8	= 0x0420,
+	GCAT9	= 0x0424,
+	GCAT10	= 0x0428,
+	GCAT11	= 0x042C,
+	GCAT12	= 0x0430,
+	GCAT13	= 0x0434,
+	GCAT14	= 0x0438,
+	GCAT15	= 0x043C,
+	DIL	= 0x0440,
+	EIL	= 0x0444,
+	TIL	= 0x0448,
+	DIE	= 0x0450,
+	DID	= 0x0454,
+	EIE	= 0x0458,
+	EID	= 0x045C,
+	RIE0	= 0x0460,
+	RID0	= 0x0464,
+	RIE1	= 0x0468,
+	RID1	= 0x046c,
+	RIE2	= 0x0470,
+	RID2	= 0x0474,
+	TIE	= 0x0478,
+	TID	= 0x047c,
+	RIE3	= 0x0488,
+	RID3	= 0x048C,
 
 	/* E-MAC registers */
 	ECMR	= 0x0500,
@@ -179,9 +267,12 @@ enum ravb_reg {
 	PIR	= 0x0520,
 	PSR	= 0x0528,
 	PIPR	= 0x052c,
+	APR	= 0x0554,
 	MPR	= 0x0558,
 	PFTCR	= 0x055c,
 	PFRCR	= 0x0560,
+	PFTTLR	= 0x0564,
+	PFTTCR	= 0x0568,
 	GECMR	= 0x05b0,
 	MAHR	= 0x05c0,
 	MALR	= 0x05c8,
@@ -307,6 +398,13 @@ enum SFO_BIT {
 enum RTC_BIT {
 	RTC_MFL0	= 0x00000FFF,
 	RTC_MFL1	= 0x0FFF0000,
+};
+
+enum SFL_BIT {
+	SFL_LC		= 0x0000001F,
+	SFL_LC_SFM	= 0x0000001D,
+	SFL_LC_SFO	= 0x0000001E,
+	SFL_LC_LOADABLE	= 0x0000001F,
 };
 
 /* TGC */
@@ -556,6 +654,16 @@ enum ISS_BIT {
 	ISS_DPS15	= 0x80000000,
 };
 
+/* CIE */
+enum CIE_BIT {
+	CIE_CRIE	= 0x00000001, /* Common Receive Interrupt Enable */
+	CIE_CTIE	= 0x00000100, /* Common Transmit Interrupt Enable */
+	CIE_RQFM	= 0x00010000, /* Reception Queue Full Mode */
+	CIE_CL0M	= 0x00020000, /* Common Line 0 Mode */
+	CIE_RFWL	= 0x00040000, /* Rx-FIFO Warning interrupt Line */
+	CIE_RFFL	= 0x00080000, /* Rx-FIFO Full interrupt Line */
+};
+
 /* GCCR */
 enum GCCR_BIT {
 	GCCR_TCR	= 0x00000003,
@@ -591,6 +699,18 @@ enum GIS_BIT {
 	GIS_PTCF	= 0x00000001,	/* Undocumented? */
 	GIS_PTMF	= 0x00000004,
 };
+
+/* GIx */
+#define RAVB_GIx_ALL	0xffff03ff
+
+/* RIx0 */
+#define RAVB_RIx0_ALL	0x0003ffff
+
+/* RIx2 */
+#define RAVB_RIx2_ALL	0x8003ffff
+
+/* TIx */
+#define RAVB_TIx_ALL	0x000fffff
 
 /* ECMR */
 enum ECMR_BIT {
@@ -745,7 +865,6 @@ enum RAVB_QUEUE {
 #define RX_QUEUE_OFFSET	4
 #define NUM_RX_QUEUE	2
 #define NUM_TX_QUEUE	2
-#define NUM_TX_DESC	2	/* TX descriptors per packet */
 
 struct ravb_tstamp_skb {
 	struct list_head list;
@@ -820,6 +939,9 @@ struct ravb_private {
 
 	unsigned no_avb_link:1;
 	unsigned avb_link_active_low:1;
+	int rx_irqs[NUM_RX_QUEUE];
+	int tx_irqs[NUM_TX_QUEUE];
+	int num_tx_desc;	/* TX descriptors per packet */
 };
 
 static inline u32 ravb_read(struct net_device *ndev, enum ravb_reg reg)

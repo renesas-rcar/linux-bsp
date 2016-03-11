@@ -1,6 +1,6 @@
 /* Renesas Ethernet AVB device driver
  *
- * Copyright (C) 2014-2015 Renesas Electronics Corporation
+ * Copyright (C) 2014-2016 Renesas Electronics Corporation
  * Copyright (C) 2015 Renesas Solutions Corp.
  * Copyright (C) 2015 Cogent Embedded, Inc. <source@cogentembedded.com>
  *
@@ -31,6 +31,9 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <asm/div64.h>
 
@@ -41,6 +44,16 @@
 		 NETIF_MSG_TIMER  | \
 		 NETIF_MSG_RX_ERR | \
 		 NETIF_MSG_TX_ERR)
+
+static const char *ravb_rx_irqs[NUM_RX_QUEUE] = {
+	"ch0", /* RAVB_BE */
+	"ch1", /* RAVB_NC */
+};
+
+static const char *ravb_tx_irqs[NUM_TX_QUEUE] = {
+	"ch18", /* RAVB_BE */
+	"ch19", /* RAVB_NC */
+};
 
 int ravb_wait(struct net_device *ndev, enum ravb_reg reg, u32 mask, u32 value)
 {
@@ -182,6 +195,7 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 	struct ravb_private *priv = netdev_priv(ndev);
 	int ring_size;
 	int i;
+	int num_tx_desc = priv->num_tx_desc;
 
 	/* Free RX skb ringbuffer */
 	if (priv->rx_skb[q]) {
@@ -213,7 +227,7 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 
 	if (priv->tx_ring[q]) {
 		ring_size = sizeof(struct ravb_tx_desc) *
-			    (priv->num_tx_ring[q] * NUM_TX_DESC + 1);
+			    (priv->num_tx_ring[q] * num_tx_desc + 1);
 		dma_free_coherent(ndev->dev.parent, ring_size, priv->tx_ring[q],
 				  priv->tx_desc_dma[q]);
 		priv->tx_ring[q] = NULL;
@@ -227,9 +241,10 @@ static void ravb_ring_format(struct net_device *ndev, int q)
 	struct ravb_ex_rx_desc *rx_desc;
 	struct ravb_tx_desc *tx_desc;
 	struct ravb_desc *desc;
+	int num_tx_desc = priv->num_tx_desc;
 	int rx_ring_size = sizeof(*rx_desc) * priv->num_rx_ring[q];
 	int tx_ring_size = sizeof(*tx_desc) * priv->num_tx_ring[q] *
-			   NUM_TX_DESC;
+			   num_tx_desc;
 	dma_addr_t dma_addr;
 	int i;
 
@@ -243,10 +258,10 @@ static void ravb_ring_format(struct net_device *ndev, int q)
 	for (i = 0; i < priv->num_rx_ring[q]; i++) {
 		/* RX descriptor */
 		rx_desc = &priv->rx_ring[q][i];
-		/* The size of the buffer should be on 16-byte boundary. */
-		rx_desc->ds_cc = cpu_to_le16(ALIGN(PKT_BUF_SZ, 16));
-		dma_addr = dma_map_single(ndev->dev.parent, priv->rx_skb[q][i]->data,
-					  ALIGN(PKT_BUF_SZ, 16),
+		rx_desc->ds_cc = cpu_to_le16(PKT_BUF_SZ);
+		dma_addr = dma_map_single(ndev->dev.parent,
+					  priv->rx_skb[q][i]->data,
+					  PKT_BUF_SZ,
 					  DMA_FROM_DEVICE);
 		/* We just set the data size to 0 for a failed mapping which
 		 * should prevent DMA from happening...
@@ -265,8 +280,10 @@ static void ravb_ring_format(struct net_device *ndev, int q)
 	for (i = 0, tx_desc = priv->tx_ring[q]; i < priv->num_tx_ring[q];
 	     i++, tx_desc++) {
 		tx_desc->die_dt = DT_EEMPTY;
-		tx_desc++;
-		tx_desc->die_dt = DT_EEMPTY;
+		if (num_tx_desc >= 2) {
+			tx_desc++;
+			tx_desc->die_dt = DT_EEMPTY;
+		}
 	}
 	tx_desc->dptr = cpu_to_le32((u32)priv->tx_desc_dma[q]);
 	tx_desc->die_dt = DT_LINKFIX; /* type */
@@ -289,6 +306,7 @@ static int ravb_ring_init(struct net_device *ndev, int q)
 	struct sk_buff *skb;
 	int ring_size;
 	int i;
+	int num_tx_desc = priv->num_tx_desc;
 
 	/* Allocate RX and TX skb rings */
 	priv->rx_skb[q] = kcalloc(priv->num_rx_ring[q],
@@ -324,7 +342,7 @@ static int ravb_ring_init(struct net_device *ndev, int q)
 
 	/* Allocate all TX descriptors. */
 	ring_size = sizeof(struct ravb_tx_desc) *
-		    (priv->num_tx_ring[q] * NUM_TX_DESC + 1);
+		    (priv->num_tx_ring[q] * num_tx_desc + 1);
 	priv->tx_ring[q] = dma_alloc_coherent(ndev->dev.parent, ring_size,
 					      &priv->tx_desc_dma[q],
 					      GFP_KERNEL);
@@ -360,8 +378,6 @@ static void ravb_emac_init(struct net_device *ndev)
 	ravb_write(ndev,
 		   (ndev->dev_addr[4] << 8)  | (ndev->dev_addr[5]), MALR);
 
-	ravb_write(ndev, 1, MPR);
-
 	/* E-MAC status register clear */
 	ravb_write(ndev, ECSR_ICD | ECSR_MPD, ECSR);
 
@@ -373,6 +389,7 @@ static void ravb_emac_init(struct net_device *ndev)
 static int ravb_dmac_init(struct net_device *ndev)
 {
 	int error;
+	struct ravb_private *priv = netdev_priv(ndev);
 
 	/* Set CONFIG mode */
 	error = ravb_config(ndev);
@@ -399,7 +416,8 @@ static int ravb_dmac_init(struct net_device *ndev)
 #endif
 
 	/* Set AVB RX */
-	ravb_write(ndev, RCR_EFFS | RCR_ENCF | RCR_ETS0 | 0x18000000, RCR);
+	ravb_write(ndev,
+		   RCR_EFFS | RCR_ENCF | RCR_ETS0 | RCR_ESF | 0x18000000, RCR);
 
 	/* Set FIFO size */
 	ravb_write(ndev, TGC_TQP_AVBMODE1 | 0x00222200, TGC);
@@ -408,14 +426,30 @@ static int ravb_dmac_init(struct net_device *ndev)
 	ravb_write(ndev, TCCR_TFEN, TCCR);
 
 	/* Interrupt init: */
-	/* Frame receive */
-	ravb_write(ndev, RIC0_FRE0 | RIC0_FRE1, RIC0);
-	/* Disable FIFO full warning */
-	ravb_write(ndev, 0, RIC1);
-	/* Receive FIFO full error, descriptor empty */
-	ravb_write(ndev, RIC2_QFE0 | RIC2_QFE1 | RIC2_RFFE, RIC2);
-	/* Frame transmitted, timestamp FIFO updated */
-	ravb_write(ndev, TIC_FTE0 | TIC_FTE1 | TIC_TFUE, TIC);
+	if (priv->chip_id == RCAR_GEN2) {
+		/* Frame receive */
+		ravb_write(ndev, RIC0_FRE0 | RIC0_FRE1, RIC0);
+		/* Disable FIFO full warning */
+		ravb_write(ndev, 0, RIC1);
+		/* Receive FIFO full error, descriptor empty */
+		ravb_write(ndev, RIC2_QFE0 | RIC2_QFE1 | RIC2_RFFE, RIC2);
+		/* Frame transmitted, timestamp FIFO updated */
+		ravb_write(ndev, TIC_FTE0 | TIC_FTE1 | TIC_TFUE, TIC);
+	} else {
+		/* Clear CIE.CTIE, CIE.CRIE, DIL.DPLx */
+		ravb_write(ndev, 0, CIE);
+		ravb_write(ndev, 0, DIL);
+		/* Set queue specific interrupt */
+		ravb_write(ndev, CIE_CRIE | CIE_CTIE | CIE_CL0M, CIE);
+		/* Frame receive */
+		ravb_write(ndev, RIC0_FRE0 | RIC0_FRE1, RIE0);
+		/* Disable FIFO full warning */
+		ravb_write(ndev, 0, RID1);
+		/* Receive FIFO full error, descriptor empty */
+		ravb_write(ndev, RIC2_QFE0 | RIC2_QFE1 | RIC2_RFFE, RIE2);
+		/* Frame transmitted, timestamp FIFO updated */
+		ravb_write(ndev, TIC_FTE0 | TIC_FTE1 | TIC_TFUE, TIE);
+	}
 
 	/* Setting the control will start the AVB-DMAC process. */
 	ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) | CCC_OPC_OPERATION,
@@ -433,10 +467,11 @@ static int ravb_tx_free(struct net_device *ndev, int q)
 	int free_num = 0;
 	int entry;
 	u32 size;
+	int num_tx_desc = priv->num_tx_desc;
 
 	for (; priv->cur_tx[q] - priv->dirty_tx[q] > 0; priv->dirty_tx[q]++) {
 		entry = priv->dirty_tx[q] % (priv->num_tx_ring[q] *
-					     NUM_TX_DESC);
+					     num_tx_desc);
 		desc = &priv->tx_ring[q][entry];
 		if (desc->die_dt != DT_FEMPTY)
 			break;
@@ -444,12 +479,12 @@ static int ravb_tx_free(struct net_device *ndev, int q)
 		dma_rmb();
 		size = le16_to_cpu(desc->ds_tagl) & TX_DS;
 		/* Free the original skb. */
-		if (priv->tx_skb[q][entry / NUM_TX_DESC]) {
+		if (priv->tx_skb[q][entry / num_tx_desc]) {
 			dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
 					 size, DMA_TO_DEVICE);
 			/* Last packet descriptor? */
-			if (entry % NUM_TX_DESC == NUM_TX_DESC - 1) {
-				entry /= NUM_TX_DESC;
+			if (entry % num_tx_desc == num_tx_desc - 1) {
+				entry /= num_tx_desc;
 				dev_kfree_skb_any(priv->tx_skb[q][entry]);
 				priv->tx_skb[q][entry] = NULL;
 				stats->tx_packets++;
@@ -548,8 +583,9 @@ static bool ravb_rx(struct net_device *ndev, int *quota, int q)
 
 			skb = priv->rx_skb[q][entry];
 			priv->rx_skb[q][entry] = NULL;
-			dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
-					 ALIGN(PKT_BUF_SZ, 16),
+			dma_unmap_single(ndev->dev.parent,
+					 le32_to_cpu(desc->dptr),
+					 PKT_BUF_SZ,
 					 DMA_FROM_DEVICE);
 			get_ts &= (q == RAVB_NC) ?
 					RAVB_RXTSTAMP_TYPE_V2_L2_EVENT :
@@ -579,8 +615,7 @@ static bool ravb_rx(struct net_device *ndev, int *quota, int q)
 	for (; priv->cur_rx[q] - priv->dirty_rx[q] > 0; priv->dirty_rx[q]++) {
 		entry = priv->dirty_rx[q] % priv->num_rx_ring[q];
 		desc = &priv->rx_ring[q][entry];
-		/* The size of the buffer should be on 16-byte boundary. */
-		desc->ds_cc = cpu_to_le16(ALIGN(PKT_BUF_SZ, 16));
+		desc->ds_cc = cpu_to_le16(PKT_BUF_SZ);
 
 		if (!priv->rx_skb[q][entry]) {
 			skb = netdev_alloc_skb(ndev,
@@ -651,7 +686,7 @@ static int ravb_stop_dma(struct net_device *ndev)
 }
 
 /* E-MAC interrupt handler */
-static void ravb_emac_interrupt(struct net_device *ndev)
+static void _ravb_emac_interrupt(struct net_device *ndev)
 {
 	struct ravb_private *priv = netdev_priv(ndev);
 	u32 ecsr, psr;
@@ -677,6 +712,18 @@ static void ravb_emac_interrupt(struct net_device *ndev)
 	}
 }
 
+static irqreturn_t ravb_emac_interrupt(int irq, void *dev_id)
+{
+	struct net_device *ndev = dev_id;
+	struct ravb_private *priv = netdev_priv(ndev);
+
+	spin_lock(&priv->lock);
+	_ravb_emac_interrupt(ndev);
+	mmiowb();
+	spin_unlock(&priv->lock);
+	return IRQ_HANDLED;
+}
+
 /* Error interrupt handler */
 static void ravb_error_interrupt(struct net_device *ndev)
 {
@@ -687,7 +734,10 @@ static void ravb_error_interrupt(struct net_device *ndev)
 	ravb_write(ndev, ~EIS_QFS, EIS);
 	if (eis & EIS_QFS) {
 		ris2 = ravb_read(ndev, RIS2);
-		ravb_write(ndev, ~(RIS2_QFF0 | RIS2_RFFF), RIS2);
+		if (priv->chip_id == RCAR_GEN2)
+			ravb_write(ndev, ~(RIS2_QFF0 | RIS2_RFFF), RIS2);
+		else
+			ravb_write(ndev, RIS2_QFF0 | RIS2_RFFF, RID2);
 
 		/* Receive Descriptor Empty int */
 		if (ris2 & RIS2_QFF0)
@@ -755,7 +805,7 @@ static irqreturn_t ravb_interrupt(int irq, void *dev_id)
 
 	/* E-MAC status summary */
 	if (iss & ISS_MS) {
-		ravb_emac_interrupt(ndev);
+		_ravb_emac_interrupt(ndev);
 		result = IRQ_HANDLED;
 	}
 
@@ -771,6 +821,83 @@ static irqreturn_t ravb_interrupt(int irq, void *dev_id)
 	mmiowb();
 	spin_unlock(&priv->lock);
 	return result;
+}
+
+/* Descriptor IRQ/ Error/ Management interrupt handler */
+static irqreturn_t ravb_multi_interrupt(int irq, void *dev_id)
+{
+	struct net_device *ndev = dev_id;
+	struct ravb_private *priv = netdev_priv(ndev);
+	irqreturn_t result = IRQ_NONE;
+	u32 iss, tis;
+
+	spin_lock(&priv->lock);
+	/* Get interrupt status */
+	iss = ravb_read(ndev, ISS);
+
+	/* Timestamp updated */
+	tis  = ravb_read(ndev, TIS);
+	if (tis & TIS_TFUF) {
+		ravb_write(ndev, ~TIS_TFUF, TIS);
+		ravb_get_tx_tstamp(ndev);
+		result = IRQ_HANDLED;
+	}
+
+	/* Error status summary */
+	if (iss & ISS_ES) {
+		ravb_error_interrupt(ndev);
+		result = IRQ_HANDLED;
+	}
+
+	/* Management */
+	if (iss & ISS_CGIS)
+		result = ravb_ptp_interrupt(ndev);
+
+	mmiowb();
+	spin_unlock(&priv->lock);
+	return result;
+}
+
+static irqreturn_t ravb_dmaq_interrupt(int irq, void *dev_id, int ravb_queue)
+{
+	struct net_device *ndev = dev_id;
+	struct ravb_private *priv = netdev_priv(ndev);
+	irqreturn_t result = IRQ_NONE;
+	u32 ris0, ric0, tis, tic;
+	int q = ravb_queue;
+
+	spin_lock(&priv->lock);
+
+	ris0 = ravb_read(ndev, RIS0);
+	ric0 = ravb_read(ndev, RIC0);
+	tis  = ravb_read(ndev, TIS);
+	tic  = ravb_read(ndev, TIC);
+
+	/* Best effort queue RX/TX */
+	if (((ris0 & ric0) & BIT(q)) ||
+	    ((tis  & tic)  & BIT(q))) {
+		if (napi_schedule_prep(&priv->napi[q])) {
+			/* Mask RX and TX interrupts */
+			ravb_write(ndev, BIT(q), RID0);
+			ravb_write(ndev, BIT(q), TID);
+			__napi_schedule(&priv->napi[q]);
+		}
+		result = IRQ_HANDLED;
+	}
+
+	mmiowb();
+	spin_unlock(&priv->lock);
+	return result;
+}
+
+static irqreturn_t ravb_be_interrupt(int irq, void *dev_id)
+{
+	return ravb_dmaq_interrupt(irq, dev_id, RAVB_BE);
+}
+
+static irqreturn_t ravb_nc_interrupt(int irq, void *dev_id)
+{
+	return ravb_dmaq_interrupt(irq, dev_id, RAVB_NC);
 }
 
 static int ravb_poll(struct napi_struct *napi, int budget)
@@ -812,8 +939,13 @@ static int ravb_poll(struct napi_struct *napi, int budget)
 
 	/* Re-enable RX/TX interrupts */
 	spin_lock_irqsave(&priv->lock, flags);
-	ravb_write(ndev, ravb_read(ndev, RIC0) | mask, RIC0);
-	ravb_write(ndev, ravb_read(ndev, TIC)  | mask,  TIC);
+	if (priv->chip_id == RCAR_GEN2) {
+		ravb_write(ndev, ravb_read(ndev, RIC0) | mask, RIC0);
+		ravb_write(ndev, ravb_read(ndev, TIC)  | mask,  TIC);
+	} else {
+		ravb_write(ndev, mask, RIE0);
+		ravb_write(ndev, mask, TIE);
+	}
 	mmiowb();
 	spin_unlock_irqrestore(&priv->lock, flags);
 
@@ -909,16 +1041,40 @@ static int ravb_phy_init(struct net_device *ndev)
 	 * at this time.
 	 */
 	if (priv->chip_id == RCAR_GEN3) {
-		int err;
+		struct platform_device *pdev = priv->pdev;
+		struct device *dev = &pdev->dev;
+		enum of_gpio_flags flags;
+		int err, gpio;
 
-		err = phy_set_max_speed(phydev, SPEED_100);
-		if (err) {
-			netdev_err(ndev, "failed to limit PHY to 100Mbit/s\n");
-			phy_disconnect(phydev);
+		err = RCAR_PRR_INIT();
+		if (err)
 			return err;
+
+		if (RCAR_PRR_IS_PRODUCT(H3) &&
+		    (RCAR_PRR_CHK_CUT(H3, WS10) == 0)) {
+			err = phy_set_max_speed(phydev, SPEED_100);
+			if (err) {
+				netdev_err(ndev, "failed to limit PHY to 100Mbit/s\n");
+				phy_disconnect(phydev);
+				return err;
+			}
+			netdev_info(ndev, "limited PHY to 100Mbit/s\n");
 		}
 
-		netdev_info(ndev, "limited PHY to 100Mbit/s\n");
+		gpio = of_get_named_gpio_flags(np, "phy-int-gpio", 0, &flags);
+		if (gpio_is_valid(gpio)) {
+			err = devm_gpio_request_one(dev, gpio, GPIOF_DIR_IN,
+						    "phy-int-gpio");
+			if (err == 0 && (phydev->irq == gpio_to_irq(gpio))) {
+				if (flags & OF_GPIO_ACTIVE_LOW)
+					irq_set_irq_type(phydev->irq,
+							 IRQ_TYPE_LEVEL_LOW);
+				else
+					irq_set_irq_type(phydev->irq,
+							 IRQ_TYPE_LEVEL_HIGH);
+			}
+		}
+
 	}
 
 	/* 10BASE is not supported */
@@ -1220,30 +1376,79 @@ static int ravb_open(struct net_device *ndev)
 {
 	struct ravb_private *priv = netdev_priv(ndev);
 	int error;
+	struct platform_device *pdev = priv->pdev;
+	struct device *dev = &pdev->dev;
+	char *name;
 
 	napi_enable(&priv->napi[RAVB_BE]);
 	napi_enable(&priv->napi[RAVB_NC]);
 
-	error = request_irq(ndev->irq, ravb_interrupt, IRQF_SHARED, ndev->name,
-			    ndev);
-	if (error) {
-		netdev_err(ndev, "cannot request IRQ\n");
-		goto out_napi_off;
-	}
-
-	if (priv->chip_id == RCAR_GEN3) {
-		error = request_irq(priv->emac_irq, ravb_interrupt,
-				    IRQF_SHARED, ndev->name, ndev);
+	if (priv->chip_id == RCAR_GEN2) {
+		error = request_irq(ndev->irq, ravb_interrupt, IRQF_SHARED,
+				    ndev->name, ndev);
 		if (error) {
 			netdev_err(ndev, "cannot request IRQ\n");
+			goto out_napi_off;
+		}
+	} else {
+		name = devm_kasprintf(dev, GFP_KERNEL, "%s:ch22:multi",
+				      ndev->name);
+		error = request_irq(ndev->irq, ravb_multi_interrupt,
+				    IRQF_SHARED, name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ %s\n", name);
+			goto out_napi_off;
+		}
+		name = devm_kasprintf(dev, GFP_KERNEL, "%s:ch24:emac",
+				      ndev->name);
+		error = request_irq(priv->emac_irq, ravb_emac_interrupt,
+				    IRQF_SHARED, name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ %s\n", name);
 			goto out_free_irq;
+		}
+		name = devm_kasprintf(dev, GFP_KERNEL, "%s:ch0:rx_be",
+				      ndev->name);
+		error = request_irq(priv->rx_irqs[RAVB_BE], ravb_be_interrupt,
+				    IRQF_SHARED, name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ %s\n", name);
+			goto out_free_irq2;
+		}
+		name = devm_kasprintf(dev, GFP_KERNEL, "%s:ch18:tx_be",
+				      ndev->name);
+		error = request_irq(priv->tx_irqs[RAVB_BE], ravb_be_interrupt,
+				    IRQF_SHARED, name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ %s\n", name);
+			goto out_free_irq3;
+		}
+		name = devm_kasprintf(dev, GFP_KERNEL, "%s:ch1:rx_nc",
+				      ndev->name);
+		error = request_irq(priv->rx_irqs[RAVB_NC], ravb_nc_interrupt,
+				    IRQF_SHARED, name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ %s\n", name);
+			goto out_free_irq4;
+		}
+		name = devm_kasprintf(dev, GFP_KERNEL, "%s:ch19:tx_nc",
+				      ndev->name);
+		error = request_irq(priv->tx_irqs[RAVB_NC], ravb_nc_interrupt,
+				    IRQF_SHARED, name, ndev);
+		if (error) {
+			netdev_err(ndev, "cannot request IRQ %s\n", name);
+			goto out_free_irq5;
 		}
 	}
 
 	/* Device init */
 	error = ravb_dmac_init(ndev);
-	if (error)
-		goto out_free_irq2;
+	if (error) {
+		if (priv->chip_id == RCAR_GEN2)
+			goto out_free_irq;
+		else
+			goto out_free_irq6;
+	}
 	ravb_emac_init(ndev);
 
 	/* Initialise PTP Clock driver */
@@ -1261,11 +1466,20 @@ static int ravb_open(struct net_device *ndev)
 
 out_ptp_stop:
 	/* Stop PTP Clock driver */
-	if (priv->chip_id == RCAR_GEN2)
+	if (priv->chip_id == RCAR_GEN2) {
 		ravb_ptp_stop(ndev);
+		goto out_free_irq;
+	}
+out_free_irq6:
+	free_irq(priv->tx_irqs[RAVB_NC], ndev);
+out_free_irq5:
+	free_irq(priv->rx_irqs[RAVB_NC], ndev);
+out_free_irq4:
+	free_irq(priv->tx_irqs[RAVB_BE], ndev);
+out_free_irq3:
+	free_irq(priv->rx_irqs[RAVB_BE], ndev);
 out_free_irq2:
-	if (priv->chip_id == RCAR_GEN3)
-		free_irq(priv->emac_irq, ndev);
+	free_irq(priv->emac_irq, ndev);
 out_free_irq:
 	free_irq(ndev->irq, ndev);
 out_napi_off:
@@ -1328,41 +1542,56 @@ static netdev_tx_t ravb_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	void *buffer;
 	u32 entry;
 	u32 len;
+	int num_tx_desc = priv->num_tx_desc;
 
 	spin_lock_irqsave(&priv->lock, flags);
 	if (priv->cur_tx[q] - priv->dirty_tx[q] > (priv->num_tx_ring[q] - 1) *
-	    NUM_TX_DESC) {
+	    num_tx_desc) {
 		netif_err(priv, tx_queued, ndev,
 			  "still transmitting with the full ring!\n");
 		netif_stop_subqueue(ndev, q);
 		spin_unlock_irqrestore(&priv->lock, flags);
 		return NETDEV_TX_BUSY;
 	}
-	entry = priv->cur_tx[q] % (priv->num_tx_ring[q] * NUM_TX_DESC);
-	priv->tx_skb[q][entry / NUM_TX_DESC] = skb;
+	entry = priv->cur_tx[q] % (priv->num_tx_ring[q] * num_tx_desc);
+	priv->tx_skb[q][entry / num_tx_desc] = skb;
 
 	if (skb_put_padto(skb, ETH_ZLEN))
 		goto drop;
 
-	buffer = PTR_ALIGN(priv->tx_align[q], DPTR_ALIGN) +
-		 entry / NUM_TX_DESC * DPTR_ALIGN;
-	len = PTR_ALIGN(skb->data, DPTR_ALIGN) - skb->data;
-	memcpy(buffer, skb->data, len);
-	dma_addr = dma_map_single(ndev->dev.parent, buffer, len, DMA_TO_DEVICE);
-	if (dma_mapping_error(ndev->dev.parent, dma_addr))
-		goto drop;
+	if (num_tx_desc >= 2) {
+		buffer = PTR_ALIGN(priv->tx_align[q], DPTR_ALIGN) +
+			 entry / num_tx_desc * DPTR_ALIGN;
+		len = PTR_ALIGN(skb->data, DPTR_ALIGN) - skb->data;
+		/* quick fix */
+		if (len == 0)
+			len = 4;
+		memcpy(buffer, skb->data, len);
+		dma_addr = dma_map_single(ndev->dev.parent, buffer, len,
+					  DMA_TO_DEVICE);
+		if (dma_mapping_error(ndev->dev.parent, dma_addr))
+			goto drop;
 
-	desc = &priv->tx_ring[q][entry];
-	desc->ds_tagl = cpu_to_le16(len);
-	desc->dptr = cpu_to_le32(dma_addr);
+		desc = &priv->tx_ring[q][entry];
+		desc->ds_tagl = cpu_to_le16(len);
+		desc->dptr = cpu_to_le32(dma_addr);
 
-	buffer = skb->data + len;
-	len = skb->len - len;
-	dma_addr = dma_map_single(ndev->dev.parent, buffer, len, DMA_TO_DEVICE);
-	if (dma_mapping_error(ndev->dev.parent, dma_addr))
-		goto unmap;
+		buffer = skb->data + len;
+		len = skb->len - len;
+		dma_addr = dma_map_single(ndev->dev.parent, buffer, len,
+					  DMA_TO_DEVICE);
+		if (dma_mapping_error(ndev->dev.parent, dma_addr))
+			goto unmap;
 
-	desc++;
+		desc++;
+	} else {
+		desc = &priv->tx_ring[q][entry];
+		len = skb->len;
+		dma_addr = dma_map_single(ndev->dev.parent, skb->data, skb->len,
+					  DMA_TO_DEVICE);
+		if (dma_mapping_error(ndev->dev.parent, dma_addr))
+			goto drop;
+	}
 	desc->ds_tagl = cpu_to_le16(len);
 	desc->dptr = cpu_to_le32(dma_addr);
 
@@ -1370,9 +1599,11 @@ static netdev_tx_t ravb_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (q == RAVB_NC) {
 		ts_skb = kmalloc(sizeof(*ts_skb), GFP_ATOMIC);
 		if (!ts_skb) {
-			desc--;
-			dma_unmap_single(ndev->dev.parent, dma_addr, len,
-					 DMA_TO_DEVICE);
+			if (num_tx_desc >= 2) {
+				desc--;
+				dma_unmap_single(ndev->dev.parent, dma_addr,
+						 len, DMA_TO_DEVICE);
+			}
 			goto unmap;
 		}
 		ts_skb->skb = skb;
@@ -1389,15 +1620,19 @@ static netdev_tx_t ravb_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	/* Descriptor type must be set after all the above writes */
 	dma_wmb();
-	desc->die_dt = DT_FEND;
-	desc--;
-	desc->die_dt = DT_FSTART;
+	if (num_tx_desc >= 2) {
+		desc->die_dt = DT_FEND;
+		desc--;
+		desc->die_dt = DT_FSTART;
+	} else {
+		desc->die_dt = DT_FSINGLE;
+	}
 
 	ravb_write(ndev, ravb_read(ndev, TCCR) | (TCCR_TSRQ0 << q), TCCR);
 
-	priv->cur_tx[q] += NUM_TX_DESC;
+	priv->cur_tx[q] += num_tx_desc;
 	if (priv->cur_tx[q] - priv->dirty_tx[q] >
-	    (priv->num_tx_ring[q] - 1) * NUM_TX_DESC && !ravb_tx_free(ndev, q))
+	    (priv->num_tx_ring[q] - 1) * num_tx_desc && !ravb_tx_free(ndev, q))
 		netif_stop_subqueue(ndev, q);
 
 exit:
@@ -1410,7 +1645,7 @@ unmap:
 			 le16_to_cpu(desc->ds_tagl), DMA_TO_DEVICE);
 drop:
 	dev_kfree_skb_any(skb);
-	priv->tx_skb[q][entry / NUM_TX_DESC] = NULL;
+	priv->tx_skb[q][entry / num_tx_desc] = NULL;
 	goto exit;
 }
 
@@ -1490,9 +1725,15 @@ static int ravb_close(struct net_device *ndev)
 	netif_tx_stop_all_queues(ndev);
 
 	/* Disable interrupts by clearing the interrupt masks. */
-	ravb_write(ndev, 0, RIC0);
-	ravb_write(ndev, 0, RIC2);
-	ravb_write(ndev, 0, TIC);
+	if (priv->chip_id == RCAR_GEN2) {
+		ravb_write(ndev, 0, RIC0);
+		ravb_write(ndev, 0, RIC2);
+		ravb_write(ndev, 0, TIC);
+	} else {
+		ravb_write(ndev, RAVB_RIx0_ALL, RID0);
+		ravb_write(ndev, RAVB_RIx2_ALL, RID2);
+		ravb_write(ndev, RAVB_TIx_ALL, TID);
+	}
 
 	/* Stop PTP Clock driver */
 	if (priv->chip_id == RCAR_GEN2)
@@ -1517,6 +1758,13 @@ static int ravb_close(struct net_device *ndev)
 	}
 
 	free_irq(ndev->irq, ndev);
+	if (priv->chip_id != RCAR_GEN2) {
+		free_irq(priv->tx_irqs[RAVB_NC], ndev);
+		free_irq(priv->rx_irqs[RAVB_NC], ndev);
+		free_irq(priv->tx_irqs[RAVB_BE], ndev);
+		free_irq(priv->rx_irqs[RAVB_BE], ndev);
+		free_irq(priv->emac_irq, ndev);
+	}
 
 	napi_disable(&priv->napi[RAVB_NC]);
 	napi_disable(&priv->napi[RAVB_BE]);
@@ -1724,6 +1972,7 @@ static int ravb_probe(struct platform_device *pdev)
 	struct net_device *ndev;
 	int error, irq, q;
 	struct resource *res;
+	int i;
 
 	if (!np) {
 		dev_err(&pdev->dev,
@@ -1794,29 +2043,45 @@ static int ravb_probe(struct platform_device *pdev)
 			goto out_release;
 		}
 		priv->emac_irq = irq;
+		for (i = 0; i < NUM_RX_QUEUE; i++) {
+			irq = platform_get_irq_byname(pdev, ravb_rx_irqs[i]);
+			if (irq < 0) {
+				error = irq;
+				goto out_release;
+			}
+			priv->rx_irqs[i] = irq;
+		}
+		for (i = 0; i < NUM_TX_QUEUE; i++) {
+			irq = platform_get_irq_byname(pdev, ravb_tx_irqs[i]);
+			if (irq < 0) {
+				error = irq;
+				goto out_release;
+			}
+			priv->tx_irqs[i] = irq;
+		}
 	}
 
 	priv->chip_id = chip_id;
+
+	if (chip_id == RCAR_GEN2)
+		priv->num_tx_desc = 2;
+	else
+		priv->num_tx_desc = 1;
 
 	/* Set function */
 	ndev->netdev_ops = &ravb_netdev_ops;
 	ndev->ethtool_ops = &ravb_ethtool_ops;
 
-	/* Set AVB config mode */
+	/* Set AVB config mode and CSEL value */
 	if (chip_id == RCAR_GEN2) {
 		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
 			   CCC_OPC_CONFIG, CCC);
-		/* Set CSEL value */
 		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_CSEL) |
 			   CCC_CSEL_HPB, CCC);
 	} else {
 		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
 			   CCC_OPC_CONFIG | CCC_GAC | CCC_CSEL_HPB, CCC);
 	}
-
-	/* Set CSEL value */
-	ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_CSEL) | CCC_CSEL_HPB,
-		   CCC);
 
 	/* Set GTI value */
 	error = ravb_set_gti(ndev);
@@ -1928,6 +2193,66 @@ static int ravb_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
+static int ravb_suspend(struct device *dev)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct ravb_private *priv = netdev_priv(ndev);
+	int ret = 0;
+
+	if (netif_running(ndev)) {
+		netif_device_detach(ndev);
+		ret = ravb_close(ndev);
+		if (priv->chip_id != RCAR_GEN2)
+			ravb_ptp_stop(ndev);
+	}
+
+	return ret;
+}
+
+static int ravb_resume(struct device *dev)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct ravb_private *priv = netdev_priv(ndev);
+	struct platform_device *pdev = priv->pdev;
+	int ret = 0;
+
+	if (netif_running(ndev)) {
+		/* Set AVB config mode */
+		if (priv->chip_id == RCAR_GEN2) {
+			ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
+				   CCC_OPC_CONFIG, CCC);
+		} else {
+			ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
+				   CCC_OPC_CONFIG | CCC_GAC, CCC);
+		}
+
+		/* Set CSEL value */
+		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_CSEL) |
+			   CCC_CSEL_HPB, CCC);
+
+		/* Set GTI value */
+		ravb_set_gti(ndev);
+
+		/* Request GTI loading */
+		ravb_write(ndev, ravb_read(ndev, GCCR) | GCCR_LTI, GCCR);
+
+		/* Set DBAT value */
+		ravb_write(ndev, priv->desc_bat_dma, DBAT);
+
+		if (priv->chip_id != RCAR_GEN2)
+			ravb_ptp_init(ndev, pdev);
+
+		ret = ravb_open(ndev);
+		if (ret < 0)
+			return ret;
+		netif_device_attach(ndev);
+	}
+
+	return ret;
+}
+#endif
+
 static int ravb_runtime_nop(struct device *dev)
 {
 	/* Runtime PM callback shared between ->runtime_suspend()
@@ -1941,8 +2266,8 @@ static int ravb_runtime_nop(struct device *dev)
 }
 
 static const struct dev_pm_ops ravb_dev_pm_ops = {
-	.runtime_suspend = ravb_runtime_nop,
-	.runtime_resume = ravb_runtime_nop,
+	SET_SYSTEM_SLEEP_PM_OPS(ravb_suspend, ravb_resume)
+	SET_RUNTIME_PM_OPS(ravb_runtime_nop, ravb_runtime_nop, NULL)
 };
 
 #define RAVB_PM_OPS (&ravb_dev_pm_ops)
