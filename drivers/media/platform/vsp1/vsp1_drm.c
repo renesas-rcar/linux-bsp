@@ -1,7 +1,7 @@
 /*
  * vsp1_drm.c  --  R-Car VSP1 DRM API
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -54,6 +54,20 @@ int vsp1_du_init(struct device *dev)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(vsp1_du_init);
+
+int vsp1_du_if_set_mute(struct device *dev, bool on)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+
+	if (on)
+		vsp1_pipeline_stop(pipe);
+	else
+		vsp1_pipeline_run(pipe);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vsp1_du_if_set_mute);
 
 /**
  * vsp1_du_setup_lif - Setup the output part of the VSP pipeline
@@ -273,7 +287,7 @@ EXPORT_SYMBOL_GPL(vsp1_du_atomic_begin);
 int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 			  u32 pixelformat, unsigned int pitch,
 			  dma_addr_t mem[2], const struct v4l2_rect *src,
-			  const struct v4l2_rect *dst)
+			  const struct v4l2_rect *dst, u8 alpha)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
@@ -289,6 +303,7 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 		return -EINVAL;
 
 	rpf = vsp1->rpf[rpf_index];
+	rpf->alpha->cur.val = alpha;
 
 	if (pixelformat == 0) {
 		dev_dbg(vsp1->dev, "%s: RPF%u: disable requested\n", __func__,

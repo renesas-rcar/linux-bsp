@@ -1,7 +1,7 @@
 /*
  * vsp1_drv.c  --  R-Car VSP1 Driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -10,6 +10,10 @@
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  */
+
+#ifdef CONFIG_VIDEO_RENESAS_DEBUG
+#define DEBUG
+#endif
 
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -20,6 +24,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/videodev2.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <media/v4l2-subdev.h>
 
@@ -35,17 +40,124 @@
 #include "vsp1_uds.h"
 #include "vsp1_video.h"
 
+#define VSP1_UT_IRQ	0x01
+
+static unsigned int vsp1_debug;	/* 1 to enable debug output */
+module_param_named(debug, vsp1_debug, int, 0600);
+static int underrun_vspd[4];
+module_param_array(underrun_vspd, int, NULL, 0600);
+
+#ifdef CONFIG_VIDEO_RENESAS_DEBUG
+#define VSP1_IRQ_DEBUG(fmt, args...)					\
+	do {								\
+		if (unlikely(vsp1_debug & VSP1_UT_IRQ))			\
+			vsp1_ut_debug_printk(__func__, fmt, ##args);	\
+	} while (0)
+#else
+#define VSP1_IRQ_DEBUG(fmt, args...)
+#endif
+
+void vsp1_ut_debug_printk(const char *function_name, const char *format, ...)
+{
+	struct va_format vaf;
+	va_list args;
+
+	va_start(args, format);
+	vaf.fmt = format;
+	vaf.va = &args;
+
+	pr_debug("[vsp1 :%s] %pV", function_name, &vaf);
+
+	va_end(args);
+}
+
+#define SRCR7_REG		0xe61501cc
+#define	FCPVD0_REG		0xfea27000
+#define	FCPVD1_REG		0xfea2f000
+#define	FCPVD2_REG		0xfea37000
+#define	FCPVD3_REG		0xfea3f000
+
+#define FCP_RST_REG		0x0010
+#define FCP_RST_SOFTRST		0x00000001
+#define FCP_RST_WORKAROUND	0x00000010
+
+#define FCP_STA_REG		0x0018
+#define FCP_STA_ACT		0x00000001
+
+static void __iomem *fcpv_reg[4];
+static const unsigned int fcpvd_offset[] = {
+	FCPVD0_REG, FCPVD1_REG, FCPVD2_REG, FCPVD3_REG
+};
+
+void vsp1_underrun_workaround(struct vsp1_device *vsp1, bool reset)
+{
+	unsigned int timeout = 0;
+
+	/* 1. Disable clock stop of VSP */
+	vsp1_write(vsp1, VI6_CLK_CTRL0, VI6_CLK_CTRL0_WORKAROUND);
+	vsp1_write(vsp1, VI6_CLK_CTRL1, VI6_CLK_CTRL1_WORKAROUND);
+	vsp1_write(vsp1, VI6_CLK_DCSWT, VI6_CLK_DCSWT_WORKAROUND1);
+	vsp1_write(vsp1, VI6_CLK_DCSM0, VI6_CLK_DCSM0_WORKAROUND);
+	vsp1_write(vsp1, VI6_CLK_DCSM1, VI6_CLK_DCSM1_WORKAROUND);
+
+	/* 2. Stop operation of VSP except bus access with module reset */
+	vsp1_write(vsp1, VI6_MRESET_ENB0, VI6_MRESET_ENB0_WORKAROUND1);
+	vsp1_write(vsp1, VI6_MRESET_ENB1, VI6_MRESET_ENB1_WORKAROUND);
+	vsp1_write(vsp1, VI6_MRESET, VI6_MRESET_WORKAROUND);
+
+	/* 3. Stop operation of FCPV with software reset */
+	iowrite32(FCP_RST_SOFTRST, fcpv_reg[vsp1->index] + FCP_RST_REG);
+
+	/* 4. Wait until FCP_STA.ACT become 0. */
+	while (1) {
+		if ((ioread32(fcpv_reg[vsp1->index] + FCP_STA_REG) &
+			FCP_STA_ACT) != FCP_STA_ACT)
+			break;
+
+		if (timeout == 100)
+			break;
+
+		timeout++;
+		udelay(1);
+	}
+
+	/* 5. Initialize the whole FCPV with module reset */
+	iowrite32(FCP_RST_WORKAROUND, fcpv_reg[vsp1->index] + FCP_RST_REG);
+
+	/* 6. Stop the whole operation of VSP with module reset */
+	/*    (note that register setting is not cleared) */
+	vsp1_write(vsp1, VI6_MRESET_ENB0, VI6_MRESET_ENB0_WORKAROUND2);
+	vsp1_write(vsp1, VI6_MRESET_ENB1, VI6_MRESET_ENB1_WORKAROUND);
+	vsp1_write(vsp1, VI6_MRESET, VI6_MRESET_WORKAROUND);
+
+	/* 7. Enable clock stop of VSP */
+	vsp1_write(vsp1, VI6_CLK_CTRL0, 0);
+	vsp1_write(vsp1, VI6_CLK_CTRL1, 0);
+	vsp1_write(vsp1, VI6_CLK_DCSWT, VI6_CLK_DCSWT_WORKAROUND2);
+	vsp1_write(vsp1, VI6_CLK_DCSM0, 0);
+	vsp1_write(vsp1, VI6_CLK_DCSM1, 0);
+
+	/* 8. Restart VSPD */
+	if (!reset) {
+		/* Necessary when headerless display list */
+		vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), vsp1->dl_addr);
+		vsp1_write(vsp1, VI6_DL_BODY_SIZE, vsp1->dl_body);
+		vsp1_write(vsp1, VI6_CMD(0), VI6_CMD_STRCMD);
+	}
+}
+
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
  */
-
 static irqreturn_t vsp1_irq_handler(int irq, void *data)
 {
-	u32 mask = VI6_WFP_IRQ_STA_DFE | VI6_WFP_IRQ_STA_FRE;
+	u32 mask = VI6_WFP_IRQ_STA_DFE | VI6_WFP_IRQ_STA_FRE
+				       | VI6_WFP_IRQ_STA_UND;
 	struct vsp1_device *vsp1 = data;
 	irqreturn_t ret = IRQ_NONE;
 	unsigned int i;
 	u32 status;
+	unsigned int vsp_und_cnt = 0;
 
 	for (i = 0; i < vsp1->info->wpf_count; ++i) {
 		struct vsp1_rwpf *wpf = vsp1->wpf[i];
@@ -57,6 +169,14 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		pipe = to_vsp1_pipeline(&wpf->entity.subdev.entity);
 		status = vsp1_read(vsp1, VI6_WPF_IRQ_STA(i));
 		vsp1_write(vsp1, VI6_WPF_IRQ_STA(i), ~status & mask);
+
+		if (vsp1_debug && (status & VI6_WFP_IRQ_STA_UND)) {
+			vsp_und_cnt = ++underrun_vspd[vsp1->index];
+
+			VSP1_IRQ_DEBUG(
+				"Underrun occurred num[%d] at VSPD (%s)\n",
+				vsp_und_cnt, dev_name(vsp1->dev));
+		}
 
 		if (status & VI6_WFP_IRQ_STA_FRE) {
 			vsp1_pipeline_frame_end(pipe);
@@ -78,6 +198,11 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 
 		ret = IRQ_HANDLED;
 	}
+
+	if ((RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0)) &&
+		(status & VI6_WFP_IRQ_STA_UND))
+		vsp1_underrun_workaround(vsp1, false);
 
 	return ret;
 }
@@ -200,6 +325,8 @@ static void vsp1_destroy_entities(struct vsp1_device *vsp1)
 	struct vsp1_entity *entity, *_entity;
 	struct vsp1_video *video, *_video;
 
+	v4l2_device_unregister(&vsp1->v4l2_dev);
+
 	list_for_each_entry_safe(entity, _entity, &vsp1->entities, list_dev) {
 		list_del(&entity->list_dev);
 		vsp1_entity_destroy(entity);
@@ -210,7 +337,6 @@ static void vsp1_destroy_entities(struct vsp1_device *vsp1)
 		vsp1_video_cleanup(video);
 	}
 
-	v4l2_device_unregister(&vsp1->v4l2_dev);
 	media_device_unregister(&vsp1->media_dev);
 
 	if (!vsp1->info->uapi)
@@ -411,7 +537,12 @@ int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index)
 	if (!(status & VI6_STATUS_SYS_ACT(index)))
 		return 0;
 
-	vsp1_write(vsp1, VI6_SRESET, VI6_SRESET_SRTS(index));
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+		vsp1_underrun_workaround(vsp1, true);
+	else
+		vsp1_write(vsp1, VI6_SRESET, VI6_SRESET_SRTS(index));
+
 	for (timeout = 10; timeout > 0; --timeout) {
 		status = vsp1_read(vsp1, VI6_STATUS);
 		if (!(status & VI6_STATUS_SYS_ACT(index)))
@@ -487,9 +618,19 @@ int vsp1_device_get(struct vsp1_device *vsp1)
 	if (ret < 0)
 		goto done;
 
+	if (vsp1->info->fcpvd) {
+		ret = clk_prepare_enable(vsp1->fcpvd_clock);
+		if (ret < 0) {
+			clk_disable_unprepare(vsp1->clock);
+			goto done;
+		}
+	}
+
 	ret = vsp1_device_init(vsp1);
 	if (ret < 0) {
 		clk_disable_unprepare(vsp1->clock);
+		if (vsp1->info->fcpvd)
+			clk_disable_unprepare(vsp1->fcpvd_clock);
 		goto done;
 	}
 
@@ -509,11 +650,16 @@ done:
  */
 void vsp1_device_put(struct vsp1_device *vsp1)
 {
+	if (vsp1->ref_count == 0)
+		return;
+
 	mutex_lock(&vsp1->lock);
 
-	if (--vsp1->ref_count == 0)
+	if (--vsp1->ref_count == 0) {
 		clk_disable_unprepare(vsp1->clock);
-
+		if (vsp1->info->fcpvd)
+			clk_disable_unprepare(vsp1->fcpvd_clock);
+	}
 	mutex_unlock(&vsp1->lock);
 }
 
@@ -534,6 +680,8 @@ static int vsp1_pm_suspend(struct device *dev)
 	vsp1_pipelines_suspend(vsp1);
 
 	clk_disable_unprepare(vsp1->clock);
+	if (vsp1->info->fcpvd)
+		clk_disable_unprepare(vsp1->fcpvd_clock);
 
 	return 0;
 }
@@ -548,6 +696,8 @@ static int vsp1_pm_resume(struct device *dev)
 		return 0;
 
 	clk_prepare_enable(vsp1->clock);
+	if (vsp1->info->fcpvd)
+		clk_prepare_enable(vsp1->fcpvd_clock);
 
 	vsp1_pipelines_resume(vsp1);
 
@@ -572,6 +722,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.wpf_count = 4,
 		.num_bru_inputs = 4,
 		.uapi = true,
+		.fcpvd = false,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPR_H2,
 		.features = VSP1_HAS_BRU | VSP1_HAS_SRU,
@@ -580,6 +731,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.wpf_count = 4,
 		.num_bru_inputs = 4,
 		.uapi = true,
+		.fcpvd = false,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPD_GEN2,
 		.features = VSP1_HAS_BRU | VSP1_HAS_LIF | VSP1_HAS_LUT,
@@ -588,6 +740,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.wpf_count = 4,
 		.num_bru_inputs = 4,
 		.uapi = true,
+		.fcpvd = false,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPS_M2,
 		.features = VSP1_HAS_BRU | VSP1_HAS_LUT | VSP1_HAS_SRU,
@@ -596,6 +749,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.wpf_count = 4,
 		.num_bru_inputs = 4,
 		.uapi = true,
+		.fcpvd = false,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPI_GEN3,
 		.features = VSP1_HAS_LUT | VSP1_HAS_SRU,
@@ -603,6 +757,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.uds_count = 1,
 		.wpf_count = 1,
 		.uapi = true,
+		.fcpvd = false,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPBD_GEN3,
 		.features = VSP1_HAS_BRU,
@@ -610,6 +765,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.wpf_count = 1,
 		.num_bru_inputs = 5,
 		.uapi = true,
+		.fcpvd = false,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPBC_GEN3,
 		.features = VSP1_HAS_BRU | VSP1_HAS_LUT,
@@ -617,12 +773,15 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.wpf_count = 1,
 		.num_bru_inputs = 5,
 		.uapi = true,
+		.fcpvd = false,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPD_GEN3,
 		.features = VSP1_HAS_BRU | VSP1_HAS_LIF | VSP1_HAS_LUT,
 		.rpf_count = 5,
 		.wpf_count = 2,
 		.num_bru_inputs = 5,
+		.uapi = false,
+		.fcpvd = true,
 	},
 };
 
@@ -650,7 +809,7 @@ static int vsp1_probe(struct platform_device *pdev)
 	if (IS_ERR(vsp1->mmio))
 		return PTR_ERR(vsp1->mmio);
 
-	vsp1->clock = devm_clk_get(&pdev->dev, NULL);
+	vsp1->clock = of_clk_get(vsp1->dev->of_node, 0);
 	if (IS_ERR(vsp1->clock)) {
 		dev_err(&pdev->dev, "failed to get clock\n");
 		return PTR_ERR(vsp1->clock);
@@ -692,6 +851,14 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "IP version 0x%08x\n", version);
 
+	if (vsp1->info->fcpvd) {
+		vsp1->fcpvd_clock = of_clk_get(vsp1->dev->of_node, 1);
+		if (IS_ERR(vsp1->fcpvd_clock)) {
+			dev_err(&pdev->dev, "failed to get fcpvd clock\n");
+			return PTR_ERR(vsp1->fcpvd_clock);
+		}
+	}
+
 	/* Instanciate entities */
 	ret = vsp1_create_entities(vsp1);
 	if (ret < 0) {
@@ -699,7 +866,27 @@ static int vsp1_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	if (strcmp(dev_name(vsp1->dev), "fea20000.vsp") == 0)
+		vsp1->index = 0;
+	else if (strcmp(dev_name(vsp1->dev), "fea28000.vsp") == 0)
+		vsp1->index = 1;
+	else if (strcmp(dev_name(vsp1->dev), "fea30000.vsp") == 0)
+		vsp1->index = 2;
+	else if (strcmp(dev_name(vsp1->dev), "fea38000.vsp") == 0)
+		vsp1->index = 3;
+
 	platform_set_drvdata(pdev, vsp1);
+
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(vsp1->dev, "product register init fail.\n");
+		return ret;
+	}
+
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+		fcpv_reg[vsp1->index] =
+			 ioremap(fcpvd_offset[vsp1->index], 0x20);
 
 	return 0;
 }
@@ -708,7 +895,12 @@ static int vsp1_remove(struct platform_device *pdev)
 {
 	struct vsp1_device *vsp1 = platform_get_drvdata(pdev);
 
+	vsp1_device_put(vsp1);
 	vsp1_destroy_entities(vsp1);
+
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+		iounmap(fcpv_reg[vsp1->index]);
 
 	return 0;
 }
