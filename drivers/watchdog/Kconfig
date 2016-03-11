@@ -636,6 +636,14 @@ config ATLAS7_WATCHDOG
 	  To compile this driver as a module, choose M here: the
 	  module will be called atlas7_wdt.
 
+config RENESAS_RWDT
+	tristate "Renesas RWDT Watchdog"
+	depends on ARCH_SHMOBILE || COMPILE_TEST
+	select WATCHDOG_CORE
+	help
+	  This driver adds watchdog support for the integrated watchdog in the
+	  Renesas RCar and other SH Mobile SoCs.
+
 # AVR32 Architecture
 
 config AT32AP700X_WDT
