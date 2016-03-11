@@ -174,7 +174,7 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 912>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 		};
 
 		gpio1: gpio@e6051000 {
@@ -188,7 +188,7 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 911>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 		};
 
 		gpio2: gpio@e6052000 {
@@ -202,7 +202,7 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 910>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 		};
 
 		gpio3: gpio@e6053000 {
@@ -216,7 +216,7 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 909>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 		};
 
 		gpio4: gpio@e6054000 {
@@ -230,7 +230,7 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 908>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 		};
 
 		gpio5: gpio@e6055000 {
@@ -244,7 +244,7 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 907>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 		};
 
 		gpio6: gpio@e6055400 {
@@ -258,7 +258,7 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 906>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 		};
 
 		gpio7: gpio@e6055800 {
@@ -272,7 +272,7 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 905>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 		};
 
 		pmu {
@@ -316,6 +316,51 @@
 			#power-domain-cells = <0>;
 		};
 
+		sysc: system-controller@e6180000 {
+			compatible = "renesas,rcar-gen3-sysc";
+			reg = <0 0xe6180000 0 0x0400>;
+
+			pm-domains {
+				pd_always_on: always_on {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					#power-domain-cells = <0>;
+
+					pd_a3sg: a3sg {
+						reg = <0x0100>;
+						#power-domain-cells = <0>;
+					};
+
+					pd_a3ir: a3ir {
+						reg = <0x0180>;
+						#power-domain-cells = <0>;
+					};
+
+					pd_a3vp: a3vp {
+						reg = <0x0340>;
+						#power-domain-cells = <0>;
+					};
+
+					pd_a3vc: a3vc {
+						reg = <0x0380>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						#power-domain-cells = <0>;
+
+						pd_a2vc0: a2vc0 {
+							reg = <0x03C0>;
+							#power-domain-cells = <0>;
+						};
+
+						pd_a2vc1: a2vc1 {
+							reg = <0x03C0>;
+							#power-domain-cells = <0>;
+						};
+					};
+				};
+			};
+		};
+
 		audma0: dma-controller@ec700000 {
 			compatible = "renesas,rcar-dmac";
 			reg = <0 0xec700000 0 0x10000>;
@@ -343,7 +388,7 @@
 					"ch12", "ch13", "ch14", "ch15";
 			clocks = <&cpg CPG_MOD 502>;
 			clock-names = "fck";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
@@ -375,7 +420,7 @@
 					"ch12", "ch13", "ch14", "ch15";
 			clocks = <&cpg CPG_MOD 501>;
 			clock-names = "fck";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
@@ -433,7 +478,7 @@
 					  "ch20", "ch21", "ch22", "ch23",
 					  "ch24";
 			clocks = <&cpg CPG_MOD 812>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			phy-mode = "rgmii-id";
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -451,7 +496,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac1 0x31>, <&dmac1 0x30>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -467,7 +512,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac1 0x33>, <&dmac1 0x32>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -483,7 +528,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac1 0x35>, <&dmac1 0x34>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -499,7 +544,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac0 0x37>, <&dmac0 0x36>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -515,7 +560,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac0 0x39>, <&dmac0 0x38>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -530,7 +575,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac1 0x51>, <&dmac1 0x50>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -545,7 +590,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac1 0x53>, <&dmac1 0x52>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -560,7 +605,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac1 0x13>, <&dmac1 0x12>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -575,7 +620,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac0 0x57>, <&dmac0 0x56>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -590,7 +635,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac0 0x59>, <&dmac0 0x58>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -605,7 +650,7 @@
 			clock-names = "fck", "brg_int", "scif_clk";
 			dmas = <&dmac1 0x5b>, <&dmac1 0x5a>;
 			dma-names = "tx", "rx";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -616,7 +661,7 @@
 			reg = <0 0xe6500000 0 0x40>;
 			interrupts = <GIC_SPI 287 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 931>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			i2c-scl-internal-delay-ns = <110>;
 			status = "disabled";
 		};
@@ -628,7 +673,7 @@
 			reg = <0 0xe6508000 0 0x40>;
 			interrupts = <GIC_SPI 288 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 930>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			i2c-scl-internal-delay-ns = <6>;
 			status = "disabled";
 		};
@@ -640,7 +685,7 @@
 			reg = <0 0xe6510000 0 0x40>;
 			interrupts = <GIC_SPI 286 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 929>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			i2c-scl-internal-delay-ns = <6>;
 			status = "disabled";
 		};
@@ -652,7 +697,7 @@
 			reg = <0 0xe66d0000 0 0x40>;
 			interrupts = <GIC_SPI 290 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 928>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			i2c-scl-internal-delay-ns = <110>;
 			status = "disabled";
 		};
@@ -664,7 +709,7 @@
 			reg = <0 0xe66d8000 0 0x40>;
 			interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 927>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			i2c-scl-internal-delay-ns = <110>;
 			status = "disabled";
 		};
@@ -676,7 +721,7 @@
 			reg = <0 0xe66e0000 0 0x40>;
 			interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 919>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			i2c-scl-internal-delay-ns = <110>;
 			status = "disabled";
 		};
@@ -688,7 +733,7 @@
 			reg = <0 0xe66e8000 0 0x40>;
 			interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 918>;
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			i2c-scl-internal-delay-ns = <6>;
 			status = "disabled";
 		};
@@ -738,7 +783,7 @@
 				      "src.1", "src.0",
 				      "dvc.0", "dvc.1",
 				      "clk_a", "clk_b", "clk_c", "clk_i";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 
 			rcar_sound,dvc {
@@ -864,6 +909,7 @@
 			reg = <0 0xee300000 0 0x1fff>;
 			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 815>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -888,7 +934,7 @@
 			interrupt-map = <0 0 0 0 &gic 0 116 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 319>, <&pcie_bus_clk>;
 			clock-names = "pcie", "pcie_bus";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -913,7 +959,7 @@
 			interrupt-map = <0 0 0 0 &gic 0 148 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 318>, <&pcie_bus_clk>;
 			clock-names = "pcie", "pcie_bus";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -927,6 +973,7 @@
 			renesas,has-sru;
 			renesas,#rpf = <5>;
 			renesas,#wpf = <1>;
+			power-domains = <&pd_a3vp>;
 			status = "disabled";
 		};
 
@@ -938,6 +985,7 @@
 
 			renesas,#rpf = <5>;
 			renesas,#wpf = <1>;
+			power-domains = <&pd_a3vp>;
 			status = "disabled";
 		};
 
@@ -952,6 +1000,7 @@
 			renesas,#rpf = <1>;
 			renesas,#uds = <3>;
 			renesas,#wpf = <1>;
+			power-domains = <&pd_a3vp>;
 			status = "disabled";
 		};
 
@@ -966,6 +1015,7 @@
 			renesas,#rpf = <1>;
 			renesas,#uds = <1>;
 			renesas,#wpf = <1>;
+			power-domains = <&pd_a3vp>;
 			status = "disabled";
 		};
 
@@ -980,6 +1030,7 @@
 			renesas,#rpf = <1>;
 			renesas,#uds = <1>;
 			renesas,#wpf = <1>;
+			power-domains = <&pd_a3vp>;
 			status = "disabled";
 		};
 
@@ -987,6 +1038,7 @@
 			compatible = "renesas,vsp2";
 			reg = <0 0xfea20000 0 0x8000>;
 			interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_a3vp>;
 			clocks = <&cpg CPG_MOD 623>;
 
 			renesas,has-lif;
@@ -999,6 +1051,7 @@
 			compatible = "renesas,vsp2";
 			reg = <0 0xfea28000 0 0x8000>;
 			interrupts = <GIC_SPI 467 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_a3vp>;
 			clocks = <&cpg CPG_MOD 622>;
 
 			renesas,has-lif;
@@ -1011,6 +1064,7 @@
 			compatible = "renesas,vsp2";
 			reg = <0 0xfea30000 0 0x8000>;
 			interrupts = <GIC_SPI 468 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_a3vp>;
 			clocks = <&cpg CPG_MOD 621>;
 
 			renesas,has-lif;
@@ -1023,6 +1077,7 @@
 			compatible = "renesas,vsp2";
 			reg = <0 0xfea38000 0 0x8000>;
 			interrupts = <GIC_SPI 469 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_a3vp>;
 			clocks = <&cpg CPG_MOD 620>;
 
 			renesas,has-lif;
@@ -1046,6 +1101,8 @@
 				 <&cpg CPG_MOD 721>,
 				 <&cpg CPG_MOD 727>;
 			clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0";
+			power-domains = <&pd_always_on>;
+
 			status = "disabled";
 
 			vsps = <&vspd0 &vspd1 &vspd2 &vspd3>;
