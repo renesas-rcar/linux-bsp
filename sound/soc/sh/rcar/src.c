@@ -25,7 +25,6 @@ struct rsnd_src {
 	struct rsnd_kctrl_cfg_s sen;  /* sync convert enable */
 	struct rsnd_kctrl_cfg_s sync; /* sync convert */
 	u32 convert_rate; /* sampling rate convert */
-	int err;
 	int irq;
 };
 
@@ -250,6 +249,8 @@ static void rsnd_src_set_convert_rate(struct rsnd_dai_stream *io,
 		break;
 	}
 
+	rsnd_mod_write(mod, SRC_ROUTE_MODE0, route);
+
 	rsnd_mod_write(mod, SRC_SRCIR, 1);	/* initialize */
 	rsnd_mod_write(mod, SRC_ADINR, adinr);
 	rsnd_mod_write(mod, SRC_IFSCR, ifscr);
@@ -259,7 +260,6 @@ static void rsnd_src_set_convert_rate(struct rsnd_dai_stream *io,
 	rsnd_mod_write(mod, SRC_BSISR, bsisr);
 	rsnd_mod_write(mod, SRC_SRCIR, 0);	/* cancel initialize */
 
-	rsnd_mod_write(mod, SRC_ROUTE_MODE0, route);
 	rsnd_mod_write(mod, SRC_I_BUSIF_MODE, 1);
 	rsnd_mod_write(mod, SRC_O_BUSIF_MODE, 1);
 	rsnd_mod_write(mod, SRC_BUSIF_DALIGN, rsnd_get_dalign(mod, io));
@@ -272,9 +272,10 @@ static void rsnd_src_set_convert_rate(struct rsnd_dai_stream *io,
 		rsnd_adg_set_convert_timing_gen2(mod, io);
 }
 
-#define rsnd_src_irq_enable(mod)  rsnd_src_irq_ctrol(mod, 1)
-#define rsnd_src_irq_disable(mod) rsnd_src_irq_ctrol(mod, 0)
-static void rsnd_src_irq_ctrol(struct rsnd_mod *mod, int enable)
+static int rsnd_src_irq(struct rsnd_mod *mod,
+			struct rsnd_dai_stream *io,
+			struct rsnd_priv *priv,
+			int enable)
 {
 	struct rsnd_src *src = rsnd_mod_to_src(mod);
 	u32 sys_int_val, int_val, sys_int_mask;
@@ -306,6 +307,8 @@ static void rsnd_src_irq_ctrol(struct rsnd_mod *mod, int enable)
 	rsnd_mod_write(mod, SRC_INT_ENABLE0, int_val);
 	rsnd_mod_bset(mod, SCU_SYS_INT_EN0, sys_int_mask, sys_int_val);
 	rsnd_mod_bset(mod, SCU_SYS_INT_EN1, sys_int_mask, sys_int_val);
+
+	return 0;
 }
 
 static void rsnd_src_status_clear(struct rsnd_mod *mod)
@@ -316,7 +319,7 @@ static void rsnd_src_status_clear(struct rsnd_mod *mod)
 	rsnd_mod_bset(mod, SCU_SYS_STATUS1, val, val);
 }
 
-static bool rsnd_src_record_error(struct rsnd_mod *mod)
+static bool rsnd_src_error_occurred(struct rsnd_mod *mod)
 {
 	struct rsnd_src *src = rsnd_mod_to_src(mod);
 	u32 val0, val1;
@@ -333,12 +336,8 @@ static bool rsnd_src_record_error(struct rsnd_mod *mod)
 		val0 = val0 & 0xffff;
 
 	if ((rsnd_mod_read(mod, SCU_SYS_STATUS0) & val0) ||
-	    (rsnd_mod_read(mod, SCU_SYS_STATUS1) & val1)) {
-		struct rsnd_src *src = rsnd_mod_to_src(mod);
-
-		src->err++;
+	    (rsnd_mod_read(mod, SCU_SYS_STATUS1) & val1))
 		ret = true;
-	}
 
 	return ret;
 }
@@ -367,11 +366,7 @@ static int rsnd_src_stop(struct rsnd_mod *mod,
 			 struct rsnd_dai_stream *io,
 			 struct rsnd_priv *priv)
 {
-	/*
-	 * stop SRC output only
-	 * see rsnd_src_quit
-	 */
-	rsnd_mod_write(mod, SRC_CTRL, 0x01);
+	rsnd_mod_write(mod, SRC_CTRL, 0);
 
 	return 0;
 }
@@ -390,10 +385,6 @@ static int rsnd_src_init(struct rsnd_mod *mod,
 
 	rsnd_src_status_clear(mod);
 
-	rsnd_src_irq_enable(mod);
-
-	src->err = 0;
-
 	/* reset sync convert_rate */
 	src->sync.val = 0;
 
@@ -405,20 +396,10 @@ static int rsnd_src_quit(struct rsnd_mod *mod,
 			 struct rsnd_priv *priv)
 {
 	struct rsnd_src *src = rsnd_mod_to_src(mod);
-	struct device *dev = rsnd_priv_to_dev(priv);
-
-	rsnd_src_irq_disable(mod);
-
-	/* stop both out/in */
-	rsnd_mod_write(mod, SRC_CTRL, 0);
 
 	rsnd_src_halt(mod);
 
 	rsnd_mod_power_off(mod);
-
-	if (src->err)
-		dev_warn(dev, "%s[%d] under/over flow err = %d\n",
-			 rsnd_mod_name(mod), rsnd_mod_id(mod), src->err);
 
 	src->convert_rate = 0;
 
@@ -432,8 +413,7 @@ static void __rsnd_src_interrupt(struct rsnd_mod *mod,
 				 struct rsnd_dai_stream *io)
 {
 	struct rsnd_priv *priv = rsnd_mod_to_priv(mod);
-	struct rsnd_src *src = rsnd_mod_to_src(mod);
-	struct device *dev = rsnd_priv_to_dev(priv);
+	bool stop = false;
 
 	spin_lock(&priv->lock);
 
@@ -441,26 +421,16 @@ static void __rsnd_src_interrupt(struct rsnd_mod *mod,
 	if (!rsnd_io_is_working(io))
 		goto rsnd_src_interrupt_out;
 
-	if (rsnd_src_record_error(mod)) {
-
-		dev_dbg(dev, "%s[%d] restart\n",
-			rsnd_mod_name(mod), rsnd_mod_id(mod));
-
-		rsnd_src_stop(mod, io, priv);
-		rsnd_src_start(mod, io, priv);
-	}
-
-	if (src->err > 1024) {
-		rsnd_src_irq_disable(mod);
-
-		dev_warn(dev, "no more %s[%d] restart\n",
-			 rsnd_mod_name(mod), rsnd_mod_id(mod));
-	}
+	if (rsnd_src_error_occurred(mod))
+		stop = true;
 
 	rsnd_src_status_clear(mod);
 rsnd_src_interrupt_out:
 
 	spin_unlock(&priv->lock);
+
+	if (stop)
+		snd_pcm_stop_xrun(io->substream);
 }
 
 static irqreturn_t rsnd_src_interrupt(int irq, void *data)
@@ -485,7 +455,7 @@ static int rsnd_src_probe_(struct rsnd_mod *mod,
 		/*
 		 * IRQ is not supported on non-DT
 		 * see
-		 *	rsnd_src_irq_enable()
+		 *	rsnd_src_irq()
 		 */
 		ret = devm_request_irq(dev, irq,
 				       rsnd_src_interrupt,
@@ -495,9 +465,7 @@ static int rsnd_src_probe_(struct rsnd_mod *mod,
 			return ret;
 	}
 
-	src->dma = rsnd_dma_attach(io, mod, 0);
-	if (IS_ERR(src->dma))
-		return PTR_ERR(src->dma);
+	ret = rsnd_dma_attach(io, mod, &src->dma, 0);
 
 	return ret;
 }
@@ -557,6 +525,7 @@ static struct rsnd_mod_ops rsnd_src_ops = {
 	.quit	= rsnd_src_quit,
 	.start	= rsnd_src_start,
 	.stop	= rsnd_src_stop,
+	.irq	= rsnd_src_irq,
 	.hw_params = rsnd_src_hw_params,
 	.pcm_new = rsnd_src_pcm_new,
 };
@@ -622,7 +591,8 @@ int rsnd_src_probe(struct rsnd_priv *priv)
 		}
 
 		ret = rsnd_mod_init(priv, rsnd_mod_get(src),
-				    &rsnd_src_ops, clk, RSND_MOD_SRC, i);
+				    &rsnd_src_ops, clk, rsnd_mod_get_status,
+				    RSND_MOD_SRC, i);
 		if (ret)
 			goto rsnd_src_probe_done;
 
