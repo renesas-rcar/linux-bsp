@@ -244,8 +244,13 @@ static void dw_hdmi_i2c_init(struct dw_hdmi *hdmi)
 
 	spin_lock_irqsave(&hdmi->i2c->lock, flags);
 
-	/* Set Fast Mode speed */
-	hdmi_writeb(hdmi, 0x0b, HDMI_I2CM_DIV);
+	if (hdmi->dev_type == RCAR_HDMI) {
+		/* Set Stardard Mode speed */
+		hdmi_writeb(hdmi, 0x03, HDMI_I2CM_DIV);
+	} else {
+		/* Set Fast Mode speed */
+		hdmi_writeb(hdmi, 0x0b, HDMI_I2CM_DIV);
+	}
 
 	/* Software reset */
 	hdmi_writeb(hdmi, 0x00, HDMI_I2CM_SOFTRSTZ);
