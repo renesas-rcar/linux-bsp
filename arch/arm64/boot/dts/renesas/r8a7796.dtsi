@@ -530,6 +530,15 @@
 			power-domains = <&sysc R8A7796_PD_3DG>;
 		};
 
+		xhci0: usb@ee000000 {
+			compatible = "renesas,xhci-r8a7796";
+			reg = <0 0xee000000 0 0xc00>;
+			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 328>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			status = "disabled";
+		};
+
 		usb2_phy0: usb-phy@ee080200 {
 			compatible = "renesas,usb2-phy-r8a7796";
 			reg = <0 0xee080200 0 0x700>;
