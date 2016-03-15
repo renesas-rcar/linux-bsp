@@ -722,3 +722,49 @@
 		spi-cpol;
 	};
 };
+
+&vin0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin0ep0: endpoint {
+				csi,select = "csi40";
+				virtual,channel = <0>;
+				remote-endpoint = <&adv7482_hdmi_in>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+		port@1 {
+			csi0ep0: endpoint {
+				remote-endpoint = <&csi2_40_ep>;
+			};
+		};
+	};
+};
+
+&vin4 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin4ep0: endpoint {
+				csi,select = "csi20";
+				virtual,channel = <0>;
+				remote-endpoint = <&adv7482_sdp_in>;
+				data-lanes = <1>;
+			};
+		};
+		port@1 {
+			csi1ep0: endpoint {
+				remote-endpoint = <&csi2_20_ep>;
+			};
+		};
+	};
+};
