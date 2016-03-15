@@ -361,13 +361,6 @@ static void mdp4_crtc_atomic_flush(struct drm_crtc *crtc,
 	request_pending(crtc, PENDING_FLIP);
 }
 
-static int mdp4_crtc_set_property(struct drm_crtc *crtc,
-		struct drm_property *property, uint64_t val)
-{
-	// XXX
-	return -EINVAL;
-}
-
 #define CURSOR_WIDTH 64
 #define CURSOR_HEIGHT 64
 
@@ -499,7 +492,7 @@ static const struct drm_crtc_funcs mdp4_crtc_funcs = {
 	.set_config = drm_atomic_helper_set_config,
 	.destroy = mdp4_crtc_destroy,
 	.page_flip = drm_atomic_helper_page_flip,
-	.set_property = mdp4_crtc_set_property,
+	.set_property = drm_atomic_helper_crtc_set_property,
 	.cursor_set = mdp4_crtc_cursor_set,
 	.cursor_move = mdp4_crtc_cursor_move,
 	.reset = drm_atomic_helper_crtc_reset,
@@ -573,13 +566,6 @@ uint32_t mdp4_crtc_vblank(struct drm_crtc *crtc)
 {
 	struct mdp4_crtc *mdp4_crtc = to_mdp4_crtc(crtc);
 	return mdp4_crtc->vblank.irqmask;
-}
-
-void mdp4_crtc_cancel_pending_flip(struct drm_crtc *crtc, struct drm_file *file)
-{
-	struct mdp4_crtc *mdp4_crtc = to_mdp4_crtc(crtc);
-	DBG("%s: cancel: %p", mdp4_crtc->name, file);
-	complete_flip(crtc, file);
 }
 
 /* set dma config, ie. the format the encoder wants. */
