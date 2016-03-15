@@ -506,6 +506,50 @@
 
 	clock-frequency = <400000>;
 
+	composite-in@70 {
+		compatible = "adi,adv7482";
+		reg = <0x70>;
+
+		adi,virtual-channel = <0>;
+		adi,input-interface = "ycbcr422";
+		adi,input-hdmi = "on";
+		adi,input-sdp = "on";
+		adi,sw-reset = "on";
+		port {
+			adv7482_sdp_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1>;
+				remote-endpoint = <&vin4ep0>;
+
+				adv7482_rxb_out: endpoint {
+					remote-endpoint = <&csi2_20_in_ep>;
+				};
+			};
+		};
+	};
+
+	hdmi-in@70 {
+		compatible = "adi,adv7482";
+		reg = <0x34>;
+
+		adi,virtual-channel = <0>;
+		adi,input-interface = "rgb888";
+		adi,input-hdmi = "on";
+		adi,input-sdp = "on";
+		adi,sw-reset = "on";
+		port {
+			adv7482_hdmi_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin0ep0>;
+
+				adv7482_rxa_out: endpoint {
+					remote-endpoint = <&csi2_40_in_ep>;
+				};
+			};
+		};
+	};
+
 	clk_5p49v5923a: programmable_clk@6a {
 		compatible = "idt,5p49v5923a";
 		reg = <0x6a>;
