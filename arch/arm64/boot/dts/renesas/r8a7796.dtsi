@@ -490,5 +490,43 @@
 			status = "disabled";
 		};
 
+		vspd0: vsp@fea20000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfea20000 0 0x8000>;
+			interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_always_on>;
+			clocks = <&cpg CPG_MOD 623>, <&cpg CPG_MOD 603>;
+
+			renesas,has-lif;
+			renesas,has-lut;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <2>;
+		};
+
+		vspd1: vsp@fea28000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfea28000 0 0x8000>;
+			interrupts = <GIC_SPI 467 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_always_on>;
+			clocks = <&cpg CPG_MOD 622>, <&cpg CPG_MOD 602>;
+
+			renesas,has-lif;
+			renesas,has-lut;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <2>;
+		};
+
+		vspd2: vsp@fea30000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfea30000 0 0x8000>;
+			interrupts = <GIC_SPI 468 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&pd_always_on>;
+			clocks = <&cpg CPG_MOD 621>, <&cpg CPG_MOD 601>;
+
+			renesas,has-lif;
+			renesas,has-lut;
+			renesas,#rpf = <5>;
+			renesas,#wpf = <2>;
+		};
 	};
 };
