@@ -578,6 +578,10 @@
 	status = "okay";
 };
 
+&xhci0 {
+	status = "okay";
+};
+
 &usb2_phy0 {
 	pinctrl-0 = <&usb0_pins>;
 	pinctrl-names = "default";
