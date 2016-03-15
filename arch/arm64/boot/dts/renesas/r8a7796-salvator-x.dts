@@ -60,6 +60,11 @@
 		renesas,groups = "scif_clk_a";
 		renesas,function = "scif_clk";
 	};
+
+	i2c2_pins: i2c2 {
+		renesas,groups = "i2c2_a";
+		renesas,function = "i2c2";
+	};
 };
 
 &scif1 {
@@ -78,4 +83,19 @@
 &scif_clk {
 	clock-frequency = <14745600>;
 	status = "okay";
+};
+
+&i2c2 {
+	pinctrl-0 = <&i2c2_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+
+	clock-frequency = <100000>;
+};
+
+&i2c4 {
+	status = "okay";
+
+	clock-frequency = <400000>;
 };
