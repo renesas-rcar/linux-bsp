@@ -149,7 +149,7 @@
 		};
 	};
 
-	programmable_clk0: clock_out0 {
+	dclkin_p0: clock_out0 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <148500000>;
@@ -161,7 +161,7 @@
 		clock-frequency = <33000000>;
 	};
 
-	programmable_clk1: clock_out1 {
+	dclkin_p2: clock_out1 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <108000000>;
@@ -255,6 +255,21 @@
 	status = "okay";
 
 	clock-frequency = <400000>;
+
+	clk_5p49v5923a: programmable_clk@6a {
+		compatible = "idt,5p49v5923a";
+		reg = <0x6a>;
+
+		programmable_clk0: 5p49v5923a_clk1@6a {
+			#clock-cells = <0>;
+			clocks = <&dclkin_p0>;
+		};
+
+		programmable_clk1: 5p49v5923a_clk2@6a {
+			#clock-cells = <0>;
+			clocks = <&dclkin_p2>;
+		};
+	};
 };
 
 &avb {
