@@ -646,5 +646,13 @@
 				};
 			};
 		};
+
+		hdmi: hdmi@fead0000 {
+			compatible = "renesas,hdmi";
+			reg = <0 0xfead0000 0 0x10000>;
+			interrupts = <GIC_SPI 389 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 729>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+		};
 	};
 };
