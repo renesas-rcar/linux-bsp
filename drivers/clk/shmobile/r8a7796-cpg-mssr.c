@@ -123,6 +123,7 @@ static const struct cpg_core_clk r8a7796_core_clks[] __initconst = {
 	DEF_BASE("sd3",         R8A7796_CLK_SD3, CLK_TYPE_GEN3_SD3, CLK_SDSRC),
 
 	DEF_DIV6P1("mso",       R8A7796_CLK_MSO,   CLK_PLL1_DIV4, 0x014),
+	DEF_DIV6P1("csi0",      R8A7796_CLK_CSI0,  CLK_PLL1_DIV4, 0x00C),
 	DEF_DIV6P1("hdmi",      R8A7796_CLK_HDMI,  CLK_PLL1_DIV4, 0x250),
 };
 
@@ -164,6 +165,8 @@ static const struct mssr_mod_clk r8a7796_mod_clks[] __initconst = {
 	DEF_MOD("ehci1",		 702,	R8A7796_CLK_S3D4),
 	DEF_MOD("ehci0",		 703,	R8A7796_CLK_S3D4),
 	DEF_MOD("hsusb",		 704,	R8A7796_CLK_S3D4),
+	DEF_MOD("csi20",		 714,	R8A7796_CLK_CSI0),
+	DEF_MOD("csi40",		 716,	R8A7796_CLK_CSI0),
 	DEF_MOD("du2",			 722,	R8A7796_CLK_S2D1),
 	DEF_MOD("du1",			 723,	R8A7796_CLK_S2D1),
 	DEF_MOD("du0",			 724,	R8A7796_CLK_S2D1),
