@@ -22,6 +22,8 @@
 #include <linux/wait.h>
 
 #include <drm/drmP.h>
+#include <drm/drm_atomic.h>
+#include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_encoder_slave.h>
 #include <drm/drm_fb_cma_helper.h>
@@ -267,9 +269,16 @@ int rcar_du_set_vmute(struct drm_device *dev, void *data,
 	struct drm_mode_object *obj;
 	struct drm_crtc *crtc;
 	struct rcar_du_crtc *rcrtc;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	int ret = 0, index;
 
 	dev_dbg(dev->dev, "CRTC[%d], display:%s\n",
 		vmute->crtc_id, vmute->on ? "off":"on");
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
 
 	obj = drm_mode_object_find(dev, vmute->crtc_id,
 					DRM_MODE_OBJECT_CRTC);
@@ -277,9 +286,24 @@ int rcar_du_set_vmute(struct drm_device *dev, void *data,
 		return -EINVAL;
 	crtc = obj_to_crtc(obj);
 
+	index = drm_crtc_index(crtc);
+
 	rcrtc = to_rcar_crtc(crtc);
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	state->crtc_states[index] = crtc_state;
+	state->crtcs[index] = crtc;
+	crtc_state->state = state;
+
+	crtc_state->active = true;
 
 	vsp1_du_if_set_mute(rcrtc->vsp->vsp, vmute->on);
+
+	ret = drm_atomic_commit(state);
+	if (ret != 0)
+		return ret;
 
 	return 0;
 }
@@ -288,7 +312,6 @@ static const struct drm_ioctl_desc rcar_du_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(DRM_RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
 		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
 };
-
 
 static const struct file_operations rcar_du_fops = {
 	.owner		= THIS_MODULE,
