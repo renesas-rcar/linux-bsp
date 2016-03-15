@@ -94,6 +94,8 @@ static const struct cpg_core_clk r8a7796_core_clks[] __initconst = {
 
 	DEF_FIXED("cl",         R8A7796_CLK_CL,    CLK_PLL1_DIV2, 48, 1),
 	DEF_FIXED("cp",         R8A7796_CLK_CP,    CLK_EXTAL,      2, 1),
+
+	DEF_DIV6P1("hdmi",      R8A7796_CLK_HDMI,  CLK_PLL1_DIV4, 0x250),
 };
 
 static const struct mssr_mod_clk r8a7796_mod_clks[] __initconst = {
@@ -114,6 +116,7 @@ static const struct mssr_mod_clk r8a7796_mod_clks[] __initconst = {
 	DEF_MOD("du1",			 723,	R8A7796_CLK_S2D1),
 	DEF_MOD("du0",			 724,	R8A7796_CLK_S2D1),
 	DEF_MOD("lvds",			 727,	R8A7796_CLK_S2D1),
+	DEF_MOD("hdmi0",		 729,	R8A7796_CLK_HDMI),
 	DEF_MOD("etheravb",		 812,	R8A7796_CLK_S3D2),
 	DEF_MOD("gpio7",		 905,	R8A7796_CLK_S3D4),
 	DEF_MOD("gpio6",		 906,	R8A7796_CLK_S3D4),
