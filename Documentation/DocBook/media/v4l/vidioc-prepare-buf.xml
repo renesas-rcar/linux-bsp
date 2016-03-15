@@ -65,6 +65,15 @@ not required, the application can use one of
 <constant>V4L2_BUF_FLAG_NO_CACHE_CLEAN</constant> flags to skip the respective
 step.</para>
 
+    <para>Applications can prepare a buffer to be processed for a specific
+request. To do so they set the <structfield>request</structfield> field of the
+struct <structname>v4l2_buffer</structname> to the request ID. The buffer will
+then be automatically queued when the request is processed as if the
+<constant>VIDIOC_QBUF</constant> ioctl was called at that time by the
+application. For more information about requests see
+<xref linkend="v4l2-requests" />.
+</para>
+
     <para>The <structname>v4l2_buffer</structname> structure is
 specified in <xref linkend="buffer" />.</para>
   </refsect1>

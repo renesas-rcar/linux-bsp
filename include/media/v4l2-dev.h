@@ -235,4 +235,17 @@ static inline int video_is_registered(struct video_device *vdev)
 	return test_bit(V4L2_FL_REGISTERED, &vdev->flags);
 }
 
+#if defined(CONFIG_MEDIA_CONTROLLER)
+struct video_device_request_data {
+	struct media_entity_request_data data;
+	struct v4l2_pix_format_mplane format;
+};
+
+static inline struct video_device_request_data *
+to_video_device_request_data(struct media_entity_request_data *data)
+{
+	return container_of(data, struct video_device_request_data, data);
+}
+#endif
+
 #endif /* _V4L2_DEV_H */

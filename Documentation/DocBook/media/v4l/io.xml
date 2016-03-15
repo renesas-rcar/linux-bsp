@@ -838,7 +838,17 @@ is the file descriptor associated with a DMABUF buffer.</entry>
 	    </entry>
 	  </row>
 	  <row>
-	    <entry>__u32</entry>
+	    <entry>__u16</entry>
+	    <entry><structfield>request</structfield></entry>
+	    <entry></entry>
+	    <entry>ID of the request to associate the buffer to. Set by the
+	    application for &VIDIOC-QBUF; and &VIDIOC-PREPARE-BUF;. Set to zero
+	    by the application and the driver in all other cases. See
+	    <xref linkend="v4l2-requests" /> for more information.
+	    </entry>
+	  </row>
+	  <row>
+	    <entry>__u16</entry>
 	    <entry><structfield>reserved2</structfield></entry>
 	    <entry></entry>
 	    <entry>A place holder for future extensions. Drivers and applications

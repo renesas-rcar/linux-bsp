@@ -442,14 +442,14 @@ static void v4l_print_buffer(const void *arg, bool write_only)
 	const struct v4l2_plane *plane;
 	int i;
 
-	pr_cont("%02ld:%02d:%02d.%08ld index=%d, type=%s, "
+	pr_cont("%02ld:%02d:%02d.%08ld index=%d, type=%s, request=%u, "
 		"flags=0x%08x, field=%s, sequence=%d, memory=%s",
 			p->timestamp.tv_sec / 3600,
 			(int)(p->timestamp.tv_sec / 60) % 60,
 			(int)(p->timestamp.tv_sec % 60),
 			(long)p->timestamp.tv_usec,
 			p->index,
-			prt_names(p->type, v4l2_type_names),
+			prt_names(p->type, v4l2_type_names), p->request,
 			p->flags, prt_names(p->field, v4l2_field_names),
 			p->sequence, prt_names(p->memory, v4l2_memory_names));
 
@@ -1352,6 +1352,119 @@ static int v4l_enum_fmt(const struct v4l2_ioctl_ops *ops,
 	return ret;
 }
 
+#if defined(CONFIG_MEDIA_CONTROLLER)
+static void vdev_request_data_release(struct media_entity_request_data *data)
+{
+	struct video_device_request_data *vdata =
+		to_video_device_request_data(data);
+
+	kfree(vdata);
+}
+
+static int vdev_request_format(struct video_device *vdev, unsigned int req_id,
+			       struct media_device_request **_req,
+			       struct v4l2_pix_format_mplane **_fmt)
+{
+	struct media_entity_request_data *data;
+	struct video_device_request_data *vdata;
+	struct media_device_request *req;
+
+	if (!vdev->v4l2_dev || !vdev->v4l2_dev->mdev)
+		return -EINVAL;
+
+	req = media_device_request_find(vdev->v4l2_dev->mdev, req_id);
+	if (!req)
+		return -EINVAL;
+
+	*_req = req;
+
+	data = media_device_request_get_entity_data(req, &vdev->entity);
+	if (data) {
+		vdata = to_video_device_request_data(data);
+		*_fmt = &vdata->format;
+		return 0;
+	}
+
+	vdata = kzalloc(sizeof(*vdata), GFP_KERNEL);
+	if (!vdata) {
+		media_device_request_put(req);
+		return -ENOMEM;
+	}
+
+	vdata->data.release = vdev_request_data_release;
+
+	media_device_request_set_entity_data(req, &vdev->entity, &vdata->data);
+
+	*_fmt = &vdata->format;
+	return 0;
+}
+
+static int v4l_g_req_mplane_fmt(const struct v4l2_ioctl_ops *ops,
+				struct file *file, void *fh,
+				struct v4l2_format *fmt)
+{
+	struct video_device *vdev = video_devdata(file);
+	struct v4l2_pix_format_mplane *format;
+	struct media_device_request *req;
+	int ret;
+
+	ret = vdev_request_format(vdev, fmt->fmt.pix_mp.request,
+				  &req, &format);
+	if (ret < 0)
+		return ret;
+
+	fmt->fmt.pix_mp = *format;
+	media_device_request_put(req);
+	return 0;
+}
+
+static int v4l_s_req_mplane_fmt(const struct v4l2_ioctl_ops *ops,
+				struct file *file, void *fh,
+				struct v4l2_format *fmt)
+{
+	int (*try_op)(struct file *file, void *fh, struct v4l2_format *fmt);
+	struct video_device *vdev = video_devdata(file);
+	struct v4l2_pix_format_mplane *format;
+	struct media_device_request *req;
+	int ret;
+
+	if (fmt->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+		try_op = ops->vidioc_try_fmt_vid_cap_mplane;
+	else
+		try_op = ops->vidioc_try_fmt_vid_out_mplane;
+
+	if (unlikely(!try_op))
+		return -ENOSYS;
+
+	ret = try_op(file, fh, fmt);
+	if (ret < 0)
+		return ret;
+
+	ret = vdev_request_format(vdev, fmt->fmt.pix_mp.request,
+				  &req, &format);
+	if (ret < 0)
+		return ret;
+
+	*format = fmt->fmt.pix_mp;
+	media_device_request_put(req);
+	return 0;
+}
+#else
+static int v4l_g_req_mplane_fmt(const struct v4l2_ioctl_ops *ops,
+				struct file *file, void *fh,
+				struct v4l2_format *fmt)
+{
+	return -ENOSYS;
+}
+
+static int v4l_s_req_mplane_fmt(const struct v4l2_ioctl_ops *ops,
+				struct file *file, void *fh,
+				struct v4l2_format *fmt)
+{
+	return -ENOSYS;
+}
+#endif
+
 static int v4l_g_fmt(const struct v4l2_ioctl_ops *ops,
 				struct file *file, void *fh, void *arg)
 {
@@ -1399,6 +1512,8 @@ static int v4l_g_fmt(const struct v4l2_ioctl_ops *ops,
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
 		if (unlikely(!is_rx || !is_vid || !ops->vidioc_g_fmt_vid_cap_mplane))
 			break;
+		if (p->fmt.pix_mp.request)
+			return v4l_g_req_mplane_fmt(ops, file, fh, p);
 		return ops->vidioc_g_fmt_vid_cap_mplane(file, fh, arg);
 	case V4L2_BUF_TYPE_VIDEO_OVERLAY:
 		if (unlikely(!is_rx || !is_vid || !ops->vidioc_g_fmt_vid_overlay))
@@ -1423,6 +1538,8 @@ static int v4l_g_fmt(const struct v4l2_ioctl_ops *ops,
 	case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
 		if (unlikely(!is_tx || !is_vid || !ops->vidioc_g_fmt_vid_out_mplane))
 			break;
+		if (p->fmt.pix_mp.request)
+			return v4l_g_req_mplane_fmt(ops, file, fh, p);
 		return ops->vidioc_g_fmt_vid_out_mplane(file, fh, arg);
 	case V4L2_BUF_TYPE_VIDEO_OUTPUT_OVERLAY:
 		if (unlikely(!is_tx || !is_vid || !ops->vidioc_g_fmt_vid_out_overlay))
@@ -1477,6 +1594,8 @@ static int v4l_s_fmt(const struct v4l2_ioctl_ops *ops,
 		if (unlikely(!is_rx || !is_vid || !ops->vidioc_s_fmt_vid_cap_mplane))
 			break;
 		CLEAR_AFTER_FIELD(p, fmt.pix_mp);
+		if (p->fmt.pix_mp.request)
+			return v4l_s_req_mplane_fmt(ops, file, fh, p);
 		return ops->vidioc_s_fmt_vid_cap_mplane(file, fh, arg);
 	case V4L2_BUF_TYPE_VIDEO_OVERLAY:
 		if (unlikely(!is_rx || !is_vid || !ops->vidioc_s_fmt_vid_overlay))
@@ -1505,6 +1624,8 @@ static int v4l_s_fmt(const struct v4l2_ioctl_ops *ops,
 		if (unlikely(!is_tx || !is_vid || !ops->vidioc_s_fmt_vid_out_mplane))
 			break;
 		CLEAR_AFTER_FIELD(p, fmt.pix_mp);
+		if (p->fmt.pix_mp.request)
+			return v4l_s_req_mplane_fmt(ops, file, fh, p);
 		return ops->vidioc_s_fmt_vid_out_mplane(file, fh, arg);
 	case V4L2_BUF_TYPE_VIDEO_OUTPUT_OVERLAY:
 		if (unlikely(!is_tx || !is_vid || !ops->vidioc_s_fmt_vid_out_overlay))

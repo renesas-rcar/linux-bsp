@@ -97,6 +97,13 @@
     low-pass noise filter might crop pixels at the frame boundaries, modifying
     its output frame size.</para>
 
+    <para>Applications can get and set formats stored in a request by setting
+    the <structfield>which</structfield> field to
+    <constant>V4L2_SUBDEV_FORMAT_REQUEST</constant> and the
+    <structfield>request</structfield> to the request ID. See
+    <xref linkend="v4l2-requests" /> for more information about the request
+    API.</para>
+
     <para>Drivers must not return an error solely because the requested format
     doesn't match the device capabilities. They must instead modify the format
     to match what the hardware can provide. The modified format should be as
@@ -124,8 +131,22 @@
 	    linkend="v4l2-mbus-framefmt" /> for details.</entry>
 	  </row>
 	  <row>
+	    <entry>__u16</entry>
+	    <entry><structfield>request</structfield></entry>
+	    <entry>Request ID, only valid when the <structfield>which</structfield>
+	    field is set to <constant>V4L2_SUBDEV_FORMAT_REQUEST</constant>.
+	    Applications and drivers must set the field to zero in all other
+	    cases.</entry>
+	  </row>
+	  <row>
+	    <entry>__u16</entry>
+	    <entry><structfield>reserved2</structfield></entry>
+	    <entry>Reserved for future extensions. Applications and drivers must
+	    set the field to zero.</entry>
+	  </row>
+	  <row>
 	    <entry>__u32</entry>
-	    <entry><structfield>reserved</structfield>[8]</entry>
+	    <entry><structfield>reserved</structfield>[7]</entry>
 	    <entry>Reserved for future extensions. Applications and drivers must
 	    set the array to zero.</entry>
 	  </row>
@@ -147,6 +168,11 @@
 	    <entry>V4L2_SUBDEV_FORMAT_ACTIVE</entry>
 	    <entry>1</entry>
 	    <entry>Active formats, applied to the hardware.</entry>
+	  </row>
+	  <row>
+	    <entry>V4L2_SUBDEV_FORMAT_REQUEST</entry>
+	    <entry>1</entry>
+	    <entry>Request formats, used with the requests API.</entry>
 	  </row>
 	</tbody>
       </tgroup>
@@ -171,8 +197,9 @@
 	<term><errorcode>EINVAL</errorcode></term>
 	<listitem>
 	  <para>The &v4l2-subdev-format; <structfield>pad</structfield>
-	  references a non-existing pad, or the <structfield>which</structfield>
-	  field references a non-existing format.</para>
+	  references a non-existing pad, the <structfield>which</structfield>
+	  field references a non-existing format or the request ID references
+	  a nonexistant request.</para>
 	</listitem>
       </varlistentry>
     </variablelist>

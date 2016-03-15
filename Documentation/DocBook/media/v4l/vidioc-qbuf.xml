@@ -80,6 +80,12 @@ to a filled-in array of &v4l2-plane; and the <structfield>length</structfield>
 field must be set to the number of elements in that array.
 </para>
 
+    <para>Applications can reference a request to be applied when the buffer is
+processed. To do so they set the <structfield>request</structfield> field of the
+struct <structname>v4l2_buffer</structname> to the request ID. For more
+information about requests see <xref linkend="v4l2-requests" />.
+</para>
+
     <para>To enqueue a <link linkend="mmap">memory mapped</link>
 buffer applications set the <structfield>memory</structfield>
 field to <constant>V4L2_MEMORY_MMAP</constant>. When

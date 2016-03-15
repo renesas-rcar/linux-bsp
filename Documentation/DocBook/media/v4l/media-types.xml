@@ -121,6 +121,27 @@
 	    <entry><constant>MEDIA_ENT_F_AUDIO_MIXER</constant></entry>
 	    <entry>Audio Mixer Function Entity.</entry>
 	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_GENERIC</constant></entry>
+	    <entry>Generic video processing, when no other processing function
+		   is applicable.
+	    </entry>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_COMPOSER</constant></entry>
+	    <entry>Video composer (blender)</entry>
+	  </row>
+	  </row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_CONVERTER</constant></entry>
+	    <entry>Video format converter</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_SCALER</constant></entry>
+	    <entry>Video scaler</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_STATISTICS</constant></entry>
+	    <entry>Video statistics computation (histogram, 3A, ...)</entry>
+	  </row>
 	</tbody>
       </tgroup>
     </table>

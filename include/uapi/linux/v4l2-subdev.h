@@ -32,10 +32,12 @@
  * enum v4l2_subdev_format_whence - Media bus format type
  * @V4L2_SUBDEV_FORMAT_TRY: try format, for negotiation only
  * @V4L2_SUBDEV_FORMAT_ACTIVE: active format, applied to the device
+ * @V4L2_SUBDEV_FORMAT_REQUEST: format stored in request
  */
 enum v4l2_subdev_format_whence {
 	V4L2_SUBDEV_FORMAT_TRY = 0,
 	V4L2_SUBDEV_FORMAT_ACTIVE = 1,
+	V4L2_SUBDEV_FORMAT_REQUEST = 2,
 };
 
 /**
@@ -43,12 +45,15 @@ enum v4l2_subdev_format_whence {
  * @which: format type (from enum v4l2_subdev_format_whence)
  * @pad: pad number, as reported by the media API
  * @format: media bus format (format code and frame size)
+ * @request: request ID (when which is set to V4L2_SUBDEV_FORMAT_REQUEST)
+ * @reserved: for future use, set to zero for now
  */
 struct v4l2_subdev_format {
 	__u32 which;
 	__u32 pad;
 	struct v4l2_mbus_framefmt format;
-	__u32 reserved[8];
+	__u16 request;
+	__u16 reserved[15];
 };
 
 /**
@@ -139,6 +144,7 @@ struct v4l2_subdev_frame_interval_enum {
  *	    defined in v4l2-common.h; V4L2_SEL_TGT_* .
  * @flags: constraint flags, defined in v4l2-common.h; V4L2_SEL_FLAG_*.
  * @r: coordinates of the selection window
+ * @request: request ID (when which is set to V4L2_SUBDEV_FORMAT_REQUEST)
  * @reserved: for future use, set to zero for now
  *
  * Hardware may use multiple helper windows to process a video stream.
@@ -151,7 +157,8 @@ struct v4l2_subdev_selection {
 	__u32 target;
 	__u32 flags;
 	struct v4l2_rect r;
-	__u32 reserved[8];
+	__u16 request;
+	__u16 reserved[15];
 };
 
 /* Backwards compatibility define --- to be removed */

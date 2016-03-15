@@ -1,0 +1,90 @@
+<section id="v4l2-requests">
+
+  <title>Experimental API for request handling</title>
+
+  <note>
+    <title>Experimental</title>
+    <para>This is an <link linkend="experimental">experimental</link>
+    interface and may change in the future.</para>
+  </note>
+
+  <section>
+    <title>Introduction</title>
+
+<para>It is often useful to apply certain settings when a buffer is about to be
+filled by the DMA capture of a video capture device, ensuring that those
+settings are applied in time for them to be used with that buffer.</para>
+
+<para>One of the prime use-cases of this is Android's CameraHAL v3 which
+requires per-frame configuration support. Other use-cases are possible as well:
+changing codec settings (bit rate, etc.) starting with a specific buffer,
+preparing a configuration to be applied at a certain time, etc.</para>
+
+<para>The request API is the way V4L2 solves this problem.</para>
+
+  </section>
+
+  <section>
+    <title>Request Objects</title>
+
+<para>At the core of the request API is the request object. Applications store
+configuration parameters such as V4L2 controls, formats and selection rectangles
+in request objects and then associate those request objects for processing with
+specific buffers.</para>
+
+<para>Request objects are created and managed through the media controller
+device node. Details on request object management can be found in the
+<link linkend="media-ioc-request-cmd">media controller request API</link>
+documentation and are outside the scope of the V4L2 request API. Once a request
+object is created it can be referenced by its ID in the V4L2 ioctls that support
+requests.</para>
+
+<para>Applications can store controls, subdev formats and subdev selection
+rectangles in requests. To do so they use the usual V4L2 ioctls
+&VIDIOC-S-EXT-CTRLS;, &VIDIOC-SUBDEV-S-FMT; and &VIDIOC-SUBDEV-S-SELECTION; with
+the <structfield>request</structfield> field of the associated structure set to
+the request ID (for subdev formats and selection rectangles the
+<structfield>which</structfield> field need to be additionally set to
+<constant>V4L2_SUBDEV_FORMAT_REQUEST</constant>). Controls, formats and
+selection rectangles will be processed as usual but will be stored in the
+request instead of applied to the device.
+</para>
+
+<para>Parameters stored in requests can further be retrieved by calling the
+&VIDIOC-G-EXT-CTRLS;, &VIDIOC-SUBDEV-G-FMT; or &VIDIOC-SUBDEV-G-SELECTION;
+ioctls similarly with the <structfield>request</structfield> field of the
+associated structure set to the request ID.
+</para>
+
+  </section>
+
+  <section>
+    <title>Applying Requests</title>
+
+<para>The simplest way to apply a request is to associated it with a buffer.
+This is done by setting the <structfield>request</structfield> field of the
+&v4l2-buffer; to the request ID when queuing the buffer with the &VIDIOC-QBUF;
+ioctl.
+</para>
+
+<para>Once a buffer is queued with a non-zero request ID the driver will apply
+all parameters stored in the request atomically. The parameters are guaranteed
+to come in effect before the buffer starts being transferred and after all
+previous buffers have been complete.
+</para>
+
+<para>For devices with multiple video nodes requests might need to be applied
+synchronously with several buffers. This is achieved by first preparing (but not
+queuing) all the related buffers using the &VIDIOC-PREPARE-BUF; ioctl with the
+<structfield>request</structfield> field of the &v4l2-buffer; set to the request
+ID. Once this is done the request is queued using the
+<constant>MEDIA_REQ_CMD_QUEUE</constant> command of the &MEDIA-IOC-REQUEST-CMD;
+ioctl on the media controller device node. The driver will then queue all
+buffers prepared for the request as if the &VIDIOC-QBUF; ioctl was called on all
+of them and will apply the request parameters atomically and synchronously with
+the transfer of the buffers.
+</para>
+
+  </section>
+
+</section>

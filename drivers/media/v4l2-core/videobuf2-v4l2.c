@@ -120,6 +120,9 @@ static void __copy_timestamp(struct vb2_buffer *vb, const void *pb)
 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
 	struct vb2_queue *q = vb->vb2_queue;
 
+	if (!pb)
+		return;
+
 	if (q->is_output) {
 		/*
 		 * For output buffers copy the timestamp if needed,
@@ -174,6 +177,11 @@ static int vb2_queue_or_prepare_buf(struct vb2_queue *q, struct v4l2_buffer *b,
 		return -EINVAL;
 	}
 
+	if (!q->allow_requests && b->request) {
+		dprintk(1, "%s: unsupported request ID\n", opname);
+		return -EINVAL;
+	}
+
 	return __verify_planes_array(q->bufs[b->index], b);
 }
 
@@ -188,6 +196,9 @@ static void __fill_v4l2_buffer(struct vb2_buffer *vb, void *pb)
 	struct vb2_queue *q = vb->vb2_queue;
 	unsigned int plane;
 
+	if (!pb)
+		return;
+
 	/* Copy back data such as timestamp, flags, etc. */
 	b->index = vb->index;
 	b->type = vb->type;
@@ -199,6 +210,7 @@ static void __fill_v4l2_buffer(struct vb2_buffer *vb, void *pb)
 	b->timestamp = ns_to_timeval(vb->timestamp);
 	b->timecode = vbuf->timecode;
 	b->sequence = vbuf->sequence;
+	b->request = vbuf->request;
 	b->reserved2 = 0;
 	b->reserved = 0;
 
@@ -317,6 +329,7 @@ static int __fill_vb2_buffer(struct vb2_buffer *vb,
 	}
 	vb->timestamp = 0;
 	vbuf->sequence = 0;
+	vbuf->request = b->request;
 
 	if (V4L2_TYPE_IS_MULTIPLANAR(b->type)) {
 		if (b->memory == VB2_MEMORY_USERPTR) {
@@ -615,6 +628,31 @@ int vb2_qbuf(struct vb2_queue *q, struct v4l2_buffer *b)
 }
 EXPORT_SYMBOL_GPL(vb2_qbuf);
 
+int vb2_qbuf_request(struct vb2_queue *q, u16 request, struct vb2_buffer **p_buf)
+{
+	unsigned int buffer;
+
+	for (buffer = 0; buffer < q->num_buffers; buffer++) {
+		struct vb2_buffer *vb = q->bufs[buffer];
+		struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+
+		if (vbuf->request == request &&
+		    vb->state == VB2_BUF_STATE_PREPARED) {
+			if (p_buf)
+				*p_buf = vb;
+			/*
+			 * The buffer has already been prepared so we can skip
+			 * the vb2_queue_or_prepare_buf() call in vb2_qbuf() and
+			 * call the core function directly.
+			 */
+			return vb2_core_qbuf(q, vb->index, NULL);
+		}
+	}
+
+	return -ENOENT;
+}
+EXPORT_SYMBOL_GPL(vb2_qbuf_request);
+
 static int vb2_internal_dqbuf(struct vb2_queue *q, struct v4l2_buffer *b,
 		bool nonblocking)
 {
@@ -783,6 +821,23 @@ void vb2_queue_release(struct vb2_queue *q)
 	vb2_core_queue_release(q);
 }
 EXPORT_SYMBOL_GPL(vb2_queue_release);
+
+bool vb2_queue_has_request(struct vb2_queue *q, unsigned int request)
+{
+	unsigned int i;
+
+	for (i = 0; i < q->num_buffers; i++) {
+		struct vb2_buffer *vb = q->bufs[i];
+		struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+
+		if (vb->state == VB2_BUF_STATE_PREPARED &&
+		    vbuf->request == request)
+			return true;
+	}
+
+	return false;
+}
+EXPORT_SYMBOL_GPL(vb2_queue_has_request);
 
 /**
  * vb2_poll() - implements poll userspace operation

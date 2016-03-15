@@ -35,7 +35,7 @@
 static int subdev_fh_init(struct v4l2_subdev_fh *fh, struct v4l2_subdev *sd)
 {
 #if defined(CONFIG_VIDEO_V4L2_SUBDEV_API)
-	fh->pad = kzalloc(sizeof(*fh->pad) * sd->entity.num_pads, GFP_KERNEL);
+	fh->pad = v4l2_subdev_alloc_pad_config(sd);
 	if (fh->pad == NULL)
 		return -ENOMEM;
 #endif
@@ -83,6 +83,8 @@ static int subdev_open(struct file *file)
 	}
 #endif
 
+	v4l2_subdev_call(sd, pad, init_cfg, subdev_fh->pad);
+
 	if (sd->internal_ops && sd->internal_ops->open) {
 		ret = sd->internal_ops->open(sd, subdev_fh);
 		if (ret < 0)
@@ -126,17 +128,175 @@ static int subdev_close(struct file *file)
 }
 
 #if defined(CONFIG_VIDEO_V4L2_SUBDEV_API)
-static int check_format(struct v4l2_subdev *sd,
-			struct v4l2_subdev_format *format)
+static void subdev_request_data_release(struct media_entity_request_data *data)
 {
-	if (format->which != V4L2_SUBDEV_FORMAT_TRY &&
-	    format->which != V4L2_SUBDEV_FORMAT_ACTIVE)
+	struct v4l2_subdev_request_data *sddata =
+		to_v4l2_subdev_request_data(data);
+
+	kfree(sddata->pad);
+	kfree(sddata);
+}
+
+static struct v4l2_subdev_pad_config *
+subdev_request_pad_config(struct v4l2_subdev *sd,
+			  struct media_device_request *req)
+{
+	struct media_entity_request_data *data;
+	struct v4l2_subdev_request_data *sddata;
+
+	data = media_device_request_get_entity_data(req, &sd->entity);
+	if (data) {
+		sddata = to_v4l2_subdev_request_data(data);
+		return sddata->pad;
+	}
+
+	sddata = kzalloc(sizeof(*sddata), GFP_KERNEL);
+	if (!sddata)
+		return ERR_PTR(-ENOMEM);
+
+	sddata->data.release = subdev_request_data_release;
+
+	sddata->pad = v4l2_subdev_alloc_pad_config(sd);
+	if (sddata->pad == NULL) {
+		kfree(sddata);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	media_device_request_set_entity_data(req, &sd->entity, &sddata->data);
+
+	return sddata->pad;
+}
+
+static int subdev_prepare_pad_config(struct v4l2_subdev *sd,
+				     struct v4l2_subdev_fh *fh,
+				     enum v4l2_subdev_format_whence which,
+				     unsigned int pad, unsigned int req_id,
+				     struct media_device_request **_req,
+				     struct v4l2_subdev_pad_config **_cfg)
+{
+	struct v4l2_subdev_pad_config *cfg;
+	struct media_device_request *req;
+
+	if (pad >= sd->entity.num_pads)
 		return -EINVAL;
 
-	if (format->pad >= sd->entity.num_pads)
+
+	if (which == V4L2_SUBDEV_FORMAT_ACTIVE) {
+		*_req = NULL;
+		*_cfg = NULL;
+		return 0;
+	}
+
+	if (which == V4L2_SUBDEV_FORMAT_TRY) {
+		*_req = NULL;
+		*_cfg = fh->pad;
+		return 0;
+	}
+
+	if (which != V4L2_SUBDEV_FORMAT_REQUEST)
 		return -EINVAL;
+
+	if (!sd->v4l2_dev->mdev)
+		return -EINVAL;
+
+	req = media_device_request_find(sd->v4l2_dev->mdev, req_id);
+	if (!req)
+		return -EINVAL;
+
+	cfg = subdev_request_pad_config(sd, req);
+	if (IS_ERR(cfg)) {
+		media_device_request_put(req);
+		return PTR_ERR(cfg);
+	}
+
+	*_req = req;
+	*_cfg = cfg;
 
 	return 0;
+}
+
+static int subdev_get_format(struct v4l2_subdev *sd,
+			     struct v4l2_subdev_fh *fh,
+			     struct v4l2_subdev_format *format)
+{
+	struct v4l2_subdev_pad_config *cfg;
+	struct media_device_request *req;
+	int ret;
+
+	ret = subdev_prepare_pad_config(sd, fh, format->which, format->pad,
+					format->request, &req, &cfg);
+	if (ret < 0)
+		return ret;
+
+	ret = v4l2_subdev_call(sd, pad, get_fmt, cfg, format);
+
+	if (req)
+		media_device_request_put(req);
+
+	return ret;
+}
+
+static int subdev_set_format(struct v4l2_subdev *sd,
+			     struct v4l2_subdev_fh *fh,
+			     struct v4l2_subdev_format *format)
+{
+	struct v4l2_subdev_pad_config *cfg;
+	struct media_device_request *req;
+	int ret;
+
+	ret = subdev_prepare_pad_config(sd, fh, format->which, format->pad,
+					format->request, &req, &cfg);
+	if (ret < 0)
+		return ret;
+
+	ret = v4l2_subdev_call(sd, pad, set_fmt, cfg, format);
+
+	if (req)
+		media_device_request_put(req);
+
+	return ret;
+}
+
+static int subdev_get_selection(struct v4l2_subdev *sd,
+				struct v4l2_subdev_fh *fh,
+				struct v4l2_subdev_selection *sel)
+{
+	struct v4l2_subdev_pad_config *cfg;
+	struct media_device_request *req;
+	int ret;
+
+	ret = subdev_prepare_pad_config(sd, fh, sel->which, sel->pad,
+					sel->request, &req, &cfg);
+	if (ret < 0)
+		return ret;
+
+	ret = v4l2_subdev_call(sd, pad, get_selection, cfg, sel);
+
+	if (req)
+		media_device_request_put(req);
+
+	return ret;
+}
+
+static int subdev_set_selection(struct v4l2_subdev *sd,
+				struct v4l2_subdev_fh *fh,
+				struct v4l2_subdev_selection *sel)
+{
+	struct v4l2_subdev_pad_config *cfg;
+	struct media_device_request *req;
+	int ret;
+
+	ret = subdev_prepare_pad_config(sd, fh, sel->which, sel->pad,
+					sel->request, &req, &cfg);
+	if (ret < 0)
+		return ret;
+
+	ret = v4l2_subdev_call(sd, pad, set_selection, cfg, sel);
+
+	if (req)
+		media_device_request_put(req);
+
+	return ret;
 }
 
 static int check_crop(struct v4l2_subdev *sd, struct v4l2_subdev_crop *crop)
@@ -146,19 +306,6 @@ static int check_crop(struct v4l2_subdev *sd, struct v4l2_subdev_crop *crop)
 		return -EINVAL;
 
 	if (crop->pad >= sd->entity.num_pads)
-		return -EINVAL;
-
-	return 0;
-}
-
-static int check_selection(struct v4l2_subdev *sd,
-			   struct v4l2_subdev_selection *sel)
-{
-	if (sel->which != V4L2_SUBDEV_FORMAT_TRY &&
-	    sel->which != V4L2_SUBDEV_FORMAT_ACTIVE)
-		return -EINVAL;
-
-	if (sel->pad >= sd->entity.num_pads)
 		return -EINVAL;
 
 	return 0;
@@ -254,25 +401,11 @@ static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg)
 	}
 
 #if defined(CONFIG_VIDEO_V4L2_SUBDEV_API)
-	case VIDIOC_SUBDEV_G_FMT: {
-		struct v4l2_subdev_format *format = arg;
+	case VIDIOC_SUBDEV_G_FMT:
+		return subdev_get_format(sd, subdev_fh, arg);
 
-		rval = check_format(sd, format);
-		if (rval)
-			return rval;
-
-		return v4l2_subdev_call(sd, pad, get_fmt, subdev_fh->pad, format);
-	}
-
-	case VIDIOC_SUBDEV_S_FMT: {
-		struct v4l2_subdev_format *format = arg;
-
-		rval = check_format(sd, format);
-		if (rval)
-			return rval;
-
-		return v4l2_subdev_call(sd, pad, set_fmt, subdev_fh->pad, format);
-	}
+	case VIDIOC_SUBDEV_S_FMT:
+		return subdev_set_format(sd, subdev_fh, arg);
 
 	case VIDIOC_SUBDEV_G_CROP: {
 		struct v4l2_subdev_crop *crop = arg;
@@ -377,27 +510,11 @@ static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg)
 					fie);
 	}
 
-	case VIDIOC_SUBDEV_G_SELECTION: {
-		struct v4l2_subdev_selection *sel = arg;
+	case VIDIOC_SUBDEV_G_SELECTION:
+		return subdev_get_selection(sd, subdev_fh, arg);
 
-		rval = check_selection(sd, sel);
-		if (rval)
-			return rval;
-
-		return v4l2_subdev_call(
-			sd, pad, get_selection, subdev_fh->pad, sel);
-	}
-
-	case VIDIOC_SUBDEV_S_SELECTION: {
-		struct v4l2_subdev_selection *sel = arg;
-
-		rval = check_selection(sd, sel);
-		if (rval)
-			return rval;
-
-		return v4l2_subdev_call(
-			sd, pad, set_selection, subdev_fh->pad, sel);
-	}
+	case VIDIOC_SUBDEV_S_SELECTION:
+		return subdev_set_selection(sd, subdev_fh, arg);
 
 	case VIDIOC_G_EDID: {
 		struct v4l2_subdev_edid *edid = arg;
@@ -569,6 +686,30 @@ int v4l2_subdev_link_validate(struct media_link *link)
 		sink, link, &source_fmt, &sink_fmt);
 }
 EXPORT_SYMBOL_GPL(v4l2_subdev_link_validate);
+
+struct v4l2_subdev_pad_config *
+v4l2_subdev_alloc_pad_config(struct v4l2_subdev *sd)
+{
+	struct v4l2_subdev_pad_config *cfg;
+
+	if (!sd->entity.num_pads)
+		return NULL;
+
+	cfg = kcalloc(sd->entity.num_pads, sizeof(*cfg), GFP_KERNEL);
+	if (!cfg)
+		return NULL;
+
+	v4l2_subdev_call(sd, pad, init_cfg, cfg);
+
+	return cfg;
+}
+EXPORT_SYMBOL_GPL(v4l2_subdev_alloc_pad_config);
+
+void v4l2_subdev_free_pad_config(struct v4l2_subdev_pad_config *cfg)
+{
+	kfree(cfg);
+}
+EXPORT_SYMBOL_GPL(v4l2_subdev_free_pad_config);
 #endif /* CONFIG_MEDIA_CONTROLLER */
 
 void v4l2_subdev_init(struct v4l2_subdev *sd, const struct v4l2_subdev_ops *ops)
@@ -584,6 +725,7 @@ void v4l2_subdev_init(struct v4l2_subdev *sd, const struct v4l2_subdev_ops *ops)
 	sd->host_priv = NULL;
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	sd->entity.name = sd->name;
+	sd->entity.type = MEDIA_ENTITY_TYPE_V4L2_SUBDEV;
 	sd->entity.function = MEDIA_ENT_F_V4L2_SUBDEV_UNKNOWN;
 #endif
 }

@@ -30,6 +30,7 @@
  * @field:	enum v4l2_field; field order of the image in the buffer
  * @timecode:	frame timecode
  * @sequence:	sequence count of this frame
+ * @request:	request used by the buffer
  * Should contain enough information to be able to cover all the fields
  * of struct v4l2_buffer at videodev2.h
  */
@@ -40,6 +41,7 @@ struct vb2_v4l2_buffer {
 	__u32			field;
 	struct v4l2_timecode	timecode;
 	__u32			sequence;
+	__u32			request;
 };
 
 /*
@@ -55,6 +57,7 @@ int vb2_create_bufs(struct vb2_queue *q, struct v4l2_create_buffers *create);
 int vb2_prepare_buf(struct vb2_queue *q, struct v4l2_buffer *b);
 
 int vb2_qbuf(struct vb2_queue *q, struct v4l2_buffer *b);
+int vb2_qbuf_request(struct vb2_queue *q, u16 request, struct vb2_buffer **p_buf);
 int vb2_expbuf(struct vb2_queue *q, struct v4l2_exportbuffer *eb);
 int vb2_dqbuf(struct vb2_queue *q, struct v4l2_buffer *b, bool nonblocking);
 
@@ -63,6 +66,9 @@ int vb2_streamoff(struct vb2_queue *q, enum v4l2_buf_type type);
 
 int __must_check vb2_queue_init(struct vb2_queue *q);
 void vb2_queue_release(struct vb2_queue *q);
+
+bool vb2_queue_has_request(struct vb2_queue *q, unsigned int request);
+
 unsigned int vb2_poll(struct vb2_queue *q, struct file *file,
 		poll_table *wait);
 

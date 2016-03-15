@@ -19,17 +19,23 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/videodev2.h>
 
+#include <media/rcar-fcp.h>
 #include <media/v4l2-subdev.h>
 
 #include "vsp1.h"
 #include "vsp1_bru.h"
+#include "vsp1_clu.h"
 #include "vsp1_dl.h"
 #include "vsp1_drm.h"
+#include "vsp1_hgo.h"
 #include "vsp1_hsit.h"
 #include "vsp1_lif.h"
 #include "vsp1_lut.h"
+#include "vsp1_pipe.h"
+#include "vsp1_request.h"
 #include "vsp1_rwpf.h"
 #include "vsp1_sru.h"
 #include "vsp1_uds.h"
@@ -49,17 +55,15 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 
 	for (i = 0; i < vsp1->info->wpf_count; ++i) {
 		struct vsp1_rwpf *wpf = vsp1->wpf[i];
-		struct vsp1_pipeline *pipe;
 
 		if (wpf == NULL)
 			continue;
 
-		pipe = to_vsp1_pipeline(&wpf->entity.subdev.entity);
 		status = vsp1_read(vsp1, VI6_WPF_IRQ_STA(i));
 		vsp1_write(vsp1, VI6_WPF_IRQ_STA(i), ~status & mask);
 
 		if (status & VI6_WFP_IRQ_STA_FRE) {
-			vsp1_pipeline_frame_end(pipe);
+			vsp1_pipeline_frame_end(wpf->pipe);
 			ret = IRQ_HANDLED;
 		}
 	}
@@ -68,14 +72,7 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 	vsp1_write(vsp1, VI6_DISP_IRQ_STA, ~status & VI6_DISP_IRQ_STA_DST);
 
 	if (status & VI6_DISP_IRQ_STA_DST) {
-		struct vsp1_rwpf *wpf = vsp1->wpf[0];
-		struct vsp1_pipeline *pipe;
-
-		if (wpf) {
-			pipe = to_vsp1_pipeline(&wpf->entity.subdev.entity);
-			vsp1_pipeline_display_start(pipe);
-		}
-
+		vsp1_drm_display_start(vsp1);
 		ret = IRQ_HANDLED;
 	}
 
@@ -110,7 +107,8 @@ static int vsp1_create_sink_links(struct vsp1_device *vsp1,
 		if (source->type == sink->type)
 			continue;
 
-		if (source->type == VSP1_ENTITY_LIF ||
+		if (source->type == VSP1_ENTITY_HGO ||
+		    source->type == VSP1_ENTITY_LIF ||
 		    source->type == VSP1_ENTITY_WPF)
 			continue;
 
@@ -219,6 +217,12 @@ static void vsp1_destroy_entities(struct vsp1_device *vsp1)
 		vsp1_drm_cleanup(vsp1);
 }
 
+static const struct media_device_ops vsp1_media_device_ops = {
+	.req_alloc = vsp1_request_alloc,
+	.req_free = vsp1_request_free,
+	.req_queue = vsp1_request_queue,
+};
+
 static int vsp1_create_entities(struct vsp1_device *vsp1)
 {
 	struct media_device *mdev = &vsp1->media_dev;
@@ -228,6 +232,7 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	int ret;
 
 	mdev->dev = vsp1->dev;
+	mdev->ops = &vsp1_media_device_ops;
 	strlcpy(mdev->model, "VSP1", sizeof(mdev->model));
 	snprintf(mdev->bus_info, sizeof(mdev->bus_info), "platform:%s",
 		 dev_name(mdev->dev));
@@ -242,6 +247,7 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 		vsp1->media_ops.link_validate = v4l2_subdev_link_validate;
 
 	vdev->mdev = mdev;
+
 	ret = v4l2_device_register(vsp1->dev, vdev);
 	if (ret < 0) {
 		dev_err(vsp1->dev, "V4L2 device registration failed (%d)\n",
@@ -260,6 +266,16 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 		list_add_tail(&vsp1->bru->entity.list_dev, &vsp1->entities);
 	}
 
+	if (vsp1->info->features & VSP1_HAS_CLU) {
+		vsp1->clu = vsp1_clu_create(vsp1);
+		if (IS_ERR(vsp1->clu)) {
+			ret = PTR_ERR(vsp1->clu);
+			goto done;
+		}
+
+		list_add_tail(&vsp1->clu->entity.list_dev, &vsp1->entities);
+	}
+
 	vsp1->hsi = vsp1_hsit_create(vsp1, true);
 	if (IS_ERR(vsp1->hsi)) {
 		ret = PTR_ERR(vsp1->hsi);
@@ -275,6 +291,16 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	}
 
 	list_add_tail(&vsp1->hst->entity.list_dev, &vsp1->entities);
+
+	if (vsp1->info->features & VSP1_HAS_HGO) {
+		vsp1->hgo = vsp1_hgo_create(vsp1);
+		if (IS_ERR(vsp1->hgo)) {
+			ret = PTR_ERR(vsp1->hgo);
+			goto done;
+		}
+
+		list_add_tail(&vsp1->hgo->entity.list_dev, &vsp1->entities);
+	}
 
 	if (vsp1->info->features & VSP1_HAS_LIF) {
 		vsp1->lif = vsp1_lif_create(vsp1);
@@ -387,13 +413,10 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	/* Register subdev nodes if the userspace API is enabled or initialize
 	 * the DRM pipeline otherwise.
 	 */
-	if (vsp1->info->uapi) {
-		vsp1->use_dl = false;
+	if (vsp1->info->uapi)
 		ret = v4l2_device_register_subdev_nodes(&vsp1->v4l2_dev);
-	} else {
-		vsp1->use_dl = true;
+	else
 		ret = vsp1_drm_init(vsp1);
-	}
 	if (ret < 0)
 		goto done;
 
@@ -465,8 +488,7 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
 	vsp1_write(vsp1, VI6_DPR_HGT_SMPPT, (7 << VI6_DPR_SMPPT_TGW_SHIFT) |
 		   (VI6_DPR_NODE_UNUSED << VI6_DPR_SMPPT_PT_SHIFT));
 
-	if (vsp1->use_dl)
-		vsp1_dl_setup(vsp1);
+	vsp1_dlm_setup(vsp1);
 
 	return 0;
 }
@@ -474,35 +496,16 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
 /*
  * vsp1_device_get - Acquire the VSP1 device
  *
- * Increment the VSP1 reference count and initialize the device if the first
- * reference is taken.
+ * Make sure the device is not suspended and initialize it if needed.
  *
  * Return 0 on success or a negative error code otherwise.
  */
 int vsp1_device_get(struct vsp1_device *vsp1)
 {
-	int ret = 0;
+	int ret;
 
-	mutex_lock(&vsp1->lock);
-	if (vsp1->ref_count > 0)
-		goto done;
-
-	ret = clk_prepare_enable(vsp1->clock);
-	if (ret < 0)
-		goto done;
-
-	ret = vsp1_device_init(vsp1);
-	if (ret < 0) {
-		clk_disable_unprepare(vsp1->clock);
-		goto done;
-	}
-
-done:
-	if (!ret)
-		vsp1->ref_count++;
-
-	mutex_unlock(&vsp1->lock);
-	return ret;
+	ret = pm_runtime_get_sync(vsp1->dev);
+	return ret < 0 ? ret : 0;
 }
 
 /*
@@ -513,12 +516,7 @@ done:
  */
 void vsp1_device_put(struct vsp1_device *vsp1)
 {
-	mutex_lock(&vsp1->lock);
-
-	if (--vsp1->ref_count == 0)
-		clk_disable_unprepare(vsp1->clock);
-
-	mutex_unlock(&vsp1->lock);
+	pm_runtime_put_sync(vsp1->dev);
 }
 
 /* -----------------------------------------------------------------------------
@@ -530,14 +528,8 @@ static int vsp1_pm_suspend(struct device *dev)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 
-	WARN_ON(mutex_is_locked(&vsp1->lock));
-
-	if (vsp1->ref_count == 0)
-		return 0;
-
 	vsp1_pipelines_suspend(vsp1);
-
-	clk_disable_unprepare(vsp1->clock);
+	pm_runtime_force_suspend(vsp1->dev);
 
 	return 0;
 }
@@ -546,21 +538,40 @@ static int vsp1_pm_resume(struct device *dev)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 
-	WARN_ON(mutex_is_locked(&vsp1->lock));
-
-	if (vsp1->ref_count == 0)
-		return 0;
-
-	clk_prepare_enable(vsp1->clock);
-
+	pm_runtime_force_resume(vsp1->dev);
 	vsp1_pipelines_resume(vsp1);
 
 	return 0;
 }
 #endif
 
+static int vsp1_pm_runtime_suspend(struct device *dev)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+
+	rcar_fcp_disable(vsp1->fcp);
+
+	return 0;
+}
+
+static int vsp1_pm_runtime_resume(struct device *dev)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	int ret;
+
+	if (vsp1->info) {
+		ret = vsp1_device_init(vsp1);
+		if (ret < 0)
+			return ret;
+	}
+
+	rcar_fcp_enable(vsp1->fcp);
+	return 0;
+}
+
 static const struct dev_pm_ops vsp1_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(vsp1_pm_suspend, vsp1_pm_resume)
+	SET_RUNTIME_PM_OPS(vsp1_pm_runtime_suspend, vsp1_pm_runtime_resume, NULL)
 };
 
 /* -----------------------------------------------------------------------------
@@ -570,7 +581,8 @@ static const struct dev_pm_ops vsp1_pm_ops = {
 static const struct vsp1_device_info vsp1_device_infos[] = {
 	{
 		.version = VI6_IP_VERSION_MODEL_VSPS_H2,
-		.features = VSP1_HAS_BRU | VSP1_HAS_LUT | VSP1_HAS_SRU,
+		.features = VSP1_HAS_BRU | VSP1_HAS_CLU | VSP1_HAS_HGO
+			  | VSP1_HAS_LUT | VSP1_HAS_SRU,
 		.rpf_count = 5,
 		.uds_count = 3,
 		.wpf_count = 4,
@@ -586,15 +598,16 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.uapi = true,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPD_GEN2,
-		.features = VSP1_HAS_BRU | VSP1_HAS_LIF | VSP1_HAS_LUT,
+		.features = VSP1_HAS_BRU | VSP1_HAS_HGO | VSP1_HAS_LIF
+			  | VSP1_HAS_LUT,
 		.rpf_count = 4,
 		.uds_count = 1,
 		.wpf_count = 4,
 		.num_bru_inputs = 4,
-		.uapi = true,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPS_M2,
-		.features = VSP1_HAS_BRU | VSP1_HAS_LUT | VSP1_HAS_SRU,
+		.features = VSP1_HAS_BRU | VSP1_HAS_CLU | VSP1_HAS_HGO
+			  | VSP1_HAS_LUT | VSP1_HAS_SRU,
 		.rpf_count = 5,
 		.uds_count = 3,
 		.wpf_count = 4,
@@ -602,7 +615,8 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.uapi = true,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPI_GEN3,
-		.features = VSP1_HAS_LUT | VSP1_HAS_SRU,
+		.features = VSP1_HAS_CLU | VSP1_HAS_HGO | VSP1_HAS_LUT
+			  | VSP1_HAS_SRU,
 		.rpf_count = 1,
 		.uds_count = 1,
 		.wpf_count = 1,
@@ -616,14 +630,15 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.uapi = true,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPBC_GEN3,
-		.features = VSP1_HAS_BRU | VSP1_HAS_LUT,
+		.features = VSP1_HAS_BRU | VSP1_HAS_CLU | VSP1_HAS_HGO
+			  | VSP1_HAS_LUT,
 		.rpf_count = 5,
 		.wpf_count = 1,
 		.num_bru_inputs = 5,
 		.uapi = true,
 	}, {
 		.version = VI6_IP_VERSION_MODEL_VSPD_GEN3,
-		.features = VSP1_HAS_BRU | VSP1_HAS_LIF | VSP1_HAS_LUT,
+		.features = VSP1_HAS_BRU | VSP1_HAS_LIF,
 		.rpf_count = 5,
 		.wpf_count = 2,
 		.num_bru_inputs = 5,
@@ -633,6 +648,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 static int vsp1_probe(struct platform_device *pdev)
 {
 	struct vsp1_device *vsp1;
+	struct device_node *fcp_node;
 	struct resource *irq;
 	struct resource *io;
 	unsigned int i;
@@ -644,21 +660,16 @@ static int vsp1_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	vsp1->dev = &pdev->dev;
-	mutex_init(&vsp1->lock);
 	INIT_LIST_HEAD(&vsp1->entities);
 	INIT_LIST_HEAD(&vsp1->videos);
 
-	/* I/O, IRQ and clock resources */
+	platform_set_drvdata(pdev, vsp1);
+
+	/* I/O and IRQ resources (clock managed by the clock PM domain) */
 	io = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	vsp1->mmio = devm_ioremap_resource(&pdev->dev, io);
 	if (IS_ERR(vsp1->mmio))
 		return PTR_ERR(vsp1->mmio);
-
-	vsp1->clock = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(vsp1->clock)) {
-		dev_err(&pdev->dev, "failed to get clock\n");
-		return PTR_ERR(vsp1->clock);
-	}
 
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!irq) {
@@ -673,13 +684,27 @@ static int vsp1_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	/* FCP (optional) */
+	fcp_node = of_parse_phandle(pdev->dev.of_node, "renesas,fcp", 0);
+	if (fcp_node) {
+		vsp1->fcp = rcar_fcp_get(fcp_node);
+		of_node_put(fcp_node);
+		if (IS_ERR(vsp1->fcp)) {
+			dev_dbg(&pdev->dev, "FCP not found (%ld)\n",
+				PTR_ERR(vsp1->fcp));
+			return PTR_ERR(vsp1->fcp);
+		}
+	}
+
 	/* Configure device parameters based on the version register. */
-	ret = clk_prepare_enable(vsp1->clock);
+	pm_runtime_enable(&pdev->dev);
+
+	ret = pm_runtime_get_sync(&pdev->dev);
 	if (ret < 0)
-		return ret;
+		goto done;
 
 	version = vsp1_read(vsp1, VI6_IP_VERSION);
-	clk_disable_unprepare(vsp1->clock);
+	pm_runtime_put_sync(&pdev->dev);
 
 	for (i = 0; i < ARRAY_SIZE(vsp1_device_infos); ++i) {
 		if ((version & VI6_IP_VERSION_MODEL_MASK) ==
@@ -691,7 +716,8 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	if (!vsp1->info) {
 		dev_err(&pdev->dev, "unsupported IP version 0x%08x\n", version);
-		return -ENXIO;
+		ret = -ENXIO;
+		goto done;
 	}
 
 	dev_dbg(&pdev->dev, "IP version 0x%08x\n", version);
@@ -700,12 +726,14 @@ static int vsp1_probe(struct platform_device *pdev)
 	ret = vsp1_create_entities(vsp1);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to create entities\n");
-		return ret;
+		goto done;
 	}
 
-	platform_set_drvdata(pdev, vsp1);
+done:
+	if (ret)
+		pm_runtime_disable(&pdev->dev);
 
-	return 0;
+	return ret;
 }
 
 static int vsp1_remove(struct platform_device *pdev)
@@ -713,6 +741,9 @@ static int vsp1_remove(struct platform_device *pdev)
 	struct vsp1_device *vsp1 = platform_get_drvdata(pdev);
 
 	vsp1_destroy_entities(vsp1);
+	rcar_fcp_put(vsp1->fcp);
+
+	pm_runtime_disable(&pdev->dev);
 
 	return 0;
 }

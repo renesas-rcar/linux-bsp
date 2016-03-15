@@ -39,6 +39,262 @@
 
 #ifdef CONFIG_MEDIA_CONTROLLER
 
+struct media_device_fh {
+	struct media_devnode_fh fh;
+	struct list_head requests;
+};
+
+static inline struct media_device_fh *media_device_fh(struct file *filp)
+{
+	return container_of(filp->private_data, struct media_device_fh, fh);
+}
+
+/* -----------------------------------------------------------------------------
+ * Requests
+ */
+
+/**
+ * media_device_request_find - Find a request based from its ID
+ * @mdev: The media device
+ * @reqid: The request ID
+ *
+ * Find and return the request associated with the given ID, or NULL if no such
+ * request exists.
+ *
+ * When the function returns a non-NULL request it increases its reference
+ * count. The caller is responsible for releasing the reference by calling
+ * media_device_request_put() on the request.
+ */
+struct media_device_request *
+media_device_request_find(struct media_device *mdev, u16 reqid)
+{
+	struct media_device_request *req;
+	unsigned long flags;
+	bool found = false;
+
+	spin_lock_irqsave(&mdev->req_lock, flags);
+	list_for_each_entry(req, &mdev->requests, list) {
+		if (req->id == reqid) {
+			kref_get(&req->kref);
+			found = true;
+			break;
+		}
+	}
+	spin_unlock_irqrestore(&mdev->req_lock, flags);
+
+	return found ? req : NULL;
+}
+EXPORT_SYMBOL_GPL(media_device_request_find);
+
+void media_device_request_get(struct media_device_request *req)
+{
+	kref_get(&req->kref);
+}
+EXPORT_SYMBOL_GPL(media_device_request_get);
+
+static void media_device_request_release(struct kref *kref)
+{
+	struct media_entity_request_data *data, *data_safe;
+	struct media_device_request *req =
+		container_of(kref, struct media_device_request, kref);
+	struct media_device *mdev = req->mdev;
+	struct media_request_link *rlnk, *rlnk_safe;
+
+	list_for_each_entry_safe(data, data_safe, &req->data, list) {
+		list_del(&data->list);
+		data->release(data);
+	}
+	list_for_each_entry_safe(rlnk, rlnk_safe, &req->links, list) {
+		list_del(&rlnk->list);
+		kfree(rlnk);
+	}
+
+	mdev->ops->req_free(mdev, req);
+}
+
+void media_device_request_put(struct media_device_request *req)
+{
+	kref_put(&req->kref, media_device_request_release);
+}
+EXPORT_SYMBOL_GPL(media_device_request_put);
+
+struct media_request_link *media_device_request_link_find(
+	struct media_device_request *req, struct media_link *link)
+{
+	struct media_request_link *rlnk;
+
+	list_for_each_entry(rlnk, &req->links, list) {
+		if (rlnk->link == link)
+			return rlnk;
+	}
+
+	return NULL;
+}
+
+/**
+ * media_device_request_get_entity_data - Get per-entity data
+ * @req: The request
+ * @entity: The entity
+ *
+ * Search and return per-entity data (as a struct media_entity_request_data
+ * instance) associated with the given entity for the request, as previously
+ * registered by a call to media_device_request_set_entity_data().
+ *
+ * The caller is expected to hold a reference to the request. Per-entity data is
+ * not reference counted, the returned pointer will be valid only as long as the
+ * reference to the request is held.
+ *
+ * Return the data instance pointer or NULL if no data could be found.
+ */
+struct media_entity_request_data *
+media_device_request_get_entity_data(struct media_device_request *req,
+				     struct media_entity *entity)
+{
+	struct media_entity_request_data *data;
+	unsigned long flags;
+
+	spin_lock_irqsave(&req->mdev->req_lock, flags);
+
+	list_for_each_entry(data, &req->data, list) {
+		if (data->entity == entity)
+			goto done;
+	}
+
+	data = NULL;
+
+done:
+	spin_unlock_irqrestore(&req->mdev->req_lock, flags);
+	return data;
+}
+EXPORT_SYMBOL_GPL(media_device_request_get_entity_data);
+
+/**
+ * media_device_request_set_entity_data - Set per-entity data
+ * @req: The request
+ * @entity: The entity
+ * @data: The data
+ *
+ * Record the given per-entity data as being associated with the entity for the
+ * request.
+ *
+ * Only one per-entity data instance can be associated with a request. The
+ * caller is responsible for enforcing this requirement.
+ *
+ * Ownership of the per-entity data is transferred to the request when calling
+ * this function. The data will be freed automatically when the last reference
+ * to the request is released.
+ */
+void media_device_request_set_entity_data(struct media_device_request *req,
+	struct media_entity *entity, struct media_entity_request_data *data)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&req->mdev->req_lock, flags);
+	list_add_tail(&data->list, &req->data);
+	spin_unlock_irqrestore(&req->mdev->req_lock, flags);
+}
+EXPORT_SYMBOL_GPL(media_device_request_set_entity_data);
+
+static int media_device_request_alloc(struct media_device *mdev,
+				      struct media_device_fh *fh,
+				      struct media_request_cmd *cmd)
+{
+	struct media_device_request *req;
+	unsigned long flags;
+
+	req = mdev->ops->req_alloc(mdev);
+	if (!req)
+		return -ENOMEM;
+
+	req->mdev = mdev;
+	kref_init(&req->kref);
+	INIT_LIST_HEAD(&req->links);
+	INIT_LIST_HEAD(&req->data);
+
+	spin_lock_irqsave(&mdev->req_lock, flags);
+	req->id = ++mdev->req_id;
+	list_add_tail(&req->list, &mdev->requests);
+	list_add_tail(&req->fh_list, &fh->requests);
+	spin_unlock_irqrestore(&mdev->req_lock, flags);
+
+	cmd->request = req->id;
+	return 0;
+}
+
+static void media_device_request_delete(struct media_device *mdev,
+					struct media_device_request *req)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&mdev->req_lock, flags);
+	list_del(&req->list);
+	list_del(&req->fh_list);
+	spin_unlock_irqrestore(&mdev->req_lock, flags);
+
+	media_device_request_put(req);
+}
+
+static long media_device_request_cmd(struct media_device *mdev,
+				     struct media_device_fh *fh,
+				     struct media_request_cmd __user *_cmd)
+{
+	struct media_device_request *req = NULL;
+	struct media_request_cmd cmd;
+	int ret;
+
+	if (!mdev->ops || !mdev->ops->req_alloc || !mdev->ops->req_free)
+		return -ENOTTY;
+
+	if (copy_from_user(&cmd, _cmd, sizeof(cmd)))
+		return -EFAULT;
+
+	if (cmd.cmd != MEDIA_REQ_CMD_ALLOC) {
+		req = media_device_request_find(mdev, cmd.request);
+		if (!req)
+			return -EINVAL;
+	}
+
+	switch (cmd.cmd) {
+	case MEDIA_REQ_CMD_ALLOC:
+		ret = media_device_request_alloc(mdev, fh, &cmd);
+		break;
+
+	case MEDIA_REQ_CMD_DELETE:
+		media_device_request_delete(mdev, req);
+		ret = 0;
+		break;
+
+	case MEDIA_REQ_CMD_APPLY:
+		if (!mdev->ops->req_apply)
+			return -ENOSYS;
+
+		ret = mdev->ops->req_apply(mdev, req);
+		break;
+
+	case MEDIA_REQ_CMD_QUEUE:
+		if (!mdev->ops->req_queue)
+			return -ENOSYS;
+
+		ret = mdev->ops->req_queue(mdev, req);
+		break;
+
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	if (req)
+		media_device_request_put(req);
+
+	if (ret < 0)
+		return ret;
+
+	if (copy_to_user(_cmd, &cmd, sizeof(cmd)))
+		return -EFAULT;
+
+	return 0;
+}
+
 /* -----------------------------------------------------------------------------
  * Userspace API
  */
@@ -50,11 +306,39 @@ static inline void __user *media_get_uptr(__u64 arg)
 
 static int media_device_open(struct file *filp)
 {
+	struct media_device_fh *fh;
+
+	fh = kzalloc(sizeof(*fh), GFP_KERNEL);
+	if (!fh)
+		return -ENOMEM;
+
+	INIT_LIST_HEAD(&fh->requests);
+	filp->private_data = &fh->fh;
+
 	return 0;
 }
 
 static int media_device_close(struct file *filp)
 {
+	struct media_device_fh *fh = media_device_fh(filp);
+	struct media_device *mdev = to_media_device(fh->fh.devnode);
+
+	spin_lock_irq(&mdev->req_lock);
+	while (!list_empty(&fh->requests)) {
+		struct media_device_request *req;
+
+		req = list_first_entry(&fh->requests, typeof(*req), fh_list);
+		list_del(&req->list);
+		list_del(&req->fh_list);
+
+		spin_unlock_irq(&mdev->req_lock);
+		media_device_request_put(req);
+		spin_lock_irq(&mdev->req_lock);
+	}
+	spin_unlock_irq(&mdev->req_lock);
+
+	kfree(fh);
+
 	return 0;
 }
 
@@ -235,12 +519,21 @@ static long media_device_setup_link(struct media_device *mdev,
 {
 	struct media_link *link = NULL;
 	struct media_link_desc ulink;
+	struct media_device_request *req = NULL;
 	struct media_entity *source;
 	struct media_entity *sink;
-	int ret;
+	int ret = -EINVAL;
 
 	if (copy_from_user(&ulink, _ulink, sizeof(ulink)))
 		return -EFAULT;
+
+	if (ulink.request) {
+		req = media_device_request_find(mdev, ulink.request);
+		if (!req)
+			return -ENOENT;
+	}
+
+	mutex_lock(&mdev->graph_mutex);
 
 	/* Find the source and sink entities and link.
 	 */
@@ -248,22 +541,47 @@ static long media_device_setup_link(struct media_device *mdev,
 	sink = find_entity(mdev, ulink.sink.entity);
 
 	if (source == NULL || sink == NULL)
-		return -EINVAL;
+		goto out;
 
 	if (ulink.source.index >= source->num_pads ||
 	    ulink.sink.index >= sink->num_pads)
-		return -EINVAL;
+		goto out;
 
 	link = media_entity_find_link(&source->pads[ulink.source.index],
 				      &sink->pads[ulink.sink.index]);
 	if (link == NULL)
-		return -EINVAL;
+		goto out;
 
-	/* Setup the link on both entities. */
-	ret = __media_entity_setup_link(link, ulink.flags);
+	if (req) {
+		struct media_request_link *rlnk =
+			media_device_request_link_find(req, link);
 
-	if (copy_to_user(_ulink, &ulink, sizeof(ulink)))
-		return -EFAULT;
+		if (rlnk) {
+			list_del(&rlnk->list);
+		} else {
+			rlnk = kmalloc(sizeof(*rlnk), GFP_KERNEL);
+			if (!rlnk) {
+				ret = -ENOMEM;
+				goto out;
+			}
+		}
+
+		rlnk->link = link;
+		rlnk->enabled = ulink.flags & MEDIA_LNK_FL_ENABLED;
+		list_add(&rlnk->list, &req->links);
+	} else {
+		/* Setup the link on both entities. */
+		ret = __media_entity_setup_link(link, ulink.flags);
+	}
+
+out:
+	mutex_unlock(&mdev->graph_mutex);
+
+	if (req)
+		media_device_request_put(req);
+
+	if (!ret && copy_to_user(_ulink, &ulink, sizeof(ulink)))
+		ret = -EFAULT;
 
 	return ret;
 }
@@ -429,6 +747,7 @@ static long media_device_ioctl(struct file *filp, unsigned int cmd,
 {
 	struct media_devnode *devnode = media_devnode_data(filp);
 	struct media_device *dev = to_media_device(devnode);
+	struct media_device_fh *fh = media_device_fh(filp);
 	long ret;
 
 	switch (cmd) {
@@ -450,10 +769,8 @@ static long media_device_ioctl(struct file *filp, unsigned int cmd,
 		break;
 
 	case MEDIA_IOC_SETUP_LINK:
-		mutex_lock(&dev->graph_mutex);
 		ret = media_device_setup_link(dev,
 				(struct media_link_desc __user *)arg);
-		mutex_unlock(&dev->graph_mutex);
 		break;
 
 	case MEDIA_IOC_G_TOPOLOGY:
@@ -461,6 +778,11 @@ static long media_device_ioctl(struct file *filp, unsigned int cmd,
 		ret = media_device_get_topology(dev,
 				(struct media_v2_topology __user *)arg);
 		mutex_unlock(&dev->graph_mutex);
+		break;
+
+	case MEDIA_IOC_REQUEST_CMD:
+		ret = media_device_request_cmd(dev, fh,
+				(struct media_request_cmd __user *)arg);
 		break;
 
 	default:
@@ -724,6 +1046,9 @@ int __must_check __media_device_register(struct media_device *mdev,
 					 struct module *owner)
 {
 	int ret;
+
+	spin_lock_init(&mdev->req_lock);
+	INIT_LIST_HEAD(&mdev->requests);
 
 	/* Register the device node. */
 	mdev->devnode.fops = &media_device_fops;

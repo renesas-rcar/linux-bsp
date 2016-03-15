@@ -347,7 +347,8 @@ struct v4l2_buffer32 {
 		__s32		fd;
 	} m;
 	__u32			length;
-	__u32			reserved2;
+	__u16			request;
+	__u16			reserved2;
 	__u32			reserved;
 };
 
@@ -508,6 +509,7 @@ static int put_v4l2_buffer32(struct v4l2_buffer *kp, struct v4l2_buffer32 __user
 		put_user(kp->timestamp.tv_usec, &up->timestamp.tv_usec) ||
 		copy_to_user(&up->timecode, &kp->timecode, sizeof(struct v4l2_timecode)) ||
 		put_user(kp->sequence, &up->sequence) ||
+		put_user(kp->request, &up->request) ||
 		put_user(kp->reserved2, &up->reserved2) ||
 		put_user(kp->reserved, &up->reserved) ||
 		put_user(kp->length, &up->length))

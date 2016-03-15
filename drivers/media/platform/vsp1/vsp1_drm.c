@@ -13,10 +13,10 @@
 
 #include <linux/device.h>
 #include <linux/slab.h>
-#include <linux/vsp1.h>
 
 #include <media/media-entity.h>
 #include <media/v4l2-subdev.h>
+#include <media/vsp1.h>
 
 #include "vsp1.h"
 #include "vsp1_bru.h"
@@ -26,18 +26,14 @@
 #include "vsp1_pipe.h"
 #include "vsp1_rwpf.h"
 
+
 /* -----------------------------------------------------------------------------
- * Runtime Handling
+ * Interrupt Handling
  */
 
-static void vsp1_drm_pipeline_frame_end(struct vsp1_pipeline *pipe)
+void vsp1_drm_display_start(struct vsp1_device *vsp1)
 {
-	unsigned long flags;
-
-	spin_lock_irqsave(&pipe->irqlock, flags);
-	if (pipe->num_inputs)
-		vsp1_pipeline_run(pipe);
-	spin_unlock_irqrestore(&pipe->irqlock, flags);
+	vsp1_dlm_irq_display_start(vsp1->drm->pipe.output->dlm);
 }
 
 /* -----------------------------------------------------------------------------
@@ -97,20 +93,19 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 		media_entity_pipeline_stop(&pipe->output->entity.subdev.entity);
 
 		for (i = 0; i < bru->entity.source_pad; ++i) {
-			bru->inputs[i].rpf = NULL;
-			pipe->inputs[i] = NULL;
+			pipe->bru_inputs[i] = NULL;
+			pipe->inputs[i].rpf = NULL;
 		}
 
 		pipe->num_inputs = 0;
 
+		vsp1_dlm_reset(pipe->output->dlm);
 		vsp1_device_put(vsp1);
 
 		dev_dbg(vsp1->dev, "%s: pipeline disabled\n", __func__);
 
 		return 0;
 	}
-
-	vsp1_dl_reset(vsp1->drm->dl);
 
 	/* Configure the format at the BRU sinks and propagate it through the
 	 * pipeline.
@@ -231,7 +226,7 @@ void vsp1_du_atomic_begin(struct device *dev)
 	spin_unlock_irqrestore(&pipe->irqlock, flags);
 
 	/* Prepare the display list. */
-	vsp1_dl_begin(vsp1->drm->dl);
+	pipe->dl = vsp1_dl_list_get(pipe->output->dlm);
 }
 EXPORT_SYMBOL_GPL(vsp1_du_atomic_begin);
 
@@ -280,7 +275,6 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 	const struct vsp1_format_info *fmtinfo;
 	struct v4l2_subdev_selection sel;
 	struct v4l2_subdev_format format;
-	struct vsp1_rwpf_memory memory;
 	struct vsp1_rwpf *rpf;
 	unsigned long flags;
 	int ret;
@@ -296,12 +290,12 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 
 		spin_lock_irqsave(&pipe->irqlock, flags);
 
-		if (pipe->inputs[rpf_index]) {
+		if (pipe->inputs[rpf_index].rpf) {
 			/* Remove the RPF from the pipeline if it was previously
 			 * enabled.
 			 */
-			vsp1->bru->inputs[rpf_index].rpf = NULL;
-			pipe->inputs[rpf_index] = NULL;
+			pipe->bru_inputs[rpf_index] = NULL;
+			pipe->inputs[rpf_index].rpf = NULL;
 
 			pipe->num_inputs--;
 		}
@@ -326,7 +320,7 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 		return -EINVAL;
 	}
 
-	rpf->fmtinfo = fmtinfo;
+	rpf->format.pixelformat = pixelformat;
 	rpf->format.num_planes = fmtinfo->planes;
 	rpf->format.plane_fmt[0].bytesperline = pitch;
 	rpf->format.plane_fmt[1].bytesperline = pitch;
@@ -416,25 +410,24 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 		__func__, sel.r.left, sel.r.top, sel.r.width, sel.r.height,
 		sel.pad);
 
-	/* Store the compose rectangle coordinates in the RPF. */
-	rpf->location.left = dst->left;
-	rpf->location.top = dst->top;
+	/* Store the BRU input pad number in the RPF. */
+	pipe->inputs[rpf->entity.index].bru_pad = rpf->entity.index;
 
-	/* Set the memory buffer address. */
-	memory.num_planes = fmtinfo->planes;
-	memory.addr[0] = mem[0];
-	memory.addr[1] = mem[1];
-
-	rpf->ops->set_memory(rpf, &memory);
+	/* Cache the memory buffer address but don't apply the values to the
+	 * hardware as the crop offsets haven't been computed yet.
+	 */
+	rpf->mem.addr[0] = mem[0];
+	rpf->mem.addr[1] = mem[1];
+	rpf->mem.addr[2] = 0;
 
 	spin_lock_irqsave(&pipe->irqlock, flags);
 
 	/* If the RPF was previously stopped set the BRU input to the RPF and
 	 * store the RPF in the pipeline inputs array.
 	 */
-	if (!pipe->inputs[rpf->entity.index]) {
-		vsp1->bru->inputs[rpf_index].rpf = rpf;
-		pipe->inputs[rpf->entity.index] = rpf;
+	if (!pipe->inputs[rpf->entity.index].rpf) {
+		pipe->bru_inputs[rpf_index] = rpf;
+		pipe->inputs[rpf->entity.index].rpf = rpf;
 		pipe->num_inputs++;
 	}
 
@@ -455,37 +448,35 @@ void vsp1_du_atomic_flush(struct device *dev)
 	struct vsp1_entity *entity;
 	unsigned long flags;
 	bool stop = false;
-	int ret;
 
 	list_for_each_entry(entity, &pipe->entities, list_pipe) {
 		/* Disconnect unused RPFs from the pipeline. */
 		if (entity->type == VSP1_ENTITY_RPF) {
 			struct vsp1_rwpf *rpf = to_rwpf(&entity->subdev);
 
-			if (!pipe->inputs[rpf->entity.index]) {
-				vsp1_mod_write(entity, entity->route->reg,
-					   VI6_DPR_NODE_UNUSED);
+			if (!pipe->inputs[rpf->entity.index].rpf) {
+				vsp1_dl_list_write(pipe->dl, entity->route->reg,
+						   VI6_DPR_NODE_UNUSED);
 				continue;
 			}
 		}
 
-		vsp1_entity_route_setup(entity);
+		vsp1_entity_route_setup(entity, pipe, pipe->dl);
 
-		ret = v4l2_subdev_call(&entity->subdev, video,
-				       s_stream, 1);
-		if (ret < 0) {
-			dev_err(vsp1->dev,
-				"DRM pipeline start failure on entity %s\n",
-				entity->subdev.name);
-			return;
-		}
+		if (entity->ops->configure)
+			entity->ops->configure(entity, pipe, pipe->dl, NULL);
+
+		if (entity->type == VSP1_ENTITY_RPF)
+			vsp1_rwpf_set_memory(to_rwpf(&entity->subdev),
+					     pipe->dl);
 	}
 
-	vsp1_dl_commit(vsp1->drm->dl);
-
-	spin_lock_irqsave(&pipe->irqlock, flags);
+	vsp1_dl_list_commit(pipe->dl);
+	pipe->dl = NULL;
 
 	/* Start or stop the pipeline if needed. */
+	spin_lock_irqsave(&pipe->irqlock, flags);
+
 	if (!vsp1->drm->num_inputs && pipe->num_inputs) {
 		vsp1_write(vsp1, VI6_DISP_IRQ_STA, 0);
 		vsp1_write(vsp1, VI6_DISP_IRQ_ENB, VI6_DISP_IRQ_ENB_DSTE);
@@ -562,14 +553,9 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 	if (!vsp1->drm)
 		return -ENOMEM;
 
-	vsp1->drm->dl = vsp1_dl_create(vsp1);
-	if (!vsp1->drm->dl)
-		return -ENOMEM;
-
 	pipe = &vsp1->drm->pipe;
 
 	vsp1_pipeline_init(pipe);
-	pipe->frame_end = vsp1_drm_pipeline_frame_end;
 
 	/* The DRM pipeline is static, add entities manually. */
 	for (i = 0; i < vsp1->info->rpf_count; ++i) {
@@ -586,12 +572,9 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 	pipe->lif = &vsp1->lif->entity;
 	pipe->output = vsp1->wpf[0];
 
-	pipe->dl = vsp1->drm->dl;
-
 	return 0;
 }
 
 void vsp1_drm_cleanup(struct vsp1_device *vsp1)
 {
-	vsp1_dl_destroy(vsp1->drm->dl);
 }

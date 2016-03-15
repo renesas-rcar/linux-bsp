@@ -69,6 +69,50 @@
     more information on how each selection target affects the image
     processing pipeline inside the subdevice.</para>
 
+    <para>To retrieve a current selection rectangle applications set the
+    <structfield>pad</structfield> field of a &v4l2-subdev-selection; to the
+    desired pad number as reported by the media API, the
+    <structfield>which</structfield> field to
+    <constant>V4L2_SUBDEV_FORMAT_ACTIVE</constant> and the
+    <structfield>target</structfield> to the target selection rectangle. They
+    then call the <constant>VIDIOC_SUBDEV_G_SELECTION</constant> ioctl with a
+    pointer to this structure. The driver fills the members of the
+    <structfield>r</structfield> field or returns &EINVAL; if the input
+    arguments are invalid, or if selection is not supported on the given pad.
+    </para>
+
+    <para>To change a current selection rectangle applications set the
+    <structfield>pad</structfield>, <structfield>which</structfield> and
+    <structfield>target</structfield> fields and all members of the
+    <structfield>r</structfield> field. They then call the
+    <constant>VIDIOC_SUBDEV_S_SELECTION</constant> ioctl with a pointer to this
+    structure. The driver verifies the requested selection rectangle, adjusts it
+    based on the hardware capabilities and configures the device. Upon return
+    the &v4l2-subdev-selection; contains the current selection rectangle as
+    would be returned by a <constant>VIDIOC_SUBDEV_G_SELECTION</constant> call.
+    </para>
+
+    <para>Applications can query the device capabilities by setting the
+    <structfield>which</structfield> to
+    <constant>V4L2_SUBDEV_FORMAT_TRY</constant>. When set, 'try' selection
+    rectangles are not applied to the device by the driver, but are mangled
+    exactly as active selection rectangles and stored in the sub-device file
+    handle. Two applications querying the same sub-device would thus not
+    interfere with each other.</para>
+
+    <para>Applications can get and set selection rectangles stored in a request
+    by setting the <structfield>which</structfield> field to
+    <constant>V4L2_SUBDEV_FORMAT_REQUEST</constant> and the
+    <structfield>request</structfield> to the request ID. See
+    <xref linkend="v4l2-requests" /> for more information about the request
+    API.</para>
+
+    <para>Drivers must not return an error solely because the requested
+    selection rectangle doesn't match the device capabilities. They must instead
+    modify the rectangle to match what the hardware can provide. The modified
+    selection rectangle should be as close as possible to the original request.
+    </para>
+
     <refsect2>
       <title>Types of selection targets</title>
 
@@ -123,8 +167,22 @@
 	    <entry>Selection rectangle, in pixels.</entry>
 	  </row>
 	  <row>
+	    <entry>__u16</entry>
+	    <entry><structfield>request</structfield></entry>
+	    <entry>Request ID, only valid when the <structfield>which</structfield>
+	    field is set to <constant>V4L2_SUBDEV_FORMAT_REQUEST</constant>.
+	    Applications and drivers must set the field to zero in all other
+	    cases.</entry>
+	  </row>
+	  <row>
+	    <entry>__u16</entry>
+	    <entry><structfield>reserved2</structfield></entry>
+	    <entry>Reserved for future extensions. Applications and drivers must
+	    set the field to zero.</entry>
+	  </row>
+	  <row>
 	    <entry>__u32</entry>
-	    <entry><structfield>reserved</structfield>[8]</entry>
+	    <entry><structfield>reserved</structfield>[7]</entry>
 	    <entry>Reserved for future extensions. Applications and drivers must
 	    set the array to zero.</entry>
 	  </row>
@@ -156,8 +214,9 @@
 	  <para>The &v4l2-subdev-selection;
 	  <structfield>pad</structfield> references a non-existing
 	  pad, the <structfield>which</structfield> field references a
-	  non-existing format, or the selection target is not
-	  supported on the given subdev pad.</para>
+	  non-existing format, the selection target is not supported on
+	  the given subdev pad or the request ID references a nonexistant
+	  request.</para>
 	</listitem>
       </varlistentry>
     </variablelist>

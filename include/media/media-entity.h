@@ -188,10 +188,37 @@ struct media_entity_operations {
 };
 
 /**
+ * enum media_entity_type - Media entity type
+ *
+ * @MEDIA_ENTITY_TYPE_MEDIA_ENTITY:
+ *	The entity is a struct media_entity instance.
+ * @MEDIA_ENTITY_TYPE_VIDEO_DEVICE:
+ *	The entity is a struct video_device instance.
+ * @MEDIA_ENTITY_TYPE_V4L2_SUBDEV:
+ *	The entity is a struct v4l2_subdev instance.
+ *
+ * The entity type identifies the type of the object instance that implements
+ * the struct media_entity instance. This allows runtime type identification of
+ * media entities and safe casting to the project object type. For instance, a
+ * media entity structure instance embedded in a v4l2_subdev structure instance
+ * will have the type MEDIA_ENTITY_TYPE_V4L2_SUBDEV and can safely be cast to a
+ * v4l2_subdev structure using the container_of() macro.
+ *
+ * Media entities can be instantiated without creating any derived object type,
+ * in which case their type will be MEDIA_ENTITY_TYPE_MEDIA_ENTITY.
+ */
+enum media_entity_type {
+	MEDIA_ENTITY_TYPE_MEDIA_ENTITY,
+	MEDIA_ENTITY_TYPE_VIDEO_DEVICE,
+	MEDIA_ENTITY_TYPE_V4L2_SUBDEV,
+};
+
+/**
  * struct media_entity - A media entity graph object.
  *
  * @graph_obj:	Embedded structure containing the media object common data.
  * @name:	Entity name.
+ * @type:	Type of the object that implements the media_entity.
  * @function:	Entity main function, as defined in uapi/media.h
  *		(MEDIA_ENT_F_*)
  * @flags:	Entity flags, as defined in uapi/media.h (MEDIA_ENT_FL_*)
@@ -220,6 +247,7 @@ struct media_entity_operations {
 struct media_entity {
 	struct media_gobj graph_obj;	/* must be first field in struct */
 	const char *name;
+	enum media_entity_type type;
 	u32 function;
 	unsigned long flags;
 
@@ -248,6 +276,30 @@ struct media_entity {
 			u32 minor;
 		} dev;
 	} info;
+};
+
+/**
+ * struct media_request_link - Request link state changes
+ * @list: List head for the list in struct media_device_request.links
+ * @link: The link the state of which is to be changed
+ * @enabled: Whether the link is to be enabled or not
+ */
+struct media_request_link {
+	struct list_head list;
+	struct media_link *link;
+	bool enabled;
+};
+
+/**
+ * struct media_entity_request_data - Per-entity request data
+ * @entity: Entity this data belongs to
+ * @release: Release operation to free the data
+ * @list: List entry in the media_device_request data list
+ */
+struct media_entity_request_data {
+	struct media_entity *entity;
+	void (*release)(struct media_entity_request_data *data);
+	struct list_head list;
 };
 
 /**
@@ -329,56 +381,29 @@ static inline u32 media_gobj_gen_id(enum media_gobj_type type, u64 local_id)
 }
 
 /**
- * is_media_entity_v4l2_io() - identify if the entity main function
- *			       is a V4L2 I/O
- *
+ * is_media_entity_v4l2_video_device() - Check if the entity is a video_device
  * @entity:	pointer to entity
  *
- * Return: true if the entity main function is one of the V4L2 I/O types
- *	(video, VBI or SDR radio); false otherwise.
+ * Return: true if the entity is an instance of a video_device object and can
+ * safely be cast to a struct video_device using the container_of() macro, or
+ * false otherwise.
  */
-static inline bool is_media_entity_v4l2_io(struct media_entity *entity)
+static inline bool is_media_entity_v4l2_video_device(struct media_entity *entity)
 {
-	if (!entity)
-		return false;
-
-	switch (entity->function) {
-	case MEDIA_ENT_F_IO_V4L:
-	case MEDIA_ENT_F_IO_VBI:
-	case MEDIA_ENT_F_IO_SWRADIO:
-		return true;
-	default:
-		return false;
-	}
+	return entity && entity->type == MEDIA_ENTITY_TYPE_VIDEO_DEVICE;
 }
 
 /**
- * is_media_entity_v4l2_subdev - return true if the entity main function is
- *				 associated with the V4L2 API subdev usage
- *
+ * is_media_entity_v4l2_subdev() - Check if the entity is a v4l2_subdev
  * @entity:	pointer to entity
  *
- * This is an ancillary function used by subdev-based V4L2 drivers.
- * It checks if the entity function is one of functions used by a V4L2 subdev,
- * e. g. camera-relatef functions, analog TV decoder, TV tuner, V4L2 DSPs.
+ * Return: true if the entity is an instance of a v4l2_subdev object and can
+ * safely be cast to a struct v4l2_subdev using the container_of() macro, or
+ * false otherwise.
  */
 static inline bool is_media_entity_v4l2_subdev(struct media_entity *entity)
 {
-	if (!entity)
-		return false;
-
-	switch (entity->function) {
-	case MEDIA_ENT_F_V4L2_SUBDEV_UNKNOWN:
-	case MEDIA_ENT_F_CAM_SENSOR:
-	case MEDIA_ENT_F_FLASH:
-	case MEDIA_ENT_F_LENS:
-	case MEDIA_ENT_F_ATV_DECODER:
-	case MEDIA_ENT_F_TUNER:
-		return true;
-
-	default:
-		return false;
-	}
+	return entity && entity->type == MEDIA_ENTITY_TYPE_V4L2_SUBDEV;
 }
 
 /**
@@ -857,6 +882,10 @@ __must_check int __media_entity_pipeline_start(struct media_entity *entity,
  * streaming.
  */
 void media_entity_pipeline_stop(struct media_entity *entity);
+
+int media_entity_init(struct media_entity *entity, u16 num_pads,
+		struct media_pad *pads, u16 extra_links);
+void media_entity_cleanup(struct media_entity *entity);
 
 /**
  * __media_entity_pipeline_stop - Mark a pipeline as not streaming
