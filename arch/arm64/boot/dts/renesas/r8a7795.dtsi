@@ -2294,7 +2294,7 @@
 			hdmi = <&hdmi0 &hdmi1>;
 			clock-iahb = <0>;
 			hdmi-num = <2>;
-			hdmi-ifclk = <12500000>;
+			hdmi-ifclk = <25000000>;
 
 			ports {
 				#address-cells = <1>;
