@@ -148,6 +148,24 @@
 			};
 		};
 	};
+
+	dclkin_p0: programmable_clock0 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <148500000>;
+	};
+
+	dclkin1: x21-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <33000000>;
+	};
+
+	dclkin_p2: programmable_clock1 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <108000000>;
+	};
 };
 
 &extal_clk {
