@@ -168,6 +168,29 @@
 	};
 };
 
+&du {
+	status = "okay";
+	backlight-pin = <&gpio6 7 GPIO_ACTIVE_HIGH>;
+
+	ports {
+		port@0 {
+			endpoint {
+				remote-endpoint = <&adv7123_in>;
+			};
+		};
+		port@1 {
+			endpoint {
+				remote-endpoint = <&rcar_dw_hdmi_in>;
+			};
+		};
+		port@2 {
+			endpoint {
+				remote-endpoint = <&lvds_enc_in>;
+			};
+		};
+	};
+};
+
 &extal_clk {
 	clock-frequency = <16666666>;
 };
