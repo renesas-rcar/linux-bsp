@@ -315,7 +315,7 @@ at91_clk_register_main_rc_osc(struct at91_pmc *pmc,
 	init.ops = &main_rc_osc_ops;
 	init.parent_names = NULL;
 	init.num_parents = 0;
-	init.flags = CLK_IS_ROOT | CLK_IGNORE_UNUSED;
+	init.flags = CLK_IGNORE_UNUSED;
 
 	osc->hw.init = &init;
 	osc->pmc = pmc;
@@ -611,12 +611,12 @@ void __init of_at91sam9x5_clk_main_setup(struct device_node *np,
 {
 	struct clk *clk;
 	const char *parent_names[2];
-	int num_parents;
+	unsigned int num_parents;
 	unsigned int irq;
 	const char *name = np->name;
 
 	num_parents = of_clk_get_parent_count(np);
-	if (num_parents <= 0 || num_parents > 2)
+	if (num_parents == 0 || num_parents > 2)
 		return;
 
 	of_clk_parent_fill(np, parent_names, num_parents);
