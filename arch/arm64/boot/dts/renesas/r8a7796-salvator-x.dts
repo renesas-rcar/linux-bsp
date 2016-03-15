@@ -332,6 +332,12 @@
 	status = "okay";
 };
 
+&i2c4 {
+	status = "okay";
+
+	clock-frequency = <400000>;
+};
+
 &wdt0 {
 	timeout-sec = <60>;
 	status = "okay";
