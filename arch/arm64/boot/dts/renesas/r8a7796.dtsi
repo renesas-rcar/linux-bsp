@@ -18,6 +18,8 @@
 	#size-cells = <2>;
 
 	aliases {
+		csi2_20 = &csi2_20;
+		csi2_40 = &csi2_40;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -317,6 +319,24 @@
 			clock-names = "extal", "extalr";
 			#clock-cells = <2>;
 			#power-domain-cells = <0>;
+		};
+
+		csi2_20: csi2@fea80000 {
+			compatible = "renesas,csi2-r8a7796";
+			reg = <0 0xfea80000 0 0x10000>;
+			interrupts = <GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 714>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			status = "disabled";
+		};
+
+		csi2_40: csi2@feaa0000 {
+			compatible = "renesas,csi2-r8a7796";
+			reg = <0 0xfeaa0000 0 0x10000>;
+			interrupts = <GIC_SPI 246 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 716>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			status = "disabled";
 		};
 
 		sysc: system-controller@e6180000 {
