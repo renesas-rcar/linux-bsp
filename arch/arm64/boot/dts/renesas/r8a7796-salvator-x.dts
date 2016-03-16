@@ -236,6 +236,16 @@
 		renesas,groups = "avb_mdc";
 		renesas,function = "avb";
 	};
+
+	usb0_pins: usb0 {
+		renesas,groups = "usb0";
+		renesas,function = "usb0";
+	};
+
+	usb1_pins: usb1 {
+		renesas,groups = "usb1";
+		renesas,function = "usb1";
+	};
 };
 
 &scif1 {
