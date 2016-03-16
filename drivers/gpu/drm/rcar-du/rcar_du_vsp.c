@@ -1,7 +1,7 @@
 /*
- * rcar_du_vsp.h  --  R-Car Display Unit VSP-Based Compositor
+ * rcar_du_vsp.c  --  R-Car Display Unit VSP-Based Compositor
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -211,6 +211,7 @@ static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
 	struct rcar_du_vsp_plane_state *rstate = to_rcar_vsp_plane_state(state);
 	struct rcar_du_vsp_plane *rplane = to_rcar_vsp_plane(plane);
 	struct rcar_du_device *rcdu = rplane->vsp->dev;
+	int hdisplay, vdisplay;
 
 	if (!state->fb || !state->crtc) {
 		rstate->format = NULL;
@@ -220,6 +221,19 @@ static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
 	if (state->src_w >> 16 != state->crtc_w ||
 	    state->src_h >> 16 != state->crtc_h) {
 		dev_dbg(rcdu->dev, "%s: scaling not supported\n", __func__);
+		return -EINVAL;
+	}
+
+	hdisplay = state->crtc->mode.hdisplay;
+	vdisplay = state->crtc->mode.vdisplay;
+
+	if ((state->plane->type == DRM_PLANE_TYPE_OVERLAY) &&
+		(((state->crtc_w + state->crtc_x) > hdisplay) ||
+		((state->crtc_h + state->crtc_y) > vdisplay))) {
+		dev_err(rcdu->dev,
+			"%s: specify (%dx%d) + (%d, %d) < (%dx%d).\n",
+			__func__, state->crtc_w, state->crtc_h, state->crtc_x,
+			state->crtc_y, hdisplay, vdisplay);
 		return -EINVAL;
 	}
 
