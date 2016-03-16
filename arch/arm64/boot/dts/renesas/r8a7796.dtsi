@@ -549,6 +549,50 @@
 			status = "disabled";
 		};
 
+		ehci0: usb@ee080100 {
+			compatible = "generic-ehci";
+			reg = <0 0xee080100 0 0xff>;
+			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 703>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			phys = <&usb2_phy0>;
+			phy-names = "usb";
+			status = "disabled";
+		};
+
+		ehci1: usb@ee0a0100 {
+			compatible = "generic-ehci";
+			reg = <0 0xee0a0100 0 0xff>;
+			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 702>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			phys = <&usb2_phy1>;
+			phy-names = "usb";
+			status = "disabled";
+		};
+
+		ohci0: usb@ee080000 {
+			compatible = "generic-ohci";
+			reg = <0 0xee080000 0 0xff>;
+			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 703>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			phys = <&usb2_phy0>;
+			phy-names = "usb";
+			status = "disabled";
+		};
+
+		ohci1: usb@ee0a0000 {
+			compatible = "generic-ohci";
+			reg = <0 0xee0a0000 0 0xff>;
+			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 702>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			phys = <&usb2_phy1>;
+			phy-names = "usb";
+			status = "disabled";
+		};
+
 		vspb: vsp@fe960000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xfe960000 0 0x8000>;
