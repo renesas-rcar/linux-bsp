@@ -410,18 +410,21 @@ static int rcar_gen3_thermal_init(struct rcar_thermal_priv *priv)
 
 	spin_lock_irqsave(&priv->lock, flags);
 
+	rcar_thermal_write(priv, REG_GEN3_CTSR,  THBGR);
 	rcar_thermal_write(priv, REG_GEN3_CTSR,  0x0);
 
-	rcar_thermal_write(priv, REG_GEN3_CTSR,
-			PONM | AOUT | THBGR | VMEN);
-	udelay(100);
-	rcar_thermal_write(priv, REG_GEN3_CTSR,
-			PONM | AOUT | THBGR | VMEN | VMST | THSST);
 	udelay(1000);
 
+	rcar_thermal_write(priv, REG_GEN3_CTSR, PONM);
 	rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
 	rcar_thermal_write(priv, REG_GEN3_IRQEN, TEMP_IRQ_SHIFT(priv->id) |
 						TEMPD_IRQ_SHIFT(priv->id));
+	rcar_thermal_write(priv, REG_GEN3_CTSR,
+			PONM | AOUT | THBGR | VMEN);
+	udelay(100);
+
+	rcar_thermal_write(priv, REG_GEN3_CTSR,
+			PONM | AOUT | THBGR | VMEN | VMST | THSST);
 
 	spin_unlock_irqrestore(&priv->lock, flags);
 
