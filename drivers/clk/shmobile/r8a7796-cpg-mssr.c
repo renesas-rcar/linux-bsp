@@ -117,6 +117,7 @@ static const struct mssr_mod_clk r8a7796_mod_clks[] __initconst = {
 	DEF_MOD("scif1",		 206,	R8A7796_CLK_S3D4),
 	DEF_MOD("scif0",		 207,	R8A7796_CLK_S3D4),
 	DEF_MOD("scif2",		 310,	R8A7796_CLK_S3D4),
+	DEF_MOD("etheravb",		 812,	R8A7796_CLK_S3D2),
 	DEF_MOD("gpio7",		 905,	R8A7796_CLK_S3D4),
 	DEF_MOD("gpio6",		 906,	R8A7796_CLK_S3D4),
 	DEF_MOD("gpio5",		 907,	R8A7796_CLK_S3D4),
