@@ -56,6 +56,7 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z>;
+			cpu-idle-states = <&CPU_SLEEP_0>;
 			operating-points-v2 = <&group0_opp_tb0>,
 				<&group0_opp_tb1>, <&group0_opp_tb2>,
 				<&group0_opp_tb3>, <&group0_opp_tb4>,
@@ -68,6 +69,7 @@
 			reg = <0x1>;
 			device_type = "cpu";
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0>;
 			operating-points-v2 = <&group0_opp_tb0>,
 				<&group0_opp_tb1>, <&group0_opp_tb2>,
 				<&group0_opp_tb3>, <&group0_opp_tb4>,
@@ -105,6 +107,19 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			operating-points-v2 = <&group1_opp_tb>;
+		};
+
+		idle-states {
+			entry-method = "psci";
+
+			CPU_SLEEP_0: cpu-sleep-0 {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				local-timer-stop;
+				entry-latency-us = <639>;
+				exit-latency-us = <680>;
+				min-residency-us = <1088>;
+			};
 		};
 	};
 
