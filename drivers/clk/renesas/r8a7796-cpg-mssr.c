@@ -93,6 +93,11 @@ static const struct cpg_core_clk r8a7796_core_clks[] __initconst = {
 	DEF_FIXED("s3d2",       R8A7796_CLK_S3D2,  CLK_S3,         2, 1),
 	DEF_FIXED("s3d4",       R8A7796_CLK_S3D4,  CLK_S3,         4, 1),
 
+	DEF_GEN3_SD("sd0",      R8A7796_CLK_SD0,   CLK_PLL1_DIV2, 0x0074),
+	DEF_GEN3_SD("sd1",      R8A7796_CLK_SD1,   CLK_PLL1_DIV2, 0x0078),
+	DEF_GEN3_SD("sd2",      R8A7796_CLK_SD2,   CLK_PLL1_DIV2, 0x0268),
+	DEF_GEN3_SD("sd3",      R8A7796_CLK_SD3,   CLK_PLL1_DIV2, 0x026c),
+
 	DEF_FIXED("cl",         R8A7796_CLK_CL,    CLK_PLL1_DIV2, 48, 1),
 	DEF_FIXED("cp",         R8A7796_CLK_CP,    CLK_EXTAL,      2, 1),
 
@@ -115,6 +120,10 @@ static const struct mssr_mod_clk r8a7796_mod_clks[] __initconst = {
 	DEF_MOD("sys-dmac1",		 218,	R8A7796_CLK_S3D1),
 	DEF_MOD("sys-dmac0",		 219,	R8A7796_CLK_S3D1),
 	DEF_MOD("scif2",		 310,	R8A7796_CLK_S3D4),
+	DEF_MOD("sdif3",		 311,	R8A7796_CLK_SD3),
+	DEF_MOD("sdif2",		 312,	R8A7796_CLK_SD2),
+	DEF_MOD("sdif1",		 313,	R8A7796_CLK_SD1),
+	DEF_MOD("sdif0",		 314,	R8A7796_CLK_SD0),
 	DEF_MOD("usb3-if0",		 328,	R8A7796_CLK_S3D1),
 	DEF_MOD("usb-dmac0",		 330,	R8A7796_CLK_S3D1),
 	DEF_MOD("usb-dmac1",		 331,	R8A7796_CLK_S3D1),
