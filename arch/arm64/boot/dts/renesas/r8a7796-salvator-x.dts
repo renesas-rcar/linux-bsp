@@ -787,6 +787,18 @@
 	};
 };
 
+&pcie_bus_clk {
+	status = "okay";
+};
+
+&pciec0 {
+	status = "okay";
+};
+
+&pciec1 {
+	status = "okay";
+};
+
 &vin0 {
 	status = "okay";
 
