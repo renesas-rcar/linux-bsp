@@ -1814,6 +1814,8 @@
 				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 130>;
 			power-domains = <&sysc R8A7795_PD_A2VC1>;
+			renesas,#ch = <0>;
+			renesas,#fcp_ch = <0>;
 		};
 
 		vcpl4: vcp4@fe8f0000 {
@@ -1823,6 +1825,8 @@
 				     <GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 129>;
 			power-domains = <&sysc R8A7795_PD_A2VC0>;
+			renesas,#ch = <1>;
+			renesas,#fcp_ch = <1>;
 		};
 
 		vdpb: vcp4@fe900000 {
@@ -1832,6 +1836,8 @@
 				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 131>;
 			power-domains = <&sysc R8A7795_PD_A2VC1>;
+			renesas,#ch = <2>;
+			renesas,#fcp_ch = <0>;
 		};
 
 		ivdp1c: vcp4@fe8d0000 {
@@ -1842,6 +1848,8 @@
 			     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 128>;
 			power-domains = <&sysc R8A7795_PD_A2VC0>;
+			renesas,#ch = <3>;
+			renesas,#fcp_ch = <2>;
 		};
 
 		fcpcs: vcp4@fe90f000 {
@@ -1849,6 +1857,7 @@
 			reg = <0 0xfe90f000 0 0x200>;
 			clocks = <&cpg CPG_MOD 619>;
 			power-domains = <&sysc R8A7795_PD_A3VC>;
+			renesas,#ch = <0>;
 		};
 
 		fcpci0: vcp4@fe8df000 {
@@ -1856,6 +1865,7 @@
 			reg = <0 0xfe8df000 0 0x200>;
 			clocks = <&cpg CPG_MOD 617>;
 			power-domains = <&sysc R8A7795_PD_A3VC>;
+			renesas,#ch = <2>;
 		};
 
 		fcpci1: vcp4@fe8ff000 {
@@ -1863,6 +1873,7 @@
 			reg = <0 0xfe8ff000 0 0x200>;
 			clocks = <&cpg CPG_MOD 616>;
 			power-domains = <&sysc R8A7795_PD_A3VC>;
+			renesas,#ch = <1>;
 		};
 
 		stb: vcp4@fe8a0000 {
