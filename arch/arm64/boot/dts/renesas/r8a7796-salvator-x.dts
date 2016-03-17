@@ -666,6 +666,10 @@
 	shared-pin;
 };
 
+&wdt0 {
+	status = "okay";
+};
+
 &audio_clk_a {
 	clock-frequency = <22579200>;
 };
