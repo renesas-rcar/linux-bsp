@@ -745,6 +745,10 @@
 	clock-frequency = <22579200>;
 };
 
+&i2c_dvfs {
+	status = "okay";
+};
+
 &wdt0 {
 	timeout-sec = <60>;
 	status = "okay";
