@@ -211,6 +211,7 @@ static int rwdt_remove(struct platform_device *pdev)
  */
 static const struct of_device_id rwdt_ids[] = {
 	{ .compatible = "renesas,rwdt-r8a7795", },
+	{ .compatible = "renesas,rwdt-r8a7796", },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, rwdt_ids);
