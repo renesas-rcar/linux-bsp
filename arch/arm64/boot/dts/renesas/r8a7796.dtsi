@@ -249,6 +249,14 @@
 			reg = <0 0xe6060000 0 0x50c>;
 		};
 
+		pmu_a57 {
+			compatible = "arm,cortex-a57-pmu";
+			interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-affinity = <&a57_0>,
+					     <&a57_1>;
+		};
+
 		ipmmu_vi: mmu@febd0000 {
 			compatible = "renesas,ipmmu-r8a7796";
 			reg = <0 0xfebd0000 0 0x1000>; /* IPMMU-VI */
