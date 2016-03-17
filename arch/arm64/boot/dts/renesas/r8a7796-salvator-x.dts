@@ -189,6 +189,11 @@
 		function = "scif_clk";
 	};
 
+	hscif1_pins: hscif1 {
+		groups = "hscif1_data_a", "hscif1_ctrl_a";
+		function = "hscif1";
+	};
+
 	i2c2_pins: i2c2 {
 		groups = "i2c2_a";
 		function = "i2c2";
@@ -331,6 +336,7 @@
 &scif1 {
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
+	/* Please use exclusively to the hscif1 node */
 	status = "okay";
 };
 
@@ -343,6 +349,13 @@
 &scif_clk {
 	clock-frequency = <14745600>;
 	status = "okay";
+};
+
+&hscif1 {
+	pinctrl-0 = <&hscif1_pins>;
+	pinctrl-names = "default";
+	/* Please use exclusively to the scif1 node */
+	/* status = "okay"; */
 };
 
 &i2c2 {
