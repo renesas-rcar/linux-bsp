@@ -56,3 +56,29 @@ Example:
 			};
 		};
 	};
+
+* Emergency shutdown for R-CAR Gen3
+Emergency shutdown functionality provide the specific cooling mechanism
+for R-CAR Gen3. In case of high temperature(e.g over 100 degrees),
+it has the ability to rapidly cooling the system.
+
+Required property:
+- polling-delay:	The maximum number of milliseconds to wait between polls
+  Type: unsigned	when checking temperature for emergency shutdown.
+  Size: one cell
+
+- on-temperature:       This value indicate the emergency temperature and invoke
+  Type: unsigned	emergency shutdown functionality when exceeding this
+  Size: one cell	temperature.
+
+- off-temperature:	This value indicate the temperature to disable emergency
+  Type: unsigned	shutdown.
+  Size: one cell
+
+thermal-zones {
+	emergency {
+		polling-delay = <1000>;    /* milliseconds */
+		on-temperature = <110000>; /* millicelsius */
+		off-temperature = <95000>; /* millicelsius */
+	};
+};
