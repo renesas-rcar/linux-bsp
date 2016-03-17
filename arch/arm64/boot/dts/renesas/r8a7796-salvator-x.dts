@@ -227,6 +227,11 @@
 		renesas,function = "scif_clk";
 	};
 
+	hscif1_pins: hscif1 {
+		renesas,groups = "hscif1_data_a", "hscif1_ctrl_a";
+		renesas,function = "hscif1";
+	};
+
 	i2c2_pins: i2c2 {
 		renesas,groups = "i2c2_a";
 		renesas,function = "i2c2";
@@ -264,6 +269,13 @@
 &scif_clk {
 	clock-frequency = <14745600>;
 	status = "okay";
+};
+
+&hscif1 {
+	pinctrl-0 = <&hscif1_pins>;
+	pinctrl-names = "default";
+	/* Please use exclusively to the scif1 node */
+	/* status = "okay"; */
 };
 
 &i2c2 {
