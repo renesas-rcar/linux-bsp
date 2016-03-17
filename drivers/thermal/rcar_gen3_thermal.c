@@ -36,15 +36,14 @@
 #define REG_GEN3_IRQTEMP2	0x18
 #define REG_GEN3_IRQTEMP3	0x1C
 #define REG_GEN3_TEMP		0x28
-#define REG_GEN3_FTHCODEH	0x48
-#define REG_GEN3_FTHCODET	0x4C
-#define REG_GEN3_FTHCODEL	0x50
-#define REG_GEN3_FPTATH		0x54
-#define REG_GEN3_FPTATT		0x58
-#define REG_GEN3_FPTATL		0x5C
+#define REG_GEN3_THCODE1	0x50
+#define REG_GEN3_THCODE2	0x54
+#define REG_GEN3_THCODE3	0x58
+#define REG_GEN3_PTAT1		0x5C
+#define REG_GEN3_PTAT2		0x60
+#define REG_GEN3_PTAT3		0x64
 
 /* CTSR bit */
-#define PONSEQSTOP      (0x1 << 27)
 #define PONM            (0x1 << 8)
 #define AOUT            (0x1 << 7)
 #define THBGR           (0x1 << 5)
@@ -53,8 +52,6 @@
 #define THSST           (0x1 << 0)
 
 #define CTEMP_MASK	0xFFF
-
-#define POWERON		0
 
 #define MCELSIUS(temp)			((temp) * 1000)
 #define TEMP_IRQ_SHIFT(tsc_id)	(0x1 << tsc_id)
@@ -98,12 +95,12 @@ struct equation_coefs {
 #endif /* APPLY_QUADRATIC_EQUATION  */
 
 struct fuse_factors {
-	int fthcode_h;
-	int fthcode_t;
-	int fthcode_l;
-	int fptat_h;
-	int fptat_t;
-	int fptat_l;
+	int thcode_1;
+	int thcode_2;
+	int thcode_3;
+	int ptat_1;
+	int ptat_2;
+	int ptat_3;
 };
 
 struct rcar_thermal_priv {
@@ -124,8 +121,8 @@ struct rcar_thermal_priv {
 
 /* Temperature calculation  */
 #define CODETSD(x)		((x) * 1000)
-#define TJ_H 96000L
-#define TJ_L (-41000L)
+#define TJ_1 96000L
+#define TJ_3 (-41000L)
 #define PW2(x) ((x)*(x))
 
 #define rcar_thermal_read(p, r) _rcar_thermal_read(p, r)
@@ -170,40 +167,40 @@ static void thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 	 */
 	lsi_id = ioread32(product_register) & GEN3_PRR_MASK;
 	if ((lsi_id != RCAR_H3_WS10) && (lsi_id != RCAR_H3_WS11)) {
-		priv->factor.fthcode_h = rcar_thermal_read(priv,
-						REG_GEN3_FTHCODEH)
+		priv->factor.thcode_1 = rcar_thermal_read(priv,
+						REG_GEN3_THCODE1)
 				& GEN3_FUSE_MASK;
-		priv->factor.fthcode_t = rcar_thermal_read(priv,
-						REG_GEN3_FTHCODET)
+		priv->factor.thcode_2 = rcar_thermal_read(priv,
+						REG_GEN3_THCODE2)
 				& GEN3_FUSE_MASK;
-		priv->factor.fthcode_l = rcar_thermal_read(priv,
-						REG_GEN3_FTHCODEL)
+		priv->factor.thcode_3 = rcar_thermal_read(priv,
+						REG_GEN3_THCODE3)
 				& GEN3_FUSE_MASK;
-		priv->factor.fptat_h = rcar_thermal_read(priv, REG_GEN3_FPTATH)
+		priv->factor.ptat_1 = rcar_thermal_read(priv, REG_GEN3_PTAT1)
 				& GEN3_FUSE_MASK;
-		priv->factor.fptat_t = rcar_thermal_read(priv, REG_GEN3_FPTATT)
+		priv->factor.ptat_2 = rcar_thermal_read(priv, REG_GEN3_PTAT2)
 				& GEN3_FUSE_MASK;
-		priv->factor.fptat_l = rcar_thermal_read(priv, REG_GEN3_FPTATL)
+		priv->factor.ptat_3 = rcar_thermal_read(priv, REG_GEN3_PTAT3)
 				& GEN3_FUSE_MASK;
 	} else {
-		priv->factor.fptat_h = 2351;
-		priv->factor.fptat_t = 1509;
-		priv->factor.fptat_l = 435;
+		priv->factor.ptat_1 = 2351;
+		priv->factor.ptat_2 = 1509;
+		priv->factor.ptat_3 = 435;
 		switch (priv->id) {
 		case 0:
-			priv->factor.fthcode_h = 3248;
-			priv->factor.fthcode_t = 2800;
-			priv->factor.fthcode_l = 2221;
+			priv->factor.thcode_1 = 3248;
+			priv->factor.thcode_2 = 2800;
+			priv->factor.thcode_3 = 2221;
 			break;
 		case 1:
-			priv->factor.fthcode_h = 3245;
-			priv->factor.fthcode_t = 2795;
-			priv->factor.fthcode_l = 2216;
+			priv->factor.thcode_1 = 3245;
+			priv->factor.thcode_2 = 2795;
+			priv->factor.thcode_3 = 2216;
 			break;
 		case 2:
-			priv->factor.fthcode_h = 3250;
-			priv->factor.fthcode_t = 2805;
-			priv->factor.fthcode_l = 2237;
+			priv->factor.thcode_1 = 3250;
+			priv->factor.thcode_2 = 2805;
+			priv->factor.thcode_3 = 2237;
 			break;
 		}
 	}
@@ -213,44 +210,44 @@ static void thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 #ifdef APPLY_QUADRATIC_EQUATION
 static void _quadratic_coef_calc(struct rcar_thermal_priv *priv)
 {
-	long tj_t = 0;
+	long tj_2 = 0;
 	long a, b, c;
 	long num_a, num_a1, num_a2;
 	long den_a, den_a1, den_a2;
 	long num_b1, num_b2, num_b, den_b;
 	long para_c1, para_c2, para_c3;
 
-	tj_t = (CODETSD((priv->factor.fptat_t - priv->factor.fptat_l) * 137)
-		/ (priv->factor.fptat_h - priv->factor.fptat_l)) - CODETSD(41);
+	tj_2 = (CODETSD((priv->factor.ptat_2 - priv->factor.ptat_3) * 137)
+		/ (priv->factor.ptat_1 - priv->factor.ptat_3)) - CODETSD(41);
 
 	/*
 	 * The following code is to calculate coefficients
 	 * for quadratic equation.
 	 */
 	/* Coefficient a */
-	num_a1 = (CODETSD(priv->factor.fthcode_t)
-			- CODETSD(priv->factor.fthcode_l)) * (TJ_H - TJ_L);
-	num_a2 = (CODETSD(priv->factor.fthcode_h)
-		- CODETSD(priv->factor.fthcode_l)) * (tj_t - TJ_L);
+	num_a1 = (CODETSD(priv->factor.thcode_2)
+			- CODETSD(priv->factor.thcode_3)) * (TJ_1 - TJ_3);
+	num_a2 = (CODETSD(priv->factor.thcode_1)
+		- CODETSD(priv->factor.thcode_3)) * (tj_2 - TJ_3);
 	num_a = num_a1 - num_a2;
-	den_a1 = (PW2(tj_t) - PW2(TJ_L)) * (TJ_H - TJ_L);
-	den_a2 = (PW2(TJ_H) - PW2(TJ_L)) * (tj_t - TJ_L);
+	den_a1 = (PW2(tj_2) - PW2(TJ_3)) * (TJ_1 - TJ_3);
+	den_a2 = (PW2(TJ_1) - PW2(TJ_3)) * (tj_2 - TJ_3);
 	den_a = (den_a1 - den_a2) / 1000;
 	a = (100000 * num_a) / den_a;
 
 	/* Coefficient b */
-	num_b1 = (CODETSD(priv->factor.fthcode_t)
-		- CODETSD(priv->factor.fthcode_l))
-			* (TJ_H - TJ_L);
-	num_b2 = ((PW2(tj_t) - PW2(TJ_L)) * (TJ_H - TJ_L) * a) / 1000;
+	num_b1 = (CODETSD(priv->factor.thcode_2)
+		- CODETSD(priv->factor.thcode_3))
+			* (TJ_1 - TJ_3);
+	num_b2 = ((PW2(tj_2) - PW2(TJ_3)) * (TJ_1 - TJ_3) * a) / 1000;
 	num_b = 100000 * num_b1 - num_b2;
-	den_b = ((tj_t - TJ_L) * (TJ_H - TJ_L));
+	den_b = ((tj_2 - TJ_3) * (TJ_1 - TJ_3));
 	b = num_b / den_b;
 
 	/* Coefficient c */
-	para_c1 = 100000 * priv->factor.fthcode_l;
-	para_c2 = (PW2(TJ_L) * a) / PW2(1000);
-	para_c3 = (TJ_L * b) / 1000;
+	para_c1 = 100000 * priv->factor.thcode_3;
+	para_c2 = (PW2(TJ_3) * a) / PW2(1000);
+	para_c3 = (TJ_3 * b) / 1000;
 	c = para_c1 - para_c2 - para_c3;
 
 	priv->coef.a = a;
@@ -260,29 +257,29 @@ static void _quadratic_coef_calc(struct rcar_thermal_priv *priv)
 #else
 static void _linear_coef_calc(struct rcar_thermal_priv *priv)
 {
-	int tj_t = 0;
+	int tj_2 = 0;
 	long a1, b1;
 	long a2, b2;
 	long a1_num, a1_den;
 	long a2_num, a2_den;
 
-	tj_t = (CODETSD((priv->factor.fptat_t - priv->factor.fptat_l) * 137)
-		/ (priv->factor.fptat_h - priv->factor.fptat_l)) - CODETSD(41);
+	tj_2 = (CODETSD((priv->factor.ptat_2 - priv->factor.ptat_3) * 137)
+		/ (priv->factor.ptat_1 - priv->factor.ptat_3)) - CODETSD(41);
 
 	/*
 	 * The following code is to calculate coefficients for linear equation.
 	 */
 	/* Coefficient a1 and b1 */
-	a1_num = CODETSD(priv->factor.fthcode_t - priv->factor.fthcode_l);
-	a1_den = tj_t - TJ_L;
+	a1_num = CODETSD(priv->factor.thcode_2 - priv->factor.thcode_3);
+	a1_den = tj_2 - TJ_3;
 	a1 = (10000 * a1_num) / a1_den;
-	b1 = (10000 * priv->factor.fthcode_l) - ((a1 * TJ_L) / 1000);
+	b1 = (10000 * priv->factor.thcode_3) - ((a1 * TJ_3) / 1000);
 
 	/* Coefficient a2 and b2 */
-	a2_num = CODETSD(priv->factor.fthcode_t - priv->factor.fthcode_h);
-	a2_den = tj_t - TJ_H;
+	a2_num = CODETSD(priv->factor.thcode_2 - priv->factor.thcode_1);
+	a2_den = tj_2 - TJ_1;
 	a2 = (10000 * a2_num) / a2_den;
-	b2 = (10000 * priv->factor.fthcode_h) - ((a2 * TJ_H) / 1000);
+	b2 = (10000 * priv->factor.thcode_1) - ((a2 * TJ_1) / 1000);
 
 	priv->coef.a1 = DIV_ROUND_CLOSEST(a1, 10);
 	priv->coef.b1 = DIV_ROUND_CLOSEST(b1, 10);
@@ -394,7 +391,7 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 	if ((ctemp < MCELSIUS(-40)) || (ctemp > MCELSIUS(125))) {
 		struct device *dev = rcar_priv_to_dev(priv);
 
-		dev_err(dev, "Temperature is not measured correclty!\n");
+		dev_err(dev, "Temperature is not measured correctly!\n");
 
 		return -EIO;
 	}
