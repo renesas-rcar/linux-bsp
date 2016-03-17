@@ -1875,6 +1875,17 @@
 			power-domains = <&sysc R8A7796_PD_A3VC>;
 		};
 
+		vspbc@fe960000 {
+			compatible = "renesas,vspm-vsp2";
+			renesas,has-bru;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,#rpf = <5>;
+			renesas,#uds = <0>;
+			renesas,#wpf = <1>;
+		};
+
 		vspb: vspm@fe960000 {
 			compatible = "renesas,vspm";
 			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
@@ -1893,6 +1904,17 @@
 			renesas,#start_reservation = <1>;
 			power-domains = <&sysc R8A7796_PD_A3VC>;
 			status = "disabled";
+		};
+
+		vspi0@fe9a0000 {
+			compatible = "renesas,vspm-vsp2";
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,#rpf = <1>;
+			renesas,#uds = <1>;
+			renesas,#wpf = <1>;
 		};
 
 		vspi0: vspm@fe9a0000 {
