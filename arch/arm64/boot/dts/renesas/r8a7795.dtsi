@@ -65,7 +65,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			#cooling-cells = <2>;
-			dynamic-power-coefficient = <530>;
+			dynamic-power-coefficient = <460>;
 			cooling-min-level = <0>;
 			cooling-max-level = <2>;
 			operating-points-v2 = <&group0_opp_tb0>,
@@ -121,6 +121,7 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			dynamic-power-coefficient = <120>;
 			operating-points-v2 = <&group1_opp_tb>;
 		};
 
@@ -2642,7 +2643,7 @@
 			sensor_thermal1: sensor-thermal1 {
 				polling-delay-passive = <250>;
 				polling-delay = <0>;
-				sustainable-power = <2000>;
+				sustainable-power = <4344>;
 
 				/* sensor ID */
 				thermal-sensors = <&tsc1>;
@@ -2659,7 +2660,7 @@
 			sensor_thermal2: sensor-thermal2 {
 				polling-delay-passive = <250>;
 				polling-delay = <0>;
-				sustainable-power = <2000>;
+				sustainable-power = <4344>;
 
 				/* sensor ID */
 				thermal-sensors = <&tsc2>;
@@ -2676,7 +2677,7 @@
 			sensor_thermal3: sensor-thermal3 {
 				polling-delay-passive = <250>;
 				polling-delay = <0>;
-				sustainable-power = <2000>;
+				sustainable-power = <4344>;
 
 				/* sensor ID */
 				thermal-sensors = <&tsc3>;
