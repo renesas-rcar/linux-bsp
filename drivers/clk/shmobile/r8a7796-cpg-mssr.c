@@ -65,6 +65,7 @@ enum r8a7796_clk_types {
 	CLK_TYPE_GEN3_PLL2,
 	CLK_TYPE_GEN3_PLL3,
 	CLK_TYPE_GEN3_PLL4,
+	CLK_TYPE_GEN3_R,
 	CLK_TYPE_GEN3_SD0,
 	CLK_TYPE_GEN3_SD1,
 	CLK_TYPE_GEN3_SD2,
@@ -119,6 +120,7 @@ static const struct cpg_core_clk r8a7796_core_clks[] __initconst = {
 	DEF_FIXED("cl",         R8A7796_CLK_CL,    CLK_PLL1_DIV2, 48, 1),
 	DEF_FIXED("cp",         R8A7796_CLK_CP,    CLK_EXTAL,      2, 1),
 
+	DEF_BASE("r",           R8A7796_CLK_R,   CLK_TYPE_GEN3_R,   CLK_EXTAL),
 	DEF_BASE("sd0",         R8A7796_CLK_SD0, CLK_TYPE_GEN3_SD0, CLK_SDSRC),
 	DEF_BASE("sd1",         R8A7796_CLK_SD1, CLK_TYPE_GEN3_SD1, CLK_SDSRC),
 	DEF_BASE("sd2",         R8A7796_CLK_SD2, CLK_TYPE_GEN3_SD2, CLK_SDSRC),
@@ -245,6 +247,7 @@ static const unsigned int r8a7796_crit_mod_clks[] __initconst = {
 #define CPG_SD1CKCR	0x0078
 #define CPG_SD2CKCR	0x0268
 #define CPG_SD3CKCR	0x026c
+#define CPG_RCKCR	0x0240
 
 /* -----------------------------------------------------------------------------
  * SDn Clock
@@ -842,6 +845,19 @@ static struct clk * __init cpg_z2_clk_register(const char *name,
 }
 /** End of modifying for Z-clock, Z2-clock and PLL0-clock */
 
+/* -----------------------------------------------------------------------------
+ * RCLK Clock Data
+ */
+static const struct clk_div_table cpg_rclk_div_table[] = {
+			/*                  MD     EXTAL  RCLK  (EXTAL/div)  */
+			/* val       div  : 14 13  (MHz)  (KHz)              */
+	{ 0x0f, 512  },	/* B'00_1111 512  :  0  0  16.66  32.55 (16666/512)  */
+	{ 0x12, 608  },	/* B'01_0010 608  :  0  1  20.00  32.89 (20000/608)  */
+	{ 0x17, 768  },	/* B'01_0111 768  :  1  0  25.00  32.55 (25000/768)  */
+	{ 0x1f, 1024 },	/* B'01_1111 1024 :  1  1  33.33  32.55 (33333/1024) */
+	{ 0, 0 },
+};
+
 /*
  * CPG Clock Data
  */
@@ -974,6 +990,12 @@ struct clk * __init r8a7796_cpg_clk_register(struct device *dev,
 	case CLK_TYPE_GEN3_SD3:
 		return cpg_sd_clk_register(core->name, __clk_get_name(parent),
 					   base + CPG_SD3CKCR);
+
+	case CLK_TYPE_GEN3_R:
+		return clk_register_divider_table(NULL, core->name,
+						  __clk_get_name(parent), 0,
+						  base + CPG_RCKCR, 0, 6, 0,
+						  cpg_rclk_div_table, NULL);
 
 	case CLK_TYPE_GEN3_Z:
 		return cpg_z_clk_register(core->name, __clk_get_name(parent),
