@@ -301,7 +301,18 @@
 		#clock-cells = <0>;
 		clock-frequency = <108000000>;
 	};
+};
 
+&pwm1 {
+	pinctrl-0 = <&pwm1_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&pwm2 {
+	pinctrl-0 = <&pwm2_pins>;
+	pinctrl-names = "default";
+	status = "okay";
 };
 
 &du {
@@ -333,6 +344,15 @@
 &pfc {
 	pinctrl-0 = <&scif_clk_pins>;
 	pinctrl-names = "default";
+
+	pwm1_pins: pwm1 {
+		renesas,groups = "pwm1_a", "pwm1_b";
+		renesas,function = "pwm1";
+	};
+	pwm2_pins: pwm2 {
+		renesas,groups = "pwm2_a", "pwm2_b";
+		renesas,function = "pwm2";
+	};
 
 	scif1_pins: scif1 {
 		renesas,groups = "scif1_data_a", "scif1_ctrl";
