@@ -137,6 +137,46 @@
 			#power-domain-cells = <0>;
 		};
 
+		sysc: system-controller@e6180000 {
+			compatible = "renesas,rcar-r8a7796-sysc";
+			reg = <0 0xe6180000 0 0x0400>;
+
+			pm-domains {
+				pd_always_on: always_on {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					#power-domain-cells = <0>;
+
+					pd_a3sg: a3sg {
+						reg = <0x0100>;
+						#power-domain-cells = <0>;
+					};
+
+					pd_a3ir: a3ir {
+						reg = <0x0180>;
+						#power-domain-cells = <0>;
+					};
+
+					pd_a3vc: a3vc {
+						reg = <0x0380>;
+						#address-cells = <1>;
+						#size-cells = <0>;
+						#power-domain-cells = <0>;
+
+						pd_a2vc0: a2vc0 {
+							reg = <0x03C0>;
+							#power-domain-cells = <0>;
+						};
+
+						pd_a2vc1: a2vc1 {
+							reg = <0x03C0>;
+							#power-domain-cells = <0>;
+						};
+					};
+				};
+			};
+		};
+
 		pfc: pfc@e6060000 {
 			compatible = "renesas,pfc-r8a7796";
 			reg = <0 0xe6060000 0 0x50c>;
