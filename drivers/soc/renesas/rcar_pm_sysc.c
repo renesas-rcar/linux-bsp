@@ -166,6 +166,12 @@ int set_dm_on_off(struct rcar_sysc_domain *pd, int flag)
 
 	/* Check the power domain is ON/OFF before set OFF/ON */
 	if ((pwrsr & read_reg32(pd->base + PWRSR)) == pwrsr) {
+		/* Start W/A for A3VP, A3VC, and A3IR domains */
+		if ((flag == 0) && (!strcmp("a3vp", dm_data->name)
+				|| !strcmp("a3ir", dm_data->name)
+				|| !strcmp("a3vc", dm_data->name)))
+			udelay(1);
+
 		/* set 1 to PWRUP/PWRDWN bit(s) of PWRONCR/PWROFFCR regs */
 		write_reg32(dm_data->pwr_on_off_cr, pwr_onoff_cr);
 		/* Check err register, either shutoff/resume was not accepted */
