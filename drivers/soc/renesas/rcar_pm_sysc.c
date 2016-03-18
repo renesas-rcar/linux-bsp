@@ -99,8 +99,8 @@ static const struct rcar_sysc_domains_info rcar_gen2_domains_info = {
 	.len	= ARRAY_SIZE(rcar_gen2_pd_sysc),
 };
 
-/* R-Car Gen3 specific data */
-static const struct rcar_sysc_domain_data rcar_gen3_pd_sysc[] = {
+/* R-Car H3 specific data */
+static const struct rcar_sysc_domain_data rcar_r8a7795_pd_sysc[] = {
 	DEF_DM_DATA("a3sg",  BITS_17_20 | BIT(22), (BITS_0_4 << 5),
 				BITS_0_4, BITS_0_4, BITS_0_4, BITS_0_4),
 	DEF_DM_DATA("a3ir",  BIT(24), BIT(4), BIT(0), BIT(0), BIT(0), BIT(0)),
@@ -110,9 +110,9 @@ static const struct rcar_sysc_domain_data rcar_gen3_pd_sysc[] = {
 	DEF_DM_DATA("a2vc1", BIT(26), BIT(3), BIT(1), BIT(1), BIT(1), BIT(1)),
 };
 
-static const struct rcar_sysc_domains_info rcar_gen3_domains_info = {
-	.domains_list = rcar_gen3_pd_sysc,
-	.len	= ARRAY_SIZE(rcar_gen3_pd_sysc),
+static const struct rcar_sysc_domains_info rcar_r8a7795_domains_info = {
+	.domains_list = rcar_r8a7795_pd_sysc,
+	.len	= ARRAY_SIZE(rcar_r8a7795_pd_sysc),
 };
 
 /*======= Sysc/Power Domain Driver =======*/
@@ -434,8 +434,8 @@ static const struct of_device_id rcar_pm_sysc_dt_match[] = {
 		.data = (void *)&rcar_gen2_domains_info,
 	},
 	{
-		.compatible = "renesas,rcar-gen3-sysc",
-		.data = (void *)&rcar_gen3_domains_info,
+		.compatible = "renesas,rcar-r8a7795-sysc",
+		.data = (void *)&rcar_r8a7795_domains_info,
 	},
 
 	{ /* sentinel */ },
