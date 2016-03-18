@@ -2029,7 +2029,7 @@
 		thermal-zones {
 			sensor_thermal1: sensor-thermal1 {
 				polling-delay-passive = <250>;
-				polling-delay = <1000>;
+				polling-delay = <0>;
 
 				/* sensor ID */
 				thermal-sensors = <&tsc1>;
@@ -2045,7 +2045,7 @@
 
 			sensor_thermal2: sensor-thermal2 {
 				polling-delay-passive = <250>;
-				polling-delay = <1000>;
+				polling-delay = <0>;
 
 				/* sensor ID */
 				thermal-sensors = <&tsc2>;
@@ -2061,7 +2061,7 @@
 
 			sensor_thermal3: sensor-thermal3 {
 				polling-delay-passive = <250>;
-				polling-delay = <1000>;
+				polling-delay = <0>;
 
 				/* sensor ID */
 				thermal-sensors = <&tsc3>;
