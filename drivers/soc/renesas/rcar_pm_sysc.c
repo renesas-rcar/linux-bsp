@@ -58,6 +58,7 @@
 
 /* Bits for control 3DG power domains */
 #define BITS_0_4	((u32)(BIT(0)|BIT(1)|BIT(2)|BIT(3)|BIT(4)))
+#define BITS_0_1	((u32)(BIT(0)|BIT(1)))
 #define BITS_17_20	((u32)(BIT(17)|BIT(18)|BIT(19)|BIT(20)))
 
 #define SYSCSR_RETRIES		1000
@@ -113,6 +114,21 @@ static const struct rcar_sysc_domain_data rcar_r8a7795_pd_sysc[] = {
 static const struct rcar_sysc_domains_info rcar_r8a7795_domains_info = {
 	.domains_list = rcar_r8a7795_pd_sysc,
 	.len	= ARRAY_SIZE(rcar_r8a7795_pd_sysc),
+};
+
+/* R-Car M3 specific data */
+static const struct rcar_sysc_domain_data rcar_r8a7796_pd_sysc[] = {
+	DEF_DM_DATA("a3sg",  (BIT(17) | BIT(18)), (BITS_0_1 << 5),
+				BITS_0_1, BITS_0_1, BITS_0_1, BITS_0_1),
+	DEF_DM_DATA("a3ir",  BIT(24), BIT(4), BIT(0), BIT(0), BIT(0), BIT(0)),
+	DEF_DM_DATA("a3vc",  BIT(14), BIT(4), BIT(0), BIT(0), BIT(0), BIT(0)),
+	DEF_DM_DATA("a2vc0", BIT(25), BIT(2), BIT(0), BIT(0), BIT(0), BIT(0)),
+	DEF_DM_DATA("a2vc1", BIT(26), BIT(3), BIT(1), BIT(1), BIT(1), BIT(1)),
+};
+
+static const struct rcar_sysc_domains_info rcar_r8a7796_domains_info = {
+	.domains_list = rcar_r8a7796_pd_sysc,
+	.len	= ARRAY_SIZE(rcar_r8a7796_pd_sysc),
 };
 
 /*======= Sysc/Power Domain Driver =======*/
@@ -437,7 +453,10 @@ static const struct of_device_id rcar_pm_sysc_dt_match[] = {
 		.compatible = "renesas,rcar-r8a7795-sysc",
 		.data = (void *)&rcar_r8a7795_domains_info,
 	},
-
+	{
+		.compatible = "renesas,rcar-r8a7796-sysc",
+		.data = (void *)&rcar_r8a7796_domains_info,
+	},
 	{ /* sentinel */ },
 };
 
