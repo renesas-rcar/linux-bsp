@@ -41,9 +41,12 @@
 #define REG_GEN3_THCODE1	0x50
 #define REG_GEN3_THCODE2	0x54
 #define REG_GEN3_THCODE3	0x58
+
+#define PTAT_BASE		0xE6198000
 #define REG_GEN3_PTAT1		0x5C
 #define REG_GEN3_PTAT2		0x60
 #define REG_GEN3_PTAT3		0x64
+#define PTAT_SIZE		REG_GEN3_PTAT3
 
 /* CTSR bit */
 #define PONM            (0x1 << 8)
@@ -164,11 +167,18 @@ static int round_temp(int temp)
 
 static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 {
+	void __iomem *ptat_base;
 	int err;
 
 	err = RCAR_PRR_INIT();
 	if (err)
 		return err;
+
+	ptat_base = ioremap_nocache(PTAT_BASE, PTAT_SIZE);
+	if (!ptat_base) {
+		dev_err(rcar_priv_to_dev(priv), "Cannot map FUSE register\n");
+		return -ENOMEM;
+	}
 
 	/* For H3 WS1.0, H3 WS1.1 and M3 ES1.0
 	 * these registers have not been programmed yet.
@@ -207,13 +217,15 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 		priv->factor.thcode_3 = rcar_thermal_read(priv,
 						REG_GEN3_THCODE3)
 				& GEN3_FUSE_MASK;
-		priv->factor.ptat_1 = rcar_thermal_read(priv, REG_GEN3_PTAT1)
+		priv->factor.ptat_1 = ioread32(ptat_base + REG_GEN3_PTAT1)
 				& GEN3_FUSE_MASK;
-		priv->factor.ptat_2 = rcar_thermal_read(priv, REG_GEN3_PTAT2)
+		priv->factor.ptat_2 = ioread32(ptat_base + REG_GEN3_PTAT2)
 				& GEN3_FUSE_MASK;
-		priv->factor.ptat_3 = rcar_thermal_read(priv, REG_GEN3_PTAT3)
+		priv->factor.ptat_3 = ioread32(ptat_base + REG_GEN3_PTAT3)
 				& GEN3_FUSE_MASK;
 	}
+
+	iounmap(ptat_base);
 
 	return 0;
 }
