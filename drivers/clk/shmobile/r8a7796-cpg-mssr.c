@@ -482,7 +482,133 @@ static struct clk * __init cpg_sd_clk_register(const char *name,
 	return clk;
 }
 
-/** Implementation of customized clocks (Z-clk, Z2-clk) for CPUFreq
+/** Implementation of customized clocks (Z-clk, Z2-clk) for CPUFreq */
+#define CPG_PLLECR	0x00D0
+#define CPG_PLLECR_PLL0ST (1 << 8)
+
+/* Define for PLL0 clk driver */
+#define CPG_PLL0CR_STC_MASK             0x7f000000
+#define CPG_PLL0CR_STC_SHIFT            24
+
+#ifdef CONFIG_RCAR_Z_CLK_MAX_THRESHOLD
+#define Z_CLK_MAX_THRESHOLD     CONFIG_RCAR_Z_CLK_MAX_THRESHOLD
+#else
+#define Z_CLK_MAX_THRESHOLD             1500000000
+#endif
+
+struct cpg_pll0_clk {
+	struct clk_hw hw;
+	void __iomem *reg;
+	void __iomem *pllecr_reg;
+};
+
+#define to_pll0_clk(_hw)   container_of(_hw, struct cpg_pll0_clk, hw)
+
+static int cpg_pll0_clk_set_rate(struct clk_hw *hw, unsigned long rate,
+				unsigned long prate)
+{
+	struct cpg_pll0_clk *pll0_clk = to_pll0_clk(hw);
+	unsigned int stc_val;
+	u32 val;
+	int i;
+
+	stc_val = DIV_ROUND_CLOSEST(rate, prate);
+	stc_val = clamp(stc_val, 90U, 120U);/*Lowest value is 1.5G (stc == 90)*/
+	pr_debug("%s(): prate: %lu, rate: %lu, pll0-mult: %d\n",
+		__func__, prate, rate, stc_val);
+
+	stc_val -= 1;
+	val = clk_readl(pll0_clk->reg);
+	val &= ~CPG_PLL0CR_STC_MASK;
+	val |= stc_val << CPG_PLL0CR_STC_SHIFT;
+	clk_writel(val, pll0_clk->reg);
+
+	i = 0;
+	while (!(clk_readl(pll0_clk->pllecr_reg) & CPG_PLLECR_PLL0ST)) {
+		cpu_relax();
+		i++;
+	}
+
+	if (i > 1000)
+		pr_warn("%s(): PLL0: long settled time: %d\n", __func__, i);
+
+	return 0;
+}
+
+static long cpg_pll0_clk_round_rate(struct clk_hw *hw, unsigned long rate,
+				unsigned long *parent_rate)
+{
+	unsigned long prate = *parent_rate;
+	unsigned int mult;
+
+	if (rate < Z_CLK_MAX_THRESHOLD)
+		rate = Z_CLK_MAX_THRESHOLD; /* Set lowest value: 1.5GHz */
+
+	mult = DIV_ROUND_CLOSEST(rate, prate);
+	mult = clamp(mult, 90U, 120U); /* 1.5G => (stc == 90)*/
+
+	rate = prate * mult;
+
+	/* Round to closest value at 100MHz unit */
+	rate = 100000000 * DIV_ROUND_CLOSEST(rate, 100000000);
+	pr_debug("%s(): output rate: %lu, parent_rate: %lu, pll0-mult: %d\n",
+		__func__, rate, prate, mult);
+	return rate;
+}
+
+static unsigned long cpg_pll0_clk_recalc_rate(struct clk_hw *hw,
+					unsigned long parent_rate)
+{
+	struct cpg_pll0_clk *pll0_clk = to_pll0_clk(hw);
+	unsigned int val;
+	unsigned long rate;
+
+	val = (clk_readl(pll0_clk->reg) & CPG_PLL0CR_STC_MASK)
+		>> CPG_PLL0CR_STC_SHIFT;
+
+	rate = (u64)parent_rate * (val + 1);
+
+	/* Round to closest value at 100MHz unit */
+	rate = 100000000 * DIV_ROUND_CLOSEST(rate, 100000000);
+	return rate;
+}
+
+static const struct clk_ops cpg_pll0_clk_ops = {
+	.recalc_rate = cpg_pll0_clk_recalc_rate,
+	.round_rate = cpg_pll0_clk_round_rate,
+	.set_rate = cpg_pll0_clk_set_rate,
+};
+
+static struct clk * __init cpg_pll0_clk_register(const char *name,
+				const char *parent_name,
+				void __iomem *cpg_base)
+{
+	struct clk_init_data init;
+	struct cpg_pll0_clk *pll0_clk;
+	struct clk *clk;
+
+	pll0_clk = kzalloc(sizeof(*pll0_clk), GFP_KERNEL);
+	if (!pll0_clk)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = name;
+	init.ops = &cpg_pll0_clk_ops;
+	init.flags = 0;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+
+	pll0_clk->reg = cpg_base + CPG_PLL0CR;
+	pll0_clk->pllecr_reg = cpg_base + CPG_PLLECR;
+	pll0_clk->hw.init = &init;
+
+	clk = clk_register(NULL, &pll0_clk->hw);
+	if (IS_ERR(clk))
+		kfree(pll0_clk);
+
+	return clk;
+}
+
+/* Modify for Z-clock and Z2-clock
  *
  * Traits of this clock:
  * prepare - clk_prepare only ensures that parents are prepared
@@ -533,10 +659,24 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (!prate)
 		prate = 1;
 
-	mult = div_u64((u64)rate * 32 + prate/2, prate);
+	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
+		prate = Z_CLK_MAX_THRESHOLD; /* Set parent to: 1.5GHz */
+		mult = div_u64((u64)rate * 32 + prate/2, prate);
+	} else {
+		/* Focus on changing parent. Fix z-clock divider is 32/32 */
+		mult = 32;
+	}
+
 	mult = clamp(mult, 1U, 32U);
 
-	return *parent_rate / 32 * mult;
+	/* Re-calculate the parent_rate to propagate new rate for it */
+	prate = div_u64((u64)rate * 32 + mult/2, mult);
+	prate = 100000000 * DIV_ROUND_CLOSEST(prate, 100000000);
+	pr_debug("%s():z-clk mult:%d, re-calculated prate:%lu, return: %lu\n",
+		__func__, mult, prate, prate / 32 * mult);
+	*parent_rate = prate;
+
+	return prate / 32 * mult;
 }
 
 static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
@@ -547,9 +687,16 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	u32 val, kick;
 	unsigned int i;
 
-	mult = div_u64((u64)rate * 32 + parent_rate/2, parent_rate);
+	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
+		parent_rate = Z_CLK_MAX_THRESHOLD; /* Set parent to: 1.5GHz */
+		mult = div_u64((u64)rate * 32 + parent_rate/2, parent_rate);
+	} else {
+		mult = 32;
+	}
 	mult = clamp(mult, 1U, 32U);
 
+	pr_debug("%s(): rate: %lu, set prate to: %lu, z-clk mult: %d\n",
+		__func__, rate, parent_rate, mult);
 	if (clk_readl(zclk->kick_reg) & CPG_FRQCRB_KICK)
 		return -EBUSY;
 
@@ -605,7 +752,7 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 
 	init.name = name;
 	init.ops = &cpg_z_clk_ops;
-	init.flags = 0;
+	init.flags = CLK_SET_RATE_PARENT;
 	init.parent_names = &parent_name;
 	init.num_parents = 1;
 
@@ -691,7 +838,7 @@ static struct clk * __init cpg_z2_clk_register(const char *name,
 
 	return clk;
 }
-/** End of modifying for Z-clock, Z2-clock */
+/** End of modifying for Z-clock, Z2-clock and PLL0-clock */
 
 /*
  * CPG Clock Data
@@ -774,15 +921,12 @@ struct clk * __init r8a7796_cpg_clk_register(struct device *dev,
 
 	case CLK_TYPE_GEN3_PLL0:
 		/*
-		 * PLL0 is a configurable multiplier clock. Register it as a
-		 * fixed factor clock for now as there's no generic multiplier
-		 * clock implementation and we currently have no need to change
-		 * the multiplier value.
+		 * The PLL0 is implemented as customized clock,
+		 * it changes the multiplier when cpufreq changes between
+		 * normal and override mode.
 		 */
-		value = readl(base + CPG_PLL0CR);
-		mult = ((value >> 24) & 0x7f) + 1;
-		break;
-
+		return cpg_pll0_clk_register(core->name,
+				__clk_get_name(parent), base);
 	case CLK_TYPE_GEN3_PLL1:
 		mult = cpg_pll_config->pll1_mult;
 		break;
