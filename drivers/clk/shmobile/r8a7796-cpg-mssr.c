@@ -248,7 +248,7 @@ struct clk * __init r8a7796_cpg_clk_register(struct device *dev,
 		 * the multiplier value.
 		 */
 		value = readl(base + CPG_PLL0CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		mult = ((value >> 24) & 0x7f) + 1;
 		break;
 
 	case CLK_TYPE_GEN3_PLL1:
@@ -263,7 +263,7 @@ struct clk * __init r8a7796_cpg_clk_register(struct device *dev,
 		 * the multiplier value.
 		 */
 		value = readl(base + CPG_PLL2CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		mult = ((value >> 24) & 0x7f) + 1;
 		break;
 
 	case CLK_TYPE_GEN3_PLL3:
