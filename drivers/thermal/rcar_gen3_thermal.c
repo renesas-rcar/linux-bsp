@@ -29,6 +29,7 @@
 
 /* Register offset */
 #define REG_GEN3_CTSR		0x20
+#define REG_GEN3_THCTR		0x20
 #define REG_GEN3_IRQSTR		0x04
 #define REG_GEN3_IRQMSK		0x08
 #define REG_GEN3_IRQCTL		0x0C
@@ -51,6 +52,12 @@
 #define VMEN            (0x1 << 4)
 #define VMST            (0x1 << 1)
 #define THSST           (0x1 << 0)
+
+/* THCTR bit */
+#define CTCTL		(0x1 << 24)
+#define THCNTSEN(x)	(x << 16)
+
+#define BIT_LEN_12	0x1
 
 #define CTEMP_MASK	0xFFF
 
@@ -108,6 +115,11 @@ struct rcar_thermal_priv {
 	int id;
 	int irq;
 	u32 ctemp;
+	const struct rcar_thermal_data *data;
+};
+
+struct rcar_thermal_data {
+	int (*thermal_init)(struct rcar_thermal_priv *priv);
 };
 
 #define rcar_priv_to_dev(priv)		((priv)->dev)
@@ -158,11 +170,13 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 	if (err)
 		return err;
 
-	/* For H3 WS1.0 and H3 WS1.1,
+	/* For H3 WS1.0, H3 WS1.1 and M3 ES1.0
 	 * these registers have not been programmed yet.
 	 * We will use fixed value as temporary solution.
 	 */
-	if (RCAR_PRR_IS_PRODUCT(H3) && (RCAR_PRR_CHK_CUT(H3, WS11) <= 0)) {
+	if ((RCAR_PRR_IS_PRODUCT(H3) && (RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+		|| (RCAR_PRR_IS_PRODUCT(M3) &&
+			(RCAR_PRR_CHK_CUT(M3, ES10) == 0))) {
 		priv->factor.ptat_1 = 2351;
 		priv->factor.ptat_2 = 1509;
 		priv->factor.ptat_3 = 435;
@@ -425,6 +439,28 @@ static int rcar_gen3_thermal_init(struct rcar_thermal_priv *priv)
 	return 0;
 }
 
+static int rcar_gen3_r8a7796_thermal_init(struct rcar_thermal_priv *priv)
+{
+	unsigned long flags;
+	unsigned long reg_val;
+
+	spin_lock_irqsave(&priv->lock, flags);
+	rcar_thermal_write(priv, REG_GEN3_THCTR,  0x0);
+	udelay(1000);
+	rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
+	rcar_thermal_write(priv, REG_GEN3_IRQEN, TEMP_IRQ_SHIFT(priv->id) |
+						TEMPD_IRQ_SHIFT(priv->id));
+	rcar_thermal_write(priv, REG_GEN3_THCTR, CTCTL | THCNTSEN(BIT_LEN_12));
+	reg_val = rcar_thermal_read(priv, REG_GEN3_THCTR);
+	reg_val &= ~CTCTL;
+	reg_val |= THSST;
+	rcar_thermal_write(priv, REG_GEN3_THCTR, reg_val);
+
+	spin_unlock_irqrestore(&priv->lock, flags);
+
+	return 0;
+}
+
 /*
  *		Interrupt
  */
@@ -497,8 +533,17 @@ static int rcar_gen3_thermal_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct rcar_thermal_data r8a7795_data = {
+	.thermal_init = rcar_gen3_thermal_init,
+};
+
+static const struct rcar_thermal_data r8a7796_data = {
+	.thermal_init = rcar_gen3_r8a7796_thermal_init,
+};
+
 static const struct of_device_id rcar_thermal_dt_ids[] = {
-	{ .compatible = "renesas,rcar-gen3-thermal"},
+	{ .compatible = "renesas,thermal-r8a7795", .data = &r8a7795_data},
+	{ .compatible = "renesas,thermal-r8a7796", .data = &r8a7796_data},
 	{},
 };
 MODULE_DEVICE_TABLE(of, rcar_thermal_dt_ids);
@@ -511,6 +556,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	int ret = -ENODEV;
 	int idle;
 	struct device_node *tz_nd, *tmp_nd;
+	const struct of_device_id *of_id;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -522,6 +568,12 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
+
+	of_id = of_match_device(rcar_thermal_dt_ids, dev);
+	if (of_id)
+		priv->data = of_id->data;
+	else
+		goto error_unregister;
 
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	priv->irq = 0;
@@ -559,8 +611,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	priv->zone = thermal_zone_of_sensor_register(dev, 0, priv,
 				&rcar_gen3_tz_of_ops);
 
-
-	rcar_gen3_thermal_init(priv);
+	priv->data->thermal_init(priv);
 	ret = thermal_read_fuse_factor(priv);
 	if (ret)
 		goto error_unregister;
