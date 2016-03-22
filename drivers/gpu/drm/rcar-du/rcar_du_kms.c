@@ -362,6 +362,7 @@ static int rcar_du_encoders_init_one(struct rcar_du_device *rcdu,
 	} encoders[] = {
 		{ "adi,adv7123", RCAR_DU_ENCODER_VGA },
 		{ "adi,adv7511w", RCAR_DU_ENCODER_HDMI },
+		{ "rockchip,rcar-dw-hdmi", RCAR_DU_ENCODER_HDMI },
 		{ "thine,thc63lvdm83d", RCAR_DU_ENCODER_LVDS },
 	};
 
@@ -372,6 +373,7 @@ static int rcar_du_encoders_init_one(struct rcar_du_device *rcdu,
 	struct device_node *entity_ep_node;
 	struct device_node *entity;
 	int ret;
+	const char *enc_name = NULL;
 
 	/*
 	 * Locate the connected entity and infer its type from the number of
@@ -423,6 +425,7 @@ static int rcar_du_encoders_init_one(struct rcar_du_device *rcdu,
 			if (of_device_is_compatible(encoder,
 						    encoders[i].compatible)) {
 				enc_type = encoders[i].type;
+				enc_name = encoders[i].compatible;
 				break;
 			}
 		}
@@ -443,7 +446,8 @@ static int rcar_du_encoders_init_one(struct rcar_du_device *rcdu,
 		connector = entity;
 	}
 
-	ret = rcar_du_encoder_init(rcdu, enc_type, output, encoder, connector);
+	ret = rcar_du_encoder_init(rcdu, enc_type, output, encoder, connector,
+					enc_name);
 	of_node_put(encoder);
 	of_node_put(connector);
 
