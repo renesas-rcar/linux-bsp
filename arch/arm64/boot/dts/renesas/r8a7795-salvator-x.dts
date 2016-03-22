@@ -169,15 +169,117 @@
 			};
 		};
 	};
+
+	hdmi0-encoder {
+		compatible = "rockchip,rcar-dw-hdmi";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				reg = <0>;
+				rcar_dw_hdmi0_in: endpoint {
+					remote-endpoint = <&du_out_hdmi0>;
+				};
+			};
+			port@1 {
+				reg = <1>;
+				rcar_dw_hdmi0_out: endpoint {
+					remote-endpoint = <&hdmi0_con>;
+				};
+			};
+		};
+	};
+
+	hdmi0-out {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi0_con: endpoint {
+				remote-endpoint = <&rcar_dw_hdmi0_out>;
+			};
+		};
+	};
+
+	hdmi1-encoder {
+		compatible = "rockchip,rcar-dw-hdmi";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				reg = <0>;
+				rcar_dw_hdmi1_in: endpoint {
+					remote-endpoint = <&du_out_hdmi1>;
+				};
+			};
+			port@1 {
+				reg = <1>;
+				rcar_dw_hdmi1_out: endpoint {
+					remote-endpoint = <&hdmi1_con>;
+				};
+			};
+		};
+	};
+
+	hdmi1-out {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi1_con: endpoint {
+				remote-endpoint = <&rcar_dw_hdmi1_out>;
+			};
+		};
+	};
+
+	programable_clk0: clock_out0 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <148500000>;
+	};
+
+	x21_clk: x21-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <33000000>;
+	};
+
+	x22_clk: x22-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <33000000>;
+	};
+
+	programable_clk1: clock_out1 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <108000000>;
+	};
 };
 
 &du {
+	pinctrl-0 = <&du_pins>;
+	pinctrl-names = "default";
 	status = "okay";
+
+	backlight = <&gpio6 7 GPIO_ACTIVE_HIGH>;
 
 	ports {
 		port@0 {
 			endpoint {
 				remote-endpoint = <&adv7123_in>;
+			};
+		};
+		port@1 {
+			endpoint {
+				remote-endpoint = <&rcar_dw_hdmi0_in>;
+			};
+		};
+		port@2 {
+			endpoint {
+				remote-endpoint = <&rcar_dw_hdmi1_in>;
 			};
 		};
 	};
@@ -255,6 +357,11 @@
 	usb2_pins: usb2 {
 		groups = "usb2";
 		function = "usb2";
+	};
+
+	du_pins: du {
+		groups = "du_rgb888", "du_sync", "du_clk_out_0", "du_disp";
+		function = "du";
 	};
 };
 
