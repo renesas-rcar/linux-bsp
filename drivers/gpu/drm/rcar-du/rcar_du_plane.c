@@ -458,6 +458,7 @@ static void rcar_du_plane_setup_format_gen2(struct rcar_du_group *rgrp,
 					    unsigned int index,
 					    const struct rcar_du_plane_state *state)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
 	u32 ddcr2 = PnDDCR2_CODE;
 	u32 ddcr4;
 
@@ -484,7 +485,8 @@ static void rcar_du_plane_setup_format_gen2(struct rcar_du_group *rgrp,
 		}
 	}
 
-	rcar_du_plane_write(rgrp, index, PnDDCR2, ddcr2);
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS))
+		rcar_du_plane_write(rgrp, index, PnDDCR2, ddcr2);
 
 	ddcr4 = state->format->edf | PnDDCR4_CODE;
 	if (state->source != RCAR_DU_PLANE_MEMORY)
