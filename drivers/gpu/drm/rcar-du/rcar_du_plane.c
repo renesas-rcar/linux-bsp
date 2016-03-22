@@ -489,7 +489,9 @@ static void rcar_du_plane_setup_format_gen2(struct rcar_du_group *rgrp,
 		rcar_du_plane_write(rgrp, index, PnDDCR2, ddcr2);
 
 	ddcr4 = state->format->edf | PnDDCR4_CODE;
-	if (state->source != RCAR_DU_PLANE_MEMORY)
+
+	if ((state->source != RCAR_DU_PLANE_MEMORY)
+		&& (!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN3_REGS)))
 		ddcr4 |= PnDDCR4_VSPS;
 
 	rcar_du_plane_write(rgrp, index, PnDDCR4, ddcr4);
