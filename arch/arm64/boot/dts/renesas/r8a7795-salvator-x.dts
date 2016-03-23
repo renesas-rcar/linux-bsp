@@ -86,7 +86,7 @@
 		};
 
 		/* For Audio DSP */
-		linux,adsp {
+		adsp_reserved: linux,adsp {
 			compatible = "shared-dma-pool";
 			reusable;
 			reg = <0x00000000 0x57000000 0x0 0x01000000>;
@@ -571,6 +571,7 @@
 
 &adsp {
 	status = "okay";
+	memory-region = <&adsp_reserved>;
 };
 
 &scif1 {
