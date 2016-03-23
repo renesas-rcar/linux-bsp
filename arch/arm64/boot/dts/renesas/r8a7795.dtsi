@@ -1772,8 +1772,7 @@
 			      <0 0xece60000 0 0x10000>,
 			      <0 0xece78000 0 0x8000>,
 			      <0 0xece80000 0 0x10000>,
-			      <0 0xece90000 0 0x10000>,
-			      <0 0x41000000 0 0x1000000>;
+			      <0 0xece90000 0 0x10000>;
 			interrupts = <GIC_SPI 237 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 506>;
 			status = "disabled";
