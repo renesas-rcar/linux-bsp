@@ -222,6 +222,12 @@
 			clock-latency-ns = <300000>;
 			turbo-mode;
 		};
+		opp@2000000000 {
+			opp-hz = /bits/ 64 <2000000000>;
+			opp-microvolt = <1030000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
 	};
 
 	group0_opp_tb1: avs_tb1{
@@ -263,6 +269,12 @@
 		};
 		opp@1900000000 {
 			opp-hz = /bits/ 64 <1900000000>;
+			opp-microvolt = <1030000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp@2000000000 {
+			opp-hz = /bits/ 64 <2000000000>;
 			opp-microvolt = <1030000>;
 			clock-latency-ns = <300000>;
 			turbo-mode;
@@ -312,6 +324,12 @@
 			clock-latency-ns = <300000>;
 			turbo-mode;
 		};
+		opp@2000000000 {
+			opp-hz = /bits/ 64 <2000000000>;
+			opp-microvolt = <1030000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
 	};
 
 	group0_opp_tb3: avs_tb3 {
@@ -353,6 +371,12 @@
 		};
 		opp@1900000000 {
 			opp-hz = /bits/ 64 <1900000000>;
+			opp-microvolt = <980000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp@2000000000 {
+			opp-hz = /bits/ 64 <2000000000>;
 			opp-microvolt = <980000>;
 			clock-latency-ns = <300000>;
 			turbo-mode;
@@ -402,6 +426,12 @@
 			clock-latency-ns = <300000>;
 			turbo-mode;
 		};
+		opp@2000000000 {
+			opp-hz = /bits/ 64 <2000000000>;
+			opp-microvolt = <960000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
 	};
 
 	group0_opp_tb5: avs_tb5 {
@@ -447,6 +477,12 @@
 			clock-latency-ns = <300000>;
 			turbo-mode;
 		};
+		opp@2000000000 {
+			opp-hz = /bits/ 64 <2000000000>;
+			opp-microvolt = <940000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
 	};
 
 	group0_opp_tb6: avs_tb6 {
@@ -488,6 +524,12 @@
 		};
 		opp@1900000000 {
 			opp-hz = /bits/ 64 <1900000000>;
+			opp-microvolt = <930000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp@2000000000 {
+			opp-hz = /bits/ 64 <2000000000>;
 			opp-microvolt = <930000>;
 			clock-latency-ns = <300000>;
 			turbo-mode;
