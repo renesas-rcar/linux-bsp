@@ -25,6 +25,7 @@
 
 #include <linux/list.h>
 #include <linux/mutex.h>
+#include <linux/spinlock.h>
 
 #include <media/media-devnode.h>
 #include <media/media-entity.h>
@@ -303,7 +304,8 @@ struct media_entity_notify {
  * @pads:	List of registered pads
  * @links:	List of registered links
  * @entity_notify: List of registered entity_notify callbacks
- * @graph_mutex: Protects access to struct media_device data
+ * @lock:	Entities list lock
+ * @graph_mutex: Entities graph operation lock
  * @pm_count_walk: Graph walk for power state walk. Access serialised using
  *		   graph_mutex.
  *
@@ -369,6 +371,8 @@ struct media_device {
 	/* notify callback list invoked when a new entity is registered */
 	struct list_head entity_notify;
 
+	/* Protects the graph objects creation/removal */
+	spinlock_t lock;
 	/* Serializes graph operations. */
 	struct mutex graph_mutex;
 	struct media_entity_graph pm_count_walk;

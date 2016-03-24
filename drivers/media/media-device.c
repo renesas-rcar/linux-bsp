@@ -90,17 +90,17 @@ static struct media_entity *find_entity(struct media_device *mdev, u32 id)
 
 	id &= ~MEDIA_ENT_ID_FLAG_NEXT;
 
-	mutex_lock(&mdev->graph_mutex);
+	spin_lock(&mdev->lock);
 
 	media_device_for_each_entity(entity, mdev) {
 		if (((media_entity_id(entity) == id) && !next) ||
 		    ((media_entity_id(entity) > id) && next)) {
-			mutex_unlock(&mdev->graph_mutex);
+			spin_unlock(&mdev->lock);
 			return entity;
 		}
 	}
 
-	mutex_unlock(&mdev->graph_mutex);
+	spin_unlock(&mdev->lock);
 
 	return NULL;
 }
@@ -590,12 +590,12 @@ int __must_check media_device_register_entity(struct media_device *mdev,
 	if (!ida_pre_get(&mdev->entity_internal_idx, GFP_KERNEL))
 		return -ENOMEM;
 
-	mutex_lock(&mdev->graph_mutex);
+	spin_lock(&mdev->lock);
 
 	ret = ida_get_new_above(&mdev->entity_internal_idx, 1,
 				&entity->internal_idx);
 	if (ret < 0) {
-		mutex_unlock(&mdev->graph_mutex);
+		spin_unlock(&mdev->lock);
 		return ret;
 	}
 
@@ -615,6 +615,9 @@ int __must_check media_device_register_entity(struct media_device *mdev,
 		(notify)->notify(entity, notify->notify_data);
 	}
 
+	spin_unlock(&mdev->lock);
+
+	mutex_lock(&mdev->graph_mutex);
 	if (mdev->entity_internal_idx_max
 	    >= mdev->pm_count_walk.ent_enum.idx_max) {
 		struct media_entity_graph new = { .top = 0 };
@@ -677,9 +680,9 @@ void media_device_unregister_entity(struct media_entity *entity)
 	if (mdev == NULL)
 		return;
 
-	mutex_lock(&mdev->graph_mutex);
+	spin_lock(&mdev->lock);
 	__media_device_unregister_entity(entity);
-	mutex_unlock(&mdev->graph_mutex);
+	spin_unlock(&mdev->lock);
 }
 EXPORT_SYMBOL_GPL(media_device_unregister_entity);
 
@@ -700,6 +703,7 @@ void media_device_init(struct media_device *mdev)
 	INIT_LIST_HEAD(&mdev->pads);
 	INIT_LIST_HEAD(&mdev->links);
 	INIT_LIST_HEAD(&mdev->entity_notify);
+	spin_lock_init(&mdev->lock);
 	mutex_init(&mdev->graph_mutex);
 	ida_init(&mdev->entity_internal_idx);
 
@@ -748,9 +752,9 @@ EXPORT_SYMBOL_GPL(__media_device_register);
 int __must_check media_device_register_entity_notify(struct media_device *mdev,
 					struct media_entity_notify *nptr)
 {
-	mutex_lock(&mdev->graph_mutex);
+	spin_lock(&mdev->lock);
 	list_add_tail(&nptr->list, &mdev->entity_notify);
-	mutex_unlock(&mdev->graph_mutex);
+	spin_unlock(&mdev->lock);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(media_device_register_entity_notify);
@@ -767,9 +771,9 @@ static void __media_device_unregister_entity_notify(struct media_device *mdev,
 void media_device_unregister_entity_notify(struct media_device *mdev,
 					struct media_entity_notify *nptr)
 {
-	mutex_lock(&mdev->graph_mutex);
+	spin_lock(&mdev->lock);
 	__media_device_unregister_entity_notify(mdev, nptr);
-	mutex_unlock(&mdev->graph_mutex);
+	spin_unlock(&mdev->lock);
 }
 EXPORT_SYMBOL_GPL(media_device_unregister_entity_notify);
 
@@ -783,11 +787,11 @@ void media_device_unregister(struct media_device *mdev)
 	if (mdev == NULL)
 		return;
 
-	mutex_lock(&mdev->graph_mutex);
+	spin_lock(&mdev->lock);
 
 	/* Check if mdev was ever registered at all */
 	if (!media_devnode_is_registered(&mdev->devnode)) {
-		mutex_unlock(&mdev->graph_mutex);
+		spin_unlock(&mdev->lock);
 		return;
 	}
 
@@ -807,7 +811,7 @@ void media_device_unregister(struct media_device *mdev)
 		kfree(intf);
 	}
 
-	mutex_unlock(&mdev->graph_mutex);
+	spin_unlock(&mdev->lock);
 
 	device_remove_file(&mdev->devnode.dev, &dev_attr_model);
 	media_devnode_unregister(&mdev->devnode);
