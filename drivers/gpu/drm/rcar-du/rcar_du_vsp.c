@@ -180,8 +180,9 @@ static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 
 	WARN_ON(!pixelformat);
 
-	vsp1_du_atomic_update(plane->vsp->vsp, plane->index, pixelformat,
-			      fb->pitches[0], paddr, &src, &dst);
+	vsp1_du_atomic_update_zpos(plane->vsp->vsp, plane->index, pixelformat,
+				   fb->pitches[0], paddr, &src, &dst,
+				   state->zpos);
 }
 
 static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
@@ -220,8 +221,8 @@ static void rcar_du_vsp_plane_atomic_update(struct drm_plane *plane,
 	if (plane->state->crtc)
 		rcar_du_vsp_plane_setup(rplane);
 	else
-		vsp1_du_atomic_update(rplane->vsp->vsp, rplane->index, 0, 0, 0,
-				      NULL, NULL);
+		vsp1_du_atomic_update_zpos(rplane->vsp->vsp, rplane->index,
+					   0, 0, 0, NULL, NULL, 0);
 }
 
 static const struct drm_plane_helper_funcs rcar_du_vsp_plane_helper_funcs = {
@@ -269,6 +270,7 @@ static void rcar_du_vsp_plane_reset(struct drm_plane *plane)
 		return;
 
 	state->alpha = 255;
+	state->zpos = plane->type == DRM_PLANE_TYPE_PRIMARY ? 0 : 1;
 
 	plane->state = &state->state;
 	plane->state->plane = plane;
@@ -283,6 +285,8 @@ static int rcar_du_vsp_plane_atomic_set_property(struct drm_plane *plane,
 
 	if (property == rcdu->props.alpha)
 		rstate->alpha = val;
+	else if (property == rcdu->props.zpos)
+		rstate->zpos = val;
 	else
 		return -EINVAL;
 
@@ -299,6 +303,8 @@ static int rcar_du_vsp_plane_atomic_get_property(struct drm_plane *plane,
 
 	if (property == rcdu->props.alpha)
 		*val = rstate->alpha;
+	else if (property == rcdu->props.zpos)
+		*val = rstate->zpos;
 	else
 		return -EINVAL;
 
@@ -378,6 +384,8 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 
 		drm_object_attach_property(&plane->plane.base,
 					   rcdu->props.alpha, 255);
+		drm_object_attach_property(&plane->plane.base,
+					   rcdu->props.zpos, 1);
 	}
 
 	return 0;
