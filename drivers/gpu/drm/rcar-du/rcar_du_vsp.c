@@ -180,9 +180,9 @@ static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 
 	WARN_ON(!pixelformat);
 
-	vsp1_du_atomic_update_zpos(plane->vsp->vsp, plane->index, pixelformat,
-				   fb->pitches[0], paddr, &src, &dst,
-				   state->zpos);
+	vsp1_du_atomic_update_ext(plane->vsp->vsp, plane->index, pixelformat,
+				  fb->pitches[0], paddr, &src, &dst,
+				  state->alpha, state->zpos);
 }
 
 static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
@@ -221,8 +221,8 @@ static void rcar_du_vsp_plane_atomic_update(struct drm_plane *plane,
 	if (plane->state->crtc)
 		rcar_du_vsp_plane_setup(rplane);
 	else
-		vsp1_du_atomic_update_zpos(rplane->vsp->vsp, rplane->index,
-					   0, 0, 0, NULL, NULL, 0);
+		vsp1_du_atomic_update_ext(rplane->vsp->vsp, rplane->index,
+					  0, 0, 0, NULL, NULL, 0, 0);
 }
 
 static const struct drm_plane_helper_funcs rcar_du_vsp_plane_helper_funcs = {
