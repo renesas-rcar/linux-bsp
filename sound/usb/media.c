@@ -303,7 +303,8 @@ void media_snd_device_delete(struct snd_usb_audio *chip)
 	media_snd_mixer_delete(chip);
 
 	if (mdev) {
-		media_device_unregister_devres(mdev);
+		if (media_devnode_is_registered(&mdev->devnode))
+			media_device_unregister(mdev);
 		chip->media_dev = NULL;
 	}
 }
