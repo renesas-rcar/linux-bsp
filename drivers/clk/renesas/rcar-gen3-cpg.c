@@ -20,6 +20,7 @@
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include "renesas-cpg-mssr.h"
 #include "rcar-gen3-cpg.h"
@@ -252,6 +253,12 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (!prate)
 		prate = 1;
 
+	/* Adjust maximum frequency value on H3 WS10 to 1.9GHz */
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000) {
+		rate = 1900000000;
+	}
+	/* End of adjust freq value */
+
 	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
 		prate = Z_CLK_MAX_THRESHOLD; /* Set parent to: 1.5GHz */
 		mult = div_u64((u64)rate * 32 + prate/2, prate);
@@ -279,6 +286,12 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned int mult;
 	u32 val, kick;
 	unsigned int i;
+
+	/* Adjust maximum frequency value on H3 WS10 to 1.9GHz */
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000) {
+		rate = 1900000000;
+	}
+	/* End of adjust freq value */
 
 	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
 		parent_rate = Z_CLK_MAX_THRESHOLD; /* Set parent to: 1.5GHz */
@@ -660,6 +673,8 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 	unsigned int mult = 1;
 	unsigned int div = 1;
 	u32 value;
+
+	RCAR_PRR_INIT(); /* Get PRR register value */
 
 	parent = clks[core->parent];
 	if (IS_ERR(parent))
