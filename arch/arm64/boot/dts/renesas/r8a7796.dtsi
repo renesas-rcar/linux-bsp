@@ -1555,6 +1555,7 @@
 			interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 130>;
+			power-domains = <&sysc R8A7796_PD_A2VC1>;
 			renesas,#ch = <0>;
 			renesas,#fcp_ch = <0>;
 		};
@@ -1565,6 +1566,7 @@
 			interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 131>;
+			power-domains = <&sysc R8A7796_PD_A2VC1>;
 			renesas,#ch = <1>;
 			renesas,#fcp_ch = <0>;
 		};
@@ -1576,6 +1578,7 @@
 			     <GIC_SPI 381 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 128>;
+			power-domains = <&sysc R8A7796_PD_A2VC0>;
 			renesas,#ch = <2>;
 			renesas,#fcp_ch = <1>;
 		};
@@ -1584,6 +1587,7 @@
 			compatible = "renesas,vcp4-fcpcs";
 			reg = <0 0xfe90f000 0 0x200>;
 			clocks = <&cpg CPG_MOD 619>;
+			power-domains = <&sysc R8A7796_PD_A3VC>;
 			renesas,#ch = <0>;
 		};
 
@@ -1591,6 +1595,7 @@
 			compatible = "renesas,vcp4-fcpci0";
 			reg = <0 0xfe8df000 0 0x200>;
 			clocks = <&cpg CPG_MOD 617>;
+			power-domains = <&sysc R8A7796_PD_A3VC>;
 			renesas,#ch = <1>;
 		};
 
