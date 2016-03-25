@@ -109,6 +109,56 @@
 		   decoder.
 	    </entry>
 	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_AUDIO_CAPTURE</constant></entry>
+	    <entry>Audio Capture Function Entity.</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_AUDIO_PLAYBACK</constant></entry>
+	    <entry>Audio Playback Function Entity.</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_AUDIO_MIXER</constant></entry>
+	    <entry>Audio Mixer Function Entity.</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_GENERIC</constant></entry>
+	    <entry>Generic video processing, when no other processing function
+		   is applicable.
+	    </entry>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_COMPOSER</constant></entry>
+	    <entry>Video composer (blender). An entity capable of video
+		   composing must have at least two sink pads and one source
+		   pad, and composes input video frames onto output video
+		   frames. Composition can be performed using alpha blending,
+		   color keying, raster operations (ROP), stitching or any other
+		   mean.
+	    </entry>
+	  </row>
+	  </row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_CONVERTER</constant></entry>
+	    <entry>Video format converter. An entity capable of video format
+		   conversion must have at least one sink pad and one source
+		   pad, and convert the format of pixels received on its sink
+		   pad(s) to a different format output on its source pad(s).
+	    </entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_SCALER</constant></entry>
+	    <entry>Video scaler. An entity capable of video scaling must have
+		   at least one sink pad and one source pad, and scaling the
+		   video frame(s) received on its sink pad(s) to a different
+		   resolution output on its source pad(s). The range of
+		   supported scaling ratios is entity-specific and can differ
+		   between the horizontal and vertical directions. In particular
+		   scaling can be supported in one direction only.
+	    </entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_ENT_F_PROC_VIDEO_STATISTICS</constant></entry>
+	    <entry>Video statistics computation (histogram, 3A, ...)</entry>
+	  </row>
 	</tbody>
       </tgroup>
     </table>
@@ -188,6 +238,46 @@
 	    <entry><constant>MEDIA_INTF_T_V4L_SWRADIO</constant></entry>
 	    <entry>Device node interface for Software Defined Radio (V4L)</entry>
 	    <entry>typically, /dev/swradio?</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_INTF_T_ALSA_PCM_CAPTURE</constant></entry>
+	    <entry>Device node interface for ALSA PCM Capture</entry>
+	    <entry>typically, /dev/snd/pcmC?D?c</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_INTF_T_ALSA_PCM_PLAYBACK</constant></entry>
+	    <entry>Device node interface for ALSA PCM Playback</entry>
+	    <entry>typically, /dev/snd/pcmC?D?p</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_INTF_T_ALSA_CONTROL</constant></entry>
+	    <entry>Device node interface for ALSA Control</entry>
+	    <entry>typically, /dev/snd/controlC?</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_INTF_T_ALSA_COMPRESS</constant></entry>
+	    <entry>Device node interface for ALSA Compress</entry>
+	    <entry>typically, /dev/snd/compr?</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_INTF_T_ALSA_RAWMIDI</constant></entry>
+	    <entry>Device node interface for ALSA Raw MIDI</entry>
+	    <entry>typically, /dev/snd/midi?</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_INTF_T_ALSA_HWDEP</constant></entry>
+	    <entry>Device node interface for ALSA Hardware Dependent</entry>
+	    <entry>typically, /dev/snd/hwC?D?</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_INTF_T_ALSA_SEQUENCER</constant></entry>
+	    <entry>Device node interface for ALSA Sequencer</entry>
+	    <entry>typically, /dev/snd/seq</entry>
+	  </row>
+	  <row>
+	    <entry><constant>MEDIA_INTF_T_ALSA_TIMER</constant></entry>
+	    <entry>Device node interface for ALSA Timer</entry>
+	    <entry>typically, /dev/snd/timer</entry>
 	  </row>
 	</tbody>
       </tgroup>
