@@ -1,0 +1,87 @@
+DT bindings for the Renesas R-Car System Controller
+
+== System Controller Node ==
+
+The R-Car System Controller provides power management for the CPU cores and
+various coprocessors.
+
+Required properties:
+  - compatible: Must contain one or more of the following:
+      - "renesas,r8a7779-sysc" (R-Car H1)
+      - "renesas,r8a7790-sysc" (R-Car H2)
+      - "renesas,r8a7791-sysc" (R-Car M2-W)
+      - "renesas,r8a7792-sysc" (R-Car V2H)
+      - "renesas,r8a7793-sysc" (R-Car M2-N)
+      - "renesas,r8a7794-sysc" (R-Car E2)
+      - "renesas,r8a7795-sysc" (R-Car H3)
+      - "renesas,rcar-gen2-sysc" (Generic R-Car Gen2)
+      - "renesas,rcar-gen3-sysc" (Generic R-Car Gen3)
+    When compatible with the generic version, nodes must list the SoC-specific
+    version corresponding to the platform first, followed by the generic
+    version.
+  - reg: Address start and address range for the device.
+  - pm-domains: This node contains a hierarchy of PM Domain Nodes.
+    Dependencies (e.g. parent SCUs should not be powered off while child CPUs
+    are on) should be reflected using subnodes.
+
+
+== PM Domain Nodes ==
+
+Each of the PM domain nodes represents a PM domain, as documented by the
+generic PM domain bindings in
+Documentation/devicetree/bindings/power/power_domain.txt.
+
+Required properties:
+  - #power-domain-cells: Must be 0.
+  - reg: This property must contain 2 values:
+	   - The first value is the number of the interrupt bit representing
+	     the power area in the various Interrupt Registers (e.g. SYSCISR,
+	     Interrupt Status Register),
+	   - The second value encodes the power register block offset (which is
+	     a multiple of 64), and the number of the bit representing the
+	     power area in the various Power Control Registers (e.g. PWROFFSR,
+	     Power Shutoff Status Register). This value is created by ORing
+	     these two numbers.
+	 The parent's node must contain the following two properties:
+	   - #address-cells: Must be 2,
+	   - #size-cells: Must be 0.
+
+
+Example:
+
+	sysc: system-controller@e6180000 {
+		compatible = "renesas,r8a7791-sysc", "renesas,rcar-gen2-sysc";
+		reg = <0 0xe6180000 0 0x0200>;
+
+		pm-domains {
+			#address-cells = <2>;
+			#size-cells = <0>;
+
+			pd_ca15_scu: scu@12 {
+				reg = <12 0x180>;
+				#address-cells = <2>;
+				#size-cells = <0>;
+				#power-domain-cells = <0>;
+
+				pd_ca15_cpu0: cpu@0 {
+					reg = <0 0x40>;
+					#power-domain-cells = <0>;
+				};
+
+				pd_ca15_cpu1: cpu@1 {
+					reg = <1 0x41>;
+					#power-domain-cells = <0>;
+				};
+			};
+
+			pd_sh: sh@16 {
+				reg = <16 0x80>;
+				#power-domain-cells = <0>;
+			};
+
+			pd_sgx: sgx@20 {
+				reg = <20 0xc0>;
+				#power-domain-cells = <0>;
+			};
+		};
+	};
