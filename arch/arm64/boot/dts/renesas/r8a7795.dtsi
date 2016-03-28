@@ -1660,6 +1660,7 @@
 				      "src.5", "src.4", "src.3", "src.2",
 				      "src.1", "src.0",
 				      "dvc.0", "dvc.1";
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
