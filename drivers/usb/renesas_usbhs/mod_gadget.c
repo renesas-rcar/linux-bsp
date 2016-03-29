@@ -1064,7 +1064,12 @@ int usbhs_mod_gadget_probe(struct usbhs_priv *priv)
 		goto usbhs_mod_gadget_probe_err_gpriv;
 	}
 
-	gpriv->transceiver = usb_get_phy(USB_PHY_TYPE_UNDEFINED);
+	gpriv->transceiver = devm_usb_get_phy_by_phandle(dev, "usb-phy", 0);
+	if (PTR_ERR(gpriv->transceiver) == -EPROBE_DEFER) {
+		ret = -EPROBE_DEFER;
+		goto err_add_udc;
+	}
+
 	dev_info(dev, "%stransceiver found\n",
 		 !IS_ERR_OR_NULL(gpriv->transceiver) ? "" : "no ");
 

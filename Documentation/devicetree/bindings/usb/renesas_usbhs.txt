@@ -24,8 +24,9 @@ Optional properties:
   - renesas,buswait: Integer to use BUSWAIT register
   - renesas,enable-gpio: A gpio specifier to check GPIO determining if USB
 			 function should be enabled
-  - phys: phandle + phy specifier pair
+  - phys: phandle of *Generic PHY* + phy specifier pair
   - phy-names: must be "usb"
+  - usb-phy: phandle of usb phy
   - dmas: Must contain a list of references to DMA specifiers.
   - dma-names : named "ch%d", where %d is the channel number ranging from zero
                 to the number of channels (DnFIFOs) minus one.
