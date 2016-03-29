@@ -316,17 +316,20 @@ static int skl_free(struct hdac_ext_bus *ebus)
 
 	if (bus->irq >= 0)
 		free_irq(bus->irq, (void *)bus);
-	if (bus->remap_addr)
-		iounmap(bus->remap_addr);
-
 	snd_hdac_bus_free_stream_pages(bus);
 	snd_hdac_stream_free_all(ebus);
 	snd_hdac_link_free_all(ebus);
+
+	if (bus->remap_addr)
+		iounmap(bus->remap_addr);
+
 	pci_release_regions(skl->pci);
 	pci_disable_device(skl->pci);
 
 	snd_hdac_ext_bus_exit(ebus);
 
+	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI))
+		snd_hdac_i915_exit(&ebus->bus);
 	return 0;
 }
 
@@ -719,12 +722,12 @@ static void skl_remove(struct pci_dev *pci)
 	if (skl->tplg)
 		release_firmware(skl->tplg);
 
-	if (IS_ENABLED(CONFIG_SND_SOC_HDAC_HDMI))
-		snd_hdac_i915_exit(&ebus->bus);
-
 	if (pci_dev_run_wake(pci))
 		pm_runtime_get_noresume(&pci->dev);
-	pci_dev_put(pci);
+
+	/* codec removal, invoke bus_device_remove */
+	snd_hdac_ext_bus_device_remove(ebus);
+
 	skl_platform_unregister(&pci->dev);
 	skl_free_dsp(skl);
 	skl_machine_device_unregister(skl);
