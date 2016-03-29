@@ -1,0 +1,313 @@
+fixes
+	renesas/dt-fixes-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-fixes2-for-v4.5
+	<no branch> (0f514e690740e54815441a87708c3326f8aa8709)
+		git://git.kernel.org/pub/scm/linux/kernel/git/pjw/omap-pending tags/for-v4.5-rc/omap-critical-fixes-a
+	patch
+		ARM: mvebu: fix overlap of Crypto SRAM with PCIe memory window
+
+next/fixes-non-critical
+	smasung/fixes-nc
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-fixes-non-critical-4.6
+	patch
+		ARM: ks8695: fix __initdata annotation
+		ARM: ux500: fix ureachable iounmap()
+		ARM: socfpga: hide unused functions
+		ARM: prima2: always enable reset controller
+	davinci/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.6/fixes
+	patch
+		soc: TI knav_qmss: fix dma_addr_t printing
+	mvebu/soc
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.6-1
+	patch
+		CNS3xxx: remove unused *_VIRT definitions
+	omap/fixes-nc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.6/fixes-not-urgent-signed
+	patch
+		MAINTAINERS: unify email addrs for Kevin Hilman
+		CNS3xxx: Fix PCI cns3xxx_write_config()
+
+next/cleanup
+	patch
+		ARM: drop unused Makefile.boot of Multiplatform SoCs
+		ARM: integrator: remove redundant select in Kconfig
+		ARM: netx: remove redundant "depends on ARCH_NETX"
+	renesas/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup-for-v4.6
+	mvebu/cleanup
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.6-1
+	lpc32xx/soc
+		https://github.com/vzapolskiy/linux lpc32xx/soc
+	versatile/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/plat-versatile-cleanup
+	renesas/cleanup2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-cleanup2-for-v4.6
+	mvebu/cleanup-2
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.6-2
+
+next/soc
+	patch
+		ARM: debug: add support for Palmchip BK-310x UART
+	mvebu/drivers
+		git://git.infradead.org/linux-mvebu tags/mvebu-drivers-4.6-1
+	stm32/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/stm32 tags/stm32-soc-for-v4.6-1
+	patch
+		arm: initial machine port for artpec-6 SoC
+		ARM: mach-artpec: add entry to MAINTAINERS
+	mediatek/soc
+		https://github.com/mbgg/linux-mediatek tags/v4.5-next-soc
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-for-v4.6
+	davinci/edma
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.6/edma
+	zynq/soc
+		https://github.com/Xilinx/linux-xlnx tags/zynq-soc-for-4.6
+	patch
+		ARM: alpine: select the Alpine MSI controller driver
+	broadcom/soc
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.6/soc
+	broadcom/maintainers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.6/maintainers
+	sunxi/core
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-core-for-4.6
+	pxa/soc
+		https://github.com/rjarzmik/linux tags/pxa-for-4.6
+	patch
+		ARM: at91: avoid defining CONFIG_* symbols in source code
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.6
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.6/soc-signed
+	stm32/soc-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/stm32 tags/stm32-soc-for-v4.6-2
+	<no branch> (15925cfcf83361b4eb8c7ffb51ad29b5f1e32a23)
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-4.6-2
+	patch
+		ARM: uniphier: add missing of_node_put()
+		ARM: uniphier: rework SMP code to support new System Bus binding
+
+next/arm64
+	patch
+		arm64: defconfig: add spmi and usb related configs
+	rockchip/soc64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.6-rockchip-soc64-1
+	mvebu/arm64
+		git://git.infradead.org/linux-mvebu tags/mvebu-arm64-4.6-1
+		contains depends/irqchip-armada-370-xp
+	patch
+		arm64: add Alpine SoC family
+		arm64: defconfig: enable the Alpine family
+		arm64: alpine: select the Alpine MSI controller driver
+	broadcom/maintainers64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.6/maintainers-arm64
+	broadcom/defconfig-arm64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.6/defconfig-arm64
+	broadcom/soc-arm64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.6/soc-arm64
+	renesas/arm64-defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.6
+	renesas/arm64
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-soc-for-v4.6
+	marvell/arm64
+		git://git.infradead.org/linux-mvebu tags/mvebu-arm64-4.6-2
+	sunxi/config64
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-config64-for-4.6
+	hisi/hip05-config
+		git://github.com/hisilicon/linux-hisi tags/hip05-config-for-4.6
+	samsung/defconfig-64
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.6-2
+		contains depends/rtc-max77802
+		contains samsung/defconfig
+	patch
+		arm64: defconfig: Add Qualcomm sdhci and restart functionality
+		arm64: defconfig: Increase MMC_BLOCK_MINORS to 16
+	samsung/soc64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc64-4.6-2
+	meson/gxbb
+		https://github.com/carlocaione/linux-meson tags/for-v4.6/gxbb-arm64
+
+next/dt
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.6-1
+	patch
+		ARM: dts: spear: replace gpio-key,wakeup with wakeup-source property
+	lpc32xx/dt
+		https://github.com/vzapolskiy/linux lpc32xx/dt
+	vexpress/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/vexpress-for-v4.6/dt-updates
+	stm32/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/stm32 tags/stm32-dt-for-v4.6-1
+	rockchip/dts32
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.6-rockchip-dts32-1
+	patch
+		ARM: add device-tree SoC bindings for Axis Artpec-6
+		ARM: dts: artpeg: add Artpec-6 SoC dtsi file
+		ARM: dts: artpec: add Artpec-6 development board dts
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.6
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.6
+	versatile/dt-cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/versatile-dt-cleanup-1
+	patch
+		dts/ls2080a: Update PCIe compatible
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.6-dt
+	mediatek/dts
+		https://github.com/mbgg/linux-mediatek tags/v4.5-next-dts
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.6/dt-pt1
+	keystone/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone_dts_for_4.6_v2
+	zynq/dts
+		https://github.com/Xilinx/linux-xlnx tags/zynq-dt-for-4.6
+	patch
+		ARM: dts: alpine: add the MSIX node
+	broadcom/dt
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.6/devicetree
+	patch
+		Revert "arm: dts: Add pinctrl/GPIO/EINT node for mt2701"
+	renesas/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v4.6
+	mvebu/dt-2
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.6-2
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.6
+	pxa/dt
+		https://github.com/rjarzmik/linux tags/pxa-dt-4.6
+	qcom/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-dt-for-4.6
+	samsung/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.6-2
+	omap/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.6/dt-pt2
+	stm32/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/stm32 tags/stm32-dt-for-v4.6-2
+	at91/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-dt2
+	renesas/dt-fixes-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-fixes2-for-v4.5
+	patch
+		ARM: dts: ux500: add synaptics RMI4 for Ux500 TVK DT
+		ARM: dts: artpec: dual-license on artpec6.dtsi
+	<no branch> (6d6acd140ab3d46348ec3a9dbfd386d9ca42b825)
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/vexpress-for-v4.6/dt-updates-2
+	patch
+		ARM, ARM64: dts: drop "arm,amba-bus" in favor of "simple-bus"
+
+next/dt64
+	patch
+		MAINTAINERS: Adding Maintainers for AMD Seattle Device Tree
+		dtb: amd: Fix GICv2 hypervisor and virtual interface sizes
+		dtb: amd: Fix DMA ranges in device tree
+		dtb: amd: Fix typo in SPI device nodes
+		dtb: amd: Misc changes for I2C device nodes
+		dtb: amd: Misc changes for SATA device tree nodes
+		dtb: amd: Misc changes for GPIO devices
+		dtb: amd: Add PERF CCN-504 device tree node
+		dtb: amd: Add KCS device tree node
+		dtb: amd: Add AMD XGBE device tree file
+		dtb: amd: Add support for new AMD Overdrive boards
+		dtb: amd: Add support for AMD/Linaro 96Boards Enterprise Edition Server board
+	renesas/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.6
+	rockchip/dts64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.6-rockchip-dts64-1
+	patch
+		arm64: dts: amd: Fix-up for ccn504 and kcs nodes
+	mvebu/dt64
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.6-1
+	mediatek/dts64
+		https://github.com/mbgg/linux-mediatek tags/v4.5-next-dts64
+	zynq/dts64
+		https://github.com/Xilinx/linux-xlnx tags/zynqmp-dt-for-4.6
+	patch
+		arm64: dts: add the Alpine v2 EVP
+		arm64: dts: alpine: add the MSIX node in the Alpine v2 dtsi
+	broadcom/dt-arm64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.6/devicetree-arm64
+	renesas/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt2-for-v4.6
+	hisi/hip05-dt
+		git://github.com/hisilicon/linux-hisi tags/hip05-dt-for-4.6
+	apm/dt
+		https://github.com/AppliedMicro/xgene-next tags/xgene-dts-for-v4.6-part1
+	apm/dt64-2
+		https://github.com/AppliedMicro/xgene-next tags/xgene-dts-for-v4.6-part2
+	qcom/dts64
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-arm64-for-4.6
+	imx/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt64-4.6
+	mvebu/dt64-2
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.6-2
+	meson/gxbb-dt
+		https://github.com/carlocaione/linux-meson tags/for-v4.6/gxbb-dt
+
+next/defconfig
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v4.6
+	mvebu/defconfig
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-4.6-1
+	integrator/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-defconfig-redux
+	patch
+		ARM: multi_v7_defconfig: add MACH_ARTPEC6
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.6
+		contains depends/rtc-max77802
+	at91/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.6-defconfig
+	socfpga/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_defconfig_for_v4.6
+	patch
+		ARM: multi_v7_defconfig: enable useful configurations for Vybrid
+		ARM: multi_v5_defconfig: Cleanup multi_v5_defconfig
+		ARM: multi_v5_defconfig: Enable initramfs support
+	broadcom/defconfig
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.6/defconfig
+	marvell/defconfig
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-4.6-2
+	sunxi/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-defconfig-for-4.6
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.6
+	omap/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.6/defconfig-signed
+	stm32/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/mcoquelin/stm32 tags/stm32-defconfig-for-v4.6-1
+
+next/drivers
+	rockchip/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.6-rockchip-drivers1
+	samsung/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-4.6
+	scpi/updates
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/scpi-for-v4.6/updates
+	at91/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.6-drivers
+	drivers/reset
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.6
+	sunxi/drivers
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-drivers-for-4.6
+	omap/gpmc
+		https://github.com/rogerq/linux tags/gpmc-omap-for-v4.6
+	patch
+		bus: imx-weim: Take the 'status' property value into account
+
+next/dt2
+	imx/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.6
+		contains imx/clk
+	patch
+		arm64: dts: uniphier: rename PH1-LD10 to PH1-LD20
+		ARM: dts: uniphier: factor out ranges property of support card
+		ARM: dts: uniphier: rework UniPhier System Bus nodes
+		ARM: dts: uniphier: add reference clock nodes
+		ARM: dts: uniphier: add EEPROM node for ProXstream2 Gentil board
+		ARM: dts: uniphier: enable I2C channel 2 of ProXstream2 Gentil board
+		ARM: dts: uniphier: add PH1-Pro4 Ace board support
+		ARM: dts: uniphier: add PH1-Pro4 Sanji board support
+		ARM: dts: uniphier: add @{address} to EEPROM node
+		ARM: dts: uniphier: add pinmux node for I2C ch4
