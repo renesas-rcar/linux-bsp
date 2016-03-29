@@ -134,17 +134,19 @@ static bool rcar_gen3_check_vbus(struct rcar_gen3_chan *ch)
 		  USB2_ADPCTRL_OTGSESSVLD);
 }
 
-static void rcar_gen3_init_for_host(struct rcar_gen3_chan *ch)
+static void rcar_gen3_init_for_host(struct rcar_gen3_chan *ch, bool cable)
 {
 	rcar_gen3_set_linectrl(ch, 1, 1);
 	rcar_gen3_set_host_mode(ch, 1);
 	rcar_gen3_enable_vbus_ctrl(ch, 1);
 
-	extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, true);
-	extcon_set_cable_state_(ch->extcon, EXTCON_USB, false);
+	if (cable) {
+		extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, true);
+		extcon_set_cable_state_(ch->extcon, EXTCON_USB, false);
+	}
 }
 
-static void rcar_gen3_init_for_peri(struct rcar_gen3_chan *ch)
+static void rcar_gen3_init_for_peri(struct rcar_gen3_chan *ch, bool cable)
 {
 	rcar_gen3_set_linectrl(ch, 0, 1);
 	rcar_gen3_set_host_mode(ch, 0);
@@ -157,8 +159,10 @@ static void rcar_gen3_init_for_peri(struct rcar_gen3_chan *ch)
 			usb_gadget_vbus_disconnect(ch->usb_phy.otg->gadget);
 	}
 
-	extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, false);
-	extcon_set_cable_state_(ch->extcon, EXTCON_USB, true);
+	if (cable) {
+		extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, false);
+		extcon_set_cable_state_(ch->extcon, EXTCON_USB, true);
+	}
 }
 
 static bool rcar_gen3_check_id(struct rcar_gen3_chan *ch)
@@ -195,9 +199,9 @@ static int rcar_gen3_phy_usb2_set_peripheral(struct usb_otg *otg,
 static void rcar_gen3_device_recognition(struct rcar_gen3_chan *ch)
 {
 	if (!rcar_gen3_check_id(ch))
-		rcar_gen3_init_for_host(ch);
+		rcar_gen3_init_for_host(ch, true);
 	else
-		rcar_gen3_init_for_peri(ch);
+		rcar_gen3_init_for_peri(ch, true);
 }
 
 static void rcar_gen3_init_otg(struct rcar_gen3_chan *ch)
