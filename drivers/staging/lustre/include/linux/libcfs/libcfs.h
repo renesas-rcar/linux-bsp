@@ -60,27 +60,6 @@
 #define LNET_ACCEPTOR_MAX_RESERVED_PORT    1023
 
 /*
- * libcfs pseudo device operations
- *
- * It's just draft now.
- */
-
-struct cfs_psdev_file {
-	unsigned long   off;
-	void	    *private_data;
-	unsigned long   reserved1;
-	unsigned long   reserved2;
-};
-
-struct cfs_psdev_ops {
-	int (*p_open)(unsigned long, void *);
-	int (*p_close)(unsigned long, void *);
-	int (*p_read)(struct cfs_psdev_file *, char *, unsigned long);
-	int (*p_write)(struct cfs_psdev_file *, char *, unsigned long);
-	int (*p_ioctl)(struct cfs_psdev_file *, unsigned long, void __user *);
-};
-
-/*
  * Drop into debugger, if possible. Implementation is provided by platform.
  */
 
@@ -119,6 +98,25 @@ void cfs_get_random_bytes(void *buf, int size);
 #include "libcfs_fail.h"
 #include "libcfs_crypto.h"
 
+struct libcfs_ioctl_handler {
+	struct list_head item;
+	int (*handle_ioctl)(unsigned int cmd, struct libcfs_ioctl_hdr *hdr);
+};
+
+#define DECLARE_IOCTL_HANDLER(ident, func)			\
+	struct libcfs_ioctl_handler ident = {			\
+		.item		= LIST_HEAD_INIT(ident.item),	\
+		.handle_ioctl	= func				\
+	}
+
+int libcfs_register_ioctl(struct libcfs_ioctl_handler *hand);
+int libcfs_deregister_ioctl(struct libcfs_ioctl_handler *hand);
+
+int libcfs_ioctl_getdata(struct libcfs_ioctl_hdr **hdr_pp,
+			 const struct libcfs_ioctl_hdr __user *uparam);
+int libcfs_ioctl_data_adjust(struct libcfs_ioctl_data *data);
+int libcfs_ioctl(unsigned long cmd, void *arg);
+
 /* container_of depends on "likely" which is defined in libcfs_private.h */
 static inline void *__container_of(void *ptr, unsigned long shift)
 {
@@ -142,8 +140,6 @@ extern struct miscdevice libcfs_dev;
  */
 extern char lnet_upcall[1024];
 extern char lnet_debug_log_upcall[1024];
-
-extern struct cfs_psdev_ops libcfs_psdev_ops;
 
 extern struct cfs_wi_sched *cfs_sched_rehash;
 

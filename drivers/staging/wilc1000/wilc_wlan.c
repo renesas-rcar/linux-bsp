@@ -150,11 +150,6 @@ static u32 pending_base;
 static u32 tcp_session;
 static u32 pending_acks;
 
-static inline int init_tcp_tracking(void)
-{
-	return 0;
-}
-
 static inline int add_tcp_session(u32 src_prt, u32 dst_prt, u32 seq)
 {
 	if (tcp_session < 2 * MAX_TCP_SESSION) {
@@ -626,13 +621,12 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 
 			if ((reg & 0x1) == 0) {
 				break;
-			} else {
-				counter++;
-				if (counter > 200) {
-					counter = 0;
-					ret = wilc->hif_func->hif_write_reg(wilc, WILC_HOST_TX_CTRL, 0);
-					break;
-				}
+			}
+			counter++;
+			if (counter > 200) {
+				counter = 0;
+				ret = wilc->hif_func->hif_write_reg(wilc, WILC_HOST_TX_CTRL, 0);
+				break;
 			}
 		} while (!wilc->quit);
 
@@ -658,9 +652,8 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 				if ((reg >> 2) & 0x1) {
 					entries = ((reg >> 3) & 0x3f);
 					break;
-				} else {
-					release_bus(wilc, RELEASE_ALLOW_SLEEP);
 				}
+				release_bus(wilc, RELEASE_ALLOW_SLEEP);
 			} while (--timeout);
 			if (timeout <= 0) {
 				ret = wilc->hif_func->hif_write_reg(wilc, WILC_HOST_VMM_CTL, 0x0);
@@ -679,9 +672,8 @@ int wilc_wlan_handle_txq(struct net_device *dev, u32 *txq_count)
 				if (!ret)
 					break;
 				break;
-			} else {
-				break;
 			}
+			break;
 		} while (1);
 
 		if (!ret)
@@ -900,8 +892,6 @@ static void wilc_wlan_handle_isr_ext(struct wilc *wilc, u32 int_status)
 					      DATA_INT_CLR | ENABLE_RX_VMM);
 		ret = wilc->hif_func->hif_block_rx_ext(wilc, 0, buffer, size);
 
-		if (!ret)
-			goto _end_;
 _end_:
 		if (ret) {
 			offset += size;
@@ -951,10 +941,8 @@ int wilc_wlan_firmware_download(struct wilc *wilc, const u8 *buffer,
 	blksz = BIT(12);
 
 	dma_buffer = kmalloc(blksz, GFP_KERNEL);
-	if (!dma_buffer) {
-		ret = -EIO;
-		goto _fail_1;
-	}
+	if (!dma_buffer)
+		return -EIO;
 
 	offset = 0;
 	do {
@@ -991,8 +979,6 @@ int wilc_wlan_firmware_download(struct wilc *wilc, const u8 *buffer,
 _fail_:
 
 	kfree(dma_buffer);
-
-_fail_1:
 
 	return (ret < 0) ? ret : 0;
 }
@@ -1440,7 +1426,6 @@ int wilc_wlan_init(struct net_device *dev)
 		ret = -EIO;
 		goto _fail_;
 	}
-	init_tcp_tracking();
 
 	return 1;
 

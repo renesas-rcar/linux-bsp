@@ -11,11 +11,6 @@
  * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110, USA
- *
- *
  ******************************************************************************/
 #define _HCI_HAL_INIT_C_
 
@@ -2083,7 +2078,7 @@ void rtl8188eu_set_hal_ops(struct adapter *adapt)
 
 
 	adapt->HalData = kzalloc(sizeof(struct hal_data_8188e), GFP_KERNEL);
-	if (adapt->HalData == NULL)
+	if (!adapt->HalData)
 		DBG_88E("cant not alloc memory for HAL DATA\n");
 
 	halfunc->hal_power_on = rtl8188eu_InitPowerOn;

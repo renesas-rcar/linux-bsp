@@ -12,19 +12,15 @@
 #include <linux/sysfs.h>
 #include <linux/i2c.h>
 #include <linux/regulator/consumer.h>
-#include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/err.h>
 #include <linux/delay.h>
 #include <linux/module.h>
-#include <asm/div64.h>
 
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
 #include <linux/iio/buffer.h>
 #include <linux/iio/kfifo_buf.h>
-
-#include "ad5933.h"
 
 /* AD5933/AD5934 Registers */
 #define AD5933_REG_CONTROL_HB		0x80	/* R/W, 2 bytes */
@@ -85,6 +81,18 @@
 
 #define AD5933_POLL_TIME_ms		10
 #define AD5933_INIT_EXCITATION_TIME_ms	100
+
+/**
+ * struct ad5933_platform_data - platform specific data
+ * @ext_clk_Hz:		the external clock frequency in Hz, if not set
+ *			the driver uses the internal clock (16.776 MHz)
+ * @vref_mv:		the external reference voltage in millivolt
+ */
+
+struct ad5933_platform_data {
+	unsigned long			ext_clk_Hz;
+	unsigned short			vref_mv;
+};
 
 struct ad5933_state {
 	struct i2c_client		*client;
@@ -307,10 +315,10 @@ static ssize_t ad5933_show_frequency(struct device *dev,
 
 	freqreg = be32_to_cpu(dat.d32) & 0xFFFFFF;
 
-	freqreg = (u64) freqreg * (u64) (st->mclk_hz / 4);
+	freqreg = (u64)freqreg * (u64)(st->mclk_hz / 4);
 	do_div(freqreg, 1 << 27);
 
-	return sprintf(buf, "%d\n", (int) freqreg);
+	return sprintf(buf, "%d\n", (int)freqreg);
 }
 
 static ssize_t ad5933_store_frequency(struct device *dev,
@@ -358,7 +366,7 @@ static ssize_t ad5933_show(struct device *dev,
 	int ret = 0, len = 0;
 
 	mutex_lock(&indio_dev->mlock);
-	switch ((u32) this_attr->address) {
+	switch ((u32)this_attr->address) {
 	case AD5933_OUT_RANGE:
 		len = sprintf(buf, "%u\n",
 			      st->range_avail[(st->ctrl_hb >> 1) & 0x3]);
@@ -409,7 +417,7 @@ static ssize_t ad5933_store(struct device *dev,
 	}
 
 	mutex_lock(&indio_dev->mlock);
-	switch ((u32) this_attr->address) {
+	switch ((u32)this_attr->address) {
 	case AD5933_OUT_RANGE:
 		for (i = 0; i < 4; i++)
 			if (val == st->range_avail[i]) {
@@ -683,8 +691,9 @@ static void ad5933_work(struct work_struct *work)
 	}
 
 	if (status & AD5933_STAT_SWEEP_DONE) {
-		/* last sample received - power down do nothing until
-		 * the ring enable is toggled */
+		/* last sample received - power down do
+		 * nothing until the ring enable is toggled
+		 */
 		ad5933_cmd(st, AD5933_CTRL_POWER_DOWN);
 	} else {
 		/* we just received a valid datum, move on to the next */
@@ -699,7 +708,7 @@ static int ad5933_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
 	int ret, voltage_uv = 0;
-	struct ad5933_platform_data *pdata = client->dev.platform_data;
+	struct ad5933_platform_data *pdata = dev_get_platdata(&client->dev);
 	struct ad5933_state *st;
 	struct iio_dev *indio_dev;
 

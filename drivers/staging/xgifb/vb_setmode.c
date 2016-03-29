@@ -3450,8 +3450,9 @@ static void XGI_SetGroup2(unsigned short ModeNo, unsigned short ModeIdIndex,
 			if (!(pVBInfo->TVInfo &
 			    (TVSetYPbPr525p | TVSetYPbPr750p)))
 				tempbx >>= 1;
-		} else
+		} else {
 			tempbx >>= 1;
+		}
 	}
 
 	tempbx -= 2;
@@ -3839,9 +3840,9 @@ static void XGI_SetLCDRegs(unsigned short ModeIdIndex,
 		if (pVBInfo->VGAVDE == 525) {
 			if (pVBInfo->VBType & (VB_SIS301B | VB_SIS302B
 					| VB_SIS301LV | VB_SIS302LV
-					| VB_XGI301C)) {
+					| VB_XGI301C))
 				temp = 0xC6;
-			} else
+			else
 				temp = 0xC4;
 
 			xgifb_reg_set(pVBInfo->Part2Port, 0x2f, temp);
@@ -3851,9 +3852,9 @@ static void XGI_SetLCDRegs(unsigned short ModeIdIndex,
 		if (pVBInfo->VGAVDE == 420) {
 			if (pVBInfo->VBType & (VB_SIS301B | VB_SIS302B
 					| VB_SIS301LV | VB_SIS302LV
-					| VB_XGI301C)) {
+					| VB_XGI301C))
 				temp = 0x4F;
-			} else
+			else
 				temp = 0x4E;
 			xgifb_reg_set(pVBInfo->Part2Port, 0x2f, temp);
 		}

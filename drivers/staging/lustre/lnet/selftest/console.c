@@ -277,7 +277,7 @@ lstcon_group_find(const char *name, lstcon_group_t **grpp)
 		if (strncmp(grp->grp_name, name, LST_NAME_SIZE))
 			continue;
 
-		lstcon_group_addref(grp);  /* +1 ref for caller */
+		lstcon_group_addref(grp); /* +1 ref for caller */
 		*grpp = grp;
 		return 0;
 	}
@@ -733,7 +733,7 @@ lstcon_group_list(int index, int len, char __user *name_up)
 	list_for_each_entry(grp, &console_session.ses_grp_list, grp_link) {
 		if (!index--) {
 			return copy_to_user(name_up, grp->grp_name, len) ?
-			       -EFAULT : 0;
+					    -EFAULT : 0;
 		}
 	}
 
@@ -977,7 +977,6 @@ lstcon_batch_info(char *name, lstcon_test_batch_ent_t __user *ent_up,
 	if (!test) {
 		entp->u.tbe_batch.bae_ntest = bat->bat_ntest;
 		entp->u.tbe_batch.bae_state = bat->bat_state;
-
 	} else {
 		entp->u.tbe_test.tse_type = test->tes_type;
 		entp->u.tbe_test.tse_loop = test->tes_loop;
@@ -1423,7 +1422,6 @@ lstcon_test_batch_query(char *name, int testidx, int client,
 		translist = &batch->bat_trans_list;
 		ndlist = &batch->bat_cli_list;
 		hdr = &batch->bat_hdr;
-
 	} else {
 		/* query specified test only */
 		rc = lstcon_test_find(batch, testidx, &test);
@@ -1448,7 +1446,8 @@ lstcon_test_batch_query(char *name, int testidx, int client,
 
 	lstcon_rpc_trans_postwait(trans, timeout);
 
-	if (!testidx && /* query a batch, not a test */
+	/* query a batch, not a test */
+	if (!testidx &&
 	    !lstcon_rpc_stat_failure(lstcon_trans_stat(), 0) &&
 	    !lstcon_tsbqry_stat_run(lstcon_trans_stat(), 0)) {
 		/* all RPCs finished, and no active test */
@@ -1749,7 +1748,7 @@ lstcon_session_new(char *name, int key, unsigned feats,
 
 	if (strlen(name) > sizeof(console_session.ses_name) - 1)
 		return -E2BIG;
-	strncpy(console_session.ses_name, name,
+	strlcpy(console_session.ses_name, name,
 		sizeof(console_session.ses_name));
 
 	rc = lstcon_batch_add(LST_DEFAULT_BATCH);
