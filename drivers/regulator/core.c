@@ -906,7 +906,8 @@ static int machine_constraints_voltage(struct regulator_dev *rdev,
 
 	/* do we need to apply the constraint voltage */
 	if (rdev->constraints->apply_uV &&
-	    rdev->constraints->min_uV == rdev->constraints->max_uV) {
+	    rdev->constraints->min_uV && rdev->constraints->max_uV) {
+		int target_min, target_max;
 		int current_uV = _regulator_get_voltage(rdev);
 		if (current_uV < 0) {
 			rdev_err(rdev,
@@ -914,15 +915,32 @@ static int machine_constraints_voltage(struct regulator_dev *rdev,
 				 current_uV);
 			return current_uV;
 		}
-		if (current_uV < rdev->constraints->min_uV ||
-		    current_uV > rdev->constraints->max_uV) {
+
+		/*
+		 * If we're below the minimum voltage move up to the
+		 * minimum voltage, if we're above the maximum voltage
+		 * then move down to the maximum.
+		 */
+		target_min = current_uV;
+		target_max = current_uV;
+
+		if (current_uV < rdev->constraints->min_uV) {
+			target_min = rdev->constraints->min_uV;
+			target_max = rdev->constraints->min_uV;
+		}
+
+		if (current_uV > rdev->constraints->max_uV) {
+			target_min = rdev->constraints->max_uV;
+			target_max = rdev->constraints->max_uV;
+		}
+
+		if (target_min != current_uV || target_max != current_uV) {
 			ret = _regulator_do_set_voltage(
-				rdev, rdev->constraints->min_uV,
-				rdev->constraints->max_uV);
+				rdev, target_min, target_max);
 			if (ret < 0) {
 				rdev_err(rdev,
-					"failed to apply %duV constraint(%d)\n",
-					rdev->constraints->min_uV, ret);
+					"failed to apply %d-%duV constraint(%d)\n",
+					target_min, target_max, ret);
 				return ret;
 			}
 		}
@@ -1135,17 +1153,6 @@ static int set_machine_constraints(struct regulator_dev *rdev,
 		ret = ops->set_over_current_protection(rdev);
 		if (ret < 0) {
 			rdev_err(rdev, "failed to set over current protection\n");
-			return ret;
-		}
-	}
-
-	if (rdev->constraints->active_discharge && ops->set_active_discharge) {
-		bool ad_state = (rdev->constraints->active_discharge ==
-			      REGULATOR_ACTIVE_DISCHARGE_ENABLE) ? true : false;
-
-		ret = ops->set_active_discharge(rdev, ad_state);
-		if (ret < 0) {
-			rdev_err(rdev, "failed to set active discharge\n");
 			return ret;
 		}
 	}
@@ -1532,7 +1539,7 @@ static int regulator_resolve_supply(struct regulator_dev *rdev)
 	}
 
 	/* Cascade always-on state to supply */
-	if (_regulator_is_enabled(rdev) && rdev->supply) {
+	if (_regulator_is_enabled(rdev)) {
 		ret = regulator_enable(rdev->supply);
 		if (ret < 0) {
 			_regulator_put(rdev->supply);
