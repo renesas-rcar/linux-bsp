@@ -188,7 +188,7 @@
 			interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 207>;
 			clock-names = "fck";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -198,7 +198,7 @@
 			interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 206>;
 			clock-names = "fck";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -208,7 +208,7 @@
 			interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 310>;
 			clock-names = "fck";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -218,7 +218,7 @@
 			interrupts = <GIC_SPI 23 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 204>;
 			clock-names = "fck";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -228,7 +228,7 @@
 			interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 203>;
 			clock-names = "fck";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 
@@ -238,7 +238,7 @@
 			interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 202>;
 			clock-names = "fck";
-			power-domains = <&cpg>;
+			power-domains = <&pd_always_on>;
 			status = "disabled";
 		};
 	};
