@@ -135,7 +135,7 @@ void media_snd_stream_delete(struct snd_usb_substream *subs)
 	if (mctl && mctl->media_dev) {
 		struct media_device *mdev;
 
-		mdev = subs->stream->chip->media_dev;
+		mdev = mctl->media_dev;
 		if (mdev && media_devnode_is_registered(&mdev->devnode)) {
 			media_devnode_remove(mctl->intf_devnode);
 			media_device_unregister_entity(&mctl->media_entity);
@@ -263,19 +263,11 @@ int media_snd_device_create(struct snd_usb_audio *chip,
 	mdev = media_device_get_devres(&usbdev->dev);
 	if (!mdev)
 		return -ENOMEM;
-	if (!mdev->dev) {
-		/* register media device */
-		mdev->dev = &usbdev->dev;
-		if (usbdev->product)
-			strlcpy(mdev->model, usbdev->product,
-				sizeof(mdev->model));
-		if (usbdev->serial)
-			strlcpy(mdev->serial, usbdev->serial,
-				sizeof(mdev->serial));
-		strcpy(mdev->bus_info, usbdev->devpath);
-		mdev->hw_revision = le16_to_cpu(usbdev->descriptor.bcdDevice);
-		media_device_init(mdev);
-	}
+
+	/* Initialize media device */
+	if (!mdev->dev)
+		media_device_usb_init(mdev, usbdev, NULL);
+
 	if (!media_devnode_is_registered(&mdev->devnode)) {
 		ret = media_device_register(mdev);
 		if (ret) {
@@ -307,12 +299,18 @@ int media_snd_device_create(struct snd_usb_audio *chip,
 void media_snd_device_delete(struct snd_usb_audio *chip)
 {
 	struct media_device *mdev = chip->media_dev;
+	struct snd_usb_stream *stream;
+
+	/* release resources */
+	list_for_each_entry(stream, &chip->pcm_list, list) {
+		media_snd_stream_delete(&stream->substream[0]);
+		media_snd_stream_delete(&stream->substream[1]);
+	}
 
 	media_snd_mixer_delete(chip);
 
 	if (mdev) {
-		if (media_devnode_is_registered(&mdev->devnode))
-			media_device_unregister(mdev);
+		media_device_unregister_devres(mdev);
 		chip->media_dev = NULL;
 	}
 }
