@@ -489,6 +489,11 @@
 	};
 };
 
+&adsp {
+	status = "okay";
+	memory-region = <&adsp_reserved>;
+};
+
 &scif1 {
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
