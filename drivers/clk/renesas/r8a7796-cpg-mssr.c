@@ -108,6 +108,8 @@ static const struct cpg_core_clk r8a7796_core_clks[] __initconst = {
 
 	DEF_DIV6_RO("osc",      R8A7796_CLK_OSC,   CLK_EXTAL, CPG_RCKCR, 8),
 	DEF_DIV6_RO("r_int",    CLK_RINT,          CLK_EXTAL, CPG_RCKCR, 32),
+
+	DEF_BASE("r",           R8A7796_CLK_R, CLK_TYPE_GEN3_R, CLK_RINT),
 };
 
 static const struct mssr_mod_clk r8a7796_mod_clks[] __initconst = {
