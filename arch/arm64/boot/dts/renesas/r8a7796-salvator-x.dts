@@ -161,7 +161,7 @@
 		clock-frequency = <33000000>;
 	};
 
-	dclkin_p2: programmable_clock1 {
+	dclkin2: programmable_clock1 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <108000000>;
@@ -253,11 +253,12 @@
 			#clock-cells = <0>;
 			clocks = <&dclkin_p0>;
 		};
-
-		dclkin2: 5p49v5923a_clk2@6a {
-			#clock-cells = <0>;
-			clocks = <&dclkin_p2>;
-		};
+/*
+ *		dclkin2: 5p49v5923a_clk2@6a {
+ *			#clock-cells = <0>;
+ *			clocks = <&dclkin_p2>;
+ *		};
+ */
 	};
 };
 
