@@ -150,6 +150,10 @@
 		};
 	};
 
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+
 	lvds-encoder {
 		compatible = "thine,thc63lvdm83d";
 
@@ -954,5 +958,17 @@
 	vmmc-supply = <&fixedregulator3v3>;
 	vqmmc-supply = <&fixedregulator1v8>;
 	bus-width = <8>;
+	status = "okay";
+};
+
+&fdp0 {
+	status = "okay";
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
 	status = "okay";
 };
