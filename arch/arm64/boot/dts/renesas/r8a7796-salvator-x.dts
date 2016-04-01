@@ -234,6 +234,10 @@
 		};
 	};
 
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+
 	lvds-encoder {
 		compatible = "thine,thc63lvdm83d";
 
@@ -894,6 +898,14 @@
 };
 
 &pciec1 {
+	status = "okay";
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
 	status = "okay";
 };
 
