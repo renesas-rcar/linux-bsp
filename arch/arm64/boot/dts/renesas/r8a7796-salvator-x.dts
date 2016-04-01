@@ -217,6 +217,10 @@
 		};
 	};
 
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+
 	lvds-encoder {
 		compatible = "thine,thc63lvdm83d";
 
@@ -994,4 +998,12 @@
 			remote-endpoint = <&adv7482_rxb_out>;
 		};
 	};
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
 };
