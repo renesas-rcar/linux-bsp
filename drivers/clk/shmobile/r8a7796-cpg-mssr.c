@@ -65,6 +65,7 @@ enum r8a7796_clk_types {
 	CLK_TYPE_GEN3_PLL3,
 	CLK_TYPE_GEN3_PLL4,
 	CLK_TYPE_GEN3_Z,
+	CLK_TYPE_GEN3_Z2,
 };
 
 static const struct cpg_core_clk r8a7796_core_clks[] __initconst = {
@@ -80,6 +81,7 @@ static const struct cpg_core_clk r8a7796_core_clks[] __initconst = {
 	DEF_BASE(".pll3",       CLK_PLL3, CLK_TYPE_GEN3_PLL3, CLK_MAIN),
 	DEF_BASE(".pll4",       CLK_PLL4, CLK_TYPE_GEN3_PLL4, CLK_MAIN),
 	DEF_BASE("z",           R8A7796_CLK_Z,   CLK_TYPE_GEN3_Z,   CLK_PLL0),
+	DEF_BASE("z2",          R8A7796_CLK_Z2,  CLK_TYPE_GEN3_Z2,  CLK_PLL2),
 
 	DEF_FIXED(".pll1_div2", CLK_PLL1_DIV2,     CLK_PLL1,       2, 1),
 	DEF_FIXED(".pll1_div4", CLK_PLL1_DIV4,     CLK_PLL1_DIV2,  2, 1),
@@ -164,7 +166,7 @@ static const unsigned int r8a7796_crit_mod_clks[] __initconst = {
 #define CPG_PLL2CR	0x002c
 #define CPG_PLL4CR	0x01f4
 
-/** Implementation of customized clocks (Z-clk) for CPUFreq
+/** Implementation of customized clocks (Z-clk, Z2-clk) for CPUFreq
  *
  * Traits of this clock:
  * prepare - clk_prepare only ensures that parents are prepared
@@ -177,6 +179,7 @@ static const unsigned int r8a7796_crit_mod_clks[] __initconst = {
 #define CPG_FRQCRC				0x000000e0
 #define CPG_FRQCRC_ZFC_MASK		(0x1f << 8)
 #define CPG_FRQCRC_ZFC_SHIFT	8
+#define CPG_FRQCRC_Z2FC_MASK		0x1f
 
 /* Z-clk driver source code */
 struct cpg_z_clk {
@@ -300,7 +303,79 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 
 	return clk;
 }
-/** End of modifying for Z-clock */
+
+/* Z2 clk driver code */
+static unsigned long cpg_z2_clk_recalc_rate(struct clk_hw *hw,
+					   unsigned long parent_rate)
+{
+	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned int mult;
+	unsigned int val;
+	unsigned long rate;
+
+	val = (clk_readl(zclk->reg) & CPG_FRQCRC_Z2FC_MASK);
+	mult = 32 - val;
+
+	rate = div_u64((u64)parent_rate * mult + 16, 32);
+	/* Round to closest value at 100MHz unit */
+	rate = 100000000 * DIV_ROUND_CLOSEST(rate, 100000000);
+	return rate;
+}
+
+static long cpg_z2_clk_round_rate(struct clk_hw *hw, unsigned long rate,
+				unsigned long *parent_rate)
+{
+	unsigned long prate  = *parent_rate;
+	unsigned int mult;
+
+	mult = div_u64((u64)rate * 32 + prate/2, prate);
+	mult = clamp(mult, 1U, 32U);
+
+	return prate / 32 * mult;
+}
+
+static int cpg_z2_clk_set_rate(struct clk_hw *hw, unsigned long rate,
+			      unsigned long parent_rate)
+{
+	pr_info("Do not support Z2 clock changing\n");
+	return 0;
+}
+
+static const struct clk_ops cpg_z2_clk_ops = {
+	.recalc_rate = cpg_z2_clk_recalc_rate,
+	.round_rate = cpg_z2_clk_round_rate,
+	.set_rate = cpg_z2_clk_set_rate,
+};
+
+static struct clk * __init cpg_z2_clk_register(const char *name,
+					      const char *parent_name,
+					      void __iomem *reg)
+{
+	struct clk_init_data init;
+	struct cpg_z_clk *zclk;
+	struct clk *clk;
+
+	zclk = kzalloc(sizeof(*zclk), GFP_KERNEL);
+	if (!zclk)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = name;
+	init.ops = &cpg_z2_clk_ops;
+	init.flags = 0;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+
+	zclk->reg = reg + CPG_FRQCRC;
+	zclk->kick_reg = reg + CPG_FRQCRB;
+	zclk->hw.init = &init;
+
+	clk = clk_register(NULL, &zclk->hw);
+	if (IS_ERR(clk))
+		kfree(zclk);
+
+	return clk;
+}
+/** End of modifying for Z-clock, Z2-clock */
 
 /*
  * CPG Clock Data
@@ -424,6 +499,10 @@ struct clk * __init r8a7796_cpg_clk_register(struct device *dev,
 
 	case CLK_TYPE_GEN3_Z:
 		return cpg_z_clk_register(core->name, __clk_get_name(parent),
+					   base);
+
+	case CLK_TYPE_GEN3_Z2:
+		return cpg_z2_clk_register(core->name, __clk_get_name(parent),
 					   base);
 
 	default:
