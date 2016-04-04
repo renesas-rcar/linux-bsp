@@ -1002,14 +1002,14 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 	case V4L2_PIX_FMT_RGB565:
 		dmr = 0;
 		break;
-	case V4L2_PIX_FMT_RGB32:
+	case V4L2_PIX_FMT_XBGR32:
 		if (priv->chip == RCAR_H3 || priv->chip == RCAR_M3 ||
 		    priv->chip == RCAR_GEN2 || priv->chip == RCAR_H1 ||
 		    priv->chip == RCAR_E1) {
 			dmr = VNDMR_EXRGB;
 			break;
 		}
-	case V4L2_PIX_FMT_ARGB32:
+	case V4L2_PIX_FMT_ABGR32:
 		if (priv->chip == RCAR_H3 || priv->chip == RCAR_M3)
 			dmr = VNDMR_EXRGB | VNDMR_DTMD_ARGB;
 		else {
@@ -1549,7 +1549,7 @@ static int rcar_vin_set_rect(struct soc_camera_device *icd)
 	left_offset = cam->vin_left;
 	top_offset = cam->vin_top;
 
-	if (icd->current_fmt->host_fmt->fourcc == V4L2_PIX_FMT_RGB32 &&
+	if (icd->current_fmt->host_fmt->fourcc == V4L2_PIX_FMT_XBGR32 &&
 	    priv->chip == RCAR_E1)
 		dsize = 1;
 
@@ -1840,7 +1840,7 @@ static const struct soc_mbus_pixelfmt rcar_vin_formats[] = {
 		.layout			= SOC_MBUS_LAYOUT_PACKED,
 	},
 	{
-		.fourcc			= V4L2_PIX_FMT_RGB32,
+		.fourcc			= V4L2_PIX_FMT_XBGR32,
 		.name			= "RGB888",
 		.bits_per_sample	= 32,
 		.packing		= SOC_MBUS_PACKING_NONE,
@@ -1848,7 +1848,7 @@ static const struct soc_mbus_pixelfmt rcar_vin_formats[] = {
 		.layout			= SOC_MBUS_LAYOUT_PACKED,
 	},
 	{
-		.fourcc			= V4L2_PIX_FMT_ARGB32,
+		.fourcc			= V4L2_PIX_FMT_ABGR32,
 		.name			= "ARGB8888",
 		.bits_per_sample	= 32,
 		.packing		= SOC_MBUS_PACKING_NONE,
@@ -2458,10 +2458,10 @@ static int rcar_vin_set_fmt(struct soc_camera_device *icd,
 	mf.code	 = xlate->code;
 
 	switch (pixfmt) {
-	case V4L2_PIX_FMT_RGB32:
+	case V4L2_PIX_FMT_XBGR32:
 		can_scale = priv->chip != RCAR_E1;
 		break;
-	case V4L2_PIX_FMT_ARGB32:
+	case V4L2_PIX_FMT_ABGR32:
 	case V4L2_PIX_FMT_UYVY:
 	case V4L2_PIX_FMT_YUYV:
 	case V4L2_PIX_FMT_RGB565:
