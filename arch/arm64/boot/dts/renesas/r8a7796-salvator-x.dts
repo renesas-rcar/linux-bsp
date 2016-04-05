@@ -73,6 +73,13 @@
 			reg = <0x00000000 0x58000000 0x0 0x18000000>;
 			linux,cma-default;
 		};
+
+		/* device specific region for contiguous allocations */
+		linux,multimedia {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x70000000 0x0 0x10000000>;
+		};
 	};
 
 	x12_clk: x12_clk {
