@@ -2,3 +2,4 @@ obj-y	:= board.o
 obj-$(CONFIG_ARCH_EMEV2)	+= kzm9d.o
 obj-$(CONFIG_ARCH_R8A7740)	+= armadillo800eva.o
 obj-$(CONFIG_ARCH_R8A7795)	+= salvator-x.o
+obj-$(CONFIG_ARCH_R8A7796)	+= salvator-x.o
