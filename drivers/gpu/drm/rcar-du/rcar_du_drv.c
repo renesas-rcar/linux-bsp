@@ -333,7 +333,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 	rcdu->mmio = devm_ioremap_resource(&pdev->dev, mem);
 	if (IS_ERR(rcdu->mmio)) {
 		ret = PTR_ERR(rcdu->mmio);
-		goto error;
+		goto error_dev;
 	}
 
 	/* Initialize vertical blanking interrupts handling. Start with vblank
@@ -342,14 +342,17 @@ static int rcar_du_probe(struct platform_device *pdev)
 	ret = drm_vblank_init(ddev, (1 << rcdu->info->num_crtcs) - 1);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to initialize vblank\n");
-		goto error;
+		goto error_dev;
 	}
 
 	/* DRM/KMS objects */
 	ret = rcar_du_modeset_init(rcdu);
 	if (ret < 0) {
+		/* modeset_init could have failed partway through and doesn't
+		 * do its own cleanup, so needs to be completely undone.
+		 */
 		dev_err(&pdev->dev, "failed to initialize DRM/KMS (%d)\n", ret);
-		goto error;
+		goto error_modeset;
 	}
 
 	ddev->irq_enabled = 1;
@@ -359,7 +362,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 	 */
 	ret = drm_dev_register(ddev, 0);
 	if (ret)
-		goto error;
+		goto error_modeset;
 
 	mutex_lock(&ddev->mode_config.mutex);
 	drm_for_each_connector(connector, ddev) {
@@ -369,15 +372,30 @@ static int rcar_du_probe(struct platform_device *pdev)
 	}
 	mutex_unlock(&ddev->mode_config.mutex);
 
+	/* One or more connects could have been registered, so unregister all
+	 * connectors.
+	 */
 	if (ret < 0)
-		goto error;
+		goto error_connector;
 
 	DRM_INFO("Device %s probed\n", dev_name(&pdev->dev));
 
 	return 0;
 
-error:
-	rcar_du_remove(pdev);
+error_connector:
+	drm_connector_unregister_all(ddev);
+	drm_dev_unregister(ddev);
+
+error_modeset:
+	if (rcdu->fbdev)
+		drm_fbdev_cma_fini(rcdu->fbdev);
+
+	drm_kms_helper_poll_fini(ddev);
+	drm_mode_config_cleanup(ddev);
+	drm_vblank_cleanup(ddev);
+
+error_dev:
+	drm_dev_unref(ddev);
 
 	return ret;
 }
