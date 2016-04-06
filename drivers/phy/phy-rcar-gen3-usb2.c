@@ -204,6 +204,23 @@ static void rcar_gen3_device_recognition(struct rcar_gen3_chan *ch)
 		rcar_gen3_init_for_peri(ch, true);
 }
 
+static ssize_t gadget_store(struct device *dev, struct device_attribute *attr,
+			    const char *buf, size_t count)
+{
+	struct rcar_gen3_chan *ch = dev_get_drvdata(dev);
+
+	if (!rcar_gen3_check_vbus(ch))
+		return count;
+
+	if (buf[0] == '0')
+		rcar_gen3_init_for_host(ch, false);
+	else if (buf[0] == '1')
+		rcar_gen3_init_for_peri(ch, false);
+
+	return count;
+}
+static DEVICE_ATTR_WO(gadget);
+
 static void rcar_gen3_init_otg(struct rcar_gen3_chan *ch)
 {
 	void __iomem *usb2_base = ch->base;
@@ -405,6 +422,12 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 			dev_err(dev, "Failed to register usb PHY provider\n");
 			return ret;
 		}
+
+		ret = device_create_file(dev, &dev_attr_gadget);
+		if (ret < 0) {
+			usb_remove_phy(&channel->usb_phy);
+			return ret;
+		}
 	}
 
 	return PTR_ERR_OR_ZERO(provider);
@@ -414,8 +437,10 @@ static int rcar_gen3_phy_usb2_remove(struct platform_device *pdev)
 {
 	struct rcar_gen3_chan *channel = platform_get_drvdata(pdev);
 
-	if (channel->has_otg)
+	if (channel->has_otg) {
+		device_remove_file(&pdev->dev, &dev_attr_gadget);
 		usb_remove_phy(&channel->usb_phy);
+	}
 
 	return 0;
 }
