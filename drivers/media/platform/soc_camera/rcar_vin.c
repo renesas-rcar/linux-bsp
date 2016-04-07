@@ -747,6 +747,8 @@ struct rcar_vin_priv {
 	enum chip_id			chip;
 	unsigned int			max_width;
 	unsigned int			max_height;
+	unsigned int			ratio_h;
+	unsigned int			ratio_v;
 	bool				error_flag;
 	enum csi2_ch			csi_ch;
 	enum csi2_fmt			csi_fmt;
@@ -879,6 +881,10 @@ static int rcar_vin_videobuf_setup(struct vb2_queue *vq,
 		}
 		if (!is_scaling(cam) && (cam->out_width % 16)) {
 			dev_err(icd->parent, "Image stride parameter error\n");
+			return -EINVAL;
+		}
+		if ((priv->ratio_h > 0x10000) || (priv->ratio_v > 0x10000)) {
+			dev_err(icd->parent, "Scaling rate parameter error\n");
 			return -EINVAL;
 		}
 	}
@@ -1437,10 +1443,8 @@ static unsigned long rcar_vin_get_bwidth(unsigned long ratio)
 static unsigned long rcar_vin_compute_ratio(unsigned int input,
 		unsigned int output)
 {
-	if (output > input)
-		return input * 4096 / output;
-	else
-		return (input - 1) * 4096 / (output - 1);
+	return ((input * 4096 / output) == 0x10000) ?
+		 0xFFFF : (input * 4096 / output);
 }
 
 int rcar_vin_uds_set(struct rcar_vin_priv *priv, struct rcar_vin_cam *cam)
@@ -1455,6 +1459,9 @@ int rcar_vin_uds_set(struct rcar_vin_priv *priv, struct rcar_vin_cam *cam)
 
 	ratio_h = rcar_vin_compute_ratio(cam_subrect->width, cam->out_width);
 	ratio_v = rcar_vin_compute_ratio(cam_subrect->height, cam->out_height);
+
+	priv->ratio_h = ratio_h;
+	priv->ratio_v = ratio_v;
 
 	bwidth_h = rcar_vin_get_bwidth(ratio_h);
 	bwidth_v = rcar_vin_get_bwidth(ratio_v);
