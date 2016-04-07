@@ -21,11 +21,11 @@
 #include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <dt-bindings/clock/r8a7795-cpg-mssr.h>
 
 #include "renesas-cpg-mssr.h"
-
 
 enum clk_ids {
 	/* Core Clock Outputs exported to DT */
@@ -132,8 +132,8 @@ static const struct mssr_mod_clk r8a7795_mod_clks[] __initconst = {
 	DEF_MOD("fdp1",			 118,	R8A7795_CLK_S2D1),
 	DEF_MOD("fdp0",			 119,	R8A7795_CLK_S2D1),
 	DEF_MOD("ivdp1c",		 128,	R8A7795_CLK_S2D1),
-	DEF_MOD("vcplf",		 129,	R8A7795_CLK_S2D1),
-	DEF_MOD("vcpl4",		 130,	R8A7795_CLK_S2D1),
+	DEF_MOD("vcpl4",		 129,	R8A7795_CLK_S2D1),
+	DEF_MOD("vcplf",		 130,	R8A7795_CLK_S2D1),
 	DEF_MOD("vdpb",			 131,	R8A7795_CLK_S2D1),
 	DEF_MOD("scif5",		 202,	R8A7795_CLK_S3D4),
 	DEF_MOD("scif4",		 203,	R8A7795_CLK_S3D4),
@@ -156,6 +156,8 @@ static const struct mssr_mod_clk r8a7795_mod_clks[] __initconst = {
 	DEF_MOD("pcie0",		 319,	R8A7795_CLK_S3D1),
 	DEF_MOD("usb3-if1",		 327,	R8A7795_CLK_S3D1),
 	DEF_MOD("usb3-if0",		 328,	R8A7795_CLK_S3D1),
+	DEF_MOD("usb-dmac0",		 330,	R8A7795_CLK_S3D1),
+	DEF_MOD("usb-dmac1",		 331,	R8A7795_CLK_S3D1),
 	DEF_MOD("rwdt",			 402,	R8A7795_CLK_R),
 	DEF_MOD("intc-ap",		 408,	R8A7795_CLK_S3D1),
 	DEF_MOD("audmac0",		 502,	R8A7795_CLK_S3D4),
@@ -499,6 +501,12 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (!prate)
 		prate = 1;
 
+	/* Adjust maximum frequency value on H3 WS10 to 1.9GHz */
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000) {
+		rate = 1900000000;
+	}
+	/* End of adjust freq value */
+
 	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
 		prate = Z_CLK_MAX_THRESHOLD; /* Set parent to: 1.5GHz */
 		mult = div_u64((u64)rate * 32 + prate/2, prate);
@@ -526,6 +534,12 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned int mult;
 	u32 val, kick;
 	unsigned int i;
+
+	/* Adjust maximum frequency value on H3 WS10 to 1.9GHz */
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000) {
+		rate = 1900000000;
+	}
+	/* End of adjust freq value */
 
 	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
 		parent_rate = Z_CLK_MAX_THRESHOLD; /* Set parent to: 1.5GHz */
@@ -1000,6 +1014,8 @@ struct clk * __init r8a7795_cpg_clk_register(struct device *dev,
 	unsigned int mult = 1;
 	unsigned int div = 1;
 	u32 value;
+
+	RCAR_PRR_INIT(); /* Get PRR register value */
 
 	parent = clks[core->parent];
 	if (IS_ERR(parent))
