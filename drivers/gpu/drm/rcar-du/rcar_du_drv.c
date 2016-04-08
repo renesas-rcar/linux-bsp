@@ -22,6 +22,8 @@
 #include <linux/wait.h>
 
 #include <drm/drmP.h>
+#include <drm/drm_atomic.h>
+#include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_encoder_slave.h>
 #include <drm/drm_fb_cma_helper.h>
@@ -149,7 +151,8 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 	.gen = 3,
 	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
 		  | RCAR_DU_FEATURE_EXT_CTRL_REGS
-		  | RCAR_DU_FEATURE_VSP1_SOURCE,
+		  | RCAR_DU_FEATURE_VSP1_SOURCE
+		  | RCAR_DU_FEATURE_DIDSR2_REG,
 	.num_crtcs = 4,
 	.routes = {
 		/* R8A7795 has one RGB output, one LVDS output and two
@@ -180,6 +183,36 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 	.dpll_ch =  BIT(1) | BIT(2),
 };
 
+static const struct rcar_du_device_info rcar_du_r8a7796_info = {
+	.gen = 3,
+	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
+		  | RCAR_DU_FEATURE_EXT_CTRL_REGS
+		  | RCAR_DU_FEATURE_VSP1_SOURCE,
+	.num_crtcs = 3,
+	.routes = {
+		/* R8A7796 has one RGB output, one LVDS output and one
+		 * HDMI outputs.
+		 */
+		[RCAR_DU_OUTPUT_DPAD0] = {
+			.possible_crtcs = BIT(2),
+			.encoder_type = DRM_MODE_ENCODER_NONE,
+			.port = 0,
+		},
+		[RCAR_DU_OUTPUT_HDMI0] = {
+			.possible_crtcs = BIT(1),
+			.encoder_type = DRM_MODE_ENCODER_TMDS,
+			.port = 1,
+		},
+		[RCAR_DU_OUTPUT_LVDS0] = {
+			.possible_crtcs = BIT(0),
+			.encoder_type = DRM_MODE_ENCODER_LVDS,
+			.port = 2,
+		},
+	},
+	.num_lvds = 1,
+	.dpll_ch =  BIT(1),
+};
+
 static const struct of_device_id rcar_du_of_table[] = {
 	{ .compatible = "renesas,du-r8a7779", .data = &rcar_du_r8a7779_info },
 	{ .compatible = "renesas,du-r8a7790", .data = &rcar_du_r8a7790_info },
@@ -187,6 +220,7 @@ static const struct of_device_id rcar_du_of_table[] = {
 	{ .compatible = "renesas,du-r8a7793", .data = &rcar_du_r8a7791_info },
 	{ .compatible = "renesas,du-r8a7794", .data = &rcar_du_r8a7794_info },
 	{ .compatible = "renesas,du-r8a7795", .data = &rcar_du_r8a7795_info },
+	{ .compatible = "renesas,du-r8a7796", .data = &rcar_du_r8a7796_info },
 	{ }
 };
 
@@ -235,9 +269,16 @@ int rcar_du_set_vmute(struct drm_device *dev, void *data,
 	struct drm_mode_object *obj;
 	struct drm_crtc *crtc;
 	struct rcar_du_crtc *rcrtc;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	int ret = 0, index;
 
 	dev_dbg(dev->dev, "CRTC[%d], display:%s\n",
 		vmute->crtc_id, vmute->on ? "off":"on");
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
 
 	obj = drm_mode_object_find(dev, vmute->crtc_id,
 					DRM_MODE_OBJECT_CRTC);
@@ -245,9 +286,24 @@ int rcar_du_set_vmute(struct drm_device *dev, void *data,
 		return -EINVAL;
 	crtc = obj_to_crtc(obj);
 
+	index = drm_crtc_index(crtc);
+
 	rcrtc = to_rcar_crtc(crtc);
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	state->crtc_states[index] = crtc_state;
+	state->crtcs[index] = crtc;
+	crtc_state->state = state;
+
+	crtc_state->active = true;
 
 	vsp1_du_if_set_mute(rcrtc->vsp->vsp, vmute->on);
+
+	ret = drm_atomic_commit(state);
+	if (ret != 0)
+		return ret;
 
 	return 0;
 }
@@ -256,7 +312,6 @@ static const struct drm_ioctl_desc rcar_du_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(DRM_RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
 		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
 };
-
 
 static const struct file_operations rcar_du_fops = {
 	.owner		= THIS_MODULE,
