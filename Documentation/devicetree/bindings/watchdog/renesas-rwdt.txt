@@ -1,7 +1,9 @@
 Renesas RCLK Watchdog Timer (RWDT) Controller
 
 Required properties:
-- compatible : Should be "renesas,rwdt-r8a7795";
+- compatible : Should be one of the following.
+	- "renesas,rwdt-r8a7795",
+	- "renesas,rwdt-r8a7796".
 - reg : Should contain WDT registers location and length
 - clocks : the clock feeding the watchdog timer.
 
