@@ -131,15 +131,15 @@
 #define GPSR4_12	F_(SD3_DAT3,		IP10_19_16)
 #define GPSR4_11	F_(SD3_DAT2,		IP10_15_12)
 #define GPSR4_10	F_(SD3_DAT1,		IP10_11_8)
-#define GPSR4_9 	F_(SD3_DAT0,		IP10_7_4)
-#define GPSR4_8 	F_(SD3_CMD,		IP10_3_0)
-#define GPSR4_7 	F_(SD3_CLK,		IP9_31_28)
+#define GPSR4_9		F_(SD3_DAT0,		IP10_7_4)
+#define GPSR4_8		F_(SD3_CMD,		IP10_3_0)
+#define GPSR4_7		F_(SD3_CLK,		IP9_31_28)
 #define GPSR4_6		F_(SD2_DS,		IP9_23_20)
 #define GPSR4_5		F_(SD2_DAT3,		IP9_19_16)
 #define GPSR4_4		F_(SD2_DAT2,		IP9_15_12)
 #define GPSR4_3		F_(SD2_DAT1,		IP9_11_8)
 #define GPSR4_2		F_(SD2_DAT0,		IP9_7_4)
-#define GPSR4_1 	F_(SD2_CMD,		IP9_7_4)
+#define GPSR4_1		F_(SD2_CMD,		IP9_7_4)
 #define GPSR4_0		F_(SD2_CLK,		IP9_3_0)
 
 /* GPSR5 */
@@ -205,7 +205,7 @@
 #define GPSR6_0		F_(SSI_SCK0129,		IP14_23_20)
 
 /* GPSR7 */
-#define GPSR7_3 	FM(GP7_03)
+#define GPSR7_3		FM(GP7_03)
 #define GPSR7_2		FM(HDMI0_CEC)
 #define GPSR7_1		FM(AVS2)
 #define GPSR7_0		FM(AVS1)
@@ -3024,33 +3024,33 @@ static const unsigned int scif4_ctrl_c_mux[] = {
 };
 /* - SCIF5 ------------------------------------------------------------------ */
 static const unsigned int scif5_data_a_pins[] = {
-        /* RX, TX */
-        RCAR_GP_PIN(5, 19), RCAR_GP_PIN(5, 21),
+	/* RX, TX */
+	RCAR_GP_PIN(5, 19), RCAR_GP_PIN(5, 21),
 };
 static const unsigned int scif5_data_a_mux[] = {
-        RX5_A_MARK, TX5_A_MARK,
+	RX5_A_MARK, TX5_A_MARK,
 };
 static const unsigned int scif5_clk_a_pins[] = {
-        /* SCK */
-        RCAR_GP_PIN(6, 21),
+	/* SCK */
+	RCAR_GP_PIN(6, 21),
 };
 static const unsigned int scif5_clk_a_mux[] = {
-        SCK5_A_MARK,
+	SCK5_A_MARK,
 };
 
 static const unsigned int scif5_data_b_pins[] = {
-        /* RX, TX */
-        RCAR_GP_PIN(5, 12), RCAR_GP_PIN(5, 18),
+	/* RX, TX */
+	RCAR_GP_PIN(5, 12), RCAR_GP_PIN(5, 18),
 };
 static const unsigned int scif5_data_b_mux[] = {
-        RX5_B_MARK, TX5_B_MARK,
+	RX5_B_MARK, TX5_B_MARK,
 };
 static const unsigned int scif5_clk_b_pins[] = {
-        /* SCK */
-        RCAR_GP_PIN(5, 0),
+	/* SCK */
+	RCAR_GP_PIN(5, 0),
 };
 static const unsigned int scif5_clk_b_mux[] = {
-        SCK5_B_MARK,
+	SCK5_B_MARK,
 };
 
 /* - SDHI0 ------------------------------------------------------------------ */

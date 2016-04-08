@@ -496,10 +496,10 @@ static const struct of_device_id sh_pfc_of_table[] = {
 	},
 #endif
 #ifdef CONFIG_PINCTRL_PFC_R8A7796
-        {
-                .compatible = "renesas,pfc-r8a7796",
-                .data = &r8a7796_pinmux_info,
-        },
+	{
+		.compatible = "renesas,pfc-r8a7796",
+		.data = &r8a7796_pinmux_info,
+	},
 #endif
 #ifdef CONFIG_PINCTRL_PFC_SH73A0
 	{
