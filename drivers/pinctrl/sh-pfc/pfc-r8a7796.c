@@ -5133,7 +5133,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		MOD_SEL1_0 }
 	},
 	{ PINMUX_CFG_REG_VAR("MOD_SEL2", 0xe6060508, 32,
-			     1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 2, 1,
+			     1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1,
 			     4, 4, 4, 3, 1) {
 		MOD_SEL2_31
 		MOD_SEL2_30
