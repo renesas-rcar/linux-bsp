@@ -86,6 +86,20 @@ static int wpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	if (ret < 0)
 		return ret;
 
+	if (pipe->vmute_flag) {
+		vsp1_wpf_write(wpf, VI6_WPF_SRCRPF +
+			 (0x100 * wpf->entity.index),
+			  VI6_WPF_SRCRPF_VIRACT_MST);
+		vsp1_wpf_write(wpf, VI6_WPF_HSZCLIP +
+			 (0x100 * wpf->entity.index), 0);
+		vsp1_wpf_write(wpf, VI6_WPF_VSZCLIP +
+			 (0x100 * wpf->entity.index), 0);
+		vsp1_wpf_write(wpf, VI6_DPR_WPF_FPORCH(wpf->entity.index),
+			 VI6_DPR_WPF_FPORCH_FP_WPFN);
+
+		return 0;
+	}
+
 	if (!enable) {
 		vsp1_write(vsp1, VI6_WPF_IRQ_ENB(wpf->entity.index), 0);
 		vsp1_write(vsp1, wpf->entity.index * VI6_WPF_OFFSET +
