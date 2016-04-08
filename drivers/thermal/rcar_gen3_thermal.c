@@ -185,8 +185,8 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 	 * We will use fixed value as temporary solution.
 	 */
 	if ((RCAR_PRR_IS_PRODUCT(H3) && (RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
-		|| (RCAR_PRR_IS_PRODUCT(M3W) &&
-			(RCAR_PRR_CHK_CUT(M3W, WS10) == 0))) {
+		|| (RCAR_PRR_IS_PRODUCT(M3_W) &&
+			(RCAR_PRR_CHK_CUT(M3_W, ES10) == 0))) {
 		priv->factor.ptat_1 = 2351;
 		priv->factor.ptat_2 = 1509;
 		priv->factor.ptat_3 = 435;
