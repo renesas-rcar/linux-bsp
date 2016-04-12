@@ -605,6 +605,7 @@ and discussions on the V4L mailing list.</revremark>
     <section id="radio"> &sub-dev-radio; </section>
     <section id="rds"> &sub-dev-rds; </section>
     <section id="sdr"> &sub-dev-sdr; </section>
+    <section id="meta"> &sub-dev-meta; </section>
     <section id="event"> &sub-dev-event; </section>
     <section id="subdev"> &sub-dev-subdev; </section>
   </chapter>
