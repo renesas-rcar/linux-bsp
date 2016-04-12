@@ -43,6 +43,9 @@
 #define CORE_DLL_CONFIG		0x100
 #define CORE_DLL_STATUS		0x108
 
+#define CORE_DLL_CONFIG2	0x1b4
+#define CORE_DLL_CLK_DISABLE	BIT(21)
+
 #define CORE_VENDOR_SPEC	0x10c
 #define CORE_CLK_PWRSAVE	BIT(1)
 
@@ -324,6 +327,10 @@ static int msm_init_cm_dll(struct sdhci_host *host)
 	/* Set CK_OUT_EN bit to 1. */
 	writel_relaxed((readl_relaxed(host->ioaddr + CORE_DLL_CONFIG)
 			| CORE_CK_OUT_EN), host->ioaddr + CORE_DLL_CONFIG);
+
+	/* Write 0 to DLL_CLOCK_DISABLE bit of DLL_CONFIG_2 register */
+	writel_relaxed((readl_relaxed(host->ioaddr + CORE_DLL_CONFIG2)
+		& ~CORE_DLL_CLK_DISABLE), host->ioaddr + CORE_DLL_CONFIG2);
 
 	/* Wait until DLL_LOCK bit of DLL_STATUS register becomes '1' */
 	while (!(readl_relaxed(host->ioaddr + CORE_DLL_STATUS) &
