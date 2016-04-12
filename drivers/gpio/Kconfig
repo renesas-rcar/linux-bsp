@@ -122,6 +122,7 @@ config GPIO_ALTERA
 config GPIO_AMDPT
 	tristate "AMD Promontory GPIO support"
 	depends on ACPI
+	select GPIO_GENERIC
 	help
 	  driver for GPIO functionality on Promontory IOHub
 	  Require ACPI ASL code to enumerate as a platform device.
@@ -473,7 +474,7 @@ config GPIO_XILINX
 
 config GPIO_XLP
 	tristate "Netlogic XLP GPIO support"
-	depends on CPU_XLP && OF_GPIO
+	depends on OF_GPIO && (CPU_XLP || ARCH_VULCAN || COMPILE_TEST)
 	select GPIOLIB_IRQCHIP
 	help
 	  This driver provides support for GPIO interface on Netlogic XLP MIPS64
@@ -509,6 +510,13 @@ config GPIO_ZX
 	select GPIOLIB_IRQCHIP
 	help
 	  Say yes here to support the GPIO device on ZTE ZX SoCs.
+
+config GPIO_LOONGSON1
+	tristate "Loongson1 GPIO support"
+	depends on MACH_LOONGSON32
+	select GPIO_GENERIC
+	help
+	  Say Y or M here to support GPIO on Loongson1 SoCs.
 
 endmenu
 
@@ -557,7 +565,7 @@ config GPIO_IT87
 	  Say yes here to support GPIO functionality of IT87xx Super I/O chips.
 
 	  This driver is tested with ITE IT8728 and IT8732 Super I/O chips, and
-	  supports the IT8761E Super I/O chip as well.
+	  supports the IT8761E, IT8620E and IT8628E Super I/O chip as well.
 
 	  To compile this driver as a module, choose M here: the module will
 	  be called gpio_it87
@@ -1091,6 +1099,7 @@ menu "SPI or I2C GPIO expanders"
 
 config GPIO_MCP23S08
 	tristate "Microchip MCP23xxx I/O expander"
+	select GPIOLIB_IRQCHIP
 	help
 	  SPI/I2C driver for Microchip MCP23S08/MCP23S17/MCP23008/MCP23017
 	  I/O expanders.
