@@ -2,6 +2,7 @@
 #include <linux/time.h>
 #include <linux/kthread.h>
 #include <linux/delay.h>
+#include <linux/completion.h>
 #include "host_interface.h"
 #include "coreconfigurator.h"
 #include "wilc_wlan.h"
@@ -230,10 +231,10 @@ bool wilc_optaining_ip;
 static u8 P2P_LISTEN_STATE;
 static struct task_struct *hif_thread_handler;
 static struct message_queue hif_msg_q;
-static struct semaphore hif_sema_thread;
-static struct semaphore hif_sema_driver;
-static struct semaphore hif_sema_wait_response;
-static struct semaphore hif_sema_deinit;
+static struct completion hif_thread_comp;
+static struct completion hif_driver_comp;
+static struct completion hif_wait_response;
+static struct mutex hif_deinit_lock;
 static struct timer_list periodic_rssi;
 
 u8 wilc_multicast_mac_addr_list[WILC_MULTICAST_TABLE_SIZE][ETH_ALEN];
@@ -320,7 +321,7 @@ static s32 handle_set_wfi_drv_handler(struct wilc_vif *vif,
 				      hif_drv_handler->handler);
 
 	if (!hif_drv_handler->handler)
-		up(&hif_sema_driver);
+		complete(&hif_driver_comp);
 
 	if (result) {
 		netdev_err(vif->ndev, "Failed to set driver handler\n");
@@ -345,7 +346,7 @@ static s32 handle_set_operation_mode(struct wilc_vif *vif,
 				      wilc_get_vif_idx(vif));
 
 	if ((hif_op_mode->mode) == IDLE_MODE)
-		up(&hif_sema_driver);
+		complete(&hif_driver_comp);
 
 	if (result) {
 		netdev_err(vif->ndev, "Failed to set driver handler\n");
@@ -430,7 +431,7 @@ static s32 handle_get_mac_address(struct wilc_vif *vif,
 		netdev_err(vif->ndev, "Failed to get mac address\n");
 		result = -EFAULT;
 	}
-	up(&hif_sema_wait_response);
+	complete(&hif_wait_response);
 
 	return result;
 }
@@ -1610,7 +1611,7 @@ static int Handle_Key(struct wilc_vif *vif,
 						      &wid, 1,
 						      wilc_get_vif_idx(vif));
 		}
-		up(&hif_drv->sem_test_key_block);
+		complete(&hif_drv->comp_test_key_block);
 		break;
 
 	case WPA_RX_GTK:
@@ -1644,10 +1645,10 @@ static int Handle_Key(struct wilc_vif *vif,
 						      wilc_get_vif_idx(vif));
 
 			kfree(pu8keybuf);
-			up(&hif_drv->sem_test_key_block);
+			complete(&hif_drv->comp_test_key_block);
 		} else if (pstrHostIFkeyAttr->action & ADDKEY) {
 			pu8keybuf = kzalloc(RX_MIC_KEY_MSG_LEN, GFP_KERNEL);
-			if (pu8keybuf == NULL) {
+			if (!pu8keybuf) {
 				ret = -ENOMEM;
 				goto _WPARxGtk_end_case_;
 			}
@@ -1673,7 +1674,7 @@ static int Handle_Key(struct wilc_vif *vif,
 						      wilc_get_vif_idx(vif));
 
 			kfree(pu8keybuf);
-			up(&hif_drv->sem_test_key_block);
+			complete(&hif_drv->comp_test_key_block);
 		}
 _WPARxGtk_end_case_:
 		kfree(pstrHostIFkeyAttr->attr.wpa.key);
@@ -1711,7 +1712,7 @@ _WPARxGtk_end_case_:
 						      strWIDList, 2,
 						      wilc_get_vif_idx(vif));
 			kfree(pu8keybuf);
-			up(&hif_drv->sem_test_key_block);
+			complete(&hif_drv->comp_test_key_block);
 		} else if (pstrHostIFkeyAttr->action & ADDKEY) {
 			pu8keybuf = kmalloc(PTK_KEY_MSG_LEN, GFP_KERNEL);
 			if (!pu8keybuf) {
@@ -1734,7 +1735,7 @@ _WPARxGtk_end_case_:
 						      &wid, 1,
 						      wilc_get_vif_idx(vif));
 			kfree(pu8keybuf);
-			up(&hif_drv->sem_test_key_block);
+			complete(&hif_drv->comp_test_key_block);
 		}
 
 _WPAPtk_end_case_:
@@ -1856,7 +1857,7 @@ static void Handle_Disconnect(struct wilc_vif *vif)
 		}
 	}
 
-	up(&hif_drv->sem_test_disconn_block);
+	complete(&hif_drv->comp_test_disconn_block);
 }
 
 void wilc_resolve_disconnect_aberration(struct wilc_vif *vif)
@@ -1885,7 +1886,7 @@ static void Handle_GetRssi(struct wilc_vif *vif)
 		result = -EFAULT;
 	}
 
-	up(&vif->hif_drv->sem_get_rssi);
+	complete(&vif->hif_drv->comp_get_rssi);
 }
 
 static s32 Handle_GetStatistics(struct wilc_vif *vif,
@@ -1938,7 +1939,7 @@ static s32 Handle_GetStatistics(struct wilc_vif *vif,
 		wilc_enable_tcp_ack_filter(false);
 
 	if (pstrStatistics != &vif->wilc->dummy_statistics)
-		up(&hif_sema_wait_response);
+		complete(&hif_wait_response);
 	return 0;
 }
 
@@ -1979,7 +1980,7 @@ static s32 Handle_Get_InActiveTime(struct wilc_vif *vif,
 		return -EFAULT;
 	}
 
-	up(&hif_drv->sem_inactive_time);
+	complete(&hif_drv->comp_inactive_time);
 
 	return result;
 }
@@ -2172,7 +2173,7 @@ static void Handle_DelAllSta(struct wilc_vif *vif,
 ERRORHANDLER:
 	kfree(wid.val);
 
-	up(&hif_sema_wait_response);
+	complete(&hif_wait_response);
 }
 
 static void Handle_DelStation(struct wilc_vif *vif,
@@ -2485,7 +2486,7 @@ static void handle_get_tx_pwr(struct wilc_vif *vif, u8 *tx_pwr)
 	if (ret)
 		netdev_err(vif->ndev, "Failed to get TX PWR\n");
 
-	up(&hif_sema_wait_response);
+	complete(&hif_wait_response);
 }
 
 static int hostIFthread(void *pvArg)
@@ -2667,7 +2668,7 @@ static int hostIFthread(void *pvArg)
 		}
 	}
 
-	up(&hif_sema_thread);
+	complete(&hif_thread_comp);
 	return 0;
 }
 
@@ -2730,7 +2731,7 @@ int wilc_remove_wep_key(struct wilc_vif *vif, u8 index)
 	result = wilc_mq_send(&hif_msg_q, &msg, sizeof(struct host_if_msg));
 	if (result)
 		netdev_err(vif->ndev, "Request to remove WEP key\n");
-	down(&hif_drv->sem_test_key_block);
+	wait_for_completion(&hif_drv->comp_test_key_block);
 
 	return result;
 }
@@ -2758,7 +2759,7 @@ int wilc_set_wep_default_keyid(struct wilc_vif *vif, u8 index)
 	result = wilc_mq_send(&hif_msg_q, &msg, sizeof(struct host_if_msg));
 	if (result)
 		netdev_err(vif->ndev, "Default key index\n");
-	down(&hif_drv->sem_test_key_block);
+	wait_for_completion(&hif_drv->comp_test_key_block);
 
 	return result;
 }
@@ -2791,7 +2792,7 @@ int wilc_add_wep_key_bss_sta(struct wilc_vif *vif, const u8 *key, u8 len,
 	result = wilc_mq_send(&hif_msg_q, &msg, sizeof(struct host_if_msg));
 	if (result)
 		netdev_err(vif->ndev, "STA - WEP Key\n");
-	down(&hif_drv->sem_test_key_block);
+	wait_for_completion(&hif_drv->comp_test_key_block);
 
 	return result;
 }
@@ -2827,7 +2828,7 @@ int wilc_add_wep_key_bss_ap(struct wilc_vif *vif, const u8 *key, u8 len,
 
 	if (result)
 		netdev_err(vif->ndev, "AP - WEP Key\n");
-	down(&hif_drv->sem_test_key_block);
+	wait_for_completion(&hif_drv->comp_test_key_block);
 
 	return result;
 }
@@ -2883,7 +2884,7 @@ int wilc_add_ptk(struct wilc_vif *vif, const u8 *ptk, u8 ptk_key_len,
 	if (result)
 		netdev_err(vif->ndev, "PTK Key\n");
 
-	down(&hif_drv->sem_test_key_block);
+	wait_for_completion(&hif_drv->comp_test_key_block);
 
 	return result;
 }
@@ -2951,7 +2952,7 @@ int wilc_add_rx_gtk(struct wilc_vif *vif, const u8 *rx_gtk, u8 gtk_key_len,
 	if (result)
 		netdev_err(vif->ndev, "RX GTK\n");
 
-	down(&hif_drv->sem_test_key_block);
+	wait_for_completion(&hif_drv->comp_test_key_block);
 
 	return result;
 }
@@ -3007,7 +3008,7 @@ int wilc_get_mac_address(struct wilc_vif *vif, u8 *mac_addr)
 		return -EFAULT;
 	}
 
-	down(&hif_sema_wait_response);
+	wait_for_completion(&hif_wait_response);
 	return result;
 }
 
@@ -3098,7 +3099,7 @@ int wilc_disconnect(struct wilc_vif *vif, u16 reason_code)
 	if (result)
 		netdev_err(vif->ndev, "Failed to send message: disconnect\n");
 
-	down(&hif_drv->sem_test_disconn_block);
+	wait_for_completion(&hif_drv->comp_test_disconn_block);
 
 	return result;
 }
@@ -3220,7 +3221,7 @@ s32 wilc_get_inactive_time(struct wilc_vif *vif, const u8 *mac,
 	if (result)
 		netdev_err(vif->ndev, "Failed to send get host ch param\n");
 
-	down(&hif_drv->sem_inactive_time);
+	wait_for_completion(&hif_drv->comp_inactive_time);
 
 	*pu32InactiveTime = inactive_time;
 
@@ -3243,7 +3244,7 @@ int wilc_get_rssi(struct wilc_vif *vif, s8 *rssi_level)
 		return -EFAULT;
 	}
 
-	down(&hif_drv->sem_get_rssi);
+	wait_for_completion(&hif_drv->comp_get_rssi);
 
 	if (!rssi_level) {
 		netdev_err(vif->ndev, "RSS pointer value is null\n");
@@ -3272,7 +3273,7 @@ int wilc_get_statistics(struct wilc_vif *vif, struct rf_info *stats)
 	}
 
 	if (stats != &vif->wilc->dummy_statistics)
-		down(&hif_sema_wait_response);
+		wait_for_completion(&hif_wait_response);
 	return result;
 }
 
@@ -3382,7 +3383,7 @@ int wilc_init(struct net_device *dev, struct host_if_drv **hif_drv_handler)
 
 	scan_while_connected = false;
 
-	sema_init(&hif_sema_wait_response, 0);
+	init_completion(&hif_wait_response);
 
 	hif_drv  = kzalloc(sizeof(struct host_if_drv), GFP_KERNEL);
 	if (!hif_drv) {
@@ -3399,15 +3400,15 @@ int wilc_init(struct net_device *dev, struct host_if_drv **hif_drv_handler)
 	wilc_optaining_ip = false;
 
 	if (clients_count == 0)	{
-		sema_init(&hif_sema_thread, 0);
-		sema_init(&hif_sema_driver, 0);
-		sema_init(&hif_sema_deinit, 1);
+		init_completion(&hif_thread_comp);
+		init_completion(&hif_driver_comp);
+		mutex_init(&hif_deinit_lock);
 	}
 
-	sema_init(&hif_drv->sem_test_key_block, 0);
-	sema_init(&hif_drv->sem_test_disconn_block, 0);
-	sema_init(&hif_drv->sem_get_rssi, 0);
-	sema_init(&hif_drv->sem_inactive_time, 0);
+	init_completion(&hif_drv->comp_test_key_block);
+	init_completion(&hif_drv->comp_test_disconn_block);
+	init_completion(&hif_drv->comp_get_rssi);
+	init_completion(&hif_drv->comp_inactive_time);
 
 	if (clients_count == 0)	{
 		result = wilc_mq_create(&hif_msg_q);
@@ -3469,7 +3470,7 @@ int wilc_deinit(struct wilc_vif *vif)
 		return -EFAULT;
 	}
 
-	down(&hif_sema_deinit);
+	mutex_lock(&hif_deinit_lock);
 
 	terminated_handle = hif_drv;
 
@@ -3479,7 +3480,7 @@ int wilc_deinit(struct wilc_vif *vif)
 	del_timer_sync(&hif_drv->remain_on_ch_timer);
 
 	wilc_set_wfi_drv_handler(vif, 0, 0);
-	down(&hif_sema_driver);
+	wait_for_completion(&hif_driver_comp);
 
 	if (hif_drv->usr_scan_req.scan_result) {
 		hif_drv->usr_scan_req.scan_result(SCAN_EVENT_ABORTED, NULL,
@@ -3502,7 +3503,7 @@ int wilc_deinit(struct wilc_vif *vif)
 		if (result != 0)
 			netdev_err(vif->ndev, "deinit : Error(%d)\n", result);
 
-		down(&hif_sema_thread);
+		wait_for_completion(&hif_thread_comp);
 
 		wilc_mq_destroy(&hif_msg_q);
 	}
@@ -3511,7 +3512,7 @@ int wilc_deinit(struct wilc_vif *vif)
 
 	clients_count--;
 	terminated_handle = NULL;
-	up(&hif_sema_deinit);
+	mutex_unlock(&hif_deinit_lock);
 	return result;
 }
 
@@ -3558,25 +3559,25 @@ void wilc_gnrl_async_info_received(struct wilc *wilc, u8 *pu8Buffer,
 	struct host_if_drv *hif_drv = NULL;
 	struct wilc_vif *vif;
 
-	down(&hif_sema_deinit);
+	mutex_lock(&hif_deinit_lock);
 
 	id = ((pu8Buffer[u32Length - 4]) | (pu8Buffer[u32Length - 3] << 8) | (pu8Buffer[u32Length - 2] << 16) | (pu8Buffer[u32Length - 1] << 24));
 	vif = wilc_get_vif_from_idx(wilc, id);
 	if (!vif) {
-		up(&hif_sema_deinit);
+		mutex_unlock(&hif_deinit_lock);
 		return;
 	}
 
 	hif_drv = vif->hif_drv;
 
 	if (!hif_drv || hif_drv == terminated_handle) {
-		up(&hif_sema_deinit);
+		mutex_unlock(&hif_deinit_lock);
 		return;
 	}
 
 	if (!hif_drv->usr_conn_req.conn_result) {
 		netdev_err(vif->ndev, "there is no current Connect Request\n");
-		up(&hif_sema_deinit);
+		mutex_unlock(&hif_deinit_lock);
 		return;
 	}
 
@@ -3593,7 +3594,7 @@ void wilc_gnrl_async_info_received(struct wilc *wilc, u8 *pu8Buffer,
 	if (result)
 		netdev_err(vif->ndev, "synchronous info (%d)\n", result);
 
-	up(&hif_sema_deinit);
+	mutex_unlock(&hif_deinit_lock);
 }
 
 void wilc_scan_complete_received(struct wilc *wilc, u8 *pu8Buffer,
@@ -3688,12 +3689,6 @@ int wilc_frame_register(struct wilc_vif *vif, u16 frame_type, bool reg)
 {
 	int result = 0;
 	struct host_if_msg msg;
-	struct host_if_drv *hif_drv = vif->hif_drv;
-
-	if (!hif_drv) {
-		netdev_err(vif->ndev, "driver is null\n");
-		return -EFAULT;
-	}
 
 	memset(&msg, 0, sizeof(struct host_if_msg));
 
@@ -3888,7 +3883,7 @@ int wilc_del_allstation(struct wilc_vif *vif, u8 mac_addr[][ETH_ALEN])
 	if (result)
 		netdev_err(vif->ndev, "wilc_mq_send fail\n");
 
-	down(&hif_sema_wait_response);
+	wait_for_completion(&hif_wait_response);
 
 	return result;
 }
@@ -4221,7 +4216,7 @@ int wilc_get_tx_power(struct wilc_vif *vif, u8 *tx_power)
 	if (ret)
 		netdev_err(vif->ndev, "Failed to get TX PWR\n");
 
-	down(&hif_sema_wait_response);
+	wait_for_completion(&hif_wait_response);
 	*tx_power = msg.body.tx_power.tx_pwr;
 
 	return ret;

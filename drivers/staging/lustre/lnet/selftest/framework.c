@@ -226,7 +226,7 @@ __must_hold(&sfw_data.fw_lock)
 	}
 
 	if (nactive)
-		return;   /* wait for active batches to stop */
+		return;	/* wait for active batches to stop */
 
 	list_del_init(&sn->sn_list);
 	spin_unlock(&sfw_data.fw_lock);
@@ -693,7 +693,7 @@ sfw_unpack_addtest_req(srpc_msg_t *msg)
 	LASSERT(req->tsr_is_client);
 
 	if (msg->msg_magic == SRPC_MSG_MAGIC)
-		return; /* no flipping needed */
+		return;	/* no flipping needed */
 
 	LASSERT(msg->msg_magic == __swab32(SRPC_MSG_MAGIC));
 
@@ -789,7 +789,7 @@ sfw_add_test_instance(sfw_batch_t *tsb, struct srpc_server_rpc *rpc)
 		int j;
 
 		dests = page_address(bk->bk_iovs[i / SFW_ID_PER_PAGE].kiov_page);
-		LASSERT(dests);  /* my pages are within KVM always */
+		LASSERT(dests);		/* my pages are within KVM always */
 		id = dests[i % SFW_ID_PER_PAGE];
 		if (msg->msg_magic != SRPC_MSG_MAGIC)
 			sfw_unpack_id(id);
@@ -844,8 +844,8 @@ sfw_test_unit_done(sfw_test_unit_t *tsu)
 
 	spin_lock(&sfw_data.fw_lock);
 
-	if (!atomic_dec_and_test(&tsb->bat_nactive) ||/* tsb still active */
-	    sn == sfw_data.fw_session) {		  /* sn also active */
+	if (!atomic_dec_and_test(&tsb->bat_nactive) ||	/* tsb still active */
+	    sn == sfw_data.fw_session) {		/* sn also active */
 		spin_unlock(&sfw_data.fw_lock);
 		return;
 	}
@@ -1244,7 +1244,7 @@ sfw_handle_server_rpc(struct srpc_server_rpc *rpc)
 
 	/* Remove timer to avoid racing with it or expiring active session */
 	if (sfw_del_session_timer()) {
-		CERROR("Dropping RPC (%s) from %s: racing with expiry timer.",
+		CERROR("dropping RPC %s from %s: racing with expiry timer\n",
 		       sv->sv_name, libcfs_id2str(rpc->srpc_peer));
 		spin_unlock(&sfw_data.fw_lock);
 		return -EAGAIN;
@@ -1273,7 +1273,7 @@ sfw_handle_server_rpc(struct srpc_server_rpc *rpc)
 		}
 
 	} else if (request->msg_ses_feats & ~LST_FEATS_MASK) {
-		/**
+		/*
 		 * NB: at this point, old version will ignore features and
 		 * create new session anyway, so console should be able
 		 * to handle this

@@ -190,7 +190,7 @@ static int ll_dir_filler(void *_hash, struct page *page0)
 		body = req_capsule_server_get(&request->rq_pill, &RMF_MDT_BODY);
 		/* Checked by mdc_readpage() */
 		if (body->valid & OBD_MD_FLSIZE)
-			cl_isize_write(inode, body->size);
+			i_size_write(inode, body->size);
 
 		nrdpgs = (request->rq_bulk->bd_nob_transferred+PAGE_SIZE-1)
 			 >> PAGE_SHIFT;
@@ -466,6 +466,28 @@ fail:
 	ll_release_page(page, 1);
 	page = ERR_PTR(-EIO);
 	goto out_unlock;
+}
+
+/**
+ * return IF_* type for given lu_dirent entry.
+ * IF_* flag shld be converted to particular OS file type in
+ * platform llite module.
+ */
+static __u16 ll_dirent_type_get(struct lu_dirent *ent)
+{
+	__u16 type = 0;
+	struct luda_type *lt;
+	int len = 0;
+
+	if (le32_to_cpu(ent->lde_attrs) & LUDA_TYPE) {
+		const unsigned int align = sizeof(struct luda_type) - 1;
+
+		len = le16_to_cpu(ent->lde_namelen);
+		len = (len + align) & ~align;
+		lt = (void *)ent->lde_name + len;
+		type = IFTODT(le16_to_cpu(lt->lt_type));
+	}
+	return type;
 }
 
 int ll_dir_read(struct inode *inode, struct dir_context *ctx)

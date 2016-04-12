@@ -55,6 +55,7 @@
 #include "../include/lustre_disk.h"
 #include "../include/lustre_fid.h"
 #include "../include/lu_object.h"
+#include "../include/cl_object.h"
 #include "../include/lu_ref.h"
 #include <linux/list.h>
 
@@ -935,7 +936,7 @@ static void lu_dev_add_linkage(struct lu_site *s, struct lu_device *d)
  * Initialize site \a s, with \a d as the top level device.
  */
 #define LU_SITE_BITS_MIN    12
-#define LU_SITE_BITS_MAX    24
+#define LU_SITE_BITS_MAX    19
 /**
  * total 256 buckets, we don't want too many buckets because:
  * - consume too much memory
@@ -1468,6 +1469,7 @@ void lu_context_key_quiesce(struct lu_context_key *key)
 		/*
 		 * XXX layering violation.
 		 */
+		cl_env_cache_purge(~0);
 		key->lct_tags |= LCT_QUIESCENT;
 		/*
 		 * XXX memory barrier has to go here.

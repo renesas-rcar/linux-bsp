@@ -124,7 +124,6 @@ struct visor_device {
 	 */
 	struct visorchannel *visorchannel;
 	uuid_le channel_type_guid;
-	u64 channel_bytes;
 
 	/** These fields are for private use by the bus driver only.
 	 *  A notable exception is that the visor driver can use
@@ -136,13 +135,6 @@ struct visor_device {
 	struct periodic_work *periodic_work;
 	bool being_removed;
 	bool responded_to_device_create;
-	struct kobject kobjdevmajorminor; /* visorbus<x>/dev<y>/devmajorminor/*/
-	struct {
-		int major, minor;
-		void *attr;	/* private use by devmajorminor_attr.c you can
-				 * change this constant to whatever you want
-				 */
-	} devnodes[5];
 	/* the code will detect and behave appropriately) */
 	struct semaphore visordriver_callback_lock;
 	bool pausing;
@@ -150,14 +142,10 @@ struct visor_device {
 	u32 chipset_bus_no;
 	u32 chipset_dev_no;
 	struct visorchipset_state state;
-	uuid_le type;
 	uuid_le inst;
 	u8 *name;
-	u8 *description;
 	struct controlvm_message_header *pending_msg_hdr;
 	void *vbus_hdr_info;
-	u32 switch_no;
-	u32 internal_port_no;
 	uuid_le partition_uuid;
 };
 
@@ -174,8 +162,6 @@ int visorbus_write_channel(struct visor_device *dev,
 			   unsigned long nbytes);
 int visorbus_clear_channel(struct visor_device *dev,
 			   unsigned long offset, u8 ch, unsigned long nbytes);
-int visorbus_registerdevnode(struct visor_device *dev,
-			     const char *name, int major, int minor);
 void visorbus_enable_channel_interrupts(struct visor_device *dev);
 void visorbus_disable_channel_interrupts(struct visor_device *dev);
 #endif

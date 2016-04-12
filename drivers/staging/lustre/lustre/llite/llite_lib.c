@@ -85,10 +85,7 @@ static struct ll_sb_info *ll_init_sbi(struct super_block *sb)
 
 	si_meminfo(&si);
 	pages = si.totalram - si.totalhigh;
-	if (pages >> (20 - PAGE_SHIFT) < 512)
-		lru_page_max = pages / 2;
-	else
-		lru_page_max = (pages / 4) * 3;
+	lru_page_max = pages / 2;
 
 	/* initialize lru data */
 	atomic_set(&sbi->ll_cache.ccc_users, 0);
@@ -999,6 +996,8 @@ void ll_put_super(struct super_block *sb)
 
 	lustre_common_put_super(sb);
 
+	cl_env_cache_purge(~0);
+
 	module_put(THIS_MODULE);
 } /* client_put_super */
 
@@ -1552,7 +1551,7 @@ void ll_update_inode(struct inode *inode, struct lustre_md *md)
 	if (body->valid & OBD_MD_FLATIME) {
 		if (body->atime > LTIME_S(inode->i_atime))
 			LTIME_S(inode->i_atime) = body->atime;
-		lli->lli_lvb.lvb_atime = body->atime;
+		lli->lli_atime = body->atime;
 	}
 	if (body->valid & OBD_MD_FLMTIME) {
 		if (body->mtime > LTIME_S(inode->i_mtime)) {
@@ -1561,12 +1560,12 @@ void ll_update_inode(struct inode *inode, struct lustre_md *md)
 			       body->mtime);
 			LTIME_S(inode->i_mtime) = body->mtime;
 		}
-		lli->lli_lvb.lvb_mtime = body->mtime;
+		lli->lli_mtime = body->mtime;
 	}
 	if (body->valid & OBD_MD_FLCTIME) {
 		if (body->ctime > LTIME_S(inode->i_ctime))
 			LTIME_S(inode->i_ctime) = body->ctime;
-		lli->lli_lvb.lvb_ctime = body->ctime;
+		lli->lli_ctime = body->ctime;
 	}
 	if (body->valid & OBD_MD_FLMODE)
 		inode->i_mode = (inode->i_mode & S_IFMT)|(body->mode & ~S_IFMT);
@@ -1699,7 +1698,7 @@ void ll_read_inode2(struct inode *inode, void *opaque)
 
 void ll_delete_inode(struct inode *inode)
 {
-	struct cl_inode_info *lli = cl_i2info(inode);
+	struct ll_inode_info *lli = ll_i2info(inode);
 
 	if (S_ISREG(inode->i_mode) && lli->lli_clob)
 		/* discard all dirty pages before truncating them, required by
@@ -1772,7 +1771,7 @@ int ll_iocontrol(struct inode *inode, struct file *file,
 		if (IS_ERR(op_data))
 			return PTR_ERR(op_data);
 
-		((struct ll_iattr *)&op_data->op_attr)->ia_attr_flags = flags;
+		op_data->op_attr_flags = flags;
 		op_data->op_attr.ia_valid |= ATTR_ATTR_FLAG;
 		rc = md_setattr(sbi->ll_md_exp, op_data,
 				NULL, 0, NULL, 0, &req, NULL);
@@ -2271,7 +2270,7 @@ void ll_dirty_page_discard_warn(struct page *page, int ioret)
 {
 	char *buf, *path = NULL;
 	struct dentry *dentry = NULL;
-	struct ccc_object *obj = cl_inode2ccc(page->mapping->host);
+	struct vvp_object *obj = cl_inode2vvp(page->mapping->host);
 
 	/* this can be called inside spin lock so use GFP_ATOMIC. */
 	buf = (char *)__get_free_page(GFP_ATOMIC);
@@ -2285,7 +2284,7 @@ void ll_dirty_page_discard_warn(struct page *page, int ioret)
 	       "%s: dirty page discard: %s/fid: " DFID "/%s may get corrupted (rc %d)\n",
 	       ll_get_fsname(page->mapping->host->i_sb, NULL, 0),
 	       s2lsi(page->mapping->host->i_sb)->lsi_lmd->lmd_dev,
-	       PFID(&obj->cob_header.coh_lu.loh_fid),
+	       PFID(&obj->vob_header.coh_lu.loh_fid),
 	       (path && !IS_ERR(path)) ? path : "", ioret);
 
 	if (dentry)

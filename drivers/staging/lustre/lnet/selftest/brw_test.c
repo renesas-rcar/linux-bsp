@@ -91,7 +91,6 @@ brw_client_init(sfw_test_instance_t *tsi)
 		 * but we have to keep it for compatibility
 		 */
 		len = npg * PAGE_SIZE;
-
 	} else {
 		test_bulk_req_v1_t *breq = &tsi->tsi_u.bulk_v1;
 
@@ -279,7 +278,6 @@ brw_client_prep_rpc(sfw_test_unit_t *tsu,
 		flags = breq->blk_flags;
 		npg = breq->blk_npg;
 		len = npg * PAGE_SIZE;
-
 	} else {
 		test_bulk_req_v1_t *breq = &tsi->tsi_u.bulk_v1;
 
@@ -329,7 +327,7 @@ brw_client_done_rpc(sfw_test_unit_t *tsu, srpc_client_rpc_t *rpc)
 	if (rpc->crpc_status) {
 		CERROR("BRW RPC to %s failed with %d\n",
 		       libcfs_id2str(rpc->crpc_dest), rpc->crpc_status);
-		if (!tsi->tsi_stopping) /* rpc could have been aborted */
+		if (!tsi->tsi_stopping)	/* rpc could have been aborted */
 			atomic_inc(&sn->sn_brw_errors);
 		return;
 	}
@@ -459,7 +457,7 @@ brw_server_handle(struct srpc_server_rpc *rpc)
 
 	if (!(reqstmsg->msg_ses_feats & LST_FEAT_BULK_LEN)) {
 		/* compat with old version */
-		if (reqst->brw_len & ~CFS_PAGE_MASK) {
+		if (reqst->brw_len & ~PAGE_MASK) {
 			reply->brw_status = EINVAL;
 			return 0;
 		}

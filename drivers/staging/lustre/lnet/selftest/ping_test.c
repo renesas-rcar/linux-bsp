@@ -86,8 +86,8 @@ ping_client_fini(sfw_test_instance_t *tsi)
 }
 
 static int
-ping_client_prep_rpc(sfw_test_unit_t *tsu,
-		     lnet_process_id_t dest, srpc_client_rpc_t **rpc)
+ping_client_prep_rpc(sfw_test_unit_t *tsu, lnet_process_id_t dest,
+		     srpc_client_rpc_t **rpc)
 {
 	srpc_ping_reqst_t *req;
 	sfw_test_instance_t *tsi = tsu->tsu_instance;
@@ -129,7 +129,7 @@ ping_client_done_rpc(sfw_test_unit_t *tsu, srpc_client_rpc_t *rpc)
 	LASSERT(sn);
 
 	if (rpc->crpc_status) {
-		if (!tsi->tsi_stopping) /* rpc could have been aborted */
+		if (!tsi->tsi_stopping)	/* rpc could have been aborted */
 			atomic_inc(&sn->sn_ping_errors);
 		CERROR("Unable to ping %s (%d): %d\n",
 		       libcfs_id2str(rpc->crpc_dest),
