@@ -14,9 +14,13 @@ intended for transfer of metadata to userspace and control of that operation.
   </para>
 
   <para>
-The metadata interface is implemented on video capture devices. The device can
-be dedicated to metadata or can implement both video and metadata capture as
-specified in its reported capabilities.
+The metadata interface can be implemented on video capture devices, metadata
+devices or both, at the discretion of drivers. Metadata devices are accessed
+through character device special files named
+<filename>/dev/v4l-meta[0-9]+</filename> with major number 81 and dynamically
+allocated minor numbers. Video devices that support metadata capture can be
+dedicated to metadata or can implement both metadata capture and video capture
+and/or output, as specified in the device's reported capabilities.
   </para>
 
   <section>
