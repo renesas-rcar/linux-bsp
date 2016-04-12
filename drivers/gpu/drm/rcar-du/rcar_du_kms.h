@@ -30,6 +30,7 @@ struct rcar_du_format_info {
 };
 
 const struct rcar_du_format_info *rcar_du_format_info(u32 fourcc);
+const struct rcar_du_format_info *rcar_vsp_format_info(u32 fourcc);
 
 int rcar_du_modeset_init(struct rcar_du_device *rcdu);
 
