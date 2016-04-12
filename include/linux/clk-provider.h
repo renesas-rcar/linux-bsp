@@ -32,6 +32,7 @@
 #define CLK_GET_ACCURACY_NOCACHE BIT(8) /* do not use the cached clk accuracy */
 #define CLK_RECALC_NEW_RATES	BIT(9) /* recalc rates after notifications */
 #define CLK_SET_RATE_UNGATE	BIT(10) /* clock needs to run to set rate */
+#define CLK_IS_CRITICAL		BIT(11) /* do not gate, ever */
 
 struct clk;
 struct clk_hw;
@@ -720,7 +721,8 @@ unsigned int of_clk_get_parent_count(struct device_node *np);
 int of_clk_parent_fill(struct device_node *np, const char **parents,
 		       unsigned int size);
 const char *of_clk_get_parent_name(struct device_node *np, int index);
-
+int of_clk_detect_critical(struct device_node *np, int index,
+			    unsigned long *flags);
 void of_clk_init(const struct of_device_id *matches);
 
 #else /* !CONFIG_OF */
@@ -756,6 +758,11 @@ static inline const char *of_clk_get_parent_name(struct device_node *np,
 						 int index)
 {
 	return NULL;
+}
+static inline int of_clk_detect_critical(struct device_node *np, int index,
+					  unsigned long *flags)
+{
+	return 0;
 }
 static inline void of_clk_init(const struct of_device_id *matches) {}
 #endif /* CONFIG_OF */
