@@ -387,6 +387,14 @@ specification the ioctl returns an ``EINVAL`` error code.
 
     -  .. row 23
 
+       -  ``V4L2_CAP_META_CAPTURE``
+
+       -  0x00800000
+
+       -  The device supports the :ref:`metadata` capture interface.
+
+    -  .. row 24
+
        -  ``V4L2_CAP_READWRITE``
 
        -  0x01000000
@@ -394,7 +402,7 @@ specification the ioctl returns an ``EINVAL`` error code.
        -  The device supports the :ref:`read() <rw>` and/or
 	  :ref:`write() <rw>` I/O methods.
 
-    -  .. row 24
+    -  .. row 25
 
        -  ``V4L2_CAP_ASYNCIO``
 
@@ -402,7 +410,7 @@ specification the ioctl returns an ``EINVAL`` error code.
 
        -  The device supports the :ref:`asynchronous <async>` I/O methods.
 
-    -  .. row 25
+    -  .. row 26
 
        -  ``V4L2_CAP_STREAMING``
 
@@ -410,7 +418,7 @@ specification the ioctl returns an ``EINVAL`` error code.
 
        -  The device supports the :ref:`streaming <mmap>` I/O method.
 
-    -  .. row 26
+    -  .. row 27
 
        -  ``V4L2_CAP_DEVICE_CAPS``
 

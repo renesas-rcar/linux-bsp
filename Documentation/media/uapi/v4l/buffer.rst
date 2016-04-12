@@ -499,6 +499,14 @@ enum v4l2_buf_type
        -  Buffer for Software Defined Radio (SDR) output stream, see
 	  :ref:`sdr`.
 
+    -  .. row 13
+
+       -  ``V4L2_BUF_TYPE_META_CAPTURE``
+
+       -  13
+
+       -  Buffer for metadata capture, see :ref:`metadata`.
+
 
 
 .. _buffer-flags:

@@ -24,3 +24,4 @@ Interfaces
     dev-sdr
     dev-event
     dev-subdev
+    dev-meta
