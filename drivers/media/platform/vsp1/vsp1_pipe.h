@@ -13,13 +13,14 @@
 #ifndef __VSP1_PIPE_H__
 #define __VSP1_PIPE_H__
 
+#include <linux/kref.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
 #include <linux/wait.h>
 
 #include <media/media-entity.h>
 
-struct vsp1_dl;
+struct vsp1_dl_list;
 struct vsp1_rwpf;
 
 /*
@@ -63,13 +64,14 @@ enum vsp1_pipeline_state {
  * @wq: work queue to wait for state change completion
  * @frame_end: frame end interrupt handler
  * @lock: protects the pipeline use count and stream count
- * @use_count: number of video nodes using the pipeline
+ * @kref: pipeline reference count
  * @stream_count: number of streaming video nodes
  * @buffers_ready: bitmask of RPFs and WPFs with at least one buffer available
  * @num_inputs: number of RPFs
  * @inputs: array of RPFs in the pipeline (indexed by RPF index)
  * @output: WPF at the output of the pipeline
  * @bru: BRU entity, if present
+ * @hgo: HGO entity, if present
  * @lif: LIF entity, if present
  * @uds: UDS entity, if present
  * @uds_input: entity at the input of the UDS, if the UDS is present
@@ -86,7 +88,7 @@ struct vsp1_pipeline {
 	void (*frame_end)(struct vsp1_pipeline *pipe);
 
 	struct mutex lock;
-	unsigned int use_count;
+	struct kref kref;
 	unsigned int stream_count;
 	unsigned int buffers_ready;
 
@@ -94,22 +96,15 @@ struct vsp1_pipeline {
 	struct vsp1_rwpf *inputs[VSP1_MAX_RPF];
 	struct vsp1_rwpf *output;
 	struct vsp1_entity *bru;
+	struct vsp1_entity *hgo;
 	struct vsp1_entity *lif;
 	struct vsp1_entity *uds;
 	struct vsp1_entity *uds_input;
 
 	struct list_head entities;
 
-	struct vsp1_dl *dl;
+	struct vsp1_dl_list *dl;
 };
-
-static inline struct vsp1_pipeline *to_vsp1_pipeline(struct media_entity *e)
-{
-	if (likely(e->pipe))
-		return container_of(e->pipe, struct vsp1_pipeline, pipe);
-	else
-		return NULL;
-}
 
 void vsp1_pipeline_reset(struct vsp1_pipeline *pipe);
 void vsp1_pipeline_init(struct vsp1_pipeline *pipe);
@@ -119,11 +114,11 @@ bool vsp1_pipeline_stopped(struct vsp1_pipeline *pipe);
 int vsp1_pipeline_stop(struct vsp1_pipeline *pipe);
 bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe);
 
-void vsp1_pipeline_display_start(struct vsp1_pipeline *pipe);
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe);
 
 void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
 				   struct vsp1_entity *input,
+				   struct vsp1_dl_list *dl,
 				   unsigned int alpha);
 
 void vsp1_pipelines_suspend(struct vsp1_device *vsp1);
