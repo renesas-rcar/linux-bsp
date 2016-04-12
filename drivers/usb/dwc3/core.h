@@ -193,6 +193,7 @@
 /* Global USB3 PIPE Control Register */
 #define DWC3_GUSB3PIPECTL_PHYSOFTRST	(1 << 31)
 #define DWC3_GUSB3PIPECTL_U2SSINP3OK	(1 << 29)
+#define DWC3_GUSB3PIPECTL_DISRXDETINP3	(1 << 28)
 #define DWC3_GUSB3PIPECTL_REQP1P2P3	(1 << 24)
 #define DWC3_GUSB3PIPECTL_DEP1P2P3(n)	((n) << 19)
 #define DWC3_GUSB3PIPECTL_DEP1P2P3_MASK	DWC3_GUSB3PIPECTL_DEP1P2P3(7)
@@ -438,18 +439,17 @@ struct dwc3_event_buffer {
 #define DWC3_EP_DIRECTION_TX	true
 #define DWC3_EP_DIRECTION_RX	false
 
-#define DWC3_TRB_NUM		32
-#define DWC3_TRB_MASK		(DWC3_TRB_NUM - 1)
+#define DWC3_TRB_NUM		256
 
 /**
  * struct dwc3_ep - device side endpoint representation
  * @endpoint: usb endpoint
- * @request_list: list of requests for this endpoint
- * @req_queued: list of requests on this ep which have TRBs setup
+ * @pending_list: list of pending requests for this endpoint
+ * @started_list: list of started requests on this endpoint
  * @trb_pool: array of transaction buffers
  * @trb_pool_dma: dma address of @trb_pool
- * @free_slot: next slot which is going to be used
- * @busy_slot: first slot which is owned by HW
+ * @trb_enqueue: enqueue 'pointer' into TRB array
+ * @trb_dequeue: dequeue 'pointer' into TRB array
  * @desc: usb_endpoint_descriptor pointer
  * @dwc: pointer to DWC controller
  * @saved_state: ep state saved during hibernation
@@ -464,13 +464,11 @@ struct dwc3_event_buffer {
  */
 struct dwc3_ep {
 	struct usb_ep		endpoint;
-	struct list_head	request_list;
-	struct list_head	req_queued;
+	struct list_head	pending_list;
+	struct list_head	started_list;
 
 	struct dwc3_trb		*trb_pool;
 	dma_addr_t		trb_pool_dma;
-	u32			free_slot;
-	u32			busy_slot;
 	const struct usb_ss_ep_comp_descriptor *comp_desc;
 	struct dwc3		*dwc;
 
@@ -485,6 +483,18 @@ struct dwc3_ep {
 
 	/* This last one is specific to EP0 */
 #define DWC3_EP0_DIR_IN		(1 << 31)
+
+	/*
+	 * IMPORTANT: we *know* we have 256 TRBs in our @trb_pool, so we will
+	 * use a u8 type here. If anybody decides to increase number of TRBs to
+	 * anything larger than 256 - I can't see why people would want to do
+	 * this though - then this type needs to be changed.
+	 *
+	 * By using u8 types we ensure that our % operator when incrementing
+	 * enqueue and dequeue get optimized away by the compiler.
+	 */
+	u8			trb_enqueue;
+	u8			trb_dequeue;
 
 	u8			number;
 	u8			type;
@@ -623,19 +633,32 @@ struct dwc3_hwparams {
 /* HWPARAMS7 */
 #define DWC3_RAM1_DEPTH(n)	((n) & 0xffff)
 
+/**
+ * struct dwc3_request - representation of a transfer request
+ * @request: struct usb_request to be transferred
+ * @list: a list_head used for request queueing
+ * @dep: struct dwc3_ep owning this request
+ * @first_trb_index: index to first trb used by this request
+ * @epnum: endpoint number to which this request refers
+ * @trb: pointer to struct dwc3_trb
+ * @trb_dma: DMA address of @trb
+ * @direction: IN or OUT direction flag
+ * @mapped: true when request has been dma-mapped
+ * @queued: true when request has been queued to HW
+ */
 struct dwc3_request {
 	struct usb_request	request;
 	struct list_head	list;
 	struct dwc3_ep		*dep;
-	u32			start_slot;
 
+	u8			first_trb_index;
 	u8			epnum;
 	struct dwc3_trb		*trb;
 	dma_addr_t		trb_dma;
 
 	unsigned		direction:1;
 	unsigned		mapped:1;
-	unsigned		queued:1;
+	unsigned		started:1;
 };
 
 /*
@@ -667,7 +690,6 @@ struct dwc3_scratchpad_array {
  * @regs: base address for our registers
  * @regs_size: address space size
  * @nr_scratch: number of scratch buffers
- * @num_event_buffers: calculated number of event buffers
  * @u1u2: only used on revisions <1.83a for workaround
  * @maximum_speed: maximum speed requested (mainly for testing purposes)
  * @revision: revision register contents
@@ -709,9 +731,7 @@ struct dwc3_scratchpad_array {
  * 	0	- utmi_sleep_n
  * 	1	- utmi_l1_suspend_n
  * @is_fpga: true when we are using the FPGA board
- * @needs_fifo_resize: not all users might want fifo resizing, flag it
  * @pullups_connected: true when Run/Stop bit is set
- * @resize_fifos: tells us it's ok to reconfigure our TxFIFO sizes.
  * @setup_packet_pending: true when there's a Setup Packet in FIFO. Workaround
  * @start_config_issued: true when StartConfig command has been issued
  * @three_stage_setup: set if we perform a three phase setup
@@ -756,7 +776,7 @@ struct dwc3 {
 	struct platform_device	*xhci;
 	struct resource		xhci_resources[DWC3_XHCI_RESOURCES_NUM];
 
-	struct dwc3_event_buffer **ev_buffs;
+	struct dwc3_event_buffer *ev_buf;
 	struct dwc3_ep		*eps[DWC3_ENDPOINTS_NUM];
 
 	struct usb_gadget	gadget;
@@ -780,7 +800,6 @@ struct dwc3 {
 	u32			gctl;
 
 	u32			nr_scratch;
-	u32			num_event_buffers;
 	u32			u1u2;
 	u32			maximum_speed;
 
@@ -855,9 +874,7 @@ struct dwc3 {
 	unsigned		has_lpm_erratum:1;
 	unsigned		is_utmi_l1_suspend:1;
 	unsigned		is_fpga:1;
-	unsigned		needs_fifo_resize:1;
 	unsigned		pullups_connected:1;
-	unsigned		resize_fifos:1;
 	unsigned		setup_packet_pending:1;
 	unsigned		three_stage_setup:1;
 	unsigned		usb3_lpm_capable:1;
@@ -873,6 +890,7 @@ struct dwc3 {
 	unsigned		dis_u3_susphy_quirk:1;
 	unsigned		dis_u2_susphy_quirk:1;
 	unsigned		dis_enblslpm_quirk:1;
+	unsigned		dis_rxdet_inp3_quirk:1;
 
 	unsigned		tx_de_emphasis_quirk:1;
 	unsigned		tx_de_emphasis:2;
@@ -1025,7 +1043,6 @@ struct dwc3_gadget_ep_cmd_params {
 
 /* prototypes */
 void dwc3_set_mode(struct dwc3 *dwc, u32 mode);
-int dwc3_gadget_resize_tx_fifos(struct dwc3 *dwc);
 
 /* check whether we are on the DWC_usb31 core */
 static inline bool dwc3_is_usb31(struct dwc3 *dwc)
