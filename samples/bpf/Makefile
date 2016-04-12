@@ -19,6 +19,7 @@ hostprogs-y += lathist
 hostprogs-y += offwaketime
 hostprogs-y += spintest
 hostprogs-y += map_perf_test
+hostprogs-y += test_overhead
 
 test_verifier-objs := test_verifier.o libbpf.o
 test_maps-objs := test_maps.o libbpf.o
@@ -38,6 +39,7 @@ lathist-objs := bpf_load.o libbpf.o lathist_user.o
 offwaketime-objs := bpf_load.o libbpf.o offwaketime_user.o
 spintest-objs := bpf_load.o libbpf.o spintest_user.o
 map_perf_test-objs := bpf_load.o libbpf.o map_perf_test_user.o
+test_overhead-objs := bpf_load.o libbpf.o test_overhead_user.o
 
 # Tell kbuild to always build the programs
 always := $(hostprogs-y)
@@ -56,6 +58,8 @@ always += lathist_kern.o
 always += offwaketime_kern.o
 always += spintest_kern.o
 always += map_perf_test_kern.o
+always += test_overhead_tp_kern.o
+always += test_overhead_kprobe_kern.o
 
 HOSTCFLAGS += -I$(objtree)/usr/include
 
@@ -75,6 +79,7 @@ HOSTLOADLIBES_lathist += -lelf
 HOSTLOADLIBES_offwaketime += -lelf
 HOSTLOADLIBES_spintest += -lelf
 HOSTLOADLIBES_map_perf_test += -lelf -lrt
+HOSTLOADLIBES_test_overhead += -lelf -lrt
 
 # asm/sysreg.h - inline assembly used by it is incompatible with llvm.
 # But, there is no easy way to fix it, so just exclude it since it is
