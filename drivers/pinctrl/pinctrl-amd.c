@@ -580,7 +580,7 @@ static const struct pinctrl_ops amd_pinctrl_ops = {
 	.get_group_pins		= amd_get_group_pins,
 #ifdef CONFIG_OF
 	.dt_node_to_map		= pinconf_generic_dt_node_to_map_group,
-	.dt_free_map		= pinctrl_utils_dt_free_map,
+	.dt_free_map		= pinctrl_utils_free_map,
 #endif
 };
 
@@ -844,6 +844,7 @@ static int amd_gpio_remove(struct platform_device *pdev)
 
 static const struct acpi_device_id amd_gpio_acpi_match[] = {
 	{ "AMD0030", 0 },
+	{ "AMDI0030", 0},
 	{ },
 };
 MODULE_DEVICE_TABLE(acpi, amd_gpio_acpi_match);
