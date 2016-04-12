@@ -2240,8 +2240,12 @@ int wm_adsp2_event(struct snd_soc_dapm_widget *w,
 		if (ret != 0)
 			goto err;
 
+		mutex_lock(&dsp->pwr_lock);
+
 		if (wm_adsp_fw[dsp->fw].num_caps != 0)
 			ret = wm_adsp_buffer_init(dsp);
+
+		mutex_unlock(&dsp->pwr_lock);
 
 		break;
 
@@ -2805,20 +2809,40 @@ static int wm_adsp_buffer_update_avail(struct wm_adsp_compr_buf *buf)
 		avail += wm_adsp_buffer_size(buf);
 
 	adsp_dbg(buf->dsp, "readindex=0x%x, writeindex=0x%x, avail=%d\n",
-		 buf->read_index, write_index, avail);
+		 buf->read_index, write_index, avail * WM_ADSP_DATA_WORD_SIZE);
 
 	buf->avail = avail;
 
 	return 0;
 }
 
+static int wm_adsp_buffer_get_error(struct wm_adsp_compr_buf *buf)
+{
+	int ret;
+
+	ret = wm_adsp_buffer_read(buf, HOST_BUFFER_FIELD(error), &buf->error);
+	if (ret < 0) {
+		adsp_err(buf->dsp, "Failed to check buffer error: %d\n", ret);
+		return ret;
+	}
+	if (buf->error != 0) {
+		adsp_err(buf->dsp, "Buffer error occurred: %d\n", buf->error);
+		return -EIO;
+	}
+
+	return 0;
+}
+
 int wm_adsp_compr_handle_irq(struct wm_adsp *dsp)
 {
-	struct wm_adsp_compr_buf *buf = dsp->buffer;
-	struct wm_adsp_compr *compr = dsp->compr;
+	struct wm_adsp_compr_buf *buf;
+	struct wm_adsp_compr *compr;
 	int ret = 0;
 
 	mutex_lock(&dsp->pwr_lock);
+
+	buf = dsp->buffer;
+	compr = dsp->compr;
 
 	if (!buf) {
 		ret = -ENODEV;
@@ -2827,16 +2851,9 @@ int wm_adsp_compr_handle_irq(struct wm_adsp *dsp)
 
 	adsp_dbg(dsp, "Handling buffer IRQ\n");
 
-	ret = wm_adsp_buffer_read(buf, HOST_BUFFER_FIELD(error), &buf->error);
-	if (ret < 0) {
-		adsp_err(dsp, "Failed to check buffer error: %d\n", ret);
-		goto out;
-	}
-	if (buf->error != 0) {
-		adsp_err(dsp, "Buffer error occurred: %d\n", buf->error);
-		ret = -EIO;
-		goto out;
-	}
+	ret = wm_adsp_buffer_get_error(buf);
+	if (ret < 0)
+		goto out_notify; /* Wake poll to report error */
 
 	ret = wm_adsp_buffer_read(buf, HOST_BUFFER_FIELD(irq_count),
 				  &buf->irq_count);
@@ -2851,6 +2868,7 @@ int wm_adsp_compr_handle_irq(struct wm_adsp *dsp)
 		goto out;
 	}
 
+out_notify:
 	if (compr && compr->stream)
 		snd_compr_fragment_elapsed(compr->stream);
 
@@ -2879,13 +2897,15 @@ int wm_adsp_compr_pointer(struct snd_compr_stream *stream,
 			  struct snd_compr_tstamp *tstamp)
 {
 	struct wm_adsp_compr *compr = stream->runtime->private_data;
-	struct wm_adsp_compr_buf *buf = compr->buf;
 	struct wm_adsp *dsp = compr->dsp;
+	struct wm_adsp_compr_buf *buf;
 	int ret = 0;
 
 	adsp_dbg(dsp, "Pointer request\n");
 
 	mutex_lock(&dsp->pwr_lock);
+
+	buf = compr->buf;
 
 	if (!compr->buf) {
 		ret = -ENXIO;
@@ -2909,6 +2929,10 @@ int wm_adsp_compr_pointer(struct snd_compr_stream *stream,
 		 * DSP to inform us once a whole fragment is available.
 		 */
 		if (buf->avail < wm_adsp_compr_frag_words(compr)) {
+			ret = wm_adsp_buffer_get_error(buf);
+			if (ret < 0)
+				goto out;
+
 			ret = wm_adsp_buffer_reenable_irq(buf);
 			if (ret < 0) {
 				adsp_err(dsp,

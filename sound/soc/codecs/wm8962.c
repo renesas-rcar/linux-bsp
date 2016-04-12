@@ -2471,7 +2471,7 @@ static void wm8962_configure_bclk(struct snd_soc_codec *codec)
 		break;
 	default:
 		dev_warn(codec->dev, "Unknown DSPCLK divisor read back\n");
-		dspclk = wm8962->sysclk;
+		dspclk = wm8962->sysclk_rate;
 	}
 
 	dev_dbg(codec->dev, "DSPCLK is %dHz, BCLK %d\n", dspclk, wm8962->bclk);
@@ -3798,9 +3798,8 @@ static int wm8962_runtime_resume(struct device *dev)
 	ret = regulator_bulk_enable(ARRAY_SIZE(wm8962->supplies),
 				    wm8962->supplies);
 	if (ret != 0) {
-		dev_err(dev,
-			"Failed to enable supplies: %d\n", ret);
-		return ret;
+		dev_err(dev, "Failed to enable supplies: %d\n", ret);
+		goto disable_clock;
 	}
 
 	regcache_cache_only(wm8962->regmap, false);
@@ -3838,6 +3837,10 @@ static int wm8962_runtime_resume(struct device *dev)
 	msleep(5);
 
 	return 0;
+
+disable_clock:
+	clk_disable_unprepare(wm8962->pdata.mclk);
+	return ret;
 }
 
 static int wm8962_runtime_suspend(struct device *dev)
