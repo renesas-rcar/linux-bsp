@@ -884,7 +884,7 @@ unsigned long ata_pack_xfermask(unsigned long pio_mask,
  *	@udma_mask: resulting udma_mask
  *
  *	Unpack @xfer_mask into @pio_mask, @mwdma_mask and @udma_mask.
- *	Any NULL distination masks will be ignored.
+ *	Any NULL destination masks will be ignored.
  */
 void ata_unpack_xfermask(unsigned long xfer_mask, unsigned long *pio_mask,
 			 unsigned long *mwdma_mask, unsigned long *udma_mask)
@@ -3417,7 +3417,7 @@ int ata_do_set_mode(struct ata_link *link, struct ata_device **r_failed_dev)
  *	EH context.
  *
  *	RETURNS:
- *	0 if @linke is ready before @deadline; otherwise, -errno.
+ *	0 if @link is ready before @deadline; otherwise, -errno.
  */
 int ata_wait_ready(struct ata_link *link, unsigned long deadline,
 		   int (*check_ready)(struct ata_link *link))
@@ -3498,7 +3498,7 @@ int ata_wait_ready(struct ata_link *link, unsigned long deadline,
  *	EH context.
  *
  *	RETURNS:
- *	0 if @linke is ready before @deadline; otherwise, -errno.
+ *	0 if @link is ready before @deadline; otherwise, -errno.
  */
 int ata_wait_after_reset(struct ata_link *link, unsigned long deadline,
 				int (*check_ready)(struct ata_link *link))
@@ -3511,7 +3511,7 @@ int ata_wait_after_reset(struct ata_link *link, unsigned long deadline,
 /**
  *	sata_link_debounce - debounce SATA phy status
  *	@link: ATA link to debounce SATA phy status for
- *	@params: timing parameters { interval, duratinon, timeout } in msec
+ *	@params: timing parameters { interval, duration, timeout } in msec
  *	@deadline: deadline jiffies for the operation
  *
  *	Make sure SStatus of @link reaches stable state, determined by
@@ -3581,7 +3581,7 @@ int sata_link_debounce(struct ata_link *link, const unsigned long *params,
 /**
  *	sata_link_resume - resume SATA link
  *	@link: ATA link to resume SATA
- *	@params: timing parameters { interval, duratinon, timeout } in msec
+ *	@params: timing parameters { interval, duration, timeout } in msec
  *	@deadline: deadline jiffies for the operation
  *
  *	Resume SATA phy @link and debounce it.
@@ -3764,7 +3764,7 @@ int ata_std_prereset(struct ata_link *link, unsigned long deadline)
 /**
  *	sata_link_hardreset - reset link via SATA phy reset
  *	@link: link to reset
- *	@timing: timing parameters { interval, duratinon, timeout } in msec
+ *	@timing: timing parameters { interval, duration, timeout } in msec
  *	@deadline: deadline jiffies for the operation
  *	@online: optional out parameter indicating link onlineness
  *	@check_ready: optional callback to check link readiness
@@ -6230,7 +6230,7 @@ int ata_host_register(struct ata_host *host, struct scsi_host_template *sht)
  *
  *	After allocating an ATA host and initializing it, most libata
  *	LLDs perform three steps to activate the host - start host,
- *	request IRQ and register it.  This helper takes necessasry
+ *	request IRQ and register it.  This helper takes necessary
  *	arguments and performs the three steps in one go.
  *
  *	An invalid IRQ skips the IRQ registration and expects the host to
@@ -6283,7 +6283,7 @@ int ata_host_activate(struct ata_host *host, int irq,
 }
 
 /**
- *	ata_port_detach - Detach ATA port in prepration of device removal
+ *	ata_port_detach - Detach ATA port in preparation of device removal
  *	@ap: ATA port to be detached
  *
  *	Detach all ATA devices and the associated SCSI devices of @ap;
