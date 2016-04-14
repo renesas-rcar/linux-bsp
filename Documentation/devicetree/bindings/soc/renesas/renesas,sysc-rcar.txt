@@ -8,7 +8,8 @@ The R-Car System Controller provides the following functions:
 	on-chip drivers (via pm_runtime apis.)
 
 Required properties:
-- compatible: Should be "renesas,rcar-gen3-sysc"
+- compatible: Should be "renesas,rcar-r8a7795-sysc"
+		or "renesas,rcar-r8a7796-sysc"
 		or "renesas,rcar-gen2-sysc" as fallback.
 
 - reg: Compose start address and address range blocks for the device.

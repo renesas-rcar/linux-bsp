@@ -58,6 +58,7 @@
 
 /* Bits for control 3DG power domains */
 #define BITS_0_4	((u32)(BIT(0)|BIT(1)|BIT(2)|BIT(3)|BIT(4)))
+#define BITS_0_1	((u32)(BIT(0)|BIT(1)))
 #define BITS_17_20	((u32)(BIT(17)|BIT(18)|BIT(19)|BIT(20)))
 
 #define SYSCSR_RETRIES		1000
@@ -99,8 +100,8 @@ static const struct rcar_sysc_domains_info rcar_gen2_domains_info = {
 	.len	= ARRAY_SIZE(rcar_gen2_pd_sysc),
 };
 
-/* R-Car Gen3 specific data */
-static const struct rcar_sysc_domain_data rcar_gen3_pd_sysc[] = {
+/* R-Car H3 specific data */
+static const struct rcar_sysc_domain_data rcar_r8a7795_pd_sysc[] = {
 	DEF_DM_DATA("a3sg",  BITS_17_20 | BIT(22), (BITS_0_4 << 5),
 				BITS_0_4, BITS_0_4, BITS_0_4, BITS_0_4),
 	DEF_DM_DATA("a3ir",  BIT(24), BIT(4), BIT(0), BIT(0), BIT(0), BIT(0)),
@@ -110,9 +111,24 @@ static const struct rcar_sysc_domain_data rcar_gen3_pd_sysc[] = {
 	DEF_DM_DATA("a2vc1", BIT(26), BIT(3), BIT(1), BIT(1), BIT(1), BIT(1)),
 };
 
-static const struct rcar_sysc_domains_info rcar_gen3_domains_info = {
-	.domains_list = rcar_gen3_pd_sysc,
-	.len	= ARRAY_SIZE(rcar_gen3_pd_sysc),
+static const struct rcar_sysc_domains_info rcar_r8a7795_domains_info = {
+	.domains_list = rcar_r8a7795_pd_sysc,
+	.len	= ARRAY_SIZE(rcar_r8a7795_pd_sysc),
+};
+
+/* R-Car M3 specific data */
+static const struct rcar_sysc_domain_data rcar_r8a7796_pd_sysc[] = {
+	DEF_DM_DATA("a3sg",  (BIT(17) | BIT(18)), (BITS_0_1 << 5),
+				BITS_0_1, BITS_0_1, BITS_0_1, BITS_0_1),
+	DEF_DM_DATA("a3ir",  BIT(24), BIT(4), BIT(0), BIT(0), BIT(0), BIT(0)),
+	DEF_DM_DATA("a3vc",  BIT(14), BIT(4), BIT(0), BIT(0), BIT(0), BIT(0)),
+	DEF_DM_DATA("a2vc0", BIT(25), BIT(2), BIT(0), BIT(0), BIT(0), BIT(0)),
+	DEF_DM_DATA("a2vc1", BIT(26), BIT(3), BIT(1), BIT(1), BIT(1), BIT(1)),
+};
+
+static const struct rcar_sysc_domains_info rcar_r8a7796_domains_info = {
+	.domains_list = rcar_r8a7796_pd_sysc,
+	.len	= ARRAY_SIZE(rcar_r8a7796_pd_sysc),
 };
 
 /*======= Sysc/Power Domain Driver =======*/
@@ -150,6 +166,12 @@ int set_dm_on_off(struct rcar_sysc_domain *pd, int flag)
 
 	/* Check the power domain is ON/OFF before set OFF/ON */
 	if ((pwrsr & read_reg32(pd->base + PWRSR)) == pwrsr) {
+		/* Start W/A for A3VP, A3VC, and A3IR domains */
+		if ((flag == 0) && (!strcmp("a3vp", dm_data->name)
+				|| !strcmp("a3ir", dm_data->name)
+				|| !strcmp("a3vc", dm_data->name)))
+			udelay(1);
+
 		/* set 1 to PWRUP/PWRDWN bit(s) of PWRONCR/PWROFFCR regs */
 		write_reg32(dm_data->pwr_on_off_cr, pwr_onoff_cr);
 		/* Check err register, either shutoff/resume was not accepted */
@@ -434,10 +456,13 @@ static const struct of_device_id rcar_pm_sysc_dt_match[] = {
 		.data = (void *)&rcar_gen2_domains_info,
 	},
 	{
-		.compatible = "renesas,rcar-gen3-sysc",
-		.data = (void *)&rcar_gen3_domains_info,
+		.compatible = "renesas,rcar-r8a7795-sysc",
+		.data = (void *)&rcar_r8a7795_domains_info,
 	},
-
+	{
+		.compatible = "renesas,rcar-r8a7796-sysc",
+		.data = (void *)&rcar_r8a7796_domains_info,
+	},
 	{ /* sentinel */ },
 };
 
