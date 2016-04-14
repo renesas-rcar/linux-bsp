@@ -76,7 +76,7 @@ static int rpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	const struct v4l2_rect *crop = &rpf->crop;
 	u32 pstride;
 	u32 infmt;
-	u32 alph_sel, laya;
+	u32 alph_sel = 0, laya;
 	int ret, i;
 
 	ret = vsp1_entity_set_streaming(&rpf->entity, enable);
@@ -158,25 +158,31 @@ static int rpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	switch (fmtinfo->fourcc) {
 	case V4L2_PIX_FMT_ARGB555:
 		if (CONFIG_VIDEO_RENESAS_VSP_ALPHA_BIT_ARGB1555 == 1)
-			alph_sel = (2 << 28) | (1 << 18) |
-				   (0xFF << 8) | (rpf->alpha->cur.val & 0xFF);
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   VI6_RPF_ALPH_SEL_ALPHA0_MASK |
+				   (rpf->alpha->cur.val &
+				   VI6_RPF_ALPH_SEL_ALPHA1_MASK);
 		else
-			alph_sel = (2 << 28) | (1 << 18) |
-				   ((rpf->alpha->cur.val & 0xFF) << 8) | 0xFF;
-		laya = 0;
-		break;
-	case V4L2_PIX_FMT_ARGB32:
-	case V4L2_PIX_FMT_ABGR32:
-		alph_sel = (1 << 18);
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   ((rpf->alpha->cur.val & 0xFF) << 8) |
+				   VI6_RPF_ALPH_SEL_ALPHA1_MASK;
 		laya = 0;
 		break;
 	case V4L2_PIX_FMT_ARGB444:
-		alph_sel = (0 << 28) | (2 << 18);
+		alph_sel = VI6_RPF_ALPH_SEL_AEXT_ONE;
+		laya = 0;
+		break;
+	case V4L2_PIX_FMT_ABGR32:
+	case V4L2_PIX_FMT_ARGB32:
 		laya = 0;
 		break;
 	default:
-		alph_sel = (4 << 28) | (1 << 18);
-		laya = (rpf->alpha->cur.val & 0xFF) << 24;
+		alph_sel = VI6_RPF_ALPH_SEL_ASEL_FIXED |
+			   VI6_RPF_ALPH_SEL_AEXT_EXT;
+		laya = (rpf->alpha->cur.val & 0xFF) <<
+			 VI6_RPF_ALPH_SEL_IROP_SHIFT;
 		break;
 	}
 	vsp1_rpf_write(rpf, VI6_RPF_ALPH_SEL, alph_sel);
