@@ -350,7 +350,7 @@ static void tmio_mmc_done_work(struct work_struct *work)
 
 #define TMIO_MMC_MAX_TUNING_LOOP 40
 
-static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
+static int _tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	struct mmc_ios *ios = &mmc->ios;
@@ -1021,13 +1021,13 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	pm_runtime_get_sync(mmc_dev(mmc));
 
 	if (host->inquiry_tuning && host->inquiry_tuning(host) &&
-	    !host->done_tuning) {
+	    !host->done_tuning && host->mmc->card) {
 		if (mmc_card_mmc(host->mmc->card))
 			opcode = MMC_SEND_TUNING_BLOCK_HS200;
 		else
 			opcode = MMC_SEND_TUNING_BLOCK;
 		/* Start retuning */
-		ret = tmio_mmc_execute_tuning(mmc, opcode);
+		ret = _tmio_mmc_execute_tuning(mmc, opcode);
 		if (ret)
 			goto fail;
 		/* Restore request */
@@ -1050,13 +1050,13 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		host->last_req_ts = jiffies;
 		host->mrq = mrq;
 		if (host->inquiry_tuning && host->inquiry_tuning(host) &&
-		    !host->done_tuning) {
+		    !host->done_tuning && host->mmc->card) {
 			if (mmc_card_mmc(host->mmc->card))
 				opcode = MMC_SEND_TUNING_BLOCK_HS200;
 			else
 				opcode = MMC_SEND_TUNING_BLOCK;
 			/* Start retuning */
-			ret = tmio_mmc_execute_tuning(mmc, opcode);
+			ret = _tmio_mmc_execute_tuning(mmc, opcode);
 			if (ret)
 				goto fail;
 			/* Restore request */
@@ -1302,6 +1302,18 @@ static int tmio_mmc_card_busy(struct mmc_host *mmc)
 			return ret;
 	}
 	return 0;
+}
+
+static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
+{
+	int ret;
+
+	ret = _tmio_mmc_execute_tuning(mmc, opcode);
+
+	if (ret)
+		mmc_set_initial_state(mmc);
+
+	return ret;
 }
 
 static void tmio_mmc_hw_reset(struct mmc_host *mmc)
