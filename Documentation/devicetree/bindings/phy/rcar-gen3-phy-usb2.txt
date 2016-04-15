@@ -6,6 +6,8 @@ This file provides information on what the device node for the R-Car generation
 Required properties:
 - compatible: "renesas,usb2-phy-r8a7795" if the device is a part of an R8A7795
 	      SoC.
+	      "renesas,usb2-phy-r8a7796" if the device is a part of an R8A7796
+	      SoC.
 - reg: offset and length of the partial USB 2.0 Host register block.
 - clocks: clock phandle and specifier pair(s).
 - #phy-cells: see phy-bindings.txt in the same directory, must be <0>.
