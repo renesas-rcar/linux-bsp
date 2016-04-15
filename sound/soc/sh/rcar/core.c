@@ -1250,7 +1250,7 @@ static SIMPLE_DEV_PM_OPS(rsnd_pm_ops,
 			rsnd_suspend, rsnd_resume);
 #define DEV_PM_OPS (&rsnd_pm_ops)
 #else
-#define DEV_PM_OPS NUL
+#define DEV_PM_OPS NULL
 #endif  /* CONFIG_PM_SLEEP */
 
 static struct platform_driver rsnd_driver = {
