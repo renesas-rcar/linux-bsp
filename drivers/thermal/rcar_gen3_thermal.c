@@ -537,7 +537,7 @@ static int rcar_gen3_thermal_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 
 	rcar_thermal_irq_disable(priv);
-	thermal_zone_device_unregister(priv->zone);
+	thermal_zone_of_sensor_unregister(dev, priv->zone);
 
 	pm_runtime_put(dev);
 	pm_runtime_disable(dev);
