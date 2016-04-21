@@ -573,13 +573,23 @@ error_unregister:
 #ifdef CONFIG_PM_SLEEP
 static int rcar_gen3_thermal_suspend(struct device *dev)
 {
-	/* Empty functino for now */
+	struct rcar_thermal_priv *priv = dev_get_drvdata(dev);
+
+	pr_debug("%s\n", __func__);
+	rcar_thermal_irq_disable(priv);
+
 	return 0;
 }
 
 static int rcar_gen3_thermal_resume(struct device *dev)
 {
-	/* Empty function for now */
+	struct rcar_thermal_priv *priv = dev_get_drvdata(dev);
+
+	pr_debug("%s\n", __func__);
+	priv->data->thermal_init(priv);
+	rcar_thermal_irq_enable(priv);
+	rcar_gen3_thermal_update_temp(priv);
+
 	return 0;
 }
 
