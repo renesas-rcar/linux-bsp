@@ -47,6 +47,7 @@
 #include <linux/serial_sci.h>
 #include <linux/sh_dma.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/s2ram_ddr_backup.h>
 #include <linux/string.h>
 #include <linux/sysrq.h>
 #include <linux/timer.h>
@@ -453,6 +454,285 @@ static const struct plat_sci_reg sci_regmap[SCIx_NR_REGTYPES][SCIx_NR_REGS] = {
 };
 
 #define sci_getreg(up, offset)		(sci_regmap[to_sci_port(up)->cfg->regtype] + offset)
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+/* SCIF0 save/restore regs */
+static struct hw_register scif0_ip_regs[] = {
+	{"SCSMR",  0x0000, 16, 0},
+	{"SCBRR",  0x0004,  8, 0},
+	{"SCSCR",  0x0008, 16, 0},
+	{"SCFCR",  0x0018, 16, 0},
+	{"SCSPTR", 0x0020, 16, 0},
+	{"DL",     0x0030, 16, 0},
+	{"CKS",    0x0034, 16, 0},
+};
+
+static struct rcar_ip scif0_ip = {
+	.ip_name   = "SCIF0",
+	.reg_count = ARRAY_SIZE(scif0_ip_regs),
+	.ip_reg    = scif0_ip_regs,
+};
+
+/* SCIF1 save/restore regs */
+static struct hw_register scif1_ip_regs[] = {
+	{"SCSMR",  0x0000, 16, 0},
+	{"SCBRR",  0x0004,  8, 0},
+	{"SCSCR",  0x0008, 16, 0},
+	{"SCFCR",  0x0018, 16, 0},
+	{"SCSPTR", 0x0020, 16, 0},
+	{"DL",     0x0030, 16, 0},
+	{"CKS",    0x0034, 16, 0},
+};
+
+static struct rcar_ip scif1_ip = {
+	.ip_name   = "SCIF1",
+	.reg_count = ARRAY_SIZE(scif1_ip_regs),
+	.ip_reg    = scif1_ip_regs,
+};
+
+/* SCIF2 save/restore regs */
+static struct hw_register scif2_ip_regs[] = {
+	{"SCSMR",  0x0000, 16, 0},
+	{"SCBRR",  0x0004,  8, 0},
+	{"SCSCR",  0x0008, 16, 0},
+	{"SCFCR",  0x0018, 16, 0},
+	{"SCSPTR", 0x0020, 16, 0},
+	{"DL",     0x0030, 16, 0},
+	{"CKS",    0x0034, 16, 0},
+};
+
+static struct rcar_ip scif2_ip = {
+	.ip_name   = "SCIF2",
+	.reg_count = ARRAY_SIZE(scif2_ip_regs),
+	.ip_reg    = scif2_ip_regs,
+};
+
+/* SCIF3 save/restore regs */
+static struct hw_register scif3_ip_regs[] = {
+	{"SCSMR",  0x0000, 16, 0},
+	{"SCBRR",  0x0004,  8, 0},
+	{"SCSCR",  0x0008, 16, 0},
+	{"SCFCR",  0x0018, 16, 0},
+	{"SCSPTR", 0x0020, 16, 0},
+	{"DL",     0x0030, 16, 0},
+	{"CKS",    0x0034, 16, 0},
+};
+
+static struct rcar_ip scif3_ip = {
+	.ip_name   = "SCIF3",
+	.reg_count = ARRAY_SIZE(scif3_ip_regs),
+	.ip_reg    = scif3_ip_regs,
+};
+
+/* SCIF4 save/restore regs */
+static struct hw_register scif4_ip_regs[] = {
+	{"SCSMR",  0x0000, 16, 0},
+	{"SCBRR",  0x0004,  8, 0},
+	{"SCSCR",  0x0008, 16, 0},
+	{"SCFCR",  0x0018, 16, 0},
+	{"SCSPTR", 0x0020, 16, 0},
+	{"DL",     0x0030, 16, 0},
+	{"CKS",    0x0034, 16, 0},
+};
+
+static struct rcar_ip scif4_ip = {
+	.ip_name   = "SCIF4",
+	.reg_count = ARRAY_SIZE(scif4_ip_regs),
+	.ip_reg    = scif4_ip_regs,
+};
+
+/* SCIF5 save/restore regs */
+static struct hw_register scif5_ip_regs[] = {
+	{"SCSMR",  0x0000, 16, 0},
+	{"SCBRR",  0x0004,  8, 0},
+	{"SCSCR",  0x0008, 16, 0},
+	{"SCFCR",  0x0018, 16, 0},
+	{"SCSPTR", 0x0020, 16, 0},
+	{"DL",     0x0030, 16, 0},
+	{"CKS",    0x0034, 16, 0},
+};
+
+static struct rcar_ip scif5_ip = {
+	.ip_name   = "SCIF5",
+	.reg_count = ARRAY_SIZE(scif5_ip_regs),
+	.ip_reg    = scif5_ip_regs,
+};
+
+/* HSCIF0 save/restore regs */
+static struct hw_register hscif0_ip_regs[] = {
+	{"HSSMR",  0x0000, 16, 0},
+	{"HSBRR",  0x0004,  8, 0},
+	{"HSSCR",  0x0008, 16, 0},
+	{"HSFCR",  0x0018, 16, 0},
+	{"HSSPTR", 0x0020, 16, 0},
+	{"HSSRR",  0x0040, 16, 0},
+	{"HSRTGR", 0x0050, 16, 0},
+	{"HSRTRGR", 0x0054, 16, 0},
+	{"HSTTRGR", 0x0058, 16, 0},
+};
+
+static struct rcar_ip hscif0_ip = {
+	.ip_name   = "HSCIF0",
+	.reg_count = ARRAY_SIZE(hscif0_ip_regs),
+	.ip_reg    = hscif0_ip_regs,
+};
+
+/* HSCIF1 save/restore regs */
+static struct hw_register hscif1_ip_regs[] = {
+	{"HSSMR",  0x0000, 16, 0},
+	{"HSBRR",  0x0004,  8, 0},
+	{"HSSCR",  0x0008, 16, 0},
+	{"HSFCR",  0x0018, 16, 0},
+	{"HSSPTR", 0x0020, 16, 0},
+	{"HSSRR",  0x0040, 16, 0},
+	{"HSRTGR", 0x0050, 16, 0},
+	{"HSRTRGR", 0x0054, 16, 0},
+	{"HSTTRGR", 0x0058, 16, 0},
+};
+
+static struct rcar_ip hscif1_ip = {
+	.ip_name   = "HSCIF1",
+	.reg_count = ARRAY_SIZE(hscif1_ip_regs),
+	.ip_reg    = hscif1_ip_regs,
+};
+
+/* HSCIF2 save/restore regs */
+static struct hw_register hscif2_ip_regs[] = {
+	{"HSSMR",  0x0000, 16, 0},
+	{"HSBRR",  0x0004,  8, 0},
+	{"HSSCR",  0x0008, 16, 0},
+	{"HSFCR",  0x0018, 16, 0},
+	{"HSSPTR", 0x0020, 16, 0},
+	{"HSSRR",  0x0040, 16, 0},
+	{"HSRTGR", 0x0050, 16, 0},
+	{"HSRTRGR", 0x0054, 16, 0},
+	{"HSTTRGR", 0x0058, 16, 0},
+};
+
+static struct rcar_ip hscif2_ip = {
+	.ip_name   = "HSCIF2",
+	.reg_count = ARRAY_SIZE(hscif2_ip_regs),
+	.ip_reg    = hscif2_ip_regs,
+};
+
+/* HSCIF3 save/restore regs */
+static struct hw_register hscif3_ip_regs[] = {
+	{"HSSMR",  0x0000, 16, 0},
+	{"HSBRR",  0x0004,  8, 0},
+	{"HSSCR",  0x0008, 16, 0},
+	{"HSFCR",  0x0018, 16, 0},
+	{"HSSPTR", 0x0020, 16, 0},
+	{"HSSRR",  0x0040, 16, 0},
+	{"HSRTGR", 0x0050, 16, 0},
+	{"HSRTRGR", 0x0054, 16, 0},
+	{"HSTTRGR", 0x0058, 16, 0},
+};
+
+static struct rcar_ip hscif3_ip = {
+	.ip_name   = "HSCIF3",
+	.reg_count = ARRAY_SIZE(hscif3_ip_regs),
+	.ip_reg    = hscif3_ip_regs,
+};
+
+/* HSCIF4 save/restore regs */
+static struct hw_register hscif4_ip_regs[] = {
+	{"HSSMR",  0x0000, 16, 0},
+	{"HSBRR",  0x0004,  8, 0},
+	{"HSSCR",  0x0008, 16, 0},
+	{"HSFCR",  0x0018, 16, 0},
+	{"HSSPTR", 0x0020, 16, 0},
+	{"HSSRR",  0x0040, 16, 0},
+	{"HSRTGR", 0x0050, 16, 0},
+	{"HSRTRGR", 0x0054, 16, 0},
+	{"HSTTRGR", 0x0058, 16, 0},
+};
+
+static struct rcar_ip hscif4_ip = {
+	.ip_name   = "HSCIF4",
+	.reg_count = ARRAY_SIZE(hscif4_ip_regs),
+	.ip_reg    = hscif4_ip_regs,
+};
+
+struct h_scif_ip_info {
+	const char *name;
+	struct rcar_ip *ip;
+};
+
+static struct h_scif_ip_info ip_info_tbl[] = {
+	/* SCIF */
+	{"e6e60000.serial", &scif0_ip},
+	{"e6e68000.serial", &scif1_ip},
+	{"e6e88000.serial", &scif2_ip},
+	{"e6c50000.serial", &scif3_ip},
+	{"e6c40000.serial", &scif4_ip},
+	{"e6c30000.serial", &scif5_ip},
+	/* HSCIF */
+	{"e6540000.serial", &hscif0_ip},
+	{"e6550000.serial", &hscif1_ip},
+	{"e6560000.serial", &hscif2_ip},
+	{"e66a0000.serial", &hscif3_ip},
+	{"e66b0000.serial", &hscif4_ip},
+	{NULL, NULL},
+};
+
+static struct rcar_ip *sci_get_ip(const char *name)
+{
+	struct h_scif_ip_info *ip_info = ip_info_tbl;
+	struct rcar_ip *ip = NULL;
+
+	while (ip_info->name) {
+		if (!strcmp(ip_info->name, name)) {
+			ip = ip_info->ip;
+			break;
+		}
+		ip_info++;
+	}
+
+	return ip;
+}
+
+static int sci_save_regs(struct device *dev)
+{
+	struct sci_port *sport = dev_get_drvdata(dev);
+	struct platform_device *pdev;
+	struct rcar_ip *h_scif_ip;
+	int ret = -ENODEV;
+
+	pdev = container_of(dev, struct platform_device, dev);
+	h_scif_ip = sci_get_ip(pdev->name);
+
+	if (h_scif_ip) {
+		if (!h_scif_ip->virt_addr)
+			h_scif_ip->virt_addr = sport->port.membase;
+
+		ret = handle_registers(h_scif_ip, DO_BACKUP);
+		pr_debug("%s: Backup %s registers\n",
+			__func__, h_scif_ip->ip_name);
+	} else
+		pr_err("%s: No serial found\n", __func__);
+
+	return ret;
+}
+
+static int sci_restore_regs(struct device *dev)
+{
+	struct platform_device *pdev;
+	struct rcar_ip *h_scif_ip;
+	int ret = -ENODEV;
+
+	pdev = container_of(dev, struct platform_device, dev);
+	h_scif_ip = sci_get_ip(pdev->name);
+
+	if (h_scif_ip) {
+		ret = handle_registers(h_scif_ip, DO_RESTORE);
+		pr_debug("%s: Restore %s registers\n",
+			__func__, h_scif_ip->ip_name);
+	} else
+		pr_err("%s: No serial found\n", __func__);
+
+	return ret;
+}
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 /*
  * The "offset" here is rather misleading, in that it refers to an enum
@@ -3113,21 +3393,31 @@ static int sci_probe(struct platform_device *dev)
 static __maybe_unused int sci_suspend(struct device *dev)
 {
 	struct sci_port *sport = dev_get_drvdata(dev);
+	int ret = 0;
 
-	if (sport)
+	if (sport) {
 		uart_suspend_port(&sci_uart_driver, &sport->port);
+#ifdef CONFIG_RCAR_DDR_BACKUP
+		ret = sci_save_regs(dev);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+	}
 
-	return 0;
+	return ret;
 }
 
 static __maybe_unused int sci_resume(struct device *dev)
 {
 	struct sci_port *sport = dev_get_drvdata(dev);
+	int ret = 0;
 
-	if (sport)
+	if (sport) {
+#ifdef CONFIG_RCAR_DDR_BACKUP
+		ret = sci_restore_regs(dev);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 		uart_resume_port(&sci_uart_driver, &sport->port);
+	}
 
-	return 0;
+	return ret;
 }
 
 static SIMPLE_DEV_PM_OPS(sci_dev_pm_ops, sci_suspend, sci_resume);
