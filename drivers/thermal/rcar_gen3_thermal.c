@@ -626,6 +626,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->zone)) {
 		dev_err(dev, "Can't register thermal zone\n");
 		ret = PTR_ERR(priv->zone);
+		priv->zone = NULL;
 		goto error_unregister;
 	}
 
