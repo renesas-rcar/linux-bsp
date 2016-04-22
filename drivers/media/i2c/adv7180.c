@@ -434,6 +434,15 @@ out:
 	return ret;
 }
 
+static int adv7180_g_std(struct v4l2_subdev *sd, v4l2_std_id *norm)
+{
+	struct adv7180_state *state = to_state(sd);
+
+	*norm = state->curr_norm;
+
+	return 0;
+}
+
 static int adv7180_set_power(struct adv7180_state *state, bool on)
 {
 	u8 val;
@@ -717,14 +726,37 @@ static int adv7180_g_mbus_config(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int adv7180_cropcap(struct v4l2_subdev *sd, struct v4l2_cropcap *cropcap)
+{
+	struct adv7180_state *state = to_state(sd);
+
+	if (state->curr_norm & V4L2_STD_525_60) {
+		cropcap->pixelaspect.numerator = 11;
+		cropcap->pixelaspect.denominator = 10;
+	} else {
+		cropcap->pixelaspect.numerator = 54;
+		cropcap->pixelaspect.denominator = 59;
+	}
+
+	return 0;
+}
+
+static int adv7180_g_tvnorms(struct v4l2_subdev *sd, v4l2_std_id *norm)
+{
+	*norm = V4L2_STD_ALL;
+	return 0;
+}
+
 static const struct v4l2_subdev_video_ops adv7180_video_ops = {
 	.s_std = adv7180_s_std,
+	.g_std = adv7180_g_std,
 	.querystd = adv7180_querystd,
 	.g_input_status = adv7180_g_input_status,
 	.s_routing = adv7180_s_routing,
 	.g_mbus_config = adv7180_g_mbus_config,
+	.cropcap = adv7180_cropcap,
+	.g_tvnorms = adv7180_g_tvnorms,
 };
-
 
 static const struct v4l2_subdev_core_ops adv7180_core_ops = {
 	.s_power = adv7180_s_power,
