@@ -42,6 +42,12 @@ static int ems_poll;
 static int thermal_zone_num;
 static struct thermal_zone_device *thermal_zone[EMS_THERMAL_ZONE_MAX];
 
+#ifdef CONFIG_RCAR_THERMAL_EMS_ENABLED
+static bool ems_enabled = true;
+#else
+static bool ems_enabled = false;
+#endif
+
 static int rcar_ems_notify(unsigned long state, void *p)
 {
 	return raw_notifier_call_chain(&rcar_ems_chain, state, p);
@@ -110,6 +116,11 @@ static int __init rcar_ems_ctrl_init(void)
 	struct device_node *np, *c;
 	struct thermal_zone_device *zone;
 	u32 value;
+
+	if (ems_enabled == false) {
+		pr_err("thermal emergency: disabled\n");
+		return 0;
+	}
 
 	np = of_find_node_by_name(NULL, "thermal-zones");
 	if (!np)
@@ -246,6 +257,9 @@ static int __init rcar_ems_cpu_shutdown_init(void)
 {
 	int cpu;
 	struct device_node *cpu_node;
+
+	if (ems_enabled == false)
+		return 0;
 
 	cpumask_clear(&target_cpus);
 
