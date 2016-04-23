@@ -16,14 +16,17 @@
 #include <media/v4l2-device.h>
 
 #define RVIN_PORT_LOCAL 0
+#define RVIN_PORT_CSI 1
+#define RVIN_PORT_REMOTE 2
 
 enum rvin_input_type {
 	RVIN_INPUT_NONE,
 	RVIN_INPUT_DIGITAL,
+	RVIN_INPUT_CSI2,
 };
 
 /* Max number of inputs supported */
-#define RVIN_INPUT_MAX 1
+#define RVIN_INPUT_MAX 7
 #define RVIN_INPUT_NAME_SIZE 32
 
 /**
@@ -98,5 +101,39 @@ static inline int sd_to_pad_idx(struct v4l2_subdev *sd, int flag)
 #endif
 	return pad_idx;
 }
+
+struct rvin_group_input_ops {
+	int (*g_input_status)(struct v4l2_subdev *sd,
+			      struct rvin_input_item *item, u32 *status);
+	int (*g_tvnorms)(struct v4l2_subdev *sd,
+			 struct rvin_input_item *item, v4l2_std_id *std);
+	int (*dv_timings_cap)(struct v4l2_subdev *sd,
+			      struct rvin_input_item *item,
+			      struct v4l2_dv_timings_cap *cap);
+	int (*enum_dv_timings)(struct v4l2_subdev *sd,
+			       struct rvin_input_item *item,
+			       struct v4l2_enum_dv_timings *timings);
+};
+
+struct rvin_group_api {
+	int (*get)(struct v4l2_subdev *sd, struct rvin_input_item *inputs);
+	int (*put)(struct v4l2_subdev *sd);
+	int (*set_input)(struct v4l2_subdev *sd, struct rvin_input_item *item);
+	int (*get_code)(struct v4l2_subdev *sd, u32 *code);
+	int (*get_mbus_cfg)(struct v4l2_subdev *sd,
+			    struct v4l2_mbus_config *mbus_cfg);
+
+	int (*ctrl_add_handler)(struct v4l2_subdev *sd,
+				struct v4l2_ctrl_handler *hdl);
+	int (*alloc_pad_config)(struct v4l2_subdev *sd,
+				struct v4l2_subdev_pad_config **cfg);
+
+	const struct v4l2_subdev_ops *ops;
+	const struct rvin_group_input_ops *input_ops;
+};
+
+struct rvin_group_api *rvin_group_probe(struct device *dev,
+					struct v4l2_device *v4l2_dev);
+int rvin_group_remove(struct rvin_group_api *grp);
 
 #endif
