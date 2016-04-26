@@ -227,7 +227,6 @@ config RCAR_GEN3_THERMAL
 	tristate "Renesas R-Car Gen3 thermal driver"
 	depends on ARCH_RENESAS || COMPILE_TEST
 	depends on HAS_IOMEM
-	select CPU_THERMAL
 	help
 	  Enable this to plug the R-Car Gen3 thermal sensor driver into the Linux
 	  thermal framework.
