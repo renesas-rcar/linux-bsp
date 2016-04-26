@@ -109,6 +109,8 @@
 #define TWSI_INT_SDA		BIT_ULL(10)
 #define TWSI_INT_SCL		BIT_ULL(11)
 
+#define I2C_OCTEON_EVENT_WAIT 80 /* microseconds */
+
 struct octeon_i2c {
 	wait_queue_head_t queue;
 	struct i2c_adapter adap;
@@ -339,9 +341,27 @@ static irqreturn_t octeon_i2c_hlc_isr78(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int octeon_i2c_test_iflg(struct octeon_i2c *i2c)
+static bool octeon_i2c_test_iflg(struct octeon_i2c *i2c)
 {
 	return (octeon_i2c_ctl_read(i2c) & TWSI_CTL_IFLG);
+}
+
+static bool octeon_i2c_test_ready(struct octeon_i2c *i2c, bool *first)
+{
+	if (octeon_i2c_test_iflg(i2c))
+		return true;
+
+	if (*first) {
+		*first = false;
+		return false;
+	}
+
+	/*
+	 * IRQ has signaled an event but IFLG hasn't changed.
+	 * Sleep and retry once.
+	 */
+	usleep_range(I2C_OCTEON_EVENT_WAIT, 2 * I2C_OCTEON_EVENT_WAIT);
+	return octeon_i2c_test_iflg(i2c);
 }
 
 /**
@@ -353,15 +373,14 @@ static int octeon_i2c_test_iflg(struct octeon_i2c *i2c)
 static int octeon_i2c_wait(struct octeon_i2c *i2c)
 {
 	long time_left;
+	bool first = 1;
 
 	i2c->int_enable(i2c);
-	time_left = wait_event_timeout(i2c->queue, octeon_i2c_test_iflg(i2c),
+	time_left = wait_event_timeout(i2c->queue, octeon_i2c_test_ready(i2c, &first),
 				       i2c->adap.timeout);
 	i2c->int_disable(i2c);
-	if (!time_left) {
-		dev_dbg(i2c->dev, "%s: timeout\n", __func__);
+	if (!time_left)
 		return -ETIMEDOUT;
-	}
 
 	return 0;
 }
@@ -427,11 +446,28 @@ static int octeon_i2c_check_status(struct octeon_i2c *i2c, int final_read)
 	}
 }
 
-static bool octeon_i2c_hlc_test_ready(struct octeon_i2c *i2c)
+static bool octeon_i2c_hlc_test_valid(struct octeon_i2c *i2c)
 {
-	u64 val = __raw_readq(i2c->twsi_base + SW_TWSI);
+	return (__raw_readq(i2c->twsi_base + SW_TWSI) & SW_TWSI_V) == 0;
+}
 
-	return (val & SW_TWSI_V) == 0;
+static bool octeon_i2c_hlc_test_ready(struct octeon_i2c *i2c, bool *first)
+{
+	/* check if valid bit is cleared */
+	if (octeon_i2c_hlc_test_valid(i2c))
+		return true;
+
+	if (*first) {
+		*first = false;
+		return false;
+	}
+
+	/*
+	 * IRQ has signaled an event but valid bit isn't cleared.
+	 * Sleep and retry once.
+	 */
+	usleep_range(I2C_OCTEON_EVENT_WAIT, 2 * I2C_OCTEON_EVENT_WAIT);
+	return octeon_i2c_hlc_test_valid(i2c);
 }
 
 static void octeon_i2c_hlc_int_enable(struct octeon_i2c *i2c)
@@ -453,11 +489,12 @@ static void octeon_i2c_hlc_int_clear(struct octeon_i2c *i2c)
  */
 static int octeon_i2c_hlc_wait(struct octeon_i2c *i2c)
 {
+	bool first = 1;
 	int time_left;
 
 	i2c->hlc_int_enable(i2c);
 	time_left = wait_event_timeout(i2c->queue,
-				       octeon_i2c_hlc_test_ready(i2c),
+				       octeon_i2c_hlc_test_ready(i2c, &first),
 				       i2c->adap.timeout);
 	i2c->hlc_int_disable(i2c);
 	if (!time_left) {
@@ -838,9 +875,6 @@ static int octeon_i2c_read(struct octeon_i2c *i2c, int target,
 	int i, result, length = *rlength;
 	bool final_read = false;
 
-	if (length < 1)
-		return -EINVAL;
-
 	octeon_i2c_data_write(i2c, (target << 1) | 1);
 	octeon_i2c_ctl_write(i2c, TWSI_CTL_ENAB);
 
@@ -926,6 +960,12 @@ static int octeon_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	for (i = 0; ret == 0 && i < num; i++) {
 		struct i2c_msg *pmsg = &msgs[i];
 
+		/* zero-length messages are not supported */
+		if (!pmsg->len) {
+			ret = -EOPNOTSUPP;
+			break;
+		}
+
 		ret = octeon_i2c_start(i2c);
 		if (ret)
 			return ret;
@@ -999,7 +1039,7 @@ static struct i2c_bus_recovery_info octeon_i2c_recovery_info = {
 
 static u32 octeon_i2c_functionality(struct i2c_adapter *adap)
 {
-	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL |
+	return I2C_FUNC_I2C | (I2C_FUNC_SMBUS_EMUL & ~I2C_FUNC_SMBUS_QUICK) |
 	       I2C_FUNC_SMBUS_READ_BLOCK_DATA | I2C_SMBUS_BLOCK_PROC_CALL;
 }
 
