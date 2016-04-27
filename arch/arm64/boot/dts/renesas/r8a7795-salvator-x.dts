@@ -110,6 +110,10 @@
 		compatible = "renesas,mmngr";
 	};
 
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
 	x12_clk: x12_clk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
