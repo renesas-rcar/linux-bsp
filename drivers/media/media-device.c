@@ -499,12 +499,6 @@ static long media_device_compat_ioctl(struct file *filp, unsigned int cmd,
 	long ret;
 
 	switch (cmd) {
-	case MEDIA_IOC_DEVICE_INFO:
-	case MEDIA_IOC_ENUM_ENTITIES:
-	case MEDIA_IOC_SETUP_LINK:
-	case MEDIA_IOC_G_TOPOLOGY:
-		return media_device_ioctl(filp, cmd, arg);
-
 	case MEDIA_IOC_ENUM_LINKS32:
 		mutex_lock(&dev->graph_mutex);
 		ret = media_device_enum_links32(dev,
@@ -513,7 +507,7 @@ static long media_device_compat_ioctl(struct file *filp, unsigned int cmd,
 		break;
 
 	default:
-		ret = -ENOIOCTLCMD;
+		return media_device_ioctl(filp, cmd, arg);
 	}
 
 	return ret;
@@ -801,9 +795,8 @@ void media_device_unregister(struct media_device *mdev)
 	mutex_unlock(&mdev->graph_mutex);
 
 	device_remove_file(&mdev->devnode.dev, &dev_attr_model);
+	dev_dbg(mdev->dev, "Media device unregistering\n");
 	media_devnode_unregister(&mdev->devnode);
-
-	dev_dbg(mdev->dev, "Media device unregistered\n");
 }
 EXPORT_SYMBOL_GPL(media_device_unregister);
 
