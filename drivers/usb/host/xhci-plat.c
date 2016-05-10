@@ -1,7 +1,6 @@
 /*
  * xhci-plat.c - xHCI host controller driver platform Bus Glue.
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com
  * Author: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  *
@@ -40,7 +39,7 @@ static const struct xhci_driver_overrides xhci_plat_overrides __initconst = {
 
 static void xhci_plat_quirks(struct device *dev, struct xhci_hcd *xhci)
 {
-	struct usb_hcd *hcd = xhci->main_hcd;
+	struct usb_hcd *hcd = xhci_to_hcd(xhci);
 
 	/*
 	 * As of now platform drivers don't provide MSI support so we ensure
@@ -49,9 +48,16 @@ static void xhci_plat_quirks(struct device *dev, struct xhci_hcd *xhci)
 	 */
 	xhci->quirks |= XHCI_PLAT;
 
+	/*
+	 * On R-Car Gen2 and Gen3, the AC64 bit (bit 0) of HCCPARAMS1 is set
+	 * to 1. However, these SoCs don't support 64-bit address memory
+	 * pointers. So, this driver clears the AC64 bit of xhci->hcc_params
+	 * to call dma_set_coherent_mask(dev, DMA_BIT_MASK(32)) in
+	 * xhci_gen_setup().
+	 */
 	if (xhci_plat_type_is(hcd, XHCI_PLAT_TYPE_RENESAS_RCAR_GEN2) ||
 	    xhci_plat_type_is(hcd, XHCI_PLAT_TYPE_RENESAS_RCAR_GEN3))
-		xhci->quirks |= XHCI_NO_64BIT;
+		xhci->quirks |= XHCI_NO_64BIT_SUPPORT;
 }
 
 /* called during probe() after chip reset completes */
