@@ -26,6 +26,8 @@ struct qcom_smd_device {
 	struct qcom_smd_channel *channel;
 };
 
+typedef int (*qcom_smd_cb_t)(struct qcom_smd_channel *, const void *, size_t);
+
 /**
  * struct qcom_smd_driver - smd driver struct
  * @driver:	underlying device driver
@@ -42,7 +44,7 @@ struct qcom_smd_driver {
 
 	int (*probe)(struct qcom_smd_device *dev);
 	void (*remove)(struct qcom_smd_device *dev);
-	int (*callback)(struct qcom_smd_device *, const void *, size_t);
+	qcom_smd_cb_t callback;
 };
 
 #if IS_ENABLED(CONFIG_QCOM_SMD)
@@ -75,9 +77,16 @@ static inline int qcom_smd_send(struct qcom_smd_channel *channel,
 
 #endif
 
+void *qcom_smd_get_drvdata(struct qcom_smd_channel *channel);
+void qcom_smd_set_drvdata(struct qcom_smd_channel *channel, void *data);
+
 #define module_qcom_smd_driver(__smd_driver) \
 	module_driver(__smd_driver, qcom_smd_driver_register, \
 		      qcom_smd_driver_unregister)
 
+
+struct qcom_smd_channel *qcom_smd_open_channel(struct qcom_smd_channel *channel,
+					       const char *name,
+					       qcom_smd_cb_t cb);
 
 #endif
