@@ -209,7 +209,7 @@ static void poll_for_irq(unsigned long v);
  *	Return value indicates number of entries filled in frags
  *	Negative values indicate an error.
  */
-static unsigned int
+static int
 visor_copy_fragsinfo_from_skb(struct sk_buff *skb, unsigned int firstfraglen,
 			      unsigned int frags_max,
 			      struct phys_info frags[])
@@ -269,11 +269,9 @@ visor_copy_fragsinfo_from_skb(struct sk_buff *skb, unsigned int firstfraglen,
 			 * zero if the frags array is out of room
 			 * That should never happen because we
 			 * fail above, if count+numfrags > frags_max.
-			 * Given that theres no recovery mechanism from putting
-			 * half a packet in the I/O channel, panic here as this
-			 * should never happen
 			 */
-			BUG_ON(!count);
+			if (!count)
+				return -EINVAL;
 		}
 	}
 	if (skb_shinfo(skb)->frag_list) {
@@ -356,28 +354,38 @@ visornic_serverdown(struct visornic_devdata *devdata,
 		    visorbus_state_complete_func complete_func)
 {
 	unsigned long flags;
+	int err;
 
 	spin_lock_irqsave(&devdata->priv_lock, flags);
-	if (!devdata->server_down && !devdata->server_change_state) {
-		if (devdata->going_away) {
-			spin_unlock_irqrestore(&devdata->priv_lock, flags);
-			dev_dbg(&devdata->dev->device,
-				"%s aborting because device removal pending\n",
-				__func__);
-			return -ENODEV;
-		}
-		devdata->server_change_state = true;
-		devdata->server_down_complete_func = complete_func;
-		spin_unlock_irqrestore(&devdata->priv_lock, flags);
-		visornic_serverdown_complete(devdata);
-	} else if (devdata->server_change_state) {
+	if (devdata->server_change_state) {
 		dev_dbg(&devdata->dev->device, "%s changing state\n",
 			__func__);
-		spin_unlock_irqrestore(&devdata->priv_lock, flags);
-		return -EINVAL;
+		err = -EINVAL;
+		goto err_unlock;
 	}
+	if (devdata->server_down) {
+		dev_dbg(&devdata->dev->device, "%s already down\n",
+			__func__);
+		err = -EINVAL;
+		goto err_unlock;
+	}
+	if (devdata->going_away) {
+		dev_dbg(&devdata->dev->device,
+			"%s aborting because device removal pending\n",
+			__func__);
+		err = -ENODEV;
+		goto err_unlock;
+	}
+	devdata->server_change_state = true;
+	devdata->server_down_complete_func = complete_func;
 	spin_unlock_irqrestore(&devdata->priv_lock, flags);
+
+	visornic_serverdown_complete(devdata);
 	return 0;
+
+err_unlock:
+	spin_unlock_irqrestore(&devdata->priv_lock, flags);
+	return err;
 }
 
 /**
@@ -436,8 +444,8 @@ post_skb(struct uiscmdrsp *cmdrsp,
 		cmdrsp->net.type = NET_RCV_POST;
 		cmdrsp->cmdtype = CMD_NET_TYPE;
 		if (visorchannel_signalinsert(devdata->dev->visorchannel,
-					  IOCHAN_TO_IOPART,
-					  cmdrsp)) {
+					      IOCHAN_TO_IOPART,
+					      cmdrsp)) {
 			atomic_inc(&devdata->num_rcvbuf_in_iovm);
 			devdata->chstat.sent_post++;
 		} else {
@@ -465,8 +473,8 @@ send_enbdis(struct net_device *netdev, int state,
 	devdata->cmdrsp_rcv->net.type = NET_RCV_ENBDIS;
 	devdata->cmdrsp_rcv->cmdtype = CMD_NET_TYPE;
 	if (visorchannel_signalinsert(devdata->dev->visorchannel,
-				  IOCHAN_TO_IOPART,
-				  devdata->cmdrsp_rcv))
+				      IOCHAN_TO_IOPART,
+				      devdata->cmdrsp_rcv))
 		devdata->chstat.sent_enbdis++;
 }
 
@@ -1647,8 +1655,9 @@ service_resp_queue(struct uiscmdrsp *cmdrsp, struct visornic_devdata *devdata,
 				 * the lower watermark for
 				 * netif_wake_queue()
 				 */
-				if (vnic_hit_low_watermark(devdata,
-					devdata->lower_threshold_net_xmits)) {
+				if (vnic_hit_low_watermark
+				    (devdata,
+				     devdata->lower_threshold_net_xmits)) {
 					/* enough NET_XMITs completed
 					 * so can restart netif queue
 					 */

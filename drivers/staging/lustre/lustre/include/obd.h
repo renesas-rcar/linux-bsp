@@ -37,7 +37,7 @@
 #ifndef __OBD_H
 #define __OBD_H
 
-#include "linux/obd.h"
+#include <linux/spinlock.h>
 
 #define IOC_OSC_TYPE	 'h'
 #define IOC_OSC_MIN_NR       20
@@ -54,6 +54,7 @@
 #include "lustre_export.h"
 #include "lustre_fid.h"
 #include "lustre_fld.h"
+#include "lustre_intent.h"
 
 #define MAX_OBD_DEVICES 8192
 
@@ -293,14 +294,10 @@ struct client_obd {
 	 * blocking everywhere, but we don't want to slow down fast-path of
 	 * our main platform.)
 	 *
-	 * Exact type of ->cl_loi_list_lock is defined in arch/obd.h together
-	 * with client_obd_list_{un,}lock() and
-	 * client_obd_list_lock_{init,done}() functions.
-	 *
 	 * NB by Jinshan: though field names are still _loi_, but actually
 	 * osc_object{}s are in the list.
 	 */
-	struct client_obd_lock	       cl_loi_list_lock;
+	spinlock_t		       cl_loi_list_lock;
 	struct list_head	       cl_loi_ready_list;
 	struct list_head	       cl_loi_hp_ready_list;
 	struct list_head	       cl_loi_write_list;
@@ -327,7 +324,8 @@ struct client_obd {
 	atomic_t		 cl_lru_shrinkers;
 	atomic_t		 cl_lru_in_list;
 	struct list_head	 cl_lru_list; /* lru page list */
-	struct client_obd_lock   cl_lru_list_lock; /* page list protector */
+	spinlock_t		 cl_lru_list_lock; /* page list protector */
+	atomic_t		 cl_unstable_count;
 
 	/* number of in flight destroy rpcs is limited to max_rpcs_in_flight */
 	atomic_t	     cl_destroy_in_flight;
@@ -364,6 +362,7 @@ struct client_obd {
 
 	/* ptlrpc work for writeback in ptlrpcd context */
 	void		    *cl_writeback_work;
+	void			*cl_lru_work;
 	/* hash tables for osc_quota_info */
 	struct cfs_hash	      *cl_quota_hash[MAXQUOTAS];
 };
@@ -479,7 +478,7 @@ struct lov_obd {
 	struct dentry		*lov_pool_debugfs_entry;
 	enum lustre_sec_part    lov_sp_me;
 
-	/* Cached LRU pages from upper layer */
+	/* Cached LRU and unstable data from upper layer */
 	void		       *lov_cache;
 
 	struct rw_semaphore     lov_notify_lock;
@@ -511,7 +510,7 @@ struct lmv_obd {
 	struct obd_uuid		cluuid;
 	struct obd_export	*exp;
 
-	struct mutex		init_mutex;
+	struct mutex		lmv_init_mutex;
 	int			connected;
 	int			max_easize;
 	int			max_def_easize;

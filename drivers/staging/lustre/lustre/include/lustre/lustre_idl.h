@@ -183,6 +183,12 @@ struct lu_seq_range {
 	__u32 lsr_flags;
 };
 
+struct lu_seq_range_array {
+	__u32 lsra_count;
+	__u32 lsra_padding;
+	struct lu_seq_range lsra_lsr[0];
+};
+
 #define LU_SEQ_RANGE_MDT	0x0
 #define LU_SEQ_RANGE_OST	0x1
 #define LU_SEQ_RANGE_ANY	0x3
@@ -1001,8 +1007,9 @@ static inline int lu_dirent_calc_size(int namelen, __u16 attr)
 
 		size = (sizeof(struct lu_dirent) + namelen + align) & ~align;
 		size += sizeof(struct luda_type);
-	} else
+	} else {
 		size = sizeof(struct lu_dirent) + namelen;
+	}
 
 	return (size + 7) & ~7;
 }
@@ -1256,6 +1263,9 @@ void lustre_swab_ptlrpc_body(struct ptlrpc_body *pb);
 #define OBD_CONNECT_PINGLESS	0x4000000000000ULL/* pings not required */
 #define OBD_CONNECT_FLOCK_DEAD	0x8000000000000ULL/* flock deadlock detection */
 #define OBD_CONNECT_DISP_STRIPE 0x10000000000000ULL/*create stripe disposition*/
+#define OBD_CONNECT_OPEN_BY_FID	0x20000000000000ULL	/* open by fid won't pack
+							 * name in request
+							 */
 
 /* XXX README XXX:
  * Please DO NOT add flag values here before first ensuring that this same
@@ -1428,6 +1438,8 @@ enum obdo_flags {
 					   */
 	OBD_FL_RECOV_RESEND = 0x00080000, /* recoverable resent */
 	OBD_FL_NOSPC_BLK    = 0x00100000, /* no more block space on OST */
+	OBD_FL_FLUSH	    = 0x00200000, /* flush pages on the OST */
+	OBD_FL_SHORT_IO	    = 0x00400000, /* short io request */
 
 	/* Note that while these checksum values are currently separate bits,
 	 * in 2.x we can actually allow all values from 1-31 if we wanted.
@@ -1732,6 +1744,11 @@ void lustre_swab_obd_statfs(struct obd_statfs *os);
 #define OBD_BRW_MEMALLOC       0x800 /* Client runs in the "kswapd" context */
 #define OBD_BRW_OVER_USRQUOTA 0x1000 /* Running out of user quota */
 #define OBD_BRW_OVER_GRPQUOTA 0x2000 /* Running out of group quota */
+#define OBD_BRW_SOFT_SYNC     0x4000 /* This flag notifies the server
+				      * that the client is running low on
+				      * space for unstable pages; asking
+				      * it to sync quickly
+				      */
 
 #define OBD_OBJECT_EOF 0xffffffffffffffffULL
 
@@ -2436,6 +2453,7 @@ struct mdt_rec_reint {
 
 void lustre_swab_mdt_rec_reint(struct mdt_rec_reint *rr);
 
+/* lmv structures */
 struct lmv_desc {
 	__u32 ld_tgt_count;		/* how many MDS's */
 	__u32 ld_active_tgt_count;	 /* how many active */
@@ -2460,7 +2478,6 @@ struct lmv_stripe_md {
 	struct lu_fid mea_ids[0];
 };
 
-/* lmv structures */
 #define MEA_MAGIC_LAST_CHAR      0xb2221ca1
 #define MEA_MAGIC_ALL_CHARS      0xb222a11c
 #define MEA_MAGIC_HASH_SEGMENT   0xb222a11b
@@ -2470,9 +2487,10 @@ struct lmv_stripe_md {
 #define MAX_HASH_HIGHEST_BIT     0x1000000000000000ULL
 
 enum fld_rpc_opc {
-	FLD_QUERY		       = 900,
+	FLD_QUERY	= 900,
+	FLD_READ	= 901,
 	FLD_LAST_OPC,
-	FLD_FIRST_OPC		   = FLD_QUERY
+	FLD_FIRST_OPC	= FLD_QUERY
 };
 
 enum seq_rpc_opc {
@@ -2484,6 +2502,12 @@ enum seq_rpc_opc {
 enum seq_op {
 	SEQ_ALLOC_SUPER = 0,
 	SEQ_ALLOC_META = 1
+};
+
+enum fld_op {
+	FLD_CREATE = 0,
+	FLD_DELETE = 1,
+	FLD_LOOKUP = 2,
 };
 
 /*
@@ -2581,6 +2605,8 @@ struct ldlm_extent {
 	__u64 end;
 	__u64 gid;
 };
+
+#define LDLM_GID_ANY ((__u64)-1)
 
 static inline int ldlm_extent_overlap(struct ldlm_extent *ex1,
 				      struct ldlm_extent *ex2)
@@ -3304,7 +3330,7 @@ struct getinfo_fid2path {
 	char	    gf_path[0];
 } __packed;
 
-void lustre_swab_fid2path (struct getinfo_fid2path *gf);
+void lustre_swab_fid2path(struct getinfo_fid2path *gf);
 
 enum {
 	LAYOUT_INTENT_ACCESS    = 0,
