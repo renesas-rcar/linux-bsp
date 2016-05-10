@@ -171,7 +171,7 @@ static const struct pinctrl_ops meson_pctrl_ops = {
 	.get_group_name		= meson_get_group_name,
 	.get_group_pins		= meson_get_group_pins,
 	.dt_node_to_map		= pinconf_generic_dt_node_to_map_all,
-	.dt_free_map		= pinctrl_utils_dt_free_map,
+	.dt_free_map		= pinctrl_utils_free_map,
 	.pin_dbg_show		= meson_pin_dbg_show,
 };
 
@@ -713,7 +713,7 @@ static int meson_pinctrl_probe(struct platform_device *pdev)
 	pc->desc.pins		= pc->data->pins;
 	pc->desc.npins		= pc->data->num_pins;
 
-	pc->pcdev = pinctrl_register(&pc->desc, pc->dev, pc);
+	pc->pcdev = devm_pinctrl_register(pc->dev, &pc->desc, pc);
 	if (IS_ERR(pc->pcdev)) {
 		dev_err(pc->dev, "can't register pinctrl device");
 		return PTR_ERR(pc->pcdev);
