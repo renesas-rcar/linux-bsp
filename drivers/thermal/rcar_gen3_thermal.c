@@ -537,7 +537,7 @@ static int rcar_gen3_thermal_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 
 	rcar_thermal_irq_disable(priv);
-	thermal_zone_device_unregister(priv->zone);
+	thermal_zone_of_sensor_unregister(dev, priv->zone);
 
 	pm_runtime_put(dev);
 	pm_runtime_disable(dev);
@@ -623,6 +623,12 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	priv->zone = thermal_zone_of_sensor_register(dev, 0, priv,
 				&rcar_gen3_tz_of_ops);
 
+	if (IS_ERR(priv->zone)) {
+		dev_err(dev, "Can't register thermal zone\n");
+		ret = PTR_ERR(priv->zone);
+		goto error_unregister;
+	}
+
 	priv->data->thermal_init(priv);
 	ret = thermal_read_fuse_factor(priv);
 	if (ret)
@@ -633,11 +639,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto error_unregister;
 
-	if (IS_ERR(priv->zone)) {
-		dev_err(dev, "Can't register thermal zone\n");
-		ret = PTR_ERR(priv->zone);
-		goto error_unregister;
-	}
 
 	rcar_thermal_irq_enable(priv);
 
