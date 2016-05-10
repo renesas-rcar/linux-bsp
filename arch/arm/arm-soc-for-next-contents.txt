@@ -1,6 +1,8 @@
 fixes
 	<no branch> (b8453d4ee9e24c6590dd0eecbab1c3cc2028317f)
 		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-fixes
+	patch
+		arm64/sunxi: 4.6-rc1: Add dependency on generic irq chip
 
 next/fixes-non-critical
 	samsung/fixes-non-critical
@@ -79,6 +81,8 @@ next/arm64
 		arm64: defconfig: Add Juno SATA controller
 	mvebu/arm64
 		git://git.infradead.org/linux-mvebu tags/mvebu-arm64-4.7-1
+	<no branch> (e5d8b0ad5ae4c70a7081865a3c6c83ae1afe3087)
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig64-4.7-1
 
 next/dt
 	at91/dt
@@ -210,6 +214,18 @@ hisi/hip06-dt
 renesas/fixes-2
 		Merge branch 'renesas/fixes-2' into next/dt64
 		contains renesas/fixes
+	rockchip/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.7-rockchip-dts64-2
+	mvebu/dt64
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.7-1
+	tegra/dt-gpio
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.7-gpio
+	tegra/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.7-gm20b
+	mediatek/dt64
+		https://github.com/mbgg/linux-mediatek tags/v4.6-next-dts64
+	imx/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt64-4.7
 
 next/defconfig
 	renesas/defconfig
