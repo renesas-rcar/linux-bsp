@@ -152,6 +152,29 @@ next/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-exynos-srom-fixup-4.7
 	omap/dt-2
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.7/dt-signed
+	rockchip/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.7-rockchip-dts32-2
+	davinci/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.7/dt-part2
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.7
+	mediatek/dt
+		https://github.com/mbgg/linux-mediatek tags/v4.6-next-dts
+	imx/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.7-2
+	ux500/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-armsoc-v4.7
+	at91/dt3
+		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-dt3
+	aspeed/dt
+		https://github.com/shenki/linux tags/aspeed-for-4.7-dts
+	sunxi/dt2
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.7-2
+	patch
+		ARM: dts: tango4: Initial thermal support
+		ARM: dts: tango4: Update DT to match clk driver
+		ARM: dts: tango4: Update cpus node for cpufreq
+		ARM: dts: tango4: Import watchdog node
 
 next/dt64
 	meson/dt64
@@ -290,3 +313,7 @@ next/late
 		contains tegra/xusb-phy
 	tegra/dt-xusb
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.7-xusb-no-defconfig
+	imx/dt-clkdep
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-clkdep-4.7
+	samsung/dt-devfreq
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-devfreq-4.7
