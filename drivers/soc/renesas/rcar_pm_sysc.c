@@ -144,6 +144,25 @@ struct rcar_sysc_domain *to_rcar_pd(struct generic_pm_domain *d)
 	return container_of(d, struct rcar_sysc_domain, genpd);
 }
 
+/* This function checks status of power domains.
+ * Return: 'true' : when domain is OFF or BEING OFF
+ * Return: 'false' : in other states
+ */
+bool is_dm_off(struct rcar_sysc_domain *pd)
+{
+	const struct rcar_sysc_domain_data *dm_data = pd->dm_data;
+
+	if (dm_data == NULL)
+		return false;
+
+	/* Check domain is OFF or BEING OFF */
+	if ((dm_data->pwrsr_off & read_reg32(pd->base + PWRSR)) ||
+	    (dm_data->pwr_on_off_sr & read_reg32(pd->base + PWROFFSR)))
+		return true;
+
+	return false;
+}
+
 int set_dm_on_off(struct rcar_sysc_domain *pd, int flag)
 {
 	const struct rcar_sysc_domain_data *dm_data = pd->dm_data;
@@ -361,7 +380,7 @@ static int rcar_setup_pm_domain(struct device_node *np,
 	pd->genpd.name = np->name;
 
 	pd->genpd.flags = GENPD_FLAG_PM_CLK;
-	pm_genpd_init(&pd->genpd, &simple_qos_governor, false);
+	pm_genpd_init(&pd->genpd, &simple_qos_governor, is_dm_off(pd));
 	pd->genpd.attach_dev = rcar_clk_attach_dev;
 	pd->genpd.detach_dev = rcar_clk_detach_dev;
 
