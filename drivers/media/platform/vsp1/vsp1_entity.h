@@ -42,17 +42,21 @@ enum vsp1_entity_type {
  * @index: Entity index this routing entry is associated with
  * @reg: Output routing configuration register
  * @inputs: Target node value for each input
+ * @output: Target node value for entity output
  *
  * Each $vsp1_route entry describes routing configuration for the entity
  * specified by the entry's @type and @index. @reg indicates the register that
  * holds output routing configuration for the entity, and the @inputs array
- * store the target node value for each input of the entity.
+ * store the target node value for each input of the entity. The @output field
+ * stores the target node value of the entity output when used as a source for
+ * histogram generation.
  */
 struct vsp1_route {
 	enum vsp1_entity_type type;
 	unsigned int index;
 	unsigned int reg;
 	unsigned int inputs[VSP1_ENTITY_MAX_INPUTS];
+	unsigned int output;
 };
 
 /**
@@ -118,9 +122,9 @@ vsp1_entity_get_pad_format(struct vsp1_entity *entity,
 			   struct v4l2_subdev_pad_config *cfg,
 			   unsigned int pad);
 struct v4l2_rect *
-vsp1_entity_get_pad_compose(struct vsp1_entity *entity,
-			    struct v4l2_subdev_pad_config *cfg,
-			    unsigned int pad);
+vsp1_entity_get_pad_selection(struct vsp1_entity *entity,
+			      struct v4l2_subdev_pad_config *cfg,
+			      unsigned int pad, unsigned int target);
 int vsp1_entity_init_cfg(struct v4l2_subdev *subdev,
 			 struct v4l2_subdev_pad_config *cfg);
 
