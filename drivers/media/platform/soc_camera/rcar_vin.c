@@ -2667,7 +2667,7 @@ static int rcar_vin_init_videobuf2(struct vb2_queue *vq,
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 
 	vq->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	vq->io_modes = VB2_MMAP | VB2_USERPTR;
+	vq->io_modes = VB2_MMAP | VB2_USERPTR | VB2_DMABUF;
 	vq->drv_priv = icd;
 	vq->ops = &rcar_vin_vb2_ops;
 	vq->mem_ops = &vb2_dma_contig_memops;
