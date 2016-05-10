@@ -1,14 +1,16 @@
 /*
+ * DesignWare High-Definition Multimedia Interface (HDMI) driver
+ *
+ * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Mentor Graphics Inc.
  * Copyright (C) 2011-2013 Freescale Semiconductor, Inc.
+ * Copyright (C) 2010, Guennadi Liakhovetski <g.liakhovetski at gmx.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
  *
- * Designware High-Definition Multimedia Interface (HDMI) driver
- *
- * Copyright (C) 2010, Guennadi Liakhovetski <g.liakhovetski@gmx.de>
  */
 #include <linux/module.h>
 #include <linux/irq.h>
@@ -20,6 +22,7 @@
 #include <linux/of_device.h>
 #include <linux/spinlock.h>
 
+#include <drm/drm_atomic_helper.h>
 #include <drm/drm_of.h>
 #include <drm/drmP.h>
 #include <drm/drm_atomic_helper.h>
@@ -30,6 +33,26 @@
 
 #include "dw-hdmi.h"
 #include "dw-hdmi-audio.h"
+
+/* HDMI_IH_I2CM_STAT0 and HDMI_IH_MUTE_I2CM_STAT0 register bits */
+#define HDMI_IH_I2CM_STAT0_ERROR		BIT(0)
+#define HDMI_IH_I2CM_STAT0_DONE			BIT(1)
+
+/* HDMI_I2CM_OPERATION register bits */
+#define HDMI_I2CM_OPERATION_READ		BIT(0)
+#define HDMI_I2CM_OPERATION_READ_EXT		BIT(1)
+#define HDMI_I2CM_OPERATION_WRITE		BIT(4)
+
+/* HDMI_I2CM_INT register bits */
+#define HDMI_I2CM_INT_DONE_MASK			BIT(2)
+#define HDMI_I2CM_INT_DONE_POL			BIT(3)
+
+/* HDMI_I2CM_CTLINT register bits */
+#define HDMI_I2CM_CTLINT_ARB_MASK		BIT(2)
+#define HDMI_I2CM_CTLINT_ARB_POL		BIT(3)
+#define HDMI_I2CM_CTLINT_NAC_MASK		BIT(6)
+#define HDMI_I2CM_CTLINT_NAC_POL		BIT(7)
+
 
 #define HDMI_EDID_LEN		512
 
@@ -101,6 +124,17 @@ struct hdmi_data_info {
 	struct hdmi_vmode video_mode;
 };
 
+struct dw_hdmi_i2c {
+	struct i2c_adapter	adap;
+
+	spinlock_t		lock;
+	struct completion	cmp;
+	u8			stat;
+
+	u8			slave_reg;
+	bool			is_regaddr;
+};
+
 struct dw_hdmi {
 	struct drm_connector connector;
 	struct drm_encoder *encoder;
@@ -111,6 +145,8 @@ struct dw_hdmi {
 	struct device *dev;
 	struct clk *isfr_clk;
 	struct clk *iahb_clk;
+
+	struct dw_hdmi_i2c *i2c;
 
 	struct hdmi_data_info hdmi_data;
 	const struct dw_hdmi_plat_data *plat_data;
@@ -141,6 +177,11 @@ struct dw_hdmi {
 	unsigned int audio_cts;
 	unsigned int audio_n;
 	bool audio_enable;
+	int ratio;
+	bool interlaced;
+	bool isfr_use;
+	bool iahb_use;
+	int num;
 
 	void (*write)(struct dw_hdmi *hdmi, u8 val, int offset);
 	u8 (*read)(struct dw_hdmi *hdmi, int offset);
@@ -196,6 +237,242 @@ static void hdmi_mask_writeb(struct dw_hdmi *hdmi, u8 data, unsigned int reg,
 			     u8 shift, u8 mask)
 {
 	hdmi_modb(hdmi, data << shift, mask, reg);
+}
+
+static void dw_hdmi_i2c_init(struct dw_hdmi *hdmi)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&hdmi->i2c->lock, flags);
+
+	/* Set Fast Mode speed */
+	hdmi_writeb(hdmi, 0x0b, HDMI_I2CM_DIV);
+
+	/* Software reset */
+	hdmi_writeb(hdmi, 0x00, HDMI_I2CM_SOFTRSTZ);
+
+	/* Set done, not acknowledged and arbitration interrupt polarities */
+	hdmi_writeb(hdmi, HDMI_I2CM_INT_DONE_POL, HDMI_I2CM_INT);
+	hdmi_writeb(hdmi, HDMI_I2CM_CTLINT_NAC_POL | HDMI_I2CM_CTLINT_ARB_POL,
+		    HDMI_I2CM_CTLINT);
+
+	/* Clear DONE and ERROR interrupts */
+	hdmi_writeb(hdmi, HDMI_IH_I2CM_STAT0_ERROR | HDMI_IH_I2CM_STAT0_DONE,
+		    HDMI_IH_I2CM_STAT0);
+
+	/* Mute DONE and ERROR interrupts */
+	hdmi_writeb(hdmi, HDMI_IH_I2CM_STAT0_ERROR | HDMI_IH_I2CM_STAT0_DONE,
+		    HDMI_IH_MUTE_I2CM_STAT0);
+
+	spin_unlock_irqrestore(&hdmi->i2c->lock, flags);
+}
+
+static int dw_hdmi_i2c_read(struct dw_hdmi *hdmi,
+			    unsigned char *buf, int length)
+{
+	int stat;
+	unsigned long flags;
+	struct dw_hdmi_i2c *i2c = hdmi->i2c;
+
+	spin_lock_irqsave(&i2c->lock, flags);
+
+	if (!i2c->is_regaddr) {
+		dev_dbg(hdmi->dev, "set read register address to 0\n");
+		i2c->slave_reg = 0x00;
+		i2c->is_regaddr = true;
+	}
+
+	while (length--) {
+		hdmi_writeb(hdmi, i2c->slave_reg++, HDMI_I2CM_ADDRESS);
+		hdmi_writeb(hdmi,
+			    HDMI_I2CM_OPERATION_READ, HDMI_I2CM_OPERATION);
+		i2c->stat = 0;
+
+		spin_unlock_irqrestore(&i2c->lock, flags);
+
+		stat = wait_for_completion_interruptible_timeout(&i2c->cmp,
+								 HZ / 10);
+		if (!stat)
+			return -ETIMEDOUT;
+		if (stat < 0)
+			return stat;
+
+		spin_lock_irqsave(&i2c->lock, flags);
+
+		/* Check for error condition on the bus */
+		if (i2c->stat & HDMI_IH_I2CM_STAT0_ERROR) {
+			spin_unlock_irqrestore(&i2c->lock, flags);
+			return -EIO;
+		}
+
+		*buf++ = hdmi_readb(hdmi, HDMI_I2CM_DATAI);
+	}
+
+	spin_unlock_irqrestore(&i2c->lock, flags);
+
+	return 0;
+}
+
+static int dw_hdmi_i2c_write(struct dw_hdmi *hdmi,
+				  unsigned char *buf, int length)
+{
+	int stat;
+	unsigned long flags;
+	struct dw_hdmi_i2c *i2c = hdmi->i2c;
+
+	spin_lock_irqsave(&i2c->lock, flags);
+
+	if (!i2c->is_regaddr) {
+		if (length) {
+			/* Use the first write byte as register address */
+			i2c->slave_reg = buf[0];
+			length--;
+			buf++;
+		} else {
+			dev_dbg(hdmi->dev, "set write register address to 0\n");
+			i2c->slave_reg = 0x00;
+		}
+		i2c->is_regaddr = true;
+	}
+
+	while (length--) {
+		hdmi_writeb(hdmi, *buf++, HDMI_I2CM_DATAO);
+		hdmi_writeb(hdmi, i2c->slave_reg++, HDMI_I2CM_ADDRESS);
+		hdmi_writeb(hdmi,
+			    HDMI_I2CM_OPERATION_WRITE, HDMI_I2CM_OPERATION);
+		i2c->stat = 0;
+
+		spin_unlock_irqrestore(&i2c->lock, flags);
+
+		stat = wait_for_completion_interruptible_timeout(&i2c->cmp,
+								 HZ / 10);
+		if (!stat)
+			return -ETIMEDOUT;
+		if (stat < 0)
+			return stat;
+
+		spin_lock_irqsave(&i2c->lock, flags);
+
+		/* Check for error condition on the bus */
+		if (i2c->stat & HDMI_IH_I2CM_STAT0_ERROR) {
+			spin_unlock_irqrestore(&i2c->lock, flags);
+			return -EIO;
+		}
+	}
+
+	spin_unlock_irqrestore(&i2c->lock, flags);
+
+	return 0;
+}
+
+static int dw_hdmi_i2c_xfer(struct i2c_adapter *adap,
+			    struct i2c_msg *msgs, int num)
+{
+	struct dw_hdmi *hdmi = i2c_get_adapdata(adap);
+	struct dw_hdmi_i2c *i2c = hdmi->i2c;
+
+	int i, ret;
+	u8 addr;
+	unsigned long flags;
+
+	dev_dbg(hdmi->dev, "xfer: num: %d, addr: 0x%x\n", num, msgs[0].addr);
+
+	spin_lock_irqsave(&i2c->lock, flags);
+
+	hdmi_writeb(hdmi, 0x00, HDMI_IH_MUTE_I2CM_STAT0);
+
+	/* Set slave device address from the first transaction */
+	addr = msgs[0].addr;
+	hdmi_writeb(hdmi, addr, HDMI_I2CM_SLAVE);
+
+	/* Set slave device register address on transfer */
+	i2c->is_regaddr = false;
+
+	spin_unlock_irqrestore(&i2c->lock, flags);
+
+	for (i = 0; i < num; i++) {
+		dev_dbg(hdmi->dev, "xfer: num: %d/%d, len: %d, flags: 0x%x\n",
+			i + 1, num, msgs[i].len, msgs[i].flags);
+
+		if (msgs[i].addr != addr) {
+			dev_warn(hdmi->dev,
+				 "unsupported transaction, changed slave address\n");
+			ret = -EOPNOTSUPP;
+			break;
+		}
+
+		if (msgs[i].len == 0) {
+			dev_dbg(hdmi->dev,
+				 "unsupported transaction %d/%d, no data\n",
+				 i + 1, num);
+			ret = -EOPNOTSUPP;
+			break;
+		}
+
+		if (msgs[i].flags & I2C_M_RD)
+			ret = dw_hdmi_i2c_read(hdmi, msgs[i].buf, msgs[i].len);
+		else
+			ret = dw_hdmi_i2c_write(hdmi, msgs[i].buf, msgs[i].len);
+
+		if (ret < 0)
+			break;
+	}
+
+	if (!ret)
+		ret = num;
+
+	spin_lock_irqsave(&i2c->lock, flags);
+
+	/* Mute DONE and ERROR interrupts */
+	hdmi_writeb(hdmi, HDMI_IH_I2CM_STAT0_ERROR | HDMI_IH_I2CM_STAT0_DONE,
+		    HDMI_IH_MUTE_I2CM_STAT0);
+
+	spin_unlock_irqrestore(&i2c->lock, flags);
+
+	return ret;
+}
+
+static u32 dw_hdmi_i2c_func(struct i2c_adapter *adapter)
+{
+	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
+}
+
+static struct i2c_algorithm dw_hdmi_algorithm = {
+	.master_xfer	= dw_hdmi_i2c_xfer,
+	.functionality	= dw_hdmi_i2c_func,
+};
+
+static struct i2c_adapter *dw_hdmi_i2c_adapter(struct dw_hdmi *hdmi)
+{
+	struct i2c_adapter *adap;
+	int ret;
+
+	hdmi->i2c = devm_kzalloc(hdmi->dev, sizeof(*hdmi->i2c), GFP_KERNEL);
+	if (!hdmi->i2c)
+		return ERR_PTR(-ENOMEM);
+
+	spin_lock_init(&hdmi->i2c->lock);
+	init_completion(&hdmi->i2c->cmp);
+
+	adap = &hdmi->i2c->adap;
+	adap->class = I2C_CLASS_DDC;
+	adap->owner = THIS_MODULE;
+	adap->dev.parent = hdmi->dev;
+	adap->algo = &dw_hdmi_algorithm;
+	strlcpy(adap->name, "DesignWare HDMI", sizeof(adap->name));
+	i2c_set_adapdata(adap, hdmi);
+
+	ret = i2c_add_adapter(adap);
+	if (ret) {
+		dev_warn(hdmi->dev, "cannot add %s I2C adapter\n", adap->name);
+		devm_kfree(hdmi->dev, hdmi->i2c);
+		hdmi->i2c = NULL;
+		return ERR_PTR(ret);
+	}
+
+	dev_info(hdmi->dev, "registered %s I2C bus driver\n", adap->name);
+
+	return adap;
 }
 
 static void hdmi_set_cts_n(struct dw_hdmi *hdmi, unsigned int cts,
@@ -739,6 +1016,7 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, unsigned char prep,
 	const struct dw_hdmi_mpll_config *mpll_config = pdata->mpll_cfg;
 	const struct dw_hdmi_curr_ctrl *curr_ctrl = pdata->cur_ctr;
 	const struct dw_hdmi_phy_config *phy_config = pdata->phy_config;
+	const struct dw_hdmi_multi_div *multi_div = pdata->multi_div;
 
 	if (prep)
 		return -EINVAL;
@@ -774,9 +1052,23 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, unsigned char prep,
 		    phy_config->mpixelclock)
 			break;
 
+	if (hdmi->dev_type == RCAR_HDMI) {
+		for (; multi_div->mpixelclock != (~0UL); multi_div++)
+			if (hdmi->hdmi_data.video_mode.mpixelclock <=
+			    multi_div->mpixelclock)
+				break;
+	}
+
 	if (mpll_config->mpixelclock == ~0UL ||
 	    curr_ctrl->mpixelclock == ~0UL ||
 	    phy_config->mpixelclock == ~0UL) {
+		dev_err(hdmi->dev, "Pixel clock %d - unsupported by HDMI\n",
+			hdmi->hdmi_data.video_mode.mpixelclock);
+		return -EINVAL;
+	}
+
+	if ((multi_div->mpixelclock == ~0UL) &&
+		(hdmi->dev_type == RCAR_HDMI)) {
 		dev_err(hdmi->dev, "Pixel clock %d - unsupported by HDMI\n",
 			hdmi->hdmi_data.video_mode.mpixelclock);
 		return -EINVAL;
@@ -808,21 +1100,27 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, unsigned char prep,
 	hdmi_phy_test_clear(hdmi, 0);
 
 	hdmi_phy_i2c_write(hdmi, mpll_config->res[res_idx].cpce, 0x06);
-	hdmi_phy_i2c_write(hdmi, mpll_config->res[res_idx].gmp, 0x15);
+	if (hdmi->dev_type != RCAR_HDMI)
+		hdmi_phy_i2c_write(hdmi, mpll_config->res[res_idx].gmp, 0x15);
 
 	/* CURRCTRL */
 	hdmi_phy_i2c_write(hdmi, curr_ctrl->curr[res_idx], 0x10);
 
-	hdmi_phy_i2c_write(hdmi, 0x0000, 0x13);  /* PLLPHBYCTRL */
-	hdmi_phy_i2c_write(hdmi, 0x0006, 0x17);
+	if (hdmi->dev_type == RCAR_HDMI)
+		hdmi_phy_i2c_write(hdmi, multi_div->multi[res_idx], 0x11);
 
-	hdmi_phy_i2c_write(hdmi, phy_config->term, 0x19);  /* TXTERM */
-	hdmi_phy_i2c_write(hdmi, phy_config->sym_ctr, 0x09); /* CKSYMTXCTRL */
-	hdmi_phy_i2c_write(hdmi, phy_config->vlev_ctr, 0x0E); /* VLEVCTRL */
+	if (hdmi->dev_type != RCAR_HDMI) {
+		hdmi_phy_i2c_write(hdmi, 0x0000, 0x13);  /* PLLPHBYCTRL */
+		hdmi_phy_i2c_write(hdmi, 0x0006, 0x17);
 
-	/* REMOVE CLK TERM */
-	hdmi_phy_i2c_write(hdmi, 0x8000, 0x05);  /* CKCALCTRL */
-
+		hdmi_phy_i2c_write(hdmi, phy_config->term, 0x19);  /* TXTERM */
+		hdmi_phy_i2c_write(hdmi, phy_config->sym_ctr,
+						 0x09); /* CKSYMTXCTRL */
+		hdmi_phy_i2c_write(hdmi, phy_config->vlev_ctr,
+						 0x0E); /* VLEVCTRL */
+		/* REMOVE CLK TERM */
+		hdmi_phy_i2c_write(hdmi, 0x8000, 0x05);  /* CKCALCTRL */
+	}
 	dw_hdmi_phy_enable_powerdown(hdmi, false);
 
 	/* toggle TMDS enable */
@@ -833,7 +1131,8 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, unsigned char prep,
 	dw_hdmi_phy_gen2_txpwron(hdmi, 1);
 	dw_hdmi_phy_gen2_pddq(hdmi, 0);
 
-	if (hdmi->dev_type == RK3288_HDMI)
+	if ((hdmi->dev_type == RK3288_HDMI) ||
+		(hdmi->dev_type == RCAR_HDMI))
 		dw_hdmi_phy_enable_spare(hdmi, 1);
 
 	/*Wait for PHY PLL lock */
@@ -1522,6 +1821,16 @@ static const struct drm_connector_funcs dw_hdmi_atomic_connector_funcs = {
 	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
 };
 
+static struct drm_connector_funcs dw_hdmi_rcar_connector_funcs = {
+	.dpms = drm_atomic_helper_connector_dpms,
+	.fill_modes = drm_helper_probe_single_connector_modes,
+	.detect = dw_hdmi_connector_detect,
+	.destroy = dw_hdmi_connector_destroy,
+	.reset = drm_atomic_helper_connector_reset,
+	.atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
+	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
+};
+
 static const struct drm_connector_helper_funcs dw_hdmi_connector_helper_funcs = {
 	.get_modes = dw_hdmi_connector_get_modes,
 	.mode_valid = dw_hdmi_connector_mode_valid,
@@ -1534,16 +1843,47 @@ static const struct drm_bridge_funcs dw_hdmi_bridge_funcs = {
 	.mode_set = dw_hdmi_bridge_mode_set,
 };
 
+static irqreturn_t dw_hdmi_i2c_irq(struct dw_hdmi *hdmi)
+{
+	struct dw_hdmi_i2c *i2c = hdmi->i2c;
+	unsigned long flags;
+
+	spin_lock_irqsave(&i2c->lock, flags);
+
+	i2c->stat = hdmi_readb(hdmi, HDMI_IH_I2CM_STAT0);
+	if (!i2c->stat) {
+		spin_unlock_irqrestore(&i2c->lock, flags);
+		return IRQ_NONE;
+	}
+
+	hdmi_writeb(hdmi, i2c->stat, HDMI_IH_I2CM_STAT0);
+	complete(&i2c->cmp);
+
+	dev_dbg(hdmi->dev, "i2cm_stat: 0x%02x, addr: 0x%02x, reg: 0x%02x\n",
+		i2c->stat, hdmi_readb(hdmi, HDMI_I2CM_SLAVE),
+		hdmi_readb(hdmi, HDMI_I2CM_ADDRESS));
+
+	spin_unlock_irqrestore(&i2c->lock, flags);
+
+	return IRQ_HANDLED;
+}
+
 static irqreturn_t dw_hdmi_hardirq(int irq, void *dev_id)
 {
 	struct dw_hdmi *hdmi = dev_id;
 	u8 intr_stat;
+	irqreturn_t ret = IRQ_NONE;
+
+	if (hdmi->i2c)
+		ret = dw_hdmi_i2c_irq(hdmi);
 
 	intr_stat = hdmi_readb(hdmi, HDMI_IH_PHY_STAT0);
-	if (intr_stat)
+	if (intr_stat) {
 		hdmi_writeb(hdmi, ~0, HDMI_IH_MUTE_PHY_STAT0);
+		return IRQ_WAKE_THREAD;
+	}
 
-	return intr_stat ? IRQ_WAKE_THREAD : IRQ_NONE;
+	return ret;
 }
 
 static irqreturn_t dw_hdmi_irq(int irq, void *dev_id)
@@ -1640,16 +1980,23 @@ static int dw_hdmi_register(struct drm_device *drm, struct dw_hdmi *hdmi)
 	encoder->bridge = bridge;
 	hdmi->connector.polled = DRM_CONNECTOR_POLL_HPD;
 
+	if (hdmi->interlaced)
+		hdmi->connector.interlace_allowed = true;
+
 	drm_connector_helper_add(&hdmi->connector,
 				 &dw_hdmi_connector_helper_funcs);
 
 	if (drm_core_check_feature(drm, DRIVER_ATOMIC))
 		drm_connector_init(drm, &hdmi->connector,
-				   &dw_hdmi_atomic_connector_funcs,
+				   hdmi->dev_type == RCAR_HDMI ?
+				   	&dw_hdmi_rcar_connector_funcs :
+				   	&dw_hdmi_atomic_connector_funcs,
 				   DRM_MODE_CONNECTOR_HDMIA);
 	else
 		drm_connector_init(drm, &hdmi->connector,
-				   &dw_hdmi_connector_funcs,
+				   hdmi->dev_type == RCAR_HDMI ?
+				   	&dw_hdmi_rcar_connector_funcs :
+				   	&dw_hdmi_connector_funcs,
 				   DRM_MODE_CONNECTOR_HDMIA);
 
 	drm_mode_connector_attach_encoder(&hdmi->connector, encoder);
@@ -1706,6 +2053,11 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 		return -EINVAL;
 	}
 
+	if (of_property_read_u32(np, "interlaced", &val) == 0)
+		hdmi->interlaced = val;
+	else
+		hdmi->interlaced = false;
+
 	ddc_node = of_parse_phandle(np, "ddc-i2c-bus", 0);
 	if (ddc_node) {
 		hdmi->ddc = of_find_i2c_adapter_by_node(ddc_node);
@@ -1723,30 +2075,59 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 	if (IS_ERR(hdmi->regs))
 		return PTR_ERR(hdmi->regs);
 
-	hdmi->isfr_clk = devm_clk_get(hdmi->dev, "isfr");
-	if (IS_ERR(hdmi->isfr_clk)) {
-		ret = PTR_ERR(hdmi->isfr_clk);
-		dev_err(hdmi->dev, "Unable to get HDMI isfr clk: %d\n", ret);
-		return ret;
+	if (of_property_read_u32(np, "clock-isfr", &val) == 0)
+		hdmi->isfr_use = val;
+	else
+		hdmi->isfr_use = true;
+
+	if (hdmi->isfr_use) {
+		if (of_property_read_u32(np, "hdmi-num", &val) == 0)
+			hdmi->num = val;
+		else
+			hdmi->num = -1;
+
+		if (hdmi->num > 1) {
+			char name[7];
+
+			sprintf(name, "isfr.%u", hdmi->plat_data->index);
+			hdmi->isfr_clk = devm_clk_get(hdmi->dev, name);
+		} else
+			hdmi->isfr_clk = devm_clk_get(hdmi->dev, "isfr");
+		if (IS_ERR(hdmi->isfr_clk)) {
+			ret = PTR_ERR(hdmi->isfr_clk);
+			dev_err(hdmi->dev,
+				 "Unable to get HDMI isfr clk: %d\n", ret);
+			return ret;
+		}
+
+		ret = clk_prepare_enable(hdmi->isfr_clk);
+		if (ret) {
+			dev_err(hdmi->dev,
+				 "Cannot enable HDMI isfr clock: %d\n", ret);
+			return ret;
+		}
 	}
 
-	ret = clk_prepare_enable(hdmi->isfr_clk);
-	if (ret) {
-		dev_err(hdmi->dev, "Cannot enable HDMI isfr clock: %d\n", ret);
-		return ret;
-	}
+	if (of_property_read_u32(np, "clock-iahb", &val) == 0)
+		hdmi->iahb_use = val;
+	else
+		hdmi->iahb_use = true;
 
-	hdmi->iahb_clk = devm_clk_get(hdmi->dev, "iahb");
-	if (IS_ERR(hdmi->iahb_clk)) {
-		ret = PTR_ERR(hdmi->iahb_clk);
-		dev_err(hdmi->dev, "Unable to get HDMI iahb clk: %d\n", ret);
-		goto err_isfr;
-	}
+	if (hdmi->iahb_use) {
+		hdmi->iahb_clk = devm_clk_get(hdmi->dev, "iahb");
+		if (IS_ERR(hdmi->iahb_clk)) {
+			ret = PTR_ERR(hdmi->iahb_clk);
+			dev_err(hdmi->dev,
+				 "Unable to get HDMI iahb clk: %d\n", ret);
+			goto err_isfr;
+		}
 
-	ret = clk_prepare_enable(hdmi->iahb_clk);
-	if (ret) {
-		dev_err(hdmi->dev, "Cannot enable HDMI iahb clock: %d\n", ret);
-		goto err_isfr;
+		ret = clk_prepare_enable(hdmi->iahb_clk);
+		if (ret) {
+			dev_err(hdmi->dev,
+				 "Cannot enable HDMI iahb clock: %d\n", ret);
+			goto err_isfr;
+		}
 	}
 
 	/* Product and revision IDs */
@@ -1770,6 +2151,13 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 	 * N and cts values before enabling phy
 	 */
 	hdmi_init_clk_regenerator(hdmi);
+
+	/* If DDC bus is not specified, try to register HDMI I2C bus */
+	if (!hdmi->ddc) {
+		hdmi->ddc = dw_hdmi_i2c_adapter(hdmi);
+		if (IS_ERR(hdmi->ddc))
+			hdmi->ddc = NULL;
+	}
 
 	/*
 	 * Configure registers related to HDMI interrupt
@@ -1811,14 +2199,23 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 		hdmi->audio = platform_device_register_full(&pdevinfo);
 	}
 
+	/* Unmute I2CM interrupts and reset HDMI DDC I2C master controller */
+	if (hdmi->i2c)
+		dw_hdmi_i2c_init(hdmi);
+
 	dev_set_drvdata(dev, hdmi);
 
 	return 0;
 
 err_iahb:
-	clk_disable_unprepare(hdmi->iahb_clk);
+	if (hdmi->i2c)
+		i2c_del_adapter(&hdmi->i2c->adap);
+
+	if (hdmi->iahb_use)
+		clk_disable_unprepare(hdmi->iahb_clk);
 err_isfr:
-	clk_disable_unprepare(hdmi->isfr_clk);
+	if (hdmi->isfr_use)
+		clk_disable_unprepare(hdmi->isfr_clk);
 
 	return ret;
 }
@@ -1837,15 +2234,23 @@ void dw_hdmi_unbind(struct device *dev, struct device *master, void *data)
 	hdmi->connector.funcs->destroy(&hdmi->connector);
 	hdmi->encoder->funcs->destroy(hdmi->encoder);
 
-	clk_disable_unprepare(hdmi->iahb_clk);
-	clk_disable_unprepare(hdmi->isfr_clk);
-	i2c_put_adapter(hdmi->ddc);
+	if (hdmi->iahb_use)
+		clk_disable_unprepare(hdmi->iahb_clk);
+
+	if (hdmi->isfr_use)
+		clk_disable_unprepare(hdmi->isfr_clk);
+
+	if (hdmi->i2c)
+		i2c_del_adapter(&hdmi->i2c->adap);
+	else
+		i2c_put_adapter(hdmi->ddc);
 }
 EXPORT_SYMBOL_GPL(dw_hdmi_unbind);
 
 MODULE_AUTHOR("Sascha Hauer <s.hauer@pengutronix.de>");
 MODULE_AUTHOR("Andy Yan <andy.yan@rock-chips.com>");
 MODULE_AUTHOR("Yakir Yang <ykk@rock-chips.com>");
+MODULE_AUTHOR("Vladimir Zapolskiy <vladimir_zapolskiy at mentor.com>");
 MODULE_DESCRIPTION("DW HDMI transmitter driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:dw-hdmi");
