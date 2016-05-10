@@ -1,24 +1,13 @@
 fixes
-	<no branch> (a0a966b83873f33778710a4fc59240244b0734a5)
-		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-fixes-4.6
-	patch
-		ARM: SoCFPGA: Fix secondary CPU startup in thumb2 kernel
-	<no branch> (7472931f7f1e9d91f761dce30107ae345b61a5c3)
-		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.6/fixes-rc5-signed
-	at91/defconfig
-		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-fixes2-for-v4.6
-		contains renesas/fixes
-	patch
-		ARM: davinci: only use NVMEM when available
-	<no branch> (dcf5341f0150bc4c5bf37786e1198d2ff8fc2c38)
-		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-fixes-for-4.6
+	<no branch> (b8453d4ee9e24c6590dd0eecbab1c3cc2028317f)
+		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-fixes
 
 next/fixes-non-critical
 	samsung/fixes-non-critical
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-fixes-non-critical-4.7
 	omap/legacy-fixes-nc
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.7/legacy-signed
-	<no branch> (d4f414e559caf36d811213e56b56e9b6957caab1)
+	omap/auxdata
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.7/auxdata-signed
 
 next/cleanup
@@ -84,6 +73,12 @@ next/arm64
 		git://github.com/hisilicon/linux-hisi tags/hi6220-config-for-4.7v3
 	renesas/defconfig64
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.7
+	<no branch> (3892132c2716e2747e562dd9a4c025387c19c329)
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig64-4.7
+	patch
+		arm64: defconfig: Add Juno SATA controller
+	mvebu/arm64
+		git://git.infradead.org/linux-mvebu tags/mvebu-arm64-4.7-1
 
 next/dt
 	at91/dt
@@ -188,6 +183,10 @@ next/dt64
 	hisi/dt64-2
 hisi/hip06-dt
 		git://github.com/hisilicon/linux-hisi tags/hip0x-dt-for-4.7
+	at91/defconfig
+renesas/fixes-2
+		Merge branch 'renesas/fixes-2' into next/dt64
+		contains renesas/fixes
 
 next/defconfig
 	renesas/defconfig
@@ -215,6 +214,18 @@ next/defconfig
 		git://github.com/vzapolskiy/linux-lpc32xx tags/lpc32xx-defconfig-4.7
 	omap/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.7/defconfig-signed
+	davinci/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.7/defconfig
+	tegra/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.7-defconfig
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.7
+	ux500/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-defconfig-armsoc2
+	aspeed/defconfig
+		https://github.com/shenki/linux tags/aspeed-for-4.7-defconfig
+	at91/defconfig-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/nferre/linux-at91 tags/at91-defconfig2
 
 next/drivers
 	qcom/soc
@@ -246,7 +257,7 @@ next/drivers
 		contains renesas/dt
 	samsung/srom
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-exynos-srom-4.7
-	<no branch> (074c6a422d86fff76e05cf31be25e0eb752e1bd4)
+	rockchip/pmdomain
 		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.7-rockchip-drivers-2
 	tegra/xusb-phy
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.7-phy
@@ -254,7 +265,7 @@ next/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.7-pci
 	tegra/usb
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.7-xhci
-	<no branch> (a38045121bf42110e6043d07315a7626b021a0db)
+	tegra/genpd
 		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.7-genpd
 	mediatek/pmic
 		https://github.com/mbgg/linux-mediatek tags/v4.6-next-soc
@@ -263,20 +274,6 @@ next/drivers
 	patch
 		arm-ccn: Enable building as module
 
-next/arm64
-	meson/arm64
-		https://github.com/carlocaione/linux-meson tags/gxbb-arm64
-	patch
-		arm64: add Kconfig entry for LG1K SoC family
-		arm64: defconfig: enable ARCH_LG1K
-		MAINTAINERS: add Chanho Min as ARM/LG1K maintainer
-	samsung/defconfig-64
-		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig64-4.7
-	hisi/config
-		git://github.com/hisilicon/linux-hisi tags/hi6220-config-for-4.7v3
-	renesas/defconfig64
-		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.7
-
 next/late
 	renesas/dt-pm-domain
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-pm-domain-for-v4.7
@@ -284,7 +281,7 @@ next/late
 		contains renesas/dt
 		contains renesas/dt-2
 		contains renesas/rcar-sysc2
-	<no branch> (38dbb45ee4bc7dda4aabba2178eebff2f93380d1)
+	renesas/arm64-pm-domain
 		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-pm-domain-for-v4.7
 		contains renesas/dt64
 		contains renesas/dt64-2
