@@ -235,7 +235,6 @@ static const char i40e_priv_flags_strings[][ETH_GSTRING_LEN] = {
 	"LinkPolling",
 	"flow-director-atr",
 	"veb-stats",
-	"packet-split",
 	"hw-atr-eviction",
 };
 
@@ -313,6 +312,13 @@ static void i40e_get_settings_link_up(struct i40e_hw *hw,
 			ecmd->advertising |= ADVERTISED_10000baseT_Full;
 		if (hw_link_info->requested_speeds & I40E_LINK_SPEED_1GB)
 			ecmd->advertising |= ADVERTISED_1000baseT_Full;
+		/* adding 100baseT support for 10GBASET_PHY */
+		if (pf->flags & I40E_FLAG_HAVE_10GBASET_PHY) {
+			ecmd->supported |= SUPPORTED_100baseT_Full;
+			ecmd->advertising |= ADVERTISED_100baseT_Full |
+					     ADVERTISED_1000baseT_Full |
+					     ADVERTISED_10000baseT_Full;
+		}
 		break;
 	case I40E_PHY_TYPE_1000BASE_T_OPTICAL:
 		ecmd->supported = SUPPORTED_Autoneg |
@@ -325,6 +331,15 @@ static void i40e_get_settings_link_up(struct i40e_hw *hw,
 				  SUPPORTED_100baseT_Full;
 		if (hw_link_info->requested_speeds & I40E_LINK_SPEED_100MB)
 			ecmd->advertising |= ADVERTISED_100baseT_Full;
+		/* firmware detects 10G phy as 100M phy at 100M speed */
+		if (pf->flags & I40E_FLAG_HAVE_10GBASET_PHY) {
+			ecmd->supported |= SUPPORTED_10000baseT_Full |
+					   SUPPORTED_1000baseT_Full;
+			ecmd->advertising |= ADVERTISED_Autoneg |
+					     ADVERTISED_100baseT_Full |
+					     ADVERTISED_1000baseT_Full |
+					     ADVERTISED_10000baseT_Full;
+		}
 		break;
 	case I40E_PHY_TYPE_10GBASE_CR1_CU:
 	case I40E_PHY_TYPE_10GBASE_CR1:
@@ -1259,6 +1274,13 @@ static int i40e_set_ringparam(struct net_device *netdev,
 		}
 
 		for (i = 0; i < vsi->num_queue_pairs; i++) {
+			/* this is to allow wr32 to have something to write to
+			 * during early allocation of Rx buffers
+			 */
+			u32 __iomem faketail = 0;
+			struct i40e_ring *ring;
+			u16 unused;
+
 			/* clone ring and setup updated count */
 			rx_rings[i] = *vsi->rx_rings[i];
 			rx_rings[i].count = new_rx_count;
@@ -1267,12 +1289,22 @@ static int i40e_set_ringparam(struct net_device *netdev,
 			 */
 			rx_rings[i].desc = NULL;
 			rx_rings[i].rx_bi = NULL;
+			rx_rings[i].tail = (u8 __iomem *)&faketail;
 			err = i40e_setup_rx_descriptors(&rx_rings[i]);
+			if (err)
+				goto rx_unwind;
+
+			/* now allocate the Rx buffers to make sure the OS
+			 * has enough memory, any failure here means abort
+			 */
+			ring = &rx_rings[i];
+			unused = I40E_DESC_UNUSED(ring);
+			err = i40e_alloc_rx_buffers(ring, unused);
+rx_unwind:
 			if (err) {
-				while (i) {
-					i--;
+				do {
 					i40e_free_rx_resources(&rx_rings[i]);
-				}
+				} while (i--);
 				kfree(rx_rings);
 				rx_rings = NULL;
 
@@ -1298,6 +1330,17 @@ static int i40e_set_ringparam(struct net_device *netdev,
 	if (rx_rings) {
 		for (i = 0; i < vsi->num_queue_pairs; i++) {
 			i40e_free_rx_resources(vsi->rx_rings[i]);
+			/* get the real tail offset */
+			rx_rings[i].tail = vsi->rx_rings[i]->tail;
+			/* this is to fake out the allocation routine
+			 * into thinking it has to realloc everything
+			 * but the recycling logic will let us re-use
+			 * the buffers allocated above
+			 */
+			rx_rings[i].next_to_use = 0;
+			rx_rings[i].next_to_clean = 0;
+			rx_rings[i].next_to_alloc = 0;
+			/* do a struct copy */
 			*vsi->rx_rings[i] = rx_rings[i];
 		}
 		kfree(rx_rings);
@@ -1714,7 +1757,7 @@ static void i40e_diag_test(struct net_device *netdev,
 		/* If the device is online then take it offline */
 		if (if_running)
 			/* indicate we're in test mode */
-			dev_close(netdev);
+			i40e_close(netdev);
 		else
 			/* This reset does not affect link - if it is
 			 * changed to a type of reset that does affect
@@ -1743,7 +1786,7 @@ static void i40e_diag_test(struct net_device *netdev,
 		i40e_do_reset(pf, BIT(__I40E_PF_RESET_REQUESTED));
 
 		if (if_running)
-			dev_open(netdev);
+			i40e_open(netdev);
 	} else {
 		/* Online tests */
 		netif_info(pf, drv, netdev, "online testing starting\n");
@@ -2490,7 +2533,6 @@ static int i40e_add_fdir_ethtool(struct i40e_vsi *vsi,
 
 	if (!vsi)
 		return -EINVAL;
-
 	pf = vsi->back;
 
 	if (!(pf->flags & I40E_FLAG_FD_SB_ENABLED))
@@ -2548,15 +2590,18 @@ static int i40e_add_fdir_ethtool(struct i40e_vsi *vsi,
 	input->src_ip[0] = fsp->h_u.tcp_ip4_spec.ip4dst;
 
 	if (ntohl(fsp->m_ext.data[1])) {
-		if (ntohl(fsp->h_ext.data[1]) >= pf->num_alloc_vfs) {
-			netif_info(pf, drv, vsi->netdev, "Invalid VF id\n");
+		vf_id = ntohl(fsp->h_ext.data[1]);
+		if (vf_id >= pf->num_alloc_vfs) {
+			netif_info(pf, drv, vsi->netdev,
+				   "Invalid VF id %d\n", vf_id);
 			goto free_input;
 		}
-		vf_id = ntohl(fsp->h_ext.data[1]);
 		/* Find vsi id from vf id and override dest vsi */
 		input->dest_vsi = pf->vf[vf_id].lan_vsi_id;
 		if (input->q_index >= pf->vf[vf_id].num_queue_pairs) {
-			netif_info(pf, drv, vsi->netdev, "Invalid queue id\n");
+			netif_info(pf, drv, vsi->netdev,
+				   "Invalid queue id %d for VF %d\n",
+				   input->q_index, vf_id);
 			goto free_input;
 		}
 	}
@@ -2811,8 +2856,6 @@ static u32 i40e_get_priv_flags(struct net_device *dev)
 		I40E_PRIV_FLAGS_FD_ATR : 0;
 	ret_flags |= pf->flags & I40E_FLAG_VEB_STATS_ENABLED ?
 		I40E_PRIV_FLAGS_VEB_STATS : 0;
-	ret_flags |= pf->flags & I40E_FLAG_RX_PS_ENABLED ?
-		I40E_PRIV_FLAGS_PS : 0;
 	ret_flags |= pf->auto_disable_flags & I40E_FLAG_HW_ATR_EVICT_CAPABLE ?
 		0 : I40E_PRIV_FLAGS_HW_ATR_EVICT;
 
@@ -2832,23 +2875,6 @@ static int i40e_set_priv_flags(struct net_device *dev, u32 flags)
 	bool reset_required = false;
 
 	/* NOTE: MFP is not settable */
-
-	/* allow the user to control the method of receive
-	 * buffer DMA, whether the packet is split at header
-	 * boundaries into two separate buffers.  In some cases
-	 * one routine or the other will perform better.
-	 */
-	if ((flags & I40E_PRIV_FLAGS_PS) &&
-	    !(pf->flags & I40E_FLAG_RX_PS_ENABLED)) {
-		pf->flags |= I40E_FLAG_RX_PS_ENABLED;
-		pf->flags &= ~I40E_FLAG_RX_1BUF_ENABLED;
-		reset_required = true;
-	} else if (!(flags & I40E_PRIV_FLAGS_PS) &&
-		   (pf->flags & I40E_FLAG_RX_PS_ENABLED)) {
-		pf->flags &= ~I40E_FLAG_RX_PS_ENABLED;
-		pf->flags |= I40E_FLAG_RX_1BUF_ENABLED;
-		reset_required = true;
-	}
 
 	if (flags & I40E_PRIV_FLAGS_LINKPOLL_FLAG)
 		pf->flags |= I40E_FLAG_LINK_POLLING_ENABLED;

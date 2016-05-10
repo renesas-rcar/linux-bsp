@@ -352,6 +352,22 @@ struct sk_filter {
 
 #define BPF_SKB_CB_LEN QDISC_CB_PRIV_LEN
 
+struct bpf_skb_data_end {
+	struct qdisc_skb_cb qdisc_cb;
+	void *data_end;
+};
+
+/* compute the linear packet data range [data, data_end) which
+ * will be accessed by cls_bpf and act_bpf programs
+ */
+static inline void bpf_compute_data_end(struct sk_buff *skb)
+{
+	struct bpf_skb_data_end *cb = (struct bpf_skb_data_end *)skb->cb;
+
+	BUILD_BUG_ON(sizeof(*cb) > FIELD_SIZEOF(struct sk_buff, cb));
+	cb->data_end = skb->data + skb_headlen(skb);
+}
+
 static inline u8 *bpf_skb_cb(struct sk_buff *skb)
 {
 	/* eBPF programs may read/write skb->cb[] area to transfer meta
@@ -465,14 +481,10 @@ int bpf_prog_create_from_user(struct bpf_prog **pfp, struct sock_fprog *fprog,
 void bpf_prog_destroy(struct bpf_prog *fp);
 
 int sk_attach_filter(struct sock_fprog *fprog, struct sock *sk);
-int __sk_attach_filter(struct sock_fprog *fprog, struct sock *sk,
-		       bool locked);
 int sk_attach_bpf(u32 ufd, struct sock *sk);
 int sk_reuseport_attach_filter(struct sock_fprog *fprog, struct sock *sk);
 int sk_reuseport_attach_bpf(u32 ufd, struct sock *sk);
 int sk_detach_filter(struct sock *sk);
-int __sk_detach_filter(struct sock *sk, bool locked);
-
 int sk_get_filter(struct sock *sk, struct sock_filter __user *filter,
 		  unsigned int len);
 

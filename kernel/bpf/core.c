@@ -764,10 +764,17 @@ const struct bpf_func_proto bpf_map_delete_elem_proto __weak;
 const struct bpf_func_proto bpf_get_prandom_u32_proto __weak;
 const struct bpf_func_proto bpf_get_smp_processor_id_proto __weak;
 const struct bpf_func_proto bpf_ktime_get_ns_proto __weak;
+
 const struct bpf_func_proto bpf_get_current_pid_tgid_proto __weak;
 const struct bpf_func_proto bpf_get_current_uid_gid_proto __weak;
 const struct bpf_func_proto bpf_get_current_comm_proto __weak;
+
 const struct bpf_func_proto * __weak bpf_get_trace_printk_proto(void)
+{
+	return NULL;
+}
+
+const struct bpf_func_proto * __weak bpf_get_event_output_proto(void)
 {
 	return NULL;
 }
@@ -785,6 +792,11 @@ const struct bpf_func_proto bpf_tail_call_proto = {
 /* For classic BPF JITs that don't implement bpf_int_jit_compile(). */
 void __weak bpf_int_jit_compile(struct bpf_prog *prog)
 {
+}
+
+bool __weak bpf_helper_changes_skb_data(void *func)
+{
+	return false;
 }
 
 /* To execute LD_ABS/LD_IND instructions __bpf_prog_run() may call

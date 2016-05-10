@@ -133,6 +133,14 @@ i40e_status i40e_aq_set_vsi_unicast_promiscuous(struct i40e_hw *hw,
 		u16 vsi_id, bool set, struct i40e_asq_cmd_details *cmd_details);
 i40e_status i40e_aq_set_vsi_multicast_promiscuous(struct i40e_hw *hw,
 		u16 vsi_id, bool set, struct i40e_asq_cmd_details *cmd_details);
+enum i40e_status_code i40e_aq_set_vsi_mc_promisc_on_vlan(struct i40e_hw *hw,
+							 u16 seid, bool enable,
+							 u16 vid,
+				struct i40e_asq_cmd_details *cmd_details);
+enum i40e_status_code i40e_aq_set_vsi_uc_promisc_on_vlan(struct i40e_hw *hw,
+							 u16 seid, bool enable,
+							 u16 vid,
+				struct i40e_asq_cmd_details *cmd_details);
 i40e_status i40e_aq_set_vsi_vlan_promisc(struct i40e_hw *hw,
 				u16 seid, bool enable,
 				struct i40e_asq_cmd_details *cmd_details);
@@ -228,10 +236,6 @@ i40e_status i40e_aq_config_vsi_bw_limit(struct i40e_hw *hw,
 				struct i40e_asq_cmd_details *cmd_details);
 i40e_status i40e_aq_dcb_updated(struct i40e_hw *hw,
 				struct i40e_asq_cmd_details *cmd_details);
-i40e_status i40e_aq_set_hmc_resource_profile(struct i40e_hw *hw,
-				enum i40e_aq_hmc_profile profile,
-				u8 pe_vf_enabled_count,
-				struct i40e_asq_cmd_details *cmd_details);
 i40e_status i40e_aq_config_switch_comp_bw_limit(struct i40e_hw *hw,
 				u16 seid, u16 credit, u8 max_bw,
 				struct i40e_asq_cmd_details *cmd_details);
@@ -308,6 +312,7 @@ i40e_status i40e_validate_nvm_checksum(struct i40e_hw *hw,
 i40e_status i40e_nvmupd_command(struct i40e_hw *hw,
 				struct i40e_nvm_access *cmd,
 				u8 *bytes, int *);
+void i40e_nvmupd_check_wait_event(struct i40e_hw *hw, u16 opcode);
 void i40e_set_pci_config_data(struct i40e_hw *hw, u16 link_status);
 
 extern struct i40e_rx_ptype_decoded i40e_ptype_lookup[];

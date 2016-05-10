@@ -973,6 +973,17 @@ static enum xgene_ring_owner xgene_derive_ring_owner(struct xgene_enet_pdata *p)
 	return owner;
 }
 
+static u8 xgene_start_cpu_bufnum(struct xgene_enet_pdata *pdata)
+{
+	struct device *dev = &pdata->pdev->dev;
+	u32 cpu_bufnum;
+	int ret;
+
+	ret = device_property_read_u32(dev, "channel", &cpu_bufnum);
+
+	return (!ret) ? cpu_bufnum : pdata->cpu_bufnum;
+}
+
 static int xgene_enet_create_desc_rings(struct net_device *ndev)
 {
 	struct xgene_enet_pdata *pdata = netdev_priv(ndev);
@@ -981,12 +992,14 @@ static int xgene_enet_create_desc_rings(struct net_device *ndev)
 	struct xgene_enet_desc_ring *buf_pool = NULL;
 	enum xgene_ring_owner owner;
 	dma_addr_t dma_exp_bufs;
-	u8 cpu_bufnum = pdata->cpu_bufnum;
+	u8 cpu_bufnum;
 	u8 eth_bufnum = pdata->eth_bufnum;
 	u8 bp_bufnum = pdata->bp_bufnum;
 	u16 ring_num = pdata->ring_num;
 	u16 ring_id;
 	int i, ret, size;
+
+	cpu_bufnum = xgene_start_cpu_bufnum(pdata);
 
 	for (i = 0; i < pdata->rxq_cnt; i++) {
 		/* allocate rx descriptor ring */
@@ -1595,21 +1608,22 @@ static int xgene_enet_probe(struct platform_device *pdev)
 
 	ret = xgene_enet_init_hw(pdata);
 	if (ret)
-		goto err;
+		goto err_netdev;
 
 	mac_ops = pdata->mac_ops;
 	if (pdata->phy_mode == PHY_INTERFACE_MODE_RGMII) {
 		ret = xgene_enet_mdio_config(pdata);
 		if (ret)
-			goto err;
+			goto err_netdev;
 	} else {
 		INIT_DELAYED_WORK(&pdata->link_work, mac_ops->link_state);
 	}
 
 	xgene_enet_napi_add(pdata);
 	return 0;
-err:
+err_netdev:
 	unregister_netdev(ndev);
+err:
 	free_netdev(ndev);
 	return ret;
 }

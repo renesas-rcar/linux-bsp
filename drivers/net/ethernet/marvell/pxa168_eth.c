@@ -981,8 +981,6 @@ static int pxa168_init_phy(struct net_device *dev)
 	pep->phy = mdiobus_scan(pep->smi_bus, pep->phy_addr);
 	if (IS_ERR(pep->phy))
 		return PTR_ERR(pep->phy);
-	if (!pep->phy)
-		return -ENODEV;
 
 	err = phy_connect_direct(dev, pep->phy, pxa168_eth_adjust_link,
 				 pep->phy_intf);
@@ -1297,7 +1295,7 @@ static int pxa168_eth_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	stats->tx_bytes += length;
 	stats->tx_packets++;
-	dev->trans_start = jiffies;
+	netif_trans_update(dev);
 	if (pep->tx_ring_size - pep->tx_desc_count <= 1) {
 		/* We handled the current skb, but now we are out of space.*/
 		netif_stop_queue(dev);
