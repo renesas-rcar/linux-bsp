@@ -10,6 +10,7 @@
 
 #include <linux/bitmap.h>
 #include <linux/delay.h>
+#include <linux/dma-iommu.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/export.h>
@@ -22,7 +23,7 @@
 #include <linux/sizes.h>
 #include <linux/slab.h>
 
-#ifdef CONFIG_ARM
+#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
 #include <asm/dma-iommu.h>
 #include <asm/pgalloc.h>
 #endif
@@ -40,7 +41,7 @@ struct ipmmu_vmsa_device {
 	DECLARE_BITMAP(ctx, IPMMU_CTX_MAX);
 	struct ipmmu_vmsa_domain *domains[IPMMU_CTX_MAX];
 
-#ifdef CONFIG_ARM
+#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
 	struct dma_iommu_mapping *mapping;
 #endif
 };
@@ -479,12 +480,9 @@ static irqreturn_t ipmmu_irq(int irq, void *dev)
  * IOMMU Operations
  */
 
-static struct iommu_domain *ipmmu_domain_alloc(unsigned type)
+static struct iommu_domain *__ipmmu_domain_alloc(unsigned type)
 {
 	struct ipmmu_vmsa_domain *domain;
-
-	if (type != IOMMU_DOMAIN_UNMANAGED)
-		return NULL;
 
 	domain = kzalloc(sizeof(*domain), GFP_KERNEL);
 	if (!domain)
@@ -493,6 +491,14 @@ static struct iommu_domain *ipmmu_domain_alloc(unsigned type)
 	spin_lock_init(&domain->lock);
 
 	return &domain->io_domain;
+}
+
+static struct iommu_domain *ipmmu_domain_alloc(unsigned type)
+{
+	if (type != IOMMU_DOMAIN_UNMANAGED)
+		return NULL;
+
+	return __ipmmu_domain_alloc(type);
 }
 
 static void ipmmu_domain_free(struct iommu_domain *io_domain)
@@ -619,7 +625,70 @@ static int ipmmu_find_utlbs(struct ipmmu_vmsa_device *mmu, struct device *dev,
 	return 0;
 }
 
-#ifdef CONFIG_ARM
+static int ipmmu_init_platform_device(struct device *dev,
+				      struct iommu_group *group)
+{
+	struct ipmmu_vmsa_archdata *archdata;
+	struct ipmmu_vmsa_device *mmu;
+	unsigned int *utlbs;
+	unsigned int i;
+	int num_utlbs;
+	int ret = -ENODEV;
+
+	/* Find the master corresponding to the device. */
+
+	num_utlbs = of_count_phandle_with_args(dev->of_node, "iommus",
+					       "#iommu-cells");
+	if (num_utlbs < 0)
+		return -ENODEV;
+
+	utlbs = kcalloc(num_utlbs, sizeof(*utlbs), GFP_KERNEL);
+	if (!utlbs)
+		return -ENOMEM;
+
+	spin_lock(&ipmmu_devices_lock);
+
+	list_for_each_entry(mmu, &ipmmu_devices, list) {
+		ret = ipmmu_find_utlbs(mmu, dev, utlbs, num_utlbs);
+		if (!ret) {
+			/*
+			 * TODO Take a reference to the MMU to protect
+			 * against device removal.
+			 */
+			break;
+		}
+	}
+
+	spin_unlock(&ipmmu_devices_lock);
+
+	if (ret < 0)
+		goto error;
+
+	for (i = 0; i < num_utlbs; ++i) {
+		if (utlbs[i] >= mmu->num_utlbs) {
+			ret = -EINVAL;
+			goto error;
+		}
+	}
+
+	archdata = kzalloc(sizeof(*archdata), GFP_KERNEL);
+	if (!archdata) {
+		ret = -ENOMEM;
+		goto error;
+	}
+
+	archdata->mmu = mmu;
+	archdata->utlbs = utlbs;
+	archdata->num_utlbs = num_utlbs;
+	dev->archdata.iommu = archdata;
+	return 0;
+
+error:
+	kfree(utlbs);
+	return ret;
+}
+
+#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
 static int ipmmu_map_attach(struct device *dev, struct ipmmu_vmsa_device *mmu)
 {
 	int ret;
@@ -675,54 +744,13 @@ static inline void ipmmu_release_mapping(struct ipmmu_vmsa_device *mmu) {}
 
 static int ipmmu_add_device(struct device *dev)
 {
-	struct ipmmu_vmsa_archdata *archdata;
-	struct ipmmu_vmsa_device *mmu;
-	struct iommu_group *group = NULL;
-	unsigned int *utlbs;
-	unsigned int i;
-	int num_utlbs;
-	int ret = -ENODEV;
+	struct iommu_group *group;
+	int ret;
 
 	if (dev->archdata.iommu) {
 		dev_warn(dev, "IOMMU driver already assigned to device %s\n",
 			 dev_name(dev));
 		return -EINVAL;
-	}
-
-	/* Find the master corresponding to the device. */
-
-	num_utlbs = of_count_phandle_with_args(dev->of_node, "iommus",
-					       "#iommu-cells");
-	if (num_utlbs < 0)
-		return -ENODEV;
-
-	utlbs = kcalloc(num_utlbs, sizeof(*utlbs), GFP_KERNEL);
-	if (!utlbs)
-		return -ENOMEM;
-
-	spin_lock(&ipmmu_devices_lock);
-
-	list_for_each_entry(mmu, &ipmmu_devices, list) {
-		ret = ipmmu_find_utlbs(mmu, dev, utlbs, num_utlbs);
-		if (!ret) {
-			/*
-			 * TODO Take a reference to the MMU to protect
-			 * against device removal.
-			 */
-			break;
-		}
-	}
-
-	spin_unlock(&ipmmu_devices_lock);
-
-	if (ret < 0)
-		return -ENODEV;
-
-	for (i = 0; i < num_utlbs; ++i) {
-		if (utlbs[i] >= mmu->num_utlbs) {
-			ret = -EINVAL;
-			goto error;
-		}
 	}
 
 	/* Create a device group and add the device to it. */
@@ -742,27 +770,20 @@ static int ipmmu_add_device(struct device *dev)
 		goto error;
 	}
 
-	archdata = kzalloc(sizeof(*archdata), GFP_KERNEL);
-	if (!archdata) {
-		ret = -ENOMEM;
+	ret = ipmmu_init_platform_device(dev, group);
+	if (ret < 0) {
+		dev_err(dev, "Failed to init platform device\n");
 		goto error;
 	}
 
-	archdata->mmu = mmu;
-	archdata->utlbs = utlbs;
-	archdata->num_utlbs = num_utlbs;
-	dev->archdata.iommu = archdata;
-
-	ret = ipmmu_map_attach(dev, mmu);
+	ret = ipmmu_map_attach(dev, ((struct ipmmu_vmsa_archdata *)
+				     dev->archdata.iommu)->mmu);
 	if (ret < 0)
 		goto error;
 
 	return 0;
 
 error:
-	kfree(dev->archdata.iommu);
-	kfree(utlbs);
-
 	dev->archdata.iommu = NULL;
 
 	if (!IS_ERR_OR_NULL(group))
@@ -784,7 +805,7 @@ static void ipmmu_remove_device(struct device *dev)
 	dev->archdata.iommu = NULL;
 }
 
-static const struct iommu_ops ipmmu_ops = {
+static const struct iommu_ops __maybe_unused ipmmu_ops = {
 	.domain_alloc = ipmmu_domain_alloc,
 	.domain_free = ipmmu_domain_free,
 	.attach_dev = ipmmu_attach_device,
@@ -796,6 +817,92 @@ static const struct iommu_ops ipmmu_ops = {
 	.add_device = ipmmu_add_device,
 	.remove_device = ipmmu_remove_device,
 	.pgsize_bitmap = SZ_1G | SZ_2M | SZ_4K,
+};
+
+static struct iommu_domain *ipmmu_domain_alloc_dma(unsigned type)
+{
+	struct iommu_domain *io_domain;
+
+	if (type != IOMMU_DOMAIN_DMA)
+		return NULL;
+
+	io_domain = __ipmmu_domain_alloc(type);
+	if (io_domain)
+		iommu_get_dma_cookie(io_domain);
+
+	return io_domain;
+}
+
+static void ipmmu_domain_free_dma(struct iommu_domain *io_domain)
+{
+	iommu_put_dma_cookie(io_domain);
+	ipmmu_domain_free(io_domain);
+}
+
+static int ipmmu_add_device_dma(struct device *dev)
+{
+	struct iommu_group *group;
+
+	/* only accept devices with iommus property */
+	if (of_count_phandle_with_args(dev->of_node, "iommus",
+				       "#iommu-cells") < 0)
+		return -ENODEV;
+
+	group = iommu_group_get_for_dev(dev);
+	if (IS_ERR(group))
+		return PTR_ERR(group);
+
+	return 0;
+}
+
+static void ipmmu_remove_device_dma(struct device *dev)
+{
+	iommu_group_remove_device(dev);
+}
+
+static struct iommu_group *ipmmu_device_group_dma(struct device *dev)
+{
+	struct iommu_group *group;
+	int ret;
+
+	group = generic_device_group(dev);
+	if (IS_ERR(group))
+		return group;
+
+	ret = ipmmu_init_platform_device(dev, group);
+	if (ret) {
+		iommu_group_put(group);
+		group = ERR_PTR(ret);
+	}
+
+	return group;
+}
+
+#ifdef CONFIG_OF_IOMMU
+static int ipmmu_of_xlate_dma(struct device *dev,
+			      struct of_phandle_args *spec)
+{
+	/* dummy callback to satisfy of_iommu_configure() */
+	return 0;
+}
+#endif
+
+static const struct iommu_ops __maybe_unused ipmmu_ops_dma = {
+	.domain_alloc = ipmmu_domain_alloc_dma,
+	.domain_free = ipmmu_domain_free_dma,
+	.attach_dev = ipmmu_attach_device,
+	.detach_dev = ipmmu_detach_device,
+	.map = ipmmu_map,
+	.unmap = ipmmu_unmap,
+	.map_sg = default_iommu_map_sg,
+	.iova_to_phys = ipmmu_iova_to_phys,
+	.add_device = ipmmu_add_device_dma,
+	.remove_device = ipmmu_remove_device_dma,
+	.device_group = ipmmu_device_group_dma,
+	.pgsize_bitmap = SZ_1G | SZ_2M | SZ_4K,
+#ifdef CONFIG_OF_IOMMU
+	.of_xlate = ipmmu_of_xlate_dma,
+#endif
 };
 
 /* -----------------------------------------------------------------------------
@@ -909,14 +1016,17 @@ static struct platform_driver ipmmu_driver = {
 
 static int __init ipmmu_init(void)
 {
+	const struct iommu_ops *ops;
 	int ret;
 
 	ret = platform_driver_register(&ipmmu_driver);
 	if (ret < 0)
 		return ret;
 
+	ops = IS_ENABLED(CONFIG_IOMMU_DMA) ? &ipmmu_ops_dma : &ipmmu_ops;
+
 	if (!iommu_present(&platform_bus_type))
-		bus_set_iommu(&platform_bus_type, &ipmmu_ops);
+		bus_set_iommu(&platform_bus_type, ops);
 
 	return 0;
 }
