@@ -147,6 +147,30 @@
 		clock-frequency = <0>;
 	};
 
+	programmable_clk0: clock_out0 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	x21_clk: x21-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	x22_clk: x22-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	programmable_clk1: clock_out1 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -1509,8 +1533,14 @@
 				 <&cpg CPG_MOD 723>,
 				 <&cpg CPG_MOD 722>,
 				 <&cpg CPG_MOD 721>,
-				 <&cpg CPG_MOD 727>;
-			clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0";
+				 <&cpg CPG_MOD 727>,
+				 <&programmable_clk0>,
+				 <&x21_clk>,
+				 <&x22_clk>,
+				 <&programmable_clk1>;
+			clock-names = "du.0", "du.1", "du.2", "du.3",
+				      "lvds.0", "dclkin.0", "dclkin.1",
+				      "dclkin.2", "dclkin.3";
 			status = "disabled";
 
 			vsps = <&vspd0 &vspd1 &vspd2 &vspd3>;
