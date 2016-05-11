@@ -568,6 +568,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	int ret = -ENODEV;
 	int idle;
 	struct device_node *tz_nd, *tmp_nd;
+	int i, irq_cnt;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -641,13 +642,18 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	rcar_thermal_irq_enable(priv);
 
 	/* Interrupt */
-	if (irq) {
-		ret = devm_request_irq(dev, irq->start,
-					rcar_gen3_thermal_irq, 0,
-				       dev_name(dev), priv);
-		if (ret) {
-			dev_err(dev, "IRQ request failed\n ");
-			goto error_unregister;
+	if (rcar_has_irq_support(priv)) {
+		irq_cnt = platform_irq_count(pdev);
+		for (i = 0; i < irq_cnt; i++) {
+			irq = platform_get_resource(pdev, IORESOURCE_IRQ, i);
+			ret = devm_request_irq(dev, irq->start,
+					       rcar_gen3_thermal_irq,
+					       IRQF_SHARED,
+					       dev_name(dev), priv);
+			if (ret) {
+				dev_err(dev, "IRQ request failed\n ");
+				goto error_unregister;
+			}
 		}
 	}
 
