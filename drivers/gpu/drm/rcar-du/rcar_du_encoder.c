@@ -1,7 +1,7 @@
 /*
  * rcar_du_encoder.c  --  R-Car Display Unit Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -118,7 +118,8 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 			 enum rcar_du_encoder_type type,
 			 enum rcar_du_output output,
 			 struct device_node *enc_node,
-			 struct device_node *con_node)
+			 struct device_node *con_node,
+			 const char *device_name)
 {
 	struct rcar_du_encoder *renc;
 	struct drm_encoder *encoder;
@@ -162,8 +163,12 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 		break;
 	}
 
+	renc->device_name = device_name;
+
 	if (type == RCAR_DU_ENCODER_HDMI) {
 		ret = rcar_du_hdmienc_init(rcdu, renc, enc_node);
+		if (of_device_is_compatible(enc_node, "rockchip,rcar-dw-hdmi"))
+			goto done;
 		if (ret < 0)
 			goto done;
 	} else {
