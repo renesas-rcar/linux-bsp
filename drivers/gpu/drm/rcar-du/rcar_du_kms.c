@@ -95,6 +95,40 @@ static const struct rcar_du_format_info rcar_du_format_infos[] = {
 		.planes = 2,
 		.pnmr = PnMR_SPIM_TP_OFF | PnMR_DDDF_YC,
 		.edf = PnDDCR4_EDF_NONE,
+	}, {
+		.fourcc = DRM_FORMAT_NV61,
+		.bpp = 16,
+		.planes = 2,
+		.pnmr = PnMR_SPIM_TP_OFF | PnMR_DDDF_YC,
+		.edf = PnDDCR4_EDF_NONE,
+	},
+};
+
+static const struct rcar_du_format_info rcar_vsp_format_infos[] = {
+	{
+		.fourcc = DRM_FORMAT_RGB332,
+		.bpp = 8,
+	}, {
+		.fourcc = DRM_FORMAT_ARGB4444,
+		.bpp = 16,
+	}, {
+		.fourcc = DRM_FORMAT_XRGB4444,
+		.bpp = 16,
+	}, {
+		.fourcc = DRM_FORMAT_BGR888,
+		.bpp = 24,
+	}, {
+		.fourcc = DRM_FORMAT_RGB888,
+		.bpp = 24,
+	}, {
+		.fourcc = DRM_FORMAT_BGRA8888,
+		.bpp = 32,
+	}, {
+		.fourcc = DRM_FORMAT_BGRX8888,
+		.bpp = 32,
+	}, {
+		.fourcc = DRM_FORMAT_YVYU,
+		.bpp = 16,
 	},
 	/* The following formats are not supported on Gen2 and thus have no
 	 * associated .pnmr or .edf settings.
@@ -142,6 +176,18 @@ const struct rcar_du_format_info *rcar_du_format_info(u32 fourcc)
 	return NULL;
 }
 
+const struct rcar_du_format_info *rcar_vsp_format_info(u32 fourcc)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(rcar_vsp_format_infos); ++i) {
+		if (rcar_vsp_format_infos[i].fourcc == fourcc)
+			return &rcar_vsp_format_infos[i];
+	}
+
+	return NULL;
+}
+
 /* -----------------------------------------------------------------------------
  * Frame buffer
  */
@@ -178,6 +224,15 @@ rcar_du_fb_create(struct drm_device *dev, struct drm_file *file_priv,
 	unsigned int i;
 
 	format = rcar_du_format_info(mode_cmd->pixel_format);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE) &&
+		(format == NULL)) {
+		format = rcar_vsp_format_info(mode_cmd->pixel_format);
+	}
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE) && (format != NULL))
+		goto done;
+
 	if (format == NULL) {
 		dev_dbg(dev->dev, "unsupported pixel format %08x\n",
 			mode_cmd->pixel_format);
@@ -210,7 +265,7 @@ rcar_du_fb_create(struct drm_device *dev, struct drm_file *file_priv,
 			return ERR_PTR(-EINVAL);
 		}
 	}
-
+done:
 	return drm_fb_cma_create(dev, file_priv, mode_cmd);
 }
 
@@ -278,7 +333,6 @@ static void rcar_du_atomic_work(struct work_struct *work)
 {
 	struct rcar_du_commit *commit =
 		container_of(work, struct rcar_du_commit, work);
-
 	rcar_du_atomic_complete(commit);
 }
 
