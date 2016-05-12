@@ -2605,7 +2605,9 @@
 		tsc1: thermal@0xe6198000 {
 			compatible = "renesas,thermal-r8a7795";
 			reg = <0 0xe6198000 0 0x5c>;
-			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 522>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#thermal-sensor-cells = <0>;
@@ -2615,7 +2617,9 @@
 		tsc2: thermal@0xe61a0000 {
 			compatible = "renesas,thermal-r8a7795";
 			reg = <0 0xe61a0000 0 0x5c>;
-			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 522>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#thermal-sensor-cells = <0>;
@@ -2625,7 +2629,9 @@
 		tsc3: thermal@0xe61a8000 {
 			compatible = "renesas,thermal-r8a7795";
 			reg = <0 0xe61a8000 0 0x5c>;
-			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 522>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#thermal-sensor-cells = <0>;
