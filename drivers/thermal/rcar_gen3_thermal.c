@@ -64,6 +64,13 @@
 
 #define CTEMP_MASK	0xFFF
 
+#define IRQ_TEMP1_BIT	(0x1 << 0)
+#define IRQ_TEMP2_BIT	(0x1 << 1)
+#define IRQ_TEMP3_BIT	(0x1 << 2)
+#define IRQ_TEMPD1_BIT	(0x1 << 3)
+#define IRQ_TEMPD2_BIT	(0x1 << 4)
+#define IRQ_TEMPD3_BIT	(0x1 << 5)
+
 #define MCELSIUS(temp)			((temp) * 1000)
 #define TEMP_IRQ_SHIFT(tsc_id)	(0x1 << tsc_id)
 #define TEMPD_IRQ_SHIFT(tsc_id)	(0x1 << (tsc_id + 3))
@@ -354,6 +361,18 @@ int _linear_temp_converter(struct equation_coefs coef,
 
 	return round_temp(temp);
 }
+
+int _linear_celsius_to_temp(struct equation_coefs coef,
+					int ctemp)
+{
+	int temp_code, temp1, temp2;
+
+	temp1 = (ctemp * coef.a1 / 1000 + coef.b1) / 1000;
+	temp2 = (ctemp * coef.a2 / 1000 + coef.b2) / 1000;
+	temp_code = (temp1 + temp2) / 2;
+
+	return temp_code;
+}
 #endif /* APPLY_QUADRATIC_EQUATION */
 
 int thermal_temp_converter(struct equation_coefs coef,
@@ -368,6 +387,15 @@ int thermal_temp_converter(struct equation_coefs coef,
 
 	return ctemp;
 }
+int thermal_celsius_to_temp(struct equation_coefs coef,
+					int ctemp)
+{
+	int temp_code;
+
+	temp_code = _linear_celsius_to_temp(coef, ctemp);
+
+	return temp_code;
+}
 
 /*
  *		Zone device functions
@@ -375,22 +403,24 @@ int thermal_temp_converter(struct equation_coefs coef,
 static int rcar_gen3_thermal_update_temp(struct rcar_thermal_priv *priv)
 {
 	u32 ctemp;
-	int i;
 	unsigned long flags;
-	u32 reg = REG_GEN3_IRQTEMP1 + (priv->id * 4);
+	int temp_cel, temp_code;
 
 	spin_lock_irqsave(&priv->lock, flags);
 
-	for (i = 0; i < 256; i++) {
-		ctemp = rcar_thermal_read(priv, REG_GEN3_TEMP) & CTEMP_MASK;
-		if (rcar_has_irq_support(priv)) {
-			rcar_thermal_write(priv, reg, ctemp);
-			if (rcar_thermal_read(priv, REG_GEN3_IRQSTR) != 0)
-				break;
-		} else
-			break;
+	ctemp = rcar_thermal_read(priv, REG_GEN3_TEMP) & CTEMP_MASK;
+	if (rcar_has_irq_support(priv)) {
+		temp_cel = thermal_temp_converter(priv->coef, ctemp);
 
-		udelay(150);
+		/* set the interrupts to exceed the temperature */
+		temp_code = thermal_celsius_to_temp(priv->coef,
+						    temp_cel + MCELSIUS(1));
+		rcar_thermal_write(priv, REG_GEN3_IRQTEMP1, temp_code);
+
+		/* set the interrupts to fall below the temperature */
+		temp_code = thermal_celsius_to_temp(priv->coef,
+						    temp_cel - MCELSIUS(1));
+		rcar_thermal_write(priv, REG_GEN3_IRQTEMP2, temp_code);
 	}
 
 	priv->ctemp = ctemp;
@@ -437,8 +467,8 @@ static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
 
 	rcar_thermal_write(priv, REG_GEN3_CTSR, PONM);
 	rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
-	rcar_thermal_write(priv, REG_GEN3_IRQEN, TEMP_IRQ_SHIFT(priv->id) |
-						TEMPD_IRQ_SHIFT(priv->id));
+	rcar_thermal_write(priv, REG_GEN3_IRQEN,
+			   IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT);
 	rcar_thermal_write(priv, REG_GEN3_CTSR,
 			PONM | AOUT | THBGR | VMEN);
 	udelay(100);
@@ -460,8 +490,8 @@ static int rcar_gen3_r8a7796_thermal_init(struct rcar_thermal_priv *priv)
 	rcar_thermal_write(priv, REG_GEN3_THCTR,  0x0);
 	udelay(1000);
 	rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
-	rcar_thermal_write(priv, REG_GEN3_IRQEN, TEMP_IRQ_SHIFT(priv->id) |
-						TEMPD_IRQ_SHIFT(priv->id));
+	rcar_thermal_write(priv, REG_GEN3_IRQEN,
+			   IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT);
 	rcar_thermal_write(priv, REG_GEN3_THCTR, CTCTL | THCNTSEN(BIT_LEN_12));
 	reg_val = rcar_thermal_read(priv, REG_GEN3_THCTR);
 	reg_val &= ~CTCTL;
@@ -487,8 +517,7 @@ static void _rcar_thermal_irq_ctrl(struct rcar_thermal_priv *priv, int enable)
 
 	spin_lock_irqsave(&priv->lock, flags);
 	rcar_thermal_write(priv, REG_GEN3_IRQMSK,
-		enable ? (TEMP_IRQ_SHIFT(priv->id) |
-			TEMPD_IRQ_SHIFT(priv->id)) : 0);
+		enable ? (IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT) : 0);
 	spin_unlock_irqrestore(&priv->lock, flags);
 }
 
@@ -514,11 +543,12 @@ static irqreturn_t rcar_gen3_thermal_irq(int irq, void *data)
 	rcar_thermal_write(priv, REG_GEN3_IRQSTR, 0);
 	spin_unlock_irqrestore(&priv->lock, flags);
 
-	if ((status & TEMP_IRQ_SHIFT(priv->id)) ||
-		(status & TEMPD_IRQ_SHIFT(priv->id))) {
+	if (status == 0)
+		return IRQ_NONE;
+
+	if (status & (IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT)) {
 		rcar_thermal_irq_disable(priv);
-		schedule_delayed_work(&priv->work,
-				      msecs_to_jiffies(300));
+		schedule_delayed_work(&priv->work, 0);
 	}
 
 	return IRQ_HANDLED;
