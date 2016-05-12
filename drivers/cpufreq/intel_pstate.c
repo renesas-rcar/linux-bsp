@@ -49,6 +49,9 @@
 #define int_tofp(X) ((int64_t)(X) << FRAC_BITS)
 #define fp_toint(X) ((X) >> FRAC_BITS)
 
+#define EXT_BITS 6
+#define EXT_FRAC_BITS (EXT_BITS + FRAC_BITS)
+
 static inline int32_t mul_fp(int32_t x, int32_t y)
 {
 	return ((int64_t)x * (int64_t)y) >> FRAC_BITS;
@@ -70,12 +73,22 @@ static inline int ceiling_fp(int32_t x)
 	return ret;
 }
 
+static inline u64 mul_ext_fp(u64 x, u64 y)
+{
+	return (x * y) >> EXT_FRAC_BITS;
+}
+
+static inline u64 div_ext_fp(u64 x, u64 y)
+{
+	return div64_u64(x << EXT_FRAC_BITS, y);
+}
+
 /**
  * struct sample -	Store performance sample
- * @core_pct_busy:	Ratio of APERF/MPERF in percent, which is actual
+ * @core_avg_perf:	Ratio of APERF/MPERF which is the actual average
  *			performance during last sample period
  * @busy_scaled:	Scaled busy value which is used to calculate next
- *			P state. This can be different than core_pct_busy
+ *			P state. This can be different than core_avg_perf
  *			to account for cpu idle period
  * @aperf:		Difference of actual performance frequency clock count
  *			read from APERF MSR between last and current sample
@@ -90,7 +103,7 @@ static inline int ceiling_fp(int32_t x)
  * data for choosing next P State.
  */
 struct sample {
-	int32_t core_pct_busy;
+	int32_t core_avg_perf;
 	int32_t busy_scaled;
 	u64 aperf;
 	u64 mperf;
@@ -168,6 +181,7 @@ struct _pid {
  * struct cpudata -	Per CPU instance data storage
  * @cpu:		CPU number for this instance data
  * @update_util:	CPUFreq utility callback information
+ * @update_util_set:	CPUFreq utility callback is set
  * @pstate:		Stores P state limits for this CPU
  * @vid:		Stores VID limits for this CPU
  * @pid:		Stores PID parameters for this CPU
@@ -187,6 +201,7 @@ struct cpudata {
 	int cpu;
 
 	struct update_util_data update_util;
+	bool   update_util_set;
 
 	struct pstate_data pstate;
 	struct vid_data vid;
@@ -1150,15 +1165,11 @@ static void intel_pstate_get_cpu_pstates(struct cpudata *cpu)
 	intel_pstate_set_min_pstate(cpu);
 }
 
-static inline void intel_pstate_calc_busy(struct cpudata *cpu)
+static inline void intel_pstate_calc_avg_perf(struct cpudata *cpu)
 {
 	struct sample *sample = &cpu->sample;
-	int64_t core_pct;
 
-	core_pct = sample->aperf * int_tofp(100);
-	core_pct = div64_u64(core_pct, sample->mperf);
-
-	sample->core_pct_busy = (int32_t)core_pct;
+	sample->core_avg_perf = div_ext_fp(sample->aperf, sample->mperf);
 }
 
 static inline bool intel_pstate_sample(struct cpudata *cpu, u64 time)
@@ -1201,15 +1212,14 @@ static inline bool intel_pstate_sample(struct cpudata *cpu, u64 time)
 
 static inline int32_t get_avg_frequency(struct cpudata *cpu)
 {
-	return fp_toint(mul_fp(cpu->sample.core_pct_busy,
-			       int_tofp(cpu->pstate.max_pstate_physical *
-						cpu->pstate.scaling / 100)));
+	return mul_ext_fp(cpu->sample.core_avg_perf,
+			  cpu->pstate.max_pstate_physical * cpu->pstate.scaling);
 }
 
 static inline int32_t get_avg_pstate(struct cpudata *cpu)
 {
-	return div64_u64(cpu->pstate.max_pstate_physical * cpu->sample.aperf,
-			 cpu->sample.mperf);
+	return mul_ext_fp(cpu->pstate.max_pstate_physical,
+			  cpu->sample.core_avg_perf);
 }
 
 static inline int32_t get_target_pstate_use_cpu_load(struct cpudata *cpu)
@@ -1249,43 +1259,38 @@ static inline int32_t get_target_pstate_use_cpu_load(struct cpudata *cpu)
 
 static inline int32_t get_target_pstate_use_performance(struct cpudata *cpu)
 {
-	int32_t core_busy, max_pstate, current_pstate, sample_ratio;
+	int32_t perf_scaled, max_pstate, current_pstate, sample_ratio;
 	u64 duration_ns;
 
 	/*
-	 * core_busy is the ratio of actual performance to max
-	 * max_pstate is the max non turbo pstate available
-	 * current_pstate was the pstate that was requested during
-	 * 	the last sample period.
-	 *
-	 * We normalize core_busy, which was our actual percent
-	 * performance to what we requested during the last sample
-	 * period. The result will be a percentage of busy at a
-	 * specified pstate.
+	 * perf_scaled is the average performance during the last sampling
+	 * period scaled by the ratio of the maximum P-state to the P-state
+	 * requested last time (in percent).  That measures the system's
+	 * response to the previous P-state selection.
 	 */
-	core_busy = cpu->sample.core_pct_busy;
 	max_pstate = cpu->pstate.max_pstate_physical;
 	current_pstate = cpu->pstate.current_pstate;
-	core_busy = mul_fp(core_busy, div_fp(max_pstate, current_pstate));
+	perf_scaled = mul_ext_fp(cpu->sample.core_avg_perf,
+			       div_fp(100 * max_pstate, current_pstate));
 
 	/*
 	 * Since our utilization update callback will not run unless we are
 	 * in C0, check if the actual elapsed time is significantly greater (3x)
 	 * than our sample interval.  If it is, then we were idle for a long
-	 * enough period of time to adjust our busyness.
+	 * enough period of time to adjust our performance metric.
 	 */
 	duration_ns = cpu->sample.time - cpu->last_sample_time;
 	if ((s64)duration_ns > pid_params.sample_rate_ns * 3) {
 		sample_ratio = div_fp(pid_params.sample_rate_ns, duration_ns);
-		core_busy = mul_fp(core_busy, sample_ratio);
+		perf_scaled = mul_fp(perf_scaled, sample_ratio);
 	} else {
 		sample_ratio = div_fp(100 * cpu->sample.mperf, cpu->sample.tsc);
 		if (sample_ratio < int_tofp(1))
-			core_busy = 0;
+			perf_scaled = 0;
 	}
 
-	cpu->sample.busy_scaled = core_busy;
-	return cpu->pstate.current_pstate - pid_calc(&cpu->pid, core_busy);
+	cpu->sample.busy_scaled = perf_scaled;
+	return cpu->pstate.current_pstate - pid_calc(&cpu->pid, perf_scaled);
 }
 
 static inline void intel_pstate_update_pstate(struct cpudata *cpu, int pstate)
@@ -1315,7 +1320,7 @@ static inline void intel_pstate_adjust_busy_pstate(struct cpudata *cpu)
 	intel_pstate_update_pstate(cpu, target_pstate);
 
 	sample = &cpu->sample;
-	trace_pstate_sample(fp_toint(sample->core_pct_busy),
+	trace_pstate_sample(mul_ext_fp(100, sample->core_avg_perf),
 		fp_toint(sample->busy_scaled),
 		from,
 		cpu->pstate.current_pstate,
@@ -1335,7 +1340,7 @@ static void intel_pstate_update_util(struct update_util_data *data, u64 time,
 		bool sample_taken = intel_pstate_sample(cpu, time);
 
 		if (sample_taken) {
-			intel_pstate_calc_busy(cpu);
+			intel_pstate_calc_avg_perf(cpu);
 			if (!hwp_active)
 				intel_pstate_adjust_busy_pstate(cpu);
 		}
@@ -1417,11 +1422,18 @@ static void intel_pstate_set_update_util_hook(unsigned int cpu_num)
 	cpu->sample.time = 0;
 	cpufreq_add_update_util_hook(cpu_num, &cpu->update_util,
 				     intel_pstate_update_util);
+	cpu->update_util_set = true;
 }
 
 static void intel_pstate_clear_update_util_hook(unsigned int cpu)
 {
+	struct cpudata *cpu_data = all_cpu_data[cpu];
+
+	if (!cpu_data->update_util_set)
+		return;
+
 	cpufreq_remove_update_util_hook(cpu);
+	cpu_data->update_util_set = false;
 	synchronize_sched();
 }
 
