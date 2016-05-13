@@ -13,6 +13,7 @@
 
 #include <linux/clk.h>
 #include <linux/mutex.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <drm/drmP.h>
 #include <drm/drm_atomic.h>
@@ -167,19 +168,10 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 	u32 div;
 	u32 dpll_reg = 0;
 	struct dpll_info *dpll;
-	void __iomem *product_reg;
-	bool h3_es1_workaround = false;
 
 	dpll = kzalloc(sizeof(*dpll), GFP_KERNEL);
 	if (dpll == NULL)
 		return;
-
-	/* DU2 DPLL Clock Select bit workaround in R-Car H3(ES1.0) */
-	product_reg = ioremap(PRODUCT_REG, 0x04);
-	if (((readl(product_reg) & PRODUCT_MASK) == PRODUCT_H3_BIT)
-		&& ((readl(product_reg) & CUT_ES1_MASK) == CUT_ES1))
-		h3_es1_workaround = true;
-	iounmap(product_reg);
 
 	/* Compute the clock divisor and select the internal or external dot
 	 * clock based on the requested frequency.
@@ -224,12 +216,13 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 
 				if (rcrtc->index == DU_CH_1)
 					dpll_reg |= (DPLLCR_PLCS1 |
-						 DPLLCR_INCS_DPLL01_DOTCLKIN13);
+						DPLLCR_INCS_DPLL01_DOTCLKIN13);
 				if (rcrtc->index == DU_CH_2) {
 					dpll_reg |= (DPLLCR_PLCS0 |
-						 DPLLCR_INCS_DPLL01_DOTCLKIN02);
-					if (h3_es1_workaround)
-						dpll_reg |=  (0x01 << 21);
+						DPLLCR_INCS_DPLL01_DOTCLKIN02);
+					if (RCAR_PRR_IS_PRODUCT(H3) &&
+					   (RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+						dpll_reg |= (0x01 << 21);
 				}
 
 				rcar_du_group_write(rcrtc->group, DPLLCR,
@@ -740,6 +733,12 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	if (ret < 0) {
 		dev_err(rcdu->dev,
 			"failed to register IRQ for CRTC %u\n", index);
+		return ret;
+	}
+
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(rcdu->dev, "product register init fail.\n");
 		return ret;
 	}
 
