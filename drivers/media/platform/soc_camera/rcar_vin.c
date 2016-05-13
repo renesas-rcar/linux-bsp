@@ -1,6 +1,7 @@
 /*
  * SoC-camera host driver for Renesas R-Car VIN unit
  *
+ * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  *
@@ -35,6 +36,8 @@
 #include <media/v4l2-of.h>
 #include <media/v4l2-subdev.h>
 #include <media/videobuf2-dma-contig.h>
+
+#include <media/rcar_csi2.h>
 
 #include "soc_scale_crop.h"
 
@@ -90,6 +93,8 @@
 
 /* Register bit fields for R-Car VIN */
 /* Video n Main Control Register bits */
+#define VNMC_DPINE		(1 << 27)
+#define VNMC_SCLE		(1 << 26)
 #define VNMC_FOC		(1 << 21)
 #define VNMC_YCAL		(1 << 19)
 #define VNMC_INF_YUV8_BT656	(0 << 16)
@@ -98,6 +103,7 @@
 #define VNMC_INF_YUV10_BT601	(3 << 16)
 #define VNMC_INF_YUV16		(5 << 16)
 #define VNMC_INF_RGB888		(6 << 16)
+#define VNMC_INF_MASK		(7 << 16)
 #define VNMC_VUP		(1 << 10)
 #define VNMC_IM_ODD		(0 << 3)
 #define VNMC_IM_ODD_EVEN	(1 << 3)
@@ -132,6 +138,13 @@
 #define VNDMR2_FTEV		(1 << 17)
 #define VNDMR2_VLV(n)		((n & 0xf) << 12)
 
+/* setting CSI2 on R-Car Gen3*/
+#define VNCSI_IFMD_REG	0x20	/* Video n CSI2 Interface Mode Register */
+
+#define VNCSI_IFMD_DES2		(1 << 27) /* CSI40/CSI41 Input Data */
+#define VNCSI_IFMD_DES1		(1 << 26) /* CSI20 Input Data) */
+#define VNCSI_IFMD_DES0		(1 << 25) /* CSI21 Input Data) */
+
 #define VIN_MAX_WIDTH		2048
 #define VIN_MAX_HEIGHT		2048
 
@@ -141,6 +154,7 @@
 #define RCAR_VIN_VSYNC_ACTIVE_LOW	(1 << 1)
 #define RCAR_VIN_BT601			(1 << 2)
 #define RCAR_VIN_BT656			(1 << 3)
+#define RCAR_VIN_CSI2			(1 << 4)
 
 enum chip_id {
 	RCAR_GEN3,
@@ -492,6 +506,13 @@ struct rcar_vin_priv {
 	bool				request_to_stop;
 	struct completion		capture_stop;
 	enum chip_id			chip;
+
+	/* Asynchronous CSI2 linking */
+	struct v4l2_async_subdev	*csi2_asd;
+	struct v4l2_subdev		*csi2_sd;
+	/* Synchronous probing compatibility */
+	struct platform_device		*csi2_pdev;
+
 };
 
 #define is_continuous_transfer(priv)	(priv->vb_count > MAX_BUFFER_NUM)
@@ -649,8 +670,8 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 		dmr = 0;
 		break;
 	case V4L2_PIX_FMT_RGB32:
-		if (priv->chip != RCAR_GEN2 && priv->chip != RCAR_H1 &&
-		    priv->chip != RCAR_E1)
+		if (priv->chip != RCAR_GEN3 && priv->chip != RCAR_GEN2 &&
+		    priv->chip != RCAR_H1 && priv->chip != RCAR_E1)
 			goto e_format;
 
 		dmr = VNDMR_EXRGB;
@@ -671,6 +692,13 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 	/* If input and output use the same colorspace, use bypass mode */
 	if (input_is_yuv == output_is_yuv)
 		vnmc |= VNMC_BPS;
+
+	if (priv->chip == RCAR_GEN3) {
+		if (priv->pdata_flags & RCAR_VIN_CSI2)
+			vnmc &= ~VNMC_DPINE;
+		else
+			vnmc |= VNMC_DPINE;
+	}
 
 	/* progressive or interlaced mode */
 	interrupts = progressive ? VNIE_FIE : VNIE_EFE;
@@ -934,6 +962,34 @@ done:
 	return IRQ_RETVAL(handled);
 }
 
+static struct v4l2_subdev *find_csi2(struct rcar_vin_priv *pcdev)
+{
+	struct v4l2_subdev *sd;
+
+	if (pcdev->csi2_sd)
+		return pcdev->csi2_sd;
+
+	if (pcdev->csi2_asd) {
+		char name[] = "rcar-csi2";
+
+		v4l2_device_for_each_subdev(sd, &pcdev->ici.v4l2_dev)
+			if (!strncmp(name, sd->name, sizeof(name) - 1)) {
+				pcdev->csi2_sd = sd;
+				return sd;
+			}
+	}
+
+	return NULL;
+}
+
+static struct v4l2_subdev *csi2_subdev(struct rcar_vin_priv *pcdev,
+				       struct soc_camera_device *icd)
+{
+	struct v4l2_subdev *sd = pcdev->csi2_sd;
+
+	return sd && sd->grp_id == soc_camera_grp_id(icd) ? sd : NULL;
+}
+
 static int rcar_vin_add_device(struct soc_camera_device *icd)
 {
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
@@ -945,8 +1001,34 @@ static int rcar_vin_add_device(struct soc_camera_device *icd)
 
 	pm_runtime_get_sync(ici->v4l2_dev.dev);
 
-	dev_dbg(icd->parent, "R-Car VIN driver attached to camera %d\n",
-		icd->devnum);
+	if (priv->chip == RCAR_GEN3) {
+		struct v4l2_subdev *csi2_sd = find_csi2(priv);
+		int ret;
+
+		if (csi2_sd) {
+			csi2_sd->grp_id = soc_camera_grp_id(icd);
+			v4l2_set_subdev_hostdata(csi2_sd, icd);
+		}
+
+		ret = v4l2_subdev_call(csi2_sd, core, s_power, 1);
+		if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+			return ret;
+
+		/*
+		 * -ENODEV is special:
+		 * either csi2_sd == NULL or the CSI-2 driver
+		 * has not found this soc-camera device among its clients
+		 */
+		if (csi2_sd && ret == -ENODEV)
+			csi2_sd->grp_id = 0;
+
+		dev_dbg(icd->parent,
+			"R-Car VIN/CSI-2 driver attached to camera %d\n",
+			icd->devnum);
+
+	} else
+		dev_dbg(icd->parent, "R-Car VIN driver attached to camera %d\n",
+			icd->devnum);
 
 	return 0;
 }
@@ -978,6 +1060,12 @@ static void rcar_vin_remove_device(struct soc_camera_device *icd)
 	spin_unlock_irq(&priv->lock);
 
 	pm_runtime_put(ici->v4l2_dev.dev);
+
+	if (priv->chip == RCAR_GEN3) {
+		struct v4l2_subdev *csi2_sd = find_csi2(priv);
+
+		v4l2_subdev_call(csi2_sd, core, s_power, 0);
+	}
 
 	dev_dbg(icd->parent, "R-Car VIN driver detached from camera %d\n",
 		icd->devnum);
@@ -1156,6 +1244,13 @@ static void capture_restore(struct rcar_vin_priv *priv, u32 vnmc)
 	iowrite32(vnmc, priv->base + VNMC_REG);
 }
 
+/* Find the bus subdevice driver, e.g., CSI2 */
+static struct v4l2_subdev *find_bus_subdev(struct rcar_vin_priv *pcdev,
+					   struct soc_camera_device *icd)
+{
+	return csi2_subdev(pcdev, icd) ? : soc_camera_to_subdev(icd);
+}
+
 #define VIN_MBUS_FLAGS	(V4L2_MBUS_MASTER |		\
 			 V4L2_MBUS_PCLK_SAMPLE_RISING |	\
 			 V4L2_MBUS_HSYNC_ACTIVE_HIGH |	\
@@ -1214,7 +1309,23 @@ static int rcar_vin_set_bus_param(struct soc_camera_device *icd)
 	if (ret < 0 && ret != -ENOIOCTLCMD)
 		return ret;
 
-	val = VNDMR2_FTEV | VNDMR2_VLV(1);
+	if (priv->chip == RCAR_GEN3) {
+		sd = find_bus_subdev(priv, icd);
+
+		ret = v4l2_subdev_call(sd, video, s_mbus_config, &cfg);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			return ret;
+
+		if (cfg.type == V4L2_MBUS_CSI2)
+			vnmc &= ~VNMC_DPINE;
+		else
+			vnmc |= VNMC_DPINE;
+	}
+
+	if (priv->chip == RCAR_GEN3)
+		val = VNDMR2_FTEV;
+	else
+		val = VNDMR2_FTEV | VNDMR2_VLV(1);
 	if (!(common_flags & V4L2_MBUS_VSYNC_ACTIVE_LOW))
 		val |= VNDMR2_VPS;
 	if (!(common_flags & V4L2_MBUS_HSYNC_ACTIVE_LOW))
@@ -1878,6 +1989,8 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 	if (ep.bus_type == V4L2_MBUS_BT656)
 		pdata_flags = RCAR_VIN_BT656;
+	else if (ep.bus_type == V4L2_MBUS_CSI2)
+		pdata_flags = RCAR_VIN_BT656 | RCAR_VIN_CSI2;
 	else {
 		pdata_flags = 0;
 		if (ep.bus.parallel.flags & V4L2_MBUS_HSYNC_ACTIVE_LOW)
@@ -1978,3 +2091,4 @@ module_platform_driver(rcar_vin_driver);
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:rcar_vin");
 MODULE_DESCRIPTION("Renesas R-Car VIN camera host driver");
+MODULE_AUTHOR("Koji Matsuoka <koji.matsuoka.xm@renesas.com>");
