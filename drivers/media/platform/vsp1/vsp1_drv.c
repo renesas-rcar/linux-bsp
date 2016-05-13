@@ -149,7 +149,7 @@ static int vsp1_uapi_create_links(struct vsp1_device *vsp1)
 			return ret;
 	}
 
-	if (vsp1->info->features & VSP1_HAS_HGO) {
+	if (vsp1->hgo) {
 		ret = media_create_pad_link(&vsp1->hgo->entity.subdev.entity,
 					    HGO_PAD_SOURCE,
 					    &vsp1->hgo->histo.video.entity, 0,
@@ -159,7 +159,7 @@ static int vsp1_uapi_create_links(struct vsp1_device *vsp1)
 			return ret;
 	}
 
-	if (vsp1->info->features & VSP1_HAS_LIF) {
+	if (vsp1->lif) {
 		ret = media_create_pad_link(&vsp1->wpf[0]->entity.subdev.entity,
 					    RWPF_PAD_SOURCE,
 					    &vsp1->lif->entity.subdev.entity,
