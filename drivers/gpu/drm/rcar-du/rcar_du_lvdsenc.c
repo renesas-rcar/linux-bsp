@@ -14,6 +14,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/io.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
@@ -31,6 +32,7 @@ struct rcar_du_lvdsenc {
 	bool enabled;
 
 	enum rcar_lvds_input input;
+	int gpio_pd;
 };
 
 static void rcar_lvds_write(struct rcar_du_lvdsenc *lvds, u32 reg, u32 data)
@@ -134,6 +136,9 @@ static int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 	if (lvds->enabled)
 		return 0;
 
+	if (gpio_is_valid(lvds->gpio_pd))
+		gpio_set_value(lvds->gpio_pd, 1);
+
 	ret = clk_prepare_enable(lvds->clock);
 	if (ret < 0)
 		return ret;
@@ -180,6 +185,11 @@ static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 	clk_disable_unprepare(lvds->clock);
 
 	lvds->enabled = false;
+
+	if (gpio_is_valid(lvds->gpio_pd))
+		gpio_set_value(lvds->gpio_pd, 0);
+
+	return;
 }
 
 int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds, struct drm_crtc *crtc,
@@ -238,6 +248,7 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 	struct rcar_du_lvdsenc *lvds;
 	unsigned int i;
 	int ret;
+	char name[16];
 
 	for (i = 0; i < rcdu->info->num_lvds; ++i) {
 		lvds = devm_kzalloc(&pdev->dev, sizeof(*lvds), GFP_KERNEL);
@@ -250,12 +261,20 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 		lvds->index = i;
 		lvds->input = i ? RCAR_LVDS_INPUT_DU1 : RCAR_LVDS_INPUT_DU0;
 		lvds->enabled = false;
+		/* Get optional backlight GPIO */
+		lvds->gpio_pd = of_get_named_gpio(rcdu->dev->of_node,
+						 "backlight", 0);
 
 		ret = rcar_du_lvdsenc_get_resources(lvds, pdev);
 		if (ret < 0)
 			return ret;
 
 		rcdu->lvds[i] = lvds;
+
+		sprintf(name, "lvds%u", i);
+		if (gpio_is_valid(lvds->gpio_pd))
+			devm_gpio_request_one(&pdev->dev, lvds->gpio_pd,
+					GPIOF_OUT_INIT_LOW, name);
 	}
 
 	return 0;
