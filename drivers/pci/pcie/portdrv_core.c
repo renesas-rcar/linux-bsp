@@ -11,6 +11,7 @@
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/pm.h>
+#include <linux/pm_runtime.h>
 #include <linux/string.h>
 #include <linux/slab.h>
 #include <linux/pcieport_if.h>
@@ -254,7 +255,6 @@ static void cleanup_service_irqs(struct pci_dev *dev)
 static int get_port_device_capability(struct pci_dev *dev)
 {
 	int services = 0;
-	u32 reg32;
 	int cap_mask = 0;
 
 	if (pcie_ports_disabled)
@@ -269,19 +269,14 @@ static int get_port_device_capability(struct pci_dev *dev)
 		pcie_port_platform_notify(dev, &cap_mask);
 
 	/* Hot-Plug Capable */
-	if ((cap_mask & PCIE_PORT_SERVICE_HP) &&
-	    pcie_caps_reg(dev) & PCI_EXP_FLAGS_SLOT) {
-		pcie_capability_read_dword(dev, PCI_EXP_SLTCAP, &reg32);
-		if (reg32 & PCI_EXP_SLTCAP_HPC) {
-			services |= PCIE_PORT_SERVICE_HP;
-			/*
-			 * Disable hot-plug interrupts in case they have been
-			 * enabled by the BIOS and the hot-plug service driver
-			 * is not loaded.
-			 */
-			pcie_capability_clear_word(dev, PCI_EXP_SLTCTL,
-				PCI_EXP_SLTCTL_CCIE | PCI_EXP_SLTCTL_HPIE);
-		}
+	if ((cap_mask & PCIE_PORT_SERVICE_HP) && dev->is_hotplug_bridge) {
+		services |= PCIE_PORT_SERVICE_HP;
+		/*
+		 * Disable hot-plug interrupts in case they have been enabled
+		 * by the BIOS and the hot-plug service driver is not loaded.
+		 */
+		pcie_capability_clear_word(dev, PCI_EXP_SLTCTL,
+			  PCI_EXP_SLTCTL_CCIE | PCI_EXP_SLTCTL_HPIE);
 	}
 	/* AER capable */
 	if ((cap_mask & PCIE_PORT_SERVICE_AER)
@@ -341,6 +336,7 @@ static int pcie_device_init(struct pci_dev *pdev, int service, int irq)
 		     get_descriptor_id(pci_pcie_type(pdev), service));
 	device->parent = &pdev->dev;
 	device_enable_async_suspend(device);
+	pm_runtime_no_callbacks(device);
 
 	retval = device_register(device);
 	if (retval) {

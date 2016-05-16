@@ -756,8 +756,10 @@ static void hotplug_event(u32 type, struct acpiphp_context *context)
 
 	acpi_lock_hp_context();
 	bridge = context->bridge;
-	if (bridge)
+	if (bridge) {
 		get_bridge(bridge);
+		pm_runtime_get_sync(&bridge->pci_dev->dev);
+	}
 
 	acpi_unlock_hp_context();
 
@@ -797,8 +799,10 @@ static void hotplug_event(u32 type, struct acpiphp_context *context)
 	}
 
 	pci_unlock_rescan_remove();
-	if (bridge)
+	if (bridge) {
+		pm_runtime_put(&bridge->pci_dev->dev);
 		put_bridge(bridge);
+	}
 }
 
 static int acpiphp_hotplug_notify(struct acpi_device *adev, u32 type)
