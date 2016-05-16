@@ -383,12 +383,6 @@ static int vsp1_du_setup_rpf_pipe(struct vsp1_device *vsp1,
 
 	/* BRU sink, propagate the format from the RPF source. */
 	format.pad = bru_input;
-	format.format.code = rpf->fmtinfo->mbus;
-
-	ret = v4l2_subdev_call(&rpf->entity.subdev, pad, set_fmt, NULL,
-			       &format);
-	if (ret < 0)
-		return ret;
 
 	ret = v4l2_subdev_call(&vsp1->bru->entity.subdev, pad, set_fmt, NULL,
 			       &format);
