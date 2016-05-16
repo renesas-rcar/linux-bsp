@@ -228,7 +228,6 @@ config RCAR_GEN3_THERMAL
 	depends on ARCH_RENESAS || COMPILE_TEST
 	depends on HAS_IOMEM
 	select CPU_THERMAL
-	select THERMAL_GOV_POWER_ALLOCATOR
 	help
 	  Enable this to plug the R-Car Gen3 thermal sensor driver into the Linux
 	  thermal framework.
