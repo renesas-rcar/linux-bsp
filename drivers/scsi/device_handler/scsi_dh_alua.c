@@ -532,6 +532,7 @@ static int alua_rtpg(struct scsi_device *sdev, struct alua_port_group *pg)
 		return SCSI_DH_DEV_TEMP_BUSY;
 
  retry:
+	err = 0;
 	retval = submit_rtpg(sdev, buff, bufflen, &sense_hdr, pg->flags);
 
 	if (retval) {
@@ -1112,9 +1113,9 @@ static void alua_bus_detach(struct scsi_device *sdev)
 	h->sdev = NULL;
 	spin_unlock(&h->pg_lock);
 	if (pg) {
-		spin_lock(&pg->lock);
+		spin_lock_irq(&pg->lock);
 		list_del_rcu(&h->node);
-		spin_unlock(&pg->lock);
+		spin_unlock_irq(&pg->lock);
 		kref_put(&pg->kref, release_port_group);
 	}
 	sdev->handler_data = NULL;

@@ -3637,8 +3637,11 @@ __init int intel_pmu_init(void)
 		pr_cont("Knights Landing events, ");
 		break;
 
+	case 142: /* 14nm Kabylake Mobile */
+	case 158: /* 14nm Kabylake Desktop */
 	case 78: /* 14nm Skylake Mobile */
 	case 94: /* 14nm Skylake Desktop */
+	case 85: /* 14nm Skylake Server */
 		x86_pmu.late_ack = true;
 		memcpy(hw_cache_event_ids, skl_hw_cache_event_ids, sizeof(hw_cache_event_ids));
 		memcpy(hw_cache_extra_regs, skl_hw_cache_extra_regs, sizeof(hw_cache_extra_regs));
@@ -3705,7 +3708,7 @@ __init int intel_pmu_init(void)
 				c->idxmsk64 |= (1ULL << x86_pmu.num_counters) - 1;
 			}
 			c->idxmsk64 &=
-				~(~0UL << (INTEL_PMC_IDX_FIXED + x86_pmu.num_counters_fixed));
+				~(~0ULL << (INTEL_PMC_IDX_FIXED + x86_pmu.num_counters_fixed));
 			c->weight = hweight64(c->idxmsk64);
 		}
 	}

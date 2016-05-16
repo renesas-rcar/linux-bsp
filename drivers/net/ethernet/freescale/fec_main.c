@@ -943,8 +943,8 @@ fec_restart(struct net_device *ndev)
 		else
 			val &= ~FEC_RACC_OPTIONS;
 		writel(val, fep->hwp + FEC_RACC);
+		writel(PKT_MAXBUF_SIZE, fep->hwp + FEC_FTRL);
 	}
-	writel(PKT_MAXBUF_SIZE, fep->hwp + FEC_FTRL);
 #endif
 
 	/*
@@ -1521,9 +1521,15 @@ fec_enet_rx(struct net_device *ndev, int budget)
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
 	for_each_set_bit(queue_id, &fep->work_rx, FEC_ENET_MAX_RX_QS) {
-		clear_bit(queue_id, &fep->work_rx);
-		pkt_received += fec_enet_rx_queue(ndev,
+		int ret;
+
+		ret = fec_enet_rx_queue(ndev,
 					budget - pkt_received, queue_id);
+
+		if (ret < budget - pkt_received)
+			clear_bit(queue_id, &fep->work_rx);
+
+		pkt_received += ret;
 	}
 	return pkt_received;
 }

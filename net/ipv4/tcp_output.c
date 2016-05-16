@@ -2441,6 +2441,20 @@ u32 __tcp_select_window(struct sock *sk)
 	return window;
 }
 
+void tcp_skb_collapse_tstamp(struct sk_buff *skb,
+			     const struct sk_buff *next_skb)
+{
+	const struct skb_shared_info *next_shinfo = skb_shinfo(next_skb);
+	u8 tsflags = next_shinfo->tx_flags & SKBTX_ANY_TSTAMP;
+
+	if (unlikely(tsflags)) {
+		struct skb_shared_info *shinfo = skb_shinfo(skb);
+
+		shinfo->tx_flags |= tsflags;
+		shinfo->tskey = next_shinfo->tskey;
+	}
+}
+
 /* Collapses two adjacent SKB's during retransmission. */
 static void tcp_collapse_retrans(struct sock *sk, struct sk_buff *skb)
 {
@@ -2483,6 +2497,8 @@ static void tcp_collapse_retrans(struct sock *sk, struct sk_buff *skb)
 		tp->retransmit_skb_hint = skb;
 
 	tcp_adjust_pcount(sk, next_skb, tcp_skb_pcount(next_skb));
+
+	tcp_skb_collapse_tstamp(skb, next_skb);
 
 	sk_wmem_free_skb(sk, next_skb);
 }
@@ -2624,8 +2640,10 @@ int __tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb)
 	 */
 	if (unlikely((NET_IP_ALIGN && ((unsigned long)skb->data & 3)) ||
 		     skb_headroom(skb) >= 0xFFFF)) {
-		struct sk_buff *nskb = __pskb_copy(skb, MAX_TCP_HEADER,
-						   GFP_ATOMIC);
+		struct sk_buff *nskb;
+
+		skb_mstamp_get(&skb->skb_mstamp);
+		nskb = __pskb_copy(skb, MAX_TCP_HEADER, GFP_ATOMIC);
 		err = nskb ? tcp_transmit_skb(sk, nskb, 0, GFP_ATOMIC) :
 			     -ENOBUFS;
 	} else {
