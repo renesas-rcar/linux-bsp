@@ -139,7 +139,8 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
 		  | RCAR_DU_FEATURE_EXT_CTRL_REGS
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
-		  | RCAR_DU_FEATURE_GEN3_REGS,
+		  | RCAR_DU_FEATURE_GEN3_REGS
+		  | RCAR_DU_FEATURE_DIDSR2_REG,
 	.num_crtcs = 4,
 	.routes = {
 		/* R8A7795 has one RGB output, two HDMI outputs and one

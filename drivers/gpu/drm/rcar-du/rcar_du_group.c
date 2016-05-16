@@ -1,7 +1,7 @@
 /*
  * rcar_du_group.c  --  R-Car Display Unit Channels Pair
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -113,13 +113,30 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 		/* Configure input dot clock routing. We currently hardcode the
 		 * configuration to routing DOTCLKINn to DUn.
 		 */
-		rcar_du_group_write(rgrp, DIDSR, DIDSR_CODE |
+		if (rcdu->info->gen < 3) {
+			rcar_du_group_write(rgrp, DIDSR, DIDSR_CODE |
 				    DIDSR_LCDS_DCLKIN(2) |
 				    DIDSR_LCDS_DCLKIN(1) |
 				    DIDSR_LCDS_DCLKIN(0) |
 				    DIDSR_PDCS_CLK(2, 0) |
 				    DIDSR_PDCS_CLK(1, 0) |
 				    DIDSR_PDCS_CLK(0, 0));
+		} else {
+			if (rgrp->index == 0) {
+				rcar_du_group_write(rgrp,
+				    DIDSR, DIDSR_CODE |
+				    DIDSR_LCDS0_DCLKIN |
+				    DIDSR_PDCS_CLK(1, 0) |
+				    DIDSR_PDCS_CLK(0, 0));
+			} else if ((rgrp->index == 1) &&
+				rcar_du_has(rgrp->dev,
+				RCAR_DU_FEATURE_DIDSR2_REG)) {
+				rcar_du_group_write(rgrp,
+				    DIDSR, DIDSR_CODE |
+				    DIDSR_PDCS_CLK(1, 0) |
+				    DIDSR_PDCS_CLK(0, 0));
+			}
+		}
 	}
 
 	if (rcdu->info->gen >= 3)
