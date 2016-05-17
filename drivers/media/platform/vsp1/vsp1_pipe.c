@@ -23,6 +23,7 @@
 #include "vsp1_bru.h"
 #include "vsp1_dl.h"
 #include "vsp1_entity.h"
+#include "vsp1_hgo.h"
 #include "vsp1_pipe.h"
 #include "vsp1_rwpf.h"
 #include "vsp1_uds.h"
@@ -180,11 +181,18 @@ void vsp1_pipeline_reset(struct vsp1_pipeline *pipe)
 	pipe->output->pipe = NULL;
 	pipe->output = NULL;
 
+	if (pipe->hgo) {
+		struct vsp1_hgo *hgo = to_hgo(&pipe->hgo->subdev);
+
+		hgo->histo.pipe = NULL;
+	}
+
 	INIT_LIST_HEAD(&pipe->entities);
 	pipe->state = VSP1_PIPELINE_STOPPED;
 	pipe->buffers_ready = 0;
 	pipe->num_inputs = 0;
 	pipe->bru = NULL;
+	pipe->hgo = NULL;
 	pipe->lif = NULL;
 	pipe->uds = NULL;
 }
@@ -228,6 +236,7 @@ bool vsp1_pipeline_stopped(struct vsp1_pipeline *pipe)
 
 int vsp1_pipeline_stop(struct vsp1_pipeline *pipe)
 {
+	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
 	struct vsp1_entity *entity;
 	unsigned long flags;
 	int ret;
@@ -236,8 +245,7 @@ int vsp1_pipeline_stop(struct vsp1_pipeline *pipe)
 		/* When using display lists in continuous frame mode the only
 		 * way to stop the pipeline is to reset the hardware.
 		 */
-		ret = vsp1_reset_wpf(pipe->output->entity.vsp1,
-				     pipe->output->entity.index);
+		ret = vsp1_reset_wpf(vsp1, pipe->output->entity.index);
 		if (ret == 0) {
 			spin_lock_irqsave(&pipe->irqlock, flags);
 			pipe->state = VSP1_PIPELINE_STOPPED;
@@ -257,9 +265,14 @@ int vsp1_pipeline_stop(struct vsp1_pipeline *pipe)
 
 	list_for_each_entry(entity, &pipe->entities, list_pipe) {
 		if (entity->route && entity->route->reg)
-			vsp1_write(entity->vsp1, entity->route->reg,
+			vsp1_write(vsp1, entity->route->reg,
 				   VI6_DPR_NODE_UNUSED);
 	}
+
+	if (pipe->hgo)
+		vsp1_write(vsp1, VI6_DPR_HGO_SMPPT,
+			   (7 << VI6_DPR_SMPPT_TGW_SHIFT) |
+			   (VI6_DPR_NODE_UNUSED << VI6_DPR_SMPPT_PT_SHIFT));
 
 	v4l2_subdev_call(&pipe->output->entity.subdev, video, s_stream, 0);
 
@@ -284,8 +297,13 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 
 	vsp1_dlm_irq_frame_end(pipe->output->dlm);
 
+	if (pipe->hgo)
+		vsp1_hgo_frame_end(pipe->hgo);
+
 	if (pipe->frame_end)
 		pipe->frame_end(pipe);
+
+	pipe->sequence++;
 }
 
 /*
@@ -307,7 +325,11 @@ void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
 	struct vsp1_entity *entity;
 	struct media_pad *pad;
 
-	pad = media_entity_remote_pad(&input->pads[RWPF_PAD_SOURCE]);
+	/* The alpha value doesn't need to be propagated to the HGO, use
+	 * vsp1_entity_remote_pad() to traverse the graph.
+	 */
+
+	pad = vsp1_entity_remote_pad(&input->pads[RWPF_PAD_SOURCE]);
 
 	while (pad) {
 		if (!is_media_entity_v4l2_subdev(pad->entity))
@@ -329,7 +351,7 @@ void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
 		}
 
 		pad = &entity->pads[entity->source_pad];
-		pad = media_entity_remote_pad(pad);
+		pad = vsp1_entity_remote_pad(pad);
 	}
 }
 
@@ -383,7 +405,7 @@ void vsp1_pipelines_resume(struct vsp1_device *vsp1)
 {
 	unsigned int i;
 
-	/* Resume pipeline all running pipelines. */
+	/* Resume all running pipelines. */
 	for (i = 0; i < vsp1->info->wpf_count; ++i) {
 		struct vsp1_rwpf *wpf = vsp1->wpf[i];
 		struct vsp1_pipeline *pipe;

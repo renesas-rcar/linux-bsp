@@ -130,9 +130,10 @@ static void rpf_configure(struct vsp1_entity *entity,
 	if (pipe->bru) {
 		const struct v4l2_rect *compose;
 
-		compose = vsp1_entity_get_pad_compose(pipe->bru,
-						      pipe->bru->config,
-						      rpf->bru_input);
+		compose = vsp1_entity_get_pad_selection(pipe->bru,
+							pipe->bru->config,
+							rpf->bru_input,
+							V4L2_SEL_TGT_COMPOSE);
 		left = compose->left;
 		top = compose->top;
 	}
@@ -236,7 +237,8 @@ struct vsp1_rwpf *vsp1_rpf_create(struct vsp1_device *vsp1, unsigned int index)
 	rpf->entity.index = index;
 
 	sprintf(name, "rpf.%u", index);
-	ret = vsp1_entity_init(vsp1, &rpf->entity, name, 2, &rpf_ops);
+	ret = vsp1_entity_init(vsp1, &rpf->entity, name, 2, &rpf_ops,
+			       MEDIA_ENT_F_PROC_VIDEO_PIXEL_FORMATTER);
 	if (ret < 0)
 		return ERR_PTR(ret);
 

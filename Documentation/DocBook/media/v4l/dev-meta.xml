@@ -1,0 +1,97 @@
+  <title>Metadata Interface</title>
+
+  <note>
+    <title>Experimental</title>
+    <para>This is an <link linkend="experimental"> experimental </link>
+    interface and may change in the future.</para>
+  </note>
+
+  <para>
+Metadata refers to any non-image data that supplements video frames with
+additional information. This may include statistics computed over the image
+or frame capture parameters supplied by the image source. This interface is
+intended for transfer of metadata to userspace and control of that operation.
+  </para>
+
+  <para>
+The metadata interface can be implemented on video capture devices, metadata
+devices or both, at the discretion of drivers. Metadata devices are accessed
+through character device special files named
+<filename>/dev/v4l-meta[0-9]+</filename> with major number 81 and dynamically
+allocated minor numbers. Video devices that support metadata capture can be
+dedicated to metadata or can implement both metadata capture and video capture
+and/or output, as specified in the device's reported capabilities.
+  </para>
+
+  <section>
+    <title>Querying Capabilities</title>
+
+    <para>
+Devices supporting the metadata interface set the
+<constant>V4L2_CAP_META_CAPTURE</constant> flag in the
+<structfield>capabilities</structfield> field of &v4l2-capability;
+returned by the &VIDIOC-QUERYCAP; ioctl. That flag means the device can capture
+metadata to memory.
+    </para>
+    <para>
+At least one of the read/write or streaming I/O methods must be supported.
+    </para>
+  </section>
+
+  <section>
+    <title>Data Format Negotiation</title>
+
+    <para>
+The metadata device uses the <link linkend="format">format</link> ioctls to
+select the capture format. The metadata buffer content format is bound to that
+selectable format. In addition to the basic
+<link linkend="format">format</link> ioctls, the &VIDIOC-ENUM-FMT; ioctl
+must be supported as well.
+    </para>
+
+    <para>
+To use the <link linkend="format">format</link> ioctls applications set the
+<structfield>type</structfield> field of a &v4l2-format; to
+<constant>V4L2_BUF_TYPE_META_CAPTURE</constant> and use the &v4l2-meta-format;
+<structfield>meta</structfield> member of the <structfield>fmt</structfield>
+union as needed per the desired operation.
+Currently there are two fields, <structfield>dataformat</structfield> and
+<structfield>buffersize</structfield>, of struct &v4l2-meta-format; that are
+used. Content of the <structfield>dataformat</structfield> is the V4L2 FourCC
+code of the data format. The <structfield>buffersize</structfield> field is the
+maximum buffer size in bytes required for data transfer, set by the driver in
+order to inform applications.
+    </para>
+
+    <table pgwide="1" frame="none" id="v4l2-meta-format">
+      <title>struct <structname>v4l2_meta_format</structname></title>
+      <tgroup cols="3">
+        &cs-str;
+        <tbody valign="top">
+          <row>
+            <entry>__u32</entry>
+            <entry><structfield>dataformat</structfield></entry>
+            <entry>
+The data format, set by the application. This is a little endian
+<link linkend="v4l2-fourcc">four character code</link>.
+V4L2 defines metadata formats in <xref linkend="meta-formats" />.
+           </entry>
+          </row>
+          <row>
+            <entry>__u32</entry>
+            <entry><structfield>buffersize</structfield></entry>
+            <entry>
+Maximum size in bytes required for data. Value is set by the driver.
+           </entry>
+          </row>
+          <row>
+            <entry>__u8</entry>
+            <entry><structfield>reserved[24]</structfield></entry>
+            <entry>This array is reserved for future extensions.
+Drivers and applications must set it to zero.</entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
+
+  </section>
