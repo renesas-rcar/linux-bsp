@@ -319,7 +319,7 @@ i915_gem_phys_pwrite(struct drm_i915_gem_object *obj,
 {
 	struct drm_device *dev = obj->base.dev;
 	void *vaddr = obj->phys_handle->vaddr + args->offset;
-	char __user *user_data = to_user_ptr(args->data_ptr);
+	char __user *user_data = u64_to_user_ptr(args->data_ptr);
 	int ret = 0;
 
 	/* We manually control the domain here and pretend that it
@@ -600,7 +600,7 @@ i915_gem_shmem_pread(struct drm_device *dev,
 	int needs_clflush = 0;
 	struct sg_page_iter sg_iter;
 
-	user_data = to_user_ptr(args->data_ptr);
+	user_data = u64_to_user_ptr(args->data_ptr);
 	remain = args->size;
 
 	obj_do_bit17_swizzling = i915_gem_object_needs_bit17_swizzle(obj);
@@ -687,7 +687,7 @@ i915_gem_pread_ioctl(struct drm_device *dev, void *data,
 		return 0;
 
 	if (!access_ok(VERIFY_WRITE,
-		       to_user_ptr(args->data_ptr),
+		       u64_to_user_ptr(args->data_ptr),
 		       args->size))
 		return -EFAULT;
 
@@ -779,7 +779,7 @@ i915_gem_gtt_pwrite_fast(struct drm_device *dev,
 	if (ret)
 		goto out_unpin;
 
-	user_data = to_user_ptr(args->data_ptr);
+	user_data = u64_to_user_ptr(args->data_ptr);
 	remain = args->size;
 
 	offset = i915_gem_obj_ggtt_offset(obj) + args->offset;
@@ -903,7 +903,7 @@ i915_gem_shmem_pwrite(struct drm_device *dev,
 	int needs_clflush_before = 0;
 	struct sg_page_iter sg_iter;
 
-	user_data = to_user_ptr(args->data_ptr);
+	user_data = u64_to_user_ptr(args->data_ptr);
 	remain = args->size;
 
 	obj_do_bit17_swizzling = i915_gem_object_needs_bit17_swizzle(obj);
@@ -1032,12 +1032,12 @@ i915_gem_pwrite_ioctl(struct drm_device *dev, void *data,
 		return 0;
 
 	if (!access_ok(VERIFY_READ,
-		       to_user_ptr(args->data_ptr),
+		       u64_to_user_ptr(args->data_ptr),
 		       args->size))
 		return -EFAULT;
 
 	if (likely(!i915.prefault_disable)) {
-		ret = fault_in_multipages_readable(to_user_ptr(args->data_ptr),
+		ret = fault_in_multipages_readable(u64_to_user_ptr(args->data_ptr),
 						   args->size);
 		if (ret)
 			return -EFAULT;
