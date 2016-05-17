@@ -9,6 +9,7 @@
 
 #include <linux/kernel.h>
 #include <linux/delay.h>
+#include <linux/dmi.h>
 #include <linux/init.h>
 #include <linux/of.h>
 #include <linux/of_pci.h>
@@ -100,6 +101,21 @@ unsigned int pcibios_max_latency = 255;
 
 /* If set, the PCIe ARI capability will not be used. */
 static bool pcie_ari_disabled;
+
+/* Disable bridge_d3 for all PCIe ports */
+static bool pci_bridge_d3_disable;
+/* Force bridge_d3 for all PCIe ports */
+static bool pci_bridge_d3_force;
+
+static int __init pcie_port_pm_setup(char *str)
+{
+	if (!strcmp(str, "off"))
+		pci_bridge_d3_disable = true;
+	else if (!strcmp(str, "force"))
+		pci_bridge_d3_force = true;
+	return 1;
+}
+__setup("pcie_port_pm=", pcie_port_pm_setup);
 
 /**
  * pci_bus_max_busnr - returns maximum PCI bus number of given bus' children
@@ -2156,6 +2172,164 @@ void pci_config_pm_runtime_put(struct pci_dev *pdev)
 }
 
 /**
+ * pci_bridge_d3_possible - Is it possible to put the bridge into D3
+ * @bridge: Bridge to check
+ *
+ * This function checks if it is possible to move the bridge to D3.
+ * Currently we only allow D3 for recent enough PCIe ports.
+ */
+static bool pci_bridge_d3_possible(struct pci_dev *bridge)
+{
+	unsigned int year;
+
+	if (!pci_is_pcie(bridge))
+		return false;
+
+	switch (pci_pcie_type(bridge)) {
+	case PCI_EXP_TYPE_ROOT_PORT:
+	case PCI_EXP_TYPE_UPSTREAM:
+	case PCI_EXP_TYPE_DOWNSTREAM:
+		if (pci_bridge_d3_disable)
+			return false;
+		if (pci_bridge_d3_force)
+			return true;
+
+		/*
+		 * It should be safe to put PCIe ports from 2015 or newer
+		 * to D3.
+		 */
+		if (dmi_get_date(DMI_BIOS_DATE, &year, NULL, NULL) &&
+		    year >= 2015) {
+			return true;
+		}
+		break;
+	}
+
+	return false;
+}
+
+static int pci_dev_check_d3cold(struct pci_dev *dev, void *data)
+{
+	bool *d3cold_ok = data;
+	bool no_d3cold;
+
+	/*
+	 * The device needs to be allowed to go D3cold and if it is wake
+	 * capable to do so from D3cold.
+	 */
+	no_d3cold = dev->no_d3cold || !dev->d3cold_allowed ||
+		(device_may_wakeup(&dev->dev) && !pci_pme_capable(dev, PCI_D3cold)) ||
+		!pci_power_manageable(dev);
+
+	*d3cold_ok = !no_d3cold;
+
+	return no_d3cold;
+}
+
+/*
+ * pci_bridge_d3_update - Update bridge D3 capabilities
+ * @dev: PCI device which is changed
+ * @remove: Is the device being removed
+ *
+ * Update upstream bridge PM capabilities accordingly depending on if the
+ * device PM configuration was changed or the device is being removed.  The
+ * change is also propagated upstream.
+ */
+static void pci_bridge_d3_update(struct pci_dev *dev, bool remove)
+{
+	struct pci_dev *bridge;
+	bool d3cold_ok = true;
+
+	bridge = pci_upstream_bridge(dev);
+	if (!bridge || !pci_bridge_d3_possible(bridge))
+		return;
+
+	pci_dev_get(bridge);
+	/*
+	 * If the device is removed we do not care about its D3cold
+	 * capabilities.
+	 */
+	if (!remove)
+		pci_dev_check_d3cold(dev, &d3cold_ok);
+
+	if (d3cold_ok) {
+		/*
+		 * We need to go through all children to find out if all of
+		 * them can still go to D3cold.
+		 */
+		pci_walk_bus(bridge->subordinate, pci_dev_check_d3cold,
+			     &d3cold_ok);
+	}
+
+	if (bridge->bridge_d3 != d3cold_ok) {
+		bridge->bridge_d3 = d3cold_ok;
+		/* Propagate change to upstream bridges */
+		pci_bridge_d3_update(bridge, false);
+	}
+
+	pci_dev_put(bridge);
+}
+
+/**
+ * pci_bridge_d3_device_changed - Update bridge D3 capabilities on change
+ * @dev: PCI device that was changed
+ *
+ * If a device is added or its PM configuration, such as is it allowed to
+ * enter D3cold, is changed this function updates upstream bridge PM
+ * capabilities accordingly.
+ */
+void pci_bridge_d3_device_changed(struct pci_dev *dev)
+{
+	pci_bridge_d3_update(dev, false);
+}
+
+/**
+ * pci_bridge_d3_device_removed - Update bridge D3 capabilities on remove
+ * @dev: PCI device being removed
+ *
+ * Function updates upstream bridge PM capabilities based on other devices
+ * still left on the bus.
+ */
+void pci_bridge_d3_device_removed(struct pci_dev *dev)
+{
+	pci_bridge_d3_update(dev, true);
+}
+
+/**
+ * pci_d3cold_enable - Enable D3cold for device
+ * @dev: PCI device to handle
+ *
+ * This function can be used in drivers to enable D3cold from the device
+ * they handle.  It also updates upstream PCI bridge PM capabilities
+ * accordingly.
+ */
+void pci_d3cold_enable(struct pci_dev *dev)
+{
+	if (dev->no_d3cold) {
+		dev->no_d3cold = false;
+		pci_bridge_d3_device_changed(dev);
+	}
+}
+EXPORT_SYMBOL_GPL(pci_d3cold_enable);
+
+/**
+ * pci_d3cold_disable - Disable D3cold for device
+ * @dev: PCI device to handle
+ *
+ * This function can be used in drivers to disable D3cold from the device
+ * they handle.  It also updates upstream PCI bridge PM capabilities
+ * accordingly.
+ */
+void pci_d3cold_disable(struct pci_dev *dev)
+{
+	if (!dev->no_d3cold) {
+		dev->no_d3cold = true;
+		pci_bridge_d3_device_changed(dev);
+	}
+}
+EXPORT_SYMBOL_GPL(pci_d3cold_disable);
+
+/**
  * pci_pm_init - Initialize PM functions of given PCI device
  * @dev: PCI device to handle.
  */
@@ -2189,6 +2363,7 @@ void pci_pm_init(struct pci_dev *dev)
 	dev->pm_cap = pm;
 	dev->d3_delay = PCI_PM_D3_WAIT;
 	dev->d3cold_delay = PCI_PM_D3COLD_WAIT;
+	dev->bridge_d3 = pci_bridge_d3_possible(dev);
 	dev->d3cold_allowed = true;
 
 	dev->d1_support = false;
@@ -2228,7 +2403,7 @@ void pci_pm_init(struct pci_dev *dev)
 
 static unsigned long pci_ea_flags(struct pci_dev *dev, u8 prop)
 {
-	unsigned long flags = IORESOURCE_PCI_FIXED;
+	unsigned long flags = IORESOURCE_PCI_FIXED | IORESOURCE_PCI_EA_BEI;
 
 	switch (prop) {
 	case PCI_EA_P_MEM:
@@ -2389,7 +2564,7 @@ out:
 	return offset + ent_size;
 }
 
-/* Enhanced Allocation Initalization */
+/* Enhanced Allocation Initialization */
 void pci_ea_init(struct pci_dev *dev)
 {
 	int ea;
@@ -2547,7 +2722,7 @@ void pci_request_acs(void)
  * pci_std_enable_acs - enable ACS on devices using standard ACS capabilites
  * @dev: the PCI device
  */
-static int pci_std_enable_acs(struct pci_dev *dev)
+static void pci_std_enable_acs(struct pci_dev *dev)
 {
 	int pos;
 	u16 cap;
@@ -2555,7 +2730,7 @@ static int pci_std_enable_acs(struct pci_dev *dev)
 
 	pos = pci_find_ext_capability(dev, PCI_EXT_CAP_ID_ACS);
 	if (!pos)
-		return -ENODEV;
+		return;
 
 	pci_read_config_word(dev, pos + PCI_ACS_CAP, &cap);
 	pci_read_config_word(dev, pos + PCI_ACS_CTRL, &ctrl);
@@ -2573,8 +2748,6 @@ static int pci_std_enable_acs(struct pci_dev *dev)
 	ctrl |= (cap & PCI_ACS_UF);
 
 	pci_write_config_word(dev, pos + PCI_ACS_CTRL, ctrl);
-
-	return 0;
 }
 
 /**
@@ -2586,10 +2759,10 @@ void pci_enable_acs(struct pci_dev *dev)
 	if (!pci_acs_enable)
 		return;
 
-	if (!pci_std_enable_acs(dev))
+	if (!pci_dev_specific_enable_acs(dev))
 		return;
 
-	pci_dev_specific_enable_acs(dev);
+	pci_std_enable_acs(dev);
 }
 
 static bool pci_acs_flags_enabled(struct pci_dev *pdev, u16 acs_flags)
@@ -3020,6 +3193,121 @@ int pci_request_regions_exclusive(struct pci_dev *pdev, const char *res_name)
 					((1 << 6) - 1), res_name);
 }
 EXPORT_SYMBOL(pci_request_regions_exclusive);
+
+#ifdef PCI_IOBASE
+struct io_range {
+	struct list_head list;
+	phys_addr_t start;
+	resource_size_t size;
+};
+
+static LIST_HEAD(io_range_list);
+static DEFINE_SPINLOCK(io_range_lock);
+#endif
+
+/*
+ * Record the PCI IO range (expressed as CPU physical address + size).
+ * Return a negative value if an error has occured, zero otherwise
+ */
+int __weak pci_register_io_range(phys_addr_t addr, resource_size_t size)
+{
+	int err = 0;
+
+#ifdef PCI_IOBASE
+	struct io_range *range;
+	resource_size_t allocated_size = 0;
+
+	/* check if the range hasn't been previously recorded */
+	spin_lock(&io_range_lock);
+	list_for_each_entry(range, &io_range_list, list) {
+		if (addr >= range->start && addr + size <= range->start + size) {
+			/* range already registered, bail out */
+			goto end_register;
+		}
+		allocated_size += range->size;
+	}
+
+	/* range not registed yet, check for available space */
+	if (allocated_size + size - 1 > IO_SPACE_LIMIT) {
+		/* if it's too big check if 64K space can be reserved */
+		if (allocated_size + SZ_64K - 1 > IO_SPACE_LIMIT) {
+			err = -E2BIG;
+			goto end_register;
+		}
+
+		size = SZ_64K;
+		pr_warn("Requested IO range too big, new size set to 64K\n");
+	}
+
+	/* add the range to the list */
+	range = kzalloc(sizeof(*range), GFP_ATOMIC);
+	if (!range) {
+		err = -ENOMEM;
+		goto end_register;
+	}
+
+	range->start = addr;
+	range->size = size;
+
+	list_add_tail(&range->list, &io_range_list);
+
+end_register:
+	spin_unlock(&io_range_lock);
+#endif
+
+	return err;
+}
+
+phys_addr_t pci_pio_to_address(unsigned long pio)
+{
+	phys_addr_t address = (phys_addr_t)OF_BAD_ADDR;
+
+#ifdef PCI_IOBASE
+	struct io_range *range;
+	resource_size_t allocated_size = 0;
+
+	if (pio > IO_SPACE_LIMIT)
+		return address;
+
+	spin_lock(&io_range_lock);
+	list_for_each_entry(range, &io_range_list, list) {
+		if (pio >= allocated_size && pio < allocated_size + range->size) {
+			address = range->start + pio - allocated_size;
+			break;
+		}
+		allocated_size += range->size;
+	}
+	spin_unlock(&io_range_lock);
+#endif
+
+	return address;
+}
+
+unsigned long __weak pci_address_to_pio(phys_addr_t address)
+{
+#ifdef PCI_IOBASE
+	struct io_range *res;
+	resource_size_t offset = 0;
+	unsigned long addr = -1;
+
+	spin_lock(&io_range_lock);
+	list_for_each_entry(res, &io_range_list, list) {
+		if (address >= res->start && address < res->start + res->size) {
+			addr = address - res->start + offset;
+			break;
+		}
+		offset += res->size;
+	}
+	spin_unlock(&io_range_lock);
+
+	return addr;
+#else
+	if (address > IO_SPACE_LIMIT)
+		return (unsigned long)-1;
+
+	return (unsigned long) address;
+#endif
+}
 
 /**
  *	pci_remap_iospace - Remap the memory mapped I/O space
@@ -4576,6 +4864,37 @@ int pci_set_vga_state(struct pci_dev *dev, bool decode,
 		bus = bus->parent;
 	}
 	return 0;
+}
+
+/**
+ * pci_add_dma_alias - Add a DMA devfn alias for a device
+ * @dev: the PCI device for which alias is added
+ * @devfn: alias slot and function
+ *
+ * This helper encodes 8-bit devfn as bit number in dma_alias_mask.
+ * It should be called early, preferably as PCI fixup header quirk.
+ */
+void pci_add_dma_alias(struct pci_dev *dev, u8 devfn)
+{
+	if (!dev->dma_alias_mask)
+		dev->dma_alias_mask = kcalloc(BITS_TO_LONGS(U8_MAX),
+					      sizeof(long), GFP_KERNEL);
+	if (!dev->dma_alias_mask) {
+		dev_warn(&dev->dev, "Unable to allocate DMA alias mask\n");
+		return;
+	}
+
+	set_bit(devfn, dev->dma_alias_mask);
+	dev_info(&dev->dev, "Enabling fixed DMA alias to %02x.%d\n",
+		 PCI_SLOT(devfn), PCI_FUNC(devfn));
+}
+
+bool pci_devs_are_dma_aliases(struct pci_dev *dev1, struct pci_dev *dev2)
+{
+	return (dev1->dma_alias_mask &&
+		test_bit(dev2->devfn, dev1->dma_alias_mask)) ||
+	       (dev2->dma_alias_mask &&
+		test_bit(dev1->devfn, dev2->dma_alias_mask));
 }
 
 bool pci_device_is_present(struct pci_dev *pdev)
