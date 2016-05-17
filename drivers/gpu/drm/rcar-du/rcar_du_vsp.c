@@ -12,12 +12,14 @@
  */
 
 #include <drm/drmP.h>
+#include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 #include <drm/drm_plane_helper.h>
+#include <drm/rcar_du_drm.h>
 
 #include <linux/of_platform.h>
 #include <linux/videodev2.h>
@@ -345,6 +347,53 @@ static int rcar_du_vsp_plane_atomic_get_property(struct drm_plane *plane,
 		*val = rstate->zpos;
 	else
 		return -EINVAL;
+
+	return 0;
+}
+
+int rcar_du_set_vmute(struct drm_device *dev, void *data,
+		struct drm_file *file_priv)
+{
+	struct rcar_du_vmute *vmute =
+		(struct rcar_du_vmute *)data;
+	struct drm_mode_object *obj;
+	struct drm_crtc *crtc;
+	struct rcar_du_crtc *rcrtc;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	int ret = 0, index;
+
+	dev_dbg(dev->dev, "CRTC[%d], display:%s\n",
+		vmute->crtc_id, vmute->on ? "off":"on");
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
+
+	obj = drm_mode_object_find(dev, vmute->crtc_id,
+					DRM_MODE_OBJECT_CRTC);
+	if (!obj)
+		return -EINVAL;
+	crtc = obj_to_crtc(obj);
+
+	index = drm_crtc_index(crtc);
+
+	rcrtc = to_rcar_crtc(crtc);
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	state->crtc_states[index] = crtc_state;
+	state->crtcs[index] = crtc;
+	crtc_state->state = state;
+
+	crtc_state->active = true;
+
+	vsp1_du_if_set_mute(rcrtc->vsp->vsp, vmute->on);
+
+	ret = drm_atomic_commit(state);
+	if (ret != 0)
+		return ret;
 
 	return 0;
 }

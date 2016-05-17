@@ -22,14 +22,20 @@
 #include <linux/wait.h>
 
 #include <drm/drmP.h>
+#include <drm/drm_atomic.h>
+#include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
+#include <drm/rcar_du_drm.h>
+
+#include <media/vsp1.h>
 
 #include "rcar_du_crtc.h"
 #include "rcar_du_drv.h"
 #include "rcar_du_kms.h"
 #include "rcar_du_regs.h"
+#include "rcar_du_vsp.h"
 
 /* -----------------------------------------------------------------------------
  * Device Information
@@ -211,6 +217,11 @@ static void rcar_du_disable_vblank(struct drm_device *dev, unsigned int pipe)
 	rcar_du_crtc_enable_vblank(&rcdu->crtcs[pipe], false);
 }
 
+static const struct drm_ioctl_desc rcar_du_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(DRM_RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
+		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+};
+
 static const struct file_operations rcar_du_fops = {
 	.owner		= THIS_MODULE,
 	.open		= drm_open,
@@ -252,6 +263,8 @@ static struct drm_driver rcar_du_driver = {
 	.date			= "20130110",
 	.major			= 1,
 	.minor			= 0,
+	.ioctls			= rcar_du_ioctls,
+	.num_ioctls		= ARRAY_SIZE(rcar_du_ioctls),
 };
 
 /* -----------------------------------------------------------------------------
