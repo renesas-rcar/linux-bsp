@@ -126,9 +126,9 @@ static void lif_configure(struct vsp1_entity *entity,
 {
 	const struct v4l2_mbus_framefmt *format;
 	struct vsp1_lif *lif = to_lif(&entity->subdev);
-	unsigned int hbth = 1300;
-	unsigned int obth = 400;
-	unsigned int lbth = 200;
+	unsigned int hbth = 0;
+	unsigned int obth = 3000;
+	unsigned int lbth = 0;
 
 	format = vsp1_entity_get_pad_format(&lif->entity, lif->entity.config,
 					    LIF_PAD_SOURCE);

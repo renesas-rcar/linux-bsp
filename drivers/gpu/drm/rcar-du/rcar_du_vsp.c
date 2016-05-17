@@ -143,6 +143,28 @@ static const u32 formats_v4l2[] = {
 	V4L2_PIX_FMT_YVU444M,
 };
 
+static const u32 formats_xlate[][2] = {
+	{ DRM_FORMAT_RGB332, V4L2_PIX_FMT_RGB332 },
+	{ DRM_FORMAT_ARGB4444, V4L2_PIX_FMT_ARGB444 },
+	{ DRM_FORMAT_XRGB4444, V4L2_PIX_FMT_XRGB444 },
+	{ DRM_FORMAT_ARGB1555, V4L2_PIX_FMT_ARGB555 },
+	{ DRM_FORMAT_XRGB1555, V4L2_PIX_FMT_XRGB555 },
+	{ DRM_FORMAT_RGB565, V4L2_PIX_FMT_RGB565 },
+	{ DRM_FORMAT_BGR888, V4L2_PIX_FMT_RGB24 },
+	{ DRM_FORMAT_RGB888, V4L2_PIX_FMT_BGR24 },
+	{ DRM_FORMAT_BGRA8888, V4L2_PIX_FMT_ARGB32 },
+	{ DRM_FORMAT_BGRX8888, V4L2_PIX_FMT_XRGB32 },
+	{ DRM_FORMAT_ARGB8888, V4L2_PIX_FMT_ABGR32 },
+	{ DRM_FORMAT_XRGB8888, V4L2_PIX_FMT_XBGR32 },
+	{ DRM_FORMAT_UYVY, V4L2_PIX_FMT_UYVY },
+	{ DRM_FORMAT_YUYV, V4L2_PIX_FMT_YUYV },
+	{ DRM_FORMAT_YVYU, V4L2_PIX_FMT_YVYU },
+	{ DRM_FORMAT_NV12, V4L2_PIX_FMT_NV12M },
+	{ DRM_FORMAT_NV21, V4L2_PIX_FMT_NV21M },
+	{ DRM_FORMAT_NV16, V4L2_PIX_FMT_NV16M },
+	{ DRM_FORMAT_NV61, V4L2_PIX_FMT_NV61M },
+};
+
 static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 {
 	struct rcar_du_vsp_plane_state *state =
@@ -202,6 +224,11 @@ static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
 	}
 
 	rstate->format = rcar_du_format_info(state->fb->pixel_format);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE) &&
+			 (rstate->format == NULL))
+		rstate->format = rcar_vsp_format_info(state->fb->pixel_format);
+
 	if (rstate->format == NULL) {
 		dev_dbg(rcdu->dev, "%s: unsupported format %08x\n", __func__,
 			state->fb->pixel_format);
@@ -320,6 +347,28 @@ static const struct drm_plane_funcs rcar_du_vsp_plane_funcs = {
 	.atomic_get_property = rcar_du_vsp_plane_atomic_get_property,
 };
 
+static const uint32_t formats[] = {
+	DRM_FORMAT_RGB332,
+	DRM_FORMAT_ARGB4444,
+	DRM_FORMAT_XRGB4444,
+	DRM_FORMAT_ARGB1555,
+	DRM_FORMAT_XRGB1555,
+	DRM_FORMAT_RGB565,
+	DRM_FORMAT_BGR888,
+	DRM_FORMAT_RGB888,
+	DRM_FORMAT_BGRA8888,
+	DRM_FORMAT_BGRX8888,
+	DRM_FORMAT_ARGB8888,
+	DRM_FORMAT_XRGB8888,
+	DRM_FORMAT_UYVY,
+	DRM_FORMAT_YUYV,
+	DRM_FORMAT_YVYU,
+	DRM_FORMAT_NV12,
+	DRM_FORMAT_NV21,
+	DRM_FORMAT_NV16,
+	DRM_FORMAT_NV61,
+};
+
 int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 {
 	struct rcar_du_device *rcdu = vsp->dev;
@@ -349,7 +398,7 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 	 /* The VSP2D (Gen3) has 5 RPFs, but the VSP1D (Gen2) is limited to
 	  * 4 RPFs.
 	  */
-	vsp->num_planes = rcdu->info->gen >= 3 ? 5 : 4;
+	vsp->num_planes = rcdu->info->vsp_num;
 
 	vsp->planes = devm_kcalloc(rcdu->dev, vsp->num_planes,
 				   sizeof(*vsp->planes), GFP_KERNEL);

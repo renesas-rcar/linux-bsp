@@ -1,7 +1,7 @@
 /*
  * rcar_du_crtc.h  --  R-Car Display Unit CRTCs
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2015 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -54,6 +54,14 @@ struct rcar_du_crtc {
 	struct rcar_du_vsp *vsp;
 };
 
+struct dpll_info {
+	unsigned int dpllclk;
+	unsigned int diff;
+	unsigned int fdpll;
+	unsigned int n;
+	unsigned int m;
+};
+
 #define to_rcar_crtc(c)	container_of(c, struct rcar_du_crtc, crtc)
 
 enum rcar_du_output {
@@ -61,6 +69,8 @@ enum rcar_du_output {
 	RCAR_DU_OUTPUT_DPAD1,
 	RCAR_DU_OUTPUT_LVDS0,
 	RCAR_DU_OUTPUT_LVDS1,
+	RCAR_DU_OUTPUT_HDMI0,
+	RCAR_DU_OUTPUT_HDMI1,
 	RCAR_DU_OUTPUT_TCON,
 	RCAR_DU_OUTPUT_MAX,
 };
