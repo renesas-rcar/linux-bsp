@@ -699,7 +699,20 @@ static int usb_dmac_runtime_resume(struct device *dev)
 }
 #endif /* CONFIG_PM */
 
+#ifdef CONFIG_PM_SLEEP
+static int usb_dmac_sleep_suspend(struct device *dev)
+{
+	return usb_dmac_runtime_suspend(dev);
+}
+
+static int usb_dmac_sleep_resume(struct device *dev)
+{
+	return usb_dmac_runtime_resume(dev);
+}
+#endif
+
 static const struct dev_pm_ops usb_dmac_pm = {
+	SET_SYSTEM_SLEEP_PM_OPS(usb_dmac_sleep_suspend, usb_dmac_sleep_resume)
 	SET_RUNTIME_PM_OPS(usb_dmac_runtime_suspend, usb_dmac_runtime_resume,
 			   NULL)
 };
