@@ -620,7 +620,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 	priv->id = of_alias_get_id(dev->of_node, "tsc");
 
-	priv->zone = thermal_zone_of_sensor_register(dev, 0, priv,
+	priv->zone = devm_thermal_zone_of_sensor_register(dev, 0, priv,
 				&rcar_gen3_tz_of_ops);
 
 	if (IS_ERR(priv->zone)) {
