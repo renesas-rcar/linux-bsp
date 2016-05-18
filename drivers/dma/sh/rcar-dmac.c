@@ -1638,16 +1638,26 @@ static struct dma_chan *rcar_dmac_of_xlate(struct of_phandle_args *dma_spec,
 #ifdef CONFIG_PM_SLEEP
 static int rcar_dmac_sleep_suspend(struct device *dev)
 {
-	/*
-	 * TODO: Wait for the current transfer to complete and stop the device.
-	 */
+	struct rcar_dmac *dmac = dev_get_drvdata(dev);
+	int i;
+
+	for (i = 0; i < dmac->n_channels; ++i) {
+		if (!dmac->channels[i].iomem)
+			break;
+
+		spin_lock(&dmac->channels[i].lock);
+		rcar_dmac_chan_halt(&dmac->channels[i]);
+		spin_unlock(&dmac->channels[i].lock);
+	}
+
 	return 0;
 }
 
 static int rcar_dmac_sleep_resume(struct device *dev)
 {
-	/* TODO: Resume transfers, if any. */
-	return 0;
+	struct rcar_dmac *dmac = dev_get_drvdata(dev);
+
+	return rcar_dmac_init(dmac);
 }
 #endif
 
