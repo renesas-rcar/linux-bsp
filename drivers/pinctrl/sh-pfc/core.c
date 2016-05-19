@@ -648,12 +648,37 @@ static const struct platform_device_id sh_pfc_id_table[] = {
 	{ },
 };
 
+#ifdef CONFIG_PM_SLEEP
+static int sh_pfc_suspend(struct device *dev)
+{
+#ifdef CONFIG_PINCTRL_PFC_R8A7795
+	/* Empty function for now */
+#endif
+	return 0;
+}
+
+static int sh_pfc_resume(struct device *dev)
+{
+#ifdef CONFIG_PINCTRL_PFC_R8A7795
+	/* Empty function for now */
+#endif
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(sh_pfc_pm_ops,
+			sh_pfc_suspend, sh_pfc_resume);
+#define DEV_PM_OPS (&sh_pfc_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver sh_pfc_driver = {
 	.probe		= sh_pfc_probe,
 	.remove		= sh_pfc_remove,
 	.id_table	= sh_pfc_id_table,
 	.driver		= {
 		.name	= DRV_NAME,
+		.pm	= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(sh_pfc_of_table),
 	},
 };
