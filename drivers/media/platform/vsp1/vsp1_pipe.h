@@ -1,7 +1,7 @@
 /*
  * vsp1_pipe.h  --  R-Car VSP1 Pipeline
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -106,6 +106,7 @@ struct vsp1_pipeline {
 	struct list_head entities;
 
 	struct vsp1_dl_list *dl;
+	bool vmute_flag;
 };
 
 static inline struct vsp1_pipeline *to_vsp1_pipeline(struct media_entity *e)
