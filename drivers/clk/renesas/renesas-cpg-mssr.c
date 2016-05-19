@@ -26,6 +26,7 @@
 #include <linux/pm_clock.h>
 #include <linux/pm_domain.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/s2ram_ddr_backup.h>
 
 #include <dt-bindings/clock/renesas-cpg-mssr.h>
 
@@ -38,6 +39,60 @@
 #define WARN_DEBUG(x)	do { } while (0)
 #endif
 
+#ifdef CONFIG_RCAR_DDR_BACKUP
+static struct hw_register cpg_ip_regs[] = {
+	{"CPGWPCR",	0x904, 32, 0},
+	{"CPGWPR",	0x900, 32, 0},
+	{"FRQCRB",	0x004, 32, 0},
+	{"FRQCRC",	0x0E0, 32, 0},
+	{"PLLECR",	0x0D0, 32, 0},
+	{"PLL0CR",	0x0D8, 32, 0},
+	{"PLL2CR",	0x02C, 32, 0},
+	{"PLL4CR",	0x1F4, 32, 0},
+	{"PLL0STPCR",	0x0F0, 32, 0},
+	{"PLL2STPCR",	0x0F8, 32, 0},
+	{"PLL3STPCR",	0x0FC, 32, 0},
+	{"PLL4STPCR",	0x1F8, 32, 0},
+	{"SD0CKCR",	0x074, 32, 0},
+	{"SD1CKCR",	0x078, 32, 0},
+	{"SD2CKCR",	0x268, 32, 0},
+	{"SD3CKCR",	0x26C, 32, 0},
+	{"RPCCKCR",	0x038, 32, 0},
+	{"CANFDCKCR",	0x244, 32, 0},
+	{"MSOCKCR",	0x014, 32, 0},
+	{"HDMICKCR",	0x250, 32, 0},
+	{"CSI0CKCR",	0x00C, 32, 0},
+	{"CSIREFCKCR",	0X034, 32, 0},
+	{"RCKCR",	0x240, 32, 0},
+	{"DVFSCR0",	0x058, 32, 0},
+	{"DVFSCR1",	0x05C, 32, 0},
+	{"FSAPBR",	0x700, 32, 0},
+	{"FSCLKCSR",	0x704, 32, 0},
+	{"FSCNTCHKH0",	0x710, 32, 0},
+	{"FSCNTCHKH1",	0x714, 32, 0},
+	{"FSCNTCHKH2",	0x718, 32, 0},
+	{"FSCNTCHKH3",	0x71C, 32, 0},
+	{"FSCNTCHKH4",	0x720, 32, 0},
+	{"FSCNTCHKH5",	0x724, 32, 0},
+	{"FSCNTCHKH6",	0x728, 32, 0},
+	{"FSCNTCHKL0",	0x730, 32, 0},
+	{"FSCNTCHKL1",	0x734, 32, 0},
+	{"FSCNTCHKL2",	0x738, 32, 0},
+	{"FSCNTCHKL3",	0x73C, 32, 0},
+	{"FSCNTCHKL4",	0x740, 32, 0},
+	{"FSCNTCHKL5",	0x744, 32, 0},
+	{"FSCNTCHKL6",	0x748, 32, 0},
+	{"FSSEQCHKCSR",	0xAF4, 32, 0},
+};
+
+static struct rcar_ip cpg_ip = {
+	.ip_name   = "CPG",
+	.base_addr = 0xE6150000,
+	.size      = 0xAF8,
+	.reg_count = ARRAY_SIZE(cpg_ip_regs),
+	.ip_reg    = cpg_ip_regs,
+};
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 /*
  * Module Standby and Software Reset register offets.
@@ -614,9 +669,44 @@ static int __init cpg_mssr_probe(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int cpg_mssr_suspend(struct device *dev)
+{
+	int ret = 0;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	pr_debug("%s\n", __func__);
+	if (!cpg_ip.virt_addr) {
+		ret = handle_registers(&cpg_ip, DO_IOREMAP);
+		if (ret)
+			return ret;
+	}
+
+	ret = handle_registers(&cpg_ip, DO_BACKUP);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+	return ret;
+}
+
+static int cpg_mssr_resume(struct device *dev)
+{
+	int ret = 0;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	pr_debug("%s\n", __func__);
+	ret = handle_registers(&cpg_ip, DO_RESTORE);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+	return ret;
+}
+
+static SIMPLE_DEV_PM_OPS(cpg_mssr_pm_ops,
+			cpg_mssr_suspend, cpg_mssr_resume);
+#define DEV_PM_OPS (&cpg_mssr_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver cpg_mssr_driver = {
 	.driver		= {
 		.name	= "renesas-cpg-mssr",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = cpg_mssr_match,
 	},
 };
