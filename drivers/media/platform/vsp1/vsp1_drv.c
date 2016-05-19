@@ -11,6 +11,10 @@
  * (at your option) any later version.
  */
 
+#ifdef CONFIG_VIDEO_RENESAS_DEBUG
+#define DEBUG
+#endif
+
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
@@ -39,6 +43,37 @@
 #include "vsp1_sru.h"
 #include "vsp1_uds.h"
 #include "vsp1_video.h"
+
+#define VSP1_UT_IRQ	0x01
+
+static unsigned int vsp1_debug;	/* 1 to enable debug output */
+module_param_named(debug, vsp1_debug, int, 0600);
+static int underrun_vspd[4];
+module_param_array(underrun_vspd, int, NULL, 0600);
+
+#ifdef CONFIG_VIDEO_RENESAS_DEBUG
+#define VSP1_IRQ_DEBUG(fmt, args...)					\
+	do {								\
+		if (unlikely(vsp1_debug & VSP1_UT_IRQ))			\
+			vsp1_ut_debug_printk(__func__, fmt, ##args);	\
+	} while (0)
+#else
+#define VSP1_IRQ_DEBUG(fmt, args...)
+#endif
+
+void vsp1_ut_debug_printk(const char *function_name, const char *format, ...)
+{
+	struct va_format vaf;
+	va_list args;
+
+	va_start(args, format);
+	vaf.fmt = format;
+	vaf.va = &args;
+
+	pr_debug("[vsp1 :%s] %pV", function_name, &vaf);
+
+	va_end(args);
+}
 
 #define SRCR7_REG		0xe61501cc
 #define	FCPVD0_REG		0xfea27000
@@ -126,6 +161,7 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 	irqreturn_t ret = IRQ_NONE;
 	unsigned int i;
 	u32 status;
+	unsigned int vsp_und_cnt = 0;
 	bool underrun = false;
 
 	for (i = 0; i < vsp1->info->wpf_count; ++i) {
@@ -138,6 +174,14 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		pipe = to_vsp1_pipeline(&wpf->entity.subdev.entity);
 		status = vsp1_read(vsp1, VI6_WPF_IRQ_STA(i));
 		vsp1_write(vsp1, VI6_WPF_IRQ_STA(i), ~status & mask);
+
+		if (vsp1_debug && (status & VI6_WFP_IRQ_STA_UND)) {
+			vsp_und_cnt = ++underrun_vspd[vsp1->index];
+
+			VSP1_IRQ_DEBUG(
+				"Underrun occurred num[%d] at VSPD (%s)\n",
+				vsp_und_cnt, dev_name(vsp1->dev));
+		}
 
 		if (status & VI6_WFP_IRQ_STA_FRE) {
 			vsp1_pipeline_frame_end(pipe);
