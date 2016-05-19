@@ -249,20 +249,20 @@ static const unsigned int r8a7796_crit_mod_clks[] __initconst = {
  * 14 13 19 17	(MHz)
  *-------------------------------------------------------------------
  * 0  0  0  0	16.66 x 1	x180	x192	x144	x192	x144
- * 0  0  0  1	16.66 x 1	x180	x192	x144	x128	x144
- * 0  0  1  0	Prohibited setting
+ * 0  0  0  1	16.66 x 1	x180	x192	x144	x168	x144
+ * 0  0  1  0	16.66 x 1	x180	x192	x144	x144	x144
  * 0  0  1  1	16.66 x 1	x180	x192	x144	x192	x144
  * 0  1  0  0	20    x 1	x150	x160	x120	x160	x120
- * 0  1  0  1	20    x 1	x150	x160	x120	x106	x120
- * 0  1  1  0	Prohibited setting
+ * 0  1  0  1	20    x 1	x150	x160	x120	x140	x120
+ * 0  1  1  0	20    x 1	x150	x160	x120	x120	x120
  * 0  1  1  1	20    x 1	x150	x160	x120	x160	x120
  * 1  0  0  0	25    x 1	x120	x128	x96	x128	x96
- * 1  0  0  1	25    x 1	x120	x128	x96	x84	x96
- * 1  0  1  0	Prohibited setting
+ * 1  0  0  1	25    x 1	x120	x128	x96	x112	x96
+ * 1  0  1  0	25    x 1	x120	x128	x96	x96	x96
  * 1  0  1  1	25    x 1	x120	x128	x96	x128	x96
  * 1  1  0  0	33.33 / 2	x180	x192	x144	x192	x144
- * 1  1  0  1	33.33 / 2	x180	x192	x144	x128	x144
- * 1  1  1  0	Prohibited setting
+ * 1  1  0  1	33.33 / 2	x180	x192	x144	x168	x144
+ * 1  1  1  0	33.33 / 2	x180	x192	x144	x144	x144
  * 1  1  1  1	33.33 / 2	x180	x192	x144	x192	x144
  */
 #define CPG_PLL_CONFIG_INDEX(md)	((((md) & BIT(14)) >> 11) | \
@@ -273,20 +273,20 @@ static const unsigned int r8a7796_crit_mod_clks[] __initconst = {
 static const struct rcar_gen3_cpg_pll_config cpg_pll_configs[16] __initconst = {
 	/* EXTAL div	PLL1 mult	PLL3 mult */
 	{ 1,		192,		192,	},
-	{ 1,		192,		128,	},
-	{ 0, /* Prohibited setting */		},
+	{ 1,		192,		168,	},
+	{ 1,		192,		144,	},
 	{ 1,		192,		192,	},
 	{ 1,		160,		160,	},
-	{ 1,		160,		106,	},
-	{ 0, /* Prohibited setting */		},
+	{ 1,		160,		140,	},
+	{ 1,		160,		120,	},
 	{ 1,		160,		160,	},
 	{ 1,		128,		128,	},
-	{ 1,		128,		84,	},
-	{ 0, /* Prohibited setting */		},
+	{ 1,		128,		112,	},
+	{ 1,		128,		96,	},
 	{ 1,		128,		128,	},
 	{ 2,		192,		192,	},
-	{ 2,		192,		128,	},
-	{ 0, /* Prohibited setting */		},
+	{ 2,		192,		168,	},
+	{ 2,		192,		144,	},
 	{ 2,		192,		192,	},
 };
 
