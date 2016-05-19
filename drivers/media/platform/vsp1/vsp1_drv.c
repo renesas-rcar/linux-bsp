@@ -740,6 +740,7 @@ static int vsp1_remove(struct platform_device *pdev)
 {
 	struct vsp1_device *vsp1 = platform_get_drvdata(pdev);
 
+	vsp1_device_put(vsp1);
 	vsp1_destroy_entities(vsp1);
 	rcar_fcp_put(vsp1->fcp);
 
