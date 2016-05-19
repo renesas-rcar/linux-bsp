@@ -1,7 +1,7 @@
 /*
  * vsp1_drm.c  --  R-Car VSP1 DRM API
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -50,6 +50,20 @@ int vsp1_du_init(struct device *dev)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(vsp1_du_init);
+
+int vsp1_du_if_set_mute(struct device *dev, bool on)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+
+	if (on)
+		pipe->vmute_flag = true;
+	else
+		pipe->vmute_flag = false;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vsp1_du_if_set_mute);
 
 /**
  * vsp1_du_setup_lif - Setup the output part of the VSP pipeline

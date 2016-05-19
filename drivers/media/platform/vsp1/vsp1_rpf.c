@@ -62,6 +62,7 @@ static void rpf_configure(struct vsp1_entity *entity,
 			  struct vsp1_pipeline *pipe,
 			  struct vsp1_dl_list *dl)
 {
+	struct vsp1_device *vsp1 = entity->vsp1;
 	struct vsp1_rwpf *rpf = to_rwpf(&entity->subdev);
 	const struct vsp1_format_info *fmtinfo = rpf->fmtinfo;
 	const struct v4l2_pix_format_mplane *format = &rpf->format;
@@ -73,6 +74,14 @@ static void rpf_configure(struct vsp1_entity *entity,
 	u32 pstride;
 	u32 infmt;
 	u32 alph_sel = 0, laya = 0;
+	u32 i;
+
+	if (pipe->vmute_flag) {
+		for (i = 0; i < vsp1->info->rpf_count; ++i)
+			vsp1_rpf_write(rpf, dl, VI6_DPR_RPF_ROUTE(i),
+						VI6_DPR_NODE_UNUSED);
+		return;
+	}
 
 	/* Source size, stride and crop offsets.
 	 *
