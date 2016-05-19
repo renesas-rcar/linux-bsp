@@ -25,8 +25,92 @@
 #include <linux/pinctrl/machine.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/s2ram_ddr_backup.h>
 
 #include "core.h"
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+static struct hw_register pfc_ip_regs[] = {
+	{"PMMR",        0x0000, 32, 0},
+	{"GPSR0",       0x0100, 32, 0},
+	{"GPSR1",       0x0104, 32, 0},
+	{"GPSR2",       0x0108, 32, 0},
+	{"GPSR3",       0x010C, 32, 0},
+	{"GPSR4",       0x0110, 32, 0},
+	{"GPSR5",       0x0114, 32, 0},
+	{"GPSR6",       0x0118, 32, 0},
+	{"GPSR7",       0x011C, 32, 0},
+	{"IPSR0",       0x0200, 32, 0},
+	{"IPSR1",       0x0204, 32, 0},
+	{"IPSR2",       0x0208, 32, 0},
+	{"IPSR3",       0x020C, 32, 0},
+	{"IPSR4",       0x0210, 32, 0},
+	{"IPSR5",       0x0214, 32, 0},
+	{"IPSR6",       0x0218, 32, 0},
+	{"IPSR7",       0x021C, 32, 0},
+	{"IPSR8",       0x0220, 32, 0},
+	{"IPSR9",       0x0224, 32, 0},
+	{"IPSR10",      0x0228, 32, 0},
+	{"IPSR11",      0x022C, 32, 0},
+	{"IPSR12",      0x0230, 32, 0},
+	{"IPSR13",      0x0234, 32, 0},
+	{"IPSR14",      0x0238, 32, 0},
+	{"IPSR15",      0x023C, 32, 0},
+	{"IPSR16",      0x0240, 32, 0},
+	{"IPSR17",      0x0244, 32, 0},
+	{"DRVCTRL0",    0x0300, 32, 0},
+	{"DRVCTRL1",    0x0304, 32, 0},
+	{"DRVCTRL2",    0x0308, 32, 0},
+	{"DRVCTRL3",    0x030C, 32, 0},
+	{"DRVCTRL4",    0x0310, 32, 0},
+	{"DRVCTRL5",    0x0314, 32, 0},
+	{"DRVCTRL6",    0x0318, 32, 0},
+	{"DRVCTRL7",    0x031C, 32, 0},
+	{"DRVCTRL8",    0x0320, 32, 0},
+	{"DRVCTRL9",    0x0324, 32, 0},
+	{"DRVCTRL10",   0x0328, 32, 0},
+	{"DRVCTRL11",   0x032C, 32, 0},
+	{"DRVCTRL12",   0x0330, 32, 0},
+	{"DRVCTRL13",   0x0334, 32, 0},
+	{"DRVCTRL14",   0x0338, 32, 0},
+	{"DRVCTRL15",   0x033C, 32, 0},
+	{"DRVCTRL16",   0x0340, 32, 0},
+	{"DRVCTRL17",   0x0344, 32, 0},
+	{"DRVCTRL18",   0x0348, 32, 0},
+	{"DRVCTRL19",   0x034C, 32, 0},
+	{"DRVCTRL20",   0x0350, 32, 0},
+	{"DRVCTRL21",   0x0354, 32, 0},
+	{"DRVCTRL22",   0x0358, 32, 0},
+	{"DRVCTRL23",   0x035C, 32, 0},
+	{"DRVCTRL24",   0x0360, 32, 0},
+	{"PCCTRL0",     0x0380, 32, 0},
+	{"TDSELCTRL0",  0x03C0, 32, 0},
+	{"IOCTRL",      0x03E0, 32, 0},
+	{"PUEN0",       0x0400, 32, 0},
+	{"PUEN1",       0x0404, 32, 0},
+	{"PUEN2",       0x0408, 32, 0},
+	{"PUEN3",       0x040C, 32, 0},
+	{"PUEN4",       0x0410, 32, 0},
+	{"PUEN5",       0x0414, 32, 0},
+	{"PUEN6",       0x0418, 32, 0},
+	{"PUD0",        0x0440, 32, 0},
+	{"PUD1",        0x0444, 32, 0},
+	{"PUD2",        0x0448, 32, 0},
+	{"PUD3",        0x044C, 32, 0},
+	{"PUD4",        0x0450, 32, 0},
+	{"PUD5",        0x0454, 32, 0},
+	{"PUD6",        0x0458, 32, 0},
+	{"MOD_SEL0",    0x0500, 32, 0},
+	{"MOD_SEL1",    0x0504, 32, 0},
+	{"MOD_SEL2",    0x0508, 32, 0},
+};
+
+static struct rcar_ip pfc_ip = {
+	.ip_name   = "PFC",
+	.reg_count = ARRAY_SIZE(pfc_ip_regs),
+	.ip_reg    = pfc_ip_regs,
+};
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 static int sh_pfc_map_resources(struct sh_pfc *pfc,
 				struct platform_device *pdev)
@@ -666,11 +750,51 @@ static const struct platform_device_id sh_pfc_id_table[] = {
 	{ },
 };
 
+#ifdef CONFIG_PM_SLEEP
+static int sh_pfc_suspend(struct device *dev)
+{
+	int ret = 0;
+#if defined(CONFIG_PINCTRL_PFC_R8A7795) && \
+	defined(CONFIG_RCAR_DDR_BACKUP)
+	struct sh_pfc *pfc = dev_get_drvdata(dev);
+
+	pr_debug("%s\n", __func__);
+
+	if (!pfc_ip.virt_addr)
+		pfc_ip.virt_addr = pfc->windows->virt;
+	if (ret)
+		return ret;
+
+	ret = handle_registers(&pfc_ip, DO_BACKUP);
+#endif
+	return ret;
+}
+
+static int sh_pfc_resume(struct device *dev)
+{
+	int ret = 0;
+#if defined(CONFIG_PINCTRL_PFC_R8A7795) && \
+	defined(CONFIG_RCAR_DDR_BACKUP)
+	pr_debug("%s\n", __func__);
+	ret = handle_registers(&pfc_ip, DO_RESTORE);
+
+#endif
+	return ret;
+}
+
+static SIMPLE_DEV_PM_OPS(sh_pfc_pm_ops,
+			sh_pfc_suspend, sh_pfc_resume);
+#define DEV_PM_OPS (&sh_pfc_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver sh_pfc_driver = {
 	.probe		= sh_pfc_probe,
 	.id_table	= sh_pfc_id_table,
 	.driver		= {
 		.name	= DRV_NAME,
+		.pm	= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(sh_pfc_of_table),
 	},
 };
