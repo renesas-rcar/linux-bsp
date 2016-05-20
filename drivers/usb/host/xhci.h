@@ -2,7 +2,6 @@
 /*
  * xHCI host controller driver
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
  * Copyright (C) 2008 Intel Corp.
  *
  * Author: Sarah Sharp
@@ -1632,7 +1631,7 @@ struct xhci_hcd {
 #define XHCI_BROKEN_STREAMS	(1 << 19)
 #define XHCI_PME_STUCK_QUIRK	(1 << 20)
 #define XHCI_MTK_HOST		(1 << 21)
-#define XHCI_NO_64BIT		(1 << 22)
+#define XHCI_NO_64BIT_SUPPORT	(1 << 23)
 	unsigned int		num_active_eps;
 	unsigned int		limit_active_eps;
 	/* There are two roothubs to keep track of bus suspend info for */
