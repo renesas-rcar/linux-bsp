@@ -20,6 +20,7 @@
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include "renesas-cpg-mssr.h"
 #include "rcar-gen3-cpg.h"
@@ -474,6 +475,10 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 */
 		value = readl(base + CPG_PLL0CR);
 		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		/* Start clock issue W/A (for H3 WS1.0) */
+		if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+			mult *= 2; /* PLL0 output multiplied by 2 */
+		/* End clock issue W/A */
 		break;
 
 	case CLK_TYPE_GEN3_PLL1:
@@ -489,6 +494,10 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 */
 		value = readl(base + CPG_PLL2CR);
 		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		/* Start clock issue W/A (for H3 WS1.0) */
+		if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+			mult *= 2; /* PLL2 output multiplied by 2 */
+		/* End clock issue W/A */
 		break;
 
 	case CLK_TYPE_GEN3_PLL3:
@@ -504,6 +513,10 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 */
 		value = readl(base + CPG_PLL4CR);
 		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		/* Start clock issue W/A (for H3 WS1.0) */
+		if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+			mult *= 2; /* PLL4 output multiplied by 2 */
+		/* End clock issue W/A */
 		break;
 
 	case CLK_TYPE_GEN3_SD:
@@ -562,5 +575,8 @@ int __init rcar_gen3_cpg_init(const struct rcar_gen3_cpg_pll_config *config,
 {
 	cpg_pll_config = config;
 	cpg_clk_extalr = clk_extalr;
+
+	RCAR_PRR_INIT(); /* Get PRR register value */
+
 	return 0;
 }
