@@ -531,7 +531,7 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 * the multiplier value.
 		 */
 		value = readl(base + CPG_PLL0CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		mult = ((value >> 24) & 0x7f) + 1;
 		/* Start clock issue W/A (for H3 WS1.0) */
 		if (soc_device_match(r8a7795es10))
 			mult *= 2; /* PLL0 output multiplied by 2 */
@@ -550,7 +550,7 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 * the multiplier value.
 		 */
 		value = readl(base + CPG_PLL2CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		mult = ((value >> 24) & 0x7f) + 1;
 		/* Start clock issue W/A (for H3 WS1.0) */
 		if (soc_device_match(r8a7795es10))
 			mult *= 2; /* PLL0 output multiplied by 2 */
