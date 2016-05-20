@@ -520,6 +520,12 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 */
 		value = readl(base + CPG_PLL2CR);
 		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		/* Start clock issue W/A */
+		if (!check_product_version(
+			RCAR_H3_PRODUCT_ID|PRODUCT_VERSION_WS1_0)) {
+			mult *= 2; /* Don't divide PLL2 output for 2 */
+		}
+		/* End clock issue W/A */
 		break;
 
 	case CLK_TYPE_GEN3_PLL3:
