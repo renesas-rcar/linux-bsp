@@ -89,7 +89,8 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 	    >> CPG_FRQCRC_ZFC_SHIFT;
 	mult = 32 - val;
 
-	return div_u64((u64)parent_rate * mult, 32);
+	/* Add 1/2 to reduce the math error that raises by math rounding*/
+	return div_u64((u64)parent_rate * mult + 16, 32);
 }
 
 static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
@@ -101,7 +102,7 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (!prate)
 		prate = 1;
 
-	mult = div_u64((u64)rate * 32, prate);
+	mult = div_u64((u64)rate * 32 + prate/2, prate);
 	mult = clamp(mult, 1U, 32U);
 
 	return *parent_rate / 32 * mult;
@@ -115,7 +116,7 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	u32 val, kick;
 	unsigned int i;
 
-	mult = div_u64((u64)rate * 32, parent_rate);
+	mult = div_u64((u64)rate * 32 + parent_rate/2, parent_rate);
 	mult = clamp(mult, 1U, 32U);
 
 	if (clk_readl(zclk->kick_reg) & CPG_FRQCRB_KICK)
