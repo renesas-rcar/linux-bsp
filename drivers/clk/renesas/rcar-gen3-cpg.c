@@ -84,13 +84,16 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 	struct cpg_z_clk *zclk = to_z_clk(hw);
 	unsigned int mult;
 	unsigned int val;
+	unsigned long rate;
 
 	val = (clk_readl(zclk->reg) & CPG_FRQCRC_ZFC_MASK)
 	    >> CPG_FRQCRC_ZFC_SHIFT;
 	mult = 32 - val;
 
-	/* Add 1/2 to reduce the math error that raises by math rounding*/
-	return div_u64((u64)parent_rate * mult + 16, 32);
+	rate = div_u64((u64)parent_rate * mult + 16, 32);
+	/* Round to closest value at 100MHz unit */
+	rate = 100000000*DIV_ROUND_CLOSEST(rate, 100000000);
+	return rate;
 }
 
 static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
