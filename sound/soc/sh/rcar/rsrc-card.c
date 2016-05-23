@@ -168,14 +168,7 @@ static int rsrc_card_parse_links(struct device_node *np,
 		return ret;
 
 	if (is_fe) {
-		/* BE is dummy */
-		dai_link->codec_of_node		= NULL;
-		dai_link->codec_dai_name	= "snd-soc-dummy-dai";
-		dai_link->codec_name		= "snd-soc-dummy";
-
-		/* FE settings */
-		dai_link->dynamic		= 1;
-		dai_link->dpcm_merged_format	= 1;
+		asoc_simple_card_parse_dpcm_fe(dai_link);
 
 		ret = asoc_simple_card_parse_cpu(np, dai_link, DAI, CELL,
 						 &is_single_links);
@@ -202,14 +195,7 @@ static int rsrc_card_parse_links(struct device_node *np,
 
 		of_data = of_device_get_match_data(dev);
 
-		/* FE is dummy */
-		dai_link->cpu_of_node		= NULL;
-		dai_link->cpu_dai_name		= "snd-soc-dummy-dai";
-		dai_link->cpu_name		= "snd-soc-dummy";
-
-		/* BE settings */
-		dai_link->no_pcm		= 1;
-		dai_link->be_hw_params_fixup	= rsrc_card_be_hw_params_fixup;
+		asoc_simple_card_parse_dpcm_be(dai_link, rsrc_card_be_hw_params_fixup);
 
 		ret = asoc_simple_card_parse_codec(np, dai_link, DAI, CELL);
 		if (ret < 0)
@@ -238,8 +224,6 @@ static int rsrc_card_parse_links(struct device_node *np,
 
 	/* Simple Card assumes platform == cpu */
 	dai_link->platform_of_node	= dai_link->cpu_of_node;
-	dai_link->dpcm_playback		= 1;
-	dai_link->dpcm_capture		= 1;
 	dai_link->ops			= &rsrc_card_ops;
 	dai_link->init			= rsrc_card_dai_init;
 
