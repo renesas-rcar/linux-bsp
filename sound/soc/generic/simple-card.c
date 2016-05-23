@@ -353,14 +353,6 @@ static int asoc_simple_card_parse_of(struct device_node *node,
 	if (!node)
 		return -EINVAL;
 
-	/* The off-codec widgets */
-	if (of_property_read_bool(node, "simple-audio-card,widgets")) {
-		ret = snd_soc_of_parse_audio_simple_widgets(&priv->snd_card,
-					"simple-audio-card,widgets");
-		if (ret)
-			return ret;
-	}
-
 	/* Factor to mclk, used in hw_params() */
 	ret = of_property_read_u32(node, "simple-audio-card,mclk-fs", &val);
 	if (ret == 0)
@@ -399,6 +391,10 @@ static int asoc_simple_card_parse_of(struct device_node *node,
 	priv->gpio_mic_det_invert = !!(flags & OF_GPIO_ACTIVE_LOW);
 	if (priv->gpio_mic_det == -EPROBE_DEFER)
 		return -EPROBE_DEFER;
+
+	ret = asoc_simple_card_parse_card_widgets(card, PREFIX);
+	if (ret)
+		return ret;
 
 	ret = asoc_simple_card_parse_card_route(card, PREFIX);
 	if (ret)
