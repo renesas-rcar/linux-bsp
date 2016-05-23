@@ -44,7 +44,6 @@ static const struct of_device_id rsrc_card_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, rsrc_card_of_match);
 
-#define DAI_NAME_NUM	32
 struct rsrc_card_dai {
 	unsigned int sysclk;
 	unsigned int tx_slot_mask;
@@ -52,7 +51,7 @@ struct rsrc_card_dai {
 	int slots;
 	int slot_width;
 	struct clk *clk;
-	char dai_name[DAI_NAME_NUM];
+	const char *name;
 };
 
 #define IDX_CPU		0
@@ -160,6 +159,7 @@ static int rsrc_card_parse_links(struct device_node *np,
 				 struct rsrc_card_priv *priv,
 				 int idx, bool is_fe)
 {
+	struct device *dev = rsrc_priv_to_dev(priv);
 	struct snd_soc_dai_link *dai_link = rsrc_priv_to_link(priv, idx);
 	struct rsrc_card_dai *dai_props = rsrc_priv_to_props(priv, idx);
 	struct of_phandle_args args;
@@ -197,10 +197,6 @@ static int rsrc_card_parse_links(struct device_node *np,
 		if (ret < 0)
 			return ret;
 
-		/* set dai_name */
-		snprintf(dai_props->dai_name, DAI_NAME_NUM, "fe.%s",
-			 dai_link->cpu_dai_name);
-
 		/*
 		 * In soc_bind_dai_link() will check cpu name after
 		 * of_node matching if dai_link has cpu_dai_name.
@@ -213,7 +209,6 @@ static int rsrc_card_parse_links(struct device_node *np,
 		if (!args.args_count)
 			dai_link->cpu_dai_name = NULL;
 	} else {
-		struct device *dev = rsrc_priv_to_dev(priv);
 		const struct rsrc_card_of_data *of_data;
 
 		of_data = of_device_get_match_data(dev);
@@ -241,18 +236,16 @@ static int rsrc_card_parse_links(struct device_node *np,
 						      dai_link->codec_of_node,
 						      "audio-prefix");
 		}
-
-		/* set dai_name */
-		snprintf(dai_props->dai_name, DAI_NAME_NUM, "be.%s",
-			 dai_link->codec_dai_name);
 	}
+
+	ret = asoc_simple_card_parse_dailink_name(dev, dai_link);
+	if (ret < 0)
+		return ret;
 
 	/* Simple Card assumes platform == cpu */
 	dai_link->platform_of_node	= dai_link->cpu_of_node;
 	dai_link->dpcm_playback		= 1;
 	dai_link->dpcm_capture		= 1;
-	dai_link->name			= dai_props->dai_name;
-	dai_link->stream_name		= dai_props->dai_name;
 	dai_link->ops			= &rsrc_card_ops;
 	dai_link->init			= rsrc_card_dai_init;
 
@@ -313,7 +306,7 @@ static int rsrc_card_dai_sub_link_of(struct device_node *node,
 		return ret;
 
 	dev_dbg(dev, "\t%s / %04x / %d\n",
-		dai_props->dai_name,
+		dai_link->name,
 		dai_link->dai_fmt,
 		dai_props->sysclk);
 
