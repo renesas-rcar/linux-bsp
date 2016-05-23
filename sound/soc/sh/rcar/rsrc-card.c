@@ -158,15 +158,6 @@ static int rsrc_card_parse_links(struct device_node *np,
 	int is_single_links = 0;
 	int ret;
 
-	/* Parse TDM slot */
-	ret = snd_soc_of_parse_tdm_slot(np,
-					&dai_props->tx_slot_mask,
-					&dai_props->rx_slot_mask,
-					&dai_props->slots,
-					&dai_props->slot_width);
-	if (ret)
-		return ret;
-
 	if (is_fe) {
 		asoc_simple_card_parse_dpcm_fe(dai_link);
 
@@ -217,6 +208,10 @@ static int rsrc_card_parse_links(struct device_node *np,
 				return ret;
 		}
 	}
+
+	ret = asoc_simple_card_parse_tdm(np, dai_props);
+	if (ret < 0)
+		return ret;
 
 	ret = asoc_simple_card_parse_dailink_name(dev, dai_link);
 	if (ret < 0)
