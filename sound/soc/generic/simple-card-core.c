@@ -63,3 +63,45 @@ int asoc_simple_card_parse_tdm(struct device_node *port_np,
 					 &simple_dai->slot_width);
 }
 EXPORT_SYMBOL_GPL(asoc_simple_card_parse_tdm);
+
+int asoc_simple_card_parse_dailink_name(struct device *dev,
+					struct snd_soc_dai_link *dai_link)
+{
+	char *name = NULL;
+	int ret = -ENOMEM;
+
+	if (dai_link->dynamic && dai_link->cpu_dai_name) {
+		name = devm_kzalloc(dev,
+				    strlen(dai_link->cpu_dai_name) + 4,
+				    GFP_KERNEL);
+		if (name)
+			sprintf(name, "fe.%s", dai_link->cpu_dai_name);
+
+	} else if (dai_link->no_pcm && dai_link->codec_dai_name) {
+		name = devm_kzalloc(dev,
+				    strlen(dai_link->codec_dai_name) + 4,
+				    GFP_KERNEL);
+		if (name)
+			sprintf(name, "be.%s", dai_link->codec_dai_name);
+	} else if (dai_link->cpu_dai_name && dai_link->codec_dai_name) {
+		name = devm_kzalloc(dev,
+				    strlen(dai_link->cpu_dai_name)   +
+				    strlen(dai_link->codec_dai_name) + 2,
+				    GFP_KERNEL);
+		if (name) {
+			sprintf(name, "%s-%s",
+				dai_link->cpu_dai_name,
+				dai_link->codec_dai_name);
+		}
+	}
+
+	if (name) {
+		ret = 0;
+
+		dai_link->name =
+			dai_link->stream_name = name;
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(asoc_simple_card_parse_dailink_name);
