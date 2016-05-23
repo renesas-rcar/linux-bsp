@@ -52,3 +52,14 @@ int asoc_simple_card_parse_daifmt(struct device *dev,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(asoc_simple_card_parse_daifmt);
+
+int asoc_simple_card_parse_tdm(struct device_node *port_np,
+			       struct asoc_simple_dai *simple_dai)
+{
+	return snd_soc_of_parse_tdm_slot(port_np,
+					 &simple_dai->tx_slot_mask,
+					 &simple_dai->rx_slot_mask,
+					 &simple_dai->slots,
+					 &simple_dai->slot_width);
+}
+EXPORT_SYMBOL_GPL(asoc_simple_card_parse_tdm);
