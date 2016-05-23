@@ -69,4 +69,11 @@ int asoc_simple_card_parse_endpoint(struct device_node *port_np,
 				  const char *cells_name,
 				  int *is_single_links);
 
+#define asoc_simple_card_parse_dpcm_fe(dai_link)	\
+	asoc_simple_card_parse_dpcm(dai_link, NULL)
+#define asoc_simple_card_parse_dpcm_be(dai_link, fixup)	\
+	asoc_simple_card_parse_dpcm(dai_link, fixup)
+void asoc_simple_card_parse_dpcm(struct snd_soc_dai_link *dai_link,
+			int (*be_fixup)(struct snd_soc_pcm_runtime *rtd,
+					struct snd_pcm_hw_params *params));
 #endif /* __SIMPLE_CARD_CORE_H */

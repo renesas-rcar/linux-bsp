@@ -242,3 +242,32 @@ int asoc_simple_card_parse_endpoint(struct device_node *port_np,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(asoc_simple_card_parse_endpoint);
+
+void asoc_simple_card_parse_dpcm(struct snd_soc_dai_link *dai_link,
+				 int (*be_fixup)(struct snd_soc_pcm_runtime *rtd,
+						 struct snd_pcm_hw_params *params))
+{
+	if (be_fixup) {
+		/* FE is dummy */
+		dai_link->cpu_of_node		= NULL;
+		dai_link->cpu_dai_name		= "snd-soc-dummy-dai";
+		dai_link->cpu_name		= "snd-soc-dummy";
+
+		/* BE settings */
+		dai_link->no_pcm		= 1;
+		dai_link->be_hw_params_fixup	= be_fixup;
+	} else {
+		/* BE is dummy */
+		dai_link->codec_of_node		= NULL;
+		dai_link->codec_dai_name	= "snd-soc-dummy-dai";
+		dai_link->codec_name		= "snd-soc-dummy";
+
+		/* FE settings */
+		dai_link->dynamic		= 1;
+		dai_link->dpcm_merged_format	= 1;
+	}
+
+	dai_link->dpcm_playback		= 1;
+	dai_link->dpcm_capture		= 1;
+}
+EXPORT_SYMBOL_GPL(asoc_simple_card_parse_dpcm);
