@@ -18,8 +18,6 @@
 #include <linux/string.h>
 #include <sound/jack.h>
 #include <sound/simple_card.h>
-#include <sound/soc-dai.h>
-#include <sound/soc.h>
 
 struct simple_card_data {
 	struct snd_soc_card snd_card;
