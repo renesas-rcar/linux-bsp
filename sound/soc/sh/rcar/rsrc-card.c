@@ -224,10 +224,11 @@ static int rsrc_card_parse_links(struct device_node *np,
 			priv->codec_conf.of_node = dai_link->codec_of_node;
 			priv->codec_conf.name_prefix = of_data->prefix;
 		} else {
-			snd_soc_of_parse_audio_prefix(&priv->snd_card,
-						      &priv->codec_conf,
-						      dai_link->codec_of_node,
-						      "audio-prefix");
+			ret = asoc_simple_card_parse_card_prefix(&priv->snd_card,
+						dai_link, &priv->codec_conf,
+						"audio-");
+			if (ret < 0)
+				return ret;
 		}
 	}
 
