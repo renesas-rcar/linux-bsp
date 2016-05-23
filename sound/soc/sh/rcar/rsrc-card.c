@@ -1,5 +1,5 @@
 /*
- * Renesas Sampling Rate Convert Sound Card for DPCM
+ * ASoC simple DPCM sound card support
  *
  * Copyright (C) 2015 Renesas Solutions Corp.
  * Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
@@ -19,7 +19,7 @@
 #include <linux/string.h>
 #include <sound/simple_card_core.h>
 
-struct rsrc_card_of_data {
+struct asoc_simple_card_of_data {
 	const char *prefix;
 	const struct snd_soc_dapm_route *routes;
 	int num_routes;
@@ -30,23 +30,23 @@ static const struct snd_soc_dapm_route routes_ssi0_ak4642[] = {
 	{"DAI0 Capture", NULL, "ak4642 Capture"},
 };
 
-static const struct rsrc_card_of_data routes_of_ssi0_ak4642 = {
+static const struct asoc_simple_card_of_data routes_of_ssi0_ak4642 = {
 	.prefix		= "ak4642",
 	.routes		= routes_ssi0_ak4642,
 	.num_routes	= ARRAY_SIZE(routes_ssi0_ak4642),
 };
 
-static const struct of_device_id rsrc_card_of_match[] = {
+static const struct of_device_id asoc_simple_card_of_match[] = {
 	{ .compatible = "renesas,rsrc-card,lager",	.data = &routes_of_ssi0_ak4642 },
 	{ .compatible = "renesas,rsrc-card,koelsch",	.data = &routes_of_ssi0_ak4642 },
 	{ .compatible = "renesas,rsrc-card", },
 	{},
 };
-MODULE_DEVICE_TABLE(of, rsrc_card_of_match);
+MODULE_DEVICE_TABLE(of, asoc_simple_card_of_match);
 
 #define IDX_CPU		0
 #define IDX_CODEC	1
-struct rsrc_card_priv {
+struct asoc_simple_card_priv {
 	struct snd_soc_card snd_card;
 	struct snd_soc_codec_conf codec_conf;
 	struct asoc_simple_dai *dai_props;
@@ -55,48 +55,48 @@ struct rsrc_card_priv {
 	u32 convert_channels;
 };
 
-#define rsrc_priv_to_dev(priv) ((priv)->snd_card.dev)
-#define rsrc_priv_to_link(priv, i) ((priv)->snd_card.dai_link + (i))
-#define rsrc_priv_to_props(priv, i) ((priv)->dai_props + (i))
+#define simple_priv_to_dev(priv) ((priv)->snd_card.dev)
+#define simple_priv_to_link(priv, i) ((priv)->snd_card.dai_link + (i))
+#define simple_priv_to_props(priv, i) ((priv)->dai_props + (i))
 
 #define DAI	"sound-dai"
 #define CELL	"#sound-dai-cells"
 
-static int rsrc_card_startup(struct snd_pcm_substream *substream)
+static int asoc_simple_card_startup(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct rsrc_card_priv *priv =	snd_soc_card_get_drvdata(rtd->card);
+	struct asoc_simple_card_priv *priv =	snd_soc_card_get_drvdata(rtd->card);
 	struct asoc_simple_dai *dai_props =
-		rsrc_priv_to_props(priv, rtd->num);
+		simple_priv_to_props(priv, rtd->num);
 
 	return clk_prepare_enable(dai_props->clk);
 }
 
-static void rsrc_card_shutdown(struct snd_pcm_substream *substream)
+static void asoc_simple_card_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct rsrc_card_priv *priv =	snd_soc_card_get_drvdata(rtd->card);
+	struct asoc_simple_card_priv *priv =	snd_soc_card_get_drvdata(rtd->card);
 	struct asoc_simple_dai *dai_props =
-		rsrc_priv_to_props(priv, rtd->num);
+		simple_priv_to_props(priv, rtd->num);
 
 	clk_disable_unprepare(dai_props->clk);
 }
 
-static struct snd_soc_ops rsrc_card_ops = {
-	.startup = rsrc_card_startup,
-	.shutdown = rsrc_card_shutdown,
+static struct snd_soc_ops asoc_simple_card_ops = {
+	.startup = asoc_simple_card_startup,
+	.shutdown = asoc_simple_card_shutdown,
 };
 
-static int rsrc_card_dai_init(struct snd_soc_pcm_runtime *rtd)
+static int asoc_simple_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct rsrc_card_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct asoc_simple_card_priv *priv = snd_soc_card_get_drvdata(rtd->card);
 	struct snd_soc_dai *dai;
 	struct snd_soc_dai_link *dai_link;
 	struct asoc_simple_dai *dai_props;
 	int num = rtd->num;
 
-	dai_link	= rsrc_priv_to_link(priv, num);
-	dai_props	= rsrc_priv_to_props(priv, num);
+	dai_link	= simple_priv_to_link(priv, num);
+	dai_props	= simple_priv_to_props(priv, num);
 	dai		= dai_link->dynamic ?
 				rtd->cpu_dai :
 				rtd->codec_dai;
@@ -104,10 +104,10 @@ static int rsrc_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return asoc_simple_card_init_dai(dai, dai_props);
 }
 
-static int rsrc_card_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+static int asoc_simple_card_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 					struct snd_pcm_hw_params *params)
 {
-	struct rsrc_card_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct asoc_simple_card_priv *priv = snd_soc_card_get_drvdata(rtd->card);
 	struct snd_interval *rate = hw_param_interval(params,
 						      SNDRV_PCM_HW_PARAM_RATE);
 	struct snd_interval *channels = hw_param_interval(params,
@@ -124,13 +124,13 @@ static int rsrc_card_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	return 0;
 }
 
-static int rsrc_card_parse_links(struct device_node *np,
-				 struct rsrc_card_priv *priv,
+static int asoc_simple_card_parse_links(struct device_node *np,
+				 struct asoc_simple_card_priv *priv,
 				 int idx, bool is_fe)
 {
-	struct device *dev = rsrc_priv_to_dev(priv);
-	struct snd_soc_dai_link *dai_link = rsrc_priv_to_link(priv, idx);
-	struct asoc_simple_dai *dai_props = rsrc_priv_to_props(priv, idx);
+	struct device *dev = simple_priv_to_dev(priv);
+	struct snd_soc_dai_link *dai_link = simple_priv_to_link(priv, idx);
+	struct asoc_simple_dai *dai_props = simple_priv_to_props(priv, idx);
 	int is_single_links = 0;
 	int ret;
 
@@ -147,11 +147,11 @@ static int rsrc_card_parse_links(struct device_node *np,
 			return ret;
 
 	} else {
-		const struct rsrc_card_of_data *of_data;
+		const struct asoc_simple_card_of_data *of_data;
 
 		of_data = of_device_get_match_data(dev);
 
-		asoc_simple_card_parse_dpcm_be(dai_link, rsrc_card_be_hw_params_fixup);
+		asoc_simple_card_parse_dpcm_be(dai_link, asoc_simple_card_be_hw_params_fixup);
 
 		ret = asoc_simple_card_parse_codec(np, dai_link, DAI, CELL);
 		if (ret < 0)
@@ -186,8 +186,8 @@ static int rsrc_card_parse_links(struct device_node *np,
 	if (ret < 0)
 		return ret;
 
-	dai_link->ops			= &rsrc_card_ops;
-	dai_link->init			= rsrc_card_dai_init;
+	dai_link->ops			= &asoc_simple_card_ops;
+	dai_link->init			= asoc_simple_card_dai_init;
 
 	dev_dbg(dev, "\t%s / %04x / %d\n",
 		dai_link->name,
@@ -202,10 +202,10 @@ static int rsrc_card_parse_links(struct device_node *np,
 	return 0;
 }
 
-static int rsrc_card_dai_link_of(struct device_node *node,
-				 struct rsrc_card_priv *priv)
+static int asoc_simple_card_dai_link_of(struct device_node *node,
+				 struct asoc_simple_card_priv *priv)
 {
-	struct device *dev = rsrc_priv_to_dev(priv);
+	struct device *dev = simple_priv_to_dev(priv);
 	struct snd_soc_dai_link *dai_link;
 	struct device_node *np;
 	unsigned int daifmt = 0;
@@ -215,7 +215,7 @@ static int rsrc_card_dai_link_of(struct device_node *node,
 	/* find 1st codec */
 	i = 0;
 	for_each_child_of_node(node, np) {
-		dai_link = rsrc_priv_to_link(priv, i);
+		dai_link = simple_priv_to_link(priv, i);
 
 		if (strcmp(np->name, "codec") == 0) {
 			ret = asoc_simple_card_parse_daifmt(dev, node, np,
@@ -229,14 +229,14 @@ static int rsrc_card_dai_link_of(struct device_node *node,
 
 	i = 0;
 	for_each_child_of_node(node, np) {
-		dai_link = rsrc_priv_to_link(priv, i);
+		dai_link = simple_priv_to_link(priv, i);
 		dai_link->dai_fmt = daifmt;
 
 		is_fe = false;
 		if (strcmp(np->name, "cpu") == 0)
 			is_fe = true;
 
-		ret = rsrc_card_parse_links(np, priv, i, is_fe);
+		ret = asoc_simple_card_parse_links(np, priv, i, is_fe);
 		if (ret < 0)
 			return ret;
 		i++;
@@ -245,11 +245,11 @@ static int rsrc_card_dai_link_of(struct device_node *node,
 	return 0;
 }
 
-static int rsrc_card_parse_of(struct device_node *node,
-			      struct rsrc_card_priv *priv,
+static int asoc_simple_card_parse_of(struct device_node *node,
+			      struct asoc_simple_card_priv *priv,
 			      struct device *dev)
 {
-	const struct rsrc_card_of_data *of_data = of_device_get_match_data(dev);
+	const struct asoc_simple_card_of_data *of_data = of_device_get_match_data(dev);
 	struct asoc_simple_dai *props;
 	struct snd_soc_dai_link *links;
 	int ret;
@@ -281,7 +281,7 @@ static int rsrc_card_parse_of(struct device_node *node,
 	/* channels transfer */
 	of_property_read_u32(node, "convert-channels", &priv->convert_channels);
 
-	ret = rsrc_card_dai_link_of(node, priv);
+	ret = asoc_simple_card_dai_link_of(node, priv);
 	if (ret < 0)
 		return ret;
 
@@ -304,9 +304,9 @@ static int rsrc_card_parse_of(struct device_node *node,
 	return 0;
 }
 
-static int rsrc_card_probe(struct platform_device *pdev)
+static int asoc_simple_card_probe(struct platform_device *pdev)
 {
-	struct rsrc_card_priv *priv;
+	struct asoc_simple_card_priv *priv;
 	struct device_node *np = pdev->dev.of_node;
 	struct device *dev = &pdev->dev;
 	int ret;
@@ -316,7 +316,7 @@ static int rsrc_card_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 
-	ret = rsrc_card_parse_of(np, priv, dev);
+	ret = asoc_simple_card_parse_of(np, priv, dev);
 	if (ret < 0) {
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "parse error %d\n", ret);
@@ -334,25 +334,25 @@ err:
 	return ret;
 }
 
-static int rsrc_card_remove(struct platform_device *pdev)
+static int asoc_simple_card_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 
 	return asoc_simple_card_clean_reference(card);
 }
 
-static struct platform_driver rsrc_card = {
+static struct platform_driver asoc_simple_card = {
 	.driver = {
 		.name = "renesas-src-audio-card",
-		.of_match_table = rsrc_card_of_match,
+		.of_match_table = asoc_simple_card_of_match,
 	},
-	.probe = rsrc_card_probe,
-	.remove = rsrc_card_remove,
+	.probe = asoc_simple_card_probe,
+	.remove = asoc_simple_card_remove,
 };
 
-module_platform_driver(rsrc_card);
+module_platform_driver(asoc_simple_card);
 
-MODULE_ALIAS("platform:renesas-src-audio-card");
+MODULE_ALIAS("platform:asoc-simple-dpcm-card");
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Renesas Sampling Rate Convert Sound Card");
+MODULE_DESCRIPTION("ASoC Simple DPCM Sound Card");
 MODULE_AUTHOR("Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>");
