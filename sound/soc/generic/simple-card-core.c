@@ -331,3 +331,32 @@ void asoc_simple_card_remove_jack(struct asoc_simple_jack *sjack)
 		snd_soc_jack_free_gpios(&sjack->jack, 1, &sjack->gpio);
 }
 EXPORT_SYMBOL_GPL(asoc_simple_card_remove_jack);
+
+int asoc_simple_card_init_dai(struct snd_soc_dai *dai,
+			      struct asoc_simple_dai *simple_dai)
+{
+	int ret;
+
+	if (simple_dai->sysclk) {
+		ret = snd_soc_dai_set_sysclk(dai, 0, simple_dai->sysclk, 0);
+		if (ret && ret != -ENOTSUPP) {
+			dev_err(dai->dev, "simple-card: set_sysclk error\n");
+			return ret;
+		}
+	}
+
+	if (simple_dai->slots) {
+		ret = snd_soc_dai_set_tdm_slot(dai,
+					       simple_dai->tx_slot_mask,
+					       simple_dai->rx_slot_mask,
+					       simple_dai->slots,
+					       simple_dai->slot_width);
+		if (ret && ret != -ENOTSUPP) {
+			dev_err(dai->dev, "simple-card: set_tdm_slot error\n");
+			return ret;
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(asoc_simple_card_init_dai);
