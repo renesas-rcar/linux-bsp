@@ -40,6 +40,7 @@ struct simple_card_data {
 
 #define DAI	"sound-dai"
 #define CELL	"#sound-dai-cells"
+#define PREFIX	"simple-audio-card,"
 
 static int asoc_simple_card_startup(struct snd_pcm_substream *substream)
 {
@@ -233,7 +234,7 @@ static int asoc_simple_card_dai_link_of(struct device_node *node,
 
 	/* For single DAI link & old style of DT node */
 	if (is_top_level_node)
-		prefix = "simple-audio-card,";
+		prefix = PREFIX;
 
 	snprintf(prop, sizeof(prop), "%scpu", prefix);
 	cpu = of_get_child_by_name(node, prop);
@@ -344,15 +345,13 @@ static int asoc_simple_card_parse_of(struct device_node *node,
 				     struct simple_card_data *priv)
 {
 	struct device *dev = simple_priv_to_dev(priv);
+	struct snd_soc_card *card = &priv->snd_card;
 	enum of_gpio_flags flags;
 	u32 val;
 	int ret;
 
 	if (!node)
 		return -EINVAL;
-
-	/* Parse the card name from DT */
-	snd_soc_of_parse_card_name(&priv->snd_card, "simple-audio-card,name");
 
 	/* The off-codec widgets */
 	if (of_property_read_bool(node, "simple-audio-card,widgets")) {
@@ -374,9 +373,6 @@ static int asoc_simple_card_parse_of(struct device_node *node,
 	ret = of_property_read_u32(node, "simple-audio-card,mclk-fs", &val);
 	if (ret == 0)
 		priv->mclk_fs = val;
-
-	dev_dbg(dev, "New simple-card: %s\n", priv->snd_card.name ?
-		priv->snd_card.name : "");
 
 	/* Single/Muti DAI link(s) & New style of DT node */
 	if (of_get_child_by_name(node, "simple-audio-card,dai-link")) {
@@ -412,8 +408,9 @@ static int asoc_simple_card_parse_of(struct device_node *node,
 	if (priv->gpio_mic_det == -EPROBE_DEFER)
 		return -EPROBE_DEFER;
 
-	if (!priv->snd_card.name)
-		priv->snd_card.name = priv->snd_card.dai_link->name;
+	ret = asoc_simple_card_parse_card_name(card, PREFIX);
+	if (ret)
+		return ret;
 
 	return 0;
 }
