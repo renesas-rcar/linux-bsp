@@ -212,31 +212,6 @@ static int asoc_simple_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static int
-asoc_simple_card_sub_parse_of(struct device_node *np,
-			      struct asoc_simple_dai *dai,
-			      struct device_node **p_node,
-			      const char **name,
-			      int *args_count)
-{
-	int ret;
-
-	if (!np)
-		return 0;
-
-	if (!dai)
-		return 0;
-
-	/* Parse TDM slot */
-	ret = snd_soc_of_parse_tdm_slot(np, &dai->tx_slot_mask,
-					&dai->rx_slot_mask,
-					&dai->slots, &dai->slot_width);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
 static int asoc_simple_card_dai_link_of(struct device_node *node,
 					struct simple_card_data *priv,
 					int idx,
@@ -296,22 +271,11 @@ static int asoc_simple_card_dai_link_of(struct device_node *node,
 	if (ret < 0)
 		goto dai_link_of_err;
 
-	ret = asoc_simple_card_sub_parse_of(cpu, &dai_props->cpu_dai,
-					    &dai_link->cpu_of_node,
-					    &dai_link->cpu_dai_name,
-					    &single_cpu);
+	ret = asoc_simple_card_parse_tdm(cpu, cpu_dai);
 	if (ret < 0)
 		goto dai_link_of_err;
 
-	ret = asoc_simple_card_sub_parse_of(codec, &dai_props->codec_dai,
-					    &dai_link->codec_of_node,
-					    &dai_link->codec_dai_name, NULL);
-	if (ret < 0)
-		goto dai_link_of_err;
-
-	ret = asoc_simple_card_sub_parse_of(plat, NULL,
-					    &dai_link->platform_of_node,
-					    NULL, NULL);
+	ret = asoc_simple_card_parse_tdm(codec, codec_dai);
 	if (ret < 0)
 		goto dai_link_of_err;
 
