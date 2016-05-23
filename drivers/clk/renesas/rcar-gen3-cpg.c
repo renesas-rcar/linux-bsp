@@ -44,7 +44,6 @@ static const struct soc_device_attribute r8a7796es10[] __initconst = {
 #define CPG_PLLECR     0x00D0
 #define CPG_PLLECR_PLL0ST (1 << 8)
 
-
 /* Define for PLL0 clk driver */
 #define CPG_PLL0CR_STC_MASK             0x7f000000
 #define CPG_PLL0CR_STC_SHIFT            24
@@ -70,6 +69,11 @@ static int cpg_pll0_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned int stc_val;
 	u32 val;
 	int i;
+
+	/* Start clock issue W/A (for H3 WS1.0) */
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+		prate *= 2; /* PLL0 output multiplied by 2 */
+	/* End clock issue W/A */
 
 	stc_val = DIV_ROUND_CLOSEST(rate, prate);
 	stc_val = clamp(stc_val, 90U, 120U);/*Lowest value is 1.5G (stc == 90)*/
@@ -103,6 +107,11 @@ static long cpg_pll0_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (rate < Z_CLK_MAX_THRESHOLD)
 		rate = Z_CLK_MAX_THRESHOLD; /* Set lowest value: 1.5GHz */
 
+	/* Start clock issue W/A (for H3 WS1.0) */
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+		prate *= 2; /* PLL0 output multiplied by 2 */
+	/* End clock issue W/A */
+
 	mult = DIV_ROUND_CLOSEST(rate, prate);
 	mult = clamp(mult, 90U, 120U); /* 1.5G => (stc == 90)*/
 
@@ -126,6 +135,11 @@ static unsigned long cpg_pll0_clk_recalc_rate(struct clk_hw *hw,
 		>> CPG_PLL0CR_STC_SHIFT;
 
 	rate = (u64)parent_rate * (val + 1);
+
+	/* Start clock issue W/A (for H3 WS1.0) */
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+		rate *= 2; /* PLL0 output multiplied by 2 */
+	/* End clock issue W/A */
 
 	/* Round to closest value at 100MHz unit */
 	rate = 100000000 * DIV_ROUND_CLOSEST(rate, 100000000);
