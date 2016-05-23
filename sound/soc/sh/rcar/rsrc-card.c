@@ -308,32 +308,31 @@ static int rsrc_card_parse_of(struct device_node *node,
 	priv->snd_card.codec_conf		= &priv->codec_conf;
 	priv->snd_card.num_configs		= 1;
 
-	if (of_data) {
-		priv->snd_card.of_dapm_routes		= of_data->routes;
-		priv->snd_card.num_of_dapm_routes	= of_data->num_routes;
-	} else {
-		snd_soc_of_parse_audio_routing(&priv->snd_card,
-					       "audio-routing");
-	}
-
 	/* sampling rate convert */
 	of_property_read_u32(node, "convert-rate", &priv->convert_rate);
 
 	/* channels transfer */
 	of_property_read_u32(node, "convert-channels", &priv->convert_channels);
 
-	dev_dbg(dev, "New rsrc-audio-card: %s\n",
-		priv->snd_card.name ? priv->snd_card.name : "");
-	dev_dbg(dev, "SRC : convert_rate     %d\n", priv->convert_rate);
-	dev_dbg(dev, "CTU : convert_channels %d\n", priv->convert_channels);
-
 	ret = rsrc_card_dai_link_of(node, priv);
 	if (ret < 0)
 		return ret;
 
+	if (of_data) {
+		priv->snd_card.of_dapm_routes		= of_data->routes;
+		priv->snd_card.num_of_dapm_routes	= of_data->num_routes;
+	} else {
+		asoc_simple_card_parse_card_route(&priv->snd_card, "audio-");
+	}
+
 	ret = asoc_simple_card_parse_card_name(&priv->snd_card, "card-");
 	if (ret < 0)
 		return ret;
+
+	dev_dbg(dev, "New rsrc-audio-card: %s\n",
+		priv->snd_card.name ? priv->snd_card.name : "");
+	dev_dbg(dev, "SRC : convert_rate     %d\n", priv->convert_rate);
+	dev_dbg(dev, "CTU : convert_channels %d\n", priv->convert_channels);
 
 	return 0;
 }
