@@ -146,17 +146,6 @@ static int rsrc_card_parse_links(struct device_node *np,
 		if (ret < 0)
 			return ret;
 
-		/*
-		 * In soc_bind_dai_link() will check cpu name after
-		 * of_node matching if dai_link has cpu_dai_name.
-		 * but, it will never match if name was created by
-		 * fmt_single_name() remove cpu_dai_name if cpu_args
-		 * was 0. See:
-		 *	fmt_single_name()
-		 *	fmt_multiple_name()
-		 */
-		if (is_single_links)
-			dai_link->cpu_dai_name = NULL;
 	} else {
 		const struct rsrc_card_of_data *of_data;
 
@@ -202,6 +191,11 @@ static int rsrc_card_parse_links(struct device_node *np,
 		dai_link->name,
 		dai_link->dai_fmt,
 		dai_props->sysclk);
+
+	ret = asoc_simple_card_canonicalize_cpu(dai_link,
+						is_single_links);
+	if (ret)
+		return ret;
 
 	return 0;
 }
