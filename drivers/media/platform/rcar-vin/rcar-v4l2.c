@@ -25,6 +25,8 @@
 #define RVIN_DEFAULT_FORMAT	V4L2_PIX_FMT_YUYV
 #define RVIN_MAX_WIDTH		2048
 #define RVIN_MAX_HEIGHT		2048
+#define RVIN_MAX_WIDTH_GEN3	4096
+#define RVIN_MAX_HEIGHT_GEN3	4096
 
 /* -----------------------------------------------------------------------------
  * Format Conversions
@@ -206,7 +208,7 @@ static int __rvin_try_format(struct rvin_dev *vin,
 			     struct rvin_source_fmt *source)
 {
 	const struct rvin_video_format *info;
-	u32 rwidth, rheight, walign;
+	u32 rwidth, rheight, walign, max_width, max_height;
 
 	/* Requested */
 	rwidth = pix->width;
@@ -261,8 +263,17 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
 
 	/* Limit to VIN capabilities */
-	v4l_bound_align_image(&pix->width, 2, RVIN_MAX_WIDTH, walign,
-			      &pix->height, 4, RVIN_MAX_HEIGHT, 2, 0);
+	if (vin->chip == RCAR_GEN3) {
+		max_width = RVIN_MAX_WIDTH_GEN3;
+		max_height = RVIN_MAX_HEIGHT_GEN3;
+	} else {
+		max_width = RVIN_MAX_WIDTH;
+		max_height = RVIN_MAX_HEIGHT;
+	}
+
+	/* Limit to VIN capabilities */
+	v4l_bound_align_image(&pix->width, 2, max_width, walign,
+			      &pix->height, 4, max_height, 2, 0);
 
 	pix->bytesperline = max_t(u32, pix->bytesperline,
 				  rvin_format_bytesperline(pix));
