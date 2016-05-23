@@ -521,7 +521,7 @@
 
 		opp@1200000000 {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <820000>;
+			opp-microvolt = <850000>;
 			clock-latency-ns = <300000>;
 		};
 	};
@@ -1773,7 +1773,7 @@
 			interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 131>;
-			power-domains = <&pd_a2vc1>;
+			power-domains = <&pd_a2vc0>;
 			renesas,#ch = <2>;
 			renesas,#fcp_ch = <0>;
 		};
