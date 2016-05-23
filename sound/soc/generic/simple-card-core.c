@@ -204,3 +204,41 @@ int asoc_simple_card_parse_clk(struct device_node *port_np,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(asoc_simple_card_parse_clk);
+
+int asoc_simple_card_parse_endpoint(struct device_node *port_np,
+				    struct device_node **endpoint_np,
+				    const char **dai_name,
+				    const char *list_name,
+				    const char *cells_name,
+				    int *is_single_link)
+{
+	struct of_phandle_args args;
+	int ret;
+
+	if (!port_np)
+		return 0;
+
+	/*
+	 * Get node via "sound-dai = <&phandle port>"
+	 * it will be used as xxx_of_node on soc_bind_dai_link()
+	 */
+	ret = of_parse_phandle_with_args(port_np,
+					 list_name, cells_name, 0, &args);
+	if (ret)
+		return ret;
+
+	/* Get dai->name */
+	if (dai_name) {
+		ret = snd_soc_of_get_dai_name(port_np, dai_name);
+		if (ret < 0)
+			return ret;
+	}
+
+	*endpoint_np = args.np;
+
+	if (is_single_link)
+		*is_single_link = !args.args_count;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(asoc_simple_card_parse_endpoint);

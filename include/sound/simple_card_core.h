@@ -50,4 +50,23 @@ int asoc_simple_card_parse_clk(struct device_node *port_np,
 			       struct device_node *endpoint_np,
 			       struct asoc_simple_dai *simple_dai);
 
+#define asoc_simple_card_parse_cpu(port_np, dai_link,				\
+				   list_name, cells_name, is_single_link)	\
+	asoc_simple_card_parse_endpoint(port_np, &dai_link->cpu_of_node,	\
+		&dai_link->cpu_dai_name, list_name, cells_name, is_single_link)
+#define asoc_simple_card_parse_codec(port_np, dai_link,				\
+				     list_name, cells_name)			\
+	asoc_simple_card_parse_endpoint(port_np, &dai_link->codec_of_node,	\
+		&dai_link->codec_dai_name, list_name, cells_name, NULL)
+#define asoc_simple_card_parse_platform(port_np, dai_link,			\
+					list_name, cells_name)			\
+	asoc_simple_card_parse_endpoint(port_np, &dai_link->platform_of_node,	\
+		NULL, list_name, cells_name, NULL)
+int asoc_simple_card_parse_endpoint(struct device_node *port_np,
+				  struct device_node **endpoint_np,
+				  const char **dai_name,
+				  const char *list_name,
+				  const char *cells_name,
+				  int *is_single_links);
+
 #endif /* __SIMPLE_CARD_CORE_H */
