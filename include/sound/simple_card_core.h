@@ -37,5 +37,7 @@ int asoc_simple_card_parse_card_prefix(struct snd_soc_card *card,
 				       struct snd_soc_dai_link *dai_link,
 				       struct snd_soc_codec_conf *codec_conf,
 				       char *prefix);
+int asoc_simple_card_parse_card_route(struct snd_soc_card *card,
+				      char *prefix);
 
 #endif /* __SIMPLE_CARD_CORE_H */

@@ -142,3 +142,19 @@ int asoc_simple_card_parse_card_prefix(struct snd_soc_card *card,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(asoc_simple_card_parse_card_prefix);
+
+int asoc_simple_card_parse_card_route(struct snd_soc_card *card,
+				      char *prefix)
+{
+	struct device_node *np = card->dev->of_node;
+	char prop[128];
+	int ret = 0;
+
+	snprintf(prop, sizeof(prop), "%srouting", prefix);
+
+	if (of_property_read_bool(np, prop))
+		ret = snd_soc_of_parse_audio_routing(card, prop);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(asoc_simple_card_parse_card_route);
