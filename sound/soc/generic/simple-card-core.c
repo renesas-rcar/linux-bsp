@@ -125,3 +125,20 @@ int asoc_simple_card_parse_card_name(struct snd_soc_card *card,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(asoc_simple_card_parse_card_name);
+
+int asoc_simple_card_parse_card_prefix(struct snd_soc_card *card,
+				       struct snd_soc_dai_link *dai_link,
+				       struct snd_soc_codec_conf *codec_conf,
+				       char *prefix)
+{
+	char prop[128];
+
+	snprintf(prop, sizeof(prop), "%sprefix", prefix);
+
+	snd_soc_of_parse_audio_prefix(card, codec_conf,
+				      dai_link->codec_of_node,
+				      prop);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(asoc_simple_card_parse_card_prefix);
