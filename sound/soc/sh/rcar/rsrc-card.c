@@ -17,9 +17,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/string.h>
-#include <sound/jack.h>
 #include <sound/soc.h>
-#include <sound/soc-dai.h>
 
 struct rsrc_card_of_data {
 	const char *prefix;
