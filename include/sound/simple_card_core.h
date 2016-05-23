@@ -42,4 +42,12 @@ int asoc_simple_card_parse_card_route(struct snd_soc_card *card,
 int asoc_simple_card_parse_card_widgets(struct snd_soc_card *card,
 					char *prefix);
 
+#define asoc_simple_card_parse_clk_cpu(port_np, dai_link, simple_dai)\
+	asoc_simple_card_parse_clk(port_np, dai_link->cpu_of_node, simple_dai)
+#define asoc_simple_card_parse_clk_codec(port_np, dai_link, simple_dai)  \
+	asoc_simple_card_parse_clk(port_np, dai_link->codec_of_node, simple_dai)
+int asoc_simple_card_parse_clk(struct device_node *port_np,
+			       struct device_node *endpoint_np,
+			       struct asoc_simple_dai *simple_dai);
+
 #endif /* __SIMPLE_CARD_CORE_H */
