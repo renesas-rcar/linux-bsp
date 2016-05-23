@@ -9,6 +9,7 @@
  */
 #include <linux/clk.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 #include <sound/simple_card_core.h>
 
 int asoc_simple_card_parse_daifmt(struct device *dev,
@@ -271,3 +272,62 @@ void asoc_simple_card_parse_dpcm(struct snd_soc_dai_link *dai_link,
 	dai_link->dpcm_capture		= 1;
 }
 EXPORT_SYMBOL_GPL(asoc_simple_card_parse_dpcm);
+
+int asoc_simple_card_init_jack(struct snd_soc_card *card,
+			       struct asoc_simple_jack *sjack,
+			       int is_hp, char *prefix)
+{
+	struct device *dev = card->dev;
+	enum of_gpio_flags flags;
+	char prop[128];
+	char *pin_name;
+	char *gpio_name;
+	int mask;
+	int det;
+
+	sjack->gpio.gpio = -ENOENT;
+
+	if (is_hp) {
+		snprintf(prop, sizeof(prop), "%shp-det-gpio", prefix);
+		pin_name	= "Headphones";
+		gpio_name	= "Headphone detection";
+		mask		= SND_JACK_HEADPHONE;
+	} else {
+		snprintf(prop, sizeof(prop), "%smic-det-gpio", prefix);
+		pin_name	= "Mic Jack";
+		gpio_name	= "Mic detection";
+		mask		= SND_JACK_MICROPHONE;
+	}
+
+	det = of_get_named_gpio_flags(dev->of_node, prop, 0, &flags);
+	if (det == -EPROBE_DEFER)
+		return -EPROBE_DEFER;
+
+	if (gpio_is_valid(det)) {
+		sjack->pin.pin		= pin_name;
+		sjack->pin.mask		= mask;
+
+		sjack->gpio.name	= gpio_name;
+		sjack->gpio.report	= mask;
+		sjack->gpio.gpio	= det;
+		sjack->gpio.invert	= !!(flags & OF_GPIO_ACTIVE_LOW);
+		sjack->gpio.debounce_time = 150;
+
+		snd_soc_card_jack_new(card, pin_name, mask,
+				      &sjack->jack,
+				      &sjack->pin, 1);
+
+		snd_soc_jack_add_gpios(&sjack->jack, 1,
+				       &sjack->gpio);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(asoc_simple_card_init_jack);
+
+void asoc_simple_card_remove_jack(struct asoc_simple_jack *sjack)
+{
+	if (gpio_is_valid(sjack->gpio.gpio))
+		snd_soc_jack_free_gpios(&sjack->jack, 1, &sjack->gpio);
+}
+EXPORT_SYMBOL_GPL(asoc_simple_card_remove_jack);

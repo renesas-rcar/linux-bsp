@@ -11,6 +11,13 @@
 #define __SIMPLE_CARD_CORE_H
 
 #include <sound/soc.h>
+#include <sound/jack.h>
+
+struct asoc_simple_jack {
+	struct snd_soc_jack jack;
+	struct snd_soc_jack_pin pin;
+	struct snd_soc_jack_gpio gpio;
+};
 
 struct asoc_simple_dai {
 	const char *name;
@@ -76,4 +83,15 @@ int asoc_simple_card_parse_endpoint(struct device_node *port_np,
 void asoc_simple_card_parse_dpcm(struct snd_soc_dai_link *dai_link,
 			int (*be_fixup)(struct snd_soc_pcm_runtime *rtd,
 					struct snd_pcm_hw_params *params));
+
+#define asoc_simple_card_init_hp(card, sjack, prefix)		\
+	asoc_simple_card_init_jack(card, sjack, 1, prefix)
+#define asoc_simple_card_init_mic(card, sjack, prefix)		\
+	asoc_simple_card_init_jack(card, sjack, 0, prefix)
+int asoc_simple_card_init_jack(struct snd_soc_card *card,
+			       struct asoc_simple_jack *sjack,
+			       int is_hp, char *prefix);
+
+void asoc_simple_card_remove_jack(struct asoc_simple_jack *sjack);
+
 #endif /* __SIMPLE_CARD_CORE_H */
