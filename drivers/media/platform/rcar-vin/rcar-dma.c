@@ -130,8 +130,15 @@ static u32 rvin_read(struct rvin_dev *vin, u32 offset)
 
 static int rvin_setup(struct rvin_dev *vin)
 {
-	u32 vnmc, dmr, dmr2, interrupts;
+	u32 code, vnmc, dmr, dmr2, interrupts;
+	struct v4l2_mbus_config mbus_cfg;
 	bool progressive = false, output_is_yuv = false, input_is_yuv = false;
+
+	if (rvin_subdev_get_mbus_cfg(vin, &mbus_cfg))
+		return -EINVAL;
+
+	if (rvin_subdev_get_code(vin, &code))
+		return -EINVAL;
 
 	switch (vin->format.field) {
 	case V4L2_FIELD_TOP:
@@ -163,7 +170,7 @@ static int rvin_setup(struct rvin_dev *vin)
 	/*
 	 * Input interface
 	 */
-	switch (vin->source.code) {
+	switch (code) {
 	case MEDIA_BUS_FMT_YUYV8_1X16:
 		/* BT.601/BT.1358 16bit YCbCr422 */
 		vnmc |= VNMC_INF_YUV16;
@@ -171,7 +178,7 @@ static int rvin_setup(struct rvin_dev *vin)
 		break;
 	case MEDIA_BUS_FMT_YUYV8_2X8:
 		/* BT.656 8bit YCbCr422 or BT.601 8bit YCbCr422 */
-		vnmc |= vin->mbus_cfg.type == V4L2_MBUS_BT656 ?
+		vnmc |= mbus_cfg.type == V4L2_MBUS_BT656 ?
 			VNMC_INF_YUV8_BT656 : VNMC_INF_YUV8_BT601;
 		input_is_yuv = true;
 		break;
@@ -180,7 +187,7 @@ static int rvin_setup(struct rvin_dev *vin)
 		break;
 	case MEDIA_BUS_FMT_YUYV10_2X10:
 		/* BT.656 10bit YCbCr422 or BT.601 10bit YCbCr422 */
-		vnmc |= vin->mbus_cfg.type == V4L2_MBUS_BT656 ?
+		vnmc |= mbus_cfg.type == V4L2_MBUS_BT656 ?
 			VNMC_INF_YUV10_BT656 : VNMC_INF_YUV10_BT601;
 		input_is_yuv = true;
 		break;
@@ -192,11 +199,11 @@ static int rvin_setup(struct rvin_dev *vin)
 	dmr2 = VNDMR2_FTEV | VNDMR2_VLV(1);
 
 	/* Hsync Signal Polarity Select */
-	if (!(vin->mbus_cfg.flags & V4L2_MBUS_HSYNC_ACTIVE_LOW))
+	if (!(mbus_cfg.flags & V4L2_MBUS_HSYNC_ACTIVE_LOW))
 		dmr2 |= VNDMR2_HPS;
 
 	/* Vsync Signal Polarity Select */
-	if (!(vin->mbus_cfg.flags & V4L2_MBUS_VSYNC_ACTIVE_LOW))
+	if (!(mbus_cfg.flags & V4L2_MBUS_VSYNC_ACTIVE_LOW))
 		dmr2 |= VNDMR2_VPS;
 
 	/*
@@ -1030,12 +1037,10 @@ static void rvin_buffer_queue(struct vb2_buffer *vb)
 static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 {
 	struct rvin_dev *vin = vb2_get_drv_priv(vq);
-	struct v4l2_subdev *sd;
 	unsigned long flags;
 	int ret;
 
-	sd = vin_to_source(vin);
-	v4l2_subdev_call(sd, video, s_stream, 1);
+	rvin_subdev_call(vin, video, s_stream, 1);
 
 	spin_lock_irqsave(&vin->qlock, flags);
 
@@ -1060,7 +1065,7 @@ out:
 	/* Return all buffers if something went wrong */
 	if (ret) {
 		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
-		v4l2_subdev_call(sd, video, s_stream, 0);
+		rvin_subdev_call(vin, video, s_stream, 0);
 	}
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
@@ -1071,7 +1076,6 @@ out:
 static void rvin_stop_streaming(struct vb2_queue *vq)
 {
 	struct rvin_dev *vin = vb2_get_drv_priv(vq);
-	struct v4l2_subdev *sd;
 	unsigned long flags;
 	int retries = 0;
 
@@ -1110,8 +1114,7 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
 
-	sd = vin_to_source(vin);
-	v4l2_subdev_call(sd, video, s_stream, 0);
+	rvin_subdev_call(vin, video, s_stream, 0);
 
 	/* disable interrupts */
 	rvin_disable_interrupts(vin);
@@ -1133,19 +1136,12 @@ void rvin_dma_remove(struct rvin_dev *vin)
 		vb2_dma_contig_cleanup_ctx(vin->alloc_ctx);
 
 	mutex_destroy(&vin->lock);
-
-	v4l2_device_unregister(&vin->v4l2_dev);
 }
 
 int rvin_dma_probe(struct rvin_dev *vin, int irq)
 {
 	struct vb2_queue *q = &vin->queue;
 	int i, ret;
-
-	/* Initialize the top-level structure */
-	ret = v4l2_device_register(vin->dev, &vin->v4l2_dev);
-	if (ret)
-		return ret;
 
 	mutex_init(&vin->lock);
 	INIT_LIST_HEAD(&vin->buf_list);
