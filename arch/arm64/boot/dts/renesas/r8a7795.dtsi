@@ -1527,7 +1527,6 @@
 			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 312>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
-			cap-mmc-highspeed;
 			status = "disabled";
 		};
 
@@ -1537,7 +1536,6 @@
 			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 311>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
-			cap-mmc-highspeed;
 			status = "disabled";
 		};
 
