@@ -742,11 +742,19 @@
 	status = "okay";
 };
 
+&ehci0 {
+	status = "okay";
+};
+
 &ehci1 {
 	status = "okay";
 };
 
 &ehci2 {
+	status = "okay";
+};
+
+&ohci0 {
 	status = "okay";
 };
 
