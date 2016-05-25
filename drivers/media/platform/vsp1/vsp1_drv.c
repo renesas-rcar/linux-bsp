@@ -585,7 +585,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.gen = 2,
 		.features = VSP1_HAS_BRU | VSP1_HAS_SRU,
 		.rpf_count = 5,
-		.uds_count = 1,
+		.uds_count = 3,
 		.wpf_count = 4,
 		.num_bru_inputs = 4,
 		.uapi = true,
@@ -596,7 +596,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 			  | VSP1_HAS_LUT,
 		.rpf_count = 4,
 		.uds_count = 1,
-		.wpf_count = 4,
+		.wpf_count = 1,
 		.num_bru_inputs = 4,
 		.uapi = true,
 	}, {
@@ -605,7 +605,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.features = VSP1_HAS_BRU | VSP1_HAS_HGO | VSP1_HAS_LUT
 			  | VSP1_HAS_SRU,
 		.rpf_count = 5,
-		.uds_count = 3,
+		.uds_count = 1,
 		.wpf_count = 4,
 		.num_bru_inputs = 4,
 		.uapi = true,
