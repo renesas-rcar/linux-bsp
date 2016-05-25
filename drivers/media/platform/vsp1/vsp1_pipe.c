@@ -173,13 +173,17 @@ void vsp1_pipeline_reset(struct vsp1_pipeline *pipe)
 			bru->inputs[i].rpf = NULL;
 	}
 
-	for (i = 0; i < pipe->num_inputs; ++i) {
-		pipe->inputs[i]->pipe = NULL;
-		pipe->inputs[i] = NULL;
+	for (i = 0; i < ARRAY_SIZE(pipe->inputs); ++i) {
+		if (pipe->inputs[i]) {
+			pipe->inputs[i]->pipe = NULL;
+			pipe->inputs[i] = NULL;
+		}
 	}
 
-	pipe->output->pipe = NULL;
-	pipe->output = NULL;
+	if (pipe->output) {
+		pipe->output->pipe = NULL;
+		pipe->output = NULL;
+	}
 
 	if (pipe->hgo) {
 		struct vsp1_hgo *hgo = to_hgo(&pipe->hgo->subdev);
