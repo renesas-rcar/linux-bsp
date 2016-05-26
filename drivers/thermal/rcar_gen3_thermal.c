@@ -568,7 +568,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	int ret = -ENODEV;
 	int idle;
 	struct device_node *tz_nd, *tmp_nd;
-	const struct of_device_id *of_id;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -581,10 +580,8 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
 
-	of_id = of_match_device(rcar_thermal_dt_ids, dev);
-	if (of_id)
-		priv->data = of_id->data;
-	else
+	priv->data = of_device_get_match_data(dev);
+	if (!priv->data)
 		goto error_unregister;
 
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
