@@ -164,10 +164,12 @@ int rcar_sysc_power_up(const struct rcar_sysc_ch *sysc_ch)
 
 static bool rcar_sysc_power_is_off(const struct rcar_sysc_ch *sysc_ch)
 {
-	unsigned int st;
+	unsigned int st, dwn_st;
 
 	st = ioread32(rcar_sysc_base + sysc_ch->chan_offs + PWRSR_OFFS);
-	if (st & BIT(sysc_ch->chan_bit))
+	dwn_st = ioread32(rcar_sysc_base + sysc_ch->chan_offs + PWROFFSR_OFFS);
+
+	if ((st & BIT(sysc_ch->chan_bit)) || (dwn_st & BIT(sysc_ch->chan_bit)))
 		return true;
 
 	return false;
@@ -239,6 +241,7 @@ static void __init rcar_sysc_pd_setup(struct rcar_sysc_pd *pd)
 	struct generic_pm_domain *genpd = &pd->genpd;
 	const char *name = pd->genpd.name;
 	struct dev_power_governor *gov = &simple_qos_governor;
+	bool pd_state = false;
 
 	if (pd->flags & PD_CPU) {
 		/*
@@ -286,15 +289,11 @@ static void __init rcar_sysc_pd_setup(struct rcar_sysc_pd *pd)
 		goto finalize;
 	}
 
-	if (!rcar_sysc_power_is_off(&pd->ch)) {
-		pr_debug("%s: %s is already powered\n", __func__, genpd->name);
-		goto finalize;
-	}
-
-	rcar_sysc_power_up(&pd->ch);
+	if (rcar_sysc_power_is_off(&pd->ch))
+		pd_state = true;
 
 finalize:
-	pm_genpd_init(genpd, gov, false);
+	pm_genpd_init(genpd, gov, pd_state);
 }
 
 static const struct of_device_id rcar_sysc_matches[] = {
