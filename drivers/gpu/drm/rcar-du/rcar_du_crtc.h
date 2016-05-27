@@ -1,7 +1,7 @@
 /*
  * rcar_du_crtc.h  --  R-Car Display Unit CRTCs
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -52,6 +52,8 @@ struct rcar_du_crtc {
 
 	struct rcar_du_group *group;
 	struct rcar_du_vsp *vsp;
+
+	int lvds_ch;
 };
 
 struct dpll_info {
@@ -82,5 +84,7 @@ void rcar_du_crtc_resume(struct rcar_du_crtc *rcrtc);
 
 void rcar_du_crtc_route_output(struct drm_crtc *crtc,
 			       enum rcar_du_output output);
+int rcar_du_crtc_get(struct rcar_du_crtc *rcrtc);
+void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc);
 
 #endif /* __RCAR_DU_CRTC_H__ */
