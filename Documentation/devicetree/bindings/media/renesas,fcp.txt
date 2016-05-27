@@ -25,6 +25,10 @@ are paired with. These DT bindings currently support the FCPV and FCPF.
  - power-domains : power-domain property defined with a phandle
                            to respective power domain.
 
+Optional properties:
+ - power-domains : power-domain property defined with a power domain specifier
+                            to respective power domain.
+
 
 Device node example
 -------------------
