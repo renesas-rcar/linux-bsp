@@ -68,6 +68,8 @@ static u32 rcar_sysc_extmask_offs, rcar_sysc_extmask_val;
 
 static const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch);
 
+static const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch);
+
 static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 {
 	unsigned int sr_bit, reg_offs;
@@ -88,6 +90,12 @@ static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 					SYSCSR_TIMEOUT);
 	if (ret)
 		return -EAGAIN;
+
+	/* Start W/A for A3VP, A3VC, and A3IR domains */
+	if (!on && (!strcmp("a3vp", to_pd_name(sysc_ch)) ||
+		    !strcmp("a3ir", to_pd_name(sysc_ch)) ||
+		    !strcmp("a3vc", to_pd_name(sysc_ch))))
+		udelay(1);
 
 	/* Start W/A for A3VP, A3VC, and A3IR domains */
 	if (!on && (!strcmp("a3vp", to_pd_name(sysc_ch)) ||
