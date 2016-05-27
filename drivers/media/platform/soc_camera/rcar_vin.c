@@ -147,6 +147,8 @@
 #define VNCSI_IFMD_DES1		(1 << 26) /* CSI20 Input Data) */
 #define VNCSI_IFMD_DES0		(1 << 25) /* CSI21 Input Data) */
 
+#define VNCSI_IFMD_CSI_CHSEL(n)	(n << 0)
+
 /* UDS */
 #define VNUDS_CTRL_REG		0x80	/* Scaling Control Registers */
 #define VNUDS_CTRL_AMD		(1 << 30)
@@ -166,12 +168,139 @@
 #define RCAR_VIN_BT656			(1 << 3)
 #define RCAR_VIN_CSI2			(1 << 4)
 
+static int ifmd0_reg_match[6];
+static int ifmd4_reg_match[6];
+static int ifmd0_init = true;
+static int ifmd4_init = true;
+
 enum chip_id {
 	RCAR_GEN3,
 	RCAR_GEN2,
 	RCAR_H1,
 	RCAR_M1,
 	RCAR_E1,
+};
+
+enum csi2_ch {
+	RCAR_CSI_CH_NONE = -1,
+	RCAR_CSI40,
+	RCAR_CSI20,
+	RCAR_CSI41,
+	RCAR_CSI21,
+	RCAR_CSI_MAX,
+};
+
+enum gen3_vin_ch {
+	RCAR_VIN_CH_NONE = -1,
+	RCAR_VIDEO_0,
+	RCAR_VIDEO_1,
+	RCAR_VIDEO_2,
+	RCAR_VIDEO_3,
+	RCAR_VIDEO_4,
+	RCAR_VIDEO_5,
+	RCAR_VIDEO_6,
+	RCAR_VIDEO_7,
+	RCAR_VIDEO_MAX,
+};
+
+enum virtual_ch {
+	RCAR_VIRTUAL_NONE = -1,
+	RCAR_VIRTUAL_CH0,
+	RCAR_VIRTUAL_CH1,
+	RCAR_VIRTUAL_CH2,
+	RCAR_VIRTUAL_CH3,
+	RCAR_VIRTUAL_MAX,
+};
+
+struct vin_gen3_virtual_sel {
+	enum csi2_ch csi2_ch;
+	enum virtual_ch vc;
+};
+
+struct vin_gen3_ifmd {
+	unsigned int set_reg;
+	struct vin_gen3_virtual_sel v_sel[8];
+};
+
+static const struct vin_gen3_ifmd vin_vc_ifmd[] = {
+	{ 0x0000,
+		{
+			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH1},
+		}
+	},
+	{ 0x0001,
+		{
+			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
+		}
+	},
+	{ 0x0002,
+		{
+			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
+		}
+	},
+	{ 0x0003,
+		{
+			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH2},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH3},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH2},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH3},
+		}
+	},
+	{ 0x0004,
+		{
+			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH2},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH3},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH2},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH3},
+		}
+	},
+	{ 0x0005,
+		{
+			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH2},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH3},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH2},
+			{RCAR_CSI21, RCAR_VIRTUAL_CH3},
+		}
+	},
+};
+
+enum csi2_fmt {
+	RCAR_CSI_FMT_NONE = -1,
+	RCAR_CSI_RGB888,
+	RCAR_CSI_YCBCR422,
 };
 
 struct vin_coeff {
@@ -534,6 +663,9 @@ struct rcar_vin_priv {
 	unsigned int			ratio_h;
 	unsigned int			ratio_v;
 	bool				error_flag;
+	enum csi2_ch			csi_ch;
+	enum csi2_fmt			csi_fmt;
+	enum virtual_ch			vc;
 
 	struct rcar_vin_async_client	*async_client;
 	/* Asynchronous CSI2 linking */
@@ -573,6 +705,27 @@ struct rcar_vin_cam {
 	struct v4l2_rect		rect;
 	const struct soc_mbus_pixelfmt	*extra_fmt;
 };
+
+static void rcar_vin_cpg_enable_for_ifmd(unsigned int ch, bool enable)
+{
+	void __iomem *smstpcr8;
+
+	smstpcr8 = ioremap(0xE6150990, 0x04);
+
+	if (enable) {
+		if (ch < RCAR_VIDEO_4)
+			iowrite32((ioread32(smstpcr8) & 0xFFFFF7FF), smstpcr8);
+		else
+			iowrite32((ioread32(smstpcr8) & 0xFFFFFF7F), smstpcr8);
+	} else {
+		if (ch < RCAR_VIDEO_4)
+			iowrite32((ioread32(smstpcr8) | 0x00000800), smstpcr8);
+		else
+			iowrite32((ioread32(smstpcr8) | 0x00000080), smstpcr8);
+	}
+
+	iounmap(smstpcr8);
+}
 
 static inline int is_scaling(struct rcar_vin_cam *cam)
 {
@@ -2636,9 +2789,11 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	struct resource *mem;
 	unsigned int pdata_flags;
 	int irq, ret;
+	const char *str;
 	unsigned int i;
 	struct device_node *epn = NULL, *ren = NULL;
 	bool csi_use = false;
+	int vc, num;
 
 	match = of_match_device(of_match_ptr(rcar_vin_of_table), &pdev->dev);
 
@@ -2742,6 +2897,155 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	} else {
 		priv->max_width = 2048;
 		priv->max_height = 2048;
+	}
+
+	if (priv->chip == RCAR_GEN3) {
+		u32 ifmd = 0;
+		bool match_flag = false;
+
+		if (strcmp(dev_name(priv->ici.v4l2_dev.dev),
+						"e6ef0000.video") == 0)
+			priv->index = RCAR_VIDEO_0;
+		else if (strcmp(dev_name(priv->ici.v4l2_dev.dev),
+						"e6ef1000.video") == 0)
+			priv->index = RCAR_VIDEO_1;
+		else if (strcmp(dev_name(priv->ici.v4l2_dev.dev),
+						"e6ef2000.video") == 0)
+			priv->index = RCAR_VIDEO_2;
+		else if (strcmp(dev_name(priv->ici.v4l2_dev.dev),
+						"e6ef3000.video") == 0)
+			priv->index = RCAR_VIDEO_3;
+		else if (strcmp(dev_name(priv->ici.v4l2_dev.dev),
+						"e6ef4000.video") == 0)
+			priv->index = RCAR_VIDEO_4;
+		else if (strcmp(dev_name(priv->ici.v4l2_dev.dev),
+						"e6ef5000.video") == 0)
+			priv->index = RCAR_VIDEO_5;
+		else if (strcmp(dev_name(priv->ici.v4l2_dev.dev),
+						"e6ef6000.video") == 0)
+			priv->index = RCAR_VIDEO_6;
+		else if (strcmp(dev_name(priv->ici.v4l2_dev.dev),
+						"e6ef7000.video") == 0)
+			priv->index = RCAR_VIDEO_7;
+		else
+			priv->index = RCAR_VIN_CH_NONE;
+
+		ret = of_property_read_string(np, "csi,select", &str);
+		if (ret) {
+			dev_err(&pdev->dev, "could not parse csi,select\n");
+			return ret;
+		}
+
+		if (strcmp(str, "csi40") == 0)
+			priv->csi_ch = RCAR_CSI40;
+		else if (strcmp(str, "csi20") == 0)
+			priv->csi_ch = RCAR_CSI20;
+		else if (strcmp(str, "csi41") == 0)
+			priv->csi_ch = RCAR_CSI41;
+		else if (strcmp(str, "csi21") == 0)
+			priv->csi_ch = RCAR_CSI21;
+		else
+			priv->csi_ch = RCAR_CSI_CH_NONE;
+
+		ret = of_property_read_u32(np, "virtual,channel", &vc);
+		if (ret) {
+			dev_err(&pdev->dev,
+			"could not parse virtual,channel\n");
+			return ret;
+		}
+
+		if (vc == 0)
+			priv->vc = RCAR_VIRTUAL_CH0;
+		else if (vc == 1)
+			priv->vc = RCAR_VIRTUAL_CH1;
+		else if (vc == 2)
+			priv->vc = RCAR_VIRTUAL_CH2;
+		else if (vc == 3)
+			priv->vc = RCAR_VIRTUAL_CH3;
+		else
+			priv->vc = RCAR_VIRTUAL_NONE;
+
+		dev_dbg(&pdev->dev, "csi_ch:%d, vc:%d\n",
+					priv->csi_ch, priv->vc);
+
+		num = sizeof(vin_vc_ifmd) / sizeof(struct vin_gen3_ifmd);
+		for (i = 0; i < num; i++) {
+			if ((vin_vc_ifmd[i].v_sel[priv->index].csi2_ch
+				== priv->csi_ch) &&
+				(vin_vc_ifmd[i].v_sel[priv->index].vc
+				== priv->vc)) {
+				if (priv->index < RCAR_VIDEO_4) {
+					if (ifmd0_init) {
+						ifmd0_reg_match[i] = true;
+						match_flag = true;
+					} else if (ifmd0_reg_match[i])
+						match_flag = true;
+				} else {
+					if (ifmd4_init) {
+						ifmd4_reg_match[i] = true;
+						match_flag = true;
+					} else if (ifmd4_reg_match[i])
+						match_flag = true;
+				}
+			} else {
+				if (priv->index < RCAR_VIDEO_4)
+					ifmd0_reg_match[i] = false;
+				else
+					ifmd4_reg_match[i] = false;
+			}
+		}
+		if (priv->index < RCAR_VIDEO_4)
+			ifmd0_init = false;
+		else
+			ifmd4_init = false;
+
+		if (!match_flag) {
+			dev_err(&pdev->dev,
+			"Not match, virtual channel pattern error.\n");
+			return -EINVAL;
+		}
+
+		ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0;
+
+		rcar_vin_cpg_enable_for_ifmd(priv->index, true);
+
+		if (priv->index < RCAR_VIDEO_4) {
+			void __iomem *ifmd0_mem;
+			int i, num;
+
+			num = sizeof(vin_vc_ifmd) /
+				 sizeof(struct vin_gen3_ifmd);
+
+			for (i = 0; i < num; i++) {
+				if (ifmd0_reg_match[i]) {
+					ifmd |= vin_vc_ifmd[i].set_reg;
+					break;
+				}
+			}
+
+			ifmd0_mem = ioremap(0xe6ef0000 + VNCSI_IFMD_REG, 0x04);
+			iowrite32(ifmd, ifmd0_mem);
+			iounmap(ifmd0_mem);
+		} else {
+			void __iomem *ifmd4_mem;
+			int i, num;
+
+			num = sizeof(vin_vc_ifmd) /
+				 sizeof(struct vin_gen3_ifmd);
+
+			for (i = 0; i < num; i++) {
+				if (ifmd4_reg_match[i]) {
+					ifmd |= vin_vc_ifmd[i].set_reg;
+					break;
+				}
+			}
+
+			ifmd4_mem = ioremap(0xe6ef4000 + VNCSI_IFMD_REG, 0x04);
+			iowrite32(ifmd, ifmd4_mem);
+			iounmap(ifmd4_mem);
+		}
+
+		rcar_vin_cpg_enable_for_ifmd(priv->index, false);
 	}
 
 	spin_lock_init(&priv->lock);
