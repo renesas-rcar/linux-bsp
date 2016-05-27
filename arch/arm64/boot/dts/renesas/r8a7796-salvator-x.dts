@@ -36,7 +36,25 @@
 	clock-frequency = <16666666>;
 };
 
+&pfc {
+	pinctrl-0 = <&scif_clk_pins>;
+	pinctrl-names = "default";
+
+	scif2_pins: scif2 {
+		renesas,groups = "scif2_data_a";
+		renesas,function = "scif2";
+	};
+
+	scif_clk_pins: scif_clk {
+		renesas,groups = "scif_clk_a";
+		renesas,function = "scif_clk";
+	};
+};
+
 &scif2 {
+	pinctrl-0 = <&scif2_pins>;
+	pinctrl-names = "default";
+
 	status = "okay";
 };
 
