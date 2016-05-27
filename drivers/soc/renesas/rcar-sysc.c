@@ -64,6 +64,8 @@ struct rcar_sysc_ch {
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
 
+static const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch);
+
 static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 {
 	unsigned int sr_bit, reg_offs;
@@ -86,6 +88,12 @@ static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 
 	if (k == SYSCSR_RETRIES)
 		return -EAGAIN;
+
+	/* Start W/A for A3VP, A3VC, and A3IR domains */
+	if (!on && (!strcmp("a3vp", to_pd_name(sysc_ch)) ||
+		    !strcmp("a3ir", to_pd_name(sysc_ch)) ||
+		    !strcmp("a3vc", to_pd_name(sysc_ch))))
+		udelay(1);
 
 	/* Submit power shutoff or power resume request */
 	iowrite32(BIT(sysc_ch->chan_bit),
@@ -176,6 +184,11 @@ struct rcar_sysc_pd {
 static inline struct rcar_sysc_pd *to_rcar_pd(struct generic_pm_domain *d)
 {
 	return container_of(d, struct rcar_sysc_pd, genpd);
+}
+
+static inline const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch)
+{
+	return container_of(sysc_ch, struct rcar_sysc_pd, ch)->genpd.name;
 }
 
 static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
