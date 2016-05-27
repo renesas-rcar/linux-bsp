@@ -46,3 +46,6 @@ const struct rcar_sysc_info r8a7796_sysc_info __initconst = {
 	.areas = r8a7796_areas,
 	.num_areas = ARRAY_SIZE(r8a7796_areas),
 };
+
+const u32 isr_bit_3dg_r8a7796 = ((u32)(BIT(17)|BIT(18)));
+const u32 chan_bit_3dg_r8a7796 = ((u32)(BIT(0)|BIT(1)));

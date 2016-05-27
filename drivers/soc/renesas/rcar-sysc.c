@@ -63,6 +63,9 @@ static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
 
 
 static const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch);
+void match_3dg(const struct of_device_id *match);
+u32 isr_bit_3dg;
+u32 chan_bit_3dg;
 
 static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 {
@@ -94,8 +97,12 @@ static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 		udelay(1);
 
 	/* Submit power shutoff or power resume request */
-	iowrite32(BIT(sysc_ch->chan_bit),
-		  rcar_sysc_base + sysc_ch->chan_offs + reg_offs);
+	if (strcmp(to_pd_name(sysc_ch), "3dg"))
+		iowrite32(BIT(sysc_ch->chan_bit),
+			rcar_sysc_base + sysc_ch->chan_offs + reg_offs);
+	else
+		iowrite32(chan_bit_3dg,
+			rcar_sysc_base + sysc_ch->chan_offs + reg_offs);
 
 	return 0;
 }
@@ -108,6 +115,11 @@ static int rcar_sysc_power(const struct rcar_sysc_ch *sysc_ch, bool on)
 	unsigned long flags;
 	int ret = 0;
 	int k;
+
+	if (!strcmp(to_pd_name(sysc_ch), "3dg")) {
+		isr_mask = isr_bit_3dg;
+		chan_mask = chan_bit_3dg;
+	}
 
 	spin_lock_irqsave(&rcar_sysc_lock, flags);
 
@@ -134,7 +146,7 @@ static int rcar_sysc_power(const struct rcar_sysc_ch *sysc_ch, bool on)
 
 	/* Wait until the power shutoff or resume request has completed * */
 	for (k = 0; k < SYSCISR_RETRIES; k++) {
-		if (ioread32(rcar_sysc_base + SYSCISR) & isr_mask)
+		if ((ioread32(rcar_sysc_base + SYSCISR) & isr_mask) == isr_mask)
 			break;
 		udelay(SYSCISR_DELAY_US);
 	}
@@ -169,8 +181,14 @@ static bool rcar_sysc_power_is_off(const struct rcar_sysc_ch *sysc_ch)
 	st = ioread32(rcar_sysc_base + sysc_ch->chan_offs + PWRSR_OFFS);
 	dwn_st = ioread32(rcar_sysc_base + sysc_ch->chan_offs + PWROFFSR_OFFS);
 
-	if ((st & BIT(sysc_ch->chan_bit)) || (dwn_st & BIT(sysc_ch->chan_bit)))
-		return true;
+	if (strcmp(to_pd_name(sysc_ch), "3dg")) {
+		if ((st & BIT(sysc_ch->chan_bit))
+			|| (dwn_st & BIT(sysc_ch->chan_bit)))
+			return true;
+	} else {
+		if ((st & chan_bit_3dg) || (dwn_st & chan_bit_3dg))
+			return true;
+	}
 
 	return false;
 }
@@ -296,6 +314,24 @@ finalize:
 	pm_genpd_init(genpd, gov, pd_state);
 }
 
+
+void match_3dg(const struct of_device_id *match)
+{
+	if (!match)
+		return;
+
+	if (!strcmp(match->compatible, "renesas,r8a7795-sysc")) {
+
+		isr_bit_3dg = isr_bit_3dg_r8a7795;
+		chan_bit_3dg = chan_bit_3dg_r8a7795;
+
+	} else if (!strcmp(match->compatible, "renesas,r8a7796-sysc")) {
+
+		isr_bit_3dg = isr_bit_3dg_r8a7796;
+		chan_bit_3dg = chan_bit_3dg_r8a7796;
+	}
+}
+
 static const struct of_device_id rcar_sysc_matches[] = {
 #ifdef CONFIG_ARCH_R8A7779
 	{ .compatible = "renesas,r8a7779-sysc", .data = &r8a7779_sysc_info },
@@ -343,6 +379,7 @@ static int __init rcar_sysc_pd_init(void)
 		return -ENODEV;
 
 	info = match->data;
+	match_3dg(match);
 
 	has_cpg_mstp = of_find_compatible_node(NULL, NULL,
 					       "renesas,cpg-mstp-clocks");
@@ -365,8 +402,12 @@ static int __init rcar_sysc_pd_init(void)
 	domains->onecell_data.domains = domains->domains;
 	domains->onecell_data.num_domains = ARRAY_SIZE(domains->domains);
 
-	for (i = 0, syscier = 0; i < info->num_areas; i++)
-		syscier |= BIT(info->areas[i].isr_bit);
+	for (i = 0, syscier = 0; i < info->num_areas; i++) {
+		if (strcmp(info->areas[i].name, "3dg"))
+			syscier |= BIT(info->areas[i].isr_bit);
+		else
+			syscier |= isr_bit_3dg;
+	}
 
 	/*
 	 * Mask all interrupt sources to prevent the CPU from receiving them.
