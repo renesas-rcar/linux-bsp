@@ -243,7 +243,8 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 		__func__, mult, prate, prate / 32 * mult);
 	*parent_rate = prate;
 
-	return prate / 32 * mult;
+	rate = 100000000 * DIV_ROUND_CLOSEST(prate / 32 * mult, 100000000);
+	return rate;
 }
 
 static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
