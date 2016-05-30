@@ -101,11 +101,6 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	rcar_du_group_write(rgrp, DEFR5, DEFR5_CODE | DEFR5_DEFE5);
 
 	rcar_du_group_setup_pins(rgrp);
-	if (rcdu->info->gen == 3) {
-		rcar_du_group_write(rgrp, DEFR6, DEFR6_CODE |
-					  DEFR6_ODPM22_DISP);
-		rcar_du_group_write(rgrp, DEFR10, DEFR10_CODE | DEFR10_DEFE10);
-	}
 
 	if (rcar_du_has(rgrp->dev, RCAR_DU_FEATURE_EXT_CTRL_REGS)) {
 		rcar_du_group_setup_defr8(rgrp);
