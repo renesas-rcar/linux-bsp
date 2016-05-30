@@ -383,4 +383,11 @@ config SYSC_R8A774B1
 	bool "System Controller support for RZ/G2N" if COMPILE_TEST
 	select SYSC_RCAR
 
+config RCAR_POWER_AVS
+	bool "Renesas R-Car Gen3 AVS (Adaptive Voltage Scaling)"
+	depends on ARCH_R8A77951 || ARCH_R8A77960 || ARCH_R8A77961
+	default y
+	help
+	  Enable this option if you want to have support for AVS on R-Car Gen3.
+
 endif # SOC_RENESAS
