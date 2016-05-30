@@ -37,8 +37,8 @@ static const struct rcar_sysc_area r8a7796_areas[] __initconst = {
 	{ "a3vc",	0x380, 0, R8A7796_PD_A3VC,	R8A7796_PD_ALWAYS_ON },
 	{ "a2vc0",	0x3c0, 0, R8A7796_PD_A2VC0,	R8A7796_PD_A3VC },
 	{ "a2vc1",	0x3c0, 1, R8A7796_PD_A2VC1,	R8A7796_PD_A3VC },
-	{ "3dg-a",	0x100, 0, R8A7796_PD_3DG_A,	R8A7796_PD_ALWAYS_ON },
-	{ "3dg-b",	0x100, 1, R8A7796_PD_3DG_B,	R8A7796_PD_3DG_A },
+	{ "3dg",	0x100, 0, R8A7796_PD_3DG,	R8A7796_PD_ALWAYS_ON },
+	/* map for 3DG-A/B */
 	{ "a3ir",	0x180, 0, R8A7796_PD_A3IR,	R8A7796_PD_ALWAYS_ON },
 };
 
@@ -46,3 +46,6 @@ const struct rcar_sysc_info r8a7796_sysc_info __initconst = {
 	.areas = r8a7796_areas,
 	.num_areas = ARRAY_SIZE(r8a7796_areas),
 };
+
+const u32 isr_bit_3dg_r8a7796 = ((u32)(BIT(17)|BIT(18)));
+const u32 chan_bit_3dg_r8a7796 = ((u32)(BIT(0)|BIT(1)));

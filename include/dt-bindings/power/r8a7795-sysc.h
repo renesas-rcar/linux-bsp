@@ -26,12 +26,8 @@
 #define R8A7795_PD_CA57_SCU		12
 #define R8A7795_PD_CR7			13
 #define R8A7795_PD_A3VC			14
-#define R8A7795_PD_3DG_A		17
-#define R8A7795_PD_3DG_B		18
-#define R8A7795_PD_3DG_C		19
-#define R8A7795_PD_3DG_D		20
+#define R8A7795_PD_3DG			17 /* map all 3DG-A/B/C/D/E */
 #define R8A7795_PD_CA53_SCU		21
-#define R8A7795_PD_3DG_E		22
 #define R8A7795_PD_A3IR			24
 #define R8A7795_PD_A2VC0		25
 #define R8A7795_PD_A2VC1		26

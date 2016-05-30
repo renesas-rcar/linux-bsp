@@ -401,6 +401,8 @@ static bool cpg_mssr_is_pm_clk(const struct of_phandle_args *clkspec,
 
 	switch (clkspec->args[0]) {
 	case CPG_CORE:
+		if (!pd->num_core_pm_clks)
+			return true;
 		for (i = 0; i < pd->num_core_pm_clks; i++)
 			if (clkspec->args[1] == pd->core_pm_clks[i])
 				return true;
@@ -422,6 +424,7 @@ int cpg_mssr_attach_dev(struct generic_pm_domain *unused, struct device *dev)
 	struct clk *clk;
 	int i = 0;
 	int error;
+	bool had_clk = false;
 
 	if (!pd) {
 		dev_dbg(dev, "CPG/MSSR clock domain not yet available\n");
@@ -430,40 +433,40 @@ int cpg_mssr_attach_dev(struct generic_pm_domain *unused, struct device *dev)
 
 	while (!of_parse_phandle_with_args(np, "clocks", "#clock-cells", i,
 					   &clkspec)) {
-		if (cpg_mssr_is_pm_clk(&clkspec, pd))
-			goto found;
-
-		of_node_put(clkspec.np);
 		i++;
+		if (!cpg_mssr_is_pm_clk(&clkspec, pd))
+			continue;
+
+		if (!had_clk) {
+			error = pm_clk_create(dev);
+			if (error) {
+				dev_err(dev, "pm_clk_create failed %d\n",
+					error);
+				return error;
+			}
+			had_clk = true;
+		}
+
+		clk = of_clk_get_from_provider(&clkspec);
+		of_node_put(clkspec.np);
+
+		if (IS_ERR(clk))
+			goto fail_destroy;
+
+		error = pm_clk_add_clk(dev, clk);
+		if (error) {
+			dev_err(dev, "pm_clk_add_clk %pC failed %d\n",
+				clk, error);
+			goto fail_put;
+		}
 	}
 
 	return 0;
 
-found:
-	clk = of_clk_get_from_provider(&clkspec);
-	of_node_put(clkspec.np);
-
-	if (IS_ERR(clk))
-		return PTR_ERR(clk);
-
-	error = pm_clk_create(dev);
-	if (error) {
-		dev_err(dev, "pm_clk_create failed %d\n", error);
-		goto fail_put;
-	}
-
-	error = pm_clk_add_clk(dev, clk);
-	if (error) {
-		dev_err(dev, "pm_clk_add_clk %pC failed %d\n", clk, error);
-		goto fail_destroy;
-	}
-
-	return 0;
-
-fail_destroy:
-	pm_clk_destroy(dev);
 fail_put:
 	clk_put(clk);
+fail_destroy:
+	pm_clk_destroy(dev);
 	return error;
 }
 

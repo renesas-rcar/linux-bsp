@@ -42,11 +42,8 @@ static const struct rcar_sysc_area r8a7795_areas[] __initconst = {
 	{ "a3vc",	0x380, 0, R8A7795_PD_A3VC,	R8A7795_PD_ALWAYS_ON },
 	{ "a2vc0",	0x3c0, 0, R8A7795_PD_A2VC0,	R8A7795_PD_A3VC },
 	{ "a2vc1",	0x3c0, 1, R8A7795_PD_A2VC1,	R8A7795_PD_A3VC },
-	{ "3dg-a",	0x100, 0, R8A7795_PD_3DG_A,	R8A7795_PD_ALWAYS_ON },
-	{ "3dg-b",	0x100, 1, R8A7795_PD_3DG_B,	R8A7795_PD_3DG_A },
-	{ "3dg-c",	0x100, 2, R8A7795_PD_3DG_C,	R8A7795_PD_3DG_B },
-	{ "3dg-d",	0x100, 3, R8A7795_PD_3DG_D,	R8A7795_PD_3DG_C },
-	{ "3dg-e",	0x100, 4, R8A7795_PD_3DG_E,	R8A7795_PD_3DG_D },
+	{ "3dg",	0x100, 0, R8A7795_PD_3DG,	R8A7795_PD_ALWAYS_ON },
+	/* map for all 3DG-A/B/C/D/E */
 	{ "a3ir",	0x180, 0, R8A7795_PD_A3IR,	R8A7795_PD_ALWAYS_ON },
 };
 
@@ -54,3 +51,6 @@ const struct rcar_sysc_info r8a7795_sysc_info __initconst = {
 	.areas = r8a7795_areas,
 	.num_areas = ARRAY_SIZE(r8a7795_areas),
 };
+
+const u32 isr_bit_3dg_r8a7795 = ((u32)(BIT(17)|BIT(18)|BIT(19)|BIT(20)|BIT(22)));
+const u32 chan_bit_3dg_r8a7795 = ((u32)(BIT(0)|BIT(1)|BIT(2)|BIT(3)|BIT(4)));

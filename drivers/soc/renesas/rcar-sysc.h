@@ -56,4 +56,10 @@ extern const struct rcar_sysc_info r8a7791_sysc_info;
 extern const struct rcar_sysc_info r8a7794_sysc_info;
 extern const struct rcar_sysc_info r8a7795_sysc_info;
 extern const struct rcar_sysc_info r8a7796_sysc_info;
+
+extern const u32 isr_bit_3dg_r8a7795;
+extern const u32 chan_bit_3dg_r8a7795;
+extern const u32 isr_bit_3dg_r8a7796;
+extern const u32 chan_bit_3dg_r8a7796;
+
 #endif /* __SOC_RENESAS_RCAR_SYSC_H__ */
