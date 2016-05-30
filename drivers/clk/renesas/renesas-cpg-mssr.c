@@ -590,9 +590,30 @@ static int __init cpg_mssr_probe(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int cpg_mssr_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int cpg_mssr_resume(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(cpg_mssr_pm_ops,
+			cpg_mssr_suspend, cpg_mssr_resume);
+#define DEV_PM_OPS (&cpg_mssr_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver cpg_mssr_driver = {
 	.driver		= {
 		.name	= "renesas-cpg-mssr",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = cpg_mssr_match,
 	},
 };
