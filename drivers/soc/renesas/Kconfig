@@ -321,4 +321,11 @@ config SYSC_RCAR
 config SYSC_RMOBILE
 	bool "R-Mobile System Controller support" if COMPILE_TEST
 
+config RCAR_POWER_AVS
+	bool "Renesas R-Car Gen3 AVS (Adaptive Voltage Scaling)"
+	depends on ARCH_R8A7795 || ARCH_R8A7796
+	default y
+	help
+	  Enable this option if you want to have support for AVS on R-Car Gen3.
+
 endif # SOC_RENESAS
