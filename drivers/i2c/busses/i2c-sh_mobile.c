@@ -1031,7 +1031,7 @@ static int __init sh_mobile_i2c_adap_init(void)
 {
 	return platform_driver_register(&sh_mobile_i2c_driver);
 }
-subsys_initcall(sh_mobile_i2c_adap_init);
+subsys_initcall_sync(sh_mobile_i2c_adap_init);
 
 static void __exit sh_mobile_i2c_adap_exit(void)
 {
