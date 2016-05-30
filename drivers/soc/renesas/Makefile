@@ -17,6 +17,10 @@ obj-$(CONFIG_SYSC_R8A77970)	+= r8a77970-sysc.o
 obj-$(CONFIG_SYSC_R8A77990)	+= r8a77990-sysc.o
 obj-$(CONFIG_SYSC_R8A77995)	+= r8a77995-sysc.o
 
+obj-$(CONFIG_ARCH_R8A7795)     += rcar-avs.o
+obj-$(CONFIG_ARCH_R8A7796)     += rcar-avs.o
+obj-$(CONFIG_ARCH_R8A77965)    += rcar-avs.o
+
 # Family
 obj-$(CONFIG_RST_RCAR)		+= rcar-rst.o
 obj-$(CONFIG_SYSC_RCAR)		+= rcar-sysc.o
