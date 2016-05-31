@@ -33,3 +33,8 @@ endif
 obj-$(CONFIG_RST_RCAR)		+= rcar-rst.o
 obj-$(CONFIG_SYSC_RCAR)		+= rcar-sysc.o
 obj-$(CONFIG_SYSC_RMOBILE)	+= rmobile-sysc.o
+
+# EMS for R-Car Gen3
+obj-$(CONFIG_ARCH_R8A7795)	+= rcar_ems_ctrl.o
+obj-$(CONFIG_ARCH_R8A7796)	+= rcar_ems_ctrl.o
+obj-$(CONFIG_ARCH_R8A77965)	+= rcar_ems_ctrl.o
