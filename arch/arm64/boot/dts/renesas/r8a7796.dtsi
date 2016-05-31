@@ -67,10 +67,10 @@
 			cooling-min-level = <0>;
 			cooling-max-level = <2>;
 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z>;
-			operating-points-v2 = <&group0_opp_tb0>,
-				<&group0_opp_tb1>, <&group0_opp_tb2>,
-				<&group0_opp_tb3>, <&group0_opp_tb4>,
-				<&group0_opp_tb5>, <&group0_opp_tb6>;
+			operating-points-v2 = <&cluster0_opp_tb0>,
+				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
+				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
+				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
 			cpu-supply = <&vdd_dvfs>;
 		};
 
@@ -82,10 +82,10 @@
 			next-level-cache = <&L2_CA57>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
-			operating-points-v2 = <&group0_opp_tb0>,
-				<&group0_opp_tb1>, <&group0_opp_tb2>,
-				<&group0_opp_tb3>, <&group0_opp_tb4>,
-				<&group0_opp_tb5>, <&group0_opp_tb6>;
+			operating-points-v2 = <&cluster0_opp_tb0>,
+				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
+				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
+				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
 		};
 
 		a53_0: cpu@100 {
@@ -96,7 +96,7 @@
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			dynamic-power-coefficient = <120>;
 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z2>;
-			operating-points-v2 = <&group1_opp_tb>;
+			operating-points-v2 = <&cluster1_opp_tb0>;
 		};
 
 		a53_1: cpu@101 {
@@ -105,7 +105,7 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
-			operating-points-v2 = <&group1_opp_tb>;
+			operating-points-v2 = <&cluster1_opp_tb0>;
 		};
 
 		a53_2: cpu@102 {
@@ -114,7 +114,7 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
-			operating-points-v2 = <&group1_opp_tb>;
+			operating-points-v2 = <&cluster1_opp_tb0>;
 		};
 
 		a53_3: cpu@103 {
@@ -123,7 +123,7 @@
 			device_type = "cpu";
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
-			operating-points-v2 = <&group1_opp_tb>;
+			operating-points-v2 = <&cluster1_opp_tb0>;
 		};
 
 		idle-states {
@@ -147,7 +147,7 @@
 		cache-level = <2>;
 	};
 
-	group0_opp_tb0: avs_tb0 {
+	cluster0_opp_tb0: opp_table0 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
@@ -198,7 +198,7 @@
 		};
 	};
 
-	group0_opp_tb1: avs_tb1{
+	cluster0_opp_tb1: opp_table1 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
@@ -249,7 +249,7 @@
 		};
 	};
 
-	group0_opp_tb2: avs_tb2 {
+	cluster0_opp_tb2: opp_table2 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
@@ -300,7 +300,7 @@
 		};
 	};
 
-	group0_opp_tb3: avs_tb3 {
+	cluster0_opp_tb3: opp_table3 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
@@ -351,7 +351,7 @@
 		};
 	};
 
-	group0_opp_tb4: avs_tb4 {
+	cluster0_opp_tb4: opp_table4 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
@@ -402,7 +402,7 @@
 		};
 	};
 
-	group0_opp_tb5: avs_tb5 {
+	cluster0_opp_tb5: opp_table5 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
@@ -453,7 +453,7 @@
 		};
 	};
 
-	group0_opp_tb6: avs_tb6 {
+	cluster0_opp_tb6: opp_table6 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
@@ -504,7 +504,7 @@
 		};
 	};
 
-	group1_opp_tb: grp1_opp_tb0 {
+	cluster1_opp_tb0: opp_table10 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
