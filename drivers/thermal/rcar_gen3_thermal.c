@@ -424,7 +424,7 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 	return 0;
 }
 
-static int rcar_gen3_thermal_init(struct rcar_thermal_priv *priv)
+static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
 {
 	unsigned long flags;
 
@@ -546,7 +546,7 @@ static int rcar_gen3_thermal_remove(struct platform_device *pdev)
 }
 
 static const struct rcar_thermal_data r8a7795_data = {
-	.thermal_init = rcar_gen3_thermal_init,
+	.thermal_init = rcar_gen3_r8a7795_thermal_init,
 };
 
 static const struct rcar_thermal_data r8a7796_data = {
