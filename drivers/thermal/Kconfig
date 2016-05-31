@@ -231,13 +231,6 @@ config RCAR_GEN3_THERMAL
 	  Enable this to plug the R-Car Gen3 thermal sensor driver into the Linux
 	  thermal framework.
 
-config RCAR_THERMAL_EMS_ENABLED
-	tristate "Enable the emergency shutdown function"
-	depends on RCAR_GEN3_THERMAL
-	help
-	  Enable this option if you want to have support for emergency shutdown
-	  in R-Car Gen3.
-
 config KIRKWOOD_THERMAL
 	tristate "Temperature sensor on Marvell Kirkwood SoCs"
 	depends on MACH_KIRKWOOD || COMPILE_TEST
