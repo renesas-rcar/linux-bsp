@@ -66,6 +66,7 @@
 			dynamic-power-coefficient = <460>;
 			cooling-min-level = <0>;
 			cooling-max-level = <2>;
+			clocks =<&cpg CPG_CORE R8A7796_CLK_Z>;
 			operating-points-v2 = <&group0_opp_tb0>,
 				<&group0_opp_tb1>, <&group0_opp_tb2>,
 				<&group0_opp_tb3>, <&group0_opp_tb4>,
