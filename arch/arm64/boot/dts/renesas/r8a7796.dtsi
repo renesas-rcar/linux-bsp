@@ -95,6 +95,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			dynamic-power-coefficient = <120>;
+			clocks =<&cpg CPG_CORE R8A7796_CLK_Z2>;
 			operating-points-v2 = <&group1_opp_tb>;
 		};
 
