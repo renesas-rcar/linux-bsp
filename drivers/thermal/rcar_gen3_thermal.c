@@ -414,7 +414,7 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 	if ((ctemp < MCELSIUS(-40)) || (ctemp > MCELSIUS(125))) {
 		struct device *dev = rcar_priv_to_dev(priv);
 
-		dev_err(dev, "Temperature is not measured correctly!\n");
+		dev_dbg(dev, "Temperature is not measured correctly!\n");
 
 		return -EIO;
 	}
