@@ -2174,6 +2174,7 @@
 				polling-delay = <1000>;
 				on-temperature = <110000>;
 				off-temperature = <95000>;
+				status = "disabled";
 			};
 
 			sensor_thermal1: sensor-thermal1 {
