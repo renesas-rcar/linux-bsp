@@ -25,7 +25,7 @@
 #include <linux/spinlock.h>
 #include <linux/thermal.h>
 
-#include <linux/rcar_ems_ctrl.h>
+#include <linux/soc/renesas/rcar_ems_ctrl.h>
 
 #define EMS_THERMAL_ZONE_MAX	10
 
