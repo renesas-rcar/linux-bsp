@@ -321,6 +321,16 @@ config SYSC_RCAR
 config SYSC_RMOBILE
 	bool "R-Mobile System Controller support" if COMPILE_TEST
 
+#
+# Renesas SoC drivers
+#
+config RCAR_THERMAL_EMS_ENABLED
+	tristate "Renesas R-Car Gen3 Enable Emergency Shutdown"
+	depends on RCAR_GEN3_THERMAL
+	help
+	  Enable this option if you want to have support for Emergency Shutdown
+	  in R-Car Gen3.
+
 config RCAR_POWER_AVS
 	bool "Renesas R-Car Gen3 AVS (Adaptive Voltage Scaling)"
 	depends on ARCH_R8A7795 || ARCH_R8A7796
