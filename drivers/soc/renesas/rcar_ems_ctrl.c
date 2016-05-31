@@ -176,6 +176,7 @@ module_exit(rcar_ems_ctrl_exit)
 
 /* emergency cpu shutdown function */
 static struct cpumask target_cpus;
+static struct cpumask freq_scaled_cpus;
 
 static int rcar_ems_cpufreq_notifier_call(struct notifier_block *nb,
 	unsigned long event, void *data)
@@ -183,7 +184,7 @@ static int rcar_ems_cpufreq_notifier_call(struct notifier_block *nb,
 	struct cpufreq_policy *policy = data;
 	int mode;
 
-	if (!cpumask_test_cpu(policy->cpu, &target_cpus))
+	if (!cpumask_test_cpu(policy->cpu, &freq_scaled_cpus))
 		return NOTIFY_DONE;
 
 	switch (event) {
@@ -207,7 +208,7 @@ static int rcar_ems_thermal_notifier_call(struct notifier_block *nb,
 	unsigned long state, void *val)
 {
 	long temp = (long)val;
-	int cpu, first = 0;
+	int cpu;
 
 	pr_info("thermal emergency notifier: state=%ld (temp=%ld)\n",
 		state, temp);
@@ -215,12 +216,8 @@ static int rcar_ems_thermal_notifier_call(struct notifier_block *nb,
 	switch (state) {
 	case RCAR_EMS_MODE_ON:
 		for_each_cpu(cpu, &target_cpus) {
-			if (cpu_online(cpu)) {
-				if (first != 0)
-					cpu_down(cpu);
-
-				first = 1;
-			}
+			if (cpu_online(cpu))
+				cpu_down(cpu);
 		}
 		break;
 
@@ -235,7 +232,7 @@ static int rcar_ems_thermal_notifier_call(struct notifier_block *nb,
 		return NOTIFY_DONE;
 	}
 
-	cpufreq_update_policy(cpumask_any(&target_cpus));
+	cpufreq_update_policy(cpumask_any(&freq_scaled_cpus));
 
 	return NOTIFY_OK;
 }
@@ -250,20 +247,34 @@ static struct notifier_block ems_cpufreq_notifier_block = {
 static int __init rcar_ems_cpu_shutdown_init(void)
 {
 	int cpu;
-	struct device_node *cpu_node;
+	struct device_node *cpu_node, *ems_node;
+	int total_target_cpu, i;
 
 	if (!IS_ENABLED(CONFIG_RCAR_THERMAL_EMS_ENABLED))
 		return 0;
 
 	cpumask_clear(&target_cpus);
+	cpumask_clear(&freq_scaled_cpus);
 
-	for_each_compatible_node(cpu_node, "cpu", "arm,cortex-a57") {
-		for_each_possible_cpu(cpu) {
+	ems_node = of_find_node_by_name(NULL, "emergency");
+
+	if (!ems_node)
+		return 0;
+
+	total_target_cpu = of_count_phandle_with_args(ems_node,
+						"target_cpus", 0);
+
+	for_each_online_cpu(cpu) {
+		for (i = 0; i < total_target_cpu; i++) {
+			cpu_node = of_parse_phandle(ems_node, "target_cpus", i);
 			if (of_get_cpu_node(cpu, NULL) == cpu_node) {
 				cpumask_set_cpu(cpu, &target_cpus);
 				break;
 			}
 		}
+
+		if (i == total_target_cpu)
+			cpumask_set_cpu(cpu, &freq_scaled_cpus);
 	}
 
 	if (cpumask_weight(&target_cpus) <= 1) {
@@ -277,6 +288,8 @@ static int __init rcar_ems_cpu_shutdown_init(void)
 
 	pr_info("thermal emergency: shutdown target cpus %*pbl\n",
 		cpumask_pr_args(&target_cpus));
+	pr_info("thermal emergency: freq scaled target cpus %*pbl\n",
+		cpumask_pr_args(&freq_scaled_cpus));
 
 	return 0;
 }
