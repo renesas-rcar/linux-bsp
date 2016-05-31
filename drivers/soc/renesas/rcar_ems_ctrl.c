@@ -277,7 +277,7 @@ static int __init rcar_ems_cpu_shutdown_init(void)
 			cpumask_set_cpu(cpu, &freq_scaled_cpus);
 	}
 
-	if (cpumask_weight(&target_cpus) <= 1) {
+	if (cpumask_weight(&target_cpus) == 0) {
 		pr_err("thermal emergency: shutdown cpu none\n");
 		return 0;
 	}
