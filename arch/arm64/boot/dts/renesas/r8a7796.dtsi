@@ -2172,6 +2172,7 @@
 				polling-delay = <1000>;
 				on-temperature = <110000>;
 				off-temperature = <95000>;
+				target_cpus = <&a57_1>;
 				status = "disabled";
 			};
 
