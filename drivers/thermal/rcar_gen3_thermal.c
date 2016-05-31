@@ -2,7 +2,7 @@
  *  R-Car Gen3 THS/CIVM thermal sensor driver
  *  Based on drivers/thermal/rcar_thermal.c
  *
- * Copyright (C) 2015 Renesas Electronics Corporation.
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -349,6 +349,12 @@ int _quadratic_temp_converter(struct equation_coefs coef, int temp_code)
 
 	return round_temp(temp);
 }
+
+int _quadratic_celsius_to_temp(struct equation_coefs coef,
+					int ctemp)
+{
+	return 0;
+}
 #else
 int _linear_temp_converter(struct equation_coefs coef,
 					int temp_code)
@@ -391,9 +397,11 @@ int thermal_celsius_to_temp(struct equation_coefs coef,
 					int ctemp)
 {
 	int temp_code;
-
+#ifdef APPLY_QUADRATIC_EQUATION
+	temp_code = _quadratic_celsius_to_temp(coef, ctemp);
+#else
 	temp_code = _linear_celsius_to_temp(coef, ctemp);
-
+#endif /* APPLY_QUADRATIC_EQUATION */
 	return temp_code;
 }
 
