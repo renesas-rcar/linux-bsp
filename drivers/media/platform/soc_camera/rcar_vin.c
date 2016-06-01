@@ -1,7 +1,7 @@
 /*
  * SoC-camera host driver for Renesas R-Car VIN unit
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  *
@@ -518,6 +518,7 @@ struct rcar_vin_priv {
 	unsigned int			max_height;
 	unsigned int			ratio_h;
 	unsigned int			ratio_v;
+	bool				error_flag;
 
 	/* Asynchronous CSI2 linking */
 	struct v4l2_async_subdev	*csi2_asd;
@@ -680,7 +681,7 @@ static int rcar_vin_setup(struct rcar_vin_priv *priv)
 	/* output format */
 	switch (icd->current_fmt->host_fmt->fourcc) {
 	case V4L2_PIX_FMT_NV16:
-		iowrite32(ALIGN(cam->width * cam->height, 0x80),
+		iowrite32(ALIGN(ALIGN(cam->width, 0x20) * cam->height, 0x80),
 			  priv->base + VNUVAOF_REG);
 		dmr = VNDMR_DTMD_YCSEP;
 		output_is_yuv = true;
@@ -1063,6 +1064,8 @@ static int rcar_vin_add_device(struct soc_camera_device *icd)
 		dev_dbg(icd->parent, "R-Car VIN driver attached to camera %d\n",
 			icd->devnum);
 
+	priv->error_flag = false;
+
 	return 0;
 }
 
@@ -1080,6 +1083,7 @@ static void rcar_vin_remove_device(struct soc_camera_device *icd)
 
 	priv->state = STOPPED;
 	priv->request_to_stop = false;
+	priv->error_flag = false;
 
 	/* make sure active buffer is cancelled */
 	spin_lock_irq(&priv->lock);
@@ -2099,6 +2103,18 @@ static int rcar_vin_set_fmt(struct soc_camera_device *icd,
 
 	dev_dbg(dev, "S_FMT(pix=0x%x, %ux%u)\n",
 		pixfmt, pix->width, pix->height);
+
+	/* At the time of NV16 capture format, the user has to specify */
+	/* the width of the multiple of 32 for H/W specification. */
+	if (priv->error_flag == false)
+		priv->error_flag = true;
+	else {
+		if ((pixfmt == V4L2_PIX_FMT_NV16) && (pix->width & 0x1F)) {
+			dev_dbg(icd->parent,
+			 "specified width error in NV16 format.\n");
+			return -EINVAL;
+		}
+	}
 
 	switch (pix->field) {
 	default:
