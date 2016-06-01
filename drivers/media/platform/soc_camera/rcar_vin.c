@@ -801,6 +801,14 @@ static int rcar_vin_videobuf_setup(struct vb2_queue *vq,
 			dev_err(icd->parent, "Scaling rate parameter error\n");
 			return -EINVAL;
 		}
+		if (is_scaling(cam) && (cam->out_width % 32)) {
+			dev_err(icd->parent, "Scaling parameter error\n");
+			return -EINVAL;
+		}
+		if (!is_scaling(cam) && (cam->out_width % 16)) {
+			dev_err(icd->parent, "Image stride parameter error\n");
+			return -EINVAL;
+		}
 	}
 
 	alloc_ctxs[0] = priv->alloc_ctx;
