@@ -247,7 +247,7 @@ static struct notifier_block ems_cpufreq_notifier_block = {
 static int __init rcar_ems_cpu_shutdown_init(void)
 {
 	int cpu;
-	struct device_node *cpu_node, *ems_node;
+	struct device_node *cpu_node, *ems_node, *tmp_node;
 	int total_target_cpu, i;
 
 	if (!IS_ENABLED(CONFIG_RCAR_THERMAL_EMS_ENABLED))
@@ -265,9 +265,12 @@ static int __init rcar_ems_cpu_shutdown_init(void)
 						"target_cpus", 0);
 
 	for_each_online_cpu(cpu) {
+		tmp_node  = of_get_cpu_node(cpu, NULL);
+		if (!of_device_is_compatible(tmp_node, "arm,cortex-a57"))
+			continue;
 		for (i = 0; i < total_target_cpu; i++) {
 			cpu_node = of_parse_phandle(ems_node, "target_cpus", i);
-			if (of_get_cpu_node(cpu, NULL) == cpu_node) {
+			if (tmp_node == cpu_node) {
 				cpumask_set_cpu(cpu, &target_cpus);
 				break;
 			}
