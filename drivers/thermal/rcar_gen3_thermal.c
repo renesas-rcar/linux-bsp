@@ -77,9 +77,10 @@
 #define GEN3_FUSE_MASK	0xFFF
 
 /* Quadratic and linear equation config
- * Default is using quadratic equation.
- * To switch to linear formula calculation,
+ * To use linear formula calculation,
  * please comment out APPLY_QUADRATIC_EQUATION macro.
+ * To use quadratic formula calculation,
+ * please uncomment APPLY_QUADRATIC_EQUATION macro.
 */
 /* #define APPLY_QUADRATIC_EQUATION */
 
