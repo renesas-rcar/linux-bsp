@@ -10,6 +10,7 @@
 
 #include <linux/bitmap.h>
 #include <linux/delay.h>
+#include <linux/dma-iommu.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/export.h>
@@ -22,8 +23,10 @@
 #include <linux/sizes.h>
 #include <linux/slab.h>
 
+#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
 #include <asm/dma-iommu.h>
 #include <asm/pgalloc.h>
+#endif
 
 #include "io-pgtable.h"
 
@@ -520,14 +523,6 @@ static struct iommu_domain *__ipmmu_domain_alloc(unsigned type)
 	return &domain->io_domain;
 }
 
-static struct iommu_domain *ipmmu_domain_alloc(unsigned type)
-{
-	if (type != IOMMU_DOMAIN_UNMANAGED)
-		return NULL;
-
-	return __ipmmu_domain_alloc(type);
-}
-
 static void ipmmu_domain_free(struct iommu_domain *io_domain)
 {
 	struct ipmmu_vmsa_domain *domain = to_vmsa_domain(io_domain);
@@ -715,6 +710,8 @@ error:
 	return ret;
 }
 
+#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
+
 static int ipmmu_add_device(struct device *dev)
 {
 	struct ipmmu_vmsa_archdata *archdata;
@@ -809,6 +806,14 @@ static void ipmmu_remove_device(struct device *dev)
 	dev->archdata.iommu = NULL;
 }
 
+static struct iommu_domain *ipmmu_domain_alloc(unsigned type)
+{
+	if (type != IOMMU_DOMAIN_UNMANAGED)
+		return NULL;
+
+	return __ipmmu_domain_alloc(type);
+}
+
 static const struct iommu_ops ipmmu_ops = {
 	.domain_alloc = ipmmu_domain_alloc,
 	.domain_free = ipmmu_domain_free,
@@ -822,6 +827,94 @@ static const struct iommu_ops ipmmu_ops = {
 	.remove_device = ipmmu_remove_device,
 	.pgsize_bitmap = SZ_1G | SZ_2M | SZ_4K,
 };
+
+#endif /* !CONFIG_ARM && CONFIG_IOMMU_DMA */
+
+#ifdef CONFIG_IOMMU_DMA
+
+static struct iommu_domain *ipmmu_domain_alloc_dma(unsigned type)
+{
+	struct iommu_domain *io_domain;
+
+	if (type != IOMMU_DOMAIN_DMA)
+		return NULL;
+
+	io_domain = __ipmmu_domain_alloc(type);
+	if (io_domain)
+		iommu_get_dma_cookie(io_domain);
+
+	return io_domain;
+}
+
+static void ipmmu_domain_free_dma(struct iommu_domain *io_domain)
+{
+	iommu_put_dma_cookie(io_domain);
+	ipmmu_domain_free(io_domain);
+}
+
+static int ipmmu_add_device_dma(struct device *dev)
+{
+	struct iommu_group *group;
+
+	/* only accept devices with iommus property */
+	if (of_count_phandle_with_args(dev->of_node, "iommus",
+				       "#iommu-cells") < 0)
+		return -ENODEV;
+
+	group = iommu_group_get_for_dev(dev);
+	if (IS_ERR(group))
+		return PTR_ERR(group);
+
+	return 0;
+}
+
+static void ipmmu_remove_device_dma(struct device *dev)
+{
+	iommu_group_remove_device(dev);
+}
+
+static struct iommu_group *ipmmu_device_group_dma(struct device *dev)
+{
+	struct iommu_group *group;
+	int ret;
+
+	group = generic_device_group(dev);
+	if (IS_ERR(group))
+		return group;
+
+	ret = ipmmu_init_platform_device(dev, group);
+	if (ret) {
+		iommu_group_put(group);
+		group = ERR_PTR(ret);
+	}
+
+	return group;
+}
+
+static int ipmmu_of_xlate_dma(struct device *dev,
+			      struct of_phandle_args *spec)
+{
+	/* dummy callback to satisfy of_iommu_configure() */
+	return 0;
+}
+
+static const struct iommu_ops ipmmu_ops = {
+	.domain_alloc = ipmmu_domain_alloc_dma,
+	.domain_free = ipmmu_domain_free_dma,
+	.attach_dev = ipmmu_attach_device,
+	.detach_dev = ipmmu_detach_device,
+	.map = ipmmu_map,
+	.unmap = ipmmu_unmap,
+	.map_sg = default_iommu_map_sg,
+	.iova_to_phys = ipmmu_iova_to_phys,
+	.add_device = ipmmu_add_device_dma,
+	.remove_device = ipmmu_remove_device_dma,
+	.device_group = ipmmu_device_group_dma,
+	.pgsize_bitmap = SZ_1G | SZ_2M | SZ_4K,
+	.of_xlate = ipmmu_of_xlate_dma,
+};
+
+#endif /* CONFIG_IOMMU_DMA */
 
 /* -----------------------------------------------------------------------------
  * Probe/remove and init
@@ -912,7 +1005,9 @@ static int ipmmu_remove(struct platform_device *pdev)
 	list_del(&mmu->list);
 	spin_unlock(&ipmmu_devices_lock);
 
+#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
 	arm_iommu_release_mapping(mmu->mapping);
+#endif
 
 	ipmmu_device_reset(mmu);
 
