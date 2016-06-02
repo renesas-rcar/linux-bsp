@@ -442,13 +442,13 @@
 	pinctrl-names = "default";
 
 	pwm1_pins: pwm1 {
-		renesas,groups = "pwm1_a", "pwm1_b";
-		renesas,function = "pwm1";
+		groups = "pwm1_a", "pwm1_b";
+		function = "pwm1";
 	};
 
 	pwm2_pins: pwm2 {
-		renesas,groups = "pwm2_a", "pwm2_b";
-		renesas,function = "pwm2";
+		groups = "pwm2_a", "pwm2_b";
+		function = "pwm2";
 	};
 
 	scif1_pins: scif1 {
@@ -473,8 +473,8 @@
 	};
 
 	hscif1_pins: hscif1 {
-		renesas,groups = "hscif1_data_a", "hscif1_ctrl_a";
-		renesas,function = "hscif1";
+		groups = "hscif1_data_a", "hscif1_ctrl_a";
+		function = "hscif1";
 	};
 
 	i2c2_pins: i2c2 {
@@ -512,33 +512,33 @@
 	};
 
 	mmc0_pins_1v8: mmc0_1v8 {
-		renesas,groups = "sdhi2_data8", "sdhi2_ctrl";
-		renesas,function = "sdhi2";
+		groups = "sdhi2_data8", "sdhi2_ctrl";
+		function = "sdhi2";
 		power-source = <1800>;
 	};
 
 	msiof0_pins: spi1 {
-		renesas,groups = "msiof0_clk", "msiof0_sync",
+		groups = "msiof0_clk", "msiof0_sync",
 				"msiof0_rxd",  "msiof0_txd";
-		renesas,function = "msiof0";
+		function = "msiof0";
 	};
 
 	msiof1_pins: spi2 {
-		renesas,groups = "msiof1_clk_c", "msiof1_sync_c",
+		groups = "msiof1_clk_c", "msiof1_sync_c",
 				"msiof1_rxd_c",  "msiof1_txd_c";
-		renesas,function = "msiof1";
+		function = "msiof1";
 	};
 
 	msiof2_pins: spi3 {
-		renesas,groups = "msiof2_clk_b", "msiof2_sync_b",
+		groups = "msiof2_clk_b", "msiof2_sync_b",
 				"msiof2_rxd_b",  "msiof2_txd_b";
-		renesas,function = "msiof2";
+		function = "msiof2";
 	};
 
 	msiof3_pins: spi4 {
-		renesas,groups = "msiof3_clk_d", "msiof3_sync_d",
+		groups = "msiof3_clk_d", "msiof3_sync_d",
 				"msiof3_rxd_d",  "msiof3_txd_d";
-		renesas,function = "msiof3";
+		function = "msiof3";
 	};
 
 	sound_pins: sound {
