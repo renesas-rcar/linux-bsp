@@ -11,6 +11,11 @@ menuconfig MTD
 	  particular hardware and users of MTD devices. If unsure, say N.
 
 if MTD
+config MTD_RPC_HYPERFLASH
+	tristate "MTD Renesas R-Car Gen3 RPC HyperFlash"
+	depends on ARCH_R8A7795
+	---help---
+	  This option includes Renesas R-Car Gen3 RPC HyperFlash support.
 
 config MTD_TESTS
 	tristate "MTD tests support (DANGEROUS)"
