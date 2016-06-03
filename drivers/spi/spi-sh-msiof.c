@@ -46,6 +46,8 @@ struct sh_msiof_chipdata {
 #define TRANSFAR_SYNC_DELAY (CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG_MSLEEP)
 #endif /* CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG */
 
+#define GEN3_MSIOF_MAX_CLOCK	66666666
+
 struct sh_msiof_spi_priv {
 	struct spi_master *master;
 	void __iomem *mapbase;
@@ -1375,6 +1377,11 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "spi_register_master error.\n");
 		goto err2;
+	}
+
+	if (msiof_rcar_is_gen3(&master->dev)) {
+		clk_prepare_enable(p->clk);
+		clk_set_rate(p->clk, GEN3_MSIOF_MAX_CLOCK);
 	}
 
 	ret = RCAR_PRR_INIT();
