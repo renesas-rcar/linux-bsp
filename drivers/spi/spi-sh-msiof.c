@@ -189,6 +189,23 @@ struct sh_msiof_spi_priv {
 #define IER_RFUDFE	0x00000010 /* Receive FIFO Underflow Enable */
 #define IER_RFOVFE	0x00000008 /* Receive FIFO Overflow Enable */
 
+static int msiof_rcar_is_gen2(struct device *dev)
+{
+	struct device_node *node = dev->of_node;
+
+	return of_device_is_compatible(node, "renesas,xhci-r8a7790") ||
+		of_device_is_compatible(node, "renesas,xhci-r8a7791") ||
+		of_device_is_compatible(node, "renesas,xhci-r8a7793") ||
+		of_device_is_compatible(node, "renesas,xhci-r8a7794");
+}
+
+static int msiof_rcar_is_gen3(struct device *dev)
+{
+	struct device_node *node = dev->of_node;
+
+	return of_device_is_compatible(node, "renesas,msiof-r8a7795") ||
+		of_device_is_compatible(node, "renesas,msiof-r8a7796");
+}
 
 static u32 sh_msiof_read(struct sh_msiof_spi_priv *p, int reg_offs)
 {
@@ -277,6 +294,18 @@ static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 	}
 
 	k = min_t(int, k, ARRAY_SIZE(sh_msiof_spi_div_table) - 1);
+
+	/*
+	 * In case of Gen3, BRDV[2:0]=B'111 is valid only
+	 * when the BRPS[4:0] bits are set to B'00000 or B'00001.
+	 */
+	if ((msiof_rcar_is_gen3(&p->pdev->dev) ||
+		msiof_rcar_is_gen2(&p->pdev->dev)) &&
+		!(sh_msiof_spi_div_table[k].brdv == SCR_BRDV_DIV_1 &&
+		(brps == 0 || brps == 1))) {
+		k = 1; /* SCR_BRDV_DIV_1 -> SCR_BRDV_DIV_2 */
+		brps = DIV_ROUND_UP(brps, 2);
+	}
 
 	scr = sh_msiof_spi_div_table[k].brdv | SCR_BRPS(brps);
 	sh_msiof_write(p, TSCR, scr);
