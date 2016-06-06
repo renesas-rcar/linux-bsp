@@ -804,6 +804,10 @@
 	status = "okay";
 };
 
+&hsusb {
+	status = "okay";
+};
+
 &ehci0 {
 	status = "okay";
 };
