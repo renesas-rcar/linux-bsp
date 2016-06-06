@@ -19,7 +19,6 @@
 #include <linux/iommu.h>
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/of_iommu.h>
 #include <linux/platform_device.h>
 #include <linux/sizes.h>
 #include <linux/slab.h>
@@ -1017,22 +1016,18 @@ static struct platform_driver ipmmu_driver = {
 
 static int __init ipmmu_init(void)
 {
-	static bool setup_done;
+	const struct iommu_ops *ops;
 	int ret;
-
-	if (setup_done)
-		return 0;
 
 	ret = platform_driver_register(&ipmmu_driver);
 	if (ret < 0)
 		return ret;
 
-#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
-	if (!iommu_present(&platform_bus_type))
-		bus_set_iommu(&platform_bus_type, &ipmmu_ops);
-#endif
+	ops = IS_ENABLED(CONFIG_IOMMU_DMA) ? &ipmmu_ops_dma : &ipmmu_ops;
 
-	setup_done = true;
+	if (!iommu_present(&platform_bus_type))
+		bus_set_iommu(&platform_bus_type, ops);
+
 	return 0;
 }
 
@@ -1043,24 +1038,6 @@ static void __exit ipmmu_exit(void)
 
 subsys_initcall(ipmmu_init);
 module_exit(ipmmu_exit);
-
-#ifdef CONFIG_IOMMU_DMA
-static int __init ipmmu_vmsa_iommu_of_setup(struct device_node *np)
-{
-	static const struct iommu_ops *ops = &ipmmu_ops_dma;
-
-	ipmmu_init();
-
-	of_iommu_set_ops(np, (struct iommu_ops *)ops);
-	if (!iommu_present(&platform_bus_type))
-		bus_set_iommu(&platform_bus_type, ops);
-
-	return 0;
-}
-
-IOMMU_OF_DECLARE(ipmmu_vmsa_iommu_of, "renesas,ipmmu-vmsa",
-		 ipmmu_vmsa_iommu_of_setup);
-#endif
 
 MODULE_DESCRIPTION("IOMMU API for Renesas VMSA-compatible IPMMU");
 MODULE_AUTHOR("Laurent Pinchart <laurent.pinchart@ideasonboard.com>");
