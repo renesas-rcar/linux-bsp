@@ -949,7 +949,13 @@ static struct iommu_group *ipmmu_device_group_dma(struct device *dev)
 static int ipmmu_of_xlate_dma(struct device *dev,
 			      struct of_phandle_args *spec)
 {
-	/* dummy callback to satisfy of_iommu_configure() */
+	/* If the IPMMU device is disabled in DT then return error
+	 * to make sure the of_iommu code does not install ops
+	 * even though the iommu device is disabled
+	 */
+	if (!of_device_is_available(spec->np))
+		return -ENODEV;
+
 	return 0;
 }
 
