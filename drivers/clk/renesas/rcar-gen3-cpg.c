@@ -33,32 +33,6 @@
 #define CPG_PLLECR     0x00D0
 #define CPG_PLLECR_PLL0ST (1 << 8)
 
-#define GEN3_PRR		0xFFF00044  /* Product register */
-#define PRODUCT_ID_MASK		(0x7f << 8) /* R-Car H3: PRODUCT[14:8] bits */
-#define RCAR_H3_PRODUCT_ID	(0x4f << 8) /* 0b1001111 */
-#define PRODUCT_VERSION_MASK	0xff        /* R-Car H3: CUT[7:0] bits*/
-#define PRODUCT_VERSION_WS1_0	0	/* WS1.0: 0b0000000 */
-
-int check_product_version(u32 product_bits)
-{
-	static u32 prr_value;
-	int ret;
-	void __iomem *prr = ioremap_nocache(GEN3_PRR, 4);
-
-	WARN_ON(!prr);
-	prr_value = ioread32(prr);
-	prr_value &= PRODUCT_ID_MASK | PRODUCT_VERSION_MASK;
-	if (product_bits == prr_value)
-		ret = 0;
-	else if (product_bits < prr_value)
-		ret = -1;
-	else
-		ret = 1;
-	iounmap(prr);
-
-	return ret;
-}
-
 /* Define for PLL0 clk driver */
 #define CPG_PLL0CR_STC_MASK             0x7f000000
 #define CPG_PLL0CR_STC_SHIFT            24
@@ -86,10 +60,8 @@ static int cpg_pll0_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	int i;
 
 	/* Start clock issue W/A */
-	if (check_product_version(
-			RCAR_H3_PRODUCT_ID | PRODUCT_VERSION_WS1_0) == 0) {
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
 		prate *= 2; /* Because PLL0 output is not divided for 2 */
-	}
 	/* End clock issue W/A */
 
 	stc_val = DIV_ROUND_CLOSEST(rate, prate);
@@ -125,10 +97,8 @@ static long cpg_pll0_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 		rate = Z_CLK_MAX_THRESHOLD; /* Set lowest value: 1.5GHz */
 
 	/* Start clock issue W/A */
-	if (check_product_version(
-		RCAR_H3_PRODUCT_ID | PRODUCT_VERSION_WS1_0) == 0) {
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
 		prate *= 2;
-	}
 	/* End clock issue W/A */
 
 	mult = DIV_ROUND_CLOSEST(rate, prate);
@@ -156,10 +126,8 @@ static unsigned long cpg_pll0_clk_recalc_rate(struct clk_hw *hw,
 	rate = (u64)parent_rate * (val + 1);
 
 	/* Start clock issue W/A */
-	if (check_product_version(
-		RCAR_H3_PRODUCT_ID|PRODUCT_VERSION_WS1_0) == 0) {
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
 		rate *= 2; /* Don't divide PLL0 output for 2 */
-	}
 	/* End clock issue W/A */
 
 	/* Round to closest value at 100MHz unit */
@@ -254,9 +222,8 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 		prate = 1;
 
 	/* Adjust maximum frequency value on H3 WS10 to 1.9GHz */
-	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000) {
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000)
 		rate = 1900000000;
-	}
 	/* End of adjust freq value */
 
 	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
@@ -276,7 +243,8 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 		__func__, mult, prate, prate / 32 * mult);
 	*parent_rate = prate;
 
-	return prate / 32 * mult;
+	rate = 100000000 * DIV_ROUND_CLOSEST(prate / 32 * mult, 100000000);
+	return rate;
 }
 
 static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
@@ -288,9 +256,8 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned int i;
 
 	/* Adjust maximum frequency value on H3 WS10 to 1.9GHz */
-	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000) {
+	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000)
 		rate = 1900000000;
-	}
 	/* End of adjust freq value */
 
 	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
@@ -707,10 +674,8 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		value = readl(base + CPG_PLL2CR);
 		mult = ((value >> 24) & 0x7f) + 1;
 		/* Start clock issue W/A (for H3 WS1.0) */
-		if (check_product_version(
-			RCAR_H3_PRODUCT_ID | PRODUCT_VERSION_WS1_0) == 0) {
+		if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
 			mult *= 2; /* Don't divide PLL2 output for 2 */
-		}
 		/* End clock issue W/A */
 		break;
 
