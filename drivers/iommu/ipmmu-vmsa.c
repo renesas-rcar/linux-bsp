@@ -22,7 +22,7 @@
 #include <linux/sizes.h>
 #include <linux/slab.h>
 
-#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
+#ifdef CONFIG_ARM
 #include <asm/dma-iommu.h>
 #include <asm/pgalloc.h>
 #endif
@@ -40,7 +40,7 @@ struct ipmmu_vmsa_device {
 	DECLARE_BITMAP(ctx, IPMMU_CTX_MAX);
 	struct ipmmu_vmsa_domain *domains[IPMMU_CTX_MAX];
 
-#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
+#ifdef CONFIG_ARM
 	struct dma_iommu_mapping *mapping;
 #endif
 };
@@ -619,7 +619,7 @@ static int ipmmu_find_utlbs(struct ipmmu_vmsa_device *mmu, struct device *dev,
 	return 0;
 }
 
-#if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
+#ifdef CONFIG_ARM
 static int ipmmu_map_attach(struct device *dev, struct ipmmu_vmsa_device *mmu)
 {
 	int ret;
