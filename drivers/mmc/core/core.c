@@ -1130,6 +1130,7 @@ void mmc_set_initial_state(struct mmc_host *host)
 
 	mmc_set_ios(host);
 }
+EXPORT_SYMBOL(mmc_set_initial_state);
 
 /**
  * mmc_vdd_to_ocrbitnum - Convert a voltage to the OCR bit number
