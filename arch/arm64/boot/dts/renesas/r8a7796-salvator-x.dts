@@ -334,6 +334,17 @@
 		#clock-cells = <0>;
 		clock-frequency = <108000000>;
 	};
+
+	vbus0_usb2: regulator-vbus0-usb2 {
+		compatible = "regulator-fixed";
+
+		regulator-name = "USB20_VBUS0";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+
+		gpio = <&gpio6 16 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
 };
 
 &pwm1 {
@@ -758,6 +769,7 @@
 &usb2_phy0 {
 	status = "okay";
 	pinctrl-0 = <&usb0_pins>;
+	vbus-supply = <&vbus0_usb2>;
 	pinctrl-names = "default";
 };
 
