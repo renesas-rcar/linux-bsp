@@ -256,16 +256,6 @@ static void ipmmu_ctx_write(struct ipmmu_vmsa_domain *domain, unsigned int reg,
 	ipmmu_write(domain->root, domain->context_id * IM_CTX_SIZE + reg, data);
 }
 
-static void ipmmu_ctx_write2(struct ipmmu_vmsa_domain *domain, unsigned int reg,
-			     u32 data)
-{
-	if (domain->mmu != domain->root)
-		ipmmu_write(domain->mmu,
-			    domain->context_id * IM_CTX_SIZE + reg, data);
-
-	ipmmu_write(domain->root, domain->context_id * IM_CTX_SIZE + reg, data);
-}
-
 /* -----------------------------------------------------------------------------
  * TLB and microTLB Management
  */
@@ -292,7 +282,7 @@ static void ipmmu_tlb_invalidate(struct ipmmu_vmsa_domain *domain)
 
 	reg = ipmmu_ctx_read(domain, IMCTR);
 	reg |= IMCTR_FLUSH;
-	ipmmu_ctx_write2(domain, IMCTR, reg);
+	ipmmu_ctx_write(domain, IMCTR, reg);
 
 	ipmmu_tlb_sync(domain);
 }
@@ -432,8 +422,7 @@ static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 	 * software management as we have no use for it. Flush the TLB as
 	 * required when modifying the context registers.
 	 */
-	ipmmu_ctx_write2(domain, IMCTR,
-			 IMCTR_INTEN | IMCTR_FLUSH | IMCTR_MMUEN);
+	ipmmu_ctx_write(domain, IMCTR, IMCTR_INTEN | IMCTR_FLUSH | IMCTR_MMUEN);
 
 	return 0;
 }
@@ -448,7 +437,7 @@ static void ipmmu_domain_destroy_context(struct ipmmu_vmsa_domain *domain)
 	 *
 	 * TODO: Is TLB flush really needed ?
 	 */
-	ipmmu_ctx_write2(domain, IMCTR, IMCTR_FLUSH);
+	ipmmu_ctx_write(domain, IMCTR, IMCTR_FLUSH);
 	ipmmu_tlb_sync(domain);
 }
 
