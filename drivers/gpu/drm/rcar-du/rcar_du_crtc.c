@@ -1,7 +1,7 @@
 /*
  * rcar_du_crtc.c  --  R-Car Display Unit CRTCs
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -13,6 +13,7 @@
 
 #include <linux/clk.h>
 #include <linux/mutex.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <drm/drmP.h>
 #include <drm/drm_atomic.h>
@@ -124,9 +125,14 @@ static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
 	for (n = 39; n < 120; n++) {
 		for (m = 0; m < 4; m++) {
 			for (fdpll = 1; fdpll < 32; fdpll++) {
-				/* 1/2 (FRQSEL=1) for duty rate 50% */
-				dpllclk = extclk * (n + 1) / (m + 1)
+				if (RCAR_PRR_IS_PRODUCT(H3) &&
+					(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+					/* 1/2 (FRQSEL=1) for duty rate 50% */
+					dpllclk = extclk * (n + 1) / (m + 1)
 						 / (fdpll + 1) / 2;
+				else
+					dpllclk = extclk * (n + 1) / (m + 1)
+						 / (fdpll + 1);
 				if (dpllclk >= 400000000)
 					continue;
 
@@ -167,19 +173,10 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 	u32 div;
 	u32 dpll_reg = 0;
 	struct dpll_info *dpll;
-	void __iomem *product_reg;
-	bool h3_es1_workaround = false;
 
 	dpll = kzalloc(sizeof(*dpll), GFP_KERNEL);
 	if (dpll == NULL)
 		return;
-
-	/* DU2 DPLL Clock Select bit workaround in R-Car H3(ES1.0) */
-	product_reg = ioremap(PRODUCT_REG, 0x04);
-	if (((readl(product_reg) & PRODUCT_MASK) == PRODUCT_H3_BIT)
-		&& ((readl(product_reg) & CUT_ES1_MASK) == CUT_ES1))
-		h3_es1_workaround = true;
-	iounmap(product_reg);
 
 	/* Compute the clock divisor and select the internal or external dot
 	 * clock based on the requested frequency.
@@ -195,6 +192,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		unsigned long rate;
 		u32 extdiv;
 
+		clk_set_rate(rcrtc->extclock, mode_clock);
 		extclk = clk_get_rate(rcrtc->extclock);
 
 		if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
@@ -216,7 +214,11 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 			dev_dbg(rcrtc->group->dev->dev,
 				"crtc%u: using external clock\n", rcrtc->index);
 			if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
-				escr = ESCR_DCLKSEL_DCLKIN | 0x01;
+				if (RCAR_PRR_IS_PRODUCT(H3) &&
+					(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+					escr = ESCR_DCLKSEL_DCLKIN | 0x01;
+				else
+					escr = ESCR_DCLKSEL_DCLKIN;
 				dpll_reg =  DPLLCR_CODE | DPLLCR_M(dpll->m) |
 					DPLLCR_FDPLL(dpll->fdpll) |
 					DPLLCR_CLKE | DPLLCR_N(dpll->n) |
@@ -224,12 +226,13 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 
 				if (rcrtc->index == DU_CH_1)
 					dpll_reg |= (DPLLCR_PLCS1 |
-						 DPLLCR_INCS_DPLL01_DOTCLKIN13);
+						DPLLCR_INCS_DPLL01_DOTCLKIN13);
 				if (rcrtc->index == DU_CH_2) {
 					dpll_reg |= (DPLLCR_PLCS0 |
-						 DPLLCR_INCS_DPLL01_DOTCLKIN02);
-					if (h3_es1_workaround)
-						dpll_reg |=  (0x01 << 21);
+						DPLLCR_INCS_DPLL01_DOTCLKIN02);
+					if (RCAR_PRR_IS_PRODUCT(H3) &&
+					   (RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+						dpll_reg |= (0x01 << 21);
 				}
 
 				rcar_du_group_write(rcrtc->group, DPLLCR,
@@ -244,8 +247,8 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? OTAR2 : OTAR, 0);
 
 	/* Signal polarities */
-	value = ((mode->flags & DRM_MODE_FLAG_PVSYNC) ? 0 : DSMR_VSL)
-	      | ((mode->flags & DRM_MODE_FLAG_PHSYNC) ? 0 : DSMR_HSL)
+	value = ((mode->flags & DRM_MODE_FLAG_PVSYNC) ? DSMR_VSL : 0)
+	      | ((mode->flags & DRM_MODE_FLAG_PHSYNC) ? DSMR_HSL : 0)
 	      | DSMR_DIPM_DISP | DSMR_CSPM;
 	rcar_du_crtc_write(rcrtc, DSMR, value);
 
@@ -267,7 +270,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 					mode->crtc_vsync_start - 1);
 	rcar_du_crtc_write(rcrtc, VCR,  mode->crtc_vtotal - 1);
 
-	rcar_du_crtc_write(rcrtc, DESR,  mode->htotal - mode->hsync_start);
+	rcar_du_crtc_write(rcrtc, DESR,  mode->htotal - mode->hsync_start - 1);
 	rcar_du_crtc_write(rcrtc, DEWR,  mode->hdisplay);
 }
 
@@ -528,11 +531,22 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	rcrtc->started = false;
 }
 
+void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc)
+{
+	if (!rcrtc->started)
+		return;
+
+	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? DS2PR : DS1PR, 0);
+
+	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
+
+	rcar_du_group_start_stop(rcrtc->group, false);
+
+	rcrtc->started = false;
+}
+
 void rcar_du_crtc_suspend(struct rcar_du_crtc *rcrtc)
 {
-	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
-		rcar_du_vsp_disable(rcrtc);
-
 	rcar_du_crtc_stop(rcrtc);
 	rcar_du_crtc_put(rcrtc);
 }
@@ -548,9 +562,7 @@ void rcar_du_crtc_resume(struct rcar_du_crtc *rcrtc)
 	rcar_du_crtc_start(rcrtc);
 
 	/* Commit the planes state. */
-	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE)) {
-		rcar_du_vsp_enable(rcrtc);
-	} else {
+	if (!rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE)) {
 		for (i = 0; i < rcrtc->group->num_planes; ++i) {
 			struct rcar_du_plane *plane = &rcrtc->group->planes[i];
 
@@ -705,6 +717,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	rcrtc->group = rgrp;
 	rcrtc->mmio_offset = mmio_offsets[index];
 	rcrtc->index = index;
+	rcrtc->lvds_ch = -1;
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
 		primary = &rcrtc->vsp->planes[0].plane;
@@ -740,6 +753,12 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	if (ret < 0) {
 		dev_err(rcdu->dev,
 			"failed to register IRQ for CRTC %u\n", index);
+		return ret;
+	}
+
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(rcdu->dev, "product register init fail.\n");
 		return ret;
 	}
 
