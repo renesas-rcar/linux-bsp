@@ -22,10 +22,8 @@
 #include <linux/sizes.h>
 #include <linux/slab.h>
 
-#ifdef CONFIG_ARM
 #include <asm/dma-iommu.h>
 #include <asm/pgalloc.h>
-#endif
 
 #include "io-pgtable.h"
 
@@ -40,9 +38,7 @@ struct ipmmu_vmsa_device {
 	DECLARE_BITMAP(ctx, IPMMU_CTX_MAX);
 	struct ipmmu_vmsa_domain *domains[IPMMU_CTX_MAX];
 
-#ifdef CONFIG_ARM
 	struct dma_iommu_mapping *mapping;
-#endif
 };
 
 struct ipmmu_vmsa_domain {
@@ -619,60 +615,6 @@ static int ipmmu_find_utlbs(struct ipmmu_vmsa_device *mmu, struct device *dev,
 	return 0;
 }
 
-#ifdef CONFIG_ARM
-static int ipmmu_map_attach(struct device *dev, struct ipmmu_vmsa_device *mmu)
-{
-	int ret;
-
-	/*
-	 * Create the ARM mapping, used by the ARM DMA mapping core to allocate
-	 * VAs. This will allocate a corresponding IOMMU domain.
-	 *
-	 * TODO:
-	 * - Create one mapping per context (TLB).
-	 * - Make the mapping size configurable ? We currently use a 2GB mapping
-	 *   at a 1GB offset to ensure that NULL VAs will fault.
-	 */
-	if (!mmu->mapping) {
-		struct dma_iommu_mapping *mapping;
-
-		mapping = arm_iommu_create_mapping(&platform_bus_type,
-						   SZ_1G, SZ_2G);
-		if (IS_ERR(mapping)) {
-			dev_err(mmu->dev, "failed to create ARM IOMMU mapping\n");
-			return PTR_ERR(mapping);
-		}
-
-		mmu->mapping = mapping;
-	}
-
-	/* Attach the ARM VA mapping to the device. */
-	ret = arm_iommu_attach_device(dev, mmu->mapping);
-	if (ret < 0) {
-		dev_err(dev, "Failed to attach device to VA mapping\n");
-		arm_iommu_release_mapping(mmu->mapping);
-	}
-
-	return ret;
-}
-static inline void ipmmu_detach(struct device *dev)
-{
-	arm_iommu_detach_device(dev);
-}
-static inline void ipmmu_release_mapping(struct ipmmu_vmsa_device *mmu)
-{
-	arm_iommu_release_mapping(mmu->mapping);
-}
-#else
-static inline int ipmmu_map_attach(struct device *dev,
-				   struct ipmmu_vmsa_device *mmu)
-{
-	return 0;
-}
-static inline void ipmmu_detach(struct device *dev) {}
-static inline void ipmmu_release_mapping(struct ipmmu_vmsa_device *mmu) {}
-#endif
-
 static int ipmmu_add_device(struct device *dev)
 {
 	struct ipmmu_vmsa_archdata *archdata;
@@ -753,13 +695,41 @@ static int ipmmu_add_device(struct device *dev)
 	archdata->num_utlbs = num_utlbs;
 	dev->archdata.iommu = archdata;
 
-	ret = ipmmu_map_attach(dev, mmu);
-	if (ret < 0)
+	/*
+	 * Create the ARM mapping, used by the ARM DMA mapping core to allocate
+	 * VAs. This will allocate a corresponding IOMMU domain.
+	 *
+	 * TODO:
+	 * - Create one mapping per context (TLB).
+	 * - Make the mapping size configurable ? We currently use a 2GB mapping
+	 *   at a 1GB offset to ensure that NULL VAs will fault.
+	 */
+	if (!mmu->mapping) {
+		struct dma_iommu_mapping *mapping;
+
+		mapping = arm_iommu_create_mapping(&platform_bus_type,
+						   SZ_1G, SZ_2G);
+		if (IS_ERR(mapping)) {
+			dev_err(mmu->dev, "failed to create ARM IOMMU mapping\n");
+			ret = PTR_ERR(mapping);
+			goto error;
+		}
+
+		mmu->mapping = mapping;
+	}
+
+	/* Attach the ARM VA mapping to the device. */
+	ret = arm_iommu_attach_device(dev, mmu->mapping);
+	if (ret < 0) {
+		dev_err(dev, "Failed to attach device to VA mapping\n");
 		goto error;
+	}
 
 	return 0;
 
 error:
+	arm_iommu_release_mapping(mmu->mapping);
+
 	kfree(dev->archdata.iommu);
 	kfree(utlbs);
 
@@ -775,7 +745,7 @@ static void ipmmu_remove_device(struct device *dev)
 {
 	struct ipmmu_vmsa_archdata *archdata = dev->archdata.iommu;
 
-	ipmmu_detach(dev);
+	arm_iommu_detach_device(dev);
 	iommu_group_remove_device(dev);
 
 	kfree(archdata->utlbs);
@@ -886,7 +856,7 @@ static int ipmmu_remove(struct platform_device *pdev)
 	list_del(&mmu->list);
 	spin_unlock(&ipmmu_devices_lock);
 
-	ipmmu_release_mapping(mmu);
+	arm_iommu_release_mapping(mmu->mapping);
 
 	ipmmu_device_reset(mmu);
 
