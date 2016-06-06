@@ -771,7 +771,6 @@
 
 &usb2_phy0 {
 	pinctrl-0 = <&usb0_pins>;
-	vbus-supply = <&vbus0_usb2>;
 	pinctrl-names = "default";
 
 	vbus-supply = <&vbus0_usb2>;
@@ -782,6 +781,10 @@
 	pinctrl-0 = <&usb1_pins>;
 	pinctrl-names = "default";
 
+	status = "okay";
+};
+
+&hsusb {
 	status = "okay";
 };
 
