@@ -70,10 +70,15 @@ struct ipmmu_vmsa_archdata {
 	struct ipmmu_vmsa_device *mmu;
 	unsigned int *utlbs;
 	unsigned int num_utlbs;
+	struct device *dev;
+	struct list_head list;
 };
 
 static DEFINE_SPINLOCK(ipmmu_devices_lock);
 static LIST_HEAD(ipmmu_devices);
+
+static DEFINE_SPINLOCK(ipmmu_slave_devices_lock);
+static LIST_HEAD(ipmmu_slave_devices);
 
 static struct ipmmu_vmsa_domain *to_vmsa_domain(struct iommu_domain *dom)
 {
@@ -620,6 +625,9 @@ static int ipmmu_attach_device(struct iommu_domain *io_domain,
 		dev_err(dev, "Can't attach IPMMU %s to domain on IPMMU %s\n",
 			dev_name(mmu->dev), dev_name(domain->mmu->dev));
 		ret = -EINVAL;
+	} else {
+			dev_info(dev, "Reusing IPMMU context %u\n",
+				 domain->context_id);
 	}
 
 	spin_unlock_irqrestore(&domain->lock, flags);
@@ -675,6 +683,42 @@ static phys_addr_t ipmmu_iova_to_phys(struct iommu_domain *io_domain,
 	/* TODO: Is locking needed ? */
 
 	return domain->iop->iova_to_phys(domain->iop, iova);
+}
+
+static struct device *ipmmu_find_sibling_device(struct device *dev)
+{
+	struct ipmmu_vmsa_archdata *archdata = dev->archdata.iommu;
+	struct ipmmu_vmsa_archdata *sibling_archdata = NULL;
+	bool found = false;
+
+	spin_lock(&ipmmu_slave_devices_lock);
+
+	list_for_each_entry(sibling_archdata, &ipmmu_slave_devices, list) {
+		if (archdata == sibling_archdata)
+			continue;
+		if (sibling_archdata->mmu == archdata->mmu) {
+			found = true;
+			break;
+		}
+	}
+
+	spin_unlock(&ipmmu_slave_devices_lock);
+
+	return found ? sibling_archdata->dev : NULL;
+}
+
+static struct iommu_group *ipmmu_find_group(struct device *dev)
+{
+	struct iommu_group *group;
+	struct device *sibling;
+
+	sibling = ipmmu_find_sibling_device(dev);
+	if (sibling)
+		group = iommu_group_get(sibling);
+	if (!sibling || IS_ERR(group))
+		group = generic_device_group(dev);
+
+	return group;
 }
 
 static int ipmmu_find_utlbs(struct ipmmu_vmsa_device *mmu, struct device *dev,
@@ -757,6 +801,7 @@ static int ipmmu_init_platform_device(struct device *dev,
 	archdata->mmu = mmu;
 	archdata->utlbs = utlbs;
 	archdata->num_utlbs = num_utlbs;
+	archdata->dev = dev;
 	dev->archdata.iommu = archdata;
 	return 0;
 
@@ -909,6 +954,7 @@ static void ipmmu_domain_free_dma(struct iommu_domain *io_domain)
 
 static int ipmmu_add_device_dma(struct device *dev)
 {
+	struct ipmmu_vmsa_archdata *archdata = dev->archdata.iommu;
 	struct iommu_group *group;
 
 	/* only accept devices with iommus property */
@@ -920,11 +966,21 @@ static int ipmmu_add_device_dma(struct device *dev)
 	if (IS_ERR(group))
 		return PTR_ERR(group);
 
+	archdata = dev->archdata.iommu;
+	spin_lock(&ipmmu_slave_devices_lock);
+	list_add(&archdata->list, &ipmmu_slave_devices);
+	spin_unlock(&ipmmu_slave_devices_lock);
 	return 0;
 }
 
 static void ipmmu_remove_device_dma(struct device *dev)
 {
+	struct ipmmu_vmsa_archdata *archdata = dev->archdata.iommu;
+
+	spin_lock(&ipmmu_slave_devices_lock);
+	list_del(&archdata->list);
+	spin_unlock(&ipmmu_slave_devices_lock);
+
 	iommu_group_remove_device(dev);
 }
 
@@ -933,15 +989,11 @@ static struct iommu_group *ipmmu_device_group_dma(struct device *dev)
 	struct iommu_group *group;
 	int ret;
 
-	group = generic_device_group(dev);
-	if (IS_ERR(group))
-		return group;
-
-	ret = ipmmu_init_platform_device(dev, group);
-	if (ret) {
-		iommu_group_put(group);
+	ret = ipmmu_init_platform_device(dev, NULL);
+	if (!ret)
+		group = ipmmu_find_group(dev);
+	else
 		group = ERR_PTR(ret);
-	}
 
 	return group;
 }
