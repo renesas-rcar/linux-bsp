@@ -31,7 +31,7 @@
 
 #include "io-pgtable.h"
 
-#define IPMMU_CTX_MAX 4
+#define IPMMU_CTX_MAX 1
 
 struct ipmmu_vmsa_device {
 	struct device *dev;
@@ -536,13 +536,6 @@ static int ipmmu_attach_device(struct iommu_domain *io_domain,
 		/* The domain hasn't been used yet, initialize it. */
 		domain->mmu = mmu;
 		ret = ipmmu_domain_init_context(domain);
-		if (ret < 0) {
-			dev_err(dev, "Unable to initialize IPMMU context\n");
-			domain->mmu = NULL;
-		} else {
-			dev_info(dev, "Using IPMMU context %u\n",
-				 domain->context_id);
-		}
 	} else if (domain->mmu != mmu) {
 		/*
 		 * Something is wrong, we can't attach two devices using
@@ -922,7 +915,7 @@ static void ipmmu_device_reset(struct ipmmu_vmsa_device *mmu)
 	unsigned int i;
 
 	/* Disable all contexts. */
-	for (i = 0; i < IPMMU_CTX_MAX; ++i)
+	for (i = 0; i < 4; ++i)
 		ipmmu_write(mmu, i * IM_CTX_SIZE + IMCTR, 0);
 }
 
