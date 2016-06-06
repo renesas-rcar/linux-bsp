@@ -1,7 +1,7 @@
 /*
  * vsp1_wpf.c  --  R-Car VSP1 Write Pixel Formatter
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -104,6 +104,20 @@ static void wpf_configure(struct vsp1_entity *entity,
 	u32 outfmt = 0;
 	u32 srcrpf = 0;
 
+	if (pipe->vmute_flag) {
+		vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF +
+			(0x100 * wpf->entity.index),
+			 VI6_WPF_SRCRPF_VIRACT_MST);
+		vsp1_wpf_write(wpf, dl, VI6_WPF_HSZCLIP +
+			(0x100 * wpf->entity.index), 0);
+		vsp1_wpf_write(wpf, dl, VI6_WPF_VSZCLIP +
+			(0x100 * wpf->entity.index), 0);
+		vsp1_wpf_write(wpf, dl, VI6_DPR_WPF_FPORCH(wpf->entity.index),
+			VI6_DPR_WPF_FPORCH_FP_WPFN);
+
+		return;
+	}
+
 	/* Cropping */
 	crop = vsp1_rwpf_get_crop(wpf, wpf->entity.config);
 
@@ -180,7 +194,7 @@ static void wpf_configure(struct vsp1_entity *entity,
 	/* Enable interrupts */
 	vsp1_dl_list_write(dl, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
 	vsp1_dl_list_write(dl, VI6_WPF_IRQ_ENB(wpf->entity.index),
-			   VI6_WFP_IRQ_ENB_FREE);
+			   VI6_WFP_IRQ_ENB_FREE | VI6_WFP_IRQ_ENB_UNDE);
 }
 
 static const struct vsp1_entity_operations wpf_entity_ops = {

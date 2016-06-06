@@ -1,7 +1,7 @@
 /*
  * vsp1.h  --  R-Car VSP1 API
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -37,5 +37,6 @@ void vsp1_du_atomic_begin(struct device *dev);
 int vsp1_du_atomic_update(struct device *dev, unsigned int rpf,
 			  const struct vsp1_du_atomic_config *cfg);
 void vsp1_du_atomic_flush(struct device *dev);
+int vsp1_du_if_set_mute(struct device *dev, bool on);
 
 #endif /* __MEDIA_VSP1_H__ */
