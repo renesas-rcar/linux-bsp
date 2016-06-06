@@ -60,6 +60,14 @@ static int rwdt_init_timeout(struct watchdog_device *wdev)
 	return 0;
 }
 
+static int rwdt_set_timeout(struct watchdog_device *wdev, unsigned new_timeout)
+{
+	wdev->timeout = new_timeout;
+	rwdt_init_timeout(wdev);
+
+	return 0;
+}
+
 static int rwdt_start(struct watchdog_device *wdev)
 {
 	struct rwdt_priv *priv = watchdog_get_drvdata(wdev);
@@ -105,6 +113,7 @@ static const struct watchdog_ops rwdt_ops = {
 	.start = rwdt_start,
 	.stop = rwdt_stop,
 	.ping = rwdt_init_timeout,
+	.set_timeout = rwdt_set_timeout,
 	.get_timeleft = rwdt_get_timeleft,
 };
 
