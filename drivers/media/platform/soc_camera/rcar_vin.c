@@ -1293,21 +1293,23 @@ static irqreturn_t rcar_vin_irq(int irq, void *data)
 		if (priv->state != STOPPING)
 			can_run = rcar_vin_fill_hw_slot(priv);
 
-		if (hw_stopped || !can_run) {
-			priv->state = STOPPED;
-		} else if (is_continuous_transfer(priv) &&
-			   list_empty(&priv->capture) &&
-			   priv->state == RUNNING) {
-			/*
-			 * The continuous capturing requires an explicit stop
-			 * operation when there is no buffer to be set into
-			 * the VnMBm registers.
-			 */
-			rcar_vin_request_capture_stop(priv);
+		if (is_continuous_transfer(priv)) {
+			if (hw_stopped)
+				priv->state = STOPPED;
+			else if (list_empty(&priv->capture) &&
+				priv->state == RUNNING)
+				/*
+				 * The continuous capturing requires an
+				 * explicit stop operation when there is no
+				 * buffer to be set into the VnMBm registers.
+				 */
+				rcar_vin_request_capture_stop(priv);
 		} else {
-			rcar_vin_capture(priv);
+			if (can_run)
+				rcar_vin_capture(priv);
+			else
+				priv->state = STOPPED;
 		}
-
 	} else if (hw_stopped) {
 		priv->state = STOPPED;
 		priv->request_to_stop = false;
