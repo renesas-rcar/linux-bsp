@@ -21,6 +21,9 @@
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
+#include <linux/usb/gadget.h>
+#include <linux/usb/otg.h>
+#include <linux/usb/phy_companion.h>
 
 /******* USB2.0 Host registers (original offset is +0x200) *******/
 #define USB2_INT_ENABLE		0x000
@@ -81,6 +84,7 @@ struct rcar_gen3_chan {
 	struct extcon_dev *extcon;
 	struct phy *phy;
 	struct regulator *vbus;
+	struct usb_phy usb_phy;
 	bool has_otg;
 };
 
@@ -124,30 +128,41 @@ static void rcar_gen3_enable_vbus_ctrl(struct rcar_gen3_chan *ch, int vbus)
 	writel(val, usb2_base + USB2_ADPCTRL);
 }
 
-static void rcar_gen3_init_for_host(struct rcar_gen3_chan *ch)
+static bool rcar_gen3_check_vbus(struct rcar_gen3_chan *ch)
+{
+	return !!(readl(ch->base + USB2_ADPCTRL) &
+		  USB2_ADPCTRL_OTGSESSVLD);
+}
+
+static void rcar_gen3_init_for_host(struct rcar_gen3_chan *ch, bool cable)
 {
 	rcar_gen3_set_linectrl(ch, 1, 1);
 	rcar_gen3_set_host_mode(ch, 1);
 	rcar_gen3_enable_vbus_ctrl(ch, 1);
 
-	extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, true);
-	extcon_set_cable_state_(ch->extcon, EXTCON_USB, false);
+	if (cable) {
+		extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, true);
+		extcon_set_cable_state_(ch->extcon, EXTCON_USB, false);
+	}
 }
 
-static void rcar_gen3_init_for_peri(struct rcar_gen3_chan *ch)
+static void rcar_gen3_init_for_peri(struct rcar_gen3_chan *ch, bool cable)
 {
 	rcar_gen3_set_linectrl(ch, 0, 1);
 	rcar_gen3_set_host_mode(ch, 0);
 	rcar_gen3_enable_vbus_ctrl(ch, 0);
 
-	extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, false);
-	extcon_set_cable_state_(ch->extcon, EXTCON_USB, true);
-}
+	if (ch->has_otg && ch->usb_phy.otg->gadget) {
+		if (rcar_gen3_check_vbus(ch))
+			usb_gadget_vbus_connect(ch->usb_phy.otg->gadget);
+		else
+			usb_gadget_vbus_disconnect(ch->usb_phy.otg->gadget);
+	}
 
-static bool rcar_gen3_check_vbus(struct rcar_gen3_chan *ch)
-{
-	return !!(readl(ch->base + USB2_ADPCTRL) &
-		  USB2_ADPCTRL_OTGSESSVLD);
+	if (cable) {
+		extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, false);
+		extcon_set_cable_state_(ch->extcon, EXTCON_USB, true);
+	}
 }
 
 static bool rcar_gen3_check_id(struct rcar_gen3_chan *ch)
@@ -155,19 +170,56 @@ static bool rcar_gen3_check_id(struct rcar_gen3_chan *ch)
 	return !!(readl(ch->base + USB2_ADPCTRL) & USB2_ADPCTRL_IDDIG);
 }
 
+static int rcar_gen3_phy_usb2_set_host(struct usb_otg *otg,
+				       struct usb_bus *host)
+{
+	if (!otg)
+		return -ENODEV;
+
+	otg->host = host;
+	if (!host)
+		otg->state = OTG_STATE_UNDEFINED;
+
+	return 0;
+}
+
+static int rcar_gen3_phy_usb2_set_peripheral(struct usb_otg *otg,
+					     struct usb_gadget *gadget)
+{
+	if (!otg)
+		return -ENODEV;
+
+	otg->gadget = gadget;
+	if (!gadget)
+		otg->state = OTG_STATE_UNDEFINED;
+
+	return 0;
+}
+
 static void rcar_gen3_device_recognition(struct rcar_gen3_chan *ch)
 {
-	bool is_host = true;
-
-	/* B-device? */
-	if (rcar_gen3_check_id(ch) && rcar_gen3_check_vbus(ch))
-		is_host = false;
-
-	if (is_host)
-		rcar_gen3_init_for_host(ch);
+	if (!rcar_gen3_check_id(ch))
+		rcar_gen3_init_for_host(ch, true);
 	else
-		rcar_gen3_init_for_peri(ch);
+		rcar_gen3_init_for_peri(ch, true);
 }
+
+static ssize_t gadget_store(struct device *dev, struct device_attribute *attr,
+			    const char *buf, size_t count)
+{
+	struct rcar_gen3_chan *ch = dev_get_drvdata(dev);
+
+	if (!rcar_gen3_check_vbus(ch))
+		return count;
+
+	if (buf[0] == '0')
+		rcar_gen3_init_for_host(ch, false);
+	else if (buf[0] == '1')
+		rcar_gen3_init_for_peri(ch, false);
+
+	return count;
+}
+static DEVICE_ATTR_WO(gadget);
 
 static void rcar_gen3_init_otg(struct rcar_gen3_chan *ch)
 {
@@ -275,6 +327,7 @@ static irqreturn_t rcar_gen3_phy_usb2_irq(int irq, void *_ch)
 
 static const struct of_device_id rcar_gen3_phy_usb2_match_table[] = {
 	{ .compatible = "renesas,usb2-phy-r8a7795" },
+	{ .compatible = "renesas,usb2-phy-r8a7796" },
 	{ .compatible = "renesas,rcar-gen3-usb2-phy" },
 	{ }
 };
@@ -292,7 +345,7 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 	struct rcar_gen3_chan *channel;
 	struct phy_provider *provider;
 	struct resource *res;
-	int irq;
+	int irq, ret;
 
 	if (!dev->of_node) {
 		dev_err(dev, "This driver needs device tree\n");
@@ -311,7 +364,7 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 	/* call request_irq for OTG */
 	irq = platform_get_irq(pdev, 0);
 	if (irq >= 0) {
-		int ret;
+		struct usb_otg *otg;
 
 		irq = devm_request_irq(dev, irq, rcar_gen3_phy_usb2_irq,
 				       IRQF_SHARED, dev_name(dev), channel);
@@ -328,6 +381,19 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 			dev_err(dev, "Failed to register extcon\n");
 			return ret;
 		}
+
+		otg = devm_kzalloc(dev, sizeof(*otg), GFP_KERNEL);
+		if (!otg)
+			return -ENOMEM;
+
+		channel->usb_phy.dev = dev;
+		channel->usb_phy.label = "rcar_gen3_usb2_phy";
+		channel->usb_phy.otg = otg;
+		channel->usb_phy.type = USB_PHY_TYPE_USB2;
+		otg->set_host = rcar_gen3_phy_usb2_set_host;
+		otg->set_peripheral = rcar_gen3_phy_usb2_set_peripheral;
+		otg->usb_phy = &channel->usb_phy;
+
 	}
 
 	/* devm_phy_create() will call pm_runtime_enable(dev); */
@@ -344,13 +410,39 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 		channel->vbus = NULL;
 	}
 
+	platform_set_drvdata(pdev, channel);
 	phy_set_drvdata(channel->phy, channel);
 
 	provider = devm_of_phy_provider_register(dev, of_phy_simple_xlate);
-	if (IS_ERR(provider))
+	if (IS_ERR(provider)) {
 		dev_err(dev, "Failed to register PHY provider\n");
+	} else if (channel->has_otg) {
+		ret = usb_add_phy_dev(&channel->usb_phy);
+		if (ret < 0) {
+			dev_err(dev, "Failed to register usb PHY provider\n");
+			return ret;
+		}
+
+		ret = device_create_file(dev, &dev_attr_gadget);
+		if (ret < 0) {
+			usb_remove_phy(&channel->usb_phy);
+			return ret;
+		}
+	}
 
 	return PTR_ERR_OR_ZERO(provider);
+}
+
+static int rcar_gen3_phy_usb2_remove(struct platform_device *pdev)
+{
+	struct rcar_gen3_chan *channel = platform_get_drvdata(pdev);
+
+	if (channel->has_otg) {
+		device_remove_file(&pdev->dev, &dev_attr_gadget);
+		usb_remove_phy(&channel->usb_phy);
+	}
+
+	return 0;
 }
 
 static struct platform_driver rcar_gen3_phy_usb2_driver = {
@@ -359,6 +451,7 @@ static struct platform_driver rcar_gen3_phy_usb2_driver = {
 		.of_match_table	= rcar_gen3_phy_usb2_match_table,
 	},
 	.probe	= rcar_gen3_phy_usb2_probe,
+	.remove	= rcar_gen3_phy_usb2_remove,
 };
 module_platform_driver(rcar_gen3_phy_usb2_driver);
 
