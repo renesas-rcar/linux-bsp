@@ -779,6 +779,10 @@
 	pinctrl-names = "default";
 };
 
+&hsusb {
+	status = "okay";
+};
+
 &ehci0 {
 	status = "okay";
 };
