@@ -1876,6 +1876,7 @@
 			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 328>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 12>;
 			status = "disabled";
 		};
 
