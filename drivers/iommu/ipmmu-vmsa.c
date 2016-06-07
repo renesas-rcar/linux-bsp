@@ -606,6 +606,58 @@ static void ipmmu_domain_free(struct iommu_domain *io_domain)
 	kfree(domain);
 }
 
+/* Hack to identity map address ranges needed by the DMAC hardware */
+static struct {
+	phys_addr_t base;
+	size_t size;
+} dmac_workaround[] = {
+	{
+		.base = 0xe6e68000, /* SCIF1 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6e88000, /* SCIF2 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6c50000, /* SCIF3 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6550000, /* HSCIF1 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe66a0000, /* HSCIF3 */
+		.size = SZ_4K,
+	},
+};
+
+static void ipmmu_workaround(struct iommu_domain *io_domain,
+			     struct device *dev)
+{
+	int k;
+
+	/* only apply workaround for DMA controllers */
+	if (!strstr(dev_name(dev), "dma-controller"))
+		return;
+
+	dev_info(dev, "Adding iommu workaround\n");
+
+	for (k = 0; k < ARRAY_SIZE(dmac_workaround); k++) {
+		phys_addr_t phys_addr;
+
+		phys_addr = iommu_iova_to_phys(io_domain,
+					       dmac_workaround[k].base);
+		if (phys_addr)
+			continue;
+
+		iommu_map(io_domain, dmac_workaround[k].base,
+			  dmac_workaround[k].base, dmac_workaround[k].size,
+			  IOMMU_READ | IOMMU_WRITE);
+	}
+}
+
 static int ipmmu_attach_device(struct iommu_domain *io_domain,
 			       struct device *dev)
 {
@@ -658,6 +710,8 @@ static int ipmmu_attach_device(struct iommu_domain *io_domain,
 
 	if (ret < 0)
 		return ret;
+
+	ipmmu_workaround(io_domain, dev);
 
 	for (i = 0; i < archdata->num_utlbs; ++i)
 		ipmmu_utlb_enable(domain, archdata->utlbs[i]);
