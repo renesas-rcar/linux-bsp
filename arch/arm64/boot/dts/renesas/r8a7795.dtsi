@@ -2209,6 +2209,7 @@
 			phys = <&usb2_phy0>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 4>;
 			status = "disabled";
 		};
 
@@ -2220,6 +2221,7 @@
 			phys = <&usb2_phy1>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 5>;
 			status = "disabled";
 		};
 
@@ -2231,6 +2233,7 @@
 			phys = <&usb2_phy2>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 6>;
 			status = "disabled";
 		};
 
@@ -2242,6 +2245,7 @@
 			phys = <&usb2_phy0>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 4>;
 			status = "disabled";
 		};
 
@@ -2253,6 +2257,7 @@
 			phys = <&usb2_phy1>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 5>;
 			status = "disabled";
 		};
 
@@ -2264,6 +2269,7 @@
 			phys = <&usb2_phy2>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 6>;
 			status = "disabled";
 		};
 		pciec0: pcie@fe000000 {
