@@ -242,6 +242,15 @@ static int sh_mobile_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 	return pinctrl_select_state(priv->pinctrl, pin_state);
 }
 
+static int sh_mobile_sdhi_card_busy(struct tmio_mmc_host *host)
+{
+	u32 dat0;
+
+	/* check to see DAT[3:0] */
+	dat0 = sd_ctrl_read16_and_16_as_32(host, CTL_STATUS);
+	return !(dat0 & TMIO_STAT_DAT0);
+}
+
 static int sh_mobile_sdhi_wait_idle(struct tmio_mmc_host *host)
 {
 	int timeout = 1000;
@@ -363,6 +372,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	host->clk_enable	= sh_mobile_sdhi_clk_enable;
 	host->clk_update	= sh_mobile_sdhi_clk_update;
 	host->clk_disable	= sh_mobile_sdhi_clk_disable;
+	host->card_busy		= sh_mobile_sdhi_card_busy;
 	host->multi_io_quirk	= sh_mobile_sdhi_multi_io_quirk;
 	host->start_signal_voltage_switch =
 			sh_mobile_sdhi_start_signal_voltage_switch;
