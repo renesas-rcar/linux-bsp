@@ -37,7 +37,7 @@
 
 #include "tmio_mmc.h"
 
-#define EXT_ACC           0xe4
+#define HOST_MODE           0xe4
 
 #define host_to_priv(host) container_of((host)->pdata, struct sh_mobile_sdhi, mmc_data)
 
@@ -130,7 +130,7 @@ static void sh_mobile_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
 		return;
 	}
 
-	sd_ctrl_write16(host, EXT_ACC, val);
+	sd_ctrl_write16(host, HOST_MODE, val);
 }
 
 static int sh_mobile_sdhi_clk_enable(struct tmio_mmc_host *host)
@@ -270,7 +270,7 @@ static int sh_mobile_sdhi_write16_hook(struct tmio_mmc_host *host, int addr)
 	case CTL_SD_MEM_CARD_OPT:
 	case CTL_TRANSACTION_CTL:
 	case CTL_DMA_ENABLE:
-	case EXT_ACC:
+	case HOST_MODE:
 		return sh_mobile_sdhi_wait_idle(host);
 	}
 
