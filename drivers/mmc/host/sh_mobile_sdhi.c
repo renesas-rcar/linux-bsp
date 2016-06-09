@@ -135,20 +135,12 @@ static const struct of_device_id sh_mobile_sdhi_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, sh_mobile_sdhi_of_match);
 
-struct sh_mobile_sdhi_vlt {
-	u32 base;		/* base address for IO voltage */
-	u32 offset;		/* offset value for IO voltage */
-	u32 mask;		/* bit mask position for IO voltage */
-	u32 size;		/* bit mask size for IO voltage */
-};
-
 struct sh_mobile_sdhi {
 	struct clk *clk;
 	struct tmio_mmc_data mmc_data;
 	struct tmio_mmc_dma dma_priv;
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pins_default, *pins_uhs;
-	struct sh_mobile_sdhi_vlt vlt;
 };
 
 static void sh_mobile_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
@@ -274,39 +266,33 @@ static void sh_mobile_sdhi_set_clk_div(struct platform_device *pdev,
 #define SH_MOBILE_SDHI_SIGNAL_180V	0
 #define SH_MOBILE_SDHI_SIGNAL_330V	1
 
-static void sh_mobile_sdhi_set_ioctrl(struct tmio_mmc_host *host, int state)
+static int sh_mobile_sdhi_set_ioctrl(struct tmio_mmc_host *host, int state)
 {
 	struct platform_device *pdev = host->pdev;
-	void __iomem *pmmr, *ioctrl;
-	unsigned int ctrl, mask;
 	struct sh_mobile_sdhi *priv =
 		container_of(host->pdata, struct sh_mobile_sdhi, mmc_data);
-	struct sh_mobile_sdhi_vlt *vlt = &priv->vlt;
+	struct pinctrl_state *pstate;
+	int ret;
 
-	if (!vlt)
-		return;
-
-	pmmr = ioremap(vlt->base, 0x04);
-	ioctrl = ioremap(vlt->base + vlt->offset, 0x04);
-
-	ctrl = ioread32(ioctrl);
-	/* Set 1.8V/3.3V */
-	mask = vlt->size << vlt->mask;
-
-	if (state == SH_MOBILE_SDHI_SIGNAL_330V)
-		ctrl |= mask;
-	else if (state == SH_MOBILE_SDHI_SIGNAL_180V)
-		ctrl &= ~mask;
-	else {
+	if (state == SH_MOBILE_SDHI_SIGNAL_330V) {
+		pstate = priv->pins_default;
+	} else if (state == SH_MOBILE_SDHI_SIGNAL_180V) {
+		pstate = priv->pins_uhs;
+	} else {
 		dev_err(&pdev->dev, "update_ioctrl: unknown state\n");
+		ret = -EINVAL;
 		goto err;
 	}
 
-	iowrite32(~ctrl, pmmr);
-	iowrite32(ctrl, ioctrl);
+	if (!pstate) {
+		ret = -EIO;
+		goto err;
+	}
+
+	return pinctrl_select_state(priv->pinctrl, pstate);
+
 err:
-	iounmap(pmmr);
-	iounmap(ioctrl);
+	return ret;
 }
 
 static int sh_mobile_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
@@ -661,11 +647,9 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	struct tmio_mmc_host *host;
 	struct resource *res;
 	int irq, ret, i = 0;
+	struct device_node *np = pdev->dev.of_node;
 	struct tmio_mmc_dma *dma_priv;
-	const struct device_node *np = pdev->dev.of_node;
 	int clk_rate;
-	struct sh_mobile_sdhi_vlt *vlt;
-	u32 pfcs[2], mask[2];
 	u32 num, tapnum = 0, tappos;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -678,7 +662,6 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 
 	mmc_data = &priv->mmc_data;
 	dma_priv = &priv->dma_priv;
-	vlt = &priv->vlt;
 
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(priv->clk)) {
@@ -697,18 +680,6 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 
 			clk_disable_unprepare(priv->clk);
 		}
-	}
-
-	if (np && !of_property_read_u32_array(np, "renesas,pfcs", pfcs, 2)) {
-		if (pfcs[0]) {
-			vlt->base = pfcs[0];
-			vlt->offset = pfcs[1];
-		}
-	}
-
-	if (np && !of_property_read_u32_array(np, "renesas,id", mask, 2)) {
-		vlt->mask = mask[0];
-		vlt->size = mask[1];
 	}
 
 	if (np && !of_property_read_u32(np, "renesas,mmc-scc-tapnum", &num))
