@@ -1,8 +1,8 @@
 /*
  * SuperH Mobile SDHI
  *
+ * Copyright (C) 2016 Renesas Electronics Corporation
  * Copyright (C) 2016 Sang Engineering, Wolfram Sang
- * Copyright (C) 2015-16 Renesas Electronics Corporation
  * Copyright (C) 2009 Magnus Damm
  *
  * This program is free software; you can redistribute it and/or modify
@@ -70,7 +70,8 @@ static const struct sh_mobile_sdhi_of_data of_rcar_gen2_compatible = {
 
 static const struct sh_mobile_sdhi_of_data of_rcar_gen3_compatible = {
 	.tmio_flags	= TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_WRPROTECT_DISABLE |
-			  TMIO_MMC_CLK_ACTUAL | TMIO_MMC_MIN_RCAR2,
+			  TMIO_MMC_CLK_ACTUAL | TMIO_MMC_MIN_RCAR2 |
+			  TMIO_MMC_CLK_NO_SLEEP,
 	.capabilities	= MMC_CAP_SD_HIGHSPEED | MMC_CAP_SDIO_IRQ,
 	.bus_shift	= 2,
 };
@@ -363,10 +364,14 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	host->clk_update	= sh_mobile_sdhi_clk_update;
 	host->clk_disable	= sh_mobile_sdhi_clk_disable;
 	host->multi_io_quirk	= sh_mobile_sdhi_multi_io_quirk;
-	host->start_signal_voltage_switch = sh_mobile_sdhi_start_signal_voltage_switch;
+	host->start_signal_voltage_switch =
+			sh_mobile_sdhi_start_signal_voltage_switch;
 
 	/* Orginally registers were 16 bit apart, could be 32 or 64 nowadays */
-	if (!host->bus_shift && resource_size(res) > 0x100) /* old way to determine the shift */
+	if (resource_size(res) > 0x400)
+		host->bus_shift = 2;
+	else if (!host->bus_shift &&
+	    resource_size(res) > 0x100) /* old way to determine the shift */
 		host->bus_shift = 1;
 
 	if (mmd)
