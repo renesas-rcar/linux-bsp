@@ -50,8 +50,8 @@
 #define SYSCSR_RETRIES		1000
 #define SYSCSR_DELAY_US		10
 
-#define PWRER_RETRIES		100
-#define PWRER_DELAY_US		1
+#define PWRER_RETRIES		1000
+#define PWRER_DELAY_US		10
 
 #define SYSCISR_RETRIES		1000
 #define SYSCISR_DELAY_US	10
@@ -91,9 +91,9 @@ static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 		return -EAGAIN;
 
 	/* Start W/A for A3VP, A3VC, and A3IR domains */
-	if (!strcmp("a3vp", to_pd_name(sysc_ch))
+	if (!on && (!strcmp("a3vp", to_pd_name(sysc_ch))
 		|| !strcmp("a3ir", to_pd_name(sysc_ch))
-		|| !strcmp("a3vc", to_pd_name(sysc_ch)))
+		|| !strcmp("a3vc", to_pd_name(sysc_ch))))
 		udelay(1);
 
 	/* Submit power shutoff or power resume request */
