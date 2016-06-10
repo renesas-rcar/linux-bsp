@@ -62,6 +62,7 @@ static void rpf_configure(struct vsp1_entity *entity,
 			  struct vsp1_pipeline *pipe,
 			  struct vsp1_dl_list *dl)
 {
+	struct vsp1_device *vsp1 = entity->vsp1;
 	struct vsp1_rwpf *rpf = to_rwpf(&entity->subdev);
 	const struct vsp1_format_info *fmtinfo = rpf->fmtinfo;
 	const struct v4l2_pix_format_mplane *format = &rpf->format;
@@ -72,6 +73,15 @@ static void rpf_configure(struct vsp1_entity *entity,
 	unsigned int top = 0;
 	u32 pstride;
 	u32 infmt;
+	u32 alph_sel = 0, laya = 0;
+	u32 i;
+
+	if (pipe->vmute_flag) {
+		for (i = 0; i < vsp1->info->rpf_count; ++i)
+			vsp1_rpf_write(rpf, dl, VI6_DPR_RPF_ROUTE(i),
+						VI6_DPR_NODE_UNUSED);
+		return;
+	}
 
 	/* Source size, stride and crop offsets.
 	 *
@@ -164,23 +174,51 @@ static void rpf_configure(struct vsp1_entity *entity,
 	 *
 	 * In all cases, disable color keying.
 	 */
-	vsp1_rpf_write(rpf, dl, VI6_RPF_ALPH_SEL, VI6_RPF_ALPH_SEL_AEXT_EXT |
-		       (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
-				       : VI6_RPF_ALPH_SEL_ASEL_FIXED));
+	switch (fmtinfo->fourcc) {
+	case V4L2_PIX_FMT_ARGB555:
+		if (CONFIG_VIDEO_RENESAS_VSP_ALPHA_BIT_ARGB1555 == 1)
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   VI6_RPF_ALPH_SEL_ALPHA1_MASK |
+				   (rpf->alpha &
+				   VI6_RPF_ALPH_SEL_ALPHA0_MASK);
+		else
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   ((rpf->alpha & 0xff) << 8) |
+				   VI6_RPF_ALPH_SEL_ALPHA0_MASK;
+		laya = 0;
+		break;
+	case V4L2_PIX_FMT_ARGB444:
+		alph_sel = VI6_RPF_ALPH_SEL_AEXT_ONE;
+		laya = 0;
+		break;
+	case V4L2_PIX_FMT_ABGR32:
+	case V4L2_PIX_FMT_ARGB32:
+		laya = 0;
+		break;
+	default:
+		alph_sel = VI6_RPF_ALPH_SEL_AEXT_EXT |
+			   (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
+			   : VI6_RPF_ALPH_SEL_ASEL_FIXED);
+		laya = rpf->alpha << VI6_RPF_VRTCOL_SET_LAYA_SHIFT;
+		break;
+	}
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_VRTCOL_SET,
-		       rpf->alpha << VI6_RPF_VRTCOL_SET_LAYA_SHIFT);
+	vsp1_rpf_write(rpf, dl, VI6_RPF_ALPH_SEL, alph_sel);
+	vsp1_rpf_write(rpf, dl, VI6_RPF_VRTCOL_SET, laya);
 
 	if (entity->vsp1->info->gen == 3) {
 		u32 mult;
 
-		if (fmtinfo->alpha) {
+		if ((fmtinfo->alpha) &&
+			(fmtinfo->fourcc != V4L2_PIX_FMT_ARGB555)) {
 			/* When the input contains an alpha channel enable the
 			 * alpha multiplier. If the input is premultiplied we
 			 * need to multiply both the alpha channel and the pixel
 			 * components by the global alpha value to keep them
 			 * premultiplied. Otherwise multiply the alpha channel
-			 * only.
+			 * only. The alpha multiplier is disabled in ARGB1555.
 			 */
 			bool premultiplied = format->flags
 					   & V4L2_PIX_FMT_FLAG_PREMUL_ALPHA;

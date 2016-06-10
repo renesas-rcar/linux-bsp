@@ -1,7 +1,7 @@
 /*
  * vsp1_dl.h  --  R-Car VSP1 Display List
  *
- * Copyright (C) 2015 Renesas Corporation
+ * Copyright (C) 2015-2016 Renesas Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -15,6 +15,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/gfp.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include "vsp1.h"
 #include "vsp1_dl.h"
@@ -439,6 +440,13 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl)
 	vsp1_write(vsp1, VI6_DL_BODY_SIZE, VI6_DL_BODY_SIZE_UPD |
 		   (dl->body0.num_entries * sizeof(*dl->header->lists)));
 
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0)) {
+		vsp1->dl_addr = dl->body0.dma;
+		vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
+			(dl->body0.num_entries * sizeof(*dl->header->lists));
+	}
+
 	__vsp1_dl_list_put(dlm->queued);
 	dlm->queued = dl;
 
@@ -508,6 +516,13 @@ void vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm)
 			   (dl->body0.num_entries *
 			    sizeof(*dl->header->lists)));
 
+		if (RCAR_PRR_IS_PRODUCT(H3) &&
+			(RCAR_PRR_CHK_CUT(H3, WS11) <= 0)) {
+			vsp1->dl_addr = dl->body0.dma;
+			vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
+				(dl->body0.num_entries *
+				 sizeof(*dl->header->lists));
+		}
 		dlm->queued = dl;
 		dlm->pending = NULL;
 	}
@@ -556,6 +571,7 @@ struct vsp1_dl_manager *vsp1_dlm_create(struct vsp1_device *vsp1,
 {
 	struct vsp1_dl_manager *dlm;
 	unsigned int i;
+	int ret;
 
 	dlm = devm_kzalloc(vsp1->dev, sizeof(*dlm), GFP_KERNEL);
 	if (!dlm)
@@ -577,6 +593,12 @@ struct vsp1_dl_manager *vsp1_dlm_create(struct vsp1_device *vsp1,
 			return NULL;
 
 		list_add_tail(&dl->list, &dlm->free);
+	}
+
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(dlm->vsp1->dev, "product register init fail.\n");
+		return NULL;
 	}
 
 	return dlm;
