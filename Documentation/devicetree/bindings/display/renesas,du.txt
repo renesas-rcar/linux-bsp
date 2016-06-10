@@ -9,6 +9,7 @@ Required Properties:
     - "renesas,du-r8a7793" for R8A7793 (R-Car M2-N) compatible DU
     - "renesas,du-r8a7794" for R8A7794 (R-Car E2) compatible DU
     - "renesas,du-r8a7795" for R8A7795 (R-Car H3) compatible DU
+    - "renesas,du-r8a7796" for R8A7796 (R-Car M3) compatible DU
 
   - reg: A list of base address and length of each memory resource, one for
     each entry in the reg-names property.
@@ -50,6 +51,7 @@ corresponding to each DU output.
  R8A7793 (M2-N)	DPAD		LVDS 0		-		-
  R8A7794 (E2)	DPAD 0		DPAD 1		-		-
  R8A7795 (H3)	DPAD		HDMI 0		HDMI 1		LVDS
+ R8A7796 (M3)	DPAD		HDMI		LVDS		-
 
 
 Example: R8A7790 (R-Car H2) DU
