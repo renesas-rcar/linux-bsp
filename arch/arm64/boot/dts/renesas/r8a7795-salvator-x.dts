@@ -775,8 +775,8 @@
 };
 
 &sdhi0 {
-	pinctrl-0 = <&sdhi3_pins_3v3>;
-	pinctrl-1 = <&sdhi3_pins_1v8>;
+	pinctrl-0 = <&sdhi0_pins_3v3>;
+	pinctrl-1 = <&sdhi0_pins_1v8>;
 	pinctrl-names = "default", "state_uhs";
 
 	vmmc-supply = <&vcc_sdhi0>;

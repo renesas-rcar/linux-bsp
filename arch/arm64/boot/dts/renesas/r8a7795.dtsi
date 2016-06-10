@@ -783,7 +783,7 @@
 		};
 
 		wdt0: wdt@e6020000 {
-			compatible = "renesas,rwdt-r8a7795", "renesas,rwdt";
+			compatible = "renesas,r8a7795-wdt", "renesas,rcar-gen3-wdt";
 			reg = <0 0xe6020000 0 0x0c>;
 			clocks = <&cpg CPG_MOD 402>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
@@ -1034,6 +1034,7 @@
 			reg = <0 0xe6740000 0 0x1000>; /* IPMMU-DS0 */
 			renesas,ipmmu-main = <&ipmmu_mm 0>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_ds1: mmu@e7740000 {
@@ -1050,6 +1051,7 @@
 			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		dmac0: dma-controller@e6700000 {
@@ -2046,6 +2048,7 @@
 			reg = <0 0xee300000 0 0x1fff>;
 			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 815>;
+			iommus = <&ipmmu_hc 2>;
 			status = "disabled";
 		};
 
@@ -2055,6 +2058,7 @@
 			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 328>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 12>;
 			status = "disabled";
 		};
 
@@ -2064,6 +2068,7 @@
 			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 327>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 14>;
 			status = "disabled";
 		};
 
@@ -2211,6 +2216,7 @@
 			phys = <&usb2_phy0>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 4>;
 			status = "disabled";
 		};
 
@@ -2222,6 +2228,7 @@
 			phys = <&usb2_phy1>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 5>;
 			status = "disabled";
 		};
 
@@ -2233,6 +2240,7 @@
 			phys = <&usb2_phy2>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 6>;
 			status = "disabled";
 		};
 
@@ -2244,6 +2252,7 @@
 			phys = <&usb2_phy0>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 4>;
 			status = "disabled";
 		};
 
@@ -2255,6 +2264,7 @@
 			phys = <&usb2_phy1>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 5>;
 			status = "disabled";
 		};
 
@@ -2266,6 +2276,7 @@
 			phys = <&usb2_phy2>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			iommus = <&ipmmu_hc 6>;
 			status = "disabled";
 		};
 		pciec0: pcie@fe000000 {
@@ -2734,6 +2745,5 @@
 				};
 			};
 		};
-
 	};
 };

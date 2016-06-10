@@ -361,6 +361,7 @@
 
 &du {
 	status = "okay";
+	backlight = <&gpio6 7 GPIO_ACTIVE_HIGH>;
 
 	ports {
 		port@0 {
@@ -478,7 +479,7 @@
 
 	msiof3_pins: spi4 {
 		groups = "msiof3_clk_d", "msiof3_sync_d",
-						"msiof3_rxd_d",  "msiof3_txd_d";
+				"msiof3_rxd_d",  "msiof3_txd_d";
 		function = "msiof3";
 	};
 
@@ -683,6 +684,7 @@
 	vqmmc-supply = <&vccq_sdhi0>;
 	cd-gpios = <&gpio3 12 GPIO_ACTIVE_LOW>;
 	wp-gpios = <&gpio3 13 GPIO_ACTIVE_HIGH>;
+	bus-width = <4>;
 	status = "okay";
 };
 
@@ -695,6 +697,7 @@
 	vqmmc-supply = <&vccq_sdhi3>;
 	cd-gpios = <&gpio4 15 GPIO_ACTIVE_LOW>;
 	wp-gpios = <&gpio4 16 GPIO_ACTIVE_HIGH>;
+	bus-width = <4>;
 	status = "okay";
 };
 
@@ -767,16 +770,18 @@
 };
 
 &usb2_phy0 {
-	status = "okay";
 	pinctrl-0 = <&usb0_pins>;
-	vbus-supply = <&vbus0_usb2>;
 	pinctrl-names = "default";
+
+	vbus-supply = <&vbus0_usb2>;
+	status = "okay";
 };
 
 &usb2_phy1 {
-	status = "okay";
 	pinctrl-0 = <&usb1_pins>;
 	pinctrl-names = "default";
+
+	status = "okay";
 };
 
 &hsusb {
@@ -859,6 +864,7 @@
 };
 
 &pcie_bus_clk {
+	clock-frequency = <100000000>;
 	status = "okay";
 };
 
@@ -994,10 +1000,6 @@
 			remote-endpoint = <&adv7482_rxb_out>;
 		};
 	};
-};
-
-&fdp0 {
-	status = "okay";
 };
 
 &vspb {
