@@ -2027,7 +2027,6 @@
 			renesas,clk-rate = <200000000>;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
-			mmc-hs400-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
 		};
@@ -2041,7 +2040,6 @@
 			renesas,clk-rate = <200000000>;
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
-			mmc-hs400-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
 			status = "disabled";
 		};
