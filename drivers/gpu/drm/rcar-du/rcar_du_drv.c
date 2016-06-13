@@ -286,8 +286,10 @@ static int rcar_du_pm_suspend(struct device *dev)
 			rcar_du_lvdsenc_stop_suspend(rcdu->lvds[i]);
 	}
 #endif
-	for (i = 0; i < rcdu->num_crtcs; ++i)
-		rcar_du_crtc_put(&rcdu->crtcs[i]);
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started)
+			rcar_du_crtc_put(&rcdu->crtcs[i]);
+	}
 
 	return 0;
 }
@@ -300,8 +302,10 @@ static int rcar_du_pm_resume(struct device *dev)
 
 	encoder = NULL;
 
-	for (i = 0; i < rcdu->num_crtcs; ++i)
-		rcar_du_crtc_get(&rcdu->crtcs[i]);
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started)
+			rcar_du_crtc_get(&rcdu->crtcs[i]);
+	}
 
 #if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
