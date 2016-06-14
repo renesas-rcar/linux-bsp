@@ -73,6 +73,7 @@
 #define USB2_LINECTRL1_DP_RPD		BIT(18)
 #define USB2_LINECTRL1_DMRPD_EN		BIT(17)
 #define USB2_LINECTRL1_DM_RPD		BIT(16)
+#define USB2_LINECTRL1_OPMODE_NODRV	BIT(6)
 
 /* ADPCTRL */
 #define USB2_ADPCTRL_OTGSESSVLD		BIT(20)
@@ -143,6 +144,9 @@ static void rcar_gen3_init_for_host(struct rcar_gen3_chan *ch)
 
 	extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, true);
 	extcon_set_cable_state_(ch->extcon, EXTCON_USB, false);
+
+	if (ch->has_otg && ch->usb_phy.otg)
+		ch->usb_phy.otg->state = OTG_STATE_A_HOST;
 }
 
 static void rcar_gen3_init_for_peri(struct rcar_gen3_chan *ch)
@@ -156,10 +160,60 @@ static void rcar_gen3_init_for_peri(struct rcar_gen3_chan *ch)
 			usb_gadget_vbus_connect(ch->usb_phy.otg->gadget);
 		else
 			usb_gadget_vbus_disconnect(ch->usb_phy.otg->gadget);
+		ch->usb_phy.otg->state = OTG_STATE_B_PERIPHERAL;
 	}
 
 	extcon_set_cable_state_(ch->extcon, EXTCON_USB_HOST, false);
 	extcon_set_cable_state_(ch->extcon, EXTCON_USB, true);
+}
+
+static void rcar_gen3_init_for_b_host(struct rcar_gen3_chan *ch)
+{
+	void __iomem *usb2_base = ch->base;
+	u32 val;
+
+	val = readl(usb2_base + USB2_LINECTRL1);
+	writel(val | USB2_LINECTRL1_OPMODE_NODRV, usb2_base + USB2_LINECTRL1);
+
+	if (ch->has_otg && ch->usb_phy.otg->gadget)
+		usb_gadget_vbus_disconnect(ch->usb_phy.otg->gadget);
+
+	rcar_gen3_set_linectrl(ch, 1, 1);
+	rcar_gen3_set_host_mode(ch, 1);
+	rcar_gen3_enable_vbus_ctrl(ch, 0);
+
+	val = readl(usb2_base + USB2_LINECTRL1);
+	writel(val & ~USB2_LINECTRL1_OPMODE_NODRV, usb2_base + USB2_LINECTRL1);
+
+	if (ch->has_otg && ch->usb_phy.otg)
+		ch->usb_phy.otg->state = OTG_STATE_B_HOST;
+}
+
+static void rcar_gen3_init_for_a_peri(struct rcar_gen3_chan *ch)
+{
+	rcar_gen3_set_linectrl(ch, 0, 1);
+	rcar_gen3_set_host_mode(ch, 0);
+	rcar_gen3_enable_vbus_ctrl(ch, 1);
+
+	if (ch->has_otg && ch->usb_phy.otg->gadget) {
+		usb_gadget_vbus_connect(ch->usb_phy.otg->gadget);
+		ch->usb_phy.otg->state = OTG_STATE_A_PERIPHERAL;
+	}
+}
+
+static void rcar_gen3_init_from_a_peri_to_a_host(struct rcar_gen3_chan *ch)
+{
+	void __iomem *usb2_base = ch->base;
+	u32 val;
+
+	val = readl(usb2_base + USB2_OBINTEN);
+	writel(val & ~USB2_OBINT_BITS, usb2_base + USB2_OBINTEN);
+
+	rcar_gen3_enable_vbus_ctrl(ch, 0);
+	msleep(1000);
+	rcar_gen3_init_for_host(ch);
+
+	writel(val | USB2_OBINT_BITS, usb2_base + USB2_OBINTEN);
 }
 
 static bool rcar_gen3_check_id(struct rcar_gen3_chan *ch)
@@ -200,6 +254,47 @@ static void rcar_gen3_device_recognition(struct rcar_gen3_chan *ch)
 	else
 		rcar_gen3_init_for_peri(ch);
 }
+
+static ssize_t otg_inputs_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct rcar_gen3_chan *ch = dev_get_drvdata(dev);
+	const char *otg_str[] = {
+		"a_bus_req/", "a_bus_drop", "b_bus_req/", "b_bus_req",
+	};
+	bool is_host;
+
+	if (!ch->has_otg)
+		return -EIO;
+
+	is_host = !(readl(ch->base + USB2_COMMCTRL) & USB2_COMMCTRL_OTG_PERI);
+
+	if (!strncmp(buf, otg_str[0], strlen(otg_str[0]))) {
+		/* fail if B-device */
+		if (rcar_gen3_check_id(ch))
+			return -EIO;
+		rcar_gen3_init_for_a_peri(ch);
+	} else if (!strncmp(buf, otg_str[1], strlen(otg_str[1]))) {
+		/* fail if B-device or A-host */
+		if (rcar_gen3_check_id(ch) || is_host)
+			return -EIO;
+		rcar_gen3_init_from_a_peri_to_a_host(ch);
+	} else if (!strncmp(buf, otg_str[2], strlen(otg_str[2]))) {
+		/* fail if A-device or B-peripheral */
+		if (!rcar_gen3_check_id(ch) || !is_host)
+			return -EIO;
+		rcar_gen3_init_for_peri(ch);
+	} else if (!strncmp(buf, otg_str[3], strlen(otg_str[3]))) {
+		/* fail if A-device */
+		if (!rcar_gen3_check_id(ch))
+			return -EIO;
+		rcar_gen3_init_for_b_host(ch);
+	}
+
+	return count;
+}
+static DEVICE_ATTR_WO(otg_inputs);
 
 static void rcar_gen3_init_otg(struct rcar_gen3_chan *ch)
 {
@@ -403,6 +498,12 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 			dev_err(dev, "Failed to register usb PHY provider\n");
 			return ret;
 		}
+
+		ret = device_create_file(dev, &dev_attr_otg_inputs);
+		if (ret < 0) {
+			usb_remove_phy(&channel->usb_phy);
+			return ret;
+		}
 	}
 
 	return PTR_ERR_OR_ZERO(provider);
@@ -412,10 +513,12 @@ static int rcar_gen3_phy_usb2_remove(struct platform_device *pdev)
 {
 	struct rcar_gen3_chan *channel = platform_get_drvdata(pdev);
 
-	if (channel->has_otg)
+	if (channel->has_otg) {
+		device_remove_file(&pdev->dev, &dev_attr_otg_inputs);
 		usb_remove_phy(&channel->usb_phy);
-
+	}
 	pm_runtime_disable(&pdev->dev);
+
 	return 0;
 }
 
