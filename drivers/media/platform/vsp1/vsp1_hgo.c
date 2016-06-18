@@ -380,7 +380,7 @@ static int hgo_set_format(struct v4l2_subdev *subdev,
 	return 0;
 }
 
-static struct v4l2_subdev_pad_ops hgo_pad_ops = {
+static const struct v4l2_subdev_pad_ops hgo_pad_ops = {
 	.enum_mbus_code = hgo_enum_mbus_code,
 	.enum_frame_size = hgo_enum_frame_size,
 	.get_fmt = hgo_get_format,
@@ -389,7 +389,7 @@ static struct v4l2_subdev_pad_ops hgo_pad_ops = {
 	.set_selection = hgo_set_selection,
 };
 
-static struct v4l2_subdev_ops hgo_ops = {
+static const struct v4l2_subdev_ops hgo_ops = {
 	.pad    = &hgo_pad_ops,
 };
 

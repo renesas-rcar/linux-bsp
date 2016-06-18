@@ -708,7 +708,7 @@ static void vsp1_video_stop_streaming(struct vb2_queue *vq)
 	spin_unlock_irqrestore(&video->irqlock, flags);
 }
 
-static struct vb2_ops vsp1_video_queue_qops = {
+static const struct vb2_ops vsp1_video_queue_qops = {
 	.queue_setup = vsp1_video_queue_setup,
 	.buf_prepare = vsp1_video_buffer_prepare,
 	.buf_queue = vsp1_video_buffer_queue,
@@ -925,7 +925,7 @@ static int vsp1_video_release(struct file *file)
 	return 0;
 }
 
-static struct v4l2_file_operations vsp1_video_fops = {
+static const struct v4l2_file_operations vsp1_video_fops = {
 	.owner = THIS_MODULE,
 	.unlocked_ioctl = video_ioctl2,
 	.open = vsp1_video_open,

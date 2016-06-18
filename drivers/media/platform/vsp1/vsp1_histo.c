@@ -155,7 +155,7 @@ static void histo_stop_streaming(struct vb2_queue *vq)
 	spin_unlock_irqrestore(&histo->irqlock, flags);
 }
 
-static struct vb2_ops histo_video_queue_qops = {
+static const struct vb2_ops histo_video_queue_qops = {
 	.queue_setup = histo_queue_setup,
 	.buf_prepare = histo_buffer_prepare,
 	.buf_queue = histo_buffer_queue,
