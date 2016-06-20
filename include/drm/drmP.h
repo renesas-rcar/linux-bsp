@@ -52,10 +52,12 @@
 #include <linux/poll.h>
 #include <linux/ratelimit.h>
 #include <linux/sched.h>
+#include <linux/seqlock.h>
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/vmalloc.h>
 #include <linux/workqueue.h>
+#include <linux/fence.h>
 
 #include <asm/mman.h>
 #include <asm/pgalloc.h>
@@ -66,6 +68,7 @@
 
 #include <drm/drm_agpsupport.h>
 #include <drm/drm_crtc.h>
+#include <drm/drm_fourcc.h>
 #include <drm/drm_global.h>
 #include <drm/drm_hashtab.h>
 #include <drm/drm_mem_util.h>
@@ -90,7 +93,7 @@ struct reservation_object;
 struct dma_buf_attachment;
 
 /*
- * 4 debug categories are defined:
+ * The following categories are defined:
  *
  * CORE: Used in the generic drm code: drm_ioctl.c, drm_mm.c, drm_memory.c, ...
  *	 This is the category used by the DRM_DEBUG() macro.
@@ -281,13 +284,14 @@ struct drm_ioctl_desc {
 
 /* Event queued up for userspace to read */
 struct drm_pending_event {
+	struct completion *completion;
 	struct drm_event *event;
+	struct fence *fence;
 	struct list_head link;
 	struct list_head pending_link;
 	struct drm_file *file_priv;
 	pid_t pid; /* pid of requester, no guarantee it's valid by the time
 		      we deliver the event, for tracing only */
-	void (*destroy)(struct drm_pending_event *event);
 };
 
 /* initial implementaton using a linked list - todo hashtab */
@@ -392,11 +396,6 @@ struct drm_master {
 	void *driver_priv;
 };
 
-/* Size of ringbuffer for vblank timestamps. Just double-buffer
- * in initial implementation.
- */
-#define DRM_VBLANKTIME_RBSIZE 2
-
 /* Flags and return codes for get_vblank_timestamp() driver function. */
 #define DRM_CALLED_FROM_VBLIRQ 1
 #define DRM_VBLANKTIME_SCANOUTPOS_METHOD (1 << 0)
@@ -420,8 +419,6 @@ struct drm_driver {
 	void (*postclose) (struct drm_device *, struct drm_file *);
 	void (*lastclose) (struct drm_device *);
 	int (*unload) (struct drm_device *);
-	int (*suspend) (struct drm_device *, pm_message_t state);
-	int (*resume) (struct drm_device *);
 	int (*dma_ioctl) (struct drm_device *dev, void *data, struct drm_file *file_priv);
 	int (*dma_quiescent) (struct drm_device *);
 	int (*context_dtor) (struct drm_device *dev, int context);
@@ -434,7 +431,7 @@ struct drm_driver {
 	 *
 	 * Driver callback for fetching a raw hardware vblank counter for @crtc.
 	 * If a device doesn't have a hardware counter, the driver can simply
-	 * return the value of drm_vblank_count. The DRM core will account for
+	 * use drm_vblank_no_hw_counter() function. The DRM core will account for
 	 * missed vblank events while interrupts where disabled based on system
 	 * timestamps.
 	 *
@@ -452,8 +449,8 @@ struct drm_driver {
 	 * @pipe: which irq to enable
 	 *
 	 * Enable vblank interrupts for @crtc.  If the device doesn't have
-	 * a hardware vblank counter, this routine should be a no-op, since
-	 * interrupts will have to stay on to keep the count accurate.
+	 * a hardware vblank counter, the driver should use the
+	 * drm_vblank_no_hw_counter() function that keeps a virtual counter.
 	 *
 	 * RETURNS
 	 * Zero on success, appropriate errno if the given @crtc's vblank
@@ -467,8 +464,8 @@ struct drm_driver {
 	 * @pipe: which irq to enable
 	 *
 	 * Disable vblank interrupts for @crtc.  If the device doesn't have
-	 * a hardware vblank counter, this routine should be a no-op, since
-	 * interrupts will have to stay on to keep the count accurate.
+	 * a hardware vblank counter, the driver should use the
+	 * drm_vblank_no_hw_counter() function that keeps a virtual counter.
 	 */
 	void (*disable_vblank) (struct drm_device *dev, unsigned int pipe);
 
@@ -580,12 +577,21 @@ struct drm_driver {
 	void (*debugfs_cleanup)(struct drm_minor *minor);
 
 	/**
-	 * Driver-specific constructor for drm_gem_objects, to set up
-	 * obj->driver_private.
+	 * @gem_free_object: deconstructor for drm_gem_objects
 	 *
-	 * Returns 0 on success.
+	 * This is deprecated and should not be used by new drivers. Use
+	 * @gem_free_object_unlocked instead.
 	 */
 	void (*gem_free_object) (struct drm_gem_object *obj);
+
+	/**
+	 * @gem_free_object_unlocked: deconstructor for drm_gem_objects
+	 *
+	 * This is for drivers which are not encumbered with dev->struct_mutex
+	 * legacy locking schemes. Use this hook instead of @gem_free_object.
+	 */
+	void (*gem_free_object_unlocked) (struct drm_gem_object *obj);
+
 	int (*gem_open_object) (struct drm_gem_object *, struct drm_file *);
 	void (*gem_close_object) (struct drm_gem_object *, struct drm_file *);
 
@@ -716,10 +722,10 @@ struct drm_vblank_crtc {
 	wait_queue_head_t queue;	/**< VBLANK wait queue */
 	struct timer_list disable_timer;		/* delayed disable timer */
 
-	/* vblank counter, protected by dev->vblank_time_lock for writes */
-	u32 count;
-	/* vblank timestamps, protected by dev->vblank_time_lock for writes */
-	struct timeval time[DRM_VBLANKTIME_RBSIZE];
+	seqlock_t seqlock;		/* protects vblank count and time */
+
+	u32 count;			/* vblank counter */
+	struct timeval time;		/* vblank timestamp */
 
 	atomic_t refcount;		/* number of users of vblank interruptsper crtc */
 	u32 last;			/* protected by dev->vbl_lock, used */
@@ -769,6 +775,7 @@ struct drm_device {
 	atomic_t buf_alloc;		/**< Buffer allocation in progress */
 	/*@} */
 
+	struct mutex filelist_mutex;
 	struct list_head filelist;
 
 	/** \name Memory management */
@@ -803,14 +810,6 @@ struct drm_device {
 	/*@{ */
 	bool irq_enabled;
 	int irq;
-
-	/*
-	 * At load time, disabling the vblank interrupt won't be allowed since
-	 * old clients may not call the modeset ioctl and therefore misbehave.
-	 * Once the modeset ioctl *has* been called though, we can safely
-	 * disable them when unused.
-	 */
-	bool vblank_disable_allowed;
 
 	/*
 	 * If true, vblank interrupt will be disabled immediately when the
@@ -970,18 +969,12 @@ extern u32 drm_vblank_count_and_time(struct drm_device *dev, unsigned int pipe,
 				     struct timeval *vblanktime);
 extern u32 drm_crtc_vblank_count_and_time(struct drm_crtc *crtc,
 					  struct timeval *vblanktime);
-extern void drm_send_vblank_event(struct drm_device *dev, unsigned int pipe,
-				  struct drm_pending_vblank_event *e);
 extern void drm_crtc_send_vblank_event(struct drm_crtc *crtc,
 				       struct drm_pending_vblank_event *e);
-extern void drm_arm_vblank_event(struct drm_device *dev, unsigned int pipe,
-				 struct drm_pending_vblank_event *e);
 extern void drm_crtc_arm_vblank_event(struct drm_crtc *crtc,
 				      struct drm_pending_vblank_event *e);
 extern bool drm_handle_vblank(struct drm_device *dev, unsigned int pipe);
 extern bool drm_crtc_handle_vblank(struct drm_crtc *crtc);
-extern int drm_vblank_get(struct drm_device *dev, unsigned int pipe);
-extern void drm_vblank_put(struct drm_device *dev, unsigned int pipe);
 extern int drm_crtc_vblank_get(struct drm_crtc *crtc);
 extern void drm_crtc_vblank_put(struct drm_crtc *crtc);
 extern void drm_wait_one_vblank(struct drm_device *dev, unsigned int pipe);
@@ -992,6 +985,7 @@ extern void drm_crtc_vblank_off(struct drm_crtc *crtc);
 extern void drm_crtc_vblank_reset(struct drm_crtc *crtc);
 extern void drm_crtc_vblank_on(struct drm_crtc *crtc);
 extern void drm_vblank_cleanup(struct drm_device *dev);
+extern u32 drm_accurate_vblank_count(struct drm_crtc *crtc);
 extern u32 drm_vblank_no_hw_counter(struct drm_device *dev, unsigned int pipe);
 
 extern int drm_calc_vbltimestamp_from_scanoutpos(struct drm_device *dev,

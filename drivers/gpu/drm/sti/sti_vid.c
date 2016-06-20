@@ -3,6 +3,7 @@
  * Author: Fabien Dessenne <fabien.dessenne@st.com> for STMicroelectronics.
  * License terms:  GNU General Public License (GPL), version 2
  */
+#include <linux/seq_file.h>
 
 #include <drm/drmP.h>
 
@@ -91,12 +92,6 @@ static int vid_dbg_show(struct seq_file *s, void *arg)
 {
 	struct drm_info_node *node = s->private;
 	struct sti_vid *vid = (struct sti_vid *)node->info_ent->data;
-	struct drm_device *dev = node->minor->dev;
-	int ret;
-
-	ret = mutex_lock_interruptible(&dev->struct_mutex);
-	if (ret)
-		return ret;
 
 	seq_printf(s, "VID: (vaddr= 0x%p)", vid->regs);
 
@@ -121,7 +116,6 @@ static int vid_dbg_show(struct seq_file *s, void *arg)
 	DBGFS_DUMP(VID_CSAT);
 	seq_puts(s, "\n");
 
-	mutex_unlock(&dev->struct_mutex);
 	return 0;
 }
 

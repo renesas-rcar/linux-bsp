@@ -638,7 +638,7 @@ static bool intel_hdmi_set_gcp_infoframe(struct drm_encoder *encoder)
 		reg = HSW_TVIDEO_DIP_GCP(crtc->config->cpu_transcoder);
 	else if (IS_VALLEYVIEW(dev_priv) || IS_CHERRYVIEW(dev_priv))
 		reg = VLV_TVIDEO_DIP_GCP(crtc->pipe);
-	else if (HAS_PCH_SPLIT(dev_priv->dev))
+	else if (HAS_PCH_SPLIT(dev_priv))
 		reg = TVIDEO_DIP_GCP(crtc->pipe);
 	else
 		return false;
@@ -836,6 +836,22 @@ static void hsw_set_infoframes(struct drm_encoder *encoder,
 	intel_hdmi_set_hdmi_infoframe(encoder, adjusted_mode);
 }
 
+void intel_dp_dual_mode_set_tmds_output(struct intel_hdmi *hdmi, bool enable)
+{
+	struct drm_i915_private *dev_priv = to_i915(intel_hdmi_to_dev(hdmi));
+	struct i2c_adapter *adapter =
+		intel_gmbus_get_adapter(dev_priv, hdmi->ddc_bus);
+
+	if (hdmi->dp_dual_mode.type < DRM_DP_DUAL_MODE_TYPE2_DVI)
+		return;
+
+	DRM_DEBUG_KMS("%s DP dual mode adaptor TMDS output\n",
+		      enable ? "Enabling" : "Disabling");
+
+	drm_dp_dual_mode_set_tmds_output(hdmi->dp_dual_mode.type,
+					 adapter, enable);
+}
+
 static void intel_hdmi_prepare(struct intel_encoder *encoder)
 {
 	struct drm_device *dev = encoder->base.dev;
@@ -844,6 +860,8 @@ static void intel_hdmi_prepare(struct intel_encoder *encoder)
 	struct intel_hdmi *intel_hdmi = enc_to_intel_hdmi(&encoder->base);
 	const struct drm_display_mode *adjusted_mode = &crtc->config->base.adjusted_mode;
 	u32 hdmi_val;
+
+	intel_dp_dual_mode_set_tmds_output(intel_hdmi, true);
 
 	hdmi_val = SDVO_ENCODING_HDMI;
 	if (!HAS_PCH_SPLIT(dev) && crtc->config->limited_color_range)
@@ -952,10 +970,9 @@ static void intel_hdmi_get_config(struct intel_encoder *encoder,
 	if (pipe_config->pixel_multiplier)
 		dotclock /= pipe_config->pixel_multiplier;
 
-	if (HAS_PCH_SPLIT(dev_priv->dev))
-		ironlake_check_encoder_dotclock(pipe_config, dotclock);
-
 	pipe_config->base.adjusted_mode.crtc_clock = dotclock;
+
+	pipe_config->lane_count = 4;
 }
 
 static void intel_enable_hdmi_audio(struct intel_encoder *encoder)
@@ -1143,6 +1160,8 @@ static void intel_disable_hdmi(struct intel_encoder *encoder)
 	}
 
 	intel_hdmi->set_infoframes(&encoder->base, false, NULL);
+
+	intel_dp_dual_mode_set_tmds_output(intel_hdmi, false);
 }
 
 static void g4x_disable_hdmi(struct intel_encoder *encoder)
@@ -1168,27 +1187,42 @@ static void pch_post_disable_hdmi(struct intel_encoder *encoder)
 	intel_disable_hdmi(encoder);
 }
 
-static int hdmi_port_clock_limit(struct intel_hdmi *hdmi, bool respect_dvi_limit)
+static int intel_hdmi_source_max_tmds_clock(struct drm_i915_private *dev_priv)
 {
-	struct drm_device *dev = intel_hdmi_to_dev(hdmi);
-
-	if ((respect_dvi_limit && !hdmi->has_hdmi_sink) || IS_G4X(dev))
+	if (IS_G4X(dev_priv))
 		return 165000;
-	else if (IS_HASWELL(dev) || INTEL_INFO(dev)->gen >= 8)
+	else if (IS_HASWELL(dev_priv) || INTEL_INFO(dev_priv)->gen >= 8)
 		return 300000;
 	else
 		return 225000;
 }
 
+static int hdmi_port_clock_limit(struct intel_hdmi *hdmi,
+				 bool respect_downstream_limits)
+{
+	struct drm_device *dev = intel_hdmi_to_dev(hdmi);
+	int max_tmds_clock = intel_hdmi_source_max_tmds_clock(to_i915(dev));
+
+	if (respect_downstream_limits) {
+		if (hdmi->dp_dual_mode.max_tmds_clock)
+			max_tmds_clock = min(max_tmds_clock,
+					     hdmi->dp_dual_mode.max_tmds_clock);
+		if (!hdmi->has_hdmi_sink)
+			max_tmds_clock = min(max_tmds_clock, 165000);
+	}
+
+	return max_tmds_clock;
+}
+
 static enum drm_mode_status
 hdmi_port_clock_valid(struct intel_hdmi *hdmi,
-		      int clock, bool respect_dvi_limit)
+		      int clock, bool respect_downstream_limits)
 {
 	struct drm_device *dev = intel_hdmi_to_dev(hdmi);
 
 	if (clock < 25000)
 		return MODE_CLOCK_LOW;
-	if (clock > hdmi_port_clock_limit(hdmi, respect_dvi_limit))
+	if (clock > hdmi_port_clock_limit(hdmi, respect_downstream_limits))
 		return MODE_CLOCK_HIGH;
 
 	/* BXT DPLL can't generate 223-240 MHz */
@@ -1312,7 +1346,7 @@ bool intel_hdmi_compute_config(struct intel_encoder *encoder,
 	 * within limits.
 	 */
 	if (pipe_config->pipe_bpp > 8*3 && pipe_config->has_hdmi_sink &&
-	    hdmi_port_clock_valid(intel_hdmi, clock_12bpc, false) == MODE_OK &&
+	    hdmi_port_clock_valid(intel_hdmi, clock_12bpc, true) == MODE_OK &&
 	    hdmi_12bpc_possible(pipe_config)) {
 		DRM_DEBUG_KMS("picking bpc to 12 for HDMI output\n");
 		desired_bpp = 12*3;
@@ -1340,6 +1374,8 @@ bool intel_hdmi_compute_config(struct intel_encoder *encoder,
 	/* Set user selected PAR to incoming mode's member */
 	adjusted_mode->picture_aspect_ratio = intel_hdmi->aspect_ratio;
 
+	pipe_config->lane_count = 4;
+
 	return true;
 }
 
@@ -1352,8 +1388,55 @@ intel_hdmi_unset_edid(struct drm_connector *connector)
 	intel_hdmi->has_audio = false;
 	intel_hdmi->rgb_quant_range_selectable = false;
 
+	intel_hdmi->dp_dual_mode.type = DRM_DP_DUAL_MODE_NONE;
+	intel_hdmi->dp_dual_mode.max_tmds_clock = 0;
+
 	kfree(to_intel_connector(connector)->detect_edid);
 	to_intel_connector(connector)->detect_edid = NULL;
+}
+
+static void
+intel_hdmi_dp_dual_mode_detect(struct drm_connector *connector, bool has_edid)
+{
+	struct drm_i915_private *dev_priv = to_i915(connector->dev);
+	struct intel_hdmi *hdmi = intel_attached_hdmi(connector);
+	enum port port = hdmi_to_dig_port(hdmi)->port;
+	struct i2c_adapter *adapter =
+		intel_gmbus_get_adapter(dev_priv, hdmi->ddc_bus);
+	enum drm_dp_dual_mode_type type = drm_dp_dual_mode_detect(adapter);
+
+	/*
+	 * Type 1 DVI adaptors are not required to implement any
+	 * registers, so we can't always detect their presence.
+	 * Ideally we should be able to check the state of the
+	 * CONFIG1 pin, but no such luck on our hardware.
+	 *
+	 * The only method left to us is to check the VBT to see
+	 * if the port is a dual mode capable DP port. But let's
+	 * only do that when we sucesfully read the EDID, to avoid
+	 * confusing log messages about DP dual mode adaptors when
+	 * there's nothing connected to the port.
+	 */
+	if (type == DRM_DP_DUAL_MODE_UNKNOWN) {
+		if (has_edid &&
+		    intel_bios_is_port_dp_dual_mode(dev_priv, port)) {
+			DRM_DEBUG_KMS("Assuming DP dual mode adaptor presence based on VBT\n");
+			type = DRM_DP_DUAL_MODE_TYPE1_DVI;
+		} else {
+			type = DRM_DP_DUAL_MODE_NONE;
+		}
+	}
+
+	if (type == DRM_DP_DUAL_MODE_NONE)
+		return;
+
+	hdmi->dp_dual_mode.type = type;
+	hdmi->dp_dual_mode.max_tmds_clock =
+		drm_dp_dual_mode_max_tmds_clock(type, adapter);
+
+	DRM_DEBUG_KMS("DP dual mode adaptor (%s) detected (max TMDS clock: %d kHz)\n",
+		      drm_dp_get_dual_mode_type_name(type),
+		      hdmi->dp_dual_mode.max_tmds_clock);
 }
 
 static bool
@@ -1370,6 +1453,8 @@ intel_hdmi_set_edid(struct drm_connector *connector, bool force)
 		edid = drm_get_edid(connector,
 				    intel_gmbus_get_adapter(dev_priv,
 				    intel_hdmi->ddc_bus));
+
+		intel_hdmi_dp_dual_mode_detect(connector, edid != NULL);
 
 		intel_display_power_put(dev_priv, POWER_DOMAIN_GMBUS);
 	}
@@ -1593,35 +1678,12 @@ static void vlv_hdmi_pre_enable(struct intel_encoder *encoder)
 	struct intel_crtc *intel_crtc =
 		to_intel_crtc(encoder->base.crtc);
 	const struct drm_display_mode *adjusted_mode = &intel_crtc->config->base.adjusted_mode;
-	enum dpio_channel port = vlv_dport_to_channel(dport);
-	int pipe = intel_crtc->pipe;
-	u32 val;
 
-	/* Enable clock channels for this port */
-	mutex_lock(&dev_priv->sb_lock);
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS01_DW8(port));
-	val = 0;
-	if (pipe)
-		val |= (1<<21);
-	else
-		val &= ~(1<<21);
-	val |= 0x001000c4;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW8(port), val);
+	vlv_phy_pre_encoder_enable(encoder);
 
 	/* HDMI 1.0V-2dB */
-	vlv_dpio_write(dev_priv, pipe, VLV_TX_DW5(port), 0);
-	vlv_dpio_write(dev_priv, pipe, VLV_TX_DW4(port), 0x2b245f5f);
-	vlv_dpio_write(dev_priv, pipe, VLV_TX_DW2(port), 0x5578b83a);
-	vlv_dpio_write(dev_priv, pipe, VLV_TX_DW3(port), 0x0c782040);
-	vlv_dpio_write(dev_priv, pipe, VLV_TX3_DW4(port), 0x2b247878);
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW11(port), 0x00030000);
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW9(port), 0x00002000);
-	vlv_dpio_write(dev_priv, pipe, VLV_TX_DW5(port), DPIO_TX_OCALINIT_EN);
-
-	/* Program lane clock */
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW14(port), 0x00760018);
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW23(port), 0x00400888);
-	mutex_unlock(&dev_priv->sb_lock);
+	vlv_set_phy_signal_level(encoder, 0x2b245f5f, 0x00002000, 0x5578b83a,
+				 0x2b247878);
 
 	intel_hdmi->set_infoframes(&encoder->base,
 				   intel_crtc->config->has_hdmi_sink,
@@ -1634,207 +1696,27 @@ static void vlv_hdmi_pre_enable(struct intel_encoder *encoder)
 
 static void vlv_hdmi_pre_pll_enable(struct intel_encoder *encoder)
 {
-	struct intel_digital_port *dport = enc_to_dig_port(&encoder->base);
-	struct drm_device *dev = encoder->base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	struct intel_crtc *intel_crtc =
-		to_intel_crtc(encoder->base.crtc);
-	enum dpio_channel port = vlv_dport_to_channel(dport);
-	int pipe = intel_crtc->pipe;
-
 	intel_hdmi_prepare(encoder);
 
-	/* Program Tx lane resets to default */
-	mutex_lock(&dev_priv->sb_lock);
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW0(port),
-			 DPIO_PCS_TX_LANE2_RESET |
-			 DPIO_PCS_TX_LANE1_RESET);
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW1(port),
-			 DPIO_PCS_CLK_CRI_RXEB_EIOS_EN |
-			 DPIO_PCS_CLK_CRI_RXDIGFILTSG_EN |
-			 (1<<DPIO_PCS_CLK_DATAWIDTH_SHIFT) |
-			 DPIO_PCS_CLK_SOFT_RESET);
-
-	/* Fix up inter-pair skew failure */
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW12(port), 0x00750f00);
-	vlv_dpio_write(dev_priv, pipe, VLV_TX_DW11(port), 0x00001500);
-	vlv_dpio_write(dev_priv, pipe, VLV_TX_DW14(port), 0x40400000);
-
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW9(port), 0x00002000);
-	vlv_dpio_write(dev_priv, pipe, VLV_TX_DW5(port), DPIO_TX_OCALINIT_EN);
-	mutex_unlock(&dev_priv->sb_lock);
-}
-
-static void chv_data_lane_soft_reset(struct intel_encoder *encoder,
-				     bool reset)
-{
-	struct drm_i915_private *dev_priv = to_i915(encoder->base.dev);
-	enum dpio_channel ch = vlv_dport_to_channel(enc_to_dig_port(&encoder->base));
-	struct intel_crtc *crtc = to_intel_crtc(encoder->base.crtc);
-	enum pipe pipe = crtc->pipe;
-	uint32_t val;
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS01_DW0(ch));
-	if (reset)
-		val &= ~(DPIO_PCS_TX_LANE2_RESET | DPIO_PCS_TX_LANE1_RESET);
-	else
-		val |= DPIO_PCS_TX_LANE2_RESET | DPIO_PCS_TX_LANE1_RESET;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS01_DW0(ch), val);
-
-	if (crtc->config->lane_count > 2) {
-		val = vlv_dpio_read(dev_priv, pipe, VLV_PCS23_DW0(ch));
-		if (reset)
-			val &= ~(DPIO_PCS_TX_LANE2_RESET | DPIO_PCS_TX_LANE1_RESET);
-		else
-			val |= DPIO_PCS_TX_LANE2_RESET | DPIO_PCS_TX_LANE1_RESET;
-		vlv_dpio_write(dev_priv, pipe, VLV_PCS23_DW0(ch), val);
-	}
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS01_DW1(ch));
-	val |= CHV_PCS_REQ_SOFTRESET_EN;
-	if (reset)
-		val &= ~DPIO_PCS_CLK_SOFT_RESET;
-	else
-		val |= DPIO_PCS_CLK_SOFT_RESET;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS01_DW1(ch), val);
-
-	if (crtc->config->lane_count > 2) {
-		val = vlv_dpio_read(dev_priv, pipe, VLV_PCS23_DW1(ch));
-		val |= CHV_PCS_REQ_SOFTRESET_EN;
-		if (reset)
-			val &= ~DPIO_PCS_CLK_SOFT_RESET;
-		else
-			val |= DPIO_PCS_CLK_SOFT_RESET;
-		vlv_dpio_write(dev_priv, pipe, VLV_PCS23_DW1(ch), val);
-	}
+	vlv_phy_pre_pll_enable(encoder);
 }
 
 static void chv_hdmi_pre_pll_enable(struct intel_encoder *encoder)
 {
-	struct intel_digital_port *dport = enc_to_dig_port(&encoder->base);
-	struct drm_device *dev = encoder->base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	struct intel_crtc *intel_crtc =
-		to_intel_crtc(encoder->base.crtc);
-	enum dpio_channel ch = vlv_dport_to_channel(dport);
-	enum pipe pipe = intel_crtc->pipe;
-	u32 val;
-
 	intel_hdmi_prepare(encoder);
 
-	/*
-	 * Must trick the second common lane into life.
-	 * Otherwise we can't even access the PLL.
-	 */
-	if (ch == DPIO_CH0 && pipe == PIPE_B)
-		dport->release_cl2_override =
-			!chv_phy_powergate_ch(dev_priv, DPIO_PHY0, DPIO_CH1, true);
-
-	chv_phy_powergate_lanes(encoder, true, 0x0);
-
-	mutex_lock(&dev_priv->sb_lock);
-
-	/* Assert data lane reset */
-	chv_data_lane_soft_reset(encoder, true);
-
-	/* program left/right clock distribution */
-	if (pipe != PIPE_B) {
-		val = vlv_dpio_read(dev_priv, pipe, _CHV_CMN_DW5_CH0);
-		val &= ~(CHV_BUFLEFTENA1_MASK | CHV_BUFRIGHTENA1_MASK);
-		if (ch == DPIO_CH0)
-			val |= CHV_BUFLEFTENA1_FORCE;
-		if (ch == DPIO_CH1)
-			val |= CHV_BUFRIGHTENA1_FORCE;
-		vlv_dpio_write(dev_priv, pipe, _CHV_CMN_DW5_CH0, val);
-	} else {
-		val = vlv_dpio_read(dev_priv, pipe, _CHV_CMN_DW1_CH1);
-		val &= ~(CHV_BUFLEFTENA2_MASK | CHV_BUFRIGHTENA2_MASK);
-		if (ch == DPIO_CH0)
-			val |= CHV_BUFLEFTENA2_FORCE;
-		if (ch == DPIO_CH1)
-			val |= CHV_BUFRIGHTENA2_FORCE;
-		vlv_dpio_write(dev_priv, pipe, _CHV_CMN_DW1_CH1, val);
-	}
-
-	/* program clock channel usage */
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS01_DW8(ch));
-	val |= CHV_PCS_USEDCLKCHANNEL_OVRRIDE;
-	if (pipe != PIPE_B)
-		val &= ~CHV_PCS_USEDCLKCHANNEL;
-	else
-		val |= CHV_PCS_USEDCLKCHANNEL;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS01_DW8(ch), val);
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS23_DW8(ch));
-	val |= CHV_PCS_USEDCLKCHANNEL_OVRRIDE;
-	if (pipe != PIPE_B)
-		val &= ~CHV_PCS_USEDCLKCHANNEL;
-	else
-		val |= CHV_PCS_USEDCLKCHANNEL;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS23_DW8(ch), val);
-
-	/*
-	 * This a a bit weird since generally CL
-	 * matches the pipe, but here we need to
-	 * pick the CL based on the port.
-	 */
-	val = vlv_dpio_read(dev_priv, pipe, CHV_CMN_DW19(ch));
-	if (pipe != PIPE_B)
-		val &= ~CHV_CMN_USEDCLKCHANNEL;
-	else
-		val |= CHV_CMN_USEDCLKCHANNEL;
-	vlv_dpio_write(dev_priv, pipe, CHV_CMN_DW19(ch), val);
-
-	mutex_unlock(&dev_priv->sb_lock);
+	chv_phy_pre_pll_enable(encoder);
 }
 
 static void chv_hdmi_post_pll_disable(struct intel_encoder *encoder)
 {
-	struct drm_i915_private *dev_priv = to_i915(encoder->base.dev);
-	enum pipe pipe = to_intel_crtc(encoder->base.crtc)->pipe;
-	u32 val;
-
-	mutex_lock(&dev_priv->sb_lock);
-
-	/* disable left/right clock distribution */
-	if (pipe != PIPE_B) {
-		val = vlv_dpio_read(dev_priv, pipe, _CHV_CMN_DW5_CH0);
-		val &= ~(CHV_BUFLEFTENA1_MASK | CHV_BUFRIGHTENA1_MASK);
-		vlv_dpio_write(dev_priv, pipe, _CHV_CMN_DW5_CH0, val);
-	} else {
-		val = vlv_dpio_read(dev_priv, pipe, _CHV_CMN_DW1_CH1);
-		val &= ~(CHV_BUFLEFTENA2_MASK | CHV_BUFRIGHTENA2_MASK);
-		vlv_dpio_write(dev_priv, pipe, _CHV_CMN_DW1_CH1, val);
-	}
-
-	mutex_unlock(&dev_priv->sb_lock);
-
-	/*
-	 * Leave the power down bit cleared for at least one
-	 * lane so that chv_powergate_phy_ch() will power
-	 * on something when the channel is otherwise unused.
-	 * When the port is off and the override is removed
-	 * the lanes power down anyway, so otherwise it doesn't
-	 * really matter what the state of power down bits is
-	 * after this.
-	 */
-	chv_phy_powergate_lanes(encoder, false, 0x0);
+	chv_phy_post_pll_disable(encoder);
 }
 
 static void vlv_hdmi_post_disable(struct intel_encoder *encoder)
 {
-	struct intel_digital_port *dport = enc_to_dig_port(&encoder->base);
-	struct drm_i915_private *dev_priv = encoder->base.dev->dev_private;
-	struct intel_crtc *intel_crtc =
-		to_intel_crtc(encoder->base.crtc);
-	enum dpio_channel port = vlv_dport_to_channel(dport);
-	int pipe = intel_crtc->pipe;
-
 	/* Reset lanes to avoid HDMI flicker (VLV w/a) */
-	mutex_lock(&dev_priv->sb_lock);
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW0(port), 0x00000000);
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS_DW1(port), 0x00e00060);
-	mutex_unlock(&dev_priv->sb_lock);
+	vlv_phy_reset_lanes(encoder);
 }
 
 static void chv_hdmi_post_disable(struct intel_encoder *encoder)
@@ -1859,138 +1741,12 @@ static void chv_hdmi_pre_enable(struct intel_encoder *encoder)
 	struct intel_crtc *intel_crtc =
 		to_intel_crtc(encoder->base.crtc);
 	const struct drm_display_mode *adjusted_mode = &intel_crtc->config->base.adjusted_mode;
-	enum dpio_channel ch = vlv_dport_to_channel(dport);
-	int pipe = intel_crtc->pipe;
-	int data, i, stagger;
-	u32 val;
 
-	mutex_lock(&dev_priv->sb_lock);
-
-	/* allow hardware to manage TX FIFO reset source */
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS01_DW11(ch));
-	val &= ~DPIO_LANEDESKEW_STRAP_OVRD;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS01_DW11(ch), val);
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS23_DW11(ch));
-	val &= ~DPIO_LANEDESKEW_STRAP_OVRD;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS23_DW11(ch), val);
-
-	/* Program Tx latency optimal setting */
-	for (i = 0; i < 4; i++) {
-		/* Set the upar bit */
-		data = (i == 1) ? 0x0 : 0x1;
-		vlv_dpio_write(dev_priv, pipe, CHV_TX_DW14(ch, i),
-				data << DPIO_UPAR_SHIFT);
-	}
-
-	/* Data lane stagger programming */
-	if (intel_crtc->config->port_clock > 270000)
-		stagger = 0x18;
-	else if (intel_crtc->config->port_clock > 135000)
-		stagger = 0xd;
-	else if (intel_crtc->config->port_clock > 67500)
-		stagger = 0x7;
-	else if (intel_crtc->config->port_clock > 33750)
-		stagger = 0x4;
-	else
-		stagger = 0x2;
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS01_DW11(ch));
-	val |= DPIO_TX2_STAGGER_MASK(0x1f);
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS01_DW11(ch), val);
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS23_DW11(ch));
-	val |= DPIO_TX2_STAGGER_MASK(0x1f);
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS23_DW11(ch), val);
-
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS01_DW12(ch),
-		       DPIO_LANESTAGGER_STRAP(stagger) |
-		       DPIO_LANESTAGGER_STRAP_OVRD |
-		       DPIO_TX1_STAGGER_MASK(0x1f) |
-		       DPIO_TX1_STAGGER_MULT(6) |
-		       DPIO_TX2_STAGGER_MULT(0));
-
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS23_DW12(ch),
-		       DPIO_LANESTAGGER_STRAP(stagger) |
-		       DPIO_LANESTAGGER_STRAP_OVRD |
-		       DPIO_TX1_STAGGER_MASK(0x1f) |
-		       DPIO_TX1_STAGGER_MULT(7) |
-		       DPIO_TX2_STAGGER_MULT(5));
-
-	/* Deassert data lane reset */
-	chv_data_lane_soft_reset(encoder, false);
-
-	/* Clear calc init */
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS01_DW10(ch));
-	val &= ~(DPIO_PCS_SWING_CALC_TX0_TX2 | DPIO_PCS_SWING_CALC_TX1_TX3);
-	val &= ~(DPIO_PCS_TX1DEEMP_MASK | DPIO_PCS_TX2DEEMP_MASK);
-	val |= DPIO_PCS_TX1DEEMP_9P5 | DPIO_PCS_TX2DEEMP_9P5;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS01_DW10(ch), val);
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS23_DW10(ch));
-	val &= ~(DPIO_PCS_SWING_CALC_TX0_TX2 | DPIO_PCS_SWING_CALC_TX1_TX3);
-	val &= ~(DPIO_PCS_TX1DEEMP_MASK | DPIO_PCS_TX2DEEMP_MASK);
-	val |= DPIO_PCS_TX1DEEMP_9P5 | DPIO_PCS_TX2DEEMP_9P5;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS23_DW10(ch), val);
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS01_DW9(ch));
-	val &= ~(DPIO_PCS_TX1MARGIN_MASK | DPIO_PCS_TX2MARGIN_MASK);
-	val |= DPIO_PCS_TX1MARGIN_000 | DPIO_PCS_TX2MARGIN_000;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS01_DW9(ch), val);
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS23_DW9(ch));
-	val &= ~(DPIO_PCS_TX1MARGIN_MASK | DPIO_PCS_TX2MARGIN_MASK);
-	val |= DPIO_PCS_TX1MARGIN_000 | DPIO_PCS_TX2MARGIN_000;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS23_DW9(ch), val);
+	chv_phy_pre_encoder_enable(encoder);
 
 	/* FIXME: Program the support xxx V-dB */
 	/* Use 800mV-0dB */
-	for (i = 0; i < 4; i++) {
-		val = vlv_dpio_read(dev_priv, pipe, CHV_TX_DW4(ch, i));
-		val &= ~DPIO_SWING_DEEMPH9P5_MASK;
-		val |= 128 << DPIO_SWING_DEEMPH9P5_SHIFT;
-		vlv_dpio_write(dev_priv, pipe, CHV_TX_DW4(ch, i), val);
-	}
-
-	for (i = 0; i < 4; i++) {
-		val = vlv_dpio_read(dev_priv, pipe, CHV_TX_DW2(ch, i));
-
-		val &= ~DPIO_SWING_MARGIN000_MASK;
-		val |= 102 << DPIO_SWING_MARGIN000_SHIFT;
-
-		/*
-		 * Supposedly this value shouldn't matter when unique transition
-		 * scale is disabled, but in fact it does matter. Let's just
-		 * always program the same value and hope it's OK.
-		 */
-		val &= ~(0xff << DPIO_UNIQ_TRANS_SCALE_SHIFT);
-		val |= 0x9a << DPIO_UNIQ_TRANS_SCALE_SHIFT;
-
-		vlv_dpio_write(dev_priv, pipe, CHV_TX_DW2(ch, i), val);
-	}
-
-	/*
-	 * The document said it needs to set bit 27 for ch0 and bit 26
-	 * for ch1. Might be a typo in the doc.
-	 * For now, for this unique transition scale selection, set bit
-	 * 27 for ch0 and ch1.
-	 */
-	for (i = 0; i < 4; i++) {
-		val = vlv_dpio_read(dev_priv, pipe, CHV_TX_DW3(ch, i));
-		val &= ~DPIO_TX_UNIQ_TRANS_SCALE_EN;
-		vlv_dpio_write(dev_priv, pipe, CHV_TX_DW3(ch, i), val);
-	}
-
-	/* Start swing calculation */
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS01_DW10(ch));
-	val |= DPIO_PCS_SWING_CALC_TX0_TX2 | DPIO_PCS_SWING_CALC_TX1_TX3;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS01_DW10(ch), val);
-
-	val = vlv_dpio_read(dev_priv, pipe, VLV_PCS23_DW10(ch));
-	val |= DPIO_PCS_SWING_CALC_TX0_TX2 | DPIO_PCS_SWING_CALC_TX1_TX3;
-	vlv_dpio_write(dev_priv, pipe, VLV_PCS23_DW10(ch), val);
-
-	mutex_unlock(&dev_priv->sb_lock);
+	chv_set_phy_signal_level(encoder, 128, 102, false);
 
 	intel_hdmi->set_infoframes(&encoder->base,
 				   intel_crtc->config->has_hdmi_sink,
@@ -2001,10 +1757,7 @@ static void chv_hdmi_pre_enable(struct intel_encoder *encoder)
 	vlv_wait_port_ready(dev_priv, dport, 0x0);
 
 	/* Second common lane will stay alive on its own now */
-	if (dport->release_cl2_override) {
-		chv_phy_powergate_ch(dev_priv, DPIO_PHY0, DPIO_CH1, false);
-		dport->release_cl2_override = false;
-	}
+	chv_phy_release_cl2_override(encoder);
 }
 
 static void intel_hdmi_destroy(struct drm_connector *connector)
@@ -2029,7 +1782,6 @@ static const struct drm_connector_funcs intel_hdmi_connector_funcs = {
 static const struct drm_connector_helper_funcs intel_hdmi_connector_helper_funcs = {
 	.get_modes = intel_hdmi_get_modes,
 	.mode_valid = intel_hdmi_mode_valid,
-	.best_encoder = intel_best_encoder,
 };
 
 static const struct drm_encoder_funcs intel_hdmi_enc_funcs = {
@@ -2192,7 +1944,7 @@ void intel_hdmi_init(struct drm_device *dev,
 	intel_encoder = &intel_dig_port->base;
 
 	drm_encoder_init(dev, &intel_encoder->base, &intel_hdmi_enc_funcs,
-			 DRM_MODE_ENCODER_TMDS, NULL);
+			 DRM_MODE_ENCODER_TMDS, "HDMI %c", port_name(port));
 
 	intel_encoder->compute_config = intel_hdmi_compute_config;
 	if (HAS_PCH_SPLIT(dev)) {

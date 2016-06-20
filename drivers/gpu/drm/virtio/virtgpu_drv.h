@@ -33,6 +33,7 @@
 
 #include <drm/drmP.h>
 #include <drm/drm_gem.h>
+#include <drm/drm_atomic.h>
 #include <drm/drm_crtc_helper.h>
 #include <ttm/ttm_bo_api.h>
 #include <ttm/ttm_bo_driver.h>
@@ -335,6 +336,7 @@ void virtio_gpu_modeset_fini(struct virtio_gpu_device *vgdev);
 
 /* virtio_gpu_plane.c */
 struct drm_plane *virtio_gpu_plane_init(struct virtio_gpu_device *vgdev,
+					enum drm_plane_type type,
 					int index);
 
 /* virtio_gpu_ttm.c */
@@ -400,7 +402,7 @@ static inline int virtio_gpu_object_reserve(struct virtio_gpu_object *bo,
 {
 	int r;
 
-	r = ttm_bo_reserve(&bo->tbo, true, no_wait, false, NULL);
+	r = ttm_bo_reserve(&bo->tbo, true, no_wait, NULL);
 	if (unlikely(r != 0)) {
 		if (r != -ERESTARTSYS) {
 			struct virtio_gpu_device *qdev =

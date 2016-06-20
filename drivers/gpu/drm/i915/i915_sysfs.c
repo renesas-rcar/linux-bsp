@@ -43,7 +43,7 @@ static u32 calc_residency(struct drm_device *dev,
 	u64 units = 128ULL, div = 100000ULL;
 	u32 ret;
 
-	if (!intel_enable_rc6(dev))
+	if (!intel_enable_rc6())
 		return 0;
 
 	intel_runtime_pm_get(dev_priv);
@@ -70,8 +70,7 @@ static u32 calc_residency(struct drm_device *dev,
 static ssize_t
 show_rc6_mask(struct device *kdev, struct device_attribute *attr, char *buf)
 {
-	struct drm_minor *dminor = dev_to_drm_minor(kdev);
-	return snprintf(buf, PAGE_SIZE, "%x\n", intel_enable_rc6(dminor->dev));
+	return snprintf(buf, PAGE_SIZE, "%x\n", intel_enable_rc6());
 }
 
 static ssize_t
@@ -204,7 +203,7 @@ i915_l3_write(struct file *filp, struct kobject *kobj,
 	struct drm_minor *dminor = dev_to_drm_minor(dev);
 	struct drm_device *drm_dev = dminor->dev;
 	struct drm_i915_private *dev_priv = drm_dev->dev_private;
-	struct intel_context *ctx;
+	struct i915_gem_context *ctx;
 	u32 *temp = NULL; /* Just here to make handling failures easy */
 	int slice = (int)(uintptr_t)attr->private;
 	int ret;
@@ -370,6 +369,8 @@ static ssize_t gt_max_freq_mhz_store(struct device *kdev,
 
 	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
 
+	intel_runtime_pm_get(dev_priv);
+
 	mutex_lock(&dev_priv->rps.hw_lock);
 
 	val = intel_freq_opcode(dev_priv, val);
@@ -378,6 +379,7 @@ static ssize_t gt_max_freq_mhz_store(struct device *kdev,
 	    val > dev_priv->rps.max_freq ||
 	    val < dev_priv->rps.min_freq_softlimit) {
 		mutex_unlock(&dev_priv->rps.hw_lock);
+		intel_runtime_pm_put(dev_priv);
 		return -EINVAL;
 	}
 
@@ -394,9 +396,11 @@ static ssize_t gt_max_freq_mhz_store(struct device *kdev,
 	/* We still need *_set_rps to process the new max_delay and
 	 * update the interrupt limits and PMINTRMSK even though
 	 * frequency request may be unchanged. */
-	intel_set_rps(dev, val);
+	intel_set_rps(dev_priv, val);
 
 	mutex_unlock(&dev_priv->rps.hw_lock);
+
+	intel_runtime_pm_put(dev_priv);
 
 	return count;
 }
@@ -433,6 +437,8 @@ static ssize_t gt_min_freq_mhz_store(struct device *kdev,
 
 	flush_delayed_work(&dev_priv->rps.delayed_resume_work);
 
+	intel_runtime_pm_get(dev_priv);
+
 	mutex_lock(&dev_priv->rps.hw_lock);
 
 	val = intel_freq_opcode(dev_priv, val);
@@ -441,6 +447,7 @@ static ssize_t gt_min_freq_mhz_store(struct device *kdev,
 	    val > dev_priv->rps.max_freq ||
 	    val > dev_priv->rps.max_freq_softlimit) {
 		mutex_unlock(&dev_priv->rps.hw_lock);
+		intel_runtime_pm_put(dev_priv);
 		return -EINVAL;
 	}
 
@@ -453,9 +460,11 @@ static ssize_t gt_min_freq_mhz_store(struct device *kdev,
 	/* We still need *_set_rps to process the new min_delay and
 	 * update the interrupt limits and PMINTRMSK even though
 	 * frequency request may be unchanged. */
-	intel_set_rps(dev, val);
+	intel_set_rps(dev_priv, val);
 
 	mutex_unlock(&dev_priv->rps.hw_lock);
+
+	intel_runtime_pm_put(dev_priv);
 
 	return count;
 

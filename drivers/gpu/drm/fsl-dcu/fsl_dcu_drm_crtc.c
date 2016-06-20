@@ -22,20 +22,21 @@
 #include "fsl_dcu_drm_drv.h"
 #include "fsl_dcu_drm_plane.h"
 
-static void fsl_dcu_drm_crtc_atomic_begin(struct drm_crtc *crtc,
-					  struct drm_crtc_state *old_crtc_state)
-{
-}
-
-static int fsl_dcu_drm_crtc_atomic_check(struct drm_crtc *crtc,
-					 struct drm_crtc_state *state)
-{
-	return 0;
-}
-
 static void fsl_dcu_drm_crtc_atomic_flush(struct drm_crtc *crtc,
 					  struct drm_crtc_state *old_crtc_state)
 {
+	struct drm_pending_vblank_event *event = crtc->state->event;
+
+	if (event) {
+		crtc->state->event = NULL;
+
+		spin_lock_irq(&crtc->dev->event_lock);
+		if (drm_crtc_vblank_get(crtc) == 0)
+			drm_crtc_arm_vblank_event(crtc, event);
+		else
+			drm_crtc_send_vblank_event(crtc, event);
+		spin_unlock_irq(&crtc->dev->event_lock);
+	}
 }
 
 static void fsl_dcu_drm_disable_crtc(struct drm_crtc *crtc)
@@ -66,13 +67,12 @@ static void fsl_dcu_drm_crtc_mode_set_nofb(struct drm_crtc *crtc)
 {
 	struct drm_device *dev = crtc->dev;
 	struct fsl_dcu_drm_device *fsl_dev = dev->dev_private;
+	struct drm_connector *con = &fsl_dev->connector.base;
 	struct drm_display_mode *mode = &crtc->state->mode;
-	unsigned int hbp, hfp, hsw, vbp, vfp, vsw, div, index, pol = 0;
-	unsigned long dcuclk;
+	unsigned int hbp, hfp, hsw, vbp, vfp, vsw, index, pol = 0;
 
 	index = drm_crtc_index(crtc);
-	dcuclk = clk_get_rate(fsl_dev->clk);
-	div = dcuclk / mode->clock / 1000;
+	clk_set_rate(fsl_dev->pix_clk, mode->clock * 1000);
 
 	/* Configure timings: */
 	hbp = mode->htotal - mode->hsync_end;
@@ -81,6 +81,10 @@ static void fsl_dcu_drm_crtc_mode_set_nofb(struct drm_crtc *crtc)
 	vbp = mode->vtotal - mode->vsync_end;
 	vfp = mode->vsync_start - mode->vdisplay;
 	vsw = mode->vsync_end - mode->vsync_start;
+
+	/* INV_PXCK as default (most display sample data on rising edge) */
+	if (!(con->display_info.bus_flags & DRM_BUS_FLAG_PIXDATA_POSEDGE))
+		pol |= DCU_SYN_POL_INV_PXCK;
 
 	if (mode->flags & DRM_MODE_FLAG_NHSYNC)
 		pol |= DCU_SYN_POL_INV_HS_LOW;
@@ -99,7 +103,6 @@ static void fsl_dcu_drm_crtc_mode_set_nofb(struct drm_crtc *crtc)
 	regmap_write(fsl_dev->regmap, DCU_DISP_SIZE,
 		     DCU_DISP_SIZE_DELTA_Y(mode->vdisplay) |
 		     DCU_DISP_SIZE_DELTA_X(mode->hdisplay));
-	regmap_write(fsl_dev->regmap, DCU_DIV_RATIO, div);
 	regmap_write(fsl_dev->regmap, DCU_SYN_POL, pol);
 	regmap_write(fsl_dev->regmap, DCU_BGND, DCU_BGND_R(0) |
 		     DCU_BGND_G(0) | DCU_BGND_B(0));
@@ -115,8 +118,6 @@ static void fsl_dcu_drm_crtc_mode_set_nofb(struct drm_crtc *crtc)
 }
 
 static const struct drm_crtc_helper_funcs fsl_dcu_drm_crtc_helper_funcs = {
-	.atomic_begin = fsl_dcu_drm_crtc_atomic_begin,
-	.atomic_check = fsl_dcu_drm_crtc_atomic_check,
 	.atomic_flush = fsl_dcu_drm_crtc_atomic_flush,
 	.disable = fsl_dcu_drm_disable_crtc,
 	.enable = fsl_dcu_drm_crtc_enable,

@@ -122,6 +122,7 @@ static int intelfb_alloc(struct drm_fb_helper *helper,
 	struct drm_framebuffer *fb;
 	struct drm_device *dev = helper->dev;
 	struct drm_i915_private *dev_priv = to_i915(dev);
+	struct i915_ggtt *ggtt = &dev_priv->ggtt;
 	struct drm_mode_fb_cmd2 mode_cmd = {};
 	struct drm_i915_gem_object *obj = NULL;
 	int size, ret;
@@ -146,13 +147,13 @@ static int intelfb_alloc(struct drm_fb_helper *helper,
 	/* If the FB is too big, just don't use it since fbdev is not very
 	 * important and we should probably use that space with FBC or other
 	 * features. */
-	if (size * 2 < dev_priv->gtt.stolen_usable_size)
+	if (size * 2 < ggtt->stolen_usable_size)
 		obj = i915_gem_object_create_stolen(dev, size);
 	if (obj == NULL)
-		obj = i915_gem_alloc_object(dev, size);
-	if (!obj) {
+		obj = i915_gem_object_create(dev, size);
+	if (IS_ERR(obj)) {
 		DRM_ERROR("failed to allocate framebuffer\n");
-		ret = -ENOMEM;
+		ret = PTR_ERR(obj);
 		goto out;
 	}
 
@@ -181,12 +182,15 @@ static int intelfb_create(struct drm_fb_helper *helper,
 		container_of(helper, struct intel_fbdev, helper);
 	struct intel_framebuffer *intel_fb = ifbdev->fb;
 	struct drm_device *dev = helper->dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
+	struct drm_i915_private *dev_priv = to_i915(dev);
+	struct i915_ggtt *ggtt = &dev_priv->ggtt;
 	struct fb_info *info;
 	struct drm_framebuffer *fb;
+	struct i915_vma *vma;
 	struct drm_i915_gem_object *obj;
-	int size, ret;
 	bool prealloc = false;
+	void *vaddr;
+	int ret;
 
 	if (intel_fb &&
 	    (sizes->fb_width > intel_fb->base.width ||
@@ -212,7 +216,6 @@ static int intelfb_create(struct drm_fb_helper *helper,
 	}
 
 	obj = intel_fb->obj;
-	size = obj->base.size;
 
 	mutex_lock(&dev->struct_mutex);
 
@@ -220,7 +223,7 @@ static int intelfb_create(struct drm_fb_helper *helper,
 	 * This also validates that any existing fb inherited from the
 	 * BIOS is suitable for own access.
 	 */
-	ret = intel_pin_and_fence_fb_obj(NULL, &ifbdev->fb->base, NULL);
+	ret = intel_pin_and_fence_fb_obj(&ifbdev->fb->base, BIT(DRM_ROTATE_0));
 	if (ret)
 		goto out_unlock;
 
@@ -242,22 +245,23 @@ static int intelfb_create(struct drm_fb_helper *helper,
 	info->flags = FBINFO_DEFAULT | FBINFO_CAN_FORCE_OUTPUT;
 	info->fbops = &intelfb_ops;
 
+	vma = i915_gem_obj_to_ggtt(obj);
+
 	/* setup aperture base/size for vesafb takeover */
 	info->apertures->ranges[0].base = dev->mode_config.fb_base;
-	info->apertures->ranges[0].size = dev_priv->gtt.mappable_end;
+	info->apertures->ranges[0].size = ggtt->mappable_end;
 
-	info->fix.smem_start = dev->mode_config.fb_base + i915_gem_obj_ggtt_offset(obj);
-	info->fix.smem_len = size;
+	info->fix.smem_start = dev->mode_config.fb_base + vma->node.start;
+	info->fix.smem_len = vma->node.size;
 
-	info->screen_base =
-		ioremap_wc(dev_priv->gtt.mappable_base + i915_gem_obj_ggtt_offset(obj),
-			   size);
-	if (!info->screen_base) {
+	vaddr = i915_vma_pin_iomap(vma);
+	if (IS_ERR(vaddr)) {
 		DRM_ERROR("Failed to remap framebuffer into virtual memory\n");
-		ret = -ENOSPC;
+		ret = PTR_ERR(vaddr);
 		goto out_destroy_fbi;
 	}
-	info->screen_size = size;
+	info->screen_base = vaddr;
+	info->screen_size = vma->node.size;
 
 	/* This driver doesn't need a VT switch to restore the mode on resume */
 	info->skip_vt_switch = true;
@@ -285,7 +289,7 @@ static int intelfb_create(struct drm_fb_helper *helper,
 out_destroy_fbi:
 	drm_fb_helper_release_fbi(helper);
 out_unpin:
-	i915_gem_object_ggtt_unpin(obj);
+	intel_unpin_fb_obj(&ifbdev->fb->base, BIT(DRM_ROTATE_0));
 out_unlock:
 	mutex_unlock(&dev->struct_mutex);
 	return ret;
@@ -366,12 +370,12 @@ static bool intel_fb_initial_config(struct drm_fb_helper *fb_helper,
 	uint64_t conn_configured = 0, mask;
 	int pass = 0;
 
-	save_enabled = kcalloc(dev->mode_config.num_connector, sizeof(bool),
+	save_enabled = kcalloc(fb_helper->connector_count, sizeof(bool),
 			       GFP_KERNEL);
 	if (!save_enabled)
 		return false;
 
-	memcpy(save_enabled, enabled, dev->mode_config.num_connector);
+	memcpy(save_enabled, enabled, fb_helper->connector_count);
 	mask = (1 << fb_helper->connector_count) - 1;
 retry:
 	for (i = 0; i < fb_helper->connector_count; i++) {
@@ -379,6 +383,7 @@ retry:
 		struct drm_connector *connector;
 		struct drm_encoder *encoder;
 		struct drm_fb_helper_crtc *new_crtc;
+		struct intel_crtc *intel_crtc;
 
 		fb_conn = fb_helper->connector_info[i];
 		connector = fb_conn->connector;
@@ -419,6 +424,13 @@ retry:
 		}
 
 		num_connectors_enabled++;
+
+		intel_crtc = to_intel_crtc(connector->state->crtc);
+		for (j = 0; j < 256; j++) {
+			intel_crtc->lut_r[j] = j;
+			intel_crtc->lut_g[j] = j;
+			intel_crtc->lut_b[j] = j;
+		}
 
 		new_crtc = intel_fb_helper_crtc(fb_helper, connector->state->crtc);
 
@@ -478,10 +490,10 @@ retry:
 		}
 		crtcs[i] = new_crtc;
 
-		DRM_DEBUG_KMS("connector %s on pipe %c [CRTC:%d]: %dx%d%s\n",
+		DRM_DEBUG_KMS("connector %s on [CRTC:%d:%s]: %dx%d%s\n",
 			      connector->name,
-			      pipe_name(to_intel_crtc(connector->state->crtc)->pipe),
 			      connector->state->crtc->base.id,
+			      connector->state->crtc->name,
 			      modes[i]->hdisplay, modes[i]->vdisplay,
 			      modes[i]->flags & DRM_MODE_FLAG_INTERLACE ? "i" :"");
 
@@ -510,7 +522,7 @@ retry:
 	if (fallback) {
 bail:
 		DRM_DEBUG_KMS("Not using firmware configuration\n");
-		memcpy(enabled, save_enabled, dev->mode_config.num_connector);
+		memcpy(enabled, save_enabled, fb_helper->connector_count);
 		kfree(save_enabled);
 		return false;
 	}
@@ -541,6 +553,11 @@ static void intel_fbdev_destroy(struct drm_device *dev,
 
 	if (ifbdev->fb) {
 		drm_framebuffer_unregister_private(&ifbdev->fb->base);
+
+		mutex_lock(&dev->struct_mutex);
+		intel_unpin_fb_obj(&ifbdev->fb->base, BIT(DRM_ROTATE_0));
+		mutex_unlock(&dev->struct_mutex);
+
 		drm_framebuffer_remove(&ifbdev->fb->base);
 	}
 }
@@ -706,8 +723,6 @@ int intel_fbdev_init(struct drm_device *dev)
 		kfree(ifbdev);
 		return ret;
 	}
-
-	ifbdev->helper.atomic = true;
 
 	dev_priv->fbdev = ifbdev;
 	INIT_WORK(&dev_priv->fbdev_suspend_work, intel_fbdev_suspend_worker);

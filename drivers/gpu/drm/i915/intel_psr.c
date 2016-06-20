@@ -176,7 +176,6 @@ static void hsw_psr_enable_sink(struct intel_dp *intel_dp)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	uint32_t aux_clock_divider;
 	i915_reg_t aux_ctl_reg;
-	int precharge = 0x3;
 	static const uint8_t aux_msg[] = {
 		[0] = DP_AUX_NATIVE_WRITE << 4,
 		[1] = DP_SET_POWER >> 8,
@@ -185,6 +184,7 @@ static void hsw_psr_enable_sink(struct intel_dp *intel_dp)
 		[4] = DP_SET_POWER_D0,
 	};
 	enum port port = dig_port->port;
+	u32 aux_ctl;
 	int i;
 
 	BUILD_BUG_ON(sizeof(aux_msg) > 20);
@@ -197,6 +197,13 @@ static void hsw_psr_enable_sink(struct intel_dp *intel_dp)
 				DP_SINK_DEVICE_AUX_FRAME_SYNC_CONF,
 				DP_AUX_FRAME_SYNC_ENABLE);
 
+	if (dev_priv->psr.link_standby)
+		drm_dp_dpcd_writeb(&intel_dp->aux, DP_PSR_EN_CFG,
+				   DP_PSR_ENABLE | DP_PSR_MAIN_LINK_ACTIVE);
+	else
+		drm_dp_dpcd_writeb(&intel_dp->aux, DP_PSR_EN_CFG,
+				   DP_PSR_ENABLE);
+
 	aux_ctl_reg = psr_aux_ctl_reg(dev_priv, port);
 
 	/* Setup AUX registers */
@@ -204,33 +211,9 @@ static void hsw_psr_enable_sink(struct intel_dp *intel_dp)
 		I915_WRITE(psr_aux_data_reg(dev_priv, port, i >> 2),
 			   intel_dp_pack_aux(&aux_msg[i], sizeof(aux_msg) - i));
 
-	if (INTEL_INFO(dev)->gen >= 9) {
-		uint32_t val;
-
-		val = I915_READ(aux_ctl_reg);
-		val &= ~DP_AUX_CH_CTL_TIME_OUT_MASK;
-		val |= DP_AUX_CH_CTL_TIME_OUT_1600us;
-		val &= ~DP_AUX_CH_CTL_MESSAGE_SIZE_MASK;
-		val |= (sizeof(aux_msg) << DP_AUX_CH_CTL_MESSAGE_SIZE_SHIFT);
-		/* Use hardcoded data values for PSR, frame sync and GTC */
-		val &= ~DP_AUX_CH_CTL_PSR_DATA_AUX_REG_SKL;
-		val &= ~DP_AUX_CH_CTL_FS_DATA_AUX_REG_SKL;
-		val &= ~DP_AUX_CH_CTL_GTC_DATA_AUX_REG_SKL;
-		I915_WRITE(aux_ctl_reg, val);
-	} else {
-		I915_WRITE(aux_ctl_reg,
-		   DP_AUX_CH_CTL_TIME_OUT_400us |
-		   (sizeof(aux_msg) << DP_AUX_CH_CTL_MESSAGE_SIZE_SHIFT) |
-		   (precharge << DP_AUX_CH_CTL_PRECHARGE_2US_SHIFT) |
-		   (aux_clock_divider << DP_AUX_CH_CTL_BIT_CLOCK_2X_SHIFT));
-	}
-
-	if (dev_priv->psr.link_standby)
-		drm_dp_dpcd_writeb(&intel_dp->aux, DP_PSR_EN_CFG,
-				   DP_PSR_ENABLE | DP_PSR_MAIN_LINK_ACTIVE);
-	else
-		drm_dp_dpcd_writeb(&intel_dp->aux, DP_PSR_EN_CFG,
-				   DP_PSR_ENABLE);
+	aux_ctl = intel_dp->get_aux_send_ctl(intel_dp, 0, sizeof(aux_msg),
+					     aux_clock_divider);
+	I915_WRITE(aux_ctl_reg, aux_ctl);
 }
 
 static void vlv_psr_enable_source(struct intel_dp *intel_dp)
@@ -272,15 +255,18 @@ static void hsw_psr_enable_source(struct intel_dp *intel_dp)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 
 	uint32_t max_sleep_time = 0x1f;
-	/*
-	 * Let's respect VBT in case VBT asks a higher idle_frame value.
-	 * Let's use 6 as the minimum to cover all known cases including
-	 * the off-by-one issue that HW has in some cases. Also there are
-	 * cases where sink should be able to train
-	 * with the 5 or 6 idle patterns.
+	/* Lately it was identified that depending on panel idle frame count
+	 * calculated at HW can be off by 1. So let's use what came
+	 * from VBT + 1.
+	 * There are also other cases where panel demands at least 4
+	 * but VBT is not being set. To cover these 2 cases lets use
+	 * at least 5 when VBT isn't set to be on the safest side.
 	 */
-	uint32_t idle_frames = max(6, dev_priv->vbt.psr.idle_frames);
-	uint32_t val = 0x0;
+	uint32_t idle_frames = dev_priv->vbt.psr.idle_frames + 1;
+	uint32_t val = EDP_PSR_ENABLE;
+
+	val |= max_sleep_time << EDP_PSR_MAX_SLEEP_TIME_SHIFT;
+	val |= idle_frames << EDP_PSR_IDLE_FRAME_SHIFT;
 
 	if (IS_HASWELL(dev))
 		val |= EDP_PSR_MIN_LINK_ENTRY_TIME_8_LINES;
@@ -288,14 +274,50 @@ static void hsw_psr_enable_source(struct intel_dp *intel_dp)
 	if (dev_priv->psr.link_standby)
 		val |= EDP_PSR_LINK_STANDBY;
 
-	I915_WRITE(EDP_PSR_CTL, val |
-		   max_sleep_time << EDP_PSR_MAX_SLEEP_TIME_SHIFT |
-		   idle_frames << EDP_PSR_IDLE_FRAME_SHIFT |
-		   EDP_PSR_ENABLE);
+	if (dev_priv->vbt.psr.tp1_wakeup_time > 5)
+		val |= EDP_PSR_TP1_TIME_2500us;
+	else if (dev_priv->vbt.psr.tp1_wakeup_time > 1)
+		val |= EDP_PSR_TP1_TIME_500us;
+	else if (dev_priv->vbt.psr.tp1_wakeup_time > 0)
+		val |= EDP_PSR_TP1_TIME_100us;
+	else
+		val |= EDP_PSR_TP1_TIME_0us;
 
-	if (dev_priv->psr.psr2_support)
-		I915_WRITE(EDP_PSR2_CTL, EDP_PSR2_ENABLE |
-				EDP_SU_TRACK_ENABLE | EDP_PSR2_TP2_TIME_100);
+	if (dev_priv->vbt.psr.tp2_tp3_wakeup_time > 5)
+		val |= EDP_PSR_TP2_TP3_TIME_2500us;
+	else if (dev_priv->vbt.psr.tp2_tp3_wakeup_time > 1)
+		val |= EDP_PSR_TP2_TP3_TIME_500us;
+	else if (dev_priv->vbt.psr.tp2_tp3_wakeup_time > 0)
+		val |= EDP_PSR_TP2_TP3_TIME_100us;
+	else
+		val |= EDP_PSR_TP2_TP3_TIME_0us;
+
+	if (intel_dp_source_supports_hbr2(intel_dp) &&
+	    drm_dp_tps3_supported(intel_dp->dpcd))
+		val |= EDP_PSR_TP1_TP3_SEL;
+	else
+		val |= EDP_PSR_TP1_TP2_SEL;
+
+	I915_WRITE(EDP_PSR_CTL, val);
+
+	if (!dev_priv->psr.psr2_support)
+		return;
+
+	/* FIXME: selective update is probably totally broken because it doesn't
+	 * mesh at all with our frontbuffer tracking. And the hw alone isn't
+	 * good enough. */
+	val = EDP_PSR2_ENABLE | EDP_SU_TRACK_ENABLE;
+
+	if (dev_priv->vbt.psr.tp2_tp3_wakeup_time > 5)
+		val |= EDP_PSR2_TP2_TIME_2500;
+	else if (dev_priv->vbt.psr.tp2_tp3_wakeup_time > 1)
+		val |= EDP_PSR2_TP2_TIME_500;
+	else if (dev_priv->vbt.psr.tp2_tp3_wakeup_time > 0)
+		val |= EDP_PSR2_TP2_TIME_100;
+	else
+		val |= EDP_PSR2_TP2_TIME_50;
+
+	I915_WRITE(EDP_PSR2_CTL, val);
 }
 
 static bool intel_psr_match_conditions(struct intel_dp *intel_dp)
@@ -507,7 +529,8 @@ static void hsw_psr_disable(struct intel_dp *intel_dp)
 
 		/* Wait till PSR is idle */
 		if (_wait_for((I915_READ(EDP_PSR_STATUS_CTL) &
-			       EDP_PSR_STATUS_STATE_MASK) == 0, 2000, 10))
+			       EDP_PSR_STATUS_STATE_MASK) == 0,
+			       2 * USEC_PER_SEC, 10 * USEC_PER_MSEC))
 			DRM_ERROR("Timed out waiting for PSR Idle State\n");
 
 		dev_priv->psr.active = false;
@@ -562,7 +585,7 @@ static void intel_psr_work(struct work_struct *work)
 	 * PSR might take some time to get fully disabled
 	 * and be ready for re-enable.
 	 */
-	if (HAS_DDI(dev_priv->dev)) {
+	if (HAS_DDI(dev_priv)) {
 		if (wait_for((I915_READ(EDP_PSR_STATUS_CTL) &
 			      EDP_PSR_STATUS_STATE_MASK) == 0, 50)) {
 			DRM_ERROR("Timed out waiting for PSR Idle for re-enable\n");
@@ -780,8 +803,7 @@ void intel_psr_init(struct drm_device *dev)
 
 	/* Per platform default */
 	if (i915.enable_psr == -1) {
-		if (IS_HASWELL(dev) || IS_BROADWELL(dev) ||
-		    IS_VALLEYVIEW(dev) || IS_CHERRYVIEW(dev))
+		if (IS_HASWELL(dev) || IS_BROADWELL(dev))
 			i915.enable_psr = 1;
 		else
 			i915.enable_psr = 0;

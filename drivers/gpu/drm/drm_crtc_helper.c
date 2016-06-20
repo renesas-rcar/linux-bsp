@@ -170,11 +170,14 @@ drm_encoder_disable(struct drm_encoder *encoder)
 {
 	const struct drm_encoder_helper_funcs *encoder_funcs = encoder->helper_private;
 
+	if (!encoder_funcs)
+		return;
+
 	drm_bridge_disable(encoder->bridge);
 
 	if (encoder_funcs->disable)
 		(*encoder_funcs->disable)(encoder);
-	else
+	else if (encoder_funcs->dpms)
 		(*encoder_funcs->dpms)(encoder, DRM_MODE_DPMS_OFF);
 
 	drm_bridge_post_disable(encoder->bridge);
@@ -248,6 +251,9 @@ drm_crtc_prepare_encoders(struct drm_device *dev)
 
 	drm_for_each_encoder(encoder, dev) {
 		encoder_funcs = encoder->helper_private;
+		if (!encoder_funcs)
+			continue;
+
 		/* Disable unused encoders */
 		if (encoder->crtc == NULL)
 			drm_encoder_disable(encoder);
@@ -326,6 +332,10 @@ bool drm_crtc_helper_set_mode(struct drm_crtc *crtc,
 		if (encoder->crtc != crtc)
 			continue;
 
+		encoder_funcs = encoder->helper_private;
+		if (!encoder_funcs)
+			continue;
+
 		ret = drm_bridge_mode_fixup(encoder->bridge,
 			mode, adjusted_mode);
 		if (!ret) {
@@ -360,11 +370,15 @@ bool drm_crtc_helper_set_mode(struct drm_crtc *crtc,
 		if (encoder->crtc != crtc)
 			continue;
 
+		encoder_funcs = encoder->helper_private;
+		if (!encoder_funcs)
+			continue;
+
 		drm_bridge_disable(encoder->bridge);
 
-		encoder_funcs = encoder->helper_private;
 		/* Disable the encoders as the first thing we do. */
-		encoder_funcs->prepare(encoder);
+		if (encoder_funcs->prepare)
+			encoder_funcs->prepare(encoder);
 
 		drm_bridge_post_disable(encoder->bridge);
 	}
@@ -385,11 +399,15 @@ bool drm_crtc_helper_set_mode(struct drm_crtc *crtc,
 		if (encoder->crtc != crtc)
 			continue;
 
+		encoder_funcs = encoder->helper_private;
+		if (!encoder_funcs)
+			continue;
+
 		DRM_DEBUG_KMS("[ENCODER:%d:%s] set [MODE:%d:%s]\n",
 			encoder->base.id, encoder->name,
 			mode->base.id, mode->name);
-		encoder_funcs = encoder->helper_private;
-		encoder_funcs->mode_set(encoder, mode, adjusted_mode);
+		if (encoder_funcs->mode_set)
+			encoder_funcs->mode_set(encoder, mode, adjusted_mode);
 
 		drm_bridge_mode_set(encoder->bridge, mode, adjusted_mode);
 	}
@@ -402,10 +420,14 @@ bool drm_crtc_helper_set_mode(struct drm_crtc *crtc,
 		if (encoder->crtc != crtc)
 			continue;
 
+		encoder_funcs = encoder->helper_private;
+		if (!encoder_funcs)
+			continue;
+
 		drm_bridge_pre_enable(encoder->bridge);
 
-		encoder_funcs = encoder->helper_private;
-		encoder_funcs->commit(encoder);
+		if (encoder_funcs->commit)
+			encoder_funcs->commit(encoder);
 
 		drm_bridge_enable(encoder->bridge);
 	}
@@ -456,6 +478,9 @@ drm_crtc_helper_disable(struct drm_crtc *crtc)
 			 * between them is henceforth no longer available.
 			 */
 			connector->dpms = DRM_MODE_DPMS_OFF;
+
+			/* we keep a reference while the encoder is bound */
+			drm_connector_unreference(connector);
 		}
 	}
 
@@ -606,6 +631,11 @@ int drm_crtc_helper_set_config(struct drm_mode_set *set)
 		mode_changed = true;
 	}
 
+	/* take a reference on all connectors in set */
+	for (ro = 0; ro < set->num_connectors; ro++) {
+		drm_connector_reference(set->connectors[ro]);
+	}
+
 	/* a) traverse passed in connector list and get encoders for them */
 	count = 0;
 	drm_for_each_connector(connector, dev) {
@@ -724,6 +754,12 @@ int drm_crtc_helper_set_config(struct drm_mode_set *set)
 		}
 	}
 
+	/* after fail drop reference on all connectors in save set */
+	count = 0;
+	drm_for_each_connector(connector, dev) {
+		drm_connector_unreference(&save_connectors[count++]);
+	}
+
 	kfree(save_connectors);
 	kfree(save_encoders);
 	return 0;
@@ -738,6 +774,11 @@ fail:
 	count = 0;
 	drm_for_each_connector(connector, dev) {
 		*connector = save_connectors[count++];
+	}
+
+	/* after fail drop reference on all connectors in set */
+	for (ro = 0; ro < set->num_connectors; ro++) {
+		drm_connector_unreference(set->connectors[ro]);
 	}
 
 	/* Try to restore the config */
@@ -771,12 +812,15 @@ static void drm_helper_encoder_dpms(struct drm_encoder *encoder, int mode)
 	struct drm_bridge *bridge = encoder->bridge;
 	const struct drm_encoder_helper_funcs *encoder_funcs;
 
+	encoder_funcs = encoder->helper_private;
+	if (!encoder_funcs)
+		return;
+
 	if (mode == DRM_MODE_DPMS_ON)
 		drm_bridge_pre_enable(bridge);
 	else
 		drm_bridge_disable(bridge);
 
-	encoder_funcs = encoder->helper_private;
 	if (encoder_funcs->dpms)
 		encoder_funcs->dpms(encoder, mode);
 
@@ -1053,10 +1097,12 @@ int drm_helper_crtc_mode_set_base(struct drm_crtc *crtc, int x, int y,
 
 	if (plane->funcs->atomic_duplicate_state)
 		plane_state = plane->funcs->atomic_duplicate_state(plane);
-	else if (plane->state)
+	else {
+		if (!plane->state)
+			drm_atomic_helper_plane_reset(plane);
+
 		plane_state = drm_atomic_helper_plane_duplicate_state(plane);
-	else
-		plane_state = kzalloc(sizeof(*plane_state), GFP_KERNEL);
+	}
 	if (!plane_state)
 		return -ENOMEM;
 	plane_state->plane = plane;
@@ -1075,36 +1121,3 @@ int drm_helper_crtc_mode_set_base(struct drm_crtc *crtc, int x, int y,
 	return drm_plane_helper_commit(plane, plane_state, old_fb);
 }
 EXPORT_SYMBOL(drm_helper_crtc_mode_set_base);
-
-/**
- * drm_helper_crtc_enable_color_mgmt - enable color management properties
- * @crtc: DRM CRTC
- * @degamma_lut_size: the size of the degamma lut (before CSC)
- * @gamma_lut_size: the size of the gamma lut (after CSC)
- *
- * This function lets the driver enable the color correction properties on a
- * CRTC. This includes 3 degamma, csc and gamma properties that userspace can
- * set and 2 size properties to inform the userspace of the lut sizes.
- */
-void drm_helper_crtc_enable_color_mgmt(struct drm_crtc *crtc,
-				       int degamma_lut_size,
-				       int gamma_lut_size)
-{
-	struct drm_device *dev = crtc->dev;
-	struct drm_mode_config *config = &dev->mode_config;
-
-	drm_object_attach_property(&crtc->base,
-				   config->degamma_lut_property, 0);
-	drm_object_attach_property(&crtc->base,
-				   config->ctm_property, 0);
-	drm_object_attach_property(&crtc->base,
-				   config->gamma_lut_property, 0);
-
-	drm_object_attach_property(&crtc->base,
-				   config->degamma_lut_size_property,
-				   degamma_lut_size);
-	drm_object_attach_property(&crtc->base,
-				   config->gamma_lut_size_property,
-				   gamma_lut_size);
-}
-EXPORT_SYMBOL(drm_helper_crtc_enable_color_mgmt);

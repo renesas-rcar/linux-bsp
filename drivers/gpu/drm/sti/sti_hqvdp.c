@@ -7,6 +7,7 @@
 #include <linux/component.h>
 #include <linux/firmware.h>
 #include <linux/reset.h>
+#include <linux/seq_file.h>
 
 #include <drm/drm_atomic.h>
 #include <drm/drm_fb_cma_helper.h>
@@ -554,14 +555,8 @@ static int hqvdp_dbg_show(struct seq_file *s, void *data)
 {
 	struct drm_info_node *node = s->private;
 	struct sti_hqvdp *hqvdp = (struct sti_hqvdp *)node->info_ent->data;
-	struct drm_device *dev = node->minor->dev;
 	int cmd, cmd_offset, infoxp70;
 	void *virt;
-	int ret;
-
-	ret = mutex_lock_interruptible(&dev->struct_mutex);
-	if (ret)
-		return ret;
 
 	seq_printf(s, "%s: (vaddr = 0x%p)",
 		   sti_plane_to_str(&hqvdp->plane), hqvdp->regs);
@@ -629,7 +624,6 @@ static int hqvdp_dbg_show(struct seq_file *s, void *data)
 
 	seq_puts(s, "\n");
 
-	mutex_unlock(&dev->struct_mutex);
 	return 0;
 }
 

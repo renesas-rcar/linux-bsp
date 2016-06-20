@@ -16,6 +16,7 @@ struct vc4_dev {
 	struct vc4_hvs *hvs;
 	struct vc4_crtc *crtc[3];
 	struct vc4_v3d *v3d;
+	struct vc4_dpi *dpi;
 
 	struct drm_fbdev_cma *fbdev;
 
@@ -422,6 +423,10 @@ void vc4_debugfs_cleanup(struct drm_minor *minor);
 /* vc4_drv.c */
 void __iomem *vc4_ioremap_regs(struct platform_device *dev, int index);
 
+/* vc4_dpi.c */
+extern struct platform_driver vc4_dpi_driver;
+int vc4_dpi_debugfs_regs(struct seq_file *m, void *unused);
+
 /* vc4_gem.c */
 void vc4_gem_init(struct drm_device *dev);
 void vc4_gem_destroy(struct drm_device *dev);
@@ -464,7 +469,7 @@ int vc4_kms_load(struct drm_device *dev);
 struct drm_plane *vc4_plane_init(struct drm_device *dev,
 				 enum drm_plane_type type);
 u32 vc4_plane_write_dlist(struct drm_plane *plane, u32 __iomem *dlist);
-u32 vc4_plane_dlist_size(struct drm_plane_state *state);
+u32 vc4_plane_dlist_size(const struct drm_plane_state *state);
 void vc4_plane_async_set_fb(struct drm_plane *plane,
 			    struct drm_framebuffer *fb);
 

@@ -22,13 +22,11 @@
  * Authors: Ben Skeggs
  */
 
-#include <linux/apple-gmux.h>
 #include <linux/console.h>
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/pci.h>
 #include <linux/pm_runtime.h>
-#include <linux/vgaarb.h>
 #include <linux/vga_switcheroo.h>
 
 #include "drmP.h"
@@ -44,7 +42,7 @@
 #include <nvif/cla06f.h>
 #include <nvif/if0004.h>
 
-#include "nouveau_drm.h"
+#include "nouveau_drv.h"
 #include "nouveau_dma.h"
 #include "nouveau_ttm.h"
 #include "nouveau_gem.h"
@@ -315,13 +313,7 @@ static int nouveau_drm_probe(struct pci_dev *pdev,
 	bool boot = false;
 	int ret;
 
-	/*
-	 * apple-gmux is needed on dual GPU MacBook Pro
-	 * to probe the panel if we're the inactive GPU.
-	 */
-	if (IS_ENABLED(CONFIG_VGA_ARB) && IS_ENABLED(CONFIG_VGA_SWITCHEROO) &&
-	    apple_gmux_present() && pdev != vga_default_device() &&
-	    !vga_switcheroo_handler_flags())
+	if (vga_switcheroo_client_probe_defer(pdev))
 		return -EPROBE_DEFER;
 
 	/* remove conflicting drivers (vesafb, efifb etc) */
@@ -970,7 +962,7 @@ driver_stub = {
 	.gem_prime_vmap = nouveau_gem_prime_vmap,
 	.gem_prime_vunmap = nouveau_gem_prime_vunmap,
 
-	.gem_free_object = nouveau_gem_object_del,
+	.gem_free_object_unlocked = nouveau_gem_object_del,
 	.gem_open_object = nouveau_gem_object_open,
 	.gem_close_object = nouveau_gem_object_close,
 
@@ -1083,10 +1075,8 @@ nouveau_drm_init(void)
 	nouveau_display_options();
 
 	if (nouveau_modeset == -1) {
-#ifdef CONFIG_VGA_CONSOLE
 		if (vgacon_text_force())
 			nouveau_modeset = 0;
-#endif
 	}
 
 	if (!nouveau_modeset)

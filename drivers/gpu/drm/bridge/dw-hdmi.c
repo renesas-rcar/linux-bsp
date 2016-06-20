@@ -1413,11 +1413,6 @@ static void dw_hdmi_bridge_enable(struct drm_bridge *bridge)
 	mutex_unlock(&hdmi->mutex);
 }
 
-static void dw_hdmi_bridge_nop(struct drm_bridge *bridge)
-{
-	/* do nothing */
-}
-
 static enum drm_connector_status
 dw_hdmi_connector_detect(struct drm_connector *connector, bool force)
 {
@@ -1481,15 +1476,6 @@ dw_hdmi_connector_mode_valid(struct drm_connector *connector,
 	return mode_status;
 }
 
-static struct drm_encoder *dw_hdmi_connector_best_encoder(struct drm_connector
-							   *connector)
-{
-	struct dw_hdmi *hdmi = container_of(connector, struct dw_hdmi,
-					     connector);
-
-	return hdmi->encoder;
-}
-
 static void dw_hdmi_connector_destroy(struct drm_connector *connector)
 {
 	drm_connector_unregister(connector);
@@ -1530,14 +1516,12 @@ static const struct drm_connector_funcs dw_hdmi_atomic_connector_funcs = {
 static const struct drm_connector_helper_funcs dw_hdmi_connector_helper_funcs = {
 	.get_modes = dw_hdmi_connector_get_modes,
 	.mode_valid = dw_hdmi_connector_mode_valid,
-	.best_encoder = dw_hdmi_connector_best_encoder,
+	.best_encoder = drm_atomic_helper_best_encoder,
 };
 
 static const struct drm_bridge_funcs dw_hdmi_bridge_funcs = {
 	.enable = dw_hdmi_bridge_enable,
 	.disable = dw_hdmi_bridge_disable,
-	.pre_enable = dw_hdmi_bridge_nop,
-	.post_disable = dw_hdmi_bridge_nop,
 	.mode_set = dw_hdmi_bridge_mode_set,
 };
 

@@ -67,7 +67,7 @@ DEFINE_MUTEX(drm_global_mutex);
  * specific implementations. For GEM-based drivers this is drm_gem_mmap().
  *
  * No other file operations are supported by the DRM userspace API. Overall the
- * following is an example #file_operations structure:
+ * following is an example #file_operations structure::
  *
  *     static const example_drm_fops = {
  *             .owner = THIS_MODULE,
@@ -297,9 +297,9 @@ static int drm_open_helper(struct file *filp, struct drm_minor *minor)
 	}
 	mutex_unlock(&dev->master_mutex);
 
-	mutex_lock(&dev->struct_mutex);
+	mutex_lock(&dev->filelist_mutex);
 	list_add(&priv->lhead, &dev->filelist);
-	mutex_unlock(&dev->struct_mutex);
+	mutex_unlock(&dev->filelist_mutex);
 
 #ifdef __alpha__
 	/*
@@ -368,7 +368,7 @@ static void drm_events_release(struct drm_file *file_priv)
 	/* Remove unconsumed events */
 	list_for_each_entry_safe(e, et, &file_priv->event_list, link) {
 		list_del(&e->link);
-		e->destroy(e);
+		kfree(e);
 	}
 
 	spin_unlock_irqrestore(&dev->event_lock, flags);
@@ -381,14 +381,26 @@ static void drm_events_release(struct drm_file *file_priv)
  */
 static void drm_legacy_dev_reinit(struct drm_device *dev)
 {
-	if (drm_core_check_feature(dev, DRIVER_MODESET))
-		return;
+	if (dev->irq_enabled)
+		drm_irq_uninstall(dev);
+
+	mutex_lock(&dev->struct_mutex);
+
+	drm_legacy_agp_clear(dev);
+
+	drm_legacy_sg_cleanup(dev);
+	drm_legacy_vma_flush(dev);
+	drm_legacy_dma_takedown(dev);
+
+	mutex_unlock(&dev->struct_mutex);
 
 	dev->sigdata.lock = NULL;
 
 	dev->context_flag = 0;
 	dev->last_context = 0;
 	dev->if_version = 0;
+
+	DRM_DEBUG("lastclose completed\n");
 }
 
 /*
@@ -400,7 +412,7 @@ static void drm_legacy_dev_reinit(struct drm_device *dev)
  *
  * \sa drm_device
  */
-int drm_lastclose(struct drm_device * dev)
+void drm_lastclose(struct drm_device * dev)
 {
 	DRM_DEBUG("\n");
 
@@ -408,23 +420,8 @@ int drm_lastclose(struct drm_device * dev)
 		dev->driver->lastclose(dev);
 	DRM_DEBUG("driver lastclose completed\n");
 
-	if (dev->irq_enabled && !drm_core_check_feature(dev, DRIVER_MODESET))
-		drm_irq_uninstall(dev);
-
-	mutex_lock(&dev->struct_mutex);
-
-	drm_agp_clear(dev);
-
-	drm_legacy_sg_cleanup(dev);
-	drm_legacy_vma_flush(dev);
-	drm_legacy_dma_takedown(dev);
-
-	mutex_unlock(&dev->struct_mutex);
-
-	drm_legacy_dev_reinit(dev);
-
-	DRM_DEBUG("lastclose completed\n");
-	return 0;
+	if (!drm_core_check_feature(dev, DRIVER_MODESET))
+		drm_legacy_dev_reinit(dev);
 }
 
 /**
@@ -445,14 +442,16 @@ int drm_release(struct inode *inode, struct file *filp)
 	struct drm_file *file_priv = filp->private_data;
 	struct drm_minor *minor = file_priv->minor;
 	struct drm_device *dev = minor->dev;
-	int retcode = 0;
 
 	mutex_lock(&drm_global_mutex);
 
 	DRM_DEBUG("open_count = %d\n", dev->open_count);
 
-	mutex_lock(&dev->struct_mutex);
+	mutex_lock(&dev->filelist_mutex);
 	list_del(&file_priv->lhead);
+	mutex_unlock(&dev->filelist_mutex);
+
+	mutex_lock(&dev->struct_mutex);
 	if (file_priv->magic)
 		idr_remove(&file_priv->master->magic_map, file_priv->magic);
 	mutex_unlock(&dev->struct_mutex);
@@ -538,7 +537,7 @@ int drm_release(struct inode *inode, struct file *filp)
 	 */
 
 	if (!--dev->open_count) {
-		retcode = drm_lastclose(dev);
+		drm_lastclose(dev);
 		if (drm_device_is_unplugged(dev))
 			drm_put_dev(dev);
 	}
@@ -546,7 +545,7 @@ int drm_release(struct inode *inode, struct file *filp)
 
 	drm_minor_release(minor);
 
-	return retcode;
+	return 0;
 }
 EXPORT_SYMBOL(drm_release);
 
@@ -637,7 +636,7 @@ put_back_event:
 			}
 
 			ret += length;
-			e->destroy(e);
+			kfree(e);
 		}
 	}
 	mutex_unlock(&file_priv->event_read_lock);
@@ -714,9 +713,6 @@ int drm_event_reserve_init_locked(struct drm_device *dev,
 	list_add(&p->pending_link, &file_priv->pending_event_list);
 	p->file_priv = file_priv;
 
-	/* we *could* pass this in as arg, but everyone uses kfree: */
-	p->destroy = (void (*) (struct drm_pending_event *)) kfree;
-
 	return 0;
 }
 EXPORT_SYMBOL(drm_event_reserve_init_locked);
@@ -779,7 +775,7 @@ void drm_event_cancel_free(struct drm_device *dev,
 		list_del(&p->pending_link);
 	}
 	spin_unlock_irqrestore(&dev->event_lock, flags);
-	p->destroy(p);
+	kfree(p);
 }
 EXPORT_SYMBOL(drm_event_cancel_free);
 
@@ -801,8 +797,19 @@ void drm_send_event_locked(struct drm_device *dev, struct drm_pending_event *e)
 {
 	assert_spin_locked(&dev->event_lock);
 
+	if (e->completion) {
+		/* ->completion might disappear as soon as it signalled. */
+		complete_all(e->completion);
+		e->completion = NULL;
+	}
+
+	if (e->fence) {
+		fence_signal(e->fence);
+		fence_put(e->fence);
+	}
+
 	if (!e->file_priv) {
-		e->destroy(e);
+		kfree(e);
 		return;
 	}
 

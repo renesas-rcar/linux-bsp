@@ -374,8 +374,9 @@ static void intel_fbc_hw_deactivate(struct drm_i915_private *dev_priv)
  * @dev_priv: i915 device instance
  *
  * This function is used to verify the current state of FBC.
+ *
  * FIXME: This should be tracked in the plane config eventually
- *        instead of queried at runtime for most callers.
+ * instead of queried at runtime for most callers.
  */
 bool intel_fbc_is_active(struct drm_i915_private *dev_priv)
 {
@@ -506,6 +507,7 @@ static int find_compression_threshold(struct drm_i915_private *dev_priv,
 				      int size,
 				      int fb_cpp)
 {
+	struct i915_ggtt *ggtt = &dev_priv->ggtt;
 	int compression_threshold = 1;
 	int ret;
 	u64 end;
@@ -516,9 +518,9 @@ static int find_compression_threshold(struct drm_i915_private *dev_priv,
 	 * underruns, even if that range is not reserved by the BIOS. */
 	if (IS_BROADWELL(dev_priv) ||
 	    IS_SKYLAKE(dev_priv) || IS_KABYLAKE(dev_priv))
-		end = dev_priv->gtt.stolen_size - 8 * 1024 * 1024;
+		end = ggtt->stolen_size - 8 * 1024 * 1024;
 	else
-		end = dev_priv->gtt.stolen_usable_size;
+		end = ggtt->stolen_usable_size;
 
 	/* HACK: This code depends on what we will do in *_enable_fbc. If that
 	 * code changes, this code needs to change as well.
@@ -739,7 +741,7 @@ static void intel_fbc_update_state_cache(struct intel_crtc *crtc)
 
 	/* FIXME: We lack the proper locking here, so only run this on the
 	 * platforms that need. */
-	if (INTEL_INFO(dev_priv)->gen >= 5 && INTEL_INFO(dev_priv)->gen < 7)
+	if (IS_GEN(dev_priv, 5, 6))
 		cache->fb.ilk_ggtt_offset = i915_gem_obj_ggtt_offset(obj);
 	cache->fb.pixel_format = fb->pixel_format;
 	cache->fb.stride = fb->pitches[0];
@@ -826,7 +828,7 @@ static bool intel_fbc_can_choose(struct intel_crtc *crtc)
 	bool enable_by_default = IS_HASWELL(dev_priv) ||
 				 IS_BROADWELL(dev_priv);
 
-	if (intel_vgpu_active(dev_priv->dev)) {
+	if (intel_vgpu_active(dev_priv)) {
 		fbc->no_fbc_reason = "VGPU is active";
 		return false;
 	}
