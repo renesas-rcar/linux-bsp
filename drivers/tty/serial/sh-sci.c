@@ -1972,7 +1972,6 @@ static void sci_break_ctl(struct uart_port *port, int break_state)
 static int sci_startup(struct uart_port *port)
 {
 	struct sci_port *s = to_sci_port(port);
-	unsigned long flags;
 	int ret;
 
 	dev_dbg(port->dev, "%s(%d)\n", __func__, port->line);
@@ -1982,11 +1981,6 @@ static int sci_startup(struct uart_port *port)
 		return ret;
 
 	sci_request_dma(port);
-
-	spin_lock_irqsave(&port->lock, flags);
-	sci_start_tx(port);
-	sci_start_rx(port);
-	spin_unlock_irqrestore(&port->lock, flags);
 
 	return 0;
 }
@@ -2004,6 +1998,8 @@ static void sci_shutdown(struct uart_port *port)
 	spin_lock_irqsave(&port->lock, flags);
 	sci_stop_rx(port);
 	sci_stop_tx(port);
+	/* Stop RX and TX, disable related interrupts */
+	serial_port_out(port, SCSCR, 0);
 	spin_unlock_irqrestore(&port->lock, flags);
 
 #ifdef CONFIG_SERIAL_SH_SCI_DMA
@@ -2158,6 +2154,15 @@ static void sci_reset(struct uart_port *port)
 	reg = sci_getreg(port, SCFCR);
 	if (reg->size)
 		serial_port_out(port, SCFCR, SCFCR_RFRST | SCFCR_TFRST);
+
+	sci_clear_SCxSR(port,
+			SCxSR_RDxF_CLEAR(port) & SCxSR_ERROR_CLEAR(port) &
+			SCxSR_BREAK_CLEAR(port));
+	if (sci_getreg(port, SCLSR)->size) {
+		status = serial_port_in(port, SCLSR);
+		status &= ~(SCLSR_TO | SCLSR_ORER);
+		serial_port_out(port, SCLSR, status);
+	}
 }
 
 static void sci_set_termios(struct uart_port *port, struct ktermios *termios,
