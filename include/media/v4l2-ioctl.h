@@ -38,6 +38,8 @@ struct v4l2_ioctl_ops {
 					    struct v4l2_fmtdesc *f);
 	int (*vidioc_enum_fmt_sdr_out)     (struct file *file, void *fh,
 					    struct v4l2_fmtdesc *f);
+	int (*vidioc_enum_fmt_meta_cap)    (struct file *file, void *fh,
+					    struct v4l2_fmtdesc *f);
 
 	/* VIDIOC_G_FMT handlers */
 	int (*vidioc_g_fmt_vid_cap)    (struct file *file, void *fh,
@@ -63,6 +65,8 @@ struct v4l2_ioctl_ops {
 	int (*vidioc_g_fmt_sdr_cap)    (struct file *file, void *fh,
 					struct v4l2_format *f);
 	int (*vidioc_g_fmt_sdr_out)    (struct file *file, void *fh,
+					struct v4l2_format *f);
+	int (*vidioc_g_fmt_meta_cap)   (struct file *file, void *fh,
 					struct v4l2_format *f);
 
 	/* VIDIOC_S_FMT handlers */
@@ -90,6 +94,8 @@ struct v4l2_ioctl_ops {
 					struct v4l2_format *f);
 	int (*vidioc_s_fmt_sdr_out)    (struct file *file, void *fh,
 					struct v4l2_format *f);
+	int (*vidioc_s_fmt_meta_cap)   (struct file *file, void *fh,
+					struct v4l2_format *f);
 
 	/* VIDIOC_TRY_FMT handlers */
 	int (*vidioc_try_fmt_vid_cap)    (struct file *file, void *fh,
@@ -115,6 +121,8 @@ struct v4l2_ioctl_ops {
 	int (*vidioc_try_fmt_sdr_cap)    (struct file *file, void *fh,
 					  struct v4l2_format *f);
 	int (*vidioc_try_fmt_sdr_out)    (struct file *file, void *fh,
+					  struct v4l2_format *f);
+	int (*vidioc_try_fmt_meta_cap)   (struct file *file, void *fh,
 					  struct v4l2_format *f);
 
 	/* Buffer handlers */

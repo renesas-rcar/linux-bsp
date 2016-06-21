@@ -1740,6 +1740,15 @@ extended control <constant>V4L2_CID_MPEG_STREAM_TYPE</constant>, see
     </table>
   </section>
 
+  <section id="meta-formats">
+    <title>Metadata Formats</title>
+
+    <para>These formats are used for metadata.</para>
+
+    &sub-meta-vsp1-hgo;
+
+  </section>
+
   <section id="sdr-formats">
     <title>SDR Formats</title>
 
