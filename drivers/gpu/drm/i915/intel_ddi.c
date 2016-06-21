@@ -948,7 +948,7 @@ static int bxt_calc_pll_link(struct drm_i915_private *dev_priv,
 {
 	struct intel_shared_dpll *pll;
 	struct intel_dpll_hw_state *state;
-	intel_clock_t clock;
+	struct dpll clock;
 
 	/* For DDI ports we always use a shared PLL. */
 	if (WARN_ON(dpll == DPLL_ID_PRIVATE))
@@ -2347,7 +2347,7 @@ void intel_ddi_init(struct drm_device *dev, enum port port)
 	encoder = &intel_encoder->base;
 
 	drm_encoder_init(dev, encoder, &intel_ddi_funcs,
-			 DRM_MODE_ENCODER_TMDS, NULL);
+			 DRM_MODE_ENCODER_TMDS, "DDI %c", port_name(port));
 
 	intel_encoder->compute_config = intel_ddi_compute_config;
 	intel_encoder->enable = intel_enable_ddi;

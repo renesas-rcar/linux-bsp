@@ -190,7 +190,7 @@ static void intel_pre_enable_lvds(struct intel_encoder *encoder)
 	/* Set the dithering flag on LVDS as needed, note that there is no
 	 * special lvds dither control bit on pch-split platforms, dithering is
 	 * only controlled through the PIPECONF reg. */
-	if (INTEL_INFO(dev)->gen == 4) {
+	if (IS_GEN4(dev_priv)) {
 		/* Bspec wording suggests that LVDS port dithering only exists
 		 * for 18bpp panels. */
 		if (crtc->config->dither && crtc->config->pipe_bpp == 18)
@@ -547,7 +547,6 @@ static int intel_lvds_set_property(struct drm_connector *connector,
 static const struct drm_connector_helper_funcs intel_lvds_connector_helper_funcs = {
 	.get_modes = intel_lvds_get_modes,
 	.mode_valid = intel_lvds_mode_valid,
-	.best_encoder = intel_best_encoder,
 };
 
 static const struct drm_connector_funcs intel_lvds_connector_funcs = {
@@ -978,7 +977,7 @@ void intel_lvds_init(struct drm_device *dev)
 			   DRM_MODE_CONNECTOR_LVDS);
 
 	drm_encoder_init(dev, &intel_encoder->base, &intel_lvds_enc_funcs,
-			 DRM_MODE_ENCODER_LVDS, NULL);
+			 DRM_MODE_ENCODER_LVDS, "LVDS");
 
 	intel_encoder->enable = intel_enable_lvds;
 	intel_encoder->pre_enable = intel_pre_enable_lvds;

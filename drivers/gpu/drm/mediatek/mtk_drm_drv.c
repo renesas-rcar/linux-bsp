@@ -91,7 +91,7 @@ static int mtk_atomic_commit(struct drm_device *drm,
 	mutex_lock(&private->commit.lock);
 	flush_work(&private->commit.work);
 
-	drm_atomic_helper_swap_state(drm, state);
+	drm_atomic_helper_swap_state(state, true);
 
 	if (async)
 		mtk_atomic_schedule(private, state);
@@ -243,7 +243,7 @@ static struct drm_driver mtk_drm_driver = {
 	.enable_vblank = mtk_drm_crtc_enable_vblank,
 	.disable_vblank = mtk_drm_crtc_disable_vblank,
 
-	.gem_free_object = mtk_drm_gem_free_object,
+	.gem_free_object_unlocked = mtk_drm_gem_free_object,
 	.gem_vm_ops = &drm_gem_cma_vm_ops,
 	.dumb_create = mtk_drm_gem_dumb_create,
 	.dumb_map_offset = mtk_drm_gem_dumb_map_offset,

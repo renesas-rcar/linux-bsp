@@ -351,7 +351,6 @@ static const struct drm_connector_funcs intel_dvo_connector_funcs = {
 static const struct drm_connector_helper_funcs intel_dvo_connector_helper_funcs = {
 	.mode_valid = intel_dvo_mode_valid,
 	.get_modes = intel_dvo_get_modes,
-	.best_encoder = intel_best_encoder,
 };
 
 static void intel_dvo_enc_destroy(struct drm_encoder *encoder)
@@ -406,6 +405,18 @@ intel_dvo_get_current_mode(struct drm_connector *connector)
 	return mode;
 }
 
+static char intel_dvo_port_name(i915_reg_t dvo_reg)
+{
+	if (i915_mmio_reg_equal(dvo_reg, DVOA))
+		return 'A';
+	else if (i915_mmio_reg_equal(dvo_reg, DVOB))
+		return 'B';
+	else if (i915_mmio_reg_equal(dvo_reg, DVOC))
+		return 'C';
+	else
+		return '?';
+}
+
 void intel_dvo_init(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = dev->dev_private;
@@ -428,8 +439,6 @@ void intel_dvo_init(struct drm_device *dev)
 	intel_dvo->attached_connector = intel_connector;
 
 	intel_encoder = &intel_dvo->base;
-	drm_encoder_init(dev, &intel_encoder->base,
-			 &intel_dvo_enc_funcs, encoder_type, NULL);
 
 	intel_encoder->disable = intel_disable_dvo;
 	intel_encoder->enable = intel_enable_dvo;
@@ -495,6 +504,10 @@ void intel_dvo_init(struct drm_device *dev)
 
 		if (!dvoinit)
 			continue;
+
+		drm_encoder_init(dev, &intel_encoder->base,
+				 &intel_dvo_enc_funcs, encoder_type,
+				 "DVO %c", intel_dvo_port_name(dvo->dvo_reg));
 
 		intel_encoder->type = INTEL_OUTPUT_DVO;
 		intel_encoder->crtc_mask = (1 << 0) | (1 << 1);
