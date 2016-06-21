@@ -364,7 +364,6 @@ static inline void slave_write(struct cpsw_slave *slave, u32 val, u32 offset)
 }
 
 struct cpsw_priv {
-	spinlock_t			lock;
 	struct platform_device		*pdev;
 	struct net_device		*ndev;
 	struct napi_struct		napi_rx;
@@ -1278,6 +1277,7 @@ static int cpsw_ndo_open(struct net_device *ndev)
 
 	if (!cpsw_common_res_usage_state(priv)) {
 		struct cpsw_priv *priv_sl0 = cpsw_get_slave_priv(priv, 0);
+		int buf_num;
 
 		/* setup tx dma to fixed prio and zero offset */
 		cpdma_control_set(priv->dma, CPDMA_TX_PRIO_FIXED, 1);
@@ -1305,10 +1305,8 @@ static int cpsw_ndo_open(struct net_device *ndev)
 			enable_irq(priv->irqs_table[0]);
 		}
 
-		if (WARN_ON(!priv->data.rx_descs))
-			priv->data.rx_descs = 128;
-
-		for (i = 0; i < priv->data.rx_descs; i++) {
+		buf_num = cpdma_chan_get_rx_buf_num(priv->dma);
+		for (i = 0; i < buf_num; i++) {
 			struct sk_buff *skb;
 
 			ret = -ENOMEM;
@@ -1999,12 +1997,6 @@ static int cpsw_probe_dt(struct cpsw_platform_data *data,
 	}
 	data->bd_ram_size = prop;
 
-	if (of_property_read_u32(node, "rx_descs", &prop)) {
-		dev_err(&pdev->dev, "Missing rx_descs property in the DT.\n");
-		return -EINVAL;
-	}
-	data->rx_descs = prop;
-
 	if (of_property_read_u32(node, "mac_control", &prop)) {
 		dev_err(&pdev->dev, "Missing mac_control property in the DT.\n");
 		return -EINVAL;
@@ -2124,7 +2116,6 @@ static int cpsw_probe_dual_emac(struct platform_device *pdev,
 	}
 
 	priv_sl2 = netdev_priv(ndev);
-	spin_lock_init(&priv_sl2->lock);
 	priv_sl2->data = *data;
 	priv_sl2->pdev = pdev;
 	priv_sl2->ndev = ndev;
@@ -2243,7 +2234,6 @@ static int cpsw_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, ndev);
 	priv = netdev_priv(ndev);
-	spin_lock_init(&priv->lock);
 	priv->pdev = pdev;
 	priv->ndev = ndev;
 	priv->dev  = &ndev->dev;
