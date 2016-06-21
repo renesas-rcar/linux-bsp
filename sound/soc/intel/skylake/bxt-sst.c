@@ -58,13 +58,19 @@ static int sst_bxt_prepare_fw(struct sst_dsp *ctx,
 	ctx->dsp_ops.stream_tag = stream_tag;
 	memcpy(ctx->dmab.area, fwdata, fwsize);
 
-	/* Purge FW request */
-	sst_dsp_shim_write(ctx, SKL_ADSP_REG_HIPCI, SKL_ADSP_REG_HIPCI_BUSY |
-					 BXT_IPC_PURGE_FW | (stream_tag - 1));
-
-	ret = skl_dsp_enable_core(ctx);
+	ret = skl_dsp_core_power_up(ctx);
 	if (ret < 0) {
 		dev_err(ctx->dev, "Boot dsp core failed ret: %d\n", ret);
+		goto base_fw_load_failed;
+	}
+
+	/* Purge FW request */
+	sst_dsp_shim_write(ctx, SKL_ADSP_REG_HIPCI, SKL_ADSP_REG_HIPCI_BUSY |
+				(BXT_IPC_PURGE_FW | ((stream_tag - 1) << 9)));
+
+	ret = skl_dsp_start_core(ctx);
+	if (ret < 0) {
+		dev_err(ctx->dev, "Start dsp core failed ret: %d\n", ret);
 		ret = -EIO;
 		goto base_fw_load_failed;
 	}
@@ -130,23 +136,41 @@ static int sst_transfer_fw_host_dma(struct sst_dsp *ctx)
 	return ret;
 }
 
+#define BXT_ADSP_FW_BIN_HDR_OFFSET 0x2000
+
 static int bxt_load_base_firmware(struct sst_dsp *ctx)
 {
-	const struct firmware *fw = NULL;
+	struct firmware stripped_fw;
 	struct skl_sst *skl = ctx->thread_context;
 	int ret;
 
-	ret = request_firmware(&fw, ctx->fw_name, ctx->dev);
+	ret = request_firmware(&ctx->fw, ctx->fw_name, ctx->dev);
 	if (ret < 0) {
 		dev_err(ctx->dev, "Request firmware failed %d\n", ret);
 		goto sst_load_base_firmware_failed;
 	}
 
-	ret = sst_bxt_prepare_fw(ctx, fw->data, fw->size);
+	/* check for extended manifest */
+	if (ctx->fw == NULL)
+		goto sst_load_base_firmware_failed;
+
+	ret = snd_skl_parse_uuids(ctx, BXT_ADSP_FW_BIN_HDR_OFFSET);
+	if (ret < 0)
+		goto sst_load_base_firmware_failed;
+
+	stripped_fw.data = ctx->fw->data;
+	stripped_fw.size = ctx->fw->size;
+	skl_dsp_strip_extended_manifest(&stripped_fw);
+
+	ret = sst_bxt_prepare_fw(ctx, stripped_fw.data, stripped_fw.size);
 	/* Retry Enabling core and ROM load. Retry seemed to help */
 	if (ret < 0) {
-		ret = sst_bxt_prepare_fw(ctx, fw->data, fw->size);
+		ret = sst_bxt_prepare_fw(ctx, stripped_fw.data, stripped_fw.size);
 		if (ret < 0) {
+			dev_err(ctx->dev, "Error code=0x%x: FW status=0x%x\n",
+			sst_dsp_shim_read(ctx, BXT_ADSP_ERROR_CODE),
+			sst_dsp_shim_read(ctx, BXT_ADSP_FW_STATUS));
+
 			dev_err(ctx->dev, "Core En/ROM load fail:%d\n", ret);
 			goto sst_load_base_firmware_failed;
 		}
@@ -171,11 +195,12 @@ static int bxt_load_base_firmware(struct sst_dsp *ctx)
 		} else {
 			skl_dsp_set_state_locked(ctx, SKL_DSP_RUNNING);
 			ret = 0;
+			skl->fw_loaded = true;
 		}
 	}
 
 sst_load_base_firmware_failed:
-	release_firmware(fw);
+	release_firmware(ctx->fw);
 	return ret;
 }
 
@@ -185,6 +210,14 @@ static int bxt_set_dsp_D0(struct sst_dsp *ctx)
 	int ret;
 
 	skl->boot_complete = false;
+
+	if (skl->fw_loaded == false) {
+		dev_dbg(ctx->dev, "Re-loading fw\n");
+		ret = bxt_load_base_firmware(ctx);
+		if (ret < 0)
+			dev_err(ctx->dev, "reload fw failed: %d\n", ret);
+		return ret;
+	}
 
 	ret = skl_dsp_enable_core(ctx);
 	if (ret < 0) {
@@ -274,6 +307,7 @@ int bxt_sst_dsp_init(struct device *dev, void __iomem *mmio_base, int irq,
 
 	skl->dev = dev;
 	skl_dev.thread_context = skl;
+	INIT_LIST_HEAD(&skl->uuid_list);
 
 	skl->dsp = skl_dsp_ctx_init(dev, &skl_dev, irq);
 	if (!skl->dsp) {
@@ -291,6 +325,7 @@ int bxt_sst_dsp_init(struct device *dev, void __iomem *mmio_base, int irq,
 	sst_dsp_mailbox_init(sst, (BXT_ADSP_SRAM0_BASE + SKL_ADSP_W0_STAT_SZ),
 			SKL_ADSP_W0_UP_SZ, BXT_ADSP_SRAM1_BASE, SKL_ADSP_W1_SZ);
 
+	INIT_LIST_HEAD(&sst->module_list);
 	ret = skl_ipc_init(dev, skl);
 	if (ret)
 		return ret;
@@ -314,6 +349,7 @@ EXPORT_SYMBOL_GPL(bxt_sst_dsp_init);
 
 void bxt_sst_dsp_cleanup(struct device *dev, struct skl_sst *ctx)
 {
+	skl_freeup_uuid_list(ctx);
 	skl_ipc_free(&ctx->ipc);
 	ctx->dsp->cl_dev.ops.cl_cleanup_controller(ctx->dsp);
 
