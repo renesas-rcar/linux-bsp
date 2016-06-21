@@ -379,16 +379,19 @@ struct drm_lock_data {
  * struct drm_master - drm master structure
  *
  * @refcount: Refcount for this master object.
- * @minor: Link back to minor char device we are master for. Immutable.
+ * @dev: Link back to the DRM device
  * @unique: Unique identifier: e.g. busid. Protected by drm_global_mutex.
  * @unique_len: Length of unique field. Protected by drm_global_mutex.
  * @magic_map: Map of used authentication tokens. Protected by struct_mutex.
  * @lock: DRI lock information.
  * @driver_priv: Pointer to driver-private information.
+ *
+ * Note that master structures are only relevant for the legacy/primary device
+ * nodes, hence there can only be one per device, not one per drm_minor.
  */
 struct drm_master {
 	struct kref refcount;
-	struct drm_minor *minor;
+	struct drm_device *dev;
 	char *unique;
 	int unique_len;
 	struct idr magic_map;
@@ -925,7 +928,6 @@ int drm_open(struct inode *inode, struct file *filp);
 ssize_t drm_read(struct file *filp, char __user *buffer,
 		 size_t count, loff_t *offset);
 int drm_release(struct inode *inode, struct file *filp);
-int drm_new_set_master(struct drm_device *dev, struct drm_file *fpriv);
 unsigned int drm_poll(struct file *filp, struct poll_table_struct *wait);
 int drm_event_reserve_init_locked(struct drm_device *dev,
 				  struct drm_file *file_priv,
@@ -1070,6 +1072,9 @@ extern void drm_sysfs_hotplug_event(struct drm_device *dev);
 
 struct drm_device *drm_dev_alloc(struct drm_driver *driver,
 				 struct device *parent);
+int drm_dev_init(struct drm_device *dev,
+		 struct drm_driver *driver,
+		 struct device *parent);
 void drm_dev_ref(struct drm_device *dev);
 void drm_dev_unref(struct drm_device *dev);
 int drm_dev_register(struct drm_device *dev, unsigned long flags);
