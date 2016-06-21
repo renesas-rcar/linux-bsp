@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -3024,8 +3020,10 @@ void *ptlrpcd_alloc_work(struct obd_import *imp,
 	req->rq_interpret_reply = work_interpreter;
 	/* don't want reply */
 	req->rq_receiving_reply = 0;
-	req->rq_req_unlink = req->rq_reply_unlink = 0;
-	req->rq_no_delay = req->rq_no_resend = 1;
+	req->rq_req_unlink = 0;
+	req->rq_reply_unlink = 0;
+	req->rq_no_delay = 1;
+	req->rq_no_resend = 1;
 	req->rq_pill.rc_fmt = (void *)&worker_format;
 
 	spin_lock_init(&req->rq_lock);

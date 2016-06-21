@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -318,7 +314,8 @@ static struct dentry *ll_find_alias(struct inode *inode, struct dentry *dentry)
 	if (hlist_empty(&inode->i_dentry))
 		return NULL;
 
-	discon_alias = invalid_alias = NULL;
+	discon_alias = NULL;
+	invalid_alias = NULL;
 
 	ll_lock_dcache(inode);
 	hlist_for_each_entry(alias, &inode->i_dentry, d_u.d_alias) {

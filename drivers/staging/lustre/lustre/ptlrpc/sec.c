@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -1104,7 +1100,7 @@ int sptlrpc_cli_unwrap_early_reply(struct ptlrpc_request *req,
 	early_req->rq_flvr = req->rq_flvr;
 	early_req->rq_repbuf = early_buf;
 	early_req->rq_repbuf_len = early_bufsz;
-	early_req->rq_repdata = (struct lustre_msg *) early_buf;
+	early_req->rq_repdata = (struct lustre_msg *)early_buf;
 	early_req->rq_repdata_len = early_size;
 	early_req->rq_early = 1;
 	early_req->rq_reqmsg = req->rq_reqmsg;
@@ -1556,7 +1552,7 @@ void _sptlrpc_enlarge_msg_inplace(struct lustre_msg *msg,
 	/* move from segment + 1 to end segment */
 	LASSERT(msg->lm_magic == LUSTRE_MSG_MAGIC_V2);
 	oldmsg_size = lustre_msg_size_v2(msg->lm_bufcount, msg->lm_buflens);
-	movesize = oldmsg_size - ((unsigned long) src - (unsigned long) msg);
+	movesize = oldmsg_size - ((unsigned long)src - (unsigned long)msg);
 	LASSERT(movesize >= 0);
 
 	if (movesize)
@@ -2195,6 +2191,9 @@ int sptlrpc_pack_user_desc(struct lustre_msg *msg, int offset)
 	struct ptlrpc_user_desc *pud;
 
 	pud = lustre_msg_buf(msg, offset, 0);
+
+	if (!pud)
+		return -EINVAL;
 
 	pud->pud_uid = from_kuid(&init_user_ns, current_uid());
 	pud->pud_gid = from_kgid(&init_user_ns, current_gid());

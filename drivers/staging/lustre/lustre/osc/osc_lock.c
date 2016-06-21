@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -1120,7 +1116,8 @@ static void osc_lock_set_writer(const struct lu_env *env,
 		}
 	} else {
 		LASSERT(cl_io_is_mkwrite(io));
-		io_start = io_end = io->u.ci_fault.ft_index;
+		io_start = io->u.ci_fault.ft_index;
+		io_end = io->u.ci_fault.ft_index;
 	}
 
 	if (descr->cld_mode >= CLM_WRITE &&

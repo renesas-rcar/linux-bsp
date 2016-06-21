@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -1076,17 +1072,11 @@ static int copy_and_ioctl(int cmd, struct obd_export *exp,
 	void *copy;
 	int rc;
 
-	copy = kzalloc(size, GFP_NOFS);
-	if (!copy)
-		return -ENOMEM;
-
-	if (copy_from_user(copy, data, size)) {
-		rc = -EFAULT;
-		goto out;
-	}
+	copy = memdup_user(data, size);
+	if (IS_ERR(copy))
+		return PTR_ERR(copy);
 
 	rc = obd_iocontrol(cmd, exp, size, copy, NULL);
-out:
 	kfree(copy);
 
 	return rc;

@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -519,6 +515,11 @@ static int ll_local_open(struct file *file, struct lookup_intent *it,
 	LUSTRE_FPRIVATE(file) = fd;
 	ll_readahead_init(inode, &fd->fd_ras);
 	fd->fd_omode = it->it_flags & (FMODE_READ | FMODE_WRITE | FMODE_EXEC);
+
+	/* ll_cl_context initialize */
+	rwlock_init(&fd->fd_lock);
+	INIT_LIST_HEAD(&fd->fd_lccs);
+
 	return 0;
 }
 
@@ -1178,7 +1179,9 @@ restart:
 			CERROR("Unknown IO type - %u\n", vio->vui_io_subtype);
 			LBUG();
 		}
+		ll_cl_add(file, env, io);
 		result = cl_io_loop(env, io);
+		ll_cl_remove(file, env);
 		if (args->via_io_subtype == IO_NORMAL)
 			up_read(&lli->lli_trunc_sem);
 		if (write_mutex_locked)
@@ -1410,7 +1413,7 @@ out_unlock:
 out:
 	return rc;
 out_req_free:
-	ptlrpc_req_finished((struct ptlrpc_request *) oit.d.lustre.it_data);
+	ptlrpc_req_finished((struct ptlrpc_request *)oit.d.lustre.it_data);
 	goto out;
 }
 
@@ -3124,6 +3127,9 @@ struct posix_acl *ll_get_acl(struct inode *inode, int type)
 	spin_lock(&lli->lli_lock);
 	/* VFS' acl_permission_check->check_acl will release the refcount */
 	acl = posix_acl_dup(lli->lli_posix_acl);
+#ifdef CONFIG_FS_POSIX_ACL
+	forget_cached_acl(inode, type);
+#endif
 	spin_unlock(&lli->lli_lock);
 
 	return acl;

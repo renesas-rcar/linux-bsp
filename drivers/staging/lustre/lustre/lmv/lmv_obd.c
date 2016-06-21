@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -2686,7 +2682,7 @@ static int lmv_quotactl(struct obd_device *unused, struct obd_export *exp,
 	struct lmv_obd      *lmv = &obd->u.lmv;
 	struct lmv_tgt_desc *tgt = lmv->tgts[0];
 	int		  rc = 0, i;
-	__u64		curspace, curinodes;
+	__u64 curspace = 0, curinodes = 0;
 
 	if (!tgt || !tgt->ltd_exp || !tgt->ltd_active ||
 	    !lmv->desc.ld_tgt_count) {
@@ -2699,7 +2695,6 @@ static int lmv_quotactl(struct obd_device *unused, struct obd_export *exp,
 		return rc;
 	}
 
-	curspace = curinodes = 0;
 	for (i = 0; i < lmv->desc.ld_tgt_count; i++) {
 		int err;
 

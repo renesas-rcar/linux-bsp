@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -1034,7 +1030,7 @@ static int mgc_set_info_async(const struct lu_env *env, struct obd_export *exp,
 		rc = sptlrpc_parse_flavor(val, &flvr);
 		if (rc) {
 			CERROR("invalid sptlrpc flavor %s to MGS\n",
-			       (char *) val);
+			       (char *)val);
 			return rc;
 		}
 
@@ -1050,7 +1046,7 @@ static int mgc_set_info_async(const struct lu_env *env, struct obd_export *exp,
 			sptlrpc_flavor2name(&cli->cl_flvr_mgc,
 					    str, sizeof(str));
 			LCONSOLE_ERROR("asking sptlrpc flavor %s to MGS but currently %s is in use\n",
-				       (char *) val, str);
+				       (char *)val, str);
 			rc = -EPERM;
 		}
 		return rc;

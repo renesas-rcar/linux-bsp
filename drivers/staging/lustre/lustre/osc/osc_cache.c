@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -2773,7 +2769,8 @@ int osc_queue_sync_pages(const struct lu_env *env, struct osc_object *obj,
 	ext->oe_sync = 1;
 	ext->oe_urgent = 1;
 	ext->oe_start = start;
-	ext->oe_end = ext->oe_max_end = end;
+	ext->oe_end = end;
+	ext->oe_max_end = end;
 	ext->oe_obj = obj;
 	ext->oe_srvlock = !!(brw_flags & OBD_BRW_SRVLOCK);
 	ext->oe_nr_pages = page_count;
@@ -3308,7 +3305,8 @@ int osc_lock_discard_pages(const struct lu_env *env, struct osc_object *osc,
 		goto out;
 
 	cb = mode == CLM_READ ? check_and_discard_cb : discard_cb;
-	info->oti_fn_index = info->oti_next_index = start;
+	info->oti_fn_index = start;
+	info->oti_next_index = start;
 	do {
 		res = osc_page_gang_lookup(env, io, osc,
 					   info->oti_next_index, end, cb, osc);

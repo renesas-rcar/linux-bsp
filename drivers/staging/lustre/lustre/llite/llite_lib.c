@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -864,7 +860,8 @@ int ll_fill_super(struct super_block *sb, struct vfsmount *mnt)
 	try_module_get(THIS_MODULE);
 
 	/* client additional sb info */
-	lsi->lsi_llsbi = sbi = ll_init_sbi(sb);
+	sbi = ll_init_sbi(sb);
+	lsi->lsi_llsbi = sbi;
 	if (!sbi) {
 		module_put(THIS_MODULE);
 		kfree(cfg);

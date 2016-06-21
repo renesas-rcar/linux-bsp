@@ -15,11 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * version 2 along with this program; If not, see
- * http://www.sun.com/software/products/lustre/docs/GPLv2.pdf
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
+ * http://www.gnu.org/licenses/gpl-2.0.html
  *
  * GPL HEADER END
  */
@@ -1807,7 +1803,7 @@ static int mdc_iocontrol(unsigned int cmd, struct obd_export *exp, int len,
 	case IOC_OBD_STATFS: {
 		struct obd_statfs stat_buf = {0};
 
-		if (*((__u32 *) data->ioc_inlbuf2) != 0) {
+		if (*((__u32 *)data->ioc_inlbuf2) != 0) {
 			rc = -ENODEV;
 			goto out;
 		}
@@ -2001,7 +1997,7 @@ static int mdc_hsm_copytool_send(int len, void *val)
 
 	if (len < sizeof(*lh) + sizeof(*hal)) {
 		CERROR("Short HSM message %d < %d\n", len,
-		       (int) (sizeof(*lh) + sizeof(*hal)));
+		       (int)(sizeof(*lh) + sizeof(*hal)));
 		return -EPROTO;
 	}
 	if (lh->kuc_magic == __swab16(KUC_MAGIC)) {
