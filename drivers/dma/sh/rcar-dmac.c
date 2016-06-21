@@ -311,7 +311,7 @@ static bool rcar_dmac_chan_is_busy(struct rcar_dmac_chan *chan)
 {
 	u32 chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
 
-	return (chcr & (RCAR_DMACHCR_DE | RCAR_DMACHCR_TE)) == RCAR_DMACHCR_DE;
+	return !!(chcr & (RCAR_DMACHCR_DE | RCAR_DMACHCR_TE));
 }
 
 static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
@@ -990,6 +990,8 @@ static void rcar_dmac_free_chan_resources(struct dma_chan *chan)
 	list_splice_init(&rchan->desc.done, &list);
 	list_splice_init(&rchan->desc.wait, &list);
 
+	rchan->desc.running = NULL;
+
 	list_for_each_entry(desc, &list, node)
 		rcar_dmac_realloc_hwdesc(rchan, desc, 0);
 
@@ -1143,10 +1145,22 @@ static unsigned int rcar_dmac_chan_get_residue(struct rcar_dmac_chan *chan,
 	struct rcar_dmac_desc *desc = chan->desc.running;
 	struct rcar_dmac_xfer_chunk *running = NULL;
 	struct rcar_dmac_xfer_chunk *chunk;
+	enum dma_status status;
 	unsigned int residue = 0;
 	unsigned int dptr = 0;
 
 	if (!desc)
+		return 0;
+
+
+	/*
+	 * If the cookie corresponds to a descriptor that has been completed
+	 * there is no residue. The same check has already been performed by the
+	 * caller but without holding the channel lock, so the descriptor could
+	 * now be complete.
+	 */
+	status = dma_cookie_status(&chan->chan, cookie, NULL);
+	if (status == DMA_COMPLETE)
 		return 0;
 
 	/*
@@ -1154,8 +1168,24 @@ static unsigned int rcar_dmac_chan_get_residue(struct rcar_dmac_chan *chan,
 	 * then the descriptor hasn't been processed yet, and the residue is
 	 * equal to the full descriptor size.
 	 */
-	if (cookie != desc->async_tx.cookie)
-		return desc->size;
+	if (cookie != desc->async_tx.cookie) {
+		list_for_each_entry(desc, &chan->desc.pending, node) {
+			if (cookie == desc->async_tx.cookie)
+				return desc->size;
+		}
+		list_for_each_entry(desc, &chan->desc.active, node) {
+			if (cookie == desc->async_tx.cookie)
+				return desc->size;
+		}
+
+		/*
+		 * No descriptor found for the cookie, there's thus no residue.
+		 * This shouldn't happen if the calling driver passes a correct
+		 * cookie value.
+		 */
+		WARN(1, "No descriptor for cookie!");
+		return 0;
+	}
 
 	/*
 	 * In descriptor mode the descriptor running pointer is not maintained
@@ -1201,6 +1231,10 @@ static enum dma_status rcar_dmac_tx_status(struct dma_chan *chan,
 	spin_lock_irqsave(&rchan->lock, flags);
 	residue = rcar_dmac_chan_get_residue(rchan, cookie);
 	spin_unlock_irqrestore(&rchan->lock, flags);
+
+	/* if there's no residue, the cookie is complete */
+	if (!residue)
+		return DMA_COMPLETE;
 
 	dma_set_residue(txstate, residue);
 
