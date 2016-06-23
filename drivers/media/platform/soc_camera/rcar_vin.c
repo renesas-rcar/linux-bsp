@@ -2668,6 +2668,31 @@ static int rcar_vin_init_videobuf2(struct vb2_queue *vq,
 static int rcar_vin_get_selection(struct soc_camera_device *icd,
 				  struct v4l2_selection *sel)
 {
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
+	struct v4l2_mbus_framefmt *mf = &fmt.format;
+	int ret;
+
+	ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt);
+	if (ret < 0)
+		return ret;
+
+	if (sel->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	switch (sel->target) {
+	case V4L2_SEL_TGT_CROP_BOUNDS:
+	case V4L2_SEL_TGT_CROP_DEFAULT:
+		sel->r.left = sel->r.top = 0;
+		sel->r.width = mf->width;
+		sel->r.height = mf->height;
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
