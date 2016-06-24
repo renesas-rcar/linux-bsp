@@ -272,7 +272,7 @@ static int rvin_setup(struct rvin_dev *vin)
 		dmr = 0;
 		output_is_yuv = true;
 		break;
-	case V4L2_PIX_FMT_XRGB555:
+	case V4L2_PIX_FMT_ARGB555:
 		dmr = VNDMR_DTMD_ARGB1555;
 		break;
 	case V4L2_PIX_FMT_RGB565:
