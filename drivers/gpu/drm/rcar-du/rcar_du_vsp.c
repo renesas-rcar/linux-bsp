@@ -357,6 +357,99 @@ static int rcar_du_vsp_plane_atomic_get_property(struct drm_plane *plane,
 	return 0;
 }
 
+int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+			   struct drm_file *file_priv)
+{
+	int ret, index;
+	struct rcar_du_screen_shot *sh = (struct rcar_du_screen_shot *)data;
+	struct drm_mode_object *obj;
+	struct drm_crtc *crtc;
+	struct rcar_du_crtc *rcrtc;
+	struct rcar_du_device *rcdu;
+	const struct drm_display_mode *mode;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	u32 pixelformat, bpp;
+	unsigned int pitch;
+	dma_addr_t mem[3];
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
+
+	obj = drm_mode_object_find(dev, sh->crtc_id, DRM_MODE_OBJECT_CRTC);
+	if (!obj)
+		return -EINVAL;
+	crtc = obj_to_crtc(obj);
+
+	index = drm_crtc_index(crtc);
+
+	rcrtc = to_rcar_crtc(crtc);
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	rcdu = rcrtc->group->dev;
+	state->crtc_states[index] = crtc_state;
+	state->crtcs[index] = crtc;
+	crtc_state->state = state;
+
+	mode = &rcrtc->crtc.state->adjusted_mode;
+
+	switch (sh->fmt) {
+	case DRM_FORMAT_RGB565:
+		bpp = 16;
+		pixelformat = V4L2_PIX_FMT_RGB565;
+		break;
+	case DRM_FORMAT_ARGB1555:
+		bpp = 16;
+		pixelformat = V4L2_PIX_FMT_ARGB555;
+		break;
+	case DRM_FORMAT_ARGB8888:
+		bpp = 32;
+		pixelformat = V4L2_PIX_FMT_ABGR32;
+		break;
+	default:
+		dev_err(rcdu->dev, "specified format is not supported.\n");
+		ret = -EINVAL;
+		goto out;
+	}
+
+	pitch = mode->hdisplay * bpp / 8;
+
+	rcrtc->wb_vaddr = dma_alloc_writecombine(rcdu->dev,
+				(pitch * mode->vdisplay),
+				&rcrtc->wb_paddr, GFP_KERNEL);
+	mem[0] = rcrtc->wb_paddr;
+	mem[1] = 0;
+	mem[2] = 0;
+
+	memset(rcrtc->wb_vaddr, 0, (pitch * mode->vdisplay));
+
+	vsp1_du_setup_wb(rcrtc->vsp->vsp, pixelformat, pitch, mem);
+	ret = drm_atomic_commit(state);
+	if (ret != 0)
+		goto error_dma;
+
+	vsp1_du_wait_wb(rcrtc->vsp->vsp);
+
+	ret = copy_to_user((void __user *)sh->buff, rcrtc->wb_vaddr,
+				pitch * mode->vdisplay);
+
+	dma_free_wc(rcdu->dev, (pitch * mode->vdisplay),
+				rcrtc->wb_vaddr, rcrtc->wb_paddr);
+
+	return 0;
+
+error_dma:
+	dma_free_wc(rcdu->dev, (mode->hdisplay * mode->vdisplay * bpp / 8),
+			rcrtc->wb_vaddr, rcrtc->wb_paddr);
+out:
+	drm_atomic_helper_crtc_destroy_state(crtc, crtc_state);
+
+	return ret;
+}
+
 int rcar_du_set_vmute(struct drm_device *dev, void *data,
 		struct drm_file *file_priv)
 {

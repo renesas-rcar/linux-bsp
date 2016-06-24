@@ -54,6 +54,9 @@ struct rcar_du_crtc {
 	struct rcar_du_vsp *vsp;
 
 	int lvds_ch;
+
+	dma_addr_t wb_paddr;
+	void *wb_vaddr;
 };
 
 struct dpll_info {
