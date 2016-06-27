@@ -112,6 +112,7 @@ config ARCH_RENESAS
 	select PM
 	select PM_GENERIC_DOMAINS
 	select RENESAS_IRQC
+	select RPMSG
 	help
 	  This enables support for the ARMv8 based Renesas SoCs.
 
