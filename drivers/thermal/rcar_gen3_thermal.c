@@ -76,35 +76,14 @@
 #define TEMPD_IRQ_SHIFT(tsc_id)	(0x1 << (tsc_id + 3))
 #define GEN3_FUSE_MASK	0xFFF
 
-/* Quadratic and linear equation config
- * To use linear formula calculation,
- * please comment out APPLY_QUADRATIC_EQUATION macro.
- * To use quadratic formula calculation,
- * please uncomment APPLY_QUADRATIC_EQUATION macro.
-*/
-/* #define APPLY_QUADRATIC_EQUATION */
-
-#ifdef APPLY_QUADRATIC_EQUATION
-/* This struct is for quadratic equation.
- * y = ax^2 + bx + c
- */
-struct equation_coefs {
-	long a;
-	long b;
-	long c;
-};
-#else
-/* This struct is for linear equation.
- * y = a1*x + b1
- * y = a2*x + b2
- */
+/* Equation coefficients for thermal calculation formula.*/
 struct equation_coefs {
 	long a1;
 	long b1;
 	long a2;
 	long b2;
 };
-#endif /* APPLY_QUADRATIC_EQUATION  */
+
 
 struct fuse_factors {
 	int thcode_1;
@@ -140,7 +119,6 @@ struct rcar_thermal_data {
 #define CODETSD(x)		((x) * 1000)
 #define TJ_1 96000L
 #define TJ_3 (-41000L)
-#define PW2(x) ((x)*(x))
 
 #define rcar_thermal_read(p, r) _rcar_thermal_read(p, r)
 static u32 _rcar_thermal_read(struct rcar_thermal_priv *priv, u32 reg)
@@ -238,55 +216,7 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 	return 0;
 }
 
-#ifdef APPLY_QUADRATIC_EQUATION
-static void _quadratic_coef_calc(struct rcar_thermal_priv *priv)
-{
-	long tj_2 = 0;
-	long a, b, c;
-	long num_a, num_a1, num_a2;
-	long den_a, den_a1, den_a2;
-	long num_b1, num_b2, num_b, den_b;
-	long para_c1, para_c2, para_c3;
-
-	tj_2 = (CODETSD((priv->factor.ptat_2 - priv->factor.ptat_3) * 137)
-		/ (priv->factor.ptat_1 - priv->factor.ptat_3)) - CODETSD(41);
-
-	/*
-	 * The following code is to calculate coefficients
-	 * for quadratic equation.
-	 */
-	/* Coefficient a */
-	num_a1 = (CODETSD(priv->factor.thcode_2)
-			- CODETSD(priv->factor.thcode_3)) * (TJ_1 - TJ_3);
-	num_a2 = (CODETSD(priv->factor.thcode_1)
-		- CODETSD(priv->factor.thcode_3)) * (tj_2 - TJ_3);
-	num_a = num_a1 - num_a2;
-	den_a1 = (PW2(tj_2) - PW2(TJ_3)) * (TJ_1 - TJ_3);
-	den_a2 = (PW2(TJ_1) - PW2(TJ_3)) * (tj_2 - TJ_3);
-	den_a = (den_a1 - den_a2) / 1000;
-	a = (100000 * num_a) / den_a;
-
-	/* Coefficient b */
-	num_b1 = (CODETSD(priv->factor.thcode_2)
-		- CODETSD(priv->factor.thcode_3))
-			* (TJ_1 - TJ_3);
-	num_b2 = ((PW2(tj_2) - PW2(TJ_3)) * (TJ_1 - TJ_3) * a) / 1000;
-	num_b = 100000 * num_b1 - num_b2;
-	den_b = ((tj_2 - TJ_3) * (TJ_1 - TJ_3));
-	b = num_b / den_b;
-
-	/* Coefficient c */
-	para_c1 = 100000 * priv->factor.thcode_3;
-	para_c2 = (PW2(TJ_3) * a) / PW2(1000);
-	para_c3 = (TJ_3 * b) / 1000;
-	c = para_c1 - para_c2 - para_c3;
-
-	priv->coef.a = a;
-	priv->coef.b = b;
-	priv->coef.c = c;
-}
-#else
-static void _linear_coef_calc(struct rcar_thermal_priv *priv)
+static void thermal_coefficient_calculation(struct rcar_thermal_priv *priv)
 {
 	int tj_2 = 0;
 	long a1, b1;
@@ -298,7 +228,7 @@ static void _linear_coef_calc(struct rcar_thermal_priv *priv)
 		/ (priv->factor.ptat_1 - priv->factor.ptat_3)) - CODETSD(41);
 
 	/*
-	 * The following code is to calculate coefficients for linear equation.
+	 * The following code is to calculate coefficients.
 	 */
 	/* Coefficient a1 and b1 */
 	a1_num = CODETSD(priv->factor.thcode_2 - priv->factor.thcode_3);
@@ -317,47 +247,8 @@ static void _linear_coef_calc(struct rcar_thermal_priv *priv)
 	priv->coef.a2 = DIV_ROUND_CLOSEST(a2, 10);
 	priv->coef.b2 = DIV_ROUND_CLOSEST(b2, 10);
 }
-#endif /* APPLY_QUADRATIC_EQUATION */
 
-static void thermal_coefficient_calculation(struct rcar_thermal_priv *priv)
-{
-#ifdef APPLY_QUADRATIC_EQUATION
-	_quadratic_coef_calc(priv);
-#else
-	_linear_coef_calc(priv);
-#endif /* APPLY_QUADRATIC_EQUATION */
-}
-
-#ifdef APPLY_QUADRATIC_EQUATION
-int _quadratic_temp_converter(struct equation_coefs coef, int temp_code)
-{
-	int temp, temp1, temp2;
-	long delta;
-
-	/* Multiply with 100000 to sync with coef a, coef b and coef c. */
-	delta = coef.b * coef.b - 4 * coef.a * (coef.c - 100000 * temp_code);
-
-	/* Multiply temp with 1000 to convert to Mili-Celsius */
-	temp1 = (CODETSD(-coef.b) + int_sqrt(1000000 * delta)) / 2;
-	temp1 = temp1 / coef.a;
-	temp2 = (CODETSD(-coef.b) - int_sqrt(1000000 * delta)) / 2;
-	temp2 = temp2 / coef.a;
-
-	if (temp1 > -45000000)
-		temp = temp1;
-	else
-		temp = temp2;
-
-	return round_temp(temp);
-}
-
-int _quadratic_celsius_to_temp(struct equation_coefs coef,
-					int ctemp)
-{
-	return 0;
-}
-#else
-int _linear_temp_converter(struct equation_coefs coef,
+int thermal_temp_converter(struct equation_coefs coef,
 					int temp_code)
 {
 	int temp, temp1, temp2;
@@ -369,7 +260,7 @@ int _linear_temp_converter(struct equation_coefs coef,
 	return round_temp(temp);
 }
 
-int _linear_celsius_to_temp(struct equation_coefs coef,
+int thermal_celsius_to_temp(struct equation_coefs coef,
 					int ctemp)
 {
 	int temp_code, temp1, temp2;
@@ -378,31 +269,6 @@ int _linear_celsius_to_temp(struct equation_coefs coef,
 	temp2 = (ctemp * coef.a2 / 1000 + coef.b2) / 1000;
 	temp_code = (temp1 + temp2) / 2;
 
-	return temp_code;
-}
-#endif /* APPLY_QUADRATIC_EQUATION */
-
-int thermal_temp_converter(struct equation_coefs coef,
-					int temp_code)
-{
-	int ctemp = 0;
-#ifdef APPLY_QUADRATIC_EQUATION
-	ctemp = _quadratic_temp_converter(coef, temp_code);
-#else
-	ctemp = _linear_temp_converter(coef, temp_code);
-#endif /* APPLY_QUADRATIC_EQUATION */
-
-	return ctemp;
-}
-int thermal_celsius_to_temp(struct equation_coefs coef,
-					int ctemp)
-{
-	int temp_code;
-#ifdef APPLY_QUADRATIC_EQUATION
-	temp_code = _quadratic_celsius_to_temp(coef, ctemp);
-#else
-	temp_code = _linear_celsius_to_temp(coef, ctemp);
-#endif /* APPLY_QUADRATIC_EQUATION */
 	return temp_code;
 }
 
