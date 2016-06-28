@@ -50,6 +50,14 @@ struct ipmmu_features {
 	bool reserved_context;
 };
 
+#ifdef CONFIG_RCAR_DDR_BACKUP
+struct hw_register {
+	char *reg_name;
+	unsigned int reg_offset;
+	unsigned int reg_data;
+};
+#endif
+
 struct ipmmu_vmsa_device {
 	struct device *dev;
 	void __iomem *base;
@@ -61,6 +69,9 @@ struct ipmmu_vmsa_device {
 	spinlock_t lock;			/* Protects ctx and domains[] */
 	DECLARE_BITMAP(ctx, IPMMU_CTX_MAX);
 	struct ipmmu_vmsa_domain *domains[IPMMU_CTX_MAX];
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	struct hw_register *reg_backup[IPMMU_CTX_MAX];
+#endif
 
 	struct iommu_group *group;
 	struct dma_iommu_mapping *mapping;
@@ -218,6 +229,108 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMUASID_ASID8_SHIFT		8
 #define IMUASID_ASID0_MASK		(0xff << 0)
 #define IMUASID_ASID0_SHIFT		0
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+#define HW_REGISTER_BACKUP_SIZE		ARRAY_SIZE(root_pgtable0_reg)
+static struct hw_register root_pgtable0_reg[] = {
+	{"IMTTLBR0",	IMTTLBR0,	0},
+	{"IMTTUBR0",	IMTTUBR0,	0},
+	{"IMTTBCR",	IMTTBCR,	0},
+	{"IMTTLBR1",	IMTTLBR1,	0},
+	{"IMTTUBR1",	IMTTUBR1,	0},
+	{"IMMAIR0",	IMMAIR0,	0},
+	{"IMMAIR1",	IMMAIR1,	0},
+	{"IMCTR",	IMCTR,		0},
+};
+
+static struct hw_register root_pgtable1_reg[] = {
+	{"IMTTLBR0",	IMTTLBR0,	0},
+	{"IMTTUBR0",	IMTTUBR0,	0},
+	{"IMTTBCR",	IMTTBCR,	0},
+	{"IMTTLBR1",	IMTTLBR1,	0},
+	{"IMTTUBR1",	IMTTUBR1,	0},
+	{"IMMAIR0",	IMMAIR0,	0},
+	{"IMMAIR1",	IMMAIR1,	0},
+	{"IMCTR",	IMCTR,		0},
+};
+
+static struct hw_register root_pgtable2_reg[] = {
+	{"IMTTLBR0",	IMTTLBR0,	0},
+	{"IMTTUBR0",	IMTTUBR0,	0},
+	{"IMTTBCR",	IMTTBCR,	0},
+	{"IMTTLBR1",	IMTTLBR1,	0},
+	{"IMTTUBR1",	IMTTUBR1,	0},
+	{"IMMAIR0",	IMMAIR0,	0},
+	{"IMMAIR1",	IMMAIR1,	0},
+	{"IMCTR",	IMCTR,		0},
+};
+
+static struct hw_register root_pgtable3_reg[] = {
+	{"IMTTLBR0",	IMTTLBR0,	0},
+	{"IMTTUBR0",	IMTTUBR0,	0},
+	{"IMTTBCR",	IMTTBCR,	0},
+	{"IMTTLBR1",	IMTTLBR1,	0},
+	{"IMTTUBR1",	IMTTUBR1,	0},
+	{"IMMAIR0",	IMMAIR0,	0},
+	{"IMMAIR1",	IMMAIR1,	0},
+	{"IMCTR",	IMCTR,		0},
+};
+
+static struct hw_register root_pgtable4_reg[] = {
+	{"IMTTLBR0",	IMTTLBR0,	0},
+	{"IMTTUBR0",	IMTTUBR0,	0},
+	{"IMTTBCR",	IMTTBCR,	0},
+	{"IMTTLBR1",	IMTTLBR1,	0},
+	{"IMTTUBR1",	IMTTUBR1,	0},
+	{"IMMAIR0",	IMMAIR0,	0},
+	{"IMMAIR1",	IMMAIR1,	0},
+	{"IMCTR",	IMCTR,		0},
+};
+
+static struct hw_register root_pgtable5_reg[] = {
+	{"IMTTLBR0",	IMTTLBR0,	0},
+	{"IMTTUBR0",	IMTTUBR0,	0},
+	{"IMTTBCR",	IMTTBCR,	0},
+	{"IMTTLBR1",	IMTTLBR1,	0},
+	{"IMTTUBR1",	IMTTUBR1,	0},
+	{"IMMAIR0",	IMMAIR0,	0},
+	{"IMMAIR1",	IMMAIR1,	0},
+	{"IMCTR",	IMCTR,		0},
+};
+
+static struct hw_register root_pgtable6_reg[] = {
+	{"IMTTLBR0",	IMTTLBR0,	0},
+	{"IMTTUBR0",	IMTTUBR0,	0},
+	{"IMTTBCR",	IMTTBCR,	0},
+	{"IMTTLBR1",	IMTTLBR1,	0},
+	{"IMTTUBR1",	IMTTUBR1,	0},
+	{"IMMAIR0",	IMMAIR0,	0},
+	{"IMMAIR1",	IMMAIR1,	0},
+	{"IMCTR",	IMCTR,		0},
+};
+
+static struct hw_register root_pgtable7_reg[] = {
+	{"IMTTLBR0",	IMTTLBR0,	0},
+	{"IMTTUBR0",	IMTTUBR0,	0},
+	{"IMTTBCR",	IMTTBCR,	0},
+	{"IMTTLBR1",	IMTTLBR1,	0},
+	{"IMTTUBR1",	IMTTUBR1,	0},
+	{"IMMAIR0",	IMMAIR0,	0},
+	{"IMMAIR1",	IMMAIR1,	0},
+	{"IMCTR",	IMCTR,		0},
+};
+
+static struct hw_register *root_pgtable[IPMMU_CTX_MAX] = {
+	root_pgtable0_reg,
+	root_pgtable1_reg,
+	root_pgtable2_reg,
+	root_pgtable3_reg,
+	root_pgtable4_reg,
+	root_pgtable5_reg,
+	root_pgtable6_reg,
+	root_pgtable7_reg,
+};
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 /* -----------------------------------------------------------------------------
  * Root device handling
@@ -447,6 +560,9 @@ static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 		return ret;
 
 	domain->context_id = ret;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	domain->mmu->root->reg_backup[ret] = root_pgtable[ret];
+#endif
 
 	domain->iop = alloc_io_pgtable_ops(ARM_32_LPAE_S1, &domain->cfg,
 					   domain);
@@ -516,6 +632,11 @@ static void ipmmu_domain_destroy_context(struct ipmmu_vmsa_domain *domain)
 	 */
 	ipmmu_ctx_write_all(domain, IMCTR, IMCTR_FLUSH);
 	ipmmu_tlb_sync(domain);
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	domain->mmu->root->reg_backup[domain->context_id] = NULL;
+#endif
+
 	ipmmu_domain_free_context(domain->mmu->root, domain->context_id);
 }
 
@@ -1100,9 +1221,110 @@ static int ipmmu_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_RCAR_DDR_BACKUP
+static int ipmmu_domain_backup_context(struct ipmmu_vmsa_domain *domain)
+{
+	struct ipmmu_vmsa_device *mmu = domain->mmu->root;
+	struct hw_register *reg = mmu->reg_backup[domain->context_id];
+	unsigned int i;
+
+	pr_info("%s: Handle domain context backup\n", dev_name(mmu->dev));
+
+	for (i = 0; i < HW_REGISTER_BACKUP_SIZE; i++) {
+		reg[i].reg_data = ipmmu_ctx_read_root(domain,
+						      reg[i].reg_offset);
+
+		pr_info("%s: reg_data 0x%x, reg_offset 0x%x\n",
+			reg[i].reg_name,
+			reg[i].reg_data,
+			reg[i].reg_offset);
+	}
+
+	return 0;
+}
+
+static int ipmmu_domain_restore_context(struct ipmmu_vmsa_domain *domain)
+{
+	struct ipmmu_vmsa_device *mmu = domain->mmu->root;
+	struct hw_register *reg = mmu->reg_backup[domain->context_id];
+	unsigned int i;
+
+	pr_info("%s: Handle domain context restore\n", dev_name(mmu->dev));
+
+	for (i = 0; i < HW_REGISTER_BACKUP_SIZE; i++) {
+		if (reg[i].reg_offset != IMCTR) {
+			ipmmu_ctx_write_root(domain,
+					     reg[i].reg_offset,
+					     reg[i].reg_data);
+
+			pr_info("%s: reg_data 0x%x, reg_offset 0x%x\n",
+				reg[i].reg_name,
+				ipmmu_ctx_read_root(domain, reg[i].reg_offset),
+				reg[i].reg_offset);
+		} else {
+			ipmmu_ctx_write_all(domain,
+					    reg[i].reg_offset,
+					    reg[i].reg_data | IMCTR_FLUSH);
+
+			pr_info("%s: reg_data 0x%x, reg_offset 0x%x\n",
+				reg[i].reg_name,
+				ipmmu_ctx_read_root(domain, reg[i].reg_offset),
+				reg[i].reg_offset);
+		}
+	}
+
+	return 0;
+}
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+
+static int ipmmu_suspend(struct device *dev)
+{
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	int ctx;
+	unsigned int i;
+	struct ipmmu_vmsa_device *mmu = dev_get_drvdata(dev);
+
+	ctx = find_first_zero_bit(mmu->ctx, mmu->num_ctx);
+
+	for (i = 0; i < ctx; i++) {
+		pr_info("Handle ctx %d\n", i);
+		ipmmu_domain_backup_context(mmu->domains[i]);
+	}
+#endif
+
+	return 0;
+}
+
+static int ipmmu_resume(struct device *dev)
+{
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	int ctx;
+	unsigned int i;
+	struct ipmmu_vmsa_device *mmu = dev_get_drvdata(dev);
+
+	ctx = find_first_zero_bit(mmu->ctx, mmu->num_ctx);
+
+	for (i = 0; i < ctx; i++) {
+		pr_info("Handle ctx %d\n", i);
+		ipmmu_domain_restore_context(mmu->domains[i]);
+	}
+#endif
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(ipmmu_pm_ops,
+			 ipmmu_suspend, ipmmu_resume);
+#define DEV_PM_OPS (&ipmmu_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver ipmmu_driver = {
 	.driver = {
 		.name = "ipmmu-vmsa",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(ipmmu_of_ids),
 	},
 	.probe = ipmmu_probe,
