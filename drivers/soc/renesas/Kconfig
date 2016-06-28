@@ -7,3 +7,12 @@ config RCAR_THERMAL_EMS_ENABLED
 	help
 	  Enable this option if you want to have support for Emergency Shutdown
 	  in R-Car Gen3.
+
+config RCAR_DDR_BACKUP
+	bool "Renesas R-Car DDR backup/restore function"
+	depends on SUSPEND
+	default y
+	help
+	  This enables DDR backup function for R-Car Gen3.
+	  It supports to backup/restore module register during suspend/resume
+	  sequence respectively when system enters S2RAM.
