@@ -2358,6 +2358,23 @@ static int adv7482_resume(struct device *dev)
 	/* Initializes ADV7482 to its default values */
 	ret = adv7482_write_registers(client, link_config.regs);
 
+	/* Power down */
+	ret = adv7482_write_registers(client, link_config.power_down);
+
+	if (link_config.sdp_in && link_config.hdmi_in) {
+		/* Power up hdmi rx */
+		ret = adv7482_write_registers(client,
+						adv7482_power_up_hdmi_rx);
+		if (ret < 0)
+			return ret;
+
+		/* Enable csi4 and sci1 */
+		ret = adv7482_write_registers(client,
+						adv7482_enable_csi4_csi1);
+		if (ret < 0)
+			return ret;
+	}
+
 	return ret;
 }
 
