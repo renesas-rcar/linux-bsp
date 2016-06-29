@@ -258,6 +258,10 @@ static struct vsp1_dl_list *vsp1_dl_list_alloc(struct vsp1_dl_manager *dlm)
 		memset(dl->header, 0, sizeof(*dl->header));
 		dl->header->lists[0].addr = dl->body0.dma;
 		dl->header->flags = VSP1_DLH_INT_ENABLE;
+		if (dlm->vsp1->info->header_mode) {
+			dl->header->next_header = dl->dma;
+			dl->header->flags |= VSP1_DLH_AUTO_START;
+		}
 	}
 
 	return dl;
@@ -416,7 +420,13 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl)
 		dl->header->num_lists = num_lists;
 		vsp1_write(vsp1, VI6_DL_HDR_ADDR(dlm->index), dl->dma);
 
+		if (RCAR_PRR_IS_PRODUCT(H3) &&
+			(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+			vsp1->dl_addr = dl->dma;
+
 		dlm->active = dl;
+		__vsp1_dl_list_put(dl);
+
 		goto done;
 	}
 
@@ -541,7 +551,7 @@ void vsp1_dlm_setup(struct vsp1_device *vsp1)
 	/* The DRM pipeline operates with display lists in Continuous Frame
 	 * Mode, all other pipelines use manual start.
 	 */
-	if (vsp1->drm)
+	if ((vsp1->drm) && (!vsp1->info->header_mode))
 		ctrl |= VI6_DL_CTRL_CFM0 | VI6_DL_CTRL_NH0;
 
 	vsp1_write(vsp1, VI6_DL_CTRL, ctrl);
@@ -578,7 +588,7 @@ struct vsp1_dl_manager *vsp1_dlm_create(struct vsp1_device *vsp1,
 		return NULL;
 
 	dlm->index = index;
-	dlm->mode = index == 0 && !vsp1->info->uapi
+	dlm->mode = index == 0 && !vsp1->info->uapi && !vsp1->info->header_mode
 		  ? VSP1_DL_MODE_HEADERLESS : VSP1_DL_MODE_HEADER;
 	dlm->vsp1 = vsp1;
 
