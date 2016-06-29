@@ -854,6 +854,18 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "IP version 0x%08x\n", version);
 
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(vsp1->dev, "product register init fail.\n");
+		return ret;
+	}
+
+	if (vsp1->info->header_mode && !(RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0)))
+		vsp1->auto_fld_mode = true;
+	else
+		vsp1->auto_fld_mode = false;
+
 	/* Instanciate entities */
 	ret = vsp1_create_entities(vsp1);
 	if (ret < 0) {
@@ -869,12 +881,6 @@ static int vsp1_probe(struct platform_device *pdev)
 		vsp1->index = 2;
 	else if (strcmp(dev_name(vsp1->dev), "fea38000.vsp") == 0)
 		vsp1->index = 3;
-
-	ret = RCAR_PRR_INIT();
-	if (ret) {
-		dev_dbg(vsp1->dev, "product register init fail.\n");
-		return ret;
-	}
 
 	if (RCAR_PRR_IS_PRODUCT(H3) &&
 		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
