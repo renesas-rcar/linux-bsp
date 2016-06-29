@@ -85,6 +85,10 @@ struct ipmmu_vmsa_archdata {
 	unsigned int num_utlbs;
 	struct device *dev;
 	struct list_head list;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	unsigned int *utlbs_val;
+	unsigned int *asids_val;
+#endif
 };
 
 static DEFINE_SPINLOCK(ipmmu_devices_lock);
@@ -922,6 +926,9 @@ static int ipmmu_init_platform_device(struct device *dev)
 	struct ipmmu_vmsa_archdata *archdata;
 	struct ipmmu_vmsa_device *mmu;
 	unsigned int *utlbs;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	unsigned int *utlbs_val, *asids_val;
+#endif
 	unsigned int i;
 	int num_utlbs;
 	int ret = -ENODEV;
@@ -936,6 +943,15 @@ static int ipmmu_init_platform_device(struct device *dev)
 	utlbs = kcalloc(num_utlbs, sizeof(*utlbs), GFP_KERNEL);
 	if (!utlbs)
 		return -ENOMEM;
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	utlbs_val = kcalloc(num_utlbs, sizeof(*utlbs_val), GFP_KERNEL);
+	if (!utlbs_val)
+		return -ENOMEM;
+	asids_val = kcalloc(num_utlbs, sizeof(*asids_val), GFP_KERNEL);
+	if (!asids_val)
+		return -ENOMEM;
+#endif
 
 	spin_lock(&ipmmu_devices_lock);
 
@@ -970,6 +986,10 @@ static int ipmmu_init_platform_device(struct device *dev)
 
 	archdata->mmu = mmu;
 	archdata->utlbs = utlbs;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	archdata->utlbs_val = utlbs_val;
+	archdata->asids_val = asids_val;
+#endif
 	archdata->num_utlbs = num_utlbs;
 	archdata->dev = dev;
 	set_archdata(dev, archdata);
@@ -1068,6 +1088,10 @@ static void ipmmu_remove_device(struct device *dev)
 	iommu_group_remove_device(dev);
 
 	kfree(archdata->utlbs);
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	kfree(archdata->utlbs_val);
+	kfree(archdata->asids_val);
+#endif
 	kfree(archdata);
 
 	set_archdata(dev, NULL);
