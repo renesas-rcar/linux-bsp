@@ -300,6 +300,12 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 	if (pipe == NULL)
 		return;
 
+	if (pipe->output->write_back != 0) {
+		pipe->output->write_back--;
+		if (pipe->output->write_back == 0)
+			wake_up_interruptible(&pipe->event_wait);
+	}
+
 	vsp1_dlm_irq_frame_end(pipe->output->dlm);
 
 	if (pipe->hgo)
