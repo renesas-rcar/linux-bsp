@@ -23,6 +23,44 @@
 #define RWTCNT_CODE 0x5a5a0000
 #define RWTCSRA_CODE 0xa5a5a500
 
+/* INTC-EX */
+static struct hw_register intc_ex_ip_regs[] = {
+	{"CONFIG_00",	0x0180, 32, 0},
+	{"CONFIG_01",	0x0184, 32, 0},
+	{"CONFIG_02",	0x0188, 32, 0},
+	{"CONFIG_03",	0x018C, 32, 0},
+	{"CONFIG_04",	0x0190, 32, 0},
+	{"CONFIG_05",	0x0194, 32, 0},
+};
+
+static struct rcar_ip intc_ex_ip = {
+	.ip_name	= "INTC-SYS",
+	.base_addr	= 0xE61C0000,
+	.size		= 0x198,
+	.reg_count	= ARRAY_SIZE(intc_ex_ip_regs),
+	.ip_reg		= intc_ex_ip_regs,
+};
+
+/* SYSC */
+static struct hw_register sysc_ip_regs[] = {
+	{"SYSCIER",     0x00C, 32, 0},
+	{"SYSCIMR",     0x010, 32, 0},
+};
+
+static struct rcar_ip sysc_ip = {
+	.ip_name   = "SYSC",
+	.base_addr = 0xE6180000,
+	.size      = 0x14,
+	.reg_count = ARRAY_SIZE(sysc_ip_regs),
+	.ip_reg    = sysc_ip_regs,
+};
+
+static struct rcar_ip *common_ips[] = {
+	&intc_ex_ip,
+	&sysc_ip,
+	NULL,
+};
+
 /*
  * Handle backup/restore of IP register
  *     ip: IP to be processed
@@ -226,13 +264,16 @@ int handle_ips(struct rcar_ip **ip, unsigned int handling)
 #ifdef CONFIG_PM_SLEEP
 static int ddr_bck_suspend(void)
 {
-	/* Emtpy for now  */
-	return 0;
+	pr_debug("%s\n", __func__);
+
+	return handle_ips(common_ips, DO_BACKUP);
 }
 
 static void ddr_bck_resume(void)
 {
-	/* Empty for now  */
+	pr_debug("%s\n", __func__);
+
+	handle_ips(common_ips, DO_RESTORE);
 }
 
 static struct syscore_ops ddr_bck_syscore_ops = {
@@ -242,9 +283,14 @@ static struct syscore_ops ddr_bck_syscore_ops = {
 
 static int ddr_bck_init(void)
 {
+	int ret;
+
+	/* Map register for all common IPs */
+	ret = handle_ips(common_ips, DO_IOREMAP);
+
 	register_syscore_ops(&ddr_bck_syscore_ops);
 
-	return 0;
+	return ret;
 }
 core_initcall(ddr_bck_init);
 
