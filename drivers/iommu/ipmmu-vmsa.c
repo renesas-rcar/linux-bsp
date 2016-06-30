@@ -1395,6 +1395,78 @@ static int ipmmu_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_PM_SLEEP
 #ifdef CONFIG_RCAR_DDR_BACKUP
+static int ipmmu_utlbs_backup(struct ipmmu_vmsa_device *mmu)
+{
+	unsigned int i;
+	struct ipmmu_vmsa_device *slave_mmu = NULL;
+	struct ipmmu_vmsa_archdata *slave_dev = NULL;
+
+	pr_debug("%s: Handle UTLB backup\n", dev_name(mmu->dev));
+
+	spin_lock(&ipmmu_slave_devices_lock);
+
+	list_for_each_entry(slave_dev, &ipmmu_slave_devices, list) {
+		slave_mmu = slave_dev->mmu;
+
+		if (slave_mmu != mmu)
+			continue;
+
+		for (i = 0; i < slave_dev->num_utlbs; ++i) {
+			slave_dev->utlbs_val[i] =
+				ipmmu_read(slave_mmu,
+					IMUCTR(slave_dev->utlbs[i]));
+			slave_dev->asids_val[i] =
+				ipmmu_read(slave_mmu,
+					IMUASID(slave_dev->utlbs[i]));
+			pr_debug("%d: Backup UTLB[%d]: 0x%x, ASID[%d]: %d\n",
+				i, slave_dev->utlbs[i], slave_dev->utlbs_val[i],
+				slave_dev->utlbs[i],
+				slave_dev->asids_val[i]);
+		}
+	}
+
+	spin_unlock(&ipmmu_slave_devices_lock);
+
+	return 0;
+}
+
+static int ipmmu_utlbs_restore(struct ipmmu_vmsa_device *mmu)
+{
+	unsigned int i;
+	struct ipmmu_vmsa_device *slave_mmu = NULL;
+	struct ipmmu_vmsa_archdata *slave_dev = NULL;
+
+	pr_debug("%s: Handle UTLB restore\n", dev_name(mmu->dev));
+
+	spin_lock(&ipmmu_slave_devices_lock);
+
+	list_for_each_entry(slave_dev, &ipmmu_slave_devices, list) {
+		slave_mmu = slave_dev->mmu;
+
+		if (slave_mmu != mmu)
+			continue;
+
+		for (i = 0; i < slave_dev->num_utlbs; ++i) {
+			ipmmu_write(slave_mmu, IMUASID(slave_dev->utlbs[i]),
+					slave_dev->asids_val[i]);
+			ipmmu_write(slave_mmu,
+				IMUCTR(slave_dev->utlbs[i]),
+				(slave_dev->utlbs_val[i] | IMUCTR_FLUSH));
+			pr_debug("%d: Restore UTLB[%d]: 0x%x, ASID[%d]: %d\n",
+				i, slave_dev->utlbs[i],
+				ipmmu_read(slave_mmu,
+					IMUCTR(slave_dev->utlbs[i])),
+				slave_dev->utlbs[i],
+				ipmmu_read(slave_mmu,
+				IMUASID(slave_dev->utlbs[i])));
+		}
+	}
+
+	spin_unlock(&ipmmu_slave_devices_lock);
+
+	return 0;
+}
+
 static int ipmmu_domain_backup_context(struct ipmmu_vmsa_domain *domain)
 {
 	struct ipmmu_vmsa_device *mmu = domain->root;
@@ -1433,6 +1505,12 @@ static int ipmmu_suspend(struct device *dev)
 	unsigned int i;
 	struct ipmmu_vmsa_device *mmu = dev_get_drvdata(dev);
 
+	pr_debug("%s: %s\n", __func__, dev_name(dev));
+
+	/* Only backup UTLB in IPMMU cache devices*/
+	if (!ipmmu_is_root(mmu))
+		ipmmu_utlbs_backup(mmu);
+
 	ctx = find_first_zero_bit(mmu->ctx, mmu->num_ctx);
 
 	for (i = 0; i < ctx; i++)
@@ -1449,10 +1527,16 @@ static int ipmmu_resume(struct device *dev)
 	unsigned int i;
 	struct ipmmu_vmsa_device *mmu = dev_get_drvdata(dev);
 
+	pr_debug("%s: %s\n", __func__, dev_name(dev));
+
 	ctx = find_first_zero_bit(mmu->ctx, mmu->num_ctx);
 
 	for (i = 0; i < ctx; i++)
 		ipmmu_domain_restore_context(mmu->domains[i]);
+
+	/* Only backup UTLB in IPMMU cache devices*/
+	if (!ipmmu_is_root(mmu))
+		ipmmu_utlbs_restore(mmu);
 #endif
 
 	return 0;
