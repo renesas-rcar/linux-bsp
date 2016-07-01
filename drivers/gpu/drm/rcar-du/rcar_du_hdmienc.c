@@ -39,8 +39,8 @@ static void rcar_du_hdmienc_disable(struct drm_encoder *encoder)
 	struct rcar_du_hdmienc *hdmienc = to_rcar_hdmienc(encoder);
 	const struct drm_bridge_funcs *bfuncs = encoder->bridge->funcs;
 
-	if ((bfuncs) && (bfuncs->post_disable))
-		bfuncs->post_disable(encoder->bridge);
+	if ((bfuncs) && (bfuncs->disable))
+		bfuncs->disable(encoder->bridge);
 
 	if (hdmienc->renc->lvds)
 		rcar_du_lvdsenc_enable(hdmienc->renc->lvds, encoder->crtc,
