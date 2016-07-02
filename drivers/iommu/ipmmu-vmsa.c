@@ -248,6 +248,7 @@ static void set_archdata(struct device *dev, struct ipmmu_vmsa_archdata *p)
 #define IMUASID_ASID0_SHIFT		0
 
 #ifdef CONFIG_RCAR_DDR_BACKUP
+#define HW_REGISTER_BACKUP_SIZE		ARRAY_SIZE(root_pgtable0_reg)
 static struct hw_register root_pgtable0_reg[] = {
 	{"IMTTLBR0",	IMTTLBR0,	0},
 	{"IMTTUBR0",	IMTTUBR0,	0},
@@ -1473,8 +1474,16 @@ static int ipmmu_domain_backup_context(struct ipmmu_vmsa_domain *domain)
 	struct hw_register *reg = mmu->reg_backup[domain->context_id];
 	unsigned int i;
 
-	for (i = 0; i < sizeof(root_pgtable); i++)
+	pr_info("%s: Handle domain context backup\n", dev_name(mmu->dev));
+
+	for (i = 0; i < HW_REGISTER_BACKUP_SIZE; i++) {
 		reg[i].reg_data = ipmmu_ctx_read(domain, reg[i].reg_offset);
+
+		pr_info("%s: reg_data 0x%x, reg_offset 0x%x\n",
+				reg[i].reg_name,
+				reg[i].reg_data,
+				reg[i].reg_offset);
+	}
 
 	return 0;
 }
@@ -1485,13 +1494,30 @@ static int ipmmu_domain_restore_context(struct ipmmu_vmsa_domain *domain)
 	struct hw_register *reg = mmu->reg_backup[domain->context_id];
 	unsigned int i;
 
-	for (i = 0; i < sizeof(root_pgtable); i++) {
-		if (reg[i].reg_offset != IMCTR)
-			ipmmu_ctx_write(domain, reg[i].reg_offset,
+	pr_info("%s: Handle domain context restore\n", dev_name(mmu->dev));
+
+	for (i = 0; i < HW_REGISTER_BACKUP_SIZE; i++) {
+		if (reg[i].reg_offset != IMCTR) {
+			ipmmu_ctx_write(domain,
+				reg[i].reg_offset,
 				reg[i].reg_data);
-		else
-			ipmmu_ctx_write2(domain, reg[i].reg_offset,
-				reg[i].reg_data);
+
+			pr_info("%s: reg_data 0x%x, reg_offset 0x%x\n",
+				reg[i].reg_name,
+				ipmmu_ctx_read(domain, reg[i].reg_offset),
+				reg[i].reg_offset);
+
+		} else {
+			ipmmu_ctx_write2(domain,
+				reg[i].reg_offset,
+				reg[i].reg_data | IMCTR_FLUSH);
+
+			pr_info("%s: reg_data 0x%x, reg_offset 0x%x\n",
+				reg[i].reg_name,
+				ipmmu_ctx_read(domain,
+					reg[i].reg_offset),
+				reg[i].reg_offset);
+		}
 	}
 
 	return 0;
@@ -1513,8 +1539,10 @@ static int ipmmu_suspend(struct device *dev)
 
 	ctx = find_first_zero_bit(mmu->ctx, mmu->num_ctx);
 
-	for (i = 0; i < ctx; i++)
+	for (i = 0; i < ctx; i++) {
+		pr_info("Handle ctx %d\n", i);
 		ipmmu_domain_backup_context(mmu->domains[i]);
+	}
 #endif
 
 	return 0;
@@ -1531,8 +1559,10 @@ static int ipmmu_resume(struct device *dev)
 
 	ctx = find_first_zero_bit(mmu->ctx, mmu->num_ctx);
 
-	for (i = 0; i < ctx; i++)
+	for (i = 0; i < ctx; i++) {
+		pr_info("Handle ctx %d\n", i);
 		ipmmu_domain_restore_context(mmu->domains[i]);
+	}
 
 	/* Only backup UTLB in IPMMU cache devices*/
 	if (!ipmmu_is_root(mmu))
