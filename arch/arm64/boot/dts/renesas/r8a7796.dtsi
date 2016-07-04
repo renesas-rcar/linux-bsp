@@ -2158,8 +2158,9 @@
 			status = "disabled";
 		};
 
-		vspbc@fe960000 {
+		vsp@fe960000 {
 			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe960000 0 0x8000>;
 			renesas,has-bru;
 			renesas,has-lut;
 			renesas,has-clu;
@@ -2189,8 +2190,9 @@
 			status = "disabled";
 		};
 
-		vspi0@fe9a0000 {
+		vsp@fe9a0000 {
 			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe9a0000 0 0x8000>;
 			renesas,has-lut;
 			renesas,has-clu;
 			renesas,has-hgo;
