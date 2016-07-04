@@ -1736,7 +1736,7 @@ static const unsigned int du_rgb888_pins[] = {
 	/* R[7:0] */
 	RCAR_GP_PIN(0, 15), RCAR_GP_PIN(0, 14), RCAR_GP_PIN(0, 13),
 	RCAR_GP_PIN(0, 12), RCAR_GP_PIN(0, 11), RCAR_GP_PIN(0, 10),
-	RCAR_GP_PIN(0, 9),  RCAR_GP_PIN(3, 8),
+	RCAR_GP_PIN(0, 9),  RCAR_GP_PIN(0, 8),
 
 	/* G[7:0] */
 	RCAR_GP_PIN(1, 15), RCAR_GP_PIN(1, 14), RCAR_GP_PIN(1, 13),
