@@ -2329,8 +2329,9 @@
 			status = "disabled";
 		};
 
-		vspbc@fe920000 {
+		vsp@fe920000 {
 			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe920000 0 0x8000>;
 			renesas,has-bru;
 			renesas,has-lut;
 			renesas,has-clu;
@@ -2358,8 +2359,9 @@
 			status = "disabled";
 		};
 
-		vspbd@fe960000 {
+		vsp@fe960000 {
 			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe960000 0 0x8000>;
 			renesas,has-bru;
 			renesas,#rpf = <5>;
 			renesas,#uds = <0>;
@@ -2383,8 +2385,9 @@
 			status = "disabled";
 		};
 
-		vspi0@fe9a0000 {
+		vsp@fe9a0000 {
 			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe9a0000 0 0x8000>;
 			renesas,has-lut;
 			renesas,has-clu;
 			renesas,has-hgo;
@@ -2418,8 +2421,9 @@
 			status = "disabled";
 		};
 
-		vspi1@fe9b0000 {
+		vsp@fe9b0000 {
 			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe9b0000 0 0x8000>;
 			renesas,has-lut;
 			renesas,has-clu;
 			renesas,has-hgo;
@@ -2453,8 +2457,9 @@
 			status = "disabled";
 		};
 
-		vspi2@fe9c0000 {
+		vsp@fe9c0000 {
 			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe9c0000 0 0x8000>;
 			renesas,has-lut;
 			renesas,has-clu;
 			renesas,has-hgo;
