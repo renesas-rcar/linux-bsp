@@ -601,7 +601,8 @@
 &scif3 {
 	pinctrl-0 = <&scif3_pins>;
 	pinctrl-names = "default";
-	status = "okay";
+	/* Please use exclusively to the pwm1 node */
+	/* status = "okay"; */
 };
 
 /* SCIF3 TX -> HSCIF3 RX, HSCIF3 TX -> SCIF3 RX */
@@ -609,8 +610,8 @@
 &hscif3 {
 	pinctrl-0 = <&hscif3_pins>;
 	pinctrl-names = "default";
-
-	status = "okay";
+	/* Please use exclusively to the pwm1 node */
+	/* status = "okay"; */
 };
 
 &scif2 {
