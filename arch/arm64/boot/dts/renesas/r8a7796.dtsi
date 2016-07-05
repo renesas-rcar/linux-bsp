@@ -1972,6 +1972,7 @@
 			sd-uhs-sdr50;
 			sd-uhs-sdr104;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 32>;
 			status = "disabled";
 		};
 
@@ -1986,6 +1987,7 @@
 			sd-uhs-sdr50;
 			sd-uhs-sdr104;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 33>;
 			status = "disabled";
 		};
 
@@ -2000,6 +2002,7 @@
 			sd-uhs-sdr50;
 			sd-uhs-sdr104;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 34>;
 			status = "disabled";
 		};
 
@@ -2014,6 +2017,7 @@
 			sd-uhs-sdr50;
 			sd-uhs-sdr104;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 35>;
 			status = "disabled";
 		};
 
@@ -2028,6 +2032,7 @@
 			mmc-hs200-1_8v;
 			mmc-hs400-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 34>;
 			status = "disabled";
 		};
 
@@ -2042,6 +2047,7 @@
 			mmc-hs200-1_8v;
 			mmc-hs400-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 35>;
 			status = "disabled";
 		};
 
