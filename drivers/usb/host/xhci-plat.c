@@ -158,7 +158,9 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	struct xhci_hcd		*xhci;
 	struct resource         *res;
 	struct usb_hcd		*hcd;
+#if (!IS_ENABLED(CONFIG_USB_XHCI_RCAR))
 	struct clk              *clk;
+#endif /* CONFIG_USB_XHCI_RCAR */
 	int			ret;
 	int			irq;
 
@@ -231,6 +233,10 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	 * Not all platforms have a clk so it is not an error if the
 	 * clock does not exists.
 	 */
+#if IS_ENABLED(CONFIG_USB_XHCI_RCAR)
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
+#else
 	clk = devm_clk_get(&pdev->dev, NULL);
 	if (!IS_ERR(clk)) {
 		ret = clk_prepare_enable(clk);
@@ -240,6 +246,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 		ret = -EPROBE_DEFER;
 		goto put_hcd;
 	}
+#endif /* CONFIG_USB_XHCI_RCAR */
 
 	xhci = hcd_to_xhci(hcd);
 	match = of_match_node(usb_xhci_of_match, pdev->dev.of_node);
@@ -254,7 +261,9 @@ static int xhci_plat_probe(struct platform_device *pdev)
 
 	device_wakeup_enable(hcd->self.controller);
 
+#if (!IS_ENABLED(CONFIG_USB_XHCI_RCAR))
 	xhci->clk = clk;
+#endif /* CONFIG_USB_XHCI_RCAR */
 	xhci->main_hcd = hcd;
 	xhci->shared_hcd = __usb_create_hcd(driver, sysdev, &pdev->dev,
 			dev_name(&pdev->dev), hcd);
@@ -314,8 +323,13 @@ put_usb3_hcd:
 	usb_put_hcd(xhci->shared_hcd);
 
 disable_clk:
+#if IS_ENABLED(CONFIG_USB_XHCI_RCAR)
+	pm_runtime_put_sync(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+#else
 	if (!IS_ERR(clk))
 		clk_disable_unprepare(clk);
+#endif /* CONFIG_USB_XHCI_RCAR */
 
 put_hcd:
 	usb_put_hcd(hcd);
@@ -331,7 +345,9 @@ static int xhci_plat_remove(struct platform_device *dev)
 {
 	struct usb_hcd	*hcd = platform_get_drvdata(dev);
 	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
+#if (!IS_ENABLED(CONFIG_USB_XHCI_RCAR))
 	struct clk *clk = xhci->clk;
+#endif /* CONFIG_USB_XHCI_RCAR */
 
 	xhci->xhc_state |= XHCI_STATE_REMOVING;
 
@@ -341,9 +357,15 @@ static int xhci_plat_remove(struct platform_device *dev)
 	usb_remove_hcd(hcd);
 	usb_put_hcd(xhci->shared_hcd);
 
+	usb_put_hcd(hcd);
+
+#if IS_ENABLED(CONFIG_USB_XHCI_RCAR)
+	pm_runtime_put_sync(&dev->dev);
+	pm_runtime_disable(&dev->dev);
+#else
 	if (!IS_ERR(clk))
 		clk_disable_unprepare(clk);
-	usb_put_hcd(hcd);
+#endif /* CONFIG_USB_XHCI_RCAR */
 
 	pm_runtime_set_suspended(&dev->dev);
 	pm_runtime_disable(&dev->dev);
@@ -355,8 +377,7 @@ static int __maybe_unused xhci_plat_suspend(struct device *dev)
 {
 	struct usb_hcd	*hcd = dev_get_drvdata(dev);
 	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
-	int ret;
-
+	int ret = 0;
 	/*
 	 * xhci_suspend() needs `do_wakeup` to know whether host is allowed
 	 * to do wakeup during suspend. Since xhci_plat_suspend is currently
@@ -366,9 +387,15 @@ static int __maybe_unused xhci_plat_suspend(struct device *dev)
 	 * also applies to runtime suspend.
 	 */
 	ret = xhci_suspend(xhci, device_may_wakeup(dev));
+	if (ret)
+		pr_err("%s: xhci_suspend failed, ret: %d\n", __func__, ret);
 
 	if (!device_may_wakeup(dev) && !IS_ERR(xhci->clk))
 		clk_disable_unprepare(xhci->clk);
+
+#if IS_ENABLED(CONFIG_USB_XHCI_RCAR)
+	pm_runtime_put_sync(dev);
+#endif /* CONFIG_USB_XHCI_RCAR */
 
 	return ret;
 }
@@ -401,6 +428,13 @@ static int __maybe_unused xhci_plat_runtime_resume(struct device *dev)
 {
 	struct usb_hcd  *hcd = dev_get_drvdata(dev);
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+
+#if IS_ENABLED(CONFIG_USB_XHCI_RCAR)
+	pm_runtime_get_sync(dev);
+
+	hcd->driver->reset(hcd);
+	hcd->driver->start(hcd);
+#endif /* CONFIG_USB_XHCI_RCAR */
 
 	return xhci_resume(xhci, 0);
 }
