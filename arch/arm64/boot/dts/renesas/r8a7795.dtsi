@@ -2109,6 +2109,7 @@
 			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_sy 0>;
 			status = "disabled";
 		};
 
@@ -2123,6 +2124,7 @@
 			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_sy 1>;
 			status = "disabled";
 		};
 
@@ -2137,6 +2139,7 @@
 			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_sy 2>;
 			status = "disabled";
 		};
 
@@ -2151,6 +2154,7 @@
 			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_sy 3>;
 			status = "disabled";
 		};
 
@@ -2164,6 +2168,7 @@
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_sy 2>;
 			status = "disabled";
 		};
 
@@ -2177,6 +2182,7 @@
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_sy 3>;
 			status = "disabled";
 		};
 
