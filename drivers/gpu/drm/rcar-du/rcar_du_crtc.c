@@ -109,6 +109,21 @@ void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
 	clk_disable_unprepare(rcrtc->clock);
 }
 
+void rcar_du_crtc_vbk_check(struct rcar_du_group *rgrp)
+{
+	int i;
+
+	for (i = 0; i < rgrp->dev->num_crtcs; ++i) {
+		struct rcar_du_crtc *rcrtc = &rgrp->dev->crtcs[i];
+		struct drm_crtc *crtc = &rcrtc->crtc;
+
+		if (!(rcar_du_crtc_read(rcrtc, DIER) & DIER_VBE))
+			continue;
+
+		drm_crtc_wait_one_vblank(crtc);
+	}
+}
+
 /* -----------------------------------------------------------------------------
  * Hardware Setup
  */

@@ -183,6 +183,15 @@ void rcar_du_group_put(struct rcar_du_group *rgrp)
 
 static void __rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start)
 {
+	if (!start) {
+		rcar_du_group_write(rgrp, DSYSR,
+			(rcar_du_group_read(rgrp, DSYSR) &
+			~(DSYSR_DRES | DSYSR_DEN)));
+
+		/* Wait for access stop of vsp */
+		rcar_du_crtc_vbk_check(rgrp);
+	}
+
 	rcar_du_group_write(rgrp, DSYSR,
 		(rcar_du_group_read(rgrp, DSYSR) & ~(DSYSR_DRES | DSYSR_DEN)) |
 		(start ? DSYSR_DEN : DSYSR_DRES));
