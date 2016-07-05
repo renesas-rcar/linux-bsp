@@ -67,9 +67,8 @@
 		ranges;
 
 		/* device specific region for Lossy Decompression */
-		linux,lossy_decompress {
-			compatible = "shared-dma-pool";
-			reusable;
+		lossy_decompress: linux,lossy_decompress {
+			no-map;
 			reg = <0x00000000 0x54000000 0x0 0x03000000>;
 		};
 
@@ -98,6 +97,7 @@
 
 	mmngr {
 		compatible = "renesas,mmngr";
+		memory-region = <&lossy_decompress>;
 	};
 
 	mmngrbuf {
