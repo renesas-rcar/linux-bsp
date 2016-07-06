@@ -153,12 +153,11 @@
 /* setting CSI2 on R-Car Gen3*/
 #define VNCSI_IFMD_REG	0x20	/* Video n CSI2 Interface Mode Register */
 
-#define VNCSI_IFMD_DES2		(1 << 27) /* CSI40/CSI41 Input Data */
-#define VNCSI_IFMD_DES1		(1 << 26) /* CSI20 Input Data) */
-#define VNCSI_IFMD_DES0		(1 << 25) /* CSI21 Input Data) */
+#define VNCSI_IFMD_DES1		(1 << 26) /* CSI20 */
+#define VNCSI_IFMD_DES0		(1 << 25) /* H3:CSI40/41, M3:CSI40 */
 
 #define VNCSI_IFMD_CSI_CHSEL(n)	(n << 0)
-#define VNCSI_IFMD_SEL_NUMBER	6
+#define VNCSI_IFMD_SEL_NUMBER	5
 
 /* UDS */
 #define VNUDS_CTRL_REG		0x80	/* Scaling Control Registers */
@@ -240,36 +239,36 @@ static const struct vin_gen3_ifmd vin_h3_vc_ifmd[] = {
 		{
 			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI40, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI41, RCAR_VIRTUAL_CH1},
 		}
 	},
 	{ 0x0001,
 		{
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 		}
 	},
 	{ 0x0002,
 		{
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 		}
 	},
 	{ 0x0003,
@@ -294,18 +293,6 @@ static const struct vin_gen3_ifmd vin_h3_vc_ifmd[] = {
 			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH2},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH3},
-		}
-	},
-	{ 0x0005,
-		{
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH2},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH3},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH2},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH3},
 		}
 	},
 };
@@ -369,18 +356,6 @@ static const struct vin_gen3_ifmd vin_m3_vc_ifmd[] = {
 			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH2},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH3},
-		}
-	},
-	{ 0x0005,
-		{
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
 		}
 	},
 };
@@ -3127,14 +3102,12 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "csi_ch:%d, vc:%d\n",
 					priv->csi_ch, priv->vc);
 
-		if (priv->chip == RCAR_H3) {
-			ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1 |
-				 VNCSI_IFMD_DES0;
+		ifmd = VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0;
+
+		if (priv->chip == RCAR_H3)
 			gen3_ifmd_table = vin_h3_vc_ifmd;
-		} else if (priv->chip == RCAR_M3) {
-			ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1;
+		else if (priv->chip == RCAR_M3)
 			gen3_ifmd_table = vin_m3_vc_ifmd;
-		}
 
 		for (i = 0; i < num; i++) {
 			if ((gen3_ifmd_table[i].v_sel[priv->index].csi2_ch
@@ -3274,11 +3247,10 @@ static int rcar_vin_resume(struct device *dev)
 	ifmd4_init = true;
 
 	if (priv->chip == RCAR_H3) {
-		ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1 |
-			 VNCSI_IFMD_DES0;
+		ifmd = VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0;
 		gen3_ifmd_table = vin_h3_vc_ifmd;
 	} else if (priv->chip == RCAR_M3) {
-		ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1;
+		ifmd = VNCSI_IFMD_DES1;
 		gen3_ifmd_table = vin_m3_vc_ifmd;
 	}
 
