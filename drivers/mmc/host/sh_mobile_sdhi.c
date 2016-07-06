@@ -107,9 +107,9 @@ struct sh_mobile_sdhi {
 };
 
 #if IS_ENABLED(CONFIG_MMC_SDHI_SYS_DMAC)
-void tmio_mmc_init_dma(void);
+void sdhi_sys_dmac_init_dma(void);
 #else
-static void tmio_mmc_init_dma(void) { }
+static void sdhi_sys_dmac_init_dma(void) { }
 #endif
 
 static void sh_mobile_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
@@ -369,7 +369,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		host->bus_shift = of_data->bus_shift;
 	}
 
-	tmio_mmc_init_dma();
+	sdhi_sys_dmac_init_dma();
 
 	host->dma		= dma_priv;
 	host->write16_hook	= sh_mobile_sdhi_write16_hook;
