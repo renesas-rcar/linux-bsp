@@ -1,0 +1,24 @@
+DT bindings for the Renesas R-Car Hardware spinlock driver
+----------------------------------------------------------
+
+Required properties :
+- compatible : shall contain only one of the following:
+	- "renesas,mfis-lock-r8a7795", "renesas,mfis-lock";
+	- "renesas,mfis-lock-r8a7796", "renesas,mfis-lock";
+
+- reg : start address and length for MFIS lock registers.
+
+- clocks : clock phandle and specifier pair.
+
+- power-domains : the power domain the MFIS belongs to.
+
+
+Examples:
+
+mfis_lock: mfis-lock {
+	compatible =    "renesas,mfis-lock-r8a7795",
+			"renesas,mfis-lock";
+	reg = <0 0xe62600c0 0 0x0020>;
+	clocks = <&cpg CPG_MOD 213>;
+	power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+};
