@@ -1545,7 +1545,10 @@ EXPORT_SYMBOL(tmio_mmc_host_runtime_resume);
 #ifdef CONFIG_PM_SLEEP
 int tmio_mmc_host_suspend(struct device *dev)
 {
-	/* Empty function for now */
+	struct mmc_host *mmc = dev_get_drvdata(dev);
+
+	tmio_mmc_hw_reset(mmc);
+
 	return 0;
 }
 EXPORT_SYMBOL(tmio_mmc_host_suspend);
