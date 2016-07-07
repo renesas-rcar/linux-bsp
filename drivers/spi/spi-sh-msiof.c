@@ -195,10 +195,10 @@ static int msiof_rcar_is_gen2(struct device *dev)
 {
 	struct device_node *node = dev->of_node;
 
-	return of_device_is_compatible(node, "renesas,xhci-r8a7790") ||
-		of_device_is_compatible(node, "renesas,xhci-r8a7791") ||
-		of_device_is_compatible(node, "renesas,xhci-r8a7793") ||
-		of_device_is_compatible(node, "renesas,xhci-r8a7794");
+	return of_device_is_compatible(node, "renesas,msiof-r8a7790") ||
+		of_device_is_compatible(node, "renesas,msiof-r8a7791") ||
+		of_device_is_compatible(node, "renesas,msiof-r8a7793") ||
+		of_device_is_compatible(node, "renesas,msiof-r8a7794");
 }
 
 static int msiof_rcar_is_gen3(struct device *dev)
@@ -304,7 +304,7 @@ static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 	if ((msiof_rcar_is_gen3(&p->pdev->dev) ||
 		msiof_rcar_is_gen2(&p->pdev->dev)) &&
 		sh_msiof_spi_div_table[k].brdv == SCR_BRDV_DIV_1 &&
-		(brps != 0 || brps != 1)) {
+		!(brps == 1 || brps == 2)) {
 		k = 1; /* SCR_BRDV_DIV_1 -> SCR_BRDV_DIV_2 */
 		brps = DIV_ROUND_UP(brps, 2);
 	}
