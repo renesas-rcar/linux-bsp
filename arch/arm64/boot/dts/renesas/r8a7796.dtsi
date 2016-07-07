@@ -1973,6 +1973,7 @@
 			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 32>;
 			status = "disabled";
 		};
 
@@ -1987,6 +1988,7 @@
 			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 33>;
 			status = "disabled";
 		};
 
@@ -2001,6 +2003,7 @@
 			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 34>;
 			status = "disabled";
 		};
 
@@ -2015,6 +2018,7 @@
 			sd-uhs-sdr104;
 			sd-uhs-sdr50;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 35>;
 			status = "disabled";
 		};
 
@@ -2028,6 +2032,7 @@
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 34>;
 			status = "disabled";
 		};
 
@@ -2041,6 +2046,7 @@
 			cap-mmc-highspeed;
 			mmc-hs200-1_8v;
 			renesas,mmc-scc-tapnum = <8>;
+			iommus = <&ipmmu_ds1 35>;
 			status = "disabled";
 		};
 
@@ -2161,8 +2167,9 @@
 			status = "disabled";
 		};
 
-		vspbc@fe960000 {
+		vsp@fe960000 {
 			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe960000 0 0x8000>;
 			renesas,has-bru;
 			renesas,has-lut;
 			renesas,has-clu;
@@ -2192,8 +2199,9 @@
 			status = "disabled";
 		};
 
-		vspi0@fe9a0000 {
+		vsp@fe9a0000 {
 			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe9a0000 0 0x8000>;
 			renesas,has-lut;
 			renesas,has-clu;
 			renesas,has-hgo;
@@ -2451,5 +2459,26 @@
 				};
 			};
 		};
+
+		mfis: mfis@e6260000 {
+			compatible = "renesas,mfis-r8a7796", "renesas,mfis";
+			reg = <0 0xe6260000 0 0x0200>;
+			interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "eicr0";
+			clocks = <&cpg CPG_MOD 213>;
+			clock-names = "mfis";
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			status = "okay";
+		};
+
+		mfis_lock: mfis-lock {
+			compatible =    "renesas,mfis-lock-r8a7796",
+					"renesas,mfis-lock";
+			reg = <0 0xe62600c0 0 0x0020>;
+			clocks = <&cpg CPG_MOD 213>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			status = "okay";
+		};
+
 	};
 };

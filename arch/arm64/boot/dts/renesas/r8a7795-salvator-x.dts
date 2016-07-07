@@ -79,9 +79,8 @@
 		ranges;
 
 		/* device specific region for Lossy Decompression */
-		linux,lossy_decompress {
-			compatible = "shared-dma-pool";
-			reusable;
+		lossy_decompress: linux,lossy_decompress {
+			no-map;
 			reg = <0x00000000 0x54000000 0x0 0x03000000>;
 		};
 
@@ -110,6 +109,7 @@
 
 	mmngr {
 		compatible = "renesas,mmngr";
+		memory-region = <&lossy_decompress>;
 	};
 
 	mmngrbuf {
@@ -601,7 +601,8 @@
 &scif3 {
 	pinctrl-0 = <&scif3_pins>;
 	pinctrl-names = "default";
-	status = "okay";
+	/* Please use exclusively to the pwm1 node */
+	/* status = "okay"; */
 };
 
 /* SCIF3 TX -> HSCIF3 RX, HSCIF3 TX -> SCIF3 RX */
@@ -609,8 +610,8 @@
 &hscif3 {
 	pinctrl-0 = <&hscif3_pins>;
 	pinctrl-names = "default";
-
-	status = "okay";
+	/* Please use exclusively to the pwm1 node */
+	/* status = "okay"; */
 };
 
 &scif2 {
@@ -742,6 +743,7 @@
 	/* audio_clkout0/1/2/3 */
 	#clock-cells = <1>;
 	clock-frequency = <11289600>;
+	clkout-lr-synchronous;
 
 	status = "okay";
 
