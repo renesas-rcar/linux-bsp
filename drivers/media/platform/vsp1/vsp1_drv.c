@@ -143,9 +143,10 @@ void vsp1_underrun_workaround(struct vsp1_device *vsp1, bool reset)
 
 	/* 8. Restart VSPD */
 	if (!reset) {
-		/* Necessary when headerless display list */
 		vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), vsp1->dl_addr);
-		vsp1_write(vsp1, VI6_DL_BODY_SIZE, vsp1->dl_body);
+		/* Necessary when headerless display list */
+		if (!vsp1->info->header_mode)
+			vsp1_write(vsp1, VI6_DL_BODY_SIZE, vsp1->dl_body);
 		vsp1_write(vsp1, VI6_CMD(0), VI6_CMD_STRCMD);
 	}
 }
@@ -628,10 +629,23 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
  */
 int vsp1_device_get(struct vsp1_device *vsp1)
 {
-	int ret;
+	int ret = 0;
+
+	ret = rcar_fcp_enable(vsp1->fcp);
+	if (ret < 0)
+		return ret;
 
 	ret = pm_runtime_get_sync(vsp1->dev);
-	return ret < 0 ? ret : 0;
+	if (ret < 0)
+		return ret;
+
+	if (vsp1->info) {
+		ret = vsp1_device_init(vsp1);
+		if (ret < 0)
+			return ret;
+	}
+
+	return ret;
 }
 
 /*
@@ -643,6 +657,7 @@ int vsp1_device_get(struct vsp1_device *vsp1)
 void vsp1_device_put(struct vsp1_device *vsp1)
 {
 	pm_runtime_put_sync(vsp1->dev);
+	rcar_fcp_disable(vsp1->fcp);
 }
 
 /* -----------------------------------------------------------------------------
@@ -655,7 +670,7 @@ static int vsp1_pm_suspend(struct device *dev)
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 
 	vsp1_pipelines_suspend(vsp1);
-	pm_runtime_force_suspend(vsp1->dev);
+	vsp1_device_put(vsp1);
 
 	return 0;
 }
@@ -663,40 +678,24 @@ static int vsp1_pm_suspend(struct device *dev)
 static int vsp1_pm_resume(struct device *dev)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	int ret = 0;
 
-	pm_runtime_force_resume(vsp1->dev);
+	ret = rcar_fcp_enable(vsp1->fcp);
+	if (ret < 0)
+		return ret;
+
+	ret = pm_runtime_get_sync(vsp1->dev);
+	if (ret < 0)
+		return ret;
+
 	vsp1_pipelines_resume(vsp1);
 
 	return 0;
 }
 #endif
 
-static int vsp1_pm_runtime_suspend(struct device *dev)
-{
-	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-
-	rcar_fcp_disable(vsp1->fcp);
-
-	return 0;
-}
-
-static int vsp1_pm_runtime_resume(struct device *dev)
-{
-	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-	int ret;
-
-	if (vsp1->info) {
-		ret = vsp1_device_init(vsp1);
-		if (ret < 0)
-			return ret;
-	}
-
-	return rcar_fcp_enable(vsp1->fcp);
-}
-
 static const struct dev_pm_ops vsp1_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(vsp1_pm_suspend, vsp1_pm_resume)
-	SET_RUNTIME_PM_OPS(vsp1_pm_runtime_suspend, vsp1_pm_runtime_resume, NULL)
 };
 
 /* -----------------------------------------------------------------------------
@@ -774,6 +773,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.rpf_count = 5,
 		.wpf_count = 2,
 		.num_bru_inputs = 5,
+		.header_mode = true,
 	},
 };
 
@@ -854,6 +854,18 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "IP version 0x%08x\n", version);
 
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(vsp1->dev, "product register init fail.\n");
+		return ret;
+	}
+
+	if (vsp1->info->header_mode && !(RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0)))
+		vsp1->auto_fld_mode = true;
+	else
+		vsp1->auto_fld_mode = false;
+
 	/* Instanciate entities */
 	ret = vsp1_create_entities(vsp1);
 	if (ret < 0) {
@@ -869,12 +881,6 @@ static int vsp1_probe(struct platform_device *pdev)
 		vsp1->index = 2;
 	else if (strcmp(dev_name(vsp1->dev), "fea38000.vsp") == 0)
 		vsp1->index = 3;
-
-	ret = RCAR_PRR_INIT();
-	if (ret) {
-		dev_dbg(vsp1->dev, "product register init fail.\n");
-		return ret;
-	}
 
 	if (RCAR_PRR_IS_PRODUCT(H3) &&
 		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))

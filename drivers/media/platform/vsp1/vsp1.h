@@ -58,6 +58,7 @@ struct vsp1_device_info {
 	unsigned int wpf_count;
 	unsigned int num_bru_inputs;
 	bool uapi;
+	bool header_mode;
 };
 
 struct vsp1_device {
@@ -84,6 +85,8 @@ struct vsp1_device {
 	struct v4l2_device v4l2_dev;
 	struct media_device media_dev;
 	struct media_entity_operations media_ops;
+
+	bool auto_fld_mode;
 
 	struct vsp1_drm *drm;
 	int index;
