@@ -585,6 +585,14 @@ static void sh_mobile_sdhi_hw_reset(struct tmio_mmc_host *host)
 			~SH_MOBILE_SDHI_SCC_CKSEL_DTSEL &
 			sd_scc_read32(host, SH_MOBILE_SDHI_SCC_CKSEL));
 
+		/* Reset HS400 mode */
+		sd_ctrl_write16(host, CTL_SDIF_MODE, ~0x0001 &
+			sd_ctrl_read16(host, CTL_SDIF_MODE));
+		sd_scc_write32(host, SH_MOBILE_SDHI_SCC_TMPPORT2,
+			~(SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
+			SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
+			sd_scc_read32(host, SH_MOBILE_SDHI_SCC_TMPPORT2));
+
 		sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, 0x0100 |
 			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
 
@@ -756,8 +764,16 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		mmc_data->capabilities |= MMC_CAP_UHS_SDR50;
 	if (of_find_property(np, "sd-uhs-sdr104", NULL))
 		mmc_data->capabilities |= MMC_CAP_UHS_SDR104;
+	if (of_find_property(np, "mmc-hs200-1_8v", NULL))
+		mmc_data->capabilities2 |= MMC_CAP2_HS200_1_8V_SDR;
+	if (of_find_property(np, "mmc-hs400-1_8v", NULL))
+		mmc_data->capabilities2 |= MMC_CAP2_HS400_1_8V |
+					   MMC_CAP2_HS200_1_8V_SDR;
 
-	if (mmc_data->capabilities & MMC_CAP_UHS_SDR104) {
+	if ((mmc_data->capabilities & MMC_CAP_UHS_SDR104) ||
+	    (mmc_data->capabilities2 & MMC_CAP2_HS200_1_8V_SDR) ||
+	    (mmc_data->capabilities2 & (MMC_CAP2_HS400_1_8V |
+					MMC_CAP2_HS200_1_8V_SDR))) {
 		mmc_data->capabilities |= MMC_CAP_HW_RESET;
 		mmc_data->flags |= TMIO_MMC_HAS_UHS_SCC;
 	}
