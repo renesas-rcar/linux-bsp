@@ -153,12 +153,11 @@
 /* setting CSI2 on R-Car Gen3*/
 #define VNCSI_IFMD_REG	0x20	/* Video n CSI2 Interface Mode Register */
 
-#define VNCSI_IFMD_DES2		(1 << 27) /* CSI40/CSI41 Input Data */
-#define VNCSI_IFMD_DES1		(1 << 26) /* CSI20 Input Data) */
-#define VNCSI_IFMD_DES0		(1 << 25) /* CSI21 Input Data) */
+#define VNCSI_IFMD_DES1		(1 << 26) /* CSI20 */
+#define VNCSI_IFMD_DES0		(1 << 25) /* H3:CSI40/41, M3:CSI40 */
 
 #define VNCSI_IFMD_CSI_CHSEL(n)	(n << 0)
-#define VNCSI_IFMD_SEL_NUMBER	6
+#define VNCSI_IFMD_SEL_NUMBER	5
 
 /* UDS */
 #define VNUDS_CTRL_REG		0x80	/* Scaling Control Registers */
@@ -240,36 +239,36 @@ static const struct vin_gen3_ifmd vin_h3_vc_ifmd[] = {
 		{
 			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI40, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI41, RCAR_VIRTUAL_CH1},
 		}
 	},
 	{ 0x0001,
 		{
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 		}
 	},
 	{ 0x0002,
 		{
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI40, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI40, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI41, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI41, RCAR_VIRTUAL_CH0},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
+			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 		}
 	},
 	{ 0x0003,
@@ -294,18 +293,6 @@ static const struct vin_gen3_ifmd vin_h3_vc_ifmd[] = {
 			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH2},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH3},
-		}
-	},
-	{ 0x0005,
-		{
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH2},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH3},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH0},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH1},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH2},
-			{RCAR_CSI21, RCAR_VIRTUAL_CH3},
 		}
 	},
 };
@@ -369,18 +356,6 @@ static const struct vin_gen3_ifmd vin_m3_vc_ifmd[] = {
 			{RCAR_CSI20, RCAR_VIRTUAL_CH1},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH2},
 			{RCAR_CSI20, RCAR_VIRTUAL_CH3},
-		}
-	},
-	{ 0x0005,
-		{
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
-			{RCAR_CSI_CH_NONE, RCAR_VIN_CH_NONE},
 		}
 	},
 };
@@ -1283,31 +1258,36 @@ static irqreturn_t rcar_vin_irq(int irq, void *data)
 		else
 			slot = 0;
 
-		priv->queue_buf[slot]->field = priv->field;
-		priv->queue_buf[slot]->sequence = priv->sequence++;
-		priv->queue_buf[slot]->vb2_buf.timestamp = ktime_get_ns();
-		vb2_buffer_done(&priv->queue_buf[slot]->vb2_buf,
-				VB2_BUF_STATE_DONE);
-		priv->queue_buf[slot] = NULL;
+		if (!is_continuous_transfer(priv) || ((priv->state == RUNNING)
+			&& !list_empty(&priv->capture))) {
+			priv->queue_buf[slot]->field = priv->field;
+			priv->queue_buf[slot]->sequence = priv->sequence++;
+			priv->queue_buf[slot]->vb2_buf.timestamp =
+							 ktime_get_ns();
+			vb2_buffer_done(&priv->queue_buf[slot]->vb2_buf,
+							VB2_BUF_STATE_DONE);
+			priv->queue_buf[slot] = NULL;
 
-		if (priv->state != STOPPING)
 			can_run = rcar_vin_fill_hw_slot(priv);
-
-		if (hw_stopped || !can_run) {
-			priv->state = STOPPED;
-		} else if (is_continuous_transfer(priv) &&
-			   list_empty(&priv->capture) &&
-			   priv->state == RUNNING) {
-			/*
-			 * The continuous capturing requires an explicit stop
-			 * operation when there is no buffer to be set into
-			 * the VnMBm registers.
-			 */
-			rcar_vin_request_capture_stop(priv);
-		} else {
-			rcar_vin_capture(priv);
 		}
 
+		if (is_continuous_transfer(priv)) {
+			if (hw_stopped)
+				priv->state = STOPPED;
+			else if (list_empty(&priv->capture) &&
+				priv->state == RUNNING)
+				/*
+				 * The continuous capturing requires an
+				 * explicit stop operation when there is no
+				 * buffer to be set into the VnMBm registers.
+				 */
+				rcar_vin_request_capture_stop(priv);
+		} else {
+			if (can_run)
+				rcar_vin_capture(priv);
+			else
+				priv->state = STOPPED;
+		}
 	} else if (hw_stopped) {
 		priv->state = STOPPED;
 		priv->request_to_stop = false;
@@ -2688,6 +2668,31 @@ static int rcar_vin_init_videobuf2(struct vb2_queue *vq,
 static int rcar_vin_get_selection(struct soc_camera_device *icd,
 				  struct v4l2_selection *sel)
 {
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
+	struct v4l2_mbus_framefmt *mf = &fmt.format;
+	int ret;
+
+	ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt);
+	if (ret < 0)
+		return ret;
+
+	if (sel->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	switch (sel->target) {
+	case V4L2_SEL_TGT_CROP_BOUNDS:
+	case V4L2_SEL_TGT_CROP_DEFAULT:
+		sel->r.left = sel->r.top = 0;
+		sel->r.width = mf->width;
+		sel->r.height = mf->height;
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
@@ -3122,14 +3127,12 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "csi_ch:%d, vc:%d\n",
 					priv->csi_ch, priv->vc);
 
-		if (priv->chip == RCAR_H3) {
-			ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1 |
-				 VNCSI_IFMD_DES0;
+		ifmd = VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0;
+
+		if (priv->chip == RCAR_H3)
 			gen3_ifmd_table = vin_h3_vc_ifmd;
-		} else if (priv->chip == RCAR_M3) {
-			ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1;
+		else if (priv->chip == RCAR_M3)
 			gen3_ifmd_table = vin_m3_vc_ifmd;
-		}
 
 		for (i = 0; i < num; i++) {
 			if ((gen3_ifmd_table[i].v_sel[priv->index].csi2_ch
