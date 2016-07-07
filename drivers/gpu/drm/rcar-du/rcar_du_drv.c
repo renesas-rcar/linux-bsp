@@ -258,6 +258,8 @@ static void rcar_du_disable_vblank(struct drm_device *dev, unsigned int pipe)
 static const struct drm_ioctl_desc rcar_du_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(DRM_RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
 		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+	DRM_IOCTL_DEF_DRV(DRM_RCAR_DU_SCRSHOT, rcar_du_vsp_write_back,
+		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
 };
 
 static const struct file_operations rcar_du_fops = {
@@ -335,7 +337,7 @@ static int rcar_du_pm_suspend(struct device *dev)
 #endif
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
 		if (rcdu->crtcs[i].started)
-			rcar_du_crtc_suspend(&rcdu->crtcs[i]);
+			rcar_du_crtc_put(&rcdu->crtcs[i]);
 	}
 
 	return 0;
@@ -350,8 +352,8 @@ static int rcar_du_pm_resume(struct device *dev)
 	encoder = NULL;
 
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
-		if (!rcdu->crtcs[i].started)
-			rcar_du_crtc_resume(&rcdu->crtcs[i]);
+		if (rcdu->crtcs[i].started)
+			rcar_du_crtc_get(&rcdu->crtcs[i]);
 	}
 
 #if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
