@@ -196,6 +196,7 @@ static struct ipmmu_vmsa_domain *to_vmsa_domain(struct iommu_domain *dom)
 #define IMPMBD(n)			(0x02c0 + ((n) * 4))
 
 #define IMUCTR(n)			(0x0300 + ((n) * 16))
+#define IMUCTR2(n)			(0x0600 + ((n) * 16))
 #define IMUCTR_FIXADDEN			(1 << 31)
 #define IMUCTR_FIXADD_MASK		(0xff << 16)
 #define IMUCTR_FIXADD_SHIFT		16
@@ -206,6 +207,7 @@ static struct ipmmu_vmsa_domain *to_vmsa_domain(struct iommu_domain *dom)
 #define IMUCTR_MMUEN			(1 << 0)
 
 #define IMUASID(n)			(0x0308 + ((n) * 16))
+#define IMUASID2(n)			(0x0608 + ((n) * 16))
 #define IMUASID_ASID8_MASK		(0xff << 8)
 #define IMUASID_ASID8_SHIFT		8
 #define IMUASID_ASID0_MASK		(0xff << 0)
@@ -315,6 +317,7 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 			      unsigned int utlb)
 {
 	struct ipmmu_vmsa_device *mmu = domain->mmu;
+	unsigned int offset;
 
 	/*
 	 * TODO: Reference-count the microTLB as several bus masters can be
@@ -322,9 +325,12 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 	 */
 
 	/* TODO: What should we set the ASID to ? */
-	ipmmu_write(mmu, IMUASID(utlb), 0);
+	offset = (utlb < 32) ? IMUASID(utlb) : IMUASID2(utlb - 32);
+	ipmmu_write(mmu, offset, 0);
+
 	/* TODO: Do we need to flush the microTLB ? */
-	ipmmu_write(mmu, IMUCTR(utlb),
+	offset = (utlb < 32) ? IMUCTR(utlb) : IMUCTR2(utlb - 32);
+	ipmmu_write(mmu, offset,
 		    IMUCTR_TTSEL_MMU(domain->context_id) | IMUCTR_FLUSH |
 		    IMUCTR_MMUEN);
 }
@@ -336,8 +342,10 @@ static void ipmmu_utlb_disable(struct ipmmu_vmsa_domain *domain,
 			       unsigned int utlb)
 {
 	struct ipmmu_vmsa_device *mmu = domain->mmu;
+	unsigned int offset;
 
-	ipmmu_write(mmu, IMUCTR(utlb), 0);
+	offset = (utlb < 32) ? IMUCTR(utlb) : IMUCTR2(utlb - 32);
+	ipmmu_write(mmu, offset, 0);
 }
 
 static void ipmmu_tlb_flush_all(void *cookie)
