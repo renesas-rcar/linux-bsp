@@ -496,7 +496,7 @@ static int rcar_pcie_enable(struct rcar_pcie *pcie)
 		return -ENODEV;
 	}
 
-	pci_fixup_irqs(pci_common_swizzle, of_irq_parse_and_map_pci);
+	pci_fixup_irqs_local(bus, pci_common_swizzle, of_irq_parse_and_map_pci);
 
 	pci_bus_size_bridges(bus);
 	pci_bus_assign_resources(bus);
