@@ -2615,6 +2615,10 @@
 			status = "disabled";
 		};
 
+		qos@e67e0000 {
+			compatible = "renesas,qos";
+		};
+
 		vsp@fe920000 {
 			compatible = "renesas,vspm-vsp2";
 			reg = <0 0xfe920000 0 0x8000>;
