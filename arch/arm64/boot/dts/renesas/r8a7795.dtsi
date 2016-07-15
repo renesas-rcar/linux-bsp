@@ -1753,7 +1753,7 @@
 			reg = <0 0xfd000000 0 0x3ffff>;
 			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 112>;
-			power-domains = <&sysc R8A7795_PD_3DG>;
+			power-domains = <&sysc R8A7795_PD_3DG_E>;
 		};
 
 		vcplf: vcp4@fe910000 {
