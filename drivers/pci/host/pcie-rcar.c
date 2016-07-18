@@ -798,15 +798,6 @@ static int rcar_pcie_get_resources(struct platform_device *pdev,
 	if (err)
 		return err;
 
-	pcie->clk = devm_clk_get(&pdev->dev, "pcie");
-	if (IS_ERR(pcie->clk)) {
-		dev_err(pcie->dev, "cannot get platform clock\n");
-		return PTR_ERR(pcie->clk);
-	}
-	err = clk_prepare_enable(pcie->clk);
-	if (err)
-		goto fail_clk;
-
 	pcie->bus_clk = devm_clk_get(&pdev->dev, "pcie_bus");
 	if (IS_ERR(pcie->bus_clk)) {
 		dev_err(pcie->dev, "cannot get pcie bus clock\n");
@@ -844,7 +835,6 @@ static int rcar_pcie_get_resources(struct platform_device *pdev,
 err_map_reg:
 	clk_disable_unprepare(pcie->bus_clk);
 fail_clk:
-	clk_disable_unprepare(pcie->clk);
 
 	return err;
 }
@@ -1034,6 +1024,13 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 
 	rcar_pcie_parse_request_of_pci_ranges(pcie);
 
+	pm_runtime_enable(pcie->dev);
+	err = pm_runtime_get_sync(pcie->dev);
+	if (err < 0) {
+		dev_err(pcie->dev, "pm_runtime_get_sync failed\n");
+		goto err_pm_disable;
+	}
+
 	err = rcar_pcie_get_resources(pdev, pcie);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to request resources: %d\n", err);
@@ -1048,13 +1045,6 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 	if (!of_id || !of_id->data)
 		return -EINVAL;
 	hw_init_fn = of_id->data;
-
-	pm_runtime_enable(pcie->dev);
-	err = pm_runtime_get_sync(pcie->dev);
-	if (err < 0) {
-		dev_err(pcie->dev, "pm_runtime_get_sync failed\n");
-		goto err_pm_disable;
-	}
 
 	/* Failure to get a link might just be that no cards are inserted */
 	err = hw_init_fn(pcie);
