@@ -240,6 +240,7 @@ static void sctp_v4_from_skb(union sctp_addr *addr, struct sk_buff *skb,
 	port = &addr->v4.sin_port;
 	addr->v4.sin_family = AF_INET;
 
+	/* Always called on head skb, so this is safe */
 	sh = sctp_hdr(skb);
 	if (is_saddr) {
 		*port  = sh->source;
@@ -1479,7 +1480,8 @@ static __init int sctp_init(void)
 		INIT_HLIST_HEAD(&sctp_port_hashtable[i].chain);
 	}
 
-	if (sctp_transport_hashtable_init())
+	status = sctp_transport_hashtable_init();
+	if (status)
 		goto err_thash_alloc;
 
 	pr_info("Hash tables configured (bind %d/%d)\n", sctp_port_hashsize,
@@ -1515,6 +1517,9 @@ static __init int sctp_init(void)
 	status = sctp_v6_add_protocol();
 	if (status)
 		goto err_v6_add_protocol;
+
+	if (sctp_offload_init() < 0)
+		pr_crit("%s: Cannot add SCTP protocol offload\n", __func__);
 
 out:
 	return status;

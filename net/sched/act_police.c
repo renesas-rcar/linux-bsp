@@ -115,9 +115,9 @@ static const struct nla_policy police_policy[TCA_POLICE_MAX + 1] = {
 	[TCA_POLICE_RESULT]	= { .type = NLA_U32 },
 };
 
-static int tcf_act_police_locate(struct net *net, struct nlattr *nla,
-				 struct nlattr *est, struct tc_action *a,
-				 int ovr, int bind)
+static int tcf_act_police_init(struct net *net, struct nlattr *nla,
+			       struct nlattr *est, struct tc_action *a,
+			       int ovr, int bind)
 {
 	int ret = 0, err;
 	struct nlattr *tb[TCA_POLICE_MAX + 1];
@@ -182,7 +182,8 @@ override:
 	if (est) {
 		err = gen_replace_estimator(&police->tcf_bstats, NULL,
 					    &police->tcf_rate_est,
-					    &police->tcf_lock, est);
+					    &police->tcf_lock,
+					    NULL, est);
 		if (err)
 			goto failure_unlock;
 	} else if (tb[TCA_POLICE_AVRATE] &&
@@ -336,6 +337,7 @@ tcf_act_police_dump(struct sk_buff *skb, struct tc_action *a, int bind, int ref)
 
 	t.install = jiffies_to_clock_t(jiffies - police->tcf_tm.install);
 	t.lastuse = jiffies_to_clock_t(jiffies - police->tcf_tm.lastuse);
+	t.firstuse = jiffies_to_clock_t(jiffies - police->tcf_tm.firstuse);
 	t.expires = jiffies_to_clock_t(police->tcf_tm.expires);
 	if (nla_put_64bit(skb, TCA_POLICE_TM, sizeof(t), &t, TCA_POLICE_PAD))
 		goto nla_put_failure;
@@ -364,7 +366,7 @@ static struct tc_action_ops act_police_ops = {
 	.owner		=	THIS_MODULE,
 	.act		=	tcf_act_police,
 	.dump		=	tcf_act_police_dump,
-	.init		=	tcf_act_police_locate,
+	.init		=	tcf_act_police_init,
 	.walk		=	tcf_act_police_walker,
 	.lookup		=	tcf_police_search,
 };
