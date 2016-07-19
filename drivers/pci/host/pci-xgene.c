@@ -540,14 +540,20 @@ static int xgene_pcie_probe_bridge(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	ret = devm_request_pci_bus_resources(&pdev->dev, &res);
+	if (ret)
+		goto error;
+
 	ret = xgene_pcie_setup(port, &res, iobase);
 	if (ret)
-		return ret;
+		goto error;
 
 	bus = pci_create_root_bus(&pdev->dev, 0,
 					&xgene_pcie_ops, port, &res);
-	if (!bus)
-		return -ENOMEM;
+	if (!bus) {
+		ret = -ENOMEM;
+		goto error;
+	}
 
 	pci_scan_child_bus(bus);
 	pci_assign_unassigned_bus_resources(bus);
@@ -555,6 +561,10 @@ static int xgene_pcie_probe_bridge(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, port);
 	return 0;
+
+error:
+	pci_free_resource_list(&res);
+	return ret;
 }
 
 static const struct of_device_id xgene_pcie_match_table[] = {
