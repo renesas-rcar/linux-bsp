@@ -1,0 +1,333 @@
+fixes
+	<no branch> (929e604efa3dc0522214e0dc18984be23993e9f0)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.7-1
+	<no branch> (eee25ab19de632af1ab4d2ac50bfc5006802e664)
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-fixes-for-4.7
+	<no branch> (b44439e42912b9dcc510a0ff891809ea2cadc46b)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.7-2
+	patch
+		MAINTAINERS: update STM32 maintainers list
+		MAINTAINERS: update STi maintainer list
+		ARM: tegra: beaver: Allow SD card voltage to be changed
+		arm64: dts: Fix RTC by providing rtc_src clock
+
+next/fixes-non-critical
+
+next/cleanup
+	patch
+		ARM: uniphier: drop code for old DT binding
+		ARM: do away with ARCH_[WANT_OPTIONAL|REQUIRE]_GPIOLIB
+	samsung/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-4.8
+	vexpress/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/vexpress-fixes-4.8
+	mvebu/cleanup
+		git://git.infradead.org/linux-mvebu tags/mvebu-cleanup-4.8-1
+	imx/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-cleanup-4.8
+	patch
+		ARM: iop: Fix indentation
+		ARM: s3c64xx: avoid warning about 'struct device_node'
+	tegra/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.8-arm-soc
+
+next/soc
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-for-v4.8
+	at91/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.8-soc
+	brcm/soc
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/soc
+	keystone/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone_for_4.8
+	at91/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.8-soc2
+	davinci/sco
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.8
+	qcom/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-soc-for-4.8
+	patch
+		ARM: uniphier: remove empty DT machine descriptor
+		ARM: tango: add HOTPLUG_CPU support
+		Update ARM/TANGO section
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.8
+	patch
+		ARM: oxnas: Change OX810SE default driver config
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.8/soc-signed
+	samsung/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-4.8-2
+		contains samsung/soc
+	patch
+		ARM: clps711x: Reduce static map size
+		ARM: clps711x: Add basic DT support
+		ARM: clps711x: Remove boards support
+		ARM: clps711x: Switch to MULTIPLATFORM
+	<no branch> (5c34a4e89c743339f78cafb2f2a826a010f0746a)
+		Merge ARCH_[WANT_OPTIONAL|REQUIRE]_GPIOLIB changes into next/soc
+	patch
+		ARM: tango: fix CONFIG_HOTPLUG_CPU=n build
+	renesas/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc2-for-v4.8
+		contains renesas/rcar-sysc
+		contains renesas/rcar-sysc2
+	omap/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.8/soc-pt2-signed
+	hisi/soc
+		git://github.com/hisilicon/linux-hisi tags/hisi-armv7-soc-for-4.8-v3
+	brcm/soc2
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/soc-part2
+	brcm/maintainer
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/maintainers-part2
+	patch
+		ARM: tango: add Suspend-to-RAM support
+		arm: meson: explicitly select clk drivers
+		ARM: davinci: fix build break because of undeclared dm365_evm_snd_data
+	sti/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/pchotard/sti tags/sti-soc-for-v4.8
+	<no branch> (3981b11fda14ea0b459043d97c68db0a614ec9f8)
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-4.8-3
+
+next/arm64
+	patch
+		arm64: defconfig: Enable Cadence MACB/GEM support
+	samsung/soc64
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc64-4.8
+	patch
+		arm64: defconfig: disable plain NEON implementation of AES
+	amlogic/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-soc
+	brcm/arm64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/soc-arm64
+	patch
+		arm64: Kconfig: select PM{,_GENERIC_DOMAINS} for ARCH_VEXPRESS
+		arm64: defconfig: enable stmmac and realtek PHY as modules
+	mvebu/defconfig64
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig64-4.8-1
+	juno/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/juno-defconfig-4.8
+	qcom/defconfig64
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-arm64-defconfig-for-4.8
+	renesas/defconfig64
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.8
+	mvebu/arm64
+		git://git.infradead.org/linux-mvebu tags/mvebu-arm64-4.8-1
+	brcm/arm64-2
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/soc-arm64-part2
+	patch
+		arm64: amlogic: select gxbb clk driver
+	samsung/defconfig64
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig64-4.8
+	tegra/arm64-defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.8-arm64-defconfig
+	patch
+		arm64: remove duplicate PWM entry in defconfig
+
+next/defconfig
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.8
+	at91/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.8-defconfig
+	brcm/defconfig
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/defconfig
+	keystone/config
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone_config_for_4.8
+	socfpga/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_defconfig_updates_for_v4.8
+	qcom/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-defconfig-for-4.8
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.8
+	samsung/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.8-2
+	patch
+		ARM: config: Add a multi_v4t_defconfig
+	rockchip/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v4.8
+	at91/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.8-defconfig2
+	sunxi/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-defconfig-for-4.8
+	patch
+		ARM: configs: lpc18xx: enable adc and dac iio drivers
+	<no branch> (afd9dc4562c5838323a3909cc717a8617307c253)
+		git://git.kernel.org/pub/scm/linux/kernel/git/pchotard/sti tags/sti-defconfig-for-v4.8
+	omap/defconfig-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.8/defconfig-v2-signed
+
+next/drivers
+	reset/for-4.8
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.8
+	samsung/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-4.8
+	renesas/rcar-sysc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-rcar-sysc-for-v4.8
+	at91/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.8-drivers
+	reset/for-4.8-2
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.8-2
+	samsung/mfc
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-exynos-mfc-4.8
+		contains depends/exynos-mfc
+	brcm/drivers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/drivers
+	at91/drivers2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.8-drivers2
+	drivers/scpi
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/scpi-updates-4.8
+	omap/gpmc
+		https://github.com/rogerq/linux tags/gpmc-omap-for-v4.8
+	qcom/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-drivers-for-4.8
+	samsung/drivers2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-4.8-2
+	patch
+		clk: clps711x: Changing the compatibility string to match with the smallest supported chip
+		clocksource: clps711x: Changing the compatibility string to match with the smallest supported chip
+		irqchip: clps711x: Changing the compatibility string to match with the smallest supported chip
+		serial: clps711x: Changing the compatibility string to match with the smallest supported chip
+		pwm: clps711x: Changing the compatibility string to match with the smallest supported chip
+		input: clps711x-keypad: Changing the compatibility string to match with the smallest supported chip
+		video: clps711x-fb: Changing the compatibility string to match with the smallest supported chip
+	renesas/rcar-sysc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-rcar-sysc2-for-v4.8
+	tegra/bus
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.8-bus
+	tegra/memory
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.8-memory
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.8-soc
+	reset/for-4.8-3
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.8-3
+	omap/ir-rx51
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.8/ir-rx51-signed
+	patch
+		firmware: scpi: add CONFIG_OF dependency
+		soc: raspberrypi-power: add CONFIG_OF dependency
+	brcm/maintainer
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/maintainers-part2
+	<no branch> (6c8e99d874c96200ce985d19b407d49ed3306226)
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-drivers-for-4.8-2
+	ux500/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-cleanup-bundle
+	samsung/drivers-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-4.8-3
+
+next/dt
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.8
+	samsung/dt-odroid-xu
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-odroid-xu-4.8
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.8
+	ux500/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-stericsson tags/ux500-dt-asoc-1
+	socfpga/updates
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_updates_v4.8
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.8-dt
+	patch
+		ARM: dts: uniphier: add System Bus pinmux node
+		ARM: dts: uniphier: add SoC-Glue node to UniPhier 32bit SoCs
+		ARM: dts: uniphier: renumber serial aliases for Gentil/Vodka boards
+	amlogic/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt
+	brcm/dt
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/devicetree
+	keystone/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone_dts_for_4.8
+	at91/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.8-dt2
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.8/dt-part1-signed-v2
+	qcom/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-dt-for-4.8
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.8
+	omap/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.8/dt-part2-signed
+	samsung/mfc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-exynos-mfc-4.8-2
+		contains depends/exynos-mfc
+		contains samsung/mfc
+	patch
+		ARM: dts: clps711x: Add DT Cirrus Logic EDB7211 Development board
+	renesas/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v4.8
+	rockchip/dts32
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.8-rockchip-dts32-1
+	tegra/dt-bindings
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.8-dt-bindings
+	patch
+		ARM: dts: Ux500: fix up TVK sensor data
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.8
+	hisi/dt
+		git://github.com/hisilicon/linux-hisi tags/hisi-armv7-soc-dt-for-4.8-v2
+	brcm/dt2
+broadcom/dt2
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/devicetree-part2
+	pxa/dt
+		https://github.com/rjarzmik/linux tags/pxa-dt-4.7
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.8-arm-dt
+	reset/for-4.8-2
+		Merge branch 'reset/for-4.8-2' into next/dt
+		contains reset/for-4.8
+	sti/late
+		git://git.kernel.org/pub/scm/linux/kernel/git/pchotard/sti tags/sti-late-v4.8
+	at91/dt-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux.git tags/at91-ab-4.8-dt3
+
+next/dt64
+	patch
+		arm64: dts: Add dts files for LG Electronics's lg1313 SoC
+	renesas/arm64-dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.8
+	patch
+		arm64: dts: uniphier: add SoC-Glue node to UniPhier 64bit SoCs
+		arm64: dts: uniphier: change cpu-release-address
+		arm64: dts: uniphier: add /memreserve/ for spin-table release address
+	amlogic/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64
+	brcm/dt64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/devicetree-arm64
+	xgene/dts
+		https://github.com/AppliedMicro/xgene-next tags/xgene-dts-for-v4.8-part1
+	qcom/arm64
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-arm64-for-4.8
+	imx/d64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt64-4.8
+	hisi/hi6220-dt
+		git://github.com/hisilicon/linux-hisi tags/hi6220-dt-for-4.8
+	rockchip/dts64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.8-rockchip-dts64-1
+	mediatek/dts
+		https://github.com/mbgg/linux-mediatek tags/v4.7-next-dts
+	mvebu/dt64
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.8-1
+	amlogic/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-2
+	brcm/dt64-2
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.8/devicetree-arm64-part2
+	patch
+		Revert "ARM64: DTS: meson-gxbb: switch ethernet to real clock"
+	renesas/arm64-dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt2-for-v4.8
+	<no branch> (f7b636a8d83c7c1285c55248e35458e03a007df3)
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/juno-dt-4.8
+	samsung/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-4.8-2
+	reset/for-4.8-2
+		Merge branch 'reset/for-4.8-2' into next/dt64
+		contains reset/for-4.8
+	renesas/rcar-sysc
+		Merge branch 'renesas/rcar-sysc' into next/dt64
+	<no branch> (e452b818db48dc2c7edb5afd62de47ae0363aec2)
+		Merge Tegra clk changes into next/dt64
+	hisi/dt-2
+		git://github.com/hisilicon/linux-hisi tags/hi6220-dt-for-4.8-2
+	tegra/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.8-arm64-dt
+
