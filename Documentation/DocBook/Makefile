@@ -14,7 +14,7 @@ DOCBOOKS := z8530book.xml device-drivers.xml \
 	    genericirq.xml s390-drivers.xml uio-howto.xml scsi.xml \
 	    80211.xml debugobjects.xml sh.xml regulator.xml \
 	    alsa-driver-api.xml writing-an-alsa-driver.xml \
-	    tracepoint.xml gpu.xml media_api.xml w1.xml \
+	    tracepoint.xml media_api.xml w1.xml \
 	    writing_musb_glue_layer.xml crypto-API.xml iio.xml
 
 include Documentation/DocBook/media/Makefile
@@ -32,10 +32,6 @@ include Documentation/DocBook/media/Makefile
 PDF_METHOD	= $(prefer-db2x)
 PS_METHOD	= $(prefer-db2x)
 
-
-###
-# The targets that may be used.
-PHONY += xmldocs sgmldocs psdocs pdfdocs htmldocs mandocs installmandocs cleandocs
 
 targets += $(DOCBOOKS)
 BOOKS := $(addprefix $(obj)/,$(DOCBOOKS))
@@ -62,6 +58,9 @@ installmandocs: mandocs
 	find $(obj)/man -name '*.9.gz' -printf '%h %f\n' | \
 		sort -k 2 -k 1 | uniq -f 1 | sed -e 's: :/:' | \
 		xargs install -m 644 -t /usr/local/man/man9/
+
+# no-op for the DocBook toolchain
+epubdocs:
 
 ###
 #External programs used
