@@ -281,7 +281,7 @@ static void sata_dwc_dma_exit_old(struct sata_dwc_device *hsdev)
 
 static const char *get_prot_descript(u8 protocol)
 {
-	switch ((enum ata_tf_protocols)protocol) {
+	switch (protocol) {
 	case ATA_PROT_NODATA:
 		return "ATA no data";
 	case ATA_PROT_PIO:
@@ -290,6 +290,8 @@ static const char *get_prot_descript(u8 protocol)
 		return "ATA DMA";
 	case ATA_PROT_NCQ:
 		return "ATA NCQ";
+	case ATA_PROT_NCQ_NODATA:
+		return "ATA NCQ no data";
 	case ATAPI_PROT_NODATA:
 		return "ATAPI no data";
 	case ATAPI_PROT_PIO:
