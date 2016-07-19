@@ -1081,7 +1081,6 @@ static int airspy_probe(struct usb_interface *intf,
 
 err_free_controls:
 	v4l2_ctrl_handler_free(&s->hdl);
-err_unregister_v4l2_dev:
 	v4l2_device_unregister(&s->v4l2_dev);
 err_free_mem:
 	kfree(s);
