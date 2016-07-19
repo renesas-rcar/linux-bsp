@@ -291,8 +291,8 @@ config ACPI_THERMAL
 config ACPI_NUMA
 	bool "NUMA support"
 	depends on NUMA
-	depends on (X86 || IA64)
-	default y if IA64_GENERIC || IA64_SGI_SN2
+	depends on (X86 || IA64 || ARM64)
+	default y if IA64_GENERIC || IA64_SGI_SN2 || ARM64
 
 config ACPI_CUSTOM_DSDT_FILE
 	string "Custom DSDT Table file to include"
@@ -311,9 +311,12 @@ config ACPI_CUSTOM_DSDT
 	bool
 	default ACPI_CUSTOM_DSDT_FILE != ""
 
+config ARCH_HAS_ACPI_TABLE_UPGRADE
+	def_bool n
+
 config ACPI_TABLE_UPGRADE
 	bool "Allow upgrading ACPI tables via initrd"
-	depends on BLK_DEV_INITRD && X86
+	depends on BLK_DEV_INITRD && ARCH_HAS_ACPI_TABLE_UPGRADE
 	default y
 	help
 	  This option provides functionality to upgrade arbitrary ACPI tables
@@ -519,6 +522,20 @@ config XPOWER_PMIC_OPREGION
 	help
 	  This config adds ACPI operation region support for XPower AXP288 PMIC.
 
+config BXT_WC_PMIC_OPREGION
+	bool "ACPI operation region support for BXT WhiskeyCove PMIC"
+	depends on INTEL_SOC_PMIC
+	help
+	  This config adds ACPI operation region support for BXT WhiskeyCove PMIC.
+
 endif
+
+config ACPI_CONFIGFS
+	tristate "ACPI configfs support"
+	select CONFIGFS_FS
+	help
+	  Select this option to enable support for ACPI configuration from
+	  userspace. The configurable ACPI groups will be visible under
+	  /config/acpi, assuming configfs is mounted under /config.
 
 endif	# ACPI
