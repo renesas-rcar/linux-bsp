@@ -570,7 +570,6 @@ struct fdp1_dev {
 	void __iomem		*regs;
 	unsigned int		irq;
 	struct device		*dev;
-	void			*alloc_ctx;
 
 	/* Job Queues */
 	struct fdp1_job		jobs[FDP1_NUMBER_JOBS];
@@ -1788,7 +1787,8 @@ static const struct v4l2_ioctl_ops fdp1_ioctl_ops = {
 
 static int fdp1_queue_setup(struct vb2_queue *vq,
 				unsigned int *nbuffers, unsigned int *nplanes,
-				unsigned int sizes[], void *alloc_ctxs[])
+				unsigned int sizes[],
+				struct device *alloc_ctxs[])
 {
 	struct fdp1_ctx *ctx = vb2_get_drv_priv(vq);
 	struct fdp1_q_data *q_data;
@@ -1800,18 +1800,13 @@ static int fdp1_queue_setup(struct vb2_queue *vq,
 		if (*nplanes > FDP1_MAX_PLANES)
 			return -EINVAL;
 
-		for (i = 0; i < *nplanes; i++)
-			alloc_ctxs[i] = ctx->fdp1->alloc_ctx;
-
 		return 0;
 	}
 
 	*nplanes = q_data->format.num_planes;
 
-	for (i = 0; i < *nplanes; i++) {
+	for (i = 0; i < *nplanes; i++)
 		sizes[i] = q_data->format.plane_fmt[i].sizeimage;
-		alloc_ctxs[i] = ctx->fdp1->alloc_ctx;
-	}
 
 	return 0;
 }
@@ -1992,6 +1987,7 @@ static int queue_init(void *priv, struct vb2_queue *src_vq,
 	src_vq->mem_ops = &vb2_dma_contig_memops;
 	src_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	src_vq->lock = &ctx->fdp1->dev_mutex;
+	src_vq->dev = ctx->fdp1->dev;
 
 	ret = vb2_queue_init(src_vq);
 	if (ret)
@@ -2005,6 +2001,7 @@ static int queue_init(void *priv, struct vb2_queue *src_vq,
 	dst_vq->mem_ops = &vb2_dma_contig_memops;
 	dst_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	dst_vq->lock = &ctx->fdp1->dev_mutex;
+	dst_vq->dev = ctx->fdp1->dev;
 
 	return vb2_queue_init(dst_vq);
 }
@@ -2260,18 +2257,11 @@ static int fdp1_probe(struct platform_device *pdev)
 	fdp1->clk_rate = clk_get_rate(clk);
 	clk_put(clk);
 
-	/* Memory allocation contexts */
-	fdp1->alloc_ctx = vb2_dma_contig_init_ctx(&pdev->dev);
-	if (IS_ERR(fdp1->alloc_ctx)) {
-		v4l2_err(&fdp1->v4l2_dev, "Failed to init memory allocator\n");
-		return PTR_ERR(fdp1->alloc_ctx);
-	}
-
 	/* V4L2 device registration */
 	ret = v4l2_device_register(&pdev->dev, &fdp1->v4l2_dev);
 	if (ret) {
 		v4l2_err(&fdp1->v4l2_dev, "Failed to register video device\n");
-		goto vb2_allocator_rollback;
+		return ret;
 	}
 
 	/* M2M registration */
@@ -2327,9 +2317,6 @@ release_m2m:
 unreg_dev:
 	v4l2_device_unregister(&fdp1->v4l2_dev);
 
-vb2_allocator_rollback:
-	vb2_dma_contig_cleanup_ctx(fdp1->alloc_ctx);
-
 	return ret;
 }
 
@@ -2340,7 +2327,6 @@ static int fdp1_remove(struct platform_device *pdev)
 	v4l2_m2m_release(fdp1->m2m_dev);
 	video_unregister_device(&fdp1->vfd);
 	v4l2_device_unregister(&fdp1->v4l2_dev);
-	vb2_dma_contig_cleanup_ctx(fdp1->alloc_ctx);
 	pm_runtime_disable(&pdev->dev);
 
 	return 0;
