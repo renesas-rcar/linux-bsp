@@ -910,7 +910,7 @@ static int __s5k6aa_stream(struct s5k6aa *s5k6aa, int enable)
 	return ret;
 }
 
-static int s5k6aa_s_stream(struct v4l2_subdev *sd, int on)
+static int s5k6aa_s_stream(struct v4l2_subdev *sd, unsigned int pad, int on)
 {
 	struct s5k6aa *s5k6aa = to_s5k6aa(sd);
 	int ret = 0;
@@ -1234,12 +1234,12 @@ static const struct v4l2_subdev_pad_ops s5k6aa_pad_ops = {
 	.set_fmt		= s5k6aa_set_fmt,
 	.get_selection		= s5k6aa_get_selection,
 	.set_selection		= s5k6aa_set_selection,
+	.s_stream		= s5k6aa_s_stream,
 };
 
 static const struct v4l2_subdev_video_ops s5k6aa_video_ops = {
 	.g_frame_interval	= s5k6aa_g_frame_interval,
 	.s_frame_interval	= s5k6aa_s_frame_interval,
-	.s_stream		= s5k6aa_s_stream,
 };
 
 /*

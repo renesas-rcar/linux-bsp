@@ -2016,7 +2016,7 @@ static int vpfe_start_streaming(struct vb2_queue *vq, unsigned int count)
 
 	vpfe_pcr_enable(&vpfe->ccdc, 1);
 
-	ret = v4l2_subdev_call(sdinfo->sd, video, s_stream, 1);
+	ret = v4l2_subdev_call(sdinfo->sd, pad, s_stream, 0, 1);
 	if (ret < 0) {
 		vpfe_err(vpfe, "Error in attaching interrupt handle\n");
 		goto err;
@@ -2052,7 +2052,7 @@ static void vpfe_stop_streaming(struct vb2_queue *vq)
 	vpfe_detach_irq(vpfe);
 
 	sdinfo = vpfe->current_subdev;
-	ret = v4l2_subdev_call(sdinfo->sd, video, s_stream, 0);
+	ret = v4l2_subdev_call(sdinfo->sd, pad, s_stream, 0, 0);
 	if (ret && ret != -ENOIOCTLCMD && ret != -ENODEV)
 		vpfe_dbg(1, vpfe, "stream off failed in subdev\n");
 

@@ -455,7 +455,8 @@ static int __s5c73m3_s_stream(struct s5c73m3 *state, struct v4l2_subdev *sd,
 	return s5c73m3_check_status(state, REG_STATUS_ISP_COMMAND_COMPLETED);
 }
 
-static int s5c73m3_oif_s_stream(struct v4l2_subdev *sd, int on)
+static int s5c73m3_oif_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+				int on)
 {
 	struct s5c73m3 *state = oif_sd_to_s5c73m3(sd);
 	int ret;
@@ -1528,6 +1529,7 @@ static const struct v4l2_subdev_pad_ops s5c73m3_oif_pad_ops = {
 	.set_fmt		= s5c73m3_oif_set_fmt,
 	.get_frame_desc		= s5c73m3_oif_get_frame_desc,
 	.set_frame_desc		= s5c73m3_oif_set_frame_desc,
+	.s_stream		= s5c73m3_oif_s_stream,
 };
 
 static const struct v4l2_subdev_core_ops s5c73m3_oif_core_ops = {
@@ -1536,7 +1538,6 @@ static const struct v4l2_subdev_core_ops s5c73m3_oif_core_ops = {
 };
 
 static const struct v4l2_subdev_video_ops s5c73m3_oif_video_ops = {
-	.s_stream		= s5c73m3_oif_s_stream,
 	.g_frame_interval	= s5c73m3_oif_g_frame_interval,
 	.s_frame_interval	= s5c73m3_oif_s_frame_interval,
 };

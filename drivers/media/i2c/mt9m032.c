@@ -536,7 +536,8 @@ done:
 	return ret;
 }
 
-static int mt9m032_s_stream(struct v4l2_subdev *subdev, int streaming)
+static int mt9m032_s_stream(struct v4l2_subdev *subdev, unsigned int pad,
+			    int streaming)
 {
 	struct mt9m032 *sensor = to_mt9m032(subdev);
 	int ret;
@@ -686,7 +687,6 @@ static const struct v4l2_subdev_core_ops mt9m032_core_ops = {
 };
 
 static const struct v4l2_subdev_video_ops mt9m032_video_ops = {
-	.s_stream = mt9m032_s_stream,
 	.g_frame_interval = mt9m032_get_frame_interval,
 	.s_frame_interval = mt9m032_set_frame_interval,
 };
@@ -698,6 +698,7 @@ static const struct v4l2_subdev_pad_ops mt9m032_pad_ops = {
 	.set_fmt = mt9m032_set_pad_format,
 	.set_selection = mt9m032_set_pad_selection,
 	.get_selection = mt9m032_get_pad_selection,
+	.s_stream = mt9m032_s_stream,
 };
 
 static const struct v4l2_subdev_ops mt9m032_ops = {

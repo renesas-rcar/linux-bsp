@@ -502,7 +502,8 @@ static int ov9740_reg_write_array(struct i2c_client *client,
 }
 
 /* Start/Stop streaming from the device */
-static int ov9740_s_stream(struct v4l2_subdev *sd, int enable)
+static int ov9740_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov9740_priv *priv = to_ov9740(sd);
@@ -796,11 +797,11 @@ static int ov9740_s_power(struct v4l2_subdev *sd, int on)
 
 		if (priv->current_enable) {
 			ov9740_s_fmt(sd, &priv->current_mf);
-			ov9740_s_stream(sd, 1);
+			ov9740_s_stream(sd, 0, 1);
 		}
 	} else {
 		if (priv->current_enable) {
-			ov9740_s_stream(sd, 0);
+			ov9740_s_stream(sd, 0, 0);
 			priv->current_enable = true;
 		}
 
@@ -913,7 +914,6 @@ static int ov9740_g_mbus_config(struct v4l2_subdev *sd,
 }
 
 static struct v4l2_subdev_video_ops ov9740_video_ops = {
-	.s_stream	= ov9740_s_stream,
 	.cropcap	= ov9740_cropcap,
 	.g_crop		= ov9740_g_crop,
 	.g_mbus_config	= ov9740_g_mbus_config,
@@ -930,6 +930,7 @@ static struct v4l2_subdev_core_ops ov9740_core_ops = {
 static const struct v4l2_subdev_pad_ops ov9740_pad_ops = {
 	.enum_mbus_code = ov9740_enum_mbus_code,
 	.set_fmt	= ov9740_set_fmt,
+	.s_stream	= ov9740_s_stream,
 };
 
 static struct v4l2_subdev_ops ov9740_subdev_ops = {

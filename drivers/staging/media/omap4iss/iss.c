@@ -404,7 +404,7 @@ static int iss_pipeline_disable(struct iss_pipeline *pipe,
 			break;
 
 		subdev = media_entity_to_v4l2_subdev(entity);
-		ret = v4l2_subdev_call(subdev, video, s_stream, 0);
+		ret = v4l2_subdev_call(subdev, pad, s_stream, 0, 0);
 		if (ret < 0) {
 			dev_warn(iss->dev, "%s: module stop timeout.\n",
 				 subdev->name);
@@ -469,7 +469,7 @@ static int iss_pipeline_enable(struct iss_pipeline *pipe,
 		entity = pad->entity;
 		subdev = media_entity_to_v4l2_subdev(entity);
 
-		ret = v4l2_subdev_call(subdev, video, s_stream, mode);
+		ret = v4l2_subdev_call(subdev, pad, s_stream, 0, mode);
 		if (ret < 0 && ret != -ENOIOCTLCMD) {
 			iss_pipeline_disable(pipe, entity);
 			return ret;

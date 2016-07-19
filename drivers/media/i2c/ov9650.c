@@ -1317,7 +1317,7 @@ static int __ov965x_set_params(struct ov965x *ov965x)
 	return ov965x_set_banding_filter(ov965x, ctrls->light_freq->val);
 }
 
-static int ov965x_s_stream(struct v4l2_subdev *sd, int on)
+static int ov965x_s_stream(struct v4l2_subdev *sd, unsigned int pad, int on)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov965x *ov965x = to_ov965x(sd);
@@ -1372,10 +1372,10 @@ static const struct v4l2_subdev_pad_ops ov965x_pad_ops = {
 	.enum_frame_size = ov965x_enum_frame_sizes,
 	.get_fmt = ov965x_get_fmt,
 	.set_fmt = ov965x_set_fmt,
+	.s_stream = ov965x_s_stream,
 };
 
 static const struct v4l2_subdev_video_ops ov965x_video_ops = {
-	.s_stream = ov965x_s_stream,
 	.g_frame_interval = ov965x_g_frame_interval,
 	.s_frame_interval = ov965x_s_frame_interval,
 

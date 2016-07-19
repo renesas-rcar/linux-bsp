@@ -574,7 +574,8 @@ static const struct v4l2_subdev_core_ops ad9389b_core_ops = {
 /* ------------------------------ VIDEO OPS ------------------------------ */
 
 /* Enable/disable ad9389b output */
-static int ad9389b_s_stream(struct v4l2_subdev *sd, int enable)
+static int ad9389b_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	v4l2_dbg(1, debug, sd, "%s: %sable\n", __func__, (enable ? "en" : "dis"));
 
@@ -667,7 +668,6 @@ static int ad9389b_dv_timings_cap(struct v4l2_subdev *sd,
 }
 
 static const struct v4l2_subdev_video_ops ad9389b_video_ops = {
-	.s_stream = ad9389b_s_stream,
 	.s_dv_timings = ad9389b_s_dv_timings,
 	.g_dv_timings = ad9389b_g_dv_timings,
 };
@@ -699,6 +699,7 @@ static const struct v4l2_subdev_pad_ops ad9389b_pad_ops = {
 	.get_edid = ad9389b_get_edid,
 	.enum_dv_timings = ad9389b_enum_dv_timings,
 	.dv_timings_cap = ad9389b_dv_timings_cap,
+	.s_stream = ad9389b_s_stream,
 };
 
 /* ------------------------------ AUDIO OPS ------------------------------ */
@@ -1208,7 +1209,7 @@ static int ad9389b_remove(struct i2c_client *client)
 	v4l2_dbg(1, debug, sd, "%s removed @ 0x%x (%s)\n", client->name,
 		 client->addr << 1, client->adapter->name);
 
-	ad9389b_s_stream(sd, false);
+	ad9389b_s_stream(sd, 0, false);
 	ad9389b_s_audio_stream(sd, false);
 	ad9389b_init_setup(sd);
 	cancel_delayed_work(&state->edid_handler);

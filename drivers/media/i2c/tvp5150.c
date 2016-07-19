@@ -1046,7 +1046,8 @@ static const struct media_entity_operations tvp5150_sd_media_ops = {
 			I2C Command
  ****************************************************************************/
 
-static int tvp5150_s_stream(struct v4l2_subdev *sd, int enable)
+static int tvp5150_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct tvp5150 *decoder = to_tvp5150(sd);
 	/* Output format: 8-bit ITU-R BT.656 with embedded syncs */
@@ -1231,7 +1232,6 @@ static const struct v4l2_subdev_tuner_ops tvp5150_tuner_ops = {
 
 static const struct v4l2_subdev_video_ops tvp5150_video_ops = {
 	.s_std = tvp5150_s_std,
-	.s_stream = tvp5150_s_stream,
 	.s_routing = tvp5150_s_routing,
 	.s_crop = tvp5150_s_crop,
 	.g_crop = tvp5150_g_crop,
@@ -1251,6 +1251,7 @@ static const struct v4l2_subdev_pad_ops tvp5150_pad_ops = {
 	.enum_frame_size = tvp5150_enum_frame_size,
 	.set_fmt = tvp5150_fill_fmt,
 	.get_fmt = tvp5150_fill_fmt,
+	.s_stream = tvp5150_s_stream,
 };
 
 static const struct v4l2_subdev_ops tvp5150_ops = {

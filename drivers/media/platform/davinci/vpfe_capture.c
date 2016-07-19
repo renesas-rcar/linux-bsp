@@ -725,8 +725,8 @@ static int vpfe_release(struct file *file)
 		if (vpfe_dev->started) {
 			sdinfo = vpfe_dev->current_subdev;
 			ret = v4l2_device_call_until_err(&vpfe_dev->v4l2_dev,
-							 sdinfo->grp_id,
-							 video, s_stream, 0);
+							 sdinfo->grp_id, pad,
+							 s_stream, 0, 0);
 			if (ret && (ret != -ENOIOCTLCMD))
 				v4l2_err(&vpfe_dev->v4l2_dev,
 				"stream off failed in subdev\n");
@@ -1498,7 +1498,7 @@ static int vpfe_streamon(struct file *file, void *priv,
 
 	sdinfo = vpfe_dev->current_subdev;
 	ret = v4l2_device_call_until_err(&vpfe_dev->v4l2_dev, sdinfo->grp_id,
-					video, s_stream, 1);
+					 pad, s_stream, 0, 1);
 
 	if (ret && (ret != -ENOIOCTLCMD)) {
 		v4l2_err(&vpfe_dev->v4l2_dev, "stream on failed in subdev\n");
@@ -1594,7 +1594,7 @@ static int vpfe_streamoff(struct file *file, void *priv,
 
 	sdinfo = vpfe_dev->current_subdev;
 	ret = v4l2_device_call_until_err(&vpfe_dev->v4l2_dev, sdinfo->grp_id,
-					video, s_stream, 0);
+					 pad, s_stream, 0, 0);
 
 	if (ret && (ret != -ENOIOCTLCMD))
 		v4l2_err(&vpfe_dev->v4l2_dev, "stream off failed in subdev\n");

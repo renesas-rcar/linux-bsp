@@ -118,7 +118,7 @@ static int xvip_pipeline_start_stop(struct xvip_pipeline *pipe, bool start)
 		entity = pad->entity;
 		subdev = media_entity_to_v4l2_subdev(entity);
 
-		ret = v4l2_subdev_call(subdev, video, s_stream, start);
+		ret = v4l2_subdev_call(subdev, pad, s_stream, 0, start);
 		if (start && ret < 0 && ret != -ENOIOCTLCMD)
 			return ret;
 	}

@@ -338,13 +338,13 @@ static const struct v4l2_subdev_core_ops h3a_af_subdev_core_ops = {
 	.unsubscribe_event = omap3isp_stat_unsubscribe_event,
 };
 
-static const struct v4l2_subdev_video_ops h3a_af_subdev_video_ops = {
+static const struct v4l2_subdev_pad_ops h3a_af_subdev_pad_ops = {
 	.s_stream = omap3isp_stat_s_stream,
 };
 
 static const struct v4l2_subdev_ops h3a_af_subdev_ops = {
 	.core = &h3a_af_subdev_core_ops,
-	.video = &h3a_af_subdev_video_ops,
+	.pad = &h3a_af_subdev_pad_ops,
 };
 
 /* Function to register the AF character device driver. */

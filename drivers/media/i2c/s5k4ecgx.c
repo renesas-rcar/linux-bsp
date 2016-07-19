@@ -616,10 +616,98 @@ static int s5k4ecgx_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_pad_confi
 	return ret;
 }
 
+static int __s5k4ecgx_s_params(struct s5k4ecgx *priv)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&priv->sd);
+	const struct v4l2_rect *crop_rect = &priv->curr_frmsize->input_window;
+	int ret;
+
+	ret = s5k4ecgx_set_input_window(client, crop_rect);
+	if (!ret)
+		ret = s5k4ecgx_set_zoom_window(client, crop_rect);
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_G_INPUTS_CHANGE_REQ, 1);
+	if (!ret)
+		ret = s5k4ecgx_write(client, 0x70000a1e, 0x28);
+	if (!ret)
+		ret = s5k4ecgx_write(client, 0x70000ad4, 0x3c);
+	if (!ret)
+		ret = s5k4ecgx_set_output_framefmt(priv);
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_P_PVI_MASK(0), 0x52);
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_P_FR_TIME_TYPE(0),
+				     FR_TIME_DYNAMIC);
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_P_FR_TIME_Q_TYPE(0),
+				     FR_TIME_Q_BEST_FRRATE);
+	if (!ret)
+		ret = s5k4ecgx_write(client,  REG_P_MIN_FR_TIME(0),
+				     US_TO_FR_TIME(33300));
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_P_MAX_FR_TIME(0),
+				     US_TO_FR_TIME(66600));
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_P_PREV_MIRROR(0), 0);
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_P_CAP_MIRROR(0), 0);
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_G_ACTIVE_PREV_CFG, 0);
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_G_PREV_OPEN_AFTER_CH, 1);
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_G_NEW_CFG_SYNC, 1);
+	if (!ret)
+		ret = s5k4ecgx_write(client, REG_G_PREV_CFG_CHG, 1);
+
+	return ret;
+}
+
+static int __s5k4ecgx_s_stream(struct s5k4ecgx *priv, int on)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&priv->sd);
+	int ret;
+
+	if (on && priv->set_params) {
+		ret = __s5k4ecgx_s_params(priv);
+		if (ret < 0)
+			return ret;
+		priv->set_params = 0;
+	}
+	/*
+	 * This enables/disables preview stream only. Capture requests
+	 * are not supported yet.
+	 */
+	ret = s5k4ecgx_write(client, REG_G_ENABLE_PREV, on);
+	if (ret < 0)
+		return ret;
+	return s5k4ecgx_write(client, REG_G_ENABLE_PREV_CHG, 1);
+}
+
+static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, unsigned int pad, int on)
+{
+	struct s5k4ecgx *priv = to_s5k4ecgx(sd);
+	int ret = 0;
+
+	v4l2_dbg(1, debug, sd, "Turn streaming %s\n", on ? "on" : "off");
+
+	mutex_lock(&priv->lock);
+
+	if (priv->streaming == !on) {
+		ret = __s5k4ecgx_s_stream(priv, on);
+		if (!ret)
+			priv->streaming = on & 1;
+	}
+
+	mutex_unlock(&priv->lock);
+	return ret;
+}
+
 static const struct v4l2_subdev_pad_ops s5k4ecgx_pad_ops = {
 	.enum_mbus_code	= s5k4ecgx_enum_mbus_code,
 	.get_fmt	= s5k4ecgx_get_fmt,
 	.set_fmt	= s5k4ecgx_set_fmt,
+	.s_stream	= s5k4ecgx_s_stream,
 };
 
 /*
@@ -745,101 +833,9 @@ static const struct v4l2_subdev_core_ops s5k4ecgx_core_ops = {
 	.log_status	= s5k4ecgx_log_status,
 };
 
-static int __s5k4ecgx_s_params(struct s5k4ecgx *priv)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(&priv->sd);
-	const struct v4l2_rect *crop_rect = &priv->curr_frmsize->input_window;
-	int ret;
-
-	ret = s5k4ecgx_set_input_window(client, crop_rect);
-	if (!ret)
-		ret = s5k4ecgx_set_zoom_window(client, crop_rect);
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_G_INPUTS_CHANGE_REQ, 1);
-	if (!ret)
-		ret = s5k4ecgx_write(client, 0x70000a1e, 0x28);
-	if (!ret)
-		ret = s5k4ecgx_write(client, 0x70000ad4, 0x3c);
-	if (!ret)
-		ret = s5k4ecgx_set_output_framefmt(priv);
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_P_PVI_MASK(0), 0x52);
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_P_FR_TIME_TYPE(0),
-				     FR_TIME_DYNAMIC);
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_P_FR_TIME_Q_TYPE(0),
-				     FR_TIME_Q_BEST_FRRATE);
-	if (!ret)
-		ret = s5k4ecgx_write(client,  REG_P_MIN_FR_TIME(0),
-				     US_TO_FR_TIME(33300));
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_P_MAX_FR_TIME(0),
-				     US_TO_FR_TIME(66600));
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_P_PREV_MIRROR(0), 0);
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_P_CAP_MIRROR(0), 0);
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_G_ACTIVE_PREV_CFG, 0);
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_G_PREV_OPEN_AFTER_CH, 1);
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_G_NEW_CFG_SYNC, 1);
-	if (!ret)
-		ret = s5k4ecgx_write(client, REG_G_PREV_CFG_CHG, 1);
-
-	return ret;
-}
-
-static int __s5k4ecgx_s_stream(struct s5k4ecgx *priv, int on)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(&priv->sd);
-	int ret;
-
-	if (on && priv->set_params) {
-		ret = __s5k4ecgx_s_params(priv);
-		if (ret < 0)
-			return ret;
-		priv->set_params = 0;
-	}
-	/*
-	 * This enables/disables preview stream only. Capture requests
-	 * are not supported yet.
-	 */
-	ret = s5k4ecgx_write(client, REG_G_ENABLE_PREV, on);
-	if (ret < 0)
-		return ret;
-	return s5k4ecgx_write(client, REG_G_ENABLE_PREV_CHG, 1);
-}
-
-static int s5k4ecgx_s_stream(struct v4l2_subdev *sd, int on)
-{
-	struct s5k4ecgx *priv = to_s5k4ecgx(sd);
-	int ret = 0;
-
-	v4l2_dbg(1, debug, sd, "Turn streaming %s\n", on ? "on" : "off");
-
-	mutex_lock(&priv->lock);
-
-	if (priv->streaming == !on) {
-		ret = __s5k4ecgx_s_stream(priv, on);
-		if (!ret)
-			priv->streaming = on & 1;
-	}
-
-	mutex_unlock(&priv->lock);
-	return ret;
-}
-
-static const struct v4l2_subdev_video_ops s5k4ecgx_video_ops = {
-	.s_stream = s5k4ecgx_s_stream,
-};
-
 static const struct v4l2_subdev_ops s5k4ecgx_ops = {
 	.core = &s5k4ecgx_core_ops,
 	.pad = &s5k4ecgx_pad_ops,
-	.video = &s5k4ecgx_video_ops,
 };
 
 /*

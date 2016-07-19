@@ -990,7 +990,7 @@ static int soc_camera_streamon(struct file *file, void *priv,
 		ret = vb2_streamon(&icd->vb2_vidq, i);
 
 	if (!ret)
-		v4l2_subdev_call(sd, video, s_stream, 1);
+		v4l2_subdev_call(sd, pad, s_stream, 0, 1);
 
 	return ret;
 }
@@ -1020,7 +1020,7 @@ static int soc_camera_streamoff(struct file *file, void *priv,
 	else
 		ret = vb2_streamoff(&icd->vb2_vidq, i);
 
-	v4l2_subdev_call(sd, video, s_stream, 0);
+	v4l2_subdev_call(sd, pad, s_stream, 0, 0);
 
 	return ret;
 }

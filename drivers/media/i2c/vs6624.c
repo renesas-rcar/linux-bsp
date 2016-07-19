@@ -705,7 +705,8 @@ static int vs6624_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *parms)
 	return 0;
 }
 
-static int vs6624_s_stream(struct v4l2_subdev *sd, int enable)
+static int vs6624_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	if (enable)
 		vs6624_write(sd, VS6624_USER_CMD, 0x2);
@@ -744,13 +745,13 @@ static const struct v4l2_subdev_core_ops vs6624_core_ops = {
 static const struct v4l2_subdev_video_ops vs6624_video_ops = {
 	.s_parm = vs6624_s_parm,
 	.g_parm = vs6624_g_parm,
-	.s_stream = vs6624_s_stream,
 };
 
 static const struct v4l2_subdev_pad_ops vs6624_pad_ops = {
 	.enum_mbus_code = vs6624_enum_mbus_code,
 	.get_fmt = vs6624_get_fmt,
 	.set_fmt = vs6624_set_fmt,
+	.s_stream = vs6624_s_stream,
 };
 
 static const struct v4l2_subdev_ops vs6624_ops = {

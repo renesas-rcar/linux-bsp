@@ -239,7 +239,8 @@ static int mt9v022_init(struct i2c_client *client)
 	return ret;
 }
 
-static int mt9v022_s_stream(struct v4l2_subdev *sd, int enable)
+static int mt9v022_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct mt9v022 *mt9v022 = to_mt9v022(client);
@@ -852,7 +853,6 @@ static int mt9v022_s_mbus_config(struct v4l2_subdev *sd,
 }
 
 static struct v4l2_subdev_video_ops mt9v022_subdev_video_ops = {
-	.s_stream	= mt9v022_s_stream,
 	.s_crop		= mt9v022_s_crop,
 	.g_crop		= mt9v022_g_crop,
 	.cropcap	= mt9v022_cropcap,
@@ -868,6 +868,7 @@ static const struct v4l2_subdev_pad_ops mt9v022_subdev_pad_ops = {
 	.enum_mbus_code = mt9v022_enum_mbus_code,
 	.get_fmt	= mt9v022_get_fmt,
 	.set_fmt	= mt9v022_set_fmt,
+	.s_stream	= mt9v022_s_stream,
 };
 
 static struct v4l2_subdev_ops mt9v022_subdev_ops = {

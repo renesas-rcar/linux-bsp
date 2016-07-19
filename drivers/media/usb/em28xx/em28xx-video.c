@@ -1107,7 +1107,7 @@ int em28xx_start_analog_streaming(struct vb2_queue *vq, unsigned int count)
 				     0, tuner, s_frequency, &f);
 
 		/* Enable video stream at TV decoder */
-		v4l2_device_call_all(&v4l2->v4l2_dev, 0, video, s_stream, 1);
+		v4l2_device_call_all(&v4l2->v4l2_dev, 0, pad, s_stream, 0, 1);
 	}
 
 	v4l2->streaming_users++;
@@ -1128,7 +1128,7 @@ static void em28xx_stop_streaming(struct vb2_queue *vq)
 
 	if (v4l2->streaming_users-- == 1) {
 		/* Disable video stream at TV decoder */
-		v4l2_device_call_all(&v4l2->v4l2_dev, 0, video, s_stream, 0);
+		v4l2_device_call_all(&v4l2->v4l2_dev, 0, pad, s_stream, 0, 0);
 
 		/* Last active user, so shutdown all the URBS */
 		em28xx_uninit_usb_xfer(dev, EM28XX_ANALOG_MODE);
@@ -1163,7 +1163,7 @@ void em28xx_stop_vbi_streaming(struct vb2_queue *vq)
 
 	if (v4l2->streaming_users-- == 1) {
 		/* Disable video stream at TV decoder */
-		v4l2_device_call_all(&v4l2->v4l2_dev, 0, video, s_stream, 0);
+		v4l2_device_call_all(&v4l2->v4l2_dev, 0, pad, s_stream, 0, 0);
 
 		/* Last active user, so shutdown all the URBS */
 		em28xx_uninit_usb_xfer(dev, EM28XX_ANALOG_MODE);

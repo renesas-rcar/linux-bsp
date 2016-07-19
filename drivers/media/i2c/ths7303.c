@@ -183,7 +183,8 @@ static int ths7303_config(struct v4l2_subdev *sd)
 
 }
 
-static int ths7303_s_stream(struct v4l2_subdev *sd, int enable)
+static int ths7303_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct ths7303_state *state = to_state(sd);
 
@@ -208,9 +209,13 @@ static int ths7303_s_dv_timings(struct v4l2_subdev *sd,
 }
 
 static const struct v4l2_subdev_video_ops ths7303_video_ops = {
-	.s_stream	= ths7303_s_stream,
 	.s_std_output	= ths7303_s_std_output,
 	.s_dv_timings   = ths7303_s_dv_timings,
+};
+
+
+static const struct v4l2_subdev_pad_ops ths7303_pad_ops = {
+	.s_stream       = ths7303_s_stream,
 };
 
 #ifdef CONFIG_VIDEO_ADV_DEBUG
@@ -320,6 +325,7 @@ static const struct v4l2_subdev_core_ops ths7303_core_ops = {
 static const struct v4l2_subdev_ops ths7303_ops = {
 	.core	= &ths7303_core_ops,
 	.video 	= &ths7303_video_ops,
+	.pad	= &ths7303_pad_ops,
 };
 
 static int ths7303_probe(struct i2c_client *client,

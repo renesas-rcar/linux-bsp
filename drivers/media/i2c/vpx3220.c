@@ -412,7 +412,8 @@ static int vpx3220_s_routing(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int vpx3220_s_stream(struct v4l2_subdev *sd, int enable)
+static int vpx3220_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	v4l2_dbg(1, debug, sd, "s_stream %s\n", enable ? "on" : "off");
 
@@ -455,14 +456,18 @@ static const struct v4l2_subdev_core_ops vpx3220_core_ops = {
 static const struct v4l2_subdev_video_ops vpx3220_video_ops = {
 	.s_std = vpx3220_s_std,
 	.s_routing = vpx3220_s_routing,
-	.s_stream = vpx3220_s_stream,
 	.querystd = vpx3220_querystd,
 	.g_input_status = vpx3220_g_input_status,
+};
+
+static const struct v4l2_subdev_pad_ops vpx3220_pad_ops = {
+	.s_stream = vpx3220_s_stream,
 };
 
 static const struct v4l2_subdev_ops vpx3220_ops = {
 	.core = &vpx3220_core_ops,
 	.video = &vpx3220_video_ops,
+	.pad = &vpx3220_pad_ops,
 };
 
 /* -----------------------------------------------------------------------

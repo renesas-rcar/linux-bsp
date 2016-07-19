@@ -923,16 +923,16 @@ static int ivtvfb_blank(int blank_mode, struct fb_info *info)
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
 		ivtv_vapi(itv, CX2341X_OSD_SET_STATE, 1, 1);
-		ivtv_call_hw(itv, IVTV_HW_SAA7127, video, s_stream, 1);
+		ivtv_call_hw(itv, IVTV_HW_SAA7127, pad, s_stream, 0, 1);
 		break;
 	case FB_BLANK_NORMAL:
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_VSYNC_SUSPEND:
 		ivtv_vapi(itv, CX2341X_OSD_SET_STATE, 1, 0);
-		ivtv_call_hw(itv, IVTV_HW_SAA7127, video, s_stream, 1);
+		ivtv_call_hw(itv, IVTV_HW_SAA7127, pad, s_stream, 0, 1);
 		break;
 	case FB_BLANK_POWERDOWN:
-		ivtv_call_hw(itv, IVTV_HW_SAA7127, video, s_stream, 0);
+		ivtv_call_hw(itv, IVTV_HW_SAA7127, pad, s_stream, 0, 0);
 		ivtv_vapi(itv, CX2341X_OSD_SET_STATE, 1, 0);
 		break;
 	}

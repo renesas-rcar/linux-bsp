@@ -445,7 +445,8 @@ static int mt9p031_set_params(struct mt9p031 *mt9p031)
 	return ret;
 }
 
-static int mt9p031_s_stream(struct v4l2_subdev *subdev, int enable)
+static int mt9p031_s_stream(struct v4l2_subdev *subdev, unsigned int pad,
+			    int enable)
 {
 	struct mt9p031 *mt9p031 = to_mt9p031(subdev);
 	int ret;
@@ -976,10 +977,6 @@ static struct v4l2_subdev_core_ops mt9p031_subdev_core_ops = {
 	.s_power        = mt9p031_set_power,
 };
 
-static struct v4l2_subdev_video_ops mt9p031_subdev_video_ops = {
-	.s_stream       = mt9p031_s_stream,
-};
-
 static struct v4l2_subdev_pad_ops mt9p031_subdev_pad_ops = {
 	.enum_mbus_code = mt9p031_enum_mbus_code,
 	.enum_frame_size = mt9p031_enum_frame_size,
@@ -987,11 +984,11 @@ static struct v4l2_subdev_pad_ops mt9p031_subdev_pad_ops = {
 	.set_fmt = mt9p031_set_format,
 	.get_selection = mt9p031_get_selection,
 	.set_selection = mt9p031_set_selection,
+	.s_stream = mt9p031_s_stream,
 };
 
 static struct v4l2_subdev_ops mt9p031_subdev_ops = {
 	.core   = &mt9p031_subdev_core_ops,
-	.video  = &mt9p031_subdev_video_ops,
 	.pad    = &mt9p031_subdev_pad_ops,
 };
 

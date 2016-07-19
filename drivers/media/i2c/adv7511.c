@@ -1022,7 +1022,8 @@ static const struct v4l2_subdev_core_ops adv7511_core_ops = {
 /* ------------------------------ VIDEO OPS ------------------------------ */
 
 /* Enable/disable adv7511 output */
-static int adv7511_s_stream(struct v4l2_subdev *sd, int enable)
+static int adv7511_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct adv7511_state *state = get_adv7511_state(sd);
 
@@ -1103,7 +1104,6 @@ static int adv7511_dv_timings_cap(struct v4l2_subdev *sd,
 }
 
 static const struct v4l2_subdev_video_ops adv7511_video_ops = {
-	.s_stream = adv7511_s_stream,
 	.s_dv_timings = adv7511_s_dv_timings,
 	.g_dv_timings = adv7511_g_dv_timings,
 };
@@ -1431,6 +1431,7 @@ static const struct v4l2_subdev_pad_ops adv7511_pad_ops = {
 	.set_fmt = adv7511_set_fmt,
 	.enum_dv_timings = adv7511_enum_dv_timings,
 	.dv_timings_cap = adv7511_dv_timings_cap,
+	.s_stream = adv7511_s_stream,
 };
 
 /* --------------------- SUBDEV OPS --------------------------------------- */
@@ -1759,7 +1760,7 @@ static void adv7511_init_setup(struct v4l2_subdev *sd)
 	memset(edid, 0, sizeof(struct adv7511_state_edid));
 	state->have_monitor = false;
 	adv7511_set_isr(sd, false);
-	adv7511_s_stream(sd, false);
+	adv7511_s_stream(sd, 0, false);
 	adv7511_s_audio_stream(sd, false);
 
 	if (state->i2c_cec == NULL)

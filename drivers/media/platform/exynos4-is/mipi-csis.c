@@ -502,7 +502,8 @@ static int s5pcsis_s_power(struct v4l2_subdev *sd, int on)
 	return pm_runtime_put_sync(dev);
 }
 
-static int s5pcsis_s_stream(struct v4l2_subdev *sd, int enable)
+static int s5pcsis_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct csis_state *state = sd_to_csis_state(sd);
 	int ret = 0;
@@ -658,11 +659,11 @@ static struct v4l2_subdev_pad_ops s5pcsis_pad_ops = {
 	.enum_mbus_code = s5pcsis_enum_mbus_code,
 	.get_fmt = s5pcsis_get_fmt,
 	.set_fmt = s5pcsis_set_fmt,
+	.s_stream = s5pcsis_s_stream,
 };
 
 static struct v4l2_subdev_video_ops s5pcsis_video_ops = {
 	.s_rx_buffer = s5pcsis_s_rx_buffer,
-	.s_stream = s5pcsis_s_stream,
 };
 
 static struct v4l2_subdev_ops s5pcsis_subdev_ops = {

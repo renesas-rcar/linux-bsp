@@ -86,7 +86,8 @@ struct tvp514x_std_info {
 
 static struct tvp514x_reg tvp514x_reg_list_default[0x40];
 
-static int tvp514x_s_stream(struct v4l2_subdev *sd, int enable);
+static int tvp514x_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable);
 /**
  * struct tvp514x_decoder - TVP5146/47 decoder object
  * @sd: Subdevice Slave handle
@@ -550,7 +551,7 @@ static int tvp514x_querystd(struct v4l2_subdev *sd, v4l2_std_id *std_id)
 
 	/* To query the standard the TVP514x must power on the ADCs. */
 	if (!decoder->streaming) {
-		tvp514x_s_stream(sd, 1);
+		tvp514x_s_stream(sd, 0, 1);
 		msleep(LOCK_RETRY_DELAY);
 	}
 
@@ -818,7 +819,8 @@ tvp514x_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
  *
  * Sets streaming to enable or disable, if possible.
  */
-static int tvp514x_s_stream(struct v4l2_subdev *sd, int enable)
+static int tvp514x_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	int err = 0;
 	struct tvp514x_decoder *decoder = to_decoder(sd);
@@ -963,13 +965,13 @@ static const struct v4l2_subdev_video_ops tvp514x_video_ops = {
 	.querystd = tvp514x_querystd,
 	.g_parm = tvp514x_g_parm,
 	.s_parm = tvp514x_s_parm,
-	.s_stream = tvp514x_s_stream,
 };
 
 static const struct v4l2_subdev_pad_ops tvp514x_pad_ops = {
 	.enum_mbus_code = tvp514x_enum_mbus_code,
 	.get_fmt = tvp514x_get_pad_format,
 	.set_fmt = tvp514x_set_pad_format,
+	.s_stream = tvp514x_s_stream,
 };
 
 static const struct v4l2_subdev_ops tvp514x_ops = {

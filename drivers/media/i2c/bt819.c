@@ -323,7 +323,8 @@ static int bt819_s_routing(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int bt819_s_stream(struct v4l2_subdev *sd, int enable)
+static int bt819_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			  int enable)
 {
 	struct bt819 *decoder = to_bt819(sd);
 
@@ -382,13 +383,17 @@ static const struct v4l2_ctrl_ops bt819_ctrl_ops = {
 static const struct v4l2_subdev_video_ops bt819_video_ops = {
 	.s_std = bt819_s_std,
 	.s_routing = bt819_s_routing,
-	.s_stream = bt819_s_stream,
 	.querystd = bt819_querystd,
 	.g_input_status = bt819_g_input_status,
 };
 
+static const struct v4l2_subdev_pad_ops bt819_pad_ops = {
+	.s_stream = bt819_s_stream,
+};
+
 static const struct v4l2_subdev_ops bt819_ops = {
 	.video = &bt819_video_ops,
+	.pad = &bt819_pad_ops,
 };
 
 /* ----------------------------------------------------------------------- */

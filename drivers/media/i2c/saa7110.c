@@ -316,7 +316,8 @@ static int saa7110_s_routing(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int saa7110_s_stream(struct v4l2_subdev *sd, int enable)
+static int saa7110_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct saa7110 *decoder = to_saa7110(sd);
 
@@ -360,13 +361,17 @@ static const struct v4l2_ctrl_ops saa7110_ctrl_ops = {
 static const struct v4l2_subdev_video_ops saa7110_video_ops = {
 	.s_std = saa7110_s_std,
 	.s_routing = saa7110_s_routing,
-	.s_stream = saa7110_s_stream,
 	.querystd = saa7110_querystd,
 	.g_input_status = saa7110_g_input_status,
 };
 
+static const struct v4l2_subdev_pad_ops saa7110_pad_ops = {
+	.s_stream = saa7110_s_stream,
+};
+
 static const struct v4l2_subdev_ops saa7110_ops = {
 	.video = &saa7110_video_ops,
+	.pad = &saa7110_pad_ops,
 };
 
 /* ----------------------------------------------------------------------- */

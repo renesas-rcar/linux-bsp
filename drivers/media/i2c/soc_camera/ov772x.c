@@ -553,7 +553,8 @@ static int ov772x_reset(struct i2c_client *client)
  * soc_camera_ops function
  */
 
-static int ov772x_s_stream(struct v4l2_subdev *sd, int enable)
+static int ov772x_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov772x_priv *priv = to_ov772x(sd);
@@ -1029,7 +1030,6 @@ static int ov772x_g_mbus_config(struct v4l2_subdev *sd,
 }
 
 static struct v4l2_subdev_video_ops ov772x_subdev_video_ops = {
-	.s_stream	= ov772x_s_stream,
 	.cropcap	= ov772x_cropcap,
 	.g_crop		= ov772x_g_crop,
 	.g_mbus_config	= ov772x_g_mbus_config,
@@ -1039,6 +1039,7 @@ static const struct v4l2_subdev_pad_ops ov772x_subdev_pad_ops = {
 	.enum_mbus_code = ov772x_enum_mbus_code,
 	.get_fmt	= ov772x_get_fmt,
 	.set_fmt	= ov772x_set_fmt,
+	.s_stream	= ov772x_s_stream,
 };
 
 static struct v4l2_subdev_ops ov772x_subdev_ops = {

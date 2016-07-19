@@ -791,7 +791,7 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 	struct usb_usbvision *usbvision = video_drvdata(file);
 
 	usbvision->streaming = stream_on;
-	call_all(usbvision, video, s_stream, 1);
+	call_all(usbvision, pad, s_stream, 0, 1);
 
 	return 0;
 }
@@ -807,7 +807,7 @@ static int vidioc_streamoff(struct file *file,
 	if (usbvision->streaming == stream_on) {
 		usbvision_stream_interrupt(usbvision);
 		/* Stop all video streamings */
-		call_all(usbvision, video, s_stream, 0);
+		call_all(usbvision, pad, s_stream, 0, 0);
 	}
 	usbvision_empty_framequeues(usbvision);
 
@@ -925,7 +925,7 @@ static ssize_t usbvision_read(struct file *file, char __user *buf,
 	if (usbvision->streaming != stream_on) {
 		/* no stream is running, make it running ! */
 		usbvision->streaming = stream_on;
-		call_all(usbvision, video, s_stream, 1);
+		call_all(usbvision, pad, s_stream, 0, 1);
 	}
 
 	/* Then, enqueue as many frames as possible

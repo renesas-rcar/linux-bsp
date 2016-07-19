@@ -472,7 +472,8 @@ static int adv7183_get_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int adv7183_s_stream(struct v4l2_subdev *sd, int enable)
+static int adv7183_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct adv7183 *decoder = to_adv7183(sd);
 
@@ -518,13 +519,13 @@ static const struct v4l2_subdev_video_ops adv7183_video_ops = {
 	.s_routing = adv7183_s_routing,
 	.querystd = adv7183_querystd,
 	.g_input_status = adv7183_g_input_status,
-	.s_stream = adv7183_s_stream,
 };
 
 static const struct v4l2_subdev_pad_ops adv7183_pad_ops = {
 	.enum_mbus_code = adv7183_enum_mbus_code,
 	.get_fmt = adv7183_get_fmt,
 	.set_fmt = adv7183_set_fmt,
+	.s_stream = adv7183_s_stream,
 };
 
 static const struct v4l2_subdev_ops adv7183_ops = {

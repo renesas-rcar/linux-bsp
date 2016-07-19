@@ -1253,7 +1253,7 @@ static int ivtv_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 		/* Turn off the output signal. The mpeg decoder is not yet
 		   active so without this you would get a green image until the
 		   mpeg decoder becomes active. */
-		ivtv_call_hw(itv, IVTV_HW_SAA7127, video, s_stream, 0);
+		ivtv_call_hw(itv, IVTV_HW_SAA7127, pad, s_stream, 0, 0);
 	}
 
 	/* clear interrupt mask, effectively disabling interrupts */
@@ -1373,7 +1373,7 @@ int ivtv_init_on_first_open(struct ivtv *itv)
 		/* Turn on the TV-out: ivtv_init_mpeg_decoder() initializes
 		   the mpeg decoder so now the saa7127 receives a proper
 		   signal. */
-		ivtv_call_hw(itv, IVTV_HW_SAA7127, video, s_stream, 1);
+		ivtv_call_hw(itv, IVTV_HW_SAA7127, pad, s_stream, 0, 1);
 		ivtv_init_mpeg_decoder(itv);
 	}
 
@@ -1422,7 +1422,8 @@ static void ivtv_remove(struct pci_dev *pdev)
 
 		/* Turn off the TV-out */
 		if (itv->v4l2_cap & V4L2_CAP_VIDEO_OUTPUT)
-			ivtv_call_hw(itv, IVTV_HW_SAA7127, video, s_stream, 0);
+			ivtv_call_hw(itv, IVTV_HW_SAA7127, pad, s_stream, 0,
+				     0);
 		if (atomic_read(&itv->decoding) > 0) {
 			int type;
 

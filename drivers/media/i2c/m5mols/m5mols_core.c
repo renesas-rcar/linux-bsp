@@ -651,14 +651,6 @@ static int m5mols_enum_mbus_code(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static struct v4l2_subdev_pad_ops m5mols_pad_ops = {
-	.enum_mbus_code	= m5mols_enum_mbus_code,
-	.get_fmt	= m5mols_get_fmt,
-	.set_fmt	= m5mols_set_fmt,
-	.get_frame_desc	= m5mols_get_frame_desc,
-	.set_frame_desc	= m5mols_set_frame_desc,
-};
-
 /**
  * m5mols_restore_controls - Apply current control values to the registers
  *
@@ -707,7 +699,8 @@ static int m5mols_start_monitor(struct m5mols_info *info)
 	return ret;
 }
 
-static int m5mols_s_stream(struct v4l2_subdev *sd, int enable)
+static int m5mols_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct m5mols_info *info = to_m5mols(sd);
 	u32 code;
@@ -731,7 +724,12 @@ static int m5mols_s_stream(struct v4l2_subdev *sd, int enable)
 	return ret;
 }
 
-static const struct v4l2_subdev_video_ops m5mols_video_ops = {
+static struct v4l2_subdev_pad_ops m5mols_pad_ops = {
+	.enum_mbus_code	= m5mols_enum_mbus_code,
+	.get_fmt	= m5mols_get_fmt,
+	.set_fmt	= m5mols_set_fmt,
+	.get_frame_desc	= m5mols_get_frame_desc,
+	.set_frame_desc	= m5mols_set_frame_desc,
 	.s_stream	= m5mols_s_stream,
 };
 
@@ -908,7 +906,6 @@ static const struct v4l2_subdev_internal_ops m5mols_subdev_internal_ops = {
 static const struct v4l2_subdev_ops m5mols_ops = {
 	.core		= &m5mols_core_ops,
 	.pad		= &m5mols_pad_ops,
-	.video		= &m5mols_video_ops,
 };
 
 static irqreturn_t m5mols_irq_handler(int irq, void *data)

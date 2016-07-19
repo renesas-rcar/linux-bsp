@@ -1519,7 +1519,7 @@ static int vidioc_streamon(struct file *file, void *priv,
 	if (likely(rc >= 0))
 		rc = videobuf_streamon(&fh->vb_vidq);
 
-	call_all(dev, video, s_stream, 1);
+	call_all(dev, pad, s_stream, 0, 1);
 
 	return rc;
 }
@@ -1538,7 +1538,7 @@ static int vidioc_streamoff(struct file *file, void *priv,
 	if (type != fh->type)
 		return -EINVAL;
 
-	cx25840_call(dev, video, s_stream, 0);
+	cx25840_call(dev, pad, s_stream, 0, 0);
 
 	videobuf_streamoff(&fh->vb_vidq);
 	res_free(fh);

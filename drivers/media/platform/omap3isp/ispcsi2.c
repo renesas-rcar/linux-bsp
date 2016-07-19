@@ -1050,7 +1050,8 @@ static int csi2_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
  *
  * Return 0 on success or a negative error code otherwise.
  */
-static int csi2_set_stream(struct v4l2_subdev *sd, int enable)
+static int csi2_set_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct isp_csi2_device *csi2 = v4l2_get_subdevdata(sd);
 	struct isp_device *isp = csi2->isp;
@@ -1101,22 +1102,17 @@ static int csi2_set_stream(struct v4l2_subdev *sd, int enable)
 	return 0;
 }
 
-/* subdev video operations */
-static const struct v4l2_subdev_video_ops csi2_video_ops = {
-	.s_stream = csi2_set_stream,
-};
-
 /* subdev pad operations */
 static const struct v4l2_subdev_pad_ops csi2_pad_ops = {
 	.enum_mbus_code = csi2_enum_mbus_code,
 	.enum_frame_size = csi2_enum_frame_size,
 	.get_fmt = csi2_get_format,
 	.set_fmt = csi2_set_format,
+	.s_stream = csi2_set_stream,
 };
 
 /* subdev operations */
 static const struct v4l2_subdev_ops csi2_ops = {
-	.video = &csi2_video_ops,
 	.pad = &csi2_pad_ops,
 };
 

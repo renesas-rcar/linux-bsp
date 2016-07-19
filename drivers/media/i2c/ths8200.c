@@ -169,7 +169,8 @@ static const struct v4l2_subdev_core_ops ths8200_core_ops = {
  * V4L2 subdev video operations
  */
 
-static int ths8200_s_stream(struct v4l2_subdev *sd, int enable)
+static int ths8200_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct ths8200_state *state = to_state(sd);
 
@@ -219,7 +220,7 @@ static void ths8200_setup(struct v4l2_subdev *sd, struct v4l2_bt_timings *bt)
 
 	/*** System ****/
 	/* Set chip in reset while it is configured */
-	ths8200_s_stream(sd, false);
+	ths8200_s_stream(sd, 0, false);
 
 	/* configure video output timings */
 	ths8200_write(sd, THS8200_DTG1_SPEC_A, bt->hsync);
@@ -349,7 +350,7 @@ static void ths8200_setup(struct v4l2_subdev *sd, struct v4l2_bt_timings *bt)
 	ths8200_write(sd, THS8200_DTG2_CNTL, 0x44 | polarity);
 
 	/* leave reset */
-	ths8200_s_stream(sd, true);
+	ths8200_s_stream(sd, 0, true);
 
 	v4l2_dbg(1, debug, sd, "%s: frame %dx%d, polarity %d\n"
 		 "horizontal: front porch %d, back porch %d, sync %d\n"
@@ -419,7 +420,6 @@ static int ths8200_dv_timings_cap(struct v4l2_subdev *sd,
 
 /* Specific video subsystem operation handlers */
 static const struct v4l2_subdev_video_ops ths8200_video_ops = {
-	.s_stream = ths8200_s_stream,
 	.s_dv_timings = ths8200_s_dv_timings,
 	.g_dv_timings = ths8200_g_dv_timings,
 };
@@ -427,6 +427,7 @@ static const struct v4l2_subdev_video_ops ths8200_video_ops = {
 static const struct v4l2_subdev_pad_ops ths8200_pad_ops = {
 	.enum_dv_timings = ths8200_enum_dv_timings,
 	.dv_timings_cap = ths8200_dv_timings_cap,
+	.s_stream = ths8200_s_stream,
 };
 
 /* V4L2 top level operation handlers */

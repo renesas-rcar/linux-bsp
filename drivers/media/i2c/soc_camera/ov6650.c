@@ -300,7 +300,8 @@ static struct ov6650 *to_ov6650(const struct i2c_client *client)
 }
 
 /* Start/Stop streaming from the device */
-static int ov6650_s_stream(struct v4l2_subdev *sd, int enable)
+static int ov6650_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	return 0;
 }
@@ -942,7 +943,6 @@ static int ov6650_s_mbus_config(struct v4l2_subdev *sd,
 }
 
 static struct v4l2_subdev_video_ops ov6650_video_ops = {
-	.s_stream	= ov6650_s_stream,
 	.cropcap	= ov6650_cropcap,
 	.g_crop		= ov6650_g_crop,
 	.s_crop		= ov6650_s_crop,
@@ -956,6 +956,7 @@ static const struct v4l2_subdev_pad_ops ov6650_pad_ops = {
 	.enum_mbus_code = ov6650_enum_mbus_code,
 	.get_fmt	= ov6650_get_fmt,
 	.set_fmt	= ov6650_set_fmt,
+	.s_stream	= ov6650_s_stream,
 };
 
 static struct v4l2_subdev_ops ov6650_subdev_ops = {

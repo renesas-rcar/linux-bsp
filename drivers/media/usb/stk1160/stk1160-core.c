@@ -365,7 +365,7 @@ static int stk1160_probe(struct usb_interface *interface,
 
 	/* i2c reset saa711x */
 	v4l2_device_call_all(&dev->v4l2_dev, 0, core, reset, 0);
-	v4l2_device_call_all(&dev->v4l2_dev, 0, video, s_stream, 0);
+	v4l2_device_call_all(&dev->v4l2_dev, 0, pad, s_stream, 0, 0);
 
 	/* reset stk1160 to default values */
 	stk1160_reg_reset(dev);

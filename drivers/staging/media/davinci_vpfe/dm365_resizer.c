@@ -1256,7 +1256,8 @@ static int resizer_do_hw_setup(struct vpfe_resizer_device *resizer)
  * @sd: pointer to v4l2 subdev structure
  * @enable: 1 == Enable, 0 == Disable
  */
-static int resizer_set_stream(struct v4l2_subdev *sd, int enable)
+static int resizer_set_stream(struct v4l2_subdev *sd, unsigned int pad,
+			      int enable)
 {
 	struct vpfe_resizer_device *resizer = v4l2_get_subdevdata(sd);
 
@@ -1609,23 +1610,18 @@ static const struct v4l2_subdev_internal_ops resizer_v4l2_internal_ops = {
 	.open = resizer_init_formats,
 };
 
-/* subdev video operations */
-static const struct v4l2_subdev_video_ops resizer_v4l2_video_ops = {
-	.s_stream = resizer_set_stream,
-};
-
 /* subdev pad operations */
 static const struct v4l2_subdev_pad_ops resizer_v4l2_pad_ops = {
 	.enum_mbus_code = resizer_enum_mbus_code,
 	.enum_frame_size = resizer_enum_frame_size,
 	.get_fmt = resizer_get_format,
 	.set_fmt = resizer_set_format,
+	.s_stream = resizer_set_stream,
 };
 
 /* subdev operations */
 static const struct v4l2_subdev_ops resizer_v4l2_ops = {
 	.core = &resizer_v4l2_core_ops,
-	.video = &resizer_v4l2_video_ops,
 	.pad = &resizer_v4l2_pad_ops,
 };
 

@@ -1164,7 +1164,7 @@ void cx231xx_config_i2c(struct cx231xx *dev)
 {
 	/* u32 input = INPUT(dev->video_input)->vmux; */
 
-	call_all(dev, video, s_stream, 1);
+	call_all(dev, pad, s_stream, 0, 1);
 }
 
 static void cx231xx_unregister_media_device(struct cx231xx *dev)

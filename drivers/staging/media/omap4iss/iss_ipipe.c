@@ -129,7 +129,8 @@ static void ipipe_configure(struct iss_ipipe_device *ipipe)
  * @sd: ISP IPIPE V4L2 subdevice
  * @enable: Enable/disable stream
  */
-static int ipipe_set_stream(struct v4l2_subdev *sd, int enable)
+static int ipipe_set_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct iss_ipipe_device *ipipe = v4l2_get_subdevdata(sd);
 	struct iss_device *iss = to_iss_device(ipipe);
@@ -401,11 +402,6 @@ static int ipipe_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	return 0;
 }
 
-/* V4L2 subdev video operations */
-static const struct v4l2_subdev_video_ops ipipe_v4l2_video_ops = {
-	.s_stream = ipipe_set_stream,
-};
-
 /* V4L2 subdev pad operations */
 static const struct v4l2_subdev_pad_ops ipipe_v4l2_pad_ops = {
 	.enum_mbus_code = ipipe_enum_mbus_code,
@@ -413,11 +409,11 @@ static const struct v4l2_subdev_pad_ops ipipe_v4l2_pad_ops = {
 	.get_fmt = ipipe_get_format,
 	.set_fmt = ipipe_set_format,
 	.link_validate = ipipe_link_validate,
+	.s_stream = ipipe_set_stream,
 };
 
 /* V4L2 subdev operations */
 static const struct v4l2_subdev_ops ipipe_v4l2_ops = {
-	.video = &ipipe_v4l2_video_ops,
 	.pad = &ipipe_v4l2_pad_ops,
 };
 

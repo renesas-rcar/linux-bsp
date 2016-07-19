@@ -456,7 +456,8 @@ static const struct tw9910_scale_ctrl *tw9910_select_norm(v4l2_std_id norm,
 /*
  * subdevice operations
  */
-static int tw9910_s_stream(struct v4l2_subdev *sd, int enable)
+static int tw9910_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct tw9910_priv *priv = to_tw9910(client);
@@ -920,7 +921,6 @@ static int tw9910_g_tvnorms(struct v4l2_subdev *sd, v4l2_std_id *norm)
 static struct v4l2_subdev_video_ops tw9910_subdev_video_ops = {
 	.s_std		= tw9910_s_std,
 	.g_std		= tw9910_g_std,
-	.s_stream	= tw9910_s_stream,
 	.cropcap	= tw9910_cropcap,
 	.g_crop		= tw9910_g_crop,
 	.g_mbus_config	= tw9910_g_mbus_config,
@@ -932,6 +932,7 @@ static const struct v4l2_subdev_pad_ops tw9910_subdev_pad_ops = {
 	.enum_mbus_code = tw9910_enum_mbus_code,
 	.get_fmt	= tw9910_get_fmt,
 	.set_fmt	= tw9910_set_fmt,
+	.s_stream	= tw9910_s_stream,
 };
 
 static struct v4l2_subdev_ops tw9910_subdev_ops = {

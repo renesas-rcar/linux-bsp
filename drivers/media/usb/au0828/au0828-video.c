@@ -854,8 +854,8 @@ int au0828_start_analog_streaming(struct vb2_queue *vq, unsigned int count)
 		}
 
 		if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE) {
-			v4l2_device_call_all(&dev->v4l2_dev, 0, video,
-						s_stream, 1);
+			v4l2_device_call_all(&dev->v4l2_dev, 0, pad, s_stream,
+					     0, 1);
 			dev->vid_timeout_running = 1;
 			mod_timer(&dev->vid_timeout, jiffies + (HZ / 10));
 		} else if (vq->type == V4L2_BUF_TYPE_VBI_CAPTURE) {
@@ -878,7 +878,7 @@ static void au0828_stop_streaming(struct vb2_queue *vq)
 	if (dev->streaming_users-- == 1)
 		au0828_uninit_isoc(dev);
 
-	v4l2_device_call_all(&dev->v4l2_dev, 0, video, s_stream, 0);
+	v4l2_device_call_all(&dev->v4l2_dev, 0, pad, s_stream, 0, 0);
 	dev->vid_timeout_running = 0;
 	del_timer_sync(&dev->vid_timeout);
 

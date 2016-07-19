@@ -371,7 +371,8 @@ __mt9v032_get_pad_crop(struct mt9v032 *mt9v032, struct v4l2_subdev_pad_config *c
 	}
 }
 
-static int mt9v032_s_stream(struct v4l2_subdev *subdev, int enable)
+static int mt9v032_s_stream(struct v4l2_subdev *subdev, unsigned int pad,
+			    int enable)
 {
 	const u16 mode = MT9V032_CHIP_CONTROL_DOUT_ENABLE
 		       | MT9V032_CHIP_CONTROL_SEQUENTIAL;
@@ -940,10 +941,6 @@ static struct v4l2_subdev_core_ops mt9v032_subdev_core_ops = {
 	.s_power	= mt9v032_set_power,
 };
 
-static struct v4l2_subdev_video_ops mt9v032_subdev_video_ops = {
-	.s_stream	= mt9v032_s_stream,
-};
-
 static struct v4l2_subdev_pad_ops mt9v032_subdev_pad_ops = {
 	.enum_mbus_code = mt9v032_enum_mbus_code,
 	.enum_frame_size = mt9v032_enum_frame_size,
@@ -951,11 +948,11 @@ static struct v4l2_subdev_pad_ops mt9v032_subdev_pad_ops = {
 	.set_fmt = mt9v032_set_format,
 	.get_selection = mt9v032_get_selection,
 	.set_selection = mt9v032_set_selection,
+	.s_stream = mt9v032_s_stream,
 };
 
 static struct v4l2_subdev_ops mt9v032_subdev_ops = {
 	.core	= &mt9v032_subdev_core_ops,
-	.video	= &mt9v032_subdev_video_ops,
 	.pad	= &mt9v032_subdev_pad_ops,
 };
 

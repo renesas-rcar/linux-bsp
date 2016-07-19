@@ -172,7 +172,8 @@ static int ak881x_s_std_output(struct v4l2_subdev *sd, v4l2_std_id std)
 	return 0;
 }
 
-static int ak881x_s_stream(struct v4l2_subdev *sd, int enable)
+static int ak881x_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ak881x *ak881x = to_ak881x(client);
@@ -209,13 +210,13 @@ static struct v4l2_subdev_core_ops ak881x_subdev_core_ops = {
 static struct v4l2_subdev_video_ops ak881x_subdev_video_ops = {
 	.cropcap	= ak881x_cropcap,
 	.s_std_output	= ak881x_s_std_output,
-	.s_stream	= ak881x_s_stream,
 };
 
 static const struct v4l2_subdev_pad_ops ak881x_subdev_pad_ops = {
 	.enum_mbus_code = ak881x_enum_mbus_code,
 	.set_fmt	= ak881x_fill_fmt,
 	.get_fmt	= ak881x_fill_fmt,
+	.s_stream	= ak881x_s_stream,
 };
 
 static struct v4l2_subdev_ops ak881x_subdev_ops = {

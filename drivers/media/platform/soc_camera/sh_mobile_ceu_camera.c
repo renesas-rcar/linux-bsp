@@ -1593,7 +1593,7 @@ static int sh_mobile_ceu_set_livecrop(struct soc_camera_device *icd,
 	/* Wait for frame */
 	ret = wait_for_completion_interruptible(&pcdev->complete);
 	/* Stop the client */
-	ret = v4l2_subdev_call(sd, video, s_stream, 0);
+	ret = v4l2_subdev_call(sd, pad, s_stream, 0, 0);
 	if (ret < 0)
 		dev_warn(icd->parent,
 			 "Client failed to stop the stream: %d\n", ret);
@@ -1631,7 +1631,7 @@ static int sh_mobile_ceu_set_livecrop(struct soc_camera_device *icd,
 	sh_mobile_ceu_capture(pcdev);
 	spin_unlock_irq(&pcdev->lock);
 	/* Start the client */
-	ret = v4l2_subdev_call(sd, video, s_stream, 1);
+	ret = v4l2_subdev_call(sd, pad, s_stream, 0, 1);
 	return ret;
 }
 

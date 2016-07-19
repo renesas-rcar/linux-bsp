@@ -246,7 +246,7 @@ static int sdo_streamoff(struct sdo_device *sdev)
 	return tries ? 0 : -EIO;
 }
 
-static int sdo_s_stream(struct v4l2_subdev *sd, int on)
+static int sdo_s_stream(struct v4l2_subdev *sd, unsigned int pad, int on)
 {
 	struct sdo_device *sdev = sd_to_sdev(sd);
 	return on ? sdo_streamon(sdev) : sdo_streamoff(sdev);
@@ -260,11 +260,11 @@ static const struct v4l2_subdev_video_ops sdo_sd_video_ops = {
 	.s_std_output = sdo_s_std_output,
 	.g_std_output = sdo_g_std_output,
 	.g_tvnorms_output = sdo_g_tvnorms_output,
-	.s_stream = sdo_s_stream,
 };
 
 static const struct v4l2_subdev_pad_ops sdo_sd_pad_ops = {
 	.get_fmt = sdo_get_fmt,
+	.s_stream = sdo_s_stream,
 };
 
 static const struct v4l2_subdev_ops sdo_sd_ops = {

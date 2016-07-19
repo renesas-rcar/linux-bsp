@@ -1209,7 +1209,8 @@ static int fimc_lite_subdev_set_selection(struct v4l2_subdev *sd,
 	return ret;
 }
 
-static int fimc_lite_subdev_s_stream(struct v4l2_subdev *sd, int on)
+static int fimc_lite_subdev_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+				     int on)
 {
 	struct fimc_lite *fimc = v4l2_get_subdevdata(sd);
 	unsigned long flags;
@@ -1351,9 +1352,6 @@ static const struct v4l2_subdev_pad_ops fimc_lite_subdev_pad_ops = {
 	.set_selection = fimc_lite_subdev_set_selection,
 	.get_fmt = fimc_lite_subdev_get_fmt,
 	.set_fmt = fimc_lite_subdev_set_fmt,
-};
-
-static const struct v4l2_subdev_video_ops fimc_lite_subdev_video_ops = {
 	.s_stream = fimc_lite_subdev_s_stream,
 };
 
@@ -1363,7 +1361,6 @@ static const struct v4l2_subdev_core_ops fimc_lite_core_ops = {
 
 static struct v4l2_subdev_ops fimc_lite_subdev_ops = {
 	.core = &fimc_lite_core_ops,
-	.video = &fimc_lite_subdev_video_ops,
 	.pad = &fimc_lite_subdev_pad_ops,
 };
 

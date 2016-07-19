@@ -1100,7 +1100,7 @@ static void s5k5baf_hw_set_stream(struct s5k5baf *state, int enable)
 	s5k5baf_write_seq(state, REG_G_ENABLE_PREV, enable, 1);
 }
 
-static int s5k5baf_s_stream(struct v4l2_subdev *sd, int on)
+static int s5k5baf_s_stream(struct v4l2_subdev *sd, unsigned int pad, int on)
 {
 	struct s5k5baf *state = to_s5k5baf(sd);
 	int ret;
@@ -1536,12 +1536,12 @@ static const struct v4l2_subdev_pad_ops s5k5baf_pad_ops = {
 	.set_fmt		= s5k5baf_set_fmt,
 	.get_selection		= s5k5baf_get_selection,
 	.set_selection		= s5k5baf_set_selection,
+	.s_stream		= s5k5baf_s_stream,
 };
 
 static const struct v4l2_subdev_video_ops s5k5baf_video_ops = {
 	.g_frame_interval	= s5k5baf_g_frame_interval,
 	.s_frame_interval	= s5k5baf_s_frame_interval,
-	.s_stream		= s5k5baf_s_stream,
 };
 
 /*

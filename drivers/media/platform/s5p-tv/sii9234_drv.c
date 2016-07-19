@@ -292,7 +292,8 @@ static int sii9234_s_power(struct v4l2_subdev *sd, int on)
 	return ret < 0 ? ret : 0;
 }
 
-static int sii9234_s_stream(struct v4l2_subdev *sd, int enable)
+static int sii9234_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct sii9234_context *ctx = sd_to_context(sd);
 
@@ -305,13 +306,13 @@ static const struct v4l2_subdev_core_ops sii9234_core_ops = {
 	.s_power =  sii9234_s_power,
 };
 
-static const struct v4l2_subdev_video_ops sii9234_video_ops = {
+static const struct v4l2_subdev_pad_ops sii9234_pad_ops = {
 	.s_stream =  sii9234_s_stream,
 };
 
 static const struct v4l2_subdev_ops sii9234_ops = {
 	.core = &sii9234_core_ops,
-	.video = &sii9234_video_ops,
+	.pad = &sii9234_pad_ops,
 };
 
 static int sii9234_probe(struct i2c_client *client,

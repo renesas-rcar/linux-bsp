@@ -1883,7 +1883,8 @@ static int ccdc_unsubscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
  *
  * When not writing to memory enable the CCDC immediately.
  */
-static int ccdc_set_stream(struct v4l2_subdev *sd, int enable)
+static int ccdc_set_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct isp_ccdc_device *ccdc = v4l2_get_subdevdata(sd);
 	struct isp_device *isp = to_isp_device(ccdc);
@@ -2465,11 +2466,6 @@ static const struct v4l2_subdev_core_ops ccdc_v4l2_core_ops = {
 	.unsubscribe_event = ccdc_unsubscribe_event,
 };
 
-/* V4L2 subdev video operations */
-static const struct v4l2_subdev_video_ops ccdc_v4l2_video_ops = {
-	.s_stream = ccdc_set_stream,
-};
-
 /* V4L2 subdev pad operations */
 static const struct v4l2_subdev_pad_ops ccdc_v4l2_pad_ops = {
 	.enum_mbus_code = ccdc_enum_mbus_code,
@@ -2479,12 +2475,12 @@ static const struct v4l2_subdev_pad_ops ccdc_v4l2_pad_ops = {
 	.get_selection = ccdc_get_selection,
 	.set_selection = ccdc_set_selection,
 	.link_validate = ccdc_link_validate,
+	.s_stream = ccdc_set_stream,
 };
 
 /* V4L2 subdev operations */
 static const struct v4l2_subdev_ops ccdc_v4l2_ops = {
 	.core = &ccdc_v4l2_core_ops,
-	.video = &ccdc_v4l2_video_ops,
 	.pad = &ccdc_v4l2_pad_ops,
 };
 

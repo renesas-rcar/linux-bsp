@@ -248,7 +248,8 @@ static int imx074_enum_mbus_code(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int imx074_s_stream(struct v4l2_subdev *sd, int enable)
+static int imx074_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
@@ -277,7 +278,6 @@ static int imx074_g_mbus_config(struct v4l2_subdev *sd,
 }
 
 static struct v4l2_subdev_video_ops imx074_subdev_video_ops = {
-	.s_stream	= imx074_s_stream,
 	.g_crop		= imx074_g_crop,
 	.cropcap	= imx074_cropcap,
 	.g_mbus_config	= imx074_g_mbus_config,
@@ -291,6 +291,7 @@ static const struct v4l2_subdev_pad_ops imx074_subdev_pad_ops = {
 	.enum_mbus_code = imx074_enum_mbus_code,
 	.get_fmt	= imx074_get_fmt,
 	.set_fmt	= imx074_set_fmt,
+	.s_stream	= imx074_s_stream,
 };
 
 static struct v4l2_subdev_ops imx074_subdev_ops = {

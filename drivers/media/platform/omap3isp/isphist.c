@@ -461,13 +461,13 @@ static const struct v4l2_subdev_core_ops hist_subdev_core_ops = {
 	.unsubscribe_event = omap3isp_stat_unsubscribe_event,
 };
 
-static const struct v4l2_subdev_video_ops hist_subdev_video_ops = {
+static const struct v4l2_subdev_pad_ops hist_subdev_pad_ops = {
 	.s_stream = omap3isp_stat_s_stream,
 };
 
 static const struct v4l2_subdev_ops hist_subdev_ops = {
 	.core = &hist_subdev_core_ops,
-	.video = &hist_subdev_video_ops,
+	.pad = &hist_subdev_pad_ops,
 };
 
 /*

@@ -583,7 +583,8 @@ static void au8522_video_set(struct au8522_state *state)
 	}
 }
 
-static int au8522_s_stream(struct v4l2_subdev *sd, int enable)
+static int au8522_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct au8522_state *state = to_state(sd);
 
@@ -706,8 +707,11 @@ static const struct v4l2_subdev_audio_ops au8522_audio_ops = {
 
 static const struct v4l2_subdev_video_ops au8522_video_ops = {
 	.s_routing = au8522_s_video_routing,
-	.s_stream = au8522_s_stream,
 	.s_std = au8522_s_std,
+};
+
+static const struct v4l2_subdev_pad_ops au8522_pad_ops = {
+	.s_stream = au8522_s_stream,
 };
 
 static const struct v4l2_subdev_ops au8522_ops = {
@@ -715,6 +719,7 @@ static const struct v4l2_subdev_ops au8522_ops = {
 	.tuner = &au8522_tuner_ops,
 	.audio = &au8522_audio_ops,
 	.video = &au8522_video_ops,
+	.pad = &au8522_pad_ops,
 };
 
 static const struct v4l2_ctrl_ops au8522_ctrl_ops = {

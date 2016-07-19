@@ -746,7 +746,8 @@ static int adv7180_g_tvnorms(struct v4l2_subdev *sd, v4l2_std_id *norm)
 	return 0;
 }
 
-static int adv7180_s_stream(struct v4l2_subdev *sd, int enable)
+static int adv7180_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct adv7180_state *state = to_state(sd);
 	int ret;
@@ -789,7 +790,6 @@ static const struct v4l2_subdev_video_ops adv7180_video_ops = {
 	.g_mbus_config = adv7180_g_mbus_config,
 	.cropcap = adv7180_cropcap,
 	.g_tvnorms = adv7180_g_tvnorms,
-	.s_stream = adv7180_s_stream,
 };
 
 static const struct v4l2_subdev_core_ops adv7180_core_ops = {
@@ -802,6 +802,7 @@ static const struct v4l2_subdev_pad_ops adv7180_pad_ops = {
 	.enum_mbus_code = adv7180_enum_mbus_code,
 	.set_fmt = adv7180_set_pad_format,
 	.get_fmt = adv7180_get_pad_format,
+	.s_stream = adv7180_s_stream,
 };
 
 static const struct v4l2_subdev_ops adv7180_ops = {

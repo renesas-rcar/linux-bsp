@@ -1130,7 +1130,8 @@ static const struct isp_video_operations resizer_video_ops = {
  * any buffer queued yet, just update the state field and return immediately.
  * The resizer will be enabled in resizer_video_queue().
  */
-static int resizer_set_stream(struct v4l2_subdev *sd, int enable)
+static int resizer_set_stream(struct v4l2_subdev *sd, unsigned int pad,
+			      int enable)
 {
 	struct isp_res_device *res = v4l2_get_subdevdata(sd);
 	struct isp_video *video_out = &res->video_out;
@@ -1578,11 +1579,6 @@ static int resizer_init_formats(struct v4l2_subdev *sd,
 	return 0;
 }
 
-/* subdev video operations */
-static const struct v4l2_subdev_video_ops resizer_v4l2_video_ops = {
-	.s_stream = resizer_set_stream,
-};
-
 /* subdev pad operations */
 static const struct v4l2_subdev_pad_ops resizer_v4l2_pad_ops = {
 	.enum_mbus_code = resizer_enum_mbus_code,
@@ -1592,11 +1588,11 @@ static const struct v4l2_subdev_pad_ops resizer_v4l2_pad_ops = {
 	.get_selection = resizer_get_selection,
 	.set_selection = resizer_set_selection,
 	.link_validate = resizer_link_validate,
+	.s_stream = resizer_set_stream,
 };
 
 /* subdev operations */
 static const struct v4l2_subdev_ops resizer_v4l2_ops = {
-	.video = &resizer_v4l2_video_ops,
 	.pad = &resizer_v4l2_pad_ops,
 };
 

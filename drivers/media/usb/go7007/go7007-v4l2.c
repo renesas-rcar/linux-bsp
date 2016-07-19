@@ -442,7 +442,7 @@ static int go7007_start_streaming(struct vb2_queue *q, unsigned int count)
 		q->streaming = 0;
 		return ret;
 	}
-	call_all(&go->v4l2_dev, video, s_stream, 1);
+	call_all(&go->v4l2_dev, pad, s_stream, 0, 1);
 	v4l2_ctrl_grab(go->mpeg_video_gop_size, true);
 	v4l2_ctrl_grab(go->mpeg_video_gop_closure, true);
 	v4l2_ctrl_grab(go->mpeg_video_bitrate, true);
@@ -463,7 +463,7 @@ static void go7007_stop_streaming(struct vb2_queue *q)
 	mutex_lock(&go->hw_lock);
 	go7007_reset_encoder(go);
 	mutex_unlock(&go->hw_lock);
-	call_all(&go->v4l2_dev, video, s_stream, 0);
+	call_all(&go->v4l2_dev, pad, s_stream, 0, 0);
 
 	spin_lock_irqsave(&go->spinlock, flags);
 	INIT_LIST_HEAD(&go->vidq_active);

@@ -792,7 +792,8 @@ int omap3isp_stat_enable(struct ispstat *stat, u8 enable)
 	return 0;
 }
 
-int omap3isp_stat_s_stream(struct v4l2_subdev *subdev, int enable)
+int omap3isp_stat_s_stream(struct v4l2_subdev *subdev, unsigned int pad,
+			   int enable)
 {
 	struct ispstat *stat = v4l2_get_subdevdata(subdev);
 

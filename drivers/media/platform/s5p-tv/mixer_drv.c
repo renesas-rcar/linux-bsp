@@ -81,7 +81,7 @@ void mxr_streamer_get(struct mxr_device *mdev)
 
 		ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt);
 		WARN(ret, "failed to get mbus_fmt for output %s\n", sd->name);
-		ret = v4l2_subdev_call(sd, video, s_stream, 1);
+		ret = v4l2_subdev_call(sd, pad, s_stream, 0, 1);
 		WARN(ret, "starting stream failed for output %s\n", sd->name);
 
 		mxr_reg_set_mbus_fmt(mdev, mbus_fmt);
@@ -107,7 +107,7 @@ void mxr_streamer_put(struct mxr_device *mdev)
 		/* vsync applies Mixer setup */
 		ret = mxr_reg_wait4vsync(mdev);
 		WARN(ret, "failed to get vsync (%d) from output\n", ret);
-		ret = v4l2_subdev_call(sd, video, s_stream, 0);
+		ret = v4l2_subdev_call(sd, pad, s_stream, 0, 0);
 		WARN(ret, "stopping stream failed for output %s\n", sd->name);
 	}
 	WARN(mdev->n_streamer < 0, "negative number of streamers (%d)\n",

@@ -1067,7 +1067,7 @@ static int zr36057_init (struct zoran *zr)
 		detect_guest_activity(zr);
 	test_interrupts(zr);
 	if (!pass_through) {
-		decoder_call(zr, video, s_stream, 0);
+		decoder_call(zr, pad, s_stream, 0, 0);
 		encoder_call(zr, video, s_routing, 2, 0, 0);
 	}
 

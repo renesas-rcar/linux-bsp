@@ -1366,7 +1366,8 @@ static int saa711x_s_gpio(struct v4l2_subdev *sd, u32 val)
 	return 0;
 }
 
-static int saa711x_s_stream(struct v4l2_subdev *sd, int enable)
+static int saa711x_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct saa711x_state *state = to_state(sd);
 
@@ -1606,7 +1607,6 @@ static const struct v4l2_subdev_video_ops saa711x_video_ops = {
 	.s_std = saa711x_s_std,
 	.s_routing = saa711x_s_routing,
 	.s_crystal_freq = saa711x_s_crystal_freq,
-	.s_stream = saa711x_s_stream,
 	.querystd = saa711x_querystd,
 	.g_input_status = saa711x_g_input_status,
 };
@@ -1621,6 +1621,7 @@ static const struct v4l2_subdev_vbi_ops saa711x_vbi_ops = {
 
 static const struct v4l2_subdev_pad_ops saa711x_pad_ops = {
 	.set_fmt = saa711x_set_fmt,
+	.s_stream = saa711x_s_stream,
 };
 
 static const struct v4l2_subdev_ops saa711x_ops = {

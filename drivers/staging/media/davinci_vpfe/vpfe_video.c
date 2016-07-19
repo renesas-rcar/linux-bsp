@@ -310,7 +310,7 @@ static int vpfe_pipeline_enable(struct vpfe_pipeline *pipe)
 		if (!is_media_entity_v4l2_subdev(entity))
 			continue;
 		subdev = media_entity_to_v4l2_subdev(entity);
-		ret = v4l2_subdev_call(subdev, video, s_stream, 1);
+		ret = v4l2_subdev_call(subdev, pad, s_stream, 0, 1);
 		if (ret < 0 && ret != -ENOIOCTLCMD)
 			break;
 	}
@@ -353,7 +353,7 @@ static int vpfe_pipeline_disable(struct vpfe_pipeline *pipe)
 		if (!is_media_entity_v4l2_subdev(entity))
 			continue;
 		subdev = media_entity_to_v4l2_subdev(entity);
-		ret = v4l2_subdev_call(subdev, video, s_stream, 0);
+		ret = v4l2_subdev_call(subdev, pad, s_stream, 0, 0);
 		if (ret < 0 && ret != -ENOIOCTLCMD)
 			break;
 	}

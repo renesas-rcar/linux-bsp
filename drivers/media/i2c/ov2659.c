@@ -1180,7 +1180,7 @@ static int ov2659_set_format(struct ov2659 *ov2659)
 	return ov2659_write_array(ov2659->client, ov2659->format_ctrl_regs);
 }
 
-static int ov2659_s_stream(struct v4l2_subdev *sd, int on)
+static int ov2659_s_stream(struct v4l2_subdev *sd, unsigned int pad, int on)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov2659 *ov2659 = to_ov2659(sd);
@@ -1283,21 +1283,17 @@ static const struct v4l2_subdev_core_ops ov2659_subdev_core_ops = {
 	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
 };
 
-static const struct v4l2_subdev_video_ops ov2659_subdev_video_ops = {
-	.s_stream = ov2659_s_stream,
-};
-
 static const struct v4l2_subdev_pad_ops ov2659_subdev_pad_ops = {
 	.enum_mbus_code = ov2659_enum_mbus_code,
 	.enum_frame_size = ov2659_enum_frame_sizes,
 	.get_fmt = ov2659_get_fmt,
 	.set_fmt = ov2659_set_fmt,
+	.s_stream = ov2659_s_stream,
 };
 
 #ifdef CONFIG_VIDEO_V4L2_SUBDEV_API
 static const struct v4l2_subdev_ops ov2659_subdev_ops = {
 	.core  = &ov2659_subdev_core_ops,
-	.video = &ov2659_subdev_video_ops,
 	.pad   = &ov2659_subdev_pad_ops,
 };
 

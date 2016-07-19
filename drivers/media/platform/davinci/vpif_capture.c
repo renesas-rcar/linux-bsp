@@ -193,7 +193,7 @@ static int vpif_start_streaming(struct vb2_queue *vq, unsigned int count)
 		}
 	}
 
-	ret = v4l2_subdev_call(ch->sd, video, s_stream, 1);
+	ret = v4l2_subdev_call(ch->sd, pad, s_stream, 0, 1);
 	if (ret && ret != -ENOIOCTLCMD && ret != -ENODEV) {
 		vpif_dbg(1, debug, "stream on failed in subdev\n");
 		goto err;
@@ -281,7 +281,7 @@ static void vpif_stop_streaming(struct vb2_queue *vq)
 
 	ycmux_mode = 0;
 
-	ret = v4l2_subdev_call(ch->sd, video, s_stream, 0);
+	ret = v4l2_subdev_call(ch->sd, pad, s_stream, 0, 0);
 	if (ret && ret != -ENOIOCTLCMD && ret != -ENODEV)
 		vpif_dbg(1, debug, "stream off failed in subdev\n");
 

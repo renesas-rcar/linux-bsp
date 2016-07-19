@@ -282,7 +282,8 @@ __mt9t001_get_pad_crop(struct mt9t001 *mt9t001, struct v4l2_subdev_pad_config *c
 	}
 }
 
-static int mt9t001_s_stream(struct v4l2_subdev *subdev, int enable)
+static int mt9t001_s_stream(struct v4l2_subdev *subdev, unsigned int pad,
+			    int enable)
 {
 	const u16 mode = MT9T001_OUTPUT_CONTROL_CHIP_ENABLE;
 	struct i2c_client *client = v4l2_get_subdevdata(subdev);
@@ -826,10 +827,6 @@ static struct v4l2_subdev_core_ops mt9t001_subdev_core_ops = {
 	.s_power = mt9t001_set_power,
 };
 
-static struct v4l2_subdev_video_ops mt9t001_subdev_video_ops = {
-	.s_stream = mt9t001_s_stream,
-};
-
 static struct v4l2_subdev_pad_ops mt9t001_subdev_pad_ops = {
 	.enum_mbus_code = mt9t001_enum_mbus_code,
 	.enum_frame_size = mt9t001_enum_frame_size,
@@ -837,11 +834,11 @@ static struct v4l2_subdev_pad_ops mt9t001_subdev_pad_ops = {
 	.set_fmt = mt9t001_set_format,
 	.get_selection = mt9t001_get_selection,
 	.set_selection = mt9t001_set_selection,
+	.s_stream = mt9t001_s_stream,
 };
 
 static struct v4l2_subdev_ops mt9t001_subdev_ops = {
 	.core = &mt9t001_subdev_core_ops,
-	.video = &mt9t001_subdev_video_ops,
 	.pad = &mt9t001_subdev_pad_ops,
 };
 

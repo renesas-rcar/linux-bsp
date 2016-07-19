@@ -505,7 +505,7 @@ static int hdmi_streamon(struct hdmi_device *hdev)
 	if (ret)
 		return ret;
 
-	ret = v4l2_subdev_call(hdev->phy_sd, video, s_stream, 1);
+	ret = v4l2_subdev_call(hdev->phy_sd, pad, s_stream, 0, 1);
 	if (ret)
 		return ret;
 
@@ -519,15 +519,15 @@ static int hdmi_streamon(struct hdmi_device *hdev)
 	/* steady state not achieved */
 	if (tries == 0) {
 		dev_err(dev, "hdmiphy's pll could not reach steady state.\n");
-		v4l2_subdev_call(hdev->phy_sd, video, s_stream, 0);
+		v4l2_subdev_call(hdev->phy_sd, pad, s_stream, 0, 0);
 		hdmi_dumpregs(hdev, "hdmiphy - s_stream");
 		return -EIO;
 	}
 
 	/* starting MHL */
-	ret = v4l2_subdev_call(hdev->mhl_sd, video, s_stream, 1);
+	ret = v4l2_subdev_call(hdev->mhl_sd, pad, s_stream, 0, 1);
 	if (hdev->mhl_sd && ret) {
-		v4l2_subdev_call(hdev->phy_sd, video, s_stream, 0);
+		v4l2_subdev_call(hdev->phy_sd, pad, s_stream, 0, 0);
 		hdmi_dumpregs(hdev, "mhl - s_stream");
 		return -EIO;
 	}
@@ -559,14 +559,14 @@ static int hdmi_streamoff(struct hdmi_device *hdev)
 	clk_set_parent(res->sclk_hdmi, res->sclk_pixel);
 	clk_enable(res->sclk_hdmi);
 
-	v4l2_subdev_call(hdev->mhl_sd, video, s_stream, 0);
-	v4l2_subdev_call(hdev->phy_sd, video, s_stream, 0);
+	v4l2_subdev_call(hdev->mhl_sd, pad, s_stream, 0, 0);
+	v4l2_subdev_call(hdev->phy_sd, pad, s_stream, 0, 0);
 
 	hdmi_dumpregs(hdev, "streamoff");
 	return 0;
 }
 
-static int hdmi_s_stream(struct v4l2_subdev *sd, int enable)
+static int hdmi_s_stream(struct v4l2_subdev *sd, unsigned int pad, int enable)
 {
 	struct hdmi_device *hdev = sd_to_hdmi_dev(sd);
 	struct device *dev = hdev->dev;
@@ -717,13 +717,13 @@ static const struct v4l2_subdev_core_ops hdmi_sd_core_ops = {
 static const struct v4l2_subdev_video_ops hdmi_sd_video_ops = {
 	.s_dv_timings = hdmi_s_dv_timings,
 	.g_dv_timings = hdmi_g_dv_timings,
-	.s_stream = hdmi_s_stream,
 };
 
 static const struct v4l2_subdev_pad_ops hdmi_sd_pad_ops = {
 	.enum_dv_timings = hdmi_enum_dv_timings,
 	.dv_timings_cap = hdmi_dv_timings_cap,
 	.get_fmt = hdmi_get_fmt,
+	.s_stream = hdmi_s_stream,
 };
 
 static const struct v4l2_subdev_ops hdmi_sd_ops = {

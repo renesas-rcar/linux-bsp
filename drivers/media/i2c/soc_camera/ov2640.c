@@ -679,7 +679,8 @@ err:
 /*
  * soc_camera_ops functions
  */
-static int ov2640_s_stream(struct v4l2_subdev *sd, int enable)
+static int ov2640_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	return 0;
 }
@@ -1023,7 +1024,6 @@ static int ov2640_g_mbus_config(struct v4l2_subdev *sd,
 }
 
 static struct v4l2_subdev_video_ops ov2640_subdev_video_ops = {
-	.s_stream	= ov2640_s_stream,
 	.cropcap	= ov2640_cropcap,
 	.g_crop		= ov2640_g_crop,
 	.g_mbus_config	= ov2640_g_mbus_config,
@@ -1033,6 +1033,7 @@ static const struct v4l2_subdev_pad_ops ov2640_subdev_pad_ops = {
 	.enum_mbus_code = ov2640_enum_mbus_code,
 	.get_fmt	= ov2640_get_fmt,
 	.set_fmt	= ov2640_set_fmt,
+	.s_stream	= ov2640_s_stream,
 };
 
 static struct v4l2_subdev_ops ov2640_subdev_ops = {

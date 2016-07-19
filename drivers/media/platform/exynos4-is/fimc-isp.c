@@ -252,7 +252,8 @@ static int fimc_isp_subdev_set_fmt(struct v4l2_subdev *sd,
 	return ret;
 }
 
-static int fimc_isp_subdev_s_stream(struct v4l2_subdev *sd, int on)
+static int fimc_isp_subdev_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+				    int on)
 {
 	struct fimc_isp *isp = v4l2_get_subdevdata(sd);
 	struct fimc_is *is = fimc_isp_to_is(isp);
@@ -423,9 +424,6 @@ static const struct v4l2_subdev_pad_ops fimc_is_subdev_pad_ops = {
 	.enum_mbus_code = fimc_is_subdev_enum_mbus_code,
 	.get_fmt = fimc_isp_subdev_get_fmt,
 	.set_fmt = fimc_isp_subdev_set_fmt,
-};
-
-static const struct v4l2_subdev_video_ops fimc_is_subdev_video_ops = {
 	.s_stream = fimc_isp_subdev_s_stream,
 };
 
@@ -435,7 +433,6 @@ static const struct v4l2_subdev_core_ops fimc_is_core_ops = {
 
 static struct v4l2_subdev_ops fimc_is_subdev_ops = {
 	.core = &fimc_is_core_ops,
-	.video = &fimc_is_subdev_video_ops,
 	.pad = &fimc_is_subdev_pad_ops,
 };
 

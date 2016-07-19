@@ -982,7 +982,7 @@ zr36057_enable_jpg (struct zoran          *zr,
 		 * the video bus direction set to input.
 		 */
 		set_videobus_dir(zr, 0);
-		decoder_call(zr, video, s_stream, 1);
+		decoder_call(zr, pad, s_stream, 0, 1);
 		encoder_call(zr, video, s_routing, 0, 0, 0);
 
 		/* Take the JPEG codec and the VFE out of sleep */
@@ -1029,7 +1029,7 @@ zr36057_enable_jpg (struct zoran          *zr,
 		/* In motion decompression mode, the decoder output must be disabled, and
 		 * the video bus direction set to output.
 		 */
-		decoder_call(zr, video, s_stream, 0);
+		decoder_call(zr, pad, s_stream, 0, 0);
 		set_videobus_dir(zr, 1);
 		encoder_call(zr, video, s_routing, 1, 0, 0);
 
@@ -1075,7 +1075,7 @@ zr36057_enable_jpg (struct zoran          *zr,
 		jpeg_codec_sleep(zr, 1);
 		zr36057_adjust_vfe(zr, mode);
 
-		decoder_call(zr, video, s_stream, 1);
+		decoder_call(zr, pad, s_stream, 0, 1);
 		encoder_call(zr, video, s_routing, 0, 0, 0);
 
 		dprintk(2, KERN_INFO "%s: enable_jpg(IDLE)\n", ZR_DEVNAME(zr));

@@ -38,8 +38,18 @@ static inline void vsp1_rpf_write(struct vsp1_rwpf *rpf,
  * V4L2 Subdevice Operations
  */
 
+static const struct v4l2_subdev_pad_ops vsp1_rpf_pad_ops = {
+	.init_cfg = vsp1_entity_init_cfg,
+	.enum_mbus_code = vsp1_rwpf_enum_mbus_code,
+	.enum_frame_size = vsp1_rwpf_enum_frame_size,
+	.get_fmt = vsp1_subdev_get_pad_format,
+	.set_fmt = vsp1_rwpf_set_format,
+	.get_selection = vsp1_rwpf_get_selection,
+	.set_selection = vsp1_rwpf_set_selection,
+};
+
 static const struct v4l2_subdev_ops rpf_ops = {
-	.pad    = &vsp1_rwpf_pad_ops,
+	.pad    = &vsp1_rpf_pad_ops,
 };
 
 /* -----------------------------------------------------------------------------

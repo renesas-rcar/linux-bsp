@@ -1366,7 +1366,8 @@ static int isif_configure(struct v4l2_subdev *sd, int mode)
  * @sd: VPFE ISIF V4L2 subdevice
  * @enable: Enable/disable stream
  */
-static int isif_set_stream(struct v4l2_subdev *sd, int enable)
+static int isif_set_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	struct vpfe_isif_device *isif = v4l2_get_subdevdata(sd);
 	int ret;
@@ -1664,11 +1665,6 @@ static const struct v4l2_subdev_internal_ops isif_v4l2_internal_ops = {
 	.open = isif_init_formats,
 };
 
-/* subdev video operations */
-static const struct v4l2_subdev_video_ops isif_v4l2_video_ops = {
-	.s_stream = isif_set_stream,
-};
-
 /* subdev pad operations */
 static const struct v4l2_subdev_pad_ops isif_v4l2_pad_ops = {
 	.enum_mbus_code = isif_enum_mbus_code,
@@ -1677,12 +1673,12 @@ static const struct v4l2_subdev_pad_ops isif_v4l2_pad_ops = {
 	.set_fmt = isif_set_format,
 	.set_selection = isif_pad_set_selection,
 	.get_selection = isif_pad_get_selection,
+	.s_stream = isif_set_stream,
 };
 
 /* subdev operations */
 static const struct v4l2_subdev_ops isif_v4l2_ops = {
 	.core = &isif_v4l2_core_ops,
-	.video = &isif_v4l2_video_ops,
 	.pad = &isif_v4l2_pad_ops,
 };
 

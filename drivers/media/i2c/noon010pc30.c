@@ -611,7 +611,7 @@ static int noon010_s_power(struct v4l2_subdev *sd, int on)
 	return ret;
 }
 
-static int noon010_s_stream(struct v4l2_subdev *sd, int on)
+static int noon010_s_stream(struct v4l2_subdev *sd, unsigned int pad, int on)
 {
 	struct noon010_info *info = to_noon010(sd);
 	int ret = 0;
@@ -668,16 +668,12 @@ static struct v4l2_subdev_pad_ops noon010_pad_ops = {
 	.enum_mbus_code	= noon010_enum_mbus_code,
 	.get_fmt	= noon010_get_fmt,
 	.set_fmt	= noon010_set_fmt,
-};
-
-static struct v4l2_subdev_video_ops noon010_video_ops = {
 	.s_stream	= noon010_s_stream,
 };
 
 static const struct v4l2_subdev_ops noon010_ops = {
 	.core	= &noon010_core_ops,
 	.pad	= &noon010_pad_ops,
-	.video	= &noon010_video_ops,
 };
 
 /* Return 0 if NOON010PC30L sensor type was detected or -ENODEV otherwise. */

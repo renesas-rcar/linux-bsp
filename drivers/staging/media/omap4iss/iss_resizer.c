@@ -351,7 +351,8 @@ static const struct iss_video_operations resizer_video_ops = {
  * @sd: ISP RESIZER V4L2 subdevice
  * @enable: Enable/disable stream
  */
-static int resizer_set_stream(struct v4l2_subdev *sd, int enable)
+static int resizer_set_stream(struct v4l2_subdev *sd, unsigned int pad,
+			      int enable)
 {
 	struct iss_resizer_device *resizer = v4l2_get_subdevdata(sd);
 	struct iss_device *iss = to_iss_device(resizer);
@@ -671,11 +672,6 @@ static int resizer_init_formats(struct v4l2_subdev *sd,
 	return 0;
 }
 
-/* V4L2 subdev video operations */
-static const struct v4l2_subdev_video_ops resizer_v4l2_video_ops = {
-	.s_stream = resizer_set_stream,
-};
-
 /* V4L2 subdev pad operations */
 static const struct v4l2_subdev_pad_ops resizer_v4l2_pad_ops = {
 	.enum_mbus_code = resizer_enum_mbus_code,
@@ -683,11 +679,11 @@ static const struct v4l2_subdev_pad_ops resizer_v4l2_pad_ops = {
 	.get_fmt = resizer_get_format,
 	.set_fmt = resizer_set_format,
 	.link_validate = resizer_link_validate,
+	.s_stream = resizer_set_stream,
 };
 
 /* V4L2 subdev operations */
 static const struct v4l2_subdev_ops resizer_v4l2_ops = {
-	.video = &resizer_v4l2_video_ops,
 	.pad = &resizer_v4l2_pad_ops,
 };
 

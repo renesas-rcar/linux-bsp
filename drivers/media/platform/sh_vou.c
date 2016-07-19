@@ -299,8 +299,8 @@ static int sh_vou_start_streaming(struct vb2_queue *vq, unsigned int count)
 	int ret;
 
 	vou_dev->sequence = 0;
-	ret = v4l2_device_call_until_err(&vou_dev->v4l2_dev, 0,
-					 video, s_stream, 1);
+	ret = v4l2_device_call_until_err(&vou_dev->v4l2_dev, 0, pad, s_stream,
+					 0, 1);
 	if (ret < 0 && ret != -ENOIOCTLCMD) {
 		list_for_each_entry_safe(buf, node, &vou_dev->buf_list, list) {
 			vb2_buffer_done(&buf->vb.vb2_buf,
@@ -346,8 +346,7 @@ static void sh_vou_stop_streaming(struct vb2_queue *vq)
 	struct sh_vou_buffer *buf, *node;
 	unsigned long flags;
 
-	v4l2_device_call_until_err(&vou_dev->v4l2_dev, 0,
-					 video, s_stream, 0);
+	v4l2_device_call_until_err(&vou_dev->v4l2_dev, 0, pad, s_stream, 0, 0);
 	/* disable output */
 	sh_vou_reg_a_set(vou_dev, VOUER, 0, 1);
 	/* ...but the current frame will complete */

@@ -261,7 +261,8 @@ static int ov9640_reset(struct i2c_client *client)
 }
 
 /* Start/Stop streaming from the device */
-static int ov9640_s_stream(struct v4l2_subdev *sd, int enable)
+static int ov9640_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	return 0;
 }
@@ -666,7 +667,6 @@ static int ov9640_g_mbus_config(struct v4l2_subdev *sd,
 }
 
 static struct v4l2_subdev_video_ops ov9640_video_ops = {
-	.s_stream	= ov9640_s_stream,
 	.cropcap	= ov9640_cropcap,
 	.g_crop		= ov9640_g_crop,
 	.g_mbus_config	= ov9640_g_mbus_config,
@@ -675,6 +675,7 @@ static struct v4l2_subdev_video_ops ov9640_video_ops = {
 static const struct v4l2_subdev_pad_ops ov9640_pad_ops = {
 	.enum_mbus_code = ov9640_enum_mbus_code,
 	.set_fmt	= ov9640_set_fmt,
+	.s_stream	= ov9640_s_stream,
 };
 
 static struct v4l2_subdev_ops ov9640_subdev_ops = {

@@ -1537,7 +1537,8 @@ out:
  * V4L2 subdev video operations
  */
 
-static int smiapp_set_stream(struct v4l2_subdev *subdev, int enable)
+static int smiapp_set_stream(struct v4l2_subdev *subdev, unsigned int pad,
+			     int enable)
 {
 	struct smiapp_sensor *sensor = to_smiapp_sensor(subdev);
 	int rval;
@@ -2883,10 +2884,6 @@ static int smiapp_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	return smiapp_set_power(sd, 0);
 }
 
-static const struct v4l2_subdev_video_ops smiapp_video_ops = {
-	.s_stream = smiapp_set_stream,
-};
-
 static const struct v4l2_subdev_core_ops smiapp_core_ops = {
 	.s_power = smiapp_set_power,
 };
@@ -2897,6 +2894,7 @@ static const struct v4l2_subdev_pad_ops smiapp_pad_ops = {
 	.set_fmt = smiapp_set_format,
 	.get_selection = smiapp_get_selection,
 	.set_selection = smiapp_set_selection,
+	.s_stream = smiapp_set_stream,
 };
 
 static const struct v4l2_subdev_sensor_ops smiapp_sensor_ops = {
@@ -2906,7 +2904,6 @@ static const struct v4l2_subdev_sensor_ops smiapp_sensor_ops = {
 
 static const struct v4l2_subdev_ops smiapp_ops = {
 	.core = &smiapp_core_ops,
-	.video = &smiapp_video_ops,
 	.pad = &smiapp_pad_ops,
 	.sensor = &smiapp_sensor_ops,
 };

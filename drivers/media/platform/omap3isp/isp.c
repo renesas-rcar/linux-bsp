@@ -709,17 +709,17 @@ static int isp_pipeline_enable(struct isp_pipeline *pipe,
 		entity = pad->entity;
 		subdev = media_entity_to_v4l2_subdev(entity);
 
-		ret = v4l2_subdev_call(subdev, video, s_stream, mode);
+		ret = v4l2_subdev_call(subdev, pad, s_stream, 0, mode);
 		if (ret < 0 && ret != -ENOIOCTLCMD)
 			return ret;
 
 		if (subdev == &isp->isp_ccdc.subdev) {
-			v4l2_subdev_call(&isp->isp_aewb.subdev, video,
-					s_stream, mode);
-			v4l2_subdev_call(&isp->isp_af.subdev, video,
-					s_stream, mode);
-			v4l2_subdev_call(&isp->isp_hist.subdev, video,
-					s_stream, mode);
+			v4l2_subdev_call(&isp->isp_aewb.subdev, pad, s_stream,
+					 0, mode);
+			v4l2_subdev_call(&isp->isp_af.subdev, pad, s_stream,
+					 0, mode);
+			v4l2_subdev_call(&isp->isp_hist.subdev, pad, s_stream,
+					 0, mode);
 			pipe->do_propagation = true;
 		}
 	}
@@ -799,15 +799,15 @@ static int isp_pipeline_disable(struct isp_pipeline *pipe)
 		subdev = media_entity_to_v4l2_subdev(entity);
 
 		if (subdev == &isp->isp_ccdc.subdev) {
-			v4l2_subdev_call(&isp->isp_aewb.subdev,
-					 video, s_stream, 0);
-			v4l2_subdev_call(&isp->isp_af.subdev,
-					 video, s_stream, 0);
-			v4l2_subdev_call(&isp->isp_hist.subdev,
-					 video, s_stream, 0);
+			v4l2_subdev_call(&isp->isp_aewb.subdev, pad, s_stream,
+					 0, 0);
+			v4l2_subdev_call(&isp->isp_af.subdev, pad, s_stream,
+					 0, 0);
+			v4l2_subdev_call(&isp->isp_hist.subdev, pad, s_stream,
+					 0, 0);
 		}
 
-		ret = v4l2_subdev_call(subdev, video, s_stream, 0);
+		ret = v4l2_subdev_call(subdev, pad, s_stream, 0, 0);
 
 		if (subdev == &isp->isp_res.subdev)
 			ret |= isp_pipeline_wait(isp, isp_pipeline_wait_resizer);

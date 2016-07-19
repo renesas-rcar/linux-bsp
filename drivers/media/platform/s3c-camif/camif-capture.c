@@ -132,7 +132,7 @@ static int sensor_set_streaming(struct camif_dev *camif, int on)
 	int err = 0;
 
 	if (camif->sensor.stream_count == !on)
-		err = v4l2_subdev_call(sensor->sd, video, s_stream, on);
+		err = v4l2_subdev_call(sensor->sd, pad, s_stream, 0, on);
 	if (!err)
 		sensor->stream_count += on ? 1 : -1;
 

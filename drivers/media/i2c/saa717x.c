@@ -1096,7 +1096,8 @@ static int saa717x_s_audio_routing(struct v4l2_subdev *sd,
 	return -ERANGE;
 }
 
-static int saa717x_s_stream(struct v4l2_subdev *sd, int enable)
+static int saa717x_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct saa717x_state *decoder = to_state(sd);
 
@@ -1216,7 +1217,6 @@ static const struct v4l2_subdev_tuner_ops saa717x_tuner_ops = {
 static const struct v4l2_subdev_video_ops saa717x_video_ops = {
 	.s_std = saa717x_s_std,
 	.s_routing = saa717x_s_video_routing,
-	.s_stream = saa717x_s_stream,
 };
 
 static const struct v4l2_subdev_audio_ops saa717x_audio_ops = {
@@ -1225,6 +1225,7 @@ static const struct v4l2_subdev_audio_ops saa717x_audio_ops = {
 
 static const struct v4l2_subdev_pad_ops saa717x_pad_ops = {
 	.set_fmt = saa717x_set_fmt,
+	.s_stream = saa717x_s_stream,
 };
 
 static const struct v4l2_subdev_ops saa717x_ops = {

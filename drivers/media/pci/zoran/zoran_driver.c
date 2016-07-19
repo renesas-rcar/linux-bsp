@@ -1026,7 +1026,7 @@ zoran_close(struct file  *file)
 		zoran_set_pci_master(zr, 0);
 
 		if (!pass_through) {	/* Switch to color bar */
-			decoder_call(zr, video, s_stream, 0);
+			decoder_call(zr, pad, s_stream, 0, 0);
 			encoder_call(zr, video, s_routing, 2, 0, 0);
 		}
 	}

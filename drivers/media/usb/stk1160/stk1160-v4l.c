@@ -251,7 +251,7 @@ static int stk1160_start_streaming(struct stk1160 *dev)
 	}
 
 	/* Start saa711x */
-	v4l2_device_call_all(&dev->v4l2_dev, 0, video, s_stream, 1);
+	v4l2_device_call_all(&dev->v4l2_dev, 0, pad, s_stream, 0, 1);
 
 	dev->sequence = 0;
 
@@ -293,7 +293,7 @@ static void stk1160_stop_hw(struct stk1160 *dev)
 	stk1160_write_reg(dev, STK1160_DCTRL+3, 0x00);
 
 	/* Stop saa711x */
-	v4l2_device_call_all(&dev->v4l2_dev, 0, video, s_stream, 0);
+	v4l2_device_call_all(&dev->v4l2_dev, 0, pad, s_stream, 0, 0);
 }
 
 static int stk1160_stop_streaming(struct stk1160 *dev)

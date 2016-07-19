@@ -265,7 +265,7 @@ int vsp1_pipeline_stop(struct vsp1_pipeline *pipe)
 				   VI6_DPR_NODE_UNUSED);
 	}
 
-	v4l2_subdev_call(&pipe->output->entity.subdev, video, s_stream, 0);
+	v4l2_subdev_call(&pipe->output->entity.subdev, pad, s_stream, 0, 0);
 
 	return ret;
 }

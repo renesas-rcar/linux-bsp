@@ -236,7 +236,8 @@ static int hdmiphy_dv_timings_cap(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int hdmiphy_s_stream(struct v4l2_subdev *sd, int enable)
+static int hdmiphy_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct device *dev = &client->dev;
@@ -262,11 +263,11 @@ static const struct v4l2_subdev_core_ops hdmiphy_core_ops = {
 
 static const struct v4l2_subdev_video_ops hdmiphy_video_ops = {
 	.s_dv_timings = hdmiphy_s_dv_timings,
-	.s_stream =  hdmiphy_s_stream,
 };
 
 static const struct v4l2_subdev_pad_ops hdmiphy_pad_ops = {
 	.dv_timings_cap = hdmiphy_dv_timings_cap,
+	.s_stream = hdmiphy_s_stream,
 };
 
 static const struct v4l2_subdev_ops hdmiphy_ops = {

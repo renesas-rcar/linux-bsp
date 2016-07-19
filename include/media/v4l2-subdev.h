@@ -335,9 +335,6 @@ struct v4l2_mbus_frame_desc {
  * @g_input_status: get input status. Same as the status field in the v4l2_input
  *	struct.
  *
- * @s_stream: used to notify the driver that a video stream will start or has
- *	stopped.
- *
  * @cropcap: callback for VIDIOC_CROPCAP ioctl handler code.
  *
  * @g_crop: callback for VIDIOC_G_CROP ioctl handler code.
@@ -381,7 +378,6 @@ struct v4l2_subdev_video_ops {
 	int (*g_tvnorms)(struct v4l2_subdev *sd, v4l2_std_id *std);
 	int (*g_tvnorms_output)(struct v4l2_subdev *sd, v4l2_std_id *std);
 	int (*g_input_status)(struct v4l2_subdev *sd, u32 *status);
-	int (*s_stream)(struct v4l2_subdev *sd, int enable);
 	int (*cropcap)(struct v4l2_subdev *sd, struct v4l2_cropcap *cc);
 	int (*g_crop)(struct v4l2_subdev *sd, struct v4l2_crop *crop);
 	int (*s_crop)(struct v4l2_subdev *sd, const struct v4l2_crop *crop);
@@ -585,6 +581,9 @@ struct v4l2_subdev_pad_config {
  *
  * @set_frame_desc: set the low level media bus frame parameters, @fd array
  *                  may be adjusted by the subdev driver to device capabilities.
+ * @s_stream: used to notify the driver that a video stream will start or has
+ *	      stopped.
+ *
  */
 struct v4l2_subdev_pad_ops {
 	int (*init_cfg)(struct v4l2_subdev *sd,
@@ -625,6 +624,7 @@ struct v4l2_subdev_pad_ops {
 			      struct v4l2_mbus_frame_desc *fd);
 	int (*set_frame_desc)(struct v4l2_subdev *sd, unsigned int pad,
 			      struct v4l2_mbus_frame_desc *fd);
+	int (*s_stream)(struct v4l2_subdev *sd, unsigned int pad, int enable);
 };
 
 struct v4l2_subdev_ops {

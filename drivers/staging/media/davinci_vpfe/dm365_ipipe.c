@@ -1389,7 +1389,8 @@ void vpfe_ipipe_enable(struct vpfe_device *vpfe_dev, int en)
  * @sd: pointer to v4l2 subdev structure
  * @enable: 1 == Enable, 0 == Disable
  */
-static int ipipe_set_stream(struct v4l2_subdev *sd, int enable)
+static int ipipe_set_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct vpfe_ipipe_device *ipipe = v4l2_get_subdevdata(sd);
 	struct vpfe_device *vpfe_dev = to_vpfe_device(ipipe);
@@ -1665,23 +1666,18 @@ static const struct  v4l2_subdev_internal_ops ipipe_v4l2_internal_ops = {
 	.open = ipipe_init_formats,
 };
 
-/* subdev video operations */
-static const struct v4l2_subdev_video_ops ipipe_v4l2_video_ops = {
-	.s_stream = ipipe_set_stream,
-};
-
 /* subdev pad operations */
 static const struct v4l2_subdev_pad_ops ipipe_v4l2_pad_ops = {
 	.enum_mbus_code = ipipe_enum_mbus_code,
 	.enum_frame_size = ipipe_enum_frame_size,
 	.get_fmt = ipipe_get_format,
 	.set_fmt = ipipe_set_format,
+	.s_stream = ipipe_set_stream,
 };
 
 /* v4l2 subdev operation */
 static const struct v4l2_subdev_ops ipipe_v4l2_ops = {
 	.core = &ipipe_v4l2_core_ops,
-	.video = &ipipe_v4l2_video_ops,
 	.pad = &ipipe_v4l2_pad_ops,
 };
 

@@ -332,7 +332,7 @@ static int __fimc_pipeline_s_stream(struct exynos_media_pipeline *ep, bool on)
 	for (i = 0; i < IDX_MAX; i++) {
 		unsigned int idx = seq[on][i];
 
-		ret = v4l2_subdev_call(p->subdevs[idx], video, s_stream, on);
+		ret = v4l2_subdev_call(p->subdevs[idx], pad, s_stream, 0, on);
 
 		if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
 			goto error;
@@ -343,7 +343,7 @@ error:
 	fimc_pipeline_s_power(p, !on);
 	for (; i >= 0; i--) {
 		unsigned int idx = seq[on][i];
-		v4l2_subdev_call(p->subdevs[idx], video, s_stream, !on);
+		v4l2_subdev_call(p->subdevs[idx], pad, s_stream, 0, !on);
 	}
 	return ret;
 }

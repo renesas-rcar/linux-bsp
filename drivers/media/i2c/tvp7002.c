@@ -728,7 +728,8 @@ static int tvp7002_s_register(struct v4l2_subdev *sd,
  *
  * Sets streaming to enable or disable, if possible.
  */
-static int tvp7002_s_stream(struct v4l2_subdev *sd, int enable)
+static int tvp7002_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct tvp7002 *device = to_tvp7002(sd);
 	int error;
@@ -872,7 +873,6 @@ static const struct v4l2_subdev_video_ops tvp7002_video_ops = {
 	.g_dv_timings = tvp7002_g_dv_timings,
 	.s_dv_timings = tvp7002_s_dv_timings,
 	.query_dv_timings = tvp7002_query_dv_timings,
-	.s_stream = tvp7002_s_stream,
 };
 
 /* media pad related operation handlers */
@@ -881,6 +881,7 @@ static const struct v4l2_subdev_pad_ops tvp7002_pad_ops = {
 	.get_fmt = tvp7002_get_pad_format,
 	.set_fmt = tvp7002_set_pad_format,
 	.enum_dv_timings = tvp7002_enum_dv_timings,
+	.s_stream = tvp7002_s_stream,
 };
 
 /* V4L2 top level operation handlers */

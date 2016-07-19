@@ -1628,7 +1628,8 @@ static long preview_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
  * @enable: 1 == Enable, 0 == Disable
  * return -EINVAL or zero on success
  */
-static int preview_set_stream(struct v4l2_subdev *sd, int enable)
+static int preview_set_stream(struct v4l2_subdev *sd, unsigned int pad,
+			      int enable)
 {
 	struct isp_prev_device *prev = v4l2_get_subdevdata(sd);
 	struct isp_video *video_out = &prev->video_out;
@@ -2099,11 +2100,6 @@ static const struct v4l2_subdev_core_ops preview_v4l2_core_ops = {
 	.ioctl = preview_ioctl,
 };
 
-/* subdev video operations */
-static const struct v4l2_subdev_video_ops preview_v4l2_video_ops = {
-	.s_stream = preview_set_stream,
-};
-
 /* subdev pad operations */
 static const struct v4l2_subdev_pad_ops preview_v4l2_pad_ops = {
 	.enum_mbus_code = preview_enum_mbus_code,
@@ -2112,12 +2108,12 @@ static const struct v4l2_subdev_pad_ops preview_v4l2_pad_ops = {
 	.set_fmt = preview_set_format,
 	.get_selection = preview_get_selection,
 	.set_selection = preview_set_selection,
+	.s_stream = preview_set_stream,
 };
 
 /* subdev operations */
 static const struct v4l2_subdev_ops preview_v4l2_ops = {
 	.core = &preview_v4l2_core_ops,
-	.video = &preview_v4l2_video_ops,
 	.pad = &preview_v4l2_pad_ops,
 };
 

@@ -1708,7 +1708,8 @@ static int cx25840_s_audio_stream(struct v4l2_subdev *sd, int enable)
 	return 0;
 }
 
-static int cx25840_s_stream(struct v4l2_subdev *sd, int enable)
+static int cx25840_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			    int enable)
 {
 	struct cx25840_state *state = to_state(sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -5069,7 +5070,6 @@ static const struct v4l2_subdev_video_ops cx25840_video_ops = {
 	.s_std = cx25840_s_std,
 	.g_std = cx25840_g_std,
 	.s_routing = cx25840_s_video_routing,
-	.s_stream = cx25840_s_stream,
 	.g_input_status = cx25840_g_input_status,
 };
 
@@ -5082,6 +5082,7 @@ static const struct v4l2_subdev_vbi_ops cx25840_vbi_ops = {
 
 static const struct v4l2_subdev_pad_ops cx25840_pad_ops = {
 	.set_fmt = cx25840_set_fmt,
+	.s_stream = cx25840_s_stream,
 };
 
 static const struct v4l2_subdev_ops cx25840_ops = {

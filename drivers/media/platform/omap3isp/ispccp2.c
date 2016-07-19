@@ -822,7 +822,7 @@ static int ccp2_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
  * @enable: 1 == Enable, 0 == Disable
  * return zero
  */
-static int ccp2_s_stream(struct v4l2_subdev *sd, int enable)
+static int ccp2_s_stream(struct v4l2_subdev *sd, unsigned int pad, int enable)
 {
 	struct isp_ccp2_device *ccp2 = v4l2_get_subdevdata(sd);
 	struct isp_device *isp = to_isp_device(ccp2);
@@ -892,22 +892,17 @@ static int ccp2_s_stream(struct v4l2_subdev *sd, int enable)
 	return 0;
 }
 
-/* subdev video operations */
-static const struct v4l2_subdev_video_ops ccp2_sd_video_ops = {
-	.s_stream = ccp2_s_stream,
-};
-
 /* subdev pad operations */
 static const struct v4l2_subdev_pad_ops ccp2_sd_pad_ops = {
 	.enum_mbus_code = ccp2_enum_mbus_code,
 	.enum_frame_size = ccp2_enum_frame_size,
 	.get_fmt = ccp2_get_format,
 	.set_fmt = ccp2_set_format,
+	.s_stream = ccp2_s_stream,
 };
 
 /* subdev operations */
 static const struct v4l2_subdev_ops ccp2_sd_ops = {
-	.video = &ccp2_sd_video_ops,
 	.pad = &ccp2_sd_pad_ops,
 };
 

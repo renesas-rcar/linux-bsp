@@ -167,7 +167,8 @@ static void xtpg_update_pattern_control(struct xtpg_device *xtpg,
  * V4L2 Subdevice Video Operations
  */
 
-static int xtpg_s_stream(struct v4l2_subdev *subdev, int enable)
+static int xtpg_s_stream(struct v4l2_subdev *subdev, unsigned int pad,
+			 int enable)
 {
 	struct xtpg_device *xtpg = to_tpg(subdev);
 	unsigned int width = xtpg->formats[0].width;
@@ -463,20 +464,16 @@ static const struct v4l2_ctrl_ops xtpg_ctrl_ops = {
 static struct v4l2_subdev_core_ops xtpg_core_ops = {
 };
 
-static struct v4l2_subdev_video_ops xtpg_video_ops = {
-	.s_stream = xtpg_s_stream,
-};
-
 static struct v4l2_subdev_pad_ops xtpg_pad_ops = {
 	.enum_mbus_code		= xvip_enum_mbus_code,
 	.enum_frame_size	= xtpg_enum_frame_size,
 	.get_fmt		= xtpg_get_format,
 	.set_fmt		= xtpg_set_format,
+	.s_stream		= xtpg_s_stream,
 };
 
 static struct v4l2_subdev_ops xtpg_ops = {
 	.core   = &xtpg_core_ops,
-	.video  = &xtpg_video_ops,
 	.pad    = &xtpg_pad_ops,
 };
 

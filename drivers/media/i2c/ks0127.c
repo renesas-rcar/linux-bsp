@@ -588,7 +588,8 @@ static int ks0127_s_std(struct v4l2_subdev *sd, v4l2_std_id std)
 	return 0;
 }
 
-static int ks0127_s_stream(struct v4l2_subdev *sd, int enable)
+static int ks0127_s_stream(struct v4l2_subdev *sd, unsigned int pad,
+			   int enable)
 {
 	v4l2_dbg(1, debug, sd, "s_stream(%d)\n", enable);
 	if (enable) {
@@ -651,13 +652,17 @@ static int ks0127_g_input_status(struct v4l2_subdev *sd, u32 *status)
 static const struct v4l2_subdev_video_ops ks0127_video_ops = {
 	.s_std = ks0127_s_std,
 	.s_routing = ks0127_s_routing,
-	.s_stream = ks0127_s_stream,
 	.querystd = ks0127_querystd,
 	.g_input_status = ks0127_g_input_status,
 };
 
+static const struct v4l2_subdev_pad_ops ks0127_pad_ops = {
+	.s_stream = ks0127_s_stream,
+};
+
 static const struct v4l2_subdev_ops ks0127_ops = {
 	.video = &ks0127_video_ops,
+	.pad = &ks0127_pad_ops,
 };
 
 /* ----------------------------------------------------------------------- */

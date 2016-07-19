@@ -662,7 +662,7 @@ static int cobalt_subdevs_hsma_init(struct cobalt *cobalt)
 				COBALT_SYS_CTRL_VIDEO_TX_RESETN_BIT, 1);
 		cobalt->have_hsma_tx = true;
 		v4l2_subdev_call(s->sd, core, s_power, 1);
-		v4l2_subdev_call(s->sd, video, s_stream, 1);
+		v4l2_subdev_call(s->sd, pad, s_stream, 0, 1);
 		v4l2_subdev_call(s->sd, audio, s_stream, 1);
 		v4l2_ctrl_s_ctrl(v4l2_ctrl_find(s->sd->ctrl_handler,
 				 V4L2_CID_DV_TX_MODE), V4L2_DV_TX_MODE_HDMI);

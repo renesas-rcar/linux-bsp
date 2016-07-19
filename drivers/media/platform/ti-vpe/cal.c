@@ -1325,7 +1325,7 @@ static int cal_start_streaming(struct vb2_queue *vq, unsigned int count)
 	cal_wr_dma_addr(ctx, addr);
 	csi2_ppi_enable(ctx);
 
-	ret = v4l2_subdev_call(ctx->sensor, video, s_stream, 1);
+	ret = v4l2_subdev_call(ctx->sensor, pad, s_stream, 0, 1);
 	if (ret) {
 		ctx_err(ctx, "stream on failed in subdev\n");
 		cal_runtime_put(ctx->dev);
@@ -1352,7 +1352,7 @@ static void cal_stop_streaming(struct vb2_queue *vq)
 	struct cal_buffer *buf, *tmp;
 	unsigned long flags;
 
-	if (v4l2_subdev_call(ctx->sensor, video, s_stream, 0))
+	if (v4l2_subdev_call(ctx->sensor, pad, s_stream, 0, 0))
 		ctx_err(ctx, "stream off failed in subdev\n");
 
 	csi2_ppi_disable(ctx);
