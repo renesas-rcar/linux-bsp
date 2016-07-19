@@ -751,7 +751,8 @@ static int spidev_probe(struct spi_device *spi)
 	 * compatible string, it is a Linux implementation thing
 	 * rather than a description of the hardware.
 	 */
-	if (spi->dev.of_node && !of_match_device(spidev_dt_ids, &spi->dev)) {
+	if (spi->dev.of_node && !of_match_device(spidev_dt_ids, &spi->dev) &&
+	    !(spi->master->flags & SPI_MASTER_IS_SLAVE)) {
 		dev_err(&spi->dev, "buggy DT: spidev listed directly in DT\n");
 		WARN_ON(spi->dev.of_node &&
 			!of_match_device(spidev_dt_ids, &spi->dev));
