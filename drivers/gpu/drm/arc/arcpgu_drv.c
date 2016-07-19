@@ -28,8 +28,7 @@ static void arcpgu_fb_output_poll_changed(struct drm_device *dev)
 {
 	struct arcpgu_drm_private *arcpgu = dev->dev_private;
 
-	if (arcpgu->fbdev)
-		drm_fbdev_cma_hotplug_event(arcpgu->fbdev);
+	drm_fbdev_cma_hotplug_event(arcpgu->fbdev);
 }
 
 static struct drm_mode_config_funcs arcpgu_drm_modecfg_funcs = {
@@ -127,6 +126,7 @@ static int arcpgu_load(struct drm_device *drm)
 	encoder_node = of_parse_phandle(drm->dev->of_node, "encoder-slave", 0);
 	if (encoder_node) {
 		ret = arcpgu_drm_hdmi_init(drm, encoder_node);
+		of_node_put(encoder_node);
 		if (ret < 0)
 			return ret;
 	} else {
