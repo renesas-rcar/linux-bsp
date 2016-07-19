@@ -1060,7 +1060,7 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 	err = hw_init_fn(pcie);
 	if (err) {
 		dev_info(&pdev->dev, "PCIe link down\n");
-		err = 0;
+		err = -ENODEV;
 		goto err_pm_put;
 	}
 
