@@ -14,6 +14,7 @@ are paired with. These DT bindings currently support the FCPV and FCPF.
    - "renesas,r8a7795-fcpv" for R8A7795 (R-Car H3) compatible 'FCP for VSP'
    - "renesas,r8a7795-fcpf" for R8A7795 (R-Car H3) compatible 'FCP for FDP'
    - "renesas,fcpv" for generic compatible 'FCP for VSP'
+   - "renesas,fcpf" for generic compatible 'FCP for FDP'
 
    When compatible with the generic version, nodes must list the
    SoC-specific version corresponding to the platform first, followed by the
@@ -23,6 +24,10 @@ are paired with. These DT bindings currently support the FCPV and FCPF.
  - clocks: Reference to the functional clock
  - power-domains : power-domain property defined with a phandle
                            to respective power domain.
+
+Optional properties:
+ - power-domains : power-domain property defined with a power domain specifier
+                            to respective power domain.
 
 
 Device node example
