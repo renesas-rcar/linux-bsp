@@ -101,6 +101,17 @@ static int of_thermal_get_temp(struct thermal_zone_device *tz,
 	return data->ops->get_temp(data->sensor_data, temp);
 }
 
+static int of_thermal_set_trips(struct thermal_zone_device *tz,
+				int low, int high)
+{
+	struct __thermal_zone *data = tz->devdata;
+
+	if (!data->ops || !data->ops->set_trips)
+		return -EINVAL;
+
+	return data->ops->set_trips(data->sensor_data, low, high);
+}
+
 /**
  * of_thermal_get_ntrips - function to export number of available trip
  *			   points.
@@ -181,9 +192,6 @@ static int of_thermal_set_emul_temp(struct thermal_zone_device *tz,
 {
 	struct __thermal_zone *data = tz->devdata;
 
-	if (!data->ops || !data->ops->set_emul_temp)
-		return -EINVAL;
-
 	return data->ops->set_emul_temp(data->sensor_data, temp);
 }
 
@@ -191,25 +199,11 @@ static int of_thermal_get_trend(struct thermal_zone_device *tz, int trip,
 				enum thermal_trend *trend)
 {
 	struct __thermal_zone *data = tz->devdata;
-	long dev_trend;
-	int r;
 
 	if (!data->ops->get_trend)
 		return -EINVAL;
 
-	r = data->ops->get_trend(data->sensor_data, &dev_trend);
-	if (r)
-		return r;
-
-	/* TODO: These intervals might have some thresholds, but in core code */
-	if (dev_trend > 0)
-		*trend = THERMAL_TREND_RAISING;
-	else if (dev_trend < 0)
-		*trend = THERMAL_TREND_DROPPING;
-	else
-		*trend = THERMAL_TREND_STABLE;
-
-	return 0;
+	return data->ops->get_trend(data->sensor_data, trip, trend);
 }
 
 static int of_thermal_bind(struct thermal_zone_device *thermal,
@@ -282,17 +276,12 @@ static int of_thermal_set_mode(struct thermal_zone_device *tz,
 {
 	struct __thermal_zone *data = tz->devdata;
 
-	mutex_lock(&tz->lock);
-
 	if (mode == THERMAL_DEVICE_ENABLED)
 		tz->polling_delay = data->polling_delay;
 	else
 		tz->polling_delay = 0;
 
-	mutex_unlock(&tz->lock);
-
 	data->mode = mode;
-	thermal_zone_device_update(tz);
 
 	return 0;
 }
@@ -427,7 +416,17 @@ thermal_zone_of_add_sensor(struct device_node *zone,
 
 	tzd->ops->get_temp = of_thermal_get_temp;
 	tzd->ops->get_trend = of_thermal_get_trend;
-	tzd->ops->set_emul_temp = of_thermal_set_emul_temp;
+
+	/*
+	 * The thermal zone core will calculate the window if they have set the
+	 * optional set_trips pointer.
+	 */
+	if (ops->set_trips)
+		tzd->ops->set_trips = of_thermal_set_trips;
+
+	if (ops->set_emul_temp)
+		tzd->ops->set_emul_temp = of_thermal_set_emul_temp;
+
 	mutex_unlock(&tzd->lock);
 
 	return tzd;
