@@ -6,6 +6,11 @@
 #include <drm/drm_crtc.h>
 #include <drm/drm_of.h>
 
+static void drm_release_of(struct device *dev, void *data)
+{
+	of_node_put(data);
+}
+
 /**
  * drm_crtc_port_mask - find the mask of a registered CRTC by port OF node
  * @dev: DRM device
@@ -101,8 +106,8 @@ int drm_of_component_probe(struct device *dev,
 			continue;
 		}
 
-		component_match_add(dev, &match, compare_of, port);
-		of_node_put(port);
+		component_match_add_release(dev, &match, drm_release_of,
+					    compare_of, port);
 	}
 
 	if (i == 0) {
@@ -140,8 +145,8 @@ int drm_of_component_probe(struct device *dev,
 				continue;
 			}
 
-			component_match_add(dev, &match, compare_of, remote);
-			of_node_put(remote);
+			component_match_add_release(dev, &match, drm_release_of,
+						    compare_of, remote);
 		}
 		of_node_put(port);
 	}

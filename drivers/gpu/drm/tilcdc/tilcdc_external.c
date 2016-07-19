@@ -135,6 +135,11 @@ static int dev_match_of(struct device *dev, void *data)
 	return dev->of_node == data;
 }
 
+static void dev_release_of(struct device *dev, void *data)
+{
+	of_node_put(data);
+}
+
 int tilcdc_get_external_components(struct device *dev,
 				   struct component_match **match)
 {
@@ -152,8 +157,8 @@ int tilcdc_get_external_components(struct device *dev,
 
 		dev_dbg(dev, "Subdevice node '%s' found\n", node->name);
 		if (match)
-			component_match_add(dev, match, dev_match_of, node);
-		of_node_put(node);
+			component_match_add_release(dev, match, dev_release_of,
+						    dev_match_of, node);
 		count++;
 	}
 

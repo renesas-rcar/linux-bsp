@@ -231,6 +231,11 @@ static int compare_of(struct device *dev, void *data)
 	return dev->of_node == data;
 }
 
+static void release_of(struct device *dev, void *data)
+{
+	of_node_put(data);
+}
+
 static int compare_dev_name(struct device *dev, void *data)
 {
 	const char *name = data;
@@ -254,8 +259,8 @@ static void armada_add_endpoints(struct device *dev,
 			continue;
 		}
 
-		component_match_add(dev, match, compare_of, remote);
-		of_node_put(remote);
+		component_match_add_release(dev, match, release_of,
+					    compare_of, remote);
 	}
 }
 

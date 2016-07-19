@@ -423,9 +423,14 @@ static const struct component_master_ops hdlcd_master_ops = {
 	.unbind		= hdlcd_drm_unbind,
 };
 
-static int compare_dev(struct device *dev, void *data)
+static int compare_of(struct device *dev, void *data)
 {
 	return dev->of_node == data;
+}
+
+static void release_of(struct device *dev, void *data)
+{
+	of_node_put(data);
 }
 
 static int hdlcd_probe(struct platform_device *pdev)
@@ -454,7 +459,8 @@ static int hdlcd_probe(struct platform_device *pdev)
 		return -EAGAIN;
 	}
 
-	component_match_add(&pdev->dev, &match, compare_dev, port);
+	component_match_add_release(&pdev->dev, &match, release_of,
+				    compare_of, port);
 
 	return component_master_add_with_match(&pdev->dev, &hdlcd_master_ops,
 					       match);

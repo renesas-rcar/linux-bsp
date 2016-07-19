@@ -320,6 +320,11 @@ static int compare_of(struct device *dev, void *data)
 	return dev->of_node == data;
 }
 
+static void release_of(struct device *dev, void *data)
+{
+	of_node_put(data);
+}
+
 static int sti_init(struct drm_device *ddev)
 {
 	struct sti_private *private;
@@ -423,8 +428,8 @@ static int sti_platform_probe(struct platform_device *pdev)
 	child_np = of_get_next_available_child(node, NULL);
 
 	while (child_np) {
-		component_match_add(dev, &match, compare_of, child_np);
-		of_node_put(child_np);
+		component_match_add_release(dev, &match, release_of,
+					    compare_of, child_np);
 		child_np = of_get_next_available_child(node, child_np);
 	}
 

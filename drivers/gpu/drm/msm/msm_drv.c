@@ -796,6 +796,11 @@ static int compare_of(struct device *dev, void *data)
 	return dev->of_node == data;
 }
 
+static void release_of(struct device *dev, void *data)
+{
+	of_node_put(data);
+}
+
 static int add_components(struct device *dev, struct component_match **matchptr,
 		const char *name)
 {
@@ -809,7 +814,8 @@ static int add_components(struct device *dev, struct component_match **matchptr,
 		if (!node)
 			break;
 
-		component_match_add(dev, matchptr, compare_of, node);
+		component_match_add_release(dev, matchptr, release_of,
+					    compare_of, node);
 	}
 
 	return 0;
