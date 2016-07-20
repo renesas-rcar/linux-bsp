@@ -836,6 +836,7 @@ static const struct of_device_id sh_mobile_i2c_dt_ids[] = {
 	{ .compatible = "renesas,iic-r8a7793", .data = &fast_clock_dt_config },
 	{ .compatible = "renesas,iic-r8a7794", .data = &fast_clock_dt_config },
 	{ .compatible = "renesas,iic-r8a7795", .data = &fast_clock_dt_config },
+	{ .compatible = "renesas,iic-r8a7796", .data = &fast_clock_dt_config },
 	{ .compatible = "renesas,iic-sh73a0", .data = &fast_clock_dt_config },
 	{},
 };
@@ -1031,7 +1032,7 @@ static int __init sh_mobile_i2c_adap_init(void)
 {
 	return platform_driver_register(&sh_mobile_i2c_driver);
 }
-subsys_initcall(sh_mobile_i2c_adap_init);
+subsys_initcall_sync(sh_mobile_i2c_adap_init);
 
 static void __exit sh_mobile_i2c_adap_exit(void)
 {
