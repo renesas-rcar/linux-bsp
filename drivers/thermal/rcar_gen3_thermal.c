@@ -104,7 +104,6 @@ struct rcar_thermal_priv {
 	spinlock_t lock;
 	int id;
 	int irq;
-	u32 ctemp;
 	const struct rcar_thermal_data *data;
 };
 
@@ -298,7 +297,6 @@ static int rcar_gen3_thermal_update_temp(struct rcar_thermal_priv *priv)
 		rcar_thermal_write(priv, REG_GEN3_IRQTEMP2, temp_code);
 	}
 
-	priv->ctemp = ctemp;
 	spin_unlock_irqrestore(&priv->lock, flags);
 
 	return 0;
@@ -309,11 +307,11 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 	struct rcar_thermal_priv *priv = devdata;
 	int ctemp;
 	unsigned long flags;
-
-	rcar_gen3_thermal_update_temp(priv);
+	u32 ctemp_code;
 
 	spin_lock_irqsave(&priv->lock, flags);
-	ctemp = thermal_temp_converter(priv->coef, priv->ctemp);
+	ctemp_code = rcar_thermal_read(priv, REG_GEN3_TEMP) & CTEMP_MASK;
+	ctemp = thermal_temp_converter(priv->coef, ctemp_code);
 	spin_unlock_irqrestore(&priv->lock, flags);
 
 	if ((ctemp < MCELSIUS(-40)) || (ctemp > MCELSIUS(125))) {
@@ -402,6 +400,7 @@ static void rcar_gen3_thermal_work(struct work_struct *work)
 
 	priv = container_of(work, struct rcar_thermal_priv, work.work);
 
+	rcar_gen3_thermal_update_temp(priv);
 	thermal_zone_device_update(priv->zone, THERMAL_EVENT_UNSPECIFIED);
 
 	rcar_thermal_irq_enable(priv);
@@ -542,7 +541,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 	if (ret < 0)
 		goto error_unregister;
-
 
 	rcar_thermal_irq_enable(priv);
 
