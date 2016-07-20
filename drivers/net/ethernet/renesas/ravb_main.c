@@ -2064,6 +2064,10 @@ static int ravb_probe(struct platform_device *pdev)
 	/* Request GTI loading */
 	ravb_modify(ndev, GCCR, GCCR_LTI, GCCR_LTI);
 
+	/* Set APSR */
+	if (priv->phy_interface == PHY_INTERFACE_MODE_RGMII_ID)
+		ravb_modify(ndev, APSR, APSR_DM, APSR_DM_TDM);
+
 	/* Allocate descriptor base address table */
 	priv->desc_bat_size = sizeof(struct ravb_desc) * DBAT_ENTRY_NUM;
 	priv->desc_bat = dma_alloc_coherent(ndev->dev.parent, priv->desc_bat_size,
@@ -2199,6 +2203,10 @@ static int __maybe_unused ravb_resume(struct device *dev)
 
 	/* Request GTI loading */
 	ravb_modify(ndev, GCCR, GCCR_LTI, GCCR_LTI);
+
+	/* Set APSR */
+	if (priv->phy_interface == PHY_INTERFACE_MODE_RGMII_ID)
+		ravb_modify(ndev, APSR, APSR_DM, APSR_DM_TDM);
 
 	/* Restore descriptor base address table */
 	ravb_write(ndev, priv->desc_bat_dma, DBAT);
