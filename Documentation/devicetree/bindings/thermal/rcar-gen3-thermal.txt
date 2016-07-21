@@ -1,0 +1,46 @@
+* Renesas R-Car Gen3 Thermal
+
+Required properties:
+- compatible		: "renesas,thermal-<soctype>",
+			  Examples with soctypes are:
+			    - "renesas,thermal-r8a7795" (R-Car H3)
+			    - "renesas,thermal-r8a7796" (R-Car M3)
+- reg			: Address range of the thermal registers.
+- #thermal-sensor-cells : Please see ./thermal.txt
+
+Option properties:
+
+- interrupts		: use interrupt
+
+Example (non interrupt support):
+
+thermal: thermal@0xe6198000 {
+                        compatible = "renesas,thermal-r8a7795";
+                        reg = <0 0xe6198000 0 0x5c>;
+                };
+
+thermal-zones {
+	cpu_thermal: cpu-thermal {
+		polling-delay-passive	= <250>;
+		polling-delay		= <1000>;
+
+		thermal-sensors = <&thermal>;
+	};
+};
+
+Example (interrupt support):
+
+thermal: thermal@0xe6198000 {
+                        compatible = "renesas,thermal-r8a7795";
+                        reg = <0 0xe6198000 0 0x5c>;
+			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
+                };
+
+thermal-zones {
+	cpu_thermal: cpu-thermal {
+		polling-delay-passive	= <250>;
+		polling-delay		= <0>;
+
+		thermal-sensors = <&thermal>;
+	};
+};
