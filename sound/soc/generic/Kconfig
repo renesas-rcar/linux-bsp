@@ -1,4 +1,14 @@
+config SND_SIMPLE_CARD_CORE
+       tristate
+
 config SND_SIMPLE_CARD
 	tristate "ASoC Simple sound card support"
+	select SND_SIMPLE_CARD_CORE
 	help
 	  This option enables generic simple sound card support
+
+config SND_SIMPLE_DPCM_CARD
+	tristate "ASoC Simple DPCM sound card support"
+	select SND_SIMPLE_CARD_CORE
+	help
+	  This option enables generic simple DPCM sound card support
