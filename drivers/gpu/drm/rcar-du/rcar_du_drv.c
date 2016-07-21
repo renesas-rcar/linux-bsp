@@ -604,14 +604,6 @@ static int rcar_du_pm_resume_early(struct device *dev)
 	}
 #endif
 
-#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
-	list_for_each_entry(encoder,
-		&rcdu->ddev->mode_config.encoder_list, head) {
-		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
-			rcar_du_hdmienc_enable(encoder);
-	}
-#endif
-
 #ifdef CONFIG_RCAR_DDR_BACKUP
 	ret = rcar_du_restore_regs(rcdu);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
