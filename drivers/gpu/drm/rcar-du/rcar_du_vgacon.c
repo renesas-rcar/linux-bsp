@@ -1,7 +1,7 @@
 /*
  * rcar_du_vgacon.c  --  R-Car Display Unit VGA Connector
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -23,7 +23,7 @@
 
 static int rcar_du_vga_connector_get_modes(struct drm_connector *connector)
 {
-	return 0;
+	return drm_add_modes_noedid(connector, 1024, 768);
 }
 
 static const struct drm_connector_helper_funcs connector_helper_funcs = {

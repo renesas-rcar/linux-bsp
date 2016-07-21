@@ -255,6 +255,8 @@
 
 #define DIDSR			0x20028
 #define DIDSR_CODE		(0x7790 << 16)
+#define DIDSR_LCDS0_DCLKIN	(0 << 9)
+#define DIDSR_LCDS0_LVDSIF	(1 << 9)
 #define DIDSR_LCDS_DCLKIN(n)	(0 << (8 + (n) * 2))
 #define DIDSR_LCDS_LVDS0(n)	(2 << (8 + (n) * 2))
 #define DIDSR_LCDS_LVDS1(n)	(3 << (8 + (n) * 2))
