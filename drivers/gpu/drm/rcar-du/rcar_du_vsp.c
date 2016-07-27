@@ -1323,6 +1323,15 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 
 	vsp->vsp = &pdev->dev;
 
+	/* Locate FCP device behind the VSP for dma_alloc/free. */
+	np = of_parse_phandle(pdev->dev.of_node, "renesas,fcp", 0);
+	if (np) {
+		pdev = of_find_device_by_node(np);
+		of_node_put(np);
+		if (pdev)
+			vsp->fcp = &pdev->dev;
+	}
+
 	ret = vsp1_du_init(vsp->vsp);
 	if (ret < 0)
 		return ret;
