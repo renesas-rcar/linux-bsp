@@ -99,6 +99,9 @@ void tmio_mmc_start_dma(struct tmio_mmc_host *host, struct mmc_data *data)
 	int ret;
 	u32 irq_mask;
 
+	if (!host->chan_rx || !host->chan_tx)
+		return;
+
 	/* This DMAC cannot handle if sg_len is not 1 */
 	WARN_ON(host->sg_len > 1);
 
@@ -138,6 +141,7 @@ void tmio_mmc_start_dma(struct tmio_mmc_host *host, struct mmc_data *data)
 	tmio_dm_write(host, DM_DTRAN_ADDR, sg->dma_address);
 }
 
+#ifndef CONFIG_MMC_SDHI_PIO
 static void tmio_mmc_issue_tasklet_fn(unsigned long arg)
 {
 	struct tmio_mmc_host *host = (struct tmio_mmc_host *)arg;
@@ -169,10 +173,12 @@ static void tmio_mmc_complete_tasklet_fn(unsigned long arg)
 	dma_unmap_sg(&host->pdev->dev, host->sg_ptr, host->sg_len, dir);
 	tmio_mmc_do_data_irq(host);
 }
+#endif
 
 void tmio_mmc_request_dma(struct tmio_mmc_host *host,
 			  struct tmio_mmc_data *pdata)
 {
+#ifndef CONFIG_MMC_SDHI_PIO
 	/* Each value is set to non-zero to assume "enabling" each DMA */
 	host->chan_rx = host->chan_tx = (void *)0xdeadbeaf;
 
@@ -180,6 +186,7 @@ void tmio_mmc_request_dma(struct tmio_mmc_host *host,
 		     (unsigned long)host);
 	tasklet_init(&host->dma_issue, tmio_mmc_issue_tasklet_fn,
 		     (unsigned long)host);
+#endif
 }
 
 void tmio_mmc_release_dma(struct tmio_mmc_host *host)
