@@ -200,6 +200,35 @@ const struct rcar_du_format_info *rcar_vsp_format_info(u32 fourcc)
  * Frame buffer
  */
 
+struct drm_gem_object *rcar_du_create_object(struct drm_device *dev,
+					     size_t size)
+{
+	struct rcar_du_device *rcdu = dev->dev_private;
+	struct drm_gem_cma_object *cma_obj;
+	unsigned int i;
+
+	cma_obj = kzalloc(sizeof(*cma_obj), GFP_KERNEL);
+	if (!cma_obj)
+		return ERR_PTR(-ENOMEM);
+
+	/* Use struct device from any FCP in case of VSP1_SOURCE. */
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
+		for (i = 0; i < rcdu->num_crtcs; ++i) {
+			struct rcar_du_vsp *vsp = &rcdu->vsps[i];
+
+			if (vsp->fcp) {
+				cma_obj->dev = vsp->fcp;
+				break;
+			}
+		}
+
+		if (!cma_obj->dev)
+			dev_warn(rcdu->dev, "unable to locate FCP\n");
+	}
+
+	return &cma_obj->base;
+}
+
 int rcar_du_dumb_create(struct drm_file *file, struct drm_device *dev,
 			struct drm_mode_create_dumb *args)
 {
