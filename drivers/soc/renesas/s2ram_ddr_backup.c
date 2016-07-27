@@ -237,6 +237,7 @@ int handle_registers(struct rcar_ip *ip, unsigned int handling)
 
 	return 0;
 }
+EXPORT_SYMBOL(handle_registers);
 
 /*
  * Handle backup/restore of IPs
@@ -260,6 +261,7 @@ int handle_ips(struct rcar_ip **ip, unsigned int handling)
 
 	return ret;
 }
+EXPORT_SYMBOL(handle_ips);
 
 #ifdef CONFIG_PM_SLEEP
 static int ddr_bck_suspend(void)
