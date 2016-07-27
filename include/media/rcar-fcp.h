@@ -20,6 +20,7 @@ struct rcar_fcp_device;
 struct rcar_fcp_device *rcar_fcp_get(const struct device_node *np);
 void rcar_fcp_put(struct rcar_fcp_device *fcp);
 int rcar_fcp_enable(struct rcar_fcp_device *fcp);
+struct device *rcar_fcp_device(struct rcar_fcp_device *fcp);
 void rcar_fcp_disable(struct rcar_fcp_device *fcp);
 #else
 static inline struct rcar_fcp_device *rcar_fcp_get(const struct device_node *np)
@@ -30,6 +31,10 @@ static inline void rcar_fcp_put(struct rcar_fcp_device *fcp) { }
 static inline int rcar_fcp_enable(struct rcar_fcp_device *fcp)
 {
 	return -ENOSYS;
+}
+static inline struct device *rcar_fcp_device(struct rcar_fcp_device *fcp)
+{
+	return NULL;
 }
 static inline void rcar_fcp_disable(struct rcar_fcp_device *fcp) { }
 #endif
