@@ -27,6 +27,8 @@
 #include <media/videobuf2-v4l2.h>
 #include <media/videobuf2-dma-contig.h>
 
+#include <media/rcar-fcp.h>
+
 #include "vsp1.h"
 #include "vsp1_bru.h"
 #include "vsp1_dl.h"
@@ -937,6 +939,7 @@ struct vsp1_video *vsp1_video_create(struct vsp1_device *vsp1,
 {
 	struct vsp1_video *video;
 	const char *direction;
+	struct device *fcp;
 	int ret;
 
 	video = devm_kzalloc(vsp1->dev, sizeof(*video), GFP_KERNEL);
@@ -987,7 +990,8 @@ struct vsp1_video *vsp1_video_create(struct vsp1_device *vsp1,
 	video_set_drvdata(&video->video, video);
 
 	/* ... and the buffers queue... */
-	video->alloc_ctx = vb2_dma_contig_init_ctx(video->vsp1->dev);
+	fcp = rcar_fcp_device(vsp1->fcp);
+	video->alloc_ctx = vb2_dma_contig_init_ctx(fcp ? fcp : vsp1->dev);
 	if (IS_ERR(video->alloc_ctx)) {
 		ret = PTR_ERR(video->alloc_ctx);
 		goto error;
