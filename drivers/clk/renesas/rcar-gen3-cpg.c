@@ -221,11 +221,6 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (!prate)
 		prate = 1;
 
-	/* Adjust maximum frequency value on H3 WS10 to 1.9GHz */
-	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000)
-		rate = 1900000000;
-	/* End of adjust freq value */
-
 	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
 		prate = Z_CLK_MAX_THRESHOLD; /* Set parent to: 1.5GHz */
 		mult = div_u64((u64)rate * 32 + prate/2, prate);
@@ -254,11 +249,6 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned int mult;
 	u32 val, kick;
 	unsigned int i;
-
-	/* Adjust maximum frequency value on H3 WS10 to 1.9GHz */
-	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0 && rate > 1900000000)
-		rate = 1900000000;
-	/* End of adjust freq value */
 
 	if (rate <= Z_CLK_MAX_THRESHOLD) { /* Focus on changing z-clock */
 		parent_rate = Z_CLK_MAX_THRESHOLD; /* Set parent to: 1.5GHz */
