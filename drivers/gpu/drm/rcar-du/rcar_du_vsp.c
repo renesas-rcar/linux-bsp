@@ -1,7 +1,7 @@
 /*
- * rcar_du_vsp.h  --  R-Car Display Unit VSP-Based Compositor
+ * rcar_du_vsp.c  --  R-Car Display Unit VSP-Based Compositor
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -12,12 +12,14 @@
  */
 
 #include <drm/drmP.h>
+#include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 #include <drm/drm_plane_helper.h>
+#include <drm/rcar_du_drm.h>
 
 #include <linux/soc/renesas/s2ram_ddr_backup.h>
 #include <linux/of_platform.h>
@@ -932,6 +934,12 @@ static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 	};
 	unsigned int i;
 
+	if (plane->plane.state->crtc->mode.flags
+				 & DRM_MODE_FLAG_INTERLACE)
+		cfg.interlaced = true;
+	else
+		cfg.interlaced = false;
+
 	cfg.src.left = state->state.src_x >> 16;
 	cfg.src.top = state->state.src_y >> 16;
 	cfg.src.width = state->state.src_w >> 16;
@@ -965,6 +973,7 @@ static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
 	struct rcar_du_vsp_plane_state *rstate = to_rcar_vsp_plane_state(state);
 	struct rcar_du_vsp_plane *rplane = to_rcar_vsp_plane(plane);
 	struct rcar_du_device *rcdu = rplane->vsp->dev;
+	int hdisplay, vdisplay;
 
 	if (!state->fb || !state->crtc) {
 		rstate->format = NULL;
@@ -974,6 +983,19 @@ static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
 	if (state->src_w >> 16 != state->crtc_w ||
 	    state->src_h >> 16 != state->crtc_h) {
 		dev_dbg(rcdu->dev, "%s: scaling not supported\n", __func__);
+		return -EINVAL;
+	}
+
+	hdisplay = state->crtc->mode.hdisplay;
+	vdisplay = state->crtc->mode.vdisplay;
+
+	if ((state->plane->type == DRM_PLANE_TYPE_OVERLAY) &&
+		(((state->crtc_w + state->crtc_x) > hdisplay) ||
+		((state->crtc_h + state->crtc_y) > vdisplay))) {
+		dev_err(rcdu->dev,
+			"%s: specify (%dx%d) + (%d, %d) < (%dx%d).\n",
+			__func__, state->crtc_w, state->crtc_h, state->crtc_x,
+			state->crtc_y, hdisplay, vdisplay);
 		return -EINVAL;
 	}
 
@@ -1089,6 +1111,162 @@ static int rcar_du_vsp_plane_atomic_get_property(struct drm_plane *plane,
 	return 0;
 }
 
+static int rcar_du_async_commit(struct drm_device *dev, u32 crtc_id)
+{
+	int ret, index;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	struct drm_mode_object *obj;
+	struct drm_crtc *crtc;
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
+
+	obj = drm_mode_object_find(dev, crtc_id, DRM_MODE_OBJECT_CRTC);
+	if (!obj)
+		return -EINVAL;
+
+	crtc = obj_to_crtc(obj);
+
+	index = drm_crtc_index(crtc);
+
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	state->crtc_states[index] = crtc_state;
+	state->crtcs[index] = crtc;
+	crtc_state->state = state;
+
+	ret = drm_atomic_commit(state);
+	if (ret != 0) {
+		drm_atomic_helper_crtc_destroy_state(crtc, crtc_state);
+		return ret;
+	}
+
+	return 0;
+}
+
+int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+			   struct drm_file *file_priv)
+{
+	int ret;
+	struct rcar_du_screen_shot *sh = (struct rcar_du_screen_shot *)data;
+	struct drm_mode_object *obj;
+	struct drm_crtc *crtc;
+	struct rcar_du_crtc *rcrtc;
+	struct rcar_du_device *rcdu;
+	const struct drm_display_mode *mode;
+	u32 pixelformat, bpp;
+	unsigned int pitch;
+	dma_addr_t mem[3];
+
+	obj = drm_mode_object_find(dev, sh->crtc_id, DRM_MODE_OBJECT_CRTC);
+	if (!obj)
+		return -EINVAL;
+
+	crtc = obj_to_crtc(obj);
+	rcrtc = to_rcar_crtc(crtc);
+	rcdu = rcrtc->group->dev;
+	mode = &rcrtc->crtc.state->adjusted_mode;
+
+	switch (sh->fmt) {
+	case DRM_FORMAT_RGB565:
+		bpp = 16;
+		pixelformat = V4L2_PIX_FMT_RGB565;
+		break;
+	case DRM_FORMAT_ARGB1555:
+		bpp = 16;
+		pixelformat = V4L2_PIX_FMT_ARGB555;
+		break;
+	case DRM_FORMAT_ARGB8888:
+		bpp = 32;
+		pixelformat = V4L2_PIX_FMT_ABGR32;
+		break;
+	default:
+		dev_err(rcdu->dev, "specified format is not supported.\n");
+		return -EINVAL;
+	}
+
+	pitch = mode->hdisplay * bpp / 8;
+
+	mem[0] = sh->buff;
+	mem[1] = 0;
+	mem[2] = 0;
+
+	if ((sh->width != (mode->hdisplay)) ||
+		(sh->height != (mode->vdisplay)))
+		return -EINVAL;
+
+	if ((pitch * mode->vdisplay) > sh->buff_len)
+		return -EINVAL;
+
+	vsp1_du_setup_wb(rcrtc->vsp->vsp, pixelformat, pitch, mem);
+	vsp1_du_wait_wb(rcrtc->vsp->vsp, 2);
+
+	ret = rcar_du_async_commit(dev, sh->crtc_id);
+	if (ret != 0)
+		return ret;
+
+	vsp1_du_wait_wb(rcrtc->vsp->vsp, 1);
+
+	ret = rcar_du_async_commit(dev, sh->crtc_id);
+	if (ret != 0)
+		return ret;
+
+	vsp1_du_wait_wb(rcrtc->vsp->vsp, 0);
+
+	return ret;
+}
+
+int rcar_du_set_vmute(struct drm_device *dev, void *data,
+		struct drm_file *file_priv)
+{
+	struct rcar_du_vmute *vmute =
+		(struct rcar_du_vmute *)data;
+	struct drm_mode_object *obj;
+	struct drm_crtc *crtc;
+	struct rcar_du_crtc *rcrtc;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	int ret = 0, index;
+
+	dev_dbg(dev->dev, "CRTC[%d], display:%s\n",
+		vmute->crtc_id, vmute->on ? "off":"on");
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
+
+	obj = drm_mode_object_find(dev, vmute->crtc_id,
+					DRM_MODE_OBJECT_CRTC);
+	if (!obj)
+		return -EINVAL;
+	crtc = obj_to_crtc(obj);
+
+	index = drm_crtc_index(crtc);
+
+	rcrtc = to_rcar_crtc(crtc);
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	state->crtc_states[index] = crtc_state;
+	state->crtcs[index] = crtc;
+	crtc_state->state = state;
+
+	crtc_state->active = true;
+
+	vsp1_du_if_set_mute(rcrtc->vsp->vsp, vmute->on);
+
+	ret = drm_atomic_commit(state);
+	if (ret != 0)
+		return ret;
+
+	return 0;
+}
+
 static const struct drm_plane_funcs rcar_du_vsp_plane_funcs = {
 	.update_plane = drm_atomic_helper_update_plane,
 	.disable_plane = drm_atomic_helper_disable_plane,
@@ -1144,6 +1322,15 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 		return -ENXIO;
 
 	vsp->vsp = &pdev->dev;
+
+	/* Locate FCP device behind the VSP for dma_alloc/free. */
+	np = of_parse_phandle(pdev->dev.of_node, "renesas,fcp", 0);
+	if (np) {
+		pdev = of_find_device_by_node(np);
+		of_node_put(np);
+		if (pdev)
+			vsp->fcp = &pdev->dev;
+	}
 
 	ret = vsp1_du_init(vsp->vsp);
 	if (ret < 0)

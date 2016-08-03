@@ -10,6 +10,7 @@
  * @paddr: physical address of the backing memory
  * @sgt: scatter/gather table for imported PRIME buffers
  * @vaddr: kernel virtual address of the backing memory
+ * @dev: device used for backing memory alloc/free
  */
 struct drm_gem_cma_object {
 	struct drm_gem_object base;
@@ -18,6 +19,7 @@ struct drm_gem_cma_object {
 
 	/* For objects with DMA memory allocated by GEM CMA */
 	void *vaddr;
+	struct device *dev;
 };
 
 static inline struct drm_gem_cma_object *

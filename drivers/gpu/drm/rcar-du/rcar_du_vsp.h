@@ -29,6 +29,7 @@ struct rcar_du_vsp_plane {
 struct rcar_du_vsp {
 	unsigned int index;
 	struct device *vsp;
+	struct device *fcp;
 	struct rcar_du_device *dev;
 	struct rcar_du_vsp_plane *planes;
 	unsigned int num_planes;
@@ -67,6 +68,10 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc);
 void rcar_du_vsp_disable(struct rcar_du_crtc *crtc);
 void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc);
 void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc);
+int rcar_du_set_vmute(struct drm_device *dev, void *data,
+			struct drm_file *file_priv);
+int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+			struct drm_file *file_priv);
 #ifdef CONFIG_RCAR_DDR_BACKUP
 int rcar_du_vsp_save_regs(struct rcar_du_crtc *crtc);
 int rcar_du_vsp_restore_regs(struct rcar_du_crtc *crtc);
@@ -77,6 +82,10 @@ static inline void rcar_du_vsp_enable(struct rcar_du_crtc *crtc) { };
 static inline void rcar_du_vsp_disable(struct rcar_du_crtc *crtc) { };
 static inline void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc) { };
 static inline void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc) { };
+static inline int rcar_du_set_vmute(struct drm_device *dev, void *data,
+			struct drm_file *file_priv) { return 0; };
+static inline int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+			struct drm_file *file_priv) { return 0; };
 #ifdef CONFIG_RCAR_DDR_BACKUP
 static inline int rcar_du_vsp_save_regs(struct rcar_du_crtc *crtc)
 	{ return 0; };

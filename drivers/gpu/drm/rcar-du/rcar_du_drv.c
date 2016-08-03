@@ -23,10 +23,15 @@
 #include <linux/wait.h>
 
 #include <drm/drmP.h>
+#include <drm/drm_atomic.h>
+#include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_encoder_slave.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
+#include <drm/rcar_du_drm.h>
+
+#include <media/vsp1.h>
 
 #include "rcar_du_crtc.h"
 #include "rcar_du_encoder.h"
@@ -35,6 +40,7 @@
 #include "rcar_du_kms.h"
 #include "rcar_du_lvdsenc.h"
 #include "rcar_du_regs.h"
+#include "rcar_du_vsp.h"
 
 /* -----------------------------------------------------------------------------
  * Device Information
@@ -144,7 +150,8 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
 		  | RCAR_DU_FEATURE_EXT_CTRL_REGS
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
-		  | RCAR_DU_FEATURE_GEN3_REGS,
+		  | RCAR_DU_FEATURE_GEN3_REGS
+		  | RCAR_DU_FEATURE_DIDSR2_REG,
 	.num_crtcs = 4,
 	.routes = {
 		/* R8A7795 has one RGB output, two HDMI outputs and one
@@ -176,6 +183,38 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 	.vsp_num = 5,
 };
 
+static const struct rcar_du_device_info rcar_du_r8a7796_info = {
+	.gen = 3,
+	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
+		  | RCAR_DU_FEATURE_EXT_CTRL_REGS
+		  | RCAR_DU_FEATURE_VSP1_SOURCE
+		  | RCAR_DU_FEATURE_GEN3_REGS,
+	.num_crtcs = 3,
+	.routes = {
+		/* R8A7796 has one RGB output, one LVDS output and one
+		 * HDMI outputs.
+		 */
+		[RCAR_DU_OUTPUT_DPAD0] = {
+			.possible_crtcs = BIT(2),
+			.encoder_type = DRM_MODE_ENCODER_NONE,
+			.port = 0,
+		},
+		[RCAR_DU_OUTPUT_HDMI0] = {
+			.possible_crtcs = BIT(1),
+			.encoder_type = RCAR_DU_ENCODER_HDMI,
+			.port = 1,
+		},
+		[RCAR_DU_OUTPUT_LVDS0] = {
+			.possible_crtcs = BIT(0),
+			.encoder_type = DRM_MODE_ENCODER_LVDS,
+			.port = 2,
+		},
+	},
+	.num_lvds = 1,
+	.dpll_ch =  BIT(1),
+	.vsp_num = 5,
+};
+
 static const struct of_device_id rcar_du_of_table[] = {
 	{ .compatible = "renesas,du-r8a7779", .data = &rcar_du_r8a7779_info },
 	{ .compatible = "renesas,du-r8a7790", .data = &rcar_du_r8a7790_info },
@@ -183,6 +222,7 @@ static const struct of_device_id rcar_du_of_table[] = {
 	{ .compatible = "renesas,du-r8a7793", .data = &rcar_du_r8a7791_info },
 	{ .compatible = "renesas,du-r8a7794", .data = &rcar_du_r8a7794_info },
 	{ .compatible = "renesas,du-r8a7795", .data = &rcar_du_r8a7795_info },
+	{ .compatible = "renesas,du-r8a7796", .data = &rcar_du_r8a7796_info },
 	{ }
 };
 
@@ -445,6 +485,13 @@ static void rcar_du_disable_vblank(struct drm_device *dev, unsigned int pipe)
 	rcar_du_crtc_enable_vblank(&rcdu->crtcs[pipe], false);
 }
 
+static const struct drm_ioctl_desc rcar_du_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(DRM_RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
+		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+	DRM_IOCTL_DEF_DRV(DRM_RCAR_DU_SCRSHOT, rcar_du_vsp_write_back,
+		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+};
+
 static const struct file_operations rcar_du_fops = {
 	.owner		= THIS_MODULE,
 	.open		= drm_open,
@@ -466,6 +513,7 @@ static struct drm_driver rcar_du_driver = {
 	.get_vblank_counter	= drm_vblank_no_hw_counter,
 	.enable_vblank		= rcar_du_enable_vblank,
 	.disable_vblank		= rcar_du_disable_vblank,
+	.gem_create_object	= rcar_du_create_object,
 	.gem_free_object	= drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,
 	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
@@ -486,6 +534,8 @@ static struct drm_driver rcar_du_driver = {
 	.date			= "20130110",
 	.major			= 1,
 	.minor			= 0,
+	.ioctls			= rcar_du_ioctls,
+	.num_ioctls		= ARRAY_SIZE(rcar_du_ioctls),
 };
 
 /* -----------------------------------------------------------------------------
@@ -552,14 +602,6 @@ static int rcar_du_pm_resume_early(struct device *dev)
 			rcar_du_lvdsenc_start(
 				rcdu->lvds[rcdu->crtcs[i].lvds_ch],
 				&rcdu->crtcs[i]);
-	}
-#endif
-
-#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
-	list_for_each_entry(encoder,
-		&rcdu->ddev->mode_config.encoder_list, head) {
-		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
-			rcar_du_hdmienc_enable(encoder);
 	}
 #endif
 
