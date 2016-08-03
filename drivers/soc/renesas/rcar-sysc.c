@@ -47,19 +47,22 @@
 #define PWRER_OFFS		0x14	/* Power Shutoff/Resume Error */
 
 
-#define SYSCSR_RETRIES		100
-#define SYSCSR_DELAY_US		1
+#define SYSCSR_RETRIES		1000
+#define SYSCSR_DELAY_US		10
 
-#define PWRER_RETRIES		100
-#define PWRER_DELAY_US		1
+#define PWRER_RETRIES		1000
+#define PWRER_DELAY_US		10
 
 #define SYSCISR_RETRIES		1000
-#define SYSCISR_DELAY_US	1
+#define SYSCISR_DELAY_US	10
 
 #define RCAR_PD_ALWAYS_ON	32	/* Always-on power area */
 
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
+
+
+static const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch);
 
 static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 {
@@ -83,6 +86,12 @@ static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 
 	if (k == SYSCSR_RETRIES)
 		return -EAGAIN;
+
+	/* Start W/A for A3VP, A3VC, and A3IR domains */
+	if (!on && (!strcmp("a3vp", to_pd_name(sysc_ch))
+		|| !strcmp("a3ir", to_pd_name(sysc_ch))
+		|| !strcmp("a3vc", to_pd_name(sysc_ch))))
+		udelay(1);
 
 	/* Submit power shutoff or power resume request */
 	iowrite32(BIT(sysc_ch->chan_bit),
@@ -155,10 +164,12 @@ int rcar_sysc_power_up(const struct rcar_sysc_ch *sysc_ch)
 
 static bool rcar_sysc_power_is_off(const struct rcar_sysc_ch *sysc_ch)
 {
-	unsigned int st;
+	unsigned int st, dwn_st;
 
 	st = ioread32(rcar_sysc_base + sysc_ch->chan_offs + PWRSR_OFFS);
-	if (st & BIT(sysc_ch->chan_bit))
+	dwn_st = ioread32(rcar_sysc_base + sysc_ch->chan_offs + PWROFFSR_OFFS);
+
+	if ((st & BIT(sysc_ch->chan_bit)) || (dwn_st & BIT(sysc_ch->chan_bit)))
 		return true;
 
 	return false;
@@ -183,6 +194,11 @@ struct rcar_sysc_pd {
 static inline struct rcar_sysc_pd *to_rcar_pd(struct generic_pm_domain *d)
 {
 	return container_of(d, struct rcar_sysc_pd, genpd);
+}
+
+static inline const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch)
+{
+	return container_of(sysc_ch, struct rcar_sysc_pd, ch)->genpd.name;
 }
 
 static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
@@ -225,6 +241,7 @@ static void __init rcar_sysc_pd_setup(struct rcar_sysc_pd *pd)
 	struct generic_pm_domain *genpd = &pd->genpd;
 	const char *name = pd->genpd.name;
 	struct dev_power_governor *gov = &simple_qos_governor;
+	bool pd_state = false;
 
 	if (pd->flags & PD_CPU) {
 		/*
@@ -272,15 +289,11 @@ static void __init rcar_sysc_pd_setup(struct rcar_sysc_pd *pd)
 		goto finalize;
 	}
 
-	if (!rcar_sysc_power_is_off(&pd->ch)) {
-		pr_debug("%s: %s is already powered\n", __func__, genpd->name);
-		goto finalize;
-	}
-
-	rcar_sysc_power_up(&pd->ch);
+	if (rcar_sysc_power_is_off(&pd->ch))
+		pd_state = true;
 
 finalize:
-	pm_genpd_init(genpd, gov, false);
+	pm_genpd_init(genpd, gov, pd_state);
 }
 
 static const struct of_device_id rcar_sysc_matches[] = {
