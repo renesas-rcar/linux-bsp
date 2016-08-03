@@ -107,6 +107,16 @@ int rcar_fcp_enable(struct rcar_fcp_device *fcp)
 EXPORT_SYMBOL_GPL(rcar_fcp_enable);
 
 /**
+ * rcar_fcp_device - Get FCP device
+ * @fcp: The FCP instance
+ */
+struct device *rcar_fcp_device(struct rcar_fcp_device *fcp)
+{
+	return fcp ? fcp->dev : NULL;
+}
+EXPORT_SYMBOL_GPL(rcar_fcp_device);
+
+/**
  * rcar_fcp_disable - Disable an FCP
  * @fcp: The FCP instance
  *
