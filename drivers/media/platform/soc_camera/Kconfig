@@ -44,6 +44,13 @@ config VIDEO_RCAR_VIN_DEBUG
 	  If you set to enable, When an overflow occurred,
 	  a debug overflow message is output.
 
+config VIDEO_RCAR_CSI2
+	tristate "R-Car MIPI CSI-2 Interface driver"
+	depends on VIDEO_DEV && SOC_CAMERA && HAVE_CLK
+	depends on ARCH_R8A7795 || ARCH_R8A7796 || COMPILE_TEST
+	---help---
+	  This is a v4l2 driver for the R-Car CSI-2 Interface
+
 config VIDEO_SH_MOBILE_CSI2
 	tristate "SuperH Mobile MIPI CSI-2 Interface driver"
 	depends on VIDEO_DEV && SOC_CAMERA && HAVE_CLK
