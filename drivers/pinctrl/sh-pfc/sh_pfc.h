@@ -365,6 +365,11 @@ struct sh_pfc_soc_info {
 	PORT_GP_CFG_1(bank, 26, fn, sfx, cfg), PORT_GP_CFG_1(bank, 27, fn, sfx, cfg)
 #define PORT_GP_28(bank, fn, sfx)	PORT_GP_CFG_28(bank, fn, sfx, 0)
 
+#define PORT_GP_CFG_29(bank, fn, sfx, cfg)						\
+	PORT_GP_CFG_28(bank, fn, sfx, cfg),						\
+	PORT_GP_CFG_1(bank, 28, fn, sfx, cfg)
+#define PORT_GP_29(bank, fn, sfx)	PORT_GP_CFG_29(bank, fn, sfx, 0)
+
 #define PORT_GP_CFG_30(bank, fn, sfx, cfg)						\
 	PORT_GP_CFG_28(bank, fn, sfx, cfg),						\
 	PORT_GP_CFG_1(bank, 28, fn, sfx, cfg), PORT_GP_CFG_1(bank, 29, fn, sfx, cfg)
