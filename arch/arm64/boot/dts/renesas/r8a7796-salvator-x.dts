@@ -345,6 +345,12 @@
 		gpio = <&gpio6 16 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
+
+	msiof_ref_clk: msiof-ref-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <66666666>;
+	};
 };
 
 &pwm1 {
