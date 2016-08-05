@@ -34,6 +34,8 @@ const struct rcar_du_format_info *rcar_vsp_format_info(u32 fourcc);
 
 int rcar_du_modeset_init(struct rcar_du_device *rcdu);
 
+struct drm_gem_object *rcar_du_create_object(struct drm_device *dev,
+					     size_t size);
 int rcar_du_dumb_create(struct drm_file *file, struct drm_device *dev,
 			struct drm_mode_create_dumb *args);
 
