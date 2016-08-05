@@ -192,6 +192,13 @@ config COMMON_CLK_PWM
 	  Adapter driver so that any PWM output can be (mis)used as clock signal
 	  at 50% duty cycle.
 
+config COMMON_CLK_5P49V5923A
+	tristate "Clock driver for 5P49V5923A programmable clock generator"
+	depends on I2C
+	help
+	  If you say yes here you get support for the 5P49V5923A programmable
+	  clock generator.
+
 config COMMON_CLK_PXA
 	def_bool COMMON_CLK && ARCH_PXA
 	---help---
