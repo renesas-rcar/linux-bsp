@@ -245,8 +245,13 @@ static void dw_hdmi_i2c_init(struct dw_hdmi *hdmi)
 
 	spin_lock_irqsave(&hdmi->i2c->lock, flags);
 
-	/* Set Fast Mode speed */
-	hdmi_writeb(hdmi, 0x0b, HDMI_I2CM_DIV);
+	if (hdmi->dev_type == RCAR_HDMI) {
+		/* Set Standard Mode speed */
+		hdmi_writeb(hdmi, 0x03, HDMI_I2CM_DIV);
+	} else {
+		/* Set Fast Mode speed */
+		hdmi_writeb(hdmi, 0x0b, HDMI_I2CM_DIV);
+	}
 
 	/* Software reset */
 	hdmi_writeb(hdmi, 0x00, HDMI_I2CM_SOFTRSTZ);
@@ -1709,6 +1714,14 @@ static void dw_hdmi_bridge_enable(struct drm_bridge *bridge)
 	hdmi->disabled = false;
 	dw_hdmi_update_power(hdmi);
 	dw_hdmi_update_phy_mask(hdmi);
+
+	if (hdmi->dev_type == RCAR_HDMI) {
+		hdmi_writeb(hdmi, HDMI_PHY_HPD | HDMI_PHY_RX_SENSE,
+				 HDMI_PHY_POL0);
+		dw_hdmi_fb_registered(hdmi);
+		dw_hdmi_i2c_init(hdmi);
+	}
+
 	mutex_unlock(&hdmi->mutex);
 }
 
