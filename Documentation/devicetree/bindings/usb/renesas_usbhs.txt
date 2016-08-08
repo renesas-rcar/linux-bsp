@@ -9,6 +9,7 @@ Required properties:
 	- "renesas,usbhs-r8a7793" for r8a7793 (R-Car M2-N) compatible device
 	- "renesas,usbhs-r8a7794" for r8a7794 (R-Car E2) compatible device
 	- "renesas,usbhs-r8a7795" for r8a7795 (R-Car H3) compatible device
+	- "renesas,usbhs-r8a7796" for r8a7796 (R-Car M3) compatible device
 	- "renesas,rcar-gen2-usbhs" for R-Car Gen2 compatible device
 	- "renesas,rcar-gen3-usbhs" for R-Car Gen3 compatible device
 
@@ -24,8 +25,9 @@ Optional properties:
   - renesas,buswait: Integer to use BUSWAIT register
   - renesas,enable-gpio: A gpio specifier to check GPIO determining if USB
 			 function should be enabled
-  - phys: phandle + phy specifier pair
+  - phys: phandle of *Generic PHY* + phy specifier pair
   - phy-names: must be "usb"
+  - usb-phy: phandle of usb phy
   - dmas: Must contain a list of references to DMA specifiers.
   - dma-names : named "ch%d", where %d is the channel number ranging from zero
                 to the number of channels (DnFIFOs) minus one.
