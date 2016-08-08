@@ -485,6 +485,13 @@ static int __init psci_probe(void)
 	psci_0_2_set_functions();
 
 	psci_init_migrate();
+	/*
+	 * psci_init_migrate() might fail to get needed information due to
+	 * incomplete firmware support.
+	 * FIXME: Let's assume that Trusted OS services (e.g DDR training)
+	 * always run in CPU0.
+	 */
+	resident_cpu = 0;
 
 	if (PSCI_VERSION_MAJOR(ver) >= 1) {
 		psci_init_cpu_suspend();
