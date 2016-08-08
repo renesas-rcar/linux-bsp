@@ -1,7 +1,7 @@
 /*
  * rcar_du_drv.c  --  R-Car Display Unit DRM driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -19,16 +19,21 @@
 #include <linux/platform_device.h>
 #include <linux/pm.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/s2ram_ddr_backup.h>
 #include <linux/wait.h>
 
 #include <drm/drmP.h>
 #include <drm/drm_crtc_helper.h>
+#include <drm/drm_encoder_slave.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 
 #include "rcar_du_crtc.h"
+#include "rcar_du_encoder.h"
+#include "rcar_du_hdmienc.h"
 #include "rcar_du_drv.h"
 #include "rcar_du_kms.h"
+#include "rcar_du_lvdsenc.h"
 #include "rcar_du_regs.h"
 
 /* -----------------------------------------------------------------------------
@@ -183,6 +188,235 @@ static const struct of_device_id rcar_du_of_table[] = {
 
 MODULE_DEVICE_TABLE(of, rcar_du_of_table);
 
+#ifdef CONFIG_RCAR_DDR_BACKUP
+static struct hw_register du0_ip_regs[] = {
+	{"DSYSR0",    0x00000, 32, 0},
+	{"DSMR0",     0x00004, 32, 0},
+	{"DIER0",     0x00010, 32, 0},
+	{"DPPPR0",    0x00018, 32, 0},
+	{"DEFR0",     0x00020, 32, 0},
+	{"DEF5R0",    0x000E0, 32, 0},
+	{"DDLTR0",    0x000E4, 32, 0},
+	{"DEF6R0",    0x000E8, 32, 0},
+	{"DEF7R0",    0x000EC, 32, 0},
+	{"DEF8R0",    0x20020, 32, 0},
+	{"DOFLR0",    0x20024, 32, 0},
+	{"DIDSR0",    0x20028, 32, 0},
+	{"DEF10R0",   0x20038, 32, 0},
+	{"DDTHCR0",   0x2003C, 32, 0},
+	{"HDSR0",     0x00040, 32, 0},
+	{"HDER0",     0x00044, 32, 0},
+	{"VDSR0",     0x00048, 32, 0},
+	{"VDER0",     0x0004C, 32, 0},
+	{"HCR0",      0x00050, 32, 0},
+	{"HSWR0",     0x00054, 32, 0},
+	{"VCR0",      0x00058, 32, 0},
+	{"VSPR0",     0x0005C, 32, 0},
+	{"EQWR0",     0x00060, 32, 0},
+	{"SPWR0",     0x00064, 32, 0},
+	{"CLAMPSR0",  0x00070, 32, 0},
+	{"CLAMPWR0",  0x00074, 32, 0},
+	{"DESR0",     0x00078, 32, 0},
+	{"DEWR0",     0x0007C, 32, 0},
+	{"DOOR0",     0x00090, 32, 0},
+	{"BPOR0",     0x00098, 32, 0},
+	{"RINTOFSR0", 0x0009C, 32, 0},
+	{"P1MR0",     0x00100, 32, 0},
+	{"P1DSXR0",   0x00110, 32, 0},
+	{"P1DSYR0",   0x00114, 32, 0},
+	{"P1DPXR0",   0x00118, 32, 0},
+	{"P1DPYR0",   0x0011C, 32, 0},
+	{"P3MR0",     0x00300, 32, 0},
+	{"P3DSXR0",   0x00310, 32, 0},
+	{"P3DSYR0",   0x00314, 32, 0},
+	{"P3DPXR0",   0x00318, 32, 0},
+	{"P3DPYR0",   0x0031C, 32, 0},
+	{"ESCR0",     0x10000, 32, 0},
+	{"OTAR0",     0x10004, 32, 0},
+	{"DORCR0",    0x11000, 32, 0},
+	{"DPTSR0",    0x11004, 32, 0},
+	{"DS0PR0",    0x11000, 32, 0},
+	{"YNCR0",     0x14080, 32, 0},
+	{"YNOR0",     0x14084, 32, 0},
+	{"CRNOR0",    0x14088, 32, 0},
+	{"CBNOR0",    0x1408C, 32, 0},
+	{"RCRCR0",    0x14090, 32, 0},
+	{"GCRCR0",    0x14094, 32, 0},
+	{"GCBCR0",    0x14098, 32, 0},
+	{"BCBCR0",    0x1409C, 32, 0},
+};
+
+static struct hw_register du1_ip_regs[] = {
+	{"DSYSR1",    0x40000, 32, 0},
+	{"DSMR1",     0x30004, 32, 0},
+	{"DIER1",     0x30010, 32, 0},
+	{"DEFR1",     0x30020, 32, 0},
+	{"HDSR1",     0x30040, 32, 0},
+	{"HDER1",     0x30044, 32, 0},
+	{"VDSR1",     0x30048, 32, 0},
+	{"VDER1",     0x3004C, 32, 0},
+	{"HCR1",      0x30050, 32, 0},
+	{"HSWR1",     0x30054, 32, 0},
+	{"VCR1",      0x30058, 32, 0},
+	{"VSPR1",     0x3005C, 32, 0},
+	{"EQWR1",     0x30060, 32, 0},
+	{"SPWR1",     0x30064, 32, 0},
+	{"CLAMPSR1",  0x30070, 32, 0},
+	{"CLAMPWR1",  0x30074, 32, 0},
+	{"DESR1",     0x30078, 32, 0},
+	{"DEWR1",     0x3007C, 32, 0},
+	{"DOOR1",     0x30090, 32, 0},
+	{"BPOR1",     0x30098, 32, 0},
+	{"RINTOFSR1", 0x3009C, 32, 0},
+	{"ESCR1",     0x41000, 32, 0},
+	{"OTAR1",     0x41004, 32, 0},
+	{"DS1PR0",    0x41024, 32, 0},
+};
+
+static struct hw_register du2_ip_regs[] = {
+	{"DSYSR2",    0x40000, 32, 0},
+	{"DSMR0",     0x40004, 32, 0},
+	{"DIER0",     0x40010, 32, 0},
+	{"DPPPR0",    0x40018, 32, 0},
+	{"DEFR2",     0x40020, 32, 0},
+	{"DEF5R2",    0x400E0, 32, 0},
+	{"DEF6R0",    0x400E8, 32, 0},
+	{"DEF7R0",    0x400EC, 32, 0},
+	{"DEF8R0",    0x60020, 32, 0},
+	{"DOFLR0",    0x60024, 32, 0},
+	{"DIDSR2",    0x60028, 32, 0},
+	{"DEF10R2",   0x60038, 32, 0},
+	{"DDTHCR0",   0x6003C, 32, 0},
+	{"HDSR0",     0x40040, 32, 0},
+	{"HDER0",     0x40044, 32, 0},
+	{"VDSR0",     0x40048, 32, 0},
+	{"VDER0",     0x4004C, 32, 0},
+	{"HCR0",      0x40050, 32, 0},
+	{"HSWR0",     0x40054, 32, 0},
+	{"VCR0",      0x40058, 32, 0},
+	{"VSPR0",     0x4005C, 32, 0},
+	{"EQWR0",     0x40060, 32, 0},
+	{"SPWR0",     0x40064, 32, 0},
+	{"CLAMPSR0",  0x40070, 32, 0},
+	{"CLAMPWR0",  0x40074, 32, 0},
+	{"DESR0",     0x40078, 32, 0},
+	{"DEWR0",     0x4007C, 32, 0},
+	{"DOOR0",     0x40090, 32, 0},
+	{"BPOR0",     0x40098, 32, 0},
+	{"RINTOFSR0", 0x4009C, 32, 0},
+	{"P1MR2",     0x40100, 32, 0},
+	{"P1DSXR2",   0x40110, 32, 0},
+	{"P1DSYR2",   0x40114, 32, 0},
+	{"P1DPXR2",   0x40118, 32, 0},
+	{"P1DPYR2",   0x4011C, 32, 0},
+	{"P3MR2",     0x40300, 32, 0},
+	{"P3DSXR2",   0x40310, 32, 0},
+	{"P3DSYR2",   0x40314, 32, 0},
+	{"P3DPXR2",   0x40318, 32, 0},
+	{"P3DPYR2",   0x4031C, 32, 0},
+	{"ESCR2",     0x50000, 32, 0},
+	{"OTAR0",     0x50004, 32, 0},
+	{"DORCR2",    0x51000, 32, 0},
+	{"DS0PR2",    0x51020, 32, 0},
+	{"YNCR2",     0x54080, 32, 0},
+	{"YNOR2",     0x54084, 32, 0},
+	{"CRNOR2",    0x54088, 32, 0},
+	{"CBNOR2",    0x5408C, 32, 0},
+	{"RCRCR2",    0x54090, 32, 0},
+	{"GCRCR2",    0x54094, 32, 0},
+	{"GCBCR2",    0x54098, 32, 0},
+	{"BCBCR2",    0x5409C, 32, 0},
+};
+
+static struct hw_register du3_ip_regs[] = {
+	{"DSYR3",     0x70000, 32, 0},
+	{"DSMR3",     0x70004, 32, 0},
+	{"DIER3",     0x70010, 32, 0},
+	{"DEFR3",     0x70020, 32, 0},
+	{"HDSR3",     0x70040, 32, 0},
+	{"HDER3",     0x70044, 32, 0},
+	{"VDSR3",     0x70048, 32, 0},
+	{"VDER3",     0x7004C, 32, 0},
+	{"HCR3",      0x70050, 32, 0},
+	{"HSWR3",     0x70054, 32, 0},
+	{"VCR3",      0x70058, 32, 0},
+	{"VSPR3",     0x7005C, 32, 0},
+	{"EQWR3",     0x70060, 32, 0},
+	{"SPWR3",     0x70064, 32, 0},
+	{"CLAMPSR3",  0x70070, 32, 0},
+	{"CLAMPWR3",  0x70074, 32, 0},
+	{"DESR3",     0x70078, 32, 0},
+	{"DEWR3",     0x7007C, 32, 0},
+	{"DOOR3",     0x70090, 32, 0},
+	{"BPOR3",     0x70098, 32, 0},
+	{"RINTOFSR3", 0x7009C, 32, 0},
+	{"ESCR3",     0x81000, 32, 0},
+	{"OTAR3",     0x81004, 32, 0},
+	{"DS1PR3",    0x81024, 32, 0},
+};
+
+static struct rcar_ip du0_ip = {
+	.ip_name = "DU0",
+	.reg_count = ARRAY_SIZE(du0_ip_regs),
+	.ip_reg = du0_ip_regs,
+};
+
+static struct rcar_ip du1_ip = {
+	.ip_name = "DU1",
+	.reg_count = ARRAY_SIZE(du1_ip_regs),
+	.ip_reg = du1_ip_regs,
+};
+
+static struct rcar_ip du2_ip = {
+	.ip_name = "DU2",
+	.reg_count = ARRAY_SIZE(du2_ip_regs),
+	.ip_reg = du2_ip_regs,
+};
+
+static struct rcar_ip du3_ip = {
+	.ip_name = "DU3",
+	.reg_count = ARRAY_SIZE(du3_ip_regs),
+	.ip_reg = du3_ip_regs,
+};
+
+static struct rcar_ip *ip_tbl[] = {
+	&du0_ip,
+	&du1_ip,
+	&du2_ip,
+	&du3_ip,
+};
+
+static int rcar_du_save_regs(struct rcar_du_device *rcdu)
+{
+	int ret = 0;
+	int i;
+
+	for (i = 0; i < rcdu->num_crtcs; i++)
+		if (!ip_tbl[i]->virt_addr) {
+			ip_tbl[i]->virt_addr = rcdu->mmio;
+			ret = handle_registers(ip_tbl[i], DO_BACKUP);
+			pr_debug("%s: Backup %s registers\n",
+				__func__, ip_tbl[i]->ip_name);
+		}
+
+	return ret;
+}
+
+static int rcar_du_restore_regs(struct rcar_du_device *rcdu)
+{
+	int ret = 0;
+	int i;
+
+	for (i = 0; i < rcdu->num_crtcs; i++) {
+		ret = handle_registers(ip_tbl[i], DO_RESTORE);
+		pr_debug("%s: Restore %s registers\n",
+			__func__, ip_tbl[i]->ip_name);
+	}
+
+	return ret;
+}
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+
 /* -----------------------------------------------------------------------------
  * DRM operations
  */
@@ -191,7 +425,8 @@ static void rcar_du_lastclose(struct drm_device *dev)
 {
 	struct rcar_du_device *rcdu = dev->dev_private;
 
-	drm_fbdev_cma_restore_mode(rcdu->fbdev);
+	if (dev->irq_enabled)
+		drm_fbdev_cma_restore_mode(rcdu->fbdev);
 }
 
 static int rcar_du_enable_vblank(struct drm_device *dev, unsigned int pipe)
@@ -256,51 +491,164 @@ static struct drm_driver rcar_du_driver = {
 /* -----------------------------------------------------------------------------
  * Power management
  */
-
 #ifdef CONFIG_PM_SLEEP
 static int rcar_du_pm_suspend(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+	int i;
+	int ret = 0;
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	struct drm_encoder *encoder;
+#endif
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	ret = rcar_du_save_regs(rcdu);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 	drm_kms_helper_poll_disable(rcdu->ddev);
-	/* TODO Suspend the CRTC */
 
-	return 0;
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	list_for_each_entry(encoder,
+		 &rcdu->ddev->mode_config.encoder_list, head) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS) {
+			rcar_du_hdmienc_disable(encoder);
+			rcar_du_hdmienc_backup(encoder);
+		}
+	}
+#endif
+
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+	for (i = 0; i < rcdu->info->num_lvds; ++i) {
+		if (rcdu->lvds[i])
+			rcar_du_lvdsenc_stop_suspend(rcdu->lvds[i]);
+	}
+#endif
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started)
+			rcar_du_crtc_suspend(&rcdu->crtcs[i]);
+	}
+
+	return ret;
 }
 
-static int rcar_du_pm_resume(struct device *dev)
+static int rcar_du_pm_resume_early(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+	struct drm_encoder *encoder;
+	int i;
+	int ret = 0;
 
-	/* TODO Resume the CRTC */
+	encoder = NULL;
+
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		rcar_du_crtc_resume(&rcdu->crtcs[i]);
+	}
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].lvds_ch >= 0)
+			rcar_du_lvdsenc_start(
+				rcdu->lvds[rcdu->crtcs[i].lvds_ch],
+				&rcdu->crtcs[i]);
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	list_for_each_entry(encoder,
+		&rcdu->ddev->mode_config.encoder_list, head) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
+			rcar_du_hdmienc_enable(encoder);
+	}
+#endif
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	ret = rcar_du_restore_regs(rcdu);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 	drm_kms_helper_poll_enable(rcdu->ddev);
+
 	return 0;
 }
 #endif
 
+#ifdef CONFIG_RCAR_DDR_BACKUP
+static int rcar_du_pm_resume(struct device *dev)
+{
+	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+	struct drm_encoder *encoder;
+
+	list_for_each_entry(encoder,
+		&rcdu->ddev->mode_config.encoder_list, head) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
+			rcar_du_hdmienc_restore(encoder);
+	}
+
+	return 0;
+}
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+
 static const struct dev_pm_ops rcar_du_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(rcar_du_pm_suspend, rcar_du_pm_resume)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(rcar_du_pm_suspend,
+		rcar_du_pm_resume_early)
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	.resume = rcar_du_pm_resume,
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 };
 
 /* -----------------------------------------------------------------------------
  * Platform driver
  */
+static void rcar_du_remove_suspend(struct rcar_du_device *rcdu)
+{
+	int i;
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	struct drm_encoder *encoder;
+
+	list_for_each_entry(encoder,
+		&rcdu->ddev->mode_config.encoder_list, head) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
+			rcar_du_hdmienc_disable(encoder);
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+	for (i = 0; i < rcdu->info->num_lvds; ++i) {
+		if (rcdu->lvds[i])
+			rcar_du_lvdsenc_stop_suspend(rcdu->lvds[i]);
+	}
+#endif
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started)
+			rcar_du_crtc_remove_suspend(&rcdu->crtcs[i]);
+	}
+}
 
 static int rcar_du_remove(struct platform_device *pdev)
 {
 	struct rcar_du_device *rcdu = platform_get_drvdata(pdev);
 	struct drm_device *ddev = rcdu->ddev;
+	int i;
+
+	ddev->irq_enabled = 0;
 
 	drm_connector_unregister_all(ddev);
+
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started)
+			drm_crtc_vblank_off(&rcdu->crtcs[i].crtc);
+	}
+
 	drm_dev_unregister(ddev);
+
+	rcar_du_remove_suspend(rcdu);
 
 	if (rcdu->fbdev)
 		drm_fbdev_cma_fini(rcdu->fbdev);
 
 	drm_kms_helper_poll_fini(ddev);
 	drm_mode_config_cleanup(ddev);
-	drm_vblank_cleanup(ddev);
 
 	drm_dev_unref(ddev);
 
@@ -339,8 +687,6 @@ static int rcar_du_probe(struct platform_device *pdev)
 	rcdu->ddev = ddev;
 	ddev->dev_private = rcdu;
 
-	platform_set_drvdata(pdev, rcdu);
-
 	/* I/O resources */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	rcdu->mmio = devm_ioremap_resource(&pdev->dev, mem);
@@ -361,6 +707,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 	/* DRM/KMS objects */
 	ret = rcar_du_modeset_init(rcdu);
 	if (ret < 0) {
+		platform_set_drvdata(pdev, rcdu);
 		dev_err(&pdev->dev, "failed to initialize DRM/KMS (%d)\n", ret);
 		goto error;
 	}
@@ -377,6 +724,8 @@ static int rcar_du_probe(struct platform_device *pdev)
 	ret = drm_connector_register_all(ddev);
 	if (ret < 0)
 		goto error;
+
+	platform_set_drvdata(pdev, rcdu);
 
 	DRM_INFO("Device %s probed\n", dev_name(&pdev->dev));
 

@@ -1,7 +1,7 @@
 /*
  * rcar_du_crtc.c  --  R-Car Display Unit CRTCs
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -75,7 +75,7 @@ static void rcar_du_crtc_clr_set(struct rcar_du_crtc *rcrtc, u32 reg,
 	rcar_du_write(rcdu, rcrtc->mmio_offset + reg, (value & ~clr) | set);
 }
 
-static int rcar_du_crtc_get(struct rcar_du_crtc *rcrtc)
+int rcar_du_crtc_get(struct rcar_du_crtc *rcrtc)
 {
 	int ret;
 
@@ -100,7 +100,7 @@ error_clock:
 	return ret;
 }
 
-static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
+void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
 {
 	rcar_du_group_put(rcrtc->group);
 
@@ -528,10 +528,26 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	rcrtc->started = false;
 }
 
+void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc)
+{
+	if (!rcrtc->started)
+		return;
+
+	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? DS2PR : DS1PR, 0);
+
+	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
+
+	rcar_du_group_start_stop(rcrtc->group, false);
+
+	rcrtc->started = false;
+}
+
 void rcar_du_crtc_suspend(struct rcar_du_crtc *rcrtc)
 {
-	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
-		rcar_du_vsp_disable(rcrtc);
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	if (rcar_du_vsp_save_regs(rcrtc))
+		pr_err("%s: Cannot backup VSPD register\n", __func__);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 	rcar_du_crtc_stop(rcrtc);
 	rcar_du_crtc_put(rcrtc);
@@ -545,12 +561,16 @@ void rcar_du_crtc_resume(struct rcar_du_crtc *rcrtc)
 		return;
 
 	rcar_du_crtc_get(rcrtc);
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	if (rcar_du_vsp_restore_regs(rcrtc))
+		pr_err("%s: Cannot restore VSPD register\n", __func__);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+
 	rcar_du_crtc_start(rcrtc);
 
 	/* Commit the planes state. */
-	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE)) {
-		rcar_du_vsp_enable(rcrtc);
-	} else {
+	if (!rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE)) {
 		for (i = 0; i < rcrtc->group->num_planes; ++i) {
 			struct rcar_du_plane *plane = &rcrtc->group->planes[i];
 
@@ -705,6 +725,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	rcrtc->group = rgrp;
 	rcrtc->mmio_offset = mmio_offsets[index];
 	rcrtc->index = index;
+	rcrtc->lvds_ch = -1;
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
 		primary = &rcrtc->vsp->planes[0].plane;

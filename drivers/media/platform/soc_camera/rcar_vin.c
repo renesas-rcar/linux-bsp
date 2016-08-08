@@ -1964,11 +1964,110 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_vin_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int rcar_vin_resume(struct device *dev)
+{
+	u32 ifmd = 0;
+	bool match_flag = false;
+	const struct vin_gen3_ifmd *gen3_ifmd_table = NULL;
+	int num;
+	unsigned int i;
+	struct soc_camera_host *soc_host = to_soc_camera_host(dev);
+	struct rcar_vin_priv *priv = container_of(soc_host,
+						  struct rcar_vin_priv, ici);
+	num = VNCSI_IFMD_SEL_NUMBER;
+	ifmd0_init = true;
+	ifmd4_init = true;
+
+	if (priv->chip == RCAR_H3) {
+		ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1 |
+			 VNCSI_IFMD_DES0;
+		gen3_ifmd_table = vin_h3_vc_ifmd;
+	} else if (priv->chip == RCAR_M3) {
+		ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1;
+		gen3_ifmd_table = vin_m3_vc_ifmd;
+	}
+
+	for (i = 0; i < num; i++) {
+		if ((gen3_ifmd_table[i].v_sel[priv->index].csi2_ch
+			== priv->csi_ch) &&
+			(gen3_ifmd_table[i].v_sel[priv->index].vc
+			== priv->vc)) {
+			if (priv->index < RCAR_VIDEO_4) {
+				if (ifmd0_init) {
+					ifmd0_reg_match[i] = true;
+					match_flag = true;
+				} else if (ifmd0_reg_match[i])
+					match_flag = true;
+			} else {
+				if (ifmd4_init) {
+					ifmd4_reg_match[i] = true;
+					match_flag = true;
+				} else if (ifmd4_reg_match[i])
+					match_flag = true;
+			}
+		} else {
+			if (priv->index < RCAR_VIDEO_4)
+				ifmd0_reg_match[i] = false;
+			else
+				ifmd4_reg_match[i] = false;
+		}
+	}
+	if (priv->index < RCAR_VIDEO_4)
+		ifmd0_init = false;
+	else
+		ifmd4_init = false;
+
+	if (priv->index < RCAR_VIDEO_4) {
+		void __iomem *ifmd0_mem;
+
+		for (i = 0; i < num; i++) {
+			if (ifmd0_reg_match[i]) {
+				ifmd |= gen3_ifmd_table[i].set_reg;
+				break;
+			}
+		}
+
+		ifmd0_mem = ioremap(0xe6ef0000 + VNCSI_IFMD_REG, 0x04);
+		iowrite32(ifmd, ifmd0_mem);
+		iounmap(ifmd0_mem);
+	} else {
+		void __iomem *ifmd4_mem;
+
+		for (i = 0; i < num; i++) {
+			if (ifmd4_reg_match[i]) {
+				ifmd |= gen3_ifmd_table[i].set_reg;
+				break;
+			}
+		}
+
+		ifmd4_mem = ioremap(0xe6ef4000 + VNCSI_IFMD_REG, 0x04);
+		iowrite32(ifmd, ifmd4_mem);
+		iounmap(ifmd4_mem);
+	}
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_vin_pm_ops,
+			rcar_vin_suspend, rcar_vin_resume);
+#define DEV_PM_OPS (&rcar_vin_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_vin_driver = {
 	.probe		= rcar_vin_probe,
 	.remove		= rcar_vin_remove,
 	.driver		= {
 		.name		= DRV_NAME,
+		.pm		= DEV_PM_OPS,
 		.of_match_table	= of_match_ptr(rcar_vin_of_table),
 	},
 };
