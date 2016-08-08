@@ -49,19 +49,34 @@ static struct v4l2_subdev_ops rpf_ops = {
 static void rpf_set_memory(struct vsp1_entity *entity, struct vsp1_dl_list *dl)
 {
 	struct vsp1_rwpf *rpf = entity_to_rwpf(entity);
+	struct vsp1_device *vsp1 = entity->vsp1;
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_Y,
-		       rpf->mem.addr[0] + rpf->offsets[0]);
-	vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C0,
-		       rpf->mem.addr[1] + rpf->offsets[1]);
-	vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C1,
-		       rpf->mem.addr[2] + rpf->offsets[1]);
+	if (vsp1->auto_fld_mode)
+		vsp1_dl_set_addr_auto_fld(dl, rpf);
+	else {
+		vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_Y,
+				rpf->mem.addr[0] + rpf->offsets[0]);
+		if ((rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU420M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU422M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU444M)) {
+			vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C0,
+					rpf->mem.addr[2] + rpf->offsets[1]);
+			vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C1,
+					rpf->mem.addr[1] + rpf->offsets[1]);
+		} else {
+			vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C0,
+					rpf->mem.addr[1] + rpf->offsets[1]);
+			vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C1,
+					rpf->mem.addr[2] + rpf->offsets[1]);
+		}
+	}
 }
 
 static void rpf_configure(struct vsp1_entity *entity,
 			  struct vsp1_pipeline *pipe,
 			  struct vsp1_dl_list *dl)
 {
+	struct vsp1_device *vsp1 = entity->vsp1;
 	struct vsp1_rwpf *rpf = to_rwpf(&entity->subdev);
 	const struct vsp1_format_info *fmtinfo = rpf->fmtinfo;
 	const struct v4l2_pix_format_mplane *format = &rpf->format;
@@ -72,6 +87,16 @@ static void rpf_configure(struct vsp1_entity *entity,
 	unsigned int top = 0;
 	u32 pstride;
 	u32 infmt;
+	u32 alph_sel = 0, laya = 0;
+	u32 i;
+	u32 crop_width, crop_height, crop_x, crop_y;
+
+	if (pipe->vmute_flag) {
+		for (i = 0; i < vsp1->info->rpf_count; ++i)
+			vsp1_rpf_write(rpf, dl, VI6_DPR_RPF_ROUTE(i),
+						VI6_DPR_NODE_UNUSED);
+		return;
+	}
 
 	/* Source size, stride and crop offsets.
 	 *
@@ -81,28 +106,72 @@ static void rpf_configure(struct vsp1_entity *entity,
 	 */
 	crop = vsp1_rwpf_get_crop(rpf, rpf->entity.config);
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_SRC_BSIZE,
-		       (crop->width << VI6_RPF_SRC_BSIZE_BHSIZE_SHIFT) |
-		       (crop->height << VI6_RPF_SRC_BSIZE_BVSIZE_SHIFT));
-	vsp1_rpf_write(rpf, dl, VI6_RPF_SRC_ESIZE,
-		       (crop->width << VI6_RPF_SRC_ESIZE_EHSIZE_SHIFT) |
-		       (crop->height << VI6_RPF_SRC_ESIZE_EVSIZE_SHIFT));
+	crop_width = crop->width;
+	crop_x = crop->left;
 
-	rpf->offsets[0] = crop->top * format->plane_fmt[0].bytesperline
-			+ crop->left * fmtinfo->bpp[0] / 8;
+	if (rpf->interlaced) {
+		crop_height = crop->height / 2;
+		crop_y = crop->top / 2;
+
+		if ((rpf->fmtinfo->fourcc == V4L2_PIX_FMT_UYVY) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_VYUY) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YUYV) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVYU)) {
+			crop_width = round_down(crop_width, 2);
+			crop_x = round_down(crop_x, 2);
+		} else if ((rpf->fmtinfo->fourcc == V4L2_PIX_FMT_NV12M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_NV21M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_height = round_down(crop_height, 2);
+			crop_x = round_down(crop_x, 2);
+			crop_y = round_down(crop_y, 2);
+		} else if ((rpf->fmtinfo->fourcc == V4L2_PIX_FMT_NV16M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_NV61M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_x = round_down(crop_x, 2);
+		} else if ((rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YUV420M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YUV444M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU420M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU444M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_height = round_down(crop_height, 2);
+		} else if ((rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YUV422M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU422M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_height = round_down(crop_height, 2);
+			crop_x = round_down(crop_x, 2);
+			crop_y = round_down(crop_y, 2);
+		}
+	} else {
+		crop_height = crop->height;
+		crop_y = crop->top;
+	}
+
+	vsp1_rpf_write(rpf, dl, VI6_RPF_SRC_BSIZE,
+		       (crop_width << VI6_RPF_SRC_BSIZE_BHSIZE_SHIFT) |
+		       (crop_height << VI6_RPF_SRC_BSIZE_BVSIZE_SHIFT));
+	vsp1_rpf_write(rpf, dl, VI6_RPF_SRC_ESIZE,
+		       (crop_width << VI6_RPF_SRC_ESIZE_EHSIZE_SHIFT) |
+		       (crop_height << VI6_RPF_SRC_ESIZE_EVSIZE_SHIFT));
+
+	rpf->offsets[0] = crop_y * format->plane_fmt[0].bytesperline
+			+ crop_x * fmtinfo->bpp[0] / 8;
 	pstride = format->plane_fmt[0].bytesperline
 		<< VI6_RPF_SRCM_PSTRIDE_Y_SHIFT;
 
 	if (format->num_planes > 1) {
-		rpf->offsets[1] = crop->top * format->plane_fmt[1].bytesperline
-				+ crop->left * fmtinfo->bpp[1] / 8;
+		rpf->offsets[1] = crop_y * format->plane_fmt[1].bytesperline
+				+ crop_x * fmtinfo->bpp[1] / 8;
 		pstride |= format->plane_fmt[1].bytesperline
 			<< VI6_RPF_SRCM_PSTRIDE_C_SHIFT;
 	} else {
 		rpf->offsets[1] = 0;
 	}
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_PSTRIDE, pstride);
+	if (rpf->interlaced)
+		vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_PSTRIDE, pstride * 2);
+	else
+		vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_PSTRIDE, pstride);
 
 	/* Format */
 	sink_format = vsp1_entity_get_pad_format(&rpf->entity,
@@ -138,7 +207,12 @@ static void rpf_configure(struct vsp1_entity *entity,
 		top = compose->top;
 	}
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_LOC,
+	if (rpf->interlaced)
+		vsp1_rpf_write(rpf, dl, VI6_RPF_LOC,
+		       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
+		       ((top / 2) << VI6_RPF_LOC_VCOORD_SHIFT));
+	else
+		vsp1_rpf_write(rpf, dl, VI6_RPF_LOC,
 		       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
 		       (top << VI6_RPF_LOC_VCOORD_SHIFT));
 
@@ -164,23 +238,51 @@ static void rpf_configure(struct vsp1_entity *entity,
 	 *
 	 * In all cases, disable color keying.
 	 */
-	vsp1_rpf_write(rpf, dl, VI6_RPF_ALPH_SEL, VI6_RPF_ALPH_SEL_AEXT_EXT |
-		       (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
-				       : VI6_RPF_ALPH_SEL_ASEL_FIXED));
+	switch (fmtinfo->fourcc) {
+	case V4L2_PIX_FMT_ARGB555:
+		if (CONFIG_VIDEO_RENESAS_VSP_ALPHA_BIT_ARGB1555 == 1)
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   VI6_RPF_ALPH_SEL_ALPHA1_MASK |
+				   (rpf->alpha &
+				   VI6_RPF_ALPH_SEL_ALPHA0_MASK);
+		else
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   ((rpf->alpha & 0xff) << 8) |
+				   VI6_RPF_ALPH_SEL_ALPHA0_MASK;
+		laya = 0;
+		break;
+	case V4L2_PIX_FMT_ARGB444:
+		alph_sel = VI6_RPF_ALPH_SEL_AEXT_ONE;
+		laya = 0;
+		break;
+	case V4L2_PIX_FMT_ABGR32:
+	case V4L2_PIX_FMT_ARGB32:
+		laya = 0;
+		break;
+	default:
+		alph_sel = VI6_RPF_ALPH_SEL_AEXT_EXT |
+			   (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
+			   : VI6_RPF_ALPH_SEL_ASEL_FIXED);
+		laya = rpf->alpha << VI6_RPF_VRTCOL_SET_LAYA_SHIFT;
+		break;
+	}
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_VRTCOL_SET,
-		       rpf->alpha << VI6_RPF_VRTCOL_SET_LAYA_SHIFT);
+	vsp1_rpf_write(rpf, dl, VI6_RPF_ALPH_SEL, alph_sel);
+	vsp1_rpf_write(rpf, dl, VI6_RPF_VRTCOL_SET, laya);
 
 	if (entity->vsp1->info->gen == 3) {
 		u32 mult;
 
-		if (fmtinfo->alpha) {
+		if ((fmtinfo->alpha) &&
+			(fmtinfo->fourcc != V4L2_PIX_FMT_ARGB555)) {
 			/* When the input contains an alpha channel enable the
 			 * alpha multiplier. If the input is premultiplied we
 			 * need to multiply both the alpha channel and the pixel
 			 * components by the global alpha value to keep them
 			 * premultiplied. Otherwise multiply the alpha channel
-			 * only.
+			 * only. The alpha multiplier is disabled in ARGB1555.
 			 */
 			bool premultiplied = format->flags
 					   & V4L2_PIX_FMT_FLAG_PREMUL_ALPHA;

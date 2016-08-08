@@ -1,7 +1,7 @@
 /*
  * vsp1.h  --  R-Car VSP1 API
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -26,16 +26,22 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 struct vsp1_du_atomic_config {
 	u32 pixelformat;
 	unsigned int pitch;
-	dma_addr_t mem[2];
+	dma_addr_t mem[3];
 	struct v4l2_rect src;
 	struct v4l2_rect dst;
 	unsigned int alpha;
 	unsigned int zpos;
+	bool interlaced;
 };
 
 void vsp1_du_atomic_begin(struct device *dev);
 int vsp1_du_atomic_update(struct device *dev, unsigned int rpf,
 			  const struct vsp1_du_atomic_config *cfg);
 void vsp1_du_atomic_flush(struct device *dev);
+int vsp1_du_if_set_mute(struct device *dev, bool on);
+int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
+		      dma_addr_t mem[2]);
+void vsp1_du_wait_wb(struct device *dev, u32 count);
+
 
 #endif /* __MEDIA_VSP1_H__ */
