@@ -719,6 +719,8 @@ void rcar_du_hdmienc_restore(struct drm_encoder *encoder)
 	temp = readl(smstpcr);
 	writel(temp & ~(0x3 << 28), smstpcr);
 
+	rcar_du_hdmienc_enable(encoder);
+
 	ret = handle_registers(ip, DO_RESTORE);
 	if (ret)
 		pr_err("%s: Failed to restore %s register\n",
@@ -731,8 +733,8 @@ void rcar_du_hdmienc_disable(struct drm_encoder *encoder)
 	struct rcar_du_hdmienc *hdmienc = to_rcar_hdmienc(encoder);
 	const struct drm_bridge_funcs *bfuncs = encoder->bridge->funcs;
 
-	if ((bfuncs) && (bfuncs->post_disable))
-		bfuncs->post_disable(encoder->bridge);
+	if ((bfuncs) && (bfuncs->disable))
+		bfuncs->disable(encoder->bridge);
 
 	if (hdmienc->renc->lvds)
 		rcar_du_lvdsenc_enable(hdmienc->renc->lvds, encoder->crtc,
@@ -898,6 +900,16 @@ static enum drm_mode_status
 rcar_du_hdmienc_mode_valid(struct drm_connector *connector,
 			    struct drm_display_mode *mode)
 {
+	if ((mode->hdisplay > 3840) || (mode->vdisplay > 2160))
+		return MODE_BAD;
+
+	if (((mode->hdisplay == 3840) && (mode->vdisplay == 2160))
+		&& (mode->vrefresh > 30))
+		return MODE_BAD;
+
+	if (mode->clock > 297000)
+		return MODE_BAD;
+
 	return MODE_OK;
 }
 

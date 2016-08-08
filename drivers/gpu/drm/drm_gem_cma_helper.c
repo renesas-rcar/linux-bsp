@@ -65,7 +65,10 @@ __drm_gem_cma_create(struct drm_device *drm, size_t size)
 		gem_obj = kzalloc(sizeof(*cma_obj), GFP_KERNEL);
 	if (!gem_obj)
 		return ERR_PTR(-ENOMEM);
+
 	cma_obj = container_of(gem_obj, struct drm_gem_cma_object, base);
+	if (!cma_obj->dev)
+		cma_obj->dev = drm->dev;
 
 	ret = drm_gem_object_init(drm, gem_obj, size);
 	if (ret)
@@ -109,7 +112,7 @@ struct drm_gem_cma_object *drm_gem_cma_create(struct drm_device *drm,
 	if (IS_ERR(cma_obj))
 		return cma_obj;
 
-	cma_obj->vaddr = dma_alloc_wc(drm->dev, size, &cma_obj->paddr,
+	cma_obj->vaddr = dma_alloc_wc(cma_obj->dev, size, &cma_obj->paddr,
 				      GFP_KERNEL | __GFP_NOWARN);
 	if (!cma_obj->vaddr) {
 		dev_err(drm->dev, "failed to allocate buffer with size %zu\n",
@@ -192,7 +195,7 @@ void drm_gem_cma_free_object(struct drm_gem_object *gem_obj)
 	cma_obj = to_drm_gem_cma_obj(gem_obj);
 
 	if (cma_obj->vaddr) {
-		dma_free_wc(gem_obj->dev->dev, cma_obj->base.size,
+		dma_free_wc(cma_obj->dev, cma_obj->base.size,
 			    cma_obj->vaddr, cma_obj->paddr);
 	} else if (gem_obj->import_attach) {
 		drm_prime_gem_destroy(gem_obj, cma_obj->sgt);
