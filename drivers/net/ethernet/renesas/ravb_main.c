@@ -2205,6 +2205,10 @@ static int ravb_resume(struct device *dev)
 		/* Request GTI loading */
 		ravb_write(ndev, ravb_read(ndev, GCCR) | GCCR_LTI, GCCR);
 
+		/* Set APSR */
+		if (priv->phy_interface == PHY_INTERFACE_MODE_RGMII_ID)
+			ravb_modify(ndev, APSR, APSR_DM, APSR_DM_TDM);
+
 		/* Set DBAT value */
 		ravb_write(ndev, priv->desc_bat_dma, DBAT);
 
