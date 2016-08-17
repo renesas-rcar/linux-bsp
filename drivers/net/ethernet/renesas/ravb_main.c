@@ -2142,6 +2142,13 @@ static int __maybe_unused ravb_resume(struct device *dev)
 	/* Restore descriptor base address table */
 	ravb_write(ndev, priv->desc_bat_dma, DBAT);
 
+	/* Set APSR */
+	if (priv->phy_interface == PHY_INTERFACE_MODE_RGMII_ID)
+		ravb_modify(ndev, APSR, APSR_DM, APSR_DM_TDM);
+
+	/* Set DBAT value */
+	ravb_write(ndev, priv->desc_bat_dma, DBAT);
+
 	if (netif_running(ndev)) {
 		if (priv->chip_id != RCAR_GEN2)
 			ravb_ptp_init(ndev, pdev);
