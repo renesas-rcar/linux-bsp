@@ -3396,10 +3396,12 @@ static __maybe_unused int sci_suspend(struct device *dev)
 	int ret = 0;
 
 	if (sport) {
+		pm_runtime_get_sync(sport->port.dev);
 		uart_suspend_port(&sci_uart_driver, &sport->port);
 #ifdef CONFIG_RCAR_DDR_BACKUP
 		ret = sci_save_regs(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
+		pm_runtime_put(sport->port.dev);
 	}
 
 	return ret;
