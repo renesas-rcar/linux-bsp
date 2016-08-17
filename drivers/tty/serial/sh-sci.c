@@ -3727,7 +3727,9 @@ static __maybe_unused int sci_suspend(struct device *dev)
 	struct sci_port *sport = dev_get_drvdata(dev);
 
 	if (sport) {
+		pm_runtime_get_sync(sport->port.dev);
 		uart_suspend_port(&sci_uart_driver, &sport->port);
+		pm_runtime_put(sport->port.dev);
 
 		if (!console_suspend_enabled && uart_console(&sport->port)) {
 			if (sport->ops->console_save)
