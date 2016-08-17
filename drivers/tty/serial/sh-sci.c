@@ -3524,13 +3524,16 @@ static __maybe_unused int sci_suspend(struct device *dev)
 	struct sci_port *sport = dev_get_drvdata(dev);
 
 	if (sport) {
+		pm_runtime_get_sync(sport->port.dev);
 		uart_suspend_port(&sci_uart_driver, &sport->port);
+		pm_runtime_put(sport->port.dev);
+	}
 
 		if (!console_suspend_enabled && uart_console(&sport->port))
 			sci_console_save(sport);
 		else
 			return reset_control_assert(sport->rstc);
-	}
+
 
 	return 0;
 }
