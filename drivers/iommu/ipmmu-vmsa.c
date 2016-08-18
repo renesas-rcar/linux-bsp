@@ -26,6 +26,7 @@
 #include <linux/sizes.h>
 #include <linux/slab.h>
 #include <linux/sys_soc.h>
+#include <linux/pci.h>
 
 #if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
 #include <asm/dma-iommu.h>
@@ -1240,8 +1241,21 @@ error:
 	return ret;
 }
 
+static struct device *ipmmu_get_pci_host_device(struct device *dev)
+{
+	struct pci_dev *pdev = to_pci_dev(dev);
+	struct pci_bus *bus = pdev->bus;
+
+	/* Walk up to the root bus to look for PCI Host controller */
+	while (!pci_is_root_bus(bus))
+		bus = bus->parent;
+
+	return bus->bridge->parent;
+}
+
 static int ipmmu_add_device(struct device *dev)
 {
+	struct device *root_dev;
 	struct iommu_group *group;
 	struct ipmmu_vmsa_backup *dev_backup;
 	struct iommu_fwspec *fwspec;
@@ -1256,6 +1270,17 @@ static int ipmmu_add_device(struct device *dev)
 
 	if (IS_ENABLED(CONFIG_ARM) && !IS_ENABLED(CONFIG_IOMMU_DMA))
 		return ipmmu_init_arm_mapping(dev);
+
+	/*
+	 * The IOMMU can't distinguish between different PCI Functions.
+	 * Use PCI Host controller as a proxy for all connected PCI devices
+	 */
+	if (dev_is_pci(dev)) {
+		root_dev = ipmmu_get_pci_host_device(dev);
+
+		if (root_dev->iommu_group)
+			dev->iommu_group = root_dev->iommu_group;
+	}
 
 	group = iommu_group_get_for_dev(dev);
 	if (IS_ERR(group))
