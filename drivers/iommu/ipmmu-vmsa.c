@@ -25,6 +25,7 @@
 #include <linux/sizes.h>
 #include <linux/slab.h>
 #include <linux/sys_soc.h>
+#include <linux/pci.h>
 
 #if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
 #include <asm/dma-iommu.h>
@@ -876,6 +877,18 @@ error:
 	return ret;
 }
 
+static struct device *ipmmu_get_pci_host_device(struct device *dev)
+{
+	struct pci_dev *pdev = to_pci_dev(dev);
+	struct pci_bus *bus = pdev->bus;
+
+	/* Walk up to the root bus to look for PCI Host controller */
+	while (!pci_is_root_bus(bus))
+		bus = bus->parent;
+
+	return bus->bridge->parent;
+}
+
 static struct iommu_device *ipmmu_probe_device(struct device *dev)
 {
 	struct ipmmu_vmsa_device *mmu = to_ipmmu(dev);
@@ -892,12 +905,25 @@ static struct iommu_device *ipmmu_probe_device(struct device *dev)
 static void ipmmu_probe_finalize(struct device *dev)
 {
 	int ret = 0;
+	struct device *root_dev;
 
-	if (IS_ENABLED(CONFIG_ARM) && !IS_ENABLED(CONFIG_IOMMU_DMA))
+	if (IS_ENABLED(CONFIG_ARM) && !IS_ENABLED(CONFIG_IOMMU_DMA)) {
 		ret = ipmmu_init_arm_mapping(dev);
+	} else {
+	/*
+	 * The IOMMU can't distinguish between different PCI Functions.
+	 * Use PCI Host controller as a proxy for all connected PCI devices
+	 */
+		if (dev_is_pci(dev)) {
+			root_dev = ipmmu_get_pci_host_device(dev);
+
+			if (root_dev->iommu_group)
+				dev->iommu_group = root_dev->iommu_group;
+	}
 
 	if (ret)
 		dev_err(dev, "Can't create IOMMU mapping - DMA-OPS will not work\n");
+	}
 }
 
 static void ipmmu_release_device(struct device *dev)
