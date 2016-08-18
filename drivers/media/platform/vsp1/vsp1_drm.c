@@ -12,9 +12,11 @@
  */
 
 #include <linux/device.h>
+#include <linux/dma-mapping.h>
 #include <linux/slab.h>
 
 #include <media/media-entity.h>
+#include <media/rcar-fcp.h>
 #include <media/v4l2-subdev.h>
 #include <media/vsp1.h>
 
@@ -520,6 +522,28 @@ void vsp1_du_atomic_flush(struct device *dev)
 	}
 }
 EXPORT_SYMBOL_GPL(vsp1_du_atomic_flush);
+
+int vsp1_du_map_sg(struct device *dev, struct sg_table *sgt)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct device *map_dev;
+
+	map_dev = vsp1->fcp ? rcar_fcp_get_device(vsp1->fcp) : dev;
+
+	return dma_map_sg(map_dev, sgt->sgl, sgt->nents, DMA_TO_DEVICE);
+}
+EXPORT_SYMBOL_GPL(vsp1_du_map_sg);
+
+void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct device *map_dev;
+
+	map_dev = vsp1->fcp ? rcar_fcp_get_device(vsp1->fcp) : dev;
+
+	dma_unmap_sg(map_dev, sgt->sgl, sgt->nents, DMA_TO_DEVICE);
+}
+EXPORT_SYMBOL_GPL(vsp1_du_unmap_sg);
 
 /* -----------------------------------------------------------------------------
  * Initialization
