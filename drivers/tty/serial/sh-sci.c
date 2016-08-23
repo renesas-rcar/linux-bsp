@@ -3413,10 +3413,12 @@ static __maybe_unused int sci_resume(struct device *dev)
 	int ret = 0;
 
 	if (sport) {
+		pm_runtime_get_sync(sport->port.dev);
 #ifdef CONFIG_RCAR_DDR_BACKUP
 		ret = sci_restore_regs(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 		uart_resume_port(&sci_uart_driver, &sport->port);
+		pm_runtime_put(sport->port.dev);
 	}
 
 	return ret;
