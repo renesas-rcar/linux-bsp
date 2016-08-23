@@ -1145,7 +1145,9 @@ static int rcar_i2c_resume(struct device *dev)
 #ifdef CONFIG_RCAR_DDR_BACKUP
 	struct platform_device *pdev = to_platform_device(dev);
 
+	pm_runtime_get_sync(dev);
 	ret = rcar_i2c_restore_regs(pdev);
+	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }
