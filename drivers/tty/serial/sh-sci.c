@@ -3543,6 +3543,7 @@ static __maybe_unused int sci_resume(struct device *dev)
 	struct sci_port *sport = dev_get_drvdata(dev);
 
 	if (sport) {
+
 		if (!console_suspend_enabled && uart_console(&sport->port)) {
 			sci_console_restore(sport);
 		} else {
@@ -3552,7 +3553,10 @@ static __maybe_unused int sci_resume(struct device *dev)
 				return ret;
 		}
 
+		pm_runtime_get_sync(sport->port.dev);
 		uart_resume_port(&sci_uart_driver, &sport->port);
+		pm_runtime_put(sport->port.dev);
+
 	}
 
 	return 0;
