@@ -26,15 +26,17 @@ struct rcar_ip {
 };
 
 #ifdef CONFIG_RCAR_DDR_BACKUP
-int handle_registers(struct rcar_ip *ip, unsigned int handling);
-int handle_ips(struct rcar_ip **ip, unsigned int handling);
+int rcar_handle_registers(struct rcar_ip *ip, unsigned int handling);
+int rcar_handle_ips(struct rcar_ip **ip, unsigned int handling);
 #else
-static inline int handle_registers(struct rcar_ip *ip, unsigned int handling)
+static inline int rcar_handle_registers(struct rcar_ip *ip,
+		unsigned int handling)
 {
 	return 0;
 }
 
-static inline int handle_ips(struct rcar_ip **ip, unsigned int handling)
+static inline int rcar_handle_ips(struct rcar_ip **ip,
+		unsigned int handling)
 {
 	return 0;
 }
