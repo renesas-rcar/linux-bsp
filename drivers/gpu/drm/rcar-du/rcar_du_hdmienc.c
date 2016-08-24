@@ -694,13 +694,13 @@ void rcar_du_hdmienc_backup(struct drm_encoder *encoder)
 	int ret;
 
 	if (!ip->virt_addr) {
-		ret = handle_registers(ip, DO_IOREMAP);
+		ret = rcar_handle_registers(ip, DO_IOREMAP);
 		if (ret)
 			pr_err("%s: Failed to map %s register\n",
 				__func__, ip->ip_name);
 	}
 
-	ret = handle_registers(ip, DO_BACKUP);
+	ret = rcar_handle_registers(ip, DO_BACKUP);
 	if (ret)
 		pr_err("%s: Failed to backup %s register\n",
 			__func__, ip->ip_name);
@@ -721,7 +721,7 @@ void rcar_du_hdmienc_restore(struct drm_encoder *encoder)
 
 	rcar_du_hdmienc_enable(encoder);
 
-	ret = handle_registers(ip, DO_RESTORE);
+	ret = rcar_handle_registers(ip, DO_RESTORE);
 	if (ret)
 		pr_err("%s: Failed to restore %s register\n",
 			__func__, ip->ip_name);
