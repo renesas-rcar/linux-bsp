@@ -749,11 +749,11 @@ static int sh_pfc_suspend(struct device *dev)
 	pr_debug("%s\n", __func__);
 
 	if (!pfc_ip.virt_addr)
-		ret = handle_registers(&pfc_ip, DO_IOREMAP);
+		ret = rcar_handle_registers(&pfc_ip, DO_IOREMAP);
 	if (ret)
 		return ret;
 
-	ret = handle_registers(&pfc_ip, DO_BACKUP);
+	ret = rcar_handle_registers(&pfc_ip, DO_BACKUP);
 #endif
 	return ret;
 }
@@ -764,7 +764,7 @@ static int sh_pfc_resume(struct device *dev)
 #if defined(CONFIG_PINCTRL_PFC_R8A7795) && \
 	defined(CONFIG_RCAR_DDR_BACKUP)
 	pr_debug("%s\n", __func__);
-	ret = handle_registers(&pfc_ip, DO_RESTORE);
+	ret = rcar_handle_registers(&pfc_ip, DO_RESTORE);
 
 #endif
 	return ret;
