@@ -769,7 +769,7 @@ static int gpio_rcar_suspend(struct device *dev)
 	if (!gpio_ip->virt_addr)
 		gpio_ip->virt_addr = p->base;
 
-	ret = handle_registers(gpio_ip, DO_BACKUP);
+	ret = rcar_handle_registers(gpio_ip, DO_BACKUP);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }
@@ -789,7 +789,7 @@ static int gpio_rcar_resume(struct device *dev)
 
 	gpio_ip = ip_info_tbl[index];
 
-	ret = handle_registers(gpio_ip, DO_RESTORE);
+	ret = rcar_handle_registers(gpio_ip, DO_RESTORE);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }
