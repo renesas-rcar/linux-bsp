@@ -1643,7 +1643,7 @@ static int rcar_dmac_sleep_suspend(struct device *dev)
 
 	for (i = 0; i < dmac->n_channels; ++i) {
 		if (!dmac->channels[i].iomem)
-			break;
+			continue;
 
 		spin_lock(&dmac->channels[i].lock);
 		pm_runtime_get_sync(dev);
