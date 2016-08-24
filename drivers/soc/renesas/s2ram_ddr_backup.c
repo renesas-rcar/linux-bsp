@@ -69,7 +69,7 @@ static struct rcar_ip *common_ips[] = {
  *         DO_BACKUP: backup
  *         DO_RESTORE: restore
  */
-int handle_registers(struct rcar_ip *ip, unsigned int handling)
+int rcar_handle_registers(struct rcar_ip *ip, unsigned int handling)
 {
 	int reg_count = 0;
 	unsigned int j;
@@ -237,7 +237,7 @@ int handle_registers(struct rcar_ip *ip, unsigned int handling)
 
 	return 0;
 }
-EXPORT_SYMBOL(handle_registers);
+EXPORT_SYMBOL(rcar_handle_registers);
 
 /*
  * Handle backup/restore of IPs
@@ -247,7 +247,7 @@ EXPORT_SYMBOL(handle_registers);
  *         DO_BACKUP: backup
  *         DO_RESTORE: restore
  */
-int handle_ips(struct rcar_ip **ip, unsigned int handling)
+int rcar_handle_ips(struct rcar_ip **ip, unsigned int handling)
 {
 	struct rcar_ip *working_ip;
 	unsigned int i = 0;
@@ -255,45 +255,45 @@ int handle_ips(struct rcar_ip **ip, unsigned int handling)
 
 	while (ip[i] != NULL) {
 		working_ip = ip[i];
-		ret = handle_registers(working_ip, handling);
+		ret = rcar_handle_registers(working_ip, handling);
 		i++;
 	}
 
 	return ret;
 }
-EXPORT_SYMBOL(handle_ips);
+EXPORT_SYMBOL(rcar_handle_ips);
 
 #ifdef CONFIG_PM_SLEEP
-static int ddr_bck_suspend(void)
+static int ddr_backup_suspend(void)
 {
 	pr_debug("%s\n", __func__);
 
-	return handle_ips(common_ips, DO_BACKUP);
+	return rcar_handle_ips(common_ips, DO_BACKUP);
 }
 
-static void ddr_bck_resume(void)
+static void ddr_backup_resume(void)
 {
 	pr_debug("%s\n", __func__);
 
-	handle_ips(common_ips, DO_RESTORE);
+	rcar_handle_ips(common_ips, DO_RESTORE);
 }
 
-static struct syscore_ops ddr_bck_syscore_ops = {
-	.suspend = ddr_bck_suspend,
-	.resume = ddr_bck_resume,
+static struct syscore_ops ddr_backup_syscore_ops = {
+	.suspend = ddr_backup_suspend,
+	.resume = ddr_backup_resume,
 };
 
-static int ddr_bck_init(void)
+static int ddr_backup_init(void)
 {
 	int ret;
 
 	/* Map register for all common IPs */
-	ret = handle_ips(common_ips, DO_IOREMAP);
+	ret = rcar_handle_ips(common_ips, DO_IOREMAP);
 
-	register_syscore_ops(&ddr_bck_syscore_ops);
+	register_syscore_ops(&ddr_backup_syscore_ops);
 
 	return ret;
 }
-core_initcall(ddr_bck_init);
+core_initcall(ddr_backup_init);
 
 #endif /* CONFIG_PM_SLEEP */
