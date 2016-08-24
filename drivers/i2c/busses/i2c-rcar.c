@@ -346,7 +346,7 @@ static int rcar_i2c_save_regs(struct platform_device *pdev)
 		if (!ip->virt_addr)
 			ip->virt_addr = priv->io;
 
-		ret = handle_registers(ip, DO_BACKUP);
+		ret = rcar_handle_registers(ip, DO_BACKUP);
 		pr_debug("%s: Backup %s register\n", __func__, ip->ip_name);
 	} else
 		pr_err("%s: Failed to find i2c-rcar\n", __func__);
@@ -360,7 +360,7 @@ static int rcar_i2c_restore_regs(struct platform_device *pdev)
 	int ret = -ENODEV;
 
 	if (ip) {
-		ret = handle_registers(ip, DO_RESTORE);
+		ret = rcar_handle_registers(ip, DO_RESTORE);
 		pr_debug("%s: Restore %s register\n", __func__, ip->ip_name);
 	} else
 		pr_err("%s: Failed to find i2c-rcar\n", __func__);
