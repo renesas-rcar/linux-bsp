@@ -1658,8 +1658,13 @@ static int rcar_dmac_sleep_suspend(struct device *dev)
 static int rcar_dmac_sleep_resume(struct device *dev)
 {
 	struct rcar_dmac *dmac = dev_get_drvdata(dev);
+	int ret;
 
-	return rcar_dmac_init(dmac);
+	pm_runtime_get_sync(dev);
+	ret = rcar_dmac_init(dmac);
+	pm_runtime_put(dev);
+
+	return ret;
 }
 #endif
 
