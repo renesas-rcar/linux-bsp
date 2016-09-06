@@ -1,0 +1,62 @@
+* Analog Devices ADV7482 video decoder with HDMI receiver
+
+The ADV7482 are a multi format video decoders with an integrated
+HDMI receiver. It can output CSI-2 on two independent outputs
+TXA and TXB from three input sources HDMI, analog and TTL.
+
+Required Properties:
+
+  - compatible: Must contain one of the following
+    - "adi,adv7482" for the ADV7482
+
+  - reg: I2C slave address
+
+The device node must contain one 'port' child node per device input and output
+port, in accordance with the video interface bindings defined in
+Documentation/devicetree/bindings/media/video-interfaces.txt. The port nodes
+are numbered as follows.
+
+  Name                  Type            Port
+------------------------------------------------------------
+  HDMI                  sink            0
+  AIN1                  sink            1
+  AIN                   sink            2
+  AIN                   sink            3
+  AIN                   sink            4
+  AIN                   sink            5
+  AIN                   sink            6
+  AIN                   sink            7
+  AIN                   sink            8
+  TTL                   sink            9
+  TXA                   source          10
+  TXB                   source          11
+
+The digital output port node must contain at least one source endpoint.
+
+Example:
+
+    video_receiver@70 {
+            compatible = "adi,adv7482";
+            reg = <0x70>;
+
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            port@10 {
+                    reg = <10>;
+                    adv7482_txa: endpoint@1 {
+                            clock-lanes = <0>;
+                            data-lanes = <1 2 3 4>;
+                            remote-endpoint = <&csi40_in>;
+                    };
+            };
+
+            port@11 {
+                    reg = <11>;
+                    adv7482_txb: endpoint@1 {
+                            clock-lanes = <0>;
+                            data-lanes = <1>;
+                            remote-endpoint = <&csi20_in>;
+                    };
+            };
+    };

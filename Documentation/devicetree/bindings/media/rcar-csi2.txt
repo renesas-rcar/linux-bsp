@@ -1,0 +1,79 @@
+Renesas R-Car MIPI CSI-2 driver (rcar-csi2)
+-------------------------------------------
+
+The rcar-csi2 device provides MIPI CSI-2 capabilities for the Renesas R-Car
+family of devices. It is to be used in conjunction with the rcar-vin driver which
+provides the video input capabilities.
+
+ - compatible: Must be one or more of the following
+   - "renesas,r8a7795-csi2" for the R8A7795 device
+   - "renesas,rcar-gen3-csi2" for a generic R-Car Gen3 compatible device.
+
+   When compatible with the generic version nodes must list the
+   SoC-specific version corresponding to the platform first
+   followed by the generic version.
+
+ - reg: the register base and size for the device registers
+ - interrupts: the interrupt for the device
+ - clocks: Reference to the parent clock
+
+The device node should contain two 'port' child nodes with one child 'endpoint'
+node, according to the bindings defined in Documentation/devicetree/bindings/
+media/video-interfaces.txt. Port 0 should connect the device that is the CSI-2
+producer. Port 1 should connect the R-Car VIN device (rcar-vin) consumer.
+
+ - ports:
+   - port@0: sub-node describing a endpoint to the CSI-2 source
+   - port@1: sub-node describing a endpoint to the VIN consumer
+
+Additionally, an alias named csiX will need to be created to specify
+which CSI-2 device this is.
+
+Example:
+
+/* SoC properties */
+
+	aliases {
+		csi40 = &csi40;
+	};
+
+	csi40: csi2@feaa0000 {
+		compatible = "renesas,r8a7795-csi2";
+		reg = <0 0xfeaa0000 0 0x10000>;
+		interrupts = <0 246 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cpg CPG_MOD 716>;
+		power-domains = <&cpg>;
+		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@1 {
+				reg = <1>;
+				csi40_out: endpoint@1 {
+					remote-endpoint = <&vin0csi40>;
+				};
+			};
+		};
+	};
+
+/* Board properties */
+
+	&csi40 {
+		status = "okay";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				csi40_in: endpoint@0 {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&adv7482_1_out>;
+				};
+			};
+		};
+	};
