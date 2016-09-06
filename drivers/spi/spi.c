@@ -1491,6 +1491,7 @@ err_init_queue:
 static struct spi_device *
 of_register_spi_device(struct spi_master *master, struct device_node *nc)
 {
+	bool slave = master->flags & SPI_MASTER_IS_SLAVE;
 	struct spi_device *spi;
 	int rc;
 	u32 value;
@@ -1514,13 +1515,16 @@ of_register_spi_device(struct spi_master *master, struct device_node *nc)
 	}
 
 	/* Device address */
-	rc = of_property_read_u32(nc, "reg", &value);
-	if (rc) {
-		dev_err(&master->dev, "%s has no valid 'reg' property (%d)\n",
-			nc->full_name, rc);
-		goto err_out;
+	if (!slave) {
+		rc = of_property_read_u32(nc, "reg", &value);
+		if (rc) {
+			dev_err(&master->dev,
+				"%s has no valid 'reg' property (%d)\n",
+				nc->full_name, rc);
+			goto err_out;
+		}
+		spi->chip_select = value;
 	}
-	spi->chip_select = value;
 
 	/* Mode (clock phase/polarity/etc.) */
 	if (of_find_property(nc, "spi-cpha", NULL))
@@ -1572,13 +1576,16 @@ of_register_spi_device(struct spi_master *master, struct device_node *nc)
 	}
 
 	/* Device speed */
-	rc = of_property_read_u32(nc, "spi-max-frequency", &value);
-	if (rc) {
-		dev_err(&master->dev, "%s has no valid 'spi-max-frequency' property (%d)\n",
-			nc->full_name, rc);
-		goto err_out;
+	if (!slave) {
+		rc = of_property_read_u32(nc, "spi-max-frequency", &value);
+		if (rc) {
+			dev_err(&master->dev,
+				"%s has no valid 'spi-max-frequency' property (%d)\n",
+				nc->full_name, rc);
+			goto err_out;
+		}
+		spi->max_speed_hz = value;
 	}
-	spi->max_speed_hz = value;
 
 	/* Store a pointer to the node in the device structure */
 	of_node_get(nc);
@@ -1819,7 +1826,7 @@ static int of_spi_register_master(struct spi_master *master)
 	int nb, i, *cs;
 	struct device_node *np = master->dev.of_node;
 
-	if (!np)
+	if (!np || master->flags & SPI_MASTER_IS_SLAVE)
 		return 0;
 
 	nb = of_gpio_named_count(np, "cs-gpios");
@@ -1926,8 +1933,10 @@ int spi_register_master(struct spi_master *master)
 	status = device_add(&master->dev);
 	if (status < 0)
 		goto done;
-	dev_dbg(dev, "registered master %s%s\n", dev_name(&master->dev),
-			dynamic ? " (dynamic)" : "");
+	dev_dbg(dev, "registered %s %s%s\n",
+			master->flags & SPI_MASTER_IS_SLAVE ? "slave"
+							    : "master",
+			dev_name(&master->dev), dynamic ? " (dynamic)" : "");
 
 	/* If we're using a queued driver, start the queue */
 	if (master->transfer)

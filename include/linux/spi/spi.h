@@ -28,8 +28,8 @@ struct spi_transfer;
 struct spi_flash_read_message;
 
 /*
- * INTERFACES between SPI master-side drivers and SPI infrastructure.
- * (There's no SPI slave support for Linux yet...)
+ * INTERFACES between SPI master-side drivers and SPI slave protocol handers,
+ * and SPI infrastructure.
  */
 extern struct bus_type spi_bus_type;
 
@@ -442,6 +442,7 @@ struct spi_master {
 #define SPI_MASTER_NO_TX	BIT(2)		/* can't do buffer write */
 #define SPI_MASTER_MUST_RX      BIT(3)		/* requires rx */
 #define SPI_MASTER_MUST_TX      BIT(4)		/* requires tx */
+#define SPI_MASTER_IS_SLAVE     BIT(5)		/* SPI slave controller */
 
 	/*
 	 * on some hardware transfer / message size may be constrained
