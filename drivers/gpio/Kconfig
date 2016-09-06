@@ -10,27 +10,6 @@ config ARCH_HAVE_CUSTOM_GPIO_H
 	  overriding the default implementations.  New uses of this are
 	  strongly discouraged.
 
-config ARCH_WANT_OPTIONAL_GPIOLIB
-	bool
-	help
-	  Select this config option from the architecture Kconfig, if
-	  it is possible to use gpiolib on the architecture, but let the
-	  user decide whether to actually build it or not.
-	  Select this instead of ARCH_REQUIRE_GPIOLIB, if your architecture does
-	  not depend on GPIOs being available, but rather let the user
-	  decide whether he needs it or not.
-
-config ARCH_REQUIRE_GPIOLIB
-	bool
-	select GPIOLIB
-	help
-	  Platforms select gpiolib if they use this infrastructure
-	  for all their GPIOs, usually starting with ones integrated
-	  into SOC processors.
-	  Selecting this from the architecture code will cause the gpiolib
-	  code to always get built in.
-
-
 menuconfig GPIOLIB
 	bool "GPIO Support"
 	select ANON_INODES
@@ -137,6 +116,12 @@ config GPIO_ATH79
 	help
 	  Select this option to enable GPIO driver for
 	  Atheros AR71XX/AR724X/AR913X SoC devices.
+
+config GPIO_AXP209
+	tristate "X-Powers AXP209 PMIC GPIO Support"
+	depends on MFD_AXP20X
+	help
+	  Say yes to enable GPIO support for the AXP209 PMIC
 
 config GPIO_BCM_KONA
 	bool "Broadcom Kona GPIO"
@@ -574,6 +559,19 @@ config GPIO_F7188X
 	  To compile this driver as a module, choose M here: the module will
 	  be called f7188x-gpio.
 
+config GPIO_GPIO_MM
+	tristate "Diamond Systems GPIO-MM GPIO support"
+	depends on ISA_BUS_API
+	help
+	  Enables GPIO support for the Diamond Systems GPIO-MM and GPIO-MM-12.
+
+	  The Diamond Systems GPIO-MM device features 48 lines of digital I/O
+	  via the emulation of dual 82C55A PPI chips. This driver provides GPIO
+	  support for these 48 channels of digital I/O.
+
+	  The base port addresses for the devices may be configured via the base
+	  array module parameter.
+
 config GPIO_IT87
 	tristate "IT87xx GPIO support"
 	help
@@ -780,6 +778,13 @@ config GPIO_TPIC2810
 	  To compile this driver as a module, choose M here: the module will
 	  be called gpio-tpic2810.
 
+config GPIO_TS4900
+	tristate "Technologic Systems FPGA I2C GPIO"
+	select REGMAP_I2C
+	help
+	  Say yes here to enabled the GPIO driver for Technologic's FPGA core.
+	  Series supported include TS-4100, TS-4900, TS-7970 and TS-7990.
+
 endmenu
 
 menu "MFD GPIO expanders"
@@ -984,6 +989,19 @@ config GPIO_UCB1400
 	help
 	  This enables support for the Philips UCB1400 GPIO pins.
 	  The UCB1400 is an AC97 audio codec.
+
+config GPIO_WHISKEY_COVE
+	tristate "GPIO support for Whiskey Cove PMIC"
+	depends on INTEL_SOC_PMIC
+	select GPIOLIB_IRQCHIP
+	help
+	  Support for GPIO pins on Whiskey Cove PMIC.
+
+	  Say Yes if you have a Intel SoC based tablet with Whiskey Cove PMIC
+	  inside.
+
+	  This driver can also be built as a module. If so, the module will be
+	  called gpio-wcove.
 
 config GPIO_WM831X
 	tristate "WM831x GPIOs"
