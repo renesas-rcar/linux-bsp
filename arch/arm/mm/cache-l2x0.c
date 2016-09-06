@@ -709,9 +709,8 @@ static void __init l2c310_fixup(void __iomem *base, u32 cache_id,
 	if (revision >= L310_CACHE_ID_RTL_R3P0 &&
 	    revision < L310_CACHE_ID_RTL_R3P2) {
 		u32 val = l2x0_saved_regs.prefetch_ctrl;
-		/* I don't think bit23 is required here... but iMX6 does so */
-		if (val & (BIT(30) | BIT(23))) {
-			val &= ~(BIT(30) | BIT(23));
+		if (val & L310_PREFETCH_CTRL_DBL_LINEFILL) {
+			val &= ~L310_PREFETCH_CTRL_DBL_LINEFILL;
 			l2x0_saved_regs.prefetch_ctrl = val;
 			errata[n++] = "752271";
 		}
