@@ -133,7 +133,7 @@ struct skl_i2s_config_blob {
 struct skl_dma_control {
 	u32 node_id;
 	u32 config_length;
-	u32 config_data[1];
+	u32 config_data[0];
 } __packed;
 
 struct skl_cpr_cfg {
@@ -216,7 +216,7 @@ struct skl_module_fmt {
 struct skl_module_cfg;
 
 struct skl_module_inst_id {
-	u32 module_id;
+	int module_id;
 	u32 instance_id;
 };
 

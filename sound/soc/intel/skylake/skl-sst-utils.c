@@ -28,11 +28,6 @@
 /* FW Extended Manifest Header id = $AE1 */
 #define SKL_EXT_MANIFEST_HEADER_MAGIC   0x31454124
 
-struct skl_dfw_module_mod {
-	char name[100];
-	struct skl_dfw_module skl_dfw_mod;
-};
-
 struct UUID {
 	u8 id[16];
 };
@@ -115,13 +110,13 @@ struct skl_ext_manifest_hdr {
 	u32 entries;
 };
 
-int snd_skl_get_module_info(struct skl_sst *ctx, u8 *uuid,
-			struct skl_dfw_module *dfw_config)
+int snd_skl_get_module_info(struct skl_sst *ctx,
+				struct skl_module_cfg *mconfig)
 {
 	struct uuid_module *module;
 	uuid_le *uuid_mod;
 
-	uuid_mod = (uuid_le *)uuid;
+	uuid_mod = (uuid_le *)mconfig->guid;
 
 	if (list_empty(&ctx->uuid_list)) {
 		dev_err(ctx->dev, "Module list is empty\n");
@@ -130,8 +125,8 @@ int snd_skl_get_module_info(struct skl_sst *ctx, u8 *uuid,
 
 	list_for_each_entry(module, &ctx->uuid_list, list) {
 		if (uuid_le_cmp(*uuid_mod, module->uuid) == 0) {
-			dfw_config->module_id = module->id;
-			dfw_config->is_loadable = module->is_loadable;
+			mconfig->id.module_id = module->id;
+			mconfig->is_loadable = module->is_loadable;
 
 			return 0;
 		}
@@ -145,7 +140,8 @@ EXPORT_SYMBOL_GPL(snd_skl_get_module_info);
  * Parse the firmware binary to get the UUID, module id
  * and loadable flags
  */
-int snd_skl_parse_uuids(struct sst_dsp *ctx, unsigned int offset)
+int snd_skl_parse_uuids(struct sst_dsp *ctx, const struct firmware *fw,
+			unsigned int offset, int index)
 {
 	struct adsp_fw_hdr *adsp_hdr;
 	struct adsp_module_entry *mod_entry;
@@ -158,8 +154,8 @@ int snd_skl_parse_uuids(struct sst_dsp *ctx, unsigned int offset)
 	unsigned int safe_file;
 
 	/* Get the FW pointer to derive ADSP header */
-	stripped_fw.data = ctx->fw->data;
-	stripped_fw.size = ctx->fw->size;
+	stripped_fw.data = fw->data;
+	stripped_fw.size = fw->size;
 
 	skl_dsp_strip_extended_manifest(&stripped_fw);
 
@@ -210,7 +206,7 @@ int snd_skl_parse_uuids(struct sst_dsp *ctx, unsigned int offset)
 		uuid_bin = (uuid_le *)mod_entry->uuid.id;
 		memcpy(&module->uuid, uuid_bin, sizeof(module->uuid));
 
-		module->id = i;
+		module->id = (i | (index << 12));
 		module->is_loadable = mod_entry->type.load_type;
 
 		list_add_tail(&module->list, &skl->uuid_list);
