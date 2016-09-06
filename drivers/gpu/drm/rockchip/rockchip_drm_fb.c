@@ -22,6 +22,7 @@
 #include "rockchip_drm_drv.h"
 #include "rockchip_drm_fb.h"
 #include "rockchip_drm_gem.h"
+#include "rockchip_drm_psr.h"
 
 #define to_rockchip_fb(x) container_of(x, struct rockchip_drm_fb, fb)
 
@@ -63,9 +64,20 @@ static int rockchip_drm_fb_create_handle(struct drm_framebuffer *fb,
 				     rockchip_fb->obj[0], handle);
 }
 
+static int rockchip_drm_fb_dirty(struct drm_framebuffer *fb,
+				 struct drm_file *file,
+				 unsigned int flags, unsigned int color,
+				 struct drm_clip_rect *clips,
+				 unsigned int num_clips)
+{
+	rockchip_drm_psr_flush(fb->dev);
+	return 0;
+}
+
 static const struct drm_framebuffer_funcs rockchip_drm_fb_funcs = {
 	.destroy	= rockchip_drm_fb_destroy,
 	.create_handle	= rockchip_drm_fb_create_handle,
+	.dirty		= rockchip_drm_fb_dirty,
 };
 
 static struct rockchip_drm_fb *
@@ -233,7 +245,8 @@ rockchip_atomic_commit_tail(struct drm_atomic_state *state)
 
 	drm_atomic_helper_commit_modeset_enables(dev, state);
 
-	drm_atomic_helper_commit_planes(dev, state, true);
+	drm_atomic_helper_commit_planes(dev, state,
+					DRM_PLANE_COMMIT_ACTIVE_ONLY);
 
 	drm_atomic_helper_commit_hw_done(state);
 

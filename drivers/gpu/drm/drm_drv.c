@@ -63,37 +63,51 @@ static struct idr drm_minors_idr;
 
 static struct dentry *drm_debugfs_root;
 
-void drm_err(const char *format, ...)
+#define DRM_PRINTK_FMT "[" DRM_NAME ":%s]%s %pV"
+
+void drm_dev_printk(const struct device *dev, const char *level,
+		    unsigned int category, const char *function_name,
+		    const char *prefix, const char *format, ...)
 {
 	struct va_format vaf;
 	va_list args;
 
-	va_start(args, format);
-
-	vaf.fmt = format;
-	vaf.va = &args;
-
-	printk(KERN_ERR "[" DRM_NAME ":%ps] *ERROR* %pV",
-	       __builtin_return_address(0), &vaf);
-
-	va_end(args);
-}
-EXPORT_SYMBOL(drm_err);
-
-void drm_ut_debug_printk(const char *function_name, const char *format, ...)
-{
-	struct va_format vaf;
-	va_list args;
+	if (category != DRM_UT_NONE && !(drm_debug & category))
+		return;
 
 	va_start(args, format);
 	vaf.fmt = format;
 	vaf.va = &args;
 
-	printk(KERN_DEBUG "[" DRM_NAME ":%s] %pV", function_name, &vaf);
+	if (dev)
+		dev_printk(level, dev, DRM_PRINTK_FMT, function_name, prefix,
+			   &vaf);
+	else
+		printk("%s" DRM_PRINTK_FMT, level, function_name, prefix, &vaf);
 
 	va_end(args);
 }
-EXPORT_SYMBOL(drm_ut_debug_printk);
+EXPORT_SYMBOL(drm_dev_printk);
+
+void drm_printk(const char *level, unsigned int category,
+		const char *function_name, const char *prefix,
+		const char *format, ...)
+{
+	struct va_format vaf;
+	va_list args;
+
+	if (category != DRM_UT_NONE && !(drm_debug & category))
+		return;
+
+	va_start(args, format);
+	vaf.fmt = format;
+	vaf.va = &args;
+
+	printk("%s" DRM_PRINTK_FMT, level, function_name, prefix, &vaf);
+
+	va_end(args);
+}
+EXPORT_SYMBOL(drm_printk);
 
 /*
  * DRM Minors
@@ -112,7 +126,7 @@ static struct drm_minor **drm_minor_get_slot(struct drm_device *dev,
 					     unsigned int type)
 {
 	switch (type) {
-	case DRM_MINOR_LEGACY:
+	case DRM_MINOR_PRIMARY:
 		return &dev->primary;
 	case DRM_MINOR_RENDER:
 		return &dev->render;
@@ -512,7 +526,7 @@ int drm_dev_init(struct drm_device *dev,
 			goto err_minors;
 	}
 
-	ret = drm_minor_alloc(dev, DRM_MINOR_LEGACY);
+	ret = drm_minor_alloc(dev, DRM_MINOR_PRIMARY);
 	if (ret)
 		goto err_minors;
 
@@ -545,7 +559,7 @@ err_ctxbitmap:
 	drm_legacy_ctxbitmap_cleanup(dev);
 	drm_ht_remove(&dev->map_hash);
 err_minors:
-	drm_minor_free(dev, DRM_MINOR_LEGACY);
+	drm_minor_free(dev, DRM_MINOR_PRIMARY);
 	drm_minor_free(dev, DRM_MINOR_RENDER);
 	drm_minor_free(dev, DRM_MINOR_CONTROL);
 	drm_fs_inode_free(dev->anon_inode);
@@ -608,7 +622,7 @@ static void drm_dev_release(struct kref *ref)
 	drm_ht_remove(&dev->map_hash);
 	drm_fs_inode_free(dev->anon_inode);
 
-	drm_minor_free(dev, DRM_MINOR_LEGACY);
+	drm_minor_free(dev, DRM_MINOR_PRIMARY);
 	drm_minor_free(dev, DRM_MINOR_RENDER);
 	drm_minor_free(dev, DRM_MINOR_CONTROL);
 
@@ -684,7 +698,7 @@ int drm_dev_register(struct drm_device *dev, unsigned long flags)
 	if (ret)
 		goto err_minors;
 
-	ret = drm_minor_register(dev, DRM_MINOR_LEGACY);
+	ret = drm_minor_register(dev, DRM_MINOR_PRIMARY);
 	if (ret)
 		goto err_minors;
 
@@ -701,7 +715,7 @@ int drm_dev_register(struct drm_device *dev, unsigned long flags)
 	goto out_unlock;
 
 err_minors:
-	drm_minor_unregister(dev, DRM_MINOR_LEGACY);
+	drm_minor_unregister(dev, DRM_MINOR_PRIMARY);
 	drm_minor_unregister(dev, DRM_MINOR_RENDER);
 	drm_minor_unregister(dev, DRM_MINOR_CONTROL);
 out_unlock:
@@ -741,7 +755,7 @@ void drm_dev_unregister(struct drm_device *dev)
 	list_for_each_entry_safe(r_list, list_temp, &dev->maplist, head)
 		drm_legacy_rmmap(dev, r_list->map);
 
-	drm_minor_unregister(dev, DRM_MINOR_LEGACY);
+	drm_minor_unregister(dev, DRM_MINOR_PRIMARY);
 	drm_minor_unregister(dev, DRM_MINOR_RENDER);
 	drm_minor_unregister(dev, DRM_MINOR_CONTROL);
 }

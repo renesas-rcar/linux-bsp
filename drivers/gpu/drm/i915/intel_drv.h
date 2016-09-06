@@ -178,11 +178,22 @@ struct intel_framebuffer {
 	struct drm_framebuffer base;
 	struct drm_i915_gem_object *obj;
 	struct intel_rotation_info rot_info;
+
+	/* for each plane in the normal GTT view */
+	struct {
+		unsigned int x, y;
+	} normal[2];
+	/* for each plane in the rotated GTT view */
+	struct {
+		unsigned int x, y;
+		unsigned int pitch; /* pixels */
+	} rotated[2];
 };
 
 struct intel_fbdev {
 	struct drm_fb_helper helper;
 	struct intel_framebuffer *fb;
+	struct i915_vma *vma;
 	async_cookie_t cookie;
 	int preferred_bpp;
 };
@@ -338,10 +349,16 @@ struct intel_atomic_state {
 
 struct intel_plane_state {
 	struct drm_plane_state base;
-	struct drm_rect src;
-	struct drm_rect dst;
 	struct drm_rect clip;
-	bool visible;
+
+	struct {
+		u32 offset;
+		int x, y;
+	} main;
+	struct {
+		u32 offset;
+		int x, y;
+	} aux;
 
 	/*
 	 * scaler_id
@@ -852,6 +869,7 @@ struct intel_dp {
 	int link_rate;
 	uint8_t lane_count;
 	uint8_t sink_count;
+	bool link_mst;
 	bool has_audio;
 	bool detect_done;
 	enum hdmi_force_audio force_audio;
@@ -1107,7 +1125,7 @@ void intel_crt_reset(struct drm_encoder *encoder);
 /* intel_ddi.c */
 void intel_ddi_clk_select(struct intel_encoder *encoder,
 			  const struct intel_crtc_state *pipe_config);
-void intel_prepare_ddi_buffer(struct intel_encoder *encoder);
+void intel_prepare_dp_ddi_buffers(struct intel_encoder *encoder);
 void hsw_fdi_link_train(struct drm_crtc *crtc);
 void intel_ddi_init(struct drm_device *dev, enum port port);
 enum port intel_ddi_get_encoder_port(struct intel_encoder *intel_encoder);
@@ -1134,21 +1152,10 @@ void intel_ddi_clock_get(struct intel_encoder *encoder,
 void intel_ddi_set_vc_payload_alloc(struct drm_crtc *crtc, bool state);
 uint32_t ddi_signal_levels(struct intel_dp *intel_dp);
 
-/* intel_frontbuffer.c */
-void intel_fb_obj_invalidate(struct drm_i915_gem_object *obj,
-			     enum fb_op_origin origin);
-void intel_frontbuffer_flip_prepare(struct drm_device *dev,
-				    unsigned frontbuffer_bits);
-void intel_frontbuffer_flip_complete(struct drm_device *dev,
-				     unsigned frontbuffer_bits);
-void intel_frontbuffer_flip(struct drm_device *dev,
-			    unsigned frontbuffer_bits);
 unsigned int intel_fb_align_height(struct drm_device *dev,
 				   unsigned int height,
 				   uint32_t pixel_format,
 				   uint64_t fb_format_modifier);
-void intel_fb_obj_flush(struct drm_i915_gem_object *obj, bool retire,
-			enum fb_op_origin origin);
 u32 intel_fb_stride_alignment(const struct drm_i915_private *dev_priv,
 			      uint64_t fb_modifier, uint32_t pixel_format);
 
@@ -1166,12 +1173,18 @@ int vlv_get_cck_clock(struct drm_i915_private *dev_priv,
 		      const char *name, u32 reg, int ref_freq);
 extern const struct drm_plane_funcs intel_plane_funcs;
 void intel_init_display_hooks(struct drm_i915_private *dev_priv);
+unsigned int intel_fb_xy_to_linear(int x, int y,
+				   const struct intel_plane_state *state,
+				   int plane);
+void intel_add_fb_offsets(int *x, int *y,
+			  const struct intel_plane_state *state, int plane);
 unsigned int intel_rotation_info_size(const struct intel_rotation_info *rot_info);
 bool intel_has_pending_fb_unpin(struct drm_device *dev);
 void intel_mark_busy(struct drm_i915_private *dev_priv);
 void intel_mark_idle(struct drm_i915_private *dev_priv);
 void intel_crtc_restore_mode(struct drm_crtc *crtc);
 int intel_display_suspend(struct drm_device *dev);
+void intel_pps_unlock_regs_wa(struct drm_i915_private *dev_priv);
 void intel_encoder_destroy(struct drm_encoder *encoder);
 int intel_connector_init(struct intel_connector *);
 struct intel_connector *intel_connector_alloc(void);
@@ -1227,8 +1240,8 @@ bool intel_get_load_detect_pipe(struct drm_connector *connector,
 void intel_release_load_detect_pipe(struct drm_connector *connector,
 				    struct intel_load_detect_pipe *old,
 				    struct drm_modeset_acquire_ctx *ctx);
-int intel_pin_and_fence_fb_obj(struct drm_framebuffer *fb,
-			       unsigned int rotation);
+struct i915_vma *
+intel_pin_and_fence_fb_obj(struct drm_framebuffer *fb, unsigned int rotation);
 void intel_unpin_fb_obj(struct drm_framebuffer *fb, unsigned int rotation);
 struct drm_framebuffer *
 __intel_framebuffer_create(struct drm_device *dev,
@@ -1238,9 +1251,9 @@ void intel_finish_page_flip_cs(struct drm_i915_private *dev_priv, int pipe);
 void intel_finish_page_flip_mmio(struct drm_i915_private *dev_priv, int pipe);
 void intel_check_page_flip(struct drm_i915_private *dev_priv, int pipe);
 int intel_prepare_plane_fb(struct drm_plane *plane,
-			   const struct drm_plane_state *new_state);
+			   struct drm_plane_state *new_state);
 void intel_cleanup_plane_fb(struct drm_plane *plane,
-			    const struct drm_plane_state *old_state);
+			    struct drm_plane_state *old_state);
 int intel_plane_atomic_get_property(struct drm_plane *plane,
 				    const struct drm_plane_state *state,
 				    struct drm_property *property,
@@ -1258,7 +1271,7 @@ unsigned int intel_tile_height(const struct drm_i915_private *dev_priv,
 static inline bool
 intel_rotation_90_or_270(unsigned int rotation)
 {
-	return rotation & (BIT(DRM_ROTATE_90) | BIT(DRM_ROTATE_270));
+	return rotation & (DRM_ROTATE_90 | DRM_ROTATE_270);
 }
 
 void intel_create_rotation_property(struct drm_device *dev,
@@ -1290,9 +1303,7 @@ void assert_pipe(struct drm_i915_private *dev_priv, enum pipe pipe, bool state);
 #define assert_pipe_enabled(d, p) assert_pipe(d, p, true)
 #define assert_pipe_disabled(d, p) assert_pipe(d, p, false)
 u32 intel_compute_tile_offset(int *x, int *y,
-			      const struct drm_framebuffer *fb, int plane,
-			      unsigned int pitch,
-			      unsigned int rotation);
+			      const struct intel_plane_state *state, int plane);
 void intel_prepare_reset(struct drm_i915_private *dev_priv);
 void intel_finish_reset(struct drm_i915_private *dev_priv);
 void hsw_enable_pc8(struct drm_i915_private *dev_priv);
@@ -1335,13 +1346,14 @@ void intel_mode_from_pipe_config(struct drm_display_mode *mode,
 int skl_update_scaler_crtc(struct intel_crtc_state *crtc_state);
 int skl_max_scale(struct intel_crtc *crtc, struct intel_crtc_state *crtc_state);
 
-u32 intel_plane_obj_offset(struct intel_plane *intel_plane,
-			   struct drm_i915_gem_object *obj,
-			   unsigned int plane);
+u32 intel_fb_gtt_offset(struct drm_framebuffer *fb, unsigned int rotation);
 
 u32 skl_plane_ctl_format(uint32_t pixel_format);
 u32 skl_plane_ctl_tiling(uint64_t fb_modifier);
 u32 skl_plane_ctl_rotation(unsigned int rotation);
+u32 skl_plane_stride(const struct drm_framebuffer *fb, int plane,
+		     unsigned int rotation);
+int skl_check_plane_surface(struct intel_plane_state *plane_state);
 
 /* intel_csr.c */
 void intel_csr_ucode_init(struct drm_i915_private *);
@@ -1384,11 +1396,12 @@ uint32_t intel_dp_pack_aux(const uint8_t *src, int src_bytes);
 void intel_plane_destroy(struct drm_plane *plane);
 void intel_edp_drrs_enable(struct intel_dp *intel_dp);
 void intel_edp_drrs_disable(struct intel_dp *intel_dp);
-void intel_edp_drrs_invalidate(struct drm_device *dev,
-		unsigned frontbuffer_bits);
-void intel_edp_drrs_flush(struct drm_device *dev, unsigned frontbuffer_bits);
+void intel_edp_drrs_invalidate(struct drm_i915_private *dev_priv,
+			       unsigned int frontbuffer_bits);
+void intel_edp_drrs_flush(struct drm_i915_private *dev_priv,
+			  unsigned int frontbuffer_bits);
 bool intel_digital_port_connected(struct drm_i915_private *dev_priv,
-					 struct intel_digital_port *port);
+				  struct intel_digital_port *port);
 
 void
 intel_dp_program_link_training_pattern(struct intel_dp *intel_dp,
@@ -1561,13 +1574,13 @@ static inline void intel_backlight_device_unregister(struct intel_connector *con
 /* intel_psr.c */
 void intel_psr_enable(struct intel_dp *intel_dp);
 void intel_psr_disable(struct intel_dp *intel_dp);
-void intel_psr_invalidate(struct drm_device *dev,
+void intel_psr_invalidate(struct drm_i915_private *dev_priv,
 			  unsigned frontbuffer_bits);
-void intel_psr_flush(struct drm_device *dev,
+void intel_psr_flush(struct drm_i915_private *dev_priv,
 		     unsigned frontbuffer_bits,
 		     enum fb_op_origin origin);
 void intel_psr_init(struct drm_device *dev);
-void intel_psr_single_frame_update(struct drm_device *dev,
+void intel_psr_single_frame_update(struct drm_i915_private *dev_priv,
 				   unsigned frontbuffer_bits);
 
 /* intel_runtime_pm.c */
@@ -1667,13 +1680,6 @@ enable_rpm_wakeref_asserts(struct drm_i915_private *dev_priv)
 	atomic_dec(&dev_priv->pm.wakeref_count);
 }
 
-/* TODO: convert users of these to rely instead on proper RPM refcounting */
-#define DISABLE_RPM_WAKEREF_ASSERTS(dev_priv)	\
-	disable_rpm_wakeref_asserts(dev_priv)
-
-#define ENABLE_RPM_WAKEREF_ASSERTS(dev_priv)	\
-	enable_rpm_wakeref_asserts(dev_priv)
-
 void intel_runtime_pm_get(struct drm_i915_private *dev_priv);
 bool intel_runtime_pm_get_if_in_use(struct drm_i915_private *dev_priv);
 void intel_runtime_pm_get_noresume(struct drm_i915_private *dev_priv);
@@ -1699,11 +1705,11 @@ void intel_gpu_ips_init(struct drm_i915_private *dev_priv);
 void intel_gpu_ips_teardown(void);
 void intel_init_gt_powersave(struct drm_i915_private *dev_priv);
 void intel_cleanup_gt_powersave(struct drm_i915_private *dev_priv);
+void intel_sanitize_gt_powersave(struct drm_i915_private *dev_priv);
 void intel_enable_gt_powersave(struct drm_i915_private *dev_priv);
+void intel_autoenable_gt_powersave(struct drm_i915_private *dev_priv);
 void intel_disable_gt_powersave(struct drm_i915_private *dev_priv);
 void intel_suspend_gt_powersave(struct drm_i915_private *dev_priv);
-void intel_reset_gt_powersave(struct drm_i915_private *dev_priv);
-void gen6_update_ring_freq(struct drm_i915_private *dev_priv);
 void gen6_rps_busy(struct drm_i915_private *dev_priv);
 void gen6_rps_reset_ei(struct drm_i915_private *dev_priv);
 void gen6_rps_idle(struct drm_i915_private *dev_priv);

@@ -22,7 +22,6 @@
  */
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/fb.h>
 #include "linux/delay.h"
 
 #include "hwmgr.h"
@@ -618,9 +617,6 @@ static int fiji_hwmgr_backend_init(struct pp_hwmgr *hwmgr)
 			PHM_PlatformCaps_UnTabledHardwareInterface);
 	phm_cap_set(hwmgr->platform_descriptor.platformCaps,
 			PHM_PlatformCaps_TablelessHardwareInterface);
-
-	phm_cap_set(hwmgr->platform_descriptor.platformCaps,
-			PHM_PlatformCaps_SclkDeepSleep);
 
 	data->gpio_debug = 0;
 

@@ -39,6 +39,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/vga_switcheroo.h>
 #include <drm/drm_gem.h>
+#include <drm/drm_fb_helper.h>
 
 #include "drm_crtc_helper.h"
 #include "radeon_kfd.h"
@@ -94,9 +95,10 @@
  *   2.44.0 - SET_APPEND_CNT packet3 support
  *   2.45.0 - Allow setting shader registers using DMA/COPY packet3 on SI
  *   2.46.0 - Add PFP_SYNC_ME support on evergreen
+ *   2.47.0 - Add UVD_NO_OP register support
  */
 #define KMS_DRIVER_MAJOR	2
-#define KMS_DRIVER_MINOR	46
+#define KMS_DRIVER_MINOR	47
 #define KMS_DRIVER_PATCHLEVEL	0
 int radeon_driver_load_kms(struct drm_device *dev, unsigned long flags);
 int radeon_driver_unload_kms(struct drm_device *dev);
@@ -324,7 +326,7 @@ static int radeon_kick_out_firmware_fb(struct pci_dev *pdev)
 #ifdef CONFIG_X86
 	primary = pdev->resource[PCI_ROM_RESOURCE].flags & IORESOURCE_ROM_SHADOW;
 #endif
-	remove_conflicting_framebuffers(ap, "radeondrmfb", primary);
+	drm_fb_helper_remove_conflicting_framebuffers(ap, "radeondrmfb", primary);
 	kfree(ap);
 
 	return 0;
