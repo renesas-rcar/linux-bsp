@@ -186,12 +186,22 @@ config HISI_THERMAL
 
 config IMX_THERMAL
 	tristate "Temperature sensor driver for Freescale i.MX SoCs"
-	depends on CPU_THERMAL
+	depends on (ARCH_MXC && CPU_THERMAL) || COMPILE_TEST
 	depends on MFD_SYSCON
 	depends on OF
 	help
 	  Support for Temperature Monitor (TEMPMON) found on Freescale i.MX SoCs.
 	  It supports one critical trip point and one passive trip point.  The
+	  cpufreq is used as the cooling device to throttle CPUs when the
+	  passive trip is crossed.
+
+config QORIQ_THERMAL
+	tristate "QorIQ Thermal Monitoring Unit"
+	depends on THERMAL_OF
+	depends on HAS_IOMEM
+	help
+	  Support for Thermal Monitoring Unit (TMU) found on QorIQ platforms.
+	  It supports one critical trip point and one passive trip point. The
 	  cpufreq is used as the cooling device to throttle CPUs when the
 	  passive trip is crossed.
 
@@ -398,5 +408,10 @@ config GENERIC_ADC_THERMAL
 	  is read via IIO framework and the channel information is provided
 	  to this driver. This driver reports the temperature by reading ADC
 	  channel and converts it to temperature based on lookup table.
+
+menu "Qualcomm thermal drivers"
+depends on (ARCH_QCOM && OF) || COMPILE_TEST
+source "drivers/thermal/qcom/Kconfig"
+endmenu
 
 endif
