@@ -104,7 +104,6 @@ config ARM64
 	select OF_NUMA if NUMA && OF
 	select OF_RESERVED_MEM
 	select PCI_ECAM if ACPI
-	select PERF_USE_VMALLOC
 	select POWER_RESET
 	select POWER_SUPPLY
 	select SPARSE_IRQ
@@ -119,6 +118,9 @@ config ARCH_PHYS_ADDR_T_64BIT
 	def_bool y
 
 config MMU
+	def_bool y
+
+config DEBUG_RODATA
 	def_bool y
 
 config ARM64_PAGE_SHIFT
@@ -414,18 +416,13 @@ config ARM64_ERRATUM_845719
 
 config ARM64_ERRATUM_843419
 	bool "Cortex-A53: 843419: A load or store might access an incorrect address"
-	depends on MODULES
 	default y
-	select ARM64_MODULE_CMODEL_LARGE
+	select ARM64_MODULE_CMODEL_LARGE if MODULES
 	help
-	  This option builds kernel modules using the large memory model in
-	  order to avoid the use of the ADRP instruction, which can cause
-	  a subsequent memory access to use an incorrect address on Cortex-A53
-	  parts up to r0p4.
-
-	  Note that the kernel itself must be linked with a version of ld
-	  which fixes potentially affected ADRP instructions through the
-	  use of veneers.
+	  This option links the kernel with '--fix-cortex-a53-843419' and
+	  builds modules using the large memory model in order to avoid the use
+	  of the ADRP instruction, which can cause a subsequent memory access
+	  to use an incorrect address on Cortex-A53 parts up to r0p4.
 
 	  If unsure, say Y.
 
@@ -606,7 +603,6 @@ source kernel/Kconfig.preempt
 source kernel/Kconfig.hz
 
 config ARCH_SUPPORTS_DEBUG_PAGEALLOC
-	depends on !HIBERNATION
 	def_bool y
 
 config ARCH_HAS_HOLES_MEMORYMODEL
