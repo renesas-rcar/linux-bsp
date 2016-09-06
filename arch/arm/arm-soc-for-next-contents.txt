@@ -1,0 +1,64 @@
+fixes
+	<no branch> (d9fd3c918114cfd3995947339549c7341181efb0)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.8-1
+	<no branch> (23540d6e2f3193b946c4de43e3f9654fa6d23fe7)
+		https://github.com/rogerq/linux tags/gpmc-omap-v4.8-rc1
+	<no branch> (b079bd555f6060cd6b435a1eb58ec3b8d255ebd0)
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/vexpress-fixes-4.8-rc
+	<no branch> (73912188a6663192063dc29362039997f4deb580)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.8/fixes-rc2
+	patch
+		MAINTAINERS: add tree entry for ARM/UniPhier architecture
+	<no branch> (cfee6b5874654fe4e7388bc3112d3afb76cd8b9e)
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fixes-4.8
+	<no branch> (326dce0734b63c3b82b6a88e5645eab8b54c6692)
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-fixes-4.8
+	patch
+		ARM: tegra: Correct polarity for Tegra114 PMIC interrupt
+	<no branch> (c721da1d05760ad0b4e7670896dae31b6b07d8d6)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.8-2
+	<no branch> (d662ed2e50c9dab1d4c25e80fa3e01ebe257bd65)
+		git://git.linaro.org/people/pawel.moll/linux tags/ccn/fixes-for-4.8-v2
+	patch
+		ARM: multi_v7_defconfig: update XILINX_VDMA
+		arm64: dts: Fix broken architected timer interrupt trigger
+
+next/fixes-non-critical
+
+next/cleanup
+	<no branch> (8f2c00629e43b0f32785c3e89b61cca89058929a)
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-integrator tags/realview-broomstick-sweep
+	patch
+		ARM: clps711x: remove extraneous files
+	omap/legacy
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.8/legacy-signed
+	<no branch> (502ad2a669f146e0801973c42e55478322f2d382)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.9/soc-signed
+
+next/soc
+	davinci/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.9/soc
+	samsung/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-4.9
+
+next/arm64
+
+next/defconfig
+	patch
+		ARM: defconfig: update the Integrator defconfig
+		ARM: multi_v7_defconfig: Build Atmel maXTouch driver as a module
+	davinci/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.9/defconfig
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.9
+	omap/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.9/defconfig-signed
+
+next/drivers
+	omap/gpmc
+		https://github.com/rogerq/linux tags/gpmc-omap-for-v4.9
+	drivers/reset
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.9
+	<no branch> (23540d6e2f3193b946c4de43e3f9654fa6d23fe7)
+		Merge commit 'http://github.com/rogerq/linux gpmc-omap-v4.8-rc1' into next/drivers
+
