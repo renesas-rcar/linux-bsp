@@ -202,7 +202,7 @@ void __ptlrpc_free_bulk(struct ptlrpc_bulk_desc *desc, int unpin)
 
 	if (unpin) {
 		for (i = 0; i < desc->bd_iov_count; i++)
-			put_page(desc->bd_iov[i].kiov_page);
+			put_page(desc->bd_iov[i].bv_page);
 	}
 
 	kfree(desc);
@@ -385,10 +385,12 @@ static int ptlrpc_at_recv_early_reply(struct ptlrpc_request *req)
 	spin_lock(&req->rq_lock);
 	olddl = req->rq_deadline;
 	/*
-	 * server assumes it now has rq_timeout from when it sent the
-	 * early reply, so client should give it at least that long.
+	 * server assumes it now has rq_timeout from when the request
+	 * arrived, so the client should give it at least that long.
+	 * since we don't know the arrival time we'll use the original
+	 * sent time
 	 */
-	req->rq_deadline = ktime_get_real_seconds() + req->rq_timeout +
+	req->rq_deadline = req->rq_sent + req->rq_timeout +
 			   ptlrpc_at_get_net_latency(req);
 
 	DEBUG_REQ(D_ADAPTTO, req,
@@ -1628,8 +1630,10 @@ int ptlrpc_check_set(const struct lu_env *env, struct ptlrpc_request_set *set)
 			    req->rq_waiting || req->rq_wait_ctx) {
 				int status;
 
-				if (!ptlrpc_unregister_reply(req, 1))
+				if (!ptlrpc_unregister_reply(req, 1)) {
+					ptlrpc_unregister_bulk(req, 1);
 					continue;
+				}
 
 				spin_lock(&imp->imp_lock);
 				if (ptlrpc_import_delay_req(imp, req,

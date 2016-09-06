@@ -158,7 +158,7 @@ static void cleanup(bool sysfiles)
  *
  * Module unload.  This is where it all ends.
  */
-static void dgnc_cleanup_module(void)
+static void __exit dgnc_cleanup_module(void)
 {
 	cleanup(true);
 	pci_unregister_driver(&dgnc_driver);
@@ -579,9 +579,6 @@ static int dgnc_finalize_board_init(struct dgnc_board *brd)
 {
 	int rc = 0;
 
-	if (!brd || brd->magic != DGNC_BOARD_MAGIC)
-		return -ENODEV;
-
 	if (brd->irq) {
 		rc = request_irq(brd->irq, brd->bd_ops->intr,
 				 IRQF_SHARED, "DGNC", brd);
@@ -602,9 +599,6 @@ static int dgnc_finalize_board_init(struct dgnc_board *brd)
  */
 static void dgnc_do_remap(struct dgnc_board *brd)
 {
-	if (!brd || brd->magic != DGNC_BOARD_MAGIC)
-		return;
-
 	brd->re_map_membase = ioremap(brd->membase, 0x1000);
 }
 

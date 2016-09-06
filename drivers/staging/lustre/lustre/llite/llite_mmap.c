@@ -126,7 +126,7 @@ restart:
 
 	fio = &io->u.ci_fault;
 	fio->ft_index      = index;
-	fio->ft_executable = vma->vm_flags&VM_EXEC;
+	fio->ft_executable = vma->vm_flags & VM_EXEC;
 
 	/*
 	 * disable VM_SEQ_READ and use VM_RAND_READ to make sure that
@@ -134,7 +134,7 @@ restart:
 	 * filemap_nopage. we do our readahead in ll_readpage.
 	 */
 	if (ra_flags)
-		*ra_flags = vma->vm_flags & (VM_RAND_READ|VM_SEQ_READ);
+		*ra_flags = vma->vm_flags & (VM_RAND_READ | VM_SEQ_READ);
 	vma->vm_flags &= ~VM_SEQ_READ;
 	vma->vm_flags |= VM_RAND_READ;
 
@@ -429,7 +429,6 @@ static void ll_vm_open(struct vm_area_struct *vma)
 	struct inode *inode    = file_inode(vma->vm_file);
 	struct vvp_object *vob = cl_inode2vvp(inode);
 
-	LASSERT(vma->vm_file);
 	LASSERT(atomic_read(&vob->vob_mmap_cnt) >= 0);
 	atomic_inc(&vob->vob_mmap_cnt);
 }
@@ -442,7 +441,6 @@ static void ll_vm_close(struct vm_area_struct *vma)
 	struct inode      *inode = file_inode(vma->vm_file);
 	struct vvp_object *vob   = cl_inode2vvp(inode);
 
-	LASSERT(vma->vm_file);
 	atomic_dec(&vob->vob_mmap_cnt);
 	LASSERT(atomic_read(&vob->vob_mmap_cnt) >= 0);
 }

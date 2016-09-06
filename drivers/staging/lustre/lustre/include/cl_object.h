@@ -191,6 +191,9 @@ struct cl_attr {
 	 * Group identifier for quota purposes.
 	 */
 	gid_t  cat_gid;
+
+	/* nlink of the directory */
+	__u64  cat_nlink;
 };
 
 /**
@@ -320,7 +323,7 @@ struct cl_object_operations {
 	 *	 to be used instead of newly created.
 	 */
 	int  (*coo_page_init)(const struct lu_env *env, struct cl_object *obj,
-				struct cl_page *page, pgoff_t index);
+			      struct cl_page *page, pgoff_t index);
 	/**
 	 * Initialize lock slice for this layer. Called top-to-bottom through
 	 * every object layer when a new cl_lock is instantiated. Layer
@@ -687,17 +690,6 @@ enum cl_page_type {
 };
 
 /**
- * Flags maintained for every cl_page.
- */
-enum cl_page_flags {
-	/**
-	 * Set when pagein completes. Used for debugging (read completes at
-	 * most once for a page).
-	 */
-	CPF_READ_COMPLETED = 1 << 0
-};
-
-/**
  * Fields are protected by the lock on struct page, except for atomics and
  * immutables.
  *
@@ -711,24 +703,19 @@ struct cl_page {
 	atomic_t	     cp_ref;
 	/** An object this page is a part of. Immutable after creation. */
 	struct cl_object	*cp_obj;
-	/** List of slices. Immutable after creation. */
-	struct list_head	       cp_layers;
 	/** vmpage */
 	struct page		*cp_vmpage;
+	/** Linkage of pages within group. Pages must be owned */
+	struct list_head	 cp_batch;
+	/** List of slices. Immutable after creation. */
+	struct list_head	 cp_layers;
+	/** Linkage of pages within cl_req. */
+	struct list_head         cp_flight;
 	/**
 	 * Page state. This field is const to avoid accidental update, it is
 	 * modified only internally within cl_page.c. Protected by a VM lock.
 	 */
 	const enum cl_page_state cp_state;
-	/** Linkage of pages within group. Protected by cl_page::cp_mutex. */
-	struct list_head		cp_batch;
-	/** Mutex serializing membership of a page in a batch. */
-	struct mutex		cp_mutex;
-	/** Linkage of pages within cl_req. */
-	struct list_head	       cp_flight;
-	/** Transfer error. */
-	int		      cp_error;
-
 	/**
 	 * Page type. Only CPT_TRANSIENT is used so far. Immutable after
 	 * creation.
@@ -741,10 +728,6 @@ struct cl_page {
 	 */
 	struct cl_io	    *cp_owner;
 	/**
-	 * Debug information, the task is owning the page.
-	 */
-	struct task_struct	*cp_task;
-	/**
 	 * Owning IO request in cl_page_state::CPS_PAGEOUT and
 	 * cl_page_state::CPS_PAGEIN states. This field is maintained only in
 	 * the top-level pages. Protected by a VM lock.
@@ -756,8 +739,6 @@ struct cl_page {
 	struct lu_ref_link       cp_obj_ref;
 	/** Link to a queue, for debugging. */
 	struct lu_ref_link       cp_queue_ref;
-	/** Per-page flags from enum cl_page_flags. Protected by a VM lock. */
-	unsigned                 cp_flags;
 	/** Assigned if doing a sync_io */
 	struct cl_sync_io       *cp_sync_io;
 };
@@ -1056,22 +1037,31 @@ do {									  \
 	}								     \
 } while (0)
 
-static inline int __page_in_use(const struct cl_page *page, int refc)
-{
-	if (page->cp_type == CPT_CACHEABLE)
-		++refc;
-	LASSERT(atomic_read(&page->cp_ref) > 0);
-	return (atomic_read(&page->cp_ref) > refc);
-}
-
-#define cl_page_in_use(pg)       __page_in_use(pg, 1)
-#define cl_page_in_use_noref(pg) __page_in_use(pg, 0)
-
 static inline struct page *cl_page_vmpage(struct cl_page *page)
 {
 	LASSERT(page->cp_vmpage);
 	return page->cp_vmpage;
 }
+
+/**
+ * Check if a cl_page is in use.
+ *
+ * Client cache holds a refcount, this refcount will be dropped when
+ * the page is taken out of cache, see vvp_page_delete().
+ */
+static inline bool __page_in_use(const struct cl_page *page, int refc)
+{
+	return (atomic_read(&page->cp_ref) > refc + 1);
+}
+
+/**
+ * Caller itself holds a refcount of cl_page.
+ */
+#define cl_page_in_use(pg)	 __page_in_use(pg, 1)
+/**
+ * Caller doesn't hold a refcount.
+ */
+#define cl_page_in_use_noref(pg) __page_in_use(pg, 0)
 
 /** @} cl_page */
 
@@ -2197,6 +2187,7 @@ static inline void cl_object_page_init(struct cl_object *clob, int size)
 {
 	clob->co_slice_off = cl_object_header(clob)->coh_page_bufsize;
 	cl_object_header(clob)->coh_page_bufsize += cfs_size_round(size);
+	WARN_ON(cl_object_header(clob)->coh_page_bufsize > 512);
 }
 
 static inline void *cl_object_page_slice(struct cl_object *clob,
@@ -2347,6 +2338,10 @@ struct cl_client_cache {
 	 */
 	spinlock_t		ccc_lru_lock;
 	/**
+	 * Set if unstable check is enabled
+	 */
+	unsigned int		ccc_unstable_check:1;
+	/**
 	 * # of unstable pages for this mount point
 	 */
 	atomic_t		ccc_unstable_nr;
@@ -2354,7 +2349,7 @@ struct cl_client_cache {
 	 * Waitq for awaiting unstable pages to reach zero.
 	 * Used at umounting time and signaled on BRW commit
 	 */
-        wait_queue_head_t	ccc_unstable_waitq;
+	wait_queue_head_t	ccc_unstable_waitq;
 
 };
 

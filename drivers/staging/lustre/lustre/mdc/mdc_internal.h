@@ -34,14 +34,11 @@
 #define _MDC_INTERNAL_H
 
 #include "../include/lustre_mdc.h"
-#include "../include/lustre_mds.h"
 
 void lprocfs_mdc_init_vars(struct lprocfs_static_vars *lvars);
 
 void mdc_pack_body(struct ptlrpc_request *req, const struct lu_fid *fid,
 		   __u64 valid, int ea_size, __u32 suppgid, int flags);
-void mdc_is_subdir_pack(struct ptlrpc_request *req, const struct lu_fid *pfid,
-			const struct lu_fid *cfid, int flags);
 void mdc_swap_layouts_pack(struct ptlrpc_request *req,
 			   struct md_op_data *op_data);
 void mdc_readdir_pack(struct ptlrpc_request *req, __u64 pgoff, __u32 size,
@@ -61,36 +58,32 @@ void mdc_link_pack(struct ptlrpc_request *req, struct md_op_data *op_data);
 void mdc_rename_pack(struct ptlrpc_request *req, struct md_op_data *op_data,
 		     const char *old, int oldlen, const char *new, int newlen);
 void mdc_close_pack(struct ptlrpc_request *req, struct md_op_data *op_data);
-int mdc_enter_request(struct client_obd *cli);
-void mdc_exit_request(struct client_obd *cli);
 
 /* mdc/mdc_locks.c */
 int mdc_set_lock_data(struct obd_export *exp,
-		      __u64 *lockh, void *data, __u64 *bits);
+		      const struct lustre_handle *lockh,
+		      void *data, __u64 *bits);
 
 int mdc_null_inode(struct obd_export *exp, const struct lu_fid *fid);
 
-int mdc_find_cbdata(struct obd_export *exp, const struct lu_fid *fid,
-		    ldlm_iterator_t it, void *data);
-
 int mdc_intent_lock(struct obd_export *exp,
-		    struct md_op_data *,
-		    void *lmm, int lmmsize,
-		    struct lookup_intent *, int,
+		    struct md_op_data *op_data,
+		    struct lookup_intent *it,
 		    struct ptlrpc_request **reqp,
 		    ldlm_blocking_callback cb_blocking,
 		    __u64 extra_lock_flags);
+
 int mdc_enqueue(struct obd_export *exp, struct ldlm_enqueue_info *einfo,
+		const ldlm_policy_data_t *policy,
 		struct lookup_intent *it, struct md_op_data *op_data,
-		struct lustre_handle *lockh, void *lmm, int lmmsize,
-		struct ptlrpc_request **req, __u64 extra_lock_flags);
+		struct lustre_handle *lockh, __u64 extra_lock_flags);
 
 int mdc_resource_get_unused(struct obd_export *exp, const struct lu_fid *fid,
 			    struct list_head *cancels, enum ldlm_mode  mode,
 			    __u64 bits);
 /* mdc/mdc_request.c */
-int mdc_fid_alloc(struct obd_export *exp, struct lu_fid *fid,
-		  struct md_op_data *op_data);
+int mdc_fid_alloc(const struct lu_env *env, struct obd_export *exp,
+		  struct lu_fid *fid, struct md_op_data *op_data);
 struct obd_client_handle;
 
 int mdc_set_open_replay_data(struct obd_export *exp,
@@ -136,6 +129,14 @@ static inline int mdc_prep_elc_req(struct obd_export *exp,
 {
 	return ldlm_prep_elc_req(exp, req, LUSTRE_MDS_VERSION, opc, 0, cancels,
 				 count);
+}
+
+static inline unsigned long hash_x_index(__u64 hash, int hash64)
+{
+	if (BITS_PER_LONG == 32 && hash64)
+		hash >>= 32;
+	/* save hash 0 with hash 1 */
+	return ~0UL - (hash + !hash);
 }
 
 #endif

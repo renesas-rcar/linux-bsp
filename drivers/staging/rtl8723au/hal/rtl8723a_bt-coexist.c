@@ -3530,7 +3530,7 @@ bthci_CmdLinkStatusNotify(
 				pBtMgnt->ExtConfig.linkInfo[i].BTProfile,
 				pBtMgnt->ExtConfig.linkInfo[i].BTCoreSpec));
 			pTriple += 4;
-		} else if (pBtMgnt->ExtConfig.HCIExtensionVer >= 1) {
+		} else {
 			pBtMgnt->ExtConfig.linkInfo[i].ConnectHandle = *((u16 *)&pTriple[0]);
 			pBtMgnt->ExtConfig.linkInfo[i].BTProfile = pTriple[2];
 			pBtMgnt->ExtConfig.linkInfo[i].BTCoreSpec = pTriple[3];
@@ -9824,7 +9824,7 @@ void BTDM_CheckBTIdleChange1Ant(struct rtw_adapter *padapter)
 	BT_Polling = rtl8723au_read32(padapter, regBTPolling);
 	RTPRINT(FBT, BT_TRACE, ("[DM][BT], BT_Polling(0x%x) =%x\n", regBTPolling, BT_Polling));
 
-	if (BT_Active == 0xffffffff && BT_State == 0xffffffff && BT_Polling == 0xffffffff)
+	if (BT_Active == 0x00ffffff && BT_State == 0x00ffffff && BT_Polling == 0xffffffff)
 		return;
 	if (BT_Polling == 0)
 		return;

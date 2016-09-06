@@ -96,7 +96,7 @@ static inline void mdc_get_rpc_lock(struct mdc_rpc_lock *lck,
 				    struct lookup_intent *it)
 {
 	if (it && (it->it_op == IT_GETATTR || it->it_op == IT_LOOKUP ||
-		   it->it_op == IT_LAYOUT))
+		   it->it_op == IT_LAYOUT || it->it_op == IT_READDIR))
 		return;
 
 	/* This would normally block until the existing request finishes.
@@ -136,7 +136,7 @@ static inline void mdc_put_rpc_lock(struct mdc_rpc_lock *lck,
 				    struct lookup_intent *it)
 {
 	if (it && (it->it_op == IT_GETATTR || it->it_op == IT_LOOKUP ||
-		   it->it_op == IT_LAYOUT))
+		   it->it_op == IT_LAYOUT || it->it_op == IT_READDIR))
 		return;
 
 	if (lck->rpcl_it == MDC_FAKE_RPCL_IT) { /* OBD_FAIL_MDC_RPCS_SEM */
@@ -163,26 +163,21 @@ static inline void mdc_put_rpc_lock(struct mdc_rpc_lock *lck,
 static inline void mdc_update_max_ea_from_body(struct obd_export *exp,
 					       struct mdt_body *body)
 {
-	if (body->valid & OBD_MD_FLMODEASIZE) {
+	if (body->mbo_valid & OBD_MD_FLMODEASIZE) {
 		struct client_obd *cli = &exp->exp_obd->u.cli;
 
-		if (cli->cl_max_mds_easize < body->max_mdsize) {
-			cli->cl_max_mds_easize = body->max_mdsize;
+		if (cli->cl_max_mds_easize < body->mbo_max_mdsize) {
+			cli->cl_max_mds_easize = body->mbo_max_mdsize;
 			cli->cl_default_mds_easize =
-			    min_t(__u32, body->max_mdsize, PAGE_SIZE);
+			    min_t(__u32, body->mbo_max_mdsize, PAGE_SIZE);
 		}
-		if (cli->cl_max_mds_cookiesize < body->max_cookiesize) {
-			cli->cl_max_mds_cookiesize = body->max_cookiesize;
+		if (cli->cl_max_mds_cookiesize < body->mbo_max_cookiesize) {
+			cli->cl_max_mds_cookiesize = body->mbo_max_cookiesize;
 			cli->cl_default_mds_cookiesize =
-			    min_t(__u32, body->max_cookiesize, PAGE_SIZE);
+			    min_t(__u32, body->mbo_max_cookiesize, PAGE_SIZE);
 		}
 	}
 }
-
-struct mdc_cache_waiter {
-	struct list_head	      mcw_entry;
-	wait_queue_head_t	     mcw_waitq;
-};
 
 /* mdc/mdc_locks.c */
 int it_open_error(int phase, struct lookup_intent *it);

@@ -327,7 +327,7 @@ struct lu_device_type {
 	/**
 	 * Number of existing device type instances.
 	 */
-	unsigned				ldt_device_nr;
+	atomic_t				ldt_device_nr;
 	/**
 	 * Linkage into a global list of all device types.
 	 *
@@ -673,7 +673,6 @@ void lu_object_add(struct lu_object *before, struct lu_object *o);
 
 int  lu_device_type_init(struct lu_device_type *ldt);
 void lu_device_type_fini(struct lu_device_type *ldt);
-void lu_types_stop(void);
 
 /** @} ctors */
 
@@ -1025,7 +1024,8 @@ enum lu_context_tag {
 	/**
 	 * Contexts usable in cache shrinker thread.
 	 */
-	LCT_SHRINKER  = LCT_MD_THREAD|LCT_DT_THREAD|LCT_CL_THREAD|LCT_NOREF
+	LCT_SHRINKER  = LCT_MD_THREAD | LCT_DT_THREAD | LCT_CL_THREAD |
+			LCT_NOREF
 };
 
 /**
@@ -1262,6 +1262,22 @@ struct lu_name {
 	const char    *ln_name;
 	int	    ln_namelen;
 };
+
+/**
+ * Validate names (path components)
+ *
+ * To be valid \a name must be non-empty, '\0' terminated of length \a
+ * name_len, and not contain '/'. The maximum length of a name (before
+ * say -ENAMETOOLONG will be returned) is really controlled by llite
+ * and the server. We only check for something insane coming from bad
+ * integer handling here.
+ */
+static inline bool lu_name_is_valid_2(const char *name, size_t name_len)
+{
+	return name && name_len > 0 && name_len < INT_MAX &&
+	       name[name_len] == '\0' && strlen(name) == name_len &&
+	       !memchr(name, '/', name_len);
+}
 
 /**
  * Common buffer structure to be passed around for various xattr_{s,g}et()

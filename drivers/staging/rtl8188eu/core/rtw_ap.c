@@ -481,7 +481,7 @@ void add_RATid(struct adapter *padapter, struct sta_info *psta, u8 rssi_level)
 			limit = 8;/*   1R */
 
 		for (i = 0; i < limit; i++) {
-			if (psta_ht->ht_cap.supp_mcs_set[i/8] & BIT(i%8))
+			if (psta_ht->ht_cap.mcs.rx_mask[i / 8] & BIT(i % 8))
 				tx_ra_bitmap |= BIT(i+12);
 		}
 
@@ -658,11 +658,15 @@ void update_sta_info_apmode(struct adapter *padapter, struct sta_info *psta)
 		phtpriv_sta->ampdu_enable = phtpriv_ap->ampdu_enable;
 
 		/* check if sta support s Short GI */
-		if ((phtpriv_sta->ht_cap.cap_info & phtpriv_ap->ht_cap.cap_info) & (IEEE80211_HT_CAP_SGI_20 | IEEE80211_HT_CAP_SGI_40))
+		if (le16_to_cpu(phtpriv_sta->ht_cap.cap_info &
+				phtpriv_ap->ht_cap.cap_info) &
+		    (IEEE80211_HT_CAP_SGI_20 | IEEE80211_HT_CAP_SGI_40))
 			phtpriv_sta->sgi = true;
 
 		/*  bwmode */
-		if ((phtpriv_sta->ht_cap.cap_info & phtpriv_ap->ht_cap.cap_info) & IEEE80211_HT_CAP_SUP_WIDTH) {
+		if (le16_to_cpu(phtpriv_sta->ht_cap.cap_info &
+				phtpriv_ap->ht_cap.cap_info) &
+		    IEEE80211_HT_CAP_SUP_WIDTH) {
 			phtpriv_sta->bwmode = pmlmeext->cur_bwmode;
 			phtpriv_sta->ch_offset = pmlmeext->cur_ch_offset;
 		}
@@ -702,12 +706,12 @@ static void update_hw_ht_param(struct adapter *padapter)
 
 	/* handle A-MPDU parameter field */
 	/*
-		AMPDU_para [1:0]:Max AMPDU Len => 0:8k , 1:16k, 2:32k, 3:64k
-		AMPDU_para [4:2]:Min MPDU Start Spacing
+		ampdu_params_info [1:0]:Max AMPDU Len => 0:8k , 1:16k, 2:32k, 3:64k
+		ampdu_params_info [4:2]:Min MPDU Start Spacing
 	*/
-	max_AMPDU_len = pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x03;
+	max_AMPDU_len = pmlmeinfo->HT_caps.ampdu_params_info & 0x03;
 
-	min_MPDU_spacing = (pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c) >> 2;
+	min_MPDU_spacing = (pmlmeinfo->HT_caps.ampdu_params_info & 0x1c) >> 2;
 
 	rtw_hal_set_hwreg(padapter, HW_VAR_AMPDU_MIN_SPACE, (u8 *)(&min_MPDU_spacing));
 
@@ -716,7 +720,7 @@ static void update_hw_ht_param(struct adapter *padapter)
 	/*  */
 	/*  Config SM Power Save setting */
 	/*  */
-	pmlmeinfo->SM_PS = (le16_to_cpu(pmlmeinfo->HT_caps.u.HT_cap_element.HT_caps_info) & 0x0C) >> 2;
+	pmlmeinfo->SM_PS = (le16_to_cpu(pmlmeinfo->HT_caps.cap_info) & 0x0C) >> 2;
 	if (pmlmeinfo->SM_PS == WLAN_HT_CAP_SM_PS_STATIC)
 		DBG_88E("%s(): WLAN_HT_CAP_SM_PS_STATIC\n", __func__);
 }
@@ -1032,7 +1036,7 @@ int rtw_check_beacon_data(struct adapter *padapter, u8 *pbuf,  int len)
 		       (pbss_network->IELength - _BEACON_IE_OFFSET_));
 	if (p && ie_len > 0) {
 		u8 rf_type;
-		struct rtw_ieee80211_ht_cap *pht_cap = (struct rtw_ieee80211_ht_cap *)(p+2);
+		struct ieee80211_ht_cap *pht_cap = (struct ieee80211_ht_cap *)(p + 2);
 
 		pHT_caps_ie = p;
 		ht_cap = true;
@@ -1050,8 +1054,8 @@ int rtw_check_beacon_data(struct adapter *padapter, u8 *pbuf,  int len)
 		pht_cap->ampdu_params_info |= (IEEE80211_HT_CAP_AMPDU_FACTOR & 0x03);
 
 		if (rf_type == RF_1T1R) {
-			pht_cap->supp_mcs_set[0] = 0xff;
-			pht_cap->supp_mcs_set[1] = 0x0;
+			pht_cap->mcs.rx_mask[0] = 0xff;
+			pht_cap->mcs.rx_mask[1] = 0x0;
 		}
 		memcpy(&pmlmepriv->htpriv.ht_cap, p+2, ie_len);
 	}
@@ -1422,7 +1426,8 @@ static int rtw_ht_operation_update(struct adapter *padapter)
 	if (pmlmepriv->num_sta_no_ht ||
 	    (pmlmepriv->ht_op_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT))
 		new_op_mode = OP_MODE_MIXED;
-	else if ((phtpriv_ap->ht_cap.cap_info & IEEE80211_HT_CAP_SUP_WIDTH) &&
+	else if ((le16_to_cpu(phtpriv_ap->ht_cap.cap_info) &
+		  IEEE80211_HT_CAP_SUP_WIDTH) &&
 		 pmlmepriv->num_sta_ht_20mhz)
 		new_op_mode = OP_MODE_20MHZ_HT_STA_ASSOCED;
 	else if (pmlmepriv->olbc_ht)
@@ -1552,7 +1557,7 @@ void bss_cap_update_on_sta_join(struct adapter *padapter, struct sta_info *psta)
 	}
 
 	if (psta->flags & WLAN_STA_HT) {
-		u16 ht_capab = psta->htpriv.ht_cap.cap_info;
+		u16 ht_capab = le16_to_cpu(psta->htpriv.ht_cap.cap_info);
 
 		DBG_88E("HT: STA %pM HT Capabilities Info: 0x%04x\n",
 			(psta->hwaddr), ht_capab);
@@ -1708,40 +1713,6 @@ u8 ap_free_sta(struct adapter *padapter, struct sta_info *psta,
 	spin_unlock_bh(&(pstapriv->sta_hash_lock));
 
 	return beacon_updated;
-}
-
-int rtw_ap_inform_ch_switch(struct adapter *padapter, u8 new_ch, u8 ch_offset)
-{
-	struct list_head *phead, *plist;
-	struct sta_info *psta = NULL;
-	struct sta_priv *pstapriv = &padapter->stapriv;
-	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
-	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
-	u8 bc_addr[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-
-	if ((pmlmeinfo->state&0x03) != WIFI_FW_AP_STATE)
-		return 0;
-
-	DBG_88E(FUNC_NDEV_FMT" with ch:%u, offset:%u\n",
-		FUNC_NDEV_ARG(padapter->pnetdev), new_ch, ch_offset);
-
-	spin_lock_bh(&pstapriv->asoc_list_lock);
-	phead = &pstapriv->asoc_list;
-	plist = phead->next;
-
-	/* for each sta in asoc_queue */
-	while (phead != plist) {
-		psta = container_of(plist, struct sta_info, asoc_list);
-		plist = plist->next;
-
-		issue_action_spct_ch_switch(padapter, psta->hwaddr, new_ch, ch_offset);
-		psta->expire_to = min_t(unsigned int, pstapriv->expire_to * 2, 5);
-	}
-	spin_unlock_bh(&pstapriv->asoc_list_lock);
-
-	issue_action_spct_ch_switch(padapter, bc_addr, new_ch, ch_offset);
-
-	return 0;
 }
 
 int rtw_sta_flush(struct adapter *padapter)

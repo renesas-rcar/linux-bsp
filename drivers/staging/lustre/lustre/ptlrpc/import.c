@@ -307,7 +307,8 @@ void ptlrpc_invalidate_import(struct obd_import *imp)
 		 */
 		lwi = LWI_TIMEOUT_INTERVAL(
 			cfs_timeout_cap(cfs_time_seconds(timeout)),
-			(timeout > 1)?cfs_time_seconds(1):cfs_time_seconds(1)/2,
+			(timeout > 1) ? cfs_time_seconds(1) :
+			cfs_time_seconds(1) / 2,
 			NULL, NULL);
 		rc = l_wait_event(imp->imp_recovery_waitq,
 				  (atomic_read(&imp->imp_inflight) == 0),
@@ -698,7 +699,8 @@ int ptlrpc_connect_import(struct obd_import *imp)
 	request->rq_send_state = LUSTRE_IMP_CONNECTING;
 	/* Allow a slightly larger reply for future growth compatibility */
 	req_capsule_set_size(&request->rq_pill, &RMF_CONNECT_DATA, RCL_SERVER,
-			     sizeof(struct obd_connect_data)+16*sizeof(__u64));
+			     sizeof(struct obd_connect_data) +
+			     16 * sizeof(__u64));
 	ptlrpc_request_set_replen(request);
 	request->rq_interpret_reply = ptlrpc_connect_interpret;
 
@@ -1132,6 +1134,7 @@ finish:
 
 		LASSERT((cli->cl_max_pages_per_rpc <= PTLRPC_MAX_BRW_PAGES) &&
 			(cli->cl_max_pages_per_rpc > 0));
+		client_adjust_max_dirty(cli);
 	}
 
 out:
@@ -1497,10 +1500,13 @@ EXPORT_SYMBOL(ptlrpc_disconnect_import);
 /* Adaptive Timeout utils */
 extern unsigned int at_min, at_max, at_history;
 
-/* Bin into timeslices using AT_BINS bins.
- * This gives us a max of the last binlimit*AT_BINS secs without the storage,
- * but still smoothing out a return to normalcy from a slow response.
- * (E.g. remember the maximum latency in each minute of the last 4 minutes.)
+/*
+ *Update at_current with the specified value (bounded by at_min and at_max),
+ * as well as the AT history "bins".
+ *  - Bin into timeslices using AT_BINS bins.
+ *  - This gives us a max of the last at_history seconds without the storage,
+ *    but still smoothing out a return to normalcy from a slow response.
+ *  - (E.g. remember the maximum latency in each minute of the last 4 minutes.)
  */
 int at_measured(struct adaptive_timeout *at, unsigned int val)
 {

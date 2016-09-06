@@ -50,8 +50,8 @@ struct cmd_obj {
 };
 
 struct cmd_priv {
-	struct semaphore cmd_queue_sema;
-	struct semaphore terminate_cmdthread_sema;
+	struct completion cmd_queue_comp;
+	struct completion terminate_cmdthread_comp;
 	struct  __queue	cmd_queue;
 	u8 cmd_seq;
 	u8 *cmd_buf;	/*shall be non-paged, and 4 bytes aligned*/

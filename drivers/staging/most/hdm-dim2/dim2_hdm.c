@@ -45,6 +45,17 @@ module_param(clock_speed, charp, 0);
 MODULE_PARM_DESC(clock_speed, "MediaLB Clock Speed");
 
 /*
+ * The parameter representing the number of frames per sub-buffer for
+ * synchronous channels.  Valid values: [0 .. 6].
+ *
+ * The values 0, 1, 2, 3, 4, 5, 6 represent corresponding number of frames per
+ * sub-buffer 1, 2, 4, 8, 16, 32, 64.
+ */
+static u8 fcnt = 4;  /* (1 << fcnt) frames per subbuffer */
+module_param(fcnt, byte, 0);
+MODULE_PARM_DESC(fcnt, "Num of frames per sub-buffer for sync channels as a power of 2");
+
+/*
  * #############################################################################
  *
  * The define below activates an utility function used by HAL-simu
@@ -212,7 +223,8 @@ static int startup_dim(struct platform_device *pdev)
 			return ret;
 	}
 
-	hal_ret = dim_startup(dev->io_base, dev->clk_speed);
+	pr_info("sync: num of frames per sub-buffer: %u\n", fcnt);
+	hal_ret = dim_startup(dev->io_base, dev->clk_speed, fcnt);
 	if (hal_ret != DIM_NO_ERROR) {
 		pr_err("dim_startup failed: %d\n", hal_ret);
 		if (pdata && pdata->destroy)
@@ -705,12 +717,14 @@ static int poison_channel(struct most_interface *most_iface, int ch_idx)
 	if (!hdm_ch->is_initialized)
 		return -EPERM;
 
+	tasklet_disable(&dim2_tasklet);
 	spin_lock_irqsave(&dim_lock, flags);
 	hal_ret = dim_destroy_channel(&hdm_ch->ch);
 	hdm_ch->is_initialized = false;
 	if (ch_idx == dev->atx_idx)
 		dev->atx_idx = -1;
 	spin_unlock_irqrestore(&dim_lock, flags);
+	tasklet_enable(&dim2_tasklet);
 	if (hal_ret != DIM_NO_ERROR) {
 		pr_err("HAL Failed to close channel %s\n", hdm_ch->name);
 		ret = -EFAULT;

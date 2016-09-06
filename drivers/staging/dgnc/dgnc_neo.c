@@ -399,8 +399,6 @@ static inline void neo_parse_isr(struct dgnc_board *brd, uint port)
 
 		if (isr & (UART_17158_IIR_RDI_TIMEOUT | UART_IIR_RDI)) {
 			/* Read data from uart -> queue */
-			brd->intr_rx++;
-			ch->ch_intr_rx++;
 			neo_copy_data_from_uart_to_queue(ch);
 
 			/* Call our tty layer to enforce queue flow control if needed. */
@@ -410,8 +408,6 @@ static inline void neo_parse_isr(struct dgnc_board *brd, uint port)
 		}
 
 		if (isr & UART_IIR_THRI) {
-			brd->intr_tx++;
-			ch->ch_intr_tx++;
 			/* Transfer data (if any) from Write Queue -> UART. */
 			spin_lock_irqsave(&ch->ch_lock, flags);
 			ch->ch_flags |= (CH_TX_FIFO_EMPTY | CH_TX_FIFO_LWM);
@@ -452,8 +448,6 @@ static inline void neo_parse_isr(struct dgnc_board *brd, uint port)
 			 * If we get here, this means the hardware is doing auto flow control.
 			 * Check to see whether RTS/DTR or CTS/DSR caused this interrupt.
 			 */
-			brd->intr_modem++;
-			ch->ch_intr_modem++;
 			cause = readb(&ch->ch_neo_uart->mcr);
 			/* Which pin is doing auto flow? RTS or DTR? */
 			if ((cause & 0x4) == 0) {
@@ -517,8 +511,6 @@ static inline void neo_parse_lsr(struct dgnc_board *brd, uint port)
 	ch->ch_cached_lsr |= linestatus;
 
 	if (ch->ch_cached_lsr & UART_LSR_DR) {
-		brd->intr_rx++;
-		ch->ch_intr_rx++;
 		/* Read data from uart -> queue */
 		neo_copy_data_from_uart_to_queue(ch);
 		spin_lock_irqsave(&ch->ch_lock, flags);
@@ -551,8 +543,6 @@ static inline void neo_parse_lsr(struct dgnc_board *brd, uint port)
 	}
 
 	if (linestatus & UART_LSR_THRE) {
-		brd->intr_tx++;
-		ch->ch_intr_tx++;
 		spin_lock_irqsave(&ch->ch_lock, flags);
 		ch->ch_flags |= (CH_TX_FIFO_EMPTY | CH_TX_FIFO_LWM);
 		spin_unlock_irqrestore(&ch->ch_lock, flags);
@@ -560,8 +550,6 @@ static inline void neo_parse_lsr(struct dgnc_board *brd, uint port)
 		/* Transfer data (if any) from Write Queue -> UART. */
 		neo_copy_data_from_queue_to_uart(ch);
 	} else if (linestatus & UART_17158_TX_AND_FIFO_CLR) {
-		brd->intr_tx++;
-		ch->ch_intr_tx++;
 		spin_lock_irqsave(&ch->ch_lock, flags);
 		ch->ch_flags |= (CH_TX_FIFO_EMPTY | CH_TX_FIFO_LWM);
 		spin_unlock_irqrestore(&ch->ch_lock, flags);
@@ -925,8 +913,6 @@ static irqreturn_t neo_intr(int irq, void *voidbrd)
 	 */
 	if (!brd || brd->magic != DGNC_BOARD_MAGIC)
 		return IRQ_NONE;
-
-	brd->intr_count++;
 
 	/* Lock out the slow poller from running on this board. */
 	spin_lock_irqsave(&brd->bd_intr_lock, flags);

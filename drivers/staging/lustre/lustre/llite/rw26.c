@@ -161,7 +161,7 @@ static int ll_releasepage(struct page *vmpage, gfp_t gfp_mask)
 	return result;
 }
 
-#define MAX_DIRECTIO_SIZE (2*1024*1024*1024UL)
+#define MAX_DIRECTIO_SIZE (2 * 1024 * 1024 * 1024UL)
 
 static inline int ll_get_user_pages(int rw, unsigned long user_addr,
 				    size_t size, struct page ***pages,
@@ -615,6 +615,13 @@ static int ll_write_end(struct file *file, struct address_space *mapping,
 		else
 			LASSERT(from == 0);
 		vio->u.write.vui_to = from + copied;
+
+		/*
+		 * To address the deadlock in balance_dirty_pages() where
+		 * this dirty page may be written back in the same thread.
+		 */
+		if (PageDirty(vmpage))
+			unplug = true;
 
 		/* We may have one full RPC, commit it soon */
 		if (plist->pl_nr >= PTLRPC_MAX_BRW_PAGES)

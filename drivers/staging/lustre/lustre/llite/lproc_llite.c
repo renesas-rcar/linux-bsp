@@ -828,10 +828,110 @@ static ssize_t unstable_stats_show(struct kobject *kobj,
 	pages = atomic_read(&cache->ccc_unstable_nr);
 	mb = (pages * PAGE_SIZE) >> 20;
 
-	return sprintf(buf, "unstable_pages: %8d\n"
-			    "unstable_mb:    %8d\n", pages, mb);
+	return sprintf(buf, "unstable_check: %8d\n"
+			    "unstable_pages: %8d\n"
+			    "unstable_mb:    %8d\n",
+			    cache->ccc_unstable_check, pages, mb);
 }
-LUSTRE_RO_ATTR(unstable_stats);
+
+static ssize_t unstable_stats_store(struct kobject *kobj,
+				    struct attribute *attr,
+				    const char *buffer,
+				    size_t count)
+{
+	struct ll_sb_info *sbi = container_of(kobj, struct ll_sb_info,
+					      ll_kobj);
+	char kernbuf[128];
+	int val, rc;
+
+	if (!count)
+		return 0;
+	if (count < 0 || count >= sizeof(kernbuf))
+		return -EINVAL;
+
+	if (copy_from_user(kernbuf, buffer, count))
+		return -EFAULT;
+	kernbuf[count] = 0;
+
+	buffer += lprocfs_find_named_value(kernbuf, "unstable_check:", &count) -
+		  kernbuf;
+	rc = lprocfs_write_helper(buffer, count, &val);
+	if (rc < 0)
+		return rc;
+
+	/* borrow lru lock to set the value */
+	spin_lock(&sbi->ll_cache->ccc_lru_lock);
+	sbi->ll_cache->ccc_unstable_check = !!val;
+	spin_unlock(&sbi->ll_cache->ccc_lru_lock);
+
+	return count;
+}
+LUSTRE_RW_ATTR(unstable_stats);
+
+static ssize_t root_squash_show(struct kobject *kobj, struct attribute *attr,
+				char *buf)
+{
+	struct ll_sb_info *sbi = container_of(kobj, struct ll_sb_info,
+					      ll_kobj);
+	struct root_squash_info *squash = &sbi->ll_squash;
+
+	return sprintf(buf, "%u:%u\n", squash->rsi_uid, squash->rsi_gid);
+}
+
+static ssize_t root_squash_store(struct kobject *kobj, struct attribute *attr,
+				 const char *buffer, size_t count)
+{
+	struct ll_sb_info *sbi = container_of(kobj, struct ll_sb_info,
+					      ll_kobj);
+	struct root_squash_info *squash = &sbi->ll_squash;
+
+	return lprocfs_wr_root_squash(buffer, count, squash,
+				      ll_get_fsname(sbi->ll_sb, NULL, 0));
+}
+LUSTRE_RW_ATTR(root_squash);
+
+static int ll_nosquash_nids_seq_show(struct seq_file *m, void *v)
+{
+	struct super_block *sb = m->private;
+	struct ll_sb_info *sbi = ll_s2sbi(sb);
+	struct root_squash_info *squash = &sbi->ll_squash;
+	int len;
+
+	down_read(&squash->rsi_sem);
+	if (!list_empty(&squash->rsi_nosquash_nids)) {
+		len = cfs_print_nidlist(m->buf + m->count, m->size - m->count,
+					&squash->rsi_nosquash_nids);
+		m->count += len;
+		seq_puts(m, "\n");
+	} else {
+		seq_puts(m, "NONE\n");
+	}
+	up_read(&squash->rsi_sem);
+
+	return 0;
+}
+
+static ssize_t ll_nosquash_nids_seq_write(struct file *file,
+					  const char __user *buffer,
+					  size_t count, loff_t *off)
+{
+	struct seq_file *m = file->private_data;
+	struct super_block *sb = m->private;
+	struct ll_sb_info *sbi = ll_s2sbi(sb);
+	struct root_squash_info *squash = &sbi->ll_squash;
+	int rc;
+
+	rc = lprocfs_wr_nosquash_nids(buffer, count, squash,
+				      ll_get_fsname(sb, NULL, 0));
+	if (rc < 0)
+		return rc;
+
+	ll_compute_rootsquash_state(sbi);
+
+	return rc;
+}
+
+LPROC_SEQ_FOPS(ll_nosquash_nids);
 
 static struct lprocfs_vars lprocfs_llite_obd_vars[] = {
 	/* { "mntpt_path",   ll_rd_path,	     0, 0 }, */
@@ -840,6 +940,8 @@ static struct lprocfs_vars lprocfs_llite_obd_vars[] = {
 	{ "max_cached_mb",    &ll_max_cached_mb_fops, NULL },
 	{ "statahead_stats",  &ll_statahead_stats_fops, NULL, 0 },
 	{ "sbi_flags",	      &ll_sbi_flags_fops, NULL, 0 },
+	{ .name =		"nosquash_nids",
+	  .fops =		&ll_nosquash_nids_fops		},
 	{ NULL }
 };
 
@@ -869,6 +971,7 @@ static struct attribute *llite_attrs[] = {
 	&lustre_attr_default_easize.attr,
 	&lustre_attr_xattr_cache.attr,
 	&lustre_attr_unstable_stats.attr,
+	&lustre_attr_root_squash.attr,
 	NULL,
 };
 
@@ -893,17 +996,17 @@ static const struct llite_file_opcode {
 	/* file operation */
 	{ LPROC_LL_DIRTY_HITS,     LPROCFS_TYPE_REGS, "dirty_pages_hits" },
 	{ LPROC_LL_DIRTY_MISSES,   LPROCFS_TYPE_REGS, "dirty_pages_misses" },
-	{ LPROC_LL_READ_BYTES,     LPROCFS_CNTR_AVGMINMAX|LPROCFS_TYPE_BYTES,
+	{ LPROC_LL_READ_BYTES,     LPROCFS_CNTR_AVGMINMAX | LPROCFS_TYPE_BYTES,
 				   "read_bytes" },
-	{ LPROC_LL_WRITE_BYTES,    LPROCFS_CNTR_AVGMINMAX|LPROCFS_TYPE_BYTES,
+	{ LPROC_LL_WRITE_BYTES,    LPROCFS_CNTR_AVGMINMAX | LPROCFS_TYPE_BYTES,
 				   "write_bytes" },
-	{ LPROC_LL_BRW_READ,       LPROCFS_CNTR_AVGMINMAX|LPROCFS_TYPE_PAGES,
+	{ LPROC_LL_BRW_READ,       LPROCFS_CNTR_AVGMINMAX | LPROCFS_TYPE_PAGES,
 				   "brw_read" },
-	{ LPROC_LL_BRW_WRITE,      LPROCFS_CNTR_AVGMINMAX|LPROCFS_TYPE_PAGES,
+	{ LPROC_LL_BRW_WRITE,      LPROCFS_CNTR_AVGMINMAX | LPROCFS_TYPE_PAGES,
 				   "brw_write" },
-	{ LPROC_LL_OSC_READ,       LPROCFS_CNTR_AVGMINMAX|LPROCFS_TYPE_BYTES,
+	{ LPROC_LL_OSC_READ,       LPROCFS_CNTR_AVGMINMAX | LPROCFS_TYPE_BYTES,
 				   "osc_read" },
-	{ LPROC_LL_OSC_WRITE,      LPROCFS_CNTR_AVGMINMAX|LPROCFS_TYPE_BYTES,
+	{ LPROC_LL_OSC_WRITE,      LPROCFS_CNTR_AVGMINMAX | LPROCFS_TYPE_BYTES,
 				   "osc_write" },
 	{ LPROC_LL_IOCTL,	  LPROCFS_TYPE_REGS, "ioctl" },
 	{ LPROC_LL_OPEN,	   LPROCFS_TYPE_REGS, "open" },
@@ -1150,7 +1253,7 @@ static void ll_display_extents_info(struct ll_rw_extents_info *io_extents,
 			   r, pct(r, read_tot), pct(read_cum, read_tot),
 			   w, pct(w, write_tot), pct(write_cum, write_tot));
 		start = end;
-		if (start == 1<<10) {
+		if (start == 1 << 10) {
 			start = 1;
 			units += 10;
 			unitp++;

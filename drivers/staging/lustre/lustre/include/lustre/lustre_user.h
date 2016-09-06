@@ -45,6 +45,8 @@
 #include "ll_fiemap.h"
 #include "../linux/lustre_user.h"
 
+#define LUSTRE_EOF 0xffffffffffffffffULL
+
 /* for statfs() */
 #define LL_SUPER_MAGIC 0x0BD00BD0
 
@@ -117,6 +119,11 @@ struct lu_fid {
 	__u32 f_ver;
 };
 
+static inline bool fid_is_zero(const struct lu_fid *fid)
+{
+	return !fid->f_seq && !fid->f_oid;
+}
+
 struct filter_fid {
 	struct lu_fid	ff_parent;  /* ff_parent.f_ver == file stripe number */
 };
@@ -167,7 +174,7 @@ struct lustre_mdt_attrs {
  */
 struct ost_id {
 	union {
-		struct ostid {
+		struct {
 			__u64	oi_id;
 			__u64	oi_seq;
 		} oi;
@@ -188,26 +195,20 @@ struct ost_id {
  * *STRIPE* - set/get lov_user_md
  * *INFO    - set/get lov_user_mds_data
  */
-/* see <lustre_lib.h> for ioctl numberss 101-150 */
+/*	lustre_ioctl.h			101-150 */
 #define LL_IOC_GETFLAGS		 _IOR('f', 151, long)
 #define LL_IOC_SETFLAGS		 _IOW('f', 152, long)
 #define LL_IOC_CLRFLAGS		 _IOW('f', 153, long)
-/* LL_IOC_LOV_SETSTRIPE: See also OBD_IOC_LOV_SETSTRIPE */
 #define LL_IOC_LOV_SETSTRIPE	    _IOW('f', 154, long)
-/* LL_IOC_LOV_GETSTRIPE: See also OBD_IOC_LOV_GETSTRIPE */
 #define LL_IOC_LOV_GETSTRIPE	    _IOW('f', 155, long)
-/* LL_IOC_LOV_SETEA: See also OBD_IOC_LOV_SETEA */
 #define LL_IOC_LOV_SETEA		_IOW('f', 156, long)
 #define LL_IOC_RECREATE_OBJ	     _IOW('f', 157, long)
 #define LL_IOC_RECREATE_FID	     _IOW('f', 157, struct lu_fid)
 #define LL_IOC_GROUP_LOCK	       _IOW('f', 158, long)
 #define LL_IOC_GROUP_UNLOCK	     _IOW('f', 159, long)
-/* LL_IOC_QUOTACHECK: See also OBD_IOC_QUOTACHECK */
-#define LL_IOC_QUOTACHECK	       _IOW('f', 160, int)
-/* LL_IOC_POLL_QUOTACHECK: See also OBD_IOC_POLL_QUOTACHECK */
-#define LL_IOC_POLL_QUOTACHECK	  _IOR('f', 161, struct if_quotacheck *)
-/* LL_IOC_QUOTACTL: See also OBD_IOC_QUOTACTL */
-#define LL_IOC_QUOTACTL		 _IOWR('f', 162, struct if_quotactl)
+/* #define LL_IOC_QUOTACHECK		160 OBD_IOC_QUOTACHECK */
+/* #define LL_IOC_POLL_QUOTACHECK	161 OBD_IOC_POLL_QUOTACHECK */
+/* #define LL_IOC_QUOTACTL		162 OBD_IOC_QUOTACTL */
 #define IOC_OBD_STATFS		  _IOWR('f', 164, struct obd_statfs *)
 #define IOC_LOV_GETINFO		 _IOWR('f', 165, struct lov_user_mds_data *)
 #define LL_IOC_FLUSHCTX		 _IOW('f', 166, long)
@@ -221,8 +222,7 @@ struct ost_id {
 #define LL_IOC_GET_CONNECT_FLAGS	_IOWR('f', 174, __u64 *)
 #define LL_IOC_GET_MDTIDX	       _IOR('f', 175, int)
 
-/* see <lustre_lib.h> for ioctl numbers 177-210 */
-
+/*	lustre_ioctl.h			177-210 */
 #define LL_IOC_HSM_STATE_GET		_IOR('f', 211, struct hsm_user_state)
 #define LL_IOC_HSM_STATE_SET		_IOW('f', 212, struct hsm_state_set)
 #define LL_IOC_HSM_CT_START		_IOW('f', 213, struct lustre_kernelcomm)
@@ -242,6 +242,8 @@ struct ost_id {
 #define LL_IOC_SET_LEASE		_IOWR('f', 243, long)
 #define LL_IOC_GET_LEASE		_IO('f', 244)
 #define LL_IOC_HSM_IMPORT		_IOWR('f', 245, struct hsm_user_import)
+#define LL_IOC_LMV_SET_DEFAULT_STRIPE	_IOWR('f', 246, struct lmv_user_md)
+#define LL_IOC_MIGRATE			_IOR('f', 247, int)
 
 #define LL_STATFS_LMV	   1
 #define LL_STATFS_LOV	   2
@@ -252,10 +254,6 @@ struct ost_id {
 #define IOC_MDC_GETFILESTRIPE   _IOWR(IOC_MDC_TYPE, 21, struct lov_user_md *)
 #define IOC_MDC_GETFILEINFO     _IOWR(IOC_MDC_TYPE, 22, struct lov_user_mds_data *)
 #define LL_IOC_MDC_GETINFO      _IOWR(IOC_MDC_TYPE, 23, struct lov_user_mds_data *)
-
-/* Keep these for backward compartability. */
-#define LL_IOC_OBD_STATFS       IOC_OBD_STATFS
-#define IOC_MDC_GETSTRIPE       IOC_MDC_GETFILESTRIPE
 
 #define MAX_OBD_NAME 128 /* If this changes, a NEW ioctl must be added */
 
@@ -278,12 +276,16 @@ struct ost_id {
 #define LOV_USER_MAGIC_JOIN_V1 0x0BD20BD0
 #define LOV_USER_MAGIC_V3 0x0BD30BD0
 
-#define LMV_MAGIC_V1      0x0CD10CD0    /*normal stripe lmv magic */
-#define LMV_USER_MAGIC    0x0CD20CD0    /*default lmv magic*/
+#define LMV_USER_MAGIC    0x0CD30CD0    /*default lmv magic*/
 
-#define LOV_PATTERN_RAID0 0x001
-#define LOV_PATTERN_RAID1 0x002
-#define LOV_PATTERN_FIRST 0x100
+#define LOV_PATTERN_RAID0	0x001
+#define LOV_PATTERN_RAID1	0x002
+#define LOV_PATTERN_FIRST	0x100
+#define LOV_PATTERN_CMOBD	0x200
+
+#define LOV_PATTERN_F_MASK	0xffff0000
+#define LOV_PATTERN_F_HOLE	0x40000000 /* there is hole in LOV EA */
+#define LOV_PATTERN_F_RELEASED	0x80000000 /* HSM released file */
 
 #define LOV_MAXPOOLNAME 16
 #define LOV_POOLNAMEF "%.16s"
@@ -374,19 +376,26 @@ struct lov_user_mds_data_v3 {
 } __packed;
 #endif
 
-/* keep this to be the same size as lov_user_ost_data_v1 */
 struct lmv_user_mds_data {
 	struct lu_fid	lum_fid;
 	__u32		lum_padding;
 	__u32		lum_mds;
 };
 
-/* lum_type */
-enum {
-	LMV_STRIPE_TYPE = 0,
-	LMV_DEFAULT_TYPE = 1,
+enum lmv_hash_type {
+	LMV_HASH_TYPE_UNKNOWN	= 0,	/* 0 is reserved for testing purpose */
+	LMV_HASH_TYPE_ALL_CHARS = 1,
+	LMV_HASH_TYPE_FNV_1A_64 = 2,
 };
 
+#define LMV_HASH_NAME_ALL_CHARS		"all_char"
+#define LMV_HASH_NAME_FNV_1A_64		"fnv_1a_64"
+
+/*
+ * Got this according to how get LOV_MAX_STRIPE_COUNT, see above,
+ * (max buffer size - lmv+rpc header) / sizeof(struct lmv_user_mds_data)
+ */
+#define LMV_MAX_STRIPE_COUNT 2000  /* ((12 * 4096 - 256) / 24) */
 #define lmv_user_md lmv_user_md_v1
 struct lmv_user_md_v1 {
 	__u32	lum_magic;	 /* must be the first field */
@@ -399,13 +408,15 @@ struct lmv_user_md_v1 {
 	__u32	lum_padding3;
 	char	lum_pool_name[LOV_MAXPOOLNAME];
 	struct	lmv_user_mds_data  lum_objects[0];
-};
+} __packed;
 
 static inline int lmv_user_md_size(int stripes, int lmm_magic)
 {
 	return sizeof(struct lmv_user_md) +
 		      stripes * sizeof(struct lmv_user_mds_data);
 }
+
+void lustre_swab_lmv_user_md(struct lmv_user_md *lum);
 
 struct ll_recreate_obj {
 	__u64 lrc_id;
@@ -497,6 +508,12 @@ static inline void obd_uuid2fsname(char *buf, char *uuid, int buflen)
 	&((fid)->f_ver)
 
 /********* Quotas **********/
+
+#define Q_QUOTACHECK   0x800100 /* deprecated as of 2.4 */
+#define Q_INITQUOTA    0x800101 /* deprecated as of 2.4  */
+#define Q_GETOINFO     0x800102 /* get obd quota info */
+#define Q_GETOQUOTA    0x800103 /* get obd quotas */
+#define Q_FINVALIDATE  0x800104 /* deprecated as of 2.4 */
 
 /* these must be explicitly translated into linux Q_* in ll_dir_ioctl */
 #define LUSTRE_Q_QUOTAON    0x800002     /* turn quotas on */
@@ -736,7 +753,7 @@ static inline void hsm_set_cl_error(int *flags, int error)
 	*flags |= (error << CLF_HSM_ERR_L);
 }
 
-#define CR_MAXSIZE cfs_size_round(2*NAME_MAX + 1 + \
+#define CR_MAXSIZE cfs_size_round(2 * NAME_MAX + 1 + \
 				  sizeof(struct changelog_ext_rec))
 
 struct changelog_rec {
@@ -978,7 +995,7 @@ struct hsm_user_request {
 /** Return pointer to data field in a hsm user request */
 static inline void *hur_data(struct hsm_user_request *hur)
 {
-	return &(hur->hur_user_item[hur->hur_request.hr_itemcount]);
+	return &hur->hur_user_item[hur->hur_request.hr_itemcount];
 }
 
 /**

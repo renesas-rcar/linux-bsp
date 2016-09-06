@@ -1132,23 +1132,23 @@ static void issue_assocreq(struct adapter *padapter)
 	if (padapter->mlmepriv.htpriv.ht_option) {
 		p = rtw_get_ie((pmlmeinfo->network.IEs + sizeof(struct ndis_802_11_fixed_ie)), _HT_CAPABILITY_IE_, &ie_len, (pmlmeinfo->network.IELength - sizeof(struct ndis_802_11_fixed_ie)));
 		if ((p != NULL) && (!(is_ap_in_tkip(padapter)))) {
-			memcpy(&(pmlmeinfo->HT_caps), (p + 2), sizeof(struct HT_caps_element));
+			memcpy(&pmlmeinfo->HT_caps, p + 2, sizeof(struct ieee80211_ht_cap));
 
 			/* to disable 40M Hz support while gd_bw_40MHz_en = 0 */
 			if (pregpriv->cbw40_enable == 0)
-				pmlmeinfo->HT_caps.u.HT_cap_element.HT_caps_info &= cpu_to_le16(~(BIT(6) | BIT(1)));
+				pmlmeinfo->HT_caps.cap_info &= cpu_to_le16(~(BIT(6) | BIT(1)));
 			else
-				pmlmeinfo->HT_caps.u.HT_cap_element.HT_caps_info |= cpu_to_le16(BIT(1));
+				pmlmeinfo->HT_caps.cap_info |= cpu_to_le16(BIT(1));
 
 			/* todo: disable SM power save mode */
-			pmlmeinfo->HT_caps.u.HT_cap_element.HT_caps_info |= cpu_to_le16(0x000c);
+			pmlmeinfo->HT_caps.cap_info |= cpu_to_le16(0x000c);
 
 			rtw_hal_get_hwreg(padapter, HW_VAR_RF_TYPE, (u8 *)(&rf_type));
 			switch (rf_type) {
 			case RF_1T1R:
 				if (pregpriv->rx_stbc)
-					pmlmeinfo->HT_caps.u.HT_cap_element.HT_caps_info |= cpu_to_le16(0x0100);/* RX STBC One spatial stream */
-				memcpy(pmlmeinfo->HT_caps.u.HT_cap_element.MCS_rate, MCS_rate_1R, 16);
+					pmlmeinfo->HT_caps.cap_info |= cpu_to_le16(0x0100);/* RX STBC One spatial stream */
+				memcpy((u8 *)&pmlmeinfo->HT_caps.mcs, MCS_rate_1R, 16);
 				break;
 			case RF_2T2R:
 			case RF_1T2R:
@@ -1157,9 +1157,9 @@ static void issue_assocreq(struct adapter *padapter)
 				    ((pmlmeext->cur_wireless_mode & WIRELESS_11_24N) && (pregpriv->rx_stbc == 0x1)) || /* enable for 2.4GHz */
 				    (pregpriv->wifi_spec == 1)) {
 					DBG_88E("declare supporting RX STBC\n");
-					pmlmeinfo->HT_caps.u.HT_cap_element.HT_caps_info |= cpu_to_le16(0x0200);/* RX STBC two spatial stream */
+					pmlmeinfo->HT_caps.cap_info |= cpu_to_le16(0x0200);/* RX STBC two spatial stream */
 				}
-				memcpy(pmlmeinfo->HT_caps.u.HT_cap_element.MCS_rate, MCS_rate_2R, 16);
+				memcpy(&pmlmeinfo->HT_caps.mcs, MCS_rate_2R, 16);
 				break;
 			}
 			pframe = rtw_set_ie(pframe, _HT_CAPABILITY_IE_, ie_len , (u8 *)(&(pmlmeinfo->HT_caps)), &(pattrib->pktlen));
@@ -1557,66 +1557,6 @@ static int issue_deauth_ex(struct adapter *padapter, u8 *da,
 	}
 exit:
 	return ret;
-}
-
-void issue_action_spct_ch_switch(struct adapter *padapter, u8 *ra, u8 new_ch, u8 ch_offset)
-{
-	struct xmit_frame			*pmgntframe;
-	struct pkt_attrib			*pattrib;
-	unsigned char				*pframe;
-	struct rtw_ieee80211_hdr	*pwlanhdr;
-	__le16 *fctrl;
-	struct xmit_priv			*pxmitpriv = &(padapter->xmitpriv);
-	struct mlme_ext_priv	*pmlmeext = &(padapter->mlmeextpriv);
-
-
-	DBG_88E(FUNC_NDEV_FMT" ra =%pM, ch:%u, offset:%u\n",
-		FUNC_NDEV_ARG(padapter->pnetdev), ra, new_ch, ch_offset);
-
-	pmgntframe = alloc_mgtxmitframe(pxmitpriv);
-	if (pmgntframe == NULL)
-		return;
-
-	/* update attribute */
-	pattrib = &pmgntframe->attrib;
-	update_mgntframe_attrib(padapter, pattrib);
-
-	memset(pmgntframe->buf_addr, 0, WLANHDR_OFFSET + TXDESC_OFFSET);
-
-	pframe = (u8 *)(pmgntframe->buf_addr) + TXDESC_OFFSET;
-	pwlanhdr = (struct rtw_ieee80211_hdr *)pframe;
-
-	fctrl = &(pwlanhdr->frame_ctl);
-	*(fctrl) = 0;
-
-	memcpy(pwlanhdr->addr1, ra, ETH_ALEN); /* RA */
-	memcpy(pwlanhdr->addr2, myid(&(padapter->eeprompriv)), ETH_ALEN); /* TA */
-	memcpy(pwlanhdr->addr3, ra, ETH_ALEN); /* DA = RA */
-
-	SetSeqNum(pwlanhdr, pmlmeext->mgnt_seq);
-	pmlmeext->mgnt_seq++;
-	SetFrameSubType(pframe, WIFI_ACTION);
-
-	pframe += sizeof(struct rtw_ieee80211_hdr_3addr);
-	pattrib->pktlen = sizeof(struct rtw_ieee80211_hdr_3addr);
-
-	/* category, action */
-	{
-		u8 category, action;
-		category = RTW_WLAN_CATEGORY_SPECTRUM_MGMT;
-		action = RTW_WLAN_ACTION_SPCT_CHL_SWITCH;
-
-		pframe = rtw_set_fixed_ie(pframe, 1, &(category), &(pattrib->pktlen));
-		pframe = rtw_set_fixed_ie(pframe, 1, &(action), &(pattrib->pktlen));
-	}
-
-	pframe = rtw_set_ie_ch_switch(pframe, &(pattrib->pktlen), 0, new_ch, 0);
-	pframe = rtw_set_ie_secondary_ch_offset(pframe, &(pattrib->pktlen),
-		hal_ch_offset_to_secondary_ch_offset(ch_offset));
-
-	pattrib->last_txcmdsz = pattrib->pktlen;
-
-	dump_mgntframe(padapter, pmgntframe);
 }
 
 static void issue_action_BA(struct adapter *padapter, unsigned char *raddr,
@@ -2249,10 +2189,10 @@ static u8 collect_bss_info(struct adapter *padapter,
 		struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 		p = rtw_get_ie(bssid->IEs + ie_offset, _HT_CAPABILITY_IE_, &len, bssid->IELength - ie_offset);
 		if (p && len > 0) {
-			struct HT_caps_element	*pHT_caps;
-			pHT_caps = (struct HT_caps_element *)(p + 2);
+			struct ieee80211_ht_cap *pHT_caps =
+				(struct ieee80211_ht_cap *)(p + 2);
 
-			if (le16_to_cpu(pHT_caps->u.HT_cap_element.HT_caps_info)&BIT(14))
+			if (le16_to_cpu(pHT_caps->cap_info) & BIT(14))
 				pmlmepriv->num_FortyMHzIntolerant++;
 		} else {
 			pmlmepriv->num_sta_no_ht++;
@@ -3296,13 +3236,15 @@ static unsigned int OnAssocReq(struct adapter *padapter,
 	}
 
 	/* save HT capabilities in the sta object */
-	memset(&pstat->htpriv.ht_cap, 0, sizeof(struct rtw_ieee80211_ht_cap));
-	if (elems.ht_capabilities && elems.ht_capabilities_len >= sizeof(struct rtw_ieee80211_ht_cap)) {
+	memset(&pstat->htpriv.ht_cap, 0, sizeof(struct ieee80211_ht_cap));
+	if (elems.ht_capabilities &&
+	    elems.ht_capabilities_len >= sizeof(struct ieee80211_ht_cap)) {
 		pstat->flags |= WLAN_STA_HT;
 
 		pstat->flags |= WLAN_STA_WME;
 
-		memcpy(&pstat->htpriv.ht_cap, elems.ht_capabilities, sizeof(struct rtw_ieee80211_ht_cap));
+		memcpy(&pstat->htpriv.ht_cap,
+		       elems.ht_capabilities, sizeof(struct ieee80211_ht_cap));
 	} else {
 		pstat->flags &= ~WLAN_STA_HT;
 	}
@@ -4537,7 +4479,7 @@ void update_sta_info(struct adapter *padapter, struct sta_info *psta)
 
 		psta->htpriv.ampdu_enable = pmlmepriv->htpriv.ampdu_enable;
 
-		if (support_short_GI(padapter, &(pmlmeinfo->HT_caps)))
+		if (support_short_GI(padapter, &pmlmeinfo->HT_caps))
 			psta->htpriv.sgi = true;
 
 		psta->qos_option = true;

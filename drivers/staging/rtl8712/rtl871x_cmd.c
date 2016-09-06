@@ -51,14 +51,14 @@
 #include "mlme_osdep.h"
 
 /*
-Caller and the r8712_cmd_thread can protect cmd_q by spin_lock.
-No irqsave is necessary.
-*/
+ * Caller and the r8712_cmd_thread can protect cmd_q by spin_lock.
+ * No irqsave is necessary.
+ */
 
 static sint _init_cmd_priv(struct cmd_priv *pcmdpriv)
 {
-	sema_init(&(pcmdpriv->cmd_queue_sema), 0);
-	sema_init(&(pcmdpriv->terminate_cmdthread_sema), 0);
+	init_completion(&pcmdpriv->cmd_queue_comp);
+	init_completion(&pcmdpriv->terminate_cmdthread_comp);
 
 	_init_queue(&(pcmdpriv->cmd_queue));
 
@@ -110,14 +110,14 @@ static void _free_cmd_priv(struct cmd_priv *pcmdpriv)
 }
 
 /*
-Calling Context:
-
-_enqueue_cmd can only be called between kernel thread,
-since only spin_lock is used.
-
-ISR/Call-Back functions can't call this sub-function.
-
-*/
+ * Calling Context:
+ *
+ * _enqueue_cmd can only be called between kernel thread,
+ * since only spin_lock is used.
+ *
+ * ISR/Call-Back functions can't call this sub-function.
+ *
+ */
 
 static sint _enqueue_cmd(struct  __queue *queue, struct cmd_obj *obj)
 {
@@ -172,7 +172,7 @@ u32 r8712_enqueue_cmd(struct cmd_priv *pcmdpriv, struct cmd_obj *obj)
 	if (pcmdpriv->padapter->eeprompriv.bautoload_fail_flag)
 		return _FAIL;
 	res = _enqueue_cmd(&pcmdpriv->cmd_queue, obj);
-	up(&pcmdpriv->cmd_queue_sema);
+	complete(&pcmdpriv->cmd_queue_comp);
 	return res;
 }
 
@@ -189,7 +189,7 @@ u32 r8712_enqueue_cmd_ex(struct cmd_priv *pcmdpriv, struct cmd_obj *obj)
 	spin_lock_irqsave(&queue->lock, irqL);
 	list_add_tail(&obj->list, &queue->queue);
 	spin_unlock_irqrestore(&queue->lock, irqL);
-	up(&pcmdpriv->cmd_queue_sema);
+	complete(&pcmdpriv->cmd_queue_comp);
 	return _SUCCESS;
 }
 
@@ -211,11 +211,11 @@ void r8712_free_cmd_obj(struct cmd_obj *pcmd)
 }
 
 /*
-r8712_sitesurvey_cmd(~)
-	### NOTE:#### (!!!!)
-	MUST TAKE CARE THAT BEFORE CALLING THIS FUNC,
-	 YOU SHOULD HAVE LOCKED pmlmepriv->lock
-*/
+ *	r8712_sitesurvey_cmd(~)
+ *		### NOTE:#### (!!!!)
+ *		MUST TAKE CARE THAT BEFORE CALLING THIS FUNC,
+ *		YOU SHOULD HAVE LOCKED pmlmepriv->lock
+ */
 u8 r8712_sitesurvey_cmd(struct _adapter *padapter,
 			struct ndis_802_11_ssid *pssid)
 {
@@ -491,8 +491,9 @@ u8 r8712_joinbss_cmd(struct _adapter  *padapter, struct wlan_network *pnetwork)
 		memcpy(&psecuritypriv->authenticator_ie[1],
 			&psecnetwork->IEs[12], (256 - 1));
 	psecnetwork->IELength = 0;
-	/* If the driver wants to use the bssid to create the connection.
-	 * If not,  we copy the connecting AP's MAC address to it so that
+	/*
+	 * If the driver wants to use the bssid to create the connection.
+	 * If not, we copy the connecting AP's MAC address to it so that
 	 * the driver just has the bssid information for PMKIDList searching.
 	 */
 	if (!pmlmepriv->assoc_by_bssid)
@@ -519,7 +520,8 @@ u8 r8712_joinbss_cmd(struct _adapter  *padapter, struct wlan_network *pnetwork)
 		}
 	}
 	if (pregistrypriv->ht_enable) {
-		/* For WEP mode, we will use the bg mode to do the connection
+		/*
+		 * For WEP mode, we will use the bg mode to do the connection
 		 * to avoid some IOT issues, especially for Realtek 8192u
 		 * SoftAP.
 		 */
@@ -904,8 +906,10 @@ void r8712_createbss_cmd_callback(struct _adapter *padapter,
 			(r8712_get_wlan_bssid_ex_sz(pnetwork)));
 		if (pmlmepriv->fw_state & _FW_UNDER_LINKING)
 			pmlmepriv->fw_state ^= _FW_UNDER_LINKING;
-		/* we will set _FW_LINKED when there is one more sat to
-		 * join us (stassoc_event_callback) */
+		/*
+		 * we will set _FW_LINKED when there is one more sat to
+		 * join us (stassoc_event_callback)
+		 */
 	}
 createbss_cmd_fail:
 	spin_unlock_irqrestore(&pmlmepriv->lock, irqL);

@@ -41,6 +41,7 @@
 #include "../../include/linux/libcfs/libcfs.h"
 
 #include "../include/obd_support.h"
+#include "../include/lustre/lustre_ioctl.h"
 #include "../include/lustre_lib.h"
 #include "../include/lustre_net.h"
 #include "../include/lustre/lustre_idl.h"
@@ -940,7 +941,7 @@ int lov_process_config_base(struct obd_device *obd, struct lustre_cfg *lcfg,
 	}
 	case LCFG_PARAM: {
 		struct lprocfs_static_vars lvars = { NULL };
-		struct lov_desc *desc = &(obd->u.lov.desc);
+		struct lov_desc *desc = &obd->u.lov.desc;
 
 		if (!desc) {
 			rc = -EINVAL;
@@ -1267,46 +1268,6 @@ static int lov_setattr_async(struct obd_export *exp, struct obd_info *oinfo,
 	return 0;
 }
 
-/* find any ldlm lock of the inode in lov
- * return 0    not find
- *	1    find one
- *      < 0    error
- */
-static int lov_find_cbdata(struct obd_export *exp,
-			   struct lov_stripe_md *lsm, ldlm_iterator_t it,
-			   void *data)
-{
-	struct lov_obd *lov;
-	int rc = 0, i;
-
-	ASSERT_LSM_MAGIC(lsm);
-
-	if (!exp || !exp->exp_obd)
-		return -ENODEV;
-
-	lov = &exp->exp_obd->u.lov;
-	for (i = 0; i < lsm->lsm_stripe_count; i++) {
-		struct lov_stripe_md submd;
-		struct lov_oinfo *loi = lsm->lsm_oinfo[i];
-
-		if (lov_oinfo_is_dummy(loi))
-			continue;
-
-		if (!lov->lov_tgts[loi->loi_ost_idx]) {
-			CDEBUG(D_HA, "lov idx %d NULL\n", loi->loi_ost_idx);
-			continue;
-		}
-
-		submd.lsm_oi = loi->loi_oi;
-		submd.lsm_stripe_count = 0;
-		rc = obd_find_cbdata(lov->lov_tgts[loi->loi_ost_idx]->ltd_exp,
-				     &submd, it, data);
-		if (rc != 0)
-			return rc;
-	}
-	return rc;
-}
-
 int lov_statfs_interpret(struct ptlrpc_request_set *rqset, void *data, int rc)
 {
 	struct lov_request_set *lovset = (struct lov_request_set *)data;
@@ -1460,7 +1421,7 @@ static int lov_iocontrol(unsigned int cmd, struct obd_export *exp, int len,
 		}
 
 		desc = (struct lov_desc *)data->ioc_inlbuf1;
-		memcpy(desc, &(lov->desc), sizeof(*desc));
+		memcpy(desc, &lov->desc, sizeof(*desc));
 
 		uuidp = (struct obd_uuid *)data->ioc_inlbuf2;
 		genp = (__u32 *)data->ioc_inlbuf3;
@@ -1916,8 +1877,9 @@ inactive_tgt:
 				break;
 			}
 
-			len_mapped_single_call = lcl_fm_ext[ext_count-1].fe_logical -
-				  lun_start + lcl_fm_ext[ext_count - 1].fe_length;
+			len_mapped_single_call =
+				lcl_fm_ext[ext_count - 1].fe_logical -
+				lun_start + lcl_fm_ext[ext_count - 1].fe_length;
 
 			/* Have we finished mapping on this device? */
 			if (req_fm_len <= len_mapped_single_call)
@@ -1926,14 +1888,15 @@ inactive_tgt:
 			/* Clear the EXTENT_LAST flag which can be present on
 			 * last extent
 			 */
-			if (lcl_fm_ext[ext_count-1].fe_flags & FIEMAP_EXTENT_LAST)
+			if (lcl_fm_ext[ext_count - 1].fe_flags &
+			    FIEMAP_EXTENT_LAST)
 				lcl_fm_ext[ext_count - 1].fe_flags &=
 							    ~FIEMAP_EXTENT_LAST;
 
 			curr_loc = lov_stripe_size(lsm,
-					   lcl_fm_ext[ext_count - 1].fe_logical+
-					   lcl_fm_ext[ext_count - 1].fe_length,
-					   cur_stripe);
+					lcl_fm_ext[ext_count - 1].fe_logical +
+					lcl_fm_ext[ext_count - 1].fe_length,
+					cur_stripe);
 			if (curr_loc >= fm_key->oa.o_size)
 				ost_eof = 1;
 
@@ -2159,8 +2122,8 @@ static int lov_set_info_async(const struct lu_env *env, struct obd_export *exp,
 						 &mgi->group, set);
 		} else if (next_id) {
 			err = obd_set_info_async(env, tgt->ltd_exp,
-					 keylen, key, vallen,
-					 ((struct obd_id_info *)val)->data, set);
+						 keylen, key, vallen,
+					((struct obd_id_info *)val)->data, set);
 		} else {
 			/* Only want a specific OSC */
 			if (check_uuid &&
@@ -2323,7 +2286,6 @@ static struct obd_ops lov_obd_ops = {
 	.getattr_async  = lov_getattr_async,
 	.setattr_async  = lov_setattr_async,
 	.adjust_kms     = lov_adjust_kms,
-	.find_cbdata    = lov_find_cbdata,
 	.iocontrol      = lov_iocontrol,
 	.get_info       = lov_get_info,
 	.set_info_async = lov_set_info_async,

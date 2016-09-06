@@ -9,7 +9,6 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include "../include/mc-private.h"
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/of_address.h>
@@ -18,11 +17,48 @@
 #include <linux/limits.h>
 #include <linux/bitops.h>
 #include <linux/msi.h>
+#include <linux/dma-mapping.h>
+#include "../include/mc-bus.h"
 #include "../include/dpmng.h"
 #include "../include/mc-sys.h"
+
+#include "fsl-mc-private.h"
 #include "dprc-cmd.h"
 
 static struct kmem_cache *mc_dev_cache;
+
+/**
+ * Default DMA mask for devices on a fsl-mc bus
+ */
+#define FSL_MC_DEFAULT_DMA_MASK	(~0ULL)
+
+/**
+ * struct fsl_mc - Private data of a "fsl,qoriq-mc" platform device
+ * @root_mc_bus_dev: MC object device representing the root DPRC
+ * @num_translation_ranges: number of entries in addr_translation_ranges
+ * @translation_ranges: array of bus to system address translation ranges
+ */
+struct fsl_mc {
+	struct fsl_mc_device *root_mc_bus_dev;
+	u8 num_translation_ranges;
+	struct fsl_mc_addr_translation_range *translation_ranges;
+};
+
+/**
+ * struct fsl_mc_addr_translation_range - bus to system address translation
+ * range
+ * @mc_region_type: Type of MC region for the range being translated
+ * @start_mc_offset: Start MC offset of the range being translated
+ * @end_mc_offset: MC offset of the first byte after the range (last MC
+ * offset of the range is end_mc_offset - 1)
+ * @start_phys_addr: system physical address corresponding to start_mc_addr
+ */
+struct fsl_mc_addr_translation_range {
+	enum dprc_region_type mc_region_type;
+	u64 start_mc_offset;
+	u64 end_mc_offset;
+	phys_addr_t start_phys_addr;
+};
 
 /**
  * fsl_mc_bus_match - device to driver matching callback
@@ -101,14 +137,8 @@ static struct attribute *fsl_mc_dev_attrs[] = {
 	NULL,
 };
 
-static const struct attribute_group fsl_mc_dev_group = {
-	.attrs = fsl_mc_dev_attrs,
-};
+ATTRIBUTE_GROUPS(fsl_mc_dev);
 
-static const struct attribute_group *fsl_mc_dev_groups[] = {
-	&fsl_mc_dev_group,
-	NULL,
-};
 
 struct bus_type fsl_mc_bus_type = {
 	.name = "fsl-mc",
@@ -231,19 +261,20 @@ EXPORT_SYMBOL_GPL(fsl_mc_bus_exists);
 /**
 * fsl_mc_get_root_dprc - function to traverse to the root dprc
 */
-static void fsl_mc_get_root_dprc(struct device *dev,
-				 struct device **root_dprc_dev)
+void fsl_mc_get_root_dprc(struct device *dev,
+			  struct device **root_dprc_dev)
 {
 	if (WARN_ON(!dev)) {
 		*root_dprc_dev = NULL;
-	} else if (WARN_ON(dev->bus != &fsl_mc_bus_type)) {
+	} else if (WARN_ON(!dev_is_fsl_mc(dev))) {
 		*root_dprc_dev = NULL;
 	} else {
 		*root_dprc_dev = dev;
-		while ((*root_dprc_dev)->parent->bus == &fsl_mc_bus_type)
+		while (dev_is_fsl_mc((*root_dprc_dev)->parent))
 			*root_dprc_dev = (*root_dprc_dev)->parent;
 	}
 }
+EXPORT_SYMBOL_GPL(fsl_mc_get_root_dprc);
 
 static int get_dprc_attr(struct fsl_mc_io *mc_io,
 			 int container_id, struct dprc_attributes *attr)
@@ -434,7 +465,7 @@ int fsl_mc_device_add(struct dprc_obj_desc *obj_desc,
 	struct fsl_mc_bus *mc_bus = NULL;
 	struct fsl_mc_device *parent_mc_dev;
 
-	if (parent_dev->bus == &fsl_mc_bus_type)
+	if (dev_is_fsl_mc(parent_dev))
 		parent_mc_dev = to_fsl_mc_device(parent_dev);
 	else
 		parent_mc_dev = NULL;
@@ -887,25 +918,4 @@ error_cleanup_cache:
 	kmem_cache_destroy(mc_dev_cache);
 	return error;
 }
-
 postcore_initcall(fsl_mc_bus_driver_init);
-
-static void __exit fsl_mc_bus_driver_exit(void)
-{
-	if (WARN_ON(!mc_dev_cache))
-		return;
-
-	its_fsl_mc_msi_cleanup();
-	fsl_mc_allocator_driver_exit();
-	dprc_driver_exit();
-	platform_driver_unregister(&fsl_mc_bus_driver);
-	bus_unregister(&fsl_mc_bus_type);
-	kmem_cache_destroy(mc_dev_cache);
-	pr_info("MC bus unregistered\n");
-}
-
-module_exit(fsl_mc_bus_driver_exit);
-
-MODULE_AUTHOR("Freescale Semiconductor Inc.");
-MODULE_DESCRIPTION("Freescale Management Complex (MC) bus driver");
-MODULE_LICENSE("GPL");

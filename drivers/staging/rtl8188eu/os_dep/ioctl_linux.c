@@ -132,12 +132,15 @@ static char *translate_scan(struct adapter *padapter,
 	p = rtw_get_ie(&pnetwork->network.IEs[12], _HT_CAPABILITY_IE_, &ht_ielen, pnetwork->network.IELength-12);
 
 	if (p && ht_ielen > 0) {
-		struct rtw_ieee80211_ht_cap *pht_capie;
+		struct ieee80211_ht_cap *pht_capie;
 		ht_cap = true;
-		pht_capie = (struct rtw_ieee80211_ht_cap *)(p+2);
-		memcpy(&mcs_rate, pht_capie->supp_mcs_set, 2);
-		bw_40MHz = (pht_capie->cap_info&IEEE80211_HT_CAP_SUP_WIDTH) ? 1 : 0;
-		short_GI = (pht_capie->cap_info&(IEEE80211_HT_CAP_SGI_20|IEEE80211_HT_CAP_SGI_40)) ? 1 : 0;
+		pht_capie = (struct ieee80211_ht_cap *)(p + 2);
+		memcpy(&mcs_rate, pht_capie->mcs.rx_mask, 2);
+		bw_40MHz = !!(le16_to_cpu(pht_capie->cap_info) &
+			      IEEE80211_HT_CAP_SUP_WIDTH);
+		short_GI = !!(le16_to_cpu(pht_capie->cap_info) &
+			      (IEEE80211_HT_CAP_SGI_20 |
+			       IEEE80211_HT_CAP_SGI_40));
 	}
 
 	/* Add the protocol name */
@@ -2528,7 +2531,8 @@ static int rtw_add_sta(struct net_device *dev, struct ieee_param *param)
 		if (WLAN_STA_HT&flags) {
 			psta->htpriv.ht_option = true;
 			psta->qos_option = 1;
-			memcpy((void *)&psta->htpriv.ht_cap, (void *)&param->u.add_sta.ht_cap, sizeof(struct rtw_ieee80211_ht_cap));
+			memcpy(&psta->htpriv.ht_cap, &param->u.add_sta.ht_cap,
+			       sizeof(struct ieee80211_ht_cap));
 		} else {
 			psta->htpriv.ht_option = false;
 		}
@@ -2624,7 +2628,8 @@ static int rtw_ioctl_get_sta_data(struct net_device *dev, struct ieee_param *par
 				      (psta->ht_20mhz_set << 5));
 		psta_data->tx_supp_rates_len =  psta->bssratelen;
 		memcpy(psta_data->tx_supp_rates, psta->bssrateset, psta->bssratelen);
-		memcpy(&psta_data->ht_cap, &psta->htpriv.ht_cap, sizeof(struct rtw_ieee80211_ht_cap));
+		memcpy(&psta_data->ht_cap,
+		       &psta->htpriv.ht_cap, sizeof(struct ieee80211_ht_cap));
 		psta_data->rx_pkts = psta->sta_stats.rx_data_pkts;
 		psta_data->rx_bytes = psta->sta_stats.rx_bytes;
 		psta_data->rx_drops = psta->sta_stats.rx_drops;

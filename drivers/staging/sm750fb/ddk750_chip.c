@@ -86,13 +86,17 @@ static void setMemoryClock(unsigned int frequency)
 {
 	unsigned int reg, divisor;
 
-	/* Cheok_0509: For SM750LE, the memory clock is fixed. Nothing to set. */
+	/* Cheok_0509: For SM750LE, the memory clock is fixed.
+	 * Nothing to set.
+	 */
 	if (getChipType() == SM750LE)
 		return;
 
 	if (frequency) {
-		/* Set the frequency to the maximum frequency that the DDR Memory can take
-		which is 336MHz. */
+		/*
+		 * Set the frequency to the maximum frequency that the DDR Memory can take
+		 * which is 336MHz.
+		 */
 		if (frequency > MHz(336))
 			frequency = MHz(336);
 
@@ -133,7 +137,9 @@ static void setMasterClock(unsigned int frequency)
 {
 	unsigned int reg, divisor;
 
-	/* Cheok_0509: For SM750LE, the memory clock is fixed. Nothing to set. */
+	/* Cheok_0509: For SM750LE, the memory clock is fixed.
+	 * Nothing to set.
+	 */
 	if (getChipType() == SM750LE)
 		return;
 

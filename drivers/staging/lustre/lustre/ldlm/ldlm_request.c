@@ -309,8 +309,6 @@ static void failed_lock_cleanup(struct ldlm_namespace *ns,
 	else
 		LDLM_DEBUG(lock, "lock was granted or failed in race");
 
-	ldlm_lock_decref_internal(lock, mode);
-
 	/* XXX - HACK because we shouldn't call ldlm_lock_destroy()
 	 *       from llite/file.c/ll_file_flock().
 	 */
@@ -321,9 +319,14 @@ static void failed_lock_cleanup(struct ldlm_namespace *ns,
 	 */
 	if (lock->l_resource->lr_type == LDLM_FLOCK) {
 		lock_res_and_lock(lock);
-		ldlm_resource_unlink_lock(lock);
-		ldlm_lock_destroy_nolock(lock);
+		if (!ldlm_is_destroyed(lock)) {
+			ldlm_resource_unlink_lock(lock);
+			ldlm_lock_decref_internal_nolock(lock, mode);
+			ldlm_lock_destroy_nolock(lock);
+		}
 		unlock_res_and_lock(lock);
+	} else {
+		ldlm_lock_decref_internal(lock, mode);
 	}
 }
 
@@ -418,11 +421,6 @@ int ldlm_cli_enqueue_fini(struct obd_export *exp, struct ptlrpc_request *req,
 	*flags = ldlm_flags_from_wire(reply->lock_flags);
 	lock->l_flags |= ldlm_flags_from_wire(reply->lock_flags &
 					      LDLM_FL_INHERIT_MASK);
-	/* move NO_TIMEOUT flag to the lock to force ldlm_lock_match()
-	 * to wait with no timeout as well
-	 */
-	lock->l_flags |= ldlm_flags_from_wire(reply->lock_flags &
-					      LDLM_FL_NO_TIMEOUT);
 	unlock_res_and_lock(lock);
 
 	CDEBUG(D_INFO, "local: %p, remote cookie: %#llx, flags: 0x%llx\n",
@@ -696,8 +694,8 @@ int ldlm_cli_enqueue(struct obd_export *exp, struct ptlrpc_request **reqp,
 		lock = ldlm_lock_create(ns, res_id, einfo->ei_type,
 					einfo->ei_mode, &cbs, einfo->ei_cbdata,
 					lvb_len, lvb_type);
-		if (!lock)
-			return -ENOMEM;
+		if (IS_ERR(lock))
+			return PTR_ERR(lock);
 		/* for the local lock, add the reference */
 		ldlm_lock_addref_internal(lock, einfo->ei_mode);
 		ldlm_lock2handle(lock, lockh);
@@ -819,7 +817,7 @@ static __u64 ldlm_cli_cancel_local(struct ldlm_lock *lock)
 		lock_res_and_lock(lock);
 		ldlm_set_cbpending(lock);
 		local_only = !!(lock->l_flags &
-				(LDLM_FL_LOCAL_ONLY|LDLM_FL_CANCEL_ON_BLOCK));
+				(LDLM_FL_LOCAL_ONLY | LDLM_FL_CANCEL_ON_BLOCK));
 		ldlm_cancel_callback(lock);
 		rc = ldlm_is_bl_ast(lock) ? LDLM_FL_BL_AST : LDLM_FL_CANCELING;
 		unlock_res_and_lock(lock);
@@ -1180,8 +1178,7 @@ static enum ldlm_policy_res ldlm_cancel_lrur_policy(struct ldlm_namespace *ns,
 
 	slv = ldlm_pool_get_slv(pl);
 	lvf = ldlm_pool_get_lvf(pl);
-	la = cfs_duration_sec(cfs_time_sub(cur,
-			      lock->l_last_used));
+	la = cfs_duration_sec(cfs_time_sub(cur, lock->l_last_used));
 	lv = lvf * la * unused;
 
 	/* Inform pool about current CLV to see it via debugfs. */
@@ -1374,7 +1371,7 @@ static int ldlm_prepare_lru_list(struct ldlm_namespace *ns,
 			break;
 
 		list_for_each_entry_safe(lock, next, &ns->ns_unused_list,
-					     l_lru) {
+					 l_lru) {
 			/* No locks which got blocking requests. */
 			LASSERT(!ldlm_is_bl_ast(lock));
 
@@ -1610,8 +1607,7 @@ int ldlm_cli_cancel_list(struct list_head *cancels, int count,
 	 */
 	while (count > 0) {
 		LASSERT(!list_empty(cancels));
-		lock = list_entry(cancels->next, struct ldlm_lock,
-				      l_bl_ast);
+		lock = list_entry(cancels->next, struct ldlm_lock, l_bl_ast);
 		LASSERT(lock->l_conn_export);
 
 		if (exp_connect_cancelset(lock->l_conn_export)) {
@@ -1660,7 +1656,7 @@ int ldlm_cli_cancel_unused_resource(struct ldlm_namespace *ns,
 	int rc;
 
 	res = ldlm_resource_get(ns, NULL, res_id, 0, 0);
-	if (!res) {
+	if (IS_ERR(res)) {
 		/* This is not a problem. */
 		CDEBUG(D_INFO, "No resource %llu\n", res_id->name[0]);
 		return 0;
@@ -1811,13 +1807,10 @@ int ldlm_resource_iterate(struct ldlm_namespace *ns,
 	struct ldlm_resource *res;
 	int rc;
 
-	if (!ns) {
-		CERROR("must pass in namespace\n");
-		LBUG();
-	}
+	LASSERTF(ns, "must pass in namespace\n");
 
 	res = ldlm_resource_get(ns, NULL, res_id, 0, 0);
-	if (!res)
+	if (IS_ERR(res))
 		return 0;
 
 	LDLM_RESOURCE_ADDREF(res);
@@ -1843,7 +1836,7 @@ static int ldlm_chain_lock_for_replay(struct ldlm_lock *lock, void *closure)
 	 * bug 17614: locks being actively cancelled. Get a reference
 	 * on a lock so that it does not disappear under us (e.g. due to cancel)
 	 */
-	if (!(lock->l_flags & (LDLM_FL_FAILED|LDLM_FL_CANCELING))) {
+	if (!(lock->l_flags & (LDLM_FL_FAILED | LDLM_FL_CANCELING))) {
 		list_add(&lock->l_pending_chain, list);
 		LDLM_LOCK_GET(lock);
 	}
@@ -2013,7 +2006,7 @@ static void ldlm_cancel_unused_locks_for_replay(struct ldlm_namespace *ns)
 					 LCF_LOCAL, LDLM_CANCEL_NO_WAIT);
 
 	CDEBUG(D_DLMTRACE, "Canceled %d unused locks from namespace %s\n",
-			   canceled, ldlm_ns_name(ns));
+	       canceled, ldlm_ns_name(ns));
 }
 
 int ldlm_replay_locks(struct obd_import *imp)

@@ -1935,7 +1935,6 @@ unsigned int rtw_restructure_ht_ie(struct adapter *padapter, u8 *in_ie, u8 *out_
 	u32 ielen, out_len;
 	enum ht_cap_ampdu_factor max_rx_ampdu_factor;
 	unsigned char *p;
-	struct rtw_ieee80211_ht_cap ht_capie;
 	unsigned char WMM_IE[] = {0x00, 0x50, 0xf2, 0x02, 0x00, 0x01, 0x00};
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
 	struct qos_priv		*pqospriv = &pmlmepriv->qospriv;
@@ -1948,6 +1947,8 @@ unsigned int rtw_restructure_ht_ie(struct adapter *padapter, u8 *in_ie, u8 *out_
 	p = rtw_get_ie(in_ie+12, _HT_CAPABILITY_IE_, &ielen, in_len-12);
 
 	if (p && ielen > 0) {
+		struct ieee80211_ht_cap ht_cap;
+
 		if (pqospriv->qos_option == 0) {
 			out_len = *pout_len;
 			rtw_set_ie(out_ie+out_len, _VENDOR_SPECIFIC_IE_,
@@ -1958,33 +1959,33 @@ unsigned int rtw_restructure_ht_ie(struct adapter *padapter, u8 *in_ie, u8 *out_
 
 		out_len = *pout_len;
 
-		memset(&ht_capie, 0, sizeof(struct rtw_ieee80211_ht_cap));
+		memset(&ht_cap, 0, sizeof(struct ieee80211_ht_cap));
 
-		ht_capie.cap_info = IEEE80211_HT_CAP_SUP_WIDTH |
-				    IEEE80211_HT_CAP_SGI_20 |
-				    IEEE80211_HT_CAP_SGI_40 |
-				    IEEE80211_HT_CAP_TX_STBC |
-				    IEEE80211_HT_CAP_DSSSCCK40;
+		ht_cap.cap_info = cpu_to_le16(IEEE80211_HT_CAP_SUP_WIDTH |
+					      IEEE80211_HT_CAP_SGI_20 |
+					      IEEE80211_HT_CAP_SGI_40 |
+					      IEEE80211_HT_CAP_TX_STBC |
+					      IEEE80211_HT_CAP_DSSSCCK40);
 
 		rtw_hal_get_def_var(padapter, HAL_DEF_RX_PACKET_OFFSET, &rx_packet_offset);
 		rtw_hal_get_def_var(padapter, HAL_DEF_MAX_RECVBUF_SZ, &max_recvbuf_sz);
 
 		/*
-		AMPDU_para [1:0]:Max AMPDU Len => 0:8k , 1:16k, 2:32k, 3:64k
-		AMPDU_para [4:2]:Min MPDU Start Spacing
+		ampdu_params_info [1:0]:Max AMPDU Len => 0:8k , 1:16k, 2:32k, 3:64k
+		ampdu_params_info [4:2]:Min MPDU Start Spacing
 		*/
 
 		rtw_hal_get_def_var(padapter, HW_VAR_MAX_RX_AMPDU_FACTOR, &max_rx_ampdu_factor);
-		ht_capie.ampdu_params_info = (max_rx_ampdu_factor&0x03);
+		ht_cap.ampdu_params_info = max_rx_ampdu_factor & 0x03;
 
 		if (padapter->securitypriv.dot11PrivacyAlgrthm == _AES_)
-			ht_capie.ampdu_params_info |= (IEEE80211_HT_CAP_AMPDU_DENSITY&(0x07<<2));
+			ht_cap.ampdu_params_info |= IEEE80211_HT_CAP_AMPDU_DENSITY & (0x07 << 2);
 		else
-			ht_capie.ampdu_params_info |= (IEEE80211_HT_CAP_AMPDU_DENSITY&0x00);
-
+			ht_cap.ampdu_params_info |= IEEE80211_HT_CAP_AMPDU_DENSITY & 0x00;
 
 		rtw_set_ie(out_ie+out_len, _HT_CAPABILITY_IE_,
-			   sizeof(struct rtw_ieee80211_ht_cap), (unsigned char *)&ht_capie, pout_len);
+			   sizeof(struct ieee80211_ht_cap),
+			   (unsigned char *)&ht_cap, pout_len);
 
 		phtpriv->ht_option = true;
 
@@ -2000,9 +2001,6 @@ unsigned int rtw_restructure_ht_ie(struct adapter *padapter, u8 *in_ie, u8 *out_
 /* the function is > passive_level (in critical_section) */
 void rtw_update_ht_cap(struct adapter *padapter, u8 *pie, uint ie_len)
 {
-	u8 *p, max_ampdu_sz;
-	int len;
-	struct rtw_ieee80211_ht_cap *pht_capie;
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
 	struct ht_priv		*phtpriv = &pmlmepriv->htpriv;
 	struct registry_priv *pregistrypriv = &padapter->registrypriv;
@@ -2027,22 +2025,9 @@ void rtw_update_ht_cap(struct adapter *padapter, u8 *pie, uint ie_len)
 		phtpriv->ampdu_enable = true;
 	}
 
-
-	/* check Max Rx A-MPDU Size */
-	len = 0;
-	p = rtw_get_ie(pie+sizeof(struct ndis_802_11_fixed_ie), _HT_CAPABILITY_IE_, &len, ie_len-sizeof(struct ndis_802_11_fixed_ie));
-	if (p && len > 0) {
-		pht_capie = (struct rtw_ieee80211_ht_cap *)(p+2);
-		max_ampdu_sz = pht_capie->ampdu_params_info & IEEE80211_HT_CAP_AMPDU_FACTOR;
-		max_ampdu_sz = 1 << (max_ampdu_sz+3); /*  max_ampdu_sz (kbytes); */
-		phtpriv->rx_ampdu_maxlen = max_ampdu_sz;
-	}
-	len = 0;
-	p = rtw_get_ie(pie+sizeof(struct ndis_802_11_fixed_ie), _HT_ADD_INFO_IE_, &len, ie_len-sizeof(struct ndis_802_11_fixed_ie));
-
 	/* update cur_bwmode & cur_ch_offset */
 	if ((pregistrypriv->cbw40_enable) &&
-	    (le16_to_cpu(pmlmeinfo->HT_caps.u.HT_cap_element.HT_caps_info) & BIT(1)) &&
+	    (le16_to_cpu(pmlmeinfo->HT_caps.cap_info) & BIT(1)) &&
 	    (pmlmeinfo->HT_info.infos[0] & BIT(2))) {
 		int i;
 		u8	rf_type;
@@ -2052,9 +2037,9 @@ void rtw_update_ht_cap(struct adapter *padapter, u8 *pie, uint ie_len)
 		/* update the MCS rates */
 		for (i = 0; i < 16; i++) {
 			if ((rf_type == RF_1T1R) || (rf_type == RF_1T2R))
-				pmlmeinfo->HT_caps.u.HT_cap_element.MCS_rate[i] &= MCS_rate_1R[i];
+				((u8 *)&pmlmeinfo->HT_caps.mcs)[i] &= MCS_rate_1R[i];
 			else
-				pmlmeinfo->HT_caps.u.HT_cap_element.MCS_rate[i] &= MCS_rate_2R[i];
+				((u8 *)&pmlmeinfo->HT_caps.mcs)[i] &= MCS_rate_2R[i];
 		}
 		/* switch to the 40M Hz mode according to the AP */
 		pmlmeext->cur_bwmode = HT_CHANNEL_WIDTH_40;
@@ -2072,7 +2057,7 @@ void rtw_update_ht_cap(struct adapter *padapter, u8 *pie, uint ie_len)
 	}
 
 	/*  Config SM Power Save setting */
-	pmlmeinfo->SM_PS = (le16_to_cpu(pmlmeinfo->HT_caps.u.HT_cap_element.HT_caps_info) & 0x0C) >> 2;
+	pmlmeinfo->SM_PS = (le16_to_cpu(pmlmeinfo->HT_caps.cap_info) & 0x0C) >> 2;
 	if (pmlmeinfo->SM_PS == WLAN_HT_CAP_SM_PS_STATIC)
 		DBG_88E("%s(): WLAN_HT_CAP_SM_PS_STATIC\n", __func__);
 

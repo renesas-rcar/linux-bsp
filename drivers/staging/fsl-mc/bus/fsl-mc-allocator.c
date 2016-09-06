@@ -8,14 +8,19 @@
  * warranty of any kind, whether express or implied.
  */
 
-#include "../include/mc-private.h"
-#include "../include/mc-sys.h"
 #include <linux/module.h>
+#include <linux/msi.h>
+#include "../include/mc-bus.h"
+#include "../include/mc-sys.h"
 #include "../include/dpbp-cmd.h"
 #include "../include/dpcon-cmd.h"
-#include "dpmcp-cmd.h"
-#include "dpmcp.h"
-#include <linux/msi.h>
+
+#include "fsl-mc-private.h"
+
+#define FSL_MC_IS_ALLOCATABLE(_obj_type) \
+	(strcmp(_obj_type, "dpbp") == 0 || \
+	 strcmp(_obj_type, "dpmcp") == 0 || \
+	 strcmp(_obj_type, "dpcon") == 0)
 
 /**
  * fsl_mc_resource_pool_add_device - add allocatable device to a resource
@@ -252,144 +257,6 @@ out_unlock:
 EXPORT_SYMBOL_GPL(fsl_mc_resource_free);
 
 /**
- * fsl_mc_portal_allocate - Allocates an MC portal
- *
- * @mc_dev: MC device for which the MC portal is to be allocated
- * @mc_io_flags: Flags for the fsl_mc_io object that wraps the allocated
- * MC portal.
- * @new_mc_io: Pointer to area where the pointer to the fsl_mc_io object
- * that wraps the allocated MC portal is to be returned
- *
- * This function allocates an MC portal from the device's parent DPRC,
- * from the corresponding MC bus' pool of MC portals and wraps
- * it in a new fsl_mc_io object. If 'mc_dev' is a DPRC itself, the
- * portal is allocated from its own MC bus.
- */
-int __must_check fsl_mc_portal_allocate(struct fsl_mc_device *mc_dev,
-					u16 mc_io_flags,
-					struct fsl_mc_io **new_mc_io)
-{
-	struct fsl_mc_device *mc_bus_dev;
-	struct fsl_mc_bus *mc_bus;
-	phys_addr_t mc_portal_phys_addr;
-	size_t mc_portal_size;
-	struct fsl_mc_device *dpmcp_dev;
-	int error = -EINVAL;
-	struct fsl_mc_resource *resource = NULL;
-	struct fsl_mc_io *mc_io = NULL;
-
-	if (mc_dev->flags & FSL_MC_IS_DPRC) {
-		mc_bus_dev = mc_dev;
-	} else {
-		if (WARN_ON(mc_dev->dev.parent->bus != &fsl_mc_bus_type))
-			return error;
-
-		mc_bus_dev = to_fsl_mc_device(mc_dev->dev.parent);
-	}
-
-	mc_bus = to_fsl_mc_bus(mc_bus_dev);
-	*new_mc_io = NULL;
-	error = fsl_mc_resource_allocate(mc_bus, FSL_MC_POOL_DPMCP, &resource);
-	if (error < 0)
-		return error;
-
-	error = -EINVAL;
-	dpmcp_dev = resource->data;
-	if (WARN_ON(!dpmcp_dev))
-		goto error_cleanup_resource;
-
-	if (dpmcp_dev->obj_desc.ver_major < DPMCP_MIN_VER_MAJOR ||
-	    (dpmcp_dev->obj_desc.ver_major == DPMCP_MIN_VER_MAJOR &&
-	     dpmcp_dev->obj_desc.ver_minor < DPMCP_MIN_VER_MINOR)) {
-		dev_err(&dpmcp_dev->dev,
-			"ERROR: Version %d.%d of DPMCP not supported.\n",
-			dpmcp_dev->obj_desc.ver_major,
-			dpmcp_dev->obj_desc.ver_minor);
-		error = -ENOTSUPP;
-		goto error_cleanup_resource;
-	}
-
-	if (WARN_ON(dpmcp_dev->obj_desc.region_count == 0))
-		goto error_cleanup_resource;
-
-	mc_portal_phys_addr = dpmcp_dev->regions[0].start;
-	mc_portal_size = dpmcp_dev->regions[0].end -
-			 dpmcp_dev->regions[0].start + 1;
-
-	if (WARN_ON(mc_portal_size != mc_bus_dev->mc_io->portal_size))
-		goto error_cleanup_resource;
-
-	error = fsl_create_mc_io(&mc_bus_dev->dev,
-				 mc_portal_phys_addr,
-				 mc_portal_size, dpmcp_dev,
-				 mc_io_flags, &mc_io);
-	if (error < 0)
-		goto error_cleanup_resource;
-
-	*new_mc_io = mc_io;
-	return 0;
-
-error_cleanup_resource:
-	fsl_mc_resource_free(resource);
-	return error;
-}
-EXPORT_SYMBOL_GPL(fsl_mc_portal_allocate);
-
-/**
- * fsl_mc_portal_free - Returns an MC portal to the pool of free MC portals
- * of a given MC bus
- *
- * @mc_io: Pointer to the fsl_mc_io object that wraps the MC portal to free
- */
-void fsl_mc_portal_free(struct fsl_mc_io *mc_io)
-{
-	struct fsl_mc_device *dpmcp_dev;
-	struct fsl_mc_resource *resource;
-
-	/*
-	 * Every mc_io obtained by calling fsl_mc_portal_allocate() is supposed
-	 * to have a DPMCP object associated with.
-	 */
-	dpmcp_dev = mc_io->dpmcp_dev;
-	if (WARN_ON(!dpmcp_dev))
-		return;
-
-	resource = dpmcp_dev->resource;
-	if (WARN_ON(!resource || resource->type != FSL_MC_POOL_DPMCP))
-		return;
-
-	if (WARN_ON(resource->data != dpmcp_dev))
-		return;
-
-	fsl_destroy_mc_io(mc_io);
-	fsl_mc_resource_free(resource);
-}
-EXPORT_SYMBOL_GPL(fsl_mc_portal_free);
-
-/**
- * fsl_mc_portal_reset - Resets the dpmcp object for a given fsl_mc_io object
- *
- * @mc_io: Pointer to the fsl_mc_io object that wraps the MC portal to free
- */
-int fsl_mc_portal_reset(struct fsl_mc_io *mc_io)
-{
-	int error;
-	struct fsl_mc_device *dpmcp_dev = mc_io->dpmcp_dev;
-
-	if (WARN_ON(!dpmcp_dev))
-		return -EINVAL;
-
-	error = dpmcp_reset(mc_io, 0, dpmcp_dev->mc_handle);
-	if (error < 0) {
-		dev_err(&dpmcp_dev->dev, "dpmcp_reset() failed: %d\n", error);
-		return error;
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(fsl_mc_portal_reset);
-
-/**
  * fsl_mc_object_allocate - Allocates a MC object device of the given
  * pool type from a given MC bus
  *
@@ -420,7 +287,7 @@ int __must_check fsl_mc_object_allocate(struct fsl_mc_device *mc_dev,
 	if (WARN_ON(mc_dev->flags & FSL_MC_IS_DPRC))
 		goto error;
 
-	if (WARN_ON(mc_dev->dev.parent->bus != &fsl_mc_bus_type))
+	if (WARN_ON(!dev_is_fsl_mc(mc_dev->dev.parent)))
 		goto error;
 
 	if (WARN_ON(pool_type == FSL_MC_POOL_DPMCP))
@@ -663,6 +530,55 @@ void fsl_mc_free_irqs(struct fsl_mc_device *mc_dev)
 }
 EXPORT_SYMBOL_GPL(fsl_mc_free_irqs);
 
+void fsl_mc_init_all_resource_pools(struct fsl_mc_device *mc_bus_dev)
+{
+	int pool_type;
+	struct fsl_mc_bus *mc_bus = to_fsl_mc_bus(mc_bus_dev);
+
+	for (pool_type = 0; pool_type < FSL_MC_NUM_POOL_TYPES; pool_type++) {
+		struct fsl_mc_resource_pool *res_pool =
+		    &mc_bus->resource_pools[pool_type];
+
+		res_pool->type = pool_type;
+		res_pool->max_count = 0;
+		res_pool->free_count = 0;
+		res_pool->mc_bus = mc_bus;
+		INIT_LIST_HEAD(&res_pool->free_list);
+		mutex_init(&res_pool->mutex);
+	}
+}
+
+static void fsl_mc_cleanup_resource_pool(struct fsl_mc_device *mc_bus_dev,
+					 enum fsl_mc_pool_type pool_type)
+{
+	struct fsl_mc_resource *resource;
+	struct fsl_mc_resource *next;
+	struct fsl_mc_bus *mc_bus = to_fsl_mc_bus(mc_bus_dev);
+	struct fsl_mc_resource_pool *res_pool =
+					&mc_bus->resource_pools[pool_type];
+	int free_count = 0;
+
+	WARN_ON(res_pool->type != pool_type);
+	WARN_ON(res_pool->free_count != res_pool->max_count);
+
+	list_for_each_entry_safe(resource, next, &res_pool->free_list, node) {
+		free_count++;
+		WARN_ON(resource->type != res_pool->type);
+		WARN_ON(resource->parent_pool != res_pool);
+		devm_kfree(&mc_bus_dev->dev, resource);
+	}
+
+	WARN_ON(free_count != res_pool->free_count);
+}
+
+void fsl_mc_cleanup_all_resource_pools(struct fsl_mc_device *mc_bus_dev)
+{
+	int pool_type;
+
+	for (pool_type = 0; pool_type < FSL_MC_NUM_POOL_TYPES; pool_type++)
+		fsl_mc_cleanup_resource_pool(mc_bus_dev, pool_type);
+}
+
 /**
  * fsl_mc_allocator_probe - callback invoked when an allocatable device is
  * being added to the system
@@ -678,7 +594,7 @@ static int fsl_mc_allocator_probe(struct fsl_mc_device *mc_dev)
 		return -EINVAL;
 
 	mc_bus_dev = to_fsl_mc_device(mc_dev->dev.parent);
-	if (WARN_ON(mc_bus_dev->dev.bus != &fsl_mc_bus_type))
+	if (WARN_ON(!dev_is_fsl_mc(&mc_bus_dev->dev)))
 		return -EINVAL;
 
 	mc_bus = to_fsl_mc_bus(mc_bus_dev);

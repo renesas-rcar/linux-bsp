@@ -351,10 +351,35 @@ struct base_driver {
 	uint                 cardnuminuse[SLIC_MAX_CARDS];
 };
 
-struct slic_shmem {
-	volatile u32          isr;
-	volatile u32          linkstatus;
-	volatile struct slic_stats     inicstats;
+struct slic_stats {
+	/* xmit stats */
+	u64 xmit_tcp_bytes;
+	u64 xmit_tcp_segs;
+	u64 xmit_bytes;
+	u64 xmit_collisions;
+	u64 xmit_unicasts;
+	u64 xmit_other_error;
+	u64 xmit_excess_collisions;
+	/* rcv stats */
+	u64 rcv_tcp_bytes;
+	u64 rcv_tcp_segs;
+	u64 rcv_bytes;
+	u64 rcv_unicasts;
+	u64 rcv_other_error;
+	u64 rcv_drops;
+};
+
+struct slic_shmem_data {
+	u32 isr;
+	u32 lnkstatus;
+	struct slic_stats stats;
+};
+
+struct slic_shmemory {
+	dma_addr_t isr_phaddr;
+	dma_addr_t lnkstatus_phaddr;
+	dma_addr_t stats_phaddr;
+	struct slic_shmem_data __iomem *shmem_data;
 };
 
 struct slic_upr {
@@ -414,10 +439,9 @@ struct adapter {
 	u32             intrregistered;
 	uint                isp_initialized;
 	uint                gennumber;
-	struct slic_shmem      *pshmem;
+	struct slic_shmemory shmem;
 	dma_addr_t          phys_shmem;
-	u32             isrcopy;
-	__iomem struct slic_regs       *slic_regs;
+	void __iomem *regs;
 	unsigned char               state;
 	unsigned char               linkstate;
 	unsigned char               linkspeed;
@@ -486,6 +510,34 @@ struct adapter {
 	struct slic_stats        inicstats_prev;
 	struct slicnet_stats     slic_stats;
 };
+
+static inline u32 slic_read32(struct adapter *adapter, unsigned int reg)
+{
+	return ioread32(adapter->regs + reg);
+}
+
+static inline void slic_write32(struct adapter *adapter, unsigned int reg,
+				u32 val)
+{
+	iowrite32(val, adapter->regs + reg);
+}
+
+static inline void slic_write64(struct adapter *adapter, unsigned int reg,
+				u32 val, u32 hiaddr)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&adapter->bit64reglock, flags);
+	slic_write32(adapter, SLIC_REG_ADDR_UPPER, hiaddr);
+	slic_write32(adapter, reg, val);
+	mmiowb();
+	spin_unlock_irqrestore(&adapter->bit64reglock, flags);
+}
+
+static inline void slic_flush_write(struct adapter *adapter)
+{
+	ioread32(adapter->regs + SLIC_REG_HOSTID);
+}
 
 #define UPDATE_STATS(largestat, newstat, oldstat)                        \
 {                                                                        \

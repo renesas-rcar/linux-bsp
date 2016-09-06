@@ -716,6 +716,7 @@ void HT_caps_handler(struct adapter *padapter, struct ndis_802_11_var_ie *pIE)
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
 	struct mlme_priv		*pmlmepriv = &padapter->mlmepriv;
 	struct ht_priv			*phtpriv = &pmlmepriv->htpriv;
+	u8 *HT_cap = (u8 *)(&pmlmeinfo->HT_caps);
 
 	if (pIE == NULL)
 		return;
@@ -728,20 +729,20 @@ void HT_caps_handler(struct adapter *padapter, struct ndis_802_11_var_ie *pIE)
 	for (i = 0; i < (pIE->Length); i++) {
 		if (i != 2) {
 			/*	Got the endian issue here. */
-			pmlmeinfo->HT_caps.u.HT_cap[i] &= (pIE->data[i]);
+			HT_cap[i] &= (pIE->data[i]);
 		} else {
 			/* modify from  fw by Thomas 2010/11/17 */
-			if ((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3) > (pIE->data[i] & 0x3))
+			if ((pmlmeinfo->HT_caps.ampdu_params_info & 0x3) > (pIE->data[i] & 0x3))
 				max_AMPDU_len = pIE->data[i] & 0x3;
 			else
-				max_AMPDU_len = pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x3;
+				max_AMPDU_len = pmlmeinfo->HT_caps.ampdu_params_info & 0x3;
 
-			if ((pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c) > (pIE->data[i] & 0x1c))
-				min_MPDU_spacing = pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c;
+			if ((pmlmeinfo->HT_caps.ampdu_params_info & 0x1c) > (pIE->data[i] & 0x1c))
+				min_MPDU_spacing = pmlmeinfo->HT_caps.ampdu_params_info & 0x1c;
 			else
 				min_MPDU_spacing = pIE->data[i] & 0x1c;
 
-			pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para = max_AMPDU_len | min_MPDU_spacing;
+			pmlmeinfo->HT_caps.ampdu_params_info = max_AMPDU_len | min_MPDU_spacing;
 		}
 	}
 
@@ -750,9 +751,9 @@ void HT_caps_handler(struct adapter *padapter, struct ndis_802_11_var_ie *pIE)
 	/* update the MCS rates */
 	for (i = 0; i < 16; i++) {
 		if ((rf_type == RF_1T1R) || (rf_type == RF_1T2R))
-			pmlmeinfo->HT_caps.u.HT_cap_element.MCS_rate[i] &= MCS_rate_1R[i];
+			((u8 *)&pmlmeinfo->HT_caps.mcs)[i] &= MCS_rate_1R[i];
 		else
-			pmlmeinfo->HT_caps.u.HT_cap_element.MCS_rate[i] &= MCS_rate_2R[i];
+			((u8 *)&pmlmeinfo->HT_caps.mcs)[i] &= MCS_rate_2R[i];
 	}
 }
 
@@ -798,9 +799,9 @@ void HTOnAssocRsp(struct adapter *padapter)
 		AMPDU_para [1:0]:Max AMPDU Len => 0:8k , 1:16k, 2:32k, 3:64k
 		AMPDU_para [4:2]:Min MPDU Start Spacing
 	*/
-	max_AMPDU_len = pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x03;
+	max_AMPDU_len = pmlmeinfo->HT_caps.ampdu_params_info & 0x03;
 
-	min_MPDU_spacing = (pmlmeinfo->HT_caps.u.HT_cap_element.AMPDU_para & 0x1c) >> 2;
+	min_MPDU_spacing = (pmlmeinfo->HT_caps.ampdu_params_info & 0x1c) >> 2;
 
 	rtw_hal_set_hwreg(padapter, HW_VAR_AMPDU_MIN_SPACE, (u8 *)(&min_MPDU_spacing));
 
@@ -872,7 +873,6 @@ int rtw_check_bcn_info(struct adapter  *Adapter, u8 *pframe, u32 packet_len)
 	u32 wpa_ielen = 0;
 	u8 *pbssid = GetAddr3Ptr(pframe);
 	struct HT_info_element *pht_info = NULL;
-	struct rtw_ieee80211_ht_cap *pht_cap = NULL;
 	u32 bcn_channel;
 	unsigned short	ht_cap_info;
 	unsigned char	ht_info_infos_0;
@@ -913,8 +913,10 @@ int rtw_check_bcn_info(struct adapter  *Adapter, u8 *pframe, u32 packet_len)
 	/* parsing HT_CAP_IE */
 	p = rtw_get_ie(bssid->IEs + _FIXED_IE_LENGTH_, _HT_CAPABILITY_IE_, &len, bssid->IELength - _FIXED_IE_LENGTH_);
 	if (p && len > 0) {
-		pht_cap = (struct rtw_ieee80211_ht_cap *)(p + 2);
-		ht_cap_info = pht_cap->cap_info;
+		struct ieee80211_ht_cap *ht_cap =
+			(struct ieee80211_ht_cap *)(p + 2);
+
+		ht_cap_info = le16_to_cpu(ht_cap->cap_info);
 	} else {
 		ht_cap_info = 0;
 	}
@@ -1243,16 +1245,17 @@ unsigned int update_supported_rate(unsigned char *ptn, unsigned int ptn_sz)
 	return mask;
 }
 
-unsigned int update_MSC_rate(struct HT_caps_element *pHT_caps)
+unsigned int update_MSC_rate(struct ieee80211_ht_cap *pHT_caps)
 {
 	unsigned int mask = 0;
 
-	mask = (pHT_caps->u.HT_cap_element.MCS_rate[0] << 12) | (pHT_caps->u.HT_cap_element.MCS_rate[1] << 20);
+	mask = (pHT_caps->mcs.rx_mask[0] << 12) |
+	       (pHT_caps->mcs.rx_mask[1] << 20);
 
 	return mask;
 }
 
-int support_short_GI(struct adapter *padapter, struct HT_caps_element *pHT_caps)
+int support_short_GI(struct adapter *padapter, struct ieee80211_ht_cap *pHT_caps)
 {
 	unsigned char					bit_offset;
 	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
@@ -1266,7 +1269,7 @@ int support_short_GI(struct adapter *padapter, struct HT_caps_element *pHT_caps)
 
 	bit_offset = (pmlmeext->cur_bwmode & HT_CHANNEL_WIDTH_40) ? 6 : 5;
 
-	if (__le16_to_cpu(pHT_caps->u.HT_cap_element.HT_caps_info) & (0x1 << bit_offset))
+	if (__le16_to_cpu(pHT_caps->cap_info) & (0x1 << bit_offset))
 		return _SUCCESS;
 	else
 		return _FAIL;

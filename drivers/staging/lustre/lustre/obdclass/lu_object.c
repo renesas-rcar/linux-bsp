@@ -55,6 +55,34 @@
 #include "../include/lu_ref.h"
 #include <linux/list.h>
 
+enum {
+	LU_CACHE_PERCENT_MAX	 = 50,
+	LU_CACHE_PERCENT_DEFAULT = 20
+};
+
+#define LU_CACHE_NR_MAX_ADJUST		128
+#define LU_CACHE_NR_UNLIMITED		-1
+#define LU_CACHE_NR_DEFAULT		LU_CACHE_NR_UNLIMITED
+#define LU_CACHE_NR_LDISKFS_LIMIT	LU_CACHE_NR_UNLIMITED
+#define LU_CACHE_NR_ZFS_LIMIT		256
+
+#define LU_SITE_BITS_MIN	12
+#define LU_SITE_BITS_MAX	24
+/**
+ * total 256 buckets, we don't want too many buckets because:
+ * - consume too much memory
+ * - avoid unbalanced LRU list
+ */
+#define LU_SITE_BKT_BITS	8
+
+static unsigned int lu_cache_percent = LU_CACHE_PERCENT_DEFAULT;
+module_param(lu_cache_percent, int, 0644);
+MODULE_PARM_DESC(lu_cache_percent, "Percentage of memory to be used as lu_object cache");
+
+static long lu_cache_nr = LU_CACHE_NR_DEFAULT;
+module_param(lu_cache_nr, long, 0644);
+MODULE_PARM_DESC(lu_cache_nr, "Maximum number of objects in lu_object cache");
+
 static void lu_object_free(const struct lu_env *env, struct lu_object *o);
 static __u32 ls_stats_read(struct lprocfs_stats *stats, int idx);
 
@@ -573,6 +601,27 @@ static struct lu_object *lu_object_find(const struct lu_env *env,
 	return lu_object_find_at(env, dev->ld_site->ls_top_dev, f, conf);
 }
 
+/*
+ * Limit the lu_object cache to a maximum of lu_cache_nr objects.  Because
+ * the calculation for the number of objects to reclaim is not covered by
+ * a lock the maximum number of objects is capped by LU_CACHE_MAX_ADJUST.
+ * This ensures that many concurrent threads will not accidentally purge
+ * the entire cache.
+ */
+static void lu_object_limit(const struct lu_env *env, struct lu_device *dev)
+{
+	__u64 size, nr;
+
+	if (lu_cache_nr == LU_CACHE_NR_UNLIMITED)
+		return;
+
+	size = cfs_hash_size_get(dev->ld_site->ls_obj_hash);
+	nr = (__u64)lu_cache_nr;
+	if (size > nr)
+		lu_site_purge(env, dev->ld_site,
+			      min_t(__u64, size - nr, LU_CACHE_NR_MAX_ADJUST));
+}
+
 static struct lu_object *lu_object_new(const struct lu_env *env,
 				       struct lu_device *dev,
 				       const struct lu_fid *f,
@@ -590,6 +639,9 @@ static struct lu_object *lu_object_new(const struct lu_env *env,
 	cfs_hash_bd_get_and_lock(hs, (void *)f, &bd, 1);
 	cfs_hash_bd_add_locked(hs, &bd, &o->lo_header->loh_hash);
 	cfs_hash_bd_unlock(hs, &bd, 1);
+
+	lu_object_limit(env, dev);
+
 	return o;
 }
 
@@ -656,6 +708,9 @@ static struct lu_object *lu_object_find_try(const struct lu_env *env,
 	if (likely(PTR_ERR(shadow) == -ENOENT)) {
 		cfs_hash_bd_add_locked(hs, &bd, &o->lo_header->loh_hash);
 		cfs_hash_bd_unlock(hs, &bd, 1);
+
+		lu_object_limit(env, dev);
+
 		return o;
 	}
 
@@ -726,33 +781,30 @@ int lu_device_type_init(struct lu_device_type *ldt)
 {
 	int result = 0;
 
+	atomic_set(&ldt->ldt_device_nr, 0);
 	INIT_LIST_HEAD(&ldt->ldt_linkage);
 	if (ldt->ldt_ops->ldto_init)
 		result = ldt->ldt_ops->ldto_init(ldt);
-	if (result == 0)
+
+	if (!result) {
+		spin_lock(&obd_types_lock);
 		list_add(&ldt->ldt_linkage, &lu_device_types);
+		spin_unlock(&obd_types_lock);
+	}
+
 	return result;
 }
 EXPORT_SYMBOL(lu_device_type_init);
 
 void lu_device_type_fini(struct lu_device_type *ldt)
 {
+	spin_lock(&obd_types_lock);
 	list_del_init(&ldt->ldt_linkage);
+	spin_unlock(&obd_types_lock);
 	if (ldt->ldt_ops->ldto_fini)
 		ldt->ldt_ops->ldto_fini(ldt);
 }
 EXPORT_SYMBOL(lu_device_type_fini);
-
-void lu_types_stop(void)
-{
-	struct lu_device_type *ldt;
-
-	list_for_each_entry(ldt, &lu_device_types, ldt_linkage) {
-		if (ldt->ldt_device_nr == 0 && ldt->ldt_ops->ldto_stop)
-			ldt->ldt_ops->ldto_stop(ldt);
-	}
-}
-EXPORT_SYMBOL(lu_types_stop);
 
 /**
  * Global list of all sites on this node
@@ -808,20 +860,12 @@ void lu_site_print(const struct lu_env *env, struct lu_site *s, void *cookie,
 }
 EXPORT_SYMBOL(lu_site_print);
 
-enum {
-	LU_CACHE_PERCENT_MAX     = 50,
-	LU_CACHE_PERCENT_DEFAULT = 20
-};
-
-static unsigned int lu_cache_percent = LU_CACHE_PERCENT_DEFAULT;
-module_param(lu_cache_percent, int, 0644);
-MODULE_PARM_DESC(lu_cache_percent, "Percentage of memory to be used as lu_object cache");
-
 /**
  * Return desired hash table order.
  */
-static int lu_htable_order(void)
+static int lu_htable_order(struct lu_device *top)
 {
+	unsigned long bits_max = LU_SITE_BITS_MAX;
 	unsigned long cache_size;
 	int bits;
 
@@ -854,7 +898,7 @@ static int lu_htable_order(void)
 	for (bits = 1; (1 << bits) < cache_size; ++bits) {
 		;
 	}
-	return bits;
+	return clamp_t(typeof(bits), bits, LU_SITE_BITS_MIN, bits_max);
 }
 
 static unsigned lu_obj_hop_hash(struct cfs_hash *hs,
@@ -930,28 +974,17 @@ static void lu_dev_add_linkage(struct lu_site *s, struct lu_device *d)
 /**
  * Initialize site \a s, with \a d as the top level device.
  */
-#define LU_SITE_BITS_MIN    12
-#define LU_SITE_BITS_MAX    19
-/**
- * total 256 buckets, we don't want too many buckets because:
- * - consume too much memory
- * - avoid unbalanced LRU list
- */
-#define LU_SITE_BKT_BITS    8
-
 int lu_site_init(struct lu_site *s, struct lu_device *top)
 {
 	struct lu_site_bkt_data *bkt;
 	struct cfs_hash_bd bd;
+	unsigned long bits;
+	unsigned long i;
 	char name[16];
-	int bits;
-	int i;
 
 	memset(s, 0, sizeof(*s));
-	bits = lu_htable_order();
 	snprintf(name, 16, "lu_site_%s", top->ld_type->ldt_name);
-	for (bits = min(max(LU_SITE_BITS_MIN, bits), LU_SITE_BITS_MAX);
-	     bits >= LU_SITE_BITS_MIN; bits--) {
+	for (bits = lu_htable_order(top); bits >= LU_SITE_BITS_MIN; bits--) {
 		s->ls_obj_hash = cfs_hash_create(name, bits, bits,
 						 bits - LU_SITE_BKT_BITS,
 						 sizeof(*bkt), 0, 0,
@@ -959,13 +992,14 @@ int lu_site_init(struct lu_site *s, struct lu_device *top)
 						 CFS_HASH_SPIN_BKTLOCK |
 						 CFS_HASH_NO_ITEMREF |
 						 CFS_HASH_DEPTH |
-						 CFS_HASH_ASSERT_EMPTY);
+						 CFS_HASH_ASSERT_EMPTY |
+						 CFS_HASH_COUNTER);
 		if (s->ls_obj_hash)
 			break;
 	}
 
 	if (!s->ls_obj_hash) {
-		CERROR("failed to create lu_site hash with bits: %d\n", bits);
+		CERROR("failed to create lu_site hash with bits: %lu\n", bits);
 		return -ENOMEM;
 	}
 
@@ -1082,8 +1116,10 @@ EXPORT_SYMBOL(lu_device_put);
  */
 int lu_device_init(struct lu_device *d, struct lu_device_type *t)
 {
-	if (t->ldt_device_nr++ == 0 && t->ldt_ops->ldto_start)
+	if (atomic_inc_return(&t->ldt_device_nr) == 1 &&
+	    t->ldt_ops->ldto_start)
 		t->ldt_ops->ldto_start(t);
+
 	memset(d, 0, sizeof(*d));
 	atomic_set(&d->ld_ref, 0);
 	d->ld_type = t;
@@ -1098,9 +1134,8 @@ EXPORT_SYMBOL(lu_device_init);
  */
 void lu_device_fini(struct lu_device *d)
 {
-	struct lu_device_type *t;
+	struct lu_device_type *t = d->ld_type;
 
-	t = d->ld_type;
 	if (d->ld_obd) {
 		d->ld_obd->obd_lu_dev = NULL;
 		d->ld_obd = NULL;
@@ -1109,8 +1144,10 @@ void lu_device_fini(struct lu_device *d)
 	lu_ref_fini(&d->ld_reference);
 	LASSERTF(atomic_read(&d->ld_ref) == 0,
 		 "Refcount is %u\n", atomic_read(&d->ld_ref));
-	LASSERT(t->ldt_device_nr > 0);
-	if (--t->ldt_device_nr == 0 && t->ldt_ops->ldto_stop)
+	LASSERT(atomic_read(&t->ldt_device_nr) > 0);
+
+	if (atomic_dec_and_test(&t->ldt_device_nr) &&
+	    t->ldt_ops->ldto_stop)
 		t->ldt_ops->ldto_stop(t);
 }
 EXPORT_SYMBOL(lu_device_fini);
