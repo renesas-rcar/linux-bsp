@@ -30,7 +30,7 @@ unsigned int rxrpc_max_call_lifetime = 60 * HZ;
 unsigned int rxrpc_dead_call_expiry = 2 * HZ;
 
 const char *const rxrpc_call_states[NR__RXRPC_CALL_STATES] = {
-	[RXRPC_CALL_UNINITIALISED]		= "Uninit",
+	[RXRPC_CALL_UNINITIALISED]		= "Uninit  ",
 	[RXRPC_CALL_CLIENT_AWAIT_CONN]		= "ClWtConn",
 	[RXRPC_CALL_CLIENT_SEND_REQUEST]	= "ClSndReq",
 	[RXRPC_CALL_CLIENT_AWAIT_REPLY]		= "ClAwtRpl",
@@ -43,11 +43,16 @@ const char *const rxrpc_call_states[NR__RXRPC_CALL_STATES] = {
 	[RXRPC_CALL_SERVER_SEND_REPLY]		= "SvSndRpl",
 	[RXRPC_CALL_SERVER_AWAIT_ACK]		= "SvAwtACK",
 	[RXRPC_CALL_COMPLETE]			= "Complete",
+	[RXRPC_CALL_DEAD]			= "Dead    ",
+};
+
+const char *const rxrpc_call_completions[NR__RXRPC_CALL_COMPLETIONS] = {
+	[RXRPC_CALL_SUCCEEDED]			= "Complete",
 	[RXRPC_CALL_SERVER_BUSY]		= "SvBusy  ",
 	[RXRPC_CALL_REMOTELY_ABORTED]		= "RmtAbort",
 	[RXRPC_CALL_LOCALLY_ABORTED]		= "LocAbort",
+	[RXRPC_CALL_LOCAL_ERROR]		= "LocError",
 	[RXRPC_CALL_NETWORK_ERROR]		= "NetError",
-	[RXRPC_CALL_DEAD]			= "Dead    ",
 };
 
 struct kmem_cache *rxrpc_call_jar;
@@ -127,10 +132,12 @@ static struct rxrpc_call *rxrpc_alloc_call(gfp_t gfp)
 	INIT_WORK(&call->destroyer, &rxrpc_destroy_call);
 	INIT_WORK(&call->processor, &rxrpc_process_call);
 	INIT_LIST_HEAD(&call->link);
+	INIT_LIST_HEAD(&call->chan_wait_link);
 	INIT_LIST_HEAD(&call->accept_link);
 	skb_queue_head_init(&call->rx_queue);
 	skb_queue_head_init(&call->rx_oos_queue);
-	init_waitqueue_head(&call->tx_waitq);
+	skb_queue_head_init(&call->knlrecv_queue);
+	init_waitqueue_head(&call->waitq);
 	spin_lock_init(&call->lock);
 	rwlock_init(&call->state_lock);
 	atomic_set(&call->usage, 1);
@@ -167,10 +174,7 @@ static struct rxrpc_call *rxrpc_alloc_client_call(struct rxrpc_sock *rx,
 	sock_hold(&rx->sk);
 	call->socket = rx;
 	call->rx_data_post = 1;
-
-	call->local = rx->local;
 	call->service_id = srx->srx_service;
-	call->in_clientflag = 0;
 
 	_leave(" = %p", call);
 	return call;
@@ -216,6 +220,7 @@ struct rxrpc_call *rxrpc_new_client_call(struct rxrpc_sock *rx,
 {
 	struct rxrpc_call *call, *xcall;
 	struct rb_node *parent, **pp;
+	const void *here = __builtin_return_address(0);
 	int ret;
 
 	_enter("%p,%lx", rx, user_call_ID);
@@ -225,6 +230,9 @@ struct rxrpc_call *rxrpc_new_client_call(struct rxrpc_sock *rx,
 		_leave(" = %ld", PTR_ERR(call));
 		return call;
 	}
+
+	trace_rxrpc_call(call, 0, atomic_read(&call->usage), 0, here,
+			 (const void *)user_call_ID);
 
 	/* Publish the call, even though it is incompletely set up as yet */
 	call->user_call_ID = user_call_ID;
@@ -305,6 +313,7 @@ struct rxrpc_call *rxrpc_incoming_call(struct rxrpc_sock *rx,
 {
 	struct rxrpc_skb_priv *sp = rxrpc_skb(skb);
 	struct rxrpc_call *call, *candidate;
+	const void *here = __builtin_return_address(0);
 	u32 call_id, chan;
 
 	_enter(",%d", conn->debug_id);
@@ -315,14 +324,18 @@ struct rxrpc_call *rxrpc_incoming_call(struct rxrpc_sock *rx,
 	if (!candidate)
 		return ERR_PTR(-EBUSY);
 
+	trace_rxrpc_call(candidate, 1, atomic_read(&candidate->usage),
+			 0, here, NULL);
+
 	chan = sp->hdr.cid & RXRPC_CHANNELMASK;
 	candidate->socket	= rx;
 	candidate->conn		= conn;
+	candidate->peer		= conn->params.peer;
 	candidate->cid		= sp->hdr.cid;
 	candidate->call_id	= sp->hdr.callNumber;
-	candidate->channel	= chan;
 	candidate->rx_data_post	= 0;
 	candidate->state	= RXRPC_CALL_SERVER_ACCEPTING;
+	candidate->flags	|= (1 << RXRPC_CALL_IS_SERVICE);
 	if (conn->security_ix > 0)
 		candidate->state = RXRPC_CALL_SERVER_SECURING;
 
@@ -332,7 +345,7 @@ struct rxrpc_call *rxrpc_incoming_call(struct rxrpc_sock *rx,
 	call = rcu_dereference_protected(conn->channels[chan].call,
 					 lockdep_is_held(&conn->channel_lock));
 
-	_debug("channel[%u] is %p", candidate->channel, call);
+	_debug("channel[%u] is %p", candidate->cid & RXRPC_CHANNELMASK, call);
 	if (call && call->call_id == sp->hdr.callNumber) {
 		/* already set; must've been a duplicate packet */
 		_debug("extant call [%d]", call->state);
@@ -359,8 +372,8 @@ struct rxrpc_call *rxrpc_incoming_call(struct rxrpc_sock *rx,
 		_debug("CALL: %u { %s }",
 		       call->debug_id, rxrpc_call_states[call->state]);
 
-		if (call->state >= RXRPC_CALL_COMPLETE) {
-			__rxrpc_disconnect_call(call);
+		if (call->state == RXRPC_CALL_COMPLETE) {
+			__rxrpc_disconnect_call(conn, call);
 		} else {
 			spin_unlock(&conn->channel_lock);
 			kmem_cache_free(rxrpc_call_jar, candidate);
@@ -387,6 +400,7 @@ struct rxrpc_call *rxrpc_incoming_call(struct rxrpc_sock *rx,
 	rcu_assign_pointer(conn->channels[chan].call, call);
 	sock_hold(&rx->sk);
 	rxrpc_get_connection(conn);
+	rxrpc_get_peer(call->peer);
 	spin_unlock(&conn->channel_lock);
 
 	spin_lock(&conn->params.peer->lock);
@@ -397,10 +411,7 @@ struct rxrpc_call *rxrpc_incoming_call(struct rxrpc_sock *rx,
 	list_add_tail(&call->link, &rxrpc_calls);
 	write_unlock_bh(&rxrpc_call_lock);
 
-	call->local = conn->params.local;
-	call->epoch = conn->proto.epoch;
 	call->service_id = conn->params.service_id;
-	call->in_clientflag = RXRPC_CLIENT_INITIATED;
 
 	_net("CALL incoming %d on CONN %d", call->debug_id, call->conn->debug_id);
 
@@ -429,6 +440,44 @@ old_call:
 }
 
 /*
+ * Note the re-emergence of a call.
+ */
+void rxrpc_see_call(struct rxrpc_call *call)
+{
+	const void *here = __builtin_return_address(0);
+	if (call) {
+		int n = atomic_read(&call->usage);
+		int m = atomic_read(&call->skb_count);
+
+		trace_rxrpc_call(call, 2, n, m, here, 0);
+	}
+}
+
+/*
+ * Note the addition of a ref on a call.
+ */
+void rxrpc_get_call(struct rxrpc_call *call)
+{
+	const void *here = __builtin_return_address(0);
+	int n = atomic_inc_return(&call->usage);
+	int m = atomic_read(&call->skb_count);
+
+	trace_rxrpc_call(call, 3, n, m, here, 0);
+}
+
+/*
+ * Note the addition of a ref on a call for a socket buffer.
+ */
+void rxrpc_get_call_for_skb(struct rxrpc_call *call, struct sk_buff *skb)
+{
+	const void *here = __builtin_return_address(0);
+	int n = atomic_inc_return(&call->usage);
+	int m = atomic_inc_return(&call->skb_count);
+
+	trace_rxrpc_call(call, 4, n, m, here, skb);
+}
+
+/*
  * detach a call from a socket and set up for release
  */
 void rxrpc_release_call(struct rxrpc_call *call)
@@ -440,6 +489,8 @@ void rxrpc_release_call(struct rxrpc_call *call)
 	       call->debug_id, atomic_read(&call->usage),
 	       atomic_read(&call->ackr_not_idle),
 	       call->rx_first_oos);
+
+	rxrpc_see_call(call);
 
 	spin_lock_bh(&call->lock);
 	if (test_and_set_bit(RXRPC_CALL_RELEASED, &call->flags))
@@ -475,8 +526,7 @@ void rxrpc_release_call(struct rxrpc_call *call)
 	if (call->state < RXRPC_CALL_COMPLETE &&
 	    call->state != RXRPC_CALL_CLIENT_FINAL_ACK) {
 		_debug("+++ ABORTING STATE %d +++\n", call->state);
-		call->state = RXRPC_CALL_LOCALLY_ABORTED;
-		call->local_abort = RX_CALL_DEAD;
+		__rxrpc_abort_call(call, RX_CALL_DEAD, ECONNRESET);
 	}
 	write_unlock_bh(&call->state_lock);
 
@@ -503,8 +553,6 @@ void rxrpc_release_call(struct rxrpc_call *call)
 			spin_lock_bh(&call->lock);
 		}
 		spin_unlock_bh(&call->lock);
-
-		ASSERTCMP(call->state, !=, RXRPC_CALL_COMPLETE);
 	}
 
 	del_timer_sync(&call->resend_timer);
@@ -525,6 +573,7 @@ static void rxrpc_dead_call_expired(unsigned long _call)
 
 	_enter("{%d}", call->debug_id);
 
+	rxrpc_see_call(call);
 	write_lock_bh(&call->state_lock);
 	call->state = RXRPC_CALL_DEAD;
 	write_unlock_bh(&call->state_lock);
@@ -539,22 +588,16 @@ static void rxrpc_mark_call_released(struct rxrpc_call *call)
 {
 	bool sched;
 
+	rxrpc_see_call(call);
 	write_lock(&call->state_lock);
 	if (call->state < RXRPC_CALL_DEAD) {
-		sched = false;
-		if (call->state < RXRPC_CALL_COMPLETE) {
-			_debug("abort call %p", call);
-			call->state = RXRPC_CALL_LOCALLY_ABORTED;
-			call->local_abort = RX_CALL_DEAD;
-			if (!test_and_set_bit(RXRPC_CALL_EV_ABORT, &call->events))
-				sched = true;
-		}
+		sched = __rxrpc_abort_call(call, RX_CALL_DEAD, ECONNRESET);
 		if (!test_and_set_bit(RXRPC_CALL_EV_RELEASE, &call->events))
 			sched = true;
-		if (sched)
-			rxrpc_queue_call(call);
 	}
 	write_unlock(&call->state_lock);
+	if (sched)
+		rxrpc_queue_call(call);
 }
 
 /*
@@ -569,18 +612,18 @@ void rxrpc_release_calls_on_socket(struct rxrpc_sock *rx)
 
 	read_lock_bh(&rx->call_lock);
 
-	/* mark all the calls as no longer wanting incoming packets */
-	for (p = rb_first(&rx->calls); p; p = rb_next(p)) {
-		call = rb_entry(p, struct rxrpc_call, sock_node);
-		rxrpc_mark_call_released(call);
-	}
-
 	/* kill the not-yet-accepted incoming calls */
 	list_for_each_entry(call, &rx->secureq, accept_link) {
 		rxrpc_mark_call_released(call);
 	}
 
 	list_for_each_entry(call, &rx->acceptq, accept_link) {
+		rxrpc_mark_call_released(call);
+	}
+
+	/* mark all the calls as no longer wanting incoming packets */
+	for (p = rb_first(&rx->calls); p; p = rb_next(p)) {
+		call = rb_entry(p, struct rxrpc_call, sock_node);
 		rxrpc_mark_call_released(call);
 	}
 
@@ -591,21 +634,43 @@ void rxrpc_release_calls_on_socket(struct rxrpc_sock *rx)
 /*
  * release a call
  */
-void __rxrpc_put_call(struct rxrpc_call *call)
+void rxrpc_put_call(struct rxrpc_call *call)
 {
+	const void *here = __builtin_return_address(0);
+	int n, m;
+
 	ASSERT(call != NULL);
 
-	_enter("%p{u=%d}", call, atomic_read(&call->usage));
-
-	ASSERTCMP(atomic_read(&call->usage), >, 0);
-
-	if (atomic_dec_and_test(&call->usage)) {
+	n = atomic_dec_return(&call->usage);
+	m = atomic_read(&call->skb_count);
+	trace_rxrpc_call(call, 5, n, m, here, NULL);
+	ASSERTCMP(n, >=, 0);
+	if (n == 0) {
 		_debug("call %d dead", call->debug_id);
-		WARN_ON(atomic_read(&call->skb_count) != 0);
+		WARN_ON(m != 0);
 		ASSERTCMP(call->state, ==, RXRPC_CALL_DEAD);
 		rxrpc_queue_work(&call->destroyer);
 	}
-	_leave("");
+}
+
+/*
+ * Release a call ref held by a socket buffer.
+ */
+void rxrpc_put_call_for_skb(struct rxrpc_call *call, struct sk_buff *skb)
+{
+	const void *here = __builtin_return_address(0);
+	int n, m;
+
+	n = atomic_dec_return(&call->usage);
+	m = atomic_dec_return(&call->skb_count);
+	trace_rxrpc_call(call, 6, n, m, here, skb);
+	ASSERTCMP(n, >=, 0);
+	if (n == 0) {
+		_debug("call %d dead", call->debug_id);
+		WARN_ON(m != 0);
+		ASSERTCMP(call->state, ==, RXRPC_CALL_DEAD);
+		rxrpc_queue_work(&call->destroyer);
+	}
 }
 
 /*
@@ -616,6 +681,8 @@ static void rxrpc_rcu_destroy_call(struct rcu_head *rcu)
 	struct rxrpc_call *call = container_of(rcu, struct rxrpc_call, rcu);
 
 	rxrpc_purge_queue(&call->rx_queue);
+	rxrpc_purge_queue(&call->knlrecv_queue);
+	rxrpc_put_peer(call->peer);
 	kmem_cache_free(rxrpc_call_jar, call);
 }
 
@@ -670,6 +737,7 @@ static void rxrpc_cleanup_call(struct rxrpc_call *call)
 
 	rxrpc_purge_queue(&call->rx_queue);
 	ASSERT(skb_queue_empty(&call->rx_oos_queue));
+	rxrpc_purge_queue(&call->knlrecv_queue);
 	sock_put(&call->socket->sk);
 	call_rcu(&call->rcu, rxrpc_rcu_destroy_call);
 }
@@ -682,8 +750,8 @@ static void rxrpc_destroy_call(struct work_struct *work)
 	struct rxrpc_call *call =
 		container_of(work, struct rxrpc_call, destroyer);
 
-	_enter("%p{%d,%d,%p}",
-	       call, atomic_read(&call->usage), call->channel, call->conn);
+	_enter("%p{%d,%x,%p}",
+	       call, atomic_read(&call->usage), call->cid, call->conn);
 
 	ASSERTCMP(call->state, ==, RXRPC_CALL_DEAD);
 
@@ -710,6 +778,7 @@ void __exit rxrpc_destroy_all_calls(void)
 		call = list_entry(rxrpc_calls.next, struct rxrpc_call, link);
 		_debug("Zapping call %p", call);
 
+		rxrpc_see_call(call);
 		list_del_init(&call->link);
 
 		switch (atomic_read(&call->usage)) {
@@ -751,16 +820,14 @@ static void rxrpc_call_life_expired(unsigned long _call)
 {
 	struct rxrpc_call *call = (struct rxrpc_call *) _call;
 
+	_enter("{%d}", call->debug_id);
+
+	rxrpc_see_call(call);
 	if (call->state >= RXRPC_CALL_COMPLETE)
 		return;
 
-	_enter("{%d}", call->debug_id);
-	read_lock_bh(&call->state_lock);
-	if (call->state < RXRPC_CALL_COMPLETE) {
-		set_bit(RXRPC_CALL_EV_LIFE_TIMER, &call->events);
-		rxrpc_queue_call(call);
-	}
-	read_unlock_bh(&call->state_lock);
+	set_bit(RXRPC_CALL_EV_LIFE_TIMER, &call->events);
+	rxrpc_queue_call(call);
 }
 
 /*
@@ -773,6 +840,7 @@ static void rxrpc_resend_time_expired(unsigned long _call)
 
 	_enter("{%d}", call->debug_id);
 
+	rxrpc_see_call(call);
 	if (call->state >= RXRPC_CALL_COMPLETE)
 		return;
 
@@ -790,12 +858,10 @@ static void rxrpc_ack_time_expired(unsigned long _call)
 
 	_enter("{%d}", call->debug_id);
 
+	rxrpc_see_call(call);
 	if (call->state >= RXRPC_CALL_COMPLETE)
 		return;
 
-	read_lock_bh(&call->state_lock);
-	if (call->state < RXRPC_CALL_COMPLETE &&
-	    !test_and_set_bit(RXRPC_CALL_EV_ACK, &call->events))
+	if (!test_and_set_bit(RXRPC_CALL_EV_ACK, &call->events))
 		rxrpc_queue_call(call);
-	read_unlock_bh(&call->state_lock);
 }

@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2015 PLUMgrid, http://plumgrid.com
+ * Copyright (c) 2016 Facebook
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of version 2 of the GNU General Public
@@ -8,6 +9,7 @@
 #include <linux/types.h>
 #include <linux/slab.h>
 #include <linux/bpf.h>
+#include <linux/bpf_perf_event.h>
 #include <linux/filter.h>
 #include <linux/uaccess.h>
 #include <linux/ctype.h>
@@ -376,6 +378,34 @@ static const struct bpf_func_proto bpf_get_current_task_proto = {
 	.ret_type	= RET_INTEGER,
 };
 
+static u64 bpf_current_task_under_cgroup(u64 r1, u64 r2, u64 r3, u64 r4, u64 r5)
+{
+	struct bpf_map *map = (struct bpf_map *)(long)r1;
+	struct bpf_array *array = container_of(map, struct bpf_array, map);
+	struct cgroup *cgrp;
+	u32 idx = (u32)r2;
+
+	if (unlikely(in_interrupt()))
+		return -EINVAL;
+
+	if (unlikely(idx >= array->map.max_entries))
+		return -E2BIG;
+
+	cgrp = READ_ONCE(array->ptrs[idx]);
+	if (unlikely(!cgrp))
+		return -EAGAIN;
+
+	return task_under_cgroup_hierarchy(current, cgrp);
+}
+
+static const struct bpf_func_proto bpf_current_task_under_cgroup_proto = {
+	.func           = bpf_current_task_under_cgroup,
+	.gpl_only       = false,
+	.ret_type       = RET_INTEGER,
+	.arg1_type      = ARG_CONST_MAP_PTR,
+	.arg2_type      = ARG_ANYTHING,
+};
+
 static const struct bpf_func_proto *tracing_func_proto(enum bpf_func_id func_id)
 {
 	switch (func_id) {
@@ -407,6 +437,10 @@ static const struct bpf_func_proto *tracing_func_proto(enum bpf_func_id func_id)
 		return &bpf_perf_event_read_proto;
 	case BPF_FUNC_probe_write_user:
 		return bpf_get_probe_write_proto();
+	case BPF_FUNC_current_task_under_cgroup:
+		return &bpf_current_task_under_cgroup_proto;
+	case BPF_FUNC_get_prandom_u32:
+		return &bpf_get_prandom_u32_proto;
 	default:
 		return NULL;
 	}
@@ -520,10 +554,69 @@ static struct bpf_prog_type_list tracepoint_tl = {
 	.type	= BPF_PROG_TYPE_TRACEPOINT,
 };
 
+static bool pe_prog_is_valid_access(int off, int size, enum bpf_access_type type,
+				    enum bpf_reg_type *reg_type)
+{
+	if (off < 0 || off >= sizeof(struct bpf_perf_event_data))
+		return false;
+	if (type != BPF_READ)
+		return false;
+	if (off % size != 0)
+		return false;
+	if (off == offsetof(struct bpf_perf_event_data, sample_period)) {
+		if (size != sizeof(u64))
+			return false;
+	} else {
+		if (size != sizeof(long))
+			return false;
+	}
+	return true;
+}
+
+static u32 pe_prog_convert_ctx_access(enum bpf_access_type type, int dst_reg,
+				      int src_reg, int ctx_off,
+				      struct bpf_insn *insn_buf,
+				      struct bpf_prog *prog)
+{
+	struct bpf_insn *insn = insn_buf;
+
+	switch (ctx_off) {
+	case offsetof(struct bpf_perf_event_data, sample_period):
+		BUILD_BUG_ON(FIELD_SIZEOF(struct perf_sample_data, period) != sizeof(u64));
+		*insn++ = BPF_LDX_MEM(bytes_to_bpf_size(FIELD_SIZEOF(struct bpf_perf_event_data_kern, data)),
+				      dst_reg, src_reg,
+				      offsetof(struct bpf_perf_event_data_kern, data));
+		*insn++ = BPF_LDX_MEM(BPF_DW, dst_reg, dst_reg,
+				      offsetof(struct perf_sample_data, period));
+		break;
+	default:
+		*insn++ = BPF_LDX_MEM(bytes_to_bpf_size(FIELD_SIZEOF(struct bpf_perf_event_data_kern, regs)),
+				      dst_reg, src_reg,
+				      offsetof(struct bpf_perf_event_data_kern, regs));
+		*insn++ = BPF_LDX_MEM(bytes_to_bpf_size(sizeof(long)),
+				      dst_reg, dst_reg, ctx_off);
+		break;
+	}
+
+	return insn - insn_buf;
+}
+
+static const struct bpf_verifier_ops perf_event_prog_ops = {
+	.get_func_proto		= tp_prog_func_proto,
+	.is_valid_access	= pe_prog_is_valid_access,
+	.convert_ctx_access	= pe_prog_convert_ctx_access,
+};
+
+static struct bpf_prog_type_list perf_event_tl = {
+	.ops	= &perf_event_prog_ops,
+	.type	= BPF_PROG_TYPE_PERF_EVENT,
+};
+
 static int __init register_kprobe_prog_ops(void)
 {
 	bpf_register_prog_type(&kprobe_tl);
 	bpf_register_prog_type(&tracepoint_tl);
+	bpf_register_prog_type(&perf_event_tl);
 	return 0;
 }
 late_initcall(register_kprobe_prog_ops);

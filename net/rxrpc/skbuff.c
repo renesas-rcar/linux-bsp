@@ -53,9 +53,9 @@ static void rxrpc_request_final_ACK(struct rxrpc_call *call)
 /*
  * drop the bottom ACK off of the call ACK window and advance the window
  */
-static void rxrpc_hard_ACK_data(struct rxrpc_call *call,
-				struct rxrpc_skb_priv *sp)
+static void rxrpc_hard_ACK_data(struct rxrpc_call *call, struct sk_buff *skb)
 {
+	struct rxrpc_skb_priv *sp = rxrpc_skb(skb);
 	int loop;
 	u32 seq;
 
@@ -91,8 +91,8 @@ static void rxrpc_hard_ACK_data(struct rxrpc_call *call,
 		 * its Tx bufferage.
 		 */
 		_debug("send Rx idle ACK");
-		__rxrpc_propose_ACK(call, RXRPC_ACK_IDLE, sp->hdr.serial,
-				    false);
+		__rxrpc_propose_ACK(call, RXRPC_ACK_IDLE,
+				    skb->priority, sp->hdr.serial, false);
 	}
 
 	spin_unlock_bh(&call->lock);
@@ -125,9 +125,8 @@ void rxrpc_kernel_data_consumed(struct rxrpc_call *call, struct sk_buff *skb)
 	ASSERTCMP(sp->hdr.seq, >, call->rx_data_eaten);
 
 	call->rx_data_recv = sp->hdr.seq;
-	rxrpc_hard_ACK_data(call, sp);
+	rxrpc_hard_ACK_data(call, skb);
 }
-EXPORT_SYMBOL(rxrpc_kernel_data_consumed);
 
 /*
  * Destroy a packet that has an RxRPC control buffer
@@ -140,9 +139,7 @@ void rxrpc_packet_destructor(struct sk_buff *skb)
 	_enter("%p{%p}", skb, call);
 
 	if (call) {
-		if (atomic_dec_return(&call->skb_count) < 0)
-			BUG();
-		rxrpc_put_call(call);
+		rxrpc_put_call_for_skb(call, skb);
 		sp->call = NULL;
 	}
 
@@ -163,3 +160,65 @@ void rxrpc_kernel_free_skb(struct sk_buff *skb)
 	rxrpc_free_skb(skb);
 }
 EXPORT_SYMBOL(rxrpc_kernel_free_skb);
+
+/*
+ * Note the existence of a new-to-us socket buffer (allocated or dequeued).
+ */
+void rxrpc_new_skb(struct sk_buff *skb)
+{
+	const void *here = __builtin_return_address(0);
+	int n = atomic_inc_return(&rxrpc_n_skbs);
+	trace_rxrpc_skb(skb, 0, atomic_read(&skb->users), n, here);
+}
+
+/*
+ * Note the re-emergence of a socket buffer from a queue or buffer.
+ */
+void rxrpc_see_skb(struct sk_buff *skb)
+{
+	const void *here = __builtin_return_address(0);
+	if (skb) {
+		int n = atomic_read(&rxrpc_n_skbs);
+		trace_rxrpc_skb(skb, 1, atomic_read(&skb->users), n, here);
+	}
+}
+
+/*
+ * Note the addition of a ref on a socket buffer.
+ */
+void rxrpc_get_skb(struct sk_buff *skb)
+{
+	const void *here = __builtin_return_address(0);
+	int n = atomic_inc_return(&rxrpc_n_skbs);
+	trace_rxrpc_skb(skb, 2, atomic_read(&skb->users), n, here);
+	skb_get(skb);
+}
+
+/*
+ * Note the destruction of a socket buffer.
+ */
+void rxrpc_free_skb(struct sk_buff *skb)
+{
+	const void *here = __builtin_return_address(0);
+	if (skb) {
+		int n;
+		CHECK_SLAB_OKAY(&skb->users);
+		n = atomic_dec_return(&rxrpc_n_skbs);
+		trace_rxrpc_skb(skb, 3, atomic_read(&skb->users), n, here);
+		kfree_skb(skb);
+	}
+}
+
+/*
+ * Clear a queue of socket buffers.
+ */
+void rxrpc_purge_queue(struct sk_buff_head *list)
+{
+	const void *here = __builtin_return_address(0);
+	struct sk_buff *skb;
+	while ((skb = skb_dequeue((list))) != NULL) {
+		int n = atomic_dec_return(&rxrpc_n_skbs);
+		trace_rxrpc_skb(skb, 4, atomic_read(&skb->users), n, here);
+		kfree_skb(skb);
+	}
+}

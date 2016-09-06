@@ -3355,16 +3355,6 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
 	else
 		skb_dst_force(skb);
 
-#ifdef CONFIG_NET_SWITCHDEV
-	/* Don't forward if offload device already forwarded */
-	if (skb->offload_fwd_mark &&
-	    skb->offload_fwd_mark == dev->offload_fwd_mark) {
-		consume_skb(skb);
-		rc = NET_XMIT_SUCCESS;
-		goto out;
-	}
-#endif
-
 	txq = netdev_pick_tx(dev, skb, accel_priv);
 	q = rcu_dereference_bh(txq->qdisc);
 
@@ -4292,32 +4282,53 @@ int netif_receive_skb(struct sk_buff *skb)
 }
 EXPORT_SYMBOL(netif_receive_skb);
 
-/* Network device is going away, flush any packets still pending
- * Called with irqs disabled.
- */
-static void flush_backlog(void *arg)
-{
-	struct net_device *dev = arg;
-	struct softnet_data *sd = this_cpu_ptr(&softnet_data);
-	struct sk_buff *skb, *tmp;
+DEFINE_PER_CPU(struct work_struct, flush_works);
 
+/* Network device is going away, flush any packets still pending */
+static void flush_backlog(struct work_struct *work)
+{
+	struct sk_buff *skb, *tmp;
+	struct softnet_data *sd;
+
+	local_bh_disable();
+	sd = this_cpu_ptr(&softnet_data);
+
+	local_irq_disable();
 	rps_lock(sd);
 	skb_queue_walk_safe(&sd->input_pkt_queue, skb, tmp) {
-		if (skb->dev == dev) {
+		if (skb->dev->reg_state == NETREG_UNREGISTERING) {
 			__skb_unlink(skb, &sd->input_pkt_queue);
 			kfree_skb(skb);
 			input_queue_head_incr(sd);
 		}
 	}
 	rps_unlock(sd);
+	local_irq_enable();
 
 	skb_queue_walk_safe(&sd->process_queue, skb, tmp) {
-		if (skb->dev == dev) {
+		if (skb->dev->reg_state == NETREG_UNREGISTERING) {
 			__skb_unlink(skb, &sd->process_queue);
 			kfree_skb(skb);
 			input_queue_head_incr(sd);
 		}
 	}
+	local_bh_enable();
+}
+
+static void flush_all_backlogs(void)
+{
+	unsigned int cpu;
+
+	get_online_cpus();
+
+	for_each_online_cpu(cpu)
+		queue_work_on(cpu, system_highpri_wq,
+			      per_cpu_ptr(&flush_works, cpu));
+
+	for_each_online_cpu(cpu)
+		flush_work(per_cpu_ptr(&flush_works, cpu));
+
+	put_online_cpus();
 }
 
 static int napi_gro_complete(struct sk_buff *skb)
@@ -4805,8 +4816,9 @@ static bool sd_has_rps_ipi_waiting(struct softnet_data *sd)
 
 static int process_backlog(struct napi_struct *napi, int quota)
 {
-	int work = 0;
 	struct softnet_data *sd = container_of(napi, struct softnet_data, backlog);
+	bool again = true;
+	int work = 0;
 
 	/* Check if we have pending ipi, its better to send them now,
 	 * not waiting net_rx_action() end.
@@ -4817,23 +4829,20 @@ static int process_backlog(struct napi_struct *napi, int quota)
 	}
 
 	napi->weight = weight_p;
-	local_irq_disable();
-	while (1) {
+	while (again) {
 		struct sk_buff *skb;
 
 		while ((skb = __skb_dequeue(&sd->process_queue))) {
 			rcu_read_lock();
-			local_irq_enable();
 			__netif_receive_skb(skb);
 			rcu_read_unlock();
-			local_irq_disable();
 			input_queue_head_incr(sd);
-			if (++work >= quota) {
-				local_irq_enable();
+			if (++work >= quota)
 				return work;
-			}
+
 		}
 
+		local_irq_disable();
 		rps_lock(sd);
 		if (skb_queue_empty(&sd->input_pkt_queue)) {
 			/*
@@ -4845,16 +4854,14 @@ static int process_backlog(struct napi_struct *napi, int quota)
 			 * and we dont need an smp_mb() memory barrier.
 			 */
 			napi->state = 0;
-			rps_unlock(sd);
-
-			break;
+			again = false;
+		} else {
+			skb_queue_splice_tail_init(&sd->input_pkt_queue,
+						   &sd->process_queue);
 		}
-
-		skb_queue_splice_tail_init(&sd->input_pkt_queue,
-					   &sd->process_queue);
 		rps_unlock(sd);
+		local_irq_enable();
 	}
-	local_irq_enable();
 
 	return work;
 }
@@ -6707,8 +6714,8 @@ static void rollback_registered_many(struct list_head *head)
 		unlist_netdevice(dev);
 
 		dev->reg_state = NETREG_UNREGISTERING;
-		on_each_cpu(flush_backlog, dev, 1);
 	}
+	flush_all_backlogs();
 
 	synchronize_net();
 
@@ -7625,6 +7632,9 @@ struct net_device *alloc_netdev_mqs(int sizeof_priv, const char *name,
 	INIT_LIST_HEAD(&dev->all_adj_list.lower);
 	INIT_LIST_HEAD(&dev->ptype_all);
 	INIT_LIST_HEAD(&dev->ptype_specific);
+#ifdef CONFIG_NET_SCHED
+	hash_init(dev->qdisc_hash);
+#endif
 	dev->priv_flags = IFF_XMIT_DST_RELEASE | IFF_XMIT_DST_RELEASE_PERM;
 	setup(dev);
 
@@ -8270,7 +8280,10 @@ static int __init net_dev_init(void)
 	 */
 
 	for_each_possible_cpu(i) {
+		struct work_struct *flush = per_cpu_ptr(&flush_works, i);
 		struct softnet_data *sd = &per_cpu(softnet_data, i);
+
+		INIT_WORK(flush, flush_backlog);
 
 		skb_queue_head_init(&sd->input_pkt_queue);
 		skb_queue_head_init(&sd->process_queue);

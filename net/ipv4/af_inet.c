@@ -211,24 +211,19 @@ int inet_listen(struct socket *sock, int backlog)
 	 * we can only allow the backlog to be adjusted.
 	 */
 	if (old_state != TCP_LISTEN) {
-		/* Check special setups for testing purpose to enable TFO w/o
-		 * requiring TCP_FASTOPEN sockopt.
+		/* Enable TFO w/o requiring TCP_FASTOPEN socket option.
 		 * Note that only TCP sockets (SOCK_STREAM) will reach here.
-		 * Also fastopenq may already been allocated because this
-		 * socket was in TCP_LISTEN state previously but was
-		 * shutdown() (rather than close()).
+		 * Also fastopen backlog may already been set via the option
+		 * because the socket was in TCP_LISTEN state previously but
+		 * was shutdown() rather than close().
 		 */
-		if ((sysctl_tcp_fastopen & TFO_SERVER_ENABLE) != 0 &&
+		if ((sysctl_tcp_fastopen & TFO_SERVER_WO_SOCKOPT1) &&
+		    (sysctl_tcp_fastopen & TFO_SERVER_ENABLE) &&
 		    !inet_csk(sk)->icsk_accept_queue.fastopenq.max_qlen) {
-			if ((sysctl_tcp_fastopen & TFO_SERVER_WO_SOCKOPT1) != 0)
-				fastopen_queue_tune(sk, backlog);
-			else if ((sysctl_tcp_fastopen &
-				  TFO_SERVER_WO_SOCKOPT2) != 0)
-				fastopen_queue_tune(sk,
-				    ((uint)sysctl_tcp_fastopen) >> 16);
-
+			fastopen_queue_tune(sk, backlog);
 			tcp_fastopen_init_key_once(true);
 		}
+
 		err = inet_csk_listen_start(sk, backlog);
 		if (err)
 			goto out;
@@ -921,6 +916,8 @@ const struct proto_ops inet_stream_ops = {
 	.mmap		   = sock_no_mmap,
 	.sendpage	   = inet_sendpage,
 	.splice_read	   = tcp_splice_read,
+	.read_sock	   = tcp_read_sock,
+	.peek_len	   = tcp_peek_len,
 #ifdef CONFIG_COMPAT
 	.compat_setsockopt = compat_sock_common_setsockopt,
 	.compat_getsockopt = compat_sock_common_getsockopt,

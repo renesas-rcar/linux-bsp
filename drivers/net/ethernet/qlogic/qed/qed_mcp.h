@@ -60,9 +60,10 @@ struct qed_mcp_link_state {
 #define QED_LINK_PARTNER_SPEED_1G_FD    BIT(1)
 #define QED_LINK_PARTNER_SPEED_10G      BIT(2)
 #define QED_LINK_PARTNER_SPEED_20G      BIT(3)
-#define QED_LINK_PARTNER_SPEED_40G      BIT(4)
-#define QED_LINK_PARTNER_SPEED_50G      BIT(5)
-#define QED_LINK_PARTNER_SPEED_100G     BIT(6)
+#define QED_LINK_PARTNER_SPEED_25G      BIT(4)
+#define QED_LINK_PARTNER_SPEED_40G      BIT(5)
+#define QED_LINK_PARTNER_SPEED_50G      BIT(6)
+#define QED_LINK_PARTNER_SPEED_100G     BIT(7)
 	u32     partner_adv_speed;
 
 	bool    partner_tx_flow_ctrl_en;
@@ -103,6 +104,47 @@ struct qed_mcp_nvm_common {
 struct qed_mcp_drv_version {
 	u32	version;
 	u8	name[MCP_DRV_VER_STR_SIZE - 4];
+};
+
+struct qed_mcp_lan_stats {
+	u64 ucast_rx_pkts;
+	u64 ucast_tx_pkts;
+	u32 fcs_err;
+};
+
+struct qed_mcp_fcoe_stats {
+	u64 rx_pkts;
+	u64 tx_pkts;
+	u32 fcs_err;
+	u32 login_failure;
+};
+
+struct qed_mcp_iscsi_stats {
+	u64 rx_pdus;
+	u64 tx_pdus;
+	u64 rx_bytes;
+	u64 tx_bytes;
+};
+
+struct qed_mcp_rdma_stats {
+	u64 rx_pkts;
+	u64 tx_pkts;
+	u64 rx_bytes;
+	u64 tx_byts;
+};
+
+enum qed_mcp_protocol_type {
+	QED_MCP_LAN_STATS,
+	QED_MCP_FCOE_STATS,
+	QED_MCP_ISCSI_STATS,
+	QED_MCP_RDMA_STATS
+};
+
+union qed_mcp_protocol_stats {
+	struct qed_mcp_lan_stats lan_stats;
+	struct qed_mcp_fcoe_stats fcoe_stats;
+	struct qed_mcp_iscsi_stats iscsi_stats;
+	struct qed_mcp_rdma_stats rdma_stats;
 };
 
 /**
@@ -458,6 +500,4 @@ int __qed_configure_pf_min_bandwidth(struct qed_hwfn *p_hwfn,
 				     struct qed_mcp_link_state *p_link,
 				     u8 min_bw);
 
-int qed_hw_init_first_eth(struct qed_hwfn *p_hwfn,
-			  struct qed_ptt *p_ptt, u8 *p_pf);
 #endif

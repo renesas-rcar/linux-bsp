@@ -612,7 +612,6 @@ static inline bool skb_mstamp_after(const struct skb_mstamp *t1,
  *	@no_fcs:  Request NIC to treat last 4 bytes as Ethernet FCS
   *	@napi_id: id of the NAPI struct this skb came from
  *	@secmark: security marking
- *	@offload_fwd_mark: fwding offload mark
  *	@mark: Generic packet mark
  *	@vlan_proto: vlan encapsulation protocol
  *	@vlan_tci: vlan tag control information
@@ -730,7 +729,10 @@ struct sk_buff {
 	__u8			ipvs_property:1;
 	__u8			inner_protocol_type:1;
 	__u8			remcsum_offload:1;
-	/* 3 or 5 bit hole */
+#ifdef CONFIG_NET_SWITCHDEV
+	__u8			offload_fwd_mark:1;
+#endif
+	/* 2, 4 or 5 bit hole */
 
 #ifdef CONFIG_NET_SCHED
 	__u16			tc_index;	/* traffic control index */
@@ -757,14 +759,9 @@ struct sk_buff {
 		unsigned int	sender_cpu;
 	};
 #endif
-	union {
 #ifdef CONFIG_NETWORK_SECMARK
-		__u32		secmark;
+	__u32		secmark;
 #endif
-#ifdef CONFIG_NET_SWITCHDEV
-		__u32		offload_fwd_mark;
-#endif
-	};
 
 	union {
 		__u32		mark;
@@ -2295,7 +2292,7 @@ static inline int pskb_network_may_pull(struct sk_buff *skb, unsigned int len)
 
 int ___pskb_trim(struct sk_buff *skb, unsigned int len);
 
-static inline void __skb_trim(struct sk_buff *skb, unsigned int len)
+static inline void __skb_set_length(struct sk_buff *skb, unsigned int len)
 {
 	if (unlikely(skb_is_nonlinear(skb))) {
 		WARN_ON(1);
@@ -2303,6 +2300,11 @@ static inline void __skb_trim(struct sk_buff *skb, unsigned int len)
 	}
 	skb->len = len;
 	skb_set_tail_pointer(skb, len);
+}
+
+static inline void __skb_trim(struct sk_buff *skb, unsigned int len)
+{
+	__skb_set_length(skb, len);
 }
 
 void skb_trim(struct sk_buff *skb, unsigned int len);
@@ -2333,6 +2335,20 @@ static inline void pskb_trim_unique(struct sk_buff *skb, unsigned int len)
 {
 	int err = pskb_trim(skb, len);
 	BUG_ON(err);
+}
+
+static inline int __skb_grow(struct sk_buff *skb, unsigned int len)
+{
+	unsigned int diff = len - skb->len;
+
+	if (skb_tailroom(skb) < diff) {
+		int ret = pskb_expand_head(skb, 0, diff - skb_tailroom(skb),
+					   GFP_ATOMIC);
+		if (ret)
+			return ret;
+	}
+	__skb_set_length(skb, len);
+	return 0;
 }
 
 /**
@@ -2936,6 +2952,21 @@ static inline int pskb_trim_rcsum(struct sk_buff *skb, unsigned int len)
 	if (skb->ip_summed == CHECKSUM_COMPLETE)
 		skb->ip_summed = CHECKSUM_NONE;
 	return __pskb_trim(skb, len);
+}
+
+static inline int __skb_trim_rcsum(struct sk_buff *skb, unsigned int len)
+{
+	if (skb->ip_summed == CHECKSUM_COMPLETE)
+		skb->ip_summed = CHECKSUM_NONE;
+	__skb_trim(skb, len);
+	return 0;
+}
+
+static inline int __skb_grow_rcsum(struct sk_buff *skb, unsigned int len)
+{
+	if (skb->ip_summed == CHECKSUM_COMPLETE)
+		skb->ip_summed = CHECKSUM_NONE;
+	return __skb_grow(skb, len);
 }
 
 #define skb_queue_walk(queue, skb) \
@@ -3724,6 +3755,13 @@ static inline bool skb_is_gso(const struct sk_buff *skb)
 static inline bool skb_is_gso_v6(const struct sk_buff *skb)
 {
 	return skb_shinfo(skb)->gso_type & SKB_GSO_TCPV6;
+}
+
+static inline void skb_gso_reset(struct sk_buff *skb)
+{
+	skb_shinfo(skb)->gso_size = 0;
+	skb_shinfo(skb)->gso_segs = 0;
+	skb_shinfo(skb)->gso_type = 0;
 }
 
 void __skb_warn_lro_forwarding(const struct sk_buff *skb);

@@ -227,10 +227,9 @@ void tcp_time_wait(struct sock *sk, int state, int timeo);
 #define	TFO_SERVER_COOKIE_NOT_REQD	0x200
 
 /* Force enable TFO on all listeners, i.e., not requiring the
- * TCP_FASTOPEN socket option. SOCKOPT1/2 determine how to set max_qlen.
+ * TCP_FASTOPEN socket option.
  */
 #define	TFO_SERVER_WO_SOCKOPT1	0x400
-#define	TFO_SERVER_WO_SOCKOPT2	0x800
 
 extern struct inet_timewait_death_row tcp_death_row;
 
@@ -604,8 +603,6 @@ static inline int tcp_bound_to_half_wnd(struct tcp_sock *tp, int pktsize)
 void tcp_get_info(struct sock *, struct tcp_info *);
 
 /* Read 'sendfile()'-style from a TCP socket */
-typedef int (*sk_read_actor_t)(read_descriptor_t *, struct sk_buff *,
-				unsigned int, size_t);
 int tcp_read_sock(struct sock *sk, read_descriptor_t *desc,
 		  sk_read_actor_t recv_actor);
 
@@ -1164,6 +1161,7 @@ static inline void tcp_prequeue_init(struct tcp_sock *tp)
 }
 
 bool tcp_prequeue(struct sock *sk, struct sk_buff *skb);
+bool tcp_add_backlog(struct sock *sk, struct sk_buff *skb);
 
 #undef STATE_TRACE
 
@@ -1852,6 +1850,8 @@ static inline int tcp_inq(struct sock *sk)
 
 	return answ;
 }
+
+int tcp_peek_len(struct socket *sock);
 
 static inline void tcp_segs_in(struct tcp_sock *tp, const struct sk_buff *skb)
 {

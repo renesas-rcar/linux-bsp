@@ -61,7 +61,7 @@ struct Qdisc {
 	u32			limit;
 	const struct Qdisc_ops	*ops;
 	struct qdisc_size_table	__rcu *stab;
-	struct list_head	list;
+	struct hlist_node       hash;
 	u32			handle;
 	u32			parent;
 	void			*u32_node;
@@ -592,7 +592,7 @@ static inline void qdisc_qstats_drop(struct Qdisc *sch)
 
 static inline void qdisc_qstats_cpu_drop(struct Qdisc *sch)
 {
-	qstats_drop_inc(this_cpu_ptr(sch->cpu_qstats));
+	this_cpu_inc(sch->cpu_qstats->drops);
 }
 
 static inline void qdisc_qstats_overlimit(struct Qdisc *sch)
