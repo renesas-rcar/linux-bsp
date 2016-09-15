@@ -374,6 +374,11 @@
 		groups = "audio_clk_a";
 		function = "audio_clk";
 	};
+
+	vin0_pins: vin0 {
+		groups = "vin0_data24", "vin0_sync", "vin0_clkenb", "vin0_clk";
+		function = "vin0";
+	};
 };
 
 &ether {
@@ -531,6 +536,21 @@
 		};
 	};
 
+	hdmi-in@4c {
+		compatible = "adi,adv7612";
+		reg = <0x4c>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <20 IRQ_TYPE_LEVEL_LOW>;
+		remote = <&vin0>;
+		default-input = <0>;
+
+		port {
+			adv7612: endpoint {
+				remote-endpoint = <&vin0ep>;
+			};
+		};
+	};
+
 	eeprom@50 {
 		compatible = "renesas,r1ex24002", "atmel,24c02";
 		reg = <0x50>;
@@ -557,4 +577,25 @@
 
 &ssi1 {
 	shared-pin;
+};
+
+/* HDMI video input */
+&vin0 {
+	status = "okay";
+	pinctrl-0 = <&vin0_pins>;
+	pinctrl-names = "default";
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		vin0ep: endpoint {
+			remote-endpoint = <&adv7612>;
+			bus-width = <24>;
+			hsync-active = <0>;
+			vsync-active = <0>;
+			pclk-sample = <1>;
+			data-active = <1>;
+		};
+	};
 };
