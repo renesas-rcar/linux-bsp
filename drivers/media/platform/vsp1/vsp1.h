@@ -54,6 +54,7 @@ struct vsp1_uds;
 #define VSP1_HAS_WPF_HFLIP	(1 << 6)
 #define VSP1_HAS_HGO		(1 << 7)
 #define VSP1_HAS_HGT		(1 << 8)
+#define VSP1_HAS_WPF_WRITEBACK	(1 << 9)
 
 struct vsp1_device_info {
 	u32 version;
