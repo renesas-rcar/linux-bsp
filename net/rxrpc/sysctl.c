@@ -20,7 +20,7 @@ static const unsigned int one = 1;
 static const unsigned int four = 4;
 static const unsigned int thirtytwo = 32;
 static const unsigned int n_65535 = 65535;
-static const unsigned int n_max_acks = RXRPC_MAXACKS;
+static const unsigned int n_max_acks = RXRPC_RXTX_BUFF_SIZE - 1;
 
 /*
  * RxRPC operating parameters.
@@ -59,6 +59,22 @@ static struct ctl_table rxrpc_sysctl_table[] = {
 		.data		= &rxrpc_resend_timeout,
 		.maxlen		= sizeof(unsigned int),
 		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+		.extra1		= (void *)&one,
+	},
+	{
+		.procname	= "idle_conn_expiry",
+		.data		= &rxrpc_conn_idle_client_expiry,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_ms_jiffies,
+		.extra1		= (void *)&one,
+	},
+	{
+		.procname	= "idle_conn_fast_expiry",
+		.data		= &rxrpc_conn_idle_client_fast_expiry,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
 		.proc_handler	= proc_dointvec_ms_jiffies,
 		.extra1		= (void *)&one,
 	},
@@ -72,26 +88,25 @@ static struct ctl_table rxrpc_sysctl_table[] = {
 		.proc_handler	= proc_dointvec_jiffies,
 		.extra1		= (void *)&one,
 	},
+
+	/* Non-time values */
 	{
-		.procname	= "dead_call_expiry",
-		.data		= &rxrpc_dead_call_expiry,
+		.procname	= "max_client_conns",
+		.data		= &rxrpc_max_client_connections,
 		.maxlen		= sizeof(unsigned int),
 		.mode		= 0644,
-		.proc_handler	= proc_dointvec_jiffies,
-		.extra1		= (void *)&one,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= (void *)&rxrpc_reap_client_connections,
 	},
-
-	/* Values measured in seconds */
 	{
-		.procname	= "connection_expiry",
-		.data		= &rxrpc_connection_expiry,
+		.procname	= "reap_client_conns",
+		.data		= &rxrpc_reap_client_connections,
 		.maxlen		= sizeof(unsigned int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec_minmax,
 		.extra1		= (void *)&one,
+		.extra2		= (void *)&rxrpc_max_client_connections,
 	},
-
-	/* Non-time values */
 	{
 		.procname	= "max_backlog",
 		.data		= &rxrpc_max_backlog,
