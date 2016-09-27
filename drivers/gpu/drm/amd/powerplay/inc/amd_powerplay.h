@@ -131,9 +131,8 @@ struct amd_pp_init {
 	struct cgs_device *device;
 	uint32_t chip_family;
 	uint32_t chip_id;
-	uint32_t rev_id;
-	bool powercontainment_enabled;
 };
+
 enum amd_pp_display_config_type{
 	AMD_PP_DisplayConfigType_None = 0,
 	AMD_PP_DisplayConfigType_DP54 ,

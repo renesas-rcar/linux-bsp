@@ -22,7 +22,6 @@
  */
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/fb.h>
 #include <asm/div64.h>
 #include "linux/delay.h"
 #include "pp_acpi.h"
@@ -34,11 +33,11 @@
 #include "pp_debug.h"
 #include "ppatomctrl.h"
 #include "atombios.h"
-#include "tonga_pptable.h"
+#include "pptable_v1_0.h"
 #include "pppcielanes.h"
 #include "amd_pcie_helpers.h"
 #include "hardwaremanager.h"
-#include "tonga_processpptables.h"
+#include "process_pptables_v1_0.h"
 #include "cgs_common.h"
 #include "smu74.h"
 #include "smu_ucode_xfer_vi.h"
@@ -98,19 +97,6 @@
 #define PCIE_BUS_CLK                10000
 #define TCLK                        (PCIE_BUS_CLK / 10)
 
-
-static const uint16_t polaris10_clock_stretcher_lookup_table[2][4] =
-{ {600, 1050, 3, 0}, {600, 1050, 6, 1} };
-
-/*  [FF, SS] type, [] 4 voltage ranges, and [Floor Freq, Boundary Freq, VID min , VID max] */
-static const uint32_t polaris10_clock_stretcher_ddt_table[2][4][4] =
-{ { {265, 529, 120, 128}, {325, 650, 96, 119}, {430, 860, 32, 95}, {0, 0, 0, 31} },
-  { {275, 550, 104, 112}, {319, 638, 96, 103}, {360, 720, 64, 95}, {384, 768, 32, 63} } };
-
-/*  [Use_For_Low_freq] value, [0%, 5%, 10%, 7.14%, 14.28%, 20%] (coming from PWR_CKS_CNTL.stretch_amount reg spec) */
-static const uint8_t polaris10_clock_stretch_amount_conversion[2][6] =
-{ {0, 1, 3, 2, 4, 5}, {0, 2, 4, 5, 6, 5} };
-
 /** Values for the CG_THERMAL_CTRL::DPM_EVENT_SRC field. */
 enum DPM_EVENT_SRC {
 	DPM_EVENT_SRC_ANALOG = 0,
@@ -122,7 +108,7 @@ enum DPM_EVENT_SRC {
 
 static const unsigned long PhwPolaris10_Magic = (unsigned long)(PHM_VIslands_Magic);
 
-struct polaris10_power_state *cast_phw_polaris10_power_state(
+static struct polaris10_power_state *cast_phw_polaris10_power_state(
 				  struct pp_hw_power_state *hw_ps)
 {
 	PP_ASSERT_WITH_CODE((PhwPolaris10_Magic == hw_ps->magic),
@@ -132,7 +118,8 @@ struct polaris10_power_state *cast_phw_polaris10_power_state(
 	return (struct polaris10_power_state *)hw_ps;
 }
 
-const struct polaris10_power_state *cast_const_phw_polaris10_power_state(
+static const struct polaris10_power_state *
+cast_const_phw_polaris10_power_state(
 				 const struct pp_hw_power_state *hw_ps)
 {
 	PP_ASSERT_WITH_CODE((PhwPolaris10_Magic == hw_ps->magic),
@@ -155,7 +142,7 @@ static bool polaris10_is_dpm_running(struct pp_hwmgr *hwmgr)
  * @param    hwmgr  the address of the powerplay hardware manager.
  * @return   always 0
  */
-int phm_get_mc_microcode_version (struct pp_hwmgr *hwmgr)
+static int phm_get_mc_microcode_version(struct pp_hwmgr *hwmgr)
 {
 	cgs_write_register(hwmgr->device, mmMC_SEQ_IO_DEBUG_INDEX, 0x9F);
 
@@ -164,7 +151,7 @@ int phm_get_mc_microcode_version (struct pp_hwmgr *hwmgr)
 	return 0;
 }
 
-uint16_t phm_get_current_pcie_speed(struct pp_hwmgr *hwmgr)
+static uint16_t phm_get_current_pcie_speed(struct pp_hwmgr *hwmgr)
 {
 	uint32_t speedCntl = 0;
 
@@ -175,7 +162,7 @@ uint16_t phm_get_current_pcie_speed(struct pp_hwmgr *hwmgr)
 			PCIE_LC_SPEED_CNTL, LC_CURRENT_DATA_RATE));
 }
 
-int phm_get_current_pcie_lane_number(struct pp_hwmgr *hwmgr)
+static int phm_get_current_pcie_lane_number(struct pp_hwmgr *hwmgr)
 {
 	uint32_t link_width;
 
@@ -195,7 +182,7 @@ int phm_get_current_pcie_lane_number(struct pp_hwmgr *hwmgr)
 * @param    pHwMgr  the address of the powerplay hardware manager.
 * @return   always PP_Result_OK
 */
-int polaris10_enable_smc_voltage_controller(struct pp_hwmgr *hwmgr)
+static int polaris10_enable_smc_voltage_controller(struct pp_hwmgr *hwmgr)
 {
 	PP_ASSERT_WITH_CODE(
 		(hwmgr->smumgr->smumgr_funcs->send_msg_to_smc(hwmgr->smumgr, PPSMC_MSG_Voltage_Cntl_Enable) == 0),
@@ -675,7 +662,7 @@ static int polaris10_setup_default_pcie_table(struct pp_hwmgr *hwmgr)
  * on the power policy or external client requests,
  * such as UVD request, etc.
  */
-int polaris10_setup_default_dpm_tables(struct pp_hwmgr *hwmgr)
+static int polaris10_setup_default_dpm_tables(struct pp_hwmgr *hwmgr)
 {
 	struct polaris10_hwmgr *data = (struct polaris10_hwmgr *)(hwmgr->backend);
 	struct phm_ppt_v1_information *table_info =
@@ -747,11 +734,6 @@ int polaris10_setup_default_dpm_tables(struct pp_hwmgr *hwmgr)
 			sizeof(struct polaris10_dpm_table));
 
 	return 0;
-}
-
-uint8_t convert_to_vid(uint16_t vddc)
-{
-	return (uint8_t) ((6200 - (vddc * VOLTAGE_SCALE)) / 25);
 }
 
 /**
@@ -854,7 +836,7 @@ static int polaris10_populate_cac_table(struct pp_hwmgr *hwmgr,
 * @return   always  0
 */
 
-int polaris10_populate_smc_voltage_tables(struct pp_hwmgr *hwmgr,
+static int polaris10_populate_smc_voltage_tables(struct pp_hwmgr *hwmgr,
 		struct SMU74_Discrete_DpmTable *table)
 {
 	polaris10_populate_smc_vddci_table(hwmgr, table);
@@ -1431,7 +1413,7 @@ static int polaris10_populate_all_memory_levels(struct pp_hwmgr *hwmgr)
 * @param    mclk        the MCLK value to be used in the decision if MVDD should be high or low.
 * @param    voltage     the SMC VOLTAGE structure to be populated
 */
-int polaris10_populate_mvdd_value(struct pp_hwmgr *hwmgr,
+static int polaris10_populate_mvdd_value(struct pp_hwmgr *hwmgr,
 		uint32_t mclk, SMIO_Pattern *smio_pat)
 {
 	const struct polaris10_hwmgr *data = (struct polaris10_hwmgr *)(hwmgr->backend);
@@ -1945,7 +1927,7 @@ static int polaris10_populate_vr_config(struct pp_hwmgr *hwmgr,
 }
 
 
-int polaris10_populate_avfs_parameters(struct pp_hwmgr *hwmgr)
+static int polaris10_populate_avfs_parameters(struct pp_hwmgr *hwmgr)
 {
 	struct polaris10_hwmgr *data = (struct polaris10_hwmgr *)(hwmgr->backend);
 	SMU74_Discrete_DpmTable  *table = &(data->smc_state_table);
@@ -2574,7 +2556,7 @@ static int polaris10_disable_thermal_auto_throttle(struct pp_hwmgr *hwmgr)
 	return polaris10_disable_auto_throttle_source(hwmgr, PHM_AutoThrottleSource_Thermal);
 }
 
-int polaris10_pcie_performance_request(struct pp_hwmgr *hwmgr)
+static int polaris10_pcie_performance_request(struct pp_hwmgr *hwmgr)
 {
 	struct polaris10_hwmgr *data = (struct polaris10_hwmgr *)(hwmgr->backend);
 	data->pcie_performance_request = true;
@@ -2582,7 +2564,7 @@ int polaris10_pcie_performance_request(struct pp_hwmgr *hwmgr)
 	return 0;
 }
 
-int polaris10_enable_dpm_tasks(struct pp_hwmgr *hwmgr)
+static int polaris10_enable_dpm_tasks(struct pp_hwmgr *hwmgr)
 {
 	int tmp_result, result = 0;
 	tmp_result = (!polaris10_is_dpm_running(hwmgr)) ? 0 : -1;
@@ -2763,17 +2745,14 @@ int polaris10_reset_asic_tasks(struct pp_hwmgr *hwmgr)
 	return 0;
 }
 
-int polaris10_hwmgr_backend_fini(struct pp_hwmgr *hwmgr)
+static int polaris10_hwmgr_backend_fini(struct pp_hwmgr *hwmgr)
 {
 	return phm_hwmgr_backend_fini(hwmgr);
 }
 
-int polaris10_set_features_platform_caps(struct pp_hwmgr *hwmgr)
+static int polaris10_set_features_platform_caps(struct pp_hwmgr *hwmgr)
 {
 	struct polaris10_hwmgr *data = (struct polaris10_hwmgr *)(hwmgr->backend);
-
-	phm_cap_set(hwmgr->platform_descriptor.platformCaps,
-			PHM_PlatformCaps_SclkDeepSleep);
 
 	phm_cap_set(hwmgr->platform_descriptor.platformCaps,
 		PHM_PlatformCaps_DynamicPatchPowerState);
@@ -2819,13 +2798,6 @@ int polaris10_set_features_platform_caps(struct pp_hwmgr *hwmgr)
 						PHM_PlatformCaps_TDRamping);
 	phm_cap_set(hwmgr->platform_descriptor.platformCaps,
 						PHM_PlatformCaps_TCPRamping);
-
-	if (hwmgr->powercontainment_enabled)
-		phm_cap_set(hwmgr->platform_descriptor.platformCaps,
-			    PHM_PlatformCaps_PowerContainment);
-	else
-		phm_cap_unset(hwmgr->platform_descriptor.platformCaps,
-			    PHM_PlatformCaps_PowerContainment);
 
 	phm_cap_set(hwmgr->platform_descriptor.platformCaps,
 							PHM_PlatformCaps_CAC);
@@ -2905,8 +2877,8 @@ static int polaris10_get_evv_voltages(struct pp_hwmgr *hwmgr)
 				continue;
 			}
 
-			/* need to make sure vddc is less than 2v or else, it could burn the ASIC.
-			 * real voltage level in unit of 0.01mv */
+			/* need to make sure vddc is less than 2V or else, it could burn the ASIC.
+			 * real voltage level in unit of 0.01mV */
 			PP_ASSERT_WITH_CODE((vddc < 200000 && vddc != 0),
 					"Invalid VDDC value", result = -EINVAL;);
 
@@ -3133,7 +3105,7 @@ static int polaris10_set_private_data_based_on_pptable(struct pp_hwmgr *hwmgr)
 	return 0;
 }
 
-int polaris10_patch_voltage_workaround(struct pp_hwmgr *hwmgr)
+static int polaris10_patch_voltage_workaround(struct pp_hwmgr *hwmgr)
 {
 	struct phm_ppt_v1_information *table_info =
 		       (struct phm_ppt_v1_information *)(hwmgr->pptable);
@@ -3142,8 +3114,27 @@ int polaris10_patch_voltage_workaround(struct pp_hwmgr *hwmgr)
 	struct phm_ppt_v1_voltage_lookup_table *lookup_table =
 			table_info->vddc_lookup_table;
 	uint32_t i;
+	uint32_t hw_revision, sub_vendor_id, sub_sys_id;
+	struct cgs_system_info sys_info = {0};
 
-	if (hwmgr->chip_id == CHIP_POLARIS10 && hwmgr->hw_revision == 0xC7) {
+	sys_info.size = sizeof(struct cgs_system_info);
+
+	sys_info.info_id = CGS_SYSTEM_INFO_PCIE_REV;
+	cgs_query_system_info(hwmgr->device, &sys_info);
+	hw_revision = (uint32_t)sys_info.value;
+
+	sys_info.info_id = CGS_SYSTEM_INFO_PCIE_SUB_SYS_ID;
+	cgs_query_system_info(hwmgr->device, &sys_info);
+	sub_sys_id = (uint32_t)sys_info.value;
+
+	sys_info.info_id = CGS_SYSTEM_INFO_PCIE_SUB_SYS_VENDOR_ID;
+	cgs_query_system_info(hwmgr->device, &sys_info);
+	sub_vendor_id = (uint32_t)sys_info.value;
+
+	if (hwmgr->chip_id == CHIP_POLARIS10 && hw_revision == 0xC7 &&
+			((sub_sys_id == 0xb37 && sub_vendor_id == 0x1002) ||
+		    (sub_sys_id == 0x4a8 && sub_vendor_id == 0x1043) ||
+		    (sub_sys_id == 0x9480 && sub_vendor_id == 0x1682))) {
 		if (lookup_table->entries[dep_mclk_table->entries[dep_mclk_table->count-1].vddInd].us_vdd >= 1000)
 			return 0;
 
@@ -3158,7 +3149,7 @@ int polaris10_patch_voltage_workaround(struct pp_hwmgr *hwmgr)
 }
 
 
-int polaris10_hwmgr_backend_init(struct pp_hwmgr *hwmgr)
+static int polaris10_hwmgr_backend_init(struct pp_hwmgr *hwmgr)
 {
 	struct polaris10_hwmgr *data;
 	struct pp_atomctrl_gpio_pin_assignment gpio_pin_assignment;
@@ -3901,7 +3892,7 @@ static int polaris10_get_pp_table_entry(struct pp_hwmgr *hwmgr,
 
 	ps = (struct polaris10_power_state *)(&state->hardware);
 
-	result = tonga_get_powerplay_table_entry(hwmgr, entry_index, state,
+	result = get_powerplay_table_entry_v1_0(hwmgr, entry_index, state,
 			polaris10_get_pp_table_entry_callback_func);
 
 	/* This is the earliest time we have all the dependency table and the VBIOS boot state
@@ -4368,7 +4359,8 @@ static int polaris10_generate_dpm_level_enable_mask(
 	return 0;
 }
 
-int polaris10_enable_disable_uvd_dpm(struct pp_hwmgr *hwmgr, bool enable)
+static int
+polaris10_enable_disable_uvd_dpm(struct pp_hwmgr *hwmgr, bool enable)
 {
 	return smum_send_msg_to_smc(hwmgr->smumgr, enable ?
 			PPSMC_MSG_UVDDPM_Enable :
@@ -4382,7 +4374,8 @@ int polaris10_enable_disable_vce_dpm(struct pp_hwmgr *hwmgr, bool enable)
 			PPSMC_MSG_VCEDPM_Disable);
 }
 
-int polaris10_enable_disable_samu_dpm(struct pp_hwmgr *hwmgr, bool enable)
+static int
+polaris10_enable_disable_samu_dpm(struct pp_hwmgr *hwmgr, bool enable)
 {
 	return smum_send_msg_to_smc(hwmgr->smumgr, enable?
 			PPSMC_MSG_SAMUDPM_Enable :
@@ -4696,14 +4689,16 @@ static int polaris10_set_max_fan_pwm_output(struct pp_hwmgr *hwmgr, uint16_t us_
 }
 
 
-int polaris10_notify_smc_display_change(struct pp_hwmgr *hwmgr, bool has_display)
+static int
+polaris10_notify_smc_display_change(struct pp_hwmgr *hwmgr, bool has_display)
 {
 	PPSMC_Msg msg = has_display ? (PPSMC_Msg)PPSMC_HasDisplay : (PPSMC_Msg)PPSMC_NoDisplay;
 
 	return (smum_send_msg_to_smc(hwmgr->smumgr, msg) == 0) ?  0 : -1;
 }
 
-int polaris10_notify_smc_display_config_after_ps_adjustment(struct pp_hwmgr *hwmgr)
+static int
+polaris10_notify_smc_display_config_after_ps_adjustment(struct pp_hwmgr *hwmgr)
 {
 	uint32_t num_active_displays = 0;
 	struct cgs_display_info info = {0};
@@ -4726,7 +4721,7 @@ int polaris10_notify_smc_display_config_after_ps_adjustment(struct pp_hwmgr *hwm
 * @param    hwmgr  the address of the powerplay hardware manager.
 * @return   always OK
 */
-int polaris10_program_display_gap(struct pp_hwmgr *hwmgr)
+static int polaris10_program_display_gap(struct pp_hwmgr *hwmgr)
 {
 	struct polaris10_hwmgr *data = (struct polaris10_hwmgr *)(hwmgr->backend);
 	uint32_t num_active_displays = 0;
@@ -4771,7 +4766,7 @@ int polaris10_program_display_gap(struct pp_hwmgr *hwmgr)
 }
 
 
-int polaris10_display_configuration_changed_task(struct pp_hwmgr *hwmgr)
+static int polaris10_display_configuration_changed_task(struct pp_hwmgr *hwmgr)
 {
 	return polaris10_program_display_gap(hwmgr);
 }
@@ -4795,13 +4790,15 @@ static int polaris10_set_max_fan_rpm_output(struct pp_hwmgr *hwmgr, uint16_t us_
 			PPSMC_MSG_SetFanRpmMax, us_max_fan_rpm);
 }
 
-int polaris10_register_internal_thermal_interrupt(struct pp_hwmgr *hwmgr,
+static int
+polaris10_register_internal_thermal_interrupt(struct pp_hwmgr *hwmgr,
 					const void *thermal_interrupt_info)
 {
 	return 0;
 }
 
-bool polaris10_check_smc_update_required_for_display_configuration(struct pp_hwmgr *hwmgr)
+static bool polaris10_check_smc_update_required_for_display_configuration(
+		struct pp_hwmgr *hwmgr)
 {
 	struct polaris10_hwmgr *data = (struct polaris10_hwmgr *)(hwmgr->backend);
 	bool is_update_required = false;
@@ -4831,7 +4828,9 @@ static inline bool polaris10_are_power_levels_equal(const struct polaris10_perfo
 		  (pl1->pcie_lane == pl2->pcie_lane));
 }
 
-int polaris10_check_states_equal(struct pp_hwmgr *hwmgr, const struct pp_hw_power_state *pstate1, const struct pp_hw_power_state *pstate2, bool *equal)
+static int polaris10_check_states_equal(struct pp_hwmgr *hwmgr,
+		const struct pp_hw_power_state *pstate1,
+		const struct pp_hw_power_state *pstate2, bool *equal)
 {
 	const struct polaris10_power_state *psa = cast_const_phw_polaris10_power_state(pstate1);
 	const struct polaris10_power_state *psb = cast_const_phw_polaris10_power_state(pstate2);
@@ -4862,7 +4861,7 @@ int polaris10_check_states_equal(struct pp_hwmgr *hwmgr, const struct pp_hw_powe
 	return 0;
 }
 
-int polaris10_upload_mc_firmware(struct pp_hwmgr *hwmgr)
+static int polaris10_upload_mc_firmware(struct pp_hwmgr *hwmgr)
 {
 	struct polaris10_hwmgr *data = (struct polaris10_hwmgr *)(hwmgr->backend);
 
@@ -4975,7 +4974,7 @@ static int polaris10_init_sclk_threshold(struct pp_hwmgr *hwmgr)
 	return 0;
 }
 
-int polaris10_setup_asic_task(struct pp_hwmgr *hwmgr)
+static int polaris10_setup_asic_task(struct pp_hwmgr *hwmgr)
 {
 	int tmp_result, result = 0;
 
@@ -5246,7 +5245,7 @@ static const struct pp_hwmgr_func polaris10_hwmgr_funcs = {
 	.get_sclk = polaris10_dpm_get_sclk,
 	.patch_boot_state = polaris10_dpm_patch_boot_state,
 	.get_pp_table_entry = polaris10_get_pp_table_entry,
-	.get_num_of_pp_table_entries = tonga_get_number_of_powerplay_table_entries,
+	.get_num_of_pp_table_entries = get_number_of_powerplay_table_entries_v1_0,
 	.print_current_perforce_level = polaris10_print_current_perforce_level,
 	.powerdown_uvd = polaris10_phm_powerdown_uvd,
 	.powergate_uvd = polaris10_phm_powergate_uvd,
@@ -5283,7 +5282,7 @@ static const struct pp_hwmgr_func polaris10_hwmgr_funcs = {
 int polaris10_hwmgr_init(struct pp_hwmgr *hwmgr)
 {
 	hwmgr->hwmgr_func = &polaris10_hwmgr_funcs;
-	hwmgr->pptable_func = &tonga_pptable_funcs;
+	hwmgr->pptable_func = &pptable_v1_0_funcs;
 	pp_polaris10_thermal_initialize(hwmgr);
 
 	return 0;

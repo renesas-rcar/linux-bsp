@@ -31,6 +31,7 @@
 #include "eventmanager.h"
 #include "pp_debug.h"
 
+
 #define PP_CHECK(handle)						\
 	do {								\
 		if ((handle) == NULL || (handle)->pp_valid != PP_VALID)	\
@@ -162,12 +163,12 @@ static int pp_hw_fini(void *handle)
 	pp_handle = (struct pp_instance *)handle;
 	eventmgr = pp_handle->eventmgr;
 
-	if (eventmgr != NULL || eventmgr->pp_eventmgr_fini != NULL)
+	if (eventmgr != NULL && eventmgr->pp_eventmgr_fini != NULL)
 		eventmgr->pp_eventmgr_fini(eventmgr);
 
 	smumgr = pp_handle->smu_mgr;
 
-	if (smumgr != NULL || smumgr->smumgr_funcs != NULL ||
+	if (smumgr != NULL && smumgr->smumgr_funcs != NULL &&
 		smumgr->smumgr_funcs->smu_fini != NULL)
 		smumgr->smumgr_funcs->smu_fini(smumgr);
 
@@ -537,7 +538,6 @@ int pp_dpm_dispatch_tasks(void *handle, enum amd_pp_event event_id, void *input,
 		ret = pem_handle_event(pp_handle->eventmgr, event_id, &data);
 		break;
 	case AMD_PP_EVENT_READJUST_POWER_STATE:
-		pp_handle->hwmgr->current_ps = pp_handle->hwmgr->boot_ps;
 		ret = pem_handle_event(pp_handle->eventmgr, event_id, &data);
 		break;
 	default:
@@ -764,15 +764,12 @@ static int pp_dpm_set_pp_table(void *handle, const char *buf, size_t size)
 	PP_CHECK_HW(hwmgr);
 
 	if (!hwmgr->hardcode_pp_table) {
-		hwmgr->hardcode_pp_table =
-				kzalloc(hwmgr->soft_pp_table_size, GFP_KERNEL);
+		hwmgr->hardcode_pp_table = kmemdup(hwmgr->soft_pp_table,
+						   hwmgr->soft_pp_table_size,
+						   GFP_KERNEL);
 
 		if (!hwmgr->hardcode_pp_table)
 			return -ENOMEM;
-
-		/* to avoid powerplay crash when hardcode pptable is empty */
-		memcpy(hwmgr->hardcode_pp_table, hwmgr->soft_pp_table,
-				hwmgr->soft_pp_table_size);
 	}
 
 	memcpy(hwmgr->hardcode_pp_table, buf, size);
