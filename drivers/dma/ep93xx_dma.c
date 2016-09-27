@@ -262,10 +262,8 @@ static void ep93xx_dma_set_active(struct ep93xx_dma_chan *edmac,
 static struct ep93xx_dma_desc *
 ep93xx_dma_get_active(struct ep93xx_dma_chan *edmac)
 {
-	if (list_empty(&edmac->active))
-		return NULL;
-
-	return list_first_entry(&edmac->active, struct ep93xx_dma_desc, node);
+	return list_first_entry_or_null(&edmac->active,
+					struct ep93xx_dma_desc, node);
 }
 
 /**
@@ -739,10 +737,10 @@ static void ep93xx_dma_tasklet(unsigned long data)
 {
 	struct ep93xx_dma_chan *edmac = (struct ep93xx_dma_chan *)data;
 	struct ep93xx_dma_desc *desc, *d;
-	dma_async_tx_callback callback = NULL;
-	void *callback_param = NULL;
+	struct dmaengine_desc_callback cb;
 	LIST_HEAD(list);
 
+	memset(&cb, 0, sizeof(cb));
 	spin_lock_irq(&edmac->lock);
 	/*
 	 * If dma_terminate_all() was called before we get to run, the active
@@ -757,8 +755,7 @@ static void ep93xx_dma_tasklet(unsigned long data)
 				dma_cookie_complete(&desc->txd);
 			list_splice_init(&edmac->active, &list);
 		}
-		callback = desc->txd.callback;
-		callback_param = desc->txd.callback_param;
+		dmaengine_desc_get_callback(&desc->txd, &cb);
 	}
 	spin_unlock_irq(&edmac->lock);
 
@@ -771,8 +768,7 @@ static void ep93xx_dma_tasklet(unsigned long data)
 		ep93xx_dma_desc_put(edmac, desc);
 	}
 
-	if (callback)
-		callback(callback_param);
+	dmaengine_desc_callback_invoke(&cb, NULL);
 }
 
 static irqreturn_t ep93xx_dma_interrupt(int irq, void *dev_id)
