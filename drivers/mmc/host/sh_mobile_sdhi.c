@@ -47,9 +47,15 @@
 
 #define host_to_priv(host) container_of((host)->pdata, struct sh_mobile_sdhi, mmc_data)
 
+
 struct sh_mobile_sdhi_scc {
 	unsigned long clk_rate;	/* clock rate for SDR104 */
 	u32 tap;		/* sampling clock position for SDR104 */
+};
+
+enum tmio_mmc_dmac_type {
+	TMIO_MMC_SYSC_DMAC	= 0,
+	TMIO_MMC_INTERNAL_DMAC,
 };
 
 struct sh_mobile_sdhi_of_data {
@@ -62,6 +68,9 @@ struct sh_mobile_sdhi_of_data {
 	int scc_offset;
 	struct sh_mobile_sdhi_scc *taps;
 	int taps_num;
+	unsigned int max_blk_count;
+	unsigned short max_segs;
+	enum tmio_mmc_dmac_type dmac_type;
 };
 
 static const struct sh_mobile_sdhi_of_data of_default_cfg = {
@@ -113,6 +122,10 @@ static const struct sh_mobile_sdhi_of_data of_rcar_gen3_compatible = {
 	.scc_offset	= 0x1000,
 	.taps		= rcar_gen3_scc_taps,
 	.taps_num	= ARRAY_SIZE(rcar_gen3_scc_taps),
+	/* Gen3 SDHI DMAC can handle 0xffffffff blk count, but seg = 1 */
+	.max_blk_count  = 0xffffffff,
+	.max_segs = 1,
+	.dmac_type	= TMIO_MMC_INTERNAL_DMAC,
 };
 
 static const struct of_device_id sh_mobile_sdhi_of_match[] = {
@@ -141,6 +154,29 @@ struct sh_mobile_sdhi {
 	struct pinctrl_state *pins_default, *pins_uhs;
 	void __iomem *scc_ctl;
 };
+
+#if IS_ENABLED(CONFIG_MMC_SDHI_SYS_DMAC)
+void sdhi_sys_dmac_init_dma(void);
+#else
+static void sdhi_sys_dmac_init_dma(void) { }
+#endif
+
+#if IS_ENABLED(CONFIG_MMC_SDHI_INTERNAL_DMA)
+void sdhi_internal_dmac_init_dma(void);
+#else
+static void sdhi_internal_dmac_init_dma(void) { }
+#endif
+
+static void sh_mobile_sdhi_init_dma(enum tmio_mmc_dmac_type dmac_type)
+{
+	switch (dmac_type) {
+	case TMIO_MMC_INTERNAL_DMAC:
+		return sdhi_internal_dmac_init_dma();
+
+	case TMIO_MMC_SYSC_DMAC:
+		return sdhi_sys_dmac_init_dma();
+	}
+}
 
 static void sh_mobile_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
 {
@@ -550,6 +586,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *of_id =
 		of_match_device(sh_mobile_sdhi_of_match, &pdev->dev);
+	enum tmio_mmc_dmac_type dmac_type = TMIO_MMC_SYSC_DMAC;
 	struct sh_mobile_sdhi *priv;
 	struct tmio_mmc_data *mmc_data;
 	struct tmio_mmc_data *mmd = pdev->dev.platform_data;
@@ -597,9 +634,14 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		mmc_data->capabilities |= of_data->capabilities;
 		mmc_data->capabilities2 |= of_data->capabilities2;
 		mmc_data->dma_rx_offset = of_data->dma_rx_offset;
+		mmc_data->max_blk_count = of_data->max_blk_count;
+		mmc_data->max_segs = of_data->max_segs;
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 		host->bus_shift = of_data->bus_shift;
+		dmac_type = of_data->dmac_type;
 	}
+
+	sh_mobile_sdhi_init_dma(dmac_type);
 
 	host->dma		= dma_priv;
 	host->write16_hook	= sh_mobile_sdhi_write16_hook;
