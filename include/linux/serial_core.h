@@ -374,7 +374,7 @@ extern int of_setup_earlycon(const struct earlycon_id *match,
 
 struct uart_port *uart_get_console(struct uart_port *ports, int nr,
 				   struct console *c);
-int uart_parse_earlycon(char *p, unsigned char *iotype, unsigned long *addr,
+int uart_parse_earlycon(char *p, unsigned char *iotype, resource_size_t *addr,
 			char **options);
 void uart_parse_options(char *options, int *baud, int *parity, int *bits,
 			int *flow);
@@ -412,7 +412,7 @@ int uart_resume_port(struct uart_driver *reg, struct uart_port *port);
 static inline int uart_tx_stopped(struct uart_port *port)
 {
 	struct tty_struct *tty = port->state->port.tty;
-	if (tty->stopped || port->hw_stopped)
+	if ((tty && tty->stopped) || port->hw_stopped)
 		return 1;
 	return 0;
 }
