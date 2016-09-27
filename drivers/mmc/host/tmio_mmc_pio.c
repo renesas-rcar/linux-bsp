@@ -350,9 +350,18 @@ static int tmio_mmc_start_command(struct tmio_mmc_host *host, struct mmc_command
 	u32 irq_mask = TMIO_MASK_CMD;
 
 	/* CMD12 is handled by hardware */
-	if (cmd->opcode == MMC_STOP_TRANSMISSION && !cmd->arg) {
-		sd_ctrl_write16(host, CTL_STOP_INTERNAL_ACTION, 0x001);
-		return 0;
+	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2)) {
+		if (cmd->opcode == MMC_STOP_TRANSMISSION && !cmd->arg) {
+			sd_ctrl_write16(host, CTL_STOP_INTERNAL_ACTION, 0x001);
+			return 0;
+		}
+	} else if (cmd->opcode == MMC_STOP_TRANSMISSION && !cmd->arg) {
+		u32 status = sd_ctrl_read16_and_16_as_32(host, CTL_STATUS);
+
+		if (status & TMIO_STAT_CMD_BUSY) {
+			sd_ctrl_write16(host, CTL_STOP_INTERNAL_ACTION, 0x001);
+			return 0;
+		}
 	}
 
 	switch (mmc_resp_type(cmd)) {
