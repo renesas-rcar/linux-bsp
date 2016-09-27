@@ -43,7 +43,7 @@
 #define LED_BLINK_LINK_INTERVAL_ALPHA		500
 #define LED_BLINK_SCAN_INTERVAL_ALPHA		180
 #define LED_BLINK_FASTER_INTERVAL_ALPHA		50
-#define LED_BLINK_WPS_SUCESS_INTERVAL_ALPHA	5000
+#define LED_BLINK_WPS_SUCCESS_INTERVAL_ALPHA	5000
 
 /*===========================================================================
  * LED object.
@@ -58,10 +58,12 @@ enum _LED_STATE_871x {
 	LED_POWER_ON_BLINK = 5,
 	LED_SCAN_BLINK = 6, /* LED is blinking during scanning period,
 			     * the # of times to blink is depend on time
-			     * for scanning. */
+			     * for scanning.
+			     */
 	LED_NO_LINK_BLINK = 7, /* LED is blinking during no link state. */
 	LED_BLINK_StartToBlink = 8,/* Customized for Sercomm Printer
-				    * Server case */
+				    * Server case
+				    */
 	LED_BLINK_WPS = 9,	/* LED is blinkg during WPS communication */
 	LED_TXRX_BLINK = 10,
 	LED_BLINK_WPS_STOP = 11,	/*for ALPHA */
@@ -110,7 +112,8 @@ static void DeInitLed871x(struct LED_871x *pLed)
 {
 	del_timer_sync(&pLed->BlinkTimer);
 	/* We should reset bLedBlinkInProgress if we cancel
-	 * the LedControlTimer, */
+	 * the LedControlTimer,
+	 */
 	pLed->bLedBlinkInProgress = false;
 }
 
@@ -407,7 +410,7 @@ static void SwLedBlink1(struct LED_871x *pLed)
 		if (pLed->BlinkingLedState == LED_ON) {
 			pLed->BlinkingLedState = LED_OFF;
 			mod_timer(&pLed->BlinkTimer, jiffies +
-				  msecs_to_jiffies(LED_BLINK_WPS_SUCESS_INTERVAL_ALPHA));
+				  msecs_to_jiffies(LED_BLINK_WPS_SUCCESS_INTERVAL_ALPHA));
 			bStopBlinking = false;
 		} else {
 			bStopBlinking = true;
@@ -571,7 +574,7 @@ static void SwLedBlink3(struct LED_871x *pLed)
 		if (pLed->BlinkingLedState == LED_ON) {
 			pLed->BlinkingLedState = LED_OFF;
 			mod_timer(&pLed->BlinkTimer, jiffies +
-				  msecs_to_jiffies(LED_BLINK_WPS_SUCESS_INTERVAL_ALPHA));
+				  msecs_to_jiffies(LED_BLINK_WPS_SUCCESS_INTERVAL_ALPHA));
 			bStopBlinking = false;
 		} else {
 			bStopBlinking = true;
@@ -827,7 +830,8 @@ static void BlinkTimerCallback(unsigned long data)
 	struct LED_871x  *pLed = (struct LED_871x *)data;
 
 	/* This fixed the crash problem on Fedora 12 when trying to do the
-	 * insmod;ifconfig up;rmmod commands. */
+	 * insmod;ifconfig up;rmmod commands.
+	 */
 	if (pLed->padapter->bSurpriseRemoved || pLed->padapter->bDriverStopped)
 		return;
 	schedule_work(&pLed->BlinkWorkItem);
@@ -1048,7 +1052,7 @@ static void SwLedControlMode1(struct _adapter *padapter,
 		if (pLed->bLedOn) {
 			pLed->BlinkingLedState = LED_OFF;
 			mod_timer(&pLed->BlinkTimer, jiffies +
-				  msecs_to_jiffies(LED_BLINK_WPS_SUCESS_INTERVAL_ALPHA));
+				  msecs_to_jiffies(LED_BLINK_WPS_SUCCESS_INTERVAL_ALPHA));
 		} else {
 			pLed->BlinkingLedState = LED_ON;
 			mod_timer(&pLed->BlinkTimer,
@@ -1328,7 +1332,7 @@ static void SwLedControlMode3(struct _adapter *padapter,
 		if (pLed->bLedOn) {
 			pLed->BlinkingLedState = LED_OFF;
 			mod_timer(&pLed->BlinkTimer, jiffies +
-				  msecs_to_jiffies(LED_BLINK_WPS_SUCESS_INTERVAL_ALPHA));
+				  msecs_to_jiffies(LED_BLINK_WPS_SUCCESS_INTERVAL_ALPHA));
 		} else {
 			pLed->BlinkingLedState = LED_ON;
 			mod_timer(&pLed->BlinkTimer,

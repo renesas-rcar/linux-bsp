@@ -9,7 +9,6 @@
  *   published by the Free Software Foundation.
  */
 
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/compiler.h>
@@ -70,10 +69,6 @@ static const struct iw_handler_def ks_wlan_handler_def;
 /*
  *	function prototypes
  */
-extern int ks_wlan_hw_tx(struct ks_wlan_private *priv, void *p,
-			 unsigned long size,
-			 void (*complete_handler) (void *arg1, void *arg2),
-			 void *arg1, void *arg2);
 static int ks_wlan_open(struct net_device *dev);
 static void ks_wlan_tx_timeout(struct net_device *dev);
 static int ks_wlan_start_xmit(struct sk_buff *skb, struct net_device *dev);
@@ -402,7 +397,7 @@ static int ks_wlan_set_wap(struct net_device *dev, struct iw_request_info *info,
 			priv->need_commit |= SME_MODE_SET;
 		}
 	} else {
-		memset(priv->reg.bssid, 0x0, ETH_ALEN);
+		eth_zero_addr(priv->reg.bssid);
 		return -EOPNOTSUPP;
 	}
 
@@ -433,7 +428,7 @@ static int ks_wlan_get_wap(struct net_device *dev, struct iw_request_info *info,
 	if ((priv->connect_status & CONNECT_STATUS_MASK) == CONNECT_STATUS) {
 		memcpy(awrq->sa_data, &(priv->current_ap.bssid[0]), ETH_ALEN);
 	} else {
-		memset(awrq->sa_data, 0, ETH_ALEN);
+		eth_zero_addr(awrq->sa_data);
 	}
 
 	awrq->sa_family = ARPHRD_ETHER;
@@ -2092,7 +2087,7 @@ static int ks_wlan_set_pmksa(struct net_device *dev,
 			list_for_each(ptr, &priv->pmklist.head) {
 				pmk = list_entry(ptr, struct pmk_t, list);
 				if (!memcmp(pmksa->bssid.sa_data, pmk->bssid, ETH_ALEN)) {	/* match address! list del. */
-					memset(pmk->bssid, 0, ETH_ALEN);
+					eth_zero_addr(pmk->bssid);
 					memset(pmk->pmkid, 0, IW_PMKID_LEN);
 					list_del_init(&pmk->list);
 					break;
@@ -3354,8 +3349,6 @@ void ks_wlan_tx_timeout(struct net_device *dev)
 	}
 	priv->nstats.tx_errors++;
 	netif_wake_queue(dev);
-
-	return;
 }
 
 static
@@ -3366,7 +3359,7 @@ int ks_wlan_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	DPRINTK(3, "in_interrupt()=%ld\n", in_interrupt());
 
-	if (skb == NULL) {
+	if (!skb) {
 		printk(KERN_ERR "ks_wlan:  skb == NULL!!!\n");
 		return 0;
 	}
@@ -3396,13 +3389,13 @@ void send_packet_complete(void *arg1, void *arg2)
 
 	DPRINTK(3, "\n");
 
-	priv->nstats.tx_bytes += packet->len;
 	priv->nstats.tx_packets++;
 
 	if (netif_queue_stopped(priv->net_dev))
 		netif_wake_queue(priv->net_dev);
 
 	if (packet) {
+		priv->nstats.tx_bytes += packet->len;
 		dev_kfree_skb(packet);
 		packet = NULL;
 	}
@@ -3421,8 +3414,6 @@ void ks_wlan_set_multicast_list(struct net_device *dev)
 		return;	/* not finished initialize */
 	}
 	hostif_sme_enqueue(priv, SME_MULTICAST_REQUEST);
-
-	return;
 }
 
 static
@@ -3512,17 +3503,11 @@ int ks_wlan_net_stop(struct net_device *dev)
 {
 	struct ks_wlan_private *priv = netdev_priv(dev);
 
-	int ret = 0;
 	priv->device_open_status = 0;
 	del_timer_sync(&update_phyinfo_timer);
 
 	if (netif_running(dev))
 		netif_stop_queue(dev);
 
-	return ret;
-}
-
-int ks_wlan_reset(struct net_device *dev)
-{
 	return 0;
 }

@@ -100,7 +100,7 @@ static void dgnc_tty_unthrottle(struct tty_struct *tty);
 static void dgnc_tty_flush_chars(struct tty_struct *tty);
 static void dgnc_tty_flush_buffer(struct tty_struct *tty);
 static void dgnc_tty_hangup(struct tty_struct *tty);
-static int dgnc_set_modem_info(struct tty_struct *tty, unsigned int command,
+static int dgnc_set_modem_info(struct channel_t *ch, unsigned int command,
 			       unsigned int __user *value);
 static int dgnc_get_modem_info(struct channel_t *ch,
 			       unsigned int __user *value);
@@ -186,7 +186,8 @@ int dgnc_tty_register(struct dgnc_board *brd)
 	if (IS_ERR(brd->serial_driver))
 		return PTR_ERR(brd->serial_driver);
 
-	snprintf(brd->serial_name, MAXTTYNAMELEN, "tty_dgnc_%d_", brd->boardnum);
+	snprintf(brd->serial_name, MAXTTYNAMELEN, "tty_dgnc_%d_",
+		 brd->boardnum);
 
 	brd->serial_driver->name = brd->serial_name;
 	brd->serial_driver->name_base = 0;
@@ -640,17 +641,10 @@ exit_unlock:
  ************************************************************************/
 void dgnc_carrier(struct channel_t *ch)
 {
-	struct dgnc_board *bd;
-
 	int virt_carrier = 0;
 	int phys_carrier = 0;
 
 	if (!ch || ch->magic != DGNC_CHANNEL_MAGIC)
-		return;
-
-	bd = ch->ch_bd;
-
-	if (!bd || bd->magic != DGNC_BOARD_MAGIC)
 		return;
 
 	if (ch->ch_mistat & UART_MSR_DCD)
@@ -1172,17 +1166,12 @@ static int dgnc_block_til_ready(struct tty_struct *tty,
 				struct channel_t *ch)
 {
 	int retval = 0;
-	struct un_t *un = NULL;
+	struct un_t *un = tty->driver_data;
 	unsigned long flags;
 	uint	old_flags = 0;
 	int	sleep_on_un_flags = 0;
 
-	if (!tty || tty->magic != TTY_MAGIC || !file || !ch ||
-	    ch->magic != DGNC_CHANNEL_MAGIC)
-		return -ENXIO;
-
-	un = tty->driver_data;
-	if (!un || un->magic != DGNC_UNIT_MAGIC)
+	if (!file)
 		return -ENXIO;
 
 	spin_lock_irqsave(&ch->ch_lock, flags);
@@ -1301,13 +1290,7 @@ static int dgnc_block_til_ready(struct tty_struct *tty,
  */
 static void dgnc_tty_hangup(struct tty_struct *tty)
 {
-	struct un_t	*un;
-
 	if (!tty || tty->magic != TTY_MAGIC)
-		return;
-
-	un = tty->driver_data;
-	if (!un || un->magic != DGNC_UNIT_MAGIC)
 		return;
 
 	/* flush the transmit queues */
@@ -1510,18 +1493,8 @@ static int dgnc_tty_chars_in_buffer(struct tty_struct *tty)
  * returns the new bytes_available.  This only affects printer
  * output.
  */
-static int dgnc_maxcps_room(struct tty_struct *tty, int bytes_available)
+static int dgnc_maxcps_room(struct channel_t *ch, int bytes_available)
 {
-	struct un_t *un = tty->driver_data;
-	struct channel_t *ch = un->un_ch;
-
-	/*
-	 * If its not the Transparent print device, return
-	 * the full data amount.
-	 */
-	if (un->un_type != DGNC_PRINT)
-		return bytes_available;
-
 	if (ch->ch_digi.digi_maxcps > 0 && ch->ch_digi.digi_bufsize > 0) {
 		int cps_limit = 0;
 		unsigned long current_time = jiffies;
@@ -1585,7 +1558,8 @@ static int dgnc_tty_write_room(struct tty_struct *tty)
 		ret += WQUEUESIZE;
 
 	/* Limit printer to maxcps */
-	ret = dgnc_maxcps_room(tty, ret);
+	if (un->un_type != DGNC_PRINT)
+		ret = dgnc_maxcps_room(ch, ret);
 
 	/*
 	 * If we are printer device, leave space for
@@ -1677,7 +1651,8 @@ static int dgnc_tty_write(struct tty_struct *tty,
 	 * Limit printer output to maxcps overall, with bursts allowed
 	 * up to bufsize characters.
 	 */
-	bufcount = dgnc_maxcps_room(tty, bufcount);
+	if (un->un_type != DGNC_PRINT)
+		bufcount = dgnc_maxcps_room(ch, bufcount);
 
 	/*
 	 * Take minimum of what the user wants to send, and the
@@ -1984,7 +1959,7 @@ static void dgnc_tty_send_xchar(struct tty_struct *tty, char c)
 static inline int dgnc_get_mstat(struct channel_t *ch)
 {
 	unsigned char mstat;
-	int result = -EIO;
+	int result = 0;
 	unsigned long flags;
 
 	if (!ch || ch->magic != DGNC_CHANNEL_MAGIC)
@@ -1995,8 +1970,6 @@ static inline int dgnc_get_mstat(struct channel_t *ch)
 	mstat = ch->ch_mostat | ch->ch_mistat;
 
 	spin_unlock_irqrestore(&ch->ch_lock, flags);
-
-	result = 0;
 
 	if (mstat & UART_MCR_DTR)
 		result |= TIOCM_DTR;
@@ -2028,31 +2001,13 @@ static int dgnc_get_modem_info(struct channel_t *ch,
  *
  * Set modem signals, called by ld.
  */
-static int dgnc_set_modem_info(struct tty_struct *tty,
+static int dgnc_set_modem_info(struct channel_t *ch,
 			       unsigned int command,
 			       unsigned int __user *value)
 {
-	struct dgnc_board *bd;
-	struct channel_t *ch;
-	struct un_t *un;
 	int ret = -ENXIO;
 	unsigned int arg = 0;
 	unsigned long flags;
-
-	if (!tty || tty->magic != TTY_MAGIC)
-		return ret;
-
-	un = tty->driver_data;
-	if (!un || un->magic != DGNC_UNIT_MAGIC)
-		return ret;
-
-	ch = un->un_ch;
-	if (!ch || ch->magic != DGNC_CHANNEL_MAGIC)
-		return ret;
-
-	bd = ch->ch_bd;
-	if (!bd || bd->magic != DGNC_BOARD_MAGIC)
-		return ret;
 
 	ret = get_user(arg, value);
 	if (ret)
@@ -2593,9 +2548,8 @@ static int dgnc_tty_ioctl(struct tty_struct *tty, unsigned int cmd,
 
 		spin_unlock_irqrestore(&ch->ch_lock, flags);
 
-		rc = put_user(C_CLOCAL(tty) ? 1 : 0,
-			      (unsigned long __user *)arg);
-		return rc;
+		return put_user(C_CLOCAL(tty) ? 1 : 0,
+				(unsigned long __user *)arg);
 
 	case TIOCSSOFTCAR:
 
@@ -2620,7 +2574,7 @@ static int dgnc_tty_ioctl(struct tty_struct *tty, unsigned int cmd,
 	case TIOCMBIC:
 	case TIOCMSET:
 		spin_unlock_irqrestore(&ch->ch_lock, flags);
-		return dgnc_set_modem_info(tty, cmd, uarg);
+		return dgnc_set_modem_info(ch, cmd, uarg);
 
 		/*
 		 * Here are any additional ioctl's that we want to implement
@@ -2766,8 +2720,8 @@ static int dgnc_tty_ioctl(struct tty_struct *tty, unsigned int cmd,
 
 	case DIGI_GETCUSTOMBAUD:
 		spin_unlock_irqrestore(&ch->ch_lock, flags);
-		rc = put_user(ch->ch_custom_speed, (unsigned int __user *)arg);
-		return rc;
+		return put_user(ch->ch_custom_speed,
+				(unsigned int __user *)arg);
 
 	case DIGI_SETCUSTOMBAUD:
 	{
@@ -2853,8 +2807,7 @@ static int dgnc_tty_ioctl(struct tty_struct *tty, unsigned int cmd,
 			events |= (EV_IPU | EV_IPS);
 
 		spin_unlock_irqrestore(&ch->ch_lock, flags);
-		rc = put_user(events, (unsigned int __user *)arg);
-		return rc;
+		return put_user(events, (unsigned int __user *)arg);
 	}
 
 	/*

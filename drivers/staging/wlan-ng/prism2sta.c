@@ -81,7 +81,7 @@
 #include "prism2mgmt.h"
 
 static char *dev_info = "prism2_usb";
-static wlandevice_t *create_wlan(void);
+static struct wlandevice *create_wlan(void);
 
 int prism2_reset_holdtime = 30;	/* Reset hold time in ms */
 int prism2_reset_settletime = 100;	/* Reset settle time in ms */
@@ -98,36 +98,36 @@ MODULE_PARM_DESC(prism2_reset_settletime, "reset settle time in ms");
 
 MODULE_LICENSE("Dual MPL/GPL");
 
-static int prism2sta_open(wlandevice_t *wlandev);
-static int prism2sta_close(wlandevice_t *wlandev);
-static void prism2sta_reset(wlandevice_t *wlandev);
-static int prism2sta_txframe(wlandevice_t *wlandev, struct sk_buff *skb,
+static int prism2sta_open(struct wlandevice *wlandev);
+static int prism2sta_close(struct wlandevice *wlandev);
+static void prism2sta_reset(struct wlandevice *wlandev);
+static int prism2sta_txframe(struct wlandevice *wlandev, struct sk_buff *skb,
 			     union p80211_hdr *p80211_hdr,
 			     struct p80211_metawep *p80211_wep);
-static int prism2sta_mlmerequest(wlandevice_t *wlandev, struct p80211msg *msg);
-static int prism2sta_getcardinfo(wlandevice_t *wlandev);
-static int prism2sta_globalsetup(wlandevice_t *wlandev);
-static int prism2sta_setmulticast(wlandevice_t *wlandev, netdevice_t *dev);
+static int prism2sta_mlmerequest(struct wlandevice *wlandev, struct p80211msg *msg);
+static int prism2sta_getcardinfo(struct wlandevice *wlandev);
+static int prism2sta_globalsetup(struct wlandevice *wlandev);
+static int prism2sta_setmulticast(struct wlandevice *wlandev, netdevice_t *dev);
 
-static void prism2sta_inf_handover(wlandevice_t *wlandev,
+static void prism2sta_inf_handover(struct wlandevice *wlandev,
 				   hfa384x_InfFrame_t *inf);
-static void prism2sta_inf_tallies(wlandevice_t *wlandev,
+static void prism2sta_inf_tallies(struct wlandevice *wlandev,
 				  hfa384x_InfFrame_t *inf);
-static void prism2sta_inf_hostscanresults(wlandevice_t *wlandev,
+static void prism2sta_inf_hostscanresults(struct wlandevice *wlandev,
 					  hfa384x_InfFrame_t *inf);
-static void prism2sta_inf_scanresults(wlandevice_t *wlandev,
+static void prism2sta_inf_scanresults(struct wlandevice *wlandev,
 				      hfa384x_InfFrame_t *inf);
-static void prism2sta_inf_chinforesults(wlandevice_t *wlandev,
+static void prism2sta_inf_chinforesults(struct wlandevice *wlandev,
 					hfa384x_InfFrame_t *inf);
-static void prism2sta_inf_linkstatus(wlandevice_t *wlandev,
+static void prism2sta_inf_linkstatus(struct wlandevice *wlandev,
 				     hfa384x_InfFrame_t *inf);
-static void prism2sta_inf_assocstatus(wlandevice_t *wlandev,
+static void prism2sta_inf_assocstatus(struct wlandevice *wlandev,
 				      hfa384x_InfFrame_t *inf);
-static void prism2sta_inf_authreq(wlandevice_t *wlandev,
+static void prism2sta_inf_authreq(struct wlandevice *wlandev,
 				  hfa384x_InfFrame_t *inf);
-static void prism2sta_inf_authreq_defer(wlandevice_t *wlandev,
+static void prism2sta_inf_authreq_defer(struct wlandevice *wlandev,
 					hfa384x_InfFrame_t *inf);
-static void prism2sta_inf_psusercnt(wlandevice_t *wlandev,
+static void prism2sta_inf_psusercnt(struct wlandevice *wlandev,
 				    hfa384x_InfFrame_t *inf);
 
 /*
@@ -151,7 +151,7 @@ static void prism2sta_inf_psusercnt(wlandevice_t *wlandev,
  * Call context:
  *	process thread
  */
-static int prism2sta_open(wlandevice_t *wlandev)
+static int prism2sta_open(struct wlandevice *wlandev)
 {
 	/* We don't currently have to do anything else.
 	 * The setup of the MAC should be subsequently completed via
@@ -185,7 +185,7 @@ static int prism2sta_open(wlandevice_t *wlandev)
  * Call context:
  *	process thread
  */
-static int prism2sta_close(wlandevice_t *wlandev)
+static int prism2sta_close(struct wlandevice *wlandev)
 {
 	/* We don't currently have to do anything else.
 	 * Higher layers know we're not ready from dev->start==0 and
@@ -213,7 +213,7 @@ static int prism2sta_close(wlandevice_t *wlandev)
  * Call context:
  *	process thread
  */
-static void prism2sta_reset(wlandevice_t *wlandev)
+static void prism2sta_reset(struct wlandevice *wlandev)
 {
 }
 
@@ -238,7 +238,7 @@ static void prism2sta_reset(wlandevice_t *wlandev)
  * Call context:
  *	process thread
  */
-static int prism2sta_txframe(wlandevice_t *wlandev, struct sk_buff *skb,
+static int prism2sta_txframe(struct wlandevice *wlandev, struct sk_buff *skb,
 			     union p80211_hdr *p80211_hdr,
 			     struct p80211_metawep *p80211_wep)
 {
@@ -277,7 +277,7 @@ static int prism2sta_txframe(wlandevice_t *wlandev, struct sk_buff *skb,
  * Call context:
  *	process thread
  */
-static int prism2sta_mlmerequest(wlandevice_t *wlandev, struct p80211msg *msg)
+static int prism2sta_mlmerequest(struct wlandevice *wlandev, struct p80211msg *msg)
 {
 	hfa384x_t *hw = wlandev->priv;
 
@@ -337,7 +337,7 @@ static int prism2sta_mlmerequest(wlandevice_t *wlandev, struct p80211msg *msg)
 			struct p80211msg_lnxreq_ifstate *ifstatemsg;
 
 			pr_debug("Received mlme ifstate request\n");
-			ifstatemsg = (struct p80211msg_lnxreq_ifstate *) msg;
+			ifstatemsg = (struct p80211msg_lnxreq_ifstate *)msg;
 			result =
 			    prism2sta_ifstate(wlandev,
 					      ifstatemsg->ifstate.data);
@@ -360,7 +360,7 @@ static int prism2sta_mlmerequest(wlandevice_t *wlandev, struct p80211msg *msg)
 
 			pr_debug("Received commsquality request\n");
 
-			qualmsg = (struct p80211msg_lnxreq_commsquality *) msg;
+			qualmsg = (struct p80211msg_lnxreq_commsquality *)msg;
 
 			qualmsg->link.status =
 			    P80211ENUM_msgitem_status_data_ok;
@@ -407,7 +407,7 @@ static int prism2sta_mlmerequest(wlandevice_t *wlandev, struct p80211msg *msg)
  *	process thread  (usually)
  *	interrupt
  */
-u32 prism2sta_ifstate(wlandevice_t *wlandev, u32 ifstate)
+u32 prism2sta_ifstate(struct wlandevice *wlandev, u32 ifstate)
 {
 	hfa384x_t *hw = wlandev->priv;
 	u32 result;
@@ -580,7 +580,7 @@ u32 prism2sta_ifstate(wlandevice_t *wlandev, u32 ifstate)
  * Call context:
  *	Either.
  */
-static int prism2sta_getcardinfo(wlandevice_t *wlandev)
+static int prism2sta_getcardinfo(struct wlandevice *wlandev)
 {
 	int result = 0;
 	hfa384x_t *hw = wlandev->priv;
@@ -651,7 +651,7 @@ static int prism2sta_getcardinfo(wlandevice_t *wlandev)
 
 	/* strip out the 'special' variant bits */
 	hw->mm_mods = hw->ident_sta_fw.variant & (BIT(14) | BIT(15));
-	hw->ident_sta_fw.variant &= ~((u16) (BIT(14) | BIT(15)));
+	hw->ident_sta_fw.variant &= ~((u16)(BIT(14) | BIT(15)));
 
 	if (hw->ident_sta_fw.id == 0x1f) {
 		netdev_info(wlandev->netdev,
@@ -909,7 +909,7 @@ done:
  * Call context:
  *	process thread
  */
-static int prism2sta_globalsetup(wlandevice_t *wlandev)
+static int prism2sta_globalsetup(struct wlandevice *wlandev)
 {
 	hfa384x_t *hw = wlandev->priv;
 
@@ -918,7 +918,7 @@ static int prism2sta_globalsetup(wlandevice_t *wlandev)
 					WLAN_DATA_MAXLEN);
 }
 
-static int prism2sta_setmulticast(wlandevice_t *wlandev, netdevice_t *dev)
+static int prism2sta_setmulticast(struct wlandevice *wlandev, netdevice_t *dev)
 {
 	int result = 0;
 	hfa384x_t *hw = wlandev->priv;
@@ -959,7 +959,7 @@ exit:
  * Call context:
  *	interrupt
  */
-static void prism2sta_inf_handover(wlandevice_t *wlandev,
+static void prism2sta_inf_handover(struct wlandevice *wlandev,
 				   hfa384x_InfFrame_t *inf)
 {
 	pr_debug("received infoframe:HANDOVER (unhandled)\n");
@@ -982,7 +982,7 @@ static void prism2sta_inf_handover(wlandevice_t *wlandev,
  * Call context:
  *	interrupt
  */
-static void prism2sta_inf_tallies(wlandevice_t *wlandev,
+static void prism2sta_inf_tallies(struct wlandevice *wlandev,
 				  hfa384x_InfFrame_t *inf)
 {
 	hfa384x_t *hw = wlandev->priv;
@@ -999,13 +999,13 @@ static void prism2sta_inf_tallies(wlandevice_t *wlandev,
 
 	cnt = sizeof(hfa384x_CommTallies32_t) / sizeof(u32);
 	if (inf->framelen > 22) {
-		dst = (u32 *) &hw->tallies;
-		src32 = (u32 *) &inf->info.commtallies32;
+		dst = (u32 *)&hw->tallies;
+		src32 = (u32 *)&inf->info.commtallies32;
 		for (i = 0; i < cnt; i++, dst++, src32++)
 			*dst += le32_to_cpu(*src32);
 	} else {
-		dst = (u32 *) &hw->tallies;
-		src16 = (u16 *) &inf->info.commtallies16;
+		dst = (u32 *)&hw->tallies;
+		src16 = (u16 *)&inf->info.commtallies16;
 		for (i = 0; i < cnt; i++, dst++, src16++)
 			*dst += le16_to_cpu(*src16);
 	}
@@ -1028,10 +1028,9 @@ static void prism2sta_inf_tallies(wlandevice_t *wlandev,
  * Call context:
  *	interrupt
  */
-static void prism2sta_inf_scanresults(wlandevice_t *wlandev,
+static void prism2sta_inf_scanresults(struct wlandevice *wlandev,
 				      hfa384x_InfFrame_t *inf)
 {
-
 	hfa384x_t *hw = wlandev->priv;
 	int nbss;
 	hfa384x_ScanResult_t *sr = &(inf->info.scanresult);
@@ -1084,7 +1083,7 @@ static void prism2sta_inf_scanresults(wlandevice_t *wlandev,
  * Call context:
  *	interrupt
  */
-static void prism2sta_inf_hostscanresults(wlandevice_t *wlandev,
+static void prism2sta_inf_hostscanresults(struct wlandevice *wlandev,
 					  hfa384x_InfFrame_t *inf)
 {
 	hfa384x_t *hw = wlandev->priv;
@@ -1125,7 +1124,7 @@ static void prism2sta_inf_hostscanresults(wlandevice_t *wlandev,
  * Call context:
  *	interrupt
  */
-static void prism2sta_inf_chinforesults(wlandevice_t *wlandev,
+static void prism2sta_inf_chinforesults(struct wlandevice *wlandev,
 					hfa384x_InfFrame_t *inf)
 {
 	hfa384x_t *hw = wlandev->priv;
@@ -1171,7 +1170,7 @@ static void prism2sta_inf_chinforesults(wlandevice_t *wlandev,
 void prism2sta_processing_defer(struct work_struct *data)
 {
 	hfa384x_t *hw = container_of(data, struct hfa384x, link_bh);
-	wlandevice_t *wlandev = hw->wlandev;
+	struct wlandevice *wlandev = hw->wlandev;
 	hfa384x_bytestr32_t ssid;
 	int result;
 
@@ -1181,7 +1180,7 @@ void prism2sta_processing_defer(struct work_struct *data)
 		hfa384x_InfFrame_t *inf;
 
 		while ((skb = skb_dequeue(&hw->authq))) {
-			inf = (hfa384x_InfFrame_t *) skb->data;
+			inf = (hfa384x_InfFrame_t *)skb->data;
 			prism2sta_inf_authreq_defer(wlandev, inf);
 		}
 
@@ -1256,8 +1255,8 @@ void prism2sta_processing_defer(struct work_struct *data)
 				return;
 			}
 			prism2mgmt_bytestr2pstr(
-					(struct hfa384x_bytestr *) &ssid,
-					(p80211pstrd_t *) &wlandev->ssid);
+					(struct hfa384x_bytestr *)&ssid,
+					(struct p80211pstrd *)&wlandev->ssid);
 
 			/* Collect the port status */
 			result = hfa384x_drvr_getconfig16(hw,
@@ -1337,8 +1336,8 @@ void prism2sta_processing_defer(struct work_struct *data)
 				 HFA384x_RID_CURRENTSSID, result);
 			return;
 		}
-		prism2mgmt_bytestr2pstr((struct hfa384x_bytestr *) &ssid,
-					(p80211pstrd_t *) &wlandev->ssid);
+		prism2mgmt_bytestr2pstr((struct hfa384x_bytestr *)&ssid,
+					(struct p80211pstrd *)&wlandev->ssid);
 
 		hw->link_status = HFA384x_LINK_CONNECTED;
 		netif_carrier_on(wlandev->netdev);
@@ -1438,7 +1437,7 @@ void prism2sta_processing_defer(struct work_struct *data)
  * Call context:
  *	interrupt
  */
-static void prism2sta_inf_linkstatus(wlandevice_t *wlandev,
+static void prism2sta_inf_linkstatus(struct wlandevice *wlandev,
 				     hfa384x_InfFrame_t *inf)
 {
 	hfa384x_t *hw = wlandev->priv;
@@ -1466,7 +1465,7 @@ static void prism2sta_inf_linkstatus(wlandevice_t *wlandev,
  * Call context:
  *	interrupt
  */
-static void prism2sta_inf_assocstatus(wlandevice_t *wlandev,
+static void prism2sta_inf_assocstatus(struct wlandevice *wlandev,
 				      hfa384x_InfFrame_t *inf)
 {
 	hfa384x_t *hw = wlandev->priv;
@@ -1527,7 +1526,7 @@ static void prism2sta_inf_assocstatus(wlandevice_t *wlandev,
  *	interrupt
  *
  */
-static void prism2sta_inf_authreq(wlandevice_t *wlandev,
+static void prism2sta_inf_authreq(struct wlandevice *wlandev,
 				  hfa384x_InfFrame_t *inf)
 {
 	hfa384x_t *hw = wlandev->priv;
@@ -1542,7 +1541,7 @@ static void prism2sta_inf_authreq(wlandevice_t *wlandev,
 	}
 }
 
-static void prism2sta_inf_authreq_defer(wlandevice_t *wlandev,
+static void prism2sta_inf_authreq_defer(struct wlandevice *wlandev,
 					hfa384x_InfFrame_t *inf)
 {
 	hfa384x_t *hw = wlandev->priv;
@@ -1716,7 +1715,7 @@ static void prism2sta_inf_authreq_defer(wlandevice_t *wlandev,
  * Call context:
  *	interrupt
  */
-static void prism2sta_inf_psusercnt(wlandevice_t *wlandev,
+static void prism2sta_inf_psusercnt(struct wlandevice *wlandev,
 				    hfa384x_InfFrame_t *inf)
 {
 	hfa384x_t *hw = wlandev->priv;
@@ -1741,7 +1740,7 @@ static void prism2sta_inf_psusercnt(wlandevice_t *wlandev,
  * Call context:
  *	interrupt
  */
-void prism2sta_ev_info(wlandevice_t *wlandev, hfa384x_InfFrame_t *inf)
+void prism2sta_ev_info(struct wlandevice *wlandev, hfa384x_InfFrame_t *inf)
 {
 	inf->infotype = le16_to_cpu(inf->infotype);
 	/* Dispatch */
@@ -1808,7 +1807,7 @@ void prism2sta_ev_info(wlandevice_t *wlandev, hfa384x_InfFrame_t *inf)
  * Call context:
  *	interrupt
  */
-void prism2sta_ev_txexc(wlandevice_t *wlandev, u16 status)
+void prism2sta_ev_txexc(struct wlandevice *wlandev, u16 status)
 {
 	pr_debug("TxExc status=0x%x.\n", status);
 }
@@ -1829,7 +1828,7 @@ void prism2sta_ev_txexc(wlandevice_t *wlandev, u16 status)
  * Call context:
  *	interrupt
  */
-void prism2sta_ev_tx(wlandevice_t *wlandev, u16 status)
+void prism2sta_ev_tx(struct wlandevice *wlandev, u16 status)
 {
 	pr_debug("Tx Complete, status=0x%04x\n", status);
 	/* update linux network stats */
@@ -1852,7 +1851,7 @@ void prism2sta_ev_tx(wlandevice_t *wlandev, u16 status)
  * Call context:
  *	interrupt
  */
-void prism2sta_ev_alloc(wlandevice_t *wlandev)
+void prism2sta_ev_alloc(struct wlandevice *wlandev)
 {
 	netif_wake_queue(wlandev->netdev);
 }
@@ -1860,14 +1859,14 @@ void prism2sta_ev_alloc(wlandevice_t *wlandev)
 /*
 * create_wlan
 *
-* Called at module init time.  This creates the wlandevice_t structure
+* Called at module init time.  This creates the struct wlandevice structure
 * and initializes it with relevant bits.
 *
 * Arguments:
 *	none
 *
 * Returns:
-*	the created wlandevice_t structure.
+*	the created struct wlandevice structure.
 *
 * Side effects:
 *	also allocates the priv/hw structures.
@@ -1876,13 +1875,13 @@ void prism2sta_ev_alloc(wlandevice_t *wlandev)
 *	process thread
 *
 */
-static wlandevice_t *create_wlan(void)
+static struct wlandevice *create_wlan(void)
 {
-	wlandevice_t *wlandev = NULL;
+	struct wlandevice *wlandev = NULL;
 	hfa384x_t *hw = NULL;
 
 	/* Alloc our structures */
-	wlandev = kzalloc(sizeof(wlandevice_t), GFP_KERNEL);
+	wlandev = kzalloc(sizeof(struct wlandevice), GFP_KERNEL);
 	hw = kzalloc(sizeof(hfa384x_t), GFP_KERNEL);
 
 	if (!wlandev || !hw) {
@@ -1914,10 +1913,10 @@ static wlandevice_t *create_wlan(void)
 void prism2sta_commsqual_defer(struct work_struct *data)
 {
 	hfa384x_t *hw = container_of(data, struct hfa384x, commsqual_bh);
-	wlandevice_t *wlandev = hw->wlandev;
+	struct wlandevice *wlandev = hw->wlandev;
 	hfa384x_bytestr32_t ssid;
 	struct p80211msg_dot11req_mibget msg;
-	p80211item_uint32_t *mibitem = (p80211item_uint32_t *)
+	struct p80211item_uint32 *mibitem = (struct p80211item_uint32 *)
 						&msg.mibattribute.data;
 	int result = 0;
 
@@ -1950,7 +1949,7 @@ void prism2sta_commsqual_defer(struct work_struct *data)
 	/* Get the signal rate */
 	msg.msgcode = DIDmsg_dot11req_mibget;
 	mibitem->did = DIDmib_p2_p2MAC_p2CurrentTxRate;
-	result = p80211req_dorequest(wlandev, (u8 *) &msg);
+	result = p80211req_dorequest(wlandev, (u8 *)&msg);
 
 	if (result) {
 		pr_debug("get signal rate failed, result = %d\n",
@@ -1993,8 +1992,8 @@ void prism2sta_commsqual_defer(struct work_struct *data)
 			 HFA384x_RID_CURRENTSSID, result);
 		return;
 	}
-	prism2mgmt_bytestr2pstr((struct hfa384x_bytestr *) &ssid,
-				(p80211pstrd_t *) &wlandev->ssid);
+	prism2mgmt_bytestr2pstr((struct hfa384x_bytestr *)&ssid,
+				(struct p80211pstrd *)&wlandev->ssid);
 
 	/* Reschedule timer */
 	mod_timer(&hw->commsqual_timer, jiffies + HZ);
@@ -2002,7 +2001,7 @@ void prism2sta_commsqual_defer(struct work_struct *data)
 
 void prism2sta_commsqual_timer(unsigned long data)
 {
-	hfa384x_t *hw = (hfa384x_t *) data;
+	hfa384x_t *hw = (hfa384x_t *)data;
 
 	schedule_work(&hw->commsqual_bh);
 }

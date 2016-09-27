@@ -27,8 +27,8 @@ No irqsave is necessary.
 
 int rtw_init_cmd_priv(struct cmd_priv *pcmdpriv)
 {
-	sema_init(&(pcmdpriv->cmd_queue_sema), 0);
-	sema_init(&(pcmdpriv->terminate_cmdthread_sema), 0);
+	init_completion(&pcmdpriv->cmd_queue_comp);
+	init_completion(&pcmdpriv->terminate_cmdthread_comp);
 
 	_rtw_init_queue(&(pcmdpriv->cmd_queue));
 	return _SUCCESS;
@@ -122,7 +122,7 @@ u32 rtw_enqueue_cmd(struct cmd_priv *pcmdpriv, struct cmd_obj *cmd_obj)
 	res = _rtw_enqueue_cmd(&pcmdpriv->cmd_queue, cmd_obj);
 
 	if (res == _SUCCESS)
-		up(&pcmdpriv->cmd_queue_sema);
+		complete(&pcmdpriv->cmd_queue_comp);
 
 exit:
 
@@ -162,12 +162,12 @@ int rtw_cmd_thread(void *context)
 	allow_signal(SIGTERM);
 
 	pcmdpriv->cmdthd_running = true;
-	up(&pcmdpriv->terminate_cmdthread_sema);
+	complete(&pcmdpriv->terminate_cmdthread_comp);
 
 	RT_TRACE(_module_rtl871x_cmd_c_, _drv_info_, ("start r871x rtw_cmd_thread !!!!\n"));
 
 	while (1) {
-		if (_rtw_down_sema(&pcmdpriv->cmd_queue_sema) == _FAIL)
+		if (wait_for_completion_interruptible(&pcmdpriv->cmd_queue_comp))
 			break;
 
 		if (padapter->bDriverStopped ||
@@ -234,7 +234,7 @@ _next:
 		rtw_free_cmd_obj(pcmd);
 	}
 
-	up(&pcmdpriv->terminate_cmdthread_sema);
+	complete(&pcmdpriv->terminate_cmdthread_comp);
 
 
 	complete_and_exit(NULL, 0);
@@ -305,8 +305,6 @@ u8 rtw_sitesurvey_cmd(struct adapter  *padapter, struct ndis_802_11_ssid *ssid, 
 	res = rtw_enqueue_cmd(pcmdpriv, ph2c);
 
 	if (res == _SUCCESS) {
-		pmlmepriv->scan_start_time = jiffies;
-
 		mod_timer(&pmlmepriv->scan_to_timer,
 			  jiffies + msecs_to_jiffies(SCANNING_TIMEOUT));
 
@@ -670,13 +668,13 @@ u8 rtw_addbareq_cmd(struct adapter *padapter, u8 tid, u8 *addr)
 	u8	res = _SUCCESS;
 
 
-	ph2c = kzalloc(sizeof(struct cmd_obj), GFP_KERNEL);
+	ph2c = kzalloc(sizeof(struct cmd_obj), GFP_ATOMIC);
 	if (!ph2c) {
 		res = _FAIL;
 		goto exit;
 	}
 
-	paddbareq_parm = kzalloc(sizeof(struct addBaReq_parm), GFP_KERNEL);
+	paddbareq_parm = kzalloc(sizeof(struct addBaReq_parm), GFP_ATOMIC);
 	if (!paddbareq_parm) {
 		kfree(ph2c);
 		res = _FAIL;

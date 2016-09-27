@@ -63,7 +63,7 @@
 
 /*--- Mins & Maxs -----------------------------------*/
 #define	HFA384x_PORTID_MAX		((u16)7)
-#define	HFA384x_NUMPORTS_MAX		((u16)(HFA384x_PORTID_MAX+1))
+#define	HFA384x_NUMPORTS_MAX		((u16)(HFA384x_PORTID_MAX + 1))
 #define	HFA384x_PDR_LEN_MAX		((u16)512) /* in bytes, from EK */
 #define	HFA384x_PDA_RECS_MAX		((u16)200) /* a guess */
 #define	HFA384x_PDA_LEN_MAX		((u16)1024) /* in bytes, from EK*/
@@ -110,20 +110,21 @@
 #define		HFA384x_ADDR_FLAT_CMD_OFF_MASK	(0x0000ffff)
 
 /* Mask bits for discarding unwanted pieces in AUX format
-   16-bit address parts */
+ * 16-bit address parts
+ */
 #define		HFA384x_ADDR_AUX_PAGE_MASK	(0xffff)
 #define		HFA384x_ADDR_AUX_OFF_MASK	(0x007f)
 
 /* Make a 32-bit flat address from AUX format 16-bit page and offset */
 #define		HFA384x_ADDR_AUX_MKFLAT(p, o)	\
-		((((u32)(((u16)(p))&HFA384x_ADDR_AUX_PAGE_MASK)) << 7) | \
-		((u32)(((u16)(o))&HFA384x_ADDR_AUX_OFF_MASK)))
+		((((u32)(((u16)(p)) & HFA384x_ADDR_AUX_PAGE_MASK)) << 7) | \
+		((u32)(((u16)(o)) & HFA384x_ADDR_AUX_OFF_MASK)))
 
 /* Make CMD format offset and page from a 32-bit flat address */
 #define		HFA384x_ADDR_CMD_MKPAGE(f) \
-		((u16)((((u32)(f))&HFA384x_ADDR_FLAT_CMD_PAGE_MASK)>>16))
+		((u16)((((u32)(f)) & HFA384x_ADDR_FLAT_CMD_PAGE_MASK) >> 16))
 #define		HFA384x_ADDR_CMD_MKOFF(f) \
-		((u16)(((u32)(f))&HFA384x_ADDR_FLAT_CMD_OFF_MASK))
+		((u16)(((u32)(f)) & HFA384x_ADDR_FLAT_CMD_OFF_MASK))
 
 /*--- Controller Memory addresses -------------------*/
 #define		HFA3842_PDA_BASE	(0x007f0000UL)
@@ -255,7 +256,7 @@ Information RID Lengths:  MAC Information
   include the len or code fields)
 --------------------------------------------------------------------*/
 #define		HFA384x_RID_DBMCOMMSQUALITY_LEN	 \
-	((u16) sizeof(hfa384x_dbmcommsquality_t))
+	((u16)sizeof(hfa384x_dbmcommsquality_t))
 #define		HFA384x_RID_JOINREQUEST_LEN \
 	((u16)sizeof(hfa384x_JoinRequest_data_t))
 
@@ -503,12 +504,12 @@ Communication Frames: Test/Get/Set Field Values for Transmit Frames
 --------------------------------------------------------------------*/
 /*-- Status Field --*/
 #define HFA384x_TXSTATUS_ISERROR(v)	\
-	(((u16)(v))&\
-	(HFA384x_TXSTATUS_ACKERR|HFA384x_TXSTATUS_FORMERR|\
-	HFA384x_TXSTATUS_DISCON|HFA384x_TXSTATUS_AGEDERR|\
+	(((u16)(v)) & \
+	(HFA384x_TXSTATUS_ACKERR | HFA384x_TXSTATUS_FORMERR | \
+	HFA384x_TXSTATUS_DISCON | HFA384x_TXSTATUS_AGEDERR | \
 	HFA384x_TXSTATUS_RETRYERR))
 
-#define	HFA384x_TX_SET(v, m, s)		((((u16)(v))<<((u16)(s)))&((u16)(m)))
+#define	HFA384x_TX_SET(v, m, s)		((((u16)(v)) << ((u16)(s))) & ((u16)(m)))
 
 #define	HFA384x_TX_MACPORT_SET(v)	HFA384x_TX_SET(v, HFA384x_TX_MACPORT, 8)
 #define	HFA384x_TX_STRUCTYPE_SET(v)	HFA384x_TX_SET(v, \
@@ -1273,7 +1274,7 @@ typedef struct hfa384x {
 	int join_retries;	/* number of join retries till we fail */
 	hfa384x_JoinRequest_data_t joinreq;	/* join request saved data */
 
-	wlandevice_t *wlandev;
+	struct wlandevice *wlandev;
 	/* Timer to allow for the deferred processing of linkstatus messages */
 	struct work_struct link_bh;
 
@@ -1297,7 +1298,8 @@ typedef struct hfa384x {
 	int dbmadjust;
 
 	/* Group Addresses - right now, there are up to a total
-	   of MAX_GRP_ADDR group addresses */
+	 * of MAX_GRP_ADDR group addresses
+	 */
 	u8 dot11_grp_addr[MAX_GRP_ADDR][ETH_ALEN];
 	unsigned int dot11_grpcnt;
 
@@ -1378,7 +1380,7 @@ static inline int hfa384x_drvr_getconfig16(hfa384x_t *hw, u16 rid, void *val)
 
 	result = hfa384x_drvr_getconfig(hw, rid, val, sizeof(u16));
 	if (result == 0)
-		*((u16 *) val) = le16_to_cpu(*((u16 *) val));
+		*((u16 *)val) = le16_to_cpu(*((u16 *)val));
 	return result;
 }
 
@@ -1410,7 +1412,7 @@ int
 hfa384x_drvr_txframe(hfa384x_t *hw, struct sk_buff *skb,
 		     union p80211_hdr *p80211_hdr,
 		     struct p80211_metawep *p80211_wep);
-void hfa384x_tx_timeout(wlandevice_t *wlandev);
+void hfa384x_tx_timeout(struct wlandevice *wlandev);
 
 int hfa384x_cmd_initialize(hfa384x_t *hw);
 int hfa384x_cmd_enable(hfa384x_t *hw, u16 macport);
