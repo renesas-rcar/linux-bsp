@@ -22,6 +22,8 @@ are paired with. These DT bindings currently support the FCPV and FCPF.
 
  - reg: the register base and size for the device registers
  - clocks: Reference to the functional clock
+ - power-domains : power-domain property defined with a phandle
+                           to respective power domain.
 
 Optional properties:
  - power-domains : power-domain property defined with a power domain specifier
