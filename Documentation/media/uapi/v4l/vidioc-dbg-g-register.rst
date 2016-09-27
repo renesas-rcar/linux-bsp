@@ -15,9 +15,11 @@ VIDIOC_DBG_G_REGISTER - VIDIOC_DBG_S_REGISTER - Read or write hardware registers
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_dbg_register *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_DBG_G_REGISTER, struct v4l2_dbg_register *argp )
+    :name: VIDIOC_DBG_G_REGISTER
 
-.. cpp:function:: int ioctl( int fd, int request, const struct v4l2_dbg_register *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_DBG_S_REGISTER, const struct v4l2_dbg_register *argp )
+    :name: VIDIOC_DBG_S_REGISTER
 
 
 Arguments
@@ -25,9 +27,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_DBG_G_REGISTER, VIDIOC_DBG_S_REGISTER
 
 ``argp``
 
@@ -50,7 +49,7 @@ superuser privileges. Additionally the Linux kernel must be compiled
 with the ``CONFIG_VIDEO_ADV_DEBUG`` option to enable these ioctls.
 
 To write a register applications must initialize all fields of a struct
-:ref:`v4l2_dbg_register <v4l2-dbg-register>` except for ``size`` and
+:c:type:`v4l2_dbg_register` except for ``size`` and
 call ``VIDIOC_DBG_S_REGISTER`` with a pointer to this structure. The
 ``match.type`` and ``match.addr`` or ``match.name`` fields select a chip
 on the TV card, the ``reg`` field specifies a register number and the
@@ -86,7 +85,9 @@ It is available from the LinuxTV v4l-dvb repository; see
 instructions.
 
 
-.. _v4l2-dbg-match:
+.. tabularcolumns:: |p{3.5cm}|p{3.5cm}|p{3.5cm}|p{7.0cm}|
+
+.. c:type:: v4l2_dbg_match
 
 .. flat-table:: struct v4l2_dbg_match
     :header-rows:  0
@@ -130,7 +131,7 @@ instructions.
 
 
 
-.. _v4l2-dbg-register:
+.. c:type:: v4l2_dbg_register
 
 .. flat-table:: struct v4l2_dbg_register
     :header-rows:  0
@@ -143,7 +144,7 @@ instructions.
 
        -  ``match``
 
-       -  How to match the chip, see :ref:`v4l2-dbg-match`.
+       -  How to match the chip, see :c:type:`v4l2_dbg_match`.
 
     -  .. row 2
 
@@ -170,6 +171,8 @@ instructions.
        -  The value read from, or to be written into the register.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _chip-match-types:
 

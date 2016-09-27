@@ -11,14 +11,14 @@ the Streaming I/O methods. In the multi-planar API, the data is held in
 planes, while the buffer structure acts as a container for the planes.
 Only pointers to buffers (planes) are exchanged, the data itself is not
 copied. These pointers, together with meta-information like timestamps
-or field parity, are stored in a struct :ref:`struct v4l2_buffer <v4l2-buffer>`,
+or field parity, are stored in a struct :c:type:`v4l2_buffer`,
 argument to the :ref:`VIDIOC_QUERYBUF`,
 :ref:`VIDIOC_QBUF` and
 :ref:`VIDIOC_DQBUF <VIDIOC_QBUF>` ioctl. In the multi-planar API,
-some plane-specific members of struct :ref:`struct v4l2_buffer <v4l2-buffer>`,
+some plane-specific members of struct :c:type:`v4l2_buffer`,
 such as pointers and sizes for each plane, are stored in struct
-:ref:`struct v4l2_plane <v4l2-plane>` instead. In that case, struct
-:ref:`struct v4l2_buffer <v4l2-buffer>` contains an array of plane structures.
+struct :c:type:`v4l2_plane` instead. In that case, struct
+struct :c:type:`v4l2_buffer` contains an array of plane structures.
 
 Dequeued video buffers come with timestamps. The driver decides at which
 part of the frame and with which clock the timestamp is taken. Please
@@ -34,15 +34,19 @@ flags are copied from the OUTPUT video buffer to the CAPTURE video
 buffer.
 
 
-.. _v4l2-buffer:
+.. c:type:: v4l2_buffer
 
 struct v4l2_buffer
 ==================
 
+.. tabularcolumns:: |p{2.8cm}|p{2.5cm}|p{1.3cm}|p{10.5cm}|
+
+.. cssclass:: longtable
+
 .. flat-table:: struct v4l2_buffer
     :header-rows:  0
     :stub-columns: 0
-    :widths:       1 1 1 2
+    :widths:       1 2 1 10
 
 
     -  .. row 1
@@ -56,7 +60,7 @@ struct v4l2_buffer
 	  :ref:`VIDIOC_DQBUF <VIDIOC_QBUF>`, then it is set by the
 	  driver. This field can range from zero to the number of buffers
 	  allocated with the :ref:`VIDIOC_REQBUFS` ioctl
-	  (struct :ref:`v4l2_requestbuffers <v4l2-requestbuffers>`
+	  (struct :c:type:`v4l2_requestbuffers`
 	  ``count``), plus any buffers allocated with
 	  :ref:`VIDIOC_CREATE_BUFS` minus one.
 
@@ -68,9 +72,9 @@ struct v4l2_buffer
 
        -
        -  Type of the buffer, same as struct
-	  :ref:`v4l2_format <v4l2-format>` ``type`` or struct
-	  :ref:`v4l2_requestbuffers <v4l2-requestbuffers>` ``type``, set
-	  by the application. See :ref:`v4l2-buf-type`
+	  :c:type:`v4l2_format` ``type`` or struct
+	  :c:type:`v4l2_requestbuffers` ``type``, set
+	  by the application. See :c:type:`v4l2_buf_type`
 
     -  .. row 3
 
@@ -106,7 +110,7 @@ struct v4l2_buffer
 
        -
        -  Indicates the field order of the image in the buffer, see
-	  :ref:`v4l2-field`. This field is not used when the buffer
+	  :c:type:`v4l2_field`. This field is not used when the buffer
 	  contains VBI data. Drivers must set it when ``type`` refers to a
 	  capture stream, applications when it refers to an output stream.
 
@@ -130,7 +134,7 @@ struct v4l2_buffer
 
     -  .. row 7
 
-       -  struct :ref:`v4l2_timecode <v4l2-timecode>`
+       -  struct :c:type:`v4l2_timecode`
 
        -  ``timecode``
 
@@ -138,7 +142,7 @@ struct v4l2_buffer
        -  When ``type`` is ``V4L2_BUF_TYPE_VIDEO_CAPTURE`` and the
 	  ``V4L2_BUF_FLAG_TIMECODE`` flag is set in ``flags``, this
 	  structure contains a frame timecode. In
-	  :ref:`V4L2_FIELD_ALTERNATE <v4l2-field>` mode the top and
+	  :c:type:`V4L2_FIELD_ALTERNATE <v4l2_field>` mode the top and
 	  bottom field contain the same timecode. Timecodes are intended to
 	  help video editing and are typically recorded on video tapes, but
 	  also embedded in compressed formats like MPEG. This field is
@@ -158,7 +162,7 @@ struct v4l2_buffer
 
        -  :cspan:`3`
 
-	  In :ref:`V4L2_FIELD_ALTERNATE <v4l2-field>` mode the top and
+	  In :c:type:`V4L2_FIELD_ALTERNATE <v4l2_field>` mode the top and
 	  bottom field have the same sequence number. The count starts at
 	  zero and includes dropped or repeated frames. A dropped frame was
 	  received by an input device but could not be stored due to lack of
@@ -166,11 +170,14 @@ struct v4l2_buffer
 	  output device because the application did not pass new data in
 	  time.
 
-	  .. note:: This may count the frames received e.g. over USB, without
+	  .. note::
+
+	     This may count the frames received e.g. over USB, without
 	     taking into account the frames dropped by the remote hardware due
 	     to limited compression throughput or bus bandwidth. These devices
 	     identify by not enumerating any video standards, see
 	     :ref:`standard`.
+
 
     -  .. row 10
 
@@ -180,7 +187,7 @@ struct v4l2_buffer
 
        -
        -  This field must be set by applications and/or drivers in
-	  accordance with the selected I/O method. See :ref:`v4l2-memory`
+	  accordance with the selected I/O method. See :c:type:`v4l2_memory`
 
     -  .. row 11
 
@@ -222,9 +229,9 @@ struct v4l2_buffer
        -  ``*planes``
 
        -  When using the multi-planar API, contains a userspace pointer to
-	  an array of struct :ref:`v4l2_plane <v4l2-plane>`. The size of
+	  an array of struct :c:type:`v4l2_plane`. The size of
 	  the array should be put in the ``length`` field of this
-	  :ref:`struct v4l2_buffer <v4l2-buffer>` structure.
+	  struct :c:type:`v4l2_buffer` structure.
 
     -  .. row 15
 
@@ -274,10 +281,14 @@ struct v4l2_buffer
 
 
 
-.. _v4l2-plane:
+.. c:type:: v4l2_plane
 
 struct v4l2_plane
 =================
+
+.. tabularcolumns:: |p{3.5cm}|p{3.5cm}|p{3.5cm}|p{7.0cm}|
+
+.. cssclass:: longtable
 
 .. flat-table::
     :header-rows:  0
@@ -299,7 +310,9 @@ struct v4l2_plane
 	  ``bytesused`` will be set to the size of the plane (see the
 	  ``length`` field of this struct) by the driver.
 
-	  .. note:: Note that the actual image data starts at ``data_offset``
+	  .. note::
+
+	     Note that the actual image data starts at ``data_offset``
 	     which may not be 0.
 
     -  .. row 2
@@ -331,10 +344,10 @@ struct v4l2_plane
        -  ``mem_offset``
 
        -  When the memory type in the containing struct
-	  :ref:`v4l2_buffer <v4l2-buffer>` is ``V4L2_MEMORY_MMAP``, this
+	  :c:type:`v4l2_buffer` is ``V4L2_MEMORY_MMAP``, this
 	  is the value that should be passed to :ref:`mmap() <func-mmap>`,
 	  similar to the ``offset`` field in struct
-	  :ref:`v4l2_buffer <v4l2-buffer>`.
+	  :c:type:`v4l2_buffer`.
 
     -  .. row 5
 
@@ -344,7 +357,7 @@ struct v4l2_plane
        -  ``userptr``
 
        -  When the memory type in the containing struct
-	  :ref:`v4l2_buffer <v4l2-buffer>` is ``V4L2_MEMORY_USERPTR``,
+	  :c:type:`v4l2_buffer` is ``V4L2_MEMORY_USERPTR``,
 	  this is a userspace pointer to the memory allocated for this plane
 	  by an application.
 
@@ -356,9 +369,9 @@ struct v4l2_plane
        -  ``fd``
 
        -  When the memory type in the containing struct
-	  :ref:`v4l2_buffer <v4l2-buffer>` is ``V4L2_MEMORY_DMABUF``,
+	  :c:type:`v4l2_buffer` is ``V4L2_MEMORY_DMABUF``,
 	  this is a file descriptor associated with a DMABUF buffer, similar
-	  to the ``fd`` field in struct :ref:`v4l2_buffer <v4l2-buffer>`.
+	  to the ``fd`` field in struct :c:type:`v4l2_buffer`.
 
     -  .. row 7
 
@@ -371,7 +384,9 @@ struct v4l2_plane
 	  field when ``type`` refers to a capture stream, applications when
 	  it refers to an output stream.
 
-	  .. note:: That data_offset is included  in ``bytesused``. So the
+	  .. note::
+
+	     That data_offset is included  in ``bytesused``. So the
 	     size of the image in the plane is ``bytesused``-``data_offset``
 	     at offset ``data_offset`` from the start of the plane.
 
@@ -387,15 +402,19 @@ struct v4l2_plane
 
 
 
-.. _v4l2-buf-type:
+.. c:type:: v4l2_buf_type
 
 enum v4l2_buf_type
 ==================
 
+.. cssclass:: longtable
+
+.. tabularcolumns:: |p{7.2cm}|p{0.6cm}|p{9.7cm}|
+
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       3 1 4
+    :widths:       4 1 9
 
 
     -  .. row 1
@@ -505,6 +524,10 @@ enum v4l2_buf_type
 
 Buffer Flags
 ============
+
+.. tabularcolumns:: |p{7.0cm}|p{2.2cm}|p{8.3cm}|
+
+.. cssclass:: longtable
 
 .. flat-table::
     :header-rows:  0
@@ -689,7 +712,7 @@ Buffer Flags
 	  clock). Monotonic clock has been favoured in embedded systems
 	  whereas most of the drivers use the realtime clock. Either kinds
 	  of timestamps are available in user space via
-	  :c:func:`clock_gettime(2)` using clock IDs ``CLOCK_MONOTONIC``
+	  :c:func:`clock_gettime` using clock IDs ``CLOCK_MONOTONIC``
 	  and ``CLOCK_REALTIME``, respectively.
 
     -  .. _`V4L2-BUF-FLAG-TIMESTAMP-MONOTONIC`:
@@ -700,7 +723,7 @@ Buffer Flags
 
        -  The buffer timestamp has been taken from the ``CLOCK_MONOTONIC``
 	  clock. To access the same clock outside V4L2, use
-	  :c:func:`clock_gettime(2)`.
+	  :c:func:`clock_gettime`.
 
     -  .. _`V4L2-BUF-FLAG-TIMESTAMP-COPY`:
 
@@ -750,10 +773,12 @@ Buffer Flags
 
 
 
-.. _v4l2-memory:
+.. c:type:: v4l2_memory
 
 enum v4l2_memory
 ================
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. flat-table::
     :header-rows:  0
@@ -798,16 +823,18 @@ enum v4l2_memory
 Timecodes
 =========
 
-The :ref:`struct v4l2_timecode <v4l2-timecode>` structure is designed to hold a
+The struct :c:type:`v4l2_timecode` structure is designed to hold a
 :ref:`smpte12m` or similar timecode. (struct
-:c:type:`struct timeval` timestamps are stored in struct
-:ref:`v4l2_buffer <v4l2-buffer>` field ``timestamp``.)
+struct :c:type:`timeval` timestamps are stored in struct
+:c:type:`v4l2_buffer` field ``timestamp``.)
 
 
-.. _v4l2-timecode:
+.. c:type:: v4l2_timecode
 
 struct v4l2_timecode
 --------------------
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table::
     :header-rows:  0
@@ -879,6 +906,8 @@ struct v4l2_timecode
 Timecode Types
 --------------
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
+
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
@@ -931,6 +960,8 @@ Timecode Types
 
 Timecode Flags
 --------------
+
+.. tabularcolumns:: |p{6.6cm}|p{1.4cm}|p{9.5cm}|
 
 .. flat-table::
     :header-rows:  0

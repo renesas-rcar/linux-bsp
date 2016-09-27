@@ -6,7 +6,6 @@
 V4L2_PIX_FMT_Y10 ('Y10 ')
 *************************
 
-*man V4L2_PIX_FMT_Y10(2)*
 
 Grey-scale image
 
@@ -23,10 +22,10 @@ Each cell is one byte.
 
 
 
+
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1 1 1 1 1 1 1
 
 
     -  .. row 1

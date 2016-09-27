@@ -15,9 +15,11 @@ VIDIOC_G_FBUF - VIDIOC_S_FBUF - Get or set frame buffer overlay parameters
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_framebuffer *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_FBUF, struct v4l2_framebuffer *argp )
+    :name: VIDIOC_G_FBUF
 
-.. cpp:function:: int ioctl( int fd, int request, const struct v4l2_framebuffer *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_S_FBUF, const struct v4l2_framebuffer *argp )
+    :name: VIDIOC_S_FBUF
 
 
 Arguments
@@ -25,9 +27,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_FBUF, VIDIOC_S_FBUF
 
 ``argp``
 
@@ -50,13 +49,13 @@ VGA signal or graphics into a video signal. *Video Output Overlays* are
 always non-destructive.
 
 To get the current parameters applications call the :ref:`VIDIOC_G_FBUF <VIDIOC_G_FBUF>`
-ioctl with a pointer to a :ref:`struct v4l2_framebuffer <v4l2-framebuffer>`
+ioctl with a pointer to a struct :c:type:`v4l2_framebuffer`
 structure. The driver fills all fields of the structure or returns an
 EINVAL error code when overlays are not supported.
 
 To set the parameters for a *Video Output Overlay*, applications must
 initialize the ``flags`` field of a struct
-:ref:`struct v4l2_framebuffer <v4l2-framebuffer>`. Since the framebuffer is
+struct :c:type:`v4l2_framebuffer`. Since the framebuffer is
 implemented on the TV card all other parameters are determined by the
 driver. When an application calls :ref:`VIDIOC_S_FBUF <VIDIOC_G_FBUF>` with a pointer to
 this structure, the driver prepares for the overlay and returns the
@@ -76,7 +75,11 @@ hardware, therefore only the superuser can set the parameters for a
 destructive video overlay.
 
 
-.. _v4l2-framebuffer:
+.. tabularcolumns:: |p{3.5cm}|p{3.5cm}|p{3.5cm}|p{7.0cm}|
+
+.. c:type:: v4l2_framebuffer
+
+.. cssclass:: longtable
 
 .. flat-table:: struct v4l2_framebuffer
     :header-rows:  0
@@ -169,7 +172,7 @@ destructive video overlay.
        -
        -
        -  For *non-destructive Video Overlays* this field only defines a
-	  format for the struct :ref:`v4l2_window <v4l2-window>`
+	  format for the struct :c:type:`v4l2_window`
 	  ``chromakey`` field.
 
     -  .. row 10
@@ -197,14 +200,14 @@ destructive video overlay.
     -  .. row 12
 
        -
-       -  enum :ref:`v4l2_field <v4l2-field>`
+       -  enum :c:type:`v4l2_field`
 
        -  ``field``
 
        -  Drivers and applications shall ignore this field. If applicable,
 	  the field order is selected with the
 	  :ref:`VIDIOC_S_FMT <VIDIOC_G_FMT>` ioctl, using the ``field``
-	  field of struct :ref:`v4l2_window <v4l2-window>`.
+	  field of struct :c:type:`v4l2_window`.
 
     -  .. row 13
 
@@ -263,7 +266,7 @@ destructive video overlay.
     -  .. row 16
 
        -
-       -  enum :ref:`v4l2_colorspace <v4l2-colorspace>`
+       -  enum :c:type:`v4l2_colorspace`
 
        -  ``colorspace``
 
@@ -280,6 +283,7 @@ destructive video overlay.
        -  Reserved. Drivers and applications must set this field to zero.
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _framebuffer-cap:
 
@@ -368,8 +372,11 @@ destructive video overlay.
 	  exactly opposite of ``V4L2_FBUF_CAP_CHROMAKEY``
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _framebuffer-flags:
+
+.. cssclass:: longtable
 
 .. flat-table:: Frame Buffer Flags
     :header-rows:  0
@@ -415,7 +422,7 @@ destructive video overlay.
        -  0x0004
 
        -  Use chroma-keying. The chroma-key color is determined by the
-	  ``chromakey`` field of struct :ref:`v4l2_window <v4l2-window>`
+	  ``chromakey`` field of struct :c:type:`v4l2_window`
 	  and negotiated with the :ref:`VIDIOC_S_FMT <VIDIOC_G_FMT>`
 	  ioctl, see :ref:`overlay` and :ref:`osd`.
 
@@ -447,7 +454,7 @@ destructive video overlay.
 	  images. The blend function is: output = (framebuffer pixel * alpha
 	  + video pixel * (255 - alpha)) / 255. The alpha value is
 	  determined by the ``global_alpha`` field of struct
-	  :ref:`v4l2_window <v4l2-window>` and negotiated with the
+	  :c:type:`v4l2_window` and negotiated with the
 	  :ref:`VIDIOC_S_FMT <VIDIOC_G_FMT>` ioctl, see :ref:`overlay`
 	  and :ref:`osd`.
 
@@ -471,11 +478,11 @@ destructive video overlay.
 
        -  Use source chroma-keying. The source chroma-key color is
 	  determined by the ``chromakey`` field of struct
-	  :ref:`v4l2_window <v4l2-window>` and negotiated with the
+	  :c:type:`v4l2_window` and negotiated with the
 	  :ref:`VIDIOC_S_FMT <VIDIOC_G_FMT>` ioctl, see :ref:`overlay`
 	  and :ref:`osd`. Both chroma-keying are mutual exclusive to each
 	  other, so same ``chromakey`` field of struct
-	  :ref:`v4l2_window <v4l2-window>` is being used.
+	  :c:type:`v4l2_window` is being used.
 
 
 Return Value

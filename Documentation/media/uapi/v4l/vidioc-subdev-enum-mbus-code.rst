@@ -15,7 +15,8 @@ VIDIOC_SUBDEV_ENUM_MBUS_CODE - Enumerate media bus formats
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_subdev_mbus_code_enum * argp )
+.. c:function:: int ioctl( int fd, VIDIOC_SUBDEV_ENUM_MBUS_CODE, struct v4l2_subdev_mbus_code_enum * argp )
+    :name: VIDIOC_SUBDEV_ENUM_MBUS_CODE
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_SUBDEV_ENUM_MBUS_CODE
 
 ``argp``
 
@@ -36,7 +34,7 @@ Description
 To enumerate media bus formats available at a given sub-device pad
 applications initialize the ``pad``, ``which`` and ``index`` fields of
 struct
-:ref:`v4l2_subdev_mbus_code_enum <v4l2-subdev-mbus-code-enum>` and
+:c:type:`v4l2_subdev_mbus_code_enum` and
 call the :ref:`VIDIOC_SUBDEV_ENUM_MBUS_CODE` ioctl with a pointer to this
 structure. Drivers fill the rest of the structure or return an ``EINVAL``
 error code if either the ``pad`` or ``index`` are invalid. All media bus
@@ -49,7 +47,9 @@ See :ref:`VIDIOC_SUBDEV_G_FMT` for more
 information about the try formats.
 
 
-.. _v4l2-subdev-mbus-code-enum:
+.. c:type:: v4l2_subdev_mbus_code_enum
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_subdev_mbus_code_enum
     :header-rows:  0
@@ -110,6 +110,6 @@ appropriately. The generic error codes are described at the
 
 EINVAL
     The struct
-    :ref:`v4l2_subdev_mbus_code_enum <v4l2-subdev-mbus-code-enum>`
+    :c:type:`v4l2_subdev_mbus_code_enum`
     ``pad`` references a non-existing pad, or the ``index`` field is out
     of bounds.

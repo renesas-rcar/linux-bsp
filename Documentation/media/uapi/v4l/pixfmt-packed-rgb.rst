@@ -6,11 +6,6 @@
 Packed RGB formats
 ******************
 
-*man Packed RGB formats(2)*
-
-Packed RGB formats
-
-
 Description
 ===========
 
@@ -19,6 +14,11 @@ graphics frame buffers. They occupy 8, 16, 24 or 32 bits per pixel.
 These are all packed-pixel formats, meaning all the data for a pixel lie
 next to each other in memory.
 
+.. raw:: latex
+
+    \begin{adjustbox}{width=\columnwidth}
+
+.. tabularcolumns:: |p{4.5cm}|p{3.3cm}|p{0.7cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.2cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.2cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.2cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{1.7cm}|
 
 .. _rgb-formats:
 
@@ -36,10 +36,13 @@ next to each other in memory.
        -
        -  :cspan:`7` Byte 0 in memory
 
+       -
        -  :cspan:`7` Byte 1
 
+       -
        -  :cspan:`7` Byte 2
 
+       -
        -  :cspan:`7` Byte 3
 
     -  .. row 2
@@ -202,13 +205,13 @@ next to each other in memory.
        -  b\ :sub:`0`
 
        -
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
        -  r\ :sub:`3`
 
@@ -282,7 +285,7 @@ next to each other in memory.
        -  b\ :sub:`0`
 
        -
-       -  -
+       -
 
        -  r\ :sub:`4`
 
@@ -385,7 +388,7 @@ next to each other in memory.
        -  'XR15' | (1 << 31)
 
        -
-       -  -
+       -
 
        -  r\ :sub:`4`
 
@@ -617,34 +620,34 @@ next to each other in memory.
 
        -  r\ :sub:`0`
 
-       -  -
-
-       -  -
-
-       -  -
-
-       -  -
-
-       -  -
-
-       -  -
+       -
 
        -
-       -  -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
+
+       -
+
+       -
+
+       -
+
+       -
+
+       -
 
     -  .. _V4L2-PIX-FMT-ABGR32:
 
@@ -778,21 +781,21 @@ next to each other in memory.
        -  r\ :sub:`0`
 
        -
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
     -  .. _V4L2-PIX-FMT-ARGB32:
 
@@ -875,21 +878,21 @@ next to each other in memory.
        -  'BX24'
 
        -
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
-       -  -
+       -
 
        -
        -  r\ :sub:`7`
@@ -942,8 +945,11 @@ next to each other in memory.
 
        -  b\ :sub:`0`
 
+.. raw:: latex
 
-Bit 7 is the most significant bit.
+    \end{adjustbox}\newline\newline
+
+.. note:: Bit 7 is the most significant bit.
 
 The usage and value of the alpha bits (a) in the ARGB and ABGR formats
 (collectively referred to as alpha formats) depend on the device type
@@ -973,11 +979,16 @@ devices and drivers must ignore those bits, for both
 Each cell is one byte.
 
 
+.. raw:: latex
 
-.. flat-table::
+    \newline\newline\begin{adjustbox}{width=\columnwidth}
+
+.. tabularcolumns:: |p{4.1cm}|p{1.1cm}|p{1.1cm}|p{1.1cm}|p{1.1cm}|p{1.1cm}|p{1.1cm}|p{1.1cm}|p{1.1cm}|p{1.1cm}|p{1.1cm}|p{1.1cm}|p{1.3cm}|
+
+.. flat-table:: RGB byte order
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1 1 1 1 1 1 1 1 1 1 1
+    :widths:       11 3 3 3 3 3 3 3 3 3 3 3 3
 
 
     -  .. row 1
@@ -1092,12 +1103,21 @@ Each cell is one byte.
 
        -  R\ :sub:`33`
 
+.. raw:: latex
+
+    \end{adjustbox}\newline\newline
 
 Formats defined in :ref:`rgb-formats-deprecated` are deprecated and
 must not be used by new drivers. They are documented here for reference.
 The meaning of their alpha bits (a) is ill-defined and interpreted as in
 either the corresponding ARGB or XRGB format, depending on the driver.
 
+
+.. raw:: latex
+
+    \begin{adjustbox}{width=\columnwidth}
+
+.. tabularcolumns:: |p{4.2cm}|p{1.0cm}|p{0.7cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.2cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.2cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.2cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{0.4cm}|p{1.7cm}|
 
 .. _rgb-formats-deprecated:
 
@@ -1115,10 +1135,13 @@ either the corresponding ARGB or XRGB format, depending on the driver.
        -
        -  :cspan:`7` Byte 0 in memory
 
+       -
        -  :cspan:`7` Byte 1
 
+       -
        -  :cspan:`7` Byte 2
 
+       -
        -  :cspan:`7` Byte 3
 
     -  .. row 2
@@ -1462,6 +1485,9 @@ either the corresponding ARGB or XRGB format, depending on the driver.
 
        -  b\ :sub:`0`
 
+.. raw:: latex
+
+    \end{adjustbox}\newline\newline
 
 A test utility to determine which RGB formats a driver actually supports
 is available from the LinuxTV v4l-dvb repository. See

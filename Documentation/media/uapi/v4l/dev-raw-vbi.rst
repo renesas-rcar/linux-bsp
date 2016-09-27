@@ -39,7 +39,7 @@ Querying Capabilities
 Devices supporting the raw VBI capturing or output API set the
 ``V4L2_CAP_VBI_CAPTURE`` or ``V4L2_CAP_VBI_OUTPUT`` flags, respectively,
 in the ``capabilities`` field of struct
-:ref:`v4l2_capability <v4l2-capability>` returned by the
+:c:type:`v4l2_capability` returned by the
 :ref:`VIDIOC_QUERYCAP` ioctl. At least one of the
 read/write, streaming or asynchronous I/O methods must be supported. VBI
 devices may or may not have a tuner or modulator.
@@ -69,16 +69,16 @@ always ensure they really get what they want, requesting reasonable
 parameters and then checking if the actual parameters are suitable.
 
 To query the current raw VBI capture parameters applications set the
-``type`` field of a struct :ref:`v4l2_format <v4l2-format>` to
+``type`` field of a struct :c:type:`v4l2_format` to
 ``V4L2_BUF_TYPE_VBI_CAPTURE`` or ``V4L2_BUF_TYPE_VBI_OUTPUT``, and call
 the :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>` ioctl with a pointer to this
 structure. Drivers fill the struct
-:ref:`v4l2_vbi_format <v4l2-vbi-format>` ``vbi`` member of the
+:c:type:`v4l2_vbi_format` ``vbi`` member of the
 ``fmt`` union.
 
 To request different parameters applications set the ``type`` field of a
-struct :ref:`v4l2_format <v4l2-format>` as above and initialize all
-fields of the struct :ref:`v4l2_vbi_format <v4l2-vbi-format>`
+struct :c:type:`v4l2_format` as above and initialize all
+fields of the struct :c:type:`v4l2_vbi_format`
 ``vbi`` member of the ``fmt`` union, or better just modify the results
 of :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>`, and call the :ref:`VIDIOC_S_FMT <VIDIOC_G_FMT>`
 ioctl with a pointer to this structure. Drivers return an ``EINVAL`` error
@@ -99,8 +99,11 @@ VBI devices must implement both the :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>` and
 and always returns default parameters as :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>` does.
 :ref:`VIDIOC_TRY_FMT <VIDIOC_G_FMT>` is optional.
 
+.. tabularcolumns:: |p{2.4cm}|p{4.4cm}|p{10.7cm}|
 
-.. _v4l2-vbi-format:
+.. c:type:: v4l2_vbi_format
+
+.. cssclass:: longtable
 
 .. flat-table:: struct v4l2_vbi_format
     :header-rows:  0
@@ -194,15 +197,14 @@ and always returns default parameters as :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>` does
 	  driver. Anyway, drivers may not support single field capturing and
 	  return both count values non-zero.
 
-	  Both ``count`` values set to zero, or line numbers outside the
-	  bounds depicted in :ref:`vbi-525` and :ref:`vbi-625`, or a
-	  field image covering lines of two fields, are invalid and shall
-	  not be returned by the driver.
+	  Both ``count`` values set to zero, or line numbers are outside the
+	  bounds depicted\ [#f4]_, or a field image covering lines of two
+	  fields, are invalid and shall not be returned by the driver.
 
 	  To initialize the ``start`` and ``count`` fields, applications
 	  must first determine the current video standard selection. The
 	  :ref:`v4l2_std_id <v4l2-std-id>` or the ``framelines`` field
-	  of struct :ref:`v4l2_standard <v4l2-standard>` can be evaluated
+	  of struct :c:type:`v4l2_standard` can be evaluated
 	  for this purpose.
 
     -  .. row 8
@@ -224,6 +226,7 @@ and always returns default parameters as :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>` does
 	  applications must set it to zero.
 
 
+.. tabularcolumns:: |p{4.0cm}|p{1.5cm}|p{12.0cm}|
 
 .. _vbifmt-flags:
 
@@ -348,3 +351,6 @@ another process.
    Most VBI services transmit on both fields, but some have different
    semantics depending on the field number. These cannot be reliable
    decoded or encoded when ``V4L2_VBI_UNSYNC`` is set.
+
+.. [#f4]
+   The valid values ar shown at :ref:`vbi-525` and :ref:`vbi-625`.

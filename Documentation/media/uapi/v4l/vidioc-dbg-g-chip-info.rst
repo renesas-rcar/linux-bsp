@@ -15,7 +15,8 @@ VIDIOC_DBG_G_CHIP_INFO - Identify the chips on a TV card
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_dbg_chip_info *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_DBG_G_CHIP_INFO, struct v4l2_dbg_chip_info *argp )
+    :name: VIDIOC_DBG_G_CHIP_INFO
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_DBG_G_CHIP_INFO
 
 ``argp``
 
@@ -50,7 +48,7 @@ Additionally the Linux kernel must be compiled with the
 
 To query the driver applications must initialize the ``match.type`` and
 ``match.addr`` or ``match.name`` fields of a struct
-:ref:`v4l2_dbg_chip_info <v4l2-dbg-chip-info>` and call
+:c:type:`v4l2_dbg_chip_info` and call
 :ref:`VIDIOC_DBG_G_CHIP_INFO` with a pointer to this structure. On success
 the driver stores information about the selected chip in the ``name``
 and ``flags`` fields.
@@ -77,6 +75,8 @@ is available from the LinuxTV v4l-dvb repository; see
 `https://linuxtv.org/repo/ <https://linuxtv.org/repo/>`__ for access
 instructions.
 
+
+.. tabularcolumns:: |p{3.5cm}|p{3.5cm}|p{3.5cm}|p{7.0cm}|
 
 .. _name-v4l2-dbg-match:
 
@@ -122,7 +122,9 @@ instructions.
 
 
 
-.. _v4l2-dbg-chip-info:
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
+.. c:type:: v4l2_dbg_chip_info
 
 .. flat-table:: struct v4l2_dbg_chip_info
     :header-rows:  0
@@ -166,6 +168,8 @@ instructions.
        -  Reserved fields, both application and driver must set these to 0.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _name-chip-match-types:
 

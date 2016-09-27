@@ -15,7 +15,11 @@ VIDIOC_ENUM_DV_TIMINGS - VIDIOC_SUBDEV_ENUM_DV_TIMINGS - Enumerate supported Dig
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_enum_dv_timings *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_ENUM_DV_TIMINGS, struct v4l2_enum_dv_timings *argp )
+    :name: VIDIOC_ENUM_DV_TIMINGS
+
+.. c:function:: int ioctl( int fd, VIDIOC_SUBDEV_ENUM_DV_TIMINGS, struct v4l2_enum_dv_timings *argp )
+    :name: VIDIOC_SUBDEV_ENUM_DV_TIMINGS
 
 
 Arguments
@@ -23,9 +27,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_ENUM_DV_TIMINGS, VIDIOC_SUBDEV_ENUM_DV_TIMINGS
 
 ``argp``
 
@@ -42,14 +43,16 @@ this list.
 
 To query the available timings, applications initialize the ``index``
 field, set the ``pad`` field to 0, zero the reserved array of struct
-:ref:`v4l2_enum_dv_timings <v4l2-enum-dv-timings>` and call the
+:c:type:`v4l2_enum_dv_timings` and call the
 ``VIDIOC_ENUM_DV_TIMINGS`` ioctl on a video node with a pointer to this
 structure. Drivers fill the rest of the structure or return an ``EINVAL``
 error code when the index is out of bounds. To enumerate all supported
 DV timings, applications shall begin at index zero, incrementing by one
 until the driver returns ``EINVAL``.
 
-.. note:: Drivers may enumerate a different set of DV timings after
+.. note::
+
+   Drivers may enumerate a different set of DV timings after
    switching the video input or output.
 
 When implemented by the driver DV timings of subdevices can be queried
@@ -57,12 +60,14 @@ by calling the ``VIDIOC_SUBDEV_ENUM_DV_TIMINGS`` ioctl directly on a
 subdevice node. The DV timings are specific to inputs (for DV receivers)
 or outputs (for DV transmitters), applications must specify the desired
 pad number in the struct
-:ref:`v4l2_enum_dv_timings <v4l2-enum-dv-timings>` ``pad`` field.
+:c:type:`v4l2_enum_dv_timings` ``pad`` field.
 Attempts to enumerate timings on a pad that doesn't support them will
 return an ``EINVAL`` error code.
 
 
-.. _v4l2-enum-dv-timings:
+.. c:type:: v4l2_enum_dv_timings
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_enum_dv_timings
     :header-rows:  0
@@ -99,7 +104,7 @@ return an ``EINVAL`` error code.
 
     -  .. row 4
 
-       -  struct :ref:`v4l2_dv_timings <v4l2-dv-timings>`
+       -  struct :c:type:`v4l2_dv_timings`
 
        -  ``timings``
 
@@ -114,7 +119,7 @@ appropriately. The generic error codes are described at the
 :ref:`Generic Error Codes <gen-errors>` chapter.
 
 EINVAL
-    The struct :ref:`v4l2_enum_dv_timings <v4l2-enum-dv-timings>`
+    The struct :c:type:`v4l2_enum_dv_timings`
     ``index`` is out of bounds or the ``pad`` number is invalid.
 
 ENODATA

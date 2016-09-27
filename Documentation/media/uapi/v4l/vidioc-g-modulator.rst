@@ -15,9 +15,11 @@ VIDIOC_G_MODULATOR - VIDIOC_S_MODULATOR - Get or set modulator attributes
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_modulator *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_MODULATOR, struct v4l2_modulator *argp )
+    :name: VIDIOC_G_MODULATOR
 
-.. cpp:function:: int ioctl( int fd, int request, const struct v4l2_modulator *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_S_MODULATOR, const struct v4l2_modulator *argp )
+    :name: VIDIOC_S_MODULATOR
 
 
 Arguments
@@ -25,9 +27,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_MODULATOR, VIDIOC_S_MODULATOR
 
 ``argp``
 
@@ -37,7 +36,7 @@ Description
 
 To query the attributes of a modulator applications initialize the
 ``index`` field and zero out the ``reserved`` array of a struct
-:ref:`v4l2_modulator <v4l2-modulator>` and call the
+:c:type:`v4l2_modulator` and call the
 :ref:`VIDIOC_G_MODULATOR <VIDIOC_G_MODULATOR>` ioctl with a pointer to this structure. Drivers
 fill the rest of the structure or return an ``EINVAL`` error code when the
 index is out of bounds. To enumerate all modulators applications shall
@@ -61,7 +60,9 @@ To change the radio frequency the
 :ref:`VIDIOC_S_FREQUENCY <VIDIOC_G_FREQUENCY>` ioctl is available.
 
 
-.. _v4l2-modulator:
+.. tabularcolumns:: |p{2.9cm}|p{2.9cm}|p{5.8cm}|p{2.9cm}|p{3.0cm}|
+
+.. c:type:: v4l2_modulator
 
 .. flat-table:: struct v4l2_modulator
     :header-rows:  0
@@ -83,8 +84,9 @@ To change the radio frequency the
 
        -  ``name``\ [32]
 
-       -  Name of the modulator, a NUL-terminated ASCII string. This
-	  information is intended for the user.
+       -  Name of the modulator, a NUL-terminated ASCII string.
+
+	  This information is intended for the user.
 
     -  .. row 3
 
@@ -93,7 +95,7 @@ To change the radio frequency the
        -  ``capability``
 
        -  Modulator capability flags. No flags are defined for this field,
-	  the tuner flags in struct :ref:`v4l2_tuner <v4l2-tuner>` are
+	  the tuner flags in struct :c:type:`v4l2_tuner` are
 	  used accordingly. The audio flags indicate the ability to encode
 	  audio subprograms. They will *not* change for example with the
 	  current video standard.
@@ -130,7 +132,9 @@ To change the radio frequency the
 	  shall be modulated. It contains a set of flags as defined in
 	  :ref:`modulator-txsubchans`.
 
-	  .. note:: The tuner ``rxsubchans`` flags  are reused, but the
+	  .. note::
+
+	     The tuner ``rxsubchans`` flags  are reused, but the
 	     semantics are different. Video output devices
 	     are assumed to have an analog or PCM audio input with 1-3
 	     channels. The ``txsubchans`` flags select one or more channels
@@ -143,7 +147,7 @@ To change the radio frequency the
 
        -  ``type``
 
-       -  :cspan:`2` Type of the modulator, see :ref:`v4l2-tuner-type`.
+       -  :cspan:`2` Type of the modulator, see :c:type:`v4l2_tuner_type`.
 
     -  .. row 8
 
@@ -151,10 +155,13 @@ To change the radio frequency the
 
        -  ``reserved``\ [3]
 
-       -  Reserved for future extensions. Drivers and applications must set
-	  the array to zero.
+       -  Reserved for future extensions.
+
+	  Drivers and applications must set the array to zero.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _modulator-txsubchans:
 
@@ -253,5 +260,5 @@ appropriately. The generic error codes are described at the
 :ref:`Generic Error Codes <gen-errors>` chapter.
 
 EINVAL
-    The struct :ref:`v4l2_modulator <v4l2-modulator>` ``index`` is
+    The struct :c:type:`v4l2_modulator` ``index`` is
     out of bounds.

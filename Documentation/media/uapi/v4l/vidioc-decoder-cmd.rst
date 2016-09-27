@@ -15,7 +15,12 @@ VIDIOC_DECODER_CMD - VIDIOC_TRY_DECODER_CMD - Execute an decoder command
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_decoder_cmd *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_DECODER_CMD, struct v4l2_decoder_cmd *argp )
+    :name: VIDIOC_DECODER_CMD
+
+
+.. c:function:: int ioctl( int fd, VIDIOC_TRY_DECODER_CMD, struct v4l2_decoder_cmd *argp )
+    :name: VIDIOC_TRY_DECODER_CMD
 
 
 Arguments
@@ -24,10 +29,8 @@ Arguments
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
 
-``request``
-    VIDIOC_DECODER_CMD, VIDIOC_TRY_DECODER_CMD
-
 ``argp``
+    pointer to struct :c:type:`v4l2_decoder_cmd`.
 
 
 Description
@@ -37,7 +40,7 @@ These ioctls control an audio/video (usually MPEG-) decoder.
 ``VIDIOC_DECODER_CMD`` sends a command to the decoder,
 ``VIDIOC_TRY_DECODER_CMD`` can be used to try a command without actually
 executing it. To send a command applications must initialize all fields
-of a struct :ref:`v4l2_decoder_cmd <v4l2-decoder-cmd>` and call
+of a struct :c:type:`v4l2_decoder_cmd` and call
 ``VIDIOC_DECODER_CMD`` or ``VIDIOC_TRY_DECODER_CMD`` with a pointer to
 this structure.
 
@@ -56,12 +59,16 @@ These ioctls are optional, not all drivers may support them. They were
 introduced in Linux 3.3.
 
 
-.. _v4l2-decoder-cmd:
+.. tabularcolumns:: |p{1.1cm}|p{2.4cm}|p{1.2cm}|p{1.6cm}|p{10.6cm}|
+
+.. c:type:: v4l2_decoder_cmd
+
+.. cssclass:: longtable
 
 .. flat-table:: struct v4l2_decoder_cmd
     :header-rows:  0
     :stub-columns: 0
-    :widths:       1 1 2 1 1
+    :widths: 11 24 12 16 106
 
 
     -  .. row 1
@@ -185,12 +192,14 @@ introduced in Linux 3.3.
 
 
 
+.. tabularcolumns:: |p{5.6cm}|p{0.6cm}|p{11.3cm}|
+
 .. _decoder-cmds:
 
 .. flat-table:: Decoder Commands
     :header-rows:  0
     :stub-columns: 0
-    :widths:       3 1 4
+    :widths: 56 6 113
 
 
     -  .. row 1

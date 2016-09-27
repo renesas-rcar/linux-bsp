@@ -15,9 +15,11 @@ VIDIOC_G_TUNER - VIDIOC_S_TUNER - Get or set tuner attributes
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_tuner *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_TUNER, struct v4l2_tuner *argp )
+    :name: VIDIOC_G_TUNER
 
-.. cpp:function:: int ioctl( int fd, int request, const struct v4l2_tuner *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_S_TUNER, const struct v4l2_tuner *argp )
+    :name: VIDIOC_S_TUNER
 
 
 Arguments
@@ -25,9 +27,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_TUNER, VIDIOC_S_TUNER
 
 ``argp``
 
@@ -37,7 +36,7 @@ Description
 
 To query the attributes of a tuner applications initialize the ``index``
 field and zero out the ``reserved`` array of a struct
-:ref:`v4l2_tuner <v4l2-tuner>` and call the ``VIDIOC_G_TUNER`` ioctl
+:c:type:`v4l2_tuner` and call the ``VIDIOC_G_TUNER`` ioctl
 with a pointer to this structure. Drivers fill the rest of the structure
 or return an ``EINVAL`` error code when the index is out of bounds. To
 enumerate all tuners applications shall begin at index zero,
@@ -60,7 +59,11 @@ To change the radio frequency the
 :ref:`VIDIOC_S_FREQUENCY <VIDIOC_G_FREQUENCY>` ioctl is available.
 
 
-.. _v4l2-tuner:
+ .. tabularcolumns:: |p{1.3cm}|p{3.0cm}|p{6.6cm}|p{6.6cm}|
+
+.. c:type:: v4l2_tuner
+
+.. cssclass:: longtable
 
 .. flat-table:: struct v4l2_tuner
     :header-rows:  0
@@ -83,8 +86,9 @@ To change the radio frequency the
 
        -  :cspan:`1`
 
-	  Name of the tuner, a NUL-terminated ASCII string. This information
-	  is intended for the user.
+	  Name of the tuner, a NUL-terminated ASCII string.
+
+	  This information is intended for the user.
 
     -  .. row 3
 
@@ -92,7 +96,7 @@ To change the radio frequency the
 
        -  ``type``
 
-       -  :cspan:`1` Type of the tuner, see :ref:`v4l2-tuner-type`.
+       -  :cspan:`1` Type of the tuner, see :c:type:`v4l2_tuner_type`.
 
     -  .. row 4
 
@@ -112,7 +116,7 @@ To change the radio frequency the
 
 	  If multiple frequency bands are supported, then ``capability`` is
 	  the union of all ``capability`` fields of each struct
-	  :ref:`v4l2_frequency_band <v4l2-frequency-band>`.
+	  :c:type:`v4l2_frequency_band`.
 
     -  .. row 5
 
@@ -222,7 +226,7 @@ To change the radio frequency the
 	  received audio programs do not match.
 
 	  Currently this is the only field of struct
-	  :ref:`struct v4l2_tuner <v4l2-tuner>` applications can change.
+	  struct :c:type:`v4l2_tuner` applications can change.
 
     -  .. row 15
 
@@ -230,8 +234,9 @@ To change the radio frequency the
 
        -  ``signal``
 
-       -  :cspan:`1` The signal strength if known, ranging from 0 to
-	  65535. Higher values indicate a better signal.
+       -  :cspan:`1` The signal strength if known.
+
+	  Ranging from 0 to 65535. Higher values indicate a better signal.
 
     -  .. row 16
 
@@ -239,8 +244,10 @@ To change the radio frequency the
 
        -  ``afc``
 
-       -  :cspan:`1` Automatic frequency control: When the ``afc`` value
-	  is negative, the frequency is too low, when positive too high.
+       -  :cspan:`1` Automatic frequency control.
+
+	  When the ``afc`` value is negative, the frequency is too
+	  low, when positive too high.
 
     -  .. row 17
 
@@ -248,17 +255,20 @@ To change the radio frequency the
 
        -  ``reserved``\ [4]
 
-       -  :cspan:`1` Reserved for future extensions. Drivers and
-	  applications must set the array to zero.
+       -  :cspan:`1` Reserved for future extensions.
+
+	  Drivers and applications must set the array to zero.
 
 
 
-.. _v4l2-tuner-type:
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
+
+.. c:type:: v4l2_tuner_type
 
 .. flat-table:: enum v4l2_tuner_type
     :header-rows:  0
     :stub-columns: 0
-    :widths:       3 1 4
+    :widths:       3 1 6
 
 
     -  .. row 1
@@ -267,7 +277,7 @@ To change the radio frequency the
 
        -  1
 
-       -
+       - Tuner supports radio
 
     -  .. row 2
 
@@ -275,7 +285,7 @@ To change the radio frequency the
 
        -  2
 
-       -
+       - Tuner supports analog TV
 
     -  .. row 3
 
@@ -283,7 +293,8 @@ To change the radio frequency the
 
        -  4
 
-       -
+       - Tuner controls the A/D and/or D/A block of a
+	 Sofware Digital Radio (SDR)
 
     -  .. row 4
 
@@ -291,11 +302,14 @@ To change the radio frequency the
 
        -  5
 
-       -
+       - Tuner controls the RF part of a Sofware Digital Radio (SDR)
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _tuner-capability:
+
+.. cssclass:: longtable
 
 .. flat-table:: Tuner and Modulator Capability Flags
     :header-rows:  0
@@ -323,7 +337,7 @@ To change the radio frequency the
 	  multi-standard because the video standard is automatically
 	  determined from the frequency band.) The set of supported video
 	  standards is available from the struct
-	  :ref:`v4l2_input <v4l2-input>` pointing to this tuner, see the
+	  :c:type:`v4l2_input` pointing to this tuner, see the
 	  description of ioctl :ref:`VIDIOC_ENUMINPUT`
 	  for details. Only ``V4L2_TUNER_ANALOG_TV`` tuners can have this
 	  capability.
@@ -391,7 +405,9 @@ To change the radio frequency the
 	  carrier for a monaural secondary language. Only
 	  ``V4L2_TUNER_ANALOG_TV`` tuners can have this capability.
 
-	  .. note:: The ``V4L2_TUNER_CAP_LANG2`` and ``V4L2_TUNER_CAP_SAP``
+	  .. note::
+
+	     The ``V4L2_TUNER_CAP_LANG2`` and ``V4L2_TUNER_CAP_SAP``
 	     flags are synonyms. ``V4L2_TUNER_CAP_SAP`` applies when the tuner
 	     supports the ``V4L2_STD_NTSC_M`` video standard.
 
@@ -451,6 +467,8 @@ To change the radio frequency the
 
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
+
 .. _tuner-rxsubchans:
 
 .. flat-table:: Tuner Audio Reception Flags
@@ -502,7 +520,9 @@ To change the radio frequency the
 
        -  The tuner receives a Second Audio Program.
 
-	  .. note:: The ``V4L2_TUNER_SUB_LANG2`` and ``V4L2_TUNER_SUB_SAP``
+	  .. note::
+
+	     The ``V4L2_TUNER_SUB_LANG2`` and ``V4L2_TUNER_SUB_SAP``
 	     flags are synonyms. The ``V4L2_TUNER_SUB_SAP`` flag applies
 	     when the current video standard is ``V4L2_STD_NTSC_M``.
 
@@ -515,6 +535,8 @@ To change the radio frequency the
        -  The tuner receives an RDS channel.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _tuner-audmode:
 
@@ -596,7 +618,9 @@ To change the radio frequency the
 	  ``MODE_MONO``. Only ``V4L2_TUNER_ANALOG_TV`` tuners support this
 	  mode.
 
+.. raw:: latex
 
+    \begin{adjustbox}{width=\columnwidth}
 
 .. _tuner-matrix:
 
@@ -694,6 +718,9 @@ To change the radio frequency the
 
        -  Lang1/Lang2 (preferred) or Lang1/Lang1
 
+.. raw:: latex
+
+    \end{adjustbox}\newline\newline
 
 Return Value
 ============
@@ -703,7 +730,7 @@ appropriately. The generic error codes are described at the
 :ref:`Generic Error Codes <gen-errors>` chapter.
 
 EINVAL
-    The struct :ref:`v4l2_tuner <v4l2-tuner>` ``index`` is out of
+    The struct :c:type:`v4l2_tuner` ``index`` is out of
     bounds.
 
 .. [#f1]

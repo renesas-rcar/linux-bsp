@@ -15,11 +15,14 @@ VIDIOC_QUERYCTRL - VIDIOC_QUERY_EXT_CTRL - VIDIOC_QUERYMENU - Enumerate controls
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_queryctrl *argp )
+.. c:function:: int ioctl( int fd, int VIDIOC_QUERYCTRL, struct v4l2_queryctrl *argp )
+    :name: VIDIOC_QUERYCTRL
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_query_ext_ctrl *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_QUERY_EXT_CTRL, struct v4l2_query_ext_ctrl *argp )
+    :name: VIDIOC_QUERY_EXT_CTRL
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_querymenu *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_QUERYMENU, struct v4l2_querymenu *argp )
+    :name: VIDIOC_QUERYMENU
 
 
 Arguments
@@ -27,9 +30,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_QUERYCTRL, VIDIOC_QUERY_EXT_CTRL, VIDIOC_QUERYMENU
 
 ``argp``
 
@@ -84,7 +84,9 @@ fills the rest of the structure or returns an ``EINVAL`` error code when the
 :ref:`v4l2_queryctrl <v4l2-queryctrl>` ``minimum`` to ``maximum``,
 inclusive.
 
-.. note:: It is possible for ``VIDIOC_QUERYMENU`` to return
+.. note::
+
+   It is possible for ``VIDIOC_QUERYMENU`` to return
    an ``EINVAL`` error code for some indices between ``minimum`` and
    ``maximum``. In that case that particular menu item is not supported by
    this driver. Also note that the ``minimum`` value is not necessarily 0.
@@ -92,7 +94,11 @@ inclusive.
 See also the examples in :ref:`control`.
 
 
+.. tabularcolumns:: |p{1.2cm}|p{3.6cm}|p{12.7cm}|
+
 .. _v4l2-queryctrl:
+
+.. cssclass:: longtable
 
 .. flat-table:: struct v4l2_queryctrl
     :header-rows:  0
@@ -118,7 +124,7 @@ See also the examples in :ref:`control`.
 
        -  ``type``
 
-       -  Type of control, see :ref:`v4l2-ctrl-type`.
+       -  Type of control, see :c:type:`v4l2_ctrl_type`.
 
     -  .. row 3
 
@@ -136,7 +142,7 @@ See also the examples in :ref:`control`.
        -  ``minimum``
 
        -  Minimum value, inclusive. This field gives a lower bound for the
-	  control. See enum :ref:`v4l2_ctrl_type <v4l2-ctrl-type>` how
+	  control. See enum :c:type:`v4l2_ctrl_type` how
 	  the minimum value is to be used for each possible control type.
 	  Note that this a signed 32-bit value.
 
@@ -147,7 +153,7 @@ See also the examples in :ref:`control`.
        -  ``maximum``
 
        -  Maximum value, inclusive. This field gives an upper bound for the
-	  control. See enum :ref:`v4l2_ctrl_type <v4l2-ctrl-type>` how
+	  control. See enum :c:type:`v4l2_ctrl_type` how
 	  the maximum value is to be used for each possible control type.
 	  Note that this a signed 32-bit value.
 
@@ -158,7 +164,7 @@ See also the examples in :ref:`control`.
        -  ``step``
 
        -  This field gives a step size for the control. See enum
-	  :ref:`v4l2_ctrl_type <v4l2-ctrl-type>` how the step value is
+	  :c:type:`v4l2_ctrl_type` how the step value is
 	  to be used for each possible control type. Note that this an
 	  unsigned 32-bit value.
 
@@ -188,7 +194,9 @@ See also the examples in :ref:`control`.
 	  ``_BITMASK``, ``_MENU`` or ``_INTEGER_MENU`` control. Not valid
 	  for other types of controls.
 
-	  .. note:: Drivers reset controls to their default value only when
+	  .. note::
+
+	     Drivers reset controls to their default value only when
 	     the driver is first loaded, never afterwards.
 
     -  .. row 8
@@ -210,7 +218,11 @@ See also the examples in :ref:`control`.
 
 
 
+.. tabularcolumns:: |p{1.2cm}|p{5.0cm}|p{11.3cm}|
+
 .. _v4l2-query-ext-ctrl:
+
+.. cssclass:: longtable
 
 .. flat-table:: struct v4l2_query_ext_ctrl
     :header-rows:  0
@@ -239,7 +251,7 @@ See also the examples in :ref:`control`.
 
        -  ``type``
 
-       -  Type of control, see :ref:`v4l2-ctrl-type`.
+       -  Type of control, see :c:type:`v4l2_ctrl_type`.
 
     -  .. row 3
 
@@ -257,7 +269,7 @@ See also the examples in :ref:`control`.
        -  ``minimum``
 
        -  Minimum value, inclusive. This field gives a lower bound for the
-	  control. See enum :ref:`v4l2_ctrl_type <v4l2-ctrl-type>` how
+	  control. See enum :c:type:`v4l2_ctrl_type` how
 	  the minimum value is to be used for each possible control type.
 	  Note that this a signed 64-bit value.
 
@@ -268,7 +280,7 @@ See also the examples in :ref:`control`.
        -  ``maximum``
 
        -  Maximum value, inclusive. This field gives an upper bound for the
-	  control. See enum :ref:`v4l2_ctrl_type <v4l2-ctrl-type>` how
+	  control. See enum :c:type:`v4l2_ctrl_type` how
 	  the maximum value is to be used for each possible control type.
 	  Note that this a signed 64-bit value.
 
@@ -279,7 +291,7 @@ See also the examples in :ref:`control`.
        -  ``step``
 
        -  This field gives a step size for the control. See enum
-	  :ref:`v4l2_ctrl_type <v4l2-ctrl-type>` how the step value is
+	  :c:type:`v4l2_ctrl_type` how the step value is
 	  to be used for each possible control type. Note that this an
 	  unsigned 64-bit value.
 
@@ -306,7 +318,9 @@ See also the examples in :ref:`control`.
 	  ``_BOOLEAN``, ``_BITMASK``, ``_MENU``, ``_INTEGER_MENU``, ``_U8``
 	  or ``_U16`` control. Not valid for other types of controls.
 
-	  .. note:: Drivers reset controls to their default value only when
+	  .. note::
+
+	     Drivers reset controls to their default value only when
 	     the driver is first loaded, never afterwards.
 
     -  .. row 8
@@ -369,6 +383,8 @@ See also the examples in :ref:`control`.
 	  the array to zero.
 
 
+
+.. tabularcolumns:: |p{1.2cm}|p{0.6cm}|p{1.6cm}|p{13.5cm}|
 
 .. _v4l2-querymenu:
 
@@ -438,7 +454,11 @@ See also the examples in :ref:`control`.
 
 
 
-.. _v4l2-ctrl-type:
+.. tabularcolumns:: |p{5.8cm}|p{1.4cm}|p{1.0cm}|p{1.4cm}|p{6.9cm}|
+
+.. c:type:: v4l2_ctrl_type
+
+.. cssclass:: longtable
 
 .. flat-table:: enum v4l2_ctrl_type
     :header-rows:  1
@@ -572,7 +592,7 @@ See also the examples in :ref:`control`.
 	  pass a string of length 8 to
 	  :ref:`VIDIOC_S_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` you need to
 	  set the ``size`` field of struct
-	  :ref:`v4l2_ext_control <v4l2-ext-control>` to 9. For
+	  :c:type:`v4l2_ext_control` to 9. For
 	  :ref:`VIDIOC_G_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` you can set
 	  the ``size`` field to ``maximum`` + 1. Which character encoding is
 	  used will depend on the string control itself and should be part
@@ -635,7 +655,11 @@ See also the examples in :ref:`control`.
 
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
+
 .. _control-flags:
+
+.. cssclass:: longtable
 
 .. flat-table:: Control Flags
     :header-rows:  0
@@ -728,10 +752,14 @@ See also the examples in :ref:`control`.
 	  case the hardware calculates the gain value based on the lighting
 	  conditions which can change over time.
 
-	  .. note:: Setting a new value for a volatile control will have no
-	     effect and no ``V4L2_EVENT_CTRL_CH_VALUE`` will be sent, unless
-	     the ``V4L2_CTRL_FLAG_EXECUTE_ON_WRITE`` flag (see below) is
-	     also set. Otherwise the new value will just be ignored.
+	  .. note::
+
+	     Setting a new value for a volatile control will be ignored
+	     unless
+	     :ref:`V4L2_CTRL_FLAG_EXECUTE_ON_WRITE <FLAG_EXECUTE_ON_WRITE>`
+	     is also set.
+	     Setting a new value for a volatile control will *never* trigger a
+	     :ref:`V4L2_EVENT_CTRL_CH_VALUE <ctrl-changes-flags>` event.
 
     -  .. row 9
 
@@ -741,12 +769,13 @@ See also the examples in :ref:`control`.
 
        -  This control has a pointer type, so its value has to be accessed
 	  using one of the pointer fields of struct
-	  :ref:`v4l2_ext_control <v4l2-ext-control>`. This flag is set
+	  :c:type:`v4l2_ext_control`. This flag is set
 	  for controls that are an array, string, or have a compound type.
 	  In all cases you have to set a pointer to memory containing the
 	  payload of the control.
 
     -  .. row 10
+       .. _FLAG_EXECUTE_ON_WRITE:
 
        -  ``V4L2_CTRL_FLAG_EXECUTE_ON_WRITE``
 

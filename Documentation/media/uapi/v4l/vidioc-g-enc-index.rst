@@ -15,7 +15,8 @@ VIDIOC_G_ENC_INDEX - Get meta data about a compressed video stream
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_enc_idx *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_ENC_INDEX, struct v4l2_enc_idx *argp )
+    :name: VIDIOC_G_ENC_INDEX
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_ENC_INDEX
 
 ``argp``
 
@@ -39,7 +37,7 @@ driver, which is useful for random access into the stream without
 decoding it.
 
 To read the data applications must call :ref:`VIDIOC_G_ENC_INDEX <VIDIOC_G_ENC_INDEX>` with a
-pointer to a struct :ref:`v4l2_enc_idx <v4l2-enc-idx>`. On success
+pointer to a struct :c:type:`v4l2_enc_idx`. On success
 the driver fills the ``entry`` array, stores the number of elements
 written in the ``entries`` field, and initializes the ``entries_cap``
 field.
@@ -57,12 +55,14 @@ Currently this ioctl is only defined for MPEG-2 program streams and
 video elementary streams.
 
 
-.. _v4l2-enc-idx:
+.. tabularcolumns:: |p{3.5cm}|p{5.6cm}|p{8.4cm}|
+
+.. c:type:: v4l2_enc_idx
 
 .. flat-table:: struct v4l2_enc_idx
     :header-rows:  0
     :stub-columns: 0
-    :widths:       1 1 2 1 1
+    :widths:       1 3 8
 
 
     -  .. row 1
@@ -88,12 +88,12 @@ video elementary streams.
 
        -  ``reserved``\ [4]
 
-       -  :cspan:`2` Reserved for future extensions. Drivers must set the
+       -  Reserved for future extensions. Drivers must set the
 	  array to zero.
 
     -  .. row 4
 
-       -  struct :ref:`v4l2_enc_idx_entry <v4l2-enc-idx-entry>`
+       -  struct :c:type:`v4l2_enc_idx_entry`
 
        -  ``entry``\ [``V4L2_ENC_IDX_ENTRIES``]
 
@@ -103,7 +103,9 @@ video elementary streams.
 
 
 
-.. _v4l2-enc-idx-entry:
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
+.. c:type:: v4l2_enc_idx_entry
 
 .. flat-table:: struct v4l2_enc_idx_entry
     :header-rows:  0
@@ -159,6 +161,7 @@ video elementary streams.
 	  zero.
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _enc-idx-flags:
 

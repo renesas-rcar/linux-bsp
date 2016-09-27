@@ -6,8 +6,6 @@
 V4L2_PIX_FMT_GREY ('GREY')
 **************************
 
-*man V4L2_PIX_FMT_GREY(2)*
-
 Grey-scale image
 
 
@@ -20,12 +18,9 @@ which simply contains no Cb or Cr data.
 **Byte Order.**
 Each cell is one byte.
 
-
-
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1 1 1
 
 
     -  .. row 1

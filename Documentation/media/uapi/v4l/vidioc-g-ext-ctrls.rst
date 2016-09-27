@@ -15,7 +15,16 @@ VIDIOC_G_EXT_CTRLS - VIDIOC_S_EXT_CTRLS - VIDIOC_TRY_EXT_CTRLS - Get or set the 
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_ext_controls *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_EXT_CTRLS, struct v4l2_ext_controls *argp )
+    :name: VIDIOC_G_EXT_CTRLS
+
+
+.. c:function:: int ioctl( int fd, VIDIOC_S_EXT_CTRLS, struct v4l2_ext_controls *argp )
+    :name: VIDIOC_S_EXT_CTRLS
+
+
+.. c:function:: int ioctl( int fd, VIDIOC_TRY_EXT_CTRLS, struct v4l2_ext_controls *argp )
+    :name: VIDIOC_TRY_EXT_CTRLS
 
 
 Arguments
@@ -23,10 +32,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_EXT_CTRLS, VIDIOC_S_EXT_CTRLS,
-    VIDIOC_TRY_EXT_CTRLS
 
 ``argp``
 
@@ -41,13 +46,13 @@ to the same control class.
 
 Applications must always fill in the ``count``, ``which``, ``controls``
 and ``reserved`` fields of struct
-:ref:`v4l2_ext_controls <v4l2-ext-controls>`, and initialize the
-struct :ref:`v4l2_ext_control <v4l2-ext-control>` array pointed to
+:c:type:`v4l2_ext_controls`, and initialize the
+struct :c:type:`v4l2_ext_control` array pointed to
 by the ``controls`` fields.
 
 To get the current value of a set of controls applications initialize
 the ``id``, ``size`` and ``reserved2`` fields of each struct
-:ref:`v4l2_ext_control <v4l2-ext-control>` and call the
+:c:type:`v4l2_ext_control` and call the
 :ref:`VIDIOC_G_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` ioctl. String controls controls must also set the
 ``string`` field. Controls of compound types
 (``V4L2_CTRL_FLAG_HAS_PAYLOAD`` is set) must set the ``ptr`` field.
@@ -69,14 +74,14 @@ by calling :ref:`VIDIOC_QUERY_EXT_CTRL <VIDIOC_QUERYCTRL>`.
 
 To change the value of a set of controls applications initialize the
 ``id``, ``size``, ``reserved2`` and ``value/value64/string/ptr`` fields
-of each struct :ref:`v4l2_ext_control <v4l2-ext-control>` and call
+of each struct :c:type:`v4l2_ext_control` and call
 the :ref:`VIDIOC_S_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` ioctl. The controls will only be set if *all*
 control values are valid.
 
 To check if a set of controls have correct values applications
 initialize the ``id``, ``size``, ``reserved2`` and
 ``value/value64/string/ptr`` fields of each struct
-:ref:`v4l2_ext_control <v4l2-ext-control>` and call the
+:c:type:`v4l2_ext_control` and call the
 :ref:`VIDIOC_TRY_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` ioctl. It is up to the driver whether wrong
 values are automatically adjusted to a valid value or if an error is
 returned.
@@ -85,7 +90,7 @@ When the ``id`` or ``which`` is invalid drivers return an ``EINVAL`` error
 code. When the value is out of bounds drivers can choose to take the
 closest valid value or return an ``ERANGE`` error code, whatever seems more
 appropriate. In the first case the new value is set in struct
-:ref:`v4l2_ext_control <v4l2-ext-control>`. If the new control value
+:c:type:`v4l2_ext_control`. If the new control value
 is inappropriate (e.g. the given menu index is not supported by the menu
 control), then this will also result in an ``EINVAL`` error code error.
 
@@ -95,7 +100,11 @@ were set/get. Only low-level errors (e. g. a failed i2c command) can
 still cause this situation.
 
 
-.. _v4l2-ext-control:
+.. tabularcolumns:: |p{1.2cm}|p{3.0cm}|p{1.5cm}|p{11.8cm}|
+
+.. c:type:: v4l2_ext_control
+
+.. cssclass: longtable
 
 .. flat-table:: struct v4l2_ext_control
     :header-rows:  0
@@ -127,7 +136,9 @@ still cause this situation.
 	  to a value large enough to store the payload result and ``ENOSPC`` is
 	  returned.
 
-	  .. note:: For string controls, this ``size`` field should
+	  .. note::
+
+	     For string controls, this ``size`` field should
 	     not be confused with the length of the string. This field refers
 	     to the size of the memory that contains the string. The actual
 	     *length* of the string may well be much smaller.
@@ -223,8 +234,11 @@ still cause this situation.
 	  ``V4L2_CTRL_FLAG_HAS_PAYLOAD`` is set for this control.
 
 
+.. tabularcolumns:: |p{4.0cm}|p{2.0cm}|p{2.0cm}|p{8.5cm}|
 
-.. _v4l2-ext-controls:
+.. c:type:: v4l2_ext_controls
+
+.. cssclass:: longtable
 
 .. flat-table:: struct v4l2_ext_controls
     :header-rows:  0
@@ -265,7 +279,9 @@ still cause this situation.
 	  control and ``V4L2_CTRL_WHICH_DEF_VAL`` will return the default
 	  value of the control.
 
-	  .. note:: You can only get the default value of the control,
+	  .. note::
+
+	     You can only get the default value of the control,
 	     you cannot set or try it.
 
 	  For backwards compatibility you can also use a control class here
@@ -340,19 +356,22 @@ still cause this situation.
 
        -  ``reserved``\ [2]
 
-       -  Reserved for future extensions. Drivers and applications must set
-	  the array to zero.
+       -  Reserved for future extensions.
+
+	  Drivers and applications must set the array to zero.
 
     -  .. row 7
 
-       -  struct :ref:`v4l2_ext_control <v4l2-ext-control>` *
+       -  struct :c:type:`v4l2_ext_control` *
 
        -  ``controls``
 
        -  Pointer to an array of ``count`` v4l2_ext_control structures.
+
 	  Ignored if ``count`` equals zero.
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _ctrl-class:
 
@@ -464,17 +483,17 @@ appropriately. The generic error codes are described at the
 :ref:`Generic Error Codes <gen-errors>` chapter.
 
 EINVAL
-    The struct :ref:`v4l2_ext_control <v4l2-ext-control>` ``id`` is
-    invalid, the struct :ref:`v4l2_ext_controls <v4l2-ext-controls>`
+    The struct :c:type:`v4l2_ext_control` ``id`` is
+    invalid, the struct :c:type:`v4l2_ext_controls`
     ``which`` is invalid, or the struct
-    :ref:`v4l2_ext_control <v4l2-ext-control>` ``value`` was
+    :c:type:`v4l2_ext_control` ``value`` was
     inappropriate (e.g. the given menu index is not supported by the
     driver). This error code is also returned by the
     :ref:`VIDIOC_S_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` and :ref:`VIDIOC_TRY_EXT_CTRLS <VIDIOC_G_EXT_CTRLS>` ioctls if two or
     more control values are in conflict.
 
 ERANGE
-    The struct :ref:`v4l2_ext_control <v4l2-ext-control>` ``value``
+    The struct :c:type:`v4l2_ext_control` ``value``
     is out of bounds.
 
 EBUSY

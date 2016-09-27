@@ -15,7 +15,8 @@ VIDIOC_G_SLICED_VBI_CAP - Query sliced VBI capabilities
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_sliced_vbi_cap *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_SLICED_VBI_CAP, struct v4l2_sliced_vbi_cap *argp )
+    :name: VIDIOC_G_SLICED_VBI_CAP
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_SLICED_VBI_CAP
 
 ``argp``
 
@@ -35,16 +33,20 @@ Description
 
 To find out which data services are supported by a sliced VBI capture or
 output device, applications initialize the ``type`` field of a struct
-:ref:`v4l2_sliced_vbi_cap <v4l2-sliced-vbi-cap>`, clear the
+:c:type:`v4l2_sliced_vbi_cap`, clear the
 ``reserved`` array and call the :ref:`VIDIOC_G_SLICED_VBI_CAP <VIDIOC_G_SLICED_VBI_CAP>` ioctl. The
 driver fills in the remaining fields or returns an ``EINVAL`` error code if
 the sliced VBI API is unsupported or ``type`` is invalid.
 
-.. note:: The ``type`` field was added, and the ioctl changed from read-only
+.. note::
+
+   The ``type`` field was added, and the ioctl changed from read-only
    to write-read, in Linux 2.6.19.
 
 
-.. _v4l2-sliced-vbi-cap:
+.. c:type:: v4l2_sliced_vbi_cap
+
+.. tabularcolumns:: |p{1.2cm}|p{4.2cm}|p{4.1cm}|p{4.0cm}|p{4.0cm}|
 
 .. flat-table:: struct v4l2_sliced_vbi_cap
     :header-rows:  0
@@ -59,6 +61,7 @@ the sliced VBI API is unsupported or ``type`` is invalid.
        -  ``service_set``
 
        -  :cspan:`2` A set of all data services supported by the driver.
+
 	  Equal to the union of all elements of the ``service_lines`` array.
 
     -  .. row 2
@@ -70,8 +73,7 @@ the sliced VBI API is unsupported or ``type`` is invalid.
        -  :cspan:`2` Each element of this array contains a set of data
 	  services the hardware can look for or insert into a particular
 	  scan line. Data services are defined in :ref:`vbi-services`.
-	  Array indices map to ITU-R line numbers (see also :ref:`vbi-525`
-	  and :ref:`vbi-625`) as follows:
+	  Array indices map to ITU-R line numbers\ [#f1]_ as follows:
 
     -  .. row 3
 
@@ -156,7 +158,7 @@ the sliced VBI API is unsupported or ``type`` is invalid.
 
        -  ``type``
 
-       -  Type of the data stream, see :ref:`v4l2-buf-type`. Should be
+       -  Type of the data stream, see :c:type:`v4l2_buf_type`. Should be
 	  ``V4L2_BUF_TYPE_SLICED_VBI_CAPTURE`` or
 	  ``V4L2_BUF_TYPE_SLICED_VBI_OUTPUT``.
 
@@ -167,9 +169,19 @@ the sliced VBI API is unsupported or ``type`` is invalid.
        -  ``reserved``\ [3]
 
        -  :cspan:`2` This array is reserved for future extensions.
+
 	  Applications and drivers must set it to zero.
 
+.. [#f1]
 
+   See also :ref:`vbi-525` and :ref:`vbi-625`.
+
+
+.. raw:: latex
+
+    \begin{adjustbox}{width=\columnwidth}
+
+.. tabularcolumns:: |p{5.0cm}|p{1.4cm}|p{3.0cm}|p{2.5cm}|p{9.0cm}|
 
 .. _vbi-services:
 
@@ -197,7 +209,9 @@ the sliced VBI API is unsupported or ``type`` is invalid.
 
        -  0x0001
 
-       -  :ref:`ets300706`, :ref:`itu653`
+       -  :ref:`ets300706`,
+
+	  :ref:`itu653`
 
        -  PAL/SECAM line 7-22, 320-335 (second field 7-22)
 
@@ -236,7 +250,9 @@ the sliced VBI API is unsupported or ``type`` is invalid.
 
        -  0x4000
 
-       -  :ref:`en300294`, :ref:`itu1119`
+       -  :ref:`en300294`,
+
+	  :ref:`itu1119`
 
        -  PAL/SECAM line 23
 
@@ -263,6 +279,10 @@ the sliced VBI API is unsupported or ``type`` is invalid.
        -  0x4401
 
        -  :cspan:`2` Set of services applicable to 625 line systems.
+
+.. raw:: latex
+
+    \end{adjustbox}\newline\newline
 
 
 Return Value

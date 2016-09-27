@@ -15,7 +15,8 @@ VIDIOC_ENUMINPUT - Enumerate video inputs
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_input *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_ENUMINPUT, struct v4l2_input *argp )
+    :name: VIDIOC_ENUMINPUT
 
 
 Arguments
@@ -24,9 +25,6 @@ Arguments
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
 
-``request``
-    VIDIOC_ENUMINPUT
-
 ``argp``
 
 
@@ -34,14 +32,16 @@ Description
 ===========
 
 To query the attributes of a video input applications initialize the
-``index`` field of struct :ref:`v4l2_input <v4l2-input>` and call the
+``index`` field of struct :c:type:`v4l2_input` and call the
 :ref:`VIDIOC_ENUMINPUT` ioctl with a pointer to this structure. Drivers
 fill the rest of the structure or return an ``EINVAL`` error code when the
 index is out of bounds. To enumerate all inputs applications shall begin
 at index zero, incrementing by one until the driver returns ``EINVAL``.
 
 
-.. _v4l2-input:
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
+.. c:type:: v4l2_input
 
 .. flat-table:: struct v4l2_input
     :header-rows:  0
@@ -104,7 +104,7 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
        -  Capture devices can have zero or more tuners (RF demodulators).
 	  When the ``type`` is set to ``V4L2_INPUT_TYPE_TUNER`` this is an
 	  RF connector and this field identifies the tuner. It corresponds
-	  to struct :ref:`v4l2_tuner <v4l2-tuner>` field ``index``. For
+	  to struct :c:type:`v4l2_tuner` field ``index``. For
 	  details on tuners see :ref:`tuner`.
 
     -  .. row 6
@@ -148,6 +148,8 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
 
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
+
 .. _input-type:
 
 .. flat-table:: Input Types
@@ -173,7 +175,17 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
        -  Analog baseband input, for example CVBS / Composite Video,
 	  S-Video, RGB.
 
+    -  .. row 3
 
+       -  ``V4L2_INPUT_TYPE_TOUCH``
+
+       -  3
+
+       -  This input is a touch device for capturing raw touch data.
+
+
+
+.. tabularcolumns:: |p{4.8cm}|p{2.6cm}|p{10.1cm}|
 
 .. _input-status:
 
@@ -260,9 +272,26 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
 
     -  .. row 11
 
-       -  :cspan:`2` Digital Video
+       -  ``V4L2_IN_ST_NO_V_LOCK``
+
+       -  0x00000400
+
+       -  No vertical sync lock.
 
     -  .. row 12
+
+       -  ``V4L2_IN_ST_NO_STD_LOCK``
+
+       -  0x00000800
+
+       -  No standard format lock in case of auto-detection format
+	  by the component.
+
+    -  .. row 13
+
+       -  :cspan:`2` Digital Video
+
+    -  .. row 14
 
        -  ``V4L2_IN_ST_NO_SYNC``
 
@@ -270,7 +299,7 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
 
        -  No synchronization lock.
 
-    -  .. row 13
+    -  .. row 15
 
        -  ``V4L2_IN_ST_NO_EQU``
 
@@ -278,7 +307,7 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
 
        -  No equalizer lock.
 
-    -  .. row 14
+    -  .. row 16
 
        -  ``V4L2_IN_ST_NO_CARRIER``
 
@@ -286,11 +315,11 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
 
        -  Carrier recovery failed.
 
-    -  .. row 15
+    -  .. row 17
 
        -  :cspan:`2` VCR and Set-Top Box
 
-    -  .. row 16
+    -  .. row 18
 
        -  ``V4L2_IN_ST_MACROVISION``
 
@@ -300,7 +329,7 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
 	  signal to confuse video recorders. When this flag is set
 	  Macrovision has been detected.
 
-    -  .. row 17
+    -  .. row 19
 
        -  ``V4L2_IN_ST_NO_ACCESS``
 
@@ -308,7 +337,7 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
 
        -  Conditional access denied.
 
-    -  .. row 18
+    -  .. row 20
 
        -  ``V4L2_IN_ST_VTR``
 
@@ -317,6 +346,8 @@ at index zero, incrementing by one until the driver returns ``EINVAL``.
        -  VTR time constant. [?]
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _input-capabilities:
 
@@ -363,5 +394,5 @@ appropriately. The generic error codes are described at the
 :ref:`Generic Error Codes <gen-errors>` chapter.
 
 EINVAL
-    The struct :ref:`v4l2_input <v4l2-input>` ``index`` is out of
+    The struct :c:type:`v4l2_input` ``index`` is out of
     bounds.

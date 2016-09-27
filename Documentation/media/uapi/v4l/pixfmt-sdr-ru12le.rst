@@ -6,7 +6,6 @@
 V4L2_SDR_FMT_RU12LE ('RU12')
 ****************************
 
-*man V4L2_SDR_FMT_RU12LE(2)*
 
 Real unsigned 12-bit little endian sample
 
@@ -23,10 +22,10 @@ Each cell is one byte.
 
 
 
+
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1
 
 
     -  .. row 1

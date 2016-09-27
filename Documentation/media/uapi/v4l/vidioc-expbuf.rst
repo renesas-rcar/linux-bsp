@@ -15,7 +15,8 @@ VIDIOC_EXPBUF - Export a buffer as a DMABUF file descriptor.
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_exportbuffer *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_EXPBUF, struct v4l2_exportbuffer *argp )
+    :name: VIDIOC_EXPBUF
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_EXPBUF
 
 ``argp``
 
@@ -40,13 +38,13 @@ buffers have been allocated with the
 :ref:`VIDIOC_REQBUFS` ioctl.
 
 To export a buffer, applications fill struct
-:ref:`v4l2_exportbuffer <v4l2-exportbuffer>`. The ``type`` field is
+:c:type:`v4l2_exportbuffer`. The ``type`` field is
 set to the same buffer type as was previously used with struct
-:ref:`v4l2_requestbuffers <v4l2-requestbuffers>` ``type``.
+:c:type:`v4l2_requestbuffers` ``type``.
 Applications must also set the ``index`` field. Valid index numbers
 range from zero to the number of buffers allocated with
 :ref:`VIDIOC_REQBUFS` (struct
-:ref:`v4l2_requestbuffers <v4l2-requestbuffers>` ``count``) minus
+:c:type:`v4l2_requestbuffers` ``count``) minus
 one. For the multi-planar API, applications set the ``plane`` field to
 the index of the plane to be exported. Valid planes range from zero to
 the maximal number of valid planes for the currently active format. For
@@ -116,7 +114,9 @@ Examples
     }
 
 
-.. _v4l2-exportbuffer:
+.. c:type:: v4l2_exportbuffer
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_exportbuffer
     :header-rows:  0
@@ -131,9 +131,9 @@ Examples
        -  ``type``
 
        -  Type of the buffer, same as struct
-	  :ref:`v4l2_format <v4l2-format>` ``type`` or struct
-	  :ref:`v4l2_requestbuffers <v4l2-requestbuffers>` ``type``, set
-	  by the application. See :ref:`v4l2-buf-type`
+	  :c:type:`v4l2_format` ``type`` or struct
+	  :c:type:`v4l2_requestbuffers` ``type``, set
+	  by the application. See :c:type:`v4l2_buf_type`
 
     -  .. row 2
 

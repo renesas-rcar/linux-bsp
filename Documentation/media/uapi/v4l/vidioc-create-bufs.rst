@@ -15,7 +15,8 @@ VIDIOC_CREATE_BUFS - Create buffers for Memory Mapped or User Pointer or DMA Buf
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_create_buffers *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_CREATE_BUFS, struct v4l2_create_buffers *argp )
+    :name: VIDIOC_CREATE_BUFS
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_CREATE_BUFS
 
 ``argp``
 
@@ -41,14 +39,14 @@ over buffers is required. This ioctl can be called multiple times to
 create buffers of different sizes.
 
 To allocate the device buffers applications must initialize the relevant
-fields of the :ref:`struct v4l2_create_buffers <v4l2-create-buffers>` structure. The
+fields of the struct :c:type:`v4l2_create_buffers` structure. The
 ``count`` field must be set to the number of requested buffers, the
 ``memory`` field specifies the requested I/O method and the ``reserved``
 array must be zeroed.
 
 The ``format`` field specifies the image format that the buffers must be
 able to handle. The application has to fill in this struct
-:ref:`v4l2_format <v4l2-format>`. Usually this will be done using the
+:c:type:`v4l2_format`. Usually this will be done using the
 :ref:`VIDIOC_TRY_FMT <VIDIOC_G_FMT>` or
 :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>` ioctls to ensure that the
 requested format is supported by the driver. Based on the format's
@@ -73,7 +71,9 @@ the ``index`` fields respectively. On return ``count`` can be smaller
 than the number requested.
 
 
-.. _v4l2-create-buffers:
+.. c:type:: v4l2_create_buffers
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_create_buffers
     :header-rows:  0
@@ -111,11 +111,11 @@ than the number requested.
 
        -  Applications set this field to ``V4L2_MEMORY_MMAP``,
 	  ``V4L2_MEMORY_DMABUF`` or ``V4L2_MEMORY_USERPTR``. See
-	  :ref:`v4l2-memory`
+	  :c:type:`v4l2_memory`
 
     -  .. row 4
 
-       -  struct :ref:`v4l2_format <v4l2-format>`
+       -  struct :c:type:`v4l2_format`
 
        -  ``format``
 

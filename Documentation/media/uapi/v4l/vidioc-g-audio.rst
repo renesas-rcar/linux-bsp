@@ -15,9 +15,11 @@ VIDIOC_G_AUDIO - VIDIOC_S_AUDIO - Query or select the current audio input and it
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_audio *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_AUDIO, struct v4l2_audio *argp )
+    :name: VIDIOC_G_AUDIO
 
-.. cpp:function:: int ioctl( int fd, int request, const struct v4l2_audio *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_S_AUDIO, const struct v4l2_audio *argp )
+    :name: VIDIOC_S_AUDIO
 
 
 Arguments
@@ -26,9 +28,6 @@ Arguments
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
 
-``request``
-    VIDIOC_G_AUDIO, VIDIOC_S_AUDIO
-
 ``argp``
 
 
@@ -36,7 +35,7 @@ Description
 ===========
 
 To query the current audio input applications zero out the ``reserved``
-array of a struct :ref:`v4l2_audio <v4l2-audio>` and call the
+array of a struct :c:type:`v4l2_audio` and call the
 :ref:`VIDIOC_G_AUDIO <VIDIOC_G_AUDIO>` ioctl with a pointer to this structure. Drivers fill
 the rest of the structure or return an ``EINVAL`` error code when the device
 has no audio inputs, or none which combine with the current video input.
@@ -44,13 +43,15 @@ has no audio inputs, or none which combine with the current video input.
 Audio inputs have one writable property, the audio mode. To select the
 current audio input *and* change the audio mode, applications initialize
 the ``index`` and ``mode`` fields, and the ``reserved`` array of a
-:ref:`struct v4l2_audio <v4l2-audio>` structure and call the :ref:`VIDIOC_S_AUDIO <VIDIOC_G_AUDIO>`
+struct :c:type:`v4l2_audio` structure and call the :ref:`VIDIOC_S_AUDIO <VIDIOC_G_AUDIO>`
 ioctl. Drivers may switch to a different audio mode if the request
 cannot be satisfied. However, this is a write-only ioctl, it does not
 return the actual new audio mode.
 
 
-.. _v4l2-audio:
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
+.. c:type:: v4l2_audio
 
 .. flat-table:: struct v4l2_audio
     :header-rows:  0
@@ -104,6 +105,8 @@ return the actual new audio mode.
 
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
+
 .. _audio-capability:
 
 .. flat-table:: Audio Capability Flags
@@ -132,6 +135,8 @@ return the actual new audio mode.
        -  Automatic Volume Level mode is supported.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _audio-mode:
 

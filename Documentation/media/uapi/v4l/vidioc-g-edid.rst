@@ -15,7 +15,18 @@ VIDIOC_G_EDID - VIDIOC_S_EDID - VIDIOC_SUBDEV_G_EDID - VIDIOC_SUBDEV_S_EDID - Ge
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_edid *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_EDID, struct v4l2_edid *argp )
+    :name: VIDIOC_G_EDID
+
+.. c:function:: int ioctl( int fd, VIDIOC_S_EDID, struct v4l2_edid *argp )
+    :name: VIDIOC_S_EDID
+
+
+.. c:function:: int ioctl( int fd, VIDIOC_SUBDEV_G_EDID, struct v4l2_edid *argp )
+    :name: VIDIOC_SUBDEV_G_EDID
+
+.. c:function:: int ioctl( int fd, VIDIOC_SUBDEV_S_EDID, struct v4l2_edid *argp )
+    :name: VIDIOC_SUBDEV_S_EDID
 
 
 Arguments
@@ -23,10 +34,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_EDID, VIDIOC_S_EDID, VIDIOC_SUBDEV_G_EDID,
-    VIDIOC_SUBDEV_S_EDID
 
 ``argp``
 
@@ -67,7 +74,9 @@ total number of available EDID blocks and it will return 0 without
 copying any data. This is an easy way to discover how many EDID blocks
 there are.
 
-.. note:: If there are no EDID blocks available at all, then
+.. note::
+
+   If there are no EDID blocks available at all, then
    the driver will set ``blocks`` to 0 and it returns 0.
 
 To set the EDID blocks of a receiver the application has to fill in the
@@ -88,7 +97,9 @@ the EDID data in some way. In any case, the end result is the same: the
 EDID is no longer available.
 
 
-.. _v4l2-edid:
+.. c:type:: v4l2_edid
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_edid
     :header-rows:  0

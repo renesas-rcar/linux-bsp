@@ -15,7 +15,8 @@ VIDIOC_REQBUFS - Initiate Memory Mapping, User Pointer I/O or DMA buffer I/O
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_requestbuffers *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_REQBUFS, struct v4l2_requestbuffers *argp )
+    :name: VIDIOC_REQBUFS
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_REQBUFS
 
 ``argp``
 
@@ -45,7 +43,7 @@ configures the driver into DMABUF I/O mode without performing any direct
 allocation.
 
 To allocate device buffers applications initialize all fields of the
-:ref:`struct v4l2_requestbuffers <v4l2-requestbuffers>` structure. They set the ``type``
+struct :c:type:`v4l2_requestbuffers` structure. They set the ``type``
 field to the respective stream or buffer type, the ``count`` field to
 the desired number of buffers, ``memory`` must be set to the requested
 I/O method and the ``reserved`` array must be zeroed. When the ioctl is
@@ -67,7 +65,9 @@ any DMA in progress, an implicit
 :ref:`VIDIOC_STREAMOFF <VIDIOC_STREAMON>`.
 
 
-.. _v4l2-requestbuffers:
+.. c:type:: v4l2_requestbuffers
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_requestbuffers
     :header-rows:  0
@@ -90,8 +90,8 @@ any DMA in progress, an implicit
        -  ``type``
 
        -  Type of the stream or buffers, this is the same as the struct
-	  :ref:`v4l2_format <v4l2-format>` ``type`` field. See
-	  :ref:`v4l2-buf-type` for valid values.
+	  :c:type:`v4l2_format` ``type`` field. See
+	  :c:type:`v4l2_buf_type` for valid values.
 
     -  .. row 3
 
@@ -101,7 +101,7 @@ any DMA in progress, an implicit
 
        -  Applications set this field to ``V4L2_MEMORY_MMAP``,
 	  ``V4L2_MEMORY_DMABUF`` or ``V4L2_MEMORY_USERPTR``. See
-	  :ref:`v4l2-memory`.
+	  :c:type:`v4l2_memory`.
 
     -  .. row 4
 

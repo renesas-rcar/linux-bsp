@@ -6,7 +6,6 @@
 V4L2_PIX_FMT_Y16_BE ('Y16 ' | (1 << 31))
 ****************************************
 
-*man V4L2_PIX_FMT_Y16_BE(2)*
 
 Grey-scale image
 
@@ -17,7 +16,9 @@ Description
 This is a grey-scale image with a depth of 16 bits per pixel. The most
 significant byte is stored at lower memory addresses (big-endian).
 
-.. note:: Tthe actual sampling precision may be lower than 16 bits, for
+.. note::
+
+   The actual sampling precision may be lower than 16 bits, for
    example 10 bits per pixel with values in range 0 to 1023.
 
 **Byte Order.**
@@ -25,10 +26,10 @@ Each cell is one byte.
 
 
 
+
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1 1 1 1 1 1 1
 
 
     -  .. row 1

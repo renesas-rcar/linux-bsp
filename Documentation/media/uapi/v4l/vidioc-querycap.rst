@@ -15,7 +15,8 @@ VIDIOC_QUERYCAP - Query device capabilities
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_capability *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_QUERYCAP, struct v4l2_capability *argp )
+    :name: VIDIOC_QUERYCAP
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_QUERYCAP
 
 ``argp``
 
@@ -36,18 +34,19 @@ Description
 All V4L2 devices support the ``VIDIOC_QUERYCAP`` ioctl. It is used to
 identify kernel devices compatible with this specification and to obtain
 information about driver and hardware capabilities. The ioctl takes a
-pointer to a struct :ref:`v4l2_capability <v4l2-capability>` which is
+pointer to a struct :c:type:`v4l2_capability` which is
 filled by the driver. When the driver is not compatible with this
 specification the ioctl returns an ``EINVAL`` error code.
 
 
-.. _v4l2-capability:
+.. tabularcolumns:: |p{1.5cm}|p{2.5cm}|p{13cm}|
+
+.. c:type:: v4l2_capability
 
 .. flat-table:: struct v4l2_capability
     :header-rows:  0
     :stub-columns: 0
-    :widths:       1 1 2
-
+    :widths:       3 4 20
 
     -  .. row 1
 
@@ -117,17 +116,13 @@ specification the ioctl returns an ``EINVAL`` error code.
 
        -  :cspan:`2`
 
+	  ``#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))``
 
-	  .. code-block:: c
+	  ``__u32 version = KERNEL_VERSION(0, 8, 1);``
 
-	      #define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
+	  ``printf ("Version: %u.%u.%u\\n",``
 
-	      __u32 version = KERNEL_VERSION(0, 8, 1);
-
-	      printf ("Version: %u.%u.%u\\n",
-		  (version >> 16) & 0xFF,
-		  (version >> 8) & 0xFF,
-		   version & 0xFF);
+	  ``(version >> 16) & 0xFF, (version >> 8) & 0xFF, version & 0xFF);``
 
     -  .. row 6
 
@@ -173,13 +168,16 @@ specification the ioctl returns an ``EINVAL`` error code.
 
 
 
+.. tabularcolumns:: |p{6cm}|p{2.2cm}|p{8.8cm}|
+
 .. _device-capabilities:
+
+.. cssclass:: longtable
 
 .. flat-table:: Device Capabilities Flags
     :header-rows:  0
     :stub-columns: 0
     :widths:       3 1 4
-
 
     -  .. row 1
 
@@ -375,7 +373,7 @@ specification the ioctl returns an ``EINVAL`` error code.
        -  0x00200000
 
        -  The device supports the struct
-	  :ref:`v4l2_pix_format <v4l2-pix-format>` extended fields.
+	  :c:type:`v4l2_pix_format` extended fields.
 
     -  .. row 22
 
@@ -412,6 +410,14 @@ specification the ioctl returns an ``EINVAL`` error code.
 
     -  .. row 26
 
+       -  ``V4L2_CAP_TOUCH``
+
+       -  0x10000000
+
+       -  This is a touch device.
+
+    -  .. row 27
+
        -  ``V4L2_CAP_DEVICE_CAPS``
 
        -  0x80000000
@@ -429,6 +435,6 @@ appropriately. The generic error codes are described at the
 :ref:`Generic Error Codes <gen-errors>` chapter.
 
 .. [#f1]
-   The struct :ref:`v4l2_framebuffer <v4l2-framebuffer>` lacks an
-   enum :ref:`v4l2_buf_type <v4l2-buf-type>` field, therefore the
+   The struct :c:type:`v4l2_framebuffer` lacks an
+   enum :c:type:`v4l2_buf_type` field, therefore the
    type of overlay is implied by the driver capabilities.

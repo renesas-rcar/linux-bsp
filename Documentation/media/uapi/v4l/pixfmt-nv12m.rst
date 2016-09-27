@@ -8,7 +8,6 @@
 V4L2_PIX_FMT_NV12M ('NM12'), V4L2_PIX_FMT_NV21M ('NM21'), V4L2_PIX_FMT_NV12MT_16X16
 ***********************************************************************************
 
-*man V4L2_PIX_FMT_NV12M(2)*
 
 V4L2_PIX_FMT_NV21M
 V4L2_PIX_FMT_NV12MT_16X16
@@ -50,8 +49,6 @@ Each cell is one byte.
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1 1 1
-
 
     -  .. row 1
 

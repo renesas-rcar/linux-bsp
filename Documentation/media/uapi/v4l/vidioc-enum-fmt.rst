@@ -15,7 +15,8 @@ VIDIOC_ENUM_FMT - Enumerate image formats
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_fmtdesc *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_ENUM_FMT, struct v4l2_fmtdesc *argp )
+    :name: VIDIOC_ENUM_FMT
 
 
 Arguments
@@ -24,9 +25,6 @@ Arguments
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
 
-``request``
-    VIDIOC_ENUM_FMT
-
 ``argp``
 
 
@@ -34,23 +32,26 @@ Description
 ===========
 
 To enumerate image formats applications initialize the ``type`` and
-``index`` field of struct :ref:`v4l2_fmtdesc <v4l2-fmtdesc>` and call
+``index`` field of struct :c:type:`v4l2_fmtdesc` and call
 the :ref:`VIDIOC_ENUM_FMT` ioctl with a pointer to this structure. Drivers
 fill the rest of the structure or return an ``EINVAL`` error code. All
 formats are enumerable by beginning at index zero and incrementing by
 one until ``EINVAL`` is returned.
 
-.. note:: After switching input or output the list of enumerated image
+.. note::
+
+   After switching input or output the list of enumerated image
    formats may be different.
 
 
-.. _v4l2-fmtdesc:
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
+.. c:type:: v4l2_fmtdesc
 
 .. flat-table:: struct v4l2_fmtdesc
     :header-rows:  0
     :stub-columns: 0
     :widths:       1 1 2
-
 
     -  .. row 1
 
@@ -72,7 +73,7 @@ one until ``EINVAL`` is returned.
 	  ``V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE``,
 	  ``V4L2_BUF_TYPE_VIDEO_OUTPUT``,
 	  ``V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE`` and
-	  ``V4L2_BUF_TYPE_VIDEO_OVERLAY``. See :ref:`v4l2-buf-type`.
+	  ``V4L2_BUF_TYPE_VIDEO_OVERLAY``. See :c:type:`v4l2_buf_type`.
 
     -  .. row 3
 
@@ -104,16 +105,18 @@ one until ``EINVAL`` is returned.
 
        -  :cspan:`2`
 
-
 	  .. _v4l2-fourcc:
-	  .. code-block:: c
 
-	      #define v4l2_fourcc(a,b,c,d) (((__u32)(a)<<0)|((__u32)(b)<<8)|((__u32)(c)<<16)|((__u32)(d)<<24))
+	  ``#define v4l2_fourcc(a,b,c,d)``
+
+	  ``(((__u32)(a)<<0)|((__u32)(b)<<8)|((__u32)(c)<<16)|((__u32)(d)<<24))``
 
 	  Several image formats are already defined by this specification in
 	  :ref:`pixfmt`.
 
-	  .. attention:: These codes are not the same as those used
+	  .. attention::
+
+	     These codes are not the same as those used
 	     in the Windows world.
 
     -  .. row 7
@@ -126,6 +129,8 @@ one until ``EINVAL`` is returned.
 	  zero.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _fmtdesc-flags:
 
@@ -162,5 +167,5 @@ appropriately. The generic error codes are described at the
 :ref:`Generic Error Codes <gen-errors>` chapter.
 
 EINVAL
-    The struct :ref:`v4l2_fmtdesc <v4l2-fmtdesc>` ``type`` is not
+    The struct :c:type:`v4l2_fmtdesc` ``type`` is not
     supported or the ``index`` is out of bounds.

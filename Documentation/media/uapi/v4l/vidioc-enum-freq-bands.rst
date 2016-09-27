@@ -15,7 +15,8 @@ VIDIOC_ENUM_FREQ_BANDS - Enumerate supported frequency bands
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_frequency_band *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_ENUM_FREQ_BANDS, struct v4l2_frequency_band *argp )
+    :name: VIDIOC_ENUM_FREQ_BANDS
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_ENUM_FREQ_BANDS
 
 ``argp``
 
@@ -36,14 +34,16 @@ Description
 Enumerates the frequency bands that a tuner or modulator supports. To do
 this applications initialize the ``tuner``, ``type`` and ``index``
 fields, and zero out the ``reserved`` array of a struct
-:ref:`v4l2_frequency_band <v4l2-frequency-band>` and call the
+:c:type:`v4l2_frequency_band` and call the
 :ref:`VIDIOC_ENUM_FREQ_BANDS` ioctl with a pointer to this structure.
 
 This ioctl is supported if the ``V4L2_TUNER_CAP_FREQ_BANDS`` capability
 of the corresponding tuner/modulator is set.
 
 
-.. _v4l2-frequency-band:
+.. tabularcolumns:: |p{2.9cm}|p{2.9cm}|p{5.8cm}|p{2.9cm}|p{3.0cm}|
+
+.. c:type:: v4l2_frequency_band
 
 .. flat-table:: struct v4l2_frequency_band
     :header-rows:  0
@@ -58,10 +58,10 @@ of the corresponding tuner/modulator is set.
        -  ``tuner``
 
        -  The tuner or modulator index number. This is the same value as in
-	  the struct :ref:`v4l2_input <v4l2-input>` ``tuner`` field and
-	  the struct :ref:`v4l2_tuner <v4l2-tuner>` ``index`` field, or
-	  the struct :ref:`v4l2_output <v4l2-output>` ``modulator`` field
-	  and the struct :ref:`v4l2_modulator <v4l2-modulator>` ``index``
+	  the struct :c:type:`v4l2_input` ``tuner`` field and
+	  the struct :c:type:`v4l2_tuner` ``index`` field, or
+	  the struct :c:type:`v4l2_output` ``modulator`` field
+	  and the struct :c:type:`v4l2_modulator` ``index``
 	  field.
 
     -  .. row 2
@@ -71,11 +71,11 @@ of the corresponding tuner/modulator is set.
        -  ``type``
 
        -  The tuner type. This is the same value as in the struct
-	  :ref:`v4l2_tuner <v4l2-tuner>` ``type`` field. The type must be
+	  :c:type:`v4l2_tuner` ``type`` field. The type must be
 	  set to ``V4L2_TUNER_RADIO`` for ``/dev/radioX`` device nodes, and
 	  to ``V4L2_TUNER_ANALOG_TV`` for all others. Set this field to
 	  ``V4L2_TUNER_RADIO`` for modulators (currently only radio
-	  modulators are supported). See :ref:`v4l2-tuner-type`
+	  modulators are supported). See :c:type:`v4l2_tuner_type`
 
     -  .. row 3
 
@@ -129,7 +129,9 @@ of the corresponding tuner/modulator is set.
        -  :cspan:`2` The supported modulation systems of this frequency
 	  band. See :ref:`band-modulation`.
 
-	  .. note:: Currently only one modulation system per frequency band
+	  .. note::
+
+	     Currently only one modulation system per frequency band
 	     is supported. More work will need to be done if multiple
 	     modulation systems are possible. Contact the linux-media
 	     mailing list
@@ -142,10 +144,13 @@ of the corresponding tuner/modulator is set.
 
        -  ``reserved``\ [9]
 
-       -  Reserved for future extensions. Applications and drivers must set
-	  the array to zero.
+       -  Reserved for future extensions.
+
+	  Applications and drivers must set the array to zero.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _band-modulation:
 
