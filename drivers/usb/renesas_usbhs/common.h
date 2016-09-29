@@ -280,6 +280,8 @@ struct usbhs_priv {
 
 	struct usb_phy *usb_phy;
 	struct phy *phy;
+
+	int suspended;
 };
 
 /*
