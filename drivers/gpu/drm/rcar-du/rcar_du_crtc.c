@@ -563,7 +563,9 @@ void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc)
 
 void rcar_du_crtc_suspend(struct rcar_du_crtc *rcrtc)
 {
+	rcrtc->suspend = true;
 	rcar_du_crtc_stop(rcrtc);
+	rcrtc->suspend = false;
 	rcar_du_crtc_put(rcrtc);
 }
 
@@ -734,6 +736,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	rcrtc->mmio_offset = mmio_offsets[index];
 	rcrtc->index = index;
 	rcrtc->lvds_ch = -1;
+	rcrtc->suspend = false;
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
 		primary = &rcrtc->vsp->planes[0].plane;

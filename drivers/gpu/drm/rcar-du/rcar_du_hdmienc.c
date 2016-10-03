@@ -717,12 +717,14 @@ void rcar_du_hdmienc_restore(struct drm_encoder *encoder)
 	temp = readl(smstpcr);
 	writel(temp & ~(0x3 << 28), smstpcr);
 
-	rcar_du_hdmienc_enable(encoder);
+	rcar_du_hdmienc_disable(encoder);
 
 	ret = rcar_handle_registers(ip, DO_RESTORE);
 	if (ret)
 		pr_err("%s: Failed to restore %s register\n",
 			__func__, ip->ip_name);
+
+	rcar_du_hdmienc_enable(encoder);
 }
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 
