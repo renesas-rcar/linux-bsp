@@ -524,3 +524,9 @@
 &pciec1 {
 	status = "okay";
 };
+
+#include "../../../arm/boot/dts/r8a77xx-aa104xd12-panel.dtsi"
+
+&{/panel/} {
+	backlight = <&backlight>;
+};
