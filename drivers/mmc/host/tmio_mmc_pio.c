@@ -36,6 +36,7 @@
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/mfd/tmio.h>
+#include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/slot-gpio.h>
@@ -298,6 +299,9 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 	if (mrq->cmd->error || (mrq->data && mrq->data->error))
 		tmio_mmc_abort_dma(host);
 
+	if (host->check_scc_error)
+		host->check_scc_error(host);
+
 	mmc_request_done(host->mmc, mrq);
 }
 
@@ -522,7 +526,7 @@ void tmio_mmc_do_data_irq(struct tmio_mmc_host *host)
 	schedule_work(&host->done);
 }
 
-static void tmio_mmc_data_irq(struct tmio_mmc_host *host)
+static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 {
 	struct mmc_data *data;
 	spin_lock(&host->lock);
@@ -531,6 +535,9 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host)
 	if (!data)
 		goto out;
 
+	if (stat & TMIO_STAT_CRCFAIL || stat & TMIO_STAT_STOPBIT_ERR ||
+	    stat & TMIO_STAT_TXUNDERRUN)
+		data->error = -EILSEQ;
 	if (host->chan_tx && (data->flags & MMC_DATA_WRITE) && !host->force_pio) {
 		u32 status = sd_ctrl_read16_and_16_as_32(host, CTL_STATUS);
 		bool done = false;
@@ -579,8 +586,6 @@ static void tmio_mmc_cmd_irq(struct tmio_mmc_host *host,
 		goto out;
 	}
 
-	host->cmd = NULL;
-
 	/* This controller is sicker than the PXA one. Not only do we need to
 	 * drop the top 8 bits of the first response word, we also need to
 	 * modify the order of the response for short response command types.
@@ -600,14 +605,16 @@ static void tmio_mmc_cmd_irq(struct tmio_mmc_host *host,
 
 	if (stat & TMIO_STAT_CMDTIMEOUT)
 		cmd->error = -ETIMEDOUT;
-	else if (stat & TMIO_STAT_CRCFAIL && cmd->flags & MMC_RSP_CRC)
+	else if ((stat & TMIO_STAT_CRCFAIL && cmd->flags & MMC_RSP_CRC) ||
+		 stat & TMIO_STAT_STOPBIT_ERR ||
+		 stat & TMIO_STAT_CMD_IDX_ERR)
 		cmd->error = -EILSEQ;
 
 	/* If there is data to handle we enable data IRQs here, and
 	 * we will ultimatley finish the request in the data_end handler.
 	 * If theres no data or we encountered an error, finish now.
 	 */
-	if (host->data && !cmd->error) {
+	if (host->data && (!cmd->error || cmd->error == -EILSEQ)) {
 		if (host->data->flags & MMC_DATA_READ) {
 			if (host->force_pio || !host->chan_rx)
 				tmio_mmc_enable_mmc_irqs(host, TMIO_MASK_READOP);
@@ -668,7 +675,7 @@ static bool __tmio_mmc_sdcard_irq(struct tmio_mmc_host *host,
 	/* Data transfer completion */
 	if (ireg & TMIO_STAT_DATAEND) {
 		tmio_mmc_ack_mmc_irqs(host, TMIO_STAT_DATAEND);
-		tmio_mmc_data_irq(host);
+		tmio_mmc_data_irq(host, status);
 		return true;
 	}
 
@@ -754,6 +761,64 @@ static int tmio_mmc_start_data(struct tmio_mmc_host *host,
 	tmio_mmc_start_dma(host, data);
 
 	return 0;
+}
+
+static void tmio_mmc_hw_reset(struct mmc_host *mmc)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+
+	if (host->hw_reset)
+		host->hw_reset(host);
+}
+
+static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	int i, ret = 0;
+
+	if (!host->tap_num) {
+		if (!host->init_tuning || !host->select_tuning)
+			/* Tuning is not supported */
+			goto out;
+
+		host->tap_num = host->init_tuning(host);
+		if (!host->tap_num)
+			/* Tuning is not supported */
+			goto out;
+	}
+
+	if (host->tap_num * 2 >= sizeof(host->taps) * BITS_PER_BYTE) {
+		dev_warn_once(&host->pdev->dev,
+		      "Too many taps, skipping tuning. Please consider "
+		      "updating size of taps field of tmio_mmc_host\n");
+		goto out;
+	}
+
+	bitmap_zero(host->taps, host->tap_num * 2);
+
+	/* Issue CMD19 twice for each tap */
+	for (i = 0; i < 2 * host->tap_num; i++) {
+		if (host->prepare_tuning)
+			host->prepare_tuning(host, i % host->tap_num);
+
+		ret = mmc_send_tuning(mmc, opcode, NULL);
+		if (ret && ret != -EILSEQ)
+			goto out;
+		if (ret == 0)
+			set_bit(i, host->taps);
+
+		mdelay(1);
+	}
+
+	ret = host->select_tuning(host);
+
+out:
+	if (ret < 0) {
+		dev_warn(&host->pdev->dev, "Tuning procedure failed\n");
+		tmio_mmc_hw_reset(mmc);
+	}
+
+	return ret;
 }
 
 /* Process requests from the MMC layer */
@@ -972,6 +1037,8 @@ static struct mmc_host_ops tmio_mmc_ops = {
 	.get_cd		= mmc_gpio_get_cd,
 	.enable_sdio_irq = tmio_mmc_enable_sdio_irq,
 	.multi_io_quirk	= tmio_multi_io_quirk,
+	.hw_reset	= tmio_mmc_hw_reset,
+	.execute_tuning = tmio_mmc_execute_tuning,
 };
 
 static int tmio_mmc_init_ocr(struct tmio_mmc_host *host)
@@ -1218,6 +1285,11 @@ int tmio_mmc_host_runtime_suspend(struct device *dev)
 }
 EXPORT_SYMBOL(tmio_mmc_host_runtime_suspend);
 
+static bool tmio_mmc_can_retune(struct tmio_mmc_host *host)
+{
+	return host->tap_num && mmc_can_retune(host->mmc);
+}
+
 int tmio_mmc_host_runtime_resume(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
@@ -1230,6 +1302,9 @@ int tmio_mmc_host_runtime_resume(struct device *dev)
 		tmio_mmc_set_clock(host, host->clk_cache);
 
 	tmio_mmc_enable_dma(host, true);
+
+	if (tmio_mmc_can_retune(host) && host->select_tuning(host))
+		dev_warn(&host->pdev->dev, "Tuning selection failed\n");
 
 	return 0;
 }
