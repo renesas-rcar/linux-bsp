@@ -170,7 +170,6 @@ config ARCH_TEGRA
 	select CLKSRC_OF
 	select GENERIC_CLOCKEVENTS
 	select GPIOLIB
-	select HAVE_CLK
 	select PINCTRL
 	select PM
 	select PM_GENERIC_DOMAINS
