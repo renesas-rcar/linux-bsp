@@ -10,7 +10,6 @@
 V4L2_PIX_FMT_SRGGB12 ('RG12'), V4L2_PIX_FMT_SGRBG12 ('BA12'), V4L2_PIX_FMT_SGBRG12 ('GB12'), V4L2_PIX_FMT_SBGGR12 ('BG12'),
 ***************************************************************************************************************************
 
-*man V4L2_PIX_FMT_SRGGB12(2)*
 
 V4L2_PIX_FMT_SGRBG12
 V4L2_PIX_FMT_SGBRG12
@@ -27,17 +26,18 @@ high bits filled with zeros. Each n-pixel row contains n/2 green samples
 and n/2 blue or red samples, with alternating red and blue rows. Bytes
 are stored in memory in little endian order. They are conventionally
 described as GRGR... BGBG..., RGRG... GBGB..., etc. Below is an example
-of one of these formats
+of one of these formats:
 
 **Byte Order.**
-Each cell is one byte, high 6 bits in high bytes are 0.
+Each cell is one byte, the 4 most significant bits in the high bytes are
+0.
+
 
 
 
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1 1 1 1 1 1 1
 
 
     -  .. row 1

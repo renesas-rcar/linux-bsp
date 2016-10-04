@@ -15,7 +15,11 @@ VIDIOC_G_PARM - VIDIOC_S_PARM - Get or set streaming parameters
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, v4l2_streamparm *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_PARM, v4l2_streamparm *argp )
+    :name: VIDIOC_G_PARM
+
+.. c:function:: int ioctl( int fd, VIDIOC_S_PARM, v4l2_streamparm *argp )
+    :name: VIDIOC_S_PARM
 
 
 Arguments
@@ -23,9 +27,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_PARM, VIDIOC_S_PARM
 
 ``argp``
 
@@ -46,11 +47,13 @@ section discussing the :ref:`read() <func-read>` function.
 
 To get and set the streaming parameters applications call the
 :ref:`VIDIOC_G_PARM <VIDIOC_G_PARM>` and :ref:`VIDIOC_S_PARM <VIDIOC_G_PARM>` ioctl, respectively. They take a
-pointer to a struct :ref:`struct v4l2_streamparm <v4l2-streamparm>` which contains a
+pointer to a struct :c:type:`v4l2_streamparm` which contains a
 union holding separate parameters for input and output devices.
 
 
-.. _v4l2-streamparm:
+.. tabularcolumns:: |p{3.5cm}|p{3.5cm}|p{3.5cm}|p{7.0cm}|
+
+.. c:type:: v4l2_streamparm
 
 .. flat-table:: struct v4l2_streamparm
     :header-rows:  0
@@ -66,8 +69,8 @@ union holding separate parameters for input and output devices.
 
        -
        -  The buffer (stream) type, same as struct
-	  :ref:`v4l2_format <v4l2-format>` ``type``, set by the
-	  application. See :ref:`v4l2-buf-type`
+	  :c:type:`v4l2_format` ``type``, set by the
+	  application. See :c:type:`v4l2_buf_type`
 
     -  .. row 2
 
@@ -81,7 +84,7 @@ union holding separate parameters for input and output devices.
     -  .. row 3
 
        -
-       -  struct :ref:`v4l2_captureparm <v4l2-captureparm>`
+       -  struct :c:type:`v4l2_captureparm`
 
        -  ``capture``
 
@@ -91,7 +94,7 @@ union holding separate parameters for input and output devices.
     -  .. row 4
 
        -
-       -  struct :ref:`v4l2_outputparm <v4l2-outputparm>`
+       -  struct :c:type:`v4l2_outputparm`
 
        -  ``output``
 
@@ -109,7 +112,9 @@ union holding separate parameters for input and output devices.
 
 
 
-.. _v4l2-captureparm:
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
+.. c:type:: v4l2_captureparm
 
 .. flat-table:: struct v4l2_captureparm
     :header-rows:  0
@@ -135,7 +140,7 @@ union holding separate parameters for input and output devices.
 
     -  .. row 3
 
-       -  struct :ref:`v4l2_fract <v4l2-fract>`
+       -  struct :c:type:`v4l2_fract`
 
        -  ``timeperframe``
 
@@ -146,7 +151,7 @@ union holding separate parameters for input and output devices.
 	  Applications store here the desired frame period, drivers return
 	  the actual frame period, which must be greater or equal to the
 	  nominal frame period determined by the current video standard
-	  (struct :ref:`v4l2_standard <v4l2-standard>` ``frameperiod``
+	  (struct :c:type:`v4l2_standard` ``frameperiod``
 	  field). Changing the video standard (also implicitly by switching
 	  the video input) may reset this parameter to the nominal frame
 	  period. To reset manually applications can just set this field to
@@ -190,7 +195,9 @@ union holding separate parameters for input and output devices.
 
 
 
-.. _v4l2-outputparm:
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
+.. c:type:: v4l2_outputparm
 
 .. flat-table:: struct v4l2_outputparm
     :header-rows:  0
@@ -216,7 +223,7 @@ union holding separate parameters for input and output devices.
 
     -  .. row 3
 
-       -  struct :ref:`v4l2_fract <v4l2-fract>`
+       -  struct :c:type:`v4l2_fract`
 
        -  ``timeperframe``
 
@@ -234,7 +241,7 @@ union holding separate parameters for input and output devices.
 	  Applications store here the desired frame period, drivers return
 	  the actual frame period, which must be greater or equal to the
 	  nominal frame period determined by the current video standard
-	  (struct :ref:`v4l2_standard <v4l2-standard>` ``frameperiod``
+	  (struct :c:type:`v4l2_standard` ``frameperiod``
 	  field). Changing the video standard (also implicitly by switching
 	  the video output) may reset this parameter to the nominal frame
 	  period. To reset manually applications can just set this field to
@@ -278,6 +285,8 @@ union holding separate parameters for input and output devices.
 
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
+
 .. _parm-caps:
 
 .. flat-table:: Streaming Parameters Capabilites
@@ -296,6 +305,8 @@ union holding separate parameters for input and output devices.
 	  field is supported.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _parm-flags:
 

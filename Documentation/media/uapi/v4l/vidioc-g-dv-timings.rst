@@ -15,7 +15,17 @@ VIDIOC_G_DV_TIMINGS - VIDIOC_S_DV_TIMINGS - VIDIOC_SUBDEV_G_DV_TIMINGS - VIDIOC_
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_dv_timings *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_DV_TIMINGS, struct v4l2_dv_timings *argp )
+    :name: VIDIOC_G_DV_TIMINGS
+
+.. c:function:: int ioctl( int fd, VIDIOC_S_DV_TIMINGS, struct v4l2_dv_timings *argp )
+    :name: VIDIOC_S_DV_TIMINGS
+
+.. c:function:: int ioctl( int fd, VIDIOC_SUBDEV_G_DV_TIMINGS, struct v4l2_dv_timings *argp )
+    :name: VIDIOC_SUBDEV_G_DV_TIMINGS
+
+.. c:function:: int ioctl( int fd, VIDIOC_SUBDEV_S_DV_TIMINGS, struct v4l2_dv_timings *argp )
+    :name: VIDIOC_SUBDEV_S_DV_TIMINGS
 
 
 Arguments
@@ -23,10 +33,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_DV_TIMINGS, VIDIOC_S_DV_TIMINGS,
-    VIDIOC_SUBDEV_G_DV_TIMINGS, VIDIOC_SUBDEV_S_DV_TIMINGS
 
 ``argp``
 
@@ -38,8 +44,8 @@ To set DV timings for the input or output, applications use the
 :ref:`VIDIOC_S_DV_TIMINGS <VIDIOC_G_DV_TIMINGS>` ioctl and to get the current timings,
 applications use the :ref:`VIDIOC_G_DV_TIMINGS <VIDIOC_G_DV_TIMINGS>` ioctl. The detailed timing
 information is filled in using the structure struct
-:ref:`v4l2_dv_timings <v4l2-dv-timings>`. These ioctls take a
-pointer to the struct :ref:`v4l2_dv_timings <v4l2-dv-timings>`
+:c:type:`v4l2_dv_timings`. These ioctls take a
+pointer to the struct :c:type:`v4l2_dv_timings`
 structure as argument. If the ioctl is not supported or the timing
 values are not correct, the driver returns ``EINVAL`` error code.
 
@@ -68,7 +74,9 @@ EBUSY
     The device is busy and therefore can not change the timings.
 
 
-.. _v4l2-bt-timings:
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
+.. c:type:: v4l2_bt_timings
 
 .. flat-table:: struct v4l2_bt_timings
     :header-rows:  0
@@ -219,9 +227,19 @@ EBUSY
        -  Several flags giving more information about the format. See
 	  :ref:`dv-bt-flags` for a description of the flags.
 
+    -  .. row 17
+
+       -  __u32
+
+       -  ``reserved[14]``
+
+       -  Reserved for future extensions. Drivers and applications must set
+          the array to zero.
 
 
-.. _v4l2-dv-timings:
+.. tabularcolumns:: |p{3.5cm}|p{3.5cm}|p{7.0cm}|p{3.5cm}|
+
+.. c:type:: v4l2_dv_timings
 
 .. flat-table:: struct v4l2_dv_timings
     :header-rows:  0
@@ -248,7 +266,7 @@ EBUSY
     -  .. row 3
 
        -
-       -  struct :ref:`v4l2_bt_timings <v4l2-bt-timings>`
+       -  struct :c:type:`v4l2_bt_timings`
 
        -  ``bt``
 
@@ -263,7 +281,7 @@ EBUSY
 
        -
 
-
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. _dv-timing-types:
 
@@ -310,11 +328,6 @@ EBUSY
 
        -  Description
 
-    -  .. row 2
-
-       -
-       -
-
     -  .. row 3
 
        -  ``V4L2_DV_BT_STD_CEA861``
@@ -339,7 +352,15 @@ EBUSY
 
        -  The timings follow the VESA Generalized Timings Formula standard
 
+    -  .. row 7
 
+       -  ``V4L2_DV_BT_STD_SDI``
+
+       -  The timings follow the SDI Timings standard.
+	  There are no horizontal syncs/porches at all in this format.
+	  Total blanking timings must be set in hsync or vsync fields only.
+
+.. tabularcolumns:: |p{6.0cm}|p{11.5cm}|
 
 .. _dv-bt-flags:
 
@@ -353,11 +374,6 @@ EBUSY
        -  Flag
 
        -  Description
-
-    -  .. row 2
-
-       -
-       -
 
     -  .. row 3
 
@@ -415,3 +431,11 @@ EBUSY
 	  R'G'B' values use limited range (i.e. 16-235) as opposed to full
 	  range (i.e. 0-255). All formats defined in CEA-861 except for the
 	  640x480p59.94 format are CE formats.
+
+    -  .. row 8
+
+       -  ``V4L2_DV_FL_FIRST_FIELD_EXTRA_LINE``
+
+       -  Some formats like SMPTE-125M have an interlaced signal with a odd
+	  total height. For these formats, if this flag is set, the first
+	  field has the extra line. Else, it is the second field.

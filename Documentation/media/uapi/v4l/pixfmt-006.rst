@@ -5,26 +5,29 @@ Defining Colorspaces in V4L2
 ****************************
 
 In V4L2 colorspaces are defined by four values. The first is the
-colorspace identifier (enum :ref:`v4l2_colorspace <v4l2-colorspace>`)
+colorspace identifier (enum :c:type:`v4l2_colorspace`)
 which defines the chromaticities, the default transfer function, the
 default Y'CbCr encoding and the default quantization method. The second
 is the transfer function identifier (enum
-:ref:`v4l2_xfer_func <v4l2-xfer-func>`) to specify non-standard
+:c:type:`v4l2_xfer_func`) to specify non-standard
 transfer functions. The third is the Y'CbCr encoding identifier (enum
-:ref:`v4l2_ycbcr_encoding <v4l2-ycbcr-encoding>`) to specify
+:c:type:`v4l2_ycbcr_encoding`) to specify
 non-standard Y'CbCr encodings and the fourth is the quantization
-identifier (enum :ref:`v4l2_quantization <v4l2-quantization>`) to
+identifier (enum :c:type:`v4l2_quantization`) to
 specify non-standard quantization methods. Most of the time only the
-colorspace field of struct :ref:`v4l2_pix_format <v4l2-pix-format>`
-or struct :ref:`v4l2_pix_format_mplane <v4l2-pix-format-mplane>`
+colorspace field of struct :c:type:`v4l2_pix_format`
+or struct :c:type:`v4l2_pix_format_mplane`
 needs to be filled in.
 
-.. note:: The default R'G'B' quantization is full range for all
+.. note::
+
+   The default R'G'B' quantization is full range for all
    colorspaces except for BT.2020 which uses limited range R'G'B'
    quantization.
 
+.. tabularcolumns:: |p{6.0cm}|p{11.5cm}|
 
-.. _v4l2-colorspace:
+.. c:type:: v4l2_colorspace
 
 .. flat-table:: V4L2 Colorspaces
     :header-rows:  1
@@ -116,7 +119,7 @@ needs to be filled in.
 
 
 
-.. _v4l2-xfer-func:
+.. c:type:: v4l2_xfer_func
 
 .. flat-table:: V4L2 Transfer Function
     :header-rows:  1
@@ -179,7 +182,9 @@ needs to be filled in.
 
 
 
-.. _v4l2-ycbcr-encoding:
+.. c:type:: v4l2_ycbcr_encoding
+
+.. tabularcolumns:: |p{6.5cm}|p{11.0cm}|
 
 .. flat-table:: V4L2 Y'CbCr Encodings
     :header-rows:  1
@@ -224,23 +229,17 @@ needs to be filled in.
 
     -  .. row 7
 
-       -  ``V4L2_YCBCR_ENC_SYCC``
-
-       -  Use the extended gamut sYCC encoding.
-
-    -  .. row 8
-
        -  ``V4L2_YCBCR_ENC_BT2020``
 
        -  Use the default non-constant luminance BT.2020 Y'CbCr encoding.
 
-    -  .. row 9
+    -  .. row 8
 
        -  ``V4L2_YCBCR_ENC_BT2020_CONST_LUM``
 
        -  Use the constant luminance BT.2020 Yc'CbcCrc encoding.
 
-    -  .. row 10
+    -  .. row 9
 
        -  ``V4L2_YCBCR_ENC_SMPTE_240M``
 
@@ -248,7 +247,9 @@ needs to be filled in.
 
 
 
-.. _v4l2-quantization:
+.. c:type:: v4l2_quantization
+
+.. tabularcolumns:: |p{6.5cm}|p{11.0cm}|
 
 .. flat-table:: V4L2 Quantization Methods
     :header-rows:  1

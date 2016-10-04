@@ -7,7 +7,6 @@
 V4L2_PIX_FMT_YUV444M ('YM24'), V4L2_PIX_FMT_YVU444M ('YM42')
 ************************************************************
 
-*man V4L2_PIX_FMT_YUV444M(2)*
 
 V4L2_PIX_FMT_YVU444M
 Planar formats with full horizontal resolution, also known as YUV and
@@ -38,10 +37,10 @@ described in :ref:`planar-apis`.
 **Byte Order.**
 Each cell is one byte.
 
+
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1 1 1
 
 
     -  .. row 1

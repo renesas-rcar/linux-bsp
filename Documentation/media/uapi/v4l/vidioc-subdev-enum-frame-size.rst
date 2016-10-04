@@ -15,7 +15,8 @@ VIDIOC_SUBDEV_ENUM_FRAME_SIZE - Enumerate media bus frame sizes
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_subdev_frame_size_enum * argp )
+.. c:function:: int ioctl( int fd, VIDIOC_SUBDEV_ENUM_FRAME_SIZE, struct v4l2_subdev_frame_size_enum * argp )
+    :name: VIDIOC_SUBDEV_ENUM_FRAME_SIZE
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_SUBDEV_ENUM_FRAME_SIZE
 
 ``argp``
 
@@ -41,7 +39,7 @@ ioctl.
 
 To enumerate frame sizes applications initialize the ``pad``, ``which``
 , ``code`` and ``index`` fields of the struct
-:ref:`v4l2_subdev_mbus_code_enum <v4l2-subdev-mbus-code-enum>` and
+:c:type:`v4l2_subdev_mbus_code_enum` and
 call the :ref:`VIDIOC_SUBDEV_ENUM_FRAME_SIZE` ioctl with a pointer to the
 structure. Drivers fill the minimum and maximum frame sizes or return an
 EINVAL error code if one of the input parameters is invalid.
@@ -64,7 +62,9 @@ current values of V4L2 controls. See
 information about try formats.
 
 
-.. _v4l2-subdev-frame-size-enum:
+.. c:type:: v4l2_subdev_frame_size_enum
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_subdev_frame_size_enum
     :header-rows:  0
@@ -157,6 +157,6 @@ appropriately. The generic error codes are described at the
 
 EINVAL
     The struct
-    :ref:`v4l2_subdev_frame_size_enum <v4l2-subdev-frame-size-enum>`
+    :c:type:`v4l2_subdev_frame_size_enum`
     ``pad`` references a non-existing pad, the ``code`` is invalid for
     the given pad or the ``index`` field is out of bounds.

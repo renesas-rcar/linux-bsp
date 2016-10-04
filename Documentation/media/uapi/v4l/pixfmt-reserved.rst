@@ -17,6 +17,8 @@ you think your format should be listed in a standard format section
 please make a proposal on the linux-media mailing list.
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
+
 .. _reserved-formats:
 
 .. flat-table:: Reserved Image Formats
@@ -338,6 +340,8 @@ please make a proposal on the linux-media mailing list.
 	  should be concatenated to form the JPEG stream.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _format-flags:
 

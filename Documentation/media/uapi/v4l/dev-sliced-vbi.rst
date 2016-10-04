@@ -34,7 +34,7 @@ Querying Capabilities
 Devices supporting the sliced VBI capturing or output API set the
 ``V4L2_CAP_SLICED_VBI_CAPTURE`` or ``V4L2_CAP_SLICED_VBI_OUTPUT`` flag
 respectively, in the ``capabilities`` field of struct
-:ref:`v4l2_capability <v4l2-capability>` returned by the
+:c:type:`v4l2_capability` returned by the
 :ref:`VIDIOC_QUERYCAP` ioctl. At least one of the
 read/write, streaming or asynchronous :ref:`I/O methods <io>` must be
 supported. Sliced VBI devices may have a tuner or modulator.
@@ -67,17 +67,17 @@ line 16 the hardware may be able to look for a VPS or Teletext signal,
 but not both at the same time.
 
 To determine the currently selected services applications set the
-``type`` field of struct :ref:`v4l2_format <v4l2-format>` to
+``type`` field of struct :c:type:`v4l2_format` to
 ``V4L2_BUF_TYPE_SLICED_VBI_CAPTURE`` or
 ``V4L2_BUF_TYPE_SLICED_VBI_OUTPUT``, and the
 :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>` ioctl fills the ``fmt.sliced``
 member, a struct
-:ref:`v4l2_sliced_vbi_format <v4l2-sliced-vbi-format>`.
+:c:type:`v4l2_sliced_vbi_format`.
 
 Applications can request different parameters by initializing or
 modifying the ``fmt.sliced`` member and calling the
 :ref:`VIDIOC_S_FMT <VIDIOC_G_FMT>` ioctl with a pointer to the
-:ref:`struct v4l2_format <v4l2-format>` structure.
+struct :c:type:`v4l2_format` structure.
 
 The sliced VBI API is more complicated than the raw VBI API because the
 hardware must be told which VBI service to expect on each scan line. Not
@@ -100,10 +100,14 @@ which may return ``EBUSY`` can be the
 :ref:`select() <func-select>` call.
 
 
-.. _v4l2-sliced-vbi-format:
+.. c:type:: v4l2_sliced_vbi_format
 
 struct v4l2_sliced_vbi_format
 -----------------------------
+
+.. tabularcolumns:: |p{1.0cm}|p{4.5cm}|p{4.0cm}|p{4.0cm}|p{4.0cm}|
+
+.. cssclass:: longtable
 
 .. flat-table::
     :header-rows:  0
@@ -153,8 +157,7 @@ struct v4l2_sliced_vbi_format
 	  service the driver chooses.
 
 	  Data services are defined in :ref:`vbi-services2`. Array indices
-	  map to ITU-R line numbers (see also :ref:`vbi-525` and
-	  :ref:`vbi-625`) as follows:
+	  map to ITU-R line numbers\ [#f2]_ as follows:
 
     -  .. row 3
 
@@ -230,7 +233,7 @@ struct v4l2_sliced_vbi_format
 	  :ref:`VIDIOC_QBUF` and
 	  :ref:`VIDIOC_DQBUF <VIDIOC_QBUF>` ioctl. Drivers set this field
 	  to the size of struct
-	  :ref:`v4l2_sliced_vbi_data <v4l2-sliced-vbi-data>` times the
+	  :c:type:`v4l2_sliced_vbi_data` times the
 	  number of non-zero elements in the returned ``service_lines``
 	  array (that is the number of lines potentially carrying data).
 
@@ -241,14 +244,20 @@ struct v4l2_sliced_vbi_format
        -  ``reserved``\ [2]
 
        -  :cspan:`2` This array is reserved for future extensions.
-	  Applications and drivers must set it to zero.
 
+	  Applications and drivers must set it to zero.
 
 
 .. _vbi-services2:
 
 Sliced VBI services
 -------------------
+
+.. raw:: latex
+
+    \begin{adjustbox}{width=\columnwidth}
+
+.. tabularcolumns:: |p{5.0cm}|p{1.4cm}|p{3.0cm}|p{2.5cm}|p{9.0cm}|
 
 .. flat-table::
     :header-rows:  1
@@ -274,7 +283,9 @@ Sliced VBI services
 
        -  0x0001
 
-       -  :ref:`ets300706`, :ref:`itu653`
+       -  :ref:`ets300706`,
+
+	  :ref:`itu653`
 
        -  PAL/SECAM line 7-22, 320-335 (second field 7-22)
 
@@ -313,7 +324,9 @@ Sliced VBI services
 
        -  0x4000
 
-       -  :ref:`itu1119`, :ref:`en300294`
+       -  :ref:`itu1119`,
+
+	  :ref:`en300294`
 
        -  PAL/SECAM line 23
 
@@ -341,6 +354,10 @@ Sliced VBI services
 
        -  :cspan:`2` Set of services applicable to 625 line systems.
 
+.. raw:: latex
+
+    \end{adjustbox}\newline\newline
+
 
 Drivers may return an ``EINVAL`` error code when applications attempt to
 read or write data without prior format negotiation, after switching the
@@ -359,17 +376,19 @@ Reading and writing sliced VBI data
 
 A single :ref:`read() <func-read>` or :ref:`write() <func-write>`
 call must pass all data belonging to one video frame. That is an array
-of :ref:`struct v4l2_sliced_vbi_data <v4l2-sliced-vbi-data>` structures with one or
+of struct :c:type:`v4l2_sliced_vbi_data` structures with one or
 more elements and a total size not exceeding ``io_size`` bytes. Likewise
 in streaming I/O mode one buffer of ``io_size`` bytes must contain data
 of one video frame. The ``id`` of unused
-:ref:`struct v4l2_sliced_vbi_data <v4l2-sliced-vbi-data>` elements must be zero.
+struct :c:type:`v4l2_sliced_vbi_data` elements must be zero.
 
 
-.. _v4l2-sliced-vbi-data:
+.. c:type:: v4l2_sliced_vbi_data
 
 struct v4l2_sliced_vbi_data
 ---------------------------
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. flat-table::
     :header-rows:  0
@@ -542,7 +561,7 @@ refer to the MPEG-2 specifications for details on those packet headers.)
 
 The payload of the MPEG-2 *Private Stream 1 PES* packets that contain
 sliced VBI data is specified by struct
-:ref:`v4l2_mpeg_vbi_fmt_ivtv <v4l2-mpeg-vbi-fmt-ivtv>`. The
+:c:type:`v4l2_mpeg_vbi_fmt_ivtv`. The
 payload is variable length, depending on the actual number of lines of
 sliced VBI data present in a video frame. The payload may be padded at
 the end with unspecified fill bytes to align the end of the payload to a
@@ -551,10 +570,12 @@ with 18 lines/field with 43 bytes of data/line and a 4 byte magic
 number).
 
 
-.. _v4l2-mpeg-vbi-fmt-ivtv:
+.. c:type:: v4l2_mpeg_vbi_fmt_ivtv
 
 struct v4l2_mpeg_vbi_fmt_ivtv
 -----------------------------
+
+.. tabularcolumns:: |p{1.0cm}|p{3.5cm}|p{1.0cm}|p{11.5cm}|
 
 .. flat-table::
     :header-rows:  0
@@ -583,7 +604,7 @@ struct v4l2_mpeg_vbi_fmt_ivtv
     -  .. row 3
 
        -
-       -  struct :ref:`v4l2_mpeg_vbi_itv0 <v4l2-mpeg-vbi-itv0>`
+       -  struct :c:type:`v4l2_mpeg_vbi_itv0`
 
        -  ``itv0``
 
@@ -611,6 +632,8 @@ struct v4l2_mpeg_vbi_fmt_ivtv
 Magic Constants for struct v4l2_mpeg_vbi_fmt_ivtv magic field
 -------------------------------------------------------------
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
+
 .. flat-table::
     :header-rows:  1
     :stub-columns: 0
@@ -632,7 +655,7 @@ Magic Constants for struct v4l2_mpeg_vbi_fmt_ivtv magic field
        -  "itv0"
 
        -  Indicates the ``itv0`` member of the union in struct
-	  :ref:`v4l2_mpeg_vbi_fmt_ivtv <v4l2-mpeg-vbi-fmt-ivtv>` is
+	  :c:type:`v4l2_mpeg_vbi_fmt_ivtv` is
 	  valid.
 
     -  .. row 3
@@ -642,15 +665,19 @@ Magic Constants for struct v4l2_mpeg_vbi_fmt_ivtv magic field
        -  "ITV0"
 
        -  Indicates the ``ITV0`` member of the union in struct
-	  :ref:`v4l2_mpeg_vbi_fmt_ivtv <v4l2-mpeg-vbi-fmt-ivtv>` is
+	  :c:type:`v4l2_mpeg_vbi_fmt_ivtv` is
 	  valid and that 36 lines of sliced VBI data are present.
 
 
 
-.. _v4l2-mpeg-vbi-itv0:
+.. c:type:: v4l2_mpeg_vbi_itv0
 
-struct v4l2_mpeg_vbi_itv0
--------------------------
+.. c:type:: v4l2_mpeg_vbi_ITV0
+
+structs v4l2_mpeg_vbi_itv0 and v4l2_mpeg_vbi_ITV0
+-------------------------------------------------
+
+.. tabularcolumns:: |p{4.4cm}|p{2.4cm}|p{10.7cm}|
 
 .. flat-table::
     :header-rows:  0
@@ -676,9 +703,9 @@ struct v4l2_mpeg_vbi_itv0
 	  ::
 
 	      linemask[0] b0:     line  6     first field
-	      linemask[0] b17:        line 23     first field
-	      linemask[0] b18:        line  6     second field
-	      linemask[0] b31:        line 19     second field
+	      linemask[0] b17:    line 23     first field
+	      linemask[0] b18:    line  6     second field
+	      linemask[0] b31:    line 19     second field
 	      linemask[1] b0:     line 20     second field
 	      linemask[1] b3:     line 23     second field
 	      linemask[1] b4-b31: unused and set to 0
@@ -686,7 +713,7 @@ struct v4l2_mpeg_vbi_itv0
     -  .. row 2
 
        -  struct
-	  :ref:`v4l2_mpeg_vbi_itv0_line <v4l2-mpeg-vbi-itv0-line>`
+	  :c:type:`v4l2_mpeg_vbi_itv0_line`
 
        -  ``line``\ [35]
 
@@ -709,6 +736,8 @@ struct v4l2_mpeg_vbi_itv0
 struct v4l2_mpeg_vbi_ITV0
 -------------------------
 
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
@@ -718,7 +747,7 @@ struct v4l2_mpeg_vbi_ITV0
     -  .. row 1
 
        -  struct
-	  :ref:`v4l2_mpeg_vbi_itv0_line <v4l2-mpeg-vbi-itv0-line>`
+	  :c:type:`v4l2_mpeg_vbi_itv0_line`
 
        -  ``line``\ [36]
 
@@ -729,10 +758,12 @@ struct v4l2_mpeg_vbi_ITV0
 
 
 
-.. _v4l2-mpeg-vbi-itv0-line:
+.. c:type:: v4l2_mpeg_vbi_itv0_line
 
 struct v4l2_mpeg_vbi_itv0_line
 ------------------------------
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table::
     :header-rows:  0
@@ -764,6 +795,8 @@ struct v4l2_mpeg_vbi_itv0_line
 
 Line Identifiers for struct v4l2_mpeg_vbi_itv0_line id field
 ------------------------------------------------------------
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. flat-table::
     :header-rows:  1
@@ -820,3 +853,6 @@ Line Identifiers for struct v4l2_mpeg_vbi_itv0_line id field
 .. [#f1]
    According to :ref:`ETS 300 706 <ets300706>` lines 6-22 of the first
    field and lines 5-22 of the second field may carry Teletext data.
+
+.. [#f2]
+   See also :ref:`vbi-525` and :ref:`vbi-625`.

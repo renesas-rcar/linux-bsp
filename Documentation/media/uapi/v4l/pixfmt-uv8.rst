@@ -6,7 +6,6 @@
 V4L2_PIX_FMT_UV8 ('UV8')
 ************************
 
-*man V4L2_PIX_FMT_UV8(2)*
 
 UV plane interleaved
 
@@ -21,10 +20,10 @@ Each cell is one byte.
 
 
 
+
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1 1 1
 
 
     -  .. row 1

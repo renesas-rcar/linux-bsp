@@ -16,7 +16,11 @@ VIDIOC_SUBSCRIBE_EVENT - VIDIOC_UNSUBSCRIBE_EVENT - Subscribe or unsubscribe eve
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_event_subscription *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_SUBSCRIBE_EVENT, struct v4l2_event_subscription *argp )
+    :name: VIDIOC_SUBSCRIBE_EVENT
+
+.. c:function:: int ioctl( int fd, VIDIOC_UNSUBSCRIBE_EVENT, struct v4l2_event_subscription *argp )
+    :name: VIDIOC_UNSUBSCRIBE_EVENT
 
 
 Arguments
@@ -24,9 +28,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_SUBSCRIBE_EVENT, VIDIOC_UNSUBSCRIBE_EVENT
 
 ``argp``
 
@@ -38,7 +39,9 @@ Subscribe or unsubscribe V4L2 event. Subscribed events are dequeued by
 using the :ref:`VIDIOC_DQEVENT` ioctl.
 
 
-.. _v4l2-event-subscription:
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
+
+.. c:type:: v4l2_event_subscription
 
 .. flat-table:: struct v4l2_event_subscription
     :header-rows:  0
@@ -54,7 +57,9 @@ using the :ref:`VIDIOC_DQEVENT` ioctl.
 
        -  Type of the event, see :ref:`event-type`.
 
-	  .. note:: ``V4L2_EVENT_ALL`` can be used with
+	  .. note::
+
+	     ``V4L2_EVENT_ALL`` can be used with
 	     :ref:`VIDIOC_UNSUBSCRIBE_EVENT <VIDIOC_SUBSCRIBE_EVENT>` for
 	     unsubscribing all events at once.
 
@@ -86,6 +91,8 @@ using the :ref:`VIDIOC_DQEVENT` ioctl.
 	  the array to zero.
 
 
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _event-flags:
 

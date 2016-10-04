@@ -7,7 +7,6 @@
 V4L2_PIX_FMT_NV12 ('NV12'), V4L2_PIX_FMT_NV21 ('NV21')
 ******************************************************
 
-*man V4L2_PIX_FMT_NV12(2)*
 
 V4L2_PIX_FMT_NV21
 Formats with ½ horizontal and vertical chroma resolution, also known as
@@ -36,12 +35,9 @@ many pad bytes after its rows.
 Each cell is one byte.
 
 
-
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1 1 1
-
 
     -  .. row 1
 

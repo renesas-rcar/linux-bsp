@@ -15,7 +15,11 @@ VIDIOC_DV_TIMINGS_CAP - VIDIOC_SUBDEV_DV_TIMINGS_CAP - The capabilities of the D
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_dv_timings_cap *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_DV_TIMINGS_CAP, struct v4l2_dv_timings_cap *argp )
+    :name: VIDIOC_DV_TIMINGS_CAP
+
+.. c:function:: int ioctl( int fd, VIDIOC_SUBDEV_DV_TIMINGS_CAP, struct v4l2_dv_timings_cap *argp )
+    :name: VIDIOC_SUBDEV_DV_TIMINGS_CAP
 
 
 Arguments
@@ -23,9 +27,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_DV_TIMINGS_CAP, VIDIOC_SUBDEV_DV_TIMINGS_CAP
 
 ``argp``
 
@@ -35,11 +36,13 @@ Description
 
 To query the capabilities of the DV receiver/transmitter applications
 initialize the ``pad`` field to 0, zero the reserved array of struct
-:ref:`v4l2_dv_timings_cap <v4l2-dv-timings-cap>` and call the
+:c:type:`v4l2_dv_timings_cap` and call the
 ``VIDIOC_DV_TIMINGS_CAP`` ioctl on a video node and the driver will fill
 in the structure.
 
-.. note:: Drivers may return different values after
+.. note::
+
+   Drivers may return different values after
    switching the video input or output.
 
 When implemented by the driver DV capabilities of subdevices can be
@@ -47,12 +50,14 @@ queried by calling the ``VIDIOC_SUBDEV_DV_TIMINGS_CAP`` ioctl directly
 on a subdevice node. The capabilities are specific to inputs (for DV
 receivers) or outputs (for DV transmitters), applications must specify
 the desired pad number in the struct
-:ref:`v4l2_dv_timings_cap <v4l2-dv-timings-cap>` ``pad`` field and
+:c:type:`v4l2_dv_timings_cap` ``pad`` field and
 zero the ``reserved`` array. Attempts to query capabilities on a pad
 that doesn't support them will return an ``EINVAL`` error code.
 
 
-.. _v4l2-bt-timings-cap:
+.. tabularcolumns:: |p{1.2cm}|p{3.0cm}|p{13.3cm}|
+
+.. c:type:: v4l2_bt_timings_cap
 
 .. flat-table:: struct v4l2_bt_timings_cap
     :header-rows:  0
@@ -132,12 +137,14 @@ that doesn't support them will return an ``EINVAL`` error code.
 
        -  ``reserved``\ [16]
 
-       -  Reserved for future extensions. Drivers must set the array to
-	  zero.
+       -  Reserved for future extensions.
+	  Drivers must set the array to zero.
 
 
 
-.. _v4l2-dv-timings-cap:
+.. tabularcolumns:: |p{1.0cm}|p{3.5cm}|p{3.5cm}|p{9.5cm}|
+
+.. c:type:: v4l2_dv_timings_cap
 
 .. flat-table:: struct v4l2_dv_timings_cap
     :header-rows:  0
@@ -169,8 +176,9 @@ that doesn't support them will return an ``EINVAL`` error code.
 
        -  ``reserved``\ [2]
 
-       -  Reserved for future extensions. Drivers and applications must set
-	  the array to zero.
+       -  Reserved for future extensions.
+
+	  Drivers and applications must set the array to zero.
 
     -  .. row 4
 
@@ -182,7 +190,7 @@ that doesn't support them will return an ``EINVAL`` error code.
     -  .. row 5
 
        -
-       -  struct :ref:`v4l2_bt_timings_cap <v4l2-bt-timings-cap>`
+       -  struct :c:type:`v4l2_bt_timings_cap`
 
        -  ``bt``
 
@@ -197,7 +205,7 @@ that doesn't support them will return an ``EINVAL`` error code.
 
        -
 
-
+.. tabularcolumns:: |p{7.0cm}|p{10.5cm}|
 
 .. _dv-bt-cap-capabilities:
 

@@ -15,7 +15,8 @@ VIDIOC_ENUM_FRAMESIZES - Enumerate frame sizes
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_frmsizeenum *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_ENUM_FRAMESIZES, struct v4l2_frmsizeenum *argp )
+    :name: VIDIOC_ENUM_FRAMESIZES
 
 
 Arguments
@@ -24,11 +25,8 @@ Arguments
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
 
-``request``
-    VIDIOC_ENUM_FRAMESIZES
-
 ``argp``
-    Pointer to a struct :ref:`v4l2_frmsizeenum <v4l2-frmsizeenum>`
+    Pointer to a struct :c:type:`v4l2_frmsizeenum`
     that contains an index and pixel format and receives a frame width
     and height.
 
@@ -72,7 +70,9 @@ the ``type`` field to determine the type of frame size enumeration the
 device supports. Only for the ``V4L2_FRMSIZE_TYPE_DISCRETE`` type does
 it make sense to increase the index value to receive more frame sizes.
 
-.. note:: The order in which the frame sizes are returned has no special
+.. note::
+
+   The order in which the frame sizes are returned has no special
    meaning. In particular does it not say anything about potential default
    format sizes.
 
@@ -90,7 +90,9 @@ the application, *OUT* denotes values that the driver fills in. The
 application should zero out all members except for the *IN* fields.
 
 
-.. _v4l2-frmsize-discrete:
+.. c:type:: v4l2_frmsize_discrete
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_frmsize_discrete
     :header-rows:  0
@@ -116,7 +118,9 @@ application should zero out all members except for the *IN* fields.
 
 
 
-.. _v4l2-frmsize-stepwise:
+.. c:type:: v4l2_frmsize_stepwise
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_frmsize_stepwise
     :header-rows:  0
@@ -174,7 +178,7 @@ application should zero out all members except for the *IN* fields.
 
 
 
-.. _v4l2-frmsizeenum:
+.. c:type:: v4l2_frmsizeenum
 
 .. flat-table:: struct v4l2_frmsizeenum
     :header-rows:  0
@@ -219,7 +223,7 @@ application should zero out all members except for the *IN* fields.
     -  .. row 5
 
        -
-       -  struct :ref:`v4l2_frmsize_discrete <v4l2-frmsize-discrete>`
+       -  struct :c:type:`v4l2_frmsize_discrete`
 
        -  ``discrete``
 
@@ -228,7 +232,7 @@ application should zero out all members except for the *IN* fields.
     -  .. row 6
 
        -
-       -  struct :ref:`v4l2_frmsize_stepwise <v4l2-frmsize-stepwise>`
+       -  struct :c:type:`v4l2_frmsize_stepwise`
 
        -  ``stepwise``
 
@@ -250,7 +254,9 @@ Enums
 =====
 
 
-.. _v4l2-frmsizetypes:
+.. c:type:: v4l2_frmsizetypes
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. flat-table:: enum v4l2_frmsizetypes
     :header-rows:  0

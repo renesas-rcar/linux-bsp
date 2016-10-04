@@ -87,15 +87,17 @@ Querying Capabilities
 The V4L ``VIDIOCGCAP`` ioctl is equivalent to V4L2's
 :ref:`VIDIOC_QUERYCAP`.
 
-The ``name`` field in struct :c:type:`struct video_capability` became
-``card`` in struct :ref:`v4l2_capability <v4l2-capability>`, ``type``
+The ``name`` field in struct ``video_capability`` became
+``card`` in struct :c:type:`v4l2_capability`, ``type``
 was replaced by ``capabilities``. Note V4L2 does not distinguish between
 device types like this, better think of basic video input, video output
 and radio devices supporting a set of related functions like video
 capturing, video overlay and VBI capturing. See :ref:`open` for an
 introduction.
 
+.. tabularcolumns:: |p{5.5cm}|p{6.5cm}|p{5.5cm}
 
+.. cssclass:: longtable
 
 .. flat-table::
     :header-rows:  1
@@ -104,9 +106,9 @@ introduction.
 
     -  .. row 1
 
-       -  struct :c:type:`struct video_capability` ``type``
+       -  ``struct video_capability`` ``type``
 
-       -  struct :ref:`v4l2_capability <v4l2-capability>`
+       -  struct :c:type:`v4l2_capability`
 	  ``capabilities`` flags
 
        -  Purpose
@@ -148,7 +150,7 @@ introduction.
        -  ``VID_TYPE_CHROMAKEY``
 
        -  ``V4L2_FBUF_CAP_CHROMAKEY`` in field ``capability`` of struct
-	  :ref:`v4l2_framebuffer <v4l2-framebuffer>`
+	  :c:type:`v4l2_framebuffer`
 
        -  Whether chromakey overlay is supported. For more information on
 	  overlay see :ref:`overlay`.
@@ -159,7 +161,7 @@ introduction.
 
        -  ``V4L2_FBUF_CAP_LIST_CLIPPING`` and
 	  ``V4L2_FBUF_CAP_BITMAP_CLIPPING`` in field ``capability`` of
-	  struct :ref:`v4l2_framebuffer <v4l2-framebuffer>`
+	  struct :c:type:`v4l2_framebuffer`
 
        -  Whether clipping the overlaid image is supported, see
 	  :ref:`overlay`.
@@ -169,7 +171,7 @@ introduction.
        -  ``VID_TYPE_FRAMERAM``
 
        -  ``V4L2_FBUF_CAP_EXTERNOVERLAY`` *not set* in field ``capability``
-	  of struct :ref:`v4l2_framebuffer <v4l2-framebuffer>`
+	  of struct :c:type:`v4l2_framebuffer`
 
        -  Whether overlay overwrites frame buffer memory, see
 	  :ref:`overlay`.
@@ -262,12 +264,12 @@ Video Sources
 =============
 
 V4L provides the ``VIDIOCGCHAN`` and ``VIDIOCSCHAN`` ioctl using struct
-:c:type:`struct video_channel` to enumerate the video inputs of a V4L
+``video_channel`` to enumerate the video inputs of a V4L
 device. The equivalent V4L2 ioctls are
 :ref:`VIDIOC_ENUMINPUT`,
 :ref:`VIDIOC_G_INPUT <VIDIOC_G_INPUT>` and
 :ref:`VIDIOC_S_INPUT <VIDIOC_G_INPUT>` using struct
-:ref:`v4l2_input <v4l2-input>` as discussed in :ref:`video`.
+:c:type:`v4l2_input` as discussed in :ref:`video`.
 
 The ``channel`` field counting inputs was renamed to ``index``, the
 video input types were renamed as follows:
@@ -281,9 +283,9 @@ video input types were renamed as follows:
 
     -  .. row 1
 
-       -  struct :c:type:`struct video_channel` ``type``
+       -  struct ``video_channel`` ``type``
 
-       -  struct :ref:`v4l2_input <v4l2-input>` ``type``
+       -  struct :c:type:`v4l2_input` ``type``
 
     -  .. row 2
 
@@ -303,7 +305,7 @@ input, V4L2 assumes each video input is connected to at most one tuner.
 However a tuner can have more than one input, i. e. RF connectors, and a
 device can have multiple tuners. The index number of the tuner
 associated with the input, if any, is stored in field ``tuner`` of
-struct :ref:`v4l2_input <v4l2-input>`. Enumeration of tuners is
+struct :c:type:`v4l2_input`. Enumeration of tuners is
 discussed in :ref:`tuner`.
 
 The redundant ``VIDEO_VC_TUNER`` flag was dropped. Video inputs
@@ -326,11 +328,11 @@ Tuning
 ======
 
 The V4L ``VIDIOCGTUNER`` and ``VIDIOCSTUNER`` ioctl and struct
-:c:type:`struct video_tuner` can be used to enumerate the tuners of a
+``video_tuner`` can be used to enumerate the tuners of a
 V4L TV or radio device. The equivalent V4L2 ioctls are
 :ref:`VIDIOC_G_TUNER <VIDIOC_G_TUNER>` and
 :ref:`VIDIOC_S_TUNER <VIDIOC_G_TUNER>` using struct
-:ref:`v4l2_tuner <v4l2-tuner>`. Tuners are covered in :ref:`tuner`.
+:c:type:`v4l2_tuner`. Tuners are covered in :ref:`tuner`.
 
 The ``tuner`` field counting tuners was renamed to ``index``. The fields
 ``name``, ``rangelow`` and ``rangehigh`` remained unchanged.
@@ -338,7 +340,7 @@ The ``tuner`` field counting tuners was renamed to ``index``. The fields
 The ``VIDEO_TUNER_PAL``, ``VIDEO_TUNER_NTSC`` and ``VIDEO_TUNER_SECAM``
 flags indicating the supported video standards were dropped. This
 information is now contained in the associated struct
-:ref:`v4l2_input <v4l2-input>`. No replacement exists for the
+:c:type:`v4l2_input`. No replacement exists for the
 ``VIDEO_TUNER_NORM`` flag indicating whether the video standard can be
 switched. The ``mode`` field to select a different video standard was
 replaced by a whole new set of ioctls and structures described in
@@ -351,18 +353,18 @@ Japan with numbers 3-6 (sic).
 The ``VIDEO_TUNER_STEREO_ON`` flag indicating stereo reception became
 ``V4L2_TUNER_SUB_STEREO`` in field ``rxsubchans``. This field also
 permits the detection of monaural and bilingual audio, see the
-definition of struct :ref:`v4l2_tuner <v4l2-tuner>` for details.
+definition of struct :c:type:`v4l2_tuner` for details.
 Presently no replacement exists for the ``VIDEO_TUNER_RDS_ON`` and
 ``VIDEO_TUNER_MBS_ON`` flags.
 
 The ``VIDEO_TUNER_LOW`` flag was renamed to ``V4L2_TUNER_CAP_LOW`` in
-the struct :ref:`v4l2_tuner <v4l2-tuner>` ``capability`` field.
+the struct :c:type:`v4l2_tuner` ``capability`` field.
 
 The ``VIDIOCGFREQ`` and ``VIDIOCSFREQ`` ioctl to change the tuner
 frequency where renamed to
 :ref:`VIDIOC_G_FREQUENCY <VIDIOC_G_FREQUENCY>` and
 :ref:`VIDIOC_S_FREQUENCY <VIDIOC_G_FREQUENCY>`. They take a pointer
-to a struct :ref:`v4l2_frequency <v4l2-frequency>` instead of an
+to a struct :c:type:`v4l2_frequency` instead of an
 unsigned long integer.
 
 
@@ -372,7 +374,7 @@ Image Properties
 ================
 
 V4L2 has no equivalent of the ``VIDIOCGPICT`` and ``VIDIOCSPICT`` ioctl
-and struct :c:type:`struct video_picture`. The following fields where
+and struct ``video_picture``. The following fields where
 replaced by V4L2 controls accessible with the
 :ref:`VIDIOC_QUERYCTRL`,
 :ref:`VIDIOC_G_CTRL <VIDIOC_G_CTRL>` and
@@ -387,7 +389,7 @@ replaced by V4L2 controls accessible with the
 
     -  .. row 1
 
-       -  struct :c:type:`struct video_picture`
+       -  struct ``video_picture``
 
        -  V4L2 Control ID
 
@@ -432,7 +434,7 @@ The ``depth`` (average number of bits per pixel) of a video image is
 implied by the selected image format. V4L2 does not explicitly provide
 such information assuming applications recognizing the format are aware
 of the image depth and others need not know. The ``palette`` field moved
-into the struct :ref:`v4l2_pix_format <v4l2-pix-format>`:
+into the struct :c:type:`v4l2_pix_format`:
 
 
 
@@ -443,9 +445,9 @@ into the struct :ref:`v4l2_pix_format <v4l2-pix-format>`:
 
     -  .. row 1
 
-       -  struct :c:type:`struct video_picture` ``palette``
+       -  struct ``video_picture`` ``palette``
 
-       -  struct :ref:`v4l2_pix_format <v4l2-pix-format>` ``pixfmt``
+       -  struct :c:type:`v4l2_pix_format` ``pixfmt``
 
     -  .. row 2
 
@@ -552,11 +554,11 @@ Audio
 =====
 
 The ``VIDIOCGAUDIO`` and ``VIDIOCSAUDIO`` ioctl and struct
-:c:type:`struct video_audio` are used to enumerate the audio inputs
+``video_audio`` are used to enumerate the audio inputs
 of a V4L device. The equivalent V4L2 ioctls are
 :ref:`VIDIOC_G_AUDIO <VIDIOC_G_AUDIO>` and
 :ref:`VIDIOC_S_AUDIO <VIDIOC_G_AUDIO>` using struct
-:ref:`v4l2_audio <v4l2-audio>` as discussed in :ref:`audio`.
+:c:type:`v4l2_audio` as discussed in :ref:`audio`.
 
 The ``audio`` "channel number" field counting audio inputs was renamed
 to ``index``.
@@ -569,10 +571,10 @@ standard is BTSC ``VIDEO_SOUND_LANG2`` refers to SAP and
 specification, there is no way to query the selected mode. On
 ``VIDIOCGAUDIO`` the driver returns the *actually received* audio
 programmes in this field. In the V4L2 API this information is stored in
-the struct :ref:`v4l2_tuner <v4l2-tuner>` ``rxsubchans`` and
+the struct :c:type:`v4l2_tuner` ``rxsubchans`` and
 ``audmode`` fields, respectively. See :ref:`tuner` for more
 information on tuners. Related to audio modes struct
-:ref:`v4l2_audio <v4l2-audio>` also reports if this is a mono or
+:c:type:`v4l2_audio` also reports if this is a mono or
 stereo input, regardless if the source is a tuner.
 
 The following fields where replaced by V4L2 controls accessible with the
@@ -589,7 +591,7 @@ The following fields where replaced by V4L2 controls accessible with the
 
     -  .. row 1
 
-       -  struct :c:type:`struct video_audio`
+       -  struct ``video_audio``
 
        -  V4L2 Control ID
 
@@ -627,7 +629,7 @@ and ``VIDEO_AUDIO_MUTE`` flags where replaced by the boolean
 ``V4L2_CID_AUDIO_MUTE`` control.
 
 All V4L2 controls have a ``step`` attribute replacing the struct
-:c:type:`struct video_audio` ``step`` field. The V4L audio controls
+``video_audio`` ``step`` field. The V4L audio controls
 are assumed to range from 0 to 65535 with no particular reset value. The
 V4L2 API permits arbitrary limits and defaults which can be queried with
 the :ref:`VIDIOC_QUERYCTRL` ioctl. For general
@@ -640,11 +642,11 @@ Frame Buffer Overlay
 The V4L2 ioctls equivalent to ``VIDIOCGFBUF`` and ``VIDIOCSFBUF`` are
 :ref:`VIDIOC_G_FBUF <VIDIOC_G_FBUF>` and
 :ref:`VIDIOC_S_FBUF <VIDIOC_G_FBUF>`. The ``base`` field of struct
-:c:type:`struct video_buffer` remained unchanged, except V4L2 defines
+``video_buffer`` remained unchanged, except V4L2 defines
 a flag to indicate non-destructive overlays instead of a ``NULL``
 pointer. All other fields moved into the struct
-:ref:`v4l2_pix_format <v4l2-pix-format>` ``fmt`` substructure of
-struct :ref:`v4l2_framebuffer <v4l2-framebuffer>`. The ``depth``
+:c:type:`v4l2_pix_format` ``fmt`` substructure of
+struct :c:type:`v4l2_framebuffer`. The ``depth``
 field was replaced by ``pixelformat``. See :ref:`pixfmt-rgb` for a
 list of RGB formats and their respective color depths.
 
@@ -652,28 +654,28 @@ Instead of the special ioctls ``VIDIOCGWIN`` and ``VIDIOCSWIN`` V4L2
 uses the general-purpose data format negotiation ioctls
 :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>` and
 :ref:`VIDIOC_S_FMT <VIDIOC_G_FMT>`. They take a pointer to a struct
-:ref:`v4l2_format <v4l2-format>` as argument. Here the ``win`` member
+:c:type:`v4l2_format` as argument. Here the ``win`` member
 of the ``fmt`` union is used, a struct
-:ref:`v4l2_window <v4l2-window>`.
+:c:type:`v4l2_window`.
 
 The ``x``, ``y``, ``width`` and ``height`` fields of struct
-:c:type:`struct video_window` moved into struct
-:ref:`v4l2_rect <v4l2-rect>` substructure ``w`` of struct
-:c:type:`struct v4l2_window`. The ``chromakey``, ``clips``, and
+``video_window`` moved into struct
+:c:type:`v4l2_rect` substructure ``w`` of struct
+:c:type:`v4l2_window`. The ``chromakey``, ``clips``, and
 ``clipcount`` fields remained unchanged. Struct
-:c:type:`struct video_clip` was renamed to struct
-:ref:`v4l2_clip <v4l2-clip>`, also containing a struct
-:c:type:`struct v4l2_rect`, but the semantics are still the same.
+``video_clip`` was renamed to struct
+:c:type:`v4l2_clip`, also containing a struct
+:c:type:`v4l2_rect`, but the semantics are still the same.
 
 The ``VIDEO_WINDOW_INTERLACE`` flag was dropped. Instead applications
 must set the ``field`` field to ``V4L2_FIELD_ANY`` or
 ``V4L2_FIELD_INTERLACED``. The ``VIDEO_WINDOW_CHROMAKEY`` flag moved
-into struct :ref:`v4l2_framebuffer <v4l2-framebuffer>`, under the new
+into struct :c:type:`v4l2_framebuffer`, under the new
 name ``V4L2_FBUF_FLAG_CHROMAKEY``.
 
 In V4L, storing a bitmap pointer in ``clips`` and setting ``clipcount``
 to ``VIDEO_CLIP_BITMAP`` (-1) requests bitmap clipping, using a fixed
-size bitmap of 1024 × 625 bits. Struct :c:type:`struct v4l2_window`
+size bitmap of 1024 × 625 bits. Struct :c:type:`v4l2_window`
 has a separate ``bitmap`` pointer field for this purpose and the bitmap
 size is determined by ``w.width`` and ``w.height``.
 
@@ -686,24 +688,24 @@ Cropping
 
 To capture only a subsection of the full picture V4L defines the
 ``VIDIOCGCAPTURE`` and ``VIDIOCSCAPTURE`` ioctls using struct
-:c:type:`struct video_capture`. The equivalent V4L2 ioctls are
+``video_capture``. The equivalent V4L2 ioctls are
 :ref:`VIDIOC_G_CROP <VIDIOC_G_CROP>` and
 :ref:`VIDIOC_S_CROP <VIDIOC_G_CROP>` using struct
-:ref:`v4l2_crop <v4l2-crop>`, and the related
+:c:type:`v4l2_crop`, and the related
 :ref:`VIDIOC_CROPCAP` ioctl. This is a rather
 complex matter, see :ref:`crop` for details.
 
 The ``x``, ``y``, ``width`` and ``height`` fields moved into struct
-:ref:`v4l2_rect <v4l2-rect>` substructure ``c`` of struct
-:c:type:`struct v4l2_crop`. The ``decimation`` field was dropped. In
+:c:type:`v4l2_rect` substructure ``c`` of struct
+:c:type:`v4l2_crop`. The ``decimation`` field was dropped. In
 the V4L2 API the scaling factor is implied by the size of the cropping
 rectangle and the size of the captured or overlaid image.
 
 The ``VIDEO_CAPTURE_ODD`` and ``VIDEO_CAPTURE_EVEN`` flags to capture
 only the odd or even field, respectively, were replaced by
 ``V4L2_FIELD_TOP`` and ``V4L2_FIELD_BOTTOM`` in the field named
-``field`` of struct :ref:`v4l2_pix_format <v4l2-pix-format>` and
-struct :ref:`v4l2_window <v4l2-window>`. These structures are used to
+``field`` of struct :c:type:`v4l2_pix_format` and
+struct :c:type:`v4l2_window`. These structures are used to
 select a capture or overlay format with the
 :ref:`VIDIOC_S_FMT <VIDIOC_G_FMT>` ioctl.
 
@@ -728,8 +730,8 @@ To select an image format and size, V4L provides the ``VIDIOCSPICT`` and
 ``VIDIOCSWIN`` ioctls. V4L2 uses the general-purpose data format
 negotiation ioctls :ref:`VIDIOC_G_FMT <VIDIOC_G_FMT>` and
 :ref:`VIDIOC_S_FMT <VIDIOC_G_FMT>`. They take a pointer to a struct
-:ref:`v4l2_format <v4l2-format>` as argument, here the struct
-:ref:`v4l2_pix_format <v4l2-pix-format>` named ``pix`` of its
+:c:type:`v4l2_format` as argument, here the struct
+:c:type:`v4l2_pix_format` named ``pix`` of its
 ``fmt`` union is used.
 
 For more information about the V4L2 read interface see :ref:`rw`.
@@ -836,7 +838,7 @@ with the following parameters:
 
     -  .. row 1
 
-       -  struct :ref:`v4l2_vbi_format <v4l2-vbi-format>`
+       -  struct :c:type:`v4l2_vbi_format`
 
        -  V4L, BTTV driver
 
@@ -887,14 +889,14 @@ with the following parameters:
 
 Undocumented in the V4L specification, in Linux 2.3 the
 ``VIDIOCGVBIFMT`` and ``VIDIOCSVBIFMT`` ioctls using struct
-:c:type:`struct vbi_format` were added to determine the VBI image
+``vbi_format`` were added to determine the VBI image
 parameters. These ioctls are only partially compatible with the V4L2 VBI
 interface specified in :ref:`raw-vbi`.
 
 An ``offset`` field does not exist, ``sample_format`` is supposed to be
 ``VIDEO_PALETTE_RAW``, equivalent to ``V4L2_PIX_FMT_GREY``. The
 remaining fields are probably equivalent to struct
-:ref:`v4l2_vbi_format <v4l2-vbi-format>`.
+:c:type:`v4l2_vbi_format`.
 
 Apparently only the Zoran (ZR 36120) driver implements these ioctls. The
 semantics differ from those specified for V4L2 in two ways. The

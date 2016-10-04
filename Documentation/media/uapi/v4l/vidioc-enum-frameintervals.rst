@@ -15,7 +15,8 @@ VIDIOC_ENUM_FRAMEINTERVALS - Enumerate frame intervals
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_frmivalenum *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_ENUM_FRAMEINTERVALS, struct v4l2_frmivalenum *argp )
+    :name: VIDIOC_ENUM_FRAMEINTERVALS
 
 
 Arguments
@@ -24,11 +25,8 @@ Arguments
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
 
-``request``
-    VIDIOC_ENUM_FRAMEINTERVALS
-
 ``argp``
-    Pointer to a struct :ref:`v4l2_frmivalenum <v4l2-frmivalenum>`
+    Pointer to a struct :c:type:`v4l2_frmivalenum`
     structure that contains a pixel format and size and receives a frame
     interval.
 
@@ -73,7 +71,9 @@ the device supports. Only for the ``V4L2_FRMIVAL_TYPE_DISCRETE`` type
 does it make sense to increase the index value to receive more frame
 intervals.
 
-.. note:: The order in which the frame intervals are returned has no
+.. note::
+
+   The order in which the frame intervals are returned has no
    special meaning. In particular does it not say anything about potential
    default frame intervals.
 
@@ -101,7 +101,9 @@ the application, *OUT* denotes values that the driver fills in. The
 application should zero out all members except for the *IN* fields.
 
 
-.. _v4l2-frmival-stepwise:
+.. c:type:: v4l2_frmival_stepwise
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_frmival_stepwise
     :header-rows:  0
@@ -111,7 +113,7 @@ application should zero out all members except for the *IN* fields.
 
     -  .. row 1
 
-       -  struct :ref:`v4l2_fract <v4l2-fract>`
+       -  struct :c:type:`v4l2_fract`
 
        -  ``min``
 
@@ -119,7 +121,7 @@ application should zero out all members except for the *IN* fields.
 
     -  .. row 2
 
-       -  struct :ref:`v4l2_fract <v4l2-fract>`
+       -  struct :c:type:`v4l2_fract`
 
        -  ``max``
 
@@ -127,7 +129,7 @@ application should zero out all members except for the *IN* fields.
 
     -  .. row 3
 
-       -  struct :ref:`v4l2_fract <v4l2-fract>`
+       -  struct :c:type:`v4l2_fract`
 
        -  ``step``
 
@@ -135,7 +137,7 @@ application should zero out all members except for the *IN* fields.
 
 
 
-.. _v4l2-frmivalenum:
+.. c:type:: v4l2_frmivalenum
 
 .. flat-table:: struct v4l2_frmivalenum
     :header-rows:  0
@@ -198,7 +200,7 @@ application should zero out all members except for the *IN* fields.
     -  .. row 7
 
        -
-       -  struct :ref:`v4l2_fract <v4l2-fract>`
+       -  struct :c:type:`v4l2_fract`
 
        -  ``discrete``
 
@@ -207,7 +209,7 @@ application should zero out all members except for the *IN* fields.
     -  .. row 8
 
        -
-       -  struct :ref:`v4l2_frmival_stepwise <v4l2-frmival-stepwise>`
+       -  struct :c:type:`v4l2_frmival_stepwise`
 
        -  ``stepwise``
 
@@ -229,7 +231,9 @@ Enums
 =====
 
 
-.. _v4l2-frmivaltypes:
+.. c:type:: v4l2_frmivaltypes
+
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. flat-table:: enum v4l2_frmivaltypes
     :header-rows:  0

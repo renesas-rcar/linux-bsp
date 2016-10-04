@@ -6,8 +6,6 @@
 V4L2_PIX_FMT_Y12I ('Y12I')
 **************************
 
-*man V4L2_PIX_FMT_Y12I(2)*
-
 Interleaved grey-scale image, e.g. from a stereo-pair
 
 
@@ -32,7 +30,6 @@ interleaved pixel.
 .. flat-table::
     :header-rows:  0
     :stub-columns: 0
-    :widths:       2 1 1
 
 
     -  .. row 1

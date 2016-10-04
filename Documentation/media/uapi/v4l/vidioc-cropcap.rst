@@ -15,7 +15,8 @@ VIDIOC_CROPCAP - Information about the video cropping and scaling abilities
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, struct v4l2_cropcap *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_CROPCAP, struct v4l2_cropcap *argp )
+    :name: VIDIOC_CROPCAP
 
 
 Arguments
@@ -23,9 +24,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_CROPCAP
 
 ``argp``
 
@@ -52,7 +50,9 @@ support cropping and/or scaling and/or have non-square pixels, and for
 overlay devices.
 
 
-.. _v4l2-cropcap:
+.. c:type:: v4l2_cropcap
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_cropcap
     :header-rows:  0
@@ -69,7 +69,7 @@ overlay devices.
        -  Type of the data stream, set by the application. Only these types
 	  are valid here: ``V4L2_BUF_TYPE_VIDEO_CAPTURE``,
 	  ``V4L2_BUF_TYPE_VIDEO_OUTPUT`` and
-	  ``V4L2_BUF_TYPE_VIDEO_OVERLAY``. See :ref:`v4l2-buf-type`.
+	  ``V4L2_BUF_TYPE_VIDEO_OVERLAY``. See :c:type:`v4l2_buf_type`.
 
     -  .. row 2
 
@@ -98,7 +98,7 @@ overlay devices.
 
     -  .. row 4
 
-       -  struct :ref:`v4l2_fract <v4l2-fract>`
+       -  struct :c:type:`v4l2_fract`
 
        -  ``pixelaspect``
 
@@ -113,6 +113,8 @@ overlay devices.
 
 
 .. _v4l2-rect-crop:
+
+.. tabularcolumns:: |p{4.4cm}|p{4.4cm}|p{8.7cm}|
 
 .. flat-table:: struct v4l2_rect
     :header-rows:  0
@@ -163,5 +165,8 @@ appropriately. The generic error codes are described at the
 :ref:`Generic Error Codes <gen-errors>` chapter.
 
 EINVAL
-    The struct :ref:`v4l2_cropcap <v4l2-cropcap>` ``type`` is
+    The struct :c:type:`v4l2_cropcap` ``type`` is
     invalid.
+
+ENODATA
+    Cropping is not supported for this input or output.

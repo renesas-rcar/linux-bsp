@@ -15,9 +15,11 @@ VIDIOC_G_JPEGCOMP - VIDIOC_S_JPEGCOMP
 Synopsis
 ========
 
-.. cpp:function:: int ioctl( int fd, int request, v4l2_jpegcompression *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_G_JPEGCOMP, v4l2_jpegcompression *argp )
+    :name: VIDIOC_G_JPEGCOMP
 
-.. cpp:function:: int ioctl( int fd, int request, const v4l2_jpegcompression *argp )
+.. c:function:: int ioctl( int fd, VIDIOC_S_JPEGCOMP, const v4l2_jpegcompression *argp )
+    :name: VIDIOC_S_JPEGCOMP
 
 
 Arguments
@@ -25,9 +27,6 @@ Arguments
 
 ``fd``
     File descriptor returned by :ref:`open() <func-open>`.
-
-``request``
-    VIDIOC_G_JPEGCOMP, VIDIOC_S_JPEGCOMP
 
 ``argp``
 
@@ -55,7 +54,9 @@ encoded. If you omit them, applications assume you've used standard
 encoding. You usually do want to add them.
 
 
-.. _v4l2-jpegcompression:
+.. tabularcolumns:: |p{1.2cm}|p{3.0cm}|p{13.3cm}|
+
+.. c:type:: v4l2_jpegcompression
 
 .. flat-table:: struct v4l2_jpegcompression
     :header-rows:  0
@@ -126,6 +127,7 @@ encoding. You usually do want to add them.
 	  and ignore this field.
 
 
+.. tabularcolumns:: |p{6.6cm}|p{2.2cm}|p{8.7cm}|
 
 .. _jpeg-markers:
 
