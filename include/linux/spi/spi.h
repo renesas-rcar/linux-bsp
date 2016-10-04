@@ -28,8 +28,8 @@ struct spi_transfer;
 struct spi_flash_read_message;
 
 /*
- * INTERFACES between SPI master-side drivers and SPI infrastructure.
- * (There's no SPI slave support for Linux yet...)
+ * INTERFACES between SPI master-side drivers and SPI slave protocol handers,
+ * and SPI infrastructure.
  */
 extern struct bus_type spi_bus_type;
 
@@ -373,6 +373,7 @@ static inline void spi_unregister_driver(struct spi_driver *sdrv)
  * @handle_err: the subsystem calls the driver to handle an error that occurs
  *		in the generic implementation of transfer_one_message().
  * @unprepare_message: undo any work done by prepare_message().
+ * @slave_abort: abort the ongoing transfer request on an SPI slave controller
  * @spi_flash_read: to support spi-controller hardwares that provide
  *                  accelerated interface to read from flash devices.
  * @flash_read_supported: spi device supports flash read
@@ -442,6 +443,7 @@ struct spi_master {
 #define SPI_MASTER_NO_TX	BIT(2)		/* can't do buffer write */
 #define SPI_MASTER_MUST_RX      BIT(3)		/* requires rx */
 #define SPI_MASTER_MUST_TX      BIT(4)		/* requires tx */
+#define SPI_CONTROLLER_IS_SLAVE	BIT(5)		/* SPI slave controller */
 
 	/*
 	 * on some hardware transfer / message size may be constrained
@@ -535,6 +537,7 @@ struct spi_master {
 			       struct spi_message *message);
 	int (*unprepare_message)(struct spi_master *master,
 				 struct spi_message *message);
+	int (*slave_abort)(struct spi_master *spi);
 	int (*spi_flash_read)(struct  spi_device *spi,
 			      struct spi_flash_read_message *msg);
 	bool (*flash_read_supported)(struct spi_device *spi);
@@ -587,6 +590,15 @@ static inline void spi_master_put(struct spi_master *master)
 {
 	if (master)
 		put_device(&master->dev);
+}
+
+static inline bool spi_controller_is_slave(struct spi_master *ctlr)
+{
+#ifdef CONFIG_SPI_SLAVE
+	return ctlr->flags & SPI_CONTROLLER_IS_SLAVE;
+#else
+	return false;
+#endif
 }
 
 /* PM calls that need to be issued by the driver */
@@ -906,6 +918,7 @@ extern int spi_setup(struct spi_device *spi);
 extern int spi_async(struct spi_device *spi, struct spi_message *message);
 extern int spi_async_locked(struct spi_device *spi,
 			    struct spi_message *message);
+extern int spi_slave_abort(struct spi_device *spi);
 
 static inline size_t
 spi_max_message_size(struct spi_device *spi)
