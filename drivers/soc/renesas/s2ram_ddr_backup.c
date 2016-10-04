@@ -61,6 +61,182 @@ static struct rcar_ip *common_ips[] = {
 	NULL,
 };
 
+static unsigned int read_reg(unsigned int size, void __iomem *addr)
+{
+	unsigned int ret = 0;
+
+	switch (size) {
+	case 8:
+		ret = readb_relaxed(addr);
+		break;
+	case 16:
+		ret = readw_relaxed(addr);
+		break;
+	case 32:
+		ret = readl_relaxed(addr);
+		break;
+	default:
+		pr_debug("%s: Wrong access size\n", __func__);
+		break;
+	}
+
+	return ret;
+}
+
+static void write_reg(unsigned int size, unsigned int value,
+			void __iomem *addr)
+{
+	switch (size) {
+	case 8:
+		writeb_relaxed(value, addr);
+		break;
+	case 16:
+		writew_relaxed(value, addr);
+		break;
+	case 32:
+		writel_relaxed(value, addr);
+		break;
+	default:
+		pr_debug("%s: Wrong access size\n", __func__);
+		break;
+	}
+}
+
+static int _do_ioremap(struct rcar_ip *ip)
+{
+	ip->virt_addr = ioremap_nocache(ip->base_addr, ip->size);
+
+	if (ip->virt_addr == NULL) {
+		pr_debug("s2ram ioremap: Could not remap IP register\n");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+static int _do_backup(struct rcar_ip *ip)
+{
+	struct hw_register *ip_reg;
+	void __iomem *virt_addr = NULL;
+	int reg_count = 0;
+	unsigned int j;
+
+	if (ip->virt_addr == NULL) {
+		pr_debug("s2ram backup: Registers have not been mapped\n");
+		return -EINVAL;
+	}
+
+	ip_reg    = ip->ip_reg;
+	reg_count = ip->reg_count;
+	virt_addr = ip->virt_addr;
+
+	pr_debug("s2ram backup:  Working with %s, size 0x%x, virt_addr 0x%p\n",
+		  ip->ip_name, ip->size, ip->virt_addr);
+
+	for (j = 0; j < reg_count; j++) {
+		pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
+			  ip_reg[j].reg_name, ip_reg[j].access_size,
+			  ip_reg[j].reg_offset, ip_reg[j].reg_value);
+
+		ip_reg[j].reg_value = read_reg(ip_reg[j].access_size,
+				virt_addr + ip_reg[j].reg_offset);
+
+		pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
+			  ip_reg[j].reg_name, ip_reg[j].access_size,
+			  ip_reg[j].reg_offset, ip_reg[j].reg_value);
+	}
+
+	return 0;
+}
+
+static int _do_restore(struct rcar_ip *ip)
+{
+	struct hw_register *ip_reg;
+	void __iomem *virt_addr = NULL;
+	int reg_count = 0;
+	unsigned int j;
+
+	if (ip->virt_addr == NULL) {
+		pr_debug("s2ram restore: Registers have not been mapped\n");
+		return -EINVAL;
+	}
+
+	ip_reg    = ip->ip_reg;
+	reg_count = ip->reg_count;
+	virt_addr = ip->virt_addr;
+
+	pr_debug("s2ram restore: Working with %s, size 0x%x, virt_addr 0x%p\n",
+		  ip->ip_name, ip->size, ip->virt_addr);
+
+	if (strcmp(ip->ip_name, "PFC") && strcmp(ip->ip_name, "RWDT")) {
+		for (j = 0; j < reg_count; j++) {
+			pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
+				ip_reg[j].reg_name,
+				ip_reg[j].access_size,
+				ip_reg[j].reg_offset,
+				ip_reg[j].reg_value);
+
+			write_reg(ip_reg[j].access_size, ip_reg[j].reg_value,
+				virt_addr + ip_reg[j].reg_offset);
+
+			pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
+				ip_reg[j].reg_name,
+				ip_reg[j].access_size,
+				ip_reg[j].reg_offset,
+				read_reg(ip_reg[j].access_size, virt_addr +
+					ip_reg[j].reg_offset));
+		}
+	} else if (!strcmp(ip->ip_name, "RWDT")) {
+		/* For RWDT registers, need special way to write */
+		for (j = 0; j < reg_count; j++) {
+			pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
+				ip_reg[j].reg_name,
+				ip_reg[j].access_size,
+				ip_reg[j].reg_offset,
+				ip_reg[j].reg_value);
+
+			/* Only two registers are backup/restored.
+			 * If offset is zero, it is RWTCNT register
+			 * and RWTCNT_CODE is used for writing.
+			 * Otherwise, RWTCSRA_CODE is used for RWTCSRA register.
+			*/
+			writel_relaxed(ip_reg[j].reg_value |
+				(!ip_reg[j].reg_offset ? RWTCNT_CODE
+					: RWTCSRA_CODE),
+				virt_addr + ip_reg[j].reg_offset);
+
+			pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
+				ip_reg[j].reg_name,
+				ip_reg[j].access_size,
+				ip_reg[j].reg_offset,
+				read_reg(ip_reg[j].access_size, virt_addr +
+					ip_reg[j].reg_offset));
+		}
+	} else {
+		/* For PFC registers, need to unlock before writing */
+		for (j = 0; j < reg_count; j++) {
+			pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
+				ip_reg[j].reg_name,
+				ip_reg[j].access_size,
+				ip_reg[j].reg_offset,
+				ip_reg[j].reg_value);
+
+			writel_relaxed(~ip_reg[j].reg_value,
+				virt_addr + ip_reg[0].reg_offset);
+			writel_relaxed(ip_reg[j].reg_value,
+					virt_addr +
+					ip_reg[j].reg_offset);
+			pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
+				ip_reg[j].reg_name,
+				ip_reg[j].access_size,
+				ip_reg[j].reg_offset,
+				readl_relaxed(virt_addr +
+					ip_reg[j].reg_offset));
+		}
+	}
+
+	return 0;
+}
+
 /*
  * Handle backup/restore of IP register
  *     ip: IP to be processed
@@ -69,175 +245,27 @@ static struct rcar_ip *common_ips[] = {
  *         DO_BACKUP: backup
  *         DO_RESTORE: restore
  */
-int handle_registers(struct rcar_ip *ip, unsigned int handling)
+int rcar_handle_registers(struct rcar_ip *ip, unsigned int handling)
 {
-	int reg_count = 0;
-	unsigned int j;
-	void __iomem *virt_addr = NULL;
-	struct hw_register *ip_reg;
+	int ret = 0;
 
-	if (handling == DO_IOREMAP) { /* ioremap */
-		/* Called during boot process */
-		virt_addr = ioremap_nocache(ip->base_addr, ip->size);
-		if (virt_addr == NULL) {
-			pr_debug("s2ram: %s: Could not remap IP register\n",
-				__func__);
-			return -ENOMEM;
-		}
-
-		ip->virt_addr = virt_addr;
-
-		pr_debug("s2ram ioremap: %s: Working with %s, size 0x%x, virt_addr 0x%p\n",
-			__func__, ip->ip_name, ip->size, ip->virt_addr);
-
-	} else if (handling == DO_BACKUP) { /* backup */
-		if (ip->virt_addr == NULL) {
-			pr_debug("s2ram backup: %s: iomem has not been mapped\n",
-				__func__);
-			return -ENOMEM;
-		}
-
-		ip_reg    = ip->ip_reg;
-		reg_count = ip->reg_count;
-		virt_addr = ip->virt_addr;
-
-		pr_debug("s2ram backup: %s:  Working with %s, size 0x%x, virt_addr 0x%p\n",
-			  __func__, ip->ip_name, ip->size, ip->virt_addr);
-
-		for (j = 0; j < reg_count; j++) {
-			pr_debug("%-20ss, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
-				  ip_reg[j].reg_name, ip_reg[j].access_size,
-				  ip_reg[j].reg_offset, ip_reg[j].reg_value);
-
-			switch (ip_reg[j].access_size) {
-			case 8:
-				ip_reg[j].reg_value =
-					readb_relaxed(virt_addr +
-						      ip_reg[j].reg_offset);
-				break;
-			case 16:
-				ip_reg[j].reg_value =
-					readw_relaxed(virt_addr +
-						      ip_reg[j].reg_offset);
-				break;
-			case 32:
-				ip_reg[j].reg_value =
-					readl_relaxed(virt_addr +
-						      ip_reg[j].reg_offset);
-				break;
-			}
-
-			pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
-				  ip_reg[j].reg_name, ip_reg[j].access_size,
-				  ip_reg[j].reg_offset, ip_reg[j].reg_value);
-		}
-	} else { /* restore */
-		if (ip->virt_addr == NULL) {
-			pr_debug("s2ram backup: %s: iomem has not been mapped\n",
-				__func__);
-			return -ENOMEM;
-		}
-
-		ip_reg    = ip->ip_reg;
-		reg_count = ip->reg_count;
-		virt_addr = ip->virt_addr;
-
-		pr_debug("s2ram restore: %s: Working with %s, size 0x%x, virt_addr 0x%p\n",
-			  __func__, ip->ip_name, ip->size, ip->virt_addr);
-
-		if (strcmp(ip->ip_name, "PFC") && strcmp(ip->ip_name, "RWDT")) {
-			for (j = 0; j < reg_count; j++) {
-				pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
-					ip_reg[j].reg_name,
-					ip_reg[j].access_size,
-					ip_reg[j].reg_offset,
-					ip_reg[j].reg_value);
-
-				switch (ip_reg[j].access_size) {
-				case 8:
-					writeb_relaxed(ip_reg[j].reg_value,
-						virt_addr +
-						ip_reg[j].reg_offset);
-					break;
-				case 16:
-					writew_relaxed(ip_reg[j].reg_value,
-						virt_addr +
-						ip_reg[j].reg_offset);
-					break;
-				case 32:
-					writel_relaxed(ip_reg[j].reg_value,
-						virt_addr +
-						ip_reg[j].reg_offset);
-					break;
-				}
-
-				pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
-					ip_reg[j].reg_name,
-					ip_reg[j].access_size,
-					ip_reg[j].reg_offset,
-					readl_relaxed(virt_addr +
-						ip_reg[j].reg_offset));
-			}
-		} else if (!strcmp(ip->ip_name, "RWDT")) {
-			/* For RWDT registers, need special way to write */
-			for (j = 0; j < reg_count; j++) {
-				pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
-					ip_reg[j].reg_name,
-					ip_reg[j].access_size,
-					ip_reg[j].reg_offset,
-					ip_reg[j].reg_value);
-
-				writel_relaxed(ip_reg[j].reg_value |
-					(!ip_reg[j].reg_offset ? RWTCNT_CODE
-						: RWTCSRA_CODE),
-					virt_addr +
-					ip_reg[j].reg_offset);
-					switch (ip_reg[j].access_size) {
-					case 8:
-					pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
-						ip_reg[j].reg_name,
-						ip_reg[j].access_size,
-						ip_reg[j].reg_offset,
-						readb_relaxed(virt_addr +
-							ip_reg[j].reg_offset));
-					break;
-					case 16:
-					pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
-						ip_reg[j].reg_name,
-						ip_reg[j].access_size,
-						ip_reg[j].reg_offset,
-						readw(virt_addr +
-							ip_reg[j].reg_offset));
-					break;
-					}
-			}
-		} else {
-			/* For PFC registers, need to unlock before writing */
-			for (j = 0; j < reg_count; j++) {
-				pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
-					ip_reg[j].reg_name,
-					ip_reg[j].access_size,
-					ip_reg[j].reg_offset,
-					ip_reg[j].reg_value);
-
-				writel_relaxed(~ip_reg[j].reg_value,
-					virt_addr + ip_reg[0].reg_offset);
-				writel_relaxed(ip_reg[j].reg_value,
-						virt_addr +
-						ip_reg[j].reg_offset);
-				pr_debug("%-20s, access_size 0x%-2x, offset 0x%-4x, value 0x%x\n",
-					ip_reg[j].reg_name,
-					ip_reg[j].access_size,
-					ip_reg[j].reg_offset,
-					readl_relaxed(virt_addr +
-						ip_reg[j].reg_offset));
-			}
-		}
+	switch (handling) {
+	case DO_IOREMAP:
+		ret = _do_ioremap(ip);
+		break;
+	case DO_BACKUP:
+		ret = _do_backup(ip);
+		break;
+	case DO_RESTORE:
+		ret = _do_restore(ip);
+		break;
+	default:
+		ret = -EINVAL;
 	}
 
-	return 0;
+	return ret;
 }
-EXPORT_SYMBOL(handle_registers);
+EXPORT_SYMBOL(rcar_handle_registers);
 
 /*
  * Handle backup/restore of IPs
@@ -247,7 +275,7 @@ EXPORT_SYMBOL(handle_registers);
  *         DO_BACKUP: backup
  *         DO_RESTORE: restore
  */
-int handle_ips(struct rcar_ip **ip, unsigned int handling)
+int rcar_handle_ips(struct rcar_ip **ip, unsigned int handling)
 {
 	struct rcar_ip *working_ip;
 	unsigned int i = 0;
@@ -255,45 +283,45 @@ int handle_ips(struct rcar_ip **ip, unsigned int handling)
 
 	while (ip[i] != NULL) {
 		working_ip = ip[i];
-		ret = handle_registers(working_ip, handling);
+		ret = rcar_handle_registers(working_ip, handling);
 		i++;
 	}
 
 	return ret;
 }
-EXPORT_SYMBOL(handle_ips);
+EXPORT_SYMBOL(rcar_handle_ips);
 
 #ifdef CONFIG_PM_SLEEP
-static int ddr_bck_suspend(void)
+static int ddr_backup_suspend(void)
 {
 	pr_debug("%s\n", __func__);
 
-	return handle_ips(common_ips, DO_BACKUP);
+	return rcar_handle_ips(common_ips, DO_BACKUP);
 }
 
-static void ddr_bck_resume(void)
+static void ddr_backup_resume(void)
 {
 	pr_debug("%s\n", __func__);
 
-	handle_ips(common_ips, DO_RESTORE);
+	rcar_handle_ips(common_ips, DO_RESTORE);
 }
 
-static struct syscore_ops ddr_bck_syscore_ops = {
-	.suspend = ddr_bck_suspend,
-	.resume = ddr_bck_resume,
+static struct syscore_ops ddr_backup_syscore_ops = {
+	.suspend = ddr_backup_suspend,
+	.resume = ddr_backup_resume,
 };
 
-static int ddr_bck_init(void)
+static int ddr_backup_init(void)
 {
 	int ret;
 
 	/* Map register for all common IPs */
-	ret = handle_ips(common_ips, DO_IOREMAP);
+	ret = rcar_handle_ips(common_ips, DO_IOREMAP);
 
-	register_syscore_ops(&ddr_bck_syscore_ops);
+	register_syscore_ops(&ddr_backup_syscore_ops);
 
 	return ret;
 }
-core_initcall(ddr_bck_init);
+core_initcall(ddr_backup_init);
 
 #endif /* CONFIG_PM_SLEEP */

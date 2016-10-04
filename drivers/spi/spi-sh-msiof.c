@@ -314,7 +314,7 @@ static int msiof_save_regs(struct platform_device *pdev)
 		if (!ip->virt_addr)
 			ip->virt_addr = priv->mapbase;
 
-		ret = handle_registers(ip, DO_BACKUP);
+		ret = rcar_handle_registers(ip, DO_BACKUP);
 		pr_debug("%s: Backup %s register\n", __func__, ip->ip_name);
 	} else
 		pr_err("%s: Failed to find MSIOF device\n", __func__);
@@ -328,7 +328,7 @@ static int msiof_restore_regs(struct platform_device *pdev)
 	int ret = -ENODEV;
 
 	if (ip) {
-		ret = handle_registers(ip, DO_RESTORE);
+		ret = rcar_handle_registers(ip, DO_RESTORE);
 		pr_debug("%s: Restore %s register\n", __func__, ip->ip_name);
 	} else
 		pr_err("%s: Failed to find MSIOF device\n", __func__);
@@ -1576,7 +1576,9 @@ static int sh_msiof_spi_suspend(struct device *dev)
 #ifdef CONFIG_RCAR_DDR_BACKUP
 	struct platform_device *pdev = to_platform_device(dev);
 
+	pm_runtime_get_sync(dev);
 	ret = msiof_save_regs(pdev);
+	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }
@@ -1587,7 +1589,9 @@ static int sh_msiof_spi_resume(struct device *dev)
 #ifdef CONFIG_RCAR_DDR_BACKUP
 	struct platform_device *pdev = to_platform_device(dev);
 
+	pm_runtime_get_sync(dev);
 	ret = msiof_restore_regs(pdev);
+	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }

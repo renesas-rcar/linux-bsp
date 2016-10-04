@@ -37,18 +37,6 @@ struct rcar_du_hdmienc {
 
 #ifdef CONFIG_RCAR_DDR_BACKUP
 static struct hw_register hdmi0_ip_regs[] = {
-/* Interrupt Registers */
-	{"HDMI_IH_MUTE_FC_STAT0", 0x0180, 8, 0},
-	{"HDMI_IH_MUTE_FC_STAT1", 0x0181, 8, 0},
-	{"HDMI_IH_MUTE_FC_STAT2", 0x0182, 8, 0},
-	{"HDMI_IH_MUTE_AS_STAT0", 0x0183, 8, 0},
-	{"HDMI_IH_MUTE_PHY_STAT0", 0x0184, 8, 0},
-	{"HDMI_IH_MUTE_I2CM_STAT0", 0x0185, 8, 0},
-	{"HDMI_IH_MUTE_CEC_STAT0", 0x0186, 8, 0},
-	{"HDMI_IH_MUTE_VP_STAT0", 0x0187, 8, 0},
-	{"HDMI_IH_MUTE_I2CMPHY_STAT0", 0x0188, 8, 0},
-	{"HDMI_IH_MUTE", 0x01FF, 8, 0},
-
 /* Video Packetizer Registers */
 	{"HDMI_VP_PR_CD", 0x0801, 8, 0},
 	{"HDMI_VP_STUFF", 0x0802, 8, 0},
@@ -68,7 +56,6 @@ static struct hw_register hdmi0_ip_regs[] = {
 	{"HDMI_TX_RCRDATA1", 0x0205, 8, 0},
 	{"HDMI_TX_BCBDATA0", 0x0206, 8, 0},
 	{"HDMI_TX_BCBDATA1", 0x0207, 8, 0},
-
 
 /* Frame Composer Registers */
 	{"HDMI_FC_INVIDCONF", 0x1000, 8, 0},
@@ -349,21 +336,21 @@ static struct hw_register hdmi0_ip_regs[] = {
 	{"HDMI_PHY_I2CM_FS_SCL_HCNT_0_ADDR", 0x3030, 8, 0},
 	{"HDMI_PHY_I2CM_FS_SCL_LCNT_1_ADDR", 0x3031, 8, 0},
 	{"HDMI_PHY_I2CM_FS_SCL_LCNT_0_ADDR", 0x3032, 8, 0},
+
+/* Interrupt Registers */
+	{"HDMI_IH_MUTE_FC_STAT0", 0x0180, 8, 0},
+	{"HDMI_IH_MUTE_FC_STAT1", 0x0181, 8, 0},
+	{"HDMI_IH_MUTE_FC_STAT2", 0x0182, 8, 0},
+	{"HDMI_IH_MUTE_AS_STAT0", 0x0183, 8, 0},
+	{"HDMI_IH_MUTE_PHY_STAT0", 0x0184, 8, 0},
+	{"HDMI_IH_MUTE_I2CM_STAT0", 0x0185, 8, 0},
+	{"HDMI_IH_MUTE_CEC_STAT0", 0x0186, 8, 0},
+	{"HDMI_IH_MUTE_VP_STAT0", 0x0187, 8, 0},
+	{"HDMI_IH_MUTE_I2CMPHY_STAT0", 0x0188, 8, 0},
+	{"HDMI_IH_MUTE", 0x01FF, 8, 0},
 };
 
 static struct hw_register hdmi1_ip_regs[] = {
-/* Interrupt Registers */
-	{"HDMI_IH_MUTE_FC_STAT0", 0x0180, 8, 0},
-	{"HDMI_IH_MUTE_FC_STAT1", 0x0181, 8, 0},
-	{"HDMI_IH_MUTE_FC_STAT2", 0x0182, 8, 0},
-	{"HDMI_IH_MUTE_AS_STAT0", 0x0183, 8, 0},
-	{"HDMI_IH_MUTE_PHY_STAT0", 0x0184, 8, 0},
-	{"HDMI_IH_MUTE_I2CM_STAT0", 0x0185, 8, 0},
-	{"HDMI_IH_MUTE_CEC_STAT0", 0x0186, 8, 0},
-	{"HDMI_IH_MUTE_VP_STAT0", 0x0187, 8, 0},
-	{"HDMI_IH_MUTE_I2CMPHY_STAT0", 0x0188, 8, 0},
-	{"HDMI_IH_MUTE", 0x01FF, 8, 0},
-
 /* Video Packetizer Registers */
 	{"HDMI_VP_PR_CD", 0x0801, 8, 0},
 	{"HDMI_VP_STUFF", 0x0802, 8, 0},
@@ -383,7 +370,6 @@ static struct hw_register hdmi1_ip_regs[] = {
 	{"HDMI_TX_RCRDATA1", 0x0205, 8, 0},
 	{"HDMI_TX_BCBDATA0", 0x0206, 8, 0},
 	{"HDMI_TX_BCBDATA1", 0x0207, 8, 0},
-
 
 /* Frame Composer Registers */
 	{"HDMI_FC_INVIDCONF", 0x1000, 8, 0},
@@ -664,6 +650,18 @@ static struct hw_register hdmi1_ip_regs[] = {
 	{"HDMI_PHY_I2CM_FS_SCL_HCNT_0_ADDR", 0x3030, 8, 0},
 	{"HDMI_PHY_I2CM_FS_SCL_LCNT_1_ADDR", 0x3031, 8, 0},
 	{"HDMI_PHY_I2CM_FS_SCL_LCNT_0_ADDR", 0x3032, 8, 0},
+
+/* Interrupt Registers */
+	{"HDMI_IH_MUTE_FC_STAT0", 0x0180, 8, 0},
+	{"HDMI_IH_MUTE_FC_STAT1", 0x0181, 8, 0},
+	{"HDMI_IH_MUTE_FC_STAT2", 0x0182, 8, 0},
+	{"HDMI_IH_MUTE_AS_STAT0", 0x0183, 8, 0},
+	{"HDMI_IH_MUTE_PHY_STAT0", 0x0184, 8, 0},
+	{"HDMI_IH_MUTE_I2CM_STAT0", 0x0185, 8, 0},
+	{"HDMI_IH_MUTE_CEC_STAT0", 0x0186, 8, 0},
+	{"HDMI_IH_MUTE_VP_STAT0", 0x0187, 8, 0},
+	{"HDMI_IH_MUTE_I2CMPHY_STAT0", 0x0188, 8, 0},
+	{"HDMI_IH_MUTE", 0x01FF, 8, 0},
 };
 
 static struct rcar_ip hdmi0_ip = {
@@ -694,13 +692,13 @@ void rcar_du_hdmienc_backup(struct drm_encoder *encoder)
 	int ret;
 
 	if (!ip->virt_addr) {
-		ret = handle_registers(ip, DO_IOREMAP);
+		ret = rcar_handle_registers(ip, DO_IOREMAP);
 		if (ret)
 			pr_err("%s: Failed to map %s register\n",
 				__func__, ip->ip_name);
 	}
 
-	ret = handle_registers(ip, DO_BACKUP);
+	ret = rcar_handle_registers(ip, DO_BACKUP);
 	if (ret)
 		pr_err("%s: Failed to backup %s register\n",
 			__func__, ip->ip_name);
@@ -719,12 +717,14 @@ void rcar_du_hdmienc_restore(struct drm_encoder *encoder)
 	temp = readl(smstpcr);
 	writel(temp & ~(0x3 << 28), smstpcr);
 
-	rcar_du_hdmienc_enable(encoder);
+	rcar_du_hdmienc_disable(encoder);
 
-	ret = handle_registers(ip, DO_RESTORE);
+	ret = rcar_handle_registers(ip, DO_RESTORE);
 	if (ret)
 		pr_err("%s: Failed to restore %s register\n",
 			__func__, ip->ip_name);
+
+	rcar_du_hdmienc_enable(encoder);
 }
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 
