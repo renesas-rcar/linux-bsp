@@ -30,6 +30,7 @@
 #include "amdgpu_pm.h"
 #include <drm/amdgpu_drm.h>
 #include "amdgpu_powerplay.h"
+#include "si_dpm.h"
 #include "cik_dpm.h"
 #include "vi_dpm.h"
 
@@ -52,8 +53,6 @@ static int amdgpu_powerplay_init(struct amdgpu_device *adev)
 		pp_init->chip_family = adev->family;
 		pp_init->chip_id = adev->asic_type;
 		pp_init->device = amdgpu_cgs_create_device(adev);
-		pp_init->powercontainment_enabled = amdgpu_powercontainment;
-
 		ret = amd_powerplay_init(pp_init, amd_pp);
 		kfree(pp_init);
 #endif
@@ -61,6 +60,15 @@ static int amdgpu_powerplay_init(struct amdgpu_device *adev)
 		amd_pp->pp_handle = (void *)adev;
 
 		switch (adev->asic_type) {
+#ifdef CONFIG_DRM_AMDGPU_SI
+		case CHIP_TAHITI:
+		case CHIP_PITCAIRN:
+		case CHIP_VERDE:
+		case CHIP_OLAND:
+		case CHIP_HAINAN:
+			amd_pp->ip_funcs = &si_dpm_ip_funcs;
+		break;
+#endif
 #ifdef CONFIG_DRM_AMDGPU_CIK
 		case CHIP_BONAIRE:
 		case CHIP_HAWAII:
@@ -72,15 +80,6 @@ static int amdgpu_powerplay_init(struct amdgpu_device *adev)
 			amd_pp->ip_funcs = &kv_dpm_ip_funcs;
 			break;
 #endif
-		case CHIP_TOPAZ:
-			amd_pp->ip_funcs = &iceland_dpm_ip_funcs;
-			break;
-		case CHIP_TONGA:
-			amd_pp->ip_funcs = &tonga_dpm_ip_funcs;
-			break;
-		case CHIP_FIJI:
-			amd_pp->ip_funcs = &fiji_dpm_ip_funcs;
-			break;
 		case CHIP_CARRIZO:
 		case CHIP_STONEY:
 			amd_pp->ip_funcs = &cz_dpm_ip_funcs;
@@ -102,15 +101,14 @@ static int amdgpu_pp_early_init(void *handle)
 	switch (adev->asic_type) {
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS10:
-		adev->pp_enabled = true;
-		break;
 	case CHIP_TONGA:
 	case CHIP_FIJI:
-		adev->pp_enabled = (amdgpu_powerplay == 0) ? false : true;
+	case CHIP_TOPAZ:
+		adev->pp_enabled = true;
 		break;
 	case CHIP_CARRIZO:
 	case CHIP_STONEY:
-		adev->pp_enabled = (amdgpu_powerplay > 0) ? true : false;
+		adev->pp_enabled = (amdgpu_powerplay == 0) ? false : true;
 		break;
 	/* These chips don't have powerplay implemenations */
 	case CHIP_BONAIRE:
@@ -118,7 +116,6 @@ static int amdgpu_pp_early_init(void *handle)
 	case CHIP_KABINI:
 	case CHIP_MULLINS:
 	case CHIP_KAVERI:
-	case CHIP_TOPAZ:
 	default:
 		adev->pp_enabled = false;
 		break;

@@ -143,8 +143,8 @@ static int rockchip_drm_bind(struct device *dev)
 	int ret;
 
 	drm_dev = drm_dev_alloc(&rockchip_drm_driver, dev);
-	if (!drm_dev)
-		return -ENOMEM;
+	if (IS_ERR(drm_dev))
+		return PTR_ERR(drm_dev);
 
 	dev_set_drvdata(dev, drm_dev);
 
@@ -155,6 +155,9 @@ static int rockchip_drm_bind(struct device *dev)
 	}
 
 	drm_dev->dev_private = private;
+
+	INIT_LIST_HEAD(&private->psr_list);
+	spin_lock_init(&private->psr_list_lock);
 
 	drm_mode_config_init(drm_dev);
 
