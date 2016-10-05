@@ -2109,9 +2109,10 @@ static int __maybe_unused ravb_suspend(struct device *dev)
 	if (netif_running(ndev)) {
 		netif_device_detach(ndev);
 		ret = ravb_close(ndev);
-		if (priv->chip_id != RCAR_GEN2)
-			ravb_ptp_stop(ndev);
 	}
+
+	if (priv->chip_id != RCAR_GEN2)
+		ravb_ptp_stop(ndev);
 
 	return ret;
 }
@@ -2149,10 +2150,10 @@ static int __maybe_unused ravb_resume(struct device *dev)
 	/* Set DBAT value */
 	ravb_write(ndev, priv->desc_bat_dma, DBAT);
 
-	if (netif_running(ndev)) {
-		if (priv->chip_id != RCAR_GEN2)
-			ravb_ptp_init(ndev, pdev);
+	if (priv->chip_id != RCAR_GEN2)
+		ravb_ptp_init(ndev, pdev);
 
+	if (netif_running(ndev)) {
 		ret = ravb_open(ndev);
 		if (ret < 0)
 			return ret;
