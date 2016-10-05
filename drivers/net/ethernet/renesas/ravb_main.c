@@ -2171,9 +2171,10 @@ static int ravb_suspend(struct device *dev)
 	if (netif_running(ndev)) {
 		netif_device_detach(ndev);
 		ret = ravb_close(ndev);
-		if (priv->chip_id != RCAR_GEN2)
-			ravb_ptp_stop(ndev);
 	}
+
+	if (priv->chip_id != RCAR_GEN2)
+		ravb_ptp_stop(ndev);
 
 	return ret;
 }
@@ -2185,36 +2186,33 @@ static int ravb_resume(struct device *dev)
 	struct platform_device *pdev = priv->pdev;
 	int ret = 0;
 
-	if (netif_running(ndev)) {
-		/* Set AVB config mode */
-		if (priv->chip_id == RCAR_GEN2) {
-			ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
-				   CCC_OPC_CONFIG, CCC);
-		} else {
-			ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_OPC) |
-				   CCC_OPC_CONFIG | CCC_GAC, CCC);
-		}
-
+	/* Set AVB config mode */
+	if (priv->chip_id == RCAR_GEN2) {
+		ravb_modify(ndev, CCC, CCC_OPC, CCC_OPC_CONFIG);
 		/* Set CSEL value */
-		ravb_write(ndev, (ravb_read(ndev, CCC) & ~CCC_CSEL) |
-			   CCC_CSEL_HPB, CCC);
+		ravb_modify(ndev, CCC, CCC_CSEL, CCC_CSEL_HPB);
+	} else {
+		ravb_modify(ndev, CCC, CCC_OPC, CCC_OPC_CONFIG |
+			    CCC_GAC | CCC_CSEL_HPB);
+	}
 
-		/* Set GTI value */
-		ravb_set_gti(ndev);
+	/* Set GTI value */
+	ravb_set_gti(ndev);
 
-		/* Request GTI loading */
-		ravb_write(ndev, ravb_read(ndev, GCCR) | GCCR_LTI, GCCR);
+	/* Request GTI loading */
+	ravb_write(ndev, ravb_read(ndev, GCCR) | GCCR_LTI, GCCR);
 
-		/* Set APSR */
-		if (priv->phy_interface == PHY_INTERFACE_MODE_RGMII_ID)
-			ravb_modify(ndev, APSR, APSR_DM, APSR_DM_TDM);
+	/* Set APSR */
+	if (priv->phy_interface == PHY_INTERFACE_MODE_RGMII_ID)
+		ravb_modify(ndev, APSR, APSR_DM, APSR_DM_TDM);
 
-		/* Set DBAT value */
-		ravb_write(ndev, priv->desc_bat_dma, DBAT);
+	/* Set DBAT value */
+	ravb_write(ndev, priv->desc_bat_dma, DBAT);
 
-		if (priv->chip_id != RCAR_GEN2)
-			ravb_ptp_init(ndev, pdev);
+	if (priv->chip_id != RCAR_GEN2)
+		ravb_ptp_init(ndev, pdev);
 
+	if (netif_running(ndev)) {
 		ret = ravb_open(ndev);
 		if (ret < 0)
 			return ret;
