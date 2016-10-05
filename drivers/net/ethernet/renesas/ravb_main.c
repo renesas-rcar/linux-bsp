@@ -2172,12 +2172,16 @@ static int ravb_remove(struct platform_device *pdev)
 static int __maybe_unused ravb_suspend(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
+	struct ravb_private *priv = netdev_priv(ndev);
 	int ret = 0;
 
 	if (netif_running(ndev)) {
 		netif_device_detach(ndev);
 		ret = ravb_close(ndev);
 	}
+
+	if (priv->chip_id != RCAR_GEN2)
+		ravb_ptp_stop(ndev);
 
 	return ret;
 }
@@ -2186,6 +2190,7 @@ static int __maybe_unused ravb_resume(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct ravb_private *priv = netdev_priv(ndev);
+	struct platform_device *pdev = priv->pdev;
 	int ret = 0;
 
 	/* All register have been reset to default values.
@@ -2210,6 +2215,9 @@ static int __maybe_unused ravb_resume(struct device *dev)
 
 	/* Restore descriptor base address table */
 	ravb_write(ndev, priv->desc_bat_dma, DBAT);
+
+	if (priv->chip_id != RCAR_GEN2)
+		ravb_ptp_init(ndev, pdev);
 
 	if (netif_running(ndev)) {
 		ret = ravb_open(ndev);
