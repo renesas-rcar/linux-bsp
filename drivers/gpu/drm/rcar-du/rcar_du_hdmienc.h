@@ -25,8 +25,6 @@ int rcar_du_hdmienc_init(struct rcar_du_device *rcdu,
 			 struct rcar_du_encoder *renc, struct device_node *np);
 void rcar_du_hdmienc_disable(struct drm_encoder *encoder);
 void rcar_du_hdmienc_enable(struct drm_encoder *encoder);
-void rcar_du_hdmienc_backup(struct drm_encoder *encoder);
-void rcar_du_hdmienc_restore(struct drm_encoder *encoder);
 #else
 static inline int rcar_du_hdmienc_init(struct rcar_du_device *rcdu,
 				       struct rcar_du_encoder *renc,

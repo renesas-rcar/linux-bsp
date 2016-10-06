@@ -561,10 +561,8 @@ static int rcar_du_pm_suspend(struct device *dev)
 #if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
 	list_for_each_entry(encoder,
 		 &rcdu->ddev->mode_config.encoder_list, head) {
-		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
 			rcar_du_hdmienc_disable(encoder);
-			rcar_du_hdmienc_backup(encoder);
-		}
 	}
 #endif
 
@@ -583,7 +581,7 @@ static int rcar_du_pm_suspend(struct device *dev)
 	return ret;
 }
 
-static int rcar_du_pm_resume_early(struct device *dev)
+static int rcar_du_pm_resume(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
 	struct drm_encoder *encoder;
@@ -615,28 +613,8 @@ static int rcar_du_pm_resume_early(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_RCAR_DDR_BACKUP
-static int rcar_du_pm_resume(struct device *dev)
-{
-	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
-	struct drm_encoder *encoder;
-
-	list_for_each_entry(encoder,
-		&rcdu->ddev->mode_config.encoder_list, head) {
-		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
-			rcar_du_hdmienc_restore(encoder);
-	}
-
-	return 0;
-}
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-
 static const struct dev_pm_ops rcar_du_pm_ops = {
-	SET_LATE_SYSTEM_SLEEP_PM_OPS(rcar_du_pm_suspend,
-		rcar_du_pm_resume_early)
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	.resume = rcar_du_pm_resume,
-#endif /* CONFIG_RCAR_DDR_BACKUP */
+	SET_SYSTEM_SLEEP_PM_OPS(rcar_du_pm_suspend, rcar_du_pm_resume)
 };
 
 /* -----------------------------------------------------------------------------
