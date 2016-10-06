@@ -563,12 +563,9 @@ void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc)
 
 void rcar_du_crtc_suspend(struct rcar_du_crtc *rcrtc)
 {
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	if (rcar_du_vsp_save_regs(rcrtc))
-		pr_err("%s: Cannot backup VSPD register\n", __func__);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-
+	rcrtc->suspend = true;
 	rcar_du_crtc_stop(rcrtc);
+	rcrtc->suspend = false;
 	rcar_du_crtc_put(rcrtc);
 }
 
@@ -580,12 +577,6 @@ void rcar_du_crtc_resume(struct rcar_du_crtc *rcrtc)
 		return;
 
 	rcar_du_crtc_get(rcrtc);
-
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	if (rcar_du_vsp_restore_regs(rcrtc))
-		pr_err("%s: Cannot restore VSPD register\n", __func__);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-
 	rcar_du_crtc_start(rcrtc);
 
 	/* Commit the planes state. */
@@ -745,6 +736,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	rcrtc->mmio_offset = mmio_offsets[index];
 	rcrtc->index = index;
 	rcrtc->lvds_ch = -1;
+	rcrtc->suspend = false;
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
 		primary = &rcrtc->vsp->planes[0].plane;

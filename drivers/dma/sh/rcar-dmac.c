@@ -1574,10 +1574,12 @@ static int rcar_dmac_sleep_suspend(struct device *dev)
 
 	for (i = 0; i < dmac->n_channels; ++i) {
 		if (!dmac->channels[i].iomem)
-			break;
+			continue;
 
 		spin_lock(&dmac->channels[i].lock);
+		pm_runtime_get_sync(dev);
 		rcar_dmac_chan_halt(&dmac->channels[i]);
+		pm_runtime_put(dev);
 		spin_unlock(&dmac->channels[i].lock);
 	}
 
@@ -1587,8 +1589,13 @@ static int rcar_dmac_sleep_suspend(struct device *dev)
 static int rcar_dmac_sleep_resume(struct device *dev)
 {
 	struct rcar_dmac *dmac = dev_get_drvdata(dev);
+	int ret;
 
-	return rcar_dmac_init(dmac);
+	pm_runtime_get_sync(dev);
+	ret = rcar_dmac_init(dmac);
+	pm_runtime_put(dev);
+
+	return ret;
 }
 #endif
 

@@ -1043,7 +1043,9 @@ static int sh_mobile_i2c_suspend(struct device *dev)
 
 	if (!i2c_dvfs_ip.virt_addr)
 		i2c_dvfs_ip.virt_addr = i2c_data->reg;
-	ret = handle_registers(&i2c_dvfs_ip, DO_BACKUP);
+	pm_runtime_get_sync(dev);
+	ret = rcar_handle_registers(&i2c_dvfs_ip, DO_BACKUP);
+	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP  */
 	return ret;
 }
@@ -1052,7 +1054,9 @@ static int sh_mobile_i2c_resume(struct device *dev)
 {
 	int ret = 0;
 #ifdef CONFIG_RCAR_DDR_BACKUP
-	ret = handle_registers(&i2c_dvfs_ip, DO_RESTORE);
+	pm_runtime_get_sync(dev);
+	ret = rcar_handle_registers(&i2c_dvfs_ip, DO_RESTORE);
+	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP  */
 	return ret;
 }

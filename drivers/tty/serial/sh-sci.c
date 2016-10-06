@@ -723,7 +723,7 @@ static int sci_save_regs(struct device *dev)
 		if (!h_scif_ip->virt_addr)
 			h_scif_ip->virt_addr = sport->port.membase;
 
-		ret = handle_registers(h_scif_ip, DO_BACKUP);
+		ret = rcar_handle_registers(h_scif_ip, DO_BACKUP);
 		pr_debug("%s: Backup %s registers\n",
 			__func__, h_scif_ip->ip_name);
 	} else
@@ -742,7 +742,7 @@ static int sci_restore_regs(struct device *dev)
 	h_scif_ip = get_ip(pdev->name);
 
 	if (h_scif_ip) {
-		ret = handle_registers(h_scif_ip, DO_RESTORE);
+		ret = rcar_handle_registers(h_scif_ip, DO_RESTORE);
 		pr_debug("%s: Restore %s registers\n",
 			__func__, h_scif_ip->ip_name);
 	} else
@@ -3296,10 +3296,12 @@ static __maybe_unused int sci_suspend(struct device *dev)
 	int ret = 0;
 
 	if (sport) {
+		pm_runtime_get_sync(sport->port.dev);
 		uart_suspend_port(&sci_uart_driver, &sport->port);
 #ifdef CONFIG_RCAR_DDR_BACKUP
 		ret = sci_save_regs(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
+		pm_runtime_put(sport->port.dev);
 	}
 
 	return ret;
@@ -3311,10 +3313,12 @@ static __maybe_unused int sci_resume(struct device *dev)
 	int ret = 0;
 
 	if (sport) {
+		pm_runtime_get_sync(sport->port.dev);
 #ifdef CONFIG_RCAR_DDR_BACKUP
 		ret = sci_restore_regs(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 		uart_resume_port(&sci_uart_driver, &sport->port);
+		pm_runtime_put(sport->port.dev);
 	}
 
 	return ret;

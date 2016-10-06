@@ -302,16 +302,7 @@ static int clk_5p49_suspend(struct device *dev)
 
 static int clk_5p49_resume(struct device *dev)
 {
-	struct clk_5p49_priv *priv = dev_get_drvdata(dev);
-
-	/* Initialize value */
-	clk_5p49_write(priv, C5P49_DIV_INTEGER_11_4, 1);
-	clk_5p49_write(priv, C5P49_DIV_INTEGER_3_0, 0x40);
-	clk_5p49_write(priv, C5P49_DIV_FRAC_29_22, 0);
-	clk_5p49_write(priv, C5P49_DIV_FRAC_21_14, 0xC3);
-	clk_5p49_write(priv, C5P49_DIV_FRAC_13_6, 0x94);
-	clk_5p49_write(priv, C5P49_DIV_FRAC_5_0, 0xDC);
-
+	/* Empty function for now */
 	return 0;
 }
 
