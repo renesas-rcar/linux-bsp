@@ -72,10 +72,6 @@ int rcar_du_set_vmute(struct drm_device *dev, void *data,
 			struct drm_file *file_priv);
 int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
 			struct drm_file *file_priv);
-#ifdef CONFIG_RCAR_DDR_BACKUP
-int rcar_du_vsp_save_regs(struct rcar_du_crtc *crtc);
-int rcar_du_vsp_restore_regs(struct rcar_du_crtc *crtc);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
 #else
 static inline int rcar_du_vsp_init(struct rcar_du_vsp *vsp) { return 0; };
 static inline void rcar_du_vsp_enable(struct rcar_du_crtc *crtc) { };
@@ -86,12 +82,6 @@ static inline int rcar_du_set_vmute(struct drm_device *dev, void *data,
 			struct drm_file *file_priv) { return 0; };
 static inline int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
 			struct drm_file *file_priv) { return 0; };
-#ifdef CONFIG_RCAR_DDR_BACKUP
-static inline int rcar_du_vsp_save_regs(struct rcar_du_crtc *crtc)
-	{ return 0; };
-static inline int rcar_du_vsp_restore_regs(struct rcar_du_crtc *crtc)
-	{ return 0; };
-#endif /* CONFIG_RCAR_DDR_BACKUP */
 #endif
 
 #endif /* __RCAR_DU_VSP_H__ */

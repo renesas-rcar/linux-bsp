@@ -563,11 +563,6 @@ void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc)
 
 void rcar_du_crtc_suspend(struct rcar_du_crtc *rcrtc)
 {
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	if (rcar_du_vsp_save_regs(rcrtc))
-		pr_err("%s: Cannot backup VSPD register\n", __func__);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-
 	rcar_du_crtc_stop(rcrtc);
 	rcar_du_crtc_put(rcrtc);
 }
@@ -580,12 +575,6 @@ void rcar_du_crtc_resume(struct rcar_du_crtc *rcrtc)
 		return;
 
 	rcar_du_crtc_get(rcrtc);
-
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	if (rcar_du_vsp_restore_regs(rcrtc))
-		pr_err("%s: Cannot restore VSPD register\n", __func__);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-
 	rcar_du_crtc_start(rcrtc);
 
 	/* Commit the planes state. */
