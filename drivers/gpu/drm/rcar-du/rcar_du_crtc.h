@@ -54,6 +54,7 @@ struct rcar_du_crtc {
 	struct rcar_du_vsp *vsp;
 
 	int lvds_ch;
+	bool suspend;
 };
 
 struct dpll_info {

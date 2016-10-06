@@ -311,6 +311,35 @@ static struct drm_driver rcar_du_driver = {
 /* -----------------------------------------------------------------------------
  * Power management
  */
+static int rcar_du_resume_commit(struct drm_device *dev, struct drm_crtc *crtc)
+{
+	int ret, index;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
+
+	index = drm_crtc_index(crtc);
+
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	state->crtc_states[index] = crtc_state;
+	state->crtcs[index] = crtc;
+	crtc_state->state = state;
+
+	ret = drm_atomic_commit(state);
+	if (ret != 0) {
+		drm_atomic_helper_crtc_destroy_state(crtc, crtc_state);
+		return ret;
+	}
+
+	return 0;
+}
+
 #ifdef CONFIG_PM_SLEEP
 static int rcar_du_pm_suspend(struct device *dev)
 {
@@ -326,7 +355,7 @@ static int rcar_du_pm_suspend(struct device *dev)
 	list_for_each_entry(encoder,
 		 &rcdu->ddev->mode_config.encoder_list, head) {
 		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
-			rcar_du_hdmienc_disable(encoder);
+			rcar_du_hdmienc_suspend(encoder);
 	}
 #endif
 
@@ -337,8 +366,11 @@ static int rcar_du_pm_suspend(struct device *dev)
 	}
 #endif
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
-		if (rcdu->crtcs[i].started)
-			rcar_du_crtc_put(&rcdu->crtcs[i]);
+		if (rcdu->crtcs[i].started) {
+			rcar_du_crtc_suspend(&rcdu->crtcs[i]);
+			clk_set_rate(rcdu->crtcs[i].extclock, 0);
+			rcdu->crtcs[i].group->used_crtcs = 0;
+		}
 	}
 
 	return 0;
@@ -352,9 +384,13 @@ static int rcar_du_pm_resume(struct device *dev)
 
 	encoder = NULL;
 
-	for (i = 0; i < rcdu->num_crtcs; ++i) {
-		if (rcdu->crtcs[i].started)
-			rcar_du_crtc_get(&rcdu->crtcs[i]);
+	for (i = 0; i < rcdu->num_crtcs; ++i)
+		rcar_du_crtc_resume(&rcdu->crtcs[i]);
+
+	list_for_each_entry(encoder,
+		&rcdu->ddev->mode_config.encoder_list, head) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
+			rcar_du_hdmienc_resume(encoder);
 	}
 
 #if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
@@ -365,7 +401,20 @@ static int rcar_du_pm_resume(struct device *dev)
 				&rcdu->crtcs[i]);
 	}
 #endif
+
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		struct drm_crtc *crtc = &rcdu->crtcs[i].crtc;
+
+		if (rcdu->crtcs[i].started) {
+			rcar_du_crtc_enable_vblank(&rcdu->crtcs[i], true);
+			rcar_du_group_restart(rcdu->crtcs[i].group);
+			rcar_du_resume_commit(rcdu->ddev, crtc);
+		}
+	}
+
 	drm_kms_helper_poll_enable(rcdu->ddev);
+	drm_fbdev_cma_hotplug_event(rcdu->fbdev);
+
 	return 0;
 }
 #endif
