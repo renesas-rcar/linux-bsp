@@ -26,12 +26,25 @@
 /* Max chsel supported by HW */
 #define RVIN_CHSEL_MAX 5
 #define RVIN_H3_WS11_CHSEL_MAX 6
+#define RVIN_VCSEL_MAX 4
 
 enum rvin_csi_id {
-	RVIN_CSI20,
-	RVIN_CSI21,
-	RVIN_CSI40,
-	RVIN_CSI41,
+	RVIN_CSI20_VC0,
+	RVIN_CSI20_VC1,
+	RVIN_CSI20_VC2,
+	RVIN_CSI20_VC3,
+	RVIN_CSI21_VC0,
+	RVIN_CSI21_VC1,
+	RVIN_CSI21_VC2,
+	RVIN_CSI21_VC3,
+	RVIN_CSI40_VC0,
+	RVIN_CSI40_VC1,
+	RVIN_CSI40_VC2,
+	RVIN_CSI40_VC3,
+	RVIN_CSI41_VC0,
+	RVIN_CSI41_VC1,
+	RVIN_CSI41_VC2,
+	RVIN_CSI41_VC3,
 	RVIN_CSI_MAX,
 	RVIN_CSI_ERROR,
 };
@@ -57,167 +70,167 @@ struct rvin_group_map_item {
 static const struct rvin_group_map_item
 rvin_group_h3_ws11_map[RVIN_CHAN_MAX][RVIN_H3_WS11_CHSEL_MAX] = {
 	{
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 1" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 4" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC0 chsel1: 5" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI21_VC0, .name = "CSI21/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 4" },
+		{ .csi = RVIN_CSI21_VC0, .name = "CSI21/VC0 chsel1: 5" },
 	}, {
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 0" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC0 chsel1: 1" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 4" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC1 chsel1: 5" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI21_VC0, .name = "CSI21/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel1: 4" },
+		{ .csi = RVIN_CSI21_VC1, .name = "CSI21/VC1 chsel1: 5" },
 	}, {
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC0 chsel1: 0" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 1" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC2 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel1: 4" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC2 chsel1: 5" },
+		{ .csi = RVIN_CSI21_VC0, .name = "CSI21/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC2, .name = "CSI40/VC2 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC2, .name = "CSI20/VC2 chsel1: 4" },
+		{ .csi = RVIN_CSI21_VC2, .name = "CSI21/VC2 chsel1: 5" },
 	}, {
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 1" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC1 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC3 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel1: 4" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC3 chsel1: 5" },
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel1: 0" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel1: 1" },
+		{ .csi = RVIN_CSI21_VC1, .name = "CSI21/VC1 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC3, .name = "CSI40/VC3 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC3, .name = "CSI20/VC3 chsel1: 4" },
+		{ .csi = RVIN_CSI21_VC3, .name = "CSI21/VC3 chsel1: 5" },
 	}, {
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 1" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC0 chsel2: 2" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 4" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC0 chsel2: 5" },
+		{ .csi = RVIN_CSI41_VC0, .name = "CSI41/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI21_VC0, .name = "CSI21/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI41_VC0, .name = "CSI41/VC0 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 4" },
+		{ .csi = RVIN_CSI21_VC0, .name = "CSI21/VC0 chsel2: 5" },
 	}, {
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 0" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC0 chsel2: 1" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 2" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 4" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC1 chsel2: 5" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI21_VC0, .name = "CSI21/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI41_VC0, .name = "CSI41/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI41_VC1, .name = "CSI41/VC1 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel2: 4" },
+		{ .csi = RVIN_CSI21_VC1, .name = "CSI21/VC1 chsel2: 5" },
 	}, {
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC0 chsel2: 0" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 1" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 2" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC2 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel2: 4" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC2 chsel2: 5" },
+		{ .csi = RVIN_CSI21_VC0, .name = "CSI21/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI41_VC0, .name = "CSI41/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI41_VC2, .name = "CSI41/VC2 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC2, .name = "CSI20/VC2 chsel2: 4" },
+		{ .csi = RVIN_CSI21_VC2, .name = "CSI21/VC2 chsel2: 5" },
 	}, {
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 1" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC1 chsel2: 2" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC3 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel2: 4" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC3 chsel2: 5" },
+		{ .csi = RVIN_CSI41_VC1, .name = "CSI41/VC1 chsel2: 0" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel2: 1" },
+		{ .csi = RVIN_CSI21_VC1, .name = "CSI21/VC1 chsel2: 2" },
+		{ .csi = RVIN_CSI41_VC3, .name = "CSI41/VC3 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC3, .name = "CSI20/VC3 chsel2: 4" },
+		{ .csi = RVIN_CSI21_VC3, .name = "CSI21/VC3 chsel2: 5" },
 	},
 };
 
 static const struct rvin_group_map_item
 rvin_group_h3_map[RVIN_CHAN_MAX][RVIN_CHSEL_MAX] = {
 	{
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 1" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 4" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 4" },
 	}, {
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 0" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 1" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 4" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel1: 1" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel1: 4" },
 	}, {
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 0" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 1" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC2 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel1: 4" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel1: 0" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC2, .name = "CSI40/VC2 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC2, .name = "CSI20/VC2 chsel1: 4" },
 	}, {
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 1" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC3 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel1: 4" },
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel1: 0" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel1: 1" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC3, .name = "CSI40/VC3 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC3, .name = "CSI20/VC3 chsel1: 4" },
 	}, {
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 1" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 2" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 4" },
+		{ .csi = RVIN_CSI41_VC0, .name = "CSI41/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI41_VC1, .name = "CSI41/VC1 chsel2: 2" },
+		{ .csi = RVIN_CSI41_VC0, .name = "CSI41/VC0 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 4" },
 	}, {
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 0" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 1" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 2" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 4" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI41_VC1, .name = "CSI41/VC1 chsel2: 1" },
+		{ .csi = RVIN_CSI41_VC0, .name = "CSI41/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI41_VC1, .name = "CSI41/VC1 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel2: 4" },
 	}, {
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 0" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 1" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 2" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC2 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel2: 4" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel2: 0" },
+		{ .csi = RVIN_CSI41_VC0, .name = "CSI41/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI41_VC2, .name = "CSI41/VC2 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC2, .name = "CSI20/VC2 chsel2: 4" },
 	}, {
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 1" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 2" },
-		{ .csi = RVIN_CSI41, .name = "CSI41/VC3 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel2: 4" },
+		{ .csi = RVIN_CSI41_VC1, .name = "CSI41/VC1 chsel2: 0" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel2: 1" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel2: 2" },
+		{ .csi = RVIN_CSI41_VC3, .name = "CSI41/VC3 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC3, .name = "CSI20/VC3 chsel2: 4" },
 	},
 };
 
 static const struct rvin_group_map_item
 rvin_group_m3_map[RVIN_CHAN_MAX][RVIN_CHSEL_MAX] = {
 	{
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 1" },
 		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 4" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 4" },
 	}, {
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 0" },
 		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 4" },
-	}, {
-		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 1" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC2 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel1: 4" },
-	}, {
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 1" },
-		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC3 chsel1: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel1: 4" },
-	}, {
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel2: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 1" },
-		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 4" },
-	}, {
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 0" },
-		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel2: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 4" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel1: 4" },
 	}, {
 		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel2: 1" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 2" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC2 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel2: 4" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40_VC2, .name = "CSI40/VC2 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC2, .name = "CSI20/VC2 chsel1: 4" },
 	}, {
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel2: 0" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 1" },
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel1: 0" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel1: 1" },
 		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
-		{ .csi = RVIN_CSI40, .name = "CSI40/VC3 chsel2: 3" },
-		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel2: 4" },
+		{ .csi = RVIN_CSI40_VC3, .name = "CSI40/VC3 chsel1: 3" },
+		{ .csi = RVIN_CSI20_VC3, .name = "CSI20/VC3 chsel1: 4" },
+	}, {
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 4" },
+	}, {
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel2: 4" },
+	}, {
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40_VC0, .name = "CSI40/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI20_VC0, .name = "CSI20/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI40_VC2, .name = "CSI40/VC2 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC2, .name = "CSI20/VC2 chsel2: 4" },
+	}, {
+		{ .csi = RVIN_CSI40_VC1, .name = "CSI40/VC1 chsel2: 0" },
+		{ .csi = RVIN_CSI20_VC1, .name = "CSI20/VC1 chsel2: 1" },
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40_VC3, .name = "CSI40/VC3 chsel2: 3" },
+		{ .csi = RVIN_CSI20_VC3, .name = "CSI20/VC3 chsel2: 4" },
 	},
 };
 
@@ -305,8 +318,15 @@ static enum rvin_csi_id rvin_group_get_csi(struct rvin_group *grp,
 		container_of(sd->v4l2_dev, struct rvin_dev, v4l2_dev);
 	enum rvin_chan_id chan;
 	enum rvin_csi_id csi = RVIN_CSI_ERROR;
+	int chsel_max;
 
-	if (chsel < 0 || chsel > RVIN_CHSEL_MAX)
+	if ((vin->chip == RCAR_H3) && (RCAR_PRR_IS_PRODUCT(H3)
+		&& (RCAR_PRR_CHK_CUT(H3, WS11) <= 0)))
+		chsel_max = RVIN_H3_WS11_CHSEL_MAX;
+	else
+		chsel_max = RVIN_CHSEL_MAX;
+
+	if (chsel < 0 || chsel > chsel_max)
 		return RVIN_CSI_ERROR;
 
 	chan = sd_to_chan(grp, sd);
@@ -392,6 +412,7 @@ static int rvin_group_get(struct v4l2_subdev *sd,
 	enum rvin_chan_id chan, master;
 	enum rvin_csi_id csi;
 	int i, num = 0;
+	int chsel_max;
 
 	mutex_lock(&grp->lock);
 
@@ -410,8 +431,14 @@ static int rvin_group_get(struct v4l2_subdev *sd,
 		goto out;
 	}
 
+	if ((vin->chip == RCAR_H3) && (RCAR_PRR_IS_PRODUCT(H3)
+		&& (RCAR_PRR_CHK_CUT(H3, WS11) <= 0)))
+		chsel_max = RVIN_H3_WS11_CHSEL_MAX;
+	else
+		chsel_max = RVIN_CHSEL_MAX;
+
 	/* Create list of valid inputs */
-	for (i = 0; i < RVIN_CHSEL_MAX; i++) {
+	for (i = 0; i < chsel_max; i++) {
 		csi = rvin_group_get_csi(grp, sd, i);
 		if (rvin_group_get_csi(grp, sd, i) != RVIN_CSI_ERROR) {
 			inputs[num].type = RVIN_INPUT_CSI2;
@@ -896,7 +923,7 @@ use_default:
 static int rvin_graph_notify_complete(struct v4l2_async_notifier *notifier)
 {
 	struct rvin_group *grp = notifier_to_grp(notifier);
-	int i, ret;
+	int i;
 
 	for (i = 0; i < RVIN_CSI_MAX; i++) {
 		if (!grp->source[i].subdev)
@@ -916,13 +943,6 @@ static int rvin_graph_notify_complete(struct v4l2_async_notifier *notifier)
 			grp->source[i].subdev->name, grp->source[i].source_idx,
 			grp->source[i].code);
 	}
-
-	ret = v4l2_device_register_subdev_nodes(grp->v4l2_dev);
-	if (ret < 0) {
-		grp_err(grp, "Failed to register subdev nodes\n");
-		return ret;
-	}
-
 	return 0;
 }
 
@@ -965,7 +985,7 @@ static int rvin_graph_notify_bound(struct v4l2_async_notifier *notifier,
 {
 	struct rvin_group *grp = notifier_to_grp(notifier);
 	bool matched = false;
-	int i;
+	int i, j;
 
 	v4l2_set_subdev_hostdata(subdev, grp);
 
@@ -973,6 +993,10 @@ static int rvin_graph_notify_bound(struct v4l2_async_notifier *notifier,
 		if (grp->bridge[i].asd.match.of.node == subdev->dev->of_node) {
 			grp_dbg(grp, "bound bridge subdev %s\n", subdev->name);
 			grp->bridge[i].subdev = subdev;
+
+			for (j = i; j < (i + RVIN_VCSEL_MAX); j++)
+				grp->bridge[j].subdev = subdev;
+
 			matched = true;
 		}
 		if (grp->source[i].asd.match.of.node == subdev->dev->of_node) {
@@ -1037,6 +1061,7 @@ static int rvin_get_csi_source(struct rvin_group *grp, int id)
 	struct v4l2_mbus_config mbus_cfg;
 	struct of_endpoint endpoint;
 	int ret;
+	u32 souce_cnt = 0, loop_cnt = 0;
 
 	grp->bridge[id].asd.match.of.node = NULL;
 	grp->bridge[id].subdev = NULL;
@@ -1080,8 +1105,26 @@ static int rvin_get_csi_source(struct rvin_group *grp, int id)
 		} else if (!of_device_is_available(np)) {
 			/* Not all sources are available, this is OK */
 		} else if (source) {
-			grp_err(grp, "Multiple source for %s, will use first\n",
-				of_node_full_name(bridge));
+			souce_cnt++;
+
+			if (souce_cnt == loop_cnt) {
+				grp_dbg(grp, "Multiple source for %s\n",
+					of_node_full_name(source));
+
+				ret = rvin_parse_v4l2_endpoint(grp, ep,
+								 &mbus_cfg);
+				if (ret) {
+					of_node_put(bridge);
+					of_node_put(ep);
+					of_node_put(np);
+					return ret;
+				}
+				source = np;
+				grp->source[id].mbus_cfg = mbus_cfg;
+				grp->source[id].asd.match.of.node = source;
+				grp->source[id].asd.match_type =
+							 V4L2_ASYNC_MATCH_OF;
+			}
 		} else {
 			/* Get endpoint information */
 			rp = of_graph_get_remote_port(ep);
@@ -1096,19 +1139,28 @@ static int rvin_get_csi_source(struct rvin_group *grp, int id)
 				return ret;
 			}
 			source = np;
+			grp->source[id].mbus_cfg = mbus_cfg;
+			grp->source[id].source_idx = endpoint.id;
+			grp->source[id].asd.match.of.node = source;
+			grp->source[id].asd.match_type = V4L2_ASYNC_MATCH_OF;
+
+			/* Multiple source registration */
+			if ((id % 4) == 1)
+				loop_cnt = 1;
+			else if ((id % 4) == 2)
+				loop_cnt = 2;
+			else if ((id % 4) == 3)
+				loop_cnt = 3;
+			else
+				loop_cnt = 0;
 		}
 
 		of_node_put(np);
 	}
 	of_node_put(bridge);
 
-	grp->source[id].mbus_cfg = mbus_cfg;
-	grp->source[id].source_idx = endpoint.id;
-
 	grp->bridge[id].asd.match.of.node = bridge;
 	grp->bridge[id].asd.match_type = V4L2_ASYNC_MATCH_OF;
-	grp->source[id].asd.match.of.node = source;
-	grp->source[id].asd.match_type = V4L2_ASYNC_MATCH_OF;
 
 	grp_dbg(grp, "csi%d: bridge: %s source: %s pad: %d", id,
 		of_node_full_name(grp->bridge[id].asd.match.of.node),
