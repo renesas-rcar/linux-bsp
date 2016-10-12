@@ -1256,7 +1256,7 @@ struct rvin_group_api *rvin_group_probe(struct device *dev,
 	grp->dev = dev;
 	grp->v4l2_dev = v4l2_dev;
 	grp->chsel1 = 0;
-	grp->chsel2 = 0;
+	grp->chsel2 = 1;
 
 	ret = RCAR_PRR_INIT();
 	if (ret) {
