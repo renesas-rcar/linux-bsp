@@ -133,7 +133,6 @@
 #define VNDMR2_VLV(n)		((n & 0xf) << 12)
 
 /* Video n CSI2 Interface Mode Register (Gen3) */
-#define VNCSI_IFMD_DES2		(1 << 27)
 #define VNCSI_IFMD_DES1		(1 << 26)
 #define VNCSI_IFMD_DES0		(1 << 25)
 #define VNCSI_IFMD_CSI_CHSEL(n) ((n & 0xf) << 0)
@@ -1382,7 +1381,7 @@ static int rvin_subdev_s_gpio(struct v4l2_subdev *sd, u32 val)
 	 */
 	rvin_write(vin, 0, VNMC_REG);
 
-	ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0 |
+	ifmd = VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0 |
 		VNCSI_IFMD_CSI_CHSEL(val);
 
 	rvin_write(vin, ifmd, VNCSI_IFMD_REG);
