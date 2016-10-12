@@ -194,6 +194,9 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 	int ring_size;
 	int i;
 	int num_tx_desc = priv->num_tx_desc;
+	struct ravb_ex_rx_desc *rx_desc;
+	struct ravb_tx_desc *tx_desc;
+	u32 size;
 
 	/* Free RX skb ringbuffer */
 	if (priv->rx_skb[q]) {
@@ -216,6 +219,16 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 	priv->tx_align[q] = NULL;
 
 	if (priv->rx_ring[q]) {
+		for (i = 0; i < priv->num_rx_ring[q]; i++) {
+			rx_desc = &priv->rx_ring[q][i];
+			if (rx_desc->dptr != 0) {
+				dma_unmap_single(ndev->dev.parent,
+						 le32_to_cpu(rx_desc->dptr),
+						 PKT_BUF_SZ,
+						 DMA_FROM_DEVICE);
+				rx_desc->dptr = 0;
+			}
+		}
 		ring_size = sizeof(struct ravb_ex_rx_desc) *
 			    (priv->num_rx_ring[q] + 1);
 		dma_free_coherent(ndev->dev.parent, ring_size, priv->rx_ring[q],
@@ -224,6 +237,16 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 	}
 
 	if (priv->tx_ring[q]) {
+		for (i = 0; i < priv->num_tx_ring[q]; i++) {
+			tx_desc = &priv->tx_ring[q][i];
+			size = le16_to_cpu(tx_desc->ds_tagl) & TX_DS;
+			if (tx_desc->dptr != 0) {
+				dma_unmap_single(ndev->dev.parent,
+						 le32_to_cpu(tx_desc->dptr),
+						 size, DMA_TO_DEVICE);
+				tx_desc->dptr = 0;
+			}
+		}
 		ring_size = sizeof(struct ravb_tx_desc) *
 			    (priv->num_tx_ring[q] * num_tx_desc + 1);
 		dma_free_coherent(ndev->dev.parent, ring_size, priv->tx_ring[q],
