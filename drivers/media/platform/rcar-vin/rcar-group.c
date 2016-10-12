@@ -12,6 +12,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_graph.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
@@ -20,9 +21,11 @@
 #include <media/v4l2-of.h>
 
 #include "rcar-group.h"
+#include "rcar-vin.h"
 
 /* Max chsel supported by HW */
-#define RVIN_CHSEL_MAX 6
+#define RVIN_CHSEL_MAX 5
+#define RVIN_H3_WS11_CHSEL_MAX 6
 
 enum rvin_csi_id {
 	RVIN_CSI20,
@@ -52,11 +55,11 @@ struct rvin_group_map_item {
 };
 
 static const struct rvin_group_map_item
-rvin_group_map[RVIN_CHAN_MAX][RVIN_CHSEL_MAX] = {
+rvin_group_h3_ws11_map[RVIN_CHAN_MAX][RVIN_H3_WS11_CHSEL_MAX] = {
 	{
 		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 0" },
 		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 1" },
-		{ .csi = RVIN_CSI21, .name = "CSI21/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 2" },
 		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 3" },
 		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 4" },
 		{ .csi = RVIN_CSI21, .name = "CSI21/VC0 chsel1: 5" },
@@ -109,6 +112,112 @@ rvin_group_map[RVIN_CHAN_MAX][RVIN_CHSEL_MAX] = {
 		{ .csi = RVIN_CSI41, .name = "CSI41/VC3 chsel2: 3" },
 		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel2: 4" },
 		{ .csi = RVIN_CSI21, .name = "CSI21/VC3 chsel2: 5" },
+	},
+};
+
+static const struct rvin_group_map_item
+rvin_group_h3_map[RVIN_CHAN_MAX][RVIN_CHSEL_MAX] = {
+	{
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 2" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 4" },
+	}, {
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 1" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 4" },
+	}, {
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 0" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC2 chsel1: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel1: 4" },
+	}, {
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 0" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 1" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 2" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC3 chsel1: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel1: 4" },
+	}, {
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 2" },
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 4" },
+	}, {
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 1" },
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 4" },
+	}, {
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 0" },
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC2 chsel2: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel2: 4" },
+	}, {
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC1 chsel2: 0" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 1" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 2" },
+		{ .csi = RVIN_CSI41, .name = "CSI41/VC3 chsel2: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel2: 4" },
+	},
+};
+
+static const struct rvin_group_map_item
+rvin_group_m3_map[RVIN_CHAN_MAX][RVIN_CHSEL_MAX] = {
+	{
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 4" },
+	}, {
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 0" },
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 4" },
+	}, {
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel1: 1" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel1: 2" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC2 chsel1: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel1: 4" },
+	}, {
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel1: 0" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel1: 1" },
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC3 chsel1: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel1: 4" },
+	}, {
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel2: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 4" },
+	}, {
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 0" },
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel2: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 4" },
+	}, {
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC0 chsel2: 1" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC0 chsel2: 2" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC2 chsel2: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC2 chsel2: 4" },
+	}, {
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC1 chsel2: 0" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC1 chsel2: 1" },
+		{ .csi = RVIN_CSI_ERROR, .name = "No operate" },
+		{ .csi = RVIN_CSI40, .name = "CSI40/VC3 chsel2: 3" },
+		{ .csi = RVIN_CSI20, .name = "CSI20/VC3 chsel2: 4" },
 	},
 };
 
@@ -192,15 +301,23 @@ static enum rvin_chan_id chan_to_master(struct rvin_group *grp,
 static enum rvin_csi_id rvin_group_get_csi(struct rvin_group *grp,
 					   struct v4l2_subdev *sd, int chsel)
 {
+	struct rvin_dev *vin =
+		container_of(sd->v4l2_dev, struct rvin_dev, v4l2_dev);
 	enum rvin_chan_id chan;
-	enum rvin_csi_id csi;
+	enum rvin_csi_id csi = RVIN_CSI_ERROR;
 
 	if (chsel < 0 || chsel > RVIN_CHSEL_MAX)
 		return RVIN_CSI_ERROR;
 
 	chan = sd_to_chan(grp, sd);
 
-	csi = rvin_group_map[sd_to_chan(grp, sd)][chsel].csi;
+	if ((vin->chip == RCAR_H3) && (RCAR_PRR_IS_PRODUCT(H3)
+		&& (RCAR_PRR_CHK_CUT(H3, WS11) <= 0)))
+		csi = rvin_group_h3_ws11_map[chan][chsel].csi;
+	else if (vin->chip == RCAR_H3)
+		csi = rvin_group_h3_map[chan][chsel].csi;
+	else if (vin->chip == RCAR_M3)
+		csi = rvin_group_m3_map[chan][chsel].csi;
 
 	/* Not all CSI source might be available */
 	if (!grp->bridge[csi].subdev || !grp->source[csi].subdev)
@@ -270,6 +387,8 @@ static int rvin_group_get(struct v4l2_subdev *sd,
 			  struct rvin_input_item *inputs)
 {
 	struct rvin_group *grp = v4l2_get_subdev_hostdata(sd);
+	struct rvin_dev *vin =
+		container_of(sd->v4l2_dev, struct rvin_dev, v4l2_dev);
 	enum rvin_chan_id chan, master;
 	enum rvin_csi_id csi;
 	int i, num = 0;
@@ -303,8 +422,19 @@ static int rvin_group_get(struct v4l2_subdev *sd,
 				rvin_group_get_sink_idx(
 					&grp->source[csi].subdev->entity,
 					inputs[num].source_idx);
-			strlcpy(inputs[num].name, rvin_group_map[chan][i].name,
-				RVIN_INPUT_NAME_SIZE);
+			if ((vin->chip == RCAR_H3) && (RCAR_PRR_IS_PRODUCT(H3)
+				&& (RCAR_PRR_CHK_CUT(H3, WS11) <= 0)))
+				strlcpy(inputs[num].name,
+					rvin_group_h3_ws11_map[chan][i].name,
+					RVIN_INPUT_NAME_SIZE);
+			else if (vin->chip == RCAR_H3)
+				strlcpy(inputs[num].name,
+					rvin_group_h3_map[chan][i].name,
+					RVIN_INPUT_NAME_SIZE);
+			else if (vin->chip == RCAR_M3)
+				strlcpy(inputs[num].name,
+					rvin_group_m3_map[chan][i].name,
+					RVIN_INPUT_NAME_SIZE);
 			grp_dbg(grp, "chan%d: %s source pad: %d sink pad: %d\n",
 				chan, inputs[num].name, inputs[num].source_idx,
 				inputs[num].sink_idx);
@@ -1127,6 +1257,13 @@ struct rvin_group_api *rvin_group_probe(struct device *dev,
 	grp->v4l2_dev = v4l2_dev;
 	grp->chsel1 = 0;
 	grp->chsel2 = 0;
+
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		devm_kfree(dev, grp);
+		grp_dbg(grp, "product register init fail.\n");
+		return NULL;
+	}
 
 	for (i = 0; i < RVIN_CSI_MAX; i++) {
 		grp->power[i] = 0;
