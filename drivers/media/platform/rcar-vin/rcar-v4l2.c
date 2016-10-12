@@ -165,6 +165,8 @@ static int __rvin_try_format(struct rvin_dev *vin,
 {
 	const struct rvin_video_format *info;
 	u32 rwidth, rheight, walign, max_width, max_height;
+	int ret;
+	v4l2_std_id std;
 
 	/* Requested */
 	rwidth = pix->width;
@@ -204,7 +206,17 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	case V4L2_FIELD_NONE:
 	case V4L2_FIELD_INTERLACED_TB:
 	case V4L2_FIELD_INTERLACED_BT:
+		break;
 	case V4L2_FIELD_INTERLACED:
+		ret = rvin_subdev_call(vin, video, querystd, &std);
+		if (ret == -ENOIOCTLCMD)
+			pix->field = V4L2_FIELD_NONE;
+		else if (ret < 0)
+			goto out;
+		else
+			pix->field = std & V4L2_STD_625_50 ?
+				V4L2_FIELD_INTERLACED_TB :
+				V4L2_FIELD_INTERLACED_BT;
 		break;
 	default:
 		pix->field = V4L2_FIELD_NONE;
@@ -266,6 +278,8 @@ static int __rvin_try_format(struct rvin_dev *vin,
 		pix->bytesperline, pix->sizeimage);
 
 	return 0;
+out:
+	return ret;
 }
 
 static int rvin_querycap(struct file *file, void *priv,
