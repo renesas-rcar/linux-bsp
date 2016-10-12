@@ -394,6 +394,9 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_register;
 
+	pm_suspend_ignore_children(&pdev->dev, true);
+	pm_runtime_enable(&pdev->dev);
+
 	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3)
 		vin->api = rvin_group_probe(&pdev->dev, &vin->v4l2_dev);
 	else
@@ -412,9 +415,6 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	ret = rvin_subdev_probe(vin);
 	if (ret)
 		goto err_subdev;
-
-	pm_suspend_ignore_children(&pdev->dev, true);
-	pm_runtime_enable(&pdev->dev);
 
 	return 0;
 
