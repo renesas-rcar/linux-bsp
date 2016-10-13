@@ -142,10 +142,20 @@ static void rpf_configure(struct vsp1_entity *entity,
 
 		vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_Y,
 			       rpf->mem.addr[0] + offsets[0]);
-		vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C0,
-			       rpf->mem.addr[1] + offsets[1]);
-		vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C1,
-			       rpf->mem.addr[2] + offsets[1]);
+
+		if ((rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU420M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU422M) ||
+			(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU444M)) {
+			vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C0,
+					rpf->mem.addr[2] + rpf->offsets[1]);
+			vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C1,
+					rpf->mem.addr[1] + rpf->offsets[1]);
+		} else {
+			vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C0,
+					rpf->mem.addr[1] + rpf->offsets[1]);
+			vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C1,
+					rpf->mem.addr[2] + rpf->offsets[1]);
+		}
 		return;
 	}
 
