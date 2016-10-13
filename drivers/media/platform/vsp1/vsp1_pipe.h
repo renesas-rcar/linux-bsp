@@ -1,7 +1,7 @@
 /*
  * vsp1_pipe.h  --  R-Car VSP1 Pipeline
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -116,6 +116,8 @@ struct vsp1_pipeline {
 	unsigned int partitions;
 	struct v4l2_rect partition;
 	unsigned int current_partition;
+
+	bool vmute_flag;
 };
 
 static inline struct vsp1_pipeline *to_vsp1_pipeline(struct media_entity *e)
