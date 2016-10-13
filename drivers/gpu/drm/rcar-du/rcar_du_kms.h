@@ -1,7 +1,7 @@
 /*
  * rcar_du_kms.h  --  R-Car Display Unit Mode Setting
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -30,6 +30,7 @@ struct rcar_du_format_info {
 };
 
 const struct rcar_du_format_info *rcar_du_format_info(u32 fourcc);
+const struct rcar_du_format_info *rcar_vsp_format_info(u32 fourcc);
 
 int rcar_du_modeset_init(struct rcar_du_device *rcdu);
 
