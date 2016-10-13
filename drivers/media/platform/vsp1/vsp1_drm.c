@@ -14,6 +14,7 @@
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <media/media-entity.h>
 #include <media/rcar-fcp.h>
@@ -323,6 +324,13 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 	rpf->alpha = cfg->alpha;
 	rpf->interlaced = cfg->interlaced;
 
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0) && rpf->interlaced) {
+		dev_err(vsp1->dev,
+			"Interlaced mode is not supported.\n");
+		return -EINVAL;
+	}
+
 	rpf->mem.addr[0] = cfg->mem[0];
 	rpf->mem.addr[1] = cfg->mem[1];
 	rpf->mem.addr[2] = cfg->mem[2];
@@ -618,6 +626,7 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 {
 	struct vsp1_pipeline *pipe;
 	unsigned int i;
+	int ret;
 
 	vsp1->drm = devm_kzalloc(vsp1->dev, sizeof(*vsp1->drm), GFP_KERNEL);
 	if (!vsp1->drm)
@@ -641,6 +650,12 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 	pipe->bru = &vsp1->bru->entity;
 	pipe->lif = &vsp1->lif->entity;
 	pipe->output = vsp1->wpf[0];
+
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(vsp1->dev, "product register init fail.\n");
+		return ret;
+	}
 
 	return 0;
 }
