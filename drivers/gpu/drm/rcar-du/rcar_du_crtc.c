@@ -103,6 +103,24 @@ static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
 	clk_disable_unprepare(rcrtc->clock);
 }
 
+void rcar_du_crtc_vbk_check(struct rcar_du_crtc *rcrtc)
+{
+	u32 i, timeout = 100, loop = 2;
+	u32 status;
+
+	/* Check next VBK flag */
+	for (i = 0; i < timeout; i++) {
+		status = rcar_du_crtc_read(rcrtc, DSSR);
+		if (status & DSSR_VBK) {
+
+			rcar_du_crtc_write(rcrtc, DSRCR, DSRCR_VBCL);
+			if (--loop == 0)
+				break;
+		}
+		mdelay(1);
+	}
+}
+
 /* -----------------------------------------------------------------------------
  * Hardware Setup
  */
@@ -376,12 +394,12 @@ static void rcar_du_crtc_update_planes(struct rcar_du_crtc *rcrtc)
 		rcrtc->group->dptsr_planes = dptsr_planes;
 
 		if (rcrtc->group->used_crtcs)
-			rcar_du_group_restart(rcrtc->group);
+			rcar_du_group_restart(rcrtc->group, rcrtc);
 	}
 
 	/* Restart the group if plane sources have changed. */
 	if (rcrtc->group->need_restart)
-		rcar_du_group_restart(rcrtc->group);
+		rcar_du_group_restart(rcrtc->group, rcrtc);
 
 	mutex_unlock(&rcrtc->group->lock);
 
@@ -474,7 +492,7 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 			     (interlaced ? DSYSR_SCM_INT_VIDEO : 0) |
 			     DSYSR_TVM_MASTER);
 
-	rcar_du_group_start_stop(rcrtc->group, true);
+	rcar_du_group_start_stop(rcrtc->group, true, rcrtc);
 
 	/* Enable the VSP compositor. */
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
@@ -522,7 +540,7 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 */
 	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
 
-	rcar_du_group_start_stop(rcrtc->group, false);
+	rcar_du_group_start_stop(rcrtc->group, false, rcrtc);
 
 	rcrtc->started = false;
 }
