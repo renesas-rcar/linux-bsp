@@ -316,8 +316,17 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe)
 
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 {
+	unsigned long flags;
+
 	if (pipe == NULL)
 		return;
+
+	spin_lock_irqsave(&pipe->irqlock, flags);
+	if (pipe->output->write_back != 0) {
+		pipe->output->write_back--;
+		wake_up_interruptible(&pipe->event_wait);
+	}
+	spin_unlock_irqrestore(&pipe->irqlock, flags);
 
 	vsp1_dlm_irq_frame_end(pipe->output->dlm);
 

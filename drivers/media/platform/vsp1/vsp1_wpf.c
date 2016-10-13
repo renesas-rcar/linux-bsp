@@ -398,9 +398,20 @@ static void wpf_configure(struct vsp1_entity *entity,
 	}
 
 	/* Format */
-	if (!pipe->lif) {
+	if (!pipe->lif || (wpf->write_back == 2)) {
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
 		const struct vsp1_format_info *fmtinfo = wpf->fmtinfo;
+
+		if (pipe->lif) {
+			vsp1_wpf_write(wpf, dl, VI6_WPF_DSTM_ADDR_Y,
+						wpf->buf_addr[0]);
+			if (format->num_planes > 1)
+				vsp1_wpf_write(wpf, dl, VI6_WPF_DSTM_ADDR_C0,
+						wpf->buf_addr[1]);
+			if (format->num_planes > 2)
+				vsp1_wpf_write(wpf, dl, VI6_WPF_DSTM_ADDR_C1,
+						wpf->buf_addr[2]);
+		}
 
 		outfmt = fmtinfo->hwfmt << VI6_WPF_OUTFMT_WRFMT_SHIFT;
 
@@ -438,7 +449,11 @@ static void wpf_configure(struct vsp1_entity *entity,
 	vsp1_dl_list_write(dl, VI6_DPR_WPF_FPORCH(wpf->entity.index),
 			   VI6_DPR_WPF_FPORCH_FP_WPFN);
 
-	vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL, 0);
+	if (pipe->lif && (pipe->output->write_back == 2))
+		vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL,
+					VI6_WPF_WRBCK_CTRL_WBMD);
+	else
+		vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL, 0);
 
 	/* Sources. If the pipeline has a single input and BRU is not used,
 	 * configure it as the master layer. Otherwise configure all
