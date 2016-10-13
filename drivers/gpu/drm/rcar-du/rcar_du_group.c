@@ -181,14 +181,30 @@ void rcar_du_group_put(struct rcar_du_group *rgrp)
 	--rgrp->use_count;
 }
 
-static void __rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start)
+static void __rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start,
+				       struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
+
+	if (!start) {
+		rcar_du_group_write(rgrp, DSYSR,
+			(rcar_du_group_read(rgrp, DSYSR) &
+			~(DSYSR_DRES | DSYSR_DEN)));
+
+		/* Wait until access to VSP stops after setting both
+		 * the DEN and DRES bits in DSYSRm.
+		 */
+		if (rcdu->info->gen >= 3)
+			rcar_du_crtc_vbk_check(rcrtc);
+	}
+
 	rcar_du_group_write(rgrp, DSYSR,
 		(rcar_du_group_read(rgrp, DSYSR) & ~(DSYSR_DRES | DSYSR_DEN)) |
 		(start ? DSYSR_DEN : DSYSR_DRES));
 }
 
-void rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start)
+void rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start,
+			      struct rcar_du_crtc *rcrtc)
 {
 	/* Many of the configuration bits are only updated when the display
 	 * reset (DRES) bit in DSYSR is set to 1, disabling *both* CRTCs. Some
@@ -203,20 +219,21 @@ void rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start)
 	 */
 	if (start) {
 		if (rgrp->used_crtcs++ != 0)
-			__rcar_du_group_start_stop(rgrp, false);
-		__rcar_du_group_start_stop(rgrp, true);
+			__rcar_du_group_start_stop(rgrp, false, rcrtc);
+		__rcar_du_group_start_stop(rgrp, true, rcrtc);
 	} else {
 		if (--rgrp->used_crtcs == 0)
-			__rcar_du_group_start_stop(rgrp, false);
+			__rcar_du_group_start_stop(rgrp, false, rcrtc);
 	}
 }
 
-void rcar_du_group_restart(struct rcar_du_group *rgrp)
+void rcar_du_group_restart(struct rcar_du_group *rgrp,
+			   struct rcar_du_crtc *rcrtc)
 {
 	rgrp->need_restart = false;
 
-	__rcar_du_group_start_stop(rgrp, false);
-	__rcar_du_group_start_stop(rgrp, true);
+	__rcar_du_group_start_stop(rgrp, false, rcrtc);
+	__rcar_du_group_start_stop(rgrp, true, rcrtc);
 }
 
 int rcar_du_set_dpad0_vsp1_routing(struct rcar_du_device *rcdu)
