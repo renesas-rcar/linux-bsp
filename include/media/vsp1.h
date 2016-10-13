@@ -42,5 +42,9 @@ void vsp1_du_atomic_flush(struct device *dev);
 int vsp1_du_map_sg(struct device *dev, struct sg_table *sgt);
 void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt);
 int vsp1_du_if_set_mute(struct device *dev, bool on);
+int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
+		      dma_addr_t mem[2]);
+void vsp1_du_wait_wb(struct device *dev, u32 count);
+
 
 #endif /* __MEDIA_VSP1_H__ */
