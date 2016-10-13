@@ -159,9 +159,10 @@ void vsp1_underrun_workaround(struct vsp1_device *vsp1, bool reset)
 
 	/* 8. Restart VSPD */
 	if (!reset) {
-		/* Necessary when headerless display list */
 		vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), vsp1->dl_addr);
-		vsp1_write(vsp1, VI6_DL_BODY_SIZE, vsp1->dl_body);
+		/* Necessary when headerless display list */
+		if (!vsp1->info->header_mode)
+			vsp1_write(vsp1, VI6_DL_BODY_SIZE, vsp1->dl_body);
 		vsp1_write(vsp1, VI6_CMD(0), VI6_CMD_STRCMD);
 	}
 }
@@ -855,6 +856,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.rpf_count = 5,
 		.wpf_count = 2,
 		.num_bru_inputs = 5,
+		.header_mode = true,
 	},
 };
 
