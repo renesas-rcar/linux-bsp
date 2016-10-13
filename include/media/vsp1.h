@@ -22,7 +22,7 @@ struct device;
 int vsp1_du_init(struct device *dev);
 
 int vsp1_du_setup_lif(struct device *dev, unsigned int width,
-		      unsigned int height);
+		      unsigned int height, bool suspend);
 
 struct vsp1_du_atomic_config {
 	u32 pixelformat;
