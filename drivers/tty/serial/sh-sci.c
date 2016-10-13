@@ -460,11 +460,11 @@ static const struct plat_sci_reg sci_regmap[SCIx_NR_REGTYPES][SCIx_NR_REGS] = {
 static struct hw_register scif0_ip_regs[] = {
 	{"SCSMR",  0x0000, 16, 0},
 	{"SCBRR",  0x0004,  8, 0},
-	{"SCSCR",  0x0008, 16, 0},
 	{"SCFCR",  0x0018, 16, 0},
 	{"SCSPTR", 0x0020, 16, 0},
 	{"DL",     0x0030, 16, 0},
 	{"CKS",    0x0034, 16, 0},
+	{"SCSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip scif0_ip = {
@@ -479,11 +479,11 @@ static struct rcar_ip scif0_ip = {
 static struct hw_register scif1_ip_regs[] = {
 	{"SCSMR",  0x0000, 16, 0},
 	{"SCBRR",  0x0004,  8, 0},
-	{"SCSCR",  0x0008, 16, 0},
 	{"SCFCR",  0x0018, 16, 0},
 	{"SCSPTR", 0x0020, 16, 0},
 	{"DL",     0x0030, 16, 0},
 	{"CKS",    0x0034, 16, 0},
+	{"SCSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip scif1_ip = {
@@ -498,11 +498,11 @@ static struct rcar_ip scif1_ip = {
 static struct hw_register scif2_ip_regs[] = {
 	{"SCSMR",  0x0000, 16, 0},
 	{"SCBRR",  0x0004,  8, 0},
-	{"SCSCR",  0x0008, 16, 0},
 	{"SCFCR",  0x0018, 16, 0},
 	{"SCSPTR", 0x0020, 16, 0},
 	{"DL",     0x0030, 16, 0},
 	{"CKS",    0x0034, 16, 0},
+	{"SCSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip scif2_ip = {
@@ -517,11 +517,11 @@ static struct rcar_ip scif2_ip = {
 static struct hw_register scif3_ip_regs[] = {
 	{"SCSMR",  0x0000, 16, 0},
 	{"SCBRR",  0x0004,  8, 0},
-	{"SCSCR",  0x0008, 16, 0},
 	{"SCFCR",  0x0018, 16, 0},
 	{"SCSPTR", 0x0020, 16, 0},
 	{"DL",     0x0030, 16, 0},
 	{"CKS",    0x0034, 16, 0},
+	{"SCSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip scif3_ip = {
@@ -536,11 +536,11 @@ static struct rcar_ip scif3_ip = {
 static struct hw_register scif4_ip_regs[] = {
 	{"SCSMR",  0x0000, 16, 0},
 	{"SCBRR",  0x0004,  8, 0},
-	{"SCSCR",  0x0008, 16, 0},
 	{"SCFCR",  0x0018, 16, 0},
 	{"SCSPTR", 0x0020, 16, 0},
 	{"DL",     0x0030, 16, 0},
 	{"CKS",    0x0034, 16, 0},
+	{"SCSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip scif4_ip = {
@@ -555,11 +555,11 @@ static struct rcar_ip scif4_ip = {
 static struct hw_register scif5_ip_regs[] = {
 	{"SCSMR",  0x0000, 16, 0},
 	{"SCBRR",  0x0004,  8, 0},
-	{"SCSCR",  0x0008, 16, 0},
 	{"SCFCR",  0x0018, 16, 0},
 	{"SCSPTR", 0x0020, 16, 0},
 	{"DL",     0x0030, 16, 0},
 	{"CKS",    0x0034, 16, 0},
+	{"SCSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip scif5_ip = {
@@ -574,13 +574,13 @@ static struct rcar_ip scif5_ip = {
 static struct hw_register hscif0_ip_regs[] = {
 	{"HSSMR",  0x0000, 16, 0},
 	{"HSBRR",  0x0004,  8, 0},
-	{"HSSCR",  0x0008, 16, 0},
 	{"HSFCR",  0x0018, 16, 0},
 	{"HSSPTR", 0x0020, 16, 0},
 	{"HSSRR",  0x0040, 16, 0},
 	{"HSRTGR", 0x0050, 16, 0},
 	{"HSRTRGR", 0x0054, 16, 0},
 	{"HSTTRGR", 0x0058, 16, 0},
+	{"HSSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip hscif0_ip = {
@@ -595,13 +595,13 @@ static struct rcar_ip hscif0_ip = {
 static struct hw_register hscif1_ip_regs[] = {
 	{"HSSMR",  0x0000, 16, 0},
 	{"HSBRR",  0x0004,  8, 0},
-	{"HSSCR",  0x0008, 16, 0},
 	{"HSFCR",  0x0018, 16, 0},
 	{"HSSPTR", 0x0020, 16, 0},
 	{"HSSRR",  0x0040, 16, 0},
 	{"HSRTGR", 0x0050, 16, 0},
 	{"HSRTRGR", 0x0054, 16, 0},
 	{"HSTTRGR", 0x0058, 16, 0},
+	{"HSSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip hscif1_ip = {
@@ -616,13 +616,13 @@ static struct rcar_ip hscif1_ip = {
 static struct hw_register hscif2_ip_regs[] = {
 	{"HSSMR",  0x0000, 16, 0},
 	{"HSBRR",  0x0004,  8, 0},
-	{"HSSCR",  0x0008, 16, 0},
 	{"HSFCR",  0x0018, 16, 0},
 	{"HSSPTR", 0x0020, 16, 0},
 	{"HSSRR",  0x0040, 16, 0},
 	{"HSRTGR", 0x0050, 16, 0},
 	{"HSRTRGR", 0x0054, 16, 0},
 	{"HSTTRGR", 0x0058, 16, 0},
+	{"HSSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip hscif2_ip = {
@@ -637,13 +637,13 @@ static struct rcar_ip hscif2_ip = {
 static struct hw_register hscif3_ip_regs[] = {
 	{"HSSMR",  0x0000, 16, 0},
 	{"HSBRR",  0x0004,  8, 0},
-	{"HSSCR",  0x0008, 16, 0},
 	{"HSFCR",  0x0018, 16, 0},
 	{"HSSPTR", 0x0020, 16, 0},
 	{"HSSRR",  0x0040, 16, 0},
 	{"HSRTGR", 0x0050, 16, 0},
 	{"HSRTRGR", 0x0054, 16, 0},
 	{"HSTTRGR", 0x0058, 16, 0},
+	{"HSSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip hscif3_ip = {
@@ -658,13 +658,13 @@ static struct rcar_ip hscif3_ip = {
 static struct hw_register hscif4_ip_regs[] = {
 	{"HSSMR",  0x0000, 16, 0},
 	{"HSBRR",  0x0004,  8, 0},
-	{"HSSCR",  0x0008, 16, 0},
 	{"HSFCR",  0x0018, 16, 0},
 	{"HSSPTR", 0x0020, 16, 0},
 	{"HSSRR",  0x0040, 16, 0},
 	{"HSRTGR", 0x0050, 16, 0},
 	{"HSRTRGR", 0x0054, 16, 0},
 	{"HSTTRGR", 0x0058, 16, 0},
+	{"HSSCR",  0x0008, 16, 0},
 };
 
 static struct rcar_ip hscif4_ip = {
