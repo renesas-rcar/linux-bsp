@@ -206,6 +206,16 @@ static enum drm_mode_status
 rcar_du_hdmienc_mode_valid(struct drm_connector *connector,
 			    struct drm_display_mode *mode)
 {
+	if ((mode->hdisplay > 3840) || (mode->vdisplay > 2160))
+		return MODE_BAD;
+
+	if (((mode->hdisplay == 3840) && (mode->vdisplay == 2160))
+		&& (mode->vrefresh > 30))
+		return MODE_BAD;
+
+	if (mode->clock > 297000)
+		return MODE_BAD;
+
 	return MODE_OK;
 }
 
