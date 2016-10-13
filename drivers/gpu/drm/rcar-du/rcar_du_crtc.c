@@ -31,6 +31,11 @@
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
 
+static const struct soc_device_attribute r8a7795es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 {
 	struct rcar_du_device *rcdu = rcrtc->group->dev;
@@ -103,14 +108,30 @@ static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
 	clk_disable_unprepare(rcrtc->clock);
 }
 
+void rcar_du_crtc_vbk_check(struct rcar_du_crtc *rcrtc)
+{
+	u32 i, timeout = 100, loop = 1;
+	u32 status;
+
+	if (soc_device_match(r8a7795es1))
+		loop = 2;
+
+	/* Check next VBK flag */
+	for (i = 0; i < timeout; i++) {
+		status = rcar_du_crtc_read(rcrtc, DSSR);
+		if (status & DSSR_VBK) {
+
+			rcar_du_crtc_write(rcrtc, DSRCR, DSRCR_VBCL);
+			if (--loop == 0)
+				break;
+		}
+		mdelay(1);
+	}
+}
+
 /* -----------------------------------------------------------------------------
  * Hardware Setup
  */
-
-static const struct soc_device_attribute r8a7795es1[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ /* sentinel */ }
-};
 
 static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
 				 unsigned int mode_clock)
@@ -382,12 +403,12 @@ static void rcar_du_crtc_update_planes(struct rcar_du_crtc *rcrtc)
 		rcrtc->group->dptsr_planes = dptsr_planes;
 
 		if (rcrtc->group->used_crtcs)
-			rcar_du_group_restart(rcrtc->group);
+			rcar_du_group_restart(rcrtc->group, rcrtc);
 	}
 
 	/* Restart the group if plane sources have changed. */
 	if (rcrtc->group->need_restart)
-		rcar_du_group_restart(rcrtc->group);
+		rcar_du_group_restart(rcrtc->group, rcrtc);
 
 	mutex_unlock(&rcrtc->group->lock);
 
@@ -480,7 +501,7 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 			     (interlaced ? DSYSR_SCM_INT_VIDEO : 0) |
 			     DSYSR_TVM_MASTER);
 
-	rcar_du_group_start_stop(rcrtc->group, true);
+	rcar_du_group_start_stop(rcrtc->group, true, rcrtc);
 
 	/* Enable the VSP compositor. */
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
@@ -528,7 +549,7 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 */
 	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
 
-	rcar_du_group_start_stop(rcrtc->group, false);
+	rcar_du_group_start_stop(rcrtc->group, false, rcrtc);
 
 	rcrtc->started = false;
 }
