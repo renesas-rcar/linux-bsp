@@ -66,6 +66,7 @@ struct vsp1_device_info {
 	unsigned int wpf_count;
 	unsigned int num_bru_inputs;
 	bool uapi;
+	bool header_mode;
 };
 
 struct vsp1_device {
