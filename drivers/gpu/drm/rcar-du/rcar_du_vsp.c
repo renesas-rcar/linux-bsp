@@ -12,12 +12,14 @@
  */
 
 #include <drm/drmP.h>
+#include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 #include <drm/drm_plane_helper.h>
+#include <drm/rcar_du_drm.h>
 
 #include <linux/dma-mapping.h>
 #include <linux/of_platform.h>
@@ -405,6 +407,34 @@ static int rcar_du_vsp_plane_atomic_get_property(struct drm_plane *plane,
 		return -EINVAL;
 
 	return 0;
+}
+
+int rcar_du_set_vmute(struct drm_device *dev, void *data,
+		struct drm_file *file_priv)
+{
+	struct rcar_du_vmute *vmute =
+		(struct rcar_du_vmute *)data;
+	struct drm_mode_object *obj;
+	struct drm_crtc *crtc;
+	struct rcar_du_crtc *rcrtc;
+	int ret = 0;
+
+	dev_dbg(dev->dev, "CRTC[%d], display:%s\n",
+		vmute->crtc_id, vmute->on ? "off":"on");
+
+	obj = drm_mode_object_find(dev, vmute->crtc_id,
+					DRM_MODE_OBJECT_CRTC);
+	if (!obj)
+		return -EINVAL;
+
+	crtc = obj_to_crtc(obj);
+	rcrtc = to_rcar_crtc(crtc);
+
+	vsp1_du_if_set_mute(rcrtc->vsp->vsp, vmute->on);
+
+	ret = rcar_du_async_commit(dev, crtc);
+
+	return ret;
 }
 
 static const struct drm_plane_funcs rcar_du_vsp_plane_funcs = {
