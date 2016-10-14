@@ -103,17 +103,6 @@ static u32 rvin_format_sizeimage(struct v4l2_pix_format *pix)
  * V4L2
  */
 
-static void rvin_reset_crop_compose(struct rvin_dev *vin)
-{
-	vin->crop.top = vin->crop.left = 0;
-	vin->crop.width = vin->source.width;
-	vin->crop.height = vin->source.height;
-
-	vin->compose.top = vin->compose.left = 0;
-	vin->compose.width = vin->format.width;
-	vin->compose.height = vin->format.height;
-}
-
 static int __rvin_try_format_source(struct rvin_dev *vin,
 				    u32 which,
 				    struct v4l2_pix_format *pix,
@@ -321,8 +310,6 @@ static int __rvin_s_fmt_vid_cap(struct rvin_dev *vin, struct v4l2_format *f)
 	vin->source.height = source.height;
 
 	vin->format = f->fmt.pix;
-
-	rvin_reset_crop_compose(vin);
 
 	return 0;
 }
