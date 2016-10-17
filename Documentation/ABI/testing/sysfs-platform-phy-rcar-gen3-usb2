@@ -1,0 +1,11 @@
+What:		/sys/devices/platform/<phy-name>/otg-inputs
+Date:		October 2016
+KernelVersion:	4.10
+Contact:	Yoshihiro Shimoda <yoshihiro.shimoda.uh@renesas.com>
+Description:
+		This write-only file changes the phy mode for role swap of usb.
+		This file accepts the following strings:
+		 "a_bus_req/" - switching from A-Host to A-Peripheral
+		 "a_bus_drop" - switching from A-Peripheral to A-Host
+		 "b_bus_req"  - switching from B-Peripheral to B-Host
+		 "b_bus_req/" - switching from B-Host to B-Peripheral
