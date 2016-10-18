@@ -695,7 +695,6 @@ static int rvin_dv_timings_cap(struct file *file, void *priv_fh,
 static int rvin_g_edid(struct file *file, void *fh, struct v4l2_edid *edid)
 {
 	struct rvin_dev *vin = video_drvdata(file);
-	struct v4l2_subdev *sd = vin_to_source(vin);
 	int input, ret;
 
 	if (edid->pad)
@@ -704,7 +703,7 @@ static int rvin_g_edid(struct file *file, void *fh, struct v4l2_edid *edid)
 	input = edid->pad;
 	edid->pad = vin->sink_pad_idx;
 
-	ret = v4l2_subdev_call(sd, pad, get_edid, edid);
+	ret = rvin_subdev_call_local(vin, pad, get_edid, edid);
 
 	edid->pad = input;
 
@@ -714,7 +713,6 @@ static int rvin_g_edid(struct file *file, void *fh, struct v4l2_edid *edid)
 static int rvin_s_edid(struct file *file, void *fh, struct v4l2_edid *edid)
 {
 	struct rvin_dev *vin = video_drvdata(file);
-	struct v4l2_subdev *sd = vin_to_source(vin);
 	int input, ret;
 
 	if (edid->pad)
@@ -723,7 +721,7 @@ static int rvin_s_edid(struct file *file, void *fh, struct v4l2_edid *edid)
 	input = edid->pad;
 	edid->pad = vin->sink_pad_idx;
 
-	ret = v4l2_subdev_call(sd, pad, set_edid, edid);
+	ret = rvin_subdev_call_local(vin, pad, set_edid, edid);
 
 	edid->pad = input;
 

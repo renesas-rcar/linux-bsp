@@ -166,7 +166,7 @@ static int rvin_setup(struct rvin_dev *vin)
 		/* Default to TB */
 		vnmc = VNMC_IM_FULL;
 		/* Use BT if video standard can be read and is 60 Hz format */
-		if (!v4l2_subdev_call(vin_to_source(vin), video, g_std, &std)) {
+		if (!rvin_subdev_call_local(vin, video, g_std, &std)) {
 			if (std & V4L2_STD_525_60)
 				vnmc = VNMC_IM_FULL | VNMC_FOC;
 		}
@@ -1095,8 +1095,7 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	unsigned long flags;
 	int ret;
 
-	rvin_subdev_call(vin, pad, s_stream,
-			 vin->inputs[vin->current_input].source_idx, 1);
+	rvin_subdev_call_local(vin, video, s_stream, 1);
 
 	spin_lock_irqsave(&vin->qlock, flags);
 
@@ -1121,8 +1120,7 @@ out:
 	/* Return all buffers if something went wrong */
 	if (ret) {
 		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
-		rvin_subdev_call(vin, pad, s_stream,
-				 vin->inputs[vin->current_input].source_idx, 0);
+		rvin_subdev_call_local(vin, video, s_stream, 0);
 	}
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
@@ -1171,8 +1169,7 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
 
-	rvin_subdev_call(vin, pad, s_stream,
-			 vin->inputs[vin->current_input].source_idx, 0);
+	rvin_subdev_call_local(vin, video, s_stream, 0);
 
 	/* disable interrupts */
 	rvin_disable_interrupts(vin);
