@@ -6,6 +6,7 @@ family of devices. It is to be used in conjunction with the rcar-vin driver whic
 provides the video input capabilities.
 
  - compatible: Must be one or more of the following
+   - "renesas,csi2-r8a7796" for the R8A7796 device
    - "renesas,csi2-r8a7795" for the R8A7795 device
    - "renesas,rcar-gen3-csi2" for a generic R-Car Gen3 compatible device.
 

@@ -387,6 +387,7 @@ static struct v4l2_subdev_ops rcar_csi2_subdev_ops = {
  */
 
 static const struct of_device_id rcar_csi2_of_table[] = {
+	{ .compatible = "renesas,csi2-r8a7796" },
 	{ .compatible = "renesas,csi2-r8a7795" },
 	{ .compatible = "renesas,rcar-gen3-csi2" },
 	{ },
