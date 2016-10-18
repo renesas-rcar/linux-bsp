@@ -605,6 +605,45 @@ static int rvin_group_g_tvnorms(struct v4l2_subdev *sd, v4l2_std_id *tvnorms)
 				tvnorms);
 }
 
+static int rvin_group_s_stream(struct v4l2_subdev *sd, int enable)
+{
+	struct rvin_group *grp = v4l2_get_subdev_hostdata(sd);
+	enum rvin_csi_id csi;
+	int ret = 0;
+
+	mutex_lock(&grp->lock);
+
+	csi = sd_to_csi(grp, sd);
+	if (csi == RVIN_CSI_ERROR) {
+		ret = -ENODEV;
+		goto unlock_err;
+	}
+
+	/* If we already are streaming just increment the usage */
+	if ((enable && grp->stream[csi] != 0) ||
+	    (!enable && grp->stream[csi] != 1))
+		goto unlock;
+
+	/* Important to start bridge fist, it needs a quiet bus to start */
+	ret = v4l2_subdev_call(grp->bridge[csi].subdev, video, s_stream,
+			       enable);
+	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+		goto unlock_err;
+	ret = v4l2_subdev_call(grp->source[csi].subdev, video, s_stream,
+			       enable);
+	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+		goto unlock_err;
+
+	grp_dbg(grp, "csi%d: stream: %d bridge: %s source %s\n", csi,
+		enable, grp->bridge[csi].subdev->name,
+		grp->source[csi].subdev->name);
+unlock:
+	grp->stream[csi] += enable ? 1 : -1;
+unlock_err:
+	mutex_unlock(&grp->lock);
+	return ret;
+}
+
 static int rvin_group_g_dv_timings(struct v4l2_subdev *sd,
 				   struct v4l2_dv_timings *timings)
 {
@@ -652,6 +691,7 @@ static const struct v4l2_subdev_video_ops rvin_group_video_ops = {
 	.s_std			= rvin_group_s_std,
 	.querystd		= rvin_group_querystd,
 	.g_tvnorms		= rvin_group_g_tvnorms,
+	.s_stream		= rvin_group_s_stream,
 	.g_dv_timings		= rvin_group_g_dv_timings,
 	.s_dv_timings		= rvin_group_s_dv_timings,
 	.query_dv_timings	= rvin_group_query_dv_timings,
@@ -693,50 +733,9 @@ static int rvin_group_set_fmt(struct v4l2_subdev *sd,
 				NULL, fmt);
 }
 
-static int rvin_group_s_stream(struct v4l2_subdev *sd, unsigned int pad,
-			       int enable)
-{
-	struct rvin_group *grp = v4l2_get_subdev_hostdata(sd);
-	enum rvin_csi_id csi;
-	int ret = 0;
-
-	mutex_lock(&grp->lock);
-
-	csi = sd_to_csi(grp, sd);
-	if (csi == RVIN_CSI_ERROR) {
-		ret = -ENODEV;
-		goto unlock_err;
-	}
-
-	/* If we already are streaming just increment the usage */
-	if ((enable && grp->stream[csi] != 0) ||
-	    (!enable && grp->stream[csi] != 1))
-		goto unlock;
-
-	/* Important to start bridge fist, it needs a quiet bus to start */
-	ret = v4l2_subdev_call(grp->bridge[csi].subdev, pad, s_stream, pad,
-			       enable);
-	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
-		goto unlock_err;
-	ret = v4l2_subdev_call(grp->source[csi].subdev, pad, s_stream, pad,
-			       enable);
-	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
-		goto unlock_err;
-
-	grp_dbg(grp, "csi%d: stream: %d bridge: %s source %s\n", csi,
-		enable, grp->bridge[csi].subdev->name,
-		grp->source[csi].subdev->name);
-unlock:
-	grp->stream[csi] += enable ? 1 : -1;
-unlock_err:
-	mutex_unlock(&grp->lock);
-	return ret;
-}
-
 static const struct v4l2_subdev_pad_ops rvin_group_pad_ops = {
 	.get_fmt	= rvin_group_get_fmt,
 	.set_fmt	= rvin_group_set_fmt,
-	.s_stream	= rvin_group_s_stream,
 };
 
 static const struct v4l2_subdev_ops rvin_group_ops = {
