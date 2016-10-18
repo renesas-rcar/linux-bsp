@@ -424,12 +424,10 @@ static int rvin_s_selection(struct file *file, void *fh,
 static int rvin_cropcap(struct file *file, void *priv,
 			struct v4l2_cropcap *crop)
 {
-	struct rvin_dev *vin = video_drvdata(file);
-
 	if (crop->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
-	return rvin_subdev_call(vin, video, cropcap, crop);
+	return 0;
 }
 
 static int rvin_attach_subdevices(struct rvin_dev *vin)

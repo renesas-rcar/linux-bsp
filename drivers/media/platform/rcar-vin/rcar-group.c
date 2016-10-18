@@ -605,18 +605,6 @@ static int rvin_group_g_tvnorms(struct v4l2_subdev *sd, v4l2_std_id *tvnorms)
 				tvnorms);
 }
 
-static int rvin_group_cropcap(struct v4l2_subdev *sd, struct v4l2_cropcap *crop)
-{
-	struct rvin_group *grp = v4l2_get_subdev_hostdata(sd);
-	enum rvin_csi_id csi;
-
-	csi = sd_to_csi(grp, sd);
-	if (csi == RVIN_CSI_ERROR)
-		return -ENODEV;
-
-	return v4l2_subdev_call(grp->source[csi].subdev, video, cropcap, crop);
-}
-
 static int rvin_group_g_dv_timings(struct v4l2_subdev *sd,
 				   struct v4l2_dv_timings *timings)
 {
@@ -664,7 +652,6 @@ static const struct v4l2_subdev_video_ops rvin_group_video_ops = {
 	.s_std			= rvin_group_s_std,
 	.querystd		= rvin_group_querystd,
 	.g_tvnorms		= rvin_group_g_tvnorms,
-	.cropcap		= rvin_group_cropcap,
 	.g_dv_timings		= rvin_group_g_dv_timings,
 	.s_dv_timings		= rvin_group_s_dv_timings,
 	.query_dv_timings	= rvin_group_query_dv_timings,
