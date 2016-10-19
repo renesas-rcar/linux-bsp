@@ -26,35 +26,100 @@
 #include "rcar-vin.h"
 
 /* -----------------------------------------------------------------------------
- * Async notifier
+ * Subdevice group helpers
+ */
+
+int rvin_subdev_get(struct rvin_dev *vin)
+{
+	int i, num = 0;
+
+	for (i = 0; i < RVIN_INPUT_MAX; i++) {
+		vin->inputs[i].type = RVIN_INPUT_NONE;
+		vin->inputs[i].hint = false;
+	}
+
+	/* Add local digital input */
+	if (num < RVIN_INPUT_MAX && vin->digital.subdev) {
+		vin->inputs[num].type = RVIN_INPUT_DIGITAL;
+		strncpy(vin->inputs[num].name, "Digital", RVIN_INPUT_NAME_SIZE);
+		vin->inputs[num].sink_idx =
+			sd_to_pad_idx(vin->digital.subdev, MEDIA_PAD_FL_SINK);
+		vin->inputs[num].source_idx =
+			sd_to_pad_idx(vin->digital.subdev, MEDIA_PAD_FL_SOURCE);
+		/* If last input was digital we want it again */
+		if (vin->current_input == RVIN_INPUT_DIGITAL)
+			vin->inputs[num].hint = true;
+	}
+
+	/* Make sure we have at least one input */
+	if (vin->inputs[0].type == RVIN_INPUT_NONE) {
+		vin_err(vin, "No inputs for channel with current selection\n");
+		return -EBUSY;
+	}
+	vin->current_input = 0;
+
+	/* Search for hint and prefer digital over CSI2 run over all elements */
+	for (i = 0; i < RVIN_INPUT_MAX; i++)
+		if (vin->inputs[i].hint)
+			vin->current_input = i;
+
+	return 0;
+}
+
+int rvin_subdev_put(struct rvin_dev *vin)
+{
+	/* Store what type of input we used */
+	vin->current_input = vin->inputs[vin->current_input].type;
+
+	return 0;
+}
+
+int rvin_subdev_set_input(struct rvin_dev *vin, struct rvin_input_item *item)
+{
+	if (vin->digital.subdev)
+		return 0;
+
+	return -EBUSY;
+}
+
+int rvin_subdev_get_code(struct rvin_dev *vin, u32 *code)
+{
+	*code = vin->digital.code;
+	return 0;
+}
+
+int rvin_subdev_get_mbus_cfg(struct rvin_dev *vin,
+			     struct v4l2_mbus_config *mbus_cfg)
+{
+	*mbus_cfg = vin->digital.mbus_cfg;
+	return 0;
+}
+
+struct v4l2_subdev_pad_config*
+rvin_subdev_alloc_pad_config(struct rvin_dev *vin)
+{
+	return v4l2_subdev_alloc_pad_config(vin->digital.subdev);
+}
+
+int rvin_subdev_ctrl_add_handler(struct rvin_dev *vin)
+{
+	int ret;
+
+	v4l2_ctrl_handler_free(&vin->ctrl_handler);
+
+	ret = v4l2_ctrl_handler_init(&vin->ctrl_handler, 16);
+	if (ret < 0)
+		return ret;
+
+	return v4l2_ctrl_add_handler(&vin->ctrl_handler,
+				     vin->digital.subdev->ctrl_handler, NULL);
+}
+
+/* -----------------------------------------------------------------------------
+ * Async notifier for local Digital
  */
 
 #define notifier_to_vin(n) container_of(n, struct rvin_dev, notifier)
-
-static bool rvin_mbus_supported(struct rvin_graph_entity *entity)
-{
-	struct v4l2_subdev *sd = entity->subdev;
-	struct v4l2_subdev_mbus_code_enum code = {
-		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
-	};
-
-	code.index = 0;
-	while (!v4l2_subdev_call(sd, pad, enum_mbus_code, NULL, &code)) {
-		code.index++;
-		switch (code.code) {
-		case MEDIA_BUS_FMT_YUYV8_1X16:
-		case MEDIA_BUS_FMT_UYVY8_2X8:
-		case MEDIA_BUS_FMT_UYVY10_2X10:
-		case MEDIA_BUS_FMT_RGB888_1X24:
-			entity->code = code.code;
-			return true;
-		default:
-			break;
-		}
-	}
-
-	return false;
-}
 
 static int rvin_digital_notify_complete(struct v4l2_async_notifier *notifier)
 {
@@ -77,7 +142,7 @@ static int rvin_digital_notify_complete(struct v4l2_async_notifier *notifier)
 		return ret;
 	}
 
-	return rvin_v4l2_probe(vin);
+	return 0;
 }
 
 static void rvin_digital_notify_unbind(struct v4l2_async_notifier *notifier,
@@ -88,7 +153,6 @@ static void rvin_digital_notify_unbind(struct v4l2_async_notifier *notifier,
 
 	if (vin->digital.subdev == subdev) {
 		vin_dbg(vin, "unbind digital subdev %s\n", subdev->name);
-		rvin_v4l2_remove(vin);
 		vin->digital.subdev = NULL;
 		return;
 	}
@@ -146,7 +210,7 @@ static int rvin_digitial_parse_v4l2(struct rvin_dev *vin,
 	return 0;
 }
 
-static int rvin_digital_graph_parse(struct rvin_dev *vin)
+static int rvin_digital_get(struct rvin_dev *vin)
 {
 	struct device_node *ep, *np;
 	int ret;
@@ -158,7 +222,8 @@ static int rvin_digital_graph_parse(struct rvin_dev *vin)
 	 * Port 0 id 0 is local digital input, try to get it.
 	 * Not all instances can or will have this, that is OK
 	 */
-	ep = of_graph_get_endpoint_by_regs(vin->dev->of_node, 0, 0);
+	ep = of_graph_get_endpoint_by_regs(vin->dev->of_node, RVIN_PORT_LOCAL,
+					   0);
 	if (!ep)
 		return 0;
 
@@ -186,13 +251,13 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 	struct v4l2_async_subdev **subdevs = NULL;
 	int ret;
 
-	ret = rvin_digital_graph_parse(vin);
+	ret = rvin_digital_get(vin);
 	if (ret)
 		return ret;
 
 	if (!vin->digital.asd.match.of.node) {
 		vin_dbg(vin, "No digital subdevice found\n");
-		return -ENODEV;
+		return -EINVAL;
 	}
 
 	/* Register the subdevices notifier. */
@@ -200,7 +265,7 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 	if (subdevs == NULL)
 		return -ENOMEM;
 
-	subdevs[0] = &vin->digital.asd;
+	subdevs[0] =  &vin->digital.asd;
 
 	vin_dbg(vin, "Found digital subdevice %s\n",
 		of_node_full_name(subdevs[0]->match.of.node));
@@ -236,12 +301,36 @@ static const struct of_device_id rvin_of_id_table[] = {
 };
 MODULE_DEVICE_TABLE(of, rvin_of_id_table);
 
+static int rvin_probe_channel(struct platform_device *pdev,
+			      struct rvin_dev *vin)
+{
+	struct resource *mem;
+	int irq, ret;
+
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (mem == NULL)
+		return -EINVAL;
+
+	vin->base = devm_ioremap_resource(vin->dev, mem);
+	if (IS_ERR(vin->base))
+		return PTR_ERR(vin->base);
+
+	irq = platform_get_irq(pdev, 0);
+	if (irq <= 0)
+		return irq;
+
+	ret = rvin_dma_probe(vin, irq);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
 static int rcar_vin_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
 	struct rvin_dev *vin;
-	struct resource *mem;
-	int irq, ret;
+	int ret;
 
 	vin = devm_kzalloc(&pdev->dev, sizeof(*vin), GFP_KERNEL);
 	if (!vin)
@@ -254,34 +343,37 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	vin->dev = &pdev->dev;
 	vin->chip = (enum chip_id)match->data;
 
-	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (mem == NULL)
-		return -EINVAL;
+	/* Prefer digital input */
+	vin->current_input = RVIN_INPUT_DIGITAL;
 
-	vin->base = devm_ioremap_resource(vin->dev, mem);
-	if (IS_ERR(vin->base))
-		return PTR_ERR(vin->base);
-
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0)
-		return irq;
-
-	ret = rvin_dma_probe(vin, irq);
+	/* Initialize the top-level structure */
+	ret = v4l2_device_register(vin->dev, &vin->v4l2_dev);
 	if (ret)
 		return ret;
 
+	ret = rvin_probe_channel(pdev, vin);
+	if (ret)
+		goto err_register;
+
 	ret = rvin_digital_graph_init(vin);
 	if (ret < 0)
-		goto error;
+		goto err_dma;
+
+	ret = rvin_v4l2_probe(vin);
+	if (ret)
+		goto err_dma;
+
+	platform_set_drvdata(pdev, vin);
 
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
-	platform_set_drvdata(pdev, vin);
-
 	return 0;
-error:
+
+err_dma:
 	rvin_dma_remove(vin);
+err_register:
+	v4l2_device_unregister(&vin->v4l2_dev);
 
 	return ret;
 }
@@ -292,9 +384,13 @@ static int rcar_vin_remove(struct platform_device *pdev)
 
 	pm_runtime_disable(&pdev->dev);
 
+	rvin_v4l2_remove(vin);
+
 	v4l2_async_notifier_unregister(&vin->notifier);
 
 	rvin_dma_remove(vin);
+
+	v4l2_device_unregister(&vin->v4l2_dev);
 
 	return 0;
 }
