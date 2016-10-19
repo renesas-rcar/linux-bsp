@@ -277,6 +277,8 @@ static void rcar_du_disable_vblank(struct drm_device *dev, unsigned int pipe)
 static const struct drm_ioctl_desc rcar_du_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
 		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+	DRM_IOCTL_DEF_DRV(RCAR_DU_SCRSHOT, rcar_du_vsp_write_back,
+		DRM_UNLOCKED | DRM_CONTROL_ALLOW),
 };
 
 static const struct file_operations rcar_du_fops = {
