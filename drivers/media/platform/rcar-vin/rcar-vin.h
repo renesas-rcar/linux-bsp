@@ -23,6 +23,8 @@
 #include <media/v4l2-device.h>
 #include <media/videobuf2-v4l2.h>
 
+#include "rcar-group.h"
+
 /* Number of HW buffers */
 #define HW_BUFFER_NUM 3
 
@@ -69,21 +71,6 @@ struct rvin_video_format {
 };
 
 /**
- * struct rvin_graph_entity - Video endpoint from async framework
- * @asd:	sub-device descriptor for async framework
- * @subdev:	subdevice matched using async framework
- * @code:	Media bus format from source
- * @mbus_cfg:	Media bus format from DT
- */
-struct rvin_graph_entity {
-	struct v4l2_async_subdev asd;
-	struct v4l2_subdev *subdev;
-
-	u32 code;
-	struct v4l2_mbus_config mbus_cfg;
-};
-
-/**
  * struct rvin_dev - Renesas VIN device structure
  * @dev:		(OF) device
  * @base:		device I/O register space remapped to virtual memory
@@ -113,6 +100,9 @@ struct rvin_graph_entity {
  *
  * @crop:		active cropping
  * @compose:		active composing
+ *
+ * @current_input:	currently used input in @inputs
+ * @inputs:		list of valid inputs sources
  */
 struct rvin_dev {
 	struct device *dev;
@@ -142,9 +132,10 @@ struct rvin_dev {
 
 	struct v4l2_rect crop;
 	struct v4l2_rect compose;
-};
 
-#define vin_to_source(vin)		vin->digital.subdev
+	int current_input;
+	struct rvin_input_item inputs[RVIN_INPUT_MAX];
+};
 
 /* Debug */
 #define vin_dbg(d, fmt, arg...)		dev_dbg(d->dev, fmt, ##arg)
@@ -165,4 +156,23 @@ void rvin_scale_try(struct rvin_dev *vin, struct v4l2_pix_format *pix,
 		    u32 width, u32 height);
 void rvin_crop_scale_comp(struct rvin_dev *vin);
 
+/* Subdevice group helpers */
+#define rvin_subdev_call(v, o, f, args...)				\
+	(v->digital.subdev ?						\
+	 v4l2_subdev_call(v->digital.subdev, o, f, ##args) : -ENODEV)
+#define rvin_subdev_call_input(v, i, o, f, args...)			\
+	(v->digital.subdev ?						\
+	 v4l2_subdev_call(v->digital.subdev, o, f, ##args) : -ENODEV)
+
+int rvin_subdev_get(struct rvin_dev *vin);
+int rvin_subdev_put(struct rvin_dev *vin);
+int rvin_subdev_set_input(struct rvin_dev *vin, struct rvin_input_item *item);
+
+int rvin_subdev_get_code(struct rvin_dev *vin, u32 *code);
+int rvin_subdev_get_mbus_cfg(struct rvin_dev *vin,
+			     struct v4l2_mbus_config *mbus_cfg);
+
+int rvin_subdev_ctrl_add_handler(struct rvin_dev *vin);
+struct v4l2_subdev_pad_config *rvin_subdev_alloc_pad_config(struct rvin_dev
+							    *vin);
 #endif
