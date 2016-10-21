@@ -898,6 +898,10 @@
 	status = "okay";
 };
 
+&msiof_ref_clk {
+	clock-frequency = <66666666>;
+};
+
 &msiof0 {
 	pinctrl-0 = <&msiof0_pins>;
 	pinctrl-names = "default";
