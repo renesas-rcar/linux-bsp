@@ -23,8 +23,8 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <linux/soc/renesas/rcar_prr.h>
 #include <linux/spinlock.h>
+#include <linux/sys_soc.h>
 #include <linux/thermal.h>
 
 /* Register offset */
@@ -75,6 +75,19 @@
 #define TEMP_IRQ_SHIFT(tsc_id)	(0x1 << tsc_id)
 #define TEMPD_IRQ_SHIFT(tsc_id)	(0x1 << (tsc_id + 3))
 #define GEN3_FUSE_MASK	0xFFF
+
+/* Attribute structs describing Salvator-X revisions */
+/* H3 WS1.0 and WS1.1 */
+static const struct soc_device_attribute r8a7795es1[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{}
+};
+
+/* M3 WS1.0 */
+static const struct soc_device_attribute r8a7796es10[]  = {
+	{ .soc_id = "r8a7796", .revision = "ES1.0" },
+	{}
+};
 
 /* Equation coefficients for thermal calculation formula.*/
 struct equation_coefs {
@@ -153,11 +166,6 @@ static int round_temp(int temp)
 static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 {
 	void __iomem *ptat_base;
-	int err;
-
-	err = RCAR_PRR_INIT();
-	if (err)
-		return err;
 
 	ptat_base = ioremap_nocache(PTAT_BASE, PTAT_SIZE);
 	if (!ptat_base) {
@@ -169,9 +177,8 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 	 * these registers have not been programmed yet.
 	 * We will use fixed value as temporary solution.
 	 */
-	if ((RCAR_PRR_IS_PRODUCT(H3) && (RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
-		|| (RCAR_PRR_IS_PRODUCT(M3) &&
-			(RCAR_PRR_CHK_CUT(M3, ES10) == 0))) {
+	if (soc_device_match(r8a7795es1)
+		|| soc_device_match(r8a7796es10)) {
 		priv->factor.ptat_1 = 2351;
 		priv->factor.ptat_2 = 1509;
 		priv->factor.ptat_3 = 435;
