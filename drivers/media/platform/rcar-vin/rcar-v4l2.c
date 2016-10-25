@@ -452,8 +452,31 @@ static int rvin_s_selection(struct file *file, void *fh,
 static int rvin_cropcap(struct file *file, void *priv,
 			struct v4l2_cropcap *crop)
 {
+	struct rvin_dev *vin = video_drvdata(file);
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
+	struct v4l2_mbus_framefmt *mf = &fmt.format;
+	int ret;
+
 	if (crop->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
+
+	/* Changing the standard will change the width/height */
+	ret = rvin_subdev_call(vin, pad, get_fmt, NULL, &fmt);
+	if (ret) {
+		vin_err(vin, "Failed to get initial format\n");
+		return ret;
+	}
+
+	crop->bounds.left = 0;
+	crop->bounds.top  = 0;
+	crop->bounds.width = mf->width;
+	crop->bounds.height = mf->height;
+
+	/* default cropping rectangle */
+	crop->defrect = crop->bounds;
+	crop->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
 	return 0;
 }
