@@ -136,8 +136,6 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 	if (ret < 0 && ret != -ENOIOCTLCMD)
 		goto done;
 
-	v4l2_fill_pix_format(pix, &format.format);
-
 	pix->field = field;
 
 	source->width = pix->width;
