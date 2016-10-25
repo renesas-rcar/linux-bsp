@@ -216,6 +216,17 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	if (source->width != rwidth || source->height != rheight)
 		rvin_scale_try(vin, pix, rwidth, rheight);
 
+	/* At the time of capturing NV16/NV12 format, user has to specify
+	 * the width of the multiple of 32 for H/W specification.
+	 */
+	if (((pix->pixelformat == V4L2_PIX_FMT_NV16) ||
+		(pix->pixelformat == V4L2_PIX_FMT_NV12)) &&
+		(pix->width % 32)) {
+		vin_err(vin,
+			"specify width of 32 multiple in separate format.\n");
+		return -EINVAL;
+	}
+
 	/* HW limit width to a multiple of 32 (2^5) for NV16/12 else 2 (2^1) */
 	if ((pix->pixelformat == V4L2_PIX_FMT_NV12) ||
 		(pix->pixelformat == V4L2_PIX_FMT_NV16))
