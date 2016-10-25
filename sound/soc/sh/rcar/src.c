@@ -477,7 +477,7 @@ static int rsnd_src_probe_(struct rsnd_mod *mod,
 			return ret;
 	}
 
-	ret = rsnd_dma_attach(io, mod, &src->dma, 0);
+	ret = rsnd_dma_attach(io, mod, &src->dma);
 
 	return ret;
 }
