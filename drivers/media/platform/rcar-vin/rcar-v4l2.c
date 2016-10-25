@@ -34,6 +34,10 @@
 
 static const struct rvin_video_format rvin_formats[] = {
 	{
+		.fourcc			= V4L2_PIX_FMT_NV12,
+		.bpp			= 1,
+	},
+	{
 		.fourcc			= V4L2_PIX_FMT_NV16,
 		.bpp			= 1,
 	},
@@ -84,7 +88,8 @@ static u32 rvin_format_bytesperline(struct v4l2_pix_format *pix)
 
 static u32 rvin_format_sizeimage(struct v4l2_pix_format *pix)
 {
-	if (pix->pixelformat == V4L2_PIX_FMT_NV16)
+	if ((pix->pixelformat == V4L2_PIX_FMT_NV16) ||
+		(pix->pixelformat == V4L2_PIX_FMT_NV12))
 		return pix->bytesperline * pix->height * 2;
 
 	return pix->bytesperline * pix->height;
@@ -206,8 +211,9 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	if (source->width != rwidth || source->height != rheight)
 		rvin_scale_try(vin, pix, rwidth, rheight);
 
-	/* HW limit width to a multiple of 32 (2^5) for NV16 else 2 (2^1) */
-	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
+	/* HW limit width to a multiple of 32 (2^5) for NV16/12 else 2 (2^1) */
+	walign = vin->format.pixelformat ==
+		 (V4L2_PIX_FMT_NV16 || V4L2_PIX_FMT_NV12) ? 5 : 1;
 
 	/* Limit to VIN capabilities */
 	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3) {
@@ -229,6 +235,12 @@ static int __rvin_try_format(struct rvin_dev *vin,
 
 	if (vin->chip == RCAR_M1 && pix->pixelformat == V4L2_PIX_FMT_XBGR32) {
 		vin_err(vin, "pixel format XBGR32 not supported on M1\n");
+		return -EINVAL;
+	}
+
+	if ((vin->chip != RCAR_H3 && vin->chip != RCAR_M3) &&
+		(pix->pixelformat == V4L2_PIX_FMT_NV12)) {
+		vin_err(vin, "pixel format NV12 is supported from GEN3\n");
 		return -EINVAL;
 	}
 
