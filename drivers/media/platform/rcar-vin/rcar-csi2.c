@@ -275,16 +275,19 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 			PHYCNT_ENABLE_2 | PHYCNT_ENABLE_1 | PHYCNT_ENABLE_0;
 
 		/* Calculate MBPS per lane, assume 32 bits per pixel at 60Hz */
-		pixels = (priv->mf.width * priv->mf.height) /
-			(priv->mf.field == V4L2_FIELD_NONE ? 1 : 2);
+		pixels = (priv->mf.width * priv->mf.height);
 		if (pixels <= 640 * 480)
 			phypll = PHYPLL_HSFREQRANGE_100MBPS;
 		else if (pixels <= 720 * 576)
 			phypll = PHYPLL_HSFREQRANGE_190MBPS;
 		else if (pixels <= 1280 * 720)
 			phypll = PHYPLL_HSFREQRANGE_450MBPS;
-		else if (pixels <= 1920 * 1080)
-			phypll = PHYPLL_HSFREQRANGE_900MBPS;
+		else if (pixels <= 1920 * 1080) {
+			if (priv->mf.field == V4L2_FIELD_NONE)
+				phypll = PHYPLL_HSFREQRANGE_900MBPS;
+			else
+				phypll = PHYPLL_HSFREQRANGE_450MBPS;
+			}
 		else
 			goto error;
 
