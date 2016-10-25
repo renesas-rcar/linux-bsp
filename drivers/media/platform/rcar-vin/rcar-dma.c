@@ -220,7 +220,7 @@ static int rvin_setup(struct rvin_dev *vin)
 	}
 
 	/* Enable VSYNC Field Toogle mode after one VSYNC input */
-	if (vin->chip == RCAR_GEN3)
+	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3)
 		dmr2 = VNDMR2_FTEV;
 	else
 		dmr2 = VNDMR2_FTEV | VNDMR2_VLV(1);
@@ -275,7 +275,7 @@ static int rvin_setup(struct rvin_dev *vin)
 	if (input_is_yuv == output_is_yuv)
 		vnmc |= VNMC_BPS;
 
-	if (vin->chip == RCAR_GEN3) {
+	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3) {
 		/* Select between CSI-2 and Digital input */
 		if (mbus_cfg.type == V4L2_MBUS_CSI2)
 			vnmc &= ~VNMC_DPINE;
@@ -853,7 +853,7 @@ void rvin_crop_scale_comp(struct rvin_dev *vin)
 	}
 
 	/* Driver do not support UDS */
-	if (vin->chip != RCAR_GEN3)
+	if (vin->chip != RCAR_H3 && vin->chip != RCAR_M3)
 		rvin_crop_scale_comp_gen2(vin);
 
 	if (vin->format.pixelformat == V4L2_PIX_FMT_NV16)
@@ -866,7 +866,7 @@ void rvin_scale_try(struct rvin_dev *vin, struct v4l2_pix_format *pix,
 		    u32 width, u32 height)
 {
 	/* Driver do not support UDS */
-	if (vin->chip == RCAR_GEN3)
+	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3)
 		return;
 
 	/* All VIN channels on Gen2 have scalers */
@@ -1247,7 +1247,7 @@ static int rvin_subdev_s_gpio(struct v4l2_subdev *sd, u32 val)
 	struct rvin_dev *vin = container_of(sd, struct rvin_dev, slave);
 	u32 ifmd;
 
-	if (vin->chip != RCAR_GEN3)
+	if (vin->chip != RCAR_H3 && vin->chip != RCAR_M3)
 		return 0;
 
 	pm_runtime_get_sync(vin->v4l2_dev.dev);
@@ -1283,7 +1283,7 @@ int rvin_subdev_probe(struct rvin_dev *vin)
 {
 	vin->slave.v4l2_dev = NULL;
 
-	if (vin->chip != RCAR_GEN3)
+	if (vin->chip != RCAR_H3 && vin->chip != RCAR_M3)
 		return 0;
 
 	vin->slave.owner = THIS_MODULE;
@@ -1298,7 +1298,7 @@ int rvin_subdev_probe(struct rvin_dev *vin)
 
 void rvin_subdev_remove(struct rvin_dev *vin)
 {
-	if (vin->chip != RCAR_GEN3)
+	if (vin->chip != RCAR_H3 && vin->chip != RCAR_M3)
 		return;
 
 	v4l2_async_unregister_subdev(&vin->slave);

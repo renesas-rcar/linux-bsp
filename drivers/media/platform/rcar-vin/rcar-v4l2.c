@@ -212,7 +212,7 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
 
 	/* Limit to VIN capabilities */
-	if (vin->chip == RCAR_GEN3) {
+	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3) {
 		max_width = RVIN_MAX_WIDTH_GEN3;
 		max_height = RVIN_MAX_HEIGHT_GEN3;
 	} else {

@@ -32,6 +32,8 @@
 #define HW_BUFFER_MASK 0x7f
 
 enum chip_id {
+	RCAR_M3,
+	RCAR_H3,
 	RCAR_GEN3,
 	RCAR_GEN2,
 	RCAR_H1,

@@ -290,7 +290,7 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 		vin_dbg(vin, "No digital subdevice found\n");
 
 		/* OK for Gen3 where we can be part of a subdevice group */
-		if (vin->chip == RCAR_GEN3)
+		if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3)
 			return 0;
 
 		return -EINVAL;
@@ -326,7 +326,8 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
  */
 
 static const struct of_device_id rvin_of_id_table[] = {
-	{ .compatible = "renesas,vin-r8a7795", .data = (void *)RCAR_GEN3 },
+	{ .compatible = "renesas,vin-r8a7796", .data = (void *)RCAR_M3 },
+	{ .compatible = "renesas,vin-r8a7795", .data = (void *)RCAR_H3 },
 	{ .compatible = "renesas,vin-r8a7794", .data = (void *)RCAR_GEN2 },
 	{ .compatible = "renesas,vin-r8a7793", .data = (void *)RCAR_GEN2 },
 	{ .compatible = "renesas,vin-r8a7791", .data = (void *)RCAR_GEN2 },
@@ -393,7 +394,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_register;
 
-	if (vin->chip == RCAR_GEN3)
+	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3)
 		vin->api = rvin_group_probe(&pdev->dev, &vin->v4l2_dev);
 	else
 		vin->api = NULL;
