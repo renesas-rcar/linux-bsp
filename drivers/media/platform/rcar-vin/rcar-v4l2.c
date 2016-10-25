@@ -216,8 +216,14 @@ static int __rvin_try_format(struct rvin_dev *vin,
 		rvin_scale_try(vin, pix, rwidth, rheight);
 
 	/* HW limit width to a multiple of 32 (2^5) for NV16/12 else 2 (2^1) */
-	walign = vin->format.pixelformat ==
-		 (V4L2_PIX_FMT_NV16 || V4L2_PIX_FMT_NV12) ? 5 : 1;
+	if ((pix->pixelformat == V4L2_PIX_FMT_NV12) ||
+		(pix->pixelformat == V4L2_PIX_FMT_NV16))
+		walign = 5;
+	else if ((pix->pixelformat == V4L2_PIX_FMT_YUYV) ||
+		(pix->pixelformat == V4L2_PIX_FMT_UYVY))
+		walign = 1;
+	else
+		walign = 0;
 
 	/* Limit to VIN capabilities */
 	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3) {
@@ -229,8 +235,8 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	}
 
 	/* Limit to VIN capabilities */
-	v4l_bound_align_image(&pix->width, 2, max_width, walign,
-			      &pix->height, 4, max_height, 2, 0);
+	v4l_bound_align_image(&pix->width, 5, max_width, walign,
+			      &pix->height, 2, max_height, 0, 0);
 
 	pix->bytesperline = max_t(u32, pix->bytesperline,
 				  rvin_format_bytesperline(pix));
