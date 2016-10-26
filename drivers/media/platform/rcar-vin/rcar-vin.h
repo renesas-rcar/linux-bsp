@@ -144,6 +144,7 @@ struct rvin_dev {
 	struct v4l2_rect compose;
 };
 
+struct rvin_graph_entity *vin_to_entity(struct rvin_dev *vin);
 #define vin_to_source(vin)		vin->digital.subdev
 
 /* Debug */
