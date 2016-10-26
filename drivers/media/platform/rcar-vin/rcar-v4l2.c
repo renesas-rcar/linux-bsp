@@ -164,6 +164,7 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 {
 	struct v4l2_subdev *sd;
 	struct v4l2_subdev_pad_config *pad_cfg;
+	struct rvin_graph_entity *rent;
 	struct v4l2_subdev_format format = {
 		.which = which,
 	};
@@ -171,8 +172,11 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 	int ret;
 
 	sd = vin_to_source(vin);
+	rent = vin_to_entity(vin);
+	if (!rent)
+		return -ENODEV;
 
-	v4l2_fill_mbus_format(&format.format, pix, vin->digital.code);
+	v4l2_fill_mbus_format(&format.format, pix, rent->code);
 
 	pad_cfg = v4l2_subdev_alloc_pad_config(sd);
 	if (pad_cfg == NULL)

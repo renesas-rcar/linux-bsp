@@ -26,6 +26,15 @@
 #include "rcar-vin.h"
 
 /* -----------------------------------------------------------------------------
+ * Subdevice helpers
+ */
+
+struct rvin_graph_entity *vin_to_entity(struct rvin_dev *vin)
+{
+	return &vin->digital;
+}
+
+/* -----------------------------------------------------------------------------
  * Async notifier
  */
 
