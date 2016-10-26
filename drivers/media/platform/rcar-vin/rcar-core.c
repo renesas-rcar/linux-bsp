@@ -68,6 +68,8 @@ static bool rvin_mbus_supported(struct rvin_graph_entity *entity)
 static int rvin_digital_notify_complete(struct v4l2_async_notifier *notifier)
 {
 	struct rvin_dev *vin = notifier_to_vin(notifier);
+	struct v4l2_subdev *sd = vin->digital.subdev;
+	unsigned int pad_idx;
 	int ret;
 
 	/* Verify subdevices mbus format */
@@ -79,6 +81,27 @@ static int rvin_digital_notify_complete(struct v4l2_async_notifier *notifier)
 
 	vin_dbg(vin, "Found media bus format for %s: %d\n",
 		vin->digital.subdev->name, vin->digital.code);
+
+	/* Figure out source and sink pad ids */
+	vin->digital.source_pad_idx = 0;
+	for (pad_idx = 0; pad_idx < sd->entity.num_pads; pad_idx++)
+		if (sd->entity.pads[pad_idx].flags == MEDIA_PAD_FL_SOURCE)
+			break;
+	if (pad_idx >= sd->entity.num_pads)
+		return -EINVAL;
+
+	vin->digital.source_pad_idx = pad_idx;
+
+	vin->digital.sink_pad_idx = 0;
+	for (pad_idx = 0; pad_idx < sd->entity.num_pads; pad_idx++)
+		if (sd->entity.pads[pad_idx].flags == MEDIA_PAD_FL_SINK) {
+			vin->digital.sink_pad_idx = pad_idx;
+			break;
+		}
+
+	vin_dbg(vin, "Found media pads for %s source: %d sink %d\n",
+		vin->digital.subdev->name, vin->digital.source_pad_idx,
+		vin->digital.sink_pad_idx);
 
 	ret = v4l2_device_register_subdev_nodes(&vin->v4l2_dev);
 	if (ret < 0) {
