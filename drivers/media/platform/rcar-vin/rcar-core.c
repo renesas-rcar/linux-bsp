@@ -20,11 +20,170 @@
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/slab.h>
 
 #include <media/v4l2-async.h>
 #include <media/v4l2-fwnode.h>
 
 #include "rcar-vin.h"
+
+/* -----------------------------------------------------------------------------
+ * Gen3 CSI2 Group Allocator
+ */
+
+static int rvin_group_read_id(struct rvin_dev *vin, struct device_node *np)
+{
+	u32 val;
+	int ret;
+
+	ret = of_property_read_u32(np, "renesas,id", &val);
+	if (ret) {
+		vin_err(vin, "%s: No renesas,id property found\n",
+			of_node_full_name(np));
+		return -EINVAL;
+	}
+
+	if (val >= RCAR_VIN_NUM) {
+		vin_err(vin, "%s: Invalid renesas,id '%u'\n",
+			of_node_full_name(np), val);
+		return -EINVAL;
+	}
+
+	return val;
+}
+
+static DEFINE_MUTEX(rvin_group_lock);
+static struct rvin_group *rvin_group_data;
+
+static void rvin_group_release(struct kref *kref)
+{
+	struct rvin_group *group =
+		container_of(kref, struct rvin_group, refcount);
+
+	mutex_lock(&rvin_group_lock);
+
+	media_device_unregister(&group->mdev);
+	media_device_cleanup(&group->mdev);
+
+	rvin_group_data = NULL;
+
+	mutex_unlock(&rvin_group_lock);
+
+	kfree(group);
+}
+
+static struct rvin_group *__rvin_group_allocate(struct rvin_dev *vin)
+{
+	struct rvin_group *group;
+
+	if (rvin_group_data) {
+		group = rvin_group_data;
+		kref_get(&group->refcount);
+		vin_dbg(vin, "%s: get group=%p\n", __func__, group);
+		return group;
+	}
+
+	group = kzalloc(sizeof(*group), GFP_KERNEL);
+	if (!group)
+		return NULL;
+
+	kref_init(&group->refcount);
+	rvin_group_data = group;
+
+	vin_dbg(vin, "%s: alloc group=%p\n", __func__, group);
+	return group;
+}
+
+static int rvin_group_add_vin(struct rvin_dev *vin)
+{
+	int ret;
+
+	ret = rvin_group_read_id(vin, vin->dev->of_node);
+	if (ret < 0)
+		return ret;
+
+	mutex_lock(&vin->group->lock);
+
+	if (vin->group->vin[ret]) {
+		mutex_unlock(&vin->group->lock);
+		vin_err(vin, "VIN number %d already occupied\n", ret);
+		return -EINVAL;
+	}
+
+	vin->group->vin[ret] = vin;
+
+	mutex_unlock(&vin->group->lock);
+
+	vin_dbg(vin, "I'm VIN number %d", ret);
+
+	return 0;
+}
+
+static int rvin_group_allocate(struct rvin_dev *vin)
+{
+	struct rvin_group *group;
+	struct media_device *mdev;
+	int ret;
+
+	mutex_lock(&rvin_group_lock);
+
+	group = __rvin_group_allocate(vin);
+	if (!group) {
+		mutex_unlock(&rvin_group_lock);
+		return -ENOMEM;
+	}
+
+	/* Init group data if it is not already initialized */
+	mdev = &group->mdev;
+	if (!mdev->dev) {
+		mutex_init(&group->lock);
+		mdev->dev = vin->dev;
+
+		strlcpy(mdev->driver_name, "Renesas VIN",
+			sizeof(mdev->driver_name));
+		strlcpy(mdev->model, vin->dev->of_node->name,
+			sizeof(mdev->model));
+		strlcpy(mdev->bus_info, of_node_full_name(vin->dev->of_node),
+			sizeof(mdev->bus_info));
+		media_device_init(mdev);
+
+		ret = media_device_register(mdev);
+		if (ret) {
+			vin_err(vin, "Failed to register media device\n");
+			kref_put(&group->refcount, rvin_group_release);
+			mutex_unlock(&rvin_group_lock);
+			return ret;
+		}
+	}
+
+	vin->group = group;
+	vin->v4l2_dev.mdev = mdev;
+
+	ret = rvin_group_add_vin(vin);
+	if (ret) {
+		kref_put(&group->refcount, rvin_group_release);
+		mutex_unlock(&rvin_group_lock);
+		return ret;
+	}
+
+	mutex_unlock(&rvin_group_lock);
+
+	return 0;
+}
+
+static void rvin_group_delete(struct rvin_dev *vin)
+{
+	unsigned int i;
+
+	mutex_lock(&vin->group->lock);
+	for (i = 0; i < RCAR_VIN_NUM; i++)
+		if (vin->group->vin[i] == vin)
+			vin->group->vin[i] = NULL;
+	mutex_unlock(&vin->group->lock);
+
+	vin_dbg(vin, "%s: group=%p\n", __func__, &vin->group);
+	kref_put(&vin->group->refcount, rvin_group_release);
+}
 
 /* -----------------------------------------------------------------------------
  * Async notifier
@@ -248,12 +407,27 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 
 static int rvin_group_init(struct rvin_dev *vin)
 {
+	int ret;
+
+	ret = rvin_group_allocate(vin);
+	if (ret)
+		return ret;
+
 	/* All our sources are CSI-2 */
 	vin->mbus_cfg.type = V4L2_MBUS_CSI2;
 	vin->mbus_cfg.flags = 0;
 
 	vin->pad.flags = MEDIA_PAD_FL_SINK;
-	return media_entity_pads_init(&vin->vdev.entity, 1, &vin->pad);
+	ret = media_entity_pads_init(&vin->vdev.entity, 1, &vin->pad);
+	if (ret)
+		goto error_group;
+
+	return 0;
+
+error_group:
+	rvin_group_delete(vin);
+
+	return ret;
 }
 
 /* -----------------------------------------------------------------------------
@@ -376,6 +550,9 @@ static int rcar_vin_remove(struct platform_device *pdev)
 		v4l2_ctrl_handler_free(&vin->ctrl_handler);
 
 	rvin_v4l2_unregister(vin);
+
+	if (vin->info->use_mc)
+		rvin_group_delete(vin);
 
 	rvin_dma_remove(vin);
 
