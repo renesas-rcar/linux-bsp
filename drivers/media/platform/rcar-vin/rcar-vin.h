@@ -111,6 +111,7 @@ struct rvin_graph_entity {
  * @sequence:		V4L2 buffers sequence number
  * @state:		keeps track of operation state
  *
+ * @last_input:		points to the last active input source
  * @source:		active format from the video source
  * @format:		active V4L2 pixel format
  *
@@ -138,6 +139,7 @@ struct rvin_dev {
 	unsigned int sequence;
 	enum rvin_dma_state state;
 
+	struct rvin_graph_entity *last_input;
 	struct rvin_source_fmt source;
 	struct v4l2_pix_format format;
 
