@@ -20,10 +20,108 @@
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/slab.h>
 
 #include <media/v4l2-fwnode.h>
 
 #include "rcar-vin.h"
+
+/* -----------------------------------------------------------------------------
+ * Gen3 CSI2 Group Allocator
+ */
+
+static DEFINE_MUTEX(rvin_group_lock);
+static struct rvin_group *rvin_group_data;
+
+static void rvin_group_release(struct kref *kref)
+{
+	struct rvin_group *group =
+		container_of(kref, struct rvin_group, refcount);
+
+	mutex_lock(&rvin_group_lock);
+
+	media_device_unregister(&group->mdev);
+	media_device_cleanup(&group->mdev);
+
+	rvin_group_data = NULL;
+
+	mutex_unlock(&rvin_group_lock);
+
+	kfree(group);
+}
+
+static struct rvin_group *__rvin_group_allocate(struct rvin_dev *vin)
+{
+	struct rvin_group *group;
+
+	if (rvin_group_data) {
+		group = rvin_group_data;
+		kref_get(&group->refcount);
+		vin_dbg(vin, "%s: get group=%p\n", __func__, group);
+		return group;
+	}
+
+	group = kzalloc(sizeof(*group), GFP_KERNEL);
+	if (!group)
+		return NULL;
+
+	kref_init(&group->refcount);
+	rvin_group_data = group;
+
+	vin_dbg(vin, "%s: alloc group=%p\n", __func__, group);
+	return group;
+}
+
+static struct rvin_group *rvin_group_allocate(struct rvin_dev *vin)
+{
+	struct rvin_group *group;
+	struct media_device *mdev;
+	int ret;
+
+	mutex_lock(&rvin_group_lock);
+
+	group = __rvin_group_allocate(vin);
+	if (!group) {
+		mutex_unlock(&rvin_group_lock);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	/* Init group data if its not already initialized */
+	mdev = &group->mdev;
+	if (!mdev->dev) {
+		mutex_init(&group->lock);
+		mdev->dev = vin->dev;
+
+		strlcpy(mdev->driver_name, "Renesas VIN",
+			sizeof(mdev->driver_name));
+		strlcpy(mdev->model, vin->dev->of_node->name,
+			sizeof(mdev->model));
+		strlcpy(mdev->bus_info, of_node_full_name(vin->dev->of_node),
+			sizeof(mdev->bus_info));
+		mdev->driver_version = LINUX_VERSION_CODE;
+		media_device_init(mdev);
+
+		ret = media_device_register(mdev);
+		if (ret) {
+			vin_err(vin, "Failed to register media device\n");
+			kref_put(&group->refcount, rvin_group_release);
+			mutex_unlock(&rvin_group_lock);
+			return ERR_PTR(ret);
+		}
+	}
+
+	vin->v4l2_dev.mdev = mdev;
+
+	mutex_unlock(&rvin_group_lock);
+
+	return group;
+}
+
+static void rvin_group_delete(struct rvin_dev *vin)
+{
+	vin_dbg(vin, "%s: group=%p\n", __func__, &vin->group);
+	kref_put(&vin->group->refcount, rvin_group_release);
+}
 
 /* -----------------------------------------------------------------------------
  * Async notifier
@@ -239,6 +337,10 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 	struct v4l2_async_subdev **subdevs = NULL;
 	int ret;
 
+	ret = rvin_v4l2_probe(vin);
+	if (ret)
+		return ret;
+
 	ret = rvin_digital_graph_parse(vin);
 	if (ret)
 		return ret;
@@ -279,8 +381,29 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 
 static int rvin_group_init(struct rvin_dev *vin)
 {
+	int ret;
+
+	vin->group = rvin_group_allocate(vin);
+	if (IS_ERR(vin->group))
+		return PTR_ERR(vin->group);
+
+	ret = rvin_v4l2_probe(vin);
+	if (ret)
+		goto error_group;
+
 	vin->pad.flags = MEDIA_PAD_FL_SINK;
-	return media_entity_pads_init(&vin->vdev.entity, 1, &vin->pad);
+	ret = media_entity_pads_init(&vin->vdev.entity, 1, &vin->pad);
+	if (ret)
+		goto error_v4l2;
+
+	return 0;
+
+error_v4l2:
+	rvin_v4l2_remove(vin);
+error_group:
+	rvin_group_delete(vin);
+
+	return ret;
 }
 
 /* -----------------------------------------------------------------------------
@@ -375,16 +498,12 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = rvin_v4l2_probe(vin);
-	if (ret)
-		goto error_dma;
-
 	if (vin->info->use_mc)
 		ret = rvin_group_init(vin);
 	else
 		ret = rvin_digital_graph_init(vin);
 	if (ret < 0)
-		goto error_v4l2;
+		goto error_dma;
 
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
@@ -392,8 +511,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, vin);
 
 	return 0;
-error_v4l2:
-	rvin_v4l2_remove(vin);
+
 error_dma:
 	rvin_dma_remove(vin);
 
@@ -410,6 +528,9 @@ static int rcar_vin_remove(struct platform_device *pdev)
 
 	/* Checks internaly if handlers have been init or not */
 	v4l2_ctrl_handler_free(&vin->ctrl_handler);
+
+	if (vin->info->use_mc)
+		rvin_group_delete(vin);
 
 	rvin_v4l2_remove(vin);
 	rvin_dma_remove(vin);
