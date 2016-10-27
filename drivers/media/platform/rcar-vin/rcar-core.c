@@ -45,6 +45,42 @@ static int rvin_find_pad(struct v4l2_subdev *sd, int direction)
 	return -EINVAL;
 }
 
+static int rvin_parse_v4l2(struct rvin_dev *vin,
+			   struct device_node *ep,
+			   struct v4l2_mbus_config *mbus_cfg)
+{
+	struct v4l2_fwnode_endpoint v4l2_ep;
+	int ret;
+
+	ret = v4l2_fwnode_endpoint_parse(of_fwnode_handle(ep), &v4l2_ep);
+	if (ret) {
+		vin_err(vin, "Could not parse v4l2 endpoint\n");
+		return -EINVAL;
+	}
+
+	mbus_cfg->type = v4l2_ep.bus_type;
+
+	switch (mbus_cfg->type) {
+	case V4L2_MBUS_PARALLEL:
+		vin_dbg(vin, "Found PARALLEL media bus\n");
+		mbus_cfg->flags = v4l2_ep.bus.parallel.flags;
+		break;
+	case V4L2_MBUS_BT656:
+		vin_dbg(vin, "Found BT656 media bus\n");
+		mbus_cfg->flags = 0;
+		break;
+	default:
+		vin_err(vin, "Unknown media bus type\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/* -----------------------------------------------------------------------------
+ * Digital async notifier
+ */
+
 static bool rvin_mbus_supported(struct rvin_dev *vin)
 {
 	struct v4l2_subdev *sd = vin->digital.subdev;
@@ -163,38 +199,6 @@ static int rvin_digital_notify_bound(struct v4l2_async_notifier *notifier,
 	return 0;
 }
 
-static int rvin_digitial_parse_v4l2(struct rvin_dev *vin,
-				    struct device_node *ep,
-				    struct v4l2_mbus_config *mbus_cfg)
-{
-	struct v4l2_fwnode_endpoint v4l2_ep;
-	int ret;
-
-	ret = v4l2_fwnode_endpoint_parse(of_fwnode_handle(ep), &v4l2_ep);
-	if (ret) {
-		vin_err(vin, "Could not parse v4l2 endpoint\n");
-		return -EINVAL;
-	}
-
-	mbus_cfg->type = v4l2_ep.bus_type;
-
-	switch (mbus_cfg->type) {
-	case V4L2_MBUS_PARALLEL:
-		vin_dbg(vin, "Found PARALLEL media bus\n");
-		mbus_cfg->flags = v4l2_ep.bus.parallel.flags;
-		break;
-	case V4L2_MBUS_BT656:
-		vin_dbg(vin, "Found BT656 media bus\n");
-		mbus_cfg->flags = 0;
-		break;
-	default:
-		vin_err(vin, "Unknown media bus type\n");
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
 static int rvin_digital_graph_parse(struct rvin_dev *vin)
 {
 	struct device_node *ep, *np;
@@ -219,7 +223,7 @@ static int rvin_digital_graph_parse(struct rvin_dev *vin)
 	}
 	of_node_put(np);
 
-	ret = rvin_digitial_parse_v4l2(vin, ep, &vin->mbus_cfg);
+	ret = rvin_parse_v4l2(vin, ep, &vin->mbus_cfg);
 	of_node_put(ep);
 	if (ret)
 		return ret;
