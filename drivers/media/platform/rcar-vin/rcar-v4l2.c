@@ -483,6 +483,94 @@ static int rvin_cropcap(struct file *file, void *priv,
 	return v4l2_subdev_call(sd, video, g_pixelaspect, &crop->pixelaspect);
 }
 
+static int rvin_attach_subdevices(struct rvin_dev *vin)
+{
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
+	struct v4l2_mbus_framefmt *mf = &fmt.format;
+	struct v4l2_subdev *sd = vin_to_source(vin);
+	struct rvin_graph_entity *rent;
+	struct v4l2_format f;
+	int ret;
+
+	rent = vin_to_entity(vin);
+	if (!rent)
+		return -ENODEV;
+
+	ret = v4l2_subdev_call(sd, core, s_power, 1);
+	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+		return ret;
+
+	if (rent != vin->last_input) {
+		/* Input source have changed, reset our format */
+
+		vin->vdev.tvnorms = 0;
+		ret = v4l2_subdev_call(sd, video, g_tvnorms,
+				       &vin->vdev.tvnorms);
+		if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+			goto error;
+
+		/* Free old controls (safe even if there where none) */
+		v4l2_ctrl_handler_free(&vin->ctrl_handler);
+
+		ret = v4l2_ctrl_handler_init(&vin->ctrl_handler, 16);
+		if (ret < 0)
+			goto error;
+
+		/* Add new controls */
+		ret = v4l2_ctrl_add_handler(&vin->ctrl_handler,
+					    sd->ctrl_handler, NULL);
+		if (ret < 0)
+			goto error;
+
+		v4l2_ctrl_handler_setup(&vin->ctrl_handler);
+
+		fmt.pad = rent->source_pad_idx;
+
+		/* Try to improve our guess of a reasonable window format */
+		ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt);
+		if (ret)
+			goto error;
+
+		/* Set default format */
+		vin->format.width	= mf->width;
+		vin->format.height	= mf->height;
+		vin->format.colorspace	= mf->colorspace;
+		vin->format.field	= mf->field;
+		vin->format.pixelformat	= RVIN_DEFAULT_FORMAT;
+
+		/* Set initial crop and compose */
+		vin->crop.top = vin->crop.left = 0;
+		vin->crop.width = mf->width;
+		vin->crop.height = mf->height;
+
+		vin->compose.top = vin->compose.left = 0;
+		vin->compose.width = mf->width;
+		vin->compose.height = mf->height;
+
+		f.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		f.fmt.pix = vin->format;
+		ret = __rvin_s_fmt_vid_cap(vin, &f);
+		if (ret)
+			goto error;
+	}
+
+	vin->last_input = rent;
+
+	return 0;
+error:
+	v4l2_subdev_call(sd, core, s_power, 0);
+	return ret;
+}
+
+static void rvin_detach_subdevices(struct rvin_dev *vin)
+{
+	struct v4l2_subdev *sd = vin_to_source(vin);
+
+	v4l2_subdev_call(sd, core, s_power, 0);
+}
+
 static int rvin_enum_input(struct file *file, void *priv,
 			   struct v4l2_input *i)
 {
@@ -741,80 +829,6 @@ static const struct v4l2_ioctl_ops rvin_ioctl_ops = {
  * File Operations
  */
 
-static int rvin_power_on(struct rvin_dev *vin)
-{
-	int ret;
-	struct v4l2_subdev *sd = vin_to_source(vin);
-
-	pm_runtime_get_sync(vin->v4l2_dev.dev);
-
-	ret = v4l2_subdev_call(sd, core, s_power, 1);
-	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
-		return ret;
-	return 0;
-}
-
-static int rvin_power_off(struct rvin_dev *vin)
-{
-	int ret;
-	struct v4l2_subdev *sd = vin_to_source(vin);
-
-	ret = v4l2_subdev_call(sd, core, s_power, 0);
-
-	pm_runtime_put(vin->v4l2_dev.dev);
-
-	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
-		return ret;
-
-	return 0;
-}
-
-static int rvin_initialize_device(struct file *file)
-{
-	struct rvin_dev *vin = video_drvdata(file);
-	int ret;
-
-	struct v4l2_format f = {
-		.type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
-		.fmt.pix = {
-			.width		= vin->format.width,
-			.height		= vin->format.height,
-			.field		= vin->format.field,
-			.colorspace	= vin->format.colorspace,
-			.pixelformat	= vin->format.pixelformat,
-		},
-	};
-
-	ret = rvin_power_on(vin);
-	if (ret < 0)
-		return ret;
-
-	pm_runtime_enable(&vin->vdev.dev);
-	ret = pm_runtime_resume(&vin->vdev.dev);
-	if (ret < 0 && ret != -ENOSYS)
-		goto eresume;
-
-	/*
-	 * Try to configure with default parameters. Notice: this is the
-	 * very first open, so, we cannot race against other calls,
-	 * apart from someone else calling open() simultaneously, but
-	 * .host_lock is protecting us against it.
-	 */
-	ret = rvin_s_fmt_vid_cap(file, NULL, &f);
-	if (ret < 0)
-		goto esfmt;
-
-	v4l2_ctrl_handler_setup(&vin->ctrl_handler);
-
-	return 0;
-esfmt:
-	pm_runtime_disable(&vin->vdev.dev);
-eresume:
-	rvin_power_off(vin);
-
-	return ret;
-}
-
 static int rvin_open(struct file *file)
 {
 	struct rvin_dev *vin = video_drvdata(file);
@@ -826,17 +840,31 @@ static int rvin_open(struct file *file)
 
 	ret = v4l2_fh_open(file);
 	if (ret)
-		goto unlock;
+		goto err_out;
 
-	if (!v4l2_fh_is_singular_file(file))
-		goto unlock;
-
-	if (rvin_initialize_device(file)) {
-		v4l2_fh_release(file);
-		ret = -ENODEV;
+	/* If there is no subdevice there is not much we can do */
+	if (!vin_to_source(vin)) {
+		ret = -EBUSY;
+		goto err_open;
 	}
 
-unlock:
+	if (v4l2_fh_is_singular_file(file)) {
+		pm_runtime_get_sync(vin->dev);
+		ret = rvin_attach_subdevices(vin);
+		if (ret) {
+			vin_err(vin, "Error attaching subdevice\n");
+			goto err_power;
+		}
+	}
+
+	mutex_unlock(&vin->lock);
+
+	return 0;
+err_power:
+	pm_runtime_put(vin->dev);
+err_open:
+	v4l2_fh_release(file);
+err_out:
 	mutex_unlock(&vin->lock);
 	return ret;
 }
@@ -860,9 +888,8 @@ static int rvin_release(struct file *file)
 	 * Then de-initialize hw module.
 	 */
 	if (fh_singular) {
-		pm_runtime_suspend(&vin->vdev.dev);
-		pm_runtime_disable(&vin->vdev.dev);
-		rvin_power_off(vin);
+		rvin_detach_subdevices(vin);
+		pm_runtime_put(vin->dev);
 	}
 
 	mutex_unlock(&vin->lock);
@@ -910,40 +937,9 @@ static void rvin_notify(struct v4l2_subdev *sd,
 int rvin_v4l2_probe(struct rvin_dev *vin)
 {
 	struct video_device *vdev = &vin->vdev;
-	struct v4l2_subdev *sd = vin_to_source(vin);
 	int ret;
 
-	v4l2_set_subdev_hostdata(sd, vin);
-
 	vin->v4l2_dev.notify = rvin_notify;
-
-	ret = v4l2_subdev_call(sd, video, g_tvnorms, &vin->vdev.tvnorms);
-	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
-		return ret;
-
-	if (vin->vdev.tvnorms == 0) {
-		/* Disable the STD API if there are no tvnorms defined */
-		v4l2_disable_ioctl(&vin->vdev, VIDIOC_G_STD);
-		v4l2_disable_ioctl(&vin->vdev, VIDIOC_S_STD);
-		v4l2_disable_ioctl(&vin->vdev, VIDIOC_QUERYSTD);
-		v4l2_disable_ioctl(&vin->vdev, VIDIOC_ENUMSTD);
-	}
-
-	/* Add the controls */
-	/*
-	 * Currently the subdev with the largest number of controls (13) is
-	 * ov6550. So let's pick 16 as a hint for the control handler. Note
-	 * that this is a hint only: too large and you waste some memory, too
-	 * small and there is a (very) small performance hit when looking up
-	 * controls in the internal hash.
-	 */
-	ret = v4l2_ctrl_handler_init(&vin->ctrl_handler, 16);
-	if (ret < 0)
-		return ret;
-
-	ret = v4l2_ctrl_add_handler(&vin->ctrl_handler, sd->ctrl_handler, NULL);
-	if (ret < 0)
-		return ret;
 
 	/* video node */
 	vdev->fops = &rvin_fops;
