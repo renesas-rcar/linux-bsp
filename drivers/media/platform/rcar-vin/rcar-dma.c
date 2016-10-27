@@ -16,6 +16,7 @@
 
 #include <linux/delay.h>
 #include <linux/interrupt.h>
+#include <linux/pm_runtime.h>
 
 #include <media/videobuf2-dma-contig.h>
 
@@ -1227,4 +1228,28 @@ error:
 	rvin_dma_remove(vin);
 
 	return ret;
+}
+
+/* -----------------------------------------------------------------------------
+ * Gen3 CHSEL manipulation
+ */
+
+void rvin_set_chsel(struct rvin_dev *vin, u8 chsel)
+{
+	u32 ifmd, vnmc;
+
+	pm_runtime_get_sync(vin->dev);
+
+	/* Make register writes take effect immediately */
+	vnmc = rvin_read(vin, VNMC_REG) & ~VNMC_VUP;
+	rvin_write(vin, vnmc, VNMC_REG);
+
+	ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0 |
+		VNCSI_IFMD_CSI_CHSEL(chsel);
+
+	rvin_write(vin, ifmd, VNCSI_IFMD_REG);
+
+	vin_dbg(vin, "Set IFMD 0x%x\n", ifmd);
+
+	pm_runtime_put(vin->dev);
 }
