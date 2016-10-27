@@ -17,10 +17,13 @@
 #ifndef __RCAR_VIN__
 #define __RCAR_VIN__
 
+#include <linux/kref.h>
+
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-dev.h>
 #include <media/v4l2-device.h>
+#include <media/v4l2-mc.h>
 #include <media/videobuf2-v4l2.h>
 
 /* Number of HW buffers */
@@ -29,11 +32,23 @@
 /* Address alignment mask for HW buffers */
 #define HW_BUFFER_MASK 0x7f
 
+/* Max number on VIN instances that can be in a system */
+#define RCAR_VIN_NUM 8
+
 enum chip_id {
 	RCAR_H1,
 	RCAR_M1,
 	RCAR_GEN2,
 	RCAR_GEN3,
+};
+
+enum rvin_csi_id {
+	RVIN_CSI20,
+	RVIN_CSI21,
+	RVIN_CSI40,
+	RVIN_CSI41,
+	RVIN_CSI_MAX,
+	RVIN_NOOPE,
 };
 
 enum rvin_pads {
@@ -94,6 +109,8 @@ struct rvin_graph_entity {
 	int sink_pad_idx;
 };
 
+struct rvin_group;
+
 /**
  * struct rvin_info- Information about the particular VIN implementation
  * @chip:		type of VIN chip
@@ -120,6 +137,7 @@ struct rvin_info {
  * @notifier:		V4L2 asynchronous subdevs notifier
  * @digital:		entity in the DT for local digital subdevice
  *
+ * @group:		Gen3 CSI group
  * @pads:		pads for media controller
  *
  * @lock:		protects @queue
@@ -151,6 +169,7 @@ struct rvin_dev {
 	struct v4l2_async_notifier notifier;
 	struct rvin_graph_entity digital;
 
+	struct rvin_group *group;
 	struct media_pad pads[RVIN_PAD_MAX];
 
 	struct mutex lock;
@@ -179,6 +198,28 @@ struct rvin_graph_entity *vin_to_entity(struct rvin_dev *vin);
 #define vin_info(d, fmt, arg...)	dev_info(d->dev, fmt, ##arg)
 #define vin_warn(d, fmt, arg...)	dev_warn(d->dev, fmt, ##arg)
 #define vin_err(d, fmt, arg...)		dev_err(d->dev, fmt, ##arg)
+
+/**
+ * struct rvin_group - VIN CSI2 group information
+ * @refcount:		number of VIN instances using the group
+ *
+ * @mdev:		media device which represents the group
+ *
+ * @lock:		protects the vin, bridge and source members
+ * @vin:		VIN instances which are part of the group
+ * @bridge:		CSI2 bridge between video source and VIN
+ * @source:		video source connected to each bridge
+ */
+struct rvin_group {
+	struct kref refcount;
+
+	struct media_device mdev;
+
+	struct mutex lock;
+	struct rvin_dev *vin[RCAR_VIN_NUM];
+	struct rvin_graph_entity bridge[RVIN_CSI_MAX];
+	struct rvin_graph_entity source[RVIN_CSI_MAX];
+};
 
 int rvin_dma_probe(struct rvin_dev *vin, int irq);
 void rvin_dma_remove(struct rvin_dev *vin);
