@@ -36,6 +36,11 @@ enum chip_id {
 	RCAR_GEN3,
 };
 
+enum rvin_pads {
+	RVIN_SINK,
+	RVIN_PAD_MAX,
+};
+
 /**
  * STOPPED  - No operation in progress
  * RUNNING  - Operation in progress have buffers
@@ -115,6 +120,8 @@ struct rvin_info {
  * @notifier:		V4L2 asynchronous subdevs notifier
  * @digital:		entity in the DT for local digital subdevice
  *
+ * @pads:		pads for media controller
+ *
  * @lock:		protects @queue
  * @queue:		vb2 buffers queue
  *
@@ -143,6 +150,8 @@ struct rvin_dev {
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_async_notifier notifier;
 	struct rvin_graph_entity digital;
+
+	struct media_pad pads[RVIN_PAD_MAX];
 
 	struct mutex lock;
 	struct vb2_queue queue;
