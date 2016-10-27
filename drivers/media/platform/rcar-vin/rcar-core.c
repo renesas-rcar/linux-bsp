@@ -28,6 +28,209 @@
 #include "rcar-vin.h"
 
 /* -----------------------------------------------------------------------------
+ * Media Controller link notification
+ */
+
+static unsigned int rvin_group_csi_pad_to_chan(unsigned int pad)
+{
+	/*
+	 * The companion CSI-2 receiver driver (rcar-csi2) is known
+	 * and we know it have one source pad (pad 0) and four sink
+	 * pads (pad 1-4). So to translate a pad on the remote
+	 * CSI-2 receiver to the VIN internal channel number simply
+	 * subtract one from the pad number.
+	 */
+	return pad - 1;
+}
+
+/* group lock should be held when calling this function */
+static int rvin_group_entity_to_vin_num(struct rvin_group *group,
+					struct media_entity *entity)
+{
+	struct video_device *vdev;
+	int i;
+
+	if (!is_media_entity_v4l2_video_device(entity))
+		return -ENODEV;
+
+	vdev = media_entity_to_video_device(entity);
+
+	for (i = 0; i < RCAR_VIN_NUM; i++) {
+		if (!group->vin[i])
+			continue;
+
+		if (&group->vin[i]->vdev == vdev)
+			return i;
+	}
+
+	return -ENODEV;
+}
+
+/* group lock should be held when calling this function */
+static int rvin_group_entity_to_csi_num(struct rvin_group *group,
+					struct media_entity *entity)
+{
+	struct v4l2_subdev *sd;
+	int i;
+
+	if (!is_media_entity_v4l2_subdev(entity))
+		return -ENODEV;
+
+	sd = media_entity_to_v4l2_subdev(entity);
+
+	for (i = 0; i < RVIN_CSI_MAX; i++)
+		if (group->csi[i].subdev == sd)
+			return i;
+
+	return -ENODEV;
+}
+
+/* group lock should be held when calling this function */
+static void __rvin_group_build_link_list(struct rvin_group *group,
+					 struct rvin_group_chsel *map,
+					 int start, int len)
+{
+	struct media_pad *vin_pad, *remote_pad;
+	unsigned int n;
+
+	for (n = 0; n < len; n++) {
+		map[n].csi = -1;
+		map[n].chan = -1;
+
+		if (!group->vin[start + n])
+			continue;
+
+		vin_pad = &group->vin[start + n]->vdev.entity.pads[0];
+
+		remote_pad = media_entity_remote_pad(vin_pad);
+		if (!remote_pad)
+			continue;
+
+		map[n].csi =
+			rvin_group_entity_to_csi_num(group, remote_pad->entity);
+		map[n].chan = rvin_group_csi_pad_to_chan(remote_pad->index);
+	}
+}
+
+/* group lock should be held when calling this function */
+static int __rvin_group_try_get_chsel(struct rvin_group *group,
+				      struct rvin_group_chsel *map,
+				      int start, int len)
+{
+	const struct rvin_group_chsel *sel;
+	unsigned int i, n;
+	int chsel;
+
+	for (i = 0; i < group->vin[start]->info->num_chsels; i++) {
+		chsel = i;
+		for (n = 0; n < len; n++) {
+
+			/* If the link is not active it's OK */
+			if (map[n].csi == -1)
+				continue;
+
+			/* Check if chsel matches requested link */
+			sel = &group->vin[start]->info->chsels[start + n][i];
+			if (map[n].csi != sel->csi ||
+			    map[n].chan != sel->chan) {
+				chsel = -1;
+				break;
+			}
+		}
+
+		/* A chsel which satisfies the links has been found */
+		if (chsel != -1)
+			return chsel;
+	}
+
+	/* No chsel can satisfy the requested links */
+	return -1;
+}
+
+/* group lock should be held when calling this function */
+static bool rvin_group_in_use(struct rvin_group *group)
+{
+	struct media_entity *entity;
+
+	media_device_for_each_entity(entity, &group->mdev)
+		if (entity->use_count)
+			return true;
+
+	return false;
+}
+
+static int rvin_group_link_notify(struct media_link *link, u32 flags,
+				  unsigned int notification)
+{
+	struct rvin_group *group = container_of(link->graph_obj.mdev,
+						struct rvin_group, mdev);
+	struct rvin_group_chsel chsel_map[4];
+	int vin_num, vin_master, csi_num, csi_chan;
+	unsigned int chsel;
+
+	mutex_lock(&group->lock);
+
+	vin_num = rvin_group_entity_to_vin_num(group, link->sink->entity);
+	csi_num = rvin_group_entity_to_csi_num(group, link->source->entity);
+	csi_chan = rvin_group_csi_pad_to_chan(link->source->index);
+
+	/*
+	 * Figure out which VIN node is the subgroup master.
+	 *
+	 * VIN0-3 are controlled by VIN0
+	 * VIN4-7 are controlled by VIN4
+	 */
+	vin_master = vin_num < 4 ? 0 : 4;
+
+	/* If not all devices exist something is horribly wrong */
+	if (vin_num < 0 || csi_num < 0 || !group->vin[vin_master])
+		goto error;
+
+	/* Special checking only needed for links which are to be enabled */
+	if (notification != MEDIA_DEV_NOTIFY_PRE_LINK_CH ||
+	    !(flags & MEDIA_LNK_FL_ENABLED))
+		goto out;
+
+	/* If any link in the group is in use, no new link can be enabled */
+	if (rvin_group_in_use(group))
+		goto error;
+
+	/* If the VIN already has an active link it's busy */
+	if (media_entity_remote_pad(&link->sink->entity->pads[0]))
+		goto error;
+
+	/* Build list of active links */
+	__rvin_group_build_link_list(group, chsel_map, vin_master, 4);
+
+	/* Add the new proposed link */
+	chsel_map[vin_num - vin_master].csi = csi_num;
+	chsel_map[vin_num - vin_master].chan = csi_chan;
+
+	/* See if there is a chsel value which matches our link selection */
+	chsel = __rvin_group_try_get_chsel(group, chsel_map, vin_master, 4);
+
+	/* No chsel can provide the requested links */
+	if (chsel == -1)
+		goto error;
+
+	/* Update chsel value at group master */
+	rvin_set_chsel(group->vin[vin_master], chsel);
+
+out:
+	mutex_unlock(&group->lock);
+
+	return v4l2_pipeline_link_notify(link, flags, notification);
+error:
+	mutex_unlock(&group->lock);
+
+	return -EMLINK;
+}
+
+static const struct media_device_ops rvin_media_ops = {
+	.link_notify = rvin_group_link_notify,
+};
+
+/* -----------------------------------------------------------------------------
  * Gen3 CSI2 Group Allocator
  */
 
@@ -146,6 +349,8 @@ static int rvin_group_allocate(struct rvin_dev *vin)
 		strlcpy(mdev->bus_info, of_node_full_name(vin->dev->of_node),
 			sizeof(mdev->bus_info));
 		media_device_init(mdev);
+
+		mdev->ops = &rvin_media_ops;
 
 		ret = media_device_register(mdev);
 		if (ret) {
