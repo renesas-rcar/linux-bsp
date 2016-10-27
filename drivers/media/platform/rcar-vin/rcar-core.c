@@ -132,7 +132,7 @@ struct rvin_graph_entity *vin_to_entity(struct rvin_dev *vin)
 }
 
 /* -----------------------------------------------------------------------------
- * Async notifier
+ * Async notifier helpers
  */
 
 #define notifier_to_vin(n) container_of(n, struct rvin_dev, notifier)
@@ -173,6 +173,10 @@ static unsigned int rvin_pad_idx(struct v4l2_subdev *sd, int direction)
 
 	return 0;
 }
+
+/* -----------------------------------------------------------------------------
+ * Digital async notifier
+ */
 
 static int rvin_digital_notify_complete(struct v4l2_async_notifier *notifier)
 {
@@ -337,11 +341,7 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 	vin->notifier.unbind = rvin_digital_notify_unbind;
 	vin->notifier.complete = rvin_digital_notify_complete;
 
-	ret = v4l2_async_notifier_register(&vin->v4l2_dev, &vin->notifier);
-	if (ret < 0) {
-		vin_err(vin, "Notifier registration failed\n");
-		return ret;
-	}
+
 
 	return 0;
 }
@@ -461,11 +461,19 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 	ret = rvin_graph_init(vin);
 	if (ret < 0)
-		goto error;
+		goto error_dma;
 
 	ret = rvin_v4l2_probe(vin);
 	if (ret)
-		goto error;
+		goto error_dma;
+
+	if (vin->notifier.num_subdevs) {
+		ret = v4l2_async_notifier_register(&vin->v4l2_dev, &vin->notifier);
+		if (ret < 0) {
+			vin_err(vin, "Notifier registration failed\n");
+			goto error_v4l2;
+		}
+	}
 
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
@@ -473,7 +481,9 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, vin);
 
 	return 0;
-error:
+error_v4l2:
+	rvin_v4l2_remove(vin);
+error_dma:
 	if (vin->group)
 		rvin_group_delete(vin);
 
