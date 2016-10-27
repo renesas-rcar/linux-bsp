@@ -107,7 +107,7 @@ static int rvin_digital_notify_complete(struct v4l2_async_notifier *notifier)
 		return ret;
 	}
 
-	return rvin_v4l2_probe(vin);
+	return 0;
 }
 
 static void rvin_digital_notify_unbind(struct v4l2_async_notifier *notifier,
@@ -118,7 +118,6 @@ static void rvin_digital_notify_unbind(struct v4l2_async_notifier *notifier,
 
 	if (vin->digital.subdev == subdev) {
 		vin_dbg(vin, "unbind digital subdev %s\n", subdev->name);
-		rvin_v4l2_remove(vin);
 		vin->digital.subdev = NULL;
 		return;
 	}
@@ -283,6 +282,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 	vin->dev = &pdev->dev;
 	vin->chip = (enum chip_id)match->data;
+	vin->last_input = NULL;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL)
@@ -304,6 +304,10 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto error;
 
+	ret = rvin_v4l2_probe(vin);
+	if (ret)
+		goto error;
+
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
@@ -321,6 +325,8 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	struct rvin_dev *vin = platform_get_drvdata(pdev);
 
 	pm_runtime_disable(&pdev->dev);
+
+	rvin_v4l2_remove(vin);
 
 	v4l2_async_notifier_unregister(&vin->notifier);
 
