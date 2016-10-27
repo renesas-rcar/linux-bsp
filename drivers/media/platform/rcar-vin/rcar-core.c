@@ -35,7 +35,7 @@ struct rvin_graph_entity *vin_to_entity(struct rvin_dev *vin)
 }
 
 /* -----------------------------------------------------------------------------
- * Async notifier
+ * Async notifier helpers
  */
 
 #define notifier_to_vin(n) container_of(n, struct rvin_dev, notifier)
@@ -76,6 +76,10 @@ static unsigned int rvin_pad_idx(struct v4l2_subdev *sd, int direction)
 
 	return 0;
 }
+
+/* -----------------------------------------------------------------------------
+ * Digital async notifier
+ */
 
 static int rvin_digital_notify_complete(struct v4l2_async_notifier *notifier)
 {
@@ -242,7 +246,7 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 
 	ret = v4l2_async_notifier_register(&vin->v4l2_dev, &vin->notifier);
 	if (ret < 0) {
-		vin_err(vin, "Notifier registration failed\n");
+		vin_err(vin, "Digital notifier registration failed\n");
 		return ret;
 	}
 
