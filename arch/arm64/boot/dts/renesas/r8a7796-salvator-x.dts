@@ -296,6 +296,10 @@
 	};
 };
 
+&a57_0 {
+	cpu-supply = <&vdd_dvfs>;
+};
+
 &pwm1 {
 	pinctrl-0 = <&pwm1_pins>;
 	pinctrl-names = "default";
