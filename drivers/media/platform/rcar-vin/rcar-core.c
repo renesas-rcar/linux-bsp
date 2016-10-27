@@ -308,6 +308,25 @@ static const struct of_device_id rvin_of_id_table[] = {
 };
 MODULE_DEVICE_TABLE(of, rvin_of_id_table);
 
+static int rvin_graph_init(struct rvin_dev *vin)
+{
+	int ret;
+
+	/* Try to get digital video pipe */
+	ret = rvin_digital_graph_init(vin);
+
+	/* No digital pipe and we are on Gen3 try to joint CSI2 group */
+	if (ret == -ENODEV && vin->info->chip == RCAR_GEN3) {
+
+		vin->pads[RVIN_SINK].flags = MEDIA_PAD_FL_SINK;
+		ret = media_entity_pads_init(&vin->vdev.entity, 1, vin->pads);
+		if (ret)
+			return ret;
+	}
+
+	return ret;
+}
+
 static int rcar_vin_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
@@ -343,7 +362,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	ret = rvin_digital_graph_init(vin);
+	ret = rvin_graph_init(vin);
 	if (ret < 0)
 		goto error;
 
