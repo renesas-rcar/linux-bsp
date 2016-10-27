@@ -184,4 +184,7 @@ void rvin_scale_try(struct rvin_dev *vin, struct v4l2_pix_format *pix,
 		    u32 width, u32 height);
 void rvin_crop_scale_comp(struct rvin_dev *vin);
 
+int rvin_set_chsel(struct rvin_dev *vin, u8 chsel);
+int rvin_get_chsel(struct rvin_dev *vin);
+
 #endif
