@@ -465,6 +465,11 @@
 		power-domains = <&pd_c5>;
 	};
 
+	cccr: chipid@e600101c {
+		compatible = "renesas,cccr";
+		reg = <0xe600101c 4>;
+	};
+
 	sysc: system-controller@e6180000 {
 		compatible = "renesas,sysc-sh73a0", "renesas,sysc-rmobile";
 		reg = <0xe6180000 0x8000>, <0xe6188000 0x8000>;
