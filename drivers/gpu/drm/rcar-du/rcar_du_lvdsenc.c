@@ -134,9 +134,18 @@ int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 {
 	u32 lvdhcr;
 	int ret;
+	void __iomem *srstclr7_reg;
+	u32 srstclr7_lvds = 0;
 
 	if (lvds->enabled)
 		return 0;
+
+	/* software reset release */
+	if (lvds->index == 0)
+		srstclr7_lvds |= SRCR7_LVDS;
+	srstclr7_reg = ioremap_nocache(SRSTCLR7, 0x04);
+	writel_relaxed(srstclr7_lvds, srstclr7_reg);
+	iounmap(srstclr7_reg);
 
 	if (gpio_is_valid(lvds->gpio_pd))
 		gpio_set_value(lvds->gpio_pd, 1);
@@ -179,6 +188,9 @@ int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 
 int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 {
+	void __iomem *srcr7_reg;
+	u32 srcr7_lvds = 0;
+
 	if (!lvds->enabled)
 		return -1;
 
@@ -191,6 +203,12 @@ int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 
 	if (gpio_is_valid(lvds->gpio_pd))
 		gpio_set_value(lvds->gpio_pd, 0);
+
+	if (lvds->index == 0)
+		srcr7_lvds |= SRCR7_LVDS;
+	srcr7_reg = ioremap_nocache(SRCR7, 0x04);
+	writel_relaxed(readl_relaxed(srcr7_reg) | srcr7_lvds, srcr7_reg);
+	iounmap(srcr7_reg);
 
 	return 0;
 }
