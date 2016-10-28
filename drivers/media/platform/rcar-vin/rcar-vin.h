@@ -35,6 +35,9 @@
 /* Max number on VIN instances that can be in a system */
 #define RCAR_VIN_NUM 8
 
+/* Max number of CHSEL values for any Gen3 SoC */
+#define RCAR_CHSEL_MAX 6
+
 enum chip_id {
 	RCAR_H1,
 	RCAR_M1,
@@ -91,6 +94,22 @@ struct rvin_graph_entity {
 
 struct rvin_group;
 
+/** struct rvin_group_chsel - Map a CSI-2 receiver and channel to a CHSEL value
+ * @csi:		VIN internal number for CSI-2 device
+ * @chan:		Output channel of the CSI-2 receiver. Each R-Car CSI-2
+ *			receiver has four output channels facing the VIN
+ *			devices, each channel can carry one CSI-2 Virtual
+ *			Channel (VC) and there are no correlation between
+ *			output channel number and CSI-2 VC. It's up to the
+ *			CSI-2 receiver driver to configure which VC is
+ *			outputted on which channel, the VIN devices only
+ *			cares about output channels.
+ */
+struct rvin_group_chsel {
+	enum rvin_csi_id csi;
+	unsigned int chan;
+};
+
 /**
  * struct rvin_info - Information about the particular VIN implementation
  * @chip:		type of VIN chip
@@ -98,6 +117,9 @@ struct rvin_group;
  *
  * max_width:		max input width the VIN supports
  * max_height:		max input height the VIN supports
+ *
+ * num_chsels:		number of possible chsel values for this VIN
+ * chsels:		routing table VIN <-> CSI-2 for the chsel values
  */
 struct rvin_info {
 	enum chip_id chip;
@@ -105,6 +127,9 @@ struct rvin_info {
 
 	unsigned int max_width;
 	unsigned int max_height;
+
+	unsigned int num_chsels;
+	struct rvin_group_chsel chsels[RCAR_VIN_NUM][RCAR_CHSEL_MAX];
 };
 
 /**
