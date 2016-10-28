@@ -29,6 +29,9 @@
  * Subdevice group helpers
  */
 
+#define rvin_group_call_func(v, f, args...)				\
+	(v->slave.v4l2_dev ? vin_to_group(v)->f(&v->slave, ##args) : -ENODEV)
+
 int rvin_subdev_get(struct rvin_dev *vin)
 {
 	int i, num = 0;
@@ -37,6 +40,10 @@ int rvin_subdev_get(struct rvin_dev *vin)
 		vin->inputs[i].type = RVIN_INPUT_NONE;
 		vin->inputs[i].hint = false;
 	}
+
+	/* Get inputs from CSI2 group */
+	if (vin->slave.v4l2_dev)
+		num = rvin_group_call_func(vin, get, vin->inputs);
 
 	/* Add local digital input */
 	if (num < RVIN_INPUT_MAX && vin->digital.subdev) {
@@ -71,11 +78,17 @@ int rvin_subdev_put(struct rvin_dev *vin)
 	/* Store what type of input we used */
 	vin->current_input = vin->inputs[vin->current_input].type;
 
+	if (vin->slave.v4l2_dev)
+		rvin_group_call_func(vin, put);
+
 	return 0;
 }
 
 int rvin_subdev_set_input(struct rvin_dev *vin, struct rvin_input_item *item)
 {
+	if (rvin_input_is_csi(vin))
+		return rvin_group_call_func(vin, set_input, item);
+
 	if (vin->digital.subdev)
 		return 0;
 
@@ -84,6 +97,9 @@ int rvin_subdev_set_input(struct rvin_dev *vin, struct rvin_input_item *item)
 
 int rvin_subdev_get_code(struct rvin_dev *vin, u32 *code)
 {
+	if (rvin_input_is_csi(vin))
+		return rvin_group_call_func(vin, get_code, code);
+
 	*code = vin->digital.code;
 	return 0;
 }
@@ -91,6 +107,9 @@ int rvin_subdev_get_code(struct rvin_dev *vin, u32 *code)
 int rvin_subdev_get_mbus_cfg(struct rvin_dev *vin,
 			     struct v4l2_mbus_config *mbus_cfg)
 {
+	if (rvin_input_is_csi(vin))
+		return rvin_group_call_func(vin, get_mbus_cfg, mbus_cfg);
+
 	*mbus_cfg = vin->digital.mbus_cfg;
 	return 0;
 }
@@ -98,6 +117,14 @@ int rvin_subdev_get_mbus_cfg(struct rvin_dev *vin,
 struct v4l2_subdev_pad_config*
 rvin_subdev_alloc_pad_config(struct rvin_dev *vin)
 {
+	struct v4l2_subdev_pad_config *cfg;
+
+	if (rvin_input_is_csi(vin)) {
+		if (rvin_group_call_func(vin, alloc_pad_config, &cfg))
+			return NULL;
+		return cfg;
+	}
+
 	return v4l2_subdev_alloc_pad_config(vin->digital.subdev);
 }
 
@@ -110,6 +137,10 @@ int rvin_subdev_ctrl_add_handler(struct rvin_dev *vin)
 	ret = v4l2_ctrl_handler_init(&vin->ctrl_handler, 16);
 	if (ret < 0)
 		return ret;
+
+	if (rvin_input_is_csi(vin))
+		return rvin_group_call_func(vin, ctrl_add_handler,
+					    &vin->ctrl_handler);
 
 	return v4l2_ctrl_add_handler(&vin->ctrl_handler,
 				     vin->digital.subdev->ctrl_handler, NULL);
@@ -257,6 +288,11 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 
 	if (!vin->digital.asd.match.of.node) {
 		vin_dbg(vin, "No digital subdevice found\n");
+
+		/* OK for Gen3 where we can be part of a subdevice group */
+		if (vin->chip == RCAR_GEN3)
+			return 0;
+
 		return -EINVAL;
 	}
 
@@ -355,6 +391,11 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_register;
 
+	if (vin->chip == RCAR_GEN3)
+		vin->api = rvin_group_probe(&pdev->dev, &vin->v4l2_dev);
+	else
+		vin->api = NULL;
+
 	ret = rvin_digital_graph_init(vin);
 	if (ret < 0)
 		goto err_dma;
@@ -365,11 +406,17 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, vin);
 
+	ret = rvin_subdev_probe(vin);
+	if (ret)
+		goto err_subdev;
+
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
 	return 0;
 
+err_subdev:
+	rvin_v4l2_remove(vin);
 err_dma:
 	rvin_dma_remove(vin);
 err_register:
@@ -384,9 +431,14 @@ static int rcar_vin_remove(struct platform_device *pdev)
 
 	pm_runtime_disable(&pdev->dev);
 
+	rvin_subdev_remove(vin);
+
 	rvin_v4l2_remove(vin);
 
 	v4l2_async_notifier_unregister(&vin->notifier);
+
+	if (vin->api)
+		rvin_group_remove(vin->api);
 
 	rvin_dma_remove(vin);
 
