@@ -44,6 +44,12 @@ static const struct soc_device_attribute r8a7796es10[] __initconst = {
 #define CPG_PLLECR     0x00D0
 #define CPG_PLLECR_PLL0ST (1 << 8)
 
+
+static const struct soc_device_attribute r8a7795es10[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.0" },
+	{ /* sentinel */ }
+};
+
 /* Define for PLL0 clk driver */
 #define CPG_PLL0CR_STC_MASK             0x7f000000
 #define CPG_PLL0CR_STC_SHIFT            24
@@ -71,7 +77,7 @@ static int cpg_pll0_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	int i;
 
 	/* Start clock issue W/A (for H3 WS1.0) */
-	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+	if (soc_device_match(r8a7795es10))
 		prate *= 2; /* PLL0 output multiplied by 2 */
 	/* End clock issue W/A */
 
@@ -108,7 +114,7 @@ static long cpg_pll0_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 		rate = Z_CLK_MAX_THRESHOLD; /* Set lowest value: 1.5GHz */
 
 	/* Start clock issue W/A (for H3 WS1.0) */
-	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+	if (soc_device_match(r8a7795es10))
 		prate *= 2; /* PLL0 output multiplied by 2 */
 	/* End clock issue W/A */
 
@@ -137,7 +143,7 @@ static unsigned long cpg_pll0_clk_recalc_rate(struct clk_hw *hw,
 	rate = (u64)parent_rate * (val + 1);
 
 	/* Start clock issue W/A (for H3 WS1.0) */
-	if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+	if (soc_device_match(r8a7795es10))
 		rate *= 2; /* PLL0 output multiplied by 2 */
 	/* End clock issue W/A */
 
@@ -674,7 +680,7 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		value = readl(base + CPG_PLL2CR);
 		mult = ((value >> 24) & 0x7f) + 1;
 		/* Start clock issue W/A (for H3 WS1.0) */
-		if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+		if (soc_device_match(r8a7795es10))
 			mult *= 2; /* PLL2 output multiplied by 2 */
 		/* End clock issue W/A */
 		break;
@@ -693,7 +699,7 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		value = readl(base + CPG_PLL4CR);
 		mult = (((value >> 24) & 0x7f) + 1) * 2;
 		/* Start clock issue W/A (for H3 WS1.0) */
-		if (RCAR_PRR_CHK_CUT(H3, WS10) == 0)
+		if (soc_device_match(r8a7795es10))
 			mult *= 2; /* PLL4 output multiplied by 2 */
 		/* End clock issue W/A */
 		break;
@@ -761,8 +767,6 @@ int __init rcar_gen3_cpg_init(const struct rcar_gen3_cpg_pll_config *config,
 {
 	cpg_pll_config = config;
 	cpg_clk_extalr = clk_extalr;
-
-	RCAR_PRR_INIT(); /* Get PRR register value */
 
 	return 0;
 }
