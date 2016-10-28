@@ -91,9 +91,15 @@ struct rvin_graph_entity {
 /**
  * struct rvin_info- Information about the particular VIN implementation
  * @chip:		type of VIN chip
+ *
+ * max_width:		max input width the VIN supports
+ * max_height:		max input height the VIN supports
  */
 struct rvin_info {
 	enum chip_id chip;
+
+	unsigned int max_width;
+	unsigned int max_height;
 };
 
 /**
