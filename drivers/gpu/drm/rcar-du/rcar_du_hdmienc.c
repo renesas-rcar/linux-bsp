@@ -34,6 +34,29 @@ struct rcar_du_hdmienc {
 
 #define to_rcar_hdmienc(e)	(to_rcar_encoder(e)->hdmi)
 
+void rcar_du_hdmienc_suspend(struct drm_encoder *encoder)
+{
+	const struct drm_bridge_funcs *bfuncs = encoder->bridge->funcs;
+
+	if ((bfuncs) && (bfuncs->disable))
+		bfuncs->disable(encoder->bridge);
+}
+
+#define SMSTPCR7 0xE615014C
+
+void rcar_du_hdmienc_resume(struct drm_encoder *encoder)
+{
+	void __iomem *smstpcr = ioremap_nocache(SMSTPCR7, 4);
+	const struct drm_bridge_funcs *bfuncs = encoder->bridge->funcs;
+	u32 temp;
+
+	temp = readl(smstpcr);
+	writel(temp & ~(0x3 << 28), smstpcr);
+
+	if ((bfuncs) && (bfuncs->enable))
+		bfuncs->enable(encoder->bridge);
+}
+
 void rcar_du_hdmienc_disable(struct drm_encoder *encoder)
 {
 	struct rcar_du_hdmienc *hdmienc = to_rcar_hdmienc(encoder);
