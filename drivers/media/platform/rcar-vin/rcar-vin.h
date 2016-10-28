@@ -35,6 +35,9 @@
 /* Max number on VIN instances that can be in a system */
 #define RCAR_VIN_NUM 8
 
+/* Max number of CHSEL values for any Gen3 SoC */
+#define RCAR_CHSEL_MAX 6
+
 enum chip_id {
 	RCAR_H1,
 	RCAR_M1,
@@ -111,6 +114,16 @@ struct rvin_graph_entity {
 
 struct rvin_group;
 
+
+/** struct rvin_group_chsel - Map a CSI2 device and channel for a CHSEL value
+ * @csi:		VIN internal number for CSI2 device
+ * @chan:		CSI2 VC number on remote
+ */
+struct rvin_group_chsel {
+	enum rvin_csi_id csi;
+	int chan;
+};
+
 /**
  * struct rvin_info- Information about the particular VIN implementation
  * @chip:		type of VIN chip
@@ -123,6 +136,9 @@ struct rvin_info {
 
 	unsigned int max_width;
 	unsigned int max_height;
+
+	unsigned int num_chsels;
+	struct rvin_group_chsel chsels[RCAR_VIN_NUM][RCAR_CHSEL_MAX];
 };
 
 /**
