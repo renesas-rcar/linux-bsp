@@ -327,8 +327,7 @@ static void rcar_csi2_stop(struct rcar_csi2 *priv)
 	rcar_csi2_reset(priv);
 }
 
-static int rcar_csi2_s_stream(struct v4l2_subdev *sd, unsigned int pad,
-			      int enable)
+static int rcar_csi2_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct rcar_csi2 *priv = container_of(sd, struct rcar_csi2, subdev);
 
@@ -365,6 +364,7 @@ static int rcar_csi2_s_power(struct v4l2_subdev *sd, int on)
 }
 
 static const struct v4l2_subdev_video_ops rcar_csi2_video_ops = {
+	.s_stream = rcar_csi2_s_stream,
 };
 
 static struct v4l2_subdev_core_ops rcar_csi2_subdev_core_ops = {
@@ -372,7 +372,6 @@ static struct v4l2_subdev_core_ops rcar_csi2_subdev_core_ops = {
 };
 
 static const struct v4l2_subdev_pad_ops rcar_csi2_pad_ops = {
-	.s_stream = rcar_csi2_s_stream,
 	.set_fmt = rcar_csi2_set_pad_format,
 };
 
