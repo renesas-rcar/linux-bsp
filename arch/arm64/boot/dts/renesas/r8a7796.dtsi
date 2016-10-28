@@ -331,7 +331,7 @@
 			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
 			#iommu-cells = <1>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		cpg: clock-controller@e6150000 {
