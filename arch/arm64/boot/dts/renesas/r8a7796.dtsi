@@ -551,6 +551,7 @@
 			phy-mode = "rgmii-id";
 			#address-cells = <1>;
 			#size-cells = <0>;
+			iommus = <&ipmmu_ds0 16>;
 		};
 
 		hscif0: serial@e6540000 {
