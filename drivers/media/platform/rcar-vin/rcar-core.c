@@ -397,9 +397,37 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
-	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3)
+	if (vin->chip == RCAR_H3 || vin->chip == RCAR_M3) {
 		vin->api = rvin_group_probe(&pdev->dev, &vin->v4l2_dev);
-	else
+
+		if (strcmp(dev_name(vin->v4l2_dev.dev),
+						"e6ef0000.video") == 0)
+			vin->index = RCAR_VIDEO_0;
+		else if (strcmp(dev_name(vin->v4l2_dev.dev),
+						"e6ef1000.video") == 0)
+			vin->index = RCAR_VIDEO_1;
+		else if (strcmp(dev_name(vin->v4l2_dev.dev),
+						"e6ef2000.video") == 0)
+			vin->index = RCAR_VIDEO_2;
+		else if (strcmp(dev_name(vin->v4l2_dev.dev),
+						"e6ef3000.video") == 0)
+			vin->index = RCAR_VIDEO_3;
+		else if (strcmp(dev_name(vin->v4l2_dev.dev),
+						"e6ef4000.video") == 0)
+			vin->index = RCAR_VIDEO_4;
+		else if (strcmp(dev_name(vin->v4l2_dev.dev),
+						"e6ef5000.video") == 0)
+			vin->index = RCAR_VIDEO_5;
+		else if (strcmp(dev_name(vin->v4l2_dev.dev),
+						"e6ef6000.video") == 0)
+			vin->index = RCAR_VIDEO_6;
+		else if (strcmp(dev_name(vin->v4l2_dev.dev),
+						"e6ef7000.video") == 0)
+			vin->index = RCAR_VIDEO_7;
+		else
+			vin->index = RCAR_VIN_CH_NONE;
+
+	} else
 		vin->api = NULL;
 
 	ret = rvin_digital_graph_init(vin);

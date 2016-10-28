@@ -25,6 +25,8 @@
 
 #include "rcar-group.h"
 
+#define DRV_NAME "rcar-vin"
+
 /* Number of HW buffers */
 #define HW_BUFFER_NUM 3
 
@@ -71,6 +73,19 @@ struct rvin_source_fmt {
 struct rvin_video_format {
 	u32 fourcc;
 	u8 bpp;
+};
+
+enum gen3_vin_ch {
+	RCAR_VIN_CH_NONE = -1,
+	RCAR_VIDEO_0,
+	RCAR_VIDEO_1,
+	RCAR_VIDEO_2,
+	RCAR_VIDEO_3,
+	RCAR_VIDEO_4,
+	RCAR_VIDEO_5,
+	RCAR_VIDEO_6,
+	RCAR_VIDEO_7,
+	RCAR_VIDEO_MAX,
 };
 
 /**
@@ -144,6 +159,8 @@ struct rvin_dev {
 
 	int current_input;
 	struct rvin_input_item inputs[RVIN_INPUT_MAX];
+
+	unsigned int index;
 };
 
 /* Debug */
