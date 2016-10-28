@@ -2,8 +2,13 @@ Renesas RCar Video Input driver (rcar_vin)
 ------------------------------------------
 
 The rcar_vin device provides video input capabilities for the Renesas R-Car
-family of devices. The current blocks are always slaves and suppot one input
-channel which can be either RGB, YUYV or BT656.
+family of devices.
+
+On Gen2 the current blocks are always slaves and support one input
+channel which can be either RGB, YUYV or BT656
+
+On Gen3 the current blocks are always slaves and support multiple inputs
+channels which can be ether RGB, YUVU, BT656 or CSI-2.
 
  - compatible: Must be one or more of the following
    - "renesas,vin-r8a7795" for the R8A7795 device
@@ -28,7 +33,30 @@ channel which can be either RGB, YUYV or BT656.
 Additionally, an alias named vinX will need to be created to specify
 which video input device this is.
 
-The per-board settings:
+On Gen3 additional ports can be specified to describe the CSI-2 group
+hierarchy. Port 0 are used to describe inputs (in per-board settings)
+and VIN group membership. Port 1 are used to describe CSI-2 endpoints.
+Port 2 are used to describe VIN endpoints which are part of the group.
+    - ports:
+        - port@0:
+            - reg 1: sub-node describing a endpoint connected to the VIN
+              group master.
+        - port@1: remote CSI-2 endpoints part of VIN group
+            - reg 0: sub-node describing a endpoint to CSI20
+            - reg 1: sub-node describing a endpoint to CSI21
+            - reg 3: sub-node describing a endpoint to CSI40
+            - reg 4: sub-node describing a endpoint to CSI41
+        - port@2: remote VIN endpoints part of VIN group
+            - reg 0: sub-node describing a endpoint to VIN0
+            - reg 1: sub-node describing a endpoint to VIN1
+            - reg 2: sub-node describing a endpoint to VIN2
+            - reg 3: sub-node describing a endpoint to VIN3
+            - reg 4: sub-node describing a endpoint to VIN4
+            - reg 5: sub-node describing a endpoint to VIN5
+            - reg 6: sub-node describing a endpoint to VIN6
+            - reg 7: sub-node describing a endpoint to VIN7
+
+The per-board settings Gen2:
  - port sub-node describing a single endpoint connected to the vin
    as described in video-interfaces.txt[1]. Only the first one will
    be considered as each vin interface has one input port.
@@ -36,9 +64,17 @@ The per-board settings:
    These settings are used to work out video input format and widths
    into the system.
 
+The per-board settings Gen3:
+-ports:
+    - port@0:
+        - reg 0: sub-node describing a endpoint connected to the VIN
+          private digital input as described in video-interfaces.txt[1].
 
-Device node example
--------------------
+   These settings are used to work out video input format and widths
+   into the system.
+
+Device node example Gen2
+------------------------
 
 	aliases {
 	       vin0 = &vin0;
@@ -52,8 +88,8 @@ Device node example
                 status = "disabled";
         };
 
-Board setup example (vin1 composite video input)
-------------------------------------------------
+Board setup example Gen2 (vin1 composite video input)
+-----------------------------------------------------
 
 &i2c2   {
         status = "ok";
@@ -92,6 +128,174 @@ Board setup example (vin1 composite video input)
         };
 };
 
+Device node example Gen3
+------------------------
 
+aliases {
+       vin0 = &vin0;
+       vin4 = &vin4;
+};
+
+csi21: csi2@fea90000 {
+        ...
+
+        ports {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                port@1 {
+                        reg = <1>;
+
+                        csi21_out: endpoint@1 {
+                                remote-endpoint =  <&vin0csi21>;
+                        };
+                };
+        };
+};
+
+vin0: video@e6ef0000 {
+        compatible = "renesas,vin-r8a7795";
+        reg = <0 0xe6ef0000 0 0x1000>;
+        interrupts = <0 188 IRQ_TYPE_LEVEL_HIGH>;
+        clocks = <&cpg CPG_MOD 811>;
+        power-domains = <&cpg>;
+        status = "disabled";
+
+        ports {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                port@0 {
+                        reg = <0>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        vin0csi: endpoint@1 {
+                                reg = <1>;
+                                remote-endpoint= <&vin0out0>;
+                        };
+
+                };
+                port@1 {
+                        reg = <1>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        vin0csi21: endpoint@1 {
+                                reg = <1>;
+                                remote-endpoint= <&csi21_out>;
+                        };
+                };
+                port@2 {
+                        reg = <2>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        vin0out0: endpoint@0 {
+                                reg = <0>;
+                                remote-endpoint = <&vin0csi>;
+                        };
+                        vin0out4: endpoint@4 {
+                                reg = <4>;
+                                remote-endpoint = <&vin4csi>;
+                        };
+                };
+        };
+};
+
+vin4: video@e6ef4000 {
+        compatible = "renesas,vin-r8a7795";
+        reg = <0 0xe6ef4000 0 0x1000>;
+        interrupts = <0 174 IRQ_TYPE_LEVEL_HIGH>;
+        clocks = <&cpg CPG_MOD 807>;
+        power-domains = <&cpg>;
+        status = "disabled";
+
+        ports {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                port@0 {
+                        reg = <0>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        vin4csi: endpoint@1 {
+                                reg = <1>;
+                                remote-endpoint = <&vin0out4>;
+                        };
+                };
+        };
+};
+
+Board setup example Gen3
+- VIN0 and VIN4 part of CSI-2 group
+- VIN4 with local digital input
+-----------------------------------------------------
+
+&i2c2   {
+        ...
+
+        adv7482: composite-in@70 {
+                ...
+                port {
+                        adv7482_out: endpoint@1 {
+                                clock-lanes = <0>;
+                                data-lanes = <1>;
+                                remote-endpoint = <&csi21_in>;
+                        };
+                };
+        };
+
+        adv7612: composite-in@20 {
+                ...
+                port {
+                        adv7612_out: endpoint {
+                                bus-width = <8>;
+                                remote-endpoint = <&vin4ep0>;
+                        };
+                };
+        };
+};
+
+&csi21 {
+        status = "okay";
+
+        ...
+
+        ports {
+                port@0 {
+                        reg = <0>;
+
+                        csi21_in: endpoint@0 {
+                                clock-lanes = <0>;
+                                data-lanes = <1>;
+                                remote-endpoint = <&adv7482_out>;
+                        };
+                };
+        };
+};
+
+&vin0 {
+        status = "okay";
+};
+
+&vin4 {
+        status = "okay";
+
+        ports {
+                port@0 {
+                        reg = <0>;
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        vin4ep0: endpoint@0 {
+                                reg = <0>;
+                                remote-endpoint= <&adv7612_out>;
+                        };
+
+                };
+        };
+};
 
 [1] video-interfaces.txt common video media interface

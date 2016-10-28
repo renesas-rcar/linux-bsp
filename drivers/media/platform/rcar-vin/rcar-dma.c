@@ -16,6 +16,7 @@
 
 #include <linux/delay.h>
 #include <linux/interrupt.h>
+#include <linux/pm_runtime.h>
 
 #include <media/videobuf2-dma-contig.h>
 
@@ -1238,4 +1239,70 @@ error:
 	rvin_dma_remove(vin);
 
 	return ret;
+}
+
+/* -----------------------------------------------------------------------------
+ * Salve Subdevice
+ */
+
+static int rvin_subdev_s_gpio(struct v4l2_subdev *sd, u32 val)
+{
+	struct rvin_dev *vin = container_of(sd, struct rvin_dev, slave);
+	u32 ifmd;
+
+	if (vin->chip != RCAR_GEN3)
+		return 0;
+
+	pm_runtime_get_sync(vin->v4l2_dev.dev);
+
+	/*
+	 * Undocumented feature: Writing to VNCSI_IFMD_REG will go
+	 * through and on read back look correct but won't have
+	 * any effect if VNMC_REG is not first set to 0.
+	 */
+	rvin_write(vin, 0, VNMC_REG);
+
+	ifmd = VNCSI_IFMD_DES2 | VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0 |
+		VNCSI_IFMD_CSI_CHSEL(val);
+
+	rvin_write(vin, ifmd, VNCSI_IFMD_REG);
+
+	vin_dbg(vin, "Set IFMD 0x%x\n", ifmd);
+
+	pm_runtime_put(vin->v4l2_dev.dev);
+
+	return 0;
+}
+
+static struct v4l2_subdev_core_ops rvin_subdev_core_ops = {
+	.s_gpio		= rvin_subdev_s_gpio,
+};
+
+static struct v4l2_subdev_ops rvin_subdev_ops = {
+	.core	= &rvin_subdev_core_ops,
+};
+
+int rvin_subdev_probe(struct rvin_dev *vin)
+{
+	vin->slave.v4l2_dev = NULL;
+
+	if (vin->chip != RCAR_GEN3)
+		return 0;
+
+	vin->slave.owner = THIS_MODULE;
+	vin->slave.dev = vin->dev;
+	v4l2_subdev_init(&vin->slave, &rvin_subdev_ops);
+	v4l2_set_subdevdata(&vin->slave, vin->dev);
+	snprintf(vin->slave.name, V4L2_SUBDEV_NAME_SIZE, "rcar-vin-slave.%s",
+		 dev_name(vin->dev));
+
+	return v4l2_async_register_subdev(&vin->slave);
+}
+
+void rvin_subdev_remove(struct rvin_dev *vin)
+{
+	if (vin->chip != RCAR_GEN3)
+		return;
+
+	v4l2_async_unregister_subdev(&vin->slave);
 }

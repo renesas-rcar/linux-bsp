@@ -102,6 +102,9 @@ struct rvin_video_format {
  * @crop:		active cropping
  * @compose:		active composing
  *
+ * @slave:		subdevice used to register with the group master
+ * @api:		group api controller (only used on master channel)
+ *
  * @current_input:	currently used input in @inputs
  * @inputs:		list of valid inputs sources
  */
@@ -134,6 +137,9 @@ struct rvin_dev {
 	struct v4l2_rect crop;
 	struct v4l2_rect compose;
 
+	struct v4l2_subdev slave;
+	struct rvin_group_api *api;
+
 	int current_input;
 	struct rvin_input_item inputs[RVIN_INPUT_MAX];
 };
@@ -147,6 +153,9 @@ struct rvin_dev {
 int rvin_dma_probe(struct rvin_dev *vin, int irq);
 void rvin_dma_remove(struct rvin_dev *vin);
 
+int rvin_subdev_probe(struct rvin_dev *vin);
+void rvin_subdev_remove(struct rvin_dev *vin);
+
 int rvin_v4l2_probe(struct rvin_dev *vin);
 void rvin_v4l2_remove(struct rvin_dev *vin);
 
@@ -158,12 +167,28 @@ void rvin_scale_try(struct rvin_dev *vin, struct v4l2_pix_format *pix,
 void rvin_crop_scale_comp(struct rvin_dev *vin);
 
 /* Subdevice group helpers */
+#define rvin_input_is_csi(v) (v->inputs[v->current_input].type == \
+			      RVIN_INPUT_CSI2)
+#define vin_to_group(v) container_of(v->slave.v4l2_dev, struct rvin_dev, \
+				     v4l2_dev)->api
+#define rvin_subdev_call_local(v, o, f, args...)			\
+	(v->digital.subdev ?						\
+	 v4l2_subdev_call(v->digital.subdev, o, f, ##args) : -ENODEV)
+#define rvin_subdev_call_group(v, o, f, args...)			\
+	(!(v)->slave.v4l2_dev ? -ENODEV :				\
+	 (vin_to_group(v)->ops->o && vin_to_group(v)->ops->o->f) ?	\
+	 vin_to_group(v)->ops->o->f(&v->slave, ##args) : -ENOIOCTLCMD)
+#define rvin_subdev_call_group_input(v, i, f, args...)			\
+	(!(v)->slave.v4l2_dev ? -ENODEV :				\
+	 (vin_to_group(v)->input_ops->f ?				\
+	  vin_to_group(v)->input_ops->f(&v->slave, i, ##args) : -ENOIOCTLCMD))
 #define rvin_subdev_call(v, o, f, args...)				\
-	(v->digital.subdev ?						\
-	 v4l2_subdev_call(v->digital.subdev, o, f, ##args) : -ENODEV)
+	(rvin_input_is_csi(v) ? rvin_subdev_call_group(v, o, f, ##args) :\
+	 rvin_subdev_call_local(v, o, f, ##args))
 #define rvin_subdev_call_input(v, i, o, f, args...)			\
-	(v->digital.subdev ?						\
-	 v4l2_subdev_call(v->digital.subdev, o, f, ##args) : -ENODEV)
+	(v->inputs[i].type == RVIN_INPUT_CSI2 ?				\
+	 rvin_subdev_call_group_input(v, &v->inputs[i], f, ##args) :	\
+	 rvin_subdev_call_local(v, o, f, ##args))
 
 int rvin_subdev_get(struct rvin_dev *vin);
 int rvin_subdev_put(struct rvin_dev *vin);
