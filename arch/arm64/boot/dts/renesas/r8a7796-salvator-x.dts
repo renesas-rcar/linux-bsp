@@ -660,29 +660,7 @@
 
 	clock-frequency = <400000>;
 
-	composite-in@70 {
-		compatible = "adi,adv7482";
-		reg = <0x70>;
-
-		adi,virtual-channel = <0>;
-		adi,input-interface = "ycbcr422";
-		adi,input-hdmi = "on";
-		adi,input-sdp = "on";
-		adi,sw-reset = "on";
-		port {
-			adv7482_sdp_in: endpoint {
-				clock-lanes = <0>;
-				data-lanes = <1>;
-				remote-endpoint = <&vin4ep0>;
-
-				adv7482_rxb_out: endpoint {
-					remote-endpoint = <&csi2_20_in_ep>;
-				};
-			};
-		};
-	};
-
-	hdmi-in@70 {
+	adv7482_1: hdmi-in@34 {
 		compatible = "adi,adv7482";
 		reg = <0x34>;
 
@@ -691,15 +669,31 @@
 		adi,input-hdmi = "on";
 		adi,input-sdp = "on";
 		adi,sw-reset = "on";
+
 		port {
-			adv7482_hdmi_in: endpoint {
+			adv7482_1_out: endpoint@1 {
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
-				remote-endpoint = <&vin0ep0>;
+				remote-endpoint = <&csi2_40_0_in>;
+			};
+		};
+	};
 
-				adv7482_rxa_out: endpoint {
-					remote-endpoint = <&csi2_40_in_ep>;
-				};
+	adv7482_2: composite-in@70 {
+		compatible = "adi,adv7482";
+		reg = <0x70>;
+
+		adi,virtual-channel = <0>;
+		adi,input-interface = "ycbcr422";
+		adi,input-hdmi = "on";
+		adi,input-sdp = "on";
+		adi,sw-reset = "on";
+
+		port {
+			adv7482_2_out: endpoint@1 {
+				clock-lanes = <0>;
+				data-lanes = <1>;
+				remote-endpoint = <&csi2_20_0_in>;
 			};
 		};
 	};
@@ -905,47 +899,60 @@
 	status = "okay";
 };
 
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
 &vin0 {
 	status = "okay";
+};
 
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
+&vin1 {
+	status = "okay";
+};
 
-		port@0 {
-			vin0ep0: endpoint {
-				csi,select = "csi40";
-				virtual,channel = <0>;
-				remote-endpoint = <&adv7482_hdmi_in>;
-				data-lanes = <1 2 3 4>;
-			};
-		};
-		port@1 {
-			csi0ep0: endpoint {
-				remote-endpoint = <&csi2_40_ep>;
-			};
-		};
-	};
+&vin2 {
+	status = "okay";
+};
+
+&vin3 {
+	status = "okay";
 };
 
 &vin4 {
 	status = "okay";
+};
+
+&vin5 {
+	status = "okay";
+};
+
+&vin6 {
+	status = "okay";
+};
+
+&vin7 {
+	status = "okay";
+};
+
+&csi2_20 {
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
 		port@0 {
-			vin4ep0: endpoint {
-				csi,select = "csi20";
-				virtual,channel = <0>;
-				remote-endpoint = <&adv7482_sdp_in>;
+			reg = <0>;
+			csi2_20_0_in: endpoint@0 {
+				clock-lanes = <0>;
 				data-lanes = <1>;
-			};
-		};
-		port@1 {
-			csi1ep0: endpoint {
-				remote-endpoint = <&csi2_20_ep>;
+				virtual-channel-number = <1>;
+				remote-endpoint = <&adv7482_2_out>;
 			};
 		};
 	};
@@ -954,87 +961,19 @@
 &csi2_40 {
 	status = "okay";
 
-	adi,input-interface = "rgb888";
-
-	virtual,channel {
-		csi2_vc0 {
-			data,type = "rgb888";
-			receive,vc = <0>;
-		};
-		csi2_vc1 {
-			data,type = "rgb888";
-			receive,vc = <1>;
-		};
-		csi2_vc2 {
-			data,type = "rgb888";
-			receive,vc = <2>;
-		};
-		csi2_vc3 {
-			data,type = "rgb888";
-			receive,vc = <3>;
-		};
-	};
-
-	port {
+	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		csi2_40_ep: endpoint@0 {
-			remote-endpoint = <&vin0ep0>;
-			clock-lanes = <0>;
-			data-lanes = <1 2 3 4>;
-		};
+		port@0 {
+			reg = <0>;
 
-		csi2_40_in_ep: endpoint@1 {
-			remote-endpoint = <&adv7482_rxa_out>;
-		};
-	};
-};
-
-&csi2_20 {
-	status = "okay";
-
-	adi,input-interface = "ycbcr422";
-
-	virtual,channel {
-		csi2_vc0 {
-			data,type = "ycbcr422";
-			receive,vc = <0>;
-		};
-		csi2_vc1 {
-			data,type = "ycbcr422";
-			receive,vc = <1>;
-		};
-		csi2_vc2 {
-			data,type = "ycbcr422";
-			receive,vc = <2>;
-		};
-		csi2_vc3 {
-			data,type = "ycbcr422";
-			receive,vc = <3>;
+			csi2_40_0_in: endpoint@0 {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				virtual-channel-number = <1>;
+				remote-endpoint = <&adv7482_1_out>;
+			};
 		};
 	};
-
-	port {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		csi2_20_ep: endpoint@0 {
-			remote-endpoint = <&vin4ep0>;
-			clock-lanes = <0>;
-			data-lanes = <1>;
-		};
-
-		csi2_20_in_ep: endpoint@1 {
-			remote-endpoint = <&adv7482_rxb_out>;
-		};
-	};
-};
-
-&vspb {
-	status = "okay";
-};
-
-&vspi0 {
-	status = "okay";
 };
