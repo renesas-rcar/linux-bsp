@@ -1089,15 +1089,87 @@ static void rvin_buffer_queue(struct vb2_buffer *vb)
 	spin_unlock_irqrestore(&vin->qlock, flags);
 }
 
+static int __rvin_start_streaming(struct rvin_dev *vin)
+{
+	struct v4l2_subdev *source, *bridge = NULL;
+	struct media_pipeline *pipe;
+	int ret;
+
+	source = vin_to_source(vin);
+	if (!source)
+		return -EINVAL;
+
+	if (vin_have_bridge(vin)) {
+		bridge = vin_to_bridge(vin);
+
+		if (!bridge)
+			return -EINVAL;
+
+		mutex_lock(&vin->group->lock);
+
+		pipe = bridge->entity.pipe ? bridge->entity.pipe :
+			&vin->vdev.pipe;
+		ret = media_entity_pipeline_start(&vin->vdev.entity, pipe);
+		if (ret) {
+			mutex_unlock(&vin->group->lock);
+			return ret;
+		}
+
+		/* Only need to start stream if it's not running */
+		if (bridge->entity.stream_count <= 1)
+			v4l2_subdev_call(bridge, video, s_stream, 1);
+		if (source->entity.stream_count <= 1)
+			v4l2_subdev_call(source, video, s_stream, 1);
+
+		mutex_unlock(&vin->group->lock);
+	} else {
+		v4l2_subdev_call(source, video, s_stream, 1);
+	}
+
+	return 0;
+}
+
+static int __rvin_stop_streaming(struct rvin_dev *vin)
+{
+	struct v4l2_subdev *source, *bridge = NULL;
+
+	source = vin_to_source(vin);
+	if (!source)
+		return -EINVAL;
+
+	if (vin_have_bridge(vin)) {
+		bridge = vin_to_bridge(vin);
+
+		if (!bridge)
+			return -EINVAL;
+
+		mutex_lock(&vin->group->lock);
+
+		media_entity_pipeline_stop(&vin->vdev.entity);
+
+		/* Only need to stop stream if there are no other users */
+		if (bridge->entity.stream_count <= 0)
+			v4l2_subdev_call(bridge, video, s_stream, 0);
+		if (source->entity.stream_count <= 0)
+			v4l2_subdev_call(source, video, s_stream, 0);
+
+		mutex_unlock(&vin->group->lock);
+	} else {
+		v4l2_subdev_call(source, video, s_stream, 0);
+	}
+
+	return 0;
+}
+
 static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 {
 	struct rvin_dev *vin = vb2_get_drv_priv(vq);
-	struct v4l2_subdev *sd;
 	unsigned long flags;
 	int ret;
 
-	sd = vin_to_source(vin);
-	v4l2_subdev_call(sd, video, s_stream, 1);
+	ret = __rvin_start_streaming(vin);
+	if (ret)
+		return ret;
 
 	spin_lock_irqsave(&vin->qlock, flags);
 
@@ -1122,7 +1194,7 @@ out:
 	/* Return all buffers if something went wrong */
 	if (ret) {
 		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
-		v4l2_subdev_call(sd, video, s_stream, 0);
+		__rvin_stop_streaming(vin);
 	}
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
@@ -1133,7 +1205,6 @@ out:
 static void rvin_stop_streaming(struct vb2_queue *vq)
 {
 	struct rvin_dev *vin = vb2_get_drv_priv(vq);
-	struct v4l2_subdev *sd;
 	unsigned long flags;
 	int retries = 0;
 
@@ -1172,8 +1243,7 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
 
-	sd = vin_to_source(vin);
-	v4l2_subdev_call(sd, video, s_stream, 0);
+	__rvin_stop_streaming(vin);
 
 	/* disable interrupts */
 	rvin_disable_interrupts(vin);
