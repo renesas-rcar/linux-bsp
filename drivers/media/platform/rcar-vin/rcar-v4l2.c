@@ -193,6 +193,21 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 	if (ret < 0 && ret != -ENOIOCTLCMD)
 		goto done;
 
+	/* If we are part of a CSI2 group update bridge */
+	if (vin_have_bridge(vin)) {
+		struct v4l2_subdev *bridge = vin_to_bridge(vin);
+
+		if (!bridge) {
+			ret = -EINVAL;
+			goto done;
+		}
+
+		format.pad = 0;
+		ret = v4l2_subdev_call(bridge, pad, set_fmt, pad_cfg, &format);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			goto done;
+	}
+
 	v4l2_fill_pix_format(pix, &format.format);
 
 	pix->field = field;
