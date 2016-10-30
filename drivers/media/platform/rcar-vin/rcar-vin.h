@@ -207,7 +207,7 @@ struct rvin_dev {
 };
 
 struct rvin_graph_entity *vin_to_entity(struct rvin_dev *vin);
-#define vin_to_source(vin)		vin->digital.subdev
+struct v4l2_subdev *vin_to_source(struct rvin_dev *vin);
 
 /* Debug */
 #define vin_dbg(d, fmt, arg...)		dev_dbg(d->dev, fmt, ##arg)
