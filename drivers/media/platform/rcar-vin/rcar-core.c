@@ -373,6 +373,11 @@ static int rvin_group_vin_to_csi(struct rvin_dev *vin)
 	return csi;
 }
 
+bool vin_have_bridge(struct rvin_dev *vin)
+{
+	return vin->digital.subdev == NULL;
+}
+
 struct rvin_graph_entity *vin_to_entity(struct rvin_dev *vin)
 {
 	int csi;
@@ -401,6 +406,20 @@ struct v4l2_subdev *vin_to_source(struct rvin_dev *vin)
 		return NULL;
 
 	return vin->group->source[csi].subdev;
+}
+
+struct v4l2_subdev *vin_to_bridge(struct rvin_dev *vin)
+{
+	int csi;
+
+	if (vin->digital.subdev)
+		return NULL;
+
+	csi = rvin_group_vin_to_csi(vin);
+	if (csi < 0)
+		return NULL;
+
+	return vin->group->bridge[csi].subdev;
 }
 
 /* -----------------------------------------------------------------------------
