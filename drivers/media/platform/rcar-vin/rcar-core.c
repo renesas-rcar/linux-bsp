@@ -330,9 +330,77 @@ static void rvin_group_delete(struct rvin_dev *vin)
  * Subdevice helpers
  */
 
+static int rvin_group_vin_to_csi(struct rvin_dev *vin)
+{
+	int i, vin_num, vin_master, chsel, csi;
+
+	/* Only valid on Gen3 */
+	if (vin->info->chip != RCAR_GEN3)
+		return -1;
+
+	/*
+	 * Only try to translate to a CSI2 number if there is a enabled
+	 * link from the VIN sink pad. However if there are no links at
+	 * all we are at probe time so ignore the need for enabled links
+	 * to be able to make a better guess of initial format
+	 */
+	if (vin->pads[RVIN_SINK].entity->num_links &&
+	    !media_entity_remote_pad(&vin->pads[RVIN_SINK]))
+		return -1;
+
+	/* Find which VIN we are */
+	vin_num = -1;
+	for (i = 0; i < RCAR_VIN_NUM; i++)
+		if (vin == vin->group->vin[i])
+			vin_num = i;
+
+	if (vin_num == -1)
+		return -1;
+
+	vin_master = vin_num < 4 ? 0 : 4;
+	if (!vin->group->vin[vin_master])
+		return -1;
+
+	chsel = rvin_get_chsel(vin->group->vin[vin_master]);
+
+	csi = vin->info->chsels[vin_num][chsel].csi;
+	if (csi >= RVIN_CSI_MAX)
+		return -1;
+
+	if (!vin->group->source[csi].subdev || !vin->group->bridge[csi].subdev)
+		return -1;
+
+	return csi;
+}
+
 struct rvin_graph_entity *vin_to_entity(struct rvin_dev *vin)
 {
-	return &vin->digital;
+	int csi;
+
+	/* If there is a digital subdev use it */
+	if (vin->digital.subdev)
+		return &vin->digital;
+
+	csi = rvin_group_vin_to_csi(vin);
+	if (csi < 0)
+		return NULL;
+
+	return &vin->group->source[csi];
+}
+
+struct v4l2_subdev *vin_to_source(struct rvin_dev *vin)
+{
+	int csi;
+
+	/* If there is a digital subdev use it */
+	if (vin->digital.subdev)
+		return vin->digital.subdev;
+
+	csi = rvin_group_vin_to_csi(vin);
+	if (csi < 0)
+		return NULL;
+
+	return vin->group->source[csi].subdev;
 }
 
 /* -----------------------------------------------------------------------------
