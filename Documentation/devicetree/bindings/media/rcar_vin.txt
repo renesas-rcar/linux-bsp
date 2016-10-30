@@ -10,6 +10,7 @@ always slaves and support multiple input channels which can be either RGB,
 YUVU, BT656 or CSI-2.
 
  - compatible: Must be one or more of the following
+   - "renesas,vin-r8a7796" for the R8A7796 device
    - "renesas,vin-r8a7795" for the R8A7795 device
    - "renesas,vin-r8a7794" for the R8A7794 device
    - "renesas,vin-r8a7793" for the R8A7793 device
