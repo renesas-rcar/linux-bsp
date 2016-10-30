@@ -846,6 +846,7 @@ static const struct v4l2_ioctl_ops rvin_ioctl_ops = {
 static int rvin_open(struct file *file)
 {
 	struct rvin_dev *vin = video_drvdata(file);
+	struct v4l2_subdev *source, *bridge;
 	int ret;
 
 	mutex_lock(&vin->lock);
@@ -857,12 +858,28 @@ static int rvin_open(struct file *file)
 		goto err_out;
 
 	/* If there is no subdevice there is not much we can do */
-	if (!vin_to_source(vin)) {
+	source = vin_to_source(vin);
+	if (!source) {
 		ret = -EBUSY;
 		goto err_open;
 	}
 
 	if (v4l2_fh_is_singular_file(file)) {
+		if (vin_have_bridge(vin)) {
+
+			/* If there are no bridge not much we can do */
+			bridge = vin_to_bridge(vin);
+			if (!bridge) {
+				ret = -EBUSY;
+				goto err_open;
+			}
+
+			v4l2_pipeline_pm_use(&vin->vdev.entity, 1);
+
+			vin_dbg(vin, "Group source: %s bridge: %s\n",
+				source->name,
+				bridge->name);
+		}
 		pm_runtime_get_sync(vin->dev);
 		ret = rvin_attach_subdevices(vin);
 		if (ret) {
@@ -876,6 +893,8 @@ static int rvin_open(struct file *file)
 	return 0;
 err_power:
 	pm_runtime_put(vin->dev);
+	if (vin_have_bridge(vin))
+		v4l2_pipeline_pm_use(&vin->vdev.entity, 0);
 err_open:
 	v4l2_fh_release(file);
 err_out:
@@ -904,6 +923,8 @@ static int rvin_release(struct file *file)
 	if (fh_singular) {
 		rvin_detach_subdevices(vin);
 		pm_runtime_put(vin->dev);
+		if (vin_have_bridge(vin))
+			v4l2_pipeline_pm_use(&vin->vdev.entity, 0);
 	}
 
 	mutex_unlock(&vin->lock);
