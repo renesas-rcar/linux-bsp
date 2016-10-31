@@ -1064,10 +1064,9 @@ static int sh_mobile_i2c_resume(struct device *dev)
 #endif /* CONFIG_PM_SLEEP */
 
 static const struct dev_pm_ops sh_mobile_i2c_dev_pm_ops = {
-	.suspend = sh_mobile_i2c_suspend,
-	.resume = sh_mobile_i2c_resume,
-	.runtime_suspend = sh_mobile_i2c_runtime_nop,
-	.runtime_resume = sh_mobile_i2c_runtime_nop,
+	SET_SYSTEM_SLEEP_PM_OPS(sh_mobile_i2c_suspend, sh_mobile_i2c_resume)
+	SET_RUNTIME_PM_OPS(sh_mobile_i2c_runtime_nop, sh_mobile_i2c_runtime_nop,
+			NULL)
 };
 
 static struct platform_driver sh_mobile_i2c_driver = {
