@@ -1,8 +1,8 @@
 /*
  * linux/drivers/mmc/host/tmio_mmc_pio.c
  *
+ * Copyright (C) 2016 Renesas Electronics Corporation
  * Copyright (C) 2016 Sang Engineering, Wolfram Sang
- * Copyright (C) 2015-16 Renesas Electronics Corporation
  * Copyright (C) 2011 Guennadi Liakhovetski
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
@@ -161,8 +161,9 @@ static void tmio_mmc_clk_start(struct tmio_mmc_host *host)
 	msleep(host->pdata->flags & TMIO_MMC_MIN_RCAR2 ? 1 : 10);
 
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
-		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0100);
-		msleep(10);
+		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, CLK_CTL_SCLKEN);
+		if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
+			msleep(10);
 	}
 }
 
@@ -170,7 +171,8 @@ static void tmio_mmc_clk_stop(struct tmio_mmc_host *host)
 {
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
 		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0000);
-		msleep(10);
+		if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
+			msleep(10);
 	}
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
@@ -197,8 +199,13 @@ static void tmio_mmc_set_clock(struct tmio_mmc_host *host,
 		clock <<= 1;
 
 	/* 1/1 clock is option */
-	if ((host->pdata->flags & TMIO_MMC_CLK_ACTUAL) && ((clk >> 22) & 0x1))
-		clk |= 0xff;
+	if ((host->pdata->flags & TMIO_MMC_CLK_ACTUAL) &&
+	    ((clk >> 22) & 0x1)) {
+		if (!(host->mmc->ios.timing == MMC_TIMING_MMC_HS400))
+			clk |= 0xff;
+		else
+			clk &= ~0xff;
+	}
 
 	if (host->set_clk_div)
 		host->set_clk_div(host->pdev, (clk >> 22) & 1);
@@ -231,6 +238,7 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 						  delayed_reset_work.work);
 	struct mmc_request *mrq;
 	unsigned long flags;
+	u16 clk;
 
 	spin_lock_irqsave(&host->lock, flags);
 	mrq = host->mrq;
@@ -264,7 +272,9 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
+	clk = sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL) & 0x0ff;
 	tmio_mmc_reset(host);
+	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, clk | 0x100);
 
 	/* Ready for new calls */
 	host->mrq = NULL;
@@ -949,6 +959,11 @@ static void tmio_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	struct device *dev = &host->pdev->dev;
 	unsigned long flags;
 
+	/* HS400 Register setting */
+	if (ios->timing == MMC_TIMING_MMC_HS400)
+		if (host->prepare_hs400_tuning)
+			host->prepare_hs400_tuning(mmc, ios);
+
 	mutex_lock(&host->ios_lock);
 
 	spin_lock_irqsave(&host->lock, flags);
@@ -1142,10 +1157,10 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host,
 
 	mmc->caps |= MMC_CAP_4_BIT_DATA | pdata->capabilities;
 	mmc->caps2 |= pdata->capabilities2;
-	mmc->max_segs = 32;
+	mmc->max_segs = pdata->max_segs ? pdata->max_segs : 32;
 	mmc->max_blk_size = 512;
-	mmc->max_blk_count = (PAGE_SIZE / mmc->max_blk_size) *
-		mmc->max_segs;
+	mmc->max_blk_count = pdata->max_blk_count ? :
+		(PAGE_SIZE / mmc->max_blk_size) * mmc->max_segs;
 	mmc->max_req_size = mmc->max_blk_size * mmc->max_blk_count;
 	mmc->max_seg_size = mmc->max_req_size;
 
