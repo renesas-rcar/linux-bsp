@@ -188,6 +188,11 @@
 		function = "i2c2";
 	};
 
+	avb_pins: avb {
+		groups = "avb_mdc";
+		function = "avb";
+	};
+
 	sdhi0_pins: sd0 {
 		groups = "sdhi0_data4", "sdhi0_ctrl";
 		function = "sdhi0";
@@ -226,6 +231,8 @@
 };
 
 &avb {
+	pinctrl-0 = <&avb_pins>;
+	pinctrl-names = "default";
 	renesas,no-ether-link;
 	phy-handle = <&phy0>;
 	status = "okay";
