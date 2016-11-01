@@ -33,6 +33,7 @@
 #include "vsp1_entity.h"
 #include "vsp1_pipe.h"
 #include "vsp1_rwpf.h"
+#include "vsp1_sru.h"
 #include "vsp1_uds.h"
 #include "vsp1_video.h"
 
@@ -459,10 +460,12 @@ static int vsp1_video_pipeline_build_branch(struct vsp1_pipeline *pipe,
 					    struct vsp1_rwpf *input,
 					    struct vsp1_rwpf *output)
 {
+	struct vsp1_device *vsp1 = output->entity.vsp1;
 	struct media_entity_enum ent_enum;
 	struct vsp1_entity *entity;
 	struct media_pad *pad;
 	bool bru_found = false;
+	bool sru_found = false;
 	int ret;
 
 	ret = media_entity_enum_init(&ent_enum, &input->entity.vsp1->media_dev);
@@ -509,9 +512,33 @@ static int vsp1_video_pipeline_build_branch(struct vsp1_pipeline *pipe,
 			goto out;
 		}
 
-		/* UDS can't be chained. */
+		if (entity->type == VSP1_ENTITY_SRU) {
+			struct vsp1_sru *sru = to_sru(&entity->subdev);
+
+			/*
+			 * Gen3 partition algorithm restricts SRU double-scaled
+			 * resolution if it is connected after a UDS entity
+			 */
+			if (vsp1->info->gen == 3 && pipe->uds)
+				sru->force_identity_mode = true;
+
+			sru_found = true;
+		}
+
 		if (entity->type == VSP1_ENTITY_UDS) {
+			/* UDS can't be chained. */
 			if (pipe->uds) {
+				ret = -EPIPE;
+				goto out;
+			}
+
+			/*
+			 * On Gen3 hardware using the partition algorithm, the
+			 * UDS must not be connected after the SRU. Using the
+			 * SRU on Gen3 will always engage the partition
+			 * algorithm
+			 */
+			if (vsp1->info->gen == 3 && sru_found) {
 				ret = -EPIPE;
 				goto out;
 			}

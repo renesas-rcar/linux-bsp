@@ -30,6 +30,7 @@ struct vsp1_sru {
 	struct v4l2_ctrl_handler ctrls;
 
 	unsigned int intensity;
+	bool force_identity_mode;
 };
 
 static inline struct vsp1_sru *to_sru(struct v4l2_subdev *subdev)
