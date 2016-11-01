@@ -249,6 +249,7 @@ static void vsp1_video_pipeline_setup_partitions(struct vsp1_pipeline *pipe)
 	const struct v4l2_mbus_framefmt *format;
 	struct vsp1_entity *entity;
 	unsigned int div_size;
+	int i;
 
 	format = vsp1_entity_get_pad_format(&pipe->output->entity,
 					    pipe->output->entity.config,
@@ -259,6 +260,7 @@ static void vsp1_video_pipeline_setup_partitions(struct vsp1_pipeline *pipe)
 	if (vsp1->info->gen == 2) {
 		pipe->div_size = div_size;
 		pipe->partitions = 1;
+		pipe->part_table[0] = vsp1_video_partition(pipe, div_size, 0);
 		return;
 	}
 
@@ -274,6 +276,9 @@ static void vsp1_video_pipeline_setup_partitions(struct vsp1_pipeline *pipe)
 
 	pipe->div_size = div_size;
 	pipe->partitions = DIV_ROUND_UP(format->width, div_size);
+
+	for (i = 0; i < pipe->partitions; i++)
+		pipe->part_table[i] = vsp1_video_partition(pipe, div_size, i);
 }
 
 /* -----------------------------------------------------------------------------
@@ -356,8 +361,7 @@ static void vsp1_video_pipeline_run_partition(struct vsp1_pipeline *pipe,
 {
 	struct vsp1_entity *entity;
 
-	pipe->partition = vsp1_video_partition(pipe, pipe->div_size,
-					       pipe->current_partition);
+	pipe->partition = pipe->part_table[pipe->current_partition];
 
 	list_for_each_entry(entity, &pipe->entities, list_pipe) {
 		if (entity->ops->configure)
