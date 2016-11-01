@@ -13,6 +13,7 @@
 
 #include <linux/clk.h>
 #include <linux/mutex.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <drm/drmP.h>
 #include <drm/drm_atomic.h>
@@ -102,18 +103,92 @@ static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
 	clk_disable_unprepare(rcrtc->clock);
 }
 
+void rcar_du_crtc_vbk_check(struct rcar_du_crtc *rcrtc)
+{
+	u32 i, timeout = 100, loop = 2;
+	u32 status;
+
+	/* Check next VBK flag */
+	for (i = 0; i < timeout; i++) {
+		status = rcar_du_crtc_read(rcrtc, DSSR);
+		if (status & DSSR_VBK) {
+
+			rcar_du_crtc_write(rcrtc, DSRCR, DSRCR_VBCL);
+			if (--loop == 0)
+				break;
+		}
+		mdelay(1);
+	}
+}
+
 /* -----------------------------------------------------------------------------
  * Hardware Setup
  */
 
+static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
+				 unsigned int mode_clock)
+{
+	unsigned long dpllclk;
+	unsigned long diff;
+	unsigned long n, m, fdpll;
+	bool match_flag = false;
+	bool clk_diff_set = true;
+
+	for (n = 39; n < 120; n++) {
+		for (m = 0; m < 4; m++) {
+			for (fdpll = 1; fdpll < 32; fdpll++) {
+				if (RCAR_PRR_IS_PRODUCT(H3) &&
+					(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+					/* 1/2 (FRQSEL=1) for duty rate 50% */
+					dpllclk = extclk * (n + 1) / (m + 1)
+						 / (fdpll + 1) / 2;
+				else
+					dpllclk = extclk * (n + 1) / (m + 1)
+						 / (fdpll + 1);
+				if (dpllclk >= 400000000)
+					continue;
+
+				diff = abs((long)dpllclk - (long)mode_clock);
+				if (clk_diff_set ||
+					((diff == 0) || (dpll->diff > diff))) {
+					dpll->diff = diff;
+					dpll->n = n;
+					dpll->m = m;
+					dpll->fdpll = fdpll;
+					dpll->dpllclk = dpllclk;
+
+					if (clk_diff_set)
+						clk_diff_set = false;
+
+					if (diff == 0) {
+						match_flag = true;
+						break;
+					}
+				}
+			}
+			if (match_flag)
+				break;
+		}
+		if (match_flag)
+			break;
+	}
+}
+
 static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 {
 	const struct drm_display_mode *mode = &rcrtc->crtc.state->adjusted_mode;
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	unsigned long mode_clock = mode->clock * 1000;
 	unsigned long clk;
 	u32 value;
 	u32 escr;
 	u32 div;
+	u32 dpll_reg = 0;
+	struct dpll_info *dpll;
+
+	dpll = kzalloc(sizeof(*dpll), GFP_KERNEL);
+	if (dpll == NULL)
+		return;
 
 	/* Compute the clock divisor and select the internal or external dot
 	 * clock based on the requested frequency.
@@ -129,7 +204,17 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		unsigned long rate;
 		u32 extdiv;
 
+		clk_set_rate(rcrtc->extclock, mode_clock);
 		extclk = clk_get_rate(rcrtc->extclock);
+
+		if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
+			rcar_du_dpll_divider(dpll, extclk, mode_clock);
+			extclk = dpll->dpllclk;
+			dev_dbg(rcrtc->group->dev->dev,
+				"dpllclk:%d, fdpll:%d, n:%d, m:%d, diff:%d\n",
+				 dpll->dpllclk, dpll->fdpll, dpll->n, dpll->m,
+				 dpll->diff);
+		}
 		extdiv = DIV_ROUND_CLOSEST(extclk, mode_clock);
 		extdiv = clamp(extdiv, 1U, 64U) - 1;
 
@@ -140,17 +225,44 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		    abs((long)rate - (long)mode_clock)) {
 			dev_dbg(rcrtc->group->dev->dev,
 				"crtc%u: using external clock\n", rcrtc->index);
-			escr = extdiv | ESCR_DCLKSEL_DCLKIN;
+			if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
+				if (RCAR_PRR_IS_PRODUCT(H3) &&
+					(RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+					escr = ESCR_DCLKSEL_DCLKIN | 0x01;
+				else
+					escr = ESCR_DCLKSEL_DCLKIN;
+				dpll_reg =  DPLLCR_CODE | DPLLCR_M(dpll->m) |
+					DPLLCR_FDPLL(dpll->fdpll) |
+					DPLLCR_CLKE | DPLLCR_N(dpll->n) |
+					DPLLCR_STBY;
+
+				if (rcrtc->index == DU_CH_1)
+					dpll_reg |= (DPLLCR_PLCS1 |
+						DPLLCR_INCS_DPLL01_DOTCLKIN13);
+				if (rcrtc->index == DU_CH_2) {
+					dpll_reg |= (DPLLCR_PLCS0 |
+						DPLLCR_INCS_DPLL01_DOTCLKIN02);
+					if (RCAR_PRR_IS_PRODUCT(H3) &&
+					   (RCAR_PRR_CHK_CUT(H3, WS11) <= 0))
+						dpll_reg |= (0x01 << 21);
+				}
+				rcar_du_group_write(rcrtc->group, DPLLCR,
+								  dpll_reg);
+			} else
+				escr = extdiv | ESCR_DCLKSEL_DCLKIN;
 		}
 	}
+
+	kfree(dpll);
 
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? ESCR2 : ESCR,
 			    escr);
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? OTAR2 : OTAR, 0);
 
 	/* Signal polarities */
-	value = ((mode->flags & DRM_MODE_FLAG_PVSYNC) ? 0 : DSMR_VSL)
-	      | ((mode->flags & DRM_MODE_FLAG_PHSYNC) ? 0 : DSMR_HSL)
+	value = ((mode->flags & DRM_MODE_FLAG_PVSYNC) ? DSMR_VSL : 0)
+	      | ((mode->flags & DRM_MODE_FLAG_PHSYNC) ? DSMR_HSL : 0)
+	      | ((mode->flags & DRM_MODE_FLAG_INTERLACE) ? DSMR_ODEV : 0)
 	      | DSMR_DIPM_DISP | DSMR_CSPM;
 	rcar_du_crtc_write(rcrtc, DSMR, value);
 
@@ -172,7 +284,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 					mode->crtc_vsync_start - 1);
 	rcar_du_crtc_write(rcrtc, VCR,  mode->crtc_vtotal - 1);
 
-	rcar_du_crtc_write(rcrtc, DESR,  mode->htotal - mode->hsync_start);
+	rcar_du_crtc_write(rcrtc, DESR,  mode->htotal - mode->hsync_start - 1);
 	rcar_du_crtc_write(rcrtc, DEWR,  mode->hdisplay);
 }
 
@@ -282,12 +394,12 @@ static void rcar_du_crtc_update_planes(struct rcar_du_crtc *rcrtc)
 		rcrtc->group->dptsr_planes = dptsr_planes;
 
 		if (rcrtc->group->used_crtcs)
-			rcar_du_group_restart(rcrtc->group);
+			rcar_du_group_restart(rcrtc->group, rcrtc);
 	}
 
 	/* Restart the group if plane sources have changed. */
 	if (rcrtc->group->need_restart)
-		rcar_du_group_restart(rcrtc->group);
+		rcar_du_group_restart(rcrtc->group, rcrtc);
 
 	mutex_unlock(&rcrtc->group->lock);
 
@@ -380,7 +492,7 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 			     (interlaced ? DSYSR_SCM_INT_VIDEO : 0) |
 			     DSYSR_TVM_MASTER);
 
-	rcar_du_group_start_stop(rcrtc->group, true);
+	rcar_du_group_start_stop(rcrtc->group, true, rcrtc);
 
 	/* Enable the VSP compositor. */
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
@@ -428,7 +540,23 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 */
 	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
 
-	rcar_du_group_start_stop(rcrtc->group, false);
+	rcar_du_group_start_stop(rcrtc->group, false, rcrtc);
+
+	rcrtc->started = false;
+}
+
+void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc)
+{
+	if (!rcrtc->started)
+		return;
+
+	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? DS2PR : DS1PR, 0);
+
+	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
+
+	rcar_du_group_start_stop(rcrtc->group, false, rcrtc);
+
+	rcar_du_crtc_put(rcrtc);
 
 	rcrtc->started = false;
 }
@@ -610,6 +738,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	rcrtc->group = rgrp;
 	rcrtc->mmio_offset = mmio_offsets[index];
 	rcrtc->index = index;
+	rcrtc->lvds_ch = -1;
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
 		primary = &rcrtc->vsp->planes[0].plane;
@@ -645,6 +774,12 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	if (ret < 0) {
 		dev_err(rcdu->dev,
 			"failed to register IRQ for CRTC %u\n", index);
+		return ret;
+	}
+
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(rcdu->dev, "product register init fail.\n");
 		return ret;
 	}
 
