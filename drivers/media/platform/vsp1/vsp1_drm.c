@@ -1,7 +1,7 @@
 /*
  * vsp1_drm.c  --  R-Car VSP1 DRM API
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -14,6 +14,7 @@
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/rcar_prr.h>
 
 #include <media/media-entity.h>
 #include <media/rcar-fcp.h>
@@ -52,6 +53,20 @@ int vsp1_du_init(struct device *dev)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(vsp1_du_init);
+
+int vsp1_du_if_set_mute(struct device *dev, bool on)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+
+	if (on)
+		pipe->vmute_flag = true;
+	else
+		pipe->vmute_flag = false;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vsp1_du_if_set_mute);
 
 /**
  * vsp1_du_setup_lif - Setup the output part of the VSP pipeline
@@ -299,8 +314,22 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 	rpf->fmtinfo = fmtinfo;
 	rpf->format.num_planes = fmtinfo->planes;
 	rpf->format.plane_fmt[0].bytesperline = cfg->pitch;
-	rpf->format.plane_fmt[1].bytesperline = cfg->pitch;
+	if ((rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YUV420M) ||
+		(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU420M) ||
+		(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YUV422M) ||
+		(rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU422M))
+		rpf->format.plane_fmt[1].bytesperline = cfg->pitch / 2;
+	else
+		rpf->format.plane_fmt[1].bytesperline = cfg->pitch;
 	rpf->alpha = cfg->alpha;
+	rpf->interlaced = cfg->interlaced;
+
+	if (RCAR_PRR_IS_PRODUCT(H3) &&
+		(RCAR_PRR_CHK_CUT(H3, WS11) <= 0) && rpf->interlaced) {
+		dev_err(vsp1->dev,
+			"Interlaced mode is not supported.\n");
+		return -EINVAL;
+	}
 
 	rpf->mem.addr[0] = cfg->mem[0];
 	rpf->mem.addr[1] = cfg->mem[1];
@@ -543,6 +572,58 @@ void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt)
 }
 EXPORT_SYMBOL_GPL(vsp1_du_unmap_sg);
 
+int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
+		      dma_addr_t mem[2])
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+	struct vsp1_rwpf *wpf = pipe->output;
+	const struct vsp1_format_info *fmtinfo;
+	struct vsp1_rwpf *rpf = pipe->inputs[0];
+	unsigned long flags;
+	int i;
+
+	fmtinfo = vsp1_get_format_info(vsp1, pixelformat);
+	if (!fmtinfo) {
+		dev_err(vsp1->dev, "Unsupport pixel format %08x for RPF\n",
+			pixelformat);
+		return -EINVAL;
+	}
+
+	if (rpf->interlaced) {
+		dev_err(vsp1->dev, "Prohibited in interlaced mode\n");
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave(&pipe->irqlock, flags);
+
+	wpf->fmtinfo = fmtinfo;
+	wpf->format.num_planes = fmtinfo->planes;
+	wpf->format.plane_fmt[0].bytesperline = pitch;
+	wpf->format.plane_fmt[1].bytesperline = pitch;
+
+	for (i = 0; i < wpf->format.num_planes; ++i)
+		wpf->buf_addr[i] = mem[i];
+
+	pipe->output->write_back = 3;
+
+	spin_unlock_irqrestore(&pipe->irqlock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vsp1_du_setup_wb);
+
+void vsp1_du_wait_wb(struct device *dev, u32 count)
+{
+	int ret;
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+
+	ret = wait_event_interruptible(pipe->event_wait,
+				       (pipe->output->write_back == count));
+}
+EXPORT_SYMBOL_GPL(vsp1_du_wait_wb);
+
 /* -----------------------------------------------------------------------------
  * Initialization
  */
@@ -597,6 +678,7 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 {
 	struct vsp1_pipeline *pipe;
 	unsigned int i;
+	int ret;
 
 	vsp1->drm = devm_kzalloc(vsp1->dev, sizeof(*vsp1->drm), GFP_KERNEL);
 	if (!vsp1->drm)
@@ -620,6 +702,14 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 	pipe->bru = &vsp1->bru->entity;
 	pipe->lif = &vsp1->lif->entity;
 	pipe->output = vsp1->wpf[0];
+	pipe->output->write_back = 0;
+	init_waitqueue_head(&pipe->event_wait);
+
+	ret = RCAR_PRR_INIT();
+	if (ret) {
+		dev_dbg(vsp1->dev, "product register init fail.\n");
+		return ret;
+	}
 
 	return 0;
 }

@@ -1,7 +1,7 @@
 /*
  * vsp1_wpf.c  --  R-Car VSP1 Write Pixel Formatter
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -248,6 +248,20 @@ static void wpf_configure(struct vsp1_entity *entity,
 	u32 outfmt = 0;
 	u32 srcrpf = 0;
 
+	if (pipe->vmute_flag) {
+		vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF +
+			(0x100 * wpf->entity.index),
+			 VI6_WPF_SRCRPF_VIRACT_MST);
+		vsp1_wpf_write(wpf, dl, VI6_WPF_HSZCLIP +
+			(0x100 * wpf->entity.index), 0);
+		vsp1_wpf_write(wpf, dl, VI6_WPF_VSZCLIP +
+			(0x100 * wpf->entity.index), 0);
+		vsp1_wpf_write(wpf, dl, VI6_DPR_WPF_FPORCH(wpf->entity.index),
+			VI6_DPR_WPF_FPORCH_FP_WPFN);
+
+		return;
+	}
+
 	if (params == VSP1_ENTITY_PARAMS_RUNTIME) {
 		const unsigned int mask = BIT(WPF_CTRL_VFLIP)
 					| BIT(WPF_CTRL_HFLIP);
@@ -384,9 +398,20 @@ static void wpf_configure(struct vsp1_entity *entity,
 	}
 
 	/* Format */
-	if (!pipe->lif) {
+	if (!pipe->lif || (wpf->write_back == 2)) {
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
 		const struct vsp1_format_info *fmtinfo = wpf->fmtinfo;
+
+		if (pipe->lif) {
+			vsp1_wpf_write(wpf, dl, VI6_WPF_DSTM_ADDR_Y,
+						wpf->buf_addr[0]);
+			if (format->num_planes > 1)
+				vsp1_wpf_write(wpf, dl, VI6_WPF_DSTM_ADDR_C0,
+						wpf->buf_addr[1]);
+			if (format->num_planes > 2)
+				vsp1_wpf_write(wpf, dl, VI6_WPF_DSTM_ADDR_C1,
+						wpf->buf_addr[2]);
+		}
 
 		outfmt = fmtinfo->hwfmt << VI6_WPF_OUTFMT_WRFMT_SHIFT;
 
@@ -424,7 +449,11 @@ static void wpf_configure(struct vsp1_entity *entity,
 	vsp1_dl_list_write(dl, VI6_DPR_WPF_FPORCH(wpf->entity.index),
 			   VI6_DPR_WPF_FPORCH_FP_WPFN);
 
-	vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL, 0);
+	if (pipe->lif && (pipe->output->write_back == 2))
+		vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL,
+					VI6_WPF_WRBCK_CTRL_WBMD);
+	else
+		vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL, 0);
 
 	/* Sources. If the pipeline has a single input and BRU is not used,
 	 * configure it as the master layer. Otherwise configure all
@@ -450,7 +479,7 @@ static void wpf_configure(struct vsp1_entity *entity,
 	/* Enable interrupts */
 	vsp1_dl_list_write(dl, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
 	vsp1_dl_list_write(dl, VI6_WPF_IRQ_ENB(wpf->entity.index),
-			   VI6_WFP_IRQ_ENB_DFEE);
+			   VI6_WFP_IRQ_ENB_FREE | VI6_WFP_IRQ_ENB_UNDE);
 }
 
 static unsigned int wpf_max_width(struct vsp1_entity *entity,
