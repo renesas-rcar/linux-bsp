@@ -30,6 +30,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
+#include <linux/soc/renesas/s2ram_ddr_backup.h>
 
 #define PCIECAR			0x000010
 #define PCIECCTLR		0x000018
@@ -43,6 +44,7 @@
 
 /* Transfer control */
 #define PCIETCTLR		0x02000
+#define  DL_DOWN		(1 << 3)
 #define  CFINIT			1
 #define PCIETSTR		0x02004
 #define  DATA_LINK_ACTIVE	1
@@ -146,6 +148,7 @@ static inline struct rcar_msi *to_rcar_msi(struct msi_controller *chip)
 	return container_of(chip, struct rcar_msi, chip);
 }
 
+
 /* Structure representing the PCIe interface */
 struct rcar_pcie {
 	struct device		*dev;
@@ -156,6 +159,150 @@ struct rcar_pcie {
 	struct clk		*bus_clk;
 	struct			rcar_msi msi;
 };
+
+static int rcar_pcie_wait_for_dl(struct rcar_pcie *pcie);
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
+
+#define PCIE_BACKUP_REGS(pcie_ip_regs)	\
+struct hw_register (pcie_ip_regs)[] = {	\
+/* PCIEC transfer control registers */	\
+	{"PCIETCTLR",	0x2000,	32, 0}, \
+	{"PCIEINTER",	0x200C,	32, 0},	\
+	{"PCIEERRFER",	0x2024,	32, 0},	\
+	{"PCIETIER",	0x2030,	32, 0},	\
+	{"PCIEPMSCIER",	0x2038,	32, 0}, \
+	{"PCIEMSIALR",	0x2048,	32, 0},	\
+	{"PCIEMSIAUR",	0x204C,	32, 0},	\
+	{"PCIEMSIIER",	0x2050,	32, 0},	\
+	{"PCIEPRAR0",	0x2080,	32, 0},	\
+	{"PCIEPRAR1",	0x2084,	32, 0},	\
+	{"PCIEPRAR2",	0x2088,	32, 0},	\
+	{"PCIEPRAR3",	0x208C,	32, 0},	\
+	{"PCIEPRAR4",	0x2090,	32, 0},	\
+	{"PCIEPRAR5",	0x2094,	32, 0},	\
+	\
+	/* Local address registers */	\
+	{"PCIELAR0",	0x2200,	32, 0},	\
+	{"PCIELAMR0",	0x2208,	32, 0},	\
+	{"PCIELAR1",	0x2220,	32, 0},	\
+	{"PCIELAMR1",	0x2228,	32, 0},	\
+	{"PCIELAR2",	0x2240,	32, 0},	\
+	{"PCIELAMR2",	0x2248,	32, 0},	\
+	{"PCIELAR3",	0x2260,	32, 0},	\
+	{"PCIELAMR3",	0x2268,	32, 0},	\
+	{"PCIELAR4",	0x2280,	32, 0},	\
+	{"PCIELAMR4",	0x2288,	32, 0},	\
+	{"PCIELAR5",	0x22A0,	32, 0},	\
+	{"PCIELAMR5",	0x22A8,	32, 0},	\
+	\
+	/* PCIEC address registers */	\
+	{"PCIEPALR0",	0x3400,	32, 0},	\
+	{"PCIEPAUR0",	0x3404,	32, 0},	\
+	{"PCIEPAMR0",	0x3408,	32, 0},	\
+	{"PCIEPTCTLR0",	0x340C,	32, 0},	\
+	{"PCIEPALR1",	0x3420,	32, 0},	\
+	{"PCIEPAUR1",	0x3424,	32, 0},	\
+	{"PCIEPAMR1",	0x3428,	32, 0},	\
+	{"PCIEPTCTLR1",	0x342C,	32, 0},	\
+	{"PCIEPALR2",	0x3440,	32, 0},	\
+	{"PCIEPAUR2",	0x3444,	32, 0},	\
+	{"PCIEPAMR2",	0x3448,	32, 0},	\
+	{"PCIEPTCTLR2",	0x344C,	32, 0},	\
+	{"PCIEPALR3",	0x3460,	32, 0},	\
+	{"PCIEPAUR3",	0x3464,	32, 0},	\
+	{"PCIEPAMR3",	0x3468,	32, 0},	\
+	{"PCIEPTCTLR3",	0x346C,	32, 0},	\
+}
+
+static PCIE_BACKUP_REGS(pcie0_ip_regs);
+static PCIE_BACKUP_REGS(pcie1_ip_regs);
+
+static struct rcar_ip pcie0_ip = {
+	.ip_name = "pcie0",
+	.base_addr = 0xFE000000,
+	.size = 0x3470,
+	.reg_count = ARRAY_SIZE(pcie0_ip_regs),
+	.ip_reg = pcie0_ip_regs,
+};
+
+static struct rcar_ip pcie1_ip = {
+	.ip_name = "pcie1",
+	.base_addr = 0xEE800000,
+	.size = 0x3470,
+	.reg_count = ARRAY_SIZE(pcie1_ip_regs),
+	.ip_reg = pcie1_ip_regs,
+};
+
+struct ip_info {
+	const char *name;
+	struct rcar_ip *ip;
+};
+
+static struct ip_info ip_info_tbl[] = {
+	{"fe000000.pcie", &pcie0_ip },
+	{"ee800000.pcie", &pcie1_ip },
+	{NULL, NULL},
+};
+
+static struct rcar_ip *get_ip(const char *name)
+{
+	struct ip_info *ip_info = ip_info_tbl;
+	struct rcar_ip *ip = NULL;
+
+	while (ip_info->name) {
+		if (!strcmp(ip_info->name, name)) {
+			ip = ip_info->ip;
+			break;
+		}
+		ip_info++;
+	}
+
+	return ip;
+}
+
+static int rcar_pcie_save_regs(struct device *dev)
+{
+	struct rcar_ip *ip = get_ip(dev_name(dev));
+	struct rcar_pcie *pcie = NULL;
+	int ret;
+
+	if (ip) {
+		if (!ip->virt_addr) {
+			pcie = dev_get_drvdata(dev);
+			ip->virt_addr = pcie->base;
+		}
+
+		ret = rcar_handle_registers(ip, DO_BACKUP);
+		if (ret)
+			pr_err("%s: %s: BACKUP failed, ret=%d\n",
+				__func__, dev_name(dev), ret);
+	} else
+		pr_err("%s: Failed to find backup of dev: %s\n\n",
+				__func__, dev_name(dev));
+
+	return 0;
+}
+
+static int rcar_pcie_restore_regs(struct device *dev)
+{
+	struct rcar_ip *ip = get_ip(dev_name(dev));
+	int ret = -ENODEV;
+
+	if (ip) {
+		ret = rcar_handle_registers(ip, DO_RESTORE);
+		if (ret)
+			pr_err("%s: %s: RESTORE failed, ret=%d\n",
+				__func__, dev_name(dev), ret);
+
+	} else
+		pr_err("%s: Failed to find backup of dev: %s\n\n",
+				__func__, dev_name(dev));
+
+	return 0;
+}
+
+#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 static void rcar_pci_write_reg(struct rcar_pcie *pcie, unsigned long val,
 			       unsigned long reg)
@@ -245,6 +392,13 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 	 * transition to L1 link state. The HW will handle coming of of L1.
 	 */
 	val = rcar_pci_read_reg(pcie, PMSR);
+
+	if ((val == 0) || (rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN)) {
+		/* Wait PCI Express link is re-initialized */
+		rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
+		rcar_pcie_wait_for_dl(pcie);
+	}
+
 	if ((val & PM_ENTER_L1RX) && ((val & PMSTATE) != PMSTATE_L1)) {
 		rcar_pci_write_reg(pcie, L1_INIT, PMCTLR);
 
@@ -560,7 +714,7 @@ static int rcar_pcie_wait_for_dl(struct rcar_pcie *pcie)
 		if ((rcar_pci_read_reg(pcie, PCIETSTR) & DATA_LINK_ACTIVE))
 			return 0;
 
-		msleep(5);
+		mdelay(5);
 	}
 
 	return -ETIMEDOUT;
@@ -939,15 +1093,6 @@ static int rcar_pcie_get_resources(struct rcar_pcie *pcie)
 	if (IS_ERR(pcie->base))
 		return PTR_ERR(pcie->base);
 
-	pcie->clk = devm_clk_get(dev, "pcie");
-	if (IS_ERR(pcie->clk)) {
-		dev_err(dev, "cannot get platform clock\n");
-		return PTR_ERR(pcie->clk);
-	}
-	err = clk_prepare_enable(pcie->clk);
-	if (err)
-		return err;
-
 	pcie->bus_clk = devm_clk_get(dev, "pcie_bus");
 	if (IS_ERR(pcie->bus_clk)) {
 		dev_err(dev, "cannot get pcie bus clock\n");
@@ -979,7 +1124,6 @@ static int rcar_pcie_get_resources(struct rcar_pcie *pcie)
 err_map_reg:
 	clk_disable_unprepare(pcie->bus_clk);
 fail_clk:
-	clk_disable_unprepare(pcie->clk);
 
 	return err;
 }
@@ -1164,6 +1308,13 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 
 	rcar_pcie_parse_request_of_pci_ranges(pcie);
 
+	pm_runtime_enable(pcie->dev);
+	err = pm_runtime_get_sync(pcie->dev);
+	if (err < 0) {
+		dev_err(pcie->dev, "pm_runtime_get_sync failed\n");
+		goto err_pm_disable;
+	}
+
 	err = rcar_pcie_get_resources(pcie);
 	if (err < 0) {
 		dev_err(dev, "failed to request resources: %d\n", err);
@@ -1178,13 +1329,6 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 	if (!of_id || !of_id->data)
 		return -EINVAL;
 	hw_init_fn = of_id->data;
-
-	pm_runtime_enable(dev);
-	err = pm_runtime_get_sync(dev);
-	if (err < 0) {
-		dev_err(dev, "pm_runtime_get_sync failed\n");
-		goto err_pm_disable;
-	}
 
 	/* Failure to get a link might just be that no cards are inserted */
 	err = hw_init_fn(pcie);
@@ -1221,9 +1365,49 @@ err_pm_disable:
 	return err;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_pcie_suspend(struct device *dev)
+{
+	int ret = 0;
+#ifdef CONFIG_RCAR_DDR_BACKUP
+	ret = rcar_pcie_save_regs(dev);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+
+	return ret;
+}
+
+static int rcar_pcie_resume(struct device *dev)
+{
+	struct rcar_pcie *pcie = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (pcie) {
+#ifdef CONFIG_RCAR_DDR_BACKUP
+		rcar_pcie_restore_regs(dev);
+#endif /* CONFIG_RCAR_DDR_BACKUP */
+		ret = rcar_pcie_hw_init(pcie);
+		if (ret)
+			pr_debug("%s: %s: re-init hw fail, ret=%d\n",
+			__func__, dev_name(dev), ret);
+	} else
+		pr_warn("%s: %s: pcie NULL\n", __func__, dev_name(dev));
+
+	return 0;
+}
+
+static const struct dev_pm_ops rcar_pcie_pm_ops = {
+	.suspend	= rcar_pcie_suspend,
+	.resume		= rcar_pcie_resume,
+};
+#define DEV_PM_OPS (&rcar_pcie_pm_ops)
+#else /* CONFIG_PM_SLEEP */
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_pcie_driver = {
 	.driver = {
 		.name = "rcar-pcie",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rcar_pcie_of_match,
 		.suppress_bind_attrs = true,
 	},

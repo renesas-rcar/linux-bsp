@@ -62,6 +62,8 @@
 #define YCBCR422_8BITS		3
 #define XVYCC444		4
 
+#define TIMEOUT			200 /* time for hot plug detection */
+
 enum hdmi_datamap {
 	RGB444_8B = 0x01,
 	RGB444_10B = 0x03,
@@ -1697,17 +1699,60 @@ static void dw_hdmi_bridge_disable(struct drm_bridge *bridge)
 	hdmi->disabled = true;
 	dw_hdmi_update_power(hdmi);
 	dw_hdmi_update_phy_mask(hdmi);
+
+	if (hdmi->dev_type == RCAR_HDMI) {
+		hdmi_writeb(hdmi, ~0, HDMI_IH_MUTE_PHY_STAT0);
+		hdmi_writeb(hdmi, HDMI_PHY_HPD | HDMI_PHY_RX_SENSE,
+					 HDMI_PHY_POL0);
+	}
 	mutex_unlock(&hdmi->mutex);
 }
 
 static void dw_hdmi_bridge_enable(struct drm_bridge *bridge)
 {
 	struct dw_hdmi *hdmi = bridge->driver_private;
+	u8 intr_stat, i;
 
 	mutex_lock(&hdmi->mutex);
+
+	if (hdmi->dev_type == RCAR_HDMI) {
+		/* Reinitialization for resume */
+		initialize_hdmi_ih_mutes(hdmi);
+		hdmi_init_clk_regenerator(hdmi);
+		hdmi_writeb(hdmi, HDMI_PHY_HPD | HDMI_PHY_RX_SENSE,
+					HDMI_PHY_POL0);
+		hdmi_writeb(hdmi, HDMI_IH_PHY_STAT0_HPD |
+					HDMI_IH_PHY_STAT0_RX_SENSE,
+					HDMI_IH_PHY_STAT0);
+		hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD |
+					HDMI_IH_PHY_STAT0_RX_SENSE),
+					HDMI_IH_MUTE_PHY_STAT0);
+		dw_hdmi_fb_registered(hdmi);
+		hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD |
+					HDMI_IH_PHY_STAT0_RX_SENSE),
+					HDMI_IH_MUTE_PHY_STAT0);
+		dw_hdmi_i2c_init(hdmi);
+	}
+
 	hdmi->disabled = false;
 	dw_hdmi_update_power(hdmi);
 	dw_hdmi_update_phy_mask(hdmi);
+
+	if (hdmi->dev_type == RCAR_HDMI) {
+		/* Wait for hot plug detection */
+		for (i = 0; i < TIMEOUT; i++) {
+			intr_stat = hdmi_readb(hdmi, HDMI_IH_PHY_STAT0);
+			if (intr_stat & HDMI_IH_PHY_STAT0_HPD) {
+				dev_dbg(hdmi->dev,
+					"HPD is occurred after %dms\n", i);
+				break;
+			}
+			mdelay(1);
+		}
+		if (i == TIMEOUT)
+			dev_warn(hdmi->dev, "HPD is not occurred\n");
+	}
+
 	mutex_unlock(&hdmi->mutex);
 }
 

@@ -25,6 +25,7 @@
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc_helper.h>
+#include <drm/drm_encoder_slave.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 #include <drm/rcar_du_drm.h>
@@ -311,20 +312,74 @@ static struct drm_driver rcar_du_driver = {
 static int rcar_du_pm_suspend(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
-
+	int i;
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	struct drm_encoder *encoder;
+#endif
 	drm_kms_helper_poll_disable(rcdu->ddev);
-	/* TODO Suspend the CRTC */
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	list_for_each_entry(encoder,
+		 &rcdu->ddev->mode_config.encoder_list, head) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
+			rcar_du_hdmienc_suspend(encoder);
+	}
+#endif
 
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+	for (i = 0; i < rcdu->info->num_lvds; ++i) {
+		if (rcdu->lvds[i])
+			rcar_du_lvdsenc_stop_suspend(rcdu->lvds[i]);
+	}
+#endif
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started) {
+			rcar_du_crtc_suspend(&rcdu->crtcs[i]);
+			clk_set_rate(rcdu->crtcs[i].extclock, 0);
+			rcdu->crtcs[i].group->used_crtcs = 0;
+		}
+	}
 	return 0;
 }
 
 static int rcar_du_pm_resume(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+	struct drm_encoder *encoder;
+	int i;
 
-	/* TODO Resume the CRTC */
+	encoder = NULL;
 
+	for (i = 0; i < rcdu->num_crtcs; ++i)
+		rcar_du_crtc_resume(&rcdu->crtcs[i]);
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	list_for_each_entry(encoder,
+		&rcdu->ddev->mode_config.encoder_list, head) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
+			rcar_du_hdmienc_resume(encoder);
+	}
+#endif
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].lvds_ch >= 0)
+			rcar_du_lvdsenc_start(
+				rcdu->lvds[rcdu->crtcs[i].lvds_ch],
+				&rcdu->crtcs[i]);
+	}
+#endif
+
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		struct drm_crtc *crtc = &rcdu->crtcs[i].crtc;
+
+		if (rcdu->crtcs[i].started) {
+			rcar_du_group_restart(rcdu->crtcs[i].group,
+						&rcdu->crtcs[i]);
+			rcar_du_async_commit(rcdu->ddev, crtc);
+		}
+	}
 	drm_kms_helper_poll_enable(rcdu->ddev);
+	drm_fbdev_cma_hotplug_event(rcdu->fbdev);
+
 	return 0;
 }
 #endif

@@ -1326,4 +1326,23 @@ int tmio_mmc_host_runtime_resume(struct device *dev)
 EXPORT_SYMBOL(tmio_mmc_host_runtime_resume);
 #endif
 
+#ifdef CONFIG_PM_SLEEP
+int tmio_mmc_host_suspend(struct device *dev)
+{
+	struct mmc_host *mmc = dev_get_drvdata(dev);
+
+	tmio_mmc_hw_reset(mmc);
+
+	return 0;
+}
+EXPORT_SYMBOL(tmio_mmc_host_suspend);
+
+int tmio_mmc_host_resume(struct device *dev)
+{
+	/* Empty for now */
+	return 0;
+}
+EXPORT_SYMBOL(tmio_mmc_host_resume);
+#endif /* CONFIG_PM_SLEEP */
+
 MODULE_LICENSE("GPL v2");

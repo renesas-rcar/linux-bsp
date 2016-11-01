@@ -87,7 +87,7 @@ EXPORT_SYMBOL_GPL(vsp1_du_if_set_mute);
  * Return 0 on success or a negative error code on failure.
  */
 int vsp1_du_setup_lif(struct device *dev, unsigned int width,
-		      unsigned int height)
+		      unsigned int height, bool suspend)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
@@ -109,10 +109,12 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 
 		media_entity_pipeline_stop(&pipe->output->entity.subdev.entity);
 
-		for (i = 0; i < bru->entity.source_pad; ++i) {
-			vsp1->drm->inputs[i].enabled = false;
-			bru->inputs[i].rpf = NULL;
-			pipe->inputs[i] = NULL;
+		if (!suspend) {
+			for (i = 0; i < bru->entity.source_pad; ++i) {
+				vsp1->drm->inputs[i].enabled = false;
+				bru->inputs[i].rpf = NULL;
+				pipe->inputs[i] = NULL;
+			}
 		}
 
 		pipe->num_inputs = 0;
