@@ -204,7 +204,7 @@ static void rcar_csi2_wait_phy_start(struct rcar_csi2 *priv)
 	int timeout;
 
 	/* Read the PHY clock lane monitor register (PHCLM). */
-	for (timeout = 100; timeout >= 0; timeout--) {
+	for (timeout = 100; timeout > 0; timeout--) {
 		if (ioread32(priv->base + PHCLM_REG) & 0x01) {
 			csi_dbg(priv, "Detected the PHY clock lane\n");
 			break;
@@ -216,7 +216,7 @@ static void rcar_csi2_wait_phy_start(struct rcar_csi2 *priv)
 
 
 	/* Read the PHY data lane monitor register (PHDLM). */
-	for (timeout = 100; timeout >= 0; timeout--) {
+	for (timeout = 100; timeout > 0; timeout--) {
 		if (ioread32(priv->base + PHDLM_REG) & 0x01) {
 			csi_dbg(priv, "Detected the PHY data lane\n");
 			break;
