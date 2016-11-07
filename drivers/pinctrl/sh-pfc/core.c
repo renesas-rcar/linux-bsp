@@ -741,8 +741,7 @@ static const struct platform_device_id sh_pfc_id_table[] = {
 static int sh_pfc_suspend(struct device *dev)
 {
 	int ret = 0;
-#if defined(CONFIG_PINCTRL_PFC_R8A7795) && \
-	defined(CONFIG_RCAR_DDR_BACKUP)
+#ifdef CONFIG_RCAR_DDR_BACKUP
 	pr_debug("%s\n", __func__);
 
 	if (!pfc_ip.virt_addr)
@@ -758,11 +757,9 @@ static int sh_pfc_suspend(struct device *dev)
 static int sh_pfc_resume(struct device *dev)
 {
 	int ret = 0;
-#if defined(CONFIG_PINCTRL_PFC_R8A7795) && \
-	defined(CONFIG_RCAR_DDR_BACKUP)
+#ifdef CONFIG_RCAR_DDR_BACKUP
 	pr_debug("%s\n", __func__);
 	ret = rcar_handle_registers(&pfc_ip, DO_RESTORE);
-
 #endif
 	return ret;
 }
