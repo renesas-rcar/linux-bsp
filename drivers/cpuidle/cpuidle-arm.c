@@ -67,6 +67,7 @@ static struct cpuidle_driver arm_idle_driver = {
 	}
 };
 
+#if IS_ENABLED(CONFIG_ARM64)
 static int __init arm_idle_driver_init(struct cpuidle_driver *drv, int part_id)
 {
 	struct cpumask *cpumask;
@@ -88,6 +89,7 @@ static int __init arm_idle_driver_init(struct cpuidle_driver *drv, int part_id)
 
 	return 0;
 }
+#endif
 
 static const struct of_device_id arm_idle_state_match[] __initconst = {
 	{ .compatible = "arm,idle-state",
@@ -108,10 +110,12 @@ static int __init arm_idle_init(void)
 	struct cpuidle_driver *drv = &arm_idle_driver;
 	struct cpuidle_device *dev;
 
+#if IS_ENABLED(CONFIG_ARM64)
 	/* Support CPUIdle for Cortex-A57 only */
 	ret = arm_idle_driver_init(drv, ARM_CPU_PART_CORTEX_A57);
 	if (ret)
 		return ret;
+#endif
 
 	/*
 	 * Initialize idle states data, starting at index 1.
