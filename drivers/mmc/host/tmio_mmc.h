@@ -19,6 +19,7 @@
 #define TMIO_MMC_H
 
 #include <linux/dmaengine.h>
+#include <linux/completion.h>
 #include <linux/highmem.h>
 #include <linux/mutex.h>
 #include <linux/pagemap.h>
@@ -154,6 +155,7 @@ struct tmio_mmc_host {
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
 	u32			scc_tappos;
+	struct completion	completion;
 
 	/* Mandatory callback */
 	int (*clk_enable)(struct tmio_mmc_host *host);
