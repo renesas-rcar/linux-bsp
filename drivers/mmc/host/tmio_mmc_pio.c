@@ -283,6 +283,7 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 {
 	struct mmc_request *mrq;
 	unsigned long flags;
+	struct mmc_command *cmd = host->cmd;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -306,6 +307,12 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 
 	if (host->check_scc_error)
 		host->check_scc_error(host);
+
+	if (cmd == mrq->sbc) {
+		/* finish SET_BLOCK_COUNT request */
+		complete(&host->completion);
+		return;
+	}
 
 	mmc_request_done(host->mmc, mrq);
 }
@@ -374,7 +381,8 @@ static int tmio_mmc_start_command(struct tmio_mmc_host *host, struct mmc_command
 			 * multiple block transfer
 			 */
 			if ((host->pdata->flags & TMIO_MMC_HAVE_CMD12_CTRL) &&
-			    (cmd->opcode == SD_IO_RW_EXTENDED))
+			    ((cmd->opcode == SD_IO_RW_EXTENDED) ||
+			     host->mrq->sbc))
 				c |= NO_CMD12_ISSUE;
 		}
 		if (data->flags & MMC_DATA_READ)
@@ -832,6 +840,7 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	unsigned long flags;
 	int ret;
+	u32 opcode;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -850,6 +859,36 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	host->mrq = mrq;
 
 	spin_unlock_irqrestore(&host->lock, flags);
+
+	if (mrq->sbc) {
+		init_completion(&host->completion);
+		ret = tmio_mmc_start_command(host, mrq->sbc);
+		if (ret)
+			goto fail;
+		ret = wait_for_completion_timeout(&host->completion,
+					msecs_to_jiffies(CMDREQ_TIMEOUT));
+		if (ret < 0)
+			goto fail;
+		if (!ret) {
+			ret = -ETIMEDOUT;
+			goto fail;
+		}
+		host->last_req_ts = jiffies;
+		host->mrq = mrq;
+		if (((host->check_scc_error && host->check_scc_error(host)) ||
+			(mrq->cmd->error == -EILSEQ)) && host->mmc->card) {
+			if (mmc_card_mmc(host->mmc->card))
+				opcode = MMC_SEND_TUNING_BLOCK_HS200;
+			else
+				opcode = MMC_SEND_TUNING_BLOCK;
+			/* Start retuning */
+			ret = tmio_mmc_execute_tuning(mmc, opcode);
+			if (ret)
+				goto fail;
+			/* Restore request */
+			host->mrq = mrq;
+		}
+	}
 
 	if (mrq->data) {
 		ret = tmio_mmc_start_data(host, mrq->data);
