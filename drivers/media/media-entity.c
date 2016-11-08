@@ -256,6 +256,10 @@ bool media_entity_has_route(struct media_entity *entity, unsigned int pad0,
 	if (!entity->ops || !entity->ops->has_route)
 		return true;
 
+	if (entity->pads[pad0].flags & MEDIA_PAD_FL_SOURCE
+	    && entity->pads[pad1].flags & MEDIA_PAD_FL_SINK)
+		swap(pad0, pad1);
+
 	return entity->ops->has_route(entity, pad0, pad1);
 }
 EXPORT_SYMBOL_GPL(media_entity_has_route);
