@@ -334,6 +334,10 @@ static int rvin_group_vin_to_csi(struct rvin_dev *vin)
 {
 	int i, vin_num, vin_master, chsel, csi;
 
+	/* Only valid on Gen3 */
+	if (vin->info->chip != RCAR_GEN3)
+		return -1;
+
 	/*
 	 * Only try to translate to a CSI2 number if there is a enabled
 	 * link from the VIN sink pad. However if there are no links at
