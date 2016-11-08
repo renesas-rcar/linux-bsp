@@ -21,11 +21,13 @@ config ARCH_RCAR_GEN2
 	select PM
 	select PM_GENERIC_DOMAINS
 	select RENESAS_IRQC
+	select SOC_BUS
 	select SYS_SUPPORTS_SH_CMT
 
 config ARCH_RMOBILE
 	bool
 	select PM_RMOBILE
+	select SOC_BUS
 	select SYS_SUPPORTS_SH_CMT
 	select SYS_SUPPORTS_SH_TMU
 
@@ -80,6 +82,7 @@ config ARCH_R8A7778
 config ARCH_R8A7779
 	bool "R-Car H1 (R8A77790)"
 	select ARCH_RCAR_GEN1
+	select SOC_BUS
 
 config ARCH_R8A7790
 	bool "R-Car H2 (R8A77900)"

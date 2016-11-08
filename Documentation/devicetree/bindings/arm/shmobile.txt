@@ -81,3 +81,29 @@ Boards:
     compatible = "renesas,sk-rzg1m", "renesas,r8a7743"
   - Wheat
     compatible = "renesas,wheat", "renesas,r8a7792"
+
+
+Most Renesas ARM SoCs have one or two registers (Common Chip Code
+Register and/or Product Register) that allow to retrieve SoC product and
+revision information.  If present, device nodes for these devices should
+be added.
+
+Required properties:
+  - compatible: Must be one of:
+      - "renesas,cccr" for the Common Chip Code Register,
+      - "renesas,prr" for the Product Register.
+  - reg: Base address and length of the register block.
+
+
+Examples
+--------
+
+	cccr: chipid@e600101c {
+		compatible = "renesas,cccr";
+		reg = <0xe600101c 4>;
+	};
+
+	prr: chipid@ff000044 {
+		compatible = "renesas,prr";
+		reg = <0 0xff000044 0 4>;
+	};
