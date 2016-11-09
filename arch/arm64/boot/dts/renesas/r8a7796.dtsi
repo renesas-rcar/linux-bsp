@@ -2417,7 +2417,6 @@
 			renesas,has-clu;
 			renesas,has-bru;
 			renesas,has-hgo;
-			renesas,has-drc;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <1>;
 			power-domains = <&sysc R8A7796_PD_A3VC>;
