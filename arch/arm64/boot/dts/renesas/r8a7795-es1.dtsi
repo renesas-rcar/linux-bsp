@@ -2673,7 +2673,6 @@
 			renesas,#rpf_clut = <4>;
 			renesas,#wpf_rot = <0>;
 			renesas,has-bru;
-			renesas,has-drc;
 			renesas,#read_outstanding = <0>;
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			status = "disabled";
