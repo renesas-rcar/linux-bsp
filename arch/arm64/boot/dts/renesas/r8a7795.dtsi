@@ -2716,18 +2716,6 @@
 			status = "disabled";
 		};
 
-		vsp@fe9c0000 {
-			compatible = "renesas,vspm-vsp2";
-			reg = <0 0xfe9c0000 0 0x8000>;
-			renesas,has-lut;
-			renesas,has-clu;
-			renesas,has-hgo;
-			renesas,has-hgt;
-			renesas,#rpf = <1>;
-			renesas,#uds = <1>;
-			renesas,#wpf = <1>;
-		};
-
 		vspd0: vsp@fea20000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xfea20000 0 0x4000>;
