@@ -13,11 +13,18 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/sys_soc.h>
 
 #include <media/v4l2-of.h>
 #include <media/v4l2-subdev.h>
+
+enum chip_id {
+	RCAR_H3_WS20,
+	RCAR_GEN3,
+};
 
 /* Register offsets */
 #define TREF_REG		0x00 /* Control Timing Select */
@@ -152,6 +159,7 @@ struct rcar_csi2 {
 	struct v4l2_mbus_framefmt mf;
 
 	u32 vc_num;
+	enum chip_id chip;
 };
 
 #define csi_dbg(p, fmt, arg...)		dev_dbg(p->dev, fmt, ##arg)
@@ -386,11 +394,16 @@ static struct v4l2_subdev_ops rcar_csi2_subdev_ops = {
 /* -----------------------------------------------------------------------------
  * Platform Device Driver
  */
+/* H3 WS2.0  */
+static const struct soc_device_attribute r8a7795es20[] = {
+    { .soc_id = "r8a7795", .revision = "ES2.0" },
+    { },
+};
 
 static const struct of_device_id rcar_csi2_of_table[] = {
-	{ .compatible = "renesas,csi2-r8a7796" },
-	{ .compatible = "renesas,csi2-r8a7795" },
-	{ .compatible = "renesas,rcar-gen3-csi2" },
+	{ .compatible = "renesas,csi2-r8a7796", .data = (void *)RCAR_GEN3 },
+	{ .compatible = "renesas,csi2-r8a7795", .data = (void *)RCAR_GEN3 },
+	{ .compatible = "renesas,rcar-gen3-csi2", .data = (void *)RCAR_GEN3 },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, rcar_csi2_of_table);
@@ -488,6 +501,7 @@ static int rcar_csi2_probe_resources(struct rcar_csi2 *priv,
 static int rcar_csi2_probe(struct platform_device *pdev)
 {
 	struct rcar_csi2 *priv;
+	const struct of_device_id *match;
 	int ret;
 	u32 vc_num;
 
@@ -495,11 +509,18 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 
+	match = of_match_device(of_match_ptr(rcar_csi2_of_table), &pdev->dev);
+	if (!match)
+		return -ENODEV;
 
 	priv->dev = &pdev->dev;
 	spin_lock_init(&priv->lock);
 
 	priv->vc_num = 0;
+	priv->chip = (enum chip_id)match->data;
+
+	if (soc_device_match(r8a7795es20))
+		priv->chip = RCAR_H3_WS20;
 
 	ret = rcar_csi2_parse_dt(priv);
 	if (ret)
