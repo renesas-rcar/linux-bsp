@@ -46,11 +46,13 @@ enum chip_id {
 #define SHPCNT_REG		0x44 /* Short Packet Count */
 #define LINKCNT_REG		0x48 /* LINK Operation Control */
 #define LSWAP_REG		0x4C /* Lane Swap */
+#define PHTW_REG		0x50 /* PHY Test Interface Write */
 #define PHTC_REG		0x58 /* PHY Test Interface Clear */
 #define PHYPLL_REG		0x68 /* PHY Frequency Control */
 #define PHEERM_REG		0x74 /* PHY ESC Error Monitor */
 #define PHCLM_REG		0x78 /* PHY Clock Lane Monitor */
 #define PHDLM_REG		0x7C /* PHY Data Lane Monitor */
+#define CSI0CLKFCPR_REG		0x254/* CSI0CLK Frequency Configuration Preset */
 
 /* Control Timing Select bits */
 #define TREF_TREF			(1 << 0)
@@ -146,6 +148,9 @@ enum chip_id {
 #define PHYPLL_HSFREQRANGE_1400MBPS	(0x1C << 16)
 #define PHYPLL_HSFREQRANGE_1450MBPS	(0x2C << 16)
 #define PHYPLL_HSFREQRANGE_1500MBPS	(0x3C << 16)
+
+/* CSI0CLK frequency configuration bit */
+#define CSI0CLKFREQRANGE(n)		((n & 0x3f) << 16)
 
 struct rcar_csi2 {
 	struct device *dev;
@@ -310,8 +315,25 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		  LSWAP_L2SEL(priv->swap[2]) | LSWAP_L3SEL(priv->swap[3]),
 		  priv->base + LSWAP_REG);
 
+	if (priv->chip == RCAR_H3_WS20) {
+		/* Set PHY Test Interface Write Register for external
+		 * reference resistor is unnecessary in R-Car H3(WS2.0)
+		 */
+		iowrite32(0x012701e2, priv->base + PHTW_REG);
+		iowrite32(0x010101e3, priv->base + PHTW_REG);
+		iowrite32(0x010101e4, priv->base + PHTW_REG);
+		iowrite32(0x01100104, priv->base + PHTW_REG);
+	}
+
 	/* Start */
 	iowrite32(phypll, priv->base + PHYPLL_REG);
+
+	/* Set CSI0CLK Frequency Configuration Preset Register for external
+	 * reference resistor is unnecessary in R-Car H3(WS2.0)
+	 */
+	if (priv->chip == RCAR_H3_WS20)
+		iowrite32(CSI0CLKFREQRANGE(32), priv->base + CSI0CLKFCPR_REG);
+
 	iowrite32(phycnt, priv->base + PHYCNT_REG);
 	iowrite32(LINKCNT_MONITOR_EN | LINKCNT_REG_MONI_PACT_EN |
 		  LINKCNT_ICLK_NONSTOP, priv->base + LINKCNT_REG);
