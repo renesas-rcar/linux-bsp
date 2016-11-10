@@ -915,7 +915,7 @@
 	status = "okay";
 };
 
-&hsusb {
+&hsusb0 {
 	status = "okay";
 };
 
