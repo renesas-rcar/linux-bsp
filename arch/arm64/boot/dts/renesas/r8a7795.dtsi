@@ -2508,7 +2508,7 @@
 			status = "disabled";
 		};
 
-		hsusb: usb@e6590000 {
+		hsusb0: usb@e6590000 {
 			compatible = "renesas,usbhs-r8a7795",
 				     "renesas,rcar-gen3-usbhs";
 			reg = <0 0xe6590000 0 0x100>;
@@ -2519,6 +2519,22 @@
 			dma-names = "ch0", "ch1", "ch2", "ch3";
 			renesas,buswait = <11>;
 			phys = <&usb2_phy0>;
+			phy-names = "usb";
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			status = "disabled";
+		};
+
+		hsusb3: usb@e659c000 {
+			compatible = "renesas,usbhs-r8a7795",
+				     "renesas,rcar-gen3-usbhs";
+			reg = <0 0xe659c000 0 0x100>;
+			interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 705>;
+			dmas = <&usb_dmac2 0>, <&usb_dmac2 1>,
+			       <&usb_dmac3 0>, <&usb_dmac3 1>;
+			dma-names = "ch0", "ch1", "ch2", "ch3";
+			renesas,buswait = <11>;
+			phys = <&usb2_phy3>;
 			phy-names = "usb";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "disabled";
