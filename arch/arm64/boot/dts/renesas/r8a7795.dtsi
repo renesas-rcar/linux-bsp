@@ -19,7 +19,6 @@
 
 	aliases {
 		csi2_20 = &csi2_20;
-		csi2_21 = &csi2_21;
 		csi2_40 = &csi2_40;
 		csi2_41 = &csi2_41;
 		i2c0 = &i2c0;
@@ -1916,22 +1915,6 @@
 						reg = <3>;
 						remote-endpoint= <&csi2_20_3_out>;
 					};
-					vin0csi2_21_0: endpoint@4 {
-						reg = <4>;
-						remote-endpoint= <&csi2_21_0_out>;
-					};
-					vin0csi2_21_1: endpoint@5 {
-						reg = <5>;
-						remote-endpoint= <&csi2_21_1_out>;
-					};
-					vin0csi2_21_2: endpoint@6 {
-						reg = <6>;
-						remote-endpoint= <&csi2_21_2_out>;
-					};
-					vin0csi2_21_3: endpoint@7 {
-						reg = <7>;
-						remote-endpoint= <&csi2_21_3_out>;
-					};
 					vin0csi2_40_0: endpoint@8 {
 						reg = <8>;
 						remote-endpoint= <&csi2_40_0_out>;
@@ -2219,49 +2202,6 @@
 
 					csi2_20_3_out: endpoint@1 {
 						remote-endpoint = <&vin0csi2_20_3>;
-					};
-				};
-			};
-		};
-
-		csi2_21: csi2@fea90000 {
-			compatible = "renesas,csi2-r8a7795";
-			reg = <0 0xfea90000 0 0x10000>;
-			interrupts = <GIC_SPI 185 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 713>;
-			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
-			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					reg = <1>;
-
-					csi2_21_0_out: endpoint@1 {
-						remote-endpoint = <&vin0csi2_21_0>;
-					};
-				};
-				port@2 {
-					reg = <2>;
-
-					csi2_21_1_out: endpoint@1 {
-						remote-endpoint = <&vin0csi2_21_1>;
-					};
-				};
-				port@3 {
-					reg = <3>;
-
-					csi2_21_2_out: endpoint@1 {
-						remote-endpoint = <&vin0csi2_21_2>;
-					};
-				};
-				port@4 {
-					reg = <4>;
-
-					csi2_21_3_out: endpoint@1 {
-						remote-endpoint = <&vin0csi2_21_3>;
 					};
 				};
 			};
