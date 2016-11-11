@@ -2288,15 +2288,6 @@
 			status = "disabled";
 		};
 
-		xhci1: usb@ee0400000 {
-			compatible = "renesas,xhci-r8a7795", "renesas,rcar-gen3-xhci";
-			reg = <0 0xee040000 0 0xc00>;
-			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 327>;
-			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
-			status = "disabled";
-		};
-
 		usb_dmac0: dma-controller@e65a0000 {
 			compatible = "renesas,r8a7795-usb-dmac",
 				     "renesas,usb-dmac";
