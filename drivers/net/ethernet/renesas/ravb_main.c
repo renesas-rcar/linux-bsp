@@ -1968,6 +1968,29 @@ static void ravb_set_config_mode(struct net_device *ndev)
 	}
 }
 
+static void ravb_set_delay_mode(struct net_device *ndev)
+{
+	struct ravb_private *priv = netdev_priv(ndev);
+
+	if (priv->chip_id != RCAR_GEN2) {
+		switch (priv->phy_interface) {
+		case PHY_INTERFACE_MODE_RGMII_ID:
+			ravb_modify(ndev, APSR, APSR_DM, APSR_DM_RDM |
+				   APSR_DM_TDM);
+			break;
+		case PHY_INTERFACE_MODE_RGMII_RXID:
+			ravb_modify(ndev, APSR, APSR_DM, APSR_DM_RDM);
+			break;
+		case PHY_INTERFACE_MODE_RGMII_TXID:
+			ravb_modify(ndev, APSR, APSR_DM, APSR_DM_TDM);
+			break;
+		default:
+			ravb_modify(ndev, APSR, APSR_DM, 0);
+			break;
+		}
+	}
+}
+
 static int ravb_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -2086,8 +2109,7 @@ static int ravb_probe(struct platform_device *pdev)
 	ravb_modify(ndev, GCCR, GCCR_LTI, GCCR_LTI);
 
 	/* Set APSR */
-	if (priv->phy_interface == PHY_INTERFACE_MODE_RGMII_ID)
-		ravb_modify(ndev, APSR, APSR_DM, APSR_DM_TDM);
+	ravb_set_delay_mode(ndev);
 
 	/* Allocate descriptor base address table */
 	priv->desc_bat_size = sizeof(struct ravb_desc) * DBAT_ENTRY_NUM;
@@ -2231,8 +2253,7 @@ static int __maybe_unused ravb_resume(struct device *dev)
 	ravb_modify(ndev, GCCR, GCCR_LTI, GCCR_LTI);
 
 	/* Set APSR */
-	if (priv->phy_interface == PHY_INTERFACE_MODE_RGMII_ID)
-		ravb_modify(ndev, APSR, APSR_DM, APSR_DM_TDM);
+	ravb_set_delay_mode(ndev);
 
 	/* Restore descriptor base address table */
 	ravb_write(ndev, priv->desc_bat_dma, DBAT);
