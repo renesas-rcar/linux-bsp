@@ -252,6 +252,17 @@ static void rpf_configure(struct vsp1_entity *entity,
 		top = compose->top;
 	}
 
+	if (pipe->brs) {
+		const struct v4l2_rect *compose;
+
+		compose = vsp1_entity_get_pad_selection(pipe->brs,
+							pipe->brs->config,
+							rpf->brs_input,
+							V4L2_SEL_TGT_COMPOSE);
+		left = compose->left;
+		top = compose->top;
+	}
+
 	if (rpf->interlaced)
 		vsp1_rpf_write(rpf, dl, VI6_RPF_LOC,
 		       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
