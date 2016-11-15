@@ -13,14 +13,16 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/usb/phy.h>
+#include <linux/sys_soc.h>
 
 #include "xhci.h"
 #include "xhci-plat.h"
 #include "xhci-rcar.h"
 
 /*
-* - The V3 firmware is for r8a7796 (with good performance).
-* - The V2 firmware can be used on both r8a7795 (es1.x) and r8a7796.
+* - The V3 firmware is possible to use on r8a7795 es2.0 or later and
+*   r8a7796 es1.1 or later.
+* - The V2 firmware is possible to use on r8a7795 es1.x and r8a7796 es1.0.
 * - The V2 firmware is possible to use on R-Car Gen2. However, the V2 causes
 *   performance degradation. So, this driver continues to use the V1 if R-Car
 *   Gen2.
@@ -66,6 +68,22 @@ MODULE_FIRMWARE(XHCI_RCAR_FIRMWARE_NAME_V3);
 /* USB3.0 Polarity */
 #define RCAR_USB3_RX_POL_VAL	BIT(21)
 #define RCAR_USB3_TX_POL_VAL	BIT(4)
+
+/* Check LSI revisions and set specific quirk value */
+#define RCAR_XHCI_GEN3          BIT(0) /* Gen3 series */
+#define RCAR_XHCI_FIRMWARE_V2   BIT(1) /* FIRMWARE V2 */
+
+static const struct soc_device_attribute rcar_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*",
+		.data = (void *)(RCAR_XHCI_GEN3 | RCAR_XHCI_FIRMWARE_V2), },
+	{ .soc_id = "r8a7795",
+		.data = (void *)RCAR_XHCI_GEN3, },
+	{ .soc_id = "r8a7796", .revision = "ES1.0",
+		.data = (void *)(RCAR_XHCI_GEN3 | RCAR_XHCI_FIRMWARE_V2), },
+	{ .soc_id = "r8a7796",
+		.data = (void *)RCAR_XHCI_GEN3, },
+	{/*sentinel*/},
+};
 
 static void xhci_rcar_start_gen2(struct usb_hcd *hcd)
 {
@@ -122,9 +140,23 @@ static int xhci_rcar_download_firmware(struct usb_hcd *hcd)
 	int retval, index, j, time;
 	int timeout = 10000;
 	u32 data, val, temp;
+	u32 quirks = 0;
+	const struct soc_device_attribute *attr;
 
 	/* request R-Car USB3.0 firmware */
-	retval = request_firmware(&fw, priv->firmware_name, dev);
+	attr = soc_device_match(rcar_quirks_match);
+	if (attr)
+		quirks = (uintptr_t)attr->data;
+
+	if (quirks & RCAR_XHCI_GEN3) {
+		if (quirks & RCAR_XHCI_FIRMWARE_V2)
+			retval = request_firmware(&fw,
+					XHCI_RCAR_FIRMWARE_NAME_V2, dev);
+		else
+			retval = request_firmware(&fw,
+					XHCI_RCAR_FIRMWARE_NAME_V3, dev);
+	} else
+		retval = request_firmware(&fw, priv->firmware_name, dev);
 	if (retval)
 		return retval;
 
