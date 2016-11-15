@@ -21,6 +21,7 @@
 
 #include "vsp1.h"
 #include "vsp1_bru.h"
+#include "vsp1_brs.h"
 #include "vsp1_dl.h"
 #include "vsp1_entity.h"
 #include "vsp1_hgo.h"
@@ -180,6 +181,13 @@ void vsp1_pipeline_reset(struct vsp1_pipeline *pipe)
 			bru->inputs[i].rpf = NULL;
 	}
 
+	if (pipe->brs) {
+		struct vsp1_brs *brs = to_brs(&pipe->brs->subdev);
+
+		for (i = 0; i < ARRAY_SIZE(brs->inputs); ++i)
+			brs->inputs[i].rpf = NULL;
+	}
+
 	for (i = 0; i < ARRAY_SIZE(pipe->inputs); ++i) {
 		if (pipe->inputs[i]) {
 			pipe->inputs[i]->pipe = NULL;
@@ -209,6 +217,7 @@ void vsp1_pipeline_reset(struct vsp1_pipeline *pipe)
 	pipe->buffers_ready = 0;
 	pipe->num_inputs = 0;
 	pipe->bru = NULL;
+	pipe->brs = NULL;
 	pipe->hgo = NULL;
 	pipe->hgt = NULL;
 	pipe->lif = NULL;

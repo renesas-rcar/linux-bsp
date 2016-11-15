@@ -48,6 +48,7 @@ struct vsp1_rwpf {
 	struct v4l2_pix_format_mplane format;
 	const struct vsp1_format_info *fmtinfo;
 	unsigned int bru_input;
+	unsigned int brs_input;
 
 	unsigned int alpha;
 

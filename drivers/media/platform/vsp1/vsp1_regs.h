@@ -347,6 +347,10 @@
 #define VI6_DPR_HST_ROUTE		0x2044
 #define VI6_DPR_HSI_ROUTE		0x2048
 #define VI6_DPR_BRU_ROUTE		0x204c
+#define VI6_DPR_BRS_ROUTE		0x2050
+#define VI6_DPR_ROUTE_BRSSEL_MASK	(0x01 << 28)
+#define VI6_DPR_ROUTE_BRSSEL_ILV	(0x00 << 28)
+#define VI6_DPR_ROUTE_BRSSEL_BRS	(0x01 << 28)
 #define VI6_DPR_ROUTE_FXA_MASK		(0xff << 16)
 #define VI6_DPR_ROUTE_FXA_SHIFT		16
 #define VI6_DPR_ROUTE_FP_MASK		(0x3f << 8)
@@ -366,6 +370,7 @@
 #define VI6_DPR_NODE_UDS(n)		(17 + (n))
 #define VI6_DPR_NODE_LUT		22
 #define VI6_DPR_NODE_BRU_IN(n)		(((n) <= 3) ? 23 + (n) : 49)
+#define VI6_DPR_NODE_BRS_IN(n)		(38 + (n))
 #define VI6_DPR_NODE_BRU_OUT		27
 #define VI6_DPR_NODE_CLU		29
 #define VI6_DPR_NODE_HST		30
@@ -674,6 +679,90 @@
 #define VI6_HGT_LB_DET			0x3758
 #define VI6_HGT_REGRST			0x37fc
 #define VI6_HGT_REGRST_RCLEA		(1 << 0)
+
+/* -----------------------------------------------------------------------------
+ * BRS Control Registers
+ */
+
+#define VI6_BRS_INCTRL			0x3900
+#define VI6_BRS_INCTRL_NRM		(1 << 28)
+#define VI6_BRS_INCTRL_DnON		(1 << (16 + (n)))
+#define VI6_BRS_INCTRL_DITHn_OFF	(0 << ((n) * 4))
+#define VI6_BRS_INCTRL_DITHn_18BPP	(1 << ((n) * 4))
+#define VI6_BRS_INCTRL_DITHn_16BPP	(2 << ((n) * 4))
+#define VI6_BRS_INCTRL_DITHn_15BPP	(3 << ((n) * 4))
+#define VI6_BRS_INCTRL_DITHn_12BPP	(4 << ((n) * 4))
+#define VI6_BRS_INCTRL_DITHn_8BPP	(5 << ((n) * 4))
+#define VI6_BRS_INCTRL_DITHn_MASK	(7 << ((n) * 4))
+#define VI6_BRS_INCTRL_DITHn_SHIFT	((n) * 4)
+
+#define VI6_BRS_VIRRPF_SIZE		0x3904
+#define VI6_BRS_VIRRPF_SIZE_HSIZE_MASK	(0x1fff << 16)
+#define VI6_BRS_VIRRPF_SIZE_HSIZE_SHIFT	16
+#define VI6_BRS_VIRRPF_SIZE_VSIZE_MASK	(0x1fff << 0)
+#define VI6_BRS_VIRRPF_SIZE_VSIZE_SHIFT	0
+
+#define VI6_BRS_VIRRPF_LOC		0x3908
+#define VI6_BRS_VIRRPF_LOC_HCOORD_MASK	(0x1fff << 16)
+#define VI6_BRS_VIRRPF_LOC_HCOORD_SHIFT	16
+#define VI6_BRS_VIRRPF_LOC_VCOORD_MASK	(0x1fff << 0)
+#define VI6_BRS_VIRRPF_LOC_VCOORD_SHIFT	0
+
+#define VI6_BRS_VIRRPF_COL		0x390c
+#define VI6_BRS_VIRRPF_COL_A_MASK	(0xff << 24)
+#define VI6_BRS_VIRRPF_COL_A_SHIFT	24
+#define VI6_BRS_VIRRPF_COL_RCR_MASK	(0xff << 16)
+#define VI6_BRS_VIRRPF_COL_RCR_SHIFT	16
+#define VI6_BRS_VIRRPF_COL_GY_MASK	(0xff << 8)
+#define VI6_BRS_VIRRPF_COL_GY_SHIFT	8
+#define VI6_BRS_VIRRPF_COL_BCB_MASK	(0xff << 0)
+#define VI6_BRS_VIRRPF_COL_BCB_SHIFT	0
+
+#define VI6_BRS_CTRL(n)			(0x3910 + (n) * 8)
+#define VI6_BRS_CTRL_RBC		(1 << 31)
+#define VI6_BRS_CTRL_DSTSEL_BRSIN(n)	((n) << 20)
+#define VI6_BRS_CTRL_DSTSEL_VRPF	(4 << 20)
+#define VI6_BRS_CTRL_DSTSEL_MASK	(7 << 20)
+#define VI6_BRS_CTRL_SRCSEL_BRSIN(n)	((n) << 16)
+#define VI6_BRS_CTRL_SRCSEL_VRPF	(4 << 16)
+#define VI6_BRS_CTRL_SRCSEL_MASK	(7 << 16)
+#define VI6_BRS_CTRL_CROP(rop)		((rop) << 4)
+#define VI6_BRS_CTRL_CROP_MASK		(0xf << 4)
+#define VI6_BRS_CTRL_AROP(rop)		((rop) << 0)
+#define VI6_BRS_CTRL_AROP_MASK		(0xf << 0)
+
+#define VI6_BRS_BLD(n)			(0x3914 + (n) * 8)
+#define VI6_BRS_BLD_CBES		(1 << 31)
+#define VI6_BRS_BLD_CCMDX_DST_A		(0 << 28)
+#define VI6_BRS_BLD_CCMDX_255_DST_A	(1 << 28)
+#define VI6_BRS_BLD_CCMDX_SRC_A		(2 << 28)
+#define VI6_BRS_BLD_CCMDX_255_SRC_A	(3 << 28)
+#define VI6_BRS_BLD_CCMDX_COEFX		(4 << 28)
+#define VI6_BRS_BLD_CCMDX_MASK		(7 << 28)
+#define VI6_BRS_BLD_CCMDY_DST_A		(0 << 24)
+#define VI6_BRS_BLD_CCMDY_255_DST_A	(1 << 24)
+#define VI6_BRS_BLD_CCMDY_SRC_A		(2 << 24)
+#define VI6_BRS_BLD_CCMDY_255_SRC_A	(3 << 24)
+#define VI6_BRS_BLD_CCMDY_COEFY		(4 << 24)
+#define VI6_BRS_BLD_CCMDY_MASK		(7 << 24)
+#define VI6_BRS_BLD_CCMDY_SHIFT		24
+#define VI6_BRS_BLD_ABES		(1 << 23)
+#define VI6_BRS_BLD_ACMDX_DST_A		(0 << 20)
+#define VI6_BRS_BLD_ACMDX_255_DST_A	(1 << 20)
+#define VI6_BRS_BLD_ACMDX_SRC_A		(2 << 20)
+#define VI6_BRS_BLD_ACMDX_255_SRC_A	(3 << 20)
+#define VI6_BRS_BLD_ACMDX_COEFX		(4 << 20)
+#define VI6_BRS_BLD_ACMDX_MASK		(7 << 20)
+#define VI6_BRS_BLD_ACMDY_DST_A		(0 << 16)
+#define VI6_BRS_BLD_ACMDY_255_DST_A	(1 << 16)
+#define VI6_BRS_BLD_ACMDY_SRC_A		(2 << 16)
+#define VI6_BRS_BLD_ACMDY_255_SRC_A	(3 << 16)
+#define VI6_BRS_BLD_ACMDY_COEFY		(4 << 16)
+#define VI6_BRS_BLD_ACMDY_MASK		(7 << 16)
+#define VI6_BRS_BLD_COEFX_MASK		(0xff << 8)
+#define VI6_BRS_BLD_COEFX_SHIFT		8
+#define VI6_BRS_BLD_COEFY_MASK		(0xff << 0)
+#define VI6_BRS_BLD_COEFY_SHIFT		0
 
 /* -----------------------------------------------------------------------------
  * LIF Control Registers
