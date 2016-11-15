@@ -95,6 +95,15 @@ static const unsigned int fcpvd_offset[] = {
 	FCPVD0_REG, FCPVD1_REG, FCPVD2_REG, FCPVD3_REG
 };
 
+int vsp1_gen3_vspdl_check(struct vsp1_device *vsp1)
+{
+	if (((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
+		VI6_IP_VERSION_MODEL_VSPDL_H3) && (vsp1->index == 0))
+		return true;
+
+	return false;
+}
+
 static int vsp1_gen3_vspd_check(struct vsp1_device *vsp1)
 {
 	if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
