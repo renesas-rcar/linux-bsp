@@ -292,11 +292,6 @@ static void vsp1_video_pipeline_setup_partitions(struct vsp1_pipeline *pipe)
  * This function completes the current buffer by filling its sequence number,
  * time stamp and payload size, and hands it back to the videobuf core.
  *
- * When operating in DU output mode (deep pipeline to the DU through the LIF),
- * the VSP1 needs to constantly supply frames to the display. In that case, if
- * no other buffer is queued, reuse the one that has just been processed instead
- * of handing it back to the videobuf core.
- *
  * Return the next queued buffer or NULL if the queue is empty.
  */
 static struct vsp1_vb2_buffer *
@@ -317,12 +312,6 @@ vsp1_video_complete_buffer(struct vsp1_video *video)
 
 	done = list_first_entry(&video->irqqueue,
 				struct vsp1_vb2_buffer, queue);
-
-	/* In DU output mode reuse the buffer if the list is singular. */
-	if (pipe->lif && list_is_singular(&video->irqqueue)) {
-		spin_unlock_irqrestore(&video->irqlock, flags);
-		return done;
-	}
 
 	list_del(&done->queue);
 
@@ -893,6 +882,7 @@ static void vsp1_video_stop_streaming(struct vb2_queue *vq)
 	list_for_each_entry(buffer, &video->irqqueue, queue)
 		vb2_buffer_done(&buffer->buf.vb2_buf, VB2_BUF_STATE_ERROR);
 	INIT_LIST_HEAD(&video->irqqueue);
+	INIT_LIST_HEAD(&video->wbqueue);
 	spin_unlock_irqrestore(&video->irqlock, flags);
 }
 
@@ -905,6 +895,147 @@ static const struct vb2_ops vsp1_video_queue_qops = {
 	.start_streaming = vsp1_video_start_streaming,
 	.stop_streaming = vsp1_video_stop_streaming,
 };
+
+
+/* -----------------------------------------------------------------------------
+ * videobuf2 queue operations for writeback nodes
+ */
+
+static void vsp1_video_wb_process_buffer(struct vsp1_video *video)
+{
+	struct vsp1_vb2_buffer *buf;
+	unsigned long flags;
+
+	/*
+	 * Writeback uses a running stream, unlike the M2M interface which
+	 * controls a pipeline process manually though the use of
+	 * vsp1_pipeline_run().
+	 *
+	 * Instead writeback will commence at the next frame interval, and can
+	 * be marked complete at the interval following that. To handle this we
+	 * store the configured buffer as pending until the next callback.
+	 *
+	 * |    |    |    |    |
+	 *  A   |<-->|
+	 *       B   |<-->|
+	 *            C   |<-->| : Only at interrupt C can A be marked done
+	 */
+
+	spin_lock_irqsave(&video->irqlock, flags);
+
+	/* Move the pending image to the active hw queue */
+	if (video->pending) {
+		list_add_tail(&video->pending->queue, &video->irqqueue);
+		video->pending = NULL;
+	}
+
+	buf = list_first_entry_or_null(&video->wbqueue, struct vsp1_vb2_buffer,
+					queue);
+
+	if (buf) {
+		video->rwpf->mem = buf->mem;
+
+		/*
+		 * Store this buffer as pending. It will commence at the next
+		 * frame start interrupt
+		 */
+		video->pending = buf;
+		list_del(&buf->queue);
+	} else {
+		/* Disable writeback with no buffer */
+		video->rwpf->mem = (struct vsp1_rwpf_memory) { 0 };
+	}
+
+	spin_unlock_irqrestore(&video->irqlock, flags);
+}
+
+static void vsp1_video_wb_frame_end(struct vsp1_pipeline *pipe)
+{
+	struct vsp1_video *video = pipe->output->video;
+	unsigned long flags;
+
+	spin_lock_irqsave(&pipe->irqlock, flags);
+
+	/* Complete any buffer on the IRQ queue */
+	vsp1_video_complete_buffer(video);
+
+	/* Queue up any buffer from our wb queue, and place on the IRQ queue */
+	vsp1_video_wb_process_buffer(video);
+
+	spin_unlock_irqrestore(&pipe->irqlock, flags);
+}
+
+static void vsp1_video_wb_buffer_queue(struct vb2_buffer *vb)
+{
+	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+	struct vsp1_video *video = vb2_get_drv_priv(vb->vb2_queue);
+	struct vsp1_vb2_buffer *buf = to_vsp1_vb2_buffer(vbuf);
+	unsigned long flags;
+
+	spin_lock_irqsave(&video->irqlock, flags);
+	list_add_tail(&buf->queue, &video->wbqueue);
+	spin_unlock_irqrestore(&video->irqlock, flags);
+}
+
+static int vsp1_video_wb_start_streaming(struct vb2_queue *vq,
+		unsigned int count)
+{
+	struct vsp1_video *video = vb2_get_drv_priv(vq);
+	unsigned long flags;
+
+	/* Enable the completion interrupts */
+	spin_lock_irqsave(&video->irqlock, flags);
+	video->frame_end = vsp1_video_wb_frame_end;
+	spin_unlock_irqrestore(&video->irqlock, flags);
+
+	return 0;
+}
+
+static void vsp1_video_wb_stop_streaming(struct vb2_queue *vq)
+{
+	struct vsp1_video *video = vb2_get_drv_priv(vq);
+	struct vsp1_rwpf *rwpf = video->rwpf;
+	struct vsp1_pipeline *pipe = rwpf->pipe;
+	struct vsp1_vb2_buffer *buffer;
+	unsigned long flags;
+
+	/*
+	 * Disable the completion interrupts, and clear the WPF memory to
+	 * prevent writing out frames
+	 */
+	spin_lock_irqsave(&video->irqlock, flags);
+	video->frame_end = NULL;
+	rwpf->mem = (struct vsp1_rwpf_memory) { 0 };
+
+	/* Return all queued buffers to userspace */
+	list_for_each_entry(buffer, &video->wbqueue, queue)
+		vb2_buffer_done(&buffer->buf.vb2_buf, VB2_BUF_STATE_ERROR);
+	list_for_each_entry(buffer, &video->irqqueue, queue)
+		vb2_buffer_done(&buffer->buf.vb2_buf, VB2_BUF_STATE_ERROR);
+	if (video->pending) {
+		vb2_buffer_done(&video->pending->buf.vb2_buf,
+				VB2_BUF_STATE_ERROR);
+		video->pending = NULL;
+	}
+
+	INIT_LIST_HEAD(&video->wbqueue);
+	INIT_LIST_HEAD(&video->irqqueue);
+	spin_unlock_irqrestore(&video->irqlock, flags);
+
+	/* Return the reference obtained by vsp1_video_streamon() */
+	vsp1_video_pipeline_put(pipe);
+}
+
+static const struct vb2_ops vsp1_video_wb_queue_qops = {
+	.queue_setup = vsp1_video_queue_setup,
+	.buf_prepare = vsp1_video_buffer_prepare,
+	.buf_queue = vsp1_video_wb_buffer_queue,
+	.wait_prepare = vb2_ops_wait_prepare,
+	.wait_finish = vb2_ops_wait_finish,
+	.start_streaming = vsp1_video_wb_start_streaming,
+	.stop_streaming = vsp1_video_wb_stop_streaming,
+};
+
 
 /* -----------------------------------------------------------------------------
  * V4L2 ioctls
@@ -1142,6 +1273,8 @@ struct vsp1_video *vsp1_video_create(struct vsp1_device *vsp1,
 	video->vsp1 = vsp1;
 	video->rwpf = rwpf;
 
+	video->is_writeback = rwpf->has_writeback;
+
 	if (rwpf->entity.type == VSP1_ENTITY_RPF) {
 		direction = "input";
 		video->type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -1157,6 +1290,7 @@ struct vsp1_video *vsp1_video_create(struct vsp1_device *vsp1,
 	mutex_init(&video->lock);
 	spin_lock_init(&video->irqlock);
 	INIT_LIST_HEAD(&video->irqqueue);
+	INIT_LIST_HEAD(&video->wbqueue);
 
 	/* Initialize the media entity... */
 	ret = media_entity_pads_init(&video->video.entity, 1, &video->pad);
@@ -1180,12 +1314,15 @@ struct vsp1_video *vsp1_video_create(struct vsp1_device *vsp1,
 
 	video_set_drvdata(&video->video, video);
 
+	if (video->is_writeback)
+		video->queue.ops = &vsp1_video_wb_queue_qops;
+	else
+		video->queue.ops = &vsp1_video_queue_qops;
 	video->queue.type = video->type;
 	video->queue.io_modes = VB2_MMAP | VB2_USERPTR | VB2_DMABUF;
 	video->queue.lock = &video->lock;
 	video->queue.drv_priv = video;
 	video->queue.buf_struct_size = sizeof(struct vsp1_vb2_buffer);
-	video->queue.ops = &vsp1_video_queue_qops;
 	video->queue.mem_ops = &vb2_dma_contig_memops;
 	video->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	video->queue.dev = video->vsp1->dev;
