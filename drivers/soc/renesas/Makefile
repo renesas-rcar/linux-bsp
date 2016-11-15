@@ -1,3 +1,5 @@
+obj-$(CONFIG_SOC_BUS)		+= renesas-soc.o
+
 obj-$(CONFIG_ARCH_RCAR_GEN1)	+= rcar-rst.o
 obj-$(CONFIG_ARCH_RCAR_GEN2)	+= rcar-rst.o
 obj-$(CONFIG_ARCH_R8A7795)	+= rcar-rst.o
