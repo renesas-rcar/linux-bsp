@@ -63,7 +63,6 @@ static struct hw_register cpg_ip_regs[] = {
 	{"HDMICKCR",	0x250, 32, 0},
 	{"CSI0CKCR",	0x00C, 32, 0},
 	{"CSIREFCKCR",	0X034, 32, 0},
-	{"RCKCR",	0x240, 32, 0},
 	{"DVFSCR0",	0x058, 32, 0},
 	{"DVFSCR1",	0x05C, 32, 0},
 	{"FSAPBR",	0x700, 32, 0},
