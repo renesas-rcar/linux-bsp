@@ -13,14 +13,16 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/usb/phy.h>
+#include <linux/sys_soc.h>
 
 #include "xhci.h"
 #include "xhci-plat.h"
 #include "xhci-rcar.h"
 
 /*
-* - The V3 firmware is for r8a7796 (with good performance).
-* - The V2 firmware can be used on both r8a7795 (es1.x) and r8a7796.
+* - The V3 firmware is possible to use on r8a7795 es2.0 or later and
+*   r8a7796 es1.1 or later.
+* - The V2 firmware is possible to use on r8a7795 es1.x and r8a7796 es1.0.
 * - The V2 firmware is possible to use on R-Car Gen2. However, the V2 causes
 *   performance degradation. So, this driver continues to use the V1 if R-Car
 *   Gen2.
@@ -66,6 +68,17 @@ MODULE_FIRMWARE(XHCI_RCAR_FIRMWARE_NAME_V3);
 /* USB3.0 Polarity */
 #define RCAR_USB3_RX_POL_VAL	BIT(21)
 #define RCAR_USB3_TX_POL_VAL	BIT(4)
+
+static const struct soc_device_attribute r8a7795es1x[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ },
+};
+
+static const struct soc_device_attribute r8a7796es10[] = {
+	{ .soc_id = "r8a7796", .revision = "ES1.0" },
+	{ },
+};
+
 
 static void xhci_rcar_start_gen2(struct usb_hcd *hcd)
 {
@@ -124,7 +137,18 @@ static int xhci_rcar_download_firmware(struct usb_hcd *hcd)
 	u32 data, val, temp;
 
 	/* request R-Car USB3.0 firmware */
-	retval = request_firmware(&fw, priv->firmware_name, dev);
+	if (xhci_rcar_is_gen3(hcd->self.controller)) {
+		if (soc_device_match(r8a7795es1x))
+			retval = request_firmware(&fw,
+					XHCI_RCAR_FIRMWARE_NAME_V2, dev);
+		else if (soc_device_match(r8a7796es10))
+			retval = request_firmware(&fw,
+					XHCI_RCAR_FIRMWARE_NAME_V2, dev);
+		else
+			retval = request_firmware(&fw,
+					XHCI_RCAR_FIRMWARE_NAME_V3, dev);
+	} else
+		retval = request_firmware(&fw, priv->firmware_name, dev);
 	if (retval)
 		return retval;
 
