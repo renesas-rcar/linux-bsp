@@ -9,6 +9,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/sys_soc.h>
 
 #include "core.h"
 #include "sh_pfc.h"
@@ -5627,7 +5628,25 @@ static void r8a7795_pinmux_set_bias(struct sh_pfc *pfc, unsigned int pin,
 	sh_pfc_write_reg(pfc, PUEN + reg, 32, enable);
 }
 
+static const struct soc_device_attribute r8a7795es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
+static int r8a7795_pinmux_init(struct sh_pfc *pfc)
+{
+	if (soc_device_match(r8a7795es1)) {
+		pr_info("%s: R-Car H3 ES1.x detected\n", __func__);
+		// FIXME Fixup r8a7795_pinmux_info for ES1.x
+	} else {
+		pr_info("%s: R-Car H3 >= ES2.0\n", __func__);
+		// FIXME Fixup r8a7795_pinmux_info for ES2.0
+	}
+	return 0;
+}
+
 static const struct sh_pfc_soc_operations r8a7795_pinmux_ops = {
+	.init = r8a7795_pinmux_init,
 	.pin_to_pocctrl = r8a7795_pin_to_pocctrl,
 	.get_bias = r8a7795_pinmux_get_bias,
 	.set_bias = r8a7795_pinmux_set_bias,
