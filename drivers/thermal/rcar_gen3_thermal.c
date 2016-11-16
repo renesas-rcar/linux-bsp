@@ -49,7 +49,7 @@
 #define PTAT_SIZE		REG_GEN3_PTAT3
 
 /* CTSR bit */
-#define PONM            (0x1 << 8)
+#define PONM1            (0x1 << 8)	/* For H3 WS1.x */
 #define AOUT            (0x1 << 7)
 #define THBGR           (0x1 << 5)
 #define VMEN            (0x1 << 4)
@@ -57,10 +57,7 @@
 #define THSST           (0x1 << 0)
 
 /* THCTR bit */
-#define CTCTL		(0x1 << 24)
-#define THCNTSEN(x)	(x << 16)
-
-#define BIT_LEN_12	0x1
+#define PONM2            (0x1 << 6)	/* For H3 WS2.0 and M3 WS1.0 */
 
 #define CTEMP_MASK	0xFFF
 
@@ -345,16 +342,16 @@ static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
 
 	udelay(1000);
 
-	rcar_thermal_write(priv, REG_GEN3_CTSR, PONM);
+	rcar_thermal_write(priv, REG_GEN3_CTSR, PONM1);
 	rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
 	rcar_thermal_write(priv, REG_GEN3_IRQEN,
 			   IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT);
 	rcar_thermal_write(priv, REG_GEN3_CTSR,
-			PONM | AOUT | THBGR | VMEN);
+			PONM1 | AOUT | THBGR | VMEN);
 	udelay(100);
 
 	rcar_thermal_write(priv, REG_GEN3_CTSR,
-			PONM | AOUT | THBGR | VMEN | VMST | THSST);
+			PONM1 | AOUT | THBGR | VMEN | VMST | THSST);
 
 	spin_unlock_irqrestore(&priv->lock, flags);
 
@@ -367,14 +364,14 @@ static int rcar_gen3_r8a7796_thermal_init(struct rcar_thermal_priv *priv)
 	unsigned long reg_val;
 
 	spin_lock_irqsave(&priv->lock, flags);
-	rcar_thermal_write(priv, REG_GEN3_THCTR,  0x0);
+	reg_val = rcar_thermal_read(priv, REG_GEN3_THCTR);
+	reg_val &= ~PONM2;
+	rcar_thermal_write(priv, REG_GEN3_THCTR, reg_val);
 	udelay(1000);
 	rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
 	rcar_thermal_write(priv, REG_GEN3_IRQEN,
 			   IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT);
-	rcar_thermal_write(priv, REG_GEN3_THCTR, CTCTL | THCNTSEN(BIT_LEN_12));
 	reg_val = rcar_thermal_read(priv, REG_GEN3_THCTR);
-	reg_val &= ~CTCTL;
 	reg_val |= THSST;
 	rcar_thermal_write(priv, REG_GEN3_THCTR, reg_val);
 
