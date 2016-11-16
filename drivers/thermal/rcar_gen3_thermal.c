@@ -331,33 +331,6 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 	return 0;
 }
 
-static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&priv->lock, flags);
-
-	rcar_thermal_write(priv, REG_GEN3_CTSR,  THBGR);
-	rcar_thermal_write(priv, REG_GEN3_CTSR,  0x0);
-
-	udelay(1000);
-
-	rcar_thermal_write(priv, REG_GEN3_CTSR, PONM1);
-	rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
-	rcar_thermal_write(priv, REG_GEN3_IRQEN,
-			   IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT);
-	rcar_thermal_write(priv, REG_GEN3_CTSR,
-			PONM1 | AOUT | THBGR | VMEN);
-	udelay(100);
-
-	rcar_thermal_write(priv, REG_GEN3_CTSR,
-			PONM1 | AOUT | THBGR | VMEN | VMST | THSST);
-
-	spin_unlock_irqrestore(&priv->lock, flags);
-
-	return 0;
-}
-
 static int rcar_gen3_r8a7796_thermal_init(struct rcar_thermal_priv *priv)
 {
 	unsigned long flags;
@@ -376,6 +349,37 @@ static int rcar_gen3_r8a7796_thermal_init(struct rcar_thermal_priv *priv)
 	rcar_thermal_write(priv, REG_GEN3_THCTR, reg_val);
 
 	spin_unlock_irqrestore(&priv->lock, flags);
+
+	return 0;
+}
+
+static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
+{
+	unsigned long flags;
+
+	if (soc_device_match(r8a7795es1)) {
+		spin_lock_irqsave(&priv->lock, flags);
+
+		rcar_thermal_write(priv, REG_GEN3_CTSR,  THBGR);
+		rcar_thermal_write(priv, REG_GEN3_CTSR,  0x0);
+
+		udelay(1000);
+
+		rcar_thermal_write(priv, REG_GEN3_CTSR, PONM1);
+		rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
+		rcar_thermal_write(priv, REG_GEN3_IRQEN,
+				   IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT);
+		rcar_thermal_write(priv, REG_GEN3_CTSR,
+				PONM1 | AOUT | THBGR | VMEN);
+		udelay(100);
+
+		rcar_thermal_write(priv, REG_GEN3_CTSR,
+				PONM1 | AOUT | THBGR | VMEN | VMST | THSST);
+
+		spin_unlock_irqrestore(&priv->lock, flags);
+	} else
+		/* H3 WS2.0 has the same init flow with M3 WS1.0 */
+		rcar_gen3_r8a7796_thermal_init(priv);
 
 	return 0;
 }
