@@ -1095,7 +1095,3 @@
 &vspi1 {
 	status = "okay";
 };
-
-&vspi2 {
-	status = "okay";
-};
