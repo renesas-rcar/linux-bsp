@@ -181,6 +181,10 @@
 		};
 	};
 
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+
 	hdmi0-out {
 		compatible = "hdmi-connector";
 		type = "a";
@@ -533,4 +537,24 @@
 		spi-cpha;
 		spi-cpol;
 	};
+};
+
+&vspbc {
+	status = "okay";
+};
+
+&vspbd {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
+&vspi1 {
+	status = "okay";
+};
+
+&vspi2 {
+	status = "okay";
 };
