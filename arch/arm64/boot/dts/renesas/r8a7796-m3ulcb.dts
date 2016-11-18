@@ -64,6 +64,10 @@
 		memory-region = <&lossy_decompress>;
 	};
 
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
 	leds {
 		compatible = "gpio-leds";
 
