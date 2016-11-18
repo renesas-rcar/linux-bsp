@@ -390,6 +390,8 @@ static const unsigned int r8a7795es2_mod_nullify[] __initconst = {
 	MOD_CLK_ID(600),			/* FCPVD3 */
 	MOD_CLK_ID(609),			/* FCPVI2 */
 	MOD_CLK_ID(613),			/* FCPF2 */
+	MOD_CLK_ID(616),			/* FCPCI1 */
+	MOD_CLK_ID(617),			/* FCPCI0 */
 	MOD_CLK_ID(620),			/* VSPD3 */
 	MOD_CLK_ID(629),			/* VSPI2 */
 	MOD_CLK_ID(713),			/* CSI21 */
