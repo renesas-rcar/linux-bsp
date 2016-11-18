@@ -1,7 +1,7 @@
 /*
  * vsp1_dl.h  --  R-Car VSP1 Display List
  *
- * Copyright (C) 2015 Renesas Corporation
+ * Copyright (C) 2015-2016 Renesas Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -31,6 +31,7 @@ void vsp1_dlm_irq_display_start(struct vsp1_dl_manager *dlm);
 void vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm);
 
 struct vsp1_dl_list *vsp1_dl_list_get(struct vsp1_dl_manager *dlm);
+void vsp1_dl_set_addr_auto_fld(struct vsp1_dl_list *dl, struct vsp1_rwpf *rpf);
 void vsp1_dl_list_put(struct vsp1_dl_list *dl);
 void vsp1_dl_list_write(struct vsp1_dl_list *dl, u32 reg, u32 data);
 void vsp1_dl_list_commit(struct vsp1_dl_list *dl);
