@@ -99,6 +99,9 @@
  */
 #define TMIO_MMC_SDIO_STATUS_QUIRK	(1 << 8)
 
+/* The start or stop of SD clock don't wait 10msec. */
+#define TMIO_MMC_CLK_NO_SLEEP		(1 << 9)
+
 /*
  * Some controllers allows to set SDx actual clock
  */
@@ -125,6 +128,8 @@ struct tmio_mmc_data {
 	unsigned int			cd_gpio;
 	int				alignment_shift;
 	dma_addr_t			dma_rx_offset;
+	unsigned int			max_blk_count;
+	unsigned short			max_segs;
 	void (*set_pwr)(struct platform_device *host, int state);
 	void (*set_clk_div)(struct platform_device *host, int state);
 };
