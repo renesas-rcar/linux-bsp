@@ -23,6 +23,7 @@
 
 #include "vsp1.h"
 #include "vsp1_bru.h"
+#include "vsp1_brs.h"
 #include "vsp1_dl.h"
 #include "vsp1_drm.h"
 #include "vsp1_lif.h"
@@ -34,9 +35,9 @@
  * Interrupt Handling
  */
 
-void vsp1_drm_display_start(struct vsp1_device *vsp1)
+void vsp1_drm_display_start(struct vsp1_device *vsp1, unsigned int lif_index)
 {
-	vsp1_dlm_irq_display_start(vsp1->drm->pipe.output->dlm);
+	vsp1_dlm_irq_display_start(vsp1->drm->pipe[lif_index].output->dlm);
 }
 
 /* -----------------------------------------------------------------------------
@@ -54,10 +55,10 @@ int vsp1_du_init(struct device *dev)
 }
 EXPORT_SYMBOL_GPL(vsp1_du_init);
 
-int vsp1_du_if_set_mute(struct device *dev, bool on)
+int vsp1_du_if_set_mute(struct device *dev, bool on, unsigned int lif_index)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 
 	if (on)
 		pipe->vmute_flag = true;
@@ -87,17 +88,37 @@ EXPORT_SYMBOL_GPL(vsp1_du_if_set_mute);
  * Return 0 on success or a negative error code on failure.
  */
 int vsp1_du_setup_lif(struct device *dev, unsigned int width,
-		      unsigned int height)
+		      unsigned int height, unsigned int lif_index)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 	struct vsp1_bru *bru = vsp1->bru;
+	struct vsp1_brs *brs = vsp1->brs;
+	unsigned int init_bru_num, end_bru_num;
+	unsigned int init_brs_num, end_brs_num;
 	struct v4l2_subdev_format format;
 	unsigned int i;
 	int ret;
 
-	dev_dbg(vsp1->dev, "%s: configuring LIF with format %ux%u\n",
-		__func__, width, height);
+	dev_dbg(vsp1->dev, "%s: configuring LIF%d with format %ux%u\n",
+		__func__, lif_index, width, height);
+
+	if (vsp1_gen3_vspdl_check(vsp1)) {
+		if (!vsp1->brs || !vsp1->lif[1])
+			return -ENXIO;
+
+		init_bru_num = 0;
+		init_brs_num = vsp1->info->rpf_count -
+			       vsp1->num_brs_inputs;
+		end_bru_num = vsp1->info->rpf_count -
+			      vsp1->num_brs_inputs;
+		end_brs_num = vsp1->info->rpf_count;
+	} else {
+		init_bru_num = 0;
+		init_brs_num = 0;
+		end_bru_num = bru->entity.source_pad;
+		end_brs_num = 0;
+	}
 
 	if (width == 0 || height == 0) {
 		/* Zero width or height means the CRTC is being disabled, stop
@@ -131,16 +152,67 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 	memset(&format, 0, sizeof(format));
 	format.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 
-	for (i = 0; i < bru->entity.source_pad; ++i) {
-		format.pad = i;
+	if (lif_index == 1) {
+		for (i = init_brs_num; i < end_brs_num; ++i) {
+			format.pad = i;
 
-		format.format.width = width;
-		format.format.height = height;
-		format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
-		format.format.field = V4L2_FIELD_NONE;
+			format.format.width = width;
+			format.format.height = height;
+			format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
+			format.format.field = V4L2_FIELD_NONE;
 
-		ret = v4l2_subdev_call(&bru->entity.subdev, pad,
-				       set_fmt, NULL, &format);
+			ret = v4l2_subdev_call(&brs->entity.subdev, pad,
+					       set_fmt, NULL, &format);
+			if (ret < 0)
+				return ret;
+
+			dev_dbg(vsp1->dev,
+				"%s: set format %ux%u (%x) on BRS pad %u\n",
+				__func__, format.format.width,
+				format.format.height,
+				format.format.code, i);
+		}
+		format.pad = brs->entity.source_pad;
+	} else {
+		for (i = init_bru_num; i < end_bru_num; ++i) {
+			format.pad = i;
+
+			format.format.width = width;
+			format.format.height = height;
+			format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
+			format.format.field = V4L2_FIELD_NONE;
+
+			ret = v4l2_subdev_call(&bru->entity.subdev, pad,
+					       set_fmt, NULL, &format);
+			if (ret < 0)
+				return ret;
+
+			dev_dbg(vsp1->dev,
+				"%s: set format %ux%u (%x) on BRU pad %u\n",
+				__func__, format.format.width,
+				format.format.height,
+				format.format.code, i);
+		}
+		format.pad = bru->entity.source_pad;
+	}
+
+	format.format.width = width;
+	format.format.height = height;
+	format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
+	format.format.field = V4L2_FIELD_NONE;
+
+	if (lif_index == 1) {
+		ret = v4l2_subdev_call(&brs->entity.subdev, pad, set_fmt, NULL,
+				       &format);
+		if (ret < 0)
+			return ret;
+
+		dev_dbg(vsp1->dev, "%s: set format %ux%u (%x) on BRS pad %u\n",
+			__func__, format.format.width, format.format.height,
+			format.format.code, i);
+	} else {
+		ret = v4l2_subdev_call(&bru->entity.subdev, pad, set_fmt, NULL,
+				       &format);
 		if (ret < 0)
 			return ret;
 
@@ -149,50 +221,35 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 			format.format.code, i);
 	}
 
-	format.pad = bru->entity.source_pad;
-	format.format.width = width;
-	format.format.height = height;
-	format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
-	format.format.field = V4L2_FIELD_NONE;
-
-	ret = v4l2_subdev_call(&bru->entity.subdev, pad, set_fmt, NULL,
-			       &format);
-	if (ret < 0)
-		return ret;
-
-	dev_dbg(vsp1->dev, "%s: set format %ux%u (%x) on BRU pad %u\n",
-		__func__, format.format.width, format.format.height,
-		format.format.code, i);
-
 	format.pad = RWPF_PAD_SINK;
-	ret = v4l2_subdev_call(&vsp1->wpf[0]->entity.subdev, pad, set_fmt, NULL,
-			       &format);
+	ret = v4l2_subdev_call(&vsp1->wpf[lif_index]->entity.subdev,
+			       pad, set_fmt, NULL, &format);
 	if (ret < 0)
 		return ret;
 
-	dev_dbg(vsp1->dev, "%s: set format %ux%u (%x) on WPF0 sink\n",
+	dev_dbg(vsp1->dev, "%s: set format %ux%u (%x) on WPF%d sink\n",
 		__func__, format.format.width, format.format.height,
-		format.format.code);
+		format.format.code, lif_index);
 
 	format.pad = RWPF_PAD_SOURCE;
-	ret = v4l2_subdev_call(&vsp1->wpf[0]->entity.subdev, pad, get_fmt, NULL,
-			       &format);
+	ret = v4l2_subdev_call(&vsp1->wpf[lif_index]->entity.subdev,
+			       pad, get_fmt, NULL, &format);
 	if (ret < 0)
 		return ret;
 
-	dev_dbg(vsp1->dev, "%s: got format %ux%u (%x) on WPF0 source\n",
+	dev_dbg(vsp1->dev, "%s: got format %ux%u (%x) on WPF%d source\n",
 		__func__, format.format.width, format.format.height,
-		format.format.code);
+		format.format.code, lif_index);
 
 	format.pad = LIF_PAD_SINK;
-	ret = v4l2_subdev_call(&vsp1->lif->entity.subdev, pad, set_fmt, NULL,
-			       &format);
+	ret = v4l2_subdev_call(&vsp1->lif[lif_index]->entity.subdev,
+			       pad, set_fmt, NULL, &format);
 	if (ret < 0)
 		return ret;
 
-	dev_dbg(vsp1->dev, "%s: set format %ux%u (%x) on LIF sink\n",
+	dev_dbg(vsp1->dev, "%s: set format %ux%u (%x) on LIF%d sink\n",
 		__func__, format.format.width, format.format.height,
-		format.format.code);
+		format.format.code, lif_index);
 
 	/* Verify that the format at the output of the pipeline matches the
 	 * requested frame size and media bus code.
@@ -231,10 +288,10 @@ EXPORT_SYMBOL_GPL(vsp1_du_setup_lif);
  * vsp1_du_atomic_begin - Prepare for an atomic update
  * @dev: the VSP device
  */
-void vsp1_du_atomic_begin(struct device *dev)
+void vsp1_du_atomic_begin(struct device *dev, unsigned int lif_index)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 
 	vsp1->drm->num_inputs = pipe->num_inputs;
 
@@ -350,7 +407,9 @@ static int vsp1_du_setup_rpf_pipe(struct vsp1_device *vsp1,
 	struct v4l2_subdev_selection sel;
 	struct v4l2_subdev_format format;
 	const struct v4l2_rect *crop;
+	struct v4l2_subdev *subdev;
 	int ret;
+	bool brs_use = false;
 
 	/* Configure the format on the RPF sink pad and propagate it up to the
 	 * BRU sink pad.
@@ -416,28 +475,40 @@ static int vsp1_du_setup_rpf_pipe(struct vsp1_device *vsp1,
 	/* BRU sink, propagate the format from the RPF source. */
 	format.pad = bru_input;
 
-	ret = v4l2_subdev_call(&vsp1->bru->entity.subdev, pad, set_fmt, NULL,
+	if (bru_input >=
+		(vsp1->info->rpf_count - vsp1->num_brs_inputs))
+		brs_use = true;
+
+	if (vsp1_gen3_vspdl_check(vsp1)) {
+		if (brs_use)
+			subdev = &vsp1->brs->entity.subdev;
+		else
+			subdev = &vsp1->bru->entity.subdev;
+	} else
+		subdev = &vsp1->bru->entity.subdev;
+
+	ret = v4l2_subdev_call(subdev, pad, set_fmt, NULL,
 			       &format);
 	if (ret < 0)
 		return ret;
 
-	dev_dbg(vsp1->dev, "%s: set format %ux%u (%x) on BRU pad %u\n",
+	dev_dbg(vsp1->dev, "%s: set format %ux%u (%x) on %s pad %u\n",
 		__func__, format.format.width, format.format.height,
-		format.format.code, format.pad);
+		format.format.code, (brs_use ? "BRS" : "BRU"), format.pad);
 
 	sel.pad = bru_input;
 	sel.target = V4L2_SEL_TGT_COMPOSE;
 	sel.r = vsp1->drm->inputs[rpf->entity.index].compose;
 
-	ret = v4l2_subdev_call(&vsp1->bru->entity.subdev, pad, set_selection,
+	ret = v4l2_subdev_call(subdev, pad, set_selection,
 			       NULL, &sel);
 	if (ret < 0)
 		return ret;
 
 	dev_dbg(vsp1->dev,
-		"%s: set selection (%u,%u)/%ux%u on BRU pad %u\n",
+		"%s: set selection (%u,%u)/%ux%u on %s pad %u\n",
 		__func__, sel.r.left, sel.r.top, sel.r.width, sel.r.height,
-		sel.pad);
+		(brs_use ? "BRS" : "BRU"), sel.pad);
 
 	return 0;
 }
@@ -451,20 +522,36 @@ static unsigned int rpf_zpos(struct vsp1_device *vsp1, struct vsp1_rwpf *rpf)
  * vsp1_du_atomic_flush - Commit an atomic update
  * @dev: the VSP device
  */
-void vsp1_du_atomic_flush(struct device *dev)
+void vsp1_du_atomic_flush(struct device *dev, unsigned int lif_index)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 	struct vsp1_rwpf *inputs[VSP1_MAX_RPF] = { NULL, };
 	struct vsp1_entity *entity;
 	unsigned long flags;
 	unsigned int i;
+	unsigned int init_rpf, end_rpf;
 	int ret;
 
 	/* Count the number of enabled inputs and sort them by Z-order. */
 	pipe->num_inputs = 0;
 
-	for (i = 0; i < vsp1->info->rpf_count; ++i) {
+	if (vsp1_gen3_vspdl_check(vsp1)) {
+		if (lif_index == 1) {
+			init_rpf = vsp1->info->rpf_count -
+				       vsp1->num_brs_inputs;
+			end_rpf = vsp1->info->rpf_count;
+		} else {
+			init_rpf = 0;
+			end_rpf = vsp1->info->rpf_count -
+				      vsp1->num_brs_inputs;
+		}
+	} else {
+		init_rpf = 0;
+		end_rpf = vsp1->info->rpf_count;
+	}
+
+	for (i = init_rpf; i < end_rpf; ++i) {
 		struct vsp1_rwpf *rpf = vsp1->rpf[i];
 		unsigned int j;
 
@@ -477,29 +564,42 @@ void vsp1_du_atomic_flush(struct device *dev)
 
 		/* Insert the RPF in the sorted RPFs array. */
 		for (j = pipe->num_inputs++; j > 0; --j) {
-			if (rpf_zpos(vsp1, inputs[j-1]) <= rpf_zpos(vsp1, rpf))
+			if (rpf_zpos(vsp1, inputs[j-1+init_rpf]) <=
+					rpf_zpos(vsp1, rpf))
 				break;
-			inputs[j] = inputs[j-1];
+			inputs[j+init_rpf] = inputs[j-1+init_rpf];
 		}
 
-		inputs[j] = rpf;
+		inputs[j+init_rpf] = rpf;
 	}
 
+	if (!vsp1_gen3_vspdl_check(vsp1))
+		end_rpf = vsp1->info->num_bru_inputs;
+
 	/* Setup the RPF input pipeline for every enabled input. */
-	for (i = 0; i < vsp1->info->num_bru_inputs; ++i) {
+	for (i = init_rpf; i < end_rpf; ++i) {
 		struct vsp1_rwpf *rpf = inputs[i];
+		bool brs_use = false;
 
 		if (!rpf) {
 			vsp1->bru->inputs[i].rpf = NULL;
+			if ((lif_index == 1) && (vsp1->brs))
+				vsp1->brs->inputs[i].rpf = NULL;
 			continue;
 		}
 
 		vsp1->bru->inputs[i].rpf = rpf;
+		if ((lif_index == 1) && (vsp1->brs)) {
+			vsp1->brs->inputs[i].rpf = rpf;
+			rpf->brs_input = 2;
+			brs_use = true;
+		}
 		rpf->bru_input = i;
 		rpf->entity.sink_pad = i;
 
-		dev_dbg(vsp1->dev, "%s: connecting RPF.%u to BRU:%u\n",
-			__func__, rpf->entity.index, i);
+		dev_dbg(vsp1->dev, "%s: connecting RPF.%u to %s:%u\n",
+			__func__, rpf->entity.index,
+			(brs_use ? "BRS" : "BRU"), i);
 
 		ret = vsp1_du_setup_rpf_pipe(vsp1, rpf, i);
 		if (ret < 0)
@@ -538,13 +638,14 @@ void vsp1_du_atomic_flush(struct device *dev)
 
 	/* Start or stop the pipeline if needed. */
 	if (!vsp1->drm->num_inputs && pipe->num_inputs) {
-		vsp1_write(vsp1, VI6_DISP_IRQ_STA, 0);
-		vsp1_write(vsp1, VI6_DISP_IRQ_ENB, VI6_DISP_IRQ_ENB_DSTE);
+		vsp1_write(vsp1, VI6_DISP_IRQ_STA(lif_index), 0);
+		vsp1_write(vsp1, VI6_DISP_IRQ_ENB(lif_index),
+					 VI6_DISP_IRQ_ENB_DSTE);
 		spin_lock_irqsave(&pipe->irqlock, flags);
 		vsp1_pipeline_run(pipe);
 		spin_unlock_irqrestore(&pipe->irqlock, flags);
 	} else if (vsp1->drm->num_inputs && !pipe->num_inputs) {
-		vsp1_write(vsp1, VI6_DISP_IRQ_ENB, 0);
+		vsp1_write(vsp1, VI6_DISP_IRQ_ENB(lif_index), 0);
 		vsp1_pipeline_stop(pipe);
 	}
 }
@@ -573,10 +674,10 @@ void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt)
 EXPORT_SYMBOL_GPL(vsp1_du_unmap_sg);
 
 int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
-		      dma_addr_t mem[2])
+		      dma_addr_t mem[2], unsigned int lif_index)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 	struct vsp1_rwpf *wpf = pipe->output;
 	const struct vsp1_format_info *fmtinfo;
 	struct vsp1_rwpf *rpf = pipe->inputs[0];
@@ -613,11 +714,11 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 }
 EXPORT_SYMBOL_GPL(vsp1_du_setup_wb);
 
-void vsp1_du_wait_wb(struct device *dev, u32 count)
+void vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int lif_index)
 {
 	int ret;
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 
 	ret = wait_event_interruptible(pipe->event_wait,
 				       (pipe->output->write_back == count));
@@ -632,15 +733,34 @@ int vsp1_drm_create_links(struct vsp1_device *vsp1)
 {
 	const u32 flags = MEDIA_LNK_FL_ENABLED | MEDIA_LNK_FL_IMMUTABLE;
 	unsigned int i;
+	unsigned int init_bru_num, end_bru_num;
+	unsigned int init_brs_num, end_brs_num;
 	int ret;
 
 	/* VSPD instances require a BRU to perform composition and a LIF to
 	 * output to the DU.
 	 */
-	if (!vsp1->bru || !vsp1->lif)
+	if (!vsp1->bru || !vsp1->lif[0])
 		return -ENXIO;
 
-	for (i = 0; i < vsp1->info->rpf_count; ++i) {
+	if (vsp1_gen3_vspdl_check(vsp1)) {
+		if (!vsp1->brs || !vsp1->lif[1])
+			return -ENXIO;
+
+		init_bru_num = 0;
+		init_brs_num = vsp1->info->rpf_count -
+			       vsp1->num_brs_inputs;
+		end_bru_num = vsp1->info->rpf_count -
+			      vsp1->num_brs_inputs;
+		end_brs_num = vsp1->info->rpf_count;
+	} else {
+		init_bru_num = 0;
+		init_brs_num = 0;
+		end_bru_num = vsp1->info->rpf_count;
+		end_brs_num = 0;
+	}
+
+	for (i = init_bru_num; i < end_bru_num; ++i) {
 		struct vsp1_rwpf *rpf = vsp1->rpf[i];
 
 		ret = media_create_pad_link(&rpf->entity.subdev.entity,
@@ -649,8 +769,20 @@ int vsp1_drm_create_links(struct vsp1_device *vsp1)
 					    i, flags);
 		if (ret < 0)
 			return ret;
-
 		rpf->entity.sink = &vsp1->bru->entity.subdev.entity;
+		rpf->entity.sink_pad = i;
+	}
+
+	for (i = init_brs_num; i < end_brs_num; ++i) {
+		struct vsp1_rwpf *rpf = vsp1->rpf[i];
+
+		ret = media_create_pad_link(&rpf->entity.subdev.entity,
+					    RWPF_PAD_SOURCE,
+					    &vsp1->brs->entity.subdev.entity,
+					    i, flags);
+		if (ret < 0)
+			return ret;
+		rpf->entity.sink = &vsp1->brs->entity.subdev.entity;
 		rpf->entity.sink_pad = i;
 	}
 
@@ -666,10 +798,31 @@ int vsp1_drm_create_links(struct vsp1_device *vsp1)
 
 	ret = media_create_pad_link(&vsp1->wpf[0]->entity.subdev.entity,
 				    RWPF_PAD_SOURCE,
-				    &vsp1->lif->entity.subdev.entity,
+				    &vsp1->lif[0]->entity.subdev.entity,
 				    LIF_PAD_SINK, flags);
 	if (ret < 0)
 		return ret;
+
+	if (vsp1_gen3_vspdl_check(vsp1)) {
+		ret = media_create_pad_link(
+					&vsp1->brs->entity.subdev.entity,
+					vsp1->brs->entity.source_pad,
+					&vsp1->wpf[1]->entity.subdev.entity,
+					RWPF_PAD_SINK, flags);
+		if (ret < 0)
+			return ret;
+
+		vsp1->brs->entity.sink = &vsp1->wpf[1]->entity.subdev.entity;
+		vsp1->brs->entity.sink_pad = RWPF_PAD_SINK;
+
+		ret = media_create_pad_link(
+					&vsp1->wpf[1]->entity.subdev.entity,
+					RWPF_PAD_SOURCE,
+					&vsp1->lif[1]->entity.subdev.entity,
+					LIF_PAD_SINK, flags);
+		if (ret < 0)
+			return ret;
+	}
 
 	return 0;
 }
@@ -677,33 +830,61 @@ int vsp1_drm_create_links(struct vsp1_device *vsp1)
 int vsp1_drm_init(struct vsp1_device *vsp1)
 {
 	struct vsp1_pipeline *pipe;
-	unsigned int i;
-	int ret;
+	unsigned int i, j, lif_cnt = 1;
+	int ret, rpf_share = -1;
 
 	vsp1->drm = devm_kzalloc(vsp1->dev, sizeof(*vsp1->drm), GFP_KERNEL);
 	if (!vsp1->drm)
 		return -ENOMEM;
 
-	pipe = &vsp1->drm->pipe;
-
-	vsp1_pipeline_init(pipe);
-
-	/* The DRM pipeline is static, add entities manually. */
-	for (i = 0; i < vsp1->info->rpf_count; ++i) {
-		struct vsp1_rwpf *input = vsp1->rpf[i];
-
-		list_add_tail(&input->entity.list_pipe, &pipe->entities);
+	if (vsp1_gen3_vspdl_check(vsp1)) {
+		lif_cnt = 2;
+		rpf_share = vsp1->info->rpf_count - vsp1->num_brs_inputs;
 	}
 
-	list_add_tail(&vsp1->bru->entity.list_pipe, &pipe->entities);
-	list_add_tail(&vsp1->wpf[0]->entity.list_pipe, &pipe->entities);
-	list_add_tail(&vsp1->lif->entity.list_pipe, &pipe->entities);
+	for (i = 0; i < lif_cnt; i++) {
 
-	pipe->bru = &vsp1->bru->entity;
-	pipe->lif = &vsp1->lif->entity;
-	pipe->output = vsp1->wpf[0];
-	pipe->output->write_back = 0;
-	init_waitqueue_head(&pipe->event_wait);
+		pipe = &vsp1->drm->pipe[i];
+
+		vsp1_pipeline_init(pipe);
+
+		if (i == 1) {
+			list_add_tail(&vsp1->brs->entity.list_pipe,
+				      &pipe->entities);
+			pipe->brs = &vsp1->brs->entity;
+		} else {
+			list_add_tail(&vsp1->bru->entity.list_pipe,
+				      &pipe->entities);
+			pipe->bru = &vsp1->bru->entity;
+		}
+
+		/* The DRM pipeline is static, add entities manually. */
+		for (j = 0; j < vsp1->info->rpf_count; ++j) {
+			struct vsp1_rwpf *input = vsp1->rpf[j];
+
+			if (rpf_share < 0)
+				list_add_tail(&input->entity.list_pipe,
+						 &pipe->entities);
+			else {
+				if ((i == 0) && (j < rpf_share))
+					list_add_tail(&input->entity.list_pipe,
+						      &pipe->entities);
+				if ((i == 1) && (j >= rpf_share))
+					list_add_tail(&input->entity.list_pipe,
+						      &pipe->entities);
+			}
+		}
+
+		list_add_tail(&vsp1->wpf[i]->entity.list_pipe,
+			      &pipe->entities);
+		list_add_tail(&vsp1->lif[i]->entity.list_pipe,
+			      &pipe->entities);
+
+		pipe->lif = &vsp1->lif[i]->entity;
+		pipe->output = vsp1->wpf[i];
+		pipe->output->write_back = 0;
+		init_waitqueue_head(&pipe->event_wait);
+	}
 
 	ret = RCAR_PRR_INIT();
 	if (ret) {
