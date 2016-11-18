@@ -20,9 +20,26 @@
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/slab.h>
+#include <linux/sys_soc.h>
+#include <linux/soc/renesas/rcar-rst.h>
 
 #include "renesas-cpg-mssr.h"
 #include "rcar-gen3-cpg.h"
+
+static const struct soc_device_attribute r8a7795es10[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.0" },
+	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute r8a7795es11[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.1" },
+	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute r8a7796es10[] = {
+	{ .soc_id = "r8a7796", .revision = "ES1.0" },
+	{ /* sentinel */ }
+};
 
 #define CPG_PLL0CR		0x00d8
 #define CPG_PLL2CR		0x002c
@@ -455,6 +472,8 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 	unsigned int mult = 1;
 	unsigned int div = 1;
 	u32 value;
+	u32 cpg_mode;
+	int error;
 
 	parent = clks[core->parent];
 	if (IS_ERR(parent))
@@ -510,18 +529,31 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		return cpg_sd_clk_register(core, base, __clk_get_name(parent));
 
 	case CLK_TYPE_GEN3_R:
-		/*
-		 * RINT is default.
-		 * Only if EXTALR is populated, we switch to it.
-		 */
-		value = readl(base + CPG_RCKCR) & 0x3f;
+		if (soc_device_match(r8a7795es10) ||
+		    soc_device_match(r8a7795es11) ||
+		    soc_device_match(r8a7796es10)) {
+			/*
+			 * RINT is default.
+			 * Only if EXTALR is populated, we switch to it.
+			 */
+			value = readl(base + CPG_RCKCR) & 0x3f;
 
-		if (clk_get_rate(clks[cpg_clk_extalr])) {
-			parent = clks[cpg_clk_extalr];
-			value |= BIT(15);
+			if (clk_get_rate(clks[cpg_clk_extalr])) {
+				parent = clks[cpg_clk_extalr];
+				value |= BIT(15);
+			}
+
+			writel(value, base + CPG_RCKCR);
+		} else {
+
+			error = rcar_rst_read_mode_pins(&cpg_mode);
+			if (error)
+				return ERR_PTR(error);
+
+			/* Select parent clock of RCLK by MD28 */
+			if (cpg_mode & BIT(28))
+				parent = clks[cpg_clk_extalr];
 		}
-
-		writel(value, base + CPG_RCKCR);
 		break;
 
 	case CLK_TYPE_GEN3_Z:
