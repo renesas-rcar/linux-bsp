@@ -22,7 +22,8 @@ void __weak pcibios_update_irq(struct pci_dev *dev, int irq)
 	pci_write_config_byte(dev, PCI_INTERRUPT_LINE, irq);
 }
 
-static void pdev_fixup_irq(struct pci_dev *dev,
+static void pdev_fixup_irq(int domain_nr,
+			   struct pci_dev *dev,
 			   u8 (*swizzle)(struct pci_dev *, u8 *),
 			   int (*map_irq)(const struct pci_dev *, u8, u8))
 {
@@ -48,8 +49,15 @@ static void pdev_fixup_irq(struct pci_dev *dev,
 		if (irq == -1)
 			irq = 0;
 	}
-	dev->irq = irq;
+	/* Since pci_fixup_irqs() can be called more than once due to multiple
+	 * host controllers, and we scan all PCI devices, not just those
+	 * attached to this controller, make sure we don't clobber dev->irq
+	 * that has nothing to do with this domain.
+	 */
+	if (domain_nr >= 0 && dev->bus->domain_nr != domain_nr)
+		return;
 
+	dev->irq = irq;
 	dev_dbg(&dev->dev, "fixup irq: got %d\n", dev->irq);
 
 	/* Always tell the device, so the driver knows what is
@@ -63,6 +71,17 @@ void pci_fixup_irqs(u8 (*swizzle)(struct pci_dev *, u8 *),
 	struct pci_dev *dev = NULL;
 
 	for_each_pci_dev(dev)
-		pdev_fixup_irq(dev, swizzle, map_irq);
+		pdev_fixup_irq(-1, dev, swizzle, map_irq);
 }
 EXPORT_SYMBOL_GPL(pci_fixup_irqs);
+
+void pci_fixup_irqs_local(struct pci_bus *bus,
+		    u8 (*swizzle)(struct pci_dev *, u8 *),
+		    int (*map_irq)(const struct pci_dev *, u8, u8))
+{
+	struct pci_dev *dev = NULL;
+
+	for_each_pci_dev(dev)
+		pdev_fixup_irq(bus->domain_nr, dev, swizzle, map_irq);
+}
+EXPORT_SYMBOL_GPL(pci_fixup_irqs_local);
