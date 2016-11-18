@@ -55,6 +55,7 @@ struct rcar_du_crtc {
 
 	int lvds_ch;
 	bool suspend;
+	unsigned int lif_index;
 };
 
 struct dpll_info {
