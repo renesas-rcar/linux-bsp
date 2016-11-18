@@ -450,10 +450,11 @@ static void wpf_configure(struct vsp1_entity *entity,
 			   VI6_DPR_WPF_FPORCH_FP_WPFN);
 
 	if (pipe->lif && (pipe->output->write_back == 2))
-		vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL,
+		vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL(wpf->entity.index),
 					VI6_WPF_WRBCK_CTRL_WBMD);
 	else
-		vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL, 0);
+		vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL(wpf->entity.index),
+				   0);
 
 	/* Sources. If the pipeline has a single input and BRU is not used,
 	 * configure it as the master layer. Otherwise configure all
