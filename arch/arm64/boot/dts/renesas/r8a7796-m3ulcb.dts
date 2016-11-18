@@ -169,6 +169,10 @@
 	clock-frequency = <32768>;
 };
 
+&a57_0 {
+	cpu-supply = <&vdd_dvfs>;
+};
+
 &pfc {
 	pinctrl-0 = <&scif_clk_pins>;
 	pinctrl-names = "default";
