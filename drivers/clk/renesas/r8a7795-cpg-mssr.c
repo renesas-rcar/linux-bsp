@@ -339,7 +339,7 @@ static const struct soc_device_attribute r8a7795es1[] __initconst = {
 	 */
 
 static const unsigned int r8a7795es1_mod_nullify[] __initconst = {
-	MOD_CLK_ID(326),			/* USB3.0-IF3-0 */
+	MOD_CLK_ID(326),			/* USB-DMAC3-0 */
 	MOD_CLK_ID(329),			/* USB-DMAC3-1 */
 	MOD_CLK_ID(700),			/* EHCI/OHCI3 */
 	MOD_CLK_ID(705),			/* HS-USB-IF3 */
@@ -383,6 +383,7 @@ static const unsigned int r8a7795es2_mod_nullify[] __initconst = {
 	MOD_CLK_ID(117),			/* FDP1-2 */
 	MOD_CLK_ID(128),			/* iVDP1C */
 	MOD_CLK_ID(129),			/* VCPL4 */
+	MOD_CLK_ID(327),			/* USB3.0-IF3-1 */
 	MOD_CLK_ID(600),			/* FCPVD3 */
 	MOD_CLK_ID(609),			/* FCPVI2 */
 	MOD_CLK_ID(613),			/* FCPF2 */
