@@ -59,6 +59,11 @@
 		};
 	};
 
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&lossy_decompress>;
+	};
+
 	leds {
 		compatible = "gpio-leds";
 
