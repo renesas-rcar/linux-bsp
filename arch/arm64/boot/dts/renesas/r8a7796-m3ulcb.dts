@@ -217,6 +217,12 @@
 		power-source = <1800>;
 	};
 
+	msiof1_pins: spi2 {
+		groups = "msiof1_clk_a", "msiof1_sync_a",
+				"msiof1_rxd_a",  "msiof1_txd_a";
+		function = "msiof1";
+	};
+
 	sound_pins: sound {
 		groups = "ssi0129_ctrl", "ssi0_data", "ssi1_data_a";
 		function = "ssi";
@@ -452,4 +458,18 @@
 
 &ohci1 {
 	status = "okay";
+};
+
+&msiof1 {
+	pinctrl-0 = <&msiof1_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	spidev@0 {
+		compatible = "renesas,sh-msiof";
+		reg = <0>;
+		spi-max-frequency = <66666666>;
+		spi-cpha;
+		spi-cpol;
+	};
 };
