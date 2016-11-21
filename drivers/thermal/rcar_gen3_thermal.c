@@ -50,6 +50,7 @@
 
 /* CTSR bit */
 #define PONM1            (0x1 << 8)	/* For H3 WS1.x */
+#define PONM            (0x1 << 8)
 #define AOUT            (0x1 << 7)
 #define THBGR           (0x1 << 5)
 #define VMEN            (0x1 << 4)
@@ -58,6 +59,10 @@
 
 /* THCTR bit */
 #define PONM2            (0x1 << 6)	/* For H3 WS2.0 and M3 WS1.0 */
+#define CTCTL		(0x1 << 24)
+#define THCNTSEN(x)	(x << 16)
+
+#define BIT_LEN_12	0x1
 
 #define CTEMP_MASK	0xFFF
 
@@ -357,6 +362,33 @@ static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
 {
 	unsigned long flags;
 
+	spin_lock_irqsave(&priv->lock, flags);
+
+	rcar_thermal_write(priv, REG_GEN3_CTSR,  THBGR);
+	rcar_thermal_write(priv, REG_GEN3_CTSR,  0x0);
+
+	udelay(1000);
+
+	rcar_thermal_write(priv, REG_GEN3_CTSR, PONM);
+	rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
+	rcar_thermal_write(priv, REG_GEN3_IRQEN,
+			   IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT);
+	rcar_thermal_write(priv, REG_GEN3_CTSR,
+			PONM | AOUT | THBGR | VMEN);
+	udelay(100);
+
+	rcar_thermal_write(priv, REG_GEN3_CTSR,
+			PONM | AOUT | THBGR | VMEN | VMST | THSST);
+
+	spin_unlock_irqrestore(&priv->lock, flags);
+
+	return 0;
+}
+
+static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
+{
+	unsigned long flags;
+
 	if (soc_device_match(r8a7795es1)) {
 		spin_lock_irqsave(&priv->lock, flags);
 
@@ -380,6 +412,28 @@ static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
 	} else
 		/* H3 WS2.0 has the same init flow with M3 WS1.0 */
 		rcar_gen3_r8a7796_thermal_init(priv);
+
+	return 0;
+}
+
+static int rcar_gen3_r8a7796_thermal_init(struct rcar_thermal_priv *priv)
+{
+	unsigned long flags;
+	unsigned long reg_val;
+
+	spin_lock_irqsave(&priv->lock, flags);
+	rcar_thermal_write(priv, REG_GEN3_THCTR,  0x0);
+	udelay(1000);
+	rcar_thermal_write(priv, REG_GEN3_IRQCTL, 0x3F);
+	rcar_thermal_write(priv, REG_GEN3_IRQEN,
+			   IRQ_TEMP1_BIT | IRQ_TEMPD2_BIT);
+	rcar_thermal_write(priv, REG_GEN3_THCTR, CTCTL | THCNTSEN(BIT_LEN_12));
+	reg_val = rcar_thermal_read(priv, REG_GEN3_THCTR);
+	reg_val &= ~CTCTL;
+	reg_val |= THSST;
+	rcar_thermal_write(priv, REG_GEN3_THCTR, reg_val);
+
+	spin_unlock_irqrestore(&priv->lock, flags);
 
 	return 0;
 }
