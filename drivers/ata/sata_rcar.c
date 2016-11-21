@@ -970,8 +970,40 @@ static int sata_rcar_resume(struct device *dev)
 	struct ata_host *host = dev_get_drvdata(dev);
 	struct sata_rcar_priv *priv = host->private_data;
 	void __iomem *base = priv->base;
+	u32 val;
 
 	clk_prepare_enable(priv->clk);
+
+	/* Re-use from sata_rcar_init_controller() */
+	/* reset and setup phy */
+	switch (priv->type) {
+	case RCAR_GEN1_SATA:
+		sata_rcar_gen1_phy_init(priv);
+		break;
+	case RCAR_GEN2_SATA:
+		sata_rcar_gen2_phy_init(priv);
+		break;
+	default:
+		dev_warn(host->dev, "SATA phy is not initialized\n");
+		break;
+	}
+
+	/* SATA-IP reset state */
+	val = ioread32(base + ATAPI_CONTROL1_REG);
+	val |= ATAPI_CONTROL1_RESET;
+	iowrite32(val, base + ATAPI_CONTROL1_REG);
+
+	/* ISM mode, PRD mode, DTEND flag at bit 0 */
+	val = ioread32(base + ATAPI_CONTROL1_REG);
+	val |= ATAPI_CONTROL1_ISM;
+	val |= ATAPI_CONTROL1_DESE;
+	val |= ATAPI_CONTROL1_DTA32M;
+	iowrite32(val, base + ATAPI_CONTROL1_REG);
+
+	/* Release the SATA-IP from the reset state */
+	val = ioread32(base + ATAPI_CONTROL1_REG);
+	val &= ~ATAPI_CONTROL1_RESET;
+	iowrite32(val, base + ATAPI_CONTROL1_REG);
 
 	/* ack and mask */
 	iowrite32(0, base + SATAINTSTAT_REG);
