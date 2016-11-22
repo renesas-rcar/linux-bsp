@@ -23,6 +23,10 @@
 #include <media/v4l2-device.h>
 #include <media/videobuf2-v4l2.h>
 
+#include "rcar-group.h"
+
+#define DRV_NAME "rcar-vin"
+
 /* Number of HW buffers */
 #define HW_BUFFER_NUM 3
 
@@ -30,9 +34,12 @@
 #define HW_BUFFER_MASK 0x7f
 
 enum chip_id {
+	RCAR_M3,
+	RCAR_H3,
+	RCAR_GEN3,
+	RCAR_GEN2,
 	RCAR_H1,
 	RCAR_M1,
-	RCAR_GEN2,
 };
 
 /**
@@ -68,19 +75,17 @@ struct rvin_video_format {
 	u8 bpp;
 };
 
-/**
- * struct rvin_graph_entity - Video endpoint from async framework
- * @asd:	sub-device descriptor for async framework
- * @subdev:	subdevice matched using async framework
- * @code:	Media bus format from source
- * @mbus_cfg:	Media bus format from DT
- */
-struct rvin_graph_entity {
-	struct v4l2_async_subdev asd;
-	struct v4l2_subdev *subdev;
-
-	u32 code;
-	struct v4l2_mbus_config mbus_cfg;
+enum gen3_vin_ch {
+	RCAR_VIN_CH_NONE = -1,
+	RCAR_VIDEO_0,
+	RCAR_VIDEO_1,
+	RCAR_VIDEO_2,
+	RCAR_VIDEO_3,
+	RCAR_VIDEO_4,
+	RCAR_VIDEO_5,
+	RCAR_VIDEO_6,
+	RCAR_VIDEO_7,
+	RCAR_VIDEO_MAX,
 };
 
 /**
@@ -113,6 +118,12 @@ struct rvin_graph_entity {
  *
  * @crop:		active cropping
  * @compose:		active composing
+ *
+ * @slave:		subdevice used to register with the group master
+ * @api:		group api controller (only used on master channel)
+ *
+ * @current_input:	currently used input in @inputs
+ * @inputs:		list of valid inputs sources
  */
 struct rvin_dev {
 	struct device *dev;
@@ -142,9 +153,15 @@ struct rvin_dev {
 
 	struct v4l2_rect crop;
 	struct v4l2_rect compose;
-};
 
-#define vin_to_source(vin)		vin->digital.subdev
+	struct v4l2_subdev slave;
+	struct rvin_group_api *api;
+
+	int current_input;
+	struct rvin_input_item inputs[RVIN_INPUT_MAX];
+
+	unsigned int index;
+};
 
 /* Debug */
 #define vin_dbg(d, fmt, arg...)		dev_dbg(d->dev, fmt, ##arg)
@@ -154,6 +171,9 @@ struct rvin_dev {
 
 int rvin_dma_probe(struct rvin_dev *vin, int irq);
 void rvin_dma_remove(struct rvin_dev *vin);
+
+int rvin_subdev_probe(struct rvin_dev *vin);
+void rvin_subdev_remove(struct rvin_dev *vin);
 
 int rvin_v4l2_probe(struct rvin_dev *vin);
 void rvin_v4l2_remove(struct rvin_dev *vin);
@@ -165,4 +185,39 @@ void rvin_scale_try(struct rvin_dev *vin, struct v4l2_pix_format *pix,
 		    u32 width, u32 height);
 void rvin_crop_scale_comp(struct rvin_dev *vin);
 
+/* Subdevice group helpers */
+#define rvin_input_is_csi(v) (v->inputs[v->current_input].type == \
+			      RVIN_INPUT_CSI2)
+#define vin_to_group(v) container_of(v->slave.v4l2_dev, struct rvin_dev, \
+				     v4l2_dev)->api
+#define rvin_subdev_call_local(v, o, f, args...)			\
+	(v->digital.subdev ?						\
+	 v4l2_subdev_call(v->digital.subdev, o, f, ##args) : -ENODEV)
+#define rvin_subdev_call_group(v, o, f, args...)			\
+	(!(v)->slave.v4l2_dev ? -ENODEV :				\
+	 (vin_to_group(v)->ops->o && vin_to_group(v)->ops->o->f) ?	\
+	 vin_to_group(v)->ops->o->f(&v->slave, ##args) : -ENOIOCTLCMD)
+#define rvin_subdev_call_group_input(v, i, f, args...)			\
+	(!(v)->slave.v4l2_dev ? -ENODEV :				\
+	 (vin_to_group(v)->input_ops->f ?				\
+	  vin_to_group(v)->input_ops->f(&v->slave, i, ##args) : -ENOIOCTLCMD))
+#define rvin_subdev_call(v, o, f, args...)				\
+	(rvin_input_is_csi(v) ? rvin_subdev_call_group(v, o, f, ##args) :\
+	 rvin_subdev_call_local(v, o, f, ##args))
+#define rvin_subdev_call_input(v, i, o, f, args...)			\
+	(v->inputs[i].type == RVIN_INPUT_CSI2 ?				\
+	 rvin_subdev_call_group_input(v, &v->inputs[i], f, ##args) :	\
+	 rvin_subdev_call_local(v, o, f, ##args))
+
+int rvin_subdev_get(struct rvin_dev *vin);
+int rvin_subdev_put(struct rvin_dev *vin);
+int rvin_subdev_set_input(struct rvin_dev *vin, struct rvin_input_item *item);
+
+int rvin_subdev_get_code(struct rvin_dev *vin, u32 *code);
+int rvin_subdev_get_mbus_cfg(struct rvin_dev *vin,
+			     struct v4l2_mbus_config *mbus_cfg);
+
+int rvin_subdev_ctrl_add_handler(struct rvin_dev *vin);
+struct v4l2_subdev_pad_config *rvin_subdev_alloc_pad_config(struct rvin_dev
+							    *vin);
 #endif

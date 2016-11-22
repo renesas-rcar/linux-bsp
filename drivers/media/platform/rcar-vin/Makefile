@@ -1,3 +1,3 @@
-rcar-vin-objs = rcar-core.o rcar-dma.o rcar-v4l2.o
+rcar-vin-objs = rcar-core.o rcar-dma.o rcar-v4l2.o rcar-group.o
 
 obj-$(CONFIG_VIDEO_RCAR_VIN) += rcar-vin.o
