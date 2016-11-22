@@ -854,7 +854,7 @@ static int get_card_status(struct mmc_card *card, u32 *status, int retries)
 }
 
 static int card_busy_detect(struct mmc_card *card, unsigned int timeout_ms,
-		bool hw_busy_detect, struct request *req, int *gen_err)
+		bool hw_busy_detect, struct request *req, bool *gen_err)
 {
 	unsigned long timeout = jiffies + msecs_to_jiffies(timeout_ms);
 	int err = 0;
@@ -871,7 +871,7 @@ static int card_busy_detect(struct mmc_card *card, unsigned int timeout_ms,
 		if (status & R1_ERROR) {
 			pr_err("%s: %s: error sending status cmd, status %#x\n",
 				req->rq_disk->disk_name, __func__, status);
-			*gen_err = 1;
+			*gen_err = true;
 		}
 
 		/* We may rely on the host hw to handle busy detection.*/
@@ -902,7 +902,7 @@ static int card_busy_detect(struct mmc_card *card, unsigned int timeout_ms,
 }
 
 static int send_stop(struct mmc_card *card, unsigned int timeout_ms,
-		struct request *req, int *gen_err, u32 *stop_status)
+		struct request *req, bool *gen_err, u32 *stop_status)
 {
 	struct mmc_host *host = card->host;
 	struct mmc_command cmd = {0};
@@ -940,7 +940,7 @@ static int send_stop(struct mmc_card *card, unsigned int timeout_ms,
 		(*stop_status & R1_ERROR)) {
 		pr_err("%s: %s: general error sending stop command, resp %#x\n",
 			req->rq_disk->disk_name, __func__, *stop_status);
-		*gen_err = 1;
+		*gen_err = true;
 	}
 
 	return card_busy_detect(card, timeout_ms, use_r1b_resp, req, gen_err);
@@ -1014,7 +1014,7 @@ static int mmc_blk_cmd_error(struct request *req, const char *name, int error,
  * Otherwise we don't understand what happened, so abort.
  */
 static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
-	struct mmc_blk_request *brq, int *ecc_err, int *gen_err)
+	struct mmc_blk_request *brq, bool *ecc_err, bool *gen_err)
 {
 	bool prev_cmd_status_valid = true;
 	u32 status, stop_status = 0;
@@ -1053,7 +1053,7 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 	if ((status & R1_CARD_ECC_FAILED) ||
 	    (brq->stop.resp[0] & R1_CARD_ECC_FAILED) ||
 	    (brq->cmd.resp[0] & R1_CARD_ECC_FAILED))
-		*ecc_err = 1;
+		*ecc_err = true;
 
 	/* Flag General errors */
 	if (!mmc_host_is_spi(card->host) && rq_data_dir(req) != READ)
@@ -1062,7 +1062,7 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 			pr_err("%s: %s: general error sending stop or status command, stop cmd response %#x, card status %#x\n",
 			       req->rq_disk->disk_name, __func__,
 			       brq->stop.resp[0], status);
-			*gen_err = 1;
+			*gen_err = true;
 		}
 
 	/*
@@ -1085,7 +1085,7 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 		}
 
 		if (stop_status & R1_CARD_ECC_FAILED)
-			*ecc_err = 1;
+			*ecc_err = true;
 	}
 
 	/* Check for set block count errors */
@@ -1154,7 +1154,7 @@ static inline void mmc_blk_reset_success(struct mmc_blk_data *md, int type)
 
 int mmc_access_rpmb(struct mmc_queue *mq)
 {
-	struct mmc_blk_data *md = mq->data;
+	struct mmc_blk_data *md = mq->blkdata;
 	/*
 	 * If this is a RPMB partition access, return ture
 	 */
@@ -1166,7 +1166,7 @@ int mmc_access_rpmb(struct mmc_queue *mq)
 
 static int mmc_blk_issue_discard_rq(struct mmc_queue *mq, struct request *req)
 {
-	struct mmc_blk_data *md = mq->data;
+	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_card *card = md->queue.card;
 	unsigned int from, nr, arg;
 	int err = 0, type = MMC_BLK_DISCARD;
@@ -1210,7 +1210,7 @@ out:
 static int mmc_blk_issue_secdiscard_rq(struct mmc_queue *mq,
 				       struct request *req)
 {
-	struct mmc_blk_data *md = mq->data;
+	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_card *card = md->queue.card;
 	unsigned int from, nr, arg;
 	int err = 0, type = MMC_BLK_SECDISCARD;
@@ -1276,7 +1276,7 @@ out:
 
 static int mmc_blk_issue_flush(struct mmc_queue *mq, struct request *req)
 {
-	struct mmc_blk_data *md = mq->data;
+	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_card *card = md->queue.card;
 	int ret = 0;
 
@@ -1320,15 +1320,16 @@ static inline void mmc_apply_rel_rw(struct mmc_blk_request *brq,
 	 R1_CC_ERROR |		/* Card controller error */		\
 	 R1_ERROR)		/* General/unknown error */
 
-static int mmc_blk_err_check(struct mmc_card *card,
-			     struct mmc_async_req *areq)
+static enum mmc_blk_status mmc_blk_err_check(struct mmc_card *card,
+					     struct mmc_async_req *areq)
 {
 	struct mmc_queue_req *mq_mrq = container_of(areq, struct mmc_queue_req,
 						    mmc_active);
 	struct mmc_blk_request *brq = &mq_mrq->brq;
 	struct request *req = mq_mrq->req;
 	int need_retune = card->host->need_retune;
-	int ecc_err = 0, gen_err = 0;
+	bool ecc_err = false;
+	bool gen_err = false;
 
 	/*
 	 * sbc.error indicates a problem with the set block count
@@ -1378,7 +1379,7 @@ static int mmc_blk_err_check(struct mmc_card *card,
 			pr_err("%s: %s: general error sending stop command, stop cmd response %#x\n",
 			       req->rq_disk->disk_name, __func__,
 			       brq->stop.resp[0]);
-			gen_err = 1;
+			gen_err = true;
 		}
 
 		err = card_busy_detect(card, MMC_BLK_TIMEOUT_MS, false, req,
@@ -1432,14 +1433,58 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	return MMC_BLK_SUCCESS;
 }
 
-static int mmc_blk_packed_err_check(struct mmc_card *card,
-				    struct mmc_async_req *areq)
+static int mmc_packed_init(struct mmc_queue *mq, struct mmc_card *card)
+{
+	struct mmc_queue_req *mqrq_cur = &mq->mqrq[0];
+	struct mmc_queue_req *mqrq_prev = &mq->mqrq[1];
+	int ret = 0;
+
+
+	mqrq_cur->packed = kzalloc(sizeof(struct mmc_packed), GFP_KERNEL);
+	if (!mqrq_cur->packed) {
+		pr_warn("%s: unable to allocate packed cmd for mqrq_cur\n",
+			mmc_card_name(card));
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	mqrq_prev->packed = kzalloc(sizeof(struct mmc_packed), GFP_KERNEL);
+	if (!mqrq_prev->packed) {
+		pr_warn("%s: unable to allocate packed cmd for mqrq_prev\n",
+			mmc_card_name(card));
+		kfree(mqrq_cur->packed);
+		mqrq_cur->packed = NULL;
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	INIT_LIST_HEAD(&mqrq_cur->packed->list);
+	INIT_LIST_HEAD(&mqrq_prev->packed->list);
+
+out:
+	return ret;
+}
+
+static void mmc_packed_clean(struct mmc_queue *mq)
+{
+	struct mmc_queue_req *mqrq_cur = &mq->mqrq[0];
+	struct mmc_queue_req *mqrq_prev = &mq->mqrq[1];
+
+	kfree(mqrq_cur->packed);
+	mqrq_cur->packed = NULL;
+	kfree(mqrq_prev->packed);
+	mqrq_prev->packed = NULL;
+}
+
+static enum mmc_blk_status mmc_blk_packed_err_check(struct mmc_card *card,
+						    struct mmc_async_req *areq)
 {
 	struct mmc_queue_req *mq_rq = container_of(areq, struct mmc_queue_req,
 			mmc_active);
 	struct request *req = mq_rq->req;
 	struct mmc_packed *packed = mq_rq->packed;
-	int err, check, status;
+	enum mmc_blk_status status, check;
+	int err;
 	u8 *ext_csd;
 
 	packed->retries--;
@@ -1488,7 +1533,7 @@ static void mmc_blk_rw_rq_prep(struct mmc_queue_req *mqrq,
 	u32 readcmd, writecmd;
 	struct mmc_blk_request *brq = &mqrq->brq;
 	struct request *req = mqrq->req;
-	struct mmc_blk_data *md = mq->data;
+	struct mmc_blk_data *md = mq->blkdata;
 	bool do_data_tag;
 
 	/*
@@ -1661,7 +1706,7 @@ static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
 	struct request_queue *q = mq->queue;
 	struct mmc_card *card = mq->card;
 	struct request *cur = req, *next = NULL;
-	struct mmc_blk_data *md = mq->data;
+	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_queue_req *mqrq = mq->mqrq_cur;
 	bool en_rel_wr = card->ext_csd.rel_param & EXT_CSD_WR_REL_PARAM_EN;
 	unsigned int req_sectors = 0, phys_segments = 0;
@@ -1734,9 +1779,7 @@ static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
 		    !IS_ALIGNED(blk_rq_sectors(next), 8))
 			break;
 
-		if (req_op(next) == REQ_OP_DISCARD ||
-		    req_op(next) == REQ_OP_SECURE_ERASE ||
-		    req_op(next) == REQ_OP_FLUSH)
+		if (mmc_req_is_special(next))
 			break;
 
 		if (rq_data_dir(cur) != rq_data_dir(next))
@@ -1784,7 +1827,7 @@ static void mmc_blk_packed_hdr_wrq_prep(struct mmc_queue_req *mqrq,
 	struct mmc_blk_request *brq = &mqrq->brq;
 	struct request *req = mqrq->req;
 	struct request *prq;
-	struct mmc_blk_data *md = mq->data;
+	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_packed *packed = mqrq->packed;
 	bool do_rel_wr, do_data_tag;
 	__le32 *packed_cmd_hdr;
@@ -1955,7 +1998,7 @@ static void mmc_blk_revert_packed_req(struct mmc_queue *mq,
 
 static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 {
-	struct mmc_blk_data *md = mq->data;
+	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_card *card = md->queue.card;
 	struct mmc_blk_request *brq = &mq->mqrq_cur->brq;
 	int ret = 1, disable_multi = 0, retry = 0, type, retune_retry_done = 0;
@@ -1994,7 +2037,7 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			areq = &mq->mqrq_cur->mmc_active;
 		} else
 			areq = NULL;
-		areq = mmc_start_req(card->host, areq, (int *) &status);
+		areq = mmc_start_req(card->host, areq, &status);
 		if (!areq) {
 			if (status == MMC_BLK_NEW_REQUEST)
 				mq->flags |= MMC_QUEUE_NEW_REQUEST;
@@ -2148,7 +2191,7 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 {
 	int ret;
-	struct mmc_blk_data *md = mq->data;
+	struct mmc_blk_data *md = mq->blkdata;
 	struct mmc_card *card = md->queue.card;
 	struct mmc_host *host = card->host;
 	unsigned long flags;
@@ -2266,7 +2309,7 @@ again:
 	if (ret)
 		goto err_putdisk;
 
-	md->queue.data = md;
+	md->queue.blkdata = md;
 
 	md->disk->major	= MMC_BLOCK_MAJOR;
 	md->disk->first_minor = devidx * perdev_minors;
