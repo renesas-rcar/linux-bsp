@@ -220,5 +220,7 @@ int xhci_rcar_init_quirk(struct usb_hcd *hcd)
 			xhci_rcar_is_gen3(hcd->self.controller))
 		xhci->quirks |= XHCI_NO_64BIT_SUPPORT;
 
+	xhci->quirks |= XHCI_SLOW_SUSPEND;
+
 	return xhci_rcar_download_firmware(hcd);
 }

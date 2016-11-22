@@ -478,9 +478,41 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_vin_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int rcar_vin_resume(struct device *dev)
+{
+	int ifmd_val = -1;
+	struct rvin_dev *vin = dev_get_drvdata(dev);
+
+	if (vin->index == 0)
+		ifmd_val = 0;
+
+	if (vin->index == 4)
+		ifmd_val = 1;
+
+	if (ifmd_val >= 0)
+		rvin_set_ifmd(vin, ifmd_val);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_vin_pm_ops,
+			rcar_vin_suspend, rcar_vin_resume);
+#define DEV_PM_OPS (&rcar_vin_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_vin_driver = {
 	.driver = {
 		.name = "rcar-vin",
+		.pm		= DEV_PM_OPS,
 		.of_match_table = rvin_of_id_table,
 	},
 	.probe = rcar_vin_probe,
