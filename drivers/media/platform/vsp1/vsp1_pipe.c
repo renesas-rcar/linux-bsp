@@ -1,7 +1,7 @@
 /*
  * vsp1_pipe.c  --  R-Car VSP1 Pipeline
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -21,6 +21,7 @@
 
 #include "vsp1.h"
 #include "vsp1_bru.h"
+#include "vsp1_brs.h"
 #include "vsp1_dl.h"
 #include "vsp1_entity.h"
 #include "vsp1_hgo.h"
@@ -119,7 +120,7 @@ static const struct vsp1_format_info vsp1_video_formats[] = {
 	{ V4L2_PIX_FMT_YVU420M, MEDIA_BUS_FMT_AYUV8_1X32,
 	  VI6_FMT_Y_U_V_420, VI6_RPF_DSWAP_P_LLS | VI6_RPF_DSWAP_P_LWS |
 	  VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
-	  3, { 8, 8, 8 }, false, true, 2, 2, false },
+	  3, { 8, 8, 8 }, false, false, 2, 2, false },
 	{ V4L2_PIX_FMT_YUV422M, MEDIA_BUS_FMT_AYUV8_1X32,
 	  VI6_FMT_Y_U_V_422, VI6_RPF_DSWAP_P_LLS | VI6_RPF_DSWAP_P_LWS |
 	  VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
@@ -127,7 +128,7 @@ static const struct vsp1_format_info vsp1_video_formats[] = {
 	{ V4L2_PIX_FMT_YVU422M, MEDIA_BUS_FMT_AYUV8_1X32,
 	  VI6_FMT_Y_U_V_422, VI6_RPF_DSWAP_P_LLS | VI6_RPF_DSWAP_P_LWS |
 	  VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
-	  3, { 8, 8, 8 }, false, true, 2, 1, false },
+	  3, { 8, 8, 8 }, false, false, 2, 1, false },
 	{ V4L2_PIX_FMT_YUV444M, MEDIA_BUS_FMT_AYUV8_1X32,
 	  VI6_FMT_Y_U_V_444, VI6_RPF_DSWAP_P_LLS | VI6_RPF_DSWAP_P_LWS |
 	  VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
@@ -135,7 +136,7 @@ static const struct vsp1_format_info vsp1_video_formats[] = {
 	{ V4L2_PIX_FMT_YVU444M, MEDIA_BUS_FMT_AYUV8_1X32,
 	  VI6_FMT_Y_U_V_444, VI6_RPF_DSWAP_P_LLS | VI6_RPF_DSWAP_P_LWS |
 	  VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
-	  3, { 8, 8, 8 }, false, true, 1, 1, false },
+	  3, { 8, 8, 8 }, false, false, 1, 1, false },
 };
 
 /**
@@ -180,6 +181,13 @@ void vsp1_pipeline_reset(struct vsp1_pipeline *pipe)
 			bru->inputs[i].rpf = NULL;
 	}
 
+	if (pipe->brs) {
+		struct vsp1_brs *brs = to_brs(&pipe->brs->subdev);
+
+		for (i = 0; i < ARRAY_SIZE(brs->inputs); ++i)
+			brs->inputs[i].rpf = NULL;
+	}
+
 	for (i = 0; i < ARRAY_SIZE(pipe->inputs); ++i) {
 		if (pipe->inputs[i]) {
 			pipe->inputs[i]->pipe = NULL;
@@ -209,6 +217,7 @@ void vsp1_pipeline_reset(struct vsp1_pipeline *pipe)
 	pipe->buffers_ready = 0;
 	pipe->num_inputs = 0;
 	pipe->bru = NULL;
+	pipe->brs = NULL;
 	pipe->hgo = NULL;
 	pipe->hgt = NULL;
 	pipe->lif = NULL;
@@ -224,6 +233,7 @@ void vsp1_pipeline_init(struct vsp1_pipeline *pipe)
 
 	INIT_LIST_HEAD(&pipe->entities);
 	pipe->state = VSP1_PIPELINE_STOPPED;
+	pipe->vmute_flag = false;
 }
 
 /* Must be called with the pipe irqlock held. */
@@ -315,8 +325,17 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe)
 
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 {
+	unsigned long flags;
+
 	if (pipe == NULL)
 		return;
+
+	spin_lock_irqsave(&pipe->irqlock, flags);
+	if (pipe->output->write_back != 0) {
+		pipe->output->write_back--;
+		wake_up_interruptible(&pipe->event_wait);
+	}
+	spin_unlock_irqrestore(&pipe->irqlock, flags);
 
 	vsp1_dlm_irq_frame_end(pipe->output->dlm);
 

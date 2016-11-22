@@ -1,7 +1,7 @@
 /*
  * vsp1.h  --  R-Car VSP1 API
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -22,7 +22,7 @@ struct device;
 int vsp1_du_init(struct device *dev);
 
 int vsp1_du_setup_lif(struct device *dev, unsigned int width,
-		      unsigned int height);
+		      unsigned int height, unsigned int lif_index);
 
 struct vsp1_du_atomic_config {
 	u32 pixelformat;
@@ -32,13 +32,19 @@ struct vsp1_du_atomic_config {
 	struct v4l2_rect dst;
 	unsigned int alpha;
 	unsigned int zpos;
+	bool interlaced;
 };
 
-void vsp1_du_atomic_begin(struct device *dev);
+void vsp1_du_atomic_begin(struct device *dev, unsigned int lif_index);
 int vsp1_du_atomic_update(struct device *dev, unsigned int rpf,
 			  const struct vsp1_du_atomic_config *cfg);
-void vsp1_du_atomic_flush(struct device *dev);
+void vsp1_du_atomic_flush(struct device *dev, unsigned int lif_index);
 int vsp1_du_map_sg(struct device *dev, struct sg_table *sgt);
 void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt);
+int vsp1_du_if_set_mute(struct device *dev, bool on, unsigned int lif_index);
+int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
+		      dma_addr_t mem[2], unsigned int lif_index);
+void vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int lif_index);
+
 
 #endif /* __MEDIA_VSP1_H__ */
