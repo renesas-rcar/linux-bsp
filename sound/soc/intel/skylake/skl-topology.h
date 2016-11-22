@@ -279,6 +279,7 @@ struct skl_pipe {
 	u8 pipe_priority;
 	u16 conn_type;
 	u32 memory_pages;
+	u8 lp_mode;
 	struct skl_pipe_params *p_params;
 	enum skl_pipe_state state;
 	struct list_head w_list;
@@ -291,6 +292,12 @@ enum skl_module_state {
 	SKL_MODULE_INIT_DONE = 2,
 	SKL_MODULE_BIND_DONE = 3,
 	SKL_MODULE_UNLOADED = 4,
+};
+
+enum d0i3_capability {
+	SKL_D0I3_NONE = 0,
+	SKL_D0I3_STREAMING = 1,
+	SKL_D0I3_NON_STREAMING = 2,
 };
 
 struct skl_module_cfg {
@@ -319,6 +326,7 @@ struct skl_module_cfg {
 	u32 converter;
 	u32 vbus_id;
 	u32 mem_pages;
+	enum d0i3_capability d0i3_caps;
 	struct skl_module_pin *m_in_pin;
 	struct skl_module_pin *m_out_pin;
 	enum skl_module_type m_type;
@@ -360,6 +368,9 @@ struct skl_module_cfg *skl_tplg_fe_get_cpr_module(
 		struct snd_soc_dai *dai, int stream);
 int skl_tplg_update_pipe_params(struct device *dev,
 		struct skl_module_cfg *mconfig, struct skl_pipe_params *params);
+
+void skl_tplg_d0i3_get(struct skl *skl, enum d0i3_capability caps);
+void skl_tplg_d0i3_put(struct skl *skl, enum d0i3_capability caps);
 
 int skl_create_pipeline(struct skl_sst *ctx, struct skl_pipe *pipe);
 

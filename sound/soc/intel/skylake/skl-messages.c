@@ -294,6 +294,33 @@ int skl_free_dsp(struct skl *skl)
 	return 0;
 }
 
+/*
+ * In the case of "suspend_active" i.e, the Audio IP being active
+ * during system suspend, immediately excecute any pending D0i3 work
+ * before suspending. This is needed for the IP to work in low power
+ * mode during system suspend. In the case of normal suspend, cancel
+ * any pending D0i3 work.
+ */
+int skl_suspend_late_dsp(struct skl *skl)
+{
+	struct skl_sst *ctx = skl->skl_sst;
+	struct delayed_work *dwork;
+
+	if (!ctx)
+		return 0;
+
+	dwork = &ctx->d0i3.work;
+
+	if (dwork->work.func) {
+		if (skl->supend_active)
+			flush_delayed_work(dwork);
+		else
+			cancel_delayed_work_sync(dwork);
+	}
+
+	return 0;
+}
+
 int skl_suspend_dsp(struct skl *skl)
 {
 	struct skl_sst *ctx = skl->skl_sst;
@@ -1042,7 +1069,8 @@ int skl_create_pipeline(struct skl_sst *ctx, struct skl_pipe *pipe)
 	dev_dbg(ctx->dev, "%s: pipe_id = %d\n", __func__, pipe->ppl_id);
 
 	ret = skl_ipc_create_pipeline(&ctx->ipc, pipe->memory_pages,
-				pipe->pipe_priority, pipe->ppl_id);
+				pipe->pipe_priority, pipe->ppl_id,
+				pipe->lp_mode);
 	if (ret < 0) {
 		dev_err(ctx->dev, "Failed to create pipeline\n");
 		return ret;
