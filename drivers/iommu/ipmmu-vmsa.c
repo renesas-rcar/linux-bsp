@@ -215,6 +215,7 @@ static void set_archdata(struct device *dev, struct ipmmu_vmsa_archdata *p)
 #define IMPMBD(n)			(0x02c0 + ((n) * 4))
 
 #define IMUCTR(n)			(0x0300 + ((n) * 16))
+#define IMUCTR2(n)			(0x0600 + ((n) * 16))
 #define IMUCTR_FIXADDEN			(1 << 31)
 #define IMUCTR_FIXADD_MASK		(0xff << 16)
 #define IMUCTR_FIXADD_SHIFT		16
@@ -225,6 +226,7 @@ static void set_archdata(struct device *dev, struct ipmmu_vmsa_archdata *p)
 #define IMUCTR_MMUEN			(1 << 0)
 
 #define IMUASID(n)			(0x0308 + ((n) * 16))
+#define IMUASID2(n)			(0x0608 + ((n) * 16))
 #define IMUASID_ASID8_MASK		(0xff << 8)
 #define IMUASID_ASID8_SHIFT		8
 #define IMUASID_ASID0_MASK		(0xff << 0)
@@ -334,6 +336,7 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 			      unsigned int utlb)
 {
 	struct ipmmu_vmsa_device *mmu = domain->mmu;
+	unsigned int offset;
 
 	/*
 	 * TODO: Reference-count the microTLB as several bus masters can be
@@ -341,9 +344,12 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 	 */
 
 	/* TODO: What should we set the ASID to ? */
-	ipmmu_write(mmu, IMUASID(utlb), 0);
+	offset = (utlb < 32) ? IMUASID(utlb) : IMUASID2(utlb - 32);
+	ipmmu_write(mmu, offset, 0);
+
 	/* TODO: Do we need to flush the microTLB ? */
-	ipmmu_write(mmu, IMUCTR(utlb),
+	offset = (utlb < 32) ? IMUCTR(utlb) : IMUCTR2(utlb - 32);
+	ipmmu_write(mmu, offset,
 		    IMUCTR_TTSEL_MMU(domain->context_id) | IMUCTR_FLUSH |
 		    IMUCTR_MMUEN);
 }
@@ -355,8 +361,10 @@ static void ipmmu_utlb_disable(struct ipmmu_vmsa_domain *domain,
 			       unsigned int utlb)
 {
 	struct ipmmu_vmsa_device *mmu = domain->mmu;
+	unsigned int offset;
 
-	ipmmu_write(mmu, IMUCTR(utlb), 0);
+	offset = (utlb < 32) ? IMUCTR(utlb) : IMUCTR2(utlb - 32);
+	ipmmu_write(mmu, offset, 0);
 }
 
 static void ipmmu_tlb_flush_all(void *cookie)
@@ -625,6 +633,95 @@ static void ipmmu_domain_free(struct iommu_domain *io_domain)
 	kfree(domain);
 }
 
+/* Hack to identity map address ranges needed by the DMAC hardware */
+static struct {
+	phys_addr_t base;
+	size_t size;
+} dmac_workaround[] = {
+	{
+		.base = 0xe6e60000, /* SCIF0 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6e68000, /* SCIF1 */
+		.size = SZ_4K,
+	},
+	/* DMA transfer of SCIF2 is not supported */
+	{
+		.base = 0xe6c50000, /* SCIF3 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6c40000, /* SCIF4 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6f30000, /* SCIF5 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6540000, /* HSCIF0 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6550000, /* HSCIF1 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6560000, /* HSCIF2 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe66a0000, /* HSCIF3 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe66b0000, /* HSCIF4 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6e90000, /* MSIOF0 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6ea0000, /* MSIOF1 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6c00000, /* MSIOF2 */
+		.size = SZ_4K,
+	},
+	{
+		.base = 0xe6c10000, /* MSIOF3 */
+		.size = SZ_4K,
+	},
+};
+
+static void ipmmu_workaround(struct iommu_domain *io_domain,
+			     struct device *dev)
+{
+	int k;
+
+	/* only apply workaround for DMA controllers */
+	if (!strstr(dev_name(dev), "dma-controller"))
+		return;
+
+	dev_info(dev, "Adding iommu workaround\n");
+
+	for (k = 0; k < ARRAY_SIZE(dmac_workaround); k++) {
+		phys_addr_t phys_addr;
+
+		phys_addr = iommu_iova_to_phys(io_domain,
+					       dmac_workaround[k].base);
+		if (phys_addr)
+			continue;
+
+		iommu_map(io_domain, dmac_workaround[k].base,
+			  dmac_workaround[k].base, dmac_workaround[k].size,
+			  IOMMU_READ | IOMMU_WRITE);
+	}
+}
+
 static int ipmmu_attach_device(struct iommu_domain *io_domain,
 			       struct device *dev)
 {
@@ -677,6 +774,8 @@ static int ipmmu_attach_device(struct iommu_domain *io_domain,
 
 	if (ret < 0)
 		return ret;
+
+	ipmmu_workaround(io_domain, dev);
 
 	for (i = 0; i < archdata->num_utlbs; ++i)
 		ipmmu_utlb_enable(domain, archdata->utlbs[i]);
