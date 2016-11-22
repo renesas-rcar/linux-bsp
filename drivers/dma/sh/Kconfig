@@ -40,7 +40,7 @@ config SH_DMAE_R8A73A4
 endif
 
 config RCAR_DMAC
-	tristate "Renesas R-Car Gen2 DMA Controller"
+	tristate "Renesas R-Car Gen2/3 DMA Controller"
 	depends on ARCH_RENESAS || COMPILE_TEST
 	select RENESAS_DMA
 	help
