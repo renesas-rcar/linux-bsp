@@ -1,7 +1,7 @@
 /*
  * rcar_du_vsp.h  --  R-Car Display Unit VSP-Based Compositor
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -32,6 +32,7 @@ struct rcar_du_vsp {
 	struct rcar_du_device *dev;
 	struct rcar_du_vsp_plane *planes;
 	unsigned int num_planes;
+	unsigned int num_brs;
 };
 
 static inline struct rcar_du_vsp_plane *to_rcar_vsp_plane(struct drm_plane *p)
@@ -69,12 +70,20 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc);
 void rcar_du_vsp_disable(struct rcar_du_crtc *crtc);
 void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc);
 void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc);
+int rcar_du_set_vmute(struct drm_device *dev, void *data,
+			struct drm_file *file_priv);
+int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+			struct drm_file *file_priv);
 #else
 static inline int rcar_du_vsp_init(struct rcar_du_vsp *vsp) { return 0; };
 static inline void rcar_du_vsp_enable(struct rcar_du_crtc *crtc) { };
 static inline void rcar_du_vsp_disable(struct rcar_du_crtc *crtc) { };
 static inline void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc) { };
 static inline void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc) { };
+static inline int rcar_du_set_vmute(struct drm_device *dev, void *data,
+			struct drm_file *file_priv) { return 0; };
+static inline int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+			struct drm_file *file_priv) { return 0; };
 #endif
 
 #endif /* __RCAR_DU_VSP_H__ */

@@ -1,7 +1,7 @@
 /*
  * rcar_lvds_regs.h  --  R-Car LVDS Interface Registers Definitions
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -75,5 +75,9 @@
 #define LVDCHCR				0x0010
 #define LVDCHCR_CHSEL_CH(n, c)		((((c) - (n)) & 3) << ((n) * 4))
 #define LVDCHCR_CHSEL_MASK(n)		(3 << ((n) * 4))
+
+#define SRCR7		0xE61501CC
+#define SRSTCLR7	0xE615095C
+#define SRCR7_LVDS	(1 << 27)
 
 #endif /* __RCAR_LVDS_REGS_H__ */
