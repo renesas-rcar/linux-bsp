@@ -432,13 +432,12 @@ int iommu_dma_mmap(struct page **pages, size_t size, struct vm_area_struct *vma)
 	return ret;
 }
 
-dma_addr_t iommu_dma_map_page(struct device *dev, struct page *page,
-		unsigned long offset, size_t size, int prot)
+static dma_addr_t __iommu_dma_map(struct device *dev, phys_addr_t phys,
+		size_t size, int prot)
 {
 	dma_addr_t dma_addr;
 	struct iommu_domain *domain = iommu_get_domain_for_dev(dev);
 	struct iova_domain *iovad = cookie_iovad(domain);
-	phys_addr_t phys = page_to_phys(page) + offset;
 	size_t iova_off = iova_offset(iovad, phys);
 	size_t len = iova_align(iovad, size + iova_off);
 	struct iova *iova = __alloc_iova(domain, len, dma_get_mask(dev));
@@ -452,6 +451,12 @@ dma_addr_t iommu_dma_map_page(struct device *dev, struct page *page,
 		return DMA_ERROR_CODE;
 	}
 	return dma_addr + iova_off;
+}
+
+dma_addr_t iommu_dma_map_page(struct device *dev, struct page *page,
+		unsigned long offset, size_t size, int prot)
+{
+	return __iommu_dma_map(dev, page_to_phys(page) + offset, size, prot);
 }
 
 void iommu_dma_unmap_page(struct device *dev, dma_addr_t handle, size_t size,
@@ -627,8 +632,8 @@ void iommu_dma_unmap_sg(struct device *dev, struct scatterlist *sg, int nents,
 dma_addr_t iommu_dma_map_resource(struct device *dev, phys_addr_t phys,
 		size_t size, enum dma_data_direction dir, unsigned long attrs)
 {
-	return iommu_dma_map_page(dev, phys_to_page(phys), offset_in_page(phys),
-			size, dma_direction_to_prot(dir, false) | IOMMU_MMIO);
+	return __iommu_dma_map(dev, phys, size,
+			dma_direction_to_prot(dir, false) | IOMMU_MMIO);
 }
 
 void iommu_dma_unmap_resource(struct device *dev, dma_addr_t handle,
