@@ -12,6 +12,7 @@
 #define pr_fmt(fmt) "CPUidle arm: " fmt
 
 #include <linux/cpuidle.h>
+#include <linux/cpufeature.h>
 #include <linux/cpumask.h>
 #include <linux/cpu_pm.h>
 #include <linux/kernel.h>
@@ -19,7 +20,9 @@
 #include <linux/of.h>
 #include <linux/slab.h>
 
+#include <asm/cpu.h>
 #include <asm/cpuidle.h>
+#include <asm/cputype.h>
 
 #include "dt_idle_states.h"
 
@@ -64,6 +67,30 @@ static struct cpuidle_driver arm_idle_driver = {
 	}
 };
 
+#if IS_ENABLED(CONFIG_ARM64)
+static int __init arm_idle_driver_init(struct cpuidle_driver *drv, int part_id)
+{
+	struct cpumask *cpumask;
+	int cpu;
+
+	cpumask = kzalloc(cpumask_size(), GFP_KERNEL);
+	if (!cpumask)
+		return -ENOMEM;
+
+	for_each_possible_cpu(cpu) {
+		struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, cpu);
+		u32 midr = cpuinfo->reg_midr;
+
+		if (MIDR_PARTNUM(midr) == part_id)
+			cpumask_set_cpu(cpu, cpumask);
+	}
+
+	drv->cpumask = cpumask;
+
+	return 0;
+}
+#endif
+
 static const struct of_device_id arm_idle_state_match[] __initconst = {
 	{ .compatible = "arm,idle-state",
 	  .data = arm_enter_idle_state },
@@ -82,6 +109,13 @@ static int __init arm_idle_init(void)
 	int cpu, ret;
 	struct cpuidle_driver *drv = &arm_idle_driver;
 	struct cpuidle_device *dev;
+
+#if IS_ENABLED(CONFIG_ARM64)
+	/* Support CPUIdle for Cortex-A57 only */
+	ret = arm_idle_driver_init(drv, ARM_CPU_PART_CORTEX_A57);
+	if (ret)
+		return ret;
+#endif
 
 	/*
 	 * Initialize idle states data, starting at index 1.
@@ -103,7 +137,7 @@ static int __init arm_idle_init(void)
 	 * Call arch CPU operations in order to initialize
 	 * idle states suspend back-end specific data
 	 */
-	for_each_possible_cpu(cpu) {
+	for_each_cpu(cpu, drv->cpumask) {
 		ret = arm_cpuidle_init(cpu);
 
 		/*
