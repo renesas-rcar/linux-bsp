@@ -1568,7 +1568,7 @@ static int netcp_setup_navigator_resources(struct net_device *ndev)
 	/* open Tx completion queue */
 	snprintf(name, sizeof(name), "tx-compl-%s", ndev->name);
 	netcp->tx_compl_q = knav_queue_open(name, netcp->tx_compl_qid, 0);
-	if (IS_ERR_OR_NULL(netcp->tx_compl_q)) {
+	if (IS_ERR(netcp->tx_compl_q)) {
 		ret = PTR_ERR(netcp->tx_compl_q);
 		goto fail;
 	}
@@ -1588,7 +1588,7 @@ static int netcp_setup_navigator_resources(struct net_device *ndev)
 	/* open Rx completion queue */
 	snprintf(name, sizeof(name), "rx-compl-%s", ndev->name);
 	netcp->rx_queue = knav_queue_open(name, netcp->rx_queue_id, 0);
-	if (IS_ERR_OR_NULL(netcp->rx_queue)) {
+	if (IS_ERR(netcp->rx_queue)) {
 		ret = PTR_ERR(netcp->rx_queue);
 		goto fail;
 	}
@@ -1610,7 +1610,7 @@ static int netcp_setup_navigator_resources(struct net_device *ndev)
 	     ++i) {
 		snprintf(name, sizeof(name), "rx-fdq-%s-%d", ndev->name, i);
 		netcp->rx_fdq[i] = knav_queue_open(name, KNAV_QUEUE_GP, 0);
-		if (IS_ERR_OR_NULL(netcp->rx_fdq[i])) {
+		if (IS_ERR(netcp->rx_fdq[i])) {
 			ret = PTR_ERR(netcp->rx_fdq[i]);
 			goto fail;
 		}
@@ -1766,21 +1766,6 @@ out:
 	return (ret == 0) ? 0 : err;
 }
 
-static int netcp_ndo_change_mtu(struct net_device *ndev, int new_mtu)
-{
-	struct netcp_intf *netcp = netdev_priv(ndev);
-
-	/* MTU < 68 is an error for IPv4 traffic */
-	if ((new_mtu < 68) ||
-	    (new_mtu > (NETCP_MAX_FRAME_SIZE - ETH_HLEN - ETH_FCS_LEN))) {
-		dev_err(netcp->ndev_dev, "Invalid mtu size = %d\n", new_mtu);
-		return -EINVAL;
-	}
-
-	ndev->mtu = new_mtu;
-	return 0;
-}
-
 static void netcp_ndo_tx_timeout(struct net_device *ndev)
 {
 	struct netcp_intf *netcp = netdev_priv(ndev);
@@ -1886,7 +1871,6 @@ static const struct net_device_ops netcp_netdev_ops = {
 	.ndo_start_xmit		= netcp_ndo_start_xmit,
 	.ndo_set_rx_mode	= netcp_set_rx_mode,
 	.ndo_do_ioctl           = netcp_ndo_ioctl,
-	.ndo_change_mtu		= netcp_ndo_change_mtu,
 	.ndo_set_mac_address	= eth_mac_addr,
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_vlan_rx_add_vid	= netcp_rx_add_vid,
@@ -1922,6 +1906,10 @@ static int netcp_create_interface(struct netcp_device *netcp_device,
 	ndev->features |= NETIF_F_HW_VLAN_CTAG_FILTER;
 	ndev->hw_features = ndev->features;
 	ndev->vlan_features |=  NETIF_F_SG;
+
+	/* MTU range: 68 - 9486 */
+	ndev->min_mtu = ETH_MIN_MTU;
+	ndev->max_mtu = NETCP_MAX_FRAME_SIZE - (ETH_HLEN + ETH_FCS_LEN);
 
 	netcp = netdev_priv(ndev);
 	spin_lock_init(&netcp->lock);
@@ -2070,7 +2058,6 @@ static void netcp_delete_interface(struct netcp_device *netcp_device,
 		if (module->release)
 			module->release(intf_modpriv->module_priv);
 		list_del(&intf_modpriv->intf_list);
-		kfree(intf_modpriv);
 	}
 	WARN(!list_empty(&netcp->module_head), "%s interface module list is not empty!\n",
 	     ndev->name);
@@ -2133,6 +2120,8 @@ static int netcp_probe(struct platform_device *pdev)
 		}
 	}
 
+	of_node_put(interfaces);
+
 	/* Add the device instance to the list */
 	list_add_tail(&netcp_device->device_list, &netcp_devices);
 
@@ -2144,6 +2133,8 @@ probe_quit_interface:
 				 interface_list) {
 		netcp_delete_interface(netcp_device, netcp_intf->ndev);
 	}
+
+	of_node_put(interfaces);
 
 probe_quit:
 	pm_runtime_put_sync(&pdev->dev);
@@ -2165,7 +2156,6 @@ static int netcp_remove(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "Removing module \"%s\"\n", module->name);
 		module->remove(netcp_device, inst_modpriv->module_priv);
 		list_del(&inst_modpriv->inst_list);
-		kfree(inst_modpriv);
 	}
 
 	/* now that all modules are removed, clean up the interfaces */

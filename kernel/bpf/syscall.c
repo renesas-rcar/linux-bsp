@@ -17,6 +17,7 @@
 #include <linux/license.h>
 #include <linux/filter.h>
 #include <linux/version.h>
+#include <linux/kernel.h>
 
 DEFINE_PER_CPU(int, bpf_prog_active);
 
@@ -254,12 +255,6 @@ struct bpf_map *bpf_map_get_with_uref(u32 ufd)
 	return map;
 }
 
-/* helper to convert user pointers passed inside __aligned_u64 fields */
-static void __user *u64_to_ptr(__u64 val)
-{
-	return (void __user *) (unsigned long) val;
-}
-
 int __weak bpf_stackmap_copy(struct bpf_map *map, void *key, void *value)
 {
 	return -ENOTSUPP;
@@ -270,8 +265,8 @@ int __weak bpf_stackmap_copy(struct bpf_map *map, void *key, void *value)
 
 static int map_lookup_elem(union bpf_attr *attr)
 {
-	void __user *ukey = u64_to_ptr(attr->key);
-	void __user *uvalue = u64_to_ptr(attr->value);
+	void __user *ukey = u64_to_user_ptr(attr->key);
+	void __user *uvalue = u64_to_user_ptr(attr->value);
 	int ufd = attr->map_fd;
 	struct bpf_map *map;
 	void *key, *value, *ptr;
@@ -297,6 +292,7 @@ static int map_lookup_elem(union bpf_attr *attr)
 		goto free_key;
 
 	if (map->map_type == BPF_MAP_TYPE_PERCPU_HASH ||
+	    map->map_type == BPF_MAP_TYPE_LRU_PERCPU_HASH ||
 	    map->map_type == BPF_MAP_TYPE_PERCPU_ARRAY)
 		value_size = round_up(map->value_size, 8) * num_possible_cpus();
 	else
@@ -307,7 +303,8 @@ static int map_lookup_elem(union bpf_attr *attr)
 	if (!value)
 		goto free_key;
 
-	if (map->map_type == BPF_MAP_TYPE_PERCPU_HASH) {
+	if (map->map_type == BPF_MAP_TYPE_PERCPU_HASH ||
+	    map->map_type == BPF_MAP_TYPE_LRU_PERCPU_HASH) {
 		err = bpf_percpu_hash_copy(map, key, value);
 	} else if (map->map_type == BPF_MAP_TYPE_PERCPU_ARRAY) {
 		err = bpf_percpu_array_copy(map, key, value);
@@ -344,8 +341,8 @@ err_put:
 
 static int map_update_elem(union bpf_attr *attr)
 {
-	void __user *ukey = u64_to_ptr(attr->key);
-	void __user *uvalue = u64_to_ptr(attr->value);
+	void __user *ukey = u64_to_user_ptr(attr->key);
+	void __user *uvalue = u64_to_user_ptr(attr->value);
 	int ufd = attr->map_fd;
 	struct bpf_map *map;
 	void *key, *value;
@@ -371,6 +368,7 @@ static int map_update_elem(union bpf_attr *attr)
 		goto free_key;
 
 	if (map->map_type == BPF_MAP_TYPE_PERCPU_HASH ||
+	    map->map_type == BPF_MAP_TYPE_LRU_PERCPU_HASH ||
 	    map->map_type == BPF_MAP_TYPE_PERCPU_ARRAY)
 		value_size = round_up(map->value_size, 8) * num_possible_cpus();
 	else
@@ -390,7 +388,8 @@ static int map_update_elem(union bpf_attr *attr)
 	 */
 	preempt_disable();
 	__this_cpu_inc(bpf_prog_active);
-	if (map->map_type == BPF_MAP_TYPE_PERCPU_HASH) {
+	if (map->map_type == BPF_MAP_TYPE_PERCPU_HASH ||
+	    map->map_type == BPF_MAP_TYPE_LRU_PERCPU_HASH) {
 		err = bpf_percpu_hash_update(map, key, value, attr->flags);
 	} else if (map->map_type == BPF_MAP_TYPE_PERCPU_ARRAY) {
 		err = bpf_percpu_array_update(map, key, value, attr->flags);
@@ -422,7 +421,7 @@ err_put:
 
 static int map_delete_elem(union bpf_attr *attr)
 {
-	void __user *ukey = u64_to_ptr(attr->key);
+	void __user *ukey = u64_to_user_ptr(attr->key);
 	int ufd = attr->map_fd;
 	struct bpf_map *map;
 	struct fd f;
@@ -466,8 +465,8 @@ err_put:
 
 static int map_get_next_key(union bpf_attr *attr)
 {
-	void __user *ukey = u64_to_ptr(attr->key);
-	void __user *unext_key = u64_to_ptr(attr->next_key);
+	void __user *ukey = u64_to_user_ptr(attr->key);
+	void __user *unext_key = u64_to_user_ptr(attr->next_key);
 	int ufd = attr->map_fd;
 	struct bpf_map *map;
 	void *key, *next_key;
@@ -682,10 +681,22 @@ struct bpf_prog *bpf_prog_add(struct bpf_prog *prog, int i)
 }
 EXPORT_SYMBOL_GPL(bpf_prog_add);
 
+void bpf_prog_sub(struct bpf_prog *prog, int i)
+{
+	/* Only to be used for undoing previous bpf_prog_add() in some
+	 * error path. We still know that another entity in our call
+	 * path holds a reference to the program, thus atomic_sub() can
+	 * be safely used in such cases!
+	 */
+	WARN_ON(atomic_sub_return(i, &prog->aux->refcnt) == 0);
+}
+EXPORT_SYMBOL_GPL(bpf_prog_sub);
+
 struct bpf_prog *bpf_prog_inc(struct bpf_prog *prog)
 {
 	return bpf_prog_add(prog, 1);
 }
+EXPORT_SYMBOL_GPL(bpf_prog_inc);
 
 static struct bpf_prog *__bpf_prog_get(u32 ufd, enum bpf_prog_type *type)
 {
@@ -732,7 +743,7 @@ static int bpf_prog_load(union bpf_attr *attr)
 		return -EINVAL;
 
 	/* copy eBPF program license from user space */
-	if (strncpy_from_user(license, u64_to_ptr(attr->license),
+	if (strncpy_from_user(license, u64_to_user_ptr(attr->license),
 			      sizeof(license) - 1) < 0)
 		return -EFAULT;
 	license[sizeof(license) - 1] = 0;
@@ -762,7 +773,7 @@ static int bpf_prog_load(union bpf_attr *attr)
 	prog->len = attr->insn_cnt;
 
 	err = -EFAULT;
-	if (copy_from_user(prog->insns, u64_to_ptr(attr->insns),
+	if (copy_from_user(prog->insns, u64_to_user_ptr(attr->insns),
 			   prog->len * sizeof(struct bpf_insn)) != 0)
 		goto free_prog;
 
@@ -813,7 +824,7 @@ static int bpf_obj_pin(const union bpf_attr *attr)
 	if (CHECK_ATTR(BPF_OBJ))
 		return -EINVAL;
 
-	return bpf_obj_pin_user(attr->bpf_fd, u64_to_ptr(attr->pathname));
+	return bpf_obj_pin_user(attr->bpf_fd, u64_to_user_ptr(attr->pathname));
 }
 
 static int bpf_obj_get(const union bpf_attr *attr)
@@ -821,7 +832,7 @@ static int bpf_obj_get(const union bpf_attr *attr)
 	if (CHECK_ATTR(BPF_OBJ) || attr->bpf_fd != 0)
 		return -EINVAL;
 
-	return bpf_obj_get_user(u64_to_ptr(attr->pathname));
+	return bpf_obj_get_user(u64_to_user_ptr(attr->pathname));
 }
 
 SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, size)

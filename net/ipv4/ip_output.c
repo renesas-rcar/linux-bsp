@@ -581,7 +581,7 @@ int ip_do_fragment(struct net *net, struct sock *sk, struct sk_buff *skb,
 	 */
 	if (skb_has_frag_list(skb)) {
 		struct sk_buff *frag, *frag2;
-		int first_len = skb_pagelen(skb);
+		unsigned int first_len = skb_pagelen(skb);
 
 		if (first_len - hlen > mtu ||
 		    ((first_len - hlen) & 7) ||
@@ -1592,7 +1592,8 @@ void ip_send_unicast_reply(struct sock *sk, struct sk_buff *skb,
 			   RT_SCOPE_UNIVERSE, ip_hdr(skb)->protocol,
 			   ip_reply_arg_flowi_flags(arg),
 			   daddr, saddr,
-			   tcp_hdr(skb)->source, tcp_hdr(skb)->dest);
+			   tcp_hdr(skb)->source, tcp_hdr(skb)->dest,
+			   arg->uid);
 	security_skb_classify_flow(skb, flowi4_to_flowi(&fl4));
 	rt = ip_route_output_key(net, &fl4);
 	if (IS_ERR(rt))

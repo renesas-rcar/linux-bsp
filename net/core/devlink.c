@@ -341,15 +341,7 @@ static void devlink_nl_post_doit(const struct genl_ops *ops,
 	mutex_unlock(&devlink_mutex);
 }
 
-static struct genl_family devlink_nl_family = {
-	.id		= GENL_ID_GENERATE,
-	.name		= DEVLINK_GENL_NAME,
-	.version	= DEVLINK_GENL_VERSION,
-	.maxattr	= DEVLINK_ATTR_MAX,
-	.netnsok	= true,
-	.pre_doit	= devlink_nl_pre_doit,
-	.post_doit	= devlink_nl_post_doit,
-};
+static struct genl_family devlink_nl_family;
 
 enum devlink_multicast_groups {
 	DEVLINK_MCGRP_CONFIG,
@@ -608,6 +600,8 @@ static int devlink_port_type_set(struct devlink *devlink,
 	if (devlink->ops && devlink->ops->port_type_set) {
 		if (port_type == DEVLINK_PORT_TYPE_NOTSET)
 			return -EINVAL;
+		if (port_type == devlink_port->type)
+			return 0;
 		err = devlink->ops->port_type_set(devlink_port, port_type);
 		if (err)
 			return err;
@@ -1618,6 +1612,20 @@ static const struct genl_ops devlink_nl_ops[] = {
 	},
 };
 
+static struct genl_family devlink_nl_family __ro_after_init = {
+	.name		= DEVLINK_GENL_NAME,
+	.version	= DEVLINK_GENL_VERSION,
+	.maxattr	= DEVLINK_ATTR_MAX,
+	.netnsok	= true,
+	.pre_doit	= devlink_nl_pre_doit,
+	.post_doit	= devlink_nl_post_doit,
+	.module		= THIS_MODULE,
+	.ops		= devlink_nl_ops,
+	.n_ops		= ARRAY_SIZE(devlink_nl_ops),
+	.mcgrps		= devlink_nl_mcgrps,
+	.n_mcgrps	= ARRAY_SIZE(devlink_nl_mcgrps),
+};
+
 /**
  *	devlink_alloc - Allocate new devlink instance resources
  *
@@ -1840,9 +1848,7 @@ EXPORT_SYMBOL_GPL(devlink_sb_unregister);
 
 static int __init devlink_module_init(void)
 {
-	return genl_register_family_with_ops_groups(&devlink_nl_family,
-						    devlink_nl_ops,
-						    devlink_nl_mcgrps);
+	return genl_register_family(&devlink_nl_family);
 }
 
 static void __exit devlink_module_exit(void)

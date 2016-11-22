@@ -69,8 +69,10 @@ static const struct efx_sw_stat_desc efx_sw_stat_desc[] = {
 	EFX_ETHTOOL_UINT_TXQ_STAT(tso_bursts),
 	EFX_ETHTOOL_UINT_TXQ_STAT(tso_long_headers),
 	EFX_ETHTOOL_UINT_TXQ_STAT(tso_packets),
+	EFX_ETHTOOL_UINT_TXQ_STAT(tso_fallbacks),
 	EFX_ETHTOOL_UINT_TXQ_STAT(pushes),
 	EFX_ETHTOOL_UINT_TXQ_STAT(pio_packets),
+	EFX_ETHTOOL_UINT_TXQ_STAT(cb_packets),
 	EFX_ETHTOOL_ATOMIC_NIC_ERROR_STAT(rx_reset),
 	EFX_ETHTOOL_UINT_CHANNEL_STAT(rx_tobe_disc),
 	EFX_ETHTOOL_UINT_CHANNEL_STAT(rx_ip_hdr_chksum_err),
@@ -968,20 +970,24 @@ efx_ethtool_get_rxnfc(struct net_device *net_dev,
 
 		info->data = 0;
 		switch (info->flow_type) {
-		case TCP_V4_FLOW:
-			info->data |= RXH_L4_B_0_1 | RXH_L4_B_2_3;
-			/* fall through */
 		case UDP_V4_FLOW:
+			if (efx->rx_hash_udp_4tuple)
+				/* fall through */
+		case TCP_V4_FLOW:
+				info->data |= RXH_L4_B_0_1 | RXH_L4_B_2_3;
+			/* fall through */
 		case SCTP_V4_FLOW:
 		case AH_ESP_V4_FLOW:
 		case IPV4_FLOW:
 			info->data |= RXH_IP_SRC | RXH_IP_DST;
 			min_revision = EFX_REV_FALCON_B0;
 			break;
-		case TCP_V6_FLOW:
-			info->data |= RXH_L4_B_0_1 | RXH_L4_B_2_3;
-			/* fall through */
 		case UDP_V6_FLOW:
+			if (efx->rx_hash_udp_4tuple)
+				/* fall through */
+		case TCP_V6_FLOW:
+				info->data |= RXH_L4_B_0_1 | RXH_L4_B_2_3;
+			/* fall through */
 		case SCTP_V6_FLOW:
 		case AH_ESP_V6_FLOW:
 		case IPV6_FLOW:

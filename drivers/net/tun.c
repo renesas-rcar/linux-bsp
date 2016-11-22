@@ -925,18 +925,6 @@ static void tun_net_mclist(struct net_device *dev)
 	 */
 }
 
-#define MIN_MTU 68
-#define MAX_MTU 65535
-
-static int
-tun_net_change_mtu(struct net_device *dev, int new_mtu)
-{
-	if (new_mtu < MIN_MTU || new_mtu + dev->hard_header_len > MAX_MTU)
-		return -EINVAL;
-	dev->mtu = new_mtu;
-	return 0;
-}
-
 static netdev_features_t tun_net_fix_features(struct net_device *dev,
 	netdev_features_t features)
 {
@@ -1014,7 +1002,6 @@ static const struct net_device_ops tun_netdev_ops = {
 	.ndo_open		= tun_net_open,
 	.ndo_stop		= tun_net_close,
 	.ndo_start_xmit		= tun_net_xmit,
-	.ndo_change_mtu		= tun_net_change_mtu,
 	.ndo_fix_features	= tun_net_fix_features,
 	.ndo_select_queue	= tun_select_queue,
 #ifdef CONFIG_NET_POLL_CONTROLLER
@@ -1029,7 +1016,6 @@ static const struct net_device_ops tap_netdev_ops = {
 	.ndo_open		= tun_net_open,
 	.ndo_stop		= tun_net_close,
 	.ndo_start_xmit		= tun_net_xmit,
-	.ndo_change_mtu		= tun_net_change_mtu,
 	.ndo_fix_features	= tun_net_fix_features,
 	.ndo_set_rx_mode	= tun_net_mclist,
 	.ndo_set_mac_address	= eth_mac_addr,
@@ -1062,6 +1048,9 @@ static void tun_flow_uninit(struct tun_struct *tun)
 	tun_flow_flush(tun);
 }
 
+#define MIN_MTU 68
+#define MAX_MTU 65535
+
 /* Initialize net device. */
 static void tun_net_init(struct net_device *dev)
 {
@@ -1092,6 +1081,9 @@ static void tun_net_init(struct net_device *dev)
 
 		break;
 	}
+
+	dev->min_mtu = MIN_MTU;
+	dev->max_mtu = MAX_MTU - dev->hard_header_len;
 }
 
 /* Character device part */
@@ -1260,8 +1252,7 @@ static ssize_t tun_get_user(struct tun_struct *tun, struct tun_file *tfile,
 		return -EFAULT;
 	}
 
-	err = virtio_net_hdr_to_skb(skb, &gso, tun_is_little_endian(tun));
-	if (err) {
+	if (virtio_net_hdr_to_skb(skb, &gso, tun_is_little_endian(tun))) {
 		this_cpu_inc(tun->pcpu_stats->rx_frame_errors);
 		kfree_skb(skb);
 		return -EINVAL;
@@ -1369,15 +1360,13 @@ static ssize_t tun_put_user(struct tun_struct *tun,
 	}
 
 	if (vnet_hdr_sz) {
-		struct virtio_net_hdr gso = { 0 }; /* no info leak */
-		int ret;
+		struct virtio_net_hdr gso;
 
 		if (iov_iter_count(iter) < vnet_hdr_sz)
 			return -EINVAL;
 
-		ret = virtio_net_hdr_from_skb(skb, &gso,
-					      tun_is_little_endian(tun));
-		if (ret) {
+		if (virtio_net_hdr_from_skb(skb, &gso,
+					    tun_is_little_endian(tun))) {
 			struct skb_shared_info *sinfo = skb_shinfo(skb);
 			pr_err("unexpected GSO type: "
 			       "0x%x, gso_size %d, hdr_len %d\n",
@@ -1993,7 +1982,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 	int le;
 	int ret;
 
-	if (cmd == TUNSETIFF || cmd == TUNSETQUEUE || _IOC_TYPE(cmd) == 0x89) {
+	if (cmd == TUNSETIFF || cmd == TUNSETQUEUE || _IOC_TYPE(cmd) == SOCK_IOC_TYPE) {
 		if (copy_from_user(&ifr, argp, ifreq_len))
 			return -EFAULT;
 	} else {
@@ -2013,7 +2002,11 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 	rtnl_lock();
 
 	tun = __tun_get(tfile);
-	if (cmd == TUNSETIFF && !tun) {
+	if (cmd == TUNSETIFF) {
+		ret = -EEXIST;
+		if (tun)
+			goto unlock;
+
 		ifr.ifr_name[IFNAMSIZ-1] = '\0';
 
 		ret = tun_set_iff(sock_net(&tfile->sk), file, &ifr);

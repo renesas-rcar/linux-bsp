@@ -2394,10 +2394,7 @@ static void tcp_undo_cwnd_reduction(struct sock *sk, bool unmark_loss)
 	if (tp->prior_ssthresh) {
 		const struct inet_connection_sock *icsk = inet_csk(sk);
 
-		if (icsk->icsk_ca_ops->undo_cwnd)
-			tp->snd_cwnd = icsk->icsk_ca_ops->undo_cwnd(sk);
-		else
-			tp->snd_cwnd = max(tp->snd_cwnd, tp->snd_ssthresh << 1);
+		tp->snd_cwnd = icsk->icsk_ca_ops->undo_cwnd(sk);
 
 		if (tp->prior_ssthresh > tp->snd_ssthresh) {
 			tp->snd_ssthresh = tp->prior_ssthresh;
@@ -3351,9 +3348,7 @@ static void tcp_snd_una_update(struct tcp_sock *tp, u32 ack)
 	u32 delta = ack - tp->snd_una;
 
 	sock_owned_by_me((struct sock *)tp);
-	u64_stats_update_begin_raw(&tp->syncp);
 	tp->bytes_acked += delta;
-	u64_stats_update_end_raw(&tp->syncp);
 	tp->snd_una = ack;
 }
 
@@ -3363,9 +3358,7 @@ static void tcp_rcv_nxt_update(struct tcp_sock *tp, u32 seq)
 	u32 delta = seq - tp->rcv_nxt;
 
 	sock_owned_by_me((struct sock *)tp);
-	u64_stats_update_begin_raw(&tp->syncp);
 	tp->bytes_received += delta;
-	u64_stats_update_end_raw(&tp->syncp);
 	tp->rcv_nxt = seq;
 }
 
@@ -6298,13 +6291,7 @@ int tcp_conn_request(struct request_sock_ops *rsk_ops,
 			goto drop;
 	}
 
-
-	/* Accept backlog is full. If we have already queued enough
-	 * of warm entries in syn queue, drop request. It is better than
-	 * clogging syn queue with openreqs with exponentially increasing
-	 * timeout.
-	 */
-	if (sk_acceptq_is_full(sk) && inet_csk_reqsk_queue_young(sk) > 1) {
+	if (sk_acceptq_is_full(sk)) {
 		NET_INC_STATS(sock_net(sk), LINUX_MIB_LISTENOVERFLOWS);
 		goto drop;
 	}

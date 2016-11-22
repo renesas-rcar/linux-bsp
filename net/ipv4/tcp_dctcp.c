@@ -188,8 +188,8 @@ static void dctcp_ce_state_1_to_0(struct sock *sk)
 
 static void dctcp_update_alpha(struct sock *sk, u32 flags)
 {
-	const struct tcp_sock *tp = tcp_sk(sk);
 	struct dctcp *ca = inet_csk_ca(sk);
+	struct tcp_sock *tp = tcp_sk(sk);
 	u32 acked_bytes = tp->snd_una - ca->prior_snd_una;
 
 	/* If ack did not advance snd_una, count dupack as MSS size.
@@ -228,6 +228,13 @@ static void dctcp_update_alpha(struct sock *sk, u32 flags)
 		 */
 		WRITE_ONCE(ca->dctcp_alpha, alpha);
 		dctcp_reset(tp, ca);
+	}
+
+	if (flags & CA_ACK_ECE) {
+		unsigned int cwnd = dctcp_ssthresh(sk);
+
+		if (cwnd != tp->snd_cwnd)
+			tp->snd_cwnd = cwnd;
 	}
 }
 
@@ -335,6 +342,7 @@ static struct tcp_congestion_ops dctcp __read_mostly = {
 static struct tcp_congestion_ops dctcp_reno __read_mostly = {
 	.ssthresh	= tcp_reno_ssthresh,
 	.cong_avoid	= tcp_reno_cong_avoid,
+	.undo_cwnd	= tcp_reno_undo_cwnd,
 	.get_info	= dctcp_get_info,
 	.owner		= THIS_MODULE,
 	.name		= "dctcp-reno",

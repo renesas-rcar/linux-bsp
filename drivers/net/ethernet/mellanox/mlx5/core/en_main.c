@@ -290,12 +290,36 @@ static void mlx5e_update_q_counter(struct mlx5e_priv *priv)
 				      &qcnt->rx_out_of_buffer);
 }
 
+static void mlx5e_update_pcie_counters(struct mlx5e_priv *priv)
+{
+	struct mlx5e_pcie_stats *pcie_stats = &priv->stats.pcie;
+	struct mlx5_core_dev *mdev = priv->mdev;
+	int sz = MLX5_ST_SZ_BYTES(mpcnt_reg);
+	void *out;
+	u32 *in;
+
+	in = mlx5_vzalloc(sz);
+	if (!in)
+		return;
+
+	out = pcie_stats->pcie_perf_counters;
+	MLX5_SET(mpcnt_reg, in, grp, MLX5_PCIE_PERFORMANCE_COUNTERS_GROUP);
+	mlx5_core_access_reg(mdev, in, sz, out, sz, MLX5_REG_MPCNT, 0, 0);
+
+	out = pcie_stats->pcie_tas_counters;
+	MLX5_SET(mpcnt_reg, in, grp, MLX5_PCIE_TIMERS_AND_STATES_COUNTERS_GROUP);
+	mlx5_core_access_reg(mdev, in, sz, out, sz, MLX5_REG_MPCNT, 0, 0);
+
+	kvfree(in);
+}
+
 void mlx5e_update_stats(struct mlx5e_priv *priv)
 {
 	mlx5e_update_q_counter(priv);
 	mlx5e_update_vport_counters(priv);
 	mlx5e_update_pport_counters(priv);
 	mlx5e_update_sw_counters(priv);
+	mlx5e_update_pcie_counters(priv);
 }
 
 void mlx5e_update_stats_work(struct work_struct *work)
@@ -489,7 +513,13 @@ static int mlx5e_create_rq(struct mlx5e_channel *c,
 	rq->channel = c;
 	rq->ix      = c->ix;
 	rq->priv    = c->priv;
-	rq->xdp_prog = priv->xdp_prog;
+
+	rq->xdp_prog = priv->xdp_prog ? bpf_prog_inc(priv->xdp_prog) : NULL;
+	if (IS_ERR(rq->xdp_prog)) {
+		err = PTR_ERR(rq->xdp_prog);
+		rq->xdp_prog = NULL;
+		goto err_rq_wq_destroy;
+	}
 
 	rq->buff.map_dir = DMA_FROM_DEVICE;
 	if (rq->xdp_prog)
@@ -566,12 +596,11 @@ static int mlx5e_create_rq(struct mlx5e_channel *c,
 	rq->page_cache.head = 0;
 	rq->page_cache.tail = 0;
 
-	if (rq->xdp_prog)
-		bpf_prog_add(rq->xdp_prog, 1);
-
 	return 0;
 
 err_rq_wq_destroy:
+	if (rq->xdp_prog)
+		bpf_prog_put(rq->xdp_prog);
 	mlx5_wq_destroy(&rq->wq_ctrl);
 
 	return err;
@@ -1533,7 +1562,6 @@ err_close_icosq_cq:
 
 err_napi_del:
 	netif_napi_del(&c->napi);
-	napi_hash_del(&c->napi);
 	kfree(c);
 
 	return err;
@@ -1553,9 +1581,6 @@ static void mlx5e_close_channel(struct mlx5e_channel *c)
 	mlx5e_close_tx_cqs(c);
 	mlx5e_close_cq(&c->icosq.cq);
 	netif_napi_del(&c->napi);
-
-	napi_hash_del(&c->napi);
-	synchronize_rcu();
 
 	kfree(c);
 }
@@ -2850,30 +2875,12 @@ static int mlx5e_set_features(struct net_device *netdev,
 	return err ? -EINVAL : 0;
 }
 
-#define MXL5_HW_MIN_MTU 64
-#define MXL5E_MIN_MTU (MXL5_HW_MIN_MTU + ETH_FCS_LEN)
-
 static int mlx5e_change_mtu(struct net_device *netdev, int new_mtu)
 {
 	struct mlx5e_priv *priv = netdev_priv(netdev);
-	struct mlx5_core_dev *mdev = priv->mdev;
 	bool was_opened;
-	u16 max_mtu;
-	u16 min_mtu;
 	int err = 0;
 	bool reset;
-
-	mlx5_query_port_max_mtu(mdev, &max_mtu, 1);
-
-	max_mtu = MLX5E_HW2SW_MTU(max_mtu);
-	min_mtu = MLX5E_HW2SW_MTU(MXL5E_MIN_MTU);
-
-	if (new_mtu > max_mtu || new_mtu < min_mtu) {
-		netdev_err(netdev,
-			   "%s: Bad MTU (%d), valid range is: [%d..%d]\n",
-			   __func__, new_mtu, min_mtu, max_mtu);
-		return -EINVAL;
-	}
 
 	mutex_lock(&priv->state_lock);
 
@@ -2944,6 +2951,20 @@ static int mlx5e_set_vf_trust(struct net_device *dev, int vf, bool setting)
 
 	return mlx5_eswitch_set_vport_trust(mdev->priv.eswitch, vf + 1, setting);
 }
+
+static int mlx5e_set_vf_rate(struct net_device *dev, int vf, int min_tx_rate,
+			     int max_tx_rate)
+{
+	struct mlx5e_priv *priv = netdev_priv(dev);
+	struct mlx5_core_dev *mdev = priv->mdev;
+
+	if (min_tx_rate)
+		return -EOPNOTSUPP;
+
+	return mlx5_eswitch_set_vport_rate(mdev->priv.eswitch, vf + 1,
+					   max_tx_rate);
+}
+
 static int mlx5_vport_link2ifla(u8 esw_link)
 {
 	switch (esw_link) {
@@ -3000,8 +3021,8 @@ static int mlx5e_get_vf_stats(struct net_device *dev,
 					    vf_stats);
 }
 
-static void mlx5e_add_vxlan_port(struct net_device *netdev,
-				 struct udp_tunnel_info *ti)
+void mlx5e_add_vxlan_port(struct net_device *netdev,
+			  struct udp_tunnel_info *ti)
 {
 	struct mlx5e_priv *priv = netdev_priv(netdev);
 
@@ -3014,8 +3035,8 @@ static void mlx5e_add_vxlan_port(struct net_device *netdev,
 	mlx5e_vxlan_queue_work(priv, ti->sa_family, be16_to_cpu(ti->port), 1);
 }
 
-static void mlx5e_del_vxlan_port(struct net_device *netdev,
-				 struct udp_tunnel_info *ti)
+void mlx5e_del_vxlan_port(struct net_device *netdev,
+			  struct udp_tunnel_info *ti)
 {
 	struct mlx5e_priv *priv = netdev_priv(netdev);
 
@@ -3123,11 +3144,21 @@ static int mlx5e_xdp_set(struct net_device *netdev, struct bpf_prog *prog)
 
 	if (was_opened && reset)
 		mlx5e_close_locked(netdev);
+	if (was_opened && !reset) {
+		/* num_channels is invariant here, so we can take the
+		 * batched reference right upfront.
+		 */
+		prog = bpf_prog_add(prog, priv->params.num_channels);
+		if (IS_ERR(prog)) {
+			err = PTR_ERR(prog);
+			goto unlock;
+		}
+	}
 
-	/* exchange programs */
+	/* exchange programs, extra prog reference we got from caller
+	 * as long as we don't fail from this point onwards.
+	 */
 	old_prog = xchg(&priv->xdp_prog, prog);
-	if (prog)
-		bpf_prog_add(prog, 1);
 	if (old_prog)
 		bpf_prog_put(old_prog);
 
@@ -3143,7 +3174,6 @@ static int mlx5e_xdp_set(struct net_device *netdev, struct bpf_prog *prog)
 	/* exchanging programs w/o reset, we update ref counts on behalf
 	 * of the channels RQs here.
 	 */
-	bpf_prog_add(prog, priv->params.num_channels);
 	for (i = 0; i < priv->params.num_channels; i++) {
 		struct mlx5e_channel *c = priv->channel[i];
 
@@ -3251,6 +3281,7 @@ static const struct net_device_ops mlx5e_netdev_ops_sriov = {
 	.ndo_set_vf_vlan         = mlx5e_set_vf_vlan,
 	.ndo_set_vf_spoofchk     = mlx5e_set_vf_spoofchk,
 	.ndo_set_vf_trust        = mlx5e_set_vf_trust,
+	.ndo_set_vf_rate         = mlx5e_set_vf_rate,
 	.ndo_get_vf_config       = mlx5e_get_vf_config,
 	.ndo_set_vf_link_state   = mlx5e_set_vf_link_state,
 	.ndo_get_vf_stats        = mlx5e_get_vf_stats,
@@ -3674,6 +3705,9 @@ static void mlx5e_nic_cleanup(struct mlx5e_priv *priv)
 
 	if (MLX5_CAP_GEN(mdev, vport_group_manager))
 		mlx5_eswitch_unregister_vport_rep(esw, 0);
+
+	if (priv->xdp_prog)
+		bpf_prog_put(priv->xdp_prog);
 }
 
 static int mlx5e_init_nic_rx(struct mlx5e_priv *priv)
@@ -3849,6 +3883,7 @@ int mlx5e_attach_netdev(struct mlx5_core_dev *mdev, struct net_device *netdev)
 {
 	const struct mlx5e_profile *profile;
 	struct mlx5e_priv *priv;
+	u16 max_mtu;
 	int err;
 
 	priv = netdev_priv(netdev);
@@ -3878,6 +3913,11 @@ int mlx5e_attach_netdev(struct mlx5_core_dev *mdev, struct net_device *netdev)
 	mlx5e_create_q_counter(priv);
 
 	mlx5e_init_l2_addr(priv);
+
+	/* MTU range: 68 - hw-specific max */
+	netdev->min_mtu = ETH_MIN_MTU;
+	mlx5_query_port_max_mtu(priv->mdev, &max_mtu, 1);
+	netdev->max_mtu = MLX5E_HW2SW_MTU(max_mtu);
 
 	mlx5e_set_dev_port_mtu(netdev);
 

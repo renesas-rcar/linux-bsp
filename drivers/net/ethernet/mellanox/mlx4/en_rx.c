@@ -688,18 +688,23 @@ out_loopback:
 	dev_kfree_skb_any(skb);
 }
 
-static void mlx4_en_refill_rx_buffers(struct mlx4_en_priv *priv,
-				     struct mlx4_en_rx_ring *ring)
+static bool mlx4_en_refill_rx_buffers(struct mlx4_en_priv *priv,
+				      struct mlx4_en_rx_ring *ring)
 {
-	int index = ring->prod & ring->size_mask;
+	u32 missing = ring->actual_size - (ring->prod - ring->cons);
 
-	while ((u32) (ring->prod - ring->cons) < ring->actual_size) {
-		if (mlx4_en_prepare_rx_desc(priv, ring, index,
+	/* Try to batch allocations, but not too much. */
+	if (missing < 8)
+		return false;
+	do {
+		if (mlx4_en_prepare_rx_desc(priv, ring,
+					    ring->prod & ring->size_mask,
 					    GFP_ATOMIC | __GFP_COLD))
 			break;
 		ring->prod++;
-		index = ring->prod & ring->size_mask;
-	}
+	} while (--missing);
+
+	return true;
 }
 
 /* When hardware doesn't strip the vlan, we need to calculate the checksum
@@ -788,7 +793,6 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
 	struct bpf_prog *xdp_prog;
 	int doorbell_pending;
 	struct sk_buff *skb;
-	int tx_index;
 	int index;
 	int nr;
 	unsigned int length;
@@ -808,7 +812,6 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
 	rcu_read_lock();
 	xdp_prog = rcu_dereference(ring->xdp_prog);
 	doorbell_pending = 0;
-	tx_index = (priv->tx_ring_num - priv->xdp_ring_num) + cq->ring;
 
 	/* We assume a 1:1 mapping between CQEs and Rx descriptors, so Rx
 	 * descriptor offset can be deduced from the CQE index instead of
@@ -877,8 +880,6 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
 		 */
 		length = be32_to_cpu(cqe->byte_cnt);
 		length -= ring->fcs_del;
-		ring->bytes += length;
-		ring->packets++;
 		l2_tunnel = (dev->hw_enc_features & NETIF_F_RXCSUM) &&
 			(cqe->vlan_my_qpn & cpu_to_be32(MLX4_CQE_L2_TUNNEL));
 
@@ -904,21 +905,25 @@ int mlx4_en_process_rx_cq(struct net_device *dev, struct mlx4_en_cq *cq, int bud
 			case XDP_PASS:
 				break;
 			case XDP_TX:
-				if (likely(!mlx4_en_xmit_frame(frags, dev,
-							length, tx_index,
+				if (likely(!mlx4_en_xmit_frame(ring, frags, dev,
+							length, cq->ring,
 							&doorbell_pending)))
 					goto consumed;
-				goto xdp_drop; /* Drop on xmit failure */
+				goto xdp_drop_no_cnt; /* Drop on xmit failure */
 			default:
 				bpf_warn_invalid_xdp_action(act);
 			case XDP_ABORTED:
 			case XDP_DROP:
-xdp_drop:
+				ring->xdp_drop++;
+xdp_drop_no_cnt:
 				if (likely(mlx4_en_rx_recycle(ring, frags)))
 					goto consumed;
 				goto next;
 			}
 		}
+
+		ring->bytes += length;
+		ring->packets++;
 
 		if (likely(dev->features & NETIF_F_RXCSUM)) {
 			if (cqe->status & cpu_to_be16(MLX4_CQE_STATUS_TCP |
@@ -1081,15 +1086,20 @@ consumed:
 
 out:
 	rcu_read_unlock();
-	if (doorbell_pending)
-		mlx4_en_xmit_doorbell(priv->tx_ring[tx_index]);
 
+	if (polled) {
+		if (doorbell_pending)
+			mlx4_en_xmit_doorbell(priv->tx_ring[TX_XDP][cq->ring]);
+
+		mlx4_cq_set_ci(&cq->mcq);
+		wmb(); /* ensure HW sees CQ consumer before we post new buffers */
+		ring->cons = cq->mcq.cons_index;
+	}
 	AVG_PERF_COUNTER(priv->pstats.rx_coal_avg, polled);
-	mlx4_cq_set_ci(&cq->mcq);
-	wmb(); /* ensure HW sees CQ consumer before we post new buffers */
-	ring->cons = cq->mcq.cons_index;
-	mlx4_en_refill_rx_buffers(priv, ring);
-	mlx4_en_update_rx_prod_db(ring);
+
+	if (mlx4_en_refill_rx_buffers(priv, ring))
+		mlx4_en_update_rx_prod_db(ring);
+
 	return polled;
 }
 
@@ -1131,14 +1141,17 @@ int mlx4_en_poll_rx_cq(struct napi_struct *napi, int budget)
 			return budget;
 
 		/* Current cpu is not according to smp_irq_affinity -
-		 * probably affinity changed. need to stop this NAPI
-		 * poll, and restart it on the right CPU
+		 * probably affinity changed. Need to stop this NAPI
+		 * poll, and restart it on the right CPU.
+		 * Try to avoid returning a too small value (like 0),
+		 * to not fool net_rx_action() and its netdev_budget
 		 */
-		done = 0;
+		if (done)
+			done--;
 	}
 	/* Done for now */
-	napi_complete_done(napi, done);
-	mlx4_en_arm_cq(priv, cq);
+	if (napi_complete_done(napi, done))
+		mlx4_en_arm_cq(priv, cq);
 	return done;
 }
 
@@ -1162,7 +1175,7 @@ void mlx4_en_calc_rx_buf(struct net_device *dev)
 	/* bpf requires buffers to be set up as 1 packet per page.
 	 * This only works when num_frags == 1.
 	 */
-	if (priv->xdp_ring_num) {
+	if (priv->tx_ring_num[TX_XDP]) {
 		dma_dir = PCI_DMA_BIDIRECTIONAL;
 		/* This will gain efficient xdp frame recycling at the expense
 		 * of more costly truesize accounting

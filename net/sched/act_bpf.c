@@ -33,7 +33,7 @@ struct tcf_bpf_cfg {
 	bool is_ebpf;
 };
 
-static int bpf_net_id;
+static unsigned int bpf_net_id;
 static struct tc_action_ops act_bpf_ops;
 
 static int tcf_bpf(struct sk_buff *skb, const struct tc_action *act,
@@ -226,9 +226,7 @@ static int tcf_bpf_init_from_efd(struct nlattr **tb, struct tcf_bpf_cfg *cfg)
 		return PTR_ERR(fp);
 
 	if (tb[TCA_ACT_BPF_NAME]) {
-		name = kmemdup(nla_data(tb[TCA_ACT_BPF_NAME]),
-			       nla_len(tb[TCA_ACT_BPF_NAME]),
-			       GFP_KERNEL);
+		name = nla_memdup(tb[TCA_ACT_BPF_NAME], GFP_KERNEL);
 		if (!name) {
 			bpf_prog_put(fp);
 			return -ENOMEM;

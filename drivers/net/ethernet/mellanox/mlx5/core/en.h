@@ -524,7 +524,7 @@ struct mlx5e_vxlan_db {
 
 struct mlx5e_l2_rule {
 	u8  addr[ETH_ALEN + 2];
-	struct mlx5_flow_rule *rule;
+	struct mlx5_flow_handle *rule;
 };
 
 struct mlx5e_flow_table {
@@ -545,10 +545,10 @@ struct mlx5e_tc_table {
 struct mlx5e_vlan_table {
 	struct mlx5e_flow_table		ft;
 	unsigned long active_vlans[BITS_TO_LONGS(VLAN_N_VID)];
-	struct mlx5_flow_rule	*active_vlans_rule[VLAN_N_VID];
-	struct mlx5_flow_rule	*untagged_rule;
-	struct mlx5_flow_rule	*any_vlan_rule;
-	bool          filter_disabled;
+	struct mlx5_flow_handle	*active_vlans_rule[VLAN_N_VID];
+	struct mlx5_flow_handle	*untagged_rule;
+	struct mlx5_flow_handle	*any_vlan_rule;
+	bool		filter_disabled;
 };
 
 struct mlx5e_l2_table {
@@ -566,14 +566,14 @@ struct mlx5e_l2_table {
 /* L3/L4 traffic type classifier */
 struct mlx5e_ttc_table {
 	struct mlx5e_flow_table  ft;
-	struct mlx5_flow_rule	 *rules[MLX5E_NUM_TT];
+	struct mlx5_flow_handle	 *rules[MLX5E_NUM_TT];
 };
 
 #define ARFS_HASH_SHIFT BITS_PER_BYTE
 #define ARFS_HASH_SIZE BIT(BITS_PER_BYTE)
 struct arfs_table {
 	struct mlx5e_flow_table  ft;
-	struct mlx5_flow_rule    *default_rule;
+	struct mlx5_flow_handle	 *default_rule;
 	struct hlist_head	 rules_hash[ARFS_HASH_SIZE];
 };
 
@@ -893,5 +893,9 @@ void mlx5e_detach_netdev(struct mlx5_core_dev *mdev, struct net_device *netdev);
 struct rtnl_link_stats64 *
 mlx5e_get_stats(struct net_device *dev, struct rtnl_link_stats64 *stats);
 u32 mlx5e_choose_lro_timeout(struct mlx5_core_dev *mdev, u32 wanted_timeout);
+void mlx5e_add_vxlan_port(struct net_device *netdev,
+			  struct udp_tunnel_info *ti);
+void mlx5e_del_vxlan_port(struct net_device *netdev,
+			  struct udp_tunnel_info *ti);
 
 #endif /* __MLX5_EN_H__ */

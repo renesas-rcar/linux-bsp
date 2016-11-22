@@ -48,17 +48,11 @@
 
 #include "trap.h"
 #include "reg.h"
-
 #include "cmd.h"
-
-#define MLXSW_MODULE_ALIAS_PREFIX "mlxsw-driver-"
-#define MODULE_MLXSW_DRIVER_ALIAS(kind)	\
-	MODULE_ALIAS(MLXSW_MODULE_ALIAS_PREFIX kind)
-
-#define MLXSW_DEVICE_KIND_SWITCHX2 "switchx2"
-#define MLXSW_DEVICE_KIND_SPECTRUM "spectrum"
+#include "resources.h"
 
 struct mlxsw_core;
+struct mlxsw_core_port;
 struct mlxsw_driver;
 struct mlxsw_bus;
 struct mlxsw_bus_info;
@@ -148,23 +142,18 @@ u8 mlxsw_core_lag_mapping_get(struct mlxsw_core *mlxsw_core,
 void mlxsw_core_lag_mapping_clear(struct mlxsw_core *mlxsw_core,
 				  u16 lag_id, u8 local_port);
 
-struct mlxsw_core_port {
-	struct devlink_port devlink_port;
-};
-
-static inline void *
-mlxsw_core_port_driver_priv(struct mlxsw_core_port *mlxsw_core_port)
-{
-	/* mlxsw_core_port is ensured to always be the first field in driver
-	 * port structure.
-	 */
-	return mlxsw_core_port;
-}
-
-int mlxsw_core_port_init(struct mlxsw_core *mlxsw_core,
-			 struct mlxsw_core_port *mlxsw_core_port, u8 local_port,
-			 struct net_device *dev, bool split, u32 split_group);
-void mlxsw_core_port_fini(struct mlxsw_core_port *mlxsw_core_port);
+void *mlxsw_core_port_driver_priv(struct mlxsw_core_port *mlxsw_core_port);
+int mlxsw_core_port_init(struct mlxsw_core *mlxsw_core, u8 local_port);
+void mlxsw_core_port_fini(struct mlxsw_core *mlxsw_core, u8 local_port);
+void mlxsw_core_port_eth_set(struct mlxsw_core *mlxsw_core, u8 local_port,
+			     void *port_driver_priv, struct net_device *dev,
+			     bool split, u32 split_group);
+void mlxsw_core_port_ib_set(struct mlxsw_core *mlxsw_core, u8 local_port,
+			    void *port_driver_priv);
+void mlxsw_core_port_clear(struct mlxsw_core *mlxsw_core, u8 local_port,
+			   void *port_driver_priv);
+enum devlink_port_type mlxsw_core_port_type_get(struct mlxsw_core *mlxsw_core,
+						u8 local_port);
 
 int mlxsw_core_schedule_dw(struct delayed_work *dwork, unsigned long delay);
 
@@ -221,11 +210,12 @@ struct mlxsw_config_profile {
 struct mlxsw_driver {
 	struct list_head list;
 	const char *kind;
-	struct module *owner;
 	size_t priv_size;
 	int (*init)(struct mlxsw_core *mlxsw_core,
 		    const struct mlxsw_bus_info *mlxsw_bus_info);
 	void (*fini)(struct mlxsw_core *mlxsw_core);
+	int (*port_type_set)(struct mlxsw_core *mlxsw_core, u8 local_port,
+			     enum devlink_port_type new_type);
 	int (*port_split)(struct mlxsw_core *mlxsw_core, u8 local_port,
 			  unsigned int count);
 	int (*port_unsplit)(struct mlxsw_core *mlxsw_core, u8 local_port);
@@ -266,45 +256,25 @@ struct mlxsw_driver {
 	const struct mlxsw_config_profile *profile;
 };
 
-struct mlxsw_resources {
-	u32	max_span_valid:1,
-		max_lag_valid:1,
-		max_ports_in_lag_valid:1,
-		kvd_size_valid:1,
-		kvd_single_min_size_valid:1,
-		kvd_double_min_size_valid:1,
-		max_virtual_routers_valid:1,
-		max_system_ports_valid:1,
-		max_vlan_groups_valid:1,
-		max_regions_valid:1,
-		max_rif_valid:1;
-	u8      max_span;
-	u8	max_lag;
-	u8	max_ports_in_lag;
-	u32	kvd_size;
-	u32	kvd_single_min_size;
-	u32	kvd_double_min_size;
-	u16     max_virtual_routers;
-	u16	max_system_ports;
-	u16	max_vlan_groups;
-	u16	max_regions;
-	u16	max_rif;
+bool mlxsw_core_res_valid(struct mlxsw_core *mlxsw_core,
+			  enum mlxsw_res_id res_id);
 
-	/* Internal resources.
-	 * Determined by the SW, not queried from the HW.
-	 */
-	u32	kvd_single_size;
-	u32	kvd_double_size;
-	u32	kvd_linear_size;
-};
+#define MLXSW_CORE_RES_VALID(res, short_res_id)			\
+	mlxsw_core_res_valid(res, MLXSW_RES_ID_##short_res_id)
 
-struct mlxsw_resources *mlxsw_core_resources_get(struct mlxsw_core *mlxsw_core);
+u64 mlxsw_core_res_get(struct mlxsw_core *mlxsw_core,
+		       enum mlxsw_res_id res_id);
+
+#define MLXSW_CORE_RES_GET(res, short_res_id)			\
+	mlxsw_core_res_get(res, MLXSW_RES_ID_##short_res_id)
+
+#define MLXSW_BUS_F_TXRX	BIT(0)
 
 struct mlxsw_bus {
 	const char *kind;
 	int (*init)(void *bus_priv, struct mlxsw_core *mlxsw_core,
 		    const struct mlxsw_config_profile *profile,
-		    struct mlxsw_resources *resources);
+		    struct mlxsw_res *res);
 	void (*fini)(void *bus_priv);
 	bool (*skb_transmit_busy)(void *bus_priv,
 				  const struct mlxsw_tx_info *tx_info);
@@ -315,6 +285,7 @@ struct mlxsw_bus {
 			char *in_mbox, size_t in_mbox_size,
 			char *out_mbox, size_t out_mbox_size,
 			u8 *p_status);
+	u8 features;
 };
 
 struct mlxsw_bus_info {
