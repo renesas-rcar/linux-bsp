@@ -205,6 +205,30 @@ int rvin_is_scaling(struct rvin_dev *vin)
 	return 0;
 }
 
+int rvin_set_ifmd(struct rvin_dev *vin, int val)
+{
+	u32 ifmd;
+
+	if (vin->chip != RCAR_H3 && vin->chip != RCAR_M3)
+		return 0;
+
+	if ((vin->index != 0) && (vin->index != 4))
+		return 0;
+
+	pm_runtime_get_sync(vin->v4l2_dev.dev);
+
+	ifmd = VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0 |
+		VNCSI_IFMD_CSI_CHSEL(val);
+
+	rvin_write(vin, ifmd, VNCSI_IFMD_REG);
+
+	vin_dbg(vin, "Set IFMD 0x%x\n", ifmd);
+
+	pm_runtime_put(vin->v4l2_dev.dev);
+
+	return 0;
+}
+
 static int rvin_setup(struct rvin_dev *vin)
 {
 	v4l2_std_id std;
