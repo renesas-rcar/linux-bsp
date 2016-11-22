@@ -1,7 +1,11 @@
 /*
- * Device Tree Source for the Salvator-X board
+ * Device Tree Source for the Salvator-X board on r8a7795 ES1.x
  *
- * Copyright (C) 2015-2016 Renesas Electronics Corp.
+ * Copyright (C) 2016 Renesas Electronics Corp.
+ *
+ * This file is based on the arch/arm64/boot/dts/renesas/r8a7795-es1-salvator-x.dts
+ *
+ * Copyright (C) 2015 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -32,7 +36,7 @@
  */
 
 /dts-v1/;
-#include "r8a7795.dtsi"
+#include "r8a7795-es1.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 
 / {
@@ -860,6 +864,7 @@
 		reg = <0>;
 		interrupt-parent = <&gpio2>;
 		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
+		max-speed = <100>;
 	};
 };
 
@@ -913,7 +918,7 @@
 	status = "okay";
 };
 
-&hsusb0 {
+&hsusb {
 	status = "okay";
 };
 
@@ -944,7 +949,7 @@
 	spidev@0 {
 		compatible = "renesas,sh-msiof";
 		reg = <0>;
-		spi-max-frequency = <66666666>;
+		spi-max-frequency = <33333333>;
 		spi-cpha;
 		spi-cpol;
 	};
@@ -1078,5 +1083,9 @@
 };
 
 &vspi1 {
+	status = "okay";
+};
+
+&vspi2 {
 	status = "okay";
 };
