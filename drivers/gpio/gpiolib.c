@@ -2223,6 +2223,7 @@ EXPORT_SYMBOL_GPL(gpiod_direction_input);
 static int _gpiod_direction_output_raw(struct gpio_desc *desc, int value)
 {
 	struct gpio_chip *gc = desc->gdev->chip;
+	int val = !!value;
 	int ret;
 
 	/* GPIOs used for IRQs shall not be set as output */
@@ -2242,7 +2243,7 @@ static int _gpiod_direction_output_raw(struct gpio_desc *desc, int value)
 				goto set_output_value;
 		}
 		/* Emulate open drain by not actively driving the line high */
-		if (value)
+		if (val)
 			return gpiod_direction_input(desc);
 	}
 	else if (test_bit(FLAG_OPEN_SOURCE, &desc->flags)) {
@@ -2253,7 +2254,7 @@ static int _gpiod_direction_output_raw(struct gpio_desc *desc, int value)
 				goto set_output_value;
 		}
 		/* Emulate open source by not actively driving the line low */
-		if (!value)
+		if (!val)
 			return gpiod_direction_input(desc);
 	} else {
 		/* Make sure to disable open drain/source hardware, if any */
@@ -2271,10 +2272,10 @@ set_output_value:
 		return -EIO;
 	}
 
-	ret = gc->direction_output(gc, gpio_chip_hwgpio(desc), value);
+	ret = gc->direction_output(gc, gpio_chip_hwgpio(desc), val);
 	if (!ret)
 		set_bit(FLAG_IS_OUT, &desc->flags);
-	trace_gpio_value(desc_to_gpio(desc), 0, value);
+	trace_gpio_value(desc_to_gpio(desc), 0, val);
 	trace_gpio_direction(desc_to_gpio(desc), 0, ret);
 	return ret;
 }
@@ -2314,6 +2315,8 @@ int gpiod_direction_output(struct gpio_desc *desc, int value)
 	VALIDATE_DESC(desc);
 	if (test_bit(FLAG_ACTIVE_LOW, &desc->flags))
 		value = !value;
+	else
+		value = !!value;
 	return _gpiod_direction_output_raw(desc, value);
 }
 EXPORT_SYMBOL_GPL(gpiod_direction_output);
@@ -2758,6 +2761,15 @@ int gpiochip_lock_as_irq(struct gpio_chip *chip, unsigned int offset)
 	}
 
 	set_bit(FLAG_USED_AS_IRQ, &desc->flags);
+
+	/*
+	 * If the consumer has not set up a label (such as when the
+	 * IRQ is referenced from .to_irq()) we set up a label here
+	 * so it is clear this is used as an interrupt.
+	 */
+	if (!desc->label)
+		desc_set_label(desc, "interrupt");
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(gpiochip_lock_as_irq);
@@ -2772,10 +2784,17 @@ EXPORT_SYMBOL_GPL(gpiochip_lock_as_irq);
  */
 void gpiochip_unlock_as_irq(struct gpio_chip *chip, unsigned int offset)
 {
-	if (offset >= chip->ngpio)
+	struct gpio_desc *desc;
+
+	desc = gpiochip_get_desc(chip, offset);
+	if (IS_ERR(desc))
 		return;
 
-	clear_bit(FLAG_USED_AS_IRQ, &chip->gpiodev->descs[offset].flags);
+	clear_bit(FLAG_USED_AS_IRQ, &desc->flags);
+
+	/* If we only had this marking, erase it */
+	if (desc->label && !strcmp(desc->label, "interrupt"))
+		desc_set_label(desc, NULL);
 }
 EXPORT_SYMBOL_GPL(gpiochip_unlock_as_irq);
 
@@ -3170,7 +3189,7 @@ static int gpiod_configure_flags(struct gpio_desc *desc, const char *con_id,
 	/* Process flags */
 	if (dflags & GPIOD_FLAGS_BIT_DIR_OUT)
 		status = gpiod_direction_output(desc,
-					      dflags & GPIOD_FLAGS_BIT_DIR_VAL);
+				!!(dflags & GPIOD_FLAGS_BIT_DIR_VAL));
 	else
 		status = gpiod_direction_input(desc);
 
