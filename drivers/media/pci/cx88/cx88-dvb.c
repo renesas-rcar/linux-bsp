@@ -625,8 +625,7 @@ static int attach_xc3028(u8 addr, struct cx8802_dev *dev)
 		return -EINVAL;
 
 	if (!fe0->dvb.frontend) {
-		printk(KERN_ERR "%s/2: dvb frontend not attached. "
-				"Can't attach xc3028\n",
+		printk(KERN_ERR "%s/2: dvb frontend not attached. Can't attach xc3028\n",
 		       dev->core->name);
 		return -EINVAL;
 	}
@@ -665,8 +664,7 @@ static int attach_xc4000(struct cx8802_dev *dev, struct xc4000_config *cfg)
 		return -EINVAL;
 
 	if (!fe0->dvb.frontend) {
-		printk(KERN_ERR "%s/2: dvb frontend not attached. "
-				"Can't attach xc4000\n",
+		printk(KERN_ERR "%s/2: dvb frontend not attached. Can't attach xc4000\n",
 		       dev->core->name);
 		return -EINVAL;
 	}
@@ -1771,7 +1769,6 @@ static int cx8802_dvb_probe(struct cx8802_driver *drv)
 	if (err)
 		goto fail_core;
 
-	err = -ENODEV;
 	for (i = 1; i <= core->board.num_frontends; i++) {
 		struct vb2_queue *q;
 
@@ -1779,6 +1776,7 @@ static int cx8802_dvb_probe(struct cx8802_driver *drv)
 		if (fe == NULL) {
 			printk(KERN_ERR "%s() failed to get frontend(%d)\n",
 					__func__, i);
+			err = -ENODEV;
 			goto fail_probe;
 		}
 		q = &fe->dvb.dvbq;

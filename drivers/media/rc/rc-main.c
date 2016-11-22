@@ -660,8 +660,7 @@ static void ir_do_keydown(struct rc_dev *dev, enum rc_type protocol,
 		dev->last_toggle = toggle;
 		dev->last_keycode = keycode;
 
-		IR_dprintk(1, "%s: key down event, "
-			   "key 0x%04x, protocol 0x%04x, scancode 0x%08x\n",
+		IR_dprintk(1, "%s: key down event, key 0x%04x, protocol 0x%04x, scancode 0x%08x\n",
 			   dev->input_name, keycode, protocol, scancode);
 		input_report_key(dev->input_dev, keycode, 1);
 
@@ -1403,6 +1402,34 @@ void rc_free_device(struct rc_dev *dev)
 }
 EXPORT_SYMBOL_GPL(rc_free_device);
 
+static void devm_rc_alloc_release(struct device *dev, void *res)
+{
+	rc_free_device(*(struct rc_dev **)res);
+}
+
+struct rc_dev *devm_rc_allocate_device(struct device *dev)
+{
+	struct rc_dev **dr, *rc;
+
+	dr = devres_alloc(devm_rc_alloc_release, sizeof(*dr), GFP_KERNEL);
+	if (!dr)
+		return NULL;
+
+	rc = rc_allocate_device();
+	if (!rc) {
+		devres_free(dr);
+		return NULL;
+	}
+
+	rc->dev.parent = dev;
+	rc->managed_alloc = true;
+	*dr = rc;
+	devres_add(dev, dr);
+
+	return rc;
+}
+EXPORT_SYMBOL_GPL(devm_rc_allocate_device);
+
 int rc_register_device(struct rc_dev *dev)
 {
 	static bool raw_init = false; /* raw decoders loaded? */
@@ -1531,6 +1558,33 @@ out_unlock:
 }
 EXPORT_SYMBOL_GPL(rc_register_device);
 
+static void devm_rc_release(struct device *dev, void *res)
+{
+	rc_unregister_device(*(struct rc_dev **)res);
+}
+
+int devm_rc_register_device(struct device *parent, struct rc_dev *dev)
+{
+	struct rc_dev **dr;
+	int ret;
+
+	dr = devres_alloc(devm_rc_release, sizeof(*dr), GFP_KERNEL);
+	if (!dr)
+		return -ENOMEM;
+
+	ret = rc_register_device(dev);
+	if (ret) {
+		devres_free(dr);
+		return ret;
+	}
+
+	*dr = dev;
+	devres_add(parent, dr);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(devm_rc_register_device);
+
 void rc_unregister_device(struct rc_dev *dev)
 {
 	if (!dev)
@@ -1552,7 +1606,8 @@ void rc_unregister_device(struct rc_dev *dev)
 
 	ida_simple_remove(&rc_ida, dev->minor);
 
-	rc_free_device(dev);
+	if (!dev->managed_alloc)
+		rc_free_device(dev);
 }
 
 EXPORT_SYMBOL_GPL(rc_unregister_device);

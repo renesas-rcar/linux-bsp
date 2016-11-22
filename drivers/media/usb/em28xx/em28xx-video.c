@@ -26,6 +26,8 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "em28xx.h"
+
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/module.h>
@@ -37,7 +39,6 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 
-#include "em28xx.h"
 #include "em28xx-v4l.h"
 #include <media/v4l2-common.h>
 #include <media/v4l2-ioctl.h>
@@ -65,16 +66,13 @@ MODULE_PARM_DESC(alt, "alternate setting to use for video endpoint");
 
 #define em28xx_videodbg(fmt, arg...) do {\
 	if (video_debug) \
-		printk(KERN_INFO "%s %s :"fmt, \
-			 dev->name, __func__ , ##arg); } while (0)
+		printk(KERN_DEBUG pr_fmt("video: %s: " fmt), \
+			 __func__, ##arg); } while (0)
 
-#define em28xx_isocdbg(fmt, arg...) \
-do {\
-	if (isoc_debug) { \
-		printk(KERN_INFO "%s %s :"fmt, \
-			 dev->name, __func__ , ##arg); \
-	} \
-  } while (0)
+#define em28xx_isocdbg(fmt, arg...) do {\
+	if (isoc_debug) \
+		printk(KERN_DEBUG pr_fmt("isoc: %s: " fmt), \
+			 __func__, ##arg); } while (0)
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC " - v4l2 interface");
@@ -413,8 +411,8 @@ set_alt:
 			dev->alt, dev->max_pkt_size);
 	errCode = usb_set_interface(dev->udev, dev->ifnum, dev->alt);
 	if (errCode < 0) {
-		em28xx_errdev("cannot change alternate number to %d (error=%i)\n",
-			      dev->alt, errCode);
+		pr_err("cannot change alternate number to %d (error=%i)\n",
+		       dev->alt, errCode);
 		return errCode;
 	}
 	return 0;
@@ -505,8 +503,7 @@ static void em28xx_copy_video(struct em28xx *dev,
 
 		if ((char *)startwrite + lencopy > (char *)buf->vb_buf +
 		    buf->length) {
-			em28xx_isocdbg("Overflow of %zu bytes past buffer end"
-				       "(2)\n",
+			em28xx_isocdbg("Overflow of %zu bytes past buffer end(2)\n",
 				       ((char *)startwrite + lencopy) -
 				       ((char *)buf->vb_buf + buf->length));
 			lencopy = remain = (char *)buf->vb_buf + buf->length -
@@ -2048,8 +2045,8 @@ static int em28xx_v4l2_open(struct file *filp)
 
 	ret = v4l2_fh_open(filp);
 	if (ret) {
-		em28xx_errdev("%s: v4l2_fh_open() returned error %d\n",
-			      __func__, ret);
+		pr_err("%s: v4l2_fh_open() returned error %d\n",
+		       __func__, ret);
 		mutex_unlock(&dev->lock);
 		return ret;
 	}
@@ -2103,7 +2100,7 @@ static int em28xx_v4l2_fini(struct em28xx *dev)
 	if (v4l2 == NULL)
 		return 0;
 
-	em28xx_info("Closing video extension\n");
+	pr_info("Closing video extension\n");
 
 	mutex_lock(&dev->lock);
 
@@ -2114,18 +2111,18 @@ static int em28xx_v4l2_fini(struct em28xx *dev)
 	em28xx_v4l2_media_release(dev);
 
 	if (video_is_registered(&v4l2->radio_dev)) {
-		em28xx_info("V4L2 device %s deregistered\n",
-			    video_device_node_name(&v4l2->radio_dev));
+		pr_info("V4L2 device %s deregistered\n",
+			video_device_node_name(&v4l2->radio_dev));
 		video_unregister_device(&v4l2->radio_dev);
 	}
 	if (video_is_registered(&v4l2->vbi_dev)) {
-		em28xx_info("V4L2 device %s deregistered\n",
-			    video_device_node_name(&v4l2->vbi_dev));
+		pr_info("V4L2 device %s deregistered\n",
+			video_device_node_name(&v4l2->vbi_dev));
 		video_unregister_device(&v4l2->vbi_dev);
 	}
 	if (video_is_registered(&v4l2->vdev)) {
-		em28xx_info("V4L2 device %s deregistered\n",
-			    video_device_node_name(&v4l2->vdev));
+		pr_info("V4L2 device %s deregistered\n",
+			video_device_node_name(&v4l2->vdev));
 		video_unregister_device(&v4l2->vdev);
 	}
 
@@ -2154,7 +2151,7 @@ static int em28xx_v4l2_suspend(struct em28xx *dev)
 	if (!dev->has_video)
 		return 0;
 
-	em28xx_info("Suspending video extension\n");
+	pr_info("Suspending video extension\n");
 	em28xx_stop_urbs(dev);
 	return 0;
 }
@@ -2167,7 +2164,7 @@ static int em28xx_v4l2_resume(struct em28xx *dev)
 	if (!dev->has_video)
 		return 0;
 
-	em28xx_info("Resuming video extension\n");
+	pr_info("Resuming video extension\n");
 	/* what do we do here */
 	return 0;
 }
@@ -2204,8 +2201,8 @@ static int em28xx_v4l2_close(struct file *filp)
 		em28xx_videodbg("setting alternate 0\n");
 		errCode = usb_set_interface(dev->udev, 0, 0);
 		if (errCode < 0) {
-			em28xx_errdev("cannot change alternate number to "
-					"0 (error=%i)\n", errCode);
+			pr_err("cannot change alternate number to 0 (error=%i)\n",
+			       errCode);
 		}
 	}
 
@@ -2422,13 +2419,12 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 		return 0;
 	}
 
-	em28xx_info("Registering V4L2 extension\n");
+	pr_info("Registering V4L2 extension\n");
 
 	mutex_lock(&dev->lock);
 
 	v4l2 = kzalloc(sizeof(struct em28xx_v4l2), GFP_KERNEL);
-	if (v4l2 == NULL) {
-		em28xx_info("em28xx_v4l: memory allocation failed\n");
+	if (!v4l2) {
 		mutex_unlock(&dev->lock);
 		return -ENOMEM;
 	}
@@ -2441,7 +2437,7 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 #endif
 	ret = v4l2_device_register(&dev->udev->dev, &v4l2->v4l2_dev);
 	if (ret < 0) {
-		em28xx_errdev("Call to v4l2_device_register() failed!\n");
+		pr_err("Call to v4l2_device_register() failed!\n");
 		goto err;
 	}
 
@@ -2525,8 +2521,8 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 	/* Configure audio */
 	ret = em28xx_audio_setup(dev);
 	if (ret < 0) {
-		em28xx_errdev("%s: Error while setting audio - error [%d]!\n",
-			      __func__, ret);
+		pr_err("%s: Error while setting audio - error [%d]!\n",
+		       __func__, ret);
 		goto unregister_dev;
 	}
 	if (dev->audio_mode.ac97 != EM28XX_NO_AC97) {
@@ -2553,16 +2549,16 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 		/* Send a reset to other chips via gpio */
 		ret = em28xx_write_reg(dev, EM2820_R08_GPIO_CTRL, 0xf7);
 		if (ret < 0) {
-			em28xx_errdev("%s: em28xx_write_reg - msp34xx(1) failed! error [%d]\n",
-				      __func__, ret);
+			pr_err("%s: em28xx_write_reg - msp34xx(1) failed! error [%d]\n",
+			       __func__, ret);
 			goto unregister_dev;
 		}
 		msleep(3);
 
 		ret = em28xx_write_reg(dev, EM2820_R08_GPIO_CTRL, 0xff);
 		if (ret < 0) {
-			em28xx_errdev("%s: em28xx_write_reg - msp34xx(2) failed! error [%d]\n",
-				      __func__, ret);
+			pr_err("%s: em28xx_write_reg - msp34xx(2) failed! error [%d]\n",
+			       __func__, ret);
 			goto unregister_dev;
 		}
 		msleep(3);
@@ -2663,8 +2659,7 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 	ret = video_register_device(&v4l2->vdev, VFL_TYPE_GRABBER,
 				    video_nr[dev->devno]);
 	if (ret) {
-		em28xx_errdev("unable to register video device (error=%i).\n",
-			      ret);
+		pr_err("unable to register video device (error=%i).\n", ret);
 		goto unregister_dev;
 	}
 
@@ -2693,7 +2688,7 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 		ret = video_register_device(&v4l2->vbi_dev, VFL_TYPE_VBI,
 					    vbi_nr[dev->devno]);
 		if (ret < 0) {
-			em28xx_errdev("unable to register vbi device\n");
+			pr_err("unable to register vbi device\n");
 			goto unregister_dev;
 		}
 	}
@@ -2704,11 +2699,11 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 		ret = video_register_device(&v4l2->radio_dev, VFL_TYPE_RADIO,
 					    radio_nr[dev->devno]);
 		if (ret < 0) {
-			em28xx_errdev("can't register radio device\n");
+			pr_err("can't register radio device\n");
 			goto unregister_dev;
 		}
-		em28xx_info("Registered radio device as %s\n",
-			    video_device_node_name(&v4l2->radio_dev));
+		pr_info("Registered radio device as %s\n",
+			video_device_node_name(&v4l2->radio_dev));
 	}
 
 	/* Init entities at the Media Controller */
@@ -2717,18 +2712,18 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 #ifdef CONFIG_MEDIA_CONTROLLER
 	ret = v4l2_mc_create_media_graph(dev->media_dev);
 	if (ret) {
-		em28xx_errdev("failed to create media graph\n");
+		pr_err("failed to create media graph\n");
 		em28xx_v4l2_media_release(dev);
 		goto unregister_dev;
 	}
 #endif
 
-	em28xx_info("V4L2 video device registered as %s\n",
-		    video_device_node_name(&v4l2->vdev));
+	pr_info("V4L2 video device registered as %s\n",
+		video_device_node_name(&v4l2->vdev));
 
 	if (video_is_registered(&v4l2->vbi_dev))
-		em28xx_info("V4L2 VBI device registered as %s\n",
-			    video_device_node_name(&v4l2->vbi_dev));
+		pr_info("V4L2 VBI device registered as %s\n",
+			video_device_node_name(&v4l2->vbi_dev));
 
 	/* Save some power by putting tuner to sleep */
 	v4l2_device_call_all(&v4l2->v4l2_dev, 0, core, s_power, 0);
@@ -2736,7 +2731,7 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 	/* initialize videobuf2 stuff */
 	em28xx_vb2_setup(dev);
 
-	em28xx_info("V4L2 extension successfully initialized\n");
+	pr_info("V4L2 extension successfully initialized\n");
 
 	kref_get(&dev->ref);
 
@@ -2745,18 +2740,18 @@ static int em28xx_v4l2_init(struct em28xx *dev)
 
 unregister_dev:
 	if (video_is_registered(&v4l2->radio_dev)) {
-		em28xx_info("V4L2 device %s deregistered\n",
-			    video_device_node_name(&v4l2->radio_dev));
+		pr_info("V4L2 device %s deregistered\n",
+			video_device_node_name(&v4l2->radio_dev));
 		video_unregister_device(&v4l2->radio_dev);
 	}
 	if (video_is_registered(&v4l2->vbi_dev)) {
-		em28xx_info("V4L2 device %s deregistered\n",
-			    video_device_node_name(&v4l2->vbi_dev));
+		pr_info("V4L2 device %s deregistered\n",
+			video_device_node_name(&v4l2->vbi_dev));
 		video_unregister_device(&v4l2->vbi_dev);
 	}
 	if (video_is_registered(&v4l2->vdev)) {
-		em28xx_info("V4L2 device %s deregistered\n",
-			    video_device_node_name(&v4l2->vdev));
+		pr_info("V4L2 device %s deregistered\n",
+			video_device_node_name(&v4l2->vdev));
 		video_unregister_device(&v4l2->vdev);
 	}
 
