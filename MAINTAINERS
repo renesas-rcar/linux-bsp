@@ -1025,6 +1025,7 @@ L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 N:	sun[x456789]i
 F:	arch/arm/boot/dts/ntc-gr8*
+F:	arch/arm64/boot/dts/allwinner/
 
 ARM/Allwinner SoC Clock Support
 M:	Emilio López <emilio@elopez.com.ar>
@@ -1608,6 +1609,7 @@ F:	arch/arm/mach-qcom/
 F:	arch/arm64/boot/dts/qcom/*
 F:	drivers/i2c/busses/i2c-qup.c
 F:	drivers/clk/qcom/
+F:	drivers/pinctrl/qcom/
 F:	drivers/soc/qcom/
 F:	drivers/spi/spi-qup.c
 F:	drivers/tty/serial/msm_serial.h
@@ -1788,9 +1790,7 @@ F:	drivers/media/rc/st_rc.c
 F:	drivers/media/platform/sti/c8sectpfe/
 F:	drivers/mmc/host/sdhci-st.c
 F:	drivers/phy/phy-miphy28lp.c
-F:	drivers/phy/phy-miphy365x.c
 F:	drivers/phy/phy-stih407-usb.c
-F:	drivers/phy/phy-stih41x-usb.c
 F:	drivers/pinctrl/pinctrl-st.c
 F:	drivers/remoteproc/st_remoteproc.c
 F:	drivers/remoteproc/st_slim_rproc.c
