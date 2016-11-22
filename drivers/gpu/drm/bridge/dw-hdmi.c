@@ -1948,7 +1948,7 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 
 	ddc_node = of_parse_phandle(np, "ddc-i2c-bus", 0);
 	if (ddc_node) {
-		hdmi->ddc = of_find_i2c_adapter_by_node(ddc_node);
+		hdmi->ddc = of_get_i2c_adapter_by_node(ddc_node);
 		of_node_put(ddc_node);
 		if (!hdmi->ddc) {
 			dev_dbg(hdmi->dev, "failed to read ddc node\n");
@@ -1960,8 +1960,10 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 	}
 
 	hdmi->regs = devm_ioremap_resource(dev, iores);
-	if (IS_ERR(hdmi->regs))
-		return PTR_ERR(hdmi->regs);
+	if (IS_ERR(hdmi->regs)) {
+		ret = PTR_ERR(hdmi->regs);
+		goto err_res;
+	}
 
 	hdmi->isfr_clk = devm_clk_get(hdmi->dev, "isfr");
 	if (IS_ERR(hdmi->isfr_clk))
@@ -1971,7 +1973,7 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 		if (ret) {
 			dev_err(hdmi->dev,
 				"Cannot enable HDMI isfr clock: %d\n", ret);
-			return ret;
+			goto err_res;
 		}
 	}
 
@@ -2075,6 +2077,8 @@ err_iahb:
 err_isfr:
 	if (hdmi->isfr_clk)
 		clk_disable_unprepare(hdmi->isfr_clk);
+err_res:
+	i2c_put_adapter(hdmi->ddc);
 
 	return ret;
 }
