@@ -16,7 +16,6 @@
  */
 
 #include <linux/clk-provider.h>
-#include <linux/clk/renesas.h>
 #include <linux/clocksource.h>
 #include <linux/device.h>
 #include <linux/dma-contiguous.h>
@@ -73,7 +72,6 @@ static unsigned int __init get_extal_freq(void)
 
 void __init rcar_gen2_timer_init(void)
 {
-	u32 mode = rcar_gen2_read_mode_pins();
 #ifdef CONFIG_ARM_ARCH_TIMER
 	void __iomem *base;
 	u32 freq;
@@ -132,15 +130,7 @@ void __init rcar_gen2_timer_init(void)
 	iounmap(base);
 #endif /* CONFIG_ARM_ARCH_TIMER */
 
-	if (IS_ENABLED(CONFIG_ARCH_R8A7790) ||
-	    IS_ENABLED(CONFIG_ARCH_R8A7791) ||
-	    IS_ENABLED(CONFIG_ARCH_R8A7792) ||
-	    IS_ENABLED(CONFIG_ARCH_R8A7793) ||
-	    IS_ENABLED(CONFIG_ARCH_R8A7794))
-		rcar_gen2_clocks_init(mode);
-	else
-		of_clk_init(NULL);
-
+	of_clk_init(NULL);
 	clocksource_probe();
 }
 
