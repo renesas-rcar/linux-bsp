@@ -9,7 +9,10 @@
  */
 #include <linux/linkage.h>
 #include <asm/assembler.h>
+#include <asm/export.h>
 #include "bitops.h"
                 .text
 
 bitop	_clear_bit, bic
+
+EXPORT_SYMBOL(_clear_bit)

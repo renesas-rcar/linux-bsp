@@ -9,7 +9,10 @@
  */
 #include <linux/linkage.h>
 #include <asm/assembler.h>
+#include <asm/export.h>
 #include "bitops.h"
 		.text
 
 bitop	_set_bit, orr
+
+EXPORT_SYMBOL(_set_bit)
