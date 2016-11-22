@@ -193,7 +193,7 @@ add_nidrange(const struct cfs_lstr *src,
 	struct netstrfns *nf;
 	struct nidrange *nr;
 	int endlen;
-	unsigned netnum;
+	unsigned int netnum;
 
 	if (src->ls_len >= LNET_NIDSTR_SIZE)
 		return NULL;
@@ -1156,7 +1156,7 @@ EXPORT_SYMBOL(libcfs_nid2str_r);
 static struct netstrfns *
 libcfs_str2net_internal(const char *str, __u32 *net)
 {
-	struct netstrfns *uninitialized_var(nf);
+	struct netstrfns *nf = NULL;
 	int nob;
 	unsigned int netnum;
 	int i;

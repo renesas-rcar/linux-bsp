@@ -360,6 +360,7 @@ static struct osc_extent *osc_extent_alloc(struct osc_object *obj)
 
 	RB_CLEAR_NODE(&ext->oe_node);
 	ext->oe_obj = obj;
+	cl_object_get(osc2cl(obj));
 	atomic_set(&ext->oe_refc, 1);
 	atomic_set(&ext->oe_users, 0);
 	INIT_LIST_HEAD(&ext->oe_link);
@@ -398,6 +399,7 @@ static void osc_extent_put(const struct lu_env *env, struct osc_extent *ext)
 			LDLM_LOCK_PUT(ext->oe_dlmlock);
 			ext->oe_dlmlock = NULL;
 		}
+		cl_object_put(env, osc2cl(ext->oe_obj));
 		osc_extent_free(ext);
 	}
 }
@@ -977,7 +979,6 @@ static int osc_extent_wait(const struct lu_env *env, struct osc_extent *ext,
 static int osc_extent_truncate(struct osc_extent *ext, pgoff_t trunc_index,
 			       bool partial)
 {
-	struct cl_env_nest nest;
 	struct lu_env *env;
 	struct cl_io *io;
 	struct osc_object *obj = ext->oe_obj;
@@ -990,6 +991,7 @@ static int osc_extent_truncate(struct osc_extent *ext, pgoff_t trunc_index,
 	int grants = 0;
 	int nr_pages = 0;
 	int rc = 0;
+	int refcheck;
 
 	LASSERT(sanity_check(ext) == 0);
 	EASSERT(ext->oe_state == OES_TRUNC, ext);
@@ -999,7 +1001,7 @@ static int osc_extent_truncate(struct osc_extent *ext, pgoff_t trunc_index,
 	 * We can't use that env from osc_cache_truncate_start() because
 	 * it's from lov_io_sub and not fully initialized.
 	 */
-	env = cl_env_nested_get(&nest);
+	env = cl_env_get(&refcheck);
 	io  = &osc_env_info(env)->oti_io;
 	io->ci_obj = cl_object_top(osc2cl(obj));
 	rc = cl_io_init(env, io, CIT_MISC, io->ci_obj);
@@ -1085,7 +1087,7 @@ static int osc_extent_truncate(struct osc_extent *ext, pgoff_t trunc_index,
 
 out:
 	cl_io_fini(env, io);
-	cl_env_nested_put(&nest, env);
+	cl_env_put(env, &refcheck);
 	return rc;
 }
 
@@ -1338,14 +1340,6 @@ static int osc_completion(const struct lu_env *env, struct osc_async_page *oap,
 		 "cp_state:%u, cmd:%d\n", page->cp_state, cmd);
 	LASSERT(opg->ops_transfer_pinned);
 
-	/*
-	 * page->cp_req can be NULL if io submission failed before
-	 * cl_req was allocated.
-	 */
-	if (page->cp_req)
-		cl_req_page_done(env, page);
-	LASSERT(!page->cp_req);
-
 	crt = cmd == OBD_BRW_READ ? CRT_READ : CRT_WRITE;
 	/* Clear opg->ops_transfer_pinned before VM lock is released. */
 	opg->ops_transfer_pinned = 0;
@@ -1380,6 +1374,7 @@ static int osc_completion(const struct lu_env *env, struct osc_async_page *oap,
 	lu_ref_del(&page->cp_reference, "transfer", page);
 
 	cl_page_completion(env, page, crt, rc);
+	cl_page_put(env, page);
 
 	return 0;
 }
@@ -1931,7 +1926,8 @@ static int try_to_add_extent_for_io(struct client_obd *cli,
 		}
 
 		if (tmp->oe_srvlock != ext->oe_srvlock ||
-		    !tmp->oe_grants != !ext->oe_grants)
+		    !tmp->oe_grants != !ext->oe_grants ||
+		    tmp->oe_no_merge || ext->oe_no_merge)
 			return 0;
 
 		/* remove break for strict check */
@@ -2666,11 +2662,13 @@ int osc_queue_sync_pages(const struct lu_env *env, struct osc_object *obj,
 	struct osc_async_page *oap, *tmp;
 	int page_count = 0;
 	int mppr = cli->cl_max_pages_per_rpc;
+	bool can_merge = true;
 	pgoff_t start = CL_PAGE_EOF;
 	pgoff_t end = 0;
 
 	list_for_each_entry(oap, list, oap_pending_item) {
-		pgoff_t index = osc_index(oap2osc(oap));
+		struct osc_page *opg = oap2osc_page(oap);
+		pgoff_t index = osc_index(opg);
 
 		if (index > end)
 			end = index;
@@ -2678,6 +2676,9 @@ int osc_queue_sync_pages(const struct lu_env *env, struct osc_object *obj,
 			start = index;
 		++page_count;
 		mppr <<= (page_count > mppr);
+
+		if (unlikely(opg->ops_from > 0 || opg->ops_to < PAGE_SIZE))
+			can_merge = false;
 	}
 
 	ext = osc_extent_alloc(obj);
@@ -2691,6 +2692,7 @@ int osc_queue_sync_pages(const struct lu_env *env, struct osc_object *obj,
 
 	ext->oe_rw = !!(cmd & OBD_BRW_READ);
 	ext->oe_sync = 1;
+	ext->oe_no_merge = !can_merge;
 	ext->oe_urgent = 1;
 	ext->oe_start = start;
 	ext->oe_end = end;
@@ -3158,7 +3160,8 @@ static int check_and_discard_cb(const struct lu_env *env, struct cl_io *io,
 		struct cl_page *page = ops->ops_cl.cpl_page;
 
 		/* refresh non-overlapped index */
-		tmp = osc_dlmlock_at_pgoff(env, osc, index, 0, 0);
+		tmp = osc_dlmlock_at_pgoff(env, osc, index,
+					   OSC_DAP_FL_TEST_LOCK);
 		if (tmp) {
 			__u64 end = tmp->l_policy_data.l_extent.end;
 			/* Cache the first-non-overlapped index so as to skip

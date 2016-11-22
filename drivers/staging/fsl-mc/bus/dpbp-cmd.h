@@ -1,4 +1,5 @@
-/* Copyright 2013-2016 Freescale Semiconductor Inc.
+/*
+ * Copyright 2013-2016 Freescale Semiconductor Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -10,7 +11,6 @@
  * * Neither the name of the above-listed copyright holders nor the
  * names of any contributors may be used to endorse or promote products
  * derived from this software without specific prior written permission.
- *
  *
  * ALTERNATIVELY, this software may be distributed under the terms of the
  * GNU General Public License ("GPL") as published by the Free Software
@@ -33,35 +33,46 @@
 #define _FSL_DPBP_CMD_H
 
 /* DPBP Version */
-#define DPBP_VER_MAJOR				2
+#define DPBP_VER_MAJOR				3
 #define DPBP_VER_MINOR				2
 
+/* Command versioning */
+#define DPBP_CMD_BASE_VERSION			1
+#define DPBP_CMD_ID_OFFSET			4
+
+#define DPBP_CMD(id)	((id << DPBP_CMD_ID_OFFSET) | DPBP_CMD_BASE_VERSION)
+
 /* Command IDs */
-#define DPBP_CMDID_CLOSE				0x800
-#define DPBP_CMDID_OPEN					0x804
-#define DPBP_CMDID_CREATE				0x904
-#define DPBP_CMDID_DESTROY				0x900
+#define DPBP_CMDID_CLOSE		DPBP_CMD(0x800)
+#define DPBP_CMDID_OPEN			DPBP_CMD(0x804)
+#define DPBP_CMDID_CREATE		DPBP_CMD(0x904)
+#define DPBP_CMDID_DESTROY		DPBP_CMD(0x984)
+#define DPBP_CMDID_GET_API_VERSION	DPBP_CMD(0xa04)
 
-#define DPBP_CMDID_ENABLE				0x002
-#define DPBP_CMDID_DISABLE				0x003
-#define DPBP_CMDID_GET_ATTR				0x004
-#define DPBP_CMDID_RESET				0x005
-#define DPBP_CMDID_IS_ENABLED				0x006
+#define DPBP_CMDID_ENABLE		DPBP_CMD(0x002)
+#define DPBP_CMDID_DISABLE		DPBP_CMD(0x003)
+#define DPBP_CMDID_GET_ATTR		DPBP_CMD(0x004)
+#define DPBP_CMDID_RESET		DPBP_CMD(0x005)
+#define DPBP_CMDID_IS_ENABLED		DPBP_CMD(0x006)
 
-#define DPBP_CMDID_SET_IRQ				0x010
-#define DPBP_CMDID_GET_IRQ				0x011
-#define DPBP_CMDID_SET_IRQ_ENABLE			0x012
-#define DPBP_CMDID_GET_IRQ_ENABLE			0x013
-#define DPBP_CMDID_SET_IRQ_MASK				0x014
-#define DPBP_CMDID_GET_IRQ_MASK				0x015
-#define DPBP_CMDID_GET_IRQ_STATUS			0x016
-#define DPBP_CMDID_CLEAR_IRQ_STATUS			0x017
+#define DPBP_CMDID_SET_IRQ		DPBP_CMD(0x010)
+#define DPBP_CMDID_GET_IRQ		DPBP_CMD(0x011)
+#define DPBP_CMDID_SET_IRQ_ENABLE	DPBP_CMD(0x012)
+#define DPBP_CMDID_GET_IRQ_ENABLE	DPBP_CMD(0x013)
+#define DPBP_CMDID_SET_IRQ_MASK		DPBP_CMD(0x014)
+#define DPBP_CMDID_GET_IRQ_MASK		DPBP_CMD(0x015)
+#define DPBP_CMDID_GET_IRQ_STATUS	DPBP_CMD(0x016)
+#define DPBP_CMDID_CLEAR_IRQ_STATUS	DPBP_CMD(0x017)
 
-#define DPBP_CMDID_SET_NOTIFICATIONS		0x01b0
-#define DPBP_CMDID_GET_NOTIFICATIONS		0x01b1
+#define DPBP_CMDID_SET_NOTIFICATIONS	DPBP_CMD(0x01b0)
+#define DPBP_CMDID_GET_NOTIFICATIONS	DPBP_CMD(0x01b1)
 
 struct dpbp_cmd_open {
 	__le32 dpbp_id;
+};
+
+struct dpbp_cmd_destroy {
+	__le32 object_id;
 };
 
 #define DPBP_ENABLE			0x1

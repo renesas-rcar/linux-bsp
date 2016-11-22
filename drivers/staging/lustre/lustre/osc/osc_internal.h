@@ -112,21 +112,19 @@ int osc_enqueue_base(struct obd_export *exp, struct ldlm_res_id *res_id,
 		     osc_enqueue_upcall_f upcall,
 		     void *cookie, struct ldlm_enqueue_info *einfo,
 		     struct ptlrpc_request_set *rqset, int async, int agl);
-int osc_cancel_base(struct lustre_handle *lockh, __u32 mode);
 
 int osc_match_base(struct obd_export *exp, struct ldlm_res_id *res_id,
 		   __u32 type, ldlm_policy_data_t *policy, __u32 mode,
 		   __u64 *flags, void *data, struct lustre_handle *lockh,
 		   int unref);
 
-int osc_setattr_async_base(struct obd_export *exp, struct obd_info *oinfo,
-			   struct obd_trans_info *oti,
-			   obd_enqueue_update_f upcall, void *cookie,
-			   struct ptlrpc_request_set *rqset);
-int osc_punch_base(struct obd_export *exp, struct obd_info *oinfo,
+int osc_setattr_async(struct obd_export *exp, struct obdo *oa,
+		      obd_enqueue_update_f upcall, void *cookie,
+		      struct ptlrpc_request_set *rqset);
+int osc_punch_base(struct obd_export *exp, struct obdo *oa,
 		   obd_enqueue_update_f upcall, void *cookie,
 		   struct ptlrpc_request_set *rqset);
-int osc_sync_base(struct obd_export *exp, struct obd_info *oinfo,
+int osc_sync_base(struct osc_object *exp, struct obdo *oa,
 		  obd_enqueue_update_f upcall, void *cookie,
 		  struct ptlrpc_request_set *rqset);
 
@@ -192,15 +190,27 @@ int osc_quota_setdq(struct client_obd *cli, const unsigned int qid[],
 int osc_quota_chkdq(struct client_obd *cli, const unsigned int qid[]);
 int osc_quotactl(struct obd_device *unused, struct obd_export *exp,
 		 struct obd_quotactl *oqctl);
-int osc_quotacheck(struct obd_device *unused, struct obd_export *exp,
-		   struct obd_quotactl *oqctl);
-int osc_quota_poll_check(struct obd_export *exp, struct if_quotacheck *qchk);
 void osc_inc_unstable_pages(struct ptlrpc_request *req);
 void osc_dec_unstable_pages(struct ptlrpc_request *req);
 bool osc_over_unstable_soft_limit(struct client_obd *cli);
 
+/**
+ * Bit flags for osc_dlm_lock_at_pageoff().
+ */
+enum osc_dap_flags {
+	/**
+	 * Just check if the desired lock exists, it won't hold reference
+	 * count on lock.
+	 */
+	OSC_DAP_FL_TEST_LOCK	= BIT(0),
+	/**
+	 * Return the lock even if it is being canceled.
+	 */
+	OSC_DAP_FL_CANCELING	= BIT(1),
+};
+
 struct ldlm_lock *osc_dlmlock_at_pgoff(const struct lu_env *env,
 				       struct osc_object *obj, pgoff_t index,
-				       int pending, int canceling);
+				       enum osc_dap_flags flags);
 
 #endif /* OSC_INTERNAL_H */

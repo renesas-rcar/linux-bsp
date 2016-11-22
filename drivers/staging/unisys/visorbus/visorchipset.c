@@ -57,7 +57,6 @@ visorchipset_open(struct inode *inode, struct file *file)
 
 	if (minor_number)
 		return -ENODEV;
-	file->private_data = NULL;
 	return 0;
 }
 
@@ -533,9 +532,8 @@ chipset_init(struct controlvm_message *inmsg)
 	 * Set features to indicate we support parahotplug (if Command
 	 * also supports it).
 	 */
-	features =
-	    inmsg->cmd.init_chipset.
-	    features & ULTRA_CHIPSET_FEATURE_PARA_HOTPLUG;
+	features = inmsg->cmd.init_chipset.features &
+		   ULTRA_CHIPSET_FEATURE_PARA_HOTPLUG;
 
 	/*
 	 * Set the "reply" bit so Command knows this is a
@@ -689,149 +687,30 @@ device_responder(enum controlvm_id cmd_id,
 	controlvm_respond(pending_msg_hdr, response);
 }
 
-static void
-bus_epilog(struct visor_device *bus_info,
-	   u32 cmd, struct controlvm_message_header *msg_hdr,
-	   int response, bool need_response)
-{
-	struct controlvm_message_header *pmsg_hdr = NULL;
-
-	if (!bus_info) {
-		/*
-		 * relying on a valid passed in response code
-		 * be lazy and re-use msg_hdr for this failure, is this ok??
-		 */
-		pmsg_hdr = msg_hdr;
-		goto out_respond;
-	}
-
-	if (bus_info->pending_msg_hdr) {
-		/* only non-NULL if dev is still waiting on a response */
-		response = -CONTROLVM_RESP_ERROR_MESSAGE_ID_INVALID_FOR_CLIENT;
-		pmsg_hdr = bus_info->pending_msg_hdr;
-		goto out_respond;
-	}
-
-	if (need_response) {
-		pmsg_hdr = kzalloc(sizeof(*pmsg_hdr), GFP_KERNEL);
-		if (!pmsg_hdr) {
-			POSTCODE_LINUX_4(MALLOC_FAILURE_PC, cmd,
-					 bus_info->chipset_bus_no,
-					 POSTCODE_SEVERITY_ERR);
-			return;
-		}
-
-		memcpy(pmsg_hdr, msg_hdr,
-		       sizeof(struct controlvm_message_header));
-		bus_info->pending_msg_hdr = pmsg_hdr;
-	}
-
-	if (response == CONTROLVM_RESP_SUCCESS) {
-		switch (cmd) {
-		case CONTROLVM_BUS_CREATE:
-			chipset_bus_create(bus_info);
-			break;
-		case CONTROLVM_BUS_DESTROY:
-			chipset_bus_destroy(bus_info);
-			break;
-		}
-	}
-
-out_respond:
-	bus_responder(cmd, pmsg_hdr, response);
-}
-
-static void
-device_epilog(struct visor_device *dev_info,
-	      struct spar_segment_state state, u32 cmd,
-	      struct controlvm_message_header *msg_hdr, int response,
-	      bool need_response, bool for_visorbus)
-{
-	struct controlvm_message_header *pmsg_hdr = NULL;
-
-	if (!dev_info) {
-		/*
-		 * relying on a valid passed in response code
-		 * be lazy and re-use msg_hdr for this failure, is this ok??
-		 */
-		pmsg_hdr = msg_hdr;
-		goto out_respond;
-	}
-
-	if (dev_info->pending_msg_hdr) {
-		/* only non-NULL if dev is still waiting on a response */
-		response = -CONTROLVM_RESP_ERROR_MESSAGE_ID_INVALID_FOR_CLIENT;
-		pmsg_hdr = dev_info->pending_msg_hdr;
-		goto out_respond;
-	}
-
-	if (need_response) {
-		pmsg_hdr = kzalloc(sizeof(*pmsg_hdr), GFP_KERNEL);
-		if (!pmsg_hdr) {
-			response = -CONTROLVM_RESP_ERROR_KMALLOC_FAILED;
-			goto out_respond;
-		}
-
-		memcpy(pmsg_hdr, msg_hdr,
-		       sizeof(struct controlvm_message_header));
-		dev_info->pending_msg_hdr = pmsg_hdr;
-	}
-
-	if (response >= 0) {
-		switch (cmd) {
-		case CONTROLVM_DEVICE_CREATE:
-			chipset_device_create(dev_info);
-			break;
-		case CONTROLVM_DEVICE_CHANGESTATE:
-			/* ServerReady / ServerRunning / SegmentStateRunning */
-			if (state.alive == segment_state_running.alive &&
-			    state.operating ==
-				segment_state_running.operating) {
-				chipset_device_resume(dev_info);
-			}
-			/* ServerNotReady / ServerLost / SegmentStateStandby */
-			else if (state.alive == segment_state_standby.alive &&
-				 state.operating ==
-				 segment_state_standby.operating) {
-				/*
-				 * technically this is standby case
-				 * where server is lost
-				 */
-				chipset_device_pause(dev_info);
-			}
-			break;
-		case CONTROLVM_DEVICE_DESTROY:
-			chipset_device_destroy(dev_info);
-			break;
-		}
-	}
-
-out_respond:
-	device_responder(cmd, pmsg_hdr, response);
-}
-
-static void
+static int
 bus_create(struct controlvm_message *inmsg)
 {
 	struct controlvm_message_packet *cmd = &inmsg->cmd;
+	struct controlvm_message_header *pmsg_hdr = NULL;
 	u32 bus_no = cmd->create_bus.bus_no;
-	int rc = CONTROLVM_RESP_SUCCESS;
 	struct visor_device *bus_info;
 	struct visorchannel *visorchannel;
+	int err;
 
 	bus_info = visorbus_get_device_by_id(bus_no, BUS_ROOT_DEVICE, NULL);
 	if (bus_info && (bus_info->state.created == 1)) {
 		POSTCODE_LINUX_3(BUS_CREATE_FAILURE_PC, bus_no,
 				 POSTCODE_SEVERITY_ERR);
-		rc = -CONTROLVM_RESP_ERROR_ALREADY_DONE;
-		goto out_bus_epilog;
+		err = -EEXIST;
+		goto err_respond;
 	}
+
 	bus_info = kzalloc(sizeof(*bus_info), GFP_KERNEL);
 	if (!bus_info) {
 		POSTCODE_LINUX_3(BUS_CREATE_FAILURE_PC, bus_no,
 				 POSTCODE_SEVERITY_ERR);
-		rc = -CONTROLVM_RESP_ERROR_KMALLOC_FAILED;
-		goto out_bus_epilog;
+		err = -ENOMEM;
+		goto err_respond;
 	}
 
 	INIT_LIST_HEAD(&bus_info->list_all);
@@ -839,6 +718,25 @@ bus_create(struct controlvm_message *inmsg)
 	bus_info->chipset_dev_no = BUS_ROOT_DEVICE;
 
 	POSTCODE_LINUX_3(BUS_CREATE_ENTRY_PC, bus_no, POSTCODE_SEVERITY_INFO);
+
+	if (uuid_le_cmp(cmd->create_bus.bus_inst_uuid, spar_siovm_uuid) == 0)
+		save_crash_message(inmsg, CRASH_BUS);
+
+	if (inmsg->hdr.flags.response_expected == 1) {
+		pmsg_hdr = kzalloc(sizeof(*pmsg_hdr),
+				   GFP_KERNEL);
+		if (!pmsg_hdr) {
+			POSTCODE_LINUX_4(MALLOC_FAILURE_PC, cmd,
+					 bus_info->chipset_bus_no,
+					 POSTCODE_SEVERITY_ERR);
+			err = -ENOMEM;
+			goto err_free_bus_info;
+		}
+
+		memcpy(pmsg_hdr, &inmsg->hdr,
+		       sizeof(struct controlvm_message_header));
+		bus_info->pending_msg_hdr = pmsg_hdr;
+	}
 
 	visorchannel = visorchannel_create(cmd->create_bus.channel_addr,
 					   cmd->create_bus.channel_bytes,
@@ -848,40 +746,75 @@ bus_create(struct controlvm_message *inmsg)
 	if (!visorchannel) {
 		POSTCODE_LINUX_3(BUS_CREATE_FAILURE_PC, bus_no,
 				 POSTCODE_SEVERITY_ERR);
-		rc = -CONTROLVM_RESP_ERROR_KMALLOC_FAILED;
-		kfree(bus_info);
-		bus_info = NULL;
-		goto out_bus_epilog;
+		err = -ENOMEM;
+		goto err_free_pending_msg;
 	}
 	bus_info->visorchannel = visorchannel;
-	if (uuid_le_cmp(cmd->create_bus.bus_inst_uuid, spar_siovm_uuid) == 0)
-		save_crash_message(inmsg, CRASH_BUS);
+
+	/* Response will be handled by chipset_bus_create */
+	chipset_bus_create(bus_info);
 
 	POSTCODE_LINUX_3(BUS_CREATE_EXIT_PC, bus_no, POSTCODE_SEVERITY_INFO);
+	return 0;
 
-out_bus_epilog:
-	bus_epilog(bus_info, CONTROLVM_BUS_CREATE, &inmsg->hdr,
-		   rc, inmsg->hdr.flags.response_expected == 1);
+err_free_pending_msg:
+	kfree(bus_info->pending_msg_hdr);
+
+err_free_bus_info:
+	kfree(bus_info);
+
+err_respond:
+	if (inmsg->hdr.flags.response_expected == 1)
+		bus_responder(inmsg->hdr.id, &inmsg->hdr, err);
+	return err;
 }
 
-static void
+static int
 bus_destroy(struct controlvm_message *inmsg)
 {
 	struct controlvm_message_packet *cmd = &inmsg->cmd;
+	struct controlvm_message_header *pmsg_hdr = NULL;
 	u32 bus_no = cmd->destroy_bus.bus_no;
 	struct visor_device *bus_info;
-	int rc = CONTROLVM_RESP_SUCCESS;
+	int err;
 
 	bus_info = visorbus_get_device_by_id(bus_no, BUS_ROOT_DEVICE, NULL);
-	if (!bus_info)
-		rc = -CONTROLVM_RESP_ERROR_BUS_INVALID;
-	else if (bus_info->state.created == 0)
-		rc = -CONTROLVM_RESP_ERROR_ALREADY_DONE;
+	if (!bus_info) {
+		err = -ENODEV;
+		goto err_respond;
+	}
+	if (bus_info->state.created == 0) {
+		err = -ENOENT;
+		goto err_respond;
+	}
+	if (bus_info->pending_msg_hdr) {
+		/* only non-NULL if dev is still waiting on a response */
+		err = -EEXIST;
+		goto err_respond;
+	}
+	if (inmsg->hdr.flags.response_expected == 1) {
+		pmsg_hdr = kzalloc(sizeof(*pmsg_hdr), GFP_KERNEL);
+		if (!pmsg_hdr) {
+			POSTCODE_LINUX_4(MALLOC_FAILURE_PC, cmd,
+					 bus_info->chipset_bus_no,
+					 POSTCODE_SEVERITY_ERR);
+			err = -ENOMEM;
+			goto err_respond;
+		}
 
-	bus_epilog(bus_info, CONTROLVM_BUS_DESTROY, &inmsg->hdr,
-		   rc, inmsg->hdr.flags.response_expected == 1);
+		memcpy(pmsg_hdr, &inmsg->hdr,
+		       sizeof(struct controlvm_message_header));
+		bus_info->pending_msg_hdr = pmsg_hdr;
+	}
 
-	/* bus_info is freed as part of the busdevice_release function */
+	/* Response will be handled by chipset_bus_destroy */
+	chipset_bus_destroy(bus_info);
+	return 0;
+
+err_respond:
+	if (inmsg->hdr.flags.response_expected == 1)
+		bus_responder(inmsg->hdr.id, &inmsg->hdr, err);
+	return err;
 }
 
 static void
@@ -921,14 +854,15 @@ bus_configure(struct controlvm_message *inmsg,
 		POSTCODE_LINUX_3(BUS_CONFIGURE_EXIT_PC, bus_no,
 				 POSTCODE_SEVERITY_INFO);
 	}
-	bus_epilog(bus_info, CONTROLVM_BUS_CONFIGURE, &inmsg->hdr,
-		   rc, inmsg->hdr.flags.response_expected == 1);
+	if (inmsg->hdr.flags.response_expected == 1)
+		bus_responder(inmsg->hdr.id, &inmsg->hdr, rc);
 }
 
 static void
 my_device_create(struct controlvm_message *inmsg)
 {
 	struct controlvm_message_packet *cmd = &inmsg->cmd;
+	struct controlvm_message_header *pmsg_hdr = NULL;
 	u32 bus_no = cmd->create_device.bus_no;
 	u32 dev_no = cmd->create_device.dev_no;
 	struct visor_device *dev_info = NULL;
@@ -987,9 +921,7 @@ my_device_create(struct controlvm_message *inmsg)
 		POSTCODE_LINUX_4(DEVICE_CREATE_FAILURE_PC, dev_no, bus_no,
 				 POSTCODE_SEVERITY_ERR);
 		rc = -CONTROLVM_RESP_ERROR_KMALLOC_FAILED;
-		kfree(dev_info);
-		dev_info = NULL;
-		goto out_respond;
+		goto out_free_dev_info;
 	}
 	dev_info->visorchannel = visorchannel;
 	dev_info->channel_type_guid = cmd->create_device.data_type_uuid;
@@ -997,18 +929,36 @@ my_device_create(struct controlvm_message *inmsg)
 			spar_vhba_channel_protocol_uuid) == 0)
 		save_crash_message(inmsg, CRASH_DEV);
 
+	if (inmsg->hdr.flags.response_expected == 1) {
+		pmsg_hdr = kzalloc(sizeof(*pmsg_hdr), GFP_KERNEL);
+		if (!pmsg_hdr) {
+			rc = -CONTROLVM_RESP_ERROR_KMALLOC_FAILED;
+			goto out_free_dev_info;
+		}
+
+		memcpy(pmsg_hdr, &inmsg->hdr,
+		       sizeof(struct controlvm_message_header));
+		dev_info->pending_msg_hdr = pmsg_hdr;
+	}
+	/* Chipset_device_create will send response */
+	chipset_device_create(dev_info);
 	POSTCODE_LINUX_4(DEVICE_CREATE_EXIT_PC, dev_no, bus_no,
 			 POSTCODE_SEVERITY_INFO);
+	return;
+
+out_free_dev_info:
+	kfree(dev_info);
+
 out_respond:
-	device_epilog(dev_info, segment_state_running,
-		      CONTROLVM_DEVICE_CREATE, &inmsg->hdr, rc,
-		      inmsg->hdr.flags.response_expected == 1, 1);
+	if (inmsg->hdr.flags.response_expected == 1)
+		device_responder(inmsg->hdr.id, &inmsg->hdr, rc);
 }
 
 static void
 my_device_changestate(struct controlvm_message *inmsg)
 {
 	struct controlvm_message_packet *cmd = &inmsg->cmd;
+	struct controlvm_message_header *pmsg_hdr = NULL;
 	u32 bus_no = cmd->device_change_state.bus_no;
 	u32 dev_no = cmd->device_change_state.dev_no;
 	struct spar_segment_state state = cmd->device_change_state.state;
@@ -1020,36 +970,94 @@ my_device_changestate(struct controlvm_message *inmsg)
 		POSTCODE_LINUX_4(DEVICE_CHANGESTATE_FAILURE_PC, dev_no, bus_no,
 				 POSTCODE_SEVERITY_ERR);
 		rc = -CONTROLVM_RESP_ERROR_DEVICE_INVALID;
-	} else if (dev_info->state.created == 0) {
+		goto err_respond;
+	}
+	if (dev_info->state.created == 0) {
 		POSTCODE_LINUX_4(DEVICE_CHANGESTATE_FAILURE_PC, dev_no, bus_no,
 				 POSTCODE_SEVERITY_ERR);
 		rc = -CONTROLVM_RESP_ERROR_DEVICE_INVALID;
+		goto err_respond;
 	}
-	if ((rc >= CONTROLVM_RESP_SUCCESS) && dev_info)
-		device_epilog(dev_info, state,
-			      CONTROLVM_DEVICE_CHANGESTATE, &inmsg->hdr, rc,
-			      inmsg->hdr.flags.response_expected == 1, 1);
+	if (dev_info->pending_msg_hdr) {
+		/* only non-NULL if dev is still waiting on a response */
+		rc = -CONTROLVM_RESP_ERROR_MESSAGE_ID_INVALID_FOR_CLIENT;
+		goto err_respond;
+	}
+	if (inmsg->hdr.flags.response_expected == 1) {
+		pmsg_hdr = kzalloc(sizeof(*pmsg_hdr), GFP_KERNEL);
+		if (!pmsg_hdr) {
+			rc = -CONTROLVM_RESP_ERROR_KMALLOC_FAILED;
+			goto err_respond;
+		}
+
+		memcpy(pmsg_hdr, &inmsg->hdr,
+		       sizeof(struct controlvm_message_header));
+		dev_info->pending_msg_hdr = pmsg_hdr;
+	}
+
+	if (state.alive == segment_state_running.alive &&
+	    state.operating == segment_state_running.operating)
+		/* Response will be sent from chipset_device_resume */
+		chipset_device_resume(dev_info);
+	/* ServerNotReady / ServerLost / SegmentStateStandby */
+	else if (state.alive == segment_state_standby.alive &&
+		 state.operating == segment_state_standby.operating)
+		/*
+		 * technically this is standby case where server is lost.
+		 * Response will be sent from chipset_device_pause.
+		 */
+		chipset_device_pause(dev_info);
+
+	return;
+
+err_respond:
+	if (inmsg->hdr.flags.response_expected == 1)
+		device_responder(inmsg->hdr.id, &inmsg->hdr, rc);
 }
 
 static void
 my_device_destroy(struct controlvm_message *inmsg)
 {
 	struct controlvm_message_packet *cmd = &inmsg->cmd;
+	struct controlvm_message_header *pmsg_hdr = NULL;
 	u32 bus_no = cmd->destroy_device.bus_no;
 	u32 dev_no = cmd->destroy_device.dev_no;
 	struct visor_device *dev_info;
 	int rc = CONTROLVM_RESP_SUCCESS;
 
 	dev_info = visorbus_get_device_by_id(bus_no, dev_no, NULL);
-	if (!dev_info)
+	if (!dev_info) {
 		rc = -CONTROLVM_RESP_ERROR_DEVICE_INVALID;
-	else if (dev_info->state.created == 0)
+		goto err_respond;
+	}
+	if (dev_info->state.created == 0) {
 		rc = -CONTROLVM_RESP_ERROR_ALREADY_DONE;
+		goto err_respond;
+	}
 
-	if ((rc >= CONTROLVM_RESP_SUCCESS) && dev_info)
-		device_epilog(dev_info, segment_state_running,
-			      CONTROLVM_DEVICE_DESTROY, &inmsg->hdr, rc,
-			      inmsg->hdr.flags.response_expected == 1, 1);
+	if (dev_info->pending_msg_hdr) {
+		/* only non-NULL if dev is still waiting on a response */
+		rc = -CONTROLVM_RESP_ERROR_MESSAGE_ID_INVALID_FOR_CLIENT;
+		goto err_respond;
+	}
+	if (inmsg->hdr.flags.response_expected == 1) {
+		pmsg_hdr = kzalloc(sizeof(*pmsg_hdr), GFP_KERNEL);
+		if (!pmsg_hdr) {
+			rc = -CONTROLVM_RESP_ERROR_KMALLOC_FAILED;
+			goto err_respond;
+		}
+
+		memcpy(pmsg_hdr, &inmsg->hdr,
+		       sizeof(struct controlvm_message_header));
+		dev_info->pending_msg_hdr = pmsg_hdr;
+	}
+
+	chipset_device_destroy(dev_info);
+	return;
+
+err_respond:
+	if (inmsg->hdr.flags.response_expected == 1)
+		device_responder(inmsg->hdr.id, &inmsg->hdr, rc);
 }
 
 /**
@@ -1075,7 +1083,6 @@ initialize_controlvm_payload_info(u64 phys_addr, u64 offset, u32 bytes,
 	if (!info)
 		return -CONTROLVM_RESP_ERROR_PAYLOAD_INVALID;
 
-	memset(info, 0, sizeof(struct visor_controlvm_payload_info));
 	if ((offset == 0) || (bytes == 0))
 		return -CONTROLVM_RESP_ERROR_PAYLOAD_INVALID;
 
@@ -1083,6 +1090,7 @@ initialize_controlvm_payload_info(u64 phys_addr, u64 offset, u32 bytes,
 	if (!payload)
 		return -CONTROLVM_RESP_ERROR_IOREMAP_FAILED;
 
+	memset(info, 0, sizeof(struct visor_controlvm_payload_info));
 	info->offset = offset;
 	info->bytes = bytes;
 	info->ptr = payload;
@@ -1317,7 +1325,7 @@ static struct attribute *visorchipset_install_attrs[] = {
 	NULL
 };
 
-static struct attribute_group visorchipset_install_group = {
+static const struct attribute_group visorchipset_install_group = {
 	.name = "install",
 	.attrs = visorchipset_install_attrs
 };
@@ -2118,8 +2126,6 @@ visorchipset_init(struct acpi_device *acpi_device)
 	addr = controlvm_get_channel_address();
 	if (!addr)
 		goto error;
-
-	memset(&controlvm_payload_info, 0, sizeof(controlvm_payload_info));
 
 	controlvm_channel = visorchannel_create_with_lock(addr, 0,
 							  GFP_KERNEL, uuid);
