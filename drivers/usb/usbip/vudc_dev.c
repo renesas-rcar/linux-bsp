@@ -242,10 +242,10 @@ static const struct usb_gadget_ops vgadget_ops = {
 static int vep_enable(struct usb_ep *_ep,
 		const struct usb_endpoint_descriptor *desc)
 {
-	struct vep *ep;
-	struct vudc *udc;
-	unsigned maxp;
-	unsigned long flags;
+	struct vep	*ep;
+	struct vudc	*udc;
+	unsigned int	maxp;
+	unsigned long	flags;
 
 	ep = to_vep(_ep);
 	udc = ep_to_vudc(ep);
@@ -259,7 +259,7 @@ static int vep_enable(struct usb_ep *_ep,
 
 	spin_lock_irqsave(&udc->lock, flags);
 
-	maxp = usb_endpoint_maxp(desc) & 0x7ff;
+	maxp = usb_endpoint_maxp(desc);
 	_ep->maxpacket = maxp;
 	ep->desc = desc;
 	ep->type = usb_endpoint_type(desc);
