@@ -44,7 +44,7 @@ MODULE_PARM_DESC(debug, "Enable debug printks in this driver");
 
 static int forceload;
 module_param_named(forceload, forceload, uint, 0644);
-MODULE_PARM_DESC(debug, "Enable driver testing on unvalidated i5000");
+MODULE_PARM_DESC(forceload, "Enable driver testing on unvalidated i5000");
 
 #define dprintk(fmt, arg...) \
 	do { if (debug) printk(KERN_INFO I7300_PRINT fmt, ##arg); } while (0)
@@ -347,6 +347,7 @@ static int i7300_idle_thrt_save(void)
 {
 	u32 new_mc_val;
 	u8 gblactlm;
+	int ret;
 
 	pci_read_config_byte(fbd_dev, DIMM_THRTCTL, &i7300_idle_thrtctl_saved);
 	pci_read_config_byte(fbd_dev, DIMM_THRTLOW, &i7300_idle_thrtlow_saved);
@@ -364,7 +365,9 @@ static int i7300_idle_thrt_save(void)
 	 * unlimited-activations while in open-loop throttling (i.e., when
 	 * Global Activation Throttle Limit is zero).
 	 */
-	pci_read_config_byte(fbd_dev, DIMM_GBLACT, &gblactlm);
+	ret = pci_read_config_byte(fbd_dev, DIMM_GBLACT, &gblactlm);
+	if (ret)
+		return ret;
 	dprintk("thrtctl_saved = 0x%02x, thrtlow_saved = 0x%02x\n",
 		i7300_idle_thrtctl_saved,
 		i7300_idle_thrtlow_saved);
@@ -413,14 +416,16 @@ static void i7300_idle_stop(void)
 {
 	u8 new_ctl;
 	u8 got_ctl;
+	int ret;
 
 	new_ctl = i7300_idle_thrtctl_saved & ~DIMM_THRTCTL_THRMHUNT;
 	pci_write_config_byte(fbd_dev, DIMM_THRTCTL, new_ctl);
 
 	pci_write_config_byte(fbd_dev, DIMM_THRTLOW, i7300_idle_thrtlow_saved);
 	pci_write_config_byte(fbd_dev, DIMM_THRTCTL, i7300_idle_thrtctl_saved);
-	pci_read_config_byte(fbd_dev, DIMM_THRTCTL, &got_ctl);
-	WARN_ON_ONCE(got_ctl != i7300_idle_thrtctl_saved);
+	ret = pci_read_config_byte(fbd_dev, DIMM_THRTCTL, &got_ctl);
+
+	WARN_ON_ONCE(ret || (got_ctl != i7300_idle_thrtctl_saved));
 }
 
 
