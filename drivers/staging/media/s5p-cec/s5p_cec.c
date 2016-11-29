@@ -22,7 +22,6 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/timer.h>
-#include <linux/version.h>
 #include <linux/workqueue.h>
 #include <media/cec.h>
 
@@ -231,7 +230,7 @@ static int s5p_cec_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int s5p_cec_runtime_suspend(struct device *dev)
+static int __maybe_unused s5p_cec_runtime_suspend(struct device *dev)
 {
 	struct s5p_cec_dev *cec = dev_get_drvdata(dev);
 
@@ -239,7 +238,7 @@ static int s5p_cec_runtime_suspend(struct device *dev)
 	return 0;
 }
 
-static int s5p_cec_runtime_resume(struct device *dev)
+static int __maybe_unused s5p_cec_runtime_resume(struct device *dev)
 {
 	struct s5p_cec_dev *cec = dev_get_drvdata(dev);
 	int ret;
@@ -263,6 +262,7 @@ static const struct of_device_id s5p_cec_match[] = {
 	},
 	{},
 };
+MODULE_DEVICE_TABLE(of, s5p_cec_match);
 
 static struct platform_driver s5p_cec_pdrv = {
 	.probe	= s5p_cec_probe,
