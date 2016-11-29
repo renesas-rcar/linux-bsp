@@ -763,8 +763,6 @@ struct most_aim_obj {
 	struct kobject kobj;
 	struct list_head list;
 	struct most_aim *driver;
-	char add_link[STRING_SIZE];
-	char remove_link[STRING_SIZE];
 };
 
 #define to_aim_obj(d) container_of(d, struct most_aim_obj, kobj)
@@ -885,16 +883,16 @@ static ssize_t show_add_link(struct most_aim_obj *aim_obj,
  *
  * Examples:
  *
- * Input: "mdev0:ch0@ep_81:my_channel\n" or
- *        "mdev0:ch0@ep_81:my_channel"
+ * Input: "mdev0:ch6:my_channel\n" or
+ *        "mdev0:ch6:my_channel"
  *
- * Output: *a -> "mdev0", *b -> "ch0@ep_81", *c -> "my_channel"
+ * Output: *a -> "mdev0", *b -> "ch6", *c -> "my_channel"
  *
- * Input: "mdev0:ch0@ep_81\n"
- * Output: *a -> "mdev0", *b -> "ch0@ep_81", *c -> ""
+ * Input: "mdev1:ep81\n"
+ * Output: *a -> "mdev1", *b -> "ep81", *c -> ""
  *
- * Input: "mdev0:ch0@ep_81"
- * Output: *a -> "mdev0", *b -> "ch0@ep_81", *c == NULL
+ * Input: "mdev1:ep81"
+ * Output: *a -> "mdev1", *b -> "ep81", *c == NULL
  */
 static int split_string(char *buf, char **a, char **b, char **c)
 {
@@ -962,11 +960,11 @@ most_c_obj *get_channel_by_name(char *mdev, char *mdev_ch)
  * Searches for a pair of device and channel and probes the AIM
  *
  * Example:
- * (1) echo -n -e "mdev0:ch0@ep_81:my_rxchannel\n" >add_link
- * (2) echo -n -e "mdev0:ch0@ep_81\n" >add_link
+ * (1) echo "mdev0:ch6:my_rxchannel" >add_link
+ * (2) echo "mdev1:ep81" >add_link
  *
  * (1) would create the device node /dev/my_rxchannel
- * (2) would create the device node /dev/mdev0-ch0@ep_81
+ * (2) would create the device node /dev/mdev1-ep81
  */
 static ssize_t store_add_link(struct most_aim_obj *aim_obj,
 			      struct most_aim_attribute *attr,
@@ -984,7 +982,6 @@ static ssize_t store_add_link(struct most_aim_obj *aim_obj,
 	size_t max_len = min_t(size_t, len + 1, STRING_SIZE);
 
 	strlcpy(buffer, buf, max_len);
-	strlcpy(aim_obj->add_link, buf, max_len);
 
 	ret = split_string(buffer, &mdev, &mdev_ch, &mdev_devnod);
 	if (ret)
@@ -1021,13 +1018,6 @@ static ssize_t store_add_link(struct most_aim_obj *aim_obj,
 static struct most_aim_attribute most_aim_attr_add_link =
 	__ATTR(add_link, S_IRUGO | S_IWUSR, show_add_link, store_add_link);
 
-static ssize_t show_remove_link(struct most_aim_obj *aim_obj,
-				struct most_aim_attribute *attr,
-				char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%s\n", aim_obj->remove_link);
-}
-
 /**
  * store_remove_link - store function for remove_link attribute
  * @aim_obj: pointer to AIM object
@@ -1036,7 +1026,7 @@ static ssize_t show_remove_link(struct most_aim_obj *aim_obj,
  * @len: buffer length
  *
  * Example:
- * echo -n -e "mdev0:ch0@ep_81\n" >remove_link
+ * echo "mdev0:ep81" >remove_link
  */
 static ssize_t store_remove_link(struct most_aim_obj *aim_obj,
 				 struct most_aim_attribute *attr,
@@ -1051,7 +1041,6 @@ static ssize_t store_remove_link(struct most_aim_obj *aim_obj,
 	size_t max_len = min_t(size_t, len + 1, STRING_SIZE);
 
 	strlcpy(buffer, buf, max_len);
-	strlcpy(aim_obj->remove_link, buf, max_len);
 	ret = split_string(buffer, &mdev, &mdev_ch, NULL);
 	if (ret)
 		return ret;
@@ -1070,8 +1059,7 @@ static ssize_t store_remove_link(struct most_aim_obj *aim_obj,
 }
 
 static struct most_aim_attribute most_aim_attr_remove_link =
-	__ATTR(remove_link, S_IRUGO | S_IWUSR, show_remove_link,
-	       store_remove_link);
+	__ATTR(remove_link, S_IWUSR, NULL, store_remove_link);
 
 static struct attribute *most_aim_def_attrs[] = {
 	&most_aim_attr_add_link.attr,
@@ -1761,9 +1749,6 @@ struct kobject *most_register_interface(struct most_interface *iface)
 
 		if (!name_suffix)
 			snprintf(channel_name, STRING_SIZE, "ch%d", i);
-		else if (name_suffix[0] == '@')
-			snprintf(channel_name, STRING_SIZE, "ch%d%s", i,
-				 name_suffix);
 		else
 			snprintf(channel_name, STRING_SIZE, "%s", name_suffix);
 

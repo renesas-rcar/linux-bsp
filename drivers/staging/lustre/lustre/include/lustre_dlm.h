@@ -59,7 +59,7 @@ struct obd_device;
 #define OBD_LDLM_DEVICENAME  "ldlm"
 
 #define LDLM_DEFAULT_LRU_SIZE (100 * num_online_cpus())
-#define LDLM_DEFAULT_MAX_ALIVE (cfs_time_seconds(36000))
+#define LDLM_DEFAULT_MAX_ALIVE (cfs_time_seconds(3900)) /* 65 min */
 #define LDLM_DEFAULT_PARALLEL_AST_LIMIT 1024
 
 /**
@@ -550,8 +550,6 @@ struct ldlm_flock {
 	__u64 owner;
 	__u64 blocking_owner;
 	struct obd_export *blocking_export;
-	/* Protected by the hash lock */
-	__u32 blocking_refs;
 	__u32 pid;
 };
 
@@ -979,7 +977,7 @@ struct ldlm_enqueue_info {
 extern struct obd_ops ldlm_obd_ops;
 
 extern char *ldlm_lockname[];
-char *ldlm_it2str(int it);
+const char *ldlm_it2str(enum ldlm_intent_flags it);
 
 /**
  * Just a fancy CDEBUG call with log level preset to LDLM_DEBUG.
