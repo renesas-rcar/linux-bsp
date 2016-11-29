@@ -972,6 +972,48 @@ struct snd_soc_dai *snd_soc_find_dai(
 }
 EXPORT_SYMBOL_GPL(snd_soc_find_dai);
 
+
+/**
+ * snd_soc_find_dai_link - Find a DAI link
+ *
+ * @card: soc card
+ * @id: DAI link ID to match
+ * @name: DAI link name to match, optional
+ * @stream name: DAI link stream name to match, optional
+ *
+ * This function will search all existing DAI links of the soc card to
+ * find the link of the same ID. Since DAI links may not have their
+ * unique ID, so name and stream name should also match if being
+ * specified.
+ *
+ * Return: pointer of DAI link, or NULL if not found.
+ */
+struct snd_soc_dai_link *snd_soc_find_dai_link(struct snd_soc_card *card,
+					       int id, const char *name,
+					       const char *stream_name)
+{
+	struct snd_soc_dai_link *link, *_link;
+
+	lockdep_assert_held(&client_mutex);
+
+	list_for_each_entry_safe(link, _link, &card->dai_link_list, list) {
+		if (link->id != id)
+			continue;
+
+		if (name && (!link->name || strcmp(name, link->name)))
+			continue;
+
+		if (stream_name && (!link->stream_name
+			|| strcmp(stream_name, link->stream_name)))
+			continue;
+
+		return link;
+	}
+
+	return NULL;
+}
+EXPORT_SYMBOL_GPL(snd_soc_find_dai_link);
+
 static bool soc_is_dai_link_bound(struct snd_soc_card *card,
 		struct snd_soc_dai_link *dai_link)
 {
@@ -993,6 +1035,7 @@ static int soc_bind_dai_link(struct snd_soc_card *card,
 	struct snd_soc_dai_link_component cpu_dai_component;
 	struct snd_soc_dai **codec_dais;
 	struct snd_soc_platform *platform;
+	struct device_node *platform_of_node;
 	const char *platform_name;
 	int i;
 
@@ -1042,9 +1085,12 @@ static int soc_bind_dai_link(struct snd_soc_card *card,
 
 	/* find one from the set of registered platforms */
 	list_for_each_entry(platform, &platform_list, list) {
+		platform_of_node = platform->dev->of_node;
+		if (!platform_of_node && platform->dev->parent->of_node)
+			platform_of_node = platform->dev->parent->of_node;
+
 		if (dai_link->platform_of_node) {
-			if (platform->dev->of_node !=
-			    dai_link->platform_of_node)
+			if (platform_of_node != dai_link->platform_of_node)
 				continue;
 		} else {
 			if (strcmp(platform->component.name, platform_name))
@@ -3424,10 +3470,10 @@ found:
 EXPORT_SYMBOL_GPL(snd_soc_unregister_codec);
 
 /* Retrieve a card's name from device tree */
-int snd_soc_of_parse_card_name(struct snd_soc_card *card,
-			       const char *propname)
+int snd_soc_of_parse_card_name_from_node(struct snd_soc_card *card,
+					 struct device_node *np,
+					 const char *propname)
 {
-	struct device_node *np;
 	int ret;
 
 	if (!card->dev) {
@@ -3435,7 +3481,8 @@ int snd_soc_of_parse_card_name(struct snd_soc_card *card,
 		return -EINVAL;
 	}
 
-	np = card->dev->of_node;
+	if (!np)
+		np = card->dev->of_node;
 
 	ret = of_property_read_string_index(np, propname, 0, &card->name);
 	/*
@@ -3452,7 +3499,7 @@ int snd_soc_of_parse_card_name(struct snd_soc_card *card,
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(snd_soc_of_parse_card_name);
+EXPORT_SYMBOL_GPL(snd_soc_of_parse_card_name_from_node);
 
 static const struct snd_soc_dapm_widget simple_widgets[] = {
 	SND_SOC_DAPM_MIC("Microphone", NULL),
@@ -3461,13 +3508,16 @@ static const struct snd_soc_dapm_widget simple_widgets[] = {
 	SND_SOC_DAPM_SPK("Speaker", NULL),
 };
 
-int snd_soc_of_parse_audio_simple_widgets(struct snd_soc_card *card,
+int snd_soc_of_parse_audio_simple_widgets_from_node(struct snd_soc_card *card,
+					  struct device_node *np,
 					  const char *propname)
 {
-	struct device_node *np = card->dev->of_node;
 	struct snd_soc_dapm_widget *widgets;
 	const char *template, *wname;
 	int i, j, num_widgets, ret;
+
+	if (!np)
+		np = card->dev->of_node;
 
 	num_widgets = of_property_count_strings(np, propname);
 	if (num_widgets < 0) {
@@ -3539,7 +3589,7 @@ int snd_soc_of_parse_audio_simple_widgets(struct snd_soc_card *card,
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(snd_soc_of_parse_audio_simple_widgets);
+EXPORT_SYMBOL_GPL(snd_soc_of_parse_audio_simple_widgets_from_node);
 
 static int snd_soc_of_get_slot_mask(struct device_node *np,
 				    const char *prop_name,
@@ -3595,14 +3645,17 @@ int snd_soc_of_parse_tdm_slot(struct device_node *np,
 }
 EXPORT_SYMBOL_GPL(snd_soc_of_parse_tdm_slot);
 
-void snd_soc_of_parse_audio_prefix(struct snd_soc_card *card,
+void snd_soc_of_parse_audio_prefix_from_node(struct snd_soc_card *card,
+				   struct device_node *np,
 				   struct snd_soc_codec_conf *codec_conf,
 				   struct device_node *of_node,
 				   const char *propname)
 {
-	struct device_node *np = card->dev->of_node;
 	const char *str;
 	int ret;
+
+	if (!np)
+		np = card->dev->of_node;
 
 	ret = of_property_read_string(np, propname, &str);
 	if (ret < 0) {
@@ -3613,15 +3666,18 @@ void snd_soc_of_parse_audio_prefix(struct snd_soc_card *card,
 	codec_conf->of_node	= of_node;
 	codec_conf->name_prefix	= str;
 }
-EXPORT_SYMBOL_GPL(snd_soc_of_parse_audio_prefix);
+EXPORT_SYMBOL_GPL(snd_soc_of_parse_audio_prefix_from_node);
 
-int snd_soc_of_parse_audio_routing(struct snd_soc_card *card,
+int snd_soc_of_parse_audio_routing_from_node(struct snd_soc_card *card,
+				   struct device_node *np,
 				   const char *propname)
 {
-	struct device_node *np = card->dev->of_node;
 	int num_routes;
 	struct snd_soc_dapm_route *routes;
 	int i, ret;
+
+	if (!np)
+		np = card->dev->of_node;
 
 	num_routes = of_property_count_strings(np, propname);
 	if (num_routes < 0 || num_routes & 1) {
@@ -3669,7 +3725,7 @@ int snd_soc_of_parse_audio_routing(struct snd_soc_card *card,
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(snd_soc_of_parse_audio_routing);
+EXPORT_SYMBOL_GPL(snd_soc_of_parse_audio_routing_from_node);
 
 unsigned int snd_soc_of_parse_daifmt(struct device_node *np,
 				     const char *prefix,
@@ -3784,7 +3840,7 @@ unsigned int snd_soc_of_parse_daifmt(struct device_node *np,
 }
 EXPORT_SYMBOL_GPL(snd_soc_of_parse_daifmt);
 
-static int snd_soc_get_dai_name(struct of_phandle_args *args,
+int snd_soc_get_dai_name(struct of_phandle_args *args,
 				const char **dai_name)
 {
 	struct snd_soc_component *pos;
@@ -3836,6 +3892,7 @@ static int snd_soc_get_dai_name(struct of_phandle_args *args,
 	mutex_unlock(&client_mutex);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(snd_soc_get_dai_name);
 
 int snd_soc_of_get_dai_name(struct device_node *of_node,
 			    const char **dai_name)

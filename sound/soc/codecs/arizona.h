@@ -14,6 +14,8 @@
 #define _ASOC_ARIZONA_H
 
 #include <linux/completion.h>
+#include <linux/notifier.h>
+#include <linux/mfd/arizona/core.h>
 
 #include <sound/soc.h>
 
@@ -66,7 +68,6 @@
 /* Notifier events */
 #define ARIZONA_NOTIFY_VOICE_TRIGGER   0x1
 
-struct arizona;
 struct wm_adsp;
 
 struct arizona_dai_priv {
@@ -273,6 +274,8 @@ extern int arizona_eq_coeff_put(struct snd_kcontrol *kcontrol,
 extern int arizona_lhpf_coeff_put(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol);
 
+extern int arizona_clk_ev(struct snd_soc_dapm_widget *w,
+			  struct snd_kcontrol *kcontrol, int event);
 extern int arizona_set_sysclk(struct snd_soc_codec *codec, int clk_id,
 			      int source, unsigned int freq, int dir);
 
@@ -315,7 +318,8 @@ extern int arizona_init_gpio(struct snd_soc_codec *codec);
 extern int arizona_init_mono(struct snd_soc_codec *codec);
 extern int arizona_init_notifiers(struct snd_soc_codec *codec);
 
-extern int arizona_free_spk(struct snd_soc_codec *codec);
+extern int arizona_init_spk_irqs(struct arizona *arizona);
+extern int arizona_free_spk_irqs(struct arizona *arizona);
 
 extern int arizona_init_dai(struct arizona_priv *priv, int dai);
 
@@ -326,12 +330,27 @@ extern bool arizona_input_analog(struct snd_soc_codec *codec, int shift);
 
 extern const char *arizona_sample_rate_val_to_name(unsigned int rate_val);
 
-extern int arizona_register_notifier(struct snd_soc_codec *codec,
-				     struct notifier_block *nb,
-				     int (*notify)(struct notifier_block *nb,
-						   unsigned long action,
-						   void *data));
-extern int arizona_unregister_notifier(struct snd_soc_codec *codec,
-				       struct notifier_block *nb);
+static inline int arizona_register_notifier(struct snd_soc_codec *codec,
+					    struct notifier_block *nb,
+					    int (*notify)
+					    (struct notifier_block *nb,
+					    unsigned long action, void *data))
+{
+	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct arizona *arizona = priv->arizona;
+
+	nb->notifier_call = notify;
+
+	return blocking_notifier_chain_register(&arizona->notifier, nb);
+}
+
+static inline int arizona_unregister_notifier(struct snd_soc_codec *codec,
+					      struct notifier_block *nb)
+{
+	struct arizona_priv *priv = snd_soc_codec_get_drvdata(codec);
+	struct arizona *arizona = priv->arizona;
+
+	return blocking_notifier_chain_unregister(&arizona->notifier, nb);
+}
 
 #endif
