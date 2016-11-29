@@ -40,6 +40,7 @@ enum {
 	PFVF_STATUS_NOT_SUPPORTED,
 	PFVF_STATUS_NO_RESOURCE,
 	PFVF_STATUS_FORCED,
+	PFVF_STATUS_MALICIOUS,
 };
 
 /* vf pf channel tlvs */
@@ -622,6 +623,14 @@ void qed_vf_get_num_vlan_filters(struct qed_hwfn *p_hwfn,
 				 u8 *num_vlan_filters);
 
 /**
+ * @brief Get number of MAC filters allocated for VF by qed
+ *
+ *  @param p_hwfn
+ *  @param num_rxqs - allocated MAC filters
+ */
+void qed_vf_get_num_mac_filters(struct qed_hwfn *p_hwfn, u8 *num_mac_filters);
+
+/**
  * @brief Check if VF can set a MAC address
  *
  * @param p_hwfn
@@ -868,6 +877,11 @@ static inline void qed_vf_get_port_mac(struct qed_hwfn *p_hwfn, u8 *port_mac)
 
 static inline void qed_vf_get_num_vlan_filters(struct qed_hwfn *p_hwfn,
 					       u8 *num_vlan_filters)
+{
+}
+
+static inline void qed_vf_get_num_mac_filters(struct qed_hwfn *p_hwfn,
+					      u8 *num_mac_filters)
 {
 }
 

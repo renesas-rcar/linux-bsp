@@ -233,13 +233,14 @@ void bpf_register_map_type(struct bpf_map_type_list *tl);
 
 struct bpf_prog *bpf_prog_get(u32 ufd);
 struct bpf_prog *bpf_prog_get_type(u32 ufd, enum bpf_prog_type type);
-struct bpf_prog *bpf_prog_add(struct bpf_prog *prog, int i);
-struct bpf_prog *bpf_prog_inc(struct bpf_prog *prog);
+struct bpf_prog * __must_check bpf_prog_add(struct bpf_prog *prog, int i);
+void bpf_prog_sub(struct bpf_prog *prog, int i);
+struct bpf_prog * __must_check bpf_prog_inc(struct bpf_prog *prog);
 void bpf_prog_put(struct bpf_prog *prog);
 
 struct bpf_map *bpf_map_get_with_uref(u32 ufd);
 struct bpf_map *__bpf_map_get(struct fd f);
-struct bpf_map *bpf_map_inc(struct bpf_map *map, bool uref);
+struct bpf_map * __must_check bpf_map_inc(struct bpf_map *map, bool uref);
 void bpf_map_put_with_uref(struct bpf_map *map);
 void bpf_map_put(struct bpf_map *map);
 int bpf_map_precharge_memlock(u32 pages);
@@ -298,15 +299,21 @@ static inline struct bpf_prog *bpf_prog_get_type(u32 ufd,
 {
 	return ERR_PTR(-EOPNOTSUPP);
 }
-static inline struct bpf_prog *bpf_prog_add(struct bpf_prog *prog, int i)
+static inline struct bpf_prog * __must_check bpf_prog_add(struct bpf_prog *prog,
+							  int i)
 {
 	return ERR_PTR(-EOPNOTSUPP);
+}
+
+static inline void bpf_prog_sub(struct bpf_prog *prog, int i)
+{
 }
 
 static inline void bpf_prog_put(struct bpf_prog *prog)
 {
 }
-static inline struct bpf_prog *bpf_prog_inc(struct bpf_prog *prog)
+
+static inline struct bpf_prog * __must_check bpf_prog_inc(struct bpf_prog *prog)
 {
 	return ERR_PTR(-EOPNOTSUPP);
 }
@@ -319,6 +326,7 @@ extern const struct bpf_func_proto bpf_map_delete_elem_proto;
 
 extern const struct bpf_func_proto bpf_get_prandom_u32_proto;
 extern const struct bpf_func_proto bpf_get_smp_processor_id_proto;
+extern const struct bpf_func_proto bpf_get_numa_node_id_proto;
 extern const struct bpf_func_proto bpf_tail_call_proto;
 extern const struct bpf_func_proto bpf_ktime_get_ns_proto;
 extern const struct bpf_func_proto bpf_get_current_pid_tgid_proto;

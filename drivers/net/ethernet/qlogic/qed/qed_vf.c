@@ -1171,6 +1171,13 @@ void qed_vf_get_num_vlan_filters(struct qed_hwfn *p_hwfn, u8 *num_vlan_filters)
 	*num_vlan_filters = p_vf->acquire_resp.resc.num_vlan_filters;
 }
 
+void qed_vf_get_num_mac_filters(struct qed_hwfn *p_hwfn, u8 *num_mac_filters)
+{
+	struct qed_vf_iov *p_vf = p_hwfn->vf_iov_info;
+
+	*num_mac_filters = p_vf->acquire_resp.resc.num_mac_filters;
+}
+
 bool qed_vf_check_mac(struct qed_hwfn *p_hwfn, u8 *mac)
 {
 	struct qed_bulletin_content *bulletin;
@@ -1230,8 +1237,8 @@ static void qed_handle_bulletin_change(struct qed_hwfn *hwfn)
 
 	is_mac_exist = qed_vf_bulletin_get_forced_mac(hwfn, mac,
 						      &is_mac_forced);
-	if (is_mac_exist && is_mac_forced && cookie)
-		ops->force_mac(cookie, mac);
+	if (is_mac_exist && cookie)
+		ops->force_mac(cookie, mac, !!is_mac_forced);
 
 	/* Always update link configuration according to bulletin */
 	qed_link_update(hwfn);

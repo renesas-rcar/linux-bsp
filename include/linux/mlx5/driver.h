@@ -104,6 +104,8 @@ enum {
 enum {
 	MLX5_REG_QETCR		 = 0x4005,
 	MLX5_REG_QTCT		 = 0x400a,
+	MLX5_REG_DCBX_PARAM      = 0x4020,
+	MLX5_REG_DCBX_APP        = 0x4021,
 	MLX5_REG_PCAP		 = 0x5001,
 	MLX5_REG_PMTU		 = 0x5003,
 	MLX5_REG_PTYS		 = 0x5004,
@@ -121,6 +123,12 @@ enum {
 	MLX5_REG_HOST_ENDIANNESS = 0x7004,
 	MLX5_REG_MCIA		 = 0x9014,
 	MLX5_REG_MLCR		 = 0x902b,
+	MLX5_REG_MPCNT		 = 0x9051,
+};
+
+enum mlx5_dcbx_oper_mode {
+	MLX5E_DCBX_PARAM_VER_OPER_HOST  = 0x0,
+	MLX5E_DCBX_PARAM_VER_OPER_AUTO  = 0x3,
 };
 
 enum {
@@ -208,7 +216,7 @@ struct mlx5_cmd_first {
 
 struct mlx5_cmd_msg {
 	struct list_head		list;
-	struct cache_ent	       *cache;
+	struct cmd_msg_cache	       *parent;
 	u32				len;
 	struct mlx5_cmd_first		first;
 	struct mlx5_cmd_mailbox	       *next;
@@ -228,17 +236,17 @@ struct mlx5_cmd_debug {
 	u16			outlen;
 };
 
-struct cache_ent {
+struct cmd_msg_cache {
 	/* protect block chain allocations
 	 */
 	spinlock_t		lock;
 	struct list_head	head;
+	unsigned int		max_inbox_size;
+	unsigned int		num_ent;
 };
 
-struct cmd_msg_cache {
-	struct cache_ent	large;
-	struct cache_ent	med;
-
+enum {
+	MLX5_NUM_COMMAND_CACHES = 5,
 };
 
 struct mlx5_cmd_stats {
@@ -281,7 +289,7 @@ struct mlx5_cmd {
 	struct mlx5_cmd_work_ent *ent_arr[MLX5_MAX_COMMANDS];
 	struct pci_pool *pool;
 	struct mlx5_cmd_debug dbg;
-	struct cmd_msg_cache cache;
+	struct cmd_msg_cache cache[MLX5_NUM_COMMAND_CACHES];
 	int checksum_disabled;
 	struct mlx5_cmd_stats stats[MLX5_CMD_OP_MAX];
 };
@@ -498,6 +506,31 @@ struct mlx5_rl_table {
 	struct mlx5_rl_entry   *rl_entry;
 };
 
+enum port_module_event_status_type {
+	MLX5_MODULE_STATUS_PLUGGED   = 0x1,
+	MLX5_MODULE_STATUS_UNPLUGGED = 0x2,
+	MLX5_MODULE_STATUS_ERROR     = 0x3,
+	MLX5_MODULE_STATUS_NUM       = 0x3,
+};
+
+enum  port_module_event_error_type {
+	MLX5_MODULE_EVENT_ERROR_POWER_BUDGET_EXCEEDED,
+	MLX5_MODULE_EVENT_ERROR_LONG_RANGE_FOR_NON_MLNX_CABLE_MODULE,
+	MLX5_MODULE_EVENT_ERROR_BUS_STUCK,
+	MLX5_MODULE_EVENT_ERROR_NO_EEPROM_RETRY_TIMEOUT,
+	MLX5_MODULE_EVENT_ERROR_ENFORCE_PART_NUMBER_LIST,
+	MLX5_MODULE_EVENT_ERROR_UNKNOWN_IDENTIFIER,
+	MLX5_MODULE_EVENT_ERROR_HIGH_TEMPERATURE,
+	MLX5_MODULE_EVENT_ERROR_BAD_CABLE,
+	MLX5_MODULE_EVENT_ERROR_UNKNOWN,
+	MLX5_MODULE_EVENT_ERROR_NUM,
+};
+
+struct mlx5_port_module_event_stats {
+	u64 status_counters[MLX5_MODULE_STATUS_NUM];
+	u64 error_counters[MLX5_MODULE_EVENT_ERROR_NUM];
+};
+
 struct mlx5_priv {
 	char			name[MLX5_MAX_NAME_LEN];
 	struct mlx5_eq_table	eq_table;
@@ -559,6 +592,8 @@ struct mlx5_priv {
 	unsigned long		pci_dev_data;
 	struct mlx5_fc_stats		fc_stats;
 	struct mlx5_rl_table            rl_table;
+
+	struct mlx5_port_module_event_stats  pme_stats;
 };
 
 enum mlx5_device_state {

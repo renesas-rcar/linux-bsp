@@ -193,6 +193,8 @@ struct qede_dev {
 	u16				vxlan_dst_port;
 	u16				geneve_dst_port;
 
+	bool wol_enabled;
+
 	struct qede_rdma_dev		rdma_info;
 };
 
@@ -320,6 +322,7 @@ struct qede_fastpath {
 #define XMIT_L4_CSUM		BIT(0)
 #define XMIT_LSO		BIT(1)
 #define XMIT_ENC		BIT(2)
+#define XMIT_ENC_GSO_L4_CSUM	BIT(3)
 
 #define QEDE_CSUM_ERROR			BIT(0)
 #define QEDE_CSUM_UNNECESSARY		BIT(1)
@@ -362,8 +365,9 @@ void qede_update_rx_prod(struct qede_dev *edev, struct qede_rx_queue *rxq);
 #define NUM_TX_BDS_MIN		128
 #define NUM_TX_BDS_DEF		NUM_TX_BDS_MAX
 
-#define QEDE_MIN_PKT_LEN	64
-#define QEDE_RX_HDR_SIZE	256
+#define QEDE_MIN_PKT_LEN		64
+#define QEDE_RX_HDR_SIZE		256
+#define QEDE_MAX_JUMBO_PACKET_SIZE	9600
 #define	for_each_queue(i) for (i = 0; i < edev->num_queues; i++)
 
 #endif /* _QEDE_H_ */

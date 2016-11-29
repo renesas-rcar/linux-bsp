@@ -1849,7 +1849,7 @@ i40e_status i40e_aq_get_link_info(struct i40e_hw *hw,
 	else
 		hw_link_info->crc_enable = false;
 
-	if (resp->command_flags & cpu_to_le16(I40E_AQ_LSE_ENABLE))
+	if (resp->command_flags & cpu_to_le16(I40E_AQ_LSE_IS_ENABLED))
 		hw_link_info->lse_enable = true;
 	else
 		hw_link_info->lse_enable = false;
@@ -2494,7 +2494,10 @@ i40e_status i40e_update_link_info(struct i40e_hw *hw)
 	if (status)
 		return status;
 
-	if (hw->phy.link_info.link_info & I40E_AQ_MEDIA_AVAILABLE) {
+	/* extra checking needed to ensure link info to user is timely */
+	if ((hw->phy.link_info.link_info & I40E_AQ_MEDIA_AVAILABLE) &&
+	    ((hw->phy.link_info.link_info & I40E_AQ_LINK_UP) ||
+	     !(hw->phy.link_info_old.link_info & I40E_AQ_LINK_UP))) {
 		status = i40e_aq_get_phy_capabilities(hw, false, false,
 						      &abilities, NULL);
 		if (status)
@@ -3310,8 +3313,10 @@ static void i40e_parse_discover_capabilities(struct i40e_hw *hw, void *buff,
 	/* partition id is 1-based, and functions are evenly spread
 	 * across the ports as partitions
 	 */
-	hw->partition_id = (hw->pf_id / hw->num_ports) + 1;
-	hw->num_partitions = num_functions / hw->num_ports;
+	if (hw->num_ports != 0) {
+		hw->partition_id = (hw->pf_id / hw->num_ports) + 1;
+		hw->num_partitions = num_functions / hw->num_ports;
+	}
 
 	/* additional HW specific goodies that might
 	 * someday be HW version specific

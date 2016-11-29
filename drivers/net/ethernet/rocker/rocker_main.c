@@ -1953,12 +1953,6 @@ static int rocker_port_change_mtu(struct net_device *dev, int new_mtu)
 	int running = netif_running(dev);
 	int err;
 
-#define ROCKER_PORT_MIN_MTU	68
-#define ROCKER_PORT_MAX_MTU	9000
-
-	if (new_mtu < ROCKER_PORT_MIN_MTU || new_mtu > ROCKER_PORT_MAX_MTU)
-		return -EINVAL;
-
 	if (running)
 		rocker_port_stop(dev);
 
@@ -2536,9 +2530,11 @@ static void rocker_port_dev_addr_init(struct rocker_port *rocker_port)
 	}
 }
 
+#define ROCKER_PORT_MIN_MTU	ETH_MIN_MTU
+#define ROCKER_PORT_MAX_MTU	9000
 static int rocker_probe_port(struct rocker *rocker, unsigned int port_number)
 {
-	const struct pci_dev *pdev = rocker->pdev;
+	struct pci_dev *pdev = rocker->pdev;
 	struct rocker_port *rocker_port;
 	struct net_device *dev;
 	int err;
@@ -2546,6 +2542,7 @@ static int rocker_probe_port(struct rocker *rocker, unsigned int port_number)
 	dev = alloc_etherdev(sizeof(struct rocker_port));
 	if (!dev)
 		return -ENOMEM;
+	SET_NETDEV_DEV(dev, &pdev->dev);
 	rocker_port = netdev_priv(dev);
 	rocker_port->dev = dev;
 	rocker_port->rocker = rocker;
@@ -2569,6 +2566,10 @@ static int rocker_probe_port(struct rocker *rocker, unsigned int port_number)
 	rocker_carrier_init(rocker_port);
 
 	dev->features |= NETIF_F_NETNS_LOCAL | NETIF_F_SG;
+
+	/* MTU range: 68 - 9000 */
+	dev->min_mtu = ROCKER_PORT_MIN_MTU;
+	dev->max_mtu = ROCKER_PORT_MAX_MTU;
 
 	err = rocker_world_port_pre_init(rocker_port);
 	if (err) {
@@ -2839,20 +2840,37 @@ static bool rocker_port_dev_check_under(const struct net_device *dev,
 	return true;
 }
 
+struct rocker_walk_data {
+	struct rocker *rocker;
+	struct rocker_port *port;
+};
+
+static int rocker_lower_dev_walk(struct net_device *lower_dev, void *_data)
+{
+	struct rocker_walk_data *data = _data;
+	int ret = 0;
+
+	if (rocker_port_dev_check_under(lower_dev, data->rocker)) {
+		data->port = netdev_priv(lower_dev);
+		ret = 1;
+	}
+
+	return ret;
+}
+
 struct rocker_port *rocker_port_dev_lower_find(struct net_device *dev,
 					       struct rocker *rocker)
 {
-	struct net_device *lower_dev;
-	struct list_head *iter;
+	struct rocker_walk_data data;
 
 	if (rocker_port_dev_check_under(dev, rocker))
 		return netdev_priv(dev);
 
-	netdev_for_each_all_lower_dev(dev, lower_dev, iter) {
-		if (rocker_port_dev_check_under(lower_dev, rocker))
-			return netdev_priv(lower_dev);
-	}
-	return NULL;
+	data.rocker = rocker;
+	data.port = NULL;
+	netdev_walk_all_lower_dev(dev, rocker_lower_dev_walk, &data);
+
+	return data.port;
 }
 
 static int rocker_netdevice_event(struct notifier_block *unused,

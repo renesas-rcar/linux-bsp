@@ -1253,7 +1253,6 @@ static const struct net_device_ops xgene_ndev_ops = {
 	.ndo_start_xmit = xgene_enet_start_xmit,
 	.ndo_tx_timeout = xgene_enet_timeout,
 	.ndo_get_stats64 = xgene_enet_get_stats64,
-	.ndo_change_mtu = eth_change_mtu,
 	.ndo_set_mac_address = xgene_enet_set_mac_address,
 };
 
@@ -1382,9 +1381,13 @@ static void xgene_enet_gpiod_get(struct xgene_enet_pdata *pdata)
 {
 	struct device *dev = &pdata->pdev->dev;
 
-	if (pdata->phy_mode != PHY_INTERFACE_MODE_XGMII)
+	pdata->sfp_gpio_en = false;
+	if (pdata->phy_mode != PHY_INTERFACE_MODE_XGMII ||
+	    (!device_property_present(dev, "sfp-gpios") &&
+	     !device_property_present(dev, "rxlos-gpios")))
 		return;
 
+	pdata->sfp_gpio_en = true;
 	pdata->sfp_rdy = gpiod_get(dev, "rxlos", GPIOD_IN);
 	if (IS_ERR(pdata->sfp_rdy))
 		pdata->sfp_rdy = gpiod_get(dev, "sfp", GPIOD_IN);

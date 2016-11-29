@@ -221,6 +221,7 @@ static void  nicvf_handle_mbx_intr(struct nicvf *nic)
 		nic->link_up = mbx.link_status.link_up;
 		nic->duplex = mbx.link_status.duplex;
 		nic->speed = mbx.link_status.speed;
+		nic->mac_type = mbx.link_status.mac_type;
 		if (nic->link_up) {
 			netdev_info(nic->netdev, "%s: Link is Up %d Mbps %s\n",
 				    nic->netdev->name, nic->speed,
@@ -253,6 +254,12 @@ static void  nicvf_handle_mbx_intr(struct nicvf *nic)
 		 * to primary VF's netdev.
 		 */
 		nic->pnicvf = (struct nicvf *)mbx.nicvf.nicvf;
+		nic->pf_acked = true;
+		break;
+	case NIC_MBOX_MSG_PFC:
+		nic->pfc.autoneg = mbx.pfc.autoneg;
+		nic->pfc.fc_rx = mbx.pfc.fc_rx;
+		nic->pfc.fc_tx = mbx.pfc.fc_tx;
 		nic->pf_acked = true;
 		break;
 	default:
@@ -1291,20 +1298,17 @@ napi_del:
 static int nicvf_change_mtu(struct net_device *netdev, int new_mtu)
 {
 	struct nicvf *nic = netdev_priv(netdev);
-
-	if (new_mtu > NIC_HW_MAX_FRS)
-		return -EINVAL;
-
-	if (new_mtu < NIC_HW_MIN_FRS)
-		return -EINVAL;
+	int orig_mtu = netdev->mtu;
 
 	netdev->mtu = new_mtu;
 
 	if (!netif_running(netdev))
 		return 0;
 
-	if (nicvf_update_hw_max_frs(nic, new_mtu))
+	if (nicvf_update_hw_max_frs(nic, new_mtu)) {
+		netdev->mtu = orig_mtu;
 		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -1630,6 +1634,10 @@ static int nicvf_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	netdev->netdev_ops = &nicvf_netdev_ops;
 	netdev->watchdog_timeo = NICVF_TX_TIMEOUT;
+
+	/* MTU range: 64 - 9200 */
+	netdev->min_mtu = NIC_HW_MIN_FRS;
+	netdev->max_mtu = NIC_HW_MAX_FRS;
 
 	INIT_WORK(&nic->reset_task, nicvf_reset_task);
 

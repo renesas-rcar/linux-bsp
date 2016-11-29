@@ -22,6 +22,7 @@
 
 #include "hnae.h"
 #include "hns_enet.h"
+#include "hns_dsaf_mac.h"
 
 #define NIC_MAX_Q_PER_VF 16
 #define HNS_NIC_TX_TIMEOUT (5 * HZ)
@@ -1426,10 +1427,6 @@ static int hns_nic_change_mtu(struct net_device *ndev, int new_mtu)
 	struct hnae_handle *h = priv->ae_handle;
 	int ret;
 
-	/* MTU < 68 is an error and causes problems on some kernels */
-	if (new_mtu < 68)
-		return -EINVAL;
-
 	if (!h->dev->ops->set_mtu)
 		return -ENOTSUPP;
 
@@ -1496,6 +1493,29 @@ static netdev_features_t hns_nic_fix_features(
 	return features;
 }
 
+static int hns_nic_uc_sync(struct net_device *netdev, const unsigned char *addr)
+{
+	struct hns_nic_priv *priv = netdev_priv(netdev);
+	struct hnae_handle *h = priv->ae_handle;
+
+	if (h->dev->ops->add_uc_addr)
+		return h->dev->ops->add_uc_addr(h, addr);
+
+	return 0;
+}
+
+static int hns_nic_uc_unsync(struct net_device *netdev,
+			     const unsigned char *addr)
+{
+	struct hns_nic_priv *priv = netdev_priv(netdev);
+	struct hnae_handle *h = priv->ae_handle;
+
+	if (h->dev->ops->rm_uc_addr)
+		return h->dev->ops->rm_uc_addr(h, addr);
+
+	return 0;
+}
+
 /**
  * nic_set_multicast_list - set mutl mac address
  * @netdev: net device
@@ -1513,6 +1533,10 @@ void hns_set_multicast_list(struct net_device *ndev)
 		netdev_err(ndev, "hnae handle is null\n");
 		return;
 	}
+
+	if (h->dev->ops->clr_mc_addr)
+		if (h->dev->ops->clr_mc_addr(h))
+			netdev_err(ndev, "clear multicast address fail\n");
 
 	if (h->dev->ops->set_mc_addr) {
 		netdev_for_each_mc_addr(ha, ndev)
@@ -1534,6 +1558,9 @@ void hns_nic_set_rx_mode(struct net_device *ndev)
 	}
 
 	hns_set_multicast_list(ndev);
+
+	if (__dev_uc_sync(ndev, hns_nic_uc_sync, hns_nic_uc_unsync))
+		netdev_err(ndev, "sync uc address fail\n");
 }
 
 struct rtnl_link_stats64 *hns_nic_get_stats64(struct net_device *ndev,
@@ -1992,14 +2019,20 @@ static int hns_nic_dev_probe(struct platform_device *pdev)
 		NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM | NETIF_F_RXCSUM;
 	ndev->vlan_features |= NETIF_F_SG | NETIF_F_GSO | NETIF_F_GRO;
 
+	/* MTU range: 68 - 9578 (v1) or 9706 (v2) */
+	ndev->min_mtu = MAC_MIN_MTU;
 	switch (priv->enet_ver) {
 	case AE_VERSION_2:
 		ndev->features |= NETIF_F_TSO | NETIF_F_TSO6;
 		ndev->hw_features |= NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM |
 			NETIF_F_RXCSUM | NETIF_F_SG | NETIF_F_GSO |
 			NETIF_F_GRO | NETIF_F_TSO | NETIF_F_TSO6;
+		ndev->max_mtu = MAC_MAX_MTU_V2 -
+				(ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN);
 		break;
 	default:
+		ndev->max_mtu = MAC_MAX_MTU -
+				(ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN);
 		break;
 	}
 
