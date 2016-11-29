@@ -1478,7 +1478,7 @@ static struct iommu_group *arm_smmu_device_group(struct device *dev)
 	}
 
 	if (group)
-		return group;
+		return iommu_group_ref_get(group);
 
 	if (dev_is_pci(dev))
 		group = pci_device_group(dev);
