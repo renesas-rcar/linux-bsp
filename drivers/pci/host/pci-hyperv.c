@@ -755,7 +755,7 @@ static int hv_set_affinity(struct irq_data *data, const struct cpumask *dest,
 	return parent->chip->irq_set_affinity(parent, dest, force);
 }
 
-void hv_irq_mask(struct irq_data *data)
+static void hv_irq_mask(struct irq_data *data)
 {
 	pci_msi_mask_irq(data);
 }
@@ -770,7 +770,7 @@ void hv_irq_mask(struct irq_data *data)
  * is built out of this PCI bus's instance GUID and the function
  * number of the device.
  */
-void hv_irq_unmask(struct irq_data *data)
+static void hv_irq_unmask(struct irq_data *data)
 {
 	struct msi_desc *msi_desc = irq_data_get_msi_desc(data);
 	struct irq_cfg *cfg = irqd_cfg(data);
@@ -1271,9 +1271,9 @@ static struct hv_pci_dev *new_pcichild_device(struct hv_pcibus_device *hbus,
 	struct hv_pci_dev *hpdev;
 	struct pci_child_message *res_req;
 	struct q_res_req_compl comp_pkt;
-	union {
-	struct pci_packet init_packet;
-		u8 buffer[0x100];
+	struct {
+		struct pci_packet init_packet;
+		u8 buffer[sizeof(struct pci_child_message)];
 	} pkt;
 	unsigned long flags;
 	int ret;
@@ -1582,6 +1582,10 @@ static void hv_eject_device_work(struct work_struct *work)
 		pci_dev_put(pdev);
 	}
 
+	spin_lock_irqsave(&hpdev->hbus->device_list_lock, flags);
+	list_del(&hpdev->list_entry);
+	spin_unlock_irqrestore(&hpdev->hbus->device_list_lock, flags);
+
 	memset(&ctxt, 0, sizeof(ctxt));
 	ejct_pkt = (struct pci_eject_response *)&ctxt.pkt.message;
 	ejct_pkt->message_type.type = PCI_EJECTION_COMPLETE;
@@ -1589,10 +1593,6 @@ static void hv_eject_device_work(struct work_struct *work)
 	vmbus_sendpacket(hpdev->hbus->hdev->channel, ejct_pkt,
 			 sizeof(*ejct_pkt), (unsigned long)&ctxt.pkt,
 			 VM_PKT_DATA_INBAND, 0);
-
-	spin_lock_irqsave(&hpdev->hbus->device_list_lock, flags);
-	list_del(&hpdev->list_entry);
-	spin_unlock_irqrestore(&hpdev->hbus->device_list_lock, flags);
 
 	put_pcichild(hpdev, hv_pcidev_ref_childlist);
 	put_pcichild(hpdev, hv_pcidev_ref_pnp);
@@ -2266,24 +2266,32 @@ free_bus:
 	return ret;
 }
 
-/**
- * hv_pci_remove() - Remove routine for this VMBus channel
- * @hdev:	VMBus's tracking struct for this root PCI bus
- *
- * Return: 0 on success, -errno on failure
- */
-static int hv_pci_remove(struct hv_device *hdev)
+static void hv_pci_bus_exit(struct hv_device *hdev)
 {
-	int ret;
-	struct hv_pcibus_device *hbus;
-	union {
+	struct hv_pcibus_device *hbus = hv_get_drvdata(hdev);
+	struct {
 		struct pci_packet teardown_packet;
-		u8 buffer[0x100];
+		u8 buffer[sizeof(struct pci_message)];
 	} pkt;
 	struct pci_bus_relations relations;
 	struct hv_pci_compl comp_pkt;
+	int ret;
 
-	hbus = hv_get_drvdata(hdev);
+	/*
+	 * After the host sends the RESCIND_CHANNEL message, it doesn't
+	 * access the per-channel ringbuffer any longer.
+	 */
+	if (hdev->channel->rescind)
+		return;
+
+	/* Delete any children which might still exist. */
+	memset(&relations, 0, sizeof(relations));
+	hv_pci_devices_present(hbus, &relations);
+
+	ret = hv_send_resources_released(hdev);
+	if (ret)
+		dev_err(&hdev->device,
+			"Couldn't send resources released packet(s)\n");
 
 	memset(&pkt.teardown_packet, 0, sizeof(pkt.teardown_packet));
 	init_completion(&comp_pkt.host_event);
@@ -2298,7 +2306,19 @@ static int hv_pci_remove(struct hv_device *hdev)
 			       VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED);
 	if (!ret)
 		wait_for_completion_timeout(&comp_pkt.host_event, 10 * HZ);
+}
 
+/**
+ * hv_pci_remove() - Remove routine for this VMBus channel
+ * @hdev:	VMBus's tracking struct for this root PCI bus
+ *
+ * Return: 0 on success, -errno on failure
+ */
+static int hv_pci_remove(struct hv_device *hdev)
+{
+	struct hv_pcibus_device *hbus;
+
+	hbus = hv_get_drvdata(hdev);
 	if (hbus->state == hv_pcibus_installed) {
 		/* Remove the bus from PCI's point of view. */
 		pci_lock_rescan_remove();
@@ -2307,16 +2327,9 @@ static int hv_pci_remove(struct hv_device *hdev)
 		pci_unlock_rescan_remove();
 	}
 
-	ret = hv_send_resources_released(hdev);
-	if (ret)
-		dev_err(&hdev->device,
-			"Couldn't send resources released packet(s)\n");
+	hv_pci_bus_exit(hdev);
 
 	vmbus_close(hdev->channel);
-
-	/* Delete any children which might still exist. */
-	memset(&relations, 0, sizeof(relations));
-	hv_pci_devices_present(hbus, &relations);
 
 	iounmap(hbus->cfg_addr);
 	hv_free_config_window(hbus);
