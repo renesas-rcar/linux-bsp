@@ -2159,9 +2159,11 @@ static void sci_reset(struct uart_port *port)
 	unsigned int status;
 	struct sci_port *s = to_sci_port(port);
 
-	do {
-		status = serial_port_in(port, SCxSR);
-	} while (!(status & SCxSR_TEND(port)));
+	if (serial_port_in(port, SCSCR) & SCSCR_TE) {
+		do {
+			status = serial_port_in(port, SCxSR);
+		} while (!(status & SCxSR_TEND(port)));
+	}
 
 	serial_port_out(port, SCSCR, 0x00);	/* TE=0, RE=0, CKE1=0 */
 
