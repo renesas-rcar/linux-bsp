@@ -21,12 +21,6 @@ enum {
 	DW_HDMI_RES_MAX,
 };
 
-enum dw_hdmi_devtype {
-	IMX6Q_HDMI,
-	IMX6DL_HDMI,
-	RK3288_HDMI,
-};
-
 enum dw_hdmi_phy_type {
 	DW_HDMI_PHY_DWC_HDMI_TX_PHY = 0x00,
 	DW_HDMI_PHY_DWC_MHL_PHY_HEAC = 0xb2,
@@ -58,7 +52,6 @@ struct dw_hdmi_phy_config {
 };
 
 struct dw_hdmi_plat_data {
-	enum dw_hdmi_devtype dev_type;
 	const struct dw_hdmi_mpll_config *mpll_cfg;
 	const struct dw_hdmi_curr_ctrl *cur_ctr;
 	const struct dw_hdmi_phy_config *phy_config;
