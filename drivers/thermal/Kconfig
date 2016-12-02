@@ -247,7 +247,7 @@ config RCAR_THERMAL
 
 config RCAR_GEN3_THERMAL
 	tristate "Renesas R-Car Gen3 thermal driver"
-	depends on ARCH_RENESAS || COMPILE_TEST
+	depends on ARCH_RENESAS && 64BIT
 	depends on HAS_IOMEM
 	depends on OF
 	help
