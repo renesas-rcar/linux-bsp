@@ -57,6 +57,7 @@ struct sh_msiof_spi_priv {
 	unsigned int tx_fifo_size;
 	unsigned int rx_fifo_size;
 	int mode;
+	int cs;
 	void *tx_dma_page;
 	void *rx_dma_page;
 	dma_addr_t tx_dma_addr;
@@ -87,6 +88,9 @@ struct sh_msiof_spi_priv {
 #define MDR1_SYNCMD_MASK 0x30000000 /* SYNC Mode */
 #define MDR1_SYNCMD_SPI	 0x20000000 /*   Level mode/SPI */
 #define MDR1_SYNCMD_LR	 0x30000000 /*   L/R mode */
+#define MDR1_SYNCCH_MASK 0x0c000000 /* SYNC Channel Select */
+#define MDR1_SYNCCH_SS1  0x04000000 /*   MSIOF_SS1 */
+#define MDR1_SYNCCH_SS2  0x08000000 /*   MSIOF_SS2 */
 #define MDR1_SYNCAC_SHIFT	 25 /* Sync Polarity (1 = Active-low) */
 #define MDR1_BITLSB_SHIFT	 24 /* MSB/LSB First (1 = LSB first) */
 #define MDR1_DTDL_MASK   0x00700000 /* Data Pin Bit Delay Mask */
@@ -376,9 +380,15 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 			tmp |= 1 << MDR1_DTDL_SHIFT;
 		}
 	}
-	if (p->mode == SPI_MSIOF_MASTER)
+	if (p->mode == SPI_MSIOF_MASTER) {
+		if (p->cs == 1)
+			tmp |= MDR1_SYNCCH_SS1;
+		else if (p->cs == 2)
+			tmp |= MDR1_SYNCCH_SS2;
+		else
+			tmp &= ~MDR1_SYNCCH_MASK;
 		sh_msiof_write(p, TMDR1, tmp | MDR1_TRMD | TMDR1_PCON);
-	else
+	} else
 		sh_msiof_write(p, TMDR1, tmp | TMDR1_PCON);
 	if (soc_device_match(r8a7795es10)) {
 		if (p->mode == SPI_MSIOF_MASTER) {
@@ -595,6 +605,8 @@ static int sh_msiof_spi_setup(struct spi_device *spi)
 		spi->cs_gpio = (uintptr_t)spi->controller_data;
 	}
 
+	p->cs = spi->chip_select;
+
 	/* Configure pins before deasserting CS */
 	sh_msiof_spi_set_pin_regs(p, !!(spi->mode & SPI_CPOL),
 				  !!(spi->mode & SPI_CPHA),
@@ -616,6 +628,8 @@ static int sh_msiof_prepare_message(struct spi_master *master,
 {
 	struct sh_msiof_spi_priv *p = spi_master_get_devdata(master);
 	const struct spi_device *spi = msg->spi;
+
+	p->cs = spi->chip_select;
 
 	/* Configure pins before asserting CS */
 	sh_msiof_spi_set_pin_regs(p, !!(spi->mode & SPI_CPOL),
