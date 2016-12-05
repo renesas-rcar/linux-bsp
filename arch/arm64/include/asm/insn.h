@@ -22,6 +22,7 @@
 
 /* A64 instructions are always 32 bits. */
 #define	AARCH64_INSN_SIZE		4
+#define	AARCH64_INSN_NOP		0xd503201f
 
 #ifndef __ASSEMBLY__
 /*

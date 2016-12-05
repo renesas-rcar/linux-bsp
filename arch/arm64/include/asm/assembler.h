@@ -29,6 +29,7 @@
 #include <asm/pgtable-hwdef.h>
 #include <asm/ptrace.h>
 #include <asm/thread_info.h>
+#include <asm/insn.h>
 
 /*
  * Enable and disable interrupts.
@@ -99,9 +100,29 @@
  * NOP sequence
  */
 	.macro	nops, num
+#ifdef CONFIG_BROKEN_GAS_INST
+	/*
+	 * The .inst assembler bug strikes here again if we output
+	 * these nops as part of an alternative while the first half
+	 * of the alternative sequence contains a .inst, leading to a
+	 * cryptic error message ("Error: bad or irreducible absolute
+	 * expression"). Use .fill to emit the nops in that case.
+	 */
+#ifndef CONFIG_CPU_BIG_ENDIAN
+#define __INSTR_BSWAP(x)	(x)
+#else
+#define __INSTR_BSWAP(x)	((((x) << 24) & 0xff000000)	|	\
+				 (((x) <<  8) & 0x00ff0000)	|	\
+				 (((x) >>  8) & 0x0000ff00)	|	\
+				 (((x) >> 24) & 0x000000ff))
+#endif
+	 .fill	\num, AARCH64_INSN_SIZE, __INSTR_BSWAP(AARCH64_INSN_NOP)
+#undef __INSTR_BSWAP
+#else
 	.rept	\num
 	nop
 	.endr
+#endif
 	.endm
 
 /*

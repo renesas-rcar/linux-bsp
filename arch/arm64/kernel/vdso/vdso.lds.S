@@ -20,6 +20,7 @@
  */
 
 #include <linux/const.h>
+#include <asm/insn.h>
 #include <asm/page.h>
 #include <asm/vdso.h>
 
@@ -43,7 +44,7 @@ SECTIONS
 
 	. = ALIGN(16);
 
-	.text		: { *(.text*) }			:text	=0xd503201f
+	.text		: { *(.text*) }			:text	=AARCH64_INSN_NOP
 	PROVIDE (__etext = .);
 	PROVIDE (_etext = .);
 	PROVIDE (etext = .);
