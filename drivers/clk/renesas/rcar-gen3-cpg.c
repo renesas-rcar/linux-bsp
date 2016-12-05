@@ -170,8 +170,47 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 static int cpg_z2_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 			      unsigned long parent_rate)
 {
-	pr_info("Do not support Z2 clock changing\n");
-	return 0;
+	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned int mult;
+	u32 val, kick;
+	unsigned int i;
+
+	mult = div_u64((u64)rate * 32 + parent_rate/2, parent_rate);
+	mult = clamp(mult, 1U, 32U);
+
+	if (clk_readl(zclk->kick_reg) & CPG_FRQCRB_KICK)
+		return -EBUSY;
+
+	val = clk_readl(zclk->reg);
+	val &= ~CPG_FRQCRC_Z2FC_MASK;
+	val |= 32 - mult;
+	clk_writel(val, zclk->reg);
+
+	/*
+	 * Set KICK bit in FRQCRB to update hardware setting and wait for
+	 * clock change completion.
+	 */
+	kick = clk_readl(zclk->kick_reg);
+	kick |= CPG_FRQCRB_KICK;
+	clk_writel(kick, zclk->kick_reg);
+
+	/*
+	 * Note: There is no HW information about the worst case latency.
+	 *
+	 * Using experimental measurements, it seems that no more than
+	 * ~10 iterations are needed, independently of the CPU rate.
+	 * Since this value might be dependent of external xtal rate, pll1
+	 * rate or even the other emulation clocks rate, use 1000 as a
+	 * "super" safe value.
+	 */
+	for (i = 1000; i; i--) {
+		if (!(clk_readl(zclk->kick_reg) & CPG_FRQCRB_KICK))
+			return 0;
+
+		cpu_relax();
+	}
+
+	return -ETIMEDOUT;
 }
 
 static const struct clk_ops cpg_z_clk_ops = {
