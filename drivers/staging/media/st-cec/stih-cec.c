@@ -16,7 +16,6 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
-#include <linux/version.h>
 
 #include <media/cec.h>
 
@@ -108,11 +107,11 @@
 
 /* Constants for CEC_BIT_TOUT_THRESH register */
 #define CEC_SBIT_TOUT_47MS BIT(1)
-#define CEC_SBIT_TOUT_48MS BIT(0) | BIT(1)
+#define CEC_SBIT_TOUT_48MS (BIT(0) | BIT(1))
 #define CEC_SBIT_TOUT_50MS BIT(2)
 #define CEC_DBIT_TOUT_27MS BIT(0)
 #define CEC_DBIT_TOUT_28MS BIT(1)
-#define CEC_DBIT_TOUT_29MS BIT(0) | BIT(1)
+#define CEC_DBIT_TOUT_29MS (BIT(0) | BIT(1))
 
 /* Constants for CEC_BIT_PULSE_THRESH register */
 #define CEC_BIT_LPULSE_03MS BIT(1)
@@ -363,6 +362,7 @@ static const struct of_device_id stih_cec_match[] = {
 	},
 	{},
 };
+MODULE_DEVICE_TABLE(of, stih_cec_match);
 
 static struct platform_driver stih_cec_pdrv = {
 	.probe	= stih_cec_probe,
