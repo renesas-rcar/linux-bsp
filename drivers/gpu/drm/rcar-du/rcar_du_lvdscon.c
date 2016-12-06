@@ -24,6 +24,7 @@
 #include "rcar_du_encoder.h"
 #include "rcar_du_kms.h"
 #include "rcar_du_lvdscon.h"
+#include "rcar_du_lvdsenc.h"
 
 struct rcar_du_lvds_connector {
 	struct rcar_du_connector connector;
@@ -33,6 +34,8 @@ struct rcar_du_lvds_connector {
 		unsigned int height_mm;		/* Panel height in mm */
 		struct videomode mode;
 	} panel;
+
+	unsigned int mode;
 };
 
 #define to_rcar_lvds_connector(c) \
@@ -99,6 +102,32 @@ int rcar_du_lvds_connector_init(struct rcar_du_device *rcdu,
 
 	of_property_read_u32(np, "width-mm", &lvdscon->panel.width_mm);
 	of_property_read_u32(np, "height-mm", &lvdscon->panel.height_mm);
+
+	if (of_device_is_compatible(np, "panel-lvds")) {
+		enum rcar_lvds_mode mode = 0;
+		const char *mapping = NULL;
+
+		of_property_read_string(np, "data-mapping", &mapping);
+		if (!mapping) {
+			dev_dbg(rcdu->dev,
+				"required property %s not found in %s node\n",
+				"data-mapping", np->full_name);
+			return -EINVAL;
+		}
+
+		if (!strcmp(mapping, "jeida-18") ||
+		    !strcmp(mapping, "jeida-24"))
+			mode = RCAR_LVDS_MODE_JEIDA;
+		else if (!strcmp(mapping, "vesa-24"))
+			mode = RCAR_LVDS_MODE_VESA;
+		else
+			return -EINVAL;
+
+		if (of_find_property(np, "data-mirror", NULL))
+			mode |= RCAR_LVDS_MODE_MIRROR;
+
+		rcar_du_lvdsenc_set_mode(renc->lvds, mode);
+	}
 
 	connector = &lvdscon->connector.connector;
 	connector->display_info.width_mm = lvdscon->panel.width_mm;
