@@ -256,6 +256,9 @@ int drm_fb_helper_debug_enter(struct fb_info *info)
 				continue;
 
 			funcs =	mode_set->crtc->helper_private;
+			if (funcs->mode_set_base_atomic == NULL)
+				continue;
+
 			drm_fb_helper_save_lut_atomic(mode_set->crtc, helper);
 			funcs->mode_set_base_atomic(mode_set->crtc,
 						    mode_set->fb,
@@ -308,6 +311,9 @@ int drm_fb_helper_debug_leave(struct fb_info *info)
 			DRM_ERROR("no fb to restore??\n");
 			continue;
 		}
+
+		if (funcs->mode_set_base_atomic == NULL)
+			continue;
 
 		drm_fb_helper_restore_lut_atomic(mode_set->crtc);
 		funcs->mode_set_base_atomic(mode_set->crtc, fb, crtc->x,
@@ -372,9 +378,7 @@ fail:
 	if (ret == -EDEADLK)
 		goto backoff;
 
-	if (ret != 0)
-		drm_atomic_state_free(state);
-
+	drm_atomic_state_put(state);
 	return ret;
 
 backoff:
@@ -399,11 +403,10 @@ static int restore_fbdev_mode(struct drm_fb_helper *fb_helper)
 		if (plane->type != DRM_PLANE_TYPE_PRIMARY)
 			drm_plane_force_disable(plane);
 
-		if (dev->mode_config.rotation_property) {
+		if (plane->rotation_property)
 			drm_mode_plane_set_obj_prop(plane,
-						    dev->mode_config.rotation_property,
+						    plane->rotation_property,
 						    DRM_ROTATE_0);
-		}
 	}
 
 	for (i = 0; i < fb_helper->crtc_count; i++) {
@@ -1238,11 +1241,14 @@ int drm_fb_helper_check_var(struct fb_var_screeninfo *var,
 	if (var->pixclock != 0 || in_dbg_master())
 		return -EINVAL;
 
-	/* Need to resize the fb object !!! */
-	if (var->bits_per_pixel > fb->bits_per_pixel ||
-	    var->xres > fb->width || var->yres > fb->height ||
-	    var->xres_virtual > fb->width || var->yres_virtual > fb->height) {
-		DRM_DEBUG("fb userspace requested width/height/bpp is greater than current fb "
+	/*
+	 * Changes struct fb_var_screeninfo are currently not pushed back
+	 * to KMS, hence fail if different settings are requested.
+	 */
+	if (var->bits_per_pixel != fb->bits_per_pixel ||
+	    var->xres != fb->width || var->yres != fb->height ||
+	    var->xres_virtual != fb->width || var->yres_virtual != fb->height) {
+		DRM_DEBUG("fb userspace requested width/height/bpp different than current fb "
 			  "request %dx%d-%d (virtual %dx%d) > %dx%d-%d\n",
 			  var->xres, var->yres, var->bits_per_pixel,
 			  var->xres_virtual, var->yres_virtual,
@@ -1388,16 +1394,13 @@ retry:
 	info->var.xoffset = var->xoffset;
 	info->var.yoffset = var->yoffset;
 
-
 fail:
 	drm_atomic_clean_old_fb(dev, plane_mask, ret);
 
 	if (ret == -EDEADLK)
 		goto backoff;
 
-	if (ret != 0)
-		drm_atomic_state_free(state);
-
+	drm_atomic_state_put(state);
 	return ret;
 
 backoff:
@@ -1956,19 +1959,20 @@ static bool drm_target_preferred(struct drm_fb_helper *fb_helper,
 				 bool *enabled, int width, int height)
 {
 	struct drm_fb_helper_connector *fb_helper_conn;
-	int i;
-	uint64_t conn_configured = 0, mask;
+	const u64 mask = BIT_ULL(fb_helper->connector_count) - 1;
+	u64 conn_configured = 0;
 	int tile_pass = 0;
-	mask = (1 << fb_helper->connector_count) - 1;
+	int i;
+
 retry:
 	for (i = 0; i < fb_helper->connector_count; i++) {
 		fb_helper_conn = fb_helper->connector_info[i];
 
-		if (conn_configured & (1 << i))
+		if (conn_configured & BIT_ULL(i))
 			continue;
 
 		if (enabled[i] == false) {
-			conn_configured |= (1 << i);
+			conn_configured |= BIT_ULL(i);
 			continue;
 		}
 
@@ -2009,7 +2013,7 @@ retry:
 		}
 		DRM_DEBUG_KMS("found mode %s\n", modes[i] ? modes[i]->name :
 			  "none");
-		conn_configured |= (1 << i);
+		conn_configured |= BIT_ULL(i);
 	}
 
 	if ((conn_configured & mask) != mask) {
