@@ -26,13 +26,13 @@ static struct nf_hook_ops ipvl_nfops[] __read_mostly = {
 	},
 };
 
-static struct l3mdev_ops ipvl_l3mdev_ops __read_mostly = {
+static const struct l3mdev_ops ipvl_l3mdev_ops = {
 	.l3mdev_l3_rcv = ipvlan_l3_rcv,
 };
 
 static void ipvlan_adjust_mtu(struct ipvl_dev *ipvlan, struct net_device *dev)
 {
-	ipvlan->dev->mtu = dev->mtu - ipvlan->mtu_adj;
+	ipvlan->dev->mtu = dev->mtu;
 }
 
 static int ipvlan_register_nf_hook(void)

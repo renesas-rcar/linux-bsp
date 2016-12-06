@@ -14,6 +14,7 @@
 #include <linux/workqueue.h>
 #include <linux/sched.h>
 #include <linux/capability.h>
+#include <linux/cryptohash.h>
 
 #include <net/sch_generic.h>
 
@@ -55,6 +56,9 @@ struct bpf_prog_aux;
 
 /* BPF program can access up to 512 bytes of stack space. */
 #define MAX_BPF_STACK	512
+
+/* Maximum BPF program size in bytes. */
+#define MAX_BPF_SIZE	(BPF_MAXINSNS * sizeof(struct bpf_insn))
 
 /* Helper macros for filter block array initializers. */
 
@@ -404,12 +408,13 @@ struct bpf_prog {
 				cb_access:1,	/* Is control block accessed? */
 				dst_needed:1;	/* Do we need dst entry? */
 	kmemcheck_bitfield_end(meta);
-	u32			len;		/* Number of filter blocks */
 	enum bpf_prog_type	type;		/* Type of BPF program */
+	u32			len;		/* Number of filter blocks */
+	u32			digest[SHA_DIGEST_WORDS]; /* Program digest */
 	struct bpf_prog_aux	*aux;		/* Auxiliary fields */
 	struct sock_fprog_kern	*orig_prog;	/* Original BPF program */
-	unsigned int		(*bpf_func)(const struct sk_buff *skb,
-					    const struct bpf_insn *filter);
+	unsigned int		(*bpf_func)(const void *ctx,
+					    const struct bpf_insn *insn);
 	/* Instructions for interpreter */
 	union {
 		struct sock_filter	insns[0];
@@ -438,7 +443,7 @@ struct xdp_buff {
 };
 
 /* compute the linear packet data range [data, data_end) which
- * will be accessed by cls_bpf and act_bpf programs
+ * will be accessed by cls_bpf, act_bpf and lwt programs
  */
 static inline void bpf_compute_data_end(struct sk_buff *skb)
 {
@@ -498,16 +503,16 @@ static inline u32 bpf_prog_run_clear_cb(const struct bpf_prog *prog,
 	return BPF_PROG_RUN(prog, skb);
 }
 
-static inline u32 bpf_prog_run_xdp(const struct bpf_prog *prog,
-				   struct xdp_buff *xdp)
+static __always_inline u32 bpf_prog_run_xdp(const struct bpf_prog *prog,
+					    struct xdp_buff *xdp)
 {
-	u32 ret;
-
-	rcu_read_lock();
-	ret = BPF_PROG_RUN(prog, (void *)xdp);
-	rcu_read_unlock();
-
-	return ret;
+	/* Caller needs to hold rcu_read_lock() (!), otherwise program
+	 * can be released while still running, or map elements could be
+	 * freed early while still having concurrent users. XDP fastpath
+	 * already takes rcu_read_lock() when fetching the program, so
+	 * it's not necessary here anymore.
+	 */
+	return BPF_PROG_RUN(prog, xdp);
 }
 
 static inline unsigned int bpf_prog_size(unsigned int proglen)

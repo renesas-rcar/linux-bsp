@@ -104,7 +104,7 @@ static const struct i40e_stats i40e_gstrings_misc_stats[] = {
  * The PF_STATs are appended to the netdev stats only when ethtool -S
  * is queried on the base PF netdev, not on the VMDq or FCoE netdev.
  */
-static struct i40e_stats i40e_gstrings_stats[] = {
+static const struct i40e_stats i40e_gstrings_stats[] = {
 	I40E_PF_STAT("rx_bytes", stats.eth.rx_bytes),
 	I40E_PF_STAT("tx_bytes", stats.eth.tx_bytes),
 	I40E_PF_STAT("rx_unicast", stats.eth.rx_unicast),
@@ -216,7 +216,6 @@ enum i40e_ethtool_test_id {
 	I40E_ETH_TEST_REG = 0,
 	I40E_ETH_TEST_EEPROM,
 	I40E_ETH_TEST_INTR,
-	I40E_ETH_TEST_LOOPBACK,
 	I40E_ETH_TEST_LINK,
 };
 
@@ -224,25 +223,13 @@ static const char i40e_gstrings_test[][ETH_GSTRING_LEN] = {
 	"Register test  (offline)",
 	"Eeprom test    (offline)",
 	"Interrupt test (offline)",
-	"Loopback test  (offline)",
 	"Link test   (on/offline)"
 };
 
 #define I40E_TEST_LEN (sizeof(i40e_gstrings_test) / ETH_GSTRING_LEN)
 
-static const char i40e_priv_flags_strings_gl[][ETH_GSTRING_LEN] = {
-	"MFP",
-	"LinkPolling",
-	"flow-director-atr",
-	"veb-stats",
-	"hw-atr-eviction",
-	"vf-true-promisc-support",
-};
-
-#define I40E_PRIV_FLAGS_GL_STR_LEN ARRAY_SIZE(i40e_priv_flags_strings_gl)
-
 static const char i40e_priv_flags_strings[][ETH_GSTRING_LEN] = {
-	"NPAR",
+	"MFP",
 	"LinkPolling",
 	"flow-director-atr",
 	"veb-stats",
@@ -250,6 +237,13 @@ static const char i40e_priv_flags_strings[][ETH_GSTRING_LEN] = {
 };
 
 #define I40E_PRIV_FLAGS_STR_LEN ARRAY_SIZE(i40e_priv_flags_strings)
+
+/* Private flags with a global effect, restricted to PF 0 */
+static const char i40e_gl_priv_flags_strings[][ETH_GSTRING_LEN] = {
+	"vf-true-promisc-support",
+};
+
+#define I40E_GL_PRIV_FLAGS_STR_LEN ARRAY_SIZE(i40e_gl_priv_flags_strings)
 
 /**
  * i40e_partition_setting_complaint - generic complaint for MFP restriction
@@ -351,11 +345,13 @@ static void i40e_phy_type_to_ethtool(struct i40e_pf *pf, u32 *supported,
 			*advertising |= ADVERTISED_20000baseKR2_Full;
 	}
 	if (phy_types & I40E_CAP_PHY_TYPE_10GBASE_KR) {
-		*supported |= SUPPORTED_10000baseKR_Full |
-			      SUPPORTED_Autoneg;
+		if (!(pf->flags & I40E_FLAG_HAVE_CRT_RETIMER))
+			*supported |= SUPPORTED_10000baseKR_Full |
+				      SUPPORTED_Autoneg;
 		*advertising |= ADVERTISED_Autoneg;
 		if (hw_link_info->requested_speeds & I40E_LINK_SPEED_10GB)
-			*advertising |= ADVERTISED_10000baseKR_Full;
+			if (!(pf->flags & I40E_FLAG_HAVE_CRT_RETIMER))
+				*advertising |= ADVERTISED_10000baseKR_Full;
 	}
 	if (phy_types & I40E_CAP_PHY_TYPE_10GBASE_KX4) {
 		*supported |= SUPPORTED_10000baseKX4_Full |
@@ -365,11 +361,13 @@ static void i40e_phy_type_to_ethtool(struct i40e_pf *pf, u32 *supported,
 			*advertising |= ADVERTISED_10000baseKX4_Full;
 	}
 	if (phy_types & I40E_CAP_PHY_TYPE_1000BASE_KX) {
-		*supported |= SUPPORTED_1000baseKX_Full |
-			      SUPPORTED_Autoneg;
+		if (!(pf->flags & I40E_FLAG_HAVE_CRT_RETIMER))
+			*supported |= SUPPORTED_1000baseKX_Full |
+				      SUPPORTED_Autoneg;
 		*advertising |= ADVERTISED_Autoneg;
 		if (hw_link_info->requested_speeds & I40E_LINK_SPEED_1GB)
-			*advertising |= ADVERTISED_1000baseKX_Full;
+			if (!(pf->flags & I40E_FLAG_HAVE_CRT_RETIMER))
+				*advertising |= ADVERTISED_1000baseKX_Full;
 	}
 }
 
@@ -978,6 +976,10 @@ static u32 i40e_get_msglevel(struct net_device *netdev)
 {
 	struct i40e_netdev_priv *np = netdev_priv(netdev);
 	struct i40e_pf *pf = np->vsi->back;
+	u32 debug_mask = pf->hw.debug_mask;
+
+	if (debug_mask)
+		netdev_info(netdev, "i40e debug_mask: 0x%08X\n", debug_mask);
 
 	return pf->msg_enable;
 }
@@ -989,7 +991,8 @@ static void i40e_set_msglevel(struct net_device *netdev, u32 data)
 
 	if (I40E_DEBUG_USER & data)
 		pf->hw.debug_mask = data;
-	pf->msg_enable = data;
+	else
+		pf->msg_enable = data;
 }
 
 static int i40e_get_regs_len(struct net_device *netdev)
@@ -1191,10 +1194,9 @@ static void i40e_get_drvinfo(struct net_device *netdev,
 		sizeof(drvinfo->fw_version));
 	strlcpy(drvinfo->bus_info, pci_name(pf->pdev),
 		sizeof(drvinfo->bus_info));
+	drvinfo->n_priv_flags = I40E_PRIV_FLAGS_STR_LEN;
 	if (pf->hw.pf_id == 0)
-		drvinfo->n_priv_flags = I40E_PRIV_FLAGS_GL_STR_LEN;
-	else
-		drvinfo->n_priv_flags = I40E_PRIV_FLAGS_STR_LEN;
+		drvinfo->n_priv_flags += I40E_GL_PRIV_FLAGS_STR_LEN;
 }
 
 static void i40e_get_ringparam(struct net_device *netdev,
@@ -1219,6 +1221,7 @@ static int i40e_set_ringparam(struct net_device *netdev,
 {
 	struct i40e_ring *tx_rings = NULL, *rx_rings = NULL;
 	struct i40e_netdev_priv *np = netdev_priv(netdev);
+	struct i40e_hw *hw = &np->vsi->back->hw;
 	struct i40e_vsi *vsi = np->vsi;
 	struct i40e_pf *pf = vsi->back;
 	u32 new_rx_count, new_tx_count;
@@ -1311,10 +1314,6 @@ static int i40e_set_ringparam(struct net_device *netdev,
 		}
 
 		for (i = 0; i < vsi->num_queue_pairs; i++) {
-			/* this is to allow wr32 to have something to write to
-			 * during early allocation of Rx buffers
-			 */
-			u32 __iomem faketail = 0;
 			struct i40e_ring *ring;
 			u16 unused;
 
@@ -1326,7 +1325,10 @@ static int i40e_set_ringparam(struct net_device *netdev,
 			 */
 			rx_rings[i].desc = NULL;
 			rx_rings[i].rx_bi = NULL;
-			rx_rings[i].tail = (u8 __iomem *)&faketail;
+			/* this is to allow wr32 to have something to write to
+			 * during early allocation of Rx buffers
+			 */
+			rx_rings[i].tail = hw->hw_addr + I40E_PRTGEN_STATUS;
 			err = i40e_setup_rx_descriptors(&rx_rings[i]);
 			if (err)
 				goto rx_unwind;
@@ -1422,10 +1424,8 @@ static int i40e_get_sset_count(struct net_device *netdev, int sset)
 			return I40E_VSI_STATS_LEN(netdev);
 		}
 	case ETH_SS_PRIV_FLAGS:
-		if (pf->hw.pf_id == 0)
-			return I40E_PRIV_FLAGS_GL_STR_LEN;
-		else
-			return I40E_PRIV_FLAGS_STR_LEN;
+		return I40E_PRIV_FLAGS_STR_LEN +
+			(pf->hw.pf_id == 0 ? I40E_GL_PRIV_FLAGS_STR_LEN : 0);
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -1536,10 +1536,8 @@ static void i40e_get_strings(struct net_device *netdev, u32 stringset,
 
 	switch (stringset) {
 	case ETH_SS_TEST:
-		for (i = 0; i < I40E_TEST_LEN; i++) {
-			memcpy(data, i40e_gstrings_test[i], ETH_GSTRING_LEN);
-			data += ETH_GSTRING_LEN;
-		}
+		memcpy(data, i40e_gstrings_test,
+		       I40E_TEST_LEN * ETH_GSTRING_LEN);
 		break;
 	case ETH_SS_STATS:
 		for (i = 0; i < I40E_NETDEV_STATS_LEN; i++) {
@@ -1623,19 +1621,12 @@ static void i40e_get_strings(struct net_device *netdev, u32 stringset,
 		/* BUG_ON(p - data != I40E_STATS_LEN * ETH_GSTRING_LEN); */
 		break;
 	case ETH_SS_PRIV_FLAGS:
-		if (pf->hw.pf_id == 0) {
-			for (i = 0; i < I40E_PRIV_FLAGS_GL_STR_LEN; i++) {
-				memcpy(data, i40e_priv_flags_strings_gl[i],
-				       ETH_GSTRING_LEN);
-				data += ETH_GSTRING_LEN;
-			}
-		} else {
-			for (i = 0; i < I40E_PRIV_FLAGS_STR_LEN; i++) {
-				memcpy(data, i40e_priv_flags_strings[i],
-				       ETH_GSTRING_LEN);
-				data += ETH_GSTRING_LEN;
-			}
-		}
+		memcpy(data, i40e_priv_flags_strings,
+		       I40E_PRIV_FLAGS_STR_LEN * ETH_GSTRING_LEN);
+		data += I40E_PRIV_FLAGS_STR_LEN * ETH_GSTRING_LEN;
+		if (pf->hw.pf_id == 0)
+			memcpy(data, i40e_gl_priv_flags_strings,
+			       I40E_GL_PRIV_FLAGS_STR_LEN * ETH_GSTRING_LEN);
 		break;
 	default:
 		break;
@@ -1739,17 +1730,6 @@ static int i40e_intr_test(struct net_device *netdev, u64 *data)
 	return *data;
 }
 
-static int i40e_loopback_test(struct net_device *netdev, u64 *data)
-{
-	struct i40e_netdev_priv *np = netdev_priv(netdev);
-	struct i40e_pf *pf = np->vsi->back;
-
-	netif_info(pf, hw, netdev, "loopback test not implemented\n");
-	*data = 0;
-
-	return *data;
-}
-
 static inline bool i40e_active_vfs(struct i40e_pf *pf)
 {
 	struct i40e_vf *vfs = pf->vf;
@@ -1763,17 +1743,7 @@ static inline bool i40e_active_vfs(struct i40e_pf *pf)
 
 static inline bool i40e_active_vmdqs(struct i40e_pf *pf)
 {
-	struct i40e_vsi **vsi = pf->vsi;
-	int i;
-
-	for (i = 0; i < pf->num_alloc_vsi; i++) {
-		if (!vsi[i])
-			continue;
-		if (vsi[i]->type == I40E_VSI_VMDQ2)
-			return true;
-	}
-
-	return false;
+	return !!i40e_find_vsi_by_type(pf, I40E_VSI_VMDQ2);
 }
 
 static void i40e_diag_test(struct net_device *netdev,
@@ -1795,7 +1765,6 @@ static void i40e_diag_test(struct net_device *netdev,
 			data[I40E_ETH_TEST_REG]		= 1;
 			data[I40E_ETH_TEST_EEPROM]	= 1;
 			data[I40E_ETH_TEST_INTR]	= 1;
-			data[I40E_ETH_TEST_LOOPBACK]	= 1;
 			data[I40E_ETH_TEST_LINK]	= 1;
 			eth_test->flags |= ETH_TEST_FL_FAILED;
 			clear_bit(__I40E_TESTING, &pf->state);
@@ -1823,9 +1792,6 @@ static void i40e_diag_test(struct net_device *netdev,
 		if (i40e_intr_test(netdev, &data[I40E_ETH_TEST_INTR]))
 			eth_test->flags |= ETH_TEST_FL_FAILED;
 
-		if (i40e_loopback_test(netdev, &data[I40E_ETH_TEST_LOOPBACK]))
-			eth_test->flags |= ETH_TEST_FL_FAILED;
-
 		/* run reg test last, a reset is required after it */
 		if (i40e_reg_test(netdev, &data[I40E_ETH_TEST_REG]))
 			eth_test->flags |= ETH_TEST_FL_FAILED;
@@ -1846,7 +1812,6 @@ static void i40e_diag_test(struct net_device *netdev,
 		data[I40E_ETH_TEST_REG] = 0;
 		data[I40E_ETH_TEST_EEPROM] = 0;
 		data[I40E_ETH_TEST_INTR] = 0;
-		data[I40E_ETH_TEST_LOOPBACK] = 0;
 	}
 
 skip_ol_tests:

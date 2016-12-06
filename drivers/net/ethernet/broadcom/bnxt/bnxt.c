@@ -54,6 +54,7 @@
 #include "bnxt.h"
 #include "bnxt_sriov.h"
 #include "bnxt_ethtool.h"
+#include "bnxt_dcb.h"
 
 #define BNXT_TX_TIMEOUT		(5 * HZ)
 
@@ -186,11 +187,11 @@ static const u16 bnxt_vf_req_snif[] = {
 };
 
 static const u16 bnxt_async_events_arr[] = {
-	HWRM_ASYNC_EVENT_CMPL_EVENT_ID_LINK_STATUS_CHANGE,
-	HWRM_ASYNC_EVENT_CMPL_EVENT_ID_PF_DRVR_UNLOAD,
-	HWRM_ASYNC_EVENT_CMPL_EVENT_ID_PORT_CONN_NOT_ALLOWED,
-	HWRM_ASYNC_EVENT_CMPL_EVENT_ID_VF_CFG_CHANGE,
-	HWRM_ASYNC_EVENT_CMPL_EVENT_ID_LINK_SPEED_CFG_CHANGE,
+	ASYNC_EVENT_CMPL_EVENT_ID_LINK_STATUS_CHANGE,
+	ASYNC_EVENT_CMPL_EVENT_ID_PF_DRVR_UNLOAD,
+	ASYNC_EVENT_CMPL_EVENT_ID_PORT_CONN_NOT_ALLOWED,
+	ASYNC_EVENT_CMPL_EVENT_ID_VF_CFG_CHANGE,
+	ASYNC_EVENT_CMPL_EVENT_ID_LINK_SPEED_CFG_CHANGE,
 };
 
 static bool bnxt_vf_pciid(enum board_idx idx)
@@ -1476,8 +1477,8 @@ next_rx_no_prod:
 }
 
 #define BNXT_GET_EVENT_PORT(data)	\
-	((data) &				\
-	 HWRM_ASYNC_EVENT_CMPL_PORT_CONN_NOT_ALLOWED_EVENT_DATA1_PORT_ID_MASK)
+	((data) &			\
+	 ASYNC_EVENT_CMPL_PORT_CONN_NOT_ALLOWED_EVENT_DATA1_PORT_ID_MASK)
 
 static int bnxt_async_event_process(struct bnxt *bp,
 				    struct hwrm_async_event_cmpl *cmpl)
@@ -1486,7 +1487,7 @@ static int bnxt_async_event_process(struct bnxt *bp,
 
 	/* TODO CHIMP_FW: Define event id's for link change, error etc */
 	switch (event_id) {
-	case HWRM_ASYNC_EVENT_CMPL_EVENT_ID_LINK_SPEED_CFG_CHANGE: {
+	case ASYNC_EVENT_CMPL_EVENT_ID_LINK_SPEED_CFG_CHANGE: {
 		u32 data1 = le32_to_cpu(cmpl->event_data1);
 		struct bnxt_link_info *link_info = &bp->link_info;
 
@@ -1499,15 +1500,16 @@ static int bnxt_async_event_process(struct bnxt *bp,
 			netdev_warn(bp->dev, "Link speed %d no longer supported\n",
 				    speed);
 		}
+		set_bit(BNXT_LINK_SPEED_CHNG_SP_EVENT, &bp->sp_event);
 		/* fall thru */
 	}
-	case HWRM_ASYNC_EVENT_CMPL_EVENT_ID_LINK_STATUS_CHANGE:
+	case ASYNC_EVENT_CMPL_EVENT_ID_LINK_STATUS_CHANGE:
 		set_bit(BNXT_LINK_CHNG_SP_EVENT, &bp->sp_event);
 		break;
-	case HWRM_ASYNC_EVENT_CMPL_EVENT_ID_PF_DRVR_UNLOAD:
+	case ASYNC_EVENT_CMPL_EVENT_ID_PF_DRVR_UNLOAD:
 		set_bit(BNXT_HWRM_PF_UNLOAD_SP_EVENT, &bp->sp_event);
 		break;
-	case HWRM_ASYNC_EVENT_CMPL_EVENT_ID_PORT_CONN_NOT_ALLOWED: {
+	case ASYNC_EVENT_CMPL_EVENT_ID_PORT_CONN_NOT_ALLOWED: {
 		u32 data1 = le32_to_cpu(cmpl->event_data1);
 		u16 port_id = BNXT_GET_EVENT_PORT(data1);
 
@@ -1520,7 +1522,7 @@ static int bnxt_async_event_process(struct bnxt *bp,
 		set_bit(BNXT_HWRM_PORT_MODULE_SP_EVENT, &bp->sp_event);
 		break;
 	}
-	case HWRM_ASYNC_EVENT_CMPL_EVENT_ID_VF_CFG_CHANGE:
+	case ASYNC_EVENT_CMPL_EVENT_ID_VF_CFG_CHANGE:
 		if (BNXT_PF(bp))
 			goto async_event_process_exit;
 		set_bit(BNXT_RESET_TASK_SILENT_SP_EVENT, &bp->sp_event);
@@ -3433,13 +3435,7 @@ static int bnxt_hwrm_vnic_set_rss(struct bnxt *bp, u16 vnic_id, bool set_rss)
 
 	bnxt_hwrm_cmd_hdr_init(bp, &req, HWRM_VNIC_RSS_CFG, -1, -1);
 	if (set_rss) {
-		vnic->hash_type = VNIC_RSS_CFG_REQ_HASH_TYPE_IPV4 |
-				  VNIC_RSS_CFG_REQ_HASH_TYPE_TCP_IPV4 |
-				  VNIC_RSS_CFG_REQ_HASH_TYPE_IPV6 |
-				  VNIC_RSS_CFG_REQ_HASH_TYPE_TCP_IPV6;
-
-		req.hash_type = cpu_to_le32(vnic->hash_type);
-
+		req.hash_type = cpu_to_le32(bp->rss_hash_cfg);
 		if (vnic->flags & BNXT_VNIC_RSS_FLAG) {
 			if (BNXT_CHIP_TYPE_NITRO_A0(bp))
 				max_rings = bp->rx_nr_rings - 1;
@@ -4266,11 +4262,15 @@ static int bnxt_hwrm_queue_qportcfg(struct bnxt *bp)
 		goto qportcfg_exit;
 	}
 	bp->max_tc = resp->max_configurable_queues;
+	bp->max_lltc = resp->max_configurable_lossless_queues;
 	if (bp->max_tc > BNXT_MAX_QUEUE)
 		bp->max_tc = BNXT_MAX_QUEUE;
 
 	if (resp->queue_cfg_info & QUEUE_QPORTCFG_RESP_QUEUE_CFG_INFO_ASYM_CFG)
 		bp->max_tc = 1;
+
+	if (bp->max_lltc > bp->max_tc)
+		bp->max_lltc = bp->max_tc;
 
 	qptr = &resp->queue_id0;
 	for (i = 0; i < bp->max_tc; i++) {
@@ -4967,7 +4967,6 @@ static void bnxt_init_napi(struct bnxt *bp)
 			bnapi = bp->bnapi[cp_nr_rings];
 			netif_napi_add(bp->dev, &bnapi->napi,
 				       bnxt_poll_nitroa0, 64);
-			napi_hash_add(&bnapi->napi);
 		}
 	} else {
 		bnapi = bp->bnapi[0];
@@ -4999,7 +4998,7 @@ static void bnxt_enable_napi(struct bnxt *bp)
 	}
 }
 
-static void bnxt_tx_disable(struct bnxt *bp)
+void bnxt_tx_disable(struct bnxt *bp)
 {
 	int i;
 	struct bnxt_tx_ring_info *txr;
@@ -5017,7 +5016,7 @@ static void bnxt_tx_disable(struct bnxt *bp)
 	netif_carrier_off(bp->dev);
 }
 
-static void bnxt_tx_enable(struct bnxt *bp)
+void bnxt_tx_enable(struct bnxt *bp)
 {
 	int i;
 	struct bnxt_tx_ring_info *txr;
@@ -5109,6 +5108,7 @@ static int bnxt_update_link(struct bnxt *bp, bool chng_link_state)
 	struct hwrm_port_phy_qcfg_input req = {0};
 	struct hwrm_port_phy_qcfg_output *resp = bp->hwrm_cmd_resp_addr;
 	u8 link_up = link_info->link_up;
+	u16 diff;
 
 	bnxt_hwrm_cmd_hdr_init(bp, &req, HWRM_PORT_PHY_QCFG, -1, -1);
 
@@ -5196,6 +5196,23 @@ static int bnxt_update_link(struct bnxt *bp, bool chng_link_state)
 		link_info->link_up = 0;
 	}
 	mutex_unlock(&bp->hwrm_cmd_lock);
+
+	diff = link_info->support_auto_speeds ^ link_info->advertising;
+	if ((link_info->support_auto_speeds | diff) !=
+	    link_info->support_auto_speeds) {
+		/* An advertised speed is no longer supported, so we need to
+		 * update the advertisement settings.  See bnxt_reset() for
+		 * comments about the rtnl_lock() sequence below.
+		 */
+		clear_bit(BNXT_STATE_IN_SP_TASK, &bp->state);
+		rtnl_lock();
+		link_info->advertising = link_info->support_auto_speeds;
+		if (test_bit(BNXT_STATE_OPEN, &bp->state) &&
+		    (link_info->autoneg & BNXT_AUTONEG_SPEED))
+			bnxt_hwrm_set_link_setting(bp, true, false);
+		set_bit(BNXT_STATE_IN_SP_TASK, &bp->state);
+		rtnl_unlock();
+	}
 	return 0;
 }
 
@@ -5360,7 +5377,7 @@ static int bnxt_hwrm_shutdown_link(struct bnxt *bp)
 		return 0;
 
 	bnxt_hwrm_cmd_hdr_init(bp, &req, HWRM_PORT_PHY_CFG, -1, -1);
-	req.flags = cpu_to_le32(PORT_PHY_CFG_REQ_FLAGS_FORCE_LINK_DOWN);
+	req.flags = cpu_to_le32(PORT_PHY_CFG_REQ_FLAGS_FORCE_LINK_DWN);
 	return hwrm_send_message(bp, &req, sizeof(req), HWRM_CMD_TIMEOUT);
 }
 
@@ -5422,6 +5439,12 @@ static int bnxt_update_phy_setting(struct bnxt *bp)
 		if (link_info->advertising != link_info->auto_link_speeds)
 			update_link = true;
 	}
+
+	/* The last close may have shutdown the link, so need to call
+	 * PHY_CFG to bring it back up.
+	 */
+	if (!netif_carrier_ok(bp->dev))
+		update_link = true;
 
 	if (!bnxt_eee_config_ok(bp))
 		update_eee = true;
@@ -6116,6 +6139,10 @@ static void bnxt_sp_task(struct work_struct *work)
 	if (test_and_clear_bit(BNXT_RX_NTP_FLTR_SP_EVENT, &bp->sp_event))
 		bnxt_cfg_ntp_filters(bp);
 	if (test_and_clear_bit(BNXT_LINK_CHNG_SP_EVENT, &bp->sp_event)) {
+		if (test_and_clear_bit(BNXT_LINK_SPEED_CHNG_SP_EVENT,
+				       &bp->sp_event))
+			bnxt_hwrm_phy_qcaps(bp);
+
 		rc = bnxt_update_link(bp, true);
 		if (rc)
 			netdev_err(bp->dev, "SP task can't update link (rc: %x)\n",
@@ -6303,9 +6330,6 @@ static int bnxt_change_mtu(struct net_device *dev, int new_mtu)
 {
 	struct bnxt *bp = netdev_priv(dev);
 
-	if (new_mtu < 60 || new_mtu > 9500)
-		return -EINVAL;
-
 	if (netif_running(dev))
 		bnxt_close_nic(bp, false, false);
 
@@ -6318,17 +6342,10 @@ static int bnxt_change_mtu(struct net_device *dev, int new_mtu)
 	return 0;
 }
 
-static int bnxt_setup_tc(struct net_device *dev, u32 handle, __be16 proto,
-			 struct tc_to_netdev *ntc)
+int bnxt_setup_mq_tc(struct net_device *dev, u8 tc)
 {
 	struct bnxt *bp = netdev_priv(dev);
 	bool sh = false;
-	u8 tc;
-
-	if (ntc->type != TC_SETUP_MQPRIO)
-		return -EINVAL;
-
-	tc = ntc->tc;
 
 	if (tc > bp->max_tc) {
 		netdev_err(dev, "too many traffic classes requested: %d Max supported is %d\n",
@@ -6369,6 +6386,15 @@ static int bnxt_setup_tc(struct net_device *dev, u32 handle, __be16 proto,
 		return bnxt_open_nic(bp, true, false);
 
 	return 0;
+}
+
+static int bnxt_setup_tc(struct net_device *dev, u32 handle, __be16 proto,
+			 struct tc_to_netdev *ntc)
+{
+	if (ntc->type != TC_SETUP_MQPRIO)
+		return -EINVAL;
+
+	return bnxt_setup_mq_tc(dev, ntc->tc);
 }
 
 #ifdef CONFIG_RFS_ACCEL
@@ -6661,6 +6687,7 @@ static void bnxt_remove_one(struct pci_dev *pdev)
 
 	bnxt_hwrm_func_drv_unrgtr(bp);
 	bnxt_free_hwrm_resources(bp);
+	bnxt_dcb_free(bp);
 	pci_iounmap(pdev, bp->bar2);
 	pci_iounmap(pdev, bp->bar1);
 	pci_iounmap(pdev, bp->bar0);
@@ -6884,6 +6911,12 @@ static int bnxt_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 	dev->features |= dev->hw_features | NETIF_F_HIGHDMA;
 	dev->priv_flags |= IFF_UNICAST_FLT;
 
+	/* MTU range: 60 - 9500 */
+	dev->min_mtu = ETH_ZLEN;
+	dev->max_mtu = 9500;
+
+	bnxt_dcb_init(bp);
+
 #ifdef CONFIG_BNXT_SRIOV
 	init_waitqueue_head(&bp->sriov_cfg_wait);
 #endif
@@ -6923,6 +6956,19 @@ static int bnxt_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 		bp->vf.max_irqs = max_irqs;
 #endif
 	bnxt_set_dflt_rings(bp);
+
+	/* Default RSS hash cfg. */
+	bp->rss_hash_cfg = VNIC_RSS_CFG_REQ_HASH_TYPE_IPV4 |
+			   VNIC_RSS_CFG_REQ_HASH_TYPE_TCP_IPV4 |
+			   VNIC_RSS_CFG_REQ_HASH_TYPE_IPV6 |
+			   VNIC_RSS_CFG_REQ_HASH_TYPE_TCP_IPV6;
+	if (!BNXT_CHIP_NUM_57X0X(bp->chip_num) &&
+	    !BNXT_CHIP_TYPE_NITRO_A0(bp) &&
+	    bp->hwrm_spec_code >= 0x10501) {
+		bp->flags |= BNXT_FLAG_UDP_RSS_CAP;
+		bp->rss_hash_cfg |= VNIC_RSS_CFG_REQ_HASH_TYPE_UDP_IPV4 |
+				    VNIC_RSS_CFG_REQ_HASH_TYPE_UDP_IPV6;
+	}
 
 	if (BNXT_PF(bp) && !BNXT_CHIP_TYPE_NITRO_A0(bp)) {
 		dev->hw_features |= NETIF_F_NTUPLE;

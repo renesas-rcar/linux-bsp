@@ -44,6 +44,7 @@ struct fl_flow_key {
 		struct flow_dissector_key_ipv4_addrs enc_ipv4;
 		struct flow_dissector_key_ipv6_addrs enc_ipv6;
 	};
+	struct flow_dissector_key_ports enc_tp;
 } __aligned(BITS_PER_LONG / 8); /* Ensure that we can do comparisons as longs. */
 
 struct fl_flow_mask_range {
@@ -81,6 +82,8 @@ struct cls_fl_filter {
 	u32 handle;
 	u32 flags;
 	struct rcu_head	rcu;
+	struct tc_to_netdev tc;
+	struct net_device *hw_dev;
 };
 
 static unsigned short int fl_mask_range(const struct fl_flow_mask *mask)
@@ -159,6 +162,8 @@ static int fl_classify(struct sk_buff *skb, const struct tcf_proto *tp,
 		}
 
 		skb_key.enc_key_id.keyid = tunnel_id_to_key32(key->tun_id);
+		skb_key.enc_tp.src = key->tp_src;
+		skb_key.enc_tp.dst = key->tp_dst;
 	}
 
 	skb_key.indev_ifindex = skb->skb_iif;
@@ -202,75 +207,90 @@ static void fl_destroy_filter(struct rcu_head *head)
 	kfree(f);
 }
 
-static void fl_hw_destroy_filter(struct tcf_proto *tp, unsigned long cookie)
+static void fl_hw_destroy_filter(struct tcf_proto *tp, struct cls_fl_filter *f)
 {
-	struct net_device *dev = tp->q->dev_queue->dev;
 	struct tc_cls_flower_offload offload = {0};
-	struct tc_to_netdev tc;
+	struct net_device *dev = f->hw_dev;
+	struct tc_to_netdev *tc = &f->tc;
 
-	if (!tc_should_offload(dev, tp, 0))
+	if (!tc_can_offload(dev, tp))
 		return;
 
 	offload.command = TC_CLSFLOWER_DESTROY;
-	offload.cookie = cookie;
+	offload.cookie = (unsigned long)f;
 
-	tc.type = TC_SETUP_CLSFLOWER;
-	tc.cls_flower = &offload;
+	tc->type = TC_SETUP_CLSFLOWER;
+	tc->cls_flower = &offload;
 
-	dev->netdev_ops->ndo_setup_tc(dev, tp->q->handle, tp->protocol, &tc);
+	dev->netdev_ops->ndo_setup_tc(dev, tp->q->handle, tp->protocol, tc);
 }
 
 static int fl_hw_replace_filter(struct tcf_proto *tp,
 				struct flow_dissector *dissector,
 				struct fl_flow_key *mask,
-				struct fl_flow_key *key,
-				struct tcf_exts *actions,
-				unsigned long cookie, u32 flags)
+				struct cls_fl_filter *f)
 {
 	struct net_device *dev = tp->q->dev_queue->dev;
 	struct tc_cls_flower_offload offload = {0};
-	struct tc_to_netdev tc;
+	struct tc_to_netdev *tc = &f->tc;
 	int err;
 
-	if (!tc_should_offload(dev, tp, flags))
-		return tc_skip_sw(flags) ? -EINVAL : 0;
+	if (!tc_can_offload(dev, tp)) {
+		if (tcf_exts_get_dev(dev, &f->exts, &f->hw_dev) ||
+		    (f->hw_dev && !tc_can_offload(f->hw_dev, tp))) {
+			f->hw_dev = dev;
+			return tc_skip_sw(f->flags) ? -EINVAL : 0;
+		}
+		dev = f->hw_dev;
+		tc->egress_dev = true;
+	} else {
+		f->hw_dev = dev;
+	}
 
 	offload.command = TC_CLSFLOWER_REPLACE;
-	offload.cookie = cookie;
+	offload.cookie = (unsigned long)f;
 	offload.dissector = dissector;
 	offload.mask = mask;
-	offload.key = key;
-	offload.exts = actions;
+	offload.key = &f->key;
+	offload.exts = &f->exts;
 
-	tc.type = TC_SETUP_CLSFLOWER;
-	tc.cls_flower = &offload;
+	tc->type = TC_SETUP_CLSFLOWER;
+	tc->cls_flower = &offload;
 
 	err = dev->netdev_ops->ndo_setup_tc(dev, tp->q->handle, tp->protocol,
-					    &tc);
+					    tc);
 
-	if (tc_skip_sw(flags))
+	if (tc_skip_sw(f->flags))
 		return err;
-
 	return 0;
 }
 
 static void fl_hw_update_stats(struct tcf_proto *tp, struct cls_fl_filter *f)
 {
-	struct net_device *dev = tp->q->dev_queue->dev;
 	struct tc_cls_flower_offload offload = {0};
-	struct tc_to_netdev tc;
+	struct net_device *dev = f->hw_dev;
+	struct tc_to_netdev *tc = &f->tc;
 
-	if (!tc_should_offload(dev, tp, 0))
+	if (!tc_can_offload(dev, tp))
 		return;
 
 	offload.command = TC_CLSFLOWER_STATS;
 	offload.cookie = (unsigned long)f;
 	offload.exts = &f->exts;
 
-	tc.type = TC_SETUP_CLSFLOWER;
-	tc.cls_flower = &offload;
+	tc->type = TC_SETUP_CLSFLOWER;
+	tc->cls_flower = &offload;
 
-	dev->netdev_ops->ndo_setup_tc(dev, tp->q->handle, tp->protocol, &tc);
+	dev->netdev_ops->ndo_setup_tc(dev, tp->q->handle, tp->protocol, tc);
+}
+
+static void __fl_delete(struct tcf_proto *tp, struct cls_fl_filter *f)
+{
+	list_del_rcu(&f->list);
+	if (!tc_skip_hw(f->flags))
+		fl_hw_destroy_filter(tp, f);
+	tcf_unbind_filter(tp, &f->res);
+	call_rcu(&f->rcu, fl_destroy_filter);
 }
 
 static void fl_destroy_sleepable(struct work_struct *work)
@@ -299,14 +319,12 @@ static bool fl_destroy(struct tcf_proto *tp, bool force)
 	if (!force && !list_empty(&head->filters))
 		return false;
 
-	list_for_each_entry_safe(f, next, &head->filters, list) {
-		fl_hw_destroy_filter(tp, (unsigned long)f);
-		list_del_rcu(&f->list);
-		call_rcu(&f->rcu, fl_destroy_filter);
-	}
+	list_for_each_entry_safe(f, next, &head->filters, list)
+		__fl_delete(tp, f);
 
 	__module_get(THIS_MODULE);
 	call_rcu(&head->rcu, fl_destroy_rcu);
+
 	return true;
 }
 
@@ -360,6 +378,14 @@ static const struct nla_policy fl_policy[TCA_FLOWER_MAX + 1] = {
 	[TCA_FLOWER_KEY_TCP_DST_MASK]	= { .type = NLA_U16 },
 	[TCA_FLOWER_KEY_UDP_SRC_MASK]	= { .type = NLA_U16 },
 	[TCA_FLOWER_KEY_UDP_DST_MASK]	= { .type = NLA_U16 },
+	[TCA_FLOWER_KEY_SCTP_SRC_MASK]	= { .type = NLA_U16 },
+	[TCA_FLOWER_KEY_SCTP_DST_MASK]	= { .type = NLA_U16 },
+	[TCA_FLOWER_KEY_SCTP_SRC]	= { .type = NLA_U16 },
+	[TCA_FLOWER_KEY_SCTP_DST]	= { .type = NLA_U16 },
+	[TCA_FLOWER_KEY_ENC_UDP_SRC_PORT]	= { .type = NLA_U16 },
+	[TCA_FLOWER_KEY_ENC_UDP_SRC_PORT_MASK]	= { .type = NLA_U16 },
+	[TCA_FLOWER_KEY_ENC_UDP_DST_PORT]	= { .type = NLA_U16 },
+	[TCA_FLOWER_KEY_ENC_UDP_DST_PORT_MASK]	= { .type = NLA_U16 },
 };
 
 static void fl_set_key_val(struct nlattr **tb,
@@ -469,6 +495,13 @@ static int fl_set_key(struct net *net, struct nlattr **tb,
 		fl_set_key_val(tb, &key->tp.dst, TCA_FLOWER_KEY_UDP_DST,
 			       &mask->tp.dst, TCA_FLOWER_KEY_UDP_DST_MASK,
 			       sizeof(key->tp.dst));
+	} else if (key->basic.ip_proto == IPPROTO_SCTP) {
+		fl_set_key_val(tb, &key->tp.src, TCA_FLOWER_KEY_SCTP_SRC,
+			       &mask->tp.src, TCA_FLOWER_KEY_SCTP_SRC_MASK,
+			       sizeof(key->tp.src));
+		fl_set_key_val(tb, &key->tp.dst, TCA_FLOWER_KEY_SCTP_DST,
+			       &mask->tp.dst, TCA_FLOWER_KEY_SCTP_DST_MASK,
+			       sizeof(key->tp.dst));
 	}
 
 	if (tb[TCA_FLOWER_KEY_ENC_IPV4_SRC] ||
@@ -504,6 +537,14 @@ static int fl_set_key(struct net *net, struct nlattr **tb,
 	fl_set_key_val(tb, &key->enc_key_id.keyid, TCA_FLOWER_KEY_ENC_KEY_ID,
 		       &mask->enc_key_id.keyid, TCA_FLOWER_UNSPEC,
 		       sizeof(key->enc_key_id.keyid));
+
+	fl_set_key_val(tb, &key->enc_tp.src, TCA_FLOWER_KEY_ENC_UDP_SRC_PORT,
+		       &mask->enc_tp.src, TCA_FLOWER_KEY_ENC_UDP_SRC_PORT_MASK,
+		       sizeof(key->enc_tp.src));
+
+	fl_set_key_val(tb, &key->enc_tp.dst, TCA_FLOWER_KEY_ENC_UDP_DST_PORT,
+		       &mask->enc_tp.dst, TCA_FLOWER_KEY_ENC_UDP_DST_PORT_MASK,
+		       sizeof(key->enc_tp.dst));
 
 	return 0;
 }
@@ -572,6 +613,18 @@ static void fl_init_dissector(struct cls_fl_head *head,
 			     FLOW_DISSECTOR_KEY_PORTS, tp);
 	FL_KEY_SET_IF_MASKED(&mask->key, keys, cnt,
 			     FLOW_DISSECTOR_KEY_VLAN, vlan);
+	FL_KEY_SET_IF_MASKED(&mask->key, keys, cnt,
+			     FLOW_DISSECTOR_KEY_ENC_KEYID, enc_key_id);
+	FL_KEY_SET_IF_MASKED(&mask->key, keys, cnt,
+			     FLOW_DISSECTOR_KEY_ENC_IPV4_ADDRS, enc_ipv4);
+	FL_KEY_SET_IF_MASKED(&mask->key, keys, cnt,
+			     FLOW_DISSECTOR_KEY_ENC_IPV6_ADDRS, enc_ipv6);
+	if (FL_KEY_IS_MASKED(&mask->key, enc_ipv4) ||
+	    FL_KEY_IS_MASKED(&mask->key, enc_ipv6))
+		FL_KEY_SET(keys, cnt, FLOW_DISSECTOR_KEY_ENC_CONTROL,
+			   enc_control);
+	FL_KEY_SET_IF_MASKED(&mask->key, keys, cnt,
+			     FLOW_DISSECTOR_KEY_ENC_PORTS, enc_tp);
 
 	skb_flow_dissector_init(&head->dissector, keys, cnt);
 }
@@ -721,21 +774,21 @@ static int fl_change(struct net *net, struct sk_buff *in_skb,
 			goto errout;
 	}
 
-	err = fl_hw_replace_filter(tp,
-				   &head->dissector,
-				   &mask.key,
-				   &fnew->key,
-				   &fnew->exts,
-				   (unsigned long)fnew,
-				   fnew->flags);
-	if (err)
-		goto errout;
+	if (!tc_skip_hw(fnew->flags)) {
+		err = fl_hw_replace_filter(tp,
+					   &head->dissector,
+					   &mask.key,
+					   fnew);
+		if (err)
+			goto errout;
+	}
 
 	if (fold) {
 		if (!tc_skip_sw(fold->flags))
 			rhashtable_remove_fast(&head->ht, &fold->ht_node,
 					       head->ht_params);
-		fl_hw_destroy_filter(tp, (unsigned long)fold);
+		if (!tc_skip_hw(fold->flags))
+			fl_hw_destroy_filter(tp, fold);
 	}
 
 	*arg = (unsigned long) fnew;
@@ -764,10 +817,7 @@ static int fl_delete(struct tcf_proto *tp, unsigned long arg)
 	if (!tc_skip_sw(f->flags))
 		rhashtable_remove_fast(&head->ht, &f->ht_node,
 				       head->ht_params);
-	list_del_rcu(&f->list);
-	fl_hw_destroy_filter(tp, (unsigned long)f);
-	tcf_unbind_filter(tp, &f->res);
-	call_rcu(&f->rcu, fl_destroy_filter);
+	__fl_delete(tp, f);
 	return 0;
 }
 
@@ -862,7 +912,8 @@ static int fl_dump(struct net *net, struct tcf_proto *tp, unsigned long fh,
 			goto nla_put_failure;
 	}
 
-	fl_hw_update_stats(tp, f);
+	if (!tc_skip_hw(f->flags))
+		fl_hw_update_stats(tp, f);
 
 	if (fl_dump_key_val(skb, key->eth.dst, TCA_FLOWER_KEY_ETH_DST,
 			    mask->eth.dst, TCA_FLOWER_KEY_ETH_DST_MASK,
@@ -918,6 +969,14 @@ static int fl_dump(struct net *net, struct tcf_proto *tp, unsigned long fh,
 				  &mask->tp.dst, TCA_FLOWER_KEY_UDP_DST_MASK,
 				  sizeof(key->tp.dst))))
 		goto nla_put_failure;
+	else if (key->basic.ip_proto == IPPROTO_SCTP &&
+		 (fl_dump_key_val(skb, &key->tp.src, TCA_FLOWER_KEY_SCTP_SRC,
+				  &mask->tp.src, TCA_FLOWER_KEY_SCTP_SRC_MASK,
+				  sizeof(key->tp.src)) ||
+		  fl_dump_key_val(skb, &key->tp.dst, TCA_FLOWER_KEY_SCTP_DST,
+				  &mask->tp.dst, TCA_FLOWER_KEY_SCTP_DST_MASK,
+				  sizeof(key->tp.dst))))
+		goto nla_put_failure;
 
 	if (key->enc_control.addr_type == FLOW_DISSECTOR_KEY_IPV4_ADDRS &&
 	    (fl_dump_key_val(skb, &key->enc_ipv4.src,
@@ -943,7 +1002,17 @@ static int fl_dump(struct net *net, struct tcf_proto *tp, unsigned long fh,
 
 	if (fl_dump_key_val(skb, &key->enc_key_id, TCA_FLOWER_KEY_ENC_KEY_ID,
 			    &mask->enc_key_id, TCA_FLOWER_UNSPEC,
-			    sizeof(key->enc_key_id)))
+			    sizeof(key->enc_key_id)) ||
+	    fl_dump_key_val(skb, &key->enc_tp.src,
+			    TCA_FLOWER_KEY_ENC_UDP_SRC_PORT,
+			    &mask->enc_tp.src,
+			    TCA_FLOWER_KEY_ENC_UDP_SRC_PORT_MASK,
+			    sizeof(key->enc_tp.src)) ||
+	    fl_dump_key_val(skb, &key->enc_tp.dst,
+			    TCA_FLOWER_KEY_ENC_UDP_DST_PORT,
+			    &mask->enc_tp.dst,
+			    TCA_FLOWER_KEY_ENC_UDP_DST_PORT_MASK,
+			    sizeof(key->enc_tp.dst)))
 		goto nla_put_failure;
 
 	nla_put_u32(skb, TCA_FLOWER_FLAGS, f->flags);
