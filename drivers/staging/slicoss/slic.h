@@ -52,8 +52,8 @@
 
 #define GB_RCVUCODE_VERS_STRING	"1.2"
 #define GB_RCVUCODE_VERS_DATE	"2006/03/27 15:12:15"
-static u32 OasisRcvUCodeLen = 512;
-static u32 GBRcvUCodeLen = 512;
+static u32 oasis_rcv_ucode_len = 512;
+static u32 gb_rcv_ucode_len = 512;
 #define SECTION_SIZE 65536
 
 #define SLIC_RSPQ_PAGES_GB        10
@@ -215,12 +215,20 @@ struct mcast_address {
 #define MAC_LOOPBACK     0x00000010
 #define MAC_ALLMCAST     0x00000020
 
-#define SLIC_DUPLEX(x)    ((x == LINK_FULLD) ? "FDX" : "HDX")
-#define SLIC_SPEED(x)     ((x == LINK_100MB) ? "100Mb" : ((x == LINK_1000MB) ?\
-				"1000Mb" : " 10Mb"))
-#define SLIC_LINKSTATE(x) ((x == LINK_DOWN) ? "Down" : "Up  ")
-#define SLIC_ADAPTER_STATE(x) ((x == ADAPT_UP) ? "UP" : "Down")
-#define SLIC_CARD_STATE(x)    ((x == CARD_UP) ? "UP" : "Down")
+static inline const char *slic_linkstate(unsigned char x)
+{
+	return ((x == LINK_DOWN) ? "Down" : "Up  ");
+}
+
+static inline const char *slic_adapter_state(unsigned char x)
+{
+	return ((x == ADAPT_UP) ? "UP" : "Down");
+}
+
+static inline const char *slic_card_state(uint x)
+{
+	return ((x == CARD_UP) ? "UP" : "Down");
+}
 
 struct slic_iface_stats {
 	/*
@@ -380,7 +388,7 @@ struct slic_shmemory {
 	dma_addr_t isr_phaddr;
 	dma_addr_t lnkstatus_phaddr;
 	dma_addr_t stats_phaddr;
-	struct slic_shmem_data __iomem *shmem_data;
+	struct slic_shmem_data *shmem_data;
 };
 
 struct slic_upr {
@@ -396,20 +404,20 @@ struct slic_upr {
 struct slic_ifevents {
 	uint        oflow802;
 	uint        uflow802;
-	uint        Tprtoflow;
+	uint        tprtoflow;
 	uint        rcvearly;
-	uint        Bufov;
-	uint        Carre;
-	uint        Longe;
-	uint        Invp;
-	uint        Crc;
-	uint        Drbl;
-	uint        Code;
-	uint        IpHlen;
-	uint        IpLen;
-	uint        IpCsum;
-	uint        TpCsum;
-	uint        TpHlen;
+	uint        bufov;
+	uint        carre;
+	uint        longe;
+	uint        invp;
+	uint        crc;
+	uint        drbl;
+	uint        code;
+	uint        ip_hlen;
+	uint        ip_len;
+	uint        ip_csum;
+	uint        tp_csum;
+	uint        tp_hlen;
 };
 
 struct adapter {
@@ -538,19 +546,6 @@ static inline void slic_write64(struct adapter *adapter, unsigned int reg,
 static inline void slic_flush_write(struct adapter *adapter)
 {
 	ioread32(adapter->regs + SLIC_REG_HOSTID);
-}
-
-#define UPDATE_STATS(largestat, newstat, oldstat)                        \
-{                                                                        \
-	if ((newstat) < (oldstat))                                       \
-		(largestat) += ((newstat) + (0xFFFFFFFF - oldstat + 1)); \
-	else                                                             \
-		(largestat) += ((newstat) - (oldstat));                  \
-}
-
-#define UPDATE_STATS_GB(largestat, newstat, oldstat)                     \
-{                                                                        \
-	(largestat) += ((newstat) - (oldstat));                          \
 }
 
 #if BITS_PER_LONG == 64

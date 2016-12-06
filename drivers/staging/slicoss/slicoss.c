@@ -191,7 +191,7 @@ static void slic_timer_ping(ulong dev)
  *
  */
 static void slic_link_config(struct adapter *adapter,
-		      u32 linkspeed, u32 linkduplex)
+			     u32 linkspeed, u32 linkduplex)
 {
 	u32 speed;
 	u32 duplex;
@@ -386,13 +386,13 @@ static int slic_card_download_gbrcv(struct adapter *adapter)
 	index += 4;
 	switch (adapter->devid) {
 	case SLIC_2GB_DEVICE_ID:
-		if (rcvucodelen != OasisRcvUCodeLen) {
+		if (rcvucodelen != oasis_rcv_ucode_len) {
 			release_firmware(fw);
 			return -EINVAL;
 		}
 		break;
 	case SLIC_1GB_DEVICE_ID:
-		if (rcvucodelen != GBRcvUCodeLen) {
+		if (rcvucodelen != gb_rcv_ucode_len) {
 			release_firmware(fw);
 			return -EINVAL;
 		}
@@ -540,7 +540,7 @@ static void slic_adapter_set_hwaddr(struct adapter *adapter)
 
 	if ((adapter->card) && (card->config_set)) {
 		memcpy(adapter->macaddr,
-		       card->config.MacInfo[adapter->functionnumber].macaddrA,
+		       card->config.mac_info[adapter->functionnumber].macaddr_a,
 		       sizeof(struct slic_config_mac));
 		if (is_zero_ether_addr(adapter->currmacaddr))
 			memcpy(adapter->currmacaddr, adapter->macaddr,
@@ -614,8 +614,8 @@ static void slic_mac_config(struct adapter *adapter)
 		value |= GMCR_GBIT;
 
 	/* enable fullduplex */
-	if ((adapter->linkduplex == LINK_FULLD)
-	    || (adapter->macopts & MAC_LOOPBACK)) {
+	if ((adapter->linkduplex == LINK_FULLD) ||
+	    (adapter->macopts & MAC_LOOPBACK)) {
 		value |= GMCR_FULLD;
 	}
 
@@ -629,15 +629,15 @@ static void slic_mac_config(struct adapter *adapter)
 static void slic_config_set(struct adapter *adapter, bool linkchange)
 {
 	u32 value;
-	u32 RcrReset;
+	u32 rcr_reset;
 
 	if (linkchange) {
 		/* Setup MAC */
 		slic_mac_config(adapter);
-		RcrReset = GRCR_RESET;
+		rcr_reset = GRCR_RESET;
 	} else {
 		slic_mac_address_config(adapter);
-		RcrReset = 0;
+		rcr_reset = 0;
 	}
 
 	if (adapter->linkduplex == LINK_FULLD) {
@@ -649,7 +649,7 @@ static void slic_config_set(struct adapter *adapter, bool linkchange)
 		slic_write32(adapter, SLIC_REG_WXCFG, value);
 
 		/* Setup rcvcfg last */
-		value = (RcrReset |	/* Reset, if linkchange */
+		value = (rcr_reset |	/* Reset, if linkchange */
 			 GRCR_CTLEN |	/* Enable CTL frames    */
 			 GRCR_ADDRAEN |	/* Address A enable     */
 			 GRCR_RCVBAD |	/* Rcv bad frames       */
@@ -662,7 +662,7 @@ static void slic_config_set(struct adapter *adapter, bool linkchange)
 		slic_write32(adapter, SLIC_REG_WXCFG, value);
 
 		/* Setup rcvcfg last */
-		value = (RcrReset |	/* Reset, if linkchange */
+		value = (rcr_reset |	/* Reset, if linkchange */
 			 GRCR_ADDRAEN |	/* Address A enable     */
 			 GRCR_RCVBAD |	/* Rcv bad frames       */
 			 (GRCR_HASHSIZE << GRCR_HASHSIZE_SHIFT));
@@ -706,7 +706,7 @@ static void slic_config_clear(struct adapter *adapter)
 }
 
 static bool slic_mac_filter(struct adapter *adapter,
-			struct ether_header *ether_frame)
+			    struct ether_header *ether_frame)
 {
 	struct net_device *netdev = adapter->netdev;
 	u32 opts = adapter->macopts;
@@ -784,9 +784,9 @@ static void slic_timer_load_check(ulong cardaddr)
 	if ((adapter) && (adapter->state == ADAPT_UP) &&
 	    (card->state == CARD_UP) && (slic_global.dynamic_intagg)) {
 		if (adapter->devid == SLIC_1GB_DEVICE_ID) {
-			if (adapter->linkspeed == LINK_1000MB)
+			if (adapter->linkspeed == LINK_1000MB) {
 				level = 100;
-			else {
+			} else {
 				if (load > SLIC_LOAD_5)
 					level = SLIC_INTAGG_5;
 				else if (load > SLIC_LOAD_4)
@@ -829,10 +829,10 @@ static void slic_timer_load_check(ulong cardaddr)
 }
 
 static int slic_upr_queue_request(struct adapter *adapter,
-			   u32 upr_request,
-			   u32 upr_data,
-			   u32 upr_data_h,
-			   u32 upr_buffer, u32 upr_buffer_h)
+				  u32 upr_request,
+				  u32 upr_data,
+				  u32 upr_data_h,
+				  u32 upr_buffer, u32 upr_buffer_h)
 {
 	struct slic_upr *upr;
 	struct slic_upr *uprqueue;
@@ -898,19 +898,19 @@ static void slic_upr_start(struct adapter *adapter)
 }
 
 static int slic_upr_request(struct adapter *adapter,
-		     u32 upr_request,
-		     u32 upr_data,
-		     u32 upr_data_h,
-		     u32 upr_buffer, u32 upr_buffer_h)
+			    u32 upr_request,
+			    u32 upr_data,
+			    u32 upr_data_h,
+			    u32 upr_buffer, u32 upr_buffer_h)
 {
 	unsigned long flags;
 	int rc;
 
 	spin_lock_irqsave(&adapter->upr_lock, flags);
 	rc = slic_upr_queue_request(adapter,
-					upr_request,
-					upr_data,
-					upr_data_h, upr_buffer, upr_buffer_h);
+				    upr_request,
+				    upr_data,
+				    upr_data_h, upr_buffer, upr_buffer_h);
 	if (rc)
 		goto err_unlock_irq;
 
@@ -1014,50 +1014,48 @@ static void slic_upr_request_complete(struct adapter *adapter, u32 isr)
 			break;
 		}
 
-		UPDATE_STATS_GB(stst->tcp.xmit_tcp_segs, stats->xmit_tcp_segs,
-				old->xmit_tcp_segs);
+		stst->tcp.xmit_tcp_segs +=
+			stats->xmit_tcp_segs - old->xmit_tcp_segs;
 
-		UPDATE_STATS_GB(stst->tcp.xmit_tcp_bytes, stats->xmit_tcp_bytes,
-				old->xmit_tcp_bytes);
+		stst->tcp.xmit_tcp_bytes +=
+			stats->xmit_tcp_bytes - old->xmit_tcp_bytes;
 
-		UPDATE_STATS_GB(stst->tcp.rcv_tcp_segs, stats->rcv_tcp_segs,
-				old->rcv_tcp_segs);
+		stst->tcp.rcv_tcp_segs +=
+			stats->rcv_tcp_segs - old->rcv_tcp_segs;
 
-		UPDATE_STATS_GB(stst->tcp.rcv_tcp_bytes, stats->rcv_tcp_bytes,
-				old->rcv_tcp_bytes);
+		stst->tcp.rcv_tcp_bytes +=
+			stats->rcv_tcp_bytes - old->rcv_tcp_bytes;
 
-		UPDATE_STATS_GB(stst->iface.xmt_bytes, stats->xmit_bytes,
-				old->xmit_bytes);
+		stst->iface.xmt_bytes +=
+			stats->xmit_bytes - old->xmit_bytes;
 
-		UPDATE_STATS_GB(stst->iface.xmt_ucast, stats->xmit_unicasts,
-				old->xmit_unicasts);
+		stst->iface.xmt_ucast +=
+			stats->xmit_unicasts - old->xmit_unicasts;
 
-		UPDATE_STATS_GB(stst->iface.rcv_bytes, stats->rcv_bytes,
-				old->rcv_bytes);
+		stst->iface.rcv_bytes +=
+			stats->rcv_bytes - old->rcv_bytes;
 
-		UPDATE_STATS_GB(stst->iface.rcv_ucast, stats->rcv_unicasts,
-				old->rcv_unicasts);
+		stst->iface.rcv_ucast +=
+			stats->rcv_unicasts - old->rcv_unicasts;
 
-		UPDATE_STATS_GB(stst->iface.xmt_errors, stats->xmit_collisions,
-				old->xmit_collisions);
+		stst->iface.xmt_errors +=
+			stats->xmit_collisions - old->xmit_collisions;
 
-		UPDATE_STATS_GB(stst->iface.xmt_errors,
-				stats->xmit_excess_collisions,
-				old->xmit_excess_collisions);
+		stst->iface.xmt_errors += stats->xmit_excess_collisions -
+					old->xmit_excess_collisions;
 
-		UPDATE_STATS_GB(stst->iface.xmt_errors, stats->xmit_other_error,
-				old->xmit_other_error);
+		stst->iface.xmt_errors +=
+			stats->xmit_other_error - old->xmit_other_error;
 
-		UPDATE_STATS_GB(stst->iface.rcv_errors, stats->rcv_other_error,
-				old->rcv_other_error);
+		stst->iface.rcv_errors +=
+			stats->rcv_other_error - old->rcv_other_error;
 
-		UPDATE_STATS_GB(stst->iface.rcv_discards, stats->rcv_drops,
-				old->rcv_drops);
+		stst->iface.rcv_discards += stats->rcv_drops - old->rcv_drops;
 
 		if (stats->rcv_drops > old->rcv_drops)
 			adapter->rcv_drops += (stats->rcv_drops -
 					       old->rcv_drops);
-		memcpy_fromio(old, stats, sizeof(*stats));
+		memcpy(old, stats, sizeof(*stats));
 		break;
 	}
 	case SLIC_UPR_RLSR:
@@ -1420,7 +1418,7 @@ retry:
 }
 
 static void slic_cmdq_putdone_irq(struct adapter *adapter,
-				struct slic_hostcmd *cmd)
+				  struct slic_hostcmd *cmd)
 {
 	struct slic_cmdqueue *cmdq = &adapter->cmdq_done;
 
@@ -1469,17 +1467,17 @@ retry_rcvqfill:
 					__func__);
 				dev_err(dev, "skb[%p] PROBLEM\n", skb);
 				dev_err(dev, "         skbdata[%p]\n",
-						skb->data);
+					skb->data);
 				dev_err(dev, "         skblen[%x]\n", skb->len);
 				dev_err(dev, "         paddr[%p]\n", paddr);
 				dev_err(dev, "         paddrl[%x]\n", paddrl);
 				dev_err(dev, "         paddrh[%x]\n", paddrh);
 				dev_err(dev, "         rcvq->head[%p]\n",
-						rcvq->head);
+					rcvq->head);
 				dev_err(dev, "         rcvq->tail[%p]\n",
-						rcvq->tail);
+					rcvq->tail);
 				dev_err(dev, "         rcvq->count[%x]\n",
-						rcvq->count);
+					rcvq->count);
 				dev_err(dev, "SKIP THIS SKB!!!!!!!!\n");
 				goto retry_rcvqfill;
 			}
@@ -1489,17 +1487,17 @@ retry_rcvqfill:
 					__func__);
 				dev_err(dev, "skb[%p] PROBLEM\n", skb);
 				dev_err(dev, "         skbdata[%p]\n",
-						skb->data);
+					skb->data);
 				dev_err(dev, "         skblen[%x]\n", skb->len);
 				dev_err(dev, "         paddr[%p]\n", paddr);
 				dev_err(dev, "         paddrl[%x]\n", paddrl);
 				dev_err(dev, "         paddrh[%x]\n", paddrh);
 				dev_err(dev, "         rcvq->head[%p]\n",
-						rcvq->head);
+					rcvq->head);
 				dev_err(dev, "         rcvq->tail[%p]\n",
-						rcvq->tail);
+					rcvq->tail);
 				dev_err(dev, "         rcvq->count[%x]\n",
-						rcvq->count);
+					rcvq->count);
 				dev_err(dev, "GIVE TO CARD ANYWAY\n");
 			}
 #endif
@@ -1764,7 +1762,8 @@ static void slic_mcast_set_list(struct net_device *dev)
 #define  XMIT_FAIL_HOSTCMD_FAIL             3
 
 static void slic_xmit_build_request(struct adapter *adapter,
-			     struct slic_hostcmd *hcmd, struct sk_buff *skb)
+				    struct slic_hostcmd *hcmd,
+				    struct sk_buff *skb)
 {
 	struct slic_host64_cmd *ihcmd;
 	ulong phys_addr;
@@ -1775,7 +1774,7 @@ static void slic_xmit_build_request(struct adapter *adapter,
 	ihcmd->command = IHCMD_XMT_REQ;
 	ihcmd->u.slic_buffers.totlen = skb->len;
 	phys_addr = pci_map_single(adapter->pcidev, skb->data, skb->len,
-			PCI_DMA_TODEVICE);
+				   PCI_DMA_TODEVICE);
 	if (pci_dma_mapping_error(adapter->pcidev, phys_addr)) {
 		kfree_skb(skb);
 		dev_err(&adapter->pcidev->dev, "DMA mapping error\n");
@@ -1794,8 +1793,8 @@ static void slic_xmit_build_request(struct adapter *adapter,
 }
 
 static void slic_xmit_fail(struct adapter *adapter,
-		    struct sk_buff *skb,
-		    void *cmd, u32 skbtype, u32 status)
+			   struct sk_buff *skb,
+			   void *cmd, u32 skbtype, u32 status)
 {
 	if (adapter->xmitq_full)
 		netif_stop_queue(adapter->netdev);
@@ -1805,10 +1804,10 @@ static void slic_xmit_fail(struct adapter *adapter,
 			dev_err(&adapter->netdev->dev,
 				"reject xmit skb[%p: %x] linkstate[%s] adapter[%s:%d] card[%s:%d]\n",
 				skb, skb->pkt_type,
-				SLIC_LINKSTATE(adapter->linkstate),
-				SLIC_ADAPTER_STATE(adapter->state),
+				slic_linkstate(adapter->linkstate),
+				slic_adapter_state(adapter->state),
 				adapter->state,
-				SLIC_CARD_STATE(adapter->card->state),
+				slic_card_state(adapter->card->state),
 				adapter->card->state);
 			break;
 		case XMIT_FAIL_ZERO_LENGTH:
@@ -1828,7 +1827,7 @@ static void slic_xmit_fail(struct adapter *adapter,
 }
 
 static void slic_rcv_handle_error(struct adapter *adapter,
-					struct slic_rcvbuf *rcvbuf)
+				  struct slic_rcvbuf *rcvbuf)
 {
 	struct slic_hddr_wds *hdr = (struct slic_hddr_wds *)rcvbuf->data;
 	struct net_device *netdev = adapter->netdev;
@@ -1837,7 +1836,7 @@ static void slic_rcv_handle_error(struct adapter *adapter,
 		if (hdr->frame_status14 & VRHSTAT_802OE)
 			adapter->if_events.oflow802++;
 		if (hdr->frame_status14 & VRHSTAT_TPOFLO)
-			adapter->if_events.Tprtoflow++;
+			adapter->if_events.tprtoflow++;
 		if (hdr->frame_status_b14 & VRHSTATB_802UE)
 			adapter->if_events.uflow802++;
 		if (hdr->frame_status_b14 & VRHSTATB_RCVE) {
@@ -1845,71 +1844,71 @@ static void slic_rcv_handle_error(struct adapter *adapter,
 			netdev->stats.rx_fifo_errors++;
 		}
 		if (hdr->frame_status_b14 & VRHSTATB_BUFF) {
-			adapter->if_events.Bufov++;
+			adapter->if_events.bufov++;
 			netdev->stats.rx_over_errors++;
 		}
 		if (hdr->frame_status_b14 & VRHSTATB_CARRE) {
-			adapter->if_events.Carre++;
+			adapter->if_events.carre++;
 			netdev->stats.tx_carrier_errors++;
 		}
 		if (hdr->frame_status_b14 & VRHSTATB_LONGE)
-			adapter->if_events.Longe++;
+			adapter->if_events.longe++;
 		if (hdr->frame_status_b14 & VRHSTATB_PREA)
-			adapter->if_events.Invp++;
+			adapter->if_events.invp++;
 		if (hdr->frame_status_b14 & VRHSTATB_CRC) {
-			adapter->if_events.Crc++;
+			adapter->if_events.crc++;
 			netdev->stats.rx_crc_errors++;
 		}
 		if (hdr->frame_status_b14 & VRHSTATB_DRBL)
-			adapter->if_events.Drbl++;
+			adapter->if_events.drbl++;
 		if (hdr->frame_status_b14 & VRHSTATB_CODE)
-			adapter->if_events.Code++;
+			adapter->if_events.code++;
 		if (hdr->frame_status_b14 & VRHSTATB_TPCSUM)
-			adapter->if_events.TpCsum++;
+			adapter->if_events.tp_csum++;
 		if (hdr->frame_status_b14 & VRHSTATB_TPHLEN)
-			adapter->if_events.TpHlen++;
+			adapter->if_events.tp_hlen++;
 		if (hdr->frame_status_b14 & VRHSTATB_IPCSUM)
-			adapter->if_events.IpCsum++;
+			adapter->if_events.ip_csum++;
 		if (hdr->frame_status_b14 & VRHSTATB_IPLERR)
-			adapter->if_events.IpLen++;
+			adapter->if_events.ip_len++;
 		if (hdr->frame_status_b14 & VRHSTATB_IPHERR)
-			adapter->if_events.IpHlen++;
+			adapter->if_events.ip_hlen++;
 	} else {
-		if (hdr->frame_statusGB & VGBSTAT_XPERR) {
-			u32 xerr = hdr->frame_statusGB >> VGBSTAT_XERRSHFT;
+		if (hdr->frame_status_gb & VGBSTAT_XPERR) {
+			u32 xerr = hdr->frame_status_gb >> VGBSTAT_XERRSHFT;
 
 			if (xerr == VGBSTAT_XCSERR)
-				adapter->if_events.TpCsum++;
+				adapter->if_events.tp_csum++;
 			if (xerr == VGBSTAT_XUFLOW)
-				adapter->if_events.Tprtoflow++;
+				adapter->if_events.tprtoflow++;
 			if (xerr == VGBSTAT_XHLEN)
-				adapter->if_events.TpHlen++;
+				adapter->if_events.tp_hlen++;
 		}
-		if (hdr->frame_statusGB & VGBSTAT_NETERR) {
+		if (hdr->frame_status_gb & VGBSTAT_NETERR) {
 			u32 nerr =
 			    (hdr->
-			     frame_statusGB >> VGBSTAT_NERRSHFT) &
+			     frame_status_gb >> VGBSTAT_NERRSHFT) &
 			    VGBSTAT_NERRMSK;
 			if (nerr == VGBSTAT_NCSERR)
-				adapter->if_events.IpCsum++;
+				adapter->if_events.ip_csum++;
 			if (nerr == VGBSTAT_NUFLOW)
-				adapter->if_events.IpLen++;
+				adapter->if_events.ip_len++;
 			if (nerr == VGBSTAT_NHLEN)
-				adapter->if_events.IpHlen++;
+				adapter->if_events.ip_hlen++;
 		}
-		if (hdr->frame_statusGB & VGBSTAT_LNKERR) {
-			u32 lerr = hdr->frame_statusGB & VGBSTAT_LERRMSK;
+		if (hdr->frame_status_gb & VGBSTAT_LNKERR) {
+			u32 lerr = hdr->frame_status_gb & VGBSTAT_LERRMSK;
 
 			if (lerr == VGBSTAT_LDEARLY)
 				adapter->if_events.rcvearly++;
 			if (lerr == VGBSTAT_LBOFLO)
-				adapter->if_events.Bufov++;
+				adapter->if_events.bufov++;
 			if (lerr == VGBSTAT_LCODERR)
-				adapter->if_events.Code++;
+				adapter->if_events.code++;
 			if (lerr == VGBSTAT_LDBLNBL)
-				adapter->if_events.Drbl++;
+				adapter->if_events.drbl++;
 			if (lerr == VGBSTAT_LCRCERR)
-				adapter->if_events.Crc++;
+				adapter->if_events.crc++;
 			if (lerr == VGBSTAT_LOFLO)
 				adapter->if_events.oflow802++;
 			if (lerr == VGBSTAT_LUFLO)
@@ -2003,7 +2002,7 @@ static void slic_xmit_complete(struct adapter *adapter)
 }
 
 static void slic_interrupt_card_up(u32 isr, struct adapter *adapter,
-			struct net_device *dev)
+				   struct net_device *dev)
 {
 	if (isr & ~ISR_IO) {
 		if (isr & ISR_ERR) {
@@ -2030,12 +2029,10 @@ static void slic_interrupt_card_up(u32 isr, struct adapter *adapter,
 				}
 			} else if (isr & ISR_XDROP) {
 				dev_err(&dev->dev,
-						"isr & ISR_ERR [%x] ISR_XDROP\n",
-						isr);
+					"isr & ISR_ERR [%x] ISR_XDROP\n", isr);
 			} else {
 				dev_err(&dev->dev,
-						"isr & ISR_ERR [%x]\n",
-						isr);
+					"isr & ISR_ERR [%x]\n", isr);
 			}
 		}
 
@@ -2586,7 +2583,7 @@ static int slic_card_init(struct sliccard *card, struct adapter *adapter)
 	struct slic_shmemory *sm = &adapter->shmem;
 	struct slic_shmem_data *sm_data = sm->shmem_data;
 	struct slic_eeprom *peeprom;
-	struct oslic_eeprom *pOeeprom;
+	struct oslic_eeprom *poeeprom;
 	dma_addr_t phys_config;
 	u32 phys_configh;
 	u32 phys_configl;
@@ -2682,14 +2679,14 @@ static int slic_card_init(struct sliccard *card, struct adapter *adapter)
 		/* Oasis card */
 		case SLIC_2GB_DEVICE_ID:
 			/* extract EEPROM data and pointers to EEPROM data */
-			pOeeprom = (struct oslic_eeprom *)peeprom;
-			eecodesize = pOeeprom->EecodeSize;
-			dramsize = pOeeprom->DramSize;
-			pmac = pOeeprom->MacInfo;
-			fruformat = pOeeprom->FruFormat;
-			patkfru = &pOeeprom->AtkFru;
-			oemfruformat = pOeeprom->OemFruFormat;
-			poemfru = &pOeeprom->OemFru;
+			poeeprom = (struct oslic_eeprom *)peeprom;
+			eecodesize = poeeprom->eecode_size;
+			dramsize = poeeprom->dram_size;
+			pmac = poeeprom->mac_info;
+			fruformat = poeeprom->fru_format;
+			patkfru = &poeeprom->atk_fru;
+			oemfruformat = poeeprom->oem_fru_format;
+			poemfru = &poeeprom->oem_fru;
 			macaddrs = 2;
 			/*
 			 * Minor kludge for Oasis card
@@ -2700,17 +2697,17 @@ static int slic_card_init(struct sliccard *card, struct adapter *adapter)
 			break;
 		default:
 			/* extract EEPROM data and pointers to EEPROM data */
-			eecodesize = peeprom->EecodeSize;
-			dramsize = peeprom->DramSize;
-			pmac = peeprom->u2.mac.MacInfo;
-			fruformat = peeprom->FruFormat;
-			patkfru = &peeprom->AtkFru;
-			oemfruformat = peeprom->OemFruFormat;
-			poemfru = &peeprom->OemFru;
+			eecodesize = peeprom->eecode_size;
+			dramsize = peeprom->dram_size;
+			pmac = peeprom->u2.mac.mac_info;
+			fruformat = peeprom->fru_format;
+			patkfru = &peeprom->atk_fru;
+			oemfruformat = peeprom->oem_fru_format;
+			poemfru = &peeprom->oem_fru;
 			break;
 		}
 
-		card->config.EepromValid = false;
+		card->config.eeprom_valid = false;
 
 		/*  see if the EEPROM is valid by checking it's checksum */
 		if ((eecodesize <= MAX_EECODE_SIZE) &&
@@ -2727,27 +2724,26 @@ static int slic_card_init(struct sliccard *card, struct adapter *adapter)
 			 *  we wouldn't need this
 			 */
 			if (ee_chksum == calc_chksum)
-				card->config.EepromValid = true;
+				card->config.eeprom_valid = true;
 		}
 		/*  copy in the DRAM size */
-		card->config.DramSize = dramsize;
+		card->config.dram_size = dramsize;
 
 		/*  copy in the MAC address(es) */
 		for (i = 0; i < macaddrs; i++) {
-			memcpy(&card->config.MacInfo[i],
+			memcpy(&card->config.mac_info[i],
 			       &pmac[i], sizeof(struct slic_config_mac));
 		}
 
 		/*  copy the Alacritech FRU information */
-		card->config.FruFormat = fruformat;
-		memcpy(&card->config.AtkFru, patkfru,
-						sizeof(struct atk_fru));
+		card->config.fru_format = fruformat;
+		memcpy(&card->config.atk_fru, patkfru, sizeof(struct atk_fru));
 
 		pci_free_consistent(adapter->pcidev,
 				    sizeof(struct slic_eeprom),
 				    peeprom, phys_config);
 
-		if (!card->config.EepromValid) {
+		if (!card->config.eeprom_valid) {
 			slic_write64(adapter, SLIC_REG_ISP, 0, 0);
 			slic_flush_write(adapter);
 			dev_err(&adapter->pcidev->dev, "EEPROM invalid.\n");
@@ -2967,7 +2963,7 @@ static u32 slic_card_locate(struct adapter *adapter)
 }
 
 static int slic_entry_probe(struct pci_dev *pcidev,
-			       const struct pci_device_id *pci_tbl_entry)
+			    const struct pci_device_id *pci_tbl_entry)
 {
 	static int cards_found;
 	static int did_version;

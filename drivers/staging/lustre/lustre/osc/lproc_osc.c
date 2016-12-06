@@ -162,7 +162,7 @@ static ssize_t max_dirty_mb_store(struct kobject *kobj,
 	pages_number *= 1 << (20 - PAGE_SHIFT); /* MB -> pages */
 
 	if (pages_number <= 0 ||
-	    pages_number > OSC_MAX_DIRTY_MB_MAX << (20 - PAGE_SHIFT) ||
+	    pages_number >= OSC_MAX_DIRTY_MB_MAX << (20 - PAGE_SHIFT) ||
 	    pages_number > totalram_pages / 4) /* 1/4 of RAM */
 		return -ERANGE;
 
@@ -585,7 +585,8 @@ static ssize_t max_pages_per_rpc_store(struct kobject *kobj,
 	chunk_mask = ~((1 << (cli->cl_chunkbits - PAGE_SHIFT)) - 1);
 	/* max_pages_per_rpc must be chunk aligned */
 	val = (val + ~chunk_mask) & chunk_mask;
-	if (val == 0 || val > ocd->ocd_brw_size >> PAGE_SHIFT) {
+	if (!val || (ocd->ocd_brw_size &&
+		     val > ocd->ocd_brw_size >> PAGE_SHIFT)) {
 		return -ERANGE;
 	}
 	spin_lock(&cli->cl_loi_list_lock);
