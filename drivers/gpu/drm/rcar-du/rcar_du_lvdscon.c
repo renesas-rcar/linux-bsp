@@ -37,12 +37,6 @@ static const struct drm_connector_helper_funcs connector_helper_funcs = {
 	.get_modes = rcar_du_lvds_connector_get_modes,
 };
 
-static enum drm_connector_status
-rcar_du_lvds_connector_detect(struct drm_connector *connector, bool force)
-{
-	return connector_status_connected;
-}
-
 static void rcar_du_lvds_connector_destroy(struct drm_connector *connector)
 {
 	struct rcar_du_connector *rcon = to_rcar_connector(connector);
@@ -54,7 +48,6 @@ static void rcar_du_lvds_connector_destroy(struct drm_connector *connector)
 static const struct drm_connector_funcs connector_funcs = {
 	.dpms = drm_atomic_helper_connector_dpms,
 	.reset = drm_atomic_helper_connector_reset,
-	.detect = rcar_du_lvds_connector_detect,
 	.fill_modes = drm_helper_probe_single_connector_modes,
 	.destroy = rcar_du_lvds_connector_destroy,
 	.atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
