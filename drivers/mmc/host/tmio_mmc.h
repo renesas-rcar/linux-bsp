@@ -185,6 +185,10 @@ struct tmio_mmc_host {
 	DECLARE_BITMAP(taps, BITS_PER_BYTE * sizeof(long));
 	unsigned int tap_num;
 	void (*prepare_hs400_tuning)(struct mmc_host *mmc, struct mmc_ios *ios);
+
+	/* Sampling data comparison: 1 for match. 0 for mismatch */
+	DECLARE_BITMAP(smpcmp, BITS_PER_BYTE * sizeof(long));
+	unsigned int (*compare_scc_data)(struct tmio_mmc_host *host);
 };
 
 struct tmio_mmc_host *tmio_mmc_host_alloc(struct platform_device *pdev);
