@@ -433,10 +433,37 @@ void __ref acpi_os_unmap_memory(void *virt, acpi_size size)
 }
 EXPORT_SYMBOL_GPL(acpi_os_unmap_memory);
 
+/*******************************************************************************
+ *
+ * acpi_get_table_with_size()/early_acpi_os_unmap_memory():
+ *
+ * These 2 functions are traditionally used by Linux to map/unmap physical
+ * addressed ACPI tables during the early stage.
+ * They are deprectated now. Do not use them in the new code, but use
+ * acpi_get_table()/acpi_put_table() instead.
+ *
+ ******************************************************************************/
+acpi_status
+acpi_get_table_with_size(char *signature,
+	       u32 instance, struct acpi_table_header **out_table,
+	       acpi_size *tbl_size)
+{
+	acpi_status status;
+
+	status = acpi_get_table(signature, instance, out_table);
+	if (ACPI_SUCCESS(status)) {
+		/* No longer used by early_acpi_os_unmap_memory() */
+		*tbl_size = 0;
+	}
+
+	return (status);
+}
+
+ACPI_EXPORT_SYMBOL(acpi_get_table_with_size)
+
 void __init early_acpi_os_unmap_memory(void __iomem *virt, acpi_size size)
 {
-	if (!acpi_gbl_permanent_mmap)
-		__acpi_unmap_table(virt, size);
+	acpi_put_table(ACPI_CAST_PTR(struct acpi_table_header, virt));
 }
 
 int acpi_os_map_generic_address(struct acpi_generic_address *gas)
