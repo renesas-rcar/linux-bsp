@@ -5,6 +5,7 @@ Required properties:
    * "snps,dw-hdmi-tx"
    * "fsl,imx6q-hdmi"
    * "fsl,imx6dl-hdmi"
+   * "renesas,rcar-dw-hdmi"
    * "rockchip,rk3288-dw-hdmi"
 - reg: Physical base address and length of the controller's registers.
 - interrupts: The HDMI interrupt number
