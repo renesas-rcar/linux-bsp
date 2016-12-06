@@ -55,6 +55,7 @@ static const struct rcar_du_device_info rcar_du_r8a7779_info = {
 		},
 	},
 	.num_lvds = 0,
+	.dpll_ch =  0,
 };
 
 static const struct rcar_du_device_info rcar_du_r8a7790_info = {
@@ -84,6 +85,7 @@ static const struct rcar_du_device_info rcar_du_r8a7790_info = {
 		},
 	},
 	.num_lvds = 2,
+	.dpll_ch =  0,
 };
 
 /* M2-W (r8a7791) and M2-N (r8a7793) are identical */
@@ -108,6 +110,7 @@ static const struct rcar_du_device_info rcar_du_r8a7791_info = {
 		},
 	},
 	.num_lvds = 1,
+	.dpll_ch =  0,
 };
 
 static const struct rcar_du_device_info rcar_du_r8a7792_info = {
@@ -152,22 +155,34 @@ static const struct rcar_du_device_info rcar_du_r8a7794_info = {
 		},
 	},
 	.num_lvds = 0,
+	.dpll_ch =  0,
 };
 
 static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 	.gen = 3,
 	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
 		  | RCAR_DU_FEATURE_EXT_CTRL_REGS
-		  | RCAR_DU_FEATURE_VSP1_SOURCE,
+		  | RCAR_DU_FEATURE_VSP1_SOURCE
+		  | RCAR_DU_FEATURE_GEN3_REGS,
 	.num_crtcs = 4,
 	.routes = {
-		/* R8A7795 has one RGB output, one LVDS output and two
-		 * (currently unsupported) HDMI outputs.
+		/* R8A7795 has one RGB output, two HDMI outputs and one
+		 * LVDS output.
 		 */
 		[RCAR_DU_OUTPUT_DPAD0] = {
 			.possible_crtcs = BIT(3),
 			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
+		},
+		[RCAR_DU_OUTPUT_HDMI0] = {
+			.possible_crtcs = BIT(1),
+			.encoder_type = RCAR_DU_ENCODER_HDMI,
+			.port = 1,
+		},
+		[RCAR_DU_OUTPUT_HDMI1] = {
+			.possible_crtcs = BIT(2),
+			.encoder_type = RCAR_DU_ENCODER_HDMI,
+			.port = 2,
 		},
 		[RCAR_DU_OUTPUT_LVDS0] = {
 			.possible_crtcs = BIT(0),
@@ -176,6 +191,7 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 		},
 	},
 	.num_lvds = 1,
+	.dpll_ch =  BIT(1) | BIT(2),
 };
 
 static const struct rcar_du_device_info rcar_du_r8a7796_info = {

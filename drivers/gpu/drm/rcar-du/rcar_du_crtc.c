@@ -13,6 +13,7 @@
 
 #include <linux/clk.h>
 #include <linux/mutex.h>
+#include <linux/sys_soc.h>
 
 #include <drm/drmP.h>
 #include <drm/drm_atomic.h>
@@ -106,14 +107,70 @@ static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
  * Hardware Setup
  */
 
+static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
+				 unsigned int mode_clock)
+{
+	unsigned long dpllclk;
+	unsigned long diff;
+	unsigned long n, m, fdpll;
+	bool match_flag = false;
+	bool clk_diff_set = true;
+
+	for (n = 39; n < 120; n++) {
+		for (m = 0; m < 4; m++) {
+			for (fdpll = 1; fdpll < 32; fdpll++) {
+				/* 1/2 (FRQSEL=1) for duty rate 50% */
+				dpllclk = extclk * (n + 1) / (m + 1)
+						 / (fdpll + 1) / 2;
+				if (dpllclk >= 400000000)
+					continue;
+
+				diff = abs((long)dpllclk - (long)mode_clock);
+				if (clk_diff_set ||
+					((diff == 0) || (dpll->diff > diff))) {
+					dpll->diff = diff;
+					dpll->n = n;
+					dpll->m = m;
+					dpll->fdpll = fdpll;
+					dpll->dpllclk = dpllclk;
+
+					if (clk_diff_set)
+						clk_diff_set = false;
+
+					if (diff == 0) {
+						match_flag = true;
+						break;
+					}
+				}
+			}
+			if (match_flag)
+				break;
+		}
+		if (match_flag)
+			break;
+	}
+}
+
+static const struct soc_device_attribute r8a7795es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 {
 	const struct drm_display_mode *mode = &rcrtc->crtc.state->adjusted_mode;
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	unsigned long mode_clock = mode->clock * 1000;
 	unsigned long clk;
 	u32 value;
 	u32 escr;
 	u32 div;
+	u32 dpll_reg = 0;
+	struct dpll_info *dpll;
+
+	dpll = kzalloc(sizeof(*dpll), GFP_KERNEL);
+	if (dpll == NULL)
+		return;
 
 	/* Compute the clock divisor and select the internal or external dot
 	 * clock based on the requested frequency.
@@ -130,6 +187,15 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		u32 extdiv;
 
 		extclk = clk_get_rate(rcrtc->extclock);
+
+		if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
+			rcar_du_dpll_divider(dpll, extclk, mode_clock);
+			extclk = dpll->dpllclk;
+			dev_dbg(rcrtc->group->dev->dev,
+				"dpllclk:%d, fdpll:%d, n:%d, m:%d, diff:%d\n",
+				 dpll->dpllclk, dpll->fdpll, dpll->n, dpll->m,
+				 dpll->diff);
+		}
 		extdiv = DIV_ROUND_CLOSEST(extclk, mode_clock);
 		extdiv = clamp(extdiv, 1U, 64U) - 1;
 
@@ -140,7 +206,27 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		    abs((long)rate - (long)mode_clock)) {
 			dev_dbg(rcrtc->group->dev->dev,
 				"crtc%u: using external clock\n", rcrtc->index);
-			escr = extdiv | ESCR_DCLKSEL_DCLKIN;
+			if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
+				escr = ESCR_DCLKSEL_DCLKIN | 0x01;
+				dpll_reg =  DPLLCR_CODE | DPLLCR_M(dpll->m) |
+					DPLLCR_FDPLL(dpll->fdpll) |
+					DPLLCR_CLKE | DPLLCR_N(dpll->n) |
+					DPLLCR_STBY;
+
+				if (rcrtc->index == DU_CH_1)
+					dpll_reg |= (DPLLCR_PLCS1 |
+						DPLLCR_INCS_DPLL01_DOTCLKIN13);
+				if (rcrtc->index == DU_CH_2) {
+					dpll_reg |= (DPLLCR_PLCS0 |
+						DPLLCR_INCS_DPLL01_DOTCLKIN02);
+					if (soc_device_match(r8a7795es1))
+						dpll_reg |= (0x01 << 21);
+				}
+
+				rcar_du_group_write(rcrtc->group, DPLLCR,
+								  dpll_reg);
+			} else
+				escr = extdiv | ESCR_DCLKSEL_DCLKIN;
 		}
 	}
 
