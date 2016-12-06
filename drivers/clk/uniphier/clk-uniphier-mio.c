@@ -30,7 +30,7 @@
 		.name = "sd" #ch "-sel",				\
 		.type = UNIPHIER_CLK_TYPE_MUX,				\
 		.idx = -1,						\
-		.data.mux = {						\
+		.mux = {						\
 			.parent_names = {				\
 				"sd-44m",				\
 				"sd-33m",				\
