@@ -1,0 +1,324 @@
+fixes
+	<no branch> (e5cd7ff7058dc6f2133455636809a09b691ee419)
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-fixes-for-4.9-2
+	<no branch> (86b4522d19329b3bf9c05722f217568b803439f7)
+		git://git.kernel.org/pub/scm/linux/kernel/git/pchotard/sti tags/sti-dt-for-v4.9-rc-round2
+	patch
+		arm64: dts: juno: Correct PCI IO window
+
+next/fixes-non-critical
+	patch
+		ARM: spear: Fix error handling
+		ARM: zx: Fix error handling
+	davinci/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-fixes-for-v4.9
+	imx/fixes-nc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-fix-nc-4.10
+	omap/fixes-nc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.10/fixes-not-urgent-signed
+	patch
+		ARM: ixp4xx: drop duplicate header gpio.h
+		ARM: lpc32xx: drop duplicate header device.h
+	socfpga/updates
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_updates_for_v4.10
+	patch
+		soc: ti: qmss: fix the case when !SMP
+		bus: vexpress-config: fix device reference leak
+
+next/soc
+	vexpress/fixes
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/vexpress-fixes-4.10
+	davinci/cleanup
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/cleanup
+	davinci/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/soc
+	renesas/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-for-v4.10
+	lpc32xx/cleanup
+		https://github.com/sylemieux/linux-lpc32xx tags/lpc32xx-cleanup-v4.10
+	pxa/soc
+		https://github.com/rjarzmik/linux tags/pxa-for-4.10
+	patch
+		ARM: integrator: drop EBI access use syscon
+	mediatek/kconfig
+		https://github.com/mbgg/linux-mediatek tags/v4.9-next-kconfig
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.10
+	stm32/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/atorgue/stm32 tags/soc-for-4.10-1
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.10/soc-signed
+	omap/legacy
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.10/legacy-signed
+	renesas/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc2-for-v4.10
+	mvebu/drivers
+		git://git.infradead.org/linux-mvebu tags/mvebu-drivers-4.10-1
+	patch
+		ARM: ARTPEC-6: add select MFD_SYSCON to MACH_ARTPEC6
+	oxnas/soc
+		https://github.com/OXNAS/linux tags/oxnas-arm-soc-for-4.10-v2
+	mvebu/soc
+		git://git.infradead.org/linux-mvebu tags/mvebu-soc-4.10-1
+	davinci/cleanup-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/cleanup-2
+	davinci/soc-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/soc-2
+	davinci/soc-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/soc-3
+	broadcom/soc
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.10/soc
+
+next/arm64
+	patch
+		arm64: Enable HIBERNATION in defconfig
+	renesas/defconfig64
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.10
+	qcom/arm64-defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-arm64-defconfig-for-4.10
+	qcom/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-soc-for-4.10
+	amlogic/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-defconfig
+	tegra/arm64-defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-arm64-defconfig
+	patch
+		arm64: defconfig: Do not lower CONFIG_LOG_BUF_SHIFT
+	broadcom/maintainer
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.10/maintainers-arm64
+	<no branch> (9efacfc80902c6ddf538a2f396e0112c1f6d1e23)
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.10/defconfig-arm64
+	patch
+		arm64: defconfig: drop GPIO_SYSFS on multiplatforms
+	rockchip/defconfig64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.10-rockchip-defconfig64
+
+next/dt
+	sti/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/pchotard/sti tags/sti-dt-for-4.10
+	socfpga/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.10_part_1
+	vexpress/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/vexpress-dt-4.10
+	davinci/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/dt
+	renesas/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.10
+	stm32/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/atorgue/stm32 tags/stm32-dt-for-v4.10-1
+	<no branch> (a909d3e636995ba7c349e2ca5dbb528154d4ac30)
+		Merge tag 'v4.9-rc3' into next/dt
+	uniphier/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-uniphier tags/uniphier-dt-v4.10
+	lpc32xx/dt
+		https://github.com/sylemieux/linux-lpc32xx tags/lpc32xx-dt-v4.10
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.10
+	sti/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/pchotard/sti tags/sti-dt-for-4.10-round2
+	socfpga/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.10_part_2
+	rockchip/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.10-rockchip-dts32-1
+	mediatek/dt
+		https://github.com/mbgg/linux-mediatek tags/v4.9-next-dts
+	patch
+		ARM: dts: Add Integrator/CP cpus node and operating points
+		ARM: dts: Add Integrator/AP cpus node and operating points
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.10-dt1
+	omap/pinctrl-cells
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.10/pinctrl-cells-signed
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.10
+	stm32/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/atorgue/stm32 tags/stm32-dt-for-v4.10-2
+	hisi/dt
+		git://github.com/hisilicon/linux-hisi tags/hisi-armv7-soc-dt-for-4.10
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.10/dt-signed
+	samsung/dt-gic-flags
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-gic-flags-4.10
+	tegra/dt-bindings
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-dt-bindings
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-arm-dt
+	oxnas/dt
+		https://github.com/OXNAS/linux tags/oxnas-arm-soc-dt-for-4.10
+	patch
+		ARM: dts: artpec: add pcie support
+	pxa/dt
+		https://github.com/rjarzmik/linux tags/pxa-dt-4.10
+	qcom/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-dts-for-4.10-1
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.10-1
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt-for-4.10-bis
+	davinci/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/dt-2
+	davinci/dt-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/dt-3
+	renesas/rzg-clock-defs
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-drivers tags/rzg-clock-defs-tag1
+	renesas/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v4.10
+	socfpga/dts-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.10_part_3
+	broadcom/dt
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.10/devicetree
+	samsung/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.10-2
+	qcom/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-dts-for-4.10-2
+	rockchip/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.10-rockchip-dts32-2
+	berlin/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/jszhang/linux-berlin tags/berlin-dt-for-v4.10-1
+	<no branch> (26ca8b52d6e18c10109cabda0f775dd9345bbfdf)
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.10-2
+	<no branch> (5817430ba7250cfc5a9c4a397935b07da16c9762)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.10/dt-late-signed
+
+next/dt64
+	juno/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/juno-dt-4.10
+	renesas/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.10
+	<no branch> (a909d3e636995ba7c349e2ca5dbb528154d4ac30)
+		Merge tag 'v4.9-rc3' into next/dt64
+	uniphier/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-uniphier tags/uniphier-dt64-v4.10
+	samsung/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-4.10
+	rockchip/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.10-rockchip-dts64-1
+	depends/clk-qcom-8994
+		git://git.kernel.org/pub/scm/linux/kernel/git/clk/linux clk-qcom-8994
+	qcom/arm64
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-arm64-for-4.10
+	imx/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt64-4.10
+	hisi/dt64
+		git://github.com/hisilicon/linux-hisi tags/hisi-arm64-dt-4.10
+	sunxi/dt64
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-dt64-for-4.10
+	amlogic/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64
+	mvebu/dt64
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.10-1
+	samsung/dt64-gic-flags
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-gic-flags-4.10
+	patch
+		ARM: dts: artpec: add pcie support
+	mvebu/dt64-2
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.10-2
+	patch
+		arm64: dts: fix build errors from missing dependencies
+	renesas/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt2-for-v4.10
+	tagra/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-arm64-dt-numeric-ids
+	broadcom/dt64-2
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.10/devicetree-arm64
+	samsung/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-4.10-2
+	qcom/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-arm64-for-4.10-2
+	rockchip/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.10-rockchip-dts64-2
+	berlin/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/jszhang/linux-berlin tags/berlin64-dt-for-v4.10-1
+	zte/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/zte-dt64-4.10
+	amlogic/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-2-v2
+
+next/defconfig
+	patch
+		ARM: defconfig: update U8500 defconfig
+	sti/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/pchotard/sti tags/sti-defconfig-for-4.10
+	renesas/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-defconfig-for-v4.10
+	davinci/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/defconfig
+	patch
+		ARM: config: Enable GPIO Key driver in stm32_defconfig
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.10
+	sti/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/pchotard/sti sti-defconfig-for-4.10-round2
+	socfpga/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_defconfig_updates_for_v4.10
+	qcom/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-defconfig-for-4.10
+	patch
+		ARM: defconfig: turn on the DT cpufreq for Integrator
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.10
+	sunxi/defconfig
+		https://git.kernel.org/pub/scm/linux/kernel/git/mripard/linux tags/sunxi-defconfig-for-4.10
+	omap/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.10/defconfig-signed
+	tegra/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-arm-defconfig
+	config/v4.9-rc2-arm-configs-pata
+		https://github.com/bzolnier/linux v4.9-rc2-arm-configs-pata
+	patch
+		ARM: configs: Add new config fragment to change RAM start point
+	davinci/defconfig-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/defconfig-3
+	broadcom/defconfig
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.10/defconfig
+	patch
+		ARM: defconfig: drop GPIO_SYSFS on multiplatforms
+	sti/defconfig-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/pchotard/sti tags/sti-defconfig-for-4.10-round3
+
+next/drivers
+	renesas/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-drivers-for-v4.10
+	rockchip/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.10-rockchip-drivers1
+	qcom/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-drivers-for-4.10
+	davinci/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/drivers
+	mediatek/soc
+		https://github.com/mbgg/linux-mediatek tags/v4.9-next-soc
+	at91/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.10-drivers
+	drivers/reset
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.10
+	tegra/mailbox
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-mailbox
+	tegra/firmware
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-firmware
+	tegra/reset
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-reset
+	tegra/bus
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-bus
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.10-soc
+	patch
+		drivers: psci: PSCI checker module
+		drivers: psci: Allow PSCI node to be disabled
+	davinci/drivers-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.10/drivers-2
+	patch
+		misc: sram: remove useless #ifdef
+	renesas/r8a7745-sysc
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-r8a7745-sysc-for-v4.10
+	soc-device/match-tag1
+		git://git.kernel.org/pub/scm/linux/kernel/git/geert/renesas-drivers tags/soc-device-match-tag1
+	renesas/soc-match
+		git://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-match-for-v4.10
+	drivers/scpi
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/scpi-updates-4.10
+	keystone/ti-sci
+		https://github.com/t-kristo/linux-pm for-4.10-ti-sci-base
+	qcom/drivers-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-drivers-for-4.10-2
+
+
