@@ -196,6 +196,16 @@
 			};
 		};
 	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm1 0 50000>;
+
+		brightness-levels = <256 128 64 16 8 4 0>;
+		default-brightness-level = <6>;
+
+		enable-gpios = <&gpio6 7 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &du {
@@ -254,6 +264,11 @@
 	du_pins: du {
 		groups = "du_rgb888", "du_sync", "du_oddf", "du_clk_out_0";
 		function = "du";
+	};
+
+	pwm1_pins: pwm {
+		groups = "pwm1_a";
+		function = "pwm1";
 	};
 
 	sdhi0_pins: sd0 {
@@ -329,6 +344,13 @@
 		groups = "usb2";
 		function = "usb2";
 	};
+};
+
+&pwm1 {
+	pinctrl-0 = <&pwm1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
 };
 
 &scif1 {
@@ -574,4 +596,10 @@
 
 &pciec1 {
 	status = "okay";
+};
+
+#include "../../../arm/boot/dts/r8a77xx-aa104xd12-panel.dtsi"
+
+&{/panel/} {
+	backlight = <&backlight>;
 };
