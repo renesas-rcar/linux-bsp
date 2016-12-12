@@ -143,6 +143,25 @@
 		clock-frequency = <0>;
 	};
 
+	/* DU input dot clock - to be overridden by boards that provide it */
+	du_dotclkin0: dclkin-0 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	du_dotclkin1: dclkin-1 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	du_dotclkin2: dclkin-2 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -1097,8 +1116,12 @@
 			clocks = <&cpg CPG_MOD 724>,
 				 <&cpg CPG_MOD 723>,
 				 <&cpg CPG_MOD 722>,
-				 <&cpg CPG_MOD 727>;
-			clock-names = "du.0", "du.1", "du.2", "lvds.0";
+				 <&cpg CPG_MOD 727>,
+				 <&du_dotclkin0>,
+				 <&du_dotclkin1>,
+				 <&du_dotclkin2>;
+			clock-names = "du.0", "du.1", "du.2", "lvds.0",
+				      "dclkin.0", "dclkin.1", "dclkin.2";
 			status = "disabled";
 
 			vsps = <&vspd0 &vspd1 &vspd2>;
