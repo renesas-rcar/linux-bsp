@@ -107,6 +107,11 @@ static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
  * Hardware Setup
  */
 
+static const struct soc_device_attribute r8a7795es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
 				 unsigned int mode_clock)
 {
@@ -119,9 +124,15 @@ static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
 	for (n = 39; n < 120; n++) {
 		for (m = 0; m < 4; m++) {
 			for (fdpll = 1; fdpll < 32; fdpll++) {
-				/* 1/2 (FRQSEL=1) for duty rate 50% */
-				dpllclk = extclk * (n + 1) / (m + 1)
-						 / (fdpll + 1) / 2;
+				if (soc_device_match(r8a7795es1)) {
+					/* 1/2 (FRQSEL=1) for duty rate 50% */
+					dpllclk = extclk * (n + 1) / (m + 1)
+							 / (fdpll + 1) / 2;
+				} else {
+					dpllclk = extclk * (n + 1) / (m + 1)
+							 / (fdpll + 1);
+				}
+
 				if (dpllclk >= 400000000)
 					continue;
 
@@ -150,11 +161,6 @@ static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
 			break;
 	}
 }
-
-static const struct soc_device_attribute r8a7795es1[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ /* sentinel */ }
-};
 
 static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 {
@@ -207,7 +213,11 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 			dev_dbg(rcrtc->group->dev->dev,
 				"crtc%u: using external clock\n", rcrtc->index);
 			if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
-				escr = ESCR_DCLKSEL_DCLKIN | 0x01;
+				if (soc_device_match(r8a7795es1))
+					escr = ESCR_DCLKSEL_DCLKIN | 0x01;
+				else
+					escr = ESCR_DCLKSEL_DCLKIN;
+
 				dpll_reg =  DPLLCR_CODE | DPLLCR_M(dpll->m) |
 					DPLLCR_FDPLL(dpll->fdpll) |
 					DPLLCR_CLKE | DPLLCR_N(dpll->n) |
@@ -220,7 +230,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 					dpll_reg |= (DPLLCR_PLCS0 |
 						DPLLCR_INCS_DPLL01_DOTCLKIN02);
 					if (soc_device_match(r8a7795es1))
-						dpll_reg |= (0x01 << 21);
+						dpll_reg |= (0x01 << 20);
 				}
 
 				rcar_du_group_write(rcrtc->group, DPLLCR,
@@ -229,6 +239,8 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 				escr = extdiv | ESCR_DCLKSEL_DCLKIN;
 		}
 	}
+
+	kfree(dpll);
 
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? ESCR2 : ESCR,
 			    escr);
