@@ -698,8 +698,7 @@ static void sh_mobile_sdhi_enable_dma(struct tmio_mmc_host *host, bool enable)
 
 static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 {
-	const struct of_device_id *of_id =
-		of_match_device(sh_mobile_sdhi_of_match, &pdev->dev);
+	const struct sh_mobile_sdhi_of_data *of_data = of_device_get_match_data(&pdev->dev);
 	struct sh_mobile_sdhi *priv;
 	struct tmio_mmc_data *mmc_data;
 	struct tmio_mmc_data *mmd = pdev->dev.platform_data;
@@ -753,9 +752,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 #else
 	host->sequencer_enabled = false;
 #endif
-	if (of_id && of_id->data) {
-		const struct sh_mobile_sdhi_of_data *of_data = of_id->data;
-
+	if (of_data) {
 		mmc_data->flags |= of_data->tmio_flags;
 		mmc_data->ocr_mask = of_data->tmio_ocr_mask;
 		mmc_data->capabilities |= of_data->capabilities;
@@ -861,13 +858,9 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 					MMC_CAP2_HS200_1_8V_SDR))) {
 		host->mmc->caps |= MMC_CAP_HW_RESET;
 
-		if (of_id && of_id->data) {
-			const struct sh_mobile_sdhi_of_data *of_data;
-			const struct sh_mobile_sdhi_scc *taps;
+		if (of_data) {
+			const struct sh_mobile_sdhi_scc *taps = of_data->taps;
 			bool hit = false;
-
-			of_data = of_id->data;
-			taps = of_data->taps;
 
 			for (i = 0; i < of_data->taps_num; i++) {
 				if (taps[i].clk_rate == 0 ||
