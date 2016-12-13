@@ -160,6 +160,8 @@ struct drm_display_info {
 #define DRM_BUS_FLAG_PIXDATA_POSEDGE	(1<<2)
 /* drive data on neg. edge */
 #define DRM_BUS_FLAG_PIXDATA_NEGEDGE	(1<<3)
+/* data is mirrored on the bus */
+#define DRM_BUS_FLAG_DATA_MIRROR	(1<<4)
 
 	/**
 	 * @bus_flags: Additional information (like pixel signal polarity) for
