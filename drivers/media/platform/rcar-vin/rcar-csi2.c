@@ -537,6 +537,7 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 		 KBUILD_MODNAME, dev_name(&pdev->dev));
 
 	priv->subdev.flags = V4L2_SUBDEV_FL_HAS_DEVNODE;
+	priv->subdev.entity.function = MEDIA_ENT_F_ATV_DECODER;
 	priv->subdev.entity.flags |= MEDIA_ENT_F_ATV_DECODER;
 
 	priv->pads[RCAR_CSI2_SINK].flags = MEDIA_PAD_FL_SINK;
