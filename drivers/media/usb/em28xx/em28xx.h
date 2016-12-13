@@ -610,7 +610,6 @@ struct em28xx {
 	struct em28xx_IR *ir;
 
 	/* generic device properties */
-	char name[30];		/* name (including minor) of the device */
 	int model;		/* index in the device_data struct */
 	int devno;		/* marks the number of this device */
 	enum em28xx_chip_id chip_id;
@@ -796,21 +795,5 @@ void em28xx_free_device(struct kref *ref);
 /* Provided by em28xx-camera.c */
 int em28xx_detect_sensor(struct em28xx *dev);
 int em28xx_init_camera(struct em28xx *dev);
-
-/* printk macros */
-
-#define em28xx_err(fmt, arg...) do {\
-	printk(KERN_ERR fmt , ##arg); } while (0)
-
-#define em28xx_errdev(fmt, arg...) do {\
-	printk(KERN_ERR "%s: "fmt,\
-			dev->name , ##arg); } while (0)
-
-#define em28xx_info(fmt, arg...) do {\
-	printk(KERN_INFO "%s: "fmt,\
-			dev->name , ##arg); } while (0)
-#define em28xx_warn(fmt, arg...) do {\
-	printk(KERN_WARNING "%s: "fmt,\
-			dev->name , ##arg); } while (0)
 
 #endif

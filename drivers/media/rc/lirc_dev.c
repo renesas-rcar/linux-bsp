@@ -150,9 +150,6 @@ static const struct file_operations lirc_dev_fops = {
 	.write		= lirc_dev_fop_write,
 	.poll		= lirc_dev_fop_poll,
 	.unlocked_ioctl	= lirc_dev_fop_ioctl,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl	= lirc_dev_fop_ioctl,
-#endif
 	.open		= lirc_dev_fop_open,
 	.release	= lirc_dev_fop_close,
 	.llseek		= noop_llseek,
@@ -164,15 +161,15 @@ static int lirc_cdev_add(struct irctl *ir)
 	struct lirc_driver *d = &ir->d;
 	struct cdev *cdev;
 
-	cdev = kzalloc(sizeof(*cdev), GFP_KERNEL);
+	cdev = cdev_alloc();
 	if (!cdev)
 		goto err_out;
 
 	if (d->fops) {
-		cdev_init(cdev, d->fops);
+		cdev->ops = d->fops;
 		cdev->owner = d->owner;
 	} else {
-		cdev_init(cdev, &lirc_dev_fops);
+		cdev->ops = &lirc_dev_fops;
 		cdev->owner = THIS_MODULE;
 	}
 	retval = kobject_set_name(&cdev->kobj, "lirc%d", d->minor);
@@ -190,7 +187,7 @@ static int lirc_cdev_add(struct irctl *ir)
 	return 0;
 
 err_out:
-	kfree(cdev);
+	cdev_del(cdev);
 	return retval;
 }
 
@@ -420,7 +417,6 @@ int lirc_unregister_driver(int minor)
 	} else {
 		lirc_irctl_cleanup(ir);
 		cdev_del(cdev);
-		kfree(cdev);
 		kfree(ir);
 		irctls[minor] = NULL;
 	}
@@ -521,7 +517,6 @@ int lirc_dev_fop_close(struct inode *inode, struct file *file)
 		lirc_irctl_cleanup(ir);
 		cdev_del(cdev);
 		irctls[ir->d.minor] = NULL;
-		kfree(cdev);
 		kfree(ir);
 	}
 
@@ -684,7 +679,6 @@ ssize_t lirc_dev_fop_read(struct file *file,
 	 * between while condition checking and scheduling)
 	 */
 	add_wait_queue(&ir->buf->wait_poll, &wait);
-	set_current_state(TASK_INTERRUPTIBLE);
 
 	/*
 	 * while we didn't provide 'length' bytes, device is opened in blocking
@@ -709,19 +703,19 @@ ssize_t lirc_dev_fop_read(struct file *file,
 			}
 
 			mutex_unlock(&ir->irctl_lock);
-			schedule();
 			set_current_state(TASK_INTERRUPTIBLE);
+			schedule();
+			set_current_state(TASK_RUNNING);
 
 			if (mutex_lock_interruptible(&ir->irctl_lock)) {
 				ret = -ERESTARTSYS;
 				remove_wait_queue(&ir->buf->wait_poll, &wait);
-				set_current_state(TASK_RUNNING);
 				goto out_unlocked;
 			}
 
 			if (!ir->attached) {
 				ret = -ENODEV;
-				break;
+				goto out_locked;
 			}
 		} else {
 			lirc_buffer_read(ir->buf, buf);
@@ -735,7 +729,6 @@ ssize_t lirc_dev_fop_read(struct file *file,
 	}
 
 	remove_wait_queue(&ir->buf->wait_poll, &wait);
-	set_current_state(TASK_RUNNING);
 
 out_locked:
 	mutex_unlock(&ir->irctl_lock);
