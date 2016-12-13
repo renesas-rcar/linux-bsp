@@ -53,6 +53,7 @@ struct vsp1_rwpf {
 
 	u32 mult_alpha;
 	u32 outfmt;
+	bool has_writeback;
 
 	struct {
 		spinlock_t lock;
