@@ -1,5 +1,5 @@
 /*
- * linux/drivers/mmc/card/sdio_uart.c - SDIO UART/GPS driver
+ * SDIO UART/GPS driver
  *
  * Based on drivers/serial/8250.c and drivers/serial/serial_core.c
  * by Russell King.
@@ -134,8 +134,6 @@ static void sdio_uart_port_put(struct sdio_uart_port *port)
 static void sdio_uart_port_remove(struct sdio_uart_port *port)
 {
 	struct sdio_func *func;
-
-	BUG_ON(sdio_uart_table[port->index] != port);
 
 	spin_lock(&sdio_uart_table_lock);
 	sdio_uart_table[port->index] = NULL;

@@ -93,8 +93,7 @@ struct mmc_host_ops {
 	 */
 	void	(*post_req)(struct mmc_host *host, struct mmc_request *req,
 			    int err);
-	void	(*pre_req)(struct mmc_host *host, struct mmc_request *req,
-			   bool is_first_req);
+	void	(*pre_req)(struct mmc_host *host, struct mmc_request *req);
 	void	(*request)(struct mmc_host *host, struct mmc_request *req);
 
 	/*
@@ -173,7 +172,7 @@ struct mmc_async_req {
 	 * Check error status of completed mmc request.
 	 * Returns 0 if success otherwise non zero.
 	 */
-	int (*err_check) (struct mmc_card *, struct mmc_async_req *);
+	enum mmc_blk_status (*err_check)(struct mmc_card *, struct mmc_async_req *);
 };
 
 /**
@@ -198,14 +197,12 @@ struct mmc_slot {
  * @is_new_req		wake up reason was new request
  * @is_waiting_last_req	mmc context waiting for single running request
  * @wait		wait queue
- * @lock		lock to protect data fields
  */
 struct mmc_context_info {
 	bool			is_done_rcv;
 	bool			is_new_req;
 	bool			is_waiting_last_req;
 	wait_queue_head_t	wait;
-	spinlock_t		lock;
 };
 
 struct regulator;
@@ -493,11 +490,6 @@ static inline int mmc_host_uhs(struct mmc_host *host)
 		(MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
 		 MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104 |
 		 MMC_CAP_UHS_DDR50);
-}
-
-static inline int mmc_host_packed_wr(struct mmc_host *host)
-{
-	return host->caps2 & MMC_CAP2_PACKED_WR;
 }
 
 static inline int mmc_card_hs(struct mmc_card *card)
