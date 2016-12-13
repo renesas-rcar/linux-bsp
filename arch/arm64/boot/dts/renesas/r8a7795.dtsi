@@ -147,6 +147,30 @@
 		clock-frequency = <0>;
 	};
 
+	programmable_clk0: clock_out0 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	x21_clk: x21-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	x22_clk: x22-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	programmable_clk1: clock_out1 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -1702,8 +1726,14 @@
 				 <&cpg CPG_MOD 723>,
 				 <&cpg CPG_MOD 722>,
 				 <&cpg CPG_MOD 721>,
-				 <&cpg CPG_MOD 727>;
-			clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0";
+				 <&cpg CPG_MOD 727>,
+				 <&programmable_clk0>,
+				 <&x21_clk>,
+				 <&x22_clk>,
+				 <&programmable_clk1>;
+			clock-names = "du.0", "du.1", "du.2", "du.3",
+				      "lvds.0", "dclkin.0", "dclkin.1",
+				      "dclkin.2", "dclkin.3";
 			status = "disabled";
 
 			vsps = <&vspd0 &vspd1 &vspd2 &vspd3>;
@@ -1733,6 +1763,28 @@
 					};
 				};
 			};
+		};
+
+		hdmi0: hdmi0@fead0000 {
+			compatible = "renesas,rcar-dw-hdmi";
+			reg = <0 0xfead0000 0 0x10000>;
+			interrupts = <0 389 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 729>;
+			clock-names = "isfr";
+			interlaced = <1>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			status = "disabled";
+		};
+
+		hdmi1: hdmi1@feae0000 {
+			compatible = "renesas,rcar-dw-hdmi";
+			reg = <0 0xfeae0000 0 0x10000>;
+			interrupts = <0 436 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 728>;
+			clock-names = "isfr";
+			interlaced = <1>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			status = "disabled";
 		};
 	};
 };
