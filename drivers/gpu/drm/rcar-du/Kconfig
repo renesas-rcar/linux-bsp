@@ -14,6 +14,8 @@ config DRM_RCAR_DU
 config DRM_RCAR_HDMI
 	bool "R-Car DU HDMI Encoder Support"
 	depends on DRM_RCAR_DU
+	depends on OF
+	select DRM_DW_HDMI
 	help
 	  Enable support for external HDMI encoders.
 
