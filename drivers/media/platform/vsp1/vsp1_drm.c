@@ -14,6 +14,7 @@
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
+#include <linux/sys_soc.h>
 
 #include <media/media-entity.h>
 #include <media/rcar-fcp.h>
@@ -29,6 +30,11 @@
 #include "vsp1_rwpf.h"
 #include "vsp1_video.h"
 
+
+static const struct soc_device_attribute r8a7795es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
 
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
@@ -323,6 +329,12 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 		rpf->format.plane_fmt[1].bytesperline = cfg->pitch;
 	rpf->alpha = cfg->alpha;
 	rpf->interlaced = cfg->interlaced;
+
+	if (soc_device_match(r8a7795es1) && rpf->interlaced) {
+		dev_err(vsp1->dev,
+			"Interlaced mode is not supported.\n");
+		return -EINVAL;
+	}
 
 	rpf->mem.addr[0] = cfg->mem[0];
 	rpf->mem.addr[1] = cfg->mem[1];
