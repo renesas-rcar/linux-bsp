@@ -32,6 +32,7 @@ struct vsp1_du_atomic_config {
 	struct v4l2_rect dst;
 	unsigned int alpha;
 	unsigned int zpos;
+	bool interlaced;
 };
 
 void vsp1_du_atomic_begin(struct device *dev);

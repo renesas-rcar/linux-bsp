@@ -937,6 +937,11 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "IP version 0x%08x\n", vsp1->version);
 
+	if (vsp1->info->header_mode && !soc_device_match(r8a7795es1))
+		vsp1->auto_fld_mode = true;
+	else
+		vsp1->auto_fld_mode = false;
+
 	/* Instanciate entities */
 	ret = vsp1_create_entities(vsp1);
 	if (ret < 0) {
@@ -956,7 +961,6 @@ static int vsp1_probe(struct platform_device *pdev)
 	if (soc_device_match(r8a7795es1) && vsp1_gen3_vspd_check(vsp1))
 		fcpv_reg[vsp1->index] =
 			ioremap(fcpvd_offset[vsp1->index], 0x20);
-
 done:
 	if (ret)
 		pm_runtime_disable(&pdev->dev);

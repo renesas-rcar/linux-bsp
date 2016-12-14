@@ -322,6 +322,7 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 	else
 		rpf->format.plane_fmt[1].bytesperline = cfg->pitch;
 	rpf->alpha = cfg->alpha;
+	rpf->interlaced = cfg->interlaced;
 
 	rpf->mem.addr[0] = cfg->mem[0];
 	rpf->mem.addr[1] = cfg->mem[1];
