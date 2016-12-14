@@ -112,6 +112,7 @@ struct vsp1_pipeline {
 	struct vsp1_entity *uds_input;
 
 	struct list_head entities;
+	wait_queue_head_t event_wait;
 
 	struct vsp1_dl_list *dl;
 
