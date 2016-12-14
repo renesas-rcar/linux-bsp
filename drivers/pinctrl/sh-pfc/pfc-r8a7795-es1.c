@@ -1,4 +1,10 @@
 /*
+ * R8A7795 ES1.x processor support - PFC hardware block.
+ *
+ * Copyright (C) 2016 Renesas Electronics Corp.
+ *
+ * This file is based on the drivers/pinctrl/sh-pfc/pfc-r8a7795.c
+ *
  * R8A7795 processor support - PFC hardware block.
  *
  * Copyright (C) 2015  Renesas Electronics Corporation
@@ -5393,7 +5399,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 	{ },
 };
 
-static int r8a7795_pin_to_pocctrl(struct sh_pfc *pfc, unsigned int pin, u32 *pocctrl)
+static int r8a7795_es1_pin_to_pocctrl(struct sh_pfc *pfc, unsigned int pin, u32 *pocctrl)
 {
 	int bit = -EINVAL;
 
@@ -5627,7 +5633,7 @@ static const struct sh_pfc_bias_info bias_info[] = {
 	{ RCAR_GP_PIN(6, 25),    PU6,  0 },	/* USB0_OVC */
 };
 
-static unsigned int r8a7795_pinmux_get_bias(struct sh_pfc *pfc,
+static unsigned int r8a7795_es1_pinmux_get_bias(struct sh_pfc *pfc,
 					    unsigned int pin)
 {
 	const struct sh_pfc_bias_info *info;
@@ -5649,7 +5655,7 @@ static unsigned int r8a7795_pinmux_get_bias(struct sh_pfc *pfc,
 		return PIN_CONFIG_BIAS_PULL_DOWN;
 }
 
-static void r8a7795_pinmux_set_bias(struct sh_pfc *pfc, unsigned int pin,
+static void r8a7795_es1_pinmux_set_bias(struct sh_pfc *pfc, unsigned int pin,
 				   unsigned int bias)
 {
 	const struct sh_pfc_bias_info *info;
@@ -5676,33 +5682,15 @@ static void r8a7795_pinmux_set_bias(struct sh_pfc *pfc, unsigned int pin,
 	sh_pfc_write_reg(pfc, PUEN + reg, 32, enable);
 }
 
-static const struct soc_device_attribute r8a7795es1[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ /* sentinel */ }
+static const struct sh_pfc_soc_operations r8a7795_es1_pinmux_ops = {
+	.pin_to_pocctrl = r8a7795_es1_pin_to_pocctrl,
+	.get_bias = r8a7795_es1_pinmux_get_bias,
+	.set_bias = r8a7795_es1_pinmux_set_bias,
 };
 
-static int r8a7795_pinmux_init(struct sh_pfc *pfc)
-{
-	if (soc_device_match(r8a7795es1)) {
-		pr_info("%s: R-Car H3 ES1.x detected\n", __func__);
-		pfc->info = &r8a7795_es1_pinmux_info;
-	} else {
-		pr_info("%s: R-Car H3 >= ES2.0\n", __func__);
-		// FIXME Fixup r8a7795_pinmux_info for ES2.0
-	}
-	return 0;
-}
-
-static const struct sh_pfc_soc_operations r8a7795_pinmux_ops = {
-	.init = r8a7795_pinmux_init,
-	.pin_to_pocctrl = r8a7795_pin_to_pocctrl,
-	.get_bias = r8a7795_pinmux_get_bias,
-	.set_bias = r8a7795_pinmux_set_bias,
-};
-
-const struct sh_pfc_soc_info r8a7795_pinmux_info = {
+const struct sh_pfc_soc_info r8a7795_es1_pinmux_info = {
 	.name = "r8a77950_pfc",
-	.ops = &r8a7795_pinmux_ops,
+	.ops = &r8a7795_es1_pinmux_ops,
 	.unlock_reg = 0xe6060000, /* PMMR */
 
 	.function = { PINMUX_FUNCTION_BEGIN, PINMUX_FUNCTION_END },
