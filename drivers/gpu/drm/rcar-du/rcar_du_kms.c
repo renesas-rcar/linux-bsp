@@ -412,6 +412,34 @@ error:
 	return ret;
 }
 
+int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
+{
+	int ret;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
+
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	state->crtcs->state = crtc_state;
+	state->crtcs->ptr = crtc;
+	crtc_state->state = state;
+	crtc_state->active = true;
+
+	ret = drm_atomic_commit(state);
+	if (ret != 0) {
+		drm_atomic_helper_crtc_destroy_state(crtc, crtc_state);
+		return ret;
+	}
+
+	return 0;
+}
+
 /* -----------------------------------------------------------------------------
  * Initialization
  */
