@@ -193,25 +193,26 @@
 		clock-frequency = <0>;
 	};
 
-	programmable_clk0: clock_out0 {
+	/* DU input dot clock - to be overridden by boards that provide it */
+	du_dotclkin0: dclkin-0 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <0>;
 	};
 
-	x21_clk: x21-clock {
+	du_dotclkin1: dclkin-1 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <0>;
 	};
 
-	x22_clk: x22-clock {
+	du_dotclkin2: dclkin-2 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <0>;
 	};
 
-	programmable_clk1: clock_out1 {
+	du_dotclkin3: dclkin-3 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <0>;
@@ -1785,10 +1786,8 @@
 				 <&cpg CPG_MOD 722>,
 				 <&cpg CPG_MOD 721>,
 				 <&cpg CPG_MOD 727>,
-				 <&programmable_clk0>,
-				 <&x21_clk>,
-				 <&x22_clk>,
-				 <&programmable_clk1>;
+				 <&du_dotclkin0>, <&du_dotclkin1>,
+				 <&du_dotclkin2>, <&du_dotclkin3>;
 			clock-names = "du.0", "du.1", "du.2", "du.3",
 				      "lvds.0", "dclkin.0", "dclkin.1",
 				      "dclkin.2", "dclkin.3";
