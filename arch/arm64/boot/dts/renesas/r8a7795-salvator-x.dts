@@ -235,19 +235,19 @@
 	};
 };
 
-&programmable_clk0 {
+&du_dotclkin0 {
 	clock-frequency = <148500000>;
 };
 
-&x21_clk {
+&du_dotclkin1 {
 	clock-frequency = <33000000>;
 };
 
-&x22_clk {
+&du_dotclkin2 {
 	clock-frequency = <33000000>;
 };
 
-&programmable_clk1 {
+&du_dotclkin3 {
 	clock-frequency = <108000000>;
 };
 
