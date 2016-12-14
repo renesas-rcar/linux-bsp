@@ -1,7 +1,7 @@
 /*
  * rcar_du_drv.c  --  R-Car Display Unit DRM driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -37,6 +37,8 @@
 #include "rcar_du_kms.h"
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
+#include "rcar_du_hdmienc.h"
+#include "rcar_du_lvdsenc.h"
 
 /* -----------------------------------------------------------------------------
  * Device Information
@@ -255,7 +257,8 @@ static void rcar_du_lastclose(struct drm_device *dev)
 {
 	struct rcar_du_device *rcdu = dev->dev_private;
 
-	drm_fbdev_cma_restore_mode(rcdu->fbdev);
+	if (dev->irq_enabled)
+		drm_fbdev_cma_restore_mode(rcdu->fbdev);
 }
 
 static int rcar_du_enable_vblank(struct drm_device *dev, unsigned int pipe)
@@ -329,7 +332,6 @@ static struct drm_driver rcar_du_driver = {
 /* -----------------------------------------------------------------------------
  * Power management
  */
-
 #ifdef CONFIG_PM_SLEEP
 static int rcar_du_pm_suspend(struct device *dev)
 {
@@ -360,12 +362,47 @@ static const struct dev_pm_ops rcar_du_pm_ops = {
  * Platform driver
  */
 
+static void rcar_du_remove_suspend(struct rcar_du_device *rcdu)
+{
+	int i;
+#if IS_ENABLED(CONFIG_DRM_RCAR_HDMI)
+	struct drm_encoder *encoder;
+
+	list_for_each_entry(encoder,
+		&rcdu->ddev->mode_config.encoder_list, head) {
+		if (encoder->encoder_type == DRM_MODE_ENCODER_TMDS)
+			rcar_du_hdmienc_disable(encoder);
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+	for (i = 0; i < rcdu->info->num_lvds; ++i) {
+		if (rcdu->lvds[i])
+			rcar_du_lvdsenc_stop_suspend(rcdu->lvds[i]);
+	}
+#endif
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started)
+			rcar_du_crtc_remove_suspend(&rcdu->crtcs[i]);
+	}
+}
+
 static int rcar_du_remove(struct platform_device *pdev)
 {
 	struct rcar_du_device *rcdu = platform_get_drvdata(pdev);
 	struct drm_device *ddev = rcdu->ddev;
+	int i;
+
+	ddev->irq_enabled = 0;
+
+	for (i = 0; i < rcdu->num_crtcs; ++i) {
+		if (rcdu->crtcs[i].started)
+			drm_crtc_vblank_off(&rcdu->crtcs[i].crtc);
+	}
 
 	drm_dev_unregister(ddev);
+
+	rcar_du_remove_suspend(rcdu);
 
 	if (rcdu->fbdev)
 		drm_fbdev_cma_fini(rcdu->fbdev);
@@ -395,8 +432,6 @@ static int rcar_du_probe(struct platform_device *pdev)
 	rcdu->dev = &pdev->dev;
 	rcdu->info = of_match_device(rcar_du_of_table, rcdu->dev)->data;
 
-	platform_set_drvdata(pdev, rcdu);
-
 	/* I/O resources */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	rcdu->mmio = devm_ioremap_resource(&pdev->dev, mem);
@@ -413,6 +448,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 
 	ret = rcar_du_modeset_init(rcdu);
 	if (ret < 0) {
+		platform_set_drvdata(pdev, rcdu);
 		if (ret != -EPROBE_DEFER)
 			dev_err(&pdev->dev,
 				"failed to initialize DRM/KMS (%d)\n", ret);
@@ -427,6 +463,8 @@ static int rcar_du_probe(struct platform_device *pdev)
 	ret = drm_dev_register(ddev, 0);
 	if (ret)
 		goto error;
+
+	platform_set_drvdata(pdev, rcdu);
 
 	DRM_INFO("Device %s probed\n", dev_name(&pdev->dev));
 

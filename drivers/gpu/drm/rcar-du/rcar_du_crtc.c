@@ -554,6 +554,22 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	rcrtc->started = false;
 }
 
+void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc)
+{
+	if (!rcrtc->started)
+		return;
+
+	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? DS2PR : DS1PR, 0);
+
+	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
+
+	rcar_du_group_start_stop(rcrtc->group, false, rcrtc);
+
+	rcar_du_crtc_put(rcrtc);
+
+	rcrtc->started = false;
+}
+
 void rcar_du_crtc_suspend(struct rcar_du_crtc *rcrtc)
 {
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
@@ -731,6 +747,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	rcrtc->group = rgrp;
 	rcrtc->mmio_offset = mmio_offsets[index];
 	rcrtc->index = index;
+	rcrtc->lvds_ch = -1;
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
 		primary = &rcrtc->vsp->planes[0].plane;
