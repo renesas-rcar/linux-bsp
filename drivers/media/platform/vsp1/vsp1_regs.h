@@ -1,7 +1,7 @@
 /*
  * vsp1_regs.h  --  R-Car VSP1 Registers Definitions
  *
- * Copyright (C) 2013 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -20,23 +20,49 @@
 #define VI6_CMD(n)			(0x0000 + (n) * 4)
 #define VI6_CMD_STRCMD			(1 << 0)
 
+#define VI6_CLK_CTRL0			0x0010
+#define VI6_CLK_CTRL0_WORKAROUND	0x10010F1F
+
+#define VI6_CLK_CTRL1			0x0014
+#define VI6_CLK_CTRL1_WORKAROUND	0xFF00FFFF
+
 #define VI6_CLK_DCSWT			0x0018
 #define VI6_CLK_DCSWT_CSTPW_MASK	(0xff << 8)
 #define VI6_CLK_DCSWT_CSTPW_SHIFT	8
 #define VI6_CLK_DCSWT_CSTRW_MASK	(0xff << 0)
 #define VI6_CLK_DCSWT_CSTRW_SHIFT	0
+#define VI6_CLK_DCSWT_WORKAROUND1	0x00130808
+#define VI6_CLK_DCSWT_WORKAROUND2	0x00000808
+
+#define VI6_CLK_DCSM0			0x001C
+#define VI6_CLK_DCSM0_WORKAROUND	0x1FFF0F1F
+
+#define VI6_CLK_DCSM1			0x0020
+#define VI6_CLK_DCSM1_WORKAROUND	0xFF00FFFF
 
 #define VI6_SRESET			0x0028
 #define VI6_SRESET_SRTS(n)		(1 << (n))
+
+#define VI6_MRESET_ENB0			0x002C
+#define VI6_MRESET_ENB0_WORKAROUND1	0x0000001F
+#define VI6_MRESET_ENB0_WORKAROUND2	0x30000F1F
+
+#define VI6_MRESET_ENB1			0x0030
+#define VI6_MRESET_ENB1_WORKAROUND	0xFF00FFFF
+
+#define VI6_MRESET			0x0034
+#define VI6_MRESET_WORKAROUND		0x00000001
 
 #define VI6_STATUS			0x0038
 #define VI6_STATUS_SYS_ACT(n)		(1 << ((n) + 8))
 
 #define VI6_WPF_IRQ_ENB(n)		(0x0048 + (n) * 12)
+#define VI6_WFP_IRQ_ENB_UNDE		(1 << 16)
 #define VI6_WFP_IRQ_ENB_DFEE		(1 << 1)
 #define VI6_WFP_IRQ_ENB_FREE		(1 << 0)
 
 #define VI6_WPF_IRQ_STA(n)		(0x004c + (n) * 12)
+#define VI6_WFP_IRQ_STA_UND		(1 << 16)
 #define VI6_WFP_IRQ_STA_DFE		(1 << 1)
 #define VI6_WFP_IRQ_STA_FRE		(1 << 0)
 
