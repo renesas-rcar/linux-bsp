@@ -97,6 +97,8 @@ struct vsp1_device {
 	struct media_device media_dev;
 	struct media_entity_operations media_ops;
 
+	bool auto_fld_mode;
+
 	struct vsp1_drm *drm;
 	int index;
 
