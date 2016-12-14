@@ -584,6 +584,58 @@ void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt)
 }
 EXPORT_SYMBOL_GPL(vsp1_du_unmap_sg);
 
+int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
+		      dma_addr_t mem[2])
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+	struct vsp1_rwpf *wpf = pipe->output;
+	const struct vsp1_format_info *fmtinfo;
+	struct vsp1_rwpf *rpf = pipe->inputs[0];
+	unsigned long flags;
+	int i;
+
+	fmtinfo = vsp1_get_format_info(vsp1, pixelformat);
+	if (!fmtinfo) {
+		dev_err(vsp1->dev, "Unsupport pixel format %08x for RPF\n",
+			pixelformat);
+		return -EINVAL;
+	}
+
+	if (rpf->interlaced) {
+		dev_err(vsp1->dev, "Prohibited in interlaced mode\n");
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave(&pipe->irqlock, flags);
+
+	wpf->fmtinfo = fmtinfo;
+	wpf->format.num_planes = fmtinfo->planes;
+	wpf->format.plane_fmt[0].bytesperline = pitch;
+	wpf->format.plane_fmt[1].bytesperline = pitch;
+
+	for (i = 0; i < wpf->format.num_planes; ++i)
+		wpf->buf_addr[i] = mem[i];
+
+	pipe->output->write_back = 3;
+
+	spin_unlock_irqrestore(&pipe->irqlock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vsp1_du_setup_wb);
+
+void vsp1_du_wait_wb(struct device *dev, u32 count)
+{
+	int ret;
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
+
+	ret = wait_event_interruptible(pipe->event_wait,
+				       (pipe->output->write_back == count));
+}
+EXPORT_SYMBOL_GPL(vsp1_du_wait_wb);
+
 /* -----------------------------------------------------------------------------
  * Initialization
  */
@@ -672,6 +724,8 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 	pipe->lif = &vsp1->lif->entity;
 	pipe->output = vsp1->wpf[0];
 	pipe->output->pipe = pipe;
+	pipe->output->write_back = 0;
+	init_waitqueue_head(&pipe->event_wait);
 
 	return 0;
 }
