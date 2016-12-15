@@ -116,6 +116,10 @@ static int vsp1_gen3_vspd_check(struct vsp1_device *vsp1)
 		VI6_IP_VERSION_MODEL_VSPD_GEN3)
 		return true;
 
+	if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
+		VI6_IP_VERSION_MODEL_VSPDL_H3)
+		return true;
+
 	return false;
 }
 
@@ -905,6 +909,16 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.gen = 3,
 		.features = VSP1_HAS_BRU | VSP1_HAS_LIF | VSP1_HAS_WPF_VFLIP
 			  | VSP1_HAS_WPF_WRITEBACK,
+		.rpf_count = 5,
+		.wpf_count = 2,
+		.num_bru_inputs = 5,
+		.header_mode = true,
+	}, {
+		.version = VI6_IP_VERSION_MODEL_VSPDL_H3,
+		.model = "VSP2-D",
+		.gen = 3,
+		.features = VSP1_HAS_BRU | VSP1_HAS_LIF | VSP1_HAS_WPF_VFLIP
+			  | VSP1_HAS_BRS,
 		.rpf_count = 5,
 		.wpf_count = 2,
 		.num_bru_inputs = 5,
