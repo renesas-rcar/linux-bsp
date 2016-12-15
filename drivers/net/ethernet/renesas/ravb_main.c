@@ -33,6 +33,7 @@
 #include <linux/spinlock.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
+#include <linux/sys_soc.h>
 
 #include <asm/div64.h>
 
@@ -52,6 +53,11 @@ static const char *ravb_rx_irqs[NUM_RX_QUEUE] = {
 static const char *ravb_tx_irqs[NUM_TX_QUEUE] = {
 	"ch18", /* RAVB_BE */
 	"ch19", /* RAVB_NC */
+};
+
+static const struct soc_device_attribute r8a7795es10[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.0" },
+	{ /* sentinel */ }
 };
 
 void ravb_modify(struct net_device *ndev, enum ravb_reg reg, u32 clear,
@@ -1023,9 +1029,6 @@ static int ravb_phy_init(struct net_device *ndev)
 		goto err_deregister_fixed_link;
 	}
 
-	/* This driver only support 10/100Mbit speeds on Gen3
-	 * at this time.
-	 */
 	if (priv->chip_id == RCAR_GEN3) {
 		gpio = of_get_named_gpio_flags(np, "phy-int-gpio", 0, &flags);
 		if (gpio_is_valid(gpio)) {
@@ -1041,13 +1044,14 @@ static int ravb_phy_init(struct net_device *ndev)
 			}
 		}
 
-		err = phy_set_max_speed(phydev, SPEED_100);
-		if (err) {
-			netdev_err(ndev, "failed to limit PHY to 100Mbit/s\n");
-			goto err_phy_disconnect;
+		if (soc_device_match(r8a7795es10)) {
+			err = phy_set_max_speed(phydev, SPEED_100);
+			if (err) {
+				netdev_err(ndev, "failed to limit PHY to 100Mbit/s\n");
+				goto err_phy_disconnect;
+			}
+			netdev_info(ndev, "limited PHY to 100Mbit/s\n");
 		}
-
-		netdev_info(ndev, "limited PHY to 100Mbit/s\n");
 	}
 
 	/* 10BASE is not supported */
