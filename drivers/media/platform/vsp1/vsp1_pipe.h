@@ -105,6 +105,7 @@ struct vsp1_pipeline {
 	struct vsp1_rwpf *inputs[VSP1_MAX_RPF];
 	struct vsp1_rwpf *output;
 	struct vsp1_entity *bru;
+	struct vsp1_entity *brs;
 	struct vsp1_entity *hgo;
 	struct vsp1_entity *hgt;
 	struct vsp1_entity *lif;

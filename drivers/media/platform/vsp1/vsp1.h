@@ -31,6 +31,7 @@ struct vsp1_drm;
 struct vsp1_entity;
 struct vsp1_platform_data;
 struct vsp1_bru;
+struct vsp1_brs;
 struct vsp1_clu;
 struct vsp1_hgo;
 struct vsp1_hgt;
@@ -55,6 +56,7 @@ struct vsp1_uds;
 #define VSP1_HAS_HGO		(1 << 7)
 #define VSP1_HAS_HGT		(1 << 8)
 #define VSP1_HAS_WPF_WRITEBACK	(1 << 9)
+#define VSP1_HAS_BRS		(1 << 10)
 
 struct vsp1_device_info {
 	u32 version;
@@ -78,6 +80,7 @@ struct vsp1_device {
 	struct rcar_fcp_device *fcp;
 
 	struct vsp1_bru *bru;
+	struct vsp1_brs *brs;
 	struct vsp1_clu *clu;
 	struct vsp1_hgo *hgo;
 	struct vsp1_hgt *hgt;
@@ -96,6 +99,8 @@ struct vsp1_device {
 	struct v4l2_device v4l2_dev;
 	struct media_device media_dev;
 	struct media_entity_operations media_ops;
+
+	unsigned int num_brs_inputs;
 
 	bool auto_fld_mode;
 

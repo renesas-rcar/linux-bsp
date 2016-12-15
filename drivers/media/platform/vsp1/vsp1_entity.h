@@ -35,6 +35,7 @@ enum vsp1_entity_type {
 	VSP1_ENTITY_SRU,
 	VSP1_ENTITY_UDS,
 	VSP1_ENTITY_WPF,
+	VSP1_ENTITY_BRS,
 };
 
 /**
