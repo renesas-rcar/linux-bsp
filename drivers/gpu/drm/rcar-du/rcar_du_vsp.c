@@ -70,22 +70,23 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 	 */
 	crtc->group->need_restart = true;
 
-	vsp1_du_setup_lif(crtc->vsp->vsp, mode->hdisplay, mode->vdisplay);
+	vsp1_du_setup_lif(crtc->vsp->vsp, mode->hdisplay, mode->vdisplay,
+			  crtc->lif_index);
 }
 
 void rcar_du_vsp_disable(struct rcar_du_crtc *crtc)
 {
-	vsp1_du_setup_lif(crtc->vsp->vsp, 0, 0);
+	vsp1_du_setup_lif(crtc->vsp->vsp, 0, 0, crtc->lif_index);
 }
 
 void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc)
 {
-	vsp1_du_atomic_begin(crtc->vsp->vsp);
+	vsp1_du_atomic_begin(crtc->vsp->vsp, crtc->lif_index);
 }
 
 void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc)
 {
-	vsp1_du_atomic_flush(crtc->vsp->vsp);
+	vsp1_du_atomic_flush(crtc->vsp->vsp, crtc->lif_index);
 }
 
 /* Keep the two tables in sync. */
@@ -469,20 +470,21 @@ int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
 	if ((pitch * mode->vdisplay) > sh->buff_len)
 		return -EINVAL;
 
-	vsp1_du_setup_wb(rcrtc->vsp->vsp, pixelformat, pitch, mem);
-	vsp1_du_wait_wb(rcrtc->vsp->vsp, 2);
+	vsp1_du_setup_wb(rcrtc->vsp->vsp, pixelformat, pitch, mem,
+						rcrtc->lif_index);
+	vsp1_du_wait_wb(rcrtc->vsp->vsp, 2, rcrtc->lif_index);
 
 	ret = rcar_du_async_commit(dev, crtc);
 	if (ret != 0)
 		return ret;
 
-	vsp1_du_wait_wb(rcrtc->vsp->vsp, 1);
+	vsp1_du_wait_wb(rcrtc->vsp->vsp, 1, rcrtc->lif_index);
 
 	ret = rcar_du_async_commit(dev, crtc);
 	if (ret != 0)
 		return ret;
 
-	vsp1_du_wait_wb(rcrtc->vsp->vsp, 0);
+	vsp1_du_wait_wb(rcrtc->vsp->vsp, 0, rcrtc->lif_index);
 
 	return ret;
 }
@@ -508,7 +510,7 @@ int rcar_du_set_vmute(struct drm_device *dev, void *data,
 	crtc = obj_to_crtc(obj);
 	rcrtc = to_rcar_crtc(crtc);
 
-	vsp1_du_if_set_mute(rcrtc->vsp->vsp, vmute->on);
+	vsp1_du_if_set_mute(rcrtc->vsp->vsp, vmute->on, rcrtc->lif_index);
 
 	ret = rcar_du_async_commit(dev, crtc);
 
@@ -556,6 +558,7 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 	struct device_node *np;
 	unsigned int i;
 	int ret;
+	unsigned long possible_crtcs, share_num;
 
 	/* Find the VSP device and initialize it. */
 	np = of_parse_phandle(rcdu->dev->of_node, "vsps", vsp->index);
@@ -563,6 +566,8 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 		dev_err(rcdu->dev, "vsps node not found\n");
 		return -ENXIO;
 	}
+
+	of_property_read_u32(np, "renesas,#brs", &vsp->num_brs);
 
 	pdev = of_find_device_by_node(np);
 	of_node_put(np);
@@ -585,16 +590,34 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 	if (!vsp->planes)
 		return -ENOMEM;
 
+	share_num = vsp->num_planes - vsp->num_brs;
+
 	for (i = 0; i < vsp->num_planes; ++i) {
-		enum drm_plane_type type = i ? DRM_PLANE_TYPE_OVERLAY
-					 : DRM_PLANE_TYPE_PRIMARY;
 		struct rcar_du_vsp_plane *plane = &vsp->planes[i];
+		enum drm_plane_type type;
+
+		if ((rcar_du_has(rcdu, RCAR_DU_FEATURE_VSPDL_SOURCE)) &&
+			(vsp->index == 0)) {
+
+			if (i < share_num)
+				possible_crtcs = 1 << vsp->index;
+			else
+				possible_crtcs =
+					 1 << rcdu->info->vspdl_pair_ch;
+
+			type = (i == 0) || (i == share_num) ?
+			       DRM_PLANE_TYPE_PRIMARY : DRM_PLANE_TYPE_OVERLAY;
+		} else {
+			possible_crtcs = 1 << vsp->index;
+			type = i ? DRM_PLANE_TYPE_OVERLAY
+					 : DRM_PLANE_TYPE_PRIMARY;
+		}
 
 		plane->vsp = vsp;
 		plane->index = i;
 
 		ret = drm_universal_plane_init(rcdu->ddev, &plane->plane,
-					       1 << vsp->index,
+					       possible_crtcs,
 					       &rcar_du_vsp_plane_funcs,
 					       formats_kms,
 					       ARRAY_SIZE(formats_kms), type,

@@ -719,6 +719,18 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	int irq;
 	int ret;
 
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSPDL_SOURCE)) {
+		if (index == rcdu->info->vspdl_pair_ch)
+			rcrtc->lif_index = 1;
+		else
+			rcrtc->lif_index = 0;
+
+		if ((rcrtc->lif_index == 1) && (rcrtc->vsp->num_brs == 0))
+			return 0;
+	} else {
+		rcrtc->lif_index = 0;
+	}
+
 	/* Get the CRTC clock and the optional external clock. */
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_CRTC_IRQ_CLOCK)) {
 		sprintf(clk_name, "du.%u", index);
@@ -749,9 +761,16 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	rcrtc->index = index;
 	rcrtc->lvds_ch = -1;
 
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
-		primary = &rcrtc->vsp->planes[0].plane;
-	else
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
+		unsigned int primary_num;
+
+		primary_num = rcrtc->vsp->num_planes - rcrtc->vsp->num_brs;
+
+		if (rcrtc->lif_index == 1)
+			primary = &rcrtc->vsp->planes[primary_num].plane;
+		else
+			primary = &rcrtc->vsp->planes[0].plane;
+	} else
 		primary = &rgrp->planes[index % 2].plane;
 
 	ret = drm_crtc_init_with_planes(rcdu->ddev, crtc, primary,

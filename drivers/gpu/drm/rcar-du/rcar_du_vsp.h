@@ -32,6 +32,7 @@ struct rcar_du_vsp {
 	struct rcar_du_device *dev;
 	struct rcar_du_vsp_plane *planes;
 	unsigned int num_planes;
+	unsigned int num_brs;
 };
 
 static inline struct rcar_du_vsp_plane *to_rcar_vsp_plane(struct drm_plane *p)
