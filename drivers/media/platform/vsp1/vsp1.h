@@ -45,6 +45,7 @@ struct vsp1_uds;
 #define VSP1_MAX_RPF		5
 #define VSP1_MAX_UDS		3
 #define VSP1_MAX_WPF		4
+#define VSP1_MAX_LIF		2
 
 #define VSP1_HAS_LIF		(1 << 0)
 #define VSP1_HAS_LUT		(1 << 1)
@@ -86,7 +87,7 @@ struct vsp1_device {
 	struct vsp1_hgt *hgt;
 	struct vsp1_hsit *hsi;
 	struct vsp1_hsit *hst;
-	struct vsp1_lif *lif;
+	struct vsp1_lif *lif[VSP1_MAX_LIF];
 	struct vsp1_lut *lut;
 	struct vsp1_rwpf *rpf[VSP1_MAX_RPF];
 	struct vsp1_sru *sru;

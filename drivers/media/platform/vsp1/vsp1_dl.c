@@ -799,14 +799,14 @@ done:
 }
 
 /* Hardware Setup */
-void vsp1_dlm_setup(struct vsp1_device *vsp1)
+void vsp1_dlm_setup(struct vsp1_device *vsp1, unsigned int lif_index)
 {
 	u32 ctrl = (256 << VI6_DL_CTRL_AR_WAIT_SHIFT)
 		 | VI6_DL_CTRL_DC2 | VI6_DL_CTRL_DC1 | VI6_DL_CTRL_DC0
 		 | VI6_DL_CTRL_DLE;
 
 	if ((vsp1->info->header_mode) && (vsp1->auto_fld_mode)) {
-		vsp1_write(vsp1, VI6_DL_EXT_CTRL,
+		vsp1_write(vsp1, VI6_DL_EXT_CTRL(lif_index),
 			(0x02 << VI6_DL_EXT_CTRL_POLINT_SHIFT)
 			| VI6_DL_EXT_CTRL_DLPRI | VI6_DL_EXT_CTRL_EXT);
 	}
@@ -818,7 +818,7 @@ void vsp1_dlm_setup(struct vsp1_device *vsp1)
 		ctrl |= VI6_DL_CTRL_CFM0 | VI6_DL_CTRL_NH0;
 
 	vsp1_write(vsp1, VI6_DL_CTRL, ctrl);
-	vsp1_write(vsp1, VI6_DL_SWAP, VI6_DL_SWAP_LWS);
+	vsp1_write(vsp1, VI6_DL_SWAP(lif_index), VI6_DL_SWAP_LWS);
 }
 
 void vsp1_dlm_reset(struct vsp1_dl_manager *dlm)

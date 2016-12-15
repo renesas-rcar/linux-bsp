@@ -36,6 +36,7 @@ void vsp1_entity_route_setup(struct vsp1_entity *entity,
 {
 	struct vsp1_entity *source;
 	struct vsp1_entity *sink;
+	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
 	u32 route_data;
 
 	if (entity->type == VSP1_ENTITY_HGO) {
@@ -75,6 +76,8 @@ void vsp1_entity_route_setup(struct vsp1_entity *entity,
 		route_data = sink->route->inputs[source->sink_pad] |
 			     VI6_DPR_ROUTE_BRSSEL_BRS;
 
+	dev_dbg(vsp1->dev, "type:%d, reg:0x%x, route_data:0x%x\n",
+		entity->type, source->route->reg, route_data);
 	vsp1_dl_list_write(dl, source->route->reg, route_data);
 }
 
@@ -456,14 +459,17 @@ static const struct vsp1_route vsp1_routes[] = {
 	    VI6_DPR_NODE_BRU_IN(2), VI6_DPR_NODE_BRU_IN(3),
 	    VI6_DPR_NODE_BRU_IN(4) }, VI6_DPR_NODE_BRU_OUT },
 	{ VSP1_ENTITY_BRS, 0, VI6_DPR_BRS_ROUTE,
-	  { VI6_DPR_NODE_BRS_IN(0), VI6_DPR_NODE_BRS_IN(1), },
+	  { 0, 0, 0, VI6_DPR_NODE_BRS_IN(0), VI6_DPR_NODE_BRS_IN(1), },
 	    VI6_DPR_NODE_BRS_OUT },
 	VSP1_ENTITY_ROUTE(CLU),
 	{ VSP1_ENTITY_HGO, 0, 0, { 0, }, 0 },
 	{ VSP1_ENTITY_HGT, 0, 0, { 0, }, 0 },
 	VSP1_ENTITY_ROUTE(HSI),
 	VSP1_ENTITY_ROUTE(HST),
-	{ VSP1_ENTITY_LIF, 0, 0, { VI6_DPR_NODE_LIF, }, VI6_DPR_NODE_LIF },
+	{ VSP1_ENTITY_LIF, 0, 0,
+	  { VI6_DPR_NODE_LIF(0), }, VI6_DPR_NODE_LIF(0) },
+	{ VSP1_ENTITY_LIF, 1, 0,
+	  { VI6_DPR_NODE_LIF(1), }, VI6_DPR_NODE_LIF(1) },
 	VSP1_ENTITY_ROUTE(LUT),
 	VSP1_ENTITY_ROUTE_RPF(0),
 	VSP1_ENTITY_ROUTE_RPF(1),

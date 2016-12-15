@@ -216,12 +216,15 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 			underrun = true;
 	}
 
-	status = vsp1_read(vsp1, VI6_DISP_IRQ_STA);
-	vsp1_write(vsp1, VI6_DISP_IRQ_STA, ~status & VI6_DISP_IRQ_STA_DST);
+	for (i = 0; i < vsp1->info->wpf_count; ++i) {
+		status = vsp1_read(vsp1, VI6_DISP_IRQ_STA(i));
+		vsp1_write(vsp1, VI6_DISP_IRQ_STA(i),
+				 ~status & VI6_DISP_IRQ_STA_DST);
 
-	if (status & VI6_DISP_IRQ_STA_DST) {
-		vsp1_drm_display_start(vsp1);
-		ret = IRQ_HANDLED;
+		if (status & VI6_DISP_IRQ_STA_DST) {
+			vsp1_drm_display_start(vsp1, i);
+			ret = IRQ_HANDLED;
+		}
 	}
 
 	if (soc_device_match(r8a7795es1) &&
@@ -324,10 +327,19 @@ static int vsp1_uapi_create_links(struct vsp1_device *vsp1)
 			return ret;
 	}
 
-	if (vsp1->lif) {
+	if (vsp1->lif[0]) {
 		ret = media_create_pad_link(&vsp1->wpf[0]->entity.subdev.entity,
 					    RWPF_PAD_SOURCE,
-					    &vsp1->lif->entity.subdev.entity,
+					    &vsp1->lif[0]->entity.subdev.entity,
+					    LIF_PAD_SINK, 0);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (vsp1->lif[1]) {
+		ret = media_create_pad_link(&vsp1->wpf[1]->entity.subdev.entity,
+					    RWPF_PAD_SOURCE,
+					    &vsp1->lif[1]->entity.subdev.entity,
 					    LIF_PAD_SINK, 0);
 		if (ret < 0)
 			return ret;
@@ -492,13 +504,27 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 	 * enabled skip the LIF, even when present.
 	 */
 	if (vsp1->info->features & VSP1_HAS_LIF && !vsp1->info->uapi) {
-		vsp1->lif = vsp1_lif_create(vsp1);
-		if (IS_ERR(vsp1->lif)) {
-			ret = PTR_ERR(vsp1->lif);
-			goto done;
-		}
+		if (vsp1_gen3_vspdl_check(vsp1)) {
+			for (i = 0; i < 2; i++) {
+				vsp1->lif[i] = vsp1_lif_create(vsp1, i);
+				if (IS_ERR(vsp1->lif[i])) {
+					ret = PTR_ERR(vsp1->lif[i]);
+					goto done;
+				}
 
-		list_add_tail(&vsp1->lif->entity.list_dev, &vsp1->entities);
+				list_add_tail(&vsp1->lif[i]->entity.list_dev,
+					      &vsp1->entities);
+			}
+		} else {
+			vsp1->lif[0] = vsp1_lif_create(vsp1, 0);
+			if (IS_ERR(vsp1->lif[0])) {
+				ret = PTR_ERR(vsp1->lif[0]);
+				goto done;
+			}
+
+			list_add_tail(&vsp1->lif[0]->entity.list_dev,
+				      &vsp1->entities);
+		}
 	}
 
 	if (vsp1->info->features & VSP1_HAS_LUT) {
@@ -683,7 +709,12 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
 	vsp1_write(vsp1, VI6_DPR_HGT_SMPPT, (7 << VI6_DPR_SMPPT_TGW_SHIFT) |
 		   (VI6_DPR_NODE_UNUSED << VI6_DPR_SMPPT_PT_SHIFT));
 
-	vsp1_dlm_setup(vsp1);
+	for (i = 0; i < vsp1->info->wpf_count; ++i) {
+		if ((i == 1) && (!vsp1_gen3_vspdl_check(vsp1)))
+			break;
+
+		vsp1_dlm_setup(vsp1, i);
+	}
 
 	return 0;
 }
@@ -967,13 +998,6 @@ static int vsp1_probe(struct platform_device *pdev)
 	else
 		vsp1->auto_fld_mode = false;
 
-	/* Instanciate entities */
-	ret = vsp1_create_entities(vsp1);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to create entities\n");
-		goto done;
-	}
-
 	if (strcmp(dev_name(vsp1->dev), "fea20000.vsp") == 0)
 		vsp1->index = 0;
 	else if (strcmp(dev_name(vsp1->dev), "fea28000.vsp") == 0)
@@ -982,6 +1006,13 @@ static int vsp1_probe(struct platform_device *pdev)
 		vsp1->index = 2;
 	else if (strcmp(dev_name(vsp1->dev), "fea38000.vsp") == 0)
 		vsp1->index = 3;
+
+	/* Instanciate entities */
+	ret = vsp1_create_entities(vsp1);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to create entities\n");
+		goto done;
+	}
 
 	if (soc_device_match(r8a7795es1) && vsp1_gen3_vspd_check(vsp1))
 		fcpv_reg[vsp1->index] =
