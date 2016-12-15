@@ -277,9 +277,6 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	case V4L2_FIELD_TOP:
 	case V4L2_FIELD_BOTTOM:
 	case V4L2_FIELD_ALTERNATE:
-		pix->height /= 2;
-		source->height /= 2;
-		break;
 	case V4L2_FIELD_NONE:
 	case V4L2_FIELD_INTERLACED_TB:
 	case V4L2_FIELD_INTERLACED_BT:
@@ -389,8 +386,6 @@ static int __rvin_s_fmt_vid_cap(struct rvin_dev *vin, struct v4l2_format *f)
 	vin->source.height = source.height;
 
 	vin->format = f->fmt.pix;
-
-	rvin_reset_crop_compose(vin);
 
 	return 0;
 }
