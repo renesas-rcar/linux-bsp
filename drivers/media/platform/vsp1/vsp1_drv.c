@@ -32,6 +32,7 @@
 
 #include "vsp1.h"
 #include "vsp1_bru.h"
+#include "vsp1_brs.h"
 #include "vsp1_clu.h"
 #include "vsp1_dl.h"
 #include "vsp1_drm.h"
@@ -428,6 +429,16 @@ static int vsp1_create_entities(struct vsp1_device *vsp1)
 		list_add_tail(&vsp1->bru->entity.list_dev, &vsp1->entities);
 	}
 
+	if (vsp1->info->features & VSP1_HAS_BRS) {
+		vsp1->brs = vsp1_brs_create(vsp1);
+		if (IS_ERR(vsp1->brs)) {
+			ret = PTR_ERR(vsp1->brs);
+			goto done;
+		}
+
+		list_add_tail(&vsp1->brs->entity.list_dev, &vsp1->entities);
+	}
+
 	if (vsp1->info->features & VSP1_HAS_CLU) {
 		vsp1->clu = vsp1_clu_create(vsp1);
 		if (IS_ERR(vsp1->clu)) {
@@ -665,6 +676,7 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
 	vsp1_write(vsp1, VI6_DPR_HST_ROUTE, VI6_DPR_NODE_UNUSED);
 	vsp1_write(vsp1, VI6_DPR_HSI_ROUTE, VI6_DPR_NODE_UNUSED);
 	vsp1_write(vsp1, VI6_DPR_BRU_ROUTE, VI6_DPR_NODE_UNUSED);
+	vsp1_write(vsp1, VI6_DPR_BRS_ROUTE, VI6_DPR_NODE_UNUSED);
 
 	vsp1_write(vsp1, VI6_DPR_HGO_SMPPT, (7 << VI6_DPR_SMPPT_TGW_SHIFT) |
 		   (VI6_DPR_NODE_UNUSED << VI6_DPR_SMPPT_PT_SHIFT));
@@ -918,6 +930,10 @@ static int vsp1_probe(struct platform_device *pdev)
 			return PTR_ERR(vsp1->fcp);
 		}
 	}
+
+	/* Get using number of BRS module */
+	of_property_read_u32(pdev->dev.of_node, "renesas,#brs",
+					&vsp1->num_brs_inputs);
 
 	/* Configure device parameters based on the version register. */
 	pm_runtime_enable(&pdev->dev);
