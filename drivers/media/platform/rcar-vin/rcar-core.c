@@ -1075,6 +1075,7 @@ static int rvin_group_graph_parse(struct rvin_dev *vin, unsigned long *bitmap)
 		return -EINVAL;
 	}
 	vin->group->vin[vin_num] = vin;
+	vin->index = vin_num;
 
 	return 0;
 }
