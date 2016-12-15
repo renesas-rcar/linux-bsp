@@ -1051,10 +1051,10 @@ static int ravb_phy_init(struct net_device *ndev)
 	}
 
 	if (priv->chip_id == RCAR_GEN3) {
-		gpio = of_get_named_gpio_flags(np, "phy-int-gpio", 0, &flags);
+		gpio = of_get_named_gpio_flags(np, "phy-gpios", 0, &flags);
 		if (gpio_is_valid(gpio)) {
 			err = devm_gpio_request_one(dev, gpio, GPIOF_DIR_IN,
-						    "phy-int-gpio");
+						    "phy-gpios");
 			if (err == 0 && (phydev->irq == gpio_to_irq(gpio))) {
 				if (flags & OF_GPIO_ACTIVE_LOW)
 					irq_set_irq_type(phydev->irq,
