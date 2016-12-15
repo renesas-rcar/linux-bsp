@@ -20,7 +20,7 @@ struct vsp1_dl_fragment;
 struct vsp1_dl_list;
 struct vsp1_dl_manager;
 
-void vsp1_dlm_setup(struct vsp1_device *vsp1);
+void vsp1_dlm_setup(struct vsp1_device *vsp1, unsigned int lif_index);
 
 struct vsp1_dl_manager *vsp1_dlm_create(struct vsp1_device *vsp1,
 					unsigned int index,

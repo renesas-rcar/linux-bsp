@@ -66,12 +66,12 @@
 #define VI6_WFP_IRQ_STA_DFE		(1 << 1)
 #define VI6_WFP_IRQ_STA_FRE		(1 << 0)
 
-#define VI6_DISP_IRQ_ENB		0x0078
+#define VI6_DISP_IRQ_ENB(n)		(0x0078 + (n) * 60)
 #define VI6_DISP_IRQ_ENB_DSTE		(1 << 8)
 #define VI6_DISP_IRQ_ENB_MAEE		(1 << 5)
 #define VI6_DISP_IRQ_ENB_LNEE(n)	(1 << (n))
 
-#define VI6_DISP_IRQ_STA		0x007c
+#define VI6_DISP_IRQ_STA(n)		(0x007c + (n) * 60)
 #define VI6_DISP_IRQ_STA_DST		(1 << 8)
 #define VI6_DISP_IRQ_STA_MAE		(1 << 5)
 #define VI6_DISP_IRQ_STA_LNE(n)		(1 << (n))
@@ -95,12 +95,12 @@
 
 #define VI6_DL_HDR_ADDR(n)		(0x0104 + (n) * 4)
 
-#define VI6_DL_SWAP			0x0114
+#define VI6_DL_SWAP(n)			(0x0114 + (n) * 56)
 #define VI6_DL_SWAP_LWS			(1 << 2)
 #define VI6_DL_SWAP_WDS			(1 << 1)
 #define VI6_DL_SWAP_BTS			(1 << 0)
 
-#define VI6_DL_EXT_CTRL			0x011c
+#define VI6_DL_EXT_CTRL(n)		(0x011c + (n) * 36)
 #define VI6_DL_EXT_CTRL_NWE		(1 << 16)
 #define VI6_DL_EXT_CTRL_POLINT_MASK	(0x3f << 8)
 #define VI6_DL_EXT_CTRL_POLINT_SHIFT	8
@@ -328,7 +328,7 @@
 #define VI6_WPF_DSTM_ADDR_C0		0x1028
 #define VI6_WPF_DSTM_ADDR_C1		0x102c
 
-#define VI6_WPF_WRBCK_CTRL		0x1034
+#define VI6_WPF_WRBCK_CTRL(n)		(0x1034 + ((n) * 0x100))
 #define VI6_WPF_WRBCK_CTRL_WBMD		(1 << 0)
 
 /* -----------------------------------------------------------------------------
@@ -375,7 +375,8 @@
 #define VI6_DPR_NODE_CLU		29
 #define VI6_DPR_NODE_HST		30
 #define VI6_DPR_NODE_HSI		31
-#define VI6_DPR_NODE_LIF		55
+#define VI6_DPR_NODE_BRS_OUT		40
+#define VI6_DPR_NODE_LIF(n)		(54 + (n))
 #define VI6_DPR_NODE_WPF(n)		(56 + (n))
 #define VI6_DPR_NODE_UNUSED		63
 
@@ -768,14 +769,14 @@
  * LIF Control Registers
  */
 
-#define VI6_LIF_CTRL			0x3b00
+#define VI6_LIF_CTRL(n)			(0x3b00 - ((n) * 0x100))
 #define VI6_LIF_CTRL_OBTH_MASK		(0x7ff << 16)
 #define VI6_LIF_CTRL_OBTH_SHIFT		16
 #define VI6_LIF_CTRL_CFMT		(1 << 4)
 #define VI6_LIF_CTRL_REQSEL		(1 << 1)
 #define VI6_LIF_CTRL_LIF_EN		(1 << 0)
 
-#define VI6_LIF_CSBTH			0x3b04
+#define VI6_LIF_CSBTH(n)		(0x3b04 - ((n) * 0x100))
 #define VI6_LIF_CSBTH_HBTH_MASK		(0x7ff << 16)
 #define VI6_LIF_CSBTH_HBTH_SHIFT	16
 #define VI6_LIF_CSBTH_LBTH_MASK		(0x7ff << 0)

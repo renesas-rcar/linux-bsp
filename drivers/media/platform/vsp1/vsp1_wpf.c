@@ -253,9 +253,9 @@ static void wpf_configure(struct vsp1_entity *entity,
 			       (height << VI6_WPF_SZCLIP_SIZE_SHIFT));
 
 		if (pipe->output->write_back != 2)
-			vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL, writeback ?
-						VI6_WPF_WRBCK_CTRL_WBMD : 0);
-
+			vsp1_dl_list_write(dl,
+				VI6_WPF_WRBCK_CTRL(wpf->entity.index),
+				writeback ? VI6_WPF_WRBCK_CTRL_WBMD : 0);
 		/*
 		 * Display pipelines with no writeback memory do not configure
 		 * the write out address
