@@ -958,7 +958,8 @@
 &msiof1 {
 	pinctrl-0 = <&msiof1_pins>;
 	pinctrl-names = "default";
-	status = "okay";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
 
 	spidev@0 {
 		compatible = "renesas,sh-msiof";
