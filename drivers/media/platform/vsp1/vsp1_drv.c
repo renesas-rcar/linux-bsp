@@ -100,6 +100,15 @@ static const struct soc_device_attribute r8a7795es1[] = {
 	{ /* sentinel */ }
 };
 
+int vsp1_gen3_vspdl_check(struct vsp1_device *vsp1)
+{
+	if (((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
+		VI6_IP_VERSION_MODEL_VSPDL_H3) && (vsp1->index == 0))
+		return true;
+
+	return false;
+}
+
 static int vsp1_gen3_vspd_check(struct vsp1_device *vsp1)
 {
 	if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
