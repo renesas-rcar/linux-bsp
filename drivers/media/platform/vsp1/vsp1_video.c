@@ -1,7 +1,7 @@
 /*
  * vsp1_video.c  --  R-Car VSP1 Video Node
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -26,6 +26,8 @@
 #include <media/v4l2-subdev.h>
 #include <media/videobuf2-v4l2.h>
 #include <media/videobuf2-dma-contig.h>
+
+#include <media/rcar-fcp.h>
 
 #include "vsp1.h"
 #include "vsp1_bru.h"
@@ -1262,6 +1264,7 @@ struct vsp1_video *vsp1_video_create(struct vsp1_device *vsp1,
 {
 	struct vsp1_video *video;
 	const char *direction;
+	struct device *fcp;
 	int ret;
 
 	video = devm_kzalloc(vsp1->dev, sizeof(*video), GFP_KERNEL);
@@ -1325,7 +1328,8 @@ struct vsp1_video *vsp1_video_create(struct vsp1_device *vsp1,
 	video->queue.buf_struct_size = sizeof(struct vsp1_vb2_buffer);
 	video->queue.mem_ops = &vb2_dma_contig_memops;
 	video->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
-	video->queue.dev = video->vsp1->dev;
+	fcp = rcar_fcp_get_device(vsp1->fcp);
+	video->queue.dev = fcp ? fcp : video->vsp1->dev;
 	ret = vb2_queue_init(&video->queue);
 	if (ret < 0) {
 		dev_err(video->vsp1->dev, "failed to initialize vb2 queue\n");

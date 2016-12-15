@@ -18,6 +18,8 @@
 #include <linux/sys_soc.h>
 #include <linux/workqueue.h>
 
+#include <media/rcar-fcp.h>
+
 #include "vsp1.h"
 #include "vsp1_dl.h"
 #include "vsp1_pipe.h"
@@ -170,11 +172,12 @@ static int vsp1_dl_body_init(struct vsp1_device *vsp1,
 			     size_t extra_size)
 {
 	size_t size = num_entries * sizeof(*dlb->entries) + extra_size;
+	struct device *fcp = rcar_fcp_get_device(vsp1->fcp);
 
 	dlb->vsp1 = vsp1;
 	dlb->size = size;
 
-	dlb->entries = dma_alloc_wc(vsp1->dev, dlb->size +
+	dlb->entries = dma_alloc_wc(fcp ? fcp : vsp1->dev, dlb->size +
 			 (VSP1_DL_EXT_OFFSET * 2), &dlb->dma, GFP_KERNEL);
 	if (!dlb->entries)
 		return -ENOMEM;
@@ -187,8 +190,10 @@ static int vsp1_dl_body_init(struct vsp1_device *vsp1,
  */
 static void vsp1_dl_body_cleanup(struct vsp1_dl_body *dlb)
 {
-	dma_free_wc(dlb->vsp1->dev, dlb->size + (VSP1_DL_EXT_OFFSET * 2),
-			 dlb->entries, dlb->dma);
+	struct device *fcp = rcar_fcp_get_device(dlb->vsp1->fcp);
+
+	dma_free_wc(fcp ? fcp : dlb->vsp1->dev, dlb->size +
+			 (VSP1_DL_EXT_OFFSET * 2), dlb->entries, dlb->dma);
 }
 
 /**
