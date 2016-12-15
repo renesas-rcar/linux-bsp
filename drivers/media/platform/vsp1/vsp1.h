@@ -106,6 +106,7 @@ struct vsp1_device {
 	unsigned int dl_body;
 };
 
+int vsp1_gen3_vspdl_check(struct vsp1_device *vsp1);
 int vsp1_device_get(struct vsp1_device *vsp1);
 void vsp1_device_put(struct vsp1_device *vsp1);
 void vsp1_underrun_workaround(struct vsp1_device *vsp1, bool reset);
