@@ -73,6 +73,20 @@ enum rvin_dma_state {
 };
 
 /**
+ * struct rvin_uds_regs - UDS register information
+ * @ctrl:		UDS Control register
+ * @scale:		UDS Scaling Factor register
+ * @pass_bwidth:	UDS Passband Register
+ * @clip_size:		UDS Output Size Clipping Register
+ */
+struct rvin_uds_regs {
+	unsigned long ctrl;
+	unsigned long scale;
+	unsigned long pass_bwidth;
+	unsigned long clip_size;
+};
+
+/**
  * struct rvin_source_fmt - Source information
  * @width:	Width from source
  * @height:	Height from source
