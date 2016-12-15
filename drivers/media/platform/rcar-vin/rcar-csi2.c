@@ -160,6 +160,8 @@ struct rcar_csi2 {
 	struct v4l2_subdev subdev;
 	struct media_pad pads[RCAR_CSI2_PAD_MAX];
 	struct v4l2_mbus_framefmt mf;
+
+	u32 vc_num;
 };
 
 #define csi_dbg(p, fmt, arg...)		dev_dbg(p->dev, fmt, ##arg)
@@ -235,7 +237,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		priv->mf.field == V4L2_FIELD_NONE ? 'p' : 'i');
 
 	vcdt = vcdt2 = 0;
-	for (i = 0; i < priv->lanes; i++) {
+	for (i = 0; i < priv->vc_num; i++) {
 		tmp = VCDT_SEL_VC(i) | VCDT_VCDTN_EN | VCDT_SEL_DTN_ON;
 
 		switch (priv->mf.code) {
@@ -425,6 +427,7 @@ static int rcar_csi2_parse_dt(struct rcar_csi2 *priv)
 	struct v4l2_of_endpoint v4l2_ep;
 	struct device_node *ep;
 	int i, n, ret;
+	u32 vc_num;
 
 	ep = of_graph_get_endpoint_by_regs(priv->dev->of_node, 0, 0);
 	if (!ep)
@@ -481,6 +484,9 @@ static int rcar_csi2_parse_dt(struct rcar_csi2 *priv)
 		}
 	}
 
+	if (!of_property_read_u32(ep, "virtual-channel-number", &vc_num))
+		priv->vc_num = vc_num;
+
 	return 0;
 }
 
@@ -511,6 +517,7 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	struct rcar_csi2 *priv;
 	unsigned int i;
 	int ret;
+	u32 vc_num;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct rcar_csi2), GFP_KERNEL);
 	if (!priv)
@@ -519,6 +526,8 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 
 	priv->dev = &pdev->dev;
 	spin_lock_init(&priv->lock);
+
+	priv->vc_num = 0;
 
 	ret = rcar_csi2_parse_dt(priv);
 	if (ret)
@@ -530,8 +539,10 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	vc_num = priv->vc_num;
 	platform_set_drvdata(pdev, priv);
 
+retry:
 	priv->subdev.owner = THIS_MODULE;
 	priv->subdev.dev = &pdev->dev;
 	v4l2_subdev_init(&priv->subdev, &rcar_csi2_subdev_ops);
@@ -556,9 +567,14 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
+	vc_num--;
+	if (vc_num > 0)
+		goto retry;
+
 	pm_runtime_enable(&pdev->dev);
 
-	csi_info(priv, "%d lanes found\n", priv->lanes);
+	csi_info(priv, "%d lanes found. virtual channel number %d use\n",
+		 priv->lanes, priv->vc_num);
 
 	return 0;
 }
