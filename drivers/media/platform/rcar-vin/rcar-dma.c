@@ -14,8 +14,13 @@
  * option) any later version.
  */
 
+#ifdef CONFIG_VIDEO_RCAR_VIN_DEBUG
+#define DEBUG
+#endif
+
 #include <linux/delay.h>
 #include <linux/interrupt.h>
+#include <linux/module.h>
 #include <linux/pm_runtime.h>
 
 #include <media/videobuf2-dma-contig.h>
@@ -118,6 +123,12 @@
 /* Video n Interrupt Enable Register bits */
 #define VNIE_FIE		(1 << 4)
 #define VNIE_EFE		(1 << 1)
+#define VNIE_FOE		(1 << 0)
+
+/* Video n Interrupt Status Register bits */
+#define VNINTS_FIS		(1 << 4)
+#define VNINTS_EFS		(1 << 1)
+#define VNINTS_FOS		(1 << 0)
 
 /* Video n Data Mode Register bits */
 #define VNDMR_EXRGB		(1 << 8)
@@ -142,6 +153,37 @@
 #define VNUDS_CTRL_AMD		(1 << 30)
 #define VNUDS_CTRL_BC		(1 << 20)
 #define VNUDS_CTRL_TDIPC	(1 << 1)
+
+#define VIN_UT_IRQ	0x01
+
+static int vin_debug;
+module_param_named(debug, vin_debug, int, 0600);
+static int overflow_video[RCAR_VIN_NUM];
+module_param_array(overflow_video, int, NULL, 0600);
+
+#ifdef CONFIG_VIDEO_RCAR_VIN_DEBUG
+#define VIN_IRQ_DEBUG(fmt, args...)					\
+	do {								\
+		if (unlikely(vin_debug & VIN_UT_IRQ))			\
+			vin_ut_debug_printk(__func__, fmt, ##args);	\
+	} while (0)
+#else
+#define VIN_IRQ_DEBUG(fmt, args...)
+#endif
+
+void vin_ut_debug_printk(const char *function_name, const char *format, ...)
+{
+	struct va_format vaf;
+	va_list args;
+
+	va_start(args, format);
+	vaf.fmt = format;
+	vaf.va = &args;
+
+	pr_debug("[" DRV_NAME ":%s] %pV", function_name, &vaf);
+
+	va_end(args);
+}
 
 static void rvin_write(struct rvin_dev *vin, u32 value, u32 offset)
 {
@@ -319,6 +361,12 @@ static int rvin_setup(struct rvin_dev *vin)
 
 	/* Progressive or interlaced mode */
 	interrupts = progressive ? VNIE_FIE : VNIE_EFE;
+
+	/* Enable Overflow */
+	if (vin_debug) {
+		vin_dbg(vin, "Enable Overflow\n");
+		interrupts |= VNIE_FOE;
+	}
 
 	/* Ack interrupts */
 	rvin_write(vin, interrupts, VNINTS_REG);
@@ -1048,6 +1096,7 @@ static irqreturn_t rvin_irq(int irq, void *data)
 	int slot;
 	unsigned int sequence, handled = 0;
 	unsigned long flags;
+	int vin_ovr_cnt = 0;
 
 	spin_lock_irqsave(&vin->qlock, flags);
 
@@ -1057,6 +1106,13 @@ static irqreturn_t rvin_irq(int irq, void *data)
 
 	rvin_ack_interrupt(vin);
 	handled = 1;
+
+	/* overflow occurs */
+	if (vin_debug && (int_status & VNINTS_FOS)) {
+		vin_ovr_cnt = ++overflow_video[vin->index];
+		VIN_IRQ_DEBUG("overflow occurrs num[%d] at VIN (%s)\n",
+				vin_ovr_cnt, dev_name(vin->v4l2_dev.dev));
+	}
 
 	/* Nothing to do if capture status is 'STOPPED' */
 	if (vin->state == STOPPED) {
@@ -1422,6 +1478,8 @@ int rvin_dma_probe(struct rvin_dev *vin, int irq)
 		vin_err(vin, "failed to request irq\n");
 		goto error;
 	}
+
+	vin_debug = 0;
 
 	return 0;
 error:

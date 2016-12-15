@@ -10,6 +10,15 @@ config VIDEO_RCAR_VIN
 	  To compile this driver as a module, choose M here: the
 	  module will be called rcar-vin.
 
+config VIDEO_RCAR_VIN_DEBUG
+	bool "Renesas VIN overflow debug messages"
+	depends on VIDEO_RCAR_VIN
+	---help---
+	  Enable debug overflow messages on R-Car Video
+	  Input driver.
+	  If you set to enable, When an overflow occurred,
+	  a debug overflow message is output.
+
 config VIDEO_RCAR_CSI2
 	tristate "R-Car MIPI CSI-2 Interface driver"
 	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && OF
