@@ -700,15 +700,26 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 	/* Initialize the compositors. */
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
 		for (i = 0; i < rcdu->num_crtcs; ++i) {
-			struct rcar_du_vsp *vsp = &rcdu->vsps[i];
+			struct rcar_du_vsp *vsp;
+			int vsp_index = i;
+			bool init = true;
 
-			vsp->index = i;
+			if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSPDL_SOURCE) &&
+					(i == rcdu->info->vspdl_pair_ch)) {
+				vsp_index = 0;
+				init = false;
+			}
+
+			vsp = &rcdu->vsps[vsp_index];
+			vsp->index = vsp_index;
 			vsp->dev = rcdu;
 			rcdu->crtcs[i].vsp = vsp;
 
-			ret = rcar_du_vsp_init(vsp);
-			if (ret < 0)
-				return ret;
+			if (init) {
+				ret = rcar_du_vsp_init(vsp);
+				if (ret < 0)
+					return ret;
+			}
 		}
 	}
 
