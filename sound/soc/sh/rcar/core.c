@@ -1255,37 +1255,9 @@ static int rsnd_remove(struct platform_device *pdev)
 	return ret;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int rsnd_suspend(struct device *dev)
-{
-	struct rsnd_priv *priv = dev_get_drvdata(dev);
-
-	rsnd_adg_remove(priv);
-
-	return 0;
-}
-
-static int rsnd_resume(struct device *dev)
-{
-	struct rsnd_priv *priv = dev_get_drvdata(dev);
-	int ret;
-
-	ret = rsnd_adg_probe(priv);
-
-	return ret;
-}
-
-static SIMPLE_DEV_PM_OPS(rsnd_pm_ops,
-			rsnd_suspend, rsnd_resume);
-#define DEV_PM_OPS (&rsnd_pm_ops)
-#else
-#define DEV_PM_OPS NULL
-#endif  /* CONFIG_PM_SLEEP */
-
 static struct platform_driver rsnd_driver = {
 	.driver	= {
 		.name	= "rcar_sound",
-		.pm	= DEV_PM_OPS,
 		.of_match_table = rsnd_of_match,
 	},
 	.probe		= rsnd_probe,
