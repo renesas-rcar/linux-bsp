@@ -2,7 +2,7 @@
  * Watchdog driver for Renesas WDT watchdog
  *
  * Copyright (C) 2015-16 Wolfram Sang, Sang Engineering <wsa@sang-engineering.com>
- * Copyright (C) 2015-16 Renesas Electronics Corporation
+ * Copyright (C) 2015-17 Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -208,9 +208,40 @@ static const struct of_device_id rwdt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, rwdt_ids);
 
+#ifdef CONFIG_PM_SLEEP
+static int rwdt_suspend(struct device *dev)
+{
+	int ret = 0;
+	struct rwdt_priv *priv = dev_get_drvdata(dev);
+
+	if (watchdog_active(&priv->wdev))
+		ret = rwdt_stop(&priv->wdev);
+
+	return ret;
+}
+
+static int rwdt_resume(struct device *dev)
+{
+	int ret = 0;
+	struct rwdt_priv *priv = dev_get_drvdata(dev);
+
+	if (watchdog_active(&priv->wdev))
+		ret = rwdt_start(&priv->wdev);
+
+	return ret;
+}
+
+static SIMPLE_DEV_PM_OPS(rwdt_pm_ops,
+			rwdt_suspend, rwdt_resume);
+#define DEV_PM_OPS (&rwdt_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rwdt_driver = {
 	.driver = {
 		.name = "renesas_wdt",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rwdt_ids,
 	},
 	.probe = rwdt_probe,
