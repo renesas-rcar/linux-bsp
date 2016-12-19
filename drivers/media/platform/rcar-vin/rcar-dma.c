@@ -424,7 +424,7 @@ static void rvin_capture_stop(struct rvin_dev *vin)
 		u32 vnmc;
 
 		vnmc = rvin_read(vin, VNMC_REG);
-		rvin_write(vin, vnmc & ~VNMC_SCLE, VNMC_REG);
+		rvin_write(vin, vnmc & ~(VNMC_SCLE | VNMC_VUP), VNMC_REG);
 	}
 
 	/* Disable module */
