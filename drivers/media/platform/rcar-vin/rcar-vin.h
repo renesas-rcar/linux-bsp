@@ -222,6 +222,7 @@ struct rvin_dev {
 	struct v4l2_rect compose;
 
 	unsigned int index;
+	unsigned int chsel;
 };
 
 bool vin_have_bridge(struct rvin_dev *vin);
