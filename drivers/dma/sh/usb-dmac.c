@@ -685,6 +685,10 @@ static int usb_dmac_runtime_suspend(struct device *dev)
 	for (i = 0; i < dmac->n_channels; ++i) {
 		if (!dmac->channels[i].iomem)
 			break;
+
+		if (usb_dmac_chan_is_busy(&dmac->channels[i]))
+			return -EBUSY;
+
 		usb_dmac_chan_halt(&dmac->channels[i]);
 	}
 
