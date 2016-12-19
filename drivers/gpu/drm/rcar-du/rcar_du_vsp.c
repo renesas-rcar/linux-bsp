@@ -71,12 +71,13 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 	crtc->group->need_restart = true;
 
 	vsp1_du_setup_lif(crtc->vsp->vsp, mode->hdisplay, mode->vdisplay,
-			  crtc->lif_index);
+			  crtc->lif_index, 0);
 }
 
 void rcar_du_vsp_disable(struct rcar_du_crtc *crtc)
 {
-	vsp1_du_setup_lif(crtc->vsp->vsp, 0, 0, crtc->lif_index);
+	vsp1_du_setup_lif(crtc->vsp->vsp, 0, 0, crtc->lif_index,
+			  crtc->suspend);
 }
 
 void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc)
