@@ -751,7 +751,7 @@ static int gpio_rcar_suspend(struct device *dev)
 		if (!ip->virt_addr)
 			ip->virt_addr = p->base;
 
-		ret = handle_registers(ip, DO_BACKUP);
+		ret = rcar_handle_registers(ip, DO_BACKUP);
 		pr_debug("%s: Backup %s register\n", __func__, ip->ip_name);
 	} else
 		pr_err("%s: Failed to backup %s register\n", __func__,
@@ -769,7 +769,7 @@ static int gpio_rcar_resume(struct device *dev)
 	struct rcar_ip *ip = gpio_rcar_get_ip(pdev->name);
 
 	if (ip) {
-		ret = handle_registers(ip, DO_RESTORE);
+		ret = rcar_handle_registers(ip, DO_RESTORE);
 		pr_debug("%s: Restore %s register\n", __func__, ip->ip_name);
 	} else
 		pr_err("%s: Failed to restore %s register\n", __func__,
