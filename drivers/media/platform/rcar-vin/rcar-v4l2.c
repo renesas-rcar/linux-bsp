@@ -30,6 +30,10 @@
 
 static const struct rvin_video_format rvin_formats[] = {
 	{
+		.fourcc			= V4L2_PIX_FMT_NV12,
+		.bpp			= 1,
+	},
+	{
 		.fourcc			= V4L2_PIX_FMT_NV16,
 		.bpp			= 1,
 	},
@@ -46,8 +50,12 @@ static const struct rvin_video_format rvin_formats[] = {
 		.bpp			= 2,
 	},
 	{
-		.fourcc			= V4L2_PIX_FMT_XRGB555,
+		.fourcc			= V4L2_PIX_FMT_ARGB555,
 		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_ABGR32,
+		.bpp			= 4,
 	},
 	{
 		.fourcc			= V4L2_PIX_FMT_XBGR32,
@@ -82,6 +90,9 @@ static u32 rvin_format_sizeimage(struct v4l2_pix_format *pix)
 {
 	if (pix->pixelformat == V4L2_PIX_FMT_NV16)
 		return pix->bytesperline * pix->height * 2;
+
+	if (pix->pixelformat == V4L2_PIX_FMT_NV12)
+		return pix->bytesperline * pix->height * 3 / 2;
 
 	return pix->bytesperline * pix->height;
 }
@@ -229,7 +240,10 @@ static int __rvin_try_format(struct rvin_dev *vin,
 			     struct rvin_source_fmt *source)
 {
 	const struct rvin_video_format *info;
+	struct v4l2_subdev *sd = vin_to_source(vin);
 	u32 rwidth, rheight, walign;
+	int ret;
+	v4l2_std_id std;
 
 	/* Requested */
 	rwidth = pix->width;
@@ -263,13 +277,20 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	case V4L2_FIELD_TOP:
 	case V4L2_FIELD_BOTTOM:
 	case V4L2_FIELD_ALTERNATE:
-		pix->height /= 2;
-		source->height /= 2;
-		break;
 	case V4L2_FIELD_NONE:
 	case V4L2_FIELD_INTERLACED_TB:
 	case V4L2_FIELD_INTERLACED_BT:
+		break;
 	case V4L2_FIELD_INTERLACED:
+		ret = v4l2_subdev_call(sd, video, querystd, &std);
+		if (ret == -ENOIOCTLCMD)
+			pix->field = V4L2_FIELD_NONE;
+		else if (ret < 0)
+			goto out;
+		else
+			pix->field = std & V4L2_STD_625_50 ?
+				V4L2_FIELD_INTERLACED_TB :
+				V4L2_FIELD_INTERLACED_BT;
 		break;
 	default:
 		pix->field = V4L2_FIELD_NONE;
@@ -280,12 +301,19 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	if (source->width != rwidth || source->height != rheight)
 		rvin_scale_try(vin, pix, rwidth, rheight);
 
-	/* HW limit width to a multiple of 32 (2^5) for NV16 else 2 (2^1) */
-	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
+	/* HW limit width to a multiple of 32 (2^5) for NV16/12 else 2 (2^1) */
+	if ((pix->pixelformat == V4L2_PIX_FMT_NV12) ||
+		(pix->pixelformat == V4L2_PIX_FMT_NV16))
+		walign = 5;
+	else if ((pix->pixelformat == V4L2_PIX_FMT_YUYV) ||
+		(pix->pixelformat == V4L2_PIX_FMT_UYVY))
+		walign = 1;
+	else
+		walign = 0;
 
 	/* Limit to VIN capabilities */
-	v4l_bound_align_image(&pix->width, 2, vin->info->max_width, walign,
-			      &pix->height, 4, vin->info->max_height, 2, 0);
+	v4l_bound_align_image(&pix->width, 5, vin->info->max_width, walign,
+			      &pix->height, 2, vin->info->max_height, 0, 0);
 
 	pix->bytesperline = max_t(u32, pix->bytesperline,
 				  rvin_format_bytesperline(pix));
@@ -298,11 +326,25 @@ static int __rvin_try_format(struct rvin_dev *vin,
 		return -EINVAL;
 	}
 
+	if ((vin->info->chip != RCAR_GEN3) &&
+		(pix->pixelformat == V4L2_PIX_FMT_NV12)) {
+		vin_err(vin, "pixel format NV12 is supported from GEN3\n");
+		return -EINVAL;
+	}
+
+	if ((vin->info->chip != RCAR_GEN3) &&
+		(pix->pixelformat == V4L2_PIX_FMT_ABGR32)) {
+		vin_err(vin, "pixel format ARGB8888 is supported from GEN2\n");
+		return -EINVAL;
+	}
+
 	vin_dbg(vin, "Requested %ux%u Got %ux%u bpl: %d size: %d\n",
 		rwidth, rheight, pix->width, pix->height,
 		pix->bytesperline, pix->sizeimage);
 
 	return 0;
+out:
+	return ret;
 }
 
 static int rvin_querycap(struct file *file, void *priv,
@@ -344,8 +386,6 @@ static int __rvin_s_fmt_vid_cap(struct rvin_dev *vin, struct v4l2_format *f)
 	vin->source.height = source.height;
 
 	vin->format = f->fmt.pix;
-
-	rvin_reset_crop_compose(vin);
 
 	return 0;
 }
