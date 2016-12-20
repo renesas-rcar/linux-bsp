@@ -1569,9 +1569,14 @@ MODULE_DEVICE_TABLE(platform, spi_driver_ids);
 static int sh_msiof_spi_suspend(struct device *dev)
 {
 	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
 	struct platform_device *pdev = to_platform_device(dev);
+	struct sh_msiof_spi_priv *p = platform_get_drvdata(pdev);
 
+	ret = spi_master_suspend(p->master);
+	if (ret)
+		return ret;
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
 	pm_runtime_get_sync(dev);
 	ret = msiof_save_regs(pdev);
 	pm_runtime_put(dev);
@@ -1582,13 +1587,19 @@ static int sh_msiof_spi_suspend(struct device *dev)
 static int sh_msiof_spi_resume(struct device *dev)
 {
 	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
 	struct platform_device *pdev = to_platform_device(dev);
+	struct sh_msiof_spi_priv *p = platform_get_drvdata(pdev);
 
+#ifdef CONFIG_RCAR_DDR_BACKUP
 	pm_runtime_get_sync(dev);
 	ret = msiof_restore_regs(pdev);
 	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
+
+	ret = spi_master_resume(p->master);
+	if (ret)
+		return ret;
+
 	return ret;
 }
 
