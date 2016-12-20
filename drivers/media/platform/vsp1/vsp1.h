@@ -1,7 +1,7 @@
 /*
  * vsp1.h  --  R-Car VSP1 Driver
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -31,6 +31,7 @@ struct vsp1_drm;
 struct vsp1_entity;
 struct vsp1_platform_data;
 struct vsp1_bru;
+struct vsp1_brs;
 struct vsp1_clu;
 struct vsp1_hgo;
 struct vsp1_hgt;
@@ -44,6 +45,7 @@ struct vsp1_uds;
 #define VSP1_MAX_RPF		5
 #define VSP1_MAX_UDS		3
 #define VSP1_MAX_WPF		4
+#define VSP1_MAX_LIF		2
 
 #define VSP1_HAS_LIF		(1 << 0)
 #define VSP1_HAS_LUT		(1 << 1)
@@ -55,6 +57,7 @@ struct vsp1_uds;
 #define VSP1_HAS_HGO		(1 << 7)
 #define VSP1_HAS_HGT		(1 << 8)
 #define VSP1_HAS_WPF_WRITEBACK	(1 << 9)
+#define VSP1_HAS_BRS		(1 << 10)
 
 struct vsp1_device_info {
 	u32 version;
@@ -66,6 +69,7 @@ struct vsp1_device_info {
 	unsigned int wpf_count;
 	unsigned int num_bru_inputs;
 	bool uapi;
+	bool header_mode;
 };
 
 struct vsp1_device {
@@ -77,12 +81,13 @@ struct vsp1_device {
 	struct rcar_fcp_device *fcp;
 
 	struct vsp1_bru *bru;
+	struct vsp1_brs *brs;
 	struct vsp1_clu *clu;
 	struct vsp1_hgo *hgo;
 	struct vsp1_hgt *hgt;
 	struct vsp1_hsit *hsi;
 	struct vsp1_hsit *hst;
-	struct vsp1_lif *lif;
+	struct vsp1_lif *lif[VSP1_MAX_LIF];
 	struct vsp1_lut *lut;
 	struct vsp1_rwpf *rpf[VSP1_MAX_RPF];
 	struct vsp1_sru *sru;
@@ -96,11 +101,21 @@ struct vsp1_device {
 	struct media_device media_dev;
 	struct media_entity_operations media_ops;
 
+	unsigned int num_brs_inputs;
+
+	bool auto_fld_mode;
+
 	struct vsp1_drm *drm;
+	int index;
+
+	dma_addr_t dl_addr;
+	unsigned int dl_body;
 };
 
+int vsp1_gen3_vspdl_check(struct vsp1_device *vsp1);
 int vsp1_device_get(struct vsp1_device *vsp1);
 void vsp1_device_put(struct vsp1_device *vsp1);
+void vsp1_underrun_workaround(struct vsp1_device *vsp1, bool reset);
 
 int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index);
 

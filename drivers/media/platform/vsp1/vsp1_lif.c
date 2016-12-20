@@ -1,7 +1,7 @@
 /*
  * vsp1_lif.c  --  R-Car VSP1 LCD Controller Interface
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -134,9 +134,9 @@ static void lif_configure(struct vsp1_entity *entity,
 {
 	const struct v4l2_mbus_framefmt *format;
 	struct vsp1_lif *lif = to_lif(&entity->subdev);
-	unsigned int hbth = 1300;
-	unsigned int obth = 400;
-	unsigned int lbth = 200;
+	unsigned int hbth = 0;
+	unsigned int obth = 3000;
+	unsigned int lbth = 0;
 
 	if (params != VSP1_ENTITY_PARAMS_INIT)
 		return;
@@ -146,11 +146,11 @@ static void lif_configure(struct vsp1_entity *entity,
 
 	obth = min(obth, (format->width + 1) / 2 * format->height - 4);
 
-	vsp1_lif_write(lif, dl, VI6_LIF_CSBTH,
+	vsp1_lif_write(lif, dl, VI6_LIF_CSBTH(lif->entity.index),
 			(hbth << VI6_LIF_CSBTH_HBTH_SHIFT) |
 			(lbth << VI6_LIF_CSBTH_LBTH_SHIFT));
 
-	vsp1_lif_write(lif, dl, VI6_LIF_CTRL,
+	vsp1_lif_write(lif, dl, VI6_LIF_CTRL(lif->entity.index),
 			(obth << VI6_LIF_CTRL_OBTH_SHIFT) |
 			(format->code == 0 ? VI6_LIF_CTRL_CFMT : 0) |
 			VI6_LIF_CTRL_REQSEL | VI6_LIF_CTRL_LIF_EN);
@@ -164,7 +164,8 @@ static const struct vsp1_entity_operations lif_entity_ops = {
  * Initialization and Cleanup
  */
 
-struct vsp1_lif *vsp1_lif_create(struct vsp1_device *vsp1)
+struct vsp1_lif *vsp1_lif_create(struct vsp1_device *vsp1,
+				 unsigned int lif_index)
 {
 	struct vsp1_lif *lif;
 	int ret;
@@ -175,6 +176,7 @@ struct vsp1_lif *vsp1_lif_create(struct vsp1_device *vsp1)
 
 	lif->entity.ops = &lif_entity_ops;
 	lif->entity.type = VSP1_ENTITY_LIF;
+	lif->entity.index = lif_index;
 
 	/* The LIF is never exposed to userspace, but media entity registration
 	 * requires a function to be set. Use PROC_VIDEO_PIXEL_FORMATTER just to
