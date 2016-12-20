@@ -34,13 +34,13 @@ struct rcar_du_hdmienc {
 
 #define to_rcar_hdmienc(e)	(to_rcar_encoder(e)->hdmi)
 
-static void rcar_du_hdmienc_disable(struct drm_encoder *encoder)
+void rcar_du_hdmienc_disable(struct drm_encoder *encoder)
 {
 	struct rcar_du_hdmienc *hdmienc = to_rcar_hdmienc(encoder);
 	const struct drm_bridge_funcs *bfuncs = encoder->bridge->funcs;
 
-	if ((bfuncs) && (bfuncs->post_disable))
-		bfuncs->post_disable(encoder->bridge);
+	if ((bfuncs) && (bfuncs->disable))
+		bfuncs->disable(encoder->bridge);
 
 	if (hdmienc->renc->lvds)
 		rcar_du_lvdsenc_enable(hdmienc->renc->lvds, encoder->crtc,
@@ -49,7 +49,7 @@ static void rcar_du_hdmienc_disable(struct drm_encoder *encoder)
 	hdmienc->enabled = false;
 }
 
-static void rcar_du_hdmienc_enable(struct drm_encoder *encoder)
+void rcar_du_hdmienc_enable(struct drm_encoder *encoder)
 {
 	struct rcar_du_hdmienc *hdmienc = to_rcar_hdmienc(encoder);
 	const struct drm_bridge_funcs *bfuncs = encoder->bridge->funcs;
@@ -207,6 +207,16 @@ static enum drm_mode_status
 rcar_du_hdmienc_mode_valid(struct drm_connector *connector,
 			    struct drm_display_mode *mode)
 {
+	if ((mode->hdisplay > 3840) || (mode->vdisplay > 2160))
+		return MODE_BAD;
+
+	if (((mode->hdisplay == 3840) && (mode->vdisplay == 2160))
+		&& (mode->vrefresh > 30))
+		return MODE_BAD;
+
+	if (mode->clock > 297000)
+		return MODE_BAD;
+
 	return MODE_OK;
 }
 
