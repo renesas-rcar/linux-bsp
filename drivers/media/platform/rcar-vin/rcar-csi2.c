@@ -15,6 +15,7 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/sys_soc.h>
 
 #include <media/v4l2-of.h>
 #include <media/v4l2-subdev.h>
@@ -39,11 +40,13 @@
 #define SHPCNT_REG		0x44 /* Short Packet Count */
 #define LINKCNT_REG		0x48 /* LINK Operation Control */
 #define LSWAP_REG		0x4C /* Lane Swap */
+#define PHTW_REG		0x50 /* PHY Test Interface Write */
 #define PHTC_REG		0x58 /* PHY Test Interface Clear */
 #define PHYPLL_REG		0x68 /* PHY Frequency Control */
 #define PHEERM_REG		0x74 /* PHY ESC Error Monitor */
 #define PHCLM_REG		0x78 /* PHY Clock Lane Monitor */
 #define PHDLM_REG		0x7C /* PHY Data Lane Monitor */
+#define CSI0CLKFCPR_REG		0x254/* CSI0CLK Frequency Configuration Preset */
 
 /* Control Timing Select bits */
 #define TREF_TREF			(1 << 0)
@@ -149,6 +152,9 @@ enum rcar_csi2_pads {
 	RCAR_CSI2_PAD_MAX,
 };
 
+/* CSI0CLK frequency configuration bit */
+#define CSI0CLKFREQRANGE(n)		((n & 0x3f) << 16)
+
 struct rcar_csi2 {
 	struct device *dev;
 	void __iomem *base;
@@ -160,12 +166,26 @@ struct rcar_csi2 {
 	struct v4l2_subdev subdev;
 	struct media_pad pads[RCAR_CSI2_PAD_MAX];
 	struct v4l2_mbus_framefmt mf;
+
+	u32 vc_num;
 };
 
 #define csi_dbg(p, fmt, arg...)		dev_dbg(p->dev, fmt, ##arg)
 #define csi_info(p, fmt, arg...)	dev_info(p->dev, fmt, ##arg)
 #define csi_warn(p, fmt, arg...)	dev_warn(p->dev, fmt, ##arg)
 #define csi_err(p, fmt, arg...)		dev_err(p->dev, fmt, ##arg)
+
+/* H3 WS1.x  */
+static const struct soc_device_attribute r8a7795es1x[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ },
+};
+
+/* M3  */
+static const struct soc_device_attribute r8a7796[] = {
+	{ .soc_id = "r8a7796" },
+	{ },
+};
 
 static irqreturn_t rcar_csi2_irq(int irq, void *data)
 {
@@ -202,7 +222,7 @@ static void rcar_csi2_wait_phy_start(struct rcar_csi2 *priv)
 	int timeout;
 
 	/* Read the PHY clock lane monitor register (PHCLM). */
-	for (timeout = 100; timeout >= 0; timeout--) {
+	for (timeout = 100; timeout > 0; timeout--) {
 		if (ioread32(priv->base + PHCLM_REG) & 0x01) {
 			csi_dbg(priv, "Detected the PHY clock lane\n");
 			break;
@@ -214,7 +234,7 @@ static void rcar_csi2_wait_phy_start(struct rcar_csi2 *priv)
 
 
 	/* Read the PHY data lane monitor register (PHDLM). */
-	for (timeout = 100; timeout >= 0; timeout--) {
+	for (timeout = 100; timeout > 0; timeout--) {
 		if (ioread32(priv->base + PHDLM_REG) & 0x01) {
 			csi_dbg(priv, "Detected the PHY data lane\n");
 			break;
@@ -235,7 +255,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		priv->mf.field == V4L2_FIELD_NONE ? 'p' : 'i');
 
 	vcdt = vcdt2 = 0;
-	for (i = 0; i < priv->lanes; i++) {
+	for (i = 0; i < priv->vc_num; i++) {
 		tmp = VCDT_SEL_VC(i) | VCDT_VCDTN_EN | VCDT_SEL_DTN_ON;
 
 		switch (priv->mf.code) {
@@ -275,16 +295,19 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 			PHYCNT_ENABLE_2 | PHYCNT_ENABLE_1 | PHYCNT_ENABLE_0;
 
 		/* Calculate MBPS per lane, assume 32 bits per pixel at 60Hz */
-		pixels = (priv->mf.width * priv->mf.height) /
-			(priv->mf.field == V4L2_FIELD_NONE ? 1 : 2);
+		pixels = (priv->mf.width * priv->mf.height);
 		if (pixels <= 640 * 480)
 			phypll = PHYPLL_HSFREQRANGE_100MBPS;
 		else if (pixels <= 720 * 576)
 			phypll = PHYPLL_HSFREQRANGE_190MBPS;
 		else if (pixels <= 1280 * 720)
 			phypll = PHYPLL_HSFREQRANGE_450MBPS;
-		else if (pixels <= 1920 * 1080)
-			phypll = PHYPLL_HSFREQRANGE_900MBPS;
+		else if (pixels <= 1920 * 1080) {
+			if (priv->mf.field == V4L2_FIELD_NONE)
+				phypll = PHYPLL_HSFREQRANGE_900MBPS;
+			else
+				phypll = PHYPLL_HSFREQRANGE_450MBPS;
+			}
 		else
 			goto error;
 
@@ -306,8 +329,25 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		  LSWAP_L2SEL(priv->swap[2]) | LSWAP_L3SEL(priv->swap[3]),
 		  priv->base + LSWAP_REG);
 
+	if (!soc_device_match(r8a7795es1x) && !soc_device_match(r8a7796)) {
+		/* Set PHY Test Interface Write Register for external
+		 * reference resistor is unnecessary in R-Car H3(WS2.0)
+		 */
+		iowrite32(0x012701e2, priv->base + PHTW_REG);
+		iowrite32(0x010101e3, priv->base + PHTW_REG);
+		iowrite32(0x010101e4, priv->base + PHTW_REG);
+		iowrite32(0x01100104, priv->base + PHTW_REG);
+	}
+
 	/* Start */
 	iowrite32(phypll, priv->base + PHYPLL_REG);
+
+	/* Set CSI0CLK Frequency Configuration Preset Register for external
+	 * reference resistor is unnecessary in R-Car H3(WS2.0)
+	 */
+	if (!soc_device_match(r8a7795es1x) && !soc_device_match(r8a7796))
+		iowrite32(CSI0CLKFREQRANGE(32), priv->base + CSI0CLKFCPR_REG);
+
 	iowrite32(phycnt, priv->base + PHYCNT_REG);
 	iowrite32(LINKCNT_MONITOR_EN | LINKCNT_REG_MONI_PACT_EN |
 		  LINKCNT_ICLK_NONSTOP, priv->base + LINKCNT_REG);
@@ -422,6 +462,7 @@ static int rcar_csi2_parse_dt(struct rcar_csi2 *priv)
 	struct v4l2_of_endpoint v4l2_ep;
 	struct device_node *ep;
 	int i, n, ret;
+	u32 vc_num;
 
 	ep = of_graph_get_endpoint_by_regs(priv->dev->of_node, 0, 0);
 	if (!ep)
@@ -478,6 +519,9 @@ static int rcar_csi2_parse_dt(struct rcar_csi2 *priv)
 		}
 	}
 
+	if (!of_property_read_u32(ep, "virtual-channel-number", &vc_num))
+		priv->vc_num = vc_num;
+
 	return 0;
 }
 
@@ -508,6 +552,7 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	struct rcar_csi2 *priv;
 	unsigned int i;
 	int ret;
+	u32 vc_num;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct rcar_csi2), GFP_KERNEL);
 	if (!priv)
@@ -516,6 +561,8 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 
 	priv->dev = &pdev->dev;
 	spin_lock_init(&priv->lock);
+
+	priv->vc_num = 0;
 
 	ret = rcar_csi2_parse_dt(priv);
 	if (ret)
@@ -527,8 +574,10 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	vc_num = priv->vc_num;
 	platform_set_drvdata(pdev, priv);
 
+retry:
 	priv->subdev.owner = THIS_MODULE;
 	priv->subdev.dev = &pdev->dev;
 	v4l2_subdev_init(&priv->subdev, &rcar_csi2_subdev_ops);
@@ -537,6 +586,7 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 		 KBUILD_MODNAME, dev_name(&pdev->dev));
 
 	priv->subdev.flags = V4L2_SUBDEV_FL_HAS_DEVNODE;
+	priv->subdev.entity.function = MEDIA_ENT_F_ATV_DECODER;
 	priv->subdev.entity.flags |= MEDIA_ENT_F_ATV_DECODER;
 
 	priv->pads[RCAR_CSI2_SINK].flags = MEDIA_PAD_FL_SINK;
@@ -552,9 +602,14 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
+	vc_num--;
+	if (vc_num > 0)
+		goto retry;
+
 	pm_runtime_enable(&pdev->dev);
 
-	csi_info(priv, "%d lanes found\n", priv->lanes);
+	csi_info(priv, "%d lanes found. virtual channel number %d use\n",
+		 priv->lanes, priv->vc_num);
 
 	return 0;
 }
