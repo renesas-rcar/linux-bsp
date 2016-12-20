@@ -1,8 +1,8 @@
 /*
  * SuperH Mobile SDHI
  *
+ * Copyright (C) 2016 Renesas Electronics Corporation
  * Copyright (C) 2016 Sang Engineering, Wolfram Sang
- * Copyright (C) 2015-16 Renesas Electronics Corporation
  * Copyright (C) 2009 Magnus Damm
  *
  * This program is free software; you can redistribute it and/or modify
@@ -37,7 +37,7 @@
 
 #include "tmio_mmc.h"
 
-#define EXT_ACC           0xe4
+#define HOST_MODE           0xe4
 
 #define SDHI_VER_GEN2_SDR50	0x490c
 /* very old datasheets said 0x490c for SDR104, too. They are wrong! */
@@ -59,6 +59,9 @@ struct sh_mobile_sdhi_of_data {
 	enum dma_slave_buswidth dma_buswidth;
 	dma_addr_t dma_rx_offset;
 	unsigned bus_shift;
+	unsigned int max_blk_count;
+	unsigned short max_segs;
+	bool sdbuf_64bit;
 	int scc_offset;
 	struct sh_mobile_sdhi_scc *taps;
 	int taps_num;
@@ -107,9 +110,15 @@ static struct sh_mobile_sdhi_scc rcar_gen3_scc_taps[] = {
 
 static const struct sh_mobile_sdhi_of_data of_rcar_gen3_compatible = {
 	.tmio_flags	= TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_WRPROTECT_DISABLE |
-			  TMIO_MMC_CLK_ACTUAL | TMIO_MMC_MIN_RCAR2,
-	.capabilities	= MMC_CAP_SD_HIGHSPEED | MMC_CAP_SDIO_IRQ,
+			  TMIO_MMC_CLK_ACTUAL | TMIO_MMC_MIN_RCAR2 |
+			  TMIO_MMC_CLK_NO_SLEEP,
+	.capabilities	= MMC_CAP_SD_HIGHSPEED | MMC_CAP_SDIO_IRQ |
+			  MMC_CAP_CMD23,
 	.bus_shift	= 2,
+	/* Gen3 SDHI DMAC can handle 0xffffffff blk count, but seg = 1 */
+	.max_blk_count	= 0xffffffff,
+	.max_segs = 1,
+	.sdbuf_64bit = true,
 	.scc_offset	= 0x1000,
 	.taps		= rcar_gen3_scc_taps,
 	.taps_num	= ARRAY_SIZE(rcar_gen3_scc_taps),
@@ -171,7 +180,7 @@ static void sh_mobile_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
 		return;
 	}
 
-	sd_ctrl_write16(host, EXT_ACC, val);
+	sd_ctrl_write16(host, HOST_MODE, val);
 }
 
 static int sh_mobile_sdhi_clk_enable(struct tmio_mmc_host *host)
@@ -297,6 +306,8 @@ static int sh_mobile_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 #define SH_MOBILE_SDHI_SCC_CKSEL	0x006
 #define SH_MOBILE_SDHI_SCC_RVSCNTL	0x008
 #define SH_MOBILE_SDHI_SCC_RVSREQ	0x00A
+#define SH_MOBILE_SDHI_SCC_SMPCMP	0x00C
+#define SH_MOBILE_SDHI_SCC_TMPPORT2	0x00E
 
 /* Definitions for values the SH_MOBILE_SDHI_SCC_DTCNTL register */
 #define SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN		BIT(0)
@@ -309,6 +320,9 @@ static int sh_mobile_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 #define SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN	BIT(0)
 /* Definitions for values the SH_MOBILE_SDHI_SCC_RVSREQ register */
 #define SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR	BIT(2)
+/* Definitions for values the SH_MOBILE_SDHI_SCC_TMPPORT2 register */
+#define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN	BIT(31)
+#define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL	BIT(4)
 
 static inline u32 sd_scc_read32(struct tmio_mmc_host *host,
 				struct sh_mobile_sdhi *priv, int addr)
@@ -327,7 +341,10 @@ static unsigned int sh_mobile_sdhi_init_tuning(struct tmio_mmc_host *host)
 {
 	struct sh_mobile_sdhi *priv;
 
-	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104))
+	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104) &&
+	    !(host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR) &&
+	    !(host->mmc->caps2 & (MMC_CAP2_HS400_1_8V |
+					MMC_CAP2_HS200_1_8V_SDR)))
 		return 0;
 
 	priv = host_to_priv(host);
@@ -374,6 +391,35 @@ static void sh_mobile_sdhi_prepare_tuning(struct tmio_mmc_host *host,
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET, tap);
 }
 
+static unsigned int sh_mobile_sdhi_compare_scc_data(struct tmio_mmc_host *host)
+{
+	struct sh_mobile_sdhi *priv = host_to_priv(host);
+
+	/* Get comparison of sampling data */
+	return sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_SMPCMP);
+}
+
+static void sh_mobile_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
+					struct mmc_ios *ios)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	struct sh_mobile_sdhi *priv = host_to_priv(host);
+
+	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
+		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
+
+	/* Set HS400 mode */
+	sd_ctrl_write16(host, CTL_SDIF_MODE, 0x0001 |
+		sd_ctrl_read16(host, CTL_SDIF_MODE));
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
+		(SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
+		SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) |
+		sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2));
+
+	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
+		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
+}
+
 #define SH_MOBILE_SDHI_MAX_TAP 3
 
 static int sh_mobile_sdhi_select_tuning(struct tmio_mmc_host *host)
@@ -384,10 +430,26 @@ static int sh_mobile_sdhi_select_tuning(struct tmio_mmc_host *host)
 	unsigned long tap_start;/* start position of tuning success */
 	unsigned long tap_end;  /* end position of tuning success */
 	unsigned long ntap;     /* temporary counter of tuning success */
+	unsigned long match_cnt;/* counter of matching data */
 	unsigned long i;
+	bool select = false;
 
 	/* Clear SCC_RVSREQ */
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
+
+	/* Merge the results */
+	for (i = 0; i < host->tap_num * 2; i++) {
+		if (!test_bit(i, host->taps)) {
+			clear_bit(i % host->tap_num, host->taps);
+			clear_bit((i % host->tap_num) + host->tap_num,
+					host->taps);
+		}
+		if (!test_bit(i, host->smpcmp)) {
+			clear_bit(i % host->tap_num, host->smpcmp);
+			clear_bit((i % host->tap_num) + host->tap_num,
+					host->smpcmp);
+		}
+	}
 
 	/*
 	 * Find the longest consecutive run of successful probes.  If that
@@ -417,7 +479,38 @@ static int sh_mobile_sdhi_select_tuning(struct tmio_mmc_host *host)
 		tap_cnt = ntap;
 	}
 
-	if (tap_cnt >= SH_MOBILE_SDHI_MAX_TAP)
+	/*
+	 * If all of the TAP is OK, the sampling clock position is selected by
+	 * identifying the change point of data.
+	 */
+	if (tap_cnt == host->tap_num * 2) {
+		match_cnt = 0;
+		ntap = 0;
+		tap_start = 0;
+		tap_end = 0;
+		for (i = 0; i < host->tap_num * 2; i++) {
+			if (test_bit(i, host->smpcmp))
+				ntap++;
+			else {
+				if (ntap > match_cnt) {
+					tap_start = i - ntap;
+					tap_end = i - 1;
+					match_cnt = ntap;
+				}
+				ntap = 0;
+			}
+		}
+		if (ntap > match_cnt) {
+			tap_start = i - ntap;
+			tap_end = i - 1;
+			match_cnt = ntap;
+		}
+		if (match_cnt)
+			select = true;
+	} else if (tap_cnt >= SH_MOBILE_SDHI_MAX_TAP)
+		select = true;
+
+	if (select)
 		tap_set = (tap_start + tap_end) / 2 % host->tap_num;
 	else
 		return -EIO;
@@ -438,7 +531,10 @@ static bool sh_mobile_sdhi_check_scc_error(struct tmio_mmc_host *host)
 {
 	struct sh_mobile_sdhi *priv;
 
-	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104))
+	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104) &&
+	    !(host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR) &&
+	    !(host->mmc->caps2 & (MMC_CAP2_HS400_1_8V |
+					MMC_CAP2_HS200_1_8V_SDR)))
 		return 0;
 
 	priv = host_to_priv(host);
@@ -460,7 +556,10 @@ static void sh_mobile_sdhi_hw_reset(struct tmio_mmc_host *host)
 {
 	struct sh_mobile_sdhi *priv;
 
-	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104))
+	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104) &&
+	    !(host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR) &&
+	    !(host->mmc->caps2 & (MMC_CAP2_HS400_1_8V |
+					MMC_CAP2_HS200_1_8V_SDR)))
 		return;
 
 	priv = host_to_priv(host);
@@ -472,6 +571,14 @@ static void sh_mobile_sdhi_hw_reset(struct tmio_mmc_host *host)
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_CKSEL,
 		       ~SH_MOBILE_SDHI_SCC_CKSEL_DTSEL &
 		       sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_CKSEL));
+
+	/* Reset HS400 mode */
+	sd_ctrl_write16(host, CTL_SDIF_MODE, ~0x0001 &
+			sd_ctrl_read16(host, CTL_SDIF_MODE));
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
+			~(SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
+			SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
+			sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2));
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
 			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
@@ -513,7 +620,7 @@ static int sh_mobile_sdhi_write16_hook(struct tmio_mmc_host *host, int addr)
 	case CTL_SD_MEM_CARD_OPT:
 	case CTL_TRANSACTION_CTL:
 	case CTL_DMA_ENABLE:
-	case EXT_ACC:
+	case HOST_MODE:
 		return sh_mobile_sdhi_wait_idle(host);
 	}
 
@@ -540,10 +647,12 @@ static int sh_mobile_sdhi_multi_io_quirk(struct mmc_card *card,
 
 static void sh_mobile_sdhi_enable_dma(struct tmio_mmc_host *host, bool enable)
 {
+	int dma_width = host->dma->sdbuf_64bit ? 64 : 32;
+
 	sd_ctrl_write16(host, CTL_DMA_ENABLE, enable ? 2 : 0);
 
 	/* enable 32bit access if DMA mode if possibile */
-	sh_mobile_sdhi_sdbuf_width(host, enable ? 32 : 16);
+	sh_mobile_sdhi_sdbuf_width(host, enable ? dma_width : 16);
 }
 
 static int sh_mobile_sdhi_probe(struct platform_device *pdev)
@@ -597,6 +706,8 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		mmc_data->capabilities |= of_data->capabilities;
 		mmc_data->capabilities2 |= of_data->capabilities2;
 		mmc_data->dma_rx_offset = of_data->dma_rx_offset;
+		mmc_data->max_blk_count	= of_data->max_blk_count;
+		mmc_data->max_segs = of_data->max_segs;
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 		host->bus_shift = of_data->bus_shift;
 	}
@@ -616,13 +727,19 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 			sh_mobile_sdhi_start_signal_voltage_switch;
 		host->init_tuning	= sh_mobile_sdhi_init_tuning;
 		host->prepare_tuning	= sh_mobile_sdhi_prepare_tuning;
+		host->compare_scc_data	= sh_mobile_sdhi_compare_scc_data;
 		host->select_tuning	= sh_mobile_sdhi_select_tuning;
 		host->check_scc_error	= sh_mobile_sdhi_check_scc_error;
 		host->hw_reset		= sh_mobile_sdhi_hw_reset;
+		host->prepare_hs400_tuning =
+			sh_mobile_sdhi_prepare_hs400_tuning;
 	}
 
 	/* Orginally registers were 16 bit apart, could be 32 or 64 nowadays */
-	if (!host->bus_shift && resource_size(res) > 0x100) /* old way to determine the shift */
+	if (resource_size(res) > 0x400)
+		host->bus_shift = 2;
+	else if (!host->bus_shift &&
+	    resource_size(res) > 0x100) /* old way to determine the shift */
 		host->bus_shift = 1;
 
 	if (mmd)
@@ -659,7 +776,10 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto efree;
 
-	if (host->mmc->caps & MMC_CAP_UHS_SDR104) {
+	if ((host->mmc->caps & MMC_CAP_UHS_SDR104) ||
+	    (host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR) ||
+	    (host->mmc->caps2 & (MMC_CAP2_HS400_1_8V |
+					MMC_CAP2_HS200_1_8V_SDR))) {
 		host->mmc->caps |= MMC_CAP_HW_RESET;
 
 		if (of_id && of_id->data) {
