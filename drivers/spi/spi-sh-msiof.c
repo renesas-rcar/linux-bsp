@@ -1,6 +1,7 @@
 /*
  * SuperH MSIOF SPI Master Interface
  *
+ * Copyright (C) 2016 Renesas Electronics Corporation
  * Copyright (c) 2009 Magnus Damm
  * Copyright (C) 2014 Glider bvba
  *
@@ -27,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/sh_dma.h>
+#include <linux/sys_soc.h>
 
 #include <linux/spi/sh_msiof.h>
 #include <linux/spi/spi.h>
@@ -40,6 +42,10 @@ struct sh_msiof_chipdata {
 	u16 master_flags;
 };
 
+#ifdef CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG
+#define TRANSFAR_SYNC_DELAY (CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG_MSLEEP)
+#endif /* CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG */
+
 struct sh_msiof_spi_priv {
 	struct spi_master *master;
 	void __iomem *mapbase;
@@ -47,8 +53,11 @@ struct sh_msiof_spi_priv {
 	struct platform_device *pdev;
 	struct sh_msiof_spi_info *info;
 	struct completion done;
+	struct completion done_dma_tx, done_dma_rx;
 	unsigned int tx_fifo_size;
 	unsigned int rx_fifo_size;
+	int mode;
+	int cs;
 	void *tx_dma_page;
 	void *rx_dma_page;
 	dma_addr_t tx_dma_addr;
@@ -79,8 +88,12 @@ struct sh_msiof_spi_priv {
 #define MDR1_SYNCMD_MASK 0x30000000 /* SYNC Mode */
 #define MDR1_SYNCMD_SPI	 0x20000000 /*   Level mode/SPI */
 #define MDR1_SYNCMD_LR	 0x30000000 /*   L/R mode */
+#define MDR1_SYNCCH_MASK 0x0c000000 /* SYNC Channel Select */
+#define MDR1_SYNCCH_SS1  0x04000000 /*   MSIOF_SS1 */
+#define MDR1_SYNCCH_SS2  0x08000000 /*   MSIOF_SS2 */
 #define MDR1_SYNCAC_SHIFT	 25 /* Sync Polarity (1 = Active-low) */
 #define MDR1_BITLSB_SHIFT	 24 /* MSB/LSB First (1 = LSB first) */
+#define MDR1_DTDL_MASK   0x00700000 /* Data Pin Bit Delay Mask */
 #define MDR1_DTDL_SHIFT		 20 /* Data Pin Bit Delay for MSIOF_SYNC */
 #define MDR1_SYNCDL_SHIFT	 16 /* Frame Sync Signal Timing Delay */
 #define MDR1_FLD_MASK	 0x0000000c /* Frame Sync Signal Interval (0-3) */
@@ -179,6 +192,24 @@ struct sh_msiof_spi_priv {
 #define IER_RFUDFE	0x00000010 /* Receive FIFO Underflow Enable */
 #define IER_RFOVFE	0x00000008 /* Receive FIFO Overflow Enable */
 
+static const struct soc_device_attribute r8a7795es10[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.0" },
+	{ },
+};
+
+static const struct soc_device_attribute r8a7795es11[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.1" },
+	{ },
+};
+
+
+static int msiof_rcar_is_gen3(struct device *dev)
+{
+	struct device_node *node = dev->of_node;
+
+	return of_device_is_compatible(node, "renesas,msiof-r8a7795") ||
+		of_device_is_compatible(node, "renesas,msiof-r8a7796");
+}
 
 static u32 sh_msiof_read(struct sh_msiof_spi_priv *p, int reg_offs)
 {
@@ -337,7 +368,40 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	tmp |= !cs_high << MDR1_SYNCAC_SHIFT;
 	tmp |= lsb_first << MDR1_BITLSB_SHIFT;
 	tmp |= sh_msiof_spi_get_dtdl_and_syncdl(p);
-	sh_msiof_write(p, TMDR1, tmp | MDR1_TRMD | TMDR1_PCON);
+	if (soc_device_match(r8a7795es10)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 0 << MDR1_DTDL_SHIFT;
+		}
+	}
+	if (soc_device_match(r8a7795es11)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 1 << MDR1_DTDL_SHIFT;
+		}
+	}
+	if (p->mode == SPI_MSIOF_MASTER) {
+		if (p->cs == 1)
+			tmp |= MDR1_SYNCCH_SS1;
+		else if (p->cs == 2)
+			tmp |= MDR1_SYNCCH_SS2;
+		else
+			tmp &= ~MDR1_SYNCCH_MASK;
+		sh_msiof_write(p, TMDR1, tmp | MDR1_TRMD | TMDR1_PCON);
+	} else
+		sh_msiof_write(p, TMDR1, tmp | TMDR1_PCON);
+	if (soc_device_match(r8a7795es10)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 2 << MDR1_DTDL_SHIFT;
+		}
+	}
+	if (soc_device_match(r8a7795es11)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 1 << MDR1_DTDL_SHIFT;
+		}
+	}
 	if (p->master->flags & SPI_MASTER_MUST_TX) {
 		/* These bits are reserved if RX needs TX */
 		tmp &= ~0x0000ffff;
@@ -345,8 +409,18 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	sh_msiof_write(p, RMDR1, tmp);
 
 	tmp = 0;
-	tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
-	tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+	if (soc_device_match(r8a7795es11)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp |= 0 << CTR_TSCKIZ_POL_SHIFT;
+			tmp |= 0 << CTR_RSCKIZ_POL_SHIFT;
+		} else {
+			tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
+			tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+		}
+	} else {
+		tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
+		tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+	}
 
 	edge = cpol ^ !cpha;
 
@@ -520,6 +594,7 @@ static int sh_msiof_spi_setup(struct spi_device *spi)
 {
 	struct device_node	*np = spi->master->dev.of_node;
 	struct sh_msiof_spi_priv *p = spi_master_get_devdata(spi->master);
+	int ret;
 
 	pm_runtime_get_sync(&p->pdev->dev);
 
@@ -531,6 +606,8 @@ static int sh_msiof_spi_setup(struct spi_device *spi)
 		spi->cs_gpio = (uintptr_t)spi->controller_data;
 	}
 
+	p->cs = spi->chip_select;
+
 	/* Configure pins before deasserting CS */
 	sh_msiof_spi_set_pin_regs(p, !!(spi->mode & SPI_CPOL),
 				  !!(spi->mode & SPI_CPHA),
@@ -538,8 +615,12 @@ static int sh_msiof_spi_setup(struct spi_device *spi)
 				  !!(spi->mode & SPI_LSB_FIRST),
 				  !!(spi->mode & SPI_CS_HIGH));
 
-	if (spi->cs_gpio >= 0)
-		gpio_set_value(spi->cs_gpio, !(spi->mode & SPI_CS_HIGH));
+	if (gpio_is_valid(spi->cs_gpio)) {
+		ret = gpio_request(spi->cs_gpio, dev_name(&spi->dev));
+		if (!ret)
+			gpio_direction_output(spi->cs_gpio,
+					!(spi->mode & SPI_CS_HIGH));
+	}
 
 
 	pm_runtime_put(&p->pdev->dev);
@@ -553,6 +634,8 @@ static int sh_msiof_prepare_message(struct spi_master *master,
 	struct sh_msiof_spi_priv *p = spi_master_get_devdata(master);
 	const struct spi_device *spi = msg->spi;
 
+	p->cs = spi->chip_select;
+
 	/* Configure pins before asserting CS */
 	sh_msiof_spi_set_pin_regs(p, !!(spi->mode & SPI_CPOL),
 				  !!(spi->mode & SPI_CPHA),
@@ -564,17 +647,18 @@ static int sh_msiof_prepare_message(struct spi_master *master,
 
 static int sh_msiof_spi_start(struct sh_msiof_spi_priv *p, void *rx_buf)
 {
-	int ret;
+	int ret = 0;
 
 	/* setup clock and rx/tx signals */
-	ret = sh_msiof_modify_ctr_wait(p, 0, CTR_TSCKE);
+	if (p->mode == SPI_MSIOF_MASTER)
+		ret = sh_msiof_modify_ctr_wait(p, 0, CTR_TSCKE);
 	if (rx_buf && !ret)
 		ret = sh_msiof_modify_ctr_wait(p, 0, CTR_RXE);
 	if (!ret)
 		ret = sh_msiof_modify_ctr_wait(p, 0, CTR_TXE);
 
 	/* start by setting frame bit */
-	if (!ret)
+	if (!ret && p->mode == SPI_MSIOF_MASTER)
 		ret = sh_msiof_modify_ctr_wait(p, 0, CTR_TFSE);
 
 	return ret;
@@ -582,15 +666,16 @@ static int sh_msiof_spi_start(struct sh_msiof_spi_priv *p, void *rx_buf)
 
 static int sh_msiof_spi_stop(struct sh_msiof_spi_priv *p, void *rx_buf)
 {
-	int ret;
+	int ret = 0;
 
 	/* shut down frame, rx/tx and clock signals */
-	ret = sh_msiof_modify_ctr_wait(p, CTR_TFSE, 0);
+	if (p->mode == SPI_MSIOF_MASTER)
+		ret = sh_msiof_modify_ctr_wait(p, CTR_TFSE, 0);
 	if (!ret)
 		ret = sh_msiof_modify_ctr_wait(p, CTR_TXE, 0);
 	if (rx_buf && !ret)
 		ret = sh_msiof_modify_ctr_wait(p, CTR_RXE, 0);
-	if (!ret)
+	if (!ret && p->mode == SPI_MSIOF_MASTER)
 		ret = sh_msiof_modify_ctr_wait(p, CTR_TSCKE, 0);
 
 	return ret;
@@ -606,6 +691,9 @@ static int sh_msiof_spi_txrx_once(struct sh_msiof_spi_priv *p,
 {
 	int fifo_shift;
 	int ret;
+	unsigned long timeout;
+
+	timeout = (p->mode == SPI_MSIOF_MASTER) ? HZ : MAX_SCHEDULE_TIMEOUT;
 
 	/* limit maximum word transfer to rx/tx fifo size */
 	if (tx_buf)
@@ -636,7 +724,7 @@ static int sh_msiof_spi_txrx_once(struct sh_msiof_spi_priv *p,
 	}
 
 	/* wait for tx fifo to be emptied / rx fifo to be filled */
-	if (!wait_for_completion_timeout(&p->done, HZ)) {
+	if (!wait_for_completion_timeout(&p->done, timeout)) {
 		dev_err(&p->pdev->dev, "PIO timeout\n");
 		ret = -ETIMEDOUT;
 		goto stop_reset;
@@ -665,12 +753,18 @@ stop_ier:
 	return ret;
 }
 
-static void sh_msiof_dma_complete(void *arg)
+static void sh_msiof_tx_dma_complete(void *arg)
 {
 	struct sh_msiof_spi_priv *p = arg;
 
-	sh_msiof_write(p, IER, 0);
-	complete(&p->done);
+	complete(&p->done_dma_tx);
+}
+
+static void sh_msiof_rx_dma_complete(void *arg)
+{
+	struct sh_msiof_spi_priv *p = arg;
+
+	complete(&p->done_dma_rx);
 }
 
 static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
@@ -680,6 +774,9 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 	struct dma_async_tx_descriptor *desc_tx = NULL, *desc_rx = NULL;
 	dma_cookie_t cookie;
 	int ret;
+	unsigned long timeout;
+
+	timeout = (p->mode == SPI_MSIOF_MASTER) ? HZ : MAX_SCHEDULE_TIMEOUT;
 
 	/* First prepare and submit the DMA request(s), as this may fail */
 	if (rx) {
@@ -690,7 +787,7 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 		if (!desc_rx)
 			return -EAGAIN;
 
-		desc_rx->callback = sh_msiof_dma_complete;
+		desc_rx->callback = sh_msiof_rx_dma_complete;
 		desc_rx->callback_param = p;
 		cookie = dmaengine_submit(desc_rx);
 		if (dma_submit_error(cookie))
@@ -709,13 +806,8 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 			goto no_dma_tx;
 		}
 
-		if (rx) {
-			/* No callback */
-			desc_tx->callback = NULL;
-		} else {
-			desc_tx->callback = sh_msiof_dma_complete;
-			desc_tx->callback_param = p;
-		}
+		desc_tx->callback = sh_msiof_tx_dma_complete;
+		desc_tx->callback_param = p;
 		cookie = dmaengine_submit(desc_tx);
 		if (dma_submit_error(cookie)) {
 			ret = cookie;
@@ -732,6 +824,8 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 	sh_msiof_write(p, IER, ier_bits);
 
 	reinit_completion(&p->done);
+	reinit_completion(&p->done_dma_tx);
+	reinit_completion(&p->done_dma_rx);
 
 	/* Now start DMA */
 	if (rx)
@@ -745,12 +839,37 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 		goto stop_dma;
 	}
 
-	/* wait for tx fifo to be emptied / rx fifo to be filled */
-	if (!wait_for_completion_timeout(&p->done, HZ)) {
-		dev_err(&p->pdev->dev, "DMA timeout\n");
-		ret = -ETIMEDOUT;
-		goto stop_reset;
+	/* wait for Tx/Rx DMA completion */
+	if (tx) {
+		ret = wait_for_completion_timeout(&p->done_dma_tx, timeout);
+		if (!ret) {
+			dev_err(&p->pdev->dev, "Tx DMA timeout\n");
+			ret = -ETIMEDOUT;
+			goto stop_reset;
+		}
+		if (!rx) {
+			ier_bits = IER_TEOFE;
+			sh_msiof_write(p, IER, ier_bits);
+
+			/* wait for tx fifo to be emptied */
+			if (!wait_for_completion_timeout(&p->done, timeout)) {
+				dev_err(&p->pdev->dev,
+					"Tx fifo to be emptied timeout\n");
+				ret = -ETIMEDOUT;
+				goto stop_reset;
+			}
+		}
 	}
+	if (rx) {
+		ret = wait_for_completion_timeout(&p->done_dma_rx, timeout);
+		if (!ret) {
+			dev_err(&p->pdev->dev, "Rx DMA timeout\n");
+			ret = -ETIMEDOUT;
+			goto stop_reset;
+		}
+	}
+
+	sh_msiof_write(p, IER, 0);
 
 	/* clear status bits */
 	sh_msiof_reset_str(p);
@@ -843,7 +962,8 @@ static int sh_msiof_transfer_one(struct spi_master *master,
 	int ret;
 
 	/* setup clocks (clock already enabled in chipselect()) */
-	sh_msiof_spi_set_clk_regs(p, clk_get_rate(p->clk), t->speed_hz);
+	if (p->mode == SPI_MSIOF_MASTER)
+		sh_msiof_spi_set_clk_regs(p, clk_get_rate(p->clk), t->speed_hz);
 
 	while (master->dma_tx && len > 15) {
 		/*
@@ -862,7 +982,7 @@ static int sh_msiof_transfer_one(struct spi_master *master,
 				break;
 			copy32 = copy_bswap32;
 		} else if (bits <= 16) {
-			if (l & 1)
+			if (l & 3)
 				break;
 			copy32 = copy_wswap32;
 		} else {
@@ -871,6 +991,11 @@ static int sh_msiof_transfer_one(struct spi_master *master,
 
 		if (tx_buf)
 			copy32(p->tx_dma_page, tx_buf, l / 4);
+
+#ifdef CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG
+		if (p->mode == SPI_MSIOF_MASTER)
+			msleep(TRANSFAR_SYNC_DELAY);
+#endif /* CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG */
 
 		ret = sh_msiof_dma_once(p, tx_buf, rx_buf, l);
 		if (ret == -EAGAIN) {
@@ -945,6 +1070,12 @@ static int sh_msiof_transfer_one(struct spi_master *master,
 	words = len / bytes_per_word;
 
 	while (words > 0) {
+
+#ifdef CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG
+		if (p->mode == SPI_MSIOF_MASTER)
+			msleep(TRANSFAR_SYNC_DELAY);
+#endif /* CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG */
+
 		n = sh_msiof_spi_txrx_once(p, tx_fifo, rx_fifo, tx_buf, rx_buf,
 					   words, bits);
 		if (n < 0)
@@ -980,6 +1111,8 @@ static const struct of_device_id sh_msiof_match[] = {
 	{ .compatible = "renesas,msiof-r8a7792",   .data = &r8a779x_data },
 	{ .compatible = "renesas,msiof-r8a7793",   .data = &r8a779x_data },
 	{ .compatible = "renesas,msiof-r8a7794",   .data = &r8a779x_data },
+	{ .compatible = "renesas,msiof-r8a7795",   .data = &r8a779x_data },
+	{ .compatible = "renesas,msiof-r8a7796",   .data = &r8a779x_data },
 	{},
 };
 MODULE_DEVICE_TABLE(of, sh_msiof_match);
@@ -1003,6 +1136,11 @@ static struct sh_msiof_spi_info *sh_msiof_spi_parse_dt(struct device *dev)
 					&info->rx_fifo_override);
 	of_property_read_u32(np, "renesas,dtdl", &info->dtdl);
 	of_property_read_u32(np, "renesas,syncdl", &info->syncdl);
+
+	if (of_property_read_bool(np, "slave"))
+		info->mode = SPI_MSIOF_SLAVE;
+	else
+		info->mode = SPI_MSIOF_MASTER;
 
 	info->num_chipselect = num_cs;
 
@@ -1076,10 +1214,7 @@ static int sh_msiof_request_dma(struct sh_msiof_spi_priv *p)
 		return 0;
 	}
 
-	/* The DMA engine uses the second register set, if present */
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (!res)
-		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
 	master = p->master;
 	master->dma_tx = sh_msiof_request_dma_chan(dev, DMA_MEM_TO_DEV,
@@ -1157,6 +1292,8 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	const struct sh_msiof_chipdata *chipdata;
 	const struct of_device_id *of_id;
 	struct sh_msiof_spi_priv *p;
+	struct clk *ref_clk;
+	u32 clk_rate = 0;
 	int i;
 	int ret;
 
@@ -1187,6 +1324,8 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	}
 
 	init_completion(&p->done);
+	init_completion(&p->done_dma_tx);
+	init_completion(&p->done_dma_rx);
 
 	p->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(p->clk)) {
@@ -1226,6 +1365,7 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 		p->tx_fifo_size = p->info->tx_fifo_override;
 	if (p->info->rx_fifo_override)
 		p->rx_fifo_size = p->info->rx_fifo_override;
+	p->mode = p->info->mode;
 
 	/* init master code */
 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
@@ -1248,6 +1388,17 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "spi_register_master error.\n");
 		goto err2;
+	}
+
+	if (msiof_rcar_is_gen3(&master->dev)) {
+		ref_clk = devm_clk_get(&pdev->dev, "msiof_ref_clk");
+		if (!IS_ERR(ref_clk))
+			clk_rate = clk_get_rate(ref_clk);
+		if (clk_rate) {
+			clk_prepare_enable(p->clk);
+			clk_set_rate(p->clk, clk_rate);
+			clk_disable_unprepare(p->clk);
+		}
 	}
 
 	return 0;
