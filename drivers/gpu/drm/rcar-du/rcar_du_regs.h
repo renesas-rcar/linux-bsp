@@ -255,6 +255,8 @@
 
 #define DIDSR			0x20028
 #define DIDSR_CODE		(0x7790 << 16)
+#define DIDSR_LCDS0_DCLKIN	(0 << 9)
+#define DIDSR_LCDS0_LVDSIF	(1 << 9)
 #define DIDSR_LCDS_DCLKIN(n)	(0 << (8 + (n) * 2))
 #define DIDSR_LCDS_LVDS0(n)	(2 << (8 + (n) * 2))
 #define DIDSR_LCDS_LVDS1(n)	(3 << (8 + (n) * 2))
@@ -280,7 +282,7 @@
 #define DPLLCR			0x20044
 #define DPLLCR_CODE		(0x95 << 24)
 #define DPLLCR_PLCS1		(1 << 23)
-#define DPLLCR_PLCS0		(1 << 20)
+#define DPLLCR_PLCS0		(1 << 21)
 #define DPLLCR_CLKE		(1 << 18)
 #define DPLLCR_FDPLL(n)		((n) << 12)	/* n=0 Setting prohibited */
 /* H'00 to H'26, H'78 to H'7F: Setting prohibited.*/

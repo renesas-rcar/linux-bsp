@@ -31,6 +31,11 @@
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
 
+static const struct soc_device_attribute r8a7795es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 {
 	struct rcar_du_device *rcdu = rcrtc->group->dev;
@@ -103,6 +108,27 @@ static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
 	clk_disable_unprepare(rcrtc->clock);
 }
 
+void rcar_du_crtc_vbk_check(struct rcar_du_crtc *rcrtc)
+{
+	u32 i, timeout = 100, loop = 1;
+	u32 status;
+
+	if (soc_device_match(r8a7795es1))
+		loop = 2;
+
+	/* Check next VBK flag */
+	for (i = 0; i < timeout; i++) {
+		status = rcar_du_crtc_read(rcrtc, DSSR);
+		if (status & DSSR_VBK) {
+
+			rcar_du_crtc_write(rcrtc, DSRCR, DSRCR_VBCL);
+			if (--loop == 0)
+				break;
+		}
+		mdelay(1);
+	}
+}
+
 /* -----------------------------------------------------------------------------
  * Hardware Setup
  */
@@ -119,9 +145,15 @@ static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
 	for (n = 39; n < 120; n++) {
 		for (m = 0; m < 4; m++) {
 			for (fdpll = 1; fdpll < 32; fdpll++) {
-				/* 1/2 (FRQSEL=1) for duty rate 50% */
-				dpllclk = extclk * (n + 1) / (m + 1)
-						 / (fdpll + 1) / 2;
+				if (soc_device_match(r8a7795es1)) {
+					/* 1/2 (FRQSEL=1) for duty rate 50% */
+					dpllclk = extclk * (n + 1) / (m + 1)
+							 / (fdpll + 1) / 2;
+				} else {
+					dpllclk = extclk * (n + 1) / (m + 1)
+							 / (fdpll + 1);
+				}
+
 				if (dpllclk >= 400000000)
 					continue;
 
@@ -150,11 +182,6 @@ static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
 			break;
 	}
 }
-
-static const struct soc_device_attribute r8a7795es1[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ /* sentinel */ }
-};
 
 static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 {
@@ -186,6 +213,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		unsigned long rate;
 		u32 extdiv;
 
+		clk_set_rate(rcrtc->extclock, mode_clock);
 		extclk = clk_get_rate(rcrtc->extclock);
 
 		if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
@@ -207,7 +235,11 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 			dev_dbg(rcrtc->group->dev->dev,
 				"crtc%u: using external clock\n", rcrtc->index);
 			if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
-				escr = ESCR_DCLKSEL_DCLKIN | 0x01;
+				if (soc_device_match(r8a7795es1))
+					escr = ESCR_DCLKSEL_DCLKIN | 0x01;
+				else
+					escr = ESCR_DCLKSEL_DCLKIN;
+
 				dpll_reg =  DPLLCR_CODE | DPLLCR_M(dpll->m) |
 					DPLLCR_FDPLL(dpll->fdpll) |
 					DPLLCR_CLKE | DPLLCR_N(dpll->n) |
@@ -220,7 +252,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 					dpll_reg |= (DPLLCR_PLCS0 |
 						DPLLCR_INCS_DPLL01_DOTCLKIN02);
 					if (soc_device_match(r8a7795es1))
-						dpll_reg |= (0x01 << 21);
+						dpll_reg |= (0x01 << 20);
 				}
 
 				rcar_du_group_write(rcrtc->group, DPLLCR,
@@ -230,6 +262,8 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		}
 	}
 
+	kfree(dpll);
+
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? ESCR2 : ESCR,
 			    escr);
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? OTAR2 : OTAR, 0);
@@ -237,6 +271,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 	/* Signal polarities */
 	value = ((mode->flags & DRM_MODE_FLAG_PVSYNC) ? DSMR_VSL : 0)
 	      | ((mode->flags & DRM_MODE_FLAG_PHSYNC) ? DSMR_HSL : 0)
+	      | ((mode->flags & DRM_MODE_FLAG_INTERLACE) ? DSMR_ODEV : 0)
 	      | DSMR_DIPM_DISP | DSMR_CSPM;
 	rcar_du_crtc_write(rcrtc, DSMR, value);
 
@@ -368,12 +403,12 @@ static void rcar_du_crtc_update_planes(struct rcar_du_crtc *rcrtc)
 		rcrtc->group->dptsr_planes = dptsr_planes;
 
 		if (rcrtc->group->used_crtcs)
-			rcar_du_group_restart(rcrtc->group);
+			rcar_du_group_restart(rcrtc->group, rcrtc);
 	}
 
 	/* Restart the group if plane sources have changed. */
 	if (rcrtc->group->need_restart)
-		rcar_du_group_restart(rcrtc->group);
+		rcar_du_group_restart(rcrtc->group, rcrtc);
 
 	mutex_unlock(&rcrtc->group->lock);
 
@@ -466,7 +501,7 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 			     (interlaced ? DSYSR_SCM_INT_VIDEO : 0) |
 			     DSYSR_TVM_MASTER);
 
-	rcar_du_group_start_stop(rcrtc->group, true);
+	rcar_du_group_start_stop(rcrtc->group, true, rcrtc);
 
 	/* Enable the VSP compositor. */
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
@@ -514,7 +549,23 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 */
 	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
 
-	rcar_du_group_start_stop(rcrtc->group, false);
+	rcar_du_group_start_stop(rcrtc->group, false, rcrtc);
+
+	rcrtc->started = false;
+}
+
+void rcar_du_crtc_remove_suspend(struct rcar_du_crtc *rcrtc)
+{
+	if (!rcrtc->started)
+		return;
+
+	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? DS2PR : DS1PR, 0);
+
+	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
+
+	rcar_du_group_start_stop(rcrtc->group, false, rcrtc);
+
+	rcar_du_crtc_put(rcrtc);
 
 	rcrtc->started = false;
 }
@@ -668,6 +719,18 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	int irq;
 	int ret;
 
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSPDL_SOURCE)) {
+		if (index == rcdu->info->vspdl_pair_ch)
+			rcrtc->lif_index = 1;
+		else
+			rcrtc->lif_index = 0;
+
+		if ((rcrtc->lif_index == 1) && (rcrtc->vsp->num_brs == 0))
+			return 0;
+	} else {
+		rcrtc->lif_index = 0;
+	}
+
 	/* Get the CRTC clock and the optional external clock. */
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_CRTC_IRQ_CLOCK)) {
 		sprintf(clk_name, "du.%u", index);
@@ -696,10 +759,18 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	rcrtc->group = rgrp;
 	rcrtc->mmio_offset = mmio_offsets[index];
 	rcrtc->index = index;
+	rcrtc->lvds_ch = -1;
 
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
-		primary = &rcrtc->vsp->planes[0].plane;
-	else
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
+		unsigned int primary_num;
+
+		primary_num = rcrtc->vsp->num_planes - rcrtc->vsp->num_brs;
+
+		if (rcrtc->lif_index == 1)
+			primary = &rcrtc->vsp->planes[primary_num].plane;
+		else
+			primary = &rcrtc->vsp->planes[0].plane;
+	} else
 		primary = &rgrp->planes[index % 2].plane;
 
 	ret = drm_crtc_init_with_planes(rcdu->ddev, crtc, primary,

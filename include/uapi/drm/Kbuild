@@ -12,6 +12,7 @@ header-y += nouveau_drm.h
 header-y += qxl_drm.h
 header-y += r128_drm.h
 header-y += radeon_drm.h
+header-y += rcar_du_drm.h
 header-y += savage_drm.h
 header-y += sis_drm.h
 header-y += tegra_drm.h
