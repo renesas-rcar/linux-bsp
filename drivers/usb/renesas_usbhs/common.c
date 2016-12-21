@@ -735,7 +735,10 @@ static int usbhsc_suspend(struct device *dev)
 {
 	struct usbhs_priv *priv = dev_get_drvdata(dev);
 	struct usbhs_mod *mod = usbhs_mod_get_current(priv);
+	struct renesas_usbhs_platform_info *info = dev_get_platdata(dev);
+	struct renesas_usbhs_driver_callback *dfunc = &info->driver_callback;
 
+	dfunc->notify_hotplug = NULL;
 	if (mod) {
 		usbhs_mod_call(priv, stop, priv);
 		usbhs_mod_change(priv, -1);
@@ -751,11 +754,14 @@ static int usbhsc_resume(struct device *dev)
 {
 	struct usbhs_priv *priv = dev_get_drvdata(dev);
 	struct platform_device *pdev = usbhs_priv_to_pdev(priv);
+	struct renesas_usbhs_platform_info *info = dev_get_platdata(dev);
+	struct renesas_usbhs_driver_callback *dfunc = &info->driver_callback;
 
 	if (!usbhsc_flags_has(priv, USBHSF_RUNTIME_PWCTRL))
 		usbhsc_power_ctrl(priv, 1);
 
 	usbhs_platform_call(priv, phy_reset, pdev);
+	dfunc->notify_hotplug = usbhsc_drvcllbck_notify_hotplug;
 
 	usbhsc_drvcllbck_notify_hotplug(pdev);
 
@@ -775,10 +781,9 @@ static int usbhsc_runtime_nop(struct device *dev)
 }
 
 static const struct dev_pm_ops usbhsc_pm_ops = {
-	.suspend		= usbhsc_suspend,
-	.resume			= usbhsc_resume,
-	.runtime_suspend	= usbhsc_runtime_nop,
-	.runtime_resume		= usbhsc_runtime_nop,
+	SET_SYSTEM_SLEEP_PM_OPS(usbhsc_suspend, usbhsc_resume)
+	SET_RUNTIME_PM_OPS(usbhsc_runtime_nop, usbhsc_runtime_nop,
+			NULL)
 };
 
 static struct platform_driver renesas_usbhs_driver = {

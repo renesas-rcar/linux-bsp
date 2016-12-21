@@ -732,10 +732,23 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
  */
 int vsp1_device_get(struct vsp1_device *vsp1)
 {
-	int ret;
+	int ret = 0;
+
+	ret = rcar_fcp_enable(vsp1->fcp);
+	if (ret < 0)
+		return ret;
 
 	ret = pm_runtime_get_sync(vsp1->dev);
-	return ret < 0 ? ret : 0;
+	if (ret < 0)
+		return ret;
+
+	if (vsp1->info) {
+		ret = vsp1_device_init(vsp1);
+		if (ret < 0)
+			return ret;
+	}
+
+	return ret;
 }
 
 /*
@@ -747,59 +760,8 @@ int vsp1_device_get(struct vsp1_device *vsp1)
 void vsp1_device_put(struct vsp1_device *vsp1)
 {
 	pm_runtime_put_sync(vsp1->dev);
-}
-
-/* -----------------------------------------------------------------------------
- * Power Management
- */
-
-static int __maybe_unused vsp1_pm_suspend(struct device *dev)
-{
-	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-
-	vsp1_pipelines_suspend(vsp1);
-	pm_runtime_force_suspend(vsp1->dev);
-
-	return 0;
-}
-
-static int __maybe_unused vsp1_pm_resume(struct device *dev)
-{
-	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-
-	pm_runtime_force_resume(vsp1->dev);
-	vsp1_pipelines_resume(vsp1);
-
-	return 0;
-}
-
-static int __maybe_unused vsp1_pm_runtime_suspend(struct device *dev)
-{
-	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-
 	rcar_fcp_disable(vsp1->fcp);
-
-	return 0;
 }
-
-static int __maybe_unused vsp1_pm_runtime_resume(struct device *dev)
-{
-	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
-	int ret;
-
-	if (vsp1->info) {
-		ret = vsp1_device_init(vsp1);
-		if (ret < 0)
-			return ret;
-	}
-
-	return rcar_fcp_enable(vsp1->fcp);
-}
-
-static const struct dev_pm_ops vsp1_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(vsp1_pm_suspend, vsp1_pm_resume)
-	SET_RUNTIME_PM_OPS(vsp1_pm_runtime_suspend, vsp1_pm_runtime_resume, NULL)
-};
 
 /* -----------------------------------------------------------------------------
  * Platform Driver
@@ -1064,7 +1026,6 @@ static struct platform_driver vsp1_platform_driver = {
 	.remove		= vsp1_remove,
 	.driver		= {
 		.name	= "vsp1",
-		.pm	= &vsp1_pm_ops,
 		.of_match_table = vsp1_of_match,
 	},
 };
