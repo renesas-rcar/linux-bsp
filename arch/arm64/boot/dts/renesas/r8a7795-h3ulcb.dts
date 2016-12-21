@@ -10,7 +10,7 @@
  */
 
 /dts-v1/;
-#include "r8a7795.dtsi"
+#include "r8a7795-es1.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 
@@ -31,6 +31,48 @@
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
 		reg = <0x0 0x48000000 0x0 0x38000000>;
+	};
+
+	memory@500000000 {
+		device_type = "memory";
+		reg = <0x5 0x00000000 0x0 0x40000000>;
+	};
+
+	memory@600000000 {
+		device_type = "memory";
+		reg = <0x6 0x00000000 0x0 0x40000000>;
+	};
+
+	memory@700000000 {
+		device_type = "memory";
+		reg = <0x7 0x00000000 0x0 0x40000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* device specific region for Lossy Decompression */
+		lossy_decompress: linux,lossy_decompress {
+			no-map;
+			reg = <0x00000000 0x54000000 0x0 0x03000000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x18000000>;
+			linux,cma-default;
+		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x70000000 0x0 0x10000000>;
+		};
 	};
 
 	leds {
@@ -54,6 +96,15 @@
 			debounce-interval = <20>;
 			gpios = <&gpio6 11 GPIO_ACTIVE_LOW>;
 		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
 	};
 
 	x12_clk: x12 {
@@ -129,6 +180,74 @@
 			sound-dai = <&ak4613>;
 		};
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+
+	hdmi0-out {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi0_con: endpoint {
+				remote-endpoint = <&rcar_dw_hdmi0_out>;
+			};
+		};
+	};
+};
+
+&du_dotclkin0 {
+	clock-frequency = <148500000>;
+};
+
+&du_dotclkin1 {
+	clock-frequency = <33000000>;
+};
+
+&du_dotclkin2 {
+	clock-frequency = <33000000>;
+};
+
+&du_dotclkin3 {
+	clock-frequency = <108000000>;
+};
+
+&a57_0 {
+	cpu-supply = <&vdd_dvfs>;
+};
+
+&du {
+	status = "okay";
+
+	ports {
+		port@1 {
+			endpoint {
+				remote-endpoint = <&rcar_dw_hdmi0_in>;
+			};
+		};
+	};
+};
+
+&hdmi0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			rcar_dw_hdmi0_in: endpoint {
+				remote-endpoint = <&du_out_hdmi0>;
+			};
+		};
+		port@1 {
+			reg = <1>;
+			rcar_dw_hdmi0_out: endpoint {
+				remote-endpoint = <&hdmi0_con>;
+			};
+		};
+	};
 };
 
 &extal_clk {
@@ -185,6 +304,12 @@
 		groups = "sdhi2_data8", "sdhi2_ctrl";
 		function = "sdhi2";
 		power-source = <1800>;
+	};
+
+	msiof1_pins: spi2 {
+		groups = "msiof1_clk_a", "msiof1_sync_a",
+				"msiof1_rxd_a",  "msiof1_txd_a";
+		function = "msiof1";
 	};
 
 	sound_pins: sound {
@@ -252,6 +377,12 @@
 	};
 };
 
+&i2c4 {
+	status = "okay";
+
+	clock-frequency = <400000>;
+};
+
 &rcar_sound {
 	pinctrl-0 = <&sound_pins &sound_clk_pins>;
 	pinctrl-names = "default";
@@ -262,6 +393,7 @@
 	/* audio_clkout0/1/2/3 */
 	#clock-cells = <1>;
 	clock-frequency = <11289600>;
+	clkout-lr-synchronous;
 
 	status = "okay";
 
@@ -277,6 +409,8 @@
 		 <&cpg CPG_MOD 1026>, <&cpg CPG_MOD 1027>,
 		 <&cpg CPG_MOD 1028>, <&cpg CPG_MOD 1029>,
 		 <&cpg CPG_MOD 1030>, <&cpg CPG_MOD 1031>,
+		 <&cpg CPG_MOD 1020>, <&cpg CPG_MOD 1021>,
+		 <&cpg CPG_MOD 1020>, <&cpg CPG_MOD 1021>,
 		 <&cpg CPG_MOD 1019>, <&cpg CPG_MOD 1018>,
 		 <&audio_clk_a>, <&cs2000>,
 		 <&audio_clk_c>,
@@ -329,29 +463,46 @@
 	clock-frequency = <22579200>;
 };
 
+&i2c_dvfs {
+	status = "okay";
+	clock-frequency = <400000>;
+
+	vdd_dvfs: regulator@30 {
+		compatible = "rohm,bd9571mwv";
+		reg = <0x30>;
+
+		regulator-min-microvolt = <750000>;
+		regulator-max-microvolt = <1030000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+};
+
 &avb {
 	pinctrl-0 = <&avb_pins>;
 	pinctrl-names = "default";
 	renesas,no-ether-link;
 	phy-handle = <&phy0>;
 	status = "okay";
+	phy-gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
 
 	phy0: ethernet-phy@0 {
-		rxc-skew-ps = <900>;
-		rxdv-skew-ps = <0>;
-		rxd0-skew-ps = <0>;
-		rxd1-skew-ps = <0>;
-		rxd2-skew-ps = <0>;
-		rxd3-skew-ps = <0>;
-		txc-skew-ps = <900>;
-		txen-skew-ps = <0>;
-		txd0-skew-ps = <0>;
-		txd1-skew-ps = <0>;
-		txd2-skew-ps = <0>;
-		txd3-skew-ps = <0>;
+		rxc-skew-ps = <1500>;
+		rxdv-skew-ps = <420>; /* default */
+		rxd0-skew-ps = <420>; /* default */
+		rxd1-skew-ps = <420>; /* default */
+		rxd2-skew-ps = <420>; /* default */
+		rxd3-skew-ps = <420>; /* default */
+		txc-skew-ps = <900>; /* default */
+		txen-skew-ps = <420>; /* default */
+		txd0-skew-ps = <420>; /* default */
+		txd1-skew-ps = <420>; /* default */
+		txd2-skew-ps = <420>; /* default */
+		txd3-skew-ps = <420>; /* default */
 		reg = <0>;
 		interrupt-parent = <&gpio2>;
 		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
+		max-speed = <100>;
 	};
 };
 
@@ -367,5 +518,43 @@
 };
 
 &ohci1 {
+	status = "okay";
+};
+
+&msiof_ref_clk {
+	clock-frequency = <66666666>;
+};
+
+&msiof1 {
+	pinctrl-0 = <&msiof1_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	spidev@0 {
+		compatible = "renesas,sh-msiof";
+		reg = <0>;
+		spi-max-frequency = <33333333>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&vspbc {
+	status = "okay";
+};
+
+&vspbd {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
+&vspi1 {
+	status = "okay";
+};
+
+&vspi2 {
 	status = "okay";
 };
