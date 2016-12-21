@@ -1,7 +1,7 @@
 /*
  * rcar_du_lvdsenc.c  --  R-Car Display Unit LVDS Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -14,6 +14,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/io.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
@@ -32,6 +33,7 @@ struct rcar_du_lvdsenc {
 
 	enum rcar_lvds_input input;
 	enum rcar_lvds_mode mode;
+	int gpio_pd;
 };
 
 static void rcar_lvds_write(struct rcar_du_lvdsenc *lvds, u32 reg, u32 data)
@@ -127,14 +129,26 @@ static void rcar_du_lvdsenc_start_gen3(struct rcar_du_lvdsenc *lvds,
 	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
 }
 
-static int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
+int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 				 struct rcar_du_crtc *rcrtc)
 {
 	u32 lvdhcr;
 	int ret;
+	void __iomem *srstclr7_reg;
+	u32 srstclr7_lvds = 0;
 
 	if (lvds->enabled)
 		return 0;
+
+	/* software reset release */
+	if (lvds->index == 0)
+		srstclr7_lvds |= SRCR7_LVDS;
+	srstclr7_reg = ioremap_nocache(SRSTCLR7, 0x04);
+	writel_relaxed(srstclr7_lvds, srstclr7_reg);
+	iounmap(srstclr7_reg);
+
+	if (gpio_is_valid(lvds->gpio_pd))
+		gpio_set_value(lvds->gpio_pd, 1);
 
 	ret = clk_prepare_enable(lvds->clock);
 	if (ret < 0)
@@ -166,15 +180,19 @@ static int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 	else
 		rcar_du_lvdsenc_start_gen3(lvds, rcrtc);
 
+	rcrtc->lvds_ch = lvds->index;
 	lvds->enabled = true;
 
 	return 0;
 }
 
-static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
+int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 {
+	void __iomem *srcr7_reg;
+	u32 srcr7_lvds = 0;
+
 	if (!lvds->enabled)
-		return;
+		return -1;
 
 	rcar_lvds_write(lvds, LVDCR0, 0);
 	rcar_lvds_write(lvds, LVDCR1, 0);
@@ -182,6 +200,36 @@ static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 	clk_disable_unprepare(lvds->clock);
 
 	lvds->enabled = false;
+
+	if (gpio_is_valid(lvds->gpio_pd))
+		gpio_set_value(lvds->gpio_pd, 0);
+
+	if (lvds->index == 0)
+		srcr7_lvds |= SRCR7_LVDS;
+	srcr7_reg = ioremap_nocache(SRCR7, 0x04);
+	writel_relaxed(readl_relaxed(srcr7_reg) | srcr7_lvds, srcr7_reg);
+	iounmap(srcr7_reg);
+
+	return 0;
+}
+
+static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
+{
+	int ret;
+	unsigned int i;
+
+	if (!lvds->enabled)
+		return;
+
+	ret = rcar_du_lvdsenc_stop_suspend(lvds);
+	if (ret < 0)
+		return;
+
+	for (i = 0; i < lvds->dev->num_crtcs; ++i)
+		if (lvds->index == lvds->dev->crtcs[i].lvds_ch)
+			lvds->dev->crtcs[i].lvds_ch = -1;
+
+	return;
 }
 
 int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds, struct drm_crtc *crtc,
@@ -246,6 +294,7 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 	struct rcar_du_lvdsenc *lvds;
 	unsigned int i;
 	int ret;
+	char name[16];
 
 	for (i = 0; i < rcdu->info->num_lvds; ++i) {
 		lvds = devm_kzalloc(&pdev->dev, sizeof(*lvds), GFP_KERNEL);
@@ -256,12 +305,20 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 		lvds->index = i;
 		lvds->input = i ? RCAR_LVDS_INPUT_DU1 : RCAR_LVDS_INPUT_DU0;
 		lvds->enabled = false;
+		/* Get optional backlight GPIO */
+		lvds->gpio_pd = of_get_named_gpio(rcdu->dev->of_node,
+						 "backlight-gpios", 0);
 
 		ret = rcar_du_lvdsenc_get_resources(lvds, pdev);
 		if (ret < 0)
 			return ret;
 
 		rcdu->lvds[i] = lvds;
+
+		sprintf(name, "lvds%u", i);
+		if (gpio_is_valid(lvds->gpio_pd))
+			devm_gpio_request_one(&pdev->dev, lvds->gpio_pd,
+					GPIOF_OUT_INIT_LOW, name);
 	}
 
 	return 0;

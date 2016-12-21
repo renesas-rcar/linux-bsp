@@ -101,29 +101,37 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	rcar_du_group_write(rgrp, DEFR5, DEFR5_CODE | DEFR5_DEFE5);
 
 	rcar_du_group_setup_pins(rgrp);
-	if (rcdu->info->gen == 3) {
-		rcar_du_group_write(rgrp, DEFR6, DEFR6_CODE |
-					  DEFR6_ODPM22_DISP);
-		rcar_du_group_write(rgrp, DEFR10, DEFR10_CODE | DEFR10_DEFE10);
-	}
 
 	if (rcar_du_has(rgrp->dev, RCAR_DU_FEATURE_EXT_CTRL_REGS)) {
 		rcar_du_group_setup_defr8(rgrp);
 
-		/*
-		 * Configure input dot clock routing. We currently hardcode the
-		 * configuration to routing DOTCLKINn to DUn. Register fields
-		 * depend on the DU generation, but the resulting value is 0 in
-		 * all cases.
-		 *
-		 * On Gen2 a single register in the first group controls dot
-		 * clock selection for all channels, while on Gen3 dot clocks
-		 * are setup through per-group registers, only available when
-		 * the group has two channels.
+		/* Configure input dot clock routing. We currently hardcode the
+		 * configuration to routing DOTCLKINn to DUn.
 		 */
-		if ((rcdu->info->gen < 3 && rgrp->index == 0) ||
-		    (rcdu->info->gen == 3 &&  rgrp->num_crtcs > 1))
-			rcar_du_group_write(rgrp, DIDSR, DIDSR_CODE);
+		if (rcdu->info->gen < 3) {
+			rcar_du_group_write(rgrp, DIDSR, DIDSR_CODE |
+				    DIDSR_LCDS_DCLKIN(2) |
+				    DIDSR_LCDS_DCLKIN(1) |
+				    DIDSR_LCDS_DCLKIN(0) |
+				    DIDSR_PDCS_CLK(2, 0) |
+				    DIDSR_PDCS_CLK(1, 0) |
+				    DIDSR_PDCS_CLK(0, 0));
+		} else {
+			if (rgrp->index == 0) {
+				rcar_du_group_write(rgrp,
+				    DIDSR, DIDSR_CODE |
+				    DIDSR_LCDS0_DCLKIN |
+				    DIDSR_PDCS_CLK(1, 0) |
+				    DIDSR_PDCS_CLK(0, 0));
+			} else if ((rgrp->index == 1) &&
+				rcar_du_has(rgrp->dev,
+				RCAR_DU_FEATURE_DIDSR2_REG)) {
+				rcar_du_group_write(rgrp,
+				    DIDSR, DIDSR_CODE |
+				    DIDSR_PDCS_CLK(1, 0) |
+				    DIDSR_PDCS_CLK(0, 0));
+			}
+		}
 	}
 
 	if (rcdu->info->gen >= 3)
@@ -173,14 +181,30 @@ void rcar_du_group_put(struct rcar_du_group *rgrp)
 	--rgrp->use_count;
 }
 
-static void __rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start)
+static void __rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start,
+				       struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
+
+	if (!start) {
+		rcar_du_group_write(rgrp, DSYSR,
+			(rcar_du_group_read(rgrp, DSYSR) &
+			~(DSYSR_DRES | DSYSR_DEN)));
+
+		/* Wait until access to VSP stops after setting both
+		 * the DEN and DRES bits in DSYSRm.
+		 */
+		if (rcdu->info->gen >= 3)
+			rcar_du_crtc_vbk_check(rcrtc);
+	}
+
 	rcar_du_group_write(rgrp, DSYSR,
 		(rcar_du_group_read(rgrp, DSYSR) & ~(DSYSR_DRES | DSYSR_DEN)) |
 		(start ? DSYSR_DEN : DSYSR_DRES));
 }
 
-void rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start)
+void rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start,
+			      struct rcar_du_crtc *rcrtc)
 {
 	/* Many of the configuration bits are only updated when the display
 	 * reset (DRES) bit in DSYSR is set to 1, disabling *both* CRTCs. Some
@@ -195,20 +219,21 @@ void rcar_du_group_start_stop(struct rcar_du_group *rgrp, bool start)
 	 */
 	if (start) {
 		if (rgrp->used_crtcs++ != 0)
-			__rcar_du_group_start_stop(rgrp, false);
-		__rcar_du_group_start_stop(rgrp, true);
+			__rcar_du_group_start_stop(rgrp, false, rcrtc);
+		__rcar_du_group_start_stop(rgrp, true, rcrtc);
 	} else {
 		if (--rgrp->used_crtcs == 0)
-			__rcar_du_group_start_stop(rgrp, false);
+			__rcar_du_group_start_stop(rgrp, false, rcrtc);
 	}
 }
 
-void rcar_du_group_restart(struct rcar_du_group *rgrp)
+void rcar_du_group_restart(struct rcar_du_group *rgrp,
+			   struct rcar_du_crtc *rcrtc)
 {
 	rgrp->need_restart = false;
 
-	__rcar_du_group_start_stop(rgrp, false);
-	__rcar_du_group_start_stop(rgrp, true);
+	__rcar_du_group_start_stop(rgrp, false, rcrtc);
+	__rcar_du_group_start_stop(rgrp, true, rcrtc);
 }
 
 int rcar_du_set_dpad0_vsp1_routing(struct rcar_du_device *rcdu)
