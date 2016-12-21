@@ -26,6 +26,8 @@
 #include <media/v4l2-mc.h>
 #include <media/videobuf2-v4l2.h>
 
+#define DRV_NAME "rcar-vin"
+
 /* Number of HW buffers */
 #define HW_BUFFER_NUM 3
 
@@ -70,6 +72,20 @@ enum rvin_dma_state {
 	RUNNING,
 	STALLED,
 	STOPPING,
+};
+
+/**
+ * struct rvin_uds_regs - UDS register information
+ * @ctrl:		UDS Control register
+ * @scale:		UDS Scaling Factor register
+ * @pass_bwidth:	UDS Passband Register
+ * @clip_size:		UDS Output Size Clipping Register
+ */
+struct rvin_uds_regs {
+	unsigned long ctrl;
+	unsigned long scale;
+	unsigned long pass_bwidth;
+	unsigned long clip_size;
 };
 
 /**
@@ -204,6 +220,8 @@ struct rvin_dev {
 
 	struct v4l2_rect crop;
 	struct v4l2_rect compose;
+
+	unsigned int index;
 };
 
 bool vin_have_bridge(struct rvin_dev *vin);
