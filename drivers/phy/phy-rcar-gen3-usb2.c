@@ -20,6 +20,7 @@
 #include <linux/of_address.h>
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 
@@ -411,6 +412,7 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 	if (IS_ERR(channel->base))
 		return PTR_ERR(channel->base);
 
+	pm_runtime_enable(dev);
 	/* call request_irq for OTG */
 	irq = platform_get_irq(pdev, 0);
 	if (irq >= 0) {
@@ -472,16 +474,45 @@ static int rcar_gen3_phy_usb2_remove(struct platform_device *pdev)
 	if (channel->has_otg)
 		device_remove_file(&pdev->dev, &dev_attr_role);
 
+	pm_runtime_disable(&pdev->dev);
 	return 0;
-};
+}
+
+#ifdef CONFIG_PM_SLEEP
+static int rcar_gen3_phy_suspend(struct device *dev)
+{
+	/* Empty function for now */
+	return 0;
+}
+
+static int rcar_gen3_phy_resume(struct device *dev)
+{
+	int ret = 0;
+
+	if (to_phy(dev))
+		ret = rcar_gen3_phy_usb2_init(to_phy(dev));
+	else {
+		pr_warn("%s: No phy dev\n", __func__);
+		ret = -ENODEV;
+	}
+	return ret;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_gen3_phy_pm_ops,
+			rcar_gen3_phy_suspend, rcar_gen3_phy_resume);
+#define DEV_PM_OPS (&rcar_gen3_phy_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
 
 static struct platform_driver rcar_gen3_phy_usb2_driver = {
 	.driver = {
 		.name		= "phy_rcar_gen3_usb2",
+		.pm		= DEV_PM_OPS,
 		.of_match_table	= rcar_gen3_phy_usb2_match_table,
 	},
 	.probe	= rcar_gen3_phy_usb2_probe,
-	.remove = rcar_gen3_phy_usb2_remove,
+	.remove	= rcar_gen3_phy_usb2_remove,
 };
 module_platform_driver(rcar_gen3_phy_usb2_driver);
 

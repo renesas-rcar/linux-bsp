@@ -94,7 +94,8 @@ EXPORT_SYMBOL_GPL(vsp1_du_if_set_mute);
  * Return 0 on success or a negative error code on failure.
  */
 int vsp1_du_setup_lif(struct device *dev, unsigned int width,
-		      unsigned int height, unsigned int lif_index)
+		      unsigned int height, unsigned int lif_index,
+		      bool suspend)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
@@ -136,17 +137,19 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 
 		media_entity_pipeline_stop(&pipe->output->entity.subdev.entity);
 
-		if (lif_index == 1) {
-			for (i = init_brs_num; i < end_brs_num; ++i) {
-				vsp1->drm->inputs[i].enabled = false;
-				brs->inputs[i].rpf = NULL;
-				pipe->inputs[i] = NULL;
-			}
-		} else {
-			for (i = init_bru_num; i < end_bru_num; ++i) {
-				vsp1->drm->inputs[i].enabled = false;
-				bru->inputs[i].rpf = NULL;
-				pipe->inputs[i] = NULL;
+		if (!suspend) {
+			if (lif_index == 1) {
+				for (i = init_brs_num; i < end_brs_num; ++i) {
+					vsp1->drm->inputs[i].enabled = false;
+					brs->inputs[i].rpf = NULL;
+					pipe->inputs[i] = NULL;
+				}
+			} else {
+				for (i = init_bru_num; i < end_bru_num; ++i) {
+					vsp1->drm->inputs[i].enabled = false;
+					bru->inputs[i].rpf = NULL;
+					pipe->inputs[i] = NULL;
+				}
 			}
 		}
 
