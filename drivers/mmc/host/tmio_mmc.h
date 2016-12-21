@@ -19,6 +19,7 @@
 #define TMIO_MMC_H
 
 #include <linux/dmaengine.h>
+#include <linux/completion.h>
 #include <linux/highmem.h>
 #include <linux/mutex.h>
 #include <linux/pagemap.h>
@@ -45,6 +46,7 @@
 #define CTL_DMA_ENABLE 0xd8
 #define CTL_RESET_SD 0xe0
 #define CTL_VERSION 0xe2
+#define CTL_SDIF_MODE 0xe6
 #define CTL_SDIO_REGS 0x100
 #define CTL_CLK_AND_WAIT_CTL 0x138
 #define CTL_RESET_SDIO 0x1e0
@@ -104,6 +106,7 @@ struct tmio_mmc_host;
 
 struct tmio_mmc_dma {
 	enum dma_slave_buswidth dma_buswidth;
+	bool sdbuf_64bit;
 	bool (*filter)(struct dma_chan *chan, void *arg);
 	void (*enable)(struct tmio_mmc_host *host, bool enable);
 };
@@ -154,6 +157,7 @@ struct tmio_mmc_host {
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
 	u32			scc_tappos;
+	struct completion	completion;
 
 	/* Mandatory callback */
 	int (*clk_enable)(struct tmio_mmc_host *host);
@@ -180,6 +184,11 @@ struct tmio_mmc_host {
 	/* Tuning values: 1 for success, 0 for failure */
 	DECLARE_BITMAP(taps, BITS_PER_BYTE * sizeof(long));
 	unsigned int tap_num;
+	void (*prepare_hs400_tuning)(struct mmc_host *mmc, struct mmc_ios *ios);
+
+	/* Sampling data comparison: 1 for match. 0 for mismatch */
+	DECLARE_BITMAP(smpcmp, BITS_PER_BYTE * sizeof(long));
+	unsigned int (*compare_scc_data)(struct tmio_mmc_host *host);
 };
 
 struct tmio_mmc_host *tmio_mmc_host_alloc(struct platform_device *pdev);

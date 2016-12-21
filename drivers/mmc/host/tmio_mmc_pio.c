@@ -1,8 +1,8 @@
 /*
  * linux/drivers/mmc/host/tmio_mmc_pio.c
  *
+ * Copyright (C) 2016 Renesas Electronics Corporation
  * Copyright (C) 2016 Sang Engineering, Wolfram Sang
- * Copyright (C) 2015-16 Renesas Electronics Corporation
  * Copyright (C) 2011 Guennadi Liakhovetski
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
@@ -161,8 +161,9 @@ static void tmio_mmc_clk_start(struct tmio_mmc_host *host)
 	msleep(host->pdata->flags & TMIO_MMC_MIN_RCAR2 ? 1 : 10);
 
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
-		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0100);
-		msleep(10);
+		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, CLK_CTL_SCLKEN);
+		if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
+			msleep(10);
 	}
 }
 
@@ -170,7 +171,8 @@ static void tmio_mmc_clk_stop(struct tmio_mmc_host *host)
 {
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
 		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0000);
-		msleep(10);
+		if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
+			msleep(10);
 	}
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
@@ -197,8 +199,13 @@ static void tmio_mmc_set_clock(struct tmio_mmc_host *host,
 		clock <<= 1;
 
 	/* 1/1 clock is option */
-	if ((host->pdata->flags & TMIO_MMC_CLK_ACTUAL) && ((clk >> 22) & 0x1))
-		clk |= 0xff;
+	if ((host->pdata->flags & TMIO_MMC_CLK_ACTUAL) &&
+	    ((clk >> 22) & 0x1)) {
+		if (!(host->mmc->ios.timing == MMC_TIMING_MMC_HS400))
+			clk |= 0xff;
+		else
+			clk &= ~0xff;
+	}
 
 	if (host->set_clk_div)
 		host->set_clk_div(host->pdev, (clk >> 22) & 1);
@@ -231,6 +238,7 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 						  delayed_reset_work.work);
 	struct mmc_request *mrq;
 	unsigned long flags;
+	u16 clk;
 
 	spin_lock_irqsave(&host->lock, flags);
 	mrq = host->mrq;
@@ -264,7 +272,9 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
+	clk = sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL) & 0x0ff;
 	tmio_mmc_reset(host);
+	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, clk | 0x100);
 
 	/* Ready for new calls */
 	host->mrq = NULL;
@@ -278,6 +288,7 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 {
 	struct mmc_request *mrq;
 	unsigned long flags;
+	struct mmc_command *cmd = host->cmd;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -301,6 +312,12 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 
 	if (host->check_scc_error)
 		host->check_scc_error(host);
+
+	if (cmd == mrq->sbc) {
+		/* finish SET_BLOCK_COUNT request */
+		complete(&host->completion);
+		return;
+	}
 
 	mmc_request_done(host->mmc, mrq);
 }
@@ -333,9 +350,18 @@ static int tmio_mmc_start_command(struct tmio_mmc_host *host, struct mmc_command
 	u32 irq_mask = TMIO_MASK_CMD;
 
 	/* CMD12 is handled by hardware */
-	if (cmd->opcode == MMC_STOP_TRANSMISSION && !cmd->arg) {
-		sd_ctrl_write16(host, CTL_STOP_INTERNAL_ACTION, 0x001);
-		return 0;
+	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2)) {
+		if (cmd->opcode == MMC_STOP_TRANSMISSION && !cmd->arg) {
+			sd_ctrl_write16(host, CTL_STOP_INTERNAL_ACTION, 0x001);
+			return 0;
+		}
+	} else if (cmd->opcode == MMC_STOP_TRANSMISSION && !cmd->arg) {
+		u32 status = sd_ctrl_read16_and_16_as_32(host, CTL_STATUS);
+
+		if (status & TMIO_STAT_CMD_BUSY) {
+			sd_ctrl_write16(host, CTL_STOP_INTERNAL_ACTION, 0x001);
+			return 0;
+		}
 	}
 
 	switch (mmc_resp_type(cmd)) {
@@ -369,7 +395,8 @@ static int tmio_mmc_start_command(struct tmio_mmc_host *host, struct mmc_command
 			 * multiple block transfer
 			 */
 			if ((host->pdata->flags & TMIO_MMC_HAVE_CMD12_CTRL) &&
-			    (cmd->opcode == SD_IO_RW_EXTENDED))
+			    ((cmd->opcode == SD_IO_RW_EXTENDED) ||
+			     host->mrq->sbc))
 				c |= NO_CMD12_ISSUE;
 		}
 		if (data->flags & MMC_DATA_READ)
@@ -767,6 +794,8 @@ static void tmio_mmc_hw_reset(struct mmc_host *mmc)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 
+	tmio_mmc_reset(host);
+
 	if (host->hw_reset)
 		host->hw_reset(host);
 }
@@ -776,16 +805,14 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	int i, ret = 0;
 
-	if (!host->tap_num) {
-		if (!host->init_tuning || !host->select_tuning)
-			/* Tuning is not supported */
-			goto out;
+	if (!host->init_tuning || !host->select_tuning)
+		/* Tuning is not supported */
+		goto out;
 
-		host->tap_num = host->init_tuning(host);
-		if (!host->tap_num)
-			/* Tuning is not supported */
-			goto out;
-	}
+	host->tap_num = host->init_tuning(host);
+	if (!host->tap_num)
+		/* Tuning is not supported */
+		goto out;
 
 	if (host->tap_num * 2 >= sizeof(host->taps) * BITS_PER_BYTE) {
 		dev_warn_once(&host->pdev->dev,
@@ -795,6 +822,7 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	}
 
 	bitmap_zero(host->taps, host->tap_num * 2);
+	bitmap_zero(host->smpcmp, host->tap_num * 2);
 
 	/* Issue CMD19 twice for each tap */
 	for (i = 0; i < 2 * host->tap_num; i++) {
@@ -802,10 +830,11 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 			host->prepare_tuning(host, i % host->tap_num);
 
 		ret = mmc_send_tuning(mmc, opcode, NULL);
-		if (ret && ret != -EILSEQ)
-			goto out;
 		if (ret == 0)
 			set_bit(i, host->taps);
+		if (host->compare_scc_data)
+			if (!host->compare_scc_data(host))
+				set_bit(i, host->smpcmp);
 
 		mdelay(1);
 	}
@@ -827,6 +856,7 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	unsigned long flags;
 	int ret;
+	u32 opcode;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -845,6 +875,36 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	host->mrq = mrq;
 
 	spin_unlock_irqrestore(&host->lock, flags);
+
+	if (mrq->sbc) {
+		init_completion(&host->completion);
+		ret = tmio_mmc_start_command(host, mrq->sbc);
+		if (ret)
+			goto fail;
+		ret = wait_for_completion_timeout(&host->completion,
+					msecs_to_jiffies(CMDREQ_TIMEOUT));
+		if (ret < 0)
+			goto fail;
+		if (!ret) {
+			ret = -ETIMEDOUT;
+			goto fail;
+		}
+		host->last_req_ts = jiffies;
+		host->mrq = mrq;
+		if (((host->check_scc_error && host->check_scc_error(host)) ||
+			(mrq->cmd->error == -EILSEQ)) && host->mmc->card) {
+			if (mmc_card_mmc(host->mmc->card))
+				opcode = MMC_SEND_TUNING_BLOCK_HS200;
+			else
+				opcode = MMC_SEND_TUNING_BLOCK;
+			/* Start retuning */
+			ret = tmio_mmc_execute_tuning(mmc, opcode);
+			if (ret)
+				goto fail;
+			/* Restore request */
+			host->mrq = mrq;
+		}
+	}
 
 	if (mrq->data) {
 		ret = tmio_mmc_start_data(host, mrq->data);
@@ -948,6 +1008,11 @@ static void tmio_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	struct device *dev = &host->pdev->dev;
 	unsigned long flags;
+
+	/* HS400 Register setting */
+	if (ios->timing == MMC_TIMING_MMC_HS400)
+		if (host->prepare_hs400_tuning)
+			host->prepare_hs400_tuning(mmc, ios);
 
 	mutex_lock(&host->ios_lock);
 
@@ -1142,10 +1207,10 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host,
 
 	mmc->caps |= MMC_CAP_4_BIT_DATA | pdata->capabilities;
 	mmc->caps2 |= pdata->capabilities2;
-	mmc->max_segs = 32;
+	mmc->max_segs = pdata->max_segs ? pdata->max_segs : 32;
 	mmc->max_blk_size = 512;
-	mmc->max_blk_count = (PAGE_SIZE / mmc->max_blk_size) *
-		mmc->max_segs;
+	mmc->max_blk_count = pdata->max_blk_count ? :
+		(PAGE_SIZE / mmc->max_blk_size) * mmc->max_segs;
 	mmc->max_req_size = mmc->max_blk_size * mmc->max_blk_count;
 	mmc->max_seg_size = mmc->max_req_size;
 
