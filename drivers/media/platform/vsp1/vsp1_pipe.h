@@ -1,7 +1,7 @@
 /*
  * vsp1_pipe.h  --  R-Car VSP1 Pipeline
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2016 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -105,6 +105,7 @@ struct vsp1_pipeline {
 	struct vsp1_rwpf *inputs[VSP1_MAX_RPF];
 	struct vsp1_rwpf *output;
 	struct vsp1_entity *bru;
+	struct vsp1_entity *brs;
 	struct vsp1_entity *hgo;
 	struct vsp1_entity *hgt;
 	struct vsp1_entity *lif;
@@ -112,12 +113,15 @@ struct vsp1_pipeline {
 	struct vsp1_entity *uds_input;
 
 	struct list_head entities;
+	wait_queue_head_t event_wait;
 
 	struct vsp1_dl_list *dl;
 
 	unsigned int partitions;
 	struct v4l2_rect partition;
 	struct v4l2_rect part_table[VSP1_PIPE_MAX_PARTITIONS];
+
+	bool vmute_flag;
 };
 
 void vsp1_pipeline_reset(struct vsp1_pipeline *pipe);

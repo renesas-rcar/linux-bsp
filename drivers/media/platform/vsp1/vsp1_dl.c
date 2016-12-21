@@ -1,7 +1,7 @@
 /*
  * vsp1_dl.h  --  R-Car VSP1 Display List
  *
- * Copyright (C) 2015 Renesas Corporation
+ * Copyright (C) 2015-2016 Renesas Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -15,12 +15,18 @@
 #include <linux/dma-mapping.h>
 #include <linux/gfp.h>
 #include <linux/slab.h>
+#include <linux/sys_soc.h>
 #include <linux/workqueue.h>
+
+#include <media/rcar-fcp.h>
 
 #include "vsp1.h"
 #include "vsp1_dl.h"
+#include "vsp1_pipe.h"
+#include "vsp1_rwpf.h"
 
 #define VSP1_DL_NUM_ENTRIES		256
+#define VSP1_DL_EXT_OFFSET		0x1000
 
 #define VSP1_DLH_INT_ENABLE		(1 << 1)
 #define VSP1_DLH_AUTO_START		(1 << 0)
@@ -35,6 +41,24 @@ struct vsp1_dl_header {
 	struct vsp1_dl_header_list lists[8];
 	u32 next_header;
 	u32 flags;
+	/* if (VI6_DL_EXT_CTRL.EXT) */
+	u32 zero_bits;
+	/* zero_bits:6 + pre_ext_dl_exec:1 + */
+	/* post_ext_dl_exec:1 + zero_bits:8 + pre_ext_dl_num_cmd:16 */
+	u32 pre_post_num;
+	u32 pre_ext_dl_plist;
+	/* zero_bits:16 + post_ext_dl_num_cmd:16 */
+	u32 post_ext_dl_num_cmd;
+	u32 post_ext_dl_p_list;
+} __attribute__((__packed__));
+
+struct vsp1_ext_dl_body {
+	u32 ext_dl_cmd[2];
+	u32 ext_dl_data[2];
+} __attribute__((__packed__));
+
+struct vsp1_ext_addr {
+	u32 addr;
 } __attribute__((__packed__));
 
 struct vsp1_dl_entry {
@@ -68,6 +92,10 @@ struct vsp1_dl_body {
  * @dlm: the display list manager
  * @header: display list header, NULL for headerless lists
  * @dma: DMA address for the header
+ * @ext_body: display list extended body
+ * @ext_dma: DMA address for extended body
+ * @src_dst_addr: display list (Auto-FLD) source/destination address
+ * @ext_addr_dma: DMA address for display list (Auto-FLD)
  * @body0: first display list body
  * @fragments: list of extra display list bodies
  * @chain: entry in the display list partition chain
@@ -78,6 +106,12 @@ struct vsp1_dl_list {
 
 	struct vsp1_dl_header *header;
 	dma_addr_t dma;
+
+	struct vsp1_ext_dl_body *ext_body;
+	dma_addr_t ext_dma;
+
+	struct vsp1_ext_addr *src_dst_addr;
+	dma_addr_t ext_addr_dma;
 
 	struct vsp1_dl_body body0;
 	struct list_head fragments;
@@ -119,6 +153,11 @@ struct vsp1_dl_manager {
 	struct list_head gc_fragments;
 };
 
+static const struct soc_device_attribute r8a7795es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 /* -----------------------------------------------------------------------------
  * Display List Body Management
  */
@@ -133,12 +172,13 @@ static int vsp1_dl_body_init(struct vsp1_device *vsp1,
 			     size_t extra_size)
 {
 	size_t size = num_entries * sizeof(*dlb->entries) + extra_size;
+	struct device *fcp = rcar_fcp_get_device(vsp1->fcp);
 
 	dlb->vsp1 = vsp1;
 	dlb->size = size;
 
-	dlb->entries = dma_alloc_wc(vsp1->dev, dlb->size, &dlb->dma,
-				    GFP_KERNEL);
+	dlb->entries = dma_alloc_wc(fcp ? fcp : vsp1->dev, dlb->size +
+			 (VSP1_DL_EXT_OFFSET * 2), &dlb->dma, GFP_KERNEL);
 	if (!dlb->entries)
 		return -ENOMEM;
 
@@ -150,7 +190,10 @@ static int vsp1_dl_body_init(struct vsp1_device *vsp1,
  */
 static void vsp1_dl_body_cleanup(struct vsp1_dl_body *dlb)
 {
-	dma_free_wc(dlb->vsp1->dev, dlb->size, dlb->entries, dlb->dma);
+	struct device *fcp = rcar_fcp_get_device(dlb->vsp1->fcp);
+
+	dma_free_wc(fcp ? fcp : dlb->vsp1->dev, dlb->size +
+			 (VSP1_DL_EXT_OFFSET * 2), dlb->entries, dlb->dma);
 }
 
 /**
@@ -227,6 +270,102 @@ void vsp1_dl_fragment_write(struct vsp1_dl_body *dlb, u32 reg, u32 data)
  * Display List Transaction Management
  */
 
+void vsp1_dl_set_addr_auto_fld(struct vsp1_dl_list *dl, struct vsp1_rwpf *rpf)
+{
+	const struct vsp1_format_info *fmtinfo = rpf->fmtinfo;
+	const struct v4l2_rect *crop;
+	u32 y_top_index, y_bot_index;
+	u32 u_top_index, u_bot_index;
+	u32 v_top_index, v_bot_index;
+	dma_addr_t y_top_addr, y_bot_addr;
+	dma_addr_t u_top_addr, u_bot_addr;
+	dma_addr_t v_top_addr, v_bot_addr;
+	u32 width, stride;
+
+	crop = vsp1_rwpf_get_crop(rpf, rpf->entity.config);
+	width = ALIGN(crop->width, 16);
+	stride = width * fmtinfo->bpp[0] / 8;
+
+	y_top_index = rpf->entity.index * 8;
+	y_bot_index = rpf->entity.index * 8 + 1;
+	u_top_index = rpf->entity.index * 8 + 2;
+	u_bot_index = rpf->entity.index * 8 + 3;
+	v_top_index = rpf->entity.index * 8 + 4;
+	v_bot_index = rpf->entity.index * 8 + 5;
+
+	switch (rpf->fmtinfo->fourcc) {
+	case V4L2_PIX_FMT_YUV420M:
+		y_top_addr = rpf->mem.addr[0] + rpf->offsets[0];
+		y_bot_addr = rpf->mem.addr[0] + rpf->offsets[0] + stride;
+		u_top_addr = rpf->mem.addr[1] + rpf->offsets[1];
+		u_bot_addr = rpf->mem.addr[1] + rpf->offsets[1] + stride / 2;
+		v_top_addr = rpf->mem.addr[2] + rpf->offsets[1];
+		v_bot_addr = rpf->mem.addr[2] + rpf->offsets[1] + stride / 2;
+		break;
+
+	case V4L2_PIX_FMT_YUV422M:
+		y_top_addr = rpf->mem.addr[0] + rpf->offsets[0];
+		y_bot_addr = rpf->mem.addr[0] + rpf->offsets[0] + stride * 2;
+		u_top_addr = rpf->mem.addr[1] + rpf->offsets[1];
+		u_bot_addr = rpf->mem.addr[1] + rpf->offsets[1] + stride;
+		v_top_addr = rpf->mem.addr[2] + rpf->offsets[1];
+		v_bot_addr = rpf->mem.addr[2] + rpf->offsets[1] + stride;
+		break;
+
+	case V4L2_PIX_FMT_YUV444M:
+		y_top_addr = rpf->mem.addr[0] + rpf->offsets[0];
+		y_bot_addr = rpf->mem.addr[0] + rpf->offsets[0] + stride * 3;
+		u_top_addr = rpf->mem.addr[1] + rpf->offsets[1];
+		u_bot_addr = rpf->mem.addr[1] + rpf->offsets[1] + stride * 3;
+		v_top_addr = rpf->mem.addr[2] + rpf->offsets[1];
+		v_bot_addr = rpf->mem.addr[2] + rpf->offsets[1] + stride * 3;
+		break;
+
+	case V4L2_PIX_FMT_YVU420M:
+		y_top_addr = rpf->mem.addr[0] + rpf->offsets[0];
+		y_bot_addr = rpf->mem.addr[0] + rpf->offsets[0] + stride;
+		u_top_addr = rpf->mem.addr[2] + rpf->offsets[1];
+		u_bot_addr = rpf->mem.addr[2] + rpf->offsets[1] + stride / 2;
+		v_top_addr = rpf->mem.addr[1] + rpf->offsets[1];
+		v_bot_addr = rpf->mem.addr[1] + rpf->offsets[1] + stride / 2;
+		break;
+
+	case V4L2_PIX_FMT_YVU422M:
+		y_top_addr = rpf->mem.addr[0] + rpf->offsets[0];
+		y_bot_addr = rpf->mem.addr[0] + rpf->offsets[0] + stride * 2;
+		u_top_addr = rpf->mem.addr[2] + rpf->offsets[1];
+		u_bot_addr = rpf->mem.addr[2] + rpf->offsets[1] + stride;
+		v_top_addr = rpf->mem.addr[1] + rpf->offsets[1];
+		v_bot_addr = rpf->mem.addr[1] + rpf->offsets[1] + stride;
+		break;
+
+	case V4L2_PIX_FMT_YVU444M:
+		y_top_addr = rpf->mem.addr[0] + rpf->offsets[0];
+		y_bot_addr = rpf->mem.addr[0] + rpf->offsets[0] + stride * 3;
+		u_top_addr = rpf->mem.addr[2] + rpf->offsets[1];
+		u_bot_addr = rpf->mem.addr[2] + rpf->offsets[1] + stride * 3;
+		v_top_addr = rpf->mem.addr[1] + rpf->offsets[1];
+		v_bot_addr = rpf->mem.addr[1] + rpf->offsets[1] + stride * 3;
+		break;
+
+	default:
+		y_top_addr = rpf->mem.addr[0] + rpf->offsets[0];
+		y_bot_addr = rpf->mem.addr[0] + rpf->offsets[0] + stride;
+		u_top_addr = rpf->mem.addr[1] + rpf->offsets[1];
+		u_bot_addr = rpf->mem.addr[1] + rpf->offsets[1] + stride;
+		v_top_addr = rpf->mem.addr[2] + rpf->offsets[1];
+		v_bot_addr = rpf->mem.addr[2] + rpf->offsets[1] + stride;
+		break;
+	}
+
+	dl->src_dst_addr[y_top_index].addr = y_top_addr;
+	dl->src_dst_addr[y_bot_index].addr = y_bot_addr;
+	dl->src_dst_addr[u_top_index].addr = u_top_addr;
+	dl->src_dst_addr[u_bot_index].addr = u_bot_addr;
+	dl->src_dst_addr[v_top_index].addr = v_top_addr;
+	dl->src_dst_addr[v_bot_index].addr = v_bot_addr;
+}
+
 static struct vsp1_dl_list *vsp1_dl_list_alloc(struct vsp1_dl_manager *dlm)
 {
 	struct vsp1_dl_list *dl;
@@ -262,6 +401,16 @@ static struct vsp1_dl_list *vsp1_dl_list_alloc(struct vsp1_dl_manager *dlm)
 
 		dl->header = ((void *)dl->body0.entries) + header_offset;
 		dl->dma = dl->body0.dma + header_offset;
+
+		dl->ext_body = ((void *)dl->body0.entries) +
+				 header_offset + VSP1_DL_EXT_OFFSET;
+		dl->ext_dma = dl->body0.dma + header_offset +
+				 VSP1_DL_EXT_OFFSET;
+
+		dl->src_dst_addr = ((void *)dl->body0.entries) +
+				 header_offset + (VSP1_DL_EXT_OFFSET * 2);
+		dl->ext_addr_dma = dl->body0.dma + header_offset +
+				 (VSP1_DL_EXT_OFFSET * 2);
 
 		memset(dl->header, 0, sizeof(*dl->header));
 		dl->header->lists[0].addr = dl->body0.dma;
@@ -472,6 +621,30 @@ static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last)
 		dl->header->flags = VSP1_DLH_AUTO_START;
 	} else {
 		dl->header->flags = VSP1_DLH_INT_ENABLE;
+		if (dl->dlm->vsp1->info->header_mode) {
+			dl->header->next_header = dl->dma;
+			dl->header->flags |= VSP1_DLH_AUTO_START;
+		}
+
+		if (dl->dlm->vsp1->auto_fld_mode) {
+			/* Set extended display list header */
+			/* pre_ext_dl_exec = 1, pre_ext_dl_num_cmd = 1 */
+			dl->header->pre_post_num = (1 << 25) | (0x01);
+			dl->header->pre_ext_dl_plist = dl->ext_dma;
+			dl->header->post_ext_dl_num_cmd = 0;
+			dl->header->post_ext_dl_p_list = 0;
+
+			/* Set extended display list (Auto-FLD) */
+			/* Set opecode */
+			dl->ext_body->ext_dl_cmd[0] = 0x00000003;
+			/* RPF[0]-[4] address is updated */
+			dl->ext_body->ext_dl_cmd[1] = 0x001f0001;
+
+			/* Set pointer of source/destination address */
+			dl->ext_body->ext_dl_data[0] = dl->ext_addr_dma;
+			/* Should be set to 0 */
+			dl->ext_body->ext_dl_data[1] = 0;
+		}
 	}
 }
 
@@ -507,7 +680,12 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl)
 		 */
 		vsp1_write(vsp1, VI6_DL_HDR_ADDR(dlm->index), dl->dma);
 
+		if (soc_device_match(r8a7795es1))
+			vsp1->dl_addr = dl->dma;
+
 		dlm->active = dl;
+		__vsp1_dl_list_put(dl);
+
 		goto done;
 	}
 
@@ -530,6 +708,12 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl)
 	vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), dl->body0.dma);
 	vsp1_write(vsp1, VI6_DL_BODY_SIZE, VI6_DL_BODY_SIZE_UPD |
 		   (dl->body0.num_entries * sizeof(*dl->header->lists)));
+
+	if (soc_device_match(r8a7795es1)) {
+		vsp1->dl_addr = dl->body0.dma;
+		vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
+			(dl->body0.num_entries * sizeof(*dl->header->lists));
+	}
 
 	__vsp1_dl_list_put(dlm->queued);
 	dlm->queued = dl;
@@ -600,6 +784,12 @@ void vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm)
 			   (dl->body0.num_entries *
 			    sizeof(*dl->header->lists)));
 
+		if (soc_device_match(r8a7795es1)) {
+			vsp1->dl_addr = dl->body0.dma;
+			vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
+				(dl->body0.num_entries *
+				 sizeof(*dl->header->lists));
+		}
 		dlm->queued = dl;
 		dlm->pending = NULL;
 	}
@@ -609,20 +799,26 @@ done:
 }
 
 /* Hardware Setup */
-void vsp1_dlm_setup(struct vsp1_device *vsp1)
+void vsp1_dlm_setup(struct vsp1_device *vsp1, unsigned int lif_index)
 {
 	u32 ctrl = (256 << VI6_DL_CTRL_AR_WAIT_SHIFT)
 		 | VI6_DL_CTRL_DC2 | VI6_DL_CTRL_DC1 | VI6_DL_CTRL_DC0
 		 | VI6_DL_CTRL_DLE;
 
+	if ((vsp1->info->header_mode) && (vsp1->auto_fld_mode)) {
+		vsp1_write(vsp1, VI6_DL_EXT_CTRL(lif_index),
+			(0x02 << VI6_DL_EXT_CTRL_POLINT_SHIFT)
+			| VI6_DL_EXT_CTRL_DLPRI | VI6_DL_EXT_CTRL_EXT);
+	}
+
 	/* The DRM pipeline operates with display lists in Continuous Frame
 	 * Mode, all other pipelines use manual start.
 	 */
-	if (vsp1->drm)
+	if ((vsp1->drm) && (!vsp1->info->header_mode))
 		ctrl |= VI6_DL_CTRL_CFM0 | VI6_DL_CTRL_NH0;
 
 	vsp1_write(vsp1, VI6_DL_CTRL, ctrl);
-	vsp1_write(vsp1, VI6_DL_SWAP, VI6_DL_SWAP_LWS);
+	vsp1_write(vsp1, VI6_DL_SWAP(lif_index), VI6_DL_SWAP_LWS);
 }
 
 void vsp1_dlm_reset(struct vsp1_dl_manager *dlm)
@@ -688,7 +884,7 @@ struct vsp1_dl_manager *vsp1_dlm_create(struct vsp1_device *vsp1,
 		return NULL;
 
 	dlm->index = index;
-	dlm->mode = index == 0 && !vsp1->info->uapi
+	dlm->mode = index == 0 && !vsp1->info->uapi && !vsp1->info->header_mode
 		  ? VSP1_DL_MODE_HEADERLESS : VSP1_DL_MODE_HEADER;
 	dlm->vsp1 = vsp1;
 
@@ -713,11 +909,15 @@ struct vsp1_dl_manager *vsp1_dlm_create(struct vsp1_device *vsp1,
 void vsp1_dlm_destroy(struct vsp1_dl_manager *dlm)
 {
 	struct vsp1_dl_list *dl, *next;
+	struct vsp1_device *vsp1 = dlm->vsp1;
 
 	if (!dlm)
 		return;
 
 	cancel_work_sync(&dlm->gc_work);
+
+	if (vsp1->info->header_mode)
+		return;
 
 	list_for_each_entry_safe(dl, next, &dlm->free, list) {
 		list_del(&dl->list);
