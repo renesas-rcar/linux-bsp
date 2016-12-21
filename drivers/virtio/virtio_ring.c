@@ -257,13 +257,42 @@ static struct vring_desc *alloc_indirect(struct virtqueue *_vq,
 	return desc;
 }
 
+static inline int vring_desc_set(struct virtqueue *_vq,
+				  struct vring_desc *desc,
+				  struct scatterlist *sg,
+				  unsigned int flags,
+				  enum dma_data_direction direction,
+				  bool dma)
+{
+	int ret = 0;
+	struct vring_virtqueue *vq = to_vvq(_vq);
+	dma_addr_t addr;
+
+	if (dma)
+		addr = sg_dma_address(sg);
+	else {
+		addr = vring_map_one_sg(vq, sg, direction);
+		ret = vring_mapping_error(vq, addr);
+		if (ret)
+			return ret;
+	}
+
+	desc->flags = cpu_to_virtio16(_vq->vdev, flags);
+	desc->addr = cpu_to_virtio64(_vq->vdev, addr);
+	desc->len = cpu_to_virtio32(_vq->vdev,
+		dma ? sg_dma_len(sg) : sg->length);
+
+	return ret;
+}
+
 static inline int virtqueue_add(struct virtqueue *_vq,
 				struct scatterlist *sgs[],
 				unsigned int total_sg,
 				unsigned int out_sgs,
 				unsigned int in_sgs,
 				void *data,
-				gfp_t gfp)
+				gfp_t gfp,
+				bool dma)
 {
 	struct vring_virtqueue *vq = to_vvq(_vq);
 	struct scatterlist *sg;
@@ -301,7 +330,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 
 	/* If the host supports indirect descriptor tables, and we have multiple
 	 * buffers, then go indirect. FIXME: tune this threshold */
-	if (vq->indirect && total_sg > 1 && vq->vq.num_free)
+	if (!dma && vq->indirect && total_sg > 1 && vq->vq.num_free)
 		desc = alloc_indirect(_vq, total_sg, gfp);
 	else
 		desc = NULL;
@@ -335,26 +364,23 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 
 	for (n = 0; n < out_sgs; n++) {
 		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
-			dma_addr_t addr = vring_map_one_sg(vq, sg, DMA_TO_DEVICE);
-			if (vring_mapping_error(vq, addr))
+			int ret = vring_desc_set(_vq, desc + i, sg,
+				       VRING_DESC_F_NEXT, DMA_TO_DEVICE, dma);
+			if (ret)
 				goto unmap_release;
 
-			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
-			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
-			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			prev = i;
 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
 		}
 	}
 	for (; n < (out_sgs + in_sgs); n++) {
 		for (sg = sgs[n]; sg; sg = sg_next(sg)) {
-			dma_addr_t addr = vring_map_one_sg(vq, sg, DMA_FROM_DEVICE);
-			if (vring_mapping_error(vq, addr))
+			int ret = vring_desc_set(_vq, desc + i, sg,
+				       VRING_DESC_F_NEXT | VRING_DESC_F_WRITE,
+				       DMA_FROM_DEVICE, dma);
+			if (ret)
 				goto unmap_release;
 
-			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT | VRING_DESC_F_WRITE);
-			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
-			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			prev = i;
 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
 		}
@@ -461,7 +487,8 @@ int virtqueue_add_sgs(struct virtqueue *_vq,
 		for (sg = sgs[i]; sg; sg = sg_next(sg))
 			total_sg++;
 	}
-	return virtqueue_add(_vq, sgs, total_sg, out_sgs, in_sgs, data, gfp);
+	return virtqueue_add(_vq, sgs, total_sg, out_sgs, in_sgs, data, gfp,
+			     false);
 }
 EXPORT_SYMBOL_GPL(virtqueue_add_sgs);
 
@@ -483,9 +510,18 @@ int virtqueue_add_outbuf(struct virtqueue *vq,
 			 void *data,
 			 gfp_t gfp)
 {
-	return virtqueue_add(vq, &sg, num, 1, 0, data, gfp);
+	return virtqueue_add(vq, &sg, num, 1, 0, data, gfp, false);
 }
 EXPORT_SYMBOL_GPL(virtqueue_add_outbuf);
+
+int dma_virtqueue_add_outbuf(struct virtqueue *vq,
+			     struct scatterlist *sg, unsigned int num,
+			     void *data,
+			     gfp_t gfp)
+{
+	return virtqueue_add(vq, &sg, num, 1, 0, data, gfp, true);
+}
+EXPORT_SYMBOL_GPL(dma_virtqueue_add_outbuf);
 
 /**
  * virtqueue_add_inbuf - expose input buffers to other end
@@ -505,9 +541,18 @@ int virtqueue_add_inbuf(struct virtqueue *vq,
 			void *data,
 			gfp_t gfp)
 {
-	return virtqueue_add(vq, &sg, num, 0, 1, data, gfp);
+	return virtqueue_add(vq, &sg, num, 0, 1, data, gfp, false);
 }
 EXPORT_SYMBOL_GPL(virtqueue_add_inbuf);
+
+int dma_virtqueue_add_inbuf(struct virtqueue *vq,
+			    struct scatterlist *sg, unsigned int num,
+			    void *data,
+			    gfp_t gfp)
+{
+	return virtqueue_add(vq, &sg, num, 0, 1, data, gfp, true);
+}
+EXPORT_SYMBOL_GPL(dma_virtqueue_add_inbuf);
 
 /**
  * virtqueue_kick_prepare - first half of split virtqueue_kick call.
