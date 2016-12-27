@@ -17,7 +17,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/pwm.h>
 #include <linux/slab.h>
-#include <linux/soc/renesas/s2ram_ddr_backup.h>
 
 #define RCAR_PWM_MAX_DIVISION	24
 #define RCAR_PWM_MIN_CYCLE	2
@@ -36,124 +35,6 @@
 #define  RCAR_PWMCNT_CYC0_SHIFT	16
 #define  RCAR_PWMCNT_PH0_MASK	0x000003ff
 #define  RCAR_PWMCNT_PH0_SHIFT	0
-
-#ifdef CONFIG_RCAR_DDR_BACKUP
-/* PWM0 */
-static struct hw_register pwm0_ip_regs[] = {
-	{"PWMCNT",   0x0004, 32, 0},
-	{"PWMCR",    0x0000, 32, 0},
-};
-
-static struct rcar_ip pwm0_ip = {
-	.ip_name   = "PWM0",
-	.reg_count = ARRAY_SIZE(pwm0_ip_regs),
-	.ip_reg    = pwm0_ip_regs,
-};
-
-/* PWM1 */
-static struct hw_register pwm1_ip_regs[] = {
-	{"PWMCNT",   0x0004, 32, 0},
-	{"PWMCR",    0x0000, 32, 0},
-};
-
-static struct rcar_ip pwm1_ip = {
-	.ip_name   = "PWM1",
-	.reg_count = ARRAY_SIZE(pwm1_ip_regs),
-	.ip_reg    = pwm1_ip_regs,
-};
-
-/* PWM2 */
-static struct hw_register pwm2_ip_regs[] = {
-	{"PWMCNT",   0x0004, 32, 0},
-	{"PWMCR",    0x0000, 32, 0},
-};
-
-static struct rcar_ip pwm2_ip = {
-	.ip_name   = "PWM2",
-	.reg_count = ARRAY_SIZE(pwm2_ip_regs),
-	.ip_reg    = pwm2_ip_regs,
-};
-
-/* PWM3 */
-static struct hw_register pwm3_ip_regs[] = {
-	{"PWMCNT",   0x0004, 32, 0},
-	{"PWMCR",    0x0000, 32, 0},
-};
-
-static struct rcar_ip pwm3_ip = {
-	.ip_name   = "PWM3",
-	.reg_count = ARRAY_SIZE(pwm3_ip_regs),
-	.ip_reg    = pwm3_ip_regs,
-};
-
-/* PWM4 */
-static struct hw_register pwm4_ip_regs[] = {
-	{"PWMCNT",   0x0004, 32, 0},
-	{"PWMCR",    0x0000, 32, 0},
-};
-
-static struct rcar_ip pwm4_ip = {
-	.ip_name   = "PWM4",
-	.reg_count = ARRAY_SIZE(pwm4_ip_regs),
-	.ip_reg    = pwm4_ip_regs,
-};
-
-/* PWM5 */
-static struct hw_register pwm5_ip_regs[] = {
-	{"PWMCNT",   0x0004, 32, 0},
-	{"PWMCR",    0x0000, 32, 0},
-};
-
-static struct rcar_ip pwm5_ip = {
-	.ip_name   = "PWM5",
-	.reg_count = ARRAY_SIZE(pwm5_ip_regs),
-	.ip_reg    = pwm5_ip_regs,
-};
-
-/* PWM6 */
-static struct hw_register pwm6_ip_regs[] = {
-	{"PWMCNT",   0x0004, 32, 0},
-	{"PWMCR",    0x0000, 32, 0},
-};
-
-static struct rcar_ip pwm6_ip = {
-	.ip_name   = "PWM6",
-	.reg_count = ARRAY_SIZE(pwm6_ip_regs),
-	.ip_reg    = pwm6_ip_regs,
-};
-
-struct pwm_ip_info {
-	const char *name;
-	struct rcar_ip *ip;
-};
-
-static struct pwm_ip_info ip_info_tbl[] = {
-	{"e6e30000.pwm", &pwm0_ip},
-	{"e6e31000.pwm", &pwm1_ip},
-	{"e6e32000.pwm", &pwm2_ip},
-	{"e6e33000.pwm", &pwm3_ip},
-	{"e6e34000.pwm", &pwm4_ip},
-	{"e6e35000.pwm", &pwm5_ip},
-	{"e6e36000.pwm", &pwm6_ip},
-	{NULL, NULL},
-};
-
-static struct rcar_ip *rcar_pwm_get_ip(const char *name)
-{
-	struct pwm_ip_info *ip_info = ip_info_tbl;
-	struct rcar_ip *ip = NULL;
-
-	while (ip_info->name) {
-		if (!strcmp(ip_info->name, name)) {
-			ip = ip_info->ip;
-			break;
-		}
-		ip_info++;
-	}
-
-	return ip;
-}
-#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 struct rcar_pwm_chip {
 	struct pwm_chip chip;
@@ -379,59 +260,11 @@ static const struct of_device_id rcar_pwm_of_table[] = {
 };
 MODULE_DEVICE_TABLE(of, rcar_pwm_of_table);
 
-#ifdef CONFIG_PM_SLEEP
-static int rcar_pwm_suspend(struct device *dev)
-{
-	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	struct platform_device *pdev = to_platform_device(dev);
-	struct rcar_ip *ip = rcar_pwm_get_ip(pdev->name);
-
-	if (ip) {
-		struct rcar_pwm_chip *pwm = platform_get_drvdata(pdev);
-
-		if (!ip->virt_addr)
-			ip->virt_addr = pwm->base;
-
-		ret = handle_registers(ip, DO_BACKUP);
-	} else {
-		pr_err("%s: Failed to find PWM device\n", __func__);
-		ret = -ENODEV;
-	}
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-	return ret;
-}
-
-static int rcar_pwm_resume(struct device *dev)
-{
-	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	struct platform_device *pdev = to_platform_device(dev);
-	struct rcar_ip *ip = rcar_pwm_get_ip(pdev->name);
-
-	if (ip)
-		ret = handle_registers(ip, DO_RESTORE);
-	else {
-		pr_err("%s: Failed to find PWM device\n", __func__);
-		ret = -ENODEV;
-	}
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-	return ret;
-}
-
-static SIMPLE_DEV_PM_OPS(rcar_pwm_pm_ops,
-			rcar_pwm_suspend, rcar_pwm_resume);
-#define DEV_PM_OPS (&rcar_pwm_pm_ops)
-#else
-#define DEV_PM_OPS NULL
-#endif /* CONFIG_PM_SLEEP */
-
 static struct platform_driver rcar_pwm_driver = {
 	.probe = rcar_pwm_probe,
 	.remove = rcar_pwm_remove,
 	.driver = {
 		.name = "pwm-rcar",
-		.pm	= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(rcar_pwm_of_table),
 	}
 };
