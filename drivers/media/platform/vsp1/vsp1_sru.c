@@ -152,7 +152,8 @@ static int sru_enum_frame_size(struct v4l2_subdev *subdev,
 		fse->min_width = format->width;
 		fse->min_height = format->height;
 		if (format->width <= SRU_MAX_SIZE / 2 &&
-		    format->height <= SRU_MAX_SIZE / 2) {
+		    format->height <= SRU_MAX_SIZE / 2 &&
+		    sru->force_identity_mode == false) {
 			fse->max_width = format->width * 2;
 			fse->max_height = format->height * 2;
 		} else {
@@ -203,7 +204,8 @@ static void sru_try_format(struct vsp1_sru *sru,
 
 		if (fmt->width <= SRU_MAX_SIZE / 2 &&
 		    fmt->height <= SRU_MAX_SIZE / 2 &&
-		    output_area > input_area * 9 / 4) {
+		    output_area > input_area * 9 / 4 &&
+		    sru->force_identity_mode == false) {
 			fmt->width = format->width * 2;
 			fmt->height = format->height * 2;
 		} else {
@@ -355,6 +357,7 @@ struct vsp1_sru *vsp1_sru_create(struct vsp1_device *vsp1)
 	v4l2_ctrl_new_custom(&sru->ctrls, &sru_intensity_control, NULL);
 
 	sru->intensity = 1;
+	sru->force_identity_mode = false;
 
 	sru->entity.subdev.ctrl_handler = &sru->ctrls;
 
