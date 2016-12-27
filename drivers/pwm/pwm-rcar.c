@@ -260,11 +260,47 @@ static const struct of_device_id rcar_pwm_of_table[] = {
 };
 MODULE_DEVICE_TABLE(of, rcar_pwm_of_table);
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_pwm_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static int rcar_pwm_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_pwm_chip *rcar_pwm = platform_get_drvdata(pdev);
+	struct pwm_device *pwm_dev;
+	struct pwm_state state;
+
+	pm_runtime_get_sync(dev);
+
+	pwm_dev = &rcar_pwm->chip.pwms[0];
+	pwm_get_state(pwm_dev, &state);
+	rcar_pwm_config(&rcar_pwm->chip, pwm_dev, state.duty_cycle,
+			state.period);
+
+	if (pwm_is_enabled(pwm_dev))
+		rcar_pwm_enable(&rcar_pwm->chip, pwm_dev);
+
+	pm_runtime_put(dev);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_pwm_pm_ops,
+			rcar_pwm_suspend, rcar_pwm_resume);
+#define DEV_PM_OPS (&rcar_pwm_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_pwm_driver = {
 	.probe = rcar_pwm_probe,
 	.remove = rcar_pwm_remove,
 	.driver = {
 		.name = "pwm-rcar",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(rcar_pwm_of_table),
 	}
 };
