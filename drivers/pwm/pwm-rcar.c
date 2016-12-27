@@ -392,9 +392,8 @@ static int rcar_pwm_suspend(struct device *dev)
 
 		if (!ip->virt_addr)
 			ip->virt_addr = pwm->base;
-		pm_runtime_get_sync(dev);
+
 		ret = rcar_handle_registers(ip, DO_BACKUP);
-		pm_runtime_put(dev);
 	} else {
 		pr_err("%s: Failed to find PWM device\n", __func__);
 		ret = -ENODEV;
