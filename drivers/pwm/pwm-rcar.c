@@ -410,11 +410,9 @@ static int rcar_pwm_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct rcar_ip *ip = rcar_pwm_get_ip(pdev->name);
 
-	if (ip) {
-		pm_runtime_get_sync(dev);
+	if (ip)
 		ret = rcar_handle_registers(ip, DO_RESTORE);
-		pm_runtime_put(dev);
-	} else {
+	else {
 		pr_err("%s: Failed to find PWM device\n", __func__);
 		ret = -ENODEV;
 	}
