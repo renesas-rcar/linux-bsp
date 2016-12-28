@@ -489,42 +489,9 @@ probe_err:
 	return ret;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int cs2000_suspend(struct device *dev)
-{
-	/* Empty function for now */
-	return 0;
-}
-
-static int cs2000_resume(struct device *dev)
-{
-	struct cs2000_priv *priv = dev_get_drvdata(dev);
-	int rate;
-	int ret;
-
-	/* Setting is referred from cs2000_clk_register */
-	rate = clk_get_rate(priv->ref_clk);
-	ret = __cs2000_set_rate(priv, 0, rate, rate);
-
-	if (ret < 0)
-		return ret;
-
-	return 0;
-}
-
-static const struct dev_pm_ops cs2000_pm_ops = {
-	.suspend = cs2000_suspend,
-	.resume_early = cs2000_resume,
-};
-#define DEV_PM_OPS (&cs2000_pm_ops)
-#else
-#define DEV_PM_OPS NULL
-#endif /* CONFIG_PM_SLEEP */
-
 static struct i2c_driver cs2000_driver = {
 	.driver = {
 		.name = "cs2000-cp",
-		.pm	= DEV_PM_OPS,
 		.of_match_table = cs2000_of_match,
 	},
 	.probe		= cs2000_probe,
