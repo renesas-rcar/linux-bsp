@@ -1,7 +1,7 @@
 /*
  * DesignWare High-Definition Multimedia Interface (HDMI) driver
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  * Copyright (C) 2013-2015 Mentor Graphics Inc.
  * Copyright (C) 2011-2013 Freescale Semiconductor, Inc.
  * Copyright (C) 2010, Guennadi Liakhovetski <g.liakhovetski@gmx.de>
@@ -1943,6 +1943,7 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 		 const struct dw_hdmi_plat_data *plat_data)
 {
 	struct drm_device *drm = data;
+	struct device *dev_master;
 	struct device_node *np = dev->of_node;
 	struct platform_device_info pdevinfo;
 	struct device_node *ddc_node;
@@ -2004,7 +2005,12 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 		dev_dbg(hdmi->dev, "no ddc property found\n");
 	}
 
-	hdmi->regs = devm_ioremap_resource(dev, iores);
+	if (hdmi->dev_type == RCAR_HDMI)
+		dev_master = master;
+	else
+		dev_master = dev;
+
+	hdmi->regs = devm_ioremap_resource(dev_master, iores);
 	if (IS_ERR(hdmi->regs))
 		return PTR_ERR(hdmi->regs);
 
@@ -2042,7 +2048,7 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 
 	initialize_hdmi_ih_mutes(hdmi);
 
-	ret = devm_request_threaded_irq(dev, irq, dw_hdmi_hardirq,
+	ret = devm_request_threaded_irq(dev_master, irq, dw_hdmi_hardirq,
 					dw_hdmi_irq, IRQF_SHARED,
 					dev_name(dev), hdmi);
 	if (ret)
