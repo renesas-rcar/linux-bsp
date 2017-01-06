@@ -880,6 +880,18 @@ static bool hdmi_phy_wait_i2c_done(struct dw_hdmi *hdmi, int msec)
 	return true;
 }
 
+static u16 dw_hdmi_phy_i2c_read(struct dw_hdmi *hdmi, unsigned char addr)
+{
+	hdmi_writeb(hdmi, 0xFF, HDMI_IH_I2CMPHY_STAT0);
+	hdmi_writeb(hdmi, addr, HDMI_PHY_I2CM_ADDRESS_ADDR);
+	hdmi_writeb(hdmi, HDMI_PHY_I2CM_OPERATION_ADDR_READ,
+		    HDMI_PHY_I2CM_OPERATION_ADDR);
+	hdmi_phy_wait_i2c_done(hdmi, 1000);
+
+	return (hdmi_readb(hdmi, HDMI_PHY_I2CM_DATAI_1_ADDR) << 8) |
+	       (hdmi_readb(hdmi, HDMI_PHY_I2CM_DATAI_0_ADDR) << 0);
+}
+
 void dw_hdmi_phy_i2c_write(struct dw_hdmi *hdmi, unsigned short data,
 			   unsigned char addr)
 {
@@ -946,13 +958,35 @@ static void dw_hdmi_phy_sel_interface_control(struct dw_hdmi *hdmi, u8 enable)
 
 static void dw_hdmi_phy_power_off(struct dw_hdmi *hdmi)
 {
+	unsigned int i;
+	u16 val;
+
 	if (hdmi->phy->gen == 1) {
 		dw_hdmi_phy_enable_tmds(hdmi, 0);
 		dw_hdmi_phy_enable_powerdown(hdmi, true);
-	} else {
-		dw_hdmi_phy_gen2_txpwron(hdmi, 0);
-		dw_hdmi_phy_gen2_pddq(hdmi, 1);
+		return;
 	}
+
+	dw_hdmi_phy_gen2_txpwron(hdmi, 0);
+
+	/*
+	 * Wait for TX_READY to be deasserted. The signal happens to be exposed
+	 * through the same register on all tested Gen2 PHY versions.
+	 */
+	for (i = 0; i < 5; ++i) {
+		val = dw_hdmi_phy_i2c_read(hdmi, HDMI_3D_TX_PHY_PTRPT_ENBL);
+		if (!(val & HDMI_3D_TX_PHY_PTRPT_ENBL_TX_READY))
+			break;
+
+		usleep_range(1000, 2000);
+	}
+
+	if (val & HDMI_3D_TX_PHY_PTRPT_ENBL_TX_READY)
+		dev_warn(hdmi->dev, "TX_READY failed to go low\n");
+	else
+		dev_dbg(hdmi->dev, "TX_READY went low in %u iterations\n", i);
+
+	dw_hdmi_phy_gen2_pddq(hdmi, 1);
 }
 
 static void dw_hdmi_phy_power_on(struct dw_hdmi *hdmi)
