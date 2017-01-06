@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -838,6 +838,9 @@ static void rvin_group_notify_unbind(struct v4l2_async_notifier *notifier,
 	struct rvin_dev *vin = notifier_to_vin(notifier);
 	unsigned int i;
 
+	if (!subdev->dev)
+		return;
+
 	mutex_lock(&vin->group->lock);
 	for (i = 0; i < RVIN_CSI_MAX; i++) {
 		struct device_node *del = subdev->dev->of_node;
@@ -1495,10 +1498,10 @@ static int rcar_vin_remove(struct platform_device *pdev)
 
 	rvin_v4l2_remove(vin);
 
+	v4l2_async_notifier_unregister(&vin->notifier);
+
 	if (vin->group)
 		rvin_group_delete(vin);
-
-	v4l2_async_notifier_unregister(&vin->notifier);
 
 	rvin_dma_remove(vin);
 
