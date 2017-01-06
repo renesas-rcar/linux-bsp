@@ -1,7 +1,7 @@
 /*
  * R-Car Display Unit HDMI Encoder
  *
- * Copyright (C) 2014-2015 Renesas Electronics Corporation
+ * Copyright (C) 2014-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -340,8 +340,8 @@ int rcar_du_hdmienc_init(struct rcar_du_device *rcdu,
 	}
 
 	if (dw_hdmi_use)
-		ret = dw_hdmi_bind(hdmienc->dev, NULL, rcdu->ddev, encoder,
-				iores, irq, plat_data);
+		ret = dw_hdmi_bind(hdmienc->dev, rcdu->dev, rcdu->ddev,
+				   encoder, iores, irq, plat_data);
 
 	if (bridge) {
 		ret = drm_bridge_attach(rcdu->ddev, bridge);
