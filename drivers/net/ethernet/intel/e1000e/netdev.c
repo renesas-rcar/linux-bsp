@@ -5920,12 +5920,11 @@ static void e1000_reset_task(struct work_struct *work)
  *
  * Returns the address of the device statistics structure.
  **/
-struct rtnl_link_stats64 *e1000e_get_stats64(struct net_device *netdev,
-					     struct rtnl_link_stats64 *stats)
+void e1000e_get_stats64(struct net_device *netdev,
+			struct rtnl_link_stats64 *stats)
 {
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 
-	memset(stats, 0, sizeof(struct rtnl_link_stats64));
 	spin_lock(&adapter->stats64_lock);
 	e1000e_update_stats(adapter);
 	/* Fill out the OS statistics structure */
@@ -5958,7 +5957,6 @@ struct rtnl_link_stats64 *e1000e_get_stats64(struct net_device *netdev,
 	/* Tx Dropped needs to be maintained elsewhere */
 
 	spin_unlock(&adapter->stats64_lock);
-	return stats;
 }
 
 /**
@@ -6276,8 +6274,8 @@ static int e1000e_pm_freeze(struct device *dev)
 		/* Quiesce the device without resetting the hardware */
 		e1000e_down(adapter, false);
 		e1000_free_irq(adapter);
+		e1000e_reset_interrupt_capability(adapter);
 	}
-	e1000e_reset_interrupt_capability(adapter);
 
 	/* Allow time for pending master requests to run */
 	e1000e_disable_pcie_master(&adapter->hw);

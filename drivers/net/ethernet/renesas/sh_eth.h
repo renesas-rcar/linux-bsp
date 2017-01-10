@@ -265,7 +265,7 @@ enum EESR_BIT {
 				 EESR_RTO)
 #define DEFAULT_EESR_ERR_CHECK	(EESR_TWB | EESR_TABT | EESR_RABT | EESR_RFE | \
 				 EESR_RDE | EESR_RFRMER | EESR_ADE | \
-				 EESR_TFE | EESR_TDE | EESR_ECI)
+				 EESR_TFE | EESR_TDE)
 
 /* EESIPR */
 enum DMAC_IM_BIT {
@@ -339,7 +339,7 @@ enum FELIC_MODE_BIT {
 	ECMR_DPAD = 0x00200000, ECMR_RZPF = 0x00100000,
 	ECMR_ZPF = 0x00080000, ECMR_PFR = 0x00040000, ECMR_RXF = 0x00020000,
 	ECMR_TXF = 0x00010000, ECMR_MCT = 0x00002000, ECMR_PRCEF = 0x00001000,
-	ECMR_PMDE = 0x00000200, ECMR_RE = 0x00000040, ECMR_TE = 0x00000020,
+	ECMR_MPDE = 0x00000200, ECMR_RE = 0x00000040, ECMR_TE = 0x00000020,
 	ECMR_RTM = 0x00000010, ECMR_ILB = 0x00000008, ECMR_ELB = 0x00000004,
 	ECMR_DM = 0x00000002, ECMR_PRM = 0x00000001,
 };
@@ -488,11 +488,11 @@ struct sh_eth_cpu_data {
 	unsigned rpadir:1;	/* E-DMAC have RPADIR */
 	unsigned no_trimd:1;	/* E-DMAC DO NOT have TRIMD */
 	unsigned no_ade:1;	/* E-DMAC DO NOT have ADE bit in EESR */
-	unsigned hw_crc:1;	/* E-DMAC have CSMR */
+	unsigned hw_checksum:1;	/* E-DMAC has CSMR */
 	unsigned select_mii:1;	/* EtherC have RMII_MII (MII select register) */
-	unsigned shift_rd0:1;	/* shift Rx descriptor word 0 right by 16 */
 	unsigned rmiimode:1;	/* EtherC has RMIIMODE register */
 	unsigned rtrate:1;	/* EtherC has RTRATE register */
+	unsigned magic:1;	/* EtherC has ECMR.MPDE and ECSR.MPD */
 };
 
 struct sh_eth_private {
@@ -501,6 +501,7 @@ struct sh_eth_private {
 	const u16 *reg_offset;
 	void __iomem *addr;
 	void __iomem *tsu_addr;
+	struct clk *clk;
 	u32 num_rx_ring;
 	u32 num_tx_ring;
 	dma_addr_t rx_desc_dma;
@@ -529,6 +530,7 @@ struct sh_eth_private {
 	unsigned no_ether_link:1;
 	unsigned ether_link_active_low:1;
 	unsigned is_opened:1;
+	unsigned wol_enabled:1;
 };
 
 static inline void sh_eth_soft_swap(char *src, int len)

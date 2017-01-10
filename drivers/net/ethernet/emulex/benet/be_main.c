@@ -275,8 +275,7 @@ static int be_dev_mac_add(struct be_adapter *adapter, u8 *mac)
 
 	/* Check if mac has already been added as part of uc-list */
 	for (i = 0; i < adapter->uc_macs; i++) {
-		if (ether_addr_equal((u8 *)&adapter->uc_list[i * ETH_ALEN],
-				     mac)) {
+		if (ether_addr_equal(adapter->uc_list[i].mac, mac)) {
 			/* mac already added, skip addition */
 			adapter->pmac_id[0] = adapter->pmac_id[i + 1];
 			return 0;
@@ -639,8 +638,8 @@ void be_parse_stats(struct be_adapter *adapter)
 	}
 }
 
-static struct rtnl_link_stats64 *be_get_stats64(struct net_device *netdev,
-						struct rtnl_link_stats64 *stats)
+static void be_get_stats64(struct net_device *netdev,
+			   struct rtnl_link_stats64 *stats)
 {
 	struct be_adapter *adapter = netdev_priv(netdev);
 	struct be_drv_stats *drvs = &adapter->drv_stats;
@@ -704,7 +703,6 @@ static struct rtnl_link_stats64 *be_get_stats64(struct net_device *netdev,
 	stats->rx_fifo_errors = drvs->rxpp_fifo_overflow_drop +
 				drvs->rx_input_fifo_overflow_drop +
 				drvs->rx_drops_no_pbuf;
-	return stats;
 }
 
 void be_link_status_update(struct be_adapter *adapter, u8 link_status)
@@ -1655,14 +1653,12 @@ static void be_clear_mc_list(struct be_adapter *adapter)
 
 static int be_uc_mac_add(struct be_adapter *adapter, int uc_idx)
 {
-	if (ether_addr_equal((u8 *)&adapter->uc_list[uc_idx * ETH_ALEN],
-			     adapter->dev_mac)) {
+	if (ether_addr_equal(adapter->uc_list[uc_idx].mac, adapter->dev_mac)) {
 		adapter->pmac_id[uc_idx + 1] = adapter->pmac_id[0];
 		return 0;
 	}
 
-	return be_cmd_pmac_add(adapter,
-			       (u8 *)&adapter->uc_list[uc_idx * ETH_ALEN],
+	return be_cmd_pmac_add(adapter, adapter->uc_list[uc_idx].mac,
 			       adapter->if_handle,
 			       &adapter->pmac_id[uc_idx + 1], 0);
 }
@@ -1698,9 +1694,8 @@ static void be_set_uc_list(struct be_adapter *adapter)
 	}
 
 	if (adapter->update_uc_list) {
-		i = 1; /* First slot is claimed by the Primary MAC */
-
 		/* cache the uc-list in adapter array */
+		i = 0;
 		netdev_for_each_uc_addr(ha, netdev) {
 			ether_addr_copy(adapter->uc_list[i].mac, ha->addr);
 			i++;

@@ -986,7 +986,7 @@ void ef4_mac_reconfigure(struct ef4_nic *efx)
 
 /* Push loopback/power/transmit disable settings to the PHY, and reconfigure
  * the MAC appropriately. All other PHY configuration changes are pushed
- * through phy_op->set_settings(), and pushed asynchronously to the MAC
+ * through phy_op->set_link_ksettings(), and pushed asynchronously to the MAC
  * through ef4_monitor().
  *
  * Callers must hold the mac_lock
@@ -2158,16 +2158,14 @@ int ef4_net_stop(struct net_device *net_dev)
 }
 
 /* Context: process, dev_base_lock or RTNL held, non-blocking. */
-static struct rtnl_link_stats64 *ef4_net_stats(struct net_device *net_dev,
-					       struct rtnl_link_stats64 *stats)
+static void ef4_net_stats(struct net_device *net_dev,
+			  struct rtnl_link_stats64 *stats)
 {
 	struct ef4_nic *efx = netdev_priv(net_dev);
 
 	spin_lock_bh(&efx->stats_lock);
 	efx->type->update_stats(efx, NULL, stats);
 	spin_unlock_bh(&efx->stats_lock);
-
-	return stats;
 }
 
 /* Context: netif_tx_lock held, BHs disabled. */
@@ -3348,3 +3346,4 @@ MODULE_AUTHOR("Solarflare Communications and "
 MODULE_DESCRIPTION("Solarflare Falcon network driver");
 MODULE_LICENSE("GPL");
 MODULE_DEVICE_TABLE(pci, ef4_pci_table);
+MODULE_VERSION(EF4_DRIVER_VERSION);

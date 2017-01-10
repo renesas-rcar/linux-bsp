@@ -429,7 +429,7 @@ EXPORT_SYMBOL(tcp_init_sock);
 
 static void tcp_tx_timestamp(struct sock *sk, u16 tsflags, struct sk_buff *skb)
 {
-	if (tsflags) {
+	if (tsflags && skb) {
 		struct skb_shared_info *shinfo = skb_shinfo(skb);
 		struct tcp_skb_cb *tcb = TCP_SKB_CB(skb);
 
@@ -958,10 +958,8 @@ new_segment:
 		copied += copy;
 		offset += copy;
 		size -= copy;
-		if (!size) {
-			tcp_tx_timestamp(sk, sk->sk_tsflags, skb);
+		if (!size)
 			goto out;
-		}
 
 		if (skb->len < size_goal || (flags & MSG_OOB))
 			continue;
@@ -987,8 +985,11 @@ wait_for_memory:
 	}
 
 out:
-	if (copied && !(flags & MSG_SENDPAGE_NOTLAST))
-		tcp_push(sk, flags, mss_now, tp->nonagle, size_goal);
+	if (copied) {
+		tcp_tx_timestamp(sk, sk->sk_tsflags, tcp_write_queue_tail(sk));
+		if (!(flags & MSG_SENDPAGE_NOTLAST))
+			tcp_push(sk, flags, mss_now, tp->nonagle, size_goal);
+	}
 	return copied;
 
 do_error:
@@ -1281,7 +1282,6 @@ new_segment:
 
 		copied += copy;
 		if (!msg_data_left(msg)) {
-			tcp_tx_timestamp(sk, sockc.tsflags, skb);
 			if (unlikely(flags & MSG_EOR))
 				TCP_SKB_CB(skb)->eor = 1;
 			goto out;
@@ -1312,8 +1312,10 @@ wait_for_memory:
 	}
 
 out:
-	if (copied)
+	if (copied) {
+		tcp_tx_timestamp(sk, sockc.tsflags, tcp_write_queue_tail(sk));
 		tcp_push(sk, flags, mss_now, tp->nonagle, size_goal);
+	}
 out_nopush:
 	release_sock(sk);
 	return copied + copied_syn;
@@ -2764,6 +2766,9 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 		info->tcpi_sacked = sk->sk_max_ack_backlog;
 		return;
 	}
+
+	slow = lock_sock_fast(sk);
+
 	info->tcpi_ca_state = icsk->icsk_ca_state;
 	info->tcpi_retransmits = icsk->icsk_retransmits;
 	info->tcpi_probes = icsk->icsk_probes_out;
@@ -2814,14 +2819,10 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 
 	info->tcpi_total_retrans = tp->total_retrans;
 
-	slow = lock_sock_fast(sk);
-
 	info->tcpi_bytes_acked = tp->bytes_acked;
 	info->tcpi_bytes_received = tp->bytes_received;
 	info->tcpi_notsent_bytes = max_t(int, 0, tp->write_seq - tp->snd_nxt);
 	tcp_get_info_chrono_stats(tp, info);
-
-	unlock_sock_fast(sk, slow);
 
 	info->tcpi_segs_out = tp->segs_out;
 	info->tcpi_segs_in = tp->segs_in;
@@ -2838,6 +2839,7 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 		do_div(rate64, intv);
 		info->tcpi_delivery_rate = rate64;
 	}
+	unlock_sock_fast(sk, slow);
 }
 EXPORT_SYMBOL_GPL(tcp_get_info);
 
@@ -3334,6 +3336,7 @@ void __init tcp_init(void)
 
 	percpu_counter_init(&tcp_sockets_allocated, 0, GFP_KERNEL);
 	percpu_counter_init(&tcp_orphan_count, 0, GFP_KERNEL);
+	inet_hashinfo_init(&tcp_hashinfo);
 	tcp_hashinfo.bind_bucket_cachep =
 		kmem_cache_create("tcp_bind_bucket",
 				  sizeof(struct inet_bind_bucket), 0,
@@ -3377,10 +3380,7 @@ void __init tcp_init(void)
 
 
 	cnt = tcp_hashinfo.ehash_mask + 1;
-
-	tcp_death_row.sysctl_max_tw_buckets = cnt / 2;
 	sysctl_tcp_max_orphans = cnt / 2;
-	sysctl_max_syn_backlog = max(128, cnt / 256);
 
 	tcp_init_mem();
 	/* Set per-socket limits to no more than 1/128 the pressure threshold */
@@ -3399,6 +3399,7 @@ void __init tcp_init(void)
 	pr_info("Hash tables configured (established %u bind %u)\n",
 		tcp_hashinfo.ehash_mask + 1, tcp_hashinfo.bhash_size);
 
+	tcp_v4_init();
 	tcp_metrics_init();
 	BUG_ON(tcp_register_congestion_control(&tcp_reno) != 0);
 	tcp_tasklet_init();

@@ -188,17 +188,23 @@ static void link_report(struct net_device *dev)
 		const struct port_info *p = netdev_priv(dev);
 
 		switch (p->link_cfg.speed) {
-		case 10000:
-			s = "10Gbps";
-			break;
-		case 1000:
-			s = "1000Mbps";
-			break;
 		case 100:
 			s = "100Mbps";
 			break;
+		case 1000:
+			s = "1Gbps";
+			break;
+		case 10000:
+			s = "10Gbps";
+			break;
+		case 25000:
+			s = "25Gbps";
+			break;
 		case 40000:
 			s = "40Gbps";
+			break;
+		case 100000:
+			s = "100Gbps";
 			break;
 		default:
 			pr_info("%s: unsupported speed: %d\n",
@@ -2369,8 +2375,8 @@ int cxgb4_remove_server_filter(const struct net_device *dev, unsigned int stid,
 }
 EXPORT_SYMBOL(cxgb4_remove_server_filter);
 
-static struct rtnl_link_stats64 *cxgb_get_stats(struct net_device *dev,
-						struct rtnl_link_stats64 *ns)
+static void cxgb_get_stats(struct net_device *dev,
+			   struct rtnl_link_stats64 *ns)
 {
 	struct port_stats stats;
 	struct port_info *p = netdev_priv(dev);
@@ -2383,7 +2389,7 @@ static struct rtnl_link_stats64 *cxgb_get_stats(struct net_device *dev,
 	spin_lock(&adapter->stats_lock);
 	if (!netif_device_present(dev)) {
 		spin_unlock(&adapter->stats_lock);
-		return ns;
+		return;
 	}
 	t4_get_port_stats_offset(adapter, p->tx_chan, &stats,
 				 &p->stats_base);
@@ -2417,7 +2423,6 @@ static struct rtnl_link_stats64 *cxgb_get_stats(struct net_device *dev,
 	ns->tx_errors = stats.tx_error_frames;
 	ns->rx_errors = stats.rx_symbol_err + stats.rx_fcs_err +
 		ns->rx_length_errors + stats.rx_len_err + ns->rx_fifo_errors;
-	return ns;
 }
 
 static int cxgb_ioctl(struct net_device *dev, struct ifreq *req, int cmd)
@@ -4397,9 +4402,9 @@ static void print_port_info(const struct net_device *dev)
 		spd = " 8 GT/s";
 
 	if (pi->link_cfg.supported & FW_PORT_CAP_SPEED_100M)
-		bufp += sprintf(bufp, "100/");
+		bufp += sprintf(bufp, "100M/");
 	if (pi->link_cfg.supported & FW_PORT_CAP_SPEED_1G)
-		bufp += sprintf(bufp, "1000/");
+		bufp += sprintf(bufp, "1G/");
 	if (pi->link_cfg.supported & FW_PORT_CAP_SPEED_10G)
 		bufp += sprintf(bufp, "10G/");
 	if (pi->link_cfg.supported & FW_PORT_CAP_SPEED_25G)
@@ -4707,6 +4712,9 @@ static int init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 	spin_lock_init(&adapter->stats_lock);
 	spin_lock_init(&adapter->tid_release_lock);
 	spin_lock_init(&adapter->win0_lock);
+	spin_lock_init(&adapter->mbox_lock);
+
+	INIT_LIST_HEAD(&adapter->mlist.list);
 
 	INIT_WORK(&adapter->tid_release_task, process_tid_release_list);
 	INIT_WORK(&adapter->db_full_task, process_db_full);

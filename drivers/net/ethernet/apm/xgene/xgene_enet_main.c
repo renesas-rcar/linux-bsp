@@ -1453,7 +1453,7 @@ err:
 	return ret;
 }
 
-static struct rtnl_link_stats64 *xgene_enet_get_stats64(
+static void xgene_enet_get_stats64(
 			struct net_device *ndev,
 			struct rtnl_link_stats64 *storage)
 {
@@ -1462,7 +1462,6 @@ static struct rtnl_link_stats64 *xgene_enet_get_stats64(
 	struct xgene_enet_desc_ring *ring;
 	int i;
 
-	memset(stats, 0, sizeof(struct rtnl_link_stats64));
 	for (i = 0; i < pdata->txq_cnt; i++) {
 		ring = pdata->tx_ring[i];
 		if (ring) {
@@ -1484,8 +1483,6 @@ static struct rtnl_link_stats64 *xgene_enet_get_stats64(
 		}
 	}
 	memcpy(storage, stats, sizeof(struct rtnl_link_stats64));
-
-	return storage;
 }
 
 static int xgene_enet_set_mac_address(struct net_device *ndev, void *addr)

@@ -263,6 +263,11 @@ struct tp_params {
 	u32 vlan_pri_map;               /* cached TP_VLAN_PRI_MAP */
 	u32 ingress_config;             /* cached TP_INGRESS_CONFIG */
 
+	/* cached TP_OUT_CONFIG compressed error vector
+	 * and passing outer header info for encapsulated packets.
+	 */
+	int rx_pkt_encap;
+
 	/* TP_VLAN_PRI_MAP Compressed Filter Tuple field offsets.  This is a
 	 * subset of the set of fields which may be present in the Compressed
 	 * Filter Tuple portion of filters and TCP TCB connections.  The
@@ -782,6 +787,10 @@ struct vf_info {
 	bool pf_set_mac;
 };
 
+struct mbox_list {
+	struct list_head list;
+};
+
 struct adapter {
 	void __iomem *regs;
 	void __iomem *bar2;
@@ -843,6 +852,10 @@ struct adapter {
 	struct work_struct db_full_task;
 	struct work_struct db_drop_task;
 	bool tid_release_task_busy;
+
+	/* lock for mailbox cmd list */
+	spinlock_t mbox_lock;
+	struct mbox_list mlist;
 
 	/* support for mailbox command/reply logging */
 #define T4_OS_LOG_MBOX_CMDS 256

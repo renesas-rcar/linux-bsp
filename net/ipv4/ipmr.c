@@ -2091,8 +2091,10 @@ static int __ipmr_fill_mroute(struct mr_table *mrt, struct sk_buff *skb,
 	int ct;
 
 	/* If cache is unresolved, don't try to parse IIF and OIF */
-	if (c->mfc_parent >= MAXVIFS)
+	if (c->mfc_parent >= MAXVIFS) {
+		rtm->rtm_flags |= RTNH_F_UNRESOLVED;
 		return -ENOENT;
+	}
 
 	if (VIF_EXISTS(mrt, c->mfc_parent) &&
 	    nla_put_u32(skb, RTA_IIF, mrt->vif_table[c->mfc_parent].dev->ifindex) < 0)
@@ -2134,7 +2136,7 @@ static int __ipmr_fill_mroute(struct mr_table *mrt, struct sk_buff *skb,
 
 int ipmr_get_route(struct net *net, struct sk_buff *skb,
 		   __be32 saddr, __be32 daddr,
-		   struct rtmsg *rtm, int nowait, u32 portid)
+		   struct rtmsg *rtm, u32 portid)
 {
 	struct mfc_cache *cache;
 	struct mr_table *mrt;
@@ -2157,11 +2159,6 @@ int ipmr_get_route(struct net *net, struct sk_buff *skb,
 		struct iphdr *iph;
 		struct net_device *dev;
 		int vif = -1;
-
-		if (nowait) {
-			rcu_read_unlock();
-			return -EAGAIN;
-		}
 
 		dev = skb->dev;
 		read_lock(&mrt_lock);
