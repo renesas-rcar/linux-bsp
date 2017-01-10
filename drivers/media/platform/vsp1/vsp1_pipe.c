@@ -216,6 +216,7 @@ void vsp1_pipeline_init(struct vsp1_pipeline *pipe)
 
 	INIT_LIST_HEAD(&pipe->entities);
 	pipe->state = VSP1_PIPELINE_STOPPED;
+	pipe->configured = false;
 }
 
 /* Must be called with the pipe irqlock held. */
