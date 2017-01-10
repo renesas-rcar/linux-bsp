@@ -80,6 +80,8 @@ config SATA_PMP
 	  This option adds support for SATA Port Multipliers
 	  (the SATA version of an ethernet hub, or SAS expander).
 
+if HAS_DMA
+
 comment "Controllers with non-SFF native interface"
 
 config SATA_AHCI
@@ -232,6 +234,8 @@ config SATA_SIL24
 
 	  If unsure, say N.
 
+endif # HAS_DMA
+
 config ATA_SFF
 	bool "ATA SFF support (for legacy IDE and PATA)"
 	default y
@@ -289,6 +293,7 @@ config SATA_SX4
 
 config ATA_BMDMA
 	bool "ATA BMDMA support"
+	depends on HAS_DMA
 	default y
 	help
 	  This option adds support for SFF ATA controllers with BMDMA
@@ -344,6 +349,7 @@ config SATA_DWC_VDEBUG
 
 config SATA_HIGHBANK
 	tristate "Calxeda Highbank SATA support"
+	depends on HAS_DMA
 	depends on ARCH_HIGHBANK || COMPILE_TEST
 	help
 	  This option enables support for the Calxeda Highbank SoC's
@@ -353,6 +359,7 @@ config SATA_HIGHBANK
 
 config SATA_MV
 	tristate "Marvell SATA support"
+	depends on HAS_DMA
 	depends on PCI || ARCH_DOVE || ARCH_MV78XX0 || \
 		   ARCH_MVEBU || ARCH_ORION5X || COMPILE_TEST
 	select GENERIC_PHY
