@@ -287,8 +287,6 @@ struct pwm_ops {
  * @pwms: array of PWM devices allocated by the framework
  * @of_xlate: request a PWM device given a device tree PWM specifier
  * @of_pwm_n_cells: number of cells expected in the device tree PWM specifier
- * @can_sleep: must be true if the .config(), .enable() or .disable()
- *             operations may sleep
  */
 struct pwm_chip {
 	struct device *dev;
@@ -302,7 +300,6 @@ struct pwm_chip {
 	struct pwm_device * (*of_xlate)(struct pwm_chip *pc,
 					const struct of_phandle_args *args);
 	unsigned int of_pwm_n_cells;
-	bool can_sleep;
 };
 
 /**
@@ -451,8 +448,6 @@ struct pwm_device *devm_pwm_get(struct device *dev, const char *con_id);
 struct pwm_device *devm_of_pwm_get(struct device *dev, struct device_node *np,
 				   const char *con_id);
 void devm_pwm_put(struct device *dev, struct pwm_device *pwm);
-
-bool pwm_can_sleep(struct pwm_device *pwm);
 #else
 static inline struct pwm_device *pwm_request(int pwm_id, const char *label)
 {
@@ -565,11 +560,6 @@ static inline struct pwm_device *devm_of_pwm_get(struct device *dev,
 
 static inline void devm_pwm_put(struct device *dev, struct pwm_device *pwm)
 {
-}
-
-static inline bool pwm_can_sleep(struct pwm_device *pwm)
-{
-	return false;
 }
 #endif
 
