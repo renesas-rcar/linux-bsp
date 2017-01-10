@@ -43,6 +43,7 @@
 #include "lustre_fld.h"
 #include "lustre_handles.h"
 #include "lustre_intent.h"
+#include "cl_object.h"
 
 #define MAX_OBD_DEVICES 8192
 
@@ -75,6 +76,8 @@ static inline void loi_init(struct lov_oinfo *loi)
 
 struct lov_stripe_md;
 struct obd_info;
+
+int lov_read_and_clear_async_rc(struct cl_object *clob);
 
 typedef int (*obd_enqueue_update_f)(void *cookie, int rc);
 
@@ -889,7 +892,7 @@ struct obd_client_handle {
 	struct md_open_data	*och_mod;
 	struct lustre_handle	 och_lease_handle; /* open lock for lease */
 	__u32			 och_magic;
-	int			 och_flags;
+	fmode_t			 och_flags;
 };
 
 #define OBD_CLIENT_HANDLE_MAGIC 0xd15ea5ed

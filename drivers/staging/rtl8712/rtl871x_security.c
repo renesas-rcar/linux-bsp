@@ -192,7 +192,7 @@ void r8712_wep_encrypt(struct _adapter *padapter, u8 *pxmitframe)
 				length = pattrib->last_txcmdsz - pattrib->
 					 hdrlen - pattrib->iv_len -
 					 pattrib->icv_len;
-				*((u32 *)crc) = cpu_to_le32(getcrc32(
+				*((__le32 *)crc) = cpu_to_le32(getcrc32(
 						payload, length));
 				arcfour_init(&mycontext, wepkey, 3 + keylength);
 				arcfour_encrypt(&mycontext, payload, payload,
@@ -203,7 +203,7 @@ void r8712_wep_encrypt(struct _adapter *padapter, u8 *pxmitframe)
 				length = pxmitpriv->frag_len -
 					 pattrib->hdrlen - pattrib->iv_len -
 					 pattrib->icv_len;
-				*((u32 *)crc) = cpu_to_le32(getcrc32(
+				*((__le32 *)crc) = cpu_to_le32(getcrc32(
 						payload, length));
 				arcfour_init(&mycontext, wepkey, 3 + keylength);
 				arcfour_encrypt(&mycontext, payload, payload,
@@ -248,7 +248,7 @@ void r8712_wep_decrypt(struct _adapter  *padapter, u8 *precvframe)
 		arcfour_init(&mycontext, wepkey, 3 + keylength);
 		arcfour_encrypt(&mycontext, payload, payload,  length);
 		/* calculate icv and compare the icv */
-		*((u32 *)crc) = cpu_to_le32(getcrc32(payload, length - 4));
+		*((__le32 *)crc) = cpu_to_le32(getcrc32(payload, length - 4));
 	}
 }
 
@@ -616,7 +616,7 @@ u32 r8712_tkip_encrypt(struct _adapter *padapter, u8 *pxmitframe)
 					     pattrib->hdrlen -
 					     pattrib->iv_len -
 					     pattrib->icv_len;
-					*((u32 *)crc) = cpu_to_le32(
+					*((__le32 *)crc) = cpu_to_le32(
 						getcrc32(payload, length));
 					arcfour_init(&mycontext, rc4key, 16);
 					arcfour_encrypt(&mycontext, payload,
@@ -628,7 +628,7 @@ u32 r8712_tkip_encrypt(struct _adapter *padapter, u8 *pxmitframe)
 						 pattrib->hdrlen -
 						 pattrib->iv_len -
 						 pattrib->icv_len;
-					*((u32 *)crc) = cpu_to_le32(getcrc32(
+					*((__le32 *)crc) = cpu_to_le32(getcrc32(
 							payload, length));
 					arcfour_init(&mycontext, rc4key, 16);
 					arcfour_encrypt(&mycontext, payload,
@@ -696,7 +696,7 @@ u32 r8712_tkip_decrypt(struct _adapter *padapter, u8 *precvframe)
 			/* 4 decrypt payload include icv */
 			arcfour_init(&mycontext, rc4key, 16);
 			arcfour_encrypt(&mycontext, payload, payload, length);
-			*((u32 *)crc) = cpu_to_le32(getcrc32(payload,
+			*((__le32 *)crc) = cpu_to_le32(getcrc32(payload,
 					length - 4));
 			if (crc[3] != payload[length - 1] ||
 			    crc[2] != payload[length - 2] ||
@@ -1047,8 +1047,8 @@ static sint aes_cipher(u8 *key, uint	hdrlen,
 	u8 aes_out[16];
 	u8 padded_buffer[16];
 	u8 mic[8];
-	uint	frtype  = GetFrameType(pframe);
-	uint	frsubtype  = GetFrameSubType(pframe);
+	u16 frtype  = GetFrameType(pframe);
+	u16 frsubtype  = GetFrameSubType(pframe);
 
 	frsubtype >>= 4;
 	memset((void *)mic_iv, 0, 16);
