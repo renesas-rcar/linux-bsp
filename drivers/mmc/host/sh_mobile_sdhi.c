@@ -335,9 +335,6 @@ static unsigned int sh_mobile_sdhi_init_tuning(struct tmio_mmc_host *host)
 {
 	struct sh_mobile_sdhi *priv;
 
-	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104))
-		return 0;
-
 	priv = host_to_priv(host);
 
 	/* set sampling clock selection range */
@@ -444,12 +441,7 @@ static int sh_mobile_sdhi_select_tuning(struct tmio_mmc_host *host)
 
 static bool sh_mobile_sdhi_check_scc_error(struct tmio_mmc_host *host)
 {
-	struct sh_mobile_sdhi *priv;
-
-	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104))
-		return 0;
-
-	priv = host_to_priv(host);
+	struct sh_mobile_sdhi *priv = host_to_priv(host);
 
 	/* Check SCC error */
 	if (sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSCNTL) &
@@ -467,9 +459,6 @@ static bool sh_mobile_sdhi_check_scc_error(struct tmio_mmc_host *host)
 static void sh_mobile_sdhi_hw_reset(struct tmio_mmc_host *host)
 {
 	struct sh_mobile_sdhi *priv;
-
-	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104))
-		return;
 
 	priv = host_to_priv(host);
 
@@ -556,8 +545,7 @@ static void sh_mobile_sdhi_enable_dma(struct tmio_mmc_host *host, bool enable)
 
 static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 {
-	const struct of_device_id *of_id =
-		of_match_device(sh_mobile_sdhi_of_match, &pdev->dev);
+	const struct sh_mobile_sdhi_of_data *of_data = of_device_get_match_data(&pdev->dev);
 	struct sh_mobile_sdhi *priv;
 	struct tmio_mmc_data *mmc_data;
 	struct tmio_mmc_data *mmd = pdev->dev.platform_data;
@@ -598,9 +586,8 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		goto eprobe;
 	}
 
-	if (of_id && of_id->data) {
-		const struct sh_mobile_sdhi_of_data *of_data = of_id->data;
 
+	if (of_data) {
 		mmc_data->flags |= of_data->tmio_flags;
 		mmc_data->ocr_mask = of_data->tmio_ocr_mask;
 		mmc_data->capabilities |= of_data->capabilities;
@@ -623,11 +610,6 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		host->card_busy	= sh_mobile_sdhi_card_busy;
 		host->start_signal_voltage_switch =
 			sh_mobile_sdhi_start_signal_voltage_switch;
-		host->init_tuning	= sh_mobile_sdhi_init_tuning;
-		host->prepare_tuning	= sh_mobile_sdhi_prepare_tuning;
-		host->select_tuning	= sh_mobile_sdhi_select_tuning;
-		host->check_scc_error	= sh_mobile_sdhi_check_scc_error;
-		host->hw_reset		= sh_mobile_sdhi_hw_reset;
 	}
 
 	/* Orginally registers were 16 bit apart, could be 32 or 64 nowadays */
@@ -668,31 +650,33 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto efree;
 
-	if (host->mmc->caps & MMC_CAP_UHS_SDR104) {
+	/* Enable tuning iff we have an SCC and a supported mode */
+	if (of_data && of_data->scc_offset &&
+	    (host->mmc->caps & MMC_CAP_UHS_SDR104 ||
+	     host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR)) {
+		const struct sh_mobile_sdhi_scc *taps = of_data->taps;
+		bool hit = false;
+
 		host->mmc->caps |= MMC_CAP_HW_RESET;
 
-		if (of_id && of_id->data) {
-			const struct sh_mobile_sdhi_of_data *of_data;
-			const struct sh_mobile_sdhi_scc *taps;
-			bool hit = false;
-
-			of_data = of_id->data;
-			taps = of_data->taps;
-
-			for (i = 0; i < of_data->taps_num; i++) {
-				if (taps[i].clk_rate == 0 ||
-				    taps[i].clk_rate == host->mmc->f_max) {
-					host->scc_tappos = taps->tap;
-					hit = true;
-					break;
-				}
+		for (i = 0; i < of_data->taps_num; i++) {
+			if (taps[i].clk_rate == 0 ||
+			    taps[i].clk_rate == host->mmc->f_max) {
+				host->scc_tappos = taps->tap;
+				hit = true;
+				break;
 			}
-
-			if (!hit)
-				dev_warn(&host->pdev->dev, "Unknown clock rate for SDR104\n");
-
-			priv->scc_ctl = host->ctl + of_data->scc_offset;
 		}
+
+		if (!hit)
+			dev_warn(&host->pdev->dev, "Unknown clock rate for SDR104\n");
+
+		priv->scc_ctl = host->ctl + of_data->scc_offset;
+		host->init_tuning = sh_mobile_sdhi_init_tuning;
+		host->prepare_tuning = sh_mobile_sdhi_prepare_tuning;
+		host->select_tuning = sh_mobile_sdhi_select_tuning;
+		host->check_scc_error = sh_mobile_sdhi_check_scc_error;
+		host->hw_reset = sh_mobile_sdhi_hw_reset;
 	}
 
 	i = 0;
