@@ -634,7 +634,6 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	vc_num = priv->vc_num;
 	platform_set_drvdata(pdev, priv);
 
-retry:
 	priv->subdev.owner = THIS_MODULE;
 	priv->subdev.dev = &pdev->dev;
 	v4l2_subdev_init(&priv->subdev, &rcar_csi2_subdev_ops);
@@ -658,10 +657,6 @@ retry:
 	ret = v4l2_async_register_subdev(&priv->subdev);
 	if (ret < 0)
 		return ret;
-
-	vc_num--;
-	if (vc_num > 0)
-		goto retry;
 
 	pm_runtime_enable(&pdev->dev);
 
