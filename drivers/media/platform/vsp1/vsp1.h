@@ -1,7 +1,7 @@
 /*
  * vsp1.h  --  R-Car VSP1 Driver
  *
- * Copyright (C) 2013-2016 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -76,6 +76,7 @@ struct vsp1_device {
 	struct device *dev;
 	const struct vsp1_device_info *info;
 	u32 version;
+	bool h3_es1x;
 
 	void __iomem *mmio;
 	struct rcar_fcp_device *fcp;

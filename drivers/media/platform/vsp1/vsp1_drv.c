@@ -1,7 +1,7 @@
 /*
  * vsp1_drv.c  --  R-Car VSP1 Driver
  *
- * Copyright (C) 2013-2016 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -231,7 +231,7 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		}
 	}
 
-	if (soc_device_match(r8a7795es1) &&
+	if (vsp1->h3_es1x &&
 		underrun && vsp1_gen3_vspd_check(vsp1))
 		vsp1_underrun_workaround(vsp1, false);
 
@@ -950,6 +950,11 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	vsp1->version = vsp1_read(vsp1, VI6_IP_VERSION);
 	pm_runtime_put_sync(&pdev->dev);
+
+	if (soc_device_match(r8a7795es1))
+		vsp1->h3_es1x = true;
+	else
+		vsp1->h3_es1x = false;
 
 	for (i = 0; i < ARRAY_SIZE(vsp1_device_infos); ++i) {
 		if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
