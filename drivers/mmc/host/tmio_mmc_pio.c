@@ -2,7 +2,7 @@
  * linux/drivers/mmc/host/tmio_mmc_pio.c
  *
  * Copyright (C) 2016 Sang Engineering, Wolfram Sang
- * Copyright (C) 2015-16 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  * Copyright (C) 2011 Guennadi Liakhovetski
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
@@ -63,6 +63,32 @@ void tmio_mmc_disable_mmc_irqs(struct tmio_mmc_host *host, u32 i)
 {
 	host->sdcard_irq_mask |= (i & TMIO_MASK_IRQ);
 	sd_ctrl_write32_as_16_and_16(host, CTL_IRQ_MASK, host->sdcard_irq_mask);
+}
+
+void tmio_set_transtate(struct tmio_mmc_host *host, unsigned int state)
+{
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&host->trans_lock, flags);
+	host->trans_state |= state;
+
+	if (host->trans_state == (TMIO_TRANSTATE_DEND | TMIO_TRANSTATE_AEND)) {
+		spin_unlock_irqrestore(&host->trans_lock, flags);
+		tasklet_schedule(&host->dma_complete);
+	} else {
+		spin_unlock_irqrestore(&host->trans_lock, flags);
+	}
+}
+
+void tmio_clear_transtate(struct tmio_mmc_host *host)
+{
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&host->trans_lock, flags);
+
+	host->trans_state = 0;
+
+	spin_unlock_irqrestore(&host->trans_lock, flags);
 }
 
 static void tmio_mmc_ack_mmc_irqs(struct tmio_mmc_host *host, u32 i)
@@ -596,11 +622,17 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 
 		if (done) {
 			tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND);
-			tasklet_schedule(&host->dma_complete);
+			if (!data->error)
+				tmio_set_transtate(host, TMIO_TRANSTATE_AEND);
+			else
+				tasklet_schedule(&host->dma_complete);
 		}
 	} else if (host->chan_rx && (data->flags & MMC_DATA_READ) && !host->force_pio) {
 		tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND);
-		tasklet_schedule(&host->dma_complete);
+		if (!data->error)
+			tmio_set_transtate(host, TMIO_TRANSTATE_AEND);
+		else
+			tasklet_schedule(&host->dma_complete);
 	} else {
 		tmio_mmc_do_data_irq(host);
 		tmio_mmc_disable_mmc_irqs(host, TMIO_MASK_READOP | TMIO_MASK_WRITEOP);
@@ -650,7 +682,7 @@ static void tmio_mmc_cmd_irq(struct tmio_mmc_host *host,
 	 * we will ultimatley finish the request in the data_end handler.
 	 * If theres no data or we encountered an error, finish now.
 	 */
-	if (host->data && (!cmd->error || cmd->error == -EILSEQ)) {
+	if (host->data && !cmd->error) {
 		if (host->data->flags & MMC_DATA_READ) {
 			if (host->force_pio || !host->chan_rx)
 				tmio_mmc_enable_mmc_irqs(host, TMIO_MASK_READOP);
@@ -759,6 +791,8 @@ irqreturn_t tmio_mmc_irq(int irq, void *devid)
 	if (__tmio_mmc_card_detect_irq(host, ireg, status))
 		return IRQ_HANDLED;
 	if (__tmio_mmc_sdcard_irq(host, ireg, status))
+		return IRQ_HANDLED;
+	if (__tmio_mmc_dma_irq(host))
 		return IRQ_HANDLED;
 
 	tmio_mmc_sdio_irq(irq, devid);
@@ -1283,6 +1317,9 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host,
 
 	spin_lock_init(&_host->lock);
 	mutex_init(&_host->ios_lock);
+
+	spin_lock_init(&_host->trans_lock);
+	_host->trans_state = 0;
 
 	/* Init delayed work for request timeouts */
 	INIT_DELAYED_WORK(&_host->delayed_reset_work, tmio_mmc_reset_work);
