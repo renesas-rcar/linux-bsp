@@ -1,7 +1,7 @@
 /*
  * vsp1_drm.c  --  R-Car VSP1 DRM API
  *
- * Copyright (C) 2015-2016 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -604,13 +604,14 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int lif_index)
 			continue;
 		}
 
-		vsp1->bru->inputs[i].rpf = rpf;
 		if ((lif_index == 1) && (vsp1->brs)) {
 			vsp1->brs->inputs[i].rpf = rpf;
-			rpf->brs_input = 2;
+			rpf->brs_input = i;
 			brs_use = true;
+		} else {
+			vsp1->bru->inputs[i].rpf = rpf;
+			rpf->bru_input = i;
 		}
-		rpf->bru_input = i;
 		rpf->entity.sink_pad = i;
 
 		dev_dbg(vsp1->dev, "%s: connecting RPF.%u to %s:%u\n",
@@ -656,7 +657,7 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int lif_index)
 		}
 	}
 
-	vsp1_dl_list_commit(pipe->dl);
+	vsp1_dl_list_commit(pipe->dl, lif_index);
 	pipe->dl = NULL;
 
 	/* Start or stop the pipeline if needed. */

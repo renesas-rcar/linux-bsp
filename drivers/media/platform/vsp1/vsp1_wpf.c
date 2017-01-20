@@ -1,7 +1,7 @@
 /*
  * vsp1_wpf.c  --  R-Car VSP1 Write Pixel Formatter
  *
- * Copyright (C) 2013-2016 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -385,6 +385,23 @@ static void wpf_configure(struct vsp1_entity *entity,
 
 	if (pipe->bru || pipe->num_inputs > 1)
 		srcrpf |= VI6_WPF_SRCRPF_VIRACT_MST;
+
+	/* When using multiple BRS module, layer is allocated as follows.
+	 * When one BRS is used, RPF4 is master layer.
+	 * When two BRS is used, RPF3 is master layer and RPF4 is sub layer.
+	 */
+	if (pipe->brs) {
+		if (vsp1->num_brs_inputs == 1)
+			srcrpf = VI6_WPF_SRCRPF_VIRACT2_MST |
+				 VI6_WPF_SRCRPF_RPF_ACT_MST(4);
+		else if (pipe->num_inputs > 1)
+			srcrpf = VI6_WPF_SRCRPF_VIRACT2_MST |
+				 VI6_WPF_SRCRPF_RPF_ACT_MST(3) |
+				 VI6_WPF_SRCRPF_RPF_ACT_SUB(4);
+		else if (pipe->num_inputs == 1)
+			srcrpf = VI6_WPF_SRCRPF_VIRACT2_MST |
+				 VI6_WPF_SRCRPF_RPF_ACT_MST(3);
+	}
 
 	vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF, srcrpf);
 

@@ -298,9 +298,14 @@ static void brs_configure(struct vsp1_entity *entity,
 			  enum vsp1_entity_params params)
 {
 	struct vsp1_brs *brs = to_brs(&entity->subdev);
+	struct vsp1_device *vsp1 = brs->entity.vsp1;
 	struct v4l2_mbus_framefmt *format;
 	unsigned int flags;
 	unsigned int i;
+	unsigned int reg_offset = 3;	/* for use from RPF3 */
+	unsigned int brs_base;
+
+	brs_base = vsp1->info->rpf_count - vsp1->num_brs_inputs;
 
 	if (params != VSP1_ENTITY_PARAMS_INIT)
 		return;
@@ -316,7 +321,7 @@ static void brs_configure(struct vsp1_entity *entity,
 		vsp1_brs_write(brs, dl, VI6_BRS_VIRRPF_LOC, 0);
 		vsp1_brs_write(brs, dl, VI6_BRS_VIRRPF_COL, (0xFF << 24));
 
-		for (i = 0; i < brs->entity.source_pad; ++i) {
+		for (i = brs_base; i < brs->entity.source_pad; ++i) {
 			vsp1_brs_write(brs, dl, VI6_BRS_BLD(i),
 			VI6_BRS_BLD_CCMDX_255_SRC_A |
 			VI6_BRS_BLD_CCMDY_SRC_A |
@@ -353,7 +358,7 @@ static void brs_configure(struct vsp1_entity *entity,
 	vsp1_brs_write(brs, dl, VI6_BRS_VIRRPF_COL, brs->bgcolor |
 		       (0xff << VI6_BRS_VIRRPF_COL_A_SHIFT));
 
-	for (i = 0; i < brs->entity.source_pad; ++i) {
+	for (i = reg_offset; i < brs->entity.source_pad; ++i) {
 		bool premultiplied = false;
 		u32 ctrl = 0;
 
@@ -375,18 +380,12 @@ static void brs_configure(struct vsp1_entity *entity,
 		/* Select the virtual RPF as the Blend/ROP unit A DST input to
 		 * serve as a background color.
 		 */
-		if (i == 0)
+		if (i == brs_base)
 			ctrl |= VI6_BRS_CTRL_DSTSEL_VRPF;
 
-		/* Route BRS inputs 0 to 3 as SRC inputs to Blend/ROP units A to
-		 * D in that order. The Blend/ROP unit B SRC is hardwired to the
-		 * ROP unit output, the corresponding register bits must be set
-		 * to 0.
-		 */
-		if (i != 1)
-			ctrl |= VI6_BRS_CTRL_SRCSEL_BRSIN(i);
+		ctrl |= VI6_BRS_CTRL_SRCSEL_BRSIN(i - reg_offset);
 
-		vsp1_brs_write(brs, dl, VI6_BRS_CTRL(i), ctrl);
+		vsp1_brs_write(brs, dl, VI6_BRS_CTRL(i - reg_offset), ctrl);
 
 		/* Harcode the blending formula to
 		 *
@@ -400,7 +399,7 @@ static void brs_configure(struct vsp1_entity *entity,
 		 *
 		 * otherwise.
 		 */
-		vsp1_brs_write(brs, dl, VI6_BRS_BLD(i),
+		vsp1_brs_write(brs, dl, VI6_BRS_BLD(i - reg_offset),
 			       VI6_BRS_BLD_CCMDX_255_SRC_A |
 			       (premultiplied ? VI6_BRS_BLD_CCMDY_COEFY :
 						VI6_BRS_BLD_CCMDY_SRC_A) |
