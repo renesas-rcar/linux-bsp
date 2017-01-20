@@ -560,6 +560,17 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 	if (!data)
 		goto out;
 
+	/* The response of automatic CMD12 is stored */
+	if (host->pdata->flags & TMIO_MMC_MIN_RCAR2) {
+		if ((sd_ctrl_read16(host, CTL_SD_CMD) &
+			(TRANSFER_MULTI | NO_CMD12_ISSUE)) == TRANSFER_MULTI) {
+			if (data->stop) {
+				data->stop->resp[0] =
+					sd_ctrl_read16_and_16_as_32(host,
+							CTL_RESPONSE);
+			}
+		}
+	}
 	if (stat & TMIO_STAT_CRCFAIL || stat & TMIO_STAT_STOPBIT_ERR ||
 	    stat & TMIO_STAT_TXUNDERRUN)
 		data->error = -EILSEQ;
