@@ -878,7 +878,12 @@ static bool hdmi_phy_wait_i2c_done(struct dw_hdmi *hdmi, int msec)
 static void __hdmi_phy_i2c_write(struct dw_hdmi *hdmi, unsigned short data,
 				 unsigned char addr)
 {
-	hdmi_writeb(hdmi, 0xFF, HDMI_IH_I2CMPHY_STAT0);
+	if (hdmi->dev_type == RCAR_HDMI)
+		hdmi_writeb(hdmi, HDMI_IH_I2CMPHY_STAT0_I2CMPHYDONE |
+				HDMI_IH_I2CMPHY_STAT0_I2CMPHYERROR,
+				HDMI_IH_I2CMPHY_STAT0);
+	else
+		hdmi_writeb(hdmi, 0xFF, HDMI_IH_I2CMPHY_STAT0);
 	hdmi_writeb(hdmi, addr, HDMI_PHY_I2CM_ADDRESS_ADDR);
 	hdmi_writeb(hdmi, (unsigned char)(data >> 8),
 		    HDMI_PHY_I2CM_DATAO_1_ADDR);
@@ -1384,7 +1389,13 @@ static void dw_hdmi_clear_overflow(struct dw_hdmi *hdmi)
 	u8 val;
 
 	/* TMDS software reset */
-	hdmi_writeb(hdmi, (u8)~HDMI_MC_SWRSTZ_TMDSSWRST_REQ, HDMI_MC_SWRSTZ);
+	if (hdmi->dev_type == RCAR_HDMI)
+		hdmi_writeb(hdmi, (HDMI_MC_SWRSTZ_TMDSSWRST_MASK &
+				  (u8)~HDMI_MC_SWRSTZ_TMDSSWRST_REQ),
+				  HDMI_MC_SWRSTZ);
+	else
+		hdmi_writeb(hdmi, (u8)~HDMI_MC_SWRSTZ_TMDSSWRST_REQ,
+				  HDMI_MC_SWRSTZ);
 
 	val = hdmi_readb(hdmi, HDMI_FC_INVIDCONF);
 	if (hdmi->dev_type == IMX6DL_HDMI) {
@@ -1502,6 +1513,52 @@ static int dw_hdmi_fb_registered(struct dw_hdmi *hdmi)
 		    HDMI_IH_PHY_STAT0);
 
 	return 0;
+}
+static void initialize_hdmi_rcar_ih_mutes(struct dw_hdmi *hdmi)
+{
+	u8 ih_mute;
+	/*
+	 * Boot up defaults are:
+	 * HDMI_IH_MUTE   = 0x03 (disabled)
+	 * HDMI_IH_MUTE_* = 0x00 (enabled)
+	 *
+	 * Disable top level interrupt bits in HDMI block
+	 */
+	ih_mute = hdmi_readb(hdmi, HDMI_IH_MUTE) |
+		  HDMI_IH_MUTE_MUTE_WAKEUP_INTERRUPT |
+		  HDMI_IH_MUTE_MUTE_ALL_INTERRUPT;
+
+	hdmi_writeb(hdmi, ih_mute, HDMI_IH_MUTE);
+
+	/* by default mask all interrupts */
+	hdmi_writeb(hdmi, 0xff, HDMI_VP_MASK);
+	hdmi_writeb(hdmi, 0xff, HDMI_FC_MASK0);
+	hdmi_writeb(hdmi, 0xff, HDMI_FC_MASK1);
+	hdmi_writeb(hdmi, 0x03, HDMI_FC_MASK2);
+	hdmi_writeb(hdmi, 0xf3, HDMI_PHY_MASK0);
+	hdmi_writeb(hdmi, 0x0c, HDMI_PHY_I2CM_INT_ADDR);
+	hdmi_writeb(hdmi, 0xcc, HDMI_PHY_I2CM_CTLINT_ADDR);
+	hdmi_writeb(hdmi, 0x0c, HDMI_AUD_INT);
+	hdmi_writeb(hdmi, 0xff, HDMI_A_APIINTMSK);
+	hdmi_writeb(hdmi, 0x7f, HDMI_CEC_MASK);
+	hdmi_writeb(hdmi, 0x44, HDMI_I2CM_INT);
+	hdmi_writeb(hdmi, 0x44, HDMI_I2CM_CTLINT);
+
+	/* Disable interrupts in the IH_MUTE_* registers */
+	hdmi_writeb(hdmi, 0xff, HDMI_IH_MUTE_FC_STAT0);
+	hdmi_writeb(hdmi, 0xff, HDMI_IH_MUTE_FC_STAT1);
+	hdmi_writeb(hdmi, 0x03, HDMI_IH_MUTE_FC_STAT2);
+	hdmi_writeb(hdmi, 0x1f, HDMI_IH_MUTE_AS_STAT0);
+	hdmi_writeb(hdmi, 0x3f, HDMI_IH_MUTE_PHY_STAT0);
+	hdmi_writeb(hdmi, 0x0f, HDMI_IH_MUTE_I2CM_STAT0);
+	hdmi_writeb(hdmi, 0x7f, HDMI_IH_MUTE_CEC_STAT0);
+	hdmi_writeb(hdmi, 0xff, HDMI_IH_MUTE_VP_STAT0);
+	hdmi_writeb(hdmi, 0x03, HDMI_IH_MUTE_I2CMPHY_STAT0);
+
+	/* Enable top level interrupt bits in HDMI block */
+	ih_mute &= ~(HDMI_IH_MUTE_MUTE_WAKEUP_INTERRUPT |
+		    HDMI_IH_MUTE_MUTE_ALL_INTERRUPT);
+	hdmi_writeb(hdmi, ih_mute, HDMI_IH_MUTE);
 }
 
 static void initialize_hdmi_ih_mutes(struct dw_hdmi *hdmi)
@@ -1639,7 +1696,7 @@ static void dw_hdmi_bridge_disable(struct drm_bridge *bridge)
 	dw_hdmi_update_phy_mask(hdmi);
 
 	if (hdmi->dev_type == RCAR_HDMI) {
-		hdmi_writeb(hdmi, ~0, HDMI_IH_MUTE_PHY_STAT0);
+		hdmi_writeb(hdmi, 0x3f, HDMI_IH_MUTE_PHY_STAT0);
 		hdmi_writeb(hdmi, HDMI_PHY_HPD | HDMI_PHY_RX_SENSE,
 					 HDMI_PHY_POL0);
 	}
@@ -1655,19 +1712,21 @@ static void dw_hdmi_bridge_enable(struct drm_bridge *bridge)
 
 	if (hdmi->dev_type == RCAR_HDMI) {
 		/* Reinitialization for resume */
-		initialize_hdmi_ih_mutes(hdmi);
+		initialize_hdmi_rcar_ih_mutes(hdmi);
 		hdmi_init_clk_regenerator(hdmi);
 		hdmi_writeb(hdmi, HDMI_PHY_HPD | HDMI_PHY_RX_SENSE,
 					HDMI_PHY_POL0);
 		hdmi_writeb(hdmi, HDMI_IH_PHY_STAT0_HPD |
 					HDMI_IH_PHY_STAT0_RX_SENSE,
 					HDMI_IH_PHY_STAT0);
-		hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD |
-					HDMI_IH_PHY_STAT0_RX_SENSE),
+		hdmi_writeb(hdmi, (HDMI_IH_MUTE_PHY_STAT0_MASK &
+					~(HDMI_IH_PHY_STAT0_HPD |
+					HDMI_IH_PHY_STAT0_RX_SENSE)),
 					HDMI_IH_MUTE_PHY_STAT0);
 		dw_hdmi_fb_registered(hdmi);
-		hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD |
-					HDMI_IH_PHY_STAT0_RX_SENSE),
+		hdmi_writeb(hdmi, (HDMI_IH_MUTE_PHY_STAT0_MASK &
+					~(HDMI_IH_PHY_STAT0_HPD |
+					HDMI_IH_PHY_STAT0_RX_SENSE)),
 					HDMI_IH_MUTE_PHY_STAT0);
 		dw_hdmi_i2c_init(hdmi);
 	}
@@ -1821,7 +1880,10 @@ static irqreturn_t dw_hdmi_hardirq(int irq, void *dev_id)
 
 	intr_stat = hdmi_readb(hdmi, HDMI_IH_PHY_STAT0);
 	if (intr_stat) {
-		hdmi_writeb(hdmi, ~0, HDMI_IH_MUTE_PHY_STAT0);
+		if (hdmi->dev_type == RCAR_HDMI)
+			hdmi_writeb(hdmi, 0x3f, HDMI_IH_MUTE_PHY_STAT0);
+		else
+			hdmi_writeb(hdmi, ~0, HDMI_IH_MUTE_PHY_STAT0);
 		return IRQ_WAKE_THREAD;
 	}
 
@@ -1892,8 +1954,14 @@ static irqreturn_t dw_hdmi_irq(int irq, void *dev_id)
 	}
 
 	hdmi_writeb(hdmi, intr_stat, HDMI_IH_PHY_STAT0);
-	hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD | HDMI_IH_PHY_STAT0_RX_SENSE),
-		    HDMI_IH_MUTE_PHY_STAT0);
+	if (hdmi->dev_type == RCAR_HDMI)
+		hdmi_writeb(hdmi, (HDMI_IH_MUTE_PHY_STAT0_MASK &
+				 ~(HDMI_IH_PHY_STAT0_HPD |
+				  HDMI_IH_PHY_STAT0_RX_SENSE)),
+				  HDMI_IH_MUTE_PHY_STAT0);
+	else
+		hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD |
+			 HDMI_IH_PHY_STAT0_RX_SENSE), HDMI_IH_MUTE_PHY_STAT0);
 
 	return IRQ_HANDLED;
 }
@@ -1965,7 +2033,11 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 	hdmi->encoder = encoder;
 	hdmi->disabled = true;
 	hdmi->rxsense = true;
-	hdmi->phy_mask = (u8)~(HDMI_PHY_HPD | HDMI_PHY_RX_SENSE);
+	if (hdmi->dev_type == RCAR_HDMI)
+		hdmi->phy_mask = (u8)~(BIT(3) | BIT(2) | HDMI_PHY_HPD |
+					 HDMI_PHY_RX_SENSE);
+	else
+		hdmi->phy_mask = (u8)~(HDMI_PHY_HPD | HDMI_PHY_RX_SENSE);
 
 	mutex_init(&hdmi->mutex);
 	mutex_init(&hdmi->audio_mutex);
@@ -2046,7 +2118,10 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 		 hdmi_readb(hdmi, HDMI_PRODUCT_ID0),
 		 hdmi_readb(hdmi, HDMI_PRODUCT_ID1));
 
-	initialize_hdmi_ih_mutes(hdmi);
+	if (hdmi->dev_type == RCAR_HDMI)
+		initialize_hdmi_rcar_ih_mutes(hdmi);
+	else
+		initialize_hdmi_ih_mutes(hdmi);
 
 	ret = devm_request_threaded_irq(dev_master, irq, dw_hdmi_hardirq,
 					dw_hdmi_irq, IRQF_SHARED,
@@ -2086,8 +2161,14 @@ int dw_hdmi_bind(struct device *dev, struct device *master,
 		goto err_iahb;
 
 	/* Unmute interrupts */
-	hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD | HDMI_IH_PHY_STAT0_RX_SENSE),
-		    HDMI_IH_MUTE_PHY_STAT0);
+	if (hdmi->dev_type == RCAR_HDMI)
+		hdmi_writeb(hdmi, (HDMI_IH_MUTE_PHY_STAT0_MASK &
+				 ~(HDMI_IH_PHY_STAT0_HPD |
+				  HDMI_IH_PHY_STAT0_RX_SENSE)),
+				  HDMI_IH_MUTE_PHY_STAT0);
+	else
+		hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD |
+			 HDMI_IH_PHY_STAT0_RX_SENSE), HDMI_IH_MUTE_PHY_STAT0);
 
 	memset(&pdevinfo, 0, sizeof(pdevinfo));
 	pdevinfo.parent = dev;
@@ -2139,7 +2220,10 @@ void dw_hdmi_unbind(struct device *dev, struct device *master, void *data)
 		platform_device_unregister(hdmi->audio);
 
 	/* Disable all interrupts */
-	hdmi_writeb(hdmi, ~0, HDMI_IH_MUTE_PHY_STAT0);
+	if (hdmi->dev_type == RCAR_HDMI)
+		hdmi_writeb(hdmi, 0x3f, HDMI_IH_MUTE_PHY_STAT0);
+	else
+		hdmi_writeb(hdmi, ~0, HDMI_IH_MUTE_PHY_STAT0);
 
 	hdmi->connector.funcs->destroy(&hdmi->connector);
 	hdmi->encoder->funcs->destroy(hdmi->encoder);
