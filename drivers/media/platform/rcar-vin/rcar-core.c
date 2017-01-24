@@ -1512,23 +1512,38 @@ static int rcar_vin_remove(struct platform_device *pdev)
 static int rcar_vin_suspend(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
+	int ret;
 
 	if ((vin->info->chip == RCAR_GEN3) &&
 		((vin->index == 0) || (vin->index == 4)))
 		vin->chsel = rvin_get_chsel(vin);
 
-	return 0;
+	if (vin->state != STALLED)
+		return 0;
+
+	ret = rvin_suspend_stop_streaming(vin);
+
+	pm_runtime_put(vin->dev);
+
+	return ret;
 }
 
 static int rcar_vin_resume(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
+	int ret;
 
 	if ((vin->info->chip == RCAR_GEN3) &&
 		((vin->index == 0) || (vin->index == 4)))
 		rvin_set_chsel(vin, vin->chsel);
 
-	return 0;
+	if (vin->state != STALLED)
+		return 0;
+
+	pm_runtime_get_sync(vin->dev);
+	ret = rvin_resume_start_streaming(vin);
+
+	return ret;
 }
 
 static SIMPLE_DEV_PM_OPS(rcar_vin_pm_ops,

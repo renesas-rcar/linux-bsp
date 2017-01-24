@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -273,5 +273,8 @@ void rvin_crop_scale_comp(struct rvin_dev *vin);
 
 int rvin_set_chsel(struct rvin_dev *vin, u8 chsel);
 int rvin_get_chsel(struct rvin_dev *vin);
+
+int rvin_resume_start_streaming(struct rvin_dev *vin);
+int rvin_suspend_stop_streaming(struct rvin_dev *vin);
 
 #endif
