@@ -1056,15 +1056,14 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, unsigned char prep,
 		hdmi_phy_i2c_write(hdmi, 0x0000, 0x13);	/* PLLPHBYCTRL */
 		hdmi_phy_i2c_write(hdmi, 0x0006, 0x17);
 
-		hdmi_phy_i2c_write(hdmi, phy_config->term,
-				   0x19);		/* TXTERM */
-		hdmi_phy_i2c_write(hdmi, phy_config->sym_ctr,
-				   0x09);		/* CKSYMTXCTRL */
-		hdmi_phy_i2c_write(hdmi, phy_config->vlev_ctr,
-				   0x0e);		/* VLEVCTRL */
 		/* REMOVE CLK TERM */
 		hdmi_phy_i2c_write(hdmi, 0x8000, 0x05);	/* CKCALCTRL */
 	}
+
+	hdmi_phy_i2c_write(hdmi, phy_config->term, 0x19);     /* TXTERM */
+	hdmi_phy_i2c_write(hdmi, phy_config->sym_ctr, 0x09);  /* CKSYMTXCTRL */
+	hdmi_phy_i2c_write(hdmi, phy_config->vlev_ctr, 0x0e); /* VLEVCTRL */
+
 	dw_hdmi_phy_enable_powerdown(hdmi, false);
 
 	/* toggle TMDS enable */
