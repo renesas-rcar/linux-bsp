@@ -1,7 +1,7 @@
 /*
  * vsp1_brs.c  --  R-Car VSP1 Blend ROP Sub Unit
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
+ * Copyright (C) 2016-2017 Renesas Electronics Corporation
  *
  * This file is based on the drivers/media/platform/vsp1/vsp1_bru.c
  *
@@ -112,23 +112,27 @@ static void brs_try_format(struct vsp1_brs *brs,
 			   unsigned int pad, struct v4l2_mbus_framefmt *fmt)
 {
 	struct v4l2_mbus_framefmt *format;
+	struct vsp1_device *vsp1 = brs->entity.vsp1;
+	int brs_base;
 
-	switch (pad) {
-	case BRS_PAD_SINK(0):
+	brs_base = vsp1->info->rpf_count - vsp1->num_brs_inputs;
+
+	if (!pad)
+		goto not_set_code;
+
+	if (pad == brs_base) {
 		/* Default to YUV if the requested format is not supported. */
 		if (fmt->code != MEDIA_BUS_FMT_ARGB8888_1X32 &&
 		    fmt->code != MEDIA_BUS_FMT_AYUV8_1X32)
 			fmt->code = MEDIA_BUS_FMT_AYUV8_1X32;
-		break;
-
-	default:
+	} else {
 		/* The BRS can't perform format conversion. */
 		format = vsp1_entity_get_pad_format(&brs->entity, config,
-						    BRS_PAD_SINK(0));
+						    BRS_PAD_SINK(brs_base));
 		fmt->code = format->code;
-		break;
 	}
 
+not_set_code:
 	fmt->width = clamp(fmt->width, BRS_MIN_SIZE, BRS_MAX_SIZE);
 	fmt->height = clamp(fmt->height, BRS_MIN_SIZE, BRS_MAX_SIZE);
 	fmt->field = V4L2_FIELD_NONE;
@@ -140,9 +144,11 @@ static int brs_set_format(struct v4l2_subdev *subdev,
 			  struct v4l2_subdev_format *fmt)
 {
 	struct vsp1_brs *brs = to_brs(subdev);
+	struct vsp1_device *vsp1 = brs->entity.vsp1;
 	struct v4l2_subdev_pad_config *config;
 	struct v4l2_mbus_framefmt *format;
 	int ret = 0;
+	int brs_base;
 
 	mutex_lock(&brs->entity.lock);
 
@@ -168,11 +174,13 @@ static int brs_set_format(struct v4l2_subdev *subdev,
 		compose->height = format->height;
 	}
 
+	brs_base = vsp1->info->rpf_count - vsp1->num_brs_inputs;
+
 	/* Propagate the format code to all pads */
-	if (fmt->pad == BRS_PAD_SINK(0)) {
+	if (fmt->pad == BRS_PAD_SINK(brs_base)) {
 		unsigned int i;
 
-		for (i = 0; i <= brs->entity.source_pad; ++i) {
+		for (i = brs_base; i <= brs->entity.source_pad; ++i) {
 			format = vsp1_entity_get_pad_format(&brs->entity,
 							    config, i);
 			format->code = fmt->format.code;
