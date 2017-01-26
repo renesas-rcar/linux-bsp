@@ -192,7 +192,9 @@ struct tmio_mmc_host {
 	/* Tuning values: 1 for success, 0 for failure */
 	DECLARE_BITMAP(taps, BITS_PER_BYTE * sizeof(long));
 	unsigned int tap_num;
+	unsigned long tap_set;
 	void (*prepare_hs400_tuning)(struct mmc_host *mmc, struct mmc_ios *ios);
+	void (*reset_hs400_mode)(struct mmc_host *mmc);
 
 	/* Sampling data comparison: 1 for match. 0 for mismatch */
 	DECLARE_BITMAP(smpcmp, BITS_PER_BYTE * sizeof(long));
