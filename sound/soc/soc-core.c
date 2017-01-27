@@ -3675,10 +3675,10 @@ found:
 EXPORT_SYMBOL_GPL(snd_soc_unregister_codec);
 
 /* Retrieve a card's name from device tree */
-int snd_soc_of_parse_card_name_from_node(struct snd_soc_card *card,
-					 struct device_node *np,
-					 const char *propname)
+int snd_soc_of_parse_card_name(struct snd_soc_card *card,
+			       const char *propname)
 {
+	struct device_node *np;
 	int ret;
 
 	if (!card->dev) {
@@ -3686,8 +3686,7 @@ int snd_soc_of_parse_card_name_from_node(struct snd_soc_card *card,
 		return -EINVAL;
 	}
 
-	if (!np)
-		np = card->dev->of_node;
+	np = card->dev->of_node;
 
 	ret = of_property_read_string_index(np, propname, 0, &card->name);
 	/*
@@ -3704,7 +3703,7 @@ int snd_soc_of_parse_card_name_from_node(struct snd_soc_card *card,
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(snd_soc_of_parse_card_name_from_node);
+EXPORT_SYMBOL_GPL(snd_soc_of_parse_card_name);
 
 static const struct snd_soc_dapm_widget simple_widgets[] = {
 	SND_SOC_DAPM_MIC("Microphone", NULL),
