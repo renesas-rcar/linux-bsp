@@ -264,9 +264,9 @@ static int rcar_pcie_save_regs(struct device *dev)
 
 	if (ip) {
 		if (!ip->virt_addr)
-			rcar_handle_registers(ip, DO_IOREMAP);
+			handle_registers(ip, DO_IOREMAP);
 
-		ret = rcar_handle_registers(ip, DO_BACKUP);
+		ret = handle_registers(ip, DO_BACKUP);
 		if (ret)
 			pr_err("%s: %s: BACKUP failed, ret=%d\n",
 				__func__, dev_name(dev), ret);
@@ -283,7 +283,7 @@ static int rcar_pcie_restore_regs(struct device *dev)
 	int ret = -ENODEV;
 
 	if (ip) {
-		ret = rcar_handle_registers(ip, DO_RESTORE);
+		ret = handle_registers(ip, DO_RESTORE);
 		if (ret)
 			pr_err("%s: %s: RESTORE failed, ret=%d\n",
 				__func__, dev_name(dev), ret);
