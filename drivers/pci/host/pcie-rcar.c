@@ -260,14 +260,11 @@ static struct rcar_ip *rcar_pcie_get_ip(const char *name)
 static int rcar_pcie_save_regs(struct device *dev)
 {
 	struct rcar_ip *ip = rcar_pcie_get_ip(dev_name(dev));
-	struct rcar_pcie *pcie = NULL;
 	int ret;
 
 	if (ip) {
-		if (!ip->virt_addr) {
-			pcie = dev_get_drvdata(dev);
-			ip->virt_addr = pcie->base;
-		}
+		if (!ip->virt_addr)
+			rcar_handle_registers(ip, DO_IOREMAP);
 
 		ret = rcar_handle_registers(ip, DO_BACKUP);
 		if (ret)
