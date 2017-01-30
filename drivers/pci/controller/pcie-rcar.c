@@ -477,6 +477,36 @@ done:
 		 (macsr & LINK_SPEED) == LINK_SPEED_5_0GTS ? "5" : "2.5");
 }
 
+static int rcar_pcie_hw_enable(struct rcar_pcie *pcie)
+{
+	struct resource_entry *win;
+	LIST_HEAD(res);
+	int i = 0;
+
+	/* Try setting 5 GT/s link speed */
+	rcar_pcie_force_speedup(pcie);
+
+	/* Setup PCI resources */
+	resource_list_for_each_entry(win, &pcie->resources) {
+		struct resource *res = win->res;
+
+		if (!res->flags)
+			continue;
+
+		switch (resource_type(res)) {
+		case IORESOURCE_IO:
+		case IORESOURCE_MEM:
+			rcar_pcie_setup_window(i, pcie, res);
+			i++;
+			break;
+		default:
+			continue;
+		}
+	}
+
+	return 0;
+}
+
 static int rcar_pcie_enable(struct rcar_pcie *pcie)
 {
 	struct device *dev = pcie->dev;
@@ -916,6 +946,23 @@ static void rcar_pcie_unmap_msi(struct rcar_pcie *pcie)
 	irq_domain_remove(msi->domain);
 }
 
+static int rcar_pcie_hw_enable_msi(struct rcar_pcie *pcie)
+{
+	struct rcar_msi *msi = &pcie->msi;
+	unsigned long base;
+
+	/* setup MSI data target */
+	base = virt_to_phys((void *)msi->pages);
+
+	rcar_pci_write_reg(pcie, base | MSIFE, PCIEMSIALR);
+	rcar_pci_write_reg(pcie, 0, PCIEMSIAUR);
+
+	/* enable all MSI interrupts */
+	rcar_pci_write_reg(pcie, 0xffffffff, PCIEMSIIER);
+
+	return 0;
+}
+
 static int rcar_pcie_enable_msi(struct rcar_pcie *pcie)
 {
 	struct device *dev = pcie->dev;
@@ -1256,9 +1303,13 @@ err_free_bridge:
 	return err;
 }
 
+#ifdef CONFIG_PM_SLEEP
 static int rcar_pcie_resume_noirq(struct device *dev)
 {
 	struct rcar_pcie *pcie = dev_get_drvdata(dev);
+	unsigned int data;
+	int err;
+	int (*hw_init_fn)(struct rcar_pcie *);
 
 	if (rcar_pci_read_reg(pcie, PMSR) &&
 	    !(rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN))
@@ -1267,18 +1318,61 @@ static int rcar_pcie_resume_noirq(struct device *dev)
 	/* Re-establish the PCIe link */
 	rcar_pci_write_reg(pcie, MACCTLR_INIT_VAL, MACCTLR);
 	rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
-	return rcar_pcie_wait_for_dl(pcie);
+	err = rcar_pcie_wait_for_dl(pcie);
+	if (err)
+		return err;
+
+	/* HW initialize on Resume */
+	if (!pcie) {
+		dev_warn(dev, "%s: %s: pcie NULL\n", __func__, dev_name(dev));
+		return 0; /* resume of the whole system continues */
+	}
+
+	err = rcar_pcie_parse_map_dma_ranges(pcie, dev->of_node);
+	if (err) {
+		dev_err(dev, "%s: %s: parse map dma ranges fail, err=%d\n",
+			__func__, dev_name(dev), err);
+		return 0; /* resume of the whole system continues */
+	}
+
+	/* Failure to get a link might just be that no cards are inserted */
+	hw_init_fn = of_device_get_match_data(dev);
+	err = hw_init_fn(pcie);
+	if (err) {
+		dev_err(dev, "PCIe link down\n");
+		dev_dbg(dev, "%s: %s: re-init hw fail, err=%d\n",
+			__func__, dev_name(dev), err);
+		pm_runtime_put(dev);
+		return 0; /* resume of the whole system continues */
+	}
+
+	data = rcar_pci_read_reg(pcie, MACSR);
+	dev_info(dev, "PCIe x%d: link up\n", (data >> 20) & 0x3f);
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		/* enable MSI */
+		rcar_pcie_hw_enable_msi(pcie);
+		dev_dbg(dev, "%s: %s: enable MSI\n", __func__, dev_name(dev));
+	}
+	rcar_pcie_hw_enable(pcie);
+
+	return 0;
 }
 
 static const struct dev_pm_ops rcar_pcie_pm_ops = {
 	.resume_noirq = rcar_pcie_resume_noirq,
 };
 
+#define DEV_PM_OPS (&rcar_pcie_pm_ops)
+#else /* CONFIG_PM_SLEEP */
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_pcie_driver = {
 	.driver = {
 		.name = "rcar-pcie",
 		.of_match_table = rcar_pcie_of_match,
-		.pm = &rcar_pcie_pm_ops,
+		.pm = DEV_PM_OPS,
 		.suppress_bind_attrs = true,
 	},
 	.probe = rcar_pcie_probe,
