@@ -43,6 +43,7 @@
 
 /* Transfer control */
 #define PCIETCTLR		0x02000
+#define  DL_DOWN		(1 << 3)
 #define  CFINIT			1
 #define PCIETSTR		0x02004
 #define  DATA_LINK_ACTIVE	1
@@ -157,6 +158,8 @@ struct rcar_pcie {
 	struct			rcar_msi msi;
 };
 
+static int rcar_pcie_wait_for_dl(struct rcar_pcie *pcie);
+
 static void rcar_pci_write_reg(struct rcar_pcie *pcie, unsigned long val,
 			       unsigned long reg)
 {
@@ -245,6 +248,14 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 	 * transition to L1 link state. The HW will handle coming of of L1.
 	 */
 	val = rcar_pci_read_reg(pcie, PMSR);
+
+	if ((val == 0) || (rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN)) {
+		/* Wait PCI Express link is re-initialized */
+		dev_info(&bus->dev, "Wait PCI Express link is re-initialized\n");
+		rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
+		rcar_pcie_wait_for_dl(pcie);
+	}
+
 	if ((val & PM_ENTER_L1RX) && ((val & PMSTATE) != PMSTATE_L1)) {
 		rcar_pci_write_reg(pcie, L1_INIT, PMCTLR);
 
@@ -560,7 +571,8 @@ static int rcar_pcie_wait_for_dl(struct rcar_pcie *pcie)
 		if ((rcar_pci_read_reg(pcie, PCIETSTR) & DATA_LINK_ACTIVE))
 			return 0;
 
-		msleep(5);
+		/* It sometimes interrupts, I don't use sleep. */
+		mdelay(5);
 	}
 
 	return -ETIMEDOUT;
