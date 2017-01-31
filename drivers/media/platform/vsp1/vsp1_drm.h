@@ -1,7 +1,7 @@
 /*
  * vsp1_drm.h  --  R-Car VSP1 DRM/KMS Interface
  *
- * Copyright (C) 2015-2016 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -26,7 +26,7 @@
  */
 struct vsp1_drm {
 	struct vsp1_pipeline pipe[VSP1_MAX_LIF];
-	unsigned int num_inputs;
+	unsigned int num_inputs[VSP1_MAX_LIF];
 	struct {
 		bool enabled;
 		struct v4l2_rect crop;

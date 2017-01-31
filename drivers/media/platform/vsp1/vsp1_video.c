@@ -1216,7 +1216,7 @@ static int vsp1_video_open(struct file *file)
 
 	file->private_data = vfh;
 
-	ret = vsp1_device_get(video->vsp1);
+	ret = vsp1_device_get(video->vsp1, 0);
 	if (ret < 0) {
 		v4l2_fh_del(vfh);
 		kfree(vfh);

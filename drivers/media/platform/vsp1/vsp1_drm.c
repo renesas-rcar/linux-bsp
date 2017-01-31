@@ -283,7 +283,7 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 	 * as there's no plane configured yet, so we can't start processing
 	 * buffers.
 	 */
-	ret = vsp1_device_get(vsp1);
+	ret = vsp1_device_get(vsp1, lif_index);
 	if (ret < 0)
 		return ret;
 
@@ -310,7 +310,7 @@ void vsp1_du_atomic_begin(struct device *dev, unsigned int lif_index)
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 
-	vsp1->drm->num_inputs = pipe->num_inputs;
+	vsp1->drm->num_inputs[lif_index] = pipe->num_inputs;
 
 	/* Prepare the display list. */
 	pipe->dl = vsp1_dl_list_get(pipe->output->dlm);
@@ -661,14 +661,14 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int lif_index)
 	pipe->dl = NULL;
 
 	/* Start or stop the pipeline if needed. */
-	if (!vsp1->drm->num_inputs && pipe->num_inputs) {
+	if (!vsp1->drm->num_inputs[lif_index] && pipe->num_inputs) {
 		vsp1_write(vsp1, VI6_DISP_IRQ_STA(lif_index), 0);
 		vsp1_write(vsp1, VI6_DISP_IRQ_ENB(lif_index),
 					 VI6_DISP_IRQ_ENB_DSTE);
 		spin_lock_irqsave(&pipe->irqlock, flags);
 		vsp1_pipeline_run(pipe);
 		spin_unlock_irqrestore(&pipe->irqlock, flags);
-	} else if (vsp1->drm->num_inputs && !pipe->num_inputs) {
+	} else if (vsp1->drm->num_inputs[lif_index] && !pipe->num_inputs) {
 		vsp1_write(vsp1, VI6_DISP_IRQ_ENB(lif_index), 0);
 		vsp1_pipeline_stop(pipe);
 	}
