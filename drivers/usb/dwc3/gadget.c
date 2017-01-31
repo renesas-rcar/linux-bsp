@@ -1930,10 +1930,12 @@ static const struct usb_gadget_ops dwc3_gadget_ops = {
 
 /* -------------------------------------------------------------------------- */
 
-static int dwc3_gadget_init_hw_endpoints(struct dwc3 *dwc, u8 num)
+static int dwc3_gadget_init_endpoints(struct dwc3 *dwc, u8 num)
 {
 	struct dwc3_ep			*dep;
 	u8				epnum;
+
+	INIT_LIST_HEAD(&dwc->gadget.ep_list);
 
 	for (epnum = 0; epnum < num; epnum++) {
 		bool			direction = epnum & 1;
@@ -2034,13 +2036,6 @@ static int dwc3_gadget_init_hw_endpoints(struct dwc3 *dwc, u8 num)
 	}
 
 	return 0;
-}
-
-static int dwc3_gadget_init_endpoints(struct dwc3 *dwc)
-{
-	INIT_LIST_HEAD(&dwc->gadget.ep_list);
-
-	return dwc3_gadget_init_hw_endpoints(dwc, dwc->num_eps);
 }
 
 static void dwc3_gadget_free_endpoints(struct dwc3 *dwc)
@@ -3150,7 +3145,7 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	 * sure we're starting from a well known location.
 	 */
 
-	ret = dwc3_gadget_init_endpoints(dwc);
+	ret = dwc3_gadget_init_endpoints(dwc, dwc->num_eps);
 	if (ret)
 		goto err6;
 
