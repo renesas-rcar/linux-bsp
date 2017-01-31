@@ -78,7 +78,6 @@ void vsp1_ut_debug_printk(const char *function_name, const char *format, ...)
 	va_end(args);
 }
 
-#define SRCR7_REG		0xe61501cc
 #define	FCPVD0_REG		0xfea27000
 #define	FCPVD1_REG		0xfea2f000
 #define	FCPVD2_REG		0xfea37000
