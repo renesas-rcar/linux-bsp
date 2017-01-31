@@ -1218,10 +1218,8 @@ static irqreturn_t ravb_interrupt(int irq, void *dev_id)
 	}
 
 	/* gPTP interrupt status summary */
-	if (iss & ISS_CGIS) {
-		ravb_ptp_interrupt(ndev);
-		result = IRQ_HANDLED;
-	}
+	if (iss & ISS_CGIS)
+		result = ravb_ptp_interrupt(ndev);
 
 	spin_unlock(&priv->lock);
 	return result;
@@ -1250,10 +1248,8 @@ static irqreturn_t ravb_multi_interrupt(int irq, void *dev_id)
 	}
 
 	/* gPTP interrupt status summary */
-	if (iss & ISS_CGIS) {
-		ravb_ptp_interrupt(ndev);
-		result = IRQ_HANDLED;
-	}
+	if (iss & ISS_CGIS)
+		result = ravb_ptp_interrupt(ndev);
 
 	spin_unlock(&priv->lock);
 	return result;
