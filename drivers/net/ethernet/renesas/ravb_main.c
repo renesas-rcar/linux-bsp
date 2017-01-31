@@ -1,6 +1,6 @@
 /* Renesas Ethernet AVB device driver
  *
- * Copyright (C) 2014-2015 Renesas Electronics Corporation
+ * Copyright (C) 2014-2017 Renesas Electronics Corporation
  * Copyright (C) 2015 Renesas Solutions Corp.
  * Copyright (C) 2015-2016 Cogent Embedded, Inc. <source@cogentembedded.com>
  *
@@ -1379,8 +1379,8 @@ static const struct ethtool_ops ravb_ethtool_ops = {
 };
 
 static inline int ravb_hook_irq(unsigned int irq, irq_handler_t handler,
-				struct net_device *ndev, struct device *dev,
-				const char *ch)
+				unsigned long flags, struct net_device *ndev,
+				struct device *dev, const char *ch)
 {
 	char *name;
 	int error;
@@ -1388,7 +1388,7 @@ static inline int ravb_hook_irq(unsigned int irq, irq_handler_t handler,
 	name = devm_kasprintf(dev, GFP_KERNEL, "%s:%s", ndev->name, ch);
 	if (!name)
 		return -ENOMEM;
-	error = request_irq(irq, handler, 0, name, ndev);
+	error = request_irq(irq, handler, flags, name, ndev);
 	if (error)
 		netdev_err(ndev, "cannot request IRQ %s\n", name);
 
@@ -1414,28 +1414,28 @@ static int ravb_open(struct net_device *ndev)
 			goto out_napi_off;
 		}
 	} else {
-		error = ravb_hook_irq(ndev->irq, ravb_multi_interrupt, ndev,
-				      dev, "ch22:multi");
+		error = ravb_hook_irq(ndev->irq, ravb_multi_interrupt,
+				      IRQF_SHARED, ndev, dev, "ch22:multi");
 		if (error)
 			goto out_napi_off;
-		error = ravb_hook_irq(priv->emac_irq, ravb_emac_interrupt, ndev,
-				      dev, "ch24:emac");
+		error = ravb_hook_irq(priv->emac_irq, ravb_emac_interrupt,
+				      0, ndev, dev, "ch24:emac");
 		if (error)
 			goto out_free_irq;
 		error = ravb_hook_irq(priv->rx_irqs[RAVB_BE], ravb_be_interrupt,
-				      ndev, dev, "ch0:rx_be");
+				      0, ndev, dev, "ch0:rx_be");
 		if (error)
 			goto out_free_irq_emac;
 		error = ravb_hook_irq(priv->tx_irqs[RAVB_BE], ravb_be_interrupt,
-				      ndev, dev, "ch18:tx_be");
+				      0, ndev, dev, "ch18:tx_be");
 		if (error)
 			goto out_free_irq_be_rx;
 		error = ravb_hook_irq(priv->rx_irqs[RAVB_NC], ravb_nc_interrupt,
-				      ndev, dev, "ch1:rx_nc");
+				      0, ndev, dev, "ch1:rx_nc");
 		if (error)
 			goto out_free_irq_be_tx;
 		error = ravb_hook_irq(priv->tx_irqs[RAVB_NC], ravb_nc_interrupt,
-				      ndev, dev, "ch19:tx_nc");
+				      0, ndev, dev, "ch19:tx_nc");
 		if (error)
 			goto out_free_irq_nc_rx;
 	}
