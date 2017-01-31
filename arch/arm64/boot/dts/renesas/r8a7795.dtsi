@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a7795 SoC
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2015-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -2310,7 +2310,7 @@
 			interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH
 				      GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ch0", "ch1";
-			clocks = <&cpg CPG_MOD 329>;
+			clocks = <&cpg CPG_MOD 326>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#dma-cells = <1>;
 			dma-channels = <2>;
@@ -2323,7 +2323,7 @@
 			interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH
 				      GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ch0", "ch1";
-			clocks = <&cpg CPG_MOD 326>;
+			clocks = <&cpg CPG_MOD 329>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#dma-cells = <1>;
 			dma-channels = <2>;
