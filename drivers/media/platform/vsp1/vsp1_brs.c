@@ -316,18 +316,27 @@ static void brs_configure(struct vsp1_entity *entity,
 	if (pipe->vmute_flag) {
 		vsp1_brs_write(brs, dl, VI6_BRS_INCTRL, 0);
 		vsp1_brs_write(brs, dl, VI6_BRS_VIRRPF_SIZE,
-		  (format->width << VI6_BRS_VIRRPF_SIZE_HSIZE_SHIFT) |
-		  (format->height << VI6_BRS_VIRRPF_SIZE_VSIZE_SHIFT));
+			(format->width << VI6_BRS_VIRRPF_SIZE_HSIZE_SHIFT) |
+			(format->height << VI6_BRS_VIRRPF_SIZE_VSIZE_SHIFT));
 		vsp1_brs_write(brs, dl, VI6_BRS_VIRRPF_LOC, 0);
 		vsp1_brs_write(brs, dl, VI6_BRS_VIRRPF_COL, (0xFF << 24));
 
 		for (i = brs_base; i < brs->entity.source_pad; ++i) {
-			vsp1_brs_write(brs, dl, VI6_BRS_BLD(i),
-			VI6_BRS_BLD_CCMDX_255_SRC_A |
-			VI6_BRS_BLD_CCMDY_SRC_A |
-			VI6_BRS_BLD_ACMDX_255_SRC_A |
-			VI6_BRS_BLD_ACMDY_COEFY |
-			VI6_BRS_BLD_COEFY_MASK);
+			u32 ctrl = 0;
+
+			if (i == brs_base)
+				ctrl |= VI6_BRS_CTRL_DSTSEL_VRPF;
+
+			ctrl |= VI6_BRS_CTRL_SRCSEL_BRSIN(i - reg_offset);
+			vsp1_brs_write(brs, dl, VI6_BRS_CTRL(i - reg_offset),
+								ctrl);
+
+			vsp1_brs_write(brs, dl, VI6_BRS_BLD(i - reg_offset),
+						VI6_BRS_BLD_CCMDX_255_SRC_A |
+						VI6_BRS_BLD_CCMDY_SRC_A |
+						VI6_BRS_BLD_ACMDX_255_SRC_A |
+						VI6_BRS_BLD_ACMDY_COEFY |
+						VI6_BRS_BLD_COEFY_MASK);
 		}
 
 		return;

@@ -189,16 +189,16 @@ static void wpf_configure(struct vsp1_entity *entity,
 	bool writeback = pipe->lif && wpf->mem.addr[0];
 
 	if (pipe->vmute_flag) {
-		vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF +
-			(0x100 * wpf->entity.index),
-			 VI6_WPF_SRCRPF_VIRACT_MST);
-		vsp1_wpf_write(wpf, dl, VI6_WPF_HSZCLIP +
-			(0x100 * wpf->entity.index), 0);
-		vsp1_wpf_write(wpf, dl, VI6_WPF_VSZCLIP +
-			(0x100 * wpf->entity.index), 0);
-		vsp1_wpf_write(wpf, dl, VI6_DPR_WPF_FPORCH(wpf->entity.index),
-			VI6_DPR_WPF_FPORCH_FP_WPFN);
-
+		if (pipe->bru)
+			vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF,
+					 VI6_WPF_SRCRPF_VIRACT_MST);
+		else if (pipe->brs)
+			vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF,
+					 VI6_WPF_SRCRPF_VIRACT2_MST);
+		vsp1_wpf_write(wpf, dl, VI6_WPF_HSZCLIP, 0);
+		vsp1_wpf_write(wpf, dl, VI6_WPF_VSZCLIP, 0);
+		vsp1_dl_list_write(dl, VI6_DPR_WPF_FPORCH(wpf->entity.index),
+					   VI6_DPR_WPF_FPORCH_FP_WPFN);
 		return;
 	}
 
