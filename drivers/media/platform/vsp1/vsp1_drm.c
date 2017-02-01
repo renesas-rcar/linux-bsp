@@ -704,9 +704,15 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 	struct vsp1_rwpf *wpf = pipe->output;
 	const struct vsp1_format_info *fmtinfo;
-	struct vsp1_rwpf *rpf = pipe->inputs[0];
+	struct vsp1_rwpf *rpf;
 	unsigned long flags;
 	int i;
+	u32 rpf_num = 0;
+
+	if (pipe->brs)
+		rpf_num = vsp1->info->rpf_count - vsp1->num_brs_inputs;
+
+	rpf = pipe->inputs[rpf_num];
 
 	fmtinfo = vsp1_get_format_info(vsp1, pixelformat);
 	if (!fmtinfo) {
@@ -740,11 +746,10 @@ EXPORT_SYMBOL_GPL(vsp1_du_setup_wb);
 
 void vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int lif_index)
 {
-	int ret;
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 
-	ret = wait_event_interruptible(pipe->event_wait,
+	wait_event_interruptible(pipe->event_wait,
 				       (pipe->output->write_back == count));
 }
 EXPORT_SYMBOL_GPL(vsp1_du_wait_wb);
