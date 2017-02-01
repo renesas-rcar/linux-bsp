@@ -373,20 +373,20 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		  priv->base + LSWAP_REG);
 
 	if (!soc_device_match(r8a7795es1x) && !soc_device_match(r8a7796)) {
-		/* Set PHY Test Interface Write Register for external
-		 * reference resistor is unnecessary in R-Car H3(WS2.0)
-		 */
-		iowrite32(0x012701e2, priv->base + PHTW_REG);
+		/* Set PHY Test Interface Write Register in R-Car H3(ES2.0) */
+		iowrite32(0x01cc01e2, priv->base + PHTW_REG);
 		iowrite32(0x010101e3, priv->base + PHTW_REG);
 		iowrite32(0x010101e4, priv->base + PHTW_REG);
 		iowrite32(0x01100104, priv->base + PHTW_REG);
+		iowrite32(0x01030100, priv->base + PHTW_REG);
+		iowrite32(0x01800107, priv->base + PHTW_REG);
 	}
 
 	/* Start */
 	iowrite32(phypll, priv->base + PHYPLL_REG);
 
-	/* Set CSI0CLK Frequency Configuration Preset Register for external
-	 * reference resistor is unnecessary in R-Car H3(WS2.0)
+	/* Set CSI0CLK Frequency Configuration Preset Register
+	 * in R-Car H3(ES2.0)
 	 */
 	if (!soc_device_match(r8a7795es1x) && !soc_device_match(r8a7796))
 		iowrite32(CSI0CLKFREQRANGE(32), priv->base + CSI0CLKFCPR_REG);
