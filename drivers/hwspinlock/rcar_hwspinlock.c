@@ -1,7 +1,7 @@
 /*
  * rcar_hwspinlock.c
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
+ * Copyright (C) 2016-2017 Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2
@@ -13,7 +13,6 @@
  * GNU General Public License for more details.
  */
 #include <linux/hwspinlock.h>
-#include <linux/clk.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
@@ -60,16 +59,6 @@ static int rcar_hwspinlock_probe(struct platform_device *pdev)
 	struct hwspinlock_device	*bank;
 	struct hwspinlock		*lock;
 	struct resource			*res = NULL;
-	struct clk			*clock;
-
-	/* enable MFIS clock */
-	clock = of_clk_get(pdev->dev.of_node, 0);
-	if (!clock) {
-		dev_err(&pdev->dev, "Failed to get clock.\n");
-		ret = PTR_ERR(clock);
-		goto out;
-	}
-	clk_prepare_enable(clock);
 
 	pm_runtime_enable(&pdev->dev);
 
@@ -80,7 +69,7 @@ static int rcar_hwspinlock_probe(struct platform_device *pdev)
 	if (IS_ERR(addr)) {
 		dev_err(&pdev->dev, "Failed to remap MFIS Lock register.\n");
 		ret = PTR_ERR(addr);
-		goto clk_disable;
+		goto out;
 	}
 
 	/* create hwspinlock control info */
@@ -90,7 +79,7 @@ static int rcar_hwspinlock_probe(struct platform_device *pdev)
 	if (!bank) {
 		dev_err(&pdev->dev, "Failed to allocate memory.\n");
 		ret = PTR_ERR(bank);
-		goto clk_disable;
+		goto out;
 	}
 
 	for (idx = 0; idx < RCAR_HWSPINLOCK_NUM; idx++) {
@@ -102,12 +91,6 @@ static int rcar_hwspinlock_probe(struct platform_device *pdev)
 	/* register hwspinlock */
 	ret = hwspin_lock_register(bank, &pdev->dev, &rcar_hwspinlock_ops,
 				   0, RCAR_HWSPINLOCK_NUM);
-	if (!ret)
-		goto out;
-
-clk_disable:
-	if (clock)
-		clk_disable_unprepare(clock);
 
 out:
 	return ret;
@@ -116,7 +99,6 @@ out:
 static int rcar_hwspinlock_remove(struct platform_device *pdev)
 {
 	int		ret;
-	struct clk	*clock = NULL;
 
 	ret = hwspin_lock_unregister(platform_get_drvdata(pdev));
 	if (ret) {
@@ -125,9 +107,6 @@ static int rcar_hwspinlock_remove(struct platform_device *pdev)
 	}
 
 	pm_runtime_disable(&pdev->dev);
-	clock = of_clk_get(pdev->dev.of_node, 0);
-	if (clock)
-		clk_disable_unprepare(clock);
 
 	return 0;
 }
