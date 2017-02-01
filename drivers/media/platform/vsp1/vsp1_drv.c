@@ -999,10 +999,17 @@ done:
 static int vsp1_remove(struct platform_device *pdev)
 {
 	struct vsp1_device *vsp1 = platform_get_drvdata(pdev);
+	u32 i, lif_num = 1;
 
-	vsp1_device_put(vsp1);
+	if (vsp1_gen3_vspdl_check(vsp1))
+		lif_num = 2;
+
 	vsp1_destroy_entities(vsp1);
-	rcar_fcp_put(vsp1->fcp);
+
+	for (i = 0; i < lif_num; i++) {
+		vsp1_device_put(vsp1);
+		rcar_fcp_put(vsp1->fcp);
+	}
 
 	pm_runtime_disable(&pdev->dev);
 
