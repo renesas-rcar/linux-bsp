@@ -2,7 +2,7 @@
  * SuperH Mobile SDHI
  *
  * Copyright (C) 2016 Sang Engineering, Wolfram Sang
- * Copyright (C) 2015-16 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  * Copyright (C) 2009 Magnus Damm
  *
  * This program is free software; you can redistribute it and/or modify
@@ -735,7 +735,10 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	}
 
 	/* Orginally registers were 16 bit apart, could be 32 or 64 nowadays */
-	if (!host->bus_shift && resource_size(res) > 0x100) /* old way to determine the shift */
+	if (resource_size(res) > 0x400)
+		host->bus_shift = 2;
+	else if (!host->bus_shift &&
+	    resource_size(res) > 0x100) /* old way to determine the shift */
 		host->bus_shift = 1;
 
 	if (mmd)
