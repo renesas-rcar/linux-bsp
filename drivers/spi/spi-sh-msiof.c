@@ -1,7 +1,7 @@
 /*
  * SuperH MSIOF SPI Master Interface
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
+ * Copyright (C) 2016-2017 Renesas Electronics Corporation
  * Copyright (c) 2009 Magnus Damm
  * Copyright (C) 2014 Glider bvba
  *
@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/sh_dma.h>
+#include <linux/sys_soc.h>
 
 #include <linux/soc/renesas/s2ram_ddr_backup.h>
 #include <linux/spi/sh_msiof.h>
@@ -92,6 +93,7 @@ struct sh_msiof_spi_priv {
 #define MDR1_SYNCCH_SS2  0x08000000 /*   MSIOF_SS2 */
 #define MDR1_SYNCAC_SHIFT	 25 /* Sync Polarity (1 = Active-low) */
 #define MDR1_BITLSB_SHIFT	 24 /* MSB/LSB First (1 = LSB first) */
+#define MDR1_DTDL_MASK   0x00700000 /* Data Pin Bit Delay Mask */
 #define MDR1_DTDL_SHIFT		 20 /* Data Pin Bit Delay for MSIOF_SYNC */
 #define MDR1_SYNCDL_SHIFT	 16 /* Frame Sync Signal Timing Delay */
 #define MDR1_FLD_MASK	 0x0000000c /* Frame Sync Signal Interval (0-3) */
@@ -190,6 +192,15 @@ struct sh_msiof_spi_priv {
 #define IER_RFUDFE	0x00000010 /* Receive FIFO Underflow Enable */
 #define IER_RFOVFE	0x00000008 /* Receive FIFO Overflow Enable */
 
+static const struct soc_device_attribute r8a7795es10[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.0" },
+	{ },
+};
+
+static const struct soc_device_attribute r8a7795es11[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.1" },
+	{ },
+};
 
 static int msiof_rcar_is_gen3(struct device *dev)
 {
@@ -496,6 +507,18 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	tmp |= !cs_high << MDR1_SYNCAC_SHIFT;
 	tmp |= lsb_first << MDR1_BITLSB_SHIFT;
 	tmp |= sh_msiof_spi_get_dtdl_and_syncdl(p);
+	if (soc_device_match(r8a7795es10)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 0 << MDR1_DTDL_SHIFT;
+		}
+	}
+	if (soc_device_match(r8a7795es11)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 1 << MDR1_DTDL_SHIFT;
+		}
+	}
 	if (p->mode == SPI_MSIOF_MASTER) {
 		if (p->cs == 1)
 			tmp |= MDR1_SYNCCH_SS1;
@@ -506,6 +529,18 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 		sh_msiof_write(p, TMDR1, tmp | MDR1_TRMD | TMDR1_PCON);
 	} else
 		sh_msiof_write(p, TMDR1, tmp | TMDR1_PCON);
+	if (soc_device_match(r8a7795es10)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 2 << MDR1_DTDL_SHIFT;
+		}
+	}
+	if (soc_device_match(r8a7795es11)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 1 << MDR1_DTDL_SHIFT;
+		}
+	}
 	if (p->master->flags & SPI_MASTER_MUST_TX) {
 		/* These bits are reserved if RX needs TX */
 		tmp &= ~0x0000ffff;
@@ -513,8 +548,18 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	sh_msiof_write(p, RMDR1, tmp);
 
 	tmp = 0;
-	tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
-	tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+	if (soc_device_match(r8a7795es10)) {
+		if (p->mode == SPI_MSIOF_MASTER) {
+			tmp |= 0 << CTR_TSCKIZ_POL_SHIFT;
+			tmp |= 0 << CTR_RSCKIZ_POL_SHIFT;
+		} else {
+			tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
+			tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+		}
+	} else {
+		tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
+		tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+	}
 
 	edge = cpol ^ !cpha;
 
