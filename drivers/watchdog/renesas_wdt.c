@@ -232,7 +232,7 @@ static int rwdt_suspend(struct device *dev)
 	if (!rwdt_ip.virt_addr)
 		rwdt_ip.virt_addr = priv->base;
 
-	ret = rcar_handle_registers(&rwdt_ip, DO_BACKUP);
+	ret = handle_registers(&rwdt_ip, DO_BACKUP);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }
@@ -241,7 +241,7 @@ static int rwdt_resume(struct device *dev)
 {
 	int ret = 0;
 #ifdef CONFIG_RCAR_DDR_BACKUP
-	ret = rcar_handle_registers(&rwdt_ip, DO_RESTORE);
+	ret = handle_registers(&rwdt_ip, DO_RESTORE);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }
