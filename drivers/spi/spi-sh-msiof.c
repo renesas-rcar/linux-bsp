@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/sh_dma.h>
+#include <linux/sys_soc.h>
 
 #include <linux/spi/sh_msiof.h>
 #include <linux/spi/spi.h>
@@ -62,6 +63,7 @@ struct sh_msiof_spi_priv {
 	dma_addr_t tx_dma_addr;
 	dma_addr_t rx_dma_addr;
 	bool slave_aborted;
+	unsigned int quirks;
 };
 
 #define TMDR1	0x00	/* Transmit Mode Register 1 */
@@ -93,6 +95,7 @@ struct sh_msiof_spi_priv {
 #define MDR1_SYNCCH_SS2  0x08000000 /*   MSIOF_SS2 */
 #define MDR1_SYNCAC_SHIFT	 25 /* Sync Polarity (1 = Active-low) */
 #define MDR1_BITLSB_SHIFT	 24 /* MSB/LSB First (1 = LSB first) */
+#define MDR1_DTDL_MASK   0x00700000 /* Data Pin Bit Delay Mask */
 #define MDR1_DTDL_SHIFT		 20 /* Data Pin Bit Delay for MSIOF_SYNC */
 #define MDR1_SYNCDL_SHIFT	 16 /* Frame Sync Signal Timing Delay */
 #define MDR1_FLD_MASK	 0x0000000c /* Frame Sync Signal Interval (0-3) */
@@ -193,6 +196,17 @@ struct sh_msiof_spi_priv {
 #define IER_RFUDFE	0x00000010 /* Receive FIFO Underflow Enable */
 #define IER_RFOVFE	0x00000008 /* Receive FIFO Overflow Enable */
 
+/* Check LSI revisions and set specific quirk value */
+#define TRANSFER_WORKAROUND_H3WS10  BIT(0) /* H3ES1.0 workaround */
+#define TRANSFER_WORKAROUND_H3WS11  BIT(1) /* H3ES1.1 workaround */
+
+static const struct soc_device_attribute rcar_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.0",
+		.data = (void *)TRANSFER_WORKAROUND_H3WS10, },
+	{ .soc_id = "r8a7795", .revision = "ES1.1",
+		.data = (void *)TRANSFER_WORKAROUND_H3WS11, },
+	{/*sentinel*/},
+};
 
 static int msiof_rcar_is_gen3(struct device *dev)
 {
@@ -380,6 +394,19 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	tmp |= !cs_high << MDR1_SYNCAC_SHIFT;
 	tmp |= lsb_first << MDR1_BITLSB_SHIFT;
 	tmp |= sh_msiof_spi_get_dtdl_and_syncdl(p);
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS10) {
+		if (!spi_controller_is_slave(p->master)) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 0 << MDR1_DTDL_SHIFT;
+		}
+	}
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS11) {
+		if (!spi_controller_is_slave(p->master)) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 1 << MDR1_DTDL_SHIFT;
+		}
+	}
+
 	if (spi_controller_is_slave(p->master)) {
 		sh_msiof_write(p, TMDR1, tmp | TMDR1_PCON);
 	} else {
@@ -391,6 +418,18 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 			tmp &= ~MDR1_SYNCCH_MASK;
 		sh_msiof_write(p, TMDR1, tmp | MDR1_TRMD | TMDR1_PCON);
 	}
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS10) {
+		if (!spi_controller_is_slave(p->master)) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 2 << MDR1_DTDL_SHIFT;
+		}
+	}
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS11) {
+		if (!spi_controller_is_slave(p->master)) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 1 << MDR1_DTDL_SHIFT;
+		}
+	}
 	if (p->master->flags & SPI_MASTER_MUST_TX) {
 		/* These bits are reserved if RX needs TX */
 		tmp &= ~0x0000ffff;
@@ -398,8 +437,18 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	sh_msiof_write(p, RMDR1, tmp);
 
 	tmp = 0;
-	tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
-	tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS10) {
+		if (!spi_controller_is_slave(p->master)) {
+			tmp |= 0 << CTR_TSCKIZ_POL_SHIFT;
+			tmp |= 0 << CTR_RSCKIZ_POL_SHIFT;
+		} else {
+			tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
+			tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+		}
+	} else {
+		tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
+		tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+	}
 
 	edge = cpol ^ !cpha;
 
@@ -1306,6 +1355,7 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	u32 clk_rate = 0;
 	int i;
 	int ret;
+	const struct soc_device_attribute *attr;
 
 	of_id = of_match_device(sh_msiof_match, &pdev->dev);
 	if (of_id) {
@@ -1336,6 +1386,10 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	p->master = master;
 	p->info = info;
 	p->min_div = chipdata->min_div;
+
+	attr = soc_device_match(rcar_quirks_match);
+	if (attr)
+		p->quirks = (uintptr_t)attr->data;
 
 	init_completion(&p->done);
 	init_completion(&p->done_dma_tx);
