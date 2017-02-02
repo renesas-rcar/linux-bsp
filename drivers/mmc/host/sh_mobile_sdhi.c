@@ -1,8 +1,8 @@
 /*
  * SuperH Mobile SDHI
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
  * Copyright (C) 2016 Sang Engineering, Wolfram Sang
+ * Copyright (C) 2015-16 Renesas Electronics Corporation
  * Copyright (C) 2009 Magnus Damm
  *
  * This program is free software; you can redistribute it and/or modify
@@ -110,8 +110,7 @@ static struct sh_mobile_sdhi_scc rcar_gen3_scc_taps[] = {
 
 static const struct sh_mobile_sdhi_of_data of_rcar_gen3_compatible = {
 	.tmio_flags	= TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_WRPROTECT_DISABLE |
-			  TMIO_MMC_CLK_ACTUAL | TMIO_MMC_MIN_RCAR2 |
-			  TMIO_MMC_CLK_NO_SLEEP,
+			  TMIO_MMC_CLK_ACTUAL | TMIO_MMC_MIN_RCAR2,
 	.capabilities	= MMC_CAP_SD_HIGHSPEED | MMC_CAP_SDIO_IRQ |
 			  MMC_CAP_CMD23,
 	.bus_shift	= 2,
@@ -736,10 +735,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	}
 
 	/* Orginally registers were 16 bit apart, could be 32 or 64 nowadays */
-	if (resource_size(res) > 0x400)
-		host->bus_shift = 2;
-	else if (!host->bus_shift &&
-	    resource_size(res) > 0x100) /* old way to determine the shift */
+	if (!host->bus_shift && resource_size(res) > 0x100) /* old way to determine the shift */
 		host->bus_shift = 1;
 
 	if (mmd)
