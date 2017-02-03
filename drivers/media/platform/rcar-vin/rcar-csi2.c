@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car MIPI CSI-2
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -13,6 +13,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/sys_soc.h>
@@ -98,50 +99,90 @@
 /* PHY Test Interface Clear bits */
 #define PHTC_TESTCLR			(1 << 0)
 
-/* PHY Frequency Control bits */
-#define PHYPLL_HSFREQRANGE_80MBPS	(0x00 << 16)
-#define PHYPLL_HSFREQRANGE_90MBPS	(0x10 << 16)
-#define PHYPLL_HSFREQRANGE_100MBPS	(0x20 << 16)
-#define PHYPLL_HSFREQRANGE_110MBPS	(0x30 << 16)
-#define PHYPLL_HSFREQRANGE_120MBPS	(0x01 << 16)
-#define PHYPLL_HSFREQRANGE_130MBPS	(0x11 << 16)
-#define PHYPLL_HSFREQRANGE_140MBPS	(0x21 << 16)
-#define PHYPLL_HSFREQRANGE_150MBPS	(0x31 << 16)
-#define PHYPLL_HSFREQRANGE_160MBPS	(0x02 << 16)
-#define PHYPLL_HSFREQRANGE_170MBPS	(0x12 << 16)
-#define PHYPLL_HSFREQRANGE_180MBPS	(0x22 << 16)
-#define PHYPLL_HSFREQRANGE_190MBPS	(0x32 << 16)
-#define PHYPLL_HSFREQRANGE_205MBPS	(0x03 << 16)
-#define PHYPLL_HSFREQRANGE_220MBPS	(0x13 << 16)
-#define PHYPLL_HSFREQRANGE_235MBPS	(0x23 << 16)
-#define PHYPLL_HSFREQRANGE_250MBPS	(0x33 << 16)
-#define PHYPLL_HSFREQRANGE_275MBPS	(0x04 << 16)
-#define PHYPLL_HSFREQRANGE_300MBPS	(0x14 << 16)
-#define PHYPLL_HSFREQRANGE_325MBPS	(0x05 << 16)
-#define PHYPLL_HSFREQRANGE_350MBPS	(0x15 << 16)
-#define PHYPLL_HSFREQRANGE_400MBPS	(0x25 << 16)
-#define PHYPLL_HSFREQRANGE_450MBPS	(0x06 << 16)
-#define PHYPLL_HSFREQRANGE_500MBPS	(0x16 << 16)
-#define PHYPLL_HSFREQRANGE_550MBPS	(0x07 << 16)
-#define PHYPLL_HSFREQRANGE_600MBPS	(0x17 << 16)
-#define PHYPLL_HSFREQRANGE_650MBPS	(0x08 << 16)
-#define PHYPLL_HSFREQRANGE_700MBPS	(0x18 << 16)
-#define PHYPLL_HSFREQRANGE_750MBPS	(0x09 << 16)
-#define PHYPLL_HSFREQRANGE_800MBPS	(0x19 << 16)
-#define PHYPLL_HSFREQRANGE_850MBPS	(0x29 << 16)
-#define PHYPLL_HSFREQRANGE_900MBPS	(0x39 << 16)
-#define PHYPLL_HSFREQRANGE_950MBPS	(0x0A << 16)
-#define PHYPLL_HSFREQRANGE_1000MBPS	(0x1A << 16)
-#define PHYPLL_HSFREQRANGE_1050MBPS	(0x2A << 16)
-#define PHYPLL_HSFREQRANGE_1100MBPS	(0x3A << 16)
-#define PHYPLL_HSFREQRANGE_1150MBPS	(0x0B << 16)
-#define PHYPLL_HSFREQRANGE_1200MBPS	(0x1B << 16)
-#define PHYPLL_HSFREQRANGE_1250MBPS	(0x2B << 16)
-#define PHYPLL_HSFREQRANGE_1300MBPS	(0x3B << 16)
-#define PHYPLL_HSFREQRANGE_1350MBPS	(0x0C << 16)
-#define PHYPLL_HSFREQRANGE_1400MBPS	(0x1C << 16)
-#define PHYPLL_HSFREQRANGE_1450MBPS	(0x2C << 16)
-#define PHYPLL_HSFREQRANGE_1500MBPS	(0x3C << 16)
+/* PHY Frequency Control */
+#define CSI2_FRE_NUM	43
+
+enum fre_range {
+	BPS_80M,
+	BPS_90M,
+	BPS_100M,
+	BPS_110M,
+	BPS_120M,
+	BPS_130M,
+	BPS_140M,
+	BPS_150M,
+	BPS_160M,
+	BPS_170M,
+	BPS_180M,
+	BPS_190M,
+	BPS_205M,
+	BPS_220M,
+	BPS_235M,
+	BPS_250M,
+	BPS_275M,
+	BPS_300M,
+	BPS_325M,
+	BPS_350M,
+	BPS_400M,
+	BPS_450M,
+	BPS_500M,
+	BPS_550M,
+	BPS_600M,
+	BPS_650M,
+	BPS_700M,
+	BPS_750M,
+	BPS_800M,
+	BPS_850M,
+	BPS_900M,
+	BPS_950M,
+	BPS_1000M,
+	BPS_1050M,
+	BPS_1100M,
+	BPS_1150M,
+	BPS_1200M,
+	BPS_1250M,
+	BPS_1300M,
+	BPS_1350M,
+	BPS_1400M,
+	BPS_1450M,
+	BPS_1500M,
+};
+
+struct rcar_csi2_info {
+	int fre_range[CSI2_FRE_NUM];
+};
+
+static const struct rcar_csi2_info rcar_csi2_info_r8a7795 = {
+	.fre_range = {
+		(0x00 << 16), (0x10 << 16), (0x20 << 16), (0x30 << 16),
+		(0x01 << 16), (0x11 << 16), (0x21 << 16), (0x31 << 16),
+		(0x02 << 16), (0x12 << 16), (0x22 << 16), (0x32 << 16),
+		(0x03 << 16), (0x13 << 16), (0x23 << 16), (0x33 << 16),
+		(0x04 << 16), (0x14 << 16), (0x25 << 16), (0x35 << 16),
+		(0x05 << 16), (0x26 << 16), (0x36 << 16), (0x37 << 16),
+		(0x07 << 16), (0x18 << 16), (0x28 << 16), (0x39 << 16),
+		(0x09 << 16), (0x19 << 16), (0x29 << 16), (0x3a << 16),
+		(0x0a << 16), (0x1a << 16), (0x2a << 16), (0x3b << 16),
+		(0x0b << 16), (0x1b << 16), (0x2b << 16), (0x3c << 16),
+		(0x0c << 16), (0x1c << 16), (0x2c << 16),
+	},
+};
+
+static const struct rcar_csi2_info rcar_csi2_info_r8a7796 = {
+	.fre_range = {
+		(0x00 << 16), (0x10 << 16), (0x20 << 16), (0x30 << 16),
+		(0x01 << 16), (0x11 << 16), (0x21 << 16), (0x31 << 16),
+		(0x02 << 16), (0x12 << 16), (0x22 << 16), (0x32 << 16),
+		(0x03 << 16), (0x13 << 16), (0x23 << 16), (0x33 << 16),
+		(0x04 << 16), (0x14 << 16), (0x05 << 16), (0x15 << 16),
+		(0x25 << 16), (0x06 << 16), (0x16 << 16), (0x07 << 16),
+		(0x17 << 16), (0x08 << 16), (0x18 << 16), (0x09 << 16),
+		(0x19 << 16), (0x29 << 16), (0x39 << 16), (0x0a << 16),
+		(0x1a << 16), (0x2a << 16), (0x3a << 16), (0x0b << 16),
+		(0x1b << 16), (0x2b << 16), (0x3b << 16), (0x0c << 16),
+		(0x1c << 16), (0x2c << 16), (0x3c << 16),
+	},
+};
 
 enum rcar_csi2_pads {
 	RCAR_CSI2_SINK,
@@ -159,6 +200,7 @@ struct rcar_csi2 {
 	struct device *dev;
 	void __iomem *base;
 	spinlock_t lock;
+	const struct rcar_csi2_info *info;
 
 	unsigned short lanes;
 	unsigned char swap[4];
@@ -286,7 +328,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 	case 1:
 		fld = FLD_FLD_NUM(1) | FLD_FLD_EN;
 		phycnt = PHYCNT_ENABLECLK | PHYCNT_ENABLE_0;
-		phypll = PHYPLL_HSFREQRANGE_400MBPS;
+		phypll = priv->info->fre_range[BPS_205M];
 		break;
 	case 4:
 		fld = FLD_FLD_NUM(2) | FLD_FLD_EN4 | FLD_FLD_EN3 |
@@ -297,24 +339,25 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		/* Calculate MBPS per lane, assume 32 bits per pixel at 60Hz */
 		pixels = (priv->mf.width * priv->mf.height);
 		if (pixels <= 640 * 480)
-			phypll = PHYPLL_HSFREQRANGE_100MBPS;
+			phypll = priv->info->fre_range[BPS_100M];
 		else if (pixels <= 720 * 576)
-			phypll = PHYPLL_HSFREQRANGE_190MBPS;
+			phypll = priv->info->fre_range[BPS_190M];
 		else if (pixels <= 1280 * 720)
-			phypll = PHYPLL_HSFREQRANGE_450MBPS;
+			phypll = priv->info->fre_range[BPS_450M];
 		else if (pixels <= 1920 * 1080) {
 			if (priv->mf.field == V4L2_FIELD_NONE)
-				phypll = PHYPLL_HSFREQRANGE_900MBPS;
+				phypll = priv->info->fre_range[BPS_900M];
 			else
-				phypll = PHYPLL_HSFREQRANGE_450MBPS;
-			}
-		else
+				phypll = priv->info->fre_range[BPS_450M];
+		} else
 			goto error;
 
 		break;
 	default:
 		goto error;
 	}
+
+	csi_dbg(priv, "PHYPLL:0x%x\n", phypll);
 
 	/* Init */
 	iowrite32(TREF_TREF, priv->base + TREF_REG);
@@ -450,9 +493,14 @@ static struct v4l2_subdev_ops rcar_csi2_subdev_ops = {
  */
 
 static const struct of_device_id rcar_csi2_of_table[] = {
-	{ .compatible = "renesas,r8a7795-csi2" },
-	{ .compatible = "renesas,r8a7796-csi2" },
-	{ .compatible = "renesas,rcar-gen3-csi2" },
+	{
+		.compatible = "renesas,r8a7795-csi2",
+		.data = &rcar_csi2_info_r8a7795,
+	},
+	{
+		.compatible = "renesas,r8a7796-csi2",
+		.data = &rcar_csi2_info_r8a7796,
+	},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, rcar_csi2_of_table);
@@ -550,6 +598,7 @@ static int rcar_csi2_probe_resources(struct rcar_csi2 *priv,
 static int rcar_csi2_probe(struct platform_device *pdev)
 {
 	struct rcar_csi2 *priv;
+	const struct of_device_id *match;
 	unsigned int i;
 	int ret;
 	u32 vc_num;
@@ -558,6 +607,14 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 
+	match = of_match_device(of_match_ptr(rcar_csi2_of_table), &pdev->dev);
+	if (!match)
+		return -ENODEV;
+	priv->info = match->data;
+
+	/* HSFREQRANGE bit information of H3(ES1.x) and M3(WS1.0) are same. */
+	if (soc_device_match(r8a7795es1x))
+		priv->info = &rcar_csi2_info_r8a7796;
 
 	priv->dev = &pdev->dev;
 	spin_lock_init(&priv->lock);
