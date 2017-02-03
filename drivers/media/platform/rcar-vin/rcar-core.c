@@ -1448,11 +1448,11 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 	vin->dev = &pdev->dev;
 
-	if (soc_device_match(r8a7795es1))
-		vin->info = &rcar_info_r8a7795_es1x;
-
 	vin->info = match->data;
 	vin->last_input = NULL;
+
+	if (soc_device_match(r8a7795es1))
+		vin->info = &rcar_info_r8a7795_es1x;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL)
