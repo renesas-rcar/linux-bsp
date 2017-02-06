@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -530,9 +530,16 @@ static int rvin_cropcap(struct file *file, void *priv,
 {
 	struct rvin_dev *vin = video_drvdata(file);
 	struct v4l2_subdev *sd = vin_to_source(vin);
+	struct rvin_source_fmt source;
 
 	if (crop->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
+
+	__rvin_try_format_source(vin, V4L2_SUBDEV_FORMAT_TRY,
+				 &vin->format, &source);
+
+	vin->source.width = source.width;
+	vin->source.height = source.height;
 
 	return v4l2_subdev_call(sd, video, g_pixelaspect, &crop->pixelaspect);
 }
