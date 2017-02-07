@@ -1,8 +1,8 @@
 /*
  * linux/drivers/mmc/host/tmio_mmc_pio.c
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
  * Copyright (C) 2016 Sang Engineering, Wolfram Sang
+ * Copyright (C) 2015-16 Renesas Electronics Corporation
  * Copyright (C) 2011 Guennadi Liakhovetski
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
@@ -161,9 +161,8 @@ static void tmio_mmc_clk_start(struct tmio_mmc_host *host)
 	msleep(host->pdata->flags & TMIO_MMC_MIN_RCAR2 ? 1 : 10);
 
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
-		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, CLK_CTL_SCLKEN);
-		if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
-			msleep(10);
+		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0100);
+		msleep(10);
 	}
 }
 
@@ -171,8 +170,7 @@ static void tmio_mmc_clk_stop(struct tmio_mmc_host *host)
 {
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
 		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0000);
-		if (!(host->pdata->flags & TMIO_MMC_CLK_NO_SLEEP))
-			msleep(10);
+		msleep(10);
 	}
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &

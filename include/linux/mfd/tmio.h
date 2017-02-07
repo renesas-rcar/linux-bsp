@@ -99,9 +99,6 @@
  */
 #define TMIO_MMC_SDIO_STATUS_QUIRK	(1 << 8)
 
-/* The start or stop of SD clock don't wait 10msec. */
-#define TMIO_MMC_CLK_NO_SLEEP		(1 << 9)
-
 /*
  * Some controllers allows to set SDx actual clock
  */
