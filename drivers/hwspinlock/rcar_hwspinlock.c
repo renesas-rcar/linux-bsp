@@ -60,8 +60,6 @@ static int rcar_hwspinlock_probe(struct platform_device *pdev)
 	struct hwspinlock		*lock;
 	struct resource			*res = NULL;
 
-	pm_runtime_enable(&pdev->dev);
-
 	/* map MFIS register */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	addr = (u32 __iomem *)devm_ioremap_nocache(&pdev->dev,
@@ -88,9 +86,13 @@ static int rcar_hwspinlock_probe(struct platform_device *pdev)
 	}
 	platform_set_drvdata(pdev, bank);
 
+	pm_runtime_enable(&pdev->dev);
+
 	/* register hwspinlock */
 	ret = hwspin_lock_register(bank, &pdev->dev, &rcar_hwspinlock_ops,
 				   0, RCAR_HWSPINLOCK_NUM);
+	if (ret)
+		pm_runtime_disable(&pdev->dev);
 
 out:
 	return ret;
