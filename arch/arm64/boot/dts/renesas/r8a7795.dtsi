@@ -2585,6 +2585,18 @@
 			compatible = "renesas,qos";
 		};
 
+		vsp@fe920000 {
+			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe920000 0 0x8000>;
+			renesas,has-bru;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,#rpf = <5>;
+			renesas,#uds = <0>;
+			renesas,#wpf = <1>;
+		};
+
 		vspbc: vspm@fe920000 {
 			compatible = "renesas,vspm";
 			reg = <0 0xfe920000 0 0x8000>, <0 0xfe92f000 0 0x200>;
