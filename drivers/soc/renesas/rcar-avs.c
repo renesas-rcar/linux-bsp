@@ -18,6 +18,7 @@
 #ifdef CONFIG_POWER_AVS
 #include <linux/io.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/slab.h>
 
 /* Change the default opp_table pattern in device tree.
@@ -61,37 +62,48 @@ int change_default_opp_pattern(unsigned int opp_pattern_num)
 }
 
 /* Get AVS value */
-#define ADVFS_BASE		0xE60A0000
-#define KSEN_ADJCNTS		(ADVFS_BASE + 0x13C)
-#define VOLCOND_MASK_0_3	0x0f	/* VOLCOND[3:0] */
+#define VOLCOND_MASK_0_3  0x0f	/* VOLCOND[3:0] bits of KSEN_ADJCNTS register */
 
 #define AVS_TABLE_NUM	7
 
-unsigned int get_avs_value(void)
-{
-	unsigned int ret;
-	void __iomem *ksen_adjcnts = ioremap_nocache(KSEN_ADJCNTS, 4);
-	u32 ksen_adjcnts_value = ioread32(ksen_adjcnts);
-
-	ksen_adjcnts_value &= VOLCOND_MASK_0_3;
-	if (ksen_adjcnts_value >= 0 && ksen_adjcnts_value < AVS_TABLE_NUM) {
-		ret = ksen_adjcnts_value;
-	} else {
-		ret = 0;
-		pr_debug("rcar-cpufreq: hw get invalid avs value, use avs_tb0\n");
-	}
-	pr_info("rcar-cpufreq: use avs value: %d\n", ksen_adjcnts_value);
-	iounmap(ksen_adjcnts);
-
-	return ret;
-}
 #endif /* CONFIG_POWER_AVS */
+
+static const struct of_device_id rcar_avs_matches[] = {
+#if defined(CONFIG_ARCH_R8A7795) || defined(CONFIG_ARCH_R8A7796)
+	{ .compatible = "renesas,rcar-gen3-avs" },
+#endif
+	{ /* sentinel */ }
+};
 
 int __init rcar_avs_init(void)
 {
 #ifdef CONFIG_POWER_AVS
-	int avs_val = get_avs_value();
+	int avs_val;
+	struct device_node *np;
+	void __iomem *ksen_adjcnts;
 
+	/* Map and get KSEN_ADJCNTS register */
+	np = of_find_matching_node(NULL, rcar_avs_matches);
+	if (!np)
+		return -ENODEV;
+
+	ksen_adjcnts = of_iomap(np, 0); /* KSEN_ADJCNTS register from dts */
+	if (!ksen_adjcnts) {
+		pr_warn("%s: Cannot map regs\n", np->full_name);
+		return -ENOMEM;
+	}
+
+	/* Get and check avs value */
+	avs_val = ioread32(ksen_adjcnts);
+
+	avs_val &= VOLCOND_MASK_0_3;
+	if (!(avs_val >= 0 && avs_val < AVS_TABLE_NUM)) {
+		avs_val = 0;
+		pr_debug("rcar-cpufreq: hw get invalid avs value, use avs_tb0\n");
+	}
+	pr_info("rcar-cpufreq: use avs value: %d\n", avs_val);
+
+	/* Apply avs value */
 	change_default_opp_pattern(avs_val);
 #endif /* CONFIG_POWER_AVS */
 	return 0;
