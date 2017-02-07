@@ -413,6 +413,7 @@ done:
 
 int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index)
 {
+	struct vsp1_rwpf *wpf = vsp1->wpf[index];
 	unsigned int timeout;
 	u32 status;
 
@@ -428,6 +429,9 @@ int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index)
 
 		usleep_range(1000, 2000);
 	}
+
+	if (wpf->pipe)
+		wpf->pipe->configured = false;
 
 	if (!timeout) {
 		dev_err(vsp1->dev, "failed to reset wpf.%u\n", index);

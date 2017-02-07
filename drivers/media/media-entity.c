@@ -546,6 +546,8 @@ void __media_pipeline_stop(struct media_entity *entity)
 	struct media_graph *graph = &entity->pipe->graph;
 	struct media_pipeline *pipe = entity->pipe;
 
+	if (!pipe)
+		return;
 
 	WARN_ON(!pipe->streaming_count);
 	media_graph_walk_start(graph, entity);
