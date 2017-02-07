@@ -1288,7 +1288,7 @@ static int __init ipmmu_vmsa_iommu_of_setup(struct device_node *np)
 
 	ipmmu_init();
 
-	of_iommu_set_ops(np, (struct iommu_ops *)ops);
+	iommu_register_instance(&np->fwnode, (struct iommu_ops *)ops);
 	if (!iommu_present(&platform_bus_type))
 		bus_set_iommu(&platform_bus_type, ops);
 
