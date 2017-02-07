@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Salvator-X board
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -232,6 +232,10 @@
 				remote-endpoint = <&adv7123_out>;
 			};
 		};
+	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
 	};
 
 	lvds-encoder {
@@ -970,4 +974,16 @@
 			};
 		};
 	};
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
+&vin0 {
+	status = "okay";
 };
