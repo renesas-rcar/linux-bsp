@@ -45,12 +45,10 @@ static const struct rcar_du_device_info rcar_du_r8a7779_info = {
 		 */
 		[RCAR_DU_OUTPUT_DPAD0] = {
 			.possible_crtcs = BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
 		},
 		[RCAR_DU_OUTPUT_DPAD1] = {
 			.possible_crtcs = BIT(1) | BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 1,
 		},
 	},
@@ -69,17 +67,14 @@ static const struct rcar_du_device_info rcar_du_r8a7790_info = {
 		 */
 		[RCAR_DU_OUTPUT_DPAD0] = {
 			.possible_crtcs = BIT(2) | BIT(1) | BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
 		},
 		[RCAR_DU_OUTPUT_LVDS0] = {
 			.possible_crtcs = BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_LVDS,
 			.port = 1,
 		},
 		[RCAR_DU_OUTPUT_LVDS1] = {
 			.possible_crtcs = BIT(2) | BIT(1),
-			.encoder_type = DRM_MODE_ENCODER_LVDS,
 			.port = 2,
 		},
 	},
@@ -98,12 +93,10 @@ static const struct rcar_du_device_info rcar_du_r8a7791_info = {
 		 */
 		[RCAR_DU_OUTPUT_DPAD0] = {
 			.possible_crtcs = BIT(1) | BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
 		},
 		[RCAR_DU_OUTPUT_LVDS0] = {
 			.possible_crtcs = BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_LVDS,
 			.port = 1,
 		},
 	},
@@ -119,12 +112,10 @@ static const struct rcar_du_device_info rcar_du_r8a7792_info = {
 		/* R8A7792 has two RGB outputs. */
 		[RCAR_DU_OUTPUT_DPAD0] = {
 			.possible_crtcs = BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
 		},
 		[RCAR_DU_OUTPUT_DPAD1] = {
 			.possible_crtcs = BIT(1),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 1,
 		},
 	},
@@ -142,12 +133,10 @@ static const struct rcar_du_device_info rcar_du_r8a7794_info = {
 		 */
 		[RCAR_DU_OUTPUT_DPAD0] = {
 			.possible_crtcs = BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
 		},
 		[RCAR_DU_OUTPUT_DPAD1] = {
 			.possible_crtcs = BIT(1),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 1,
 		},
 	},
@@ -161,21 +150,28 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 		  | RCAR_DU_FEATURE_VSP1_SOURCE,
 	.num_crtcs = 4,
 	.routes = {
-		/* R8A7795 has one RGB output, one LVDS output and two
-		 * (currently unsupported) HDMI outputs.
+		/* R8A7795 has one RGB output, two HDMI outputs and one
+		 * LVDS output.
 		 */
 		[RCAR_DU_OUTPUT_DPAD0] = {
 			.possible_crtcs = BIT(3),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
+		},
+		[RCAR_DU_OUTPUT_HDMI0] = {
+			.possible_crtcs = BIT(1),
+			.port = 1,
+		},
+		[RCAR_DU_OUTPUT_HDMI1] = {
+			.possible_crtcs = BIT(2),
+			.port = 2,
 		},
 		[RCAR_DU_OUTPUT_LVDS0] = {
 			.possible_crtcs = BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_LVDS,
 			.port = 3,
 		},
 	},
 	.num_lvds = 1,
+	.dpll_ch =  BIT(1) | BIT(2),
 };
 
 static const struct rcar_du_device_info rcar_du_r8a7796_info = {
@@ -190,12 +186,10 @@ static const struct rcar_du_device_info rcar_du_r8a7796_info = {
 		 */
 		[RCAR_DU_OUTPUT_DPAD0] = {
 			.possible_crtcs = BIT(2),
-			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
 		},
 		[RCAR_DU_OUTPUT_LVDS0] = {
 			.possible_crtcs = BIT(0),
-			.encoder_type = DRM_MODE_ENCODER_LVDS,
 			.port = 2,
 		},
 	},
@@ -351,7 +345,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 	init_waitqueue_head(&rcdu->commit.wait);
 
 	rcdu->dev = &pdev->dev;
-	rcdu->info = of_match_device(rcar_du_of_table, rcdu->dev)->data;
+	rcdu->info = of_device_get_match_data(rcdu->dev);
 
 	platform_set_drvdata(pdev, rcdu);
 

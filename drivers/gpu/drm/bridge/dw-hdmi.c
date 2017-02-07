@@ -116,14 +116,17 @@ struct dw_hdmi_i2c {
 struct dw_hdmi_phy_data {
 	enum dw_hdmi_phy_type type;
 	const char *name;
+	unsigned int gen;
 	bool has_svsret;
+	int (*configure)(struct dw_hdmi *hdmi,
+			 const struct dw_hdmi_plat_data *pdata,
+			 unsigned long mpixelclock);
 };
 
 struct dw_hdmi {
 	struct drm_connector connector;
 	struct drm_bridge bridge;
 
-	enum dw_hdmi_devtype dev_type;
 	unsigned int version;
 
 	struct platform_device *audio;
@@ -877,8 +880,20 @@ static bool hdmi_phy_wait_i2c_done(struct dw_hdmi *hdmi, int msec)
 	return true;
 }
 
-static void hdmi_phy_i2c_write(struct dw_hdmi *hdmi, unsigned short data,
-				 unsigned char addr)
+static u16 dw_hdmi_phy_i2c_read(struct dw_hdmi *hdmi, unsigned char addr)
+{
+	hdmi_writeb(hdmi, 0xFF, HDMI_IH_I2CMPHY_STAT0);
+	hdmi_writeb(hdmi, addr, HDMI_PHY_I2CM_ADDRESS_ADDR);
+	hdmi_writeb(hdmi, HDMI_PHY_I2CM_OPERATION_ADDR_READ,
+		    HDMI_PHY_I2CM_OPERATION_ADDR);
+	hdmi_phy_wait_i2c_done(hdmi, 1000);
+
+	return (hdmi_readb(hdmi, HDMI_PHY_I2CM_DATAI_1_ADDR) << 8) |
+	       (hdmi_readb(hdmi, HDMI_PHY_I2CM_DATAI_0_ADDR) << 0);
+}
+
+void dw_hdmi_phy_i2c_write(struct dw_hdmi *hdmi, unsigned short data,
+			   unsigned char addr)
 {
 	hdmi_writeb(hdmi, 0xFF, HDMI_IH_I2CMPHY_STAT0);
 	hdmi_writeb(hdmi, addr, HDMI_PHY_I2CM_ADDRESS_ADDR);
@@ -890,6 +905,7 @@ static void hdmi_phy_i2c_write(struct dw_hdmi *hdmi, unsigned short data,
 		    HDMI_PHY_I2CM_OPERATION_ADDR);
 	hdmi_phy_wait_i2c_done(hdmi, 1000);
 }
+EXPORT_SYMBOL_GPL(dw_hdmi_phy_i2c_write);
 
 static void dw_hdmi_phy_enable_powerdown(struct dw_hdmi *hdmi, bool enable)
 {
@@ -940,51 +956,111 @@ static void dw_hdmi_phy_sel_interface_control(struct dw_hdmi *hdmi, u8 enable)
 			 HDMI_PHY_CONF0_SELDIPIF_MASK);
 }
 
-static int hdmi_phy_configure(struct dw_hdmi *hdmi, int cscon)
+static void dw_hdmi_phy_power_off(struct dw_hdmi *hdmi)
 {
-	u8 val, msec;
-	const struct dw_hdmi_plat_data *pdata = hdmi->plat_data;
+	unsigned int i;
+	u16 val;
+
+	if (hdmi->phy->gen == 1) {
+		dw_hdmi_phy_enable_tmds(hdmi, 0);
+		dw_hdmi_phy_enable_powerdown(hdmi, true);
+		return;
+	}
+
+	dw_hdmi_phy_gen2_txpwron(hdmi, 0);
+
+	/*
+	 * Wait for TX_READY to be deasserted. The signal happens to be exposed
+	 * through the same register on all tested Gen2 PHY versions.
+	 */
+	for (i = 0; i < 5; ++i) {
+		val = dw_hdmi_phy_i2c_read(hdmi, HDMI_3D_TX_PHY_PTRPT_ENBL);
+		if (!(val & HDMI_3D_TX_PHY_PTRPT_ENBL_TX_READY))
+			break;
+
+		usleep_range(1000, 2000);
+	}
+
+	if (val & HDMI_3D_TX_PHY_PTRPT_ENBL_TX_READY)
+		dev_warn(hdmi->dev, "TX_READY failed to go low\n");
+	else
+		dev_dbg(hdmi->dev, "TX_READY went low in %u iterations\n", i);
+
+	dw_hdmi_phy_gen2_pddq(hdmi, 1);
+}
+
+static void dw_hdmi_phy_power_on(struct dw_hdmi *hdmi)
+{
+	if (hdmi->phy->gen == 1) {
+		dw_hdmi_phy_enable_powerdown(hdmi, false);
+
+		/* Toggle TMDS enable. */
+		dw_hdmi_phy_enable_tmds(hdmi, 0);
+		dw_hdmi_phy_enable_tmds(hdmi, 1);
+	} else {
+		dw_hdmi_phy_gen2_txpwron(hdmi, 1);
+		dw_hdmi_phy_gen2_pddq(hdmi, 0);
+	}
+}
+
+/*
+ * PHY configuration function for the DWC HDMI 3D TX PHY. Based on the available
+ * information the DWC MHL PHY has the same register layout and is thus also
+ * supported by this function.
+ */
+static int hdmi_phy_configure_dwc_hdmi_3d_tx(struct dw_hdmi *hdmi,
+		const struct dw_hdmi_plat_data *pdata,
+		unsigned long mpixelclock)
+{
 	const struct dw_hdmi_mpll_config *mpll_config = pdata->mpll_cfg;
 	const struct dw_hdmi_curr_ctrl *curr_ctrl = pdata->cur_ctr;
 	const struct dw_hdmi_phy_config *phy_config = pdata->phy_config;
 
 	/* PLL/MPLL Cfg - always match on final entry */
 	for (; mpll_config->mpixelclock != ~0UL; mpll_config++)
-		if (hdmi->hdmi_data.video_mode.mpixelclock <=
-		    mpll_config->mpixelclock)
+		if (mpixelclock <= mpll_config->mpixelclock)
 			break;
 
 	for (; curr_ctrl->mpixelclock != ~0UL; curr_ctrl++)
-		if (hdmi->hdmi_data.video_mode.mpixelclock <=
-		    curr_ctrl->mpixelclock)
+		if (mpixelclock <= curr_ctrl->mpixelclock)
 			break;
 
 	for (; phy_config->mpixelclock != ~0UL; phy_config++)
-		if (hdmi->hdmi_data.video_mode.mpixelclock <=
-		    phy_config->mpixelclock)
+		if (mpixelclock <= phy_config->mpixelclock)
 			break;
 
 	if (mpll_config->mpixelclock == ~0UL ||
 	    curr_ctrl->mpixelclock == ~0UL ||
-	    phy_config->mpixelclock == ~0UL) {
-		dev_err(hdmi->dev, "Pixel clock %d - unsupported by HDMI\n",
-			hdmi->hdmi_data.video_mode.mpixelclock);
+	    phy_config->mpixelclock == ~0UL)
 		return -EINVAL;
-	}
 
-	/* Enable csc path */
-	if (cscon)
-		val = HDMI_MC_FLOWCTRL_FEED_THROUGH_OFF_CSC_IN_PATH;
-	else
-		val = HDMI_MC_FLOWCTRL_FEED_THROUGH_OFF_CSC_BYPASS;
+	dw_hdmi_phy_i2c_write(hdmi, mpll_config->res[0].cpce, 0x06);
+	dw_hdmi_phy_i2c_write(hdmi, mpll_config->res[0].gmp, 0x15);
 
-	hdmi_writeb(hdmi, val, HDMI_MC_FLOWCTRL);
+	/* CURRCTRL */
+	dw_hdmi_phy_i2c_write(hdmi, curr_ctrl->curr[0], 0x10);
 
-	/* gen2 tx power off */
-	dw_hdmi_phy_gen2_txpwron(hdmi, 0);
+	dw_hdmi_phy_i2c_write(hdmi, 0x0000, 0x13); /* PLLPHBYCTRL */
+	dw_hdmi_phy_i2c_write(hdmi, 0x0006, 0x17);
 
-	/* gen2 pddq */
-	dw_hdmi_phy_gen2_pddq(hdmi, 1);
+	dw_hdmi_phy_i2c_write(hdmi, phy_config->term, 0x19); /* TXTERM */
+	dw_hdmi_phy_i2c_write(hdmi, phy_config->sym_ctr, 0x09); /* CKSYMTXCTRL */
+	dw_hdmi_phy_i2c_write(hdmi, phy_config->vlev_ctr, 0x0E); /* VLEVCTRL */
+
+	/* REMOVE CLK TERM */
+	dw_hdmi_phy_i2c_write(hdmi, 0x8000, 0x05); /* CKCALCTRL */
+
+	return 0;
+}
+
+static int hdmi_phy_configure(struct dw_hdmi *hdmi)
+{
+	const struct dw_hdmi_plat_data *pdata = hdmi->plat_data;
+	unsigned long mpixelclock = hdmi->hdmi_data.video_mode.mpixelclock;
+	u8 val, msec;
+	int ret;
+
+	dw_hdmi_phy_power_off(hdmi);
 
 	/* Leave low power consumption mode by asserting SVSRET. */
 	if (hdmi->phy->has_svsret)
@@ -1001,36 +1077,18 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, int cscon)
 		    HDMI_PHY_I2CM_SLAVE_ADDR);
 	hdmi_phy_test_clear(hdmi, 0);
 
-	hdmi_phy_i2c_write(hdmi, mpll_config->res[0].cpce,
-			   HDMI_3D_TX_PHY_CPCE_CTRL);
-	hdmi_phy_i2c_write(hdmi, mpll_config->res[0].gmp,
-			   HDMI_3D_TX_PHY_GMPCTRL);
-	hdmi_phy_i2c_write(hdmi, curr_ctrl->curr[0],
-			   HDMI_3D_TX_PHY_CURRCTRL);
+	/* Write to the PHY as configured by the platform */
+	if (pdata->configure_phy)
+		ret = pdata->configure_phy(hdmi, pdata, mpixelclock);
+	else
+		ret = hdmi->phy->configure(hdmi, pdata, mpixelclock);
+	if (ret) {
+		dev_err(hdmi->dev, "PHY configuration failed (clock %lu)\n",
+			mpixelclock);
+		return ret;
+	}
 
-	hdmi_phy_i2c_write(hdmi, 0, HDMI_3D_TX_PHY_PLLPHBYCTRL);
-	hdmi_phy_i2c_write(hdmi, HDMI_3D_TX_PHY_MSM_CTRL_CKO_SEL_FB_CLK,
-			   HDMI_3D_TX_PHY_MSM_CTRL);
-
-	hdmi_phy_i2c_write(hdmi, phy_config->term, HDMI_3D_TX_PHY_TXTERM);
-	hdmi_phy_i2c_write(hdmi, phy_config->sym_ctr,
-			   HDMI_3D_TX_PHY_CKSYMTXCTRL);
-	hdmi_phy_i2c_write(hdmi, phy_config->vlev_ctr,
-			   HDMI_3D_TX_PHY_VLEVCTRL);
-
-	/* Override and disable clock termination. */
-	hdmi_phy_i2c_write(hdmi, HDMI_3D_TX_PHY_CKCALCTRL_OVERRIDE,
-			   HDMI_3D_TX_PHY_CKCALCTRL);
-
-	dw_hdmi_phy_enable_powerdown(hdmi, false);
-
-	/* toggle TMDS enable */
-	dw_hdmi_phy_enable_tmds(hdmi, 0);
-	dw_hdmi_phy_enable_tmds(hdmi, 1);
-
-	/* gen2 tx power on */
-	dw_hdmi_phy_gen2_txpwron(hdmi, 1);
-	dw_hdmi_phy_gen2_pddq(hdmi, 0);
+	dw_hdmi_phy_power_on(hdmi);
 
 	/* Wait for PHY PLL lock */
 	msec = 5;
@@ -1054,20 +1112,13 @@ static int hdmi_phy_configure(struct dw_hdmi *hdmi, int cscon)
 static int dw_hdmi_phy_init(struct dw_hdmi *hdmi)
 {
 	int i, ret;
-	bool cscon;
-
-	/*check csc whether needed activated in HDMI mode */
-	cscon = hdmi->sink_is_hdmi && is_color_space_conversion(hdmi);
 
 	/* HDMI Phy spec says to do the phy initialization sequence twice */
 	for (i = 0; i < 2; i++) {
 		dw_hdmi_phy_sel_data_en_pol(hdmi, 1);
 		dw_hdmi_phy_sel_interface_control(hdmi, 0);
-		dw_hdmi_phy_enable_tmds(hdmi, 0);
-		dw_hdmi_phy_enable_powerdown(hdmi, true);
 
-		/* Enable CSC */
-		ret = hdmi_phy_configure(hdmi, cscon);
+		ret = hdmi_phy_configure(hdmi);
 		if (ret)
 			return ret;
 	}
@@ -1295,9 +1346,7 @@ static void dw_hdmi_phy_disable(struct dw_hdmi *hdmi)
 	if (!hdmi->phy_enabled)
 		return;
 
-	dw_hdmi_phy_enable_tmds(hdmi, 0);
-	dw_hdmi_phy_enable_powerdown(hdmi, true);
-
+	dw_hdmi_phy_power_off(hdmi);
 	hdmi->phy_enabled = false;
 }
 
@@ -1329,6 +1378,14 @@ static void dw_hdmi_enable_video_path(struct dw_hdmi *hdmi)
 		clkdis &= ~HDMI_MC_CLKDIS_CSCCLK_DISABLE;
 		hdmi_writeb(hdmi, clkdis, HDMI_MC_CLKDIS);
 	}
+
+	/* Enable color space conversion if needed (for HDMI sinks only). */
+	if (hdmi->sink_is_hdmi && is_color_space_conversion(hdmi))
+		hdmi_writeb(hdmi, HDMI_MC_FLOWCTRL_FEED_THROUGH_OFF_CSC_IN_PATH,
+			    HDMI_MC_FLOWCTRL);
+	else
+		hdmi_writeb(hdmi, HDMI_MC_FLOWCTRL_FEED_THROUGH_OFF_CSC_BYPASS,
+			    HDMI_MC_FLOWCTRL);
 }
 
 static void hdmi_enable_audio_clk(struct dw_hdmi *hdmi)
@@ -1858,24 +1915,37 @@ static const struct dw_hdmi_phy_data dw_hdmi_phys[] = {
 	{
 		.type = DW_HDMI_PHY_DWC_HDMI_TX_PHY,
 		.name = "DWC HDMI TX PHY",
+		.gen = 1,
 	}, {
 		.type = DW_HDMI_PHY_DWC_MHL_PHY_HEAC,
 		.name = "DWC MHL PHY + HEAC PHY",
+		.gen = 2,
 		.has_svsret = true,
+		.configure = hdmi_phy_configure_dwc_hdmi_3d_tx,
 	}, {
 		.type = DW_HDMI_PHY_DWC_MHL_PHY,
 		.name = "DWC MHL PHY",
+		.gen = 2,
 		.has_svsret = true,
+		.configure = hdmi_phy_configure_dwc_hdmi_3d_tx,
 	}, {
 		.type = DW_HDMI_PHY_DWC_HDMI_3D_TX_PHY_HEAC,
 		.name = "DWC HDMI 3D TX PHY + HEAC PHY",
+		.gen = 2,
+		.configure = hdmi_phy_configure_dwc_hdmi_3d_tx,
 	}, {
 		.type = DW_HDMI_PHY_DWC_HDMI_3D_TX_PHY,
 		.name = "DWC HDMI 3D TX PHY",
+		.gen = 2,
+		.configure = hdmi_phy_configure_dwc_hdmi_3d_tx,
 	}, {
 		.type = DW_HDMI_PHY_DWC_HDMI20_TX_PHY,
 		.name = "DWC HDMI 2.0 TX PHY",
+		.gen = 2,
 		.has_svsret = true,
+	}, {
+		.type = DW_HDMI_PHY_VENDOR_PHY,
+		.name = "Vendor PHY",
 	}
 };
 
@@ -1889,17 +1959,23 @@ static int dw_hdmi_detect_phy(struct dw_hdmi *hdmi)
 	for (i = 0; i < ARRAY_SIZE(dw_hdmi_phys); ++i) {
 		if (dw_hdmi_phys[i].type == phy_type) {
 			hdmi->phy = &dw_hdmi_phys[i];
-			return 0;
+			break;
 		}
 	}
 
-	if (phy_type == DW_HDMI_PHY_VENDOR_PHY)
-		dev_err(hdmi->dev, "Unsupported vendor HDMI PHY\n");
-	else
+	if (!hdmi->phy) {
 		dev_err(hdmi->dev, "Unsupported HDMI PHY type (%02x)\n",
 			phy_type);
+		return -ENODEV;
+	}
 
-	return -ENODEV;
+	if (!hdmi->phy->configure && !hdmi->plat_data->configure_phy) {
+		dev_err(hdmi->dev, "%s requires platform support\n",
+			hdmi->phy->name);
+		return -ENODEV;
+	}
+
+	return 0;
 }
 
 static struct dw_hdmi *
@@ -1926,7 +2002,6 @@ __dw_hdmi_probe(struct platform_device *pdev,
 
 	hdmi->plat_data = plat_data;
 	hdmi->dev = dev;
-	hdmi->dev_type = plat_data->dev_type;
 	hdmi->sample_rate = 48000;
 	hdmi->disabled = true;
 	hdmi->rxsense = true;
