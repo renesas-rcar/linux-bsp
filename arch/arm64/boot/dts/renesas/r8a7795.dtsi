@@ -875,6 +875,12 @@
 			status = "disabled";
 		};
 
+		avs: avs@e60a013c {
+			compatible = "renesas,r8a7795-avs", "renesas,rcar-gen3-avs";
+			reg = <0 0xe60a013c 0 0x04>;
+			target_devices = <&a57_0>, <&a57_1>, <&a57_2>, <&a57_3>;
+		};
+
 		cpg: clock-controller@e6150000 {
 			compatible = "renesas,r8a7795-cpg-mssr";
 			reg = <0 0xe6150000 0 0x1000>;
