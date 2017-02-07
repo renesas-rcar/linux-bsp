@@ -570,6 +570,12 @@
 		};
 	};
 
+	avs: avs@e60a013c {
+		compatible = "renesas,r8a7796-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
+		target_devices = <&a57_0>, <&a57_1>;
+	};
+
 	extal_clk: extal {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
