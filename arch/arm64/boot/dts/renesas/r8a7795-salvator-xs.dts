@@ -144,3 +144,7 @@
 		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
 	};
 };
+
+&xhci0 {
+	status = "okay";
+};
