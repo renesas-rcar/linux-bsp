@@ -239,3 +239,11 @@
 &ohci3 {
 	status = "okay";
 };
+
+&hsusb0 {
+	status = "okay";
+};
+
+&hsusb3 {
+	status = "okay";
+};
