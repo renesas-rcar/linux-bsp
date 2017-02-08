@@ -121,6 +121,11 @@
 		function = "hscif1";
 	};
 
+	i2c2_pins: i2c2 {
+		groups = "i2c2_a";
+		function = "i2c2";
+	};
+
 	avb_pins: avb {
 		groups = "avb_mdc";
 		function = "avb";
@@ -195,6 +200,15 @@
 	pinctrl-names = "default";
 	/* Please use exclusively to the scif1 node */
 	/* status = "okay"; */
+};
+
+&i2c2 {
+	pinctrl-0 = <&i2c2_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+
+	clock-frequency = <100000>;
 };
 
 &avb {
