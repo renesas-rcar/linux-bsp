@@ -655,3 +655,41 @@
 &vin7 {
 	status = "okay";
 };
+
+&csi2_20 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi2_20_0_in: endpoint@0 {
+				clock-lanes = <0>;
+				data-lanes = <1>;
+				virtual-channel-number = <1>;
+			};
+		};
+	};
+};
+
+&csi2_40 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi2_40_0_in: endpoint@0 {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				virtual-channel-number = <1>;
+			};
+		};
+	};
+};
