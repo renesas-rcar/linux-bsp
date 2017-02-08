@@ -126,6 +126,30 @@
 		function = "avb";
 	};
 
+	msiof0_pins: spi1 {
+		groups = "msiof0_clk", "msiof0_sync",
+			 "msiof0_rxd", "msiof0_txd";
+		function = "msiof0";
+	};
+
+	msiof1_pins: spi2 {
+		groups = "msiof1_clk_c", "msiof1_sync_c",
+			 "msiof1_rxd_c", "msiof1_txd_c";
+		function = "msiof1";
+	};
+
+	msiof2_pins: spi3 {
+		groups = "msiof2_clk_b", "msiof2_sync_b",
+			 "msiof2_rxd_b", "msiof2_txd_b";
+		function = "msiof2";
+	};
+
+	msiof3_pins: spi4 {
+		groups = "msiof3_clk_d", "msiof3_sync_d",
+			 "msiof3_rxd_d", "msiof3_txd_d";
+		function = "msiof3";
+	};
+
 	usb0_pins: usb0 {
 		groups = "usb0";
 		function = "usb0";
@@ -271,4 +295,68 @@
 
 &hsusb3 {
 	status = "okay";
+};
+
+&msiof_ref_clk {
+	clock-frequency = <66666666>;
+};
+
+&msiof0 {
+	pinctrl-0 = <&msiof0_pins>;
+	pinctrl-names = "default";
+	/* Please use exclusively to the rcar_sound node */
+	/* status = "okay"; */
+
+	spidev@0 {
+		compatible = "renesas,sh-msiof";
+		reg = <0>;
+		spi-max-frequency = <66666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof1 {
+	pinctrl-0 = <&msiof1_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	spidev@0 {
+		compatible = "renesas,sh-msiof";
+		reg = <0>;
+		spi-max-frequency = <66666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof2 {
+	pinctrl-0 = <&msiof2_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	spidev@0 {
+		compatible = "renesas,sh-msiof";
+		reg = <0>;
+		spi-max-frequency = <66666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof3 {
+	pinctrl-0 = <&msiof3_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	spidev@0 {
+		compatible = "renesas,sh-msiof";
+		reg = <0>;
+		spi-max-frequency = <66666666>;
+		spi-cpha;
+		spi-cpol;
+	};
 };
