@@ -10,6 +10,7 @@
 
 /dts-v1/;
 #include "r8a7795.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	model = "Renesas Salvator-X 2nd version board based on r8a7795 es2.0";
@@ -18,6 +19,7 @@
 	aliases {
 		serial0 = &scif2;
 		serial1 = &scif1;
+		ethernet0 = &avb;
 	};
 
 	chosen {
@@ -46,6 +48,11 @@
 		groups = "scif2_data_a";
 		function = "scif2";
 	};
+
+	avb_pins: avb {
+		groups = "avb_mdc";
+		function = "avb";
+	};
 };
 
 &scif1 {
@@ -60,4 +67,31 @@
 	pinctrl-names = "default";
 
 	status = "okay";
+};
+
+&avb {
+	pinctrl-0 = <&avb_pins>;
+	pinctrl-names = "default";
+	renesas,no-ether-link;
+	phy-handle = <&phy0>;
+	status = "okay";
+	phy-gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
+
+	phy0: ethernet-phy@0 {
+		rxc-skew-ps = <1500>;
+		rxdv-skew-ps = <420>; /* default */
+		rxd0-skew-ps = <420>; /* default */
+		rxd1-skew-ps = <420>; /* default */
+		rxd2-skew-ps = <420>; /* default */
+		rxd3-skew-ps = <420>; /* default */
+		txc-skew-ps = <900>; /* default */
+		txen-skew-ps = <420>; /* default */
+		txd0-skew-ps = <420>; /* default */
+		txd1-skew-ps = <420>; /* default */
+		txd2-skew-ps = <420>; /* default */
+		txd3-skew-ps = <420>; /* default */
+		reg = <0>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
+	};
 };
