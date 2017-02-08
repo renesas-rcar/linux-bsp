@@ -125,6 +125,22 @@
 	};
 };
 
+&du_dotclkin0 {
+	clock-frequency = <148500000>;
+};
+
+&du_dotclkin1 {
+	clock-frequency = <33000000>;
+};
+
+&du_dotclkin2 {
+	clock-frequency = <33000000>;
+};
+
+&du_dotclkin3 {
+	clock-frequency = <108000000>;
+};
+
 &du {
 	status = "okay";
 
