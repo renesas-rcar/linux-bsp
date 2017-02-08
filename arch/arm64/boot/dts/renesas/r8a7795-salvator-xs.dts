@@ -146,10 +146,12 @@
 	};
 
 	lvds {
-		compatible = "lvds-connector";
+		compatible = "lvds-connector", "panel-lvds";
 
 		width-mm = <210>;
 		height-mm = <158>;
+
+		data-mapping = "jeida-24";
 
 		panel-timing {
 			/* 1024x768 @60Hz */
