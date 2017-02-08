@@ -1380,8 +1380,10 @@ EXPORT_SYMBOL(tmio_mmc_host_runtime_resume);
 int tmio_mmc_host_suspend(struct device *dev)
 {
 	struct mmc_host *mmc = dev_get_drvdata(dev);
+	struct tmio_mmc_host *host = mmc_priv(mmc);
 
-	tmio_mmc_hw_reset(mmc);
+	if (host->clk_disable)
+		host->clk_disable(host);
 
 	return 0;
 }
@@ -1389,7 +1391,11 @@ EXPORT_SYMBOL(tmio_mmc_host_suspend);
 
 int tmio_mmc_host_resume(struct device *dev)
 {
-	/* Empty for now */
+	struct mmc_host *mmc = dev_get_drvdata(dev);
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+
+	tmio_mmc_clk_enable(host);
+
 	return 0;
 }
 EXPORT_SYMBOL(tmio_mmc_host_resume);
