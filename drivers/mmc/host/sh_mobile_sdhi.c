@@ -850,13 +850,10 @@ static int sh_mobile_sdhi_remove(struct platform_device *pdev)
 }
 
 static const struct dev_pm_ops tmio_mmc_dev_pm_ops = {
-	SET_RUNTIME_PM_OPS(tmio_mmc_host_runtime_suspend,
-			tmio_mmc_host_runtime_resume,
-			NULL)
-#ifdef CONFIG_PM_SLEEP
+	.runtime_suspend = tmio_mmc_host_runtime_suspend,
+	.runtime_resume = tmio_mmc_host_runtime_resume,
 	.suspend_late = tmio_mmc_host_suspend,
 	.resume_early = tmio_mmc_host_resume,
-#endif
 };
 
 static struct platform_driver sh_mobile_sdhi_driver = {
