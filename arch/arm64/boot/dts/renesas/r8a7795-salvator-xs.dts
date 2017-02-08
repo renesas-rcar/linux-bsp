@@ -195,6 +195,15 @@
 	pinctrl-names = "default";
 	status = "okay";
 
+	/* update <du_dotclkin0/3> to <programmable_clk0/1> */
+	clocks = <&cpg CPG_MOD 724>,
+		 <&cpg CPG_MOD 723>,
+		 <&cpg CPG_MOD 722>,
+		 <&cpg CPG_MOD 721>,
+		 <&cpg CPG_MOD 727>,
+		 <&programmable_clk0>, <&du_dotclkin1>, <&du_dotclkin2>,
+		 <&programmable_clk1>;
+
 	backlight-gpios = <&gpio6 7 GPIO_ACTIVE_HIGH>;
 
 	ports {
@@ -338,6 +347,21 @@
 	status = "okay";
 
 	clock-frequency = <400000>;
+
+	clk_5p49v5923a: programmable_clk@6a {
+		compatible = "idt,5p49v5923a";
+		reg = <0x6a>;
+
+		programmable_clk0: 5p49v5923a_clk1@6a {
+			#clock-cells = <0>;
+			clocks = <&du_dotclkin0>;
+		};
+
+		programmable_clk1: 5p49v5923a_clk2@6a {
+			#clock-cells = <0>;
+			clocks = <&du_dotclkin3>;
+		};
+	};
 };
 
 &avb {
