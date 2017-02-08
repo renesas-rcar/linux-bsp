@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Salvator-X 2nd version board
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -33,7 +33,7 @@
 };
 
 &extal_clk {
-	clock-frequency = <16666666>;
+	clock-frequency = <16640000>;
 };
 
 &pfc {
