@@ -814,8 +814,6 @@
 			compatible =    "renesas,mfis-lock-r8a7795",
 					"renesas,mfis-lock";
 			reg = <0 0xe62600c0 0 0x0020>;
-			clocks = <&cpg CPG_MOD 213>;
-			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "okay";
 		};
 
