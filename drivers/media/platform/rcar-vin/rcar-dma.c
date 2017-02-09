@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -1249,9 +1249,12 @@ static void rvin_buffer_queue(struct vb2_buffer *vb)
 	 * If capture is stalled add buffer to HW and restart
 	 * capturing if HW is ready to continue.
 	 */
-	if (vin->state == STALLED)
-		if (rvin_fill_hw(vin))
+	if (vin->state == STALLED) {
+		if (rvin_fill_hw(vin)) {
 			rvin_capture_on(vin);
+			vin->state = RUNNING;
+		}
+	}
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
 }
@@ -1414,6 +1417,66 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 
 	/* disable interrupts */
 	rvin_disable_interrupts(vin);
+}
+
+int rvin_resume_start_streaming(struct rvin_dev *vin)
+{
+	unsigned long flags;
+	int ret;
+
+	ret = __rvin_start_streaming(vin);
+	if (ret)
+		return ret;
+
+	spin_lock_irqsave(&vin->qlock, flags);
+
+	vin->sequence = 0;
+
+	rvin_crop_scale_comp(vin);
+	ret = rvin_setup(vin);
+
+	/* Return all buffers if something went wrong */
+	if (ret) {
+		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
+		__rvin_stop_streaming(vin);
+	}
+
+	spin_unlock_irqrestore(&vin->qlock, flags);
+
+	return ret;
+}
+
+int rvin_suspend_stop_streaming(struct rvin_dev *vin)
+{
+	unsigned long flags;
+	struct v4l2_subdev *source, *bridge = NULL;
+
+	/* Release all active buffers */
+	spin_lock_irqsave(&vin->qlock, flags);
+	return_all_buffers(vin, VB2_BUF_STATE_ERROR);
+	spin_unlock_irqrestore(&vin->qlock, flags);
+
+	__rvin_stop_streaming(vin);
+	source = vin_to_source(vin);
+	if (!source)
+		return -EINVAL;
+
+	if (vin_have_bridge(vin)) {
+		bridge = vin_to_bridge(vin);
+
+		if (!bridge)
+			return -EINVAL;
+
+		mutex_lock(&vin->group->lock);
+		bridge->entity.stream_count = 0;
+		source->entity.stream_count = 0;
+		mutex_unlock(&vin->group->lock);
+	}
+
+	/* disable interrupts */
+	rvin_disable_interrupts(vin);
+
+	return 0;
 }
 
 static const struct vb2_ops rvin_qops = {
