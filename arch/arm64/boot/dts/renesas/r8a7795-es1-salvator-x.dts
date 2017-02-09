@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Salvator-X board on r8a7795 ES1.x
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This file is based on the arch/arm64/boot/dts/renesas/r8a7795-es1-salvator-x.dts
  *
@@ -617,7 +617,6 @@
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
 
-	uart-has-rtscts;
 	/* Please use exclusively to the hscif1 node */
 	status = "okay";
 };
