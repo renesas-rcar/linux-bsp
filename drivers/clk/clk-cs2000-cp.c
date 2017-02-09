@@ -59,6 +59,10 @@ struct cs2000_priv {
 	struct i2c_client *client;
 	struct clk *clk_in;
 	struct clk *ref_clk;
+
+	/* suspend/resume */
+	unsigned long saved_rate;
+	unsigned long saved_parent_rate;
 };
 
 static const struct of_device_id cs2000_of_match[] = {
@@ -286,6 +290,9 @@ static int __cs2000_set_rate(struct cs2000_priv *priv, int ch,
 	if (ret < 0)
 		return ret;
 
+	priv->saved_rate	= rate;
+	priv->saved_parent_rate	= parent_rate;
+
 	return 0;
 }
 
@@ -489,42 +496,24 @@ probe_err:
 	return ret;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int cs2000_suspend(struct device *dev)
-{
-	/* Empty function for now */
-	return 0;
-}
-
 static int cs2000_resume(struct device *dev)
 {
 	struct cs2000_priv *priv = dev_get_drvdata(dev);
-	int rate;
-	int ret;
+	int ch = 0; /* it uses ch0 only at this point */
 
-	/* Setting is referred from cs2000_clk_register */
-	rate = clk_get_rate(priv->ref_clk);
-	ret = __cs2000_set_rate(priv, 0, rate, rate);
-
-	if (ret < 0)
-		return ret;
-
-	return 0;
+	return __cs2000_set_rate(priv, ch,
+				 priv->saved_rate,
+				 priv->saved_parent_rate);
 }
 
 static const struct dev_pm_ops cs2000_pm_ops = {
-	.suspend = cs2000_suspend,
-	.resume_early = cs2000_resume,
+	.resume_early	= cs2000_resume,
 };
-#define DEV_PM_OPS (&cs2000_pm_ops)
-#else
-#define DEV_PM_OPS NULL
-#endif /* CONFIG_PM_SLEEP */
 
 static struct i2c_driver cs2000_driver = {
 	.driver = {
 		.name = "cs2000-cp",
-		.pm	= DEV_PM_OPS,
+		.pm	= &cs2000_pm_ops,
 		.of_match_table = cs2000_of_match,
 	},
 	.probe		= cs2000_probe,
