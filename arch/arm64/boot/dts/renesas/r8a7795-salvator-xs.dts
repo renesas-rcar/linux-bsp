@@ -734,6 +734,11 @@
 	};
 };
 
+&sata {
+	/* Please use exclusively to pciec1 node */
+	/* status = "okay"; */
+};
+
 &sdhi0 {
 	pinctrl-0 = <&sdhi0_pins>;
 	pinctrl-1 = <&sdhi0_pins_uhs>;
@@ -961,6 +966,7 @@
 };
 
 &pciec1 {
+	/* Please use exclusively to sata node */
 	status = "okay";
 };
 
