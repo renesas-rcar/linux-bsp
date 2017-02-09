@@ -613,7 +613,6 @@
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
 
-	uart-has-rtscts;
 	/* Please use exclusively to the hscif1 node */
 	status = "okay";
 };
