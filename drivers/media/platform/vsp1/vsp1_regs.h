@@ -1,7 +1,7 @@
 /*
  * vsp1_regs.h  --  R-Car VSP1 Registers Definitions
  *
- * Copyright (C) 2013-2016 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -86,16 +86,14 @@
 #define VI6_DL_CTRL			0x0100
 #define VI6_DL_CTRL_AR_WAIT_MASK	(0xffff << 16)
 #define VI6_DL_CTRL_AR_WAIT_SHIFT	16
-#define VI6_DL_CTRL_DC2			(1 << 12)
-#define VI6_DL_CTRL_DC1			(1 << 8)
-#define VI6_DL_CTRL_DC0			(1 << 4)
 #define VI6_DL_CTRL_CFM0		(1 << 2)
 #define VI6_DL_CTRL_NH0			(1 << 1)
-#define VI6_DL_CTRL_DLE			(1 << 0)
+#define VI6_DL_CTRL_DLE(n)		(1 << (4 * n))
 
 #define VI6_DL_HDR_ADDR(n)		(0x0104 + (n) * 4)
 
 #define VI6_DL_SWAP(n)			(0x0114 + (n) * 56)
+#define VI6_DL_SWAP_IND			(1 << 31)
 #define VI6_DL_SWAP_LWS			(1 << 2)
 #define VI6_DL_SWAP_WDS			(1 << 1)
 #define VI6_DL_SWAP_BTS			(1 << 0)
@@ -264,6 +262,10 @@
 #define VI6_WPF_SRCRPF_VIRACT_SUB	(1 << 28)
 #define VI6_WPF_SRCRPF_VIRACT_MST	(2 << 28)
 #define VI6_WPF_SRCRPF_VIRACT_MASK	(3 << 28)
+#define VI6_WPF_SRCRPF_VIRACT2_DIS	(0 << 24)
+#define VI6_WPF_SRCRPF_VIRACT2_SUB	(1 << 24)
+#define VI6_WPF_SRCRPF_VIRACT2_MST	(2 << 24)
+#define VI6_WPF_SRCRPF_VIRACT2_MASK	(3 << 24)
 #define VI6_WPF_SRCRPF_RPF_ACT_DIS(n)	(0 << ((n) * 2))
 #define VI6_WPF_SRCRPF_RPF_ACT_SUB(n)	(1 << ((n) * 2))
 #define VI6_WPF_SRCRPF_RPF_ACT_MST(n)	(2 << ((n) * 2))
