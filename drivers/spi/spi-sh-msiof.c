@@ -1,7 +1,7 @@
 /*
  * SuperH MSIOF SPI Master Interface
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
+ * Copyright (C) 2016-2017 Renesas Electronics Corporation
  * Copyright (c) 2009 Magnus Damm
  * Copyright (C) 2014 Glider bvba
  *
@@ -201,7 +201,6 @@ static const struct soc_device_attribute r8a7795es11[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.1" },
 	{ },
 };
-
 
 static int msiof_rcar_is_gen3(struct device *dev)
 {
@@ -549,7 +548,7 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	sh_msiof_write(p, RMDR1, tmp);
 
 	tmp = 0;
-	if (soc_device_match(r8a7795es11)) {
+	if (soc_device_match(r8a7795es10)) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp |= 0 << CTR_TSCKIZ_POL_SHIFT;
 			tmp |= 0 << CTR_RSCKIZ_POL_SHIFT;
@@ -1570,9 +1569,14 @@ MODULE_DEVICE_TABLE(platform, spi_driver_ids);
 static int sh_msiof_spi_suspend(struct device *dev)
 {
 	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
 	struct platform_device *pdev = to_platform_device(dev);
+	struct sh_msiof_spi_priv *p = platform_get_drvdata(pdev);
 
+	ret = spi_master_suspend(p->master);
+	if (ret)
+		return ret;
+
+#ifdef CONFIG_RCAR_DDR_BACKUP
 	pm_runtime_get_sync(dev);
 	ret = msiof_save_regs(pdev);
 	pm_runtime_put(dev);
@@ -1583,13 +1587,19 @@ static int sh_msiof_spi_suspend(struct device *dev)
 static int sh_msiof_spi_resume(struct device *dev)
 {
 	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
 	struct platform_device *pdev = to_platform_device(dev);
+	struct sh_msiof_spi_priv *p = platform_get_drvdata(pdev);
 
+#ifdef CONFIG_RCAR_DDR_BACKUP
 	pm_runtime_get_sync(dev);
 	ret = msiof_restore_regs(pdev);
 	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
+
+	ret = spi_master_resume(p->master);
+	if (ret)
+		return ret;
+
 	return ret;
 }
 
