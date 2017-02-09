@@ -1976,6 +1976,7 @@
 			reg = <0 0xfe940000 0 0x2400>, <0 0xfe950000 0 0x200>;
 			interrupts = <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 119>, <&cpg CPG_MOD 615>;
+			clock-names = "fdp", "fcp";
 			power-domains = <&sysc R8A7796_PD_A3VC>;
 			renesas,#ch = <0>;
 		};
@@ -2404,6 +2405,7 @@
 			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
 			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 626>, <&cpg CPG_MOD 607>;
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <3>;
 			renesas,#rpf = <31>;
 			renesas,#rpf_clut = <6>;
@@ -2435,6 +2437,7 @@
 			reg = <0 0xfe9a0000 0 0x8000>, <0 0xfe9af000 0 0x200>;
 			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 631>, <&cpg CPG_MOD 611>;
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <0>;
 			renesas,#rpf = <1>;
 			renesas,#rpf_clut = <1>;
