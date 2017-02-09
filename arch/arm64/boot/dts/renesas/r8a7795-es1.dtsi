@@ -1879,6 +1879,7 @@
 			reg = <0 0xfe940000 0 0x2400>, <0 0xfe950000 0 0x200>;
 			interrupts = <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 119>, <&cpg CPG_MOD 615>;
+			clock-names = "fdp", "fcp";
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			renesas,#ch = <0>;
 		};
@@ -1888,6 +1889,7 @@
 			reg = <0 0xfe944000 0 0x2400>, <0 0xfe951000 0 0x200>;
 			interrupts = <GIC_SPI 263 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>, <&cpg CPG_MOD 614>;
+			clock-names = "fdp", "fcp";
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			renesas,#ch = <1>;
 		};
@@ -1897,6 +1899,7 @@
 			reg = <0 0xfe948000 0 0x2400>, <0 0xfe952000 0 0x200>;
 			interrupts = <GIC_SPI 264 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 117>, <&cpg CPG_MOD 613>;
+			clock-names = "fdp", "fcp";
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			renesas,#ch = <2>;
 		};
@@ -2635,6 +2638,7 @@
 			reg = <0 0xfe920000 0 0x8000>, <0 0xfe92f000 0 0x200>;
 			interrupts = <GIC_SPI 465 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 624>, <&cpg CPG_MOD 606>;
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <4>;
 			renesas,#rpf = <31>;
 			renesas,#rpf_clut = <4>;
@@ -2662,7 +2666,7 @@
 			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
 			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 626>, <&cpg CPG_MOD 607>;
-
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <3>;
 			renesas,#rpf = <31>;
 			renesas,#rpf_clut = <4>;
@@ -2690,7 +2694,7 @@
 			reg = <0 0xfe9a0000 0 0x8000>, <0 0xfe9af000 0 0x200>;
 			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 631>, <&cpg CPG_MOD 611>;
-
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <0>;
 			renesas,#rpf = <1>;
 			renesas,#rpf_clut = <1>;
@@ -2726,7 +2730,7 @@
 			reg = <0 0xfe9b0000 0 0x8000>, <0 0xfe9bf000 0 0x200>;
 			interrupts = <GIC_SPI 445 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 630>, <&cpg CPG_MOD 610>;
-
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <1>;
 			renesas,#rpf = <1>;
 			renesas,#rpf_clut = <1>;
@@ -2762,7 +2766,7 @@
 			reg = <0 0xfe9c0000 0 0x8000>, <0 0xfe9cf000 0 0x200>;
 			interrupts = <GIC_SPI 446 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 629>, <&cpg CPG_MOD 609>;
-
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <2>;
 			renesas,#rpf = <1>;
 			renesas,#rpf_clut = <1>;
