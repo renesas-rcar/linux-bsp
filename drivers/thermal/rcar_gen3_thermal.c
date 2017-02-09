@@ -49,7 +49,7 @@
 #define PTAT_SIZE		REG_GEN3_PTAT3
 
 /* CTSR bit */
-#define PONM1            (0x1 << 8)	/* For H3 WS1.x */
+#define PONM1            (0x1 << 8)	/* For H3 ES1.x */
 #define AOUT            (0x1 << 7)
 #define THBGR           (0x1 << 5)
 #define VMEN            (0x1 << 4)
@@ -57,7 +57,7 @@
 #define THSST           (0x1 << 0)
 
 /* THCTR bit */
-#define PONM2            (0x1 << 6)	/* For H3 WS2.0 and M3 WS1.0 */
+#define PONM2            (0x1 << 6)	/* For H3 ES2.0 and M3 ES1.0 */
 
 #define CTEMP_MASK	0xFFF
 
@@ -74,13 +74,18 @@
 #define GEN3_FUSE_MASK	0xFFF
 
 /* Attribute structs describing Salvator-X revisions */
-/* H3 WS1.0 and WS1.1 */
+/* H3 ES1.0 and ES1.1 */
 static const struct soc_device_attribute r8a7795es1[]  = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*" },
 	{}
 };
 
-/* M3 WS1.0 */
+static const struct soc_device_attribute r8a7795[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES2.0" },
+	{}
+};
+
+/* M3 ES1.0 */
 static const struct soc_device_attribute r8a7796es10[]  = {
 	{ .soc_id = "r8a7796", .revision = "ES1.0" },
 	{}
@@ -170,11 +175,12 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 		return -ENOMEM;
 	}
 
-	/* For H3 WS1.0, H3 WS1.1 and M3 ES1.0
+	/* For H3 ES1.x, H3 ES2.0 and M3 ES1.0
 	 * these registers have not been programmed yet.
 	 * We will use fixed value as temporary solution.
 	 */
 	if (soc_device_match(r8a7795es1)
+		|| soc_device_match(r8a7795)
 		|| soc_device_match(r8a7796es10)) {
 		priv->factor.ptat_1 = 2351;
 		priv->factor.ptat_2 = 1509;
@@ -378,7 +384,7 @@ static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
 
 		spin_unlock_irqrestore(&priv->lock, flags);
 	} else
-		/* H3 WS2.0 has the same init flow with M3 WS1.0 */
+		/* H3 ES2.0 has the same init flow with M3 ES1.0 */
 		rcar_gen3_r8a7796_thermal_init(priv);
 
 	return 0;
