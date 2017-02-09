@@ -408,7 +408,7 @@ static void wpf_configure(struct vsp1_entity *entity,
 	/* Enable interrupts */
 	vsp1_dl_list_write(dl, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
 	vsp1_dl_list_write(dl, VI6_WPF_IRQ_ENB(wpf->entity.index),
-			   VI6_WFP_IRQ_ENB_FREE | VI6_WFP_IRQ_ENB_UNDE);
+			   VI6_WFP_IRQ_ENB_DFEE | VI6_WFP_IRQ_ENB_UNDE);
 }
 
 static const struct vsp1_entity_operations wpf_entity_ops = {
