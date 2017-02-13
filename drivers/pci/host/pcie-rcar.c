@@ -30,7 +30,6 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
-#include <linux/soc/renesas/s2ram_ddr_backup.h>
 
 #define PCIECAR			0x000010
 #define PCIECCTLR		0x000018
@@ -148,7 +147,6 @@ static inline struct rcar_msi *to_rcar_msi(struct msi_controller *chip)
 	return container_of(chip, struct rcar_msi, chip);
 }
 
-
 /* Structure representing the PCIe interface */
 struct rcar_pcie {
 	struct device		*dev;
@@ -161,144 +159,6 @@ struct rcar_pcie {
 };
 
 static int rcar_pcie_wait_for_dl(struct rcar_pcie *pcie);
-
-#ifdef CONFIG_RCAR_DDR_BACKUP
-
-#define PCIE_BACKUP_REGS(pcie_ip_regs)	\
-struct hw_register (pcie_ip_regs)[] = {	\
-/* PCIEC transfer control registers */	\
-	{"PCIETCTLR",	0x2000,	32, 0}, \
-	{"PCIEINTER",	0x200C,	32, 0},	\
-	{"PCIEERRFER",	0x2024,	32, 0},	\
-	{"PCIETIER",	0x2030,	32, 0},	\
-	{"PCIEPMSCIER",	0x2038,	32, 0}, \
-	{"PCIEMSIALR",	0x2048,	32, 0},	\
-	{"PCIEMSIAUR",	0x204C,	32, 0},	\
-	{"PCIEMSIIER",	0x2050,	32, 0},	\
-	{"PCIEPRAR0",	0x2080,	32, 0},	\
-	{"PCIEPRAR1",	0x2084,	32, 0},	\
-	{"PCIEPRAR2",	0x2088,	32, 0},	\
-	{"PCIEPRAR3",	0x208C,	32, 0},	\
-	{"PCIEPRAR4",	0x2090,	32, 0},	\
-	{"PCIEPRAR5",	0x2094,	32, 0},	\
-	\
-	/* Local address registers */	\
-	{"PCIELAR0",	0x2200,	32, 0},	\
-	{"PCIELAMR0",	0x2208,	32, 0},	\
-	{"PCIELAR1",	0x2220,	32, 0},	\
-	{"PCIELAMR1",	0x2228,	32, 0},	\
-	{"PCIELAR2",	0x2240,	32, 0},	\
-	{"PCIELAMR2",	0x2248,	32, 0},	\
-	{"PCIELAR3",	0x2260,	32, 0},	\
-	{"PCIELAMR3",	0x2268,	32, 0},	\
-	{"PCIELAR4",	0x2280,	32, 0},	\
-	{"PCIELAMR4",	0x2288,	32, 0},	\
-	{"PCIELAR5",	0x22A0,	32, 0},	\
-	{"PCIELAMR5",	0x22A8,	32, 0},	\
-	\
-	/* PCIEC address registers */	\
-	{"PCIEPALR0",	0x3400,	32, 0},	\
-	{"PCIEPAUR0",	0x3404,	32, 0},	\
-	{"PCIEPAMR0",	0x3408,	32, 0},	\
-	{"PCIEPTCTLR0",	0x340C,	32, 0},	\
-	{"PCIEPALR1",	0x3420,	32, 0},	\
-	{"PCIEPAUR1",	0x3424,	32, 0},	\
-	{"PCIEPAMR1",	0x3428,	32, 0},	\
-	{"PCIEPTCTLR1",	0x342C,	32, 0},	\
-	{"PCIEPALR2",	0x3440,	32, 0},	\
-	{"PCIEPAUR2",	0x3444,	32, 0},	\
-	{"PCIEPAMR2",	0x3448,	32, 0},	\
-	{"PCIEPTCTLR2",	0x344C,	32, 0},	\
-	{"PCIEPALR3",	0x3460,	32, 0},	\
-	{"PCIEPAUR3",	0x3464,	32, 0},	\
-	{"PCIEPAMR3",	0x3468,	32, 0},	\
-	{"PCIEPTCTLR3",	0x346C,	32, 0},	\
-}
-
-static PCIE_BACKUP_REGS(pcie0_ip_regs);
-static PCIE_BACKUP_REGS(pcie1_ip_regs);
-
-static struct rcar_ip pcie0_ip = {
-	.ip_name = "pcie0",
-	.reg_count = ARRAY_SIZE(pcie0_ip_regs),
-	.ip_reg = pcie0_ip_regs,
-};
-
-static struct rcar_ip pcie1_ip = {
-	.ip_name = "pcie1",
-	.reg_count = ARRAY_SIZE(pcie1_ip_regs),
-	.ip_reg = pcie1_ip_regs,
-};
-
-struct ip_info {
-	const char *name;
-	struct rcar_ip *ip;
-};
-
-static struct ip_info ip_info_tbl[] = {
-	{"fe000000.pcie", &pcie0_ip },
-	{"ee800000.pcie", &pcie1_ip },
-	{NULL, NULL},
-};
-
-static struct rcar_ip *rcar_pcie_get_ip(const char *name)
-{
-	struct ip_info *ip_info = ip_info_tbl;
-	struct rcar_ip *ip = NULL;
-
-	while (ip_info->name) {
-		if (!strcmp(ip_info->name, name)) {
-			ip = ip_info->ip;
-			break;
-		}
-		ip_info++;
-	}
-
-	return ip;
-}
-
-static int rcar_pcie_save_regs(struct device *dev)
-{
-	struct rcar_ip *ip = rcar_pcie_get_ip(dev_name(dev));
-	struct rcar_pcie *pcie = NULL;
-	int ret;
-
-	if (ip) {
-		if (!ip->virt_addr) {
-			pcie = dev_get_drvdata(dev);
-			ip->virt_addr = pcie->base;
-		}
-
-		ret = rcar_handle_registers(ip, DO_BACKUP);
-		if (ret)
-			pr_err("%s: %s: BACKUP failed, ret=%d\n",
-				__func__, dev_name(dev), ret);
-	} else
-		pr_err("%s: Failed to find backup of dev: %s\n\n",
-				__func__, dev_name(dev));
-
-	return 0;
-}
-
-static int rcar_pcie_restore_regs(struct device *dev)
-{
-	struct rcar_ip *ip = rcar_pcie_get_ip(dev_name(dev));
-	int ret = -ENODEV;
-
-	if (ip) {
-		ret = rcar_handle_registers(ip, DO_RESTORE);
-		if (ret)
-			pr_err("%s: %s: RESTORE failed, ret=%d\n",
-				__func__, dev_name(dev), ret);
-
-	} else
-		pr_err("%s: Failed to find backup of dev: %s\n\n",
-				__func__, dev_name(dev));
-
-	return 0;
-}
-
-#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 static void rcar_pci_write_reg(struct rcar_pcie *pcie, unsigned long val,
 			       unsigned long reg)
@@ -391,6 +251,7 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 
 	if ((val == 0) || (rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN)) {
 		/* Wait PCI Express link is re-initialized */
+		dev_info(&bus->dev, "Wait PCI Express link is re-initialized\n");
 		rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
 		rcar_pcie_wait_for_dl(pcie);
 	}
@@ -621,6 +482,36 @@ done:
 		 (macsr & LINK_SPEED) == LINK_SPEED_5_0GTS ? "5" : "2.5");
 }
 
+static int rcar_pcie_hw_enable(struct rcar_pcie *pcie)
+{
+	struct resource_entry *win;
+	LIST_HEAD(res);
+	int i = 0;
+
+	/* Try setting 5 GT/s link speed */
+	rcar_pcie_force_speedup(pcie);
+
+	/* Setup PCI resources */
+	resource_list_for_each_entry(win, &pcie->resources) {
+		struct resource *res = win->res;
+
+		if (!res->flags)
+			continue;
+
+		switch (resource_type(res)) {
+		case IORESOURCE_IO:
+		case IORESOURCE_MEM:
+			rcar_pcie_setup_window(i, pcie, res);
+			i++;
+			break;
+		default:
+			continue;
+		}
+	}
+
+	return 0;
+}
+
 static int rcar_pcie_enable(struct rcar_pcie *pcie)
 {
 	struct device *dev = pcie->dev;
@@ -710,6 +601,7 @@ static int rcar_pcie_wait_for_dl(struct rcar_pcie *pcie)
 		if ((rcar_pci_read_reg(pcie, PCIETSTR) & DATA_LINK_ACTIVE))
 			return 0;
 
+		/* It sometimes interrupts, I don't use sleep. */
 		mdelay(5);
 	}
 
@@ -1016,6 +908,23 @@ static int rcar_msi_map(struct irq_domain *domain, unsigned int irq,
 static const struct irq_domain_ops msi_domain_ops = {
 	.map = rcar_msi_map,
 };
+
+static int rcar_pcie_hw_enable_msi(struct rcar_pcie *pcie)
+{
+	struct rcar_msi *msi = &pcie->msi;
+	unsigned long base;
+
+	/* setup MSI data target */
+	base = virt_to_phys((void *)msi->pages);
+
+	rcar_pci_write_reg(pcie, base | MSIFE, PCIEMSIALR);
+	rcar_pci_write_reg(pcie, 0, PCIEMSIAUR);
+
+	/* enable all MSI interrupts */
+	rcar_pci_write_reg(pcie, 0xffffffff, PCIEMSIIER);
+
+	return 0;
+}
 
 static int rcar_pcie_enable_msi(struct rcar_pcie *pcie)
 {
@@ -1364,29 +1273,57 @@ err_pm_disable:
 #ifdef CONFIG_PM_SLEEP
 static int rcar_pcie_suspend(struct device *dev)
 {
-	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	ret = rcar_pcie_save_regs(dev);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-
-	return ret;
+	/* Processing is unnecesary */
+	return 0;
 }
 
 static int rcar_pcie_resume(struct device *dev)
 {
 	struct rcar_pcie *pcie = dev_get_drvdata(dev);
-	int ret = 0;
+	unsigned int data;
+	const struct of_device_id *of_id;
+	int err;
+	int (*hw_init_fn)(struct rcar_pcie *);
 
-	if (pcie) {
-#ifdef CONFIG_RCAR_DDR_BACKUP
-		rcar_pcie_restore_regs(dev);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-		ret = rcar_pcie_hw_init(pcie);
-		if (ret)
-			pr_debug("%s: %s: re-init hw fail, ret=%d\n",
-			__func__, dev_name(dev), ret);
-	} else
-		pr_warn("%s: %s: pcie NULL\n", __func__, dev_name(dev));
+	/* HW initialize on Resume */
+	if (!pcie) {
+		dev_warn(dev, "%s: %s: pcie NULL\n", __func__, dev_name(dev));
+		return 0; /* resume of the whole system continues */
+	}
+
+	err = rcar_pcie_parse_map_dma_ranges(pcie, dev->of_node);
+	if (err) {
+		dev_err(dev, "%s: %s: parse map dma ranges fail, err=%d\n",
+				 __func__, dev_name(dev), err);
+		return 0; /* resume of the whole system continues */
+	}
+
+	of_id = of_match_device(rcar_pcie_of_match, dev);
+	if (!of_id || !of_id->data) {
+		dev_err(dev, "of_match_device not found.\n");
+		return 0; /* resume of the whole system continues */
+	}
+	hw_init_fn = of_id->data;
+
+	/* Failure to get a link might just be that no cards are inserted */
+	err = hw_init_fn(pcie);
+	if (err) {
+		dev_err(dev, "PCIe link down\n");
+		dev_dbg(dev, "%s: %s: re-init hw fail, err=%d\n",
+				__func__, dev_name(dev), err);
+		pm_runtime_put(dev);
+		return 0; /* resume of the whole system continues */
+	}
+
+	data = rcar_pci_read_reg(pcie, MACSR);
+	dev_info(dev, "PCIe x%d: link up\n", (data >> 20) & 0x3f);
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		/* enable MSI */
+		rcar_pcie_hw_enable_msi(pcie);
+		dev_dbg(dev, "%s: %s: enable MSI\n", __func__, dev_name(dev));
+	}
+	rcar_pcie_hw_enable(pcie);
 
 	return 0;
 }
