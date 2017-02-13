@@ -1,7 +1,7 @@
 /*
  * Renesas R-Car Gen3 for USB2.0 PHY driver
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * This is based on the phy-rcar-gen2 driver:
  * Copyright (C) 2014 Renesas Solutions Corp.
@@ -481,8 +481,15 @@ static int rcar_gen3_phy_usb2_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int rcar_gen3_phy_suspend(struct device *dev)
 {
-	/* Empty function for now */
-	return 0;
+	int ret = 0;
+
+	if (to_phy(dev))
+		ret = rcar_gen3_phy_usb2_exit(to_phy(dev));
+	else {
+		pr_warn("%s: No phy dev\n", __func__);
+		ret = -ENODEV;
+	}
+	return ret;
 }
 
 static int rcar_gen3_phy_resume(struct device *dev)
