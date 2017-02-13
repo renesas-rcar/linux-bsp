@@ -341,6 +341,8 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		pixels = (priv->mf.width * priv->mf.height);
 		if (pixels <= 640 * 480)
 			phypll = priv->info->fre_range[BPS_100M];
+		else if (pixels <= 720 * 480)
+			phypll = priv->info->fre_range[BPS_160M];
 		else if (pixels <= 720 * 576)
 			phypll = priv->info->fre_range[BPS_190M];
 		else if (pixels <= 1280 * 720)
