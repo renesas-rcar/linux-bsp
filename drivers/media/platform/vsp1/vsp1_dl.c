@@ -1,7 +1,7 @@
 /*
  * vsp1_dl.h  --  R-Car VSP1 Display List
  *
- * Copyright (C) 2015-2016 Renesas Corporation
+ * Copyright (C) 2015-2017 Renesas Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -583,11 +583,16 @@ int vsp1_dl_list_add_chain(struct vsp1_dl_list *head,
 	return 0;
 }
 
-static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last)
+static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last,
+				     unsigned int lif_index)
 {
 	struct vsp1_dl_header_list *hdr = dl->header->lists;
 	struct vsp1_dl_body *dlb;
+	struct vsp1_device *vsp1 = dl->dlm->vsp1;
 	unsigned int num_lists = 0;
+	unsigned int init_bru_num, end_bru_num;
+	unsigned int init_brs_num, end_brs_num;
+	unsigned int i, rpf_update = 0;
 
 	/*
 	 * Fill the header with the display list bodies addresses and sizes. The
@@ -609,6 +614,28 @@ static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last)
 
 	dl->header->num_lists = num_lists;
 
+	if (vsp1_gen3_vspdl_check(vsp1)) {
+		if (!vsp1->brs || !vsp1->lif[1])
+			return;
+
+		init_bru_num = 0;
+		init_brs_num = vsp1->info->rpf_count - vsp1->num_brs_inputs;
+		end_bru_num = vsp1->info->rpf_count - vsp1->num_brs_inputs;
+		end_brs_num = vsp1->info->rpf_count;
+	} else {
+		init_bru_num = 0;
+		init_brs_num = 0;
+		end_bru_num = vsp1->info->rpf_count;
+		end_brs_num = 0;
+	}
+
+	if (lif_index == 1) {
+		for (i = init_brs_num; i < end_brs_num; ++i)
+			rpf_update |= (0x01 << (16 + i));
+	} else {
+		for (i = init_bru_num; i < end_bru_num; ++i)
+			rpf_update |= (0x01 << (16 + i));
+	}
 	/*
 	 * If this display list's chain is not empty, we are on a list, where
 	 * the next item in the list is the display list entity which should be
@@ -638,7 +665,7 @@ static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last)
 			/* Set opecode */
 			dl->ext_body->ext_dl_cmd[0] = 0x00000003;
 			/* RPF[0]-[4] address is updated */
-			dl->ext_body->ext_dl_cmd[1] = 0x001f0001;
+			dl->ext_body->ext_dl_cmd[1] = 0x00000001 | rpf_update;
 
 			/* Set pointer of source/destination address */
 			dl->ext_body->ext_dl_data[0] = dl->ext_addr_dma;
@@ -648,7 +675,7 @@ static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last)
 	}
 }
 
-void vsp1_dl_list_commit(struct vsp1_dl_list *dl)
+void vsp1_dl_list_commit(struct vsp1_dl_list *dl, unsigned int lif_index)
 {
 	struct vsp1_dl_manager *dlm = dl->dlm;
 	struct vsp1_device *vsp1 = dlm->vsp1;
@@ -666,12 +693,13 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl)
 		 */
 
 		/* Fill the header for the head and chained display lists. */
-		vsp1_dl_list_fill_header(dl, list_empty(&dl->chain));
+		vsp1_dl_list_fill_header(dl, list_empty(&dl->chain),
+							 lif_index);
 
 		list_for_each_entry(dl_child, &dl->chain, chain) {
 			bool last = list_is_last(&dl_child->chain, &dl->chain);
 
-			vsp1_dl_list_fill_header(dl_child, last);
+			vsp1_dl_list_fill_header(dl_child, last, lif_index);
 		}
 
 		/*
@@ -802,8 +830,7 @@ done:
 void vsp1_dlm_setup(struct vsp1_device *vsp1, unsigned int lif_index)
 {
 	u32 ctrl = (256 << VI6_DL_CTRL_AR_WAIT_SHIFT)
-		 | VI6_DL_CTRL_DC2 | VI6_DL_CTRL_DC1 | VI6_DL_CTRL_DC0
-		 | VI6_DL_CTRL_DLE;
+		 | VI6_DL_CTRL_DLE(lif_index);
 
 	if ((vsp1->info->header_mode) && (vsp1->auto_fld_mode)) {
 		vsp1_write(vsp1, VI6_DL_EXT_CTRL(lif_index),
@@ -817,8 +844,9 @@ void vsp1_dlm_setup(struct vsp1_device *vsp1, unsigned int lif_index)
 	if ((vsp1->drm) && (!vsp1->info->header_mode))
 		ctrl |= VI6_DL_CTRL_CFM0 | VI6_DL_CTRL_NH0;
 
-	vsp1_write(vsp1, VI6_DL_CTRL, ctrl);
-	vsp1_write(vsp1, VI6_DL_SWAP(lif_index), VI6_DL_SWAP_LWS);
+	vsp1_write(vsp1, VI6_DL_CTRL, (vsp1_read(vsp1, VI6_DL_CTRL) | ctrl));
+	vsp1_write(vsp1, VI6_DL_SWAP(lif_index), VI6_DL_SWAP_LWS |
+				    (lif_index == 1 ? VI6_DL_SWAP_IND : 0));
 }
 
 void vsp1_dlm_reset(struct vsp1_dl_manager *dlm)

@@ -1,7 +1,7 @@
 /*
  * vsp1_rpf.c  --  R-Car VSP1 Read Pixel Formatter
  *
- * Copyright (C) 2013-2016 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -64,9 +64,25 @@ static void rpf_configure(struct vsp1_entity *entity,
 	u32 alph_sel = 0;
 	u32 i;
 	u32 crop_width, crop_height, crop_x, crop_y;
+	unsigned int sta_rpf = 0, end_rpf = 0;
+
+	if (vsp1_gen3_vspdl_check(vsp1)) {
+		if (pipe->brs) {
+			sta_rpf = vsp1->info->rpf_count -
+					 vsp1->num_brs_inputs;
+			end_rpf = vsp1->info->rpf_count;
+		} else if (pipe->bru) {
+			sta_rpf = 0;
+			end_rpf = vsp1->info->rpf_count -
+					 vsp1->num_brs_inputs;
+		}
+	} else {
+		sta_rpf = 0;
+		end_rpf = vsp1->info->rpf_count;
+	}
 
 	if (pipe->vmute_flag) {
-		for (i = 0; i < vsp1->info->rpf_count; ++i)
+		for (i = sta_rpf; i < end_rpf; ++i)
 			vsp1_rpf_write(rpf, dl, VI6_DPR_RPF_ROUTE(i),
 						VI6_DPR_NODE_UNUSED);
 		return;
