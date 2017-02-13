@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -838,6 +838,9 @@ static void rvin_group_notify_unbind(struct v4l2_async_notifier *notifier,
 	struct rvin_dev *vin = notifier_to_vin(notifier);
 	unsigned int i;
 
+	if (!subdev->dev)
+		return;
+
 	mutex_lock(&vin->group->lock);
 	for (i = 0; i < RVIN_CSI_MAX; i++) {
 		struct device_node *del = subdev->dev->of_node;
@@ -1445,11 +1448,11 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 	vin->dev = &pdev->dev;
 
-	if (soc_device_match(r8a7795es1))
-		vin->info = &rcar_info_r8a7795_es1x;
-
 	vin->info = match->data;
 	vin->last_input = NULL;
+
+	if (soc_device_match(r8a7795es1))
+		vin->info = &rcar_info_r8a7795_es1x;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL)
@@ -1495,10 +1498,10 @@ static int rcar_vin_remove(struct platform_device *pdev)
 
 	rvin_v4l2_remove(vin);
 
+	v4l2_async_notifier_unregister(&vin->notifier);
+
 	if (vin->group)
 		rvin_group_delete(vin);
-
-	v4l2_async_notifier_unregister(&vin->notifier);
 
 	rvin_dma_remove(vin);
 
@@ -1509,23 +1512,38 @@ static int rcar_vin_remove(struct platform_device *pdev)
 static int rcar_vin_suspend(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
+	int ret;
 
 	if ((vin->info->chip == RCAR_GEN3) &&
 		((vin->index == 0) || (vin->index == 4)))
 		vin->chsel = rvin_get_chsel(vin);
 
-	return 0;
+	if (vin->state != STALLED)
+		return 0;
+
+	ret = rvin_suspend_stop_streaming(vin);
+
+	pm_runtime_put(vin->dev);
+
+	return ret;
 }
 
 static int rcar_vin_resume(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
+	int ret;
 
 	if ((vin->info->chip == RCAR_GEN3) &&
 		((vin->index == 0) || (vin->index == 4)))
 		rvin_set_chsel(vin, vin->chsel);
 
-	return 0;
+	if (vin->state != STALLED)
+		return 0;
+
+	pm_runtime_get_sync(vin->dev);
+	ret = rvin_resume_start_streaming(vin);
+
+	return ret;
 }
 
 static SIMPLE_DEV_PM_OPS(rcar_vin_pm_ops,
