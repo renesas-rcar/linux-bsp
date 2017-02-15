@@ -2419,8 +2419,6 @@ static int adv7482_resume(struct device *dev)
 const struct dev_pm_ops adv7482_pm_ops = {
 	SET_LATE_SYSTEM_SLEEP_PM_OPS(adv7482_suspend, adv7482_resume)
 };
-#else
-#define ADV7482_PM_OPS NULL
 #endif
 
 MODULE_DEVICE_TABLE(i2c, adv7482_id);
@@ -2434,7 +2432,9 @@ MODULE_DEVICE_TABLE(of, adv7482_of_ids);
 static struct i2c_driver adv7482_driver = {
 	.driver = {
 		.name	= DRIVER_NAME,
+#ifdef CONFIG_PM_SLEEP
 		.pm = &adv7482_pm_ops,
+#endif
 		.of_match_table = adv7482_of_ids,
 	},
 	.probe		= adv7482_probe,
