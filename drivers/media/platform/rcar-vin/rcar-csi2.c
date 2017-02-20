@@ -326,7 +326,8 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 
 	switch (priv->lanes) {
 	case 1:
-		fld = FLD_FLD_NUM(1) | FLD_FLD_EN;
+		fld = FLD_FLD_NUM(1) | FLD_FLD_EN4 | FLD_FLD_EN3 |
+			FLD_FLD_EN2 | FLD_FLD_EN;
 		phycnt = PHYCNT_ENABLECLK | PHYCNT_ENABLE_0;
 		phypll = priv->info->fre_range[BPS_205M];
 		break;
