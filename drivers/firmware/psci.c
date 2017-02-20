@@ -20,6 +20,7 @@
 #include <linux/linkage.h>
 #include <linux/of.h>
 #include <linux/pm.h>
+#include <linux/pm_wakeup.h>
 #include <linux/printk.h>
 #include <linux/psci.h>
 #include <linux/reboot.h>
@@ -86,6 +87,7 @@ static u32 psci_function_id[PSCI_FN_MAX];
 
 static u32 psci_cpu_suspend_feature;
 static bool psci_suspend_mem_supported;
+static bool psci_system_suspend_is_power_down;
 
 static inline bool psci_has_ext_power_state(void)
 {
@@ -440,12 +442,14 @@ static int psci_system_suspend_valid(suspend_state_t state)
 static int psci_system_suspend_enter(suspend_state_t state)
 {
 	switch (state) {
+	case PM_SUSPEND_MEM:
+		if (!psci_system_suspend_is_power_down ||
+		    !wakeup_source_available())
+			return cpu_suspend(0, psci_system_suspend);
+		/* fall through */
 	case PM_SUSPEND_STANDBY:
 		cpu_do_idle();
 		break;
-
-	case PM_SUSPEND_MEM:
-		return cpu_suspend(0, psci_system_suspend);
 	}
 
 	return 0;
@@ -595,6 +599,9 @@ static int __init psci_0_2_init(struct device_node *np)
 	 * by firmware
 	 */
 	err = psci_probe();
+
+	psci_system_suspend_is_power_down = of_property_read_bool(np,
+		"arm,psci-system-suspend-is-power-down");
 
 out_put_node:
 	of_node_put(np);
