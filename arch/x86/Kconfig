@@ -46,6 +46,7 @@ config X86
 	select ARCH_CLOCKSOURCE_DATA
 	select ARCH_DISCARD_MEMBLOCK
 	select ARCH_HAS_ACPI_TABLE_UPGRADE	if ACPI
+	select ARCH_HAS_DEBUG_VIRTUAL
 	select ARCH_HAS_DEVMEM_IS_ALLOWED
 	select ARCH_HAS_ELF_RANDOMIZE
 	select ARCH_HAS_FAST_MULTIPLIER
@@ -2788,10 +2789,6 @@ config X86_DEV_DMA_OPS
 config X86_DMA_REMAP
 	bool
 	depends on STA2X11
-
-config PMC_ATOM
-	def_bool y
-        depends on PCI
 
 source "net/Kconfig"
 
