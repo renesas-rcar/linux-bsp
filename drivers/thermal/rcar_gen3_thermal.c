@@ -85,9 +85,9 @@ static const struct soc_device_attribute r8a7795[]  = {
 	{}
 };
 
-/* M3 ES1.0 */
-static const struct soc_device_attribute r8a7796es10[]  = {
-	{ .soc_id = "r8a7796", .revision = "ES1.0" },
+/* M3 ES1.x */
+static const struct soc_device_attribute r8a7796[]  = {
+	{ .soc_id = "r8a7796" },
 	{}
 };
 
@@ -181,7 +181,7 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 	 */
 	if (soc_device_match(r8a7795es1)
 		|| soc_device_match(r8a7795)
-		|| soc_device_match(r8a7796es10)) {
+		|| soc_device_match(r8a7796)) {
 		priv->factor.ptat_1 = 2351;
 		priv->factor.ptat_2 = 1509;
 		priv->factor.ptat_3 = 435;
