@@ -837,8 +837,7 @@ static void copy_rtnl_link_stats(struct rtnl_link_stats *a,
 static inline int rtnl_vfinfo_size(const struct net_device *dev,
 				   u32 ext_filter_mask)
 {
-	if (dev->dev.parent && dev_is_pci(dev->dev.parent) &&
-	    (ext_filter_mask & RTEXT_FILTER_VF)) {
+	if (dev->dev.parent && (ext_filter_mask & RTEXT_FILTER_VF)) {
 		int num_vfs = dev_num_vf(dev->dev.parent);
 		size_t size = nla_total_size(0);
 		size += num_vfs *
@@ -877,8 +876,6 @@ static size_t rtnl_port_size(const struct net_device *dev,
 {
 	size_t port_size = nla_total_size(4)		/* PORT_VF */
 		+ nla_total_size(PORT_PROFILE_MAX)	/* PORT_PROFILE */
-		+ nla_total_size(sizeof(struct ifla_port_vsi))
-							/* PORT_VSI_TYPE */
 		+ nla_total_size(PORT_UUID_MAX)		/* PORT_INSTANCE_UUID */
 		+ nla_total_size(PORT_UUID_MAX)		/* PORT_HOST_UUID */
 		+ nla_total_size(1)			/* PROT_VDP_REQUEST */
@@ -1492,14 +1489,19 @@ static const struct nla_policy ifla_port_policy[IFLA_PORT_MAX+1] = {
 	[IFLA_PORT_VF]		= { .type = NLA_U32 },
 	[IFLA_PORT_PROFILE]	= { .type = NLA_STRING,
 				    .len = PORT_PROFILE_MAX },
-	[IFLA_PORT_VSI_TYPE]	= { .type = NLA_BINARY,
-				    .len = sizeof(struct ifla_port_vsi)},
 	[IFLA_PORT_INSTANCE_UUID] = { .type = NLA_BINARY,
 				      .len = PORT_UUID_MAX },
 	[IFLA_PORT_HOST_UUID]	= { .type = NLA_STRING,
 				    .len = PORT_UUID_MAX },
 	[IFLA_PORT_REQUEST]	= { .type = NLA_U8, },
 	[IFLA_PORT_RESPONSE]	= { .type = NLA_U16, },
+
+	/* Unused, but we need to keep it here since user space could
+	 * fill it. It's also broken with regard to NLA_BINARY use in
+	 * combination with structs.
+	 */
+	[IFLA_PORT_VSI_TYPE]	= { .type = NLA_BINARY,
+				    .len = sizeof(struct ifla_port_vsi) },
 };
 
 static const struct nla_policy ifla_xdp_policy[IFLA_XDP_MAX + 1] = {
@@ -2571,7 +2573,7 @@ replay:
 			return -ENODEV;
 		}
 
-		if (tb[IFLA_MAP] || tb[IFLA_MASTER] || tb[IFLA_PROTINFO])
+		if (tb[IFLA_MAP] || tb[IFLA_PROTINFO])
 			return -EOPNOTSUPP;
 
 		if (!ops) {
@@ -2651,6 +2653,11 @@ replay:
 		if (link_net) {
 			err = dev_change_net_namespace(dev, dest_net, ifname);
 			if (err < 0)
+				goto out_unregister;
+		}
+		if (tb[IFLA_MASTER]) {
+			err = do_set_master(dev, nla_get_u32(tb[IFLA_MASTER]));
+			if (err)
 				goto out_unregister;
 		}
 out:
@@ -3829,6 +3836,39 @@ static int rtnl_fill_statsinfo(struct sk_buff *skb, struct net_device *dev,
 		*idxattr = 0;
 	}
 
+	if (stats_attr_valid(filter_mask, IFLA_STATS_AF_SPEC, *idxattr)) {
+		struct rtnl_af_ops *af_ops;
+
+		*idxattr = IFLA_STATS_AF_SPEC;
+		attr = nla_nest_start(skb, IFLA_STATS_AF_SPEC);
+		if (!attr)
+			goto nla_put_failure;
+
+		list_for_each_entry(af_ops, &rtnl_af_ops, list) {
+			if (af_ops->fill_stats_af) {
+				struct nlattr *af;
+				int err;
+
+				af = nla_nest_start(skb, af_ops->family);
+				if (!af)
+					goto nla_put_failure;
+
+				err = af_ops->fill_stats_af(skb, dev);
+
+				if (err == -ENODATA)
+					nla_nest_cancel(skb, af);
+				else if (err < 0)
+					goto nla_put_failure;
+
+				nla_nest_end(skb, af);
+			}
+		}
+
+		nla_nest_end(skb, attr);
+
+		*idxattr = 0;
+	}
+
 	nlmsg_end(skb, nlh);
 
 	return 0;
@@ -3884,6 +3924,23 @@ static size_t if_nlmsg_stats_size(const struct net_device *dev,
 
 	if (stats_attr_valid(filter_mask, IFLA_STATS_LINK_OFFLOAD_XSTATS, 0))
 		size += rtnl_get_offload_stats_size(dev);
+
+	if (stats_attr_valid(filter_mask, IFLA_STATS_AF_SPEC, 0)) {
+		struct rtnl_af_ops *af_ops;
+
+		/* for IFLA_STATS_AF_SPEC */
+		size += nla_total_size(0);
+
+		list_for_each_entry(af_ops, &rtnl_af_ops, list) {
+			if (af_ops->get_stats_af_size) {
+				size += nla_total_size(
+					af_ops->get_stats_af_size(dev));
+
+				/* for AF_* */
+				size += nla_total_size(0);
+			}
+		}
+	}
 
 	return size;
 }
