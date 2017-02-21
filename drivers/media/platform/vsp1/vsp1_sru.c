@@ -18,6 +18,7 @@
 
 #include "vsp1.h"
 #include "vsp1_dl.h"
+#include "vsp1_pipe.h"
 #include "vsp1_sru.h"
 
 #define SRU_MIN_SIZE				4U
@@ -152,7 +153,8 @@ static int sru_enum_frame_size(struct v4l2_subdev *subdev,
 		fse->min_width = format->width;
 		fse->min_height = format->height;
 		if (format->width <= SRU_MAX_SIZE / 2 &&
-		    format->height <= SRU_MAX_SIZE / 2) {
+		    format->height <= SRU_MAX_SIZE / 2 &&
+		    sru->force_identity_mode == false) {
 			fse->max_width = format->width * 2;
 			fse->max_height = format->height * 2;
 		} else {
@@ -203,7 +205,8 @@ static void sru_try_format(struct vsp1_sru *sru,
 
 		if (fmt->width <= SRU_MAX_SIZE / 2 &&
 		    fmt->height <= SRU_MAX_SIZE / 2 &&
-		    output_area > input_area * 9 / 4) {
+		    output_area > input_area * 9 / 4 &&
+		    sru->force_identity_mode == false) {
 			fmt->width = format->width * 2;
 			fmt->height = format->height * 2;
 		} else {
@@ -324,9 +327,37 @@ static unsigned int sru_max_width(struct vsp1_entity *entity,
 		return 256;
 }
 
+struct vsp1_partition_rect *sru_partition(struct vsp1_entity *entity,
+					  struct vsp1_pipeline *pipe,
+					  struct vsp1_partition *partition,
+					  unsigned int partition_idx,
+					  struct vsp1_partition_rect *dest)
+{
+	struct vsp1_sru *sru = to_sru(&entity->subdev);
+	struct v4l2_mbus_framefmt *input;
+	struct v4l2_mbus_framefmt *output;
+
+	input = vsp1_entity_get_pad_format(&sru->entity, sru->entity.config,
+					   SRU_PAD_SINK);
+	output = vsp1_entity_get_pad_format(&sru->entity, sru->entity.config,
+					    SRU_PAD_SOURCE);
+
+	/* Copy the destination target */
+	partition->sru = *dest;
+
+	/* Adapt if SRUx2 is enabled */
+	if (input->width != output->width) {
+		partition->sru.width /= 2;
+		partition->sru.left /= 2;
+	}
+
+	return &partition->sru;
+}
+
 static const struct vsp1_entity_operations sru_entity_ops = {
 	.configure = sru_configure,
 	.max_width = sru_max_width,
+	.partition = sru_partition,
 };
 
 /* -----------------------------------------------------------------------------
@@ -355,6 +386,7 @@ struct vsp1_sru *vsp1_sru_create(struct vsp1_device *vsp1)
 	v4l2_ctrl_new_custom(&sru->ctrls, &sru_intensity_control, NULL);
 
 	sru->intensity = 1;
+	sru->force_identity_mode = false;
 
 	sru->entity.subdev.ctrl_handler = &sru->ctrls;
 

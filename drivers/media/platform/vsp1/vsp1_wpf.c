@@ -218,19 +218,21 @@ static void wpf_configure(struct vsp1_entity *entity,
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
 		struct vsp1_rwpf_memory mem = wpf->mem;
 		unsigned int flip = wpf->flip.active;
-		unsigned int width = source_format->width;
-		unsigned int height = source_format->height;
-		unsigned int offset;
+		unsigned int width = sink_format->width;
+		unsigned int height = sink_format->height;
+		unsigned int offset = 0;
 
 		/*
 		 * Cropping. The partition algorithm can split the image into
 		 * multiple slices.
 		 */
-		if (pipe->partitions > 1)
-			width = pipe->partition.width;
+		if (pipe->partitions > 1) {
+			offset = pipe->partition->wpf.offset;
+			width = pipe->partition->wpf.width;
+		}
 
 		vsp1_wpf_write(wpf, dl, VI6_WPF_HSZCLIP, VI6_WPF_SZCLIP_EN |
-			       (0 << VI6_WPF_SZCLIP_OFST_SHIFT) |
+			       (offset << VI6_WPF_SZCLIP_OFST_SHIFT) |
 			       (width << VI6_WPF_SZCLIP_SIZE_SHIFT));
 		vsp1_wpf_write(wpf, dl, VI6_WPF_VSZCLIP, VI6_WPF_SZCLIP_EN |
 			       (0 << VI6_WPF_SZCLIP_OFST_SHIFT) |
@@ -255,10 +257,11 @@ static void wpf_configure(struct vsp1_entity *entity,
 			 * order the partitions correctly.
 			 */
 			if (flip & BIT(WPF_CTRL_HFLIP))
-				offset = format->width - pipe->partition.left
-					- pipe->partition.width;
+				offset = format->width
+					- pipe->partition->wpf.left
+					- pipe->partition->wpf.width;
 			else
-				offset = pipe->partition.left;
+				offset = pipe->partition->wpf.left;
 
 			mem.addr[0] += offset * fmtinfo->bpp[0] / 8;
 			if (format->num_planes > 1) {
@@ -354,9 +357,22 @@ static void wpf_configure(struct vsp1_entity *entity,
 			   VI6_WFP_IRQ_ENB_DFEE);
 }
 
+struct vsp1_partition_rect *wpf_partition(struct vsp1_entity *entity,
+					  struct vsp1_pipeline *pipe,
+					  struct vsp1_partition *partition,
+					  unsigned int partition_idx,
+					  struct vsp1_partition_rect *dest)
+{
+	/* Initialise the WPF partition */
+	partition->wpf = *dest;
+
+	return &partition->wpf;
+}
+
 static const struct vsp1_entity_operations wpf_entity_ops = {
 	.destroy = vsp1_wpf_destroy,
 	.configure = wpf_configure,
+	.partition = wpf_partition,
 };
 
 /* -----------------------------------------------------------------------------

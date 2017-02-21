@@ -50,6 +50,60 @@ void vsp1_uds_set_alpha(struct vsp1_entity *entity, struct vsp1_dl_list *dl,
 		       alpha << VI6_UDS_ALPVAL_VAL0_SHIFT);
 }
 
+struct uds_phase {
+	unsigned int mp;
+	unsigned int prefilt_term;
+	unsigned int prefilt_outpos;
+	unsigned int residual;
+};
+
+/*
+ * TODO: Remove start_phase if possible:
+ * 'start_phase' as we use it should always be 0 I believe,
+ * Therefore this could be removed once confirmed
+ */
+static struct uds_phase uds_phase_calculation(int position, int start_phase,
+					      int ratio)
+{
+	struct uds_phase phase;
+	int alpha = ratio * position;
+
+	/* These must be adjusted if we ever set BLADV */
+	phase.mp = ratio / 4096;
+	phase.mp = phase.mp < 4 ? 1 : (phase.mp < 8 ? 2 : 4);
+
+	phase.prefilt_term = phase.mp * 4096;
+	phase.prefilt_outpos = (alpha - start_phase * phase.mp)
+			/ phase.prefilt_term;
+	phase.residual = (alpha - start_phase * phase.mp)
+			% phase.prefilt_term;
+
+	return phase;
+}
+
+static int uds_left_src_pixel(int pos, int start_phase, int ratio)
+{
+	struct uds_phase phase;
+
+	phase = uds_phase_calculation(pos, start_phase, ratio);
+
+	/* Renesas guard against odd values in these scale ratios here ? */
+	if ((phase.mp == 2 && (phase.residual & 0x01)) ||
+	    (phase.mp == 4 && (phase.residual & 0x03)))
+		WARN_ON(1);
+
+	return phase.mp * (phase.prefilt_outpos + (phase.residual ? 1 : 0));
+}
+
+static int uds_start_phase(int pos, int start_phase, int ratio)
+{
+	struct uds_phase phase;
+
+	phase = uds_phase_calculation(pos, start_phase, ratio);
+
+	return phase.residual ? (4096 - phase.residual / phase.mp) : 0;
+}
+
 /*
  * uds_output_size - Return the output size for an input size and scaling ratio
  * @input: input size in pixels
@@ -269,14 +323,35 @@ static void uds_configure(struct vsp1_entity *entity,
 	const struct v4l2_mbus_framefmt *input;
 	unsigned int hscale;
 	unsigned int vscale;
+	bool manual_phase = (pipe->partitions > 1);
 	bool multitap;
 
 	if (params == VSP1_ENTITY_PARAMS_PARTITION) {
-		const struct v4l2_rect *clip = &pipe->partition;
+		struct vsp1_partition *partition = pipe->partition;
 
+		/* Input size clipping */
+		vsp1_uds_write(uds, dl, VI6_UDS_HSZCLIP, VI6_UDS_HSZCLIP_HCEN |
+			       (partition->uds_sink.offset
+					<< VI6_UDS_HSZCLIP_HCL_OFST_SHIFT) |
+			       (partition->uds_sink.width
+					<< VI6_UDS_HSZCLIP_HCL_SIZE_SHIFT));
+
+		/* Output size clipping */
 		vsp1_uds_write(uds, dl, VI6_UDS_CLIP_SIZE,
-			       (clip->width << VI6_UDS_CLIP_SIZE_HSIZE_SHIFT) |
-			       (clip->height << VI6_UDS_CLIP_SIZE_VSIZE_SHIFT));
+			       (partition->uds_source.width
+					<< VI6_UDS_CLIP_SIZE_HSIZE_SHIFT) |
+			       (partition->uds_source.height
+					<< VI6_UDS_CLIP_SIZE_VSIZE_SHIFT));
+
+		if (!manual_phase)
+			return;
+
+		vsp1_uds_write(uds, dl, VI6_UDS_HPHASE,
+			       (partition->start_phase
+					<< VI6_UDS_HPHASE_HSTP_SHIFT) |
+			       (partition->end_phase
+					<< VI6_UDS_HPHASE_HEDP_SHIFT));
+
 		return;
 	}
 
@@ -304,7 +379,8 @@ static void uds_configure(struct vsp1_entity *entity,
 
 	vsp1_uds_write(uds, dl, VI6_UDS_CTRL,
 		       (uds->scale_alpha ? VI6_UDS_CTRL_AON : 0) |
-		       (multitap ? VI6_UDS_CTRL_BC : 0));
+		       (multitap ? VI6_UDS_CTRL_BC : 0) |
+		       (manual_phase ? VI6_UDS_CTRL_AMDSLH : 0));
 
 	vsp1_uds_write(uds, dl, VI6_UDS_PASS_BWIDTH,
 		       (uds_passband_width(hscale)
@@ -342,9 +418,69 @@ static unsigned int uds_max_width(struct vsp1_entity *entity,
 		return 2048;
 }
 
+/* -----------------------------------------------------------------------------
+ * Partition Algorithm Support
+ */
+
+/* Perform UDS specific calculations for the Partition Algorithm */
+struct vsp1_partition_rect *uds_partition(struct vsp1_entity *entity,
+					  struct vsp1_pipeline *pipe,
+					  struct vsp1_partition *partition,
+					  unsigned int partition_idx,
+					  struct vsp1_partition_rect *dest)
+{
+	struct vsp1_uds *uds = to_uds(&entity->subdev);
+	const struct v4l2_mbus_framefmt *output;
+	const struct v4l2_mbus_framefmt *input;
+	unsigned int hscale;
+	unsigned int image_start_phase = 0;
+	unsigned int right_sink;
+	unsigned int margin;
+
+	/* Initialise the partition state */
+	partition->uds_sink = *dest;
+	partition->uds_source = *dest;
+
+	input = vsp1_entity_get_pad_format(&uds->entity, uds->entity.config,
+					   UDS_PAD_SINK);
+	output = vsp1_entity_get_pad_format(&uds->entity, uds->entity.config,
+					    UDS_PAD_SOURCE);
+
+	hscale = uds_compute_ratio(input->width, output->width);
+
+	/* Handle 'left' edge of the partitions */
+	if (partition_idx == 0) {
+		margin = 0;
+	} else {
+		margin = hscale < 0x200 ? 32 : /* 8 <  scale */
+			 hscale < 0x400 ? 16 : /* 4 <  scale <= 8 */
+			 hscale < 0x800 ?  8 : /* 2 <  scale <= 4 */
+					   4;  /* 1 <  scale <= 2, scale <= 1 */
+	}
+
+	partition->uds_sink.left = uds_left_src_pixel(dest->left,
+					image_start_phase, hscale);
+
+	partition->uds_sink.offset = margin;
+
+	right_sink = uds_left_src_pixel(dest->left + dest->width - 1,
+					image_start_phase, hscale);
+
+	partition->uds_sink.width = right_sink - partition->uds_sink.left + 1;
+
+	partition->start_phase = uds_start_phase(partition->uds_source.left,
+						 image_start_phase, hscale);
+
+	/* Renesas partition algorithm always sets end-phase as 0 */
+	partition->end_phase = 0;
+
+	return &partition->uds_sink;
+}
+
 static const struct vsp1_entity_operations uds_entity_ops = {
 	.configure = uds_configure,
 	.max_width = uds_max_width,
+	.partition = uds_partition,
 };
 
 /* -----------------------------------------------------------------------------

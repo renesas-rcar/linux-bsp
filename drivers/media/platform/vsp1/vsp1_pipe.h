@@ -20,6 +20,9 @@
 
 #include <media/media-entity.h>
 
+/* Max Video Width / Min Partition Size = 8190/128 */
+#define VSP1_PIPE_MAX_PARTITIONS 64
+
 struct vsp1_dl_list;
 struct vsp1_rwpf;
 
@@ -57,6 +60,39 @@ enum vsp1_pipeline_state {
 };
 
 /*
+ * struct vsp1_partition_rect
+ *
+ * replicates struct v4l2_rect, but with an offset to apply
+ */
+struct vsp1_partition_rect {
+	__s32   left;
+	__s32   top;
+	__u32   width;
+	__u32   height;
+	__u32   offset;
+};
+
+/*
+ * struct vsp1_partition - A description of each partition slice performed by HW
+ * @rpf: The RPF partition window configuration
+ * @uds_sink: The UDS input partition window configuration
+ * @uds_source: The UDS output partition window configuration
+ * @sru: The SRU partition window configuration
+ * @wpf: The WPF partition window configuration
+ * @start_phase: The UDS start phase specific to this partition.
+ * @end_phase: The UDS end phase specific to this partition.
+ */
+struct vsp1_partition {
+	struct vsp1_partition_rect rpf;
+	struct vsp1_partition_rect uds_sink;
+	struct vsp1_partition_rect uds_source;
+	struct vsp1_partition_rect sru;
+	struct vsp1_partition_rect wpf;
+	unsigned int start_phase;
+	unsigned int end_phase;
+};
+
+/*
  * struct vsp1_pipeline - A VSP1 hardware pipeline
  * @pipe: the media pipeline
  * @irqlock: protects the pipeline state
@@ -74,13 +110,14 @@ enum vsp1_pipeline_state {
  * @output: WPF at the output of the pipeline
  * @bru: BRU entity, if present
  * @lif: LIF entity, if present
+ * @sru: SRU entity, if present
  * @uds: UDS entity, if present
  * @uds_input: entity at the input of the UDS, if the UDS is present
  * @entities: list of entities in the pipeline
  * @dl: display list associated with the pipeline
- * @div_size: The maximum allowed partition size for the pipeline
  * @partitions: The number of partitions used to process one frame
- * @current_partition: The partition number currently being configured
+ * @partition: The current partition for configuration to process
+ * @part_table: The pre-calculated partitions used by the pipeline
  */
 struct vsp1_pipeline {
 	struct media_pipeline pipe;
@@ -103,15 +140,20 @@ struct vsp1_pipeline {
 	struct vsp1_rwpf *output;
 	struct vsp1_entity *bru;
 	struct vsp1_entity *lif;
+	struct vsp1_entity *sru;
 	struct vsp1_entity *uds;
 	struct vsp1_entity *uds_input;
 
+	/*
+	 * The order of this list should be representative of the order and
+	 * routing of the the pipeline, as it is assumed by the partition
+	 * algorithm that we can walk this list in sequence.
+	 */
 	struct list_head entities;
 
-	unsigned int div_size;
 	unsigned int partitions;
-	struct v4l2_rect partition;
-	unsigned int current_partition;
+	struct vsp1_partition *partition;
+	struct vsp1_partition part_table[VSP1_PIPE_MAX_PARTITIONS];
 };
 
 void vsp1_pipeline_reset(struct vsp1_pipeline *pipe);
@@ -126,6 +168,11 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe);
 
 void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
 				   struct vsp1_dl_list *dl, unsigned int alpha);
+
+void vsp1_pipeline_propagate_partition(struct vsp1_pipeline *pipe,
+				       struct vsp1_partition *partition,
+				       unsigned int index,
+				       struct vsp1_partition_rect *rect);
 
 void vsp1_pipelines_suspend(struct vsp1_device *vsp1);
 void vsp1_pipelines_resume(struct vsp1_device *vsp1);
