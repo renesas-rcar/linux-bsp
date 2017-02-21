@@ -275,6 +275,8 @@ drm_atomic_get_crtc_state(struct drm_atomic_state *state,
 		return ERR_PTR(-ENOMEM);
 
 	state->crtcs[index].state = crtc_state;
+	state->crtcs[index].old_state = crtc->state;
+	state->crtcs[index].new_state = crtc_state;
 	state->crtcs[index].ptr = crtc;
 	crtc_state->state = state;
 
@@ -689,6 +691,8 @@ drm_atomic_get_plane_state(struct drm_atomic_state *state,
 
 	state->planes[index].state = plane_state;
 	state->planes[index].ptr = plane;
+	state->planes[index].old_state = plane->state;
+	state->planes[index].new_state = plane_state;
 	plane_state->state = state;
 
 	DRM_DEBUG_ATOMIC("Added [PLANE:%d:%s] %p state to %p\n",
@@ -1028,6 +1032,8 @@ drm_atomic_get_connector_state(struct drm_atomic_state *state,
 
 	drm_connector_reference(connector);
 	state->connectors[index].state = connector_state;
+	state->connectors[index].old_state = connector->state;
+	state->connectors[index].new_state = connector_state;
 	state->connectors[index].ptr = connector;
 	connector_state->state = state;
 
@@ -1351,8 +1357,8 @@ drm_atomic_set_crtc_for_connector(struct drm_connector_state *conn_state,
 		return 0;
 
 	if (conn_state->crtc) {
-		crtc_state = drm_atomic_get_existing_crtc_state(conn_state->state,
-								conn_state->crtc);
+		crtc_state = drm_atomic_get_new_crtc_state(conn_state->state,
+							   conn_state->crtc);
 
 		crtc_state->connector_mask &=
 			~(1 << drm_connector_index(conn_state->connector));
@@ -1408,7 +1414,12 @@ drm_atomic_add_affected_connectors(struct drm_atomic_state *state,
 	struct drm_connector *connector;
 	struct drm_connector_state *conn_state;
 	struct drm_connector_list_iter conn_iter;
+	struct drm_crtc_state *crtc_state;
 	int ret;
+
+	crtc_state = drm_atomic_get_crtc_state(state, crtc);
+	if (IS_ERR(crtc_state))
+		return PTR_ERR(crtc_state);
 
 	ret = drm_modeset_lock(&config->connection_mutex, state->acquire_ctx);
 	if (ret)
@@ -1418,12 +1429,12 @@ drm_atomic_add_affected_connectors(struct drm_atomic_state *state,
 			 crtc->base.id, crtc->name, state);
 
 	/*
-	 * Changed connectors are already in @state, so only need to look at the
-	 * current configuration.
+	 * Changed connectors are already in @state, so only need to look
+	 * at the connector_mask in crtc_state.
 	 */
 	drm_connector_list_iter_get(state->dev, &conn_iter);
 	drm_for_each_connector_iter(connector, &conn_iter) {
-		if (connector->state->crtc != crtc)
+		if (!(crtc_state->connector_mask & (1 << drm_connector_index(connector))))
 			continue;
 
 		conn_state = drm_atomic_get_connector_state(state, connector);
@@ -1464,7 +1475,7 @@ drm_atomic_add_affected_planes(struct drm_atomic_state *state,
 {
 	struct drm_plane *plane;
 
-	WARN_ON(!drm_atomic_get_existing_crtc_state(state, crtc));
+	WARN_ON(!drm_atomic_get_new_crtc_state(state, crtc));
 
 	drm_for_each_plane_mask(plane, state->dev, crtc->state->plane_mask) {
 		struct drm_plane_state *plane_state =
@@ -1546,7 +1557,7 @@ int drm_atomic_check_only(struct drm_atomic_state *state)
 
 	DRM_DEBUG_ATOMIC("checking %p\n", state);
 
-	for_each_plane_in_state(state, plane, plane_state, i) {
+	for_each_new_plane_in_state(state, plane, plane_state, i) {
 		ret = drm_atomic_plane_check(plane, plane_state);
 		if (ret) {
 			DRM_DEBUG_ATOMIC("[PLANE:%d:%s] atomic core check failed\n",
@@ -1555,7 +1566,7 @@ int drm_atomic_check_only(struct drm_atomic_state *state)
 		}
 	}
 
-	for_each_crtc_in_state(state, crtc, crtc_state, i) {
+	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
 		ret = drm_atomic_crtc_check(crtc, crtc_state);
 		if (ret) {
 			DRM_DEBUG_ATOMIC("[CRTC:%d:%s] atomic core check failed\n",
@@ -1568,7 +1579,7 @@ int drm_atomic_check_only(struct drm_atomic_state *state)
 		ret = config->funcs->atomic_check(state->dev, state);
 
 	if (!state->allow_modeset) {
-		for_each_crtc_in_state(state, crtc, crtc_state, i) {
+		for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
 			if (drm_atomic_crtc_needs_modeset(crtc_state)) {
 				DRM_DEBUG_ATOMIC("[CRTC:%d:%s] requires full modeset\n",
 						 crtc->base.id, crtc->name);
@@ -1652,13 +1663,13 @@ static void drm_atomic_print_state(const struct drm_atomic_state *state)
 
 	DRM_DEBUG_ATOMIC("checking %p\n", state);
 
-	for_each_plane_in_state(state, plane, plane_state, i)
+	for_each_new_plane_in_state(state, plane, plane_state, i)
 		drm_atomic_plane_print_state(&p, plane_state);
 
-	for_each_crtc_in_state(state, crtc, crtc_state, i)
+	for_each_new_crtc_in_state(state, crtc, crtc_state, i)
 		drm_atomic_crtc_print_state(&p, crtc_state);
 
-	for_each_connector_in_state(state, connector, connector_state, i)
+	for_each_new_connector_in_state(state, connector, connector_state, i)
 		drm_atomic_connector_print_state(&p, connector_state);
 }
 
@@ -1938,7 +1949,7 @@ static int prepare_crtc_signaling(struct drm_device *dev,
 	if (arg->flags & DRM_MODE_ATOMIC_TEST_ONLY)
 		return 0;
 
-	for_each_crtc_in_state(state, crtc, crtc_state, i) {
+	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
 		s32 __user *fence_ptr;
 
 		fence_ptr = get_out_fence_for_crtc(crtc_state->state, crtc);
@@ -2018,7 +2029,7 @@ static void complete_crtc_signaling(struct drm_device *dev,
 		return;
 	}
 
-	for_each_crtc_in_state(state, crtc, crtc_state, i) {
+	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
 		struct drm_pending_vblank_event *event = crtc_state->event;
 		/*
 		 * Free the allocated event. drm_atomic_helper_setup_commit
