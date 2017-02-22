@@ -2400,6 +2400,19 @@ static int adv7482_resume(struct device *dev)
 						adv7482_enable_csi4_csi1);
 	}
 
+	/* Setting virtual channel for ADV7482 */
+	if (link_config.vc_ch == 0)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel0);
+	else if (link_config.vc_ch == 1)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel1);
+	else if (link_config.vc_ch == 2)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel2);
+	else if (link_config.vc_ch == 3)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel3);
 	return ret;
 }
 
