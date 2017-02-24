@@ -37,6 +37,7 @@ struct rwdt_priv {
 	void __iomem *base;
 	struct watchdog_device wdev;
 	struct clk *clk;
+	unsigned long clk_rate;
 	unsigned int clks_per_sec;
 	u8 cks;
 };
@@ -55,7 +56,9 @@ static int rwdt_init_timeout(struct watchdog_device *wdev)
 {
 	struct rwdt_priv *priv = watchdog_get_drvdata(wdev);
 
-	rwdt_write(priv, 65536 - wdev->timeout * priv->clks_per_sec, RWTCNT);
+	rwdt_write(priv,
+		   65536 - DIV_ROUND_UP(wdev->timeout * priv->clk_rate,
+					clk_divs[priv->cks]), RWTCNT);
 
 	return 0;
 }
@@ -101,7 +104,8 @@ static unsigned int rwdt_get_timeleft(struct watchdog_device *wdev)
 	struct rwdt_priv *priv = watchdog_get_drvdata(wdev);
 	u16 val = readw_relaxed(priv->base + RWTCNT);
 
-	return DIV_ROUND_CLOSEST(65536 - val, priv->clks_per_sec);
+	return DIV_ROUND_CLOSEST((65536 - val) * clk_divs[priv->cks],
+				 priv->clk_rate);
 }
 
 static const struct watchdog_info rwdt_ident = {
@@ -122,7 +126,6 @@ static int rwdt_probe(struct platform_device *pdev)
 {
 	struct rwdt_priv *priv;
 	struct resource *res;
-	unsigned long rate;
 	unsigned int clks_per_sec;
 	int ret, i;
 
@@ -139,12 +142,12 @@ static int rwdt_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->clk))
 		return PTR_ERR(priv->clk);
 
-	rate = clk_get_rate(priv->clk);
-	if (!rate)
+	priv->clk_rate = clk_get_rate(priv->clk);
+	if (!priv->clk_rate)
 		return -ENOENT;
 
 	for (i = ARRAY_SIZE(clk_divs) - 1; i >= 0; i--) {
-		clks_per_sec = DIV_ROUND_UP(rate, clk_divs[i]);
+		clks_per_sec = DIV_ROUND_UP(priv->clk_rate, clk_divs[i]);
 		if (clks_per_sec) {
 			priv->clks_per_sec = clks_per_sec;
 			priv->cks = i;
