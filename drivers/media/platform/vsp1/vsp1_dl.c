@@ -153,11 +153,6 @@ struct vsp1_dl_manager {
 	struct list_head gc_fragments;
 };
 
-static const struct soc_device_attribute r8a7795es1[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ /* sentinel */ }
-};
-
 /* -----------------------------------------------------------------------------
  * Display List Body Management
  */
@@ -708,7 +703,7 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl, unsigned int lif_index)
 		 */
 		vsp1_write(vsp1, VI6_DL_HDR_ADDR(dlm->index), dl->dma);
 
-		if (soc_device_match(r8a7795es1))
+		if (vsp1->underrun_workaround)
 			vsp1->dl_addr = dl->dma;
 
 		dlm->active = dl;
@@ -739,7 +734,7 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl, unsigned int lif_index)
 	vsp1_write(vsp1, VI6_DL_BODY_SIZE, VI6_DL_BODY_SIZE_UPD |
 		   (dl->body0.num_entries * sizeof(*dl->header->lists)));
 
-	if (soc_device_match(r8a7795es1)) {
+	if (vsp1->underrun_workaround) {
 		vsp1->dl_addr = dl->body0.dma;
 		vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
 			(dl->body0.num_entries * sizeof(*dl->header->lists));
@@ -840,7 +835,7 @@ bool vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm)
 			   (dl->body0.num_entries *
 			    sizeof(*dl->header->lists)));
 
-		if (soc_device_match(r8a7795es1)) {
+		if (vsp1->underrun_workaround) {
 			vsp1->dl_addr = dl->body0.dma;
 			vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
 				(dl->body0.num_entries *

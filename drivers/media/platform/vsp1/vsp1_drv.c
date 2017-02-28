@@ -95,7 +95,7 @@ static const unsigned int fcpvd_offset[] = {
 	FCPVD0_REG, FCPVD1_REG, FCPVD2_REG, FCPVD3_REG
 };
 
-static const struct soc_device_attribute r8a7795es1[] = {
+static const struct soc_device_attribute r8a7795es1x[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*" },
 	{ /* sentinel */ }
 };
@@ -230,7 +230,7 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		}
 	}
 
-	if (vsp1->h3_es1x &&
+	if (vsp1->underrun_workaround &&
 		underrun && vsp1_gen3_vspd_check(vsp1))
 		vsp1_underrun_workaround(vsp1, false);
 
@@ -657,7 +657,7 @@ int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index)
 	if (!(status & VI6_STATUS_SYS_ACT(index)))
 		return 0;
 
-	if (soc_device_match(r8a7795es1) && vsp1_gen3_vspd_check(vsp1))
+	if (vsp1->underrun_workaround && vsp1_gen3_vspd_check(vsp1))
 		vsp1_underrun_workaround(vsp1, true);
 	else
 		vsp1_write(vsp1, VI6_SRESET, VI6_SRESET_SRTS(index));
@@ -943,10 +943,13 @@ static int vsp1_probe(struct platform_device *pdev)
 	vsp1->version = vsp1_read(vsp1, VI6_IP_VERSION);
 	pm_runtime_put_sync(&pdev->dev);
 
-	if (soc_device_match(r8a7795es1))
-		vsp1->h3_es1x = true;
-	else
-		vsp1->h3_es1x = false;
+	if (soc_device_match(r8a7795es1x)) {
+		vsp1->underrun_workaround = true;
+		vsp1->auto_fld_mode = false;
+	} else {
+		vsp1->underrun_workaround = false;
+		vsp1->auto_fld_mode = true;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(vsp1_device_infos); ++i) {
 		if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
@@ -965,11 +968,6 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "IP version 0x%08x\n", vsp1->version);
 
-	if (vsp1->info->header_mode && !soc_device_match(r8a7795es1))
-		vsp1->auto_fld_mode = true;
-	else
-		vsp1->auto_fld_mode = false;
-
 	if (strcmp(dev_name(vsp1->dev), "fea20000.vsp") == 0)
 		vsp1->index = 0;
 	else if (strcmp(dev_name(vsp1->dev), "fea28000.vsp") == 0)
@@ -986,7 +984,7 @@ static int vsp1_probe(struct platform_device *pdev)
 		goto done;
 	}
 
-	if (soc_device_match(r8a7795es1) && vsp1_gen3_vspd_check(vsp1))
+	if (vsp1->underrun_workaround && vsp1_gen3_vspd_check(vsp1))
 		fcpv_reg[vsp1->index] =
 			ioremap(fcpvd_offset[vsp1->index], 0x20);
 done:
@@ -1013,7 +1011,7 @@ static int vsp1_remove(struct platform_device *pdev)
 
 	pm_runtime_disable(&pdev->dev);
 
-	if (soc_device_match(r8a7795es1) && vsp1_gen3_vspd_check(vsp1))
+	if (vsp1->underrun_workaround && vsp1_gen3_vspd_check(vsp1))
 		iounmap(fcpv_reg[vsp1->index]);
 
 	return 0;
