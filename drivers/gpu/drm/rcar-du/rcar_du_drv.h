@@ -110,6 +110,10 @@ struct rcar_du_device {
 		wait_queue_head_t wait;
 		u32 pending;
 	} commit;
+
+	bool dpll_duty_rate_workaround;
+	bool dpllcr_reg_workaround;
+	bool vbk_check_workaround;
 };
 
 static inline bool rcar_du_has(struct rcar_du_device *rcdu,

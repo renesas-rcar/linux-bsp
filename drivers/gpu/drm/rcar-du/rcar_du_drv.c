@@ -276,16 +276,10 @@ static const struct rcar_du_device_info rcar_du_r8a7796_info = {
 	.dpll_ch =  BIT(1),
 };
 
-/* H3 WS1.0  */
-static const struct soc_device_attribute r8a7795es10[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.0" },
-	{ },
-};
-
-/* H3 WS1.1  */
-static const struct soc_device_attribute r8a7795es11[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.1" },
-	{ },
+/* H3 ES1.x  */
+static const struct soc_device_attribute r8a7795es1x[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
 };
 
 static const struct of_device_id rcar_du_of_table[] = {
@@ -544,8 +538,16 @@ static int rcar_du_probe(struct platform_device *pdev)
 	rcdu->dev = &pdev->dev;
 	rcdu->info = of_match_device(rcar_du_of_table, rcdu->dev)->data;
 
-	if (soc_device_match(r8a7795es10) || soc_device_match(r8a7795es11))
+	if (soc_device_match(r8a7795es1x)) {
+		rcdu->dpll_duty_rate_workaround = true;
+		rcdu->dpllcr_reg_workaround = true;
+		rcdu->vbk_check_workaround = true;
 		rcdu->info = &rcar_du_r8a7795_es1x_info;
+	} else {
+		rcdu->dpll_duty_rate_workaround = false;
+		rcdu->dpllcr_reg_workaround = false;
+		rcdu->vbk_check_workaround = false;
+	}
 
 	/* I/O resources */
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
