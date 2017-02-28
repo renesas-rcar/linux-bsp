@@ -210,6 +210,8 @@ struct rcar_csi2 {
 	struct v4l2_mbus_framefmt mf;
 
 	u32 vc_num;
+	bool csi2_phy_init_add;
+	bool freq_range_table_workaround;
 };
 
 #define csi_dbg(p, fmt, arg...)		dev_dbg(p->dev, fmt, ##arg)
@@ -217,7 +219,7 @@ struct rcar_csi2 {
 #define csi_warn(p, fmt, arg...)	dev_warn(p->dev, fmt, ##arg)
 #define csi_err(p, fmt, arg...)		dev_err(p->dev, fmt, ##arg)
 
-/* H3 WS1.x  */
+/* H3 ES1.x  */
 static const struct soc_device_attribute r8a7795es1x[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*" },
 	{ },
@@ -375,7 +377,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		  LSWAP_L2SEL(priv->swap[2]) | LSWAP_L3SEL(priv->swap[3]),
 		  priv->base + LSWAP_REG);
 
-	if (!soc_device_match(r8a7795es1x) && !soc_device_match(r8a7796)) {
+	if (priv->csi2_phy_init_add) {
 		/* Set PHY Test Interface Write Register in R-Car H3(ES2.0) */
 		iowrite32(0x01cc01e2, priv->base + PHTW_REG);
 		iowrite32(0x010101e3, priv->base + PHTW_REG);
@@ -391,7 +393,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 	/* Set CSI0CLK Frequency Configuration Preset Register
 	 * in R-Car H3(ES2.0)
 	 */
-	if (!soc_device_match(r8a7795es1x) && !soc_device_match(r8a7796))
+	if (priv->csi2_phy_init_add)
 		iowrite32(CSI0CLKFREQRANGE(32), priv->base + CSI0CLKFCPR_REG);
 
 	iowrite32(phycnt, priv->base + PHYCNT_REG);
@@ -615,8 +617,18 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 		return -ENODEV;
 	priv->info = match->data;
 
-	/* HSFREQRANGE bit information of H3(ES1.x) and M3(WS1.0) are same. */
 	if (soc_device_match(r8a7795es1x))
+		priv->freq_range_table_workaround = true;
+	else if ((!soc_device_match(r8a7795es1x))
+		 && (!soc_device_match(r8a7796)))
+		priv->csi2_phy_init_add = true;
+	else {
+		priv->freq_range_table_workaround = false;
+		priv->csi2_phy_init_add = false;
+	}
+
+	/* HSFREQRANGE bit information of H3(ES1.x) and M3(ES1.0) are same. */
+	if (priv->freq_range_table_workaround)
 		priv->info = &rcar_csi2_info_r8a7796;
 
 	priv->dev = &pdev->dev;
