@@ -68,6 +68,8 @@ struct equation_coefs {
 };
 
 struct rcar_gen3_thermal_tsc {
+	struct device *dev;
+	int num;
 	void __iomem *base;
 	struct thermal_zone_device *zone;
 	struct equation_coefs coef;
@@ -281,6 +283,9 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 			ret = -ENOMEM;
 			goto error_unregister;
 		}
+
+		tsc->dev = dev;
+		tsc->num = i;
 
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
 		if (!res) {
