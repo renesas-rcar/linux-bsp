@@ -2,7 +2,7 @@
  * Device Tree Source for the H3ULCB (R-Car Starter Kit Premier) board
  *
  * Copyright (C) 2016-2017 Renesas Electronics Corp.
- * Copyright (C) 2016 Cogent Embedded, Inc.
+ * Copyright (C) 2016-2017 Cogent Embedded, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -10,7 +10,7 @@
  */
 
 /dts-v1/;
-#include "r8a7795-es1.dtsi"
+#include "r8a7795.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 
