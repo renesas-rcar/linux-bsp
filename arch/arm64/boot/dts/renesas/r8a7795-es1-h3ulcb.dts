@@ -489,6 +489,10 @@
 	status = "okay";
 };
 
+&msiof_ref_clk {
+	clock-frequency = <66666666>;
+};
+
 &msiof1 {
 	pinctrl-0 = <&msiof1_pins>;
 	pinctrl-names = "default";
