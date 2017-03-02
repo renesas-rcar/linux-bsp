@@ -232,7 +232,9 @@ static int rcar_ems_thermal_notifier_call(struct notifier_block *nb,
 		return NOTIFY_DONE;
 	}
 
+#ifdef CONFIG_CPU_FREQ
 	cpufreq_update_policy(cpumask_any(&freq_scaled_cpus));
+#endif
 
 	return NOTIFY_OK;
 }
