@@ -1,8 +1,8 @@
 /*
- * drivers/gpu/drm/i2c/5p49v5923a.c
+ * drivers/gpu/drm/i2c/5p49x.c
  *     This file is programmable clock generator driver.
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
+ * Copyright (C) 2016-2017 Renesas Electronics Corporation
  *
  * This file is based on the drivers/clk/clk-cs2000-cp.c
  *
@@ -250,7 +250,7 @@ static int clk_5p49_probe(struct i2c_client *client,
 	for (i = ch; i < CLK_MAX; i++) {
 		char name[20];
 
-		sprintf(name, "5p49v5923a_clk%u", i);
+		sprintf(name, "5p49x_clk%u", i);
 		ch_np = of_get_child_by_name(np, name);
 		if (!ch_np)
 			continue;
@@ -295,7 +295,7 @@ static int clk_5p49_remove(struct i2c_client *client)
 
 static struct i2c_driver clk_5p49_driver = {
 	.driver = {
-		.name = "5p49v5923a",
+		.name = "5p49x",
 		.of_match_table = clk_5p49_of_match,
 	},
 	.probe		= clk_5p49_probe,
@@ -305,6 +305,6 @@ static struct i2c_driver clk_5p49_driver = {
 
 module_i2c_driver(clk_5p49_driver);
 
-MODULE_DESCRIPTION("5p49v5923a programmable clock generator driver");
+MODULE_DESCRIPTION("5p49x programmable clock generator driver");
 MODULE_AUTHOR("Koji Matsuoka <koji.matsuoka.xm@renesas.com>");
 MODULE_LICENSE("GPL");
