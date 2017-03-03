@@ -36,6 +36,10 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 {
 	const struct drm_display_mode *mode = &crtc->crtc.state->adjusted_mode;
 	struct rcar_du_device *rcdu = crtc->group->dev;
+	struct vsp1_du_lif_config cfg = {
+		.width = mode->hdisplay,
+		.height = mode->vdisplay,
+	};
 	struct rcar_du_plane_state state = {
 		.state = {
 			.crtc = &crtc->crtc,
@@ -70,13 +74,12 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 	 */
 	crtc->group->need_restart = true;
 
-	vsp1_du_setup_lif(crtc->vsp->vsp, mode->hdisplay, mode->vdisplay,
-			  crtc->lif_index, 0);
+	vsp1_du_setup_lif(crtc->vsp->vsp, &cfg, crtc->lif_index, 0);
 }
 
 void rcar_du_vsp_disable(struct rcar_du_crtc *crtc)
 {
-	vsp1_du_setup_lif(crtc->vsp->vsp, 0, 0, crtc->lif_index,
+	vsp1_du_setup_lif(crtc->vsp->vsp, NULL, crtc->lif_index,
 			  crtc->suspend);
 }
 
