@@ -46,6 +46,15 @@ void vsp1_drm_display_start(struct vsp1_device *vsp1, unsigned int lif_index)
 	vsp1_dlm_irq_display_start(vsp1->drm->pipe[lif_index].output->dlm);
 }
 
+static void vsp1_du_pipeline_frame_end(struct vsp1_pipeline *pipe,
+				       unsigned int lif_index)
+{
+	struct vsp1_drm *drm = to_vsp1_drm(pipe, lif_index);
+
+	if (drm->du_complete[lif_index])
+		drm->du_complete[lif_index](drm->du_private[lif_index]);
+}
+
 /* -----------------------------------------------------------------------------
  * DU Driver API
  */
@@ -150,6 +159,7 @@ int vsp1_du_setup_lif(struct device *dev, const struct vsp1_du_lif_config *cfg,
 		}
 
 		pipe->num_inputs = 0;
+		vsp1->drm->du_complete[lif_index] = NULL;
 
 		vsp1_dlm_reset(pipe->output->dlm);
 		vsp1_device_put(vsp1);
@@ -287,6 +297,14 @@ int vsp1_du_setup_lif(struct device *dev, const struct vsp1_du_lif_config *cfg,
 	ret = vsp1_device_get(vsp1, lif_index);
 	if (ret < 0)
 		return ret;
+
+	/*
+	 * Register a callback to allow us to notify the DRM driver of frame
+	 * completion events.
+	 */
+
+	vsp1->drm->du_complete[lif_index] = cfg->callback;
+	vsp1->drm->du_private[lif_index] = cfg->callback_data;
 
 	ret = media_entity_pipeline_start(&pipe->output->entity.subdev.entity,
 					  &pipe->pipe);
@@ -920,6 +938,7 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 		pipe->output = vsp1->wpf[i];
 		pipe->output->pipe = pipe;
 		pipe->output->write_back = 0;
+		pipe->frame_end = vsp1_du_pipeline_frame_end;
 		init_waitqueue_head(&pipe->event_wait);
 	}
 

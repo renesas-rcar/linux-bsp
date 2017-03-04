@@ -23,6 +23,8 @@
  * @num_inputs: number of active pipeline inputs at the beginning of an update
  * @planes: source crop rectangle, destination compose rectangle and z-order
  *	position for every input
+ * @du_complete: frame completion callback for the DU driver (optional)
+ * @du_private: data to be passed to the du_complete callback
  */
 struct vsp1_drm {
 	struct vsp1_pipeline pipe[VSP1_MAX_LIF];
@@ -33,7 +35,17 @@ struct vsp1_drm {
 		struct v4l2_rect compose;
 		unsigned int zpos;
 	} inputs[VSP1_MAX_RPF];
+
+	/* Frame synchronisation */
+	void (*du_complete[VSP1_MAX_LIF])(void *);
+	void *du_private[VSP1_MAX_LIF];
 };
+
+static inline struct vsp1_drm *to_vsp1_drm(struct vsp1_pipeline *pipe,
+					   unsigned int lif_index)
+{
+	return container_of(pipe, struct vsp1_drm, pipe[lif_index]);
+}
 
 int vsp1_drm_init(struct vsp1_device *vsp1);
 void vsp1_drm_cleanup(struct vsp1_device *vsp1);

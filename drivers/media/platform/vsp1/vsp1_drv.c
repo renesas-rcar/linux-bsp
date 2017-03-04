@@ -212,7 +212,7 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		}
 
 		if (status & VI6_WFP_IRQ_STA_DFE) {
-			vsp1_pipeline_frame_end(wpf->pipe);
+			vsp1_pipeline_frame_end(wpf->pipe, i);
 			ret = IRQ_HANDLED;
 		}
 		if (status & VI6_WFP_IRQ_STA_UND)

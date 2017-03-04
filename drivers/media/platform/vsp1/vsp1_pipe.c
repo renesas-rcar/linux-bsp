@@ -323,7 +323,8 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe)
 	return pipe->buffers_ready == mask;
 }
 
-void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
+void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
+			     unsigned int lif_index)
 {
 	unsigned long flags;
 	bool completed;
@@ -356,7 +357,7 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 		vsp1_hgt_frame_end(pipe->hgt);
 
 	if (pipe->frame_end)
-		pipe->frame_end(pipe);
+		pipe->frame_end(pipe, lif_index);
 
 	pipe->sequence++;
 }
