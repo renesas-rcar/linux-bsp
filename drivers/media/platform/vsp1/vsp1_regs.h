@@ -19,6 +19,7 @@
 
 #define VI6_CMD(n)			(0x0000 + (n) * 4)
 #define VI6_CMD_STRCMD			(1 << 0)
+#define VI6_CMD_UPDHDR			(1 << 4)
 
 #define VI6_CLK_CTRL0			0x0010
 #define VI6_CLK_CTRL0_WORKAROUND	0x10010F1F
