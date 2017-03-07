@@ -28,10 +28,23 @@
 #include "rcar_du_kms.h"
 #include "rcar_du_vsp.h"
 
+static void rcar_du_vsp_complete(void *private)
+{
+	struct rcar_du_crtc *crtc = private;
+
+	rcar_du_crtc_finish_page_flip(crtc);
+}
+
 void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 {
 	const struct drm_display_mode *mode = &crtc->crtc.state->adjusted_mode;
 	struct rcar_du_device *rcdu = crtc->group->dev;
+	struct vsp1_du_lif_config cfg = {
+		.width = mode->hdisplay,
+		.height = mode->vdisplay,
+		.callback = rcar_du_vsp_complete,
+		.callback_data = crtc,
+	};
 	struct rcar_du_plane_state state = {
 		.state = {
 			.crtc = &crtc->crtc,
@@ -66,12 +79,12 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 	 */
 	crtc->group->need_restart = true;
 
-	vsp1_du_setup_lif(crtc->vsp->vsp, mode->hdisplay, mode->vdisplay);
+	vsp1_du_setup_lif(crtc->vsp->vsp, &cfg);
 }
 
 void rcar_du_vsp_disable(struct rcar_du_crtc *crtc)
 {
-	vsp1_du_setup_lif(crtc->vsp->vsp, 0, 0);
+	vsp1_du_setup_lif(crtc->vsp->vsp, NULL);
 }
 
 void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc)

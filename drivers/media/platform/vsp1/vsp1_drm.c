@@ -36,6 +36,14 @@ void vsp1_drm_display_start(struct vsp1_device *vsp1)
 	vsp1_dlm_irq_display_start(vsp1->drm->pipe.output->dlm);
 }
 
+static void vsp1_du_pipeline_frame_end(struct vsp1_pipeline *pipe)
+{
+	struct vsp1_drm *drm = to_vsp1_drm(pipe);
+
+	if (drm->du_complete)
+		drm->du_complete(drm->du_private);
+}
+
 /* -----------------------------------------------------------------------------
  * DU Driver API
  */
@@ -54,12 +62,11 @@ EXPORT_SYMBOL_GPL(vsp1_du_init);
 /**
  * vsp1_du_setup_lif - Setup the output part of the VSP pipeline
  * @dev: the VSP device
- * @width: output frame width in pixels
- * @height: output frame height in pixels
+ * @cfg: the LIF configuration
  *
- * Configure the output part of VSP DRM pipeline for the given frame @width and
- * @height. This sets up formats on the BRU source pad, the WPF0 sink and source
- * pads, and the LIF sink pad.
+ * Configure the output part of VSP DRM pipeline for the given frame @cfg.width
+ * and @cfg.height. This sets up formats on the BRU source pad, the WPF0 sink
+ * and source pads, and the LIF sink pad.
  *
  * As the media bus code on the BRU source pad is conditioned by the
  * configuration of the BRU sink 0 pad, we also set up the formats on all BRU
@@ -69,8 +76,7 @@ EXPORT_SYMBOL_GPL(vsp1_du_init);
  *
  * Return 0 on success or a negative error code on failure.
  */
-int vsp1_du_setup_lif(struct device *dev, unsigned int width,
-		      unsigned int height)
+int vsp1_du_setup_lif(struct device *dev, const struct vsp1_du_lif_config *cfg)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe;
@@ -79,12 +85,9 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 	unsigned int i;
 	int ret;
 
-	dev_dbg(vsp1->dev, "%s: configuring LIF with format %ux%u\n",
-		__func__, width, height);
-
-	if (width == 0 || height == 0) {
+	if (!cfg) {
 		/*
-		 * Zero width or height means the CRTC is being disabled, stop
+		 * NULL configuration means the CRTC is being disabled, stop
 		 * the pipeline and turn the light off.
 		 */
 		ret = vsp1_pipeline_stop(pipe);
@@ -100,6 +103,7 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 		}
 
 		pipe->num_inputs = 0;
+		vsp1->drm->du_complete = NULL;
 
 		vsp1_dlm_reset(pipe->output->dlm);
 		vsp1_device_put(vsp1);
@@ -108,6 +112,9 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 
 		return 0;
 	}
+
+	dev_dbg(vsp1->dev, "%s: configuring LIF with format %ux%u\n",
+		__func__, cfg->width, cfg->height);
 
 	/*
 	 * Configure the format at the BRU sinks and propagate it through the
@@ -119,8 +126,8 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 	for (i = 0; i < bru->entity.source_pad; ++i) {
 		format.pad = i;
 
-		format.format.width = width;
-		format.format.height = height;
+		format.format.width = cfg->width;
+		format.format.height = cfg->height;
 		format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
 		format.format.field = V4L2_FIELD_NONE;
 
@@ -135,8 +142,8 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 	}
 
 	format.pad = bru->entity.source_pad;
-	format.format.width = width;
-	format.format.height = height;
+	format.format.width = cfg->width;
+	format.format.height = cfg->height;
 	format.format.code = MEDIA_BUS_FMT_ARGB8888_1X32;
 	format.format.field = V4L2_FIELD_NONE;
 
@@ -183,7 +190,8 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 	 * Verify that the format at the output of the pipeline matches the
 	 * requested frame size and media bus code.
 	 */
-	if (format.format.width != width || format.format.height != height ||
+	if (format.format.width != cfg->width ||
+	    format.format.height != cfg->height ||
 	    format.format.code != MEDIA_BUS_FMT_ARGB8888_1X32) {
 		dev_dbg(vsp1->dev, "%s: format mismatch\n", __func__);
 		return -EPIPE;
@@ -199,6 +207,13 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 	ret = vsp1_device_get(vsp1);
 	if (ret < 0)
 		return ret;
+
+	/*
+	 * Register a callback to allow us to notify the DRM driver of frame
+	 * completion events.
+	 */
+	vsp1->drm->du_complete = cfg->callback;
+	vsp1->drm->du_private = cfg->callback_data;
 
 	ret = media_pipeline_start(&pipe->output->entity.subdev.entity,
 					  &pipe->pipe);
@@ -604,6 +619,7 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 	pipe->lif = &vsp1->lif->entity;
 	pipe->output = vsp1->wpf[0];
 	pipe->output->pipe = pipe;
+	pipe->frame_end = vsp1_du_pipeline_frame_end;
 
 	return 0;
 }
