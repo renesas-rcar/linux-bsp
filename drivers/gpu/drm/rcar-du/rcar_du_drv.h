@@ -73,6 +73,7 @@ struct rcar_du_device_info {
 	unsigned int num_lvds;
 	unsigned int dpll_ch;
 	unsigned int vspdl_pair_ch;
+	unsigned int vspdl_ch;
 };
 
 #define RCAR_DU_MAX_CRTCS		4

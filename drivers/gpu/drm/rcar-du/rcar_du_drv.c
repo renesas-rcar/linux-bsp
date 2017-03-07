@@ -242,6 +242,7 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 	.num_lvds = 1,
 	.dpll_ch =  BIT(1) | BIT(2),
 	.vspdl_pair_ch = DU_CH_3,
+	.vspdl_ch = DU_CH_0,
 };
 
 static const struct rcar_du_device_info rcar_du_r8a7796_info = {
