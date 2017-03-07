@@ -566,13 +566,11 @@ static int samsung_gpio_set_direction(struct gpio_chip *gc,
 {
 	const struct samsung_pin_bank_type *type;
 	struct samsung_pin_bank *bank;
-	struct samsung_pinctrl_drv_data *drvdata;
 	void __iomem *reg;
 	u32 data, mask, shift;
 
 	bank = gpiochip_get_data(gc);
 	type = bank->type;
-	drvdata = bank->drvdata;
 
 	reg = bank->pctl_base + bank->pctl_offset
 			+ type->reg_offset[PINCFG_TYPE_FUNC];
@@ -893,6 +891,19 @@ static int samsung_pinctrl_register(struct platform_device *pdev,
 	return 0;
 }
 
+/* unregister the pinctrl interface with the pinctrl subsystem */
+static int samsung_pinctrl_unregister(struct platform_device *pdev,
+				      struct samsung_pinctrl_drv_data *drvdata)
+{
+	struct samsung_pin_bank *bank = drvdata->pin_banks;
+	int i;
+
+	for (i = 0; i < drvdata->nr_banks; ++i, ++bank)
+		pinctrl_remove_gpio_range(drvdata->pctl_dev, &bank->grange);
+
+	return 0;
+}
+
 static const struct gpio_chip samsung_gpiolib_chip = {
 	.request = gpiochip_generic_request,
 	.free = gpiochip_generic_free,
@@ -937,19 +948,6 @@ fail:
 	for (--i, --bank; i >= 0; --i, --bank)
 		gpiochip_remove(&bank->gpio_chip);
 	return ret;
-}
-
-/* unregister the gpiolib interface with the gpiolib subsystem */
-static int samsung_gpiolib_unregister(struct platform_device *pdev,
-				      struct samsung_pinctrl_drv_data *drvdata)
-{
-	struct samsung_pin_bank *bank = drvdata->pin_banks;
-	int i;
-
-	for (i = 0; i < drvdata->nr_banks; ++i, ++bank)
-		gpiochip_remove(&bank->gpio_chip);
-
-	return 0;
 }
 
 /* retrieve the soc specific data */
@@ -1062,13 +1060,13 @@ static int samsung_pinctrl_probe(struct platform_device *pdev)
 			return PTR_ERR(drvdata->retention_ctrl);
 	}
 
-	ret = samsung_gpiolib_register(pdev, drvdata);
+	ret = samsung_pinctrl_register(pdev, drvdata);
 	if (ret)
 		return ret;
 
-	ret = samsung_pinctrl_register(pdev, drvdata);
+	ret = samsung_gpiolib_register(pdev, drvdata);
 	if (ret) {
-		samsung_gpiolib_unregister(pdev, drvdata);
+		samsung_pinctrl_unregister(pdev, drvdata);
 		return ret;
 	}
 
