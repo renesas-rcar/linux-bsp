@@ -407,12 +407,12 @@ static char *next_specifier(char *input)
 	int found = 0;
 	char *next_percent = input;
 
-	while ((next_percent != NULL) && !found) {
+	while (next_percent && !found) {
 		next_percent = strchr(next_percent, '%');
-		if (next_percent != NULL) {
+		if (next_percent) {
 			/* skip over doubled percent signs */
-			while ((next_percent[0] == '%')
-			       && (next_percent[1] == '%'))
+			while (next_percent[0] == '%' &&
+			       next_percent[1] == '%')
 				next_percent += 2;
 			if (*next_percent == '%')
 				found = 1;
@@ -549,10 +549,10 @@ ssize_t spk_msg_set(enum msg_index_t index, char *text, size_t length)
 		if (newstr) {
 			memcpy(newstr, text, length);
 			newstr[length] = '\0';
-			if ((index >= MSG_FORMATTED_START
-			&& index <= MSG_FORMATTED_END)
-				&& !fmt_validate(speakup_default_msgs[index],
-				newstr)) {
+			if (index >= MSG_FORMATTED_START &&
+			    index <= MSG_FORMATTED_END &&
+			    !fmt_validate(speakup_default_msgs[index],
+			                  newstr)) {
 				kfree(newstr);
 				return -EINVAL;
 			}

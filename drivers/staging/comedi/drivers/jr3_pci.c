@@ -95,27 +95,30 @@ struct jr3_pci_poll_delay {
 };
 
 struct jr3_pci_dev_private {
-	struct jr3_t __iomem *iobase;
 	struct timer_list timer;
+};
+
+union jr3_pci_single_range {
+	struct comedi_lrange l;
+	char _reserved[offsetof(struct comedi_lrange, range[1])];
+};
+
+enum jr3_pci_poll_state {
+	state_jr3_poll,
+	state_jr3_init_wait_for_offset,
+	state_jr3_init_transform_complete,
+	state_jr3_init_set_full_scale_complete,
+	state_jr3_init_use_offset_complete,
+	state_jr3_done
 };
 
 struct jr3_pci_subdev_private {
 	struct jr3_channel __iomem *channel;
 	unsigned long next_time_min;
-	unsigned long next_time_max;
-	enum { state_jr3_poll,
-		state_jr3_init_wait_for_offset,
-		state_jr3_init_transform_complete,
-		state_jr3_init_set_full_scale_complete,
-		state_jr3_init_use_offset_complete,
-		state_jr3_done
-	} state;
+	enum jr3_pci_poll_state state;
 	int serial_no;
 	int model_no;
-	struct {
-		int length;
-		struct comedi_krange range;
-	} range[9];
+	union jr3_pci_single_range range[9];
 	const struct comedi_lrange *range_table_list[8 * 7 + 2];
 	unsigned int maxdata_list[8 * 7 + 2];
 	u16 errors;
@@ -137,19 +140,19 @@ static int is_complete(struct jr3_channel __iomem *channel)
 }
 
 static void set_transforms(struct jr3_channel __iomem *channel,
-			   struct jr3_pci_transform transf, short num)
+			   const struct jr3_pci_transform *transf, short num)
 {
 	int i;
 
 	num &= 0x000f;		/* Make sure that 0 <= num <= 15 */
 	for (i = 0; i < 8; i++) {
 		set_u16(&channel->transforms[num].link[i].link_type,
-			transf.link[i].link_type);
+			transf->link[i].link_type);
 		udelay(1);
 		set_s16(&channel->transforms[num].link[i].link_amount,
-			transf.link[i].link_amount);
+			transf->link[i].link_amount);
 		udelay(1);
-		if (transf.link[i].link_type == end_x_form)
+		if (transf->link[i].link_type == end_x_form)
 			break;
 	}
 }
@@ -279,9 +282,6 @@ static int jr3_pci_ai_insn_read(struct comedi_device *dev,
 	u16 errors;
 	int i;
 
-	if (!spriv)
-		return -EINVAL;
-
 	errors = get_u16(&spriv->channel->errors);
 	if (spriv->state != state_jr3_done ||
 	    (errors & (watch_dog | watch_dog2 | sensor_change))) {
@@ -309,9 +309,8 @@ static int jr3_pci_open(struct comedi_device *dev)
 	for (i = 0; i < dev->n_subdevices; i++) {
 		s = &dev->subdevices[i];
 		spriv = s->private;
-		if (spriv)
-			dev_dbg(dev->class_dev, "serial: %p %d (%d)\n",
-				spriv, spriv->serial_no, s->index);
+		dev_dbg(dev->class_dev, "serial: %p %d (%d)\n",
+			spriv, spriv->serial_no, s->index);
 	}
 	return 0;
 }
@@ -375,8 +374,7 @@ static int jr3_check_firmware(struct comedi_device *dev,
 static void jr3_write_firmware(struct comedi_device *dev,
 			       int subdev, const u8 *data, size_t size)
 {
-	struct jr3_pci_dev_private *devpriv = dev->private;
-	struct jr3_t __iomem *iobase = devpriv->iobase;
+	struct jr3_t __iomem *iobase = dev->mmio;
 	u32 __iomem *lo;
 	u32 __iomem *hi;
 	int more = 1;
@@ -459,9 +457,6 @@ jr3_pci_poll_subdevice(struct comedi_subdevice *s)
 	int errors;
 	int i;
 
-	if (!spriv)
-		return result;
-
 	channel = spriv->channel;
 	errors = get_u16(&channel->errors);
 
@@ -508,7 +503,7 @@ jr3_pci_poll_subdevice(struct comedi_subdevice *s)
 				transf.link[i].link_amount = 0;
 			}
 
-			set_transforms(channel, transf, 0);
+			set_transforms(channel, &transf, 0);
 			use_transform(channel, 0);
 			spriv->state = state_jr3_init_transform_complete;
 			/* Allow 20 ms for completion */
@@ -537,27 +532,28 @@ jr3_pci_poll_subdevice(struct comedi_subdevice *s)
 			result = poll_delay_min_max(20, 100);
 		} else {
 			struct force_array __iomem *fs = &channel->full_scale;
+			union jr3_pci_single_range *r = spriv->range;
 
 			/* Use ranges in kN or we will overflow around 2000N! */
-			spriv->range[0].range.min = -get_s16(&fs->fx) * 1000;
-			spriv->range[0].range.max = get_s16(&fs->fx) * 1000;
-			spriv->range[1].range.min = -get_s16(&fs->fy) * 1000;
-			spriv->range[1].range.max = get_s16(&fs->fy) * 1000;
-			spriv->range[2].range.min = -get_s16(&fs->fz) * 1000;
-			spriv->range[2].range.max = get_s16(&fs->fz) * 1000;
-			spriv->range[3].range.min = -get_s16(&fs->mx) * 100;
-			spriv->range[3].range.max = get_s16(&fs->mx) * 100;
-			spriv->range[4].range.min = -get_s16(&fs->my) * 100;
-			spriv->range[4].range.max = get_s16(&fs->my) * 100;
-			spriv->range[5].range.min = -get_s16(&fs->mz) * 100;
+			r[0].l.range[0].min = -get_s16(&fs->fx) * 1000;
+			r[0].l.range[0].max = get_s16(&fs->fx) * 1000;
+			r[1].l.range[0].min = -get_s16(&fs->fy) * 1000;
+			r[1].l.range[0].max = get_s16(&fs->fy) * 1000;
+			r[2].l.range[0].min = -get_s16(&fs->fz) * 1000;
+			r[2].l.range[0].max = get_s16(&fs->fz) * 1000;
+			r[3].l.range[0].min = -get_s16(&fs->mx) * 100;
+			r[3].l.range[0].max = get_s16(&fs->mx) * 100;
+			r[4].l.range[0].min = -get_s16(&fs->my) * 100;
+			r[4].l.range[0].max = get_s16(&fs->my) * 100;
+			r[5].l.range[0].min = -get_s16(&fs->mz) * 100;
 			/* the next five are questionable */
-			spriv->range[5].range.max = get_s16(&fs->mz) * 100;
-			spriv->range[6].range.min = -get_s16(&fs->v1) * 100;
-			spriv->range[6].range.max = get_s16(&fs->v1) * 100;
-			spriv->range[7].range.min = -get_s16(&fs->v2) * 100;
-			spriv->range[7].range.max = get_s16(&fs->v2) * 100;
-			spriv->range[8].range.min = 0;
-			spriv->range[8].range.max = 65535;
+			r[5].l.range[0].max = get_s16(&fs->mz) * 100;
+			r[6].l.range[0].min = -get_s16(&fs->v1) * 100;
+			r[6].l.range[0].max = get_s16(&fs->v1) * 100;
+			r[7].l.range[0].min = -get_s16(&fs->v2) * 100;
+			r[7].l.range[0].max = get_s16(&fs->v2) * 100;
+			r[8].l.range[0].min = 0;
+			r[8].l.range[0].max = 65535;
 
 			use_offset(channel, 0);
 			spriv->state = state_jr3_init_use_offset_complete;
@@ -611,15 +607,13 @@ static void jr3_pci_poll_dev(unsigned long data)
 		s = &dev->subdevices[i];
 		spriv = s->private;
 
-		if (now > spriv->next_time_min) {
+		if (time_after_eq(now, spriv->next_time_min)) {
 			struct jr3_pci_poll_delay sub_delay;
 
 			sub_delay = jr3_pci_poll_subdevice(s);
 
 			spriv->next_time_min = jiffies +
 					       msecs_to_jiffies(sub_delay.min);
-			spriv->next_time_max = jiffies +
-					       msecs_to_jiffies(sub_delay.max);
 
 			if (sub_delay.max && sub_delay.max < delay)
 				/*
@@ -638,7 +632,7 @@ static void jr3_pci_poll_dev(unsigned long data)
 static struct jr3_pci_subdev_private *
 jr3_pci_alloc_spriv(struct comedi_device *dev, struct comedi_subdevice *s)
 {
-	struct jr3_pci_dev_private *devpriv = dev->private;
+	struct jr3_t __iomem *iobase = dev->mmio;
 	struct jr3_pci_subdev_private *spriv;
 	int j;
 	int k;
@@ -647,34 +641,46 @@ jr3_pci_alloc_spriv(struct comedi_device *dev, struct comedi_subdevice *s)
 	if (!spriv)
 		return NULL;
 
-	spriv->channel = &devpriv->iobase->channel[s->index].data;
+	spriv->channel = &iobase->channel[s->index].data;
 
 	for (j = 0; j < 8; j++) {
-		spriv->range[j].length = 1;
-		spriv->range[j].range.min = -1000000;
-		spriv->range[j].range.max = 1000000;
+		spriv->range[j].l.length = 1;
+		spriv->range[j].l.range[0].min = -1000000;
+		spriv->range[j].l.range[0].max = 1000000;
 
 		for (k = 0; k < 7; k++) {
-			spriv->range_table_list[j + k * 8] =
-				(struct comedi_lrange *)&spriv->range[j];
+			spriv->range_table_list[j + k * 8] = &spriv->range[j].l;
 			spriv->maxdata_list[j + k * 8] = 0x7fff;
 		}
 	}
-	spriv->range[8].length = 1;
-	spriv->range[8].range.min = 0;
-	spriv->range[8].range.max = 65536;
+	spriv->range[8].l.length = 1;
+	spriv->range[8].l.range[0].min = 0;
+	spriv->range[8].l.range[0].max = 65536;
 
-	spriv->range_table_list[56] = (struct comedi_lrange *)&spriv->range[8];
-	spriv->range_table_list[57] = (struct comedi_lrange *)&spriv->range[8];
+	spriv->range_table_list[56] = &spriv->range[8].l;
+	spriv->range_table_list[57] = &spriv->range[8].l;
 	spriv->maxdata_list[56] = 0xffff;
 	spriv->maxdata_list[57] = 0xffff;
 
 	dev_dbg(dev->class_dev, "p->channel %p %p (%tx)\n",
-		spriv->channel, devpriv->iobase,
+		spriv->channel, iobase,
 		((char __iomem *)spriv->channel -
-		 (char __iomem *)devpriv->iobase));
+		 (char __iomem *)iobase));
 
 	return spriv;
+}
+
+static void jr3_pci_show_copyright(struct comedi_device *dev)
+{
+	struct jr3_t __iomem *iobase = dev->mmio;
+	struct jr3_channel __iomem *ch0data = &iobase->channel[0].data;
+	char copy[ARRAY_SIZE(ch0data->copyright) + 1];
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ch0data->copyright); i++)
+		copy[i] = (char)(get_u16(&ch0data->copyright[i]) >> 8);
+	copy[i] = '\0';
+	dev_dbg(dev->class_dev, "Firmware copyright: %s\n", copy);
 }
 
 static int jr3_pci_auto_attach(struct comedi_device *dev,
@@ -684,6 +690,7 @@ static int jr3_pci_auto_attach(struct comedi_device *dev,
 	static const struct jr3_pci_board *board;
 	struct jr3_pci_dev_private *devpriv;
 	struct jr3_pci_subdev_private *spriv;
+	struct jr3_t __iomem *iobase;
 	struct comedi_subdevice *s;
 	int ret;
 	int i;
@@ -710,9 +717,11 @@ static int jr3_pci_auto_attach(struct comedi_device *dev,
 	if (ret)
 		return ret;
 
-	devpriv->iobase = pci_ioremap_bar(pcidev, 0);
-	if (!devpriv->iobase)
+	dev->mmio = pci_ioremap_bar(pcidev, 0);
+	if (!dev->mmio)
 		return -ENOMEM;
+
+	iobase = dev->mmio;
 
 	ret = comedi_alloc_subdevices(dev, board->n_subdevs);
 	if (ret)
@@ -727,15 +736,17 @@ static int jr3_pci_auto_attach(struct comedi_device *dev,
 		s->insn_read	= jr3_pci_ai_insn_read;
 
 		spriv = jr3_pci_alloc_spriv(dev, s);
-		if (spriv) {
-			/* Channel specific range and maxdata */
-			s->range_table_list	= spriv->range_table_list;
-			s->maxdata_list		= spriv->maxdata_list;
-		}
+		if (!spriv)
+			return -ENOMEM;
+
+		/* Channel specific range and maxdata */
+		s->range_table_list	= spriv->range_table_list;
+		s->maxdata_list		= spriv->maxdata_list;
 	}
 
 	/* Reset DSP card */
-	writel(0, &devpriv->iobase->channel[0].reset);
+	for (i = 0; i < dev->n_subdevices; i++)
+		writel(0, &iobase->channel[i].reset);
 
 	ret = comedi_load_firmware(dev, &comedi_to_pci_dev(dev)->dev,
 				   "comedi/jr3pci.idm",
@@ -758,11 +769,7 @@ static int jr3_pci_auto_attach(struct comedi_device *dev,
 	 * can read firmware version
 	 */
 	msleep_interruptible(25);
-	for (i = 0; i < 0x18; i++) {
-		dev_dbg(dev->class_dev, "%c\n",
-			get_u16(&devpriv->iobase->channel[0].
-				data.copyright[i]) >> 8);
-	}
+	jr3_pci_show_copyright(dev);
 
 	/* Start card timer */
 	for (i = 0; i < dev->n_subdevices; i++) {
@@ -770,7 +777,6 @@ static int jr3_pci_auto_attach(struct comedi_device *dev,
 		spriv = s->private;
 
 		spriv->next_time_min = jiffies + msecs_to_jiffies(500);
-		spriv->next_time_max = jiffies + msecs_to_jiffies(2000);
 	}
 
 	setup_timer(&devpriv->timer, jr3_pci_poll_dev, (unsigned long)dev);
@@ -784,13 +790,10 @@ static void jr3_pci_detach(struct comedi_device *dev)
 {
 	struct jr3_pci_dev_private *devpriv = dev->private;
 
-	if (devpriv) {
+	if (devpriv)
 		del_timer_sync(&devpriv->timer);
 
-		if (devpriv->iobase)
-			iounmap(devpriv->iobase);
-	}
-	comedi_pci_disable(dev);
+	comedi_pci_detach(dev);
 }
 
 static struct comedi_driver jr3_pci_driver = {

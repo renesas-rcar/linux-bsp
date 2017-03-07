@@ -129,7 +129,6 @@ static ssize_t chars_chartab_store(struct kobject *kobj,
 
 	spin_lock_irqsave(&speakup_info.spinlock, flags);
 	while (cp < end) {
-
 		while ((cp < end) && (*cp == ' ' || *cp == '\t'))
 			cp++;
 
@@ -292,7 +291,7 @@ static ssize_t keymap_store(struct kobject *kobj, struct kobj_attribute *attr,
 	i *= (int)cp1[-1] + 1;
 	i += 2; /* 0 and last map ver */
 	if (cp1[-3] != KEY_MAP_VER || cp1[-1] > 10 ||
-			i+SHIFT_TBL_SIZE+4 >= sizeof(spk_key_buf)) {
+			i + SHIFT_TBL_SIZE + 4 >= sizeof(spk_key_buf)) {
 		pr_warn("i %d %d %d %d\n", i,
 				(int)cp1[-3], (int)cp1[-2], (int)cp1[-1]);
 		kfree(in_buff);
@@ -344,7 +343,7 @@ static ssize_t silent_store(struct kobject *kobj, struct kobj_attribute *attr,
 		return -EINVAL;
 	}
 	spin_lock_irqsave(&speakup_info.spinlock, flags);
-	if (ch&2) {
+	if (ch & 2) {
 		shut = 1;
 		spk_do_flush();
 	} else {
@@ -479,12 +478,12 @@ static ssize_t punc_show(struct kobject *kobj, struct kobj_attribute *attr,
 	pb = (struct st_bits_data *) &spk_punc_info[var->value];
 	mask = pb->mask;
 	for (i = 33; i < 128; i++) {
-		if (!(spk_chartab[i]&mask))
+		if (!(spk_chartab[i] & mask))
 			continue;
 		*cp++ = (char)i;
 	}
 	spin_unlock_irqrestore(&speakup_info.spinlock, flags);
-	return cp-buf;
+	return cp - buf;
 }
 
 /*
@@ -575,7 +574,7 @@ ssize_t spk_var_show(struct kobject *kobj, struct kobj_attribute *attr,
 			*cp1++ = '"';
 			*cp1++ = '\n';
 			*cp1 = '\0';
-			rv = cp1-buf;
+			rv = cp1 - buf;
 		} else {
 			rv = sprintf(buf, "\"\"\n");
 		}
@@ -834,7 +833,9 @@ static ssize_t message_show(struct kobject *kobj,
 	struct msg_group_t *group = spk_find_msg_group(attr->attr.name);
 	unsigned long flags;
 
-	BUG_ON(!group);
+	if (WARN_ON(!group))
+		return -EINVAL;
+
 	spin_lock_irqsave(&speakup_info.spinlock, flags);
 	retval = message_show_helper(buf, group->start, group->end);
 	spin_unlock_irqrestore(&speakup_info.spinlock, flags);
@@ -846,7 +847,9 @@ static ssize_t message_store(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	struct msg_group_t *group = spk_find_msg_group(attr->attr.name);
 
-	BUG_ON(!group);
+	if (WARN_ON(!group))
+		return -EINVAL;
+
 	return message_store_helper(buf, count, group);
 }
 
