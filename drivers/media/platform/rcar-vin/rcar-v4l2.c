@@ -424,9 +424,6 @@ static int rvin_s_selection(struct file *file, void *fh,
 		return -EINVAL;
 	}
 
-	/* HW supports modifying configuration while running */
-	rvin_crop_scale_comp(vin);
-
 	return 0;
 }
 
