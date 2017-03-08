@@ -166,6 +166,7 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 		.which = which,
 	};
 	enum v4l2_field field;
+	u32 width, height;
 	int ret;
 
 	sd = vin_to_source(vin);
@@ -178,7 +179,10 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 
 	format.pad = vin->digital.source_pad;
 
+	/* Allow the video device to override field and to scale */
 	field = pix->field;
+	width = pix->width;
+	height = pix->height;
 
 	ret = v4l2_subdev_call(sd, pad, set_fmt, pad_cfg, &format);
 	if (ret < 0 && ret != -ENOIOCTLCMD)
@@ -190,6 +194,9 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 
 	source->width = pix->width;
 	source->height = pix->height;
+
+	pix->width = width;
+	pix->height = height;
 
 	vin_dbg(vin, "Source resolution: %ux%u\n", source->width,
 		source->height);
@@ -205,12 +212,8 @@ static int __rvin_try_format(struct rvin_dev *vin,
 			     struct rvin_source_fmt *source)
 {
 	const struct rvin_video_format *info;
-	u32 rwidth, rheight, walign;
+	u32 walign;
 	int ret;
-
-	/* Requested */
-	rwidth = pix->width;
-	rheight = pix->height;
 
 	/* Keep current field if no specific one is asked for */
 	if (pix->field == V4L2_FIELD_ANY)
@@ -254,10 +257,6 @@ static int __rvin_try_format(struct rvin_dev *vin,
 		break;
 	}
 
-	/* If source can't match format try if VIN can scale */
-	if (source->width != rwidth || source->height != rheight)
-		rvin_scale_try(vin, pix, rwidth, rheight);
-
 	/* HW limit width to a multiple of 32 (2^5) for NV16 else 2 (2^1) */
 	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
 
@@ -276,9 +275,8 @@ static int __rvin_try_format(struct rvin_dev *vin,
 		return -EINVAL;
 	}
 
-	vin_dbg(vin, "Requested %ux%u Got %ux%u bpl: %d size: %d\n",
-		rwidth, rheight, pix->width, pix->height,
-		pix->bytesperline, pix->sizeimage);
+	vin_dbg(vin, "Format %ux%u bpl: %d size: %d\n",
+		pix->width, pix->height, pix->bytesperline, pix->sizeimage);
 
 	return 0;
 }
