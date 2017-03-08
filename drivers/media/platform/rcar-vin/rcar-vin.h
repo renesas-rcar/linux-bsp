@@ -62,17 +62,12 @@ struct rvin_video_format {
  * struct rvin_graph_entity - Video endpoint from async framework
  * @asd:	sub-device descriptor for async framework
  * @subdev:	subdevice matched using async framework
- * @code:	Media bus format from source
- * @mbus_cfg:	Media bus format from DT
  * @source_pad:	source pad of remote subdevice
  * @sink_pad:	sink pad of remote subdevice
  */
 struct rvin_graph_entity {
 	struct v4l2_async_subdev asd;
 	struct v4l2_subdev *subdev;
-
-	u32 code;
-	struct v4l2_mbus_config mbus_cfg;
 
 	unsigned int source_pad;
 	unsigned int sink_pad;
@@ -115,6 +110,8 @@ struct rvin_info {
  * @sequence:		V4L2 buffers sequence number
  * @state:		keeps track of operation state
  *
+ * @mbus_cfg:		media bus format from DT
+ * @code:		media bus coide from subdevice
  * @format:		active V4L2 pixel format
  *
  * @crop:		active cropping
@@ -141,6 +138,8 @@ struct rvin_dev {
 	unsigned int sequence;
 	enum rvin_dma_state state;
 
+	struct v4l2_mbus_config mbus_cfg;
+	u32 code;
 	struct v4l2_pix_format format;
 
 	struct v4l2_rect crop;
