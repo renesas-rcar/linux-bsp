@@ -100,10 +100,10 @@ static int rvin_digital_notify_bound(struct v4l2_async_notifier *notifier,
 	vin->digital->sink_pad = ret < 0 ? 0 : ret;
 
 	/* Find compatible subdevices mbus format */
-	vin->digital->code = 0;
+	vin->code = 0;
 	code.index = 0;
 	code.pad = vin->digital->source_pad;
-	while (!vin->digital->code &&
+	while (!vin->code &&
 	       !v4l2_subdev_call(subdev, pad, enum_mbus_code, NULL, &code)) {
 		code.index++;
 		switch (code.code) {
@@ -111,16 +111,16 @@ static int rvin_digital_notify_bound(struct v4l2_async_notifier *notifier,
 		case MEDIA_BUS_FMT_UYVY8_2X8:
 		case MEDIA_BUS_FMT_UYVY10_2X10:
 		case MEDIA_BUS_FMT_RGB888_1X24:
-			vin->digital->code = code.code;
+			vin->code = code.code;
 			vin_dbg(vin, "Found media bus format for %s: %d\n",
-				subdev->name, vin->digital->code);
+				subdev->name, vin->code);
 			break;
 		default:
 			break;
 		}
 	}
 
-	if (!vin->digital->code) {
+	if (!vin->code) {
 		vin_err(vin, "Unsupported media bus format for %s\n",
 			subdev->name);
 		return -EINVAL;
@@ -186,16 +186,16 @@ static int rvin_digital_parse_v4l2(struct device *dev,
 	if (vep->base.port || vep->base.id)
 		return -ENOTCONN;
 
-	rvge->mbus_cfg.type = vep->bus_type;
+	vin->mbus_cfg.type = vep->bus_type;
 
-	switch (rvge->mbus_cfg.type) {
+	switch (vin->mbus_cfg.type) {
 	case V4L2_MBUS_PARALLEL:
 		vin_dbg(vin, "Found PARALLEL media bus\n");
-		rvge->mbus_cfg.flags = vep->bus.parallel.flags;
+		vin->mbus_cfg.flags = vep->bus.parallel.flags;
 		break;
 	case V4L2_MBUS_BT656:
 		vin_dbg(vin, "Found BT656 media bus\n");
-		rvge->mbus_cfg.flags = 0;
+		vin->mbus_cfg.flags = 0;
 		break;
 	default:
 		vin_err(vin, "Unknown media bus type\n");
