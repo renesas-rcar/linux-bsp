@@ -655,7 +655,7 @@ static int rvin_crop_scale_comp_gen3(struct rvin_dev *vin)
 	return 0;
 }
 
-void rvin_crop_scale_comp(struct rvin_dev *vin)
+static void rvin_crop_scale_comp(struct rvin_dev *vin)
 {
 	const struct rvin_video_format *fmt;
 	u32 stride;
