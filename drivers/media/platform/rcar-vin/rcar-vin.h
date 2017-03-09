@@ -21,6 +21,7 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-dev.h>
 #include <media/v4l2-device.h>
+#include <media/v4l2-mc.h>
 #include <media/videobuf2-v4l2.h>
 
 /* Number of HW buffers */
@@ -162,6 +163,8 @@ void rvin_dma_remove(struct rvin_dev *vin);
 
 int rvin_v4l2_probe(struct rvin_dev *vin);
 void rvin_v4l2_remove(struct rvin_dev *vin);
+int rvin_v4l2_mc_probe(struct rvin_dev *vin);
+void rvin_v4l2_mc_remove(struct rvin_dev *vin);
 
 const struct rvin_video_format *rvin_format_from_pixel(u32 pixelformat);
 
