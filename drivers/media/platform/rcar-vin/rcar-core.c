@@ -268,7 +268,16 @@ static int rvin_group_init(struct rvin_dev *vin)
 	if (ret)
 		return ret;
 
+	vin->pad.flags = MEDIA_PAD_FL_SINK;
+	ret = media_entity_pads_init(&vin->vdev->entity, 1, &vin->pad);
+	if (ret)
+		goto error_v4l2;
+
 	return 0;
+error_v4l2:
+	rvin_v4l2_mc_remove(vin);
+
+	return ret;
 }
 
 /* -----------------------------------------------------------------------------
