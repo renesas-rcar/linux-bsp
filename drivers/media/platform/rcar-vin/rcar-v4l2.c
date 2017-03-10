@@ -226,9 +226,8 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	if (!info) {
 		vin_dbg(vin, "Format %x not found, keeping %x\n",
 			pix->pixelformat, vin->format.pixelformat);
-		*pix = vin->format;
-		pix->width = rwidth;
-		pix->height = rheight;
+		pix->pixelformat = vin->format.pixelformat;
+		info = rvin_format_from_pixel(pix->pixelformat);
 	}
 
 	/* Always recalculate */
