@@ -993,7 +993,11 @@ static int __rsnd_kctrl_new(struct rsnd_mod *mod,
 
 void _rsnd_kctrl_remove(struct rsnd_kctrl_cfg *cfg)
 {
-	snd_ctl_remove(cfg->card, cfg->kctrl);
+	if (cfg->card && cfg->kctrl)
+		snd_ctl_remove(cfg->card, cfg->kctrl);
+
+	cfg->card = NULL;
+	cfg->kctrl = NULL;
 }
 
 int rsnd_kctrl_new_m(struct rsnd_mod *mod,
@@ -1251,12 +1255,11 @@ static int rsnd_remove(struct platform_device *pdev)
 	return ret;
 }
 
-#ifdef CONFIG_PM_SLEEP
 static int rsnd_suspend(struct device *dev)
 {
 	struct rsnd_priv *priv = dev_get_drvdata(dev);
 
-	rsnd_adg_remove(priv);
+	rsnd_adg_clk_disable(priv);
 
 	return 0;
 }
@@ -1264,24 +1267,21 @@ static int rsnd_suspend(struct device *dev)
 static int rsnd_resume(struct device *dev)
 {
 	struct rsnd_priv *priv = dev_get_drvdata(dev);
-	int ret;
 
-	ret = rsnd_adg_probe(priv);
+	rsnd_adg_clk_enable(priv);
 
-	return ret;
+	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(rsnd_pm_ops,
-			rsnd_suspend, rsnd_resume);
-#define DEV_PM_OPS (&rsnd_pm_ops)
-#else
-#define DEV_PM_OPS NULL
-#endif  /* CONFIG_PM_SLEEP */
+static const struct dev_pm_ops rsnd_pm_ops = {
+	.suspend		= rsnd_suspend,
+	.resume			= rsnd_resume,
+};
 
 static struct platform_driver rsnd_driver = {
 	.driver	= {
 		.name	= "rcar_sound",
-		.pm	= DEV_PM_OPS,
+		.pm	= &rsnd_pm_ops,
 		.of_match_table = rsnd_of_match,
 	},
 	.probe		= rsnd_probe,
