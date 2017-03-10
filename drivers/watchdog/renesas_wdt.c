@@ -2,7 +2,7 @@
  * Watchdog driver for Renesas WDT watchdog
  *
  * Copyright (C) 2015-16 Wolfram Sang, Sang Engineering <wsa@sang-engineering.com>
- * Copyright (C) 2015-16 Renesas Electronics Corporation
+ * Copyright (C) 2015-17 Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -16,7 +16,6 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <linux/soc/renesas/s2ram_ddr_backup.h>
 #include <linux/watchdog.h>
 
 #define RWTCNT		0
@@ -26,19 +25,6 @@
 #define RWTCSRA_TME	BIT(7)
 
 #define RWDT_DEFAULT_TIMEOUT 60U
-
-#ifdef CONFIG_RCAR_DDR_BACKUP
-static struct hw_register rwdt_ip_regs[] = {
-	{"RWTCNT",   0x00, 16, 0},
-	{"RWTCSRA",  0x04, 8, 0},
-};
-
-static struct rcar_ip rwdt_ip = {
-	.ip_name = "RWDT",
-	.reg_count = ARRAY_SIZE(rwdt_ip_regs),
-	.ip_reg = rwdt_ip_regs,
-};
-#endif /* CONFIG_RCAR_DDR_BACKUP*/
 
 static const unsigned int clk_divs[] = { 1, 4, 16, 32, 64, 128, 1024 };
 
@@ -226,23 +212,22 @@ MODULE_DEVICE_TABLE(of, rwdt_ids);
 static int rwdt_suspend(struct device *dev)
 {
 	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
 	struct rwdt_priv *priv = dev_get_drvdata(dev);
 
-	if (!rwdt_ip.virt_addr)
-		rwdt_ip.virt_addr = priv->base;
+	if (watchdog_active(&priv->wdev))
+		ret = rwdt_stop(&priv->wdev);
 
-	ret = rcar_handle_registers(&rwdt_ip, DO_BACKUP);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }
 
 static int rwdt_resume(struct device *dev)
 {
 	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	ret = rcar_handle_registers(&rwdt_ip, DO_RESTORE);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
+	struct rwdt_priv *priv = dev_get_drvdata(dev);
+
+	if (watchdog_active(&priv->wdev))
+		ret = rwdt_start(&priv->wdev);
+
 	return ret;
 }
 
