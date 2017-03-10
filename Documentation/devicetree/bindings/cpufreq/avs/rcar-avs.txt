@@ -1,0 +1,26 @@
+R-Car AVS driver
+
+It is a simple driver that checks AVS (Adaptive Voltage Scaling) value of
+chip. It helps to cpufreq select the best opp table (appropriate table with
+avs value) to apply for the chip at runtime.
+
+Required properties:
+ - reg: address and offset for registers of AVS.
+
+Optional properties:
+ - None
+
+Examples:
+ - Below is device tree definition for R-Car H3 and M3:
+
+  For H3:
+	avs_sensor: avs {
+		compatible = "renesas,r8a7795-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
+	};
+
+  For M3:
+	avs_sensor: avs {
+		compatible = "renesas,r8a7796-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
+	};
