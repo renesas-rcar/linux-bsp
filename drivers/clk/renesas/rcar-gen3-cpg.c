@@ -1,6 +1,7 @@
 /*
  * R-Car Gen3 Clock Pulse Generator
  *
+ * Copyright (C) 2017 Renesas Electronics Corp.
  * Copyright (C) 2015-2016 Glider bvba
  *
  * Based on clk-rcar-gen3.c
@@ -494,12 +495,12 @@ struct sd_clock {
  *                     sd_srcfc   sd_fc   div
  * stp_hck   stp_ck    (div)      (div)     = sd_srcfc x sd_fc
  *-------------------------------------------------------------------
- *  0         0         1 (2)      0 (2)      4 : SDR104 / HS400 / HS200
+ *  0         0         1 (2)      0 (-)      2 : HS400
+ *  0         0         0 (1)      1 (4)      4 : SDR104 / HS200
  *  0         0         1 (2)      1 (4)      8 : SDR50
  *  1         0         2 (4)      1 (4)     16 : HS / SDR25
  *  1         0         3 (8)      1 (4)     32 : NS / SDR12
  *  0         0         0 (1)      0 (2)      2 : (no case)
- *  0         0         0 (1)      1 (4)      4 : (no case)
  *  1         0         2 (4)      0 (2)      8 : (no case)
  *  1         0         3 (8)      0 (2)     16 : (no case)
  *  1         0         4 (16)     0 (2)     32 : (no case)
@@ -507,12 +508,12 @@ struct sd_clock {
  */
 static const struct sd_div_table cpg_sd_div_table[] = {
 /*	CPG_SD_DIV_TABLE_DATA(stp_hck,  stp_ck,   sd_srcfc,   sd_fc,  sd_div) */
-	CPG_SD_DIV_TABLE_DATA(0,	0,	  1,	      0,        4),
+	CPG_SD_DIV_TABLE_DATA(0,	0,	  1,	      0,        2),
+	CPG_SD_DIV_TABLE_DATA(0,	0,	  0,	      1,        4),
 	CPG_SD_DIV_TABLE_DATA(0,	0,	  1,	      1,        8),
 	CPG_SD_DIV_TABLE_DATA(1,	0,	  2,	      1,       16),
 	CPG_SD_DIV_TABLE_DATA(1,	0,	  3,	      1,       32),
 	CPG_SD_DIV_TABLE_DATA(0,	0,	  0,	      0,        2),
-	CPG_SD_DIV_TABLE_DATA(0,	0,	  0,	      1,        4),
 	CPG_SD_DIV_TABLE_DATA(1,	0,	  2,	      0,        8),
 	CPG_SD_DIV_TABLE_DATA(1,	0,	  3,	      0,       16),
 	CPG_SD_DIV_TABLE_DATA(1,	0,	  4,	      0,       32),

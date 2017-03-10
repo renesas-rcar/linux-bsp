@@ -1,6 +1,7 @@
 /*
  * r8a7795 Clock Pulse Generator / Module Standby and Software Reset
  *
+ * Copyright (C) 2017 Renesas Electronics Corp.
  * Copyright (C) 2015 Glider bvba
  *
  * Based on clk-rcar-gen3.c
@@ -136,7 +137,6 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("msiof2",		 209,	R8A7795_CLK_MSO),
 	DEF_MOD("msiof1",		 210,	R8A7795_CLK_MSO),
 	DEF_MOD("msiof0",		 211,	R8A7795_CLK_MSO),
-	DEF_MOD("mfis",			 213,	R8A7795_CLK_S3D2),
 	DEF_MOD("sys-dmac2",		 217,	R8A7795_CLK_S0D3),
 	DEF_MOD("sys-dmac1",		 218,	R8A7795_CLK_S0D3),
 	DEF_MOD("sys-dmac0",		 219,	R8A7795_CLK_S0D3),
@@ -242,6 +242,7 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("can-if0",		 916,	R8A7795_CLK_S3D4),
 	DEF_MOD("i2c6",			 918,	R8A7795_CLK_S3D2),
 	DEF_MOD("i2c5",			 919,	R8A7795_CLK_S3D2),
+	DEF_MOD("adg",                   922,   R8A7795_CLK_S0D1),
 	DEF_MOD("i2c-dvfs",		 926,	R8A7795_CLK_CP),
 	DEF_MOD("i2c4",			 927,	R8A7795_CLK_S3D2),
 	DEF_MOD("i2c3",			 928,	R8A7795_CLK_S3D2),
