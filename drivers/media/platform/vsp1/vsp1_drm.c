@@ -1,7 +1,7 @@
 /*
  * vsp1_drm.c  --  R-Car VSP1 DRM API
  *
- * Copyright (C) 2015-2016 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -283,7 +283,7 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int width,
 	 * as there's no plane configured yet, so we can't start processing
 	 * buffers.
 	 */
-	ret = vsp1_device_get(vsp1);
+	ret = vsp1_device_get(vsp1, lif_index);
 	if (ret < 0)
 		return ret;
 
@@ -310,7 +310,7 @@ void vsp1_du_atomic_begin(struct device *dev, unsigned int lif_index)
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 
-	vsp1->drm->num_inputs = pipe->num_inputs;
+	vsp1->drm->num_inputs[lif_index] = pipe->num_inputs;
 
 	/* Prepare the display list. */
 	pipe->dl = vsp1_dl_list_get(pipe->output->dlm);
@@ -604,13 +604,14 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int lif_index)
 			continue;
 		}
 
-		vsp1->bru->inputs[i].rpf = rpf;
 		if ((lif_index == 1) && (vsp1->brs)) {
 			vsp1->brs->inputs[i].rpf = rpf;
-			rpf->brs_input = 2;
+			rpf->brs_input = i;
 			brs_use = true;
+		} else {
+			vsp1->bru->inputs[i].rpf = rpf;
+			rpf->bru_input = i;
 		}
-		rpf->bru_input = i;
 		rpf->entity.sink_pad = i;
 
 		dev_dbg(vsp1->dev, "%s: connecting RPF.%u to %s:%u\n",
@@ -656,18 +657,18 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int lif_index)
 		}
 	}
 
-	vsp1_dl_list_commit(pipe->dl);
+	vsp1_dl_list_commit(pipe->dl, lif_index);
 	pipe->dl = NULL;
 
 	/* Start or stop the pipeline if needed. */
-	if (!vsp1->drm->num_inputs && pipe->num_inputs) {
+	if (!vsp1->drm->num_inputs[lif_index] && pipe->num_inputs) {
 		vsp1_write(vsp1, VI6_DISP_IRQ_STA(lif_index), 0);
 		vsp1_write(vsp1, VI6_DISP_IRQ_ENB(lif_index),
 					 VI6_DISP_IRQ_ENB_DSTE);
 		spin_lock_irqsave(&pipe->irqlock, flags);
 		vsp1_pipeline_run(pipe);
 		spin_unlock_irqrestore(&pipe->irqlock, flags);
-	} else if (vsp1->drm->num_inputs && !pipe->num_inputs) {
+	} else if (vsp1->drm->num_inputs[lif_index] && !pipe->num_inputs) {
 		vsp1_write(vsp1, VI6_DISP_IRQ_ENB(lif_index), 0);
 		vsp1_pipeline_stop(pipe);
 	}
@@ -703,9 +704,15 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 	struct vsp1_rwpf *wpf = pipe->output;
 	const struct vsp1_format_info *fmtinfo;
-	struct vsp1_rwpf *rpf = pipe->inputs[0];
+	struct vsp1_rwpf *rpf;
 	unsigned long flags;
 	int i;
+	u32 rpf_num = 0;
+
+	if (pipe->brs)
+		rpf_num = vsp1->info->rpf_count - vsp1->num_brs_inputs;
+
+	rpf = pipe->inputs[rpf_num];
 
 	fmtinfo = vsp1_get_format_info(vsp1, pixelformat);
 	if (!fmtinfo) {
@@ -739,11 +746,10 @@ EXPORT_SYMBOL_GPL(vsp1_du_setup_wb);
 
 void vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int lif_index)
 {
-	int ret;
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 
-	ret = wait_event_interruptible(pipe->event_wait,
+	wait_event_interruptible(pipe->event_wait,
 				       (pipe->output->write_back == count));
 }
 EXPORT_SYMBOL_GPL(vsp1_du_wait_wb);

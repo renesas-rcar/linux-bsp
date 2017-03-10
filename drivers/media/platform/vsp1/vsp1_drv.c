@@ -78,7 +78,6 @@ void vsp1_ut_debug_printk(const char *function_name, const char *format, ...)
 	va_end(args);
 }
 
-#define SRCR7_REG		0xe61501cc
 #define	FCPVD0_REG		0xfea27000
 #define	FCPVD1_REG		0xfea2f000
 #define	FCPVD2_REG		0xfea37000
@@ -679,17 +678,15 @@ int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index)
 	return 0;
 }
 
-static int vsp1_device_init(struct vsp1_device *vsp1)
+static int vsp1_device_init(struct vsp1_device *vsp1, unsigned int index)
 {
 	unsigned int i;
 	int ret;
 
 	/* Reset any channel that might be running. */
-	for (i = 0; i < vsp1->info->wpf_count; ++i) {
-		ret = vsp1_reset_wpf(vsp1, i);
-		if (ret < 0)
-			return ret;
-	}
+	ret = vsp1_reset_wpf(vsp1, index);
+	if (ret < 0)
+		return ret;
 
 	vsp1_write(vsp1, VI6_CLK_DCSWT, (8 << VI6_CLK_DCSWT_CSTPW_SHIFT) |
 		   (8 << VI6_CLK_DCSWT_CSTRW_SHIFT));
@@ -713,12 +710,7 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
 	vsp1_write(vsp1, VI6_DPR_HGT_SMPPT, (7 << VI6_DPR_SMPPT_TGW_SHIFT) |
 		   (VI6_DPR_NODE_UNUSED << VI6_DPR_SMPPT_PT_SHIFT));
 
-	for (i = 0; i < vsp1->info->wpf_count; ++i) {
-		if ((i == 1) && (!vsp1_gen3_vspdl_check(vsp1)))
-			break;
-
-		vsp1_dlm_setup(vsp1, i);
-	}
+	vsp1_dlm_setup(vsp1, index);
 
 	return 0;
 }
@@ -730,7 +722,7 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
  *
  * Return 0 on success or a negative error code otherwise.
  */
-int vsp1_device_get(struct vsp1_device *vsp1)
+int vsp1_device_get(struct vsp1_device *vsp1, unsigned int index)
 {
 	int ret = 0;
 
@@ -743,7 +735,7 @@ int vsp1_device_get(struct vsp1_device *vsp1)
 		return ret;
 
 	if (vsp1->info) {
-		ret = vsp1_device_init(vsp1);
+		ret = vsp1_device_init(vsp1, index);
 		if (ret < 0)
 			return ret;
 	}
@@ -1007,10 +999,17 @@ done:
 static int vsp1_remove(struct platform_device *pdev)
 {
 	struct vsp1_device *vsp1 = platform_get_drvdata(pdev);
+	u32 i, lif_num = 1;
 
-	vsp1_device_put(vsp1);
+	if (vsp1_gen3_vspdl_check(vsp1))
+		lif_num = 2;
+
 	vsp1_destroy_entities(vsp1);
-	rcar_fcp_put(vsp1->fcp);
+
+	for (i = 0; i < lif_num; i++) {
+		vsp1_device_put(vsp1);
+		rcar_fcp_put(vsp1->fcp);
+	}
 
 	pm_runtime_disable(&pdev->dev);
 

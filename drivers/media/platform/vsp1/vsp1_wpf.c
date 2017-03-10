@@ -1,7 +1,7 @@
 /*
  * vsp1_wpf.c  --  R-Car VSP1 Write Pixel Formatter
  *
- * Copyright (C) 2013-2016 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -189,16 +189,16 @@ static void wpf_configure(struct vsp1_entity *entity,
 	bool writeback = pipe->lif && wpf->mem.addr[0];
 
 	if (pipe->vmute_flag) {
-		vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF +
-			(0x100 * wpf->entity.index),
-			 VI6_WPF_SRCRPF_VIRACT_MST);
-		vsp1_wpf_write(wpf, dl, VI6_WPF_HSZCLIP +
-			(0x100 * wpf->entity.index), 0);
-		vsp1_wpf_write(wpf, dl, VI6_WPF_VSZCLIP +
-			(0x100 * wpf->entity.index), 0);
-		vsp1_wpf_write(wpf, dl, VI6_DPR_WPF_FPORCH(wpf->entity.index),
-			VI6_DPR_WPF_FPORCH_FP_WPFN);
-
+		if (pipe->bru)
+			vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF,
+					 VI6_WPF_SRCRPF_VIRACT_MST);
+		else if (pipe->brs)
+			vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF,
+					 VI6_WPF_SRCRPF_VIRACT2_MST);
+		vsp1_wpf_write(wpf, dl, VI6_WPF_HSZCLIP, 0);
+		vsp1_wpf_write(wpf, dl, VI6_WPF_VSZCLIP, 0);
+		vsp1_dl_list_write(dl, VI6_DPR_WPF_FPORCH(wpf->entity.index),
+					   VI6_DPR_WPF_FPORCH_FP_WPFN);
 		return;
 	}
 
@@ -386,12 +386,29 @@ static void wpf_configure(struct vsp1_entity *entity,
 	if (pipe->bru || pipe->num_inputs > 1)
 		srcrpf |= VI6_WPF_SRCRPF_VIRACT_MST;
 
+	/* When using multiple BRS module, layer is allocated as follows.
+	 * When one BRS is used, RPF4 is master layer.
+	 * When two BRS is used, RPF3 is master layer and RPF4 is sub layer.
+	 */
+	if (pipe->brs) {
+		if (vsp1->num_brs_inputs == 1)
+			srcrpf = VI6_WPF_SRCRPF_VIRACT2_MST |
+				 VI6_WPF_SRCRPF_RPF_ACT_MST(4);
+		else if (pipe->num_inputs > 1)
+			srcrpf = VI6_WPF_SRCRPF_VIRACT2_MST |
+				 VI6_WPF_SRCRPF_RPF_ACT_MST(3) |
+				 VI6_WPF_SRCRPF_RPF_ACT_SUB(4);
+		else if (pipe->num_inputs == 1)
+			srcrpf = VI6_WPF_SRCRPF_VIRACT2_MST |
+				 VI6_WPF_SRCRPF_RPF_ACT_MST(3);
+	}
+
 	vsp1_wpf_write(wpf, dl, VI6_WPF_SRCRPF, srcrpf);
 
 	/* Enable interrupts */
 	vsp1_dl_list_write(dl, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
 	vsp1_dl_list_write(dl, VI6_WPF_IRQ_ENB(wpf->entity.index),
-			   VI6_WFP_IRQ_ENB_FREE | VI6_WFP_IRQ_ENB_UNDE);
+			   VI6_WFP_IRQ_ENB_DFEE | VI6_WFP_IRQ_ENB_UNDE);
 }
 
 static const struct vsp1_entity_operations wpf_entity_ops = {
