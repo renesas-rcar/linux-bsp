@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a7796 SoC
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -150,6 +150,11 @@
 				status = "disabled";
 			};
 		};
+	};
+
+	avs_sensor: avs {
+		compatible = "renesas,r8a7796-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
 	};
 
 	cluster0_opp_tb0: opp_table0 {
@@ -678,9 +683,6 @@
 			reg = <0 0xe6260000 0 0x0200>;
 			interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "eicr0";
-			clocks = <&cpg CPG_MOD 213>;
-			clock-names = "mfis";
-			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			status = "okay";
 		};
 
@@ -688,8 +690,6 @@
 			compatible =    "renesas,mfis-lock-r8a7796",
 					"renesas,mfis-lock";
 			reg = <0 0xe62600c0 0 0x0020>;
-			clocks = <&cpg CPG_MOD 213>;
-			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			status = "okay";
 		};
 
@@ -1981,6 +1981,7 @@
 			reg = <0 0xfe940000 0 0x2400>, <0 0xfe950000 0 0x200>;
 			interrupts = <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 119>, <&cpg CPG_MOD 615>;
+			clock-names = "fdp", "fcp";
 			power-domains = <&sysc R8A7796_PD_A3VC>;
 			renesas,#ch = <0>;
 		};
@@ -2409,6 +2410,7 @@
 			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
 			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 626>, <&cpg CPG_MOD 607>;
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <3>;
 			renesas,#rpf = <31>;
 			renesas,#rpf_clut = <6>;
@@ -2440,6 +2442,7 @@
 			reg = <0 0xfe9a0000 0 0x8000>, <0 0xfe9af000 0 0x200>;
 			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 631>, <&cpg CPG_MOD 611>;
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <0>;
 			renesas,#rpf = <1>;
 			renesas,#rpf_clut = <1>;
