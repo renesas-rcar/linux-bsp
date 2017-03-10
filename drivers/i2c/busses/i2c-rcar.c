@@ -141,6 +141,7 @@ struct rcar_i2c_priv {
 	struct dma_chan *dma_rx;
 	struct scatterlist sg;
 	enum dma_data_direction dma_direction;
+	int suspended;
 };
 
 #define rcar_i2c_priv_to_dev(p)		((p)->adap.dev.parent)
@@ -919,6 +920,9 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 	int i, ret;
 	long time_left;
 
+	if (priv->suspended)
+		return -EBUSY;
+
 	pm_runtime_get_sync(dev);
 
 	ret = rcar_i2c_bus_barrier(priv);
@@ -1129,9 +1133,11 @@ static int rcar_i2c_remove(struct platform_device *pdev)
 static int rcar_i2c_suspend(struct device *dev)
 {
 	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
 	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
 
+	priv->suspended = 1;
+#ifdef CONFIG_RCAR_DDR_BACKUP
 	pm_runtime_get_sync(dev);
 	ret = rcar_i2c_save_regs(pdev);
 	pm_runtime_put(dev);
@@ -1142,19 +1148,20 @@ static int rcar_i2c_suspend(struct device *dev)
 static int rcar_i2c_resume(struct device *dev)
 {
 	int ret = 0;
-#ifdef CONFIG_RCAR_DDR_BACKUP
 	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
 
+#ifdef CONFIG_RCAR_DDR_BACKUP
 	pm_runtime_get_sync(dev);
 	ret = rcar_i2c_restore_regs(pdev);
 	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
+	priv->suspended = 0;
 	return ret;
 }
 
 static const struct dev_pm_ops rcar_i2c_pm_ops = {
-	.suspend = rcar_i2c_suspend,
-	.resume_early = rcar_i2c_resume,
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(rcar_i2c_suspend,rcar_i2c_resume)
 };
 
 #define DEV_PM_OPS (&rcar_i2c_pm_ops)
