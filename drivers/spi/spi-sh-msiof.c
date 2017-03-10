@@ -1577,9 +1577,7 @@ static int sh_msiof_spi_suspend(struct device *dev)
 		return ret;
 
 #ifdef CONFIG_RCAR_DDR_BACKUP
-	pm_runtime_get_sync(dev);
 	ret = msiof_save_regs(pdev);
-	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }
