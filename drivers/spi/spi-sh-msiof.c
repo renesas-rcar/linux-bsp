@@ -1591,9 +1591,7 @@ static int sh_msiof_spi_resume(struct device *dev)
 	struct sh_msiof_spi_priv *p = platform_get_drvdata(pdev);
 
 #ifdef CONFIG_RCAR_DDR_BACKUP
-	pm_runtime_get_sync(dev);
 	ret = msiof_restore_regs(pdev);
-	pm_runtime_put(dev);
 #endif /* CONFIG_RCAR_DDR_BACKUP */
 
 	ret = spi_master_resume(p->master);
