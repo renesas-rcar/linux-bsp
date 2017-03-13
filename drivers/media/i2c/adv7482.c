@@ -2,7 +2,7 @@
  * drivers/media/i2c/adv7482.c
  *     This file is Analog Devices ADV7482 HDMI receiver driver.
  *
- * Copyright (C) 2015-2016 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2
@@ -2349,41 +2349,63 @@ static int adv7482_resume(struct device *dev)
 	struct adv7482_link_config link_config;
 	int ret;
 
-	ret = adv7482_write_register(client, ADV7482_I2C_IO,
-				ADV7482_IO_PWR_MAN_REG, ADV7482_IO_PWR_ON);
-	if (ret < 0)
-		return ret;
-
 	ret = adv7482_parse_dt(dev->of_node, &link_config);
 	if (ret)
 		return ret;
 
-	/* Initializes ADV7482 to its default values */
-	ret = adv7482_write_registers(client, link_config.regs);
+	/* SW reset ADV7482 to its default values */
+	if (link_config.sw_reset) {
+		ret = adv7482_write_registers(client, adv7482_sw_reset);
 
-	/* Power down */
-	ret = adv7482_write_registers(client, link_config.power_down);
+		/* check rd_info */
+		{
+			u8 msb;
+			u8 lsb;
+
+			ret = adv7482_read_register(client, ADV7482_I2C_IO,
+					ADV7482_IO_RD_INFO1_REG, &lsb);
+			if (ret < 0)
+				return ret;
+
+			ret = adv7482_read_register(client, ADV7482_I2C_IO,
+					ADV7482_IO_RD_INFO2_REG, &msb);
+			if (ret < 0)
+				return ret;
+		}
+	}
+
+	if (link_config.hdmi_in) {
+		ret = adv7482_write_registers(client,
+				adv7482_init_txa_4lane);
+		/* Power down */
+		ret = adv7482_write_registers(client,
+				adv7482_power_down_txa_4lane);
+	}
+
+	/* Initializes ADV7482 to its default values */
+	if (link_config.sdp_in) {
+		ret = adv7482_write_registers(client,
+						adv7482_init_txb_1lane);
+		/* Power down */
+		ret = adv7482_write_registers(client,
+						adv7482_power_down_txb_1lane);
+	}
 
 	if (link_config.sdp_in && link_config.hdmi_in) {
 		/* Power up hdmi rx */
 		ret = adv7482_write_registers(client,
 						adv7482_power_up_hdmi_rx);
-		if (ret < 0)
-			return ret;
-
 		/* Enable csi4 and sci1 */
 		ret = adv7482_write_registers(client,
 						adv7482_enable_csi4_csi1);
-		if (ret < 0)
-			return ret;
 	}
 
 	return ret;
 }
 
-static SIMPLE_DEV_PM_OPS(adv7482_pm_ops, adv7482_suspend, adv7482_resume);
-#define ADV7482_PM_OPS (&adv7482_pm_ops)
-
+const struct dev_pm_ops adv7482_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(adv7482_suspend, adv7482_resume)
+};
 #else
 #define ADV7482_PM_OPS NULL
 #endif
@@ -2399,7 +2421,7 @@ MODULE_DEVICE_TABLE(of, adv7482_of_ids);
 static struct i2c_driver adv7482_driver = {
 	.driver = {
 		.name	= DRIVER_NAME,
-		.pm = ADV7482_PM_OPS,
+		.pm = &adv7482_pm_ops,
 		.of_match_table = adv7482_of_ids,
 	},
 	.probe		= adv7482_probe,
