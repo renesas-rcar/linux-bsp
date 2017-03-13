@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a7795 SoC
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2015-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -179,6 +179,11 @@
 				status = "disabled";
 			};
 		};
+	};
+
+	avs_sensor: avs {
+		compatible = "renesas,r8a7795-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
 	};
 
 	cluster0_opp_tb0: opp_table0 {
@@ -802,9 +807,6 @@
 			reg = <0 0xe6260000 0 0x0200>;
 			interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "eicr0";
-			clocks = <&cpg CPG_MOD 213>;
-			clock-names = "mfis";
-			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "okay";
 		};
 
@@ -812,8 +814,6 @@
 			compatible =    "renesas,mfis-lock-r8a7795",
 					"renesas,mfis-lock";
 			reg = <0 0xe62600c0 0 0x0020>;
-			clocks = <&cpg CPG_MOD 213>;
-			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "okay";
 		};
 
@@ -872,7 +872,7 @@
 		};
 
 		ipmmu_vc0: mmu@fe6b0000 {
-			compatible = "renesas,ipmmu-r8a7795";
+			compatible = "renesas,ipmmu-pmb-r8a7795";
 			reg = <0 0xfe6b0000 0 0x1000>; /* IPMMU-VC0 */
 			renesas,ipmmu-main = <&ipmmu_mm 12>;
 			#iommu-cells = <1>;
@@ -1853,7 +1853,7 @@
 			clocks = <&cpg CPG_MOD 128>;
 			power-domains = <&sysc R8A7795_PD_A2VC0>;
 			renesas,#ch = <2>;
-			renesas,#fcp_ch = <1>;
+			renesas,#fcp_ch = <0>;
 		};
 
 		fcpcs: vcp4@fe90f000 {
@@ -1864,19 +1864,12 @@
 			renesas,#ch = <0>;
 		};
 
-		fcpci0: vcp4@fe8df000 {
-			compatible = "renesas,vcp4-fcpci0";
-			reg = <0 0xfe8df000 0 0x200>;
-			clocks = <&cpg CPG_MOD 617>;
-			power-domains = <&sysc R8A7795_PD_A3VC>;
-			renesas,#ch = <1>;
-		};
-
 		fdp0: fdpm@fe940000 {
 			compatible = "renesas,fdpm";
 			reg = <0 0xfe940000 0 0x2400>, <0 0xfe950000 0 0x200>;
 			interrupts = <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 119>, <&cpg CPG_MOD 615>;
+			clock-names = "fdp", "fcp";
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			renesas,#ch = <0>;
 		};
@@ -1886,6 +1879,7 @@
 			reg = <0 0xfe944000 0 0x2400>, <0 0xfe951000 0 0x200>;
 			interrupts = <GIC_SPI 263 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>, <&cpg CPG_MOD 614>;
+			clock-names = "fdp", "fcp";
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			renesas,#ch = <1>;
 		};
@@ -2310,7 +2304,7 @@
 			interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH
 				      GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ch0", "ch1";
-			clocks = <&cpg CPG_MOD 329>;
+			clocks = <&cpg CPG_MOD 326>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#dma-cells = <1>;
 			dma-channels = <2>;
@@ -2323,7 +2317,7 @@
 			interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH
 				      GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ch0", "ch1";
-			clocks = <&cpg CPG_MOD 326>;
+			clocks = <&cpg CPG_MOD 329>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#dma-cells = <1>;
 			dma-channels = <2>;
@@ -2401,8 +2395,10 @@
 		};
 
 		usb2_phy3: usb-phy@ee0e0200 {
-			compatible = "renesas,usb2-phy-r8a7795";
+			compatible = "renesas,usb2-phy-r8a7795",
+				     "renesas,rcar-gen3-usb2-phy";
 			reg = <0 0xee0e0200 0 0x700>;
+			interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			#phy-cells = <0>;
@@ -2585,11 +2581,24 @@
 			compatible = "renesas,qos";
 		};
 
+		vsp@fe920000 {
+			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe920000 0 0x8000>;
+			renesas,has-bru;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,#rpf = <5>;
+			renesas,#uds = <0>;
+			renesas,#wpf = <1>;
+		};
+
 		vspbc: vspm@fe920000 {
 			compatible = "renesas,vspm";
 			reg = <0 0xfe920000 0 0x8000>, <0 0xfe92f000 0 0x200>;
 			interrupts = <GIC_SPI 465 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 624>, <&cpg CPG_MOD 606>;
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <4>;
 			renesas,#rpf = <31>;
 			renesas,#rpf_clut = <6>;
@@ -2618,7 +2627,7 @@
 			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
 			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 626>, <&cpg CPG_MOD 607>;
-
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <3>;
 			renesas,#rpf = <31>;
 			renesas,#rpf_clut = <6>;
@@ -2647,7 +2656,7 @@
 			reg = <0 0xfe9a0000 0 0x8000>, <0 0xfe9af000 0 0x200>;
 			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 631>, <&cpg CPG_MOD 611>;
-
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <0>;
 			renesas,#rpf = <1>;
 			renesas,#rpf_clut = <1>;
@@ -2684,7 +2693,7 @@
 			reg = <0 0xfe9b0000 0 0x8000>, <0 0xfe9bf000 0 0x200>;
 			interrupts = <GIC_SPI 445 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 630>, <&cpg CPG_MOD 610>;
-
+			clock-names = "vsp", "fcp";
 			renesas,#ch = <1>;
 			renesas,#rpf = <1>;
 			renesas,#rpf_clut = <1>;
@@ -2702,18 +2711,6 @@
 			renesas,#start_reservation = <2>;
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			status = "disabled";
-		};
-
-		vsp@fe9c0000 {
-			compatible = "renesas,vspm-vsp2";
-			reg = <0 0xfe9c0000 0 0x8000>;
-			renesas,has-lut;
-			renesas,has-clu;
-			renesas,has-hgo;
-			renesas,has-hgt;
-			renesas,#rpf = <1>;
-			renesas,#uds = <1>;
-			renesas,#wpf = <1>;
 		};
 
 		vspd0: vsp@fea20000 {

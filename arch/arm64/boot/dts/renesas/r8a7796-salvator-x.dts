@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Salvator-X board
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -102,6 +102,15 @@
 
 	mmngrbuf {
 		compatible = "renesas,mmngrbuf";
+	};
+
+	avb-mch {
+		compatible = "renesas,avb-mch-gen3";
+		reg =	<0 0xec5a0100 0 0x100>;  /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
 	};
 
 	reg_1p8v: regulator0 {
@@ -706,12 +715,12 @@
 		compatible = "idt,5p49v5923a";
 		reg = <0x6a>;
 
-		programmable_clk0: 5p49v5923a_clk1@6a {
+		programmable_clk0: 5p49x_clk1@6a {
 			#clock-cells = <0>;
 			clocks = <&du_dotclkin0>;
 		};
 
-		programmable_clk1: 5p49v5923a_clk2@6a {
+		programmable_clk1: 5p49x_clk2@6a {
 			#clock-cells = <0>;
 			clocks = <&du_dotclkin2>;
 		};
@@ -901,6 +910,10 @@
 };
 
 &pciec1 {
+	status = "okay";
+};
+
+&vin0 {
 	status = "okay";
 };
 
