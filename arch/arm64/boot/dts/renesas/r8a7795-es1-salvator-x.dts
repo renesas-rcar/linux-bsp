@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Salvator-X board on r8a7795 ES1.x
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This file is based on the arch/arm64/boot/dts/renesas/r8a7795-es1-salvator-x.dts
  *
@@ -116,6 +116,15 @@
 
 	mmngrbuf {
 		compatible = "renesas,mmngrbuf";
+	};
+
+	avb-mch {
+		compatible = "renesas,avb-mch-gen3";
+		reg =	<0 0xec5a0100 0 0x100>;  /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
 	};
 
 	x12_clk: x12_clk {
@@ -617,7 +626,6 @@
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
 
-	uart-has-rtscts;
 	/* Please use exclusively to the hscif1 node */
 	status = "okay";
 };
@@ -724,12 +732,12 @@
 		compatible = "idt,5p49v5923a";
 		reg = <0x6a>;
 
-		programmable_clk0: 5p49v5923a_clk1@6a {
+		programmable_clk0: 5p49x_clk1@6a {
 			#clock-cells = <0>;
 			clocks = <&du_dotclkin0>;
 		};
 
-		programmable_clk1: 5p49v5923a_clk2@6a {
+		programmable_clk1: 5p49x_clk2@6a {
 			#clock-cells = <0>;
 			clocks = <&du_dotclkin3>;
 		};
