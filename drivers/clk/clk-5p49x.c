@@ -1,8 +1,8 @@
 /*
- * drivers/gpu/drm/i2c/5p49v5923a.c
+ * drivers/gpu/drm/i2c/5p49x.c
  *     This file is programmable clock generator driver.
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
+ * Copyright (C) 2016-2017 Renesas Electronics Corporation
  *
  * This file is based on the drivers/clk/clk-cs2000-cp.c
  *
@@ -26,8 +26,6 @@
 #define REF_CLK		1
 #define CLK_MAX		5
 
-#define INPUT_CLK	25000000
-
 #define C5P49_FB_INT_DIV_REG1	0x17
 #define C5P49_FB_INT_DIV_REG0	0x18
 
@@ -45,22 +43,43 @@
 #define priv_to_client(priv)	(priv->client)
 #define priv_to_dev(priv)	(&(priv_to_client(priv)->dev))
 
+struct clk_5p49_info {
+	unsigned long	xtal_fre;
+};
+
 struct clk_5p49_priv {
 	struct		clk_hw hw;
 	struct		i2c_client *client;
 	struct		clk *clk_out;
 	unsigned long	index;
 	unsigned long	clk_rate;
+	const struct clk_5p49_info	*info;
+};
+
+static const struct clk_5p49_info clk_5p49v5923a = {
+	.xtal_fre = 25000000,
+};
+
+static const struct clk_5p49_info clk_5p49v6901a = {
+	.xtal_fre = 50000000,
 };
 
 static const struct of_device_id clk_5p49_of_match[] = {
-	{ .compatible = "idt,5p49v5923a", },
+	{
+		.compatible = "idt,5p49v5923a",
+		.data = &clk_5p49v5923a,
+	},
+	{
+		.compatible = "idt,5p49v6901a",
+		.data = &clk_5p49v6901a,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, clk_5p49_of_match);
 
 static const struct i2c_device_id clk_5p49_id[] = {
 	{ "5p49v5923a",},
+	{ "5p49v6901a",},
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, clk_5p49_id);
@@ -132,7 +151,7 @@ static int clk_5p49_div_calculation(struct clk_hw *hw, unsigned long rate)
 
 	clk_5p49_power(hw, false);
 
-	vco_clk = INPUT_CLK * vco_div / shift_1kHz;
+	vco_clk = priv->info->xtal_fre * vco_div / shift_1kHz;
 	dev_dbg(&priv->client->dev, "vco clock:%d kHz\n", vco_clk);
 
 	vco_clk = (vco_clk / 2);
@@ -244,13 +263,18 @@ static int clk_5p49_probe(struct i2c_client *client,
 	struct clk_5p49_priv *priv = NULL;
 	struct device *dev = &client->dev;
 	struct device_node *np = dev->of_node, *ch_np;
+	const struct of_device_id *match;
 	int ret, i, ch = 1;	/* ch = 0 reserved.*/
 	u32 probe_cnt = 0;
+
+	match = of_match_device(of_match_ptr(clk_5p49_of_match), dev);
+	if (!match)
+		return -ENODEV;
 
 	for (i = ch; i < CLK_MAX; i++) {
 		char name[20];
 
-		sprintf(name, "5p49v5923a_clk%u", i);
+		sprintf(name, "5p49x_clk%u", i);
 		ch_np = of_get_child_by_name(np, name);
 		if (!ch_np)
 			continue;
@@ -259,6 +283,7 @@ static int clk_5p49_probe(struct i2c_client *client,
 		if (!priv)
 			return -ENOMEM;
 
+		priv->info = match->data;
 		priv->client = client;
 		priv->index = i + 1;
 		i2c_set_clientdata(client, priv);
@@ -295,7 +320,7 @@ static int clk_5p49_remove(struct i2c_client *client)
 
 static struct i2c_driver clk_5p49_driver = {
 	.driver = {
-		.name = "5p49v5923a",
+		.name = "5p49x",
 		.of_match_table = clk_5p49_of_match,
 	},
 	.probe		= clk_5p49_probe,
@@ -305,6 +330,6 @@ static struct i2c_driver clk_5p49_driver = {
 
 module_i2c_driver(clk_5p49_driver);
 
-MODULE_DESCRIPTION("5p49v5923a programmable clock generator driver");
+MODULE_DESCRIPTION("5p49x programmable clock generator driver");
 MODULE_AUTHOR("Koji Matsuoka <koji.matsuoka.xm@renesas.com>");
 MODULE_LICENSE("GPL");
