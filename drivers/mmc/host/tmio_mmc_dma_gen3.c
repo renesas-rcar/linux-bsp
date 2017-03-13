@@ -1,7 +1,7 @@
 /*
  * linux/drivers/mmc/tmio_mmc_dma_gen3.c
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,6 +18,7 @@
 #include <linux/mmc/host.h>
 #include <linux/pagemap.h>
 #include <linux/scatterlist.h>
+#include <linux/sys_soc.h>
 
 #include "tmio_mmc.h"
 
@@ -46,12 +47,23 @@
 
 /* DM_CM_INFO1 and DM_CM_INFO1_MASK */
 #define INFO1_CLEAR		0
-#define INFO1_DTRANEND1		BIT(17)
+#define INFO1_DTRANEND1_BIT20	BIT(20)
+#define INFO1_DTRANEND1_BIT17	BIT(17)
 #define INFO1_DTRANEND0		BIT(16)
 
 /* DM_CM_INFO2 and DM_CM_INFO2_MASK */
 #define INFO2_DTRANERR1		BIT(17)
 #define INFO2_DTRANERR0		BIT(16)
+
+static const struct soc_device_attribute r8a7795es1x[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ },
+};
+
+static const struct soc_device_attribute r8a7796es10[] = {
+	{ .soc_id = "r8a7796", .revision = "ES1.0" },
+	{ },
+};
 
 /*
  * Specification of this driver:
@@ -65,6 +77,11 @@ static void tmio_dm_write(struct tmio_mmc_host *host, int addr, u64 val)
 	writeq(val, host->ctl + addr);
 }
 
+static u32 tmio_dm_read(struct tmio_mmc_host *host, int addr)
+{
+	return readl(host->ctl + addr);
+}
+
 void tmio_mmc_enable_dma(struct tmio_mmc_host *host, bool enable)
 {
 	if (!host->chan_tx || !host->chan_rx)
@@ -73,8 +90,11 @@ void tmio_mmc_enable_dma(struct tmio_mmc_host *host, bool enable)
 	if (!enable)
 		tmio_dm_write(host, DM_CM_INFO1, INFO1_CLEAR);
 
-	if (host->dma->enable)
+	if (host->dma->enable) {
+		host->dma_irq_mask = ~(host->dma_tranend1 | INFO1_DTRANEND0);
 		host->dma->enable(host, enable);
+		tmio_dm_write(host, DM_CM_INFO1_MASK, host->dma_irq_mask);
+	}
 }
 
 void tmio_mmc_abort_dma(struct tmio_mmc_host *host)
@@ -131,6 +151,7 @@ void tmio_mmc_start_dma(struct tmio_mmc_host *host, struct mmc_data *data)
 		return;
 	}
 
+	tmio_clear_transtate(host);
 	tmio_mmc_enable_dma(host, true);
 
 	/* disable PIO irqs to avoid "PIO IRQ in DMA mode!" */
@@ -175,12 +196,38 @@ static void tmio_mmc_complete_tasklet_fn(unsigned long arg)
 }
 #endif
 
+bool __tmio_mmc_dma_irq(struct tmio_mmc_host *host)
+{
+	unsigned int ireg, status;
+
+	status = tmio_dm_read(host, DM_CM_INFO1);
+	ireg = status & ~host->dma_irq_mask;
+
+	if (ireg & INFO1_DTRANEND0) {
+		tmio_dm_write(host, DM_CM_INFO1, ireg & ~INFO1_DTRANEND0);
+		tmio_set_transtate(host, TMIO_TRANSTATE_DEND);
+		return true;
+	}
+
+	if (ireg & host->dma_tranend1) {
+		tmio_dm_write(host, DM_CM_INFO1, ireg & ~host->dma_tranend1);
+		tmio_set_transtate(host, TMIO_TRANSTATE_DEND);
+		return true;
+	}
+	return false;
+}
+
 void tmio_mmc_request_dma(struct tmio_mmc_host *host,
 			  struct tmio_mmc_data *pdata)
 {
 #ifndef CONFIG_MMC_SDHI_PIO
 	/* Each value is set to non-zero to assume "enabling" each DMA */
 	host->chan_rx = host->chan_tx = (void *)0xdeadbeaf;
+
+	if (soc_device_match(r8a7795es1x) || soc_device_match(r8a7796es10))
+		host->dma_tranend1 = INFO1_DTRANEND1_BIT17;
+	else /* ES 2.0 */
+		host->dma_tranend1 = INFO1_DTRANEND1_BIT20;
 
 	tasklet_init(&host->dma_complete, tmio_mmc_complete_tasklet_fn,
 		     (unsigned long)host);

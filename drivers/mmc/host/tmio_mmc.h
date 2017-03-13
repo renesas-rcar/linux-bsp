@@ -2,7 +2,7 @@
  * linux/drivers/mmc/host/tmio_mmc.h
  *
  * Copyright (C) 2016 Sang Engineering, Wolfram Sang
- * Copyright (C) 2015-16 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
  *
@@ -101,6 +101,9 @@
 		TMIO_STAT_CARD_REMOVE | TMIO_STAT_CARD_INSERT)
 #define TMIO_MASK_IRQ     (TMIO_MASK_READOP | TMIO_MASK_WRITEOP | TMIO_MASK_CMD)
 
+#define TMIO_TRANSTATE_DEND	0x00000001
+#define TMIO_TRANSTATE_AEND	0x00000002
+
 struct tmio_mmc_data;
 struct tmio_mmc_host;
 
@@ -141,6 +144,7 @@ struct tmio_mmc_host {
 	struct tasklet_struct	dma_issue;
 	struct scatterlist	bounce_sg;
 	u8			*bounce_buf;
+	u32			dma_tranend1;
 
 	/* Track lost interrupts */
 	struct delayed_work	delayed_reset_work;
@@ -149,6 +153,7 @@ struct tmio_mmc_host {
 	/* Cache */
 	u32			sdcard_irq_mask;
 	u32			sdio_irq_mask;
+	u32			dma_irq_mask;
 	unsigned int		clk_cache;
 
 	spinlock_t		lock;		/* protect host private data */
@@ -158,6 +163,9 @@ struct tmio_mmc_host {
 	bool			sdio_irq_enabled;
 	u32			scc_tappos;
 	struct completion	completion;
+
+	spinlock_t		trans_lock;
+	unsigned int		trans_state;
 
 	/* Mandatory callback */
 	int (*clk_enable)(struct tmio_mmc_host *host);
@@ -184,7 +192,9 @@ struct tmio_mmc_host {
 	/* Tuning values: 1 for success, 0 for failure */
 	DECLARE_BITMAP(taps, BITS_PER_BYTE * sizeof(long));
 	unsigned int tap_num;
+	unsigned long tap_set;
 	void (*prepare_hs400_tuning)(struct mmc_host *mmc, struct mmc_ios *ios);
+	void (*reset_hs400_mode)(struct mmc_host *mmc);
 
 	/* Sampling data comparison: 1 for match. 0 for mismatch */
 	DECLARE_BITMAP(smpcmp, BITS_PER_BYTE * sizeof(long));
@@ -197,6 +207,9 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *host,
 			struct tmio_mmc_data *pdata);
 void tmio_mmc_host_remove(struct tmio_mmc_host *host);
 void tmio_mmc_do_data_irq(struct tmio_mmc_host *host);
+
+void tmio_set_transtate(struct tmio_mmc_host *host, unsigned int state);
+void tmio_clear_transtate(struct tmio_mmc_host *host);
 
 void tmio_mmc_enable_mmc_irqs(struct tmio_mmc_host *host, u32 i);
 void tmio_mmc_disable_mmc_irqs(struct tmio_mmc_host *host, u32 i);
@@ -248,14 +261,19 @@ static inline void tmio_mmc_abort_dma(struct tmio_mmc_host *host)
 }
 #endif
 
+#if (defined(CONFIG_MMC_SDHI) || defined(CONFIG_MMC_SDHI_MODULE)) \
+	&& defined(CONFIG_ARM64)
+bool __tmio_mmc_dma_irq(struct tmio_mmc_host *host);
+#else
+static inline bool __tmio_mmc_dma_irq(struct tmio_mmc_host *host)
+{
+	return false;
+}
+#endif
+
 #ifdef CONFIG_PM
 int tmio_mmc_host_runtime_suspend(struct device *dev);
 int tmio_mmc_host_runtime_resume(struct device *dev);
-#endif
-
-#ifdef CONFIG_PM_SLEEP
-int tmio_mmc_host_suspend(struct device *dev);
-int tmio_mmc_host_resume(struct device *dev);
 #endif
 
 static inline u16 sd_ctrl_read16(struct tmio_mmc_host *host, int addr)
