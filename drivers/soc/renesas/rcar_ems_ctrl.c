@@ -151,8 +151,8 @@ static int __init rcar_ems_ctrl_init(void)
 		return 0;
 	}
 
-	if (ems_poll == 0 ||
-	    ems_mode_on_temp == 0 || ems_mode_off_temp == 0) {
+	if ((ems_poll == 0) ||
+		(ems_mode_on_temp == 0) || (ems_mode_off_temp == 0)) {
 		pr_err("thermal emergency: not set value\n");
 		return 0;
 	}
