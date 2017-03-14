@@ -508,14 +508,15 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	if (irq) {
 		priv->irq = 1;
 		for_each_node_with_property(tz_nd, "polling-delay") {
-			tmp_nd = of_parse_phandle(tz_nd,
-					"thermal-sensors", 0);
-			if (tmp_nd && !strcmp(tmp_nd->full_name,
-					dev->of_node->full_name)) {
-				of_property_read_u32(tz_nd, "polling-delay",
-					&idle);
-				(idle > 0) ? (priv->irq = 0) :
-						(priv->irq = 1);
+			tmp_nd = of_parse_phandle(tz_nd, "thermal-sensors", 0);
+			if (!tmp_nd)
+				continue;
+			if (!strcmp(tmp_nd->full_name,
+						dev->of_node->full_name)) {
+				of_property_read_u32(tz_nd,
+						     "polling-delay", &idle);
+				if (idle > 0)
+					priv->irq = 0;
 				break;
 			}
 		}
