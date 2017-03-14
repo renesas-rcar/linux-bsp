@@ -157,7 +157,7 @@ static int round_temp(int temp)
 
 	if (tmp1 < 250)
 		result = CODETSD(tmp2);
-	else if (tmp1 < 750 && tmp1 >= 250)
+	else if ((tmp1 < 750) && (tmp1 >= 250))
 		result = CODETSD(tmp2) + 500;
 	else
 		result = CODETSD(tmp2) + 1000;
@@ -274,8 +274,8 @@ int thermal_celsius_to_temp(struct equation_coefs coef,
 {
 	int temp_code, temp1, temp2;
 
-	temp1 = (ctemp * coef.a1 / 1000 + coef.b1) / 1000;
-	temp2 = (ctemp * coef.a2 / 1000 + coef.b2) / 1000;
+	temp1 = (((ctemp * coef.a1) / 1000) + coef.b1) / 1000;
+	temp2 = (((ctemp * coef.a2) / 1000) + coef.b2) / 1000;
 	temp_code = (temp1 + temp2) / 2;
 
 	return temp_code;
