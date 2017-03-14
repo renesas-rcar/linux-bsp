@@ -749,7 +749,17 @@ static int sh_msiof_spi_txrx_once(struct sh_msiof_spi_priv *p,
 	}
 
 	/* wait for tx fifo to be emptied / rx fifo to be filled */
-	if (!wait_for_completion_timeout(&p->done, timeout)) {
+	if (p->mode == SPI_MSIOF_MASTER)
+		ret = wait_for_completion_timeout(&p->done, timeout);
+	else {
+		ret = wait_for_completion_interruptible_timeout(
+						&p->done, timeout);
+		if (ret == -ERESTARTSYS) {
+			dev_err(&p->pdev->dev, "PIO mode. Task interrupt\n");
+			goto stop_reset;
+		}
+	}
+	if (!ret) {
 		dev_err(&p->pdev->dev, "PIO timeout\n");
 		ret = -ETIMEDOUT;
 		goto stop_reset;
@@ -866,7 +876,17 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 
 	/* wait for Tx/Rx DMA completion */
 	if (tx) {
-		ret = wait_for_completion_timeout(&p->done_dma_tx, timeout);
+		if (p->mode == SPI_MSIOF_MASTER)
+			ret = wait_for_completion_timeout(
+					&p->done_dma_tx, timeout);
+		else {
+			ret = wait_for_completion_interruptible_timeout(
+						&p->done_dma_tx, timeout);
+			if (ret == -ERESTARTSYS) {
+				dev_err(&p->pdev->dev, "Tx DMA. Task interrupt\n");
+				goto stop_reset;
+			}
+		}
 		if (!ret) {
 			dev_err(&p->pdev->dev, "Tx DMA timeout\n");
 			ret = -ETIMEDOUT;
@@ -877,7 +897,19 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 			sh_msiof_write(p, IER, ier_bits);
 
 			/* wait for tx fifo to be emptied */
-			if (!wait_for_completion_timeout(&p->done, timeout)) {
+			if (p->mode == SPI_MSIOF_MASTER)
+				ret = wait_for_completion_timeout(
+							&p->done, timeout);
+			else {
+				ret = wait_for_completion_interruptible_timeout(
+							&p->done, timeout);
+				if (ret == -ERESTARTSYS) {
+					dev_err(&p->pdev->dev,
+						"Tx fifo to be emptied. Task interrupt\n");
+					goto stop_reset;
+				}
+			}
+			if (!ret) {
 				dev_err(&p->pdev->dev,
 					"Tx fifo to be emptied timeout\n");
 				ret = -ETIMEDOUT;
@@ -886,7 +918,17 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 		}
 	}
 	if (rx) {
-		ret = wait_for_completion_timeout(&p->done_dma_rx, timeout);
+		if (p->mode == SPI_MSIOF_MASTER)
+			ret = wait_for_completion_timeout(
+					&p->done_dma_rx, timeout);
+		else {
+			ret = wait_for_completion_interruptible_timeout(
+						&p->done_dma_rx, timeout);
+			if (ret == -ERESTARTSYS) {
+				dev_err(&p->pdev->dev, "Rx DMA. Task interrupt\n");
+				goto stop_reset;
+			}
+		}
 		if (!ret) {
 			dev_err(&p->pdev->dev, "Rx DMA timeout\n");
 			ret = -ETIMEDOUT;
