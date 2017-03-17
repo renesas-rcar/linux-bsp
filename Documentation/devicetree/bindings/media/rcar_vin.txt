@@ -2,10 +2,15 @@ Renesas RCar Video Input driver (rcar_vin)
 ------------------------------------------
 
 The rcar_vin device provides video input capabilities for the Renesas R-Car
-family of devices. The current blocks are always slaves and suppot one input
-channel which can be either RGB, YUYV or BT656.
+family of devices.
+
+On Gen2 the current blocks are always slaves and support one input channel
+which can be either RGB, YUYV or BT656. On Gen3 the current blocks are
+always slaves and support multiple input channels which can be either RGB,
+YUVU, BT656 or CSI-2.
 
  - compatible: Must be one or more of the following
+   - "renesas,vin-r8a7796" for the R8A7796 device
    - "renesas,vin-r8a7795" for the R8A7795 device
    - "renesas,vin-r8a7794" for the R8A7794 device
    - "renesas,vin-r8a7793" for the R8A7793 device
@@ -28,7 +33,7 @@ channel which can be either RGB, YUYV or BT656.
 Additionally, an alias named vinX will need to be created to specify
 which video input device this is.
 
-The per-board settings:
+The per-board settings Gen2:
  - port sub-node describing a single endpoint connected to the vin
    as described in video-interfaces.txt[1]. Only the first one will
    be considered as each vin interface has one input port.
@@ -36,13 +41,23 @@ The per-board settings:
    These settings are used to work out video input format and widths
    into the system.
 
+The per-board settings Gen3:
 
-Device node example
--------------------
+- renesas,id - ID number of the VIN
+- ports
+        - port@0 - Digital video source (same as port node on Gen2)
+        - port@1 - CSI-2 video sources
+                -reg 0 - sub-node describing the endpoint which is CSI20
+                -reg 1 - sub-node describing the endpoint which is CSI21
+                -reg 2 - sub-node describing the endpoint which is CSI40
+                -reg 3 - sub-node describing the endpoint which is CSI41
 
-	aliases {
-	       vin0 = &vin0;
-	};
+Device node example Gen2
+------------------------
+
+        aliases {
+                vin0 = &vin0;
+        };
 
         vin0: vin@0xe6ef0000 {
                 compatible = "renesas,vin-r8a7790", "renesas,rcar-gen2-vin";
@@ -52,8 +67,8 @@ Device node example
                 status = "disabled";
         };
 
-Board setup example (vin1 composite video input)
-------------------------------------------------
+Board setup example Gen2 (vin1 composite video input)
+-----------------------------------------------------
 
 &i2c2   {
         status = "ok";
@@ -92,6 +107,94 @@ Board setup example (vin1 composite video input)
         };
 };
 
+Device node example Gen3
+------------------------
 
+        vin0: video@e6ef0000 {
+                compatible = "renesas,vin-r8a7795";
+                reg = <0 0xe6ef0000 0 0x1000>;
+                interrupts = <0 188 IRQ_TYPE_LEVEL_HIGH>;
+                clocks = <&cpg CPG_MOD 811>;
+                power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+                status = "disabled";
+
+                renesas,id = <0>;
+
+                ports {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        port@1 {
+                                #address-cells = <1>;
+                                #size-cells = <0>;
+
+                                reg = <1>;
+
+                                vin0csi20: endpoint@0 {
+                                        reg = <0>;
+                                        remote-endpoint= <&csi20vin0>;
+                                };
+                                vin0csi21: endpoint@1 {
+                                        reg = <1>;
+                                        remote-endpoint= <&csi21vin0>;
+                                };
+                                vin0csi40: endpoint@2 {
+                                        reg = <2>;
+                                        remote-endpoint= <&csi40vin0>;
+                                };
+                        };
+                };
+        };
+
+        csi20: csi2@fea80000 {
+                compatible = "renesas,r8a7795-csi2", "renesas,rcar-gen3-csi2";
+                reg = <0 0xfea80000 0 0x10000>;
+                interrupts = <0 184 IRQ_TYPE_LEVEL_HIGH>;
+                clocks = <&cpg CPG_MOD 714>;
+                power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+                status = "disabled";
+
+                ports {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        port@1 {
+                                #address-cells = <1>;
+                                #size-cells = <0>;
+
+                                reg = <1>;
+
+                                csi20vin0: endpoint@0 {
+                                        remote-endpoint = <&vin0csi20>;
+                                };
+                        };
+                };
+        };
+
+
+Board setup example Gen3 (CSI-2)
+--------------------------------
+
+        &vin0 {
+                status = "okay";
+        };
+
+        csi20 {
+                status = "okay";
+
+                ports {
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+
+                        port@0 {
+                                reg = <0>;
+                                csi20_in: endpoint@0 {
+                                        clock-lanes = <0>;
+                                        data-lanes = <1>;
+                                        remote-endpoint = <&adv7482_txb>;
+                                };
+                        };
+                };
+        };
 
 [1] video-interfaces.txt common video media interface
