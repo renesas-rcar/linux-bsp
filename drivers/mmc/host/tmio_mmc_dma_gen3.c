@@ -177,7 +177,7 @@ static void tmio_mmc_issue_tasklet_fn(unsigned long arg)
 
 	dev_dbg(&host->pdev->dev, "%s\n", __func__);
 
-	tmio_mmc_enable_mmc_irqs(host, TMIO_STAT_DATAEND);
+	tmio_mmc_enable_mmc_irqs(host, TMIO_MASK_DMA);
 
 	/* start the DMAC */
 	tmio_dm_write(host, DM_CM_DTRAN_CTRL, DTRAN_CTRL_DM_START);
