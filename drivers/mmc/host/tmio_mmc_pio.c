@@ -619,7 +619,8 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 		 * DATAEND interrupt with the BUSY bit set, in this cases
 		 * waiting for one more interrupt fixes the problem.
 		 */
-		if (host->pdata->flags & TMIO_MMC_HAS_IDLE_WAIT) {
+		if (host->pdata->flags &
+			(TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
 			if (status & TMIO_STAT_SCLKDIVEN)
 				done = true;
 		} else {
