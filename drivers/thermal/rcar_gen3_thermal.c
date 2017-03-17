@@ -74,6 +74,7 @@ struct rcar_gen3_thermal_tsc {
 };
 
 struct rcar_gen3_thermal_priv {
+	unsigned int num_tscs;
 	struct rcar_gen3_thermal_tsc *tscs[TSC_MAX_NUM];
 };
 
@@ -305,6 +306,12 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 			goto error_unregister;
 		}
 		tsc->zone = zone;
+		priv->num_tscs++;
+	}
+
+	if (!priv->num_tscs) {
+		ret = -ENODEV;
+		goto error_unregister;
 	}
 
 	return 0;
