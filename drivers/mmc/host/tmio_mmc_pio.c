@@ -847,6 +847,8 @@ static void tmio_mmc_hw_reset(struct mmc_host *mmc)
 
 	tmio_mmc_reset(host);
 
+	tmio_mmc_reset_dma(host);
+
 	if (host->hw_reset)
 		host->hw_reset(host);
 }
@@ -1308,6 +1310,7 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host,
 
 	tmio_mmc_clk_stop(_host);
 	tmio_mmc_reset(_host);
+	tmio_mmc_reset_dma(_host);
 
 	_host->sdcard_irq_mask = sd_ctrl_read16_and_16_as_32(_host, CTL_IRQ_MASK);
 	tmio_mmc_disable_mmc_irqs(_host, TMIO_MASK_ALL);

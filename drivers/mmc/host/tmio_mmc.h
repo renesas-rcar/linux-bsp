@@ -264,10 +264,14 @@ static inline void tmio_mmc_abort_dma(struct tmio_mmc_host *host)
 #if (defined(CONFIG_MMC_SDHI) || defined(CONFIG_MMC_SDHI_MODULE)) \
 	&& defined(CONFIG_ARM64)
 bool __tmio_mmc_dma_irq(struct tmio_mmc_host *host);
+void tmio_mmc_reset_dma(struct tmio_mmc_host *host);
 #else
 static inline bool __tmio_mmc_dma_irq(struct tmio_mmc_host *host)
 {
 	return false;
+}
+static inline void tmio_mmc_reset_dma(struct tmio_mmc_host *host)
+{
 }
 #endif
 

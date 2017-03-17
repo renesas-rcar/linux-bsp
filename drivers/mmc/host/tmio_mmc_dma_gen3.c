@@ -111,6 +111,14 @@ void tmio_mmc_abort_dma(struct tmio_mmc_host *host)
 	tmio_mmc_enable_dma(host, true);
 }
 
+void tmio_mmc_reset_dma(struct tmio_mmc_host *host)
+{
+	u64 val = RST_DTRANRST1 | RST_DTRANRST0;
+
+	tmio_dm_write(host, DM_CM_RST, RST_RESERVED_BITS & ~val);
+	tmio_dm_write(host, DM_CM_RST, RST_RESERVED_BITS | val);
+}
+
 void tmio_mmc_start_dma(struct tmio_mmc_host *host, struct mmc_data *data)
 {
 	struct scatterlist *sg = host->sg_ptr;
