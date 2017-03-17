@@ -635,9 +635,17 @@ static int sh_mobile_sdhi_wait_idle(struct tmio_mmc_host *host)
 {
 	int timeout = 1000;
 
-	while (--timeout && !(sd_ctrl_read16_and_16_as_32(host, CTL_STATUS)
-			      & TMIO_STAT_SCLKDIVEN))
-		udelay(1);
+	if (host->pdata->flags & TMIO_MMC_USE_SCLKDIVEN) {
+		while (--timeout &&
+		       !(sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
+		       TMIO_STAT_SCLKDIVEN))
+			udelay(1);
+	} else {
+		while (--timeout &&
+		       (sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
+		       TMIO_STAT_CMD_BUSY))
+			udelay(1);
+	}
 
 	if (!timeout) {
 		dev_warn(&host->pdev->dev, "timeout waiting for SD bus idle\n");
@@ -824,6 +832,12 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	ret = tmio_mmc_host_probe(host, mmc_data);
 	if (ret < 0)
 		goto efree;
+
+	/*
+	 * Some controllers don't have CBSY bit
+	 */
+	if (sd_ctrl_read16(host, CTL_VERSION) == SDHI_VER_GEN2_SDR50)
+		mmc_data->flags |= TMIO_MMC_USE_SCLKDIVEN;
 
 	if ((host->mmc->caps & MMC_CAP_UHS_SDR104) ||
 	    (host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR) ||
