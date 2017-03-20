@@ -44,6 +44,12 @@
 		renesas,pins = <PIN(3, 0) 6>,
 			       <PIN(3, 2) 4>;
 	};
+
+	i2c2_pins: i2c2 {
+		/* RIIC2: P1_4 as SCL, P1_5 as SDA */
+		renesas,pins = <PIN(1, 4) (1 | BI_DIR)>,
+			       <PIN(1, 5) (1 | BI_DIR)>;
+	};
 };
 
 &extal_clk {
@@ -61,6 +67,9 @@
 &i2c2 {
 	status = "okay";
 	clock-frequency = <400000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
 
 	eeprom@50 {
 		compatible = "renesas,24c128";
