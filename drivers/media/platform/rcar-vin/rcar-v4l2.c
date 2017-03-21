@@ -23,8 +23,9 @@
 #include "rcar-vin.h"
 
 #define RVIN_DEFAULT_FORMAT	V4L2_PIX_FMT_YUYV
-#define RVIN_MAX_WIDTH		2048
-#define RVIN_MAX_HEIGHT		2048
+#define RVIN_DEFAULT_WIDTH	800
+#define RVIN_DEFAULT_HEIGHT	600
+#define RVIN_DEFAULT_COLORSPACE	V4L2_COLORSPACE_SRGB
 
 /* -----------------------------------------------------------------------------
  * Format Conversions
@@ -92,15 +93,22 @@ static u32 rvin_format_sizeimage(struct v4l2_pix_format *pix)
  * V4L2
  */
 
-static void rvin_reset_crop_compose(struct rvin_dev *vin)
+static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 {
-	vin->crop.top = vin->crop.left = 0;
-	vin->crop.width = vin->source.width;
-	vin->crop.height = vin->source.height;
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
+	int ret;
 
-	vin->compose.top = vin->compose.left = 0;
-	vin->compose.width = vin->format.width;
-	vin->compose.height = vin->format.height;
+	fmt.pad = vin->digital.source_pad;
+
+	ret = v4l2_subdev_call(vin_to_source(vin), pad, get_fmt, NULL, &fmt);
+	if (ret)
+		return ret;
+
+	v4l2_fill_pix_format(pix, &fmt.format);
+
+	return 0;
 }
 
 static int rvin_reset_format(struct rvin_dev *vin)
@@ -111,7 +119,7 @@ static int rvin_reset_format(struct rvin_dev *vin)
 	struct v4l2_mbus_framefmt *mf = &fmt.format;
 	int ret;
 
-	fmt.pad = vin->src_pad_idx;
+	fmt.pad = vin->digital.source_pad;
 
 	ret = v4l2_subdev_call(vin_to_source(vin), pad, get_fmt, NULL, &fmt);
 	if (ret)
@@ -137,8 +145,6 @@ static int rvin_reset_format(struct rvin_dev *vin)
 	case V4L2_FIELD_TOP:
 	case V4L2_FIELD_BOTTOM:
 	case V4L2_FIELD_ALTERNATE:
-		vin->format.height /= 2;
-		break;
 	case V4L2_FIELD_NONE:
 	case V4L2_FIELD_INTERLACED_TB:
 	case V4L2_FIELD_INTERLACED_BT:
@@ -149,15 +155,22 @@ static int rvin_reset_format(struct rvin_dev *vin)
 		break;
 	}
 
-	rvin_reset_crop_compose(vin);
+	vin->crop.top = vin->crop.left = 0;
+	vin->crop.width = mf->width;
+	vin->crop.height = mf->height;
+
+	vin->compose.top = vin->compose.left = 0;
+	vin->compose.width = mf->width;
+	vin->compose.height = mf->height;
+
+	vin->format.bytesperline = rvin_format_bytesperline(&vin->format);
+	vin->format.sizeimage = rvin_format_sizeimage(&vin->format);
 
 	return 0;
 }
 
 static int __rvin_try_format_source(struct rvin_dev *vin,
-				    u32 which,
-				    struct v4l2_pix_format *pix,
-				    struct rvin_source_fmt *source)
+				    u32 which, struct v4l2_pix_format *pix)
 {
 	struct v4l2_subdev *sd;
 	struct v4l2_subdev_pad_config *pad_cfg;
@@ -165,19 +178,23 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 		.which = which,
 	};
 	enum v4l2_field field;
+	u32 width, height;
 	int ret;
 
 	sd = vin_to_source(vin);
 
-	v4l2_fill_mbus_format(&format.format, pix, vin->digital.code);
+	v4l2_fill_mbus_format(&format.format, pix, vin->code);
 
 	pad_cfg = v4l2_subdev_alloc_pad_config(sd);
 	if (pad_cfg == NULL)
 		return -ENOMEM;
 
-	format.pad = vin->src_pad_idx;
+	format.pad = vin->digital.source_pad;
 
+	/* Allow the video device to override field and to scale */
 	field = pix->field;
+	width = pix->width;
+	height = pix->height;
 
 	ret = v4l2_subdev_call(sd, pad, set_fmt, pad_cfg, &format);
 	if (ret < 0 && ret != -ENOIOCTLCMD)
@@ -186,29 +203,19 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 	v4l2_fill_pix_format(pix, &format.format);
 
 	pix->field = field;
-
-	source->width = pix->width;
-	source->height = pix->height;
-
-	vin_dbg(vin, "Source resolution: %ux%u\n", source->width,
-		source->height);
-
+	pix->width = width;
+	pix->height = height;
 done:
 	v4l2_subdev_free_pad_config(pad_cfg);
 	return ret;
 }
 
 static int __rvin_try_format(struct rvin_dev *vin,
-			     u32 which,
-			     struct v4l2_pix_format *pix,
-			     struct rvin_source_fmt *source)
+			     u32 which, struct v4l2_pix_format *pix)
 {
 	const struct rvin_video_format *info;
-	u32 rwidth, rheight, walign;
-
-	/* Requested */
-	rwidth = pix->width;
-	rheight = pix->height;
+	u32 walign;
+	int ret;
 
 	/* Keep current field if no specific one is asked for */
 	if (pix->field == V4L2_FIELD_ANY)
@@ -222,9 +229,8 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	if (!info) {
 		vin_dbg(vin, "Format %x not found, keeping %x\n",
 			pix->pixelformat, vin->format.pixelformat);
-		*pix = vin->format;
-		pix->width = rwidth;
-		pix->height = rheight;
+		pix->pixelformat = vin->format.pixelformat;
+		info = rvin_format_from_pixel(pix->pixelformat);
 	}
 
 	/* Always recalculate */
@@ -232,15 +238,14 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	pix->sizeimage = 0;
 
 	/* Limit to source capabilities */
-	__rvin_try_format_source(vin, which, pix, source);
+	ret = __rvin_try_format_source(vin, which, pix);
+	if (ret)
+		return ret;
 
 	switch (pix->field) {
 	case V4L2_FIELD_TOP:
 	case V4L2_FIELD_BOTTOM:
 	case V4L2_FIELD_ALTERNATE:
-		pix->height /= 2;
-		source->height /= 2;
-		break;
 	case V4L2_FIELD_NONE:
 	case V4L2_FIELD_INTERLACED_TB:
 	case V4L2_FIELD_INTERLACED_BT:
@@ -251,30 +256,26 @@ static int __rvin_try_format(struct rvin_dev *vin,
 		break;
 	}
 
-	/* If source can't match format try if VIN can scale */
-	if (source->width != rwidth || source->height != rheight)
-		rvin_scale_try(vin, pix, rwidth, rheight);
-
 	/* HW limit width to a multiple of 32 (2^5) for NV16 else 2 (2^1) */
 	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
 
 	/* Limit to VIN capabilities */
-	v4l_bound_align_image(&pix->width, 2, RVIN_MAX_WIDTH, walign,
-			      &pix->height, 4, RVIN_MAX_HEIGHT, 2, 0);
+	v4l_bound_align_image(&pix->width, 2, vin->info->max_width, walign,
+			      &pix->height, 4, vin->info->max_height, 2, 0);
 
 	pix->bytesperline = max_t(u32, pix->bytesperline,
 				  rvin_format_bytesperline(pix));
 	pix->sizeimage = max_t(u32, pix->sizeimage,
 			       rvin_format_sizeimage(pix));
 
-	if (vin->chip == RCAR_M1 && pix->pixelformat == V4L2_PIX_FMT_XBGR32) {
+	if (vin->info->chip == RCAR_M1 &&
+	    pix->pixelformat == V4L2_PIX_FMT_XBGR32) {
 		vin_err(vin, "pixel format XBGR32 not supported on M1\n");
 		return -EINVAL;
 	}
 
-	vin_dbg(vin, "Requested %ux%u Got %ux%u bpl: %d size: %d\n",
-		rwidth, rheight, pix->width, pix->height,
-		pix->bytesperline, pix->sizeimage);
+	vin_dbg(vin, "Format %ux%u bpl: %d size: %d\n",
+		pix->width, pix->height, pix->bytesperline, pix->sizeimage);
 
 	return 0;
 }
@@ -295,33 +296,24 @@ static int rvin_try_fmt_vid_cap(struct file *file, void *priv,
 				struct v4l2_format *f)
 {
 	struct rvin_dev *vin = video_drvdata(file);
-	struct rvin_source_fmt source;
 
-	return __rvin_try_format(vin, V4L2_SUBDEV_FORMAT_TRY, &f->fmt.pix,
-				 &source);
+	return __rvin_try_format(vin, V4L2_SUBDEV_FORMAT_TRY, &f->fmt.pix);
 }
 
 static int rvin_s_fmt_vid_cap(struct file *file, void *priv,
 			      struct v4l2_format *f)
 {
 	struct rvin_dev *vin = video_drvdata(file);
-	struct rvin_source_fmt source;
 	int ret;
 
 	if (vb2_is_busy(&vin->queue))
 		return -EBUSY;
 
-	ret = __rvin_try_format(vin, V4L2_SUBDEV_FORMAT_ACTIVE, &f->fmt.pix,
-				&source);
+	ret = __rvin_try_format(vin, V4L2_SUBDEV_FORMAT_ACTIVE, &f->fmt.pix);
 	if (ret)
 		return ret;
 
-	vin->source.width = source.width;
-	vin->source.height = source.height;
-
 	vin->format = f->fmt.pix;
-
-	rvin_reset_crop_compose(vin);
 
 	return 0;
 }
@@ -351,6 +343,8 @@ static int rvin_g_selection(struct file *file, void *fh,
 			    struct v4l2_selection *s)
 {
 	struct rvin_dev *vin = video_drvdata(file);
+	struct v4l2_pix_format pix;
+	int ret;
 
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
@@ -358,9 +352,12 @@ static int rvin_g_selection(struct file *file, void *fh,
 	switch (s->target) {
 	case V4L2_SEL_TGT_CROP_BOUNDS:
 	case V4L2_SEL_TGT_CROP_DEFAULT:
+		ret = rvin_get_sd_format(vin, &pix);
+		if (ret)
+			return ret;
 		s->r.left = s->r.top = 0;
-		s->r.width = vin->source.width;
-		s->r.height = vin->source.height;
+		s->r.width = pix.width;
+		s->r.height = pix.height;
 		break;
 	case V4L2_SEL_TGT_CROP:
 		s->r = vin->crop;
@@ -386,12 +383,14 @@ static int rvin_s_selection(struct file *file, void *fh,
 {
 	struct rvin_dev *vin = video_drvdata(file);
 	const struct rvin_video_format *fmt;
+	struct v4l2_pix_format pix;
 	struct v4l2_rect r = s->r;
 	struct v4l2_rect max_rect;
 	struct v4l2_rect min_rect = {
 		.width = 6,
 		.height = 2,
 	};
+	int ret;
 
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
@@ -401,22 +400,25 @@ static int rvin_s_selection(struct file *file, void *fh,
 	switch (s->target) {
 	case V4L2_SEL_TGT_CROP:
 		/* Can't crop outside of source input */
+		ret = rvin_get_sd_format(vin, &pix);
+		if (ret)
+			return ret;
 		max_rect.top = max_rect.left = 0;
-		max_rect.width = vin->source.width;
-		max_rect.height = vin->source.height;
+		max_rect.width = pix.width;
+		max_rect.height = pix.height;
 		v4l2_rect_map_inside(&r, &max_rect);
 
-		v4l_bound_align_image(&r.width, 2, vin->source.width, 1,
-				      &r.height, 4, vin->source.height, 2, 0);
+		v4l_bound_align_image(&r.width, 2, pix.width, 1,
+				      &r.height, 4, pix.height, 2, 0);
 
-		r.top  = clamp_t(s32, r.top, 0, vin->source.height - r.height);
-		r.left = clamp_t(s32, r.left, 0, vin->source.width - r.width);
+		r.top  = clamp_t(s32, r.top, 0, pix.height - r.height);
+		r.left = clamp_t(s32, r.left, 0, pix.width - r.width);
 
 		vin->crop = s->r = r;
 
 		vin_dbg(vin, "Cropped %dx%d@%d:%d of %dx%d\n",
 			r.width, r.height, r.left, r.top,
-			vin->source.width, vin->source.height);
+			pix.width, pix.height);
 		break;
 	case V4L2_SEL_TGT_COMPOSE:
 		/* Make sure compose rect fits inside output format */
@@ -446,9 +448,6 @@ static int rvin_s_selection(struct file *file, void *fh,
 	default:
 		return -EINVAL;
 	}
-
-	/* HW supports modifying configuration while running */
-	rvin_crop_scale_comp(vin);
 
 	return 0;
 }
@@ -480,10 +479,14 @@ static int rvin_enum_input(struct file *file, void *priv,
 		return ret;
 
 	i->type = V4L2_INPUT_TYPE_CAMERA;
-	i->std = vin->vdev.tvnorms;
 
-	if (v4l2_subdev_has_op(sd, pad, dv_timings_cap))
+	if (v4l2_subdev_has_op(sd, pad, dv_timings_cap)) {
 		i->capabilities = V4L2_IN_CAP_DV_TIMINGS;
+		i->std = 0;
+	} else {
+		i->capabilities = V4L2_IN_CAP_STD;
+		i->std = vin->vdev->tvnorms;
+	}
 
 	strlcpy(i->name, "Camera", sizeof(i->name));
 
@@ -547,14 +550,16 @@ static int rvin_enum_dv_timings(struct file *file, void *priv_fh,
 {
 	struct rvin_dev *vin = video_drvdata(file);
 	struct v4l2_subdev *sd = vin_to_source(vin);
-	int pad, ret;
+	int ret;
 
-	pad = timings->pad;
-	timings->pad = vin->sink_pad_idx;
+	if (timings->pad)
+		return -EINVAL;
+
+	timings->pad = vin->digital.sink_pad;
 
 	ret = v4l2_subdev_call(sd, pad, enum_dv_timings, timings);
 
-	timings->pad = pad;
+	timings->pad = 0;
 
 	return ret;
 }
@@ -570,12 +575,8 @@ static int rvin_s_dv_timings(struct file *file, void *priv_fh,
 	if (ret)
 		return ret;
 
-	vin->source.width = timings->bt.width;
-	vin->source.height = timings->bt.height;
-	vin->format.width = timings->bt.width;
-	vin->format.height = timings->bt.height;
-
-	return 0;
+	/* Changing the timings will change the width/height */
+	return rvin_reset_format(vin);
 }
 
 static int rvin_g_dv_timings(struct file *file, void *priv_fh,
@@ -601,14 +602,16 @@ static int rvin_dv_timings_cap(struct file *file, void *priv_fh,
 {
 	struct rvin_dev *vin = video_drvdata(file);
 	struct v4l2_subdev *sd = vin_to_source(vin);
-	int pad, ret;
+	int ret;
 
-	pad = cap->pad;
-	cap->pad = vin->sink_pad_idx;
+	if (cap->pad)
+		return -EINVAL;
+
+	cap->pad = vin->digital.sink_pad;
 
 	ret = v4l2_subdev_call(sd, pad, dv_timings_cap, cap);
 
-	cap->pad = pad;
+	cap->pad = 0;
 
 	return ret;
 }
@@ -617,17 +620,16 @@ static int rvin_g_edid(struct file *file, void *fh, struct v4l2_edid *edid)
 {
 	struct rvin_dev *vin = video_drvdata(file);
 	struct v4l2_subdev *sd = vin_to_source(vin);
-	int input, ret;
+	int ret;
 
 	if (edid->pad)
 		return -EINVAL;
 
-	input = edid->pad;
-	edid->pad = vin->sink_pad_idx;
+	edid->pad = vin->digital.sink_pad;
 
 	ret = v4l2_subdev_call(sd, pad, get_edid, edid);
 
-	edid->pad = input;
+	edid->pad = 0;
 
 	return ret;
 }
@@ -636,17 +638,16 @@ static int rvin_s_edid(struct file *file, void *fh, struct v4l2_edid *edid)
 {
 	struct rvin_dev *vin = video_drvdata(file);
 	struct v4l2_subdev *sd = vin_to_source(vin);
-	int input, ret;
+	int ret;
 
 	if (edid->pad)
 		return -EINVAL;
 
-	input = edid->pad;
-	edid->pad = vin->sink_pad_idx;
+	edid->pad = vin->digital.sink_pad;
 
 	ret = v4l2_subdev_call(sd, pad, set_edid, edid);
 
-	edid->pad = input;
+	edid->pad = 0;
 
 	return ret;
 }
@@ -679,6 +680,126 @@ static const struct v4l2_ioctl_ops rvin_ioctl_ops = {
 	.vidioc_querystd		= rvin_querystd,
 	.vidioc_g_std			= rvin_g_std,
 	.vidioc_s_std			= rvin_s_std,
+
+	.vidioc_reqbufs			= vb2_ioctl_reqbufs,
+	.vidioc_create_bufs		= vb2_ioctl_create_bufs,
+	.vidioc_querybuf		= vb2_ioctl_querybuf,
+	.vidioc_qbuf			= vb2_ioctl_qbuf,
+	.vidioc_dqbuf			= vb2_ioctl_dqbuf,
+	.vidioc_expbuf			= vb2_ioctl_expbuf,
+	.vidioc_prepare_buf		= vb2_ioctl_prepare_buf,
+	.vidioc_streamon		= vb2_ioctl_streamon,
+	.vidioc_streamoff		= vb2_ioctl_streamoff,
+
+	.vidioc_log_status		= v4l2_ctrl_log_status,
+	.vidioc_subscribe_event		= rvin_subscribe_event,
+	.vidioc_unsubscribe_event	= v4l2_event_unsubscribe,
+};
+
+/* -----------------------------------------------------------------------------
+ * V4L2 Media Controller
+ */
+
+static int __rvin_mc_try_format(struct rvin_dev *vin,
+				struct v4l2_pix_format *pix)
+{
+	const struct rvin_video_format *info;
+	u32 walign;
+
+	/* Keep current field if no specific one is asked for */
+	if (pix->field == V4L2_FIELD_ANY)
+		pix->field = vin->format.field;
+
+	switch (pix->field) {
+	case V4L2_FIELD_TOP:
+	case V4L2_FIELD_BOTTOM:
+	case V4L2_FIELD_ALTERNATE:
+	case V4L2_FIELD_NONE:
+	case V4L2_FIELD_INTERLACED_TB:
+	case V4L2_FIELD_INTERLACED_BT:
+	case V4L2_FIELD_INTERLACED:
+		break;
+	default:
+		pix->field = V4L2_FIELD_NONE;
+		break;
+	}
+
+	/* Check that colorspace is resonable, if not keep current */
+	if (!pix->colorspace || pix->colorspace >= 0xff)
+		pix->colorspace = vin->format.colorspace;
+
+	info = rvin_format_from_pixel(pix->pixelformat);
+	if (!info) {
+		vin_dbg(vin, "Format %x not found, keeping %x\n",
+			pix->pixelformat, vin->format.pixelformat);
+		pix->pixelformat = vin->format.pixelformat;
+		info = rvin_format_from_pixel(pix->pixelformat);
+	}
+
+	/* HW limit width to a multiple of 32 (2^5) for NV16 else 2 (2^1) */
+	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
+
+	/* Limit to VIN capabilities */
+	v4l_bound_align_image(&pix->width, 2, vin->info->max_width, walign,
+			      &pix->height, 4, vin->info->max_height, 2, 0);
+
+	pix->bytesperline = rvin_format_bytesperline(pix);
+	pix->sizeimage = rvin_format_sizeimage(pix);
+
+	vin_dbg(vin, "Format %ux%u bpl: %d size: %d\n",
+		pix->width, pix->height, pix->bytesperline, pix->sizeimage);
+
+	return 0;
+}
+
+static int rvin_mc_try_fmt_vid_cap(struct file *file, void *priv,
+				   struct v4l2_format *f)
+{
+	struct rvin_dev *vin = video_drvdata(file);
+
+	return __rvin_mc_try_format(vin, &f->fmt.pix);
+}
+
+static int rvin_mc_s_fmt_vid_cap(struct file *file, void *priv,
+				 struct v4l2_format *f)
+{
+	struct rvin_dev *vin = video_drvdata(file);
+	int ret;
+
+	if (vb2_is_busy(&vin->queue))
+		return -EBUSY;
+
+	ret = __rvin_mc_try_format(vin, &f->fmt.pix);
+	if (ret)
+		return ret;
+
+	vin->format = f->fmt.pix;
+
+	return 0;
+}
+
+static int rvin_mc_enum_input(struct file *file, void *priv,
+			      struct v4l2_input *i)
+{
+	if (i->index != 0)
+		return -EINVAL;
+
+	i->type = V4L2_INPUT_TYPE_CAMERA;
+	strlcpy(i->name, "Camera", sizeof(i->name));
+
+	return 0;
+}
+
+static const struct v4l2_ioctl_ops rvin_mc_ioctl_ops = {
+	.vidioc_querycap		= rvin_querycap,
+	.vidioc_try_fmt_vid_cap		= rvin_mc_try_fmt_vid_cap,
+	.vidioc_g_fmt_vid_cap		= rvin_g_fmt_vid_cap,
+	.vidioc_s_fmt_vid_cap		= rvin_mc_s_fmt_vid_cap,
+	.vidioc_enum_fmt_vid_cap	= rvin_enum_fmt_vid_cap,
+
+	.vidioc_enum_input		= rvin_mc_enum_input,
+	.vidioc_g_input			= rvin_g_input,
+	.vidioc_s_input			= rvin_s_input,
 
 	.vidioc_reqbufs			= vb2_ioctl_reqbufs,
 	.vidioc_create_bufs		= vb2_ioctl_create_bufs,
@@ -747,8 +868,8 @@ static int rvin_initialize_device(struct file *file)
 	if (ret < 0)
 		return ret;
 
-	pm_runtime_enable(&vin->vdev.dev);
-	ret = pm_runtime_resume(&vin->vdev.dev);
+	pm_runtime_enable(&vin->vdev->dev);
+	ret = pm_runtime_resume(&vin->vdev->dev);
 	if (ret < 0 && ret != -ENOSYS)
 		goto eresume;
 
@@ -766,7 +887,7 @@ static int rvin_initialize_device(struct file *file)
 
 	return 0;
 esfmt:
-	pm_runtime_disable(&vin->vdev.dev);
+	pm_runtime_disable(&vin->vdev->dev);
 eresume:
 	rvin_power_off(vin);
 
@@ -818,8 +939,8 @@ static int rvin_release(struct file *file)
 	 * Then de-initialize hw module.
 	 */
 	if (fh_singular) {
-		pm_runtime_suspend(&vin->vdev.dev);
-		pm_runtime_disable(&vin->vdev.dev);
+		pm_runtime_suspend(&vin->vdev->dev);
+		pm_runtime_disable(&vin->vdev->dev);
 		rvin_power_off(vin);
 	}
 
@@ -838,16 +959,78 @@ static const struct v4l2_file_operations rvin_fops = {
 	.read		= vb2_fop_read,
 };
 
+/* -----------------------------------------------------------------------------
+ * Media controller file Operations
+ */
+
+static int rvin_mc_open(struct file *file)
+{
+	struct rvin_dev *vin = video_drvdata(file);
+	int ret;
+
+	mutex_lock(&vin->lock);
+
+	file->private_data = vin;
+
+	ret = v4l2_fh_open(file);
+	if (ret)
+		goto unlock;
+
+	if (v4l2_fh_is_singular_file(file)) {
+		pm_runtime_get_sync(vin->dev);
+		v4l2_pipeline_pm_use(&vin->vdev->entity, 1);
+	}
+
+unlock:
+	mutex_unlock(&vin->lock);
+
+	return ret;
+}
+
+static int rvin_mc_release(struct file *file)
+{
+	struct rvin_dev *vin = video_drvdata(file);
+	bool fh_singular;
+	int ret;
+
+	mutex_lock(&vin->lock);
+
+	/* Save the singular status before we call the clean-up helper */
+	fh_singular = v4l2_fh_is_singular_file(file);
+
+	/* the release helper will cleanup any on-going streaming */
+	ret = _vb2_fop_release(file, NULL);
+
+	if (fh_singular) {
+		v4l2_pipeline_pm_use(&vin->vdev->entity, 0);
+		pm_runtime_put(vin->dev);
+	}
+
+	mutex_unlock(&vin->lock);
+
+	return ret;
+}
+
+static const struct v4l2_file_operations rvin_mc_fops = {
+	.owner		= THIS_MODULE,
+	.unlocked_ioctl	= video_ioctl2,
+	.open		= rvin_mc_open,
+	.release	= rvin_mc_release,
+	.poll		= vb2_fop_poll,
+	.mmap		= vb2_fop_mmap,
+	.read		= vb2_fop_read,
+};
+
 void rvin_v4l2_remove(struct rvin_dev *vin)
 {
 	v4l2_info(&vin->v4l2_dev, "Removing %s\n",
-		  video_device_node_name(&vin->vdev));
+		  video_device_node_name(vin->vdev));
 
 	/* Checks internaly if handlers have been init or not */
 	v4l2_ctrl_handler_free(&vin->ctrl_handler);
 
 	/* Checks internaly if vdev have been init or not */
-	video_unregister_device(&vin->vdev);
+	video_unregister_device(vin->vdev);
 }
 
 static void rvin_notify(struct v4l2_subdev *sd,
@@ -858,7 +1041,7 @@ static void rvin_notify(struct v4l2_subdev *sd,
 
 	switch (notification) {
 	case V4L2_DEVICE_NOTIFY_EVENT:
-		v4l2_event_queue(&vin->vdev, arg);
+		v4l2_event_queue(vin->vdev, arg);
 		break;
 	default:
 		break;
@@ -867,24 +1050,26 @@ static void rvin_notify(struct v4l2_subdev *sd,
 
 int rvin_v4l2_probe(struct rvin_dev *vin)
 {
-	struct video_device *vdev = &vin->vdev;
+	struct video_device *vdev;
 	struct v4l2_subdev *sd = vin_to_source(vin);
-	int pad_idx, ret;
+	int ret;
 
 	v4l2_set_subdev_hostdata(sd, vin);
 
 	vin->v4l2_dev.notify = rvin_notify;
 
-	ret = v4l2_subdev_call(sd, video, g_tvnorms, &vin->vdev.tvnorms);
+	vdev = video_device_alloc();
+
+	ret = v4l2_subdev_call(sd, video, g_tvnorms, &vdev->tvnorms);
 	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
 		return ret;
 
-	if (vin->vdev.tvnorms == 0) {
+	if (vdev->tvnorms == 0) {
 		/* Disable the STD API if there are no tvnorms defined */
-		v4l2_disable_ioctl(&vin->vdev, VIDIOC_G_STD);
-		v4l2_disable_ioctl(&vin->vdev, VIDIOC_S_STD);
-		v4l2_disable_ioctl(&vin->vdev, VIDIOC_QUERYSTD);
-		v4l2_disable_ioctl(&vin->vdev, VIDIOC_ENUMSTD);
+		v4l2_disable_ioctl(vdev, VIDIOC_G_STD);
+		v4l2_disable_ioctl(vdev, VIDIOC_S_STD);
+		v4l2_disable_ioctl(vdev, VIDIOC_QUERYSTD);
+		v4l2_disable_ioctl(vdev, VIDIOC_ENUMSTD);
 	}
 
 	/* Add the controls */
@@ -907,43 +1092,84 @@ int rvin_v4l2_probe(struct rvin_dev *vin)
 	vdev->fops = &rvin_fops;
 	vdev->v4l2_dev = &vin->v4l2_dev;
 	vdev->queue = &vin->queue;
-	strlcpy(vdev->name, KBUILD_MODNAME, sizeof(vdev->name));
-	vdev->release = video_device_release_empty;
+	snprintf(vdev->name, sizeof(vdev->name), "%s %s", KBUILD_MODNAME,
+		 dev_name(vin->dev));
+	vdev->release = video_device_release;
 	vdev->ioctl_ops = &rvin_ioctl_ops;
 	vdev->lock = &vin->lock;
 	vdev->ctrl_handler = &vin->ctrl_handler;
 	vdev->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING |
 		V4L2_CAP_READWRITE;
 
-	vin->src_pad_idx = 0;
-	for (pad_idx = 0; pad_idx < sd->entity.num_pads; pad_idx++)
-		if (sd->entity.pads[pad_idx].flags == MEDIA_PAD_FL_SOURCE)
-			break;
-	if (pad_idx >= sd->entity.num_pads)
-		return -EINVAL;
-
-	vin->src_pad_idx = pad_idx;
-
-	vin->sink_pad_idx = 0;
-	for (pad_idx = 0; pad_idx < sd->entity.num_pads; pad_idx++)
-		if (sd->entity.pads[pad_idx].flags == MEDIA_PAD_FL_SINK) {
-			vin->sink_pad_idx = pad_idx;
-			break;
-		}
-
 	vin->format.pixelformat	= RVIN_DEFAULT_FORMAT;
 	rvin_reset_format(vin);
 
-	ret = video_register_device(&vin->vdev, VFL_TYPE_GRABBER, -1);
+	ret = video_register_device(vdev, VFL_TYPE_GRABBER, -1);
 	if (ret) {
 		vin_err(vin, "Failed to register video device\n");
 		return ret;
 	}
 
-	video_set_drvdata(&vin->vdev, vin);
+	video_set_drvdata(vdev, vin);
 
 	v4l2_info(&vin->v4l2_dev, "Device registered as %s\n",
-		  video_device_node_name(&vin->vdev));
+		  video_device_node_name(vdev));
+
+	vin->vdev = vdev;
+
+	return ret;
+}
+
+void rvin_v4l2_mc_remove(struct rvin_dev *vin)
+{
+	v4l2_info(&vin->v4l2_dev, "Removing %s\n",
+		  video_device_node_name(vin->vdev));
+
+	/* Checks internaly if vdev have been init or not */
+	video_unregister_device(vin->vdev);
+}
+
+int rvin_v4l2_mc_probe(struct rvin_dev *vin)
+{
+	struct video_device *vdev;
+	int ret;
+
+	vin->v4l2_dev.notify = rvin_notify;
+
+	vdev = video_device_alloc();
+
+	vdev->fops = &rvin_mc_fops;
+	vdev->v4l2_dev = &vin->v4l2_dev;
+	vdev->queue = &vin->queue;
+	snprintf(vdev->name, sizeof(vdev->name), "%s %s", KBUILD_MODNAME,
+		 dev_name(vin->dev));
+	vdev->release = video_device_release;
+	vdev->ioctl_ops = &rvin_mc_ioctl_ops;
+	vdev->lock = &vin->lock;
+	vdev->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING |
+		V4L2_CAP_READWRITE;
+
+	/* Set some form of default format */
+	vin->format.pixelformat	= RVIN_DEFAULT_FORMAT;
+	vin->format.width = RVIN_DEFAULT_WIDTH;
+	vin->format.height = RVIN_DEFAULT_HEIGHT;
+	vin->format.colorspace = RVIN_DEFAULT_COLORSPACE;
+	ret = __rvin_mc_try_format(vin, &vin->format);
+	if (ret)
+		return ret;
+
+	ret = video_register_device(vdev, VFL_TYPE_GRABBER, -1);
+	if (ret) {
+		vin_err(vin, "Failed to register video device\n");
+		return ret;
+	}
+
+	video_set_drvdata(vdev, vin);
+
+	v4l2_info(&vin->v4l2_dev, "Device registered as %s\n",
+		  video_device_node_name(vdev));
+
+	vin->vdev = vdev;
 
 	return ret;
 }
