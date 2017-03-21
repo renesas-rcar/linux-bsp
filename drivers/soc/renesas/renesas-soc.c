@@ -235,10 +235,14 @@ static int __init renesas_soc_init(void)
 	soc_dev_attr->family = kstrdup_const(family->name, GFP_KERNEL);
 	soc_dev_attr->soc_id = kstrdup_const(strchr(match->compatible, ',') + 1,
 					     GFP_KERNEL);
-	if (chipid)
+	if (chipid) {
 		soc_dev_attr->revision = kasprintf(GFP_KERNEL, "ES%u.%u",
 						   ((product >> 4) & 0x0f) + 1,
 						   product & 0xf);
+
+		if ((product & 0x7fff) == ((soc_rcar_m3_w.id << 8) | 0x10))
+			soc_dev_attr->revision = kasprintf(GFP_KERNEL, "ES1.1");
+	}
 
 	pr_info("Detected Renesas %s %s %s\n", soc_dev_attr->family,
 		soc_dev_attr->soc_id, soc_dev_attr->revision ?: "");
