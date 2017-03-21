@@ -193,7 +193,7 @@ static ssize_t u2_timeout_store(struct device *dev,
 		return ret;
 	}
 
-	if (val < 0 || val > 127)
+	if (val > 127)
 		return -EINVAL;
 
 	ret = lvs_rh_set_port_feature(hdev, lvs->portnum | (val << 8),
@@ -222,7 +222,7 @@ static ssize_t u1_timeout_store(struct device *dev,
 		return ret;
 	}
 
-	if (val < 0 || val > 127)
+	if (val > 127)
 		return -EINVAL;
 
 	ret = lvs_rh_set_port_feature(hdev, lvs->portnum | (val << 8),
@@ -429,6 +429,7 @@ static void lvs_rh_disconnect(struct usb_interface *intf)
 	struct lvs_rh *lvs = usb_get_intfdata(intf);
 
 	sysfs_remove_group(&intf->dev.kobj, &lvs_attr_group);
+	usb_poison_urb(lvs->urb); /* used in scheduled work */
 	flush_work(&lvs->rh_work);
 	usb_free_urb(lvs->urb);
 }
