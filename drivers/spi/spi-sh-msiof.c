@@ -62,7 +62,12 @@ struct sh_msiof_spi_priv {
 	void *rx_dma_page;
 	dma_addr_t tx_dma_addr;
 	dma_addr_t rx_dma_addr;
+	unsigned int transfer_workaround;
 };
+
+#define RCAR_H3_ES10	(1 << 0)
+#define RCAR_H3_ES11	(1 << 1)
+
 
 #define TMDR1	0x00	/* Transmit Mode Register 1 */
 #define TMDR2	0x04	/* Transmit Mode Register 2 */
@@ -192,11 +197,13 @@ struct sh_msiof_spi_priv {
 #define IER_RFUDFE	0x00000010 /* Receive FIFO Underflow Enable */
 #define IER_RFOVFE	0x00000008 /* Receive FIFO Overflow Enable */
 
+/* H3 ES1.0 */
 static const struct soc_device_attribute r8a7795es10[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.0" },
 	{ },
 };
 
+/* H3 ES1.1 */
 static const struct soc_device_attribute r8a7795es11[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.1" },
 	{ },
@@ -367,13 +374,13 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	tmp |= !cs_high << MDR1_SYNCAC_SHIFT;
 	tmp |= lsb_first << MDR1_BITLSB_SHIFT;
 	tmp |= sh_msiof_spi_get_dtdl_and_syncdl(p);
-	if (soc_device_match(r8a7795es10)) {
+	if (p->transfer_workaround == RCAR_H3_ES10) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp &= ~MDR1_DTDL_MASK;
 			tmp |= 0 << MDR1_DTDL_SHIFT;
 		}
 	}
-	if (soc_device_match(r8a7795es11)) {
+	if (p->transfer_workaround == RCAR_H3_ES11) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp &= ~MDR1_DTDL_MASK;
 			tmp |= 1 << MDR1_DTDL_SHIFT;
@@ -389,13 +396,13 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 		sh_msiof_write(p, TMDR1, tmp | MDR1_TRMD | TMDR1_PCON);
 	} else
 		sh_msiof_write(p, TMDR1, tmp | TMDR1_PCON);
-	if (soc_device_match(r8a7795es10)) {
+	if (p->transfer_workaround == RCAR_H3_ES10) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp &= ~MDR1_DTDL_MASK;
 			tmp |= 2 << MDR1_DTDL_SHIFT;
 		}
 	}
-	if (soc_device_match(r8a7795es11)) {
+	if (p->transfer_workaround == RCAR_H3_ES11) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp &= ~MDR1_DTDL_MASK;
 			tmp |= 1 << MDR1_DTDL_SHIFT;
@@ -408,7 +415,7 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	sh_msiof_write(p, RMDR1, tmp);
 
 	tmp = 0;
-	if (soc_device_match(r8a7795es10)) {
+	if (p->transfer_workaround == RCAR_H3_ES10) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp |= 0 << CTR_TSCKIZ_POL_SHIFT;
 			tmp |= 0 << CTR_RSCKIZ_POL_SHIFT;
@@ -1321,6 +1328,13 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 		ret = -ENXIO;
 		goto err1;
 	}
+
+	if (soc_device_match(r8a7795es10))
+		p->transfer_workaround = RCAR_H3_ES10;
+	else if (soc_device_match(r8a7795es11))
+		p->transfer_workaround = RCAR_H3_ES11;
+	else
+		p->transfer_workaround = 0;
 
 	init_completion(&p->done);
 	init_completion(&p->done_dma_tx);
