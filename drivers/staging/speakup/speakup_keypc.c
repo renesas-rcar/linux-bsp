@@ -105,6 +105,7 @@ static struct spk_synth synth_keypc = {
 	.startup = SYNTH_START,
 	.checkval = SYNTH_CHECK,
 	.vars = vars,
+	.io_ops = &spk_serial_io_ops,
 	.probe = synth_probe,
 	.release = keynote_release,
 	.synth_immediate = synth_immediate,
@@ -198,6 +199,7 @@ spin_lock_irqsave(&speakup_info.spinlock, flags);
 			synth->flush(synth);
 			continue;
 		}
+		synth_buffer_skip_nonlatin1();
 		if (synth_buffer_empty()) {
 			spin_unlock_irqrestore(&speakup_info.spinlock, flags);
 			break;
@@ -304,6 +306,7 @@ static int synth_probe(struct spk_synth *synth)
 
 static void keynote_release(void)
 {
+	spk_stop_serial_interrupt();
 	if (synth_port)
 		synth_release_region(synth_port, SYNTH_IO_EXTENT);
 	synth_port = 0;

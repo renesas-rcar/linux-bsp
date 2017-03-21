@@ -886,11 +886,14 @@ static void _rtl92e_dm_tx_power_tracking_cb_thermal(struct net_device *dev)
 		if (tmpCCK40Mindex >= CCK_Table_length)
 			tmpCCK40Mindex = CCK_Table_length-1;
 	} else {
-		tmpval = ((u8)tmpRegA - priv->ThermalMeter[0]);
-		if (tmpval >= 6)
-			tmpOFDMindex = tmpCCK20Mindex = 0;
-		else
-			tmpOFDMindex = tmpCCK20Mindex = 6 - tmpval;
+		tmpval = (u8)tmpRegA - priv->ThermalMeter[0];
+		if (tmpval >= 6) {
+			tmpOFDMindex = 0;
+			tmpCCK20Mindex = 0;
+		} else {
+			tmpOFDMindex = 6 - tmpval;
+			tmpCCK20Mindex = 6 - tmpval;
+		}
 		tmpCCK40Mindex = 0;
 	}
 	if (priv->CurrentChannelBW != HT_CHANNEL_WIDTH_20)

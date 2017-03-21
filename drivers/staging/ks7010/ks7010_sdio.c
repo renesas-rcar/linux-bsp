@@ -176,70 +176,53 @@ static int _ks_wlan_hw_power_save(struct ks_wlan_private *priv)
 	if (priv->reg.powermgt == POWMGT_ACTIVE_MODE)
 		return 0;
 
-	if (priv->reg.operation_mode == MODE_INFRASTRUCTURE &&
-	    (priv->connect_status & CONNECT_STATUS_MASK) == CONNECT_STATUS) {
-		if (priv->dev_state == DEVICE_STATE_SLEEP) {
-			switch (atomic_read(&priv->psstatus.status)) {
-			case PS_SNOOZE:	/* 4 */
-				break;
-			default:
-				DPRINTK(5, "\npsstatus.status=%d\npsstatus.confirm_wait=%d\npsstatus.snooze_guard=%d\ncnt_txqbody=%d\n",
-					atomic_read(&priv->psstatus.status),
-					atomic_read(&priv->psstatus.confirm_wait),
-					atomic_read(&priv->psstatus.snooze_guard),
-					cnt_txqbody(priv));
+	if (priv->reg.operation_mode != MODE_INFRASTRUCTURE ||
+	    (priv->connect_status & CONNECT_STATUS_MASK) != CONNECT_STATUS)
+		return 0;
 
-				if (!atomic_read(&priv->psstatus.confirm_wait)
-				    && !atomic_read(&priv->psstatus.snooze_guard)
-				    && !cnt_txqbody(priv)) {
-					retval =
-					    ks7010_sdio_read(priv, INT_PENDING,
-							     &rw_data,
-							     sizeof(rw_data));
-					if (retval) {
-						DPRINTK(1,
-							" error : INT_PENDING=%02X\n",
-							rw_data);
-						queue_delayed_work(priv->ks_wlan_hw.ks7010sdio_wq,
-								   &priv->ks_wlan_hw.rw_wq, 1);
-						break;
-					}
-					if (!rw_data) {
-						rw_data = GCR_B_DOZE;
-						retval =
-						    ks7010_sdio_write(priv,
-								      GCR_B,
-								      &rw_data,
-								      sizeof(rw_data));
-						if (retval) {
-							DPRINTK(1,
-								" error : GCR_B=%02X\n",
-								rw_data);
-							queue_delayed_work
-							    (priv->ks_wlan_hw.ks7010sdio_wq,
-							     &priv->ks_wlan_hw.rw_wq, 1);
-							break;
-						}
-						DPRINTK(4,
-							"PMG SET!! : GCR_B=%02X\n",
-							rw_data);
-						atomic_set(&priv->psstatus.
-							   status, PS_SNOOZE);
-						DPRINTK(3,
-							"psstatus.status=PS_SNOOZE\n");
-					} else {
-						queue_delayed_work(priv->ks_wlan_hw.ks7010sdio_wq,
-								   &priv->ks_wlan_hw.rw_wq, 1);
-					}
-				} else {
-					queue_delayed_work(priv->ks_wlan_hw.
-							   ks7010sdio_wq,
-							   &priv->ks_wlan_hw.rw_wq,
-							   0);
-				}
-				break;
-			}
+	if (priv->dev_state != DEVICE_STATE_SLEEP)
+		return 0;
+
+	if (atomic_read(&priv->psstatus.status) == PS_SNOOZE)
+		return 0;
+
+	DPRINTK(5, "\npsstatus.status=%d\npsstatus.confirm_wait=%d\npsstatus.snooze_guard=%d\ncnt_txqbody=%d\n",
+		atomic_read(&priv->psstatus.status),
+		atomic_read(&priv->psstatus.confirm_wait),
+		atomic_read(&priv->psstatus.snooze_guard),
+		cnt_txqbody(priv));
+
+	if (!atomic_read(&priv->psstatus.confirm_wait) &&
+		!atomic_read(&priv->psstatus.snooze_guard) &&
+		!cnt_txqbody(priv)) {
+		retval = ks7010_sdio_read(priv, INT_PENDING, &rw_data,
+					  sizeof(rw_data));
+		if (retval) {
+			DPRINTK(1, " error : INT_PENDING=%02X\n", rw_data);
+			queue_delayed_work(priv->ks_wlan_hw.ks7010sdio_wq,
+					   &priv->ks_wlan_hw.rw_wq, 1);
+			return 0;
 		}
+		if (!rw_data) {
+			rw_data = GCR_B_DOZE;
+			retval = ks7010_sdio_write(priv, GCR_B, &rw_data,
+						   sizeof(rw_data));
+			if (retval) {
+				DPRINTK(1, " error : GCR_B=%02X\n", rw_data);
+				queue_delayed_work(priv->ks_wlan_hw.ks7010sdio_wq,
+						   &priv->ks_wlan_hw.rw_wq, 1);
+				return 0;
+			}
+			DPRINTK(4, "PMG SET!! : GCR_B=%02X\n", rw_data);
+			atomic_set(&priv->psstatus.status, PS_SNOOZE);
+			DPRINTK(3, "psstatus.status=PS_SNOOZE\n");
+		} else {
+			queue_delayed_work(priv->ks_wlan_hw.ks7010sdio_wq,
+					   &priv->ks_wlan_hw.rw_wq, 1);
+		}
+	} else {
+		queue_delayed_work(priv->ks_wlan_hw.ks7010sdio_wq,
+				   &priv->ks_wlan_hw.rw_wq, 0);
 	}
 
 	return 0;
@@ -258,21 +241,18 @@ static int enqueue_txdev(struct ks_wlan_private *priv, unsigned char *p,
 			 void *arg1, void *arg2)
 {
 	struct tx_device_buffer *sp;
+	int rc;
 
 	if (priv->dev_state < DEVICE_STATE_BOOT) {
-		kfree(p);
-		if (complete_handler)
-			(*complete_handler) (arg1, arg2);
-		return 1;
+		rc = -EPERM;
+		goto err_complete;
 	}
 
 	if ((TX_DEVICE_BUFF_SIZE - 1) <= cnt_txqbody(priv)) {
 		/* in case of buffer overflow */
 		DPRINTK(1, "tx buffer overflow\n");
-		kfree(p);
-		if (complete_handler)
-			(*complete_handler) (arg1, arg2);
-		return 1;
+		rc = -EOVERFLOW;
+		goto err_complete;
 	}
 
 	sp = &priv->tx_dev.tx_dev_buff[priv->tx_dev.qtail];
@@ -284,15 +264,22 @@ static int enqueue_txdev(struct ks_wlan_private *priv, unsigned char *p,
 	inc_txqtail(priv);
 
 	return 0;
+
+err_complete:
+	kfree(p);
+	if (complete_handler)
+		(*complete_handler) (arg1, arg2);
+
+	return rc;
 }
 
 /* write data */
 static int write_to_device(struct ks_wlan_private *priv, unsigned char *buffer,
 			   unsigned long size)
 {
-	int retval;
 	unsigned char rw_data;
 	struct hostif_hdr *hdr;
+	int rc;
 
 	hdr = (struct hostif_hdr *)buffer;
 
@@ -302,18 +289,17 @@ static int write_to_device(struct ks_wlan_private *priv, unsigned char *buffer,
 		return 0;
 	}
 
-	retval = ks7010_sdio_write(priv, DATA_WINDOW, buffer, size);
-	if (retval) {
-		DPRINTK(1, " write error : retval=%d\n", retval);
-		return -4;
+	rc = ks7010_sdio_write(priv, DATA_WINDOW, buffer, size);
+	if (rc) {
+		DPRINTK(1, " write error : retval=%d\n", rc);
+		return rc;
 	}
 
 	rw_data = WRITE_STATUS_BUSY;
-	retval =
-	    ks7010_sdio_write(priv, WRITE_STATUS, &rw_data, sizeof(rw_data));
-	if (retval) {
+	rc = ks7010_sdio_write(priv, WRITE_STATUS, &rw_data, sizeof(rw_data));
+	if (rc) {
 		DPRINTK(1, " error : WRITE_STATUS=%02X\n", rw_data);
-		return -3;
+		return rc;
 	}
 
 	return 0;
@@ -495,8 +481,6 @@ static void ks7010_rw_function(struct work_struct *work)
 	/* wiat after WAKEUP */
 	while (time_after(priv->last_wakeup + ((30 * HZ) / 1000), jiffies)) {
 		DPRINTK(4, "wait after WAKEUP\n");
-/*		queue_delayed_work(priv->ks_wlan_hw.ks7010sdio_wq,&priv->ks_wlan_hw.rw_wq,
-		(priv->last_wakeup + ((30*HZ)/1000) - jiffies));*/
 		dev_info(&priv->ks_wlan_hw.sdio_card->func->dev,
 			 "wake: %lu %lu\n",
 			 priv->last_wakeup + (30 * HZ) / 1000,
@@ -614,39 +598,19 @@ static void ks_sdio_interrupt(struct sdio_func *func)
 					      (uint16_t)(rsize << 4));
 			}
 			if (rw_data & WSTATUS_MASK) {
-#if 0
-				if (status & INT_WRITE_STATUS
-				    && !cnt_txqbody(priv)) {
-					/* dummy write for interrupt clear */
-					rw_data = 0;
-					retval =
-					    ks7010_sdio_write(priv, DATA_WINDOW,
-							      &rw_data,
-							      sizeof(rw_data));
-					if (retval) {
-						DPRINTK(1,
-							"write DATA_WINDOW Failed!!(%d)\n",
-							retval);
+				if (atomic_read(&priv->psstatus.status) == PS_SNOOZE) {
+					if (cnt_txqbody(priv)) {
+						ks_wlan_hw_wakeup_request(priv);
+						queue_delayed_work
+							(priv->ks_wlan_hw.
+								ks7010sdio_wq,
+								&priv->ks_wlan_hw.
+								rw_wq, 1);
+						return;
 					}
-					status &= ~INT_WRITE_STATUS;
 				} else {
-#endif
-					if (atomic_read(&priv->psstatus.status) == PS_SNOOZE) {
-						if (cnt_txqbody(priv)) {
-							ks_wlan_hw_wakeup_request(priv);
-							queue_delayed_work
-							    (priv->ks_wlan_hw.
-							     ks7010sdio_wq,
-							     &priv->ks_wlan_hw.
-							     rw_wq, 1);
-							return;
-						}
-					} else {
-						tx_device_task((void *)priv);
-					}
-#if 0
+					tx_device_task((void *)priv);
 				}
-#endif
 			}
 		} while (rsize);
 	}
@@ -694,30 +658,27 @@ static void trx_device_exit(struct ks_wlan_private *priv)
 
 static int ks7010_sdio_update_index(struct ks_wlan_private *priv, u32 index)
 {
-	int rc = 0;
-	int retval;
+	int rc;
 	unsigned char *data_buf;
 
 	data_buf = kmalloc(sizeof(u32), GFP_KERNEL);
-	if (!data_buf) {
-		rc = 1;
-		goto error_out;
-	}
+	if (!data_buf)
+		return -ENOMEM;
 
 	memcpy(data_buf, &index, sizeof(index));
-	retval = ks7010_sdio_write(priv, WRITE_INDEX, data_buf, sizeof(index));
-	if (retval) {
-		rc = 2;
+	rc = ks7010_sdio_write(priv, WRITE_INDEX, data_buf, sizeof(index));
+	if (rc)
 		goto error_out;
-	}
 
-	retval = ks7010_sdio_write(priv, READ_INDEX, data_buf, sizeof(index));
-	if (retval) {
-		rc = 3;
+	rc = ks7010_sdio_write(priv, READ_INDEX, data_buf, sizeof(index));
+	if (rc)
 		goto error_out;
-	}
+
+	return 0;
+
  error_out:
 	kfree(data_buf);
+
 	return rc;
 }
 
@@ -725,29 +686,28 @@ static int ks7010_sdio_update_index(struct ks_wlan_private *priv, u32 index)
 static int ks7010_sdio_data_compare(struct ks_wlan_private *priv, u32 address,
 				    unsigned char *data, unsigned int size)
 {
-	int rc = 0;
-	int retval;
+	int rc;
 	unsigned char *read_buf;
 
 	read_buf = kmalloc(ROM_BUFF_SIZE, GFP_KERNEL);
-	if (!read_buf) {
-		rc = 1;
-		goto error_out;
-	}
-	retval = ks7010_sdio_read(priv, address, read_buf, size);
-	if (retval) {
-		rc = 2;
-		goto error_out;
-	}
-	retval = memcmp(data, read_buf, size);
+	if (!read_buf)
+		return -ENOMEM;
 
-	if (retval) {
-		DPRINTK(0, "data compare error (%d)\n", retval);
-		rc = 3;
+	rc = ks7010_sdio_read(priv, address, read_buf, size);
+	if (rc)
+		goto error_out;
+
+	rc = memcmp(data, read_buf, size);
+	if (rc) {
+		DPRINTK(0, "data compare error (%d)\n", rc);
 		goto error_out;
 	}
+
+	return 0;
+
  error_out:
 	kfree(read_buf);
+
 	return rc;
 }
 
@@ -757,28 +717,27 @@ static int ks7010_upload_firmware(struct ks_wlan_private *priv,
 	unsigned int size, offset, n = 0;
 	unsigned char *rom_buf;
 	unsigned char rw_data = 0;
-	int retval, rc = 0;
+	int rc;
 	int length;
 	const struct firmware *fw_entry = NULL;
 
 	/* buffer allocate */
 	rom_buf = kmalloc(ROM_BUFF_SIZE, GFP_KERNEL);
 	if (!rom_buf)
-		return 3;
+		return -ENOMEM;
 
 	sdio_claim_host(card->func);
 
 	/* Firmware running ? */
-	retval = ks7010_sdio_read(priv, GCR_A, &rw_data, sizeof(rw_data));
+	rc = ks7010_sdio_read(priv, GCR_A, &rw_data, sizeof(rw_data));
 	if (rw_data == GCR_A_RUN) {
 		DPRINTK(0, "MAC firmware running ...\n");
-		rc = 0;
-		goto error_out0;
+		goto release_host_and_free;
 	}
 
-	retval = request_firmware(&fw_entry, ROM_FILE, &priv->ks_wlan_hw.sdio_card->func->dev);
-	if (retval)
-		goto error_out0;
+	rc = request_firmware(&fw_entry, ROM_FILE, &priv->ks_wlan_hw.sdio_card->func->dev);
+	if (rc)
+		goto release_host_and_free;
 
 	length = fw_entry->size;
 
@@ -798,67 +757,58 @@ static int ks7010_upload_firmware(struct ks_wlan_private *priv,
 		memcpy(rom_buf, fw_entry->data + n, size);
 		/* Update write index */
 		offset = n;
-		retval =
-		    ks7010_sdio_update_index(priv,
-					     KS7010_IRAM_ADDRESS + offset);
-		if (retval) {
-			rc = 6;
-			goto error_out1;
-		}
+		rc = ks7010_sdio_update_index(priv,
+					      KS7010_IRAM_ADDRESS + offset);
+		if (rc)
+			goto release_firmware;
 
 		/* Write data */
-		retval = ks7010_sdio_write(priv, DATA_WINDOW, rom_buf, size);
-		if (retval) {
-			rc = 8;
-			goto error_out1;
-		}
+		rc = ks7010_sdio_write(priv, DATA_WINDOW, rom_buf, size);
+		if (rc)
+			goto release_firmware;
 
 		/* compare */
-		retval =
-		    ks7010_sdio_data_compare(priv, DATA_WINDOW, rom_buf, size);
-		if (retval) {
-			rc = 9;
-			goto error_out1;
-		}
+		rc = ks7010_sdio_data_compare(priv, DATA_WINDOW, rom_buf, size);
+		if (rc)
+			goto release_firmware;
+
 		n += size;
 
 	} while (size);
 
 	/* Remap request */
 	rw_data = GCR_A_REMAP;
-	retval = ks7010_sdio_write(priv, GCR_A, &rw_data, sizeof(rw_data));
-	if (retval) {
-		rc = 11;
-		goto error_out1;
-	}
+	rc = ks7010_sdio_write(priv, GCR_A, &rw_data, sizeof(rw_data));
+	if (rc)
+		goto release_firmware;
+
 	DPRINTK(4, " REMAP Request : GCR_A=%02X\n", rw_data);
 
 	/* Firmware running check */
 	for (n = 0; n < 50; ++n) {
 		mdelay(10);	/* wait_ms(10); */
-		retval =
-		    ks7010_sdio_read(priv, GCR_A, &rw_data, sizeof(rw_data));
-		if (retval) {
-			rc = 11;
-			goto error_out1;
-		}
+		rc = ks7010_sdio_read(priv, GCR_A, &rw_data, sizeof(rw_data));
+		if (rc)
+			goto release_firmware;
+
 		if (rw_data == GCR_A_RUN)
 			break;
 	}
 	DPRINTK(4, "firmware wakeup (%d)!!!!\n", n);
 	if ((50) <= n) {
 		DPRINTK(1, "firmware can't start\n");
-		rc = 12;
-		goto error_out1;
+		rc = -EIO;
+		goto release_firmware;
 	}
 
 	rc = 0;
 
- error_out1:
+ release_firmware:
 	release_firmware(fw_entry);
- error_out0:
+ release_host_and_free:
 	sdio_release_host(card->func);
 	kfree(rom_buf);
+
 	return rc;
 }
 

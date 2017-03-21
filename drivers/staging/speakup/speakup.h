@@ -34,6 +34,7 @@
 #define B_SYM 0x0800
 #define B_CAPSYM (B_CAP|B_SYM)
 
+/* FIXME: u16 */
 #define IS_WDLM(x) (spk_chartab[((u_char)x)]&B_WDLM)
 #define IS_CHAR(x, type) (spk_chartab[((u_char)x)]&type)
 #define IS_TYPE(x, type) ((spk_chartab[((u_char)x)]&type) == type)
@@ -66,7 +67,7 @@ void synth_release(void);
 
 void spk_do_flush(void);
 void speakup_start_ttys(void);
-void synth_buffer_add(char ch);
+void synth_buffer_add(u16 ch);
 void synth_buffer_clear(void);
 void speakup_clear_selection(void);
 int speakup_set_selection(struct tty_struct *tty);

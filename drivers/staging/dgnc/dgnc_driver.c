@@ -98,13 +98,11 @@ static const struct board_id dgnc_ids[] = {
 
 static int dgnc_do_remap(struct dgnc_board *brd)
 {
-	int rc = 0;
-
 	brd->re_map_membase = ioremap(brd->membase, 0x1000);
 	if (!brd->re_map_membase)
-		rc = -ENOMEM;
+		return -ENOMEM;
 
-	return rc;
+	return 0;
 }
 
 /*
@@ -198,7 +196,6 @@ static struct dgnc_board *dgnc_found_board(struct pci_dev *pdev, int id)
 		brd->bd_dividend = 921600;
 
 		rc = dgnc_do_remap(brd);
-
 		if (rc < 0)
 			goto failed;
 
@@ -289,21 +286,18 @@ failed:
 
 static int dgnc_request_irq(struct dgnc_board *brd)
 {
-	int rc = 0;
-
 	if (brd->irq) {
-		rc = request_irq(brd->irq, brd->bd_ops->intr,
+		int rc = request_irq(brd->irq, brd->bd_ops->intr,
 				 IRQF_SHARED, "DGNC", brd);
-
 		if (rc) {
 			dev_err(&brd->pdev->dev,
 				"Failed to hook IRQ %d\n", brd->irq);
 			brd->state = BOARD_FAILED;
 			brd->dpastatus = BD_NOFEP;
-			rc = -ENODEV;
+			return -ENODEV;
 		}
 	}
-	return rc;
+	return 0;
 }
 
 static void dgnc_free_irq(struct dgnc_board *brd)
@@ -387,7 +381,6 @@ static int dgnc_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	/* wake up and enable device */
 	rc = pci_enable_device(pdev);
-
 	if (rc)
 		return -EIO;
 
@@ -426,7 +419,6 @@ free_irq:
 	dgnc_free_irq(brd);
 unregister_tty:
 	dgnc_tty_unregister(brd);
-
 failed:
 	kfree(brd);
 
@@ -495,6 +487,7 @@ failed_device:
 	class_destroy(dgnc_class);
 failed_class:
 	unregister_chrdev(dgnc_major, "dgnc");
+
 	return rc;
 }
 
@@ -597,7 +590,6 @@ static int __init dgnc_init_module(void)
 	/* Initialize global stuff */
 
 	rc = dgnc_start();
-
 	if (rc < 0)
 		return rc;
 
@@ -609,7 +601,6 @@ static int __init dgnc_init_module(void)
 		cleanup();
 		return rc;
 	}
-
 	return 0;
 }
 

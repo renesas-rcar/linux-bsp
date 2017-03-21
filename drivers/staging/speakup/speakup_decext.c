@@ -127,9 +127,10 @@ static struct spk_synth synth_decext = {
 	.startup = SYNTH_START,
 	.checkval = SYNTH_CHECK,
 	.vars = vars,
+	.io_ops = &spk_serial_io_ops,
 	.probe = spk_serial_synth_probe,
 	.release = spk_serial_release,
-	.synth_immediate = spk_synth_immediate,
+	.synth_immediate = spk_serial_synth_immediate,
 	.catch_up = do_catch_up,
 	.flush = synth_flush,
 	.is_alive = spk_synth_is_alive_restart,
@@ -175,6 +176,7 @@ static void do_catch_up(struct spk_synth *synth)
 			synth->flush(synth);
 			continue;
 		}
+		synth_buffer_skip_nonlatin1();
 		if (synth_buffer_empty()) {
 			spin_unlock_irqrestore(&speakup_info.spinlock, flags);
 			break;
@@ -185,7 +187,7 @@ static void do_catch_up(struct spk_synth *synth)
 		spin_unlock_irqrestore(&speakup_info.spinlock, flags);
 		if (ch == '\n')
 			ch = 0x0D;
-		if (synth_full() || !spk_serial_out(ch)) {
+		if (synth_full() || !synth->io_ops->synth_out(synth, ch)) {
 			schedule_timeout(msecs_to_jiffies(delay_time_val));
 			continue;
 		}
@@ -199,10 +201,10 @@ static void do_catch_up(struct spk_synth *synth)
 			in_escape = 0;
 		else if (ch <= SPACE) {
 			if (!in_escape && strchr(",.!?;:", last))
-				spk_serial_out(PROCSPEECH);
+				synth->io_ops->synth_out(synth, PROCSPEECH);
 			if (time_after_eq(jiffies, jiff_max)) {
 				if (!in_escape)
-					spk_serial_out(PROCSPEECH);
+					synth->io_ops->synth_out(synth, PROCSPEECH);
 				spin_lock_irqsave(&speakup_info.spinlock,
 							flags);
 				jiffy_delta_val = jiffy_delta->u.n.value;
@@ -217,13 +219,13 @@ static void do_catch_up(struct spk_synth *synth)
 		last = ch;
 	}
 	if (!in_escape)
-		spk_serial_out(PROCSPEECH);
+		synth->io_ops->synth_out(synth, PROCSPEECH);
 }
 
 static void synth_flush(struct spk_synth *synth)
 {
 	in_escape = 0;
-	spk_synth_immediate(synth, "\033P;10z\033\\");
+	synth->synth_immediate(synth, "\033P;10z\033\\");
 }
 
 module_param_named(ser, synth_decext.ser, int, 0444);
