@@ -68,7 +68,6 @@
 #define QMGR_MEMCTRL_IDX_SH	16
 #define QMGR_MEMCTRL_DESC_SH	8
 
-#define QMGR_NUM_PEND	5
 #define QMGR_PEND(x)	(0x90 + (x) * 4)
 
 #define QMGR_PENDING_SLOT_Q(x)	(x / 32)
@@ -131,7 +130,6 @@ struct cppi41_dd {
 	u32 first_td_desc;
 	struct cppi41_channel *chan_busy[ALLOC_DECS_NUM];
 
-	void __iomem *usbss_mem;
 	void __iomem *ctrl_mem;
 	void __iomem *sched_mem;
 	void __iomem *qmgr_mem;
@@ -139,6 +137,10 @@ struct cppi41_dd {
 	const struct chan_queues *queues_rx;
 	const struct chan_queues *queues_tx;
 	struct chan_queues td_queue;
+	u16 first_completion_queue;
+	u16 qmgr_num_pend;
+	u32 n_chans;
+	u8 platform;
 
 	struct list_head pending;	/* Pending queued transfers */
 	spinlock_t lock;		/* Lock for pending list */
@@ -149,8 +151,7 @@ struct cppi41_dd {
 	bool is_suspended;
 };
 
-#define FIST_COMPLETION_QUEUE	93
-static struct chan_queues usb_queues_tx[] = {
+static struct chan_queues am335x_usb_queues_tx[] = {
 	/* USB0 ENDP 1 */
 	[ 0] = { .submit = 32, .complete =  93},
 	[ 1] = { .submit = 34, .complete =  94},
@@ -186,7 +187,7 @@ static struct chan_queues usb_queues_tx[] = {
 	[29] = { .submit = 90, .complete = 139},
 };
 
-static const struct chan_queues usb_queues_rx[] = {
+static const struct chan_queues am335x_usb_queues_rx[] = {
 	/* USB0 ENDP 1 */
 	[ 0] = { .submit =  1, .complete = 109},
 	[ 1] = { .submit =  2, .complete = 110},
@@ -222,11 +223,26 @@ static const struct chan_queues usb_queues_rx[] = {
 	[29] = { .submit = 30, .complete = 155},
 };
 
+static const struct chan_queues da8xx_usb_queues_tx[] = {
+	[0] = { .submit =  16, .complete = 24},
+	[1] = { .submit =  18, .complete = 24},
+	[2] = { .submit =  20, .complete = 24},
+	[3] = { .submit =  22, .complete = 24},
+};
+
+static const struct chan_queues da8xx_usb_queues_rx[] = {
+	[0] = { .submit =  1, .complete = 26},
+	[1] = { .submit =  3, .complete = 26},
+	[2] = { .submit =  5, .complete = 26},
+	[3] = { .submit =  7, .complete = 26},
+};
+
 struct cppi_glue_infos {
-	irqreturn_t (*isr)(int irq, void *data);
 	const struct chan_queues *queues_rx;
 	const struct chan_queues *queues_tx;
 	struct chan_queues td_queue;
+	u16 first_completion_queue;
+	u16 qmgr_num_pend;
 };
 
 static struct cppi41_channel *to_cpp41_chan(struct dma_chan *c)
@@ -285,19 +301,21 @@ static u32 cppi41_pop_desc(struct cppi41_dd *cdd, unsigned queue_num)
 static irqreturn_t cppi41_irq(int irq, void *data)
 {
 	struct cppi41_dd *cdd = data;
+	u16 first_completion_queue = cdd->first_completion_queue;
+	u16 qmgr_num_pend = cdd->qmgr_num_pend;
 	struct cppi41_channel *c;
 	int i;
 
-	for (i = QMGR_PENDING_SLOT_Q(FIST_COMPLETION_QUEUE); i < QMGR_NUM_PEND;
+	for (i = QMGR_PENDING_SLOT_Q(first_completion_queue); i < qmgr_num_pend;
 			i++) {
 		u32 val;
 		u32 q_num;
 
 		val = cppi_readl(cdd->qmgr_mem + QMGR_PEND(i));
-		if (i == QMGR_PENDING_SLOT_Q(FIST_COMPLETION_QUEUE) && val) {
+		if (i == QMGR_PENDING_SLOT_Q(first_completion_queue) && val) {
 			u32 mask;
 			/* set corresponding bit for completetion Q 93 */
-			mask = 1 << QMGR_PENDING_BIT_Q(FIST_COMPLETION_QUEUE);
+			mask = 1 << QMGR_PENDING_BIT_Q(first_completion_queue);
 			/* not set all bits for queues less than Q 93 */
 			mask--;
 			/* now invert and keep only Q 93+ set */
@@ -630,7 +648,7 @@ static int cppi41_tear_down_chan(struct cppi41_channel *c)
 		if (!c->is_tx) {
 			reg |= GCR_STARV_RETRY;
 			reg |= GCR_DESC_TYPE_HOST;
-			reg |= c->q_comp_num;
+			reg |= cdd->td_queue.complete;
 		}
 		reg |= GCR_TEARDOWN;
 		cppi_writel(reg, c->gcr_reg);
@@ -641,7 +659,7 @@ static int cppi41_tear_down_chan(struct cppi41_channel *c)
 	if (!c->td_seen || !c->td_desc_seen) {
 
 		desc_phys = cppi41_pop_desc(cdd, cdd->td_queue.complete);
-		if (!desc_phys)
+		if (!desc_phys && c->is_tx)
 			desc_phys = cppi41_pop_desc(cdd, c->q_comp_num);
 
 		if (desc_phys == c->desc_phys) {
@@ -739,13 +757,8 @@ static int cppi41_add_chans(struct device *dev, struct cppi41_dd *cdd)
 {
 	struct cppi41_channel *cchan;
 	int i;
-	int ret;
-	u32 n_chans;
+	u32 n_chans = cdd->n_chans;
 
-	ret = of_property_read_u32(dev->of_node, "#dma-channels",
-			&n_chans);
-	if (ret)
-		return ret;
 	/*
 	 * The channels can only be used as TX or as RX. So we add twice
 	 * that much dma channels because USB can only do RX or TX.
@@ -859,7 +872,7 @@ static void init_sched(struct cppi41_dd *cdd)
 
 	word = 0;
 	cppi_writel(0, cdd->sched_mem + DMA_SCHED_CTRL);
-	for (ch = 0; ch < 15 * 2; ch += 2) {
+	for (ch = 0; ch < cdd->n_chans; ch += 2) {
 
 		reg = SCHED_ENTRY0_CHAN(ch);
 		reg |= SCHED_ENTRY1_CHAN(ch) | SCHED_ENTRY1_IS_RX;
@@ -869,7 +882,7 @@ static void init_sched(struct cppi41_dd *cdd)
 		cppi_writel(reg, cdd->sched_mem + DMA_SCHED_WORD(word));
 		word++;
 	}
-	reg = 15 * 2 * 2 - 1;
+	reg = cdd->n_chans * 2 - 1;
 	reg |= DMA_SCHED_CTRL_EN;
 	cppi_writel(reg, cdd->sched_mem + DMA_SCHED_CTRL);
 }
@@ -885,7 +898,7 @@ static int init_cppi41(struct device *dev, struct cppi41_dd *cdd)
 		return -ENOMEM;
 
 	cppi_writel(cdd->scratch_phys, cdd->qmgr_mem + QMGR_LRAM0_BASE);
-	cppi_writel(QMGR_SCRATCH_SIZE, cdd->qmgr_mem + QMGR_LRAM_SIZE);
+	cppi_writel(TOTAL_DESCS_NUM, cdd->qmgr_mem + QMGR_LRAM_SIZE);
 	cppi_writel(0, cdd->qmgr_mem + QMGR_LRAM1_BASE);
 
 	ret = init_descs(dev, cdd);
@@ -894,6 +907,7 @@ static int init_cppi41(struct device *dev, struct cppi41_dd *cdd)
 
 	cppi_writel(cdd->td_queue.submit, cdd->ctrl_mem + DMA_TDFDQ);
 	init_sched(cdd);
+
 	return 0;
 err_td:
 	deinit_cppi41(dev, cdd);
@@ -933,8 +947,9 @@ static bool cpp41_dma_filter_fn(struct dma_chan *chan, void *param)
 	else
 		queues = cdd->queues_rx;
 
-	BUILD_BUG_ON(ARRAY_SIZE(usb_queues_rx) != ARRAY_SIZE(usb_queues_tx));
-	if (WARN_ON(cchan->port_num > ARRAY_SIZE(usb_queues_rx)))
+	BUILD_BUG_ON(ARRAY_SIZE(am335x_usb_queues_rx) !=
+		     ARRAY_SIZE(am335x_usb_queues_tx));
+	if (WARN_ON(cchan->port_num > ARRAY_SIZE(am335x_usb_queues_rx)))
 		return false;
 
 	cchan->q_num = queues[cchan->port_num].submit;
@@ -962,15 +977,25 @@ static struct dma_chan *cppi41_dma_xlate(struct of_phandle_args *dma_spec,
 			&dma_spec->args[0]);
 }
 
-static const struct cppi_glue_infos usb_infos = {
-	.isr = cppi41_irq,
-	.queues_rx = usb_queues_rx,
-	.queues_tx = usb_queues_tx,
+static const struct cppi_glue_infos am335x_usb_infos = {
+	.queues_rx = am335x_usb_queues_rx,
+	.queues_tx = am335x_usb_queues_tx,
 	.td_queue = { .submit = 31, .complete = 0 },
+	.first_completion_queue = 93,
+	.qmgr_num_pend = 5,
+};
+
+static const struct cppi_glue_infos da8xx_usb_infos = {
+	.queues_rx = da8xx_usb_queues_rx,
+	.queues_tx = da8xx_usb_queues_tx,
+	.td_queue = { .submit = 31, .complete = 0 },
+	.first_completion_queue = 24,
+	.qmgr_num_pend = 2,
 };
 
 static const struct of_device_id cppi41_dma_ids[] = {
-	{ .compatible = "ti,am3359-cppi41", .data = &usb_infos},
+	{ .compatible = "ti,am3359-cppi41", .data = &am335x_usb_infos},
+	{ .compatible = "ti,da830-cppi41", .data = &da8xx_usb_infos},
 	{},
 };
 MODULE_DEVICE_TABLE(of, cppi41_dma_ids);
@@ -995,6 +1020,7 @@ static int cppi41_dma_probe(struct platform_device *pdev)
 	struct cppi41_dd *cdd;
 	struct device *dev = &pdev->dev;
 	const struct cppi_glue_infos *glue_info;
+	int index;
 	int irq;
 	int ret;
 
@@ -1021,16 +1047,20 @@ static int cppi41_dma_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&cdd->ddev.channels);
 	cpp41_dma_info.dma_cap = cdd->ddev.cap_mask;
 
-	cdd->usbss_mem = of_iomap(dev->of_node, 0);
-	cdd->ctrl_mem = of_iomap(dev->of_node, 1);
-	cdd->sched_mem = of_iomap(dev->of_node, 2);
-	cdd->qmgr_mem = of_iomap(dev->of_node, 3);
+	index = of_property_match_string(dev->of_node,
+					 "reg-names", "controller");
+	if (index < 0)
+		return index;
+
+	cdd->ctrl_mem = of_iomap(dev->of_node, index);
+	cdd->sched_mem = of_iomap(dev->of_node, index + 1);
+	cdd->qmgr_mem = of_iomap(dev->of_node, index + 2);
 	spin_lock_init(&cdd->lock);
 	INIT_LIST_HEAD(&cdd->pending);
 
 	platform_set_drvdata(pdev, cdd);
 
-	if (!cdd->usbss_mem || !cdd->ctrl_mem || !cdd->sched_mem ||
+	if (!cdd->ctrl_mem || !cdd->sched_mem ||
 			!cdd->qmgr_mem)
 		return -ENXIO;
 
@@ -1044,6 +1074,13 @@ static int cppi41_dma_probe(struct platform_device *pdev)
 	cdd->queues_rx = glue_info->queues_rx;
 	cdd->queues_tx = glue_info->queues_tx;
 	cdd->td_queue = glue_info->td_queue;
+	cdd->qmgr_num_pend = glue_info->qmgr_num_pend;
+	cdd->first_completion_queue = glue_info->first_completion_queue;
+
+	ret = of_property_read_u32(dev->of_node,
+				   "#dma-channels", &cdd->n_chans);
+	if (ret)
+		goto err_get_n_chans;
 
 	ret = init_cppi41(dev, cdd);
 	if (ret)
@@ -1059,7 +1096,7 @@ static int cppi41_dma_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
-	ret = devm_request_irq(&pdev->dev, irq, glue_info->isr, IRQF_SHARED,
+	ret = devm_request_irq(&pdev->dev, irq, cppi41_irq, IRQF_SHARED,
 			dev_name(dev), cdd);
 	if (ret)
 		goto err_irq;
@@ -1087,10 +1124,10 @@ err_chans:
 	deinit_cppi41(dev, cdd);
 err_init_cppi:
 	pm_runtime_dont_use_autosuspend(dev);
+err_get_n_chans:
 err_get_sync:
 	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
-	iounmap(cdd->usbss_mem);
 	iounmap(cdd->ctrl_mem);
 	iounmap(cdd->sched_mem);
 	iounmap(cdd->qmgr_mem);
@@ -1112,7 +1149,6 @@ static int cppi41_dma_remove(struct platform_device *pdev)
 	devm_free_irq(&pdev->dev, cdd->irq, cdd);
 	cleanup_chans(cdd);
 	deinit_cppi41(&pdev->dev, cdd);
-	iounmap(cdd->usbss_mem);
 	iounmap(cdd->ctrl_mem);
 	iounmap(cdd->sched_mem);
 	iounmap(cdd->qmgr_mem);
