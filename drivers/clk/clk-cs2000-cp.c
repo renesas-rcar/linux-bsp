@@ -319,6 +319,10 @@ static int cs2000_enable(struct clk_hw *hw)
 	struct cs2000_priv *priv = hw_to_priv(hw);
 	int ret;
 
+	ret = cs2000_set_saved_rate(priv);
+	if (ret < 0)
+		return ret;
+
 	ret = cs2000_enable_dev_config(priv, true);
 	if (ret < 0)
 		return ret;
@@ -513,7 +517,7 @@ static int cs2000_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops cs2000_pm_ops = {
-	.resume_early	= cs2000_resume,
+	.resume		= cs2000_resume,
 };
 
 static struct i2c_driver cs2000_driver = {
