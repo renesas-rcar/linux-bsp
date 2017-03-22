@@ -98,6 +98,11 @@
 		function = "scif2";
 	};
 
+	hscif1_pins: hscif1 {
+		groups = "hscif1_data_a", "hscif1_ctrl_a";
+		function = "hscif1";
+	};
+
 	avb_pins: avb {
 		groups = "avb_mdc";
 		function = "avb";
@@ -117,7 +122,7 @@
 &scif1 {
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
-
+	/* Please use exclusively to the hscif1 node */
 	status = "okay";
 };
 
@@ -126,6 +131,13 @@
 	pinctrl-names = "default";
 
 	status = "okay";
+};
+
+&hscif1 {
+	pinctrl-0 = <&hscif1_pins>;
+	pinctrl-names = "default";
+	/* Please use exclusively to the scif1 node */
+	/* status = "okay"; */
 };
 
 &avb {
