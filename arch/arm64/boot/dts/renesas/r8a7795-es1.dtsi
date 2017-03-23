@@ -1787,7 +1787,9 @@
 				 <&cpg CPG_MOD 1026>, <&cpg CPG_MOD 1027>,
 				 <&cpg CPG_MOD 1028>, <&cpg CPG_MOD 1029>,
 				 <&cpg CPG_MOD 1030>, <&cpg CPG_MOD 1031>,
-				 <&cpg CPG_MOD 1019>, <&cpg CPG_MOD 1018>;
+				 <&cpg CPG_MOD 1019>, <&cpg CPG_MOD 1018>,
+				 <&cpg CPG_MOD 501>, <&cpg CPG_MOD 502>,
+				 <&cpg CPG_MOD 922>;
 			clock-names = "adsp",
 				      "ssi-all",
 				      "ssi.9", "ssi.8", "ssi.7", "ssi.6",
@@ -1796,7 +1798,9 @@
 				      "src.9", "src.8", "src.7", "src.6",
 				      "src.5", "src.4", "src.3", "src.2",
 				      "src.1", "src.0",
-				      "dvc.0", "dvc.1";
+				      "dvc.0", "dvc.1",
+				      "audmac.1", "audmac.0",
+				      "adg";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
