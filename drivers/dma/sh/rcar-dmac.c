@@ -1263,6 +1263,24 @@ static int rcar_dmac_chan_terminate_all(struct dma_chan *chan)
 	return 0;
 }
 
+static void rcar_dmac_synchronize(struct dma_chan *chan)
+{
+	struct rcar_dmac_chan *rchan = to_rcar_dmac_chan(chan);
+	struct rcar_dmac *dmac = to_rcar_dmac(chan->device);
+	struct platform_device *pdev = to_platform_device(dmac->dev);
+	int irq;
+	char pdev_irqname[5];
+
+	sprintf(pdev_irqname, "ch%u", rchan->index);
+	irq = platform_get_irq_byname(pdev, pdev_irqname);
+	if (irq < 0) {
+		dev_err(dmac->dev, "no IRQ specified for channel %u\n",
+			rchan->index);
+		return;
+	}
+	synchronize_irq(irq);
+}
+
 static unsigned int rcar_dmac_chan_get_residue(struct rcar_dmac_chan *chan,
 					       dma_cookie_t cookie)
 {
@@ -1901,6 +1919,7 @@ static int rcar_dmac_probe(struct platform_device *pdev)
 	engine->device_config = rcar_dmac_device_config;
 	engine->device_pause = rcar_dmac_chan_pause;
 	engine->device_terminate_all = rcar_dmac_chan_terminate_all;
+	engine->device_synchronize = rcar_dmac_synchronize;
 	engine->device_tx_status = rcar_dmac_tx_status;
 	engine->device_issue_pending = rcar_dmac_issue_pending;
 
