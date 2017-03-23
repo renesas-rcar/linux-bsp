@@ -1116,6 +1116,8 @@ struct ravb_private {
 	unsigned no_avb_link:1;
 	unsigned avb_link_active_low:1;
 	unsigned wol_enabled:1;
+	u32 has_phy_reset_gpio;
+	u32 phy_reset_gpio;
 };
 
 static inline u32 ravb_read(struct net_device *ndev, enum ravb_reg reg)

@@ -31,6 +31,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/sys_soc.h>
 
 #include <asm/div64.h>
@@ -1066,6 +1068,32 @@ static int ravb_phy_start(struct net_device *ndev)
 	return 0;
 }
 
+static void ravb_phy_reset(struct net_device *ndev)
+{
+	struct ravb_private *priv = netdev_priv(ndev);
+	struct platform_device *pdev = priv->pdev;
+	struct device_node *np = ndev->dev.parent->of_node;
+	int ret, gpio, has_phy_reset_gpio = priv->has_phy_reset_gpio;
+
+	gpio = of_get_named_gpio(np, "phy-reset-gpios", 0);
+	if (gpio_is_valid(gpio)) {
+		if (has_phy_reset_gpio == 0) {
+			ret = devm_gpio_request_one(&pdev->dev, gpio,
+						    GPIOF_OUT_INIT_LOW,
+						    "phy-reset");
+			if (ret)
+				return;
+			priv->has_phy_reset_gpio = 1;
+			priv->phy_reset_gpio = gpio;
+		} else {
+			gpio = priv->phy_reset_gpio;
+			gpio_set_value(gpio, 0);
+		}
+		msleep(20);
+		gpio_set_value(gpio, 1);
+	}
+}
+
 static int ravb_get_link_ksettings(struct net_device *ndev,
 				   struct ethtool_link_ksettings *cmd)
 {
@@ -2088,6 +2116,9 @@ static int ravb_probe(struct platform_device *pdev)
 	ndev->netdev_ops = &ravb_netdev_ops;
 	ndev->ethtool_ops = &ravb_ethtool_ops;
 
+	/* phy reset */
+	ravb_phy_reset(ndev);
+
 	/* Set AVB config mode */
 	ravb_set_config_mode(ndev);
 
@@ -2302,6 +2333,9 @@ static int __maybe_unused ravb_resume(struct device *dev)
 	 * Restore all registers which where setup at probe time and
 	 * reopen device if it was running before system suspended.
 	 */
+
+	/* phy reset */
+	ravb_phy_reset(ndev);
 
 	/* Set AVB config mode */
 	ravb_set_config_mode(ndev);
