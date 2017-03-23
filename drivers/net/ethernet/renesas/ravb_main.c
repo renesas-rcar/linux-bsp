@@ -2215,13 +2215,25 @@ static int __maybe_unused ravb_resume(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct ravb_private *priv = netdev_priv(ndev);
 	struct platform_device *pdev = priv->pdev;
-	int ret = 0;
+	int ret = 0, phy_reset;
+	struct device_node *np = ndev->dev.parent->of_node;
 
 	/* All register have been reset to default values.
 	 * Restore all registers which where setup at probe time and
 	 * reopen device if it was running before system suspended.
 	 */
 
+	/* phy reset */
+	phy_reset = of_get_named_gpio(np, "phy-reset-gpios", 0);
+	if (gpio_is_valid(phy_reset)) {
+		ret = devm_gpio_request_one(&pdev->dev, phy_reset,
+					    GPIOF_OUT_INIT_LOW,
+					    "phy-reset");
+		if (!ret) {
+			msleep(20);
+			gpio_set_value(phy_reset, 1);
+		}
+	}
 	/* Set AVB config mode */
 	ravb_set_config_mode(ndev);
 
