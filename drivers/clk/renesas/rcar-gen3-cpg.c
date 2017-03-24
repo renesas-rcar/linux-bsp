@@ -578,7 +578,7 @@ static unsigned long cpg_sd_clock_recalc_rate(struct clk_hw *hw,
 			break;
 
 	if (i >= clock->div_num)
-		return -EINVAL;
+		return 0;
 
 	return DIV_ROUND_CLOSEST(rate, clock->div_table[i].div);
 }
