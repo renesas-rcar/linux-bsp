@@ -63,8 +63,11 @@ struct sh_msiof_spi_priv {
 	dma_addr_t tx_dma_addr;
 	dma_addr_t rx_dma_addr;
 	unsigned int transfer_workaround;
+	unsigned int chip;
 };
 
+#define RCAR_SERIES_H3	(1 << 0)
+#define RCAR_SERIES_M3	(1 << 1)
 #define RCAR_H3_ES10	(1 << 0)
 #define RCAR_H3_ES11	(1 << 1)
 
@@ -197,6 +200,18 @@ struct sh_msiof_spi_priv {
 #define IER_RFUDFE	0x00000010 /* Receive FIFO Underflow Enable */
 #define IER_RFOVFE	0x00000008 /* Receive FIFO Overflow Enable */
 
+/* H3 Series. */
+static const struct soc_device_attribute r8a7795[] = {
+	{ .soc_id = "r8a7795" },
+	{ },
+};
+
+/* M3 Series. */
+static const struct soc_device_attribute r8a7796[] = {
+	{ .soc_id = "r8a7796" },
+	{ },
+};
+
 /* H3 ES1.0 */
 static const struct soc_device_attribute r8a7795es10[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.0" },
@@ -301,6 +316,10 @@ static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 		brps = DIV_ROUND_UP(div, sh_msiof_spi_div_table[k].div);
 		/* SCR_BRDV_DIV_1 is valid only if BRPS is x 1/1 or x 1/2 */
 		if (sh_msiof_spi_div_table[k].div == 1 && brps > 2)
+			continue;
+		/* r8a7796 is invalid only when BRPS x BRDV = 1/1 */
+		if (p->chip == RCAR_SERIES_M3 &&
+			sh_msiof_spi_div_table[k].div == 1 && brps == 1)
 			continue;
 		if (brps <= 32) /* max of brdv is 32 */
 			break;
@@ -1328,6 +1347,13 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 		ret = -ENXIO;
 		goto err1;
 	}
+
+	if (soc_device_match(r8a7795))
+		p->chip = RCAR_SERIES_H3;
+	else if (soc_device_match(r8a7796))
+		p->chip = RCAR_SERIES_M3;
+	else
+		p->chip = 0;
 
 	if (soc_device_match(r8a7795es10))
 		p->transfer_workaround = RCAR_H3_ES10;
