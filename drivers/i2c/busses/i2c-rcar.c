@@ -147,6 +147,7 @@ struct rcar_i2c_priv {
 	enum dma_data_direction dma_direction;
 
 	struct reset_control *rstc;
+	int suspended;
 };
 
 #define rcar_i2c_priv_to_dev(p)		((p)->adap.dev.parent)
@@ -785,6 +786,9 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 	int i, ret;
 	long time_left;
 
+	if (priv->suspended)
+		return -EBUSY;
+
 	pm_runtime_get_sync(dev);
 
 	/* Gen3 needs a reset before allowing RXDMA once */
@@ -1021,9 +1025,51 @@ static int rcar_i2c_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_i2c_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
+
+	priv->suspended = 1;
+
+	return 0;
+}
+
+static int rcar_i2c_resume(struct device *dev)
+{
+	int ret = 0;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
+	struct i2c_timings i2c_t;
+
+	i2c_parse_fw_timings(dev, &i2c_t, false);
+	pm_runtime_get_sync(dev);
+	ret = rcar_i2c_clock_calculate(priv, &i2c_t);
+	if (ret < 0)
+		dev_err(dev, "Could not calculate clock\n");
+
+	rcar_i2c_init(priv);
+	pm_runtime_put(dev);
+
+	priv->suspended = 0;
+
+	return ret;
+}
+
+static const struct dev_pm_ops rcar_i2c_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(rcar_i2c_suspend, rcar_i2c_resume)
+};
+
+#define DEV_PM_OPS (&rcar_i2c_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_i2c_driver = {
 	.driver	= {
 		.name	= "i2c-rcar",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rcar_i2c_dt_ids,
 	},
 	.probe		= rcar_i2c_probe,
