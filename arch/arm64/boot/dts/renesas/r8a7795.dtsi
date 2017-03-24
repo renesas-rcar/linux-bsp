@@ -2616,6 +2616,7 @@
 			renesas,has-bru;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
+			renesas,#burst_access = <1>;
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			status = "disabled";
 		};
@@ -2642,6 +2643,7 @@
 			renesas,has-bru;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
+			renesas,#burst_access = <0>;
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			status = "disabled";
 		};
