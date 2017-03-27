@@ -2400,14 +2400,25 @@ static int adv7482_resume(struct device *dev)
 						adv7482_enable_csi4_csi1);
 	}
 
+	/* Setting virtual channel for ADV7482 */
+	if (link_config.vc_ch == 0)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel0);
+	else if (link_config.vc_ch == 1)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel1);
+	else if (link_config.vc_ch == 2)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel2);
+	else if (link_config.vc_ch == 3)
+		ret = adv7482_write_registers(client,
+					adv7482_set_virtual_channel3);
 	return ret;
 }
 
 const struct dev_pm_ops adv7482_pm_ops = {
 	SET_LATE_SYSTEM_SLEEP_PM_OPS(adv7482_suspend, adv7482_resume)
 };
-#else
-#define ADV7482_PM_OPS NULL
 #endif
 
 MODULE_DEVICE_TABLE(i2c, adv7482_id);
@@ -2421,7 +2432,9 @@ MODULE_DEVICE_TABLE(of, adv7482_of_ids);
 static struct i2c_driver adv7482_driver = {
 	.driver = {
 		.name	= DRIVER_NAME,
+#ifdef CONFIG_PM_SLEEP
 		.pm = &adv7482_pm_ops,
+#endif
 		.of_match_table = adv7482_of_ids,
 	},
 	.probe		= adv7482_probe,
