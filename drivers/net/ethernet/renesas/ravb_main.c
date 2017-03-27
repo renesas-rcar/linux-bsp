@@ -429,12 +429,6 @@ static int ravb_dmac_init(struct net_device *ndev)
 	ravb_ring_format(ndev, RAVB_BE);
 	ravb_ring_format(ndev, RAVB_NC);
 
-#if defined(__LITTLE_ENDIAN)
-	ravb_modify(ndev, CCC, CCC_BOC, 0);
-#else
-	ravb_modify(ndev, CCC, CCC_BOC, CCC_BOC);
-#endif
-
 	/* Set AVB RX */
 	ravb_write(ndev,
 		   RCR_EFFS | RCR_ENCF | RCR_ETS0 | RCR_ESF | 0x18000000, RCR);
@@ -1662,15 +1656,6 @@ static struct net_device_stats *ravb_get_stats(struct net_device *ndev)
 
 	nstats->tx_dropped += ravb_read(ndev, TROCR);
 	ravb_write(ndev, 0, TROCR);	/* (write clear) */
-	nstats->collisions += ravb_read(ndev, CDCR);
-	ravb_write(ndev, 0, CDCR);	/* (write clear) */
-	nstats->tx_carrier_errors += ravb_read(ndev, LCCR);
-	ravb_write(ndev, 0, LCCR);	/* (write clear) */
-
-	nstats->tx_carrier_errors += ravb_read(ndev, CERCR);
-	ravb_write(ndev, 0, CERCR);	/* (write clear) */
-	nstats->tx_carrier_errors += ravb_read(ndev, CEECR);
-	ravb_write(ndev, 0, CEECR);	/* (write clear) */
 
 	nstats->rx_packets = stats0->rx_packets + stats1->rx_packets;
 	nstats->tx_packets = stats0->tx_packets + stats1->tx_packets;
@@ -2230,13 +2215,25 @@ static int __maybe_unused ravb_resume(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct ravb_private *priv = netdev_priv(ndev);
 	struct platform_device *pdev = priv->pdev;
-	int ret = 0;
+	int ret = 0, phy_reset;
+	struct device_node *np = ndev->dev.parent->of_node;
 
 	/* All register have been reset to default values.
 	 * Restore all registers which where setup at probe time and
 	 * reopen device if it was running before system suspended.
 	 */
 
+	/* phy reset */
+	phy_reset = of_get_named_gpio(np, "phy-reset-gpios", 0);
+	if (gpio_is_valid(phy_reset)) {
+		ret = devm_gpio_request_one(&pdev->dev, phy_reset,
+					    GPIOF_OUT_INIT_LOW,
+					    "phy-reset");
+		if (!ret) {
+			msleep(20);
+			gpio_set_value(phy_reset, 1);
+		}
+	}
 	/* Set AVB config mode */
 	ravb_set_config_mode(ndev);
 
