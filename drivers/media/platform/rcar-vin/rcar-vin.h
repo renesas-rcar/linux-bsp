@@ -40,6 +40,9 @@
 /* Max number of CHSEL values for any Gen3 SoC */
 #define RCAR_CHSEL_MAX 6
 
+/* Time until source device reconnects */
+#define CONNECTION_TIME 1500
+
 enum chip_id {
 	RCAR_H1,
 	RCAR_M1,
@@ -220,6 +223,8 @@ struct rvin_dev {
 
 	struct v4l2_rect crop;
 	struct v4l2_rect compose;
+	struct workqueue_struct *work_queue;
+	struct delayed_work rvin_resume;
 
 	unsigned int index;
 	unsigned int chsel;
@@ -274,7 +279,7 @@ void rvin_crop_scale_comp(struct rvin_dev *vin);
 int rvin_set_chsel(struct rvin_dev *vin, u8 chsel);
 int rvin_get_chsel(struct rvin_dev *vin);
 
-int rvin_resume_start_streaming(struct rvin_dev *vin);
+void rvin_resume_start_streaming(struct work_struct *work);
 int rvin_suspend_stop_streaming(struct rvin_dev *vin);
 
 #endif
