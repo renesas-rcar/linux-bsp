@@ -1419,31 +1419,31 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 	rvin_disable_interrupts(vin);
 }
 
-int rvin_resume_start_streaming(struct rvin_dev *vin)
+void rvin_resume_start_streaming(struct work_struct *work)
 {
-	unsigned long flags;
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct rvin_dev *vin =
+			container_of(dwork, struct rvin_dev, rvin_resume);
 	int ret;
 
 	ret = __rvin_start_streaming(vin);
-	if (ret)
-		return ret;
-
-	spin_lock_irqsave(&vin->qlock, flags);
+	if (ret) {
+		vin_err(vin, "Error is occurred in streaming when resuming.\n");
+		return;
+	}
 
 	vin->sequence = 0;
-
 	rvin_crop_scale_comp(vin);
 	ret = rvin_setup(vin);
 
 	/* Return all buffers if something went wrong */
 	if (ret) {
+		vin_err(vin, "Error is occurred in setup when resuming.\n");
 		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
 		__rvin_stop_streaming(vin);
 	}
 
-	spin_unlock_irqrestore(&vin->qlock, flags);
-
-	return ret;
+	return;
 }
 
 int rvin_suspend_stop_streaming(struct rvin_dev *vin)
