@@ -76,7 +76,6 @@ struct vsp1_device {
 	struct device *dev;
 	const struct vsp1_device_info *info;
 	u32 version;
-	bool h3_es1x;
 
 	void __iomem *mmio;
 	struct rcar_fcp_device *fcp;
@@ -105,6 +104,7 @@ struct vsp1_device {
 	unsigned int num_brs_inputs;
 
 	bool auto_fld_mode;
+	bool underrun_workaround;
 
 	struct vsp1_drm *drm;
 	int index;
