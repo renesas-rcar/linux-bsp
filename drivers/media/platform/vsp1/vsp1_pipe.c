@@ -323,9 +323,11 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe)
 	return pipe->buffers_ready == mask;
 }
 
-void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
+void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
+			     unsigned int lif_index)
 {
 	unsigned long flags;
+	bool completed;
 
 	if (pipe == NULL)
 		return;
@@ -337,7 +339,16 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 	}
 	spin_unlock_irqrestore(&pipe->irqlock, flags);
 
-	vsp1_dlm_irq_frame_end(pipe->output->dlm);
+	completed = vsp1_dlm_irq_frame_end(pipe->output->dlm);
+	if (!completed) {
+		/*
+		 * If the DL commit raced with the frame end interrupt, the
+		 * commit ends up being postponed by one frame. Return
+		 * immediately without calling the pipeline's frame end handler
+		 * or incrementing the sequence number.
+		 */
+		return;
+	}
 
 	if (pipe->hgo)
 		vsp1_hgo_frame_end(pipe->hgo);
@@ -346,7 +357,7 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 		vsp1_hgt_frame_end(pipe->hgt);
 
 	if (pipe->frame_end)
-		pipe->frame_end(pipe);
+		pipe->frame_end(pipe, lif_index);
 
 	pipe->sequence++;
 }
