@@ -545,6 +545,17 @@ static int rcar_du_encoders_init_one(struct rcar_du_device *rcdu,
 		connector = entity;
 	}
 
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSPDL_SOURCE) &&
+			(rcdu->vsps[rcdu->info->vspdl_ch].num_brs == 0) &&
+			(enc_type == RCAR_DU_ENCODER_VGA)) {
+		dev_warn(rcdu->dev,
+		    "encoder type for %s, skipping because brs number is 0.\n",
+		     encoder->full_name);
+		of_node_put(encoder);
+		of_node_put(connector);
+		return -EINVAL;
+	}
+
 	ret = rcar_du_encoder_init(rcdu, enc_type, output, encoder, connector,
 					enc_name);
 	if (ret && ret != -EPROBE_DEFER)

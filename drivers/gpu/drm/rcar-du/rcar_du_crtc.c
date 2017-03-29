@@ -31,11 +31,6 @@
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
 
-static const struct soc_device_attribute r8a7795es1[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ /* sentinel */ }
-};
-
 static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 {
 	struct rcar_du_device *rcdu = rcrtc->group->dev;
@@ -110,10 +105,11 @@ void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
 
 void rcar_du_crtc_vbk_check(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	u32 i, timeout = 100, loop = 1;
 	u32 status;
 
-	if (soc_device_match(r8a7795es1))
+	if (rcdu->vbk_check_workaround)
 		loop = 2;
 
 	/* Check next VBK flag */
@@ -133,9 +129,11 @@ void rcar_du_crtc_vbk_check(struct rcar_du_crtc *rcrtc)
  * Hardware Setup
  */
 
-static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
+static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
+				 struct dpll_info *dpll, unsigned int extclk,
 				 unsigned int mode_clock)
 {
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	unsigned long dpllclk;
 	unsigned long diff;
 	unsigned long n, m, fdpll;
@@ -145,7 +143,7 @@ static void rcar_du_dpll_divider(struct dpll_info *dpll, unsigned int extclk,
 	for (n = 39; n < 120; n++) {
 		for (m = 0; m < 4; m++) {
 			for (fdpll = 1; fdpll < 32; fdpll++) {
-				if (soc_device_match(r8a7795es1)) {
+				if (rcdu->dpll_duty_rate_workaround) {
 					/* 1/2 (FRQSEL=1) for duty rate 50% */
 					dpllclk = extclk * (n + 1) / (m + 1)
 							 / (fdpll + 1) / 2;
@@ -217,7 +215,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		extclk = clk_get_rate(rcrtc->extclock);
 
 		if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
-			rcar_du_dpll_divider(dpll, extclk, mode_clock);
+			rcar_du_dpll_divider(rcrtc, dpll, extclk, mode_clock);
 			extclk = dpll->dpllclk;
 			dev_dbg(rcrtc->group->dev->dev,
 				"dpllclk:%d, fdpll:%d, n:%d, m:%d, diff:%d\n",
@@ -235,7 +233,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 			dev_dbg(rcrtc->group->dev->dev,
 				"crtc%u: using external clock\n", rcrtc->index);
 			if (rcdu->info->dpll_ch & (0x01 << rcrtc->index)) {
-				if (soc_device_match(r8a7795es1))
+				if (rcdu->dpll_duty_rate_workaround)
 					escr = ESCR_DCLKSEL_DCLKIN | 0x01;
 				else
 					escr = ESCR_DCLKSEL_DCLKIN;
@@ -251,7 +249,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 				if (rcrtc->index == DU_CH_2) {
 					dpll_reg |= (DPLLCR_PLCS0 |
 						DPLLCR_INCS_DPLL01_DOTCLKIN02);
-					if (soc_device_match(r8a7795es1))
+					if (rcdu->dpllcr_reg_workaround)
 						dpll_reg |= (0x01 << 20);
 				}
 
