@@ -73,6 +73,7 @@ struct rcar_du_device_info {
 	unsigned int num_lvds;
 	unsigned int dpll_ch;
 	unsigned int vspdl_pair_ch;
+	unsigned int vspdl_ch;
 };
 
 #define RCAR_DU_MAX_CRTCS		4
@@ -109,6 +110,10 @@ struct rcar_du_device {
 		wait_queue_head_t wait;
 		u32 pending;
 	} commit;
+
+	bool dpll_duty_rate_workaround;
+	bool dpllcr_reg_workaround;
+	bool vbk_check_workaround;
 };
 
 static inline bool rcar_du_has(struct rcar_du_device *rcdu,
