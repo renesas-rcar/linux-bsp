@@ -73,22 +73,18 @@
 #define TEMPD_IRQ_SHIFT(tsc_id)	(0x1 << (tsc_id + 3))
 #define GEN3_FUSE_MASK	0xFFF
 
-/* Attribute structs describing Salvator-X revisions */
-/* H3 ES1.0 and ES1.1 */
-static const struct soc_device_attribute r8a7795es1[]  = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{}
-};
+/* Check LSI revisions and set specific quirk value */
+#define FUSE_PSEUDO_VAL	BIT(0) /* FUSE's not been defined, use pseudo value */
+#define H3_1X_INIT	BIT(1) /* H3 1.x uses init flow that is diff others */
 
-static const struct soc_device_attribute r8a7795[]  = {
-	{ .soc_id = "r8a7795", .revision = "ES2.0" },
-	{}
-};
-
-/* M3 ES1.0 */
-static const struct soc_device_attribute r8a7796es10[]  = {
-	{ .soc_id = "r8a7796", .revision = "ES1.0" },
-	{}
+static const struct soc_device_attribute ths_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*",
+	  .data = (void *)(FUSE_PSEUDO_VAL | H3_1X_INIT), },
+	{ .soc_id = "r8a7795", .revision = "ES2.0",
+	  .data = (void *)FUSE_PSEUDO_VAL, },
+	{ .soc_id = "r8a7796",
+	  .data = (void *)FUSE_PSEUDO_VAL, },
+	{/*sentinel*/}
 };
 
 /* Equation coefficients for thermal calculation formula.*/
@@ -120,6 +116,7 @@ struct rcar_thermal_priv {
 	int id;
 	int irq;
 	const struct rcar_thermal_data *data;
+	u32 ths_quirks;
 };
 
 struct rcar_thermal_data {
@@ -157,7 +154,7 @@ static int round_temp(int temp)
 
 	if (tmp1 < 250)
 		result = CODETSD(tmp2);
-	else if (tmp1 < 750 && tmp1 >= 250)
+	else if ((tmp1 < 750) && (tmp1 >= 250))
 		result = CODETSD(tmp2) + 500;
 	else
 		result = CODETSD(tmp2) + 1000;
@@ -179,9 +176,7 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 	 * these registers have not been programmed yet.
 	 * We will use fixed value as temporary solution.
 	 */
-	if (soc_device_match(r8a7795es1)
-		|| soc_device_match(r8a7795)
-		|| soc_device_match(r8a7796es10)) {
+	if (priv->ths_quirks & FUSE_PSEUDO_VAL) {
 		priv->factor.ptat_1 = 2351;
 		priv->factor.ptat_2 = 1509;
 		priv->factor.ptat_3 = 435;
@@ -274,8 +269,8 @@ int thermal_celsius_to_temp(struct equation_coefs coef,
 {
 	int temp_code, temp1, temp2;
 
-	temp1 = (ctemp * coef.a1 / 1000 + coef.b1) / 1000;
-	temp2 = (ctemp * coef.a2 / 1000 + coef.b2) / 1000;
+	temp1 = (((ctemp * coef.a1) / 1000) + coef.b1) / 1000;
+	temp2 = (((ctemp * coef.a2) / 1000) + coef.b2) / 1000;
 	temp_code = (temp1 + temp2) / 2;
 
 	return temp_code;
@@ -363,7 +358,7 @@ static int rcar_gen3_r8a7795_thermal_init(struct rcar_thermal_priv *priv)
 {
 	unsigned long flags;
 
-	if (soc_device_match(r8a7795es1)) {
+	if (priv->ths_quirks & H3_1X_INIT) {
 		spin_lock_irqsave(&priv->lock, flags);
 
 		rcar_thermal_write(priv, REG_GEN3_CTSR,  THBGR);
@@ -487,10 +482,17 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	int idle;
 	struct device_node *tz_nd, *tmp_nd;
 	int i, irq_cnt;
+	const struct soc_device_attribute *attr;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
+	attr = soc_device_match(ths_quirks_match);
+	if (attr)
+		priv->ths_quirks = (uintptr_t)attr->data;
+
+	pr_debug("%s: ths_quirks: 0x%x\n", __func__, priv->ths_quirks);
 
 	platform_set_drvdata(pdev, priv);
 
@@ -508,14 +510,15 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	if (irq) {
 		priv->irq = 1;
 		for_each_node_with_property(tz_nd, "polling-delay") {
-			tmp_nd = of_parse_phandle(tz_nd,
-					"thermal-sensors", 0);
-			if (tmp_nd && !strcmp(tmp_nd->full_name,
-					dev->of_node->full_name)) {
-				of_property_read_u32(tz_nd, "polling-delay",
-					&idle);
-				(idle > 0) ? (priv->irq = 0) :
-						(priv->irq = 1);
+			tmp_nd = of_parse_phandle(tz_nd, "thermal-sensors", 0);
+			if (!tmp_nd)
+				continue;
+			if (!strcmp(tmp_nd->full_name,
+						dev->of_node->full_name)) {
+				of_property_read_u32(tz_nd,
+						     "polling-delay", &idle);
+				if (idle > 0)
+					priv->irq = 0;
 				break;
 			}
 		}
