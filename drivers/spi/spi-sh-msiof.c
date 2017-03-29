@@ -30,11 +30,11 @@
 #include <linux/sh_dma.h>
 #include <linux/sys_soc.h>
 
-#include <linux/soc/renesas/s2ram_ddr_backup.h>
 #include <linux/spi/sh_msiof.h>
 #include <linux/spi/spi.h>
 
 #include <asm/unaligned.h>
+
 
 struct sh_msiof_chipdata {
 	u16 tx_fifo_size;
@@ -62,7 +62,15 @@ struct sh_msiof_spi_priv {
 	void *rx_dma_page;
 	dma_addr_t tx_dma_addr;
 	dma_addr_t rx_dma_addr;
+	unsigned int transfer_workaround;
+	unsigned int chip;
 };
+
+#define RCAR_SERIES_H3	(1 << 0)
+#define RCAR_SERIES_M3	(1 << 1)
+#define RCAR_H3_ES10	(1 << 0)
+#define RCAR_H3_ES11	(1 << 1)
+
 
 #define TMDR1	0x00	/* Transmit Mode Register 1 */
 #define TMDR2	0x04	/* Transmit Mode Register 2 */
@@ -135,6 +143,8 @@ struct sh_msiof_spi_priv {
 #define CTR_TFSE	0x00004000 /* Transmit Frame Sync Signal Output Enable */
 #define CTR_TXE		0x00000200 /* Transmit Enable */
 #define CTR_RXE		0x00000100 /* Receive Enable */
+#define CTR_TXRST	0x00000002 /* Transmit Reset */
+#define CTR_RXRST	0x00000001 /* Receive Reset */
 
 /* FCTR */
 #define FCTR_TFWM_MASK	0xe0000000 /* Transmit FIFO Watermark */
@@ -192,11 +202,25 @@ struct sh_msiof_spi_priv {
 #define IER_RFUDFE	0x00000010 /* Receive FIFO Underflow Enable */
 #define IER_RFOVFE	0x00000008 /* Receive FIFO Overflow Enable */
 
+/* H3 Series. */
+static const struct soc_device_attribute r8a7795[] = {
+	{ .soc_id = "r8a7795" },
+	{ },
+};
+
+/* M3 Series. */
+static const struct soc_device_attribute r8a7796[] = {
+	{ .soc_id = "r8a7796" },
+	{ },
+};
+
+/* H3 ES1.0 */
 static const struct soc_device_attribute r8a7795es10[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.0" },
 	{ },
 };
 
+/* H3 ES1.1 */
 static const struct soc_device_attribute r8a7795es11[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.1" },
 	{ },
@@ -209,146 +233,6 @@ static int msiof_rcar_is_gen3(struct device *dev)
 	return of_device_is_compatible(node, "renesas,msiof-r8a7795") ||
 		of_device_is_compatible(node, "renesas,msiof-r8a7796");
 }
-
-#ifdef CONFIG_RCAR_DDR_BACKUP
-static struct hw_register msiof0_ip_regs[] = {
-	{"SITMDR1",	0x00, 32, 0},
-	{"SITMDR2",	0x04, 32, 0},
-	{"SITMDR3",	0x08, 32, 0},
-	{"SIRMDR1",	0x10, 32, 0},
-	{"SIRMDR2",	0x14, 32, 0},
-	{"SIRMDR3",	0x18, 32, 0},
-	{"SITSCR",	0x20, 32, 0},
-	{"SICTR",	0x28, 32, 0},
-	{"SIFCTR",	0x30, 32, 0},
-	{"SIIER",	0x44, 32, 0},
-};
-
-static struct rcar_ip msiof0_ip = {
-	.ip_name = "MSIOF0",
-	.reg_count = ARRAY_SIZE(msiof0_ip_regs),
-	.ip_reg = msiof0_ip_regs,
-};
-
-static struct hw_register msiof1_ip_regs[] = {
-	{"SITMDR1",	0x00, 32, 0},
-	{"SITMDR2",	0x04, 32, 0},
-	{"SITMDR3",	0x08, 32, 0},
-	{"SIRMDR1",	0x10, 32, 0},
-	{"SIRMDR2",	0x14, 32, 0},
-	{"SIRMDR3",	0x18, 32, 0},
-	{"SITSCR",	0x20, 32, 0},
-	{"SICTR",	0x28, 32, 0},
-	{"SIFCTR",	0x30, 32, 0},
-	{"SIIER",	0x44, 32, 0},
-};
-
-static struct rcar_ip msiof1_ip = {
-	.ip_name = "MSIOF1",
-	.reg_count = ARRAY_SIZE(msiof1_ip_regs),
-	.ip_reg = msiof1_ip_regs,
-};
-
-static struct hw_register msiof2_ip_regs[] = {
-	{"SITMDR1",	0x00, 32, 0},
-	{"SITMDR2",	0x04, 32, 0},
-	{"SITMDR3",	0x08, 32, 0},
-	{"SIRMDR1",	0x10, 32, 0},
-	{"SIRMDR2",	0x14, 32, 0},
-	{"SIRMDR3",	0x18, 32, 0},
-	{"SITSCR",	0x20, 32, 0},
-	{"SICTR",	0x28, 32, 0},
-	{"SIFCTR",	0x30, 32, 0},
-	{"SIIER",	0x44, 32, 0},
-};
-
-static struct rcar_ip msiof2_ip = {
-	.ip_name = "MSIO2",
-	.reg_count = ARRAY_SIZE(msiof2_ip_regs),
-	.ip_reg = msiof2_ip_regs,
-};
-
-static struct hw_register msiof3_ip_regs[] = {
-	{"SITMDR1",	0x00, 32, 0},
-	{"SITMDR2",	0x04, 32, 0},
-	{"SITMDR3",	0x08, 32, 0},
-	{"SIRMDR1",	0x10, 32, 0},
-	{"SIRMDR2",	0x14, 32, 0},
-	{"SIRMDR3",	0x18, 32, 0},
-	{"SITSCR",	0x20, 32, 0},
-	{"SICTR",	0x28, 32, 0},
-	{"SIFCTR",	0x30, 32, 0},
-	{"SIIER",	0x44, 32, 0},
-};
-
-static struct rcar_ip msiof3_ip = {
-	.ip_name = "MSIOF3",
-	.reg_count = ARRAY_SIZE(msiof3_ip_regs),
-	.ip_reg = msiof3_ip_regs,
-};
-
-struct msiof_ip_info {
-	const char *name;
-	struct rcar_ip *ip;
-};
-
-static struct msiof_ip_info ip_info_tbl[] = {
-	{"e6e90000.spi", &msiof0_ip},
-	{"e6ea0000.spi", &msiof1_ip},
-	{"e6c00000.spi", &msiof2_ip},
-	{"e6c10000.spi", &msiof3_ip},
-	{NULL, NULL},
-};
-
-static struct rcar_ip *msiof_get_ip(const char *name)
-{
-	struct msiof_ip_info *ip_info = ip_info_tbl;
-	struct rcar_ip *ip = NULL;
-
-	while (ip_info->name) {
-		if (!strcmp(ip_info->name, name)) {
-			ip = ip_info->ip;
-			break;
-		}
-		ip_info++;
-	}
-
-	return ip;
-}
-
-static int msiof_save_regs(struct platform_device *pdev)
-{
-	struct rcar_ip *ip = msiof_get_ip(pdev->name);
-	int ret = -ENODEV;
-
-	if (ip) {
-		struct sh_msiof_spi_priv *priv = platform_get_drvdata(pdev);
-
-		if (!ip->virt_addr)
-			ip->virt_addr = priv->mapbase;
-
-		ret = rcar_handle_registers(ip, DO_BACKUP);
-		pr_debug("%s: Backup %s register\n", __func__, ip->ip_name);
-	} else
-		pr_err("%s: Failed to find MSIOF device\n", __func__);
-
-	return ret;
-}
-
-static int msiof_restore_regs(struct platform_device *pdev)
-{
-	struct rcar_ip *ip = msiof_get_ip(pdev->name);
-	int ret = -ENODEV;
-
-	if (ip) {
-		ret = rcar_handle_registers(ip, DO_RESTORE);
-		pr_debug("%s: Restore %s register\n", __func__, ip->ip_name);
-	} else
-		pr_err("%s: Failed to find MSIOF device\n", __func__);
-
-	return ret;
-}
-#endif /* CONFIG_RCAR_DDR_BACKUP*/
 
 static u32 sh_msiof_read(struct sh_msiof_spi_priv *p, int reg_offs)
 {
@@ -408,6 +292,25 @@ static irqreturn_t sh_msiof_spi_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static void sh_msiof_spi_reset_regs(struct sh_msiof_spi_priv *p)
+{
+	u32 mask = CTR_TXRST | CTR_RXRST;
+	u32 data;
+	int k;
+
+	data = sh_msiof_read(p, CTR);
+	data |= mask;
+
+	sh_msiof_write(p, CTR, data);
+
+	for (k = 100; k > 0; k--) {
+		if (!(sh_msiof_read(p, CTR) & mask))
+			break;
+
+		udelay(10);
+	}
+}
+
 static struct {
 	unsigned short div;
 	unsigned short brdv;
@@ -434,6 +337,10 @@ static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 		brps = DIV_ROUND_UP(div, sh_msiof_spi_div_table[k].div);
 		/* SCR_BRDV_DIV_1 is valid only if BRPS is x 1/1 or x 1/2 */
 		if (sh_msiof_spi_div_table[k].div == 1 && brps > 2)
+			continue;
+		/* r8a7796 is invalid only when BRPS x BRDV = 1/1 */
+		if (p->chip == RCAR_SERIES_M3 &&
+			sh_msiof_spi_div_table[k].div == 1 && brps == 1)
 			continue;
 		if (brps <= 32) /* max of brdv is 32 */
 			break;
@@ -507,13 +414,13 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	tmp |= !cs_high << MDR1_SYNCAC_SHIFT;
 	tmp |= lsb_first << MDR1_BITLSB_SHIFT;
 	tmp |= sh_msiof_spi_get_dtdl_and_syncdl(p);
-	if (soc_device_match(r8a7795es10)) {
+	if (p->transfer_workaround == RCAR_H3_ES10) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp &= ~MDR1_DTDL_MASK;
 			tmp |= 0 << MDR1_DTDL_SHIFT;
 		}
 	}
-	if (soc_device_match(r8a7795es11)) {
+	if (p->transfer_workaround == RCAR_H3_ES11) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp &= ~MDR1_DTDL_MASK;
 			tmp |= 1 << MDR1_DTDL_SHIFT;
@@ -529,13 +436,13 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 		sh_msiof_write(p, TMDR1, tmp | MDR1_TRMD | TMDR1_PCON);
 	} else
 		sh_msiof_write(p, TMDR1, tmp | TMDR1_PCON);
-	if (soc_device_match(r8a7795es10)) {
+	if (p->transfer_workaround == RCAR_H3_ES10) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp &= ~MDR1_DTDL_MASK;
 			tmp |= 2 << MDR1_DTDL_SHIFT;
 		}
 	}
-	if (soc_device_match(r8a7795es11)) {
+	if (p->transfer_workaround == RCAR_H3_ES11) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp &= ~MDR1_DTDL_MASK;
 			tmp |= 1 << MDR1_DTDL_SHIFT;
@@ -548,7 +455,7 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p,
 	sh_msiof_write(p, RMDR1, tmp);
 
 	tmp = 0;
-	if (soc_device_match(r8a7795es10)) {
+	if (p->transfer_workaround == RCAR_H3_ES10) {
 		if (p->mode == SPI_MSIOF_MASTER) {
 			tmp |= 0 << CTR_TSCKIZ_POL_SHIFT;
 			tmp |= 0 << CTR_RSCKIZ_POL_SHIFT;
@@ -863,7 +770,17 @@ static int sh_msiof_spi_txrx_once(struct sh_msiof_spi_priv *p,
 	}
 
 	/* wait for tx fifo to be emptied / rx fifo to be filled */
-	if (!wait_for_completion_timeout(&p->done, timeout)) {
+	if (p->mode == SPI_MSIOF_MASTER)
+		ret = wait_for_completion_timeout(&p->done, timeout);
+	else {
+		ret = wait_for_completion_interruptible_timeout(
+						&p->done, timeout);
+		if (ret == -ERESTARTSYS) {
+			dev_err(&p->pdev->dev, "PIO mode. Task interrupt\n");
+			goto stop_reset;
+		}
+	}
+	if (!ret) {
 		dev_err(&p->pdev->dev, "PIO timeout\n");
 		ret = -ETIMEDOUT;
 		goto stop_reset;
@@ -980,7 +897,17 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 
 	/* wait for Tx/Rx DMA completion */
 	if (tx) {
-		ret = wait_for_completion_timeout(&p->done_dma_tx, timeout);
+		if (p->mode == SPI_MSIOF_MASTER)
+			ret = wait_for_completion_timeout(
+					&p->done_dma_tx, timeout);
+		else {
+			ret = wait_for_completion_interruptible_timeout(
+						&p->done_dma_tx, timeout);
+			if (ret == -ERESTARTSYS) {
+				dev_err(&p->pdev->dev, "Tx DMA. Task interrupt\n");
+				goto stop_reset;
+			}
+		}
 		if (!ret) {
 			dev_err(&p->pdev->dev, "Tx DMA timeout\n");
 			ret = -ETIMEDOUT;
@@ -991,7 +918,19 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 			sh_msiof_write(p, IER, ier_bits);
 
 			/* wait for tx fifo to be emptied */
-			if (!wait_for_completion_timeout(&p->done, timeout)) {
+			if (p->mode == SPI_MSIOF_MASTER)
+				ret = wait_for_completion_timeout(
+							&p->done, timeout);
+			else {
+				ret = wait_for_completion_interruptible_timeout(
+							&p->done, timeout);
+				if (ret == -ERESTARTSYS) {
+					dev_err(&p->pdev->dev,
+						"Tx fifo to be emptied. Task interrupt\n");
+					goto stop_reset;
+				}
+			}
+			if (!ret) {
 				dev_err(&p->pdev->dev,
 					"Tx fifo to be emptied timeout\n");
 				ret = -ETIMEDOUT;
@@ -1000,7 +939,17 @@ static int sh_msiof_dma_once(struct sh_msiof_spi_priv *p, const void *tx,
 		}
 	}
 	if (rx) {
-		ret = wait_for_completion_timeout(&p->done_dma_rx, timeout);
+		if (p->mode == SPI_MSIOF_MASTER)
+			ret = wait_for_completion_timeout(
+					&p->done_dma_rx, timeout);
+		else {
+			ret = wait_for_completion_interruptible_timeout(
+						&p->done_dma_rx, timeout);
+			if (ret == -ERESTARTSYS) {
+				dev_err(&p->pdev->dev, "Rx DMA. Task interrupt\n");
+				goto stop_reset;
+			}
+		}
 		if (!ret) {
 			dev_err(&p->pdev->dev, "Rx DMA timeout\n");
 			ret = -ETIMEDOUT;
@@ -1099,6 +1048,9 @@ static int sh_msiof_transfer_one(struct spi_master *master,
 	int n;
 	bool swab;
 	int ret;
+
+	/* reset registers */
+	sh_msiof_spi_reset_regs(p);
 
 	/* setup clocks (clock already enabled in chipselect()) */
 	if (p->mode == SPI_MSIOF_MASTER)
@@ -1462,6 +1414,20 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
+	if (soc_device_match(r8a7795))
+		p->chip = RCAR_SERIES_H3;
+	else if (soc_device_match(r8a7796))
+		p->chip = RCAR_SERIES_M3;
+	else
+		p->chip = 0;
+
+	if (soc_device_match(r8a7795es10))
+		p->transfer_workaround = RCAR_H3_ES10;
+	else if (soc_device_match(r8a7795es11))
+		p->transfer_workaround = RCAR_H3_ES11;
+	else
+		p->transfer_workaround = 0;
+
 	init_completion(&p->done);
 	init_completion(&p->done_dma_tx);
 	init_completion(&p->done_dma_rx);
@@ -1576,11 +1542,6 @@ static int sh_msiof_spi_suspend(struct device *dev)
 	if (ret)
 		return ret;
 
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	pm_runtime_get_sync(dev);
-	ret = msiof_save_regs(pdev);
-	pm_runtime_put(dev);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
 	return ret;
 }
 
@@ -1589,12 +1550,6 @@ static int sh_msiof_spi_resume(struct device *dev)
 	int ret = 0;
 	struct platform_device *pdev = to_platform_device(dev);
 	struct sh_msiof_spi_priv *p = platform_get_drvdata(pdev);
-
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	pm_runtime_get_sync(dev);
-	ret = msiof_restore_regs(pdev);
-	pm_runtime_put(dev);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 	ret = spi_master_resume(p->master);
 	if (ret)
@@ -1616,7 +1571,6 @@ static struct platform_driver sh_msiof_spi_drv = {
 	.id_table	= spi_driver_ids,
 	.driver		= {
 		.name		= "spi_sh_msiof",
-		.pm		= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(sh_msiof_match),
 	},
 };
