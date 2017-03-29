@@ -21,6 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/sys_soc.h>
+#include <linux/workqueue.h>
 
 #include <media/v4l2-of.h>
 
@@ -1481,6 +1482,13 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
+	vin->work_queue = create_singlethread_workqueue(dev_name(vin->dev));
+	if (!vin->work_queue) {
+		ret = -ENOMEM;
+		goto error;
+	}
+	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
+
 	platform_set_drvdata(pdev, vin);
 
 	return 0;
@@ -1495,6 +1503,8 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	struct rvin_dev *vin = platform_get_drvdata(pdev);
 
 	pm_runtime_disable(&pdev->dev);
+	cancel_delayed_work_sync(&vin->rvin_resume);
+	destroy_workqueue(vin->work_queue);
 
 	rvin_v4l2_remove(vin);
 
@@ -1541,7 +1551,8 @@ static int rcar_vin_resume(struct device *dev)
 		return 0;
 
 	pm_runtime_get_sync(vin->dev);
-	ret = rvin_resume_start_streaming(vin);
+	queue_delayed_work(vin->work_queue, &vin->rvin_resume,
+				msecs_to_jiffies(CONNECTION_TIME));
 
 	return ret;
 }
