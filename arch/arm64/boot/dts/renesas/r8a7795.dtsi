@@ -173,10 +173,10 @@
 				compatible = "arm,idle-state";
 				arm,psci-suspend-param = <0x0010000>;
 				local-timer-stop;
-				entry-latency-us = <639>;
-				exit-latency-us = <680>;
-				min-residency-us = <1088>;
-				status = "disabled";
+				entry-latency-us = <400>;
+				exit-latency-us = <500>;
+				min-residency-us = <4000>;
+				status = "okay";
 			};
 		};
 	};
@@ -204,6 +204,7 @@
 			opp-hz = /bits/ 64 <1500000000>;
 			opp-microvolt = <820000>;
 			clock-latency-ns = <300000>;
+			opp-suspend;
 		};
 		opp@1600000000 {
 			opp-hz = /bits/ 64 <1600000000>;
@@ -237,6 +238,7 @@
 			opp-hz = /bits/ 64 <1500000000>;
 			opp-microvolt = <820000>;
 			clock-latency-ns = <300000>;
+			opp-suspend;
 		};
 		opp@1600000000 {
 			opp-hz = /bits/ 64 <1600000000>;
@@ -270,6 +272,7 @@
 			opp-hz = /bits/ 64 <1500000000>;
 			opp-microvolt = <820000>;
 			clock-latency-ns = <300000>;
+			opp-suspend;
 		};
 		opp@1600000000 {
 			opp-hz = /bits/ 64 <1600000000>;
@@ -303,6 +306,7 @@
 			opp-hz = /bits/ 64 <1500000000>;
 			opp-microvolt = <790000>;
 			clock-latency-ns = <300000>;
+			opp-suspend;
 		};
 		opp@1600000000 {
 			opp-hz = /bits/ 64 <1600000000>;
@@ -336,6 +340,7 @@
 			opp-hz = /bits/ 64 <1500000000>;
 			opp-microvolt = <790000>;
 			clock-latency-ns = <300000>;
+			opp-suspend;
 		};
 		opp@1600000000 {
 			opp-hz = /bits/ 64 <1600000000>;
@@ -369,6 +374,7 @@
 			opp-hz = /bits/ 64 <1500000000>;
 			opp-microvolt = <770000>;
 			clock-latency-ns = <300000>;
+			opp-suspend;
 		};
 		opp@1600000000 {
 			opp-hz = /bits/ 64 <1600000000>;
@@ -402,6 +408,7 @@
 			opp-hz = /bits/ 64 <1500000000>;
 			opp-microvolt = <750000>;
 			clock-latency-ns = <300000>;
+			opp-suspend;
 		};
 		opp@1600000000 {
 			opp-hz = /bits/ 64 <1600000000>;
@@ -1648,11 +1655,11 @@
 
 			rcar_sound,dvc {
 				dvc0: dvc-0 {
-					dmas = <&audma0 0xbc>;
+					dmas = <&audma1 0xbc>;
 					dma-names = "tx";
 				};
 				dvc1: dvc-1 {
-					dmas = <&audma0 0xbe>;
+					dmas = <&audma1 0xbe>;
 					dma-names = "tx";
 				};
 			};
@@ -1800,7 +1807,9 @@
 				 <&cpg CPG_MOD 1026>, <&cpg CPG_MOD 1027>,
 				 <&cpg CPG_MOD 1028>, <&cpg CPG_MOD 1029>,
 				 <&cpg CPG_MOD 1030>, <&cpg CPG_MOD 1031>,
-				 <&cpg CPG_MOD 1019>, <&cpg CPG_MOD 1018>;
+				 <&cpg CPG_MOD 1019>, <&cpg CPG_MOD 1018>,
+				 <&cpg CPG_MOD 501>, <&cpg CPG_MOD 502>,
+				 <&cpg CPG_MOD 922>;
 			clock-names = "adsp",
 				      "ssi-all",
 				      "ssi.9", "ssi.8", "ssi.7", "ssi.6",
@@ -1809,7 +1818,9 @@
 				      "src.9", "src.8", "src.7", "src.6",
 				      "src.5", "src.4", "src.3", "src.2",
 				      "src.1", "src.0",
-				      "dvc.0", "dvc.1";
+				      "dvc.0", "dvc.1",
+				      "audmac.1", "audmac.0",
+				      "adg";
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
@@ -2609,6 +2620,7 @@
 			renesas,has-bru;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
+			renesas,#burst_access = <1>;
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			status = "disabled";
 		};
@@ -2635,6 +2647,7 @@
 			renesas,has-bru;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
+			renesas,#burst_access = <0>;
 			power-domains = <&sysc R8A7795_PD_A3VP>;
 			status = "disabled";
 		};
