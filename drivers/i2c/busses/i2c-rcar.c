@@ -33,7 +33,6 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
-#include <linux/soc/renesas/s2ram_ddr_backup.h>
 
 /* register offsets */
 #define ICSCR	0x00	/* slave ctrl */
@@ -149,226 +148,6 @@ struct rcar_i2c_priv {
 
 #define LOOP_TIMEOUT	1024
 
-#ifdef CONFIG_RCAR_DDR_BACKUP
-static struct hw_register i2c0_ip_regs[] = {
-	{"ICSCR",   0x00, 32, 0},
-	{"ICMCR",   0x04, 32, 0},
-	{"ICSIER",  0x10, 32, 0},
-	{"ICMIER",  0x14, 32, 0},
-	{"ICCCR",   0x18, 32, 0},
-	{"ICSAR",   0x1C, 32, 0},
-	{"ICMAR",   0x20, 32, 0},
-	{"ICCCR2",  0x28, 32, 0},
-	{"ICMPR",   0x2C, 32, 0},
-	{"ICHPR",   0x30, 32, 0},
-	{"ICLPR",   0x34, 32, 0},
-	{"ICDMAER", 0x3C, 32, 0},
-	{"ICFBSCR", 0x38, 32, 0},
-};
-
-static struct rcar_ip i2c0_ip = {
-	.ip_name = "I2C0",
-	.reg_count = ARRAY_SIZE(i2c0_ip_regs),
-	.ip_reg = i2c0_ip_regs,
-};
-
-static struct hw_register i2c1_ip_regs[] = {
-	{"ICSCR",   0x00, 32, 0},
-	{"ICMCR",   0x04, 32, 0},
-	{"ICSIER",  0x10, 32, 0},
-	{"ICMIER",  0x14, 32, 0},
-	{"ICCCR",   0x18, 32, 0},
-	{"ICSAR",   0x1C, 32, 0},
-	{"ICMAR",   0x20, 32, 0},
-	{"ICCCR2",  0x28, 32, 0},
-	{"ICMPR",   0x2C, 32, 0},
-	{"ICHPR",   0x30, 32, 0},
-	{"ICLPR",   0x34, 32, 0},
-	{"ICDMAER", 0x3C, 32, 0},
-	{"ICFBSCR", 0x38, 32, 0},
-};
-
-static struct rcar_ip i2c1_ip = {
-	.ip_name = "I2C1",
-	.reg_count = ARRAY_SIZE(i2c1_ip_regs),
-	.ip_reg = i2c1_ip_regs,
-};
-
-static struct hw_register i2c2_ip_regs[] = {
-	{"ICSCR",   0x00, 32, 0},
-	{"ICMCR",   0x04, 32, 0},
-	{"ICSIER",  0x10, 32, 0},
-	{"ICMIER",  0x14, 32, 0},
-	{"ICCCR",   0x18, 32, 0},
-	{"ICSAR",   0x1C, 32, 0},
-	{"ICMAR",   0x20, 32, 0},
-	{"ICCCR2",  0x28, 32, 0},
-	{"ICMPR",   0x2C, 32, 0},
-	{"ICHPR",   0x30, 32, 0},
-	{"ICLPR",   0x34, 32, 0},
-	{"ICDMAER", 0x3C, 32, 0},
-	{"ICFBSCR", 0x38, 32, 0},
-};
-
-static struct rcar_ip i2c2_ip = {
-	.ip_name = "I2C2",
-	.reg_count = ARRAY_SIZE(i2c2_ip_regs),
-	.ip_reg = i2c2_ip_regs,
-};
-
-static struct hw_register i2c3_ip_regs[] = {
-	{"ICSCR",   0x00, 32, 0},
-	{"ICMCR",   0x04, 32, 0},
-	{"ICSIER",  0x10, 32, 0},
-	{"ICMIER",  0x14, 32, 0},
-	{"ICCCR",   0x18, 32, 0},
-	{"ICSAR",   0x1C, 32, 0},
-	{"ICMAR",   0x20, 32, 0},
-	{"ICCCR2",  0x28, 32, 0},
-	{"ICMPR",   0x2C, 32, 0},
-	{"ICHPR",   0x30, 32, 0},
-	{"ICLPR",   0x34, 32, 0},
-	{"ICDMAER", 0x3C, 32, 0},
-	{"ICFBSCR", 0x38, 32, 0},
-};
-
-static struct rcar_ip i2c3_ip = {
-	.ip_name = "I2C3",
-	.reg_count = ARRAY_SIZE(i2c3_ip_regs),
-	.ip_reg = i2c3_ip_regs,
-};
-
-static struct hw_register i2c4_ip_regs[] = {
-	{"ICSCR",   0x00, 32, 0},
-	{"ICMCR",   0x04, 32, 0},
-	{"ICSIER",  0x10, 32, 0},
-	{"ICMIER",  0x14, 32, 0},
-	{"ICCCR",   0x18, 32, 0},
-	{"ICSAR",   0x1C, 32, 0},
-	{"ICMAR",   0x20, 32, 0},
-	{"ICCCR2",  0x28, 32, 0},
-	{"ICMPR",   0x2C, 32, 0},
-	{"ICHPR",   0x30, 32, 0},
-	{"ICLPR",   0x34, 32, 0},
-	{"ICDMAER", 0x3C, 32, 0},
-	{"ICFBSCR", 0x38, 32, 0},
-};
-
-static struct rcar_ip i2c4_ip = {
-	.ip_name = "I2C4",
-	.reg_count = ARRAY_SIZE(i2c4_ip_regs),
-	.ip_reg = i2c4_ip_regs,
-};
-
-static struct hw_register i2c5_ip_regs[] = {
-	{"ICSCR",   0x00, 32, 0},
-	{"ICMCR",   0x04, 32, 0},
-	{"ICSIER",  0x10, 32, 0},
-	{"ICMIER",  0x14, 32, 0},
-	{"ICCCR",   0x18, 32, 0},
-	{"ICSAR",   0x1C, 32, 0},
-	{"ICMAR",   0x20, 32, 0},
-	{"ICCCR2",  0x28, 32, 0},
-	{"ICMPR",   0x2C, 32, 0},
-	{"ICHPR",   0x30, 32, 0},
-	{"ICLPR",   0x34, 32, 0},
-	{"ICDMAER", 0x3C, 32, 0},
-	{"ICFBSCR", 0x38, 32, 0},
-};
-
-static struct rcar_ip i2c5_ip = {
-	.ip_name = "I2C5",
-	.reg_count = ARRAY_SIZE(i2c5_ip_regs),
-	.ip_reg = i2c5_ip_regs,
-};
-
-static struct hw_register i2c6_ip_regs[] = {
-	{"ICSCR",   0x00, 32, 0},
-	{"ICMCR",   0x04, 32, 0},
-	{"ICSIER",  0x10, 32, 0},
-	{"ICMIER",  0x14, 32, 0},
-	{"ICCCR",   0x18, 32, 0},
-	{"ICSAR",   0x1C, 32, 0},
-	{"ICMAR",   0x20, 32, 0},
-	{"ICCCR2",  0x28, 32, 0},
-	{"ICMPR",   0x2C, 32, 0},
-	{"ICHPR",   0x30, 32, 0},
-	{"ICLPR",   0x34, 32, 0},
-	{"ICDMAER", 0x3C, 32, 0},
-	{"ICFBSCR", 0x38, 32, 0},
-};
-
-static struct rcar_ip i2c6_ip = {
-	.ip_name = "I2C6",
-	.reg_count = ARRAY_SIZE(i2c6_ip_regs),
-	.ip_reg = i2c6_ip_regs,
-};
-
-struct i2c_ip_info {
-	const char *name;
-	struct rcar_ip *ip;
-};
-
-static struct i2c_ip_info ip_info_tbl[] = {
-	{"e6500000.i2c", &i2c0_ip},
-	{"e6508000.i2c", &i2c1_ip},
-	{"e6510000.i2c", &i2c2_ip},
-	{"e66d0000.i2c", &i2c3_ip},
-	{"e66d8000.i2c", &i2c4_ip},
-	{"e66e0000.i2c", &i2c5_ip},
-	{"e66e8000.i2c", &i2c6_ip},
-	{NULL, NULL},
-};
-
-static struct rcar_ip *rcar_i2c_get_ip(const char *name)
-{
-	struct i2c_ip_info *ip_info = ip_info_tbl;
-	struct rcar_ip *ip = NULL;
-
-	while (ip_info->name) {
-		if (!strcmp(ip_info->name, name)) {
-			ip = ip_info->ip;
-			break;
-		}
-		ip_info++;
-	}
-
-	return ip;
-}
-
-static int rcar_i2c_save_regs(struct platform_device *pdev)
-{
-	struct rcar_ip *ip = rcar_i2c_get_ip(pdev->name);
-	int ret = -ENODEV;
-
-	if (ip) {
-		struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
-
-		if (!ip->virt_addr)
-			ip->virt_addr = priv->io;
-
-		ret = rcar_handle_registers(ip, DO_BACKUP);
-		pr_debug("%s: Backup %s register\n", __func__, ip->ip_name);
-	} else
-		pr_err("%s: Failed to find i2c-rcar\n", __func__);
-
-	return ret;
-}
-
-static int rcar_i2c_restore_regs(struct platform_device *pdev)
-{
-	struct rcar_ip *ip = rcar_i2c_get_ip(pdev->name);
-	int ret = -ENODEV;
-
-	if (ip) {
-		ret = rcar_handle_registers(ip, DO_RESTORE);
-		pr_debug("%s: Restore %s register\n", __func__, ip->ip_name);
-	} else
-		pr_err("%s: Failed to find i2c-rcar\n", __func__);
-
-	return ret;
-}
-#endif /* CONFIG_RCAR_DDR_BACKUP */
 
 static void rcar_i2c_write(struct rcar_i2c_priv *priv, int reg, u32 val)
 {
@@ -1132,17 +911,12 @@ static int rcar_i2c_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int rcar_i2c_suspend(struct device *dev)
 {
-	int ret = 0;
 	struct platform_device *pdev = to_platform_device(dev);
 	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
 
 	priv->suspended = 1;
-#ifdef CONFIG_RCAR_DDR_BACKUP
-	pm_runtime_get_sync(dev);
-	ret = rcar_i2c_save_regs(pdev);
-	pm_runtime_put(dev);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
-	return ret;
+
+	return 0;
 }
 
 static int rcar_i2c_resume(struct device *dev)
@@ -1150,18 +924,24 @@ static int rcar_i2c_resume(struct device *dev)
 	int ret = 0;
 	struct platform_device *pdev = to_platform_device(dev);
 	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
+	struct i2c_timings i2c_t;
 
-#ifdef CONFIG_RCAR_DDR_BACKUP
+	i2c_parse_fw_timings(dev, &i2c_t, false);
 	pm_runtime_get_sync(dev);
-	ret = rcar_i2c_restore_regs(pdev);
+	ret = rcar_i2c_clock_calculate(priv, &i2c_t);
+	if (ret < 0)
+		dev_err(dev, "Could not calculate clock\n");
+
+	rcar_i2c_init(priv);
 	pm_runtime_put(dev);
-#endif /* CONFIG_RCAR_DDR_BACKUP */
+
 	priv->suspended = 0;
+
 	return ret;
 }
 
 static const struct dev_pm_ops rcar_i2c_pm_ops = {
-	SET_LATE_SYSTEM_SLEEP_PM_OPS(rcar_i2c_suspend,rcar_i2c_resume)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(rcar_i2c_suspend, rcar_i2c_resume)
 };
 
 #define DEV_PM_OPS (&rcar_i2c_pm_ops)
