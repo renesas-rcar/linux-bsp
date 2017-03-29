@@ -1,8 +1,8 @@
 /*
  * Device Tree Source for the H3ULCB (R-Car Starter Kit Premier) board
  *
- * Copyright (C) 2016-2017 Renesas Electronics Corp.
- * Copyright (C) 2016-2017 Cogent Embedded, Inc.
+ * Copyright (C) 2017 Renesas Electronics Corp.
+ * Copyright (C) 2017 Cogent Embedded, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -10,7 +10,7 @@
  */
 
 /dts-v1/;
-#include "r8a7795.dtsi"
+#include "r8a7795-es1.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 
@@ -456,7 +456,6 @@
 	vmmc-supply = <&reg_3p3v>;
 	vqmmc-supply = <&reg_1p8v>;
 	mmc-hs200-1_8v;
-	mmc-hs400-1_8v;
 	bus-width = <8>;
 	non-removable;
 	status = "okay";
@@ -514,6 +513,7 @@
 		reg = <0>;
 		interrupt-parent = <&gpio2>;
 		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
+		max-speed = <100>;
 	};
 };
 
@@ -544,7 +544,7 @@
 	spidev@0 {
 		compatible = "renesas,sh-msiof";
 		reg = <0>;
-		spi-max-frequency = <66666666>;
+		spi-max-frequency = <33333333>;
 		spi-cpha;
 		spi-cpol;
 	};
@@ -563,5 +563,9 @@
 };
 
 &vspi1 {
+	status = "okay";
+};
+
+&vspi2 {
 	status = "okay";
 };
