@@ -90,5 +90,6 @@ void rcar_du_crtc_route_output(struct drm_crtc *crtc,
 void rcar_du_crtc_vbk_check(struct rcar_du_crtc *rcrtc);
 int rcar_du_crtc_get(struct rcar_du_crtc *rcrtc);
 void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc);
+void rcar_du_crtc_finish_page_flip(struct rcar_du_crtc *rcrtc);
 
 #endif /* __RCAR_DU_CRTC_H__ */

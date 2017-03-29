@@ -419,7 +419,8 @@ static void vsp1_video_pipeline_run(struct vsp1_pipeline *pipe)
 	vsp1_pipeline_run(pipe);
 }
 
-static void vsp1_video_pipeline_frame_end(struct vsp1_pipeline *pipe)
+static void vsp1_video_pipeline_frame_end(struct vsp1_pipeline *pipe,
+					  unsigned int lif_index)
 {
 	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
 	enum vsp1_pipeline_state state;

@@ -93,7 +93,7 @@ struct vsp1_pipeline {
 	enum vsp1_pipeline_state state;
 	wait_queue_head_t wq;
 
-	void (*frame_end)(struct vsp1_pipeline *pipe);
+	void (*frame_end)(struct vsp1_pipeline *pipe, unsigned int lif_index);
 
 	struct mutex lock;
 	struct kref kref;
@@ -132,7 +132,8 @@ bool vsp1_pipeline_stopped(struct vsp1_pipeline *pipe);
 int vsp1_pipeline_stop(struct vsp1_pipeline *pipe);
 bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe);
 
-void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe);
+void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
+			     unsigned int lif_index);
 
 void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
 				   struct vsp1_dl_list *dl, unsigned int alpha);
