@@ -97,7 +97,7 @@ int __init rcar_avs_init(void)
 	avs_val = ioread32(ksen_adjcnts);
 
 	avs_val &= VOLCOND_MASK_0_3;
-	if (!(avs_val >= 0 && avs_val < AVS_TABLE_NUM)) {
+	if (!((avs_val >= 0) && (avs_val < AVS_TABLE_NUM))) {
 		avs_val = 0;
 		pr_debug("rcar-cpufreq: hw get invalid avs value, use avs_tb0\n");
 	}
