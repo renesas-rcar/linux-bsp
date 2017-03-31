@@ -166,6 +166,7 @@ struct tmio_mmc_host {
 	bool			sdio_irq_enabled;
 	u32			scc_tappos;
 	struct completion	completion;
+	int			drive_strength;
 
 	spinlock_t		trans_lock;
 	unsigned int		trans_state;
@@ -182,6 +183,10 @@ struct tmio_mmc_host {
 	int (*card_busy)(struct mmc_host *mmc);
 	int (*start_signal_voltage_switch)(struct mmc_host *mmc,
 					   struct mmc_ios *ios);
+	/* Sets the required Driver Strength from device */
+	int (*select_drive_strength)(struct mmc_card *card,
+				     unsigned int max_dtr, int host_drv,
+				     int card_drv, int *drv_type);
 	int (*write16_hook)(struct tmio_mmc_host *host, int addr);
 	void (*hw_reset)(struct tmio_mmc_host *host);
 	void (*prepare_tuning)(struct tmio_mmc_host *host, unsigned long tap);
