@@ -298,6 +298,15 @@ static int sh_mobile_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 	return pinctrl_select_state(priv->pinctrl, pin_state);
 }
 
+static int sh_mobile_sdhi_select_drive_strength(struct mmc_card *card,
+				unsigned int max_dtr, int host_drv,
+				int card_drv, int *drv_type)
+{
+	struct tmio_mmc_host *host = mmc_priv(card->host);
+
+	return host->drive_strength;
+}
+
 /* SCC registers */
 #define SH_MOBILE_SDHI_SCC_DTCNTL	0x000
 #define SH_MOBILE_SDHI_SCC_TAPSET	0x002
@@ -699,6 +708,8 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	struct resource *res;
 	int irq, ret, i;
 	struct tmio_mmc_dma *dma_priv;
+	const struct device_node *np = pdev->dev.of_node;
+	int tmp, drive_strength = 0;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
@@ -717,6 +728,9 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "cannot get clock: %d\n", ret);
 		goto eprobe;
 	}
+
+	if (np && !of_property_read_u32(np, "drive-strength", &tmp))
+		drive_strength = tmp & 0xf;
 
 	priv->pinctrl = devm_pinctrl_get(&pdev->dev);
 	if (!IS_ERR(priv->pinctrl)) {
@@ -751,6 +765,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	host->clk_update	= sh_mobile_sdhi_clk_update;
 	host->clk_disable	= sh_mobile_sdhi_clk_disable;
 	host->multi_io_quirk	= sh_mobile_sdhi_multi_io_quirk;
+	host->drive_strength	= drive_strength;
 
 	/* SDR speeds are only available on Gen2+ */
 	if (mmc_data->flags & TMIO_MMC_MIN_RCAR2) {
@@ -767,6 +782,8 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		host->prepare_hs400_tuning =
 			sh_mobile_sdhi_prepare_hs400_tuning;
 		host->reset_hs400_mode = sh_mobile_sdhi_reset_hs400_mode;
+		host->select_drive_strength =
+			sh_mobile_sdhi_select_drive_strength;
 	}
 
 	/* Orginally registers were 16 bit apart, could be 32 or 64 nowadays */
