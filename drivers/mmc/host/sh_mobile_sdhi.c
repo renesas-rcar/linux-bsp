@@ -421,6 +421,11 @@ static void sh_mobile_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 		SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) |
 		sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2));
 
+	/* HS400 mode sets sampling clock selection range to 4 */
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
+		       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
+		       0x4 << SH_MOBILE_SDHI_SCC_DTCNTL_TAPNUM_SHIFT);
+
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET, host->tap_set/2);
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
@@ -545,7 +550,7 @@ static int sh_mobile_sdhi_select_tuning(struct tmio_mmc_host *host)
 		select = true;
 
 	if (select)
-		host->tap_set = (tap_start + tap_end) / 2 % host->tap_num;
+		host->tap_set = ((tap_start + tap_end) / 2) % host->tap_num;
 	else
 		return -EIO;
 
