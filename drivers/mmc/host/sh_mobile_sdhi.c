@@ -761,6 +761,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		mmc_data->max_blk_count	= of_data->max_blk_count;
 		mmc_data->max_segs = of_data->max_segs;
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
+		dma_priv->sdbuf_64bit = of_data->sdbuf_64bit;
 		host->bus_shift = of_data->bus_shift;
 	}
 
