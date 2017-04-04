@@ -201,12 +201,6 @@ atomic_t netpoll_block_tx = ATOMIC_INIT(0);
 
 unsigned int bond_net_id __read_mostly;
 
-static __be32 arp_target[BOND_MAX_ARP_TARGETS];
-static int arp_ip_count;
-static int bond_mode	= BOND_MODE_ROUNDROBIN;
-static int xmit_hashtype = BOND_XMIT_POLICY_LAYER2;
-static int lacp_fast;
-
 /*-------------------------- Forward declarations ---------------------------*/
 
 static int bond_init(struct net_device *bond_dev);
@@ -371,9 +365,10 @@ down:
 /* Get link speed and duplex from the slave's base driver
  * using ethtool. If for some reason the call fails or the
  * values are invalid, set speed and duplex to -1,
- * and return.
+ * and return. Return 1 if speed or duplex settings are
+ * UNKNOWN; 0 otherwise.
  */
-static void bond_update_speed_duplex(struct slave *slave)
+static int bond_update_speed_duplex(struct slave *slave)
 {
 	struct net_device *slave_dev = slave->dev;
 	struct ethtool_link_ksettings ecmd;
@@ -383,24 +378,27 @@ static void bond_update_speed_duplex(struct slave *slave)
 	slave->duplex = DUPLEX_UNKNOWN;
 
 	res = __ethtool_get_link_ksettings(slave_dev, &ecmd);
-	if (res < 0)
-		return;
-
-	if (ecmd.base.speed == 0 || ecmd.base.speed == ((__u32)-1))
-		return;
-
+	if (res < 0) {
+		slave->link = BOND_LINK_DOWN;
+		return 1;
+	}
+	if (ecmd.base.speed == 0 || ecmd.base.speed == ((__u32)-1)) {
+		slave->link = BOND_LINK_DOWN;
+		return 1;
+	}
 	switch (ecmd.base.duplex) {
 	case DUPLEX_FULL:
 	case DUPLEX_HALF:
 		break;
 	default:
-		return;
+		slave->link = BOND_LINK_DOWN;
+		return 1;
 	}
 
 	slave->speed = ecmd.base.speed;
 	slave->duplex = ecmd.base.duplex;
 
-	return;
+	return 0;
 }
 
 const char *bond_slave_link_status(s8 link)
@@ -2039,8 +2037,7 @@ static int bond_miimon_inspect(struct bonding *bond)
 			if (link_state)
 				continue;
 
-			bond_set_slave_link_state(slave, BOND_LINK_FAIL,
-						  BOND_SLAVE_NOTIFY_LATER);
+			bond_propose_link_state(slave, BOND_LINK_FAIL);
 			slave->delay = bond->params.downdelay;
 			if (slave->delay) {
 				netdev_info(bond->dev, "link status down for %sinterface %s, disabling it in %d ms\n",
@@ -2055,8 +2052,7 @@ static int bond_miimon_inspect(struct bonding *bond)
 		case BOND_LINK_FAIL:
 			if (link_state) {
 				/* recovered before downdelay expired */
-				bond_set_slave_link_state(slave, BOND_LINK_UP,
-							  BOND_SLAVE_NOTIFY_LATER);
+				bond_propose_link_state(slave, BOND_LINK_UP);
 				slave->last_link_up = jiffies;
 				netdev_info(bond->dev, "link status up again after %d ms for interface %s\n",
 					    (bond->params.downdelay - slave->delay) *
@@ -2078,8 +2074,7 @@ static int bond_miimon_inspect(struct bonding *bond)
 			if (!link_state)
 				continue;
 
-			bond_set_slave_link_state(slave, BOND_LINK_BACK,
-						  BOND_SLAVE_NOTIFY_LATER);
+			bond_propose_link_state(slave, BOND_LINK_BACK);
 			slave->delay = bond->params.updelay;
 
 			if (slave->delay) {
@@ -2092,9 +2087,7 @@ static int bond_miimon_inspect(struct bonding *bond)
 			/*FALLTHRU*/
 		case BOND_LINK_BACK:
 			if (!link_state) {
-				bond_set_slave_link_state(slave,
-							  BOND_LINK_DOWN,
-							  BOND_SLAVE_NOTIFY_LATER);
+				bond_propose_link_state(slave, BOND_LINK_DOWN);
 				netdev_info(bond->dev, "link status down again after %d ms for interface %s\n",
 					    (bond->params.updelay - slave->delay) *
 					    bond->params.miimon,
@@ -2132,7 +2125,12 @@ static void bond_miimon_commit(struct bonding *bond)
 			continue;
 
 		case BOND_LINK_UP:
-			bond_update_speed_duplex(slave);
+			if (bond_update_speed_duplex(slave)) {
+				netdev_warn(bond->dev,
+					    "failed to get link speed/duplex for %s\n",
+					    slave->dev->name);
+				continue;
+			}
 			bond_set_slave_link_state(slave, BOND_LINK_UP,
 						  BOND_SLAVE_NOTIFY_NOW);
 			slave->last_link_up = jiffies;
@@ -2231,6 +2229,8 @@ static void bond_mii_monitor(struct work_struct *work)
 					    mii_work.work);
 	bool should_notify_peers = false;
 	unsigned long delay;
+	struct slave *slave;
+	struct list_head *iter;
 
 	delay = msecs_to_jiffies(bond->params.miimon);
 
@@ -2251,6 +2251,9 @@ static void bond_mii_monitor(struct work_struct *work)
 			goto re_arm;
 		}
 
+		bond_for_each_slave(bond, slave, iter) {
+			bond_commit_link_state(slave, BOND_SLAVE_NOTIFY_LATER);
+		}
 		bond_miimon_commit(bond);
 
 		rtnl_unlock();	/* might sleep, hold no other locks */
@@ -2575,10 +2578,8 @@ static bool bond_time_in_interval(struct bonding *bond, unsigned long last_act,
  * arp is transmitted to generate traffic. see activebackup_arp_monitor for
  * arp monitoring in active backup mode.
  */
-static void bond_loadbalance_arp_mon(struct work_struct *work)
+static void bond_loadbalance_arp_mon(struct bonding *bond)
 {
-	struct bonding *bond = container_of(work, struct bonding,
-					    arp_work.work);
 	struct slave *slave, *oldcurrent;
 	struct list_head *iter;
 	int do_failover = 0, slave_state_changed = 0;
@@ -2916,10 +2917,8 @@ check_state:
 	return should_notify_rtnl;
 }
 
-static void bond_activebackup_arp_mon(struct work_struct *work)
+static void bond_activebackup_arp_mon(struct bonding *bond)
 {
-	struct bonding *bond = container_of(work, struct bonding,
-					    arp_work.work);
 	bool should_notify_peers = false;
 	bool should_notify_rtnl = false;
 	int delta_in_ticks;
@@ -2970,6 +2969,17 @@ re_arm:
 
 		rtnl_unlock();
 	}
+}
+
+static void bond_arp_monitor(struct work_struct *work)
+{
+	struct bonding *bond = container_of(work, struct bonding,
+					    arp_work.work);
+
+	if (BOND_MODE(bond) == BOND_MODE_ACTIVEBACKUP)
+		bond_activebackup_arp_mon(bond);
+	else
+		bond_loadbalance_arp_mon(bond);
 }
 
 /*-------------------------- netdev event handling --------------------------*/
@@ -3228,10 +3238,7 @@ static void bond_work_init_all(struct bonding *bond)
 			  bond_resend_igmp_join_requests_delayed);
 	INIT_DELAYED_WORK(&bond->alb_work, bond_alb_monitor);
 	INIT_DELAYED_WORK(&bond->mii_work, bond_mii_monitor);
-	if (BOND_MODE(bond) == BOND_MODE_ACTIVEBACKUP)
-		INIT_DELAYED_WORK(&bond->arp_work, bond_activebackup_arp_mon);
-	else
-		INIT_DELAYED_WORK(&bond->arp_work, bond_loadbalance_arp_mon);
+	INIT_DELAYED_WORK(&bond->arp_work, bond_arp_monitor);
 	INIT_DELAYED_WORK(&bond->ad_work, bond_3ad_state_machine_handler);
 	INIT_DELAYED_WORK(&bond->slave_arr_work, bond_slave_arr_handler);
 }
@@ -3265,8 +3272,6 @@ static int bond_open(struct net_device *bond_dev)
 			}
 		}
 	}
-
-	bond_work_init_all(bond);
 
 	if (bond_is_lb(bond)) {
 		/* bond_alb_initialize must be called before the timer
@@ -3327,12 +3332,17 @@ static void bond_fold_stats(struct rtnl_link_stats64 *_res,
 	for (i = 0; i < sizeof(*_res) / sizeof(u64); i++) {
 		u64 nv = new[i];
 		u64 ov = old[i];
+		s64 delta = nv - ov;
 
 		/* detects if this particular field is 32bit only */
 		if (((nv | ov) >> 32) == 0)
-			res[i] += (u32)nv - (u32)ov;
-		else
-			res[i] += nv - ov;
+			delta = (s64)(s32)((u32)nv - (u32)ov);
+
+		/* filter anomalies, some drivers reset their stats
+		 * at down/up events.
+		 */
+		if (delta > 0)
+			res[i] += delta;
 	}
 }
 
@@ -4252,6 +4262,12 @@ static int bond_check_params(struct bond_params *params)
 	int arp_all_targets_value;
 	u16 ad_actor_sys_prio = 0;
 	u16 ad_user_port_key = 0;
+	__be32 arp_target[BOND_MAX_ARP_TARGETS];
+	int arp_ip_count;
+	int bond_mode	= BOND_MODE_ROUNDROBIN;
+	int xmit_hashtype = BOND_XMIT_POLICY_LAYER2;
+	int lacp_fast = 0;
+	int tlb_dynamic_lb = 0;
 
 	/* Convert string parameters. */
 	if (mode) {
@@ -4564,6 +4580,17 @@ static int bond_check_params(struct bond_params *params)
 	}
 	ad_user_port_key = valptr->value;
 
+	if (bond_mode == BOND_MODE_TLB) {
+		bond_opt_initstr(&newval, "default");
+		valptr = bond_opt_parse(bond_opt_get(BOND_OPT_TLB_DYNAMIC_LB),
+					&newval);
+		if (!valptr) {
+			pr_err("Error: No tlb_dynamic_lb default value");
+			return -EINVAL;
+		}
+		tlb_dynamic_lb = valptr->value;
+	}
+
 	if (lp_interval == 0) {
 		pr_warn("Warning: ip_interval must be between 1 and %d, so it was reset to %d\n",
 			INT_MAX, BOND_ALB_DEFAULT_LP_INTERVAL);
@@ -4591,7 +4618,7 @@ static int bond_check_params(struct bond_params *params)
 	params->min_links = min_links;
 	params->lp_interval = lp_interval;
 	params->packets_per_slave = packets_per_slave;
-	params->tlb_dynamic_lb = 1; /* Default value */
+	params->tlb_dynamic_lb = tlb_dynamic_lb;
 	params->ad_actor_sys_prio = ad_actor_sys_prio;
 	eth_zero_addr(params->ad_actor_system);
 	params->ad_user_port_key = ad_user_port_key;
@@ -4686,6 +4713,8 @@ int bond_create(struct net *net, const char *name)
 	res = register_netdevice(bond_dev);
 
 	netif_carrier_off(bond_dev);
+
+	bond_work_init_all(bond);
 
 	rtnl_unlock();
 	if (res < 0)
