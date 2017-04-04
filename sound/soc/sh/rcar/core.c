@@ -96,7 +96,7 @@
 #include <linux/pm_runtime.h>
 #include "rsnd.h"
 
-#define RSND_RATES SNDRV_PCM_RATE_8000_96000
+#define RSND_RATES SNDRV_PCM_RATE_8000_192000
 #define RSND_FMTS (SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S16_LE)
 
 static const struct of_device_id rsnd_of_match[] = {
@@ -674,12 +674,10 @@ static int rsnd_soc_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	/* set clock inversion */
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_NB_IF:
-		rdai->bit_clk_inv =  rdai->bit_clk_inv;
 		rdai->frm_clk_inv = !rdai->frm_clk_inv;
 		break;
 	case SND_SOC_DAIFMT_IB_NF:
 		rdai->bit_clk_inv = !rdai->bit_clk_inv;
-		rdai->frm_clk_inv =  rdai->frm_clk_inv;
 		break;
 	case SND_SOC_DAIFMT_IB_IF:
 		rdai->bit_clk_inv = !rdai->bit_clk_inv;
@@ -1037,15 +1035,6 @@ static int __rsnd_kctrl_new(struct rsnd_mod *mod,
 	cfg->io = io;
 
 	return 0;
-}
-
-void _rsnd_kctrl_remove(struct rsnd_kctrl_cfg *cfg)
-{
-	if (cfg->card && cfg->kctrl)
-		snd_ctl_remove(cfg->card, cfg->kctrl);
-
-	cfg->card = NULL;
-	cfg->kctrl = NULL;
 }
 
 int rsnd_kctrl_new_m(struct rsnd_mod *mod,
