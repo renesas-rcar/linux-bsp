@@ -27,31 +27,6 @@
 #include "core.h"
 #include "debug.h"
 
-DECLARE_EVENT_CLASS(dwc3_log_msg,
-	TP_PROTO(struct va_format *vaf),
-	TP_ARGS(vaf),
-	TP_STRUCT__entry(__dynamic_array(char, msg, DWC3_MSG_MAX)),
-	TP_fast_assign(
-		vsnprintf(__get_str(msg), DWC3_MSG_MAX, vaf->fmt, *vaf->va);
-	),
-	TP_printk("%s", __get_str(msg))
-);
-
-DEFINE_EVENT(dwc3_log_msg, dwc3_gadget,
-	TP_PROTO(struct va_format *vaf),
-	TP_ARGS(vaf)
-);
-
-DEFINE_EVENT(dwc3_log_msg, dwc3_core,
-	TP_PROTO(struct va_format *vaf),
-	TP_ARGS(vaf)
-);
-
-DEFINE_EVENT(dwc3_log_msg, dwc3_ep0,
-	TP_PROTO(struct va_format *vaf),
-	TP_ARGS(vaf)
-);
-
 DECLARE_EVENT_CLASS(dwc3_log_io,
 	TP_PROTO(void *base, u32 offset, u32 value),
 	TP_ARGS(base, offset, value),
@@ -198,7 +173,7 @@ DECLARE_EVENT_CLASS(dwc3_log_generic_cmd,
 		__entry->param = param;
 		__entry->status = status;
 	),
-	TP_printk("cmd '%s' [%d] param %08x --> status: %s",
+	TP_printk("cmd '%s' [%x] param %08x --> status: %s",
 		dwc3_gadget_generic_cmd_string(__entry->cmd),
 		__entry->cmd, __entry->param,
 		dwc3_gadget_generic_cmd_status_string(__entry->status)
