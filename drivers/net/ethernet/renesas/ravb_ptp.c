@@ -323,7 +323,7 @@ irqreturn_t ravb_ptp_interrupt(struct net_device *ndev)
 		}
 
 		result = IRQ_HANDLED;
-		gis &= ~GIS_PTCF;
+		gis &= ~GIS_PTMF;
 	}
 
 	ravb_write(ndev, gis, GIS);
