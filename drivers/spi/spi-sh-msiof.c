@@ -198,12 +198,15 @@ struct sh_msiof_spi_priv {
 /* Check LSI revisions and set specific quirk value */
 #define TRANSFER_WORKAROUND_H3WS10  BIT(0) /* H3ES1.0 workaround */
 #define TRANSFER_WORKAROUND_H3WS11  BIT(1) /* H3ES1.1 workaround */
+#define UNDIVIDED_PROHIBIT          BIT(2) /* Prohibition of 1/1 division */
 
 static const struct soc_device_attribute rcar_quirks_match[]  = {
 	{ .soc_id = "r8a7795", .revision = "ES1.0",
 		.data = (void *)TRANSFER_WORKAROUND_H3WS10, },
 	{ .soc_id = "r8a7795", .revision = "ES1.1",
 		.data = (void *)TRANSFER_WORKAROUND_H3WS11, },
+	{ .soc_id = "r8a7796",
+		.data = (void *)UNDIVIDED_PROHIBIT, },
 	{/*sentinel*/},
 };
 
@@ -318,6 +321,10 @@ static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 		brps = DIV_ROUND_UP(div, sh_msiof_spi_div_table[k].div);
 		/* SCR_BRDV_DIV_1 is valid only if BRPS is x 1/1 or x 1/2 */
 		if (sh_msiof_spi_div_table[k].div == 1 && brps > 2)
+			continue;
+		/* r8a7796 is invalid only when BRPS x BRDV = 1/1 */
+		if ((p->quirks & UNDIVIDED_PROHIBIT) &&
+			sh_msiof_spi_div_table[k].div == 1 && brps == 1)
 			continue;
 		if (brps <= 32) /* max of brdv is 32 */
 			break;
