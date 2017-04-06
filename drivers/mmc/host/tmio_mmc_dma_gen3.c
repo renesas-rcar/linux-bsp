@@ -55,12 +55,8 @@
 #define INFO2_DTRANERR1		BIT(17)
 #define INFO2_DTRANERR0		BIT(16)
 
-static const struct soc_device_attribute r8a7795es1x[] = {
+static const struct soc_device_attribute dma_quirks_match[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ },
-};
-
-static const struct soc_device_attribute r8a7796es10[] = {
 	{ .soc_id = "r8a7796", .revision = "ES1.0" },
 	{ },
 };
@@ -232,7 +228,7 @@ void tmio_mmc_request_dma(struct tmio_mmc_host *host,
 	/* Each value is set to non-zero to assume "enabling" each DMA */
 	host->chan_rx = host->chan_tx = (void *)0xdeadbeaf;
 
-	if (soc_device_match(r8a7795es1x) || soc_device_match(r8a7796es10))
+	if (soc_device_match(dma_quirks_match))
 		host->dma_tranend1 = INFO1_DTRANEND1_BIT17;
 	else /* ES 2.0 */
 		host->dma_tranend1 = INFO1_DTRANEND1_BIT20;
