@@ -338,8 +338,11 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 	host->mrq = NULL;
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	if (mrq->cmd->error || (mrq->data && mrq->data->error))
+	if (mrq->cmd->error || (mrq->data && mrq->data->error)) {
+		/* clear the interrupt flag register */
+		sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, 0);
 		tmio_mmc_abort_dma(host);
+	}
 
 	if (host->check_scc_error)
 		host->check_scc_error(host);
