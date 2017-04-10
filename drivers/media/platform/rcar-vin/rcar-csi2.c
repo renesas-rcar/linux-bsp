@@ -210,6 +210,7 @@ struct rcar_csi2 {
 	struct v4l2_mbus_framefmt mf;
 
 	u32 vc_num;
+	u32 ths_quirks;
 };
 
 #define csi_dbg(p, fmt, arg...)		dev_dbg(p->dev, fmt, ##arg)
@@ -217,16 +218,19 @@ struct rcar_csi2 {
 #define csi_warn(p, fmt, arg...)	dev_warn(p->dev, fmt, ##arg)
 #define csi_err(p, fmt, arg...)		dev_err(p->dev, fmt, ##arg)
 
-/* H3 WS1.x  */
-static const struct soc_device_attribute r8a7795es1x[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ },
-};
+/* Set PHY Test Interface Write Register in R-Car H3(ES2.0) */
+#define CSI2_PHY_ADD_INIT		BIT(0)
+/* HSFREQRANGE bit information of H3(ES1.x) and M3(ES1.0) are same. */
+#define CSI2_FREQ_RANGE_TABLE_WA	BIT(1)
 
-/* M3  */
-static const struct soc_device_attribute r8a7796[] = {
-	{ .soc_id = "r8a7796" },
-	{ },
+static const struct soc_device_attribute ths_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*",
+	  .data = (void *)CSI2_FREQ_RANGE_TABLE_WA, },
+	{ .soc_id = "r8a7795", .revision = "ES2.0",
+	  .data = (void *)CSI2_PHY_ADD_INIT, },
+	{ .soc_id = "r8a7796",
+	  .data = 0, },
+	{/*sentinel*/}
 };
 
 static irqreturn_t rcar_csi2_irq(int irq, void *data)
@@ -375,7 +379,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		  LSWAP_L2SEL(priv->swap[2]) | LSWAP_L3SEL(priv->swap[3]),
 		  priv->base + LSWAP_REG);
 
-	if (!soc_device_match(r8a7795es1x) && !soc_device_match(r8a7796)) {
+	if (priv->ths_quirks & CSI2_PHY_ADD_INIT) {
 		/* Set PHY Test Interface Write Register in R-Car H3(ES2.0) */
 		iowrite32(0x01cc01e2, priv->base + PHTW_REG);
 		iowrite32(0x010101e3, priv->base + PHTW_REG);
@@ -391,7 +395,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 	/* Set CSI0CLK Frequency Configuration Preset Register
 	 * in R-Car H3(ES2.0)
 	 */
-	if (!soc_device_match(r8a7795es1x) && !soc_device_match(r8a7796))
+	if (priv->ths_quirks & CSI2_PHY_ADD_INIT)
 		iowrite32(CSI0CLKFREQRANGE(32), priv->base + CSI0CLKFCPR_REG);
 
 	iowrite32(phycnt, priv->base + PHYCNT_REG);
@@ -605,6 +609,7 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	unsigned int i;
 	int ret;
 	u32 vc_num;
+	const struct soc_device_attribute *attr;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct rcar_csi2), GFP_KERNEL);
 	if (!priv)
@@ -615,8 +620,14 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 		return -ENODEV;
 	priv->info = match->data;
 
-	/* HSFREQRANGE bit information of H3(ES1.x) and M3(WS1.0) are same. */
-	if (soc_device_match(r8a7795es1x))
+	attr = soc_device_match(ths_quirks_match);
+	if (attr)
+		priv->ths_quirks = (uintptr_t)attr->data;
+
+	pr_debug("%s: ths_quirks: 0x%x\n", __func__, priv->ths_quirks);
+
+	/* HSFREQRANGE bit information of H3(ES1.x) and M3(ES1.0) are same. */
+	if (priv->ths_quirks & CSI2_FREQ_RANGE_TABLE_WA)
 		priv->info = &rcar_csi2_info_r8a7796;
 
 	priv->dev = &pdev->dev;
