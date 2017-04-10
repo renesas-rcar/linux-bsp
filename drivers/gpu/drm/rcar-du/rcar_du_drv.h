@@ -29,6 +29,11 @@ struct drm_fbdev_cma;
 struct rcar_du_device;
 struct rcar_du_lvdsenc;
 
+#define RCAR_DU_DPLL_DUTY_RATE_WA	(1 << 0)	/* DPLL duty rate workaround */
+#define RCAR_DU_DPLLCR_REG_WA		(1 << 1)	/* DPLL register workaround */
+#define RCAR_DU_VBK_CHECK_WA		(1 << 2)	/* VBK bit check workaround */
+#define RCAR_DU_R8A7795_ES1X_INFO_JUDGE	(1 << 3)	/* R8A7795(ES1.0) information */
+
 #define RCAR_DU_FEATURE_CRTC_IRQ_CLOCK	(1 << 0)	/* Per-CRTC IRQ and clock */
 #define RCAR_DU_FEATURE_EXT_CTRL_REGS	(1 << 1)	/* Has extended control registers */
 #define RCAR_DU_FEATURE_VSP1_SOURCE	(1 << 2)	/* Has inputs from VSP1 */
@@ -110,6 +115,8 @@ struct rcar_du_device {
 		wait_queue_head_t wait;
 		u32 pending;
 	} commit;
+
+	u32 ths_quirks;
 };
 
 static inline bool rcar_du_has(struct rcar_du_device *rcdu,

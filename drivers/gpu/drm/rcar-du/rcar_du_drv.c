@@ -276,16 +276,17 @@ static const struct rcar_du_device_info rcar_du_r8a7796_info = {
 	.dpll_ch =  BIT(1),
 };
 
-/* H3 WS1.0  */
-static const struct soc_device_attribute r8a7795es10[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.0" },
-	{ },
-};
-
-/* H3 WS1.1  */
-static const struct soc_device_attribute r8a7795es11[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.1" },
-	{ },
+static const struct soc_device_attribute ths_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*",
+	  .data = (void *)(RCAR_DU_DPLL_DUTY_RATE_WA
+			 | RCAR_DU_DPLLCR_REG_WA
+			 | RCAR_DU_VBK_CHECK_WA
+			 | RCAR_DU_R8A7795_ES1X_INFO_JUDGE), },
+	{ .soc_id = "r8a7795", .revision = "ES2.0",
+	  .data = 0, },
+	{ .soc_id = "r8a7796",
+	  .data = 0, },
+	{/*sentinel*/}
 };
 
 static const struct of_device_id rcar_du_of_table[] = {
@@ -533,6 +534,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 	struct drm_device *ddev;
 	struct resource *mem;
 	int ret;
+	const struct soc_device_attribute *attr;
 
 	/* Allocate and initialize the R-Car device structure. */
 	rcdu = devm_kzalloc(&pdev->dev, sizeof(*rcdu), GFP_KERNEL);
@@ -544,7 +546,13 @@ static int rcar_du_probe(struct platform_device *pdev)
 	rcdu->dev = &pdev->dev;
 	rcdu->info = of_match_device(rcar_du_of_table, rcdu->dev)->data;
 
-	if (soc_device_match(r8a7795es10) || soc_device_match(r8a7795es11))
+	attr = soc_device_match(ths_quirks_match);
+	if (attr)
+		rcdu->ths_quirks = (uintptr_t)attr->data;
+
+	pr_debug("%s: ths_quirks: 0x%x\n", __func__, rcdu->ths_quirks);
+
+	if (rcdu->ths_quirks & RCAR_DU_R8A7795_ES1X_INFO_JUDGE)
 		rcdu->info = &rcar_du_r8a7795_es1x_info;
 
 	/* I/O resources */
