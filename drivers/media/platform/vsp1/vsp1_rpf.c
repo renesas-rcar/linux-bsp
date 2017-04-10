@@ -200,9 +200,7 @@ static void rpf_configure(struct vsp1_entity *entity,
 		else
 			rpf->offsets[1] = 0;
 
-		if (vsp1->auto_fld_mode)
-			vsp1_dl_set_addr_auto_fld(dl, rpf);
-		else {
+		if (vsp1->ths_quirks & VSP1_AUTO_FLD_NOT_SUPPORT) {
 			vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_Y,
 					rpf->mem.addr[0] + rpf->offsets[0]);
 			if ((fourcc == V4L2_PIX_FMT_YVU420M) ||
@@ -218,7 +216,9 @@ static void rpf_configure(struct vsp1_entity *entity,
 				vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C1,
 					rpf->mem.addr[2] + rpf->offsets[1]);
 			}
-		}
+		} else
+			vsp1_dl_set_addr_auto_fld(dl, rpf);
+
 		return;
 	}
 

@@ -95,9 +95,20 @@ static const unsigned int fcpvd_offset[] = {
 	FCPVD0_REG, FCPVD1_REG, FCPVD2_REG, FCPVD3_REG
 };
 
-static const struct soc_device_attribute r8a7795es1[] = {
+static const struct soc_device_attribute r8a7795es1x[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*" },
 	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute ths_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*",
+	  .data = (void *)(VSP1_UNDERRUN_WORKAROUND |
+			   VSP1_AUTO_FLD_NOT_SUPPORT), },
+	{ .soc_id = "r8a7795", .revision = "ES2.0",
+	  .data = 0, },
+	{ .soc_id = "r8a7796",
+	  .data = 0, },
+	{/*sentinel*/}
 };
 
 int vsp1_gen3_vspdl_check(struct vsp1_device *vsp1)
@@ -230,7 +241,7 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		}
 	}
 
-	if (vsp1->h3_es1x &&
+	if ((vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND) &&
 		underrun && vsp1_gen3_vspd_check(vsp1))
 		vsp1_underrun_workaround(vsp1, false);
 
@@ -657,7 +668,8 @@ int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index)
 	if (!(status & VI6_STATUS_SYS_ACT(index)))
 		return 0;
 
-	if (soc_device_match(r8a7795es1) && vsp1_gen3_vspd_check(vsp1))
+	if ((vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND) &&
+		vsp1_gen3_vspd_check(vsp1))
 		vsp1_underrun_workaround(vsp1, true);
 	else
 		vsp1_write(vsp1, VI6_SRESET, VI6_SRESET_SRTS(index));
@@ -887,6 +899,7 @@ static int vsp1_probe(struct platform_device *pdev)
 	struct resource *io;
 	unsigned int i;
 	int ret;
+	const struct soc_device_attribute *attr;
 
 	vsp1 = devm_kzalloc(&pdev->dev, sizeof(*vsp1), GFP_KERNEL);
 	if (vsp1 == NULL)
@@ -943,10 +956,11 @@ static int vsp1_probe(struct platform_device *pdev)
 	vsp1->version = vsp1_read(vsp1, VI6_IP_VERSION);
 	pm_runtime_put_sync(&pdev->dev);
 
-	if (soc_device_match(r8a7795es1))
-		vsp1->h3_es1x = true;
-	else
-		vsp1->h3_es1x = false;
+	attr = soc_device_match(ths_quirks_match);
+	if (attr)
+		vsp1->ths_quirks = (uintptr_t)attr->data;
+
+	pr_debug("%s: ths_quirks: 0x%x\n", __func__, vsp1->ths_quirks);
 
 	for (i = 0; i < ARRAY_SIZE(vsp1_device_infos); ++i) {
 		if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
@@ -965,11 +979,6 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "IP version 0x%08x\n", vsp1->version);
 
-	if (vsp1->info->header_mode && !soc_device_match(r8a7795es1))
-		vsp1->auto_fld_mode = true;
-	else
-		vsp1->auto_fld_mode = false;
-
 	if (strcmp(dev_name(vsp1->dev), "fea20000.vsp") == 0)
 		vsp1->index = 0;
 	else if (strcmp(dev_name(vsp1->dev), "fea28000.vsp") == 0)
@@ -986,7 +995,8 @@ static int vsp1_probe(struct platform_device *pdev)
 		goto done;
 	}
 
-	if (soc_device_match(r8a7795es1) && vsp1_gen3_vspd_check(vsp1))
+	if ((vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND) &&
+		vsp1_gen3_vspd_check(vsp1))
 		fcpv_reg[vsp1->index] =
 			ioremap(fcpvd_offset[vsp1->index], 0x20);
 done:
@@ -1013,7 +1023,8 @@ static int vsp1_remove(struct platform_device *pdev)
 
 	pm_runtime_disable(&pdev->dev);
 
-	if (soc_device_match(r8a7795es1) && vsp1_gen3_vspd_check(vsp1))
+	if ((vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND) &&
+		vsp1_gen3_vspd_check(vsp1))
 		iounmap(fcpv_reg[vsp1->index]);
 
 	return 0;
