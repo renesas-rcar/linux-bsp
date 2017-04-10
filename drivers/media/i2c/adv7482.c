@@ -214,6 +214,7 @@ struct adv7482_sdp_main_info {
 #define ADV7482_SDP_INPUT_CONTROL_INSEL_MASK	0x0f
 
 #define ADV7482_SDP_REG_INPUT_VIDSEL		0x02
+#define ADV7482_SDP_REG_INPUT_RESERVED_BIT	0x04
 
 #define ADV7482_SDP_REG_CTRL			0x0e
 
@@ -1099,7 +1100,7 @@ static int adv7482_set_video_standard(struct adv7482_state *state,
 		return ret;
 
 	value &= 0xf;
-	value |= std << 4;
+	value |= (std << 4) | ADV7482_SDP_REG_INPUT_RESERVED_BIT;
 
 	return adv7482_write_register(state->client, ADV7482_I2C_SDP,
 				ADV7482_SDP_REG_INPUT_VIDSEL, value);
