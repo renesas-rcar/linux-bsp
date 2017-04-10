@@ -85,6 +85,7 @@ static struct hw_register pfc_ip_regs[] = {
 	{"DRVCTRL24",   0x0360, 32, 0},
 	{"PCCTRL0",     0x0380, 32, 0},
 	{"TDSELCTRL0",  0x03C0, 32, 0},
+	{"IOCTRL",      0x03E0, 32, 0},
 	{"PUEN0",       0x0400, 32, 0},
 	{"PUEN1",       0x0404, 32, 0},
 	{"PUEN2",       0x0408, 32, 0},
