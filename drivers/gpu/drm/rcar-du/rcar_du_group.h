@@ -63,5 +63,7 @@ void rcar_du_group_restart(struct rcar_du_group *rgrp,
 int rcar_du_group_set_routing(struct rcar_du_group *rgrp);
 
 int rcar_du_set_dpad0_vsp1_routing(struct rcar_du_device *rcdu);
+void rcar_du_pre_group_set_routing(struct rcar_du_group *rgrp,
+				   struct rcar_du_crtc *rcrtc);
 
 #endif /* __RCAR_DU_GROUP_H__ */

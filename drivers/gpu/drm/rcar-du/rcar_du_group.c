@@ -80,6 +80,9 @@ static void rcar_du_group_setup_defr8(struct rcar_du_group *rgrp)
 		 */
 		u32 crtc = ffs(possible_crtcs) - 1;
 
+		if (rgrp->index == 0)
+			return;
+
 		if (crtc / 2 == rgrp->index)
 			defr8 |= DEFR8_DRGBS_DU(crtc);
 	}
@@ -278,4 +281,20 @@ int rcar_du_group_set_routing(struct rcar_du_group *rgrp)
 	rcar_du_group_write(rgrp, DORCR, dorcr);
 
 	return rcar_du_set_dpad0_vsp1_routing(rgrp->dev);
+}
+
+void rcar_du_pre_group_set_routing(struct rcar_du_group *rgrp,
+				   struct rcar_du_crtc *rcrtc)
+{
+	unsigned int possible_crtcs =
+		rgrp->dev->info->routes[RCAR_DU_OUTPUT_DPAD0].possible_crtcs;
+	u32 crtc = ffs(possible_crtcs) - 1;
+
+	if (rcrtc->index != crtc)
+		return;
+
+	clk_prepare_enable(rcrtc->clock);
+	rcar_du_group_setup(rgrp);
+	rcar_du_group_restart(rgrp, rcrtc);
+	clk_disable_unprepare(rcrtc->clock);
 }
