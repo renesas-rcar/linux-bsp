@@ -32,6 +32,11 @@
 #include "vsp1_video.h"
 
 
+static const struct soc_device_attribute r8a7795es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
  */
@@ -412,7 +417,7 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int rpf_index,
 	rpf->alpha = cfg->alpha;
 	rpf->interlaced = cfg->interlaced;
 
-	if (!vsp1->auto_fld_mode && rpf->interlaced) {
+	if (soc_device_match(r8a7795es1) && rpf->interlaced) {
 		dev_err(vsp1->dev,
 			"Interlaced mode is not supported.\n");
 		return -EINVAL;
