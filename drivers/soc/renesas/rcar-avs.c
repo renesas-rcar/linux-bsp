@@ -25,7 +25,7 @@
  * Set opp_pattern_num is default.
  */
 
-int change_default_opp_pattern(unsigned int opp_pattern_num)
+static int change_default_opp_pattern(unsigned int opp_pattern_num)
 {
 	struct device_node *cpu_node = NULL;
 
@@ -75,7 +75,7 @@ static const struct of_device_id rcar_avs_matches[] = {
 	{ /* sentinel */ }
 };
 
-int __init rcar_avs_init(void)
+static int __init rcar_avs_init(void)
 {
 #ifdef CONFIG_POWER_AVS
 	int avs_val;
