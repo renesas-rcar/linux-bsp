@@ -44,7 +44,7 @@ int change_default_opp_pattern(unsigned int opp_pattern_num)
 			list = kzalloc(sizeof(*pp_val), GFP_KERNEL);
 			if (!list) {
 				pr_debug("%s(): kzalloc fail, return -ENOMEM\n",
-						__func__);
+					 __func__);
 				return -ENOMEM;
 			}
 			*list = *(pp_val + opp_pattern_num);
