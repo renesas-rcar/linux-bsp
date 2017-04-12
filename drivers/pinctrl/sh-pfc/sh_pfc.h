@@ -197,6 +197,19 @@ struct sh_pfc_bias_info {
 
 struct sh_pfc_pin_range;
 
+struct sh_pfc_reg {
+	u32 addr;
+	unsigned int val;
+};
+
+struct sh_pfc_sav_regs {
+	struct sh_pfc_reg cfg_regs[32];
+	struct sh_pfc_reg drv_regs[32];
+	struct sh_pfc_reg puen_regs[8];
+	struct sh_pfc_reg pud_regs[8];
+	struct sh_pfc_reg pocctrl_reg;
+};
+
 struct sh_pfc {
 	struct device *dev;
 	const struct sh_pfc_soc_info *info;
@@ -213,6 +226,7 @@ struct sh_pfc {
 	unsigned int nr_gpio_pins;
 
 	struct sh_pfc_chip *gpio;
+	struct sh_pfc_sav_regs sav_regs;
 };
 
 struct sh_pfc_soc_operations {
@@ -246,6 +260,10 @@ struct sh_pfc_soc_info {
 	const struct pinmux_cfg_reg *cfg_regs;
 	const struct pinmux_drive_reg *drive_regs;
 	const struct pinmux_data_reg *data_regs;
+	u32 pocctrl_reg;
+	u32 puen_base;
+	u32 pud_base;
+	unsigned int nr_bias_regs;
 
 	const u16 *pinmux_data;
 	unsigned int pinmux_data_size;

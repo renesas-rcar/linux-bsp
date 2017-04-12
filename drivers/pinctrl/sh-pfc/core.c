@@ -549,6 +549,91 @@ static const struct of_device_id sh_pfc_of_table[] = {
 };
 #endif
 
+#ifdef CONFIG_PM_SLEEP
+static int sh_pfc_suspend(struct device *dev)
+{
+	struct sh_pfc *pfc = dev_get_drvdata(dev);
+	unsigned int i;
+
+	i = 0;
+	while (pfc->info->cfg_regs[i].reg) {
+		pfc->sav_regs.cfg_regs[i].addr = pfc->info->cfg_regs[i].reg;
+		pfc->sav_regs.cfg_regs[i].val = sh_pfc_read_reg(pfc,
+					pfc->sav_regs.cfg_regs[i].addr, 32);
+		i++;
+	}
+
+	i = 0;
+	while (pfc->info->drive_regs[i].reg) {
+		pfc->sav_regs.drv_regs[i].addr = pfc->info->drive_regs[i].reg;
+		pfc->sav_regs.drv_regs[i].val = sh_pfc_read_reg(pfc,
+					pfc->sav_regs.drv_regs[i].addr, 32);
+		i++;
+	}
+
+	if (pfc->info->nr_bias_regs)
+		for (i = 0; i < pfc->info->nr_bias_regs; i++) {
+			pfc->sav_regs.puen_regs[i].addr = pfc->info->puen_base +
+						(0x4 * i);
+			pfc->sav_regs.puen_regs[i].val = sh_pfc_read_reg(pfc,
+					pfc->sav_regs.puen_regs[i].addr, 32);
+
+			pfc->sav_regs.pud_regs[i].addr = pfc->info->pud_base +
+						(0x4 * i);
+			pfc->sav_regs.pud_regs[i].val = sh_pfc_read_reg(pfc,
+					pfc->sav_regs.pud_regs[i].addr, 32);
+		}
+
+	if (pfc->info->pocctrl_reg) {
+		pfc->sav_regs.pocctrl_reg.addr = pfc->info->pocctrl_reg;
+		pfc->sav_regs.pocctrl_reg.val = sh_pfc_read_reg(pfc,
+					pfc->sav_regs.pocctrl_reg.addr, 32);
+	}
+
+	return 0;
+}
+
+static int sh_pfc_resume(struct device *dev)
+{
+	struct sh_pfc *pfc = dev_get_drvdata(dev);
+	unsigned int i;
+
+	i = 0;
+	while (pfc->info->cfg_regs[i].reg) {
+		sh_pfc_write_reg(pfc, pfc->sav_regs.cfg_regs[i].addr, 32,
+				 pfc->sav_regs.cfg_regs[i].val);
+		i++;
+	}
+
+	i = 0;
+	while (pfc->info->drive_regs[i].reg) {
+		sh_pfc_write_reg(pfc, pfc->sav_regs.drv_regs[i].addr, 32,
+				 pfc->sav_regs.drv_regs[i].val);
+		i++;
+	}
+
+	if (pfc->info->nr_bias_regs)
+		for (i = 0; i < pfc->info->nr_bias_regs; i++) {
+			sh_pfc_write_reg(pfc, pfc->sav_regs.puen_regs[i].addr,
+					 32, pfc->sav_regs.puen_regs[i].val);
+			sh_pfc_write_reg(pfc, pfc->sav_regs.pud_regs[i].addr,
+					 32, pfc->sav_regs.pud_regs[i].val);
+		}
+
+	if (pfc->info->pocctrl_reg)
+		sh_pfc_write_reg(pfc, pfc->sav_regs.pocctrl_reg.addr, 32,
+				 pfc->sav_regs.pocctrl_reg.val);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(sh_pfc_pm_ops,
+		sh_pfc_suspend, sh_pfc_resume);
+#define DEV_PM_OPS (&sh_pfc_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static int sh_pfc_probe(struct platform_device *pdev)
 {
 	const struct platform_device_id *platid = platform_get_device_id(pdev);
@@ -671,6 +756,7 @@ static struct platform_driver sh_pfc_driver = {
 	.id_table	= sh_pfc_id_table,
 	.driver		= {
 		.name	= DRV_NAME,
+		.pm     = DEV_PM_OPS,
 		.of_match_table = of_match_ptr(sh_pfc_of_table),
 	},
 };
