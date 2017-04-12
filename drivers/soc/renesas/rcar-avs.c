@@ -73,7 +73,7 @@ static const struct of_device_id rcar_avs_matches[] = {
 
 static int __init rcar_avs_init(void)
 {
-	int avs_val;
+	u32 avs_val;
 	struct device_node *np;
 	void __iomem *ksen_adjcnts;
 	int ret = 0;
@@ -93,7 +93,7 @@ static int __init rcar_avs_init(void)
 	avs_val = ioread32(ksen_adjcnts);
 
 	avs_val &= VOLCOND_MASK_0_3;
-	if (!((avs_val >= 0) && (avs_val < AVS_TABLE_NUM))) {
+	if (avs_val >= AVS_TABLE_NUM) { /* if avs_val is out of range [0-6]*/
 		avs_val = 0;
 		pr_debug("rcar-cpufreq: hw get invalid avs value, use avs_tb0\n");
 	}
