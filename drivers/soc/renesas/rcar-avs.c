@@ -14,8 +14,6 @@
  */
 
 #include <linux/module.h>
-
-#ifdef CONFIG_POWER_AVS
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -66,8 +64,6 @@ static int change_default_opp_pattern(unsigned int opp_pattern_num)
 
 #define AVS_TABLE_NUM	7
 
-#endif /* CONFIG_POWER_AVS */
-
 static const struct of_device_id rcar_avs_matches[] = {
 #if defined(CONFIG_ARCH_R8A7795) || defined(CONFIG_ARCH_R8A7796)
 	{ .compatible = "renesas,rcar-gen3-avs" },
@@ -77,10 +73,10 @@ static const struct of_device_id rcar_avs_matches[] = {
 
 static int __init rcar_avs_init(void)
 {
-#ifdef CONFIG_POWER_AVS
 	int avs_val;
 	struct device_node *np;
 	void __iomem *ksen_adjcnts;
+	int ret = 0;
 
 	/* Map and get KSEN_ADJCNTS register */
 	np = of_find_matching_node(NULL, rcar_avs_matches);
@@ -103,10 +99,12 @@ static int __init rcar_avs_init(void)
 	}
 	pr_info("rcar-cpufreq: use avs value: %d\n", avs_val);
 
-	/* Apply avs value */
-	change_default_opp_pattern(avs_val);
-#endif /* CONFIG_POWER_AVS */
-	return 0;
+	if (IS_ENABLED(CONFIG_POWER_AVS)) {
+		/* Apply avs value */
+		ret = change_default_opp_pattern(avs_val);
+	}
+
+	return ret;
 }
 
 subsys_initcall(rcar_avs_init);
