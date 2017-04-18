@@ -90,23 +90,14 @@
  */
 struct hw_info_t {
 	struct ks_sdio_card *sdio_card;
-	struct completion ks7010_sdio_wait;
 	struct workqueue_struct *ks7010sdio_wq;
 	struct delayed_work rw_wq;
-	unsigned char *read_buf;
 	struct tasklet_struct rx_bh_task;
-};
-
-struct ks_sdio_packet {
-	struct ks_sdio_packet *next;
-	u16 nb;
-	u8 buffer[0] __aligned(4);
 };
 
 struct ks_sdio_card {
 	struct sdio_func *func;
 	struct ks_wlan_private *priv;
-	spinlock_t lock;
 };
 
 /* Tx Device struct */
@@ -115,7 +106,7 @@ struct ks_sdio_card {
 struct tx_device_buffer {
 	unsigned char *sendp;	/* pointer of send req data */
 	unsigned int size;
-	void (*complete_handler) (void *arg1, void *arg2);
+	void (*complete_handler)(void *arg1, void *arg2);
 	void *arg1;
 	void *arg2;
 };

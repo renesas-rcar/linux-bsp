@@ -26,7 +26,6 @@ union ion_ioctl_arg {
 	struct ion_fd_data fd;
 	struct ion_allocation_data allocation;
 	struct ion_handle_data handle;
-	struct ion_custom_data custom;
 	struct ion_heap_query query;
 };
 
@@ -51,9 +50,7 @@ static int validate_ioctl_arg(unsigned int cmd, union ion_ioctl_arg *arg)
 static unsigned int ion_ioctl_dir(unsigned int cmd)
 {
 	switch (cmd) {
-	case ION_IOC_SYNC:
 	case ION_IOC_FREE:
-	case ION_IOC_CUSTOM:
 		return _IOC_WRITE;
 	default:
 		return _IOC_DIR(cmd);
@@ -63,7 +60,6 @@ static unsigned int ion_ioctl_dir(unsigned int cmd)
 long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct ion_client *client = filp->private_data;
-	struct ion_device *dev = client->dev;
 	struct ion_handle *cleanup_handle = NULL;
 	int ret = 0;
 	unsigned int dir;
@@ -95,7 +91,6 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct ion_handle *handle;
 
 		handle = ion_alloc(client, data.allocation.len,
-						data.allocation.align,
 						data.allocation.heap_id_mask,
 						data.allocation.flags);
 		if (IS_ERR(handle))
@@ -123,7 +118,6 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 	}
 	case ION_IOC_SHARE:
-	case ION_IOC_MAP:
 	{
 		struct ion_handle *handle;
 
@@ -134,30 +128,6 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		ion_handle_put(handle);
 		if (data.fd.fd < 0)
 			ret = data.fd.fd;
-		break;
-	}
-	case ION_IOC_IMPORT:
-	{
-		struct ion_handle *handle;
-
-		handle = ion_import_dma_buf_fd(client, data.fd.fd);
-		if (IS_ERR(handle))
-			ret = PTR_ERR(handle);
-		else
-			data.handle.handle = handle->id;
-		break;
-	}
-	case ION_IOC_SYNC:
-	{
-		ret = ion_sync_for_device(client, data.fd.fd);
-		break;
-	}
-	case ION_IOC_CUSTOM:
-	{
-		if (!dev->custom_ioctl)
-			return -ENOTTY;
-		ret = dev->custom_ioctl(client, data.custom.cmd,
-						data.custom.arg);
 		break;
 	}
 	case ION_IOC_HEAP_QUERY:

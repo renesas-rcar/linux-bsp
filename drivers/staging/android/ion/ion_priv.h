@@ -44,7 +44,6 @@
  * @lock:		protects the buffers cnt fields
  * @kmap_cnt:		number of times the buffer is mapped to the kernel
  * @vaddr:		the kernel mapping if kmap_cnt is not zero
- * @dmap_cnt:		number of times the buffer is mapped for dma
  * @sg_table:		the sg table for the buffer if dmap_cnt is not zero
  * @pages:		flat array of pages in the buffer -- used by fault
  *			handler and only valid for buffers that are faulted in
@@ -70,10 +69,10 @@ struct ion_buffer {
 	struct mutex lock;
 	int kmap_cnt;
 	void *vaddr;
-	int dmap_cnt;
 	struct sg_table *sg_table;
 	struct page **pages;
 	struct list_head vmas;
+	struct list_head attachments;
 	/* used to track orphaned buffers */
 	int handle_count;
 	char task_comm[TASK_COMM_LEN];
@@ -96,8 +95,6 @@ struct ion_device {
 	struct mutex buffer_lock;
 	struct rw_semaphore lock;
 	struct plist_head heaps;
-	long (*custom_ioctl)(struct ion_client *client, unsigned int cmd,
-			     unsigned long arg);
 	struct rb_root clients;
 	struct dentry *debug_root;
 	struct dentry *heaps_debug_root;
@@ -174,7 +171,7 @@ struct ion_handle {
 struct ion_heap_ops {
 	int (*allocate)(struct ion_heap *heap,
 			struct ion_buffer *buffer, unsigned long len,
-			unsigned long align, unsigned long flags);
+			unsigned long flags);
 	void (*free)(struct ion_buffer *buffer);
 	void * (*map_kernel)(struct ion_heap *heap, struct ion_buffer *buffer);
 	void (*unmap_kernel)(struct ion_heap *heap, struct ion_buffer *buffer);
@@ -261,14 +258,10 @@ bool ion_buffer_fault_user_mappings(struct ion_buffer *buffer);
 
 /**
  * ion_device_create - allocates and returns an ion device
- * @custom_ioctl:	arch specific ioctl function if applicable
  *
  * returns a valid device or -PTR_ERR
  */
-struct ion_device *ion_device_create(long (*custom_ioctl)
-				     (struct ion_client *client,
-				      unsigned int cmd,
-				      unsigned long arg));
+struct ion_device *ion_device_create(void);
 
 /**
  * ion_device_destroy - free and device and it's resource
@@ -441,20 +434,7 @@ void ion_page_pool_free(struct ion_page_pool *pool, struct page *page);
 int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,
 			  int nr_to_scan);
 
-/**
- * ion_pages_sync_for_device - cache flush pages for use with the specified
- *                             device
- * @dev:		the device the pages will be used with
- * @page:		the first page to be flushed
- * @size:		size in bytes of region to be flushed
- * @dir:		direction of dma transfer
- */
-void ion_pages_sync_for_device(struct device *dev, struct page *page,
-		size_t size, enum dma_data_direction dir);
-
 long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
-
-int ion_sync_for_device(struct ion_client *client, int fd);
 
 struct ion_handle *ion_handle_get_by_id_nolock(struct ion_client *client,
 						int id);

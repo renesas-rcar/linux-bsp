@@ -75,9 +75,6 @@ static struct page *alloc_buffer_page(struct ion_system_heap *heap,
 
 	page = ion_page_pool_alloc(pool);
 
-	if (cached)
-		ion_pages_sync_for_device(NULL, page, PAGE_SIZE << order,
-					  DMA_BIDIRECTIONAL);
 	return page;
 }
 
@@ -129,7 +126,7 @@ static struct page *alloc_largest_available(struct ion_system_heap *heap,
 
 static int ion_system_heap_allocate(struct ion_heap *heap,
 				    struct ion_buffer *buffer,
-				    unsigned long size, unsigned long align,
+				    unsigned long size,
 				    unsigned long flags)
 {
 	struct ion_system_heap *sys_heap = container_of(heap,
@@ -142,9 +139,6 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 	int i = 0;
 	unsigned long size_remaining = PAGE_ALIGN(size);
 	unsigned int max_order = orders[0];
-
-	if (align > PAGE_SIZE)
-		return -EINVAL;
 
 	if (size / PAGE_SIZE > totalram_pages / 2)
 		return -ENOMEM;
@@ -372,7 +366,6 @@ void ion_system_heap_destroy(struct ion_heap *heap)
 static int ion_system_contig_heap_allocate(struct ion_heap *heap,
 					   struct ion_buffer *buffer,
 					   unsigned long len,
-					   unsigned long align,
 					   unsigned long flags)
 {
 	int order = get_order(len);
@@ -380,9 +373,6 @@ static int ion_system_contig_heap_allocate(struct ion_heap *heap,
 	struct sg_table *table;
 	unsigned long i;
 	int ret;
-
-	if (align > (PAGE_SIZE << order))
-		return -EINVAL;
 
 	page = alloc_pages(low_order_gfp_flags, order);
 	if (!page)
@@ -407,8 +397,6 @@ static int ion_system_contig_heap_allocate(struct ion_heap *heap,
 	sg_set_page(table->sgl, page, len, 0);
 
 	buffer->sg_table = table;
-
-	ion_pages_sync_for_device(NULL, page, len, DMA_BIDIRECTIONAL);
 
 	return 0;
 

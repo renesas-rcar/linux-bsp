@@ -115,19 +115,6 @@ struct ion_handle_data {
 	ion_user_handle_t handle;
 };
 
-/**
- * struct ion_custom_data - metadata passed to/from userspace for a custom ioctl
- * @cmd:	the custom ioctl function to call
- * @arg:	additional data to pass to the custom ioctl, typically a user
- *		pointer to a predefined structure
- *
- * This works just like the regular cmd and arg fields of an ioctl.
- */
-struct ion_custom_data {
-	unsigned int cmd;
-	unsigned long arg;
-};
-
 #define MAX_HEAP_NAME			32
 
 /**
@@ -177,16 +164,6 @@ struct ion_heap_query {
 #define ION_IOC_FREE		_IOWR(ION_IOC_MAGIC, 1, struct ion_handle_data)
 
 /**
- * DOC: ION_IOC_MAP - get a file descriptor to mmap
- *
- * Takes an ion_fd_data struct with the handle field populated with a valid
- * opaque handle.  Returns the struct with the fd field set to a file
- * descriptor open in the current address space.  This file descriptor
- * can then be used as an argument to mmap.
- */
-#define ION_IOC_MAP		_IOWR(ION_IOC_MAGIC, 2, struct ion_fd_data)
-
-/**
  * DOC: ION_IOC_SHARE - creates a file descriptor to use to share an allocation
  *
  * Takes an ion_fd_data struct with the handle field populated with a valid
@@ -196,33 +173,6 @@ struct ion_heap_query {
  * be retrieved via ION_IOC_IMPORT.
  */
 #define ION_IOC_SHARE		_IOWR(ION_IOC_MAGIC, 4, struct ion_fd_data)
-
-/**
- * DOC: ION_IOC_IMPORT - imports a shared file descriptor
- *
- * Takes an ion_fd_data struct with the fd field populated with a valid file
- * descriptor obtained from ION_IOC_SHARE and returns the struct with the handle
- * filed set to the corresponding opaque handle.
- */
-#define ION_IOC_IMPORT		_IOWR(ION_IOC_MAGIC, 5, struct ion_fd_data)
-
-/**
- * DOC: ION_IOC_SYNC - syncs a shared file descriptors to memory
- *
- * Deprecated in favor of using the dma_buf api's correctly (syncing
- * will happen automatically when the buffer is mapped to a device).
- * If necessary should be used after touching a cached buffer from the cpu,
- * this will make the buffer in memory coherent.
- */
-#define ION_IOC_SYNC		_IOWR(ION_IOC_MAGIC, 7, struct ion_fd_data)
-
-/**
- * DOC: ION_IOC_CUSTOM - call architecture specific ion ioctl
- *
- * Takes the argument of the architecture specific ioctl to call and
- * passes appropriate userdata for that ioctl
- */
-#define ION_IOC_CUSTOM		_IOWR(ION_IOC_MAGIC, 6, struct ion_custom_data)
 
 /**
  * DOC: ION_IOC_HEAP_QUERY - information about available heaps
