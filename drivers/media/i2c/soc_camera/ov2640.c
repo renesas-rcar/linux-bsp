@@ -794,10 +794,11 @@ static int ov2640_set_params(struct i2c_client *client, u32 *width, u32 *height,
 		dev_dbg(&client->dev, "%s: Selected cfmt YUYV (YUV422)", __func__);
 		selected_cfmt_regs = ov2640_yuyv_regs;
 		break;
-	default:
 	case MEDIA_BUS_FMT_UYVY8_2X8:
+	default:
 		dev_dbg(&client->dev, "%s: Selected cfmt UYVY", __func__);
 		selected_cfmt_regs = ov2640_uyvy_regs;
+		break;
 	}
 
 	/* reset hardware */
@@ -865,17 +866,7 @@ static int ov2640_get_fmt(struct v4l2_subdev *sd,
 	mf->width	= priv->win->width;
 	mf->height	= priv->win->height;
 	mf->code	= priv->cfmt_code;
-
-	switch (mf->code) {
-	case MEDIA_BUS_FMT_RGB565_2X8_BE:
-	case MEDIA_BUS_FMT_RGB565_2X8_LE:
-		mf->colorspace = V4L2_COLORSPACE_SRGB;
-		break;
-	default:
-	case MEDIA_BUS_FMT_YUYV8_2X8:
-	case MEDIA_BUS_FMT_UYVY8_2X8:
-		mf->colorspace = V4L2_COLORSPACE_JPEG;
-	}
+	mf->colorspace	= V4L2_COLORSPACE_SRGB;
 	mf->field	= V4L2_FIELD_NONE;
 
 	return 0;
@@ -897,17 +888,17 @@ static int ov2640_set_fmt(struct v4l2_subdev *sd,
 	ov2640_select_win(&mf->width, &mf->height);
 
 	mf->field	= V4L2_FIELD_NONE;
+	mf->colorspace	= V4L2_COLORSPACE_SRGB;
 
 	switch (mf->code) {
 	case MEDIA_BUS_FMT_RGB565_2X8_BE:
 	case MEDIA_BUS_FMT_RGB565_2X8_LE:
-		mf->colorspace = V4L2_COLORSPACE_SRGB;
+	case MEDIA_BUS_FMT_YUYV8_2X8:
+	case MEDIA_BUS_FMT_UYVY8_2X8:
 		break;
 	default:
 		mf->code = MEDIA_BUS_FMT_UYVY8_2X8;
-	case MEDIA_BUS_FMT_YUYV8_2X8:
-	case MEDIA_BUS_FMT_UYVY8_2X8:
-		mf->colorspace = V4L2_COLORSPACE_JPEG;
+		break;
 	}
 
 	if (format->which == V4L2_SUBDEV_FORMAT_ACTIVE)
@@ -995,7 +986,7 @@ static const struct v4l2_ctrl_ops ov2640_ctrl_ops = {
 	.s_ctrl = ov2640_s_ctrl,
 };
 
-static struct v4l2_subdev_core_ops ov2640_subdev_core_ops = {
+static const struct v4l2_subdev_core_ops ov2640_subdev_core_ops = {
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register	= ov2640_g_register,
 	.s_register	= ov2640_s_register,
@@ -1018,7 +1009,7 @@ static int ov2640_g_mbus_config(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static struct v4l2_subdev_video_ops ov2640_subdev_video_ops = {
+static const struct v4l2_subdev_video_ops ov2640_subdev_video_ops = {
 	.s_stream	= ov2640_s_stream,
 	.g_mbus_config	= ov2640_g_mbus_config,
 };
@@ -1030,7 +1021,7 @@ static const struct v4l2_subdev_pad_ops ov2640_subdev_pad_ops = {
 	.set_fmt	= ov2640_set_fmt,
 };
 
-static struct v4l2_subdev_ops ov2640_subdev_ops = {
+static const struct v4l2_subdev_ops ov2640_subdev_ops = {
 	.core	= &ov2640_subdev_core_ops,
 	.video	= &ov2640_subdev_video_ops,
 	.pad	= &ov2640_subdev_pad_ops,

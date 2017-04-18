@@ -195,12 +195,34 @@ static void cec_devnode_unregister(struct cec_devnode *devnode)
 	put_device(&devnode->dev);
 }
 
+#ifdef CONFIG_MEDIA_CEC_NOTIFIER
+static void cec_cec_notify(struct cec_adapter *adap, u16 pa)
+{
+	cec_s_phys_addr(adap, pa, false);
+}
+
+void cec_register_cec_notifier(struct cec_adapter *adap,
+			       struct cec_notifier *notifier)
+{
+	if (WARN_ON(!adap->devnode.registered))
+		return;
+
+	adap->notifier = notifier;
+	cec_notifier_register(adap->notifier, adap, cec_cec_notify);
+}
+EXPORT_SYMBOL_GPL(cec_register_cec_notifier);
+#endif
+
 struct cec_adapter *cec_allocate_adapter(const struct cec_adap_ops *ops,
 					 void *priv, const char *name, u32 caps,
 					 u8 available_las)
 {
 	struct cec_adapter *adap;
 	int res;
+
+#if !IS_REACHABLE(CONFIG_RC_CORE)
+	caps &= ~CEC_CAP_RC;
+#endif
 
 	if (WARN_ON(!caps))
 		return ERR_PTR(-EINVAL);
@@ -234,10 +256,10 @@ struct cec_adapter *cec_allocate_adapter(const struct cec_adap_ops *ops,
 		return ERR_PTR(res);
 	}
 
+#if IS_REACHABLE(CONFIG_RC_CORE)
 	if (!(caps & CEC_CAP_RC))
 		return adap;
 
-#if IS_REACHABLE(CONFIG_RC_CORE)
 	/* Prepare the RC input device */
 	adap->rc = rc_allocate_device(RC_DRIVER_SCANCODE);
 	if (!adap->rc) {
@@ -264,8 +286,6 @@ struct cec_adapter *cec_allocate_adapter(const struct cec_adap_ops *ops,
 	adap->rc->priv = adap;
 	adap->rc->map_name = RC_MAP_CEC;
 	adap->rc->timeout = MS_TO_NS(100);
-#else
-	adap->capabilities &= ~CEC_CAP_RC;
 #endif
 	return adap;
 }
@@ -286,8 +306,8 @@ int cec_register_adapter(struct cec_adapter *adap,
 	adap->devnode.dev.parent = parent;
 
 #if IS_REACHABLE(CONFIG_RC_CORE)
-	adap->rc->dev.parent = parent;
 	if (adap->capabilities & CEC_CAP_RC) {
+		adap->rc->dev.parent = parent;
 		res = rc_register_device(adap->rc);
 
 		if (res) {
@@ -343,6 +363,10 @@ void cec_unregister_adapter(struct cec_adapter *adap)
 	adap->rc = NULL;
 #endif
 	debugfs_remove_recursive(adap->cec_dir);
+#ifdef CONFIG_MEDIA_CEC_NOTIFIER
+	if (adap->notifier)
+		cec_notifier_unregister(adap->notifier);
+#endif
 	cec_devnode_unregister(&adap->devnode);
 }
 EXPORT_SYMBOL_GPL(cec_unregister_adapter);

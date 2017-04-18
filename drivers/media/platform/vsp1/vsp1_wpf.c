@@ -88,12 +88,14 @@ static int wpf_init_controls(struct vsp1_rwpf *wpf)
 		/* Only WPF0 supports flipping. */
 		num_flip_ctrls = 0;
 	} else if (vsp1->info->features & VSP1_HAS_WPF_HFLIP) {
-		/* When horizontal flip is supported the WPF implements two
+		/*
+		 * When horizontal flip is supported the WPF implements two
 		 * controls (horizontal flip and vertical flip).
 		 */
 		num_flip_ctrls = 2;
 	} else if (vsp1->info->features & VSP1_HAS_WPF_VFLIP) {
-		/* When only vertical flip is supported the WPF implements a
+		/*
+		 * When only vertical flip is supported the WPF implements a
 		 * single control (vertical flip).
 		 */
 		num_flip_ctrls = 1;
@@ -139,7 +141,8 @@ static int wpf_s_stream(struct v4l2_subdev *subdev, int enable)
 	if (enable)
 		return 0;
 
-	/* Write to registers directly when stopping the stream as there will be
+	/*
+	 * Write to registers directly when stopping the stream as there will be
 	 * no pipeline run to apply the display list.
 	 */
 	vsp1_write(vsp1, VI6_WPF_IRQ_ENB(wpf->entity.index), 0);
@@ -216,6 +219,7 @@ static void wpf_configure(struct vsp1_entity *entity,
 
 	if (params == VSP1_ENTITY_PARAMS_PARTITION) {
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
+		const struct vsp1_format_info *fmtinfo = wpf->fmtinfo;
 		struct vsp1_rwpf_memory mem = wpf->mem;
 		unsigned int flip = wpf->flip.active;
 		unsigned int width = source_format->width;
@@ -281,6 +285,14 @@ static void wpf_configure(struct vsp1_entity *entity,
 			}
 		}
 
+		/*
+		 * On Gen3 hardware the SPUVS bit has no effect on 3-planar
+		 * formats. Swap the U and V planes manually in that case.
+		 */
+		if (vsp1->info->gen == 3 && format->num_planes == 3 &&
+		    fmtinfo->swap_uv)
+			swap(mem.addr[1], mem.addr[2]);
+
 		vsp1_wpf_write(wpf, dl, VI6_WPF_DSTM_ADDR_Y, mem.addr[0]);
 		vsp1_wpf_write(wpf, dl, VI6_WPF_DSTM_ADDR_C0, mem.addr[1]);
 		vsp1_wpf_write(wpf, dl, VI6_WPF_DSTM_ADDR_C1, mem.addr[2]);
@@ -327,7 +339,8 @@ static void wpf_configure(struct vsp1_entity *entity,
 
 	vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL, 0);
 
-	/* Sources. If the pipeline has a single input and BRU is not used,
+	/*
+	 * Sources. If the pipeline has a single input and BRU is not used,
 	 * configure it as the master layer. Otherwise configure all
 	 * inputs as sub-layers and select the virtual RPF as the master
 	 * layer.

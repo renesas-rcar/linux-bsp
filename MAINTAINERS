@@ -2243,7 +2243,7 @@ ATMEL ISI DRIVER
 M:	Ludovic Desroches <ludovic.desroches@microchip.com>
 L:	linux-media@vger.kernel.org
 S:	Supported
-F:	drivers/media/platform/soc_camera/atmel-isi.c
+F:	drivers/media/platform/atmel/atmel-isi.c
 F:	include/media/atmel-isi.h
 
 ATMEL LCDFB DRIVER
@@ -3094,7 +3094,7 @@ F:	drivers/net/ieee802154/cc2520.c
 F:	include/linux/spi/cc2520.h
 F:	Documentation/devicetree/bindings/net/ieee802154/cc2520.txt
 
-CEC DRIVER
+CEC FRAMEWORK
 M:	Hans Verkuil <hans.verkuil@cisco.com>
 L:	linux-media@vger.kernel.org
 T:	git git://linuxtv.org/media_tree.git
@@ -3104,9 +3104,11 @@ F:	Documentation/media/kapi/cec-core.rst
 F:	Documentation/media/uapi/cec
 F:	drivers/media/cec/
 F:	drivers/media/cec-edid.c
+F:	drivers/media/cec-notifier.c
 F:	drivers/media/rc/keymaps/rc-cec.c
 F:	include/media/cec.h
 F:	include/media/cec-edid.h
+F:	include/media/cec-notifier.h
 F:	include/uapi/linux/cec.h
 F:	include/uapi/linux/cec-funcs.h
 
@@ -8150,6 +8152,13 @@ L:	netdev@vger.kernel.org
 S:	Maintained
 F:	drivers/net/ethernet/mediatek/
 
+MEDIATEK JPEG DRIVER
+M:	Rick Chang <rick.chang@mediatek.com>
+M:	Bin Liu <bin.liu@mediatek.com>
+S:	Supported
+F:	drivers/media/platform/mtk-jpeg/
+F:	Documentation/devicetree/bindings/media/mediatek-jpeg-decoder.txt
+
 MEDIATEK MEDIA DRIVER
 M:	Tiffany Lin <tiffany.lin@mediatek.com>
 M:	Andrew-CT Chen <andrew-ct.chen@mediatek.com>
@@ -9330,6 +9339,7 @@ L:	linux-media@vger.kernel.org
 T:	git git://linuxtv.org/media_tree.git
 S:	Maintained
 F:	drivers/media/i2c/ov7670.c
+F:	Documentation/devicetree/bindings/media/i2c/ov7670.txt
 
 ONENAND FLASH DRIVER
 M:	Kyungmin Park <kyungmin.park@samsung.com>
@@ -10514,6 +10524,13 @@ M:	Paul Mackerras <paulus@samba.org>
 L:	linux-fbdev@vger.kernel.org
 S:	Maintained
 F:	drivers/video/fbdev/aty/aty128fb.c
+
+RAINSHADOW-CEC DRIVER
+M:	Hans Verkuil <hverkuil@xs4all.nl>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+S:	Maintained
+F:	drivers/media/usb/rainshadow-cec/*
 
 RALINK MIPS ARCHITECTURE
 M:	John Crispin <john@phrozen.org>
