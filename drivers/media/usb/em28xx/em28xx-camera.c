@@ -23,9 +23,7 @@
 
 #include <linux/i2c.h>
 #include <linux/usb.h>
-#include <media/soc_camera.h>
 #include <media/i2c/mt9v011.h>
-#include <media/v4l2-clk.h>
 #include <media/v4l2-common.h>
 
 /* Possible i2c addresses of Micron sensors */
@@ -41,13 +39,6 @@ static unsigned short omnivision_sensor_addrs[] = {
 	0x42 >> 1,   /* OV7725, OV7670/60/48 */
 	0x60 >> 1,   /* OV2640, OV9650/53/55 */
 	I2C_CLIENT_END
-};
-
-static struct soc_camera_link camlink = {
-	.bus_id = 0,
-	.flags = 0,
-	.module_name = "em28xx",
-	.unbalanced_power = true,
 };
 
 /* FIXME: Should be replaced by a proper mt9m111 driver */
@@ -106,8 +97,6 @@ static int em28xx_probe_sensor_micron(struct em28xx *dev)
 {
 	int ret, i;
 	char *name;
-	u8 reg;
-	__be16 id_be;
 	u16 id;
 
 	struct i2c_client *client = &dev->i2c_client[dev->def_i2c_bus];
@@ -115,10 +104,8 @@ static int em28xx_probe_sensor_micron(struct em28xx *dev)
 	dev->em28xx_sensor = EM28XX_NOSENSOR;
 	for (i = 0; micron_sensor_addrs[i] != I2C_CLIENT_END; i++) {
 		client->addr = micron_sensor_addrs[i];
-		/* NOTE: i2c_smbus_read_word_data() doesn't work with BE data */
 		/* Read chip ID from register 0x00 */
-		reg = 0x00;
-		ret = i2c_master_send(client, &reg, 1);
+		ret = i2c_smbus_read_word_data(client, 0x00); /* assumes LE */
 		if (ret < 0) {
 			if (ret != -ENXIO)
 				dev_err(&dev->intf->dev,
@@ -126,24 +113,9 @@ static int em28xx_probe_sensor_micron(struct em28xx *dev)
 				       client->addr << 1, ret);
 			continue;
 		}
-		ret = i2c_master_recv(client, (u8 *)&id_be, 2);
-		if (ret < 0) {
-			dev_err(&dev->intf->dev,
-				"couldn't read from i2c device 0x%02x: error %i\n",
-				client->addr << 1, ret);
-			continue;
-		}
-		id = be16_to_cpu(id_be);
+		id = swab16(ret); /* LE -> BE */
 		/* Read chip ID from register 0xff */
-		reg = 0xff;
-		ret = i2c_master_send(client, &reg, 1);
-		if (ret < 0) {
-			dev_err(&dev->intf->dev,
-				"couldn't read from i2c device 0x%02x: error %i\n",
-				client->addr << 1, ret);
-			continue;
-		}
-		ret = i2c_master_recv(client, (u8 *)&id_be, 2);
+		ret = i2c_smbus_read_word_data(client, 0xff);
 		if (ret < 0) {
 			dev_err(&dev->intf->dev,
 				"couldn't read from i2c device 0x%02x: error %i\n",
@@ -151,10 +123,9 @@ static int em28xx_probe_sensor_micron(struct em28xx *dev)
 			continue;
 		}
 		/* Validate chip ID to be sure we have a Micron device */
-		if (id != be16_to_cpu(id_be))
+		if (id != swab16(ret))
 			continue;
 		/* Check chip ID */
-		id = be16_to_cpu(id_be);
 		switch (id) {
 		case 0x1222:
 			name = "MT9V012"; /* MI370 */ /* 640x480 */
@@ -339,17 +310,9 @@ int em28xx_detect_sensor(struct em28xx *dev)
 
 int em28xx_init_camera(struct em28xx *dev)
 {
-	char clk_name[V4L2_CLK_NAME_SIZE];
 	struct i2c_client *client = &dev->i2c_client[dev->def_i2c_bus];
 	struct i2c_adapter *adap = &dev->i2c_adap[dev->def_i2c_bus];
 	struct em28xx_v4l2 *v4l2 = dev->v4l2;
-	int ret = 0;
-
-	v4l2_clk_name_i2c(clk_name, sizeof(clk_name),
-			  i2c_adapter_id(adap), client->addr);
-	v4l2->clk = v4l2_clk_register_fixed(clk_name, -EINVAL);
-	if (IS_ERR(v4l2->clk))
-		return PTR_ERR(v4l2->clk);
 
 	switch (dev->em28xx_sensor) {
 	case EM28XX_MT9V011:
@@ -379,12 +342,9 @@ int em28xx_init_camera(struct em28xx *dev)
 		pdata.xtal = v4l2->sensor_xtal;
 		if (NULL ==
 		    v4l2_i2c_new_subdev_board(&v4l2->v4l2_dev, adap,
-					      &mt9v011_info, NULL)) {
-			ret = -ENODEV;
-			break;
-		}
-		/* probably means GRGB 16 bit bayer */
-		v4l2->vinmode = 0x0d;
+					      &mt9v011_info, NULL))
+			return -ENODEV;
+		v4l2->vinmode = EM28XX_VINMODE_RGB8_GRBG;
 		v4l2->vinctl = 0x00;
 
 		break;
@@ -395,8 +355,7 @@ int em28xx_init_camera(struct em28xx *dev)
 
 		em28xx_initialize_mt9m001(dev);
 
-		/* probably means BGGR 16 bit bayer */
-		v4l2->vinmode = 0x0c;
+		v4l2->vinmode = EM28XX_VINMODE_RGB8_BGGR;
 		v4l2->vinctl = 0x00;
 
 		break;
@@ -408,7 +367,7 @@ int em28xx_init_camera(struct em28xx *dev)
 		em28xx_write_reg(dev, EM28XX_R0F_XCLK, dev->board.xclk);
 		em28xx_initialize_mt9m111(dev);
 
-		v4l2->vinmode = 0x0a;
+		v4l2->vinmode = EM28XX_VINMODE_YUV422_UYVY;
 		v4l2->vinctl = 0x00;
 
 		break;
@@ -419,7 +378,6 @@ int em28xx_init_camera(struct em28xx *dev)
 			.type = "ov2640",
 			.flags = I2C_CLIENT_SCCB,
 			.addr = client->addr,
-			.platform_data = &camlink,
 		};
 		struct v4l2_subdev_format format = {
 			.which = V4L2_SUBDEV_FORMAT_ACTIVE,
@@ -439,10 +397,8 @@ int em28xx_init_camera(struct em28xx *dev)
 		subdev =
 		     v4l2_i2c_new_subdev_board(&v4l2->v4l2_dev, adap,
 					       &ov2640_info, NULL);
-		if (NULL == subdev) {
-			ret = -ENODEV;
-			break;
-		}
+		if (subdev == NULL)
+			return -ENODEV;
 
 		format.format.code = MEDIA_BUS_FMT_YUYV8_2X8;
 		format.format.width = 640;
@@ -452,21 +408,16 @@ int em28xx_init_camera(struct em28xx *dev)
 		/* NOTE: for UXGA=1600x1200 switch to 12MHz */
 		dev->board.xclk = EM28XX_XCLK_FREQUENCY_24MHZ;
 		em28xx_write_reg(dev, EM28XX_R0F_XCLK, dev->board.xclk);
-		v4l2->vinmode = 0x08;
+		v4l2->vinmode = EM28XX_VINMODE_YUV422_YUYV;
 		v4l2->vinctl = 0x00;
 
 		break;
 	}
 	case EM28XX_NOSENSOR:
 	default:
-		ret = -EINVAL;
+		return -EINVAL;
 	}
 
-	if (ret < 0) {
-		v4l2_clk_unregister_fixed(v4l2->clk);
-		v4l2->clk = NULL;
-	}
-
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL_GPL(em28xx_init_camera);

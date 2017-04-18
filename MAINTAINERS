@@ -8158,6 +8158,7 @@ W:	https://linuxtv.org
 Q:	http://patchwork.kernel.org/project/linux-media/list/
 T:	git git://linuxtv.org/media_tree.git
 S:	Maintained
+F:	Documentation/devicetree/bindings/media/
 F:	Documentation/media/
 F:	drivers/media/
 F:	drivers/staging/media/
@@ -9358,6 +9359,13 @@ OMNIKEY CARDMAN 4040 DRIVER
 M:	Harald Welte <laforge@gnumonks.org>
 S:	Maintained
 F:	drivers/char/pcmcia/cm4040_cs.*
+
+OMNIVISION OV5647 SENSOR DRIVER
+M:	Ramiro Oliveira <roliveir@synopsys.com>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+S:	Maintained
+F:	drivers/media/i2c/ov5647.c
 
 OMNIVISION OV7670 SENSOR DRIVER
 M:	Jonathan Corbet <corbet@lwn.net>
@@ -13547,6 +13555,14 @@ T:	git git://linuxtv.org/media_tree.git
 W:	https://linuxtv.org
 S:	Maintained
 F:	drivers/media/platform/vivid/*
+
+VIMC VIRTUAL MEDIA CONTROLLER DRIVER
+M:	Helen Koike <helen.koike@collabora.com>
+L:	linux-media@vger.kernel.org
+T:	git git://linuxtv.org/media_tree.git
+W:	https://linuxtv.org
+S:	Maintained
+F:	drivers/media/platform/vimc/*
 
 VLYNQ BUS
 M:	Florian Fainelli <f.fainelli@gmail.com>

@@ -390,6 +390,7 @@ static int coda_enum_fmt(struct file *file, void *priv,
 {
 	struct video_device *vdev = video_devdata(file);
 	const struct coda_video_device *cvd = to_coda_video_device(vdev);
+	struct coda_ctx *ctx = fh_to_ctx(priv);
 	const u32 *formats;
 
 	if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT)
@@ -400,6 +401,11 @@ static int coda_enum_fmt(struct file *file, void *priv,
 		return -EINVAL;
 
 	if (f->index >= CODA_MAX_FORMATS || formats[f->index] == 0)
+		return -EINVAL;
+
+	/* Skip YUYV if the vdoa is not available */
+	if (!ctx->vdoa && f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE &&
+	    formats[f->index] == V4L2_PIX_FMT_YUYV)
 		return -EINVAL;
 
 	f->pixelformat = formats[f->index];
@@ -817,8 +823,6 @@ static int coda_qbuf(struct file *file, void *priv,
 static bool coda_buf_is_end_of_stream(struct coda_ctx *ctx,
 				      struct vb2_v4l2_buffer *buf)
 {
-	v4l2_m2m_get_vq(ctx->fh.m2m_ctx, V4L2_BUF_TYPE_VIDEO_OUTPUT);
-
 	return ((ctx->bit_stream_param & CODA_BIT_STREAM_END_FLAG) &&
 		(buf->sequence == (ctx->qsequence - 1)));
 }

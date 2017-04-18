@@ -16,6 +16,7 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/i2c.h>
+#include <linux/clk.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
@@ -24,8 +25,7 @@
 #include <linux/v4l2-mediabus.h>
 #include <linux/videodev2.h>
 
-#include <media/soc_camera.h>
-#include <media/v4l2-clk.h>
+#include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-image-sizes.h>
@@ -282,12 +282,14 @@ struct ov2640_win_size {
 
 struct ov2640_priv {
 	struct v4l2_subdev		subdev;
+#if defined(CONFIG_MEDIA_CONTROLLER)
+	struct media_pad pad;
+#endif
 	struct v4l2_ctrl_handler	hdl;
 	u32	cfmt_code;
-	struct v4l2_clk			*clk;
+	struct clk			*clk;
 	const struct ov2640_win_size	*win;
 
-	struct soc_camera_subdev_desc	ssdd_dt;
 	struct gpio_desc *resetb_gpio;
 	struct gpio_desc *pwdn_gpio;
 };
@@ -677,13 +679,8 @@ err:
 }
 
 /*
- * soc_camera_ops functions
+ * functions
  */
-static int ov2640_s_stream(struct v4l2_subdev *sd, int enable)
-{
-	return 0;
-}
-
 static int ov2640_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct v4l2_subdev *sd =
@@ -744,10 +741,16 @@ static int ov2640_s_register(struct v4l2_subdev *sd,
 static int ov2640_s_power(struct v4l2_subdev *sd, int on)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct soc_camera_subdev_desc *ssdd = soc_camera_i2c_to_desc(client);
 	struct ov2640_priv *priv = to_ov2640(client);
 
-	return soc_camera_set_power(&client->dev, ssdd, priv->clk, on);
+	gpiod_direction_output(priv->pwdn_gpio, !on);
+	if (on && priv->resetb_gpio) {
+		/* Active the resetb pin to perform a reset pulse */
+		gpiod_direction_output(priv->resetb_gpio, 1);
+		usleep_range(3000, 5000);
+		gpiod_direction_output(priv->resetb_gpio, 0);
+	}
+	return 0;
 }
 
 /* Select the nearest higher resolution for capture */
@@ -769,15 +772,15 @@ static const struct ov2640_win_size *ov2640_select_win(u32 *width, u32 *height)
 	return &ov2640_supported_win_sizes[default_size];
 }
 
-static int ov2640_set_params(struct i2c_client *client, u32 *width, u32 *height,
-			     u32 code)
+static int ov2640_set_params(struct i2c_client *client,
+			     const struct ov2640_win_size *win, u32 code)
 {
 	struct ov2640_priv       *priv = to_ov2640(client);
 	const struct regval_list *selected_cfmt_regs;
 	int ret;
 
 	/* select win */
-	priv->win = ov2640_select_win(width, height);
+	priv->win = win;
 
 	/* select format */
 	priv->cfmt_code = 0;
@@ -833,8 +836,6 @@ static int ov2640_set_params(struct i2c_client *client, u32 *width, u32 *height,
 		goto err;
 
 	priv->cfmt_code = code;
-	*width = priv->win->width;
-	*height = priv->win->height;
 
 	return 0;
 
@@ -878,14 +879,13 @@ static int ov2640_set_fmt(struct v4l2_subdev *sd,
 {
 	struct v4l2_mbus_framefmt *mf = &format->format;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	const struct ov2640_win_size *win;
 
 	if (format->pad)
 		return -EINVAL;
 
-	/*
-	 * select suitable win, but don't store it
-	 */
-	ov2640_select_win(&mf->width, &mf->height);
+	/* select suitable win */
+	win = ov2640_select_win(&mf->width, &mf->height);
 
 	mf->field	= V4L2_FIELD_NONE;
 	mf->colorspace	= V4L2_COLORSPACE_SRGB;
@@ -902,8 +902,7 @@ static int ov2640_set_fmt(struct v4l2_subdev *sd,
 	}
 
 	if (format->which == V4L2_SUBDEV_FORMAT_ACTIVE)
-		return ov2640_set_params(client, &mf->width,
-					 &mf->height, mf->code);
+		return ov2640_set_params(client, win, mf->code);
 	cfg->try_fmt = *mf;
 	return 0;
 }
@@ -994,26 +993,6 @@ static const struct v4l2_subdev_core_ops ov2640_subdev_core_ops = {
 	.s_power	= ov2640_s_power,
 };
 
-static int ov2640_g_mbus_config(struct v4l2_subdev *sd,
-				struct v4l2_mbus_config *cfg)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct soc_camera_subdev_desc *ssdd = soc_camera_i2c_to_desc(client);
-
-	cfg->flags = V4L2_MBUS_PCLK_SAMPLE_RISING | V4L2_MBUS_MASTER |
-		V4L2_MBUS_VSYNC_ACTIVE_HIGH | V4L2_MBUS_HSYNC_ACTIVE_HIGH |
-		V4L2_MBUS_DATA_ACTIVE_HIGH;
-	cfg->type = V4L2_MBUS_PARALLEL;
-	cfg->flags = soc_camera_apply_board_flags(ssdd, cfg);
-
-	return 0;
-}
-
-static const struct v4l2_subdev_video_ops ov2640_subdev_video_ops = {
-	.s_stream	= ov2640_s_stream,
-	.g_mbus_config	= ov2640_g_mbus_config,
-};
-
 static const struct v4l2_subdev_pad_ops ov2640_subdev_pad_ops = {
 	.enum_mbus_code = ov2640_enum_mbus_code,
 	.get_selection	= ov2640_get_selection,
@@ -1023,39 +1002,8 @@ static const struct v4l2_subdev_pad_ops ov2640_subdev_pad_ops = {
 
 static const struct v4l2_subdev_ops ov2640_subdev_ops = {
 	.core	= &ov2640_subdev_core_ops,
-	.video	= &ov2640_subdev_video_ops,
 	.pad	= &ov2640_subdev_pad_ops,
 };
-
-/* OF probe functions */
-static int ov2640_hw_power(struct device *dev, int on)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct ov2640_priv *priv = to_ov2640(client);
-
-	dev_dbg(&client->dev, "%s: %s the camera\n",
-			__func__, on ? "ENABLE" : "DISABLE");
-
-	if (priv->pwdn_gpio)
-		gpiod_direction_output(priv->pwdn_gpio, !on);
-
-	return 0;
-}
-
-static int ov2640_hw_reset(struct device *dev)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct ov2640_priv *priv = to_ov2640(client);
-
-	if (priv->resetb_gpio) {
-		/* Active the resetb pin to perform a reset pulse */
-		gpiod_direction_output(priv->resetb_gpio, 1);
-		usleep_range(3000, 5000);
-		gpiod_direction_output(priv->resetb_gpio, 0);
-	}
-
-	return 0;
-}
 
 static int ov2640_probe_dt(struct i2c_client *client,
 		struct ov2640_priv *priv)
@@ -1076,11 +1024,6 @@ static int ov2640_probe_dt(struct i2c_client *client,
 	else if (IS_ERR(priv->pwdn_gpio))
 		return PTR_ERR(priv->pwdn_gpio);
 
-	/* Initialize the soc_camera_subdev_desc */
-	priv->ssdd_dt.power = ov2640_hw_power;
-	priv->ssdd_dt.reset = ov2640_hw_reset;
-	client->dev.platform_data = &priv->ssdd_dt;
-
 	return 0;
 }
 
@@ -1091,7 +1034,6 @@ static int ov2640_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
 	struct ov2640_priv	*priv;
-	struct soc_camera_subdev_desc *ssdd = soc_camera_i2c_to_desc(client);
 	struct i2c_adapter	*adapter = to_i2c_adapter(client->dev.parent);
 	int			ret;
 
@@ -1108,23 +1050,19 @@ static int ov2640_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
-	priv->clk = v4l2_clk_get(&client->dev, "xvclk");
-	if (IS_ERR(priv->clk))
-		return -EPROBE_DEFER;
+	if (client->dev.of_node) {
+		priv->clk = devm_clk_get(&client->dev, "xvclk");
+		if (IS_ERR(priv->clk))
+			return -EPROBE_DEFER;
+		clk_prepare_enable(priv->clk);
+	}
 
-	if (!ssdd && !client->dev.of_node) {
-		dev_err(&client->dev, "Missing platform_data for driver\n");
-		ret = -EINVAL;
+	ret = ov2640_probe_dt(client, priv);
+	if (ret)
 		goto err_clk;
-	}
-
-	if (!ssdd) {
-		ret = ov2640_probe_dt(client, priv);
-		if (ret)
-			goto err_clk;
-	}
 
 	v4l2_i2c_subdev_init(&priv->subdev, client, &ov2640_subdev_ops);
+	priv->subdev.flags = V4L2_SUBDEV_FL_HAS_DEVNODE;
 	v4l2_ctrl_handler_init(&priv->hdl, 2);
 	v4l2_ctrl_new_std(&priv->hdl, &ov2640_ctrl_ops,
 			V4L2_CID_VFLIP, 0, 1, 1, 0);
@@ -1133,8 +1071,15 @@ static int ov2640_probe(struct i2c_client *client,
 	priv->subdev.ctrl_handler = &priv->hdl;
 	if (priv->hdl.error) {
 		ret = priv->hdl.error;
-		goto err_clk;
+		goto err_hdl;
 	}
+#if defined(CONFIG_MEDIA_CONTROLLER)
+	priv->pad.flags = MEDIA_PAD_FL_SOURCE;
+	priv->subdev.entity.function = MEDIA_ENT_F_CAM_SENSOR;
+	ret = media_entity_pads_init(&priv->subdev.entity, 1, &priv->pad);
+	if (ret < 0)
+		goto err_hdl;
+#endif
 
 	ret = ov2640_video_probe(client);
 	if (ret < 0)
@@ -1149,9 +1094,13 @@ static int ov2640_probe(struct i2c_client *client,
 	return 0;
 
 err_videoprobe:
+#if defined(CONFIG_MEDIA_CONTROLLER)
+	media_entity_cleanup(&priv->subdev.entity);
+#endif
+err_hdl:
 	v4l2_ctrl_handler_free(&priv->hdl);
 err_clk:
-	v4l2_clk_put(priv->clk);
+	clk_disable_unprepare(priv->clk);
 	return ret;
 }
 
@@ -1160,9 +1109,12 @@ static int ov2640_remove(struct i2c_client *client)
 	struct ov2640_priv       *priv = to_ov2640(client);
 
 	v4l2_async_unregister_subdev(&priv->subdev);
-	v4l2_clk_put(priv->clk);
-	v4l2_device_unregister_subdev(&priv->subdev);
 	v4l2_ctrl_handler_free(&priv->hdl);
+#if defined(CONFIG_MEDIA_CONTROLLER)
+	media_entity_cleanup(&priv->subdev.entity);
+#endif
+	v4l2_device_unregister_subdev(&priv->subdev);
+	clk_disable_unprepare(priv->clk);
 	return 0;
 }
 
@@ -1190,6 +1142,6 @@ static struct i2c_driver ov2640_i2c_driver = {
 
 module_i2c_driver(ov2640_i2c_driver);
 
-MODULE_DESCRIPTION("SoC Camera driver for Omni Vision 2640 sensor");
+MODULE_DESCRIPTION("Driver for Omni Vision 2640 sensor");
 MODULE_AUTHOR("Alberto Panizzo");
 MODULE_LICENSE("GPL v2");
