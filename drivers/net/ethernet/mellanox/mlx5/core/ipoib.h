@@ -1,5 +1,5 @@
-/* QLogic qedr NIC Driver
- * Copyright (c) 2015-2016  QLogic Corporation
+/*
+ * Copyright (c) 2017, Mellanox Technologies. All rights reserved.
  *
  * This software is available to you under a choice of one of two
  * licenses.  You may choose to be licensed under the terms of the GNU
@@ -17,7 +17,7 @@
  *
  *      - Redistributions in binary form must reproduce the above
  *        copyright notice, this list of conditions and the following
- *        disclaimer in the documentation and /or other materials
+ *        disclaimer in the documentation and/or other materials
  *        provided with the distribution.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -29,28 +29,26 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#ifndef __QED_HSI_ROCE__
-#define __QED_HSI_ROCE__
 
-#include <linux/qed/common_hsi.h>
-#include <linux/qed/roce_common.h>
-#include "qedr_hsi_rdma.h"
+#ifndef __MLX5E_IPOB_H__
+#define __MLX5E_IPOB_H__
 
-/* Affiliated asynchronous events / errors enumeration */
-enum roce_async_events_type {
-	ROCE_ASYNC_EVENT_NONE = 0,
-	ROCE_ASYNC_EVENT_COMM_EST = 1,
-	ROCE_ASYNC_EVENT_SQ_DRAINED,
-	ROCE_ASYNC_EVENT_SRQ_LIMIT,
-	ROCE_ASYNC_EVENT_LAST_WQE_REACHED,
-	ROCE_ASYNC_EVENT_CQ_ERR,
-	ROCE_ASYNC_EVENT_LOCAL_INVALID_REQUEST_ERR,
-	ROCE_ASYNC_EVENT_LOCAL_CATASTROPHIC_ERR,
-	ROCE_ASYNC_EVENT_LOCAL_ACCESS_ERR,
-	ROCE_ASYNC_EVENT_QP_CATASTROPHIC_ERR,
-	ROCE_ASYNC_EVENT_CQ_OVERFLOW_ERR,
-	ROCE_ASYNC_EVENT_SRQ_EMPTY,
-	MAX_ROCE_ASYNC_EVENTS_TYPE
+#include <linux/mlx5/fs.h>
+#include "en.h"
+
+#define MLX5I_MAX_NUM_TC 1
+
+/* ipoib rdma netdev's private data structure */
+struct mlx5i_priv {
+	struct mlx5_core_qp qp;
+	char  *mlx5e_priv[0];
 };
 
-#endif /* __QED_HSI_ROCE__ */
+/* Extract mlx5e_priv from IPoIB netdev */
+#define mlx5i_epriv(netdev) ((void *)(((struct mlx5i_priv *)netdev_priv(netdev))->mlx5e_priv))
+
+netdev_tx_t mlx5i_sq_xmit(struct mlx5e_txqsq *sq, struct sk_buff *skb,
+			  struct mlx5_av *av, u32 dqpn, u32 dqkey);
+void mlx5i_handle_rx_cqe(struct mlx5e_rq *rq, struct mlx5_cqe64 *cqe);
+
+#endif /* __MLX5E_IPOB_H__ */

@@ -118,6 +118,7 @@ struct mlx5_flow_table {
 	/* FWD rules that point on this flow table */
 	struct list_head		fwd_rules;
 	u32				flags;
+	u32				underlay_qpn;
 };
 
 struct mlx5_fc_cache {
@@ -152,6 +153,7 @@ struct fs_fte {
 	u32				index;
 	u32				action;
 	u32				encap_id;
+	u32				modify_id;
 	enum fs_fte_status		status;
 	struct mlx5_fc			*counter;
 };

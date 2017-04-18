@@ -440,14 +440,14 @@ static void can_can_gw_rcv(struct sk_buff *skb, void *data)
 
 static inline int cgw_register_filter(struct cgw_job *gwj)
 {
-	return can_rx_register(gwj->src.dev, gwj->ccgw.filter.can_id,
+	return can_rx_register(&init_net, gwj->src.dev, gwj->ccgw.filter.can_id,
 			       gwj->ccgw.filter.can_mask, can_can_gw_rcv,
 			       gwj, "gw", NULL);
 }
 
 static inline void cgw_unregister_filter(struct cgw_job *gwj)
 {
-	can_rx_unregister(gwj->src.dev, gwj->ccgw.filter.can_id,
+	can_rx_unregister(&init_net, gwj->src.dev, gwj->ccgw.filter.can_id,
 			  gwj->ccgw.filter.can_mask, can_can_gw_rcv, gwj);
 }
 
@@ -641,7 +641,7 @@ static int cgw_parse_attr(struct nlmsghdr *nlh, struct cf_mod *mod,
 	memset(mod, 0, sizeof(*mod));
 
 	err = nlmsg_parse(nlh, sizeof(struct rtcanmsg), tb, CGW_MAX,
-			  cgw_policy);
+			  cgw_policy, NULL);
 	if (err < 0)
 		return err;
 
@@ -809,7 +809,8 @@ static int cgw_parse_attr(struct nlmsghdr *nlh, struct cf_mod *mod,
 	return 0;
 }
 
-static int cgw_create_job(struct sk_buff *skb,  struct nlmsghdr *nlh)
+static int cgw_create_job(struct sk_buff *skb,  struct nlmsghdr *nlh,
+			  struct netlink_ext_ack *extack)
 {
 	struct rtcanmsg *r;
 	struct cgw_job *gwj;
@@ -921,7 +922,8 @@ static void cgw_remove_all_jobs(void)
 	}
 }
 
-static int cgw_remove_job(struct sk_buff *skb, struct nlmsghdr *nlh)
+static int cgw_remove_job(struct sk_buff *skb, struct nlmsghdr *nlh,
+			  struct netlink_ext_ack *extack)
 {
 	struct cgw_job *gwj = NULL;
 	struct hlist_node *nx;

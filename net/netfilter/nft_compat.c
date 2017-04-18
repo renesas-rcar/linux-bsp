@@ -200,7 +200,7 @@ static int nft_parse_compat(const struct nlattr *attr, u16 *proto, bool *inv)
 	int err;
 
 	err = nla_parse_nested(tb, NFTA_RULE_COMPAT_MAX, attr,
-			       nft_rule_compat_policy);
+			       nft_rule_compat_policy, NULL);
 	if (err < 0)
 		return err;
 
@@ -229,10 +229,6 @@ nft_target_init(const struct nft_ctx *ctx, const struct nft_expr *expr,
 	bool inv = false;
 	union nft_entry e = {};
 	int ret;
-
-	ret = nft_compat_chain_validate_dependency(target->table, ctx->chain);
-	if (ret < 0)
-		goto err;
 
 	target_compat_from_user(target, nla_data(tb[NFTA_TARGET_INFO]), info);
 
@@ -418,10 +414,6 @@ nft_match_init(const struct nft_ctx *ctx, const struct nft_expr *expr,
 	bool inv = false;
 	union nft_entry e = {};
 	int ret;
-
-	ret = nft_compat_chain_validate_dependency(match->table, ctx->chain);
-	if (ret < 0)
-		goto err;
 
 	match_compat_from_user(match, nla_data(tb[NFTA_MATCH_INFO]), info);
 
