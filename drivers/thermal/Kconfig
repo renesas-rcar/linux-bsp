@@ -291,6 +291,16 @@ config ARMADA_THERMAL
 	  Enable this option if you want to have support for thermal management
 	  controller present in Armada 370 and Armada XP SoC.
 
+config DA9062_THERMAL
+	tristate "DA9062/DA9061 Dialog Semiconductor thermal driver"
+	depends on MFD_DA9062 || COMPILE_TEST
+	depends on OF
+	help
+	  Enable this for the Dialog Semiconductor thermal sensor driver.
+	  This will report PMIC junction over-temperature for one thermal trip
+	  zone.
+	  Compatible with the DA9062 and DA9061 PMICs.
+
 config INTEL_POWERCLAMP
 	tristate "Intel PowerClamp idle injection driver"
 	depends on THERMAL
@@ -380,6 +390,11 @@ config MTK_THERMAL
 	  Enable this option if you want to have support for thermal management
 	  controller present in Mediatek SoCs
 
+menu "Broadcom thermal drivers"
+depends on ARCH_BCM || COMPILE_TEST
+source "drivers/thermal/broadcom/Kconfig"
+endmenu
+
 menu "Texas Instruments thermal drivers"
 depends on ARCH_HAS_BANDGAP || COMPILE_TEST
 depends on HAS_IOMEM
@@ -440,5 +455,13 @@ config ZX2967_THERMAL
 	  Enable the zx2967 thermal sensors driver, which supports
 	  the primitive temperature sensor embedded in zx2967 SoCs.
 	  This sensor generates the real time die temperature.
+
+config BCM2835_THERMAL
+	tristate "Thermal sensors on bcm2835 SoC"
+	depends on ARCH_BCM2835 || COMPILE_TEST
+	depends on HAS_IOMEM
+	depends on THERMAL_OF
+	help
+	  Support for thermal sensors on Broadcom bcm2835 SoCs.
 
 endif
