@@ -105,6 +105,18 @@ struct v4l2_async_notifier {
 };
 
 /**
+ * v4l2_async_notifier_register - registers a subdevice asynchronous subnotifier
+ *
+ * @sd: pointer to &struct v4l2_subdev
+ * @notifier: pointer to &struct v4l2_async_notifier
+ *
+ * This function assumes the async list_lock is already locked, allowing
+ * it to be used from struct v4l2_subdev_internal_ops registered() callback.
+ */
+int v4l2_async_subnotifier_register(struct v4l2_subdev *sd,
+				    struct v4l2_async_notifier *notifier);
+
+/**
  * v4l2_async_notifier_register - registers a subdevice asynchronous notifier
  *
  * @v4l2_dev: pointer to &struct v4l2_device
@@ -112,6 +124,16 @@ struct v4l2_async_notifier {
  */
 int v4l2_async_notifier_register(struct v4l2_device *v4l2_dev,
 				 struct v4l2_async_notifier *notifier);
+
+/**
+ * v4l2_async_subnotifier_unregister - unregisters a asynchronous subnotifier
+ *
+ * @notifier: pointer to &struct v4l2_async_notifier
+ *
+ * This function assumes the async list_lock is already locked, allowing
+ * it to be used from struct v4l2_subdev_internal_ops unregistered() callback.
+ */
+void v4l2_async_subnotifier_unregister(struct v4l2_async_notifier *notifier);
 
 /**
  * v4l2_async_notifier_unregister - unregisters a subdevice asynchronous notifier
