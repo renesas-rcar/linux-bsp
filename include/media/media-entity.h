@@ -822,6 +822,28 @@ struct media_pad *media_entity_remote_pad(struct media_pad *pad);
 struct media_entity *media_entity_get(struct media_entity *entity);
 
 /**
+ * media_entity_pad_from_fwnode - Get pad number from fwnode
+ *
+ * @entity: The entity
+ * @fwnode: Pointer to fwnode_handle which should be used to find pad
+ * @direction: Expected direction of the pad
+ * @pad: Pointer to pad which will should be filled in
+ *
+ * This function can be used to resolve the media pad number from
+ * a fwnode. This is useful for devices which uses more complex
+ * mappings of media pads.
+ *
+ * If the entity do not implement the pad_from_fwnode() operation
+ * this function searches the entity for the first pad that matches
+ * the @direction.
+ *
+ * Return: return 0 on success.
+ */
+int media_entity_pad_from_fwnode(struct media_entity *entity,
+				 struct fwnode_handle *fwnode,
+				 int direction, unsigned int *pad);
+
+/**
  * media_graph_walk_init - Allocate resources used by graph walk.
  *
  * @graph: Media graph structure that will be used to walk the graph
