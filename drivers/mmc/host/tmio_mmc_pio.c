@@ -391,8 +391,17 @@ static int tmio_mmc_start_command(struct tmio_mmc_host *host, struct mmc_command
 		}
 	} else if (cmd->opcode == MMC_STOP_TRANSMISSION && !cmd->arg) {
 		u32 status = sd_ctrl_read16_and_16_as_32(host, CTL_STATUS);
+		bool busy = false;
 
-		if (status & TMIO_STAT_CMD_BUSY) {
+		if (host->pdata->flags &
+			(TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
+			if (!(status & TMIO_STAT_SCLKDIVEN))
+				busy = true;
+		} else {
+			if (status & TMIO_STAT_CMD_BUSY)
+				busy = true;
+		}
+		if (busy) {
 			sd_ctrl_write16(host, CTL_STOP_INTERNAL_ACTION, 0x001);
 			return 0;
 		}
@@ -624,7 +633,8 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 		 * DATAEND interrupt with the BUSY bit set, in this cases
 		 * waiting for one more interrupt fixes the problem.
 		 */
-		if (host->pdata->flags & TMIO_MMC_HAS_IDLE_WAIT) {
+		if (host->pdata->flags &
+			(TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
 			if (status & TMIO_STAT_SCLKDIVEN)
 				done = true;
 		} else {
