@@ -697,9 +697,11 @@ static void tmio_mmc_cmd_irq(struct tmio_mmc_host *host,
 		cmd->error = -ETIMEDOUT;
 	else if ((stat & TMIO_STAT_CRCFAIL && cmd->flags & MMC_RSP_CRC) ||
 		 stat & TMIO_STAT_STOPBIT_ERR ||
-		 stat & TMIO_STAT_CMD_IDX_ERR)
+		 stat & TMIO_STAT_CMD_IDX_ERR) {
 		cmd->error = -EILSEQ;
-
+		if (stat & TMIO_STAT_DATAEND)
+			tmio_mmc_ack_mmc_irqs(host, TMIO_STAT_DATAEND);
+	}
 	/* If there is data to handle we enable data IRQs here, and
 	 * we will ultimatley finish the request in the data_end handler.
 	 * If theres no data or we encountered an error, finish now.
