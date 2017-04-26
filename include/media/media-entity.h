@@ -21,6 +21,7 @@
 
 #include <linux/bitmap.h>
 #include <linux/bug.h>
+#include <linux/fwnode.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/media.h>
@@ -171,6 +172,9 @@ struct media_pad {
 
 /**
  * struct media_entity_operations - Media entity operations
+ * @pad_from_fwnode:	Return the pad number based on a fwnode endpoint.
+ *			This operation can be used to map a fwnode to a
+ *			media pad number. Optional.
  * @link_setup:		Notify the entity of link changes. The operation can
  *			return an error, in which case link setup will be
  *			cancelled. Optional.
@@ -184,6 +188,8 @@ struct media_pad {
  *    mutex held.
  */
 struct media_entity_operations {
+	int (*pad_from_fwnode)(struct fwnode_endpoint *endpoint,
+			       unsigned int *pad);
 	int (*link_setup)(struct media_entity *entity,
 			  const struct media_pad *local,
 			  const struct media_pad *remote, u32 flags);
