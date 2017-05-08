@@ -287,7 +287,7 @@ done:
 static void rcar_csi2_reset(struct rcar_csi2 *priv)
 {
 	iowrite32(SRST_SRST, priv->base + SRST_REG);
-	udelay(5);
+	usleep_range(100, 150);
 	iowrite32(0, priv->base + SRST_REG);
 }
 
