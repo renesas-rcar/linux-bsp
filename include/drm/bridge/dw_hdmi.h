@@ -75,4 +75,6 @@ void dw_hdmi_set_sample_rate(struct dw_hdmi *hdmi, unsigned int rate);
 void dw_hdmi_audio_enable(struct dw_hdmi *hdmi);
 void dw_hdmi_audio_disable(struct dw_hdmi *hdmi);
 
+void dw_hdmi_s2r_ctrl(struct drm_bridge *bridge, int flag);
+
 #endif /* __IMX_HDMI_H__ */
