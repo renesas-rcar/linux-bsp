@@ -2423,10 +2423,21 @@ static const struct renesas_usb3_priv renesas_usb3_priv_r8a7795 = {
 	.workaround_for_vbus = true,
 };
 
+static const struct renesas_usb3_priv renesas_usb3_priv_r8a7796 = {
+	.ramsize_per_ramif = SZ_16K,
+	.num_ramif = 4,
+	.ramsize_per_pipe = SZ_4K,
+	.workaround_for_vbus = true,
+};
+
 static const struct of_device_id usb3_of_match[] = {
 	{
 		.compatible = "renesas,r8a7795-usb3-peri",
 		.data = &renesas_usb3_priv_r8a7795,
+	},
+	{
+		.compatible = "renesas,r8a7796-usb3-peri",
+		.data = &renesas_usb3_priv_r8a7796,
 	},
 	{ },
 };
