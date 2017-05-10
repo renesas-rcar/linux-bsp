@@ -102,6 +102,10 @@
 /* PHY Test Interface Clear bits */
 #define PHTC_TESTCLR			(1 << 0)
 
+/* Interrupt Status Monitor bits */
+#define INT_ULPS_START			(1 << 7)
+#define INT_ULPS_END			(1 << 6)
+
 /* PHY Frequency Control */
 #define CSI2_FRE_NUM	43
 
@@ -372,6 +376,10 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv,
 		mbps, hsfreq->mbps);
 
 	*phypll = PHYPLL_HSFREQRANGE(hsfreq->reg);
+
+	if (priv->ths_quirks & CSI2_PHY_ADD_INIT)
+		iowrite32((INT_ULPS_START | INT_ULPS_END),
+			  priv->base + INTSTATE_REG);
 
 	return 0;
 }
