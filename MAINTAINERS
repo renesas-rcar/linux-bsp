@@ -10216,12 +10216,11 @@ L:	linux-renesas-soc@vger.kernel.org
 F:	drivers/net/ethernet/renesas/
 F:	include/linux/sh_eth.h
 
-RENESAS USB2 PHY DRIVER
+RENESAS USB2/3 PHY DRIVER
 M:	Yoshihiro Shimoda <yoshihiro.shimoda.uh@renesas.com>
 L:	linux-renesas-soc@vger.kernel.org
 S:	Maintained
-F:	drivers/phy/phy-rcar-gen3-usb2.c
-F:	drivers/phy/phy-rcar-gen3-usb2-clksel.c
+F:	drivers/phy/phy-rcar-gen3-usb*.c
 
 RESET CONTROLLER FRAMEWORK
 M:	Philipp Zabel <p.zabel@pengutronix.de>
