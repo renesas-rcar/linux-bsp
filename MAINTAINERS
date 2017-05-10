@@ -10221,6 +10221,7 @@ M:	Yoshihiro Shimoda <yoshihiro.shimoda.uh@renesas.com>
 L:	linux-renesas-soc@vger.kernel.org
 S:	Maintained
 F:	drivers/phy/phy-rcar-gen3-usb2.c
+F:	drivers/phy/phy-rcar-gen3-usb2-clksel.c
 
 RESET CONTROLLER FRAMEWORK
 M:	Philipp Zabel <p.zabel@pengutronix.de>
