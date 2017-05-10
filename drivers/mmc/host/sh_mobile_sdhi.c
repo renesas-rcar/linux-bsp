@@ -147,7 +147,7 @@ struct sh_mobile_sdhi {
 	struct tmio_mmc_dma dma_priv;
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pins_default, *pins_uhs;
-	void __iomem *scc_ctl;
+	int scc_offset;
 };
 
 static void sh_mobile_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
@@ -335,14 +335,14 @@ static int sh_mobile_sdhi_select_drive_strength(struct mmc_card *card,
 static inline u32 sd_scc_read32(struct tmio_mmc_host *host,
 				struct sh_mobile_sdhi *priv, int addr)
 {
-	return readl(priv->scc_ctl + (addr << host->bus_shift));
+	return readl(host->ctl + priv->scc_offset + (addr << host->bus_shift));
 }
 
 static inline void sd_scc_write32(struct tmio_mmc_host *host,
 				  struct sh_mobile_sdhi *priv,
 				  int addr, u32 val)
 {
-	writel(val, priv->scc_ctl + (addr << host->bus_shift));
+	writel(val, host->ctl + priv->scc_offset + (addr << host->bus_shift));
 }
 
 static unsigned int sh_mobile_sdhi_init_tuning(struct tmio_mmc_host *host)
@@ -440,9 +440,6 @@ static void sh_mobile_sdhi_reset_hs400_mode(struct mmc_host *mmc)
 	if (!(host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR) &&
 	    !(host->mmc->caps2 & (MMC_CAP2_HS400_1_8V |
 					MMC_CAP2_HS200_1_8V_SDR)))
-		return;
-
-	if (!priv->scc_ctl)
 		return;
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
@@ -761,6 +758,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 		dma_priv->sdbuf_64bit = of_data->sdbuf_64bit;
 		host->bus_shift = of_data->bus_shift;
+		priv->scc_offset = of_data->scc_offset;
 	}
 
 	host->dma		= dma_priv;
@@ -862,8 +860,6 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 
 			if (!hit)
 				dev_warn(&host->pdev->dev, "Unknown clock rate for SDR104\n");
-
-			priv->scc_ctl = host->ctl + of_data->scc_offset;
 		}
 	}
 
