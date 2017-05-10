@@ -570,10 +570,8 @@ static bool sh_mobile_sdhi_check_scc_error(struct tmio_mmc_host *host)
 {
 	struct sh_mobile_sdhi *priv;
 
-	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104) &&
-	    !(host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR) &&
-	    !(host->mmc->caps2 & (MMC_CAP2_HS400_1_8V |
-					MMC_CAP2_HS200_1_8V_SDR)))
+	if (!(host->mmc->ios.timing == MMC_TIMING_UHS_SDR104) &&
+	    !(host->mmc->ios.timing == MMC_TIMING_MMC_HS200))
 		return 0;
 
 	priv = host_to_priv(host);
