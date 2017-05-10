@@ -925,7 +925,6 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	unsigned long flags;
 	int ret;
-	u32 opcode;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -960,18 +959,13 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		}
 		host->last_req_ts = jiffies;
 		host->mrq = mrq;
-		if (((host->check_scc_error && host->check_scc_error(host)) ||
-			(mrq->cmd->error == -EILSEQ)) && host->mmc->card) {
-			if (mmc_card_mmc(host->mmc->card))
-				opcode = MMC_SEND_TUNING_BLOCK_HS200;
-			else
-				opcode = MMC_SEND_TUNING_BLOCK;
-			/* Start retuning */
-			ret = tmio_mmc_execute_tuning(mmc, opcode);
-			if (ret)
-				goto fail;
-			/* Restore request */
-			host->mrq = mrq;
+		if (mrq->cmd->error && host->mmc->card) {
+			ret = mrq->cmd->error;
+			goto fail;
+		}
+		if (host->check_scc_error && host->check_scc_error(host)) {
+			ret = -EILSEQ;
+			goto fail;
 		}
 	}
 
