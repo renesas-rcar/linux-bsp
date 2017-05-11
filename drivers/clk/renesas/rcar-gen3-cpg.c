@@ -856,7 +856,7 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 * the multiplier value.
 		 */
 		value = readl(base + CPG_PLL4CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		mult = ((value >> 24) & 0x7f) + 1;
 		if (cpg_quirks & PLL_ERRATA)
 			mult *= 2;
 		break;
