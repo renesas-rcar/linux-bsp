@@ -40,18 +40,15 @@ void rcar_du_hdmienc_suspend(struct drm_encoder *encoder)
 
 	if ((bfuncs) && (bfuncs->disable))
 		bfuncs->disable(encoder->bridge);
-}
 
-#define SMSTPCR7 0xE615014C
+	dw_hdmi_s2r_ctrl(encoder->bridge, 0);
+}
 
 void rcar_du_hdmienc_resume(struct drm_encoder *encoder)
 {
-	void __iomem *smstpcr = ioremap_nocache(SMSTPCR7, 4);
 	const struct drm_bridge_funcs *bfuncs = encoder->bridge->funcs;
-	u32 temp;
 
-	temp = readl(smstpcr);
-	writel(temp & ~(0x3 << 28), smstpcr);
+	dw_hdmi_s2r_ctrl(encoder->bridge, 1);
 
 	if ((bfuncs) && (bfuncs->enable))
 		bfuncs->enable(encoder->bridge);

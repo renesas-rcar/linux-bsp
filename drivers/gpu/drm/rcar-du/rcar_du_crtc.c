@@ -657,11 +657,33 @@ static void rcar_du_crtc_atomic_flush(struct drm_crtc *crtc,
 		rcar_du_vsp_atomic_flush(rcrtc);
 }
 
+static bool rcar_du_crtc_mode_fixup(struct drm_crtc *crtc,
+				    const struct drm_display_mode *mode,
+				    struct drm_display_mode *adjusted_mode)
+{
+	struct rcar_du_crtc *rcrtc = to_rcar_crtc(crtc);
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
+	int vdsr_reg = mode->crtc_vtotal - mode->crtc_vsync_end - 2;
+
+	/* It is prohibited to set a value less than 1 to VDSR register
+	 * by the H/W specification.
+	 */
+	if (vdsr_reg < 1) {
+		dev_err(rcdu->dev,
+			"setting value (%d) to VDSR register is invalid.\n",
+			vdsr_reg);
+		return false;
+	}
+
+	return true;
+}
+
 static const struct drm_crtc_helper_funcs crtc_helper_funcs = {
 	.disable = rcar_du_crtc_disable,
 	.enable = rcar_du_crtc_enable,
 	.atomic_begin = rcar_du_crtc_atomic_begin,
 	.atomic_flush = rcar_du_crtc_atomic_flush,
+	.mode_fixup = rcar_du_crtc_mode_fixup,
 };
 
 static const struct drm_crtc_funcs crtc_funcs = {
