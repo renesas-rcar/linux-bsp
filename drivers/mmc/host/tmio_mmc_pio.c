@@ -344,8 +344,8 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 		tmio_mmc_abort_dma(host);
 	}
 
-	if (host->check_scc_error)
-		host->check_scc_error(host);
+	if (host->check_scc_error && host->check_scc_error(host))
+		mrq->cmd->error = -EILSEQ;
 
 	if (cmd == mrq->sbc) {
 		/* finish SET_BLOCK_COUNT request */
@@ -391,8 +391,17 @@ static int tmio_mmc_start_command(struct tmio_mmc_host *host, struct mmc_command
 		}
 	} else if (cmd->opcode == MMC_STOP_TRANSMISSION && !cmd->arg) {
 		u32 status = sd_ctrl_read16_and_16_as_32(host, CTL_STATUS);
+		bool busy = false;
 
-		if (status & TMIO_STAT_CMD_BUSY) {
+		if (host->pdata->flags &
+			(TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
+			if (!(status & TMIO_STAT_SCLKDIVEN))
+				busy = true;
+		} else {
+			if (status & TMIO_STAT_CMD_BUSY)
+				busy = true;
+		}
+		if (busy) {
 			sd_ctrl_write16(host, CTL_STOP_INTERNAL_ACTION, 0x001);
 			return 0;
 		}
@@ -688,9 +697,11 @@ static void tmio_mmc_cmd_irq(struct tmio_mmc_host *host,
 		cmd->error = -ETIMEDOUT;
 	else if ((stat & TMIO_STAT_CRCFAIL && cmd->flags & MMC_RSP_CRC) ||
 		 stat & TMIO_STAT_STOPBIT_ERR ||
-		 stat & TMIO_STAT_CMD_IDX_ERR)
+		 stat & TMIO_STAT_CMD_IDX_ERR) {
 		cmd->error = -EILSEQ;
-
+		if (stat & TMIO_STAT_DATAEND)
+			tmio_mmc_ack_mmc_irqs(host, TMIO_STAT_DATAEND);
+	}
 	/* If there is data to handle we enable data IRQs here, and
 	 * we will ultimatley finish the request in the data_end handler.
 	 * If theres no data or we encountered an error, finish now.
@@ -914,7 +925,6 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	unsigned long flags;
 	int ret;
-	u32 opcode;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -949,18 +959,13 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		}
 		host->last_req_ts = jiffies;
 		host->mrq = mrq;
-		if (((host->check_scc_error && host->check_scc_error(host)) ||
-			(mrq->cmd->error == -EILSEQ)) && host->mmc->card) {
-			if (mmc_card_mmc(host->mmc->card))
-				opcode = MMC_SEND_TUNING_BLOCK_HS200;
-			else
-				opcode = MMC_SEND_TUNING_BLOCK;
-			/* Start retuning */
-			ret = tmio_mmc_execute_tuning(mmc, opcode);
-			if (ret)
-				goto fail;
-			/* Restore request */
-			host->mrq = mrq;
+		if (mrq->cmd->error && host->mmc->card) {
+			ret = mrq->cmd->error;
+			goto fail;
+		}
+		if (host->check_scc_error && host->check_scc_error(host)) {
+			ret = -EILSEQ;
+			goto fail;
 		}
 	}
 
@@ -1319,6 +1324,7 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host,
 	tmio_mmc_reset(_host);
 	tmio_mmc_reset_dma(_host);
 
+	sd_ctrl_write32_as_16_and_16(_host, CTL_IRQ_MASK, TMIO_MASK_INIT);
 	_host->sdcard_irq_mask = sd_ctrl_read16_and_16_as_32(_host, CTL_IRQ_MASK);
 	tmio_mmc_disable_mmc_irqs(_host, TMIO_MASK_ALL);
 
