@@ -697,7 +697,8 @@ int vsp1_du_map_sg(struct device *dev, struct sg_table *sgt)
 
 	map_dev = vsp1->fcp ? rcar_fcp_get_device(vsp1->fcp) : dev;
 
-	return dma_map_sg(map_dev, sgt->sgl, sgt->nents, DMA_TO_DEVICE);
+	return dma_map_sg_attrs(map_dev, sgt->sgl, sgt->nents, DMA_TO_DEVICE,
+				DMA_ATTR_SKIP_CPU_SYNC);
 }
 EXPORT_SYMBOL_GPL(vsp1_du_map_sg);
 
@@ -708,7 +709,8 @@ void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt)
 
 	map_dev = vsp1->fcp ? rcar_fcp_get_device(vsp1->fcp) : dev;
 
-	dma_unmap_sg(map_dev, sgt->sgl, sgt->nents, DMA_TO_DEVICE);
+	dma_unmap_sg_attrs(map_dev, sgt->sgl, sgt->nents, DMA_TO_DEVICE,
+			   DMA_ATTR_SKIP_CPU_SYNC);
 }
 EXPORT_SYMBOL_GPL(vsp1_du_unmap_sg);
 
