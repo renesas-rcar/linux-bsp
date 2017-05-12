@@ -331,8 +331,8 @@ static void rsnd_src_status_clear(struct rsnd_mod *mod)
 {
 	u32 val = OUF_SRC(rsnd_mod_id(mod));
 
-	rsnd_mod_bset(mod, SCU_SYS_STATUS0, val, val);
-	rsnd_mod_bset(mod, SCU_SYS_STATUS1, val, val);
+	rsnd_mod_write(mod, SCU_SYS_STATUS0, val);
+	rsnd_mod_write(mod, SCU_SYS_STATUS1, val);
 }
 
 static bool rsnd_src_error_occurred(struct rsnd_mod *mod)
@@ -477,7 +477,7 @@ static int rsnd_src_probe_(struct rsnd_mod *mod,
 			return ret;
 	}
 
-	ret = rsnd_dma_attach(io, mod, &src->dma, 0);
+	ret = rsnd_dma_attach(io, mod, &src->dma);
 
 	return ret;
 }
