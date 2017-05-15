@@ -714,6 +714,13 @@
 			status = "okay";
 		};
 
+		mfis_lock: mfis-lock@e62600c0 {
+			compatible =    "renesas,mfis-lock-r8a7796",
+					"renesas,mfis-lock";
+			reg = <0 0xe62600c0 0 0x0020>;
+			status = "okay";
+		};
+
 		pfc: pin-controller@e6060000 {
 			compatible = "renesas,pfc-r8a7796";
 			reg = <0 0xe6060000 0 0x50c>;
