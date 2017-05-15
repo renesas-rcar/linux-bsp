@@ -18,6 +18,7 @@
 
 #include <linux/bitmap.h>
 #include <linux/module.h>
+#include <linux/property.h>
 #include <linux/slab.h>
 #include <media/media-entity.h>
 #include <media/media-device.h>
@@ -385,6 +386,44 @@ struct media_entity *media_graph_walk_next(struct media_graph *graph)
 	return entity;
 }
 EXPORT_SYMBOL_GPL(media_graph_walk_next);
+
+int media_entity_pad_from_fwnode(struct media_entity *entity,
+				 struct fwnode_handle *fwnode,
+				 int direction, unsigned int *pad)
+{
+	struct fwnode_endpoint endpoint;
+	int i, tmp, ret;
+
+	if (!entity->ops || !entity->ops->pad_from_fwnode) {
+		for (i = 0; i < entity->num_pads; i++) {
+			if (entity->pads[i].flags & direction) {
+				*pad = i;
+				return 0;
+			}
+		}
+
+		return -ENXIO;
+	}
+
+	ret = fwnode_graph_parse_endpoint(fwnode, &endpoint);
+	if (ret)
+		return ret;
+
+	ret = entity->ops->pad_from_fwnode(&endpoint, &tmp);
+	if (ret)
+		return ret;
+
+	if (tmp >= entity->num_pads)
+		return -ENXIO;
+
+	if (!(entity->pads[tmp].flags & direction))
+		return -ENXIO;
+
+	*pad = tmp;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(media_entity_pad_from_fwnode);
 
 /* -----------------------------------------------------------------------------
  * Pipeline management
