@@ -1,0 +1,15 @@
+fixes
+	patch
+		ARM: omap2+: make omap4_get_cpu1_ns_pa_addr declaration usable
+	<no branch> (1c0803652d82b9a62980886e019c9f70576028a5)
+		https://github.com/mbgg/linux-mediatek tags/v4.11-next-fixes
+	<no branch> (7b4ccb3c466f62bbf2f4dd5d6a143d945a6f3051)
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-fixes-for-v4.12
+	<no branch> (6a680783aaadd168557eec695374929ac066536f)
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.12-3
+	<no branch> (d2718d1365f7fce624fd7ed163f60532f92ed016)
+		git://git.infradead.org/linux-mvebu tags/mvebu-arm64-4.12-1
+
+next/tee
+	tee/initial-merge
+		git://git.linaro.org:/people/jens.wiklander/linux-tee tags/tee-drv-for-4.12
