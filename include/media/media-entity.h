@@ -21,6 +21,7 @@
 
 #include <linux/bitmap.h>
 #include <linux/bug.h>
+#include <linux/fwnode.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/media.h>
@@ -171,12 +172,18 @@ struct media_pad {
 
 /**
  * struct media_entity_operations - Media entity operations
+ * @pad_from_fwnode:	Return the pad number based on a fwnode endpoint.
+ *			This operation can be used to map a fwnode to a
+ *			media pad number. Optional.
  * @link_setup:		Notify the entity of link changes. The operation can
  *			return an error, in which case link setup will be
  *			cancelled. Optional.
  * @link_validate:	Return whether a link is valid from the entity point of
  *			view. The media_pipeline_start() function
  *			validates all links by calling this operation. Optional.
+ * @has_route:		Return whether a route exists inside the entity between
+ *			two given pads. Optional. If the operation isn't
+ *			implemented all pads will be considered as connected.
  *
  * .. note::
  *
@@ -184,10 +191,14 @@ struct media_pad {
  *    mutex held.
  */
 struct media_entity_operations {
+	int (*pad_from_fwnode)(struct fwnode_endpoint *endpoint,
+			       unsigned int *pad);
 	int (*link_setup)(struct media_entity *entity,
 			  const struct media_pad *local,
 			  const struct media_pad *remote, u32 flags);
 	int (*link_validate)(struct media_link *link);
+	bool (*has_route)(struct media_entity *entity, unsigned int pad0,
+			  unsigned int pad1);
 };
 
 /**
@@ -816,6 +827,28 @@ struct media_pad *media_entity_remote_pad(struct media_pad *pad);
 struct media_entity *media_entity_get(struct media_entity *entity);
 
 /**
+ * media_entity_pad_from_fwnode - Get pad number from fwnode
+ *
+ * @entity: The entity
+ * @fwnode: Pointer to fwnode_handle which should be used to find pad
+ * @direction: Expected direction of the pad
+ * @pad: Pointer to pad which will should be filled in
+ *
+ * This function can be used to resolve the media pad number from
+ * a fwnode. This is useful for devices which uses more complex
+ * mappings of media pads.
+ *
+ * If the entity do not implement the pad_from_fwnode() operation
+ * this function searches the entity for the first pad that matches
+ * the @direction.
+ *
+ * Return: return 0 on success.
+ */
+int media_entity_pad_from_fwnode(struct media_entity *entity,
+				 struct fwnode_handle *fwnode,
+				 int direction, unsigned int *pad);
+
+/**
  * media_graph_walk_init - Allocate resources used by graph walk.
  *
  * @graph: Media graph structure that will be used to walk the graph
@@ -824,6 +857,22 @@ struct media_entity *media_entity_get(struct media_entity *entity);
 __must_check int media_graph_walk_init(
 	struct media_graph *graph, struct media_device *mdev);
 
+/**
+ * media_entity_has_route - Check if two entity pads are connected internally
+ *
+ * @entity: The entity
+ * @pad0: The first pad index
+ * @pad1: The second pad index
+ *
+ * This function can be used to check whether two pads of an entity are
+ * connected internally in the entity.
+ *
+ * The caller must hold entity->graph_obj.mdev->mutex.
+ *
+ * Return: true if the pads are connected internally and false otherwise.
+ */
+bool media_entity_has_route(struct media_entity *entity, unsigned int pad0,
+			    unsigned int pad1);
 /**
  * media_graph_walk_cleanup - Release resources used by graph walk.
  *
