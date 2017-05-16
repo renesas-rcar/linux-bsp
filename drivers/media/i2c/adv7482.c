@@ -988,7 +988,8 @@ static int adv7482_write_registers(struct i2c_client *client,
 	while (regs->addr != ADV7482_I2C_EOR) {
 
 		if (regs->addr == ADV7482_I2C_WAIT)
-			msleep(regs->value);
+			usleep_range(regs->value * 1000,
+				     (regs->value * 1000) + 1000);
 		else {
 			/* Lane configuration for TXA */
 			if ((regs->addr == ADV7482_I2C_TXA) &&
