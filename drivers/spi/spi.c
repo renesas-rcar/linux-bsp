@@ -80,7 +80,7 @@ static ssize_t spi_master_##field##_show(struct device *dev,		\
 	return spi_statistics_##field##_show(&master->statistics, buf);	\
 }									\
 static struct device_attribute dev_attr_spi_master_##field = {		\
-	.attr = { .name = file, .mode = S_IRUGO },			\
+	.attr = { .name = file, .mode = 0444 },				\
 	.show = spi_master_##field##_show,				\
 };									\
 static ssize_t spi_device_##field##_show(struct device *dev,		\
@@ -91,7 +91,7 @@ static ssize_t spi_device_##field##_show(struct device *dev,		\
 	return spi_statistics_##field##_show(&spi->statistics, buf);	\
 }									\
 static struct device_attribute dev_attr_spi_device_##field = {		\
-	.attr = { .name = file, .mode = S_IRUGO },			\
+	.attr = { .name = file, .mode = 0444 },				\
 	.show = spi_device_##field##_show,				\
 }
 
@@ -2021,7 +2021,7 @@ static void devm_spi_unregister(struct device *dev, void *res)
 }
 
 /**
- * dev_spi_register_master - register managed SPI master controller
+ * devm_spi_register_master - register managed SPI master controller
  * @dev:    device managing SPI master
  * @master: initialized master, originally from spi_alloc_master()
  * Context: can sleep
