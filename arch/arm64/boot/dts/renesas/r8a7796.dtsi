@@ -1428,6 +1428,15 @@
 			/* placeholder */
 		};
 
+		hdmi0: hdmi0@fead0000 {
+			/* placeholder */
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+
 		du: display@feb00000 {
 			/* placeholder */
 
