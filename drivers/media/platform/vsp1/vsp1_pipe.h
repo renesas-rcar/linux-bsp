@@ -62,6 +62,7 @@ enum vsp1_pipeline_state {
  * @pipe: the media pipeline
  * @irqlock: protects the pipeline state
  * @state: current state
+ * @configured: true if the pipeline has been set up for video streaming
  * @wq: wait queue to wait for state change completion
  * @frame_end: frame end interrupt handler
  * @lock: protects the pipeline use count and stream count
@@ -89,6 +90,7 @@ struct vsp1_pipeline {
 
 	spinlock_t irqlock;
 	enum vsp1_pipeline_state state;
+	bool configured;
 	wait_queue_head_t wq;
 
 	void (*frame_end)(struct vsp1_pipeline *pipe);
@@ -110,8 +112,6 @@ struct vsp1_pipeline {
 	struct vsp1_entity *uds_input;
 
 	struct list_head entities;
-
-	struct vsp1_dl_list *dl;
 
 	unsigned int div_size;
 	unsigned int partitions;

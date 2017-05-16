@@ -368,6 +368,45 @@ static void vsp1_video_frame_end(struct vsp1_pipeline *pipe,
 	pipe->buffers_ready |= 1 << video->pipe_index;
 }
 
+static int vsp1_video_setup_pipeline(struct vsp1_pipeline *pipe,
+				     struct vsp1_dl_list *dl)
+{
+	struct vsp1_entity *entity;
+
+	/* Determine this pipelines sizes for image partitioning support. */
+	vsp1_video_pipeline_setup_partitions(pipe);
+
+	if (pipe->uds) {
+		struct vsp1_uds *uds = to_uds(&pipe->uds->subdev);
+
+		/* If a BRU is present in the pipeline before the UDS, the alpha
+		 * component doesn't need to be scaled as the BRU output alpha
+		 * value is fixed to 255. Otherwise we need to scale the alpha
+		 * component only when available at the input RPF.
+		 */
+		if (pipe->uds_input->type == VSP1_ENTITY_BRU) {
+			uds->scale_alpha = false;
+		} else {
+			struct vsp1_rwpf *rpf =
+				to_rwpf(&pipe->uds_input->subdev);
+
+			uds->scale_alpha = rpf->fmtinfo->alpha;
+		}
+	}
+
+	list_for_each_entry(entity, &pipe->entities, list_pipe) {
+		vsp1_entity_route_setup(entity, pipe, dl);
+
+		if (entity->ops->configure)
+			entity->ops->configure(entity, pipe, dl,
+					       VSP1_ENTITY_PARAMS_INIT);
+	}
+
+	pipe->configured = true;
+
+	return 0;
+}
+
 static void vsp1_video_pipeline_run_partition(struct vsp1_pipeline *pipe,
 					      struct vsp1_dl_list *dl)
 {
@@ -387,9 +426,16 @@ static void vsp1_video_pipeline_run(struct vsp1_pipeline *pipe)
 {
 	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
 	struct vsp1_entity *entity;
+	struct vsp1_dl_list *dl;
 
-	if (!pipe->dl)
-		pipe->dl = vsp1_dl_list_get(pipe->output->dlm);
+	dl = vsp1_dl_list_get(pipe->output->dlm);
+	if (!dl) {
+		dev_err(vsp1->dev, "Failed to obtain a dl list\n");
+		return;
+	}
+
+	if (!pipe->configured)
+		vsp1_video_setup_pipeline(pipe, dl);
 
 	/*
 	 * Start with the runtime parameters as the configure operation can
@@ -398,45 +444,43 @@ static void vsp1_video_pipeline_run(struct vsp1_pipeline *pipe)
 	 */
 	list_for_each_entry(entity, &pipe->entities, list_pipe) {
 		if (entity->ops->configure)
-			entity->ops->configure(entity, pipe, pipe->dl,
+			entity->ops->configure(entity, pipe, dl,
 					       VSP1_ENTITY_PARAMS_RUNTIME);
 	}
 
 	/* Run the first partition */
 	pipe->current_partition = 0;
-	vsp1_video_pipeline_run_partition(pipe, pipe->dl);
+	vsp1_video_pipeline_run_partition(pipe, dl);
 
 	/* Process consecutive partitions as necessary */
 	for (pipe->current_partition = 1;
 	     pipe->current_partition < pipe->partitions;
 	     pipe->current_partition++) {
-		struct vsp1_dl_list *dl;
+		struct vsp1_dl_list *child;
 
 		/*
 		 * Partition configuration operations will utilise
 		 * the pipe->current_partition variable to determine
 		 * the work they should complete.
 		 */
-		dl = vsp1_dl_list_get(pipe->output->dlm);
+		child = vsp1_dl_list_get(pipe->output->dlm);
 
 		/*
 		 * An incomplete chain will still function, but output only
 		 * the partitions that had a dl available. The frame end
 		 * interrupt will be marked on the last dl in the chain.
 		 */
-		if (!dl) {
+		if (!child) {
 			dev_err(vsp1->dev, "Failed to obtain a dl list. Frame will be incomplete\n");
 			break;
 		}
 
-		vsp1_video_pipeline_run_partition(pipe, dl);
-		vsp1_dl_list_add_chain(pipe->dl, dl);
+		vsp1_video_pipeline_run_partition(pipe, child);
+		vsp1_dl_list_add_chain(dl, child);
 	}
 
 	/* Complete, and commit the head display list. */
-	vsp1_dl_list_commit(pipe->dl);
-	pipe->dl = NULL;
-
+	vsp1_dl_list_commit(dl);
 	vsp1_pipeline_run(pipe);
 }
 
@@ -780,66 +824,16 @@ static void vsp1_video_buffer_queue(struct vb2_buffer *vb)
 	spin_unlock_irqrestore(&pipe->irqlock, flags);
 }
 
-static int vsp1_video_setup_pipeline(struct vsp1_pipeline *pipe)
-{
-	struct vsp1_entity *entity;
-
-	/* Determine this pipelines sizes for image partitioning support. */
-	vsp1_video_pipeline_setup_partitions(pipe);
-
-	/* Prepare the display list. */
-	pipe->dl = vsp1_dl_list_get(pipe->output->dlm);
-	if (!pipe->dl)
-		return -ENOMEM;
-
-	if (pipe->uds) {
-		struct vsp1_uds *uds = to_uds(&pipe->uds->subdev);
-
-		/*
-		 * If a BRU is present in the pipeline before the UDS, the alpha
-		 * component doesn't need to be scaled as the BRU output alpha
-		 * value is fixed to 255. Otherwise we need to scale the alpha
-		 * component only when available at the input RPF.
-		 */
-		if (pipe->uds_input->type == VSP1_ENTITY_BRU) {
-			uds->scale_alpha = false;
-		} else {
-			struct vsp1_rwpf *rpf =
-				to_rwpf(&pipe->uds_input->subdev);
-
-			uds->scale_alpha = rpf->fmtinfo->alpha;
-		}
-	}
-
-	list_for_each_entry(entity, &pipe->entities, list_pipe) {
-		vsp1_entity_route_setup(entity, pipe, pipe->dl);
-
-		if (entity->ops->configure)
-			entity->ops->configure(entity, pipe, pipe->dl,
-					       VSP1_ENTITY_PARAMS_INIT);
-	}
-
-	return 0;
-}
-
 static int vsp1_video_start_streaming(struct vb2_queue *vq, unsigned int count)
 {
 	struct vsp1_video *video = vb2_get_drv_priv(vq);
 	struct vsp1_pipeline *pipe = video->rwpf->pipe;
 	bool start_pipeline = false;
 	unsigned long flags;
-	int ret;
 
 	mutex_lock(&pipe->lock);
-	if (pipe->stream_count == pipe->num_inputs) {
-		ret = vsp1_video_setup_pipeline(pipe);
-		if (ret < 0) {
-			mutex_unlock(&pipe->lock);
-			return ret;
-		}
-
+	if (pipe->stream_count == pipe->num_inputs)
 		start_pipeline = true;
-	}
 
 	pipe->stream_count++;
 	mutex_unlock(&pipe->lock);
@@ -884,9 +878,6 @@ static void vsp1_video_stop_streaming(struct vb2_queue *vq)
 		ret = vsp1_pipeline_stop(pipe);
 		if (ret == -ETIMEDOUT)
 			dev_err(video->vsp1->dev, "pipeline stop timeout\n");
-
-		vsp1_dl_list_put(pipe->dl);
-		pipe->dl = NULL;
 	}
 	mutex_unlock(&pipe->lock);
 
