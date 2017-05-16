@@ -279,45 +279,6 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 	mmc_request_done(host->mmc, mrq);
 }
 
-/* called with host->lock held, interrupts disabled */
-static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
-{
-	struct mmc_request *mrq;
-	unsigned long flags;
-
-	spin_lock_irqsave(&host->lock, flags);
-
-	mrq = host->mrq;
-	if (IS_ERR_OR_NULL(mrq)) {
-		spin_unlock_irqrestore(&host->lock, flags);
-		return;
-	}
-
-	host->cmd = NULL;
-	host->data = NULL;
-	host->force_pio = false;
-
-	cancel_delayed_work(&host->delayed_reset_work);
-
-	host->mrq = NULL;
-	spin_unlock_irqrestore(&host->lock, flags);
-
-	if (mrq->cmd->error || (mrq->data && mrq->data->error))
-		tmio_mmc_abort_dma(host);
-
-	if (host->check_scc_error)
-		host->check_scc_error(host);
-
-	mmc_request_done(host->mmc, mrq);
-}
-
-static void tmio_mmc_done_work(struct work_struct *work)
-{
-	struct tmio_mmc_host *host = container_of(work, struct tmio_mmc_host,
-						  done);
-	tmio_mmc_finish_request(host);
-}
-
 /* These are the bitmasks the tmio chip requires to implement the MMC response
  * types. Note that R1 and R6 are the same in this scheme. */
 #define APP_CMD        0x0040
@@ -371,11 +332,11 @@ static int tmio_mmc_start_command(struct tmio_mmc_host *host, struct mmc_command
 			c |= TRANSFER_MULTI;
 
 			/*
-			 * Disable auto CMD12 at IO_RW_EXTENDED when
-			 * multiple block transfer
+			 * Disable auto CMD12 at IO_RW_EXTENDED and SET_BLOCK_COUNT
+			 * when doing multiple block transfer
 			 */
 			if ((host->pdata->flags & TMIO_MMC_HAVE_CMD12_CTRL) &&
-			    (cmd->opcode == SD_IO_RW_EXTENDED))
+			    (cmd->opcode == SD_IO_RW_EXTENDED || host->mrq->sbc))
 				c |= NO_CMD12_ISSUE;
 		}
 		if (data->flags & MMC_DATA_READ)
@@ -552,7 +513,7 @@ void tmio_mmc_do_data_irq(struct tmio_mmc_host *host)
 			host->mrq);
 	}
 
-	if (stop) {
+	if (stop && !host->mrq->sbc) {
 		if (stop->opcode != MMC_STOP_TRANSMISSION || stop->arg)
 			dev_err(&host->pdev->dev, "unsupported stop: CMD%u,0x%x. We did CMD12,0\n",
 				stop->opcode, stop->arg);
@@ -857,12 +818,42 @@ out:
 	return ret;
 }
 
+static void tmio_process_mrq(struct tmio_mmc_host *host, struct mmc_request *mrq)
+{
+	struct mmc_command *cmd;
+	int ret;
+
+	if (mrq->sbc && host->cmd != mrq->sbc) {
+		cmd = mrq->sbc;
+	} else {
+		cmd = mrq->cmd;
+		if (mrq->data) {
+			ret = tmio_mmc_start_data(host, mrq->data);
+			if (ret)
+				goto fail;
+		}
+	}
+
+	ret = tmio_mmc_start_command(host, cmd);
+	if (ret)
+		goto fail;
+
+	schedule_delayed_work(&host->delayed_reset_work,
+			      msecs_to_jiffies(CMDREQ_TIMEOUT));
+	return;
+
+fail:
+	host->force_pio = false;
+	host->mrq = NULL;
+	mrq->cmd->error = ret;
+	mmc_request_done(host->mmc, mrq);
+}
+
 /* Process requests from the MMC layer */
 static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	unsigned long flags;
-	int ret;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -882,24 +873,54 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	if (mrq->data) {
-		ret = tmio_mmc_start_data(host, mrq->data);
-		if (ret)
-			goto fail;
-	}
+	tmio_process_mrq(host, mrq);
+}
 
-	ret = tmio_mmc_start_command(host, mrq->cmd);
-	if (!ret) {
-		schedule_delayed_work(&host->delayed_reset_work,
-				      msecs_to_jiffies(CMDREQ_TIMEOUT));
+static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
+{
+	struct mmc_request *mrq;
+	unsigned long flags;
+
+	spin_lock_irqsave(&host->lock, flags);
+
+	mrq = host->mrq;
+	if (IS_ERR_OR_NULL(mrq)) {
+		spin_unlock_irqrestore(&host->lock, flags);
 		return;
 	}
 
-fail:
-	host->force_pio = false;
-	host->mrq = NULL;
-	mrq->cmd->error = ret;
-	mmc_request_done(mmc, mrq);
+	/* If not SET_BLOCK_COUNT, clear old data */
+	if (host->cmd != mrq->sbc) {
+		host->cmd = NULL;
+		host->data = NULL;
+		host->force_pio = false;
+		host->mrq = NULL;
+	}
+
+	cancel_delayed_work(&host->delayed_reset_work);
+
+	spin_unlock_irqrestore(&host->lock, flags);
+
+	if (mrq->cmd->error || (mrq->data && mrq->data->error))
+		tmio_mmc_abort_dma(host);
+
+	if (host->check_scc_error)
+		host->check_scc_error(host);
+
+	/* If SET_BLOCK_COUNT, continue with main command */
+	if (host->mrq) {
+		tmio_process_mrq(host, mrq);
+		return;
+	}
+
+	mmc_request_done(host->mmc, mrq);
+}
+
+static void tmio_mmc_done_work(struct work_struct *work)
+{
+	struct tmio_mmc_host *host = container_of(work, struct tmio_mmc_host,
+						  done);
+	tmio_mmc_finish_request(host);
 }
 
 static int tmio_mmc_clk_enable(struct tmio_mmc_host *host)
