@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2012-2017 ARM Limited or its affiliates.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
@@ -28,17 +28,17 @@ that executes the KAT.
 #include "ssi_request_mgr.h"
 
 
-static const uint32_t digest_len_init[] = {
+static const u32 digest_len_init[] = {
 	0x00000040, 0x00000000, 0x00000000, 0x00000000 };
-static const uint32_t sha1_init[] = { 
+static const u32 sha1_init[] = {
 	SHA1_H4, SHA1_H3, SHA1_H2, SHA1_H1, SHA1_H0 };
-static const uint32_t sha256_init[] = {
+static const u32 sha256_init[] = {
 	SHA256_H7, SHA256_H6, SHA256_H5, SHA256_H4,
 	SHA256_H3, SHA256_H2, SHA256_H1, SHA256_H0 };
 #if (CC_SUPPORT_SHA > 256)
-static const uint32_t digest_len_sha512_init[] = { 
+static const u32 digest_len_sha512_init[] = {
 	0x00000080, 0x00000000, 0x00000000, 0x00000000 };
-static const uint64_t sha512_init[] = {
+static const u64 sha512_init[] = {
 	SHA512_H7, SHA512_H6, SHA512_H5, SHA512_H4,
 	SHA512_H3, SHA512_H2, SHA512_H1, SHA512_H0 };
 #endif
@@ -47,128 +47,128 @@ static const uint64_t sha512_init[] = {
 #define NIST_CIPHER_AES_MAX_VECTOR_SIZE      32
 
 struct fips_cipher_ctx {
-	uint8_t iv[CC_AES_IV_SIZE];
-	uint8_t key[AES_512_BIT_KEY_SIZE];
-	uint8_t din[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
-	uint8_t dout[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
+	u8 iv[CC_AES_IV_SIZE];
+	u8 key[AES_512_BIT_KEY_SIZE];
+	u8 din[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
+	u8 dout[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
 };
 
 typedef struct _FipsCipherData {
-	uint8_t                   isAes;
-	uint8_t                   key[AES_512_BIT_KEY_SIZE];
+	u8                   isAes;
+	u8                   key[AES_512_BIT_KEY_SIZE];
 	size_t                    keySize;
-	uint8_t                   iv[CC_AES_IV_SIZE];
+	u8                   iv[CC_AES_IV_SIZE];
 	enum drv_crypto_direction direction;
 	enum drv_cipher_mode      oprMode;
-	uint8_t                   dataIn[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
-	uint8_t                   dataOut[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
+	u8                   dataIn[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
+	u8                   dataOut[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
 	size_t                    dataInSize;
 } FipsCipherData;
 
 
 struct fips_cmac_ctx {
-	uint8_t key[AES_256_BIT_KEY_SIZE];
-	uint8_t din[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
-	uint8_t mac_res[CC_DIGEST_SIZE_MAX];
+	u8 key[AES_256_BIT_KEY_SIZE];
+	u8 din[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
+	u8 mac_res[CC_DIGEST_SIZE_MAX];
 };
 
 typedef struct _FipsCmacData {
 	enum drv_crypto_direction direction;
-	uint8_t                   key[AES_256_BIT_KEY_SIZE];
+	u8                   key[AES_256_BIT_KEY_SIZE];
 	size_t                    key_size;
-	uint8_t                   data_in[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
+	u8                   data_in[NIST_CIPHER_AES_MAX_VECTOR_SIZE];
 	size_t                    data_in_size;
-	uint8_t                   mac_res[CC_DIGEST_SIZE_MAX];
+	u8                   mac_res[CC_DIGEST_SIZE_MAX];
 	size_t                    mac_res_size;
 } FipsCmacData;
 
 
 struct fips_hash_ctx {
-	uint8_t initial_digest[CC_DIGEST_SIZE_MAX];
-	uint8_t din[NIST_SHA_MSG_SIZE];
-	uint8_t mac_res[CC_DIGEST_SIZE_MAX];
+	u8 initial_digest[CC_DIGEST_SIZE_MAX];
+	u8 din[NIST_SHA_MSG_SIZE];
+	u8 mac_res[CC_DIGEST_SIZE_MAX];
 };
 
 typedef struct _FipsHashData {
 	enum drv_hash_mode    hash_mode;
-	uint8_t               data_in[NIST_SHA_MSG_SIZE];
+	u8               data_in[NIST_SHA_MSG_SIZE];
 	size_t                data_in_size;
-	uint8_t               mac_res[CC_DIGEST_SIZE_MAX];
+	u8               mac_res[CC_DIGEST_SIZE_MAX];
 } FipsHashData;
 
 
 /* note that the hmac key length must be equal or less than block size (block size is 64 up to sha256 and 128 for sha384/512) */
 struct fips_hmac_ctx {
-	uint8_t initial_digest[CC_DIGEST_SIZE_MAX];
-	uint8_t key[CC_HMAC_BLOCK_SIZE_MAX];
-	uint8_t k0[CC_HMAC_BLOCK_SIZE_MAX];
-	uint8_t digest_bytes_len[HASH_LEN_SIZE];
-	uint8_t tmp_digest[CC_DIGEST_SIZE_MAX];
-	uint8_t din[NIST_HMAC_MSG_SIZE];
-	uint8_t mac_res[CC_DIGEST_SIZE_MAX];
+	u8 initial_digest[CC_DIGEST_SIZE_MAX];
+	u8 key[CC_HMAC_BLOCK_SIZE_MAX];
+	u8 k0[CC_HMAC_BLOCK_SIZE_MAX];
+	u8 digest_bytes_len[HASH_LEN_SIZE];
+	u8 tmp_digest[CC_DIGEST_SIZE_MAX];
+	u8 din[NIST_HMAC_MSG_SIZE];
+	u8 mac_res[CC_DIGEST_SIZE_MAX];
 };
 
 typedef struct _FipsHmacData {
 	enum drv_hash_mode    hash_mode;
-	uint8_t               key[CC_HMAC_BLOCK_SIZE_MAX];
+	u8               key[CC_HMAC_BLOCK_SIZE_MAX];
 	size_t                key_size;
-	uint8_t               data_in[NIST_HMAC_MSG_SIZE];
+	u8               data_in[NIST_HMAC_MSG_SIZE];
 	size_t                data_in_size;
-	uint8_t               mac_res[CC_DIGEST_SIZE_MAX];
+	u8               mac_res[CC_DIGEST_SIZE_MAX];
 } FipsHmacData;
 
 
 #define FIPS_CCM_B0_A0_ADATA_SIZE   (NIST_AESCCM_IV_SIZE + NIST_AESCCM_IV_SIZE + NIST_AESCCM_ADATA_SIZE)
 
 struct fips_ccm_ctx {
-	uint8_t b0_a0_adata[FIPS_CCM_B0_A0_ADATA_SIZE];
-	uint8_t iv[NIST_AESCCM_IV_SIZE];
-	uint8_t ctr_cnt_0[NIST_AESCCM_IV_SIZE];
-	uint8_t key[CC_AES_KEY_SIZE_MAX];
-	uint8_t din[NIST_AESCCM_TEXT_SIZE];
-	uint8_t dout[NIST_AESCCM_TEXT_SIZE];
-	uint8_t mac_res[NIST_AESCCM_TAG_SIZE];
+	u8 b0_a0_adata[FIPS_CCM_B0_A0_ADATA_SIZE];
+	u8 iv[NIST_AESCCM_IV_SIZE];
+	u8 ctr_cnt_0[NIST_AESCCM_IV_SIZE];
+	u8 key[CC_AES_KEY_SIZE_MAX];
+	u8 din[NIST_AESCCM_TEXT_SIZE];
+	u8 dout[NIST_AESCCM_TEXT_SIZE];
+	u8 mac_res[NIST_AESCCM_TAG_SIZE];
 };
 
 typedef struct _FipsCcmData {
 	enum drv_crypto_direction direction;
-	uint8_t                   key[CC_AES_KEY_SIZE_MAX];
+	u8                   key[CC_AES_KEY_SIZE_MAX];
 	size_t                    keySize;
-	uint8_t                   nonce[NIST_AESCCM_NONCE_SIZE];
-	uint8_t                   adata[NIST_AESCCM_ADATA_SIZE];
+	u8                   nonce[NIST_AESCCM_NONCE_SIZE];
+	u8                   adata[NIST_AESCCM_ADATA_SIZE];
 	size_t                    adataSize;
-	uint8_t                   dataIn[NIST_AESCCM_TEXT_SIZE];
+	u8                   dataIn[NIST_AESCCM_TEXT_SIZE];
 	size_t                    dataInSize;
-	uint8_t                   dataOut[NIST_AESCCM_TEXT_SIZE];
-	uint8_t                   tagSize;
-	uint8_t                   macResOut[NIST_AESCCM_TAG_SIZE];
+	u8                   dataOut[NIST_AESCCM_TEXT_SIZE];
+	u8                   tagSize;
+	u8                   macResOut[NIST_AESCCM_TAG_SIZE];
 } FipsCcmData;
 
 
 struct fips_gcm_ctx {
-	uint8_t adata[NIST_AESGCM_ADATA_SIZE];
-	uint8_t key[CC_AES_KEY_SIZE_MAX];
-	uint8_t hkey[CC_AES_KEY_SIZE_MAX];
-	uint8_t din[NIST_AESGCM_TEXT_SIZE];
-	uint8_t dout[NIST_AESGCM_TEXT_SIZE];
-	uint8_t mac_res[NIST_AESGCM_TAG_SIZE];
-	uint8_t len_block[AES_BLOCK_SIZE];
-	uint8_t iv_inc1[AES_BLOCK_SIZE];
-	uint8_t iv_inc2[AES_BLOCK_SIZE];
+	u8 adata[NIST_AESGCM_ADATA_SIZE];
+	u8 key[CC_AES_KEY_SIZE_MAX];
+	u8 hkey[CC_AES_KEY_SIZE_MAX];
+	u8 din[NIST_AESGCM_TEXT_SIZE];
+	u8 dout[NIST_AESGCM_TEXT_SIZE];
+	u8 mac_res[NIST_AESGCM_TAG_SIZE];
+	u8 len_block[AES_BLOCK_SIZE];
+	u8 iv_inc1[AES_BLOCK_SIZE];
+	u8 iv_inc2[AES_BLOCK_SIZE];
 };
 
 typedef struct _FipsGcmData {
 	enum drv_crypto_direction direction;
-	uint8_t                   key[CC_AES_KEY_SIZE_MAX];
+	u8                   key[CC_AES_KEY_SIZE_MAX];
 	size_t                    keySize;
-	uint8_t                   iv[NIST_AESGCM_IV_SIZE];
-	uint8_t                   adata[NIST_AESGCM_ADATA_SIZE];
+	u8                   iv[NIST_AESGCM_IV_SIZE];
+	u8                   adata[NIST_AESGCM_ADATA_SIZE];
 	size_t                    adataSize;
-	uint8_t                   dataIn[NIST_AESGCM_TEXT_SIZE];
+	u8                   dataIn[NIST_AESGCM_TEXT_SIZE];
 	size_t                    dataInSize;
-	uint8_t                   dataOut[NIST_AESGCM_TEXT_SIZE];
-	uint8_t                   tagSize;
-	uint8_t                   macResOut[NIST_AESGCM_TAG_SIZE];
+	u8                   dataOut[NIST_AESGCM_TEXT_SIZE];
+	u8                   tagSize;
+	u8                   macResOut[NIST_AESGCM_TAG_SIZE];
 } FipsGcmData;
 
 
@@ -271,7 +271,7 @@ static const FipsGcmData FipsGcmDataTable[] = {
 #define FIPS_GCM_NUM_OF_TESTS        (sizeof(FipsGcmDataTable) / sizeof(FipsGcmData))
 
 
-static inline ssi_fips_error_t 
+static inline ssi_fips_error_t
 FIPS_CipherToFipsError(enum drv_cipher_mode mode, bool is_aes)
 {
 	switch (mode)
@@ -296,7 +296,7 @@ FIPS_CipherToFipsError(enum drv_cipher_mode mode, bool is_aes)
 }
 
 
-static inline int 
+static inline int
 ssi_cipher_fips_run_test(struct ssi_drvdata *drvdata,
 			 bool is_aes,
 			 int cipher_mode,
@@ -314,7 +314,7 @@ ssi_cipher_fips_run_test(struct ssi_drvdata *drvdata,
 
 	int rc;
 	struct ssi_crypto_req ssi_req = {0};
-	HwDesc_s desc[FIPS_CIPHER_MAX_SEQ_LEN];
+	struct cc_hw_desc desc[FIPS_CIPHER_MAX_SEQ_LEN];
 	int idx = 0;
 	int s_flow_mode = is_aes ? S_DIN_to_AES : S_DIN_to_DES;
 
@@ -331,7 +331,7 @@ ssi_cipher_fips_run_test(struct ssi_drvdata *drvdata,
 		HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], direction);
 		HW_DESC_SET_FLOW_MODE(&desc[idx], s_flow_mode);
 		HW_DESC_SET_CIPHER_MODE(&desc[idx], cipher_mode);
-		if ((cipher_mode == DRV_CIPHER_CTR) || 
+		if ((cipher_mode == DRV_CIPHER_CTR) ||
 		    (cipher_mode == DRV_CIPHER_OFB) ) {
 			HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_STATE1);
 		} else {
@@ -346,7 +346,7 @@ ssi_cipher_fips_run_test(struct ssi_drvdata *drvdata,
 		HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], direction);
 		if (is_aes) {
 			HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
-					     key_dma_addr, 
+					     key_dma_addr,
 					     ((key_len == 24) ? AES_MAX_KEY_SIZE : key_len),
 					     NS_BIT);
 			HW_DESC_SET_KEY_SIZE_AES(&desc[idx], key_len);
@@ -376,7 +376,7 @@ ssi_cipher_fips_run_test(struct ssi_drvdata *drvdata,
 		HW_DESC_INIT(&desc[idx]);
 		HW_DESC_SET_CIPHER_MODE(&desc[idx], cipher_mode);
 		HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], direction);
-		HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI, 
+		HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
 				     (key_dma_addr+key_len/2), key_len/2, NS_BIT);
 		HW_DESC_SET_XEX_DATA_UNIT_SIZE(&desc[idx], data_size);
 		HW_DESC_SET_FLOW_MODE(&desc[idx], s_flow_mode);
@@ -481,7 +481,7 @@ ssi_cipher_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffe
 }
 
 
-static inline int 
+static inline int
 ssi_cmac_fips_run_test(struct ssi_drvdata *drvdata,
 		       dma_addr_t key_dma_addr,
 		       size_t key_len,
@@ -495,7 +495,7 @@ ssi_cmac_fips_run_test(struct ssi_drvdata *drvdata,
 
 	int rc;
 	struct ssi_crypto_req ssi_req = {0};
-	HwDesc_s desc[FIPS_CMAC_MAX_SEQ_LEN];
+	struct cc_hw_desc desc[FIPS_CMAC_MAX_SEQ_LEN];
 	int idx = 0;
 
 	/* Setup CMAC Key */
@@ -522,19 +522,19 @@ ssi_cmac_fips_run_test(struct ssi_drvdata *drvdata,
 
 	//ssi_hash_create_data_desc(state, ctx, DIN_AES_DOUT, desc, false, &idx);
 	HW_DESC_INIT(&desc[idx]);
-	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI, 
-			     din_dma_addr, 
+	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
+			     din_dma_addr,
 			     din_len, NS_BIT);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], DIN_AES_DOUT);
 	idx++;
-	
+
 	/* Get final MAC result */
 	HW_DESC_INIT(&desc[idx]);
 	HW_DESC_SET_DOUT_DLLI(&desc[idx], digest_dma_addr, CC_AES_BLOCK_SIZE, NS_BIT, 0);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_AES_to_DOUT);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_WRITE_STATE0);
 	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DESC_DIRECTION_ENCRYPT_ENCRYPT);
-	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_CIPHER_CMAC); 
+	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_CIPHER_CMAC);
 	idx++;
 
 	/* perform the operation - Lock HW and push sequence */
@@ -605,7 +605,7 @@ ssi_cmac_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
 }
 
 
-static inline ssi_fips_error_t 
+static inline ssi_fips_error_t
 FIPS_HashToFipsError(enum drv_hash_mode hash_mode)
 {
 	switch (hash_mode) {
@@ -624,7 +624,7 @@ FIPS_HashToFipsError(enum drv_hash_mode hash_mode)
 	return CC_REE_FIPS_ERROR_GENERAL;
 }
 
-static inline int 
+static inline int
 ssi_hash_fips_run_test(struct ssi_drvdata *drvdata,
 		       dma_addr_t initial_digest_dma_addr,
 		       dma_addr_t din_dma_addr,
@@ -640,7 +640,7 @@ ssi_hash_fips_run_test(struct ssi_drvdata *drvdata,
 
 	int rc;
 	struct ssi_crypto_req ssi_req = {0};
-	HwDesc_s desc[FIPS_HASH_MAX_SEQ_LEN];
+	struct cc_hw_desc desc[FIPS_HASH_MAX_SEQ_LEN];
 	int idx = 0;
 
 	/* Load initial digest */
@@ -779,7 +779,7 @@ ssi_hash_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
 }
 
 
-static inline ssi_fips_error_t 
+static inline ssi_fips_error_t
 FIPS_HmacToFipsError(enum drv_hash_mode hash_mode)
 {
 	switch (hash_mode) {
@@ -798,7 +798,7 @@ FIPS_HmacToFipsError(enum drv_hash_mode hash_mode)
 	return CC_REE_FIPS_ERROR_GENERAL;
 }
 
-static inline int 
+static inline int
 ssi_hmac_fips_run_test(struct ssi_drvdata *drvdata,
 		       dma_addr_t initial_digest_dma_addr,
 		       dma_addr_t key_dma_addr,
@@ -823,7 +823,7 @@ ssi_hmac_fips_run_test(struct ssi_drvdata *drvdata,
 
 	int rc;
 	struct ssi_crypto_req ssi_req = {0};
-	HwDesc_s desc[FIPS_HMAC_MAX_SEQ_LEN];
+	struct cc_hw_desc desc[FIPS_HMAC_MAX_SEQ_LEN];
 	int idx = 0;
 	int i;
 	/* calc the hash opad first and ipad only afterwards (unlike the flow in ssi_hash.c) */
@@ -841,7 +841,7 @@ ssi_hmac_fips_run_test(struct ssi_drvdata *drvdata,
 		HW_DESC_INIT(&desc[idx]);
 		HW_DESC_SET_DIN_CONST(&desc[idx], 0, (block_size - key_size));
 		HW_DESC_SET_FLOW_MODE(&desc[idx], BYPASS);
-		HW_DESC_SET_DOUT_DLLI(&desc[idx], 
+		HW_DESC_SET_DOUT_DLLI(&desc[idx],
 				      (k0_dma_addr + key_size), (block_size - key_size),
 				      NS_BIT, 0);
 		idx++;
@@ -917,7 +917,7 @@ ssi_hmac_fips_run_test(struct ssi_drvdata *drvdata,
 
 	/* data descriptor */
 	HW_DESC_INIT(&desc[idx]);
-	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI, 
+	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
 			     din_dma_addr, data_in_size,
 			     NS_BIT);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], DIN_HASH);
@@ -1112,7 +1112,7 @@ ssi_hmac_fips_power_up_tests(struct ssi_drvdata *drvdata, void *cpu_addr_buffer,
 }
 
 
-static inline int 
+static inline int
 ssi_ccm_fips_run_test(struct ssi_drvdata *drvdata,
 		      enum drv_crypto_direction direction,
 		      dma_addr_t key_dma_addr,
@@ -1131,7 +1131,7 @@ ssi_ccm_fips_run_test(struct ssi_drvdata *drvdata,
 
 	int rc;
 	struct ssi_crypto_req ssi_req = {0};
-	HwDesc_s desc[FIPS_CCM_MAX_SEQ_LEN];
+	struct cc_hw_desc desc[FIPS_CCM_MAX_SEQ_LEN];
 	unsigned int idx = 0;
 	unsigned int cipher_flow_mode;
 
@@ -1160,7 +1160,7 @@ ssi_ccm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
 			     iv_dma_addr, AES_BLOCK_SIZE,
 			     NS_BIT);
-	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DESC_DIRECTION_ENCRYPT_ENCRYPT);	
+	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DESC_DIRECTION_ENCRYPT_ENCRYPT);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_STATE1);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_DIN_to_AES);
 	idx++;
@@ -1183,7 +1183,7 @@ ssi_ccm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_CIPHER_CBC_MAC);
 	HW_DESC_SET_KEY_SIZE_AES(&desc[idx], key_size);
 	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI, mac_res_dma_addr, NIST_AESCCM_TAG_SIZE, NS_BIT);
-	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DESC_DIRECTION_ENCRYPT_ENCRYPT);	
+	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DESC_DIRECTION_ENCRYPT_ENCRYPT);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_STATE0);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_DIN_to_HASH);
 	HW_DESC_SET_AES_NOT_HASH_MODE(&desc[idx]);
@@ -1235,7 +1235,7 @@ ssi_ccm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI, mac_res_dma_addr, NIST_AESCCM_TAG_SIZE, NS_BIT);
 	HW_DESC_SET_DOUT_DLLI(&desc[idx], mac_res_dma_addr, NIST_AESCCM_TAG_SIZE, NS_BIT, 0);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], DIN_AES_DOUT);
-	idx++;	
+	idx++;
 
 	/* perform the operation - Lock HW and push sequence */
 	BUG_ON(idx > FIPS_CCM_MAX_SEQ_LEN);
@@ -1358,7 +1358,7 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 
 	int rc;
 	struct ssi_crypto_req ssi_req = {0};
-	HwDesc_s desc[FIPS_GCM_MAX_SEQ_LEN];
+	struct cc_hw_desc desc[FIPS_GCM_MAX_SEQ_LEN];
 	unsigned int idx = 0;
 	unsigned int cipher_flow_mode;
 
@@ -1373,12 +1373,12 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 /////////////////////////////////   1   ////////////////////////////////////
 
 	/* load key to AES*/
-	HW_DESC_INIT(&desc[idx]);	
-	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_CIPHER_ECB);	
+	HW_DESC_INIT(&desc[idx]);
+	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_CIPHER_ECB);
 	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DRV_CRYPTO_DIRECTION_ENCRYPT);
 	HW_DESC_SET_DIN_TYPE(&desc[idx],
 			     DMA_DLLI, key_dma_addr, key_size,
-			     NS_BIT); 
+			     NS_BIT);
 	HW_DESC_SET_KEY_SIZE_AES(&desc[idx], key_size);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_KEY0);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_DIN_to_AES);
@@ -1389,7 +1389,7 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_DIN_CONST(&desc[idx], 0x0, AES_BLOCK_SIZE);
 	HW_DESC_SET_DOUT_DLLI(&desc[idx],
 			      hkey_dma_addr, AES_BLOCK_SIZE,
-			      NS_BIT, 0); 
+			      NS_BIT, 0);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], DIN_AES_DOUT);
 	idx++;
 
@@ -1407,8 +1407,8 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_DOUT_NO_DMA(&desc[idx], 0, 0, 1);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_DIN_to_HASH);
 	HW_DESC_SET_AES_NOT_HASH_MODE(&desc[idx]);
-	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_HASH_HW_GHASH);	
-	HW_DESC_SET_CIPHER_CONFIG1(&desc[idx], HASH_PADDING_ENABLED);	
+	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_HASH_HW_GHASH);
+	HW_DESC_SET_CIPHER_CONFIG1(&desc[idx], HASH_PADDING_ENABLED);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_KEY0);
 	idx++;
 
@@ -1420,10 +1420,10 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_DOUT_NO_DMA(&desc[idx], 0, 0, 1);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_DIN_to_HASH);
 	HW_DESC_SET_AES_NOT_HASH_MODE(&desc[idx]);
-	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_HASH_HW_GHASH);	
+	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_HASH_HW_GHASH);
 	HW_DESC_SET_CIPHER_DO(&desc[idx], 1); //1=AES_SK RKEK
 	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DRV_CRYPTO_DIRECTION_ENCRYPT);
-	HW_DESC_SET_CIPHER_CONFIG1(&desc[idx], HASH_PADDING_ENABLED); 
+	HW_DESC_SET_CIPHER_CONFIG1(&desc[idx], HASH_PADDING_ENABLED);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_KEY0);
 	idx++;
 
@@ -1434,7 +1434,7 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_DIN_to_HASH);
 	HW_DESC_SET_AES_NOT_HASH_MODE(&desc[idx]);
 	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_HASH_HW_GHASH);
-	HW_DESC_SET_CIPHER_CONFIG1(&desc[idx], HASH_PADDING_ENABLED); 
+	HW_DESC_SET_CIPHER_CONFIG1(&desc[idx], HASH_PADDING_ENABLED);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_STATE0);
 	idx++;
 
@@ -1447,7 +1447,7 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 /////////////////////////////////   2   ////////////////////////////////////
 
 	HW_DESC_INIT(&desc[idx]);
-	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI, 
+	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
 			     adata_dma_addr, adata_size,
 			     NS_BIT);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], DIN_HASH);
@@ -1459,12 +1459,12 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 /////////////////////////////////   3   ////////////////////////////////////
 
 	/* load key to AES*/
-	HW_DESC_INIT(&desc[idx]);	
-	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_CIPHER_GCTR);	
+	HW_DESC_INIT(&desc[idx]);
+	HW_DESC_SET_CIPHER_MODE(&desc[idx], DRV_CIPHER_GCTR);
 	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DRV_CRYPTO_DIRECTION_ENCRYPT);
 	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
 			     key_dma_addr, key_size,
-			     NS_BIT); 
+			     NS_BIT);
 	HW_DESC_SET_KEY_SIZE_AES(&desc[idx], key_size);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_KEY0);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_DIN_to_AES);
@@ -1477,7 +1477,7 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
 			     iv_inc2_dma_addr, AES_BLOCK_SIZE,
 			     NS_BIT);
-	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DRV_CRYPTO_DIRECTION_ENCRYPT);	
+	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DRV_CRYPTO_DIRECTION_ENCRYPT);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_STATE1);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_DIN_to_AES);
 	idx++;
@@ -1486,7 +1486,7 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 /////////////////////////////////   4   ////////////////////////////////////
 	/* process(gctr+ghash) */
 //	if (req_ctx->cryptlen != 0)
-//		ssi_aead_process_cipher_data_desc(req, cipher_flow_mode, desc, seq_size); 
+//		ssi_aead_process_cipher_data_desc(req, cipher_flow_mode, desc, seq_size);
 /////////////////////////////////   4   ////////////////////////////////////
 
 	HW_DESC_INIT(&desc[idx]);
@@ -1506,7 +1506,7 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 
 	/* prcess(ghash) gcm_block_len */
 	HW_DESC_INIT(&desc[idx]);
-	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI, 
+	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
 			     block_len_dma_addr, AES_BLOCK_SIZE,
 			     NS_BIT);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], DIN_HASH);
@@ -1522,7 +1522,7 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_WRITE_STATE0);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_HASH_to_DOUT);
 	HW_DESC_SET_AES_NOT_HASH_MODE(&desc[idx]);
-	idx++; 
+	idx++;
 
 	/* load AES/CTR initial CTR value inc by 1*/
 	HW_DESC_INIT(&desc[idx]);
@@ -1531,7 +1531,7 @@ ssi_gcm_fips_run_test(struct ssi_drvdata *drvdata,
 	HW_DESC_SET_DIN_TYPE(&desc[idx], DMA_DLLI,
 			     iv_inc1_dma_addr, AES_BLOCK_SIZE,
 			     NS_BIT);
-	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DRV_CRYPTO_DIRECTION_ENCRYPT);	
+	HW_DESC_SET_CIPHER_CONFIG0(&desc[idx], DRV_CRYPTO_DIRECTION_ENCRYPT);
 	HW_DESC_SET_SETUP_MODE(&desc[idx], SETUP_LOAD_STATE1);
 	HW_DESC_SET_FLOW_MODE(&desc[idx], S_DIN_to_AES);
 	idx++;

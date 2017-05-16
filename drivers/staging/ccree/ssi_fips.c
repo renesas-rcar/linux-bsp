@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2012-2017 ARM Limited or its affiliates.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
@@ -27,12 +27,12 @@ extern int ssi_fips_ext_get_state(ssi_fips_state_t *p_state);
 extern int ssi_fips_ext_get_error(ssi_fips_error_t *p_err);
 
 /*
-This function returns the REE FIPS state.  
-It should be called by kernel module. 
+This function returns the REE FIPS state.
+It should be called by kernel module.
 */
 int ssi_fips_get_state(ssi_fips_state_t *p_state)
 {
-        int rc = 0;
+	int rc = 0;
 
 	if (p_state == NULL) {
 		return -EINVAL;
@@ -46,12 +46,12 @@ int ssi_fips_get_state(ssi_fips_state_t *p_state)
 EXPORT_SYMBOL(ssi_fips_get_state);
 
 /*
-This function returns the REE FIPS error.  
-It should be called by kernel module. 
+This function returns the REE FIPS error.
+It should be called by kernel module.
 */
 int ssi_fips_get_error(ssi_fips_error_t *p_err)
 {
-        int rc = 0;
+	int rc = 0;
 
 	if (p_err == NULL) {
 		return -EINVAL;

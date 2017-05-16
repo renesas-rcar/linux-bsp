@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2012-2017 ARM Limited or its affiliates.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
@@ -48,29 +48,29 @@ enum HashConfig1Padding {
 	HASH_PADDING_DISABLED = 0,
 	HASH_PADDING_ENABLED = 1,
 	HASH_DIGEST_RESULT_LITTLE_ENDIAN = 2,
-	HASH_CONFIG1_PADDING_RESERVE32 = INT32_MAX,
+	HASH_CONFIG1_PADDING_RESERVE32 = S32_MAX,
 };
 
 enum HashCipherDoPadding {
 	DO_NOT_PAD = 0,
 	DO_PAD = 1,
-	HASH_CIPHER_DO_PADDING_RESERVE32 = INT32_MAX,
+	HASH_CIPHER_DO_PADDING_RESERVE32 = S32_MAX,
 };
 
 typedef struct SepHashPrivateContext {
-	/* The current length is placed at the end of the context buffer because the hash 
-	   context is used for all HMAC operations as well. HMAC context includes a 64 bytes 
+	/* The current length is placed at the end of the context buffer because the hash
+	   context is used for all HMAC operations as well. HMAC context includes a 64 bytes
 	   K0 field.  The size of struct drv_ctx_hash reserved field is  88/184 bytes depend if t
 	   he SHA512 is supported ( in this case teh context size is 256 bytes).
 	   The size of struct drv_ctx_hash reseved field is 20 or 52 depend if the SHA512 is supported.
 	   This means that this structure size (without the reserved field can be up to 20 bytes ,
 	   in case sha512 is not suppported it is 20 bytes (SEP_HASH_LENGTH_WORDS define to 2 ) and in the other
 	   case it is 28 (SEP_HASH_LENGTH_WORDS define to 4) */
-	uint32_t reserved[(sizeof(struct drv_ctx_hash)/sizeof(uint32_t)) - SEP_HASH_LENGTH_WORDS - 3];
-	uint32_t CurrentDigestedLength[SEP_HASH_LENGTH_WORDS];
-	uint32_t KeyType;
-	uint32_t dataCompleted;
-	uint32_t hmacFinalization;
+	u32 reserved[(sizeof(struct drv_ctx_hash)/sizeof(u32)) - SEP_HASH_LENGTH_WORDS - 3];
+	u32 CurrentDigestedLength[SEP_HASH_LENGTH_WORDS];
+	u32 KeyType;
+	u32 dataCompleted;
+	u32 hmacFinalization;
 	/* no space left */
 } SepHashPrivateContext_s;
 

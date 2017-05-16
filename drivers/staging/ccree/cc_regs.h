@@ -1,22 +1,22 @@
 /*
  * Copyright (C) 2012-2017 ARM Limited or its affiliates.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
 
 /*!
- * @file 
+ * @file
  * @brief This file contains macro definitions for accessing ARM TrustZone CryptoCell register space.
  */
 
@@ -32,25 +32,14 @@
 #define CC_REG_BIT_SHIFT(reg_name, field_name)               \
 	(DX_ ## reg_name ## _ ## field_name ## _BIT_SHIFT)
 
-/* Register Offset macros (from registers base address in host) */
-#include "dx_reg_base_host.h"
-
 /* Read-Modify-Write a field of a register */
 #define MODIFY_REGISTER_FLD(unitName, regName, fldName, fldVal)         \
 do {								            \
-	uint32_t regVal;						    \
+	u32 regVal;						    \
 	regVal = READ_REGISTER(CC_REG_ADDR(unitName, regName));       \
 	CC_REG_FLD_SET(unitName, regName, fldName, regVal, fldVal); \
 	WRITE_REGISTER(CC_REG_ADDR(unitName, regName), regVal);       \
 } while (0)
-
-/* Registers address macros for ENV registers (development FPGA only) */
-#ifdef DX_BASE_ENV_REGS
-
-/* This offset should be added to mapping address of DX_BASE_ENV_REGS */
-#define CC_ENV_REG_OFFSET(reg_name) (DX_ENV_ ## reg_name ## _REG_OFFSET)
-
-#endif /*DX_BASE_ENV_REGS*/
 
 /*! Bit fields get */
 #define CC_REG_FLD_GET(unit_name, reg_name, fld_name, reg_val)	      \
@@ -66,7 +55,7 @@ do {								            \
 	BITFIELD_GET(reg_val, CC_ ## reg_name ## _ ## fld_name ## _BIT_SHIFT, \
 		     CC_ ## reg_name ## _ ## fld_name ## _BIT_SIZE))
 
-/* yael TBD !!! -       				      * 
+/* yael TBD !!! -       				      *
 * all HW includes should start with CC_ and not DX_ !!	      */
 
 
@@ -97,7 +86,7 @@ do {                                                                     \
 } while (0)
 
 /* Usage example:
-   uint32_t reg_shadow = READ_REGISTER(CC_REG_ADDR(CRY_KERNEL,AES_CONTROL));
+   u32 reg_shadow = READ_REGISTER(CC_REG_ADDR(CRY_KERNEL,AES_CONTROL));
    CC_REG_FLD_SET(CRY_KERNEL,AES_CONTROL,NK_KEY0,reg_shadow, 3);
    CC_REG_FLD_SET(CRY_KERNEL,AES_CONTROL,NK_KEY1,reg_shadow, 1);
    WRITE_REGISTER(CC_REG_ADDR(CRY_KERNEL,AES_CONTROL), reg_shadow);

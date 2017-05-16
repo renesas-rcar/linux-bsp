@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2012-2017 ARM Limited or its affiliates.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
@@ -40,7 +40,7 @@ struct stat_name {
 	const char *stat_phase_name[MAX_STAT_PHASES];
 };
 
-static struct stat_name stat_name_db[MAX_STAT_OP_TYPES] = 
+static struct stat_name stat_name_db[MAX_STAT_OP_TYPES] =
 {
 	{
 		/* STAT_OP_TYPE_NULL */
@@ -50,8 +50,8 @@ static struct stat_name stat_name_db[MAX_STAT_OP_TYPES] =
 	{
 		.op_type_name = "Encode",
 		.stat_phase_name[STAT_PHASE_0] = "Init and sanity checks",
-		.stat_phase_name[STAT_PHASE_1] = "Map buffers", 
-		.stat_phase_name[STAT_PHASE_2] = "Create sequence", 
+		.stat_phase_name[STAT_PHASE_1] = "Map buffers",
+		.stat_phase_name[STAT_PHASE_2] = "Create sequence",
 		.stat_phase_name[STAT_PHASE_3] = "Send Request",
 		.stat_phase_name[STAT_PHASE_4] = "HW-Q push",
 		.stat_phase_name[STAT_PHASE_5] = "Sequence completion",
@@ -59,8 +59,8 @@ static struct stat_name stat_name_db[MAX_STAT_OP_TYPES] =
 	},
 	{	.op_type_name = "Decode",
 		.stat_phase_name[STAT_PHASE_0] = "Init and sanity checks",
-		.stat_phase_name[STAT_PHASE_1] = "Map buffers", 
-		.stat_phase_name[STAT_PHASE_2] = "Create sequence", 
+		.stat_phase_name[STAT_PHASE_1] = "Map buffers",
+		.stat_phase_name[STAT_PHASE_2] = "Create sequence",
 		.stat_phase_name[STAT_PHASE_3] = "Send Request",
 		.stat_phase_name[STAT_PHASE_4] = "HW-Q push",
 		.stat_phase_name[STAT_PHASE_5] = "Sequence completion",
@@ -88,14 +88,14 @@ static struct stat_name stat_name_db[MAX_STAT_OP_TYPES] =
 };
 
 /*
- * Structure used to create a directory 
+ * Structure used to create a directory
  * and its attributes in sysfs.
  */
 struct sys_dir {
 	struct kobject *sys_dir_kobj;
 	struct attribute_group sys_dir_attr_group;
 	struct attribute **sys_dir_attr_list;
-	uint32_t num_of_attrs;
+	u32 num_of_attrs;
 	struct ssi_drvdata *drvdata; /* Associated driver context */
 };
 
@@ -137,15 +137,15 @@ static void update_db(struct stat_item *item, unsigned int result)
 static void display_db(struct stat_item item[MAX_STAT_OP_TYPES][MAX_STAT_PHASES])
 {
 	unsigned int i, j;
-	uint64_t avg;
+	u64 avg;
 
 	for (i=STAT_OP_TYPE_ENCODE; i<MAX_STAT_OP_TYPES; i++) {
-		for (j=0; j<MAX_STAT_PHASES; j++) {	
+		for (j=0; j<MAX_STAT_PHASES; j++) {
 			if (item[i][j].count > 0) {
-				avg = (uint64_t)item[i][j].sum;
+				avg = (u64)item[i][j].sum;
 				do_div(avg, item[i][j].count);
-				SSI_LOG_ERR("%s, %s: min=%d avg=%d max=%d sum=%lld count=%d\n", 
-					stat_name_db[i].op_type_name, stat_name_db[i].stat_phase_name[j], 
+				SSI_LOG_ERR("%s, %s: min=%d avg=%d max=%d sum=%lld count=%d\n",
+					stat_name_db[i].op_type_name, stat_name_db[i].stat_phase_name[j],
 					item[i][j].min, (int)avg, item[i][j].max, (long long)item[i][j].sum, item[i][j].count);
 			}
 		}
@@ -176,8 +176,8 @@ static ssize_t ssi_sys_stat_host_db_show(struct kobject *kobj,
 {
 	int i, j ;
 	char line[512];
-	uint32_t min_cyc, max_cyc;
-	uint64_t avg;
+	u32 min_cyc, max_cyc;
+	u64 avg;
 	ssize_t buf_len, tmp_len=0;
 
 	buf_len = scnprintf(buf,PAGE_SIZE,
@@ -187,7 +187,7 @@ static ssize_t ssi_sys_stat_host_db_show(struct kobject *kobj,
 	for (i=STAT_OP_TYPE_ENCODE; i<MAX_STAT_OP_TYPES; i++) {
 		for (j=0; j<MAX_STAT_PHASES-1; j++) {
 			if (stat_host_db[i][j].count > 0) {
-				avg = (uint64_t)stat_host_db[i][j].sum;
+				avg = (u64)stat_host_db[i][j].sum;
 				do_div(avg, stat_host_db[i][j].count);
 				min_cyc = stat_host_db[i][j].min;
 				max_cyc = stat_host_db[i][j].max;
@@ -216,8 +216,8 @@ static ssize_t ssi_sys_stat_cc_db_show(struct kobject *kobj,
 {
 	int i;
 	char line[256];
-	uint32_t min_cyc, max_cyc;
-	uint64_t avg;
+	u32 min_cyc, max_cyc;
+	u64 avg;
 	ssize_t buf_len,tmp_len=0;
 
 	buf_len = scnprintf(buf,PAGE_SIZE,
@@ -226,7 +226,7 @@ static ssize_t ssi_sys_stat_cc_db_show(struct kobject *kobj,
 		return buf_len;
 	for (i=STAT_OP_TYPE_ENCODE; i<MAX_STAT_OP_TYPES; i++) {
 		if (stat_cc_db[i][STAT_PHASE_6].count > 0) {
-			avg = (uint64_t)stat_cc_db[i][STAT_PHASE_6].sum;
+			avg = (u64)stat_cc_db[i][STAT_PHASE_6].sum;
 			do_div(avg, stat_cc_db[i][STAT_PHASE_6].count);
 			min_cyc = stat_cc_db[i][STAT_PHASE_6].min;
 			max_cyc = stat_cc_db[i][STAT_PHASE_6].max;
@@ -271,9 +271,9 @@ void update_cc_stat(
 
 void display_all_stat_db(void)
 {
-	SSI_LOG_ERR("\n=======    CYCLE COUNT STATS    =======\n"); 
+	SSI_LOG_ERR("\n=======    CYCLE COUNT STATS    =======\n");
 	display_db(stat_host_db);
-	SSI_LOG_ERR("\n======= CC HW CYCLE COUNT STATS =======\n"); 
+	SSI_LOG_ERR("\n======= CC HW CYCLE COUNT STATS =======\n");
 	display_db(stat_cc_db);
 }
 #endif /*CC_CYCLE_COUNT*/
@@ -284,7 +284,7 @@ static ssize_t ssi_sys_regdump_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
 	struct ssi_drvdata *drvdata = sys_get_drvdata();
-	uint32_t register_value;
+	u32 register_value;
 	void __iomem* cc_base = drvdata->cc_base;
 	int offset = 0;
 
@@ -333,7 +333,7 @@ struct sys_dir {
 	struct kobject *sys_dir_kobj;
 	struct attribute_group sys_dir_attr_group;
 	struct attribute **sys_dir_attr_list;
-	uint32_t num_of_attrs;
+	u32 num_of_attrs;
 	struct ssi_drvdata *drvdata; /* Associated driver context */
 };
 
@@ -361,7 +361,7 @@ static struct ssi_drvdata *sys_get_drvdata(void)
 
 static int sys_init_dir(struct sys_dir *sys_dir, struct ssi_drvdata *drvdata,
 		 struct kobject *parent_dir_kobj, const char *dir_name,
-		 struct kobj_attribute *attrs, uint32_t num_of_attrs)
+		 struct kobj_attribute *attrs, u32 num_of_attrs)
 {
 	int i;
 
