@@ -469,7 +469,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		iowrite32(0x010101e4, priv->base + PHTW_REG);
 		iowrite32(0x01100104, priv->base + PHTW_REG);
 		iowrite32(0x01030100, priv->base + PHTW_REG);
-		iowrite32(0x01800107, priv->base + PHTW_REG);
+		iowrite32(0x01800100, priv->base + PHTW_REG);
 	}
 
 	/* Start */
