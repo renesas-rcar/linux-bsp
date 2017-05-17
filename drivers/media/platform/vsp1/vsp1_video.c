@@ -939,7 +939,7 @@ static void vsp1_video_wb_process_buffer(struct vsp1_video *video)
 		list_del(&buf->queue);
 	} else {
 		/* Disable writeback with no buffer */
-		video->rwpf->mem = (struct vsp1_rwpf_memory) { 0 };
+		video->rwpf->mem = (struct vsp1_rwpf_memory) { { 0, } };
 	}
 
 	spin_unlock_irqrestore(&video->irqlock, flags);
@@ -1001,7 +1001,7 @@ static void vsp1_video_wb_stop_streaming(struct vb2_queue *vq)
 	 */
 	spin_lock_irqsave(&video->irqlock, flags);
 	video->frame_end = NULL;
-	rwpf->mem = (struct vsp1_rwpf_memory) { 0 };
+	rwpf->mem = (struct vsp1_rwpf_memory) { { 0, } };
 
 	/* Return all queued buffers to userspace */
 	list_for_each_entry(buffer, &video->wbqueue, queue)
