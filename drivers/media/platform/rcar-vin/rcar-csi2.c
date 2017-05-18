@@ -352,8 +352,8 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv,
 	hblank = priv->mf.width * 105 / 100;
 	h_freq = hblank * v_freq;
 
-	/* Vblank's margin is 1.3 times of the vertical size */
-	vblank = priv->mf.height * 130 / 100;
+	/* Vblank's margin is 1.13 times of the vertical size */
+	vblank = priv->mf.height * 113 / 100;
 	dot_clk = h_freq * vblank;
 
 	if (priv->mf.field != V4L2_FIELD_NONE)
