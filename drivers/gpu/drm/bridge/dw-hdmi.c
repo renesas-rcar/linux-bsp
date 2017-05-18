@@ -1723,12 +1723,6 @@ static void dw_hdmi_bridge_disable(struct drm_bridge *bridge)
 	hdmi->disabled = true;
 	dw_hdmi_update_power(hdmi);
 	dw_hdmi_update_phy_mask(hdmi);
-
-	if (hdmi->dev_type == RCAR_HDMI) {
-		hdmi_writeb(hdmi, 0x3f, HDMI_IH_MUTE_PHY_STAT0);
-		hdmi_writeb(hdmi, HDMI_PHY_HPD | HDMI_PHY_RX_SENSE,
-					 HDMI_PHY_POL0);
-	}
 	mutex_unlock(&hdmi->mutex);
 }
 
