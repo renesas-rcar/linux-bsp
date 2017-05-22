@@ -274,6 +274,16 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 }
 
 /* -----------------------------------------------------------------------------
+ * Group async notifier
+ */
+
+static int rvin_group_init(struct rvin_dev *vin)
+{
+	vin->pad.flags = MEDIA_PAD_FL_SINK;
+	return media_entity_pads_init(&vin->vdev.entity, 1, &vin->pad);
+}
+
+/* -----------------------------------------------------------------------------
  * Platform Device Driver
  */
 
@@ -369,7 +379,10 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (ret)
 		goto error_dma;
 
-	ret = rvin_digital_graph_init(vin);
+	if (vin->info->use_mc)
+		ret = rvin_group_init(vin);
+	else
+		ret = rvin_digital_graph_init(vin);
 	if (ret < 0)
 		goto error_v4l2;
 
