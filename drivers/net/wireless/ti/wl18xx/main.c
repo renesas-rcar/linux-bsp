@@ -865,7 +865,9 @@ static int wl18xx_pre_upload(struct wl1271 *wl)
 {
 	u32 tmp;
 	int ret;
+#if 0
 	u16 irq_invert;
+#endif
 
 	BUILD_BUG_ON(sizeof(struct wl18xx_mac_and_phy_params) >
 		WL18XX_PHY_INIT_MEM_SIZE);
@@ -918,6 +920,11 @@ static int wl18xx_pre_upload(struct wl1271 *wl)
 	if (ret < 0)
 		goto out;
 
+#if 0
+	/* We have level translator with inversion on IRQ line so we
+	 * set IRQ_TYPE_EDGE_FALLING in DTS, but we do not need to
+	 * invert IRQ logic on WLxxxx side!
+	 */
 	ret = irq_get_trigger_type(wl->irq);
 	if ((ret == IRQ_TYPE_LEVEL_LOW) || (ret == IRQ_TYPE_EDGE_FALLING)) {
 		wl1271_info("using inverted interrupt logic: %d", ret);
@@ -937,6 +944,7 @@ static int wl18xx_pre_upload(struct wl1271 *wl)
 
 		ret = wlcore_set_partition(wl, &wl->ptable[PART_PHY_INIT]);
 	}
+#endif
 
 out:
 	return ret;
