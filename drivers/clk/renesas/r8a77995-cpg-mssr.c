@@ -102,6 +102,8 @@ static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
 	DEF_FIXED("zt",         R8A77995_CLK_ZT,    CLK_PLL1,       4, 1),
 	DEF_FIXED("zx",         R8A77995_CLK_ZX,    CLK_PLL1,       3, 1),
 
+	DEF_FIXED("usb",        R8A77995_CLK_USB,   CLK_EXTAL,      1, 1),
+
 	DEF_FIXED("s0d1",       R8A77995_CLK_S0D1,  CLK_S0,         1, 1),
 	DEF_FIXED("s1d1",       R8A77995_CLK_S1D1,  CLK_S1,         1, 1),
 	DEF_FIXED("s1d2",       R8A77995_CLK_S1D2,  CLK_S1,         2, 1),
@@ -145,6 +147,7 @@ static const struct mssr_mod_clk r8a77995_mod_clks[] __initconst = {
 	DEF_MOD("vspd1",		 622,	R8A77995_CLK_S1D2),
 	DEF_MOD("vspd0",		 623,	R8A77995_CLK_S1D2),
 	DEF_MOD("vspbs",		 627,	R8A77995_CLK_S1D2),
+	DEF_MOD("ehci0",		 703,	R8A77995_CLK_USB),
 	DEF_MOD("du1",			 723,	R8A77995_CLK_S1D1),
 	DEF_MOD("du0",			 724,	R8A77995_CLK_S1D1),
 	DEF_MOD("lvds",			 727,	R8A77995_CLK_LV0),
