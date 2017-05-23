@@ -285,6 +285,18 @@ config IPMMU_VMSA
 
 	  If unsure, say N.
 
+config RCAR_IPMMU_SHARE
+	bool "Share IPMMU resources with MMNGR driver"
+	depends on IPMMU_VMSA
+	default n
+	help
+	  If yes, share IPMMU resources with MMNGR driver which is
+	  involved with Renesas Multimedia package.
+          MMNGR driver makes use of the 8th one of 8 MMU contexts.
+          The resource assignement of ipmmu-vmsa and MMNGR is:
+            - MMUn (n = 0 to 6) context is for ipmmu-vmsa
+            - MMUn (n = 7) context is for MMNGR driver
+
 config SPAPR_TCE_IOMMU
 	bool "sPAPR TCE IOMMU Support"
 	depends on PPC_POWERNV || PPC_PSERIES

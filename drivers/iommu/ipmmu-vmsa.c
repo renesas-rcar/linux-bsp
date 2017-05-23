@@ -1331,7 +1331,11 @@ static int ipmmu_probe(struct platform_device *pdev)
 	 * Newer SoCs get a total of 8 contexts enabled, older ones just one.
 	 */
 	if (mmu->features->has_eight_ctx)
+#ifdef CONFIG_RCAR_IPMMU_SHARE
+		mmu->num_ctx = min(7, IPMMU_CTX_MAX);
+#else
 		mmu->num_ctx = 8;
+#endif
 	else
 		mmu->num_ctx = 1;
 
