@@ -656,10 +656,14 @@ static int rsnd_ssi_common_probe(struct rsnd_mod *mod,
 	if (ret < 0)
 		return ret;
 
-	ret = devm_request_irq(dev, ssi->irq,
-			       rsnd_ssi_interrupt,
-			       IRQF_SHARED,
-			       dev_name(dev), mod);
+	/*
+	 * SSI might be called again as PIO fallback
+	 * It is easy to manual handling for IRQ request/free
+	 */
+	ret = request_irq(ssi->irq,
+			  rsnd_ssi_interrupt,
+			  IRQF_SHARED,
+			  dev_name(dev), mod);
 
 	return ret;
 }
@@ -681,7 +685,6 @@ static int rsnd_ssi_dma_probe(struct rsnd_mod *mod,
 			      struct rsnd_priv *priv)
 {
 	struct rsnd_ssi *ssi = rsnd_mod_to_ssi(mod);
-	int dma_id = 0; /* not needed */
 	int ret;
 
 	/*
@@ -696,7 +699,7 @@ static int rsnd_ssi_dma_probe(struct rsnd_mod *mod,
 		return ret;
 
 	/* SSI probe might be called many times in MUX multi path */
-	ret = rsnd_dma_attach(io, mod, &ssi->dma, dma_id);
+	ret = rsnd_dma_attach(io, mod, &ssi->dma);
 
 	return ret;
 }
@@ -706,14 +709,9 @@ static int rsnd_ssi_dma_remove(struct rsnd_mod *mod,
 			       struct rsnd_priv *priv)
 {
 	struct rsnd_ssi *ssi = rsnd_mod_to_ssi(mod);
-	struct device *dev = rsnd_priv_to_dev(priv);
-	int irq = ssi->irq;
 
 	/* PIO will request IRQ again */
-	if (ssi->dma)
-		devm_free_irq(dev, irq, mod);
-
-	rsnd_dma_detach(mod, &ssi->dma);
+	free_irq(ssi->irq, mod);
 
 	return 0;
 }
