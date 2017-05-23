@@ -39,21 +39,25 @@
 
 #define C5P49_CLK_OE_SHUTDOWN	0x68
 
-#define hw_to_priv(_hw)		container_of(_hw, struct clk_5p49_priv, hw)
-#define priv_to_client(priv)	(priv->client)
+#define hw_to_priv(_hw)		container_of(_hw, struct clk_5p49_data, hw)
+#define priv_to_client(data)	((data)->client)
 #define priv_to_dev(priv)	(&(priv_to_client(priv)->dev))
 
 struct clk_5p49_info {
 	unsigned long	xtal_fre;
 };
 
-struct clk_5p49_priv {
+struct clk_5p49_data {
 	struct		clk_hw hw;
 	struct		i2c_client *client;
 	struct		clk *clk_out;
 	unsigned long	index;
 	unsigned long	clk_rate;
 	const struct clk_5p49_info	*info;
+};
+
+struct clk_5p49_priv {
+	struct clk_5p49_data data[CLK_MAX];
 };
 
 static const struct clk_5p49_info clk_5p49v5923a = {
@@ -84,12 +88,12 @@ static const struct i2c_device_id clk_5p49_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, clk_5p49_id);
 
-#define clk_5p49_read(priv, addr) \
-	i2c_smbus_read_byte_data(priv_to_client(priv), \
-	(addr + (0x10 * priv->index)))
-#define clk_5p49_write(priv, addr, val) \
-	i2c_smbus_write_byte_data(priv_to_client(priv), \
-	(addr + (0x10 * priv->index)), val)
+#define clk_5p49_read(data, addr) \
+	i2c_smbus_read_byte_data(priv_to_client(data), \
+	((addr) + (0x10 * ((data)->index))))
+#define clk_5p49_write(data, addr, val) \
+	i2c_smbus_write_byte_data(priv_to_client(data), \
+	((addr) + (0x10 * ((data)->index))), val)
 
 static int clk_5p49_set_rate(struct clk_hw *hw,
 			     unsigned long rate, unsigned long parent_rate)
@@ -99,21 +103,21 @@ static int clk_5p49_set_rate(struct clk_hw *hw,
 
 static void clk_5p49_power(struct clk_hw *hw, bool power)
 {
-	struct clk_5p49_priv *priv = hw_to_priv(hw);
+	struct clk_5p49_data *data = hw_to_priv(hw);
 	u8 reg;
 
 	if (power) {
-		reg = i2c_smbus_read_byte_data(priv->client,
-					C5P49_CLK_OE_SHUTDOWN);
-		reg |= (0x80 >> (priv->index - 1));
-		i2c_smbus_write_byte_data(priv->client,
-					C5P49_CLK_OE_SHUTDOWN, reg);
+		reg = i2c_smbus_read_byte_data(data->client,
+					       C5P49_CLK_OE_SHUTDOWN);
+		reg |= (0x80 >> (data->index - 1));
+		i2c_smbus_write_byte_data(data->client,
+					  C5P49_CLK_OE_SHUTDOWN, reg);
 	} else {
-		reg = i2c_smbus_read_byte_data(priv->client,
-					C5P49_CLK_OE_SHUTDOWN);
-		reg &= ~(0x80 >> (priv->index - 1));
-		i2c_smbus_write_byte_data(priv->client,
-					C5P49_CLK_OE_SHUTDOWN, reg);
+		reg = i2c_smbus_read_byte_data(data->client,
+					       C5P49_CLK_OE_SHUTDOWN);
+		reg &= ~(0x80 >> (data->index - 1));
+		i2c_smbus_write_byte_data(data->client,
+					  C5P49_CLK_OE_SHUTDOWN, reg);
 	}
 }
 
@@ -132,47 +136,47 @@ static void clk_5p49_disable(struct clk_hw *hw)
 static unsigned long clk_5p49_recalc_rate(struct clk_hw *hw,
 					unsigned long parent_rate)
 {
-	struct clk_5p49_priv *priv = hw_to_priv(hw);
+	struct clk_5p49_data *data = hw_to_priv(hw);
 
-	return priv->clk_rate;
+	return data->clk_rate;
 }
 
 static int clk_5p49_div_calculation(struct clk_hw *hw, unsigned long rate)
 {
-	struct clk_5p49_priv *priv = hw_to_priv(hw);
+	struct clk_5p49_data *data = hw_to_priv(hw);
 	int integ_div, frac_div, div, vco_div, vco_clk;
-	u32 shift_1kHz = 1000;
+	u32 shift_1khz = 1000;
 	u8 frac_0, frac_1, frac_2, frac_3;
 
-	vco_div = ((i2c_smbus_read_byte_data(priv->client,
+	vco_div = ((i2c_smbus_read_byte_data(data->client,
 			C5P49_FB_INT_DIV_REG0) & 0xF0) >> 4)
-			+ (i2c_smbus_read_byte_data(priv->client,
+			+ (i2c_smbus_read_byte_data(data->client,
 			C5P49_FB_INT_DIV_REG1) << 4);
 
 	clk_5p49_power(hw, false);
 
-	vco_clk = priv->info->xtal_fre * vco_div / shift_1kHz;
-	dev_dbg(&priv->client->dev, "vco clock:%d kHz\n", vco_clk);
+	vco_clk = data->info->xtal_fre * vco_div / shift_1khz;
+	dev_dbg(&data->client->dev, "vco clock:%d kHz\n", vco_clk);
 
 	vco_clk = (vco_clk / 2);
-	rate = rate / shift_1kHz;
+	rate = rate / shift_1khz;
 
 	integ_div = (vco_clk / rate);
-	div = ((vco_clk * shift_1kHz) / rate);
-	frac_div = div - (integ_div * shift_1kHz);
+	div = ((vco_clk * shift_1khz) / rate);
+	frac_div = div - (integ_div * shift_1khz);
 
 	if (frac_div > 0x3fffffff)
 		return -EINVAL;
 
-	clk_5p49_write(priv, C5P49_DIV_INTEGER_11_4,
-			((0x0ff0 & (u16)integ_div) >> 4));
-	clk_5p49_write(priv, C5P49_DIV_INTEGER_3_0,
-			((0x000f & (u16)integ_div) << 4));
+	clk_5p49_write(data, C5P49_DIV_INTEGER_11_4,
+		       ((0x0ff0 & (u16)integ_div) >> 4));
+	clk_5p49_write(data, C5P49_DIV_INTEGER_3_0,
+		       ((0x000f & (u16)integ_div) << 4));
 
 	/* spread = 0.01% */
 	frac_div = frac_div - ((div / (100 * 100 / 1)) / 2);
-	frac_div = ((0x1000000 / shift_1kHz) * frac_div);
-	dev_dbg(&priv->client->dev,
+	frac_div = ((0x1000000 / shift_1khz) * frac_div);
+	dev_dbg(&data->client->dev,
 		"integer:0x%x, fraction:0x%x\n",
 		integ_div, frac_div);
 
@@ -181,10 +185,10 @@ static int clk_5p49_div_calculation(struct clk_hw *hw, unsigned long rate)
 	frac_2 = (frac_div & 0x00003fc0) >> 6;
 	frac_3 = (frac_div & 0x0000003f) << 2;
 
-	clk_5p49_write(priv, C5P49_DIV_FRAC_29_22, frac_0);
-	clk_5p49_write(priv, C5P49_DIV_FRAC_21_14, frac_1);
-	clk_5p49_write(priv, C5P49_DIV_FRAC_13_6,  frac_2);
-	clk_5p49_write(priv, C5P49_DIV_FRAC_5_0,   frac_3);
+	clk_5p49_write(data, C5P49_DIV_FRAC_29_22, frac_0);
+	clk_5p49_write(data, C5P49_DIV_FRAC_21_14, frac_1);
+	clk_5p49_write(data, C5P49_DIV_FRAC_13_6,  frac_2);
+	clk_5p49_write(data, C5P49_DIV_FRAC_5_0,   frac_3);
 
 	clk_5p49_power(hw, true);
 
@@ -194,16 +198,16 @@ static int clk_5p49_div_calculation(struct clk_hw *hw, unsigned long rate)
 static long clk_5p49_round_rate(struct clk_hw *hw, unsigned long rate,
 				unsigned long *parent_rate)
 {
-	struct clk_5p49_priv *priv = hw_to_priv(hw);
+	struct clk_5p49_data *data = hw_to_priv(hw);
 	int ret;
 
-	priv->clk_rate = 0;
+	data->clk_rate = 0;
 
 	ret = clk_5p49_div_calculation(hw, rate);
 	if (ret < 0)
 		return ret;
 
-	priv->clk_rate = rate;
+	data->clk_rate = rate;
 
 	return 0;
 }
@@ -222,7 +226,7 @@ static const struct clk_ops clk_5p49_ops = {
 	.round_rate	= clk_5p49_round_rate,
 };
 
-static int clk_5p49_clk_register(struct clk_5p49_priv *priv,
+static int clk_5p49_clk_register(struct clk_5p49_data *data,
 				 struct device_node *np)
 {
 	struct clk_init_data init;
@@ -240,9 +244,9 @@ static int clk_5p49_clk_register(struct clk_5p49_priv *priv,
 	init.parent_names	= parent_names;
 	init.num_parents	= ARRAY_SIZE(parent_names);
 
-	priv->hw.init = &init;
+	data->hw.init = &init;
 
-	clk = clk_register(NULL, &priv->hw);
+	clk = clk_register(NULL, &data->hw);
 	if (IS_ERR(clk))
 		return PTR_ERR(clk);
 
@@ -252,7 +256,7 @@ static int clk_5p49_clk_register(struct clk_5p49_priv *priv,
 		return ret;
 	}
 
-	priv->clk_out = clk;
+	data->clk_out = clk;
 
 	return 0;
 }
@@ -260,7 +264,7 @@ static int clk_5p49_clk_register(struct clk_5p49_priv *priv,
 static int clk_5p49_probe(struct i2c_client *client,
 			  const struct i2c_device_id *id)
 {
-	struct clk_5p49_priv *priv = NULL;
+	struct clk_5p49_priv *priv;
 	struct device *dev = &client->dev;
 	struct device_node *np = dev->of_node, *ch_np;
 	const struct of_device_id *match;
@@ -271,6 +275,10 @@ static int clk_5p49_probe(struct i2c_client *client,
 	if (!match)
 		return -ENODEV;
 
+	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
 	for (i = ch; i < CLK_MAX; i++) {
 		char name[20];
 
@@ -279,16 +287,12 @@ static int clk_5p49_probe(struct i2c_client *client,
 		if (!ch_np)
 			continue;
 
-		priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
-		if (!priv)
-			return -ENOMEM;
-
-		priv->info = match->data;
-		priv->client = client;
-		priv->index = i + 1;
+		priv->data[i].info = match->data;
+		priv->data[i].client = client;
+		priv->data[i].index = i + 1;
 		i2c_set_clientdata(client, priv);
 
-		ret = clk_5p49_clk_register(priv, ch_np);
+		ret = clk_5p49_clk_register(&priv->data[i], ch_np);
 		if (ret < 0)
 			return ret;
 		probe_cnt++;
@@ -300,7 +304,7 @@ static int clk_5p49_probe(struct i2c_client *client,
 	}
 
 	dev_info(dev, "Rev.0x%x, probed\n",
-		i2c_smbus_read_byte_data(priv->client, 0x01));
+		i2c_smbus_read_byte_data(priv->data[ch].client, 0x01));
 
 	return 0;
 }
@@ -310,10 +314,12 @@ static int clk_5p49_remove(struct i2c_client *client)
 	struct clk_5p49_priv *priv = i2c_get_clientdata(client);
 	struct device *dev = &client->dev;
 	struct device_node *np = dev->of_node;
+	int i, ch = 1;	/* ch = 0 reserved.*/
 
 	of_clk_del_provider(np);
 
-	clk_unregister(priv->clk_out);
+	for (i = ch; i < CLK_MAX; i++)
+		clk_unregister(priv->data[i].clk_out);
 
 	return 0;
 }
