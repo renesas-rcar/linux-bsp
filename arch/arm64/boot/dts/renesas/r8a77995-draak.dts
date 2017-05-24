@@ -10,6 +10,7 @@
 
 /dts-v1/;
 #include "r8a77995.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	model = "Renesas Draak board based on r8a77995";
@@ -17,6 +18,7 @@
 
 	aliases {
 		serial0 = &scif2;
+		ethernet0 = &avb;
 	};
 
 	chosen {
@@ -31,8 +33,45 @@
 	};
 };
 
+&pfc {
+	avb_pins: avb {
+		groups = "avb0_td", "avb0_tx_ctl", "avb0_txc",
+			 "avb0_rd", "avb0_rx_ctl", "avb0_rxc",
+			 "avb0_txcrefclk", "avb0_mdc", "avb0_mdio";
+		function = "avb0";
+	};
+};
+
 &extal_clk {
 	clock-frequency = <48000000>;
+};
+
+&avb {
+	pinctrl-0 = <&avb_pins>;
+	pinctrl-names = "default";
+	renesas,no-ether-link;
+	phy-handle = <&phy0>;
+	status = "okay";
+	phy-gpios = <&gpio5 19 GPIO_ACTIVE_LOW>;
+	phy-reset-gpios = <&gpio5 18 GPIO_ACTIVE_LOW>;
+
+	phy0: ethernet-phy@0 {
+		rxc-skew-ps = <1500>;
+		rxdv-skew-ps = <420>; /* default */
+		rxd0-skew-ps = <420>; /* default */
+		rxd1-skew-ps = <420>; /* default */
+		rxd2-skew-ps = <420>; /* default */
+		rxd3-skew-ps = <420>; /* default */
+		txc-skew-ps = <900>; /* default */
+		txen-skew-ps = <420>; /* default */
+		txd0-skew-ps = <420>; /* default */
+		txd1-skew-ps = <420>; /* default */
+		txd2-skew-ps = <420>; /* default */
+		txd3-skew-ps = <420>; /* default */
+		reg = <0>;
+		interrupt-parent = <&gpio5>;
+		interrupts = <20 IRQ_TYPE_LEVEL_LOW>;
+	};
 };
 
 &scif2 {
