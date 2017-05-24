@@ -271,7 +271,9 @@ static int __rvin_try_format(struct rvin_dev *vin,
 	pix->sizeimage = 0;
 
 	/* Limit to source capabilities */
-	__rvin_try_format_source(vin, which, pix, source);
+	ret = __rvin_try_format_source(vin, which, pix, source);
+	if (ret)
+		return ret;
 
 	switch (pix->field) {
 	case V4L2_FIELD_TOP:
