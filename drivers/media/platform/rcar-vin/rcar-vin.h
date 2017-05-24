@@ -156,8 +156,9 @@ struct rvin_dev {
 int rvin_dma_probe(struct rvin_dev *vin, int irq);
 void rvin_dma_remove(struct rvin_dev *vin);
 
-int rvin_v4l2_probe(struct rvin_dev *vin);
-void rvin_v4l2_remove(struct rvin_dev *vin);
+int rvin_v4l2_register(struct rvin_dev *vin);
+void rvin_v4l2_unregister(struct rvin_dev *vin);
+int rvin_reset_format(struct rvin_dev *vin);
 
 const struct rvin_video_format *rvin_format_from_pixel(u32 pixelformat);
 
