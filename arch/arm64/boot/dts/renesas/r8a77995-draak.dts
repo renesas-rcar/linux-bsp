@@ -187,6 +187,11 @@
 			 "avb0_txcrefclk", "avb0_mdc", "avb0_mdio";
 		function = "avb0";
 	};
+
+	usb0_pins: usb0 {
+		groups = "usb0";
+		function = "usb0";
+	};
 };
 
 &extal_clk {
@@ -316,6 +321,21 @@
 			bus-width = <8>;
 		};
 	};
+};
+
+&usb2_phy0 {
+	pinctrl-0 = <&usb0_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&ehci0 {
+	status = "okay";
+};
+
+&ohci0 {
+	status = "okay";
 };
 
 &du {
