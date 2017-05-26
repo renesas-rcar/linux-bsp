@@ -145,6 +145,7 @@ struct sh_mobile_i2c_data {
 	struct dma_chan *dma_rx;
 	struct scatterlist sg;
 	enum dma_data_direction dma_direction;
+	u8 *bounce_buf;
 };
 
 struct sh_mobile_dt_config {
@@ -548,6 +549,8 @@ static void sh_mobile_i2c_dma_callback(void *data)
 	pd->pos = pd->msg->len;
 	pd->stop_after_dma = true;
 
+	i2c_release_bounce_buf(pd->msg, pd->bounce_buf);
+
 	iic_set_clr(pd, ICIC, 0, ICIC_TDMAE | ICIC_RDMAE);
 }
 
@@ -595,6 +598,7 @@ static void sh_mobile_i2c_xfer_dma(struct sh_mobile_i2c_data *pd)
 	struct dma_async_tx_descriptor *txdesc;
 	dma_addr_t dma_addr;
 	dma_cookie_t cookie;
+	u8 *dma_buf = pd->bounce_buf ?: pd->msg->buf;
 
 	if (PTR_ERR(chan) == -EPROBE_DEFER) {
 		if (read)
@@ -608,7 +612,7 @@ static void sh_mobile_i2c_xfer_dma(struct sh_mobile_i2c_data *pd)
 	if (IS_ERR(chan))
 		return;
 
-	dma_addr = dma_map_single(chan->device->dev, pd->msg->buf, pd->msg->len, dir);
+	dma_addr = dma_map_single(chan->device->dev, dma_buf, pd->msg->len, dir);
 	if (dma_mapping_error(chan->device->dev, dma_addr)) {
 		dev_dbg(pd->dev, "dma map failed, using PIO\n");
 		return;
@@ -665,7 +669,7 @@ static int start_ch(struct sh_mobile_i2c_data *pd, struct i2c_msg *usr_msg,
 	pd->pos = -1;
 	pd->sr = 0;
 
-	if (pd->msg->len > 8)
+	if (i2c_check_msg_for_dma(pd->msg, 8, &pd->bounce_buf) == 0)
 		sh_mobile_i2c_xfer_dma(pd);
 
 	/* Enable all interrupts to begin with */
