@@ -236,6 +236,17 @@ config IPMMU_VMSA
 
 	  If unsure, say N.
 
+config IPMMU_VMSA_CTX_NUM
+	int "Input MMU number of MMU's really used"
+	depends on IPMMU_VMSA
+	range 1 8
+	default 8
+	help
+	 Specify the number of MMU contexts that you want to use.
+
+	 The specified number of MMU contexts are used for the Renesas
+	 IPMMU driver and the remaining contexts are unused.
+
 config SPAPR_TCE_IOMMU
 	bool "sPAPR TCE IOMMU Support"
 	depends on PPC_POWERNV || PPC_PSERIES
