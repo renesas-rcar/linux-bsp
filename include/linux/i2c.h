@@ -766,6 +766,11 @@ static inline u8 i2c_8bit_addr_from_msg(const struct i2c_msg *msg)
 	return (msg->addr << 1) | (msg->flags & I2C_M_RD ? 1 : 0);
 }
 
+int __must_check i2c_check_msg_for_dma(struct i2c_msg *msg, unsigned int threshold,
+					u8 **ptr_for_bounce_buf);
+
+void i2c_release_dma_bounce_buf(struct i2c_msg *msg, u8 *bounce_buf);
+
 int i2c_handle_smbus_host_notify(struct i2c_adapter *adap, unsigned short addr);
 /**
  * module_i2c_driver() - Helper macro for registering a modular I2C driver

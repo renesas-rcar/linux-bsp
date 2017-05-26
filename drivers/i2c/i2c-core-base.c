@@ -34,6 +34,7 @@
 #include <linux/irqflags.h>
 #include <linux/jump_label.h>
 #include <linux/kernel.h>
+#include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/of_device.h>
@@ -44,6 +45,7 @@
 #include <linux/pm_wakeirq.h>
 #include <linux/property.h>
 #include <linux/rwsem.h>
+#include <linux/sched/task_stack.h>
 #include <linux/slab.h>
 
 #include "i2c-core.h"
@@ -2239,6 +2241,72 @@ void i2c_put_adapter(struct i2c_adapter *adap)
 	module_put(adap->owner);
 }
 EXPORT_SYMBOL(i2c_put_adapter);
+
+/**
+ * i2c_check_msg_for_dma() - check if a message is suitable for DMA
+ * @msg: the message to be checked
+ * @threshold: the amount of byte from which using DMA makes sense
+ * @ptr_for_bounce_buf: if not NULL, a bounce buffer will be attached to this
+ *			ptr, if needed. The bounce buffer must be freed by the
+ *			caller using i2c_release_dma_bounce_buf().
+ *
+ * Return: -ERANGE if message is smaller than threshold
+ *	   -EFAULT if message buffer is not DMA capable and no bounce buffer
+ *		   was requested
+ *	   -ENOMEM if a bounce buffer could not be created
+ *	   0 if message is suitable for DMA
+ *
+ * The return value must be checked.
+ *
+ * Note: This function should only be called from process context! It uses
+ * helper functions which work on the 'current' task.
+ */
+int i2c_check_msg_for_dma(struct i2c_msg *msg, unsigned int threshold,
+					u8 **ptr_for_bounce_buf)
+{
+	if (ptr_for_bounce_buf)
+		*ptr_for_bounce_buf = NULL;
+
+	if (msg->len < threshold)
+		return -ERANGE;
+
+	if (!virt_addr_valid(msg->buf) || object_is_on_stack(msg->buf)) {
+		pr_debug("msg buffer to 0x%04x is not DMA safe%s\n", msg->addr,
+			 ptr_for_bounce_buf ? ", trying bounce buffer" : "");
+		if (ptr_for_bounce_buf) {
+			if (msg->flags & I2C_M_RD)
+				*ptr_for_bounce_buf = kzalloc(msg->len, GFP_KERNEL);
+			else
+				*ptr_for_bounce_buf = kmemdup(msg->buf, msg->len,
+							      GFP_KERNEL);
+			if (!*ptr_for_bounce_buf)
+				return -ENOMEM;
+		} else {
+			return -EFAULT;
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(i2c_check_msg_for_dma);
+
+/**
+ * i2c_release_bounce_buf - copy data back from bounce buffer and release it
+ * @msg: the message to be copied back to
+ * @bounce_buf: the bounce buffer obtained from i2c_check_msg_for_dma().
+ *		May be NULL.
+ */
+void i2c_release_dma_bounce_buf(struct i2c_msg *msg, u8 *bounce_buf)
+{
+	if (!bounce_buf)
+		return;
+
+	if (msg->flags & I2C_M_RD)
+		memcpy(msg->buf, bounce_buf, msg->len);
+
+	kfree(bounce_buf);
+}
+EXPORT_SYMBOL_GPL(i2c_release_bounce_buf);
 
 MODULE_AUTHOR("Simon G. Vogl <simon@tk.uni-linz.ac.at>");
 MODULE_DESCRIPTION("I2C-Bus main module");
