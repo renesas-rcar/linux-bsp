@@ -980,7 +980,7 @@ static int ipmmu_probe(struct platform_device *pdev)
 	if (mmu->features->use_ns_alias_offset)
 		mmu->base += IM_NS_ALIAS_OFFSET;
 
-	mmu->num_ctx = min_t(unsigned int, IPMMU_CTX_MAX,
+	mmu->num_ctx = min_t(unsigned int, CONFIG_IPMMU_VMSA_CTX_NUM,
 			     mmu->features->number_of_contexts);
 
 	irq = platform_get_irq(pdev, 0);
