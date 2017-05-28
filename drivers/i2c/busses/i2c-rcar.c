@@ -111,8 +111,11 @@
 #define ID_ARBLOST	(1 << 3)
 #define ID_NACK		(1 << 4)
 /* persistent flags */
+#define ID_P_NODMA	(1 << 30)
 #define ID_P_PM_BLOCKED	(1 << 31)
-#define ID_P_MASK	ID_P_PM_BLOCKED
+#define ID_P_MASK	(ID_P_PM_BLOCKED | ID_P_NODMA)
+
+#define RCAR_DMA_THRESHOLD 8
 
 enum rcar_i2c_type {
 	I2C_RCAR_GEN1,
@@ -358,8 +361,7 @@ static void rcar_i2c_dma(struct rcar_i2c_priv *priv)
 	unsigned char *buf;
 	int len;
 
-	/* Do not use DMA if it's not available or for messages < 8 bytes */
-	if (IS_ERR(chan) || msg->len < 8)
+	if (IS_ERR(chan) || msg->len < RCAR_DMA_THRESHOLD || priv->flags & ID_P_NODMA)
 		return;
 
 	if (read) {
@@ -657,11 +659,15 @@ static void rcar_i2c_request_dma(struct rcar_i2c_priv *priv,
 				 struct i2c_msg *msg)
 {
 	struct device *dev = rcar_i2c_priv_to_dev(priv);
-	bool read;
+	bool read = msg->flags & I2C_M_RD;
 	struct dma_chan *chan;
 	enum dma_transfer_direction dir;
 
-	read = msg->flags & I2C_M_RD;
+	/* we need to check here because we need the 'current' context */
+	if (i2c_check_msg_for_dma(msg, RCAR_DMA_THRESHOLD, NULL) == -EFAULT) {
+		dev_dbg(dev, "skipping DMA for this whole transfer\n");
+		priv->flags |= ID_P_NODMA;
+	}
 
 	chan = read ? priv->dma_rx : priv->dma_tx;
 	if (PTR_ERR(chan) != -EPROBE_DEFER)
@@ -739,6 +745,8 @@ out:
 
 	if (ret < 0 && ret != -ENXIO)
 		dev_err(dev, "error %d : %x\n", ret, priv->flags);
+
+	priv->flags &= ~ID_P_NODMA;
 
 	return ret;
 }
