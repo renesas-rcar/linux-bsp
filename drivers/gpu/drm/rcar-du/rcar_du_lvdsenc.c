@@ -294,7 +294,7 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 	struct rcar_du_lvdsenc *lvds;
 	unsigned int i;
 	int ret;
-	char name[16];
+	char name[16], gpio_name[20];
 
 	for (i = 0; i < rcdu->info->num_lvds; ++i) {
 		lvds = devm_kzalloc(&pdev->dev, sizeof(*lvds), GFP_KERNEL);
@@ -305,9 +305,15 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 		lvds->index = i;
 		lvds->input = i ? RCAR_LVDS_INPUT_DU1 : RCAR_LVDS_INPUT_DU0;
 		lvds->enabled = false;
+
 		/* Get optional backlight GPIO */
+		if (rcdu->info->num_lvds > 1)
+			sprintf(gpio_name, "backlight%u-gpios",
+				lvds->index);
+		else
+			sprintf(gpio_name, "backlight-gpios");
 		lvds->gpio_pd = of_get_named_gpio(rcdu->dev->of_node,
-						 "backlight-gpios", 0);
+						  gpio_name, 0);
 
 		ret = rcar_du_lvdsenc_get_resources(lvds, pdev);
 		if (ret < 0)
