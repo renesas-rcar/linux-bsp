@@ -317,7 +317,7 @@ irqreturn_t ravb_ptp_interrupt(struct net_device *ndev)
 		ptp_clock_event(priv->ptp.clock, &event);
 
 		result = IRQ_HANDLED;
-		gis &= ~GIS_PTCF;
+		ravb_write(ndev, ~GIS_PTCF, GIS);
 	}
 	if (gis & GIS_PTMF) {
 		struct ravb_ptp_perout *perout = priv->ptp.perout;
@@ -328,10 +328,8 @@ irqreturn_t ravb_ptp_interrupt(struct net_device *ndev)
 		}
 
 		result = IRQ_HANDLED;
-		gis &= ~GIS_PTMF;
+		ravb_write(ndev, ~GIS_PTMF, GIS);
 	}
-
-	ravb_write(ndev, (gis & ~GIS_RESERVED), GIS);
 
 	return result;
 }
