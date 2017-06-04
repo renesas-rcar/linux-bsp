@@ -468,7 +468,7 @@ static int ravb_dmac_init(struct net_device *ndev)
 	/* Receive FIFO full error, descriptor empty */
 	ravb_write(ndev, RIC2_QFE0 | RIC2_QFE1 | RIC2_RFFE, RIC2);
 	/* Frame transmitted, timestamp FIFO updated */
-	ravb_write(ndev, TIC_FTE0 | TIC_FTE1 | TIC_TFUE, TIC);
+	ravb_write(ndev, TIC_FTE0 | TIC_FTE1, TIC);
 
 	/* Setting the control will start the AVB-DMAC process. */
 	ravb_modify(ndev, CCC, CCC_OPC, CCC_OPC_OPERATION);
@@ -785,18 +785,6 @@ static bool ravb_queue_interrupt(struct net_device *ndev, int q)
 	return false;
 }
 
-static bool ravb_timestamp_interrupt(struct net_device *ndev)
-{
-	u32 tis = ravb_read(ndev, TIS);
-
-	if (tis & TIS_TFUF) {
-		ravb_write(ndev, ~(TIS_TFUF | TIS_RESERVED), TIS);
-		ravb_get_tx_tstamp(ndev);
-		return true;
-	}
-	return false;
-}
-
 static irqreturn_t ravb_interrupt(int irq, void *dev_id)
 {
 	struct net_device *ndev = dev_id;
@@ -809,12 +797,8 @@ static irqreturn_t ravb_interrupt(int irq, void *dev_id)
 	iss = ravb_read(ndev, ISS);
 
 	/* Received and transmitted interrupts */
-	if (iss & (ISS_FRS | ISS_FTS | ISS_TFUS)) {
+	if (iss & (ISS_FRS | ISS_FTS)) {
 		int q;
-
-		/* Timestamp updated */
-		if (ravb_timestamp_interrupt(ndev))
-			result = IRQ_HANDLED;
 
 		/* Network control and best effort queue RX/TX */
 		for (q = RAVB_NC; q >= RAVB_BE; q--) {
@@ -843,7 +827,7 @@ static irqreturn_t ravb_interrupt(int irq, void *dev_id)
 	return result;
 }
 
-/* Timestamp/Error/gPTP interrupt handler */
+/* Error/gPTP interrupt handler */
 static irqreturn_t ravb_multi_interrupt(int irq, void *dev_id)
 {
 	struct net_device *ndev = dev_id;
@@ -854,10 +838,6 @@ static irqreturn_t ravb_multi_interrupt(int irq, void *dev_id)
 	spin_lock(&priv->lock);
 	/* Get interrupt status */
 	iss = ravb_read(ndev, ISS);
-
-	/* Timestamp updated */
-	if ((iss & ISS_TFUS) && ravb_timestamp_interrupt(ndev))
-		result = IRQ_HANDLED;
 
 	/* Error status summary */
 	if (iss & ISS_ES) {
@@ -924,6 +904,10 @@ static int ravb_poll(struct napi_struct *napi, int budget)
 		}
 		/* Processing TX Descriptor Ring */
 		if (tis & mask) {
+			/* Timestamp updated */
+			if (q == RAVB_NC)
+				ravb_get_tx_tstamp(ndev);
+
 			spin_lock_irqsave(&priv->lock, flags);
 			/* Clear TX interrupt */
 			ravb_write(ndev, ~(mask | TIS_RESERVED), TIS);
