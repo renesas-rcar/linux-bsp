@@ -1,0 +1,38 @@
+Linux I2C and DMA
+-----------------
+
+Given that I2C is a low-speed bus where largely small messages are transferred,
+it is not considered a prime user of DMA access. At this time of writing, only
+10% of I2C bus master drivers have DMA support implemented. And the vast
+majority of transactions are so small that setting up DMA for it will likely
+add more overhead than a plain PIO transfer.
+
+Therefore, it is *not* mandatory that the buffer of an I2C message is DMA safe.
+It does not seem reasonable to apply additional burdens when the feature is so
+rarely used. However, it is recommended to use a DMA-safe buffer if your
+message size is likely applicable for DMA. Most drivers have this threshold
+around 8 bytes. As of today, this is mostly an educated guess, however.
+
+To support this scenario, drivers wishing to implement DMA can use helper
+functions from the I2C core. One checks if a message is DMA capable in terms of
+size and memory type. It can optionally also create a bounce buffer:
+
+	i2c_check_msg_for_dma(msg, threshold, &bounce_buf);
+
+The bounce buffer handling from the core is generic and simple. It will always
+allocate a new bounce buffer. If you want a more sophisticated handling (e.g.
+reusing pre-allocated buffers), you can leave the pointer to the bounce buffer
+empty and implement your own handling based on the return value of the above
+function.
+
+The other helper function releases the bounce buffer. It ensures data is copied
+back to the message:
+
+	i2c_release_dma_bounce_buf(msg, bounce_buf);
+
+Please check the in-kernel documentation for details. The i2c-sh_mobile driver
+can be used as a reference example.
+
+If you plan to use DMA with I2C (or with any other bus, actually) make sure you
+have CONFIG_DMA_API_DEBUG enabled during development. It can help you find
+various issues which can be complex to debug otherwise.
