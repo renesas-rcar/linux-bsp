@@ -1572,6 +1572,7 @@ int rvin_set_chsel(struct rvin_dev *vin, u8 chsel)
 		VNCSI_IFMD_CSI_CHSEL(chsel);
 
 	rvin_write(vin, ifmd, VNCSI_IFMD_REG);
+	vin->group->vin[vin->index]->chsel = chsel;
 
 	vin_dbg(vin, "Set IFMD 0x%x\n", ifmd);
 
@@ -1584,11 +1585,7 @@ int rvin_get_chsel(struct rvin_dev *vin)
 {
 	int chsel;
 
-	pm_runtime_get_sync(vin->dev);
-
-	chsel = rvin_read(vin, VNCSI_IFMD_REG) & VNCSI_IFMD_CSI_CHSEL_MASK;
-
-	pm_runtime_put(vin->dev);
+	chsel = vin->group->vin[vin->index]->chsel;
 
 	return chsel;
 }
