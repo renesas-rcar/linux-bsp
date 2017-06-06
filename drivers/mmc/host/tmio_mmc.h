@@ -25,6 +25,7 @@
 #include <linux/pagemap.h>
 #include <linux/scatterlist.h>
 #include <linux/spinlock.h>
+#include <linux/sys_soc.h>
 
 #define CTL_SD_CMD 0x00
 #define CTL_ARG_REG 0x04
@@ -50,6 +51,27 @@
 #define CTL_SDIO_REGS 0x100
 #define CTL_CLK_AND_WAIT_CTL 0x138
 #define CTL_RESET_SDIO 0x1e0
+
+#define DM_CM_SEQ_REGSET	0x800
+#define DM_CM_SEQ_MODE		0x808
+#define DM_CM_SEQ_CTRL		0x810
+#define DM_CM_DTRAN_MODE	0x820
+#define DM_CM_DTRAN_CTRL	0x828
+#define DM_CM_RST		0x830
+#define DM_CM_INFO1		0x840
+#define DM_CM_INFO1_MASK	0x848
+#define DM_CM_INFO2		0x850
+#define DM_CM_INFO2_MASK	0x858
+#define DM_CM_TUNING_STAT	0x860
+#define DM_CM_SEQ_STAT		0x868
+#define DM_DTRAN_ADDR		0x880
+#define DM_SEQ_CMD		0x8a0
+#define DM_SEQ_ARG		0x8a8
+#define DM_SEQ_SIZE		0x8b0
+#define DM_SEQ_SECCNT		0x8b8
+#define DM_SEQ_RSP		0x8c0
+#define DM_SEQ_RSP_CHK		0x8c8
+#define DM_SEQ_ADDR		0x8d0
 
 /* Definitions for values the CTRL_STATUS register can take. */
 #define TMIO_STAT_CMDRESPEND    BIT(0)
@@ -105,8 +127,21 @@
 #define TMIO_MASK_DMA     (TMIO_STAT_DATAEND | TMIO_STAT_DATATIMEOUT)
 #define TMIO_MASK_IRQ     (TMIO_MASK_READOP | TMIO_MASK_WRITEOP | TMIO_MASK_CMD)
 
+/* DM_CM_INFO1 and DM_CM_INFO1_MASK */
+#define DM_CM_INFO1_SEQEND		BIT(0)
+#define DM_CM_INFO1_SEQSUSPEND		BIT(8)
+#define DM_CM_INFO1_DTRAEND0		BIT(16)
+#define DM_CM_INFO1_DTRAEND1_BIT17	BIT(17)
+#define DM_CM_INFO1_DTRAEND1_BIT20	BIT(20)
+
 #define TMIO_TRANSTATE_DEND	0x00000001
 #define TMIO_TRANSTATE_AEND	0x00000002
+
+static const struct soc_device_attribute dma_quirks_match[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ .soc_id = "r8a7796", .revision = "ES1.0" },
+	{ },
+};
 
 struct tmio_mmc_data;
 struct tmio_mmc_host;
@@ -151,9 +186,14 @@ struct tmio_mmc_host {
 	struct dma_chan		*chan_tx;
 	struct tasklet_struct	dma_complete;
 	struct tasklet_struct	dma_issue;
+	struct tasklet_struct	seq_complete;
+	bool			bounce_sg_mapped;
 	struct scatterlist	bounce_sg;
 	u8			*bounce_buf;
 	u32			dma_tranend1;
+
+	/* Sequencer support */
+	bool			sequencer_enabled;
 
 	/* Track lost interrupts */
 	struct delayed_work	delayed_reset_work;
@@ -279,12 +319,17 @@ static inline void tmio_mmc_abort_dma(struct tmio_mmc_host *host)
 	&& defined(CONFIG_ARM64)
 bool __tmio_mmc_dma_irq(struct tmio_mmc_host *host);
 void tmio_mmc_reset_dma(struct tmio_mmc_host *host);
+void tmio_mmc_start_sequencer(struct tmio_mmc_host *host);
 #else
 static inline bool __tmio_mmc_dma_irq(struct tmio_mmc_host *host)
 {
 	return false;
 }
 static inline void tmio_mmc_reset_dma(struct tmio_mmc_host *host)
+{
+}
+
+static inline void tmio_mmc_start_sequencer(struct tmio_mmc_host *host)
 {
 }
 #endif
@@ -331,6 +376,24 @@ static inline void sd_ctrl_write32_as_16_and_16(struct tmio_mmc_host *host, int 
 {
 	writew(val & 0xffff, host->ctl + (addr << host->bus_shift));
 	writew(val >> 16, host->ctl + ((addr + 2) << host->bus_shift));
+}
+
+/*
+ * Specification of this driver:
+ * - host->chan_{rx,tx} will be used as a flag of enabling/disabling the dma
+ * - Since this SDHI DMAC register set has actual 32-bit and "bus_shift" is 2,
+ *   this driver cannot use original sd_ctrl_{write,read}32 functions.
+ */
+static inline void tmio_dm_write(struct tmio_mmc_host *host, int addr, u64 val)
+{
+	writel(val & 0xffffffff, host->ctl + addr);
+	writel(val >> 32, host->ctl + (addr + 4));
+}
+
+static inline u64 tmio_dm_read(struct tmio_mmc_host *host, int addr)
+{
+	return readl(host->ctl + addr) |
+	  (u64)readl(host->ctl + (addr + 4)) << 32;
 }
 
 #endif
