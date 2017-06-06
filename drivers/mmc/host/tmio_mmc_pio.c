@@ -31,6 +31,7 @@
 
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/dma-mapping.h>
 #include <linux/highmem.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -861,6 +862,47 @@ static int tmio_mmc_start_data(struct tmio_mmc_host *host,
 	return 0;
 }
 
+static void tmio_mmc_post_req(struct mmc_host *mmc, struct mmc_request *req,
+			      int err)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	struct mmc_data *data = req->data;
+	enum dma_data_direction dir;
+
+	if (data && data->host_cookie == COOKIE_PRE_MAPPED) {
+		if (req->data->flags & MMC_DATA_READ)
+			dir = DMA_FROM_DEVICE;
+		else
+			dir = DMA_TO_DEVICE;
+
+		dma_unmap_sg(&host->pdev->dev, data->sg, data->sg_len, dir);
+		data->host_cookie = COOKIE_UNMAPPED;
+	}
+}
+
+static void tmio_mmc_pre_req(struct mmc_host *mmc, struct mmc_request *req,
+			     bool is_first_req)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	struct mmc_data *data = req->data;
+	enum dma_data_direction dir;
+	int ret;
+
+	if (data && data->host_cookie == COOKIE_UNMAPPED) {
+		if (req->data->flags & MMC_DATA_READ)
+			dir = DMA_FROM_DEVICE;
+		else
+			dir = DMA_TO_DEVICE;
+
+		ret = dma_map_sg(&host->pdev->dev, data->sg, data->sg_len, dir);
+		if (ret <= 0)
+			dev_err(&host->pdev->dev,
+				"%s: dma_map_sg failed\n", __func__);
+		else
+			data->host_cookie = COOKIE_PRE_MAPPED;
+	}
+}
+
 static void tmio_mmc_hw_reset(struct mmc_host *mmc)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
@@ -977,6 +1019,20 @@ static void tmio_mmc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		ret = tmio_mmc_start_data(host, mrq->data);
 		if (ret)
 			goto fail;
+
+		if (host->force_pio &&
+		    mrq->data->host_cookie == COOKIE_PRE_MAPPED) {
+			/* PIO mode, unmap pre_dma_mapped sg */
+			enum dma_data_direction dir;
+
+			if (mrq->data->flags & MMC_DATA_READ)
+				dir = DMA_FROM_DEVICE;
+			else
+				dir = DMA_TO_DEVICE;
+			dma_unmap_sg(&host->pdev->dev, mrq->data->sg,
+				     mrq->data->sg_len, dir);
+			mrq->data->host_cookie = COOKIE_UNMAPPED;
+		}
 	}
 
 	ret = tmio_mmc_start_command(host, mrq->cmd);
@@ -1169,6 +1225,8 @@ static int tmio_multi_io_quirk(struct mmc_card *card,
 }
 
 static struct mmc_host_ops tmio_mmc_ops = {
+	.post_req	= tmio_mmc_post_req,
+	.pre_req	= tmio_mmc_pre_req,
 	.request	= tmio_mmc_request,
 	.set_ios	= tmio_mmc_set_ios,
 	.get_ro         = tmio_mmc_get_ro,

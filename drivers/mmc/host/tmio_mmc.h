@@ -111,6 +111,11 @@
 struct tmio_mmc_data;
 struct tmio_mmc_host;
 
+enum tmio_cookie {
+	COOKIE_UNMAPPED,
+	COOKIE_PRE_MAPPED,
+};
+
 struct tmio_mmc_dma {
 	enum dma_slave_buswidth dma_buswidth;
 	bool sdbuf_64bit;

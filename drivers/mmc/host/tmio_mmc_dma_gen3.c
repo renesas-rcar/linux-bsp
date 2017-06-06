@@ -149,10 +149,13 @@ void tmio_mmc_start_dma(struct tmio_mmc_host *host, struct mmc_data *data)
 		irq_mask = TMIO_STAT_TXRQ;
 	}
 
-	ret = dma_map_sg(&host->pdev->dev, sg, host->sg_len, dir);
-	if (ret < 0) {
-		dev_err(&host->pdev->dev, "%s: dma_map_sg failed\n", __func__);
-		return;
+	if (host->data->host_cookie != COOKIE_PRE_MAPPED) {
+		ret = dma_map_sg(&host->pdev->dev, sg, host->sg_len, dir);
+		if (ret < 0) {
+			dev_err(&host->pdev->dev,
+				"%s: dma_map_sg failed\n", __func__);
+			return;
+		}
 	}
 
 	tmio_clear_transtate(host);
@@ -195,7 +198,8 @@ static void tmio_mmc_complete_tasklet_fn(unsigned long arg)
 		dir = DMA_TO_DEVICE;
 
 	tmio_mmc_enable_dma(host, false);
-	dma_unmap_sg(&host->pdev->dev, host->sg_ptr, host->sg_len, dir);
+	if (host->data->host_cookie != COOKIE_PRE_MAPPED)
+		dma_unmap_sg(&host->pdev->dev, host->sg_ptr, host->sg_len, dir);
 	tmio_mmc_do_data_irq(host);
 }
 #endif
