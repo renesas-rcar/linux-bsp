@@ -746,6 +746,14 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		goto eprobe;
 	}
 
+#ifdef CONFIG_MMC_SDHI_SEQ_WORKAROUND
+	if (soc_device_match(dma_quirks_match))
+		host->sequencer_enabled = true;
+	else
+		host->sequencer_enabled = false;
+#else
+	host->sequencer_enabled = false;
+#endif
 	if (of_id && of_id->data) {
 		const struct sh_mobile_sdhi_of_data *of_data = of_id->data;
 
@@ -755,6 +763,20 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		mmc_data->dma_rx_offset = of_data->dma_rx_offset;
 		mmc_data->max_blk_count	= of_data->max_blk_count;
 		mmc_data->max_segs = of_data->max_segs;
+		/*
+		 * Gen3 SDHI SEQ can handle 0xffffffff/DM_SEQ_SIZE blk count
+		 * and max 8 commands.
+		 */
+		if (host->sequencer_enabled) {
+			mmc_data->max_blk_count  = 0xffffffff / 512;
+#ifdef CONFIG_MMC_BLOCK_BOUNCE
+			/* (CMD23+CMD18)*1 + (dummy read command) */
+			mmc_data->max_segs = 1;
+#else
+			/* (CMD23+CMD18)*3 + (dummy read command) */
+			mmc_data->max_segs = 3;
+#endif
+		}
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 		dma_priv->sdbuf_64bit = of_data->sdbuf_64bit;
 		host->bus_shift = of_data->bus_shift;

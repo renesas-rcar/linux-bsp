@@ -568,6 +568,17 @@ config MMC_SDHI_PIO
 	  When switching the transfer mode from DMA to PIO, say Y here.
 	  When switching the transfer mode from PIO to DMA, say N here.
 
+config MMC_SDHI_SEQ_WORKAROUND
+	bool "Support SDHI Sequencer as R-Car H3(WS1.1)/M3(WS1.0) Workaround"
+	depends on MMC_SDHI && ARM64 && !MMC_SDHI_PIO
+	help
+	  This option enables support for SDHI-SEQUENCER.
+
+	  Since the bus response is not taken into account,
+	  the data of the last sector might be missing.
+	  In order to read the last sector data, use SDHI-SEQUENCER
+	  to read data two extra.
+
 config MMC_CB710
 	tristate "ENE CB710 MMC/SD Interface support"
 	depends on PCI
