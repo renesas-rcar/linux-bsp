@@ -89,9 +89,25 @@ static u32 rvin_format_sizeimage(struct v4l2_pix_format *pix)
 	return pix->bytesperline * pix->height;
 }
 
-static int rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
+static void __rvin_format_aling_update(struct rvin_dev *vin,
+				       struct v4l2_pix_format *pix)
 {
 	u32 walign;
+
+	/* HW limit width to a multiple of 32 (2^5) for NV16 else 2 (2^1) */
+	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
+
+	/* Limit to VIN capabilities */
+	v4l_bound_align_image(&pix->width, 2, vin->info->max_width, walign,
+			      &pix->height, 4, vin->info->max_height, 2, 0);
+
+	pix->bytesperline = rvin_format_bytesperline(pix);
+	pix->sizeimage = rvin_format_sizeimage(pix);
+}
+
+static int rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
+{
+	int width;
 
 	/* If requested format is not supported fallback to the default */
 	if (!rvin_format_from_pixel(pix->pixelformat)) {
@@ -108,6 +124,44 @@ static int rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	case V4L2_FIELD_INTERLACED_BT:
 	case V4L2_FIELD_INTERLACED:
 		break;
+	case V4L2_FIELD_SEQ_TB:
+	case V4L2_FIELD_SEQ_BT:
+		/*
+		 * Due to extra hardware alignment restrictions on
+		 * buffer addresses for multi plane formats they
+		 * are not (yet) supported. This would be much simpler
+		 * once support for the UDS scaler is added.
+		 *
+		 * Support for multi plane formats could be supported
+		 * by having a different partitioning strategy when
+		 * capturing the second field (start capturing one
+		 * quarter in to the buffer instead of one half).
+		 */
+
+		if (pix->pixelformat == V4L2_PIX_FMT_NV16)
+			pix->pixelformat = RVIN_DEFAULT_FORMAT;
+
+		/*
+		 * For sequential formats it's needed to write to
+		 * the same buffer two times to capture both the top
+		 * and bottom field. The second time it is written
+		 * an offset is needed as to not overwrite the
+		 * previous captured field. Due to hardware limitations
+		 * the offsets must be a multiple of 128. Try to
+		 * increase the width of the image until a size is
+		 * found which can satisfy this constraint.
+		 */
+
+		width = pix->width;
+		while (width < vin->info->max_width) {
+			pix->width = width++;
+
+			__rvin_format_aling_update(vin, pix);
+
+			if (((pix->sizeimage / 2) & HW_BUFFER_MASK) == 0)
+				break;
+		}
+		break;
 	default:
 		pix->field = V4L2_FIELD_NONE;
 		break;
@@ -117,15 +171,7 @@ static int rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	if (!pix->colorspace || pix->colorspace >= 0xff)
 		pix->colorspace = vin->format.colorspace;
 
-	/* HW limit width to a multiple of 32 (2^5) for NV16 else 2 (2^1) */
-	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
-
-	/* Limit to VIN capabilities */
-	v4l_bound_align_image(&pix->width, 2, vin->info->max_width, walign,
-			      &pix->height, 4, vin->info->max_height, 2, 0);
-
-	pix->bytesperline = rvin_format_bytesperline(pix);
-	pix->sizeimage = rvin_format_sizeimage(pix);
+	__rvin_format_aling_update(vin, pix);
 
 	if (vin->info->chip == RCAR_M1 &&
 	    pix->pixelformat == V4L2_PIX_FMT_XBGR32) {
@@ -162,6 +208,8 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	case V4L2_FIELD_INTERLACED_TB:
 	case V4L2_FIELD_INTERLACED_BT:
 	case V4L2_FIELD_INTERLACED:
+	case V4L2_FIELD_SEQ_TB:
+	case V4L2_FIELD_SEQ_BT:
 		break;
 	case V4L2_FIELD_ALTERNATE:
 		/* Use VIN hardware to combine the two fields */
