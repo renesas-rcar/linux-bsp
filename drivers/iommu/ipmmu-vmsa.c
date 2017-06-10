@@ -1335,6 +1335,9 @@ static int ipmmu_probe(struct platform_device *pdev)
 	else
 		mmu->num_ctx = 1;
 
+	mmu->num_ctx = min_t(unsigned int, CONFIG_IPMMU_VMSA_CTX_NUM,
+		mmu->num_ctx);
+
 	WARN_ON(mmu->num_ctx > IPMMU_CTX_MAX);
 
 	irq = platform_get_irq(pdev, 0);
