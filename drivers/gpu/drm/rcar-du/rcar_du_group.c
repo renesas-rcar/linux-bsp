@@ -286,9 +286,15 @@ int rcar_du_group_set_routing(struct rcar_du_group *rgrp)
 void rcar_du_pre_group_set_routing(struct rcar_du_group *rgrp,
 				   struct rcar_du_crtc *rcrtc)
 {
-	unsigned int possible_crtcs =
-		rgrp->dev->info->routes[RCAR_DU_OUTPUT_DPAD0].possible_crtcs;
-	u32 crtc = ffs(possible_crtcs) - 1;
+	unsigned int possible_crtcs;
+	u32 crtc;
+
+	if ((!rgrp) || (!rcrtc))
+		return;
+
+	possible_crtcs =
+		 rgrp->dev->info->routes[RCAR_DU_OUTPUT_DPAD0].possible_crtcs;
+	crtc = ffs(possible_crtcs) - 1;
 
 	if (rcrtc->index != crtc)
 		return;
