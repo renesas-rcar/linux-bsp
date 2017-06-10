@@ -107,7 +107,7 @@
 /*
  * Some controllers don't have CBSY bit
  */
-#define TMIO_MMC_USE_SCLKDIVEN		(1 << 11)
+#define TMIO_MMC_USE_SCLKDIVEN		BIT(11)
 
 int tmio_core_mmc_enable(void __iomem *cnf, int shift, unsigned long base);
 int tmio_core_mmc_resume(void __iomem *cnf, int shift, unsigned long base);
