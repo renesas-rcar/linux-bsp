@@ -77,7 +77,7 @@ static struct cpg_core_clk r8a7795_core_clks[] __initdata = {
 	/* Core Clock Outputs */
 	DEF_BASE("z",           R8A7795_CLK_Z,     CLK_TYPE_GEN3_Z, CLK_PLL0),
 	DEF_BASE("z2",          R8A7795_CLK_Z2,    CLK_TYPE_GEN3_Z2, CLK_PLL2),
-	DEF_FIXED("zg",         R8A7795_CLK_ZG,    CLK_PLL4,       4, 1),
+	DEF_BASE("zg",          R8A7795_CLK_ZG,    CLK_TYPE_GEN3_ZG, CLK_PLL4),
 	DEF_FIXED("ztr",        R8A7795_CLK_ZTR,   CLK_PLL1_DIV2,  6, 1),
 	DEF_FIXED("ztrd2",      R8A7795_CLK_ZTRD2, CLK_PLL1_DIV2, 12, 1),
 	DEF_FIXED("zt",         R8A7795_CLK_ZT,    CLK_PLL1_DIV2,  4, 1),
@@ -112,8 +112,8 @@ static struct cpg_core_clk r8a7795_core_clks[] __initdata = {
 	DEF_DIV6P1("canfd",     R8A7795_CLK_CANFD, CLK_PLL1_DIV4, 0x244),
 	DEF_DIV6P1("csi0",      R8A7795_CLK_CSI0,  CLK_PLL1_DIV4, 0x00c),
 
-	DEF_DIV6_RO("osc",      R8A7795_CLK_OSC,   CLK_EXTAL, CPG_RCKCR, 8),
-	DEF_DIV6_RO("r_int",    CLK_RINT,          CLK_EXTAL, CPG_RCKCR, 32),
+	DEF_BASE("osc",         R8A7795_CLK_OSC, CLK_TYPE_GEN3_OSC,  CLK_EXTAL),
+	DEF_BASE("r_int",       CLK_RINT,        CLK_TYPE_GEN3_RINT, CLK_EXTAL),
 
 	DEF_BASE("r",           R8A7795_CLK_R, CLK_TYPE_GEN3_R, CLK_RINT),
 };
@@ -177,7 +177,7 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("hscif1",		 519,	R8A7795_CLK_S3D1),
 	DEF_MOD("hscif0",		 520,	R8A7795_CLK_S3D1),
 	DEF_MOD("thermal",		 522,	R8A7795_CLK_CP),
-	DEF_MOD("pwm",			 523,	R8A7795_CLK_S3D4),
+	DEF_MOD("pwm",			 523,	R8A7795_CLK_S0D12),
 	DEF_MOD("fcpvd3",		 600,	R8A7795_CLK_S2D1), /* ES1.x */
 	DEF_MOD("fcpvd2",		 601,	R8A7795_CLK_S2D1),
 	DEF_MOD("fcpvd1",		 602,	R8A7795_CLK_S2D1),
@@ -229,23 +229,23 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("vin0",			 811,	R8A7795_CLK_S0D2),
 	DEF_MOD("etheravb",		 812,	R8A7795_CLK_S0D6),
 	DEF_MOD("sata0",		 815,	R8A7795_CLK_S3D2),
-	DEF_MOD("gpio7",		 905,	R8A7795_CLK_CP),
-	DEF_MOD("gpio6",		 906,	R8A7795_CLK_CP),
-	DEF_MOD("gpio5",		 907,	R8A7795_CLK_CP),
-	DEF_MOD("gpio4",		 908,	R8A7795_CLK_CP),
-	DEF_MOD("gpio3",		 909,	R8A7795_CLK_CP),
-	DEF_MOD("gpio2",		 910,	R8A7795_CLK_CP),
-	DEF_MOD("gpio1",		 911,	R8A7795_CLK_CP),
-	DEF_MOD("gpio0",		 912,	R8A7795_CLK_CP),
+	DEF_MOD("gpio7",		 905,	R8A7795_CLK_S3D4),
+	DEF_MOD("gpio6",		 906,	R8A7795_CLK_S3D4),
+	DEF_MOD("gpio5",		 907,	R8A7795_CLK_S3D4),
+	DEF_MOD("gpio4",		 908,	R8A7795_CLK_S3D4),
+	DEF_MOD("gpio3",		 909,	R8A7795_CLK_S3D4),
+	DEF_MOD("gpio2",		 910,	R8A7795_CLK_S3D4),
+	DEF_MOD("gpio1",		 911,	R8A7795_CLK_S3D4),
+	DEF_MOD("gpio0",		 912,	R8A7795_CLK_S3D4),
 	DEF_MOD("can-fd",		 914,	R8A7795_CLK_S3D2),
 	DEF_MOD("can-if1",		 915,	R8A7795_CLK_S3D4),
 	DEF_MOD("can-if0",		 916,	R8A7795_CLK_S3D4),
-	DEF_MOD("i2c6",			 918,	R8A7795_CLK_S3D2),
-	DEF_MOD("i2c5",			 919,	R8A7795_CLK_S3D2),
+	DEF_MOD("i2c6",			 918,	R8A7795_CLK_S0D6),
+	DEF_MOD("i2c5",			 919,	R8A7795_CLK_S0D6),
 	DEF_MOD("adg",                   922,   R8A7795_CLK_S0D1),
 	DEF_MOD("i2c-dvfs",		 926,	R8A7795_CLK_CP),
-	DEF_MOD("i2c4",			 927,	R8A7795_CLK_S3D2),
-	DEF_MOD("i2c3",			 928,	R8A7795_CLK_S3D2),
+	DEF_MOD("i2c4",			 927,	R8A7795_CLK_S0D6),
+	DEF_MOD("i2c3",			 928,	R8A7795_CLK_S0D6),
 	DEF_MOD("i2c2",			 929,	R8A7795_CLK_S3D2),
 	DEF_MOD("i2c1",			 930,	R8A7795_CLK_S3D2),
 	DEF_MOD("i2c0",			 931,	R8A7795_CLK_S3D2),
@@ -306,30 +306,54 @@ static const unsigned int r8a7795_crit_mod_clks[] __initconst = {
  * 1  1  0  1	33.33 / 2	x180	x192	x144	x168	x144
  * 1  1  1  0	33.33 / 2	x180	x192	x144	x144	x144
  * 1  1  1  1	33.33 / 2	x180	x192	x144	x192	x144
+ *
+ *   MD		Internal
+ * 14 13 19 17	RCLK				OSCCLK
+ *-----------------------------------------------------------------
+ * 0  0  0  0	x 1/512  (x 1/16 x 1/32)	128 (x 1/16 x 1/8)
+ * 0  0  0  1	x 1/512  (x 1/16 x 1/32)	128 (x 1/16 x 1/8)
+ * 0  0  1  0	x 1/512  (x 1/16 x 1/32)	128 (x 1/16 x 1/8)
+ * 0  0  1  1	x 1/512  (x 1/19 x 1/32)	128 (x 1/19 x 1/8)
+ * 0  1  0  0	x 1/608  (x 1/19 x 1/32)	128 (x 1/19 x 1/8)
+ * 0  1  0  1	x 1/608  (x 1/19 x 1/32)	128 (x 1/19 x 1/8)
+ * 0  1  1  0	x 1/608  (x 1/19 x 1/32)	128 (x 1/19 x 1/8)
+ * 0  1  1  1	x 1/608  (x 1/19 x 1/32)	128 (x 1/19 x 1/8)
+ * 1  0  0  0	x 1/768  (x 1/24 x 1/32)	128 (x 1/24 x 1/8)
+ * 1  0  0  1	x 1/768  (x 1/24 x 1/32)	128 (x 1/24 x 1/8)
+ * 1  0  1  0	x 1/768  (x 1/24 x 1/32)	128 (x 1/24 x 1/8)
+ * 1  0  1  1	x 1/768  (x 1/24 x 1/32)	128 (x 1/24 x 1/8)
+ * 1  1  0  0	x 1/1024 (x 1/28 x 1/32)	128 (x 1/28 x 1/8)
+ * 1  1  0  1	x 1/1024 (x 1/28 x 1/32)	128 (x 1/28 x 1/8)
+ * 1  1  1  0	x 1/1024 (x 1/28 x 1/32)	128 (x 1/28 x 1/8)
+ * 1  1  1  1	x 1/1024 (x 1/28 x 1/32)	128 (x 1/28 x 1/8)
  */
+
 #define CPG_PLL_CONFIG_INDEX(md)	((((md) & BIT(14)) >> 11) | \
 					 (((md) & BIT(13)) >> 11) | \
 					 (((md) & BIT(19)) >> 18) | \
 					 (((md) & BIT(17)) >> 17))
 
 static const struct rcar_gen3_cpg_pll_config cpg_pll_configs[16] __initconst = {
-	/* EXTAL div	PLL1 mult	PLL3 mult */
-	{ 1,		192,		192,	},
-	{ 1,		192,		168,	},
-	{ 1,		192,		144,	},
-	{ 1,		192,		192,	},
-	{ 1,		160,		160,	},
-	{ 1,		160,		140,	},
-	{ 1,		160,		120,	},
-	{ 1,		160,		160,	},
-	{ 1,		128,		128,	},
-	{ 1,		128,		112,	},
-	{ 1,		128,		96,	},
-	{ 1,		128,		128,	},
-	{ 2,		192,		192,	},
-	{ 2,		192,		168,	},
-	{ 2,		192,		144,	},
-	{ 2,		192,		192,	},
+	/*
+	 *						internal R	OSC
+	 * EXTAL div	PLL1 mult	PLL3 mult	div		div
+	 */
+	{ 1,		192,		192,		512,		128 },
+	{ 1,		192,		168,		512,		128 },
+	{ 1,		192,		144,		512,		128 },
+	{ 1,		192,		192,		512,		128 },
+	{ 1,		160,		160,		608,		152 },
+	{ 1,		160,		140,		608,		152 },
+	{ 1,		160,		120,		608,		152 },
+	{ 1,		160,		160,		608,		152 },
+	{ 1,		128,		128,		768,		192 },
+	{ 1,		128,		112,		768,		192 },
+	{ 1,		128,		96,		768,		192 },
+	{ 1,		128,		128,		768,		192 },
+	{ 2,		192,		192,		1024,		256 },
+	{ 2,		192,		168,		1024,		256 },
+	{ 2,		192,		144,		1024,		256 },
+	{ 2,		192,		192,		1024,		256 },
 };
 
 static const struct soc_device_attribute r8a7795es1[] __initconst = {
@@ -359,6 +383,7 @@ static const struct mssr_mod_reparent r8a7795es1_mod_reparent[] __initconst = {
 	{ MOD_CLK_ID(219), R8A7795_CLK_S3D1 },	/* SYS-DMAC0 */
 	{ MOD_CLK_ID(501), R8A7795_CLK_S3D4 },	/* AUDMAC1 */
 	{ MOD_CLK_ID(502), R8A7795_CLK_S3D4 },	/* AUDMAC0 */
+	{ MOD_CLK_ID(523), R8A7795_CLK_S3D4 },	/* PWM */
 	{ MOD_CLK_ID(621), R8A7795_CLK_S2D1 },	/* VSPD2 */
 	{ MOD_CLK_ID(622), R8A7795_CLK_S2D1 },	/* VSPD1 */
 	{ MOD_CLK_ID(623), R8A7795_CLK_S2D1 },	/* VSPD0 */
@@ -375,6 +400,18 @@ static const struct mssr_mod_reparent r8a7795es1_mod_reparent[] __initconst = {
 	{ MOD_CLK_ID(810), R8A7795_CLK_S2D1 },	/* VIN1 */
 	{ MOD_CLK_ID(811), R8A7795_CLK_S2D1 },	/* VIN0 */
 	{ MOD_CLK_ID(812), R8A7795_CLK_S3D2 },	/* EAVB-IF */
+	{ MOD_CLK_ID(905), R8A7795_CLK_CP },	/* GPIO7 */
+	{ MOD_CLK_ID(906), R8A7795_CLK_CP },	/* GPIO6 */
+	{ MOD_CLK_ID(907), R8A7795_CLK_CP },	/* GPIO5 */
+	{ MOD_CLK_ID(908), R8A7795_CLK_CP },	/* GPIO4 */
+	{ MOD_CLK_ID(909), R8A7795_CLK_CP },	/* GPIO3 */
+	{ MOD_CLK_ID(910), R8A7795_CLK_CP },	/* GPIO2 */
+	{ MOD_CLK_ID(911), R8A7795_CLK_CP },	/* GPIO1 */
+	{ MOD_CLK_ID(912), R8A7795_CLK_CP },	/* GPIO0 */
+	{ MOD_CLK_ID(918), R8A7795_CLK_S3D2 },	/* I2C6 */
+	{ MOD_CLK_ID(919), R8A7795_CLK_S3D2 },	/* I2C5 */
+	{ MOD_CLK_ID(927), R8A7795_CLK_S3D2 },	/* I2C4 */
+	{ MOD_CLK_ID(928), R8A7795_CLK_S3D2 },	/* I2C3 */
 };
 
 
