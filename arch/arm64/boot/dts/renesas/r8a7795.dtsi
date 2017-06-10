@@ -435,6 +435,27 @@
 		};
 	};
 
+	gsx_opp_table: gsx_opp_table {
+		compatible = "operating-points-v2";
+
+		opp@200000000 {
+			opp-hz = /bits/ 64 <200000000>;
+			opp-microvolt = <820000>;
+		};
+		opp@300000000 {
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <820000>;
+		};
+		opp@400000000 {
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <820000>;
+		};
+		opp@600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <820000>;
+		};
+	};
+
 	extal_clk: extal {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -575,7 +596,7 @@
 			interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
 			#gpio-cells = <2>;
 			gpio-controller;
-			gpio-ranges = <&pfc 0 32 28>;
+			gpio-ranges = <&pfc 0 32 29>;
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 911>;
@@ -817,7 +838,7 @@
 			status = "okay";
 		};
 
-		mfis_lock: mfis-lock {
+		mfis_lock: mfis-lock@e62600c0 {
 			compatible =    "renesas,mfis-lock-r8a7795",
 					"renesas,mfis-lock";
 			reg = <0 0xe62600c0 0 0x0020>;
@@ -861,7 +882,7 @@
 		};
 
 		ipmmu_vp0: mmu@fe990000 {
-			compatible = "renesas,ipmmu-pmb-r8a7795";
+			compatible = "renesas,ipmmu-mmu-r8a7795";
 			reg = <0 0xfe990000 0 0x1000>; /* IPMMU-VP0 */
 			renesas,ipmmu-main = <&ipmmu_mm 16>;
 			#iommu-cells = <1>;
@@ -870,7 +891,7 @@
 		};
 
 		ipmmu_vp1: mmu@fe980000 {
-			compatible = "renesas,ipmmu-pmb-r8a7795";
+			compatible = "renesas,ipmmu-mmu-r8a7795";
 			reg = <0 0xfe980000 0 0x1000>; /* IPMMU-VP1 */
 			renesas,ipmmu-main = <&ipmmu_mm 17>;
 			#iommu-cells = <1>;
@@ -879,7 +900,7 @@
 		};
 
 		ipmmu_vc0: mmu@fe6b0000 {
-			compatible = "renesas,ipmmu-pmb-r8a7795";
+			compatible = "renesas,ipmmu-mmu-r8a7795";
 			reg = <0 0xfe6b0000 0 0x1000>; /* IPMMU-VC0 */
 			renesas,ipmmu-main = <&ipmmu_mm 12>;
 			#iommu-cells = <1>;
@@ -888,7 +909,7 @@
 		};
 
 		ipmmu_vc1: mmu@fe6f0000 {
-			compatible = "renesas,ipmmu-pmb-r8a7795";
+			compatible = "renesas,ipmmu-mmu-r8a7795";
 			reg = <0 0xfe6f0000 0 0x1000>; /* IPMMU-VC1 */
 			renesas,ipmmu-main = <&ipmmu_mm 13>;
 			#iommu-cells = <1>;
@@ -1830,6 +1851,7 @@
 			reg = <0 0xfd000000 0 0x3ffff>;
 			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 112>;
+			operating-points-v2 = <&gsx_opp_table>;
 			power-domains = <&sysc R8A7795_PD_3DG_E>;
 		};
 
@@ -2432,6 +2454,7 @@
 			clocks = <&cpg CPG_MOD 703>;
 			phys = <&usb2_phy0>;
 			phy-names = "usb";
+			companion= <&ohci0>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
@@ -2443,6 +2466,7 @@
 			clocks = <&cpg CPG_MOD 702>;
 			phys = <&usb2_phy1>;
 			phy-names = "usb";
+			companion = <&ohci1>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
@@ -2454,6 +2478,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			phys = <&usb2_phy2>;
 			phy-names = "usb";
+			companion = <&ohci2>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
@@ -2465,6 +2490,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			phys = <&usb2_phy3>;
 			phy-names = "usb";
+			companion = <&ohci3>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
