@@ -351,5 +351,11 @@ DEFINES := -DHRT_HW -DHRT_ISP_CSS_CUSTOM_HOST -DHRT_USE_VIR_ADDRS -D__HOST__
 DEFINES += -DATOMISP_POSTFIX=\"css2400b0_v21\" -DISP2400B0
 DEFINES += -DSYSTEM_hive_isp_css_2400_system -DISP2400
 
-ccflags-y += $(INCLUDES) $(DEFINES) -fno-common -Werror
+ccflags-y += $(INCLUDES) $(DEFINES) -fno-common
 
+# HACK! While this driver is in bad shape, don't enable several warnings
+#       that would be otherwise enabled with W=1
+ccflags-y += -Wno-unused-const-variable -Wno-missing-prototypes \
+	     -Wno-unused-but-set-variable -Wno-missing-declarations \
+	     -Wno-suggest-attribute=format -Wno-missing-prototypes \
+	     -Wno-implicit-fallthrough
