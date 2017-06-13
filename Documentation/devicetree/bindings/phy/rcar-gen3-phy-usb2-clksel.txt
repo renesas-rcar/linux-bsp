@@ -1,0 +1,60 @@
+* Renesas R-Car generation 3 USB 2.0 clock selector PHY
+
+This file provides information on what the device node for the R-Car generation
+3 USB 2.0 clock selector PHY contains.
+
+If you connect an external clock to the USB_EXTAL pin, you can use the
+"renesas,usb_extal_only" property for it.
+If you connect an oscillator to both the USB_XTAL and USB_EXTAL, this module
+is not needed because this is default setting.
+
+Case 1: An external clock connects to R-Car SoC
+	+----------+   +--- R-Car ---------------------+
+	|External  |---|USB_EXTAL ---> all usb channels|
+	|clock     |   |USB_XTAL                       |
+	+----------+   +-------------------------------+
+In this case, we need this driver with "usb-extal-only" property.
+
+Case 2: An oscillator connects to R-Car SoC
+	+----------+   +--- R-Car ---------------------+
+	|Oscillator|---|USB_EXTAL -+-> all usb channels|
+	|          |---|USB_XTAL --+                   |
+	+----------+   +-------------------------------+
+In this case, we don't need this selector.
+
+Required properties:
+- compatible: "renesas,usb2-clksel-phy-r8a7795" if the device is a part of an
+	      R8A7795 SoC.
+	      "renesas,usb2-clksel-phy-r8a7796" if the device is a part of an
+	      R8A7796 SoC.
+	      "renesas,rcar-gen3-usb2-clksel-phy" for a generic R-Car Gen3
+	      compatible device.
+
+	      When compatible with the generic version, nodes must list the
+	      SoC-specific version corresponding to the platform first
+	      followed by the generic version.
+
+- reg: offset and length of the USB 2.0 clock selector register block.
+- clocks: clock phandle and specifier pair(s).
+- #phy-cells: see phy-bindings.txt in the same directory, must be <0>.
+
+Optional properties:
+- renesas,usb-extal-only: to connect a clock generator to USB_EXTAL pin.
+
+Example (R-Car H3):
+
+	usb2_clksel_phy: usb-phy@e6590630 {
+		compatible = "renesas,usb2-clksel-phy-r8a7795",
+			     "renesas,rcar-gen3-usb2-clksel-phy";
+		reg = <0 0xe6590630 0 0x02>;
+		clocks = <&cpg CPG_MOD 703>;
+		renesas,usb-extal-only;
+	};
+
+	&ehci0 {
+		/* We should set usb2_clksel_phy into the first phys prop */
+		phys = <&usb2_clksel_phy>, <&usb2_phy0>;
+		phy-names = "usb_clk", "usb";
+
+		status = "okay";
+	};
