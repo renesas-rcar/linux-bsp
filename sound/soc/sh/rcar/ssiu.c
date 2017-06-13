@@ -33,6 +33,26 @@ static int rsnd_ssiu_init(struct rsnd_mod *mod,
 	u32 mask1, val1;
 	u32 mask2, val2;
 
+	/* clear status */
+	switch (id) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+		rsnd_mod_write(mod, SSI_SYS_STATUS0, 0xf << (id * 4));
+		rsnd_mod_write(mod, SSI_SYS_STATUS2, 0xf << (id * 4));
+		rsnd_mod_write(mod, SSI_SYS_STATUS4, 0xf << (id * 4));
+		rsnd_mod_write(mod, SSI_SYS_STATUS6, 0xf << (id * 4));
+		break;
+	case 9:
+		rsnd_mod_write(mod, SSI_SYS_STATUS1, 0xf << 4);
+		rsnd_mod_write(mod, SSI_SYS_STATUS3, 0xf << 4);
+		rsnd_mod_write(mod, SSI_SYS_STATUS5, 0xf << 4);
+		rsnd_mod_write(mod, SSI_SYS_STATUS7, 0xf << 4);
+		break;
+	}
+
 	/*
 	 * SSI_MODE0
 	 */
@@ -124,7 +144,8 @@ static int rsnd_ssiu_init_gen2(struct rsnd_mod *mod,
 			       (rsnd_io_is_play(io) ?
 				rsnd_runtime_channel_after_ctu(io) :
 				rsnd_runtime_channel_original(io)));
-		rsnd_mod_write(mod, SSI_BUSIF_MODE,  1);
+		rsnd_mod_write(mod, SSI_BUSIF_MODE,
+			       rsnd_get_busif_shift(io, mod) | 1);
 		rsnd_mod_write(mod, SSI_BUSIF_DALIGN,
 			       rsnd_get_dalign(mod, io));
 	}
