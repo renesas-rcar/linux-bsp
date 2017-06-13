@@ -409,7 +409,7 @@ static int adv748x_hdmi_set_pixelrate(struct adv748x_hdmi *hdmi)
 
 	adv748x_hdmi_query_dv_timings(&hdmi->sd, &timings);
 
-	fps = DIV_ROUND_CLOSEST(bt->pixelclock,
+	fps = DIV_ROUND_CLOSEST_ULL(bt->pixelclock,
 				V4L2_DV_BT_FRAME_WIDTH(bt) *
 				V4L2_DV_BT_FRAME_HEIGHT(bt));
 
