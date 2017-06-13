@@ -22,7 +22,7 @@
 #include <linux/sysfs.h>
 #include <linux/phy_fixed.h>
 #include <linux/etherdevice.h>
-#include <net/dsa.h>
+
 #include "dsa_priv.h"
 
 /* switch driver registration ***********************************************/
@@ -115,13 +115,12 @@ static int dsa_switch_setup_one(struct dsa_switch *ds, struct device *parent)
 			continue;
 
 		if (!strcmp(name, "cpu")) {
-			if (dst->cpu_switch) {
+			if (dst->cpu_dp) {
 				netdev_err(dst->master_netdev,
 					   "multiple cpu ports?!\n");
 				return -EINVAL;
 			}
-			dst->cpu_switch = ds;
-			dst->cpu_port = i;
+			dst->cpu_dp = &ds->ports[i];
 			ds->cpu_port_mask |= 1 << i;
 		} else if (!strcmp(name, "dsa")) {
 			ds->dsa_port_mask |= 1 << i;
@@ -144,7 +143,7 @@ static int dsa_switch_setup_one(struct dsa_switch *ds, struct device *parent)
 	 * tagging protocol to the preferred tagging format of this
 	 * switch.
 	 */
-	if (dst->cpu_switch == ds) {
+	if (dst->cpu_dp->ds == ds) {
 		enum dsa_tag_protocol tag_protocol;
 
 		tag_protocol = ops->get_tag_protocol(ds);
@@ -206,7 +205,7 @@ static int dsa_switch_setup_one(struct dsa_switch *ds, struct device *parent)
 		netdev_err(dst->master_netdev, "[%d] : can't configure CPU and DSA ports\n",
 			   index);
 
-	ret = dsa_cpu_port_ethtool_setup(ds);
+	ret = dsa_cpu_port_ethtool_setup(ds->dst->cpu_dp);
 	if (ret)
 		return ret;
 
@@ -577,7 +576,6 @@ static int dsa_setup_dst(struct dsa_switch_tree *dst, struct net_device *dev,
 
 	dst->pd = pd;
 	dst->master_netdev = dev;
-	dst->cpu_port = -1;
 
 	for (i = 0; i < pd->nr_chips; i++) {
 		struct dsa_switch *ds;
@@ -606,7 +604,7 @@ static int dsa_setup_dst(struct dsa_switch_tree *dst, struct net_device *dev,
 	 * sent to the tag format's receive function.
 	 */
 	wmb();
-	dev->dsa_ptr = (void *)dst;
+	dev->dsa_ptr = dst;
 
 	return 0;
 }
@@ -688,7 +686,7 @@ static void dsa_remove_dst(struct dsa_switch_tree *dst)
 			dsa_switch_destroy(ds);
 	}
 
-	dsa_cpu_port_ethtool_restore(dst->cpu_switch);
+	dsa_cpu_port_ethtool_restore(dst->cpu_dp);
 
 	dev_put(dst->master_netdev);
 }

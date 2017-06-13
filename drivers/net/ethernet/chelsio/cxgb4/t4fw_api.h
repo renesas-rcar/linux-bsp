@@ -2572,6 +2572,7 @@ enum fw_port_type {
 	FW_PORT_TYPE_CR_QSFP,
 	FW_PORT_TYPE_CR2_QSFP,
 	FW_PORT_TYPE_SFP28,
+	FW_PORT_TYPE_KR_SFP28,
 
 	FW_PORT_TYPE_NONE = FW_PORT_CMD_PTYPE_M
 };
@@ -3086,6 +3087,10 @@ struct fw_debug_cmd {
 #define FW_DEBUG_CMD_TYPE_M	0xff
 #define FW_DEBUG_CMD_TYPE_G(x)	\
 	(((x) >> FW_DEBUG_CMD_TYPE_S) & FW_DEBUG_CMD_TYPE_M)
+
+enum pcie_fw_eval {
+	PCIE_FW_EVAL_CRASH = 0,
+};
 
 #define PCIE_FW_ERR_S		31
 #define PCIE_FW_ERR_V(x)	((x) << PCIE_FW_ERR_S)
