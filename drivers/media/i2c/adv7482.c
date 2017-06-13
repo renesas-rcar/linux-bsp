@@ -923,6 +923,7 @@ struct adv7482_link_config {
 	bool		hdmi_in;
 	bool		sdp_in;
 	int		vc_ch;
+	int		num_lane;
 };
 
 struct adv7482_state {
@@ -970,6 +971,9 @@ static inline struct adv7482_state *to_state(struct v4l2_subdev *sd)
 static int adv7482_write_registers(struct i2c_client *client,
 					const struct adv7482_reg_value *regs)
 {
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct adv7482_state *state = to_state(sd);
+	struct adv7482_link_config *config = &state->mipi_csi2_link[0];
 	struct i2c_msg msg;
 	u8 data_buf[2];
 	int ret = -EINVAL;
@@ -984,12 +988,21 @@ static int adv7482_write_registers(struct i2c_client *client,
 	while (regs->addr != ADV7482_I2C_EOR) {
 
 		if (regs->addr == ADV7482_I2C_WAIT)
-			msleep(regs->value);
+			usleep_range(regs->value * 1000,
+				     (regs->value * 1000) + 1000);
 		else {
-			msg.addr = regs->addr;
-			data_buf[0] = regs->reg;
-			data_buf[1] = regs->value;
-
+			/* Lane configuration for TXA */
+			if ((regs->addr == ADV7482_I2C_TXA) &&
+			    (regs->reg == 0x00)) {
+				msg.addr = regs->addr;
+				data_buf[0] = regs->reg;
+				data_buf[1] = (regs->value & ~0x07) |
+						config->num_lane;
+			} else {
+				msg.addr = regs->addr;
+				data_buf[0] = regs->reg;
+				data_buf[1] = regs->value;
+			}
 			ret = i2c_transfer(client->adapter, &msg, 1);
 			if (ret < 0)
 				break;
@@ -2044,6 +2057,11 @@ static int adv7482_parse_dt(struct device_node *np,
 		return ret;
 
 	if (!strcmp(str, "rgb888")) {
+		config->num_lane = bus_cfg.bus.mipi_csi2.num_data_lanes;
+		if ((config->num_lane != 1) && (config->num_lane != 2) &&
+		    (config->num_lane != 4))
+			return -EINVAL;
+
 		config->input_interface = DECODER_INPUT_INTERFACE_RGB888;
 		config->regs =
 		(struct adv7482_reg_value *)adv7482_init_txa_4lane;
@@ -2054,6 +2072,10 @@ static int adv7482_parse_dt(struct device_node *np,
 		config->init_controls =
 		(int (*)(void *))adv7482_cp_init_controls;
 	} else {
+		config->num_lane = bus_cfg.bus.mipi_csi2.num_data_lanes;
+		if (config->num_lane != 1)
+			return -EINVAL;
+
 		config->input_interface = DECODER_INPUT_INTERFACE_YCBCR422;
 		config->regs =
 		(struct adv7482_reg_value *)adv7482_init_txb_1lane;
@@ -2155,6 +2177,7 @@ static int adv7482_probe(struct i2c_client *client,
 	}
 
 	state->mipi_csi2_link[0].input_interface = link_config.input_interface;
+	state->mipi_csi2_link[0].num_lane = link_config.num_lane;
 
 	mutex_init(&state->mutex);
 	state->curr_norm = V4L2_STD_NTSC;
