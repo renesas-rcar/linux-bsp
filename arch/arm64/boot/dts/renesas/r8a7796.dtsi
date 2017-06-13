@@ -448,6 +448,27 @@
 		};
 	};
 
+	gsx_opp_table: gsx_opp_table {
+		compatible = "operating-points-v2";
+
+		opp@200000000 {
+			opp-hz = /bits/ 64 <200000000>;
+			opp-microvolt = <820000>;
+		};
+		opp@300000000 {
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <820000>;
+		};
+		opp@400000000 {
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <820000>;
+		};
+		opp@600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <820000>;
+		};
+	};
+
 	extal_clk: extal {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -693,7 +714,7 @@
 			status = "okay";
 		};
 
-		mfis_lock: mfis-lock {
+		mfis_lock: mfis-lock@e62600c0 {
 			compatible =    "renesas,mfis-lock-r8a7796",
 					"renesas,mfis-lock";
 			reg = <0 0xe62600c0 0 0x0020>;
@@ -734,7 +755,7 @@
 		};
 
 		ipmmu_vc0: mmu@fe6b0000 {
-			compatible = "renesas,ipmmu-pmb-r8a7796";
+			compatible = "renesas,ipmmu-mmu-r8a7796";
 			reg = <0 0xfe6b0000 0 0x1000>; /* IPMMU-VC0 */
 			renesas,ipmmu-main = <&ipmmu_mm 8>;
 			#iommu-cells = <1>;
@@ -2063,6 +2084,7 @@
 			clocks = <&cpg CPG_MOD 703>;
 			phys = <&usb2_phy0>;
 			phy-names = "usb";
+			companion= <&ohci0>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
@@ -2074,6 +2096,7 @@
 			clocks = <&cpg CPG_MOD 702>;
 			phys = <&usb2_phy1>;
 			phy-names = "usb";
+			companion= <&ohci1>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			status = "disabled";
 		};
@@ -2222,8 +2245,8 @@
 				      "src.9", "src.8", "src.7", "src.6",
 				      "src.5", "src.4", "src.3", "src.2",
 				      "src.1", "src.0",
-				      "ctu.1", "ctu.0",
 				      "mix.1", "mix.0",
+				      "ctu.1", "ctu.0",
 				      "dvc.0", "dvc.1",
 				      "clk_a", "clk_b", "clk_c", "clk_i";
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
@@ -2406,6 +2429,7 @@
 			reg = <0 0xfd000000 0 0x3ffff>;
 			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 112>;
+			operating-points-v2 = <&gsx_opp_table>;
 			power-domains = <&sysc R8A7796_PD_3DG_B>;
 		};
 
