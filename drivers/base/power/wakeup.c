@@ -232,6 +232,14 @@ void wakeup_source_unregister(struct wakeup_source *ws)
 EXPORT_SYMBOL_GPL(wakeup_source_unregister);
 
 /**
+ * wakeup_source_available - Check if any wakeup sources have been registered
+ */
+bool wakeup_source_available(void)
+{
+	return !list_empty(&wakeup_sources);
+}
+
+/**
  * device_wakeup_attach - Attach a wakeup source object to a device object.
  * @dev: Device to handle.
  * @ws: Wakeup source object to attach to @dev.

@@ -97,6 +97,7 @@ extern void wakeup_source_add(struct wakeup_source *ws);
 extern void wakeup_source_remove(struct wakeup_source *ws);
 extern struct wakeup_source *wakeup_source_register(const char *name);
 extern void wakeup_source_unregister(struct wakeup_source *ws);
+extern bool wakeup_source_available(void);
 extern int device_wakeup_enable(struct device *dev);
 extern int device_wakeup_disable(struct device *dev);
 extern void device_set_wakeup_capable(struct device *dev, bool capable);
@@ -143,6 +144,8 @@ static inline struct wakeup_source *wakeup_source_register(const char *name)
 }
 
 static inline void wakeup_source_unregister(struct wakeup_source *ws) {}
+
+static inline bool wakeup_source_available(void) { return false; }
 
 static inline int device_wakeup_enable(struct device *dev)
 {

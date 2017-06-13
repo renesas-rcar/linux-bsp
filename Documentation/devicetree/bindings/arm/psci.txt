@@ -68,6 +68,17 @@ state nodes, as per bindings in [1]) must specify the following properties:
 		Definition: power_state parameter to pass to the PSCI
 			    suspend call.
 
+ - arm,psci-system-suspend-is-power-down
+		Nothing in the PSCI specification requires the SoC to remain
+		powered and to support wake-up sources when suspended using
+		SYSTEM_SUSPEND.
+		If your firmware implements the PSCI SYSTEM_SUSPEND operation
+		by cutting power to the SoC, the only possibly wake-up sources
+		are thus the ones connected to the PMIC.  In such case you
+		should specify this property, so the operating system is aware
+		it should use a different suspend method when other wake-up
+		sources (e.g. wake on LAN, UART or GPIO) are enabled.
+
 Example:
 
 Case 1: PSCI v0.1 only.
