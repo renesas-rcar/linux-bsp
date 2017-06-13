@@ -575,9 +575,26 @@ config MMC_SDHI
 	depends on SUPERH || ARM || ARM64
 	depends on SUPERH || ARCH_RENESAS || COMPILE_TEST
 	select MMC_TMIO_CORE
+	select MMC_SDHI_SYS_DMAC if (SUPERH || ARM)
+	select MMC_SDHI_INTERNAL_DMAC if ARM64
 	help
 	  This provides support for the SDHI SD/SDIO controller found in
 	  Renesas SuperH, ARM and ARM64 based SoCs
+
+config MMC_SDHI_SYS_DMAC
+	tristate "DMA support use of SYS DMAC with SDHI SD/SDIO controller"
+	depends on MMC_SDHI
+	help
+	  This provides DMA support for the SDHI SD/SDIO controller
+	  found in SuperH and Renesas ARM based SoCs.
+
+config MMC_SDHI_INTERNAL_DMAC
+	tristate "DMA support for Internal DMAC with SDHI SD/SDIO controller"
+	depends on ARM64 || COMPILE_TEST
+	depends on MMC_SDHI
+	help
+	  This provides DMA support for the SDHI SD/SDIO controller
+	  found in Renesas arm64 based SoCs.
 
 config MMC_CB710
 	tristate "ENE CB710 MMC/SD Interface support"
