@@ -33,6 +33,7 @@
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/interrupt.h>
+#include <linux/timer.h>
 #include <linux/of_graph.h>
 #include <linux/videodev2.h>
 #include <linux/workqueue.h>
@@ -61,6 +62,8 @@ MODULE_LICENSE("GPL");
 #define EDID_BLOCK_SIZE 128
 
 #define I2C_MAX_XFER_SIZE  (EDID_BLOCK_SIZE + 2)
+
+#define POLL_INTERVAL_MS	1000
 
 static const struct v4l2_dv_timings_cap tc358743_timings_cap = {
 	.type = V4L2_DV_BT_656_1120,
@@ -91,6 +94,9 @@ struct tc358743_state {
 	struct v4l2_ctrl *audio_present_ctrl;
 
 	struct delayed_work delayed_work_enable_hotplug;
+
+	struct timer_list timer;
+	struct work_struct work_i2c_poll;
 
 	/* edid  */
 	u8 edid_blocks_written;
@@ -1320,6 +1326,24 @@ static irqreturn_t tc358743_irq_handler(int irq, void *dev_id)
 	return handled ? IRQ_HANDLED : IRQ_NONE;
 }
 
+static void tc358743_irq_poll_timer(unsigned long arg)
+{
+	struct tc358743_state *state = (struct tc358743_state *)arg;
+
+	schedule_work(&state->work_i2c_poll);
+
+	mod_timer(&state->timer, jiffies + msecs_to_jiffies(POLL_INTERVAL_MS));
+}
+
+static void tc358743_work_i2c_poll(struct work_struct *work)
+{
+	struct tc358743_state *state = container_of(work,
+			struct tc358743_state, work_i2c_poll);
+	bool handled;
+
+	tc358743_isr(&state->sd, 0, &handled);
+}
+
 static int tc358743_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 				    struct v4l2_event_subscription *sub)
 {
@@ -1473,6 +1497,23 @@ static int tc358743_s_stream(struct v4l2_subdev *sd, int enable)
 }
 
 /* --------------- PAD OPS --------------- */
+
+static int tc358743_enum_mbus_code(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_mbus_code_enum *code)
+{
+	switch (code->index) {
+	case 0:
+		code->code = MEDIA_BUS_FMT_RGB888_1X24;
+		break;
+	case 1:
+		code->code = MEDIA_BUS_FMT_UYVY8_1X16;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
 
 static int tc358743_get_fmt(struct v4l2_subdev *sd,
 		struct v4l2_subdev_pad_config *cfg,
@@ -1643,6 +1684,7 @@ static const struct v4l2_subdev_video_ops tc358743_video_ops = {
 };
 
 static const struct v4l2_subdev_pad_ops tc358743_pad_ops = {
+	.enum_mbus_code = tc358743_enum_mbus_code,
 	.set_fmt = tc358743_set_fmt,
 	.get_fmt = tc358743_get_fmt,
 	.get_edid = tc358743_g_edid,
@@ -1731,7 +1773,11 @@ static int tc358743_probe_of(struct tc358743_state *state)
 
 	state->bus = endpoint->bus.mipi_csi2;
 
-	clk_prepare_enable(refclk);
+	ret = clk_prepare_enable(refclk);
+	if (ret) {
+		dev_err(dev, "Failed! to enable clock\n");
+		goto free_endpoint;
+	}
 
 	state->pdata.refclk_hz = clk_get_rate(refclk);
 	state->pdata.ddc5v_delay = DDC5V_DELAY_100_MS;
@@ -1888,6 +1934,8 @@ static int tc358743_probe(struct i2c_client *client,
 	if (err < 0)
 		goto err_hdl;
 
+	state->mbus_fmt_code = MEDIA_BUS_FMT_RGB888_1X24;
+
 	sd->dev = &client->dev;
 	err = v4l2_async_register_subdev(sd);
 	if (err < 0)
@@ -1902,7 +1950,6 @@ static int tc358743_probe(struct i2c_client *client,
 
 	tc358743_s_dv_timings(sd, &default_timing);
 
-	state->mbus_fmt_code = MEDIA_BUS_FMT_RGB888_1X24;
 	tc358743_set_csi_color_space(sd);
 
 	tc358743_init_interrupts(sd);
@@ -1915,6 +1962,14 @@ static int tc358743_probe(struct i2c_client *client,
 						"tc358743", state);
 		if (err)
 			goto err_work_queues;
+	} else {
+		INIT_WORK(&state->work_i2c_poll,
+			  tc358743_work_i2c_poll);
+		state->timer.data = (unsigned long)state;
+		state->timer.function = tc358743_irq_poll_timer;
+		state->timer.expires = jiffies +
+				       msecs_to_jiffies(POLL_INTERVAL_MS);
+		add_timer(&state->timer);
 	}
 
 	tc358743_enable_interrupts(sd, tx_5v_power_present(sd));
@@ -1930,6 +1985,8 @@ static int tc358743_probe(struct i2c_client *client,
 	return 0;
 
 err_work_queues:
+	if (!state->i2c_client->irq)
+		flush_work(&state->work_i2c_poll);
 	cancel_delayed_work(&state->delayed_work_enable_hotplug);
 	mutex_destroy(&state->confctl_mutex);
 err_hdl:
@@ -1943,6 +2000,10 @@ static int tc358743_remove(struct i2c_client *client)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct tc358743_state *state = to_state(sd);
 
+	if (!state->i2c_client->irq) {
+		del_timer_sync(&state->timer);
+		flush_work(&state->work_i2c_poll);
+	}
 	cancel_delayed_work(&state->delayed_work_enable_hotplug);
 	v4l2_async_unregister_subdev(sd);
 	v4l2_device_unregister_subdev(sd);
