@@ -2274,6 +2274,7 @@ static int lmv_read_striped_page(struct obd_export *exp,
 	struct lu_fid master_fid = op_data->op_fid1;
 	struct obd_device *obd = exp->exp_obd;
 	__u64 hash_offset = offset;
+	__u32 ldp_flags;
 	struct page *min_ent_page = NULL;
 	struct page *ent_page = NULL;
 	struct lu_dirent *min_ent = NULL;
@@ -2301,7 +2302,7 @@ static int lmv_read_striped_page(struct obd_export *exp,
 	dp = kmap(ent_page);
 	memset(dp, 0, sizeof(*dp));
 	dp->ldp_hash_start = cpu_to_le64(offset);
-	dp->ldp_flags |= LDF_COLLIDE;
+	ldp_flags = LDF_COLLIDE;
 
 	area = dp + 1;
 	left_bytes = PAGE_SIZE - sizeof(*dp);
@@ -2379,8 +2380,8 @@ out:
 		ent_page = NULL;
 	} else {
 		if (ent == area)
-			dp->ldp_flags |= LDF_EMPTY;
-		dp->ldp_flags = cpu_to_le32(dp->ldp_flags);
+			ldp_flags |= LDF_EMPTY;
+		dp->ldp_flags |= cpu_to_le32(ldp_flags);
 		dp->ldp_hash_end = cpu_to_le64(hash_offset);
 	}
 
@@ -2413,9 +2414,8 @@ static int lmv_read_page(struct obd_export *exp, struct md_op_data *op_data,
 	if (rc)
 		return rc;
 
-	if (unlikely(lsm)) {
+	if (unlikely(lsm))
 		return lmv_read_striped_page(exp, op_data, cb_op, offset, ppage);
-	}
 
 	tgt = lmv_find_target(lmv, &op_data->op_fid1);
 	if (IS_ERR(tgt))
@@ -3107,9 +3107,8 @@ static int lmv_quotactl(struct obd_device *unused, struct obd_export *exp,
 		return -EIO;
 	}
 
-	if (oqctl->qc_cmd != Q_GETOQUOTA) {
+	if (oqctl->qc_cmd != Q_GETOQUOTA)
 		return obd_quotactl(tgt->ltd_exp, oqctl);
-	}
 
 	for (i = 0; i < lmv->desc.ld_tgt_count; i++) {
 		int err;

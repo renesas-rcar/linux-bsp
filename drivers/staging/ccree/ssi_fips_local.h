@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2012-2017 ARM Limited or its affiliates.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,7 +29,7 @@ typedef enum CC_FipsSyncStatus{
 	CC_FIPS_SYNC_MODULE_ERROR 	= 0x1,
 	CC_FIPS_SYNC_REE_STATUS 	= 0x4,
 	CC_FIPS_SYNC_TEE_STATUS 	= 0x8,
-	CC_FIPS_SYNC_STATUS_RESERVE32B 	= INT32_MAX
+	CC_FIPS_SYNC_STATUS_RESERVE32B 	= S32_MAX
 }CCFipsSyncStatus_t;
 
 
