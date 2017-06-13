@@ -29,8 +29,8 @@
 #define	GPIO_MOCKUP_MAX_GC	10
 
 enum {
-	DIR_IN = 0,
-	DIR_OUT,
+	GPIO_MOCKUP_DIR_OUT = 0,
+	GPIO_MOCKUP_DIR_IN = 1,
 };
 
 /*
@@ -41,6 +41,7 @@ enum {
 struct gpio_mockup_line_status {
 	int dir;
 	bool value;
+	bool irq_enabled;
 };
 
 struct gpio_mockup_irq_context {
@@ -93,7 +94,7 @@ static int gpio_mockup_dirout(struct gpio_chip *gc, unsigned int offset,
 	struct gpio_mockup_chip *chip = gpiochip_get_data(gc);
 
 	gpio_mockup_set(gc, offset, value);
-	chip->lines[offset].dir = DIR_OUT;
+	chip->lines[offset].dir = GPIO_MOCKUP_DIR_OUT;
 
 	return 0;
 }
@@ -102,7 +103,7 @@ static int gpio_mockup_dirin(struct gpio_chip *gc, unsigned int offset)
 {
 	struct gpio_mockup_chip *chip = gpiochip_get_data(gc);
 
-	chip->lines[offset].dir = DIR_IN;
+	chip->lines[offset].dir = GPIO_MOCKUP_DIR_IN;
 
 	return 0;
 }
@@ -142,12 +143,21 @@ static int gpio_mockup_to_irq(struct gpio_chip *chip, unsigned int offset)
 	return chip->irq_base + offset;
 }
 
-/*
- * While we should generally support irqmask and irqunmask, this driver is
- * for testing purposes only so we don't care.
- */
-static void gpio_mockup_irqmask(struct irq_data *d) { }
-static void gpio_mockup_irqunmask(struct irq_data *d) { }
+static void gpio_mockup_irqmask(struct irq_data *data)
+{
+	struct gpio_chip *gc = irq_data_get_irq_chip_data(data);
+	struct gpio_mockup_chip *chip = gpiochip_get_data(gc);
+
+	chip->lines[data->irq - gc->irq_base].irq_enabled = false;
+}
+
+static void gpio_mockup_irqunmask(struct irq_data *data)
+{
+	struct gpio_chip *gc = irq_data_get_irq_chip_data(data);
+	struct gpio_mockup_chip *chip = gpiochip_get_data(gc);
+
+	chip->lines[data->irq - gc->irq_base].irq_enabled = true;
+}
 
 static struct irq_chip gpio_mockup_irqchip = {
 	.name		= GPIO_MOCKUP_NAME,
@@ -178,6 +188,7 @@ static int gpio_mockup_irqchip_setup(struct device *dev,
 
 	for (i = 0; i < gc->ngpio; i++) {
 		irq_set_chip(irq_base + i, gc->irqchip);
+		irq_set_chip_data(irq_base + i, gc);
 		irq_set_handler(irq_base + i, &handle_simple_irq);
 		irq_modify_status(irq_base + i,
 				  IRQ_NOREQUEST | IRQ_NOAUTOEN, IRQ_NOPROBE);
@@ -205,6 +216,9 @@ static ssize_t gpio_mockup_event_write(struct file *file,
 	desc = priv->desc;
 	chip = priv->chip;
 	gc = &chip->gc;
+
+	if (!chip->lines[priv->offset].irq_enabled)
+		return size;
 
 	if (copy_from_user(&buf, usr_buf, 1))
 		return -EFAULT;
@@ -364,9 +378,6 @@ static int gpio_mockup_probe(struct platform_device *pdev)
 
 			return ret;
 		}
-
-		dev_info(dev, "gpio<%d..%d> add successful!",
-			 base, base + ngpio);
 	}
 
 	return 0;
