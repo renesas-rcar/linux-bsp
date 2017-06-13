@@ -1,0 +1,59 @@
+fixes
+	<no branch> (95d7c1f18bf8ac03b0fc48eac1f1b11f867765b8)
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-fixes-for-v4.12
+	patch
+		arm64: defconfig: enable some core options for 64bit Rockchip socs
+	<no branch> (6c0c57ac0951a3166f318b82055b6e60eeaada14)
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.12/devicetree-fixes-2
+	<no branch> (1c005f9c129201121ef90bde57c374a4403ccfa6)
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-fixes-4.12
+	patch
+		ARM: dts: keystone-k2l: fix broken Ethernet due to disabled OSR
+		ARM: dts: versatile: use #include "..." to include local DT
+	<no branch> (cc7a938f5f308eeb6f8fe3cec28e1800aa81facb)
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-4.12-fixes
+	<no branch> (4497a224f759cd8350e07382307b55f870ef0df2)
+		git://git.pengutronix.de/git/pza/linux tags/reset-fixes-for-4.12
+	patch
+		MAINTAINERS: remove kernel@stlinux.com obsolete mailing list
+	<no branch> (44f73dc42c11398d7b84e94365a485ebd6420798)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.12-1
+	<no branch> (1cb0b57fec06a616d98deaeda1924f8e45e1e4de)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-non-critical-4.12-1
+	<no branch> (f434b1c4aba5cc4e5bae4399a965b5fd14011d69)
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-fixes-for-v4.12-p2
+
+next/fixes-non-critical
+
+next/cleanup
+
+next/soc
+
+next/arm64
+	patch
+		arm64: disable Broadcom Vulcan platform
+		arm64: defconfig: drop ARCH_VULCAN
+	realtek/arm64
+		git://github.com/afaerber/linux tags/realtek-arm64-soc-for-4.12
+
+next/dt
+	renesas/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.13
+		contains depends/renesas-dt-bindings
+	gemeni/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-v4.13-dts-1
+	patch
+		ARM: dts: augment Moxa and Aspeed DTS for FTTMR010
+
+next/dt64
+	renesas/dt64
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.13
+	realtek/dt64
+		git://github.com/afaerber/linux tags/realtek-arm64-dt-for-4.12
+
+next/defconfig
+
+next/drivers
+
+next/tee
+
