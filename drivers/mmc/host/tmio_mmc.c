@@ -1,16 +1,16 @@
 /*
- * linux/drivers/mmc/host/tmio_mmc.c
+ * Driver for the MMC / SD / SDIO cell found in:
  *
+ * TC6393XB TC6391XB TC6387XB T7L66XB ASIC3
+ *
+ * Copyright (C) 2017 Renesas Electronics Corporation
+ * Copyright (C) 2017 Horms Solutions, Simon Horman
  * Copyright (C) 2007 Ian Molton
  * Copyright (C) 2004 Ian Molton
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- *
- * Driver for the MMC / SD / SDIO cell found in:
- *
- * TC6393XB TC6391XB TC6387XB T7L66XB ASIC3
  */
 
 #include <linux/device.h>
@@ -99,7 +99,7 @@ static int tmio_mmc_probe(struct platform_device *pdev)
 	/* SD control register space size is 0x200, 0x400 for bus_shift=1 */
 	host->bus_shift = resource_size(res) >> 10;
 
-	ret = tmio_mmc_host_probe(host, pdata);
+	ret = tmio_mmc_host_probe(host, pdata, NULL);
 	if (ret)
 		goto host_free;
 
