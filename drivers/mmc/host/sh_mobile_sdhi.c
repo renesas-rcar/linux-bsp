@@ -147,7 +147,7 @@ struct sh_mobile_sdhi {
 	struct tmio_mmc_dma dma_priv;
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pins_default, *pins_uhs;
-	void __iomem *scc_ctl;
+	int scc_offset;
 };
 
 static void sh_mobile_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
@@ -335,14 +335,14 @@ static int sh_mobile_sdhi_select_drive_strength(struct mmc_card *card,
 static inline u32 sd_scc_read32(struct tmio_mmc_host *host,
 				struct sh_mobile_sdhi *priv, int addr)
 {
-	return readl(priv->scc_ctl + (addr << host->bus_shift));
+	return readl(host->ctl + priv->scc_offset + (addr << host->bus_shift));
 }
 
 static inline void sd_scc_write32(struct tmio_mmc_host *host,
 				  struct sh_mobile_sdhi *priv,
 				  int addr, u32 val)
 {
-	writel(val, priv->scc_ctl + (addr << host->bus_shift));
+	writel(val, host->ctl + priv->scc_offset + (addr << host->bus_shift));
 }
 
 static unsigned int sh_mobile_sdhi_init_tuning(struct tmio_mmc_host *host)
@@ -440,9 +440,6 @@ static void sh_mobile_sdhi_reset_hs400_mode(struct mmc_host *mmc)
 	if (!(host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR) &&
 	    !(host->mmc->caps2 & (MMC_CAP2_HS400_1_8V |
 					MMC_CAP2_HS200_1_8V_SDR)))
-		return;
-
-	if (!priv->scc_ctl)
 		return;
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
@@ -570,10 +567,8 @@ static bool sh_mobile_sdhi_check_scc_error(struct tmio_mmc_host *host)
 {
 	struct sh_mobile_sdhi *priv;
 
-	if (!(host->mmc->caps & MMC_CAP_UHS_SDR104) &&
-	    !(host->mmc->caps2 & MMC_CAP2_HS200_1_8V_SDR) &&
-	    !(host->mmc->caps2 & (MMC_CAP2_HS400_1_8V |
-					MMC_CAP2_HS200_1_8V_SDR)))
+	if (!(host->mmc->ios.timing == MMC_TIMING_UHS_SDR104) &&
+	    !(host->mmc->ios.timing == MMC_TIMING_MMC_HS200))
 		return 0;
 
 	priv = host_to_priv(host);
@@ -637,13 +632,13 @@ static int sh_mobile_sdhi_wait_idle(struct tmio_mmc_host *host)
 
 	if (host->pdata->flags & TMIO_MMC_USE_SCLKDIVEN) {
 		while (--timeout &&
-			!(sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
-				TMIO_STAT_SCLKDIVEN))
+		       !(sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
+		       TMIO_STAT_SCLKDIVEN))
 			udelay(1);
 	} else {
 		while (--timeout &&
-			(sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
-				TMIO_STAT_CMD_BUSY))
+		       (sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
+		       TMIO_STAT_CMD_BUSY))
 			udelay(1);
 	}
 
@@ -751,6 +746,14 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		goto eprobe;
 	}
 
+#ifdef CONFIG_MMC_SDHI_SEQ_WORKAROUND
+	if (soc_device_match(dma_quirks_match))
+		host->sequencer_enabled = true;
+	else
+		host->sequencer_enabled = false;
+#else
+	host->sequencer_enabled = false;
+#endif
 	if (of_id && of_id->data) {
 		const struct sh_mobile_sdhi_of_data *of_data = of_id->data;
 
@@ -760,9 +763,24 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		mmc_data->dma_rx_offset = of_data->dma_rx_offset;
 		mmc_data->max_blk_count	= of_data->max_blk_count;
 		mmc_data->max_segs = of_data->max_segs;
+		/*
+		 * Gen3 SDHI SEQ can handle 0xffffffff/DM_SEQ_SIZE blk count
+		 * and max 8 commands.
+		 */
+		if (host->sequencer_enabled) {
+			mmc_data->max_blk_count  = 0xffffffff / 512;
+#ifdef CONFIG_MMC_BLOCK_BOUNCE
+			/* (CMD23+CMD18)*1 + (dummy read command) */
+			mmc_data->max_segs = 1;
+#else
+			/* (CMD23+CMD18)*3 + (dummy read command) */
+			mmc_data->max_segs = 3;
+#endif
+		}
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 		dma_priv->sdbuf_64bit = of_data->sdbuf_64bit;
 		host->bus_shift = of_data->bus_shift;
+		priv->scc_offset = of_data->scc_offset;
 	}
 
 	host->dma		= dma_priv;
@@ -864,8 +882,6 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 
 			if (!hit)
 				dev_warn(&host->pdev->dev, "Unknown clock rate for SDR104\n");
-
-			priv->scc_ctl = host->ctl + of_data->scc_offset;
 		}
 	}
 
