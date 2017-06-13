@@ -333,14 +333,6 @@ static bool rcar_dmac_chan_is_busy(struct rcar_dmac_chan *chan)
 	return !!(chcr & (RCAR_DMACHCR_DE | RCAR_DMACHCR_TE));
 }
 
-/* Transfer completed but not yet handled */
-static bool rcar_dmac_last_tx_complete(struct rcar_dmac_chan *chan)
-{
-	u32 chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
-
-	return (chcr & RCAR_DMACHCR_TE) == RCAR_DMACHCR_TE;
-}
-
 static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 {
 	struct rcar_dmac_desc *desc = chan->desc.running;
@@ -743,38 +735,14 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 /* -----------------------------------------------------------------------------
  * Stop and reset
  */
-#define NR_READS_TO_WAIT 5 /* number of times to check if DE = 0 */
-static inline int rcar_dmac_wait_stop(struct rcar_dmac_chan *chan)
+
+static void rcar_dmac_chan_halt(struct rcar_dmac_chan *chan)
 {
-	unsigned int i = 0;
+	u32 chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
 
-	do {
-		u32 chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
-
-		if (!(chcr & RCAR_DMACHCR_DE))
-			return 0;
-		cpu_relax();
-		dev_dbg(chan->chan.device->dev, "DMA xfer couldn't be stopped");
-	} while (++i < NR_READS_TO_WAIT);
-
-	return -EBUSY;
-}
-
-/* Called with chan lock held */
-static int rcar_dmac_chan_halt(struct rcar_dmac_chan *chan)
-{
-	u32 chcr;
-	int ret;
-
-	chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
 	chcr &= ~(RCAR_DMACHCR_DSE | RCAR_DMACHCR_DSIE | RCAR_DMACHCR_IE |
 		  RCAR_DMACHCR_TE | RCAR_DMACHCR_DE);
 	rcar_dmac_chan_write(chan, RCAR_DMACHCR, chcr);
-	ret = rcar_dmac_wait_stop(chan);
-
-	WARN_ON(ret < 0);
-
-	return ret;
 }
 
 static void rcar_dmac_chan_reinit(struct rcar_dmac_chan *chan)
@@ -799,26 +767,6 @@ static void rcar_dmac_chan_reinit(struct rcar_dmac_chan *chan)
 		list_del(&desc->node);
 		rcar_dmac_desc_put(chan, desc);
 	}
-}
-
-static int rcar_dmac_chan_pause(struct dma_chan *chan)
-{
-	u32 chcr;
-	int ret;
-	unsigned long flags;
-	struct rcar_dmac_chan *rchan = to_rcar_dmac_chan(chan);
-
-	spin_lock_irqsave(&rchan->lock, flags);
-
-	chcr = rcar_dmac_chan_read(rchan, RCAR_DMACHCR);
-	chcr &= ~RCAR_DMACHCR_DE;
-	rcar_dmac_chan_write(rchan, RCAR_DMACHCR, chcr);
-	ret = rcar_dmac_wait_stop(rchan);
-
-	spin_unlock_irqrestore(&rchan->lock, flags);
-
-	WARN_ON(ret < 0);
-	return ret;
 }
 
 static void rcar_dmac_stop(struct rcar_dmac *dmac)
@@ -1038,6 +986,7 @@ static void rcar_dmac_free_chan_resources(struct dma_chan *chan)
 {
 	struct rcar_dmac_chan *rchan = to_rcar_dmac_chan(chan);
 	struct rcar_dmac *dmac = to_rcar_dmac(chan->device);
+	struct rcar_dmac_chan_map *map = &rchan->map;
 	struct rcar_dmac_desc_page *page, *_page;
 	struct rcar_dmac_desc *desc;
 	LIST_HEAD(list);
@@ -1069,6 +1018,13 @@ static void rcar_dmac_free_chan_resources(struct dma_chan *chan)
 	list_for_each_entry_safe(page, _page, &rchan->desc.pages, node) {
 		list_del(&page->node);
 		free_page((unsigned long)page);
+	}
+
+	/* Remove slave mapping if present. */
+	if (map->slave.xfer_size) {
+		dma_unmap_resource(chan->device->dev, map->addr,
+				   map->slave.xfer_size, map->dir, 0);
+		map->slave.xfer_size = 0;
 	}
 
 	pm_runtime_put(chan->device->dev);
@@ -1364,10 +1320,6 @@ static enum dma_status rcar_dmac_tx_status(struct dma_chan *chan,
 	enum dma_status status;
 	unsigned long flags;
 	unsigned int residue;
-
-	/* Interrupt not yet serviced */
-	if (rcar_dmac_last_tx_complete(rchan))
-		return DMA_COMPLETE;
 
 	status = dma_cookie_status(chan, cookie, txstate);
 	if (status == DMA_COMPLETE || !txstate)
@@ -1917,7 +1869,6 @@ static int rcar_dmac_probe(struct platform_device *pdev)
 	engine->device_prep_slave_sg = rcar_dmac_prep_slave_sg;
 	engine->device_prep_dma_cyclic = rcar_dmac_prep_dma_cyclic;
 	engine->device_config = rcar_dmac_device_config;
-	engine->device_pause = rcar_dmac_chan_pause;
 	engine->device_terminate_all = rcar_dmac_chan_terminate_all;
 	engine->device_synchronize = rcar_dmac_synchronize;
 	engine->device_tx_status = rcar_dmac_tx_status;
