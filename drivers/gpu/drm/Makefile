@@ -16,7 +16,7 @@ drm-y       :=	drm_auth.o drm_bufs.o drm_cache.o \
 		drm_framebuffer.o drm_connector.o drm_blend.o \
 		drm_encoder.o drm_mode_object.o drm_property.o \
 		drm_plane.o drm_color_mgmt.o drm_print.o \
-		drm_dumb_buffers.o drm_mode_config.o
+		drm_dumb_buffers.o drm_mode_config.o drm_vblank.o
 
 drm-$(CONFIG_DRM_LIB_RANDOM) += lib/drm_random.o
 drm-$(CONFIG_DRM_VM) += drm_vm.o
@@ -82,6 +82,7 @@ obj-$(CONFIG_DRM_BOCHS) += bochs/
 obj-$(CONFIG_DRM_VIRTIO_GPU) += virtio/
 obj-$(CONFIG_DRM_MSM) += msm/
 obj-$(CONFIG_DRM_TEGRA) += tegra/
+obj-$(CONFIG_DRM_STM) += stm/
 obj-$(CONFIG_DRM_STI) += sti/
 obj-$(CONFIG_DRM_IMX) += imx/
 obj-$(CONFIG_DRM_MEDIATEK) += mediatek/
@@ -96,3 +97,4 @@ obj-y			+= hisilicon/
 obj-$(CONFIG_DRM_ZTE)	+= zte/
 obj-$(CONFIG_DRM_MXSFB)	+= mxsfb/
 obj-$(CONFIG_DRM_TINYDRM) += tinydrm/
+obj-$(CONFIG_DRM_PL111) += pl111/

@@ -1033,7 +1033,7 @@ nv50_wndw_reset(struct drm_plane *plane)
 		plane->funcs->atomic_destroy_state(plane, plane->state);
 	plane->state = &asyw->state;
 	plane->state->plane = plane;
-	plane->state->rotation = DRM_ROTATE_0;
+	plane->state->rotation = DRM_MODE_ROTATE_0;
 }
 
 static void
@@ -2873,17 +2873,20 @@ nv50_msto_enable(struct drm_encoder *encoder)
 	struct nv50_mstc *mstc = NULL;
 	struct nv50_mstm *mstm = NULL;
 	struct drm_connector *connector;
+	struct drm_connector_list_iter conn_iter;
 	u8 proto, depth;
 	int slots;
 	bool r;
 
-	drm_for_each_connector(connector, encoder->dev) {
+	drm_connector_list_iter_begin(encoder->dev, &conn_iter);
+	drm_for_each_connector_iter(connector, &conn_iter) {
 		if (connector->state->best_encoder == &msto->encoder) {
 			mstc = nv50_mstc(connector);
 			mstm = mstc->mstm;
 			break;
 		}
 	}
+	drm_connector_list_iter_end(&conn_iter);
 
 	if (WARN_ON(!mstc))
 		return;
