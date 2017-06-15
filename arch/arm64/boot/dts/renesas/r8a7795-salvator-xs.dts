@@ -1,7 +1,7 @@
 /*
- * Device Tree Source for the Salvator-X board
+ * Device Tree Source for the Salvator-X 2nd version board
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2015-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -12,11 +12,11 @@
 
 /dts-v1/;
 #include "r8a7795.dtsi"
-#include "salvator-x.dtsi"
+#include "salvator-xs.dtsi"
 
 / {
-	model = "Renesas Salvator-X board based on r8a7795 ES2.0+";
-	compatible = "renesas,salvator-x", "renesas,r8a7795";
+	model = "Renesas Salvator-X 2nd version board based on r8a7795 ES2.0+";
+	compatible = "renesas,salvator-xs", "renesas,r8a7795";
 
 	memory@48000000 {
 		device_type = "memory";
@@ -46,12 +46,10 @@
 		 <&cpg CPG_MOD 722>,
 		 <&cpg CPG_MOD 721>,
 		 <&cpg CPG_MOD 727>,
-		 <&versaclock5 1>,
 		 <&x21_clk>,
-		 <&x22_clk>,
-		 <&versaclock5 2>;
+		 <&x22_clk>;
 	clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0",
-		      "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
+		      "dclkin.1", "dclkin.2";
 };
 
 &ehci2 {
@@ -101,10 +99,6 @@
 		groups = "usb2";
 		function = "usb2";
 	};
-};
-
-&sata {
-	status = "okay";
 };
 
 &usb2_phy2 {
