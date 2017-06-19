@@ -26,6 +26,10 @@
 
 #define CPG_PLL0CR		0x00d8
 
+#define DEF_R8A77995_PLL0_CKSEL(_name, _id, _parent, _div)	\
+	DEF_BASE(_name, _id, CLK_TYPE_R8A77995_PLL0_CKSEL, _parent, \
+		 .div = _div, .mult = 1)
+
 enum clk_ids {
 	/* Core Clock Outputs exported to DT */
 	LAST_DT_CORE_CLK = R8A77995_CLK_CP,
@@ -50,6 +54,8 @@ enum clk_ids {
 	CLK_S2,
 	CLK_S3,
 
+	CLK_PE,
+
 	/* Module Clocks */
 	MOD_CLK_BASE
 };
@@ -59,6 +65,8 @@ enum r8a77995_clk_types {
 	CLK_TYPE_R8A77995_PLL0,
 	CLK_TYPE_R8A77995_PLL1,
 	CLK_TYPE_R8A77995_PLL3,
+
+	CLK_TYPE_R8A77995_PLL0_CKSEL,
 };
 
 static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
@@ -98,10 +106,12 @@ static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
 	DEF_FIXED("s3d2",       R8A77995_CLK_S3D2,  CLK_S3,         2, 1),
 	DEF_FIXED("s3d4",       R8A77995_CLK_S3D4,  CLK_S3,         4, 1),
 
-	DEF_FIXED("s1d4c",      R8A77995_CLK_S1D4C, CLK_S1,         4, 1),
-	DEF_FIXED("s3d1c",      R8A77995_CLK_S3D1C, CLK_S3,         1, 1),
-	DEF_FIXED("s3d2c",      R8A77995_CLK_S3D2C, CLK_S3,         2, 1),
-	DEF_FIXED("s3d4c",      R8A77995_CLK_S3D4C, CLK_S3,         4, 1),
+	DEF_FIXED("pe",         CLK_PE,             CLK_PLL0_DIV3,  4, 1),
+
+	DEF_R8A77995_PLL0_CKSEL("s1d4c", R8A77995_CLK_S1D4C, CLK_S1, 4),
+	DEF_R8A77995_PLL0_CKSEL("s3d1c", R8A77995_CLK_S3D1C, CLK_S3, 1),
+	DEF_R8A77995_PLL0_CKSEL("s3d2c", R8A77995_CLK_S3D2C, CLK_S3, 2),
+	DEF_R8A77995_PLL0_CKSEL("s3d4c", R8A77995_CLK_S3D4C, CLK_S3, 4),
 
 	DEF_FIXED("cl",         R8A77995_CLK_CL,    CLK_PLL1,      48, 1),
 
@@ -203,6 +213,15 @@ static struct clk * __init r8a77995_cpg_clk_register(
 	case CLK_TYPE_R8A77995_PLL3:
 		mult = extra_cpg_pll_config->pll3_mult;
 		div = extra_cpg_pll_config->pll3_div;
+		break;
+
+	case CLK_TYPE_R8A77995_PLL0_CKSEL:
+		mult = core->mult;
+		div = core->div;
+
+		value = readl(base + CPG_PLL0CR);
+		if (value & BIT(13))
+			parent_name = "pe";
 		break;
 
 	default:
