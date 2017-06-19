@@ -52,6 +52,8 @@ enum clk_ids {
 	CLK_PLL0_DIV3,
 	CLK_PLL0_DIV5,
 
+	CLK_PLL1_DIV2,
+
 	CLK_S0,
 	CLK_S1,
 	CLK_S2,
@@ -91,6 +93,8 @@ static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
 	DEF_FIXED(".pll0_div3", CLK_PLL0_DIV3, CLK_PLL0,  3, 1),
 	DEF_FIXED(".pll0_div5", CLK_PLL0_DIV5, CLK_PLL0,  5, 1),
 
+	DEF_FIXED(".pll1_div2", CLK_PLL1_DIV2, CLK_PLL1,  2, 1),
+
 	DEF_FIXED(".s0",        CLK_S0,        CLK_PLL1,  2, 1),
 	DEF_FIXED(".s1",        CLK_S1,        CLK_PLL1,  3, 1),
 	DEF_FIXED(".s2",        CLK_S2,        CLK_PLL1,  4, 1),
@@ -128,6 +132,8 @@ static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
 
 	DEF_GEN3_SD("sd0",      R8A77995_CLK_SD0,   CLK_SDSRC,     0x0074),
 
+	DEF_DIV6P1("mso",       R8A77995_CLK_MSO,   CLK_PLL1_DIV2, 0x0014),
+
 	DEF_R8A77995_LV("lv0",  R8A77995_CLK_LV0,   CLK_PLL1,      0x04cc),
 	DEF_R8A77995_LV("lv1",  R8A77995_CLK_LV1,   CLK_PLL1,      0x04d0),
 
@@ -140,6 +146,10 @@ static const struct mssr_mod_clk r8a77995_mod_clks[] __initconst = {
 	DEF_MOD("scif3",		 204,	R8A77995_CLK_S3D4C),
 	DEF_MOD("scif1",		 206,	R8A77995_CLK_S3D4C),
 	DEF_MOD("scif0",		 207,	R8A77995_CLK_S3D4C),
+	DEF_MOD("msiof3",		 208,	R8A77995_CLK_MSO),
+	DEF_MOD("msiof2",		 209,	R8A77995_CLK_MSO),
+	DEF_MOD("msiof1",		 210,	R8A77995_CLK_MSO),
+	DEF_MOD("msiof0",		 211,	R8A77995_CLK_MSO),
 	DEF_MOD("scif2",		 310,	R8A77995_CLK_S3D4C),
 	DEF_MOD("emmc0",		 312,	R8A77995_CLK_SD0),
 	DEF_MOD("intc-ex",		 407,	R8A77995_CLK_CP),
