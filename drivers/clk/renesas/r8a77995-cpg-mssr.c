@@ -56,6 +56,7 @@ enum clk_ids {
 	CLK_S1,
 	CLK_S2,
 	CLK_S3,
+	CLK_SDSRC,
 
 	CLK_PE,
 	CLK_LV0,
@@ -94,6 +95,7 @@ static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
 	DEF_FIXED(".s1",        CLK_S1,        CLK_PLL1,  3, 1),
 	DEF_FIXED(".s2",        CLK_S2,        CLK_PLL1,  4, 1),
 	DEF_FIXED(".s3",        CLK_S3,        CLK_PLL1,  6, 1),
+	DEF_FIXED(".sdsrc",     CLK_SDSRC,     CLK_PLL1,  2, 1),
 
 	/* Core Clock Outputs */
 	DEF_BASE("z2",   R8A77995_CLK_Z2,   CLK_TYPE_GEN3_Z2,   CLK_PLL0_DIV3),
@@ -124,6 +126,8 @@ static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
 
 	DEF_FIXED("cl",         R8A77995_CLK_CL,    CLK_PLL1,      48, 1),
 
+	DEF_GEN3_SD("sd0",      R8A77995_CLK_SD0,   CLK_SDSRC,     0x0074),
+
 	DEF_R8A77995_LV("lv0",  R8A77995_CLK_LV0,   CLK_PLL1,      0x04cc),
 	DEF_R8A77995_LV("lv1",  R8A77995_CLK_LV1,   CLK_PLL1,      0x04d0),
 
@@ -137,6 +141,7 @@ static const struct mssr_mod_clk r8a77995_mod_clks[] __initconst = {
 	DEF_MOD("scif1",		 206,	R8A77995_CLK_S3D4C),
 	DEF_MOD("scif0",		 207,	R8A77995_CLK_S3D4C),
 	DEF_MOD("scif2",		 310,	R8A77995_CLK_S3D4C),
+	DEF_MOD("emmc0",		 312,	R8A77995_CLK_SD0),
 	DEF_MOD("intc-ex",		 407,	R8A77995_CLK_CP),
 	DEF_MOD("intc-ap",		 408,	R8A77995_CLK_S1D2),
 	DEF_MOD("hscif3",		 517,	R8A77995_CLK_S3D1C),
