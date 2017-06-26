@@ -686,7 +686,6 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	unsigned int i;
 	int ret;
-	u32 vc_num;
 	const struct soc_device_attribute *attr;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct rcar_csi2), GFP_KERNEL);
@@ -723,7 +722,6 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	vc_num = priv->vc_num;
 	platform_set_drvdata(pdev, priv);
 
 	priv->subdev.owner = THIS_MODULE;

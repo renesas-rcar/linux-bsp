@@ -1096,7 +1096,6 @@ static irqreturn_t rvin_irq(int irq, void *data)
 	int slot;
 	unsigned int sequence, handled = 0;
 	unsigned long flags;
-	int vin_ovr_cnt = 0;
 
 	spin_lock_irqsave(&vin->qlock, flags);
 
@@ -1109,9 +1108,10 @@ static irqreturn_t rvin_irq(int irq, void *data)
 
 	/* overflow occurs */
 	if (vin_debug && (int_status & VNINTS_FOS)) {
-		vin_ovr_cnt = ++overflow_video[vin->index];
 		VIN_IRQ_DEBUG("overflow occurrs num[%d] at VIN (%s)\n",
-				vin_ovr_cnt, dev_name(vin->v4l2_dev.dev));
+			      ++overflow_video[vin->index],
+			      dev_name(vin->v4l2_dev.dev));
+		goto done;
 	}
 
 	/* Nothing to do if capture status is 'STOPPED' */
