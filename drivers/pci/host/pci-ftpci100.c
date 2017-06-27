@@ -25,6 +25,7 @@
 #include <linux/irqchip/chained_irq.h>
 #include <linux/bitops.h>
 #include <linux/irq.h>
+#include <linux/clk.h>
 
 /*
  * Special configuration registers directly in the first few words
@@ -37,6 +38,7 @@
 #define PCI_CONFIG	0x28 /* PCI configuration command register */
 #define PCI_DATA	0x2C
 
+#define FARADAY_PCI_STATUS_CMD		0x04 /* Status and command */
 #define FARADAY_PCI_PMC			0x40 /* Power management control */
 #define FARADAY_PCI_PMCSR		0x44 /* Power management status */
 #define FARADAY_PCI_CTRL1		0x48 /* Control register 1 */
@@ -44,6 +46,8 @@
 #define FARADAY_PCI_MEM1_BASE_SIZE	0x50 /* Memory base and size #1 */
 #define FARADAY_PCI_MEM2_BASE_SIZE	0x54 /* Memory base and size #2 */
 #define FARADAY_PCI_MEM3_BASE_SIZE	0x58 /* Memory base and size #3 */
+
+#define PCI_STATUS_66MHZ_CAPABLE	BIT(21)
 
 /* Bits 31..28 gives INTD..INTA status */
 #define PCI_CTRL2_INTSTS_SHIFT		28
@@ -117,6 +121,7 @@ struct faraday_pci {
 	void __iomem *base;
 	struct irq_domain *irqdomain;
 	struct pci_bus *bus;
+	struct clk *bus_clk;
 };
 
 static int faraday_res_to_memcfg(resource_size_t mem_base,
@@ -204,17 +209,13 @@ static int faraday_pci_read_config(struct pci_bus *bus, unsigned int fn,
 	return PCIBIOS_SUCCESSFUL;
 }
 
-static int faraday_pci_write_config(struct pci_bus *bus, unsigned int fn,
-				    int config, int size, u32 value)
+static int faraday_raw_pci_write_config(struct faraday_pci *p, int bus_number,
+					 unsigned int fn, int config, int size,
+					 u32 value)
 {
-	struct faraday_pci *p = bus->sysdata;
 	int ret = PCIBIOS_SUCCESSFUL;
 
-	dev_dbg(&bus->dev,
-		"[write] slt: %.2d, fnc: %d, cnf: 0x%.2X, val (%d bytes): 0x%.8X\n",
-		PCI_SLOT(fn), PCI_FUNC(fn), config, size, value);
-
-	writel(PCI_CONF_BUS(bus->number) |
+	writel(PCI_CONF_BUS(bus_number) |
 			PCI_CONF_DEVICE(PCI_SLOT(fn)) |
 			PCI_CONF_FUNCTION(PCI_FUNC(fn)) |
 			PCI_CONF_WHERE(config) |
@@ -236,6 +237,19 @@ static int faraday_pci_write_config(struct pci_bus *bus, unsigned int fn,
 	}
 
 	return ret;
+}
+
+static int faraday_pci_write_config(struct pci_bus *bus, unsigned int fn,
+				    int config, int size, u32 value)
+{
+	struct faraday_pci *p = bus->sysdata;
+
+	dev_dbg(&bus->dev,
+		"[write] slt: %.2d, fnc: %d, cnf: 0x%.2X, val (%d bytes): 0x%.8X\n",
+		PCI_SLOT(fn), PCI_FUNC(fn), config, size, value);
+
+	return faraday_raw_pci_write_config(p, bus->number, fn, config, size,
+					    value);
 }
 
 static struct pci_ops faraday_pci_ops = {
@@ -428,11 +442,12 @@ static int faraday_pci_probe(struct platform_device *pdev)
 	struct resource *mem;
 	struct resource *io;
 	struct pci_host_bridge *host;
+	struct clk *clk;
 	int ret;
 	u32 val;
 	LIST_HEAD(res);
 
-	host = pci_alloc_host_bridge(sizeof(*p));
+	host = devm_pci_alloc_host_bridge(dev, sizeof(*p));
 	if (!host)
 		return -ENOMEM;
 
@@ -440,9 +455,33 @@ static int faraday_pci_probe(struct platform_device *pdev)
 	host->ops = &faraday_pci_ops;
 	host->busnr = 0;
 	host->msi = NULL;
+	host->map_irq = of_irq_parse_and_map_pci;
+	host->swizzle_irq = pci_common_swizzle;
 	p = pci_host_bridge_priv(host);
 	host->sysdata = p;
 	p->dev = dev;
+
+	/* Retrieve and enable optional clocks */
+	clk = devm_clk_get(dev, "PCLK");
+	if (IS_ERR(clk)) {
+		dev_err(dev, "no PCLK available\n");
+	} else {
+		ret = clk_prepare_enable(clk);
+		if (ret) {
+			dev_err(dev, "could not prepare PCLK\n");
+			return ret;
+		}
+	}
+	p->bus_clk = devm_clk_get(dev, "PCICLK");
+	if (IS_ERR(p->bus_clk)) {
+		dev_err(dev, "no PCICLK available\n");
+	} else {
+		ret = clk_prepare_enable(p->bus_clk);
+		if (ret) {
+			dev_err(dev, "could not prepare PCICLK\n");
+			return ret;
+		}
+	}
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	p->base = devm_ioremap_resource(dev, regs);
@@ -496,17 +535,8 @@ static int faraday_pci_probe(struct platform_device *pdev)
 	val |= PCI_COMMAND_MEMORY;
 	val |= PCI_COMMAND_MASTER;
 	writel(val, p->base + PCI_CTRL);
-
-	list_splice_init(&res, &host->windows);
-	ret = pci_register_host_bridge(host);
-	if (ret) {
-		dev_err(dev, "failed to register host: %d\n", ret);
-		return ret;
-	}
-	p->bus = host->bus;
-
 	/* Mask and clear all interrupts */
-	faraday_pci_write_config(p->bus, 0, FARADAY_PCI_CTRL2 + 2, 2, 0xF000);
+	faraday_raw_pci_write_config(p, 0, 0, FARADAY_PCI_CTRL2 + 2, 2, 0xF000);
 	if (variant->cascaded_irq) {
 		ret = faraday_pci_setup_cascaded_irq(p);
 		if (ret) {
@@ -515,12 +545,46 @@ static int faraday_pci_probe(struct platform_device *pdev)
 		}
 	}
 
+	/* Check bus clock if we can gear up to 66 MHz */
+	if (!IS_ERR(p->bus_clk)) {
+		unsigned long rate;
+		u32 val;
+
+		faraday_pci_read_config(p->bus, 0,
+					FARADAY_PCI_STATUS_CMD, 4, &val);
+		rate = clk_get_rate(p->bus_clk);
+
+		if ((rate == 33000000) && (val & PCI_STATUS_66MHZ_CAPABLE)) {
+			dev_info(dev, "33MHz bus is 66MHz capable\n");
+			p->bus->max_bus_speed = PCI_SPEED_66MHz;
+			ret = clk_set_rate(p->bus_clk, 66000000);
+			if (ret)
+				dev_err(dev, "failed to set bus clock\n");
+		} else {
+			dev_info(dev, "33MHz only bus\n");
+			p->bus->max_bus_speed = PCI_SPEED_33MHz;
+		}
+
+		/* Bumping the clock may fail so read back the rate */
+		rate = clk_get_rate(p->bus_clk);
+		if (rate == 33000000)
+			p->bus->cur_bus_speed = PCI_SPEED_33MHz;
+		if (rate == 66000000)
+			p->bus->cur_bus_speed = PCI_SPEED_66MHz;
+	}
+
 	ret = faraday_pci_parse_map_dma_ranges(p, dev->of_node);
 	if (ret)
 		return ret;
 
-	pci_scan_child_bus(p->bus);
-	pci_fixup_irqs(pci_common_swizzle, of_irq_parse_and_map_pci);
+	list_splice_init(&res, &host->windows);
+	ret = pci_scan_root_bus_bridge(host);
+	if (ret) {
+		dev_err(dev, "failed to scan host: %d\n", ret);
+		return ret;
+	}
+	p->bus = host->bus;
+
 	pci_bus_assign_resources(p->bus);
 	pci_bus_add_devices(p->bus);
 	pci_free_resource_list(&res);
