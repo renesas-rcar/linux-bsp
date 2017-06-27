@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2012-2017 ARM Limited or its affiliates.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
@@ -57,6 +57,8 @@
 #include <linux/sched.h>
 #include <linux/random.h>
 #include <linux/of.h>
+#include <linux/clk.h>
+#include <linux/of_address.h>
 
 #include "ssi_config.h"
 #include "ssi_driver.h"
@@ -73,10 +75,10 @@
 
 
 #ifdef DX_DUMP_BYTES
-void dump_byte_array(const char *name, const uint8_t *the_array, unsigned long size)
+void dump_byte_array(const char *name, const u8 *the_array, unsigned long size)
 {
 	int i , line_offset = 0, ret = 0;
-	const uint8_t *cur_byte;
+	const u8 *cur_byte;
 	char line_buf[80];
 
 	if (the_array == NULL) {
@@ -116,12 +118,10 @@ static irqreturn_t cc_isr(int irq, void *dev_id)
 {
 	struct ssi_drvdata *drvdata = (struct ssi_drvdata *)dev_id;
 	void __iomem *cc_base = drvdata->cc_base;
-	uint32_t irr;
-	uint32_t imr;
-	DECL_CYCLE_COUNT_RESOURCES;
+	u32 irr;
+	u32 imr;
 
 	/* STAT_OP_TYPE_GENERIC STAT_PHASE_0: Interrupt */
-	START_CYCLE_COUNT();
 
 	/* read the interrupt status */
 	irr = CC_HAL_READ_REGISTER(CC_REG_OFFSET(HOST_RGF, HOST_IRR));
@@ -154,12 +154,12 @@ static irqreturn_t cc_isr(int irq, void *dev_id)
 #endif
 	/* AXI error interrupt */
 	if (unlikely((irr & SSI_AXI_ERR_IRQ_MASK) != 0)) {
-		uint32_t axi_err;
-		
+		u32 axi_err;
+
 		/* Read the AXI error ID */
 		axi_err = CC_HAL_READ_REGISTER(CC_REG_OFFSET(CRY_KERNEL, AXIM_MON_ERR));
 		SSI_LOG_DEBUG("AXI completion error: axim_mon_err=0x%08X\n", axi_err);
-		
+
 		irr &= ~SSI_AXI_ERR_IRQ_MASK;
 	}
 
@@ -168,15 +168,12 @@ static irqreturn_t cc_isr(int irq, void *dev_id)
 		/* Just warning */
 	}
 
-	END_CYCLE_COUNT(STAT_OP_TYPE_GENERIC, STAT_PHASE_0);
-	START_CYCLE_COUNT_AT(drvdata->isr_exit_cycles);
-
 	return IRQ_HANDLED;
 }
 
 int init_cc_regs(struct ssi_drvdata *drvdata, bool is_probe)
 {
-	unsigned int val;
+	unsigned int val, cache_params;
 	void __iomem *cc_base = drvdata->cc_base;
 
 	/* Unmask all AXI interrupt sources AXI_CFG1 register */
@@ -192,7 +189,7 @@ int init_cc_regs(struct ssi_drvdata *drvdata, bool is_probe)
 	/* Unmask relevant interrupt cause */
 	val = (~(SSI_COMP_IRQ_MASK | SSI_AXI_ERR_IRQ_MASK | SSI_GPR0_IRQ_MASK));
 	CC_HAL_WRITE_REGISTER(CC_REG_OFFSET(HOST_RGF, HOST_IMR), val);
-		
+
 #ifdef DX_HOST_IRQ_TIMER_INIT_VAL_REG_OFFSET
 #ifdef DX_IRQ_DELAY
 	/* Set CC IRQ delay */
@@ -205,14 +202,18 @@ int init_cc_regs(struct ssi_drvdata *drvdata, bool is_probe)
 	}
 #endif
 
+	cache_params = (drvdata->coherent ? CC_COHERENT_CACHE_PARAMS : 0x0);
+
 	val = CC_HAL_READ_REGISTER(CC_REG_OFFSET(CRY_KERNEL, AXIM_CACHE_PARAMS));
 	if (is_probe == true) {
 		SSI_LOG_INFO("Cache params previous: 0x%08X\n", val);
 	}
-	CC_HAL_WRITE_REGISTER(CC_REG_OFFSET(CRY_KERNEL, AXIM_CACHE_PARAMS), SSI_CACHE_PARAMS);
+	CC_HAL_WRITE_REGISTER(CC_REG_OFFSET(CRY_KERNEL, AXIM_CACHE_PARAMS),
+			      cache_params);
 	val = CC_HAL_READ_REGISTER(CC_REG_OFFSET(CRY_KERNEL, AXIM_CACHE_PARAMS));
 	if (is_probe == true) {
-		SSI_LOG_INFO("Cache params current: 0x%08X  (expected: 0x%08X)\n", val, SSI_CACHE_PARAMS);
+		SSI_LOG_INFO("Cache params current: 0x%08X (expect: 0x%08X)\n",
+			     val, cache_params);
 	}
 
 	return 0;
@@ -224,7 +225,9 @@ static int init_cc_resources(struct platform_device *plat_dev)
 	void __iomem *cc_base = NULL;
 	bool irq_registered = false;
 	struct ssi_drvdata *new_drvdata = kzalloc(sizeof(struct ssi_drvdata), GFP_KERNEL);
-	uint32_t signature_val;
+	struct device *dev = &plat_dev->dev;
+	struct device_node *np = dev->of_node;
+	u32 signature_val;
 	int rc = 0;
 
 	if (unlikely(new_drvdata == NULL)) {
@@ -232,6 +235,9 @@ static int init_cc_resources(struct platform_device *plat_dev)
 		rc = -ENOMEM;
 		goto init_cc_res_err;
 	}
+
+	new_drvdata->clk = of_clk_get(np, 0);
+	new_drvdata->coherent = of_dma_is_coherent(np);
 
 	/*Initialize inflight counter used in dx_ablkcipher_secure_complete used for count of BYSPASS blocks operations*/
 	new_drvdata->inflight_counter = 0;
@@ -266,7 +272,7 @@ static int init_cc_resources(struct platform_device *plat_dev)
 	}
 	SSI_LOG_DEBUG("CC registers mapped from %pa to 0x%p\n", &new_drvdata->res_mem->start, cc_base);
 	new_drvdata->cc_base = cc_base;
-	
+
 
 	/* Then IRQ */
 	new_drvdata->res_irq = platform_get_resource(plat_dev, IORESOURCE_IRQ, 0);
@@ -291,6 +297,10 @@ static int init_cc_resources(struct platform_device *plat_dev)
 
 	new_drvdata->plat_dev = plat_dev;
 
+	rc = cc_clk_on(new_drvdata);
+	if (rc)
+		goto init_cc_res_err;
+
 	if(new_drvdata->plat_dev->dev.dma_mask == NULL)
 	{
 		new_drvdata->plat_dev->dev.dma_mask = & new_drvdata->plat_dev->dev.coherent_dma_mask;
@@ -304,7 +314,7 @@ static int init_cc_resources(struct platform_device *plat_dev)
 	signature_val = CC_HAL_READ_REGISTER(CC_REG_OFFSET(HOST_RGF, HOST_SIGNATURE));
 	if (signature_val != DX_DEV_SIGNATURE) {
 		SSI_LOG_ERR("Invalid CC signature: SIGNATURE=0x%08X != expected=0x%08X\n",
-			signature_val, (uint32_t)DX_DEV_SIGNATURE);
+			signature_val, (u32)DX_DEV_SIGNATURE);
 		rc = -EINVAL;
 		goto init_cc_res_err;
 	}
@@ -396,7 +406,7 @@ static int init_cc_resources(struct platform_device *plat_dev)
 
 init_cc_res_err:
 	SSI_LOG_ERR("Freeing CC HW resources!\n");
-	
+
 	if (new_drvdata != NULL) {
 		ssi_aead_free(new_drvdata);
 		ssi_hash_free(new_drvdata);
@@ -410,7 +420,7 @@ init_cc_res_err:
 #ifdef ENABLE_CC_SYSFS
 		ssi_sysfs_fini();
 #endif
-	
+
 		if (req_mem_cc_regs != NULL) {
 			if (irq_registered) {
 				free_irq(new_drvdata->res_irq->start, new_drvdata);
@@ -432,7 +442,7 @@ init_cc_res_err:
 void fini_cc_regs(struct ssi_drvdata *drvdata)
 {
 	/* Mask all interrupts */
-	WRITE_REGISTER(drvdata->cc_base + 
+	WRITE_REGISTER(drvdata->cc_base +
 		       CC_REG_OFFSET(HOST_RGF, HOST_IMR), 0xFFFFFFFF);
 
 }
@@ -442,9 +452,9 @@ static void cleanup_cc_resources(struct platform_device *plat_dev)
 	struct ssi_drvdata *drvdata =
 		(struct ssi_drvdata *)dev_get_drvdata(&plat_dev->dev);
 
-        ssi_aead_free(drvdata);
-        ssi_hash_free(drvdata);
-        ssi_ablkcipher_free(drvdata);
+	ssi_aead_free(drvdata);
+	ssi_hash_free(drvdata);
+	ssi_ablkcipher_free(drvdata);
 	ssi_ivgen_fini(drvdata);
 	ssi_power_mgr_fini(drvdata);
 	ssi_buffer_mgr_fini(drvdata);
@@ -455,13 +465,10 @@ static void cleanup_cc_resources(struct platform_device *plat_dev)
 	ssi_sysfs_fini();
 #endif
 
-	/* Mask all interrupts */
-	WRITE_REGISTER(drvdata->cc_base + CC_REG_OFFSET(HOST_RGF, HOST_IMR),
-		0xFFFFFFFF);
+	fini_cc_regs(drvdata);
+	cc_clk_off(drvdata);
 	free_irq(drvdata->res_irq->start, drvdata);
 	drvdata->res_irq = NULL;
-
-	fini_cc_regs(drvdata);
 
 	if (drvdata->cc_base != NULL) {
 		iounmap(drvdata->cc_base);
@@ -475,11 +482,38 @@ static void cleanup_cc_resources(struct platform_device *plat_dev)
 	dev_set_drvdata(&plat_dev->dev, NULL);
 }
 
+int cc_clk_on(struct ssi_drvdata *drvdata)
+{
+	struct clk *clk = drvdata->clk;
+	int rc;
+
+	if (IS_ERR(clk))
+		/* Not all devices have a clock associated with CCREE  */
+		return 0;
+
+	rc = clk_prepare_enable(clk);
+	if (rc)
+		return rc;
+
+	return 0;
+}
+
+void cc_clk_off(struct ssi_drvdata *drvdata)
+{
+	struct clk *clk = drvdata->clk;
+
+	if (IS_ERR(clk))
+		/* Not all devices have a clock associated with CCREE */
+		return;
+
+	clk_disable_unprepare(clk);
+}
+
 static int cc7x_probe(struct platform_device *plat_dev)
 {
 	int rc;
 #if defined(CONFIG_ARM) && defined(CC_DEBUG)
-	uint32_t ctr, cacheline_size;
+	u32 ctr, cacheline_size;
 
 	asm volatile("mrc p15, 0, %0, c0, c0, 1" : "=r" (ctr));
 	cacheline_size =  4 << ((ctr >> 16) & 0xf);
@@ -505,14 +539,11 @@ static int cc7x_probe(struct platform_device *plat_dev)
 static int cc7x_remove(struct platform_device *plat_dev)
 {
 	SSI_LOG_DEBUG("Releasing cc7x resources...\n");
-	
+
 	cleanup_cc_resources(plat_dev);
 
 	SSI_LOG(KERN_INFO, "ARM cc7x_ree device terminated\n");
-#ifdef ENABLE_CYCLE_COUNT
-	display_all_stat_db();
-#endif
-	
+
 	return 0;
 }
 #if defined (CONFIG_PM_RUNTIME) || defined (CONFIG_PM_SLEEP)

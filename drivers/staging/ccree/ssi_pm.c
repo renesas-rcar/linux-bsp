@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2012-2017 ARM Limited or its affiliates.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,7 +29,6 @@
 #include "ssi_ivgen.h"
 #include "ssi_hash.h"
 #include "ssi_pm.h"
-#include "ssi_pm_ext.h"
 
 
 #if defined (CONFIG_PM_RUNTIME) || defined (CONFIG_PM_SLEEP)
@@ -52,9 +51,7 @@ int ssi_power_mgr_runtime_suspend(struct device *dev)
 		return rc;
 	}
 	fini_cc_regs(drvdata);
-
-	/* Specific HW suspend code */
-	ssi_pm_ext_hw_suspend(dev);
+	cc_clk_off(drvdata);
 	return 0;
 }
 
@@ -66,8 +63,12 @@ int ssi_power_mgr_runtime_resume(struct device *dev)
 
 	SSI_LOG_DEBUG("ssi_power_mgr_runtime_resume , unset HOST_POWER_DOWN_EN\n");
 	WRITE_REGISTER(drvdata->cc_base + CC_REG_OFFSET(HOST_RGF, HOST_POWER_DOWN_EN), POWER_DOWN_DISABLE);
-	/* Specific HW resume code */
-	ssi_pm_ext_hw_resume(dev);
+
+	rc = cc_clk_on(drvdata);
+	if (rc) {
+		SSI_LOG_ERR("failed getting clock back on. We're toast.\n");
+		return rc;
+	}
 
 	rc = init_cc_regs(drvdata, false);
 	if (rc !=0) {
@@ -83,7 +84,7 @@ int ssi_power_mgr_runtime_resume(struct device *dev)
 
 	/* must be after the queue resuming as it uses the HW queue*/
 	ssi_hash_init_sram_digest_consts(drvdata);
-	
+
 	ssi_ivgen_init_sram_pool(drvdata);
 	return 0;
 }
