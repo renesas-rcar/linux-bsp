@@ -1692,6 +1692,13 @@ M:	Lennert Buytenhek <kernel@wantstofly.org>
 L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
 S:	Maintained
 
+ARM/REALTEK ARCHITECTURE
+M:	Andreas Färber <afaerber@suse.de>
+L:	linux-arm-kernel@lists.infradead.org (moderated for non-subscribers)
+S:	Maintained
+F:	arch/arm64/boot/dts/realtek/
+F:	Documentation/devicetree/bindings/arm/realtek.txt
+
 ARM/RENESAS ARM64 ARCHITECTURE
 M:	Simon Horman <horms@verge.net.au>
 M:	Magnus Damm <magnus.damm@gmail.com>
@@ -1725,6 +1732,7 @@ L:	linux-rockchip@lists.infradead.org
 T:	git git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip.git
 S:	Maintained
 F:	arch/arm/boot/dts/rk3*
+F:	arch/arm/boot/dts/rv1108*
 F:	arch/arm/mach-rockchip/
 F:	drivers/clk/rockchip/
 F:	drivers/i2c/busses/i2c-rk3x.c
@@ -2699,7 +2707,6 @@ N:	kona
 F:	arch/arm/mach-bcm/
 
 BROADCOM BCM2835 ARM ARCHITECTURE
-M:	Lee Jones <lee@kernel.org>
 M:	Eric Anholt <eric@anholt.net>
 M:	Stefan Wahren <stefan.wahren@i2se.com>
 L:	linux-rpi-kernel@lists.infradead.org (moderated for non-subscribers)
@@ -12808,6 +12815,8 @@ F:	include/linux/soc/ti/ti_sci_protocol.h
 F:	Documentation/devicetree/bindings/soc/ti/sci-pm-domain.txt
 F:	include/dt-bindings/genpd/k2g.h
 F:	drivers/soc/ti/ti_sci_pm_domains.c
+F:	Documentation/devicetree/bindings/reset/ti,sci-reset.txt
+F:	drivers/reset/reset-ti-sci.c
 F:	Documentation/devicetree/bindings/clock/ti,sci-clk.txt
 F:	drivers/clk/keystone/sci-clk.c
 
