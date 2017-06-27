@@ -68,7 +68,7 @@ static int exar_get(struct gpio_chip *chip, unsigned int reg)
 	value = readb(exar_gpio->regs + reg);
 	mutex_unlock(&exar_gpio->lock);
 
-	return !!value;
+	return value;
 }
 
 static int exar_get_direction(struct gpio_chip *chip, unsigned int offset)
@@ -78,7 +78,7 @@ static int exar_get_direction(struct gpio_chip *chip, unsigned int offset)
 	int val;
 
 	addr = bank ? EXAR_OFFSET_MPIOSEL_HI : EXAR_OFFSET_MPIOSEL_LO;
-	val = exar_get(chip, addr) >> (offset % 8);
+	val = exar_get(chip, addr) & BIT(offset % 8);
 
 	return !!val;
 }
@@ -89,8 +89,8 @@ static int exar_get_value(struct gpio_chip *chip, unsigned int offset)
 	unsigned int addr;
 	int val;
 
-	addr = bank ? EXAR_OFFSET_MPIOLVL_LO : EXAR_OFFSET_MPIOLVL_HI;
-	val = exar_get(chip, addr) >> (offset % 8);
+	addr = bank ? EXAR_OFFSET_MPIOLVL_HI : EXAR_OFFSET_MPIOLVL_LO;
+	val = exar_get(chip, addr) & BIT(offset % 8);
 
 	return !!val;
 }
@@ -119,7 +119,7 @@ static int exar_direction_input(struct gpio_chip *chip, unsigned int offset)
 
 static int gpio_exar_probe(struct platform_device *pdev)
 {
-	struct pci_dev *pcidev = platform_get_drvdata(pdev);
+	struct pci_dev *pcidev = to_pci_dev(pdev->dev.parent);
 	struct exar_gpio_chip *exar_gpio;
 	void __iomem *p;
 	int index, ret;
@@ -139,7 +139,7 @@ static int gpio_exar_probe(struct platform_device *pdev)
 	if (!p)
 		return -ENOMEM;
 
-	exar_gpio = devm_kzalloc(&pcidev->dev, sizeof(*exar_gpio), GFP_KERNEL);
+	exar_gpio = devm_kzalloc(&pdev->dev, sizeof(*exar_gpio), GFP_KERNEL);
 	if (!exar_gpio)
 		return -ENOMEM;
 
@@ -160,7 +160,7 @@ static int gpio_exar_probe(struct platform_device *pdev)
 	exar_gpio->regs = p;
 	exar_gpio->index = index;
 
-	ret = devm_gpiochip_add_data(&pcidev->dev,
+	ret = devm_gpiochip_add_data(&pdev->dev,
 				     &exar_gpio->gpio_chip, exar_gpio);
 	if (ret)
 		goto err_destroy;
