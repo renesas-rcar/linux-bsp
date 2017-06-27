@@ -27,7 +27,7 @@
 
 /* Uncomment next line to get verbose printout */
 /* #define DEBUG */
-#define pr_fmt(fmt) "ACPI : EC: " fmt
+#define pr_fmt(fmt) "ACPI: EC: " fmt
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -1835,7 +1835,7 @@ static int acpi_ec_suspend(struct device *dev)
 	struct acpi_ec *ec =
 		acpi_driver_data(to_acpi_device(dev));
 
-	if (ec_freeze_events)
+	if (acpi_sleep_no_ec_events() && ec_freeze_events)
 		acpi_ec_disable_event(ec);
 	return 0;
 }

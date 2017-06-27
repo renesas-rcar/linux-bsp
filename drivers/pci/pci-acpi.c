@@ -21,13 +21,12 @@
 #include "pci.h"
 
 /*
- * The UUID is defined in the PCI Firmware Specification available here:
+ * The GUID is defined in the PCI Firmware Specification available here:
  * https://www.pcisig.com/members/downloads/pcifw_r3_1_13Dec10.pdf
  */
-const u8 pci_acpi_dsm_uuid[] = {
-	0xd0, 0x37, 0xc9, 0xe5, 0x53, 0x35, 0x7a, 0x4d,
-	0x91, 0x17, 0xea, 0x4d, 0x19, 0xc3, 0x43, 0x4d
-};
+const guid_t pci_acpi_dsm_guid =
+	GUID_INIT(0xe5c937d0, 0x3553, 0x4d7a,
+		  0x91, 0x17, 0xea, 0x4d, 0x19, 0xc3, 0x43, 0x4d);
 
 #if defined(CONFIG_PCI_QUIRKS) && defined(CONFIG_ARM64)
 static int acpi_get_rc_addr(struct acpi_device *adev, struct resource *res)
@@ -395,29 +394,26 @@ bool pciehp_is_native(struct pci_dev *pdev)
 
 /**
  * pci_acpi_wake_bus - Root bus wakeup notification fork function.
- * @work: Work item to handle.
+ * @context: Device wakeup context.
  */
-static void pci_acpi_wake_bus(struct work_struct *work)
+static void pci_acpi_wake_bus(struct acpi_device_wakeup_context *context)
 {
 	struct acpi_device *adev;
 	struct acpi_pci_root *root;
 
-	adev = container_of(work, struct acpi_device, wakeup.context.work);
+	adev = container_of(context, struct acpi_device, wakeup.context);
 	root = acpi_driver_data(adev);
 	pci_pme_wakeup_bus(root->bus);
 }
 
 /**
  * pci_acpi_wake_dev - PCI device wakeup notification work function.
- * @handle: ACPI handle of a device the notification is for.
- * @work: Work item to handle.
+ * @context: Device wakeup context.
  */
-static void pci_acpi_wake_dev(struct work_struct *work)
+static void pci_acpi_wake_dev(struct acpi_device_wakeup_context *context)
 {
-	struct acpi_device_wakeup_context *context;
 	struct pci_dev *pci_dev;
 
-	context = container_of(work, struct acpi_device_wakeup_context, work);
 	pci_dev = to_pci_dev(context->dev);
 
 	if (pci_dev->pme_poll)
@@ -425,7 +421,7 @@ static void pci_acpi_wake_dev(struct work_struct *work)
 
 	if (pci_dev->current_state == PCI_D3cold) {
 		pci_wakeup_event(pci_dev);
-		pm_runtime_resume(&pci_dev->dev);
+		pm_request_resume(&pci_dev->dev);
 		return;
 	}
 
@@ -434,7 +430,7 @@ static void pci_acpi_wake_dev(struct work_struct *work)
 		pci_check_pme_status(pci_dev);
 
 	pci_wakeup_event(pci_dev);
-	pm_runtime_resume(&pci_dev->dev);
+	pm_request_resume(&pci_dev->dev);
 
 	pci_pme_wakeup_bus(pci_dev->subordinate);
 }
@@ -680,7 +676,7 @@ void acpi_pci_add_bus(struct pci_bus *bus)
 	if (!pci_is_root_bus(bus))
 		return;
 
-	obj = acpi_evaluate_dsm(ACPI_HANDLE(bus->bridge), pci_acpi_dsm_uuid, 3,
+	obj = acpi_evaluate_dsm(ACPI_HANDLE(bus->bridge), &pci_acpi_dsm_guid, 3,
 				RESET_DELAY_DSM, NULL);
 	if (!obj)
 		return;
@@ -745,7 +741,7 @@ static void pci_acpi_optimize_delay(struct pci_dev *pdev,
 	if (bridge->ignore_reset_delay)
 		pdev->d3cold_delay = 0;
 
-	obj = acpi_evaluate_dsm(handle, pci_acpi_dsm_uuid, 3,
+	obj = acpi_evaluate_dsm(handle, &pci_acpi_dsm_guid, 3,
 				FUNCTION_DELAY_DSM, NULL);
 	if (!obj)
 		return;

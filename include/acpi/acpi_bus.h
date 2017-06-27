@@ -61,17 +61,18 @@ bool acpi_ata_match(acpi_handle handle);
 bool acpi_bay_match(acpi_handle handle);
 bool acpi_dock_match(acpi_handle handle);
 
-bool acpi_check_dsm(acpi_handle handle, const u8 *uuid, u64 rev, u64 funcs);
-union acpi_object *acpi_evaluate_dsm(acpi_handle handle, const u8 *uuid,
+bool acpi_check_dsm(acpi_handle handle, const guid_t *guid, u64 rev, u64 funcs);
+union acpi_object *acpi_evaluate_dsm(acpi_handle handle, const guid_t *guid,
 			u64 rev, u64 func, union acpi_object *argv4);
 
 static inline union acpi_object *
-acpi_evaluate_dsm_typed(acpi_handle handle, const u8 *uuid, u64 rev, u64 func,
-			union acpi_object *argv4, acpi_object_type type)
+acpi_evaluate_dsm_typed(acpi_handle handle, const guid_t *guid, u64 rev,
+			u64 func, union acpi_object *argv4,
+			acpi_object_type type)
 {
 	union acpi_object *obj;
 
-	obj = acpi_evaluate_dsm(handle, uuid, rev, func, argv4);
+	obj = acpi_evaluate_dsm(handle, guid, rev, func, argv4);
 	if (obj && obj->type != type) {
 		ACPI_FREE(obj);
 		obj = NULL;
@@ -320,7 +321,7 @@ struct acpi_device_wakeup_flags {
 };
 
 struct acpi_device_wakeup_context {
-	struct work_struct work;
+	void (*func)(struct acpi_device_wakeup_context *context);
 	struct device *dev;
 };
 
@@ -599,15 +600,19 @@ static inline bool acpi_device_always_present(struct acpi_device *adev)
 #endif
 
 #ifdef CONFIG_PM
+void acpi_pm_wakeup_event(struct device *dev);
 acpi_status acpi_add_pm_notifier(struct acpi_device *adev, struct device *dev,
-				 void (*work_func)(struct work_struct *work));
+			void (*func)(struct acpi_device_wakeup_context *context));
 acpi_status acpi_remove_pm_notifier(struct acpi_device *adev);
 int acpi_pm_device_sleep_state(struct device *, int *, int);
 int acpi_pm_device_run_wake(struct device *, bool);
 #else
+static inline void acpi_pm_wakeup_event(struct device *dev)
+{
+}
 static inline acpi_status acpi_add_pm_notifier(struct acpi_device *adev,
 					       struct device *dev,
-				               void (*work_func)(struct work_struct *work))
+					       void (*func)(struct acpi_device_wakeup_context *context))
 {
 	return AE_SUPPORT;
 }
