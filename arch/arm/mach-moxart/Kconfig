@@ -4,7 +4,8 @@ menuconfig ARCH_MOXART
 	select CPU_FA526
 	select ARM_DMA_MEM_BUFFERABLE
 	select FARADAY_FTINTC010
-	select MOXART_TIMER
+	select FTTMR010_TIMER
+	select GENERIC_IRQ_CHIP
 	select GPIOLIB
 	select PHYLIB if NETDEVICES
 	help

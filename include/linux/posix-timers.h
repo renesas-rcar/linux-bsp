@@ -73,12 +73,6 @@ struct k_itimer {
 		} real;
 		struct cpu_timer_list cpu;
 		struct {
-			unsigned int clock;
-			unsigned int node;
-			unsigned long incr;
-			unsigned long expires;
-		} mmtimer;
-		struct {
 			struct alarm alarmtimer;
 			ktime_t interval;
 		} alarm;
@@ -105,10 +99,11 @@ struct k_clock {
 			   struct itimerspec64 *cur_setting);
 };
 
-extern struct k_clock clock_posix_cpu;
-extern struct k_clock clock_posix_dynamic;
-
-void posix_timers_register_clock(const clockid_t clock_id, struct k_clock *new_clock);
+extern const struct k_clock clock_posix_cpu;
+extern const struct k_clock clock_posix_dynamic;
+extern const struct k_clock clock_process;
+extern const struct k_clock clock_thread;
+extern const struct k_clock alarm_clock;
 
 /* function to call to trigger timer event */
 int posix_timer_event(struct k_itimer *timr, int si_private);
