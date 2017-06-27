@@ -455,7 +455,8 @@ try_again:
 	return err;
 
 csum_copy_err:
-	if (!__sk_queue_drop_skb(sk, skb, flags, udp_skb_destructor)) {
+	if (!__sk_queue_drop_skb(sk, &udp_sk(sk)->reader_queue, skb, flags,
+				 udp_skb_destructor)) {
 		if (is_udp4) {
 			UDP_INC_STATS(sock_net(sk),
 				      UDP_MIB_CSUMERRORS, is_udplite);
@@ -629,6 +630,7 @@ static int udpv6_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 		}
 	}
 
+	prefetch(&sk->sk_rmem_alloc);
 	if (rcu_access_pointer(sk->sk_filter) &&
 	    udp_lib_checksum_complete(skb))
 		goto csum_error;
@@ -919,12 +921,11 @@ static void udp_v6_early_demux(struct sk_buff *skb)
 	if (dst)
 		dst = dst_check(dst, inet6_sk(sk)->rx_dst_cookie);
 	if (dst) {
-		if (dst->flags & DST_NOCACHE) {
-			if (likely(atomic_inc_not_zero(&dst->__refcnt)))
-				skb_dst_set(skb, dst);
-		} else {
-			skb_dst_set_noref(skb, dst);
-		}
+		/* set noref for now.
+		 * any place which wants to hold dst has to call
+		 * dst_hold_safe()
+		 */
+		skb_dst_set_noref(skb, dst);
 	}
 }
 

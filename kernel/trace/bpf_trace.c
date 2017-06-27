@@ -234,7 +234,8 @@ BPF_CALL_2(bpf_perf_event_read, struct bpf_map *, map, u64, flags)
 	unsigned int cpu = smp_processor_id();
 	u64 index = flags & BPF_F_INDEX_MASK;
 	struct bpf_event_entry *ee;
-	struct perf_event *event;
+	u64 value = 0;
+	int err;
 
 	if (unlikely(flags & ~(BPF_F_INDEX_MASK)))
 		return -EINVAL;
@@ -247,21 +248,14 @@ BPF_CALL_2(bpf_perf_event_read, struct bpf_map *, map, u64, flags)
 	if (!ee)
 		return -ENOENT;
 
-	event = ee->event;
-	if (unlikely(event->attr.type != PERF_TYPE_HARDWARE &&
-		     event->attr.type != PERF_TYPE_RAW))
-		return -EINVAL;
-
-	/* make sure event is local and doesn't have pmu::count */
-	if (unlikely(event->oncpu != cpu || event->pmu->count))
-		return -EINVAL;
-
+	err = perf_event_read_local(ee->event, &value);
 	/*
-	 * we don't know if the function is run successfully by the
-	 * return value. It can be judged in other places, such as
-	 * eBPF programs.
+	 * this api is ugly since we miss [-22..-2] range of valid
+	 * counter values, but that's uapi
 	 */
-	return perf_event_read_local(event);
+	if (err)
+		return err;
+	return value;
 }
 
 static const struct bpf_func_proto bpf_perf_event_read_proto = {
@@ -272,14 +266,16 @@ static const struct bpf_func_proto bpf_perf_event_read_proto = {
 	.arg2_type	= ARG_ANYTHING,
 };
 
+static DEFINE_PER_CPU(struct perf_sample_data, bpf_sd);
+
 static __always_inline u64
 __bpf_perf_event_output(struct pt_regs *regs, struct bpf_map *map,
 			u64 flags, struct perf_raw_record *raw)
 {
 	struct bpf_array *array = container_of(map, struct bpf_array, map);
+	struct perf_sample_data *sd = this_cpu_ptr(&bpf_sd);
 	unsigned int cpu = smp_processor_id();
 	u64 index = flags & BPF_F_INDEX_MASK;
-	struct perf_sample_data sample_data;
 	struct bpf_event_entry *ee;
 	struct perf_event *event;
 
@@ -300,9 +296,9 @@ __bpf_perf_event_output(struct pt_regs *regs, struct bpf_map *map,
 	if (unlikely(event->oncpu != cpu))
 		return -EOPNOTSUPP;
 
-	perf_sample_data_init(&sample_data, 0, 0);
-	sample_data.raw = raw;
-	perf_event_output(event, &sample_data, regs);
+	perf_sample_data_init(sd, 0, 0);
+	sd->raw = raw;
+	perf_event_output(event, sd, regs);
 	return 0;
 }
 
@@ -483,7 +479,7 @@ static const struct bpf_func_proto *kprobe_prog_func_proto(enum bpf_func_id func
 
 /* bpf+kprobe programs can access fields of 'struct pt_regs' */
 static bool kprobe_prog_is_valid_access(int off, int size, enum bpf_access_type type,
-					enum bpf_reg_type *reg_type)
+					struct bpf_insn_access_aux *info)
 {
 	if (off < 0 || off >= sizeof(struct pt_regs))
 		return false;
@@ -566,7 +562,7 @@ static const struct bpf_func_proto *tp_prog_func_proto(enum bpf_func_id func_id)
 }
 
 static bool tp_prog_is_valid_access(int off, int size, enum bpf_access_type type,
-				    enum bpf_reg_type *reg_type)
+				    struct bpf_insn_access_aux *info)
 {
 	if (off < sizeof(void *) || off >= PERF_MAX_TRACE_SIZE)
 		return false;
@@ -585,17 +581,31 @@ const struct bpf_verifier_ops tracepoint_prog_ops = {
 };
 
 static bool pe_prog_is_valid_access(int off, int size, enum bpf_access_type type,
-				    enum bpf_reg_type *reg_type)
+				    struct bpf_insn_access_aux *info)
 {
+	int sample_period_off;
+
 	if (off < 0 || off >= sizeof(struct bpf_perf_event_data))
 		return false;
 	if (type != BPF_READ)
 		return false;
 	if (off % size != 0)
 		return false;
-	if (off == offsetof(struct bpf_perf_event_data, sample_period)) {
-		if (size != sizeof(u64))
+
+	/* permit 1, 2, 4 byte narrower and 8 normal read access to sample_period */
+	sample_period_off = offsetof(struct bpf_perf_event_data, sample_period);
+	if (off >= sample_period_off && off < sample_period_off + sizeof(__u64)) {
+		int allowed;
+
+#ifdef __LITTLE_ENDIAN
+		allowed = (off & 0x7) == 0 && size <= 8 && (size & (size - 1)) == 0;
+#else
+		allowed = ((off & 0x7) + size) == 8 && size <= 8 && (size & (size - 1)) == 0;
+#endif
+		if (!allowed)
 			return false;
+		info->ctx_field_size = 8;
+		info->converted_op_size = 8;
 	} else {
 		if (size != sizeof(long))
 			return false;

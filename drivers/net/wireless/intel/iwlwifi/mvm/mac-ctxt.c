@@ -1596,7 +1596,7 @@ void iwl_mvm_rx_stored_beacon_notif(struct iwl_mvm *mvm,
 					       rx_status.band);
 
 	/* copy the data */
-	memcpy(skb_put(skb, size), sb->data, size);
+	skb_put_data(skb, sb->data, size);
 	memcpy(IEEE80211_SKB_RXCB(skb), &rx_status, sizeof(rx_status));
 
 	/* pass it as regular rx to mac80211 */
@@ -1632,9 +1632,9 @@ void iwl_mvm_channel_switch_noa_notif(struct iwl_mvm *mvm,
 
 	IWL_DEBUG_INFO(mvm, "Channel Switch Started Notification\n");
 
-	queue_delayed_work(system_wq, &mvm->cs_tx_unblock_dwork,
-			   msecs_to_jiffies(IWL_MVM_CS_UNBLOCK_TX_TIMEOUT *
-					    csa_vif->bss_conf.beacon_int));
+	schedule_delayed_work(&mvm->cs_tx_unblock_dwork,
+			      msecs_to_jiffies(IWL_MVM_CS_UNBLOCK_TX_TIMEOUT *
+					       csa_vif->bss_conf.beacon_int));
 
 	ieee80211_csa_finish(csa_vif);
 

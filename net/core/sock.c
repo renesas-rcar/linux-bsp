@@ -1038,6 +1038,10 @@ set_rcvbuf:
 #endif
 
 	case SO_MAX_PACING_RATE:
+		if (val != ~0U)
+			cmpxchg(&sk->sk_pacing_status,
+				SK_PACING_NONE,
+				SK_PACING_NEEDED);
 		sk->sk_max_pacing_rate = val;
 		sk->sk_pacing_rate = min(sk->sk_pacing_rate,
 					 sk->sk_max_pacing_rate);
@@ -1072,6 +1076,18 @@ static void cred_to_ucred(struct pid *pid, const struct cred *cred,
 		ucred->uid = from_kuid_munged(current_ns, cred->euid);
 		ucred->gid = from_kgid_munged(current_ns, cred->egid);
 	}
+}
+
+static int groups_to_user(gid_t __user *dst, const struct group_info *src)
+{
+	struct user_namespace *user_ns = current_user_ns();
+	int i;
+
+	for (i = 0; i < src->ngroups; i++)
+		if (put_user(from_kgid_munged(user_ns, src->gid[i]), dst + i))
+			return -EFAULT;
+
+	return 0;
 }
 
 int sock_getsockopt(struct socket *sock, int level, int optname,
@@ -1224,6 +1240,27 @@ int sock_getsockopt(struct socket *sock, int level, int optname,
 		cred_to_ucred(sk->sk_peer_pid, sk->sk_peer_cred, &peercred);
 		if (copy_to_user(optval, &peercred, len))
 			return -EFAULT;
+		goto lenout;
+	}
+
+	case SO_PEERGROUPS:
+	{
+		int ret, n;
+
+		if (!sk->sk_peer_cred)
+			return -ENODATA;
+
+		n = sk->sk_peer_cred->group_info->ngroups;
+		if (len < n * sizeof(gid_t)) {
+			len = n * sizeof(gid_t);
+			return put_user(len, optlen) ? -EFAULT : -ERANGE;
+		}
+		len = n * sizeof(gid_t);
+
+		ret = groups_to_user((gid_t __user *)optval,
+				     sk->sk_peer_cred->group_info);
+		if (ret)
+			return ret;
 		goto lenout;
 	}
 
@@ -2071,6 +2108,26 @@ int sock_cmsg_send(struct sock *sk, struct msghdr *msg,
 	return 0;
 }
 EXPORT_SYMBOL(sock_cmsg_send);
+
+static void sk_enter_memory_pressure(struct sock *sk)
+{
+	if (!sk->sk_prot->enter_memory_pressure)
+		return;
+
+	sk->sk_prot->enter_memory_pressure(sk);
+}
+
+static void sk_leave_memory_pressure(struct sock *sk)
+{
+	if (sk->sk_prot->leave_memory_pressure) {
+		sk->sk_prot->leave_memory_pressure(sk);
+	} else {
+		unsigned long *memory_pressure = sk->sk_prot->memory_pressure;
+
+		if (memory_pressure && *memory_pressure)
+			*memory_pressure = 0;
+	}
+}
 
 /* On 32bit arches, an skb frag is limited to 2^15 */
 #define SKB_FRAG_PAGE_ORDER	get_order(32768)

@@ -762,7 +762,7 @@ void iwl_pcie_tx_start(struct iwl_trans *trans, u32 scd_base_addr)
 			   reg_val | FH_TX_CHICKEN_BITS_SCD_AUTO_RETRY_EN);
 
 	/* Enable L1-Active */
-	if (trans->cfg->device_family != IWL_DEVICE_FAMILY_8000)
+	if (trans->cfg->device_family < IWL_DEVICE_FAMILY_8000)
 		iwl_clear_bits_prph(trans, APMG_PCIDEV_STT_REG,
 				    APMG_PCIDEV_STT_VAL_L1_ACT_DIS);
 }
@@ -1987,8 +1987,7 @@ static int iwl_fill_data_tbs(struct iwl_trans *trans, struct sk_buff *skb,
 }
 
 #ifdef CONFIG_INET
-static struct iwl_tso_hdr_page *
-get_page_hdr(struct iwl_trans *trans, size_t len)
+struct iwl_tso_hdr_page *get_page_hdr(struct iwl_trans *trans, size_t len)
 {
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 	struct iwl_tso_hdr_page *p = this_cpu_ptr(trans_pcie->tso_hdr_page);
@@ -2141,8 +2140,7 @@ static int iwl_fill_data_tbs_amsdu(struct iwl_trans *trans, struct sk_buff *skb,
 							htons(ETH_P_IPV6),
 						    data_left);
 
-			memcpy(skb_put(csum_skb, tcp_hdrlen(skb)),
-			       tcph, tcp_hdrlen(skb));
+			skb_put_data(csum_skb, tcph, tcp_hdrlen(skb));
 			skb_reset_transport_header(csum_skb);
 			csum_skb->csum_start =
 				(unsigned char *)tcp_hdr(csum_skb) -
@@ -2176,7 +2174,7 @@ static int iwl_fill_data_tbs_amsdu(struct iwl_trans *trans, struct sk_buff *skb,
 			dma_addr_t tb_phys;
 
 			if (trans_pcie->sw_csum_tx)
-				memcpy(skb_put(csum_skb, size), tso.data, size);
+				skb_put_data(csum_skb, tso.data, size);
 
 			tb_phys = dma_map_single(trans->dev, tso.data,
 						 size, DMA_TO_DEVICE);

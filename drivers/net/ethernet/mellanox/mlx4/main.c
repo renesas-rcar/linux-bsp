@@ -119,7 +119,7 @@ MODULE_PARM_DESC(enable_4k_uar,
 
 static char mlx4_version[] =
 	DRV_NAME ": Mellanox ConnectX core driver v"
-	DRV_VERSION " (" DRV_RELDATE ")\n";
+	DRV_VERSION "\n";
 
 static struct mlx4_profile default_profile = {
 	.num_qp		= 1 << 18,
@@ -2356,8 +2356,8 @@ static int mlx4_init_hca(struct mlx4_dev *dev)
 					MLX4_A0_STEERING_TABLE_SIZE;
 			}
 
-			mlx4_dbg(dev, "DMFS high rate steer mode is: %s\n",
-				 dmfs_high_rate_steering_mode_str(
+			mlx4_info(dev, "DMFS high rate steer mode is: %s\n",
+				  dmfs_high_rate_steering_mode_str(
 					dev->caps.dmfs_high_steer_mode));
 		}
 	} else {

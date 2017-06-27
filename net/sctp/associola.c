@@ -246,7 +246,8 @@ static struct sctp_association *sctp_association_init(struct sctp_association *a
 	if (!sctp_ulpq_init(&asoc->ulpq, asoc))
 		goto fail_init;
 
-	if (sctp_stream_new(asoc, gfp))
+	if (sctp_stream_init(&asoc->stream, asoc->c.sinit_num_ostreams,
+			     0, gfp))
 		goto fail_init;
 
 	/* Assume that peer would support both address types unless we are
@@ -291,7 +292,7 @@ static struct sctp_association *sctp_association_init(struct sctp_association *a
 	return asoc;
 
 stream_free:
-	sctp_stream_free(asoc->stream);
+	sctp_stream_free(&asoc->stream);
 fail_init:
 	sock_put(asoc->base.sk);
 	sctp_endpoint_put(asoc->ep);
@@ -365,7 +366,7 @@ void sctp_association_free(struct sctp_association *asoc)
 	sctp_tsnmap_free(&asoc->peer.tsn_map);
 
 	/* Free stream information. */
-	sctp_stream_free(asoc->stream);
+	sctp_stream_free(&asoc->stream);
 
 	if (asoc->strreset_chunk)
 		sctp_chunk_free(asoc->strreset_chunk);
@@ -1111,8 +1112,8 @@ void sctp_assoc_migrate(struct sctp_association *assoc, struct sock *newsk)
 }
 
 /* Update an association (possibly from unexpected COOKIE-ECHO processing).  */
-void sctp_assoc_update(struct sctp_association *asoc,
-		       struct sctp_association *new)
+int sctp_assoc_update(struct sctp_association *asoc,
+		      struct sctp_association *new)
 {
 	struct sctp_transport *trans;
 	struct list_head *pos, *temp;
@@ -1123,8 +1124,10 @@ void sctp_assoc_update(struct sctp_association *asoc,
 	asoc->peer.sack_needed = new->peer.sack_needed;
 	asoc->peer.auth_capable = new->peer.auth_capable;
 	asoc->peer.i = new->peer.i;
-	sctp_tsnmap_init(&asoc->peer.tsn_map, SCTP_TSN_MAP_INITIAL,
-			 asoc->peer.i.initial_tsn, GFP_ATOMIC);
+
+	if (!sctp_tsnmap_init(&asoc->peer.tsn_map, SCTP_TSN_MAP_INITIAL,
+			      asoc->peer.i.initial_tsn, GFP_ATOMIC))
+		return -ENOMEM;
 
 	/* Remove any peer addresses not present in the new association. */
 	list_for_each_safe(pos, temp, &asoc->peer.transport_addr_list) {
@@ -1151,7 +1154,7 @@ void sctp_assoc_update(struct sctp_association *asoc,
 		/* Reinitialize SSN for both local streams
 		 * and peer's streams.
 		 */
-		sctp_stream_clear(asoc->stream);
+		sctp_stream_clear(&asoc->stream);
 
 		/* Flush the ULP reassembly and ordered queue.
 		 * Any data there will now be stale and will
@@ -1168,27 +1171,21 @@ void sctp_assoc_update(struct sctp_association *asoc,
 	} else {
 		/* Add any peer addresses from the new association. */
 		list_for_each_entry(trans, &new->peer.transport_addr_list,
-				transports) {
-			if (!sctp_assoc_lookup_paddr(asoc, &trans->ipaddr))
-				sctp_assoc_add_peer(asoc, &trans->ipaddr,
-						    GFP_ATOMIC, trans->state);
-		}
+				    transports)
+			if (!sctp_assoc_lookup_paddr(asoc, &trans->ipaddr) &&
+			    !sctp_assoc_add_peer(asoc, &trans->ipaddr,
+						 GFP_ATOMIC, trans->state))
+				return -ENOMEM;
 
 		asoc->ctsn_ack_point = asoc->next_tsn - 1;
 		asoc->adv_peer_ack_point = asoc->ctsn_ack_point;
 
-		if (sctp_state(asoc, COOKIE_WAIT)) {
-			sctp_stream_free(asoc->stream);
-			asoc->stream = new->stream;
-			new->stream = NULL;
-		}
+		if (sctp_state(asoc, COOKIE_WAIT))
+			sctp_stream_update(&asoc->stream, &new->stream);
 
-		if (!asoc->assoc_id) {
-			/* get a new association id since we don't have one
-			 * yet.
-			 */
-			sctp_assoc_set_id(asoc, GFP_ATOMIC);
-		}
+		/* get a new assoc id if we don't have one yet. */
+		if (sctp_assoc_set_id(asoc, GFP_ATOMIC))
+			return -ENOMEM;
 	}
 
 	/* SCTP-AUTH: Save the peer parameters from the new associations
@@ -1206,7 +1203,7 @@ void sctp_assoc_update(struct sctp_association *asoc,
 	asoc->peer.peer_hmacs = new->peer.peer_hmacs;
 	new->peer.peer_hmacs = NULL;
 
-	sctp_auth_asoc_init_active_key(asoc, GFP_ATOMIC);
+	return sctp_auth_asoc_init_active_key(asoc, GFP_ATOMIC);
 }
 
 /* Update the retran path for sending a retransmitted packet.

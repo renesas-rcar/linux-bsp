@@ -413,7 +413,7 @@ static void pad_packet(struct datapath *dp, struct sk_buff *skb)
 		size_t plen = NLA_ALIGN(skb->len) - skb->len;
 
 		if (plen > 0)
-			memset(skb_put(skb, plen), 0, plen);
+			skb_put_zero(skb, plen);
 	}
 }
 
@@ -453,7 +453,7 @@ static int queue_userspace_packet(struct datapath *dp, struct sk_buff *skb,
 
 	/* Complete checksum if needed */
 	if (skb->ip_summed == CHECKSUM_PARTIAL &&
-	    (err = skb_checksum_help(skb)))
+	    (err = skb_csum_hwoffload_help(skb, 0)))
 		goto out;
 
 	/* Older versions of OVS user space enforce alignment of the last

@@ -352,7 +352,7 @@ static bool convert_bpf_extensions(struct sock_filter *fp,
  *	bpf_convert_filter - convert filter program
  *	@prog: the user passed filter program
  *	@len: the length of the user passed filter program
- *	@new_prog: buffer where converted program will be stored
+ *	@new_prog: allocated 'struct bpf_prog' or NULL
  *	@new_len: pointer to store length of converted program
  *
  * Remap 'sock_filter' style classic BPF (cBPF) instruction set to 'bpf_insn'
@@ -364,14 +364,13 @@ static bool convert_bpf_extensions(struct sock_filter *fp,
  *
  * 2) 2nd pass to remap in two passes: 1st pass finds new
  *    jump offsets, 2nd pass remapping:
- *   new_prog = kmalloc(sizeof(struct bpf_insn) * new_len);
  *   bpf_convert_filter(old_prog, old_len, new_prog, &new_len);
  */
 static int bpf_convert_filter(struct sock_filter *prog, int len,
-			      struct bpf_insn *new_prog, int *new_len)
+			      struct bpf_prog *new_prog, int *new_len)
 {
-	int new_flen = 0, pass = 0, target, i;
-	struct bpf_insn *new_insn;
+	int new_flen = 0, pass = 0, target, i, stack_off;
+	struct bpf_insn *new_insn, *first_insn = NULL;
 	struct sock_filter *fp;
 	int *addrs = NULL;
 	u8 bpf_src;
@@ -383,6 +382,7 @@ static int bpf_convert_filter(struct sock_filter *prog, int len,
 		return -EINVAL;
 
 	if (new_prog) {
+		first_insn = new_prog->insnsi;
 		addrs = kcalloc(len, sizeof(*addrs),
 				GFP_KERNEL | __GFP_NOWARN);
 		if (!addrs)
@@ -390,11 +390,11 @@ static int bpf_convert_filter(struct sock_filter *prog, int len,
 	}
 
 do_pass:
-	new_insn = new_prog;
+	new_insn = first_insn;
 	fp = prog;
 
 	/* Classic BPF related prologue emission. */
-	if (new_insn) {
+	if (new_prog) {
 		/* Classic BPF expects A and X to be reset first. These need
 		 * to be guaranteed to be the first two instructions.
 		 */
@@ -415,7 +415,7 @@ do_pass:
 		struct bpf_insn *insn = tmp_insns;
 
 		if (addrs)
-			addrs[i] = new_insn - new_prog;
+			addrs[i] = new_insn - first_insn;
 
 		switch (fp->code) {
 		/* All arithmetic insns and skb loads map as-is. */
@@ -561,17 +561,25 @@ do_pass:
 		/* Store to stack. */
 		case BPF_ST:
 		case BPF_STX:
+			stack_off = fp->k * 4  + 4;
 			*insn = BPF_STX_MEM(BPF_W, BPF_REG_FP, BPF_CLASS(fp->code) ==
 					    BPF_ST ? BPF_REG_A : BPF_REG_X,
-					    -(BPF_MEMWORDS - fp->k) * 4);
+					    -stack_off);
+			/* check_load_and_stores() verifies that classic BPF can
+			 * load from stack only after write, so tracking
+			 * stack_depth for ST|STX insns is enough
+			 */
+			if (new_prog && new_prog->aux->stack_depth < stack_off)
+				new_prog->aux->stack_depth = stack_off;
 			break;
 
 		/* Load from stack. */
 		case BPF_LD | BPF_MEM:
 		case BPF_LDX | BPF_MEM:
+			stack_off = fp->k * 4  + 4;
 			*insn = BPF_LDX_MEM(BPF_W, BPF_CLASS(fp->code) == BPF_LD  ?
 					    BPF_REG_A : BPF_REG_X, BPF_REG_FP,
-					    -(BPF_MEMWORDS - fp->k) * 4);
+					    -stack_off);
 			break;
 
 		/* A = K or X = K */
@@ -619,13 +627,13 @@ do_pass:
 
 	if (!new_prog) {
 		/* Only calculating new length. */
-		*new_len = new_insn - new_prog;
+		*new_len = new_insn - first_insn;
 		return 0;
 	}
 
 	pass++;
-	if (new_flen != new_insn - new_prog) {
-		new_flen = new_insn - new_prog;
+	if (new_flen != new_insn - first_insn) {
+		new_flen = new_insn - first_insn;
 		if (pass > 2)
 			goto err;
 		goto do_pass;
@@ -1017,7 +1025,7 @@ static struct bpf_prog *bpf_migrate_filter(struct bpf_prog *fp)
 	fp->len = new_len;
 
 	/* 2nd pass: remap sock_filter insns into bpf_insn insns. */
-	err = bpf_convert_filter(old_prog, old_len, fp->insnsi, &new_len);
+	err = bpf_convert_filter(old_prog, old_len, fp, &new_len);
 	if (err)
 		/* 2nd bpf_convert_filter() can fail only if it fails
 		 * to allocate memory, remapping must succeed. Note,
@@ -1866,6 +1874,24 @@ static const struct bpf_func_proto bpf_set_hash_invalid_proto = {
 	.arg1_type	= ARG_PTR_TO_CTX,
 };
 
+BPF_CALL_2(bpf_set_hash, struct sk_buff *, skb, u32, hash)
+{
+	/* Set user specified hash as L4(+), so that it gets returned
+	 * on skb_get_hash() call unless BPF prog later on triggers a
+	 * skb_clear_hash().
+	 */
+	__skb_set_sw_hash(skb, hash, true);
+	return 0;
+}
+
+static const struct bpf_func_proto bpf_set_hash_proto = {
+	.func		= bpf_set_hash,
+	.gpl_only	= false,
+	.ret_type	= RET_INTEGER,
+	.arg1_type	= ARG_PTR_TO_CTX,
+	.arg2_type	= ARG_ANYTHING,
+};
+
 BPF_CALL_3(bpf_skb_vlan_push, struct sk_buff *, skb, __be16, vlan_proto,
 	   u16, vlan_tci)
 {
@@ -2539,6 +2565,7 @@ bpf_get_skb_set_tunnel_proto(enum bpf_func_id which)
 		 * that is holding verifier mutex.
 		 */
 		md_dst = metadata_dst_alloc_percpu(IP_TUNNEL_OPTS_MAX,
+						   METADATA_IP_TUNNEL,
 						   GFP_KERNEL);
 		if (!md_dst)
 			return NULL;
@@ -2736,6 +2763,8 @@ tc_cls_act_func_proto(enum bpf_func_id func_id)
 		return &bpf_get_hash_recalc_proto;
 	case BPF_FUNC_set_hash_invalid:
 		return &bpf_set_hash_invalid_proto;
+	case BPF_FUNC_set_hash:
+		return &bpf_set_hash_proto;
 	case BPF_FUNC_perf_event_output:
 		return &bpf_skb_event_output_proto;
 	case BPF_FUNC_get_smp_processor_id:
@@ -2764,12 +2793,6 @@ xdp_func_proto(enum bpf_func_id func_id)
 	default:
 		return bpf_base_func_proto(func_id);
 	}
-}
-
-static const struct bpf_func_proto *
-cg_skb_func_proto(enum bpf_func_id func_id)
-{
-	return sk_filter_func_proto(func_id);
 }
 
 static const struct bpf_func_proto *
@@ -2834,7 +2857,37 @@ lwt_xmit_func_proto(enum bpf_func_id func_id)
 	}
 }
 
-static bool __is_valid_access(int off, int size)
+static void __set_access_aux_info(int off, struct bpf_insn_access_aux *info)
+{
+	info->ctx_field_size = 4;
+	switch (off) {
+	case offsetof(struct __sk_buff, pkt_type) ...
+	     offsetof(struct __sk_buff, pkt_type) + sizeof(__u32) - 1:
+	case offsetof(struct __sk_buff, vlan_present) ...
+	     offsetof(struct __sk_buff, vlan_present) + sizeof(__u32) - 1:
+		info->converted_op_size = 1;
+		break;
+	case offsetof(struct __sk_buff, queue_mapping) ...
+	     offsetof(struct __sk_buff, queue_mapping) + sizeof(__u32) - 1:
+	case offsetof(struct __sk_buff, protocol) ...
+	     offsetof(struct __sk_buff, protocol) + sizeof(__u32) - 1:
+	case offsetof(struct __sk_buff, vlan_tci) ...
+	     offsetof(struct __sk_buff, vlan_tci) + sizeof(__u32) - 1:
+	case offsetof(struct __sk_buff, vlan_proto) ...
+	     offsetof(struct __sk_buff, vlan_proto) + sizeof(__u32) - 1:
+	case offsetof(struct __sk_buff, tc_index) ...
+	     offsetof(struct __sk_buff, tc_index) + sizeof(__u32) - 1:
+	case offsetof(struct __sk_buff, tc_classid) ...
+	     offsetof(struct __sk_buff, tc_classid) + sizeof(__u32) - 1:
+		info->converted_op_size = 2;
+		break;
+	default:
+		info->converted_op_size = 4;
+	}
+}
+
+static bool __is_valid_access(int off, int size, enum bpf_access_type type,
+			      struct bpf_insn_access_aux *info)
 {
 	if (off < 0 || off >= sizeof(struct __sk_buff))
 		return false;
@@ -2850,9 +2903,35 @@ static bool __is_valid_access(int off, int size)
 		    offsetof(struct __sk_buff, cb[4]) + sizeof(__u32))
 			return false;
 		break;
-	default:
+	case offsetof(struct __sk_buff, data) ...
+	     offsetof(struct __sk_buff, data) + sizeof(__u32) - 1:
 		if (size != sizeof(__u32))
 			return false;
+		info->reg_type = PTR_TO_PACKET;
+		break;
+	case offsetof(struct __sk_buff, data_end) ...
+	     offsetof(struct __sk_buff, data_end) + sizeof(__u32) - 1:
+		if (size != sizeof(__u32))
+			return false;
+		info->reg_type = PTR_TO_PACKET_END;
+		break;
+	default:
+		if (type == BPF_WRITE) {
+			if (size != sizeof(__u32))
+				return false;
+		} else {
+			int allowed;
+
+			/* permit narrower load for not cb/data/data_end fields */
+#ifdef __LITTLE_ENDIAN
+			allowed = (off & 0x3) == 0 && size <= 4 && (size & (size - 1)) == 0;
+#else
+			allowed = (off & 0x3) + size == 4 && size <= 4 && (size & (size - 1)) == 0;
+#endif
+			if (!allowed)
+				return false;
+			__set_access_aux_info(off, info);
+		}
 	}
 
 	return true;
@@ -2860,12 +2939,15 @@ static bool __is_valid_access(int off, int size)
 
 static bool sk_filter_is_valid_access(int off, int size,
 				      enum bpf_access_type type,
-				      enum bpf_reg_type *reg_type)
+				      struct bpf_insn_access_aux *info)
 {
 	switch (off) {
-	case offsetof(struct __sk_buff, tc_classid):
-	case offsetof(struct __sk_buff, data):
-	case offsetof(struct __sk_buff, data_end):
+	case offsetof(struct __sk_buff, tc_classid) ...
+	     offsetof(struct __sk_buff, tc_classid) + sizeof(__u32) - 1:
+	case offsetof(struct __sk_buff, data) ...
+	     offsetof(struct __sk_buff, data) + sizeof(__u32) - 1:
+	case offsetof(struct __sk_buff, data_end) ...
+	     offsetof(struct __sk_buff, data_end) + sizeof(__u32) - 1:
 		return false;
 	}
 
@@ -2879,15 +2961,16 @@ static bool sk_filter_is_valid_access(int off, int size,
 		}
 	}
 
-	return __is_valid_access(off, size);
+	return __is_valid_access(off, size, type, info);
 }
 
 static bool lwt_is_valid_access(int off, int size,
 				enum bpf_access_type type,
-				enum bpf_reg_type *reg_type)
+				struct bpf_insn_access_aux *info)
 {
 	switch (off) {
-	case offsetof(struct __sk_buff, tc_classid):
+	case offsetof(struct __sk_buff, tc_classid) ...
+	     offsetof(struct __sk_buff, tc_classid) + sizeof(__u32) - 1:
 		return false;
 	}
 
@@ -2903,21 +2986,12 @@ static bool lwt_is_valid_access(int off, int size,
 		}
 	}
 
-	switch (off) {
-	case offsetof(struct __sk_buff, data):
-		*reg_type = PTR_TO_PACKET;
-		break;
-	case offsetof(struct __sk_buff, data_end):
-		*reg_type = PTR_TO_PACKET_END;
-		break;
-	}
-
-	return __is_valid_access(off, size);
+	return __is_valid_access(off, size, type, info);
 }
 
 static bool sock_filter_is_valid_access(int off, int size,
 					enum bpf_access_type type,
-					enum bpf_reg_type *reg_type)
+					struct bpf_insn_access_aux *info)
 {
 	if (type == BPF_WRITE) {
 		switch (off) {
@@ -2980,7 +3054,7 @@ static int tc_cls_act_prologue(struct bpf_insn *insn_buf, bool direct_write,
 
 static bool tc_cls_act_is_valid_access(int off, int size,
 				       enum bpf_access_type type,
-				       enum bpf_reg_type *reg_type)
+				       struct bpf_insn_access_aux *info)
 {
 	if (type == BPF_WRITE) {
 		switch (off) {
@@ -2996,16 +3070,7 @@ static bool tc_cls_act_is_valid_access(int off, int size,
 		}
 	}
 
-	switch (off) {
-	case offsetof(struct __sk_buff, data):
-		*reg_type = PTR_TO_PACKET;
-		break;
-	case offsetof(struct __sk_buff, data_end):
-		*reg_type = PTR_TO_PACKET_END;
-		break;
-	}
-
-	return __is_valid_access(off, size);
+	return __is_valid_access(off, size, type, info);
 }
 
 static bool __is_valid_xdp_access(int off, int size)
@@ -3022,17 +3087,17 @@ static bool __is_valid_xdp_access(int off, int size)
 
 static bool xdp_is_valid_access(int off, int size,
 				enum bpf_access_type type,
-				enum bpf_reg_type *reg_type)
+				struct bpf_insn_access_aux *info)
 {
 	if (type == BPF_WRITE)
 		return false;
 
 	switch (off) {
 	case offsetof(struct xdp_md, data):
-		*reg_type = PTR_TO_PACKET;
+		info->reg_type = PTR_TO_PACKET;
 		break;
 	case offsetof(struct xdp_md, data_end):
-		*reg_type = PTR_TO_PACKET_END;
+		info->reg_type = PTR_TO_PACKET_END;
 		break;
 	}
 
@@ -3336,7 +3401,7 @@ const struct bpf_verifier_ops xdp_prog_ops = {
 };
 
 const struct bpf_verifier_ops cg_skb_prog_ops = {
-	.get_func_proto		= cg_skb_func_proto,
+	.get_func_proto		= sk_filter_func_proto,
 	.is_valid_access	= sk_filter_is_valid_access,
 	.convert_ctx_access	= bpf_convert_ctx_access,
 	.test_run		= bpf_prog_test_run_skb,

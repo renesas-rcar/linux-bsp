@@ -160,6 +160,17 @@ clean:
 	$(MAKE) -C ../../ M=$(CURDIR) clean
 	@rm -f *~
 
+$(obj)/syscall_nrs.s:	$(src)/syscall_nrs.c
+	$(call if_changed_dep,cc_s_c)
+
+$(obj)/syscall_nrs.h:	$(obj)/syscall_nrs.s FORCE
+	$(call filechk,offsets,__SYSCALL_NRS_H__)
+
+clean-files += syscall_nrs.h
+
+FORCE:
+
+
 # Verify LLVM compiler tools are available and bpf target is supported by llc
 .PHONY: verify_cmds verify_target_bpf $(CLANG) $(LLC)
 
@@ -180,11 +191,13 @@ verify_target_bpf: verify_cmds
 
 $(src)/*.c: verify_target_bpf
 
+$(obj)/tracex5_kern.o: $(obj)/syscall_nrs.h
+
 # asm/sysreg.h - inline assembly used by it is incompatible with llvm.
 # But, there is no easy way to fix it, so just exclude it since it is
 # useless for BPF samples.
 $(obj)/%.o: $(src)/%.c
-	$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(EXTRA_CFLAGS) \
+	$(CLANG) $(NOSTDINC_FLAGS) $(LINUXINCLUDE) $(EXTRA_CFLAGS) -I$(obj) \
 		-D__KERNEL__ -D__ASM_SYSREG_H -Wno-unused-value -Wno-pointer-sign \
 		-Wno-compare-distinct-pointer-types \
 		-Wno-gnu-variable-sized-type-not-at-end \
