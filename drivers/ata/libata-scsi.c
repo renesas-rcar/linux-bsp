@@ -25,7 +25,7 @@
  *
  *
  *  libata documentation is available via 'make {ps|pdf}docs',
- *  as Documentation/DocBook/libata.*
+ *  as Documentation/driver-api/libata.rst
  *
  *  Hardware documentation available from
  *  - http://www.t10.org/
@@ -903,32 +903,32 @@ static void ata_dump_status(unsigned id, struct ata_taskfile *tf)
 {
 	u8 stat = tf->command, err = tf->feature;
 
-	printk(KERN_WARNING "ata%u: status=0x%02x { ", id, stat);
+	pr_warn("ata%u: status=0x%02x { ", id, stat);
 	if (stat & ATA_BUSY) {
-		printk("Busy }\n");	/* Data is not valid in this case */
+		pr_cont("Busy }\n");	/* Data is not valid in this case */
 	} else {
-		if (stat & ATA_DRDY)	printk("DriveReady ");
-		if (stat & ATA_DF)	printk("DeviceFault ");
-		if (stat & ATA_DSC)	printk("SeekComplete ");
-		if (stat & ATA_DRQ)	printk("DataRequest ");
-		if (stat & ATA_CORR)	printk("CorrectedError ");
-		if (stat & ATA_SENSE)	printk("Sense ");
-		if (stat & ATA_ERR)	printk("Error ");
-		printk("}\n");
+		if (stat & ATA_DRDY)	pr_cont("DriveReady ");
+		if (stat & ATA_DF)	pr_cont("DeviceFault ");
+		if (stat & ATA_DSC)	pr_cont("SeekComplete ");
+		if (stat & ATA_DRQ)	pr_cont("DataRequest ");
+		if (stat & ATA_CORR)	pr_cont("CorrectedError ");
+		if (stat & ATA_SENSE)	pr_cont("Sense ");
+		if (stat & ATA_ERR)	pr_cont("Error ");
+		pr_cont("}\n");
 
 		if (err) {
-			printk(KERN_WARNING "ata%u: error=0x%02x { ", id, err);
-			if (err & ATA_ABORTED)	printk("DriveStatusError ");
+			pr_warn("ata%u: error=0x%02x { ", id, err);
+			if (err & ATA_ABORTED)	pr_cont("DriveStatusError ");
 			if (err & ATA_ICRC) {
 				if (err & ATA_ABORTED)
-						printk("BadCRC ");
-				else		printk("Sector ");
+						pr_cont("BadCRC ");
+				else		pr_cont("Sector ");
 			}
-			if (err & ATA_UNC)	printk("UncorrectableError ");
-			if (err & ATA_IDNF)	printk("SectorIdNotFound ");
-			if (err & ATA_TRK0NF)	printk("TrackZeroNotFound ");
-			if (err & ATA_AMNF)	printk("AddrMarkNotFound ");
-			printk("}\n");
+			if (err & ATA_UNC)	pr_cont("UncorrectableError ");
+			if (err & ATA_IDNF)	pr_cont("SectorIdNotFound ");
+			if (err & ATA_TRK0NF)	pr_cont("TrackZeroNotFound ");
+			if (err & ATA_AMNF)	pr_cont("AddrMarkNotFound ");
+			pr_cont("}\n");
 		}
 	}
 }
@@ -1059,8 +1059,7 @@ static void ata_to_sense_error(unsigned id, u8 drv_stat, u8 drv_err, u8 *sk,
 
  translate_done:
 	if (verbose)
-		printk(KERN_ERR "ata%u: translated ATA stat/err 0x%02x/%02x "
-		       "to SCSI SK/ASC/ASCQ 0x%x/%02x/%02x\n",
+		pr_err("ata%u: translated ATA stat/err 0x%02x/%02x to SCSI SK/ASC/ASCQ 0x%x/%02x/%02x\n",
 		       id, drv_stat, drv_err, *sk, *asc, *ascq);
 	return;
 }
@@ -3398,9 +3397,10 @@ static size_t ata_format_dsm_trim_descr(struct scsi_cmnd *cmd, u32 trmax,
  *
  * Translate a SCSI WRITE SAME command to be either a DSM TRIM command or
  * an SCT Write Same command.
- * Based on WRITE SAME has the UNMAP flag
- *   When set translate to DSM TRIM
- *   When clear translate to SCT Write Same
+ * Based on WRITE SAME has the UNMAP flag:
+ *
+ *   - When set translate to DSM TRIM
+ *   - When clear translate to SCT Write Same
  */
 static unsigned int ata_scsi_write_same_xlat(struct ata_queued_cmd *qc)
 {
@@ -3561,6 +3561,11 @@ static unsigned int ata_scsiop_maint_in(struct ata_scsi_args *args, u8 *rbuf)
 	case ZBC_OUT:
 		if (ata_id_zoned_cap(dev->id) ||
 		    dev->class == ATA_DEV_ZAC)
+			supported = 3;
+		break;
+	case SECURITY_PROTOCOL_IN:
+	case SECURITY_PROTOCOL_OUT:
+		if (dev->flags & ATA_DFLAG_TRUSTED)
 			supported = 3;
 		break;
 	default:
@@ -3909,7 +3914,7 @@ static int ata_mselect_control(struct ata_queued_cmd *qc,
 }
 
 /**
- *	ata_scsiop_mode_select - Simulate MODE SELECT 6, 10 commands
+ *	ata_scsi_mode_select_xlat - Simulate MODE SELECT 6, 10 commands
  *	@qc: Storage for translated ATA taskfile
  *
  *	Converts a MODE SELECT command to an ATA SET FEATURES taskfile.
@@ -4067,6 +4072,71 @@ static unsigned int ata_scsi_mode_select_xlat(struct ata_queued_cmd *qc)
 	return 1;
 }
 
+static u8 ata_scsi_trusted_op(u32 len, bool send, bool dma)
+{
+	if (len == 0)
+		return ATA_CMD_TRUSTED_NONDATA;
+	else if (send)
+		return dma ? ATA_CMD_TRUSTED_SND_DMA : ATA_CMD_TRUSTED_SND;
+	else
+		return dma ? ATA_CMD_TRUSTED_RCV_DMA : ATA_CMD_TRUSTED_RCV;
+}
+
+static unsigned int ata_scsi_security_inout_xlat(struct ata_queued_cmd *qc)
+{
+	struct scsi_cmnd *scmd = qc->scsicmd;
+	const u8 *cdb = scmd->cmnd;
+	struct ata_taskfile *tf = &qc->tf;
+	u8 secp = cdb[1];
+	bool send = (cdb[0] == SECURITY_PROTOCOL_OUT);
+	u16 spsp = get_unaligned_be16(&cdb[2]);
+	u32 len = get_unaligned_be32(&cdb[6]);
+	bool dma = !(qc->dev->flags & ATA_DFLAG_PIO);
+
+	/*
+	 * We don't support the ATA "security" protocol.
+	 */
+	if (secp == 0xef) {
+		ata_scsi_set_invalid_field(qc->dev, scmd, 1, 0);
+		return 1;
+	}
+
+	if (cdb[4] & 7) { /* INC_512 */
+		if (len > 0xffff) {
+			ata_scsi_set_invalid_field(qc->dev, scmd, 6, 0);
+			return 1;
+		}
+	} else {
+		if (len > 0x01fffe00) {
+			ata_scsi_set_invalid_field(qc->dev, scmd, 6, 0);
+			return 1;
+		}
+
+		/* convert to the sector-based ATA addressing */
+		len = (len + 511) / 512;
+	}
+
+	tf->protocol = dma ? ATA_PROT_DMA : ATA_PROT_PIO;
+	tf->flags |= ATA_TFLAG_DEVICE | ATA_TFLAG_ISADDR | ATA_TFLAG_LBA;
+	if (send)
+		tf->flags |= ATA_TFLAG_WRITE;
+	tf->command = ata_scsi_trusted_op(len, send, dma);
+	tf->feature = secp;
+	tf->lbam = spsp & 0xff;
+	tf->lbah = spsp >> 8;
+
+	if (len) {
+		tf->nsect = len & 0xff;
+		tf->lbal = len >> 8;
+	} else {
+		if (!send)
+			tf->lbah = (1 << 7);
+	}
+
+	ata_qc_set_pc_nbytes(qc);
+	return 0;
+}
+
 /**
  *	ata_get_xlat_func - check if SCSI to ATA translation is possible
  *	@dev: ATA device
@@ -4117,6 +4187,12 @@ static inline ata_xlat_func_t ata_get_xlat_func(struct ata_device *dev, u8 cmd)
 
 	case ZBC_OUT:
 		return ata_scsi_zbc_out_xlat;
+
+	case SECURITY_PROTOCOL_IN:
+	case SECURITY_PROTOCOL_OUT:
+		if (!(dev->flags & ATA_DFLAG_TRUSTED))
+			break;
+		return ata_scsi_security_inout_xlat;
 
 	case START_STOP:
 		return ata_scsi_start_stop_xlat;
