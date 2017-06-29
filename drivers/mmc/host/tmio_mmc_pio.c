@@ -160,6 +160,13 @@ static void pr_debug_status(u32 status)
 static void tmio_mmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
+	unsigned int timeout = 1000;
+	unsigned long flags = 0;
+
+	if (host->sequencer_enabled)
+		spin_lock_irqsave(&host->lock, flags);
+	else
+		__acquire(&host->lock);
 
 	if (enable && !host->sdio_irq_enabled) {
 		u16 sdio_status;
@@ -177,15 +184,53 @@ static void tmio_mmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 			sdio_status |= TMIO_SDIO_SETBITS_MASK;
 		sd_ctrl_write16(host, CTL_SDIO_STATUS, sdio_status);
 
-		sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK, host->sdio_irq_mask);
+		if (host->sequencer_enabled) {
+			while (timeout) {
+				sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK,
+						host->sdio_irq_mask);
+				if (sd_ctrl_read16(host, CTL_SDIO_IRQ_MASK) ==
+				    host->sdio_irq_mask)
+					break;
+
+				udelay(1);
+				timeout--;
+			}
+			if (!timeout)
+				dev_warn(&host->pdev->dev,
+					 "failed to write CTL_SDIO_IRQ_MASK\n");
+		} else {
+			sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK,
+					host->sdio_irq_mask);
+		}
 	} else if (!enable && host->sdio_irq_enabled) {
 		host->sdio_irq_mask = TMIO_SDIO_MASK_ALL;
-		sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK, host->sdio_irq_mask);
+		if (host->sequencer_enabled) {
+			while (timeout) {
+				sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK,
+						host->sdio_irq_mask);
+				if (sd_ctrl_read16(host, CTL_SDIO_IRQ_MASK) ==
+				    host->sdio_irq_mask)
+					break;
 
+				udelay(1);
+				timeout--;
+			}
+			if (!timeout)
+				dev_warn(&host->pdev->dev,
+					 "failed to write CTL_SDIO_IRQ_MASK\n");
+		} else {
+			sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK,
+					host->sdio_irq_mask);
+		}
 		host->sdio_irq_enabled = false;
 		pm_runtime_mark_last_busy(mmc_dev(mmc));
 		pm_runtime_put_autosuspend(mmc_dev(mmc));
 	}
+
+	if (host->sequencer_enabled)
+		spin_unlock_irqrestore(&host->lock, flags);
+	else
+		__release(&host->lock);
 }
 
 static void tmio_mmc_clk_start(struct tmio_mmc_host *host)
@@ -893,6 +938,11 @@ static void __tmio_mmc_sdio_irq(struct tmio_mmc_host *host)
 	if (!(pdata->flags & TMIO_MMC_SDIO_IRQ))
 		return;
 
+	if (host->sequencer_enabled)
+		spin_lock(&host->lock);
+	else
+		__acquire(&host->lock);
+
 	status = sd_ctrl_read16(host, CTL_SDIO_STATUS);
 	ireg = status & TMIO_SDIO_MASK_ALL & ~host->sdio_irq_mask;
 
@@ -901,6 +951,11 @@ static void __tmio_mmc_sdio_irq(struct tmio_mmc_host *host)
 		sdio_status |= TMIO_SDIO_SETBITS_MASK;
 
 	sd_ctrl_write16(host, CTL_SDIO_STATUS, sdio_status);
+
+	if (host->sequencer_enabled)
+		spin_unlock(&host->lock);
+	else
+		__release(&host->lock);
 
 	if (mmc->caps & MMC_CAP_SDIO_IRQ && ireg & TMIO_SDIO_STAT_IOIRQ)
 		mmc_signal_sdio_irq(mmc);
