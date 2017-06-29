@@ -412,7 +412,7 @@ static int rcar_du_pm_suspend(struct device *dev)
 	}
 #endif
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
-		if (rcdu->crtcs[i].started) {
+		if (rcdu->crtcs[i].initialized) {
 			rcar_du_crtc_suspend(&rcdu->crtcs[i]);
 			clk_set_rate(rcdu->crtcs[i].extclock, 0);
 			rcdu->crtcs[i].group->used_crtcs = 0;
@@ -453,7 +453,7 @@ static int rcar_du_pm_resume(struct device *dev)
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
 		struct drm_crtc *crtc = &rcdu->crtcs[i].crtc;
 
-		if (rcdu->crtcs[i].started) {
+		if (rcdu->crtcs[i].initialized) {
 			rcar_du_group_restart(rcdu->crtcs[i].group,
 						&rcdu->crtcs[i]);
 			rcar_du_async_commit(rcdu->ddev, crtc);
@@ -495,7 +495,7 @@ static void rcar_du_remove_suspend(struct rcar_du_device *rcdu)
 	}
 #endif
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
-		if (rcdu->crtcs[i].started)
+		if (rcdu->crtcs[i].initialized)
 			rcar_du_crtc_remove_suspend(&rcdu->crtcs[i]);
 	}
 }
@@ -509,7 +509,7 @@ static int rcar_du_remove(struct platform_device *pdev)
 	ddev->irq_enabled = 0;
 
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
-		if (rcdu->crtcs[i].started)
+		if (rcdu->crtcs[i].initialized)
 			drm_crtc_vblank_off(&rcdu->crtcs[i].crtc);
 	}
 
