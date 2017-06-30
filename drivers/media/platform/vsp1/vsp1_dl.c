@@ -775,7 +775,7 @@ void vsp1_dlm_irq_display_start(struct vsp1_dl_manager *dlm)
  * with the frame end interrupt. The function always returns true in header mode
  * as display list processing is then not continuous and races never occur.
  */
-bool vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm)
+bool vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm, bool interlaced)
 {
 	struct vsp1_device *vsp1 = dlm->vsp1;
 	bool completed = false;
@@ -798,6 +798,11 @@ bool vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm)
 		 * we'll thus skip one frame and retry.
 		 */
 		if ((vsp1_read(vsp1, VI6_CMD(dlm->index)) & VI6_CMD_UPDHDR))
+			goto done;
+
+		if (interlaced && ((vsp1_read(vsp1, VI6_STATUS) &
+			VI6_STATUS_FLD_STD(dlm->index)) !=
+			VI6_STATUS_FLD_STD(dlm->index)))
 			goto done;
 
 		if (dlm->queued) {
