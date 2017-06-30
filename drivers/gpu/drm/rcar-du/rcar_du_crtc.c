@@ -875,8 +875,8 @@ void rcar_du_crtc_enable_vblank(struct rcar_du_crtc *rcrtc, bool enable)
 {
 	if (enable) {
 		rcar_du_crtc_write(rcrtc, DSRCR, DSRCR_VBCL);
-		rcar_du_crtc_set(rcrtc, DIER, DIER_VBE);
+		rcar_du_crtc_set(rcrtc, DIER, DIER_FRE);
 	} else {
-		rcar_du_crtc_clr(rcrtc, DIER, DIER_VBE);
+		rcar_du_crtc_clr(rcrtc, DIER, DIER_FRE);
 	}
 }
