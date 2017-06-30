@@ -35,19 +35,20 @@
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
  */
-
 void vsp1_drm_display_start(struct vsp1_device *vsp1, unsigned int lif_index)
 {
 	vsp1_dlm_irq_display_start(vsp1->drm->pipe[lif_index].output->dlm);
 }
 
 static void vsp1_du_pipeline_frame_end(struct vsp1_pipeline *pipe,
-				       unsigned int lif_index)
+				       unsigned int lif_index,
+				       bool completed)
 {
 	struct vsp1_drm *drm = to_vsp1_drm(pipe, lif_index);
 
 	if (drm->du_complete[lif_index])
-		drm->du_complete[lif_index](drm->du_private[lif_index]);
+		drm->du_complete[lif_index](drm->du_private[lif_index],
+					    completed);
 }
 
 /* -----------------------------------------------------------------------------
