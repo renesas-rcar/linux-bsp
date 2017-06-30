@@ -326,8 +326,10 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe)
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
 			     unsigned int lif_index)
 {
+	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
 	unsigned long flags;
-	bool completed;
+	bool completed, interlaced;
+	u32 rpf_base;
 
 	if (pipe == NULL)
 		return;
@@ -339,12 +341,19 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
 	}
 	spin_unlock_irqrestore(&pipe->irqlock, flags);
 
+	if (vsp1_gen3_vspdl_check(vsp1) && (lif_index == 1))
+		rpf_base = vsp1->info->rpf_count - vsp1->num_brs_inputs;
+	else
+		rpf_base = 0;
+
+	interlaced = pipe->inputs[rpf_base]->interlaced;
+
 	/*
 	 * If the DL commit raced with the frame end interrupt, the commit ends
 	 * up being postponed by one frame. @completed represents whether the
 	 * active frame was finished or postponed.
 	 */
-	completed = vsp1_dlm_irq_frame_end(pipe->output->dlm);
+	completed = vsp1_dlm_irq_frame_end(pipe->output->dlm, interlaced);
 
 	if (pipe->hgo)
 		vsp1_hgo_frame_end(pipe->hgo);
