@@ -396,8 +396,6 @@
 	backlight0-gpios = <&gpio2 31 GPIO_ACTIVE_HIGH>;/* LVDS0 */
 	backlight1-gpios = <&gpio4 0 GPIO_ACTIVE_HIGH>;	/* LVDS1 */
 
-	mode = "dual-link";
-
 	ports {
 		port@0 {
 			endpoint {
