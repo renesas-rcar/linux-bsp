@@ -289,7 +289,7 @@ static const struct rcar_du_device_info rcar_du_r8a77995_info = {
 		/* R8A77995 has two LVDS output and one RGB output.
 		 */
 		[RCAR_DU_OUTPUT_DPAD0] = {
-			.possible_crtcs = BIT(0) | BIT(1),
+			.possible_crtcs = BIT(1),
 			.encoder_type = DRM_MODE_ENCODER_NONE,
 			.port = 0,
 		},
