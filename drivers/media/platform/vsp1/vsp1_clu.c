@@ -23,6 +23,8 @@
 #define CLU_MIN_SIZE				4U
 #define CLU_MAX_SIZE				8190U
 
+#define CLU_SIZE				(17 * 17 * 17)
+
 /* -----------------------------------------------------------------------------
  * Device Access
  */
@@ -47,19 +49,19 @@ static int clu_set_table(struct vsp1_clu *clu, struct v4l2_ctrl *ctrl)
 	struct vsp1_dl_body *dlb;
 	unsigned int i;
 
-	dlb = vsp1_dl_fragment_alloc(clu->entity.vsp1, 1 + 17 * 17 * 17);
+	dlb = vsp1_dl_fragment_get(clu->pool);
 	if (!dlb)
 		return -ENOMEM;
 
 	vsp1_dl_fragment_write(dlb, VI6_CLU_ADDR, 0);
-	for (i = 0; i < 17 * 17 * 17; ++i)
+	for (i = 0; i < CLU_SIZE; ++i)
 		vsp1_dl_fragment_write(dlb, VI6_CLU_DATA, ctrl->p_new.p_u32[i]);
 
 	spin_lock_irq(&clu->lock);
 	swap(clu->clu, dlb);
 	spin_unlock_irq(&clu->lock);
 
-	vsp1_dl_fragment_free(dlb);
+	vsp1_dl_fragment_put(dlb);
 	return 0;
 }
 
@@ -261,8 +263,16 @@ static void clu_configure(struct vsp1_entity *entity,
 	}
 }
 
+static void clu_destroy(struct vsp1_entity *entity)
+{
+	struct vsp1_clu *clu = to_clu(&entity->subdev);
+
+	vsp1_dl_fragment_pool_free(clu->pool);
+}
+
 static const struct vsp1_entity_operations clu_entity_ops = {
 	.configure = clu_configure,
+	.destroy = clu_destroy,
 };
 
 /* -----------------------------------------------------------------------------
@@ -287,6 +297,12 @@ struct vsp1_clu *vsp1_clu_create(struct vsp1_device *vsp1)
 			       MEDIA_ENT_F_PROC_VIDEO_LUT);
 	if (ret < 0)
 		return ERR_PTR(ret);
+
+	/* Allocate a fragment pool */
+	clu->pool = vsp1_dl_fragment_pool_alloc(clu->entity.vsp1, 2,
+						CLU_SIZE + 1, 0);
+	if (!clu->pool)
+		return ERR_PTR(-ENOMEM);
 
 	/* Initialize the control handler. */
 	v4l2_ctrl_handler_init(&clu->ctrls, 2);

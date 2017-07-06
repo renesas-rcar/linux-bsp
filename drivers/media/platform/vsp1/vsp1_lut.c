@@ -23,6 +23,8 @@
 #define LUT_MIN_SIZE				4U
 #define LUT_MAX_SIZE				8190U
 
+#define LUT_SIZE				256
+
 /* -----------------------------------------------------------------------------
  * Device Access
  */
@@ -44,11 +46,11 @@ static int lut_set_table(struct vsp1_lut *lut, struct v4l2_ctrl *ctrl)
 	struct vsp1_dl_body *dlb;
 	unsigned int i;
 
-	dlb = vsp1_dl_fragment_alloc(lut->entity.vsp1, 256);
+	dlb = vsp1_dl_fragment_get(lut->pool);
 	if (!dlb)
 		return -ENOMEM;
 
-	for (i = 0; i < 256; ++i)
+	for (i = 0; i < LUT_SIZE; ++i)
 		vsp1_dl_fragment_write(dlb, VI6_LUT_TABLE + 4 * i,
 				       ctrl->p_new.p_u32[i]);
 
@@ -56,7 +58,7 @@ static int lut_set_table(struct vsp1_lut *lut, struct v4l2_ctrl *ctrl)
 	swap(lut->lut, dlb);
 	spin_unlock_irq(&lut->lock);
 
-	vsp1_dl_fragment_free(dlb);
+	vsp1_dl_fragment_put(dlb);
 	return 0;
 }
 
@@ -87,7 +89,7 @@ static const struct v4l2_ctrl_config lut_table_control = {
 	.max = 0x00ffffff,
 	.step = 1,
 	.def = 0,
-	.dims = { 256},
+	.dims = { LUT_SIZE },
 };
 
 /* -----------------------------------------------------------------------------
@@ -217,8 +219,16 @@ static void lut_configure(struct vsp1_entity *entity,
 	}
 }
 
+static void lut_destroy(struct vsp1_entity *entity)
+{
+	struct vsp1_lut *lut = to_lut(&entity->subdev);
+
+	vsp1_dl_fragment_pool_free(lut->pool);
+}
+
 static const struct vsp1_entity_operations lut_entity_ops = {
 	.configure = lut_configure,
+	.destroy = lut_destroy,
 };
 
 /* -----------------------------------------------------------------------------
@@ -243,6 +253,11 @@ struct vsp1_lut *vsp1_lut_create(struct vsp1_device *vsp1)
 			       MEDIA_ENT_F_PROC_VIDEO_LUT);
 	if (ret < 0)
 		return ERR_PTR(ret);
+
+	/* Allocate a fragment pool */
+	lut->pool = vsp1_dl_fragment_pool_alloc(vsp1, 2, LUT_SIZE, 0);
+	if (!lut->pool)
+		return ERR_PTR(-ENOMEM);
 
 	/* Initialize the control handler. */
 	v4l2_ctrl_handler_init(&lut->ctrls, 1);
