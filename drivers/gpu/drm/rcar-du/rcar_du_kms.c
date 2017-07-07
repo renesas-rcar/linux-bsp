@@ -347,7 +347,7 @@ int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
 	crtc_state->state = state;
 	crtc_state->active = true;
 
-	ret = drm_atomic_commit(state);
+	ret = drm_atomic_nonblocking_commit(state);
 	if (ret != 0) {
 		drm_atomic_helper_crtc_destroy_state(crtc, crtc_state);
 		return ret;
