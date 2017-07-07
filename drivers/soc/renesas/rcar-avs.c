@@ -60,9 +60,9 @@ static int change_default_opp_pattern(unsigned int opp_pattern_num)
 }
 
 /* Get AVS value */
-#define VOLCOND_MASK_0_3  0x0f	/* VOLCOND[3:0] bits of KSEN_ADJCNTS register */
+#define VOLCOND_MASK  0x1ff	/* VOLCOND[8:0] bits of ADVADJP register */
 
-#define AVS_TABLE_NUM	7
+#define AVS_MAX_VALUE	7
 
 static const struct of_device_id rcar_avs_matches[] = {
 #if defined(CONFIG_ARCH_R8A7795) || defined(CONFIG_ARCH_R8A7796)
@@ -73,30 +73,37 @@ static const struct of_device_id rcar_avs_matches[] = {
 
 static int __init rcar_avs_init(void)
 {
-	u32 avs_val;
+	u32 avs_val, volcond_val;
 	struct device_node *np;
-	void __iomem *ksen_adjcnts;
-	int ret = 0;
+	void __iomem *advadjp;
+	int ret = 0, i;
 
-	/* Map and get KSEN_ADJCNTS register */
+	/* Map and get ADVADJP register */
 	np = of_find_matching_node(NULL, rcar_avs_matches);
-	if (!np)
+	if (!np) {
+		pr_warn("%s: cannot find compatible dts node\n", __func__);
 		return -ENODEV;
+	}
 
-	ksen_adjcnts = of_iomap(np, 0); /* KSEN_ADJCNTS register from dts */
-	if (!ksen_adjcnts) {
+	advadjp = of_iomap(np, 0); /* ADVADJP register from dts */
+	if (!advadjp) {
 		pr_warn("%s: Cannot map regs\n", np->full_name);
 		return -ENOMEM;
 	}
 
 	/* Get and check avs value */
-	avs_val = ioread32(ksen_adjcnts);
+	avs_val = 0; /* default avs table value */
 
-	avs_val &= VOLCOND_MASK_0_3;
-	if (avs_val >= AVS_TABLE_NUM) { /* if avs_val is out of range [0-6]*/
-		avs_val = 0;
-		pr_debug("rcar-cpufreq: hw get invalid avs value, use avs_tb0\n");
+	volcond_val = ioread32(advadjp);
+	volcond_val &= VOLCOND_MASK;
+
+	for (i = 0; i < AVS_MAX_VALUE; i++) {
+		if (volcond_val == BIT(i)) {
+			avs_val = i + 1; /* found AVS value */
+			break;
+		}
 	}
+
 	pr_info("rcar-cpufreq: use avs value: %d\n", avs_val);
 
 	if (IS_ENABLED(CONFIG_POWER_AVS)) {
