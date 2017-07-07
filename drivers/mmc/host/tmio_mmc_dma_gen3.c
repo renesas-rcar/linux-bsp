@@ -54,8 +54,11 @@ void tmio_mmc_enable_dma(struct tmio_mmc_host *host, bool enable)
 		tmio_dm_write(host, DM_CM_INFO1, INFO1_CLEAR);
 
 	if (host->dma->enable) {
-		host->dma_irq_mask =
-			~(host->dma_tranend1 | DM_CM_INFO1_DTRAEND0);
+		if (host->sequencer_enabled)
+			host->dma_irq_mask = 0xffffffff;
+		else
+			host->dma_irq_mask =
+				~(host->dma_tranend1 | DM_CM_INFO1_DTRAEND0);
 		host->dma->enable(host, enable);
 		tmio_dm_write(host, DM_CM_INFO1_MASK, host->dma_irq_mask);
 	}
