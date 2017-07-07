@@ -71,7 +71,8 @@
 			operating-points-v2 = <&cluster0_opp_tb0>,
 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
-				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
+				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>,
+				<&cluster0_opp_tb7>;
 		};
 
 		a57_1: cpu@1 {
@@ -85,7 +86,8 @@
 			operating-points-v2 = <&cluster0_opp_tb0>,
 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
-				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
+				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>,
+				<&cluster0_opp_tb7>;
 		};
 
 		a57_2: cpu@2 {
@@ -99,7 +101,8 @@
 			operating-points-v2 = <&cluster0_opp_tb0>,
 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
-				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
+				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>,
+				<&cluster0_opp_tb7>;
 		};
 
 		a57_3: cpu@3 {
@@ -113,13 +116,15 @@
 			operating-points-v2 = <&cluster0_opp_tb0>,
 				<&cluster0_opp_tb1>, <&cluster0_opp_tb2>,
 				<&cluster0_opp_tb3>, <&cluster0_opp_tb4>,
-				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>;
+				<&cluster0_opp_tb5>, <&cluster0_opp_tb6>,
+				<&cluster0_opp_tb7>;
 		};
 
 		a53_0: cpu@100 {
 			compatible = "arm,cortex-a53", "arm,armv8";
 			reg = <0x100>;
 			device_type = "cpu";
+			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
 			dynamic-power-coefficient = <277>;
 			clocks =<&cpg CPG_CORE R8A7795_CLK_Z2>;
@@ -130,6 +135,7 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x101>;
 			device_type = "cpu";
+			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
 			operating-points-v2 = <&cluster1_opp_tb0>;
 		};
@@ -138,6 +144,7 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x102>;
 			device_type = "cpu";
+			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
 			operating-points-v2 = <&cluster1_opp_tb0>;
 		};
@@ -146,6 +153,7 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x103>;
 			device_type = "cpu";
+			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
 			operating-points-v2 = <&cluster1_opp_tb0>;
 		};
@@ -419,6 +427,40 @@
 		opp@1700000000 {
 			opp-hz = /bits/ 64 <1700000000>;
 			opp-microvolt = <870000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+	};
+
+	cluster0_opp_tb7: opp_table7 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp@500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <760000>;
+			clock-latency-ns = <300000>;
+		};
+		opp@1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <760000>;
+			clock-latency-ns = <300000>;
+		};
+		opp@1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <760000>;
+			clock-latency-ns = <300000>;
+			opp-suspend;
+		};
+		opp@1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <830000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp@1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <860000>;
 			clock-latency-ns = <300000>;
 			turbo-mode;
 		};
