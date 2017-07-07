@@ -722,8 +722,8 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
 	struct vsp1_rwpf *wpf = pipe->output;
 	const struct vsp1_format_info *fmtinfo;
-	struct vsp1_rwpf *rpf;
 	unsigned long flags;
+	struct vsp1_rwpf *rpf;
 	int i;
 	u32 rpf_num = 0;
 
@@ -744,8 +744,6 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&pipe->irqlock, flags);
-
 	wpf->fmtinfo = fmtinfo;
 	wpf->format.num_planes = fmtinfo->planes;
 	wpf->format.plane_fmt[0].bytesperline = pitch;
@@ -754,9 +752,9 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 	for (i = 0; i < wpf->format.num_planes; ++i)
 		wpf->buf_addr[i] = mem[i];
 
+	spin_lock_irqsave(&pipe->wb_lock, flags);
 	pipe->output->write_back = 3;
-
-	spin_unlock_irqrestore(&pipe->irqlock, flags);
+	spin_unlock_irqrestore(&pipe->wb_lock, flags);
 
 	return 0;
 }

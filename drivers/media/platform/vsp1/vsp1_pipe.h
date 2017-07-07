@@ -90,6 +90,7 @@ struct vsp1_pipeline {
 	struct media_pipeline pipe;
 
 	spinlock_t irqlock;
+	spinlock_t wb_lock;
 	enum vsp1_pipeline_state state;
 	wait_queue_head_t wq;
 
