@@ -327,19 +327,12 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
 			     unsigned int lif_index)
 {
 	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
-	unsigned long flags;
 	bool completed, interlaced;
 	u32 rpf_base;
 
 	if (pipe == NULL)
 		return;
 
-	spin_lock_irqsave(&pipe->irqlock, flags);
-	if (pipe->output->write_back != 0) {
-		pipe->output->write_back--;
-		wake_up_interruptible(&pipe->event_wait);
-	}
-	spin_unlock_irqrestore(&pipe->irqlock, flags);
 
 	if (vsp1_gen3_vspdl_check(vsp1) && (lif_index == 1))
 		rpf_base = vsp1->info->rpf_count - vsp1->num_brs_inputs;
@@ -367,6 +360,11 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
 	 */
 	if (pipe->frame_end)
 		pipe->frame_end(pipe, lif_index, completed);
+
+	if ((completed) && (pipe->output->write_back != 0)) {
+		pipe->output->write_back--;
+		wake_up_interruptible(&pipe->event_wait);
+	}
 
 	pipe->sequence++;
 }
