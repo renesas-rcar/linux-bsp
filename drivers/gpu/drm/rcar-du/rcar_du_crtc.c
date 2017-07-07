@@ -527,7 +527,8 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 * Whether this can be improved needs to be researched.
 	 */
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? DS2PR : DS1PR, 0);
-	drm_crtc_wait_one_vblank(crtc);
+	if (!rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
+		drm_crtc_wait_one_vblank(crtc);
 
 	/* Disable vertical blanking interrupt reporting. We first need to wait
 	 * for page flip completion before stopping the CRTC as userspace
@@ -734,10 +735,14 @@ static irqreturn_t rcar_du_crtc_irq(int irq, void *arg)
 	rcar_du_crtc_write(rcrtc, DSRCR, status & DSRCR_MASK);
 
 	if (status & DSSR_FRM) {
-		drm_crtc_handle_vblank(&rcrtc->crtc);
-
-		if (rcdu->info->gen < 3)
+		/*
+		 * Gen 3 vblank and page flips are handled through the VSP
+		 * completion handler
+		 */
+		if (rcdu->info->gen < 3) {
+			drm_crtc_handle_vblank(&rcrtc->crtc);
 			rcar_du_crtc_finish_page_flip(rcrtc);
+		}
 
 		ret = IRQ_HANDLED;
 	}
@@ -831,6 +836,15 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 
 	/* Start with vertical blanking interrupt reporting disabled. */
 	drm_crtc_vblank_off(crtc);
+
+	/*
+	 * DU with a VSP1 source uses the VSP1 frame completion event to handle
+	 * vblanking and page flipping events.
+	 *
+	 * Do not register the IRQ handler in this instance.
+	 */
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
+		return 0;
 
 	/* Register the interrupt handler. */
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_CRTC_IRQ_CLOCK)) {
