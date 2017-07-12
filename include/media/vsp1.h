@@ -17,6 +17,14 @@
 #include <linux/types.h>
 #include <linux/videodev2.h>
 
+/* write back stat */
+enum {
+	WB_STAT_CATP_DONE = 0,
+	WB_STAT_CATP_START,
+	WB_STAT_CATP_SET,
+	WB_STAT_CATP_REQUEST,
+};
+
 struct device;
 
 int vsp1_du_init(struct device *dev);
@@ -61,7 +69,7 @@ void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt);
 int vsp1_du_if_set_mute(struct device *dev, bool on, unsigned int lif_index);
 int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 		      dma_addr_t mem[2], unsigned int lif_index);
-void vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int lif_index);
+int vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int lif_index);
 
 
 #endif /* __MEDIA_VSP1_H__ */

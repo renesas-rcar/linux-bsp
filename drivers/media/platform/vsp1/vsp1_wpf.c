@@ -14,6 +14,7 @@
 #include <linux/device.h>
 
 #include <media/v4l2-subdev.h>
+#include <media/vsp1.h>
 
 #include "vsp1.h"
 #include "vsp1_dl.h"
@@ -252,7 +253,7 @@ static void wpf_configure(struct vsp1_entity *entity,
 			       (0 << VI6_WPF_SZCLIP_OFST_SHIFT) |
 			       (height << VI6_WPF_SZCLIP_SIZE_SHIFT));
 
-		if (pipe->output->write_back != 2)
+		if (pipe->output->write_back != WB_STAT_CATP_SET)
 			vsp1_dl_list_write(dl,
 				VI6_WPF_WRBCK_CTRL(wpf->entity.index),
 				writeback ? VI6_WPF_WRBCK_CTRL_WBMD : 0);
@@ -312,7 +313,7 @@ static void wpf_configure(struct vsp1_entity *entity,
 	}
 
 	/* Format */
-	if (!pipe->lif || writeback || (wpf->write_back == 2)) {
+	if (!pipe->lif || writeback || (wpf->write_back == WB_STAT_CATP_SET)) {
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
 		const struct vsp1_format_info *fmtinfo = wpf->fmtinfo;
 
@@ -360,7 +361,7 @@ static void wpf_configure(struct vsp1_entity *entity,
 	vsp1_dl_list_write(dl, VI6_DPR_WPF_FPORCH(wpf->entity.index),
 			   VI6_DPR_WPF_FPORCH_FP_WPFN);
 
-	if (pipe->lif && (pipe->output->write_back == 2))
+	if (pipe->lif && (pipe->output->write_back == WB_STAT_CATP_SET))
 		vsp1_dl_list_write(dl, VI6_WPF_WRBCK_CTRL(wpf->entity.index),
 					VI6_WPF_WRBCK_CTRL_WBMD);
 	else

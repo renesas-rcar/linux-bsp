@@ -35,8 +35,28 @@
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
  */
-void vsp1_drm_display_start(struct vsp1_device *vsp1, unsigned int lif_index)
+void vsp1_drm_display_start(struct vsp1_device *vsp1, unsigned int lif_index,
+			    struct vsp1_pipeline *pipe)
 {
+	if (pipe->output->write_back == WB_STAT_CATP_REQUEST) {
+		pipe->output->write_back = WB_STAT_CATP_SET;
+		wake_up_interruptible(&pipe->event_wait);
+	} else if (pipe->completed) {
+		if ((pipe->output->write_back == WB_STAT_CATP_SET) &&
+		    ((vsp1_read(vsp1, VI6_WPF_WRBCK_CTRL(lif_index)) &
+		    VI6_WPF_WRBCK_CTRL_WBMD) == VI6_WPF_WRBCK_CTRL_WBMD)) {
+			pipe->output->write_back = WB_STAT_CATP_START;
+			wake_up_interruptible(&pipe->event_wait);
+		} else if ((pipe->output->write_back == WB_STAT_CATP_START) &&
+			   ((vsp1_read(vsp1, VI6_WPF_WRBCK_CTRL(lif_index)) &
+			   VI6_WPF_WRBCK_CTRL_WBMD) == 0)) {
+			pipe->output->write_back = WB_STAT_CATP_DONE;
+			wake_up_interruptible(&pipe->event_wait);
+		}
+	}
+
+	pipe->completed = false;
+
 	vsp1_dlm_irq_display_start(vsp1->drm->pipe[lif_index].output->dlm);
 }
 
@@ -723,7 +743,6 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 	struct vsp1_rwpf *wpf = pipe->output;
 	const struct vsp1_format_info *fmtinfo;
 	struct vsp1_rwpf *rpf;
-	unsigned long flags;
 	int i;
 	u32 rpf_num = 0;
 
@@ -744,8 +763,6 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&pipe->irqlock, flags);
-
 	wpf->fmtinfo = fmtinfo;
 	wpf->format.num_planes = fmtinfo->planes;
 	wpf->format.plane_fmt[0].bytesperline = pitch;
@@ -754,21 +771,28 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 	for (i = 0; i < wpf->format.num_planes; ++i)
 		wpf->buf_addr[i] = mem[i];
 
-	pipe->output->write_back = 3;
-
-	spin_unlock_irqrestore(&pipe->irqlock, flags);
+	pipe->output->write_back = WB_STAT_CATP_REQUEST;
 
 	return 0;
 }
 EXPORT_SYMBOL_GPL(vsp1_du_setup_wb);
 
-void vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int lif_index)
+int vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int lif_index)
 {
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 	struct vsp1_pipeline *pipe = &vsp1->drm->pipe[lif_index];
+	int tmp_wb;
 
-	wait_event_interruptible(pipe->event_wait,
-				       (pipe->output->write_back == count));
+	wait_event_interruptible_timeout(pipe->event_wait,
+					 ((tmp_wb = pipe->output->write_back)
+					 <= count), HZ / 10);
+
+	if (tmp_wb != count) {
+		dev_dbg(vsp1->dev,
+			"State transition fail, because high load.\n");
+		return -1;
+	}
+	return 0;
 }
 EXPORT_SYMBOL_GPL(vsp1_du_wait_wb);
 
@@ -936,7 +960,7 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 		pipe->lif = &vsp1->lif[i]->entity;
 		pipe->output = vsp1->wpf[i];
 		pipe->output->pipe = pipe;
-		pipe->output->write_back = 0;
+		pipe->output->write_back = WB_STAT_CATP_DONE;
 		pipe->frame_end = vsp1_du_pipeline_frame_end;
 		init_waitqueue_head(&pipe->event_wait);
 	}
