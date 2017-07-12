@@ -12,6 +12,8 @@
 #include <linux/clk/renesas.h>
 #include <linux/delay.h>
 #include <linux/err.h>
+#include <linux/cpu.h>
+#include <linux/cpuidle.h>
 #include <linux/mm.h>
 #include <linux/of_address.h>
 #include <linux/pm_domain.h>
@@ -109,6 +111,10 @@ static int rcar_sysc_power(const struct rcar_sysc_ch *sysc_ch, bool on)
 	int ret = 0;
 	int k;
 
+	cpuidle_pause_and_lock();
+
+	cpu_maps_update_begin();
+
 	spin_lock_irqsave(&rcar_sysc_lock, flags);
 
 	iowrite32(isr_mask, rcar_sysc_base + SYSCISCR);
@@ -149,6 +155,11 @@ static int rcar_sysc_power(const struct rcar_sysc_ch *sysc_ch, bool on)
 
 	pr_debug("sysc power %s domain %d: %08x -> %d\n", on ? "on" : "off",
 		 sysc_ch->isr_bit, ioread32(rcar_sysc_base + SYSCISR), ret);
+
+	cpu_maps_update_done();
+
+	cpuidle_resume_and_unlock();
+
 	return ret;
 }
 
