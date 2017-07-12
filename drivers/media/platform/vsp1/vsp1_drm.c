@@ -35,19 +35,40 @@
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
  */
-
-void vsp1_drm_display_start(struct vsp1_device *vsp1, unsigned int lif_index)
+void vsp1_drm_display_start(struct vsp1_device *vsp1, unsigned int lif_index,
+			    struct vsp1_pipeline *pipe)
 {
+	if (pipe->output->write_back == 3) {
+		pipe->output->write_back = 2;
+		wake_up_interruptible(&pipe->event_wait);
+	} else if (pipe->completed) {
+		if ((pipe->output->write_back == 2) &&
+		    ((vsp1_read(vsp1, VI6_WPF_WRBCK_CTRL(lif_index)) &
+		    VI6_WPF_WRBCK_CTRL_WBMD) == VI6_WPF_WRBCK_CTRL_WBMD)) {
+			pipe->output->write_back = 1;
+			wake_up_interruptible(&pipe->event_wait);
+		} else if ((pipe->output->write_back == 1) &&
+			   ((vsp1_read(vsp1, VI6_WPF_WRBCK_CTRL(lif_index)) &
+			   VI6_WPF_WRBCK_CTRL_WBMD) == 0)) {
+			pipe->output->write_back = 0;
+			wake_up_interruptible(&pipe->event_wait);
+		}
+	}
+
+	pipe->completed = false;
+
 	vsp1_dlm_irq_display_start(vsp1->drm->pipe[lif_index].output->dlm);
 }
 
 static void vsp1_du_pipeline_frame_end(struct vsp1_pipeline *pipe,
-				       unsigned int lif_index)
+				       unsigned int lif_index,
+				       bool completed)
 {
 	struct vsp1_drm *drm = to_vsp1_drm(pipe, lif_index);
 
 	if (drm->du_complete[lif_index])
-		drm->du_complete[lif_index](drm->du_private[lif_index]);
+		drm->du_complete[lif_index](drm->du_private[lif_index],
+					    completed);
 }
 
 /* -----------------------------------------------------------------------------
@@ -722,7 +743,6 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 	struct vsp1_rwpf *wpf = pipe->output;
 	const struct vsp1_format_info *fmtinfo;
 	struct vsp1_rwpf *rpf;
-	unsigned long flags;
 	int i;
 	u32 rpf_num = 0;
 
@@ -743,8 +763,6 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&pipe->irqlock, flags);
-
 	wpf->fmtinfo = fmtinfo;
 	wpf->format.num_planes = fmtinfo->planes;
 	wpf->format.plane_fmt[0].bytesperline = pitch;
@@ -754,8 +772,6 @@ int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 		wpf->buf_addr[i] = mem[i];
 
 	pipe->output->write_back = 3;
-
-	spin_unlock_irqrestore(&pipe->irqlock, flags);
 
 	return 0;
 }
