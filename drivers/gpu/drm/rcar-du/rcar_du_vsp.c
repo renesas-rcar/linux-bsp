@@ -488,19 +488,28 @@ int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
 
 	vsp1_du_setup_wb(rcrtc->vsp->vsp, pixelformat, pitch, mem,
 						rcrtc->lif_index);
-	vsp1_du_wait_wb(rcrtc->vsp->vsp, 2, rcrtc->lif_index);
+	ret = vsp1_du_wait_wb(rcrtc->vsp->vsp, WB_STAT_CATP_SET,
+			      rcrtc->lif_index);
+	if (ret != 0)
+		return ret;
 
 	ret = rcar_du_async_commit(dev, crtc);
 	if (ret != 0)
 		return ret;
 
-	vsp1_du_wait_wb(rcrtc->vsp->vsp, 1, rcrtc->lif_index);
+	ret = vsp1_du_wait_wb(rcrtc->vsp->vsp, WB_STAT_CATP_START,
+			      rcrtc->lif_index);
+	if (ret != 0)
+		return ret;
 
 	ret = rcar_du_async_commit(dev, crtc);
 	if (ret != 0)
 		return ret;
 
-	vsp1_du_wait_wb(rcrtc->vsp->vsp, 0, rcrtc->lif_index);
+	ret = vsp1_du_wait_wb(rcrtc->vsp->vsp, WB_STAT_CATP_DONE,
+			      rcrtc->lif_index);
+	if (ret != 0)
+		return ret;
 
 	return ret;
 }
