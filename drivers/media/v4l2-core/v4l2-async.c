@@ -226,13 +226,13 @@ void v4l2_async_notifier_unregister(struct v4l2_async_notifier *notifier)
 
 		d = get_device(sd->dev);
 
+		if (notifier->unbind)
+			notifier->unbind(notifier, sd, sd->asd);
+
 		v4l2_async_cleanup(sd);
 
 		/* If we handled USB devices, we'd have to lock the parent too */
 		device_release_driver(d);
-
-		if (notifier->unbind)
-			notifier->unbind(notifier, sd, sd->asd);
 
 		/*
 		 * Store device at the device cache, in order to call
