@@ -139,6 +139,10 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 	unsigned long n, m, fdpll;
 	bool match_flag = false;
 	bool clk_diff_set = true;
+	bool clk_high = false;
+
+	if (mode_clock > 148500000)
+		clk_high = true;
 
 	for (n = 39; n < 120; n++) {
 		for (m = 0; m < 4; m++) {
@@ -154,6 +158,9 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 				}
 
 				if (dpllclk >= 400000000)
+					continue;
+
+				if (clk_high && (dpllclk < mode_clock))
 					continue;
 
 				diff = abs((long)dpllclk - (long)mode_clock);
