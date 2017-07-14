@@ -508,6 +508,11 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 			     (interlaced ? DSYSR_SCM_INT_VIDEO : 0) |
 			     DSYSR_TVM_MASTER);
 
+	/* Register update by DRES bit */
+	rcar_du_group_write(rcrtc->group, DSYSR,
+			    (rcar_du_group_read(rcrtc->group, DSYSR) &
+			    ~(DSYSR_DRES | DSYSR_DEN)) | DSYSR_DRES);
+
 	rcar_du_group_start_stop(rcrtc->group, true, rcrtc);
 	rcar_du_crtc_vbk_check(rcrtc);
 }
