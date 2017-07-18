@@ -26,7 +26,7 @@ Arguments
     File descriptor returned by :ref:`open() <frontend_f_open>`.
 
 ``tone``
-    an integer enumered value described at :c:type:`fe_sec_mini_cmd`
+    an integer value described at enum :c:type:`fe_sec_mini_cmd`
 
 
 Description
