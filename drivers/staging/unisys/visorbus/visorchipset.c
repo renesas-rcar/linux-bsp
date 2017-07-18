@@ -312,7 +312,8 @@ parser_string_get(struct parser_context *ctx)
 			value_length = i;
 			break;
 		}
-	if (value_length < 0)	/* '\0' was not included in the length */
+	/* '\0' was not included in the length */
+	if (value_length < 0)
 		value_length = nscan;
 	value = kmalloc(value_length + 1, GFP_KERNEL);
 	if (!value)
@@ -364,9 +365,9 @@ struct visor_device *visorbus_get_device_by_id(u32 bus_no, u32 dev_no,
 	struct device *dev_start = NULL;
 	struct visor_device *vdev = NULL;
 	struct visor_busdev id = {
-			.bus_no = bus_no,
-			.dev_no = dev_no
-		};
+		.bus_no = bus_no,
+		.dev_no = dev_no
+	};
 
 	if (from)
 		dev_start = &from->device;
@@ -580,7 +581,7 @@ visorbus_create(struct controlvm_message *inmsg)
 	bus_info = visorbus_get_device_by_id(bus_no, BUS_ROOT_DEVICE, NULL);
 	if (bus_info && (bus_info->state.created == 1)) {
 		dev_err(&chipset_dev->acpi_device->dev,
-			"failed visorbus_create: already exists\n");
+			"failed %s: already exists\n", __func__);
 		err = -EEXIST;
 		goto err_respond;
 	}
@@ -1023,7 +1024,8 @@ parahotplug_request_destroy(struct parahotplug_request *req)
 }
 
 static LIST_HEAD(parahotplug_request_list);
-static DEFINE_SPINLOCK(parahotplug_request_list_lock);	/* lock for above */
+/* lock for above */
+static DEFINE_SPINLOCK(parahotplug_request_list_lock);
 
 /*
  * parahotplug_request_complete() - mark request as complete
@@ -1326,8 +1328,8 @@ static int unisys_vmcall(unsigned long tuple, unsigned long param)
 		goto error;
 
 	return 0;
-
-error: /* Need to convert from VMCALL error codes to Linux */
+/* Need to convert from VMCALL error codes to Linux */
+error:
 	switch (result) {
 	case VMCALL_RESULT_INVALID_PARAM:
 		return -EINVAL;

@@ -26,7 +26,7 @@
 #include "visorbus_private.h"
 #include "controlvmchannel.h"
 
-#define MYDRVNAME "visorchannel"
+#define VISOR_DRV_NAME "visorchannel"
 
 #define VISOR_CONSOLEVIDEO_CHANNEL_GUID \
 	UUID_LE(0x3cd6e705, 0xd6a2, 0x4aa5, \
@@ -41,11 +41,15 @@ struct visorchannel {
 	bool requested;
 	struct channel_header chan_hdr;
 	uuid_le guid;
-	bool needs_lock;	/* channel creator knows if more than one */
-				/* thread will be inserting or removing */
-	spinlock_t insert_lock; /* protect head writes in chan_hdr */
-	spinlock_t remove_lock;	/* protect tail writes in chan_hdr */
-
+	/*
+	 * channel creator knows if more than one
+	 * thread will be inserting or removing
+	 */
+	bool needs_lock;
+	/* protect head writes in chan_hdr */
+	spinlock_t insert_lock;
+	/* protect tail writes in chan_hdr */
+	spinlock_t remove_lock;
 	uuid_le type;
 	uuid_le inst;
 };
@@ -246,9 +250,9 @@ signalremove_inner(struct visorchannel *channel, u32 queue, void *msg)
 
 	/*
 	 * For each data field in SIGNAL_QUEUE_HEADER that was modified,
-	 * update host memory.
+	 * update host memory. Required for channel sync.
 	 */
-	mb(); /* required for channel synch */
+	mb();
 
 	error = SIG_WRITE_FIELD(channel, queue, &sig_hdr, tail);
 	if (error)
@@ -351,9 +355,9 @@ signalinsert_inner(struct visorchannel *channel, u32 queue, void *msg)
 
 	/*
 	 * For each data field in SIGNAL_QUEUE_HEADER that was modified,
-	 * update host memory.
+	 * update host memory. Required for channel sync.
 	 */
-	mb(); /* required for channel synch */
+	mb();
 
 	err = SIG_WRITE_FIELD(channel, queue, &sig_hdr, head);
 	if (err)
@@ -414,7 +418,7 @@ visorchannel_create_guts(u64 physaddr, unsigned long channel_bytes,
 	 * this. Remember that we haven't requested it so we don't try to
 	 * release later on.
 	 */
-	channel->requested = request_mem_region(physaddr, size, MYDRVNAME);
+	channel->requested = request_mem_region(physaddr, size, VISOR_DRV_NAME);
 	if (!channel->requested && uuid_le_cmp(guid, visor_video_guid))
 		/* we only care about errors if this is not the video channel */
 		goto err_destroy_channel;
@@ -444,7 +448,7 @@ visorchannel_create_guts(u64 physaddr, unsigned long channel_bytes,
 		release_mem_region(channel->physaddr, channel->nbytes);
 	channel->mapped = NULL;
 	channel->requested = request_mem_region(channel->physaddr,
-						channel_bytes, MYDRVNAME);
+						channel_bytes, VISOR_DRV_NAME);
 	if (!channel->requested && uuid_le_cmp(guid, visor_video_guid))
 		/* we only care about errors if this is not the video channel */
 		goto err_destroy_channel;
