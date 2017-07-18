@@ -262,6 +262,26 @@ is called. After all subdevices have been located the .complete() callback is
 called. When a subdevice is removed from the system the .unbind() method is
 called. All three callbacks are optional.
 
+Subdevice drivers might in turn register subnotifier objects with an
+array of other subdevice descriptors that the subdevice needs for its
+own operation. Subnotifiers are an extension of the bridge drivers
+notifier to allow for a incremental registering and matching of
+subdevices. This is useful when a driver only has information about
+which subdevice is closest to itself and would require knowledge from the
+driver of that subdevice to know which other subdevice(s) lie beyond.
+By registering subnotifiers drivers can incrementally move the subdevice
+matching down the chain of drivers. This is performed using the
+:c:func:`v4l2_async_subnotifier_register` call. To unregister the
+subnotifier the driver has to call
+:c:func:`v4l2_async_subnotifier_unregister`. These functions and their
+arguments behave almost the same as the bridge driver notifiers
+described above and are treated equally by the V4L2 core when matching
+asynchronously registered subdevices. The differences are that the
+subnotifier functions act on :c:type:`v4l2_subdev` instead of
+:c:type:`v4l2_device` and that they should be called from the subdevice's
+``.registered()`` and ``.unregistered()``
+:c:type:`v4l2_subdev_internal_ops` callbacks instead of at probe time.
+
 V4L2 sub-device userspace API
 -----------------------------
 
