@@ -215,6 +215,7 @@ void v4l2_async_notifier_unregister(struct v4l2_async_notifier *notifier)
 	if (!dev) {
 		dev_err(notifier->v4l2_dev->dev,
 			"Failed to allocate device cache!\n");
+		return;
 	}
 
 	mutex_lock(&list_lock);
@@ -234,23 +235,13 @@ void v4l2_async_notifier_unregister(struct v4l2_async_notifier *notifier)
 		/* If we handled USB devices, we'd have to lock the parent too */
 		device_release_driver(d);
 
-		/*
-		 * Store device at the device cache, in order to call
-		 * put_device() on the final step
-		 */
-		if (dev)
-			dev[i++] = d;
-		else
-			put_device(d);
+		dev[i++] = d;
 	}
 
 	mutex_unlock(&list_lock);
 
 	/*
 	 * Call device_attach() to reprobe devices
-	 *
-	 * NOTE: If dev allocation fails, i is 0, and the whole loop won't be
-	 * executed.
 	 */
 	while (i--) {
 		struct device *d = dev[i];
