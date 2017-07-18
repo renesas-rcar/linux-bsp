@@ -1,0 +1,251 @@
+next/fixes-non-critical
+	patch
+		MAINTAINERS: add RV1108 Rockchip soc to maintained files
+	renesas/fixes2
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-fixes2-for-v4.12
+	brcm/maintainers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.13/maintainers
+	ccn/fixes
+		git://git.linaro.org/people/pawel.moll/linux tags/ccn/fixes-for-4.13-v2
+	<no branch> (4fcee14d3802b60f22baf1aeab9f1cff08834c56)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.12-2
+
+next/soc
+	davinci/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.13/soc
+	rockchip/soc32
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.13-rockchip-soc32-1
+	samsung/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-4.13
+	patch
+		ARM: prima2: remove redundant select CPU_V7
+		ARM: stm32: Introduce MACH_STM32F469 flag
+	brcm/soc
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.13/soc
+	omap/omap1
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.13/omap1-signed
+	amlogic/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-soc
+	omap/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.13/soc-v4-signed
+	pxa/devel
+		https://github.com/rjarzmik/linux tags/pxa-for-4.13
+	davinci/soc2
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.13/soc-2
+	qcom/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-soc-for-4.13
+	renesas/soc
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-soc-for-v4.13
+	at91/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.13-soc
+	imx/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-4.13
+	<no branch> (cc7a938f5f308eeb6f8fe3cec28e1800aa81facb)
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-4.12-fixes
+	socfpga/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_updates_for_v4.13
+	actions/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/afaerber/linux-actions tags/actions-arm-soc-for-4.13
+	actions/soc-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/afaerber/linux-actions tags/actions-arm-soc+sps-for-4.13
+	patch
+		ARM: owl: Drop custom machine
+		ARM: owl: smp: Drop bogus holding pen
+
+next/dt
+	renesas/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-for-v4.13
+		contains depends/renesas-dt-bindings
+	gemeni/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-v4.13-dts-1
+	patch
+		ARM: dts: augment Moxa and Aspeed DTS for FTTMR010
+	omap/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.13/dt-signed
+	davinci/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.13/dt
+	rockchip/dts32
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.13-rockchip-dts32-1
+	samsung/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.13
+	keystone/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/ssantosh/linux-keystone tags/keystone_dts_for_4.13
+	mediatek/dts32
+		https://github.com/mbgg/linux-mediatek tags/v4.12-next-dts32
+	stm32/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/atorgue/stm32 tags/stm32-dt-for-v4.13-1
+	uniphier/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-uniphier tags/uniphier-dt-v4.13
+	brcm/dt
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.13/devicetree
+	gemini/dts2
+		git://git.kernel.org/pub/scm/linux/kernel/git/linusw/linux-nomadik tags/gemini-v4.13-dts-2
+	amlogic/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt
+	sunxi/dt
+		https://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-dt-for-4.13
+	sunxi/dt-h3
+		https://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-dt-h3-for-4.13
+	omap/dt2
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.13/dt-part2-signed
+	tegra/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.13-arm-dt
+	qcom/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-dts-for-4.13
+	renesas/dt2
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt2-for-v4.13
+	renesas/dt-bindings2
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-dt-bindings2-for-v4.13
+	at91/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.13-dt
+	mvebu/dt
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt-4.13-1
+	imx/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt-4.13
+	samsung/dt-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-4.13-2
+	pxa/dt
+		https://github.com/rjarzmik/linux tags/pxa-dt-4.13
+	socfpga/dts
+		git://git.kernel.org/pub/scm/linux/kernel/git/dinguyen/linux tags/socfpga_dts_for_v4.13
+	amlogic/dt-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt-2
+	actions/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/afaerber/linux-actions tags/actions-arm-dt-for-4.13
+
+next/defconfig
+	davinci/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.13/defconfig
+	samsung/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.13
+	stm32/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/atorgue/stm32 tags/stm32-defconfig-for-v4.13-1
+	brcm/defconfig
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.13/defconfig
+	davinci/defconfig2
+		git://git.kernel.org/pub/scm/linux/kernel/git/nsekhar/linux-davinci tags/davinci-for-v4.13/defconfig-2
+	qcom/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-defconfig-for-4.13
+	at91/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/abelloni/linux tags/at91-ab-4.13-defconfig
+	mvebu/defconfig
+		git://git.infradead.org/linux-mvebu tags/mvebu-defconfig-4.13-1
+	imx/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-4.13
+	samsung/defconfig-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-defconfig-4.13-2
+	<no branch> (7f794788dbf9e1a9ca9a5c1cc0a90642f3b4e4ce)
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-defconfig-for-4.13-2
+	patch
+		multi_v7_defconfig: Enable OMAP MTD and DM816 AHCI
+
+next/drivers
+	omap/gpmc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tmlind/linux-omap tags/omap-for-v4.13/gpmc-signed
+	drivers/reset
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.13
+	drivers/reset-2
+		git://git.pengutronix.de/git/pza/linux tags/reset-for-4.13-2
+	mediatek/soc
+		https://github.com/mbgg/linux-mediatek tags/v4.12-next-soc
+	brcm/drivers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.13/drivers
+	drivers/scpi
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/scpi-updates-4.13
+	tegra/soc
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.13-soc
+	tegra/firmware
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.13-firmware
+	renesas/drivers
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-drivers-for-v4.13
+	renesas/rcar-sysc
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-rcar-sysc-for-v4.13
+	imx/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-drivers-4.13
+	qcom/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-drivers-for-4.13
+	actions/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/afaerber/linux-actions tags/actions-drivers-for-4.13
+
+next/dt64
+	renesas/dt64
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt-for-v4.13
+	realtek/dt64
+		git://github.com/afaerber/linux tags/realtek-arm64-dt-for-4.12
+	rockchip/dts64
+		git://git.kernel.org/pub/scm/linux/kernel/git/mmind/linux-rockchip tags/v4.13-rockchip-dts64-1
+	samsung/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-4.13
+	mediatek/dts64
+		https://github.com/mbgg/linux-mediatek tags/v4.12-next-dts64
+	uniphier/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/masahiroy/linux-uniphier tags/uniphier-dt64-v4.13
+	brcm/dt64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.13/devicetree-arm64
+	amlogic/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64
+	sunxi/dt64
+		https://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-dt64-for-4.13
+	sunxi/dt64-h5
+		https://git.kernel.org/pub/scm/linux/kernel/git/sunxi/linux tags/sunxi-dt-h5-for-4.13
+	juno/updates
+		git://git.kernel.org/pub/scm/linux/kernel/git/sudeep.holla/linux tags/juno-updates-4.13
+	hisi/dt64
+		git://github.com/hisilicon/linux-hisi tags/hisi-arm64-dt-for-4.13-v2
+	tegra/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-4.13-arm64-dt
+	qcom/arm64
+		git://git.kernel.org/pub/scm/linux/kernel/git/agross/linux tags/qcom-arm64-for-4.13
+	renesas/dt64-2
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-dt2-for-v4.13
+	mvebu/dt64
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.13-1
+	imx/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-dt64-4.13
+	patch
+		arm64: dts: mediatek: don't include missing file
+	zte/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/zte-dt64-4.13
+	mvebu/dt64-2
+		git://git.infradead.org/linux-mvebu tags/mvebu-dt64-4.13-2
+	<no branch> (44f73dc42c11398d7b84e94365a485ebd6420798)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.12-1
+	patch
+		Revert "arm64: dts: marvell: add dma-mask in crypto nodes for 7k/8k"
+	amlogic/dt64-2
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-2
+	actions/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/afaerber/linux-actions tags/actions-arm64-dt-for-4.13
+
+next/arm64
+	patch
+		arm64: disable Broadcom Vulcan platform
+		arm64: defconfig: drop ARCH_VULCAN
+	realtek/arm64
+		git://github.com/afaerber/linux tags/realtek-arm64-soc-for-4.12
+	brcm/defconfig64
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.13/defconfig-arm64
+	amlogic/defconfig
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-defconfig
+	renesas/defconfig64
+		https://git.kernel.org/pub/scm/linux/kernel/git/horms/renesas tags/renesas-arm64-defconfig-for-v4.13
+	patch
+		arm64: defconfig: enable ACPI_CPPC_CPUFREQ
+		arm64: defconfig: enable BLK_DEV_NVME
+		arm64: defconfig: enable EFI_CAPSULE_LOADER
+		arm64: defconfig: enable support for PCIe hotplug
+		arm64: defconfig: enable APEI and GHES features
+		arm64: defconfig: enable EDAC options
+		arm64: defconfig: enable QCOM_L2_PMU and QCOM_L3_PMU
+		arm64: defconfig: enable Qualcomm Technologies EMAC and some PHY drivers
+	mvebu/arm64
+		git://git.infradead.org/linux-mvebu tags/mvebu-arm64-4.13-1
+	patch
+		arm64: defconfig: remove duplicate entry
+	actions/arm64
+		git://git.kernel.org/pub/scm/linux/kernel/git/afaerber/linux-actions tags/actions-arm64-soc-for-4.13
+
+fixes
+	<no branch> (4fcee14d3802b60f22baf1aeab9f1cff08834c56)
+		git://git.infradead.org/linux-mvebu tags/mvebu-fixes-4.12-2
+
