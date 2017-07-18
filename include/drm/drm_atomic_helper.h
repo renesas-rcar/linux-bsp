@@ -55,6 +55,9 @@ bool drm_atomic_helper_framebuffer_changed(struct drm_device *dev,
 void drm_atomic_helper_wait_for_vblanks(struct drm_device *dev,
 					struct drm_atomic_state *old_state);
 
+void drm_atomic_helper_wait_for_flip_done(struct drm_device *dev,
+					  struct drm_atomic_state *state);
+
 void
 drm_atomic_helper_update_legacy_modeset_state(struct drm_device *dev,
 					      struct drm_atomic_state *old_state);
