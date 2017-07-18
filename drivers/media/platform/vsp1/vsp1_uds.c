@@ -272,11 +272,19 @@ static void uds_configure(struct vsp1_entity *entity,
 	bool multitap;
 
 	if (params == VSP1_ENTITY_PARAMS_PARTITION) {
-		const struct v4l2_rect *clip = &pipe->partition;
+		struct vsp1_partition *partition = pipe->partition;
 
+		/* Input size clipping */
+		vsp1_uds_write(uds, dl, VI6_UDS_HSZCLIP, VI6_UDS_HSZCLIP_HCEN |
+			       (partition->uds_sink.width
+					<< VI6_UDS_HSZCLIP_HCL_SIZE_SHIFT));
+
+		/* Output size clipping */
 		vsp1_uds_write(uds, dl, VI6_UDS_CLIP_SIZE,
-			       (clip->width << VI6_UDS_CLIP_SIZE_HSIZE_SHIFT) |
-			       (clip->height << VI6_UDS_CLIP_SIZE_VSIZE_SHIFT));
+			       (partition->uds_source.width
+					<< VI6_UDS_CLIP_SIZE_HSIZE_SHIFT) |
+			       (partition->uds_source.height
+					<< VI6_UDS_CLIP_SIZE_VSIZE_SHIFT));
 		return;
 	}
 
@@ -343,9 +351,38 @@ static unsigned int uds_max_width(struct vsp1_entity *entity,
 		return 2048;
 }
 
+static struct vsp1_partition_window *
+uds_partition(struct vsp1_entity *entity,
+	      struct vsp1_pipeline *pipe,
+	      struct vsp1_partition *partition,
+	      unsigned int partition_idx,
+	      const struct vsp1_partition_window *dest)
+{
+	struct vsp1_uds *uds = to_uds(&entity->subdev);
+	const struct v4l2_mbus_framefmt *input;
+	const struct v4l2_mbus_framefmt *output;
+
+	/* Initialise the partition state */
+	partition->uds_sink = *dest;
+	partition->uds_source = *dest;
+
+	input = vsp1_entity_get_pad_format(&uds->entity, uds->entity.config,
+					   UDS_PAD_SINK);
+	output = vsp1_entity_get_pad_format(&uds->entity, uds->entity.config,
+					    UDS_PAD_SOURCE);
+
+	partition->uds_sink.width = dest->width * input->width
+				  / output->width;
+	partition->uds_sink.left = dest->left * input->width
+				 / output->width;
+
+	return &partition->uds_sink;
+}
+
 static const struct vsp1_entity_operations uds_entity_ops = {
 	.configure = uds_configure,
 	.max_width = uds_max_width,
+	.partition = uds_partition,
 };
 
 /* -----------------------------------------------------------------------------

@@ -21,6 +21,7 @@
 struct vsp1_device;
 struct vsp1_dl_list;
 struct vsp1_pipeline;
+struct vsp1_partition;
 
 enum vsp1_entity_type {
 	VSP1_ENTITY_BRS,
@@ -82,12 +83,19 @@ struct vsp1_route {
  *		selection rectangles, ...)
  * @max_width:	Return the max supported width of data that the entity can
  *		process in a single operation.
+ * @partition:	Process the partition construction based on this entity's
+ *		configuration.
  */
 struct vsp1_entity_operations {
 	void (*destroy)(struct vsp1_entity *);
 	void (*configure)(struct vsp1_entity *, struct vsp1_pipeline *,
 			  struct vsp1_dl_list *, enum vsp1_entity_params);
 	unsigned int (*max_width)(struct vsp1_entity *, struct vsp1_pipeline *);
+	struct vsp1_partition_window *(*partition)(struct vsp1_entity *,
+					struct vsp1_pipeline *,
+					struct vsp1_partition *,
+					unsigned int,
+					const struct vsp1_partition_window *);
 };
 
 struct vsp1_entity {
