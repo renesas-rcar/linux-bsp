@@ -1604,6 +1604,7 @@ static struct dma_chan *rcar_dmac_of_xlate(struct of_phandle_args *dma_spec,
 static int rcar_dmac_sleep_suspend(struct device *dev)
 {
 	struct rcar_dmac *dmac = dev_get_drvdata(dev);
+	unsigned long flags;
 	int i;
 
 	for (i = 0; i < dmac->n_channels; ++i) {
@@ -1611,7 +1612,7 @@ static int rcar_dmac_sleep_suspend(struct device *dev)
 			continue;
 
 		pm_runtime_get_sync(dev);
-		spin_lock(&dmac->channels[i].lock);
+		spin_lock_irqsave(&dmac->channels[i].lock, flags);
 
 		if (rcar_dmac_chan_is_busy(&dmac->channels[i])) {
 			pm_runtime_put(dev);
@@ -1620,7 +1621,7 @@ static int rcar_dmac_sleep_suspend(struct device *dev)
 		}
 
 		rcar_dmac_chan_halt(&dmac->channels[i]);
-		spin_unlock(&dmac->channels[i].lock);
+		spin_unlock_irqrestore(&dmac->channels[i].lock, flags);
 		pm_runtime_put(dev);
 	}
 
