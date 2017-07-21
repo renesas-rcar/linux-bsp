@@ -32,6 +32,20 @@
 		reg = <0x0 0x48000000 0x0 0x18000000>;
 	};
 
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x8000000>;
+			linux,cma-default;
+		};
+	};
+
 	vga-encoder {
 		compatible = "adi,adv7123";
 
