@@ -46,7 +46,11 @@
 #define REG_GEN3_PTAT1		0x5C
 #define REG_GEN3_PTAT2		0x60
 #define REG_GEN3_PTAT3		0x64
-#define PTAT_SIZE		REG_GEN3_PTAT3
+#define REG_GEN3_THSCP		0x68
+#define REG_GEN3_MAX_SIZE	(REG_GEN3_THSCP + 0x4)
+
+/* THSCP bit */
+#define COR_PARA_VLD		(0x3 << 14)
 
 /* CTSR bit */
 #define PONM1            (0x1 << 8)	/* For H3 ES1.x */
@@ -74,16 +78,11 @@
 #define GEN3_FUSE_MASK	0xFFF
 
 /* Check LSI revisions and set specific quirk value */
-#define FUSE_PSEUDO_VAL	BIT(0) /* FUSE's not been defined, use pseudo value */
 #define H3_1X_INIT	BIT(1) /* H3 1.x uses init flow that is diff others */
 
 static const struct soc_device_attribute ths_quirks_match[]  = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*",
-	  .data = (void *)(FUSE_PSEUDO_VAL | H3_1X_INIT), },
-	{ .soc_id = "r8a7795", .revision = "ES2.0",
-	  .data = (void *)FUSE_PSEUDO_VAL, },
-	{ .soc_id = "r8a7796",
-	  .data = (void *)FUSE_PSEUDO_VAL, },
+	  .data = (void *)H3_1X_INIT, },
 	{/*sentinel*/}
 };
 
@@ -165,18 +164,23 @@ static int round_temp(int temp)
 static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 {
 	void __iomem *ptat_base;
+	unsigned int cor_para_value;
 
-	ptat_base = ioremap_nocache(PTAT_BASE, PTAT_SIZE);
+	ptat_base = ioremap_nocache(PTAT_BASE, REG_GEN3_MAX_SIZE);
 	if (!ptat_base) {
 		dev_err(rcar_priv_to_dev(priv), "Cannot map FUSE register\n");
 		return -ENOMEM;
 	}
 
-	/* For H3 ES1.x, H3 ES2.0 and M3 ES1.0
-	 * these registers have not been programmed yet.
-	 * We will use fixed value as temporary solution.
+	cor_para_value = ioread32(ptat_base + REG_GEN3_THSCP) & COR_PARA_VLD;
+
+	/* Checking whether Fuse values have been programmed or not.
+	 * Base on that, it decides using fixed pseudo values or Fuse values.
 	 */
-	if (priv->ths_quirks & FUSE_PSEUDO_VAL) {
+
+	if (cor_para_value != COR_PARA_VLD) {
+		dev_info(rcar_priv_to_dev(priv), "is using pseudo fixed values\n");
+
 		priv->factor.ptat_1 = 2351;
 		priv->factor.ptat_2 = 1509;
 		priv->factor.ptat_3 = 435;
@@ -198,6 +202,8 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 			break;
 		}
 	} else {
+		dev_info(rcar_priv_to_dev(priv), "is using Fuse values\n");
+
 		priv->factor.thcode_1 = rcar_thermal_read(priv,
 						REG_GEN3_THCODE1)
 				& GEN3_FUSE_MASK;
