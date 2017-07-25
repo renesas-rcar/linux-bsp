@@ -127,7 +127,7 @@ struct rcar_thermal_data {
 
 /* Temperature calculation  */
 #define CODETSD(x)		((x) * 1000)
-#define TJ_1 96000L
+#define TJ_1 116000L
 #define TJ_3 (-41000L)
 
 #define rcar_thermal_read(p, r) _rcar_thermal_read(p, r)
@@ -181,22 +181,22 @@ static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 	if (cor_para_value != COR_PARA_VLD) {
 		dev_info(rcar_priv_to_dev(priv), "is using pseudo fixed values\n");
 
-		priv->factor.ptat_1 = 2351;
+		priv->factor.ptat_1 = 2631;
 		priv->factor.ptat_2 = 1509;
 		priv->factor.ptat_3 = 435;
 		switch (priv->id) {
 		case 0:
-			priv->factor.thcode_1 = 3248;
+			priv->factor.thcode_1 = 3397;
 			priv->factor.thcode_2 = 2800;
 			priv->factor.thcode_3 = 2221;
 			break;
 		case 1:
-			priv->factor.thcode_1 = 3245;
+			priv->factor.thcode_1 = 3393;
 			priv->factor.thcode_2 = 2795;
 			priv->factor.thcode_3 = 2216;
 			break;
 		case 2:
-			priv->factor.thcode_1 = 3250;
+			priv->factor.thcode_1 = 3389;
 			priv->factor.thcode_2 = 2805;
 			priv->factor.thcode_3 = 2237;
 			break;
@@ -234,7 +234,7 @@ static void thermal_coefficient_calculation(struct rcar_thermal_priv *priv)
 	long a1_num, a1_den;
 	long a2_num, a2_den;
 
-	tj_2 = (CODETSD((priv->factor.ptat_2 - priv->factor.ptat_3) * 137)
+	tj_2 = (CODETSD((priv->factor.ptat_2 - priv->factor.ptat_3) * 157)
 		/ (priv->factor.ptat_1 - priv->factor.ptat_3)) - CODETSD(41);
 
 	/*
