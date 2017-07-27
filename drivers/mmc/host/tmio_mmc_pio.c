@@ -1079,7 +1079,10 @@ static void tmio_mmc_post_req(struct mmc_host *mmc, struct mmc_request *req,
 	struct mmc_data *data = req->data;
 	enum dma_data_direction dir;
 
-	if (data && data->host_cookie == COOKIE_PRE_MAPPED) {
+	if (!host->chan_tx || !host->chan_rx || !data)
+		return;
+
+	if (data->host_cookie == COOKIE_PRE_MAPPED) {
 		if (req->data->flags & MMC_DATA_READ)
 			dir = DMA_FROM_DEVICE;
 		else
@@ -1098,7 +1101,10 @@ static void tmio_mmc_pre_req(struct mmc_host *mmc, struct mmc_request *req,
 	enum dma_data_direction dir;
 	int ret;
 
-	if (data && data->host_cookie == COOKIE_UNMAPPED) {
+	if (!host->chan_tx || !host->chan_rx || !data)
+		return;
+
+	if (data->host_cookie == COOKIE_UNMAPPED) {
 		if (req->data->flags & MMC_DATA_READ)
 			dir = DMA_FROM_DEVICE;
 		else
