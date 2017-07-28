@@ -565,8 +565,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto error_unregister;
 
-	rcar_thermal_irq_enable(priv);
-
 	/* Interrupt */
 	if (rcar_has_irq_support(priv)) {
 		irq_cnt = platform_irq_count(pdev);
@@ -581,6 +579,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 				goto error_unregister;
 			}
 		}
+		rcar_thermal_irq_enable(priv);
 	}
 
 	dev_info(dev, "Thermal sensor probed\n");
