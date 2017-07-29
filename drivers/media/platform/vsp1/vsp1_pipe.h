@@ -93,7 +93,8 @@ struct vsp1_pipeline {
 	enum vsp1_pipeline_state state;
 	wait_queue_head_t wq;
 
-	void (*frame_end)(struct vsp1_pipeline *pipe, unsigned int lif_index);
+	void (*frame_end)(struct vsp1_pipeline *pipe, unsigned int lif_index,
+			  bool completed);
 
 	struct mutex lock;
 	struct kref kref;
@@ -122,6 +123,7 @@ struct vsp1_pipeline {
 	struct v4l2_rect part_table[VSP1_PIPE_MAX_PARTITIONS];
 
 	bool vmute_flag;
+	bool completed;
 };
 
 void vsp1_pipeline_reset(struct vsp1_pipeline *pipe);
