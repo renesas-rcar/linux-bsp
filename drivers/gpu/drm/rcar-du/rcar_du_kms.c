@@ -414,9 +414,10 @@ error:
 
 int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
 {
-	int ret;
+	int ret = 0;
 	struct drm_atomic_state *state;
 	struct drm_crtc_state *crtc_state;
+	struct drm_mode_config *config = &dev->mode_config;
 
 	state = drm_atomic_state_alloc(dev);
 	if (!state)
@@ -431,13 +432,16 @@ int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
 	crtc_state->state = state;
 	crtc_state->active = true;
 
+	drm_modeset_lock_all(dev);
+	state->acquire_ctx = config->acquire_ctx;
 	ret = drm_atomic_commit(state);
+	drm_modeset_unlock_all(dev);
+
 	if (ret != 0) {
-		drm_atomic_helper_crtc_destroy_state(crtc, crtc_state);
-		return ret;
+		drm_atomic_state_free(state);
 	}
 
-	return 0;
+	return ret;
 }
 
 /* -----------------------------------------------------------------------------
