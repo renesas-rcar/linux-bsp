@@ -54,6 +54,7 @@ struct sh_mobile_sdhi_scc {
 
 struct sh_mobile_sdhi_of_data {
 	unsigned long tmio_flags;
+	u32	      tmio_ocr_mask;
 	unsigned long capabilities;
 	unsigned long capabilities2;
 	enum dma_slave_buswidth dma_buswidth;
@@ -143,6 +144,7 @@ MODULE_DEVICE_TABLE(of, sh_mobile_sdhi_of_match);
 
 struct sh_mobile_sdhi {
 	struct clk *clk;
+	struct clk *clk_cd;
 	struct tmio_mmc_data mmc_data;
 	struct tmio_mmc_dma dma_priv;
 	struct pinctrl *pinctrl;
@@ -189,6 +191,12 @@ static int sh_mobile_sdhi_clk_enable(struct tmio_mmc_host *host)
 	int ret = clk_prepare_enable(priv->clk);
 	if (ret < 0)
 		return ret;
+
+	ret = clk_prepare_enable(priv->clk_cd);
+	if (ret < 0) {
+		clk_disable_unprepare(priv->clk);
+		return ret;
+	}
 
 	/*
 	 * The clock driver may not know what maximum frequency
@@ -255,6 +263,7 @@ static void sh_mobile_sdhi_clk_disable(struct tmio_mmc_host *host)
 	struct sh_mobile_sdhi *priv = host_to_priv(host);
 
 	clk_disable_unprepare(priv->clk);
+	clk_disable_unprepare(priv->clk_cd);
 }
 
 static int sh_mobile_sdhi_card_busy(struct mmc_host *mmc)
@@ -631,14 +640,12 @@ static int sh_mobile_sdhi_wait_idle(struct tmio_mmc_host *host)
 	int timeout = 1000;
 
 	if (host->pdata->flags & TMIO_MMC_USE_SCLKDIVEN) {
-		while (--timeout &&
-		       !(sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
-		       TMIO_STAT_SCLKDIVEN))
+		while (!(sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
+		      TMIO_STAT_SCLKDIVEN) && --timeout)
 			udelay(1);
 	} else {
-		while (--timeout &&
-		       (sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
-		       TMIO_STAT_CMD_BUSY))
+		while ((sd_ctrl_read16_and_16_as_32(host, CTL_STATUS) &
+		      TMIO_STAT_CMD_BUSY) && --timeout)
 			udelay(1);
 	}
 
@@ -699,8 +706,7 @@ static void sh_mobile_sdhi_enable_dma(struct tmio_mmc_host *host, bool enable)
 
 static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 {
-	const struct of_device_id *of_id =
-		of_match_device(sh_mobile_sdhi_of_match, &pdev->dev);
+	const struct sh_mobile_sdhi_of_data *of_data = of_device_get_match_data(&pdev->dev);
 	struct sh_mobile_sdhi *priv;
 	struct tmio_mmc_data *mmc_data;
 	struct tmio_mmc_data *mmd = pdev->dev.platform_data;
@@ -731,6 +737,20 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 
 	if (np && !of_property_read_u32(np, "drive-strength", &tmp))
 		drive_strength = tmp & 0xf;
+	/*
+	 * Some controllers provide a 2nd clock just to run the internal card
+	 * detection logic. Unfortunately, the existing driver architecture does
+	 * not support a separation of clocks for runtime PM usage. When
+	 * native hotplug is used, the tmio driver assumes that the core
+	 * must continue to run for card detect to stay active, so we cannot
+	 * disable it.
+	 * Additionally, it is prohibited to supply a clock to the core but not
+	 * to the card detect circuit. That leaves us with if separate clocks
+	 * are presented, we must treat them both as virtually 1 clock.
+	 */
+	priv->clk_cd = devm_clk_get(&pdev->dev, "cd");
+	if (IS_ERR(priv->clk_cd))
+		priv->clk_cd = NULL;
 
 	priv->pinctrl = devm_pinctrl_get(&pdev->dev);
 	if (!IS_ERR(priv->pinctrl)) {
@@ -754,10 +774,9 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 #else
 	host->sequencer_enabled = false;
 #endif
-	if (of_id && of_id->data) {
-		const struct sh_mobile_sdhi_of_data *of_data = of_id->data;
-
+	if (of_data) {
 		mmc_data->flags |= of_data->tmio_flags;
+		mmc_data->ocr_mask = of_data->tmio_ocr_mask;
 		mmc_data->capabilities |= of_data->capabilities;
 		mmc_data->capabilities2 |= of_data->capabilities2;
 		mmc_data->dma_rx_offset = of_data->dma_rx_offset;
@@ -842,10 +861,8 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	 */
 	mmc_data->flags |= TMIO_MMC_HAVE_CMD12_CTRL;
 
-	/*
-	 * All SDHI need SDIO_INFO1 reserved bit
-	 */
-	mmc_data->flags |= TMIO_MMC_SDIO_STATUS_QUIRK;
+	/* All SDHI have SDIO status bits which must be 1 */
+	mmc_data->flags |= TMIO_MMC_SDIO_STATUS_SETBITS;
 
 	ret = tmio_mmc_host_probe(host, mmc_data);
 	if (ret < 0)
@@ -863,13 +880,9 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 					MMC_CAP2_HS200_1_8V_SDR))) {
 		host->mmc->caps |= MMC_CAP_HW_RESET;
 
-		if (of_id && of_id->data) {
-			const struct sh_mobile_sdhi_of_data *of_data;
-			const struct sh_mobile_sdhi_scc *taps;
+		if (of_data) {
+			const struct sh_mobile_sdhi_scc *taps = of_data->taps;
 			bool hit = false;
-
-			of_data = of_id->data;
-			taps = of_data->taps;
 
 			for (i = 0; i < of_data->taps_num; i++) {
 				if (taps[i].clk_rate == 0 ||
