@@ -327,9 +327,9 @@ static void rcar_du_atomic_complete(struct rcar_du_commit *commit)
 
 	/* Apply the atomic update. */
 	drm_atomic_helper_commit_modeset_disables(dev, old_state);
-	drm_atomic_helper_commit_modeset_enables(dev, old_state);
 	drm_atomic_helper_commit_planes(dev, old_state,
 					DRM_PLANE_COMMIT_ACTIVE_ONLY);
+	drm_atomic_helper_commit_modeset_enables(dev, old_state);
 
 	drm_atomic_helper_wait_for_vblanks(dev, old_state);
 
@@ -414,7 +414,7 @@ error:
 
 int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
 {
-	int ret;
+	int ret = 0;
 	struct drm_atomic_state *state;
 	struct drm_crtc_state *crtc_state;
 
@@ -433,11 +433,10 @@ int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
 
 	ret = drm_atomic_commit(state);
 	if (ret != 0) {
-		drm_atomic_helper_crtc_destroy_state(crtc, crtc_state);
-		return ret;
+		drm_atomic_state_free(state);
 	}
 
-	return 0;
+	return ret;
 }
 
 /* -----------------------------------------------------------------------------
