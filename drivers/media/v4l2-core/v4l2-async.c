@@ -234,6 +234,23 @@ void v4l2_async_notifier_unregister(struct v4l2_async_notifier *notifier)
 
 	mutex_unlock(&list_lock);
 
+	/*
+	 * Try to re-probe the subdevices which where part of the notifier.
+	 * This is done so subdevices which where part of the notifier will
+	 * be re-probed to a pristine state and put back on the global
+	 * list of subdevices so they can once more be found and associated
+	 * with a new notifier.
+	 *
+	 * One might be tempted to use device_reprobe() to handle the re-
+	 * probing. Unfortunately this is not possible since some video
+	 * device drivers call v4l2_async_notifier_unregister() from
+	 * there remove function leading to a dead lock situation on
+	 * device_lock(dev->parent). This lock is held when video device
+	 * drivers remove function is called and device_reprobe() also
+	 * tries to take the same lock, so using it here could lead to a
+	 * dead lock situation.
+	 */
+
 	for (i = 0; i < count; i++) {
 		/* If we handled USB devices, we'd have to lock the parent too */
 		device_release_driver(dev[i]);
