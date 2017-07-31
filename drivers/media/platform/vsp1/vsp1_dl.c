@@ -708,7 +708,6 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl, unsigned int lif_index)
 
 		dlm->active = dl;
 		dlm->queued = dl;
-		__vsp1_dl_list_put(dl);
 		__vsp1_dl_list_put(dlm->queued);
 
 		goto done;
@@ -760,7 +759,8 @@ void vsp1_dlm_irq_display_start(struct vsp1_dl_manager *dlm)
 	 * processing by the device. The active display list, if any, won't be
 	 * accessed anymore and can be reused.
 	 */
-	__vsp1_dl_list_put(dlm->active);
+	if (dlm->mode != VSP1_DL_MODE_HEADER)
+		__vsp1_dl_list_put(dlm->active);
 	dlm->active = NULL;
 
 	spin_unlock(&dlm->lock);
@@ -775,14 +775,15 @@ void vsp1_dlm_irq_display_start(struct vsp1_dl_manager *dlm)
  * with the frame end interrupt. The function always returns true in header mode
  * as display list processing is then not continuous and races never occur.
  */
-bool vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm)
+bool vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm, bool interlaced)
 {
 	struct vsp1_device *vsp1 = dlm->vsp1;
 	bool completed = false;
 
 	spin_lock(&dlm->lock);
 
-	__vsp1_dl_list_put(dlm->active);
+	if (dlm->mode != VSP1_DL_MODE_HEADER)
+		__vsp1_dl_list_put(dlm->active);
 	dlm->active = NULL;
 
 	/* Header mode is used for mem-to-mem pipelines only. We don't need to
@@ -797,6 +798,11 @@ bool vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm)
 		 * we'll thus skip one frame and retry.
 		 */
 		if ((vsp1_read(vsp1, VI6_CMD(dlm->index)) & VI6_CMD_UPDHDR))
+			goto done;
+
+		if (interlaced && ((vsp1_read(vsp1, VI6_STATUS) &
+			VI6_STATUS_FLD_STD(dlm->index)) !=
+			VI6_STATUS_FLD_STD(dlm->index)))
 			goto done;
 
 		if (dlm->queued) {
