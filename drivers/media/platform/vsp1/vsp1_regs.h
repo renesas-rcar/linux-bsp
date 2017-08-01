@@ -55,6 +55,7 @@
 #define VI6_MRESET_WORKAROUND		0x00000001
 
 #define VI6_STATUS			0x0038
+#define VI6_STATUS_FLD_STD(n)		(1 << ((n) + 28))
 #define VI6_STATUS_SYS_ACT(n)		(1 << ((n) + 8))
 
 #define VI6_WPF_IRQ_ENB(n)		(0x0048 + (n) * 12)

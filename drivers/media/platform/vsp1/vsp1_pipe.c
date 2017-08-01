@@ -234,6 +234,7 @@ void vsp1_pipeline_init(struct vsp1_pipeline *pipe)
 	INIT_LIST_HEAD(&pipe->entities);
 	pipe->state = VSP1_PIPELINE_STOPPED;
 	pipe->vmute_flag = false;
+	pipe->completed = false;
 }
 
 /* Must be called with the pipe irqlock held. */
@@ -326,29 +327,27 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe)
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
 			     unsigned int lif_index)
 {
-	unsigned long flags;
-	bool completed;
+	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
+	bool completed, interlaced;
+	u32 rpf_base;
 
 	if (pipe == NULL)
 		return;
 
-	spin_lock_irqsave(&pipe->irqlock, flags);
-	if (pipe->output->write_back != 0) {
-		pipe->output->write_back--;
-		wake_up_interruptible(&pipe->event_wait);
-	}
-	spin_unlock_irqrestore(&pipe->irqlock, flags);
+	if (vsp1_gen3_vspdl_check(vsp1) && (lif_index == 1))
+		rpf_base = vsp1->info->rpf_count - vsp1->num_brs_inputs;
+	else
+		rpf_base = 0;
 
-	completed = vsp1_dlm_irq_frame_end(pipe->output->dlm);
-	if (!completed) {
-		/*
-		 * If the DL commit raced with the frame end interrupt, the
-		 * commit ends up being postponed by one frame. Return
-		 * immediately without calling the pipeline's frame end handler
-		 * or incrementing the sequence number.
-		 */
-		return;
-	}
+	interlaced = pipe->inputs[rpf_base]->interlaced;
+
+	/*
+	 * If the DL commit raced with the frame end interrupt, the commit ends
+	 * up being postponed by one frame. @completed represents whether the
+	 * active frame was finished or postponed.
+	 */
+	completed = vsp1_dlm_irq_frame_end(pipe->output->dlm, interlaced);
+	pipe->completed = completed;
 
 	if (pipe->hgo)
 		vsp1_hgo_frame_end(pipe->hgo);
@@ -356,8 +355,12 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
 	if (pipe->hgt)
 		vsp1_hgt_frame_end(pipe->hgt);
 
+	/*
+	 * Regardless of frame completion we still need to notify the pipe
+	 * frame_end to account for vblank events.
+	 */
 	if (pipe->frame_end)
-		pipe->frame_end(pipe, lif_index);
+		pipe->frame_end(pipe, lif_index, completed);
 
 	pipe->sequence++;
 }
