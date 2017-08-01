@@ -54,8 +54,11 @@ void tmio_mmc_enable_dma(struct tmio_mmc_host *host, bool enable)
 		tmio_dm_write(host, DM_CM_INFO1, INFO1_CLEAR);
 
 	if (host->dma->enable) {
-		host->dma_irq_mask =
-			~(host->dma_tranend1 | DM_CM_INFO1_DTRAEND0);
+		if (host->sequencer_enabled)
+			host->dma_irq_mask = 0xffffffff;
+		else
+			host->dma_irq_mask =
+				~(host->dma_tranend1 | DM_CM_INFO1_DTRAEND0);
 		host->dma->enable(host, enable);
 		tmio_dm_write(host, DM_CM_INFO1_MASK, host->dma_irq_mask);
 	}
@@ -110,13 +113,6 @@ void tmio_mmc_start_dma(struct tmio_mmc_host *host, struct mmc_data *data)
 	dev_dbg(&host->pdev->dev, "%s: %d, %x\n", __func__, host->sg_len,
 		data->flags);
 
-	/* This DMAC cannot handle if buffer is not 8-bytes alignment */
-	if (!IS_ALIGNED(sg->offset, 8)) {
-		host->force_pio = true;
-		tmio_mmc_enable_dma(host, false);
-		return;
-	}
-
 	if (data->flags & MMC_DATA_READ) {
 		dtran_mode |= DTRAN_MODE_CH_NUM_CH1;
 		dir = DMA_FROM_DEVICE;
@@ -134,6 +130,20 @@ void tmio_mmc_start_dma(struct tmio_mmc_host *host, struct mmc_data *data)
 				"%s: dma_map_sg failed\n", __func__);
 			return;
 		}
+	}
+
+	/* This DMAC cannot handle if buffer is not 8-bytes alignment */
+	if (!IS_ALIGNED(sg_dma_address(sg), 8)) {
+		if (host->data->host_cookie != COOKIE_PRE_MAPPED) {
+			if (data->flags & MMC_DATA_READ)
+				dir = DMA_FROM_DEVICE;
+			else
+				dir = DMA_TO_DEVICE;
+			dma_unmap_sg(&host->pdev->dev, sg, host->sg_len, dir);
+		}
+		host->force_pio = true;
+		tmio_mmc_enable_dma(host, false);
+		return;
 	}
 
 	tmio_clear_transtate(host);
@@ -516,41 +526,6 @@ void tmio_mmc_start_sequencer(struct tmio_mmc_host *host)
 		goto force_pio;
 	}
 
-	if (ipmmu_on) {
-		if (!IS_ALIGNED(sg->offset, 8) ||
-		    ((sg_dma_address(sg) + data->blksz * data->blocks) >
-		    GENMASK_ULL(32, 0))) {
-			dev_dbg(&host->pdev->dev, "%s: force pio\n", __func__);
-			goto force_pio;
-		}
-		/*
-		 * workaround: if we use IPMMU, sometimes unhandled error
-		 * happened
-		 */
-		switch (host->mrq->cmd->opcode) {
-		case MMC_SEND_TUNING_BLOCK_HS200:
-		case MMC_SEND_TUNING_BLOCK:
-			goto force_pio;
-		default:
-			break;
-		}
-	} else {
-		for_each_sg(sg, sg_tmp, host->sg_len, i) {
-			/*
-			 * This DMAC cannot handle if buffer is not 8-bytes
-			 * alignment
-			 */
-			if (!IS_ALIGNED(sg_tmp->offset, 8) ||
-			    !IS_ALIGNED(sg_tmp->length, data->blksz) ||
-			    ((sg_dma_address(sg_tmp) + sg_tmp->length) >
-			    GENMASK_ULL(32, 0))) {
-				dev_dbg(&host->pdev->dev, "%s: force pio\n",
-					__func__);
-				goto force_pio;
-			}
-		}
-	}
-
 	if (host->data->host_cookie != COOKIE_PRE_MAPPED) {
 		if (data->flags & MMC_DATA_READ)
 			dir = DMA_FROM_DEVICE;
@@ -562,6 +537,38 @@ void tmio_mmc_start_sequencer(struct tmio_mmc_host *host)
 			dev_err(&host->pdev->dev,
 				"%s: dma_map_sg failed\n", __func__);
 			goto force_pio;
+		}
+	}
+
+	if (ipmmu_on) {
+		if (!IS_ALIGNED(sg_dma_address(sg), 8)) {
+			dev_dbg(&host->pdev->dev, "%s: force pio\n", __func__);
+			goto unmap_sg;
+		}
+		/*
+		 * workaround: if we use IPMMU, sometimes unhandled error
+		 * happened
+		 */
+		switch (host->mrq->cmd->opcode) {
+		case MMC_SEND_TUNING_BLOCK_HS200:
+		case MMC_SEND_TUNING_BLOCK:
+			goto unmap_sg;
+		default:
+			break;
+		}
+	} else {
+		for_each_sg(sg, sg_tmp, host->sg_len, i) {
+			/*
+			 * This DMAC cannot handle if buffer is not 8-bytes
+			 * alignment
+			 */
+			if (!IS_ALIGNED(sg_dma_address(sg_tmp), 8) ||
+			    (sg_tmp->length != data->blksz &&
+			    !IS_ALIGNED(sg_tmp->length, data->blksz))) {
+				dev_dbg(&host->pdev->dev, "%s: force pio\n",
+					__func__);
+				goto unmap_sg;
+			}
 		}
 	}
 

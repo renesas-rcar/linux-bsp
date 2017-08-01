@@ -160,30 +160,85 @@ static void pr_debug_status(u32 status)
 static void tmio_mmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
+	unsigned int timeout = 1000;
+	unsigned long flags = 0;
+
+	if (host->sequencer_enabled)
+		spin_lock_irqsave(&host->lock, flags);
+	else
+		__acquire(&host->lock);
 
 	if (enable && !host->sdio_irq_enabled) {
+		u16 sdio_status;
+
 		/* Keep device active while SDIO irq is enabled */
 		pm_runtime_get_sync(mmc_dev(mmc));
-		host->sdio_irq_enabled = true;
 
+		host->sdio_irq_enabled = true;
 		host->sdio_irq_mask = TMIO_SDIO_MASK_ALL &
 					~TMIO_SDIO_STAT_IOIRQ;
-		sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK, host->sdio_irq_mask);
+
+		/* Clear obsolete interrupts before enabling */
+		sdio_status = sd_ctrl_read16(host, CTL_SDIO_STATUS) & ~TMIO_SDIO_MASK_ALL;
+		if (host->pdata->flags & TMIO_MMC_SDIO_STATUS_SETBITS)
+			sdio_status |= TMIO_SDIO_SETBITS_MASK;
+		sd_ctrl_write16(host, CTL_SDIO_STATUS, sdio_status);
+
+		if (host->sequencer_enabled) {
+			while (timeout) {
+				sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK,
+						host->sdio_irq_mask);
+				if (sd_ctrl_read16(host, CTL_SDIO_IRQ_MASK) ==
+				    host->sdio_irq_mask)
+					break;
+
+				udelay(1);
+				timeout--;
+			}
+			if (!timeout)
+				dev_warn(&host->pdev->dev,
+					 "failed to write CTL_SDIO_IRQ_MASK\n");
+		} else {
+			sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK,
+					host->sdio_irq_mask);
+		}
 	} else if (!enable && host->sdio_irq_enabled) {
 		host->sdio_irq_mask = TMIO_SDIO_MASK_ALL;
-		sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK, host->sdio_irq_mask);
+		if (host->sequencer_enabled) {
+			while (timeout) {
+				sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK,
+						host->sdio_irq_mask);
+				if (sd_ctrl_read16(host, CTL_SDIO_IRQ_MASK) ==
+				    host->sdio_irq_mask)
+					break;
 
+				udelay(1);
+				timeout--;
+			}
+			if (!timeout)
+				dev_warn(&host->pdev->dev,
+					 "failed to write CTL_SDIO_IRQ_MASK\n");
+		} else {
+			sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK,
+					host->sdio_irq_mask);
+		}
 		host->sdio_irq_enabled = false;
 		pm_runtime_mark_last_busy(mmc_dev(mmc));
 		pm_runtime_put_autosuspend(mmc_dev(mmc));
 	}
+
+	if (host->sequencer_enabled)
+		spin_unlock_irqrestore(&host->lock, flags);
+	else
+		__release(&host->lock);
 }
 
 static void tmio_mmc_clk_start(struct tmio_mmc_host *host)
 {
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
-	msleep(host->pdata->flags & TMIO_MMC_MIN_RCAR2 ? 1 : 10);
+	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2))
+		usleep_range(10000, 11000);
 
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG) {
 		sd_ctrl_write16(host, CTL_CLK_AND_WAIT_CTL, 0x0100);
@@ -200,7 +255,8 @@ static void tmio_mmc_clk_stop(struct tmio_mmc_host *host)
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
-	msleep(host->pdata->flags & TMIO_MMC_MIN_RCAR2 ? 5 : 10);
+	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2))
+		usleep_range(10000, 11000);
 }
 
 static void tmio_mmc_set_clock(struct tmio_mmc_host *host,
@@ -255,11 +311,14 @@ static void tmio_mmc_reset(struct tmio_mmc_host *host)
 	sd_ctrl_write16(host, CTL_RESET_SD, 0x0000);
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG)
 		sd_ctrl_write16(host, CTL_RESET_SDIO, 0x0000);
-	msleep(10);
+
+	usleep_range(10000, 11000);
+
 	sd_ctrl_write16(host, CTL_RESET_SD, 0x0001);
 	if (host->pdata->flags & TMIO_MMC_HAVE_HIGH_REG)
 		sd_ctrl_write16(host, CTL_RESET_SDIO, 0x0001);
-	msleep(10);
+
+	usleep_range(10000, 11000);
 
 	if (host->pdata->flags & TMIO_MMC_SDIO_IRQ) {
 		sd_ctrl_write16(host, CTL_SDIO_IRQ_MASK, host->sdio_irq_mask);
@@ -398,8 +457,9 @@ static int tmio_mmc_start_command(struct tmio_mmc_host *host, struct mmc_command
 		u32 status = sd_ctrl_read16_and_16_as_32(host, CTL_STATUS);
 		bool busy = false;
 
-		if (host->pdata->flags &
-			(TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
+		if ((host->pdata->flags &
+		   (TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) ==
+		   (TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
 			if (!(status & TMIO_STAT_SCLKDIVEN))
 				busy = true;
 		} else {
@@ -648,8 +708,9 @@ static void tmio_mmc_seq_irq(struct tmio_mmc_host *host, unsigned int stat,
 		 * DATAEND interrupt with the BUSY bit set, in this cases
 		 * waiting for one more interrupt fixes the problem.
 		 */
-		if (host->pdata->flags &
-			(TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
+		if ((host->pdata->flags &
+		   (TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) ==
+		   (TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
 			if (status & TMIO_STAT_SCLKDIVEN)
 				done = true;
 		} else {
@@ -706,8 +767,9 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 		 * DATAEND interrupt with the BUSY bit set, in this cases
 		 * waiting for one more interrupt fixes the problem.
 		 */
-		if (host->pdata->flags &
-			(TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
+		if ((host->pdata->flags &
+		   (TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) ==
+		   (TMIO_MMC_HAS_IDLE_WAIT | TMIO_MMC_USE_SCLKDIVEN)) {
 			if (status & TMIO_STAT_SCLKDIVEN)
 				done = true;
 		} else {
@@ -866,9 +928,8 @@ static bool __tmio_mmc_sdcard_irq(struct tmio_mmc_host *host,
 	return false;
 }
 
-static void tmio_mmc_sdio_irq(int irq, void *devid)
+static void __tmio_mmc_sdio_irq(struct tmio_mmc_host *host)
 {
-	struct tmio_mmc_host *host = devid;
 	struct mmc_host *mmc = host->mmc;
 	struct tmio_mmc_data *pdata = host->pdata;
 	unsigned int ireg, status;
@@ -877,14 +938,24 @@ static void tmio_mmc_sdio_irq(int irq, void *devid)
 	if (!(pdata->flags & TMIO_MMC_SDIO_IRQ))
 		return;
 
+	if (host->sequencer_enabled)
+		spin_lock(&host->lock);
+	else
+		__acquire(&host->lock);
+
 	status = sd_ctrl_read16(host, CTL_SDIO_STATUS);
 	ireg = status & TMIO_SDIO_MASK_ALL & ~host->sdio_irq_mask;
 
 	sdio_status = status & ~TMIO_SDIO_MASK_ALL;
-	if (pdata->flags & TMIO_MMC_SDIO_STATUS_QUIRK)
-		sdio_status |= 6;
+	if (pdata->flags & TMIO_MMC_SDIO_STATUS_SETBITS)
+		sdio_status |= TMIO_SDIO_SETBITS_MASK;
 
 	sd_ctrl_write16(host, CTL_SDIO_STATUS, sdio_status);
+
+	if (host->sequencer_enabled)
+		spin_unlock(&host->lock);
+	else
+		__release(&host->lock);
 
 	if (mmc->caps & MMC_CAP_SDIO_IRQ && ireg & TMIO_SDIO_STAT_IOIRQ)
 		mmc_signal_sdio_irq(mmc);
@@ -911,7 +982,7 @@ irqreturn_t tmio_mmc_irq(int irq, void *devid)
 	if (__tmio_mmc_dma_irq(host))
 		return IRQ_HANDLED;
 
-	tmio_mmc_sdio_irq(irq, devid);
+	__tmio_mmc_sdio_irq(host);
 
 	return IRQ_HANDLED;
 }
@@ -1008,7 +1079,10 @@ static void tmio_mmc_post_req(struct mmc_host *mmc, struct mmc_request *req,
 	struct mmc_data *data = req->data;
 	enum dma_data_direction dir;
 
-	if (data && data->host_cookie == COOKIE_PRE_MAPPED) {
+	if (!host->chan_tx || !host->chan_rx || !data)
+		return;
+
+	if (data->host_cookie == COOKIE_PRE_MAPPED) {
 		if (req->data->flags & MMC_DATA_READ)
 			dir = DMA_FROM_DEVICE;
 		else
@@ -1027,7 +1101,10 @@ static void tmio_mmc_pre_req(struct mmc_host *mmc, struct mmc_request *req,
 	enum dma_data_direction dir;
 	int ret;
 
-	if (data && data->host_cookie == COOKIE_UNMAPPED) {
+	if (!host->chan_tx || !host->chan_rx || !data)
+		return;
+
+	if (data->host_cookie == COOKIE_UNMAPPED) {
 		if (req->data->flags & MMC_DATA_READ)
 			dir = DMA_FROM_DEVICE;
 		else
