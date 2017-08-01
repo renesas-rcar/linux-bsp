@@ -1145,6 +1145,36 @@ drm_atomic_helper_wait_for_vblanks(struct drm_device *dev,
 EXPORT_SYMBOL(drm_atomic_helper_wait_for_vblanks);
 
 /**
+ * drm_atomic_helper_wait_for_flip_done - wait for all page flips to be done
+ * @state: atomic state object
+ *
+ * Helper to, after atomic commit, wait for page flips on all effected
+ * crtcs (ie. before cleaning up old framebuffers using
+ * drm_atomic_helper_cleanup_planes()).
+ */
+void drm_atomic_helper_wait_for_flip_done(struct drm_device *dev,
+					  struct drm_atomic_state *state)
+{
+	struct drm_crtc_state *crtc_state;
+	struct drm_crtc *crtc;
+	int i;
+
+	for_each_crtc_in_state(state, crtc, crtc_state, i) {
+		struct drm_crtc_commit *commit = state->crtcs[i].commit;
+		int ret;
+
+		if (!commit)
+			continue;
+
+		ret = wait_for_completion_timeout(&commit->flip_done, 10 * HZ);
+		if (ret == 0)
+			DRM_ERROR("[CRTC:%d:%s] flip_done timed out\n",
+				  crtc->base.id, crtc->name);
+	}
+}
+EXPORT_SYMBOL(drm_atomic_helper_wait_for_flip_done);
+
+/**
  * drm_atomic_helper_commit_tail - commit atomic update to hardware
  * @state: new modeset state to be committed
  *
