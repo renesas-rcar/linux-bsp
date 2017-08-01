@@ -202,7 +202,7 @@ static int asoc_simple_card_dai_init(struct snd_soc_pcm_runtime *rtd)
 	if (ret < 0)
 		return ret;
 
-	ret = asoc_simple_card_init_mic(rtd->card, &priv->hp_jack, PREFIX);
+	ret = asoc_simple_card_init_mic(rtd->card, &priv->mic_jack, PREFIX);
 	if (ret < 0)
 		return ret;
 
@@ -497,8 +497,10 @@ static int asoc_simple_card_probe(struct platform_device *pdev)
 	snd_soc_card_set_drvdata(card, priv);
 
 	ret = devm_snd_soc_register_card(dev, card);
-	if (ret >= 0)
-		return ret;
+	if (ret < 0)
+		goto err;
+
+	return 0;
 err:
 	asoc_simple_card_clean_reference(card);
 
