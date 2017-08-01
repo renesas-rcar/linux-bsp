@@ -46,7 +46,11 @@
 #define REG_GEN3_PTAT1		0x5C
 #define REG_GEN3_PTAT2		0x60
 #define REG_GEN3_PTAT3		0x64
-#define PTAT_SIZE		REG_GEN3_PTAT3
+#define REG_GEN3_THSCP		0x68
+#define REG_GEN3_MAX_SIZE	(REG_GEN3_THSCP + 0x4)
+
+/* THSCP bit */
+#define COR_PARA_VLD		(0x3 << 14)
 
 /* CTSR bit */
 #define PONM1            (0x1 << 8)	/* For H3 ES1.x */
@@ -74,16 +78,11 @@
 #define GEN3_FUSE_MASK	0xFFF
 
 /* Check LSI revisions and set specific quirk value */
-#define FUSE_PSEUDO_VAL	BIT(0) /* FUSE's not been defined, use pseudo value */
 #define H3_1X_INIT	BIT(1) /* H3 1.x uses init flow that is diff others */
 
 static const struct soc_device_attribute ths_quirks_match[]  = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*",
-	  .data = (void *)(FUSE_PSEUDO_VAL | H3_1X_INIT), },
-	{ .soc_id = "r8a7795", .revision = "ES2.0",
-	  .data = (void *)FUSE_PSEUDO_VAL, },
-	{ .soc_id = "r8a7796",
-	  .data = (void *)FUSE_PSEUDO_VAL, },
+	  .data = (void *)H3_1X_INIT, },
 	{/*sentinel*/}
 };
 
@@ -128,7 +127,7 @@ struct rcar_thermal_data {
 
 /* Temperature calculation  */
 #define CODETSD(x)		((x) * 1000)
-#define TJ_1 96000L
+#define TJ_1 116000L
 #define TJ_3 (-41000L)
 
 #define rcar_thermal_read(p, r) _rcar_thermal_read(p, r)
@@ -165,39 +164,46 @@ static int round_temp(int temp)
 static int thermal_read_fuse_factor(struct rcar_thermal_priv *priv)
 {
 	void __iomem *ptat_base;
+	unsigned int cor_para_value;
 
-	ptat_base = ioremap_nocache(PTAT_BASE, PTAT_SIZE);
+	ptat_base = ioremap_nocache(PTAT_BASE, REG_GEN3_MAX_SIZE);
 	if (!ptat_base) {
 		dev_err(rcar_priv_to_dev(priv), "Cannot map FUSE register\n");
 		return -ENOMEM;
 	}
 
-	/* For H3 ES1.x, H3 ES2.0 and M3 ES1.0
-	 * these registers have not been programmed yet.
-	 * We will use fixed value as temporary solution.
+	cor_para_value = ioread32(ptat_base + REG_GEN3_THSCP) & COR_PARA_VLD;
+
+	/* Checking whether Fuse values have been programmed or not.
+	 * Base on that, it decides using fixed pseudo values or Fuse values.
 	 */
-	if (priv->ths_quirks & FUSE_PSEUDO_VAL) {
-		priv->factor.ptat_1 = 2351;
+
+	if (cor_para_value != COR_PARA_VLD) {
+		dev_info(rcar_priv_to_dev(priv), "is using pseudo fixed values\n");
+
+		priv->factor.ptat_1 = 2631;
 		priv->factor.ptat_2 = 1509;
 		priv->factor.ptat_3 = 435;
 		switch (priv->id) {
 		case 0:
-			priv->factor.thcode_1 = 3248;
+			priv->factor.thcode_1 = 3397;
 			priv->factor.thcode_2 = 2800;
 			priv->factor.thcode_3 = 2221;
 			break;
 		case 1:
-			priv->factor.thcode_1 = 3245;
+			priv->factor.thcode_1 = 3393;
 			priv->factor.thcode_2 = 2795;
 			priv->factor.thcode_3 = 2216;
 			break;
 		case 2:
-			priv->factor.thcode_1 = 3250;
+			priv->factor.thcode_1 = 3389;
 			priv->factor.thcode_2 = 2805;
 			priv->factor.thcode_3 = 2237;
 			break;
 		}
 	} else {
+		dev_info(rcar_priv_to_dev(priv), "is using Fuse values\n");
+
 		priv->factor.thcode_1 = rcar_thermal_read(priv,
 						REG_GEN3_THCODE1)
 				& GEN3_FUSE_MASK;
@@ -228,7 +234,7 @@ static void thermal_coefficient_calculation(struct rcar_thermal_priv *priv)
 	long a1_num, a1_den;
 	long a2_num, a2_den;
 
-	tj_2 = (CODETSD((priv->factor.ptat_2 - priv->factor.ptat_3) * 137)
+	tj_2 = (CODETSD((priv->factor.ptat_2 - priv->factor.ptat_3) * 157)
 		/ (priv->factor.ptat_1 - priv->factor.ptat_3)) - CODETSD(41);
 
 	/*
@@ -559,8 +565,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto error_unregister;
 
-	rcar_thermal_irq_enable(priv);
-
 	/* Interrupt */
 	if (rcar_has_irq_support(priv)) {
 		irq_cnt = platform_irq_count(pdev);
@@ -575,6 +579,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 				goto error_unregister;
 			}
 		}
+		rcar_thermal_irq_enable(priv);
 	}
 
 	dev_info(dev, "Thermal sensor probed\n");
