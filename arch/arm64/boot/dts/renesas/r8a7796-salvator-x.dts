@@ -437,7 +437,7 @@
 	};
 
 	sound_pins: sound {
-		groups = "ssi0129_ctrl", "ssi0_data", "ssi1_data_a";
+		groups = "ssi01239_ctrl", "ssi0_data", "ssi1_data_a";
 		function = "ssi";
 	};
 
