@@ -19,6 +19,8 @@
 #include <linux/sched.h>
 #include <linux/sysfs.h>
 #include <linux/tty.h>
+#include <linux/of_device.h>
+#include <linux/of_gpio.h>
 
 #include <linux/skbuff.h>
 #include <linux/ti_wilink_st.h>
@@ -713,18 +715,29 @@ static struct ti_st_plat_data *get_platform_data(struct device *dev)
 
 	dt_pdata = kzalloc(sizeof(*dt_pdata), GFP_KERNEL);
 
-	if (!dt_pdata)
+	if (!dt_pdata) {
 		pr_err("Can't allocate device_tree platform data\n");
+		return NULL;
+	}
 
 	dt_property = of_get_property(np, "dev_name", &len);
-	if (dt_property)
-		memcpy(&dt_pdata->dev_name, dt_property, len);
-	of_property_read_u32(np, "nshutdown_gpio",
-			     (u32 *)&dt_pdata->nshutdown_gpio);
+	if (!dt_property) {
+		dev_err(dev, "failed to get tty name\n");
+		goto err;
+	}
+	memcpy(&dt_pdata->dev_name, dt_property, len);
+	dt_pdata->nshutdown_gpio = of_get_named_gpio(np, "shutdown-gpios", 0);
+	if (!gpio_is_valid(dt_pdata->nshutdown_gpio)) {
+		dev_err(dev, "failed to get shutdown gpio\n");
+		goto err;
+	}
 	of_property_read_u32(np, "flow_cntrl", (u32 *)&dt_pdata->flow_cntrl);
 	of_property_read_u32(np, "baud_rate", (u32 *)&dt_pdata->baud_rate);
 
 	return dt_pdata;
+err:
+	kfree(dt_pdata);
+	return NULL;
 }
 
 static struct dentry *kim_debugfs_dir;
