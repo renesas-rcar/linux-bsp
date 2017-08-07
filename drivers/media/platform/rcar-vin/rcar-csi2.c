@@ -357,7 +357,7 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv,
 	dot_clk = h_freq * vblank;
 
 	if (priv->mf.field != V4L2_FIELD_NONE)
-		dot_clk /= 2;
+		dot_clk = div_u64(dot_clk, 2);
 
 	csi_dbg(priv, "Dot clock %llu Hz\n", dot_clk);
 
