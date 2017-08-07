@@ -753,7 +753,7 @@
 
 	/* audio_clkout0/1/2/3 */
 	#clock-cells = <1>;
-	clock-frequency = <11289600>;
+	clock-frequency = <12288000 11289600>;
 	clkout-lr-synchronous;
 
 	status = "okay";
@@ -893,14 +893,6 @@
 };
 
 &xhci0 {
-	status = "okay";
-};
-
-&usb3_peri0 {
-	status = "okay";
-};
-
-&usb3_peri1 {
 	status = "okay";
 };
 
