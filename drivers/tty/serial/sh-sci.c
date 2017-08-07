@@ -143,6 +143,7 @@ struct sci_port {
 #endif
 
 	bool autorts;
+	u64				rxfull_time;
 };
 
 #define SCI_NPORTS CONFIG_SERIAL_SH_SCI_NR_UARTS
@@ -866,12 +867,29 @@ static void sci_receive_chars(struct uart_port *port)
 		return;
 
 	while (1) {
+		int rxfill = sci_rxfill(port);
+		u64 now = get_jiffies_64();
 		/* Don't copy more bytes than there is room for in the buffer */
-		count = tty_buffer_request_room(tport, sci_rxfill(port));
+		count = tty_buffer_request_room(tport, rxfill);
 
 		/* If for any reason we can't copy more data, we're done! */
-		if (count == 0)
+		if (count == 0) {
+			int n;
+			/* discarded bytes in RX-FIFO */
+			for (n = 0; n < rxfill; n++)
+				serial_port_in(port, SCxRDR);
+			if (rxfill > 0 &&
+			    time_after64(now, sci_port->rxfull_time + (5 * HZ))
+			    ) {
+				sci_port->rxfull_time = now;
+				dev_warn(
+					port->dev,
+					"RX-FIFO isn't read, so %d bytes is discarded.\n",
+					rxfill
+				);
+			}
 			break;
+		}
 
 		if (port->type == PORT_SCI) {
 			char c = serial_port_in(port, SCxRDR);
@@ -2758,6 +2776,8 @@ static int sci_init_single(struct platform_device *dev,
 	if (p->dma_slave_tx > 0 && p->dma_slave_rx > 0)
 		dev_dbg(port->dev, "DMA tx %d, rx %d\n",
 			p->dma_slave_tx, p->dma_slave_rx);
+
+	sci_port->rxfull_time = get_jiffies_64();
 
 	return 0;
 }
