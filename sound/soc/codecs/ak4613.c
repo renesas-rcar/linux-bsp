@@ -88,6 +88,8 @@ struct ak4613_interface {
 struct ak4613_priv {
 	struct mutex lock;
 	const struct ak4613_interface *iface;
+	struct snd_pcm_hw_constraint_list constraint;
+	unsigned int sysclk;
 
 	unsigned int fmt;
 	u8 oc;
@@ -248,6 +250,74 @@ static void ak4613_dai_shutdown(struct snd_pcm_substream *substream,
 	mutex_unlock(&priv->lock);
 }
 
+static void ak4613_hw_constraints(struct ak4613_priv *priv,
+				  struct snd_pcm_runtime *runtime)
+{
+	static const unsigned int ak4613_rates[] = {
+		 32000,
+		 44100,
+		 48000,
+		 64000,
+		 88200,
+		 96000,
+		176400,
+		192000,
+	};
+	struct snd_pcm_hw_constraint_list *constraint = &priv->constraint;
+	unsigned int fs;
+	int i;
+
+	constraint->list	= ak4613_rates;
+	constraint->mask	= 0;
+	constraint->count	= 0;
+
+	/*
+	 * Slave Mode
+	 *	Normal: [32kHz, 48kHz] : 256fs,384fs or 512fs
+	 *	Double: [64kHz, 96kHz] : 256fs
+	 *	Quad  : [128kHz,192kHz]: 128fs
+	 *
+	 * Master mode
+	 *	Normal: [32kHz, 48kHz] : 256fs or 512fs
+	 *	Double: [64kHz, 96kHz] : 256fs
+	 *	Quad  : [128kHz,192kHz]: 128fs
+	*/
+	for (i = 0; i < ARRAY_SIZE(ak4613_rates); i++) {
+		/* minimum fs on each range */
+		fs = (ak4613_rates[i] <= 96000) ? 256 : 128;
+
+		if (priv->sysclk >= ak4613_rates[i] * fs)
+			constraint->count = i + 1;
+	}
+
+	snd_pcm_hw_constraint_list(runtime, 0,
+				SNDRV_PCM_HW_PARAM_RATE, constraint);
+}
+
+static int ak4613_dai_startup(struct snd_pcm_substream *substream,
+			      struct snd_soc_dai *dai)
+{
+	struct snd_soc_codec *codec = dai->codec;
+	struct ak4613_priv *priv = snd_soc_codec_get_drvdata(codec);
+
+	priv->cnt++;
+
+	ak4613_hw_constraints(priv, substream->runtime);
+
+	return 0;
+}
+
+static int ak4613_dai_set_sysclk(struct snd_soc_dai *codec_dai,
+				 int clk_id, unsigned int freq, int dir)
+{
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct ak4613_priv *priv = snd_soc_codec_get_drvdata(codec);
+
+	priv->sysclk = freq;
+
+	return 0;
+}
+
 static int ak4613_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
 	struct snd_soc_codec *codec = dai->codec;
@@ -313,6 +383,7 @@ static int ak4613_dai_hw_params(struct snd_pcm_substream *substream,
 	case 48000:
 		ctrl2 = DFS_NORMAL_SPEED;
 		break;
+	case 64000:
 	case 88200:
 	case 96000:
 		ctrl2 = DFS_DOUBLE_SPEED;
@@ -339,7 +410,7 @@ static int ak4613_dai_hw_params(struct snd_pcm_substream *substream,
 		if (ak4613_dai_fmt_matching(priv->iface, is_play, fmt, width))
 			iface = priv->iface;
 	} else {
-		for (i = ARRAY_SIZE(ak4613_iface); i >= 0; i--) {
+		for (i = ARRAY_SIZE(ak4613_iface) - 1; i >= 0; i--) {
 			if (!ak4613_dai_fmt_matching(ak4613_iface + i,
 						     is_play,
 						     fmt, width))
@@ -352,7 +423,6 @@ static int ak4613_dai_hw_params(struct snd_pcm_substream *substream,
 	if ((priv->iface == NULL) ||
 	    (priv->iface == iface)) {
 		priv->iface = iface;
-		priv->cnt++;
 		ret = 0;
 	}
 	mutex_unlock(&priv->lock);
@@ -401,7 +471,9 @@ static int ak4613_set_bias_level(struct snd_soc_codec *codec,
 }
 
 static const struct snd_soc_dai_ops ak4613_dai_ops = {
+	.startup	= ak4613_dai_startup,
 	.shutdown	= ak4613_dai_shutdown,
+	.set_sysclk	= ak4613_dai_set_sysclk,
 	.set_fmt	= ak4613_dai_set_fmt,
 	.hw_params	= ak4613_dai_hw_params,
 };
@@ -521,6 +593,7 @@ static int ak4613_i2c_probe(struct i2c_client *i2c,
 
 	priv->iface		= NULL;
 	priv->cnt		= 0;
+	priv->sysclk		= 0;
 
 	mutex_init(&priv->lock);
 
