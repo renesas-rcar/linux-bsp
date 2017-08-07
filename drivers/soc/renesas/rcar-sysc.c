@@ -17,6 +17,7 @@
 #include <linux/pm_domain.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/syscore_ops.h>
 #include <linux/io.h>
 #include <linux/soc/renesas/rcar-sysc.h>
 
@@ -328,6 +329,34 @@ struct rcar_pm_domains {
 	struct generic_pm_domain *domains[RCAR_PD_ALWAYS_ON + 1];
 };
 
+struct rcar_sysc_pd *rcar_domains[RCAR_PD_ALWAYS_ON + 1];
+
+static void rcar_power_on_force(void)
+{
+	int i;
+
+	for (i = 0; i < RCAR_PD_ALWAYS_ON; i++) {
+		struct rcar_sysc_pd *pd = rcar_domains[i];
+
+		if (!pd)
+			continue;
+
+		if (!(pd->flags & PD_ON_ONCE))
+			continue;
+
+		if (!rcar_sysc_power_is_off(&pd->ch))
+			continue;
+
+		rcar_sysc_power_up(&pd->ch);
+	}
+}
+
+#ifdef CONFIG_PM_SLEEP
+static struct syscore_ops rcar_sysc_syscore_ops = {
+	.resume = rcar_power_on_force,
+};
+#endif
+
 static int __init rcar_sysc_pd_init(void)
 {
 	const struct rcar_sysc_info *info;
@@ -410,7 +439,13 @@ static int __init rcar_sysc_pd_init(void)
 					       &pd->genpd);
 
 		domains->domains[area->isr_bit] = &pd->genpd;
+
+		rcar_domains[i] = pd;
 	}
+
+#if IS_ENABLED(CONFIG_ARCH_R8A7795) || IS_ENABLED(CONFIG_ARCH_R8A7796)
+	rcar_power_on_force();
+#endif
 
 	error = of_genpd_add_provider_onecell(np, &domains->onecell_data);
 
@@ -419,6 +454,17 @@ out_put:
 	return error;
 }
 early_initcall(rcar_sysc_pd_init);
+
+#if IS_ENABLED(CONFIG_ARCH_R8A7795) || IS_ENABLED(CONFIG_ARCH_R8A7796)
+static int __init rcar_sysc_pd_init2(void)
+{
+#ifdef CONFIG_PM_SLEEP
+	register_syscore_ops(&rcar_sysc_syscore_ops);
+#endif
+	return 0;
+}
+postcore_initcall(rcar_sysc_pd_init2);
+#endif
 
 void __init rcar_sysc_init(phys_addr_t base, u32 syscier)
 {
