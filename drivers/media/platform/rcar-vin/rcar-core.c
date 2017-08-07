@@ -169,7 +169,7 @@ static int rvin_group_link_notify(struct media_link *link, u32 flags,
 						struct rvin_group, mdev);
 	struct rvin_group_chsel chsel_map[4];
 	int vin_num, vin_master, csi_num, csi_chan;
-	unsigned int chsel;
+	int chsel;
 
 	mutex_lock(&group->lock);
 
