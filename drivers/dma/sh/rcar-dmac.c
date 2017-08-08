@@ -1615,8 +1615,8 @@ static int rcar_dmac_sleep_suspend(struct device *dev)
 		spin_lock_irqsave(&dmac->channels[i].lock, flags);
 
 		if (rcar_dmac_chan_is_busy(&dmac->channels[i])) {
+			spin_unlock_irqrestore(&dmac->channels[i].lock, flags);
 			pm_runtime_put(dev);
-			spin_unlock(&dmac->channels[i].lock);
 			return -EBUSY;
 		}
 
