@@ -328,7 +328,7 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
 			     unsigned int lif_index)
 {
 	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
-	bool completed, interlaced;
+	bool completed, interlaced = false;
 	u32 rpf_base;
 
 	if (pipe == NULL)
@@ -339,7 +339,8 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe,
 	else
 		rpf_base = 0;
 
-	interlaced = pipe->inputs[rpf_base]->interlaced;
+	if (pipe->inputs[rpf_base])
+		interlaced = pipe->inputs[rpf_base]->interlaced;
 
 	/*
 	 * If the DL commit raced with the frame end interrupt, the commit ends
