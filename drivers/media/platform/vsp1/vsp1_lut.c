@@ -213,8 +213,13 @@ static void lut_configure(struct vsp1_entity *entity,
 		lut->lut = NULL;
 		spin_unlock_irqrestore(&lut->lock, flags);
 
-		if (dlb)
+		if (dlb) {
 			vsp1_dl_list_add_fragment(dl, dlb);
+
+			/* release our local reference */
+			vsp1_dl_fragment_put(dlb);
+		}
+
 		break;
 	}
 }
