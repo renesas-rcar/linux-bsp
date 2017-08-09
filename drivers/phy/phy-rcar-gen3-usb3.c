@@ -14,6 +14,7 @@
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/delay.h>
 
 #define USB30_CLKSET0	0x034
 #define USB30_CLKSET1	0x036
