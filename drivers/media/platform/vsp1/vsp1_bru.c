@@ -285,18 +285,14 @@ static const struct v4l2_subdev_ops bru_ops = {
  * VSP1 Entity Operations
  */
 
-static void bru_configure(struct vsp1_entity *entity,
-			  struct vsp1_pipeline *pipe,
-			  struct vsp1_dl_list *dl,
-			  enum vsp1_entity_params params)
+static void bru_prepare(struct vsp1_entity *entity,
+			struct vsp1_pipeline *pipe,
+			struct vsp1_dl_list *dl)
 {
 	struct vsp1_bru *bru = to_bru(&entity->subdev);
 	struct v4l2_mbus_framefmt *format;
 	unsigned int flags;
 	unsigned int i;
-
-	if (params != VSP1_ENTITY_PARAMS_INIT)
-		return;
 
 	format = vsp1_entity_get_pad_format(&bru->entity, bru->entity.config,
 					    bru->entity.source_pad);
@@ -404,7 +400,7 @@ static void bru_configure(struct vsp1_entity *entity,
 }
 
 static const struct vsp1_entity_operations bru_entity_ops = {
-	.configure = bru_configure,
+	.prepare = bru_prepare,
 };
 
 /* -----------------------------------------------------------------------------

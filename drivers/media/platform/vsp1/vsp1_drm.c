@@ -558,15 +558,8 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int pipe_index)
 		}
 
 		vsp1_entity_route_setup(entity, pipe, dl);
-
-		if (entity->ops->configure) {
-			entity->ops->configure(entity, pipe, dl,
-					       VSP1_ENTITY_PARAMS_INIT);
-			entity->ops->configure(entity, pipe, dl,
-					       VSP1_ENTITY_PARAMS_RUNTIME);
-			entity->ops->configure(entity, pipe, dl,
-					       VSP1_ENTITY_PARAMS_PARTITION);
-		}
+		vsp1_entity_prepare(entity, pipe, dl);
+		vsp1_entity_configure(entity, pipe, dl, 0);
 	}
 
 	vsp1_dl_list_commit(dl);

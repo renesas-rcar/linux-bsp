@@ -213,37 +213,37 @@ static const struct v4l2_subdev_ops clu_ops = {
 /* -----------------------------------------------------------------------------
  * VSP1 Entity Operations
  */
+static void clu_prepare(struct vsp1_entity *entity,
+			struct vsp1_pipeline *pipe,
+			struct vsp1_dl_list *dl)
+{
+	struct vsp1_clu *clu = to_clu(&entity->subdev);
+
+	/*
+	 * The format can't be changed during streaming, only verify it
+	 * at setup time and store the information internally for future
+	 * runtime configuration calls.
+	 */
+	struct v4l2_mbus_framefmt *format;
+
+	format = vsp1_entity_get_pad_format(&clu->entity,
+					    clu->entity.config,
+					    CLU_PAD_SINK);
+	clu->yuv_mode = format->code == MEDIA_BUS_FMT_AYUV8_1X32;
+}
 
 static void clu_configure(struct vsp1_entity *entity,
 			  struct vsp1_pipeline *pipe,
 			  struct vsp1_dl_list *dl,
-			  enum vsp1_entity_params params)
+			  unsigned int partition)
 {
 	struct vsp1_clu *clu = to_clu(&entity->subdev);
 	struct vsp1_dl_body *dlb;
 	unsigned long flags;
 	u32 ctrl = VI6_CLU_CTRL_AAI | VI6_CLU_CTRL_MVS | VI6_CLU_CTRL_EN;
 
-	switch (params) {
-	case VSP1_ENTITY_PARAMS_INIT: {
-		/*
-		 * The format can't be changed during streaming, only verify it
-		 * at setup time and store the information internally for future
-		 * runtime configuration calls.
-		 */
-		struct v4l2_mbus_framefmt *format;
 
-		format = vsp1_entity_get_pad_format(&clu->entity,
-						    clu->entity.config,
-						    CLU_PAD_SINK);
-		clu->yuv_mode = format->code == MEDIA_BUS_FMT_AYUV8_1X32;
-		break;
-	}
-
-	case VSP1_ENTITY_PARAMS_PARTITION:
-		break;
-
-	case VSP1_ENTITY_PARAMS_RUNTIME:
+	if (partition == 0) {
 		/* 2D mode can only be used with the YCbCr pixel encoding. */
 		if (clu->mode == V4L2_CID_VSP1_CLU_MODE_2D && clu->yuv_mode)
 			ctrl |= VI6_CLU_CTRL_AX1I_2D | VI6_CLU_CTRL_AX2I_2D
@@ -263,8 +263,6 @@ static void clu_configure(struct vsp1_entity *entity,
 			/* release our local reference */
 			vsp1_dl_fragment_put(dlb);
 		}
-
-		break;
 	}
 }
 
@@ -276,6 +274,7 @@ static void clu_destroy(struct vsp1_entity *entity)
 }
 
 static const struct vsp1_entity_operations clu_entity_ops = {
+	.prepare = clu_prepare,
 	.configure = clu_configure,
 	.destroy = clu_destroy,
 };
