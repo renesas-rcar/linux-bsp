@@ -29,10 +29,10 @@
  * Device Access
  */
 
-static inline void vsp1_lut_write(struct vsp1_lut *lut, struct vsp1_dl_list *dl,
-				  u32 reg, u32 data)
+static inline void vsp1_lut_write(struct vsp1_lut *lut,
+				  struct vsp1_dl_body *dlb, u32 reg, u32 data)
 {
-	vsp1_dl_list_write(dl, reg, data);
+	vsp1_dl_fragment_write(dlb, reg, data);
 }
 
 /* -----------------------------------------------------------------------------
@@ -192,33 +192,34 @@ static const struct v4l2_subdev_ops lut_ops = {
 
 static void lut_prepare(struct vsp1_entity *entity,
 			struct vsp1_pipeline *pipe,
-			struct vsp1_dl_list *dl)
+			struct vsp1_dl_body *dlb)
 {
 	struct vsp1_lut *lut = to_lut(&entity->subdev);
 
-	vsp1_lut_write(lut, dl, VI6_LUT_CTRL, VI6_LUT_CTRL_EN);
+	vsp1_lut_write(lut, dlb, VI6_LUT_CTRL, VI6_LUT_CTRL_EN);
 }
 
 static void lut_configure(struct vsp1_entity *entity,
 			  struct vsp1_pipeline *pipe,
 			  struct vsp1_dl_list *dl,
+			  struct vsp1_dl_body *dlb,
 			  unsigned int partition)
 {
 	struct vsp1_lut *lut = to_lut(&entity->subdev);
-	struct vsp1_dl_body *dlb;
+	struct vsp1_dl_body *lut_dlb;
 	unsigned long flags;
 
 	if (partition == 0) {
 		spin_lock_irqsave(&lut->lock, flags);
-		dlb = lut->lut;
+		lut_dlb = lut->lut;
 		lut->lut = NULL;
 		spin_unlock_irqrestore(&lut->lock, flags);
 
-		if (dlb) {
-			vsp1_dl_list_add_fragment(dl, dlb);
+		if (lut_dlb) {
+			vsp1_dl_list_add_fragment(dl, lut_dlb);
 
 			/* release our local reference */
-			vsp1_dl_fragment_put(dlb);
+			vsp1_dl_fragment_put(lut_dlb);
 		}
 	}
 }

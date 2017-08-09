@@ -29,10 +29,10 @@
  * Device Access
  */
 
-static inline void vsp1_clu_write(struct vsp1_clu *clu, struct vsp1_dl_list *dl,
-				  u32 reg, u32 data)
+static inline void vsp1_clu_write(struct vsp1_clu *clu,
+				  struct vsp1_dl_body *dlb, u32 reg, u32 data)
 {
-	vsp1_dl_list_write(dl, reg, data);
+	vsp1_dl_fragment_write(dlb, reg, data);
 }
 
 /* -----------------------------------------------------------------------------
@@ -215,7 +215,7 @@ static const struct v4l2_subdev_ops clu_ops = {
  */
 static void clu_prepare(struct vsp1_entity *entity,
 			struct vsp1_pipeline *pipe,
-			struct vsp1_dl_list *dl)
+			struct vsp1_dl_body *dlb)
 {
 	struct vsp1_clu *clu = to_clu(&entity->subdev);
 
@@ -235,13 +235,13 @@ static void clu_prepare(struct vsp1_entity *entity,
 static void clu_configure(struct vsp1_entity *entity,
 			  struct vsp1_pipeline *pipe,
 			  struct vsp1_dl_list *dl,
+			  struct vsp1_dl_body *dlb,
 			  unsigned int partition)
 {
 	struct vsp1_clu *clu = to_clu(&entity->subdev);
-	struct vsp1_dl_body *dlb;
+	struct vsp1_dl_body *clu_dlb;
 	unsigned long flags;
 	u32 ctrl = VI6_CLU_CTRL_AAI | VI6_CLU_CTRL_MVS | VI6_CLU_CTRL_EN;
-
 
 	if (partition == 0) {
 		/* 2D mode can only be used with the YCbCr pixel encoding. */
@@ -250,18 +250,18 @@ static void clu_configure(struct vsp1_entity *entity,
 			     |  VI6_CLU_CTRL_OS0_2D | VI6_CLU_CTRL_OS1_2D
 			     |  VI6_CLU_CTRL_OS2_2D | VI6_CLU_CTRL_M2D;
 
-		vsp1_clu_write(clu, dl, VI6_CLU_CTRL, ctrl);
+		vsp1_clu_write(clu, dlb, VI6_CLU_CTRL, ctrl);
 
 		spin_lock_irqsave(&clu->lock, flags);
-		dlb = clu->clu;
+		clu_dlb = clu->clu;
 		clu->clu = NULL;
 		spin_unlock_irqrestore(&clu->lock, flags);
 
-		if (dlb) {
-			vsp1_dl_list_add_fragment(dl, dlb);
+		if (clu_dlb) {
+			vsp1_dl_list_add_fragment(dl, clu_dlb);
 
 			/* release our local reference */
-			vsp1_dl_fragment_put(dlb);
+			vsp1_dl_fragment_put(clu_dlb);
 		}
 	}
 }
