@@ -777,6 +777,23 @@ static int rsnd_ssi_common_probe(struct rsnd_mod *mod,
 	return ret;
 }
 
+static int rsnd_ssi_common_remove(struct rsnd_mod *mod,
+				  struct rsnd_dai_stream *io,
+				  struct rsnd_priv *priv)
+{
+	struct rsnd_ssi *ssi = rsnd_mod_to_ssi(mod);
+	struct rsnd_mod *pure_ssi_mod = rsnd_io_to_mod_ssi(io);
+
+	/* Do nothing if non SSI (= SSI parent, multi SSI) mod */
+	if (pure_ssi_mod != mod)
+		return 0;
+
+	/* PIO will request IRQ again */
+	free_irq(ssi->irq, mod);
+
+	return 0;
+}
+
 static int rsnd_ssi_pointer(struct rsnd_mod *mod,
 			    struct rsnd_dai_stream *io,
 			    snd_pcm_uframes_t *pointer)
@@ -792,6 +809,7 @@ static int rsnd_ssi_pointer(struct rsnd_mod *mod,
 static struct rsnd_mod_ops rsnd_ssi_pio_ops = {
 	.name	= SSI_NAME,
 	.probe	= rsnd_ssi_common_probe,
+	.remove	= rsnd_ssi_common_remove,
 	.init	= rsnd_ssi_init,
 	.quit	= rsnd_ssi_quit,
 	.start	= rsnd_ssi_start,
@@ -824,23 +842,6 @@ static int rsnd_ssi_dma_probe(struct rsnd_mod *mod,
 	ret = rsnd_dma_attach(io, mod, &ssi->dma);
 
 	return ret;
-}
-
-static int rsnd_ssi_dma_remove(struct rsnd_mod *mod,
-			       struct rsnd_dai_stream *io,
-			       struct rsnd_priv *priv)
-{
-	struct rsnd_ssi *ssi = rsnd_mod_to_ssi(mod);
-	struct rsnd_mod *ssi_parent_mod = rsnd_io_to_mod_ssip(io);
-
-	/* Do nothing for SSI parent mod */
-	if (ssi_parent_mod == mod)
-		return 0;
-
-	/* PIO will request IRQ again */
-	free_irq(ssi->irq, mod);
-
-	return 0;
 }
 
 static int rsnd_ssi_fallback(struct rsnd_mod *mod,
@@ -884,7 +885,7 @@ static struct rsnd_mod_ops rsnd_ssi_dma_ops = {
 	.name	= SSI_NAME,
 	.dma_req = rsnd_ssi_dma_req,
 	.probe	= rsnd_ssi_dma_probe,
-	.remove	= rsnd_ssi_dma_remove,
+	.remove	= rsnd_ssi_common_remove,
 	.init	= rsnd_ssi_init,
 	.quit	= rsnd_ssi_quit,
 	.start	= rsnd_ssi_start,
