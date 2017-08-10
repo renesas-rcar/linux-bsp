@@ -78,6 +78,7 @@ struct v4l2_async_subdev {
 /**
  * struct v4l2_async_notifier - v4l2_device notifier data
  *
+ * @subnotifier: flag if this notifier is part of a v4l2_subdev
  * @num_subdevs: number of subdevices
  * @subdevs:	array of pointers to subdevice descriptors
  * @v4l2_dev:	pointer to struct v4l2_device
@@ -89,6 +90,7 @@ struct v4l2_async_subdev {
  * @unbind:	a subdevice is leaving
  */
 struct v4l2_async_notifier {
+	bool subnotifier;
 	unsigned int num_subdevs;
 	struct v4l2_async_subdev **subdevs;
 	struct v4l2_device *v4l2_dev;
@@ -135,4 +137,27 @@ int v4l2_async_register_subdev(struct v4l2_subdev *sd);
  * @sd: pointer to &struct v4l2_subdev
  */
 void v4l2_async_unregister_subdev(struct v4l2_subdev *sd);
+
+/**
+ * v4l2_async_subdev_notifier_register - registers a subdevice asynchronous
+ *	subnotifier
+ *
+ * @sd: pointer to &struct v4l2_subdev
+ * @num_subdevs: number of subdevices
+ * @subdevs: array of pointers to subdevice descriptors
+ * @bound: a subdevice driver has successfully probed one of subdevices
+ * @complete: all subdevices have been probed successfully
+ * @unbind: a subdevice is leaving
+ */
+int v4l2_async_subdev_notifier_register(
+		struct v4l2_subdev *sd,
+		unsigned int num_subdevs,
+		struct v4l2_async_subdev **subdevs,
+		int (*bound)(struct v4l2_async_notifier *notifier,
+			     struct v4l2_subdev *subdev,
+			     struct v4l2_async_subdev *asd),
+		int (*complete)(struct v4l2_async_notifier *notifier),
+		void (*unbind)(struct v4l2_async_notifier *notifier,
+			       struct v4l2_subdev *subdev,
+			       struct v4l2_async_subdev *asd));
 #endif

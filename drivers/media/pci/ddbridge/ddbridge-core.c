@@ -17,6 +17,8 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -43,10 +45,17 @@
 #include "stv0367_priv.h"
 #include "cxd2841er.h"
 #include "tda18212.h"
+#include "stv0910.h"
+#include "stv6111.h"
+#include "lnbh25.h"
 
 static int xo2_speed = 2;
 module_param(xo2_speed, int, 0444);
 MODULE_PARM_DESC(xo2_speed, "default transfer speed for xo2 based duoflex, 0=55,1=75,2=90,3=104 MBit/s, default=2, use attribute to change for individual cards");
+
+static int stv0910_single;
+module_param(stv0910_single, int, 0444);
+MODULE_PARM_DESC(stv0910_single, "use stv0910 cards as single demods");
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
@@ -114,6 +123,19 @@ static int i2c_write_reg(struct i2c_adapter *adap, u8 adr,
 	return i2c_write(adap, adr, msg, 2);
 }
 
+static inline u32 safe_ddbreadl(struct ddb *dev, u32 adr)
+{
+	u32 val = ddbreadl(adr);
+
+	/* (ddb)readl returns (uint)-1 (all bits set) on failure, catch that */
+	if (val == ~0) {
+		dev_err(&dev->pdev->dev, "ddbreadl failure, adr=%08x\n", adr);
+		return 0;
+	}
+
+	return val;
+}
+
 static int ddb_i2c_cmd(struct ddb_i2c *i2c, u32 adr, u32 cmd)
 {
 	struct ddb *dev = i2c->dev;
@@ -124,10 +146,10 @@ static int ddb_i2c_cmd(struct ddb_i2c *i2c, u32 adr, u32 cmd)
 	ddbwritel((adr << 9) | cmd, i2c->regs + I2C_COMMAND);
 	stat = wait_event_timeout(i2c->wq, i2c->done == 1, HZ);
 	if (stat == 0) {
-		printk(KERN_ERR "I2C timeout\n");
+		dev_err(&dev->pdev->dev, "I2C timeout\n");
 		{ /* MSI debugging*/
 			u32 istat = ddbreadl(INTERRUPT_STATUS);
-			printk(KERN_ERR "IRS %08x\n", istat);
+			dev_err(&dev->pdev->dev, "IRS %08x\n", istat);
 			ddbwritel(istat, INTERRUPT_ACK);
 		}
 		return -EIO;
@@ -185,7 +207,7 @@ static u32 ddb_i2c_functionality(struct i2c_adapter *adap)
 	return I2C_FUNC_SMBUS_EMUL;
 }
 
-static struct i2c_algorithm ddb_i2c_algo = {
+static const struct i2c_algorithm ddb_i2c_algo = {
 	.master_xfer   = ddb_i2c_master_xfer,
 	.functionality = ddb_i2c_functionality,
 };
@@ -533,7 +555,7 @@ static u32 ddb_input_avail(struct ddb_input *input)
 	off = (stat & 0x7ff) << 7;
 
 	if (ctrl & 4) {
-		printk(KERN_ERR "IA %d %d %08x\n", idx, off, ctrl);
+		dev_err(&dev->pdev->dev, "IA %d %d %08x\n", idx, off, ctrl);
 		ddbwritel(input->stat, DMA_BUFFER_ACK(input->nr));
 		return 0;
 	}
@@ -611,6 +633,7 @@ static int demod_attach_drxk(struct ddb_input *input)
 	struct i2c_adapter *i2c = &input->port->i2c->adap;
 	struct dvb_frontend *fe;
 	struct drxk_config config;
+	struct device *dev = &input->port->dev->pdev->dev;
 
 	memset(&config, 0, sizeof(config));
 	config.microcode_name = "drxk_a3.mc";
@@ -619,7 +642,7 @@ static int demod_attach_drxk(struct ddb_input *input)
 
 	fe = input->fe = dvb_attach(drxk_attach, &config, i2c);
 	if (!input->fe) {
-		printk(KERN_ERR "No DRXK found!\n");
+		dev_err(dev, "No DRXK found!\n");
 		return -ENODEV;
 	}
 	fe->sec_priv = input;
@@ -632,12 +655,13 @@ static int tuner_attach_tda18271(struct ddb_input *input)
 {
 	struct i2c_adapter *i2c = &input->port->i2c->adap;
 	struct dvb_frontend *fe;
+	struct device *dev = &input->port->dev->pdev->dev;
 
 	if (input->fe->ops.i2c_gate_ctrl)
 		input->fe->ops.i2c_gate_ctrl(input->fe, 1);
 	fe = dvb_attach(tda18271c2dd_attach, input->fe, i2c, 0x60);
 	if (!fe) {
-		printk(KERN_ERR "No TDA18271 found!\n");
+		dev_err(dev, "No TDA18271 found!\n");
 		return -ENODEV;
 	}
 	if (input->fe->ops.i2c_gate_ctrl)
@@ -670,13 +694,14 @@ static struct stv0367_config ddb_stv0367_config[] = {
 static int demod_attach_stv0367(struct ddb_input *input)
 {
 	struct i2c_adapter *i2c = &input->port->i2c->adap;
+	struct device *dev = &input->port->dev->pdev->dev;
 
 	/* attach frontend */
 	input->fe = dvb_attach(stv0367ddb_attach,
 		&ddb_stv0367_config[(input->nr & 1)], i2c);
 
 	if (!input->fe) {
-		printk(KERN_ERR "stv0367ddb_attach failed (not found?)\n");
+		dev_err(dev, "stv0367ddb_attach failed (not found?)\n");
 		return -ENODEV;
 	}
 
@@ -690,17 +715,19 @@ static int demod_attach_stv0367(struct ddb_input *input)
 static int tuner_tda18212_ping(struct ddb_input *input, unsigned short adr)
 {
 	struct i2c_adapter *adapter = &input->port->i2c->adap;
+	struct device *dev = &input->port->dev->pdev->dev;
+
 	u8 tda_id[2];
 	u8 subaddr = 0x00;
 
-	printk(KERN_DEBUG "stv0367-tda18212 tuner ping\n");
+	dev_dbg(dev, "stv0367-tda18212 tuner ping\n");
 	if (input->fe->ops.i2c_gate_ctrl)
 		input->fe->ops.i2c_gate_ctrl(input->fe, 1);
 
 	if (i2c_read_regs(adapter, adr, subaddr, tda_id, sizeof(tda_id)) < 0)
-		printk(KERN_DEBUG "tda18212 ping 1 fail\n");
+		dev_dbg(dev, "tda18212 ping 1 fail\n");
 	if (i2c_read_regs(adapter, adr, subaddr, tda_id, sizeof(tda_id)) < 0)
-		printk(KERN_DEBUG "tda18212 ping 2 fail\n");
+		dev_warn(dev, "tda18212 ping failed, expect problems\n");
 
 	if (input->fe->ops.i2c_gate_ctrl)
 		input->fe->ops.i2c_gate_ctrl(input->fe, 0);
@@ -711,6 +738,7 @@ static int tuner_tda18212_ping(struct ddb_input *input, unsigned short adr)
 static int demod_attach_cxd28xx(struct ddb_input *input, int par, int osc24)
 {
 	struct i2c_adapter *i2c = &input->port->i2c->adap;
+	struct device *dev = &input->port->dev->pdev->dev;
 	struct cxd2841er_config cfg;
 
 	/* the cxd2841er driver expects 8bit/shifted I2C addresses */
@@ -728,7 +756,7 @@ static int demod_attach_cxd28xx(struct ddb_input *input, int par, int osc24)
 	input->fe = dvb_attach(cxd2841er_attach_t_c, &cfg, i2c);
 
 	if (!input->fe) {
-		printk(KERN_ERR "No Sony CXD28xx found!\n");
+		dev_err(dev, "No Sony CXD28xx found!\n");
 		return -ENODEV;
 	}
 
@@ -742,6 +770,7 @@ static int demod_attach_cxd28xx(struct ddb_input *input, int par, int osc24)
 static int tuner_attach_tda18212(struct ddb_input *input, u32 porttype)
 {
 	struct i2c_adapter *adapter = &input->port->i2c->adap;
+	struct device *dev = &input->port->dev->pdev->dev;
 	struct i2c_client *client;
 	struct tda18212_config config = {
 		.fe = input->fe,
@@ -786,7 +815,7 @@ static int tuner_attach_tda18212(struct ddb_input *input, u32 porttype)
 
 	return 0;
 err:
-	printk(KERN_INFO "TDA18212 tuner not found. Device is not fully operational.\n");
+	dev_warn(dev, "TDA18212 tuner not found. Device is not fully operational.\n");
 	return -ENODEV;
 }
 
@@ -847,19 +876,20 @@ static struct stv6110x_config stv6110b = {
 static int demod_attach_stv0900(struct ddb_input *input, int type)
 {
 	struct i2c_adapter *i2c = &input->port->i2c->adap;
+	struct device *dev = &input->port->dev->pdev->dev;
 	struct stv090x_config *feconf = type ? &stv0900_aa : &stv0900;
 
 	input->fe = dvb_attach(stv090x_attach, feconf, i2c,
 			       (input->nr & 1) ? STV090x_DEMODULATOR_1
 			       : STV090x_DEMODULATOR_0);
 	if (!input->fe) {
-		printk(KERN_ERR "No STV0900 found!\n");
+		dev_err(dev, "No STV0900 found!\n");
 		return -ENODEV;
 	}
 	if (!dvb_attach(lnbh24_attach, input->fe, i2c, 0,
 			0, (input->nr & 1) ?
 			(0x09 - type) : (0x0b - type))) {
-		printk(KERN_ERR "No LNBH24 found!\n");
+		dev_err(dev, "No LNBH24 found!\n");
 		return -ENODEV;
 	}
 	return 0;
@@ -868,6 +898,7 @@ static int demod_attach_stv0900(struct ddb_input *input, int type)
 static int tuner_attach_stv6110(struct ddb_input *input, int type)
 {
 	struct i2c_adapter *i2c = &input->port->i2c->adap;
+	struct device *dev = &input->port->dev->pdev->dev;
 	struct stv090x_config *feconf = type ? &stv0900_aa : &stv0900;
 	struct stv6110x_config *tunerconf = (input->nr & 1) ?
 		&stv6110b : &stv6110a;
@@ -875,10 +906,10 @@ static int tuner_attach_stv6110(struct ddb_input *input, int type)
 
 	ctl = dvb_attach(stv6110x_attach, input->fe, tunerconf, i2c);
 	if (!ctl) {
-		printk(KERN_ERR "No STV6110X found!\n");
+		dev_err(dev, "No STV6110X found!\n");
 		return -ENODEV;
 	}
-	printk(KERN_INFO "attach tuner input %d adr %02x\n",
+	dev_info(dev, "attach tuner input %d adr %02x\n",
 			 input->nr, tunerconf->addr);
 
 	feconf->tuner_init          = ctl->tuner_init;
@@ -893,6 +924,74 @@ static int tuner_attach_stv6110(struct ddb_input *input, int type)
 	feconf->tuner_set_refclk    = ctl->tuner_set_refclk;
 	feconf->tuner_get_status    = ctl->tuner_get_status;
 
+	return 0;
+}
+
+static struct stv0910_cfg stv0910_p = {
+	.adr      = 0x68,
+	.parallel = 1,
+	.rptlvl   = 4,
+	.clk      = 30000000,
+};
+
+static struct lnbh25_config lnbh25_cfg = {
+	.i2c_address = 0x0c << 1,
+	.data2_config = LNBH25_TEN
+};
+
+static int demod_attach_stv0910(struct ddb_input *input, int type)
+{
+	struct i2c_adapter *i2c = &input->port->i2c->adap;
+	struct device *dev = &input->port->dev->pdev->dev;
+	struct stv0910_cfg cfg = stv0910_p;
+	struct lnbh25_config lnbcfg = lnbh25_cfg;
+
+	if (stv0910_single)
+		cfg.single = 1;
+
+	if (type)
+		cfg.parallel = 2;
+	input->fe = dvb_attach(stv0910_attach, i2c, &cfg, (input->nr & 1));
+	if (!input->fe) {
+		cfg.adr = 0x6c;
+		input->fe = dvb_attach(stv0910_attach, i2c,
+					&cfg, (input->nr & 1));
+	}
+	if (!input->fe) {
+		dev_err(dev, "No STV0910 found!\n");
+		return -ENODEV;
+	}
+
+	/* attach lnbh25 - leftshift by one as the lnbh25 driver expects 8bit
+	 * i2c addresses
+	 */
+	lnbcfg.i2c_address = (((input->nr & 1) ? 0x0d : 0x0c) << 1);
+	if (!dvb_attach(lnbh25_attach, input->fe, &lnbcfg, i2c)) {
+		lnbcfg.i2c_address = (((input->nr & 1) ? 0x09 : 0x08) << 1);
+		if (!dvb_attach(lnbh25_attach, input->fe, &lnbcfg, i2c)) {
+			dev_err(dev, "No LNBH25 found!\n");
+			return -ENODEV;
+		}
+	}
+
+	return 0;
+}
+
+static int tuner_attach_stv6111(struct ddb_input *input, int type)
+{
+	struct i2c_adapter *i2c = &input->port->i2c->adap;
+	struct device *dev = &input->port->dev->pdev->dev;
+	struct dvb_frontend *fe;
+	u8 adr = (type ? 0 : 4) + ((input->nr & 1) ? 0x63 : 0x60);
+
+	fe = dvb_attach(stv6111_attach, input->fe, i2c, adr);
+	if (!fe) {
+		fe = dvb_attach(stv6111_attach, input->fe, i2c, adr & ~4);
+		if (!fe) {
+			dev_err(dev, "No STV6111 found at 0x%02x!\n", adr);
+			return -ENODEV;
+		}
+	}
 	return 0;
 }
 
@@ -1009,13 +1108,14 @@ static int dvb_input_attach(struct ddb_input *input)
 	struct ddb_port *port = input->port;
 	struct dvb_adapter *adap = &input->adap;
 	struct dvb_demux *dvbdemux = &input->demux;
+	struct device *dev = &input->port->dev->pdev->dev;
 	int sony_osc24 = 0, sony_tspar = 0;
 
 	ret = dvb_register_adapter(adap, "DDBridge", THIS_MODULE,
 				   &input->port->dev->pdev->dev,
 				   adapter_nr);
 	if (ret < 0) {
-		printk(KERN_ERR "ddbridge: Could not register adapter.Check if you enabled enough adapters in dvb-core!\n");
+		dev_err(dev, "Could not register adapter. Check if you enabled enough adapters in dvb-core!\n");
 		return ret;
 	}
 	input->attached = 1;
@@ -1055,6 +1155,36 @@ static int dvb_input_attach(struct ddb_input *input)
 		if (demod_attach_stv0900(input, 1) < 0)
 			return -ENODEV;
 		if (tuner_attach_stv6110(input, 1) < 0)
+			return -ENODEV;
+		if (input->fe) {
+			if (dvb_register_frontend(adap, input->fe) < 0)
+				return -ENODEV;
+		}
+		break;
+	case DDB_TUNER_XO2_DVBS_STV0910:
+		if (demod_attach_stv0910(input, 0) < 0)
+			return -ENODEV;
+		if (tuner_attach_stv6111(input, 0) < 0)
+			return -ENODEV;
+		if (input->fe) {
+			if (dvb_register_frontend(adap, input->fe) < 0)
+				return -ENODEV;
+		}
+		break;
+	case DDB_TUNER_DVBS_STV0910_PR:
+		if (demod_attach_stv0910(input, 1) < 0)
+			return -ENODEV;
+		if (tuner_attach_stv6111(input, 1) < 0)
+			return -ENODEV;
+		if (input->fe) {
+			if (dvb_register_frontend(adap, input->fe) < 0)
+				return -ENODEV;
+		}
+		break;
+	case DDB_TUNER_DVBS_STV0910_P:
+		if (demod_attach_stv0910(input, 0) < 0)
+			return -ENODEV;
+		if (tuner_attach_stv6111(input, 1) < 0)
 			return -ENODEV;
 		if (input->fe) {
 			if (dvb_register_frontend(adap, input->fe) < 0)
@@ -1241,9 +1371,9 @@ static void input_tasklet(unsigned long data)
 
 	if (input->port->class == DDB_PORT_TUNER) {
 		if (4&ddbreadl(DMA_BUFFER_CONTROL(input->nr)))
-			printk(KERN_ERR "Overflow input %d\n", input->nr);
+			dev_err(&dev->pdev->dev, "Overflow input %d\n", input->nr);
 		while (input->cbuf != ((input->stat >> 11) & 0x1f)
-		       || (4&ddbreadl(DMA_BUFFER_CONTROL(input->nr)))) {
+		       || (4 & safe_ddbreadl(dev, DMA_BUFFER_CONTROL(input->nr)))) {
 			dvb_dmx_swfilter_packets(&input->demux,
 						 input->vbuf[input->cbuf],
 						 input->dma_buf_size / 188);
@@ -1280,6 +1410,7 @@ static struct cxd2099_cfg cxd_cfg = {
 	.adr     =  0x40,
 	.polarity = 1,
 	.clock_mode = 1,
+	.max_i2c = 512,
 };
 
 static int ddb_ci_attach(struct ddb_port *port)
@@ -1310,6 +1441,7 @@ static int ddb_ci_attach(struct ddb_port *port)
 
 static int ddb_port_attach(struct ddb_port *port)
 {
+	struct device *dev = &port->dev->pdev->dev;
 	int ret = 0;
 
 	switch (port->class) {
@@ -1326,7 +1458,7 @@ static int ddb_port_attach(struct ddb_port *port)
 		break;
 	}
 	if (ret < 0)
-		printk(KERN_ERR "port_attach on port %d failed\n", port->nr);
+		dev_err(dev, "port_attach on port %d failed\n", port->nr);
 	return ret;
 }
 
@@ -1377,6 +1509,7 @@ static void ddb_ports_detach(struct ddb *dev)
 static int init_xo2(struct ddb_port *port)
 {
 	struct i2c_adapter *i2c = &port->i2c->adap;
+	struct device *dev = &port->dev->pdev->dev;
 	u8 val, data[2];
 	int res;
 
@@ -1385,7 +1518,7 @@ static int init_xo2(struct ddb_port *port)
 		return res;
 
 	if (data[0] != 0x01)  {
-		pr_info("Port %d: invalid XO2\n", port->nr);
+		dev_info(dev, "Port %d: invalid XO2\n", port->nr);
 		return -1;
 	}
 
@@ -1452,10 +1585,9 @@ static int port_has_stv0900(struct ddb_port *port)
 	return 1;
 }
 
-static int port_has_stv0900_aa(struct ddb_port *port)
+static int port_has_stv0900_aa(struct ddb_port *port, u8 *id)
 {
-	u8 val;
-	if (i2c_read_reg16(&port->i2c->adap, 0x68, 0xf100, &val) < 0)
+	if (i2c_read_reg16(&port->i2c->adap, 0x68, 0xf100, id) < 0)
 		return 0;
 	return 1;
 }
@@ -1502,7 +1634,7 @@ static void ddb_port_probe(struct ddb_port *port)
 {
 	struct ddb *dev = port->dev;
 	char *modname = "NO MODULE";
-	u8 xo2_type, xo2_id, cxd_id;
+	u8 xo2_type, xo2_id, cxd_id, stv_id;
 
 	port->class = DDB_PORT_NONE;
 
@@ -1511,7 +1643,7 @@ static void ddb_port_probe(struct ddb_port *port)
 		port->class = DDB_PORT_CI;
 		ddbwritel(I2C_SPEED_400, port->i2c->regs + I2C_TIMING);
 	} else if (port_has_xo2(port, &xo2_type, &xo2_id)) {
-		printk(KERN_INFO "Port %d (TAB %d): XO2 type: %d, id: %d\n",
+		dev_dbg(&dev->pdev->dev, "Port %d (TAB %d): XO2 type: %d, id: %d\n",
 			port->nr, port->nr+1, xo2_type, xo2_id);
 
 		ddbwritel(I2C_SPEED_400, port->i2c->regs + I2C_TIMING);
@@ -1521,8 +1653,8 @@ static void ddb_port_probe(struct ddb_port *port)
 			init_xo2(port);
 			switch (xo2_id >> 2) {
 			case 0:
-				modname = "DUAL DVB-S2 (unsupported)";
-				port->class = DDB_PORT_NONE;
+				modname = "DUAL DVB-S2";
+				port->class = DDB_PORT_TUNER;
 				port->type = DDB_TUNER_XO2_DVBS_STV0910;
 				break;
 			case 1:
@@ -1556,10 +1688,10 @@ static void ddb_port_probe(struct ddb_port *port)
 			}
 			break;
 		case DDB_XO2_TYPE_CI:
-			printk(KERN_INFO "DuoFlex CI modules not supported\n");
+			dev_info(&dev->pdev->dev, "DuoFlex CI modules not supported\n");
 			break;
 		default:
-			printk(KERN_INFO "Unknown XO2 DuoFlex module\n");
+			dev_info(&dev->pdev->dev, "Unknown XO2 DuoFlex module\n");
 			break;
 		}
 	} else if (port_has_cxd28xx(port, &cxd_id)) {
@@ -1594,10 +1726,21 @@ static void ddb_port_probe(struct ddb_port *port)
 		port->class = DDB_PORT_TUNER;
 		port->type = DDB_TUNER_DVBS_ST;
 		ddbwritel(I2C_SPEED_100, port->i2c->regs + I2C_TIMING);
-	} else if (port_has_stv0900_aa(port)) {
+	} else if (port_has_stv0900_aa(port, &stv_id)) {
 		modname = "DUAL DVB-S2";
 		port->class = DDB_PORT_TUNER;
-		port->type = DDB_TUNER_DVBS_ST_AA;
+		switch (stv_id) {
+		case 0x51:
+			if (dev->info->ts_quirks & TS_QUIRK_REVERSED &&
+					port->nr == 0)
+				port->type = DDB_TUNER_DVBS_STV0910_PR;
+			else
+				port->type = DDB_TUNER_DVBS_STV0910_P;
+			break;
+		default:
+			port->type = DDB_TUNER_DVBS_ST_AA;
+			break;
+		}
 		ddbwritel(I2C_SPEED_100, port->i2c->regs + I2C_TIMING);
 	} else if (port_has_drxks(port)) {
 		modname = "DUAL DVB-C/T";
@@ -1611,7 +1754,7 @@ static void ddb_port_probe(struct ddb_port *port)
 		ddbwritel(I2C_SPEED_100, port->i2c->regs + I2C_TIMING);
 	}
 
-	printk(KERN_INFO "Port %d (TAB %d): %s\n",
+	dev_info(&dev->pdev->dev, "Port %d (TAB %d): %s\n",
 			 port->nr, port->nr+1, modname);
 }
 
@@ -1765,7 +1908,7 @@ static int flashio(struct ddb *dev, u8 *wbuf, u32 wlen, u8 *rbuf, u32 rlen)
 		wbuf += 4;
 		wlen -= 4;
 		ddbwritel(data, SPI_DATA);
-		while (ddbreadl(SPI_CONTROL) & 0x0004)
+		while (safe_ddbreadl(dev, SPI_CONTROL) & 0x0004)
 			;
 	}
 
@@ -1785,7 +1928,7 @@ static int flashio(struct ddb *dev, u8 *wbuf, u32 wlen, u8 *rbuf, u32 rlen)
 	if (shift)
 		data <<= shift;
 	ddbwritel(data, SPI_DATA);
-	while (ddbreadl(SPI_CONTROL) & 0x0004)
+	while (safe_ddbreadl(dev, SPI_CONTROL) & 0x0004)
 		;
 
 	if (!rlen) {
@@ -1797,7 +1940,7 @@ static int flashio(struct ddb *dev, u8 *wbuf, u32 wlen, u8 *rbuf, u32 rlen)
 
 	while (rlen > 4) {
 		ddbwritel(0xffffffff, SPI_DATA);
-		while (ddbreadl(SPI_CONTROL) & 0x0004)
+		while (safe_ddbreadl(dev, SPI_CONTROL) & 0x0004)
 			;
 		data = ddbreadl(SPI_DATA);
 		*(u32 *) rbuf = swab32(data);
@@ -1806,7 +1949,7 @@ static int flashio(struct ddb *dev, u8 *wbuf, u32 wlen, u8 *rbuf, u32 rlen)
 	}
 	ddbwritel(0x0003 | ((rlen << (8 + 3)) & 0x1F00), SPI_CONTROL);
 	ddbwritel(0xffffffff, SPI_DATA);
-	while (ddbreadl(SPI_CONTROL) & 0x0004)
+	while (safe_ddbreadl(dev, SPI_CONTROL) & 0x0004)
 		;
 
 	data = ddbreadl(SPI_DATA);
@@ -1993,7 +2136,7 @@ static int ddb_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	dev->pdev = pdev;
 	pci_set_drvdata(pdev, dev);
 	dev->info = (struct ddb_info *) id->driver_data;
-	printk(KERN_INFO "DDBridge driver detected: %s\n", dev->info->name);
+	dev_info(&pdev->dev, "Detected %s\n", dev->info->name);
 
 	dev->regs = ioremap(pci_resource_start(dev->pdev, 0),
 			    pci_resource_len(dev->pdev, 0));
@@ -2001,13 +2144,13 @@ static int ddb_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		stat = -ENOMEM;
 		goto fail;
 	}
-	printk(KERN_INFO "HW %08x FW %08x\n", ddbreadl(0), ddbreadl(4));
+	dev_info(&pdev->dev, "HW %08x FW %08x\n", ddbreadl(0), ddbreadl(4));
 
 #ifdef CONFIG_PCI_MSI
 	if (pci_msi_enabled())
 		stat = pci_enable_msi(dev->pdev);
 	if (stat) {
-		printk(KERN_INFO ": MSI not available.\n");
+		dev_info(&pdev->dev, "MSI not available.\n");
 	} else {
 		irq_flag = 0;
 		dev->msi = 1;
@@ -2040,7 +2183,7 @@ static int ddb_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto fail1;
 	ddb_ports_init(dev);
 	if (ddb_buffers_alloc(dev) < 0) {
-		printk(KERN_INFO ": Could not allocate buffer memory\n");
+		dev_err(&pdev->dev, "Could not allocate buffer memory\n");
 		goto fail2;
 	}
 	if (ddb_ports_attach(dev) < 0)
@@ -2050,19 +2193,19 @@ static int ddb_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 fail3:
 	ddb_ports_detach(dev);
-	printk(KERN_ERR "fail3\n");
+	dev_err(&pdev->dev, "fail3\n");
 	ddb_ports_release(dev);
 fail2:
-	printk(KERN_ERR "fail2\n");
+	dev_err(&pdev->dev, "fail2\n");
 	ddb_buffers_free(dev);
 fail1:
-	printk(KERN_ERR "fail1\n");
+	dev_err(&pdev->dev, "fail1\n");
 	if (dev->msi)
 		pci_disable_msi(dev->pdev);
 	if (stat == 0)
 		free_irq(dev->pdev->irq, dev);
 fail:
-	printk(KERN_ERR "fail\n");
+	dev_err(&pdev->dev, "fail\n");
 	ddb_unmap(dev);
 	pci_set_drvdata(pdev, NULL);
 	pci_disable_device(pdev);
@@ -2111,6 +2254,24 @@ static const struct ddb_info ddb_v6_5 = {
 	.type     = DDB_OCTOPUS,
 	.name     = "Digital Devices Cine S2 V6.5 DVB adapter",
 	.port_num = 4,
+};
+
+static const struct ddb_info ddb_v7 = {
+	.type     = DDB_OCTOPUS,
+	.name     = "Digital Devices Cine S2 V7 DVB adapter",
+	.port_num = 4,
+	.board_control   = 2,
+	.board_control_2 = 4,
+	.ts_quirks = TS_QUIRK_REVERSED,
+};
+
+static const struct ddb_info ddb_v7a = {
+	.type     = DDB_OCTOPUS,
+	.name     = "Digital Devices Cine S2 V7 Advanced DVB adapter",
+	.port_num = 4,
+	.board_control   = 2,
+	.board_control_2 = 4,
+	.ts_quirks = TS_QUIRK_REVERSED,
 };
 
 static const struct ddb_info ddb_dvbct = {
@@ -2205,6 +2366,8 @@ static const struct pci_device_id ddb_id_tbl[] = {
 	DDB_ID(DDVID, 0x0005, DDVID, 0x0011, ddb_octopus_mini),
 	DDB_ID(DDVID, 0x0003, DDVID, 0x0020, ddb_v6),
 	DDB_ID(DDVID, 0x0003, DDVID, 0x0021, ddb_v6_5),
+	DDB_ID(DDVID, 0x0006, DDVID, 0x0022, ddb_v7),
+	DDB_ID(DDVID, 0x0006, DDVID, 0x0024, ddb_v7a),
 	DDB_ID(DDVID, 0x0003, DDVID, 0x0030, ddb_dvbct),
 	DDB_ID(DDVID, 0x0003, DDVID, 0xdb03, ddb_satixS2v3),
 	DDB_ID(DDVID, 0x0006, DDVID, 0x0031, ddb_ctv7),
@@ -2242,7 +2405,7 @@ static __init int module_init_ddbridge(void)
 {
 	int ret;
 
-	printk(KERN_INFO "Digital Devices PCIE bridge driver, Copyright (C) 2010-11 Digital Devices GmbH\n");
+	pr_info("Digital Devices PCIE bridge driver, Copyright (C) 2010-11 Digital Devices GmbH\n");
 
 	ret = ddb_class_create();
 	if (ret < 0)

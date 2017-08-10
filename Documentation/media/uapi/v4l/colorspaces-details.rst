@@ -418,6 +418,11 @@ Inverse Transfer function:
 
     L = \left( \frac{L' + 0.099}{1.099}\right) ^{\frac{1}{0.45} }\text{, for } L' \ge 0.081
 
+Please note that while Rec. 709 is defined as the default transfer function
+by the :ref:`itu2020` standard, in practice this colorspace is often used
+with the :ref:`xf-smpte-2084`. In particular Ultra HD Blu-ray discs use
+this combination.
+
 The luminance (Y') and color difference (Cb and Cr) are obtained with
 the following ``V4L2_YCBCR_ENC_BT2020`` encoding:
 
@@ -758,3 +763,45 @@ scaled to [-128…128] and then clipped to [-128…127].
    ``V4L2_COLORSPACE_JPEG`` can be considered to be an abbreviation for
    ``V4L2_COLORSPACE_SRGB``, ``V4L2_YCBCR_ENC_601`` and
    ``V4L2_QUANTIZATION_FULL_RANGE``.
+
+***************************************
+Detailed Transfer Function Descriptions
+***************************************
+
+.. _xf-smpte-2084:
+
+Transfer Function SMPTE 2084 (V4L2_XFER_FUNC_SMPTE2084)
+=======================================================
+
+The :ref:`smpte2084` standard defines the transfer function used by
+High Dynamic Range content.
+
+Constants:
+    m1 = (2610 / 4096) / 4
+
+    m2 = (2523 / 4096) * 128
+
+    c1 = 3424 / 4096
+
+    c2 = (2413 / 4096) * 32
+
+    c3 = (2392 / 4096) * 32
+
+Transfer function:
+    L' = ((c1 + c2 * L\ :sup:`m1`) / (1 + c3 * L\ :sup:`m1`))\ :sup:`m2`
+
+Inverse Transfer function:
+    L = (max(L':sup:`1/m2` - c1, 0) / (c2 - c3 *
+    L'\ :sup:`1/m2`))\ :sup:`1/m1`
+
+Take care when converting between this transfer function and non-HDR transfer
+functions: the linear RGB values [0…1] of HDR content map to a luminance range
+of 0 to 10000 cd/m\ :sup:`2` whereas the linear RGB values of non-HDR (aka
+Standard Dynamic Range or SDR) map to a luminance range of 0 to 100 cd/m\ :sup:`2`.
+
+To go from SDR to HDR you will have to divide L by 100 first. To go in the other
+direction you will have to multiply L by 100. Of course, this clamps all
+luminance values over 100 cd/m\ :sup:`2` to 100 cd/m\ :sup:`2`.
+
+There are better methods, see e.g. :ref:`colimg` for more in-depth information
+about this.

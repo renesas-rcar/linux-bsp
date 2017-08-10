@@ -51,7 +51,7 @@ MODULE_DESCRIPTION("Pulse Eight HDMI CEC driver");
 MODULE_LICENSE("GPL");
 
 static int debug;
-static int persistent_config = 1;
+static int persistent_config;
 module_param(debug, int, 0644);
 module_param(persistent_config, int, 0644);
 MODULE_PARM_DESC(debug, "debug level (0-1)");
@@ -656,7 +656,7 @@ static int pulse8_connect(struct serio *serio, struct serio_driver *drv)
 
 	pulse8->serio = serio;
 	pulse8->adap = cec_allocate_adapter(&pulse8_cec_adap_ops, pulse8,
-		"HDMI CEC", caps, 1);
+					    dev_name(&serio->dev), caps, 1);
 	err = PTR_ERR_OR_ZERO(pulse8->adap);
 	if (err < 0)
 		goto free_device;

@@ -116,21 +116,19 @@ static void rain_irq_work_handler(struct work_struct *work)
 
 	while (true) {
 		unsigned long flags;
-		bool exit_loop = false;
 		char data;
 
 		spin_lock_irqsave(&rain->buf_lock, flags);
-		if (rain->buf_len) {
-			data = rain->buf[rain->buf_rd_idx];
-			rain->buf_len--;
-			rain->buf_rd_idx = (rain->buf_rd_idx + 1) & 0xff;
-		} else {
-			exit_loop = true;
-		}
-		spin_unlock_irqrestore(&rain->buf_lock, flags);
-
-		if (exit_loop)
+		if (!rain->buf_len) {
+			spin_unlock_irqrestore(&rain->buf_lock, flags);
 			break;
+		}
+
+		data = rain->buf[rain->buf_rd_idx];
+		rain->buf_len--;
+		rain->buf_rd_idx = (rain->buf_rd_idx + 1) & 0xff;
+
+		spin_unlock_irqrestore(&rain->buf_lock, flags);
 
 		if (!rain->cmd_started && data != '?')
 			continue;
@@ -325,7 +323,7 @@ static int rain_connect(struct serio *serio, struct serio_driver *drv)
 
 	rain->serio = serio;
 	rain->adap = cec_allocate_adapter(&rain_cec_adap_ops, rain,
-		"HDMI CEC", caps, 1);
+					  dev_name(&serio->dev), caps, 1);
 	err = PTR_ERR_OR_ZERO(rain->adap);
 	if (err < 0)
 		goto free_device;
