@@ -882,6 +882,9 @@ config SND_SOC_PCM3168A_SPI
 config SND_SOC_SI468X
 	tristate "Dummy sound driver for Si468x radio"
 
+config SND_SOC_WL18XX
+	tristate "Dummy sound driver for WL18xx BT"
+
 config SND_SOC_PCM5102A
 	tristate
 
