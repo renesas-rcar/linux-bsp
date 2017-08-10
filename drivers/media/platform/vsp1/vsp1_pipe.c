@@ -249,6 +249,7 @@ void vsp1_pipeline_run(struct vsp1_pipeline *pipe)
 		vsp1_write(vsp1, VI6_CMD(pipe->output->entity.index),
 			   VI6_CMD_STRCMD);
 		pipe->state = VSP1_PIPELINE_RUNNING;
+		pipe->configured = true;
 	}
 
 	pipe->buffers_ready = 0;
@@ -430,6 +431,9 @@ void vsp1_pipelines_suspend(struct vsp1_device *vsp1)
 		spin_lock_irqsave(&pipe->irqlock, flags);
 		if (pipe->state == VSP1_PIPELINE_RUNNING)
 			pipe->state = VSP1_PIPELINE_STOPPING;
+
+		/* After a suspend, the hardware will be reset */
+		pipe->configured = false;
 		spin_unlock_irqrestore(&pipe->irqlock, flags);
 	}
 

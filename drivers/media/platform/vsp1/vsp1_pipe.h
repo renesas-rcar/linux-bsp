@@ -90,6 +90,7 @@ struct vsp1_partition {
  * @irqlock: protects the pipeline state
  * @state: current state
  * @wq: wait queue to wait for state change completion
+ * @configured: flag determining if the hardware has run since reset
  * @frame_end: frame end interrupt handler
  * @lock: protects the pipeline use count and stream count
  * @kref: pipeline reference count
@@ -117,6 +118,7 @@ struct vsp1_pipeline {
 	spinlock_t irqlock;
 	enum vsp1_pipeline_state state;
 	wait_queue_head_t wq;
+	bool configured;
 
 	void (*frame_end)(struct vsp1_pipeline *pipe, bool completed);
 
@@ -142,8 +144,6 @@ struct vsp1_pipeline {
 	 * can walk this list in sequence.
 	 */
 	struct list_head entities;
-
-	struct vsp1_dl_list *dl;
 
 	unsigned int partitions;
 	struct vsp1_partition *partition;
