@@ -893,7 +893,9 @@ EXPORT_SYMBOL_GPL(__pci_complete_power_transition);
  * -EINVAL if the requested state is invalid.
  * -EIO if device does not support PCI PM or its PM capabilities register has a
  * wrong version, or device doesn't support the requested state.
+ * 0 if the transition is to D1 or D2 but D1 and D2 are not supported.
  * 0 if device already is in the requested state.
+ * 0 if the transition is to D3 but D3 is not supported.
  * 0 if device's power state has been successfully changed.
  */
 int pci_set_power_state(struct pci_dev *dev, pci_power_t state)
@@ -5406,8 +5408,8 @@ static int of_pci_bus_find_domain_nr(struct device *parent)
 		use_dt_domains = 0;
 		domain = pci_get_new_domain_nr();
 	} else {
-		dev_err(parent, "Node %s has inconsistent \"linux,pci-domain\" property in DT\n",
-			parent->of_node->full_name);
+		dev_err(parent, "Node %pOF has inconsistent \"linux,pci-domain\" property in DT\n",
+			parent->of_node);
 		domain = -1;
 	}
 

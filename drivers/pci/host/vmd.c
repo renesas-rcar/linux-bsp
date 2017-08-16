@@ -183,7 +183,7 @@ static struct vmd_irq_list *vmd_next_irq(struct vmd_dev *vmd, struct msi_desc *d
 	int i, best = 1;
 	unsigned long flags;
 
-	if (!desc->msi_attrib.is_msix || vmd->msix_count == 1)
+	if (pci_is_bridge(msi_desc_to_pci_dev(desc)) || vmd->msix_count == 1)
 		return &vmd->irqs[0];
 
 	raw_spin_lock_irqsave(&list_lock, flags);
@@ -671,6 +671,14 @@ static int vmd_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	struct vmd_dev *vmd;
 	int i, err;
 
+	/*
+	 * The first vector is reserved for special use, so start affinity at
+	 * the second vector
+	 */
+	struct irq_affinity affd = {
+		.pre_vectors = 1,
+	};
+
 	if (resource_size(&dev->resource[VMD_CFGBAR]) < (1 << 20))
 		return -ENOMEM;
 
@@ -696,8 +704,8 @@ static int vmd_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	if (vmd->msix_count < 0)
 		return -ENODEV;
 
-	vmd->msix_count = pci_alloc_irq_vectors(dev, 1, vmd->msix_count,
-					PCI_IRQ_MSIX | PCI_IRQ_AFFINITY);
+	vmd->msix_count = pci_alloc_irq_vectors_affinity(dev, 1, vmd->msix_count,
+					PCI_IRQ_MSIX | PCI_IRQ_AFFINITY, &affd);
 	if (vmd->msix_count < 0)
 		return vmd->msix_count;
 

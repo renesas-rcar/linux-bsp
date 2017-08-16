@@ -126,12 +126,12 @@
 
 struct rcar_msi {
 	DECLARE_BITMAP(used, INT_PCI_MSI_NR);
-	struct irq_domain *domain;
-	struct msi_controller chip;
-	unsigned long pages;
-	struct mutex lock;
-	int irq1;
-	int irq2;
+	struct irq_domain	*domain;
+	struct msi_controller	chip;
+	unsigned long		pages;
+	struct mutex		lock;
+	int			irq1;
+	int			irq2;
 };
 
 static inline struct rcar_msi *to_rcar_msi(struct msi_controller *chip)
@@ -403,7 +403,7 @@ static void rcar_pcie_force_speedup(struct rcar_pcie *pcie)
 		return;
 
 	if (rcar_pci_read_reg(pcie, MACCTLR) & SPEED_CHANGE) {
-		dev_err(dev, "Speed change already in progress\n");
+		dev_err(dev, "speed change already in progress\n");
 		return;
 	}
 
@@ -432,7 +432,7 @@ static void rcar_pcie_force_speedup(struct rcar_pcie *pcie)
 			rcar_pci_write_reg(pcie, macsr, MACSR);
 
 			if (macsr & SPCHGFAIL)
-				dev_err(dev, "Speed change failed\n");
+				dev_err(dev, "speed change failed\n");
 
 			goto done;
 		}
@@ -440,10 +440,10 @@ static void rcar_pcie_force_speedup(struct rcar_pcie *pcie)
 		msleep(1);
 	};
 
-	dev_err(dev, "Speed change timed out\n");
+	dev_err(dev, "speed change timed out\n");
 
 done:
-	dev_info(dev, "Current link speed is %s GT/s\n",
+	dev_info(dev, "current link speed is %s GT/s\n",
 		 (macsr & LINK_SPEED) == LINK_SPEED_5_0GTS ? "5" : "2.5");
 }
 
@@ -501,7 +501,7 @@ static int phy_wait_for_ack(struct rcar_pcie *pcie)
 		udelay(100);
 	}
 
-	dev_err(dev, "Access to PCIe phy timed out\n");
+	dev_err(dev, "access to PCIe PHY timed out\n");
 
 	return -ETIMEDOUT;
 }
@@ -723,10 +723,11 @@ static irqreturn_t rcar_pcie_msi_irq(int irq, void *data)
 			if (test_bit(index, msi->used))
 				generic_handle_irq(irq);
 			else
-				dev_info(dev, "unhandled MSI\n");
+				dev_info(dev, "unhandled MSI (HWIRQ %u IRQ %u)\n",
+					index, irq);
 		} else {
 			/* Unknown MSI, just clear it */
-			dev_dbg(dev, "unexpected MSI\n");
+			dev_dbg(dev, "unexpected MSI (HWIRQ %u)\n", index);
 		}
 
 		/* see if there's any more pending in this vector */
@@ -871,12 +872,12 @@ static int rcar_pcie_enable_msi(struct rcar_pcie *pcie)
 	for (i = 0; i < INT_PCI_MSI_NR; i++)
 		irq_create_mapping(msi->domain, i);
 
-	/* Two irqs are for MSI, but they are also used for non-MSI irqs */
+	/* Two IRQs are for MSI, but they are also used for non-MSI IRQs */
 	err = devm_request_irq(dev, msi->irq1, rcar_pcie_msi_irq,
 			       IRQF_SHARED | IRQF_NO_THREAD,
 			       rcar_msi_irq_chip.name, pcie);
 	if (err < 0) {
-		dev_err(dev, "failed to request IRQ: %d\n", err);
+		dev_err(dev, "failed to request IRQ %u: %d\n", msi->irq1, err);
 		goto err;
 	}
 
@@ -884,7 +885,7 @@ static int rcar_pcie_enable_msi(struct rcar_pcie *pcie)
 			       IRQF_SHARED | IRQF_NO_THREAD,
 			       rcar_msi_irq_chip.name, pcie);
 	if (err < 0) {
-		dev_err(dev, "failed to request IRQ: %d\n", err);
+		dev_err(dev, "failed to request IRQ %u: %d\n", msi->irq2, err);
 		goto err;
 	}
 
@@ -930,7 +931,7 @@ static int rcar_pcie_get_resources(struct rcar_pcie *pcie)
 
 	pcie->bus_clk = devm_clk_get(dev, "pcie_bus");
 	if (IS_ERR(pcie->bus_clk)) {
-		dev_err(dev, "cannot get pcie bus clock\n");
+		dev_err(dev, "cannot get pcie_bus clock\n");
 		err = PTR_ERR(pcie->bus_clk);
 		goto fail_clk;
 	}
@@ -940,7 +941,7 @@ static int rcar_pcie_get_resources(struct rcar_pcie *pcie)
 
 	i = irq_of_parse_and_map(dev->of_node, 0);
 	if (!i) {
-		dev_err(dev, "cannot get platform resources for msi interrupt\n");
+		dev_err(dev, "cannot get platform resources for MSI interrupt\n");
 		err = -ENOENT;
 		goto err_map_reg;
 	}
@@ -948,7 +949,7 @@ static int rcar_pcie_get_resources(struct rcar_pcie *pcie)
 
 	i = irq_of_parse_and_map(dev->of_node, 1);
 	if (!i) {
-		dev_err(dev, "cannot get platform resources for msi interrupt\n");
+		dev_err(dev, "cannot get platform resources for MSI interrupt\n");
 		err = -ENOENT;
 		goto err_map_reg;
 	}
@@ -968,6 +969,7 @@ static int rcar_pcie_inbound_ranges(struct rcar_pcie *pcie,
 				    struct of_pci_range *range,
 				    int *index)
 {
+	struct device *dev = pcie->dev;
 	u64 restype = range->flags;
 	u64 cpu_addr = range->cpu_addr;
 	u64 cpu_end = range->cpu_addr + range->size;
@@ -1020,7 +1022,7 @@ static int rcar_pcie_inbound_ranges(struct rcar_pcie *pcie,
 		idx += 2;
 
 		if (idx > MAX_NR_INBOUND_MAPS) {
-			dev_err(pcie->dev, "Failed to map inbound regions!\n");
+			dev_err(dev, "failed to map inbound regions!\n");
 			return -EINVAL;
 		}
 	}
@@ -1050,6 +1052,7 @@ static int pci_dma_range_parser_init(struct of_pci_range_parser *parser,
 static int rcar_pcie_parse_map_dma_ranges(struct rcar_pcie *pcie,
 					  struct device_node *np)
 {
+	struct device *dev = pcie->dev;
 	struct of_pci_range range;
 	struct of_pci_range_parser parser;
 	int index = 0;
@@ -1062,7 +1065,7 @@ static int rcar_pcie_parse_map_dma_ranges(struct rcar_pcie *pcie,
 	for_each_of_pci_range(&parser, &range) {
 		u64 end = range.cpu_addr + range.size - 1;
 
-		dev_dbg(pcie->dev, "0x%08x 0x%016llx..0x%016llx -> 0x%016llx\n",
+		dev_dbg(dev, "0x%08x 0x%016llx..0x%016llx -> 0x%016llx\n",
 			range.flags, range.cpu_addr, end, range.pci_addr);
 
 		err = rcar_pcie_inbound_ranges(pcie, &range, &index);
@@ -1177,9 +1180,7 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
 		err = rcar_pcie_enable_msi(pcie);
 		if (err < 0) {
-			dev_err(dev,
-				"failed to enable MSI support: %d\n",
-				err);
+			dev_err(dev, "failed to enable MSI support: %d\n", err);
 			goto err_pm_put;
 		}
 	}
