@@ -897,8 +897,8 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct mmc_command *cmd)
 	sdhci_set_transfer_irqs(host);
 
 	/* Set the DMA boundary value and block size */
-	sdhci_writew(host, SDHCI_MAKE_BLKSZ(SDHCI_DEFAULT_BOUNDARY_ARG,
-		data->blksz), SDHCI_BLOCK_SIZE);
+	sdhci_writew(host, SDHCI_MAKE_BLKSZ(host->sdma_boundary, data->blksz),
+		     SDHCI_BLOCK_SIZE);
 	sdhci_writew(host, data->blocks, SDHCI_BLOCK_COUNT);
 }
 
@@ -2037,6 +2037,7 @@ static void sdhci_send_tuning(struct sdhci_host *host, u32 opcode)
 	struct mmc_command cmd = {};
 	struct mmc_request mrq = {};
 	unsigned long flags;
+	u32 b = host->sdma_boundary;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -2052,9 +2053,9 @@ static void sdhci_send_tuning(struct sdhci_host *host, u32 opcode)
 	 */
 	if (cmd.opcode == MMC_SEND_TUNING_BLOCK_HS200 &&
 	    mmc->ios.bus_width == MMC_BUS_WIDTH_8)
-		sdhci_writew(host, SDHCI_MAKE_BLKSZ(7, 128), SDHCI_BLOCK_SIZE);
+		sdhci_writew(host, SDHCI_MAKE_BLKSZ(b, 128), SDHCI_BLOCK_SIZE);
 	else
-		sdhci_writew(host, SDHCI_MAKE_BLKSZ(7, 64), SDHCI_BLOCK_SIZE);
+		sdhci_writew(host, SDHCI_MAKE_BLKSZ(b, 64), SDHCI_BLOCK_SIZE);
 
 	/*
 	 * The tuning block is sent by the card to the host controller.
@@ -2502,7 +2503,6 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 		sdhci_finish_command(host);
 }
 
-#ifdef CONFIG_MMC_DEBUG
 static void sdhci_adma_show_error(struct sdhci_host *host)
 {
 	void *desc = host->adma_table;
@@ -2530,9 +2530,6 @@ static void sdhci_adma_show_error(struct sdhci_host *host)
 			break;
 	}
 }
-#else
-static void sdhci_adma_show_error(struct sdhci_host *host) { }
-#endif
 
 static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 {
@@ -2938,7 +2935,8 @@ int sdhci_runtime_resume_host(struct sdhci_host *host)
 
 	sdhci_init(host, 0);
 
-	if (mmc->ios.power_mode != MMC_POWER_UNDEFINED) {
+	if (mmc->ios.power_mode != MMC_POWER_UNDEFINED &&
+	    mmc->ios.power_mode != MMC_POWER_OFF) {
 		/* Force clock and power re-program */
 		host->pwr = 0;
 		host->clock = 0;
@@ -2998,7 +2996,7 @@ void sdhci_cqe_enable(struct mmc_host *mmc)
 		ctrl |= SDHCI_CTRL_ADMA32;
 	sdhci_writeb(host, ctrl, SDHCI_HOST_CONTROL);
 
-	sdhci_writew(host, SDHCI_MAKE_BLKSZ(SDHCI_DEFAULT_BOUNDARY_ARG, 512),
+	sdhci_writew(host, SDHCI_MAKE_BLKSZ(host->sdma_boundary, 512),
 		     SDHCI_BLOCK_SIZE);
 
 	/* Set maximum timeout */
@@ -3119,6 +3117,8 @@ struct sdhci_host *sdhci_alloc_host(struct device *dev,
 
 	host->tuning_delay = -1;
 
+	host->sdma_boundary = SDHCI_DEFAULT_BOUNDARY_ARG;
+
 	return host;
 }
 
@@ -3229,6 +3229,13 @@ int sdhci_setup_host(struct sdhci_host *host)
 	ret = mmc_regulator_get_supply(mmc);
 	if (ret == -EPROBE_DEFER)
 		return ret;
+
+	DBG("Version:   0x%08x | Present:  0x%08x\n",
+	    sdhci_readw(host, SDHCI_HOST_VERSION),
+	    sdhci_readl(host, SDHCI_PRESENT_STATE));
+	DBG("Caps:      0x%08x | Caps_1:   0x%08x\n",
+	    sdhci_readl(host, SDHCI_CAPABILITIES),
+	    sdhci_readl(host, SDHCI_CAPABILITIES_1));
 
 	sdhci_read_caps(host);
 
@@ -3746,10 +3753,6 @@ int __sdhci_add_host(struct sdhci_host *host)
 		       mmc_hostname(mmc), host->irq, ret);
 		goto untasklet;
 	}
-
-#ifdef CONFIG_MMC_DEBUG
-	sdhci_dumpregs(host);
-#endif
 
 	ret = sdhci_led_register(host);
 	if (ret) {
