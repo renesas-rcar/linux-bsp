@@ -48,6 +48,47 @@ static const struct bpf_map_ops * const bpf_map_types[] = {
 #undef BPF_MAP_TYPE
 };
 
+/*
+ * If we're handed a bigger struct than we know of, ensure all the unknown bits
+ * are 0 - i.e. new user-space does not rely on any kernel feature extensions
+ * we don't know about yet.
+ *
+ * There is a ToCToU between this function call and the following
+ * copy_from_user() call. However, this is not a concern since this function is
+ * meant to be a future-proofing of bits.
+ */
+static int check_uarg_tail_zero(void __user *uaddr,
+				size_t expected_size,
+				size_t actual_size)
+{
+	unsigned char __user *addr;
+	unsigned char __user *end;
+	unsigned char val;
+	int err;
+
+	if (unlikely(actual_size > PAGE_SIZE))	/* silly large */
+		return -E2BIG;
+
+	if (unlikely(!access_ok(VERIFY_READ, uaddr, actual_size)))
+		return -EFAULT;
+
+	if (actual_size <= expected_size)
+		return 0;
+
+	addr = uaddr + expected_size;
+	end  = uaddr + actual_size;
+
+	for (; addr < end; addr++) {
+		err = get_user(val, addr);
+		if (err)
+			return err;
+		if (val)
+			return -E2BIG;
+	}
+
+	return 0;
+}
+
 static struct bpf_map *find_and_alloc_map(union bpf_attr *attr)
 {
 	struct bpf_map *map;
@@ -1246,32 +1287,6 @@ static int bpf_map_get_fd_by_id(const union bpf_attr *attr)
 	return fd;
 }
 
-static int check_uarg_tail_zero(void __user *uaddr,
-				size_t expected_size,
-				size_t actual_size)
-{
-	unsigned char __user *addr;
-	unsigned char __user *end;
-	unsigned char val;
-	int err;
-
-	if (actual_size <= expected_size)
-		return 0;
-
-	addr = uaddr + expected_size;
-	end  = uaddr + actual_size;
-
-	for (; addr < end; addr++) {
-		err = get_user(val, addr);
-		if (err)
-			return err;
-		if (val)
-			return -E2BIG;
-	}
-
-	return 0;
-}
-
 static int bpf_prog_get_info_by_fd(struct bpf_prog *prog,
 				   const union bpf_attr *attr,
 				   union bpf_attr __user *uattr)
@@ -1393,17 +1408,6 @@ SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, siz
 	if (!capable(CAP_SYS_ADMIN) && sysctl_unprivileged_bpf_disabled)
 		return -EPERM;
 
-	if (!access_ok(VERIFY_READ, uattr, 1))
-		return -EFAULT;
-
-	if (size > PAGE_SIZE)	/* silly large */
-		return -E2BIG;
-
-	/* If we're handed a bigger struct than we know of,
-	 * ensure all the unknown bits are 0 - i.e. new
-	 * user-space does not rely on any kernel feature
-	 * extensions we dont know about yet.
-	 */
 	err = check_uarg_tail_zero(uattr, sizeof(attr), size);
 	if (err)
 		return err;

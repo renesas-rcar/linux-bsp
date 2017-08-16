@@ -286,9 +286,6 @@ static struct Qdisc *qdisc_match_from_root(struct Qdisc *root, u32 handle)
 void qdisc_hash_add(struct Qdisc *q, bool invisible)
 {
 	if ((q->parent != TC_H_ROOT) && !(q->flags & TCQ_F_INGRESS)) {
-		struct Qdisc *root = qdisc_dev(q)->qdisc;
-
-		WARN_ON_ONCE(root == &noop_qdisc);
 		ASSERT_RTNL();
 		hash_add_rcu(qdisc_dev(q)->qdisc_hash, &q->hash, q->handle);
 		if (invisible)
@@ -1952,14 +1949,14 @@ static int __init pktsched_init(void)
 	register_qdisc(&mq_qdisc_ops);
 	register_qdisc(&noqueue_qdisc_ops);
 
-	rtnl_register(PF_UNSPEC, RTM_NEWQDISC, tc_modify_qdisc, NULL, NULL);
-	rtnl_register(PF_UNSPEC, RTM_DELQDISC, tc_get_qdisc, NULL, NULL);
+	rtnl_register(PF_UNSPEC, RTM_NEWQDISC, tc_modify_qdisc, NULL, 0);
+	rtnl_register(PF_UNSPEC, RTM_DELQDISC, tc_get_qdisc, NULL, 0);
 	rtnl_register(PF_UNSPEC, RTM_GETQDISC, tc_get_qdisc, tc_dump_qdisc,
-		      NULL);
-	rtnl_register(PF_UNSPEC, RTM_NEWTCLASS, tc_ctl_tclass, NULL, NULL);
-	rtnl_register(PF_UNSPEC, RTM_DELTCLASS, tc_ctl_tclass, NULL, NULL);
+		      0);
+	rtnl_register(PF_UNSPEC, RTM_NEWTCLASS, tc_ctl_tclass, NULL, 0);
+	rtnl_register(PF_UNSPEC, RTM_DELTCLASS, tc_ctl_tclass, NULL, 0);
 	rtnl_register(PF_UNSPEC, RTM_GETTCLASS, tc_ctl_tclass, tc_dump_tclass,
-		      NULL);
+		      0);
 
 	return 0;
 }

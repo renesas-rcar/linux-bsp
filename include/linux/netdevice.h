@@ -66,6 +66,7 @@ struct mpls_dev;
 /* UDP Tunnel offloads */
 struct udp_tunnel_info;
 struct bpf_prog;
+struct xdp_buff;
 
 void netdev_set_default_ethtool_ops(struct net_device *dev,
 				    const struct ethtool_ops *ops);
@@ -770,29 +771,12 @@ static inline bool netdev_phys_item_id_same(struct netdev_phys_item_id *a,
 typedef u16 (*select_queue_fallback_t)(struct net_device *dev,
 				       struct sk_buff *skb);
 
-/* These structures hold the attributes of qdisc and classifiers
- * that are being passed to the netdevice through the setup_tc op.
- */
-enum {
+enum tc_setup_type {
 	TC_SETUP_MQPRIO,
 	TC_SETUP_CLSU32,
 	TC_SETUP_CLSFLOWER,
-	TC_SETUP_MATCHALL,
+	TC_SETUP_CLSMATCHALL,
 	TC_SETUP_CLSBPF,
-};
-
-struct tc_cls_u32_offload;
-
-struct tc_to_netdev {
-	unsigned int type;
-	union {
-		struct tc_cls_u32_offload *cls_u32;
-		struct tc_cls_flower_offload *cls_flower;
-		struct tc_cls_matchall_offload *cls_mall;
-		struct tc_cls_bpf_offload *cls_bpf;
-		struct tc_mqprio_qopt *mqprio;
-	};
-	bool egress_dev;
 };
 
 /* These structures hold the attributes of xdp state that are being passed
@@ -977,8 +961,8 @@ struct xfrmdev_ops {
  *      with PF and querying it may introduce a theoretical security risk.
  * int (*ndo_set_vf_rss_query_en)(struct net_device *dev, int vf, bool setting);
  * int (*ndo_get_vf_port)(struct net_device *dev, int vf, struct sk_buff *skb);
- * int (*ndo_setup_tc)(struct net_device *dev, u32 handle, u32 chain_index,
- *		       __be16 protocol, struct tc_to_netdev *tc);
+ * int (*ndo_setup_tc)(struct net_device *dev, enum tc_setup_type type,
+ *		       void *type_data);
  *	Called to setup any 'tc' scheduler, classifier or action on @dev.
  *	This is always called from the stack with the rtnl lock held and netif
  *	tx queues stopped. This allows the netdevice to perform queue
@@ -1138,7 +1122,12 @@ struct xfrmdev_ops {
  * int (*ndo_xdp)(struct net_device *dev, struct netdev_xdp *xdp);
  *	This function is used to set or query state related to XDP on the
  *	netdevice. See definition of enum xdp_netdev_command for details.
- *
+ * int (*ndo_xdp_xmit)(struct net_device *dev, struct xdp_buff *xdp);
+ *	This function is used to submit a XDP packet for transmit on a
+ *	netdevice.
+ * void (*ndo_xdp_flush)(struct net_device *dev);
+ *	This function is used to inform the driver to flush a paticular
+ *	xpd tx queue. Must be called on same CPU as xdp_xmit.
  */
 struct net_device_ops {
 	int			(*ndo_init)(struct net_device *dev);
@@ -1221,9 +1210,8 @@ struct net_device_ops {
 						   struct net_device *dev,
 						   int vf, bool setting);
 	int			(*ndo_setup_tc)(struct net_device *dev,
-						u32 handle, u32 chain_index,
-						__be16 protocol,
-						struct tc_to_netdev *tc);
+						enum tc_setup_type type,
+						void *type_data);
 #if IS_ENABLED(CONFIG_FCOE)
 	int			(*ndo_fcoe_enable)(struct net_device *dev);
 	int			(*ndo_fcoe_disable)(struct net_device *dev);
@@ -1323,6 +1311,9 @@ struct net_device_ops {
 						       int needed_headroom);
 	int			(*ndo_xdp)(struct net_device *dev,
 					   struct netdev_xdp *xdp);
+	int			(*ndo_xdp_xmit)(struct net_device *dev,
+						struct xdp_buff *xdp);
+	void			(*ndo_xdp_flush)(struct net_device *dev);
 };
 
 /**
@@ -2308,6 +2299,7 @@ struct netdev_lag_lower_state_info {
 #define NETDEV_PRECHANGEUPPER	0x001A
 #define NETDEV_CHANGELOWERSTATE	0x001B
 #define NETDEV_UDP_TUNNEL_PUSH_INFO	0x001C
+#define NETDEV_UDP_TUNNEL_DROP_INFO	0x001D
 #define NETDEV_CHANGE_TX_QUEUE_LEN	0x001E
 
 int register_netdevice_notifier(struct notifier_block *nb);
@@ -2423,8 +2415,8 @@ struct net_device *dev_get_by_name_rcu(struct net *net, const char *name);
 struct net_device *__dev_get_by_name(struct net *net, const char *name);
 int dev_alloc_name(struct net_device *dev, const char *name);
 int dev_open(struct net_device *dev);
-int dev_close(struct net_device *dev);
-int dev_close_many(struct list_head *head, bool unlink);
+void dev_close(struct net_device *dev);
+void dev_close_many(struct list_head *head, bool unlink);
 void dev_disable_lro(struct net_device *dev);
 int dev_loopback_xmit(struct net *net, struct sock *sk, struct sk_buff *newskb);
 int dev_queue_xmit(struct sk_buff *skb);
@@ -3251,6 +3243,8 @@ static inline void dev_consume_skb_any(struct sk_buff *skb)
 	__dev_kfree_skb_any(skb, SKB_REASON_CONSUMED);
 }
 
+void generic_xdp_tx(struct sk_buff *skb, struct bpf_prog *xdp_prog);
+int do_xdp_generic(struct bpf_prog *xdp_prog, struct sk_buff *skb);
 int netif_rx(struct sk_buff *skb);
 int netif_rx_ni(struct sk_buff *skb);
 int netif_receive_skb(struct sk_buff *skb);
@@ -4089,7 +4083,6 @@ static inline bool net_gso_ok(netdev_features_t features, int gso_type)
 
 	/* check flags correspondence */
 	BUILD_BUG_ON(SKB_GSO_TCPV4   != (NETIF_F_TSO >> NETIF_F_GSO_SHIFT));
-	BUILD_BUG_ON(SKB_GSO_UDP     != (NETIF_F_UFO >> NETIF_F_GSO_SHIFT));
 	BUILD_BUG_ON(SKB_GSO_DODGY   != (NETIF_F_GSO_ROBUST >> NETIF_F_GSO_SHIFT));
 	BUILD_BUG_ON(SKB_GSO_TCP_ECN != (NETIF_F_TSO_ECN >> NETIF_F_GSO_SHIFT));
 	BUILD_BUG_ON(SKB_GSO_TCP_FIXEDID != (NETIF_F_TSO_MANGLEID >> NETIF_F_GSO_SHIFT));

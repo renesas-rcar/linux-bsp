@@ -510,9 +510,17 @@ static const struct pci_device_id iwl_hw_card_ids[] = {
 
 /* 9000 Series */
 	{IWL_PCI_DEVICE(0x271B, 0x0010, iwl9160_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x271B, 0x0014, iwl9160_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x271B, 0x0210, iwl9160_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x2526, 0x0000, iwl9260_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x2526, 0x0010, iwl9260_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x0014, iwl9260_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0xA014, iwl9260_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x4010, iwl9260_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x0210, iwl9260_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x0214, iwl9260_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x2526, 0x1410, iwl9270_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x1610, iwl9270_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x9DF0, 0x0A10, iwl9460_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x9DF0, 0x0010, iwl9460_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x9DF0, 0x0210, iwl9460_2ac_cfg)},
@@ -527,10 +535,22 @@ static const struct pci_device_id iwl_hw_card_ids[] = {
 	{IWL_PCI_DEVICE(0x9DF0, 0x2A10, iwl9460_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x30DC, 0x0060, iwl9460_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x2526, 0x0060, iwl9460_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x0260, iwl9460_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x0064, iwl9460_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x00A4, iwl9460_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x40A4, iwl9460_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x02A4, iwl9460_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x00A0, iwl9460_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x02A0, iwl9460_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x9DF0, 0x0060, iwl9460_2ac_cfg)},
 	{IWL_PCI_DEVICE(0xA370, 0x0060, iwl9460_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x31DC, 0x0060, iwl9460_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x2526, 0x0030, iwl9560_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x4030, iwl9560_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x0230, iwl9560_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x0234, iwl9560_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x0238, iwl9560_2ac_cfg)},
+	{IWL_PCI_DEVICE(0x2526, 0x023C, iwl9560_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x9DF0, 0x0030, iwl9560_2ac_cfg)},
 	{IWL_PCI_DEVICE(0xA370, 0x0030, iwl9560_2ac_cfg)},
 	{IWL_PCI_DEVICE(0x31DC, 0x0030, iwl9560_2ac_cfg)},
@@ -805,11 +825,11 @@ static int iwl_pci_resume(struct device *device)
 	/*
 	 * Enable rfkill interrupt (in order to keep track of the rfkill
 	 * status). Must be locked to avoid processing a possible rfkill
-	 * interrupt while in iwl_trans_check_hw_rf_kill().
+	 * interrupt while in iwl_pcie_check_hw_rf_kill().
 	 */
 	mutex_lock(&trans_pcie->mutex);
 	iwl_enable_rfkill_int(trans);
-	iwl_trans_check_hw_rf_kill(trans);
+	iwl_pcie_check_hw_rf_kill(trans);
 	mutex_unlock(&trans_pcie->mutex);
 
 	return 0;

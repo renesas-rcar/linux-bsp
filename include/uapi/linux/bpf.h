@@ -30,9 +30,14 @@
 #define BPF_FROM_LE	BPF_TO_LE
 #define BPF_FROM_BE	BPF_TO_BE
 
+/* jmp encodings */
 #define BPF_JNE		0x50	/* jump != */
+#define BPF_JLT		0xa0	/* LT is unsigned, '<' */
+#define BPF_JLE		0xb0	/* LE is unsigned, '<=' */
 #define BPF_JSGT	0x60	/* SGT is signed '>', GT in x86 */
 #define BPF_JSGE	0x70	/* SGE is signed '>=', GE in x86 */
+#define BPF_JSLT	0xc0	/* SLT is signed, '<' */
+#define BPF_JSLE	0xd0	/* SLE is signed, '<=' */
 #define BPF_CALL	0x80	/* function call */
 #define BPF_EXIT	0x90	/* function return */
 
@@ -104,6 +109,7 @@ enum bpf_map_type {
 	BPF_MAP_TYPE_LPM_TRIE,
 	BPF_MAP_TYPE_ARRAY_OF_MAPS,
 	BPF_MAP_TYPE_HASH_OF_MAPS,
+	BPF_MAP_TYPE_DEVMAP,
 };
 
 enum bpf_prog_type {
@@ -344,9 +350,20 @@ union bpf_attr {
  * int bpf_redirect(ifindex, flags)
  *     redirect to another netdev
  *     @ifindex: ifindex of the net device
- *     @flags: bit 0 - if set, redirect to ingress instead of egress
- *             other bits - reserved
- *     Return: TC_ACT_REDIRECT
+ *     @flags:
+ *	  cls_bpf:
+ *          bit 0 - if set, redirect to ingress instead of egress
+ *          other bits - reserved
+ *	  xdp_bpf:
+ *	    all bits - reserved
+ *     Return: cls_bpf: TC_ACT_REDIRECT on success or TC_ACT_SHOT on error
+ *	       xdp_bfp: XDP_REDIRECT on success or XDP_ABORT on error
+ * int bpf_redirect_map(map, key, flags)
+ *     redirect to endpoint in map
+ *     @map: pointer to dev map
+ *     @key: index in map to lookup
+ *     @flags: --
+ *     Return: XDP_REDIRECT on success or XDP_ABORT on error
  *
  * u32 bpf_get_route_realm(skb)
  *     retrieve a dst's tclassid
@@ -591,7 +608,8 @@ union bpf_attr {
 	FN(get_socket_uid),		\
 	FN(set_hash),			\
 	FN(setsockopt),			\
-	FN(skb_adjust_room),
+	FN(skb_adjust_room),		\
+	FN(redirect_map),
 
 /* integer value in 'imm' field of BPF_CALL instruction selects which helper
  * function eBPF program intends to call
@@ -717,6 +735,7 @@ enum xdp_action {
 	XDP_DROP,
 	XDP_PASS,
 	XDP_TX,
+	XDP_REDIRECT,
 };
 
 /* user accessible metadata for XDP packet hook

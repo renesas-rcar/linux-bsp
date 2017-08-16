@@ -417,14 +417,11 @@ static void ip6_dst_ifdown(struct dst_entry *dst, struct net_device *dev,
 	struct net_device *loopback_dev =
 		dev_net(dev)->loopback_dev;
 
-	if (dev != loopback_dev) {
-		if (idev && idev->dev == dev) {
-			struct inet6_dev *loopback_idev =
-				in6_dev_get(loopback_dev);
-			if (loopback_idev) {
-				rt->rt6i_idev = loopback_idev;
-				in6_dev_put(idev);
-			}
+	if (idev && idev->dev != loopback_dev) {
+		struct inet6_dev *loopback_idev = in6_dev_get(loopback_dev);
+		if (loopback_idev) {
+			rt->rt6i_idev = loopback_idev;
+			in6_dev_put(idev);
 		}
 	}
 }
@@ -3330,6 +3327,9 @@ static int rt6_nexthop_info(struct sk_buff *skb, struct rt6_info *rt,
 			goto nla_put_failure;
 	}
 
+	if (rt->rt6i_nh_flags & RTNH_F_OFFLOAD)
+		*flags |= RTNH_F_OFFLOAD;
+
 	/* not needed for multipath encoding b/c it has a rtnexthop struct */
 	if (!skip_oif && rt->dst.dev &&
 	    nla_put_u32(skb, RTA_OIF, rt->dst.dev->ifindex))
@@ -3608,8 +3608,11 @@ static int inet6_rtm_getroute(struct sk_buff *in_skb, struct nlmsghdr *nlh,
 		struct net_device *dev;
 		int flags = 0;
 
-		dev = __dev_get_by_index(net, iif);
+		rcu_read_lock();
+
+		dev = dev_get_by_index_rcu(net, iif);
 		if (!dev) {
+			rcu_read_unlock();
 			err = -ENODEV;
 			goto errout;
 		}
@@ -3621,6 +3624,8 @@ static int inet6_rtm_getroute(struct sk_buff *in_skb, struct nlmsghdr *nlh,
 
 		if (!fibmatch)
 			dst = ip6_route_input_lookup(net, dev, &fl6, flags);
+
+		rcu_read_unlock();
 	} else {
 		fl6.flowi6_oif = oif;
 
@@ -3724,10 +3729,10 @@ static int ip6_route_dev_notify(struct notifier_block *this,
 		/* NETDEV_UNREGISTER could be fired for multiple times by
 		 * netdev_wait_allrefs(). Make sure we only call this once.
 		 */
-		in6_dev_put(net->ipv6.ip6_null_entry->rt6i_idev);
+		in6_dev_put_clear(&net->ipv6.ip6_null_entry->rt6i_idev);
 #ifdef CONFIG_IPV6_MULTIPLE_TABLES
-		in6_dev_put(net->ipv6.ip6_prohibit_entry->rt6i_idev);
-		in6_dev_put(net->ipv6.ip6_blk_hole_entry->rt6i_idev);
+		in6_dev_put_clear(&net->ipv6.ip6_prohibit_entry->rt6i_idev);
+		in6_dev_put_clear(&net->ipv6.ip6_blk_hole_entry->rt6i_idev);
 #endif
 	}
 
@@ -3921,6 +3926,7 @@ static int __net_init ip6_route_net_init(struct net *net)
 			 ip6_template_metrics, true);
 
 #ifdef CONFIG_IPV6_MULTIPLE_TABLES
+	net->ipv6.fib6_has_custom_rules = false;
 	net->ipv6.ip6_prohibit_entry = kmemdup(&ip6_prohibit_entry_template,
 					       sizeof(*net->ipv6.ip6_prohibit_entry),
 					       GFP_KERNEL);
@@ -4096,9 +4102,10 @@ int __init ip6_route_init(void)
 		goto fib6_rules_init;
 
 	ret = -ENOBUFS;
-	if (__rtnl_register(PF_INET6, RTM_NEWROUTE, inet6_rtm_newroute, NULL, NULL) ||
-	    __rtnl_register(PF_INET6, RTM_DELROUTE, inet6_rtm_delroute, NULL, NULL) ||
-	    __rtnl_register(PF_INET6, RTM_GETROUTE, inet6_rtm_getroute, NULL, NULL))
+	if (__rtnl_register(PF_INET6, RTM_NEWROUTE, inet6_rtm_newroute, NULL, 0) ||
+	    __rtnl_register(PF_INET6, RTM_DELROUTE, inet6_rtm_delroute, NULL, 0) ||
+	    __rtnl_register(PF_INET6, RTM_GETROUTE, inet6_rtm_getroute, NULL,
+			    RTNL_FLAG_DOIT_UNLOCKED))
 		goto out_register_late_subsys;
 
 	ret = register_netdevice_notifier(&ip6_route_dev_notifier);

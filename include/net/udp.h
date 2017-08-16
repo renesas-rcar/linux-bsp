@@ -287,7 +287,7 @@ int udp_lib_setsockopt(struct sock *sk, int level, int optname,
 struct sock *udp4_lib_lookup(struct net *net, __be32 saddr, __be16 sport,
 			     __be32 daddr, __be16 dport, int dif);
 struct sock *__udp4_lib_lookup(struct net *net, __be32 saddr, __be16 sport,
-			       __be32 daddr, __be16 dport, int dif,
+			       __be32 daddr, __be16 dport, int dif, int sdif,
 			       struct udp_table *tbl, struct sk_buff *skb);
 struct sock *udp4_lib_lookup_skb(struct sk_buff *skb,
 				 __be16 sport, __be16 dport);
@@ -298,7 +298,7 @@ struct sock *udp6_lib_lookup(struct net *net,
 struct sock *__udp6_lib_lookup(struct net *net,
 			       const struct in6_addr *saddr, __be16 sport,
 			       const struct in6_addr *daddr, __be16 dport,
-			       int dif, struct udp_table *tbl,
+			       int dif, int sdif, struct udp_table *tbl,
 			       struct sk_buff *skb);
 struct sock *udp6_lib_lookup_skb(struct sk_buff *skb,
 				 __be16 sport, __be16 dport);
@@ -366,12 +366,13 @@ static inline bool udp_skb_is_linear(struct sk_buff *skb)
 static inline int copy_linear_skb(struct sk_buff *skb, int len, int off,
 				  struct iov_iter *to)
 {
-	int n, copy = len - off;
+	int n;
 
-	n = copy_to_iter(skb->data + off, copy, to);
-	if (n == copy)
+	n = copy_to_iter(skb->data + off, len, to);
+	if (n == len)
 		return 0;
 
+	iov_iter_revert(to, n);
 	return -EFAULT;
 }
 

@@ -384,6 +384,8 @@ int mlxsw_sp_router_netevent_event(struct notifier_block *unused,
 int mlxsw_sp_netdevice_router_port_event(struct net_device *dev);
 int mlxsw_sp_inetaddr_event(struct notifier_block *unused,
 			    unsigned long event, void *ptr);
+int mlxsw_sp_inet6addr_event(struct notifier_block *unused,
+			     unsigned long event, void *ptr);
 int mlxsw_sp_netdevice_vrf_event(struct net_device *l3_dev, unsigned long event,
 				 struct netdev_notifier_changeupper_info *info);
 void
@@ -506,7 +508,7 @@ extern const struct mlxsw_sp_acl_ops mlxsw_sp_acl_tcam_ops;
 
 /* spectrum_flower.c */
 int mlxsw_sp_flower_replace(struct mlxsw_sp_port *mlxsw_sp_port, bool ingress,
-			    __be16 protocol, struct tc_cls_flower_offload *f);
+			    struct tc_cls_flower_offload *f);
 void mlxsw_sp_flower_destroy(struct mlxsw_sp_port *mlxsw_sp_port, bool ingress,
 			     struct tc_cls_flower_offload *f);
 int mlxsw_sp_flower_stats(struct mlxsw_sp_port *mlxsw_sp_port, bool ingress,

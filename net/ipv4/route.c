@@ -2236,7 +2236,7 @@ add:
 	if (!rth)
 		return ERR_PTR(-ENOBUFS);
 
-	rth->rt_iif	= orig_oif ? : 0;
+	rth->rt_iif = orig_oif;
 	if (res->table)
 		rth->rt_table_id = res->table->tb_id;
 
@@ -2439,6 +2439,12 @@ struct rtable *ip_route_output_key_hash_rcu(struct net *net, struct flowi4 *fl4,
 		/* L3 master device is the loopback for that domain */
 		dev_out = l3mdev_master_dev_rcu(FIB_RES_DEV(*res)) ? :
 			net->loopback_dev;
+
+		/* make sure orig_oif points to fib result device even
+		 * though packet rx/tx happens over loopback or l3mdev
+		 */
+		orig_oif = FIB_RES_OIF(*res);
+
 		fl4->flowi4_oif = dev_out->ifindex;
 		flags |= RTCF_LOCAL;
 		goto make_route;
@@ -2750,12 +2756,13 @@ static int inet_rtm_getroute(struct sk_buff *in_skb, struct nlmsghdr *nlh,
 		err = 0;
 		if (IS_ERR(rt))
 			err = PTR_ERR(rt);
+		else
+			skb_dst_set(skb, &rt->dst);
 	}
 
 	if (err)
 		goto errout_free;
 
-	skb_dst_set(skb, &rt->dst);
 	if (rtm->rtm_flags & RTM_F_NOTIFY)
 		rt->rt_flags |= RTCF_NOTIFY;
 
@@ -3067,7 +3074,8 @@ int __init ip_rt_init(void)
 	xfrm_init();
 	xfrm4_init();
 #endif
-	rtnl_register(PF_INET, RTM_GETROUTE, inet_rtm_getroute, NULL, NULL);
+	rtnl_register(PF_INET, RTM_GETROUTE, inet_rtm_getroute, NULL,
+		      RTNL_FLAG_DOIT_UNLOCKED);
 
 #ifdef CONFIG_SYSCTL
 	register_pernet_subsys(&sysctl_route_ops);

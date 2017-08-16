@@ -117,35 +117,25 @@ enum bpf_access_type {
 };
 
 /* types of values stored in eBPF registers */
+/* Pointer types represent:
+ * pointer
+ * pointer + imm
+ * pointer + (u16) var
+ * pointer + (u16) var + imm
+ * if (range > 0) then [ptr, ptr + range - off) is safe to access
+ * if (id > 0) means that some 'var' was added
+ * if (off > 0) means that 'imm' was added
+ */
 enum bpf_reg_type {
 	NOT_INIT = 0,		 /* nothing was written into register */
-	UNKNOWN_VALUE,		 /* reg doesn't contain a valid pointer */
+	SCALAR_VALUE,		 /* reg doesn't contain a valid pointer */
 	PTR_TO_CTX,		 /* reg points to bpf_context */
 	CONST_PTR_TO_MAP,	 /* reg points to struct bpf_map */
 	PTR_TO_MAP_VALUE,	 /* reg points to map element value */
 	PTR_TO_MAP_VALUE_OR_NULL,/* points to map elem value or NULL */
-	FRAME_PTR,		 /* reg == frame_pointer */
-	PTR_TO_STACK,		 /* reg == frame_pointer + imm */
-	CONST_IMM,		 /* constant integer value */
-
-	/* PTR_TO_PACKET represents:
-	 * skb->data
-	 * skb->data + imm
-	 * skb->data + (u16) var
-	 * skb->data + (u16) var + imm
-	 * if (range > 0) then [ptr, ptr + range - off) is safe to access
-	 * if (id > 0) means that some 'var' was added
-	 * if (off > 0) menas that 'imm' was added
-	 */
-	PTR_TO_PACKET,
+	PTR_TO_STACK,		 /* reg == frame_pointer + offset */
+	PTR_TO_PACKET,		 /* reg points to skb->data */
 	PTR_TO_PACKET_END,	 /* skb->data + headlen */
-
-	/* PTR_TO_MAP_VALUE_ADJ is used for doing pointer math inside of a map
-	 * elem value.  We only allow this if we can statically verify that
-	 * access from this register are going to fall within the size of the
-	 * map element.
-	 */
-	PTR_TO_MAP_VALUE_ADJ,
 };
 
 struct bpf_prog;
@@ -318,6 +308,12 @@ static inline void bpf_long_memcpy(void *dst, const void *src, u32 size)
 
 /* verify correctness of eBPF program */
 int bpf_check(struct bpf_prog **fp, union bpf_attr *attr);
+
+/* Map specifics */
+struct net_device  *__dev_map_lookup_elem(struct bpf_map *map, u32 key);
+void __dev_map_insert_ctx(struct bpf_map *map, u32 index);
+void __dev_map_flush(struct bpf_map *map);
+
 #else
 static inline struct bpf_prog *bpf_prog_get(u32 ufd)
 {
@@ -354,6 +350,20 @@ static inline int __bpf_prog_charge(struct user_struct *user, u32 pages)
 }
 
 static inline void __bpf_prog_uncharge(struct user_struct *user, u32 pages)
+{
+}
+
+static inline struct net_device  *__dev_map_lookup_elem(struct bpf_map *map,
+						       u32 key)
+{
+	return NULL;
+}
+
+static inline void __dev_map_insert_ctx(struct bpf_map *map, u32 index)
+{
+}
+
+static inline void __dev_map_flush(struct bpf_map *map)
 {
 }
 #endif /* CONFIG_BPF_SYSCALL */

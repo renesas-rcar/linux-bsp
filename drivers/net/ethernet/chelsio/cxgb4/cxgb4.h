@@ -338,10 +338,12 @@ struct adapter_params {
 	unsigned int sf_nsec;             /* # of flash sectors */
 	unsigned int sf_fw_start;         /* start of FW image in flash */
 
-	unsigned int fw_vers;
-	unsigned int bs_vers;		/* bootstrap version */
-	unsigned int tp_vers;
-	unsigned int er_vers;		/* expansion ROM version */
+	unsigned int fw_vers;		  /* firmware version */
+	unsigned int bs_vers;		  /* bootstrap version */
+	unsigned int tp_vers;		  /* TP microcode version */
+	unsigned int er_vers;		  /* expansion ROM version */
+	unsigned int scfg_vers;		  /* Serial Configuration version */
+	unsigned int vpd_vers;		  /* VPD Version */
 	u8 api_vers[7];
 
 	unsigned short mtus[NMTUS];
@@ -529,6 +531,7 @@ enum {                                 /* adapter flags */
 	USING_SOFT_PARAMS  = (1 << 6),
 	MASTER_PF          = (1 << 7),
 	FW_OFLD_CONN       = (1 << 9),
+	ROOT_NO_RELAXED_ORDERING = (1 << 10),
 };
 
 enum {
@@ -1403,10 +1406,15 @@ int t4_fw_upgrade(struct adapter *adap, unsigned int mbox,
 int t4_fl_pkt_align(struct adapter *adap);
 unsigned int t4_flash_cfg_addr(struct adapter *adapter);
 int t4_check_fw_version(struct adapter *adap);
+int t4_load_cfg(struct adapter *adapter, const u8 *cfg_data, unsigned int size);
 int t4_get_fw_version(struct adapter *adapter, u32 *vers);
 int t4_get_bs_version(struct adapter *adapter, u32 *vers);
 int t4_get_tp_version(struct adapter *adapter, u32 *vers);
 int t4_get_exprom_version(struct adapter *adapter, u32 *vers);
+int t4_get_scfg_version(struct adapter *adapter, u32 *vers);
+int t4_get_vpd_version(struct adapter *adapter, u32 *vers);
+int t4_get_version_info(struct adapter *adapter);
+void t4_dump_version_info(struct adapter *adapter);
 int t4_prep_fw(struct adapter *adap, struct fw_info *fw_info,
 	       const u8 *fw_data, unsigned int fw_size,
 	       struct fw_hdr *card_fw, enum dev_state state, int *reset);

@@ -350,7 +350,7 @@ static void tcp_v6_err(struct sk_buff *skb, struct inet6_skb_parm *opt,
 	sk = __inet6_lookup_established(net, &tcp_hashinfo,
 					&hdr->daddr, th->dest,
 					&hdr->saddr, ntohs(th->source),
-					skb->dev->ifindex);
+					skb->dev->ifindex, inet6_sdif(skb));
 
 	if (!sk) {
 		__ICMP6_INC_STATS(net, __in6_dev_get(skb->dev),
@@ -918,7 +918,8 @@ static void tcp_v6_send_reset(const struct sock *sk, struct sk_buff *skb)
 					   &tcp_hashinfo, NULL, 0,
 					   &ipv6h->saddr,
 					   th->source, &ipv6h->daddr,
-					   ntohs(th->source), tcp_v6_iif(skb));
+					   ntohs(th->source), tcp_v6_iif(skb),
+					   tcp_v6_sdif(skb));
 		if (!sk1)
 			goto out;
 
@@ -1296,7 +1297,7 @@ static int tcp_v6_do_rcv(struct sock *sk, struct sk_buff *skb)
 			}
 		}
 
-		tcp_rcv_established(sk, skb, tcp_hdr(skb), skb->len);
+		tcp_rcv_established(sk, skb, tcp_hdr(skb));
 		if (opt_skb)
 			goto ipv6_pktoptions;
 		return 0;
@@ -1397,6 +1398,7 @@ static void tcp_v6_fill_cb(struct sk_buff *skb, const struct ipv6hdr *hdr,
 
 static int tcp_v6_rcv(struct sk_buff *skb)
 {
+	int sdif = inet6_sdif(skb);
 	const struct tcphdr *th;
 	const struct ipv6hdr *hdr;
 	bool refcounted;
@@ -1430,7 +1432,7 @@ static int tcp_v6_rcv(struct sk_buff *skb)
 
 lookup:
 	sk = __inet6_lookup_skb(&tcp_hashinfo, skb, __tcp_hdrlen(th),
-				th->source, th->dest, inet6_iif(skb),
+				th->source, th->dest, inet6_iif(skb), sdif,
 				&refcounted);
 	if (!sk)
 		goto no_tcp_socket;
@@ -1456,6 +1458,8 @@ process:
 		}
 		sock_hold(sk);
 		refcounted = true;
+		if (tcp_filter(sk, skb))
+			goto discard_and_relse;
 		nsk = tcp_check_req(sk, skb, req, false);
 		if (!nsk) {
 			reqsk_put(req);
@@ -1464,8 +1468,6 @@ process:
 		if (nsk == sk) {
 			reqsk_put(req);
 			tcp_v6_restore_cb(skb);
-		} else if (tcp_filter(sk, skb)) {
-			goto discard_and_relse;
 		} else if (tcp_child_process(sk, nsk, skb)) {
 			tcp_v6_send_reset(nsk, skb);
 			goto discard_and_relse;
@@ -1505,8 +1507,7 @@ process:
 	tcp_segs_in(tcp_sk(sk), skb);
 	ret = 0;
 	if (!sock_owned_by_user(sk)) {
-		if (!tcp_prequeue(sk, skb))
-			ret = tcp_v6_do_rcv(sk, skb);
+		ret = tcp_v6_do_rcv(sk, skb);
 	} else if (tcp_add_backlog(sk, skb)) {
 		goto discard_and_relse;
 	}
@@ -1564,7 +1565,8 @@ do_time_wait:
 					    skb, __tcp_hdrlen(th),
 					    &ipv6_hdr(skb)->saddr, th->source,
 					    &ipv6_hdr(skb)->daddr,
-					    ntohs(th->dest), tcp_v6_iif(skb));
+					    ntohs(th->dest), tcp_v6_iif(skb),
+					    sdif);
 		if (sk2) {
 			struct inet_timewait_sock *tw = inet_twsk(sk);
 			inet_twsk_deschedule_put(tw);
@@ -1611,7 +1613,7 @@ static void tcp_v6_early_demux(struct sk_buff *skb)
 	sk = __inet6_lookup_established(dev_net(skb->dev), &tcp_hashinfo,
 					&hdr->saddr, th->source,
 					&hdr->daddr, ntohs(th->dest),
-					inet6_iif(skb));
+					inet6_iif(skb), inet6_sdif(skb));
 	if (sk) {
 		skb->sk = sk;
 		skb->destructor = sock_edemux;

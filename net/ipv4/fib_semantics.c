@@ -44,6 +44,7 @@
 #include <net/netlink.h>
 #include <net/nexthop.h>
 #include <net/lwtunnel.h>
+#include <net/fib_notifier.h>
 
 #include "fib_lookup.h"
 
@@ -1083,15 +1084,17 @@ struct fib_info *fib_create_info(struct fib_config *cfg,
 	fi = kzalloc(sizeof(*fi)+nhs*sizeof(struct fib_nh), GFP_KERNEL);
 	if (!fi)
 		goto failure;
-	fib_info_cnt++;
 	if (cfg->fc_mx) {
 		fi->fib_metrics = kzalloc(sizeof(*fi->fib_metrics), GFP_KERNEL);
-		if (!fi->fib_metrics)
-			goto failure;
+		if (unlikely(!fi->fib_metrics)) {
+			kfree(fi);
+			return ERR_PTR(err);
+		}
 		atomic_set(&fi->fib_metrics->refcnt, 1);
-	} else
+	} else {
 		fi->fib_metrics = (struct dst_metrics *)&dst_default_metrics;
-
+	}
+	fib_info_cnt++;
 	fi->fib_net = net;
 	fi->fib_protocol = cfg->fc_protocol;
 	fi->fib_scope = cfg->fc_scope;
@@ -1342,6 +1345,8 @@ int fib_dump_info(struct sk_buff *skb, u32 portid, u32 seq, int event,
 			    IN_DEV_IGNORE_ROUTES_WITH_LINKDOWN(in_dev))
 				rtm->rtm_flags |= RTNH_F_DEAD;
 		}
+		if (fi->fib_nh->nh_flags & RTNH_F_OFFLOAD)
+			rtm->rtm_flags |= RTNH_F_OFFLOAD;
 #ifdef CONFIG_IP_ROUTE_CLASSID
 		if (fi->fib_nh[0].nh_tclassid &&
 		    nla_put_u32(skb, RTA_FLOW, fi->fib_nh[0].nh_tclassid))
@@ -1449,14 +1454,14 @@ static int call_fib_nh_notifiers(struct fib_nh *fib_nh,
 		if (IN_DEV_IGNORE_ROUTES_WITH_LINKDOWN(in_dev) &&
 		    fib_nh->nh_flags & RTNH_F_LINKDOWN)
 			break;
-		return call_fib_notifiers(dev_net(fib_nh->nh_dev), event_type,
-					  &info.info);
+		return call_fib4_notifiers(dev_net(fib_nh->nh_dev), event_type,
+					   &info.info);
 	case FIB_EVENT_NH_DEL:
 		if ((in_dev && IN_DEV_IGNORE_ROUTES_WITH_LINKDOWN(in_dev) &&
 		     fib_nh->nh_flags & RTNH_F_LINKDOWN) ||
 		    (fib_nh->nh_flags & RTNH_F_DEAD))
-			return call_fib_notifiers(dev_net(fib_nh->nh_dev),
-						  event_type, &info.info);
+			return call_fib4_notifiers(dev_net(fib_nh->nh_dev),
+						   event_type, &info.info);
 	default:
 		break;
 	}

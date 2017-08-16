@@ -342,18 +342,19 @@ static void dpaa_get_stats64(struct net_device *net_dev,
 	}
 }
 
-static int dpaa_setup_tc(struct net_device *net_dev, u32 handle,
-			 u32 chain_index, __be16 proto, struct tc_to_netdev *tc)
+static int dpaa_setup_tc(struct net_device *net_dev, enum tc_setup_type type,
+			 void *type_data)
 {
 	struct dpaa_priv *priv = netdev_priv(net_dev);
+	struct tc_mqprio_qopt *mqprio = type_data;
 	u8 num_tc;
 	int i;
 
-	if (tc->type != TC_SETUP_MQPRIO)
-		return -EINVAL;
+	if (type != TC_SETUP_MQPRIO)
+		return -EOPNOTSUPP;
 
-	tc->mqprio->hw = TC_MQPRIO_HW_OFFLOAD_TCS;
-	num_tc = tc->mqprio->num_tc;
+	mqprio->hw = TC_MQPRIO_HW_OFFLOAD_TCS;
+	num_tc = mqprio->num_tc;
 
 	if (num_tc == priv->num_tc)
 		return 0;
@@ -398,8 +399,8 @@ static struct mac_device *dpaa_mac_dev_get(struct platform_device *pdev)
 
 	of_dev = of_find_device_by_node(mac_node);
 	if (!of_dev) {
-		dev_err(dpaa_dev, "of_find_device_by_node(%s) failed\n",
-			mac_node->full_name);
+		dev_err(dpaa_dev, "of_find_device_by_node(%pOF) failed\n",
+			mac_node);
 		of_node_put(mac_node);
 		return ERR_PTR(-EINVAL);
 	}
@@ -2829,7 +2830,7 @@ static int dpaa_remove(struct platform_device *pdev)
 	return err;
 }
 
-static struct platform_device_id dpaa_devtype[] = {
+static const struct platform_device_id dpaa_devtype[] = {
 	{
 		.name = "dpaa-ethernet",
 		.driver_data = 0,
