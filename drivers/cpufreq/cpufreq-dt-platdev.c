@@ -67,6 +67,7 @@ static const struct of_device_id machines[] __initconst = {
 	{ .compatible = "renesas,r8a7792", },
 	{ .compatible = "renesas,r8a7793", },
 	{ .compatible = "renesas,r8a7794", },
+	{ .compatible = "renesas,r8a7795", },
 	{ .compatible = "renesas,sh73a0", },
 
 	{ .compatible = "rockchip,rk2928", },
@@ -76,11 +77,10 @@ static const struct of_device_id machines[] __initconst = {
 	{ .compatible = "rockchip,rk3188", },
 	{ .compatible = "rockchip,rk3228", },
 	{ .compatible = "rockchip,rk3288", },
+	{ .compatible = "rockchip,rk3328", },
 	{ .compatible = "rockchip,rk3366", },
 	{ .compatible = "rockchip,rk3368", },
 	{ .compatible = "rockchip,rk3399", },
-
-	{ .compatible = "sigma,tango4" },
 
 	{ .compatible = "socionext,uniphier-pro5", },
 	{ .compatible = "socionext,uniphier-pxs2", },
@@ -94,6 +94,7 @@ static const struct of_device_id machines[] __initconst = {
 	{ .compatible = "ti,omap5", },
 
 	{ .compatible = "xlnx,zynq-7000", },
+	{ .compatible = "xlnx,zynqmp", },
 
 	{ .compatible = "zte,zx296718", },
 
