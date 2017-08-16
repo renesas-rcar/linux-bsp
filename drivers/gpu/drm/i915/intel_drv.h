@@ -786,7 +786,6 @@ struct intel_crtc {
 	struct drm_crtc base;
 	enum pipe pipe;
 	enum plane plane;
-	u8 lut_r[256], lut_g[256], lut_b[256];
 	/*
 	 * Whether the crtc and the connected output pipeline is active. Implies
 	 * that crtc->enabled is set, i.e. the current mode configuration has
@@ -1858,9 +1857,8 @@ void intel_suspend_gt_powersave(struct drm_i915_private *dev_priv);
 void gen6_rps_busy(struct drm_i915_private *dev_priv);
 void gen6_rps_reset_ei(struct drm_i915_private *dev_priv);
 void gen6_rps_idle(struct drm_i915_private *dev_priv);
-void gen6_rps_boost(struct drm_i915_private *dev_priv,
-		    struct intel_rps_client *rps,
-		    unsigned long submitted);
+void gen6_rps_boost(struct drm_i915_gem_request *rq,
+		    struct intel_rps_client *rps);
 void intel_queue_rps_boost_for_request(struct drm_i915_gem_request *req);
 void g4x_wm_get_hw_state(struct drm_device *dev);
 void vlv_wm_get_hw_state(struct drm_device *dev);

@@ -996,7 +996,8 @@ static bool intel_sdvo_set_avi_infoframe(struct intel_sdvo *intel_sdvo,
 	ssize_t len;
 
 	ret = drm_hdmi_avi_infoframe_from_display_mode(&frame.avi,
-						       &pipe_config->base.adjusted_mode);
+						       &pipe_config->base.adjusted_mode,
+						       false);
 	if (ret < 0) {
 		DRM_ERROR("couldn't fill AVI infoframe\n");
 		return false;
@@ -1343,7 +1344,7 @@ static void intel_sdvo_pre_enable(struct intel_encoder *intel_encoder,
 		sdvox |= (9 << 19) | SDVO_BORDER_ENABLE;
 	}
 
-	if (INTEL_PCH_TYPE(dev_priv) >= PCH_CPT)
+	if (HAS_PCH_CPT(dev_priv))
 		sdvox |= SDVO_PIPE_SEL_CPT(crtc->pipe);
 	else
 		sdvox |= SDVO_PIPE_SEL(crtc->pipe);
@@ -2192,10 +2193,8 @@ intel_sdvo_connector_duplicate_state(struct drm_connector *connector)
 }
 
 static const struct drm_connector_funcs intel_sdvo_connector_funcs = {
-	.dpms = drm_atomic_helper_connector_dpms,
 	.detect = intel_sdvo_detect,
 	.fill_modes = drm_helper_probe_single_connector_modes,
-	.set_property = drm_atomic_helper_connector_set_property,
 	.atomic_get_property = intel_sdvo_connector_atomic_get_property,
 	.atomic_set_property = intel_sdvo_connector_atomic_set_property,
 	.late_register = intel_sdvo_connector_register,

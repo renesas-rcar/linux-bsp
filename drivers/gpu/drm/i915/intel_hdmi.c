@@ -459,11 +459,14 @@ static void intel_hdmi_set_avi_infoframe(struct drm_encoder *encoder,
 	struct intel_hdmi *intel_hdmi = enc_to_intel_hdmi(encoder);
 	const struct drm_display_mode *adjusted_mode =
 		&crtc_state->base.adjusted_mode;
+	struct drm_connector *connector = &intel_hdmi->attached_connector->base;
+	bool is_hdmi2_sink = connector->display_info.hdmi.scdc.supported;
 	union hdmi_infoframe frame;
 	int ret;
 
 	ret = drm_hdmi_avi_infoframe_from_display_mode(&frame.avi,
-						       adjusted_mode);
+						       adjusted_mode,
+						       is_hdmi2_sink);
 	if (ret < 0) {
 		DRM_ERROR("couldn't fill AVI infoframe\n");
 		return;
@@ -1321,7 +1324,7 @@ static bool hdmi_12bpc_possible(struct intel_crtc_state *crtc_state)
 	if (crtc_state->output_types != 1 << INTEL_OUTPUT_HDMI)
 		return false;
 
-	for_each_connector_in_state(state, connector, connector_state, i) {
+	for_each_new_connector_in_state(state, connector, connector_state, i) {
 		const struct drm_display_info *info = &connector->display_info;
 
 		if (connector_state->crtc != crtc_state->base.crtc)
@@ -1703,11 +1706,9 @@ static void intel_hdmi_destroy(struct drm_connector *connector)
 }
 
 static const struct drm_connector_funcs intel_hdmi_connector_funcs = {
-	.dpms = drm_atomic_helper_connector_dpms,
 	.detect = intel_hdmi_detect,
 	.force = intel_hdmi_force,
 	.fill_modes = drm_helper_probe_single_connector_modes,
-	.set_property = drm_atomic_helper_connector_set_property,
 	.atomic_get_property = intel_digital_connector_atomic_get_property,
 	.atomic_set_property = intel_digital_connector_atomic_set_property,
 	.late_register = intel_connector_register,
