@@ -54,10 +54,6 @@ typedef u32 sysmmu_pte_t;
 #define lv2ent_small(pent) ((*(pent) & 2) == 2)
 #define lv2ent_large(pent) ((*(pent) & 3) == 1)
 
-#ifdef CONFIG_BIG_ENDIAN
-#warning "revisit driver if we can enable big-endian ptes"
-#endif
-
 /*
  * v1.x - v3.x SYSMMU supports 32bit physical and 32bit virtual address spaces
  * v5.0 introduced support for 36bit physical address space by shifting
@@ -658,6 +654,13 @@ static int __init exynos_sysmmu_probe(struct platform_device *pdev)
 			LV2_PROT = SYSMMU_V5_LV2_PROT;
 		}
 	}
+
+	/*
+	 * use the first registered sysmmu device for performing
+	 * dma mapping operations on iommu page tables (cpu cache flush)
+	 */
+	if (!dma_dev)
+		dma_dev = &pdev->dev;
 
 	pm_runtime_enable(dev);
 
@@ -1339,8 +1342,6 @@ static struct iommu_ops exynos_iommu_ops = {
 	.of_xlate = exynos_iommu_of_xlate,
 };
 
-static bool init_done;
-
 static int __init exynos_iommu_init(void)
 {
 	int ret;
@@ -1373,8 +1374,6 @@ static int __init exynos_iommu_init(void)
 		goto err_set_iommu;
 	}
 
-	init_done = true;
-
 	return 0;
 err_set_iommu:
 	kmem_cache_free(lv2table_kmem_cache, zero_lv2_table);
@@ -1384,27 +1383,6 @@ err_reg_driver:
 	kmem_cache_destroy(lv2table_kmem_cache);
 	return ret;
 }
+core_initcall(exynos_iommu_init);
 
-static int __init exynos_iommu_of_setup(struct device_node *np)
-{
-	struct platform_device *pdev;
-
-	if (!init_done)
-		exynos_iommu_init();
-
-	pdev = of_platform_device_create(np, NULL, platform_bus_type.dev_root);
-	if (!pdev)
-		return -ENODEV;
-
-	/*
-	 * use the first registered sysmmu device for performing
-	 * dma mapping operations on iommu page tables (cpu cache flush)
-	 */
-	if (!dma_dev)
-		dma_dev = &pdev->dev;
-
-	return 0;
-}
-
-IOMMU_OF_DECLARE(exynos_iommu_of, "samsung,exynos-sysmmu",
-		 exynos_iommu_of_setup);
+IOMMU_OF_DECLARE(exynos_iommu_of, "samsung,exynos-sysmmu", NULL);
