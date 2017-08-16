@@ -30,10 +30,10 @@
  * Device Access
  */
 
-static inline void vsp1_bru_write(struct vsp1_bru *bru, struct vsp1_dl_list *dl,
-				  u32 reg, u32 data)
+static inline void vsp1_bru_write(struct vsp1_bru *bru,
+				  struct vsp1_dl_body *dlb, u32 reg, u32 data)
 {
-	vsp1_dl_list_write(dl, bru->base + reg, data);
+	vsp1_dl_fragment_write(dlb, bru->base + reg, data);
 }
 
 /* -----------------------------------------------------------------------------
@@ -285,18 +285,14 @@ static const struct v4l2_subdev_ops bru_ops = {
  * VSP1 Entity Operations
  */
 
-static void bru_configure(struct vsp1_entity *entity,
-			  struct vsp1_pipeline *pipe,
-			  struct vsp1_dl_list *dl,
-			  enum vsp1_entity_params params)
+static void bru_prepare(struct vsp1_entity *entity,
+			struct vsp1_pipeline *pipe,
+			struct vsp1_dl_body *dlb)
 {
 	struct vsp1_bru *bru = to_bru(&entity->subdev);
 	struct v4l2_mbus_framefmt *format;
 	unsigned int flags;
 	unsigned int i;
-
-	if (params != VSP1_ENTITY_PARAMS_INIT)
-		return;
 
 	format = vsp1_entity_get_pad_format(&bru->entity, bru->entity.config,
 					    bru->entity.source_pad);
@@ -313,7 +309,7 @@ static void bru_configure(struct vsp1_entity *entity,
 	 * format at the pipeline output is premultiplied.
 	 */
 	flags = pipe->output ? pipe->output->format.flags : 0;
-	vsp1_bru_write(bru, dl, VI6_BRU_INCTRL,
+	vsp1_bru_write(bru, dlb, VI6_BRU_INCTRL,
 		       flags & V4L2_PIX_FMT_FLAG_PREMUL_ALPHA ?
 		       0 : VI6_BRU_INCTRL_NRM);
 
@@ -321,12 +317,12 @@ static void bru_configure(struct vsp1_entity *entity,
 	 * Set the background position to cover the whole output image and
 	 * configure its color.
 	 */
-	vsp1_bru_write(bru, dl, VI6_BRU_VIRRPF_SIZE,
+	vsp1_bru_write(bru, dlb, VI6_BRU_VIRRPF_SIZE,
 		       (format->width << VI6_BRU_VIRRPF_SIZE_HSIZE_SHIFT) |
 		       (format->height << VI6_BRU_VIRRPF_SIZE_VSIZE_SHIFT));
-	vsp1_bru_write(bru, dl, VI6_BRU_VIRRPF_LOC, 0);
+	vsp1_bru_write(bru, dlb, VI6_BRU_VIRRPF_LOC, 0);
 
-	vsp1_bru_write(bru, dl, VI6_BRU_VIRRPF_COL, bru->bgcolor |
+	vsp1_bru_write(bru, dlb, VI6_BRU_VIRRPF_COL, bru->bgcolor |
 		       (0xff << VI6_BRU_VIRRPF_COL_A_SHIFT));
 
 	/*
@@ -336,7 +332,7 @@ static void bru_configure(struct vsp1_entity *entity,
 	 * unit.
 	 */
 	if (entity->type == VSP1_ENTITY_BRU)
-		vsp1_bru_write(bru, dl, VI6_BRU_ROP,
+		vsp1_bru_write(bru, dlb, VI6_BRU_ROP,
 			       VI6_BRU_ROP_DSTSEL_BRUIN(1) |
 			       VI6_BRU_ROP_CROP(VI6_ROP_NOP) |
 			       VI6_BRU_ROP_AROP(VI6_ROP_NOP));
@@ -378,7 +374,7 @@ static void bru_configure(struct vsp1_entity *entity,
 		if (!(entity->type == VSP1_ENTITY_BRU && i == 1))
 			ctrl |= VI6_BRU_CTRL_SRCSEL_BRUIN(i);
 
-		vsp1_bru_write(bru, dl, VI6_BRU_CTRL(i), ctrl);
+		vsp1_bru_write(bru, dlb, VI6_BRU_CTRL(i), ctrl);
 
 		/*
 		 * Harcode the blending formula to
@@ -393,7 +389,7 @@ static void bru_configure(struct vsp1_entity *entity,
 		 *
 		 * otherwise.
 		 */
-		vsp1_bru_write(bru, dl, VI6_BRU_BLD(i),
+		vsp1_bru_write(bru, dlb, VI6_BRU_BLD(i),
 			       VI6_BRU_BLD_CCMDX_255_SRC_A |
 			       (premultiplied ? VI6_BRU_BLD_CCMDY_COEFY :
 						VI6_BRU_BLD_CCMDY_SRC_A) |
@@ -404,7 +400,7 @@ static void bru_configure(struct vsp1_entity *entity,
 }
 
 static const struct vsp1_entity_operations bru_entity_ops = {
-	.configure = bru_configure,
+	.prepare = bru_prepare,
 };
 
 /* -----------------------------------------------------------------------------

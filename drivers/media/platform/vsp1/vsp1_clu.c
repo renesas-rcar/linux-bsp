@@ -23,14 +23,16 @@
 #define CLU_MIN_SIZE				4U
 #define CLU_MAX_SIZE				8190U
 
+#define CLU_SIZE				(17 * 17 * 17)
+
 /* -----------------------------------------------------------------------------
  * Device Access
  */
 
-static inline void vsp1_clu_write(struct vsp1_clu *clu, struct vsp1_dl_list *dl,
-				  u32 reg, u32 data)
+static inline void vsp1_clu_write(struct vsp1_clu *clu,
+				  struct vsp1_dl_body *dlb, u32 reg, u32 data)
 {
-	vsp1_dl_list_write(dl, reg, data);
+	vsp1_dl_fragment_write(dlb, reg, data);
 }
 
 /* -----------------------------------------------------------------------------
@@ -47,19 +49,19 @@ static int clu_set_table(struct vsp1_clu *clu, struct v4l2_ctrl *ctrl)
 	struct vsp1_dl_body *dlb;
 	unsigned int i;
 
-	dlb = vsp1_dl_fragment_alloc(clu->entity.vsp1, 1 + 17 * 17 * 17);
+	dlb = vsp1_dl_fragment_get(clu->pool);
 	if (!dlb)
 		return -ENOMEM;
 
 	vsp1_dl_fragment_write(dlb, VI6_CLU_ADDR, 0);
-	for (i = 0; i < 17 * 17 * 17; ++i)
+	for (i = 0; i < CLU_SIZE; ++i)
 		vsp1_dl_fragment_write(dlb, VI6_CLU_DATA, ctrl->p_new.p_u32[i]);
 
 	spin_lock_irq(&clu->lock);
 	swap(clu->clu, dlb);
 	spin_unlock_irq(&clu->lock);
 
-	vsp1_dl_fragment_free(dlb);
+	vsp1_dl_fragment_put(dlb);
 	return 0;
 }
 
@@ -211,58 +213,70 @@ static const struct v4l2_subdev_ops clu_ops = {
 /* -----------------------------------------------------------------------------
  * VSP1 Entity Operations
  */
+static void clu_prepare(struct vsp1_entity *entity,
+			struct vsp1_pipeline *pipe,
+			struct vsp1_dl_body *dlb)
+{
+	struct vsp1_clu *clu = to_clu(&entity->subdev);
+
+	/*
+	 * The format can't be changed during streaming, only verify it
+	 * at setup time and store the information internally for future
+	 * runtime configuration calls.
+	 */
+	struct v4l2_mbus_framefmt *format;
+
+	format = vsp1_entity_get_pad_format(&clu->entity,
+					    clu->entity.config,
+					    CLU_PAD_SINK);
+	clu->yuv_mode = format->code == MEDIA_BUS_FMT_AYUV8_1X32;
+}
 
 static void clu_configure(struct vsp1_entity *entity,
 			  struct vsp1_pipeline *pipe,
 			  struct vsp1_dl_list *dl,
-			  enum vsp1_entity_params params)
+			  struct vsp1_dl_body *dlb,
+			  unsigned int partition)
 {
 	struct vsp1_clu *clu = to_clu(&entity->subdev);
-	struct vsp1_dl_body *dlb;
+	struct vsp1_dl_body *clu_dlb;
 	unsigned long flags;
 	u32 ctrl = VI6_CLU_CTRL_AAI | VI6_CLU_CTRL_MVS | VI6_CLU_CTRL_EN;
 
-	switch (params) {
-	case VSP1_ENTITY_PARAMS_INIT: {
-		/*
-		 * The format can't be changed during streaming, only verify it
-		 * at setup time and store the information internally for future
-		 * runtime configuration calls.
-		 */
-		struct v4l2_mbus_framefmt *format;
-
-		format = vsp1_entity_get_pad_format(&clu->entity,
-						    clu->entity.config,
-						    CLU_PAD_SINK);
-		clu->yuv_mode = format->code == MEDIA_BUS_FMT_AYUV8_1X32;
-		break;
-	}
-
-	case VSP1_ENTITY_PARAMS_PARTITION:
-		break;
-
-	case VSP1_ENTITY_PARAMS_RUNTIME:
+	if (partition == 0) {
 		/* 2D mode can only be used with the YCbCr pixel encoding. */
 		if (clu->mode == V4L2_CID_VSP1_CLU_MODE_2D && clu->yuv_mode)
 			ctrl |= VI6_CLU_CTRL_AX1I_2D | VI6_CLU_CTRL_AX2I_2D
 			     |  VI6_CLU_CTRL_OS0_2D | VI6_CLU_CTRL_OS1_2D
 			     |  VI6_CLU_CTRL_OS2_2D | VI6_CLU_CTRL_M2D;
 
-		vsp1_clu_write(clu, dl, VI6_CLU_CTRL, ctrl);
+		vsp1_clu_write(clu, dlb, VI6_CLU_CTRL, ctrl);
 
 		spin_lock_irqsave(&clu->lock, flags);
-		dlb = clu->clu;
+		clu_dlb = clu->clu;
 		clu->clu = NULL;
 		spin_unlock_irqrestore(&clu->lock, flags);
 
-		if (dlb)
-			vsp1_dl_list_add_fragment(dl, dlb);
-		break;
+		if (clu_dlb) {
+			vsp1_dl_list_add_fragment(dl, clu_dlb);
+
+			/* release our local reference */
+			vsp1_dl_fragment_put(clu_dlb);
+		}
 	}
 }
 
+static void clu_destroy(struct vsp1_entity *entity)
+{
+	struct vsp1_clu *clu = to_clu(&entity->subdev);
+
+	vsp1_dl_fragment_pool_free(clu->pool);
+}
+
 static const struct vsp1_entity_operations clu_entity_ops = {
+	.prepare = clu_prepare,
 	.configure = clu_configure,
+	.destroy = clu_destroy,
 };
 
 /* -----------------------------------------------------------------------------
@@ -287,6 +301,12 @@ struct vsp1_clu *vsp1_clu_create(struct vsp1_device *vsp1)
 			       MEDIA_ENT_F_PROC_VIDEO_LUT);
 	if (ret < 0)
 		return ERR_PTR(ret);
+
+	/* Allocate a fragment pool */
+	clu->pool = vsp1_dl_fragment_pool_alloc(clu->entity.vsp1, 2,
+						CLU_SIZE + 1, 0);
+	if (!clu->pool)
+		return ERR_PTR(-ENOMEM);
 
 	/* Initialize the control handler. */
 	v4l2_ctrl_handler_init(&clu->ctrls, 2);
