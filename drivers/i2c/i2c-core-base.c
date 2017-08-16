@@ -2292,7 +2292,7 @@ int i2c_check_msg_for_dma(struct i2c_msg *msg, unsigned int threshold,
 EXPORT_SYMBOL_GPL(i2c_check_msg_for_dma);
 
 /**
- * i2c_release_bounce_buf - copy data back from bounce buffer and release it
+ * i2c_release_dma_bounce_buf - copy data back from bounce buffer and release it
  * @msg: the message to be copied back to
  * @bounce_buf: the bounce buffer obtained from i2c_check_msg_for_dma().
  *		May be NULL.
@@ -2307,7 +2307,7 @@ void i2c_release_dma_bounce_buf(struct i2c_msg *msg, u8 *bounce_buf)
 
 	kfree(bounce_buf);
 }
-EXPORT_SYMBOL_GPL(i2c_release_bounce_buf);
+EXPORT_SYMBOL_GPL(i2c_release_dma_bounce_buf);
 
 MODULE_AUTHOR("Simon G. Vogl <simon@tk.uni-linz.ac.at>");
 MODULE_DESCRIPTION("I2C-Bus main module");
