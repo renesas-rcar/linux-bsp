@@ -189,7 +189,7 @@ int __init parse_spcr(bool earlycon)
 			uart = "qdf2400_e44";
 	}
 
-	if (xgene_8250_erratum_present(table))
+	if (xgene_8250_erratum_present(table)) {
 		iotype = "mmio32";
 
 		/* for xgene v1 and v2 we don't know the clock rate of the
