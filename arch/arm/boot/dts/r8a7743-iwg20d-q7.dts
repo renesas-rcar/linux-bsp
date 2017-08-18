@@ -42,6 +42,11 @@
 		states = <3300000 1
 			  1800000 0>;
 	};
+
+	chosen {
+		bootargs = "ignore_loglevel rw root=/dev/nfs ip=dhcp";
+		stdout-path = "serial0:115200n8";
+	};
 };
 
 &pfc {
