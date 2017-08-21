@@ -63,10 +63,8 @@
 #define ADV7482_IO_CP_COLORSPACE_REG	0x04
 #define ADV7482_IO_CP_VID_STD_REG	0x05	/* Video Standard */
 
-/* Power Management */
-#define ADV7482_IO_PWR_MAN_REG	0x0C	/* Power management register */
-#define ADV7482_IO_PWR_ON		0xE0	/* Power on */
-#define ADV7482_IO_PWR_OFF		0x00	/* Power down */
+#define ADV7482_IO_PWR_CTRL_REG	0x00	/* Power down controls register */
+#define ADV7482_IO_PWR_CTRL_PWRDN_HDMI	0x20	/* HDMI power down */
 
 #define ADV7482_HDMI_DDC_PWRDN	0x73	/* Power DDC pads control register */
 #define ADV7482_HDMI_DDC_PWR_ON		0x00	/* Power on */
@@ -2356,7 +2354,8 @@ static int adv7482_suspend(struct device *dev)
 	int ret;
 
 	ret = adv7482_write_register(client, ADV7482_I2C_IO,
-				ADV7482_IO_PWR_MAN_REG, ADV7482_IO_PWR_OFF);
+				    ADV7482_IO_PWR_CTRL_REG,
+				    ADV7482_IO_PWR_CTRL_PWRDN_HDMI);
 
 	return ret;
 }
