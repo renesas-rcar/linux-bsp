@@ -44,6 +44,8 @@ void rcar_du_lvdsenc_atomic_check(struct rcar_du_lvdsenc *lvds,
 int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 				 struct rcar_du_crtc *rcrtc);
 int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds);
+void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
+				   struct rcar_du_crtc *rcrtc);
 #else
 static inline int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 {
@@ -70,6 +72,12 @@ static inline int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 static inline int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 {
 	return 0;
+}
+
+static inline void rcar_du_lvdsenc_pll_pre_start(
+		struct rcar_du_lvdsenc *lvds,
+		struct rcar_du_crtc *rcrtc)
+{
 }
 #endif
 

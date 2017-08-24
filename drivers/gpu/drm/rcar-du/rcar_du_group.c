@@ -120,6 +120,14 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 				    DIDSR_PDCS_CLK(1, 0) |
 				    DIDSR_PDCS_CLK(0, 0));
 		} else {
+			if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL)) {
+				rcar_du_group_write(rgrp,
+						    DIDSR, DIDSR_CODE |
+						    DIDSR_LCDS1_LVDSIF |
+						    DIDSR_LCDS0_LVDSIF |
+						    DIDSR_PDCS_CLK(1, 0) |
+						    DIDSR_PDCS_CLK(0, 0));
+			} else
 			if (rgrp->index == 0) {
 				rcar_du_group_write(rgrp,
 				    DIDSR, DIDSR_CODE |

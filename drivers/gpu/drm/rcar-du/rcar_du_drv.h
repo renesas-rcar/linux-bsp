@@ -40,6 +40,7 @@ struct rcar_du_lvdsenc;
 #define RCAR_DU_FEATURE_GEN3_REGS	(1 << 3)	/* Use Gen3 registers */
 #define RCAR_DU_FEATURE_DIDSR2_REG	(1 << 4)	/* Has DIDSR2 register */
 #define RCAR_DU_FEATURE_VSPDL_SOURCE	(1 << 5)	/* Has VSPDL from VSP2 */
+#define RCAR_DU_FEATURE_LVDS_PLL	(1 << 6)	/* Use PLL in LVDS */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	(1 << 0)	/* Align pitches to 128 bytes */
 #define RCAR_DU_QUIRK_LVDS_LANES	(1 << 1)	/* LVDS lanes 1 and 3 inverted */
