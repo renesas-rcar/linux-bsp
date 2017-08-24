@@ -43,6 +43,7 @@ struct rcar_du_lvdsenc {
 	enum rcar_lvds_input input;
 	enum rcar_lvds_mode mode;
 	int gpio_pd;
+	int freq_limit;
 };
 
 static void rcar_lvds_write(struct rcar_du_lvdsenc *lvds, u32 reg, u32 data)
@@ -479,6 +480,16 @@ void rcar_du_lvdsenc_atomic_check(struct rcar_du_lvdsenc *lvds,
 		mode->clock = clamp(mode->clock, 30000, 150000);
 	else
 		mode->clock = clamp(mode->clock, 25175, 148500);
+
+	if (lvds->freq_limit)
+		mode->clock = clamp(mode->clock, 25175,
+				    lvds->freq_limit / 1000);
+}
+
+void rcar_du_lvdsenc_set_limit_freq(struct rcar_du_lvdsenc *lvds,
+				    unsigned int freq_limit)
+{
+	lvds->freq_limit = freq_limit;
 }
 
 void rcar_du_lvdsenc_set_mode(struct rcar_du_lvdsenc *lvds,
@@ -526,6 +537,7 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 		lvds->index = i;
 		lvds->input = i ? RCAR_LVDS_INPUT_DU1 : RCAR_LVDS_INPUT_DU0;
 		lvds->enabled = false;
+		lvds->freq_limit = 0;
 
 		/* Get optional backlight GPIO */
 		if (rcdu->info->num_lvds > 1)

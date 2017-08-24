@@ -37,6 +37,8 @@ enum rcar_lvds_mode {
 int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu);
 void rcar_du_lvdsenc_set_mode(struct rcar_du_lvdsenc *lvds,
 			      enum rcar_lvds_mode mode);
+void rcar_du_lvdsenc_set_limit_freq(struct rcar_du_lvdsenc *lvds,
+				    unsigned int freq_limit);
 int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds,
 			   struct drm_crtc *crtc, bool enable);
 void rcar_du_lvdsenc_atomic_check(struct rcar_du_lvdsenc *lvds,
@@ -53,6 +55,11 @@ static inline int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 }
 static inline void rcar_du_lvdsenc_set_mode(struct rcar_du_lvdsenc *lvds,
 					    enum rcar_lvds_mode mode)
+{
+}
+
+static inline void rcar_du_lvdsenc_set_limit_freq(struct rcar_du_lvdsenc *lvds,
+						  unsigned int freq_limit)
 {
 }
 static inline int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds,
