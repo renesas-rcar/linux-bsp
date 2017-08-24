@@ -30,6 +30,9 @@
 	DEF_BASE(_name, _id, CLK_TYPE_R8A77995_PLL0_CKSEL, _parent, \
 		 .div = _div, .mult = 1)
 
+#define DEF_R8A77995_LV(_name, _id, _parent, _offset)	\
+	DEF_BASE(_name, _id, CLK_TYPE_R8A77995_LV, _parent, .offset = _offset)
+
 enum clk_ids {
 	/* Core Clock Outputs exported to DT */
 	LAST_DT_CORE_CLK = R8A77995_CLK_CP,
@@ -55,6 +58,8 @@ enum clk_ids {
 	CLK_S3,
 
 	CLK_PE,
+	CLK_LV0,
+	CLK_LV1,
 
 	/* Module Clocks */
 	MOD_CLK_BASE
@@ -67,6 +72,8 @@ enum r8a77995_clk_types {
 	CLK_TYPE_R8A77995_PLL3,
 
 	CLK_TYPE_R8A77995_PLL0_CKSEL,
+
+	CLK_TYPE_R8A77995_LV
 };
 
 static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
@@ -115,6 +122,9 @@ static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
 
 	DEF_FIXED("cl",         R8A77995_CLK_CL,    CLK_PLL1,      48, 1),
 
+	DEF_R8A77995_LV("lv0",  R8A77995_CLK_LV0,   CLK_PLL1,      0x04cc),
+	DEF_R8A77995_LV("lv1",  R8A77995_CLK_LV1,   CLK_PLL1,      0x04d0),
+
 	DEF_FIXED("cp",         R8A77995_CLK_CP,    CLK_EXTAL,      2, 1),
 };
 
@@ -135,6 +145,7 @@ static const struct mssr_mod_clk r8a77995_mod_clks[] __initconst = {
 	DEF_MOD("vspbs",		 627,	R8A77995_CLK_S1D2),
 	DEF_MOD("du1",			 723,	R8A77995_CLK_S1D1),
 	DEF_MOD("du0",			 724,	R8A77995_CLK_S1D1),
+	DEF_MOD("lvds",			 727,	R8A77995_CLK_LV0),
 	DEF_MOD("etheravb",		 812,	R8A77995_CLK_S3D2),
 	DEF_MOD("gpio6",		 906,	R8A77995_CLK_S3D4),
 	DEF_MOD("gpio5",		 907,	R8A77995_CLK_S3D4),
@@ -152,6 +163,72 @@ static const struct mssr_mod_clk r8a77995_mod_clks[] __initconst = {
 static const unsigned int r8a77995_crit_mod_clks[] __initconst = {
 	MOD_CLK_ID(408),	/* INTC-SYS (GIC) */
 };
+
+/* Modify for LV0CK and LV1CK
+ *
+ */
+#define CPG_LV_CKINSTP		BIT(9)
+#define CPG_LV_CKOUTSTP		BIT(8)
+#define CPG_LV_CKSTP_MASK	(CPG_LV_CKINSTP | CPG_LV_CKOUTSTP)
+
+#define CPG_LV_DIVB_MASK	(0x3f << 24)
+#define CPG_LV_DIVA_MASK	(0x3f << 16)
+#define CPG_LV_EXSRC_MASK	(0x7 << 4)
+
+struct cpg_lv_clock {
+	struct clk_hw hw;
+	void __iomem *reg;
+};
+
+#define to_lv_clock(_hw)	container_of(_hw, struct cpg_lv_clock, hw)
+
+static int cpg_lv_clock_enable(struct clk_hw *hw)
+{
+	struct cpg_lv_clock *clock = to_lv_clock(hw);
+
+	writel(readl(clock->reg) & ~CPG_LV_CKSTP_MASK, clock->reg);
+	return 0;
+}
+
+static void cpg_lv_clock_disable(struct clk_hw *hw)
+{
+	struct cpg_lv_clock *clock = to_lv_clock(hw);
+
+	writel(readl(clock->reg) | CPG_LV_CKSTP_MASK, clock->reg);
+}
+
+static const struct clk_ops cpg_lv_clock_ops = {
+	.enable = cpg_lv_clock_enable,
+	.disable = cpg_lv_clock_disable,
+};
+
+static struct clk * __init cpg_lv_clk_register(const struct cpg_core_clk *core,
+					       void __iomem *base,
+					       const char *parent_name)
+{
+	struct clk_init_data init;
+	struct cpg_lv_clock *clock;
+	struct clk *clk;
+
+	clock = kzalloc(sizeof(*clock), GFP_KERNEL);
+	if (!clock)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = core->name;
+	init.ops = &cpg_lv_clock_ops;
+	init.flags = CLK_SET_RATE_PARENT;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+
+	clock->reg = base + core->offset;
+	clock->hw.init = &init;
+
+	clk = clk_register(NULL, &clock->hw);
+	if (IS_ERR(clk))
+		kfree(clk);
+
+	return clk;
+}
 
 /*
  * CPG Clock Data
@@ -249,6 +326,9 @@ static struct clk * __init r8a77995_cpg_clk_register(
 		if (value & BIT(13))
 			parent_name = "pe";
 		break;
+
+	case CLK_TYPE_R8A77995_LV:
+		return cpg_lv_clk_register(core, base, parent_name);
 
 	default:
 		return rcar_gen3_cpg_clk_register(dev, core, info, clks, base);
