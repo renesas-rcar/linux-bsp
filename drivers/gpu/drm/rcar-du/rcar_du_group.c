@@ -80,11 +80,16 @@ static void rcar_du_group_setup_defr8(struct rcar_du_group *rgrp)
 		 */
 		u32 crtc = ffs(possible_crtcs) - 1;
 
-		if (rgrp->index == 0)
+		if ((rgrp->index == 0) &&
+		    (!rcar_du_has(rcdu, RCAR_DU_FEATURE_D3)))
 			return;
 
-		if (crtc / 2 == rgrp->index)
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_D3) &&
+		    (possible_crtcs > 1))
+			defr8 |= DEFR8_DRGBS_DU(rcdu->dpad0_source);
+		else if (crtc / 2 == rgrp->index)
 			defr8 |= DEFR8_DRGBS_DU(crtc);
+
 	}
 
 	rcar_du_group_write(rgrp, DEFR8, defr8);
