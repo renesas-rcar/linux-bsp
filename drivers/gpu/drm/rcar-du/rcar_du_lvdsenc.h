@@ -35,6 +35,8 @@ enum rcar_lvds_mode {
 
 #if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
 int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu);
+void rcar_du_lvdsenc_set_lower_refresh(struct rcar_du_lvdsenc *lvds,
+				       unsigned int lower_ref);
 void rcar_du_lvdsenc_set_mode(struct rcar_du_lvdsenc *lvds,
 			      enum rcar_lvds_mode mode);
 void rcar_du_lvdsenc_set_limit_freq(struct rcar_du_lvdsenc *lvds,
@@ -52,6 +54,12 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 static inline int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 {
 	return 0;
+}
+
+static inline void rcar_du_lvdsenc_set_lower_refresh(
+	struct rcar_du_lvdsenc *lvds,
+	unsigned int lower_ref)
+{
 }
 static inline void rcar_du_lvdsenc_set_mode(struct rcar_du_lvdsenc *lvds,
 					    enum rcar_lvds_mode mode)

@@ -33,6 +33,7 @@ struct rcar_du_lvds_connector {
 		unsigned int width_mm;		/* Panel width in mm */
 		unsigned int height_mm;		/* Panel height in mm */
 		unsigned int freq_limit;	/* limit frequency */
+		unsigned int lower_ref;		/* lower limit of refresh */
 		struct videomode mode;
 	} panel;
 
@@ -108,7 +109,11 @@ int rcar_du_lvds_connector_init(struct rcar_du_device *rcdu,
 	if (lvdscon->panel.freq_limit)
 		rcar_du_lvdsenc_set_limit_freq(renc->lvds,
 					       lvdscon->panel.freq_limit);
-
+	of_property_read_u32(np, "lower-refresh",
+			     &lvdscon->panel.lower_ref);
+	if (lvdscon->panel.lower_ref)
+		rcar_du_lvdsenc_set_lower_refresh(renc->lvds,
+						  lvdscon->panel.lower_ref);
 	if (of_device_is_compatible(np, "panel-lvds")) {
 		enum rcar_lvds_mode mode = 0;
 		const char *mapping = NULL;
