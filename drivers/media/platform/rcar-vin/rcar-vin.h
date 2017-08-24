@@ -47,6 +47,7 @@ enum chip_id {
 	RCAR_H1,
 	RCAR_M1,
 	RCAR_GEN2,
+	RCAR_D3,
 	RCAR_GEN3,
 };
 

@@ -197,7 +197,7 @@ static u32 rvin_read(struct rvin_dev *vin, u32 offset)
 
 int rvin_is_scaling(struct rvin_dev *vin)
 {
-	if (vin->info->chip == RCAR_GEN3) {
+	if ((vin->info->chip == RCAR_GEN3) || (vin->info->chip == RCAR_D3)) {
 		if ((vin->crop.width != vin->format.width) ||
 			(vin->crop.height != vin->format.height))
 			return 1;
@@ -282,7 +282,7 @@ static int rvin_setup(struct rvin_dev *vin)
 	}
 
 	/* Enable VSYNC Field Toogle mode after one VSYNC input */
-	if (vin->info->chip == RCAR_GEN3)
+	if ((vin->info->chip == RCAR_GEN3) || (vin->info->chip == RCAR_D3))
 		dmr2 = VNDMR2_FTEV;
 	else
 		dmr2 = VNDMR2_FTEV | VNDMR2_VLV(1);
@@ -347,7 +347,7 @@ static int rvin_setup(struct rvin_dev *vin)
 	if (input_is_yuv == output_is_yuv)
 		vnmc |= VNMC_BPS;
 
-	if (vin->info->chip == RCAR_GEN3) {
+	if ((vin->info->chip == RCAR_GEN3) || (vin->info->chip == RCAR_D3)) {
 		/* Select between CSI-2 and Digital input */
 		if (rent->mbus_cfg.type == V4L2_MBUS_CSI2)
 			vnmc &= ~VNMC_DPINE;
@@ -420,7 +420,7 @@ static void rvin_capture_stop(struct rvin_dev *vin)
 {
 	rvin_capture_off(vin);
 
-	if (vin->info->chip == RCAR_GEN3) {
+	if ((vin->info->chip == RCAR_GEN3) || (vin->info->chip == RCAR_D3)) {
 		u32 vnmc;
 
 		vnmc = rvin_read(vin, VNMC_REG);
@@ -1007,7 +1007,7 @@ void rvin_crop_scale_comp(struct rvin_dev *vin)
 		break;
 	}
 
-	if (vin->info->chip != RCAR_GEN3)
+	if ((vin->info->chip != RCAR_GEN3) && (vin->info->chip != RCAR_D3))
 		rvin_crop_scale_comp_gen2(vin);
 	else
 		rvin_crop_scale_comp_gen3(vin);
@@ -1022,7 +1022,7 @@ void rvin_crop_scale_comp(struct rvin_dev *vin)
 void rvin_scale_try(struct rvin_dev *vin, struct v4l2_pix_format *pix,
 		    u32 width, u32 height)
 {
-	if (vin->info->chip == RCAR_GEN3) {
+	if ((vin->info->chip == RCAR_GEN3) || (vin->info->chip == RCAR_D3)) {
 		/* Scaling width check */
 		if (pix->width % 32)
 			vin_dbg(vin, "Scaling width is not multiple of 32\n");

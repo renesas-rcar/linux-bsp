@@ -321,14 +321,14 @@ static int __rvin_try_format(struct rvin_dev *vin,
 		return -EINVAL;
 	}
 
-	if ((vin->info->chip != RCAR_GEN3) &&
-		(pix->pixelformat == V4L2_PIX_FMT_NV12)) {
+	if (((vin->info->chip != RCAR_GEN3) && (vin->info->chip != RCAR_D3)) &&
+	    (pix->pixelformat == V4L2_PIX_FMT_NV12)) {
 		vin_err(vin, "pixel format NV12 is supported from GEN3\n");
 		return -EINVAL;
 	}
 
-	if ((vin->info->chip != RCAR_GEN3) &&
-		(pix->pixelformat == V4L2_PIX_FMT_ABGR32)) {
+	if (((vin->info->chip != RCAR_GEN3) && (vin->info->chip != RCAR_D3)) &&
+	    (pix->pixelformat == V4L2_PIX_FMT_ABGR32)) {
 		vin_err(vin, "pixel format ARGB8888 is supported from GEN2\n");
 		return -EINVAL;
 	}
