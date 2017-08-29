@@ -249,6 +249,7 @@ void vsp1_pipeline_run(struct vsp1_pipeline *pipe)
 		vsp1_write(vsp1, VI6_CMD(pipe->output->entity.index),
 			   VI6_CMD_STRCMD);
 		pipe->state = VSP1_PIPELINE_RUNNING;
+		pipe->configured = true;
 	}
 
 	pipe->buffers_ready = 0;
@@ -367,7 +368,7 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
  * from the input RPF alpha.
  */
 void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
-				   struct vsp1_dl_list *dl, unsigned int alpha)
+				   struct vsp1_dl_body *dlb, unsigned int alpha)
 {
 	if (!pipe->uds)
 		return;
@@ -380,7 +381,29 @@ void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
 	    pipe->uds_input->type == VSP1_ENTITY_BRS)
 		alpha = 255;
 
-	vsp1_uds_set_alpha(pipe->uds, dl, alpha);
+	vsp1_uds_set_alpha(pipe->uds, dlb, alpha);
+}
+
+/*
+ * Propagate the partition calculations through the pipeline
+ *
+ * Work backwards through the pipe, allowing each entity to update the partition
+ * parameters based on its configuration, and the entity connected to its
+ * source. Each entity must produce the partition required for the previous
+ * entity in the pipeline.
+ */
+void vsp1_pipeline_propagate_partition(struct vsp1_pipeline *pipe,
+				       struct vsp1_partition *partition,
+				       unsigned int index,
+				       struct vsp1_partition_window *window)
+{
+	struct vsp1_entity *entity;
+
+	list_for_each_entry_reverse(entity, &pipe->entities, list_pipe) {
+		if (entity->ops->partition)
+			entity->ops->partition(entity, pipe, partition, index,
+					       window);
+	}
 }
 
 void vsp1_pipelines_suspend(struct vsp1_device *vsp1)
@@ -408,6 +431,9 @@ void vsp1_pipelines_suspend(struct vsp1_device *vsp1)
 		spin_lock_irqsave(&pipe->irqlock, flags);
 		if (pipe->state == VSP1_PIPELINE_RUNNING)
 			pipe->state = VSP1_PIPELINE_STOPPING;
+
+		/* After a suspend, the hardware will be reset */
+		pipe->configured = false;
 		spin_unlock_irqrestore(&pipe->irqlock, flags);
 	}
 
