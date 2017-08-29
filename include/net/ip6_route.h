@@ -115,6 +115,7 @@ static inline int ip6_route_get_saddr(struct net *net, struct rt6_info *rt,
 
 struct rt6_info *rt6_lookup(struct net *net, const struct in6_addr *daddr,
 			    const struct in6_addr *saddr, int oif, int flags);
+u32 rt6_multipath_hash(const struct flowi6 *fl6, const struct sk_buff *skb);
 
 struct dst_entry *icmp6_dst_alloc(struct net_device *dev, struct flowi6 *fl6);
 
@@ -194,7 +195,7 @@ static inline bool ipv6_anycast_destination(const struct dst_entry *dst,
 	struct rt6_info *rt = (struct rt6_info *)dst;
 
 	return rt->rt6i_flags & RTF_ANYCAST ||
-		(rt->rt6i_dst.plen != 128 &&
+		(rt->rt6i_dst.plen < 127 &&
 		 ipv6_addr_equal(&rt->rt6i_dst.addr, daddr));
 }
 

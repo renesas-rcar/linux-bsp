@@ -34,10 +34,12 @@
 #include <linux/bitfield.h>
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
+#include <linux/workqueue.h>
 #include <net/dst_metadata.h>
 
 #include "main.h"
 #include "../nfpcore/nfp_cpp.h"
+#include "../nfp_net.h"
 #include "../nfp_net_repr.h"
 #include "./cmsg.h"
 
@@ -73,6 +75,39 @@ nfp_flower_cmsg_alloc(struct nfp_app *app, unsigned int size,
 	skb_put(skb, size);
 
 	return skb;
+}
+
+struct sk_buff *
+nfp_flower_cmsg_mac_repr_start(struct nfp_app *app, unsigned int num_ports)
+{
+	struct nfp_flower_cmsg_mac_repr *msg;
+	struct sk_buff *skb;
+	unsigned int size;
+
+	size = sizeof(*msg) + num_ports * sizeof(msg->ports[0]);
+	skb = nfp_flower_cmsg_alloc(app, size, NFP_FLOWER_CMSG_TYPE_MAC_REPR);
+	if (!skb)
+		return NULL;
+
+	msg = nfp_flower_cmsg_get_data(skb);
+	memset(msg->reserved, 0, sizeof(msg->reserved));
+	msg->num_ports = num_ports;
+
+	return skb;
+}
+
+void
+nfp_flower_cmsg_mac_repr_add(struct sk_buff *skb, unsigned int idx,
+			     unsigned int nbi, unsigned int nbi_port,
+			     unsigned int phys_port)
+{
+	struct nfp_flower_cmsg_mac_repr *msg;
+
+	msg = nfp_flower_cmsg_get_data(skb);
+	msg->ports[idx].idx = idx;
+	msg->ports[idx].info = nbi & NFP_FLOWER_CMSG_MAC_REPR_NBI;
+	msg->ports[idx].nbi_port = nbi_port;
+	msg->ports[idx].phys_port = phys_port;
 }
 
 int nfp_flower_cmsg_portmod(struct nfp_repr *repr, bool carrier_ok)
@@ -115,14 +150,22 @@ nfp_flower_cmsg_portmod_rx(struct nfp_app *app, struct sk_buff *skb)
 		return;
 	}
 
-	if (link)
+	if (link) {
+		u16 mtu = be16_to_cpu(msg->mtu);
+
 		netif_carrier_on(netdev);
-	else
+
+		/* An MTU of 0 from the firmware should be ignored */
+		if (mtu)
+			dev_set_mtu(netdev, mtu);
+	} else {
 		netif_carrier_off(netdev);
+	}
 	rcu_read_unlock();
 }
 
-void nfp_flower_cmsg_rx(struct nfp_app *app, struct sk_buff *skb)
+static void
+nfp_flower_cmsg_process_one_rx(struct nfp_app *app, struct sk_buff *skb)
 {
 	struct nfp_flower_cmsg_hdr *cmsg_hdr;
 	enum nfp_flower_cmsg_type_port type;
@@ -150,4 +193,23 @@ void nfp_flower_cmsg_rx(struct nfp_app *app, struct sk_buff *skb)
 
 out:
 	dev_kfree_skb_any(skb);
+}
+
+void nfp_flower_cmsg_process_rx(struct work_struct *work)
+{
+	struct nfp_flower_priv *priv;
+	struct sk_buff *skb;
+
+	priv = container_of(work, struct nfp_flower_priv, cmsg_work);
+
+	while ((skb = skb_dequeue(&priv->cmsg_skbs)))
+		nfp_flower_cmsg_process_one_rx(priv->nn->app, skb);
+}
+
+void nfp_flower_cmsg_rx(struct nfp_app *app, struct sk_buff *skb)
+{
+	struct nfp_flower_priv *priv = app->priv;
+
+	skb_queue_tail(&priv->cmsg_skbs, skb);
+	schedule_work(&priv->cmsg_work);
 }

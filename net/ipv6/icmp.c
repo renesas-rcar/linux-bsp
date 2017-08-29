@@ -459,9 +459,20 @@ static void icmp6_send(struct sk_buff *skb, u8 type, u8 code, __u32 info,
 	 *	Source addr check
 	 */
 
-	if (__ipv6_addr_needs_scope_id(addr_type))
+	if (__ipv6_addr_needs_scope_id(addr_type)) {
 		iif = skb->dev->ifindex;
-	else {
+
+		/* for local packets, get the real device index */
+		if (iif == LOOPBACK_IFINDEX) {
+			dst = skb_dst(skb);
+			if (dst) {
+				struct rt6_info *rt;
+
+				rt = container_of(dst, struct rt6_info, dst);
+				iif = rt->rt6i_idev->dev->ifindex;
+			}
+		}
+	} else {
 		dst = skb_dst(skb);
 		iif = l3mdev_master_ifindex(dst ? dst->dev : skb->dev);
 	}
@@ -508,6 +519,7 @@ static void icmp6_send(struct sk_buff *skb, u8 type, u8 code, __u32 info,
 	fl6.fl6_icmp_type = type;
 	fl6.fl6_icmp_code = code;
 	fl6.flowi6_uid = sock_net_uid(net, NULL);
+	fl6.mp_hash = rt6_multipath_hash(&fl6, skb);
 	security_skb_classify_flow(skb, flowi6_to_flowi(&fl6));
 
 	sk = icmpv6_xmit_lock(net);
