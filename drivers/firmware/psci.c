@@ -20,6 +20,7 @@
 #include <linux/linkage.h>
 #include <linux/of.h>
 #include <linux/pm.h>
+#include <linux/pm_wakeup.h>
 #include <linux/printk.h>
 #include <linux/psci.h>
 #include <linux/reboot.h>
@@ -85,6 +86,8 @@ static u32 psci_function_id[PSCI_FN_MAX];
 				PSCI_1_0_EXT_POWER_STATE_TYPE_MASK)
 
 static u32 psci_cpu_suspend_feature;
+static bool psci_suspend_mem_supported;
+static bool psci_system_suspend_is_power_down;
 
 static inline bool psci_has_ext_power_state(void)
 {
@@ -422,13 +425,38 @@ static int psci_system_suspend(unsigned long unused)
 			      __pa_symbol(cpu_resume), 0, 0);
 }
 
+static int psci_system_suspend_valid(suspend_state_t state)
+{
+	switch (state) {
+	case PM_SUSPEND_STANDBY:
+		return true;
+
+	case PM_SUSPEND_MEM:
+		return psci_suspend_mem_supported;
+
+	default:
+		return false;
+	}
+}
+
 static int psci_system_suspend_enter(suspend_state_t state)
 {
-	return cpu_suspend(0, psci_system_suspend);
+	switch (state) {
+	case PM_SUSPEND_MEM:
+		if (!psci_system_suspend_is_power_down ||
+		    !wakeup_source_available())
+			return cpu_suspend(0, psci_system_suspend);
+		/* fall through */
+	case PM_SUSPEND_STANDBY:
+		cpu_do_idle();
+		break;
+	}
+
+	return 0;
 }
 
 static const struct platform_suspend_ops psci_suspend_ops = {
-	.valid          = suspend_valid_only_mem,
+	.valid          = psci_system_suspend_valid,
 	.enter          = psci_system_suspend_enter,
 };
 
@@ -442,7 +470,9 @@ static void __init psci_init_system_suspend(void)
 	ret = psci_features(PSCI_FN_NATIVE(1_0, SYSTEM_SUSPEND));
 
 	if (ret != PSCI_RET_NOT_SUPPORTED)
-		suspend_set_ops(&psci_suspend_ops);
+		psci_suspend_mem_supported = true;
+
+	suspend_set_ops(&psci_suspend_ops);
 }
 
 static void __init psci_init_cpu_suspend(void)
@@ -569,6 +599,9 @@ static int __init psci_0_2_init(struct device_node *np)
 	 * by firmware
 	 */
 	err = psci_probe();
+
+	psci_system_suspend_is_power_down = of_property_read_bool(np,
+		"arm,psci-system-suspend-is-power-down");
 
 out_put_node:
 	of_node_put(np);
