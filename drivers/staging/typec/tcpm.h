@@ -34,7 +34,8 @@ enum typec_cc_polarity {
 };
 
 /* Time to wait for TCPC to complete transmit */
-#define PD_T_TCPC_TX_TIMEOUT  100
+#define PD_T_TCPC_TX_TIMEOUT	100		/* in ms	*/
+#define PD_ROLE_SWAP_TIMEOUT	(MSEC_PER_SEC * 10)
 
 enum tcpm_transmit_status {
 	TCPC_TX_SUCCESS = 0,
@@ -72,7 +73,7 @@ struct tcpc_config {
 	enum typec_role default_role;
 	bool try_role_hw;	/* try.{src,snk} implemented in hardware */
 
-	struct typec_altmode_desc *alt_modes;
+	const struct typec_altmode_desc *alt_modes;
 };
 
 enum tcpc_usb_switch {

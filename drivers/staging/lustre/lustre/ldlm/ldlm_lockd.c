@@ -37,9 +37,9 @@
 
 #define DEBUG_SUBSYSTEM S_LDLM
 
-#include "../../include/linux/libcfs/libcfs.h"
-#include "../include/lustre_dlm.h"
-#include "../include/obd_class.h"
+#include <linux/libcfs/libcfs.h>
+#include <lustre_dlm.h>
+#include <obd_class.h>
 #include <linux/list.h>
 #include "ldlm_internal.h"
 
@@ -926,7 +926,7 @@ static struct attribute *ldlm_attrs[] = {
 	NULL,
 };
 
-static struct attribute_group ldlm_attr_group = {
+static const struct attribute_group ldlm_attr_group = {
 	.attrs = ldlm_attrs,
 };
 
