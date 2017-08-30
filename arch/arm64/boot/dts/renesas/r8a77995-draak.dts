@@ -327,6 +327,12 @@
 	};
 };
 
+&i2c1 {
+	status = "okay";
+
+	clock-frequency = <100000>;
+};
+
 &avb {
 	pinctrl-0 = <&avb_pins>;
 	pinctrl-names = "default";
