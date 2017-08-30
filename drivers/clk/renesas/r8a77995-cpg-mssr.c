@@ -64,6 +64,8 @@ enum clk_ids {
 	CLK_LV0,
 	CLK_LV1,
 
+	CLK_RINT,
+
 	/* Module Clocks */
 	MOD_CLK_BASE
 };
@@ -139,6 +141,9 @@ static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
 	DEF_R8A77995_LV("lv1",  R8A77995_CLK_LV1,   CLK_PLL1,      0x04d0),
 
 	DEF_FIXED("cp",         R8A77995_CLK_CP,    CLK_EXTAL,      2, 1),
+
+	DEF_BASE("r_int",       CLK_RINT,        CLK_TYPE_GEN3_RINT, CLK_EXTAL),
+	DEF_BASE("r",           R8A77995_CLK_R, CLK_TYPE_GEN3_R, CLK_RINT),
 };
 
 static const struct mssr_mod_clk r8a77995_mod_clks[] __initconst = {
@@ -157,6 +162,7 @@ static const struct mssr_mod_clk r8a77995_mod_clks[] __initconst = {
 	DEF_MOD("sys-dmac0",		 219,	R8A77995_CLK_S3D1),
 	DEF_MOD("scif2",		 310,	R8A77995_CLK_S3D4C),
 	DEF_MOD("emmc0",		 312,	R8A77995_CLK_SD0),
+	DEF_MOD("rwdt0",		 402,	R8A77995_CLK_R),
 	DEF_MOD("intc-ex",		 407,	R8A77995_CLK_CP),
 	DEF_MOD("intc-ap",		 408,	R8A77995_CLK_S1D2),
 	DEF_MOD("hscif3",		 517,	R8A77995_CLK_S3D1C),
