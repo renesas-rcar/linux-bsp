@@ -104,6 +104,10 @@ static void __rsnd_dmaen_complete(struct rsnd_mod *mod,
 	 * In Gen2 case, it are Audio-DMAC, and Audio-DMAC-peri-peri.
 	 * But, Audio-DMAC-peri-peri doesn't have interrupt,
 	 * and this driver is assuming that here.
+	 *
+	 * If Audio-DMAC-peri-peri has interrpt,
+	 * rsnd_dai_pointer_update() will be called twice,
+	 * ant it will breaks io->byte_pos
 	 */
 	spin_lock_irqsave(&priv->lock, flags);
 
@@ -118,7 +122,7 @@ static void __rsnd_dmaen_complete(struct rsnd_mod *mod,
 		 */
 		rsnd_dmaen_sync(dmaen, io, dmaen->dma_cnt + 2);
 
-		elapsed = true;
+		elapsed = rsnd_dai_pointer_update(io, io->byte_per_period);
 
 		dmaen->dma_cnt++;
 	}
