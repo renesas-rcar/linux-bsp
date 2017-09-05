@@ -662,7 +662,7 @@ static void dcmi_stop_streaming(struct vb2_queue *vq)
 		dcmi->errors_count, dcmi->buffers_count);
 }
 
-static struct vb2_ops dcmi_video_qops = {
+static const struct vb2_ops dcmi_video_qops = {
 	.queue_setup		= dcmi_queue_setup,
 	.buf_init		= dcmi_buf_init,
 	.buf_prepare		= dcmi_buf_prepare,
@@ -1209,7 +1209,7 @@ static int dcmi_probe(struct platform_device *pdev)
 	if (!dcmi)
 		return -ENOMEM;
 
-	dcmi->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	dcmi->rstc = devm_reset_control_get_exclusive(&pdev->dev, NULL);
 	if (IS_ERR(dcmi->rstc)) {
 		dev_err(&pdev->dev, "Could not get reset control\n");
 		return -ENODEV;
