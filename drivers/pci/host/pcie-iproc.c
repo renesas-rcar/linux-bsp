@@ -68,6 +68,9 @@
 #define APB_ERR_EN_SHIFT             0
 #define APB_ERR_EN                   BIT(APB_ERR_EN_SHIFT)
 
+#define CFG_RETRY_STATUS             0xffff0001
+#define CFG_RETRY_STATUS_TIMEOUT_US  500000 /* 500 milliseconds */
+
 /* derive the enum index of the outbound/inbound mapping registers */
 #define MAP_REG(base_reg, index)      ((base_reg) + (index) * 2)
 
@@ -448,6 +451,102 @@ static inline void iproc_pcie_apb_err_disable(struct pci_bus *bus,
 	}
 }
 
+static void __iomem *iproc_pcie_map_ep_cfg_reg(struct iproc_pcie *pcie,
+					       unsigned int busno,
+					       unsigned int slot,
+					       unsigned int fn,
+					       int where)
+{
+	u16 offset;
+	u32 val;
+
+	/* EP device access */
+	val = (busno << CFG_ADDR_BUS_NUM_SHIFT) |
+		(slot << CFG_ADDR_DEV_NUM_SHIFT) |
+		(fn << CFG_ADDR_FUNC_NUM_SHIFT) |
+		(where & CFG_ADDR_REG_NUM_MASK) |
+		(1 & CFG_ADDR_CFG_TYPE_MASK);
+
+	iproc_pcie_write_reg(pcie, IPROC_PCIE_CFG_ADDR, val);
+	offset = iproc_pcie_reg_offset(pcie, IPROC_PCIE_CFG_DATA);
+
+	if (iproc_pcie_reg_is_invalid(offset))
+		return NULL;
+
+	return (pcie->base + offset);
+}
+
+static unsigned int iproc_pcie_cfg_retry(void __iomem *cfg_data_p)
+{
+	int timeout = CFG_RETRY_STATUS_TIMEOUT_US;
+	unsigned int data;
+
+	/*
+	 * As per PCIe spec r3.1, sec 2.3.2, CRS Software Visibility only
+	 * affects config reads of the Vendor ID.  For config writes or any
+	 * other config reads, the Root may automatically reissue the
+	 * configuration request again as a new request.
+	 *
+	 * For config reads, this hardware returns CFG_RETRY_STATUS data
+	 * when it receives a CRS completion, regardless of the address of
+	 * the read or the CRS Software Visibility Enable bit.  As a
+	 * partial workaround for this, we retry in software any read that
+	 * returns CFG_RETRY_STATUS.
+	 *
+	 * Note that a non-Vendor ID config register may have a value of
+	 * CFG_RETRY_STATUS.  If we read that, we can't distinguish it from
+	 * a CRS completion, so we will incorrectly retry the read and
+	 * eventually return the wrong data (0xffffffff).
+	 */
+	data = readl(cfg_data_p);
+	while (data == CFG_RETRY_STATUS && timeout--) {
+		udelay(1);
+		data = readl(cfg_data_p);
+	}
+
+	if (data == CFG_RETRY_STATUS)
+		data = 0xffffffff;
+
+	return data;
+}
+
+static int iproc_pcie_config_read(struct pci_bus *bus, unsigned int devfn,
+				    int where, int size, u32 *val)
+{
+	struct iproc_pcie *pcie = iproc_data(bus);
+	unsigned int slot = PCI_SLOT(devfn);
+	unsigned int fn = PCI_FUNC(devfn);
+	unsigned int busno = bus->number;
+	void __iomem *cfg_data_p;
+	unsigned int data;
+	int ret;
+
+	/* root complex access */
+	if (busno == 0) {
+		ret = pci_generic_config_read32(bus, devfn, where, size, val);
+		if (ret != PCIBIOS_SUCCESSFUL)
+			return ret;
+
+		/* Don't advertise CRS SV support */
+		if ((where & ~0x3) == PCI_EXP_CAP + PCI_EXP_RTCAP)
+			*val &= ~(PCI_EXP_RTCAP_CRSVIS << 16);
+		return PCIBIOS_SUCCESSFUL;
+	}
+
+	cfg_data_p = iproc_pcie_map_ep_cfg_reg(pcie, busno, slot, fn, where);
+
+	if (!cfg_data_p)
+		return PCIBIOS_DEVICE_NOT_FOUND;
+
+	data = iproc_pcie_cfg_retry(cfg_data_p);
+
+	*val = data;
+	if (size <= 2)
+		*val = (data >> (8 * (where & 3))) & ((1 << (size * 8)) - 1);
+
+	return PCIBIOS_SUCCESSFUL;
+}
+
 /**
  * Note access to the configuration registers are protected at the higher layer
  * by 'pci_lock' in drivers/pci/access.c
@@ -459,7 +558,6 @@ static void __iomem *iproc_pcie_map_cfg_bus(struct iproc_pcie *pcie,
 {
 	unsigned slot = PCI_SLOT(devfn);
 	unsigned fn = PCI_FUNC(devfn);
-	u32 val;
 	u16 offset;
 
 	/* root complex access */
@@ -484,18 +582,7 @@ static void __iomem *iproc_pcie_map_cfg_bus(struct iproc_pcie *pcie,
 		if (slot > 0)
 			return NULL;
 
-	/* EP device access */
-	val = (busno << CFG_ADDR_BUS_NUM_SHIFT) |
-		(slot << CFG_ADDR_DEV_NUM_SHIFT) |
-		(fn << CFG_ADDR_FUNC_NUM_SHIFT) |
-		(where & CFG_ADDR_REG_NUM_MASK) |
-		(1 & CFG_ADDR_CFG_TYPE_MASK);
-	iproc_pcie_write_reg(pcie, IPROC_PCIE_CFG_ADDR, val);
-	offset = iproc_pcie_reg_offset(pcie, IPROC_PCIE_CFG_DATA);
-	if (iproc_pcie_reg_is_invalid(offset))
-		return NULL;
-	else
-		return (pcie->base + offset);
+	return iproc_pcie_map_ep_cfg_reg(pcie, busno, slot, fn, where);
 }
 
 static void __iomem *iproc_pcie_bus_map_cfg_bus(struct pci_bus *bus,
@@ -554,9 +641,13 @@ static int iproc_pcie_config_read32(struct pci_bus *bus, unsigned int devfn,
 				    int where, int size, u32 *val)
 {
 	int ret;
+	struct iproc_pcie *pcie = iproc_data(bus);
 
 	iproc_pcie_apb_err_disable(bus, true);
-	ret = pci_generic_config_read32(bus, devfn, where, size, val);
+	if (pcie->type == IPROC_PCIE_PAXB_V2)
+		ret = iproc_pcie_config_read(bus, devfn, where, size, val);
+	else
+		ret = pci_generic_config_read32(bus, devfn, where, size, val);
 	iproc_pcie_apb_err_disable(bus, false);
 
 	return ret;
@@ -580,7 +671,7 @@ static struct pci_ops iproc_pcie_ops = {
 	.write = iproc_pcie_config_write32,
 };
 
-static void iproc_pcie_reset(struct iproc_pcie *pcie)
+static void iproc_pcie_perst_ctrl(struct iproc_pcie *pcie, bool assert)
 {
 	u32 val;
 
@@ -592,19 +683,26 @@ static void iproc_pcie_reset(struct iproc_pcie *pcie)
 	if (pcie->ep_is_internal)
 		return;
 
-	/*
-	 * Select perst_b signal as reset source. Put the device into reset,
-	 * and then bring it out of reset
-	 */
-	val = iproc_pcie_read_reg(pcie, IPROC_PCIE_CLK_CTRL);
-	val &= ~EP_PERST_SOURCE_SELECT & ~EP_MODE_SURVIVE_PERST &
-		~RC_PCIE_RST_OUTPUT;
-	iproc_pcie_write_reg(pcie, IPROC_PCIE_CLK_CTRL, val);
-	udelay(250);
+	if (assert) {
+		val = iproc_pcie_read_reg(pcie, IPROC_PCIE_CLK_CTRL);
+		val &= ~EP_PERST_SOURCE_SELECT & ~EP_MODE_SURVIVE_PERST &
+			~RC_PCIE_RST_OUTPUT;
+		iproc_pcie_write_reg(pcie, IPROC_PCIE_CLK_CTRL, val);
+		udelay(250);
+	} else {
+		val = iproc_pcie_read_reg(pcie, IPROC_PCIE_CLK_CTRL);
+		val |= RC_PCIE_RST_OUTPUT;
+		iproc_pcie_write_reg(pcie, IPROC_PCIE_CLK_CTRL, val);
+		msleep(100);
+	}
+}
 
-	val |= RC_PCIE_RST_OUTPUT;
-	iproc_pcie_write_reg(pcie, IPROC_PCIE_CLK_CTRL, val);
-	msleep(100);
+int iproc_pcie_shutdown(struct iproc_pcie *pcie)
+{
+	iproc_pcie_perst_ctrl(pcie, true);
+	msleep(500);
+
+	return 0;
 }
 
 static int iproc_pcie_check_link(struct iproc_pcie *pcie)
@@ -1223,6 +1321,8 @@ static int iproc_pcie_rev_init(struct iproc_pcie *pcie)
 		pcie->ib.nr_regions = ARRAY_SIZE(paxb_v2_ib_map);
 		pcie->ib_map = paxb_v2_ib_map;
 		pcie->need_msi_steer = true;
+		dev_warn(dev, "reads of config registers that contain %#x return incorrect data\n",
+			 CFG_RETRY_STATUS);
 		break;
 	case IPROC_PCIE_PAXC:
 		regs = iproc_pcie_reg_paxc;
@@ -1286,7 +1386,8 @@ int iproc_pcie_setup(struct iproc_pcie *pcie, struct list_head *res)
 		goto err_exit_phy;
 	}
 
-	iproc_pcie_reset(pcie);
+	iproc_pcie_perst_ctrl(pcie, true);
+	iproc_pcie_perst_ctrl(pcie, false);
 
 	if (pcie->need_ob_cfg) {
 		ret = iproc_pcie_map_ranges(pcie, res);
