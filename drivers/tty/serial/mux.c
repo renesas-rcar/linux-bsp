@@ -427,7 +427,7 @@ static struct console mux_console = {
 #define MUX_CONSOLE	NULL
 #endif
 
-static struct uart_ops mux_pops = {
+static const struct uart_ops mux_pops = {
 	.tx_empty =		mux_tx_empty,
 	.set_mctrl =		mux_set_mctrl,
 	.get_mctrl =		mux_get_mctrl,
@@ -536,13 +536,13 @@ static int mux_remove(struct parisc_device *dev)
  * This table only contains the parisc_device_id of known builtin mux
  * devices.  All other mux cards will be detected by the generic mux_tbl.
  */
-static struct parisc_device_id builtin_mux_tbl[] = {
+static const struct parisc_device_id builtin_mux_tbl[] = {
 	{ HPHW_A_DIRECT, HVERSION_REV_ANY_ID, 0x15, 0x0000D }, /* All K-class */
 	{ HPHW_A_DIRECT, HVERSION_REV_ANY_ID, 0x44, 0x0000D }, /* E35, E45, and E55 */
 	{ 0, }
 };
 
-static struct parisc_device_id mux_tbl[] = {
+static const struct parisc_device_id mux_tbl[] = {
 	{ HPHW_A_DIRECT, HVERSION_REV_ANY_ID, HVERSION_ANY_ID, 0x0000D },
 	{ 0, }
 };
