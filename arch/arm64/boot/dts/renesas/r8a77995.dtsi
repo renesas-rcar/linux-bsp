@@ -862,6 +862,32 @@
 			power-domains = <&cpg>;
 		};
 
+		vsp@fe960000 {
+			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe960000 0 0x8000>;
+			renesas,has-brs;
+			renesas,#rpf = <2>;
+			renesas,#uds = <0>;
+			renesas,#wpf = <1>;
+		};
+
+		vspbs: vspm@fe960000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
+			interrupts = <GIC_SPI 465 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 627>, <&cpg CPG_MOD 607>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <3>;
+			renesas,#rpf = <3>;
+			renesas,#rpf_clut = <3>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-brs;
+			renesas,#read_outstanding = <0>;
+			renesas,#start_reservation = <2>;
+			power-domains = <&cpg>;
+			status = "disabled";
+		};
+
 		vspd0: vsp@fea20000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xfea20000 0 0x4000>;
