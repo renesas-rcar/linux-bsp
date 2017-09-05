@@ -58,11 +58,39 @@ enum vsp1_pipeline_state {
 };
 
 /*
+ * struct vsp1_partition_window - Partition window coordinates
+ * @left: horizontal coordinate of the partition start in pixels relative to the
+ *	  left edge of the image
+ * @width: partition width in pixels
+ */
+struct vsp1_partition_window {
+	unsigned int left;
+	unsigned int width;
+};
+
+/*
+ * struct vsp1_partition - A description of a slice for the partition algorithm
+ * @rpf: The RPF partition window configuration
+ * @uds_sink: The UDS input partition window configuration
+ * @uds_source: The UDS output partition window configuration
+ * @sru: The SRU partition window configuration
+ * @wpf: The WPF partition window configuration
+ */
+struct vsp1_partition {
+	struct vsp1_partition_window rpf;
+	struct vsp1_partition_window uds_sink;
+	struct vsp1_partition_window uds_source;
+	struct vsp1_partition_window sru;
+	struct vsp1_partition_window wpf;
+};
+
+/*
  * struct vsp1_pipeline - A VSP1 hardware pipeline
  * @pipe: the media pipeline
  * @irqlock: protects the pipeline state
  * @state: current state
  * @wq: wait queue to wait for state change completion
+ * @configured: flag determining if the hardware has run since reset
  * @frame_end: frame end interrupt handler
  * @lock: protects the pipeline use count and stream count
  * @kref: pipeline reference count
@@ -80,9 +108,9 @@ enum vsp1_pipeline_state {
  * @uds_input: entity at the input of the UDS, if the UDS is present
  * @entities: list of entities in the pipeline
  * @dl: display list associated with the pipeline
- * @div_size: The maximum allowed partition size for the pipeline
  * @partitions: The number of partitions used to process one frame
- * @current_partition: The partition number currently being configured
+ * @partition: The current partition for configuration to process
+ * @part_table: The pre-calculated partitions used by the pipeline
  */
 struct vsp1_pipeline {
 	struct media_pipeline pipe;
@@ -90,6 +118,7 @@ struct vsp1_pipeline {
 	spinlock_t irqlock;
 	enum vsp1_pipeline_state state;
 	wait_queue_head_t wq;
+	bool configured;
 
 	void (*frame_end)(struct vsp1_pipeline *pipe, bool completed);
 
@@ -109,14 +138,16 @@ struct vsp1_pipeline {
 	struct vsp1_entity *uds;
 	struct vsp1_entity *uds_input;
 
+	/*
+	 * The order of this list must be identical to the order of the entities
+	 * in the pipeline, as it is assumed by the partition algorithm that we
+	 * can walk this list in sequence.
+	 */
 	struct list_head entities;
 
-	struct vsp1_dl_list *dl;
-
-	unsigned int div_size;
 	unsigned int partitions;
-	struct v4l2_rect partition;
-	unsigned int current_partition;
+	struct vsp1_partition *partition;
+	struct vsp1_partition *part_table;
 };
 
 void vsp1_pipeline_reset(struct vsp1_pipeline *pipe);
@@ -130,7 +161,13 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe);
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe);
 
 void vsp1_pipeline_propagate_alpha(struct vsp1_pipeline *pipe,
-				   struct vsp1_dl_list *dl, unsigned int alpha);
+				   struct vsp1_dl_body *dlb,
+				   unsigned int alpha);
+
+void vsp1_pipeline_propagate_partition(struct vsp1_pipeline *pipe,
+				       struct vsp1_partition *partition,
+				       unsigned int index,
+				       struct vsp1_partition_window *window);
 
 void vsp1_pipelines_suspend(struct vsp1_device *vsp1);
 void vsp1_pipelines_resume(struct vsp1_device *vsp1);

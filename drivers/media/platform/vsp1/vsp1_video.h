@@ -43,6 +43,8 @@ struct vsp1_video {
 
 	struct mutex lock;
 
+	struct vsp1_dl_fragment_pool *dlbs;
+	struct vsp1_dl_body *pipe_config;
 	unsigned int pipe_index;
 
 	struct vb2_queue queue;
