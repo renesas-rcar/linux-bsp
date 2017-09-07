@@ -122,5 +122,7 @@
 #define SRCR7		0xE61501CC
 #define SRSTCLR7	0xE615095C
 #define SRCR7_LVDS	(1 << 27)
+#define SRCR7_LVDS1	(1 << 26)
+#define SRCR7_LVDS2	(1 << 25)
 
 #endif /* __RCAR_LVDS_REGS_H__ */
