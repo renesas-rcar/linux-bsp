@@ -485,6 +485,12 @@ static const u16 pinmux_data[] = {
 	PINMUX_SINGLE(VI4_CLK),
 	PINMUX_SINGLE(TX2),
 	PINMUX_SINGLE(RX2),
+	PINMUX_SINGLE(MSIOF0_RXD),
+	PINMUX_SINGLE(MSIOF0_TXD),
+	PINMUX_SINGLE(MSIOF0_SYNC),
+	PINMUX_SINGLE(MSIOF0_SCK),
+	PINMUX_SINGLE(SDA0),
+	PINMUX_SINGLE(SCL0),
 	PINMUX_SINGLE(AVB0_LINK),
 	PINMUX_SINGLE(AVB0_PHY_INT),
 	PINMUX_SINGLE(AVB0_MAGIC),
@@ -955,7 +961,7 @@ static const unsigned int audio_clkb_mux[] = {
 };
 
 static const unsigned int audio_clkout_pins[] = {
-	/* CLKA */
+	/* CLKOUT */
 	RCAR_GP_PIN(4, 5),
 };
 
@@ -964,7 +970,7 @@ static const unsigned int audio_clkout_mux[] = {
 };
 
 static const unsigned int audio_clkout1_pins[] = {
-	/* CLKA */
+	/* CLKOUT1 */
 	RCAR_GP_PIN(4, 22),
 };
 
@@ -1772,7 +1778,7 @@ static const unsigned int scif3_clk_a_mux[] = {
 
 static const unsigned int scif3_data_b_pins[] = {
 	/* RX, TX */
-	RCAR_GP_PIN(1, 29), RCAR_GP_PIN(1, 31),
+	RCAR_GP_PIN(1, 30), RCAR_GP_PIN(1, 31),
 };
 
 static const unsigned int scif3_data_b_mux[] = {
@@ -1781,7 +1787,7 @@ static const unsigned int scif3_data_b_mux[] = {
 
 static const unsigned int scif3_clk_b_pins[] = {
 	/* SCK */
-	RCAR_GP_PIN(1, 30),
+	RCAR_GP_PIN(1, 29),
 };
 
 static const unsigned int scif3_clk_b_mux[] = {
