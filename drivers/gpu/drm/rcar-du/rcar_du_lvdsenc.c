@@ -13,6 +13,7 @@
 
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/gpio/consumer.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
@@ -32,6 +33,7 @@ struct rcar_du_lvdsenc {
 
 	enum rcar_lvds_input input;
 	enum rcar_lvds_mode mode;
+	struct gpio_desc *gpio_pd;
 };
 
 static void rcar_lvds_write(struct rcar_du_lvdsenc *lvds, u32 reg, u32 data)
@@ -145,6 +147,9 @@ int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 	writel_relaxed(srstclr7_lvds, srstclr7_reg);
 	iounmap(srstclr7_reg);
 
+	if (lvds->gpio_pd)
+		gpiod_set_value(lvds->gpio_pd, 1);
+
 	ret = clk_prepare_enable(lvds->clock);
 	if (ret < 0)
 		return ret;
@@ -195,6 +200,9 @@ int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 	clk_disable_unprepare(lvds->clock);
 
 	lvds->enabled = false;
+
+	if (lvds->gpio_pd)
+		gpiod_set_value(lvds->gpio_pd, 0);
 
 	if (lvds->index == 0)
 		srcr7_lvds |= SRCR7_LVDS;
@@ -300,6 +308,12 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 		ret = rcar_du_lvdsenc_get_resources(lvds, pdev);
 		if (ret < 0)
 			return ret;
+
+		/* Get optional backlight GPIO */
+		lvds->gpio_pd = devm_gpiod_get_optional(rcdu->dev, "backlight",
+							GPIOD_OUT_LOW);
+		if (IS_ERR(lvds->gpio_pd))
+			return PTR_ERR(lvds->gpio_pd);
 
 		rcdu->lvds[i] = lvds;
 	}
