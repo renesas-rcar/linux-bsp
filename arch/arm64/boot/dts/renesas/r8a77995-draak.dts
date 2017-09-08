@@ -198,7 +198,30 @@
 	};
 };
 
+&pwm0 {
+	pinctrl-0 = <&pwm0_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&pwm1 {
+	pinctrl-0 = <&pwm1_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
 &pfc {
+
+	pwm0_pins: pwm0 {
+		groups = "pwm0_c";
+		function = "pwm0";
+	};
+
+	pwm1_pins: pwm1 {
+		groups = "pwm1_c";
+		function = "pwm1";
+	};
+
 	avb_pins: avb {
 		groups = "avb0_td", "avb0_tx_ctl", "avb0_txc",
 			 "avb0_rd", "avb0_rx_ctl", "avb0_rxc",
