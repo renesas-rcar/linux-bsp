@@ -354,7 +354,7 @@ int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
 	drm_modeset_unlock_all(dev);
 
 	if (ret != 0) {
-		drm_atomic_state_free(state);
+		drm_atomic_state_put(state);
 	}
 
 	return ret;
