@@ -524,6 +524,35 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 	rcar_du_crtc_vbk_check(rcrtc);
 }
 
+static void rcar_du_crtc_disable_planes(struct rcar_du_crtc *rcrtc)
+{
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
+	struct drm_crtc *crtc = &rcrtc->crtc;
+	u32 status;
+
+	/* Make sure vblank interrupts are enabled. */
+	drm_crtc_vblank_get(crtc);
+
+	/*
+	 * Disable planes and calculate how many vertical blanking interrupts we
+	 * have to wait for. If a vertical blanking interrupt has been triggered
+	 * but not processed yet, we don't know whether it occurred before or
+	 * after the planes got disabled. We thus have to wait for two vblank
+	 * interrupts in that case.
+	 */
+	spin_lock_irq(&rcrtc->vblank_lock);
+	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? DS2PR : DS1PR, 0);
+	status = rcar_du_crtc_read(rcrtc, DSSR);
+	rcrtc->vblank_count = status & DSSR_VBK ? 2 : 1;
+	spin_unlock_irq(&rcrtc->vblank_lock);
+
+	if (!wait_event_timeout(rcrtc->vblank_wait, rcrtc->vblank_count == 0,
+				msecs_to_jiffies(100)))
+		dev_warn(rcdu->dev, "vertical blanking timeout\n");
+
+	drm_crtc_vblank_put(crtc);
+}
+
 static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 {
 	struct drm_crtc *crtc = &rcrtc->crtc;
@@ -538,9 +567,7 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 * are stopped in one operation as we now wait for one vblank per CRTC.
 	 * Whether this can be improved needs to be researched.
 	 */
-	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? DS2PR : DS1PR, 0);
-	if (!rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
-		drm_crtc_wait_one_vblank(crtc);
+	rcar_du_crtc_disable_planes(rcrtc);
 
 	/* Disable vertical blanking interrupt reporting. We first need to wait
 	 * for page flip completion before stopping the CRTC as userspace
@@ -743,14 +770,26 @@ static irqreturn_t rcar_du_crtc_irq(int irq, void *arg)
 	irqreturn_t ret = IRQ_NONE;
 	u32 status;
 
+	spin_lock(&rcrtc->vblank_lock);
+
 	status = rcar_du_crtc_read(rcrtc, DSSR);
 	rcar_du_crtc_write(rcrtc, DSRCR, status & DSRCR_MASK);
 
-	if (status & DSSR_FRM) {
+	if (status & DSSR_VBK) {
 		/*
-		 * Gen 3 vblank and page flips are handled through the VSP
-		 * completion handler
+		 * Wake up the vblank wait if the counter reaches 0. This must
+		 * be protected by the vblank_lock to avoid races in
+		 * rcar_du_crtc_disable_planes().
 		 */
+		if (rcrtc->vblank_count) {
+			if (--rcrtc->vblank_count == 0)
+				wake_up(&rcrtc->vblank_wait);
+		}
+	}
+
+	spin_unlock(&rcrtc->vblank_lock);
+
+	if (status & DSSR_VBK) {
 		if (rcdu->info->gen < 3) {
 			drm_crtc_handle_vblank(&rcrtc->crtc);
 			rcar_du_crtc_finish_page_flip(rcrtc);
@@ -820,6 +859,8 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	}
 
 	init_waitqueue_head(&rcrtc->flip_wait);
+	init_waitqueue_head(&rcrtc->vblank_wait);
+	spin_lock_init(&rcrtc->vblank_lock);
 
 	rcrtc->group = rgrp;
 	rcrtc->mmio_offset = mmio_offsets[index];
@@ -848,15 +889,6 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 
 	/* Start with vertical blanking interrupt reporting disabled. */
 	drm_crtc_vblank_off(crtc);
-
-	/*
-	 * DU with a VSP1 source uses the VSP1 frame completion event to handle
-	 * vblanking and page flipping events.
-	 *
-	 * Do not register the IRQ handler in this instance.
-	 */
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
-		return 0;
 
 	/* Register the interrupt handler. */
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_CRTC_IRQ_CLOCK)) {
@@ -887,8 +919,10 @@ void rcar_du_crtc_enable_vblank(struct rcar_du_crtc *rcrtc, bool enable)
 {
 	if (enable) {
 		rcar_du_crtc_write(rcrtc, DSRCR, DSRCR_VBCL);
-		rcar_du_crtc_set(rcrtc, DIER, DIER_FRE);
+		rcar_du_crtc_set(rcrtc, DIER, DIER_VBE);
+		rcrtc->vblank_enable = true;
 	} else {
-		rcar_du_crtc_clr(rcrtc, DIER, DIER_FRE);
+		rcar_du_crtc_clr(rcrtc, DIER, DIER_VBE);
+		rcrtc->vblank_enable = false;
 	}
 }
