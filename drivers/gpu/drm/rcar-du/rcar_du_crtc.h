@@ -44,9 +44,14 @@ struct rcar_du_crtc {
 	unsigned int mmio_offset;
 	unsigned int index;
 	bool initialized;
+	bool vblank_enable;
 
 	struct drm_pending_vblank_event *event;
 	wait_queue_head_t flip_wait;
+
+	spinlock_t vblank_lock;
+	wait_queue_head_t vblank_wait;
+	unsigned int vblank_count;
 
 	unsigned int outputs;
 

@@ -36,7 +36,8 @@ static void rcar_du_vsp_complete(void *private, bool completed)
 {
 	struct rcar_du_crtc *crtc = private;
 
-	drm_crtc_handle_vblank(&crtc->crtc);
+	if (crtc->vblank_enable)
+		drm_crtc_handle_vblank(&crtc->crtc);
 
 	if (completed)
 		rcar_du_crtc_finish_page_flip(crtc);
