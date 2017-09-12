@@ -2157,6 +2157,15 @@ static int spi_nor_parse_bfpt(struct spi_nor *nor,
 	params->size = bfpt.dwords[BFPT_DWORD(2)];
 	if (params->size & BIT(31)) {
 		params->size &= ~BIT(31);
+
+		/*
+		 * Prevent overflows on params->size. Anyway, a NOR of 1^64
+		 * bytes is unlikely to exist so this error probably means
+		 * the BFPT we are reading is corrupted/wrong.
+		 */
+		if (params->size > 63)
+			return -EINVAL;
+
 		params->size = 1ULL << params->size;
 	} else {
 		params->size++;
