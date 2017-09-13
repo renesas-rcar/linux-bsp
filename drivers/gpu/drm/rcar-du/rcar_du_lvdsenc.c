@@ -23,6 +23,15 @@
 #include "rcar_du_lvdsenc.h"
 #include "rcar_lvds_regs.h"
 
+struct pll_info {
+	unsigned int pllclk;
+	unsigned int diff;
+	unsigned int clk_n;
+	unsigned int clk_m;
+	unsigned int clk_e;
+	unsigned int div;
+};
+
 struct rcar_du_lvdsenc {
 	struct rcar_du_device *dev;
 
@@ -33,7 +42,12 @@ struct rcar_du_lvdsenc {
 
 	enum rcar_lvds_input input;
 	enum rcar_lvds_mode mode;
+	enum rcar_lvds_link_mode link_mode;
 	int gpio_pd;
+	int freq_limit;
+	int lower_ref;
+	u32 lvdpllcr;
+	u32 lvddiv;
 };
 
 static void rcar_lvds_write(struct rcar_du_lvdsenc *lvds, u32 reg, u32 data)
@@ -186,16 +200,318 @@ int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 	return 0;
 }
 
+static void rcar_du_lvdsenc_pll_calc(struct rcar_du_crtc *rcrtc,
+				     struct pll_info *pll, unsigned int in_fre,
+				     unsigned int mode_freq, bool edivider)
+{
+	unsigned long fout, fpfd, fvco, diff, n, m, e, div;
+	bool match_flag = false;
+	bool clk_diff_set = true;
+
+	if ((in_fre < 12000000) || (in_fre > 192000000))
+		return;
+
+	for (n = 0; n < 127; n++) {
+		if (((n + 1) < 60) || ((n + 1) > 120))
+			continue;
+
+		for (m = 0; m < 7; m++) {
+			for (e = 0; e < 1; e++) {
+				if (edivider)
+					fout = (((in_fre / 1000) * (n + 1)) /
+						((m + 1) * (e + 1) * 2)) *
+						1000;
+				else
+					fout = (((in_fre / 1000) * (n + 1)) /
+						(m + 1)) * 1000;
+
+				if (fout > 1039500000)
+					continue;
+
+				fpfd  = (in_fre / (m + 1));
+				if ((fpfd < 12000000) || (fpfd > 24000000))
+					continue;
+
+				fvco  = (((in_fre / 1000) * (n + 1)) / (m + 1))
+					 * 1000;
+				if ((fvco < 900000000) || (fvco > 1800000000))
+					continue;
+
+				fout = fout / 7; /* 7 divider */
+
+				for (div = 0; div < 64; div++) {
+					diff = abs((long)(fout / (div + 1)) -
+					       (long)mode_freq);
+
+					if (clk_diff_set ||
+					    ((diff == 0) ||
+					    (pll->diff > diff))) {
+						pll->diff = diff;
+						pll->clk_n = n;
+						pll->clk_m = m;
+						pll->clk_e = e;
+						pll->pllclk = fout;
+						pll->div = div;
+
+						if (clk_diff_set)
+							clk_diff_set = false;
+
+						if (diff == 0) {
+							match_flag = true;
+							break;
+						}
+					}
+				}
+				if (match_flag)
+					break;
+			}
+			if (match_flag)
+				break;
+		}
+		if (match_flag)
+			break;
+	}
+}
+
+void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
+				   struct rcar_du_crtc *rcrtc)
+{
+	struct rcar_du_device *rcdu = lvds->dev;
+	const struct drm_display_mode *mode =
+				&rcrtc->crtc.state->adjusted_mode;
+	unsigned int mode_freq = mode->clock * 1000;
+	unsigned int extal_freq = 48000000; /* EXTAL 48MHz */
+	struct pll_info *lvds_pll[2];
+	int i, ret;
+	void __iomem *srstclr7_reg;
+	u32 srstclr7_lvds = 0;
+	u32 clksel;
+
+	if (lvds->enabled)
+		return;
+
+	for (i = 0; i < RCAR_DU_MAX_LVDS; i++) {
+		lvds_pll[i] = kzalloc(sizeof(*lvds_pll), GFP_KERNEL);
+		if (!lvds_pll[i])
+			return;
+	}
+
+	/* software reset release */
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_D3) &&
+	    (lvds->link_mode == RCAR_LVDS_DUAL))
+		srstclr7_lvds |= (SRCR7_LVDS | SRCR7_LVDS1 | SRCR7_LVDS2);
+	else if (lvds->index == 0)
+		srstclr7_lvds |= SRCR7_LVDS;
+	srstclr7_reg = ioremap_nocache(SRSTCLR7, 0x04);
+	writel_relaxed(srstclr7_lvds, srstclr7_reg);
+	iounmap(srstclr7_reg);
+
+	if (gpio_is_valid(lvds->gpio_pd))
+		gpio_set_value(lvds->gpio_pd, 1);
+
+	if (lvds->link_mode == RCAR_LVDS_DUAL) {
+		struct rcar_du_lvdsenc *lvds1 = rcdu->lvds[1];
+
+		if (gpio_is_valid(lvds1->gpio_pd))
+			gpio_set_value(lvds1->gpio_pd, 1);
+	}
+
+	ret = clk_prepare_enable(lvds->clock);
+	if (ret < 0)
+		goto end;
+
+	for (i = 0; i < 2; i++) {
+		bool edivider;
+
+		if (i == 0)
+			edivider = true;
+		else
+			edivider = false;
+
+		rcar_du_lvdsenc_pll_calc(rcrtc, lvds_pll[i], extal_freq,
+					 mode_freq, edivider);
+	}
+
+	dev_dbg(rcrtc->group->dev->dev, "mode_frequency %d Hz\n", mode_freq);
+
+	if (lvds_pll[1]->diff >= lvds_pll[0]->diff) {
+		/* use E-edivider */
+		i = 0;
+		clksel = LVDPLLCR_OUTCLKSEL_AFTER |
+			 LVDPLLCR_STP_CLKOUTE1_EN;
+	} else {
+		/* not use E-divider */
+		i = 1;
+		clksel = LVDPLLCR_OUTCLKSEL_BEFORE |
+			 LVDPLLCR_STP_CLKOUTE1_DIS;
+	}
+	dev_dbg(rcrtc->group->dev->dev,
+		"E-divider %s\n", (i == 0 ? "is used" : "is not used"));
+
+	dev_dbg(rcrtc->group->dev->dev,
+		"pllclk:%u, n:%u, m:%u, e:%u, diff:%u, div:%u\n",
+		 lvds_pll[i]->pllclk, lvds_pll[i]->clk_n, lvds_pll[i]->clk_m,
+		 lvds_pll[i]->clk_e, lvds_pll[i]->diff, lvds_pll[i]->div);
+
+	rcar_lvds_write(lvds, LVDPLLCR, LVDPLLCR_PLLON |
+			LVDPLLCR_OCKSEL_7 | clksel | LVDPLLCR_CLKOUT_ENABLE |
+			LVDPLLCR_CKSEL_EXTAL | (lvds_pll[i]->clk_e << 10) |
+			(lvds_pll[i]->clk_n << 3) | lvds_pll[i]->clk_m);
+
+	if (lvds_pll[i]->div > 0)
+		rcar_lvds_write(lvds, LVDDIV, LVDDIV_DIVSEL |
+				LVDDIV_DIVRESET | lvds_pll[i]->div);
+	else
+		rcar_lvds_write(lvds, LVDDIV, 0);
+
+	dev_dbg(rcrtc->group->dev->dev, "LVDPLLCR: 0x%x\n",
+		ioread32(lvds->mmio + LVDPLLCR));
+	dev_dbg(rcrtc->group->dev->dev, "LVDDIV: 0x%x\n",
+		ioread32(lvds->mmio + LVDDIV));
+
+	if ((lvds->link_mode == RCAR_LVDS_DUAL) && (lvds->index == 0)) {
+		struct rcar_du_lvdsenc *lvds1 = rcdu->lvds[1];
+
+		/* LVDPLLCR/LVDDIV register is reset by CPG software reset,
+		 * so resetting.
+		 */
+		rcar_lvds_write(lvds1, LVDPLLCR, lvds1->lvdpllcr);
+		rcar_lvds_write(lvds1, LVDDIV, lvds1->lvddiv);
+	}
+
+end:
+	for (i = 0; i < RCAR_DU_MAX_LVDS; i++)
+		kfree(lvds_pll[i]);
+}
+
+static int rcar_du_lvdsenc_pll_start(struct rcar_du_lvdsenc *lvds,
+				     struct rcar_du_crtc *rcrtc)
+{
+	u32 lvdhcr, lvdcr0;
+
+	rcar_lvds_write(lvds, LVDCTRCR, LVDCTRCR_CTR3SEL_ZERO |
+			LVDCTRCR_CTR2SEL_DISP | LVDCTRCR_CTR1SEL_VSYNC |
+			LVDCTRCR_CTR0SEL_HSYNC);
+
+	lvdhcr = LVDCHCR_CHSEL_CH(0, 0) | LVDCHCR_CHSEL_CH(1, 1) |
+		 LVDCHCR_CHSEL_CH(2, 2) | LVDCHCR_CHSEL_CH(3, 3);
+	rcar_lvds_write(lvds, LVDCHCR, lvdhcr);
+
+	rcar_lvds_write(lvds, LVDSTRIPE, 0);
+	/* Turn all the channels on. */
+	rcar_lvds_write(lvds, LVDCR1,
+			LVDCR1_CHSTBY_GEN3(3) | LVDCR1_CHSTBY_GEN3(2) |
+			LVDCR1_CHSTBY_GEN3(1) | LVDCR1_CHSTBY_GEN3(0) |
+			LVDCR1_CLKSTBY_GEN3);
+	/*
+	 * Turn the PLL on, set it to LVDS normal mode, wait for the startup
+	 * delay and turn the output on.
+	 */
+	lvdcr0 = (lvds->mode << LVDCR0_LVMD_SHIFT) | LVDCR0_PWD;
+	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+	lvdcr0 |= LVDCR0_LVEN;
+	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+	lvdcr0 |= LVDCR0_LVRES;
+	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+	rcrtc->lvds_ch = lvds->index;
+	lvds->enabled = true;
+
+	return 0;
+}
+
+static void rcar_du_lvdsenc_dual_mode(struct rcar_du_lvdsenc *lvds0,
+				      struct rcar_du_lvdsenc *lvds1,
+				      struct rcar_du_crtc *rcrtc)
+{
+	u32 lvdcr0;
+
+	rcar_lvds_write(lvds0, LVDSTRIPE, LVDSTRIPE_ST_ON);
+	rcar_lvds_write(lvds1, LVDSTRIPE, LVDSTRIPE_ST_ON);
+
+	/* Turn all the channels on. */
+	rcar_lvds_write(lvds0, LVDCR1,
+			LVDCR1_CHSTBY_GEN3(3) | LVDCR1_CHSTBY_GEN3(2) |
+			LVDCR1_CHSTBY_GEN3(1) | LVDCR1_CHSTBY_GEN3(0) |
+			LVDCR1_CLKSTBY_GEN3);
+	rcar_lvds_write(lvds1, LVDCR1,
+			LVDCR1_CHSTBY_GEN3(3) | LVDCR1_CHSTBY_GEN3(2) |
+			LVDCR1_CHSTBY_GEN3(1) | LVDCR1_CHSTBY_GEN3(0) |
+			LVDCR1_CLKSTBY_GEN3);
+
+	/*
+	 * Turn the PLL on, set it to LVDS normal mode, wait for the startup
+	 * delay and turn the output on.
+	 */
+	lvdcr0 = (lvds0->mode << LVDCR0_LVMD_SHIFT) | LVDCR0_PWD;
+	rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+	rcar_lvds_write(lvds1, LVDCR0, lvdcr0);
+
+	lvdcr0 |= LVDCR0_LVEN;
+	rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+	rcar_lvds_write(lvds1, LVDCR0, lvdcr0);
+
+	lvdcr0 |= LVDCR0_LVRES;
+	rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+	rcar_lvds_write(lvds1, LVDCR0, lvdcr0);
+
+	rcrtc->lvds_ch = lvds0->index;
+	lvds0->enabled = true;
+}
+
+bool rcar_du_lvdsenc_stop_pll(struct rcar_du_lvdsenc *lvds)
+{
+	struct rcar_du_device *rcdu;
+
+	if (!lvds)
+		return false;
+
+	rcdu = lvds->dev;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_D3) &&
+	    (lvds->link_mode == RCAR_LVDS_DUAL)) {
+		int ret;
+
+		ret = ioread32(lvds->mmio + LVDPLLCR);
+		if (!ret)
+			return true;
+	}
+
+	return false;
+}
+
 int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 {
 	void __iomem *srcr7_reg;
 	u32 srcr7_lvds = 0;
+	struct rcar_du_device *rcdu = lvds->dev;
 
 	if (!lvds->enabled)
 		return -1;
 
-	rcar_lvds_write(lvds, LVDCR0, 0);
-	rcar_lvds_write(lvds, LVDCR1, 0);
+	if (lvds->link_mode == RCAR_LVDS_DUAL) {
+		struct rcar_du_lvdsenc *lvds1 = rcdu->lvds[1];
+
+		/* Back up LVDS1 register. */
+		lvds1->lvdpllcr = ioread32(lvds1->mmio + LVDPLLCR);
+		lvds1->lvddiv = ioread32(lvds1->mmio + LVDDIV);
+
+		rcar_lvds_write(lvds, LVDCR0, 0);
+		rcar_lvds_write(lvds1, LVDCR0, 0);
+		rcar_lvds_write(lvds, LVDCR1, 0);
+		rcar_lvds_write(lvds1, LVDCR1, 0);
+		rcar_lvds_write(lvds, LVDPLLCR, 0);
+		rcar_lvds_write(lvds1, LVDPLLCR, 0);
+
+		if (gpio_is_valid(lvds1->gpio_pd))
+			gpio_set_value(lvds1->gpio_pd, 0);
+	} else {
+		rcar_lvds_write(lvds, LVDCR0, 0);
+		rcar_lvds_write(lvds, LVDCR1, 0);
+		rcar_lvds_write(lvds, LVDPLLCR, 0);
+	}
 
 	clk_disable_unprepare(lvds->clock);
 
@@ -204,7 +520,10 @@ int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 	if (gpio_is_valid(lvds->gpio_pd))
 		gpio_set_value(lvds->gpio_pd, 0);
 
-	if (lvds->index == 0)
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_D3) &&
+	    (lvds->link_mode == RCAR_LVDS_DUAL))
+		srcr7_lvds |= (SRCR7_LVDS | SRCR7_LVDS1 | SRCR7_LVDS2);
+	else if (lvds->index == 0)
 		srcr7_lvds |= SRCR7_LVDS;
 	srcr7_reg = ioremap_nocache(SRCR7, 0x04);
 	writel_relaxed(readl_relaxed(srcr7_reg) | srcr7_lvds, srcr7_reg);
@@ -215,19 +534,28 @@ int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 
 static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 {
+	struct rcar_du_device *rcdu = lvds->dev;
 	int ret;
 	unsigned int i;
 
 	if (!lvds->enabled)
 		return;
 
-	ret = rcar_du_lvdsenc_stop_suspend(lvds);
-	if (ret < 0)
-		return;
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL)) {
+		ret = rcar_du_lvdsenc_stop_suspend(lvds);
+		if (ret < 0)
+			return;
+	}
 
-	for (i = 0; i < lvds->dev->num_crtcs; ++i)
-		if (lvds->index == lvds->dev->crtcs[i].lvds_ch)
+	if (lvds->link_mode == RCAR_LVDS_DUAL) {
+		for (i = 0; i < lvds->dev->num_crtcs; ++i)
 			lvds->dev->crtcs[i].lvds_ch = -1;
+	} else {
+		for (i = 0; i < lvds->dev->num_crtcs; ++i) {
+			if (lvds->index == lvds->dev->crtcs[i].lvds_ch)
+				lvds->dev->crtcs[i].lvds_ch = -1;
+		}
+	}
 
 	return;
 }
@@ -235,14 +563,31 @@ static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds, struct drm_crtc *crtc,
 			   bool enable)
 {
+	struct rcar_du_device *rcdu = lvds->dev;
+
 	if (!enable) {
 		rcar_du_lvdsenc_stop(lvds);
 		return 0;
 	} else if (crtc) {
 		struct rcar_du_crtc *rcrtc = to_rcar_crtc(crtc);
-		return rcar_du_lvdsenc_start(lvds, rcrtc);
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL)) {
+			if (lvds->link_mode == RCAR_LVDS_DUAL) {
+				if (lvds->index == 1)
+					return 0;
+
+				rcar_du_lvdsenc_dual_mode(rcdu->lvds[0],
+							  rcdu->lvds[1],
+							  rcrtc);
+			} else {
+				return rcar_du_lvdsenc_pll_start(lvds, rcrtc);
+			}
+		} else {
+			return rcar_du_lvdsenc_start(lvds, rcrtc);
+		}
 	} else
 		return -EINVAL;
+
+	return 0;
 }
 
 void rcar_du_lvdsenc_atomic_check(struct rcar_du_lvdsenc *lvds,
@@ -258,6 +603,27 @@ void rcar_du_lvdsenc_atomic_check(struct rcar_du_lvdsenc *lvds,
 		mode->clock = clamp(mode->clock, 30000, 150000);
 	else
 		mode->clock = clamp(mode->clock, 25175, 148500);
+
+	if (lvds->freq_limit)
+		mode->clock = clamp(mode->clock, 25175,
+				    lvds->freq_limit / 1000);
+
+	if (lvds->lower_ref) {
+		if (drm_mode_vrefresh(mode) < lvds->lower_ref)
+			mode->status = MODE_BAD;
+	}
+}
+
+void rcar_du_lvdsenc_set_lower_refresh(struct rcar_du_lvdsenc *lvds,
+				       unsigned int lower_ref)
+{
+	lvds->lower_ref = lower_ref;
+}
+
+void rcar_du_lvdsenc_set_limit_freq(struct rcar_du_lvdsenc *lvds,
+				    unsigned int freq_limit)
+{
+	lvds->freq_limit = freq_limit;
 }
 
 void rcar_du_lvdsenc_set_mode(struct rcar_du_lvdsenc *lvds,
@@ -294,7 +660,9 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 	struct rcar_du_lvdsenc *lvds;
 	unsigned int i;
 	int ret;
-	char name[16];
+	char name[16], gpio_name[20];
+	struct device_node *np = rcdu->dev->of_node;
+	const char *str;
 
 	for (i = 0; i < rcdu->info->num_lvds; ++i) {
 		lvds = devm_kzalloc(&pdev->dev, sizeof(*lvds), GFP_KERNEL);
@@ -305,9 +673,26 @@ int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 		lvds->index = i;
 		lvds->input = i ? RCAR_LVDS_INPUT_DU1 : RCAR_LVDS_INPUT_DU0;
 		lvds->enabled = false;
+		lvds->freq_limit = 0;
+		lvds->lower_ref = 0;
+
 		/* Get optional backlight GPIO */
+		if (rcdu->info->num_lvds > 1)
+			sprintf(gpio_name, "backlight%u-gpios",
+				lvds->index);
+		else
+			sprintf(gpio_name, "backlight-gpios");
 		lvds->gpio_pd = of_get_named_gpio(rcdu->dev->of_node,
-						 "backlight-gpios", 0);
+						  gpio_name, 0);
+
+		if (!of_property_read_string(np, "mode", &str)) {
+			if (!strcmp(str, "dual-link"))
+				lvds->link_mode = RCAR_LVDS_DUAL;
+			else
+				lvds->link_mode = RCAR_LVDS_SINGLE;
+		} else {
+			lvds->link_mode = RCAR_LVDS_SINGLE;
+		}
 
 		ret = rcar_du_lvdsenc_get_resources(lvds, pdev);
 		if (ret < 0)

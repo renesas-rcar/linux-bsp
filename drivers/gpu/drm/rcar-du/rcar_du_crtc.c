@@ -27,6 +27,7 @@
 #include "rcar_du_crtc.h"
 #include "rcar_du_drv.h"
 #include "rcar_du_kms.h"
+#include "rcar_du_lvdsenc.h"
 #include "rcar_du_plane.h"
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
@@ -272,6 +273,9 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 
 	kfree(dpll);
 
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		escr = 0;
+
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? ESCR2 : ESCR,
 			    escr);
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? OTAR2 : OTAR, 0);
@@ -281,6 +285,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 	      | ((mode->flags & DRM_MODE_FLAG_PHSYNC) ? DSMR_HSL : 0)
 	      | ((mode->flags & DRM_MODE_FLAG_INTERLACE) ? DSMR_ODEV : 0)
 	      | DSMR_DIPM_DISP | DSMR_CSPM;
+
 	rcar_du_crtc_write(rcrtc, DSMR, value);
 
 	/* Display timings */
@@ -483,6 +488,12 @@ static void rcar_du_crtc_wait_page_flip(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		rcar_du_lvdsenc_pll_pre_start(rcdu->lvds[rcrtc->index],
+					      rcrtc);
+
 	/* Set display off and background to black */
 	rcar_du_crtc_write(rcrtc, DOOR, DOOR_RGB(0, 0, 0));
 	rcar_du_crtc_write(rcrtc, BPOR, BPOR_RGB(0, 0, 0));
@@ -504,6 +515,8 @@ static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 {
+	struct drm_crtc *crtc = &rcrtc->crtc;
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	bool interlaced;
 
 	/* Select master sync mode. This enables display operation in master
@@ -520,6 +533,9 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 			    (rcar_du_group_read(rcrtc->group, DSYSR) &
 			    ~(DSYSR_DRES | DSYSR_DEN)) | DSYSR_DRES);
 
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		rcar_du_lvdsenc_enable(rcdu->lvds[rcrtc->index], crtc, true);
+
 	rcar_du_group_start_stop(rcrtc->group, true, rcrtc);
 	rcar_du_crtc_vbk_check(rcrtc);
 }
@@ -527,6 +543,7 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 {
 	struct drm_crtc *crtc = &rcrtc->crtc;
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 
 	/* Disable all planes and wait for the change to take effect. This is
 	 * required as the DSnPR registers are updated on vblank, and no vblank
@@ -539,7 +556,8 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 * Whether this can be improved needs to be researched.
 	 */
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? DS2PR : DS1PR, 0);
-	if (!rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
+	if ((!rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) &&
+	    (!rcar_du_lvdsenc_stop_pll(rcdu->lvds[rcrtc->index])))
 		drm_crtc_wait_one_vblank(crtc);
 
 	/* Disable vertical blanking interrupt reporting. We first need to wait
@@ -555,6 +573,9 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK, DSYSR_TVM_SWITCH);
 
 	rcar_du_group_start_stop(rcrtc->group, false, rcrtc);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		rcar_du_lvdsenc_stop_suspend(rcdu->lvds[rcrtc->index]);
 
 	/* Disable the VSP compositor. */
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))

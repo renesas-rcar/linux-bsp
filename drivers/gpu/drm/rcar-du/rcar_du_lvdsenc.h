@@ -33,10 +33,19 @@ enum rcar_lvds_mode {
 	RCAR_LVDS_MODE_VESA = 4,
 };
 
+enum rcar_lvds_link_mode {
+	RCAR_LVDS_SINGLE = 0,
+	RCAR_LVDS_DUAL,
+};
+
 #if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
 int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu);
+void rcar_du_lvdsenc_set_lower_refresh(struct rcar_du_lvdsenc *lvds,
+				       unsigned int lower_ref);
 void rcar_du_lvdsenc_set_mode(struct rcar_du_lvdsenc *lvds,
 			      enum rcar_lvds_mode mode);
+void rcar_du_lvdsenc_set_limit_freq(struct rcar_du_lvdsenc *lvds,
+				    unsigned int freq_limit);
 int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds,
 			   struct drm_crtc *crtc, bool enable);
 void rcar_du_lvdsenc_atomic_check(struct rcar_du_lvdsenc *lvds,
@@ -44,13 +53,27 @@ void rcar_du_lvdsenc_atomic_check(struct rcar_du_lvdsenc *lvds,
 int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 				 struct rcar_du_crtc *rcrtc);
 int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds);
+bool rcar_du_lvdsenc_stop_pll(struct rcar_du_lvdsenc *lvds);
+void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
+				 struct rcar_du_crtc *rcrtc);
 #else
 static inline int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 {
 	return 0;
 }
+
+static inline void rcar_du_lvdsenc_set_lower_refresh(
+	struct rcar_du_lvdsenc *lvds,
+	unsigned int lower_ref)
+{
+}
 static inline void rcar_du_lvdsenc_set_mode(struct rcar_du_lvdsenc *lvds,
 					    enum rcar_lvds_mode mode)
+{
+}
+
+static inline void rcar_du_lvdsenc_set_limit_freq(struct rcar_du_lvdsenc *lvds,
+						  unsigned int freq_limit)
 {
 }
 static inline int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds,
@@ -70,6 +93,17 @@ static inline int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 static inline int rcar_du_lvdsenc_stop_suspend(struct rcar_du_lvdsenc *lvds)
 {
 	return 0;
+}
+
+static inline bool rcar_du_lvdsenc_stop_pll(struct rcar_du_lvdsenc *lvds)
+{
+	return 0;
+}
+
+static inline void rcar_du_lvdsenc_pll_pre_start(
+		struct rcar_du_lvdsenc *lvds,
+		struct rcar_du_crtc *rcrtc)
+{
 }
 #endif
 
