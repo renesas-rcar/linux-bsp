@@ -644,3 +644,7 @@
 &audio_clkb {
 	clock-frequency = <22579200>;
 };
+
+&vspbs {
+	status = "okay";
+};
