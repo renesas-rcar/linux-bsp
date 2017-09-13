@@ -47,6 +47,7 @@ enum chip_id {
 	RCAR_H1,
 	RCAR_M1,
 	RCAR_GEN2,
+	RCAR_D3,
 	RCAR_GEN3,
 };
 
@@ -202,6 +203,7 @@ struct rvin_dev {
 	struct v4l2_device v4l2_dev;
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_async_notifier notifier;
+	struct v4l2_dv_timings *timings;
 	struct rvin_graph_entity digital;
 
 	struct rvin_group *group;

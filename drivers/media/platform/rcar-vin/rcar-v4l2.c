@@ -217,8 +217,31 @@ static int __rvin_try_format_source(struct rvin_dev *vin,
 		ret = v4l2_subdev_call(bridge, pad, set_fmt, pad_cfg, &format);
 		if (ret < 0 && ret != -ENOIOCTLCMD)
 			goto done;
-	}
+	} else {
+		/* If we are part of a digital pin update source */
+		struct v4l2_dv_timings timings;
+		struct v4l2_subdev *source = vin_to_source(vin);
 
+		if (!source) {
+			return -EINVAL;
+			goto done;
+		}
+		ret = v4l2_subdev_call(source, video, query_dv_timings,
+				       &timings);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			goto none;
+
+		vin->timings = &timings;
+		ret = v4l2_subdev_call(source, video, s_dv_timings,
+				       vin->timings);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			goto none;
+
+		ret = v4l2_subdev_call(source, pad, set_fmt, pad_cfg, &format);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			goto done;
+	}
+none:
 	v4l2_fill_pix_format(pix, &format.format);
 
 	pix->field = field;
@@ -321,14 +344,14 @@ static int __rvin_try_format(struct rvin_dev *vin,
 		return -EINVAL;
 	}
 
-	if ((vin->info->chip != RCAR_GEN3) &&
-		(pix->pixelformat == V4L2_PIX_FMT_NV12)) {
+	if (((vin->info->chip != RCAR_GEN3) && (vin->info->chip != RCAR_D3)) &&
+	    (pix->pixelformat == V4L2_PIX_FMT_NV12)) {
 		vin_err(vin, "pixel format NV12 is supported from GEN3\n");
 		return -EINVAL;
 	}
 
-	if ((vin->info->chip != RCAR_GEN3) &&
-		(pix->pixelformat == V4L2_PIX_FMT_ABGR32)) {
+	if (((vin->info->chip != RCAR_GEN3) && (vin->info->chip != RCAR_D3)) &&
+	    (pix->pixelformat == V4L2_PIX_FMT_ABGR32)) {
 		vin_err(vin, "pixel format ARGB8888 is supported from GEN2\n");
 		return -EINVAL;
 	}

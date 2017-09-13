@@ -1354,6 +1354,12 @@ static const struct rvin_info rcar_info_r8a7796 = {
 	},
 };
 
+static const struct rvin_info rcar_info_r8a77995 = {
+	.chip = RCAR_D3,
+	.max_width = 4096,
+	.max_height = 4096,
+};
+
 static const struct rvin_info rcar_info_gen2 = {
 	.chip = RCAR_GEN2,
 	.max_width = 2048,
@@ -1361,6 +1367,10 @@ static const struct rvin_info rcar_info_gen2 = {
 };
 
 static const struct of_device_id rvin_of_id_table[] = {
+	{
+		.compatible = "renesas,vin-r8a77995",
+		.data = &rcar_info_r8a77995,
+	},
 	{
 		.compatible = "renesas,vin-r8a7795",
 		.data = &rcar_info_r8a7795,
