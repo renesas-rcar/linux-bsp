@@ -567,6 +567,40 @@ static struct rsnd_dai *rsnd_dai_to_rdai(struct snd_soc_dai *dai)
 /*
  *	rsnd_soc_dai functions
  */
+int rsnd_dai_pointer_offset(struct rsnd_dai_stream *io, int additional)
+{
+	struct snd_pcm_substream *substream = io->substream;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	int pos = io->byte_pos + additional;
+
+	pos %= (runtime->periods * io->byte_per_period);
+
+	return pos;
+}
+
+bool rsnd_dai_pointer_update(struct rsnd_dai_stream *io, int byte)
+{
+	io->byte_pos += byte;
+
+	if (io->byte_pos >= io->next_period_byte) {
+		struct snd_pcm_substream *substream = io->substream;
+		struct snd_pcm_runtime *runtime = substream->runtime;
+
+		io->period_pos++;
+		io->next_period_byte += io->byte_per_period;
+
+		if (io->period_pos >= runtime->periods) {
+			io->byte_pos = 0;
+			io->period_pos = 0;
+			io->next_period_byte = io->byte_per_period;
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 void rsnd_dai_period_elapsed(struct rsnd_dai_stream *io)
 {
 	struct snd_pcm_substream *substream = io->substream;
@@ -584,7 +618,15 @@ void rsnd_dai_period_elapsed(struct rsnd_dai_stream *io)
 static void rsnd_dai_stream_init(struct rsnd_dai_stream *io,
 				struct snd_pcm_substream *substream)
 {
+	struct snd_pcm_runtime *runtime = substream->runtime;
+
 	io->substream		= substream;
+	io->byte_pos		= 0;
+	io->period_pos		= 0;
+	io->byte_per_period	= runtime->period_size *
+				  runtime->channels *
+				  samples_to_bytes(runtime, 1);
+	io->next_period_byte	= io->byte_per_period;
 }
 
 static void rsnd_dai_stream_quit(struct rsnd_dai_stream *io)
@@ -1099,14 +1141,12 @@ static int rsnd_hw_params(struct snd_pcm_substream *substream,
 
 static snd_pcm_uframes_t rsnd_pointer(struct snd_pcm_substream *substream)
 {
+	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_dai *dai = rsnd_substream_to_dai(substream);
 	struct rsnd_dai *rdai = rsnd_dai_to_rdai(dai);
 	struct rsnd_dai_stream *io = rsnd_rdai_to_io(rdai, substream);
-	snd_pcm_uframes_t pointer = 0;
 
-	rsnd_dai_call(pointer, io, &pointer);
-
-	return pointer;
+	return bytes_to_frames(runtime, io->byte_pos);
 }
 
 static struct snd_pcm_ops rsnd_pcm_ops = {

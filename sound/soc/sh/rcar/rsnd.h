@@ -268,9 +268,6 @@ struct rsnd_mod_ops {
 			 struct rsnd_dai_stream *io,
 			 struct snd_pcm_substream *substream,
 			 struct snd_pcm_hw_params *hw_params);
-	int (*pointer)(struct rsnd_mod *mod,
-		       struct rsnd_dai_stream *io,
-		       snd_pcm_uframes_t *pointer);
 	int (*fallback)(struct rsnd_mod *mod,
 			struct rsnd_dai_stream *io,
 			struct rsnd_priv *priv);
@@ -308,7 +305,6 @@ struct rsnd_mod {
  * H	0: pcm_new
  * H	0: fallback
  * H	0: hw_params
- * H	0: pointer
  */
 #define __rsnd_mod_shift_nolock_start	0
 #define __rsnd_mod_shift_nolock_stop	0
@@ -322,7 +318,6 @@ struct rsnd_mod {
 #define __rsnd_mod_shift_pcm_new	28 /* always called */
 #define __rsnd_mod_shift_fallback	28 /* always called */
 #define __rsnd_mod_shift_hw_params	28 /* always called */
-#define __rsnd_mod_shift_pointer	28 /* always called */
 
 #define __rsnd_mod_add_probe		0
 #define __rsnd_mod_add_remove		0
@@ -336,7 +331,6 @@ struct rsnd_mod {
 #define __rsnd_mod_add_pcm_new		0
 #define __rsnd_mod_add_fallback		0
 #define __rsnd_mod_add_hw_params	0
-#define __rsnd_mod_add_pointer		0
 
 #define __rsnd_mod_call_probe		0
 #define __rsnd_mod_call_remove		0
@@ -348,7 +342,6 @@ struct rsnd_mod {
 #define __rsnd_mod_call_pcm_new		0
 #define __rsnd_mod_call_fallback	0
 #define __rsnd_mod_call_hw_params	0
-#define __rsnd_mod_call_pointer		0
 #define __rsnd_mod_call_nolock_start	0
 #define __rsnd_mod_call_nolock_stop	1
 
@@ -425,6 +418,10 @@ struct rsnd_dai_stream {
 	struct rsnd_dai_path_info *info; /* rcar_snd.h */
 	struct rsnd_dai *rdai;
 	u32 parent_ssi_status;
+	int byte_pos;
+	int period_pos;
+	int byte_per_period;
+	int next_period_byte;
 };
 #define rsnd_io_to_mod(io, i)	((i) < RSND_MOD_MAX ? (io)->mod[(i)] : NULL)
 #define rsnd_io_to_mod_ssi(io)	rsnd_io_to_mod((io), RSND_MOD_SSI)
@@ -484,7 +481,9 @@ int rsnd_rdai_channels_ctrl(struct rsnd_dai *rdai,
 int rsnd_rdai_ssi_lane_ctrl(struct rsnd_dai *rdai,
 			    int ssi_lane);
 
+bool rsnd_dai_pointer_update(struct rsnd_dai_stream *io, int cnt);
 void rsnd_dai_period_elapsed(struct rsnd_dai_stream *io);
+int rsnd_dai_pointer_offset(struct rsnd_dai_stream *io, int additional);
 int rsnd_dai_connect(struct rsnd_mod *mod,
 		     struct rsnd_dai_stream *io,
 		     enum rsnd_mod_type type);
