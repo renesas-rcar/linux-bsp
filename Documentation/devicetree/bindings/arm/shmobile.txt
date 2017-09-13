@@ -35,6 +35,8 @@ SoCs:
     compatible = "renesas,r8a7795"
   - R-Car M3-W (R8A77960)
     compatible = "renesas,r8a7796"
+  - R-Car D3 (R8A77995)
+    compatible = "renesas,r8a77995"
 
 
 Boards:
@@ -85,6 +87,9 @@ Boards:
     compatible = "renesas,sk-rzg1m", "renesas,r8a7743"
   - Wheat
     compatible = "renesas,wheat", "renesas,r8a7792"
+  - Draak (RTP0RC77995SEB0010S)
+    compatible = "renesas,draak", "renesas,r8a77995"
+
 
 
 Most Renesas ARM SoCs have a Product Register that allows to retrieve SoC
