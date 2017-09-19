@@ -95,6 +95,60 @@ static struct v4l2_async_subdev *v4l2_async_belongs(struct v4l2_async_notifier *
 	return NULL;
 }
 
+static int v4l2_async_notifier_complete(struct v4l2_async_notifier *notifier)
+{
+	struct v4l2_subdev *sd, *tmp;
+
+	if (!notifier->num_subdevs)
+		return 0;
+
+	list_for_each_entry_safe(sd, tmp, &notifier->done, async_list)
+		v4l2_async_notifier_complete(&sd->subnotifier);
+
+	if (notifier->complete)
+		return notifier->complete(notifier);
+
+	return 0;
+}
+
+static bool
+v4l2_async_is_notifier_complete(struct v4l2_async_notifier *notifier)
+{
+	struct v4l2_subdev *sd, *tmp;
+
+	if (!list_empty(&notifier->waiting))
+		return false;
+
+	list_for_each_entry_safe(sd, tmp, &notifier->done, async_list) {
+		/* Don't consider empty subnotifiers */
+		if (!sd->subnotifier.num_subdevs)
+			continue;
+
+		if (!v4l2_async_is_notifier_complete(&sd->subnotifier))
+			return false;
+	}
+
+	return true;
+}
+
+static int
+v4l2_async_try_complete_notifier(struct v4l2_async_notifier *notifier)
+{
+	struct v4l2_async_notifier *root = notifier;
+
+	while (root->subnotifier) {
+		root = subnotifier_to_v4l2_subdev(root)->notifier;
+		/* No root notifier can be found at this time */
+		if (!root)
+			return 0;
+	}
+
+	if (v4l2_async_is_notifier_complete(root))
+		return v4l2_async_notifier_complete(root);
+
+	return 0;
+}
+
 static int v4l2_async_test_notify(struct v4l2_async_notifier *notifier,
 				  struct v4l2_subdev *sd,
 				  struct v4l2_async_subdev *asd)
@@ -114,6 +168,17 @@ static int v4l2_async_test_notify(struct v4l2_async_notifier *notifier,
 		return ret;
 	}
 
+	/* Register the subnotifier if it's not empty */
+	if (sd->subnotifier.num_subdevs) {
+		ret = v4l2_async_notifier_register(sd->v4l2_dev,
+						   &sd->subnotifier);
+		if (ret) {
+			if (notifier->unbind)
+				notifier->unbind(notifier, sd, asd);
+			v4l2_device_unregister_subdev(sd);
+			return ret;
+		}
+	}
 	/* Remove from the waiting list */
 	list_del(&asd->list);
 	sd->asd = asd;
@@ -122,10 +187,7 @@ static int v4l2_async_test_notify(struct v4l2_async_notifier *notifier,
 	/* Move from the global subdevice list to notifier's done */
 	list_move(&sd->async_list, &notifier->done);
 
-	if (list_empty(&notifier->waiting) && notifier->complete)
-		return notifier->complete(notifier);
-
-	return 0;
+	return v4l2_async_try_complete_notifier(notifier);
 }
 
 static void v4l2_async_cleanup(struct v4l2_subdev *sd)
@@ -135,6 +197,7 @@ static void v4l2_async_cleanup(struct v4l2_subdev *sd)
 	list_del_init(&sd->async_list);
 	sd->asd = NULL;
 	sd->dev = NULL;
+	sd->notifier = NULL;
 }
 
 int v4l2_async_notifier_register(struct v4l2_device *v4l2_dev,
@@ -170,8 +233,17 @@ int v4l2_async_notifier_register(struct v4l2_device *v4l2_dev,
 		list_add_tail(&asd->list, &notifier->waiting);
 	}
 
-	mutex_lock(&list_lock);
+	if (notifier->subnotifier)
+		lockdep_assert_held(&list_lock);
+	else
+		mutex_lock(&list_lock);
 
+	/*
+	 * This function can be called recursively so the list
+	 * might be modified in a recursive call. Start from the
+	 * top of the list each iteration.
+	 */
+again:
 	list_for_each_entry_safe(sd, tmp, &subdev_list, async_list) {
 		int ret;
 
@@ -181,15 +253,18 @@ int v4l2_async_notifier_register(struct v4l2_device *v4l2_dev,
 
 		ret = v4l2_async_test_notify(notifier, sd, asd);
 		if (ret < 0) {
-			mutex_unlock(&list_lock);
+			if (!notifier->subnotifier)
+				mutex_unlock(&list_lock);
 			return ret;
 		}
+		goto again;
 	}
 
 	/* Keep also completed notifiers on the list */
 	list_add(&notifier->list, &notifier_list);
 
-	mutex_unlock(&list_lock);
+	if (!notifier->subnotifier)
+		mutex_unlock(&list_lock);
 
 	return 0;
 }
@@ -200,16 +275,20 @@ void v4l2_async_notifier_unregister(struct v4l2_async_notifier *notifier)
 	struct v4l2_subdev *sd, *tmp;
 	unsigned int notif_n_subdev = notifier->num_subdevs;
 	unsigned int n_subdev = min(notif_n_subdev, V4L2_MAX_SUBDEVS);
-	struct device **dev;
-	int i = 0;
+	int i, count = 0;
+	struct {
+		struct device *dev;
+		struct v4l2_subdev *sd;
+	} *cache;
 
 	if (!notifier->v4l2_dev)
 		return;
 
-	dev = kvmalloc_array(n_subdev, sizeof(*dev), GFP_KERNEL);
-	if (!dev) {
+	cache = kvmalloc_array(n_subdev, sizeof(*cache), GFP_KERNEL);
+	if (!cache) {
 		dev_err(notifier->v4l2_dev->dev,
 			"Failed to allocate device cache!\n");
+		return;
 	}
 
 	mutex_lock(&list_lock);
@@ -217,43 +296,54 @@ void v4l2_async_notifier_unregister(struct v4l2_async_notifier *notifier)
 	list_del(&notifier->list);
 
 	list_for_each_entry_safe(sd, tmp, &notifier->done, async_list) {
-		struct device *d;
-
-		d = get_device(sd->dev);
-
-		v4l2_async_cleanup(sd);
-
-		/* If we handled USB devices, we'd have to lock the parent too */
-		device_release_driver(d);
+		cache[count].dev = get_device(sd->dev);
+		cache[count].sd = sd;
+		count++;
 
 		if (notifier->unbind)
 			notifier->unbind(notifier, sd, sd->asd);
 
-		/*
-		 * Store device at the device cache, in order to call
-		 * put_device() on the final step
-		 */
-		if (dev)
-			dev[i++] = d;
-		else
-			put_device(d);
+		v4l2_async_cleanup(sd);
 	}
 
 	mutex_unlock(&list_lock);
 
 	/*
-	 * Call device_attach() to reprobe devices
+	 * Try to re-probe the subdevices which where part of the notifier.
+	 * This is done so subdevices which where part of the notifier will
+	 * be re-probed to a pristine state and put back on the global
+	 * list of subdevices so they can once more be found and associated
+	 * with a new notifier.
 	 *
-	 * NOTE: If dev allocation fails, i is 0, and the whole loop won't be
-	 * executed.
+	 * One might be tempted to use device_reprobe() to handle the re-
+	 * probing. Unfortunately this is not possible since some video
+	 * device drivers call v4l2_async_notifier_unregister() from
+	 * there remove function leading to a dead lock situation on
+	 * device_lock(dev->parent). This lock is held when video device
+	 * drivers remove function is called and device_reprobe() also
+	 * tries to take the same lock, so using it here could lead to a
+	 * dead lock situation.
 	 */
-	while (i--) {
-		struct device *d = dev[i];
+
+	for (i = 0; i < count; i++) {
+		sd = cache[i].sd;
+		/* If the subdev have a notifier unregister it */
+		if (sd->subnotifier.num_subdevs)
+			v4l2_async_notifier_unregister(&sd->subnotifier);
+
+		/* If we handled USB devices, we'd have to lock the parent too */
+		device_release_driver(cache[i].dev);
+	}
+
+	/*
+	 * Call device_attach() to reprobe devices
+	 */
+	for (i = 0; i < count; i++) {
+		struct device *d = cache[i].dev;
 
 		if (d && device_attach(d) < 0) {
 			const char *name = "(none)";
 			int lock = device_trylock(d);
-
 			if (lock && d->driver)
 				name = d->driver->name;
 			dev_err(d, "Failed to re-probe to %s\n", name);
@@ -262,7 +352,7 @@ void v4l2_async_notifier_unregister(struct v4l2_async_notifier *notifier)
 		}
 		put_device(d);
 	}
-	kvfree(dev);
+	kvfree(cache);
 
 	notifier->v4l2_dev = NULL;
 
@@ -317,6 +407,9 @@ void v4l2_async_unregister_subdev(struct v4l2_subdev *sd)
 		return;
 	}
 
+	if (sd->subnotifier.num_subdevs)
+		v4l2_async_notifier_unregister(&sd->subnotifier);
+
 	mutex_lock(&list_lock);
 
 	list_add(&sd->asd->list, &notifier->waiting);
@@ -329,3 +422,29 @@ void v4l2_async_unregister_subdev(struct v4l2_subdev *sd)
 	mutex_unlock(&list_lock);
 }
 EXPORT_SYMBOL(v4l2_async_unregister_subdev);
+
+int v4l2_async_subdev_notifier_register(
+		struct v4l2_subdev *sd,
+		unsigned int num_subdevs,
+		struct v4l2_async_subdev **subdevs,
+		int (*bound)(struct v4l2_async_notifier *notifier,
+			     struct v4l2_subdev *subdev,
+			     struct v4l2_async_subdev *asd),
+		int (*complete)(struct v4l2_async_notifier *notifier),
+		void (*unbind)(struct v4l2_async_notifier *notifier,
+			       struct v4l2_subdev *subdev,
+			       struct v4l2_async_subdev *asd))
+{
+	if (!sd || !num_subdevs || !subdevs)
+		return -EINVAL;
+
+	sd->subnotifier.subnotifier = true;
+	sd->subnotifier.num_subdevs = num_subdevs;
+	sd->subnotifier.subdevs = subdevs;
+	sd->subnotifier.bound = bound;
+	sd->subnotifier.complete = complete;
+	sd->subnotifier.unbind = unbind;
+
+	return 0;
+}
+EXPORT_SYMBOL(v4l2_async_subdev_notifier_register);
