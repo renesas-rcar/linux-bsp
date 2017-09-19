@@ -1,0 +1,28 @@
+next/fixes-non-critical
+
+next/cleanup
+
+next/soc
+
+next/dt
+
+next/defconfig
+
+next/drivers
+
+next/dt64
+
+next/arm64
+
+next/late
+	brcm/drivers
+		http://github.com/Broadcom/stblinux tags/arm-soc/for-4.14/drivers
+	actions/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/afaerber/linux-actions tags/actions-arm-dt-for-4.14
+	actions/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/afaerber/linux-actions tags/actions-arm64-dt-for-4.14
+	amlogic/dt64-3
+		git://git.kernel.org/pub/scm/linux/kernel/git/khilman/linux-amlogic tags/amlogic-dt64-3
+
+fixes
+
