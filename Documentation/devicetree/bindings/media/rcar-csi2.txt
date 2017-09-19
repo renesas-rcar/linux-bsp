@@ -8,6 +8,7 @@ which provides the video capture capabilities.
  - compatible: Must be one or more of the following
    - "renesas,r8a7795-csi2" for the R8A7795 device.
    - "renesas,r8a7796-csi2" for the R8A7796 device.
+   - "renesas,r8a77965-csi2" for the R8A77965 device.
    - "renesas,rcar-gen3-csi2" for a generic R-Car Gen3 compatible device.
 
    When compatible with a generic version nodes must list the
