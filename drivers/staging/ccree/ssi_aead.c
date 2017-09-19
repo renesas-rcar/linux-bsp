@@ -651,7 +651,6 @@ setkey_error:
 static int ssi_rfc4309_ccm_setkey(struct crypto_aead *tfm, const u8 *key, unsigned int keylen)
 {
 	struct ssi_aead_ctx *ctx = crypto_aead_ctx(tfm);
-	int rc = 0;
 
 	if (keylen < 3)
 		return -EINVAL;
@@ -659,9 +658,7 @@ static int ssi_rfc4309_ccm_setkey(struct crypto_aead *tfm, const u8 *key, unsign
 	keylen -= 3;
 	memcpy(ctx->ctr_nonce, key + keylen, 3);
 
-	rc = ssi_aead_setkey(tfm, key, keylen);
-
-	return rc;
+	return ssi_aead_setkey(tfm, key, keylen);
 }
 #endif /*SSI_CC_HAS_AES_CCM*/
 
@@ -1812,7 +1809,6 @@ static inline int ssi_aead_gcm(
 	unsigned int *seq_size)
 {
 	struct aead_req_ctx *req_ctx = aead_request_ctx(req);
-	unsigned int idx = *seq_size;
 	unsigned int cipher_flow_mode;
 
 	if (req_ctx->gen_ctx.op_type == DRV_CRYPTO_DIRECTION_DECRYPT) {
@@ -1829,7 +1825,6 @@ static inline int ssi_aead_gcm(
 		ssi_aead_create_assoc_desc(req, DIN_HASH, desc, seq_size);
 		ssi_aead_gcm_setup_gctr_desc(req, desc, seq_size);
 		ssi_aead_process_gcm_result_desc(req, desc, seq_size);
-		idx = *seq_size;
 		return 0;
 	}
 
@@ -1844,7 +1839,6 @@ static inline int ssi_aead_gcm(
 		ssi_aead_process_cipher_data_desc(req, cipher_flow_mode, desc, seq_size);
 	ssi_aead_process_gcm_result_desc(req, desc, seq_size);
 
-	idx = *seq_size;
 	return 0;
 }
 
@@ -2214,7 +2208,6 @@ out:
 static int ssi_rfc4106_gcm_setkey(struct crypto_aead *tfm, const u8 *key, unsigned int keylen)
 {
 	struct ssi_aead_ctx *ctx = crypto_aead_ctx(tfm);
-	int rc = 0;
 
 	SSI_LOG_DEBUG("%s()  keylen %d, key %p\n", __func__, keylen, key);
 
@@ -2224,15 +2217,12 @@ static int ssi_rfc4106_gcm_setkey(struct crypto_aead *tfm, const u8 *key, unsign
 	keylen -= 4;
 	memcpy(ctx->ctr_nonce, key + keylen, 4);
 
-	rc = ssi_aead_setkey(tfm, key, keylen);
-
-	return rc;
+	return ssi_aead_setkey(tfm, key, keylen);
 }
 
 static int ssi_rfc4543_gcm_setkey(struct crypto_aead *tfm, const u8 *key, unsigned int keylen)
 {
 	struct ssi_aead_ctx *ctx = crypto_aead_ctx(tfm);
-	int rc = 0;
 
 	SSI_LOG_DEBUG("%s()  keylen %d, key %p\n", __func__, keylen, key);
 
@@ -2242,9 +2232,7 @@ static int ssi_rfc4543_gcm_setkey(struct crypto_aead *tfm, const u8 *key, unsign
 	keylen -= 4;
 	memcpy(ctx->ctr_nonce, key + keylen, 4);
 
-	rc = ssi_aead_setkey(tfm, key, keylen);
-
-	return rc;
+	return ssi_aead_setkey(tfm, key, keylen);
 }
 
 static int ssi_gcm_setauthsize(struct crypto_aead *authenc,
@@ -2720,6 +2708,7 @@ int ssi_aead_alloc(struct ssi_drvdata *drvdata)
 		goto fail0;
 	}
 
+	INIT_LIST_HEAD(&aead_handle->aead_list);
 	drvdata->aead_handle = aead_handle;
 
 	aead_handle->sram_workspace_addr = ssi_sram_mgr_alloc(
@@ -2729,8 +2718,6 @@ int ssi_aead_alloc(struct ssi_drvdata *drvdata)
 		rc = -ENOMEM;
 		goto fail1;
 	}
-
-	INIT_LIST_HEAD(&aead_handle->aead_list);
 
 	/* Linux crypto */
 	for (alg = 0; alg < ARRAY_SIZE(aead_algs); alg++) {
