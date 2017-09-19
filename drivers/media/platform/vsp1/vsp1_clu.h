@@ -36,6 +36,7 @@ struct vsp1_clu {
 	spinlock_t lock;
 	unsigned int mode;
 	struct vsp1_dl_body *clu;
+	struct vsp1_dl_fragment_pool *pool;
 };
 
 static inline struct vsp1_clu *to_clu(struct v4l2_subdev *subdev)
