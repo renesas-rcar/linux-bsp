@@ -114,6 +114,7 @@
 struct rcar_csi2_info {
 	unsigned int	mbps;
 	unsigned char	reg;
+	u32		phtw_reg;
 };
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a7795[] = {
@@ -212,6 +213,54 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a7796[] = {
 	{ .mbps =   0,	.reg = 0x00 },
 };
 
+static const struct rcar_csi2_info rcar_csi2_info_r8a77965[] = {
+	{ .mbps =   80,	.reg = 0x00, .phtw_reg = 0x018601f1 },
+	{ .mbps =   90,	.reg = 0x10, .phtw_reg = 0x018601f1 },
+	{ .mbps =  100,	.reg = 0x20, .phtw_reg = 0x018701f1 },
+	{ .mbps =  110,	.reg = 0x30, .phtw_reg = 0x018701f1 },
+	{ .mbps =  120,	.reg = 0x01, .phtw_reg = 0x018801f1 },
+	{ .mbps =  130,	.reg = 0x11, .phtw_reg = 0x018801f1 },
+	{ .mbps =  140,	.reg = 0x21, .phtw_reg = 0x018901f1 },
+	{ .mbps =  150,	.reg = 0x31, .phtw_reg = 0x018901f1 },
+	{ .mbps =  160,	.reg = 0x02, .phtw_reg = 0x019001f1 },
+	{ .mbps =  170,	.reg = 0x12, .phtw_reg = 0x019001f1 },
+	{ .mbps =  180,	.reg = 0x22, .phtw_reg = 0x019101f1 },
+	{ .mbps =  190,	.reg = 0x32, .phtw_reg = 0x019101f1 },
+	{ .mbps =  205,	.reg = 0x03, .phtw_reg = 0x019201f1 },
+	{ .mbps =  220,	.reg = 0x13, .phtw_reg = 0x019201f1 },
+	{ .mbps =  235,	.reg = 0x23, .phtw_reg = 0x019401f1 },
+	{ .mbps =  250,	.reg = 0x33, .phtw_reg = 0x019401f1 },
+	{ .mbps =  275,	.reg = 0x04, .phtw_reg = 0 },
+	{ .mbps =  300,	.reg = 0x14, .phtw_reg = 0 },
+	{ .mbps =  325,	.reg = 0x25, .phtw_reg = 0 },
+	{ .mbps =  350,	.reg = 0x35, .phtw_reg = 0 },
+	{ .mbps =  400,	.reg = 0x05, .phtw_reg = 0 },
+	{ .mbps =  450,	.reg = 0x26, .phtw_reg = 0 },
+	{ .mbps =  500,	.reg = 0x36, .phtw_reg = 0 },
+	{ .mbps =  550,	.reg = 0x37, .phtw_reg = 0 },
+	{ .mbps =  600,	.reg = 0x07, .phtw_reg = 0 },
+	{ .mbps =  650,	.reg = 0x18, .phtw_reg = 0 },
+	{ .mbps =  700,	.reg = 0x28, .phtw_reg = 0 },
+	{ .mbps =  750,	.reg = 0x39, .phtw_reg = 0 },
+	{ .mbps =  800,	.reg = 0x09, .phtw_reg = 0 },
+	{ .mbps =  850,	.reg = 0x19, .phtw_reg = 0 },
+	{ .mbps =  900,	.reg = 0x29, .phtw_reg = 0 },
+	{ .mbps =  950,	.reg = 0x3a, .phtw_reg = 0 },
+	{ .mbps = 1000,	.reg = 0x0a, .phtw_reg = 0 },
+	{ .mbps = 1050,	.reg = 0x1a, .phtw_reg = 0 },
+	{ .mbps = 1100,	.reg = 0x2a, .phtw_reg = 0 },
+	{ .mbps = 1150,	.reg = 0x3b, .phtw_reg = 0 },
+	{ .mbps = 1200,	.reg = 0x0b, .phtw_reg = 0 },
+	{ .mbps = 1250,	.reg = 0x1b, .phtw_reg = 0 },
+	{ .mbps = 1300,	.reg = 0x2b, .phtw_reg = 0 },
+	{ .mbps = 1350,	.reg = 0x3c, .phtw_reg = 0 },
+	{ .mbps = 1400,	.reg = 0x0c, .phtw_reg = 0 },
+	{ .mbps = 1450,	.reg = 0x1c, .phtw_reg = 0 },
+	{ .mbps = 1500,	.reg = 0x2c, .phtw_reg = 0 },
+	/* guard */
+	{ .mbps =   0,	.reg = 0x00, .phtw_reg = 0 },
+};
+
 enum rcar_csi2_pads {
 	RCAR_CSI2_SINK,
 	RCAR_CSI2_SOURCE_VC0,
@@ -250,6 +299,8 @@ struct rcar_csi2 {
 #define CSI2_PHY_ADD_INIT		BIT(0)
 /* HSFREQRANGE bit information of H3(ES1.x) and M3(ES1.0) are same. */
 #define CSI2_FREQ_RANGE_TABLE_WA	BIT(1)
+/* Set PHTW Register for R-Car M3N */
+#define CSI2_PHTW_ADD_INIT		BIT(2)
 
 static const struct soc_device_attribute ths_quirks_match[]  = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*",
@@ -258,6 +309,8 @@ static const struct soc_device_attribute ths_quirks_match[]  = {
 	  .data = (void *)CSI2_PHY_ADD_INIT, },
 	{ .soc_id = "r8a7796",
 	  .data = 0, },
+	{ .soc_id = "r8a77965", .revision = "ES1.*",
+	  .data = (void *)(CSI2_PHY_ADD_INIT | CSI2_PHTW_ADD_INIT), },
 	{/*sentinel*/}
 };
 
@@ -321,7 +374,7 @@ static void rcar_csi2_wait_phy_start(struct rcar_csi2 *priv)
 }
 
 static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv,
-				 u32 *phypll)
+				 u32 *phypll, u32 *phtw)
 {
 	const struct rcar_csi2_info *hsfreq;
 	unsigned int bpp;
@@ -376,6 +429,7 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv,
 		mbps, hsfreq->mbps);
 
 	*phypll = PHYPLL_HSFREQRANGE(hsfreq->reg);
+	*phtw = hsfreq->phtw_reg;
 
 	if (priv->ths_quirks & CSI2_PHY_ADD_INIT)
 		iowrite32((INT_ULPS_START | INT_ULPS_END),
@@ -386,7 +440,7 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv,
 
 static int rcar_csi2_start(struct rcar_csi2 *priv)
 {
-	u32 fld_num, phycnt, phypll, vcdt, vcdt2, tmp;
+	u32 fld_num, phycnt, phypll, phtw, vcdt, vcdt2, tmp;
 	int i, ret;
 
 	csi_dbg(priv, "Input size (%dx%d%c)\n", priv->mf.width, priv->mf.height,
@@ -440,7 +494,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 
 	csi_dbg(priv, "PHYPLL:0x%x\n", phypll);
 
-	ret = rcar_csi2_calc_phypll(priv, &phypll);
+	ret = rcar_csi2_calc_phypll(priv, &phypll, &phtw);
 	if (ret) {
 		csi_err(priv, "Unsupported resolution (%dx%d%c)\n",
 			priv->mf.width, priv->mf.height,
@@ -468,8 +522,13 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		iowrite32(0x010101e3, priv->base + PHTW_REG);
 		iowrite32(0x010101e4, priv->base + PHTW_REG);
 		iowrite32(0x01100104, priv->base + PHTW_REG);
+		if ((priv->ths_quirks & CSI2_PHTW_ADD_INIT) && phtw)
+			iowrite32(phtw, priv->base + PHTW_REG);
 		iowrite32(0x01030100, priv->base + PHTW_REG);
-		iowrite32(0x01800100, priv->base + PHTW_REG);
+		if (priv->ths_quirks & CSI2_PHTW_ADD_INIT)
+			iowrite32(0x01800107, priv->base + PHTW_REG);
+		else
+			iowrite32(0x01800100, priv->base + PHTW_REG);
 	}
 
 	/* Start */
@@ -584,6 +643,10 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a7796-csi2",
 		.data = &rcar_csi2_info_r8a7796,
+	},
+	{
+		.compatible = "renesas,r8a77965-csi2",
+		.data = &rcar_csi2_info_r8a77965,
 	},
 	{ },
 };
