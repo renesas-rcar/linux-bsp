@@ -116,8 +116,10 @@ ccflags-y := -fpic -mno-single-pic-base -fno-builtin -I$(obj)
 asflags-y := -DZIMAGE
 
 # Supply kernel BSS size to the decompressor via a linker symbol.
-KBSS_SZ = $(shell $(CROSS_COMPILE)size $(obj)/../../../../vmlinux | \
-		awk 'END{print $$3}')
+KBSS_SZ = $(shell $(CROSS_COMPILE)nm $(obj)/../../../../vmlinux | \
+		awk '/B __bss_start$$/ {bss_start=strtonum("0x"$$1)}; \
+		     /B __bss_stop$$/ {bss_stop=strtonum("0x"$$1)}; \
+		     END {print bss_stop-bss_start}')
 LDFLAGS_vmlinux = --defsym _kernel_bss_size=$(KBSS_SZ)
 # Supply ZRELADDR to the decompressor via a linker symbol.
 ifneq ($(CONFIG_AUTO_ZRELADDR),y)
