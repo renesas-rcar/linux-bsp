@@ -725,6 +725,14 @@
 			status = "disabled";
 		};
 
+		ipmmu_hc: mmu@e6570000 {
+			compatible = "renesas,ipmmu-r8a77965";
+			reg = <0 0xe6570000 0 0x1000>; /* IPMMU-HC */
+			renesas,ipmmu-main = <&ipmmu_mm 2>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
 		ipmmu_mm: mmu@e67b0000 {
 			compatible = "renesas,ipmmu-r8a77965";
 			reg = <0 0xe67b0000 0 0x1000>; /* IPMMU-MM */
