@@ -40,7 +40,7 @@
  * The values 0, 1, 2, 3, 4, 5, 6 represent corresponding number of frames per
  * sub-buffer 1, 2, 4, 8, 16, 32, 64.
  */
-static u8 fcnt = 4;  /* (1 << fcnt) frames per subbuffer */
+static u8 fcnt = 3;  /* (1 << fcnt) frames per subbuffer */
 module_param(fcnt, byte, 0000);
 MODULE_PARM_DESC(fcnt, "Num of frames per sub-buffer for sync channels as a power of 2");
 
