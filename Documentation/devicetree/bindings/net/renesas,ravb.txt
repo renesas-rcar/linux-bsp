@@ -11,6 +11,7 @@ Required properties:
 	      "renesas,etheravb-r8a7794" if the device is a part of R8A7794 SoC.
 	      "renesas,etheravb-r8a7795" if the device is a part of R8A7795 SoC.
 	      "renesas,etheravb-r8a7796" if the device is a part of R8A7796 SoC.
+	      "renesas,etheravb-r8a77965" if the device is a part of R8A77965 SoC.
 	      "renesas,etheravb-rcar-gen2" for generic R-Car Gen 2 compatible interface.
 	      "renesas,etheravb-rcar-gen3" for generic R-Car Gen 3 compatible interface.
 
