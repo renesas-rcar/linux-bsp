@@ -114,7 +114,7 @@ static const struct soc_device_attribute ths_quirks_match[]  = {
 int vsp1_gen3_vspdl_check(struct vsp1_device *vsp1)
 {
 	if (((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
-		VI6_IP_VERSION_MODEL_VSPDL_H3) && (vsp1->index == 0))
+		VI6_IP_VERSION_MODEL_VSPDL_GEN3) && (vsp1->index == 0))
 		return true;
 
 	return false;
@@ -127,7 +127,7 @@ static int vsp1_gen3_vspd_check(struct vsp1_device *vsp1)
 		return true;
 
 	if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
-		VI6_IP_VERSION_MODEL_VSPDL_H3)
+		VI6_IP_VERSION_MODEL_VSPDL_GEN3)
 		return true;
 
 	return false;
@@ -884,7 +884,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.num_bru_inputs = 5,
 		.header_mode = true,
 	}, {
-		.version = VI6_IP_VERSION_MODEL_VSPDL_H3,
+		.version = VI6_IP_VERSION_MODEL_VSPDL_GEN3,
 		.model = "VSP2-D",
 		.gen = 3,
 		.features = VSP1_HAS_BRU | VSP1_HAS_LIF | VSP1_HAS_WPF_VFLIP
