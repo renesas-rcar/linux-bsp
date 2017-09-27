@@ -1621,6 +1621,15 @@ static const unsigned int du_disp_mux[] = {
 	DU_DISP_MARK,
 };
 
+/* - HDMI ------------------------------------------------------------------- */
+static const unsigned int hdmi0_cec_pins[] = {
+	/* HDMI0_CEC */
+	RCAR_GP_PIN(7, 2),
+};
+static const unsigned int hdmi0_cec_mux[] = {
+	HDMI0_CEC_MARK,
+};
+
 /* - I2C -------------------------------------------------------------------- */
 static const unsigned int i2c1_a_pins[] = {
 	/* SDA, SCL */
@@ -1904,6 +1913,7 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(du_oddf),
 	SH_PFC_PIN_GROUP(du_cde),
 	SH_PFC_PIN_GROUP(du_disp),
+	SH_PFC_PIN_GROUP(hdmi0_cec),
 	SH_PFC_PIN_GROUP(i2c1_a),
 	SH_PFC_PIN_GROUP(i2c1_b),
 	SH_PFC_PIN_GROUP(i2c2_a),
@@ -1963,6 +1973,10 @@ static const char * const du_groups[] = {
 	"du_oddf",
 	"du_cde",
 	"du_disp",
+};
+
+static const char * const hdmi0_groups[] = {
+	"hdmi0_cec",
 };
 
 static const char * const i2c1_groups[] = {
@@ -2034,6 +2048,7 @@ static const char * const scif_clk_groups[] = {
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(avb),
 	SH_PFC_FUNCTION(du),
+	SH_PFC_FUNCTION(hdmi0),
 	SH_PFC_FUNCTION(i2c1),
 	SH_PFC_FUNCTION(i2c2),
 	SH_PFC_FUNCTION(i2c6),
