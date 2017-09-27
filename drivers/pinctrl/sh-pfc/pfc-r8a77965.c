@@ -3328,6 +3328,15 @@ static const unsigned int usb1_mux[] = {
 	USB1_PWEN_MARK, USB1_OVC_MARK,
 };
 
+/* - USB30 ------------------------------------------------------------------ */
+static const unsigned int usb30_pins[] = {
+	/* PWEN, OVC */
+	RCAR_GP_PIN(6, 28), RCAR_GP_PIN(6, 29),
+};
+static const unsigned int usb30_mux[] = {
+	USB30_PWEN_MARK, USB30_OVC_MARK,
+};
+
 /* - VIN4 ------------------------------------------------------------------- */
 static const unsigned int vin4_data8_a_pins[] = {
 	RCAR_GP_PIN(0, 8),  RCAR_GP_PIN(0, 9),
@@ -3853,6 +3862,7 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(ssi9_ctrl_b),
 	SH_PFC_PIN_GROUP(usb0),
 	SH_PFC_PIN_GROUP(usb1),
+	SH_PFC_PIN_GROUP(usb30),
 	SH_PFC_PIN_GROUP(vin4_data8_a),
 	SH_PFC_PIN_GROUP(vin4_data16_a),
 	SH_PFC_PIN_GROUP(vin4_data18_a),
@@ -4216,6 +4226,10 @@ static const char * const usb1_groups[] = {
 	"usb1",
 };
 
+static const char * const usb30_groups[] = {
+	"usb30",
+};
+
 static const char * const vin4_groups[] = {
 	"vin4_data8_a",
 	"vin4_data16_a",
@@ -4273,6 +4287,7 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(ssi),
 	SH_PFC_FUNCTION(usb0),
 	SH_PFC_FUNCTION(usb1),
+	SH_PFC_FUNCTION(usb30),
 	SH_PFC_FUNCTION(vin4),
 	SH_PFC_FUNCTION(vin5),
 };
