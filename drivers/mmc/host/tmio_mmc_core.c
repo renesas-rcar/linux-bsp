@@ -616,14 +616,16 @@ static void tmio_mmc_cmd_irq(struct tmio_mmc_host *host, unsigned int stat)
 		cmd->error = -ETIMEDOUT;
 	else if ((stat & TMIO_STAT_CRCFAIL && cmd->flags & MMC_RSP_CRC) ||
 		 stat & TMIO_STAT_STOPBIT_ERR ||
-		 stat & TMIO_STAT_CMD_IDX_ERR)
+		 stat & TMIO_STAT_CMD_IDX_ERR) {
 		cmd->error = -EILSEQ;
-
+		if (stat & TMIO_STAT_DATAEND)
+			tmio_mmc_ack_mmc_irqs(host, TMIO_STAT_DATAEND);
+	}
 	/* If there is data to handle we enable data IRQs here, and
 	 * we will ultimatley finish the request in the data_end handler.
 	 * If theres no data or we encountered an error, finish now.
 	 */
-	if (host->data && (!cmd->error || cmd->error == -EILSEQ)) {
+	if (host->data && !cmd->error) {
 		if (host->data->flags & MMC_DATA_READ) {
 			if (host->force_pio || !host->chan_rx) {
 				tmio_mmc_enable_mmc_irqs(host, TMIO_MASK_READOP);
@@ -913,8 +915,11 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	if (mrq->cmd->error || (mrq->data && mrq->data->error))
+	if (mrq->cmd->error || (mrq->data && mrq->data->error)) {
+		/* clear the interrupt flag register */
+		sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, 0);
 		tmio_mmc_abort_dma(host);
+	}
 
 	if (host->check_scc_error)
 		host->check_scc_error(host);
