@@ -6211,6 +6211,10 @@ const struct sh_pfc_soc_info r8a77965_pinmux_info = {
 
 	.cfg_regs = pinmux_config_regs,
 	.drive_regs = pinmux_drive_regs,
+	.pocctrl_reg = 0xe6060380,
+	.puen_base = PUEN,
+	.pud_base = PUD,
+	.nr_bias_regs = 7,
 
 	.pinmux_data = pinmux_data,
 	.pinmux_data_size = ARRAY_SIZE(pinmux_data),
