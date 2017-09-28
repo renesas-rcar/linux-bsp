@@ -101,6 +101,7 @@ static const struct cpg_core_clk r8a77965_core_clks[] __initconst = {
 	DEF_FIXED("cp",         R8A77965_CLK_CP,    CLK_EXTAL,      2, 1),
 
 	DEF_DIV6P1("csi0",      R8A77965_CLK_CSI0,  CLK_PLL1_DIV4, 0x00c),
+	DEF_DIV6P1("mso",       R8A77965_CLK_MSO,   CLK_PLL1_DIV4, 0x014),
 	DEF_DIV6P1("hdmi",      R8A77965_CLK_HDMI,  CLK_PLL1_DIV4, 0x250),
 };
 
@@ -110,6 +111,10 @@ static const struct mssr_mod_clk r8a77965_mod_clks[] __initconst = {
 	DEF_MOD("scif3",		 204,	R8A77965_CLK_S3D4),
 	DEF_MOD("scif1",		 206,	R8A77965_CLK_S3D4),
 	DEF_MOD("scif0",		 207,	R8A77965_CLK_S3D4),
+	DEF_MOD("msiof3",		 208,	R8A77965_CLK_MSO),
+	DEF_MOD("msiof2",		 209,	R8A77965_CLK_MSO),
+	DEF_MOD("msiof1",		 210,	R8A77965_CLK_MSO),
+	DEF_MOD("msiof0",		 211,	R8A77965_CLK_MSO),
 	DEF_MOD("sys-dmac2",		 217,	R8A77965_CLK_S0D3),
 	DEF_MOD("sys-dmac1",		 218,	R8A77965_CLK_S0D3),
 	DEF_MOD("sys-dmac0",		 219,	R8A77965_CLK_S0D3),
