@@ -45,6 +45,7 @@ enum clk_ids {
 	CLK_S3,
 	CLK_SDSRC,
 	CLK_SSPSRC,
+	CLK_RINT,
 
 	/* Module Clocks */
 	MOD_CLK_BASE
@@ -103,6 +104,11 @@ static const struct cpg_core_clk r8a77965_core_clks[] __initconst = {
 	DEF_DIV6P1("csi0",      R8A77965_CLK_CSI0,  CLK_PLL1_DIV4, 0x00c),
 	DEF_DIV6P1("mso",       R8A77965_CLK_MSO,   CLK_PLL1_DIV4, 0x014),
 	DEF_DIV6P1("hdmi",      R8A77965_CLK_HDMI,  CLK_PLL1_DIV4, 0x250),
+
+	DEF_BASE("osc",         R8A77965_CLK_OSC, CLK_TYPE_GEN3_OSC, CLK_EXTAL),
+	DEF_BASE("r_int",       CLK_RINT,        CLK_TYPE_GEN3_RINT, CLK_EXTAL),
+
+	DEF_BASE("r",           R8A77965_CLK_R,     CLK_TYPE_GEN3_R, CLK_RINT),
 };
 
 static const struct mssr_mod_clk r8a77965_mod_clks[] __initconst = {
@@ -238,6 +244,26 @@ static const unsigned int r8a77965_crit_mod_clks[] __initconst = {
  * 1  1  0  1	33.33 / 2	x180	x192	x128	x144
  * 1  1  1  0	Prohibited setting
  * 1  1  1  1	33.33 / 2	x180	x192	x192	x144
+ *
+ *   MD		Internal
+ * 14 13 19 17	RCLK				OSCCLK
+ *-----------------------------------------------------------------
+ * 0  0  0  0	x 1/512  (x 1/16 x 1/32)	128 (x 1/16 x 1/8)
+ * 0  0  0  1	x 1/512  (x 1/16 x 1/32)	128 (x 1/16 x 1/8)
+ * 0  0  1  0	x Prohibited setting
+ * 0  0  1  1	x 1/512  (x 1/19 x 1/32)	128 (x 1/19 x 1/8)
+ * 0  1  0  0	x 1/608  (x 1/19 x 1/32)	152 (x 1/19 x 1/8)
+ * 0  1  0  1	x 1/608  (x 1/19 x 1/32)	152 (x 1/19 x 1/8)
+ * 0  1  1  0	x Prohibited setting
+ * 0  1  1  1	x 1/608  (x 1/19 x 1/32)	152 (x 1/19 x 1/8)
+ * 1  0  0  0	x 1/768  (x 1/24 x 1/32)	192 (x 1/24 x 1/8)
+ * 1  0  0  1	x 1/768  (x 1/24 x 1/32)	192 (x 1/24 x 1/8)
+ * 1  0  1  0	x Prohibited setting
+ * 1  0  1  1	x 1/768  (x 1/24 x 1/32)	192 (x 1/24 x 1/8)
+ * 1  1  0  0	x 1/1024 (x 1/28 x 1/32)	256 (x 1/28 x 1/8)
+ * 1  1  0  1	x 1/1024 (x 1/28 x 1/32)	256 (x 1/28 x 1/8)
+ * 1  1  1  0	x Prohibited setting
+ * 1  1  1  1	x 1/1024 (x 1/28 x 1/32)	256 (x 1/28 x 1/8)
  */
 #define CPG_PLL_CONFIG_INDEX(md)	((((md) & BIT(14)) >> 11) | \
 					 (((md) & BIT(13)) >> 11) | \
@@ -245,23 +271,26 @@ static const unsigned int r8a77965_crit_mod_clks[] __initconst = {
 					 (((md) & BIT(17)) >> 17))
 
 static const struct rcar_gen3_cpg_pll_config cpg_pll_configs[16] __initconst = {
-	/* EXTAL div	PLL1 mult	PLL3 mult */
-	{ 1,		192,		192,	},
-	{ 1,		192,		128,	},
-	{ 0, /* Prohibited setting */		},
-	{ 1,		192,		192,	},
-	{ 1,		160,		160,	},
-	{ 1,		160,		106,	},
-	{ 0, /* Prohibited setting */		},
-	{ 1,		160,		160,	},
-	{ 1,		128,		128,	},
-	{ 1,		128,		84,	},
-	{ 0, /* Prohibited setting */		},
-	{ 1,		128,		128,	},
-	{ 2,		192,		192,	},
-	{ 2,		192,		128,	},
-	{ 0, /* Prohibited setting */		},
-	{ 2,		192,		192,	},
+	/*
+	 *						internal R	OSC
+	 * EXTAL div	PLL1 mult	PLL3 mult	div		div
+	 */
+	{ 1,		192,		192,		512,		128 },
+	{ 1,		192,		128,		512,		128 },
+	{ 0, /* Prohibited setting */					    },
+	{ 1,		192,		192,		512,		128 },
+	{ 1,		160,		160,		608,		152 },
+	{ 1,		160,		106,		608,		152 },
+	{ 0, /* Prohibited setting */					    },
+	{ 1,		160,		160,		608,		152 },
+	{ 1,		128,		128,		768,		192 },
+	{ 1,		128,		84,		768,		192 },
+	{ 0, /* Prohibited setting */					    },
+	{ 1,		128,		128,		768,		192 },
+	{ 2,		192,		192,		1024,		256 },
+	{ 2,		192,		128,		1024,		256 },
+	{ 0, /* Prohibited setting */					    },
+	{ 2,		192,		192,		1024,		256 },
 };
 
 static int __init r8a77965_cpg_mssr_init(struct device *dev)
