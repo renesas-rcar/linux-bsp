@@ -2713,6 +2713,22 @@ static const unsigned int msiof3_rxd_e_mux[] = {
 	MSIOF3_RXD_E_MARK,
 };
 
+/* - SATA --------------------------------------------------------------------*/
+static const unsigned int sata0_devslp_a_pins[] = {
+	/* DEVSLP */
+	RCAR_GP_PIN(6, 16),
+};
+static const unsigned int sata0_devslp_a_mux[] = {
+	SATA_DEVSLP_A_MARK,
+};
+static const unsigned int sata0_devslp_b_pins[] = {
+	/* DEVSLP */
+	RCAR_GP_PIN(4, 6),
+};
+static const unsigned int sata0_devslp_b_mux[] = {
+	SATA_DEVSLP_B_MARK,
+};
+
 /* - SCIF0 ------------------------------------------------------------------ */
 static const unsigned int scif0_data_pins[] = {
 	/* RX, TX */
@@ -3780,6 +3796,8 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(msiof3_ss2_e),
 	SH_PFC_PIN_GROUP(msiof3_txd_e),
 	SH_PFC_PIN_GROUP(msiof3_rxd_e),
+	SH_PFC_PIN_GROUP(sata0_devslp_a),
+	SH_PFC_PIN_GROUP(sata0_devslp_b),
 	SH_PFC_PIN_GROUP(scif0_data),
 	SH_PFC_PIN_GROUP(scif0_clk),
 	SH_PFC_PIN_GROUP(scif0_ctrl),
@@ -4102,6 +4120,11 @@ static const char * const msiof3_groups[] = {
 	"msiof3_rxd_e",
 };
 
+static const char * const sata0_groups[] = {
+	"sata0_devslp_a",
+	"sata0_devslp_b",
+};
+
 static const char * const scif0_groups[] = {
 	"scif0_data",
 	"scif0_clk",
@@ -4273,6 +4296,7 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(msiof1),
 	SH_PFC_FUNCTION(msiof2),
 	SH_PFC_FUNCTION(msiof3),
+	SH_PFC_FUNCTION(sata0),
 	SH_PFC_FUNCTION(scif0),
 	SH_PFC_FUNCTION(scif1),
 	SH_PFC_FUNCTION(scif2),
