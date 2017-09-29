@@ -1,7 +1,7 @@
 /*
  * rcar_du_drv.h  --  R-Car Display Unit DRM driver
  *
- * Copyright (C) 2013-2016 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -40,6 +40,7 @@ struct rcar_du_lvdsenc;
 #define RCAR_DU_FEATURE_GEN3_REGS	(1 << 3)	/* Use Gen3 registers */
 #define RCAR_DU_FEATURE_DIDSR2_REG	(1 << 4)	/* Has DIDSR2 register */
 #define RCAR_DU_FEATURE_VSPDL_SOURCE	(1 << 5)	/* Has VSPDL from VSP2 */
+#define RCAR_DU_FEATURE_R8A77965_REGS	(1 << 6)	/* Use R8A77965 registers */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	(1 << 0)	/* Align pitches to 128 bytes */
 #define RCAR_DU_QUIRK_LVDS_LANES	(1 << 1)	/* LVDS lanes 1 and 3 inverted */
@@ -68,6 +69,10 @@ struct rcar_du_output_routing {
  * @num_crtcs: total number of CRTCs
  * @routes: array of CRTC to output routes, indexed by output (RCAR_DU_OUTPUT_*)
  * @num_lvds: number of internal LVDS encoders
+ * @dpll_ch: channel for using DPLL
+ * @vspdl_pair_ch: pair channel for VSPDL
+ * @vspdl_ch: channel for using VSPDL
+ * @skip_ch: skip channel for r8a77965
  */
 struct rcar_du_device_info {
 	unsigned int gen;
@@ -79,6 +84,7 @@ struct rcar_du_device_info {
 	unsigned int dpll_ch;
 	unsigned int vspdl_pair_ch;
 	unsigned int vspdl_ch;
+	unsigned int skip_ch;
 };
 
 #define RCAR_DU_MAX_CRTCS		4
