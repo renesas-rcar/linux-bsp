@@ -50,6 +50,11 @@
 		groups = "scif_clk_a";
 		function = "scif_clk";
 	};
+
+	avb_pins: avb {
+		groups = "avb_mdc";
+		function = "avb";
+	};
 };
 
 &scif2 {
@@ -65,6 +70,8 @@
 };
 
 &avb {
+	pinctrl-0 = <&avb_pins>;
+	pinctrl-names = "default";
 	renesas,no-ether-link;
 	phy-handle = <&phy0>;
 	status = "okay";
