@@ -4,6 +4,7 @@ dtb-$(CONFIG_ARCH_R8A7795) += r8a7795-es1-salvator-x.dtb r8a7795-es1-h3ulcb.dtb
 dtb-$(CONFIG_ARCH_R8A7796) += r8a7796-salvator-x.dtb r8a7796-m3ulcb.dtb
 dtb-$(CONFIG_ARCH_R8A7796) += r8a7796-salvator-xs.dtb
 dtb-$(CONFIG_ARCH_R8A77965) += r8a77965-salvator-x.dtb
+dtb-$(CONFIG_ARCH_R8A77965) += r8a77965-salvator-xs.dtb
 
 always		:= $(dtb-y)
 clean-files	:= *.dtb
