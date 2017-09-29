@@ -66,10 +66,98 @@
 			reg = <0x00000000 0x70000000 0x0 0x10000000>;
 		};
 	};
-};
 
-&extal_clk {
-	clock-frequency = <16666666>;
+	vga-encoder {
+		compatible = "adi,adv7123";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				adv7123_in: endpoint {
+					remote-endpoint = <&du_out_rgb>;
+				};
+			};
+			port@1 {
+				reg = <1>;
+				adv7123_out: endpoint {
+					remote-endpoint = <&vga_in>;
+				};
+			};
+		};
+	};
+
+	vga {
+		compatible = "vga-connector";
+
+		port {
+			vga_in: endpoint {
+				remote-endpoint = <&adv7123_out>;
+			};
+		};
+	};
+
+	lvds-encoder {
+		compatible = "thine,thc63lvdm83d";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				reg = <0>;
+				lvds_enc_in: endpoint {
+					remote-endpoint = <&du_out_lvds0>;
+				};
+			};
+			port@1 {
+				reg = <1>;
+				lvds_enc_out: endpoint {
+					remote-endpoint = <&lvds_in>;
+				};
+			};
+		};
+	};
+
+	lvds {
+		compatible = "lvds-connector", "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds_in: endpoint {
+				remote-endpoint = <&lvds_enc_out>;
+			};
+		};
+	};
+
+	hdmi0-out {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi0_con: endpoint {
+				remote-endpoint = <&rcar_dw_hdmi0_out>;
+			};
+		};
+	};
 };
 
 &pfc {
@@ -129,6 +217,74 @@
 	};
 };
 
+&du_dotclkin0 {
+	clock-frequency = <148500000>;
+};
+
+&du_dotclkin1 {
+	clock-frequency = <33000000>;
+};
+
+&du_dotclkin3 {
+	clock-frequency = <108000000>;
+};
+
+&du {
+	status = "okay";
+
+	/* update <du_dotclkin0/3 to <programmable_clk0/1> */
+	clocks = <&cpg CPG_MOD 724>,
+		 <&cpg CPG_MOD 723>,
+		 <&cpg CPG_MOD 721>,
+		 <&cpg CPG_MOD 727>,
+		 <&programmable_clk0>, <&du_dotclkin1>, <&programmable_clk1>;
+
+	backlight-gpios = <&gpio6 7 GPIO_ACTIVE_HIGH>;
+
+	ports {
+		port@0 {
+			endpoint {
+				remote-endpoint = <&adv7123_in>;
+			};
+		};
+		port@1 {
+			endpoint {
+				remote-endpoint = <&rcar_dw_hdmi0_in>;
+			};
+		};
+		port@2 {
+			lvds_connector: endpoint {
+				remote-endpoint = <&lvds_enc_in>;
+			};
+		};
+	};
+};
+
+&hdmi0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			rcar_dw_hdmi0_in: endpoint {
+				remote-endpoint = <&du_out_hdmi0>;
+			};
+		};
+		port@1 {
+			reg = <1>;
+			rcar_dw_hdmi0_out: endpoint {
+				remote-endpoint = <&hdmi0_con>;
+			};
+		};
+	};
+};
+
+&extal_clk {
+	clock-frequency = <16666666>;
+};
+
 &scif1 {
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
@@ -160,4 +316,19 @@
 	status = "okay";
 
 	clock-frequency = <400000>;
+
+	clk_5p49v5923a: programmable_clk@6a {
+		compatible = "idt,5p49v5923a";
+		reg = <0x6a>;
+
+		programmable_clk0: 5p49x_clk1@6a {
+			#clock-cells = <0>;
+			clocks = <&du_dotclkin0>;
+		};
+
+		programmable_clk1: 5p49x_clk2@6a {
+			#clock-cells = <0>;
+			clocks = <&du_dotclkin3>;
+		};
+	};
 };
