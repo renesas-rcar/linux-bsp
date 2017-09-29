@@ -108,3 +108,9 @@
 
 	clock-frequency = <100000>;
 };
+
+&i2c4 {
+	status = "okay";
+
+	clock-frequency = <400000>;
+};
