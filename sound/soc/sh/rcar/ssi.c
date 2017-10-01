@@ -99,9 +99,6 @@ struct rsnd_ssi {
 #define rsnd_ssi_to_dma(mod) ((ssi)->dma)
 #define rsnd_ssi_nr(priv) ((priv)->ssi_nr)
 #define rsnd_mod_to_ssi(_mod) container_of((_mod), struct rsnd_ssi, mod)
-#define rsnd_ssi_flags_has(p, f) ((p)->flags & f)
-#define rsnd_ssi_flags_set(p, f) ((p)->flags |= f)
-#define rsnd_ssi_flags_del(p, f) ((p)->flags = ((p)->flags & ~f))
 #define rsnd_ssi_is_parent(ssi, io) ((ssi) == rsnd_io_to_mod_ssip(io))
 #define rsnd_ssi_is_multi_slave(mod, io) \
 	(rsnd_ssi_multi_slaves(io) & (1 << rsnd_mod_id(mod)))
@@ -117,7 +114,7 @@ int rsnd_ssi_use_busif(struct rsnd_dai_stream *io)
 	if (!rsnd_ssi_is_dma_mode(mod))
 		return 0;
 
-	if (!(rsnd_ssi_flags_has(ssi, RSND_SSI_NO_BUSIF)))
+	if (!(rsnd_flags_has(ssi, RSND_SSI_NO_BUSIF)))
 		use_busif = 1;
 	if (rsnd_io_to_mod_src(io))
 		use_busif = 1;
@@ -779,13 +776,13 @@ static int rsnd_ssi_common_probe(struct rsnd_mod *mod,
 	 * But it don't need to call request_irq() many times.
 	 * Let's control it by RSND_SSI_PROBED flag.
 	 */
-	if (!rsnd_ssi_flags_has(ssi, RSND_SSI_PROBED)) {
+	if (!rsnd_flags_has(ssi, RSND_SSI_PROBED)) {
 		ret = request_irq(ssi->irq,
 				  rsnd_ssi_interrupt,
 				  IRQF_SHARED,
 				  dev_name(dev), mod);
 
-		rsnd_ssi_flags_set(ssi, RSND_SSI_PROBED);
+		rsnd_flags_set(ssi, RSND_SSI_PROBED);
 	}
 
 	return ret;
@@ -803,10 +800,10 @@ static int rsnd_ssi_common_remove(struct rsnd_mod *mod,
 		return 0;
 
 	/* PIO will request IRQ again */
-	if (rsnd_ssi_flags_has(ssi, RSND_SSI_PROBED)) {
+	if (rsnd_flags_has(ssi, RSND_SSI_PROBED)) {
 		free_irq(ssi->irq, mod);
 
-		rsnd_ssi_flags_del(ssi, RSND_SSI_PROBED);
+		rsnd_flags_del(ssi, RSND_SSI_PROBED);
 	}
 
 	return 0;
@@ -994,7 +991,7 @@ int __rsnd_ssi_is_pin_sharing(struct rsnd_mod *mod)
 {
 	struct rsnd_ssi *ssi = rsnd_mod_to_ssi(mod);
 
-	return !!(rsnd_ssi_flags_has(ssi, RSND_SSI_CLK_PIN_SHARE));
+	return !!(rsnd_flags_has(ssi, RSND_SSI_CLK_PIN_SHARE));
 }
 
 static u32 *rsnd_ssi_get_status(struct rsnd_dai_stream *io,
@@ -1076,10 +1073,10 @@ int rsnd_ssi_probe(struct rsnd_priv *priv)
 		}
 
 		if (of_get_property(np, "shared-pin", NULL))
-			rsnd_ssi_flags_set(ssi, RSND_SSI_CLK_PIN_SHARE);
+			rsnd_flags_set(ssi, RSND_SSI_CLK_PIN_SHARE);
 
 		if (of_get_property(np, "no-busif", NULL))
-			rsnd_ssi_flags_set(ssi, RSND_SSI_NO_BUSIF);
+			rsnd_flags_set(ssi, RSND_SSI_NO_BUSIF);
 
 		ssi->irq = irq_of_parse_and_map(np, 0);
 		if (!ssi->irq) {
