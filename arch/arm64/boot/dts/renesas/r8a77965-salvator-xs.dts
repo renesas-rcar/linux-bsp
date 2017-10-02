@@ -772,6 +772,10 @@
 	status = "okay";
 };
 
+&hsusb {
+	status = "okay";
+};
+
 &msiof_ref_clk {
 	clock-frequency = <133333333>;
 };
