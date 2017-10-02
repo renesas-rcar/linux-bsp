@@ -1561,13 +1561,6 @@ int rvin_set_chsel(struct rvin_dev *vin, u8 chsel)
 
 	pm_runtime_get_sync(vin->dev);
 
-	/*
-	 * Undocumented feature: Writing to VNCSI_IFMD_REG will go
-	 * through and on read back look correct but won't have
-	 * any effect if VNMC_REG is not first set to 0.
-	 */
-	rvin_write(vin, 0, VNMC_REG);
-
 	ifmd = VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0 |
 		VNCSI_IFMD_CSI_CHSEL(chsel);
 
