@@ -496,6 +496,7 @@
 	phy-handle = <&phy0>;
 	status = "okay";
 	phy-gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
+	phy-reset-gpios = <&gpio2 10 GPIO_ACTIVE_LOW>;
 
 	phy0: ethernet-phy@0 {
 		rxc-skew-ps = <1500>;
