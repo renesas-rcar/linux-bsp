@@ -793,6 +793,7 @@ struct v4l2_subdev_platform_data {
  *	list.
  * @asd: Pointer to respective &struct v4l2_async_subdev.
  * @notifier: Pointer to the managing notifier.
+ * @subnotifier: Notifier for devices the subdevice depends on
  * @pdata: common part of subdevice platform data
  *
  * Each instance of a subdev driver should create this struct, either
@@ -823,6 +824,7 @@ struct v4l2_subdev {
 	struct list_head async_list;
 	struct v4l2_async_subdev *asd;
 	struct v4l2_async_notifier *notifier;
+	struct v4l2_async_notifier subnotifier;
 	struct v4l2_subdev_platform_data *pdata;
 };
 
@@ -837,6 +839,9 @@ struct v4l2_subdev {
 
 #define vdev_to_v4l2_subdev(vdev) \
 	((struct v4l2_subdev *)video_get_drvdata(vdev))
+
+#define subnotifier_to_v4l2_subdev(sub) \
+	container_of(sub, struct v4l2_subdev, subnotifier)
 
 /**
  * struct v4l2_subdev_fh - Used for storing subdev information per file handle
