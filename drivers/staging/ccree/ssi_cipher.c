@@ -541,7 +541,6 @@ ssi_blkcipher_create_setup_desc(
 		break;
 	default:
 		SSI_LOG_ERR("Unsupported cipher mode (%d)\n", cipher_mode);
-		BUG();
 	}
 }
 
@@ -697,13 +696,10 @@ static int ssi_blkcipher_complete(struct device *dev,
 				  void __iomem *cc_base)
 {
 	int completion_error = 0;
-	u32 inflight_counter;
 	struct ablkcipher_request *req = (struct ablkcipher_request *)areq;
 
 	ssi_buffer_mgr_unmap_blkcipher_request(dev, req_ctx, ivsize, src, dst);
 
-	/*Set the inflight couter value to local variable*/
-	inflight_counter =  ctx_p->drvdata->inflight_counter;
 	/*Decrease the inflight counter*/
 	if (ctx_p->flow_mode == BYPASS && ctx_p->drvdata->inflight_counter > 0)
 		ctx_p->drvdata->inflight_counter--;
@@ -1315,9 +1311,8 @@ int ssi_ablkcipher_alloc(struct ssi_drvdata *drvdata)
 	if (!ablkcipher_handle)
 		return -ENOMEM;
 
-	drvdata->blkcipher_handle = ablkcipher_handle;
-
 	INIT_LIST_HEAD(&ablkcipher_handle->blkcipher_alg_list);
+	drvdata->blkcipher_handle = ablkcipher_handle;
 
 	/* Linux crypto */
 	SSI_LOG_DEBUG("Number of algorithms = %zu\n", ARRAY_SIZE(blkcipher_algs));

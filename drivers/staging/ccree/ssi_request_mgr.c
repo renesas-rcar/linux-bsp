@@ -49,7 +49,6 @@ struct ssi_request_mgr_handle {
 	dma_addr_t dummy_comp_buff_dma;
 	struct cc_hw_desc monitor_desc;
 
-	volatile unsigned long monitor_lock;
 #ifdef COMP_IN_WQ
 	struct workqueue_struct *workq;
 	struct delayed_work compwork;
@@ -369,11 +368,16 @@ int send_request(
 	enqueue_seq(cc_base, &req_mgr_h->compl_desc, (is_dout ? 0 : 1));
 
 	if (unlikely(req_mgr_h->q_free_slots < total_seq_len)) {
-		/*This means that there was a problem with the resume*/
-		BUG();
+		/* This situation should never occur. Maybe indicating problem
+		 * with resuming power. Set the free slot count to 0 and hope
+		 * for the best.
+		 */
+		SSI_LOG_ERR("HW free slot count mismatch.");
+		req_mgr_h->q_free_slots = 0;
+	} else {
+		/* Update the free slots in HW queue */
+		req_mgr_h->q_free_slots -= total_seq_len;
 	}
-	/* Update the free slots in HW queue */
-	req_mgr_h->q_free_slots -= total_seq_len;
 
 	spin_unlock_bh(&req_mgr_h->hw_lock);
 
@@ -460,8 +464,13 @@ static void proc_completions(struct ssi_drvdata *drvdata)
 
 		/* Dequeue request */
 		if (unlikely(request_mgr_handle->req_queue_head == request_mgr_handle->req_queue_tail)) {
-			SSI_LOG_ERR("Request queue is empty req_queue_head==req_queue_tail==%u\n", request_mgr_handle->req_queue_head);
-			BUG();
+			/* We are supposed to handle a completion but our
+			 * queue is empty. This is not normal. Return and
+			 * hope for the best.
+			 */
+			SSI_LOG_ERR("Request queue is empty head == tail %u\n",
+				    request_mgr_handle->req_queue_head);
+			break;
 		}
 
 		ssi_req = &request_mgr_handle->req_queue[request_mgr_handle->req_queue_tail];
