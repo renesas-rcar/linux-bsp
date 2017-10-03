@@ -56,6 +56,7 @@ struct bpf_map {
 	struct work_struct work;
 	atomic_t usercnt;
 	struct bpf_map *inner_map_meta;
+	u8 name[BPF_OBJ_NAME_LEN];
 };
 
 /* function argument constraints */
@@ -137,6 +138,7 @@ enum bpf_reg_type {
 	PTR_TO_MAP_VALUE,	 /* reg points to map element value */
 	PTR_TO_MAP_VALUE_OR_NULL,/* points to map elem value or NULL */
 	PTR_TO_STACK,		 /* reg == frame_pointer + offset */
+	PTR_TO_PACKET_META,	 /* skb->data - meta_len */
 	PTR_TO_PACKET,		 /* reg points to skb->data */
 	PTR_TO_PACKET_END,	 /* skb->data + headlen */
 };
@@ -186,6 +188,8 @@ struct bpf_prog_aux {
 	struct bpf_map **used_maps;
 	struct bpf_prog *prog;
 	struct user_struct *user;
+	u64 load_time; /* ns since boottime */
+	u8 name[BPF_OBJ_NAME_LEN];
 	union {
 		struct work_struct work;
 		struct rcu_head	rcu;
