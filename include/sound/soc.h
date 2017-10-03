@@ -795,6 +795,10 @@ struct snd_soc_component_driver {
 	int (*suspend)(struct snd_soc_component *);
 	int (*resume)(struct snd_soc_component *);
 
+	/* pcm creation and destruction */
+	int (*pcm_new)(struct snd_soc_pcm_runtime *);
+	void (*pcm_free)(struct snd_pcm *);
+
 	/* component wide operations */
 	int (*set_sysclk)(struct snd_soc_component *component,
 			  int clk_id, int source, unsigned int freq, int dir);
@@ -812,10 +816,16 @@ struct snd_soc_component_driver {
 	void (*seq_notifier)(struct snd_soc_component *, enum snd_soc_dapm_type,
 		int subseq);
 	int (*stream_event)(struct snd_soc_component *, int event);
+	int (*set_bias_level)(struct snd_soc_component *component,
+			      enum snd_soc_bias_level level);
 
 	/* probe ordering - for components with runtime dependencies */
 	int probe_order;
 	int remove_order;
+
+	/* bits */
+	unsigned int idle_bias_on:1;
+	unsigned int suspend_bias_off:1;
 };
 
 struct snd_soc_component {
@@ -872,6 +882,8 @@ struct snd_soc_component {
 	void (*remove)(struct snd_soc_component *);
 	int (*suspend)(struct snd_soc_component *);
 	int (*resume)(struct snd_soc_component *);
+	int (*pcm_new)(struct snd_soc_component *, struct snd_soc_pcm_runtime *);
+	void (*pcm_free)(struct snd_soc_component *, struct snd_pcm *);
 
 	int (*set_sysclk)(struct snd_soc_component *component,
 			  int clk_id, int source, unsigned int freq, int dir);
@@ -879,6 +891,8 @@ struct snd_soc_component {
 		       int source, unsigned int freq_in, unsigned int freq_out);
 	int (*set_jack)(struct snd_soc_component *component,
 			struct snd_soc_jack *jack,  void *data);
+	int (*set_bias_level)(struct snd_soc_component *component,
+			      enum snd_soc_bias_level level);
 
 	/* machine specific init */
 	int (*init)(struct snd_soc_component *component);
@@ -1487,6 +1501,8 @@ int snd_soc_component_set_sysclk(struct snd_soc_component *component,
 int snd_soc_component_set_pll(struct snd_soc_component *component, int pll_id,
 			      int source, unsigned int freq_in,
 			      unsigned int freq_out);
+int snd_soc_component_set_jack(struct snd_soc_component *component,
+			       struct snd_soc_jack *jack, void *data);
 
 #ifdef CONFIG_REGMAP
 

@@ -2884,7 +2884,7 @@ int snd_soc_dapm_add_routes(struct snd_soc_dapm_context *dapm,
 {
 	int i, r, ret = 0;
 
-	mutex_lock_nested(&dapm->card->dapm_mutex, SND_SOC_DAPM_CLASS_INIT);
+	mutex_lock_nested(&dapm->card->dapm_mutex, SND_SOC_DAPM_CLASS_RUNTIME);
 	for (i = 0; i < num; i++) {
 		r = snd_soc_dapm_add_route(dapm, route);
 		if (r < 0) {
@@ -2915,7 +2915,7 @@ int snd_soc_dapm_del_routes(struct snd_soc_dapm_context *dapm,
 {
 	int i;
 
-	mutex_lock_nested(&dapm->card->dapm_mutex, SND_SOC_DAPM_CLASS_INIT);
+	mutex_lock_nested(&dapm->card->dapm_mutex, SND_SOC_DAPM_CLASS_RUNTIME);
 	for (i = 0; i < num; i++) {
 		snd_soc_dapm_del_route(dapm, route);
 		route++;
@@ -3681,7 +3681,7 @@ static int snd_soc_dai_link_event(struct snd_soc_dapm_widget *w,
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		substream.stream = SNDRV_PCM_STREAM_CAPTURE;
-		if (source->driver->ops && source->driver->ops->startup) {
+		if (source->driver->ops->startup) {
 			ret = source->driver->ops->startup(&substream, source);
 			if (ret < 0) {
 				dev_err(source->dev,
@@ -3695,7 +3695,7 @@ static int snd_soc_dai_link_event(struct snd_soc_dapm_widget *w,
 			goto out;
 
 		substream.stream = SNDRV_PCM_STREAM_PLAYBACK;
-		if (sink->driver->ops && sink->driver->ops->startup) {
+		if (sink->driver->ops->startup) {
 			ret = sink->driver->ops->startup(&substream, sink);
 			if (ret < 0) {
 				dev_err(sink->dev,
@@ -3725,13 +3725,13 @@ static int snd_soc_dai_link_event(struct snd_soc_dapm_widget *w,
 		ret = 0;
 
 		source->active--;
-		if (source->driver->ops && source->driver->ops->shutdown) {
+		if (source->driver->ops->shutdown) {
 			substream.stream = SNDRV_PCM_STREAM_CAPTURE;
 			source->driver->ops->shutdown(&substream, source);
 		}
 
 		sink->active--;
-		if (sink->driver->ops && sink->driver->ops->shutdown) {
+		if (sink->driver->ops->shutdown) {
 			substream.stream = SNDRV_PCM_STREAM_PLAYBACK;
 			sink->driver->ops->shutdown(&substream, sink);
 		}
@@ -3821,19 +3821,15 @@ int snd_soc_dapm_new_pcm(struct snd_soc_card *card,
 				devm_kasprintf(card->dev, GFP_KERNEL,
 					       "Anonymous Configuration %d",
 					       count);
-			if (!w_param_text[count]) {
-				ret = -ENOMEM;
-				goto outfree_link_name;
-			}
 		} else {
 			w_param_text[count] = devm_kmemdup(card->dev,
 						config->stream_name,
 						strlen(config->stream_name) + 1,
 						GFP_KERNEL);
-			if (!w_param_text[count]) {
-				ret = -ENOMEM;
-				goto outfree_link_name;
-			}
+		}
+		if (!w_param_text[count]) {
+			ret = -ENOMEM;
+			goto outfree_link_name;
 		}
 		config++;
 	}
@@ -3907,9 +3903,9 @@ outfree_private_value:
 	devm_kfree(card->dev, (void *)private_value);
 outfree_link_name:
 	devm_kfree(card->dev, link_name);
-outfree_w_param:
 	for (count = 0 ; count < num_params; count++)
 		devm_kfree(card->dev, (void *)w_param_text[count]);
+outfree_w_param:
 	devm_kfree(card->dev, w_param_text);
 
 	return ret;
