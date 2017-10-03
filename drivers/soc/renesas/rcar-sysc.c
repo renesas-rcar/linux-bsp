@@ -446,7 +446,9 @@ static int __init rcar_sysc_pd_init(void)
 		rcar_domains[i] = pd;
 	}
 
-#if IS_ENABLED(CONFIG_ARCH_R8A7795) || IS_ENABLED(CONFIG_ARCH_R8A7796)
+#if IS_ENABLED(CONFIG_ARCH_R8A7795) || \
+	IS_ENABLED(CONFIG_ARCH_R8A7796) || \
+	IS_ENABLED(CONFIG_ARCH_R8A77965)
 	rcar_power_on_force();
 #endif
 
@@ -458,7 +460,9 @@ out_put:
 }
 early_initcall(rcar_sysc_pd_init);
 
-#if IS_ENABLED(CONFIG_ARCH_R8A7795) || IS_ENABLED(CONFIG_ARCH_R8A7796)
+#if IS_ENABLED(CONFIG_ARCH_R8A7795)  || \
+	IS_ENABLED(CONFIG_ARCH_R8A7796)  || \
+	IS_ENABLED(CONFIG_ARCH_R8A77965)
 static int __init rcar_sysc_pd_init2(void)
 {
 #ifdef CONFIG_PM_SLEEP
