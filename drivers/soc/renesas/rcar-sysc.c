@@ -321,6 +321,9 @@ static const struct of_device_id rcar_sysc_matches[] = {
 #ifdef CONFIG_ARCH_R8A7796
 	{ .compatible = "renesas,r8a7796-sysc", .data = &r8a7796_sysc_info },
 #endif
+#ifdef CONFIG_ARCH_R8A77965
+	{ .compatible = "renesas,r8a77965-sysc", .data = &r8a77965_sysc_info },
+#endif
 	{ /* sentinel */ }
 };
 
@@ -443,7 +446,9 @@ static int __init rcar_sysc_pd_init(void)
 		rcar_domains[i] = pd;
 	}
 
-#if IS_ENABLED(CONFIG_ARCH_R8A7795) || IS_ENABLED(CONFIG_ARCH_R8A7796)
+#if IS_ENABLED(CONFIG_ARCH_R8A7795) || \
+	IS_ENABLED(CONFIG_ARCH_R8A7796) || \
+	IS_ENABLED(CONFIG_ARCH_R8A77965)
 	rcar_power_on_force();
 #endif
 
@@ -455,7 +460,9 @@ out_put:
 }
 early_initcall(rcar_sysc_pd_init);
 
-#if IS_ENABLED(CONFIG_ARCH_R8A7795) || IS_ENABLED(CONFIG_ARCH_R8A7796)
+#if IS_ENABLED(CONFIG_ARCH_R8A7795)  || \
+	IS_ENABLED(CONFIG_ARCH_R8A7796)  || \
+	IS_ENABLED(CONFIG_ARCH_R8A77965)
 static int __init rcar_sysc_pd_init2(void)
 {
 #ifdef CONFIG_PM_SLEEP
