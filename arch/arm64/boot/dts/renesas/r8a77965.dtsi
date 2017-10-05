@@ -1341,6 +1341,14 @@
 			};
 		};
 
+		sata: sata@ee300000 {
+			compatible = "renesas,sata-r8a77965";
+			reg = <0 0xee300000 0 0x1fff>;
+			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 815>;
+			status = "disabled";
+		};
+
 		usb_dmac0: dma-controller@e65a0000 {
 			compatible = "renesas,r8a77965-usb-dmac",
 				"renesas,usb-dmac";
