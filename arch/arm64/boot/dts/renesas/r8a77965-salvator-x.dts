@@ -730,6 +730,10 @@
 	};
 };
 
+&sata {
+	status = "okay";
+};
+
 &ssi1 {
 	shared-pin;
 };
