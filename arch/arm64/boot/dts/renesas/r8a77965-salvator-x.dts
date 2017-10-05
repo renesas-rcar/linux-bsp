@@ -549,6 +549,7 @@
 	mmc-hs200-1_8v;
 	mmc-hs400-1_8v;
 	bus-width = <8>;
+	drive-strength = <1>;
 	non-removable;
 	status = "okay";
 };
