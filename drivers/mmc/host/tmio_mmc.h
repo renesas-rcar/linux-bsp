@@ -145,6 +145,11 @@ static const struct soc_device_attribute dma_quirks_match[] = {
 	{ },
 };
 
+static const struct soc_device_attribute hs400_use_8tap_match[] = {
+	{ .soc_id = "r8a77965" },
+	{ },
+};
+
 struct tmio_mmc_data;
 struct tmio_mmc_host;
 
@@ -251,6 +256,9 @@ struct tmio_mmc_host {
 	unsigned long tap_set;
 	void (*prepare_hs400_tuning)(struct mmc_host *mmc, struct mmc_ios *ios);
 	void (*reset_hs400_mode)(struct mmc_host *mmc);
+
+	/* HS400 mode uses 8TAP */
+	bool			hs400_use_8tap;
 
 	/* Sampling data comparison: 1 for match. 0 for mismatch */
 	DECLARE_BITMAP(smpcmp, BITS_PER_BYTE * sizeof(long));
