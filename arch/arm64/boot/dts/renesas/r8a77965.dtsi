@@ -689,6 +689,14 @@
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 		};
 
+		mfis: mfis@e6260000 {
+			compatible = "renesas,mfis-r8a77965", "renesas,mfis";
+			reg = <0 0xe6260000 0 0x0200>;
+			interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "eicr0";
+			status = "okay";
+		};
+
 		pfc: pin-controller@e6060000 {
 			compatible = "renesas,pfc-r8a77965";
 			reg = <0 0xe6060000 0 0x50c>;
