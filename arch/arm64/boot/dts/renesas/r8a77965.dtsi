@@ -111,6 +111,11 @@
 		};
 	};
 
+	avs_sensor: avs {
+		compatible = "renesas,r8a77965-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
+	};
+
 	cluster0_opp_tb0: opp_table0 {
 		compatible = "operating-points-v2";
 		opp-shared;
