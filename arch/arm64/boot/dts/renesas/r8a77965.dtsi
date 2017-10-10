@@ -2402,6 +2402,10 @@
 			power-domains = <&sysc R8A77965_PD_3DG_B>;
 		};
 
+		qos@e67e0000 {
+			compatible = "renesas,qos";
+		};
+
 		vsp@fe960000 {
 			compatible = "renesas,vspm-vsp2";
 			reg = <0 0xfe960000 0 0x8000>;
