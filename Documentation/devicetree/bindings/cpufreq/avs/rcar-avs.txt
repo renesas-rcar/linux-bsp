@@ -24,3 +24,9 @@ Examples:
 		compatible = "renesas,r8a7796-avs", "renesas,rcar-gen3-avs";
 		reg = <0 0xe60a013c 0 0x04>;
 	};
+
+  For M3N:
+	avs_sensor: avs {
+		compatible = "renesas,r8a77965-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
+	};
