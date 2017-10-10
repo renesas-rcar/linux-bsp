@@ -21,6 +21,7 @@ obj-$(CONFIG_ARCH_R8A77965)	+= rcar-sysc.o r8a77965-sysc.o
 
 obj-$(CONFIG_ARCH_R8A7795)	+= rcar-avs.o
 obj-$(CONFIG_ARCH_R8A7796)	+= rcar-avs.o
+obj-$(CONFIG_ARCH_R8A77965)	+= rcar-avs.o
 # EMS for R-Car Gen3
 obj-$(CONFIG_ARCH_R8A7795)	+= rcar_ems_ctrl.o
 obj-$(CONFIG_ARCH_R8A7796)	+= rcar_ems_ctrl.o
