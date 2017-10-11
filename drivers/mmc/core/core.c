@@ -146,11 +146,13 @@ void mmc_request_done(struct mmc_host *host, struct mmc_request *mrq)
 	struct mmc_command *cmd = mrq->cmd;
 	int err = cmd->error;
 
-	/* Flag re-tuning needed on CRC errors */
+	/* Flag re-tuning needed on CMD, CRC, END errors and timeoout */
 	if ((cmd->opcode != MMC_SEND_TUNING_BLOCK &&
 	    cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) &&
-	    (err == -EILSEQ || (mrq->sbc && mrq->sbc->error == -EILSEQ) ||
+	    (err == -EILSEQ || err == -ETIMEDOUT ||
+	    (mrq->sbc && mrq->sbc->error == -EILSEQ) ||
 	    (mrq->data && mrq->data->error == -EILSEQ) ||
+	    (mrq->data && mrq->data->error == -ETIMEDOUT) ||
 	    (mrq->stop && mrq->stop->error == -EILSEQ)))
 		mmc_retune_needed(host);
 
