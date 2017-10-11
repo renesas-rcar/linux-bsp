@@ -573,8 +573,10 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 	if (!data)
 		goto out;
 
-	if (stat & TMIO_STAT_CRCFAIL || stat & TMIO_STAT_STOPBIT_ERR ||
-	    stat & TMIO_STAT_TXUNDERRUN)
+	if (stat & TMIO_STAT_DATATIMEOUT)
+		data->error = -ETIMEDOUT;
+	else if (stat & TMIO_STAT_CRCFAIL || stat & TMIO_STAT_STOPBIT_ERR ||
+		 stat & TMIO_STAT_TXUNDERRUN)
 		data->error = -EILSEQ;
 	if (host->chan_tx && (data->flags & MMC_DATA_WRITE) && !host->force_pio) {
 		u32 status = sd_ctrl_read16_and_16_as_32(host, CTL_STATUS);
@@ -597,7 +599,8 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 		}
 
 		if (done) {
-			tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND);
+			tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND |
+						  TMIO_STAT_DATATIMEOUT);
 			if (!data->error)
 				tmio_mmc_set_transtate(host,
 						       TMIO_TRANSTATE_AEND);
@@ -605,7 +608,8 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 				tmio_mmc_dataend_dma(host);
 		}
 	} else if (host->chan_rx && (data->flags & MMC_DATA_READ) && !host->force_pio) {
-		tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND);
+		tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND |
+					  TMIO_STAT_DATATIMEOUT);
 		if (!data->error)
 			tmio_mmc_set_transtate(host, TMIO_TRANSTATE_AEND);
 		else
@@ -724,8 +728,9 @@ static bool __tmio_mmc_sdcard_irq(struct tmio_mmc_host *host, int ireg,
 	}
 
 	/* Data transfer completion */
-	if (ireg & TMIO_STAT_DATAEND) {
-		tmio_mmc_ack_mmc_irqs(host, TMIO_STAT_DATAEND);
+	if (ireg & (TMIO_STAT_DATAEND | TMIO_STAT_DATATIMEOUT)) {
+		tmio_mmc_ack_mmc_irqs(host, TMIO_STAT_DATAEND |
+				      TMIO_STAT_DATATIMEOUT);
 		tmio_mmc_data_irq(host, status);
 		return true;
 	}
