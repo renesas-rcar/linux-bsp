@@ -477,7 +477,13 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 	if (!data)
 		goto out;
 
-	if (stat & TMIO_STAT_CRCFAIL || stat & TMIO_STAT_STOPBIT_ERR ||
+	if (stat & TMIO_STAT_DATATIMEOUT) {
+		if ((host->mmc->caps & MMC_CAP_NONREMOVABLE) ||
+		    (host->ops.get_cd && host->ops.get_cd(host->mmc)))
+			data->error = -EILSEQ;  /* need retry */
+		else
+			data->error = -ETIMEDOUT;
+	} else if (stat & TMIO_STAT_CRCFAIL || stat & TMIO_STAT_STOPBIT_ERR ||
 	    stat & TMIO_STAT_TXUNDERRUN)
 		data->error = -EILSEQ;
 	if (host->dma_on && (data->flags & MMC_DATA_WRITE)) {
@@ -544,9 +550,13 @@ static void tmio_mmc_cmd_irq(struct tmio_mmc_host *host, unsigned int stat)
 		cmd->resp[0] = cmd->resp[3];
 	}
 
-	if (stat & TMIO_STAT_CMDTIMEOUT)
-		cmd->error = -ETIMEDOUT;
-	else if ((stat & TMIO_STAT_CRCFAIL && cmd->flags & MMC_RSP_CRC) ||
+	if (stat & TMIO_STAT_CMDTIMEOUT) {
+		if ((host->mmc->caps & MMC_CAP_NONREMOVABLE) ||
+		    (host->ops.get_cd && host->ops.get_cd(host->mmc)))
+			cmd->error = -EILSEQ;   /* need retry */
+		else
+			cmd->error = -ETIMEDOUT;
+	} else if ((stat & TMIO_STAT_CRCFAIL && cmd->flags & MMC_RSP_CRC) ||
 		 stat & TMIO_STAT_STOPBIT_ERR ||
 		 stat & TMIO_STAT_CMD_IDX_ERR)
 		cmd->error = -EILSEQ;
