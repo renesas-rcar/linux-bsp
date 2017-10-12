@@ -2730,6 +2730,14 @@
 	};
 
 	thermal-zones {
+		emergency {
+			polling-delay = <1000>;
+			on-temperature = <110000>;
+			off-temperature = <95000>;
+			target_cpus = <&a57_1>;
+			status = "disabled";
+		};
+
 		sensor_thermal1: sensor-thermal1 {
 			polling-delay-passive = <250>;
 			polling-delay = <0>;
