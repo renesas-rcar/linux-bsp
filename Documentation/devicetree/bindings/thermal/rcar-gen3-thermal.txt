@@ -5,6 +5,7 @@ Required properties:
 			  Examples with soctypes are:
 			    - "renesas,thermal-r8a7795" (R-Car H3)
 			    - "renesas,thermal-r8a7796" (R-Car M3)
+			    - "renesas,thermal-r8a77965" (R-Car M3-N)
 - reg			: Address range of the thermal registers.
 - #thermal-sensor-cells : Please see ./thermal.txt
 

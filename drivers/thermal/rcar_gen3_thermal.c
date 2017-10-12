@@ -475,6 +475,7 @@ static const struct rcar_thermal_data r8a7796_data = {
 static const struct of_device_id rcar_thermal_dt_ids[] = {
 	{ .compatible = "renesas,thermal-r8a7795", .data = &r8a7795_data},
 	{ .compatible = "renesas,thermal-r8a7796", .data = &r8a7796_data},
+	{ .compatible = "renesas,thermal-r8a77965", .data = &r8a7796_data},
 	{},
 };
 MODULE_DEVICE_TABLE(of, rcar_thermal_dt_ids);
