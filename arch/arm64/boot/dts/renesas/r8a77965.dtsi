@@ -61,6 +61,10 @@
 			next-level-cache = <&L2_CA57>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			#cooling-cells = <2>;
+			dynamic-power-coefficient = <854>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
 		};
 
 		a57_1: cpu@1 {
@@ -1917,10 +1921,32 @@
 				thermal-sensors = <&tsc3>;
 
 				trips {
+					threshold: trip-point@0 {
+						/* miliCelsius  */
+						temperature = <90000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+
+					target: trip-point@1 {
+						/* miliCelsius  */
+						temperature = <100000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+
 					sensor3_crit: sensor3-crit {
 						temperature = <120000>;
 						hysteresis = <2000>;
 						type = "critical";
+					};
+				};
+
+				cooling-maps {
+					map0 {
+						trip = <&target>;
+						cooling-device = <&a57_0 0 2>;
+						contribution = <1024>;
 					};
 				};
 			};
