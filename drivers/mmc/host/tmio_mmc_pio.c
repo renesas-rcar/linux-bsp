@@ -269,11 +269,11 @@ static void tmio_mmc_set_clock(struct tmio_mmc_host *host,
 		return;
 	}
 	/*
-	 * Both HS400 and HS200/SD104 set 200MHz, but HS400 sets 400MHz
-	 * to distinguish the CPG settings.
+	 * Both HS400 and HS200/SD104 set 200MHz, but some devices need to
+	 * set 400MHz to distinguish the CPG settings in HS400.
 	 */
 	if (host->mmc->ios.timing == MMC_TIMING_MMC_HS400 &&
-			new_clock == 200000000)
+	    !host->hs400_use_8tap && new_clock == 200000000)
 		new_clock = 400000000;
 
 	if (host->clk_update)

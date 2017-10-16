@@ -138,6 +138,8 @@ static const struct of_device_id sh_mobile_sdhi_of_match[] = {
 	{ .compatible = "renesas,sdhi-r8a7794", .data = &of_rcar_gen2_compatible, },
 	{ .compatible = "renesas,sdhi-r8a7795", .data = &of_rcar_gen3_compatible, },
 	{ .compatible = "renesas,sdhi-r8a7796", .data = &of_rcar_gen3_compatible, },
+	{ .compatible = "renesas,sdhi-r8a77965",
+					.data = &of_rcar_gen3_compatible, },
 	{},
 };
 MODULE_DEVICE_TABLE(of, sh_mobile_sdhi_of_match);
@@ -431,11 +433,14 @@ static void sh_mobile_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 		sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2));
 
 	/* HS400 mode sets sampling clock selection range to 4 */
-	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
-		       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
-		       0x4 << SH_MOBILE_SDHI_SCC_DTCNTL_TAPNUM_SHIFT);
+	if (!host->hs400_use_8tap) {
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
+			       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
+			       0x4 << SH_MOBILE_SDHI_SCC_DTCNTL_TAPNUM_SHIFT);
 
-	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET, host->tap_set/2);
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET,
+			       host->tap_set / 2);
+	}
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
@@ -765,6 +770,9 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto eprobe;
 	}
+
+	host->hs400_use_8tap = soc_device_match(hs400_use_8tap_match) ?
+				true : false;
 
 #ifdef CONFIG_MMC_SDHI_SEQ_WORKAROUND
 	if (soc_device_match(dma_quirks_match))
