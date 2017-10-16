@@ -65,7 +65,9 @@ static int change_default_opp_pattern(unsigned int opp_pattern_num)
 #define AVS_MAX_VALUE	7
 
 static const struct of_device_id rcar_avs_matches[] = {
-#if defined(CONFIG_ARCH_R8A7795) || defined(CONFIG_ARCH_R8A7796)
+#if defined(CONFIG_ARCH_R8A7795) || \
+	defined(CONFIG_ARCH_R8A7796) || \
+	defined(CONFIG_ARCH_R8A77965)
 	{ .compatible = "renesas,rcar-gen3-avs" },
 #endif
 	{ /* sentinel */ }
