@@ -1,7 +1,7 @@
 /*
  * rcar_du_kms.c  --  R-Car Display Unit Mode Setting
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -354,7 +354,7 @@ int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
 	drm_modeset_unlock_all(dev);
 
 	if (ret != 0) {
-		drm_atomic_state_free(state);
+		drm_atomic_state_put(state);
 	}
 
 	return ret;
@@ -640,10 +640,22 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 			int vsp_index = i;
 			bool init = true;
 
-			if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSPDL_SOURCE) &&
-					(i == rcdu->info->vspdl_pair_ch)) {
-				vsp_index = 0;
-				init = false;
+			if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSPDL_SOURCE)) {
+				int pair;
+
+				/* Offset channel for r8a77965.
+				 * In r8a77965, DU2 can not be used.
+				 */
+				if (rcdu->info->skip_ch &&
+				    ((0x01 << i) == rcdu->info->skip_ch))
+					pair = DU_CH_3;
+				else
+					pair = i;
+
+				if (pair == rcdu->info->vspdl_pair_ch) {
+					vsp_index = 0;
+					init = false;
+				}
 			}
 
 			vsp = &rcdu->vsps[vsp_index];
