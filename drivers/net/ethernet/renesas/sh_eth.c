@@ -40,7 +40,6 @@
 #include <linux/slab.h>
 #include <linux/ethtool.h>
 #include <linux/if_vlan.h>
-#include <linux/clk.h>
 #include <linux/sh_eth.h>
 #include <linux/of_mdio.h>
 
@@ -2293,7 +2292,7 @@ static void sh_eth_get_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 	wol->supported = 0;
 	wol->wolopts = 0;
 
-	if (mdp->cd->magic && mdp->clk) {
+	if (mdp->cd->magic) {
 		wol->supported = WAKE_MAGIC;
 		wol->wolopts = mdp->wol_enabled ? WAKE_MAGIC : 0;
 	}
@@ -2303,7 +2302,7 @@ static int sh_eth_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 {
 	struct sh_eth_private *mdp = netdev_priv(ndev);
 
-	if (!mdp->cd->magic || !mdp->clk || wol->wolopts & ~WAKE_MAGIC)
+	if (!mdp->cd->magic || wol->wolopts & ~WAKE_MAGIC)
 		return -EOPNOTSUPP;
 
 	mdp->wol_enabled = !!(wol->wolopts & WAKE_MAGIC);
@@ -3144,11 +3143,6 @@ static int sh_eth_drv_probe(struct platform_device *pdev)
 		goto out_release;
 	}
 
-	/* Get clock, if not found that's OK but Wake-On-Lan is unavailable */
-	mdp->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(mdp->clk))
-		mdp->clk = NULL;
-
 	ndev->base_addr = res->start;
 
 	spin_lock_init(&mdp->lock);
@@ -3251,7 +3245,7 @@ static int sh_eth_drv_probe(struct platform_device *pdev)
 	if (ret)
 		goto out_napi_del;
 
-	if (mdp->cd->magic && mdp->clk)
+	if (mdp->cd->magic)
 		device_set_wakeup_capable(&pdev->dev, 1);
 
 	/* print device information */
@@ -3305,9 +3299,6 @@ static int sh_eth_wol_setup(struct net_device *ndev)
 	/* Enable MagicPacket */
 	sh_eth_modify(ndev, ECMR, ECMR_MPDE, ECMR_MPDE);
 
-	/* Increased clock usage so device won't be suspended */
-	clk_enable(mdp->clk);
-
 	return enable_irq_wake(ndev->irq);
 }
 
@@ -3332,9 +3323,6 @@ static int sh_eth_wol_restore(struct net_device *ndev)
 	ret = sh_eth_open(ndev);
 	if (ret < 0)
 		return ret;
-
-	/* Restore clock usage count */
-	clk_disable(mdp->clk);
 
 	return disable_irq_wake(ndev->irq);
 }
