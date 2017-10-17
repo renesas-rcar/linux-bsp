@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a7796 SoC
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -751,6 +751,13 @@
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 905>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+		};
+
+		mfis: mfis@e6260000 {
+			compatible = "renesas,mfis-lock-r8a7796",
+				     "renesas,mfis-lock";
+			reg = <0 0xe6260000 0 0x1000>;
+			#hwlock-cells = <1>;
 		};
 
 		pfc: pin-controller@e6060000 {
