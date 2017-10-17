@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a7795 ES1.x SoC
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This file is based on the arch/arm64/boot/dts/renesas/r8a7795.dtsi
  *
@@ -875,6 +875,13 @@
 			       <&ipmmu_mp1 26>, <&ipmmu_mp1 27>,
 			       <&ipmmu_mp1 28>, <&ipmmu_mp1 29>,
 			       <&ipmmu_mp1 30>, <&ipmmu_mp1 31>;
+		};
+
+		mfis: mfis@e6260000 {
+			compatible = "renesas,mfis-lock-r8a7795",
+				     "renesas,mfis-lock";
+			reg = <0 0xe6260000 0 0x1000>;
+			#hwlock-cells = <1>;
 		};
 
 		pfc: pfc@e6060000 {
