@@ -582,7 +582,13 @@ static int __maybe_unused vsp1_pm_resume(struct device *dev)
 	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
 
 	pm_runtime_force_resume(vsp1->dev);
-	vsp1_pipelines_resume(vsp1);
+
+	/*
+	 * DRM pipelines are stopped before suspend, and will be resumed after
+	 * the DRM subsystem has reconfigured its pipeline with an atomic flush
+	 */
+	if (!vsp1->drm)
+		vsp1_pipelines_resume(vsp1);
 
 	return 0;
 }
