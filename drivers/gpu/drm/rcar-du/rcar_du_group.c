@@ -46,10 +46,16 @@ void rcar_du_group_write(struct rcar_du_group *rgrp, u32 reg, u32 data)
 
 static void rcar_du_group_setup_pins(struct rcar_du_group *rgrp)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
+
 	u32 defr6 = DEFR6_CODE | DEFR6_ODPM12_DISP;
 
 	if (rgrp->num_crtcs > 1)
 		defr6 |= DEFR6_ODPM22_DISP;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS) &&
+	    (rgrp->index == 1))
+		defr6 = DEFR6_CODE | DEFR6_ODPM22_DISP;
 
 	rcar_du_group_write(rgrp, DEFR6, defr6);
 }
@@ -83,10 +89,12 @@ static void rcar_du_group_setup_defr8(struct rcar_du_group *rgrp)
 		if (rgrp->index == 0)
 			return;
 
+		if (rcdu->info->skip_ch)
+			crtc += 1; /* offset for r8a77965 */
+
 		if (crtc / 2 == rgrp->index)
 			defr8 |= DEFR8_DRGBS_DU(crtc);
 	}
-
 	rcar_du_group_write(rgrp, DEFR8, defr8);
 }
 

@@ -1,7 +1,7 @@
 /*
  * rcar_du_vsp.c  --  R-Car Display Unit VSP-Based Compositor
  *
- * Copyright (C) 2015-2016 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -36,7 +36,8 @@ static void rcar_du_vsp_complete(void *private, bool completed)
 {
 	struct rcar_du_crtc *crtc = private;
 
-	drm_crtc_handle_vblank(&crtc->crtc);
+	if (crtc->vblank_enable)
+		drm_crtc_handle_vblank(&crtc->crtc);
 
 	if (completed)
 		rcar_du_crtc_finish_page_flip(crtc);
@@ -584,6 +585,7 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 	unsigned int i;
 	int ret;
 	unsigned long possible_crtcs, share_num;
+	int offset_index;
 
 	/* Find the VSP device and initialize it. */
 	np = of_parse_phandle(rcdu->dev->of_node, "vsps", vsp->index);
@@ -617,6 +619,11 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 
 	share_num = vsp->num_planes - vsp->num_brs;
 
+	if ((rcdu->info->skip_ch) && (vsp->index == 0))
+		offset_index = rcdu->info->skip_ch;
+	else
+		offset_index = 1 << rcdu->info->vspdl_pair_ch;
+
 	for (i = 0; i < vsp->num_planes; ++i) {
 		struct rcar_du_vsp_plane *plane = &vsp->planes[i];
 		enum drm_plane_type type;
@@ -627,8 +634,7 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp)
 			if (i < share_num)
 				possible_crtcs = 1 << vsp->index;
 			else
-				possible_crtcs =
-					 1 << rcdu->info->vspdl_pair_ch;
+				possible_crtcs = offset_index;
 
 			type = (i == 0) || (i == share_num) ?
 			       DRM_PLANE_TYPE_PRIMARY : DRM_PLANE_TYPE_OVERLAY;
