@@ -1281,6 +1281,9 @@ static unsigned int rcar_dmac_chan_get_residue(struct rcar_dmac_chan *chan,
 	if (desc->hwdescs.use) {
 		dptr = (rcar_dmac_chan_read(chan, RCAR_DMACHCRB) &
 			RCAR_DMACHCRB_DPTR_MASK) >> RCAR_DMACHCRB_DPTR_SHIFT;
+		if (dptr == 0)
+			dptr = desc->nchunks;
+		dptr--;
 		WARN_ON(dptr >= desc->nchunks);
 	} else {
 		running = desc->running;
@@ -1295,7 +1298,7 @@ static unsigned int rcar_dmac_chan_get_residue(struct rcar_dmac_chan *chan,
 	}
 
 	/* Add the residue for the current chunk. */
-	residue += rcar_dmac_chan_read(chan, RCAR_DMATCR) << desc->xfer_shift;
+	residue += rcar_dmac_chan_read(chan, RCAR_DMATCRB) << desc->xfer_shift;
 
 	return residue;
 }
