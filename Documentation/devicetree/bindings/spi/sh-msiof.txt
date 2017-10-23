@@ -12,6 +12,7 @@ Required properties:
 			 "renesas,msiof-r8a7794" (R-Car E2)
 			 "renesas,msiof-r8a7795" (R-Car H3)
 			 "renesas,msiof-r8a7796" (R-Car M3)
+			 "renesas,msiof-r8a77965" (R-Car M3-N)
 			 "renesas,msiof-sh73a0" (SH-Mobile AG5)
 - reg                  : A list of offsets and lengths of the register sets for
 			 the device.
