@@ -21,7 +21,7 @@
 
 /*
 * - The V3 firmware is possible to use on r8a7795 es2.0 or later and
-*   r8a7796 es1.1 or later.
+*   r8a7796 es1.1 or later and r8a77965.
 * - The V2 firmware is possible to use on r8a7795 es1.x and r8a7796 es1.0.
 * - The V2 firmware is possible to use on R-Car Gen2. However, the V2 causes
 *   performance degradation. So, this driver continues to use the V1 if R-Car
@@ -82,6 +82,8 @@ static const struct soc_device_attribute rcar_quirks_match[]  = {
 		.data = (void *)(RCAR_XHCI_GEN3 | RCAR_XHCI_FIRMWARE_V2), },
 	{ .soc_id = "r8a7796",
 		.data = (void *)RCAR_XHCI_GEN3, },
+	{ .soc_id = "r8a77965",
+		.data = (void *)RCAR_XHCI_GEN3, },
 	{/*sentinel*/},
 };
 
@@ -114,6 +116,7 @@ static int xhci_rcar_is_gen3(struct device *dev)
 
 	return of_device_is_compatible(node, "renesas,xhci-r8a7795") ||
 		of_device_is_compatible(node, "renesas,xhci-r8a7796") ||
+		of_device_is_compatible(node, "renesas,xhci-r8a77965") ||
 		of_device_is_compatible(node, "renesas,rcar-gen3-xhci");
 }
 
