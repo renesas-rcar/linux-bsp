@@ -197,6 +197,9 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	};
 	int ret;
 
+	if (!vin_to_source(vin))
+		return 0;
+
 	ret = v4l2_subdev_call(vin_to_source(vin), pad, get_fmt, NULL, &fmt);
 	if (ret)
 		return ret;
@@ -486,6 +489,9 @@ static int rvin_cropcap(struct file *file, void *priv,
 
 	if (crop->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
+
+	if (!sd)
+		return 0;
 
 	return v4l2_subdev_call(sd, video, g_pixelaspect, &crop->pixelaspect);
 }
@@ -780,6 +786,11 @@ static const struct v4l2_ioctl_ops rvin_mc_ioctl_ops = {
 	.vidioc_g_fmt_vid_cap		= rvin_g_fmt_vid_cap,
 	.vidioc_s_fmt_vid_cap		= rvin_mc_s_fmt_vid_cap,
 	.vidioc_enum_fmt_vid_cap	= rvin_enum_fmt_vid_cap,
+
+	.vidioc_g_selection		= rvin_g_selection,
+	.vidioc_s_selection		= rvin_s_selection,
+
+	.vidioc_cropcap			= rvin_cropcap,
 
 	.vidioc_enum_input		= rvin_mc_enum_input,
 	.vidioc_g_input			= rvin_g_input,
