@@ -57,6 +57,10 @@ static const struct rvin_video_format rvin_formats[] = {
 		.bpp			= 2,
 	},
 	{
+		.fourcc			= V4L2_PIX_FMT_ABGR32,
+		.bpp			= 4,
+	},
+	{
 		.fourcc			= V4L2_PIX_FMT_XBGR32,
 		.bpp			= 4,
 	},
@@ -190,6 +194,12 @@ static int rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	if (vin->info->chip != RCAR_GEN3 &&
 	    pix->pixelformat == V4L2_PIX_FMT_NV12) {
 		vin_err(vin, "pixel format NV12 is supported from Gen3\n");
+		return -EINVAL;
+	}
+
+	if (vin->info->chip != RCAR_GEN3 &&
+	    pix->pixelformat == V4L2_PIX_FMT_ABGR32) {
+		vin_err(vin, "pixel format ARGB8888 is supported from Gen3\n");
 		return -EINVAL;
 	}
 
