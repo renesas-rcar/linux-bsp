@@ -193,9 +193,13 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 {
 	struct v4l2_subdev_format fmt = {
 		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
-		.pad = vin->digital->source_pad,
 	};
 	int ret;
+
+	if (!vin->digital)
+		return 0;
+
+	fmt.pad = vin->digital->source_pad;
 
 	ret = v4l2_subdev_call(vin_to_source(vin), pad, get_fmt, NULL, &fmt);
 	if (ret)
@@ -482,10 +486,15 @@ static int rvin_cropcap(struct file *file, void *priv,
 			struct v4l2_cropcap *crop)
 {
 	struct rvin_dev *vin = video_drvdata(file);
-	struct v4l2_subdev *sd = vin_to_source(vin);
+	struct v4l2_subdev *sd;
 
 	if (crop->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
+
+	if (vin->digital)
+		sd = vin_to_source(vin);
+	else
+		return 0;
 
 	return v4l2_subdev_call(sd, video, g_pixelaspect, &crop->pixelaspect);
 }
@@ -780,6 +789,11 @@ static const struct v4l2_ioctl_ops rvin_mc_ioctl_ops = {
 	.vidioc_g_fmt_vid_cap		= rvin_g_fmt_vid_cap,
 	.vidioc_s_fmt_vid_cap		= rvin_mc_s_fmt_vid_cap,
 	.vidioc_enum_fmt_vid_cap	= rvin_enum_fmt_vid_cap,
+
+	.vidioc_g_selection		= rvin_g_selection,
+	.vidioc_s_selection		= rvin_s_selection,
+
+	.vidioc_cropcap			= rvin_cropcap,
 
 	.vidioc_enum_input		= rvin_mc_enum_input,
 	.vidioc_g_input			= rvin_g_input,
