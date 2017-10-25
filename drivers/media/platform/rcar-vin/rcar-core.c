@@ -316,6 +316,7 @@ static int rvin_group_add_vin(struct rvin_dev *vin)
 	mutex_unlock(&vin->group->lock);
 
 	vin_dbg(vin, "I'm VIN number %d", ret);
+	vin->index = ret;
 
 	return 0;
 }
