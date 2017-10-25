@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -228,6 +228,20 @@ struct rvin_group {
 	unsigned long mask;
 	struct rvin_dev *vin[RCAR_VIN_NUM];
 	struct rvin_graph_entity csi[RVIN_CSI_MAX];
+};
+
+/**
+ * struct rvin_uds_regs - UDS register information
+ * @ctrl:		UDS Control register
+ * @scale:		UDS Scaling Factor register
+ * @pass_bwidth:	UDS Passband Register
+ * @clip_size:		UDS Output Size Clipping Register
+ */
+struct rvin_uds_regs {
+	unsigned long ctrl;
+	unsigned long scale;
+	unsigned long pass_bwidth;
+	unsigned long clip_size;
 };
 
 int rvin_dma_probe(struct rvin_dev *vin, int irq);
