@@ -325,7 +325,7 @@ static void wpf_prepare(struct vsp1_entity *entity,
 	/* Enable interrupts */
 	vsp1_dl_fragment_write(dlb, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
 	vsp1_dl_fragment_write(dlb, VI6_WPF_IRQ_ENB(wpf->entity.index),
-			       VI6_WFP_IRQ_ENB_DFEE);
+			       VI6_WFP_IRQ_ENB_DFEE | VI6_WFP_IRQ_ENB_UNDE);
 }
 
 static void wpf_configure(struct vsp1_entity *entity,
