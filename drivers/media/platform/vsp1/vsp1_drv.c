@@ -11,6 +11,10 @@
  * (at your option) any later version.
  */
 
+#ifdef CONFIG_VIDEO_RENESAS_DEBUG
+#define DEBUG
+#endif
+
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
@@ -41,6 +45,37 @@
 #include "vsp1_sru.h"
 #include "vsp1_uds.h"
 #include "vsp1_video.h"
+
+#define VSP1_UT_IRQ	0x01
+
+static unsigned int vsp1_debug;	/* 1 to enable debug output */
+module_param_named(debug, vsp1_debug, int, 0600);
+static int underrun_vspd[4];
+module_param_array(underrun_vspd, int, NULL, 0600);
+
+#ifdef CONFIG_VIDEO_RENESAS_DEBUG
+#define VSP1_IRQ_DEBUG(fmt, args...)					\
+	do {								\
+		if (unlikely(vsp1_debug & VSP1_UT_IRQ))			\
+			vsp1_ut_debug_printk(__func__, fmt, ##args);	\
+	} while (0)
+#else
+#define VSP1_IRQ_DEBUG(fmt, args...)
+#endif
+
+void vsp1_ut_debug_printk(const char *function_name, const char *format, ...)
+{
+	struct va_format vaf;
+	va_list args;
+
+	va_start(args, format);
+	vaf.fmt = format;
+	vaf.va = &args;
+
+	pr_debug("[vsp1 :%s] %pV", function_name, &vaf);
+
+	va_end(args);
+}
 
 static void __iomem *fcpv_reg[4];
 static const unsigned int fcpvd_offset[] = {
@@ -128,6 +163,7 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 	unsigned int i;
 	u32 status;
 	bool underrun = false;
+	u32 vsp_und_cnt = 0;
 
 	for (i = 0; i < vsp1->info->wpf_count; ++i) {
 		struct vsp1_rwpf *wpf = vsp1->wpf[i];
@@ -140,6 +176,13 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 
 		if (status & VI6_WFP_IRQ_STA_UND)
 			underrun = true;
+
+		if (vsp1_debug && underrun) {
+			vsp_und_cnt = ++underrun_vspd[vsp1->index];
+			VSP1_IRQ_DEBUG(
+				"Underrun occurred num[%d] at VSPD (%s)\n",
+				vsp_und_cnt, dev_name(vsp1->dev));
+		}
 
 		if (status & VI6_WFP_IRQ_STA_DFE) {
 			vsp1_pipeline_frame_end(wpf->pipe);
