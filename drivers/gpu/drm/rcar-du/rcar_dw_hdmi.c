@@ -1,7 +1,7 @@
 /*
  * R-Car Gen3 HDMI PHY
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
+ * Copyright (C) 2016-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -15,6 +15,8 @@
 #include <linux/platform_device.h>
 
 #include <drm/bridge/dw_hdmi.h>
+
+#include "rcar_du_drv.h"
 
 #define RCAR_HDMI_PHY_OPMODE_PLLCFG	0x06	/* Mode of operation and PLL dividers */
 #define RCAR_HDMI_PHY_PLLCURRGMPCTRL	0x10	/* PLL current and Gmp (conductance) */
@@ -62,8 +64,32 @@ static int rcar_hdmi_phy_configure(struct dw_hdmi *hdmi,
 	return 0;
 }
 
+static enum drm_mode_status rcar_hdmi_mode_valid(
+				struct drm_connector *connector,
+				const struct drm_display_mode *mode)
+{
+	struct drm_device *ddev = connector->dev;
+	struct rcar_du_device *rcdu = ddev->dev_private;
+
+	if (rcdu->info->gen != 3)
+		return MODE_OK;
+
+	if (mode->hdisplay > 3840 || mode->vdisplay > 2160)
+		return MODE_BAD;
+
+	if (mode->hdisplay == 3840 && mode->vdisplay == 2160 &&
+	    mode->vrefresh > 30)
+		return MODE_BAD;
+
+	if (mode->clock > 297000)
+		return MODE_BAD;
+
+	return MODE_OK;
+}
+
 static const struct dw_hdmi_plat_data rcar_dw_hdmi_plat_data = {
 	.configure_phy	= rcar_hdmi_phy_configure,
+	.mode_valid	= rcar_hdmi_mode_valid,
 };
 
 static int rcar_dw_hdmi_probe(struct platform_device *pdev)
