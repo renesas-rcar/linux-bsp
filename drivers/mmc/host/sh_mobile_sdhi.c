@@ -415,6 +415,28 @@ static unsigned int sh_mobile_sdhi_compare_scc_data(struct tmio_mmc_host *host)
 	return sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_SMPCMP);
 }
 
+static void sh_mobile_sdhi_disable_scc(struct mmc_host *mmc)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	struct sh_mobile_sdhi *priv = host_to_priv(host);
+
+	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
+			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
+
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_CKSEL,
+		       ~SH_MOBILE_SDHI_SCC_CKSEL_DTSEL &
+		       sd_scc_read32(host, priv,
+				     SH_MOBILE_SDHI_SCC_CKSEL));
+
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
+		       ~SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN &
+		       sd_scc_read32(host, priv,
+				     SH_MOBILE_SDHI_SCC_DTCNTL));
+
+	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
+			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
+}
+
 static void sh_mobile_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 					struct mmc_ios *ios)
 {
@@ -440,7 +462,15 @@ static void sh_mobile_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 
 		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET,
 			       host->tap_set / 2);
+	} else {
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
+			       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
+			       0x8 << SH_MOBILE_SDHI_SCC_DTCNTL_TAPNUM_SHIFT);
 	}
+
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_CKSEL,
+		       SH_MOBILE_SDHI_SCC_CKSEL_DTSEL |
+		       sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_CKSEL));
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
@@ -830,6 +860,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 		host->select_tuning	= sh_mobile_sdhi_select_tuning;
 		host->check_scc_error	= sh_mobile_sdhi_check_scc_error;
 		host->hw_reset		= sh_mobile_sdhi_hw_reset;
+		host->disable_scc	= sh_mobile_sdhi_disable_scc;
 		host->prepare_hs400_tuning =
 			sh_mobile_sdhi_prepare_hs400_tuning;
 		host->reset_hs400_mode = sh_mobile_sdhi_reset_hs400_mode;

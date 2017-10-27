@@ -254,6 +254,7 @@ struct tmio_mmc_host {
 	DECLARE_BITMAP(taps, BITS_PER_BYTE * sizeof(long));
 	unsigned int tap_num;
 	unsigned long tap_set;
+	void (*disable_scc)(struct mmc_host *mmc);
 	void (*prepare_hs400_tuning)(struct mmc_host *mmc, struct mmc_ios *ios);
 	void (*reset_hs400_mode)(struct mmc_host *mmc);
 
