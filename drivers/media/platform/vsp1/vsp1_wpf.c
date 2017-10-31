@@ -347,6 +347,16 @@ static void wpf_configure(struct vsp1_entity *entity,
 	unsigned int offset;
 	u32 outfmt = 0;
 
+	if (pipe->vmute_flag) {
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_SRCRPF,
+			       VI6_WPF_SRCRPF_VIRACT_MST);
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_HSZCLIP, 0);
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_VSZCLIP, 0);
+		vsp1_wpf_write(wpf, dlb, VI6_DPR_WPF_FPORCH(wpf->entity.index),
+			       VI6_DPR_WPF_FPORCH_FP_WPFN);
+		return;
+	}
+
 	/* Handle the per frame constants */
 	if (partition == 0) {
 		const unsigned int mask = BIT(WPF_CTRL_VFLIP)
