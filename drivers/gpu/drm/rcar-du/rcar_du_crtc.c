@@ -229,6 +229,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		unsigned long rate;
 		u32 extdiv;
 
+		clk_set_rate(rcrtc->extclock, mode_clock);
 		extclk = clk_get_rate(rcrtc->extclock);
 		if (rcdu->info->dpll_ch & (1 << rcrtc->index)) {
 			unsigned long target = mode_clock;
