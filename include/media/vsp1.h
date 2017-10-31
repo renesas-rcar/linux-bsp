@@ -1,7 +1,7 @@
 /*
  * vsp1.h  --  R-Car VSP1 API
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -49,6 +49,7 @@ struct vsp1_du_atomic_config {
 	struct v4l2_rect dst;
 	unsigned int alpha;
 	unsigned int zpos;
+	bool interlaced;
 };
 
 void vsp1_du_atomic_begin(struct device *dev, unsigned int pipe_index);
