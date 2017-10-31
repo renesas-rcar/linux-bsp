@@ -1,7 +1,7 @@
 /*
  * rcar_du_vsp.h  --  R-Car Display Unit VSP-Based Compositor
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -175,6 +175,12 @@ static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 		.zpos = state->state.zpos,
 	};
 	unsigned int i;
+
+	if (plane->plane.state->crtc->mode.flags
+				 & DRM_MODE_FLAG_INTERLACE)
+		cfg.interlaced = true;
+	else
+		cfg.interlaced = false;
 
 	cfg.src.left = state->state.src_x >> 16;
 	cfg.src.top = state->state.src_y >> 16;
