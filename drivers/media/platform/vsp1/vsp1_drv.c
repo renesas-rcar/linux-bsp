@@ -162,7 +162,7 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 	struct vsp1_device *vsp1 = data;
 	irqreturn_t ret = IRQ_NONE;
 	unsigned int i;
-	u32 status;
+	u32 status, disp_st;
 	bool underrun = false;
 	u32 vsp_und_cnt = 0;
 
@@ -174,6 +174,10 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 
 		status = vsp1_read(vsp1, VI6_WPF_IRQ_STA(i));
 		vsp1_write(vsp1, VI6_WPF_IRQ_STA(i), ~status & mask);
+
+		disp_st = vsp1_read(vsp1, VI6_DISP_IRQ_STA(i));
+		vsp1_write(vsp1, VI6_DISP_IRQ_STA(i),
+			   ~disp_st & VI6_DISP_IRQ_STA_DST);
 
 		if (status & VI6_WFP_IRQ_STA_UND)
 			underrun = true;
@@ -187,6 +191,11 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 
 		if (status & VI6_WFP_IRQ_STA_DFE) {
 			vsp1_pipeline_frame_end(wpf->pipe);
+			ret = IRQ_HANDLED;
+		}
+
+		if (disp_st & VI6_DISP_IRQ_STA_DST) {
+			vsp1_drm_display_start(vsp1, i, wpf->pipe);
 			ret = IRQ_HANDLED;
 		}
 	}
