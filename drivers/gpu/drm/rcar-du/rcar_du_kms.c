@@ -319,6 +319,40 @@ static void rcar_du_atomic_commit_tail(struct drm_atomic_state *old_state)
 	drm_atomic_helper_cleanup_planes(dev, old_state);
 }
 
+int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
+{
+	int ret = 0;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	struct drm_mode_config *config = &dev->mode_config;
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
+
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	state->crtcs->state = crtc_state;
+	state->crtcs->old_state = crtc->state;
+	state->crtcs->new_state = crtc_state;
+	state->crtcs->ptr = crtc;
+	crtc_state->state = state;
+	crtc_state->active = true;
+
+	drm_modeset_lock_all(dev);
+	state->acquire_ctx = config->acquire_ctx;
+	ret = drm_atomic_commit(state);
+	drm_modeset_unlock_all(dev);
+
+	if (ret != 0) {
+		drm_atomic_state_put(state);
+	}
+
+	return ret;
+}
+
 /* -----------------------------------------------------------------------------
  * Initialization
  */
