@@ -227,8 +227,35 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	};
 	int ret;
 
-	if (!vin_to_source(vin))
+	/* Get cropping size */
+	if (!vin_to_source(vin)) {
+		struct v4l2_subdev *sd;
+		struct media_pad *pad;
+
+		struct v4l2_subdev_format fmt = {
+			.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+		};
+
+		pad = media_entity_remote_pad(&vin->pad);
+		if (!pad)
+			return -EPIPE;
+
+		sd = media_entity_to_v4l2_subdev(pad->entity);
+		if (!sd)
+			return -EPIPE;
+
+		if (v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt))
+			return -EPIPE;
+
+		if (fmt.format.field == V4L2_FIELD_ALTERNATE)
+			pix->height = fmt.format.height * 2;
+		else
+			pix->height = fmt.format.height;
+
+		pix->width = fmt.format.width;
+
 		return 0;
+	}
 
 	ret = v4l2_subdev_call(vin_to_source(vin), pad, get_fmt, NULL, &fmt);
 	if (ret)
