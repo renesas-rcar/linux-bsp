@@ -124,6 +124,10 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 	unsigned int fdpll;
 	unsigned int m;
 	unsigned int n;
+	bool clk_high = false;
+
+	if (target > 148500000)
+		clk_high = true;
 
 	for (n = 39; n < 120; n++) {
 		for (m = 0; m < 4; m++) {
@@ -133,6 +137,9 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 				output = input * (n + 1) / (m + 1)
 				       / (fdpll + 1);
 				if (output >= 400000000)
+					continue;
+
+				if (clk_high && output < target)
 					continue;
 
 				diff = abs((long)output - (long)target);
