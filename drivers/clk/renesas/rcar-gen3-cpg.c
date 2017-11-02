@@ -82,6 +82,7 @@ struct cpg_z_clk {
 	void __iomem *reg;
 	void __iomem *kick_reg;
 	unsigned long mask;
+	unsigned int fixed_div;
 };
 
 #define to_z_clk(_hw)	container_of(_hw, struct cpg_z_clk, hw)
@@ -90,33 +91,36 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 					   unsigned long parent_rate)
 {
 	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
 
 	mult = 32 - FIELD_GET(CPG_FRQCRC_ZFC_MASK, clk_readl(zclk->reg));
-	return DIV_ROUND_CLOSEST_ULL(parent_rate * mult, 32);
+	return DIV_ROUND_CLOSEST_ULL(prate * mult, 32);
 }
 
 static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 				 unsigned long *parent_rate)
 {
-	unsigned long prate = *parent_rate;
+	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = *parent_rate / zclk->fixed_div;
 	unsigned int mult;
 
 	mult = div_u64((u64)rate * 32, prate);
 	mult = clamp(mult, 1U, 32U);
 
-	return *parent_rate * mult / 32;
+	return prate * mult / 32;
 }
 
 static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 			      unsigned long parent_rate)
 {
 	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
 	unsigned int i;
 	u32 val, kick;
 
-	mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, parent_rate);
+	mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, prate);
 	mult = clamp(mult, 1U, 32U);
 
 	if (clk_readl(zclk->kick_reg) & CPG_FRQCRB_KICK)
@@ -182,6 +186,7 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 	zclk->kick_reg = reg + CPG_FRQCRB;
 	zclk->hw.init = &init;
 	zclk->mask = mask;
+	zclk->fixed_div = 2; /* PLLVCO x 1/2 x SYS-CPU divider */
 
 	clk = clk_register(NULL, &zclk->hw);
 	if (IS_ERR(clk))
