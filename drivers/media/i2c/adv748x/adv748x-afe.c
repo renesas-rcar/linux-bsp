@@ -348,6 +348,7 @@ static int adv748x_afe_get_format(struct v4l2_subdev *sd,
 {
 	struct adv748x_afe *afe = adv748x_sd_to_afe(sd);
 	struct v4l2_mbus_framefmt *mbusformat;
+	v4l2_std_id std = 0;
 
 	/* It makes no sense to get the format of the analog sink pads */
 	if (sdformat->pad != ADV748X_AFE_SOURCE)
@@ -357,6 +358,9 @@ static int adv748x_afe_get_format(struct v4l2_subdev *sd,
 		mbusformat = v4l2_subdev_get_try_format(sd, cfg, sdformat->pad);
 		sdformat->format = *mbusformat;
 	} else {
+		/* Set std_id automatically */
+		adv748x_afe_querystd(sd, &std);
+		adv748x_afe_s_std(sd, std);
 		adv748x_afe_fill_format(afe, &sdformat->format);
 		adv748x_afe_propagate_pixelrate(afe);
 	}
