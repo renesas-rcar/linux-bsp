@@ -434,6 +434,11 @@ static int adv748x_hdmi_get_format(struct v4l2_subdev *sd,
 		mbusformat = v4l2_subdev_get_try_format(sd, cfg, sdformat->pad);
 		sdformat->format = *mbusformat;
 	} else {
+		struct v4l2_dv_timings timings;
+
+		adv748x_hdmi_query_dv_timings(&hdmi->sd, &timings);
+		hdmi->timings = timings;
+
 		adv748x_hdmi_fill_format(hdmi, &sdformat->format);
 		adv748x_hdmi_propagate_pixelrate(hdmi);
 	}
