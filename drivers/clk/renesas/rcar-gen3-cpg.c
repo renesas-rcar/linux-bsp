@@ -93,8 +93,10 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 	struct cpg_z_clk *zclk = to_z_clk(hw);
 	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
+	u32 val;
 
-	mult = 32 - FIELD_GET(CPG_FRQCRC_ZFC_MASK, clk_readl(zclk->reg));
+	val = clk_readl(zclk->reg) & ~zclk->mask;
+	mult = 32 - (val >> __bf_shf(zclk->mask));
 	return DIV_ROUND_CLOSEST_ULL(prate * mult, 32);
 }
 
