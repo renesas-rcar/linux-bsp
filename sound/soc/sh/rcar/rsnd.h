@@ -421,6 +421,7 @@ int rsnd_runtime_is_ssi_tdm(struct rsnd_dai_stream *io);
 struct rsnd_dai_stream {
 	char name[RSND_DAI_NAME_SIZE];
 	struct snd_pcm_substream *substream;
+	struct snd_pcm_hw_params *hw_params;
 	struct rsnd_mod *mod[RSND_MOD_MAX];
 	struct rsnd_dai_path_info *info; /* rcar_snd.h */
 	struct rsnd_dai *rdai;
@@ -436,6 +437,7 @@ struct rsnd_dai_stream {
 #define rsnd_io_to_mod_dvc(io)	rsnd_io_to_mod((io), RSND_MOD_DVC)
 #define rsnd_io_to_mod_cmd(io)	rsnd_io_to_mod((io), RSND_MOD_CMD)
 #define rsnd_io_to_rdai(io)	((io)->rdai)
+#define rsnd_io_to_hwparam(io)	((io)->hw_params)
 #define rsnd_io_to_priv(io)	(rsnd_rdai_to_priv(rsnd_io_to_rdai(io)))
 #define rsnd_io_is_play(io)	(&rsnd_io_to_rdai(io)->playback == io)
 #define rsnd_io_to_runtime(io) ((io)->substream ? \
