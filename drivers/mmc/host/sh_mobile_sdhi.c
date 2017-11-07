@@ -612,7 +612,12 @@ static bool sh_mobile_sdhi_check_scc_error(struct tmio_mmc_host *host)
 	struct sh_mobile_sdhi *priv;
 
 	if (!(host->mmc->ios.timing == MMC_TIMING_UHS_SDR104) &&
-	    !(host->mmc->ios.timing == MMC_TIMING_MMC_HS200))
+	    !(host->mmc->ios.timing == MMC_TIMING_MMC_HS200) &&
+	    !((host->mmc->ios.timing == MMC_TIMING_MMC_HS400) &&
+	      host->hs400_use_8tap))
+		return 0;
+
+	if (host->mmc->doing_retune == 1)
 		return 0;
 
 	priv = host_to_priv(host);
