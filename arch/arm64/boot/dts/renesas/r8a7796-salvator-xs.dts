@@ -69,6 +69,10 @@
 	mmngrbuf {
 		compatible = "renesas,mmngrbuf";
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 &du {
@@ -106,4 +110,12 @@
 
 &hdmi0_con {
 	remote-endpoint = <&rcar_dw_hdmi0_out>;
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
 };
