@@ -1373,6 +1373,12 @@ static void tmio_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	struct device *dev = &host->pdev->dev;
 	unsigned long flags;
 
+	if (!(ios->timing == MMC_TIMING_UHS_SDR104) &&
+	    !(ios->timing == MMC_TIMING_MMC_HS200) &&
+	    !(ios->timing == MMC_TIMING_MMC_HS400))
+		if (host->disable_scc)
+			host->disable_scc(mmc);
+
 	/* reset HS400 mode */
 	if (!(ios->timing == MMC_TIMING_MMC_HS400))
 		if (host->reset_hs400_mode)
