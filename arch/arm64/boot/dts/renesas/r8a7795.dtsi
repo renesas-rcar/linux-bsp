@@ -2845,11 +2845,33 @@
 			iommus = <&ipmmu_vi1 10>;
 		};
 
+		gsx_opp_table: gsx_opp_table {
+			compatible = "operating-points-v2";
+
+			opp-200000000 {
+				opp-hz = /bits/ 64 <200000000>;
+				opp-microvolt = <830000>;
+			};
+			opp-300000000 {
+				opp-hz = /bits/ 64 <300000000>;
+				opp-microvolt = <830000>;
+			};
+			opp-400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <830000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <830000>;
+			};
+		};
+
 		gsx: gsx@fd000000 {
 			compatible = "renesas,gsx";
 			reg = <0 0xfd000000 0 0x40000>;
 			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 112>;
+			operating-points-v2 = <&gsx_opp_table>;
 			power-domains = <&sysc R8A7795_PD_3DG_E>;
 			resets = <&cpg 112>;
 		};
