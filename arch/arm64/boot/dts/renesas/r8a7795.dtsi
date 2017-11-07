@@ -577,6 +577,27 @@
 		};
 	};
 
+	gsx_opp_table: gsx_opp_table {
+		compatible = "operating-points-v2";
+
+		opp-200000000 {
+			opp-hz = /bits/ 64 <200000000>;
+			opp-microvolt = <830000>;
+		};
+		opp-300000000 {
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <830000>;
+		};
+		opp-400000000 {
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <830000>;
+		};
+		opp-600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <830000>;
+		};
+	};
+
 	/* MSIOF reference clock - to be overridden by boards that provide it */
 	msiof_ref_clk: msiof-ref-clock {
 		compatible = "fixed-clock";
