@@ -4060,7 +4060,7 @@ static const unsigned int vin5_data16_mux[] = {
 	VI5_DATA6_MARK, VI5_DATA7_MARK,
 	VI5_DATA8_MARK,  VI5_DATA9_MARK,
 	VI5_DATA10_MARK, VI5_DATA11_MARK,
-	VI5_DATA12_MARK, VI5_DATA12_MARK,
+	VI5_DATA12_MARK, VI5_DATA13_MARK,
 	VI5_DATA14_MARK, VI5_DATA15_MARK,
 };
 static const unsigned int vin5_data8_sft8_pins[] = {
@@ -4072,7 +4072,7 @@ static const unsigned int vin5_data8_sft8_pins[] = {
 static const unsigned int vin5_data8_sft8_mux[] = {
 	VI5_DATA8_MARK,  VI5_DATA9_MARK,
 	VI5_DATA10_MARK, VI5_DATA11_MARK,
-	VI5_DATA12_MARK, VI5_DATA12_MARK,
+	VI5_DATA12_MARK, VI5_DATA13_MARK,
 	VI5_DATA14_MARK, VI5_DATA15_MARK,
 };
 static const unsigned int vin5_sync_pins[] = {
