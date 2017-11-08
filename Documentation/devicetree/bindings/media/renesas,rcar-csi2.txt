@@ -10,6 +10,7 @@ Mandatory properties
  - compatible: Must be one or more of the following
    - "renesas,r8a7795-csi2" for the R8A7795 device.
    - "renesas,r8a7796-csi2" for the R8A7796 device.
+   - "renesas,r8a77965-csi2" for the R8A77965 device.
 
  - reg: the register base and size for the device registers
  - interrupts: the interrupt for the device

@@ -132,6 +132,11 @@ struct phypll_hsfreqrange {
 	u16 reg;
 };
 
+struct phtw_freqrange {
+	unsigned int	mbps;
+	u32		phtw_reg;
+};
+
 static const struct phypll_hsfreqrange hsfreqrange_h3_v3h_m3n[] = {
 	{ .mbps =   80, .reg = 0x00 },
 	{ .mbps =   90, .reg = 0x10 },
@@ -228,6 +233,27 @@ static const struct phypll_hsfreqrange hsfreqrange_m3w_h3es1[] = {
 	{ .mbps =   0,	.reg = 0x00 },
 };
 
+static const struct phtw_freqrange phtw_m3n[] = {
+	{ .mbps =   80,	.phtw_reg = 0x018601f1 },
+	{ .mbps =   90,	.phtw_reg = 0x018601f1 },
+	{ .mbps =  100,	.phtw_reg = 0x018701f1 },
+	{ .mbps =  110,	.phtw_reg = 0x018701f1 },
+	{ .mbps =  120,	.phtw_reg = 0x018801f1 },
+	{ .mbps =  130,	.phtw_reg = 0x018801f1 },
+	{ .mbps =  140,	.phtw_reg = 0x018901f1 },
+	{ .mbps =  150,	.phtw_reg = 0x018901f1 },
+	{ .mbps =  160,	.phtw_reg = 0x018a01f1 },
+	{ .mbps =  170,	.phtw_reg = 0x018a01f1 },
+	{ .mbps =  180,	.phtw_reg = 0x018b01f1 },
+	{ .mbps =  190,	.phtw_reg = 0x018b01f1 },
+	{ .mbps =  205,	.phtw_reg = 0x018c01f1 },
+	{ .mbps =  220,	.phtw_reg = 0x018d01f1 },
+	{ .mbps =  235,	.phtw_reg = 0x018e01f1 },
+	{ .mbps =  250,	.phtw_reg = 0x018e01f1 },
+	/* guard */
+	{ .mbps =   0,	.phtw_reg = 0x00 },
+};
+
 /* PHY ESC Error Monitor */
 #define PHEERM_REG			0x74
 
@@ -276,9 +302,11 @@ enum rcar_csi2_pads {
 
 struct rcar_csi2_info {
 	const struct phypll_hsfreqrange *hsfreqrange;
+	const struct phtw_freqrange *phtw;
 	unsigned int csi0clkfreqrange;
 	bool clear_ulps;
 	bool have_phtw;
+	bool have_phtw_add;
 };
 
 struct rcar_csi2 {
@@ -349,10 +377,12 @@ static int rcar_csi2_wait_phy_start(struct rcar_csi2 *priv)
 }
 
 static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv, unsigned int bpp,
-				 u32 *phypll)
+				 u32 *phypll,
+				 u32 *phtw)
 {
 
 	const struct phypll_hsfreqrange *hsfreq;
+	const struct phtw_freqrange *phtwfreq;
 	struct media_pad *pad, *source_pad;
 	struct v4l2_subdev *source = NULL;
 	struct v4l2_ctrl *ctrl;
@@ -365,6 +395,7 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv, unsigned int bpp,
 		dev_err(priv->dev, "Could not find remote source pad\n");
 		return -ENODEV;
 	}
+
 	source = media_entity_to_v4l2_subdev(source_pad->entity);
 
 	dev_dbg(priv->dev, "Using source %s pad: %u\n", source->name,
@@ -394,6 +425,16 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv, unsigned int bpp,
 	dev_dbg(priv->dev, "PHY HSFREQRANGE requested %llu got %u Mbps\n", mbps,
 		hsfreq->mbps);
 
+	if (!priv->info->phtw) {
+		*phypll = PHYPLL_HSFREQRANGE(hsfreq->reg);
+		return 0;
+	}
+
+	for (phtwfreq = priv->info->phtw; phtwfreq->mbps != 0; phtwfreq++)
+		if (phtwfreq->mbps >= mbps)
+			break;
+
+	*phtw = phtwfreq->phtw_reg;
 	*phypll = PHYPLL_HSFREQRANGE(hsfreq->reg);
 
 	return 0;
@@ -402,7 +443,7 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv, unsigned int bpp,
 static int rcar_csi2_start(struct rcar_csi2 *priv)
 {
 	const struct rcar_csi2_format *format;
-	u32 phycnt, phypll, tmp;
+	u32 phycnt, phypll, tmp, phtw = 0;
 	u32 vcdt = 0, vcdt2 = 0;
 	unsigned int i;
 	int ret;
@@ -447,7 +488,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		return -EINVAL;
 	}
 
-	ret = rcar_csi2_calc_phypll(priv, format->bpp, &phypll);
+	ret = rcar_csi2_calc_phypll(priv, format->bpp, &phypll, &phtw);
 	if (ret)
 		return ret;
 
@@ -476,17 +517,32 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 
 	if (priv->info->have_phtw) {
 		/*
-		 * This is for H3 ES2.0
-		 *
-		 * NOTE: Additional logic is needed here when
-		 * support for V3H and/or M3-N is added
+		 * This is for H3 ES2.0 and M3N ES1.0
 		 */
 		rcar_csi2_write(priv, PHTW_REG, 0x01cc01e2);
 		rcar_csi2_write(priv, PHTW_REG, 0x010101e3);
-		rcar_csi2_write(priv, PHTW_REG, 0x010101e4);
+		if (!priv->info->have_phtw_add)
+			rcar_csi2_write(priv, PHTW_REG, 0x010101e4);
+		if (priv->info->have_phtw_add) {
+			rcar_csi2_write(priv, PHTW_REG, 0x011101e4);
+			rcar_csi2_write(priv, PHTW_REG, 0x010101e5);
+		}
 		rcar_csi2_write(priv, PHTW_REG, 0x01100104);
+
+		if (priv->info->have_phtw_add) {
+			if (phtw) {
+				rcar_csi2_write(priv, PHTW_REG, 0x01390105);
+				rcar_csi2_write(priv, PHTW_REG, phtw);
+			}
+			rcar_csi2_write(priv, PHTW_REG, 0x01380108);
+			rcar_csi2_write(priv, PHTW_REG, 0x01010100);
+			rcar_csi2_write(priv, PHTW_REG, 0x014b01ac);
+		}
 		rcar_csi2_write(priv, PHTW_REG, 0x01030100);
-		rcar_csi2_write(priv, PHTW_REG, 0x01800100);
+		if (priv->info->have_phtw_add)
+			rcar_csi2_write(priv, PHTW_REG, 0x01800107);
+		else
+			rcar_csi2_write(priv, PHTW_REG, 0x01800100);
 	}
 
 	/* Start */
@@ -510,6 +566,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 static void rcar_csi2_stop(struct rcar_csi2 *priv)
 {
 	rcar_csi2_write(priv, PHYCNT_REG, 0);
+	iowrite32(PHTC_TESTCLR, priv->base + PHTC_REG);
 
 	rcar_csi2_reset(priv);
 }
@@ -776,6 +833,15 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a7796 = {
 	.hsfreqrange = hsfreqrange_m3w_h3es1,
 };
 
+static const struct rcar_csi2_info rcar_csi2_info_r8a77965 = {
+	.hsfreqrange = hsfreqrange_h3_v3h_m3n,
+	.phtw = phtw_m3n,
+	.clear_ulps = true,
+	.have_phtw = true,
+	.have_phtw_add = true,
+	.csi0clkfreqrange = 0x20,
+};
+
 static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a7795-csi2",
@@ -784,6 +850,10 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a7796-csi2",
 		.data = &rcar_csi2_info_r8a7796,
+	},
+	{
+		.compatible = "renesas,r8a77965-csi2",
+		.data = &rcar_csi2_info_r8a77965,
 	},
 	{ /* sentinel */ },
 };
