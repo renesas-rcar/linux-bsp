@@ -780,10 +780,16 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	char *name;
 	int irq;
 	int ret;
+	int offset_index;
+
+	if (rcdu->info->skip_ch && (rcdu->info->skip_ch == (0x01 << index)))
+		offset_index = index + 1; /* offset for r8a77965 */
+	else
+		offset_index = index;
 
 	/* Get the CRTC clock and the optional external clock. */
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_CRTC_IRQ_CLOCK)) {
-		sprintf(clk_name, "du.%u", index);
+		sprintf(clk_name, "du.%u", offset_index);
 		name = clk_name;
 	} else {
 		name = NULL;
@@ -791,16 +797,17 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 
 	rcrtc->clock = devm_clk_get(rcdu->dev, name);
 	if (IS_ERR(rcrtc->clock)) {
-		dev_err(rcdu->dev, "no clock for CRTC %u\n", index);
+		dev_err(rcdu->dev, "no clock for CRTC %u\n", offset_index);
 		return PTR_ERR(rcrtc->clock);
 	}
 
-	sprintf(clk_name, "dclkin.%u", index);
+	sprintf(clk_name, "dclkin.%u", offset_index);
 	clk = devm_clk_get(rcdu->dev, clk_name);
 	if (!IS_ERR(clk)) {
 		rcrtc->extclock = clk;
 	} else if (PTR_ERR(rcrtc->clock) == -EPROBE_DEFER) {
-		dev_info(rcdu->dev, "can't get external clock %u\n", index);
+		dev_info(rcdu->dev, "can't get external clock %u\n",
+			 offset_index);
 		return -EPROBE_DEFER;
 	}
 
@@ -809,13 +816,13 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	spin_lock_init(&rcrtc->vblank_lock);
 
 	rcrtc->group = rgrp;
-	rcrtc->mmio_offset = mmio_offsets[index];
-	rcrtc->index = index;
+	rcrtc->mmio_offset = mmio_offsets[offset_index];
+	rcrtc->index = offset_index;
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
 		primary = &rcrtc->vsp->planes[rcrtc->vsp_pipe].plane;
 	else
-		primary = &rgrp->planes[index % 2].plane;
+		primary = &rgrp->planes[offset_index % 2].plane;
 
 	ret = drm_crtc_init_with_planes(rcdu->ddev, crtc, primary,
 					NULL, &crtc_funcs, NULL);
@@ -837,7 +844,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	}
 
 	if (irq < 0) {
-		dev_err(rcdu->dev, "no IRQ for CRTC %u\n", index);
+		dev_err(rcdu->dev, "no IRQ for CRTC %u\n", offset_index);
 		return irq;
 	}
 
@@ -845,7 +852,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 			       dev_name(rcdu->dev), rcrtc);
 	if (ret < 0) {
 		dev_err(rcdu->dev,
-			"failed to register IRQ for CRTC %u\n", index);
+			"failed to register IRQ for CRTC %u\n", offset_index);
 		return ret;
 	}
 
