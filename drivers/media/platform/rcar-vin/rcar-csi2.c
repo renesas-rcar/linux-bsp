@@ -492,8 +492,6 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		return -EINVAL;
 	}
 
-	csi_dbg(priv, "PHYPLL:0x%x\n", phypll);
-
 	ret = rcar_csi2_calc_phypll(priv, &phypll, &phtw);
 	if (ret) {
 		csi_err(priv, "Unsupported resolution (%dx%d%c)\n",
