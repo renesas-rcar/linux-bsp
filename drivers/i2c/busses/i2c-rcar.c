@@ -490,12 +490,8 @@ static void rcar_i2c_irq_recv(struct rcar_i2c_priv *priv, u32 msr)
 		priv->pos++;
 	}
 
-	/*
-	 * If next received data is the _LAST_, go to STOP phase. Might be
-	 * overwritten by REP START when setting up a new msg. Not elegant
-	 * but the only stable sequence for REP START I have found so far.
-	 */
-	if (priv->pos + 1 >= msg->len)
+	/* If next received data is the _LAST_, go to STOP phase. */
+	if (priv->pos + 1 == msg->len && (priv->flags & ID_LAST_MSG))
 		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_STOP);
 
 	if (priv->pos == msg->len && !(priv->flags & ID_LAST_MSG))
