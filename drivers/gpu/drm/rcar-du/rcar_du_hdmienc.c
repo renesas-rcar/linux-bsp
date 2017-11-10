@@ -220,8 +220,8 @@ static const struct dw_hdmi_multi_div rcar_du_hdmienc_multi_div[] = {
 
 static const struct dw_hdmi_phy_config rcar_du_hdmienc_phy_config[] = {
 	/*pixelclk   symbol   term   vlev*/
-	{ 165000000, 0x0c88, 0x0007, 0x000c},
-	{ 297000000, 0x03c8, 0x0004, 0x000c},
+	{ 165000000, 0x8c88, 0x0007, 0x0180},
+	{ 297000000, 0x83c8, 0x0004, 0x0180},
 	{ ~0UL,	     0x0000, 0x0000, 0x0000}
 };
 
