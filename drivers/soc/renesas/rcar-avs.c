@@ -102,6 +102,8 @@ static int __init rcar_avs_init(void)
 	volcond_val = ioread32(advadjp);
 	volcond_val &= VOLCOND_MASK;
 
+	iounmap(advadjp);
+
 	for (i = 0; i < AVS_MAX_VALUE; i++) {
 		if (volcond_val == BIT(i)) {
 			avs_val = i + 1; /* found AVS value */
