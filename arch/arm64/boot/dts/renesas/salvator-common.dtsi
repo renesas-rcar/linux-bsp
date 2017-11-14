@@ -38,6 +38,7 @@
 		serial0 = &scif2;
 		serial1 = &scif1;
 		ethernet0 = &avb;
+		i2c8 = &gpioi2c1;
 	};
 
 	chosen {
@@ -245,6 +246,16 @@
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <25000000>;
+	};
+
+	gpioi2c1: i2c-8 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "i2c-gpio";
+		gpios = <&gpio6 4 GPIO_ACTIVE_HIGH /* sda */
+			 &gpio6 21 GPIO_ACTIVE_HIGH /* scl */
+			>;
+		i2c-gpio,delay-us = <5>;
 	};
 };
 
