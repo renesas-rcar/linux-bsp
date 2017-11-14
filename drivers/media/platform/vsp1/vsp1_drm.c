@@ -487,6 +487,7 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int pipe_index)
 	struct vsp1_entity *entity;
 	struct vsp1_entity *next;
 	struct vsp1_dl_list *dl;
+	struct vsp1_dl_body *dlb;
 	const char *bru_name;
 	unsigned long flags;
 	unsigned int i;
@@ -496,6 +497,9 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int pipe_index)
 
 	/* Prepare the display list. */
 	dl = vsp1_dl_list_get(pipe->output->dlm);
+
+	/* Retrieve the default DLB from the list */
+	dlb = vsp1_dl_list_body(dl);
 
 	/* Count the number of enabled inputs and sort them by Z-order. */
 	pipe->num_inputs = 0;
@@ -549,24 +553,17 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int pipe_index)
 		/* Disconnect unused RPFs from the pipeline. */
 		if (entity->type == VSP1_ENTITY_RPF &&
 		    !pipe->inputs[entity->index]) {
-			vsp1_dl_list_write(dl, entity->route->reg,
-					   VI6_DPR_NODE_UNUSED);
+			vsp1_dl_fragment_write(dlb, entity->route->reg,
+					       VI6_DPR_NODE_UNUSED);
 
 			list_del_init(&entity->list_pipe);
 
 			continue;
 		}
 
-		vsp1_entity_route_setup(entity, pipe, dl);
-
-		if (entity->ops->configure) {
-			entity->ops->configure(entity, pipe, dl,
-					       VSP1_ENTITY_PARAMS_INIT);
-			entity->ops->configure(entity, pipe, dl,
-					       VSP1_ENTITY_PARAMS_RUNTIME);
-			entity->ops->configure(entity, pipe, dl,
-					       VSP1_ENTITY_PARAMS_PARTITION);
-		}
+		vsp1_entity_route_setup(entity, pipe, dlb);
+		vsp1_entity_prepare(entity, pipe, dlb);
+		vsp1_entity_configure(entity, pipe, dl, dlb, 0);
 	}
 
 	vsp1_dl_list_commit(dl);
