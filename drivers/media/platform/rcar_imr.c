@@ -94,6 +94,7 @@ struct imr_device {
 	struct v4l2_device      v4l2_dev;
 	struct video_device     video_dev;
 	struct v4l2_m2m_dev    *m2m_dev;
+	struct device          *alloc_dev;
 
 	/* ...do we need that counter really? framework counts fh structures for us - tbd */
 	int                     refcount;
@@ -116,6 +117,9 @@ struct imr_ctx {
 
 	/* ...cropping parameters (in pixels) */
 	u16                     crop[4];
+
+	/* ...solid color code */
+	u32                     color;
 
 	/* ...number of active configurations (debugging) */
 	u32                     cfg_num;
@@ -192,6 +196,7 @@ struct imr_ctx {
 
 #define IMR_TRICR                       0x6C
 #define IMR_TRIC_YCFORM                 (1 << 31)
+#define IMR_TRICR2                      0xA0
 
 #define IMR_UVDPOR                      0x70
 #define IMR_SUSR                        0x74
@@ -211,6 +216,8 @@ struct imr_ctx {
 #define IMR_CPDP_YLDPO_SHIFT            8
 #define IMR_CPDP_UBDPO_SHIFT            4
 #define IMR_CPDP_VRDPO_SHIFT            0
+
+#define IMR_TPOR                        0xF0
 
 /*******************************************************************************
  * Auxiliary helpers
@@ -404,11 +411,16 @@ static int imr_queue_setup(struct vb2_queue *vq,
 		return -EINVAL;
 	}
 
+	/* ...specify default allocator */
+	alloc_devs[0] = ctx->imr->alloc_dev;
+
 	return 0;
 }
 
 static int imr_buf_prepare(struct vb2_buffer *vb)
 {
+	struct imr_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+
 	/* ...unclear yet if we want to prepare a buffer somehow (cache invalidation? - tbd) */
 	return 0;
 }
@@ -441,9 +453,10 @@ static void imr_buf_finish(struct vb2_buffer *vb)
 	WARN_ON(!mutex_is_locked(&ctx->imr->mutex));
 
 	/* ...any special processing of completed buffer? - tbd */
-	v4l2_dbg(3, debug, &ctx->imr->v4l2_dev, "%sput buffer <0x%08llx> done\n",
+	v4l2_dbg(3, debug, &ctx->imr->v4l2_dev, "%sput buffer <0x%08llx> done (err: %d) (ctx=%p)\n",
 			q->is_output ? "in" : "out",
-			vb2_dma_contig_plane_dma_addr(vb, 0));
+			vb2_dma_contig_plane_dma_addr(vb, 0),
+			vb->state, ctx);
 
 	/* ...unref configuration pointer as needed */
 	if (q->is_output)
@@ -568,6 +581,11 @@ static inline u16 __imr_auto_sg_dg_tcm(u32 type)
 		(type & IMR_MAP_TCM ? IMR_TRIM_TCM : 0);
 }
 
+static inline u16 __imr_bfe_tme(u32 type)
+{
+	return (type & IMR_MAP_TME ? IMR_TRIM_TME : 0) | (type & IMR_MAP_BFE ? IMR_TRIM_BFE : 0);
+}
+
 static inline u16 __imr_uvdp(u32 type)
 {
 	return __IMR_MAP_UVDPOR(type) | (type & IMR_MAP_DDP ? (1 << 8) : 0);
@@ -674,15 +692,14 @@ static inline u32 * imr_tri_set_type_b(u32 *dl, void *map, struct imr_mesh *mesh
  ******************************************************************************/
 
 /* ...calculate length of a type "c" mapping */
-static inline u32 imr_tri_type_c_get_length(struct imr_vbo *vbo, int item_size)
+static inline u32 imr_tri_type_c_get_length(int num, int item_size)
 {
-	return ((4 + 3 * item_size) * vbo->num + 4);
+	return ((4 + 3 * item_size) * num + 4);
 }
 
 /* ...set a VBO mapping using absolute coordinates */
-static inline u32 * imr_tri_set_type_c(u32 *dl, void *map, struct imr_vbo *vbo, int item_size)
+static inline u32 * imr_tri_set_type_c(u32 *dl, void *map, int num, int item_size)
 {
-	int     num = vbo->num;
 	int     i;
 
 	/* ...prepare list of triangles to draw */
@@ -732,6 +749,7 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 	int     h = ctx->queue[0].fmt.height;
 	int     W = ctx->queue[1].fmt.width;
 	int     H = ctx->queue[1].fmt.height;
+	u32     tricr = ctx->color & 0xFFFFFF;
 
 	v4l2_dbg(2, debug, &ctx->imr->v4l2_dev, "setup %u*%u -> %u*%u mapping (type=%x)\n", w, h, W, H, type);
 
@@ -739,10 +757,16 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 	*dl++ = IMR_OP_WTS(IMR_TRIMCR, 0xFFFF);
 
 	/* ...set automatic source / destination coordinates generation flags */
-	*dl++ = IMR_OP_WTS(IMR_TRIMSR, __imr_auto_sg_dg_tcm(type) | IMR_TRIM_BFE | IMR_TRIM_TME);
+	*dl++ = IMR_OP_WTS(IMR_TRIMSR, __imr_auto_sg_dg_tcm(type) | __imr_bfe_tme(type));
+
+	/* ...that's probably not needed? - tbd */
+	*dl++ = IMR_OP_SYNCM;
 
 	/* ...set source / destination coordinate precision */
 	*dl++ = IMR_OP_WTS(IMR_UVDPOR, __imr_uvdp(type));
+
+	/* ...that's probably not needed? - tbd */
+	*dl++ = IMR_OP_SYNCM;
 
 	/* ...set luminance/chromacity correction parameters precision */
 	*dl++ = IMR_OP_WTS(IMR_CPDPOR, __imr_cpdp(type));
@@ -776,14 +800,12 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 		}
 	} else {
 		u16		src_fmt = (iflags & IMR_F_UV_SWAP ? IMR_CMR2_UVFORM : 0) | (iflags & IMR_F_YUV_SWAP ? IMR_CMR2_YUV422FORM : 0);
-		u32		dst_fmt = (oflags & IMR_F_YUV_SWAP ? IMR_TRIC_YCFORM : 0);
 
 		/* ...interleaved input; output is either interleaved or planar */
 		*dl++ = IMR_OP_WTS(IMR_CMRCSR2, IMR_CMR2_YUV422E | src_fmt);
 
 		/* ...destination is always YUYV or UYVY */
-		*dl++ = IMR_OP_WTL(IMR_TRICR, 1);
-		*dl++ = dst_fmt;
+		tricr |= (oflags & IMR_F_YUV_SWAP ? IMR_TRIC_YCFORM : 0);
 
 		/* ...set precision of Y/UV planes and required correction */
 		*dl++ = IMR_OP_WTS(IMR_CMRCSR, src_y_fmt | src_uv_fmt | dst_y_fmt | dst_uv_fmt | __imr_clce(type) | __imr_luce(type));
@@ -809,6 +831,10 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 	*dl++ = IMR_OP_WTL(IMR_SUSR, 2);
 	*dl++ = ((w - 2) << 16) | (w - 1);
 	*dl++ = h - 1;
+
+	/* ...set triangle single color */
+	*dl++ = IMR_OP_WTL(IMR_TRICR, 1);
+	*dl++ = tricr;
 
 	/* ...invoke subroutine for triangles drawing */
 	*dl++ = IMR_OP_GOSUB;
@@ -852,7 +878,7 @@ static int imr_ioctl_map(struct imr_ctx *ctx, struct imr_map_desc *desc)
 {
 	struct imr_device      *imr = ctx->imr;
 	struct imr_mesh        *mesh;
-	struct imr_vbo         *vbo;
+	int                     vbo_num;
 	struct imr_cfg         *cfg;
 	void                   *buf, *map;
 	u32                     type;
@@ -925,13 +951,6 @@ static int imr_ioctl_map(struct imr_ctx *ctx, struct imr_map_desc *desc)
 			tri_length = imr_tri_type_a_get_length(mesh, item_size);
 		}
 	} else {
-		/* ...assure we have proper VBO descriptor */
-		if (length < sizeof(struct imr_vbo)) {
-			v4l2_err(&imr->v4l2_dev, "invalid vbo specification size: %u\n", length);
-			ret = -EINVAL;
-			goto out;
-		}
-
 		/* ...make sure there is no automatic-generation flags */
 		if (type & (IMR_MAP_AUTODG | IMR_MAP_AUTOSG)) {
 			v4l2_err(&imr->v4l2_dev, "invalid auto-dg/sg flags: 0x%x\n", type);
@@ -939,22 +958,23 @@ static int imr_ioctl_map(struct imr_ctx *ctx, struct imr_map_desc *desc)
 			goto out;
 		}
 
-		vbo = (struct imr_vbo *)buf;
-		length -= sizeof(struct imr_vbo);
-		map = buf + sizeof(struct imr_vbo);
+		map = buf;
 
 		/* ...vertex is given with absolute coordinates */
 		item_size += 8;
 
+		/* ...calculate total number of triangles */
+		vbo_num = length / (3 * item_size);
+
 		/* ...check the length is sane */
-		if (length != vbo->num * 3 * item_size) {
-			v4l2_err(&imr->v4l2_dev, "invalid vbo size: %u*%u*3 != %u\n", vbo->num, item_size, length);
+		if (length != vbo_num * 3 * item_size) {
+			v4l2_err(&imr->v4l2_dev, "invalid vbo size: %u*%u*3 != %u\n", vbo_num, item_size, length);
 			ret = -EINVAL;
 			goto out;
 		}
 
 		/* ...calculate size of trangles drawing subroutine */
-		tri_length = imr_tri_type_c_get_length(vbo, item_size);
+		tri_length = imr_tri_type_c_get_length(vbo_num, item_size);
 	}
 
 	/* ...DL main program shall start with 8-byte aligned address */
@@ -975,12 +995,15 @@ static int imr_ioctl_map(struct imr_ctx *ctx, struct imr_map_desc *desc)
 	imr_cfg_unref(ctx, ctx->cfg);
 
 	/* ...create new configuration */
-	ctx->cfg = cfg = imr_cfg_create(ctx, dl_size, dl_start_offset);
+	cfg = imr_cfg_create(ctx, dl_size, dl_start_offset);
 	if (IS_ERR(cfg)) {
 		ret = PTR_ERR(cfg);
+		ctx->cfg = NULL;
 		v4l2_err(&imr->v4l2_dev, "failed to create configuration: %d\n", ret);
 		goto out;
 	}
+
+	ctx->cfg = cfg;
 
 	/* ...get pointer to the new display list */
 	dl_vaddr = cfg->dl_vaddr;
@@ -994,7 +1017,7 @@ static int imr_ioctl_map(struct imr_ctx *ctx, struct imr_map_desc *desc)
 			imr_tri_set_type_a(dl_vaddr, map, mesh, item_size);
 		}
 	} else {
-		imr_tri_set_type_c(dl_vaddr, map, vbo, item_size);
+		imr_tri_set_type_c(dl_vaddr, map, vbo_num, item_size);
 	}
 
 	/* ...prepare main DL-program */
@@ -1018,6 +1041,66 @@ out:
 	kfree(buf);
 
 	return ret;
+}
+
+/* ...set mapping data (function called with video device lock held) */
+static int imr_ioctl_map_raw(struct imr_ctx *ctx, struct imr_map_desc *desc)
+{
+	struct imr_device      *imr = ctx->imr;
+	u32                     type = desc->type;
+	u32                     length = desc->size;
+	struct imr_cfg         *cfg;
+	void                   *dl_vaddr;
+	u32                     dl_size;
+	u32                     dl_start_offset;
+	dma_addr_t              dl_dma_addr;
+
+	/* ...calculate main routine length */
+	dl_size = imr_dl_program_length(ctx);
+	if (!dl_size) {
+		v4l2_err(&imr->v4l2_dev, "format configuration error\n");
+		return -EINVAL;
+	}
+
+	/* ...unref current configuration (will not be used by subsequent jobs) */
+	imr_cfg_unref(ctx, ctx->cfg);
+
+	/* ...create new configuration (starts with zero offset) */
+	cfg = imr_cfg_create(ctx, dl_size, 0);
+	if (IS_ERR(cfg)) {
+		ctx->cfg = NULL;
+		v4l2_err(&imr->v4l2_dev, "failed to create configuration: %ld\n", PTR_ERR(cfg));
+		return PTR_ERR(cfg);
+	}
+
+	ctx->cfg = cfg;
+
+	/* ...get pointer to the new display list */
+	dl_vaddr = cfg->dl_vaddr;
+
+	/* ...prepare main DL-program */
+	imr_dl_program_setup(ctx, cfg, type, dl_vaddr, (u32)(uintptr_t)desc->data);
+
+	/* ...update cropping parameters */
+	cfg->dst_subpixel = (type & IMR_MAP_DDP ? 2 : 0);
+
+	/* ...display list updated successfully */
+	v4l2_dbg(2, debug, &ctx->imr->v4l2_dev, "display-list created: #%u[%08X]:%u[%u]\n",
+		cfg->id, (u32)dl_dma_addr, dl_size, 0);
+
+	if (debug >= 4)
+		print_hex_dump_bytes("DL-", DUMP_PREFIX_OFFSET, dl_vaddr + dl_start_offset, dl_size - dl_start_offset);
+
+	/* ...success */
+	return 0;
+}
+
+/* ...set mapping data (function called with video device lock held) */
+static int imr_ioctl_color(struct imr_ctx *ctx, u32 color)
+{
+	ctx->color = color;
+
+	return 0;
 }
 
 /*******************************************************************************
@@ -1183,7 +1266,7 @@ static int imr_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 	WARN_ON(!mutex_is_locked(&ctx->imr->mutex));
 
 	/* ...verify the configuration is complete */
-	if (!V4L2_TYPE_IS_OUTPUT(buf->type) && !ctx->cfg) {
+	if (!ctx->cfg) {
 		v4l2_err(&ctx->imr->v4l2_dev, "stream configuration is not complete\n");
 		return -EINVAL;
 	}
@@ -1265,6 +1348,14 @@ static long imr_default(struct file *file, void *fh, bool valid_prio, unsigned i
 		/* ...set mesh data */
 		return imr_ioctl_map(ctx, (struct imr_map_desc *)arg);
 
+	case VIDIOC_IMR_MESH_RAW:
+		/* ...set mesh data */
+		return imr_ioctl_map_raw(ctx, (struct imr_map_desc *)arg);
+
+	case VIDIOC_IMR_COLOR:
+		/* ...set solid color code */
+		return imr_ioctl_color(ctx, *(u32 *)arg);
+
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -1325,6 +1416,9 @@ static int imr_open(struct file *file)
 
 	/* ...set default cropping parameters */
 	ctx->crop[1] = ctx->crop[3] = 0x3FF;
+
+	/* ...set default color */
+	ctx->color = 0x808080;
 
 	/* ...initialize M2M processing context */
 	ctx->m2m_ctx = v4l2_m2m_ctx_init(imr->m2m_dev, ctx, imr_queue_init);
@@ -1418,7 +1512,10 @@ static unsigned int imr_poll(struct file *file, struct poll_table_struct *wait)
 		return -ERESTARTSYS;
 
 	res = v4l2_m2m_poll(file, ctx->m2m_ctx, wait);
+
 	mutex_unlock(&imr->mutex);
+
+	v4l2_dbg(3, debug, &imr->v4l2_dev, "poll result: %X (ctx=%p)\n", res, ctx);
 
 	return res;
 }
@@ -1453,7 +1550,6 @@ static const struct v4l2_file_operations imr_fops = {
  * M2M device interface
  ******************************************************************************/
 
-#if 0
 /* ...job cleanup function */
 static void imr_cleanup(struct imr_ctx *ctx)
 {
@@ -1473,17 +1569,16 @@ static void imr_cleanup(struct imr_ctx *ctx)
 	/* ...release lock before we mark current job as finished */
 	spin_unlock_irqrestore(&imr->lock, flags);
 }
-#endif
 
 /* ...job execution function */
 static void imr_device_run(void *priv)
 {
-	struct imr_ctx     *ctx = priv;
-	struct imr_device  *imr = ctx->imr;
-	struct imr_cfg     *cfg;
-	struct vb2_buffer  *src_buf, *dst_buf;
-	u32                 src_addr, dst_addr;
-	unsigned long       flags;
+	struct imr_ctx         *ctx = priv;
+	struct imr_device      *imr = ctx->imr;
+	struct imr_cfg         *cfg;
+	struct vb2_v4l2_buffer *src_buf, *dst_buf;
+	u32                     src_addr, dst_addr;
+	unsigned long           flags;
 
 	v4l2_dbg(3, debug, &imr->v4l2_dev, "run next job...\n");
 
@@ -1494,8 +1589,11 @@ static void imr_device_run(void *priv)
 	src_buf = v4l2_m2m_next_src_buf(ctx->m2m_ctx);
 	dst_buf = v4l2_m2m_next_dst_buf(ctx->m2m_ctx);
 
+	/* ...put source/destination buffers sequence numbers */
+	dst_buf->sequence = src_buf->sequence = ctx->sequence++;
+
 	/* ...take configuration pointer associated with input buffer */
-	cfg = to_imr_buffer(to_vb2_v4l2_buffer(src_buf))->cfg;
+	cfg = to_imr_buffer(src_buf)->cfg;
 
 	/* ...cancel software reset state as needed */
 	iowrite32(0, imr->mmio + IMR_CR);
@@ -1507,8 +1605,8 @@ static void imr_device_run(void *priv)
 	iowrite32(ctx->crop[3] << cfg->dst_subpixel, imr->mmio + IMR_YMAXR);
 
 	/* ...adjust source/destination parameters of the program (interleaved / semiplanar) */
-	*cfg->src_pa_ptr[0] = src_addr = (u32)vb2_dma_contig_plane_dma_addr(src_buf, 0);
-	*cfg->dst_pa_ptr[0] = dst_addr = (u32)vb2_dma_contig_plane_dma_addr(dst_buf, 0);
+	*cfg->src_pa_ptr[0] = src_addr = (u32)vb2_dma_contig_plane_dma_addr(&src_buf->vb2_buf, 0);
+	*cfg->dst_pa_ptr[0] = dst_addr = (u32)vb2_dma_contig_plane_dma_addr(&dst_buf->vb2_buf, 0);
 
 	/* ...adjust source/destination parameters of the UV-plane as needed */
 	if (cfg->src_pa_ptr[1] && cfg->dst_pa_ptr[1]) {
@@ -1529,6 +1627,9 @@ static void imr_device_run(void *priv)
 	/* ...set display list address */
 	iowrite32(cfg->dl_dma_addr + cfg->dl_start_offset, imr->mmio + IMR_DLSAR);
 
+	/* ...enable texture prefetching */
+	iowrite32(0xACCE5501, imr->mmio + IMR_TPOR);
+
 	/* ...explicitly flush any pending write operations (don't need that, I guess) */
 	wmb();
 
@@ -1536,7 +1637,7 @@ static void imr_device_run(void *priv)
 	iowrite32(IMR_CR_RS, imr->mmio + IMR_CR);
 
 	/* ...timestamp input buffer */
-	src_buf->timestamp = ktime_get_ns();
+	src_buf->vb2_buf.timestamp = ktime_get_ns();
 
 	/* ...unlock device access */
 	spin_unlock_irqrestore(&imr->lock, flags);
@@ -1633,13 +1734,14 @@ static irqreturn_t imr_irq_handler(int irq, void *data)
 			dst_buf->timecode = src_buf->timecode;
 		dst_buf->flags = src_buf->flags & (V4L2_BUF_FLAG_TIMECODE | V4L2_BUF_FLAG_KEYFRAME |
 			 V4L2_BUF_FLAG_PFRAME | V4L2_BUF_FLAG_BFRAME | V4L2_BUF_FLAG_TSTAMP_SRC_MASK);
-		dst_buf->sequence = src_buf->sequence = ctx->sequence++;
+		//dst_buf->sequence = src_buf->sequence = ctx->sequence++;
+
 		v4l2_m2m_buf_done(src_buf, VB2_BUF_STATE_DONE);
 		v4l2_m2m_buf_done(dst_buf, VB2_BUF_STATE_DONE);
 
-		v4l2_dbg(3, debug, &imr->v4l2_dev, "buffers <0x%08x,0x%08x> done\n",
+		v4l2_dbg(3, debug, &imr->v4l2_dev, "buffers <0x%08x,0x%08x> done (ctx=%p)\n",
 			(u32)vb2_dma_contig_plane_dma_addr(&src_buf->vb2_buf, 0),
-			(u32)vb2_dma_contig_plane_dma_addr(&dst_buf->vb2_buf, 0));
+			(u32)vb2_dma_contig_plane_dma_addr(&dst_buf->vb2_buf, 0), ctx);
 	} else {
 		/* ...operation completed in error; no way to understand what exactly went wrong */
 		v4l2_m2m_buf_done(src_buf, VB2_BUF_STATE_ERROR);
@@ -1667,6 +1769,8 @@ handled:
 /*******************************************************************************
  * Device probing / removal interface
  ******************************************************************************/
+
+static struct class *imr_alloc_class;
 
 static int imr_probe(struct platform_device *pdev)
 {
@@ -1727,6 +1831,26 @@ static int imr_probe(struct platform_device *pdev)
 		goto device_register_rollback;
 	}
 
+	if (!imr_alloc_class) {
+		imr_alloc_class = class_create(THIS_MODULE, "imr-alloc");
+		if (IS_ERR(imr_alloc_class)) {
+			v4l2_err(&imr->v4l2_dev, "Failed to create alloc-device class\n");
+			ret = PTR_ERR(imr_alloc_class);
+			goto m2m_init_rollback;
+		}
+	}
+
+	struct device *adev = device_create(imr_alloc_class, imr->dev, MKDEV(0, 0), NULL, "%s_alloc", dev_name(&pdev->dev));
+	if (IS_ERR(adev)) {
+		v4l2_err(&imr->v4l2_dev, "Failed to create alloc-device\n");
+		ret = PTR_ERR(adev);
+		goto m2m_init_rollback;
+	}
+	adev->dma_mask = &adev->coherent_dma_mask;
+	adev->coherent_dma_mask = DMA_BIT_MASK(32);
+	arch_setup_dma_ops(adev, 0, DMA_BIT_MASK(32) + 1, NULL, true);
+	imr->alloc_dev = adev;
+
 	strlcpy(imr->video_dev.name, dev_name(&pdev->dev), sizeof(imr->video_dev.name));
 	imr->video_dev.fops         = &imr_fops;
 	imr->video_dev.ioctl_ops    = &imr_ioctl_ops;
@@ -1765,6 +1889,7 @@ static int imr_remove(struct platform_device *pdev)
 
 	//pm_runtime_disable(imr->v4l2_dev.dev);
 	video_unregister_device(&imr->video_dev);
+	//device_destroy(imr->alloc_dev, MKDEV(0, 0));
 	v4l2_m2m_release(imr->m2m_dev);
 	v4l2_device_unregister(&imr->v4l2_dev);
 
