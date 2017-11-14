@@ -48,6 +48,12 @@ struct imr_map_desc {
 /* ...vertex clockwise-mode order */
 #define IMR_MAP_TCM                     (1 << 5)
 
+/* ...texture mapping enable flag */
+#define IMR_MAP_TME                     (1 << 6)
+
+/* ...bilinear filtration enable flag */
+#define IMR_MAP_BFE                     (1 << 7)
+
 /* ...source coordinate decimal point position bit index */
 #define __IMR_MAP_UVDPOR_SHIFT          8
 #define __IMR_MAP_UVDPOR(v)             (((v) >> __IMR_MAP_UVDPOR_SHIFT) & 0x7)
@@ -81,18 +87,12 @@ struct imr_mesh {
 
 }   __attribute__((packed));
 
-/* ...VBO descriptor */
-struct imr_vbo {
-	/* ...number of triangles */
-	u16             num;
-
-}   __attribute__((packed));
-
-
 /*******************************************************************************
  * Private IOCTL codes
  ******************************************************************************/
 
 #define VIDIOC_IMR_MESH                 _IOW('V', BASE_VIDIOC_PRIVATE + 0, struct imr_map_desc)
+#define VIDIOC_IMR_MESH_RAW             _IOW('V', BASE_VIDIOC_PRIVATE + 1, struct imr_map_desc)
+#define VIDIOC_IMR_COLOR                _IOW('V', BASE_VIDIOC_PRIVATE + 2, u32)
 
 #endif  /* RCAR_IMR_USER_H */
