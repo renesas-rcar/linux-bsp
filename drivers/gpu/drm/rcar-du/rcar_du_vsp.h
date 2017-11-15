@@ -46,6 +46,9 @@ static inline struct rcar_du_vsp_plane *to_rcar_vsp_plane(struct drm_plane *p)
  * @sg_tables: scatter-gather tables for the frame buffer memory
  * @alpha: value of the plane alpha property
  * @zpos: value of the plane zpos property
+ * @colorkey: value of the color for which to apply colorkey_alpha, bit 24
+ * tells if it is enabled or not
+ * @colorkey_alpha: alpha to be used for pixels with color equal to colorkey
  */
 struct rcar_du_vsp_plane_state {
 	struct drm_plane_state state;
@@ -55,6 +58,8 @@ struct rcar_du_vsp_plane_state {
 
 	unsigned int alpha;
 	unsigned int zpos;
+	u32 colorkey;
+	u32 colorkey_alpha;
 };
 
 static inline struct rcar_du_vsp_plane_state *
