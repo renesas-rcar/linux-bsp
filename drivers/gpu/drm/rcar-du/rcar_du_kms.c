@@ -671,6 +671,9 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 		ret = rcar_du_crtc_create(rgrp, i);
 		if (ret < 0)
 			return ret;
+
+		rcar_du_pre_group_set_routing(rcdu->crtcs[i].group,
+					      &rcdu->crtcs[i]);
 	}
 
 	/* Initialize the encoders. */
