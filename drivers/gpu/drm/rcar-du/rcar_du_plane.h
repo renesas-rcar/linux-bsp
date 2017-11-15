@@ -1,7 +1,7 @@
 /*
  * rcar_du_plane.h  --  R-Car Display Unit Planes
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -44,6 +44,12 @@ static inline struct rcar_du_plane *to_rcar_plane(struct drm_plane *plane)
 {
 	return container_of(plane, struct rcar_du_plane, plane);
 }
+
+#define RCAR_DU_COLORKEY_NONE		(0 << 24)
+#define RCAR_DU_COLORKEY_MASK		BIT(24)
+#define RCAR_DU_COLORKEY_EN_MASK	RCAR_DU_COLORKEY_MASK
+#define RCAR_DU_COLORKEY_COLOR_MASK	0xFFFFFF
+#define RCAR_DU_COLORKEY_ALPHA_MASK	0xFF
 
 /**
  * struct rcar_du_plane_state - Driver-specific plane state
