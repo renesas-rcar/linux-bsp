@@ -216,8 +216,15 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	}
 
 	vsp1_rpf_write(rpf, dlb, VI6_RPF_MSK_CTRL, 0);
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_CKEY_CTRL, 0);
 
+	if (rpf->colorkey_en) {
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_CKEY_SET0,
+			       (rpf->colorkey_alpha << 24) | rpf->colorkey);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_CKEY_CTRL,
+			       VI6_RPF_CKEY_CTRL_SAPE0);
+	} else {
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_CKEY_CTRL, 0);
+	}
 }
 
 static void vsp1_rpf_configure_autofld(struct vsp1_rwpf *rpf,
