@@ -67,6 +67,9 @@ struct vsp1_du_atomic_config {
 	struct v4l2_rect dst;
 	unsigned int alpha;
 	unsigned int zpos;
+	u32 colorkey;
+	u32 colorkey_alpha;
+	bool colorkey_en;
 	bool interlaced;
 };
 
