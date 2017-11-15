@@ -867,7 +867,9 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int pipe_index,
 	else
 		rpf->format.plane_fmt[1].bytesperline = cfg->pitch;
 	rpf->alpha = cfg->alpha;
-
+	rpf->colorkey = cfg->colorkey;
+	rpf->colorkey_en = cfg->colorkey_en;
+	rpf->colorkey_alpha = cfg->colorkey_alpha;
 	rpf->interlaced = cfg->interlaced;
 
 	if ((vsp1->ths_quirks & VSP1_AUTO_FLD_NOT_SUPPORT) &&
