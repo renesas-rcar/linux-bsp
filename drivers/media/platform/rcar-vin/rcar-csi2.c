@@ -222,14 +222,14 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a77965[] = {
 	{ .mbps =  130,	.reg = 0x11, .phtw_reg = 0x018801f1 },
 	{ .mbps =  140,	.reg = 0x21, .phtw_reg = 0x018901f1 },
 	{ .mbps =  150,	.reg = 0x31, .phtw_reg = 0x018901f1 },
-	{ .mbps =  160,	.reg = 0x02, .phtw_reg = 0x019001f1 },
-	{ .mbps =  170,	.reg = 0x12, .phtw_reg = 0x019001f1 },
-	{ .mbps =  180,	.reg = 0x22, .phtw_reg = 0x019101f1 },
-	{ .mbps =  190,	.reg = 0x32, .phtw_reg = 0x019101f1 },
-	{ .mbps =  205,	.reg = 0x03, .phtw_reg = 0x019201f1 },
-	{ .mbps =  220,	.reg = 0x13, .phtw_reg = 0x019201f1 },
-	{ .mbps =  235,	.reg = 0x23, .phtw_reg = 0x019401f1 },
-	{ .mbps =  250,	.reg = 0x33, .phtw_reg = 0x019401f1 },
+	{ .mbps =  160,	.reg = 0x02, .phtw_reg = 0x018a01f1 },
+	{ .mbps =  170,	.reg = 0x12, .phtw_reg = 0x018a01f1 },
+	{ .mbps =  180,	.reg = 0x22, .phtw_reg = 0x018b01f1 },
+	{ .mbps =  190,	.reg = 0x32, .phtw_reg = 0x018b01f1 },
+	{ .mbps =  205,	.reg = 0x03, .phtw_reg = 0x018c01f1 },
+	{ .mbps =  220,	.reg = 0x13, .phtw_reg = 0x018d01f1 },
+	{ .mbps =  235,	.reg = 0x23, .phtw_reg = 0x018e01f1 },
+	{ .mbps =  250,	.reg = 0x33, .phtw_reg = 0x018e01f1 },
 	{ .mbps =  275,	.reg = 0x04, .phtw_reg = 0 },
 	{ .mbps =  300,	.reg = 0x14, .phtw_reg = 0 },
 	{ .mbps =  325,	.reg = 0x25, .phtw_reg = 0 },
@@ -515,13 +515,25 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 		  priv->base + LSWAP_REG);
 
 	if (priv->ths_quirks & CSI2_PHY_ADD_INIT) {
-		/* Set PHY Test Interface Write Register in R-Car H3(ES2.0) */
+		/* Set PHY Test Interface Write Register */
 		iowrite32(0x01cc01e2, priv->base + PHTW_REG);
 		iowrite32(0x010101e3, priv->base + PHTW_REG);
-		iowrite32(0x010101e4, priv->base + PHTW_REG);
+		if (!(priv->ths_quirks & CSI2_PHTW_ADD_INIT))
+			iowrite32(0x010101e4, priv->base + PHTW_REG);
+		if (priv->ths_quirks & CSI2_PHTW_ADD_INIT) {
+			iowrite32(0x011101e4, priv->base + PHTW_REG);
+			iowrite32(0x010101e5, priv->base + PHTW_REG);
+		}
 		iowrite32(0x01100104, priv->base + PHTW_REG);
-		if ((priv->ths_quirks & CSI2_PHTW_ADD_INIT) && phtw)
-			iowrite32(phtw, priv->base + PHTW_REG);
+		if ((priv->ths_quirks & CSI2_PHTW_ADD_INIT)) {
+			if (phtw) {
+				iowrite32(0x01390105, priv->base + PHTW_REG);
+				iowrite32(phtw, priv->base + PHTW_REG);
+			}
+			iowrite32(0x01380108, priv->base + PHTW_REG);
+			iowrite32(0x01010100, priv->base + PHTW_REG);
+			iowrite32(0x014b01ac, priv->base + PHTW_REG);
+		}
 		iowrite32(0x01030100, priv->base + PHTW_REG);
 		if (priv->ths_quirks & CSI2_PHTW_ADD_INIT)
 			iowrite32(0x01800107, priv->base + PHTW_REG);
@@ -553,6 +565,7 @@ static int rcar_csi2_start(struct rcar_csi2 *priv)
 static void rcar_csi2_stop(struct rcar_csi2 *priv)
 {
 	iowrite32(0, priv->base + PHYCNT_REG);
+	iowrite32(PHTC_TESTCLR, priv->base + PHTC_REG);
 
 	rcar_csi2_reset(priv);
 }
