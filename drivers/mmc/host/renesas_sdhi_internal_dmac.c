@@ -138,30 +138,31 @@ renesas_sdhi_internal_dmac_start_dma(struct tmio_mmc_host *host,
 {
 	struct scatterlist *sg = host->sg_ptr;
 	u32 dtran_mode = DTRAN_MODE_BUS_WID_TH | DTRAN_MODE_ADDR_MODE;
-	enum dma_data_direction dir;
 	int ret;
 	u32 irq_mask;
 
 	/* This DMAC cannot handle if sg_len is not 1 */
 	WARN_ON(host->sg_len > 1);
 
-	/* This DMAC cannot handle if buffer is not 8-bytes alignment */
-	if (!IS_ALIGNED(sg->offset, 8))
+	ret = dma_map_sg(&host->pdev->dev, sg, host->sg_len,
+			 mmc_get_dma_dir(data));
+	if (ret == 0)
 		goto force_pio;
+
+	/* This DMAC cannot handle if buffer is not 8-bytes alignment */
+	if (!IS_ALIGNED(sg_dma_address(sg), 8)) {
+		dma_unmap_sg(&host->pdev->dev, sg, host->sg_len,
+			     mmc_get_dma_dir(data));
+		goto force_pio;
+	}
 
 	if (data->flags & MMC_DATA_READ) {
 		dtran_mode |= DTRAN_MODE_CH_NUM_CH1;
-		dir = DMA_FROM_DEVICE;
 		irq_mask = TMIO_STAT_RXRDY;
 	} else {
 		dtran_mode |= DTRAN_MODE_CH_NUM_CH0;
-		dir = DMA_TO_DEVICE;
 		irq_mask = TMIO_STAT_TXRQ;
 	}
-
-	ret = dma_map_sg(&host->pdev->dev, sg, host->sg_len, dir);
-	if (ret == 0)
-		goto force_pio;
 
 	renesas_sdhi_internal_dmac_enable_dma(host, true);
 
@@ -172,7 +173,7 @@ renesas_sdhi_internal_dmac_start_dma(struct tmio_mmc_host *host,
 	renesas_sdhi_internal_dmac_dm_write(host, DM_CM_DTRAN_MODE,
 					    dtran_mode);
 	renesas_sdhi_internal_dmac_dm_write(host, DM_DTRAN_ADDR,
-					    sg->dma_address);
+					    sg_dma_address(sg));
 
 	return;
 
