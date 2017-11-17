@@ -96,7 +96,7 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 	unsigned int mult;
 	u32 val;
 
-	val = clk_readl(zclk->reg) & ~zclk->mask;
+	val = clk_readl(zclk->reg) & zclk->mask;
 	mult = 32 - (val >> __bf_shf(zclk->mask));
 	return DIV_ROUND_CLOSEST_ULL(prate * mult, 32);
 }
