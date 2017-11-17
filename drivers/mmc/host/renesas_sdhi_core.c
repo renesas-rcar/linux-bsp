@@ -60,6 +60,8 @@ static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	  .data = (void *)DTRAEND1_SET_BIT17, },
 	{ .soc_id = "r8a7796", .revision = "ES1.1",
 	  .data = 0, },
+	{ .soc_id = "r8a77965", .revision = "ES1.0",
+	  .data = 0, },
 	{/*sentinel*/},
 };
 
