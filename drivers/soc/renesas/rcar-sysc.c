@@ -21,6 +21,7 @@
 #include <linux/iopoll.h>
 #include <linux/soc/renesas/rcar-sysc.h>
 #include <linux/sys_soc.h>
+#include <linux/syscore_ops.h>
 
 #include "rcar-sysc.h"
 
@@ -89,8 +90,7 @@ const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
 	{
 		.soc_id = "r8a77965", .revision = "ES1.0",
 		.data = (void *)(BIT(R8A77965_PD_A3VP) | BIT(R8A77965_PD_CR7)
-			| BIT(R8A77965_PD_A3VC) | BIT(R8A77965_PD_A2VC1)
-			| BIT(R8A77965_PD_A3IR)),
+			| BIT(R8A77965_PD_A3VC) | BIT(R8A77965_PD_A2VC1)),
 	},
 	{ /* sentinel */ }
 };
@@ -100,8 +100,6 @@ static u32 rcar_sysc_quirks;
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
 static u32 rcar_sysc_extmask_offs, rcar_sysc_extmask_val;
-
-static const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch);
 
 static const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch);
 
@@ -125,12 +123,6 @@ static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 					SYSCSR_TIMEOUT);
 	if (ret)
 		return -EAGAIN;
-
-	/* Start W/A for A3VP, A3VC, and A3IR domains */
-	if (!on && (!strcmp("a3vp", to_pd_name(sysc_ch)) ||
-		    !strcmp("a3ir", to_pd_name(sysc_ch)) ||
-		    !strcmp("a3vc", to_pd_name(sysc_ch))))
-		udelay(1);
 
 	/* Start W/A for A3VP, A3VC, and A3IR domains */
 	if (!on && (!strcmp("a3vp", to_pd_name(sysc_ch)) ||
@@ -344,6 +336,19 @@ static void rcar_power_on_force(void)
 	}
 }
 
+#ifdef CONFIG_PM_SLEEP
+static void rcar_sysc_resume(void)
+{
+	pr_debug("%s\n", __func__);
+
+	rcar_power_on_force();
+}
+
+static struct syscore_ops rcar_sysc_syscore_ops = {
+	.resume = rcar_sysc_resume,
+};
+#endif
+
 static const struct of_device_id rcar_sysc_matches[] __initconst = {
 #ifdef CONFIG_SYSC_R8A7742
 	{ .compatible = "renesas,r8a7742-sysc", .data = &r8a7742_sysc_info },
@@ -526,6 +531,11 @@ static int __init rcar_sysc_pd_init(void)
 	error = of_genpd_add_provider_onecell(np, &domains->onecell_data);
 	if (!error)
 		of_node_set_flag(np, OF_POPULATED);
+
+#ifdef CONFIG_PM_SLEEP
+	if (!error)
+		register_syscore_ops(&rcar_sysc_syscore_ops);
+#endif
 
 out_put:
 	of_node_put(np);
