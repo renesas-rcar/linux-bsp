@@ -102,6 +102,13 @@ static int __init arm_idle_init(void)
 		 * wfi is supported.
 		 */
 		ret = dt_init_idle_driver(drv, arm_idle_state_match, 1);
+
+#if IS_ENABLED(CONFIG_SYSC_R8A7795) || \
+	IS_ENABLED(CONFIG_SYSC_R8A7796) || \
+	IS_ENABLED(CONFIG_SYSC_R8A77965)
+		if (ret == 0)
+			break;
+#endif
 		if (ret <= 0) {
 			ret = ret ? : -ENODEV;
 			goto init_fail;
