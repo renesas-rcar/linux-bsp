@@ -641,7 +641,8 @@ static int rvin_group_update_links(struct rvin_dev *vin)
 {
 	struct media_entity *source, *sink;
 	struct rvin_dev *master;
-	unsigned int i, n, idx, csi;
+	unsigned int i, n, idx, chsel, csi;
+	u32 flags;
 	int ret = 0;
 
 	mutex_lock(&vin->group->lock);
@@ -657,6 +658,8 @@ static int rvin_group_update_links(struct rvin_dev *vin)
 		if (!master)
 			continue;
 
+		chsel = rvin_get_chsel(master);
+
 		for (i = 0; i < vin->info->num_chsels; i++) {
 			csi = vin->info->chsels[n][i].csi;
 
@@ -671,9 +674,10 @@ static int rvin_group_update_links(struct rvin_dev *vin)
 			source = &vin->group->csi[csi].subdev->entity;
 			sink = &vin->group->vin[n]->vdev.entity;
 			idx = vin->info->chsels[n][i].chan + 1;
+			flags = i == chsel ? MEDIA_LNK_FL_ENABLED : 0;
 
 			ret = rvin_group_add_link(vin, source, idx, sink, 0,
-						  0);
+						  flags);
 			if (ret)
 				goto out;
 		}
