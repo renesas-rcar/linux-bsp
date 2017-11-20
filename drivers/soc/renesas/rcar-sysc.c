@@ -20,6 +20,7 @@
 #include <linux/io.h>
 #include <linux/soc/renesas/rcar-sysc.h>
 #include <linux/sys_soc.h>
+#include <linux/syscore_ops.h>
 
 #include "rcar-sysc.h"
 
@@ -329,6 +330,19 @@ static void rcar_power_on_force(void)
 	}
 }
 
+#ifdef CONFIG_PM_SLEEP
+static void rcar_sysc_resume(void)
+{
+	pr_debug("%s\n", __func__);
+
+	rcar_power_on_force();
+}
+
+static struct syscore_ops rcar_sysc_syscore_ops = {
+	.resume = rcar_sysc_resume,
+};
+#endif
+
 static const struct of_device_id rcar_sysc_matches[] __initconst = {
 #ifdef CONFIG_SYSC_R8A7743
 	{ .compatible = "renesas,r8a7743-sysc", .data = &r8a7743_sysc_info },
@@ -491,6 +505,11 @@ static int __init rcar_sysc_pd_init(void)
 	rcar_power_on_force();
 
 	error = of_genpd_add_provider_onecell(np, &domains->onecell_data);
+
+#ifdef CONFIG_PM_SLEEP
+	if (!error)
+		register_syscore_ops(&rcar_sysc_syscore_ops);
+#endif
 
 out_put:
 	of_node_put(np);
