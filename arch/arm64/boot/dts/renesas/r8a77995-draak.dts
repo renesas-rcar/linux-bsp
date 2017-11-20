@@ -122,3 +122,8 @@
 	timeout-sec = <60>;
 	status = "okay";
 };
+
+&i2c0 {
+	status = "okay";
+	clock-frequency = <400000>;
+};
