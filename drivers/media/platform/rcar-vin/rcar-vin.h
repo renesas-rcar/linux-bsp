@@ -259,5 +259,6 @@ int rvin_reset_format(struct rvin_dev *vin);
 const struct rvin_video_format *rvin_format_from_pixel(u32 pixelformat);
 
 void rvin_set_chsel(struct rvin_dev *vin, u8 chsel);
+int rvin_get_chsel(struct rvin_dev *vin);
 
 #endif
