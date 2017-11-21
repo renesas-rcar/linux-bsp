@@ -101,6 +101,7 @@ struct rcar_gen3_thermal_priv {
 	unsigned int num_tscs;
 	spinlock_t lock; /* Protect interrupts on and off */
 	void (*thermal_init)(struct rcar_gen3_thermal_tsc *tsc);
+	bool irq_cap;
 };
 
 static inline u32 rcar_gen3_thermal_read(struct rcar_gen3_thermal_tsc *tsc,
@@ -372,6 +373,8 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	char *irqname;
 	void __iomem *ptat_base;
 	unsigned int cor_para_value;
+	struct device_node *tz_nd;
+	int idle;
 
 	/* default values if FUSEs are missing */
 	int ptat[3] = { 2631, 1509, 435 };
@@ -435,6 +438,16 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 						IRQF_SHARED, irqname, priv);
 		if (ret)
 			return ret;
+
+		priv->irq_cap = 1;
+	}
+
+	for_each_node_with_property(tz_nd, "polling-delay") {
+		of_property_read_u32(tz_nd, "polling-delay", &idle);
+		if (idle > 0) {
+			priv->irq_cap = 0;
+			break;
+		}
 	}
 
 	pm_runtime_enable(dev);
@@ -473,7 +486,9 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 		}
 
 		rcar_gen3_thermal_calc_coefs(&tsc->coef, ptat, thcode[i]);
-		rcar_gen3_thermal_set_irq_temp(tsc);
+
+		if (priv->irq_cap)
+			rcar_gen3_thermal_set_irq_temp(tsc);
 
 		zone = devm_thermal_zone_of_sensor_register(dev, i, tsc,
 							    &rcar_gen3_tz_of_ops);
@@ -498,7 +513,8 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 		goto error_unregister;
 	}
 
-	rcar_thermal_irq_set(priv, true);
+	if (priv->irq_cap)
+		rcar_thermal_irq_set(priv, true);
 
 	return 0;
 
@@ -526,10 +542,12 @@ static int __maybe_unused rcar_gen3_thermal_resume(struct device *dev)
 		struct rcar_gen3_thermal_tsc *tsc = priv->tscs[i];
 
 		priv->thermal_init(tsc);
-		rcar_gen3_thermal_set_irq_temp(tsc);
+		if (priv->irq_cap)
+			rcar_gen3_thermal_set_irq_temp(tsc);
 	}
 
-	rcar_thermal_irq_set(priv, true);
+	if (priv->irq_cap)
+		rcar_thermal_irq_set(priv, true);
 
 	return 0;
 }
