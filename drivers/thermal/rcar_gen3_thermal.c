@@ -24,6 +24,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/spinlock.h>
+#include <linux/sys_soc.h>
 #include <linux/thermal.h>
 
 #include "thermal_core.h"
@@ -81,6 +82,15 @@
 
 #define TSC_MAX_NUM	3
 
+/* Check LSI revisions and set specific quirk value */
+#define H3_1X_INIT      BIT(1) /* H3 1.x uses init flow that is diff others */
+
+static const struct soc_device_attribute ths_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*",
+	.data = (void *)H3_1X_INIT, },
+	{/*sentinel*/}
+};
+
 /* Structure for thermal temperature calculation */
 struct equation_coefs {
 	int a1;
@@ -95,6 +105,7 @@ struct rcar_gen3_thermal_tsc {
 	struct equation_coefs coef;
 	int low;
 	int high;
+	u32 ths_quirks;
 };
 
 struct rcar_gen3_thermal_priv {
@@ -289,31 +300,6 @@ static irqreturn_t rcar_gen3_thermal_irq_thread(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static void r8a7795_thermal_init(struct rcar_gen3_thermal_tsc *tsc)
-{
-	rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR,  CTSR_THBGR);
-	rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR,  0x0);
-
-	usleep_range(1000, 2000);
-
-	rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR, CTSR_PONM);
-
-	rcar_gen3_thermal_write(tsc, REG_GEN3_IRQCTL, 0x3F);
-	rcar_gen3_thermal_write(tsc, REG_GEN3_IRQMSK, 0);
-	rcar_gen3_thermal_write(tsc, REG_GEN3_IRQEN, IRQ_TEMPD1 | IRQ_TEMP2);
-
-	rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR,
-				CTSR_PONM | CTSR_AOUT | CTSR_THBGR | CTSR_VMEN);
-
-	usleep_range(100, 200);
-
-	rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR,
-				CTSR_PONM | CTSR_AOUT | CTSR_THBGR | CTSR_VMEN |
-				CTSR_VMST | CTSR_THSST);
-
-	usleep_range(1000, 2000);
-}
-
 static void r8a7796_thermal_init(struct rcar_gen3_thermal_tsc *tsc)
 {
 	u32 reg_val;
@@ -333,6 +319,37 @@ static void r8a7796_thermal_init(struct rcar_gen3_thermal_tsc *tsc)
 	rcar_gen3_thermal_write(tsc, REG_GEN3_THCTR, reg_val);
 
 	usleep_range(1000, 2000);
+}
+
+static void r8a7795_thermal_init(struct rcar_gen3_thermal_tsc *tsc)
+{
+	if (tsc->ths_quirks & H3_1X_INIT) {
+		rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR,  CTSR_THBGR);
+		rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR,  0x0);
+
+		usleep_range(1000, 2000);
+
+		rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR, CTSR_PONM);
+
+		rcar_gen3_thermal_write(tsc, REG_GEN3_IRQCTL, 0x3F);
+		rcar_gen3_thermal_write(tsc, REG_GEN3_IRQMSK, 0);
+		rcar_gen3_thermal_write(tsc, REG_GEN3_IRQEN,
+					IRQ_TEMPD1 | IRQ_TEMP2);
+
+		rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR,
+					CTSR_PONM | CTSR_AOUT |
+					CTSR_THBGR | CTSR_VMEN);
+
+		usleep_range(100, 200);
+
+		rcar_gen3_thermal_write(tsc, REG_GEN3_CTSR,
+					CTSR_PONM | CTSR_AOUT |
+					CTSR_THBGR | CTSR_VMEN |
+					CTSR_VMST | CTSR_THSST);
+
+		usleep_range(1000, 2000);
+	} else
+		r8a7796_thermal_init(tsc);
 }
 
 static const struct rcar_gen3_thermal_data r8a7795_data = {
@@ -370,6 +387,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	char *irqname;
 	void __iomem *ptat_base;
 	unsigned int cor_para_value;
+	const struct soc_device_attribute *attr;
 
 	/* default values if FUSEs are missing */
 	int ptat[3] = { 2631, 1509, 435 };
@@ -454,6 +472,10 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 			ret = PTR_ERR(tsc->base);
 			goto error_unregister;
 		}
+
+		attr = soc_device_match(ths_quirks_match);
+		if (attr)
+			tsc->ths_quirks = (uintptr_t)attr->data;
 
 		priv->tscs[i] = tsc;
 
