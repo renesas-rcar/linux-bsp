@@ -2,7 +2,7 @@
  * Driver for the Renesas RCar I2C unit
  *
  * Copyright (C) 2014-15 Wolfram Sang <wsa@sang-engineering.com>
- * Copyright (C) 2011-2015 Renesas Electronics Corporation
+ * Copyright (C) 2011-2017 Renesas Electronics Corporation
  *
  * Copyright (C) 2012-14 Renesas Solutions Corp.
  * Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
@@ -30,6 +30,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
+#include <linux/of_address.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
@@ -141,6 +142,10 @@ struct rcar_i2c_priv {
 	struct scatterlist sg;
 	enum dma_data_direction dma_direction;
 	int suspended;
+
+	u32 reset_bit;
+	void __iomem *srcr;
+	void __iomem *srstclr;
 };
 
 #define rcar_i2c_priv_to_dev(p)		((p)->adap.dev.parent)
@@ -689,6 +694,15 @@ static void rcar_i2c_release_dma(struct rcar_i2c_priv *priv)
 	}
 }
 
+static void rcar_i2c_reset(struct rcar_i2c_priv *priv)
+{
+	/* I2C module reset and reset clean */
+	writel(priv->reset_bit, priv->srcr);
+	writel(priv->reset_bit, priv->srstclr);
+	udelay(1);
+	rcar_i2c_init(priv);
+}
+
 static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 				struct i2c_msg *msgs,
 				int num)
@@ -702,6 +716,9 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 		return -EBUSY;
 
 	pm_runtime_get_sync(dev);
+
+	if (priv->srcr && priv->srstclr)
+		rcar_i2c_reset(priv);
 
 	ret = rcar_i2c_bus_barrier(priv);
 	if (ret < 0)
@@ -818,6 +835,8 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct i2c_timings i2c_t;
 	int irq, ret;
+	struct of_phandle_args args;
+	struct resource res;
 
 	priv = devm_kzalloc(dev, sizeof(struct rcar_i2c_priv), GFP_KERNEL);
 	if (!priv)
@@ -860,6 +879,35 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	ret = rcar_i2c_clock_calculate(priv, &i2c_t);
 	if (ret < 0)
 		goto out_pm_put;
+
+	ret = of_parse_phandle_with_fixed_args(dev->of_node,
+					       "renesas,cpg-mssr-resets",
+					       3, 0, &args);
+	if (ret == 0) {
+		ret = of_address_to_resource(args.np, 0, &res);
+		if (ret < 0) {
+			dev_warn(dev, "can not get cpg-mssr resource\n");
+			goto out_pm_put;
+		} else {
+			priv->srcr = devm_ioremap_nocache(dev,
+						res.start + args.args[0],
+						0x04);
+			if (!priv->srcr) {
+				dev_warn(dev, "can not get reset register\n");
+				ret = -ENOMEM;
+				goto out_pm_put;
+			}
+			priv->srstclr = devm_ioremap_nocache(dev,
+						res.start + args.args[1],
+						0x04);
+			if (!priv->srstclr) {
+				dev_warn(dev, "can not get reset clearing register\n");
+				ret = -ENOMEM;
+				goto out_pm_put;
+			}
+			priv->reset_bit = BIT(args.args[2]);
+		}
+	}
 
 	rcar_i2c_init(priv);
 
