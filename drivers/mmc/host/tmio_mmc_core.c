@@ -52,6 +52,8 @@
 
 #include "tmio_mmc.h"
 
+static void tmio_mmc_hw_reset(struct mmc_host *mmc);
+
 static inline void tmio_mmc_start_dma(struct tmio_mmc_host *host,
 				      struct mmc_data *data)
 {
@@ -283,7 +285,7 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	clk = sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL) & CLK_CTL_DIV_MASK;
-	tmio_mmc_reset(host);
+	tmio_mmc_hw_reset(host->mmc);
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, clk | CLK_CTL_SCLKEN);
 
 	/* Ready for new calls */
@@ -775,6 +777,10 @@ static int tmio_mmc_start_data(struct tmio_mmc_host *host,
 static void tmio_mmc_hw_reset(struct mmc_host *mmc)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
+
+	tmio_mmc_reset(host);
+
+	tmio_mmc_abort_dma(host);
 
 	if (host->hw_reset)
 		host->hw_reset(host);
@@ -1274,7 +1280,7 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host)
 		_host->sdio_irq_mask = TMIO_SDIO_MASK_ALL;
 
 	tmio_mmc_clk_stop(_host);
-	tmio_mmc_reset(_host);
+	tmio_mmc_hw_reset(mmc);
 
 	_host->sdcard_irq_mask = sd_ctrl_read16_and_16_as_32(_host, CTL_IRQ_MASK);
 	tmio_mmc_disable_mmc_irqs(_host, TMIO_MASK_ALL);
@@ -1374,8 +1380,8 @@ int tmio_mmc_host_runtime_resume(struct device *dev)
 {
 	struct tmio_mmc_host *host = dev_get_drvdata(dev);
 
-	tmio_mmc_reset(host);
 	tmio_mmc_clk_enable(host);
+	tmio_mmc_hw_reset(host->mmc);
 
 	if (host->clk_cache)
 		tmio_mmc_set_clock(host, host->clk_cache);
