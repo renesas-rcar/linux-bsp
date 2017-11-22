@@ -633,7 +633,8 @@ int phy_device_register(struct phy_device *phydev)
 		return err;
 
 	/* Deassert the reset signal */
-	phy_device_reset(phydev, 0);
+	if (!(phy_read(phydev, MII_BMSR) & BMSR_LSTATUS))
+		phy_device_reset(phydev, 0);
 
 	/* Run all of the fixups for this PHY */
 	err = phy_scan_fixups(phydev);
@@ -651,7 +652,8 @@ int phy_device_register(struct phy_device *phydev)
 	}
 
 	/* Assert the reset signal */
-	phy_device_reset(phydev, 1);
+	if (!(phy_read(phydev, MII_BMSR) & BMSR_LSTATUS))
+		phy_device_reset(phydev, 1);
 
 	return 0;
 
@@ -859,7 +861,8 @@ int phy_init_hw(struct phy_device *phydev)
 	int ret = 0;
 
 	/* Deassert the reset signal */
-	phy_device_reset(phydev, 0);
+	if (!(phy_read(phydev, MII_BMSR) & BMSR_LSTATUS))
+		phy_device_reset(phydev, 0);
 
 	if (!phydev->drv || !phydev->drv->config_init)
 		return 0;
@@ -1828,12 +1831,14 @@ static int phy_probe(struct device *dev)
 
 	if (phydev->drv->probe) {
 		/* Deassert the reset signal */
-		phy_device_reset(phydev, 0);
+		if (!(phy_read(phydev, MII_BMSR) & BMSR_LSTATUS))
+			phy_device_reset(phydev, 0);
 
 		err = phydev->drv->probe(phydev);
 
 		/* Assert the reset signal */
-		phy_device_reset(phydev, 1);
+		if (!(phy_read(phydev, MII_BMSR) & BMSR_LSTATUS))
+			phy_device_reset(phydev, 1);
 	}
 
 	mutex_unlock(&phydev->lock);
