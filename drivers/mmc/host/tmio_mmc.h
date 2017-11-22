@@ -209,6 +209,10 @@ struct tmio_mmc_host {
 	DECLARE_BITMAP(taps, BITS_PER_BYTE * sizeof(long));
 	unsigned int tap_num;
 
+	/* Sampling data comparison: 1 for match. 0 for mismatch */
+	DECLARE_BITMAP(smpcmp, BITS_PER_BYTE * sizeof(long));
+	unsigned int (*compare_scc_data)(struct tmio_mmc_host *host);
+
 	const struct tmio_mmc_dma_ops *dma_ops;
 };
 
