@@ -851,6 +851,7 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	}
 
 	bitmap_zero(host->taps, host->tap_num * 2);
+	bitmap_zero(host->smpcmp, host->tap_num * 2);
 
 	/* Issue CMD19 twice for each tap */
 	for (i = 0; i < 2 * host->tap_num; i++) {
@@ -859,6 +860,9 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 		if (!mmc_send_tuning(mmc, opcode, NULL))
 			set_bit(i, host->taps);
+
+		if (host->compare_scc_data && !host->compare_scc_data(host))
+			set_bit(i, host->smpcmp);
 
 		mdelay(1);
 	}
