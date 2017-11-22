@@ -49,8 +49,8 @@
 /* DM_CM_INFO1 and DM_CM_INFO1_MASK */
 #define INFO1_CLEAR		0
 #define INFO1_MASK_CLEAR	GENMASK_ULL(31, 0)
-#define INFO1_DTRANEND1		BIT(20)
-#define INFO1_DTRANEND1_OLD	BIT(17)
+#define INFO1_DTRANEND1_BIT20	BIT(20)
+#define INFO1_DTRANEND1_BIT17	BIT(17)
 #define INFO1_DTRANEND0		BIT(16)
 
 /* DM_CM_INFO2 and DM_CM_INFO2_MASK */
@@ -288,10 +288,22 @@ renesas_sdhi_internal_dmac_dm_write(struct tmio_mmc_host *host,
 	writeq(val, host->ctl + addr);
 }
 
+static u32
+renesas_sdhi_internal_dmac_dm_read(struct tmio_mmc_host *host, int addr)
+{
+	return readl(host->ctl + addr);
+}
+
 static void
 renesas_sdhi_internal_dmac_enable_dma(struct tmio_mmc_host *host, bool enable)
 {
 	struct renesas_sdhi *priv = host_to_priv(host);
+	u32 dma_dtranend1;
+
+	if (priv->quirks && priv->quirks->old_info1_layout)
+		dma_dtranend1 = INFO1_DTRANEND1_BIT17;
+	else
+		dma_dtranend1 = INFO1_DTRANEND1_BIT20;
 
 	if (!host->chan_tx || !host->chan_rx)
 		return;
@@ -300,8 +312,12 @@ renesas_sdhi_internal_dmac_enable_dma(struct tmio_mmc_host *host, bool enable)
 		renesas_sdhi_internal_dmac_dm_write(host, DM_CM_INFO1,
 						    INFO1_CLEAR);
 
-	if (priv->dma_priv.enable)
+	if (priv->dma_priv.enable) {
+		host->dma_irq_mask = ~(dma_dtranend1 | INFO1_DTRANEND0);
 		priv->dma_priv.enable(host, enable);
+		renesas_sdhi_internal_dmac_dm_write(host, DM_CM_INFO1_MASK,
+						    host->dma_irq_mask);
+	}
 }
 
 static void
@@ -396,6 +412,7 @@ renesas_sdhi_internal_dmac_start_dma(struct tmio_mmc_host *host,
 		dtran_mode |= DTRAN_MODE_CH_NUM_CH0;
 	}
 
+	tmio_mmc_clear_transtate(host);
 	renesas_sdhi_internal_dmac_enable_dma(host, true);
 
 	/* set dma parameters */
@@ -471,6 +488,36 @@ static void renesas_sdhi_internal_dmac_end_dma(struct tmio_mmc_host *host)
 		renesas_sdhi_internal_dmac_complete(host);
 }
 
+static bool renesas_sdhi_internal_dmac_dma_irq(struct tmio_mmc_host *host)
+{
+	unsigned int ireg, status;
+	u32 dma_dtranend1;
+
+	if (priv->quirks && priv->quirks->old_info1_layout)
+		dma_dtranend1 = INFO1_DTRANEND1_BIT17;
+	else
+		dma_dtranend1 = INFO1_DTRANEND1_BIT20;
+
+
+	status = renesas_sdhi_internal_dmac_dm_read(host, DM_CM_INFO1);
+	ireg = status & ~host->dma_irq_mask;
+
+	if (ireg & INFO1_DTRANEND0) {
+		renesas_sdhi_internal_dmac_dm_write(host, DM_CM_INFO1, ireg &
+						    ~INFO1_DTRANEND0);
+		tmio_mmc_set_transtate(host, TMIO_TRANSTATE_DEND);
+		return true;
+	}
+
+	if (ireg & dma_dtranend1) {
+		renesas_sdhi_internal_dmac_dm_write(host, DM_CM_INFO1, ireg &
+						    ~dma_dtranend1);
+		tmio_mmc_set_transtate(host, TMIO_TRANSTATE_DEND);
+		return true;
+	}
+	return false;
+}
+
 static void renesas_sdhi_internal_dmac_post_req(struct mmc_host *mmc,
 						struct mmc_request *mrq,
 						int err)
@@ -539,6 +586,7 @@ static const struct tmio_mmc_dma_ops renesas_sdhi_internal_dmac_dma_ops = {
 	.abort = renesas_sdhi_internal_dmac_abort_dma,
 	.dataend = renesas_sdhi_internal_dmac_dataend_dma,
 	.end = renesas_sdhi_internal_dmac_end_dma,
+	.dma_irq = renesas_sdhi_internal_dmac_dma_irq,
 };
 
 static int renesas_sdhi_internal_dmac_probe(struct platform_device *pdev)
