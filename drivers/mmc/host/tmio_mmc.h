@@ -110,6 +110,12 @@
 		TMIO_STAT_CARD_REMOVE | TMIO_STAT_CARD_INSERT)
 #define TMIO_MASK_IRQ     (TMIO_MASK_READOP | TMIO_MASK_WRITEOP | TMIO_MASK_CMD)
 
+#define TMIO_TRANSTATE_DEND	0x00000001
+#define TMIO_TRANSTATE_AEND	0x00000002
+
+/* Check LSI revisions and set specific quirk value */
+#define DTRAEND1_SET_BIT17	BIT(0)
+
 struct tmio_mmc_data;
 struct tmio_mmc_host;
 
@@ -121,6 +127,7 @@ struct tmio_mmc_dma_ops {
 	void (*release)(struct tmio_mmc_host *host);
 	void (*abort)(struct tmio_mmc_host *host);
 	void (*dataend)(struct tmio_mmc_host *host);
+	bool (*dma_irq)(struct tmio_mmc_host *host);
 };
 
 struct tmio_mmc_host {
@@ -145,6 +152,8 @@ struct tmio_mmc_host {
 	struct platform_device *pdev;
 	struct tmio_mmc_data *pdata;
 
+	u32			sdhi_quirks;
+
 	/* DMA support */
 	bool			force_pio;
 	struct dma_chan		*chan_rx;
@@ -152,6 +161,7 @@ struct tmio_mmc_host {
 	struct tasklet_struct	dma_issue;
 	struct scatterlist	bounce_sg;
 	u8			*bounce_buf;
+	u32			dma_tranend1;
 
 	/* Track lost interrupts */
 	struct delayed_work	delayed_reset_work;
@@ -160,6 +170,7 @@ struct tmio_mmc_host {
 	/* Cache */
 	u32			sdcard_irq_mask;
 	u32			sdio_irq_mask;
+	u32			dma_irq_mask;
 	unsigned int		clk_cache;
 
 	spinlock_t		lock;		/* protect host private data */
@@ -167,6 +178,9 @@ struct tmio_mmc_host {
 	struct mutex		ios_lock;	/* protect set_ios() context */
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
+
+	spinlock_t		trans_lock;	/* protect trans_state */
+	unsigned int		trans_state;
 
 	/* Mandatory callback */
 	int (*clk_enable)(struct tmio_mmc_host *host);
@@ -202,6 +216,9 @@ void tmio_mmc_host_free(struct tmio_mmc_host *host);
 int tmio_mmc_host_probe(struct tmio_mmc_host *host);
 void tmio_mmc_host_remove(struct tmio_mmc_host *host);
 void tmio_mmc_do_data_irq(struct tmio_mmc_host *host);
+
+void tmio_mmc_set_transtate(struct tmio_mmc_host *host, unsigned int state);
+void tmio_mmc_clear_transtate(struct tmio_mmc_host *host);
 
 void tmio_mmc_enable_mmc_irqs(struct tmio_mmc_host *host, u32 i);
 void tmio_mmc_disable_mmc_irqs(struct tmio_mmc_host *host, u32 i);
