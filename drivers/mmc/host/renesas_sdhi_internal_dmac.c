@@ -169,13 +169,8 @@ renesas_sdhi_internal_dmac_start_dma(struct tmio_mmc_host *host,
 	struct scatterlist *sg = host->sg_ptr;
 	u32 dtran_mode = DTRAN_MODE_BUS_WID_TH | DTRAN_MODE_ADDR_MODE;
 
-	if (!dma_map_sg(&host->pdev->dev, sg, host->sg_len,
-			mmc_get_dma_dir(data)))
+	if (!tmio_mmc_pre_dma_transfer(host, data, COOKIE_MAPPED))
 		goto force_pio;
-
-	/* This DMAC cannot handle if buffer is not 8-bytes alignment */
-	if (!IS_ALIGNED(sg_dma_address(sg), 8))
-		goto force_pio_with_unmap;
 
 	if (data->flags & MMC_DATA_READ) {
 		dtran_mode |= DTRAN_MODE_CH_NUM_CH1;
@@ -220,22 +215,20 @@ static void renesas_sdhi_internal_dmac_issue_tasklet_fn(unsigned long arg)
 static void renesas_sdhi_internal_dmac_complete_tasklet_fn(unsigned long arg)
 {
 	struct tmio_mmc_host *host = (struct tmio_mmc_host *)arg;
-	enum dma_data_direction dir;
 
 	spin_lock_irq(&host->lock);
 
 	if (!host->data)
 		goto out;
 
-	if (host->data->flags & MMC_DATA_READ)
-		dir = DMA_FROM_DEVICE;
-	else
-		dir = DMA_TO_DEVICE;
-
 	renesas_sdhi_internal_dmac_enable_dma(host, false);
-	dma_unmap_sg(&host->pdev->dev, host->sg_ptr, host->sg_len, dir);
+	if (host->data && host->data->host_cookie == COOKIE_MAPPED) {
+		dma_unmap_sg(&host->pdev->dev, host->sg_ptr, host->sg_len,
+			     mmc_get_dma_dir(host->data));
+		host->data->host_cookie = COOKIE_UNMAPPED;
+	}
 
-	if (dir == DMA_FROM_DEVICE)
+	if (host->data->flags & MMC_DATA_READ)
 		clear_bit(SDHI_INTERNAL_DMAC_RX_IN_USE, &global_flags);
 
 	tmio_mmc_do_data_irq(host);
