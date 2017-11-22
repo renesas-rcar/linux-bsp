@@ -225,6 +225,7 @@ static int renesas_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 #define SH_MOBILE_SDHI_SCC_CKSEL	0x006
 #define SH_MOBILE_SDHI_SCC_RVSCNTL	0x008
 #define SH_MOBILE_SDHI_SCC_RVSREQ	0x00A
+#define SH_MOBILE_SDHI_SCC_SMPCMP	0x00C
 
 /* Definitions for values the SH_MOBILE_SDHI_SCC_DTCNTL register */
 #define SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN		BIT(0)
@@ -299,6 +300,14 @@ static void renesas_sdhi_prepare_tuning(struct tmio_mmc_host *host,
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET, tap);
 }
 
+static unsigned int renesas_sdhi_compare_scc_data(struct tmio_mmc_host *host)
+{
+	struct renesas_sdhi *priv = host_to_priv(host);
+
+	/* Get comparison of sampling data */
+	return sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_SMPCMP);
+}
+
 #define SH_MOBILE_SDHI_MAX_TAP 3
 
 static int renesas_sdhi_select_tuning(struct tmio_mmc_host *host)
@@ -309,7 +318,9 @@ static int renesas_sdhi_select_tuning(struct tmio_mmc_host *host)
 	unsigned long tap_start;/* start position of tuning success */
 	unsigned long tap_end;  /* end position of tuning success */
 	unsigned long ntap;     /* temporary counter of tuning success */
+	unsigned long match_cnt;/* counter of matching data */
 	unsigned long i;
+	bool select = false;
 
 	/* Clear SCC_RVSREQ */
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
@@ -324,6 +335,8 @@ static int renesas_sdhi_select_tuning(struct tmio_mmc_host *host)
 
 		if (!test_bit(i, host->taps))
 			clear_bit(i + offset, host->taps);
+		if (!test_bit(i, host->smpcmp))
+			clear_bit(i + offset, host->smpcmp);
 	}
 
 	/*
@@ -354,7 +367,39 @@ static int renesas_sdhi_select_tuning(struct tmio_mmc_host *host)
 		tap_cnt = ntap;
 	}
 
-	if (tap_cnt >= SH_MOBILE_SDHI_MAX_TAP)
+	/*
+	 * If all of the TAP is OK, the sampling clock position is selected by
+	 * identifying the change point of data.
+	 */
+	if (tap_cnt == host->tap_num * 2) {
+		match_cnt = 0;
+		ntap = 0;
+		tap_start = 0;
+		tap_end = 0;
+		for (i = 0; i < host->tap_num * 2; i++) {
+			if (test_bit(i, host->smpcmp)) {
+				ntap++;
+			} else {
+				if (ntap > match_cnt) {
+					tap_start = i - ntap;
+					tap_end = i - 1;
+					match_cnt = ntap;
+				}
+				ntap = 0;
+			}
+		}
+		if (ntap > match_cnt) {
+			tap_start = i - ntap;
+			tap_end = i - 1;
+			match_cnt = ntap;
+		}
+		if (match_cnt)
+			select = true;
+	} else if (tap_cnt >= SH_MOBILE_SDHI_MAX_TAP) {
+		select = true;
+	}
+
+	if (select)
 		tap_set = (tap_start + tap_end) / 2 % host->tap_num;
 	else
 		return -EIO;
@@ -650,6 +695,7 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		priv->scc_ctl = host->ctl + of_data->scc_offset;
 		host->init_tuning = renesas_sdhi_init_tuning;
 		host->prepare_tuning = renesas_sdhi_prepare_tuning;
+		host->compare_scc_data = renesas_sdhi_compare_scc_data;
 		host->select_tuning = renesas_sdhi_select_tuning;
 		host->check_scc_error = renesas_sdhi_check_scc_error;
 		host->hw_reset = renesas_sdhi_hw_reset;
