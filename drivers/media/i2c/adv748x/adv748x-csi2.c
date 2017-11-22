@@ -267,6 +267,7 @@ int adv748x_csi2_init(struct adv748x_state *state, struct adv748x_csi2 *tx)
 {
 	struct device_node *ep;
 	int ret;
+	unsigned int ch;
 
 	/* We can not use container_of to get back to the state with two TXs */
 	tx->state = state;
@@ -279,8 +280,14 @@ int adv748x_csi2_init(struct adv748x_state *state, struct adv748x_csi2 *tx)
 		return -ENODEV;
 	}
 
+	if (of_property_read_u32(ep, "virtual-channel", &ch))
+		ch = 0;
+
+	if (ch > 3)
+		return -EINVAL;
+
 	/* Initialise the virtual channel */
-	adv748x_csi2_set_virtual_channel(tx, 0);
+	adv748x_csi2_set_virtual_channel(tx, ch);
 
 	adv748x_subdev_init(&tx->sd, state, &adv748x_csi2_ops,
 			    MEDIA_ENT_F_UNKNOWN,
