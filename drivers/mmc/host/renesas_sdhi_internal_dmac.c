@@ -251,10 +251,10 @@ static const struct tmio_mmc_dma_ops renesas_sdhi_internal_dmac_dma_ops = {
  * implementation as others may use a different implementation.
  */
 static const struct soc_device_attribute gen3_soc_whitelist[] = {
-        { .soc_id = "r8a7795", .revision = "ES1.*" },
-        { .soc_id = "r8a7795", .revision = "ES2.0" },
-        { .soc_id = "r8a7796", .revision = "ES1.0" },
-        { /* sentinel */ }
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ .soc_id = "r8a7795", .revision = "ES2.0" },
+	{ .soc_id = "r8a7796", .revision = "ES1.*" },
+	{ /* sentinel */ }
 };
 
 static int renesas_sdhi_internal_dmac_probe(struct platform_device *pdev)
