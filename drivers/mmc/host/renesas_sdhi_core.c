@@ -34,6 +34,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinctrl-state.h>
 #include <linux/regulator/consumer.h>
+#include <linux/sys_soc.h>
 
 #include "renesas_sdhi.h"
 #include "tmio_mmc.h"
@@ -49,6 +50,18 @@
 
 #define host_to_priv(host) \
 	container_of((host)->pdata, struct renesas_sdhi, mmc_data)
+
+static const struct soc_device_attribute sdhi_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*",
+	  .data = (void *)DTRAEND1_SET_BIT17, },
+	{ .soc_id = "r8a7795", .revision = "ES2.0",
+	  .data = 0, },
+	{ .soc_id = "r8a7796", .revision = "ES1.0",
+	  .data = (void *)DTRAEND1_SET_BIT17, },
+	{ .soc_id = "r8a7796", .revision = "ES1.1",
+	  .data = 0, },
+	{/*sentinel*/},
+};
 
 struct renesas_sdhi {
 	struct clk *clk;
@@ -494,6 +507,7 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 	struct tmio_mmc_host *host;
 	struct renesas_sdhi *priv;
 	struct resource *res;
+	const struct soc_device_attribute *attr;
 	int irq, ret, i;
 
 	of_data = of_device_get_match_data(&pdev->dev);
@@ -545,6 +559,10 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		ret = -ENOMEM;
 		goto eprobe;
 	}
+
+	attr = soc_device_match(sdhi_quirks_match);
+	if (attr)
+		host->sdhi_quirks = (uintptr_t)attr->data;
 
 	if (of_data) {
 		mmc_data->flags |= of_data->tmio_flags;
