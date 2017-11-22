@@ -209,7 +209,8 @@ static void renesas_sdhi_internal_dmac_issue_tasklet_fn(unsigned long arg)
 {
 	struct tmio_mmc_host *host = (struct tmio_mmc_host *)arg;
 
-	tmio_mmc_enable_mmc_irqs(host, TMIO_STAT_DATAEND);
+	tmio_mmc_enable_mmc_irqs(host, TMIO_STAT_DATAEND |
+				 TMIO_STAT_DATATIMEOUT);
 
 	/* start the DMAC */
 	renesas_sdhi_internal_dmac_dm_write(host, DM_CM_DTRAN_CTRL,
