@@ -901,8 +901,8 @@ static int ipmmu_init_platform_device(struct device *dev,
 
 static bool ipmmu_slave_whitelist(struct device *dev)
 {
-	/* By default, do not allow use of IPMMU */
-	return false;
+	/* By default, allow R-Car Gen3 to use IPMMU */
+	return true;
 }
 
 static const struct soc_device_attribute soc_rcar_gen3[] = {
