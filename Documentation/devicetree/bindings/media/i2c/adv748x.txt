@@ -18,6 +18,8 @@ Optional Properties:
 		     "intrq3". All interrupts are optional. The "intrq3" interrupt
 		     is only available on the adv7481
   - interrupts: Specify the interrupt lines for the ADV748x
+  - data-lanes: Specify the data-lanes for the adv7482_txa of ADV748x as follows,
+		data-lanes = <1> or data-lanes = <1,2> data-lanes = <1,2,3,4>
 
 The device node must contain one 'port' child node per device input and output
 port, in accordance with the video interface bindings defined in
