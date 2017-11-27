@@ -238,6 +238,7 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("imr2",			 821,	R8A7795_CLK_S0D2),
 	DEF_MOD("imr1",			 822,	R8A7795_CLK_S0D2),
 	DEF_MOD("imr0",			 823,	R8A7795_CLK_S0D2),
+	DEF_MOD("imp",			 824,	R8A7795_CLK_S1D1),
 	DEF_MOD("gpio7",		 905,	R8A7795_CLK_S3D4),
 	DEF_MOD("gpio6",		 906,	R8A7795_CLK_S3D4),
 	DEF_MOD("gpio5",		 907,	R8A7795_CLK_S3D4),
