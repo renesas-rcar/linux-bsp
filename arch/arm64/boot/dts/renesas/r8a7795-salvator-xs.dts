@@ -111,6 +111,10 @@
 	status = "okay";
 };
 
+&ehci3 {
+	status = "okay";
+};
+
 &hdmi0 {
 	status = "okay";
 
@@ -149,15 +153,31 @@
 	status = "okay";
 };
 
+&ohci3 {
+	status = "okay";
+};
+
 &pfc {
 	usb2_pins: usb2 {
 		groups = "usb2";
 		function = "usb2";
 	};
+
+	usb3_pins: usb2_ch3 {
+		groups = "usb2_ch3";
+		function = "usb2_ch3";
+	};
 };
 
 &usb2_phy2 {
 	pinctrl-0 = <&usb2_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&usb2_phy3 {
+	pinctrl-0 = <&usb3_pins>;
 	pinctrl-names = "default";
 
 	status = "okay";
