@@ -151,7 +151,8 @@ static void adv748x_afe_set_video_standard(struct adv748x_state *state,
 					  int sdpstd)
 {
 	sdp_clrset(state, ADV748X_SDP_VID_SEL, ADV748X_SDP_VID_SEL_MASK,
-		   (sdpstd & 0xf) << ADV748X_SDP_VID_SEL_SHIFT);
+		   (sdpstd & 0xf) << ADV748X_SDP_VID_SEL_SHIFT |
+		   ADV748X_SDP_VID_RESERVED_BIT);
 }
 
 static int adv748x_afe_s_input(struct adv748x_afe *afe, unsigned int input)
