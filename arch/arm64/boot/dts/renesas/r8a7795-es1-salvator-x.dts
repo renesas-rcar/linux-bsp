@@ -160,6 +160,10 @@
 	status = "okay";
 };
 
+&sdhi2 {
+	/delete-property/ mmc-hs400-1_8v;
+};
+
 &usb2_phy2 {
 	pinctrl-0 = <&usb2_pins>;
 	pinctrl-names = "default";
