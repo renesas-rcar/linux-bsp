@@ -859,6 +859,10 @@ static const struct of_device_id sata_rcar_match[] = {
 		.data = (void *)RCAR_GEN2_SATA
 	},
 	{
+		.compatible = "renesas,sata-r8a77965",
+		.data = (void *)RCAR_GEN2_SATA
+	},
+	{
 		.compatible = "renesas,rcar-gen2-sata",
 		.data = (void *)RCAR_GEN2_SATA
 	},
