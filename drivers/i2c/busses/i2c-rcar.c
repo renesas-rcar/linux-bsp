@@ -2,7 +2,7 @@
  * Driver for the Renesas R-Car I2C unit
  *
  * Copyright (C) 2014-15 Wolfram Sang <wsa@sang-engineering.com>
- * Copyright (C) 2011-2015 Renesas Electronics Corporation
+ * Copyright (C) 2011-2017 Renesas Electronics Corporation
  *
  * Copyright (C) 2012-14 Renesas Solutions Corp.
  * Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
@@ -313,14 +313,14 @@ static void rcar_i2c_dma_unmap(struct rcar_i2c_priv *priv)
 	struct dma_chan *chan = priv->dma_direction == DMA_FROM_DEVICE
 		? priv->dma_rx : priv->dma_tx;
 
-	/* Disable DMA Master Received/Transmitted */
-	rcar_i2c_write(priv, ICDMAER, 0);
+	dma_unmap_single(chan->device->dev, sg_dma_address(&priv->sg),
+			 sg_dma_len(&priv->sg), priv->dma_direction);
 
 	/* Reset default delay */
 	rcar_i2c_write(priv, ICFBSCR, TCYC06);
 
-	dma_unmap_single(chan->device->dev, sg_dma_address(&priv->sg),
-			 sg_dma_len(&priv->sg), priv->dma_direction);
+	/* Disable DMA Master Received/Transmitted */
+	rcar_i2c_write(priv, ICDMAER, 0);
 
 	priv->dma_direction = DMA_NONE;
 }
