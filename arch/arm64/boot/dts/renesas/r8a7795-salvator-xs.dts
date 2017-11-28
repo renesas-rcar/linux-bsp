@@ -115,6 +115,11 @@
 	status = "okay";
 };
 
+&hsusb3 {
+	dr_mode = "otg";
+	status = "okay";
+};
+
 &hdmi0 {
 	status = "okay";
 
