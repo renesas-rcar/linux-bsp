@@ -75,6 +75,11 @@
 	};
 };
 
+&adsp {
+	status = "okay";
+	memory-region = <&adsp_reserved>;
+};
+
 &lvds0 {
 	ports {
 		port@1 {
