@@ -33,6 +33,8 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
+#include <linux/reset.h>
+#include <linux/sys_soc.h>
 
 /* register offsets */
 #define ICSCR	0x00	/* slave ctrl */
@@ -141,6 +143,9 @@ struct rcar_i2c_priv {
 	struct scatterlist sg;
 	enum dma_data_direction dma_direction;
 	int suspended;
+
+	struct reset_control *rstc;
+	u32 quirks;
 };
 
 #define rcar_i2c_priv_to_dev(p)		((p)->adap.dev.parent)
@@ -148,6 +153,18 @@ struct rcar_i2c_priv {
 
 #define LOOP_TIMEOUT	1024
 
+/* Check LSI revisions and set specific quirk value */
+#define RCAR_I2C_GEN3       BIT(0) /* Gen3 series */
+
+static const struct soc_device_attribute rcar_quirks_match[]  = {
+	{ .soc_id = "r8a7795",
+		.data = (void *)RCAR_I2C_GEN3, },
+	{ .soc_id = "r8a7796",
+		.data = (void *)RCAR_I2C_GEN3, },
+	{ .soc_id = "r8a77965",
+		.data = (void *)RCAR_I2C_GEN3, },
+	{/*sentinel*/},
+};
 
 static void rcar_i2c_write(struct rcar_i2c_priv *priv, int reg, u32 val)
 {
@@ -685,6 +702,24 @@ static void rcar_i2c_release_dma(struct rcar_i2c_priv *priv)
 	}
 }
 
+static void rcar_i2c_reset(struct rcar_i2c_priv *priv)
+{
+	int ret;
+	struct device *dev = rcar_i2c_priv_to_dev(priv);
+
+	/* do reset */
+	ret = reset_control_assert(priv->rstc);
+	if (ret) {
+		dev_err(dev, "assert reset error %d\n", ret);
+		return;
+	}
+
+	/* do reset release */
+	ret = reset_control_deassert(priv->rstc);
+	if (ret)
+		dev_err(dev, "dessert reset error %d\n", ret);
+}
+
 static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 				struct i2c_msg *msgs,
 				int num)
@@ -698,6 +733,9 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 		return -EBUSY;
 
 	pm_runtime_get_sync(dev);
+
+	if (priv->quirks & RCAR_I2C_GEN3 && priv->rstc)
+		rcar_i2c_reset(priv);
 
 	rcar_i2c_init(priv);
 
@@ -825,6 +863,7 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct i2c_timings i2c_t;
 	int irq, ret;
+	const struct soc_device_attribute *attr;
 
 	priv = devm_kzalloc(dev, sizeof(struct rcar_i2c_priv), GFP_KERNEL);
 	if (!priv)
@@ -835,6 +874,10 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 		dev_err(dev, "cannot get clock\n");
 		return PTR_ERR(priv->clk);
 	}
+
+	attr = soc_device_match(rcar_quirks_match);
+	if (attr)
+		priv->quirks = (uintptr_t)attr->data;
 
 	priv->res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
@@ -868,6 +911,10 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	ret = rcar_i2c_clock_calculate(priv, &i2c_t);
 	if (ret < 0)
 		goto out_pm_put;
+
+	/* get reset resource */
+	if (priv->quirks & RCAR_I2C_GEN3)
+		priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
 	/* Stay always active when multi-master to keep arbitration working */
 	if (of_property_read_bool(dev->of_node, "multi-master"))
