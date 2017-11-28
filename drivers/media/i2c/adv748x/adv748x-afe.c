@@ -124,9 +124,6 @@ static void adv748x_afe_fill_format(struct adv748x_afe *afe,
 
 	fmt->width = 720;
 	fmt->height = afe->curr_norm & V4L2_STD_525_60 ? 480 : 576;
-
-	/* Field height */
-	fmt->height /= 2;
 }
 
 static int adv748x_afe_std(v4l2_std_id std)
