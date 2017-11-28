@@ -106,6 +106,18 @@ static const struct v4l2_subdev_internal_ops adv748x_csi2_internal_ops = {
  * v4l2_subdev_video_ops
  */
 
+static int adv748x_csi2_g_std(struct v4l2_subdev *sd, v4l2_std_id *std)
+{
+	struct adv748x_csi2 *tx = adv748x_sd_to_csi2(sd);
+	struct v4l2_subdev *src;
+
+	src = adv748x_get_remote_sd(&tx->pads[ADV748X_CSI2_SINK]);
+	if (!src)
+		return -EPIPE;
+
+	return v4l2_subdev_call(src, video, g_std, std);
+}
+
 static int adv748x_csi2_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct adv748x_csi2 *tx = adv748x_sd_to_csi2(sd);
@@ -119,6 +131,7 @@ static int adv748x_csi2_s_stream(struct v4l2_subdev *sd, int enable)
 }
 
 static const struct v4l2_subdev_video_ops adv748x_csi2_video_ops = {
+	.g_std = adv748x_csi2_g_std,
 	.s_stream = adv748x_csi2_s_stream,
 };
 
