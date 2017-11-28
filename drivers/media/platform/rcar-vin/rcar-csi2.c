@@ -411,6 +411,13 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv, unsigned int bpp,
 
 	/* Calculate the phypll */
 	mbps = v4l2_ctrl_g_ctrl_int64(ctrl) * bpp;
+
+	/* Hblank's margin is 1.05 times of the horizontal size */
+	mbps = mbps * 105 / 100;
+
+	/* Vblank's margin is 1.13 times of the vertical size */
+	mbps = mbps * 113 / 100;
+
 	do_div(mbps, priv->lanes * 1000000);
 
 	for (hsfreq = priv->info->hsfreqrange; hsfreq->mbps != 0; hsfreq++)
