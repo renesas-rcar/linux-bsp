@@ -70,7 +70,8 @@ static int of_mdiobus_register_phy(struct mii_bus *mdio,
 		phy = get_phy_device(mdio, addr, is_c45);
 
 	/* Assert the reset signal again */
-	gpiod_set_value(gpiod, 1);
+	if (!(phy_read(phy, MII_BMSR) & BMSR_LSTATUS))
+		gpiod_set_value(gpiod, 1);
 
 	if (IS_ERR(phy))
 		return PTR_ERR(phy);
