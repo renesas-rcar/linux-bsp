@@ -355,8 +355,9 @@ struct rsnd_mod {
 #define __rsnd_mod_call_nolock_start	0
 #define __rsnd_mod_call_nolock_stop	1
 
-#define rsnd_mod_to_priv(mod) ((mod)->priv)
-#define rsnd_mod_id(mod) ((mod) ? (mod)->id : -1)
+#define rsnd_mod_to_priv(mod)	((mod)->priv)
+#define rsnd_mod_name(mod)	((mod)->ops->name)
+#define rsnd_mod_id(mod)	((mod)->id)
 #define rsnd_mod_power_on(mod)	clk_enable((mod)->clk)
 #define rsnd_mod_power_off(mod)	clk_disable((mod)->clk)
 #define rsnd_mod_get(ip)	(&(ip)->mod)
@@ -371,7 +372,6 @@ int rsnd_mod_init(struct rsnd_priv *priv,
 		  enum rsnd_mod_type type,
 		  int id);
 void rsnd_mod_quit(struct rsnd_mod *mod);
-char *rsnd_mod_name(struct rsnd_mod *mod);
 struct dma_chan *rsnd_mod_dma_req(struct rsnd_dai_stream *io,
 				  struct rsnd_mod *mod);
 void rsnd_mod_interrupt(struct rsnd_mod *mod,
@@ -424,6 +424,7 @@ int rsnd_runtime_is_ssi_tdm(struct rsnd_dai_stream *io);
 struct rsnd_dai_stream {
 	char name[RSND_DAI_NAME_SIZE];
 	struct snd_pcm_substream *substream;
+	struct snd_pcm_hw_params *hw_params;
 	struct rsnd_mod *mod[RSND_MOD_MAX];
 	struct rsnd_dai *rdai;
 	u32 parent_ssi_status;
@@ -438,6 +439,7 @@ struct rsnd_dai_stream {
 #define rsnd_io_to_mod_dvc(io)	rsnd_io_to_mod((io), RSND_MOD_DVC)
 #define rsnd_io_to_mod_cmd(io)	rsnd_io_to_mod((io), RSND_MOD_CMD)
 #define rsnd_io_to_rdai(io)	((io)->rdai)
+#define rsnd_io_to_hwparam(io)	((io)->hw_params)
 #define rsnd_io_to_priv(io)	(rsnd_rdai_to_priv(rsnd_io_to_rdai(io)))
 #define rsnd_io_is_play(io)	(&rsnd_io_to_rdai(io)->playback == io)
 #define rsnd_io_to_runtime(io) ((io)->substream ? \
@@ -601,6 +603,10 @@ struct rsnd_priv {
 #define rsnd_is_gen1(priv)	(((priv)->flags & RSND_GEN_MASK) == RSND_GEN1)
 #define rsnd_is_gen2(priv)	(((priv)->flags & RSND_GEN_MASK) == RSND_GEN2)
 
+#define rsnd_flags_has(p, f) ((p)->flags & (f))
+#define rsnd_flags_set(p, f) ((p)->flags |= (f))
+#define rsnd_flags_del(p, f) ((p)->flags &= ~(f))
+
 /*
  *	rsnd_kctrl
  */
@@ -627,6 +633,10 @@ struct rsnd_kctrl_cfg_s {
 	struct rsnd_kctrl_cfg cfg;
 	u32 val;
 };
+#define rsnd_kctrl_size(x)	((x).cfg.size)
+#define rsnd_kctrl_max(x)	((x).cfg.max)
+#define rsnd_kctrl_valm(x, i)	((x).val[i])	/* = (x).cfg.val[i] */
+#define rsnd_kctrl_vals(x)	((x).val)	/* = (x).cfg.val[0] */
 
 int rsnd_kctrl_accept_anytime(struct rsnd_dai_stream *io);
 int rsnd_kctrl_accept_runtime(struct rsnd_dai_stream *io);
@@ -652,9 +662,13 @@ int rsnd_kctrl_new(struct rsnd_mod *mod,
 	rsnd_kctrl_new(mod, io, rtd, name, accept, update, rsnd_kctrl_init_s(cfg), \
 		       NULL, 1, max)
 
-#define rsnd_kctrl_new_e(mod, io, rtd, name, accept, update, cfg, texts)	\
+#define rsnd_kctrl_new_e(mod, io, rtd, name, accept, update, cfg, texts, size) \
 	rsnd_kctrl_new(mod, io, rtd, name, accept, update, rsnd_kctrl_init_s(cfg), \
-		       texts, 1, ARRAY_SIZE(texts))
+		       texts, 1, size)
+
+extern const char * const volume_ramp_rate[];
+#define VOLUME_RAMP_MAX_DVC	(0x17 + 1)
+#define VOLUME_RAMP_MAX_MIX	(0x0a + 1)
 
 /*
  *	R-Car SSI
