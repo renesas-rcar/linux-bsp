@@ -941,6 +941,10 @@
 	status = "okay";
 };
 
+&usb3_peri0 {
+	status = "okay";
+};
+
 &vin0 {
 	status = "okay";
 };
