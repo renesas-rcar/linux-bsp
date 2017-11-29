@@ -123,6 +123,7 @@ struct adv748x_hdmi {
 		u32 present;
 		unsigned int blocks;
 	} edid;
+	unsigned int use_lane;
 };
 
 #define adv748x_ctrl_to_hdmi(ctrl) \
@@ -266,6 +267,7 @@ struct adv748x_state {
 #define ADV748X_SDP_INSEL		0x00	/* user_map_rw_reg_00 */
 
 #define ADV748X_SDP_VID_SEL		0x02	/* user_map_rw_reg_02 */
+#define ADV748X_SDP_VID_RESERVED_BIT	0x04
 #define ADV748X_SDP_VID_SEL_MASK	0xf0
 #define ADV748X_SDP_VID_SEL_SHIFT	4
 
