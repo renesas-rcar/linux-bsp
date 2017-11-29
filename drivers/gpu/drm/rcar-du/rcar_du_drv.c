@@ -1,7 +1,7 @@
 /*
  * rcar_du_drv.c  --  R-Car Display Unit DRM driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -26,10 +26,14 @@
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
+#include <drm/rcar_du_drm.h>
+
+#include <media/vsp1.h>
 
 #include "rcar_du_drv.h"
 #include "rcar_du_kms.h"
 #include "rcar_du_regs.h"
+#include "rcar_du_vsp.h"
 
 /* -----------------------------------------------------------------------------
  * Device Information
@@ -207,6 +211,35 @@ static const struct rcar_du_device_info rcar_du_r8a7796_info = {
 	.dpll_ch =  BIT(1),
 };
 
+static const struct rcar_du_device_info rcar_du_r8a77965_info = {
+	.gen = 3,
+	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
+		  | RCAR_DU_FEATURE_EXT_CTRL_REGS
+		  | RCAR_DU_FEATURE_VSP1_SOURCE
+		  | RCAR_DU_FEATURE_R8A77965_REGS,
+	.num_crtcs = 3,
+	.routes = {
+		/* R8A77965 has one RGB output, one LVDS output and one
+		 * HDMI output.
+		 */
+		[RCAR_DU_OUTPUT_DPAD0] = {
+			.possible_crtcs = BIT(2),
+			.port = 0,
+		},
+		[RCAR_DU_OUTPUT_HDMI0] = {
+			.possible_crtcs = BIT(1),
+			.port = 1,
+		},
+		[RCAR_DU_OUTPUT_LVDS0] = {
+			.possible_crtcs = BIT(0),
+			.port = 2,
+		},
+	},
+	.num_lvds = 1,
+	.dpll_ch =  BIT(1),
+	.skip_ch = BIT(2),
+};
+
 static const struct of_device_id rcar_du_of_table[] = {
 	{ .compatible = "renesas,du-r8a7779", .data = &rcar_du_r8a7779_info },
 	{ .compatible = "renesas,du-r8a7790", .data = &rcar_du_r8a7790_info },
@@ -216,6 +249,7 @@ static const struct of_device_id rcar_du_of_table[] = {
 	{ .compatible = "renesas,du-r8a7794", .data = &rcar_du_r8a7794_info },
 	{ .compatible = "renesas,du-r8a7795", .data = &rcar_du_r8a7795_info },
 	{ .compatible = "renesas,du-r8a7796", .data = &rcar_du_r8a7796_info },
+	{ .compatible = "renesas,du-r8a77965", .data = &rcar_du_r8a77965_info },
 	{ }
 };
 
@@ -231,6 +265,13 @@ static void rcar_du_lastclose(struct drm_device *dev)
 
 	drm_fbdev_cma_restore_mode(rcdu->fbdev);
 }
+
+static const struct drm_ioctl_desc rcar_du_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
+			  DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+	DRM_IOCTL_DEF_DRV(RCAR_DU_SCRSHOT, rcar_du_vsp_write_back,
+			  DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+};
 
 DEFINE_DRM_GEM_CMA_FOPS(rcar_du_fops);
 
@@ -256,6 +297,8 @@ static struct drm_driver rcar_du_driver = {
 	.date			= "20130110",
 	.major			= 1,
 	.minor			= 0,
+	.ioctls			= rcar_du_ioctls,
+	.num_ioctls		= ARRAY_SIZE(rcar_du_ioctls),
 };
 
 /* -----------------------------------------------------------------------------

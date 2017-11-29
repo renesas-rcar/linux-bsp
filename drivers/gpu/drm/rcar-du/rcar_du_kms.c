@@ -1,7 +1,7 @@
 /*
  * rcar_du_kms.c  --  R-Car Display Unit Mode Setting
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -128,6 +128,38 @@ static const struct rcar_du_format_info rcar_du_format_infos[] = {
 		.fourcc = DRM_FORMAT_YVU444,
 		.bpp = 24,
 		.planes = 3,
+	}, {
+		.fourcc = DRM_FORMAT_RGB332,
+		.bpp = 8,
+		.planes = 1,
+	}, {
+		.fourcc = DRM_FORMAT_ARGB4444,
+		.bpp = 16,
+		.planes = 1,
+	}, {
+		.fourcc = DRM_FORMAT_XRGB4444,
+		.bpp = 16,
+		.planes = 1,
+	}, {
+		.fourcc = DRM_FORMAT_BGR888,
+		.bpp = 24,
+		.planes = 1,
+	}, {
+		.fourcc = DRM_FORMAT_RGB888,
+		.bpp = 24,
+		.planes = 1,
+	}, {
+		.fourcc = DRM_FORMAT_BGRA8888,
+		.bpp = 32,
+		.planes = 1,
+	}, {
+		.fourcc = DRM_FORMAT_BGRX8888,
+		.bpp = 32,
+		.planes = 1,
+	}, {
+		.fourcc = DRM_FORMAT_YVYU,
+		.bpp = 16,
+		.planes = 1,
 	},
 };
 
@@ -186,6 +218,9 @@ rcar_du_fb_create(struct drm_device *dev, struct drm_file *file_priv,
 		return ERR_PTR(-EINVAL);
 	}
 
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE) && format != NULL)
+		goto done;
+
 	/*
 	 * The pitch and alignment constraints are expressed in pixels on the
 	 * hardware side and in bytes in the DRM API.
@@ -212,7 +247,7 @@ rcar_du_fb_create(struct drm_device *dev, struct drm_file *file_priv,
 			return ERR_PTR(-EINVAL);
 		}
 	}
-
+done:
 	return drm_fb_cma_create(dev, file_priv, mode_cmd);
 }
 
@@ -265,6 +300,39 @@ static void rcar_du_atomic_commit_tail(struct drm_atomic_state *old_state)
 	drm_atomic_helper_wait_for_flip_done(dev, old_state);
 
 	drm_atomic_helper_cleanup_planes(dev, old_state);
+}
+
+int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
+{
+	int ret = 0;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	struct drm_mode_config *config = &dev->mode_config;
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state)
+		return -ENOMEM;
+
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state)
+		return -ENOMEM;
+
+	state->crtcs->state = crtc_state;
+	state->crtcs->old_state = crtc->state;
+	state->crtcs->new_state = crtc_state;
+	state->crtcs->ptr = crtc;
+	crtc_state->state = state;
+	crtc_state->active = true;
+
+	drm_modeset_lock_all(dev);
+	state->acquire_ctx = config->acquire_ctx;
+	ret = drm_atomic_commit(state);
+	drm_modeset_unlock_all(dev);
+
+	if (ret != 0)
+		drm_atomic_state_put(state);
+
+	return ret;
 }
 
 /* -----------------------------------------------------------------------------
@@ -432,6 +500,14 @@ static int rcar_du_properties_init(struct rcar_du_device *rcdu)
 	if (rcdu->props.colorkey == NULL)
 		return -ENOMEM;
 
+	if (rcdu->info->gen == 3) {
+		rcdu->props.colorkey_alpha =
+			drm_property_create_range(rcdu->ddev, 0,
+						  "colorkey_alpha", 0, 255);
+		if (!rcdu->props.colorkey_alpha)
+			return -ENOMEM;
+	}
+
 	return 0;
 }
 
@@ -442,7 +518,7 @@ static int rcar_du_vsps_init(struct rcar_du_device *rcdu)
 	struct {
 		struct device_node *np;
 		unsigned int crtcs_mask;
-	} vsps[RCAR_DU_MAX_VSPS] = { { 0, }, };
+	} vsps[RCAR_DU_MAX_VSPS] = { { NULL, }, };
 	unsigned int vsps_count = 0;
 	unsigned int cells;
 	unsigned int i;
@@ -528,8 +604,8 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 
 	dev->mode_config.min_width = 0;
 	dev->mode_config.min_height = 0;
-	dev->mode_config.max_width = 4095;
-	dev->mode_config.max_height = 2047;
+	dev->mode_config.max_width = 4096;
+	dev->mode_config.max_height = 2160;
 	dev->mode_config.funcs = &rcar_du_mode_config_funcs;
 	dev->mode_config.helper_private = &rcar_du_mode_config_helper;
 
@@ -591,6 +667,9 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 		ret = rcar_du_crtc_create(rgrp, i);
 		if (ret < 0)
 			return ret;
+
+		rcar_du_pre_group_set_routing(rcdu->crtcs[i].group,
+					      &rcdu->crtcs[i]);
 	}
 
 	/* Initialize the encoders. */

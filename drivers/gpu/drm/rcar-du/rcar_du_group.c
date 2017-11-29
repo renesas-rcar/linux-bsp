@@ -46,10 +46,16 @@ void rcar_du_group_write(struct rcar_du_group *rgrp, u32 reg, u32 data)
 
 static void rcar_du_group_setup_pins(struct rcar_du_group *rgrp)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
+
 	u32 defr6 = DEFR6_CODE | DEFR6_ODPM12_DISP;
 
 	if (rgrp->num_crtcs > 1)
 		defr6 |= DEFR6_ODPM22_DISP;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS) &&
+	    (rgrp->index == 1))
+		defr6 = DEFR6_CODE | DEFR6_ODPM22_DISP;
 
 	rcar_du_group_write(rgrp, DEFR6, defr6);
 }
@@ -81,6 +87,9 @@ static void rcar_du_group_setup_defr8(struct rcar_du_group *rgrp)
 		 * needs to be set despite having a single option available.
 		 */
 		u32 crtc = ffs(possible_crtcs) - 1;
+
+		if (rcdu->info->skip_ch)
+			crtc += 1; /* offset for r8a77965 */
 
 		if (crtc / 2 == rgrp->index)
 			defr8 |= DEFR8_DRGBS_DU(crtc);
@@ -137,6 +146,27 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	rcar_du_group_write(rgrp, DPTSR, (rgrp->dptsr_planes << 16) |
 			    rgrp->dptsr_planes);
 	mutex_unlock(&rgrp->lock);
+}
+
+void rcar_du_pre_group_set_routing(struct rcar_du_group *rgrp,
+				   struct rcar_du_crtc *rcrtc)
+{
+	unsigned int possible_crtcs =
+		rgrp->dev->info->routes[RCAR_DU_OUTPUT_DPAD0].possible_crtcs;
+	u32 crtc = ffs(possible_crtcs) - 1;
+
+	if (rcrtc->index != crtc)
+		return;
+
+	clk_prepare_enable(rcrtc->clock);
+	rcar_du_group_setup(rgrp);
+	rcar_du_group_write(rgrp, DSYSR,
+			    (rcar_du_group_read(rgrp, DSYSR) &
+			    ~(DSYSR_DRES | DSYSR_DEN)) | DSYSR_DEN);
+	rcar_du_group_write(rgrp, DSYSR,
+			    (rcar_du_group_read(rgrp, DSYSR) &
+			    ~(DSYSR_DRES | DSYSR_DEN)) | DSYSR_DRES);
+	clk_disable_unprepare(rcrtc->clock);
 }
 
 /*
