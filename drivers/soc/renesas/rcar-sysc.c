@@ -19,6 +19,7 @@
 #include <linux/spinlock.h>
 #include <linux/io.h>
 #include <linux/soc/renesas/rcar-sysc.h>
+#include <linux/syscore_ops.h>
 
 #include "rcar-sysc.h"
 
@@ -47,19 +48,22 @@
 #define PWRER_OFFS		0x14	/* Power Shutoff/Resume Error */
 
 
-#define SYSCSR_RETRIES		100
-#define SYSCSR_DELAY_US		1
+#define SYSCSR_RETRIES		1000
+#define SYSCSR_DELAY_US		10
 
-#define PWRER_RETRIES		100
-#define PWRER_DELAY_US		1
+#define PWRER_RETRIES		1000
+#define PWRER_DELAY_US		10
 
 #define SYSCISR_RETRIES		1000
-#define SYSCISR_DELAY_US	1
+#define SYSCISR_DELAY_US	10
 
 #define RCAR_PD_ALWAYS_ON	32	/* Always-on power area */
 
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
+
+
+static const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch);
 
 static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 {
@@ -83,6 +87,12 @@ static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 
 	if (k == SYSCSR_RETRIES)
 		return -EAGAIN;
+
+	/* Start W/A for A3VP, A3VC, and A3IR domains */
+	if (!on && (!strcmp("a3vp", to_pd_name(sysc_ch))
+		|| !strcmp("a3ir", to_pd_name(sysc_ch))
+		|| !strcmp("a3vc", to_pd_name(sysc_ch))))
+		udelay(1);
 
 	/* Submit power shutoff or power resume request */
 	iowrite32(BIT(sysc_ch->chan_bit),
@@ -176,6 +186,11 @@ static inline struct rcar_sysc_pd *to_rcar_pd(struct generic_pm_domain *d)
 	return container_of(d, struct rcar_sysc_pd, genpd);
 }
 
+static inline const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch)
+{
+	return container_of(sysc_ch, struct rcar_sysc_pd, ch)->genpd.name;
+}
+
 static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 {
 	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
@@ -254,6 +269,50 @@ finalize:
 	pm_genpd_init(genpd, gov, false);
 }
 
+struct rcar_sysc_pd *rcar_domains[RCAR_PD_ALWAYS_ON + 1];
+
+static void rcar_power_on_force(void)
+{
+	int i;
+
+	for (i = 0; i < RCAR_PD_ALWAYS_ON; i++) {
+		struct rcar_sysc_pd *pd = rcar_domains[i];
+
+		if (!pd)
+			continue;
+
+		if (!(pd->flags & PD_ON_ONCE))
+			continue;
+
+		if (!rcar_sysc_power_is_off(&pd->ch))
+			continue;
+
+		rcar_sysc_power_up(&pd->ch);
+	}
+}
+
+static u32 syscier_val, syscimr_val;
+#ifdef CONFIG_PM_SLEEP
+static void rcar_sysc_resume(void)
+{
+	pr_debug("%s\n", __func__);
+
+	/* Re-enable interrupts as init */
+	iowrite32(syscimr_val, rcar_sysc_base + SYSCIMR);
+	iowrite32(syscier_val, rcar_sysc_base + SYSCIER);
+
+#if IS_ENABLED(CONFIG_ARCH_R8A7795) || \
+	IS_ENABLED(CONFIG_ARCH_R8A7796) || \
+	IS_ENABLED(CONFIG_ARCH_R8A77965)
+	rcar_power_on_force();
+#endif
+}
+
+static struct syscore_ops rcar_sysc_syscore_ops = {
+	.resume = rcar_sysc_resume,
+};
+#endif
+
 static const struct of_device_id rcar_sysc_matches[] = {
 #ifdef CONFIG_SYSC_R8A7743
 	{ .compatible = "renesas,r8a7743-sysc", .data = &r8a7743_sysc_info },
@@ -283,6 +342,9 @@ static const struct of_device_id rcar_sysc_matches[] = {
 #endif
 #ifdef CONFIG_SYSC_R8A7796
 	{ .compatible = "renesas,r8a7796-sysc", .data = &r8a7796_sysc_info },
+#endif
+#ifdef CONFIG_ARCH_R8A77965
+	{ .compatible = "renesas,r8a77965-sysc", .data = &r8a77965_sysc_info },
 #endif
 #ifdef CONFIG_SYSC_R8A77970
 	{ .compatible = "renesas,r8a77970-sysc", .data = &r8a77970_sysc_info },
@@ -363,6 +425,9 @@ static int __init rcar_sysc_pd_init(void)
 	pr_debug("%pOF: syscier = 0x%08x\n", np, syscier);
 	iowrite32(syscier, base + SYSCIER);
 
+	syscier_val = syscier;
+	syscimr_val = syscimr;
+
 	for (i = 0; i < info->num_areas; i++) {
 		const struct rcar_sysc_area *area = &info->areas[i];
 		struct rcar_sysc_pd *pd;
@@ -391,9 +456,22 @@ static int __init rcar_sysc_pd_init(void)
 					       &pd->genpd);
 
 		domains->domains[area->isr_bit] = &pd->genpd;
+
+		rcar_domains[i] = pd;
 	}
 
+#if IS_ENABLED(CONFIG_ARCH_R8A7795) || \
+	IS_ENABLED(CONFIG_ARCH_R8A7796) || \
+	IS_ENABLED(CONFIG_ARCH_R8A77965)
+	rcar_power_on_force();
+#endif
+
 	error = of_genpd_add_provider_onecell(np, &domains->onecell_data);
+
+#ifdef CONFIG_PM_SLEEP
+	if (!error)
+		register_syscore_ops(&rcar_sysc_syscore_ops);
+#endif
 
 out_put:
 	of_node_put(np);
