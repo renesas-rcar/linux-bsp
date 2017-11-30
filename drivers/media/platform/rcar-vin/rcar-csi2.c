@@ -970,11 +970,38 @@ static int rcar_csi2_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_csi2_suspend(struct device *dev)
+{
+	struct rcar_csi2 *priv = dev_get_drvdata(dev);
+
+	pm_runtime_put(priv->dev);
+
+	return 0;
+}
+
+static int rcar_csi2_resume(struct device *dev)
+{
+	struct rcar_csi2 *priv = dev_get_drvdata(dev);
+
+	pm_runtime_get_sync(priv->dev);
+
+	return 0;
+}
+
+static const struct dev_pm_ops rcar_csi2_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(rcar_csi2_suspend, rcar_csi2_resume)
+};
+#endif
+
 static struct platform_driver __refdata rcar_csi2_pdrv = {
 	.remove	= rcar_csi2_remove,
 	.probe	= rcar_csi2_probe,
 	.driver	= {
 		.name	= "rcar-csi2",
+#ifdef CONFIG_PM_SLEEP
+		.pm = &rcar_csi2_pm_ops,
+#endif
 		.of_match_table	= of_match_ptr(rcar_csi2_of_table),
 	},
 };
