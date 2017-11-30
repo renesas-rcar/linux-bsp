@@ -98,6 +98,7 @@ struct adv748x_csi2 {
 	struct media_pad pads[ADV748X_CSI2_NR_PADS];
 	struct v4l2_ctrl_handler ctrl_hdl;
 	struct v4l2_subdev sd;
+	unsigned int vc_ch;
 };
 
 #define notifier_to_csi2(n) container_of(n, struct adv748x_csi2, notifier)
@@ -202,6 +203,7 @@ struct adv748x_state {
 
 /* IO Map */
 #define ADV748X_IO_PD			0x00	/* power down controls */
+#define ADV748X_IO_PD_HDMI		BIT(5)
 #define ADV748X_IO_PD_RX_EN		BIT(6)
 
 #define ADV748X_IO_REG_04		0x04
@@ -423,5 +425,6 @@ int adv748x_csi2_set_pixelrate(struct v4l2_subdev *sd, s64 rate);
 
 int adv748x_hdmi_init(struct adv748x_hdmi *hdmi);
 void adv748x_hdmi_cleanup(struct adv748x_hdmi *hdmi);
+int adv748x_hdmi_set_resume_edid(struct adv748x_hdmi *hdmi);
 
 #endif /* _ADV748X_H_ */
