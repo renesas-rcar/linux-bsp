@@ -371,6 +371,7 @@ static int rcar_du_pm_suspend(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
 	struct drm_atomic_state *state;
+	int i;
 
 	drm_kms_helper_poll_disable(rcdu->ddev);
 	drm_fbdev_cma_set_suspend_unlocked(rcdu->fbdev, true);
@@ -381,6 +382,9 @@ static int rcar_du_pm_suspend(struct device *dev)
 		drm_kms_helper_poll_enable(rcdu->ddev);
 		return PTR_ERR(state);
 	}
+
+	for (i = 0; i < rcdu->num_crtcs; ++i)
+		clk_set_rate(rcdu->crtcs[i].extclock, 0);
 
 	rcdu->suspend_state = state;
 
