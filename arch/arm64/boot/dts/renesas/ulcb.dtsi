@@ -157,6 +157,10 @@
 	};
 };
 
+&a57_0 {
+	cpu-supply = <&dvfs>;
+};
+
 &du {
 	status = "okay";
 };
