@@ -202,8 +202,16 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 		/* Locate the DRM bridge from the encoder DT node. */
 		bridge = of_drm_find_bridge(enc_node);
 		if (!bridge) {
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
 			ret = -EPROBE_DEFER;
 			goto done;
+#else
+			if (output == RCAR_DU_OUTPUT_HDMI0 ||
+			    output == RCAR_DU_OUTPUT_HDMI1) {
+				ret = 0;
+				goto done;
+			}
+#endif
 		}
 		renc->bridge = bridge;
 	} else {
