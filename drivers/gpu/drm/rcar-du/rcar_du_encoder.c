@@ -1,7 +1,7 @@
 /*
  * rcar_du_encoder.c  --  R-Car Display Unit Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -195,6 +195,7 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 			ret = -EPROBE_DEFER;
 			goto done;
 		}
+		renc->bridge = bridge;
 	} else {
 		dev_dbg(rcdu->dev,
 			"initializing internal encoder for output %u\n",
