@@ -40,6 +40,17 @@
 		clock-frequency = <12288000>;
 	};
 
+	avb-mch {
+		compatible = "renesas,avb-mch-gen3";
+		reg = <0 0xec5a0100 0 0x100>; /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
+		resets = <&cpg 922>;
+		reset-names = "adg";
+	};
+
 	hdmi0-out {
 		compatible = "hdmi-connector";
 		type = "a";
