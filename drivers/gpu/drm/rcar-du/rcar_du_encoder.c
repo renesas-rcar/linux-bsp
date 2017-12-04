@@ -32,11 +32,13 @@ static void rcar_du_encoder_disable(struct drm_encoder *encoder)
 {
 	struct rcar_du_encoder *renc = to_rcar_encoder(encoder);
 
-	if (renc->connector && renc->connector->panel) {
-		drm_panel_disable(renc->connector->panel);
-		drm_panel_unprepare(renc->connector->panel);
+	if (!renc->bridge && (renc->output == RCAR_DU_OUTPUT_LVDS0 ||
+	    renc->output == RCAR_DU_OUTPUT_LVDS1)) {
+		if (renc->connector && renc->connector->panel) {
+			drm_panel_disable(renc->connector->panel);
+			drm_panel_unprepare(renc->connector->panel);
+		}
 	}
-
 	if (renc->lvds)
 		rcar_du_lvdsenc_enable(renc->lvds, encoder->crtc, false);
 }
@@ -48,9 +50,12 @@ static void rcar_du_encoder_enable(struct drm_encoder *encoder)
 	if (renc->lvds)
 		rcar_du_lvdsenc_enable(renc->lvds, encoder->crtc, true);
 
-	if (renc->connector && renc->connector->panel) {
-		drm_panel_prepare(renc->connector->panel);
-		drm_panel_enable(renc->connector->panel);
+	if (!renc->bridge && (renc->output == RCAR_DU_OUTPUT_LVDS0 ||
+	    renc->output == RCAR_DU_OUTPUT_LVDS1)) {
+		if (renc->connector && renc->connector->panel) {
+			drm_panel_prepare(renc->connector->panel);
+			drm_panel_enable(renc->connector->panel);
+		}
 	}
 }
 
@@ -117,6 +122,11 @@ static void rcar_du_encoder_mode_set(struct drm_encoder *encoder,
 	}
 
 	renc->connector = to_rcar_connector(conn_state->connector);
+
+	if (renc->bridge) {
+		dev_dbg(encoder->dev->dev, "LVDS mode is not set\n");
+		return;
+	}
 
 	if (!info->num_bus_formats || !info->bus_formats) {
 		dev_err(encoder->dev->dev, "no LVDS bus format reported\n");
