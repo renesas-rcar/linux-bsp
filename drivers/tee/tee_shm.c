@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2016, Linaro Limited
+ * Copyright (c) 2018, Renesas Electronics Corporation
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -25,21 +26,23 @@ static void tee_shm_release(struct tee_shm *shm)
 	struct tee_device *teedev = shm->teedev;
 	struct tee_shm_pool_mgr *poolm;
 
-	mutex_lock(&teedev->mutex);
-	idr_remove(&teedev->idr, shm->id);
-	if (shm->ctx)
-		list_del(&shm->link);
-	mutex_unlock(&teedev->mutex);
+	if (shm->kaddr) {
+		mutex_lock(&teedev->mutex);
+		idr_remove(&teedev->idr, shm->id);
+		if (shm->ctx)
+			list_del(&shm->link);
+		mutex_unlock(&teedev->mutex);
 
-	if (shm->flags & TEE_SHM_DMA_BUF)
-		poolm = &teedev->pool->dma_buf_mgr;
-	else
-		poolm = &teedev->pool->private_mgr;
+		if (shm->flags & TEE_SHM_DMA_BUF)
+			poolm = &teedev->pool->dma_buf_mgr;
+		else
+			poolm = &teedev->pool->private_mgr;
 
-	poolm->ops->free(poolm, shm);
-	kfree(shm);
+		poolm->ops->free(poolm, shm);
+		kfree(shm);
 
-	tee_device_put(teedev);
+		tee_device_put(teedev);
+	}
 }
 
 static struct sg_table *tee_shm_op_map_dma_buf(struct dma_buf_attachment
@@ -225,8 +228,8 @@ void tee_shm_free(struct tee_shm *shm)
 	 */
 	if (shm->flags & TEE_SHM_DMA_BUF)
 		dma_buf_put(shm->dmabuf);
-	else
-		tee_shm_release(shm);
+
+	tee_shm_release(shm);
 }
 EXPORT_SYMBOL_GPL(tee_shm_free);
 
