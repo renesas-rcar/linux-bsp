@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2016, Linaro Limited
+ * Copyright (c) 2018, Renesas Electronics Corporation
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -27,6 +28,10 @@
 
 #define TEE_SHM_MAPPED		0x1	/* Memory mapped by the kernel */
 #define TEE_SHM_DMA_BUF		0x2	/* Memory with dma-buf handle */
+
+/* Define functions corresponding to TEEC_RegisterSharedMemory */
+/* in kernel space with macros */
+#define tee_shm_reg tee_shm_alloc
 
 struct device;
 struct tee_device;
