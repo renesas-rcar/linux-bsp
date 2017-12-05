@@ -324,7 +324,11 @@ static int renesas_sdhi_internal_dmac_probe(struct platform_device *pdev)
 
 	global_flags |= (unsigned long)soc->data;
 
+#ifndef CONFIG_MMC_SDHI_PIO
 	return renesas_sdhi_probe(pdev, &renesas_sdhi_internal_dmac_dma_ops);
+#else
+	return renesas_sdhi_probe(pdev, NULL);
+#endif
 }
 
 static const struct dev_pm_ops renesas_sdhi_internal_dmac_dev_pm_ops = {
