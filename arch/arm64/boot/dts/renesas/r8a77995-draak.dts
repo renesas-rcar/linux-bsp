@@ -65,6 +65,30 @@
 		groups = "usb0";
 		function = "usb0";
 	};
+
+	msiof0_pins: spi0 {
+		groups = "msiof0_clk", "msiof0_sync",
+			 "msiof0_rxd",  "msiof0_txd";
+		function = "msiof0";
+	};
+
+	msiof1_pins: spi1 {
+		groups = "msiof1_clk", "msiof1_sync",
+			 "msiof1_rxd",  "msiof1_txd";
+		function = "msiof1";
+	};
+
+	msiof2_pins: spi2 {
+		groups = "msiof2_clk", "msiof2_sync_b",
+			 "msiof2_rxd",  "msiof2_txd";
+		function = "msiof2";
+	};
+
+	msiof3_pins: spi3 {
+		groups = "msiof3_clk_a", "msiof3_sync_a",
+			 "msiof3_rxd_a",  "msiof3_txd_a";
+		function = "msiof3";
+	};
 };
 
 &ehci0 {
@@ -126,4 +150,84 @@
 &i2c0 {
 	status = "okay";
 	clock-frequency = <400000>;
+};
+
+&msiof0 {
+	pinctrl-0 = <&msiof0_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	/*
+	 * Define the subnode name and compatible value as
+	 * correct subdevice names.
+	 */
+	slavedev {
+		compatible = "renesas,slavedev";
+		reg = <0>;
+		spi-max-frequency = <16666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof1 {
+	pinctrl-0 = <&msiof1_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	/*
+	 * Define the subnode name and compatible value as
+	 * correct subdevice names.
+	 */
+	slavedev {
+		compatible = "renesas,slavedev";
+		reg = <0>;
+		spi-max-frequency = <16666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof2 {
+	pinctrl-0 = <&msiof2_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	/*
+	 * Define the subnode name and compatible value as
+	 * correct subdevice names.
+	 */
+	slavedev {
+		compatible = "renesas,slavedev";
+		reg = <0>;
+		spi-max-frequency = <16666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof3 {
+	pinctrl-0 = <&msiof3_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	/*
+	 * Define the subnode name and compatible value as
+	 * correct subdevice names.
+	 */
+	slavedev {
+		compatible = "renesas,slavedev";
+		reg = <0>;
+		spi-max-frequency = <16666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof_ref_clk {
+	clock-frequency = <133333333>;
 };
