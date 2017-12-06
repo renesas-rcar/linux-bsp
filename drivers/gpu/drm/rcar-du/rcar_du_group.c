@@ -93,6 +93,10 @@ static void rcar_du_group_setup_defr8(struct rcar_du_group *rgrp)
 
 		if (crtc / 2 == rgrp->index)
 			defr8 |= DEFR8_DRGBS_DU(crtc);
+
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77995_REGS))
+			defr8 |= (DEFR8_DRGBS_DU(rcdu->dpad0_source) |
+				 DEFR8_DRGBS_DU(crtc));
 	}
 
 	rcar_du_group_write(rgrp, DEFR8, defr8);
