@@ -565,7 +565,8 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 * are stopped in one operation as we now wait for one vblank per CRTC.
 	 * Whether this can be improved needs to be researched.
 	 */
-	rcar_du_crtc_disable_planes(rcrtc);
+	if (!rcar_du_lvdsenc_stop_pll(rcdu->lvds[rcrtc->index]))
+		rcar_du_crtc_disable_planes(rcrtc);
 
 	/*
 	 * Disable vertical blanking interrupt reporting. We first need to wait
