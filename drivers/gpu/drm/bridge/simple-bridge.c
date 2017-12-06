@@ -34,6 +34,8 @@ struct simple_bridge {
 	struct regulator	*vdd;
 	struct gpio_desc	*enable;
 	bool			ddc_flag;
+	u32			width;
+	u32			height;
 };
 
 static inline struct simple_bridge *
@@ -69,7 +71,7 @@ static int simple_bridge_get_modes(struct drm_connector *connector)
 		 * prefer a mode pretty much anyone can handle.
 		 */
 		ret = drm_add_modes_noedid(connector, 1920, 1200);
-		drm_set_preferred_mode(connector, 1024, 768);
+		drm_set_preferred_mode(connector, sbridge->width, sbridge->height);
 		return ret;
 	}
 
@@ -194,6 +196,13 @@ static int simple_bridge_probe(struct platform_device *pdev)
 		sbridge->ddc_flag = false;
 	else
 		sbridge->ddc_flag = true;
+
+	of_property_read_u32(remote, "width", &sbridge->width);
+	of_property_read_u32(remote, "height", &sbridge->height);
+	if (sbridge->width == 0 || sbridge->height == 0) {
+		sbridge->width = 1024;
+		sbridge->height = 768;
+	}
 
 	sbridge->next_bridge = of_drm_find_bridge(remote);
 	of_node_put(remote);
