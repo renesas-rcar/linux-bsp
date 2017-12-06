@@ -246,7 +246,8 @@ static const struct rcar_du_device_info rcar_du_r8a77995_info = {
 	.gen = 3,
 	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
 		  | RCAR_DU_FEATURE_EXT_CTRL_REGS
-		  | RCAR_DU_FEATURE_VSP1_SOURCE,
+		  | RCAR_DU_FEATURE_VSP1_SOURCE
+		  | RCAR_DU_FEATURE_R8A77995_REGS,
 	.num_crtcs = 2,
 	.routes = {
 		/* R8A77995 has two LVDS output and one RGB output.
