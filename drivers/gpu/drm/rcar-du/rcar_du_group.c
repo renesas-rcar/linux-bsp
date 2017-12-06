@@ -131,8 +131,15 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 		 * are setup through per-group registers, only available when
 		 * the group has two channels.
 		 */
-		if ((rcdu->info->gen < 3 && rgrp->index == 0) ||
-		    (rcdu->info->gen == 3 &&  rgrp->num_crtcs > 1))
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+			rcar_du_group_write(rgrp,
+					    DIDSR, DIDSR_CODE |
+					    DIDSR_LCDS_LVDS0(1) |
+					    DIDSR_LCDS_LVDS0(0) |
+					    DIDSR_PDCS_CLK(1, 0) |
+					    DIDSR_PDCS_CLK(0, 0));
+		else if ((rcdu->info->gen < 3 && rgrp->index == 0) ||
+			 (rcdu->info->gen == 3 &&  rgrp->num_crtcs > 1))
 			rcar_du_group_write(rgrp, DIDSR, DIDSR_CODE);
 	}
 

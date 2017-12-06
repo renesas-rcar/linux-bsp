@@ -27,6 +27,7 @@
 #include "rcar_du_crtc.h"
 #include "rcar_du_drv.h"
 #include "rcar_du_kms.h"
+#include "rcar_du_lvdsenc.h"
 #include "rcar_du_plane.h"
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
@@ -255,6 +256,9 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 			mode_clock, extrate, rate, escr);
 	}
 
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		escr = 0;
+
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? ESCR2 : ESCR,
 			    escr);
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? OTAR2 : OTAR, 0);
@@ -469,6 +473,12 @@ static void rcar_du_crtc_wait_page_flip(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		rcar_du_lvdsenc_pll_pre_start(rcdu->lvds[rcrtc->index],
+					       rcrtc);
+
 	/* Set display off and background to black */
 	rcar_du_crtc_write(rcrtc, DOOR, DOOR_RGB(0, 0, 0));
 	rcar_du_crtc_write(rcrtc, BPOR, BPOR_RGB(0, 0, 0));
@@ -490,6 +500,8 @@ static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 {
+	struct drm_crtc *crtc = &rcrtc->crtc;
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	bool interlaced;
 
 	/*
@@ -501,6 +513,9 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK | DSYSR_SCM_MASK,
 			     (interlaced ? DSYSR_SCM_INT_VIDEO : 0) |
 			     DSYSR_TVM_MASTER);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		rcar_du_lvdsenc_enable(rcdu->lvds[rcrtc->index], crtc, true);
 
 	rcar_du_group_start_stop(rcrtc->group, true);
 }
@@ -537,6 +552,7 @@ static void rcar_du_crtc_disable_planes(struct rcar_du_crtc *rcrtc)
 static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 {
 	struct drm_crtc *crtc = &rcrtc->crtc;
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 
 	/*
 	 * Disable all planes and wait for the change to take effect. This is
@@ -558,6 +574,9 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 */
 	rcar_du_crtc_wait_page_flip(rcrtc);
 	drm_crtc_vblank_off(crtc);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		__rcar_du_lvdsenc_stop(rcdu->lvds[rcrtc->index]);
 
 	/* Disable the VSP compositor. */
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
