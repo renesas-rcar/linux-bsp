@@ -1,7 +1,7 @@
 /*
  * rcar_du_lvdsenc.h  --  R-Car Display Unit LVDS Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -41,6 +41,9 @@ int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds,
 			   struct drm_crtc *crtc, bool enable);
 void rcar_du_lvdsenc_atomic_check(struct rcar_du_lvdsenc *lvds,
 				  struct drm_display_mode *mode);
+void __rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds);
+void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
+				   struct rcar_du_crtc *rcrtc);
 #else
 static inline int rcar_du_lvdsenc_init(struct rcar_du_device *rcdu)
 {
@@ -57,6 +60,13 @@ static inline int rcar_du_lvdsenc_enable(struct rcar_du_lvdsenc *lvds,
 }
 static inline void rcar_du_lvdsenc_atomic_check(struct rcar_du_lvdsenc *lvds,
 						struct drm_display_mode *mode)
+{
+}
+static inline void __rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
+{
+}
+static inline void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
+						 struct rcar_du_crtc *rcrtc)
 {
 }
 #endif
