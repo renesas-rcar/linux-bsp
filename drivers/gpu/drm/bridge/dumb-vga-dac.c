@@ -24,6 +24,8 @@ struct dumb_vga {
 	struct i2c_adapter	*ddc;
 	struct regulator	*vdd;
 	bool			ddc_flag;
+	u32			width;
+	u32			height;
 };
 
 static inline struct dumb_vga *
@@ -66,7 +68,7 @@ fallback:
 	ret = drm_add_modes_noedid(connector, 1920, 1200);
 
 	/* And prefer a mode pretty much anyone can handle */
-	drm_set_preferred_mode(connector, 1024, 768);
+	drm_set_preferred_mode(connector, vga->width, vga->height);
 
 	return ret;
 }
@@ -175,6 +177,13 @@ static struct i2c_adapter *dumb_vga_retrieve_ddc(struct device *dev)
 		vga->ddc_flag = false;
 	else
 		vga->ddc_flag = true;
+
+	of_property_read_u32(remote, "width", &vga->width);
+	of_property_read_u32(remote, "height", &vga->height);
+	if (vga->width == 0 || vga->height == 0) {
+		vga->width = 1024;
+		vga->height = 768;
+	}
 
 	phandle = of_parse_phandle(remote, "ddc-i2c-bus", 0);
 	of_node_put(remote);
