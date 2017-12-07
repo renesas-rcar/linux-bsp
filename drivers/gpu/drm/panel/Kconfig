@@ -50,6 +50,16 @@ config DRM_PANEL_JDI_LT070ME05000
 	  The panel has a 1200(RGB)×1920 (WUXGA) resolution and uses
 	  24 bit per pixel.
 
+config DRM_PANEL_JDI_LAM123G068A
+	tristate "JDI LAM123G068A panel"
+	depends on OF && SPI
+	select VIDEOMODE_HELPERS
+	help
+	  Say Y here if you want to enable support for JDI LAM123G068A
+	  panel.
+	  To compile this driver as a module, choose M here.
+	  The panel has a 1920×720 resolution and uses.
+
 config DRM_PANEL_SAMSUNG_LD9040
 	tristate "Samsung LD9040 RGB/SPI panel"
 	depends on OF && SPI
