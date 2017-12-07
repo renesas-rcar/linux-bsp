@@ -324,9 +324,10 @@ config SYSC_RMOBILE
 #
 # Renesas SoC drivers
 #
-config RCAR_THERMAL_EMS_ENABLED
+config RCAR_THERMAL_EMS
 	tristate "Renesas R-Car Gen3 Enable Emergency Shutdown"
 	depends on RCAR_GEN3_THERMAL
+	default y
 	help
 	  Enable this option if you want to have support for Emergency Shutdown
 	  in R-Car Gen3.

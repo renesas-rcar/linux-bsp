@@ -105,16 +105,11 @@ int rcar_ems_get_mode(void)
 }
 EXPORT_SYMBOL(rcar_ems_get_mode);
 
-static int __init rcar_ems_ctrl_init(void)
+static int rcar_ems_ctrl_init(void)
 {
 	struct device_node *np, *c;
 	struct thermal_zone_device *zone;
 	u32 value;
-
-	if (!IS_ENABLED(CONFIG_RCAR_THERMAL_EMS_ENABLED)) {
-		pr_err("thermal emergency: disabled\n");
-		return 0;
-	}
 
 	np = of_find_node_by_name(NULL, "thermal-zones");
 	if (!np)
@@ -165,17 +160,14 @@ static int __init rcar_ems_ctrl_init(void)
 	return 0;
 }
 
-static void __exit rcar_ems_ctrl_exit(void)
+static void rcar_ems_ctrl_exit(void)
 {
 	cancel_delayed_work_sync(&rcar_ems_monitor_work);
 }
 
-late_initcall(rcar_ems_ctrl_init)
-module_exit(rcar_ems_ctrl_exit)
-
-
 /* emergency cpu shutdown function */
 static struct cpumask target_cpus;
+static struct cpumask runtime_cpus;
 static struct cpumask freq_scaled_cpus;
 
 static int rcar_ems_cpufreq_notifier_call(struct notifier_block *nb,
@@ -215,14 +207,17 @@ static int rcar_ems_thermal_notifier_call(struct notifier_block *nb,
 
 	switch (state) {
 	case RCAR_EMS_MODE_ON:
+		cpumask_clear(&runtime_cpus);
 		for_each_cpu(cpu, &target_cpus) {
-			if (cpu_online(cpu))
+			if (cpu_online(cpu)) {
+				cpumask_set_cpu(cpu, &runtime_cpus);
 				cpu_down(cpu);
+			}
 		}
 		break;
 
 	case RCAR_EMS_MODE_OFF:
-		for_each_cpu(cpu, &target_cpus) {
+		for_each_cpu(cpu, &runtime_cpus) {
 			if  (!cpu_online(cpu))
 				cpu_up(cpu);
 		}
@@ -246,14 +241,11 @@ static struct notifier_block ems_cpufreq_notifier_block = {
 	.notifier_call = rcar_ems_cpufreq_notifier_call,
 };
 
-static int __init rcar_ems_cpu_shutdown_init(void)
+static int rcar_ems_cpu_shutdown_init(void)
 {
 	int cpu;
 	struct device_node *cpu_node, *ems_node, *tmp_node;
 	int total_target_cpu, i;
-
-	if (!IS_ENABLED(CONFIG_RCAR_THERMAL_EMS_ENABLED))
-		return 0;
 
 	cpumask_clear(&target_cpus);
 	cpumask_clear(&freq_scaled_cpus);
@@ -299,12 +291,34 @@ static int __init rcar_ems_cpu_shutdown_init(void)
 	return 0;
 }
 
-static void __exit rcar_ems_cpu_shutdown_exit(void)
+static void rcar_ems_cpu_shutdown_exit(void)
 {
+	rcar_ems_notify(RCAR_EMS_MODE_OFF, 0);
 	unregister_rcar_ems_notifier(&ems_thermal_notifier_block);
 	cpufreq_unregister_notifier(&ems_cpufreq_notifier_block,
 				    CPUFREQ_POLICY_NOTIFIER);
 }
 
-late_initcall(rcar_ems_cpu_shutdown_init);
-module_exit(rcar_ems_cpu_shutdown_exit);
+static int __init rcar_ems_init(void)
+{
+	int ret;
+
+	ret = rcar_ems_ctrl_init();
+	if (ret)
+		return ret;
+
+	return rcar_ems_cpu_shutdown_init();
+}
+
+static void __exit rcar_ems_exit(void)
+{
+	rcar_ems_cpu_shutdown_exit();
+	rcar_ems_ctrl_exit();
+}
+
+late_initcall(rcar_ems_init);
+module_exit(rcar_ems_exit);
+
+MODULE_AUTHOR("Gaku Inami <gaku.inami.xw@bp.renesas.com>");
+MODULE_DESCRIPTION("R-Car Gen3 Emergency Shutdown");
+MODULE_LICENSE("GPL v2");
