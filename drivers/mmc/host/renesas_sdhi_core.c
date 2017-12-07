@@ -62,6 +62,8 @@ static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	  .data = (void *)HS400_USE_4TAP, },
 	{ .soc_id = "r8a77965", .revision = "ES1.0",
 	  .data = 0, },
+	{ .soc_id = "r8a77995", .revision = "ES1.0",
+	  .data = 0, },
 	{/*sentinel*/},
 };
 
