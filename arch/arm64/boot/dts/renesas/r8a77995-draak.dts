@@ -559,3 +559,19 @@
 &audio_clk_b {
 	clock-frequency = <22579200>;
 };
+
+&vin4 {
+	status = "okay";
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		vin4ep0: endpoint {
+			remote-endpoint = <&hdmi_in>;
+			bus-width = <8>;
+			hsync-active = <0>;
+			vsync-active = <0>;
+
+		};
+	};
+};
