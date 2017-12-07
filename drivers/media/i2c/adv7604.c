@@ -1972,6 +1972,11 @@ static int adv76xx_get_format(struct v4l2_subdev *sd,
 		fmt = v4l2_subdev_get_try_format(sd, cfg, format->pad);
 		format->format.code = fmt->code;
 	} else {
+		struct v4l2_dv_timings timings;
+
+		adv76xx_query_dv_timings(&state->sd, &timings);
+		state->timings = timings;
+
 		format->format.code = state->format->code;
 	}
 
