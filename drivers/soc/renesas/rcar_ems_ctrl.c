@@ -257,11 +257,8 @@ static int rcar_ems_cpu_shutdown_init(void)
 
 	total_target_cpu = of_count_phandle_with_args(ems_node,
 						"target_cpus", 0);
-
 	for_each_online_cpu(cpu) {
 		tmp_node  = of_get_cpu_node(cpu, NULL);
-		if (!of_device_is_compatible(tmp_node, "arm,cortex-a57"))
-			continue;
 		for (i = 0; i < total_target_cpu; i++) {
 			cpu_node = of_parse_phandle(ems_node, "target_cpus", i);
 			if (tmp_node == cpu_node) {
