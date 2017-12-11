@@ -1,7 +1,7 @@
 /*
  * Renesas R-Car GPIO Support
  *
- *  Copyright (C) 2014 Renesas Electronics Corporation
+ *  Copyright (C) 2014-2017 Renesas Electronics Corporation
  *  Copyright (C) 2013 Magnus Damm
  *
  * This program is free software; you can redistribute it and/or modify
@@ -29,6 +29,16 @@
 #include <linux/spinlock.h>
 #include <linux/slab.h>
 
+struct gpio_rcar_bank_info {
+	bool iointsel;
+	bool inoutsel;
+	bool outdt;
+	bool active_high_rising_edge;
+	bool level_trigger;
+	bool both;
+	bool intmsk;
+};
+
 struct gpio_rcar_priv {
 	void __iomem *base;
 	spinlock_t lock;
@@ -38,6 +48,7 @@ struct gpio_rcar_priv {
 	unsigned int irq_parent;
 	bool has_both_edge_trigger;
 	bool wakeup_path;
+	struct gpio_rcar_bank_info bank_info[32];
 };
 
 #define IOINTSEL 0x00	/* General IO/Interrupt Switching Register */
@@ -410,12 +421,75 @@ static int gpio_rcar_parse_dt(struct gpio_rcar_priv *p, unsigned int *npins)
 static int gpio_rcar_suspend(struct device *dev)
 {
 	struct gpio_rcar_priv *p = dev_get_drvdata(dev);
+	int offset;
+	u32 bit_mask;
+	struct gpio_rcar_bank_info *bank_info;
 
 	dev->power.wakeup_path = p->wakeup_path;
+
+	for (offset = 0; offset < p->gpio_chip.ngpio; offset++) {
+		bank_info = &p->bank_info[offset];
+		bit_mask = BIT(offset);
+		bank_info->iointsel = !!(gpio_rcar_read(p, IOINTSEL) &
+					 bit_mask);
+
+		/* I/O pin  */
+		if (!bank_info->iointsel) {
+			bank_info->inoutsel = !!(gpio_rcar_read(p, INOUTSEL) &
+						 bit_mask);
+			bank_info->outdt = !!(gpio_rcar_read(p, OUTDT) &
+					      bit_mask);
+		/* Interrupt pin  */
+		} else {
+			bank_info->intmsk = !!(gpio_rcar_read(p, INTMSK) &
+					       bit_mask);
+			bank_info->active_high_rising_edge =
+				!(!!(gpio_rcar_read(p, POSNEG) & bit_mask));
+			bank_info->level_trigger =
+				!(!!(gpio_rcar_read(p, EDGLEVEL) & bit_mask));
+			bank_info->both = !!(gpio_rcar_read(p, BOTHEDGE) &
+					     bit_mask);
+		}
+	}
+
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(gpio_rcar_pm_ops, gpio_rcar_suspend, NULL);
+static int gpio_rcar_resume(struct device *dev)
+{
+	struct gpio_rcar_priv *p = dev_get_drvdata(dev);
+	int offset;
+	struct gpio_rcar_bank_info *bank_info;
+
+	for (offset = 0; offset < p->gpio_chip.ngpio; offset++) {
+		bank_info = &p->bank_info[offset];
+		/* I/O pin  */
+		if (!bank_info->iointsel) {
+			if (bank_info->inoutsel)
+				gpio_rcar_direction_output(&p->gpio_chip,
+							   offset,
+							   bank_info->outdt);
+			else
+				gpio_rcar_direction_input(&p->gpio_chip,
+							  offset);
+		/* Interrupt pin  */
+		} else {
+			gpio_rcar_config_interrupt_input_mode(
+				p,
+				offset,
+				bank_info->active_high_rising_edge,
+				bank_info->level_trigger,
+				bank_info->both);
+
+			if (bank_info->intmsk)
+				gpio_rcar_write(p, MSKCLR, BIT(offset));
+		}
+	}
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(gpio_rcar_pm_ops, gpio_rcar_suspend, gpio_rcar_resume);
 #define DEV_PM_OPS	&gpio_rcar_pm_ops
 #else
 #define DEV_PM_OPS	NULL
