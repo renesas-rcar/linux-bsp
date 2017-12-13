@@ -40,6 +40,9 @@
 /* Max number of CHSEL values for any Gen3 SoC */
 #define RCAR_CHSEL_MAX 6
 
+/* Time until source device reconnects */
+#define CONNECTION_TIME 1500
+
 enum chip_id {
 	RCAR_H1,
 	RCAR_M1,
@@ -169,6 +172,10 @@ struct rvin_info {
  *
  * @crop:		active cropping
  * @compose:		active composing
+ * @work_queue:		work queue at resuming
+ * @rvin_resume:	delayed work at resuming
+ *
+ * @chsel:		channel selection
  * @index:		VIN index
  */
 struct rvin_dev {
@@ -201,7 +208,10 @@ struct rvin_dev {
 
 	struct v4l2_rect crop;
 	struct v4l2_rect compose;
+	struct workqueue_struct *work_queue;
+	struct delayed_work rvin_resume;
 
+	unsigned int chsel;
 	unsigned int index;
 };
 
@@ -260,5 +270,8 @@ const struct rvin_video_format *rvin_format_from_pixel(u32 pixelformat);
 
 void rvin_set_chsel(struct rvin_dev *vin, u8 chsel);
 int rvin_get_chsel(struct rvin_dev *vin);
+
+void rvin_resume_start_streaming(struct work_struct *work);
+void rvin_suspend_stop_streaming(struct rvin_dev *vin);
 
 #endif
