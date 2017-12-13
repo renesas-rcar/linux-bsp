@@ -26,6 +26,8 @@
 #include <media/v4l2-mc.h>
 #include <media/videobuf2-v4l2.h>
 
+#define DRV_NAME "rcar-vin"
+
 /* Number of HW buffers */
 #define HW_BUFFER_NUM 3
 
@@ -167,6 +169,7 @@ struct rvin_info {
  *
  * @crop:		active cropping
  * @compose:		active composing
+ * @index:		VIN index
  */
 struct rvin_dev {
 	struct device *dev;
@@ -198,6 +201,8 @@ struct rvin_dev {
 
 	struct v4l2_rect crop;
 	struct v4l2_rect compose;
+
+	unsigned int index;
 };
 
 #define vin_to_source(vin)		((vin)->digital->subdev)
