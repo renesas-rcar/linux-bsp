@@ -231,10 +231,36 @@ static int rcar_du_vsp_plane_prepare_fb(struct drm_plane *plane,
 			drm_fb_cma_get_gem_obj(state->fb, i);
 		struct sg_table *sgt = &rstate->sg_tables[i];
 
-		ret = dma_get_sgtable(rcdu->dev, sgt, gem->vaddr, gem->paddr,
-				      gem->base.size);
-		if (ret)
-			goto fail;
+		if (gem->sgt) {
+			struct scatterlist *src;
+			struct scatterlist *dst;
+
+			/*
+			 * If the GEM buffer has a scatter gather table, it has
+			 * been imported from a dma-buf and has no physical
+			 * address as it might not be physically contiguous.
+			 * Copy the original scatter gather table to map it to
+			 * the VSP.
+			 */
+			ret = sg_alloc_table(sgt, gem->sgt->orig_nents,
+					     GFP_KERNEL);
+			if (ret)
+				goto fail;
+
+			src = gem->sgt->sgl;
+			dst = sgt->sgl;
+			for (i = 0; i < gem->sgt->orig_nents; ++i) {
+				sg_set_page(dst, sg_page(src), src->length,
+					    src->offset);
+				src = sg_next(src);
+				dst = sg_next(dst);
+			}
+		} else {
+			ret = dma_get_sgtable(rcdu->dev, sgt, gem->vaddr,
+					      gem->paddr, gem->base.size);
+			if (ret)
+				goto fail;
+		}
 
 		ret = vsp1_du_map_sg(vsp->vsp, sgt);
 		if (!ret) {
