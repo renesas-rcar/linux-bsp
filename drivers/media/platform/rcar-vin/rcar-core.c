@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -319,6 +319,7 @@ static int rvin_group_add_vin(struct rvin_dev *vin)
 	mutex_unlock(&vin->group->lock);
 
 	vin_dbg(vin, "I'm VIN number %d", ret);
+	vin->index = ret;
 
 	return 0;
 }
