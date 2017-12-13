@@ -1,7 +1,7 @@
 /*
  * rcar_du_lvdsenc.c  --  R-Car Display Unit LVDS Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -15,6 +15,7 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/platform_device.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 
 #include "rcar_du_drv.h"
@@ -24,6 +25,7 @@
 
 struct rcar_du_lvdsenc {
 	struct rcar_du_device *dev;
+	struct reset_control *rstc;
 
 	unsigned int index;
 	void __iomem *mmio;
@@ -138,6 +140,8 @@ static int rcar_du_lvdsenc_start(struct rcar_du_lvdsenc *lvds,
 	if (lvds->enabled)
 		return 0;
 
+	reset_control_deassert(lvds->rstc);
+
 	ret = clk_prepare_enable(lvds->clock);
 	if (ret < 0)
 		return ret;
@@ -183,6 +187,8 @@ static void rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 	rcar_lvds_write(lvds, LVDCR1, 0);
 
 	clk_disable_unprepare(lvds->clock);
+
+	reset_control_assert(lvds->rstc);
 
 	lvds->enabled = false;
 }
@@ -239,6 +245,12 @@ static int rcar_du_lvdsenc_get_resources(struct rcar_du_lvdsenc *lvds,
 	if (IS_ERR(lvds->clock)) {
 		dev_err(&pdev->dev, "failed to get clock for %s\n", name);
 		return PTR_ERR(lvds->clock);
+	}
+
+	lvds->rstc = devm_reset_control_get(&pdev->dev, name);
+	if (IS_ERR(lvds->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n", name);
+		return PTR_ERR(lvds->rstc);
 	}
 
 	return 0;
