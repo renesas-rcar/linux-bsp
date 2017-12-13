@@ -147,6 +147,7 @@ enum sata_rcar_type {
 	RCAR_GEN1_SATA,
 	RCAR_GEN2_SATA,
 	RCAR_R8A7790_ES1_SATA,
+	RCAR_GEN3_SATA,
 };
 
 struct sata_rcar_priv {
@@ -799,6 +800,8 @@ static void sata_rcar_init_controller(struct ata_host *host)
 	case RCAR_R8A7790_ES1_SATA:
 		sata_rcar_gen2_phy_init(priv);
 		break;
+	case RCAR_GEN3_SATA:
+		break;
 	default:
 		dev_warn(host->dev, "SATA phy is not initialized\n");
 		break;
@@ -856,7 +859,7 @@ static const struct of_device_id sata_rcar_match[] = {
 	},
 	{
 		.compatible = "renesas,sata-r8a7795",
-		.data = (void *)RCAR_GEN2_SATA
+		.data = (void *)RCAR_GEN3_SATA
 	},
 	{
 		.compatible = "renesas,rcar-gen2-sata",
@@ -864,7 +867,7 @@ static const struct of_device_id sata_rcar_match[] = {
 	},
 	{
 		.compatible = "renesas,rcar-gen3-sata",
-		.data = (void *)RCAR_GEN2_SATA
+		.data = (void *)RCAR_GEN3_SATA
 	},
 	{ },
 };
