@@ -1311,6 +1311,13 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
+	vin->work_queue = create_singlethread_workqueue(dev_name(vin->dev));
+	if (!vin->work_queue) {
+		ret = -ENOMEM;
+		goto error;
+	}
+	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
+
 	return 0;
 error:
 	rvin_dma_remove(vin);
@@ -1342,9 +1349,52 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_vin_suspend(struct device *dev)
+{
+	struct rvin_dev *vin = dev_get_drvdata(dev);
+
+	if (vin->info->use_mc && (vin->index == 0 || vin->index == 4))
+		vin->chsel = rvin_get_chsel(vin);
+
+	if (vin->state != STALLED)
+		return 0;
+
+	rvin_suspend_stop_streaming(vin);
+
+	pm_runtime_put(vin->dev);
+
+	return 0;
+}
+
+static int rcar_vin_resume(struct device *dev)
+{
+	struct rvin_dev *vin = dev_get_drvdata(dev);
+
+	if (vin->info->use_mc && (vin->index == 0 || vin->index == 4))
+		rvin_set_chsel(vin, vin->chsel);
+
+	if (vin->state != STALLED)
+		return 0;
+
+	pm_runtime_get_sync(vin->dev);
+	queue_delayed_work(vin->work_queue, &vin->rvin_resume,
+			   msecs_to_jiffies(CONNECTION_TIME));
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_vin_pm_ops,
+			rcar_vin_suspend, rcar_vin_resume);
+#define DEV_PM_OPS (&rcar_vin_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_vin_driver = {
 	.driver = {
 		.name = "rcar-vin",
+		.pm = DEV_PM_OPS,
 		.of_match_table = rvin_of_id_table,
 	},
 	.probe = rcar_vin_probe,

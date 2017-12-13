@@ -1315,9 +1315,12 @@ static void rvin_buffer_queue(struct vb2_buffer *vb)
 	 * If capture is stalled add buffer to HW and restart
 	 * capturing if HW is ready to continue.
 	 */
-	if (vin->state == STALLED)
-		rvin_capture_start(vin);
-
+	if (vin->state == STALLED) {
+		if (rvin_fill_hw(vin)) {
+			rvin_capture_start(vin);
+			vin->state = RUNNING;
+		}
+	}
 	spin_unlock_irqrestore(&vin->qlock, flags);
 }
 
@@ -1478,6 +1481,57 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 		vin_err(vin, "Failed stop HW, something is seriously broken\n");
 		vin->state = STOPPED;
 	}
+
+	/* Release all active buffers */
+	return_all_buffers(vin, VB2_BUF_STATE_ERROR);
+
+	spin_unlock_irqrestore(&vin->qlock, flags);
+
+	rvin_set_stream(vin, 0);
+
+	/* disable interrupts */
+	rvin_disable_interrupts(vin);
+}
+
+void rvin_resume_start_streaming(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct rvin_dev *vin =
+			container_of(dwork, struct rvin_dev, rvin_resume);
+	unsigned long flags;
+	int ret;
+
+	ret = rvin_set_stream(vin, 1);
+	if (ret) {
+		spin_lock_irqsave(&vin->qlock, flags);
+		return_all_buffers(vin, VB2_BUF_STATE_ERROR);
+		spin_unlock_irqrestore(&vin->qlock, flags);
+		goto done;
+	}
+
+	vin->sequence = 0;
+	rvin_crop_scale_comp(vin);
+	ret = rvin_setup(vin);
+
+	/* Return all buffers if something went wrong */
+	if (ret) {
+		vin_err(vin, "Error is occurred in setup when resuming.\n");
+		rvin_suspend_stop_streaming(vin);
+		goto done;
+	}
+
+	return;
+done:
+	pm_runtime_put(vin->dev);
+}
+
+void rvin_suspend_stop_streaming(struct rvin_dev *vin)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&vin->qlock, flags);
+
+	rvin_capture_stop(vin);
 
 	/* Release all active buffers */
 	return_all_buffers(vin, VB2_BUF_STATE_ERROR);
