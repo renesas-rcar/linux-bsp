@@ -10,6 +10,7 @@ Depending on the instance the VIN input is connected to external SoC pins, or
 on Gen3 to a CSI-2 receiver.
 
  - compatible: Must be one or more of the following
+   - "renesas,vin-r8a77995" for the R8A77995 device
    - "renesas,vin-r8a77965" for the R8A77965 device
    - "renesas,vin-r8a7796" for the R8A7796 device
    - "renesas,vin-r8a7795" for the R8A7795 device
