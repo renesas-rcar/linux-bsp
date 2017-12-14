@@ -1,6 +1,7 @@
 /*
  * R-Car Gen3 Clock Pulse Generator
  *
+ * Copyright (C) 2017 Renesas Electronics Corp.
  * Copyright (C) 2015-2016 Glider bvba
  *
  * Based on clk-rcar-gen3.c
@@ -95,7 +96,7 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 	unsigned int mult;
 	u32 val;
 
-	val = clk_readl(zclk->reg) & ~zclk->mask;
+	val = clk_readl(zclk->reg) & zclk->mask;
 	mult = 32 - (val >> __bf_shf(zclk->mask));
 	return DIV_ROUND_CLOSEST_ULL(prate * mult, 32);
 }
