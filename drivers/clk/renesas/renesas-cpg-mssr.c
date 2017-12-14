@@ -1,6 +1,7 @@
 /*
  * Renesas Clock Pulse Generator / Module Standby and Software Reset
  *
+ * Copyright (C) 2017 Renesas Electronics Corp.
  * Copyright (C) 2015 Glider bvba
  *
  * Based on clk-mstp.c, clk-rcar-gen2.c, and clk-rcar-gen3.c
@@ -691,6 +692,12 @@ static const struct of_device_id cpg_mssr_match[] = {
 	{
 		.compatible = "renesas,r8a7796-cpg-mssr",
 		.data = &r8a7796_cpg_mssr_info,
+	},
+#endif
+#ifdef CONFIG_CLK_R8A77965
+	{
+		.compatible = "renesas,r8a77965-cpg-mssr",
+		.data = &r8a77965_cpg_mssr_info,
 	},
 #endif
 #ifdef CONFIG_CLK_R8A77970
