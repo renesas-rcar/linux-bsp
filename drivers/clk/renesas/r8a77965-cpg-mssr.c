@@ -109,6 +109,8 @@ static const struct mssr_mod_clk r8a77965_mod_clks[] __initconst = {
 	DEF_MOD("sys-dmac0",		 219,	R8A77965_CLK_S0D3),
 	DEF_MOD("scif2",		 310,	R8A77965_CLK_S3D4),
 	DEF_MOD("intc-ap",		 408,	R8A77965_CLK_S3D1),
+	DEF_MOD("audmac0",		 502,	R8A77965_CLK_S3D4),
+	DEF_MOD("audmac1",		 501,	R8A77965_CLK_S3D4),
 	DEF_MOD("fcpvd1",		 602,	R8A77965_CLK_S0D2),
 	DEF_MOD("fcpvd0",		 603,	R8A77965_CLK_S0D2),
 	DEF_MOD("fcpvb0",		 607,	R8A77965_CLK_S0D1),
