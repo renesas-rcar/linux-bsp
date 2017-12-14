@@ -1,6 +1,7 @@
 /*
  * Renesas Clock Pulse Generator / Module Standby and Software Reset
  *
+ * Copyright (C) 2017 Renesas Electronics Corp.
  * Copyright (C) 2015 Glider bvba
  *
  * This program is free software; you can redistribute it and/or modify
@@ -139,6 +140,7 @@ extern const struct cpg_mssr_info r8a7792_cpg_mssr_info;
 extern const struct cpg_mssr_info r8a7794_cpg_mssr_info;
 extern const struct cpg_mssr_info r8a7795_cpg_mssr_info;
 extern const struct cpg_mssr_info r8a7796_cpg_mssr_info;
+extern const struct cpg_mssr_info r8a77965_cpg_mssr_info;
 extern const struct cpg_mssr_info r8a77970_cpg_mssr_info;
 extern const struct cpg_mssr_info r8a77995_cpg_mssr_info;
 
