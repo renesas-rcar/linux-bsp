@@ -24,13 +24,17 @@
 		   SH_PFC_PIN_CFG_PULL_DOWN)
 
 #define CPU_ALL_PORT(fn, sfx)						\
-	PORT_GP_CFG_16(0, fn, sfx, CFG_FLAGS),				\
-	PORT_GP_CFG_29(1, fn, sfx, CFG_FLAGS),				\
-	PORT_GP_CFG_15(2, fn, sfx, CFG_FLAGS),				\
-	PORT_GP_CFG_16(3, fn, sfx, CFG_FLAGS),				\
-	PORT_GP_CFG_18(4, fn, sfx, CFG_FLAGS),				\
-	PORT_GP_CFG_26(5, fn, sfx, CFG_FLAGS),				\
-	PORT_GP_CFG_32(6, fn, sfx, CFG_FLAGS),				\
+	PORT_GP_CFG_16(0, fn, sfx, CFG_FLAGS),	\
+	PORT_GP_CFG_29(1, fn, sfx, CFG_FLAGS),	\
+	PORT_GP_CFG_15(2, fn, sfx, CFG_FLAGS),	\
+	PORT_GP_CFG_12(3, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE),	\
+	PORT_GP_CFG_1(3, 12, fn, sfx, CFG_FLAGS),	\
+	PORT_GP_CFG_1(3, 13, fn, sfx, CFG_FLAGS),	\
+	PORT_GP_CFG_1(3, 14, fn, sfx, CFG_FLAGS),	\
+	PORT_GP_CFG_1(3, 15, fn, sfx, CFG_FLAGS),	\
+	PORT_GP_CFG_18(4, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE),	\
+	PORT_GP_CFG_26(5, fn, sfx, CFG_FLAGS),	\
+	PORT_GP_CFG_32(6, fn, sfx, CFG_FLAGS),	\
 	PORT_GP_CFG_4(7, fn, sfx, CFG_FLAGS)
 /*
  * F_() : just information
@@ -3869,6 +3873,30 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 	{ },
 };
 
+enum ioctrl_regs {
+	POCCTRL,
+};
+
+static const struct pinmux_ioctrl_reg pinmux_ioctrl_regs[] = {
+	[POCCTRL] = { 0xe6060380, },
+	{ /* sentinel */ },
+};
+
+static int r8a77965_pin_to_pocctrl(struct sh_pfc *pfc, unsigned int pin, u32 *pocctrl)
+{
+	int bit = -EINVAL;
+
+	*pocctrl = pinmux_ioctrl_regs[POCCTRL].reg;
+
+	if (pin >= RCAR_GP_PIN(3, 0) && pin <= RCAR_GP_PIN(3, 11))
+		bit = pin & 0x1f;
+
+	if (pin >= RCAR_GP_PIN(4, 0) && pin <= RCAR_GP_PIN(4, 17))
+		bit = (pin & 0x1f) + 12;
+
+	return bit;
+}
+
 static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 	{ PINMUX_BIAS_REG("PUEN0", 0xe6060400, "PUD0", 0xe6060440) {
 		[ 0] = PIN_NUMBER('W', 3),	/* QSPI0_SPCLK */
@@ -4153,6 +4181,7 @@ static void r8a77965_pinmux_set_bias(struct sh_pfc *pfc, unsigned int pin,
 }
 
 static const struct sh_pfc_soc_operations r8a77965_pinmux_ops = {
+	.pin_to_pocctrl = r8a77965_pin_to_pocctrl,
 	.get_bias = r8a77965_pinmux_get_bias,
 	.set_bias = r8a77965_pinmux_set_bias,
 };
@@ -4174,6 +4203,7 @@ const struct sh_pfc_soc_info r8a77965_pinmux_info = {
 	.cfg_regs = pinmux_config_regs,
 	.drive_regs = pinmux_drive_regs,
 	.bias_regs = pinmux_bias_regs,
+	.ioctrl_regs = pinmux_ioctrl_regs,
 
 	.pinmux_data = pinmux_data,
 	.pinmux_data_size = ARRAY_SIZE(pinmux_data),
