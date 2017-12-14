@@ -2,6 +2,7 @@
  * r8a7796 Clock Pulse Generator / Module Standby and Software Reset
  *
  * Copyright (C) 2016 Glider bvba
+ * Copyright (C) 2017 Renesas Electronics Corp.
  *
  * Based on r8a7795-cpg-mssr.c
  *
@@ -110,8 +111,8 @@ static const struct cpg_core_clk r8a7796_core_clks[] __initconst = {
 	DEF_DIV6P1("mso",       R8A7796_CLK_MSO,   CLK_PLL1_DIV4, 0x014),
 	DEF_DIV6P1("hdmi",      R8A7796_CLK_HDMI,  CLK_PLL1_DIV4, 0x250),
 
-	DEF_DIV6_RO("osc",      R8A7796_CLK_OSC,   CLK_EXTAL, CPG_RCKCR,  8),
-	DEF_DIV6_RO("r_int",    CLK_RINT,          CLK_EXTAL, CPG_RCKCR, 32),
+	DEF_BASE("osc",         R8A7796_CLK_OSC, CLK_TYPE_GEN3_OSC,  CLK_EXTAL),
+	DEF_BASE("r_int",       CLK_RINT,        CLK_TYPE_GEN3_RINT, CLK_EXTAL),
 
 	DEF_BASE("r",           R8A7796_CLK_R,     CLK_TYPE_GEN3_R, CLK_RINT),
 };
@@ -274,6 +275,26 @@ static const unsigned int r8a7796_crit_mod_clks[] __initconst = {
  * 1  1  0  1	33.33 / 2	x180	x192	x144	x128	x144
  * 1  1  1  0	Prohibited setting
  * 1  1  1  1	33.33 / 2	x180	x192	x144	x192	x144
+ *
+ *   MD		Internal
+ * 14 13 19 17	RCLK				OSCCLK
+ *-----------------------------------------------------------------
+ * 0  0  0  0	x 1/512  (x 1/16 x 1/32)	1/128 (x 1/16 x 1/8)
+ * 0  0  0  1	x 1/512  (x 1/16 x 1/32)	1/128 (x 1/16 x 1/8)
+ * 0  0  1  0	Prohibited setting
+ * 0  0  1  1	x 1/512  (x 1/19 x 1/32)	1/128 (x 1/19 x 1/8)
+ * 0  1  0  0	x 1/608  (x 1/19 x 1/32)	1/152 (x 1/19 x 1/8)
+ * 0  1  0  1	x 1/608  (x 1/19 x 1/32)	1/152 (x 1/19 x 1/8)
+ * 0  1  1  0	Prohibited setting
+ * 0  1  1  1	x 1/608  (x 1/19 x 1/32)	1/152 (x 1/19 x 1/8)
+ * 1  0  0  0	x 1/768  (x 1/24 x 1/32)	1/192 (x 1/24 x 1/8)
+ * 1  0  0  1	x 1/768  (x 1/24 x 1/32)	1/192 (x 1/24 x 1/8)
+ * 1  0  1  0	Prohibited setting
+ * 1  0  1  1	x 1/768  (x 1/24 x 1/32)	1/192 (x 1/24 x 1/8)
+ * 1  1  0  0	x 1/1024 (x 1/32 x 1/32)	1/256 (x 1/32 x 1/8)
+ * 1  1  0  1	x 1/1024 (x 1/32 x 1/32)	1/256 (x 1/32 x 1/8)
+ * 1  1  1  0	Prohibited setting
+ * 1  1  1  1	x 1/1024 (x 1/32 x 1/32)	1/256 (x 1/32 x 1/8)
  */
 #define CPG_PLL_CONFIG_INDEX(md)	((((md) & BIT(14)) >> 11) | \
 					 (((md) & BIT(13)) >> 11) | \
@@ -281,23 +302,26 @@ static const unsigned int r8a7796_crit_mod_clks[] __initconst = {
 					 (((md) & BIT(17)) >> 17))
 
 static const struct rcar_gen3_cpg_pll_config cpg_pll_configs[16] __initconst = {
-	/* EXTAL div	PLL1 mult/div	PLL3 mult/div */
-	{ 1,		192,	1,	192,	1,	},
-	{ 1,		192,	1,	128,	1,	},
-	{ 0, /* Prohibited setting */			},
-	{ 1,		192,	1,	192,	1,	},
-	{ 1,		160,	1,	160,	1,	},
-	{ 1,		160,	1,	106,	1,	},
-	{ 0, /* Prohibited setting */			},
-	{ 1,		160,	1,	160,	1,	},
-	{ 1,		128,	1,	128,	1,	},
-	{ 1,		128,	1,	84,	1,	},
-	{ 0, /* Prohibited setting */			},
-	{ 1,		128,	1,	128,	1,	},
-	{ 2,		192,	1,	192,	1,	},
-	{ 2,		192,	1,	128,	1,	},
-	{ 0, /* Prohibited setting */			},
-	{ 2,		192,	1,	192,	1,	},
+	/*
+	 *						internal R	OSC
+	 * EXTAL div	PLL1 mult/div	PLL3 mult/div	div		div
+	 */
+	{ 1,		192,	1,	192,	1,	512,		128 },
+	{ 1,		192,	1,	128,	1,	512,		128 },
+	{ 0, /* Prohibited setting */					    },
+	{ 1,		192,	1,	192,	1,	512,		128 },
+	{ 1,		160,	1,	160,	1,	608,		152 },
+	{ 1,		160,	1,	106,	1,	608,		152 },
+	{ 0, /* Prohibited setting */					    },
+	{ 1,		160,	1,	160,	1,	608,		152 },
+	{ 1,		128,	1,	128,	1,	768,		192 },
+	{ 1,		128,	1,	84,	1,	768,		192 },
+	{ 0, /* Prohibited setting */					    },
+	{ 1,		128,	1,	128,	1,	768,		192 },
+	{ 2,		192,	1,	192,	1,	1024,		256 },
+	{ 2,		192,	1,	128,	1,	1024,		256 },
+	{ 0, /* Prohibited setting */					    },
+	{ 2,		192,	1,	192,	1,	1024,		256 },
 };
 
 static int __init r8a7796_cpg_mssr_init(struct device *dev)
