@@ -506,6 +506,14 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		return cpg_sd_clk_register(core, base, __clk_get_name(parent),
 					   notifiers);
 
+	case CLK_TYPE_GEN3_RINT:
+		div = cpg_pll_config->rint;
+		break;
+
+	case CLK_TYPE_GEN3_OSC:
+		div = cpg_pll_config->osc;
+		break;
+
 	case CLK_TYPE_GEN3_R:
 		if (cpg_quirks & RCKCR_CKSEL) {
 			struct cpg_simple_notifier *csn;
