@@ -514,6 +514,9 @@ enum EIS_BIT {
 	EIS_QFS		= 0x00010000,
 };
 
+#define EIS_RESERVED_BIT \
+	(unsigned int)(GENMASK_ULL(31, 17) | GENMASK_ULL(15, 11))
+
 /* RIC0 */
 enum RIC0_BIT {
 	RIC0_FRE0	= 0x00000001,
@@ -557,6 +560,8 @@ enum RIS0_BIT {
 	RIS0_FRF16	= 0x00010000,
 	RIS0_FRF17	= 0x00020000,
 };
+
+#define RIS0_RESERVED_BIT	(unsigned int)(GENMASK_ULL(31, 18))
 
 /* RIC1 */
 enum RIC1_BIT {
@@ -614,6 +619,8 @@ enum RIS2_BIT {
 	RIS2_RFFF	= 0x80000000,
 };
 
+#define RIS2_RESERVED_BIT	(unsigned int)(GENMASK_ULL(30, 18))
+
 /* TIC */
 enum TIC_BIT {
 	TIC_FTE0	= 0x00000001,	/* Undocumented? */
@@ -629,6 +636,10 @@ enum TIS_BIT {
 	TIS_TFUF	= 0x00000100,
 	TIS_TFWF	= 0x00000200,
 };
+
+#define TIS_RESERVED_BIT \
+	(unsigned int)(GENMASK_ULL(31, 20) | GENMASK_ULL(15, 12) | \
+	GENMASK_ULL(7, 4))
 
 /* ISS */
 enum ISS_BIT {
@@ -702,6 +713,8 @@ enum GIS_BIT {
 	GIS_PTCF	= 0x00000001,	/* Undocumented? */
 	GIS_PTMF	= 0x00000004,
 };
+
+#define GIS_RESERVED_BIT	(unsigned int)(GENMASK_ULL(15, 10))
 
 /* GIE (R-Car Gen3 only) */
 enum GIE_BIT {
