@@ -149,6 +149,7 @@ static const struct mssr_mod_clk r8a77965_mod_clks[] __initconst = {
 
 	DEF_MOD("audmac1",		501,	R8A77965_CLK_S1D2),
 	DEF_MOD("audmac0",		502,	R8A77965_CLK_S1D2),
+	DEF_MOD("adsp",			506,	R8A77965_CLK_S1D1),
 	DEF_MOD("drif7",		508,	R8A77965_CLK_S3D2),
 	DEF_MOD("drif6",		509,	R8A77965_CLK_S3D2),
 	DEF_MOD("drif5",		510,	R8A77965_CLK_S3D2),
