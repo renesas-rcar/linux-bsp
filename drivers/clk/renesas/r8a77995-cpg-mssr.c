@@ -1,7 +1,7 @@
 /*
  * r8a77995 Clock Pulse Generator / Module Standby and Software Reset
  *
- * Copyright (C) 2017 Glider bvba
+ * Copyright (C) 2017 Renesas Electronics Corp.
  *
  * Based on r8a7795-cpg-mssr.c
  *
@@ -74,6 +74,7 @@ static const struct cpg_core_clk r8a77995_core_clks[] __initconst = {
 
 	/* Core Clock Outputs */
 	DEF_FIXED("z2",        R8A77995_CLK_Z2,    CLK_PLL0D3,     1, 1),
+	DEF_FIXED("za2",       R8A77995_CLK_ZA2,   CLK_PLL0D3,    10, 2),
 	DEF_FIXED("ztr",       R8A77995_CLK_ZTR,   CLK_PLL1,       6, 1),
 	DEF_FIXED("zt",        R8A77995_CLK_ZT,    CLK_PLL1,       4, 1),
 	DEF_FIXED("zx",        R8A77995_CLK_ZX,    CLK_PLL1,       3, 1),
