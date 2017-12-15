@@ -176,6 +176,8 @@ struct sci_port {
 	bool has_rtscts;
 	bool autorts;
 	bool tx_occurred;
+
+	bool				use_dma;
 };
 
 #define SCI_NPORTS CONFIG_SERIAL_SH_SCI_NR_UARTS
@@ -2209,7 +2211,8 @@ static int sci_startup(struct uart_port *port)
 	dev_dbg(port->dev, "%s(%d)\n", __func__, port->line);
 
 	s->tx_occurred = false;
-	sci_request_dma(port);
+	if (s->use_dma)
+		sci_request_dma(port);
 
 	ret = sci_request_irq(s);
 	if (unlikely(ret < 0)) {
@@ -3295,6 +3298,7 @@ static struct plat_sci_port *sci_parse_dt(struct platform_device *pdev,
 	p->regtype = SCI_OF_REGTYPE(data);
 
 	sp->has_rtscts = of_property_read_bool(np, "uart-has-rtscts");
+	sp->use_dma = of_property_read_bool(np, "dmas");
 
 	return p;
 }
