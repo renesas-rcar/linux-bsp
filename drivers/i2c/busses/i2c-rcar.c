@@ -104,8 +104,8 @@
 #define RCAR_IRQ_RECV	(MNR | MAL | MST | MAT | MDR)
 #define RCAR_IRQ_STOP	(MST)
 
-#define RCAR_IRQ_ACK_SEND	(~(MAT | MDE) & 0xFF)
-#define RCAR_IRQ_ACK_RECV	(~(MAT | MDR) & 0xFF)
+#define RCAR_IRQ_ACK_SEND	(~(MAT | MDE) & 0x7F)
+#define RCAR_IRQ_ACK_RECV	(~(MAT | MDR) & 0x7F)
 
 #define ID_LAST_MSG	(1 << 0)
 #define ID_FIRST_MSG	(1 << 1)
@@ -298,7 +298,7 @@ static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 	if (priv->msgs_left == 1)
 		priv->flags |= ID_LAST_MSG;
 
-	rcar_i2c_write(priv, ICMAR, (priv->msg->addr << 1) | read);
+	rcar_i2c_write(priv, ICMAR, ((priv->msg->addr << 1) | read) & 0xff);
 	/*
 	 * We don't have a testcase but the HW engineers say that the write order
 	 * of ICMSR and ICMCR depends on whether we issue START or REP_START. Since
