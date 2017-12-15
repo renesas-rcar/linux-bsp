@@ -163,6 +163,8 @@ static const struct soc_device_attribute rcar_quirks_match[]  = {
 		.data = (void *)RCAR_I2C_GEN3, },
 	{ .soc_id = "r8a77965",
 		.data = (void *)RCAR_I2C_GEN3, },
+	{ .soc_id = "r8a77995",
+		.data = (void *)RCAR_I2C_GEN3, },
 	{/*sentinel*/},
 };
 
@@ -860,6 +862,7 @@ static const struct of_device_id rcar_i2c_dt_ids[] = {
 	{ .compatible = "renesas,i2c-r8a7795", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-r8a7796", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-r8a77965", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,i2c-r8a77995", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-rcar", .data = (void *)I2C_RCAR_GEN1 },	/* Deprecated */
 	{ .compatible = "renesas,rcar-gen1-i2c", .data = (void *)I2C_RCAR_GEN1 },
 	{ .compatible = "renesas,rcar-gen2-i2c", .data = (void *)I2C_RCAR_GEN2 },
