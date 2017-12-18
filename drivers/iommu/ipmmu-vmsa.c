@@ -119,7 +119,9 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)	/* R-Car Gen2 only */
 
 #define IMTTLBR0			0x0010		/* R-Car Gen2/3 */
+#define IMTTLBR0_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR0			0x0014		/* R-Car Gen2/3 */
+#define IMTTUBR0_TTBR_MASK		(0xff << 0)
 
 #define IMSTR				0x0020		/* R-Car Gen2/3 */
 #define IMSTR_MHIT			(1 << 4)	/* R-Car Gen2/3 */
@@ -293,8 +295,10 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 	/* TODO: What should we set the ASID to ? */
 	ipmmu_imuasid_write(mmu, utlb, 0);
 	/* TODO: Do we need to flush the microTLB ? */
-	ipmmu_imuctr_write(mmu, utlb, IMUCTR_TTSEL_MMU(domain->context_id) |
-				      IMUCTR_MMUEN);
+	ipmmu_imuctr_write(mmu, utlb,
+			   ipmmu_read(mmu, ipmmu_utlb_reg(mmu, IMUCTR(utlb))) |
+			   IMUCTR_TTSEL_MMU(domain->context_id) |
+			   IMUCTR_MMUEN);
 	mmu->utlb_ctx[utlb] = domain->context_id;
 }
 
@@ -373,8 +377,9 @@ static void ipmmu_domain_setup_context(struct ipmmu_vmsa_domain *domain)
 
 	/* TTBR0 */
 	ttbr = domain->cfg.arm_lpae_s1_cfg.ttbr;
-	ipmmu_ctx_write_root(domain, IMTTLBR0, ttbr);
-	ipmmu_ctx_write_root(domain, IMTTUBR0, ttbr >> 32);
+	ipmmu_ctx_write_root(domain, IMTTLBR0, ttbr & IMTTLBR0_TTBR_MASK);
+	ipmmu_ctx_write_root(domain, IMTTUBR0,
+			     (ttbr >> 32) & IMTTUBR0_TTBR_MASK);
 
 	/*
 	 * TTBCR
@@ -390,7 +395,10 @@ static void ipmmu_domain_setup_context(struct ipmmu_vmsa_domain *domain)
 		tmp |= IMTTBCR_SH0_INNER_SHAREABLE | IMTTBCR_ORGN0_WB_WA |
 		       IMTTBCR_IRGN0_WB_WA;
 
-	ipmmu_ctx_write_root(domain, IMTTBCR, IMTTBCR_EAE | tmp);
+	ipmmu_ctx_write_root(domain, IMTTBCR,
+			     ipmmu_ctx_read_root(domain, IMTTBCR) |
+			     IMTTBCR_EAE | IMTTBCR_SH0_INNER_SHAREABLE |
+			     IMTTBCR_ORGN0_WB_WA | IMTTBCR_IRGN0_WB_WA | tmp);
 
 	/* MAIR0 */
 	ipmmu_ctx_write_root(domain, IMMAIR0,
