@@ -86,6 +86,10 @@ static const struct soc_device_attribute rcar_quirks_match[]  = {
 		.soc_id = "r8a7796",
 		.data = (void *)RCAR_XHCI_FIRMWARE_V3,
 	},
+	{
+		.soc_id = "r8a77965",
+		.data = (void *)RCAR_XHCI_FIRMWARE_V3,
+	},
 	{ /* sentinel */ },
 };
 
@@ -118,6 +122,7 @@ static int xhci_rcar_is_gen3(struct device *dev)
 
 	return of_device_is_compatible(node, "renesas,xhci-r8a7795") ||
 		of_device_is_compatible(node, "renesas,xhci-r8a7796") ||
+		of_device_is_compatible(node, "renesas,xhci-r8a77965") ||
 		of_device_is_compatible(node, "renesas,rcar-gen3-xhci");
 }
 
