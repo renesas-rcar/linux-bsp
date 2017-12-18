@@ -160,9 +160,13 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)
 
 #define IMTTLBR0			0x0010
+#define IMTTLBR0_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR0			0x0014
+#define IMTTUBR0_TTBR_MASK		(0xff << 0)
 #define IMTTLBR1			0x0018
+#define IMTTLBR1_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR1			0x001c
+#define IMTTUBR1_TTBR_MASK		(0xff << 0)
 
 #define IMSTR				0x0020
 #define IMSTR_ERRLVL_MASK		(3 << 12)
@@ -333,8 +337,9 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 	ipmmu_write(mmu, IMUASID(utlb), 0);
 	/* TODO: Do we need to flush the microTLB ? */
 	ipmmu_write(mmu, IMUCTR(utlb),
-		    IMUCTR_TTSEL_MMU(domain->context_id) | IMUCTR_FLUSH |
-		    IMUCTR_MMUEN);
+		    ipmmu_read(mmu, IMUCTR(utlb)) |
+		    IMUCTR_TTSEL_MMU(domain->context_id) |
+		    IMUCTR_FLUSH | IMUCTR_MMUEN);
 }
 
 /*
@@ -453,8 +458,9 @@ static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 
 	/* TTBR0 */
 	ttbr = domain->cfg.arm_lpae_s1_cfg.ttbr[0];
-	ipmmu_ctx_write_root(domain, IMTTLBR0, ttbr);
-	ipmmu_ctx_write_root(domain, IMTTUBR0, ttbr >> 32);
+	ipmmu_ctx_write_root(domain, IMTTLBR0, ttbr & IMTTLBR0_TTBR_MASK);
+	ipmmu_ctx_write_root(domain, IMTTUBR0,
+			     (ttbr >> 32) & IMTTUBR0_TTBR_MASK);
 
 	/*
 	 * TTBCR
@@ -466,9 +472,10 @@ static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 	else
 		tmp = IMTTBCR_SL0_LVL_1;
 
-	ipmmu_ctx_write_root(domain, IMTTBCR, IMTTBCR_EAE |
-			     IMTTBCR_SH0_INNER_SHAREABLE | IMTTBCR_ORGN0_WB_WA |
-			     IMTTBCR_IRGN0_WB_WA | tmp);
+	ipmmu_ctx_write_root(domain, IMTTBCR,
+			     ipmmu_ctx_read_root(domain, IMTTBCR) |
+			     IMTTBCR_EAE | IMTTBCR_SH0_INNER_SHAREABLE |
+			     IMTTBCR_ORGN0_WB_WA | IMTTBCR_IRGN0_WB_WA | tmp);
 
 	/* MAIR0 */
 	ipmmu_ctx_write_root(domain, IMMAIR0,
