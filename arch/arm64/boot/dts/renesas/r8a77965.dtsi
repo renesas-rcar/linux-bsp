@@ -211,6 +211,13 @@
 		#size-cells = <2>;
 		ranges;
 
+		mfis: mfis@e6260000 {
+			compatible = "renesas,mfis-lock-r8a77965",
+				     "renesas,mfis-lock";
+			reg = <0 0xe6260000 0 0x1000>;
+			#hwlock-cells = <1>;
+		};
+
 		rwdt: watchdog@e6020000 {
 			compatible = "renesas,r8a77965-wdt",
 				     "renesas,rcar-gen3-wdt";
