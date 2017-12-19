@@ -141,6 +141,10 @@
 	};
 };
 
+&gpio1 {
+	gpio-ranges = <&pfc 0 32 28>;
+};
+
 &du {
 	vsps = <&vspd0 &vspd1 &vspd2 &vspd3>;
 };
