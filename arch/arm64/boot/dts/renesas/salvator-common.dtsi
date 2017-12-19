@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for common parts of Salvator-X board variants
  *
- * Copyright (C) 2015-2016 Renesas Electronics Corp.
+ * Copyright (C) 2015-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -574,6 +574,11 @@
 		function = "pwm1";
 	};
 
+	pwm2_pins: pwm2 {
+		groups = "pwm2_a";
+		function = "pwm2";
+	};
+
 	scif1_pins: scif1 {
 		groups = "scif1_data_a", "scif1_ctrl";
 		function = "scif1";
@@ -666,6 +671,13 @@
 
 &pwm1 {
 	pinctrl-0 = <&pwm1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&pwm2 {
+	pinctrl-0 = <&pwm2_pins>;
 	pinctrl-names = "default";
 
 	status = "okay";
