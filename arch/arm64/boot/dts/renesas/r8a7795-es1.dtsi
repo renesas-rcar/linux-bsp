@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a7795 ES1.x SoC
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2015-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -139,6 +139,10 @@
 			};
 		};
 	};
+};
+
+&gpio1 {
+	gpio-ranges = <&pfc 0 32 28>;
 };
 
 &du {
