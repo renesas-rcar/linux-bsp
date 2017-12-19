@@ -401,6 +401,9 @@ static const struct of_device_id rcar_gen3_phy_usb2_match_table[] = {
 		.data = (void *)RCAR_GEN3_PHY_HAS_DEDICATED_PINS,
 	},
 	{
+		.compatible = "renesas,usb2-phy-r8a77995",
+	},
+	{
 		.compatible = "renesas,rcar-gen3-usb2-phy",
 	},
 	{ }
