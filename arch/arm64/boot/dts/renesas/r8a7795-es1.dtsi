@@ -99,6 +99,54 @@
 
 	/delete-node/ usb-phy@ee0e0200;
 
+	vcp4@fe8f0000 {
+		compatible = "renesas,vcp4-vcpl4";
+		reg = <0 0xfe8f0000 0 0x200>, <0 0xfe8f0200 0 0x200>;
+		interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cpg CPG_MOD 129>;
+		power-domains = <&sysc R8A7795_PD_A2VC0>;
+		resets = <&cpg 129>;
+		renesas,#ch = <1>;
+		renesas,#fcp_ch = <1>;
+	};
+
+	vcp4@fe900000 {
+		renesas,#ch = <2>;
+	};
+
+	vcp4@fe8d0000 {
+		renesas,#ch = <3>;
+		renesas,#fcp_ch = <2>;
+	};
+
+	fcpci0: vcp4@fe8df000 {
+		compatible = "renesas,vcp4-fcpci0";
+		reg = <0 0xfe8df000 0 0x200>;
+		clocks = <&cpg CPG_MOD 617>;
+		power-domains = <&sysc R8A7795_PD_A3VC>;
+		resets = <&cpg 617>;
+		renesas,#ch = <2>;
+	};
+
+	fcpci1: vcp4@fe8ff000 {
+		compatible = "renesas,vcp4-fcpci1";
+		reg = <0 0xfe8ff000 0 0x200>;
+		clocks = <&cpg CPG_MOD 616>;
+		power-domains = <&sysc R8A7795_PD_A3VC>;
+		resets = <&cpg 616>;
+		renesas,#ch = <1>;
+	};
+
+	stb: vcp4@fe8a0000 {
+		compatible = "renesas,vcp4-stb";
+		reg = <0 0xfe8a0000 0 0x200>;
+		interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cpg CPG_MOD 104>;
+		power-domains = <&sysc R8A7795_PD_A3VC>;
+		resets = <&cpg 104>;
+	};
+
 	fdp1@fe948000 {
 		compatible = "renesas,fdp1";
 		reg = <0 0xfe948000 0 0x2400>;
