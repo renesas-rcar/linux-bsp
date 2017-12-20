@@ -639,6 +639,13 @@
 		clock-frequency = <0>;
 	};
 
+	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
 	soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
