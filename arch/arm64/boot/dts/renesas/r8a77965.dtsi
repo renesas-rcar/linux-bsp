@@ -971,6 +971,11 @@
 			#iommu-cells = <1>;
 		};
 
+		qos@e67e0000 {
+			compatible = "renesas,qos";
+			reg = <0 0xe67e0000 0 0x10090>;
+		};
+
 		avb: ethernet@e6800000 {
 			compatible = "renesas,etheravb-r8a77965",
 				     "renesas,etheravb-rcar-gen3";
