@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Draak board
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  * Copyright (C) 2017 Glider bvba
  *
  * This file is licensed under the terms of the GNU General Public License
@@ -120,5 +120,9 @@
 
 &rwdt {
 	timeout-sec = <60>;
+	status = "okay";
+};
+
+&i2c0 {
 	status = "okay";
 };
