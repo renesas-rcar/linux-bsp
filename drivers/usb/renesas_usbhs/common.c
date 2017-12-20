@@ -443,6 +443,10 @@ static void usbhsc_notify_hotplug(struct work_struct *work)
 	struct usbhs_priv *priv = container_of(work,
 					       struct usbhs_priv,
 					       notify_hotplug_work.work);
+
+	if (priv->suspended)
+		return;
+
 	usbhsc_hotplug(priv);
 }
 
@@ -486,6 +490,14 @@ static const struct of_device_id usbhs_of_match[] = {
 		.data = (void *)USBHS_TYPE_RCAR_GEN3,
 	},
 	{
+		.compatible = "renesas,usbhs-r8a77965",
+		.data = (void *)USBHS_TYPE_RCAR_GEN3,
+	},
+	{
+		.compatible = "renesas,usbhs-r8a77995",
+		.data = (void *)USBHS_TYPE_RCAR_GEN3_WITH_PLL,
+	},
+	{
 		.compatible = "renesas,rcar-gen2-usbhs",
 		.data = (void *)USBHS_TYPE_RCAR_GEN2,
 	},
@@ -519,8 +531,10 @@ static struct renesas_usbhs_platform_info *usbhs_parse_dt(struct device *dev)
 		dparam->enable_gpio = gpio;
 
 	if (dparam->type == USBHS_TYPE_RCAR_GEN2 ||
-	    dparam->type == USBHS_TYPE_RCAR_GEN3)
+	    dparam->type == USBHS_TYPE_RCAR_GEN3 ||
+	    dparam->type == USBHS_TYPE_RCAR_GEN3_WITH_PLL) {
 		dparam->has_usb_dmac = 1;
+	}
 
 	return info;
 }
@@ -588,6 +602,9 @@ static int usbhs_probe(struct platform_device *pdev)
 			priv->dparam.pipe_configs = usbhsc_new_pipe;
 			priv->dparam.pipe_size = ARRAY_SIZE(usbhsc_new_pipe);
 		}
+		break;
+	case USBHS_TYPE_RCAR_GEN3_WITH_PLL:
+		priv->pfunc = usbhs_rcar3_with_pll_ops;
 		break;
 	default:
 		if (!info->platform_callback.get_id) {
@@ -736,6 +753,8 @@ static int usbhsc_suspend(struct device *dev)
 	struct usbhs_priv *priv = dev_get_drvdata(dev);
 	struct usbhs_mod *mod = usbhs_mod_get_current(priv);
 
+	priv->suspended = 1;
+
 	if (mod) {
 		usbhs_mod_call(priv, stop, priv);
 		usbhs_mod_change(priv, -1);
@@ -759,6 +778,8 @@ static int usbhsc_resume(struct device *dev)
 
 	usbhs_platform_call(priv, phy_reset, pdev);
 
+	priv->suspended = 0;
+
 	usbhsc_drvcllbck_notify_hotplug(pdev);
 
 	return 0;
@@ -777,10 +798,9 @@ static int usbhsc_runtime_nop(struct device *dev)
 }
 
 static const struct dev_pm_ops usbhsc_pm_ops = {
-	.suspend		= usbhsc_suspend,
-	.resume			= usbhsc_resume,
-	.runtime_suspend	= usbhsc_runtime_nop,
-	.runtime_resume		= usbhsc_runtime_nop,
+	SET_SYSTEM_SLEEP_PM_OPS(usbhsc_suspend, usbhsc_resume)
+	SET_RUNTIME_PM_OPS(usbhsc_runtime_nop, usbhsc_runtime_nop,
+			NULL)
 };
 
 static struct platform_driver renesas_usbhs_driver = {
