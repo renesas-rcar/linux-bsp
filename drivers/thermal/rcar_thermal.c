@@ -88,6 +88,8 @@ static const struct of_device_id rcar_thermal_dt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, rcar_thermal_dt_ids);
 
+static u32 enr_bits;
+
 /*
  *		basic functions
  */
@@ -442,7 +444,7 @@ static int rcar_thermal_probe(struct platform_device *pdev)
 	int i;
 	int ret = -ENODEV;
 	int idle = IDLE_INTERVAL;
-	u32 enr_bits = 0;
+	enr_bits = 0;
 
 	common = devm_kzalloc(dev, sizeof(*common), GFP_KERNEL);
 	if (!common)
@@ -664,9 +666,47 @@ error_unregister:
 	return ret;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_thermal_suspend(struct device *dev)
+{
+	struct rcar_thermal_common *common = dev_get_drvdata(dev);
+	struct rcar_thermal_priv *priv;
+
+	rcar_thermal_for_each_priv(priv, common) {
+		rcar_thermal_irq_disable(priv);
+	}
+
+	return 0;
+}
+
+static int rcar_thermal_resume(struct device *dev)
+{
+	struct rcar_thermal_common *common = dev_get_drvdata(dev);
+	struct rcar_thermal_priv *priv;
+
+	rcar_thermal_for_each_priv(priv, common) {
+		rcar_thermal_irq_enable(priv);
+		rcar_thermal_update_temp(priv);
+	}
+
+	rcar_thermal_common_write(common, ENR, enr_bits);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_thermal_pm_ops,
+			rcar_thermal_suspend,
+			rcar_thermal_resume);
+
+#define DEV_PM_OPS (&rcar_thermal_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_thermal_driver = {
 	.driver	= {
 		.name	= "rcar_thermal",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rcar_thermal_dt_ids,
 	},
 	.probe		= rcar_thermal_probe,
