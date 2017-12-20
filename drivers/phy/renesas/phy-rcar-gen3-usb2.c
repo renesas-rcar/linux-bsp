@@ -1,7 +1,7 @@
 /*
  * Renesas R-Car Gen3 for USB2.0 PHY driver
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2017 Renesas Electronics Corporation
  *
  * This is based on the phy-rcar-gen2 driver:
  * Copyright (C) 2014 Renesas Solutions Corp.
@@ -379,6 +379,8 @@ static irqreturn_t rcar_gen3_phy_usb2_irq(int irq, void *_ch)
 static const struct of_device_id rcar_gen3_phy_usb2_match_table[] = {
 	{ .compatible = "renesas,usb2-phy-r8a7795" },
 	{ .compatible = "renesas,usb2-phy-r8a7796" },
+	{ .compatible = "renesas,usb2-phy-r8a77965" },
+	{ .compatible = "renesas,usb2-phy-r8a77995" },
 	{ .compatible = "renesas,rcar-gen3-usb2-phy" },
 	{ }
 };
@@ -492,14 +494,50 @@ static int rcar_gen3_phy_usb2_remove(struct platform_device *pdev)
 	return 0;
 };
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_gen3_phy_suspend(struct device *dev)
+{
+	int ret = 0;
+
+	if (to_phy(dev))
+		ret = rcar_gen3_phy_usb2_exit(to_phy(dev));
+	else {
+		pr_warn("%s: No phy dev\n", __func__);
+		ret = -ENODEV;
+	}
+	return ret;
+}
+
+static int rcar_gen3_phy_resume(struct device *dev)
+{
+	int ret = 0;
+
+	if (to_phy(dev))
+		ret = rcar_gen3_phy_usb2_init(to_phy(dev));
+	else {
+		pr_warn("%s: No phy dev\n", __func__);
+		ret = -ENODEV;
+	}
+	return ret;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_gen3_phy_pm_ops,
+			rcar_gen3_phy_suspend, rcar_gen3_phy_resume);
+#define DEV_PM_OPS (&rcar_gen3_phy_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_gen3_phy_usb2_driver = {
 	.driver = {
 		.name		= "phy_rcar_gen3_usb2",
+		.pm		= DEV_PM_OPS,
 		.of_match_table	= rcar_gen3_phy_usb2_match_table,
 	},
 	.probe	= rcar_gen3_phy_usb2_probe,
 	.remove = rcar_gen3_phy_usb2_remove,
 };
+
 module_platform_driver(rcar_gen3_phy_usb2_driver);
 
 MODULE_LICENSE("GPL v2");
