@@ -3284,6 +3284,52 @@
 			resets = <&cpg 820>;
 		};
 
+		fcpcs: vcp4@fe90f000 {
+			compatible = "renesas,vcp4-fcpcs";
+			reg = <0 0xfe90f000 0 0x200>;
+			clocks = <&cpg CPG_MOD 619>;
+			power-domains = <&sysc R8A7795_PD_A3VC>;
+			resets = <&cpg 619>;
+			renesas,#ch = <0>;
+		};
+
+		ivdp1c: vcp4@fe8d0000 {
+			compatible = "renesas,vcp4-ivdp1c";
+			reg = <0 0xfe8d0000 0 0x200>, <0 0xfe8d0200 0 0x200>;
+			interrupts = <GIC_SPI 380 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 381 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 128>;
+			power-domains = <&sysc R8A7795_PD_A2VC0>;
+			resets = <&cpg 128>;
+			renesas,#ch = <2>;
+			renesas,#fcp_ch = <0>;
+		};
+
+		vcplf: vcp4@fe910000 {
+			compatible = "renesas,vcp4-vcplf";
+			reg = <0 0xfe910000 0 0x200>, <0 0xfe910200 0 0x200>;
+			interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 130>;
+			power-domains = <&sysc R8A7795_PD_A2VC1>;
+			resets = <&cpg 130>;
+			renesas,#ch = <0>;
+			renesas,#fcp_ch = <0>;
+		};
+
+		vdpb: vcp4@fe900000 {
+			compatible = "renesas,vcp4-vdpb";
+			reg = <0 0xfe900000 0 0x200>, <0 0xfe900200 0 0x200>;
+			interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 131>;
+			power-domains = <&sysc R8A7795_PD_A2VC1>;
+			resets = <&cpg 131>;
+			renesas,#ch = <1>;
+			renesas,#fcp_ch = <0>;
+		};
+
 		vspbc: vsp@fe920000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xfe920000 0 0x8000>;
