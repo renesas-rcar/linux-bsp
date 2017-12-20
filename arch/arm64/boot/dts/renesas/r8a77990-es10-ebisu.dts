@@ -145,6 +145,11 @@
 		};
 	};
 
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>;
+	};
+
 	lvds0 {
 		compatible = "panel-lvds";
 
