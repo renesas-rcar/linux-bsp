@@ -3702,9 +3702,51 @@ static int adv76xx_remove(struct i2c_client *client)
 
 /* ----------------------------------------------------------------------- */
 
+#ifdef CONFIG_PM_SLEEP
+static int adv76xx_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	u8 value;
+
+	value = io_read(sd, 0x0c) | (u8)0x20;
+	io_write(sd, 0x0c, value);
+
+	return 0;
+}
+
+static int adv76xx_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct adv76xx_state *state = to_state(sd);
+	int i;
+	int ret;
+
+	for (i = 1; i < ADV76XX_PAGE_MAX; ++i) {
+		if (!(BIT(i) & state->info->page_mask))
+			continue;
+		ret = io_write(sd, 0xf2 + i,
+			       state->pdata.i2c_addresses[i] << 1);
+		if (ret)
+			return ret;
+	}
+
+	return adv76xx_core_init(sd);
+}
+
+static SIMPLE_DEV_PM_OPS(adv76xx_pm_ops, adv76xx_suspend, adv76xx_resume);
+#define ADV76XX_PM_OPS (&adv76xx_pm_ops)
+#else
+#define ADV76XX_PM_OPS (NULL)
+#endif
+
+/* ----------------------------------------------------------------------- */
+
 static struct i2c_driver adv76xx_driver = {
 	.driver = {
 		.name = "adv7604",
+		.pm = ADV76XX_PM_OPS,
 		.of_match_table = of_match_ptr(adv76xx_of_id),
 	},
 	.probe = adv76xx_probe,
