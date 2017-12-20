@@ -457,6 +457,112 @@ static int rcar_thermal_probe(struct platform_device *pdev)
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
 
+#ifdef CONFIG_ARCH_R8A77995
+
+	/*
+	 * Request 2 (of the 3 possible) IRQs, the driver only needs to
+	 * to trigger on the low and high trip points of the current
+	 * temp window at this point.
+	 */
+	for (i = 0; i < 2; i++) {
+		irq = platform_get_resource(pdev, IORESOURCE_IRQ, i);
+		/* enable temperature comparation */
+		if (irq) {
+			if (!common->base) {
+				/*
+				 * platform has IRQ support.
+				 * Then, driver uses common registers
+				 * rcar_has_irq_support() will be enabled
+				 */
+				res = platform_get_resource(pdev,
+							    IORESOURCE_MEM,
+							    mres++);
+				common->base = devm_ioremap_resource(dev, res);
+				if (IS_ERR(common->base))
+					return PTR_ERR(common->base);
+
+				idle = 0; /* polling delay is not needed */
+			}
+
+			ret = devm_request_irq(dev, irq->start,
+					       rcar_thermal_irq,
+					       IRQF_SHARED, dev_name(dev),
+					       common);
+
+			if (ret) {
+				dev_err(dev, "irq request failed\n ");
+				goto error_unregister;
+			}
+
+			/* update ENR bits */
+			enr_bits |= 1 << i;
+		}
+	}
+
+	for (i = 0;; i++) {
+		res = platform_get_resource(pdev, IORESOURCE_MEM, mres++);
+		if (!res)
+			break;
+
+		priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+		if (!priv) {
+			ret = -ENOMEM;
+			goto error_unregister;
+		}
+
+		priv->base = devm_ioremap_resource(dev, res);
+		if (IS_ERR(priv->base)) {
+			ret = PTR_ERR(priv->base);
+			goto error_unregister;
+		}
+
+		priv->common = common;
+		priv->id = i;
+		mutex_init(&priv->lock);
+		INIT_LIST_HEAD(&priv->list);
+		INIT_DELAYED_WORK(&priv->work, rcar_thermal_work);
+		ret = rcar_thermal_update_temp(priv);
+		if (ret < 0)
+			goto error_unregister;
+
+		if (rcar_use_of_thermal(dev))
+			priv->zone = devm_thermal_zone_of_sensor_register(
+						dev, i, priv,
+						&rcar_thermal_zone_of_ops);
+		else
+			priv->zone = thermal_zone_device_register(
+						"rcar_thermal",
+						1, 0, priv,
+						&rcar_thermal_zone_ops, NULL, 0,
+						idle);
+		if (IS_ERR(priv->zone)) {
+			dev_err(dev, "can't register thermal zone\n");
+			ret = PTR_ERR(priv->zone);
+			priv->zone = NULL;
+			goto error_unregister;
+		}
+
+		if (rcar_use_of_thermal(dev)) {
+			/*
+			 * thermal_zone doesn't enable hwmon as default,
+			 * but, enable it here to keep compatible
+			 */
+			priv->zone->tzp->no_hwmon = false;
+			ret = thermal_add_hwmon_sysfs(priv->zone);
+			if (ret)
+				goto error_unregister;
+		}
+
+		rcar_thermal_irq_enable(priv);
+
+		list_move_tail(&priv->list, &common->head);
+	}
+
+	if (enr_bits)
+		rcar_thermal_common_write(common, ENR, enr_bits);
+
+#else
+
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (irq) {
 		/*
@@ -545,6 +651,8 @@ static int rcar_thermal_probe(struct platform_device *pdev)
 
 		rcar_thermal_common_write(common, ENR, enr_bits);
 	}
+
+#endif
 
 	dev_info(dev, "%d sensor probed\n", i);
 
