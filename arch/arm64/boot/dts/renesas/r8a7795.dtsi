@@ -575,6 +575,13 @@
 		clock-frequency = <0>;
 	};
 
+	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
 	gsx_opp0: gsx_opp_table0 {
 		compatible = "operating-points-v2";
 
