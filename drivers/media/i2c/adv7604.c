@@ -2812,11 +2812,13 @@ static int adv76xx_core_init(struct v4l2_subdev *sd)
 	struct adv76xx_platform_data *pdata = &state->pdata;
 	int err;
 	struct v4l2_edid g_edid;
+	__u8 edid[256];
 
 	g_edid.pad = 0;
 	g_edid.start_block = 0;
 	g_edid.blocks = 2;
-	g_edid.edid = (__u8 *)g_edid_data;
+	memcpy(edid, g_edid_data, 256);
+	g_edid.edid = (__u8 *)edid;
 	err = adv76xx_set_edid(sd, &g_edid);
 	if (err < 0) {
 		v4l2_err(sd, "edid set error %d\n", err);
