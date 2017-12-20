@@ -72,6 +72,14 @@
 		 <&versaclock6 2>;
 	clock-names = "du.0", "du.1", "du.2", "lvds.0",
 		      "dclkin.0", "dclkin.1", "dclkin.2";
+
+	ports {
+		port@2 {
+			endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
 };
 
 &sound_card {
