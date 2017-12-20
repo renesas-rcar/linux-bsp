@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Salvator-X board
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -38,6 +38,14 @@
 		 <&versaclock5 2>;
 	clock-names = "du.0", "du.1", "du.2", "lvds.0",
 		      "dclkin.0", "dclkin.1", "dclkin.2";
+
+	ports {
+		port@2 {
+			endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
 };
 
 &hdmi0 {
