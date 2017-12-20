@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Salvator-X board
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -9,32 +9,17 @@
  */
 
 /dts-v1/;
-#include "r8a7795.dtsi"
+#include "r8a77965.dtsi"
 #include "salvator-x.dtsi"
 
 / {
-	model = "Renesas Salvator-X board based on r8a7795 ES2.0+";
-	compatible = "renesas,salvator-x", "renesas,r8a7795";
+	model = "Renesas Salvator-X board based on r8a77965";
+	compatible = "renesas,salvator-x", "renesas,r8a77965";
 
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
-		reg = <0x0 0x48000000 0x0 0x38000000>;
-	};
-
-	memory@500000000 {
-		device_type = "memory";
-		reg = <0x5 0x00000000 0x0 0x40000000>;
-	};
-
-	memory@600000000 {
-		device_type = "memory";
-		reg = <0x6 0x00000000 0x0 0x40000000>;
-	};
-
-	memory@700000000 {
-		device_type = "memory";
-		reg = <0x7 0x00000000 0x0 0x40000000>;
+		reg = <0x0 0x48000000 0x0 0x78000000>;
 	};
 
 	reserved-memory {
@@ -102,27 +87,21 @@
 &du {
 	clocks = <&cpg CPG_MOD 724>,
 		 <&cpg CPG_MOD 723>,
-		 <&cpg CPG_MOD 722>,
 		 <&cpg CPG_MOD 721>,
 		 <&cpg CPG_MOD 727>,
 		 <&versaclock5 1>,
 		 <&x21_clk>,
-		 <&x22_clk>,
 		 <&versaclock5 2>;
-	clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0",
-		      "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
+	clock-names = "du.0", "du.1", "du.3", "lvds.0",
+		      "dclkin.0", "dclkin.1", "dclkin.3";
 
 	ports {
-		port@3 {
+		port@2 {
 			endpoint {
 				remote-endpoint = <&lvds_in>;
 			};
 		};
 	};
-};
-
-&ehci2 {
-	status = "okay";
 };
 
 &hdmi0 {
@@ -140,23 +119,6 @@
 
 &hdmi0_con {
 	remote-endpoint = <&rcar_dw_hdmi0_out>;
-};
-
-&hdmi1 {
-	status = "okay";
-
-	ports {
-		port@1 {
-			reg = <1>;
-			rcar_dw_hdmi1_out: endpoint {
-				remote-endpoint = <&hdmi1_con>;
-			};
-		};
-	};
-};
-
-&hdmi1_con {
-	remote-endpoint = <&rcar_dw_hdmi1_out>;
 };
 
 &msiof0 {
@@ -235,17 +197,13 @@
 };
 
 &msiof_ref_clk {
-	clock-frequency = <66666666>;
-};
-
-&ohci2 {
-	status = "okay";
+	clock-frequency = <133333333>;
 };
 
 &pfc {
 	msiof0_pins: spi0 {
 		groups = "msiof0_clk", "msiof0_sync",
-			 "msiof0_rxd",  "msiof0_txd";
+			 "msiof0_rxd",	"msiof0_txd";
 		function = "msiof0";
 	};
 
@@ -266,36 +224,12 @@
 			 "msiof3_rxd_d",  "msiof3_txd_d";
 		function = "msiof3";
 	};
-
-	usb2_pins: usb2 {
-		groups = "usb2";
-		function = "usb2";
-	};
 };
 
-&sata {
-	status = "okay";
-};
-
-&usb2_phy2 {
-	pinctrl-0 = <&usb2_pins>;
-	pinctrl-names = "default";
-
-	status = "okay";
-};
-
-&vspbc {
-	status = "okay";
-};
-
-&vspbd {
+&vspb {
 	status = "okay";
 };
 
 &vspi0 {
-	status = "okay";
-};
-
-&vspi1 {
 	status = "okay";
 };

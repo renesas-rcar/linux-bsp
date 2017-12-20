@@ -36,6 +36,67 @@
 		device_type = "memory";
 		reg = <0x7 0x00000000 0x0 0x40000000>;
 	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* device specific region for Lossy Decompression */
+		lossy_decompress: linux,lossy_decompress {
+			no-map;
+			reg = <0x00000000 0x54000000 0x0 0x03000000>;
+		};
+
+		/* For Audio DSP */
+		adsp_reserved: linux,adsp {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x57000000 0x0 0x01000000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x18000000>;
+			linux,cma-default;
+		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x70000000 0x0 0x10000000>;
+		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+
+	avb-mch {
+		compatible = "renesas,avb-mch-gen3";
+		reg =	<0 0xec5a0100 0 0x100>;  /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
+	};
+};
+
+&adsp {
+	status = "okay";
+	memory-region = <&adsp_reserved>;
 };
 
 &du {
@@ -50,9 +111,26 @@
 		 <&versaclock6 2>;
 	clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0",
 		      "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
+
+	ports {
+		port@3 {
+			endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
 };
 
 &ehci2 {
+	status = "okay";
+};
+
+&ehci3 {
+	status = "okay";
+};
+
+&hsusb3 {
+	dr_mode = "otg";
 	status = "okay";
 };
 
@@ -90,14 +168,126 @@
 	remote-endpoint = <&rcar_dw_hdmi1_out>;
 };
 
+&msiof0 {
+	pinctrl-0 = <&msiof0_pins>;
+	pinctrl-names = "default";
+	/* Please use exclusively to the rcar_sound node */
+	/* status = "okay"; */
+
+	/* Define the subnode name and compatible value as
+	 * correct subdevice names.
+	 */
+	slavedev {
+		compatible = "renesas,slavedev";
+		reg = <0>;
+		spi-max-frequency = <16666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof1 {
+	pinctrl-0 = <&msiof1_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	/*
+	 * Define the subnode name and compatible value as
+	 * correct subdevice names.
+	 */
+	slavedev {
+		compatible = "renesas,slavedev";
+		reg = <0>;
+		spi-max-frequency = <16666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof2 {
+	pinctrl-0 = <&msiof2_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	/*
+	 * Define the subnode name and compatible value as
+	 * correct subdevice names.
+	 */
+	slavedev {
+		compatible = "renesas,slavedev";
+		reg = <0>;
+		spi-max-frequency = <16666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof3 {
+	pinctrl-0 = <&msiof3_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+
+	/*
+	 * Define the subnode name and compatible value as
+	 * correct subdevice names.
+	 */
+	slavedev {
+		compatible = "renesas,slavedev";
+		reg = <0>;
+		spi-max-frequency = <16666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof_ref_clk {
+	clock-frequency = <66666666>;
+};
+
 &ohci2 {
 	status = "okay";
 };
 
+&ohci3 {
+	status = "okay";
+};
+
 &pfc {
+	msiof0_pins: spi0 {
+		groups = "msiof0_clk", "msiof0_sync",
+			 "msiof0_rxd",	"msiof0_txd";
+		function = "msiof0";
+	};
+
+	msiof1_pins: spi1 {
+		groups = "msiof1_clk_c", "msiof1_sync_c",
+			 "msiof1_rxd_c",  "msiof1_txd_c";
+		function = "msiof1";
+	};
+
+	msiof2_pins: spi2 {
+		groups = "msiof2_clk_b", "msiof2_sync_b",
+			 "msiof2_rxd_b",  "msiof2_txd_b";
+		function = "msiof2";
+	};
+
+	msiof3_pins: spi3 {
+		groups = "msiof3_clk_d", "msiof3_sync_d",
+			 "msiof3_rxd_d",  "msiof3_txd_d";
+		function = "msiof3";
+	};
+
 	usb2_pins: usb2 {
 		groups = "usb2";
 		function = "usb2";
+	};
+
+	usb3_pins: usb2_ch3 {
+		groups = "usb2_ch3";
+		function = "usb2_ch3";
 	};
 };
 
@@ -105,5 +295,28 @@
 	pinctrl-0 = <&usb2_pins>;
 	pinctrl-names = "default";
 
+	status = "okay";
+};
+
+&usb2_phy3 {
+	pinctrl-0 = <&usb3_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&vspbc {
+	status = "okay";
+};
+
+&vspbd {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
+&vspi1 {
 	status = "okay";
 };
