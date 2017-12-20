@@ -2782,6 +2782,11 @@
 				 <&cpg CPG_MOD 722>,
 				 <&cpg CPG_MOD 727>;
 			clock-names = "du.0", "du.1", "du.2", "lvds.0";
+			resets = <&cpg 724>,
+				 <&cpg 724>,
+				 <&cpg 722>,
+				 <&cpg 727>;
+			reset-names = "du.0", "du.1", "du.2", "lvds.0";
 			status = "disabled";
 
 			vsps = <&vspd0 &vspd1 &vspd2>;
