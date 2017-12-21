@@ -331,6 +331,19 @@
 &i2c0 {
 	status = "okay";
 
+	adv7180: adv7180@20 {
+		compatible = "adi,adv7180";
+		reg = <0x20>;
+		remote = <&vin4>;
+
+		port {
+			cvbs_in: endpoint {
+				bus-width = <8>;
+				remote-endpoint = <&vin4ep0>;
+			};
+		};
+	};
+
 	adv7511w: hdmi@39 {
 		compatible = "adi,adv7511w";
 		reg = <0x39>;
