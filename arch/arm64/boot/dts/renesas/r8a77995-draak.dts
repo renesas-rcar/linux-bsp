@@ -46,6 +46,12 @@
 		};
 	};
 
+	msiof2_pins: spi2 {
+		groups = "msiof2_clk", "msiof2_sync_b",
+			 "msiof2_rxd",  "msiof2_txd";
+		function = "msiof2";
+	};
+
 	pwm0_pins: pwm0 {
 		groups = "pwm0_c";
 		function = "pwm0";
@@ -125,4 +131,15 @@
 
 &i2c0 {
 	status = "okay";
+};
+
+&msiof2 {
+	pinctrl-0 = <&msiof2_pins>;
+	pinctrl-names = "default";
+	/* In case of using this node, please enable this property */
+	/* status = "okay"; */
+};
+
+&msiof_ref_clk {
+	clock-frequency = <133333333>;
 };
