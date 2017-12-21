@@ -469,3 +469,7 @@
 &audio_clk_b {
 	clock-frequency = <22579200>;
 };
+
+&vin4 {
+	status = "okay";
+};
