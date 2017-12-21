@@ -367,6 +367,28 @@
 		};
 	};
 
+	adv7612: adv7612@4c {
+		compatible = "adi,adv7612";
+		reg = <0x4c>;
+		remote = <&vin4>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		default-input = <0>;
+
+		port@0 {
+			reg = <0>;
+		};
+		port@1 {
+			reg = <1>;
+			hdmi_in: endpoint {
+				remote-endpoint = <&vin4ep0>;
+			};
+
+		};
+	};
+
 	ak4613: codec@10 {
 		compatible = "asahi-kasei,ak4613";
 		#sound-dai-cells = <0>;
@@ -472,4 +494,16 @@
 
 &vin4 {
 	status = "okay";
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		vin4ep0: endpoint {
+			remote-endpoint = <&hdmi_in>;
+			bus-width = <8>;
+			hsync-active = <0>;
+			vsync-active = <0>;
+
+		};
+	};
 };
