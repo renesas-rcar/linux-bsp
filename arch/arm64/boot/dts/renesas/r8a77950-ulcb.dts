@@ -66,6 +66,10 @@
 		compatible = "renesas,mmngr";
 		memory-region = <&mmp_reserved>, <&lossy_decompress>;
 	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
 };
 
 &sdhi2 {
