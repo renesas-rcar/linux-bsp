@@ -61,6 +61,12 @@
 			reg = <0x00000000 0x70000000 0x0 0x10000000>;
 		};
 	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
 	versaclock5_out3: versaclk-3 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
