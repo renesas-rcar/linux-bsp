@@ -256,7 +256,8 @@ static int rcar_ems_cpu_shutdown_init(void)
 		return 0;
 
 	total_target_cpu = of_count_phandle_with_args(ems_node,
-						"target_cpus", 0);
+						"target_cpus", NULL);
+
 	for_each_online_cpu(cpu) {
 		tmp_node  = of_get_cpu_node(cpu, NULL);
 		for (i = 0; i < total_target_cpu; i++) {
@@ -290,7 +291,7 @@ static int rcar_ems_cpu_shutdown_init(void)
 
 static void rcar_ems_cpu_shutdown_exit(void)
 {
-	rcar_ems_notify(RCAR_EMS_MODE_OFF, 0);
+	rcar_ems_notify(RCAR_EMS_MODE_OFF, NULL);
 	unregister_rcar_ems_notifier(&ems_thermal_notifier_block);
 	cpufreq_unregister_notifier(&ems_cpufreq_notifier_block,
 				    CPUFREQ_POLICY_NOTIFIER);
