@@ -69,8 +69,7 @@ static int change_default_opp_pattern(struct device_node *avs_node,
 
 static const struct of_device_id rcar_avs_matches[] = {
 #if defined(CONFIG_ARCH_R8A7795) || \
-	defined(CONFIG_ARCH_R8A7796) || \
-	defined(CONFIG_ARCH_R8A77965)
+	defined(CONFIG_ARCH_R8A7796)
 	{ .compatible = "renesas,rcar-gen3-avs" },
 #endif
 	{ /* sentinel */ }
