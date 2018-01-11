@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 
 #define RCAR_PWM_MAX_DIVISION	24
+#define RCAR_PWM_MIN_CYCLE	2
 #define RCAR_PWM_MAX_CYCLE	1023
 
 #define RCAR_PWMCR		0x00
@@ -71,11 +72,16 @@ static void rcar_pwm_update(struct rcar_pwm_chip *rp, u32 mask, u32 data,
 static int rcar_pwm_get_clock_division(struct rcar_pwm_chip *rp, int period_ns)
 {
 	unsigned long clk_rate = clk_get_rate(rp->clk);
-	unsigned long long max; /* max cycle / nanoseconds */
+	unsigned long long min, max; /* min, max cycle / nanoseconds */
 	unsigned int div;
 
 	if (clk_rate == 0)
 		return -EINVAL;
+
+	min = (unsigned long long)NSEC_PER_SEC * RCAR_PWM_MIN_CYCLE;
+	do_div(min, clk_rate);
+	if (period_ns < min)
+		return -ERANGE;
 
 	for (div = 0; div <= RCAR_PWM_MAX_DIVISION; div++) {
 		max = (unsigned long long)NSEC_PER_SEC * RCAR_PWM_MAX_CYCLE *
@@ -134,16 +140,12 @@ static int rcar_pwm_set_counter(struct rcar_pwm_chip *rp, int div, int duty_ns,
 
 static int rcar_pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
 {
-	struct rcar_pwm_chip *rp = to_rcar_pwm_chip(chip);
-
-	return clk_prepare_enable(rp->clk);
+	return pm_runtime_get_sync(chip->dev);
 }
 
 static void rcar_pwm_free(struct pwm_chip *chip, struct pwm_device *pwm)
 {
-	struct rcar_pwm_chip *rp = to_rcar_pwm_chip(chip);
-
-	clk_disable_unprepare(rp->clk);
+	pm_runtime_put(chip->dev);
 }
 
 static int rcar_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
@@ -157,7 +159,7 @@ static int rcar_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		return div;
 
 	/* Let the core driver set pwm->period if disabled and duty_ns == 0 */
-	if (!pwm_is_enabled(pwm) && !duty_ns)
+	if (!pwm_is_enabled(pwm) && !duty_ns && !pwm->state.duty_cycle)
 		return 0;
 
 	rcar_pwm_update(rp, RCAR_PWMCR_SYNC, RCAR_PWMCR_SYNC, RCAR_PWMCR);
@@ -258,11 +260,47 @@ static const struct of_device_id rcar_pwm_of_table[] = {
 };
 MODULE_DEVICE_TABLE(of, rcar_pwm_of_table);
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_pwm_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static int rcar_pwm_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_pwm_chip *rcar_pwm = platform_get_drvdata(pdev);
+	struct pwm_device *pwm_dev;
+	struct pwm_state state;
+
+	pm_runtime_get_sync(dev);
+
+	pwm_dev = &rcar_pwm->chip.pwms[0];
+	pwm_get_state(pwm_dev, &state);
+	rcar_pwm_config(&rcar_pwm->chip, pwm_dev, state.duty_cycle,
+			state.period);
+
+	if (pwm_is_enabled(pwm_dev))
+		rcar_pwm_enable(&rcar_pwm->chip, pwm_dev);
+
+	pm_runtime_put(dev);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_pwm_pm_ops,
+			rcar_pwm_suspend, rcar_pwm_resume);
+#define DEV_PM_OPS (&rcar_pwm_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_pwm_driver = {
 	.probe = rcar_pwm_probe,
 	.remove = rcar_pwm_remove,
 	.driver = {
 		.name = "pwm-rcar",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = of_match_ptr(rcar_pwm_of_table),
 	}
 };
