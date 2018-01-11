@@ -84,9 +84,13 @@ struct rcar_thermal_priv {
 static const struct of_device_id rcar_thermal_dt_ids[] = {
 	{ .compatible = "renesas,rcar-thermal", },
 	{ .compatible = "renesas,rcar-gen2-thermal", .data = (void *)USE_OF_THERMAL },
+	{ .compatible = "renesas,thermal-r8a77995",
+	  .data = (void *)USE_OF_THERMAL },
 	{},
 };
 MODULE_DEVICE_TABLE(of, rcar_thermal_dt_ids);
+
+static u32 enr_bits;
 
 /*
  *		basic functions
@@ -442,7 +446,7 @@ static int rcar_thermal_probe(struct platform_device *pdev)
 	int i;
 	int ret = -ENODEV;
 	int idle = IDLE_INTERVAL;
-	u32 enr_bits = 0;
+	enr_bits = 0;
 
 	common = devm_kzalloc(dev, sizeof(*common), GFP_KERNEL);
 	if (!common)
@@ -456,6 +460,112 @@ static int rcar_thermal_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
+
+#ifdef CONFIG_ARCH_R8A77995
+
+	/*
+	 * Request 2 (of the 3 possible) IRQs, the driver only needs to
+	 * to trigger on the low and high trip points of the current
+	 * temp window at this point.
+	 */
+	for (i = 0; i < 2; i++) {
+		irq = platform_get_resource(pdev, IORESOURCE_IRQ, i);
+		/* enable temperature comparation */
+		if (irq) {
+			if (!common->base) {
+				/*
+				 * platform has IRQ support.
+				 * Then, driver uses common registers
+				 * rcar_has_irq_support() will be enabled
+				 */
+				res = platform_get_resource(pdev,
+							    IORESOURCE_MEM,
+							    mres++);
+				common->base = devm_ioremap_resource(dev, res);
+				if (IS_ERR(common->base))
+					return PTR_ERR(common->base);
+
+				idle = 0; /* polling delay is not needed */
+			}
+
+			ret = devm_request_irq(dev, irq->start,
+					       rcar_thermal_irq,
+					       IRQF_SHARED, dev_name(dev),
+					       common);
+
+			if (ret) {
+				dev_err(dev, "irq request failed\n ");
+				goto error_unregister;
+			}
+
+			/* update ENR bits */
+			enr_bits |= 1 << i;
+		}
+	}
+
+	for (i = 0;; i++) {
+		res = platform_get_resource(pdev, IORESOURCE_MEM, mres++);
+		if (!res)
+			break;
+
+		priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+		if (!priv) {
+			ret = -ENOMEM;
+			goto error_unregister;
+		}
+
+		priv->base = devm_ioremap_resource(dev, res);
+		if (IS_ERR(priv->base)) {
+			ret = PTR_ERR(priv->base);
+			goto error_unregister;
+		}
+
+		priv->common = common;
+		priv->id = i;
+		mutex_init(&priv->lock);
+		INIT_LIST_HEAD(&priv->list);
+		INIT_DELAYED_WORK(&priv->work, rcar_thermal_work);
+		ret = rcar_thermal_update_temp(priv);
+		if (ret < 0)
+			goto error_unregister;
+
+		if (rcar_use_of_thermal(dev))
+			priv->zone = devm_thermal_zone_of_sensor_register(
+						dev, i, priv,
+						&rcar_thermal_zone_of_ops);
+		else
+			priv->zone = thermal_zone_device_register(
+						"rcar_thermal",
+						1, 0, priv,
+						&rcar_thermal_zone_ops, NULL, 0,
+						idle);
+		if (IS_ERR(priv->zone)) {
+			dev_err(dev, "can't register thermal zone\n");
+			ret = PTR_ERR(priv->zone);
+			priv->zone = NULL;
+			goto error_unregister;
+		}
+
+		if (rcar_use_of_thermal(dev)) {
+			/*
+			 * thermal_zone doesn't enable hwmon as default,
+			 * but, enable it here to keep compatible
+			 */
+			priv->zone->tzp->no_hwmon = false;
+			ret = thermal_add_hwmon_sysfs(priv->zone);
+			if (ret)
+				goto error_unregister;
+		}
+
+		rcar_thermal_irq_enable(priv);
+
+		list_move_tail(&priv->list, &common->head);
+	}
+
+	if (enr_bits)
+		rcar_thermal_common_write(common, ENR, enr_bits);
+
+#else
 
 	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (irq) {
@@ -546,6 +656,8 @@ static int rcar_thermal_probe(struct platform_device *pdev)
 		rcar_thermal_common_write(common, ENR, enr_bits);
 	}
 
+#endif
+
 	dev_info(dev, "%d sensor probed\n", i);
 
 	return 0;
@@ -556,9 +668,47 @@ error_unregister:
 	return ret;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_thermal_suspend(struct device *dev)
+{
+	struct rcar_thermal_common *common = dev_get_drvdata(dev);
+	struct rcar_thermal_priv *priv;
+
+	rcar_thermal_for_each_priv(priv, common) {
+		rcar_thermal_irq_disable(priv);
+	}
+
+	return 0;
+}
+
+static int rcar_thermal_resume(struct device *dev)
+{
+	struct rcar_thermal_common *common = dev_get_drvdata(dev);
+	struct rcar_thermal_priv *priv;
+
+	rcar_thermal_for_each_priv(priv, common) {
+		rcar_thermal_irq_enable(priv);
+		rcar_thermal_update_temp(priv);
+	}
+
+	rcar_thermal_common_write(common, ENR, enr_bits);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_thermal_pm_ops,
+			rcar_thermal_suspend,
+			rcar_thermal_resume);
+
+#define DEV_PM_OPS (&rcar_thermal_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_thermal_driver = {
 	.driver	= {
 		.name	= "rcar_thermal",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rcar_thermal_dt_ids,
 	},
 	.probe		= rcar_thermal_probe,
