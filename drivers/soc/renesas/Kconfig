@@ -18,6 +18,13 @@ config SOC_RENESAS
 	select SYSC_R8A77970 if ARCH_R8A77970
 	select SYSC_R8A77995 if ARCH_R8A77995
 
+config RCAR_CPU_TOPOLOGY
+	depends on (ARCH_R8A7795 || ARCH_R8A7796)
+	bool "R-Car CPU Topology"
+	default y
+	help
+	  This enables the capacity awareness feature for R-Car series.
+
 if SOC_RENESAS
 
 # SoC
