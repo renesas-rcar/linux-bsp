@@ -247,6 +247,8 @@ enum adv7511_sync_polarity {
  * @sync_pulse:			Select the sync pulse
  * @vsync_polarity:		vsync input signal configuration
  * @hsync_polarity:		hsync input signal configuration
+ * @limit_vrefresh_option:	limit vrefresh option
+ * @limit_freq_option:		limit frequency option
  */
 struct adv7511_link_config {
 	unsigned int input_color_depth;
@@ -261,6 +263,9 @@ struct adv7511_link_config {
 	enum adv7511_input_sync_pulse sync_pulse;
 	enum adv7511_sync_polarity vsync_polarity;
 	enum adv7511_sync_polarity hsync_polarity;
+
+	unsigned int limit_vrefresh_option;
+	unsigned int limit_freq_option;
 };
 
 /**
@@ -327,6 +332,8 @@ struct adv7511 {
 	enum adv7511_sync_polarity vsync_polarity;
 	enum adv7511_sync_polarity hsync_polarity;
 	bool rgb;
+	unsigned int limit_vref;
+	unsigned int limit_freq;
 
 	struct edid *edid;
 

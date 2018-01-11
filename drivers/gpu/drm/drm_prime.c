@@ -29,6 +29,7 @@
 #include <linux/export.h>
 #include <linux/dma-buf.h>
 #include <linux/rbtree.h>
+#include <linux/sys_soc.h>
 #include <drm/drm_prime.h>
 #include <drm/drm_gem.h>
 #include <drm/drmP.h>
@@ -86,6 +87,11 @@ struct drm_prime_member {
 struct drm_prime_attachment {
 	struct sg_table *sgt;
 	enum dma_data_direction dir;
+};
+
+static const struct soc_device_attribute soc_device_is_dma_skip_cpu_sync[] = {
+	{ .family  = "R-Car Gen3" },
+	{ },
 };
 
 static int drm_prime_add_buf_handle(struct drm_prime_file_private *prime_fpriv,
@@ -217,9 +223,16 @@ static void drm_gem_map_detach(struct dma_buf *dma_buf,
 
 	sgt = prime_attach->sgt;
 	if (sgt) {
-		if (prime_attach->dir != DMA_NONE)
-			dma_unmap_sg(attach->dev, sgt->sgl, sgt->nents,
-					prime_attach->dir);
+		if (prime_attach->dir != DMA_NONE) {
+			if (soc_device_match(soc_device_is_dma_skip_cpu_sync))
+				dma_unmap_sg_attrs(attach->dev, sgt->sgl,
+						   sgt->nents,
+						   prime_attach->dir,
+						   DMA_ATTR_SKIP_CPU_SYNC);
+			else
+				dma_unmap_sg(attach->dev, sgt->sgl, sgt->nents,
+					     prime_attach->dir);
+		}
 		sg_free_table(sgt);
 	}
 
@@ -259,6 +272,7 @@ static struct sg_table *drm_gem_map_dma_buf(struct dma_buf_attachment *attach,
 	struct drm_prime_attachment *prime_attach = attach->priv;
 	struct drm_gem_object *obj = attach->dmabuf->priv;
 	struct sg_table *sgt;
+	int ret;
 
 	if (WARN_ON(dir == DMA_NONE || !prime_attach))
 		return ERR_PTR(-EINVAL);
@@ -277,7 +291,15 @@ static struct sg_table *drm_gem_map_dma_buf(struct dma_buf_attachment *attach,
 	sgt = obj->dev->driver->gem_prime_get_sg_table(obj);
 
 	if (!IS_ERR(sgt)) {
-		if (!dma_map_sg(attach->dev, sgt->sgl, sgt->nents, dir)) {
+		if (soc_device_match(soc_device_is_dma_skip_cpu_sync))
+			ret = dma_map_sg_attrs(attach->dev, sgt->sgl,
+					       sgt->nents, dir,
+					       DMA_ATTR_SKIP_CPU_SYNC);
+		else
+			ret = dma_map_sg(attach->dev, sgt->sgl,
+					 sgt->nents, dir);
+
+		if (!ret) {
 			sg_free_table(sgt);
 			kfree(sgt);
 			sgt = ERR_PTR(-ENOMEM);
