@@ -627,13 +627,16 @@ ATTRIBUTE_GROUPS(phy_dev);
 int phy_device_register(struct phy_device *phydev)
 {
 	int err;
+	int status;
 
 	err = mdiobus_register_device(&phydev->mdio);
 	if (err)
 		return err;
 
 	/* Deassert the reset signal */
-	phy_device_reset(phydev, 0);
+	status = phy_read(phydev, MII_BMSR);
+	if (status == 0xffff || !(status & BMSR_LSTATUS))
+		phy_device_reset(phydev, 0);
 
 	/* Run all of the fixups for this PHY */
 	err = phy_scan_fixups(phydev);
@@ -651,7 +654,8 @@ int phy_device_register(struct phy_device *phydev)
 	}
 
 	/* Assert the reset signal */
-	phy_device_reset(phydev, 1);
+	if (status == 0xffff || !(status & BMSR_LSTATUS))
+		phy_device_reset(phydev, 1);
 
 	return 0;
 
@@ -857,9 +861,12 @@ static int phy_poll_reset(struct phy_device *phydev)
 int phy_init_hw(struct phy_device *phydev)
 {
 	int ret = 0;
+	int status;
 
 	/* Deassert the reset signal */
-	phy_device_reset(phydev, 0);
+	status = phy_read(phydev, MII_BMSR);
+	if (status == 0xffff || !(status & BMSR_LSTATUS))
+		phy_device_reset(phydev, 0);
 
 	if (!phydev->drv || !phydev->drv->config_init)
 		return 0;
@@ -1776,6 +1783,7 @@ static int phy_probe(struct device *dev)
 	struct device_driver *drv = phydev->mdio.dev.driver;
 	struct phy_driver *phydrv = to_phy_driver(drv);
 	int err = 0;
+	int status;
 
 	phydev->drv = phydrv;
 
@@ -1828,12 +1836,15 @@ static int phy_probe(struct device *dev)
 
 	if (phydev->drv->probe) {
 		/* Deassert the reset signal */
-		phy_device_reset(phydev, 0);
+		status = phy_read(phydev, MII_BMSR);
+		if (status == 0xffff || !(status & BMSR_LSTATUS))
+			phy_device_reset(phydev, 0);
 
 		err = phydev->drv->probe(phydev);
 
 		/* Assert the reset signal */
-		phy_device_reset(phydev, 1);
+		if (status == 0xffff || !(status & BMSR_LSTATUS))
+			phy_device_reset(phydev, 1);
 	}
 
 	mutex_unlock(&phydev->lock);
