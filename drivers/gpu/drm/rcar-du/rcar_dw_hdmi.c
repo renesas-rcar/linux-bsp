@@ -120,6 +120,7 @@ static enum drm_mode_status rcar_hdmi_mode_valid(
 static const struct dw_hdmi_plat_data rcar_dw_hdmi_plat_data = {
 	.configure_phy	= rcar_hdmi_phy_configure,
 	.mode_valid	= rcar_hdmi_mode_valid,
+	.dev_type	= RCAR_HDMI,
 };
 
 static int rcar_dw_hdmi_probe(struct platform_device *pdev)
