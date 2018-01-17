@@ -1361,6 +1361,14 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	}
 	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
 
+	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->rstc);
+		goto error;
+	}
+
 	return 0;
 error:
 	rvin_dma_remove(vin);
@@ -1406,6 +1414,10 @@ static int rcar_vin_suspend(struct device *dev)
 	rvin_suspend_stop_streaming(vin);
 
 	pm_runtime_put(vin->dev);
+	if (vin->info->use_mc) {
+		reset_control_assert(vin->rstc);
+		reset_control_deassert(vin->rstc);
+	}
 
 	return 0;
 }
