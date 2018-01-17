@@ -879,6 +879,7 @@ static int rvin_power_on(struct rvin_dev *vin)
 	int ret;
 	struct v4l2_subdev *sd = vin_to_source(vin);
 
+	reset_control_deassert(vin->rstc);
 	pm_runtime_get_sync(vin->v4l2_dev.dev);
 
 	ret = v4l2_subdev_call(sd, core, s_power, 1);
@@ -895,6 +896,7 @@ static int rvin_power_off(struct rvin_dev *vin)
 	ret = v4l2_subdev_call(sd, core, s_power, 0);
 
 	pm_runtime_put(vin->v4l2_dev.dev);
+	reset_control_assert(vin->rstc);
 
 	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
 		return ret;
