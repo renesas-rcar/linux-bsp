@@ -18,6 +18,7 @@
 #define __RCAR_VIN__
 
 #include <linux/kref.h>
+#include <linux/reset.h>
 
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
@@ -151,6 +152,7 @@ struct rvin_info {
  * @ctrl_handler:	V4L2 control handler
  * @notifier:		V4L2 asynchronous subdevs notifier
  * @digital:		entity in the DT for local digital subdevice
+ * @rstc:		CPG reset/release control
  *
  * @group:		Gen3 CSI group
  * @pad:		pad for media controller
@@ -188,6 +190,7 @@ struct rvin_dev {
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_async_notifier notifier;
 	struct rvin_graph_entity *digital;
+	struct reset_control *rstc;
 
 	struct rvin_group *group;
 	struct media_pad pad;
