@@ -662,8 +662,6 @@ static void rcar_du_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct drm_device *dev = rcrtc->crtc.dev;
 	unsigned long flags;
 
-	rcar_du_crtc_update_planes(rcrtc);
-
 	if (crtc->state->event) {
 		WARN_ON(drm_crtc_vblank_get(crtc) != 0);
 
@@ -675,6 +673,8 @@ static void rcar_du_crtc_atomic_flush(struct drm_crtc *crtc,
 
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
 		rcar_du_vsp_atomic_flush(rcrtc);
+
+	rcar_du_crtc_update_planes(rcrtc);
 }
 
 static bool rcar_du_crtc_mode_fixup(struct drm_crtc *crtc,
