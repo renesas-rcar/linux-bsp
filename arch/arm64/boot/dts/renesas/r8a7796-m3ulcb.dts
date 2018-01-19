@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the M3ULCB (R-Car Starter Kit Pro) board
  *
- * Copyright (C) 2016-2017 Renesas Electronics Corp.
+ * Copyright (C) 2016-2018 Renesas Electronics Corp.
  * Copyright (C) 2016 Cogent Embedded, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
@@ -16,6 +16,12 @@
 / {
 	model = "Renesas M3ULCB board based on r8a7796";
 	compatible = "renesas,m3ulcb", "renesas,r8a7796";
+
+	cpus {
+		idle-states {
+			/delete-node/ cpu-sleep-1;
+		};
+	};
 
 	memory@48000000 {
 		device_type = "memory";
@@ -67,6 +73,22 @@
 	vspm_if {
 		compatible = "renesas,vspm_if";
 	};
+};
+
+&a53_0 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_1 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_2 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_3 {
+	/delete-property/ cpu-idle-states;
 };
 
 &du {
