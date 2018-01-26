@@ -581,6 +581,12 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 {
 	int ret;
 
+	ret = rvin_group_read_id(vin, vin->dev->of_node);
+	if (ret < 0)
+		return ret;
+
+	vin->index = ret;
+
 	ret = v4l2_async_notifier_parse_fwnode_endpoints(
 		vin->dev, &vin->notifier,
 		sizeof(struct rvin_graph_entity), rvin_digital_parse_v4l2);
