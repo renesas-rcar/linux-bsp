@@ -118,6 +118,10 @@
 
 /* PHY Test Interface Write Register */
 #define PHTW_REG			0x50
+#define PHTW_DWEN			BIT(24)
+#define PHTW_CWEN			BIT(8)
+#define PHTW_TESTDIN_CODE		0x44	/* for r8a77990 */
+#define PHTW_TESTDIN_DATA(n)		((n & 0xff) << 16)
 
 /* PHY Test Interface Clear */
 #define PHTC_REG			0x58
@@ -233,6 +237,50 @@ static const struct phypll_hsfreqrange hsfreqrange_m3w_h3es1[] = {
 	{ .mbps =   0,	.reg = 0x00 },
 };
 
+static const struct phtw_freqrange phtw_e3_v3m[] = {
+	{ .mbps = 89,	.phtw_reg =  0x00 },
+	{ .mbps = 99,	.phtw_reg =  0x20 },
+	{ .mbps = 109,	.phtw_reg =  0x40 },
+	{ .mbps = 129,	.phtw_reg =  0x02 },
+	{ .mbps = 139,	.phtw_reg =  0x22 },
+	{ .mbps = 149,	.phtw_reg =  0x42 },
+	{ .mbps = 169,	.phtw_reg =  0x04 },
+	{ .mbps = 179,	.phtw_reg =  0x24 },
+	{ .mbps = 199,	.phtw_reg =  0x44 },
+	{ .mbps = 219,	.phtw_reg =  0x06 },
+	{ .mbps = 239,	.phtw_reg =  0x26 },
+	{ .mbps = 249,	.phtw_reg =  0x46 },
+	{ .mbps = 269,	.phtw_reg =  0x08 },
+	{ .mbps = 299,	.phtw_reg =  0x28 },
+	{ .mbps = 329,	.phtw_reg =  0x0a },
+	{ .mbps = 359,	.phtw_reg =  0x2a },
+	{ .mbps = 399,	.phtw_reg =  0x4a },
+	{ .mbps = 449,	.phtw_reg =  0x0c },
+	{ .mbps = 499,	.phtw_reg =  0x2c },
+	{ .mbps = 549,	.phtw_reg =  0x0e },
+	{ .mbps = 599,	.phtw_reg =  0x2e },
+	{ .mbps = 649,	.phtw_reg =  0x10 },
+	{ .mbps = 699,	.phtw_reg =  0x30 },
+	{ .mbps = 749,	.phtw_reg =  0x12 },
+	{ .mbps = 799,	.phtw_reg =  0x32 },
+	{ .mbps = 849,	.phtw_reg =  0x52 },
+	{ .mbps = 899,	.phtw_reg =  0x72 },
+	{ .mbps = 949,	.phtw_reg =  0x14 },
+	{ .mbps = 999,	.phtw_reg =  0x34 },
+	{ .mbps = 1049,	.phtw_reg =  0x54 },
+	{ .mbps = 1099,	.phtw_reg =  0x74 },
+	{ .mbps = 1149,	.phtw_reg =  0x16 },
+	{ .mbps = 1199,	.phtw_reg =  0x36 },
+	{ .mbps = 1249,	.phtw_reg =  0x56 },
+	{ .mbps = 1299,	.phtw_reg =  0x76 },
+	{ .mbps = 1349,	.phtw_reg =  0x18 },
+	{ .mbps = 1399,	.phtw_reg =  0x38 },
+	{ .mbps = 1449,	.phtw_reg =  0x58 },
+	{ .mbps = 1500,	.phtw_reg =  0x78 },
+	/* guard */
+	{ .mbps =   0,	.phtw_reg = 0x00 },
+};
+
 static const struct phtw_freqrange phtw_m3n[] = {
 	{ .mbps =   80,	.phtw_reg = 0x018601f1 },
 	{ .mbps =   90,	.phtw_reg = 0x018601f1 },
@@ -266,6 +314,9 @@ static const struct phtw_freqrange phtw_m3n[] = {
 /* CSI0CLK Frequency Configuration Preset Register */
 #define CSI0CLKFCPR_REG			0x260
 #define CSI0CLKFREQRANGE(n)		((n & 0x3f) << 16)
+
+/* device information */
+#define R8A77990			BIT(0)
 
 struct rcar_csi2_format {
 	unsigned int code;
@@ -307,6 +358,8 @@ struct rcar_csi2_info {
 	bool clear_ulps;
 	bool have_phtw;
 	bool have_phtw_add;
+	bool phtw_testin;
+	u32 device;
 };
 
 struct rcar_csi2 {
@@ -378,7 +431,8 @@ static int rcar_csi2_wait_phy_start(struct rcar_csi2 *priv)
 
 static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv, unsigned int bpp,
 				 u32 *phypll,
-				 u32 *phtw)
+				 u32 *phtw,
+				 u32 *testin)
 {
 
 	const struct phypll_hsfreqrange *hsfreq;
@@ -420,6 +474,25 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv, unsigned int bpp,
 
 	do_div(mbps, priv->lanes * 1000000);
 
+	if (priv->info->phtw_testin) {
+		for (phtwfreq = priv->info->phtw; phtwfreq->mbps != 0;
+		     phtwfreq++)
+			if (phtwfreq->mbps >= mbps)
+				break;
+
+		if (!phtwfreq->mbps) {
+			dev_err(priv->dev, "Unsupported PHY speed (%llu Mbps)",
+				mbps);
+			return -ERANGE;
+		}
+		*testin = PHTW_TESTDIN_DATA(phtwfreq->phtw_reg);
+
+		dev_dbg(priv->dev, "TESTDIN_DATA requested %llu got %u Mbps\n",
+			mbps, phtwfreq->mbps);
+
+		return 0;
+	}
+
 	for (hsfreq = priv->info->hsfreqrange; hsfreq->mbps != 0; hsfreq++)
 		if (hsfreq->mbps >= mbps)
 			break;
@@ -450,7 +523,7 @@ static int rcar_csi2_calc_phypll(struct rcar_csi2 *priv, unsigned int bpp,
 static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 {
 	const struct rcar_csi2_format *format;
-	u32 phycnt, phypll, tmp, phtw = 0, fld = 0;
+	u32 phycnt, phypll = 0, tmp, phtw = 0, fld = 0, testin = 0;
 	u32 vcdt = 0, vcdt2 = 0;
 	unsigned int i;
 	int ret;
@@ -507,7 +580,8 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 		return -EINVAL;
 	}
 
-	ret = rcar_csi2_calc_phypll(priv, format->bpp, &phypll, &phtw);
+	ret = rcar_csi2_calc_phypll(priv, format->bpp, &phypll, &phtw,
+				    &testin);
 	if (ret)
 		return ret;
 
@@ -526,7 +600,8 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 	rcar_csi2_write(priv, FLD_REG, fld | FLD_FLD_EN4 |
 			FLD_FLD_EN3 | FLD_FLD_EN2 | FLD_FLD_EN);
 	rcar_csi2_write(priv, VCDT_REG, vcdt);
-	rcar_csi2_write(priv, VCDT2_REG, vcdt2);
+	if (priv->info->device != R8A77990)
+		rcar_csi2_write(priv, VCDT2_REG, vcdt2);
 	/* Lanes are zero indexed */
 	rcar_csi2_write(priv, LSWAP_REG,
 			LSWAP_L0SEL(priv->lane_swap[0] - 1) |
@@ -565,7 +640,11 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 	}
 
 	/* Start */
-	rcar_csi2_write(priv, PHYPLL_REG, phypll);
+	if (priv->info->phtw_testin)
+		rcar_csi2_write(priv, PHTW_REG, PHTW_DWEN | PHTW_CWEN |
+				PHTW_TESTDIN_CODE | testin);
+	else
+		rcar_csi2_write(priv, PHYPLL_REG, phypll);
 
 	/* Set frequency range if we have it */
 	if (priv->info->csi0clkfreqrange)
@@ -861,6 +940,12 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a77965 = {
 	.csi0clkfreqrange = 0x20,
 };
 
+static const struct rcar_csi2_info rcar_csi2_info_r8a77990 = {
+	.phtw_testin = true,
+	.phtw = phtw_e3_v3m,
+	.device = R8A77990,
+};
+
 static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a7795-csi2",
@@ -873,6 +958,10 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a77965-csi2",
 		.data = &rcar_csi2_info_r8a77965,
+	},
+	{
+		.compatible = "renesas,r8a77990-csi2",
+		.data = &rcar_csi2_info_r8a77990,
 	},
 	{ /* sentinel */ },
 };
