@@ -195,6 +195,7 @@ static void rcar_du_lvdsenc_dual_mode(struct rcar_du_lvdsenc *lvds0,
 				      struct rcar_du_lvdsenc *lvds1,
 				      struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	u32 lvdcr0;
 
 	rcar_lvds_write(lvds0, LVDSTRIPE, LVDSTRIPE_ST_ON);
@@ -214,7 +215,10 @@ static void rcar_du_lvdsenc_dual_mode(struct rcar_du_lvdsenc *lvds0,
 	 * Turn the PLL on, set it to LVDS normal mode, wait for the startup
 	 * delay and turn the output on.
 	 */
-	lvdcr0 = (lvds0->mode << LVDCR0_LVMD_SHIFT) | LVDCR0_PWD;
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77990_REGS))
+		lvdcr0 = (lvds0->mode << LVDCR0_LVMD_SHIFT);
+	else
+		lvdcr0 = (lvds0->mode << LVDCR0_LVMD_SHIFT) | LVDCR0_PWD;
 	rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
 	rcar_lvds_write(lvds1, LVDCR0, lvdcr0);
 
@@ -388,6 +392,7 @@ end:
 static int rcar_du_lvdsenc_pll_start(struct rcar_du_lvdsenc *lvds,
 				     struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	u32 lvdhcr, lvdcr0;
 
 	rcar_lvds_write(lvds, LVDCTRCR, LVDCTRCR_CTR3SEL_ZERO |
@@ -408,7 +413,10 @@ static int rcar_du_lvdsenc_pll_start(struct rcar_du_lvdsenc *lvds,
 	 * Turn the PLL on, set it to LVDS normal mode, wait for the startup
 	 * delay and turn the output on.
 	 */
-	lvdcr0 = (lvds->mode << LVDCR0_LVMD_SHIFT) | LVDCR0_PWD;
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77990_REGS))
+		lvdcr0 = (lvds->mode << LVDCR0_LVMD_SHIFT);
+	else
+		lvdcr0 = (lvds->mode << LVDCR0_LVMD_SHIFT) | LVDCR0_PWD;
 	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
 
 	lvdcr0 |= LVDCR0_LVEN;
