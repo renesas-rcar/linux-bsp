@@ -163,11 +163,12 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 	struct vsp1_device *vsp1 = data;
 	irqreturn_t ret = IRQ_NONE;
 	unsigned int i;
-	u32 status, disp_st = 0;
-	bool underrun = false, disp_access = false;
+	u32 status;
 
 	for (i = 0; i < vsp1->info->wpf_count; ++i) {
 		struct vsp1_rwpf *wpf = vsp1->wpf[i];
+		bool underrun = false, disp_access = false;
+		u32 disp_st = 0;
 
 		if (wpf == NULL)
 			continue;
@@ -205,10 +206,10 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 			vsp1_drm_display_start(vsp1, i, wpf->pipe);
 			ret = IRQ_HANDLED;
 		}
-	}
 
-	if ((vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND) && underrun)
-		vsp1_underrun_workaround(vsp1, false);
+		if ((vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND) && underrun)
+			vsp1_underrun_workaround(vsp1, false);
+	}
 
 	return ret;
 }
