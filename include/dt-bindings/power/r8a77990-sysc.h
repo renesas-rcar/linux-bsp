@@ -24,6 +24,6 @@
 #define R8A77990_PD_A2VC1		26
 
 /* Always-on power area */
-#define r8a77990_PD_ALWAYS_ON		32
+#define R8A77990_PD_ALWAYS_ON		32
 
 #endif /* __DT_BINDINGS_POWER_R8A77990_SYSC_H__ */
