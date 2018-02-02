@@ -1,0 +1,170 @@
+/*
+ * r8a77990 Clock Pulse Generator / Module Standby and Software Reset
+ *
+ * Copyright (C) 2018 Glider bvba
+ *
+ * Based on r8a7795-cpg-mssr.c
+ *
+ * Copyright (C) 2015 Glider bvba
+ * Copyright (C) 2015 Renesas Electronics Corp.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ */
+
+#include <linux/device.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/soc/renesas/rcar-rst.h>
+
+#include <dt-bindings/clock/r8a77990-cpg-mssr.h>
+
+#include "renesas-cpg-mssr.h"
+#include "rcar-gen3-cpg.h"
+
+enum clk_ids {
+	/* Core Clock Outputs exported to DT */
+	LAST_DT_CORE_CLK = R8A77990_CLK_CPEX,
+
+	/* External Input Clocks */
+	CLK_EXTAL,
+
+	/* Internal Core Clocks */
+	CLK_MAIN,
+	CLK_PLL0,
+	CLK_PLL1,
+	CLK_PLL3,
+	CLK_PLL0D4,
+	CLK_PLL0D6,
+	CLK_PLL0D8,
+	CLK_PLL0D20,
+	CLK_PLL0D24,
+	CLK_PLL1D2,
+	CLK_PE,
+	CLK_S0,
+	CLK_S1,
+	CLK_S2,
+	CLK_S3,
+	CLK_SDSRC,
+
+	/* Module Clocks */
+	MOD_CLK_BASE
+};
+
+static const struct cpg_core_clk r8a77990_core_clks[] __initconst = {
+	/* External Clock Inputs */
+	DEF_INPUT("extal",     CLK_EXTAL),
+
+	/* Internal Core Clocks */
+	DEF_BASE(".main",      CLK_MAIN, CLK_TYPE_GEN3_MAIN,       CLK_EXTAL),
+	DEF_BASE(".pll1",      CLK_PLL1, CLK_TYPE_GEN3_PLL1,       CLK_MAIN),
+	DEF_BASE(".pll3",      CLK_PLL3, CLK_TYPE_GEN3_PLL3,       CLK_MAIN),
+
+	DEF_FIXED(".pll0",     CLK_PLL0,           CLK_MAIN,	   1, 100),
+	DEF_FIXED(".pll0d4",   CLK_PLL0D4,         CLK_PLL0,       4, 1),
+	DEF_FIXED(".pll0d6",   CLK_PLL0D6,         CLK_PLL0,       6, 1),
+	DEF_FIXED(".pll0d8",   CLK_PLL0D8,         CLK_PLL0,       8, 1),
+	DEF_FIXED(".pll0d20",  CLK_PLL0D20,        CLK_PLL0,      20, 1),
+	DEF_FIXED(".pll0d24",  CLK_PLL0D24,        CLK_PLL0,      24, 1),
+	DEF_FIXED(".pll1d2",   CLK_PLL1D2,         CLK_PLL1,       2, 1),
+	DEF_FIXED(".pe",       CLK_PE,             CLK_PLL0D20,    1, 1),
+	DEF_FIXED(".s0",       CLK_S0,             CLK_PLL1,       2, 1),
+	DEF_FIXED(".s1",       CLK_S1,             CLK_PLL1,       3, 1),
+	DEF_FIXED(".s2",       CLK_S2,             CLK_PLL1,       4, 1),
+	DEF_FIXED(".s3",       CLK_S3,             CLK_PLL1,       6, 1),
+	DEF_FIXED(".sdsrc",    CLK_SDSRC,          CLK_PLL1,       2, 1),
+
+	/* Core Clock Outputs */
+	DEF_FIXED("ztr",       R8A77990_CLK_ZTR,   CLK_PLL1,       6, 1),
+	DEF_FIXED("zt",        R8A77990_CLK_ZT,    CLK_PLL1,       4, 1),
+	DEF_FIXED("zx",        R8A77990_CLK_ZX,    CLK_PLL1,       3, 1),
+	DEF_FIXED("s0d1",      R8A77990_CLK_S0D1,  CLK_S0,         1, 1),
+	DEF_FIXED("s0d3",      R8A77990_CLK_S0D3,  CLK_S0,         3, 1),
+	DEF_FIXED("s0d6",      R8A77990_CLK_S0D6,  CLK_S0,         6, 1),
+	DEF_FIXED("s0d12",     R8A77990_CLK_S0D12, CLK_S0,        12, 1),
+	DEF_FIXED("s0d24",     R8A77990_CLK_S0D24, CLK_S0,        24, 1),
+	DEF_FIXED("s1d1",      R8A77990_CLK_S1D1,  CLK_S1,         1, 1),
+	DEF_FIXED("s1d2",      R8A77990_CLK_S1D2,  CLK_S1,         2, 1),
+	DEF_FIXED("s1d4",      R8A77990_CLK_S1D4,  CLK_S1,         4, 1),
+	DEF_FIXED("s2d1",      R8A77990_CLK_S2D1,  CLK_S2,         1, 1),
+	DEF_FIXED("s2d2",      R8A77990_CLK_S2D2,  CLK_S2,         2, 1),
+	DEF_FIXED("s2d4",      R8A77990_CLK_S2D4,  CLK_S2,         4, 1),
+	DEF_FIXED("s3d1",      R8A77990_CLK_S3D1,  CLK_S3,         1, 1),
+	DEF_FIXED("s3d2",      R8A77990_CLK_S3D2,  CLK_S3,         2, 1),
+	DEF_FIXED("s3d4",      R8A77990_CLK_S3D4,  CLK_S3,         4, 1),
+
+	DEF_FIXED("cl",        R8A77990_CLK_CL,    CLK_PLL1,      48, 1),
+	DEF_FIXED("cp",        R8A77990_CLK_CP,    CLK_EXTAL,      2, 1),
+	DEF_FIXED("cpex",      R8A77990_CLK_CPEX,  CLK_EXTAL,      4, 1),
+	DEF_FIXED("osc",       R8A77990_CLK_OSC,   CLK_EXTAL,    384, 1),
+	DEF_FIXED("r",         R8A77990_CLK_R,     CLK_EXTAL,   1536, 1),
+
+	DEF_GEN3_PE("s0d6c",   R8A77990_CLK_S0D6C, CLK_S0, 6, CLK_PE, 6),
+	DEF_GEN3_PE("s3d1c",   R8A77990_CLK_S3D1C, CLK_S3, 1, CLK_PE, 1),
+	DEF_GEN3_PE("s3d2c",   R8A77990_CLK_S3D2C, CLK_S3, 2, CLK_PE, 2),
+	DEF_GEN3_PE("s3d4c",   R8A77990_CLK_S3D4C, CLK_S3, 4, CLK_PE, 4),
+};
+
+static const struct mssr_mod_clk r8a77990_mod_clks[] __initconst = {
+	DEF_MOD("scif2",		 310,	R8A77990_CLK_S3D4C),
+	DEF_MOD("intc-ap",		 408,	R8A77990_CLK_S0D3),
+};
+
+static const unsigned int r8a77990_crit_mod_clks[] __initconst = {
+	MOD_CLK_ID(408),	/* INTC-AP (GIC) */
+};
+
+/*
+ * CPG Clock Data
+ */
+
+/*
+ * MD19		EXTAL (MHz)	PLL0		PLL1		PLL3
+ *--------------------------------------------------------------------
+ * 0		48 x 1		x100/4		x100/3		x100/3
+ * 1		48 x 1		x100/4		x100/3		 x58/3
+ */
+#define CPG_PLL_CONFIG_INDEX(md)	(((md) & BIT(19)) >> 19)
+
+static const struct rcar_gen3_cpg_pll_config cpg_pll_configs[2] __initconst = {
+	/* EXTAL div	PLL1 mult/div	PLL3 mult/div */
+	{ 1,		100,	3,	100,	3,	},
+	{ 1,		100,	3,	 58,	3,	},
+};
+
+static int __init r8a77990_cpg_mssr_init(struct device *dev)
+{
+	const struct rcar_gen3_cpg_pll_config *cpg_pll_config;
+	u32 cpg_mode;
+	int error;
+
+	error = rcar_rst_read_mode_pins(&cpg_mode);
+	if (error)
+		return error;
+
+	cpg_pll_config = &cpg_pll_configs[CPG_PLL_CONFIG_INDEX(cpg_mode)];
+
+	return rcar_gen3_cpg_init(cpg_pll_config, 0, cpg_mode);
+}
+
+const struct cpg_mssr_info r8a77990_cpg_mssr_info __initconst = {
+	/* Core Clocks */
+	.core_clks = r8a77990_core_clks,
+	.num_core_clks = ARRAY_SIZE(r8a77990_core_clks),
+	.last_dt_core_clk = LAST_DT_CORE_CLK,
+	.num_total_core_clks = MOD_CLK_BASE,
+
+	/* Module Clocks */
+	.mod_clks = r8a77990_mod_clks,
+	.num_mod_clks = ARRAY_SIZE(r8a77990_mod_clks),
+	.num_hw_mod_clks = 12 * 32,
+
+	/* Critical Module Clocks */
+	.crit_mod_clks = r8a77990_crit_mod_clks,
+	.num_crit_mod_clks = ARRAY_SIZE(r8a77990_crit_mod_clks),
+
+	/* Callbacks */
+	.init = r8a77990_cpg_mssr_init,
+	.cpg_clk_register = rcar_gen3_cpg_clk_register,
+};
