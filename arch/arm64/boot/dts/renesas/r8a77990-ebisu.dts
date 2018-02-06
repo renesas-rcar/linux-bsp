@@ -53,6 +53,14 @@
 	clock-frequency = <48000000>;
 };
 
+&i2c0 {
+	status = "okay";
+};
+
+&i2c3 {
+	status = "okay";
+};
+
 &pfc {
 	avb_pins: avb {
 		mux {
