@@ -205,6 +205,11 @@
 		};
 	};
 
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>;
+	};
+
 	vga {
 		compatible = "vga-connector";
 
@@ -777,7 +782,6 @@
 			capture  = <&ssi1 &src1 &dvc1>;
 		};
 	};
-
 };
 
 &sdhi3 {
