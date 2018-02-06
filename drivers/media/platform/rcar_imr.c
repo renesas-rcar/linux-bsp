@@ -17,6 +17,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/delay.h>
 #include <linux/rcar-imr.h>
+#include <linux/of.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-fh.h>
@@ -38,6 +39,9 @@ MODULE_PARM_DESC(debug, "Debug level (0-4)");
  * Local types definitions
  ******************************************************************************/
 
+/* Number of RSE planes on V3H (non scaled, 1/2, 1/4, 1/8) */
+#define RSE_PLANES_NUM 4
+
 /* ...configuration data */
 struct imr_cfg {
 	/* ...display-list main program data */
@@ -49,6 +53,21 @@ struct imr_cfg {
 	/* ...pointers to the source/destination planes */
 	u32                    *src_pa_ptr[2];
 	u32                    *dst_pa_ptr[2];
+	/* ...pointers to the RSE destination planes */
+	u32                    *dstn_pa_ptr[RSE_PLANES_NUM];
+	u32                    *dstr_pa_ptr[RSE_PLANES_NUM];
+
+	/* ...offsets to RSE destination planes */
+	u32                     dstnr_offsets[IMR_EXTDST_NUM];
+
+	/* ...RSE logical right shift data */
+	u32                    *rscr_ptr;
+	u8                      rscr_sc8, rscr_sc4, rscr_sc2;
+
+	/* ...RSE destination stride values */
+	u32                     dstnr_strides[IMR_EXTDST_NUM];
+	u32                    *striden_ptr[RSE_PLANES_NUM];
+	u32                    *strider_ptr[RSE_PLANES_NUM];
 
 	/* ...subpixel destination coordinates space */
 	int                     dst_subpixel;
@@ -95,6 +114,8 @@ struct imr_device {
 	struct video_device     video_dev;
 	struct v4l2_m2m_dev    *m2m_dev;
 	struct device          *alloc_dev;
+
+	bool			rse;
 
 	/* ...do we need that counter really? framework counts fh structures for us - tbd */
 	int                     refcount;
@@ -218,6 +239,18 @@ struct imr_ctx {
 #define IMR_CPDP_VRDPO_SHIFT            0
 
 #define IMR_TPOR                        0xF0
+
+#define IMR_RSCSR			0x204
+#define IMR_RSCCR			0x208
+#define IMR_RSCR_RSE			31
+#define IMR_RSCR_SC8			25
+#define IMR_RSCR_SC4			21
+#define IMR_RSCR_SC2			17
+
+#define IMR_DSANRR0                     0x210
+#define IMR_DSTNRR0                     0x214
+#define IMR_DSARR0                      0x218
+#define IMR_DSTRR0                      0x21C
 
 /*******************************************************************************
  * Auxiliary helpers
@@ -398,6 +431,7 @@ static int imr_queue_setup(struct vb2_queue *vq,
 	case V4L2_PIX_FMT_YVYU:
 	case V4L2_PIX_FMT_NV16:
 	case V4L2_PIX_FMT_Y10:
+	case V4L2_PIX_FMT_Y12:
 	case V4L2_PIX_FMT_Y16:
 		sizes[0] = w * h * 2;
 		break;
@@ -750,6 +784,7 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 	int     W = ctx->queue[1].fmt.width;
 	int     H = ctx->queue[1].fmt.height;
 	u32     tricr = ctx->color & 0xFFFFFF;
+	int     i;
 
 	v4l2_dbg(2, debug, &ctx->imr->v4l2_dev, "setup %u*%u -> %u*%u mapping (type=%x)\n", w, h, W, H, type);
 
@@ -775,6 +810,38 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 	*dl++ = IMR_OP_WTS(IMR_CMRCCR, 0xFFFF);
 	*dl++ = IMR_OP_WTS(IMR_CMRCCR2, 0xFFFF);
 
+	if (type & IMR_MAP_RSE) {
+		/* ...enable RSE */
+		*dl++ = IMR_OP_WTL(IMR_RSCCR, 1);
+		*dl++ = 0xffffffff;
+		*dl++ = IMR_OP_WTL(IMR_RSCSR, 1);
+		cfg->rscr_ptr = dl++;
+
+		for (i = 0; i < RSE_PLANES_NUM; i++) {
+			/* ...set destination planes base address and strides */
+			*dl++ = IMR_OP_WTL(IMR_DSANRR0 + i * 0x10, 4);
+			cfg->dstn_pa_ptr[i] = dl++;
+			cfg->striden_ptr[i] = dl++;
+			cfg->dstr_pa_ptr[i] = dl++;
+			cfg->strider_ptr[i] = dl++;
+		}
+
+		cfg->rscr_sc8 = cfg->rscr_sc4 = cfg->rscr_sc2 = 0;
+		memset(cfg->dstnr_offsets, 0, sizeof(cfg->dstnr_offsets));
+		memset(cfg->dstnr_strides, 0, sizeof(cfg->dstnr_strides));
+	} else {
+		/* ...disable RSE */
+		*dl++ = IMR_OP_WTL(IMR_RSCCR, 1);
+		*dl++ = 0xffffffff;
+
+		for (i = 0; i < RSE_PLANES_NUM; i++) {
+			cfg->dstn_pa_ptr[i] = NULL;
+			cfg->striden_ptr[i] = NULL;
+			cfg->dstr_pa_ptr[i] = NULL;
+			cfg->strider_ptr[i] = NULL;
+		}
+		cfg->rscr_ptr = NULL;
+	}
 	/* ...set source/destination addresses of Y/UV plane */
 	*dl++ = IMR_OP_WTL(IMR_DSAR, 2);
 	cfg->dst_pa_ptr[0] = dl++;
@@ -906,6 +973,12 @@ static int imr_ioctl_map(struct imr_ctx *ctx, struct imr_map_desc *desc)
 	}
 
 	type = desc->type;
+
+	/* ...check for RSE */
+	if ((type & IMR_MAP_RSE) && !imr->rse) {
+		v4l2_err(&imr->v4l2_dev, "Rotator & Scaler extension not supported\n");
+		return -EINVAL;
+	}
 
 	/* ...mesh item size calculation */
 	item_size = (type & IMR_MAP_LUCE ? 4 : 0) + (type & IMR_MAP_CLCE ? 4 : 0);
@@ -1055,6 +1128,12 @@ static int imr_ioctl_map_raw(struct imr_ctx *ctx, struct imr_map_desc *desc)
 	u32                     dl_start_offset;
 	dma_addr_t              dl_dma_addr;
 
+	/* ...check RSE */
+	if ((type & IMR_MAP_RSE) && !imr->rse) {
+		v4l2_err(&imr->v4l2_dev, "Rotator & Scaler extension not supported\n");
+		return -EINVAL;
+	}
+
 	/* ...calculate main routine length */
 	dl_size = imr_dl_program_length(ctx);
 	if (!dl_size) {
@@ -1099,6 +1178,46 @@ static int imr_ioctl_map_raw(struct imr_ctx *ctx, struct imr_map_desc *desc)
 static int imr_ioctl_color(struct imr_ctx *ctx, u32 color)
 {
 	ctx->color = color;
+
+	return 0;
+}
+
+static int imr_extdst_set(struct imr_ctx *ctx, u32 *extdst)
+{
+	struct imr_device      *imr = ctx->imr;
+	struct imr_cfg         *cfg = ctx->cfg;
+
+	if (!cfg) {
+		v4l2_err(&imr->v4l2_dev, "failed to set V3H extension dst buffers: No active confguration.\n");
+		return -EINVAL;
+	}
+
+	if (copy_from_user((void *) cfg->dstnr_offsets, (void __user *) extdst, sizeof(cfg->dstnr_offsets))) {
+		v4l2_err(&imr->v4l2_dev, "failed to read V3H extension dst buffers\n");
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int imr_extstride_set(struct imr_ctx *ctx, struct imr_rse_param *param)
+{
+	struct imr_device      *imr = ctx->imr;
+	struct imr_cfg         *cfg = ctx->cfg;
+
+	if (!cfg) {
+		v4l2_err(&imr->v4l2_dev, "failed to set V3H extension buffers params: No active confguration.\n");
+		return -EINVAL;
+	}
+
+	cfg->rscr_sc8 = param->sc8;
+	cfg->rscr_sc4 = param->sc4;
+	cfg->rscr_sc2 = param->sc2;
+
+	if (copy_from_user((void *) cfg->dstnr_strides, (void __user *) param->strides, sizeof(cfg->dstnr_strides))) {
+		v4l2_err(&imr->v4l2_dev, "failed to read V3H extension buffers strides\n");
+		return -EFAULT;
+	}
 
 	return 0;
 }
@@ -1356,6 +1475,14 @@ static long imr_default(struct file *file, void *fh, bool valid_prio, unsigned i
 		/* ...set solid color code */
 		return imr_ioctl_color(ctx, *(u32 *)arg);
 
+	case VIDIOC_IMR_EXTDST:
+		/* ...set V3H extension dst buffers */
+		return imr_extdst_set(ctx, *(u32 **)arg);
+
+	case VIDIOC_IMR_EXTSTRIDE:
+		/* ...set V3H extension dst strides */
+		return imr_extstride_set(ctx, (struct imr_rse_param *)arg);
+
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -1579,6 +1706,7 @@ static void imr_device_run(void *priv)
 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
 	u32                     src_addr, dst_addr;
 	unsigned long           flags;
+	int			i;
 
 	v4l2_dbg(3, debug, &imr->v4l2_dev, "run next job...\n");
 
@@ -1607,6 +1735,17 @@ static void imr_device_run(void *priv)
 	/* ...adjust source/destination parameters of the program (interleaved / semiplanar) */
 	*cfg->src_pa_ptr[0] = src_addr = (u32)vb2_dma_contig_plane_dma_addr(&src_buf->vb2_buf, 0);
 	*cfg->dst_pa_ptr[0] = dst_addr = (u32)vb2_dma_contig_plane_dma_addr(&dst_buf->vb2_buf, 0);
+
+	for (i = 0; i < RSE_PLANES_NUM; i++) {
+		if (cfg->rscr_ptr) *cfg->rscr_ptr = (1 << IMR_RSCR_RSE) | (cfg->rscr_sc8 << IMR_RSCR_SC8) |
+						    (cfg->rscr_sc4 << IMR_RSCR_SC4) |(cfg->rscr_sc2 << IMR_RSCR_SC2);
+
+		if (cfg->dstn_pa_ptr[i]) *cfg->dstn_pa_ptr[i] = dst_addr + cfg->dstnr_offsets[i];
+		if (cfg->dstr_pa_ptr[i]) *cfg->dstr_pa_ptr[i] = dst_addr + cfg->dstnr_offsets[i + RSE_PLANES_NUM];
+
+		if (cfg->striden_ptr[i]) *cfg->striden_ptr[i] = cfg->dstnr_strides[i];
+		if (cfg->strider_ptr[i]) *cfg->strider_ptr[i] = cfg->dstnr_strides[i + RSE_PLANES_NUM];
+	}
 
 	/* ...adjust source/destination parameters of the UV-plane as needed */
 	if (cfg->src_pa_ptr[1] && cfg->dst_pa_ptr[1]) {
@@ -1776,6 +1915,7 @@ static int imr_probe(struct platform_device *pdev)
 {
 	struct imr_device *imr;
 	struct resource *res;
+	struct device_node *np = pdev->dev.of_node;
 	int ret;
 
 	imr = devm_kzalloc(&pdev->dev, sizeof(*imr), GFP_KERNEL);
@@ -1785,6 +1925,9 @@ static int imr_probe(struct platform_device *pdev)
 	mutex_init(&imr->mutex);
 	spin_lock_init(&imr->lock);
 	imr->dev = &pdev->dev;
+
+	/* Check RSE support */
+	imr->rse = of_property_read_bool(np, "rse");
 
 	/* ...memory-mapped registers */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

@@ -25,8 +25,8 @@ struct imr_map_desc {
 	/* ...total size of the mesh structure */
 	u32             size;
 
-    /* ...map-specific user-pointer */
-    void           *data;
+	/* ...map-specific user-pointer */
+	void           *data;
 
 }   __attribute__((packed));
 
@@ -53,6 +53,9 @@ struct imr_map_desc {
 
 /* ...bilinear filtration enable flag */
 #define IMR_MAP_BFE                     (1 << 7)
+
+/* ...extended functionality (rotation/scaling) enable flag */
+#define IMR_MAP_RSE                     (1 << 21)
 
 /* ...source coordinate decimal point position bit index */
 #define __IMR_MAP_UVDPOR_SHIFT          8
@@ -88,11 +91,26 @@ struct imr_mesh {
 }   __attribute__((packed));
 
 /*******************************************************************************
+ * V3H Extension destination data
+ ******************************************************************************/
+/* ...number of V3H extension destination buffers (rotated/non-rotated, scaled 1/1, 1/2, 1/4, 1/8) */
+#define IMR_EXTDST_NUM                      8
+
+struct imr_rse_param {
+	/* ...logical right shift data */
+	u8		sc8, sc4, sc2;
+	/* ...destination buffers stride */
+	u32            *strides;
+};
+
+/*******************************************************************************
  * Private IOCTL codes
  ******************************************************************************/
 
 #define VIDIOC_IMR_MESH                 _IOW('V', BASE_VIDIOC_PRIVATE + 0, struct imr_map_desc)
 #define VIDIOC_IMR_MESH_RAW             _IOW('V', BASE_VIDIOC_PRIVATE + 1, struct imr_map_desc)
 #define VIDIOC_IMR_COLOR                _IOW('V', BASE_VIDIOC_PRIVATE + 2, u32)
+#define VIDIOC_IMR_EXTDST               _IOW('V', BASE_VIDIOC_PRIVATE + 3, u32 *)
+#define VIDIOC_IMR_EXTSTRIDE            _IOW('V', BASE_VIDIOC_PRIVATE + 4, struct imr_rse_param)
 
 #endif  /* RCAR_IMR_USER_H */
