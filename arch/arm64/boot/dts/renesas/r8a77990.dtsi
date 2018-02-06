@@ -1643,6 +1643,11 @@
 			reg = <0 0xfff00044 0 4>;
 		};
 
+		qos@e67e0000 {
+			compatible = "renesas,qos";
+			reg = <0 0xe67e0000 0 0x10090>;
+		};
+
 		vcplf: vcp4@fe910000 {
 			compatible = "renesas,vcp4-vcplf";
 			reg = <0 0xfe910000 0 0x200>, <0 0xfe910200 0 0x200>;
