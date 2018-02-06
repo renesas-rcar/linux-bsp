@@ -383,6 +383,11 @@
 		groups = "sdhi1_data4", "sdhi1_ctrl";
 		function = "sdhi1";
 	};
+
+	usb0_pins: usb0 {
+		groups = "usb0_b";
+		function = "usb0";
+	};
 };
 
 &scif2 {
@@ -412,6 +417,13 @@
 	vqmmc-supply = <&vccq_sdhi1>;
 	cd-gpios = <&gpio3 14 GPIO_ACTIVE_LOW>;
 	bus-width = <4>;
+	status = "okay";
+};
+
+&usb2_phy0 {
+	pinctrl-0 = <&usb0_pins>;
+	pinctrl-names = "default";
+
 	status = "okay";
 };
 
