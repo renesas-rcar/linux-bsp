@@ -210,6 +210,10 @@
 		memory-region = <&mmp_reserved>;
 	};
 
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
 	vga {
 		compatible = "vga-connector";
 
