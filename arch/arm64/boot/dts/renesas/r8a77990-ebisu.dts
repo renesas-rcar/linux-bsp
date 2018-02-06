@@ -171,6 +171,10 @@
 		memory-region = <&mmp_reserved>, <&lossy_decompress>;
 	};
 
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
 	rsnd_ak4613: sound {
 		compatible = "simple-scu-audio-card";
 
