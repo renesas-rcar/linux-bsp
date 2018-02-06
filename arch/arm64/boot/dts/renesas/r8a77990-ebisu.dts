@@ -262,6 +262,10 @@
 	};
 };
 
+&ehci0 {
+	status = "okay";
+};
+
 &extal_clk {
 	clock-frequency = <48000000>;
 };
@@ -356,6 +360,10 @@
 };
 
 &i2c3 {
+	status = "okay";
+};
+
+&ohci0 {
 	status = "okay";
 };
 
