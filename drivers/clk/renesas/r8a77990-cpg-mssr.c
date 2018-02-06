@@ -116,6 +116,13 @@ static const struct mssr_mod_clk r8a77990_mod_clks[] __initconst = {
 	DEF_MOD("gpio2",		 910,	R8A77990_CLK_S3D4),
 	DEF_MOD("gpio1",		 911,	R8A77990_CLK_S3D4),
 	DEF_MOD("gpio0",		 912,	R8A77990_CLK_S3D4),
+	DEF_MOD("i2c6",			 918,	R8A77990_CLK_S3D2),
+	DEF_MOD("i2c5",			 919,	R8A77990_CLK_S3D2),
+	DEF_MOD("i2c4",			 927,	R8A77990_CLK_S3D2),
+	DEF_MOD("i2c3",			 928,	R8A77990_CLK_S3D2),
+	DEF_MOD("i2c2",			 929,	R8A77990_CLK_S3D2),
+	DEF_MOD("i2c1",			 930,	R8A77990_CLK_S3D2),
+	DEF_MOD("i2c0",			 931,	R8A77990_CLK_S3D2),
 };
 
 static const unsigned int r8a77990_crit_mod_clks[] __initconst = {
