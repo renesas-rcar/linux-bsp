@@ -147,6 +147,19 @@
 		};
 	};
 
+	gsx_opp_table: gsx_opp_table {
+		compatible = "operating-points-v2";
+
+		opp-300000000 {
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <820000>;
+		};
+		opp-600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <820000>;
+		};
+	};
+
 	/* MSIOF reference clock - to be overridden by boards that provide it */
 	msiof_ref_clk: msiof-ref-clock {
 		compatible = "fixed-clock";
@@ -1717,6 +1730,7 @@
 			reg = <0 0xfd000000 0 0x40000>;
 			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 112>;
+			operating-points-v2 = <&gsx_opp_table>;
 			power-domains = <&sysc R8A77990_PD_3DG_B>;
 			resets = <&cpg 112>;
 		};
