@@ -166,6 +166,11 @@
 		};
 	};
 
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
 	rsnd_ak4613: sound {
 		compatible = "simple-scu-audio-card";
 
