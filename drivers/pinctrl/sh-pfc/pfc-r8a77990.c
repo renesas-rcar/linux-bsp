@@ -25,7 +25,7 @@
 #define CPU_ALL_PORT(fn, sfx) \
 	PORT_GP_CFG_18(0, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_23(1, fn, sfx, CFG_FLAGS), \
-	PORT_GP_CFG_26(2, fn, sfx, CFG_FLAGS), \
+	PORT_GP_CFG_28(2, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_12(3, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE), \
 	PORT_GP_CFG_1(3, 12, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_1(3, 13, fn, sfx, CFG_FLAGS), \
@@ -85,6 +85,8 @@
 #define GPSR1_0		F_(A0,			IP2_31_28)
 
 /* GPSR2 */
+#define GPSR2_27	F_(AVB_MDC,		IP2_11_8)
+#define GPSR2_26	F_(AVB_MDIO,		IP2_7_4)
 #define GPSR2_25	F_(EX_WAIT0,		IP2_27_24)
 #define GPSR2_24	F_(RD_WR_N,		IP2_23_20)
 #define GPSR2_23	F_(RD_N,		IP2_19_16)
@@ -1440,6 +1442,15 @@ static const unsigned int avb_phy_int_pins[] = {
 
 static const unsigned int avb_phy_int_mux[] = {
 	AVB_PHY_INT_MARK,
+};
+
+static const unsigned int avb_mdc_pins[] = {
+	/* AVB0_MDC, AVB0_MDIO */
+	RCAR_GP_PIN(2, 27), RCAR_GP_PIN(2, 26),
+};
+
+static const unsigned int avb_mdc_mux[] = {
+	AVB_MDC_MARK, AVB_MDIO_MARK,
 };
 
 static const unsigned int avb_mii_pins[] = {
@@ -3901,6 +3912,7 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(avb_link),
 	SH_PFC_PIN_GROUP(avb_magic),
 	SH_PFC_PIN_GROUP(avb_phy_int),
+	SH_PFC_PIN_GROUP(avb_mdc),
 	SH_PFC_PIN_GROUP(avb_mii),
 	SH_PFC_PIN_GROUP(avb_avtp_pps),
 	SH_PFC_PIN_GROUP(avb_avtp_match_a),
@@ -4169,6 +4181,7 @@ static const char * const avb_groups[] = {
 	"avb_link",
 	"avb_magic",
 	"avb_phy_int",
+	"avb_mdc",
 	"avb_mii",
 	"avb_avtp_pps",
 	"avb_avtp_match_a",
@@ -4689,8 +4702,8 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		0, 0,
 		0, 0,
 		0, 0,
-		0, 0,
-		0, 0,
+		GP_2_27_FN,	GPSR2_27,
+		GP_2_26_FN,	GPSR2_26,
 		GP_2_25_FN,	GPSR2_25,
 		GP_2_24_FN,	GPSR2_24,
 		GP_2_23_FN,	GPSR2_23,
