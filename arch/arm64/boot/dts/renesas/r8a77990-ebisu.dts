@@ -336,13 +336,14 @@
 	renesas,no-ether-link;
 	phy-handle = <&phy0>;
 	status = "okay";
+	reset-gpios = <&gpio1 20 GPIO_ACTIVE_LOW>;
+	reset-delay-us = <20000>;
 
 	phy0: ethernet-phy@0 {
 		rxc-skew-ps = <1500>;
 		reg = <0>;
 		interrupt-parent = <&gpio2>;
 		interrupts = <21 IRQ_TYPE_LEVEL_LOW>;
-		reset-gpios = <&gpio1 20 GPIO_ACTIVE_LOW>;
 	};
 };
 
