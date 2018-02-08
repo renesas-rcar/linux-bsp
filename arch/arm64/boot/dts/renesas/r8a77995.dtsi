@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a77995 SoC
  *
- * Copyright (C) 2016-2017 Renesas Electronics Corp.
+ * Copyright (C) 2016-2018 Renesas Electronics Corp.
  * Copyright (C) 2017 Glider bvba
  *
  * This file is licensed under the terms of the GNU General Public License
@@ -1022,6 +1022,15 @@
 			resets = <&cpg 627>, <&cpg 607>;
 			reset-names = "vsp", "fcp";
 			status = "disabled";
+		};
+
+		gsx: gsx@fd000000 {
+			compatible = "renesas,gsx";
+			reg = <0 0xfd000000 0 0x3ffff>;
+			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 112>;
+			power-domains = <&cpg>;
+			resets = <&cpg 112>;
 		};
 
 		vspd0: vsp@fea20000 {
