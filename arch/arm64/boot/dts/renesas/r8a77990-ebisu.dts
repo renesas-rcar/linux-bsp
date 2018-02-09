@@ -310,6 +310,11 @@
 	clock-frequency = <48000000>;
 };
 
+
+&hsusb {
+	status = "okay";
+};
+
 &i2c0 {
 	status = "okay";
 
