@@ -94,6 +94,8 @@
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
 			dynamic-power-coefficient = <277>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
 			cpu-idle-states = <&CPU_SLEEP_1>;
 			clocks =<&cpg CPG_CORE R8A77990_CLK_Z2>;
 			operating-points-v2 = <&cluster1_opp>;
@@ -2066,25 +2068,31 @@
 			thermal-sensors = <&thermal 0>;
 			sustainable-power = <717>;
 
-			cooling-maps {
-				map0 {
-					trip = <&target>;
-					cooling-device = <&a53_0 0 2>;
-					contribution = <1024>;
-				};
-			};
-
 			trips {
-				sensor1_crit: sensor1-crit {
-					temperature = <120000>;
+				threshold: trip-point0 {
+					temperature = <90000>;
 					hysteresis = <2000>;
-					type = "critical";
+					type = "passive";
 				};
 
 				target: trip-point1 {
 					temperature = <100000>;
 					hysteresis = <2000>;
 					type = "passive";
+				};
+
+				sensor1_crit: sensor1-crit {
+					temperature = <120000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+
+			cooling-maps {
+				map0 {
+					trip = <&target>;
+					cooling-device = <&a53_0 0 2>;
+					contribution = <1024>;
 				};
 			};
 		};
