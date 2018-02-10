@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a77965 SoC
  *
- * Copyright (C) 2017 Renesas Electronics Corp.
+ * Copyright (C) 2017-2018 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -67,6 +67,7 @@
 			next-level-cache = <&L2_CA57>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A77965_CLK_Z>;
 			operating-points-v2 = <&cluster0_opp>;
 		};
 
