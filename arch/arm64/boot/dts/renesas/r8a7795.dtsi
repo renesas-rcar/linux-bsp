@@ -152,7 +152,10 @@
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_1>;
+			#cooling-cells = <2>;
 			dynamic-power-coefficient = <277>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
 			clocks =<&cpg CPG_CORE R8A7795_CLK_Z2>;
 			operating-points-v2 = <&cluster1_opp>;
 			capacity-dmips-mhz = <540>;
@@ -3427,6 +3430,11 @@
 					map0 {
 						trip = <&target>;
 						cooling-device = <&a57_0 0 2>;
+						contribution = <1024>;
+					};
+					map1 {
+						trip = <&target>;
+						cooling-device = <&a53_0 0 2>;
 						contribution = <1024>;
 					};
 				};
