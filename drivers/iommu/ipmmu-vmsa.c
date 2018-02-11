@@ -182,13 +182,13 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)
 
 #define IMTTLBR0			0x0010
-#define IMTTLBR0_TTBR_MASK		(~(IMTTUBR0_TTBR_MASK))
+#define IMTTLBR0_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR0			0x0014
-#define IMTTUBR0_TTBR_MASK		0xff
+#define IMTTUBR0_TTBR_MASK		(0xff << 0)
 #define IMTTLBR1			0x0018
-#define IMTTLBR1_TTBR_MASK		(~(IMTTUBR1_TTBR_MASK))
+#define IMTTLBR1_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR1			0x001c
-#define IMTTUBR1_TTBR_MASK		0xff
+#define IMTTUBR1_TTBR_MASK		(0xff << 0)
 
 #define IMSTR				0x0020
 #define IMSTR_ERRLVL_MASK		(3 << 12)
