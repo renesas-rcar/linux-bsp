@@ -3550,11 +3550,10 @@ static void xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	}
 
 	virt_dev->udev = NULL;
+	xhci_debugfs_remove_slot(xhci, udev->slot_id);
 	ret = xhci_disable_slot(xhci, udev->slot_id);
-	if (ret) {
-		xhci_debugfs_remove_slot(xhci, udev->slot_id);
+	if (ret)
 		xhci_free_virt_device(xhci, udev->slot_id);
-	}
 }
 
 int xhci_disable_slot(struct xhci_hcd *xhci, u32 slot_id)
