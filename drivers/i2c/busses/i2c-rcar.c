@@ -163,6 +163,8 @@ static const struct soc_device_attribute rcar_quirks_match[]  = {
 		.data = (void *)RCAR_I2C_GEN3, },
 	{ .soc_id = "r8a77965",
 		.data = (void *)RCAR_I2C_GEN3, },
+	{ .soc_id = "r8a77990",
+		.data = (void *)RCAR_I2C_GEN3, },
 	{ .soc_id = "r8a77995",
 		.data = (void *)RCAR_I2C_GEN3, },
 	{/*sentinel*/},
