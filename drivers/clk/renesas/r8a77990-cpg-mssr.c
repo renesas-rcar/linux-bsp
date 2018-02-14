@@ -131,6 +131,7 @@ static const struct mssr_mod_clk r8a77990_mod_clks[] __initconst = {
 	DEF_MOD("pcie0",		 319,	R8A77990_CLK_S3D1),
 	DEF_MOD("usb3-if0",		 328,	R8A77990_CLK_S3D1),
 	DEF_MOD("intc-ap",		 408,	R8A77990_CLK_S0D3),
+	DEF_MOD("audmac0",		 502,	R8A77990_CLK_S3D4),
 	DEF_MOD("fcpvd1",		 602,	R8A77990_CLK_S1D2),
 	DEF_MOD("fcpvd0",		 603,	R8A77990_CLK_S1D2),
 	DEF_MOD("fcpvb0",		 607,	R8A77990_CLK_S0D1),
