@@ -112,6 +112,7 @@ static const struct cpg_core_clk r8a77990_core_clks[] __initconst = {
 	DEF_GEN3_PE("s3d4c",   R8A77990_CLK_S3D4C, CLK_S3, 4, CLK_PE, 4),
 
 	DEF_DIV6P1("csi0",     R8A77990_CLK_CSI0,  CLK_PLL1D2, 0x00c),
+	DEF_DIV6P1("mso",      R8A77990_CLK_MSO,   CLK_PLL1D2, 0x014),
 };
 
 static const struct mssr_mod_clk r8a77990_mod_clks[] __initconst = {
@@ -121,6 +122,10 @@ static const struct mssr_mod_clk r8a77990_mod_clks[] __initconst = {
 	DEF_MOD("scif3",		 204,	R8A77990_CLK_S3D4C),
 	DEF_MOD("scif1",		 206,	R8A77990_CLK_S3D4C),
 	DEF_MOD("scif0",		 207,	R8A77990_CLK_S3D4C),
+	DEF_MOD("msiof3",		 208,	R8A77990_CLK_MSO),
+	DEF_MOD("msiof2",		 209,	R8A77990_CLK_MSO),
+	DEF_MOD("msiof1",		 210,	R8A77990_CLK_MSO),
+	DEF_MOD("msiof0",		 211,	R8A77990_CLK_MSO),
 	DEF_MOD("sys-dmac2",		 217,	R8A77990_CLK_S3D1),
 	DEF_MOD("sys-dmac1",		 218,	R8A77990_CLK_S3D1),
 	DEF_MOD("sys-dmac0",		 219,	R8A77990_CLK_S3D1),
