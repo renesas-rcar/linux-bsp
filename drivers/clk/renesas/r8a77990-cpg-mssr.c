@@ -147,8 +147,8 @@ static const struct mssr_mod_clk r8a77990_mod_clks[] __initconst = {
 	DEF_MOD("usb-dmac1",		 331,	R8A77990_CLK_S3D1),
 
 	DEF_MOD("rwdt",			 402,	R8A77990_CLK_R),
-
 	DEF_MOD("audmac0",		 502,	R8A77990_CLK_S1D2),
+	DEF_MOD("adsp",			 506,	R8A77990_CLK_S1D1),
 	DEF_MOD("drif7",		 508,	R8A77990_CLK_S3D2),
 	DEF_MOD("drif6",		 509,	R8A77990_CLK_S3D2),
 	DEF_MOD("drif5",		 510,	R8A77990_CLK_S3D2),
