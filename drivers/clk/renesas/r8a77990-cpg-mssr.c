@@ -78,6 +78,8 @@ static const struct cpg_core_clk r8a77990_core_clks[] __initconst = {
 	/* Core Clock Outputs */
 	DEF_GEN3_Z("z2",       R8A77990_CLK_Z2,  CLK_TYPE_GEN3_Z2, CLK_PLL0, 4),
 	DEF_GEN3_Z("zg",       R8A77990_CLK_ZG,  CLK_TYPE_GEN3_ZG, CLK_PLL0, 8),
+	DEF_FIXED("za2",       R8A77990_CLK_ZA2,   CLK_PLL0D24,    1, 1),
+	DEF_FIXED("za8",       R8A77990_CLK_ZA8,   CLK_PLL0D8,     1, 1),
 	DEF_FIXED("ztr",       R8A77990_CLK_ZTR,   CLK_PLL1,       6, 1),
 	DEF_FIXED("zt",        R8A77990_CLK_ZT,    CLK_PLL1,       4, 1),
 	DEF_FIXED("zx",        R8A77990_CLK_ZX,    CLK_PLL1,       3, 1),
@@ -198,6 +200,7 @@ static const struct mssr_mod_clk r8a77990_mod_clks[] __initconst = {
 	DEF_MOD("can-if0",		 916,	R8A77990_CLK_S3D4),
 	DEF_MOD("i2c6",			 918,	R8A77990_CLK_S3D2),
 	DEF_MOD("i2c5",			 919,	R8A77990_CLK_S3D2),
+	DEF_MOD("adg",			 922,	R8A77990_CLK_ZA8),
 	DEF_MOD("i2c-dvfs",		 926,	R8A77990_CLK_CP),
 	DEF_MOD("i2c4",			 927,	R8A77990_CLK_S3D2),
 	DEF_MOD("i2c3",			 928,	R8A77990_CLK_S3D2),
