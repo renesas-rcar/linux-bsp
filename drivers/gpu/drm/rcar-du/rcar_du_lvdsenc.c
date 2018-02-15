@@ -75,8 +75,8 @@ static void rcar_du_lvdsenc_start_gen2(struct rcar_du_lvdsenc *lvds,
 	rcar_lvds_write(lvds, LVDPLLCR, pllcr);
 
 	/*
-	 * Select the input, hardcode mode 0, enable LVDS operation and turn
-	 * bias circuitry on.
+	 * Set the  LVDS mode, select the input, enable LVDS operation,
+	 * and turn bias circuitry on.
 	 */
 	lvdcr0 = (lvds->mode << LVDCR0_LVMD_SHIFT) | LVDCR0_BEN | LVDCR0_LVEN;
 	if (rcrtc->index == 2)
@@ -122,6 +122,9 @@ static void rcar_du_lvdsenc_start_gen3(struct rcar_du_lvdsenc *lvds,
 
 	rcar_lvds_write(lvds, LVDPLLCR, pllcr);
 
+	lvdcr0 = lvds->mode << LVDCR0_LVMD_SHIFT;
+	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
 	/* Turn all the channels on. */
 	rcar_lvds_write(lvds, LVDCR1,
 			LVDCR1_CHSTBY_GEN3(3) | LVDCR1_CHSTBY_GEN3(2) |
@@ -132,7 +135,8 @@ static void rcar_du_lvdsenc_start_gen3(struct rcar_du_lvdsenc *lvds,
 	 * Turn the PLL on, set it to LVDS normal mode, wait for the startup
 	 * delay and turn the output on.
 	 */
-	lvdcr0 = (lvds->mode << LVDCR0_LVMD_SHIFT) | LVDCR0_PLLON;
+
+	lvdcr0 |= LVDCR0_PLLON;
 	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
 
 	lvdcr0 |= LVDCR0_PWD;
