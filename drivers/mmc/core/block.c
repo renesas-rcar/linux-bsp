@@ -473,6 +473,7 @@ static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 			       struct mmc_blk_ioc_data *idata)
 {
 	struct mmc_command cmd = {};
+	struct mmc_command sbc = {};
 	struct mmc_data data = {};
 	struct mmc_request mrq = {};
 	struct scatterlist sg;
@@ -550,10 +551,12 @@ static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 	}
 
 	if (idata->rpmb) {
-		err = mmc_set_blockcount(card, data.blocks,
-			idata->ic.write_flag & (1 << 31));
-		if (err)
-			return err;
+		sbc.opcode = MMC_SET_BLOCK_COUNT;
+		sbc.arg = data.blocks;
+		if (idata->ic.write_flag & (1 << 31))
+			sbc.arg |= 1 << 31;
+		sbc.flags = MMC_RSP_SPI_R1 | MMC_RSP_R1 | MMC_CMD_AC;
+		mrq.sbc = &sbc;
 	}
 
 	if ((MMC_EXTRACT_INDEX_FROM_ARG(cmd.arg) == EXT_CSD_SANITIZE_START) &&
