@@ -163,8 +163,8 @@ static const struct phypll_hsfreqrange hsfreqrange_h3_v3h_m3n[] = {
 	{ .mbps =  325, .reg = 0x25 },
 	{ .mbps =  350, .reg = 0x35 },
 	{ .mbps =  400, .reg = 0x05 },
-	{ .mbps =  450, .reg = 0x26 },
-	{ .mbps =  500, .reg = 0x36 },
+	{ .mbps =  450, .reg = 0x16 },
+	{ .mbps =  500, .reg = 0x26 },
 	{ .mbps =  550, .reg = 0x37 },
 	{ .mbps =  600, .reg = 0x07 },
 	{ .mbps =  650, .reg = 0x18 },
@@ -357,7 +357,6 @@ struct rcar_csi2_info {
 	unsigned int csi0clkfreqrange;
 	bool clear_ulps;
 	bool have_phtw;
-	bool have_phtw_add;
 	bool phtw_testin;
 	u32 device;
 };
@@ -615,28 +614,19 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 		 */
 		rcar_csi2_write(priv, PHTW_REG, 0x01cc01e2);
 		rcar_csi2_write(priv, PHTW_REG, 0x010101e3);
-		if (!priv->info->have_phtw_add)
-			rcar_csi2_write(priv, PHTW_REG, 0x010101e4);
-		if (priv->info->have_phtw_add) {
-			rcar_csi2_write(priv, PHTW_REG, 0x011101e4);
-			rcar_csi2_write(priv, PHTW_REG, 0x010101e5);
-		}
+		rcar_csi2_write(priv, PHTW_REG, 0x011101e4);
+		rcar_csi2_write(priv, PHTW_REG, 0x010101e5);
 		rcar_csi2_write(priv, PHTW_REG, 0x01100104);
 
-		if (priv->info->have_phtw_add) {
-			if (phtw) {
-				rcar_csi2_write(priv, PHTW_REG, 0x01390105);
-				rcar_csi2_write(priv, PHTW_REG, phtw);
-			}
-			rcar_csi2_write(priv, PHTW_REG, 0x01380108);
-			rcar_csi2_write(priv, PHTW_REG, 0x01010100);
-			rcar_csi2_write(priv, PHTW_REG, 0x014b01ac);
+		if (phtw) {
+			rcar_csi2_write(priv, PHTW_REG, 0x01390105);
+			rcar_csi2_write(priv, PHTW_REG, phtw);
 		}
+		rcar_csi2_write(priv, PHTW_REG, 0x01380108);
+		rcar_csi2_write(priv, PHTW_REG, 0x01010100);
+		rcar_csi2_write(priv, PHTW_REG, 0x014b01ac);
 		rcar_csi2_write(priv, PHTW_REG, 0x01030100);
-		if (priv->info->have_phtw_add)
-			rcar_csi2_write(priv, PHTW_REG, 0x01800107);
-		else
-			rcar_csi2_write(priv, PHTW_REG, 0x01800100);
+		rcar_csi2_write(priv, PHTW_REG, 0x01800107);
 	}
 
 	/* Start */
@@ -936,7 +926,6 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a77965 = {
 	.phtw = phtw_m3n,
 	.clear_ulps = true,
 	.have_phtw = true,
-	.have_phtw_add = true,
 	.csi0clkfreqrange = 0x20,
 };
 
