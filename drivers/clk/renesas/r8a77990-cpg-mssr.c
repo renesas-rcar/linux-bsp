@@ -77,6 +77,7 @@ static const struct cpg_core_clk r8a77990_core_clks[] __initconst = {
 
 	/* Core Clock Outputs */
 	DEF_FIXED("z2",        R8A77990_CLK_Z2,    CLK_PLL0D4,     1, 1),
+	DEF_FIXED("zg",        R8A77990_CLK_ZG,    CLK_PLL0D8,     1, 1),
 	DEF_FIXED("ztr",       R8A77990_CLK_ZTR,   CLK_PLL1,       6, 1),
 	DEF_FIXED("zt",        R8A77990_CLK_ZT,    CLK_PLL1,       4, 1),
 	DEF_FIXED("zx",        R8A77990_CLK_ZX,    CLK_PLL1,       3, 1),
@@ -114,6 +115,7 @@ static const struct cpg_core_clk r8a77990_core_clks[] __initconst = {
 };
 
 static const struct mssr_mod_clk r8a77990_mod_clks[] __initconst = {
+	DEF_MOD("3dge",			 112,	R8A77990_CLK_ZG),
 	DEF_MOD("scif2",		 310,	R8A77990_CLK_S3D4C),
 	DEF_MOD("sdif3",		 311,	R8A77990_CLK_SD3),
 	DEF_MOD("sdif1",		 313,	R8A77990_CLK_SD1),
