@@ -374,6 +374,11 @@
 	memory-region = <&adsp_reserved>;
 };
 
+&adsp {
+	status = "okay";
+	memory-region = <&adsp_reserved>;
+};
+
 &audio_clk_a {
 	clock-frequency = <22579200>;
 };
