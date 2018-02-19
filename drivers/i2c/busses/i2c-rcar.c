@@ -719,6 +719,7 @@ static void rcar_i2c_release_dma(struct rcar_i2c_priv *priv)
 static void rcar_i2c_reset(struct rcar_i2c_priv *priv)
 {
 	int ret;
+	int i;
 	struct device *dev = rcar_i2c_priv_to_dev(priv);
 
 	/* do reset */
@@ -728,10 +729,24 @@ static void rcar_i2c_reset(struct rcar_i2c_priv *priv)
 		return;
 	}
 
+	udelay(1);
+
 	/* do reset release */
 	ret = reset_control_deassert(priv->rstc);
 	if (ret)
 		dev_err(dev, "dessert reset error %d\n", ret);
+
+	/* do release wait */
+	for (i = 0; i < LOOP_TIMEOUT; i++) {
+		ret = reset_control_status(priv->rstc);
+		if (!ret)
+			return;
+		else if (ret < 0)
+			break;
+
+		udelay(1);
+	}
+	dev_err(dev, "reset error %d\n", ret);
 }
 
 static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
