@@ -728,6 +728,8 @@ static void rcar_i2c_reset(struct rcar_i2c_priv *priv)
 		return;
 	}
 
+	udelay(1);
+
 	/* do reset release */
 	ret = reset_control_deassert(priv->rstc);
 	if (ret)
