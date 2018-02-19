@@ -185,6 +185,14 @@
 				     "renesas,mfis-lock";
 			reg = <0 0xe6260000 0 0x1000>;
 			#hwlock-cells = <1>;
+
+			mfis_as: mfis-as {
+				compatible = "renesas,mfis-as-r8a77990",
+					     "renesas,mfis-as";
+				interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "eicr0";
+				renesas,mfis-ch = <0>;
+			};
 		};
 
 		rwdt: watchdog@e6020000 {
