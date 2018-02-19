@@ -252,6 +252,9 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 		else
 			vin->format.field = fmt.format.field;
 
+		vin->format.bytesperline =
+			rvin_format_bytesperline(&vin->format);
+
 		return 0;
 	}
 
