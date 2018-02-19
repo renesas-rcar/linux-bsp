@@ -224,6 +224,13 @@
 			reg = <0 0xe6160000 0 0x0200>;
 		};
 
+		mfis: mfis@e6260000 {
+			compatible = "renesas,mfis-lock-r8a77990",
+				     "renesas,mfis-lock";
+			reg = <0 0xe6260000 0 0x1000>;
+			#hwlock-cells = <1>;
+		};
+
 		pfc: pin-controller@e6060000 {
 			compatible = "renesas,pfc-r8a77990";
 			reg = <0 0xe6060000 0 0x50c>;
