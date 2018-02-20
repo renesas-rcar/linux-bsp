@@ -650,12 +650,12 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int pipe_index)
 
 	/* Start or stop the pipeline if needed. */
 	if (!drm_pipe->enabled && pipe->num_inputs) {
-		vsp1_write(vsp1, VI6_DISP_IRQ_STA((pipe_index)), 0);
-		vsp1_write(vsp1, VI6_DISP_IRQ_ENB((pipe_index)),
-			   VI6_DISP_IRQ_ENB_DSTE);
 		spin_lock_irqsave(&pipe->irqlock, flags);
 		vsp1_pipeline_run(pipe);
 		spin_unlock_irqrestore(&pipe->irqlock, flags);
+		vsp1_write(vsp1, VI6_DISP_IRQ_STA((pipe_index)), 0);
+		vsp1_write(vsp1, VI6_DISP_IRQ_ENB((pipe_index)),
+			   VI6_DISP_IRQ_ENB_DSTE);
 	} else if (drm_pipe->enabled && !pipe->num_inputs) {
 		vsp1_pipeline_stop(pipe);
 	}
