@@ -581,6 +581,12 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 {
 	int ret;
 
+	ret = rvin_group_read_id(vin, vin->dev->of_node);
+	if (ret < 0)
+		return ret;
+
+	vin->index = ret;
+
 	ret = v4l2_async_notifier_parse_fwnode_endpoints(
 		vin->dev, &vin->notifier,
 		sizeof(struct rvin_graph_entity), rvin_digital_parse_v4l2);
@@ -1216,6 +1222,28 @@ static const struct rvin_info rcar_info_r8a77995 = {
 	.max_height = 4096,
 };
 
+static const struct rvin_info rcar_info_r8a77990 = {
+	.chip = RCAR_GEN3,
+	.use_mc = true,
+	.max_width = 4096,
+	.max_height = 4096,
+
+	.num_chsels = 4,
+	.chsels = {
+		{
+			{ .csi = RVIN_CSI40, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_CSI40, .chan = 1 },
+			{ .csi = RVIN_CSI40, .chan = 0 },
+		}, {
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_CSI40, .chan = 1 },
+			{ .csi = RVIN_CSI40, .chan = 0 },
+			{ .csi = RVIN_CSI40, .chan = 1 },
+		},
+	},
+};
+
 static const struct of_device_id rvin_of_id_table[] = {
 	{
 		.compatible = "renesas,vin-r8a7778",
@@ -1260,6 +1288,10 @@ static const struct of_device_id rvin_of_id_table[] = {
 	{
 		.compatible = "renesas,vin-r8a77995",
 		.data = &rcar_info_r8a77995,
+	},
+	{
+		.compatible = "renesas,vin-r8a77990",
+		.data = &rcar_info_r8a77990,
 	},
 	{ },
 };
@@ -1328,6 +1360,14 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		goto error;
 	}
 	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
+
+	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->rstc);
+		goto error;
+	}
 
 	return 0;
 error:
