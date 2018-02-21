@@ -112,10 +112,8 @@ static int __init rcar_avs_init(void)
 
 	pr_info("rcar-cpufreq: use avs value: %d\n", avs_val);
 
-	if (IS_ENABLED(CONFIG_POWER_AVS)) {
-		/* Apply avs value */
-		ret = change_default_opp_pattern(np, avs_val);
-	}
+	/* Apply avs value */
+	ret = change_default_opp_pattern(np, avs_val);
 
 	return ret;
 }
