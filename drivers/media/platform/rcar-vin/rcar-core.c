@@ -1413,6 +1413,8 @@ static int rcar_vin_suspend(struct device *dev)
 
 	rvin_suspend_stop_streaming(vin);
 
+	vin->suspend = true;
+
 	pm_runtime_put(vin->dev);
 	if (vin->info->use_mc) {
 		reset_control_assert(vin->rstc);
@@ -1433,8 +1435,8 @@ static int rcar_vin_resume(struct device *dev)
 		return 0;
 
 	pm_runtime_get_sync(vin->dev);
-	queue_delayed_work(vin->work_queue, &vin->rvin_resume,
-			   msecs_to_jiffies(CONNECTION_TIME));
+	queue_delayed_work_on(0, vin->work_queue, &vin->rvin_resume,
+			      msecs_to_jiffies(CONNECTION_TIME));
 
 	return 0;
 }
