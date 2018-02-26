@@ -54,6 +54,11 @@ static void rcar_lvds_write(struct rcar_du_lvdsenc *lvds, u32 reg, u32 data)
 	iowrite32(data, lvds->mmio + reg);
 }
 
+static u32 rcar_lvds_read(struct rcar_du_lvdsenc *lvds, u32 reg)
+{
+	return ioread32(lvds->mmio + reg);
+}
+
 static void rcar_du_lvdsenc_start_gen2(struct rcar_du_lvdsenc *lvds,
 				       struct rcar_du_crtc *rcrtc)
 {
@@ -469,7 +474,25 @@ void __rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 		rcar_lvds_write(lvds, LVDPLLCR, 0);
 		rcar_lvds_write(lvds1, LVDPLLCR, 0);
 	} else {
-		rcar_lvds_write(lvds, LVDCR0, 0);
+		u32 lvdcr0 = 0;
+
+		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVRES;
+		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77995_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77990_REGS)) {
+			lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVEN;
+			rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+		}
+
+		if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77990_REGS)) {
+			lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PWD;
+			rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+		}
+
+		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PLLON;
+		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
 		rcar_lvds_write(lvds, LVDCR1, 0);
 		rcar_lvds_write(lvds, LVDPLLCR, 0);
 	}
