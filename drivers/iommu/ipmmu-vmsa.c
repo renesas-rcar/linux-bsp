@@ -182,13 +182,13 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)
 
 #define IMTTLBR0			0x0010
-#define IMTTLBR0_TTBR_MASK		(~(IMTTUBR0_TTBR_MASK))
+#define IMTTLBR0_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR0			0x0014
-#define IMTTUBR0_TTBR_MASK		0xff
+#define IMTTUBR0_TTBR_MASK		(0xff << 0)
 #define IMTTLBR1			0x0018
-#define IMTTLBR1_TTBR_MASK		(~(IMTTUBR1_TTBR_MASK))
+#define IMTTLBR1_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR1			0x001c
-#define IMTTUBR1_TTBR_MASK		0xff
+#define IMTTUBR1_TTBR_MASK		(0xff << 0)
 
 #define IMSTR				0x0020
 #define IMSTR_ERRLVL_MASK		(3 << 12)
@@ -897,6 +897,7 @@ static const struct soc_device_attribute soc_rcar_gen3[] = {
 	{ .soc_id = "r8a7795", },
 	{ .soc_id = "r8a7796", },
 	{ .soc_id = "r8a77965", },
+	{ .soc_id = "r8a77990", },
 	{ /* sentinel */ }
 };
 
@@ -1122,6 +1123,9 @@ static const struct of_device_id ipmmu_of_ids[] = {
 		.data = &ipmmu_features_rcar_gen3,
 	}, {
 		.compatible = "renesas,ipmmu-r8a77965",
+		.data = &ipmmu_features_rcar_gen3,
+	}, {
+		.compatible = "renesas,ipmmu-r8a77990",
 		.data = &ipmmu_features_rcar_gen3,
 	}, {
 		/* Terminator */
@@ -1500,6 +1504,8 @@ IOMMU_OF_DECLARE(ipmmu_r8a7795_iommu_of, "renesas,ipmmu-r8a7795",
 IOMMU_OF_DECLARE(ipmmu_r8a7796_iommu_of, "renesas,ipmmu-r8a7796",
 		 ipmmu_vmsa_iommu_of_setup);
 IOMMU_OF_DECLARE(ipmmu_r8a77965_iommu_of, "renesas,ipmmu-r8a77965",
+		 ipmmu_vmsa_iommu_of_setup);
+IOMMU_OF_DECLARE(ipmmu_r8a77990_iommu_of, "renesas,ipmmu-r8a77990",
 		 ipmmu_vmsa_iommu_of_setup);
 #endif
 
