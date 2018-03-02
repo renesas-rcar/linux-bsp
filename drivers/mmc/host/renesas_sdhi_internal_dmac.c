@@ -287,6 +287,7 @@ static const struct tmio_mmc_dma_ops renesas_sdhi_internal_dmac_dma_ops = {
 static const struct soc_device_attribute gen3_soc_whitelist[] = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*" },
 	{ .soc_id = "r8a7795", .revision = "ES2.0" },
+	{ .soc_id = "r8a7795", .revision = "ES3.0" },
 	{ .soc_id = "r8a7796", .revision = "ES1.*" },
 	{ .soc_id = "r8a77965", .revision = "ES1.*" },
 	{ .soc_id = "r8a77990", .revision = "ES1.0" },
