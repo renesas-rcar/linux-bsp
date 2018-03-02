@@ -252,6 +252,9 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 		else
 			vin->format.field = fmt.format.field;
 
+		vin->format.bytesperline =
+			rvin_format_bytesperline(&vin->format);
+
 		return 0;
 	}
 
@@ -879,6 +882,7 @@ static int rvin_power_on(struct rvin_dev *vin)
 	int ret;
 	struct v4l2_subdev *sd = vin_to_source(vin);
 
+	reset_control_deassert(vin->rstc);
 	pm_runtime_get_sync(vin->v4l2_dev.dev);
 
 	ret = v4l2_subdev_call(sd, core, s_power, 1);
@@ -895,6 +899,7 @@ static int rvin_power_off(struct rvin_dev *vin)
 	ret = v4l2_subdev_call(sd, core, s_power, 0);
 
 	pm_runtime_put(vin->v4l2_dev.dev);
+	reset_control_assert(vin->rstc);
 
 	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
 		return ret;
@@ -1036,9 +1041,10 @@ static int rvin_mc_open(struct file *file)
 		goto unlock;
 
 	ret = rvin_get_sd_format(vin, &vin->format);
-	if (ret)
+	if (ret) {
+		v4l2_fh_release(file);
 		goto unlock;
-
+	}
 	pm_runtime_get_sync(vin->dev);
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 1);
 
