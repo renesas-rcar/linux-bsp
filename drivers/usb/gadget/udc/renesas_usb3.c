@@ -2403,7 +2403,7 @@ static int renesas_usb3_remove(struct platform_device *pdev)
 	renesas_usb3_dma_free_prd(usb3, &pdev->dev);
 
 	__renesas_usb3_ep_free_request(usb3->ep0_req);
-	pm_runtime_disable(usb3_to_dev(usb3));
+	pm_runtime_disable(&pdev->dev);
 
 	return 0;
 }
@@ -2531,6 +2531,10 @@ static const struct renesas_usb3_priv renesas_usb3_priv_gen3 = {
 static const struct of_device_id usb3_of_match[] = {
 	{
 		.compatible = "renesas,r8a7795-usb3-peri",
+		.data = &renesas_usb3_priv_gen3,
+	},
+	{
+		.compatible = "renesas,r8a77990-usb3-peri",
 		.data = &renesas_usb3_priv_gen3,
 	},
 	{
