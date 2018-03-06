@@ -281,7 +281,7 @@ static const struct phtw_freqrange phtw_e3_v3m[] = {
 	{ .mbps =   0,	.phtw_reg = 0x00 },
 };
 
-static const struct phtw_freqrange phtw_m3n[] = {
+static const struct phtw_freqrange phtw_h3_m3n[] = {
 	{ .mbps =   80,	.phtw_reg = 0x018601f1 },
 	{ .mbps =   90,	.phtw_reg = 0x018601f1 },
 	{ .mbps =  100,	.phtw_reg = 0x018701f1 },
@@ -908,6 +908,14 @@ static int rcar_csi2_probe_resources(struct rcar_csi2 *priv,
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a7795 = {
 	.hsfreqrange = hsfreqrange_h3_v3h_m3n,
+	.phtw = phtw_h3_m3n,
+	.clear_ulps = true,
+	.have_phtw = true,
+	.csi0clkfreqrange = 0x20,
+};
+
+static const struct rcar_csi2_info rcar_csi2_info_r8a7795es2 = {
+	.hsfreqrange = hsfreqrange_h3_v3h_m3n,
 	.clear_ulps = true,
 	.have_phtw = true,
 	.csi0clkfreqrange = 0x20,
@@ -923,7 +931,7 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a7796 = {
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a77965 = {
 	.hsfreqrange = hsfreqrange_h3_v3h_m3n,
-	.phtw = phtw_m3n,
+	.phtw = phtw_h3_m3n,
 	.clear_ulps = true,
 	.have_phtw = true,
 	.csi0clkfreqrange = 0x20,
@@ -956,10 +964,14 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 };
 MODULE_DEVICE_TABLE(of, rcar_csi2_of_table);
 
-static const struct soc_device_attribute r8a7795es1[] = {
+static const struct soc_device_attribute r8a7795[] = {
 	{
 		.soc_id = "r8a7795", .revision = "ES1.*",
 		.data = &rcar_csi2_info_r8a7795es1,
+	},
+	{
+		.soc_id = "r8a7795", .revision = "ES2.*",
+		.data = &rcar_csi2_info_r8a7795es2,
 	},
 	{ /* sentinel */}
 };
@@ -977,8 +989,10 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 
 	priv->info = of_device_get_match_data(&pdev->dev);
 
-	/* r8a7795 ES1.x behaves different then ES2.0+ but no own compat */
-	attr = soc_device_match(r8a7795es1);
+	/* r8a7795 ES1.x behaves different then ES2.0+ but no own compat.
+	 * PHTW register setting is different between r8a7795 ES2.0 and ES3.0.
+	 */
+	attr = soc_device_match(r8a7795);
 	if (attr)
 		priv->info = attr->data;
 
