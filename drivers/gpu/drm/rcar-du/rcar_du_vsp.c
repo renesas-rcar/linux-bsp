@@ -280,10 +280,25 @@ static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
 	struct rcar_du_vsp_plane_state *rstate = to_rcar_vsp_plane_state(state);
 	struct rcar_du_vsp_plane *rplane = to_rcar_vsp_plane(plane);
 	struct rcar_du_device *rcdu = rplane->vsp->dev;
+	int hdisplay, vdisplay;
 
 	if (!state->fb || !state->crtc) {
 		rstate->format = NULL;
 		return 0;
+	}
+
+	hdisplay = state->crtc->mode.hdisplay;
+	vdisplay = state->crtc->mode.vdisplay;
+
+	if ((hdisplay > 0 && vdisplay > 0) &&
+	    state->plane->type == DRM_PLANE_TYPE_OVERLAY &&
+	    (((state->crtc_w + state->crtc_x) > hdisplay) ||
+	    ((state->crtc_h + state->crtc_y) > vdisplay))) {
+		dev_err(rcdu->dev,
+			"%s: specify (%dx%d) + (%d, %d) < (%dx%d).\n",
+			__func__, state->crtc_w, state->crtc_h, state->crtc_x,
+			state->crtc_y, hdisplay, vdisplay);
+		return -EINVAL;
 	}
 
 	if (state->src_w >> 16 != state->crtc_w ||
