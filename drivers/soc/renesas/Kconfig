@@ -16,6 +16,7 @@ config SOC_RENESAS
 	select SYSC_R8A7796 if ARCH_R8A7796
 	select SYSC_R8A77965 if ARCH_R8A77965
 	select SYSC_R8A77970 if ARCH_R8A77970
+	select SYSC_R8A77990 if ARCH_R8A77990
 	select SYSC_R8A77995 if ARCH_R8A77995
 
 config RCAR_CPU_TOPOLOGY
@@ -70,6 +71,10 @@ config SYSC_R8A77965
 
 config SYSC_R8A77970
 	bool "R-Car V3M System Controller support" if COMPILE_TEST
+	select SYSC_RCAR
+
+config SYSC_R8A77990
+	bool "R-Car E3 System Controller support" if COMPILE_TEST
 	select SYSC_RCAR
 
 config SYSC_R8A77995
