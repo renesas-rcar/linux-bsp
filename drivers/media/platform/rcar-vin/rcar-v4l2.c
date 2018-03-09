@@ -14,6 +14,8 @@
  * option) any later version.
  */
 
+#include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/pm_runtime.h>
 
 #include <media/v4l2-event.h>
@@ -1056,6 +1058,7 @@ static int rvin_mc_release(struct file *file)
 {
 	struct rvin_dev *vin = video_drvdata(file);
 	int ret;
+	u32 timeout = MSTP_WAIT_TIME;
 
 	mutex_lock(&vin->lock);
 
@@ -1063,7 +1066,20 @@ static int rvin_mc_release(struct file *file)
 	ret = _vb2_fop_release(file, NULL);
 
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 0);
-	pm_runtime_put(vin->dev);
+	pm_runtime_put_sync(vin->dev);
+	while (1) {
+		bool enable;
+
+		enable = __clk_is_enabled(vin->clk);
+		if (enable)
+			break;
+		if (!timeout) {
+			dev_warn(vin->dev, "MSTP status timeout\n");
+			break;
+		}
+		usleep_range(10, 15);
+		timeout--;
+	}
 	reset_control_assert(vin->rstc);
 
 	mutex_unlock(&vin->lock);
