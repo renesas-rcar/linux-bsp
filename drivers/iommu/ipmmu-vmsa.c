@@ -464,7 +464,7 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 	ipmmu_write(mmu, IMUCTR(utlb),
 		    ipmmu_read(mmu, IMUCTR(utlb)) |
 		    IMUCTR_TTSEL_MMU(domain->context_id) |
-		    IMUCTR_FLUSH | IMUCTR_MMUEN);
+		    IMUCTR_MMUEN);
 }
 
 /*
@@ -1344,7 +1344,7 @@ static int ipmmu_utlbs_restore(struct ipmmu_vmsa_device *mmu)
 				    slave_mmu->asids_val[i]);
 			ipmmu_write(slave_mmu,
 				    IMUCTR(slave_fwspec->ids[i]),
-				    (slave_mmu->utlbs_val[i] | IMUCTR_FLUSH));
+				    slave_mmu->utlbs_val[i]);
 			pr_debug("%d: Restore UTLB[%d]: 0x%x, ASID[%d]: %d\n",
 				 i, slave_fwspec->ids[i],
 				 ipmmu_read(slave_mmu,
