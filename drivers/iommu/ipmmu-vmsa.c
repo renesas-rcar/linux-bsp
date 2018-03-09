@@ -337,7 +337,7 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 	ipmmu_write(mmu, IMUASID(utlb), 0);
 	/* TODO: Do we need to flush the microTLB ? */
 	ipmmu_write(mmu, IMUCTR(utlb),
-		    IMUCTR_TTSEL_MMU(domain->context_id) | IMUCTR_FLUSH |
+		    IMUCTR_TTSEL_MMU(domain->context_id) |
 		    IMUCTR_MMUEN);
 	mmu->utlb_ctx[utlb] = domain->context_id;
 }
