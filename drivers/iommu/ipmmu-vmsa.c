@@ -567,6 +567,9 @@ static irqreturn_t ipmmu_domain_irq(struct ipmmu_vmsa_domain *domain)
 	if (!(status & (IMSTR_PF | IMSTR_TF)))
 		return IRQ_NONE;
 
+	/* Flush the TLB as required when IPMMU translation error occurred. */
+	ipmmu_tlb_invalidate(domain);
+
 	/*
 	 * Try to handle page faults and translation faults.
 	 *
