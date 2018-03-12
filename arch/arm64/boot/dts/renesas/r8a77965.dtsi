@@ -421,6 +421,16 @@
 					     <&a57_1>;
 		};
 
+		ipmmu_mm: mmu@e67b0000 {
+			compatible = "renesas,ipmmu-r8a77965";
+			reg = <0 0xe67b0000 0 0x1000>; /* IPMMU-MM */
+			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
 		ipmmu_vi0: mmu@febd0000 {
 			compatible = "renesas,ipmmu-r8a77965";
 			reg = <0 0xfebd0000 0 0x1000>; /* IPMMU-VI0 */
@@ -506,16 +516,6 @@
 			compatible = "renesas,ipmmu-r8a77965";
 			reg = <0 0xe7740000 0 0x1000>; /* IPMMU-DS1 */
 			renesas,ipmmu-main = <&ipmmu_mm 1>;
-			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
-			#iommu-cells = <1>;
-			status = "disabled";
-		};
-
-		ipmmu_mm: mmu@e67b0000 {
-			compatible = "renesas,ipmmu-r8a77965";
-			reg = <0 0xe67b0000 0 0x1000>; /* IPMMU-MM */
-			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
 			status = "disabled";
