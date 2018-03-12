@@ -317,7 +317,8 @@ static const struct clk_ops cpg_z_clk_ops = {
 static struct clk * __init cpg_z_clk_register(const char *name,
 					      const char *parent_name,
 					      void __iomem *reg,
-					      unsigned long mask)
+					      unsigned long mask,
+					      unsigned int div)
 {
 	struct clk_init_data init;
 	struct cpg_z_clk *zclk;
@@ -337,7 +338,7 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 	zclk->kick_reg = reg + CPG_FRQCRB;
 	zclk->hw.init = &init;
 	zclk->mask = mask;
-	zclk->fixed_div = 2; /* PLLVCO x 1/2 x SYS-CPU divider */
+	zclk->fixed_div = div; /* PLLVCO x 1/div x SYS-CPU divider */
 	zclk->max_freq = 1;
 
 	clk = clk_register(NULL, &zclk->hw);
@@ -715,11 +716,12 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 
 	case CLK_TYPE_GEN3_Z:
 		return cpg_z_clk_register(core->name, __clk_get_name(parent),
-					  base, CPG_FRQCRC_ZFC_MASK);
+					  base, CPG_FRQCRC_ZFC_MASK, core->div);
 
 	case CLK_TYPE_GEN3_Z2:
 		return cpg_z_clk_register(core->name, __clk_get_name(parent),
-					  base, CPG_FRQCRC_Z2FC_MASK);
+					  base, CPG_FRQCRC_Z2FC_MASK,
+					  core->div);
 
 	case CLK_TYPE_GEN3_ZG:
 		return cpg_zg_clk_register(core->name, __clk_get_name(parent),
