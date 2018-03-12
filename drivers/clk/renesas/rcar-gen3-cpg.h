@@ -38,6 +38,9 @@ enum rcar_gen3_clk_types {
 		 (_parent_sscg) << 16 | (_parent_clean),	\
 		 .div = (_div_sscg) << 16 | (_div_clean))
 
+#define DEF_GEN3_Z(_name, _id, _type, _parent, _div)	\
+	DEF_BASE(_name, _id, _type, _parent, .div = _div)
+
 struct rcar_gen3_cpg_pll_config {
 	u8 extal_div;
 	u8 pll1_mult;
