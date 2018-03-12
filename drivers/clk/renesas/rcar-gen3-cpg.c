@@ -354,7 +354,8 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 
 static struct clk * __init cpg_zg_clk_register(const char *name,
 					       const char *parent_name,
-					       void __iomem *reg)
+					       void __iomem *reg,
+					       unsigned int div)
 {
 	struct clk_init_data init;
 	struct cpg_z_clk *zclk;
@@ -374,7 +375,7 @@ static struct clk * __init cpg_zg_clk_register(const char *name,
 	zclk->kick_reg = reg + CPG_FRQCRB;
 	zclk->hw.init = &init;
 	zclk->mask = CPG_FRQCRB_ZGFC_MASK;
-	zclk->fixed_div = 4; /* PLLVCO x 1/2 x 3DGE divider x 1/2 */
+	zclk->fixed_div = div; /* PLLVCO x 1/div1 x 3DGE divider x 1/div2 */
 
 	clk = clk_register(NULL, &zclk->hw);
 	if (IS_ERR(clk))
@@ -725,7 +726,7 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 
 	case CLK_TYPE_GEN3_ZG:
 		return cpg_zg_clk_register(core->name, __clk_get_name(parent),
-					   base);
+					   base, core->div);
 
 	default:
 		return ERR_PTR(-EINVAL);
