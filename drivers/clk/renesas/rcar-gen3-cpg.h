@@ -2,7 +2,7 @@
  * R-Car Gen3 Clock Pulse Generator
  *
  * Copyright (C) 2015-2016 Glider bvba
- * Copyright (C) 2017 Renesas Electronics Corp.
+ * Copyright (C) 2017-2018 Renesas Electronics Corp.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,9 @@ enum rcar_gen3_clk_types {
 	DEF_BASE(_name, _id, CLK_TYPE_GEN3_PE,			\
 		 (_parent_sscg) << 16 | (_parent_clean),	\
 		 .div = (_div_sscg) << 16 | (_div_clean))
+
+#define DEF_GEN3_Z(_name, _id, _type, _parent, _div)	\
+	DEF_BASE(_name, _id, _type, _parent, .div = _div)
 
 struct rcar_gen3_cpg_pll_config {
 	u8 extal_div;
