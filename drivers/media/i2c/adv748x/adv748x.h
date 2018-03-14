@@ -153,6 +153,7 @@ struct adv748x_afe {
 	bool streaming;
 	v4l2_std_id curr_norm;
 	unsigned int input;
+	bool txa_switch;
 };
 
 #define adv748x_ctrl_to_afe(ctrl) \
@@ -219,6 +220,7 @@ struct adv748x_state {
 #define ADV748X_IO_10_CSI4_EN		BIT(7)
 #define ADV748X_IO_10_CSI1_EN		BIT(6)
 #define ADV748X_IO_10_PIX_OUT_EN	BIT(5)
+#define ADV748X_IO_10_OUT_SD_TXA	BIT(3)
 
 #define ADV748X_IO_CHIP_REV_ID_1	0xdf
 #define ADV748X_IO_CHIP_REV_ID_2	0xe0
