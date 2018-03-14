@@ -14,6 +14,8 @@
  * option) any later version.
  */
 
+#include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/pm_runtime.h>
 
 #include <media/v4l2-event.h>
@@ -251,6 +253,9 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 			vin->format.field = V4L2_FIELD_INTERLACED;
 		else
 			vin->format.field = fmt.format.field;
+
+		vin->format.bytesperline =
+			rvin_format_bytesperline(&vin->format);
 
 		return 0;
 	}
@@ -1036,9 +1041,12 @@ static int rvin_mc_open(struct file *file)
 		goto unlock;
 
 	ret = rvin_get_sd_format(vin, &vin->format);
-	if (ret)
+	if (ret) {
+		v4l2_fh_release(file);
 		goto unlock;
+	}
 
+	reset_control_deassert(vin->rstc);
 	pm_runtime_get_sync(vin->dev);
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 1);
 
@@ -1052,6 +1060,7 @@ static int rvin_mc_release(struct file *file)
 {
 	struct rvin_dev *vin = video_drvdata(file);
 	int ret;
+	u32 timeout = MSTP_WAIT_TIME;
 
 	mutex_lock(&vin->lock);
 
@@ -1059,7 +1068,21 @@ static int rvin_mc_release(struct file *file)
 	ret = _vb2_fop_release(file, NULL);
 
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 0);
-	pm_runtime_put(vin->dev);
+	pm_runtime_put_sync(vin->dev);
+	while (1) {
+		bool enable;
+
+		enable = __clk_is_enabled(vin->clk);
+		if (enable)
+			break;
+		if (!timeout) {
+			dev_warn(vin->dev, "MSTP status timeout\n");
+			break;
+		}
+		usleep_range(10, 15);
+		timeout--;
+	}
+	reset_control_assert(vin->rstc);
 
 	mutex_unlock(&vin->lock);
 
