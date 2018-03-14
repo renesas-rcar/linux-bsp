@@ -41,6 +41,7 @@ static u32 cpg_quirks;
 
 #define PLL_ERRATA		BIT(0)	/* Missing PLL0/2/4 post-divider */
 #define RCLK_CKSEL_RESEVED	BIT(1)	/* Resverd RCLK clock soruce select */
+#define CPG_Z2FC_BIT_MASK_SFT_8	BIT(2)	/* Use Z2FC bit mask range to [12:8] */
 
 struct cpg_simple_notifier {
 	struct notifier_block nb;
@@ -204,6 +205,7 @@ static struct clk * __init cpg_pll_clk_register(const char *name,
 #define CPG_FRQCRB_ZGFC_MASK		GENMASK(28, 24)
 #define CPG_FRQCRC			0x000000e0
 #define CPG_FRQCRC_ZFC_MASK		GENMASK(12, 8)
+#define CPG_FRQCRC_Z2FC_SFT_8_MASK	GENMASK(12, 8)
 #define CPG_FRQCRC_Z2FC_MASK		GENMASK(4, 0)
 
 #define Z_CLK_ROUND(f)	(100000000 * DIV_ROUND_CLOSEST_ULL((f), 100000000))
@@ -239,7 +241,10 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned long prate = *parent_rate / zclk->fixed_div;
 	unsigned int mult;
 
-	if (rate <= zclk->max_freq) { /*changing z-clock*/
+	if (!zclk->max_freq) {
+		/* Set parent as aargment */
+		mult = div_u64((u64)rate * 32, prate);
+	} else if (rate <= zclk->max_freq) {
 		prate = zclk->max_freq; /* Set parent as init value */
 		mult = div_u64((u64)rate * 32, prate);
 	} else {
@@ -257,11 +262,14 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 			      unsigned long parent_rate)
 {
 	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
 	unsigned int i;
 	u32 val, kick;
 
-	if (rate <= zclk->max_freq)
+	if (!zclk->max_freq)
+		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, prate);
+	else if (rate <= zclk->max_freq)
 		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, zclk->max_freq);
 	else
 		mult = 32;
@@ -311,7 +319,8 @@ static const struct clk_ops cpg_z_clk_ops = {
 static struct clk * __init cpg_z_clk_register(const char *name,
 					      const char *parent_name,
 					      void __iomem *reg,
-					      unsigned long mask)
+					      unsigned long mask,
+					      unsigned int div)
 {
 	struct clk_init_data init;
 	struct cpg_z_clk *zclk;
@@ -331,7 +340,7 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 	zclk->kick_reg = reg + CPG_FRQCRB;
 	zclk->hw.init = &init;
 	zclk->mask = mask;
-	zclk->fixed_div = 2; /* PLLVCO x 1/2 x SYS-CPU divider */
+	zclk->fixed_div = div; /* PLLVCO x 1/div x SYS-CPU divider */
 	zclk->max_freq = 1;
 
 	clk = clk_register(NULL, &zclk->hw);
@@ -347,7 +356,8 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 
 static struct clk * __init cpg_zg_clk_register(const char *name,
 					       const char *parent_name,
-					       void __iomem *reg)
+					       void __iomem *reg,
+					       unsigned int div)
 {
 	struct clk_init_data init;
 	struct cpg_z_clk *zclk;
@@ -367,7 +377,7 @@ static struct clk * __init cpg_zg_clk_register(const char *name,
 	zclk->kick_reg = reg + CPG_FRQCRB;
 	zclk->hw.init = &init;
 	zclk->mask = CPG_FRQCRB_ZGFC_MASK;
-	zclk->fixed_div = 4; /* PLLVCO x 1/2 x 3DGE divider x 1/2 */
+	zclk->fixed_div = div; /* PLLVCO x 1/div1 x 3DGE divider x 1/div2 */
 
 	clk = clk_register(NULL, &zclk->hw);
 	if (IS_ERR(clk))
@@ -606,6 +616,10 @@ static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 		.soc_id = "r8a7796", .revision = "ES1.0",
 		.data = (void *)RCLK_CKSEL_RESEVED,
 	},
+	{
+		.soc_id = "r8a77990",
+		.data = (void *)CPG_Z2FC_BIT_MASK_SFT_8,
+	},
 	{ /* sentinel */ }
 };
 
@@ -709,15 +723,22 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 
 	case CLK_TYPE_GEN3_Z:
 		return cpg_z_clk_register(core->name, __clk_get_name(parent),
-					  base, CPG_FRQCRC_ZFC_MASK);
+					  base, CPG_FRQCRC_ZFC_MASK, core->div);
 
 	case CLK_TYPE_GEN3_Z2:
+		if (cpg_quirks & CPG_Z2FC_BIT_MASK_SFT_8)
+			return cpg_z_clk_register(core->name,
+						  __clk_get_name(parent), base,
+						  CPG_FRQCRC_Z2FC_SFT_8_MASK,
+						  core->div);
+
 		return cpg_z_clk_register(core->name, __clk_get_name(parent),
-					  base, CPG_FRQCRC_Z2FC_MASK);
+					  base, CPG_FRQCRC_Z2FC_MASK,
+					  core->div);
 
 	case CLK_TYPE_GEN3_ZG:
 		return cpg_zg_clk_register(core->name, __clk_get_name(parent),
-					   base);
+					   base, core->div);
 
 	default:
 		return ERR_PTR(-EINVAL);
