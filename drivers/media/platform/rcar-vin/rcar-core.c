@@ -14,6 +14,9 @@
  * option) any later version.
  */
 
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -580,6 +583,12 @@ static int rvin_digital_parse_v4l2(struct device *dev,
 static int rvin_digital_graph_init(struct rvin_dev *vin)
 {
 	int ret;
+
+	ret = rvin_group_read_id(vin, vin->dev->of_node);
+	if (ret < 0)
+		return ret;
+
+	vin->index = ret;
 
 	ret = v4l2_async_notifier_parse_fwnode_endpoints(
 		vin->dev, &vin->notifier,
@@ -1216,6 +1225,28 @@ static const struct rvin_info rcar_info_r8a77995 = {
 	.max_height = 4096,
 };
 
+static const struct rvin_info rcar_info_r8a77990 = {
+	.chip = RCAR_GEN3,
+	.use_mc = true,
+	.max_width = 4096,
+	.max_height = 4096,
+
+	.num_chsels = 4,
+	.chsels = {
+		{
+			{ .csi = RVIN_CSI40, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_CSI40, .chan = 1 },
+			{ .csi = RVIN_CSI40, .chan = 0 },
+		}, {
+			{ .csi = RVIN_CSI40, .chan = 0 },
+			{ .csi = RVIN_CSI40, .chan = 1 },
+			{ .csi = RVIN_CSI40, .chan = 0 },
+			{ .csi = RVIN_CSI40, .chan = 1 },
+		},
+	},
+};
+
 static const struct of_device_id rvin_of_id_table[] = {
 	{
 		.compatible = "renesas,vin-r8a7778",
@@ -1260,6 +1291,10 @@ static const struct of_device_id rvin_of_id_table[] = {
 	{
 		.compatible = "renesas,vin-r8a77995",
 		.data = &rcar_info_r8a77995,
+	},
+	{
+		.compatible = "renesas,vin-r8a77990",
+		.data = &rcar_info_r8a77990,
 	},
 	{ },
 };
@@ -1329,6 +1364,22 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	}
 	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
 
+	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->rstc);
+		goto error;
+	}
+
+	vin->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->clk)) {
+		dev_err(&pdev->dev, "failed to get clock%s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->clk);
+		goto error;
+	}
+
 	return 0;
 error:
 	rvin_dma_remove(vin);
@@ -1364,6 +1415,7 @@ static int rcar_vin_remove(struct platform_device *pdev)
 static int rcar_vin_suspend(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
+	u32 timeout = MSTP_WAIT_TIME;
 
 	if (vin->info->use_mc && (vin->index == 0 || vin->index == 4))
 		vin->chsel = rvin_get_chsel(vin);
@@ -1373,7 +1425,26 @@ static int rcar_vin_suspend(struct device *dev)
 
 	rvin_suspend_stop_streaming(vin);
 
-	pm_runtime_put(vin->dev);
+	vin->suspend = true;
+
+	pm_runtime_put_sync(vin->dev);
+	if (vin->info->use_mc) {
+		while (1) {
+			bool enable;
+
+			enable = __clk_is_enabled(vin->clk);
+			if (enable)
+				break;
+			if (!timeout) {
+				dev_warn(vin->dev, "MSTP status timeout\n");
+				break;
+			}
+			usleep_range(10, 15);
+			timeout--;
+		}
+		reset_control_assert(vin->rstc);
+		reset_control_deassert(vin->rstc);
+	}
 
 	return 0;
 }
@@ -1389,8 +1460,8 @@ static int rcar_vin_resume(struct device *dev)
 		return 0;
 
 	pm_runtime_get_sync(vin->dev);
-	queue_delayed_work(vin->work_queue, &vin->rvin_resume,
-			   msecs_to_jiffies(CONNECTION_TIME));
+	queue_delayed_work_on(0, vin->work_queue, &vin->rvin_resume,
+			      msecs_to_jiffies(CONNECTION_TIME));
 
 	return 0;
 }
