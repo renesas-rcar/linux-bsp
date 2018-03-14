@@ -182,13 +182,13 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)
 
 #define IMTTLBR0			0x0010
-#define IMTTLBR0_TTBR_MASK		(~(IMTTUBR0_TTBR_MASK))
+#define IMTTLBR0_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR0			0x0014
-#define IMTTUBR0_TTBR_MASK		0xff
+#define IMTTUBR0_TTBR_MASK		(0xff << 0)
 #define IMTTLBR1			0x0018
-#define IMTTLBR1_TTBR_MASK		(~(IMTTUBR1_TTBR_MASK))
+#define IMTTLBR1_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR1			0x001c
-#define IMTTUBR1_TTBR_MASK		0xff
+#define IMTTUBR1_TTBR_MASK		(0xff << 0)
 
 #define IMSTR				0x0020
 #define IMSTR_ERRLVL_MASK		(3 << 12)
@@ -463,7 +463,7 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 	ipmmu_write(mmu, IMUCTR(utlb),
 		    ipmmu_read(mmu, IMUCTR(utlb)) |
 		    IMUCTR_TTSEL_MMU(domain->context_id) |
-		    IMUCTR_FLUSH | IMUCTR_MMUEN);
+		    IMUCTR_MMUEN);
 }
 
 /*
@@ -687,6 +687,9 @@ static irqreturn_t ipmmu_domain_irq(struct ipmmu_vmsa_domain *domain)
 	if (!(status & (IMSTR_PF | IMSTR_TF)))
 		return IRQ_NONE;
 
+	/* Flush the TLB as required when IPMMU translation error occurred. */
+	ipmmu_tlb_invalidate(domain);
+
 	/*
 	 * Try to handle page faults and translation faults.
 	 *
@@ -897,6 +900,7 @@ static const struct soc_device_attribute soc_rcar_gen3[] = {
 	{ .soc_id = "r8a7795", },
 	{ .soc_id = "r8a7796", },
 	{ .soc_id = "r8a77965", },
+	{ .soc_id = "r8a77990", },
 	{ /* sentinel */ }
 };
 
@@ -1124,6 +1128,9 @@ static const struct of_device_id ipmmu_of_ids[] = {
 		.compatible = "renesas,ipmmu-r8a77965",
 		.data = &ipmmu_features_rcar_gen3,
 	}, {
+		.compatible = "renesas,ipmmu-r8a77990",
+		.data = &ipmmu_features_rcar_gen3,
+	}, {
 		/* Terminator */
 	},
 };
@@ -1323,7 +1330,7 @@ static int ipmmu_utlbs_restore(struct ipmmu_vmsa_device *mmu)
 				    slave_mmu->asids_val[i]);
 			ipmmu_write(slave_mmu,
 				    IMUCTR(slave_fwspec->ids[i]),
-				    (slave_mmu->utlbs_val[i] | IMUCTR_FLUSH));
+				    slave_mmu->utlbs_val[i]);
 			pr_debug("%d: Restore UTLB[%d]: 0x%x, ASID[%d]: %d\n",
 				 i, slave_fwspec->ids[i],
 				 ipmmu_read(slave_mmu,
@@ -1486,22 +1493,11 @@ static void __exit ipmmu_exit(void)
 subsys_initcall(ipmmu_init);
 module_exit(ipmmu_exit);
 
-#ifdef CONFIG_IOMMU_DMA
-static int __init ipmmu_vmsa_iommu_of_setup(struct device_node *np)
-{
-	ipmmu_init();
-	return 0;
-}
-
-IOMMU_OF_DECLARE(ipmmu_vmsa_iommu_of, "renesas,ipmmu-vmsa",
-		 ipmmu_vmsa_iommu_of_setup);
-IOMMU_OF_DECLARE(ipmmu_r8a7795_iommu_of, "renesas,ipmmu-r8a7795",
-		 ipmmu_vmsa_iommu_of_setup);
-IOMMU_OF_DECLARE(ipmmu_r8a7796_iommu_of, "renesas,ipmmu-r8a7796",
-		 ipmmu_vmsa_iommu_of_setup);
-IOMMU_OF_DECLARE(ipmmu_r8a77965_iommu_of, "renesas,ipmmu-r8a77965",
-		 ipmmu_vmsa_iommu_of_setup);
-#endif
+IOMMU_OF_DECLARE(ipmmu_vmsa_iommu_of, "renesas,ipmmu-vmsa", NULL);
+IOMMU_OF_DECLARE(ipmmu_r8a7795_iommu_of, "renesas,ipmmu-r8a7795", NULL);
+IOMMU_OF_DECLARE(ipmmu_r8a7796_iommu_of, "renesas,ipmmu-r8a7796", NULL);
+IOMMU_OF_DECLARE(ipmmu_r8a77965_iommu_of, "renesas,ipmmu-r8a77965", NULL);
+IOMMU_OF_DECLARE(ipmmu_r8a77990_iommu_of, "renesas,ipmmu-r8a77990", NULL);
 
 MODULE_DESCRIPTION("IOMMU API for Renesas VMSA-compatible IPMMU");
 MODULE_AUTHOR("Laurent Pinchart <laurent.pinchart@ideasonboard.com>");
