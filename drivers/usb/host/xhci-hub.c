@@ -1234,13 +1234,15 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 				break;
 			}
 
-			/* Software should not attempt to set
-			 * port link state above '3' (U3) and the port
-			 * must be enabled.
-			 */
-			if ((temp & PORT_PE) == 0 ||
-				(link_state > USB_SS_PORT_LS_U3)) {
-				xhci_warn(xhci, "Cannot set link state.\n");
+			/* Port must be enabled */
+			if (!(temp & PORT_PE)) {
+				retval = -ENODEV;
+				break;
+			}
+			/* Can't set port link state above '3' (U3) */
+			if (link_state > USB_SS_PORT_LS_U3) {
+				xhci_warn(xhci, "Cannot set port %d link state %d\n",
+					  wIndex, link_state);
 				goto error;
 			}
 
