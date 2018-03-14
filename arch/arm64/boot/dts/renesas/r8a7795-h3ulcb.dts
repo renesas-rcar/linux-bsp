@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the H3ULCB (R-Car Starter Kit Premier) board
  *
- * Copyright (C) 2016-2017 Renesas Electronics Corp.
+ * Copyright (C) 2016-2018 Renesas Electronics Corp.
  * Copyright (C) 2016 Cogent Embedded, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
@@ -77,6 +77,13 @@
 	vspm_if {
 		compatible = "renesas,vspm_if";
 	};
+
+	versaclock5_out3: versaclk-3 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* Initial value of versaclock out3 */
+		clock-frequency = <33000000>;
+	};
 };
 
 &du {
@@ -86,7 +93,7 @@
 		 <&cpg CPG_MOD 721>,
 		 <&cpg CPG_MOD 727>,
 		 <&versaclock5 1>,
-		 <&versaclock5 3>,
+		 <&versaclock5_out3>,
 		 <&versaclock5 4>,
 		 <&versaclock5 2>;
 	clock-names = "du.0", "du.1", "du.2", "du.3", "lvds.0",
