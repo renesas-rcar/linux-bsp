@@ -17,6 +17,12 @@
 	model = "Renesas M3ULCB board based on r8a7796";
 	compatible = "renesas,m3ulcb", "renesas,r8a7796";
 
+	cpus {
+		idle-states {
+			/delete-node/ cpu-sleep-1;
+		};
+	};
+
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
@@ -67,6 +73,29 @@
 	vspm_if {
 		compatible = "renesas,vspm_if";
 	};
+
+	versaclock5_out3: versaclk-3 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* Initial value of versaclock out3 */
+		clock-frequency = <33000000>;
+	};
+};
+
+&a53_0 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_1 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_2 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_3 {
+	/delete-property/ cpu-idle-states;
 };
 
 &du {
@@ -75,7 +104,7 @@
 		 <&cpg CPG_MOD 722>,
 		 <&cpg CPG_MOD 727>,
 		 <&versaclock5 1>,
-		 <&versaclock5 3>,
+		 <&versaclock5_out3>,
 		 <&versaclock5 2>;
 	clock-names = "du.0", "du.1", "du.2", "lvds.0",
 		      "dclkin.0", "dclkin.1", "dclkin.2";
