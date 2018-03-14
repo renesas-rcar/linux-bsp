@@ -43,6 +43,8 @@ SoCs:
     compatible = "renesas,r8a77965"
   - R-Car V3M (R8A77970)
     compatible = "renesas,r8a77970"
+  - R-Car E3 (R8A77990)
+    compatible = "renesas,r8a77990"
   - R-Car D3 (R8A77995)
     compatible = "renesas,r8a77995"
 
