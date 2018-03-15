@@ -269,28 +269,6 @@ finalize:
 	pm_genpd_init(genpd, gov, false);
 }
 
-struct rcar_sysc_pd *rcar_domains[RCAR_PD_ALWAYS_ON + 1];
-
-static void rcar_power_on_force(void)
-{
-	int i;
-
-	for (i = 0; i < RCAR_PD_ALWAYS_ON; i++) {
-		struct rcar_sysc_pd *pd = rcar_domains[i];
-
-		if (!pd)
-			continue;
-
-		if (!(pd->flags & PD_ON_ONCE))
-			continue;
-
-		if (!rcar_sysc_power_is_off(&pd->ch))
-			continue;
-
-		rcar_sysc_power_up(&pd->ch);
-	}
-}
-
 static u32 syscier_val, syscimr_val;
 #ifdef CONFIG_PM_SLEEP
 static void rcar_sysc_resume(void)
@@ -300,12 +278,6 @@ static void rcar_sysc_resume(void)
 	/* Re-enable interrupts as init */
 	iowrite32(syscimr_val, rcar_sysc_base + SYSCIMR);
 	iowrite32(syscier_val, rcar_sysc_base + SYSCIER);
-
-#if IS_ENABLED(CONFIG_ARCH_R8A7795) || \
-	IS_ENABLED(CONFIG_ARCH_R8A7796) || \
-	IS_ENABLED(CONFIG_ARCH_R8A77965)
-	rcar_power_on_force();
-#endif
 }
 
 static struct syscore_ops rcar_sysc_syscore_ops = {
@@ -459,15 +431,7 @@ static int __init rcar_sysc_pd_init(void)
 					       &pd->genpd);
 
 		domains->domains[area->isr_bit] = &pd->genpd;
-
-		rcar_domains[i] = pd;
 	}
-
-#if IS_ENABLED(CONFIG_ARCH_R8A7795) || \
-	IS_ENABLED(CONFIG_ARCH_R8A7796) || \
-	IS_ENABLED(CONFIG_ARCH_R8A77965)
-	rcar_power_on_force();
-#endif
 
 	error = of_genpd_add_provider_onecell(np, &domains->onecell_data);
 
