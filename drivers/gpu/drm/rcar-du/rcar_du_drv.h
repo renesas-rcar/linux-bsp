@@ -104,6 +104,9 @@ struct rcar_du_device {
 	unsigned int dpad0_source;
 	unsigned int vspd1_sink;
 
+	bool vspdl_fix;
+	unsigned int brs_num;
+
 	struct rcar_du_lvdsenc *lvds[RCAR_DU_MAX_LVDS];
 };
 
