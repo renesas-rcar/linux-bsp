@@ -213,8 +213,7 @@ static int msiof_rcar_is_gen3(struct device *dev)
 	struct device_node *node = dev->of_node;
 
 	return of_device_is_compatible(node, "renesas,msiof-r8a7795") ||
-		of_device_is_compatible(node, "renesas,msiof-r8a7796") ||
-		of_device_is_compatible(node, "renesas,msiof-r8a77965");
+		of_device_is_compatible(node, "renesas,msiof-r8a7796");
 }
 
 static u32 sh_msiof_read(struct sh_msiof_spi_priv *p, int reg_offs)
@@ -1168,7 +1167,6 @@ static const struct of_device_id sh_msiof_match[] = {
 	{ .compatible = "renesas,rcar-gen2-msiof", .data = &rcar_gen2_data },
 	{ .compatible = "renesas,msiof-r8a7795",   .data = &rcar_gen3_data },
 	{ .compatible = "renesas,msiof-r8a7796",   .data = &rcar_gen3_data },
-	{ .compatible = "renesas,msiof-r8a77965",  .data = &rcar_gen3_data },
 	{ .compatible = "renesas,rcar-gen3-msiof", .data = &rcar_gen3_data },
 	{ .compatible = "renesas,sh-msiof",        .data = &sh_data }, /* Deprecated */
 	{},
