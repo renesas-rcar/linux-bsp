@@ -215,7 +215,6 @@ static int msiof_rcar_is_gen3(struct device *dev)
 	return of_device_is_compatible(node, "renesas,msiof-r8a7795") ||
 		of_device_is_compatible(node, "renesas,msiof-r8a7796") ||
 		of_device_is_compatible(node, "renesas,msiof-r8a77965") ||
-		of_device_is_compatible(node, "renesas,msiof-r8a77990") ||
 		of_device_is_compatible(node, "renesas,msiof-r8a77995");
 }
 
