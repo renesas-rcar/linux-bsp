@@ -227,8 +227,26 @@ static int rcar_gen3_thermal_convert_temp(struct rcar_gen3_thermal_tsc *tsc)
 		mcelsius = rcar_gen3_thermal_round(FIXPT_TO_MCELSIUS(
 							(val1 + val2) / 2));
 	} else {
-		reg = rcar_gen3_thermal_read(tsc, REG_GEN3_B_THSSR)
-					& CTEMP_B_MASK;
+		int i;
+		u32 old, new;
+
+		reg = 0;
+		old = ~0;
+		for (i = 0; i < 128; i++) {
+			/*
+			 * As hardware description, it needs to wait 300us after
+			 * changing comparator offset to get stable temperature.
+			 */
+			usleep_range(300, 350);
+			new = rcar_gen3_thermal_read(tsc, REG_GEN3_B_THSSR)
+						& CTEMP_B_MASK;
+
+			if (new == old) {
+				reg = new;
+				break;
+			}
+			old = new;
+		}
 		mcelsius = MCELSIUS((reg * 5) - 65);
 	}
 
