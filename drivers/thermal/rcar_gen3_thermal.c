@@ -303,12 +303,15 @@ static int rcar_gen3_thermal_set_irq_temp(struct rcar_gen3_thermal_tsc *tsc)
 		rcar_gen3_thermal_write(tsc, REG_GEN3_IRQTEMP2,
 			rcar_gen3_thermal_mcelsius_to_temp(tsc, high));
 	} else {
+		u32 reg;
+
 		low = rcar_gen3_thermal_mcelsius_to_temp(tsc, low);
 		high = rcar_gen3_thermal_mcelsius_to_temp(tsc, high);
-
-		rcar_gen3_thermal_write(tsc, REG_GEN3_B_INTCTRL,
-					(high << __bf_shf(CTEMP1_B_MASK))
-					| (low << __bf_shf(CTEMP0_B_MASK)));
+		reg = rcar_gen3_thermal_read(tsc, REG_GEN3_B_INTCTRL);
+		reg &= (~CTEMP1_B_MASK & ~CTEMP0_B_MASK);
+		reg |= (high << __bf_shf(CTEMP1_B_MASK)
+		    | low << __bf_shf(CTEMP0_B_MASK));
+		rcar_gen3_thermal_write(tsc, REG_GEN3_B_INTCTRL, reg);
 	}
 
 	return 0;
