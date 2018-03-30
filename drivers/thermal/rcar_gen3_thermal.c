@@ -216,10 +216,12 @@ static int rcar_gen3_thermal_round(int temp)
 static int rcar_gen3_thermal_convert_temp(struct rcar_gen3_thermal_tsc *tsc)
 {
 	int mcelsius = 0, val1, val2;
-	u32 reg;
+	long reg;
 
 	if (is_ths_typeA) {
 		/* Read register and convert to mili Celsius */
+
+		/* Read register and convert value to signed variable type */
 		reg = rcar_gen3_thermal_read(tsc, REG_GEN3_TEMP) & CTEMP_MASK;
 
 		val1 = FIXPT_DIV(FIXPT_INT(reg) - tsc->coef.b1, tsc->coef.a1);
