@@ -1547,24 +1547,20 @@ void rvin_resume_start_streaming(struct work_struct *work)
 
 	ret = rvin_set_stream(vin, 1);
 	if (ret) {
+		dev_warn(vin->dev, "Warning at streaming when resuming.\n");
 		spin_lock_irqsave(&vin->qlock, flags);
 		return_all_buffers(vin, VB2_BUF_STATE_ERROR);
 		spin_unlock_irqrestore(&vin->qlock, flags);
-
-		vin->suspend = false;
-		wake_up(&vin->setup_wait);
-
-		goto done;
 	}
 
+	spin_lock_irqsave(&vin->qlock, flags);
 	vin->sequence = 0;
+	spin_unlock_irqrestore(&vin->qlock, flags);
 
 	vin->suspend = false;
 	wake_up(&vin->setup_wait);
 
 	return;
-done:
-	pm_runtime_put(vin->dev);
 }
 
 void rvin_suspend_stop_streaming(struct rvin_dev *vin)
