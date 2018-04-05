@@ -944,14 +944,6 @@ static bool rvin_capture_active(struct rvin_dev *vin)
 	return rvin_read(vin, VNMS_REG) & VNMS_CA;
 }
 
-static int rvin_get_active_slot(struct rvin_dev *vin, u32 vnms)
-{
-	if (vin->continuous)
-		return (vnms & VNMS_FBS_MASK) >> VNMS_FBS_SHIFT;
-
-	return 0;
-}
-
 static void rvin_set_slot_addr(struct rvin_dev *vin, int slot, dma_addr_t addr)
 {
 	const struct rvin_video_format *fmt;
@@ -978,44 +970,39 @@ static void rvin_set_slot_addr(struct rvin_dev *vin, int slot, dma_addr_t addr)
 	rvin_write(vin, offset, VNMB_REG(slot));
 }
 
-/* Moves a buffer from the queue to the HW slots */
-static bool rvin_fill_hw_slot(struct rvin_dev *vin, int slot)
+/*
+ * Moves a buffer from the queue to the HW slot. If no buffer is
+ * available use the scratch buffer. The scratch buffer is never
+ * returned to userspace, its only function is to enable the capture
+ * loop to keep running.
+ */
+static void rvin_fill_hw_slot(struct rvin_dev *vin, int slot)
 {
 	struct rvin_buffer *buf;
 	struct vb2_v4l2_buffer *vbuf;
-	dma_addr_t phys_addr_top;
+	dma_addr_t phys_addr;
 
-	if (vin->queue_buf[slot] != NULL)
-		return true;
-
-	if (list_empty(&vin->buf_list))
-		return false;
+	/* A already populated slot shall never be overwritten. */
+	if (WARN_ON(vin->queue_buf[slot]))
+		return;
 
 	vin_dbg(vin, "Filling HW slot: %d\n", slot);
 
-	/* Keep track of buffer we give to HW */
-	buf = list_entry(vin->buf_list.next, struct rvin_buffer, list);
-	vbuf = &buf->vb;
-	list_del_init(to_buf_list(vbuf));
-	vin->queue_buf[slot] = vbuf;
+	if (list_empty(&vin->buf_list)) {
+		vin->queue_buf[slot] = NULL;
+		phys_addr = vin->scratch_phys;
+	} else {
+		/* Keep track of buffer we give to HW */
+		buf = list_entry(vin->buf_list.next, struct rvin_buffer, list);
+		vbuf = &buf->vb;
+		list_del_init(to_buf_list(vbuf));
+		vin->queue_buf[slot] = vbuf;
 
-	/* Setup DMA */
-	phys_addr_top = vb2_dma_contig_plane_dma_addr(&vbuf->vb2_buf, 0);
-	rvin_set_slot_addr(vin, slot, phys_addr_top);
+		/* Setup DMA */
+		phys_addr = vb2_dma_contig_plane_dma_addr(&vbuf->vb2_buf, 0);
+	}
 
-	return true;
-}
-
-static bool rvin_fill_hw(struct rvin_dev *vin)
-{
-	int slot, limit;
-
-	limit = vin->continuous ? HW_BUFFER_NUM : 1;
-
-	for (slot = 0; slot < limit; slot++)
-		if (!rvin_fill_hw_slot(vin, slot))
-			return false;
-	return true;
+	rvin_set_slot_addr(vin, slot, phys_addr);
 }
 
 static void rvin_capture_on(struct rvin_dev *vin)
@@ -1033,26 +1020,11 @@ static void rvin_capture_on(struct rvin_dev *vin)
 
 static int rvin_capture_start(struct rvin_dev *vin)
 {
-	struct rvin_buffer *buf, *node;
-	int bufs, ret;
+	int slot, ret, limit;
 
-	/* Count number of free buffers */
-	bufs = 0;
-	list_for_each_entry_safe(buf, node, &vin->buf_list, list)
-		bufs++;
-
-	/* Continuous capture requires more buffers then there are HW slots */
-	vin->continuous = bufs > HW_BUFFER_NUM;
-
-	/* We can't support continues mode for sequential field formats */
-	if (vin->format.field == V4L2_FIELD_SEQ_TB ||
-	    vin->format.field == V4L2_FIELD_SEQ_BT)
-		vin->continuous = false;
-
-	if (!rvin_fill_hw(vin)) {
-		vin_err(vin, "HW not ready to start, not enough buffers available\n");
-		return -EINVAL;
-	}
+	limit = vin->continuous ? HW_BUFFER_NUM : 1;
+	for (slot = 0; slot < limit; slot++)
+		rvin_fill_hw_slot(vin, slot);
 
 	rvin_crop_scale_comp(vin);
 
@@ -1145,7 +1117,7 @@ static irqreturn_t rvin_irq(int irq, void *data)
 	struct rvin_dev *vin = data;
 	u32 int_status, vnms;
 	int slot;
-	unsigned int i, sequence, handled = 0;
+	unsigned int handled = 0;
 	unsigned long flags;
 
 	spin_lock_irqsave(&vin->qlock, flags);
@@ -1177,71 +1149,42 @@ static irqreturn_t rvin_irq(int irq, void *data)
 		goto done;
 	}
 
-	/* Prepare for capture and update state */
-	vnms = rvin_read(vin, VNMS_REG);
-	slot = rvin_get_active_slot(vin, vnms);
-	sequence = vin->sequence;
-
-	vin_dbg(vin, "IRQ %02d: %d\tbuf0: %c buf1: %c buf2: %c\tmore: %d\n",
-		sequence, slot,
-		slot == 0 ? 'x' : vin->queue_buf[0] != NULL ? '1' : '0',
-		slot == 1 ? 'x' : vin->queue_buf[1] != NULL ? '1' : '0',
-		slot == 2 ? 'x' : vin->queue_buf[2] != NULL ? '1' : '0',
-		!list_empty(&vin->buf_list));
-
-	/* HW have written to a slot that is not prepared we are in trouble */
-	if (WARN_ON((vin->queue_buf[slot] == NULL)))
-		goto done;
-
 	if (!rvin_seq_field_done(vin))
 		goto done;
 
+	/* Prepare for capture and update state */
+	vnms = rvin_read(vin, VNMS_REG);
+	slot = (vnms & VNMS_FBS_MASK) >> VNMS_FBS_SHIFT;
+
 	/* Capture frame */
-	vin->queue_buf[slot]->field = vin->format.field;
-	vin->queue_buf[slot]->sequence = sequence;
-	vin->queue_buf[slot]->vb2_buf.timestamp = ktime_get_ns();
-	vb2_buffer_done(&vin->queue_buf[slot]->vb2_buf, VB2_BUF_STATE_DONE);
-	vin->queue_buf[slot] = NULL;
+	if (vin->queue_buf[slot]) {
+		vin->queue_buf[slot]->field = vin->format.field;
+		vin->queue_buf[slot]->sequence = vin->sequence;
+		vin->queue_buf[slot]->vb2_buf.timestamp = ktime_get_ns();
+		vb2_buffer_done(&vin->queue_buf[slot]->vb2_buf,
+				VB2_BUF_STATE_DONE);
+		vin->queue_buf[slot] = NULL;
+	} else {
+		/* Scratch buffer was used, dropping frame. */
+		vin_dbg(vin, "Dropping frame %u\n", vin->sequence);
+	}
+
 	vin->sequence++;
 
 	/* Prepare for next frame */
-	if (!rvin_fill_hw(vin)) {
+	rvin_fill_hw_slot(vin, slot);
 
-		/*
-		 * Can't supply HW with new buffers fast enough. Halt
-		 * capture until more buffers are available.
-		 */
-		vin->state = STALLED;
-
-		/*
-		 * The continuous capturing requires an explicit stop
-		 * operation when there is no buffer to be set into
-		 * the VnMBm registers.
-		 */
-		if (vin->continuous) {
-			rvin_capture_stop(vin);
-			vin_dbg(vin, "IRQ %02d: hw not ready stop\n", sequence);
-
-			/* Maybe we can continue in single capture mode */
-			for (i = 0; i < HW_BUFFER_NUM; i++) {
-				if (vin->queue_buf[i]) {
-					list_add(to_buf_list(vin->queue_buf[i]),
-						 &vin->buf_list);
-					vin->queue_buf[i] = NULL;
-				}
-			}
-
-			if (!list_empty(&vin->buf_list))
-				rvin_capture_start(vin);
-		}
-	} else {
-		/*
-		 * The single capturing requires an explicit capture
-		 * operation to fetch the next frame.
-		 */
-		if (!vin->continuous)
+	/*
+	 * The single capturing requires an explicit capture
+	 * operation to fetch the next frame.
+	 */
+	if (!vin->continuous) {
+		if (vin->queue_buf[slot])
 			rvin_capture_on(vin);
+		else
+			vin->state = STALLED;
 	}
+
 done:
 	spin_unlock_irqrestore(&vin->qlock, flags);
 
@@ -1313,28 +1256,26 @@ static void rvin_buffer_queue(struct vb2_buffer *vb)
 					!vin->suspend,
 					msecs_to_jiffies(SETUP_WAIT_TIME))) {
 			dev_warn(vin->dev, "set up timeout\n");
-			vin->suspend = false;
 			spin_lock_irqsave(&vin->qlock, flags);
 			return_all_buffers(vin, VB2_BUF_STATE_ERROR);
 			spin_unlock_irqrestore(&vin->qlock, flags);
 		}
+
+		rvin_capture_start(vin);
+		vin->suspend = false;
 	}
 
 	spin_lock_irqsave(&vin->qlock, flags);
-
 	list_add_tail(to_buf_list(vbuf), &vin->buf_list);
+	spin_unlock_irqrestore(&vin->qlock, flags);
 
-	/*
-	 * If capture is stalled add buffer to HW and restart
-	 * capturing if HW is ready to continue.
-	 */
-	if (vin->state == STALLED) {
-		if (rvin_fill_hw(vin)) {
-			rvin_capture_start(vin);
+	if (!vin->continuous) {
+		if (vin->state == STALLED) {
+			rvin_fill_hw_slot(vin, 0);
+			rvin_capture_on(vin);
 			vin->state = RUNNING;
 		}
 	}
-	spin_unlock_irqrestore(&vin->qlock, flags);
 }
 
 static int rvin_set_stream(struct rvin_dev *vin, int on)
@@ -1463,6 +1404,14 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	spin_lock_irqsave(&vin->qlock, flags);
 
 	vin->sequence = 0;
+
+	/* Continuous capture requires more buffers then there are HW slots */
+	vin->continuous = count > HW_BUFFER_NUM;
+
+	/* We can't support continues mode for sequential field formats */
+	if (vin->format.field == V4L2_FIELD_SEQ_TB ||
+	    vin->format.field == V4L2_FIELD_SEQ_BT)
+		vin->continuous = false;
 
 	ret = rvin_capture_start(vin);
 	if (ret) {

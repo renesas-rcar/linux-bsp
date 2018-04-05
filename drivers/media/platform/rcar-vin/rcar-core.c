@@ -1418,7 +1418,7 @@ static int rcar_vin_suspend(struct device *dev)
 	if (vin->info->use_mc && (vin->index == 0 || vin->index == 4))
 		vin->chsel = rvin_get_chsel(vin);
 
-	if (vin->state != STALLED)
+	if (vin->state == STOPPED)
 		return 0;
 
 	rvin_suspend_stop_streaming(vin);
@@ -1456,7 +1456,7 @@ static int rcar_vin_resume(struct device *dev)
 	if (vin->info->use_mc && (vin->index == 0 || vin->index == 4))
 		rvin_set_chsel(vin, vin->chsel);
 
-	if (vin->state != STALLED)
+	if (vin->state == STOPPED)
 		return 0;
 
 	if (vin->info->use_mc)
