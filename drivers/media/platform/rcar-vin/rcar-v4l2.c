@@ -1044,7 +1044,6 @@ static int rvin_mc_open(struct file *file)
 		goto unlock;
 	}
 
-	pm_runtime_get_sync(vin->dev);
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 1);
 
 unlock:
@@ -1064,7 +1063,6 @@ static int rvin_mc_release(struct file *file)
 	ret = _vb2_fop_release(file, NULL);
 
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 0);
-	pm_runtime_put(vin->dev);
 
 	mutex_unlock(&vin->lock);
 
