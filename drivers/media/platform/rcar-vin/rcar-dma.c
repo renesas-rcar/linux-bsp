@@ -18,6 +18,7 @@
 #define DEBUG
 #endif
 
+#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
@@ -1435,11 +1436,16 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	unsigned long flags;
 	int ret;
 
+	if (vin->info->use_mc)
+		pm_runtime_get_sync(vin->dev);
+
 	ret = rvin_set_stream(vin, 1);
 	if (ret) {
 		spin_lock_irqsave(&vin->qlock, flags);
 		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
 		spin_unlock_irqrestore(&vin->qlock, flags);
+		if (vin->info->use_mc)
+			pm_runtime_put(vin->dev);
 		return ret;
 	}
 
@@ -1451,6 +1457,8 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	if (ret) {
 		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
 		rvin_set_stream(vin, 0);
+		if (vin->info->use_mc)
+			pm_runtime_put(vin->dev);
 	}
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
@@ -1503,6 +1511,27 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 
 	/* disable interrupts */
 	rvin_disable_interrupts(vin);
+
+	if (vin->info->use_mc) {
+		u32 timeout = MSTP_WAIT_TIME;
+
+		pm_runtime_put_sync(vin->dev);
+		while (1) {
+			bool enable;
+
+			enable = __clk_is_enabled(vin->clk);
+			if (!enable)
+				break;
+			if (!timeout) {
+				dev_warn(vin->dev, "MSTP status timeout\n");
+				break;
+			}
+			usleep_range(10, 15);
+			timeout--;
+		}
+		reset_control_assert(vin->rstc);
+		reset_control_deassert(vin->rstc);
+	}
 }
 
 void rvin_resume_start_streaming(struct work_struct *work)
@@ -1512,6 +1541,9 @@ void rvin_resume_start_streaming(struct work_struct *work)
 			container_of(dwork, struct rvin_dev, rvin_resume);
 	unsigned long flags;
 	int ret;
+
+	if (vin->info->use_mc)
+		pm_runtime_get_sync(vin->dev);
 
 	ret = rvin_set_stream(vin, 1);
 	if (ret) {
@@ -1564,6 +1596,9 @@ void rvin_suspend_stop_streaming(struct rvin_dev *vin)
 
 	/* disable interrupts */
 	rvin_disable_interrupts(vin);
+
+	if (vin->info->use_mc)
+		pm_runtime_put_sync(vin->dev);
 }
 
 static const struct vb2_ops rvin_qops = {
