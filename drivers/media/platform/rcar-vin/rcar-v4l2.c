@@ -1044,7 +1044,6 @@ static int rvin_mc_open(struct file *file)
 		goto unlock;
 	}
 
-	reset_control_deassert(vin->rstc);
 	pm_runtime_get_sync(vin->dev);
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 1);
 
@@ -1066,7 +1065,6 @@ static int rvin_mc_release(struct file *file)
 
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 0);
 	pm_runtime_put(vin->dev);
-	reset_control_assert(vin->rstc);
 
 	mutex_unlock(&vin->lock);
 
