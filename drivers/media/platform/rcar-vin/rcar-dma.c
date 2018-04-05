@@ -1436,6 +1436,17 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	unsigned long flags;
 	int ret;
 
+	/* Allocate scratch buffer. */
+	vin->scratch = dma_alloc_coherent(vin->dev, vin->format.sizeimage,
+					  &vin->scratch_phys, GFP_KERNEL);
+	if (!vin->scratch) {
+		spin_lock_irqsave(&vin->qlock, flags);
+		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
+		spin_unlock_irqrestore(&vin->qlock, flags);
+		vin_err(vin, "Failed to allocate scratch buffer\n");
+		return -ENOMEM;
+	}
+
 	if (vin->info->use_mc)
 		pm_runtime_get_sync(vin->dev);
 
@@ -1462,6 +1473,10 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	}
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
+
+	if (ret)
+		dma_free_coherent(vin->dev, vin->format.sizeimage,
+				  vin->scratch, vin->scratch_phys);
 
 	return ret;
 }
@@ -1532,6 +1547,10 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 		reset_control_assert(vin->rstc);
 		reset_control_deassert(vin->rstc);
 	}
+
+	/* Free scratch buffer. */
+	dma_free_coherent(vin->dev, vin->format.sizeimage, vin->scratch,
+			  vin->scratch_phys);
 }
 
 void rvin_resume_start_streaming(struct work_struct *work)

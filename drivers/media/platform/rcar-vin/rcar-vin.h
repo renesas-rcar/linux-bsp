@@ -164,6 +164,8 @@ struct rvin_info {
  *
  * @lock:		protects @queue
  * @queue:		vb2 buffers queue
+ * @scratch:		cpu address for scratch buffer
+ * @scratch_phys:	physical address of the scratch buffer
  *
  * @qlock:		protects @queue_buf, @buf_list, @continuous, @sequence
  *			@state
@@ -205,6 +207,8 @@ struct rvin_dev {
 
 	struct mutex lock;
 	struct vb2_queue queue;
+	void *scratch;
+	dma_addr_t scratch_phys;
 
 	spinlock_t qlock;
 	struct vb2_v4l2_buffer *queue_buf[HW_BUFFER_NUM];
