@@ -14,9 +14,6 @@
  * option) any later version.
  */
 
-#include <linux/clk.h>
-#include <linux/clk-provider.h>
-#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -1372,14 +1369,6 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		goto error;
 	}
 
-	vin->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(vin->clk)) {
-		dev_err(&pdev->dev, "failed to get clock%s\n",
-			dev_name(vin->dev));
-		ret = PTR_ERR(vin->clk);
-		goto error;
-	}
-
 	return 0;
 error:
 	rvin_dma_remove(vin);
@@ -1415,7 +1404,6 @@ static int rcar_vin_remove(struct platform_device *pdev)
 static int rcar_vin_suspend(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
-	u32 timeout = MSTP_WAIT_TIME;
 
 	if (vin->info->use_mc && (vin->index == 0 || vin->index == 4))
 		vin->chsel = rvin_get_chsel(vin);
@@ -1427,21 +1415,8 @@ static int rcar_vin_suspend(struct device *dev)
 
 	vin->suspend = true;
 
-	pm_runtime_put_sync(vin->dev);
+	pm_runtime_put(vin->dev);
 	if (vin->info->use_mc) {
-		while (1) {
-			bool enable;
-
-			enable = __clk_is_enabled(vin->clk);
-			if (enable)
-				break;
-			if (!timeout) {
-				dev_warn(vin->dev, "MSTP status timeout\n");
-				break;
-			}
-			usleep_range(10, 15);
-			timeout--;
-		}
 		reset_control_assert(vin->rstc);
 		reset_control_deassert(vin->rstc);
 	}

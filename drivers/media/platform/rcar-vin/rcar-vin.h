@@ -45,8 +45,6 @@
 #define CONNECTION_TIME 2000
 #define SETUP_WAIT_TIME 3000
 
-#define MSTP_WAIT_TIME 100
-
 enum chip_id {
 	RCAR_H1,
 	RCAR_M1,
@@ -156,7 +154,6 @@ struct rvin_info {
  * @notifier:		V4L2 asynchronous subdevs notifier
  * @digital:		entity in the DT for local digital subdevice
  * @rstc:		CPG reset/release control
- * @clk:		CPG clock control
  *
  * @group:		Gen3 CSI group
  * @pad:		pad for media controller
@@ -197,7 +194,6 @@ struct rvin_dev {
 	struct v4l2_async_notifier notifier;
 	struct rvin_graph_entity *digital;
 	struct reset_control *rstc;
-	struct clk *clk;
 
 	struct rvin_group *group;
 	struct media_pad pad;
