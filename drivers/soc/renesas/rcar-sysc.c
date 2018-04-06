@@ -9,6 +9,9 @@
  * for more details.
  */
 
+#include <dt-bindings/power/r8a7795-sysc.h>
+#include <dt-bindings/power/r8a7796-sysc.h>
+#include <dt-bindings/power/r8a77965-sysc.h>
 #include <linux/clk/renesas.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -19,6 +22,7 @@
 #include <linux/spinlock.h>
 #include <linux/io.h>
 #include <linux/soc/renesas/rcar-sysc.h>
+#include <linux/sys_soc.h>
 #include <linux/syscore_ops.h>
 
 #include "rcar-sysc.h"
@@ -58,6 +62,37 @@
 #define SYSCISR_DELAY_US	10
 
 #define RCAR_PD_ALWAYS_ON	32	/* Always-on power area */
+
+static
+const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
+	{
+		.soc_id = "r8a7795", .revision = "ES2.0",
+		.data = (void *)(BIT(R8A7795_PD_A3VP) | BIT(R8A7795_PD_CR7)
+			| BIT(R8A7795_PD_A3VC) | BIT(R8A7795_PD_A2VC0)
+			| BIT(R8A7795_PD_A2VC1) | BIT(R8A7795_PD_A3IR)),
+	},
+	{
+		.soc_id = "r8a7795", .revision = "ES1.*",
+		.data = (void *)(BIT(R8A7795_PD_A3VP) | BIT(R8A7795_PD_CR7)
+			| BIT(R8A7795_PD_A3VC) | BIT(R8A7795_PD_A2VC0)
+			| BIT(R8A7795_PD_A2VC1) | BIT(R8A7795_PD_A3IR)),
+	},
+	{
+		.soc_id = "r8a7796", .revision = "ES1.*",
+		.data = (void *)(BIT(R8A7796_PD_CR7) | BIT(R8A7796_PD_A3VC)
+			| BIT(R8A7796_PD_A2VC0) | BIT(R8A7796_PD_A2VC1)
+			| BIT(R8A7796_PD_A3IR)),
+	},
+	{
+		.soc_id = "r8a77965", .revision = "ES1.0",
+		.data = (void *)(BIT(R8A77965_PD_A3VP) | BIT(R8A77965_PD_CR7)
+			| BIT(R8A77965_PD_A3VC) | BIT(R8A77965_PD_A2VC1)
+			| BIT(R8A77965_PD_A3IR)),
+	},
+	{ /* sentinel */ }
+};
+
+static u32 rcar_sysc_quirks;
 
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
@@ -281,13 +316,12 @@ static void rcar_power_on_force(void)
 		if (!pd)
 			continue;
 
-		if (!(pd->flags & PD_ON_ONCE))
-			continue;
+		if (rcar_sysc_quirks & BIT(pd->ch.isr_bit)) {
+			if (!rcar_sysc_power_is_off(&pd->ch))
+				continue;
 
-		if (!rcar_sysc_power_is_off(&pd->ch))
-			continue;
-
-		rcar_sysc_power_up(&pd->ch);
+			rcar_sysc_power_up(&pd->ch);
+		}
 	}
 }
 
@@ -301,11 +335,7 @@ static void rcar_sysc_resume(void)
 	iowrite32(syscimr_val, rcar_sysc_base + SYSCIMR);
 	iowrite32(syscier_val, rcar_sysc_base + SYSCIER);
 
-#if IS_ENABLED(CONFIG_ARCH_R8A7795) || \
-	IS_ENABLED(CONFIG_ARCH_R8A7796) || \
-	IS_ENABLED(CONFIG_ARCH_R8A77965)
 	rcar_power_on_force();
-#endif
 }
 
 static struct syscore_ops rcar_sysc_syscore_ops = {
@@ -373,6 +403,7 @@ static int __init rcar_sysc_pd_init(void)
 	void __iomem *base;
 	unsigned int i;
 	int error;
+	const struct soc_device_attribute *attr;
 
 	if (rcar_sysc_base)
 		return 0;
@@ -391,6 +422,10 @@ static int __init rcar_sysc_pd_init(void)
 
 	has_cpg_mstp = of_find_compatible_node(NULL, NULL,
 					       "renesas,cpg-mstp-clocks");
+
+	attr = soc_device_match(rcar_sysc_quirks_match);
+	if (attr)
+		rcar_sysc_quirks = (uintptr_t)attr->data;
 
 	base = of_iomap(np, 0);
 	if (!base) {
@@ -453,21 +488,19 @@ static int __init rcar_sysc_pd_init(void)
 		pd->ch.isr_bit = area->isr_bit;
 		pd->flags = area->flags;
 
+		if (rcar_sysc_quirks & BIT(pd->ch.isr_bit))
+			pd->flags |= PD_NO_CR;
+
 		rcar_sysc_pd_setup(pd);
 		if (area->parent >= 0)
 			pm_genpd_add_subdomain(domains->domains[area->parent],
 					       &pd->genpd);
 
 		domains->domains[area->isr_bit] = &pd->genpd;
-
 		rcar_domains[i] = pd;
 	}
 
-#if IS_ENABLED(CONFIG_ARCH_R8A7795) || \
-	IS_ENABLED(CONFIG_ARCH_R8A7796) || \
-	IS_ENABLED(CONFIG_ARCH_R8A77965)
 	rcar_power_on_force();
-#endif
 
 	error = of_genpd_add_provider_onecell(np, &domains->onecell_data);
 
