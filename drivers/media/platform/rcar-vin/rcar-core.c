@@ -14,7 +14,6 @@
  * option) any later version.
  */
 
-#include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/module.h>
@@ -1415,25 +1414,26 @@ static int rcar_vin_remove(struct platform_device *pdev)
 static int rcar_vin_suspend(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
-	u32 timeout = MSTP_WAIT_TIME;
 
 	if (vin->info->use_mc && (vin->index == 0 || vin->index == 4))
 		vin->chsel = rvin_get_chsel(vin);
 
-	if (vin->state != STALLED)
+	if (vin->state == STOPPED)
 		return 0;
 
 	rvin_suspend_stop_streaming(vin);
 
 	vin->suspend = true;
 
-	pm_runtime_put_sync(vin->dev);
 	if (vin->info->use_mc) {
+		u32 timeout = MSTP_WAIT_TIME;
+
+		pm_runtime_force_suspend(vin->dev);
 		while (1) {
 			bool enable;
 
 			enable = __clk_is_enabled(vin->clk);
-			if (enable)
+			if (!enable)
 				break;
 			if (!timeout) {
 				dev_warn(vin->dev, "MSTP status timeout\n");
@@ -1456,10 +1456,11 @@ static int rcar_vin_resume(struct device *dev)
 	if (vin->info->use_mc && (vin->index == 0 || vin->index == 4))
 		rvin_set_chsel(vin, vin->chsel);
 
-	if (vin->state != STALLED)
+	if (vin->state == STOPPED)
 		return 0;
 
-	pm_runtime_get_sync(vin->dev);
+	if (vin->info->use_mc)
+		pm_runtime_force_resume(vin->dev);
 	queue_delayed_work_on(0, vin->work_queue, &vin->rvin_resume,
 			      msecs_to_jiffies(CONNECTION_TIME));
 
