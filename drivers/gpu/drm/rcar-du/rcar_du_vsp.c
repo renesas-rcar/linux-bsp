@@ -280,10 +280,25 @@ static int rcar_du_vsp_plane_atomic_check(struct drm_plane *plane,
 	struct rcar_du_vsp_plane_state *rstate = to_rcar_vsp_plane_state(state);
 	struct rcar_du_vsp_plane *rplane = to_rcar_vsp_plane(plane);
 	struct rcar_du_device *rcdu = rplane->vsp->dev;
+	int hdisplay, vdisplay;
 
 	if (!state->fb || !state->crtc) {
 		rstate->format = NULL;
 		return 0;
+	}
+
+	hdisplay = state->crtc->mode.hdisplay;
+	vdisplay = state->crtc->mode.vdisplay;
+
+	if ((hdisplay > 0 && vdisplay > 0) &&
+	    state->plane->type == DRM_PLANE_TYPE_OVERLAY &&
+	    (((state->crtc_w + state->crtc_x) > hdisplay) ||
+	    ((state->crtc_h + state->crtc_y) > vdisplay))) {
+		dev_err(rcdu->dev,
+			"%s: specify (%dx%d) + (%d, %d) < (%dx%d).\n",
+			__func__, state->crtc_w, state->crtc_h, state->crtc_x,
+			state->crtc_y, hdisplay, vdisplay);
+		return -EINVAL;
 	}
 
 	if (state->src_w >> 16 != state->crtc_w ||
@@ -571,6 +586,33 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp, struct device_node *np,
 
 		plane->vsp = vsp;
 		plane->index = i;
+
+		/* Fix possible crtcs for plane when using VSPDL */
+		if (rcdu->vspdl_fix && vsp->index == VSPDL_CH) {
+			u32 pair_ch;
+			enum rcar_du_output pair_con = RCAR_DU_OUTPUT_DPAD0;
+
+			pair_ch = rcdu->info->routes[pair_con].possible_crtcs;
+
+			if (rcdu->brs_num == 0) {
+				crtcs = BIT(0);
+				if (i > 0)
+					type = DRM_PLANE_TYPE_OVERLAY;
+			} else if (rcdu->brs_num == 1) {
+				if (type == DRM_PLANE_TYPE_PRIMARY)
+					i == 1 ? (crtcs = pair_ch) :
+						 (crtcs = BIT(0));
+				else
+					crtcs = BIT(0);
+			} else {
+				if (type == DRM_PLANE_TYPE_PRIMARY)
+					i == 1 ? (crtcs = pair_ch) :
+						 (crtcs = BIT(0));
+				else
+					i == 4 ? (crtcs = pair_ch) :
+						 (crtcs = BIT(0));
+			}
+		}
 
 		ret = drm_universal_plane_init(rcdu->ddev, &plane->plane, crtcs,
 					       &rcar_du_vsp_plane_funcs,

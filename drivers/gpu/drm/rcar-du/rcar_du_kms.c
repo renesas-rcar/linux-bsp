@@ -578,12 +578,18 @@ static int rcar_du_vsps_init(struct rcar_du_device *rcdu)
 
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
 		unsigned int j;
+		unsigned int brs_num = 0;
 
 		ret = of_parse_phandle_with_fixed_args(np, "vsps", cells, i,
 						       &args);
 		if (ret < 0)
 			goto error;
 
+		ret = of_property_read_u32(args.np, "renesas,#brs", &brs_num);
+		if (brs_num > 2) {
+			dev_err(rcdu->dev, "error: brs number\n");
+			goto error;
+		}
 		/*
 		 * Add the VSP to the list or update the corresponding existing
 		 * entry if the VSP has already been added.
@@ -603,6 +609,13 @@ static int rcar_du_vsps_init(struct rcar_du_device *rcdu)
 		/* Store the VSP pointer and pipe index in the CRTC. */
 		rcdu->crtcs[i].vsp = &rcdu->vsps[j];
 		rcdu->crtcs[i].vsp_pipe = cells >= 1 ? args.args[0] : 0;
+
+		/* Has VSPDL */
+		if (rcdu->crtcs[i].vsp_pipe) {
+			if (!ret)
+				rcdu->vspdl_fix = true;
+			rcdu->brs_num = brs_num;
+		}
 	}
 
 	/*
@@ -653,6 +666,8 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 	dev->mode_config.helper_private = &rcar_du_mode_config_helper;
 
 	rcdu->num_crtcs = rcdu->info->num_crtcs;
+	rcdu->vspdl_fix = false;
+	rcdu->brs_num = 0;
 
 	ret = rcar_du_properties_init(rcdu);
 	if (ret < 0)
