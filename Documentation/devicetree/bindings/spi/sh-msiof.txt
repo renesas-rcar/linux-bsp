@@ -8,9 +8,6 @@ Required properties:
 			 "renesas,msiof-r8a7794" (R-Car E2)
 			 "renesas,msiof-r8a7795" (R-Car H3)
 			 "renesas,msiof-r8a7796" (R-Car M3-W)
-			 "renesas,msiof-r8a77965" (R-Car M3-N)
-			 "renesas,msiof-r8a77990" (R-Car E3)
-			 "renesas,msiof-r8a77995" (R-Car D3)
 			 "renesas,msiof-sh73a0" (SH-Mobile AG5)
 			 "renesas,sh-mobile-msiof" (generic SH-Mobile compatibile device)
 			 "renesas,rcar-gen2-msiof" (generic R-Car Gen2 compatible device)
@@ -36,7 +33,9 @@ Required properties:
 - #size-cells          : Must be <0>
 
 Optional properties:
-- clocks               : Must contain a reference to the functional clock.
+- clocks               : Specify a clock handling and a module clock.
+			 If HW supports the change of module clock, specify the module clock.
+			 Otherwise, not specify the module clock.
 - num-cs               : Total number of chip-selects (default is 1)
 - dmas                 : Must contain a list of two references to DMA
 			 specifiers, one for transmission, and one for

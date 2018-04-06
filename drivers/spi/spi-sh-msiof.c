@@ -208,17 +208,6 @@ static const struct soc_device_attribute rcar_quirks_match[]  = {
 	{/*sentinel*/},
 };
 
-static int msiof_rcar_is_gen3(struct device *dev)
-{
-	struct device_node *node = dev->of_node;
-
-	return of_device_is_compatible(node, "renesas,msiof-r8a7795") ||
-		of_device_is_compatible(node, "renesas,msiof-r8a7796") ||
-		of_device_is_compatible(node, "renesas,msiof-r8a77965") ||
-		of_device_is_compatible(node, "renesas,msiof-r8a77990") ||
-		of_device_is_compatible(node, "renesas,msiof-r8a77995");
-}
-
 static u32 sh_msiof_read(struct sh_msiof_spi_priv *p, int reg_offs)
 {
 	switch (reg_offs) {
@@ -1170,8 +1159,6 @@ static const struct of_device_id sh_msiof_match[] = {
 	{ .compatible = "renesas,rcar-gen2-msiof", .data = &rcar_gen2_data },
 	{ .compatible = "renesas,msiof-r8a7795",   .data = &rcar_gen3_data },
 	{ .compatible = "renesas,msiof-r8a7796",   .data = &rcar_gen3_data },
-	{ .compatible = "renesas,msiof-r8a77965",  .data = &rcar_gen3_data },
-	{ .compatible = "renesas,msiof-r8a77995",  .data = &rcar_gen3_data },
 	{ .compatible = "renesas,rcar-gen3-msiof", .data = &rcar_gen3_data },
 	{ .compatible = "renesas,sh-msiof",        .data = &sh_data }, /* Deprecated */
 	{},
@@ -1463,10 +1450,10 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 		goto err2;
 	}
 
-	if (msiof_rcar_is_gen3(&master->dev)) {
-		ref_clk = devm_clk_get(&pdev->dev, "msiof_ref_clk");
-		if (!IS_ERR(ref_clk))
-			clk_rate = clk_get_rate(ref_clk);
+	/* MSIOF module clock setup */
+	ref_clk = devm_clk_get(&pdev->dev, "msiof_ref_clk");
+	if (!IS_ERR(ref_clk)) {
+		clk_rate = clk_get_rate(ref_clk);
 		if (clk_rate) {
 			clk_prepare_enable(p->clk);
 			clk_set_rate(p->clk, clk_rate);
