@@ -37,12 +37,6 @@
 		#size-cells = <2>;
 		ranges;
 
-		/* device specific region for Lossy Decompression */
-		lossy_decompress: linux,lossy_decompress {
-			no-map;
-			reg = <0x00000000 0x54000000 0x0 0x03000000>;
-		};
-
 		/* For Audio DSP */
 		adsp_reserved: linux,adsp {
 			compatible = "shared-dma-pool";
@@ -54,7 +48,7 @@
 		linux,cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x58000000 0x0 0x18000000>;
+			reg = <0x00000000 0x58000000 0x0 0x10000000>;
 			linux,cma-default;
 		};
 
@@ -62,7 +56,7 @@
 		mmp_reserved: linux,multimedia {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x70000000 0x0 0x10000000>;
+			reg = <0x00000000 0x68000000 0x0 0x04000000>;
 		};
 	};
 
