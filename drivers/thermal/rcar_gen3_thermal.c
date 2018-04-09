@@ -230,10 +230,12 @@ static int rcar_gen3_thermal_round(int temp)
 static int rcar_gen3_thermal_convert_temp(struct rcar_gen3_thermal_tsc *tsc)
 {
 	int mcelsius = 0, val1, val2;
-	u32 reg;
+	long reg;
 
 	if (is_ths_typeA(tsc->priv)) {
 		/* Read register and convert to mili Celsius */
+
+		/* Read register and convert value to signed variable type */
 		reg = rcar_gen3_thermal_read(tsc, REG_GEN3_TEMP) & CTEMP_MASK;
 
 		val1 = FIXPT_DIV(FIXPT_INT(reg) - tsc->coef.b1, tsc->coef.a1);
@@ -241,8 +243,26 @@ static int rcar_gen3_thermal_convert_temp(struct rcar_gen3_thermal_tsc *tsc)
 		mcelsius = rcar_gen3_thermal_round(FIXPT_TO_MCELSIUS(
 							(val1 + val2) / 2));
 	} else {
-		reg = rcar_gen3_thermal_read(tsc, REG_GEN3_B_THSSR)
-					& CTEMP_B_MASK;
+		int i;
+		u32 old, new;
+
+		reg = 0;
+		old = ~0;
+		for (i = 0; i < 128; i++) {
+			/*
+			 * As hardware description, it needs to wait 300us after
+			 * changing comparator offset to get stable temperature.
+			 */
+			usleep_range(300, 350);
+			new = rcar_gen3_thermal_read(tsc, REG_GEN3_B_THSSR)
+						& CTEMP_B_MASK;
+
+			if (new == old) {
+				reg = new;
+				break;
+			}
+			old = new;
+		}
 		mcelsius = MCELSIUS((reg * 5) - 65);
 	}
 
@@ -303,12 +323,15 @@ static int rcar_gen3_thermal_set_irq_temp(struct rcar_gen3_thermal_tsc *tsc)
 		rcar_gen3_thermal_write(tsc, REG_GEN3_IRQTEMP2,
 			rcar_gen3_thermal_mcelsius_to_temp(tsc, high));
 	} else {
+		u32 reg;
+
 		low = rcar_gen3_thermal_mcelsius_to_temp(tsc, low);
 		high = rcar_gen3_thermal_mcelsius_to_temp(tsc, high);
-
-		rcar_gen3_thermal_write(tsc, REG_GEN3_B_INTCTRL,
-					(high << __bf_shf(CTEMP1_B_MASK))
-					| (low << __bf_shf(CTEMP0_B_MASK)));
+		reg = rcar_gen3_thermal_read(tsc, REG_GEN3_B_INTCTRL);
+		reg &= (~CTEMP1_B_MASK & ~CTEMP0_B_MASK);
+		reg |= (high << __bf_shf(CTEMP1_B_MASK)
+		    | low << __bf_shf(CTEMP0_B_MASK));
+		rcar_gen3_thermal_write(tsc, REG_GEN3_B_INTCTRL, reg);
 	}
 
 	return 0;
