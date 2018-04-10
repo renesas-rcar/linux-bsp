@@ -186,9 +186,7 @@ int of_pci_get_host_bridge_resources(struct device_node *dev,
 			unsigned char busno, unsigned char bus_max,
 			struct list_head *resources, resource_size_t *io_base)
 {
-	struct resource_entry *window;
-	struct resource *res;
-	struct resource *bus_range;
+	struct resource res;
 	struct of_pci_range range;
 	struct of_pci_range_parser parser;
 	char range_type[4];
@@ -197,25 +195,21 @@ int of_pci_get_host_bridge_resources(struct device_node *dev,
 	if (io_base)
 		*io_base = (resource_size_t)OF_BAD_ADDR;
 
-	bus_range = kzalloc(sizeof(*bus_range), GFP_KERNEL);
-	if (!bus_range)
-		return -ENOMEM;
-
 	pr_info("host bridge %pOF ranges:\n", dev);
 
-	err = of_pci_parse_bus_range(dev, bus_range);
+	err = of_pci_parse_bus_range(dev, &res);
 	if (err) {
-		bus_range->start = busno;
-		bus_range->end = bus_max;
-		bus_range->flags = IORESOURCE_BUS;
-		pr_info("  No bus range found for %pOF, using %pR\n",
-			dev, bus_range);
+		res.start = busno;
+		res.end = bus_max;
+		res.flags = IORESOURCE_BUS;
+		pr_err("  No bus range found for %s\n", dev->full_name);
 	} else {
-		if (bus_range->end > bus_range->start + bus_max)
-			bus_range->end = bus_range->start + bus_max;
+		if (res.end > res.start + bus_max)
+			res.end = res.start + bus_max;
 	}
-	pci_add_resource(resources, bus_range);
 
+	res.flags |= IORESOURCE_AUTO;
+	pci_add_resource(resources, &res);
 	/* Check for ranges property */
 	err = of_pci_range_parser_init(&parser, dev);
 	if (err)
@@ -241,24 +235,16 @@ int of_pci_get_host_bridge_resources(struct device_node *dev,
 		if (range.cpu_addr == OF_BAD_ADDR || range.size == 0)
 			continue;
 
-		res = kzalloc(sizeof(struct resource), GFP_KERNEL);
-		if (!res) {
-			err = -ENOMEM;
-			goto parse_failed;
-		}
-
-		err = of_pci_range_to_resource(&range, dev, res);
-		if (err) {
-			kfree(res);
+		err = of_pci_range_to_resource(&range, dev, &res);
+		if (err)
 			continue;
-		}
 
-		if (resource_type(res) == IORESOURCE_IO) {
+		if (resource_type(&res) == IORESOURCE_IO) {
 			if (!io_base) {
 				pr_err("I/O range found for %pOF. Please provide an io_base pointer to save CPU base address\n",
 					dev);
 				err = -EINVAL;
-				goto conversion_failed;
+				goto parse_failed;
 			}
 			if (*io_base != (resource_size_t)OF_BAD_ADDR)
 				pr_warn("More than one I/O resource converted for %pOF. CPU base address for old range lost!\n",
@@ -266,16 +252,14 @@ int of_pci_get_host_bridge_resources(struct device_node *dev,
 			*io_base = range.cpu_addr;
 		}
 
-		pci_add_resource_offset(resources, res,	res->start - range.pci_addr);
+		res.flags |= IORESOURCE_AUTO;
+		pci_add_resource_offset(resources, &res,
+					res.start - range.pci_addr);
 	}
 
 	return 0;
 
-conversion_failed:
-	kfree(res);
 parse_failed:
-	resource_list_for_each_entry(window, resources)
-		kfree(window->res);
 	pci_free_resource_list(resources);
 	return err;
 }
