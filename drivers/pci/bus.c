@@ -21,11 +21,16 @@ void pci_add_resource_offset(struct list_head *resources, struct resource *res,
 {
 	struct resource_entry *entry;
 
-	entry = resource_list_create_entry(res, 0);
+	entry = resource_list_create_entry(NULL, 0);
 	if (!entry) {
 		pr_err("PCI: can't add host bridge window %pR\n", res);
 		return;
 	}
+
+	if (res->flags & IORESOURCE_AUTO)
+		*entry->res = *res;
+	else
+		entry->res = res;
 
 	entry->offset = offset;
 	resource_list_add_tail(entry, resources);
