@@ -1215,7 +1215,9 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 
 	INIT_LIST_HEAD(&pcie->resources);
 
-	rcar_pcie_parse_request_of_pci_ranges(pcie);
+	err = rcar_pcie_parse_request_of_pci_ranges(pcie);
+	if (err)
+		goto err_free_bridge;
 
 	pm_runtime_enable(pcie->dev);
 	err = pm_runtime_get_sync(pcie->dev);
@@ -1227,12 +1229,12 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 	err = rcar_pcie_get_resources(pcie);
 	if (err < 0) {
 		dev_err(dev, "failed to request resources: %d\n", err);
-		goto err_free_bridge;
+		goto err_free_resource_list;
 	}
 
 	err = rcar_pcie_parse_map_dma_ranges(pcie, dev->of_node);
 	if (err)
-		goto err_free_bridge;
+		goto err_free_resource_list;
 
 	/* Failure to get a link might just be that no cards are inserted */
 	hw_init_fn = of_device_get_match_data(dev);
@@ -1268,9 +1270,10 @@ err_pm_put:
 err_pm_disable:
 	pm_runtime_disable(dev);
 
+err_free_resource_list:
+	pci_free_resource_list(&pcie->resources);
 err_free_bridge:
 	pci_free_host_bridge(bridge);
-	pci_free_resource_list(&pcie->resources);
 
 	return err;
 }
