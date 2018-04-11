@@ -1026,7 +1026,7 @@ of_node_compatible:
 
 static void __rsnd_dai_probe(struct rsnd_priv *priv,
 			     struct device_node *dai_np,
-			     int dai_i, int is_graph)
+			     int dai_i)
 {
 	struct device_node *playback, *capture;
 	struct rsnd_dai_stream *io_playback;
@@ -1125,13 +1125,13 @@ static int rsnd_dai_probe(struct rsnd_priv *priv)
 	dai_i = 0;
 	if (is_graph) {
 		for_each_endpoint_of_node(dai_node, dai_np) {
-			__rsnd_dai_probe(priv, dai_np, dai_i, is_graph);
+			__rsnd_dai_probe(priv, dai_np, dai_i);
 			rsnd_ssi_parse_hdmi_connection(priv, dai_np, dai_i);
 			dai_i++;
 		}
 	} else {
 		for_each_child_of_node(dai_node, dai_np)
-			__rsnd_dai_probe(priv, dai_np, dai_i++, is_graph);
+			__rsnd_dai_probe(priv, dai_np, dai_i++);
 	}
 
 	return 0;
@@ -1352,6 +1352,35 @@ int rsnd_kctrl_new(struct rsnd_mod *mod,
 #define PREALLOC_BUFFER		(32 * 1024)
 #define PREALLOC_BUFFER_MAX	(32 * 1024)
 
+static int rsnd_preallocate_pages(struct snd_soc_pcm_runtime *rtd,
+				  struct rsnd_dai_stream *io,
+				  int stream)
+{
+	struct rsnd_priv *priv = rsnd_io_to_priv(io);
+	struct device *dev = rsnd_priv_to_dev(priv);
+	struct snd_pcm_substream *substream = rtd->pcm->streams[stream].substream;
+	int err;
+
+	/*
+	 * use Audio-DMAC dev if we can use IPMMU
+	 * see
+	 *	rsnd_dmaen_attach()
+	 */
+	if (io->dmac_dev)
+		dev = io->dmac_dev;
+
+	for (; substream; substream = substream->next) {
+		err = snd_pcm_lib_preallocate_pages(substream,
+					SNDRV_DMA_TYPE_DEV,
+					dev,
+					PREALLOC_BUFFER, PREALLOC_BUFFER_MAX);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+
 static int rsnd_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *dai = rtd->cpu_dai;
@@ -1366,11 +1395,17 @@ static int rsnd_pcm_new(struct snd_soc_pcm_runtime *rtd)
 	if (ret)
 		return ret;
 
-	return snd_pcm_lib_preallocate_pages_for_all(
-		rtd->pcm,
-		SNDRV_DMA_TYPE_DEV,
-		rtd->card->snd_card->dev,
-		PREALLOC_BUFFER, PREALLOC_BUFFER_MAX);
+	ret = rsnd_preallocate_pages(rtd, &rdai->playback,
+				     SNDRV_PCM_STREAM_PLAYBACK);
+	if (ret)
+		return ret;
+
+	ret = rsnd_preallocate_pages(rtd, &rdai->capture,
+				     SNDRV_PCM_STREAM_CAPTURE);
+	if (ret)
+		return ret;
+
+	return 0;
 }
 
 static const struct snd_soc_platform_driver rsnd_soc_platform = {
@@ -1531,6 +1566,8 @@ static int rsnd_remove(struct platform_device *pdev)
 		rsnd_adg_remove,
 	};
 	int ret = 0, i;
+
+	snd_soc_disconnect_sync(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 
