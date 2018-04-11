@@ -47,6 +47,7 @@ struct ipmmu_features {
 	unsigned int number_of_contexts;
 	bool setup_imbuscr;
 	bool twobit_imttbcr_sl0;
+	bool reserved_context;
 };
 
 #ifdef CONFIG_RCAR_DDR_BACKUP
@@ -1104,6 +1105,7 @@ static const struct ipmmu_features ipmmu_features_default = {
 	.number_of_contexts = 1, /* software only tested with one context */
 	.setup_imbuscr = true,
 	.twobit_imttbcr_sl0 = false,
+	.reserved_context = false,
 };
 
 static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
@@ -1112,6 +1114,7 @@ static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
 	.number_of_contexts = CONFIG_IPMMU_VMSA_CTX_NUM,
 	.setup_imbuscr = false,
 	.twobit_imttbcr_sl0 = true,
+	.reserved_context = true,
 };
 
 static const struct of_device_id ipmmu_of_ids[] = {
@@ -1214,6 +1217,11 @@ static int ipmmu_probe(struct platform_device *pdev)
 		}
 
 		ipmmu_device_reset(mmu);
+
+		if (mmu->features->reserved_context) {
+			dev_info(&pdev->dev, "IPMMU context 0 is reserved\n");
+			set_bit(0, mmu->ctx);
+		}
 	}
 
 	/*
