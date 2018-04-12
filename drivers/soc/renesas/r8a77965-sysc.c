@@ -8,6 +8,7 @@
  * the Free Software Foundation; version 2 of the License.
  */
 
+#include <linux/bitops.h>
 #include <linux/bug.h>
 #include <linux/kernel.h>
 
@@ -32,7 +33,12 @@ static const struct rcar_sysc_area r8a77965_areas[] __initconst = {
 	{ "a3ir",	0x180, 0, R8A77965_PD_A3IR,	R8A77965_PD_ALWAYS_ON },
 };
 
+static struct rcar_sysc_extra_regs r8a77965_extra_regs = {
+	.sysc_extmask_offs = 0x2F8, .sysc_extmask_msks = BIT(0)
+};
+
 const struct rcar_sysc_info r8a77965_sysc_info __initconst = {
 	.areas = r8a77965_areas,
 	.num_areas = ARRAY_SIZE(r8a77965_areas),
+	.extra_regs = &r8a77965_extra_regs,
 };
