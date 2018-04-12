@@ -5,8 +5,10 @@
  * Copyright (C) 2016 Glider bvba
  */
 
+#include <linux/bitops.h>
 #include <linux/bug.h>
 #include <linux/kernel.h>
+#include <linux/sys_soc.h>
 
 #include <dt-bindings/power/r8a7796-sysc.h>
 
@@ -39,7 +41,26 @@ static const struct rcar_sysc_area r8a7796_areas[] __initconst = {
 	{ "a3ir",	0x180, 0, R8A7796_PD_A3IR,	R8A7796_PD_ALWAYS_ON },
 };
 
+static const struct soc_device_attribute r8a7796es1[] __initconst = {
+	{ .soc_id = "r8a7796", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
+static int __init r8a7796_sysc_init(void)
+{
+	if (soc_device_match(r8a7796es1))
+		r8a7796_sysc_info.extra_regs->sysc_extmask_msks = 0;
+
+	return 0;
+}
+
+static struct rcar_sysc_extra_regs r8a7796_extra_regs = {
+	.sysc_extmask_offs = 0x2F8, .sysc_extmask_msks = BIT(0)
+};
+
 const struct rcar_sysc_info r8a7796_sysc_info __initconst = {
+	.init = r8a7796_sysc_init,
 	.areas = r8a7796_areas,
 	.num_areas = ARRAY_SIZE(r8a7796_areas),
+	.extra_regs = &r8a7796_extra_regs,
 };
