@@ -1921,6 +1921,18 @@ static void hdmi_av_composer(struct dw_hdmi *hdmi,
 	hdmi_writeb(hdmi, vsync_len, HDMI_FC_VSYNCINWIDTH);
 }
 
+static void hdmi_vsync_in_width(struct dw_hdmi *hdmi,
+				const struct drm_display_mode *mode)
+{
+	int vsync_len = mode->vsync_end - mode->vsync_start;
+
+	if (mode->flags & DRM_MODE_FLAG_INTERLACE)
+		vsync_len /= 2;
+
+	/* Set up VSYNC active edge delay (in lines) */
+	hdmi_writeb(hdmi, vsync_len, HDMI_FC_VSYNCINWIDTH);
+}
+
 /* HDMI Initialization Step B.4 */
 static void dw_hdmi_enable_video_path(struct dw_hdmi *hdmi)
 {
@@ -2078,6 +2090,10 @@ static int dw_hdmi_setup(struct dw_hdmi *hdmi, struct drm_display_mode *mode)
 
 	/* HDMI Initialization Step B.3 */
 	dw_hdmi_enable_video_path(hdmi);
+
+	/* Rewrite Vsync width */
+	if (hdmi->plat_data->dev_type == RCAR_HDMI)
+		hdmi_vsync_in_width(hdmi, mode);
 
 	if (hdmi->sink_has_audio) {
 		dev_dbg(hdmi->dev, "sink has audio support\n");
