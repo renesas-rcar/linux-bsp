@@ -124,6 +124,7 @@ static const struct genpd_lock_ops genpd_spin_ops = {
 #define genpd_status_on(genpd)		(genpd->status == GPD_STATE_ACTIVE)
 #define genpd_is_irq_safe(genpd)	(genpd->flags & GENPD_FLAG_IRQ_SAFE)
 #define genpd_is_always_on(genpd)	(genpd->flags & GENPD_FLAG_ALWAYS_ON)
+#define genpd_is_active_wakeup(genpd)	(genpd->flags & GENPD_FLAG_ACTIVE_WAKEUP)
 
 static inline bool irq_safe_dev_in_no_sleep_domain(struct device *dev,
 		const struct generic_pm_domain *genpd)
@@ -771,12 +772,6 @@ static bool pm_genpd_present(const struct generic_pm_domain *genpd)
 
 #ifdef CONFIG_PM_SLEEP
 
-static bool genpd_dev_active_wakeup(const struct generic_pm_domain *genpd,
-				    struct device *dev)
-{
-	return GENPD_DEV_CALLBACK(genpd, bool, active_wakeup, dev);
-}
-
 /**
  * genpd_sync_power_off - Synchronously power off a PM domain and its masters.
  * @genpd: PM domain to power off, if possible.
@@ -881,7 +876,7 @@ static bool resume_needed(struct device *dev,
 	if (!device_can_wakeup(dev))
 		return false;
 
-	active_wakeup = genpd_dev_active_wakeup(genpd, dev);
+	active_wakeup = genpd_is_active_wakeup(genpd);
 	return device_may_wakeup(dev) ? active_wakeup : !active_wakeup;
 }
 
@@ -951,7 +946,7 @@ static int genpd_finish_suspend(struct device *dev, bool poweroff)
 	if (IS_ERR(genpd))
 		return -EINVAL;
 
-	if (dev->power.wakeup_path && genpd_dev_active_wakeup(genpd, dev))
+	if (dev->power.wakeup_path && genpd_is_active_wakeup(genpd))
 		return 0;
 
 	if (poweroff)
@@ -1006,7 +1001,7 @@ static int pm_genpd_resume_noirq(struct device *dev)
 	if (IS_ERR(genpd))
 		return -EINVAL;
 
-	if (dev->power.wakeup_path && genpd_dev_active_wakeup(genpd, dev))
+	if (dev->power.wakeup_path && genpd_is_active_wakeup(genpd))
 		return 0;
 
 	genpd_lock(genpd);

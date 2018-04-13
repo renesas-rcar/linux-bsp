@@ -38,6 +38,7 @@
 #include <linux/phy.h>
 #include <linux/io.h>
 #include <linux/uaccess.h>
+#include <linux/gpio/consumer.h>
 
 #include <asm/irq.h>
 
@@ -419,6 +420,9 @@ void mdiobus_unregister(struct mii_bus *bus)
 		mdiodev = bus->mdio_map[i];
 		if (!mdiodev)
 			continue;
+
+		if (mdiodev->reset)
+			gpiod_put(mdiodev->reset);
 
 		mdiodev->device_remove(mdiodev);
 		mdiodev->device_free(mdiodev);

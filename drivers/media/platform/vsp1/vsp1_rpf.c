@@ -29,9 +29,10 @@
  */
 
 static inline void vsp1_rpf_write(struct vsp1_rwpf *rpf,
-				  struct vsp1_dl_list *dl, u32 reg, u32 data)
+				  struct vsp1_dl_body *dlb, u32 reg, u32 data)
 {
-	vsp1_dl_list_write(dl, reg + rpf->entity.index * VI6_RPF_OFFSET, data);
+	vsp1_dl_fragment_write(dlb, reg + rpf->entity.index * VI6_RPF_OFFSET,
+			       data);
 }
 
 /* -----------------------------------------------------------------------------
@@ -46,10 +47,9 @@ static const struct v4l2_subdev_ops rpf_ops = {
  * VSP1 Entity Operations
  */
 
-static void rpf_configure(struct vsp1_entity *entity,
-			  struct vsp1_pipeline *pipe,
-			  struct vsp1_dl_list *dl,
-			  enum vsp1_entity_params params)
+static void rpf_prepare(struct vsp1_entity *entity,
+			struct vsp1_pipeline *pipe,
+			struct vsp1_dl_body *dlb)
 {
 	struct vsp1_rwpf *rpf = to_rwpf(&entity->subdev);
 	const struct vsp1_format_info *fmtinfo = rpf->fmtinfo;
@@ -61,80 +61,6 @@ static void rpf_configure(struct vsp1_entity *entity,
 	u32 pstride;
 	u32 infmt;
 
-	if (params == VSP1_ENTITY_PARAMS_RUNTIME) {
-		vsp1_rpf_write(rpf, dl, VI6_RPF_VRTCOL_SET,
-			       rpf->alpha << VI6_RPF_VRTCOL_SET_LAYA_SHIFT);
-		vsp1_rpf_write(rpf, dl, VI6_RPF_MULT_ALPHA, rpf->mult_alpha |
-			       (rpf->alpha << VI6_RPF_MULT_ALPHA_RATIO_SHIFT));
-
-		vsp1_pipeline_propagate_alpha(pipe, dl, rpf->alpha);
-		return;
-	}
-
-	if (params == VSP1_ENTITY_PARAMS_PARTITION) {
-		struct vsp1_device *vsp1 = rpf->entity.vsp1;
-		struct vsp1_rwpf_memory mem = rpf->mem;
-		struct v4l2_rect crop;
-
-		/*
-		 * Source size and crop offsets.
-		 *
-		 * The crop offsets correspond to the location of the crop
-		 * rectangle top left corner in the plane buffer. Only two
-		 * offsets are needed, as planes 2 and 3 always have identical
-		 * strides.
-		 */
-		crop = *vsp1_rwpf_get_crop(rpf, rpf->entity.config);
-
-		/*
-		 * Partition Algorithm Control
-		 *
-		 * The partition algorithm can split this frame into multiple
-		 * slices. We must scale our partition window based on the pipe
-		 * configuration to match the destination partition window.
-		 * To achieve this, we adjust our crop to provide a 'sub-crop'
-		 * matching the expected partition window. Only 'left' and
-		 * 'width' need to be adjusted.
-		 */
-		if (pipe->partitions > 1) {
-			crop.width = pipe->partition->rpf.width;
-			crop.left += pipe->partition->rpf.left;
-		}
-
-		vsp1_rpf_write(rpf, dl, VI6_RPF_SRC_BSIZE,
-			       (crop.width << VI6_RPF_SRC_BSIZE_BHSIZE_SHIFT) |
-			       (crop.height << VI6_RPF_SRC_BSIZE_BVSIZE_SHIFT));
-		vsp1_rpf_write(rpf, dl, VI6_RPF_SRC_ESIZE,
-			       (crop.width << VI6_RPF_SRC_ESIZE_EHSIZE_SHIFT) |
-			       (crop.height << VI6_RPF_SRC_ESIZE_EVSIZE_SHIFT));
-
-		mem.addr[0] += crop.top * format->plane_fmt[0].bytesperline
-			     + crop.left * fmtinfo->bpp[0] / 8;
-
-		if (format->num_planes > 1) {
-			unsigned int offset;
-
-			offset = crop.top * format->plane_fmt[1].bytesperline
-			       + crop.left / fmtinfo->hsub
-			       * fmtinfo->bpp[1] / 8;
-			mem.addr[1] += offset;
-			mem.addr[2] += offset;
-		}
-
-		/*
-		 * On Gen3 hardware the SPUVS bit has no effect on 3-planar
-		 * formats. Swap the U and V planes manually in that case.
-		 */
-		if (vsp1->info->gen == 3 && format->num_planes == 3 &&
-		    fmtinfo->swap_uv)
-			swap(mem.addr[1], mem.addr[2]);
-
-		vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_Y, mem.addr[0]);
-		vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C0, mem.addr[1]);
-		vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_ADDR_C1, mem.addr[2]);
-		return;
-	}
-
 	/* Stride */
 	pstride = format->plane_fmt[0].bytesperline
 		<< VI6_RPF_SRCM_PSTRIDE_Y_SHIFT;
@@ -142,7 +68,7 @@ static void rpf_configure(struct vsp1_entity *entity,
 		pstride |= format->plane_fmt[1].bytesperline
 			<< VI6_RPF_SRCM_PSTRIDE_C_SHIFT;
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_SRCM_PSTRIDE, pstride);
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_PSTRIDE, pstride);
 
 	/* Format */
 	sink_format = vsp1_entity_get_pad_format(&rpf->entity,
@@ -163,8 +89,8 @@ static void rpf_configure(struct vsp1_entity *entity,
 	if (sink_format->code != source_format->code)
 		infmt |= VI6_RPF_INFMT_CSC;
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_INFMT, infmt);
-	vsp1_rpf_write(rpf, dl, VI6_RPF_DSWAP, fmtinfo->swap);
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_INFMT, infmt);
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_DSWAP, fmtinfo->swap);
 
 	/* Output location */
 	if (pipe->bru) {
@@ -178,7 +104,7 @@ static void rpf_configure(struct vsp1_entity *entity,
 		top = compose->top;
 	}
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_LOC,
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_LOC,
 		       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
 		       (top << VI6_RPF_LOC_VCOORD_SHIFT));
 
@@ -205,7 +131,7 @@ static void rpf_configure(struct vsp1_entity *entity,
 	 *
 	 * In all cases, disable color keying.
 	 */
-	vsp1_rpf_write(rpf, dl, VI6_RPF_ALPH_SEL, VI6_RPF_ALPH_SEL_AEXT_EXT |
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_ALPH_SEL, VI6_RPF_ALPH_SEL_AEXT_EXT |
 		       (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
 				       : VI6_RPF_ALPH_SEL_ASEL_FIXED));
 
@@ -242,9 +168,87 @@ static void rpf_configure(struct vsp1_entity *entity,
 		rpf->mult_alpha = mult;
 	}
 
-	vsp1_rpf_write(rpf, dl, VI6_RPF_MSK_CTRL, 0);
-	vsp1_rpf_write(rpf, dl, VI6_RPF_CKEY_CTRL, 0);
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_MSK_CTRL, 0);
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_CKEY_CTRL, 0);
 
+}
+
+static void rpf_configure(struct vsp1_entity *entity,
+			  struct vsp1_pipeline *pipe, struct vsp1_dl_list *dl,
+			  struct vsp1_dl_body *dlb, unsigned int partition)
+{
+	struct vsp1_rwpf *rpf = to_rwpf(&entity->subdev);
+	struct vsp1_rwpf_memory mem = rpf->mem;
+	struct vsp1_device *vsp1 = rpf->entity.vsp1;
+	const struct vsp1_format_info *fmtinfo = rpf->fmtinfo;
+	const struct v4l2_pix_format_mplane *format = &rpf->format;
+	struct v4l2_rect crop;
+
+	if (partition == 0) {
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_VRTCOL_SET,
+			       rpf->alpha << VI6_RPF_VRTCOL_SET_LAYA_SHIFT);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_MULT_ALPHA, rpf->mult_alpha |
+			       (rpf->alpha << VI6_RPF_MULT_ALPHA_RATIO_SHIFT));
+
+		vsp1_pipeline_propagate_alpha(pipe, dlb, rpf->alpha);
+	}
+
+	/*
+	 * Source size and crop offsets.
+	 *
+	 * The crop offsets correspond to the location of the crop
+	 * rectangle top left corner in the plane buffer. Only two
+	 * offsets are needed, as planes 2 and 3 always have identical
+	 * strides.
+	 */
+	crop = *vsp1_rwpf_get_crop(rpf, rpf->entity.config);
+
+	/*
+	 * Partition Algorithm Control
+	 *
+	 * The partition algorithm can split this frame into multiple
+	 * slices. We must scale our partition window based on the pipe
+	 * configuration to match the destination partition window.
+	 * To achieve this, we adjust our crop to provide a 'sub-crop'
+	 * matching the expected partition window. Only 'left' and
+	 * 'width' need to be adjusted.
+	 */
+	if (pipe->partitions > 1) {
+		crop.width = pipe->partition->rpf.width;
+		crop.left += pipe->partition->rpf.left;
+	}
+
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_BSIZE,
+		       (crop.width << VI6_RPF_SRC_BSIZE_BHSIZE_SHIFT) |
+		       (crop.height << VI6_RPF_SRC_BSIZE_BVSIZE_SHIFT));
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_ESIZE,
+		       (crop.width << VI6_RPF_SRC_ESIZE_EHSIZE_SHIFT) |
+		       (crop.height << VI6_RPF_SRC_ESIZE_EVSIZE_SHIFT));
+
+	mem.addr[0] += crop.top * format->plane_fmt[0].bytesperline
+		     + crop.left * fmtinfo->bpp[0] / 8;
+
+	if (format->num_planes > 1) {
+		unsigned int offset;
+
+		offset = crop.top * format->plane_fmt[1].bytesperline
+		       + crop.left / fmtinfo->hsub
+		       * fmtinfo->bpp[1] / 8;
+		mem.addr[1] += offset;
+		mem.addr[2] += offset;
+	}
+
+	/*
+	 * On Gen3 hardware the SPUVS bit has no effect on 3-planar
+	 * formats. Swap the U and V planes manually in that case.
+	 */
+	if (vsp1->info->gen == 3 && format->num_planes == 3 &&
+	    fmtinfo->swap_uv)
+		swap(mem.addr[1], mem.addr[2]);
+
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_Y, mem.addr[0]);
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C0, mem.addr[1]);
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C1, mem.addr[2]);
 }
 
 static void rpf_partition(struct vsp1_entity *entity,
@@ -257,6 +261,7 @@ static void rpf_partition(struct vsp1_entity *entity,
 }
 
 static const struct vsp1_entity_operations rpf_entity_ops = {
+	.prepare = rpf_prepare,
 	.configure = rpf_configure,
 	.partition = rpf_partition,
 };

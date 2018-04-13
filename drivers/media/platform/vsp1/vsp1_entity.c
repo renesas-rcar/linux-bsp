@@ -26,7 +26,7 @@
 
 void vsp1_entity_route_setup(struct vsp1_entity *entity,
 			     struct vsp1_pipeline *pipe,
-			     struct vsp1_dl_list *dl)
+			     struct vsp1_dl_body *dlb)
 {
 	struct vsp1_entity *source;
 	u32 route;
@@ -42,7 +42,7 @@ void vsp1_entity_route_setup(struct vsp1_entity *entity,
 		smppt = (pipe->output->entity.index << VI6_DPR_SMPPT_TGW_SHIFT)
 		      | (source->route->output << VI6_DPR_SMPPT_PT_SHIFT);
 
-		vsp1_dl_list_write(dl, VI6_DPR_HGO_SMPPT, smppt);
+		vsp1_dl_fragment_write(dlb, VI6_DPR_HGO_SMPPT, smppt);
 		return;
 	} else if (entity->type == VSP1_ENTITY_HGT) {
 		u32 smppt;
@@ -55,7 +55,7 @@ void vsp1_entity_route_setup(struct vsp1_entity *entity,
 		smppt = (pipe->output->entity.index << VI6_DPR_SMPPT_TGW_SHIFT)
 		      | (source->route->output << VI6_DPR_SMPPT_PT_SHIFT);
 
-		vsp1_dl_list_write(dl, VI6_DPR_HGT_SMPPT, smppt);
+		vsp1_dl_fragment_write(dlb, VI6_DPR_HGT_SMPPT, smppt);
 		return;
 	}
 
@@ -70,7 +70,22 @@ void vsp1_entity_route_setup(struct vsp1_entity *entity,
 	 */
 	if (source->type == VSP1_ENTITY_BRS)
 		route |= VI6_DPR_ROUTE_BRSSEL;
-	vsp1_dl_list_write(dl, source->route->reg, route);
+	vsp1_dl_fragment_write(dlb, source->route->reg, route);
+}
+
+void vsp1_entity_prepare(struct vsp1_entity *entity, struct vsp1_pipeline *pipe,
+			 struct vsp1_dl_body *dlb)
+{
+	if (entity->ops->prepare)
+		entity->ops->prepare(entity, pipe, dlb);
+}
+
+void vsp1_entity_configure(struct vsp1_entity *entity,
+			   struct vsp1_pipeline *pipe, struct vsp1_dl_list *dl,
+			   struct vsp1_dl_body *dlb, unsigned int partition)
+{
+	if (entity->ops->configure)
+		entity->ops->configure(entity, pipe, dl, dlb, partition);
 }
 
 /* -----------------------------------------------------------------------------

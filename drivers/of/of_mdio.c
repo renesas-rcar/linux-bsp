@@ -47,6 +47,7 @@ static int of_get_phy_id(struct device_node *device, u32 *phy_id)
 static int of_mdiobus_register_phy(struct mii_bus *mdio,
 				    struct device_node *child, u32 addr)
 {
+	struct gpio_desc *gpiod;
 	struct phy_device *phy;
 	bool is_c45;
 	int rc;
@@ -55,10 +56,22 @@ static int of_mdiobus_register_phy(struct mii_bus *mdio,
 	is_c45 = of_device_is_compatible(child,
 					 "ethernet-phy-ieee802.3-c45");
 
+	/* Deassert the optional reset signal */
+	gpiod = fwnode_get_named_gpiod(&child->fwnode, "reset-gpios", 0,
+				       GPIOD_OUT_LOW, "PHY reset");
+	if (PTR_ERR(gpiod) == -ENOENT)
+		gpiod = NULL;
+	else if (IS_ERR(gpiod))
+		return PTR_ERR(gpiod);
+
 	if (!is_c45 && !of_get_phy_id(child, &phy_id))
 		phy = phy_device_create(mdio, addr, phy_id, 0, NULL);
 	else
 		phy = get_phy_device(mdio, addr, is_c45);
+
+	/* Assert the reset signal again */
+	gpiod_set_value(gpiod, 1);
+
 	if (IS_ERR(phy))
 		return PTR_ERR(phy);
 
@@ -81,6 +94,7 @@ static int of_mdiobus_register_phy(struct mii_bus *mdio,
 	 * can be looked up later */
 	of_node_get(child);
 	phy->mdio.dev.of_node = child;
+	phy->mdio.reset = gpiod;
 
 	/* All data is now stored in the phy struct;
 	 * register it */
@@ -100,6 +114,7 @@ static int of_mdiobus_register_device(struct mii_bus *mdio,
 				      struct device_node *child, u32 addr)
 {
 	struct mdio_device *mdiodev;
+	struct gpio_desc *gpiod;
 	int rc;
 
 	mdiodev = mdio_device_create(mdio, addr);
@@ -111,6 +126,14 @@ static int of_mdiobus_register_device(struct mii_bus *mdio,
 	 */
 	of_node_get(child);
 	mdiodev->dev.of_node = child;
+
+	gpiod = fwnode_get_named_gpiod(&child->fwnode, "reset-gpios", 0,
+				       GPIOD_ASIS, "PHY reset");
+	if (PTR_ERR(gpiod) == -ENOENT)
+		gpiod = NULL;
+	else if (IS_ERR(gpiod))
+		return PTR_ERR(gpiod);
+	mdiodev->reset = gpiod;
 
 	/* All data is now stored in the mdiodev struct; register it. */
 	rc = mdio_device_register(mdiodev);
