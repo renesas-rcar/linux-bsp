@@ -212,7 +212,7 @@ static const struct dw_hdmi_multi_div rcar_du_hdmienc_multi_div[] = {
 	}, {
 		281250000, { 0x0605, 0x0000, 0x0000 },
 	}, {
-		297000000, { 0x0405, 0x0000, 0x0000 },
+		297000000, { 0x0205, 0x0000, 0x0000 },
 	}, {
 		~0UL,      { 0x0000, 0x0000, 0x0000 },
 	}
