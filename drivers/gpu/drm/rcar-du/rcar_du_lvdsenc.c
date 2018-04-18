@@ -458,9 +458,13 @@ void __rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 		struct rcar_du_lvdsenc *lvds_wk1 = rcdu->lvds[1];
 		struct rcar_du_lvdsenc *lvds1 = rcdu->lvds[1];
 
-		if (lvds_wk0->enabled || lvds_wk1->enabled)
+		if (lvds_wk0->enabled || lvds_wk1->enabled) {
+			if (lvds->index == 0)
+				lvds_wk0->enabled = false;
+			else if (lvds->index == 1)
+				lvds_wk1->enabled = false;
 			return;
-
+		}
 		/* Back up LVDS1 register. */
 		lvds->lvdpllcr = rcar_lvds_read(lvds, LVDPLLCR);
 		lvds->lvddiv = rcar_lvds_read(lvds, LVDDIV);
