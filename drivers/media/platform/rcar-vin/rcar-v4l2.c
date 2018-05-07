@@ -1039,8 +1039,10 @@ static int rvin_mc_open(struct file *file)
 		goto unlock;
 
 	ret = rvin_get_sd_format(vin, &vin->format);
-	if (ret)
+	if (ret) {
+		v4l2_fh_release(file);
 		goto unlock;
+	}
 
 	pm_runtime_get_sync(vin->dev);
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 1);
