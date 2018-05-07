@@ -41,7 +41,8 @@
 #define RCAR_CHSEL_MAX 6
 
 /* Time until source device reconnects */
-#define CONNECTION_TIME 1500
+#define CONNECTION_TIME 2000
+#define SETUP_WAIT_TIME 3000
 
 enum chip_id {
 	RCAR_H1,
@@ -174,6 +175,8 @@ struct rvin_info {
  * @compose:		active composing
  * @work_queue:		work queue at resuming
  * @rvin_resume:	delayed work at resuming
+ * @setup_wait:		wait queue used to setup VIN
+ * @suspend:		suspend flag
  *
  * @chsel:		channel selection
  * @index:		VIN index
@@ -210,6 +213,8 @@ struct rvin_dev {
 	struct v4l2_rect compose;
 	struct workqueue_struct *work_queue;
 	struct delayed_work rvin_resume;
+	wait_queue_head_t setup_wait;
+	bool suspend;
 
 	unsigned int chsel;
 	unsigned int index;

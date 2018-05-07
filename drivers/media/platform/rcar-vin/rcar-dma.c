@@ -1307,6 +1307,18 @@ static void rvin_buffer_queue(struct vb2_buffer *vb)
 	struct rvin_dev *vin = vb2_get_drv_priv(vb->vb2_queue);
 	unsigned long flags;
 
+	if (vin->suspend) {
+		if (!wait_event_timeout(vin->setup_wait,
+					!vin->suspend,
+					msecs_to_jiffies(SETUP_WAIT_TIME))) {
+			dev_warn(vin->dev, "set up timeout\n");
+			vin->suspend = false;
+			spin_lock_irqsave(&vin->qlock, flags);
+			return_all_buffers(vin, VB2_BUF_STATE_ERROR);
+			spin_unlock_irqrestore(&vin->qlock, flags);
+		}
+	}
+
 	spin_lock_irqsave(&vin->qlock, flags);
 
 	list_add_tail(to_buf_list(vbuf), &vin->buf_list);
@@ -1506,19 +1518,17 @@ void rvin_resume_start_streaming(struct work_struct *work)
 		spin_lock_irqsave(&vin->qlock, flags);
 		return_all_buffers(vin, VB2_BUF_STATE_ERROR);
 		spin_unlock_irqrestore(&vin->qlock, flags);
+
+		vin->suspend = false;
+		wake_up(&vin->setup_wait);
+
 		goto done;
 	}
 
 	vin->sequence = 0;
-	rvin_crop_scale_comp(vin);
-	ret = rvin_setup(vin);
 
-	/* Return all buffers if something went wrong */
-	if (ret) {
-		vin_err(vin, "Error is occurred in setup when resuming.\n");
-		rvin_suspend_stop_streaming(vin);
-		goto done;
-	}
+	vin->suspend = false;
+	wake_up(&vin->setup_wait);
 
 	return;
 done:
@@ -1528,10 +1538,22 @@ done:
 void rvin_suspend_stop_streaming(struct rvin_dev *vin)
 {
 	unsigned long flags;
+	int retries = 0;
 
 	spin_lock_irqsave(&vin->qlock, flags);
 
-	rvin_capture_stop(vin);
+	/* Wait for streaming to stop */
+	while (retries++ < RVIN_RETRIES) {
+		rvin_capture_stop(vin);
+
+		/* Check if HW is stopped */
+		if (!rvin_capture_active(vin))
+			break;
+
+		spin_unlock_irqrestore(&vin->qlock, flags);
+		msleep(RVIN_TIMEOUT_MS);
+		spin_lock_irqsave(&vin->qlock, flags);
+	}
 
 	/* Release all active buffers */
 	return_all_buffers(vin, VB2_BUF_STATE_ERROR);
@@ -1577,6 +1599,8 @@ int rvin_dma_probe(struct rvin_dev *vin, int irq)
 	spin_lock_init(&vin->qlock);
 
 	vin->state = STOPPED;
+	vin->suspend = false;
+	init_waitqueue_head(&vin->setup_wait);
 
 	for (i = 0; i < HW_BUFFER_NUM; i++)
 		vin->queue_buf[i] = NULL;
