@@ -47,7 +47,7 @@
 #define PHEERM_REG		0x74 /* PHY ESC Error Monitor */
 #define PHCLM_REG		0x78 /* PHY Clock Lane Monitor */
 #define PHDLM_REG		0x7C /* PHY Data Lane Monitor */
-#define CSI0CLKFCPR_REG		0x254/* CSI0CLK Frequency Configuration Preset */
+#define CSI0CLKFCPR_REG		0x260/* CSI0CLK Frequency Configuration Preset */
 
 /* Control Timing Select bits */
 #define TREF_TREF			(1 << 0)
