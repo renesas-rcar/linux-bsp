@@ -117,9 +117,13 @@
 	gsx_opp_table: gsx_opp_table {
 		compatible = "operating-points-v2";
 
+		opp@300000000 {
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <820000>;
+		};
 		opp@600000000 {
 			opp-hz = /bits/ 64 <600000000>;
-			opp-microvolt = <1030000>;
+			opp-microvolt = <820000>;
 		};
 	};
 
