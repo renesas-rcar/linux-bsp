@@ -100,6 +100,7 @@ static inline void tmio_mmc_dataend_dma(struct tmio_mmc_host *host)
 void tmio_mmc_enable_mmc_irqs(struct tmio_mmc_host *host, u32 i)
 {
 	host->sdcard_irq_mask &= ~(i & TMIO_MASK_IRQ);
+	host->sdcard_irq_mask |= TMIO_STAT_SETBIT_MASK;
 	sd_ctrl_write32_as_16_and_16(host, CTL_IRQ_MASK, host->sdcard_irq_mask);
 }
 EXPORT_SYMBOL_GPL(tmio_mmc_enable_mmc_irqs);
@@ -107,6 +108,7 @@ EXPORT_SYMBOL_GPL(tmio_mmc_enable_mmc_irqs);
 void tmio_mmc_disable_mmc_irqs(struct tmio_mmc_host *host, u32 i)
 {
 	host->sdcard_irq_mask |= (i & TMIO_MASK_IRQ);
+	host->sdcard_irq_mask |= TMIO_STAT_SETBIT_MASK;
 	sd_ctrl_write32_as_16_and_16(host, CTL_IRQ_MASK, host->sdcard_irq_mask);
 }
 EXPORT_SYMBOL_GPL(tmio_mmc_disable_mmc_irqs);
@@ -811,7 +813,8 @@ irqreturn_t tmio_mmc_irq(int irq, void *devid)
 	ireg = status & TMIO_MASK_IRQ & ~host->sdcard_irq_mask;
 
 	/* Clear the status except the interrupt status */
-	sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, TMIO_MASK_IRQ);
+	sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, TMIO_MASK_IRQ |
+				     TMIO_STAT_SETBIT_MASK);
 
 	if (__tmio_mmc_card_detect_irq(host, ireg, status))
 		return IRQ_HANDLED;
@@ -1033,7 +1036,8 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 
 	if (mrq->cmd->error || (mrq->data && mrq->data->error)) {
 		/* clear the interrupt flag register */
-		sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, 0);
+		sd_ctrl_write32_as_16_and_16(host, CTL_STATUS,
+					     TMIO_STAT_SETBIT_MASK);
 		tmio_mmc_abort_dma(host);
 	}
 
