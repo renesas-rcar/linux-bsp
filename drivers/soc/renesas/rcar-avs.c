@@ -26,18 +26,18 @@
 static int change_default_opp_pattern(struct device_node *avs_node,
 				      unsigned int opp_pattern_num)
 {
-	struct device_node *cpu_node = NULL;
-	int cpu_nums, i;
+	struct device_node *dev_node = NULL;
+	int dev_nums, i;
 
 	__be32 *list, *pp_val;
 	int size;
 	struct property *pp;
 
-	cpu_nums = of_count_phandle_with_args(avs_node, "target_cpus", 0);
+	dev_nums = of_count_phandle_with_args(avs_node, "target_devices", 0);
 
-	for (i = 0; i < cpu_nums; i++) {
-		cpu_node = of_parse_phandle(avs_node, "target_cpus", i);
-		pp = of_find_property(cpu_node, "operating-points-v2", &size);
+	for (i = 0; i < dev_nums; i++) {
+		dev_node = of_parse_phandle(avs_node, "target_devices", i);
+		pp = of_find_property(dev_node, "operating-points-v2", &size);
 		if (!pp || !pp->value)
 			return -ENOENT;
 
@@ -53,8 +53,8 @@ static int change_default_opp_pattern(struct device_node *avs_node,
 		}
 		pp->length = sizeof(*list); /* opp fw only accept 1 opp_tb */
 
-		pr_info("rcar-cpufreq: %s is running with: %s\n",
-			of_node_full_name(cpu_node),
+		pr_info("rcar-avs: %s is running with: %s\n",
+			of_node_full_name(dev_node),
 			of_node_full_name(of_find_node_by_phandle(
 				be32_to_cpup(pp->value))));
 	}
@@ -110,7 +110,7 @@ static int __init rcar_avs_init(void)
 		}
 	}
 
-	pr_info("rcar-cpufreq: use avs value: %d\n", avs_val);
+	pr_info("rcar-avs: use avs value: %d\n", avs_val);
 
 	/* Apply avs value */
 	ret = change_default_opp_pattern(np, avs_val);
