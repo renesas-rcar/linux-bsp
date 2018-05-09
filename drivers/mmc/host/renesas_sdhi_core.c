@@ -263,7 +263,7 @@ static unsigned int renesas_sdhi_init_tuning(struct tmio_mmc_host *host)
 	priv = host_to_priv(host);
 
 	/* Initialize SCC */
-	sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, 0x0);
+	sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, TMIO_STAT_SETBIT_MASK);
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
 			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
