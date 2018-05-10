@@ -35,6 +35,7 @@
 
 #define CPG_PLLECR_PLL0ST	BIT(8)
 #define CPG_PLLECR_PLL2ST	BIT(10)
+#define CPG_PLLECR_PLL4ST	BIT(12)
 #define CPG_PLLCR_STC_MASK	GENMASK(30, 24) /* Bits in PLL0/2/4 CR */
 
 static u32 cpg_quirks;
@@ -42,6 +43,7 @@ static u32 cpg_quirks;
 #define PLL_ERRATA		BIT(0)	/* Missing PLL0/2/4 post-divider */
 #define RCLK_CKSEL_RESEVED	BIT(1)	/* Resverd RCLK clock soruce select */
 #define CPG_Z2FC_BIT_MASK_SFT_8	BIT(2)	/* Use Z2FC bit mask range to [12:8] */
+#define CPG_ZG_OVERRIDE_MODE	BIT(3)	/* Support ZG clock override mode */
 
 struct cpg_simple_notifier {
 	struct notifier_block nb;
@@ -361,7 +363,7 @@ static struct clk * __init cpg_zg_clk_register(const char *name,
 {
 	struct clk_init_data init;
 	struct cpg_z_clk *zclk;
-	struct clk *clk;
+	struct clk *clk, *parent;
 
 	zclk = kzalloc(sizeof(*zclk), GFP_KERNEL);
 	if (!zclk)
@@ -369,7 +371,7 @@ static struct clk * __init cpg_zg_clk_register(const char *name,
 
 	init.name = name;
 	init.ops = &cpg_z_clk_ops;
-	init.flags = 0;
+	init.flags = CLK_SET_RATE_PARENT;
 	init.parent_names = &parent_name;
 	init.num_parents = 1;
 
@@ -380,8 +382,12 @@ static struct clk * __init cpg_zg_clk_register(const char *name,
 	zclk->fixed_div = div; /* PLLVCO x 1/div1 x 3DGE divider x 1/div2 */
 
 	clk = clk_register(NULL, &zclk->hw);
-	if (IS_ERR(clk))
+	if (IS_ERR(clk)) {
 		kfree(zclk);
+	} else if (cpg_quirks & CPG_ZG_OVERRIDE_MODE) {
+		parent = clk_get_parent(clk);
+		zclk->max_freq = clk_get_rate(parent) / zclk->fixed_div;
+	}
 
 	return clk;
 }
@@ -614,7 +620,15 @@ static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 	},
 	{
 		.soc_id = "r8a7796", .revision = "ES1.0",
-		.data = (void *)RCLK_CKSEL_RESEVED,
+		.data = (void *)(RCLK_CKSEL_RESEVED | CPG_ZG_OVERRIDE_MODE),
+	},
+	{
+		.soc_id = "r8a7796",
+		.data = (void *)CPG_ZG_OVERRIDE_MODE,
+	},
+	{
+		.soc_id = "r8a77965",
+		.data = (void *)CPG_ZG_OVERRIDE_MODE,
 	},
 	{
 		.soc_id = "r8a77990",
@@ -631,7 +645,6 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 	const struct clk *parent;
 	unsigned int mult = 1;
 	unsigned int div = 1;
-	u32 value;
 
 	parent = clks[core->parent & 0xffff];	/* CLK_TYPE_PE uses high bits */
 	if (IS_ERR(parent))
@@ -667,16 +680,12 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 
 	case CLK_TYPE_GEN3_PLL4:
 		/*
-		 * PLL4 is a configurable multiplier clock. Register it as a
-		 * fixed factor clock for now as there's no generic multiplier
-		 * clock implementation and we currently have no need to change
-		 * the multiplier value.
+		 * The PLL4 is implemented as customized clock,
+		 * it changes the multiplier when devfreq changes between
+		 * normal and override mode.
 		 */
-		value = readl(base + CPG_PLL4CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
-		if (cpg_quirks & PLL_ERRATA)
-			mult *= 2;
-		break;
+		return cpg_pll_clk_register(core->name, __clk_get_name(parent),
+				base, CPG_PLL4CR, CPG_PLLECR_PLL4ST);
 
 	case CLK_TYPE_GEN3_SD:
 		return cpg_sd_clk_register(core, base, __clk_get_name(parent),
