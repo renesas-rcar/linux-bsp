@@ -1233,15 +1233,46 @@ static const struct rvin_info rcar_info_r8a77990 = {
 	.num_chsels = 4,
 	.chsels = {
 		{
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+		}, {
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+		}, {
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+		}, {
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+		}, {
 			{ .csi = RVIN_CSI40, .chan = 0 },
 			{ .csi = RVIN_NC, .chan = 0 },
 			{ .csi = RVIN_CSI40, .chan = 1 },
 			{ .csi = RVIN_CSI40, .chan = 0 },
 		}, {
+			/* CSI2 Embedded of Virtual Channel 0 */
 			{ .csi = RVIN_CSI40, .chan = 0 },
 			{ .csi = RVIN_CSI40, .chan = 1 },
 			{ .csi = RVIN_CSI40, .chan = 0 },
 			{ .csi = RVIN_CSI40, .chan = 1 },
+		}, {
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+		}, {
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
+			{ .csi = RVIN_NC, .chan = 0 },
 		},
 	},
 };
