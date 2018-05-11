@@ -936,8 +936,6 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 		if (host->compare_scc_data && !host->compare_scc_data(host))
 			set_bit(i, host->smpcmp);
-
-		usleep_range(1000, 1200);
 	}
 
 	ret = host->select_tuning(host);
