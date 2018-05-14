@@ -38,6 +38,13 @@ struct rcar_sysc_area {
 	unsigned int flags;	/* See PD_* */
 };
 
+/*
+ * List of registers that are not common in all platform.
+ */
+struct rcar_sysc_extra_regs {
+	u16 sysc_extmask_offs;	/* Offset of SYSCEXTMASK register */
+	u32 sysc_extmask_msks;	/* Mask value of SYSCEXTMASK register */
+};
 
 /*
  * SoC-specific Power Area Description
@@ -47,6 +54,7 @@ struct rcar_sysc_info {
 	int (*init)(void);	/* Optional */
 	const struct rcar_sysc_area *areas;
 	unsigned int num_areas;
+	struct rcar_sysc_extra_regs *extra_regs;
 };
 
 extern const struct rcar_sysc_info r8a7743_sysc_info;
@@ -58,7 +66,9 @@ extern const struct rcar_sysc_info r8a7792_sysc_info;
 extern const struct rcar_sysc_info r8a7794_sysc_info;
 extern const struct rcar_sysc_info r8a7795_sysc_info;
 extern const struct rcar_sysc_info r8a7796_sysc_info;
+extern const struct rcar_sysc_info r8a77965_sysc_info;
 extern const struct rcar_sysc_info r8a77970_sysc_info;
+extern const struct rcar_sysc_info r8a77990_sysc_info;
 extern const struct rcar_sysc_info r8a77995_sysc_info;
 
 
