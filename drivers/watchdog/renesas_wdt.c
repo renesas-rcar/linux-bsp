@@ -108,7 +108,8 @@ static unsigned int rwdt_get_timeleft(struct watchdog_device *wdev)
 }
 
 static const struct watchdog_info rwdt_ident = {
-	.options = WDIOF_MAGICCLOSE | WDIOF_KEEPALIVEPING | WDIOF_SETTIMEOUT,
+	.options = WDIOF_MAGICCLOSE | WDIOF_KEEPALIVEPING | WDIOF_SETTIMEOUT |
+		WDIOF_CARDRESET,
 	.identity = "Renesas WDT Watchdog",
 };
 
@@ -142,9 +143,10 @@ static int rwdt_probe(struct platform_device *pdev)
 		return PTR_ERR(clk);
 
 	pm_runtime_enable(&pdev->dev);
-
 	pm_runtime_get_sync(&pdev->dev);
 	priv->clk_rate = clk_get_rate(clk);
+	priv->wdev.bootstatus = (readb_relaxed(priv->base + RWTCSRA) &
+				RWTCSRA_WOVF) ? WDIOF_CARDRESET : 0;
 	pm_runtime_put(&pdev->dev);
 
 	if (!priv->clk_rate) {
@@ -214,9 +216,40 @@ static const struct of_device_id rwdt_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, rwdt_ids);
 
+#ifdef CONFIG_PM_SLEEP
+static int rwdt_suspend(struct device *dev)
+{
+	int ret = 0;
+	struct rwdt_priv *priv = dev_get_drvdata(dev);
+
+	if (watchdog_active(&priv->wdev))
+		ret = rwdt_stop(&priv->wdev);
+
+	return ret;
+}
+
+static int rwdt_resume(struct device *dev)
+{
+	int ret = 0;
+	struct rwdt_priv *priv = dev_get_drvdata(dev);
+
+	if (watchdog_active(&priv->wdev))
+		ret = rwdt_start(&priv->wdev);
+
+	return ret;
+}
+
+static SIMPLE_DEV_PM_OPS(rwdt_pm_ops,
+			rwdt_suspend, rwdt_resume);
+#define DEV_PM_OPS (&rwdt_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rwdt_driver = {
 	.driver = {
 		.name = "renesas_wdt",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rwdt_ids,
 	},
 	.probe = rwdt_probe,
