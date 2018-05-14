@@ -1,7 +1,7 @@
 /*
  * vsp1_pipe.c  --  R-Car VSP1 Pipeline
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -238,6 +238,8 @@ void vsp1_pipeline_init(struct vsp1_pipeline *pipe)
 
 	INIT_LIST_HEAD(&pipe->entities);
 	pipe->state = VSP1_PIPELINE_STOPPED;
+	pipe->vmute_flag = false;
+	pipe->completed = false;
 }
 
 /* Must be called with the pipe irqlock held. */
@@ -331,17 +333,27 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe)
 
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 {
-	bool completed;
+	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
+	bool completed, interlaced = false;
+	int i;
 
 	if (pipe == NULL)
 		return;
+
+	for (i = 0; i < vsp1->info->rpf_count; ++i) {
+		if (!pipe->inputs[i])
+			continue;
+
+		interlaced = pipe->inputs[i]->interlaced;
+	}
 
 	/*
 	 * If the DL commit raced with the frame end interrupt, the commit ends
 	 * up being postponed by one frame. @completed represents whether the
 	 * active frame was finished or postponed.
 	 */
-	completed = vsp1_dlm_irq_frame_end(pipe->output->dlm);
+	completed = vsp1_dlm_irq_frame_end(pipe->output->dlm, interlaced);
+	pipe->completed = completed;
 
 	if (pipe->hgo)
 		vsp1_hgo_frame_end(pipe->hgo);

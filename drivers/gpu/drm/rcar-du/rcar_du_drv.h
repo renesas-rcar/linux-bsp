@@ -1,7 +1,7 @@
 /*
  * rcar_du_drv.h  --  R-Car Display Unit DRM driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -31,6 +31,10 @@ struct rcar_du_lvdsenc;
 #define RCAR_DU_FEATURE_CRTC_IRQ_CLOCK	(1 << 0)	/* Per-CRTC IRQ and clock */
 #define RCAR_DU_FEATURE_EXT_CTRL_REGS	(1 << 1)	/* Has extended control registers */
 #define RCAR_DU_FEATURE_VSP1_SOURCE	(1 << 2)	/* Has inputs from VSP1 */
+#define RCAR_DU_FEATURE_R8A77965_REGS	(1 << 3)	/* Use R8A77965 registers */
+#define RCAR_DU_FEATURE_R8A77995_REGS	(1 << 4)	/* Use R8A77995 registers */
+#define RCAR_DU_FEATURE_LVDS_PLL	(1 << 5)	/* Use PLL in LVDS */
+#define RCAR_DU_FEATURE_R8A77990_REGS	(1 << 6)	/* Use R8A77990 registers */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	(1 << 0)	/* Align pitches to 128 bytes */
 #define RCAR_DU_QUIRK_LVDS_LANES	(1 << 1)	/* LVDS lanes 1 and 3 inverted */
@@ -57,6 +61,7 @@ struct rcar_du_output_routing {
  * @num_crtcs: total number of CRTCs
  * @routes: array of CRTC to output routes, indexed by output (RCAR_DU_OUTPUT_*)
  * @num_lvds: number of internal LVDS encoders
+ * @skip_ch: skip channel for r8a77965
  */
 struct rcar_du_device_info {
 	unsigned int gen;
@@ -66,6 +71,7 @@ struct rcar_du_device_info {
 	struct rcar_du_output_routing routes[RCAR_DU_OUTPUT_MAX];
 	unsigned int num_lvds;
 	unsigned int dpll_ch;
+	unsigned int skip_ch;
 };
 
 #define RCAR_DU_MAX_CRTCS		4
@@ -92,10 +98,14 @@ struct rcar_du_device {
 	struct {
 		struct drm_property *alpha;
 		struct drm_property *colorkey;
+		struct drm_property *colorkey_alpha;
 	} props;
 
 	unsigned int dpad0_source;
 	unsigned int vspd1_sink;
+
+	bool vspdl_fix;
+	unsigned int brs_num;
 
 	struct rcar_du_lvdsenc *lvds[RCAR_DU_MAX_LVDS];
 };
