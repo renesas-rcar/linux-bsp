@@ -400,17 +400,23 @@ static int adv748x_hdmi_propagate_pixelrate(struct adv748x_hdmi *hdmi)
 	struct v4l2_subdev *tx;
 	struct v4l2_dv_timings timings;
 	struct v4l2_bt_timings *bt = &timings.bt;
+	unsigned int ppf; /* total pixels per frame */
 	unsigned int fps;
+	int ret;
 
 	tx = adv748x_get_remote_sd(&hdmi->pads[ADV748X_HDMI_SOURCE]);
 	if (!tx)
 		return -ENOLINK;
 
-	adv748x_hdmi_query_dv_timings(&hdmi->sd, &timings);
+	ret = adv748x_hdmi_query_dv_timings(&hdmi->sd, &timings);
+	if (ret)
+		return ret;
 
-	fps = DIV_ROUND_CLOSEST_ULL(bt->pixelclock,
-				    V4L2_DV_BT_FRAME_WIDTH(bt) *
-				    V4L2_DV_BT_FRAME_HEIGHT(bt));
+	ppf = V4L2_DV_BT_FRAME_WIDTH(bt) * V4L2_DV_BT_FRAME_HEIGHT(bt);
+	if (unlikely(ppf == 0))
+		return -EINVAL;
+
+	fps = DIV_ROUND_CLOSEST_ULL(bt->pixelclock, ppf);
 
 	return adv748x_csi2_set_pixelrate(tx, bt->width * bt->height * fps);
 }
