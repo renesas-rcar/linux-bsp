@@ -112,6 +112,7 @@
 #define ID_DONE		(1 << 2)
 #define ID_ARBLOST	(1 << 3)
 #define ID_NACK		(1 << 4)
+#define ID_RESTART	(1 << 5)
 /* persistent flags */
 #define ID_P_PM_BLOCKED	(1 << 31)
 #define ID_P_MASK	ID_P_PM_BLOCKED
@@ -309,7 +310,10 @@ static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 		rcar_i2c_write(priv, ICMSR, 0);
 		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
 	} else {
-		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
+		if ((priv->flags & ID_RESTART) == 0)
+			rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
+		else
+			priv->flags &= ~ID_RESTART;
 		rcar_i2c_write(priv, ICMSR, 0);
 	}
 }
@@ -513,13 +517,15 @@ static void rcar_i2c_irq_recv(struct rcar_i2c_priv *priv, u32 msr)
 		priv->pos++;
 	}
 
-	/*
-	 * If next received data is the _LAST_, go to STOP phase. Might be
-	 * overwritten by REP START when setting up a new msg. Not elegant
-	 * but the only stable sequence for REP START I have found so far.
-	 */
-	if (priv->pos + 1 >= msg->len)
-		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_STOP);
+	/* If next received data is the _LAST_, go to STOP phase. */
+	if (priv->pos + 1 == msg->len) {
+		if (priv->flags & ID_LAST_MSG)
+			rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_STOP);
+		else {
+			rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
+			priv->flags |= ID_RESTART;
+		}
+	}
 
 	if (priv->pos == msg->len && !(priv->flags & ID_LAST_MSG))
 		rcar_i2c_next_msg(priv);
@@ -588,8 +594,10 @@ static irqreturn_t rcar_i2c_irq(int irq, void *ptr)
 	u32 msr, val;
 
 	/* Clear START or STOP as soon as we can */
-	val = rcar_i2c_read(priv, ICMCR);
-	rcar_i2c_write(priv, ICMCR, val & RCAR_BUS_MASK_DATA);
+	if ((priv->flags & ID_RESTART) == 0) {
+		val = rcar_i2c_read(priv, ICMCR);
+		rcar_i2c_write(priv, ICMCR, val & RCAR_BUS_MASK_DATA);
+	}
 
 	msr = rcar_i2c_read(priv, ICMSR);
 
