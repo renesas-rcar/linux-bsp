@@ -393,9 +393,9 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 	rcar_lvds_write(lvds_wk, LVDDIV, lvds_wk->lvddiv);
 
 	dev_dbg(rcrtc->group->dev->dev, "LVDPLLCR: 0x%x\n",
-		ioread32(lvds->mmio + LVDPLLCR));
+		rcar_lvds_read(lvds, LVDPLLCR));
 	dev_dbg(rcrtc->group->dev->dev, "LVDDIV: 0x%x\n",
-		ioread32(lvds->mmio + LVDDIV));
+		rcar_lvds_read(lvds, LVDDIV));
 
 	if (lvds->link_mode == RCAR_LVDS_DUAL)
 		rcar_du_lvdsenc_dual_mode(rcdu->lvds[0], rcdu->lvds[1],
@@ -462,10 +462,10 @@ void __rcar_du_lvdsenc_stop(struct rcar_du_lvdsenc *lvds)
 			return;
 
 		/* Back up LVDS1 register. */
-		lvds->lvdpllcr = ioread32(lvds->mmio + LVDPLLCR);
-		lvds->lvddiv = ioread32(lvds->mmio + LVDDIV);
-		lvds1->lvdpllcr = ioread32(lvds1->mmio + LVDPLLCR);
-		lvds1->lvddiv = ioread32(lvds1->mmio + LVDDIV);
+		lvds->lvdpllcr = rcar_lvds_read(lvds, LVDPLLCR);
+		lvds->lvddiv = rcar_lvds_read(lvds, LVDDIV);
+		lvds1->lvdpllcr = rcar_lvds_read(lvds1, LVDPLLCR);
+		lvds1->lvddiv = rcar_lvds_read(lvds1, LVDDIV);
 
 		rcar_lvds_write(lvds, LVDCR0, 0);
 		rcar_lvds_write(lvds1, LVDCR0, 0);
@@ -517,7 +517,7 @@ bool rcar_du_lvdsenc_stop_pll(struct rcar_du_lvdsenc *lvds)
 	    lvds->link_mode == RCAR_LVDS_DUAL) {
 		int ret;
 
-		ret = ioread32(lvds->mmio + LVDPLLCR);
+		ret = rcar_lvds_read(lvds, LVDPLLCR);
 		if (!ret)
 			return true;
 	}
