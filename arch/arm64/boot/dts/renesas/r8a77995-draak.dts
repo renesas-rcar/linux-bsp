@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the Draak board
  *
- * Copyright (C) 2016-2017 Renesas Electronics Corp.
+ * Copyright (C) 2016-2018 Renesas Electronics Corp.
  * Copyright (C) 2017 Glider bvba
  *
  * This file is licensed under the terms of the GNU General Public License
@@ -192,6 +192,13 @@
 			};
 		};
 	};
+
+	/* External DU dot clocks */
+	x12_clk: x12 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <74250000>;
+	};
 };
 
 &extal_clk {
@@ -257,6 +264,15 @@
 
 &du {
 	status = "okay";
+
+	clocks = <&cpg CPG_MOD 724>,
+		 <&cpg CPG_MOD 723>,
+		 <&cpg CPG_MOD 727>,
+		 <&cpg CPG_MOD 727>,
+		 <&x12_clk>,
+		 <&extal_clk>;
+	clock-names = "du.0", "du.1", "lvds.0", "lvds.1",
+		      "dclkin.0", "extal";
 
 	ports {
 		port@0 {
