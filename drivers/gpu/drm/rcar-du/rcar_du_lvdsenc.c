@@ -316,13 +316,20 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 	const struct drm_display_mode *mode =
 				&rcrtc->crtc.state->adjusted_mode;
 	unsigned int mode_freq = mode->clock * 1000;
-	unsigned int extal_freq = 48000000; /* EXTAL 48MHz */
+	unsigned int ext_clk = 0;
 	struct pll_info *lvds_pll[2];
 	struct rcar_du_lvdsenc *lvds_wk0 = rcdu->lvds[0];
 	struct rcar_du_lvdsenc *lvds_wk1 = rcdu->lvds[1];
 	struct rcar_du_lvdsenc *lvds_wk = rcdu->lvds[lvds->index];
 	int i, ret;
-	u32 clksel;
+	u32 clksel, cksel;
+
+	if (rcrtc->extclock)
+		ext_clk = clk_get_rate(rcrtc->extclock);
+	else
+		dev_warn(rcdu->dev, "external clock is not set\n");
+
+	dev_dbg(rcrtc->group->dev->dev, "external clock %d Hz\n", ext_clk);
 
 	if (lvds_wk0->enabled && lvds->index == 0)
 		return;
@@ -353,7 +360,7 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 		else
 			edivider = false;
 
-		rcar_du_lvdsenc_pll_calc(rcrtc, lvds_pll[i], extal_freq,
+		rcar_du_lvdsenc_pll_calc(rcrtc, lvds_pll[i], ext_clk,
 					 mode_freq, edivider);
 	}
 
@@ -378,9 +385,14 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 		 lvds_pll[i]->pllclk, lvds_pll[i]->clk_n, lvds_pll[i]->clk_m,
 		 lvds_pll[i]->clk_e, lvds_pll[i]->diff, lvds_pll[i]->div);
 
+	if (rcrtc->extal_use)
+		cksel = LVDPLLCR_CKSEL_EXTAL;
+	else
+		cksel = LVDPLLCR_CKSEL_DU_DOTCLKIN(rcrtc->index);
+
 	lvds_wk->lvdpllcr = (LVDPLLCR_PLLON |
 		LVDPLLCR_OCKSEL_7 | clksel | LVDPLLCR_CLKOUT_ENABLE |
-		LVDPLLCR_CKSEL_EXTAL | (lvds_pll[i]->clk_e << 10) |
+		cksel | (lvds_pll[i]->clk_e << 10) |
 		(lvds_pll[i]->clk_n << 3) | lvds_pll[i]->clk_m);
 
 	if (lvds_pll[i]->div > 0)
