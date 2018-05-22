@@ -104,7 +104,8 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMCTR				0x0000
 #define IMCTR_TRE			(1 << 17)
 #define IMCTR_AFE			(1 << 16)
-#define IMCTR_RTSEL_MASK		(3 << 4)
+#define IMCTR_RTSEL_MASK_GEN2		(3 << 4)
+#define IMCTR_RTSEL_MASK_GEN3		(7 << 4)
 #define IMCTR_RTSEL_SHIFT		4
 #define IMCTR_TREN			(1 << 3)
 #define IMCTR_INTEN			(1 << 2)
