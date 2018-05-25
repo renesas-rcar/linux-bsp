@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the r8a7795 SoC
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corp.
+ * Copyright (C) 2015-2018 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -82,6 +82,10 @@
 			power-domains = <&sysc R8A7795_PD_CA57_CPU0>;
 			next-level-cache = <&L2_CA57>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
+			dynamic-power-coefficient = <854>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks =<&cpg CPG_CORE R8A7795_CLK_Z>;
 			operating-points-v2 = <&cluster0_opp0>,
@@ -148,6 +152,10 @@
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_1>;
+			#cooling-cells = <2>;
+			dynamic-power-coefficient = <277>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
 			clocks =<&cpg CPG_CORE R8A7795_CLK_Z2>;
 			operating-points-v2 = <&cluster1_opp>;
 			capacity-dmips-mhz = <540>;
@@ -3048,6 +3056,7 @@
 				polling-delay-passive = <250>;
 				polling-delay = <0>;
 				thermal-sensors = <&tsc 0>;
+				sustainable-power = <6313>;
 
 				trips {
 					sensor1_crit: sensor1-crit {
@@ -3062,6 +3071,7 @@
 				polling-delay-passive = <250>;
 				polling-delay = <0>;
 				thermal-sensors = <&tsc 1>;
+				sustainable-power = <6313>;
 
 				trips {
 					sensor2_crit: sensor2-crit {
@@ -3076,12 +3086,38 @@
 				polling-delay-passive = <250>;
 				polling-delay = <0>;
 				thermal-sensors = <&tsc 2>;
+				sustainable-power = <6313>;
 
 				trips {
+					threshold: trip-point@0 {
+						temperature = <90000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+
+					target: trip-point@1 {
+						temperature = <100000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+
 					sensor3_crit: sensor3-crit {
 						temperature = <120000>;
 						hysteresis = <2000>;
 						type = "critical";
+					};
+				};
+
+				cooling-maps {
+					map0 {
+						trip = <&target>;
+						cooling-device = <&a57_0 0 2>;
+						contribution = <1024>;
+					};
+					map1 {
+						trip = <&target>;
+						cooling-device = <&a53_0 0 2>;
+						contribution = <1024>;
 					};
 				};
 			};
