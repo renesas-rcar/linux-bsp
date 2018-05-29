@@ -610,10 +610,15 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 	ret = v4l2_async_notifier_register(&vin->v4l2_dev, &vin->notifier);
 	if (ret < 0) {
 		vin_err(vin, "Notifier registration failed\n");
-		return ret;
+		goto error_notifier_cleanup;
 	}
 
 	return 0;
+
+error_notifier_cleanup:
+	v4l2_async_notifier_cleanup(&vin->notifier);
+
+	return ret;
 }
 
 /* -----------------------------------------------------------------------------
@@ -877,8 +882,15 @@ static int rvin_group_graph_register(struct rvin_dev *vin)
 	mutex_unlock(&vin->group->lock);
 
 	ret = v4l2_async_notifier_register(&vin->v4l2_dev, &vin->notifier);
-	if (ret < 0)
+	if (ret < 0) {
 		vin_err(vin, "Notifier registration failed\n");
+		goto error_notifier_cleanup;
+	}
+
+	return 0;
+
+error_notifier_cleanup:
+	v4l2_async_notifier_cleanup(&vin->notifier);
 
 	return ret;
 }
