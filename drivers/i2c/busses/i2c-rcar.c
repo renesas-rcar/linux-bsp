@@ -720,11 +720,23 @@ static void rcar_i2c_release_dma(struct rcar_i2c_priv *priv)
 
 static void rcar_i2c_reset(struct rcar_i2c_priv *priv)
 {
+	int ret, i;
+
 	/* I2C module reset and reset clean */
 	writel(priv->reset_bit, priv->srcr);
-	writel(priv->reset_bit, priv->srstclr);
 	udelay(1);
-	rcar_i2c_init(priv);
+	/* Release module from reset state */
+	writel(priv->reset_bit, priv->srstclr);
+
+	/* do release wait */
+	for (i = 0; i < LOOP_TIMEOUT; i++) {
+		ret = readl(priv->srcr) & priv->reset_bit;
+		if (!ret)
+			return;
+		else if (ret < 0)
+			break;
+		udelay(1);
+	}
 }
 
 static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
@@ -741,8 +753,10 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 
 	pm_runtime_get_sync(dev);
 
-	if (priv->srcr && priv->srstclr)
+	if (priv->srcr && priv->srstclr) {
 		rcar_i2c_reset(priv);
+		rcar_i2c_init(priv);
+	}
 
 	ret = rcar_i2c_bus_barrier(priv);
 	if (ret < 0)
