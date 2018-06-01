@@ -318,6 +318,31 @@ void rcar_du_crtc_route_output(struct drm_crtc *crtc,
 		rcdu->dpad0_source = rcrtc->index;
 }
 
+static struct rcar_du_lvdsenc *
+rcar_du_crtc_get_lvdsenc(struct rcar_du_crtc *rcrtc)
+{
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
+
+	if (rcrtc->outputs & BIT(RCAR_DU_OUTPUT_LVDS0))
+		return rcdu->lvds[0];
+
+	if (rcrtc->outputs & BIT(RCAR_DU_OUTPUT_LVDS1))
+		return rcdu->lvds[1];
+
+	/*
+	 * Devices that generate dot clock using PLL of LVDS need to allocate
+	 * lvds also at DPAD signal.
+	 */
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL)) {
+		if (rcrtc->index == 0)
+			return rcdu->lvds[0];
+		else if (rcrtc->index == 1)
+			return rcdu->lvds[1];
+	}
+
+	return NULL;
+}
+
 static unsigned int plane_zpos(struct rcar_du_plane *plane)
 {
 	return plane->plane.state->normalized_zpos;
@@ -479,11 +504,11 @@ static void rcar_du_crtc_wait_page_flip(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_lvdsenc *lvds = rcar_du_crtc_get_lvdsenc(rcrtc);
 	struct rcar_du_device *rcdu = rcrtc->group->dev;
 
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
-		rcar_du_lvdsenc_pll_pre_start(rcdu->lvds[rcrtc->index],
-					       rcrtc);
+	if (lvds && rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		rcar_du_lvdsenc_pll_pre_start(lvds, rcrtc);
 
 	/* Set display off and background to black */
 	rcar_du_crtc_write(rcrtc, DOOR, DOOR_RGB(0, 0, 0));
@@ -506,6 +531,7 @@ static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_lvdsenc *lvds = rcar_du_crtc_get_lvdsenc(rcrtc);
 	struct drm_crtc *crtc = &rcrtc->crtc;
 	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	bool interlaced;
@@ -520,8 +546,8 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 			     (interlaced ? DSYSR_SCM_INT_VIDEO : 0) |
 			     DSYSR_TVM_MASTER);
 
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
-		rcar_du_lvdsenc_enable(rcdu->lvds[rcrtc->index], crtc, true);
+	if (lvds && rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		rcar_du_lvdsenc_enable(lvds, crtc, true);
 
 	rcar_du_group_start_stop(rcrtc->group, true);
 }
@@ -557,6 +583,7 @@ static void rcar_du_crtc_disable_planes(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_lvdsenc *lvds = rcar_du_crtc_get_lvdsenc(rcrtc);
 	struct drm_crtc *crtc = &rcrtc->crtc;
 	struct rcar_du_device *rcdu = rcrtc->group->dev;
 
@@ -571,7 +598,7 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 * are stopped in one operation as we now wait for one vblank per CRTC.
 	 * Whether this can be improved needs to be researched.
 	 */
-	if (!rcar_du_lvdsenc_stop_pll(rcdu->lvds[rcrtc->index]))
+	if (!rcar_du_lvdsenc_stop_pll(lvds))
 		rcar_du_crtc_disable_planes(rcrtc);
 
 	/*
@@ -582,8 +609,8 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	rcar_du_crtc_wait_page_flip(rcrtc);
 	drm_crtc_vblank_off(crtc);
 
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
-		__rcar_du_lvdsenc_stop(rcdu->lvds[rcrtc->index]);
+	if (lvds && rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		__rcar_du_lvdsenc_stop(lvds);
 
 	/* Disable the VSP compositor. */
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
