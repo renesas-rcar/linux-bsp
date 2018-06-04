@@ -123,13 +123,10 @@ static void rcar_du_encoder_mode_set(struct drm_encoder *encoder,
 
 	renc->connector = to_rcar_connector(conn_state->connector);
 
-	if (renc->bridge) {
-		dev_dbg(encoder->dev->dev, "LVDS mode is not set\n");
-		return;
-	}
-
 	if (!info->num_bus_formats || !info->bus_formats) {
-		dev_err(encoder->dev->dev, "no LVDS bus format reported\n");
+		if (!renc->bridge)
+			dev_err(encoder->dev->dev,
+				"no LVDS bus format reported\n");
 		return;
 	}
 
