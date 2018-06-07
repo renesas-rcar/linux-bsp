@@ -1,7 +1,7 @@
 /*
  * rcar_du_lvdscon.c  --  R-Car Display Unit LVDS Connector
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -80,8 +80,6 @@ int rcar_du_lvds_connector_init(struct rcar_du_device *rcdu,
 	drm_connector_helper_add(connector, &connector_helper_funcs);
 
 	connector->dpms = DRM_MODE_DPMS_OFF;
-	drm_object_property_set_value(&connector->base,
-		rcdu->ddev->mode_config.dpms_property, DRM_MODE_DPMS_OFF);
 
 	ret = drm_mode_connector_attach_encoder(connector, encoder);
 	if (ret < 0)

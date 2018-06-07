@@ -1,7 +1,7 @@
 /*
  * rcar_du_group.c  --  R-Car Display Unit Channels Pair
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -46,10 +46,16 @@ void rcar_du_group_write(struct rcar_du_group *rgrp, u32 reg, u32 data)
 
 static void rcar_du_group_setup_pins(struct rcar_du_group *rgrp)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
+
 	u32 defr6 = DEFR6_CODE | DEFR6_ODPM12_DISP;
 
 	if (rgrp->num_crtcs > 1)
 		defr6 |= DEFR6_ODPM22_DISP;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS) &&
+	    rgrp->index == 1)
+		defr6 = DEFR6_CODE | DEFR6_ODPM22_DISP;
 
 	rcar_du_group_write(rgrp, DEFR6, defr6);
 }
@@ -82,8 +88,16 @@ static void rcar_du_group_setup_defr8(struct rcar_du_group *rgrp)
 		 */
 		u32 crtc = ffs(possible_crtcs) - 1;
 
+		if (rcdu->info->skip_ch)
+			crtc += 1; /* offset for r8a77965 */
+
 		if (crtc / 2 == rgrp->index)
 			defr8 |= DEFR8_DRGBS_DU(crtc);
+
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77990_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77995_REGS))
+			defr8 |= (DEFR8_DRGBS_DU(rcdu->dpad0_source) |
+				 DEFR8_DRGBS_DU(crtc));
 	}
 
 	rcar_du_group_write(rgrp, DEFR8, defr8);
@@ -118,8 +132,15 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 		 * are setup through per-group registers, only available when
 		 * the group has two channels.
 		 */
-		if ((rcdu->info->gen < 3 && rgrp->index == 0) ||
-		    (rcdu->info->gen == 3 &&  rgrp->num_crtcs > 1))
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+			rcar_du_group_write(rgrp,
+					    DIDSR, DIDSR_CODE |
+					    DIDSR_LCDS_LVDS0(1) |
+					    DIDSR_LCDS_LVDS0(0) |
+					    DIDSR_PDCS_CLK(1, 0) |
+					    DIDSR_PDCS_CLK(0, 0));
+		else if ((rcdu->info->gen < 3 && rgrp->index == 0) ||
+			 (rcdu->info->gen == 3 &&  rgrp->num_crtcs > 1))
 			rcar_du_group_write(rgrp, DIDSR, DIDSR_CODE);
 	}
 
@@ -137,6 +158,27 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	rcar_du_group_write(rgrp, DPTSR, (rgrp->dptsr_planes << 16) |
 			    rgrp->dptsr_planes);
 	mutex_unlock(&rgrp->lock);
+}
+
+void rcar_du_pre_group_set_routing(struct rcar_du_group *rgrp,
+				   struct rcar_du_crtc *rcrtc)
+{
+	unsigned int possible_crtcs =
+		rgrp->dev->info->routes[RCAR_DU_OUTPUT_DPAD0].possible_crtcs;
+	u32 crtc = ffs(possible_crtcs) - 1;
+
+	if (rcrtc->index != crtc)
+		return;
+
+	clk_prepare_enable(rcrtc->clock);
+	rcar_du_group_setup(rgrp);
+	rcar_du_group_write(rgrp, DSYSR,
+			    (rcar_du_group_read(rgrp, DSYSR) &
+			    ~(DSYSR_DRES | DSYSR_DEN)) | DSYSR_DEN);
+	rcar_du_group_write(rgrp, DSYSR,
+			    (rcar_du_group_read(rgrp, DSYSR) &
+			    ~(DSYSR_DRES | DSYSR_DEN)) | DSYSR_DRES);
+	clk_disable_unprepare(rcrtc->clock);
 }
 
 /*

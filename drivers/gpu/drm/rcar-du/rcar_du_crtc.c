@@ -1,7 +1,7 @@
 /*
  * rcar_du_crtc.c  --  R-Car Display Unit CRTCs
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -27,6 +27,7 @@
 #include "rcar_du_crtc.h"
 #include "rcar_du_drv.h"
 #include "rcar_du_kms.h"
+#include "rcar_du_lvdsenc.h"
 #include "rcar_du_plane.h"
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
@@ -107,6 +108,11 @@ static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
  * Hardware Setup
  */
 
+static const struct soc_device_attribute rcar_du_r8a7795_es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 struct dpll_info {
 	unsigned int output;
 	unsigned int fdpll;
@@ -124,15 +130,28 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 	unsigned int fdpll;
 	unsigned int m;
 	unsigned int n;
+	bool clk_high = false;
+
+	if (target > 148500000)
+		clk_high = true;
 
 	for (n = 39; n < 120; n++) {
 		for (m = 0; m < 4; m++) {
 			for (fdpll = 1; fdpll < 32; fdpll++) {
 				unsigned long output;
+				unsigned long wa_div;
+
+				if (soc_device_match(rcar_du_r8a7795_es1))
+					wa_div = 2;
+				else
+					wa_div = 1;
 
 				output = input * (n + 1) / (m + 1)
-				       / (fdpll + 1);
+				       / (fdpll + 1) / wa_div;
 				if (output >= 400000000)
+					continue;
+
+				if (clk_high && output < target)
 					continue;
 
 				diff = abs((long)output - (long)target);
@@ -156,11 +175,6 @@ done:
 		 dpll->output, dpll->fdpll, dpll->n, dpll->m,
 		 best_diff);
 }
-
-static const struct soc_device_attribute rcar_du_r8a7795_es1[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ /* sentinel */ }
-};
 
 static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 {
@@ -188,9 +202,13 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		unsigned long rate;
 		u32 extdiv;
 
+		clk_set_rate(rcrtc->extclock, mode_clock);
 		extclk = clk_get_rate(rcrtc->extclock);
 		if (rcdu->info->dpll_ch & (1 << rcrtc->index)) {
 			unsigned long target = mode_clock;
+
+			rcar_du_dpll_divider(rcrtc, &dpll, extclk, target);
+			extclk = dpll.output;
 
 			/*
 			 * The H3 ES1.x exhibits dot clock duty cycle stability
@@ -201,10 +219,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 			 * reason, so restrict the workaround to H3 ES1.x.
 			 */
 			if (soc_device_match(rcar_du_r8a7795_es1))
-				target *= 2;
-
-			rcar_du_dpll_divider(rcrtc, &dpll, extclk, target);
-			extclk = dpll.output;
+				extclk *= 2;
 		}
 
 		extdiv = DIV_ROUND_CLOSEST(extclk, mode_clock);
@@ -222,12 +237,18 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 					   | DPLLCR_N(dpll.n) | DPLLCR_M(dpll.m)
 					   | DPLLCR_STBY;
 
-				if (rcrtc->index == 1)
+				if (rcrtc->index == 1) {
 					dpllcr |= DPLLCR_PLCS1
 					       |  DPLLCR_INCS_DOTCLKIN1;
-				else
+				} else {
 					dpllcr |= DPLLCR_PLCS0
 					       |  DPLLCR_INCS_DOTCLKIN0;
+
+					if (soc_device_match(
+							rcar_du_r8a7795_es1))
+						dpllcr |=
+						    DPLLCR_PLCS0_H3ES1X_WA;
+				}
 
 				rcar_du_group_write(rcrtc->group, DPLLCR,
 						    dpllcr);
@@ -241,6 +262,9 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 			mode_clock, extrate, rate, escr);
 	}
 
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		escr = 0;
+
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? ESCR2 : ESCR,
 			    escr);
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? OTAR2 : OTAR, 0);
@@ -248,6 +272,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 	/* Signal polarities */
 	value = ((mode->flags & DRM_MODE_FLAG_PVSYNC) ? DSMR_VSL : 0)
 	      | ((mode->flags & DRM_MODE_FLAG_PHSYNC) ? DSMR_HSL : 0)
+	      | ((mode->flags & DRM_MODE_FLAG_INTERLACE) ? DSMR_ODEV : 0)
 	      | DSMR_DIPM_DISP | DSMR_CSPM;
 	rcar_du_crtc_write(rcrtc, DSMR, value);
 
@@ -454,6 +479,12 @@ static void rcar_du_crtc_wait_page_flip(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		rcar_du_lvdsenc_pll_pre_start(rcdu->lvds[rcrtc->index],
+					       rcrtc);
+
 	/* Set display off and background to black */
 	rcar_du_crtc_write(rcrtc, DOOR, DOOR_RGB(0, 0, 0));
 	rcar_du_crtc_write(rcrtc, BPOR, BPOR_RGB(0, 0, 0));
@@ -475,6 +506,8 @@ static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 {
+	struct drm_crtc *crtc = &rcrtc->crtc;
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	bool interlaced;
 
 	/*
@@ -486,6 +519,9 @@ static void rcar_du_crtc_start(struct rcar_du_crtc *rcrtc)
 	rcar_du_crtc_clr_set(rcrtc, DSYSR, DSYSR_TVM_MASK | DSYSR_SCM_MASK,
 			     (interlaced ? DSYSR_SCM_INT_VIDEO : 0) |
 			     DSYSR_TVM_MASTER);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		rcar_du_lvdsenc_enable(rcdu->lvds[rcrtc->index], crtc, true);
 
 	rcar_du_group_start_stop(rcrtc->group, true);
 }
@@ -522,6 +558,7 @@ static void rcar_du_crtc_disable_planes(struct rcar_du_crtc *rcrtc)
 static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 {
 	struct drm_crtc *crtc = &rcrtc->crtc;
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 
 	/*
 	 * Disable all planes and wait for the change to take effect. This is
@@ -534,7 +571,8 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 * are stopped in one operation as we now wait for one vblank per CRTC.
 	 * Whether this can be improved needs to be researched.
 	 */
-	rcar_du_crtc_disable_planes(rcrtc);
+	if (!rcar_du_lvdsenc_stop_pll(rcdu->lvds[rcrtc->index]))
+		rcar_du_crtc_disable_planes(rcrtc);
 
 	/*
 	 * Disable vertical blanking interrupt reporting. We first need to wait
@@ -543,6 +581,9 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 	 */
 	rcar_du_crtc_wait_page_flip(rcrtc);
 	drm_crtc_vblank_off(crtc);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_LVDS_PLL))
+		__rcar_du_lvdsenc_stop(rcdu->lvds[rcrtc->index]);
 
 	/* Disable the VSP compositor. */
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
@@ -627,8 +668,6 @@ static void rcar_du_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct drm_device *dev = rcrtc->crtc.dev;
 	unsigned long flags;
 
-	rcar_du_crtc_update_planes(rcrtc);
-
 	if (crtc->state->event) {
 		WARN_ON(drm_crtc_vblank_get(crtc) != 0);
 
@@ -640,6 +679,30 @@ static void rcar_du_crtc_atomic_flush(struct drm_crtc *crtc,
 
 	if (rcar_du_has(rcrtc->group->dev, RCAR_DU_FEATURE_VSP1_SOURCE))
 		rcar_du_vsp_atomic_flush(rcrtc);
+
+	rcar_du_crtc_update_planes(rcrtc);
+}
+
+static bool rcar_du_crtc_mode_fixup(struct drm_crtc *crtc,
+				    const struct drm_display_mode *mode,
+				    struct drm_display_mode *adjusted_mode)
+{
+	struct rcar_du_crtc *rcrtc = to_rcar_crtc(crtc);
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
+	int vdsr_reg = mode->crtc_vtotal - mode->crtc_vsync_end - 2;
+
+	/*
+	 * It is prohibited to set a value less than 1 to VDSR register
+	 * by the H/W specification.
+	 */
+	if (vdsr_reg < 1) {
+		dev_err(rcdu->dev,
+			"setting value (%d) to VDSR register is invalid.\n",
+			vdsr_reg);
+		return false;
+	}
+
+	return true;
 }
 
 static const struct drm_crtc_helper_funcs crtc_helper_funcs = {
@@ -647,6 +710,7 @@ static const struct drm_crtc_helper_funcs crtc_helper_funcs = {
 	.atomic_flush = rcar_du_crtc_atomic_flush,
 	.atomic_enable = rcar_du_crtc_atomic_enable,
 	.atomic_disable = rcar_du_crtc_atomic_disable,
+	.mode_fixup = rcar_du_crtc_mode_fixup,
 };
 
 static int rcar_du_crtc_enable_vblank(struct drm_crtc *crtc)
@@ -742,10 +806,16 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	char *name;
 	int irq;
 	int ret;
+	int offset_index;
+
+	if (rcdu->info->skip_ch && (rcdu->info->skip_ch == (0x01 << index)))
+		offset_index = index + 1; /* offset for r8a77965 */
+	else
+		offset_index = index;
 
 	/* Get the CRTC clock and the optional external clock. */
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_CRTC_IRQ_CLOCK)) {
-		sprintf(clk_name, "du.%u", index);
+		sprintf(clk_name, "du.%u", offset_index);
 		name = clk_name;
 	} else {
 		name = NULL;
@@ -753,16 +823,29 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 
 	rcrtc->clock = devm_clk_get(rcdu->dev, name);
 	if (IS_ERR(rcrtc->clock)) {
-		dev_err(rcdu->dev, "no clock for CRTC %u\n", index);
+		dev_err(rcdu->dev, "no clock for CRTC %u\n", offset_index);
 		return PTR_ERR(rcrtc->clock);
 	}
 
-	sprintf(clk_name, "dclkin.%u", index);
+	sprintf(clk_name, "extal");
 	clk = devm_clk_get(rcdu->dev, clk_name);
 	if (!IS_ERR(clk)) {
 		rcrtc->extclock = clk;
+		rcrtc->extal_use = true;
 	} else if (PTR_ERR(rcrtc->clock) == -EPROBE_DEFER) {
-		dev_info(rcdu->dev, "can't get external clock %u\n", index);
+		dev_info(rcdu->dev, "can't get extal clock %u\n",
+			 offset_index);
+		return -EPROBE_DEFER;
+	}
+
+	sprintf(clk_name, "dclkin.%u", offset_index);
+	clk = devm_clk_get(rcdu->dev, clk_name);
+	if (!IS_ERR(clk)) {
+		rcrtc->extclock = clk;
+		rcrtc->extal_use = false;
+	} else if (PTR_ERR(rcrtc->clock) == -EPROBE_DEFER) {
+		dev_info(rcdu->dev, "can't get external clock %u\n",
+			 offset_index);
 		return -EPROBE_DEFER;
 	}
 
@@ -771,13 +854,18 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	spin_lock_init(&rcrtc->vblank_lock);
 
 	rcrtc->group = rgrp;
-	rcrtc->mmio_offset = mmio_offsets[index];
-	rcrtc->index = index;
+	rcrtc->mmio_offset = mmio_offsets[offset_index];
+	rcrtc->index = offset_index;
 
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
+		/* If the BRS number of VSPDL is 0, skip CRTC initialization */
+		if (rcdu->vspdl_fix && rcrtc->vsp_pipe == 1 &&
+		    rcdu->brs_num == 0)
+			return 0;
 		primary = &rcrtc->vsp->planes[rcrtc->vsp_pipe].plane;
-	else
-		primary = &rgrp->planes[index % 2].plane;
+	} else {
+		primary = &rgrp->planes[offset_index % 2].plane;
+	}
 
 	ret = drm_crtc_init_with_planes(rcdu->ddev, crtc, primary,
 					NULL, &crtc_funcs, NULL);
@@ -799,7 +887,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 	}
 
 	if (irq < 0) {
-		dev_err(rcdu->dev, "no IRQ for CRTC %u\n", index);
+		dev_err(rcdu->dev, "no IRQ for CRTC %u\n", offset_index);
 		return irq;
 	}
 
@@ -807,7 +895,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int index)
 			       dev_name(rcdu->dev), rcrtc);
 	if (ret < 0) {
 		dev_err(rcdu->dev,
-			"failed to register IRQ for CRTC %u\n", index);
+			"failed to register IRQ for CRTC %u\n", offset_index);
 		return ret;
 	}
 

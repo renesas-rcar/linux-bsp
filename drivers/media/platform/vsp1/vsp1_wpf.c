@@ -1,7 +1,7 @@
 /*
  * vsp1_wpf.c  --  R-Car VSP1 Write Pixel Formatter
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -14,6 +14,7 @@
 #include <linux/device.h>
 
 #include <media/v4l2-subdev.h>
+#include <media/vsp1.h>
 
 #include "vsp1.h"
 #include "vsp1_dl.h"
@@ -256,7 +257,7 @@ static void wpf_prepare(struct vsp1_entity *entity,
 						   wpf->entity.config,
 						   RWPF_PAD_SOURCE);
 	/* Format */
-	if (!pipe->lif) {
+	if (!pipe->lif || pipe->output->write_back == WB_STAT_CATP_SET) {
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
 		const struct vsp1_format_info *fmtinfo = wpf->fmtinfo;
 
@@ -296,7 +297,11 @@ static void wpf_prepare(struct vsp1_entity *entity,
 	vsp1_dl_fragment_write(dlb, VI6_DPR_WPF_FPORCH(wpf->entity.index),
 			       VI6_DPR_WPF_FPORCH_FP_WPFN);
 
-	vsp1_dl_fragment_write(dlb, VI6_WPF_WRBCK_CTRL, 0);
+	if (pipe->lif && pipe->output->write_back == WB_STAT_CATP_SET)
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_WRBCK_CTRL,
+			       VI6_WPF_WRBCK_CTRL_WBMD);
+	else
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_WRBCK_CTRL, 0);
 
 	/*
 	 * Sources. If the pipeline has a single input and BRU is not used,
@@ -325,7 +330,7 @@ static void wpf_prepare(struct vsp1_entity *entity,
 	/* Enable interrupts */
 	vsp1_dl_fragment_write(dlb, VI6_WPF_IRQ_STA(wpf->entity.index), 0);
 	vsp1_dl_fragment_write(dlb, VI6_WPF_IRQ_ENB(wpf->entity.index),
-			       VI6_WFP_IRQ_ENB_DFEE);
+			       VI6_WFP_IRQ_ENB_DFEE | VI6_WFP_IRQ_ENB_UNDE);
 }
 
 static void wpf_configure(struct vsp1_entity *entity,
@@ -346,6 +351,16 @@ static void wpf_configure(struct vsp1_entity *entity,
 	unsigned int height;
 	unsigned int offset;
 	u32 outfmt = 0;
+
+	if (pipe->vmute_flag) {
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_SRCRPF,
+			       VI6_WPF_SRCRPF_VIRACT_MST);
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_HSZCLIP, 0);
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_VSZCLIP, 0);
+		vsp1_wpf_write(wpf, dlb, VI6_DPR_WPF_FPORCH(wpf->entity.index),
+			       VI6_DPR_WPF_FPORCH_FP_WPFN);
+		return;
+	}
 
 	/* Handle the per frame constants */
 	if (partition == 0) {
@@ -388,9 +403,19 @@ static void wpf_configure(struct vsp1_entity *entity,
 		       (0 << VI6_WPF_SZCLIP_OFST_SHIFT) |
 		       (height << VI6_WPF_SZCLIP_SIZE_SHIFT));
 
-	if (pipe->lif)
+	if (pipe->lif) {
+		if (wpf->write_back == WB_STAT_CATP_SET) {
+			vsp1_wpf_write(wpf, dlb, VI6_WPF_DSTM_ADDR_Y,
+				       wpf->buf_addr[0]);
+			if (format->num_planes > 1)
+				vsp1_wpf_write(wpf, dlb, VI6_WPF_DSTM_ADDR_C0,
+					       wpf->buf_addr[1]);
+			if (format->num_planes > 2)
+				vsp1_wpf_write(wpf, dlb, VI6_WPF_DSTM_ADDR_C1,
+					       wpf->buf_addr[2]);
+		}
 		return;
-
+	}
 	/*
 	 * Update the memory offsets based on flipping configuration.
 	 * The destination addresses point to the locations where the
