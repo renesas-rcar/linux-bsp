@@ -1,8 +1,7 @@
 /*
- * Device Tree Source for the H3ULCB (R-Car Starter Kit Premier) board
+ * Device Tree Source for the Salvator-X board
  *
- * Copyright (C) 2016-2017 Renesas Electronics Corp.
- * Copyright (C) 2016 Cogent Embedded, Inc.
+ * Copyright (C) 2017 Renesas Electronics Corp.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -10,32 +9,17 @@
  */
 
 /dts-v1/;
-#include "r8a7795-es1.dtsi"
-#include "ulcb.dtsi"
+#include "r8a77965.dtsi"
+#include "salvator-x.dtsi"
 
 / {
-	model = "Renesas H3ULCB board based on r8a7795 ES1.x";
-	compatible = "renesas,h3ulcb", "renesas,r8a7795";
+	model = "Renesas Salvator-X board based on r8a77965";
+	compatible = "renesas,salvator-x", "renesas,r8a77965";
 
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
-		reg = <0x0 0x48000000 0x0 0x38000000>;
-	};
-
-	memory@500000000 {
-		device_type = "memory";
-		reg = <0x5 0x00000000 0x0 0x40000000>;
-	};
-
-	memory@600000000 {
-		device_type = "memory";
-		reg = <0x6 0x00000000 0x0 0x40000000>;
-	};
-
-	memory@700000000 {
-		device_type = "memory";
-		reg = <0x7 0x00000000 0x0 0x40000000>;
+		reg = <0x0 0x48000000 0x0 0x78000000>;
 	};
 
 	reserved-memory {
@@ -49,11 +33,18 @@
 			reg = <0x00000000 0x54000000 0x0 0x03000000>;
 		};
 
+		/* For Audio DSP */
+		adsp_reserved: linux,adsp {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x57000000 0x0 0x01000000>;
+		};
+
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x57000000 0x0 0x19000000>;
+			reg = <0x00000000 0x58000000 0x0 0x18000000>;
 			linux,cma-default;
 		};
 
@@ -79,26 +70,52 @@
 	};
 };
 
-&sdhi2 {
-	/delete-property/ mmc-hs400-1_8v;
-};
-
-&vspbc {
+&adsp {
 	status = "okay";
+	memory-region = <&adsp_reserved>;
 };
 
-&vspbd {
+&du {
+	clocks = <&cpg CPG_MOD 724>,
+		 <&cpg CPG_MOD 723>,
+		 <&cpg CPG_MOD 721>,
+		 <&cpg CPG_MOD 727>,
+		 <&versaclock5 1>,
+		 <&x21_clk>,
+		 <&versaclock5 2>;
+	clock-names = "du.0", "du.1", "du.3", "lvds.0",
+		      "dclkin.0", "dclkin.1", "dclkin.3";
+
+	ports {
+		port@2 {
+			endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};
+
+&hdmi0 {
+	status = "okay";
+
+	ports {
+		port@1 {
+			reg = <1>;
+			rcar_dw_hdmi0_out: endpoint {
+				remote-endpoint = <&hdmi0_con>;
+			};
+		};
+	};
+};
+
+&hdmi0_con {
+	remote-endpoint = <&rcar_dw_hdmi0_out>;
+};
+
+&vspb {
 	status = "okay";
 };
 
 &vspi0 {
-	status = "okay";
-};
-
-&vspi1 {
-	status = "okay";
-};
-
-&vspi2 {
 	status = "okay";
 };
