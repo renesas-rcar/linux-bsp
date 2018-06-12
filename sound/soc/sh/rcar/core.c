@@ -550,6 +550,15 @@ struct rsnd_dai *rsnd_rdai_get(struct rsnd_priv *priv, int id)
 	return priv->rdai + id;
 }
 
+static struct snd_soc_dai_driver
+*rsnd_daidrv_get(struct rsnd_priv *priv, int id)
+{
+	if ((id < 0) || (id >= rsnd_rdai_nr(priv)))
+		return NULL;
+
+	return priv->daidrv + id;
+}
+
 #define rsnd_dai_to_priv(dai) snd_soc_dai_get_drvdata(dai)
 static struct rsnd_dai *rsnd_dai_to_rdai(struct snd_soc_dai *dai)
 {
@@ -1031,7 +1040,7 @@ static int rsnd_dai_probe(struct rsnd_priv *priv)
 	dai_i = 0;
 	for_each_child_of_node(dai_node, dai_np) {
 		rdai		= rsnd_rdai_get(priv, dai_i);
-		drv		= rdrv + dai_i;
+		drv		= rsnd_daidrv_get(priv, dai_i);
 		io_playback	= &rdai->playback;
 		io_capture	= &rdai->capture;
 
