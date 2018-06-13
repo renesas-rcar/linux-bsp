@@ -29,6 +29,7 @@ struct dumb_vga {
 	bool			ddc_flag;
 	u32			width;
 	u32			height;
+	u32			max_pixclk;
 };
 
 static inline struct dumb_vga *
@@ -74,8 +75,24 @@ fallback:
 	return ret;
 }
 
+static enum drm_mode_status
+dumb_vga_mode_valid(struct drm_connector *connector,
+		    struct drm_display_mode *mode)
+{
+	struct dumb_vga *vga = drm_connector_to_dumb_vga(connector);
+
+	if (!vga->max_pixclk)
+		return MODE_OK;
+
+	if (mode->clock > vga->max_pixclk)
+		return MODE_BAD;
+
+	return MODE_OK;
+}
+
 static const struct drm_connector_helper_funcs dumb_vga_con_helper_funcs = {
 	.get_modes	= dumb_vga_get_modes,
+	.mode_valid	= dumb_vga_mode_valid,
 };
 
 static enum drm_connector_status
@@ -183,6 +200,8 @@ static struct i2c_adapter *dumb_vga_retrieve_ddc(struct device *dev)
 		vga->width = 1024;
 		vga->height = 768;
 	}
+
+	of_property_read_u32(remote, "max-pixelclock", &vga->max_pixclk);
 
 	phandle = of_parse_phandle(remote, "ddc-i2c-bus", 0);
 	of_node_put(remote);
