@@ -228,6 +228,7 @@
 		compatible = "vga-connector";
 
 		no-use-ddc;
+		max-pixelclock = <100000>;
 
 		port {
 			vga_in: endpoint {
