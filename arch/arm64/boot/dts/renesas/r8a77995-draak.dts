@@ -94,6 +94,7 @@
 
 		width = <800>;
 		height = <600>;
+		max-pixelclock = <50000>;
 
 		port {
 			vga_in: endpoint {
