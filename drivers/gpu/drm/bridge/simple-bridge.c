@@ -36,6 +36,7 @@ struct simple_bridge {
 	bool			ddc_flag;
 	u32			width;
 	u32			height;
+	u32			max_pixclk;
 };
 
 static inline struct simple_bridge *
@@ -82,8 +83,24 @@ static int simple_bridge_get_modes(struct drm_connector *connector)
 	return ret;
 }
 
+static enum drm_mode_status
+simple_bridge_mode_valid(struct drm_connector *connector,
+		    struct drm_display_mode *mode)
+{
+	struct simple_bridge *sbridge = drm_connector_to_simple_bridge(connector);
+
+	if (!sbridge->max_pixclk)
+		return MODE_OK;
+
+	if (mode->clock > sbridge->max_pixclk)
+		return MODE_BAD;
+
+	return MODE_OK;
+}
+
 static const struct drm_connector_helper_funcs simple_bridge_con_helper_funcs = {
 	.get_modes	= simple_bridge_get_modes,
+	.mode_valid	= simple_bridge_mode_valid,
 };
 
 static enum drm_connector_status
@@ -203,6 +220,8 @@ static int simple_bridge_probe(struct platform_device *pdev)
 		sbridge->width = 1024;
 		sbridge->height = 768;
 	}
+
+	of_property_read_u32(remote, "max-pixelclock", &sbridge->max_pixclk);
 
 	sbridge->next_bridge = of_drm_find_bridge(remote);
 	of_node_put(remote);
