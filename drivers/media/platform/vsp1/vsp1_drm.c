@@ -595,12 +595,6 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int pipe_index)
 		inputs[j] = rpf;
 	}
 
-	if (pipe_index == 1 && pipe->num_inputs == 3) {
-		dev_warn(vsp1->dev, "%s: over max RPF's number in %s\n",
-			 __func__, bru_name);
-		return;
-	}
-
 	/* Setup the RPF input pipeline for every enabled input. */
 	for (i = 0; i < pipe->bru->source_pad; ++i) {
 		struct vsp1_rwpf *rpf = inputs[i];
