@@ -1305,6 +1305,9 @@ static int rvin_set_stream(struct rvin_dev *vin, int on)
 		return -EPIPE;
 
 	if (!on) {
+		if (vin->vdev.entity.stream_count <= 0)
+			return 0;
+
 		media_pipeline_stop(&vin->vdev.entity);
 		ret = v4l2_subdev_call(sd, video, s_stream, 0);
 		return 0;
