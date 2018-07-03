@@ -35,6 +35,8 @@ struct rcar_du_lvdsenc;
 #define RCAR_DU_FEATURE_R8A77995_REGS	(1 << 4)	/* Use R8A77995 registers */
 #define RCAR_DU_FEATURE_LVDS_PLL	(1 << 5)	/* Use PLL in LVDS */
 #define RCAR_DU_FEATURE_R8A77990_REGS	(1 << 6)	/* Use R8A77990 registers */
+#define RCAR_DU_FEATURE_R8A7795_REGS	(1 << 7)	/* Use R8A7795 registers */
+#define RCAR_DU_FEATURE_R8A7796_REGS	(1 << 8)	/* Use R8A7796 registers */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	(1 << 0)	/* Align pitches to 128 bytes */
 #define RCAR_DU_QUIRK_LVDS_LANES	(1 << 1)	/* LVDS lanes 1 and 3 inverted */
