@@ -205,14 +205,22 @@ static void rcar_du_lvdsenc_dual_mode(struct rcar_du_lvdsenc *lvds0,
 				      struct rcar_du_crtc *rcrtc)
 {
 	struct rcar_du_device *rcdu = rcrtc->group->dev;
-	u32 lvdcr0 = 0;
-	u32 lvdcr1 = 0;
+	u32 lvdcr0 = 0, lvdcr1 = 0, lvdhcr;
 
+	lvdhcr = LVDCHCR_CHSEL_CH(0, 0) | LVDCHCR_CHSEL_CH(1, 1) |
+		 LVDCHCR_CHSEL_CH(2, 2) | LVDCHCR_CHSEL_CH(3, 3);
+
+	rcar_lvds_write(lvds0, LVDCTRCR, LVDCTRCR_CTR3SEL_ZERO |
+			LVDCTRCR_CTR2SEL_DISP | LVDCTRCR_CTR1SEL_VSYNC |
+			LVDCTRCR_CTR0SEL_HSYNC);
+	rcar_lvds_write(lvds0, LVDCHCR, lvdhcr);
 	rcar_lvds_write(lvds0, LVDSTRIPE, LVDSTRIPE_ST_ON);
-	rcar_lvds_write(lvds1, LVDSTRIPE, LVDSTRIPE_ST_ON);
 
-	lvdcr0 = lvds0->mode << LVDCR0_LVMD_SHIFT;
-	rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+	rcar_lvds_write(lvds1, LVDCTRCR, LVDCTRCR_CTR3SEL_ZERO |
+			LVDCTRCR_CTR2SEL_DISP | LVDCTRCR_CTR1SEL_VSYNC |
+			LVDCTRCR_CTR0SEL_HSYNC);
+	rcar_lvds_write(lvds1, LVDCHCR, lvdhcr);
+	rcar_lvds_write(lvds1, LVDSTRIPE, LVDSTRIPE_ST_ON);
 
 	/* Turn all the channels on. */
 	rcar_lvds_write(lvds0, LVDCR1,
@@ -228,18 +236,32 @@ static void rcar_du_lvdsenc_dual_mode(struct rcar_du_lvdsenc *lvds0,
 	 * Turn the PLL on, set it to LVDS normal mode, wait for the startup
 	 * delay and turn the output on.
 	 */
-	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77990_REGS)) {
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77995_REGS)) {
 		lvdcr0 |= LVDCR0_PWD;
 		rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
 
 		lvdcr1 |= LVDCR0_PWD;
 		rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+
+		lvdcr1 |= LVDCR0_LVEN | LVDCR0_LVRES;
+		rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+
+		lvdcr0 |= LVDCR0_LVEN | LVDCR0_LVRES;
+		rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+
+		return;
 	}
 
-	lvdcr1 |= LVDCR0_LVEN | LVDCR0_LVRES;
+	lvdcr0 |= LVDCR0_LVEN;
+	rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+
+	lvdcr1 |= LVDCR0_LVEN;
 	rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
 
-	lvdcr0 |= LVDCR0_LVEN | LVDCR0_LVRES;
+	lvdcr1 |= LVDCR0_LVRES;
+	rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+
+	lvdcr0 |= LVDCR0_LVRES;
 	rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
 }
 
@@ -339,7 +361,7 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 
 	lvds->enabled = true;
 
-	for (i = 0; i < RCAR_DU_MAX_LVDS; i++) {
+	for (i = 0; i < RCAR_DU_LVDS_EDIVIDER; i++) {
 		lvds_pll[i] = kzalloc(sizeof(*lvds_pll), GFP_KERNEL);
 		if (!lvds_pll[i])
 			return;
@@ -347,12 +369,11 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 
 	/* software reset release */
 	reset_control_deassert(lvds->rstc);
-
 	ret = clk_prepare_enable(lvds->clock);
 	if (ret < 0)
 		goto end;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < RCAR_DU_LVDS_EDIVIDER; i++) {
 		bool edivider;
 
 		if (i == 0)
@@ -402,6 +423,10 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 		lvds_wk->lvddiv = 0;
 
 	rcar_lvds_write(lvds_wk, LVDPLLCR, lvds_wk->lvdpllcr);
+	/* SSC function = off */
+
+	usleep_range(200, 250);		/* Wait 200us until pll-lock */
+
 	rcar_lvds_write(lvds_wk, LVDDIV, lvds_wk->lvddiv);
 
 	dev_dbg(rcrtc->group->dev->dev, "LVDPLLCR: 0x%x\n",
@@ -413,7 +438,7 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 		rcar_du_lvdsenc_dual_mode(rcdu->lvds[0], rcdu->lvds[1],
 					  rcrtc);
 end:
-	for (i = 0; i < RCAR_DU_MAX_LVDS; i++)
+	for (i = 0; i < RCAR_DU_LVDS_EDIVIDER; i++)
 		kfree(lvds_pll[i]);
 }
 
@@ -445,9 +470,14 @@ static int rcar_du_lvdsenc_pll_start(struct rcar_du_lvdsenc *lvds,
 	 * Turn the PLL on, set it to LVDS normal mode, wait for the startup
 	 * delay and turn the output on.
 	 */
-	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77990_REGS)) {
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77995_REGS)) {
 		lvdcr0 |= LVDCR0_PWD;
 		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+		lvdcr0 |= LVDCR0_LVEN | LVDCR0_LVRES;
+		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+		goto done;
 	}
 
 	lvdcr0 |= LVDCR0_LVEN;
@@ -456,6 +486,7 @@ static int rcar_du_lvdsenc_pll_start(struct rcar_du_lvdsenc *lvds,
 	lvdcr0 |= LVDCR0_LVRES;
 	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
 
+done:
 	lvds->enabled = true;
 
 	return 0;

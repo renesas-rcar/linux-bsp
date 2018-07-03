@@ -20,6 +20,8 @@
 struct rcar_drm_crtc;
 struct rcar_du_lvdsenc;
 
+#define RCAR_DU_LVDS_EDIVIDER	2
+
 enum rcar_lvds_input {
 	RCAR_LVDS_INPUT_DU0,
 	RCAR_LVDS_INPUT_DU1,
