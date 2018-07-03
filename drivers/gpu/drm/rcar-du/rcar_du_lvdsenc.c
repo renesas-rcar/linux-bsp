@@ -370,12 +370,12 @@ void rcar_du_lvdsenc_pll_pre_start(struct rcar_du_lvdsenc *lvds,
 		/* use E-edivider */
 		i = 0;
 		clksel = LVDPLLCR_OUTCLKSEL_AFTER |
-			 LVDPLLCR_STP_CLKOUTE1_EN;
+			 LVDPLLCR_STP_CLKOUTE_EN;
 	} else {
 		/* not use E-divider */
 		i = 1;
 		clksel = LVDPLLCR_OUTCLKSEL_BEFORE |
-			 LVDPLLCR_STP_CLKOUTE1_DIS;
+			 LVDPLLCR_STP_CLKOUTE_DIS;
 	}
 	dev_dbg(rcrtc->group->dev->dev,
 		"E-divider %s\n", (i == 0 ? "is used" : "is not used"));
