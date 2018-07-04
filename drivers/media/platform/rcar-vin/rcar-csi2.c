@@ -590,8 +590,6 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 	rcar_csi2_write(priv, PHTC_REG, 0);
 
 	/* Configure */
-	rcar_csi2_write(priv, FLD_REG, fld | FLD_FLD_EN4 |
-			FLD_FLD_EN3 | FLD_FLD_EN2 | FLD_FLD_EN);
 	rcar_csi2_write(priv, VCDT_REG, vcdt);
 	if (priv->info->device != R8A77990)
 		rcar_csi2_write(priv, VCDT2_REG, vcdt2);
@@ -638,6 +636,13 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 	rcar_csi2_write(priv, PHYCNT_REG, phycnt);
 	rcar_csi2_write(priv, LINKCNT_REG, LINKCNT_MONITOR_EN |
 			LINKCNT_REG_MONI_PACT_EN | LINKCNT_ICLK_NONSTOP);
+
+	if (priv->mf.field != V4L2_FIELD_NONE)
+		rcar_csi2_write(priv, FLD_REG, fld | FLD_FLD_EN4 |
+				FLD_FLD_EN3 | FLD_FLD_EN2 | FLD_FLD_EN);
+	else
+		rcar_csi2_write(priv, FLD_REG, 0);
+
 	rcar_csi2_write(priv, PHYCNT_REG, phycnt | PHYCNT_SHUTDOWNZ);
 	rcar_csi2_write(priv, PHYCNT_REG, phycnt | PHYCNT_SHUTDOWNZ |
 			PHYCNT_RSTZ);
