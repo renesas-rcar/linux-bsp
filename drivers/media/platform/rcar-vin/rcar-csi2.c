@@ -18,6 +18,7 @@
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/reset.h>
 #include <linux/sys_soc.h>
 
 #include <media/v4l2-ctrls.h>
@@ -365,6 +366,7 @@ struct rcar_csi2 {
 	struct device *dev;
 	void __iomem *base;
 	const struct rcar_csi2_info *info;
+	struct reset_control *rstc;
 
 	struct v4l2_subdev subdev;
 	struct media_pad pads[NR_OF_RCAR_CSI2_PAD];
@@ -399,13 +401,6 @@ static u32 rcar_csi2_read(struct rcar_csi2 *priv, unsigned int reg)
 static void rcar_csi2_write(struct rcar_csi2 *priv, unsigned int reg, u32 data)
 {
 	iowrite32(data, priv->base + reg);
-}
-
-static void rcar_csi2_reset(struct rcar_csi2 *priv)
-{
-	rcar_csi2_write(priv, SRST_REG, SRST_SRST);
-	usleep_range(100, 150);
-	rcar_csi2_write(priv, SRST_REG, 0);
 }
 
 static int rcar_csi2_wait_phy_start(struct rcar_csi2 *priv)
@@ -586,7 +581,6 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 
 	/* Init */
 	rcar_csi2_write(priv, TREF_REG, TREF_TREF);
-	rcar_csi2_reset(priv);
 	rcar_csi2_write(priv, PHTC_REG, 0);
 
 	/* Configure */
@@ -662,9 +656,9 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 static void rcar_csi2_stop(struct rcar_csi2 *priv)
 {
 	rcar_csi2_write(priv, PHYCNT_REG, 0);
-	iowrite32(PHTC_TESTCLR, priv->base + PHTC_REG);
-
-	rcar_csi2_reset(priv);
+	rcar_csi2_write(priv, PHTC_REG, PHTC_TESTCLR);
+	reset_control_assert(priv->rstc);
+	usleep_range(100, 150);
 }
 
 static int rcar_csi2_sd_info(struct rcar_csi2 *priv, struct v4l2_subdev **sd)
@@ -700,6 +694,7 @@ static int rcar_csi2_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (enable && priv->stream_count == 0) {
 		pm_runtime_get_sync(priv->dev);
+		reset_control_deassert(priv->rstc);
 
 		ret =  rcar_csi2_start(priv, nextsd);
 		if (ret) {
@@ -1013,6 +1008,13 @@ static int rcar_csi2_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(priv->dev, "Failed to get resources\n");
 		return ret;
+	}
+
+	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(priv->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(priv->dev));
+		return PTR_ERR(priv->rstc);
 	}
 
 	platform_set_drvdata(pdev, priv);
