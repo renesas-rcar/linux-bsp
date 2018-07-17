@@ -70,13 +70,13 @@ static int of_mdiobus_register_phy(struct mii_bus *mdio,
 	else
 		phy = get_phy_device(mdio, addr, is_c45);
 
+	if (IS_ERR(phy))
+		return PTR_ERR(phy);
+
 	/* Assert the reset signal again */
 	status = phy_read(phy, MII_BMSR);
 	if (status == 0xffff || !(status & BMSR_LSTATUS))
 		gpiod_set_value(gpiod, 1);
-
-	if (IS_ERR(phy))
-		return PTR_ERR(phy);
 
 	rc = of_irq_get(child, 0);
 	if (rc == -EPROBE_DEFER) {
