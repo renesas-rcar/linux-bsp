@@ -105,9 +105,11 @@
 #define HDMI_FC_AUDICONF2                       0x1027
 #define HDMI_FC_AUDICONF3                       0x1028
 #define HDMI_FC_VSDIEEEID0                      0x1029
+#define HDMI_RCAR_FC_VSDIEEEID2                 0x1029
 #define HDMI_FC_VSDSIZE                         0x102A
 #define HDMI_FC_VSDIEEEID1                      0x1030
 #define HDMI_FC_VSDIEEEID2                      0x1031
+#define HDMI_RCAR_FC_VSDIEEEID0                 0x1031
 #define HDMI_FC_VSDPAYLOAD0                     0x1032
 #define HDMI_FC_VSDPAYLOAD1                     0x1033
 #define HDMI_FC_VSDPAYLOAD2                     0x1034
