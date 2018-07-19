@@ -1745,9 +1745,15 @@ static void hdmi_config_vendor_specific_infoframe(struct dw_hdmi *hdmi,
 	hdmi_writeb(hdmi, buffer[2], HDMI_FC_VSDSIZE);
 
 	/* Set 24bit IEEE Registration Identifier */
-	hdmi_writeb(hdmi, buffer[4], HDMI_FC_VSDIEEEID0);
-	hdmi_writeb(hdmi, buffer[5], HDMI_FC_VSDIEEEID1);
-	hdmi_writeb(hdmi, buffer[6], HDMI_FC_VSDIEEEID2);
+	if (hdmi->plat_data->dev_type == RCAR_HDMI) {
+		hdmi_writeb(hdmi, buffer[4], HDMI_RCAR_FC_VSDIEEEID0);
+		hdmi_writeb(hdmi, buffer[5], HDMI_FC_VSDIEEEID1);
+		hdmi_writeb(hdmi, buffer[6], HDMI_RCAR_FC_VSDIEEEID2);
+	} else {
+		hdmi_writeb(hdmi, buffer[4], HDMI_FC_VSDIEEEID0);
+		hdmi_writeb(hdmi, buffer[5], HDMI_FC_VSDIEEEID1);
+		hdmi_writeb(hdmi, buffer[6], HDMI_FC_VSDIEEEID2);
+	}
 
 	/* Set HDMI_Video_Format and HDMI_VIC/3D_Structure */
 	hdmi_writeb(hdmi, buffer[7], HDMI_FC_VSDPAYLOAD0);
