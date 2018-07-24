@@ -100,8 +100,11 @@
 #define VNMC_INF_YUV8_BT601	(1 << 16)
 #define VNMC_INF_YUV10_BT656	(2 << 16)
 #define VNMC_INF_YUV10_BT601	(3 << 16)
+#define VNMC_INF_RAW8		(4 << 16)
 #define VNMC_INF_YUV16		(5 << 16)
 #define VNMC_INF_RGB888		(6 << 16)
+#define VNMC_INF_RGB666		(7 << 16)
+#define VNMC_INF_MASK		(7 << 16)
 #define VNMC_VUP		(1 << 10)
 #define VNMC_IM_ODD		(0 << 3)
 #define VNMC_IM_ODD_EVEN	(1 << 3)
@@ -908,6 +911,27 @@ static int rvin_setup(struct rvin_dev *vin)
 	if (vin_debug) {
 		vin_dbg(vin, "Enable Overflow\n");
 		interrupts |= VNIE_FOE;
+	}
+
+	/* Check INF bit in VnMR register setting */
+	if (vin->info->chip == RCAR_GEN3) {
+		if (vin->mbus_cfg.type == V4L2_MBUS_CSI2) {
+			if (((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV8_BT656) ||
+			    ((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV10_BT656) ||
+			    ((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV16) ||
+			    ((vnmc & VNMC_INF_MASK) == VNMC_INF_RGB666)) {
+				vin_err(vin, "Invalid setting in MIPI CSI2\n");
+
+				return -EINVAL;
+			}
+		} else {
+			if ((vnmc & VNMC_INF_MASK) == VNMC_INF_RAW8) {
+				vin_err(vin,
+					"Invalid setting in Digital Pins\n");
+
+				return -EINVAL;
+			}
+		}
 	}
 
 	/* Ack interrupts */
