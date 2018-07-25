@@ -584,12 +584,6 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 	if (ret)
 		return ret;
 
-	/* Clear Ultra Low Power interrupt */
-	if (priv->info->clear_ulps)
-		rcar_csi2_write(priv, INTSTATE_REG,
-				INTSTATE_INT_ULPS_START |
-				INTSTATE_INT_ULPS_END);
-
 	/* Init */
 	rcar_csi2_write(priv, TREF_REG, TREF_TREF);
 	rcar_csi2_reset(priv);
@@ -648,7 +642,16 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 	rcar_csi2_write(priv, PHYCNT_REG, phycnt | PHYCNT_SHUTDOWNZ |
 			PHYCNT_RSTZ);
 
-	return rcar_csi2_wait_phy_start(priv);
+	ret = rcar_csi2_wait_phy_start(priv);
+	if (ret)
+		return ret;
+
+	/* Clear Ultra Low Power interrupt */
+	if (priv->info->clear_ulps)
+		rcar_csi2_write(priv, INTSTATE_REG,
+				INTSTATE_INT_ULPS_START |
+				INTSTATE_INT_ULPS_END);
+	return ret;
 }
 
 static void rcar_csi2_stop(struct rcar_csi2 *priv)
