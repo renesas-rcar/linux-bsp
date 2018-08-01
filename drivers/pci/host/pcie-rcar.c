@@ -200,7 +200,7 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 		unsigned char access_type, struct pci_bus *bus,
 		unsigned int devfn, int where, u32 *data)
 {
-	int dev, func, reg, index;
+	int dev, func, reg, index, ret;
 	u32 val;
 
 	dev = PCI_SLOT(devfn);
@@ -253,7 +253,9 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 		/* Wait PCI Express link is re-initialized */
 		dev_info(&bus->dev, "Wait PCI Express link is re-initialized\n");
 		rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
-		rcar_pcie_wait_for_dl(pcie);
+		ret = rcar_pcie_wait_for_dl(pcie);
+		if (ret)
+			return ret;
 	}
 
 	if ((val & PM_ENTER_L1RX) && ((val & PMSTATE) != PMSTATE_L1)) {
