@@ -230,16 +230,6 @@ static int renesas_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 	return pinctrl_select_state(priv->pinctrl, pin_state);
 }
 
-static int renesas_sdhi_select_drive_strength(struct mmc_card *card,
-					      unsigned int max_dtr,
-					      int host_drv, int card_drv,
-					      int *drv_type)
-{
-	struct tmio_mmc_host *host = mmc_priv(card->host);
-
-	return host->drive_strength;
-}
-
 /* SCC registers */
 #define SH_MOBILE_SDHI_SCC_DTCNTL	0x000
 #define SH_MOBILE_SDHI_SCC_TAPSET	0x002
@@ -661,8 +651,6 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 	struct resource *res;
 	const struct soc_device_attribute *attr;
 	int irq, ret, i;
-	const struct device_node *np = pdev->dev.of_node;
-	int tmp, drive_strength = 0;
 
 	of_data = of_device_get_match_data(&pdev->dev);
 
@@ -685,8 +673,6 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		goto eprobe;
 	}
 
-	if (np && !of_property_read_u32(np, "drive-strength", &tmp))
-		drive_strength = tmp & 0xf;
 	/*
 	 * Some controllers provide a 2nd clock just to run the internal card
 	 * detection logic. Unfortunately, the existing driver architecture does
@@ -742,7 +728,6 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 	host->clk_update	= renesas_sdhi_clk_update;
 	host->clk_disable	= renesas_sdhi_clk_disable;
 	host->multi_io_quirk	= renesas_sdhi_multi_io_quirk;
-	host->drive_strength	= drive_strength;
 
 	/* SDR speeds are only available on Gen2+ */
 	if (mmc_data->flags & TMIO_MMC_MIN_RCAR2) {
@@ -750,8 +735,6 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		host->card_busy	= renesas_sdhi_card_busy;
 		host->start_signal_voltage_switch =
 			renesas_sdhi_start_signal_voltage_switch;
-		host->select_drive_strength =
-			renesas_sdhi_select_drive_strength;
 	}
 
 	/* Orginally registers were 16 bit apart, could be 32 or 64 nowadays */
