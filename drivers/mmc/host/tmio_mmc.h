@@ -198,7 +198,6 @@ struct tmio_mmc_host {
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
 	u32			scc_tappos;
-	int			drive_strength;
 
 	spinlock_t		trans_lock;	/* protect trans_state */
 	unsigned int		trans_state;
@@ -219,11 +218,6 @@ struct tmio_mmc_host {
 	void (*hw_reset)(struct tmio_mmc_host *host);
 	void (*prepare_tuning)(struct tmio_mmc_host *host, unsigned long tap);
 	bool (*check_scc_error)(struct tmio_mmc_host *host);
-
-	/* Sets the required Driver Strength from device */
-	int (*select_drive_strength)(struct mmc_card *card,
-				     unsigned int max_dtr, int host_drv,
-				     int card_drv, int *drv_type);
 
 	/*
 	 * Mandatory callback for tuning to occur which is optional for SDR50
