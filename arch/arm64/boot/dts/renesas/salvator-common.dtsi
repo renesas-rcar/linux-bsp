@@ -815,7 +815,6 @@
 	mmc-hs200-1_8v;
 	mmc-hs400-1_8v;
 	non-removable;
-	drive-strength = <1>;
 	fixed-emmc-driver-type = <1>;
 	status = "okay";
 };
