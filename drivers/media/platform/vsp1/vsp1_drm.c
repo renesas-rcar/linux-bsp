@@ -644,12 +644,19 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int pipe_index)
 
 	/* Start or stop the pipeline if needed. */
 	if (!drm_pipe->enabled && pipe->num_inputs) {
+		if (pipe->state == VSP1_PIPELINE_STOPPED)
+			pipe->dst_cnt = 1;
 		vsp1_write(vsp1, VI6_DISP_IRQ_STA((pipe_index)), 0);
 		vsp1_write(vsp1, VI6_DISP_IRQ_ENB((pipe_index)),
 			   VI6_DISP_IRQ_ENB_DSTE);
 		spin_lock_irqsave(&pipe->irqlock, flags);
 		vsp1_pipeline_run(pipe);
 		spin_unlock_irqrestore(&pipe->irqlock, flags);
+
+		if (!wait_event_timeout(pipe->dst_wait, pipe->dst_cnt == 0,
+					msecs_to_jiffies(100)))
+			dev_warn(vsp1->dev, "display interrupt timeout\n");
+
 	} else if (drm_pipe->enabled && !pipe->num_inputs) {
 		vsp1_pipeline_stop(pipe);
 	}
@@ -778,6 +785,7 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 		pipe->bru->sink_pad = 0;
 		pipe->output->entity.sink = pipe->lif;
 		pipe->output->entity.sink_pad = 0;
+		init_waitqueue_head(&pipe->dst_wait);
 
 		list_add_tail(&pipe->bru->list_pipe, &pipe->entities);
 		list_add_tail(&pipe->lif->list_pipe, &pipe->entities);

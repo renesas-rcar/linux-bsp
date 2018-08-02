@@ -114,6 +114,8 @@ struct vsp1_partition {
  * @vmute_flag: Enable mute flag of VSPD
  * @event_wait: wait queue to wait for write back state
  * @completed: display update completion flag
+ * @dst_cnt: display interrupt count
+ * @dst_wait: wait queue used to display interrupt signal
  */
 struct vsp1_pipeline {
 	struct media_pipeline pipe;
@@ -155,6 +157,8 @@ struct vsp1_pipeline {
 	bool vmute_flag;
 	wait_queue_head_t event_wait;
 	bool completed;
+	unsigned int dst_cnt;
+	wait_queue_head_t dst_wait;
 };
 
 void vsp1_pipeline_reset(struct vsp1_pipeline *pipe);
