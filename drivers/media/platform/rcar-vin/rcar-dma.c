@@ -1427,9 +1427,7 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 		spin_lock_irqsave(&vin->qlock, flags);
 		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
 		spin_unlock_irqrestore(&vin->qlock, flags);
-		if (vin->info->use_mc)
-			pm_runtime_put(vin->dev);
-		return ret;
+		goto error;
 	}
 
 	spin_lock_irqsave(&vin->qlock, flags);
@@ -1447,12 +1445,17 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	ret = rvin_capture_start(vin);
 	if (ret) {
 		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
+		spin_unlock_irqrestore(&vin->qlock, flags);
 		rvin_set_stream(vin, 0);
-		if (vin->info->use_mc)
-			pm_runtime_put(vin->dev);
+		goto error;
 	}
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
+
+	return 0;
+error:
+	if (vin->info->use_mc)
+		pm_runtime_put(vin->dev);
 
 	if (ret)
 		dma_free_coherent(vin->dev, vin->format.sizeimage,
