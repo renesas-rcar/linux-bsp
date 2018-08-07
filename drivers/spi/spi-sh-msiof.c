@@ -289,7 +289,7 @@ static void sh_msiof_spi_reset_regs(struct sh_msiof_spi_priv *p)
 		if (!(sh_msiof_read(p, CTR) & mask))
 			break;
 
-		usleep_range(10, 20);
+		udelay(1);
 	}
 }
 
