@@ -1176,6 +1176,10 @@ static irqreturn_t rvin_irq(int irq, void *data)
 	if (!rvin_seq_field_done(vin))
 		goto done;
 
+	/* Check FIS bit before reading VnMS register */
+	if (!(int_status & VNINTS_FIS))
+		goto done;
+
 	/* Prepare for capture and update state */
 	vnms = rvin_read(vin, VNMS_REG);
 	slot = (vnms & VNMS_FBS_MASK) >> VNMS_FBS_SHIFT;
