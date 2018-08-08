@@ -86,6 +86,9 @@
 
 /* Interrupt Enable */
 #define INTEN_REG			0x30
+#define INTEN_INT_AFIFO_OF		BIT(27)
+#define INTEN_INT_ERRSOTHS		BIT(4)
+#define INTEN_INT_ERRSOTSYNCHS		BIT(3)
 
 /* Interrupt Source Mask */
 #define INTCLOSE_REG			0x34
@@ -403,6 +406,29 @@ static void rcar_csi2_write(struct rcar_csi2 *priv, unsigned int reg, u32 data)
 	iowrite32(data, priv->base + reg);
 }
 
+static irqreturn_t rcar_csi2_irq(int irq, void *data)
+{
+	struct rcar_csi2 *priv = data;
+	u32 int_status, int_err_status;
+	unsigned int handled = 0;
+
+	int_status = rcar_csi2_read(priv, INTSTATE_REG);
+	int_err_status = rcar_csi2_read(priv, INTERRSTATE_REG);
+
+	if (int_status) {
+		rcar_csi2_write(priv, INTSTATE_REG, int_status);
+		if (int_err_status) {
+			rcar_csi2_write(priv, INTERRSTATE_REG, int_err_status);
+			dev_err(priv->dev,
+				"Reinitialize for transfer error.\n");
+			reset_control_assert(priv->rstc);
+		}
+		handled = 1;
+	}
+
+	return IRQ_RETVAL(handled);
+}
+
 static int rcar_csi2_wait_phy_start(struct rcar_csi2 *priv)
 {
 	int timeout;
@@ -582,6 +608,10 @@ static int rcar_csi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 	/* Init */
 	rcar_csi2_write(priv, TREF_REG, TREF_TREF);
 	rcar_csi2_write(priv, PHTC_REG, 0);
+
+	/* Enable interrupt */
+	rcar_csi2_write(priv, INTEN_REG, INTEN_INT_AFIFO_OF |
+			INTEN_INT_ERRSOTHS | INTEN_INT_ERRSOTSYNCHS);
 
 	/* Configure */
 	rcar_csi2_write(priv, VCDT_REG, vcdt);
@@ -906,7 +936,8 @@ static int rcar_csi2_probe_resources(struct rcar_csi2 *priv,
 	if (irq < 0)
 		return irq;
 
-	return 0;
+	return devm_request_irq(&pdev->dev, irq, rcar_csi2_irq, IRQF_SHARED,
+				dev_name(&pdev->dev), priv);
 }
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a7795 = {
