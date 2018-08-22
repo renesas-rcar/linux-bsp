@@ -424,7 +424,7 @@ static void rvin_capture_stop(struct rvin_dev *vin)
 		u32 vnmc;
 
 		vnmc = rvin_read(vin, VNMC_REG);
-		rvin_write(vin, vnmc & ~(VNMC_SCLE | VNMC_VUP), VNMC_REG);
+		rvin_write(vin, vnmc & ~VNMC_VUP, VNMC_REG);
 	}
 
 	/* Disable module */
@@ -449,6 +449,11 @@ static void rvin_ack_interrupt(struct rvin_dev *vin)
 static bool rvin_capture_active(struct rvin_dev *vin)
 {
 	return rvin_read(vin, VNMS_REG) & VNMS_CA;
+}
+
+static void rvin_disable_uds(struct rvin_dev *vin)
+{
+	rvin_write(vin, rvin_read(vin, VNMC_REG) & ~VNMC_SCLE, VNMC_REG);
 }
 
 static int rvin_get_active_slot(struct rvin_dev *vin, u32 vnms)
@@ -1414,6 +1419,10 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 	spin_unlock_irqrestore(&vin->qlock, flags);
 
 	__rvin_stop_streaming(vin);
+
+	/* disable UDS */
+	if (vin->info->chip == RCAR_GEN3)
+		rvin_disable_uds(vin);
 
 	/* disable interrupts */
 	rvin_disable_interrupts(vin);
