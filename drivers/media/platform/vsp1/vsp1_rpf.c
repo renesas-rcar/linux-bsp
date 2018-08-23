@@ -231,6 +231,14 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 	const struct v4l2_pix_format_mplane *format = &rpf->format;
 	struct v4l2_rect crop;
 	u32 crop_width, crop_height, crop_x, crop_y, fourcc;
+	u32 i;
+
+	if (pipe->vmute_flag) {
+		for (i = 0; i < vsp1->info->rpf_count; ++i)
+			vsp1_rpf_write(rpf, dlb, VI6_DPR_RPF_ROUTE(i),
+				       VI6_DPR_NODE_UNUSED);
+		return;
+	}
 
 	/*
 	 * Source size and crop offsets.
