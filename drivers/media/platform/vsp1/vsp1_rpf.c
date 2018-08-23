@@ -65,7 +65,10 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 		pstride |= format->plane_fmt[1].bytesperline
 			<< VI6_RPF_SRCM_PSTRIDE_C_SHIFT;
 
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_PSTRIDE, pstride);
+	if (rpf->interlaced)
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_PSTRIDE, pstride * 2);
+	else
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_PSTRIDE, pstride);
 
 	/* Format */
 	sink_format = vsp1_entity_get_pad_format(&rpf->entity,
@@ -101,9 +104,14 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 		top = compose->top;
 	}
 
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_LOC,
-		       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
-		       (top << VI6_RPF_LOC_VCOORD_SHIFT));
+	if (rpf->interlaced)
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_LOC,
+			       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
+			       ((top / 2) << VI6_RPF_LOC_VCOORD_SHIFT));
+	else
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_LOC,
+			       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
+			       (top << VI6_RPF_LOC_VCOORD_SHIFT));
 
 	/*
 	 * On Gen2 use the alpha channel (extended to 8 bits) when available or
@@ -222,6 +230,7 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 	const struct vsp1_format_info *fmtinfo = rpf->fmtinfo;
 	const struct v4l2_pix_format_mplane *format = &rpf->format;
 	struct v4l2_rect crop;
+	u32 crop_width, crop_height, crop_x, crop_y, fourcc;
 
 	/*
 	 * Source size and crop offsets.
@@ -248,21 +257,63 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 		crop.left += pipe->partition->rpf.left;
 	}
 
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_BSIZE,
-		       (crop.width << VI6_RPF_SRC_BSIZE_BHSIZE_SHIFT) |
-		       (crop.height << VI6_RPF_SRC_BSIZE_BVSIZE_SHIFT));
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_ESIZE,
-		       (crop.width << VI6_RPF_SRC_ESIZE_EHSIZE_SHIFT) |
-		       (crop.height << VI6_RPF_SRC_ESIZE_EVSIZE_SHIFT));
+	crop_width = crop.width;
+	crop_x = crop.left;
+	fourcc = rpf->fmtinfo->fourcc;
 
-	mem.addr[0] += crop.top * format->plane_fmt[0].bytesperline
-		     + crop.left * fmtinfo->bpp[0] / 8;
+	if (rpf->interlaced) {
+		crop_height = crop.height / 2;
+		crop_y = crop.top / 2;
+
+		if (fourcc == V4L2_PIX_FMT_UYVY ||
+		    fourcc == V4L2_PIX_FMT_VYUY ||
+		    fourcc == V4L2_PIX_FMT_YUYV ||
+		    fourcc == V4L2_PIX_FMT_YVYU) {
+			crop_width = round_down(crop_width, 2);
+			crop_x = round_down(crop_x, 2);
+		} else if ((fourcc == V4L2_PIX_FMT_NV12M) ||
+			   (fourcc == V4L2_PIX_FMT_NV21M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_height = round_down(crop_height, 2);
+			crop_x = round_down(crop_x, 2);
+			crop_y = round_down(crop_y, 2);
+		} else if ((fourcc == V4L2_PIX_FMT_NV16M) ||
+			   (fourcc == V4L2_PIX_FMT_NV61M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_x = round_down(crop_x, 2);
+		} else if ((fourcc == V4L2_PIX_FMT_YUV420M) ||
+			   (fourcc == V4L2_PIX_FMT_YUV444M) ||
+			   (fourcc == V4L2_PIX_FMT_YVU420M) ||
+			   (fourcc == V4L2_PIX_FMT_YVU444M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_height = round_down(crop_height, 2);
+		} else if ((fourcc == V4L2_PIX_FMT_YUV422M) ||
+			   (fourcc == V4L2_PIX_FMT_YVU422M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_height = round_down(crop_height, 2);
+			crop_x = round_down(crop_x, 2);
+			crop_y = round_down(crop_y, 2);
+		}
+	} else {
+		crop_height = crop.height;
+		crop_y = crop.top;
+	}
+
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_BSIZE,
+		       (crop_width << VI6_RPF_SRC_BSIZE_BHSIZE_SHIFT) |
+		       (crop_height << VI6_RPF_SRC_BSIZE_BVSIZE_SHIFT));
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_ESIZE,
+		       (crop_width << VI6_RPF_SRC_ESIZE_EHSIZE_SHIFT) |
+		       (crop_height << VI6_RPF_SRC_ESIZE_EVSIZE_SHIFT));
+
+	mem.addr[0] += crop_y * format->plane_fmt[0].bytesperline
+		     + crop_x * fmtinfo->bpp[0] / 8;
 
 	if (format->num_planes > 1) {
 		unsigned int offset;
 
-		offset = crop.top * format->plane_fmt[1].bytesperline
-		       + crop.left / fmtinfo->hsub
+		offset = crop_y * format->plane_fmt[1].bytesperline
+		       + crop_x / fmtinfo->hsub
 		       * fmtinfo->bpp[1] / 8;
 		mem.addr[1] += offset;
 		mem.addr[2] += offset;
@@ -276,9 +327,13 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 	    fmtinfo->swap_uv)
 		swap(mem.addr[1], mem.addr[2]);
 
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_Y, mem.addr[0]);
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C0, mem.addr[1]);
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C1, mem.addr[2]);
+	if (!(vsp1->ths_quirks & VSP1_AUTO_FLD_NOT_SUPPORT)) {
+		vsp1_dl_set_addr_auto_fld(dlb, rpf, mem);
+	} else {
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_Y, mem.addr[0]);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C0, mem.addr[1]);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C1, mem.addr[2]);
+	}
 }
 
 static void rpf_partition(struct vsp1_entity *entity,
