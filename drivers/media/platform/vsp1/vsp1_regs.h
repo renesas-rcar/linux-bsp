@@ -28,6 +28,7 @@
 #define VI6_SRESET_SRTS(n)		(1 << (n))
 
 #define VI6_STATUS			0x0038
+#define VI6_STATUS_FLD_STD(n)		(1 << ((n) + 28))
 #define VI6_STATUS_SYS_ACT(n)		(1 << ((n) + 8))
 
 #define VI6_WPF_IRQ_ENB(n)		(0x0048 + (n) * 12)
@@ -69,12 +70,13 @@
 
 #define VI6_DL_HDR_ADDR(n)		(0x0104 + (n) * 4)
 
-#define VI6_DL_SWAP			0x0114
+#define VI6_DL_SWAP(n)			(0x0114 + (n) * 56)
+#define VI6_DL_SWAP_IND			(1 << 31)
 #define VI6_DL_SWAP_LWS			(1 << 2)
 #define VI6_DL_SWAP_WDS			(1 << 1)
 #define VI6_DL_SWAP_BTS			(1 << 0)
 
-#define VI6_DL_EXT_CTRL			0x011c
+#define VI6_DL_EXT_CTRL(n)		(0x011c + (n) * 36)
 #define VI6_DL_EXT_CTRL_NWE		(1 << 16)
 #define VI6_DL_EXT_CTRL_POLINT_MASK	(0x3f << 8)
 #define VI6_DL_EXT_CTRL_POLINT_SHIFT	8

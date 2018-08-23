@@ -2,7 +2,7 @@
 /*
  * vsp1_pipe.c  --  R-Car VSP1 Pipeline
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -311,17 +311,29 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe)
 
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 {
+	struct vsp1_device *vsp1;
 	unsigned int flags;
+	bool interlaced = false;
+	int i;
 
 	if (pipe == NULL)
 		return;
+
+	vsp1 = pipe->output->entity.vsp1;
+
+	for (i = 0; i < vsp1->info->rpf_count; ++i) {
+		if (!pipe->inputs[i])
+			continue;
+
+		interlaced = pipe->inputs[i]->interlaced;
+	}
 
 	/*
 	 * If the DL commit raced with the frame end interrupt, the commit ends
 	 * up being postponed by one frame. The returned flags tell whether the
 	 * active frame was finished or postponed.
 	 */
-	flags = vsp1_dlm_irq_frame_end(pipe->output->dlm);
+	flags = vsp1_dlm_irq_frame_end(pipe->output->dlm, interlaced);
 
 	if (pipe->hgo)
 		vsp1_hgo_frame_end(pipe->hgo);
