@@ -2,7 +2,7 @@
 /*
  * vsp1_drm.c  --  R-Car VSP1 DRM/KMS Interface
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -811,7 +811,13 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int pipe_index,
 	rpf->fmtinfo = fmtinfo;
 	rpf->format.num_planes = fmtinfo->planes;
 	rpf->format.plane_fmt[0].bytesperline = cfg->pitch;
-	rpf->format.plane_fmt[1].bytesperline = cfg->pitch;
+	if (rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YUV420M ||
+	    rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU420M ||
+	    rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YUV422M ||
+	    rpf->fmtinfo->fourcc == V4L2_PIX_FMT_YVU422M)
+		rpf->format.plane_fmt[1].bytesperline = cfg->pitch / 2;
+	else
+		rpf->format.plane_fmt[1].bytesperline = cfg->pitch;
 	rpf->alpha = cfg->alpha;
 
 	rpf->mem.addr[0] = cfg->mem[0];
