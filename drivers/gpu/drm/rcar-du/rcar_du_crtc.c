@@ -107,6 +107,11 @@ static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
  * Hardware Setup
  */
 
+static const struct soc_device_attribute rcar_du_r8a7795_es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 struct dpll_info {
 	unsigned int output;
 	unsigned int fdpll;
@@ -175,8 +180,14 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 
 			for (fdpll = 1; fdpll < 32; fdpll++) {
 				unsigned long output;
+				unsigned long wa_div;
 
-				output = fout / (fdpll + 1);
+				if (soc_device_match(rcar_du_r8a7795_es1))
+					wa_div = 2;
+				else
+					wa_div = 1;
+
+				output = fout / (fdpll + 1) / wa_div;
 				if (output >= 400 * 1000 * 1000)
 					continue;
 
@@ -204,11 +215,6 @@ done:
 		 dpll->output, dpll->fdpll, dpll->n, dpll->m,
 		 best_diff);
 }
-
-static const struct soc_device_attribute rcar_du_r8a7795_es1[] = {
-	{ .soc_id = "r8a7795", .revision = "ES1.*" },
-	{ /* sentinel */ }
-};
 
 static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 {
@@ -241,6 +247,9 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		if (rcdu->info->dpll_ch & (1 << rcrtc->index)) {
 			unsigned long target = mode_clock;
 
+			rcar_du_dpll_divider(rcrtc, &dpll, extclk, target);
+			extclk = dpll.output;
+
 			/*
 			 * The H3 ES1.x exhibits dot clock duty cycle stability
 			 * issues. We can work around them by configuring the
@@ -250,10 +259,7 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 			 * reason, so restrict the workaround to H3 ES1.x.
 			 */
 			if (soc_device_match(rcar_du_r8a7795_es1))
-				target *= 2;
-
-			rcar_du_dpll_divider(rcrtc, &dpll, extclk, target);
-			extclk = dpll.output;
+				extclk *= 2;
 		}
 
 		extdiv = DIV_ROUND_CLOSEST(extclk, mode_clock);
