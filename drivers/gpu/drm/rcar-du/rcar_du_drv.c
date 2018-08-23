@@ -1,7 +1,7 @@
 /*
  * rcar_du_drv.c  --  R-Car Display Unit DRM driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -26,11 +26,15 @@
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
+#include <drm/rcar_du_drm.h>
+
+#include <media/vsp1.h>
 
 #include "rcar_du_drv.h"
 #include "rcar_du_kms.h"
 #include "rcar_du_of.h"
 #include "rcar_du_regs.h"
+#include "rcar_du_vsp.h"
 
 /* -----------------------------------------------------------------------------
  * Device Information
@@ -323,6 +327,11 @@ static void rcar_du_lastclose(struct drm_device *dev)
 	drm_fbdev_cma_restore_mode(rcdu->fbdev);
 }
 
+static const struct drm_ioctl_desc rcar_du_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
+			  DRM_UNLOCKED | DRM_CONTROL_ALLOW),
+};
+
 DEFINE_DRM_GEM_CMA_FOPS(rcar_du_fops);
 
 static struct drm_driver rcar_du_driver = {
@@ -347,6 +356,8 @@ static struct drm_driver rcar_du_driver = {
 	.date			= "20130110",
 	.major			= 1,
 	.minor			= 0,
+	.ioctls			= rcar_du_ioctls,
+	.num_ioctls		= ARRAY_SIZE(rcar_du_ioctls),
 };
 
 /* -----------------------------------------------------------------------------
