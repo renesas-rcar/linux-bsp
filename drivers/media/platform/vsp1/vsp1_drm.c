@@ -559,7 +559,7 @@ static void vsp1_du_pipeline_configure(struct vsp1_pipeline *pipe)
 		vsp1_entity_configure_partition(entity, pipe, dl, dlb);
 	}
 
-	vsp1_dl_list_commit(dl, drm_pipe->force_brx_release);
+	vsp1_dl_list_commit(dl, drm_pipe->force_brx_release, pipe->lif->index);
 }
 
 /* -----------------------------------------------------------------------------
@@ -819,6 +819,15 @@ int vsp1_du_atomic_update(struct device *dev, unsigned int pipe_index,
 	else
 		rpf->format.plane_fmt[1].bytesperline = cfg->pitch;
 	rpf->alpha = cfg->alpha;
+
+	rpf->interlaced = cfg->interlaced;
+
+	if ((vsp1->ths_quirks & VSP1_AUTO_FLD_NOT_SUPPORT) &&
+	    rpf->interlaced) {
+		dev_err(vsp1->dev,
+			"Interlaced mode is not supported.\n");
+		return -EINVAL;
+	}
 
 	rpf->mem.addr[0] = cfg->mem[0];
 	rpf->mem.addr[1] = cfg->mem[1];
