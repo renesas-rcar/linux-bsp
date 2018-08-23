@@ -2,7 +2,7 @@
 /*
  * vsp1_rwpf.h  --  R-Car VSP1 Read and Write Pixel Formatters
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -63,6 +63,8 @@ struct vsp1_rwpf {
 	struct vsp1_rwpf_memory mem;
 
 	struct vsp1_dl_manager *dlm;
+
+	bool interlaced;
 };
 
 static inline struct vsp1_rwpf *to_rwpf(struct v4l2_subdev *subdev)
