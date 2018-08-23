@@ -2,7 +2,7 @@
 /*
  * vsp1_lif.c  --  R-Car VSP1 LCD Controller Interface
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -88,6 +88,7 @@ static void lif_configure_stream(struct vsp1_entity *entity,
 {
 	const struct v4l2_mbus_framefmt *format;
 	struct vsp1_lif *lif = to_lif(&entity->subdev);
+	struct vsp1_device *vsp1 = entity->vsp1;
 	unsigned int hbth = 1300;
 	unsigned int obth = 400;
 	unsigned int lbth = 200;
@@ -96,6 +97,18 @@ static void lif_configure_stream(struct vsp1_entity *entity,
 					    LIF_PAD_SOURCE);
 
 	obth = min(obth, (format->width + 1) / 2 * format->height - 4);
+
+	if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
+	    VI6_IP_VERSION_MODEL_VSPD_GEN3) {
+		hbth = 0;
+		obth = 3000;
+		lbth = 0;
+	} else if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
+		   VI6_IP_VERSION_MODEL_VSPDL_GEN3) {
+		hbth = 0;
+		obth = 1500;
+		lbth = 0;
+	}
 
 	vsp1_lif_write(lif, dlb, VI6_LIF_CSBTH,
 			(hbth << VI6_LIF_CSBTH_HBTH_SHIFT) |
