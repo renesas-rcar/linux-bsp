@@ -19,7 +19,6 @@
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 
-#include <linux/dma-buf.h>
 #include <linux/of_graph.h>
 #include <linux/wait.h>
 
@@ -179,44 +178,6 @@ const struct rcar_du_format_info *rcar_du_format_info(u32 fourcc)
 /* -----------------------------------------------------------------------------
  * Frame buffer
  */
-
-struct drm_gem_object *rcar_du_gem_prime_import_sg_table(struct drm_device *dev,
-				struct dma_buf_attachment *attach,
-				struct sg_table *sgt)
-{
-	struct rcar_du_device *rcdu = dev->dev_private;
-	struct drm_gem_cma_object *cma_obj;
-	struct drm_gem_object *gem_obj;
-	int ret;
-
-	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
-		return drm_gem_cma_prime_import_sg_table(dev, attach, sgt);
-
-	/* Create a CMA GEM buffer. */
-	cma_obj = kzalloc(sizeof(*cma_obj), GFP_KERNEL);
-	if (!cma_obj)
-		return ERR_PTR(-ENOMEM);
-	gem_obj = &cma_obj->base;
-
-	ret = drm_gem_object_init(dev, gem_obj, attach->dmabuf->size);
-	if (ret)
-		goto error;
-
-	ret = drm_gem_create_mmap_offset(gem_obj);
-	if (ret) {
-		drm_gem_object_release(gem_obj);
-		goto error;
-	}
-
-	cma_obj->paddr = 0;
-	cma_obj->sgt = sgt;
-
-	return gem_obj;
-
-error:
-	kfree(cma_obj);
-	return ERR_PTR(ret);
-}
 
 int rcar_du_dumb_create(struct drm_file *file, struct drm_device *dev,
 			struct drm_mode_create_dumb *args)
