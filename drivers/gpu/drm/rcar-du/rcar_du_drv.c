@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 
+#include <drm/bridge/dw_hdmi.h>
 #include <drm/drmP.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc_helper.h>
@@ -31,6 +32,7 @@
 #include <media/vsp1.h>
 
 #include "rcar_du_drv.h"
+#include "rcar_du_encoder.h"
 #include "rcar_du_kms.h"
 #include "rcar_du_of.h"
 #include "rcar_du_regs.h"
@@ -371,6 +373,9 @@ static int rcar_du_pm_suspend(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
 	struct drm_atomic_state *state;
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	struct drm_encoder *encoder;
+#endif
 	int i;
 
 	drm_kms_helper_poll_disable(rcdu->ddev);
@@ -386,6 +391,17 @@ static int rcar_du_pm_suspend(struct device *dev)
 	for (i = 0; i < rcdu->num_crtcs; ++i)
 		clk_set_rate(rcdu->crtcs[i].extclock, 0);
 
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	list_for_each_entry(encoder,
+			    &rcdu->ddev->mode_config.encoder_list,
+			    head) {
+		struct rcar_du_encoder *renc = to_rcar_encoder(encoder);
+
+		if (renc->bridge && (renc->output == RCAR_DU_OUTPUT_HDMI0 ||
+		    renc->output == RCAR_DU_OUTPUT_HDMI1))
+			dw_hdmi_s2r_ctrl(encoder->bridge, false);
+	}
+#endif
 	rcdu->suspend_state = state;
 
 	return 0;
@@ -394,7 +410,19 @@ static int rcar_du_pm_suspend(struct device *dev)
 static int rcar_du_pm_resume(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	struct drm_encoder *encoder;
 
+	list_for_each_entry(encoder,
+			    &rcdu->ddev->mode_config.encoder_list,
+			    head) {
+		struct rcar_du_encoder *renc = to_rcar_encoder(encoder);
+
+		if (renc->bridge && (renc->output == RCAR_DU_OUTPUT_HDMI0 ||
+		    renc->output == RCAR_DU_OUTPUT_HDMI1))
+			dw_hdmi_s2r_ctrl(encoder->bridge, true);
+	}
+#endif
 	drm_atomic_helper_resume(rcdu->ddev, rcdu->suspend_state);
 	drm_fbdev_cma_set_suspend_unlocked(rcdu->fbdev, false);
 	drm_kms_helper_poll_enable(rcdu->ddev);
