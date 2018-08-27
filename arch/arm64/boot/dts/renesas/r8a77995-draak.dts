@@ -32,6 +32,9 @@
 
 		no-use-ddc;
 
+		width = <800>;
+		height = <600>;
+
 		port {
 			vga_in: endpoint {
 				remote-endpoint = <&adv7123_out>;
