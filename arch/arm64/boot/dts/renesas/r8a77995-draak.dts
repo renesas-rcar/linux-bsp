@@ -49,6 +49,9 @@
 		compatible = "hdmi-connector";
 		type = "a";
 
+		width = <800>;
+		height = <600>;
+
 		port {
 			hdmi_con_in: endpoint {
 				remote-endpoint = <&adv7612_in>;
