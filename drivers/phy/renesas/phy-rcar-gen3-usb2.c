@@ -12,6 +12,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/delay.h>
 #include <linux/extcon.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -284,6 +285,10 @@ static void rcar_gen3_init_otg(struct rcar_gen3_chan *ch)
 	writel(val | USB2_OBINT_BITS, usb2_base + USB2_OBINTEN);
 	val = readl(usb2_base + USB2_ADPCTRL);
 	writel(val | USB2_ADPCTRL_IDPULLUP, usb2_base + USB2_ADPCTRL);
+
+	/* Wait at least 20 ms for IDDIG status */
+	usleep_range(20000, 21000);
+
 	val = readl(usb2_base + USB2_LINECTRL1);
 	rcar_gen3_set_linectrl(ch, 0, 0);
 	writel(val | USB2_LINECTRL1_DPRPD_EN | USB2_LINECTRL1_DMRPD_EN,
