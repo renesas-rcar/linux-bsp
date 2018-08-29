@@ -14,6 +14,7 @@
 #include <linux/of_device.h>
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 
 #include <drm/drm_atomic.h>
@@ -44,6 +45,7 @@ struct rcar_lvds_device_info {
 struct rcar_lvds {
 	struct device *dev;
 	const struct rcar_lvds_device_info *info;
+	struct reset_control *rstc;
 
 	struct drm_bridge bridge;
 
@@ -171,6 +173,8 @@ static void rcar_lvds_enable(struct drm_bridge *bridge)
 
 	WARN_ON(lvds->enabled);
 
+	reset_control_deassert(lvds->rstc);
+
 	ret = clk_prepare_enable(lvds->clock);
 	if (ret < 0)
 		return;
@@ -266,6 +270,8 @@ static void rcar_lvds_disable(struct drm_bridge *bridge)
 	rcar_lvds_write(lvds, LVDCR1, 0);
 
 	clk_disable_unprepare(lvds->clock);
+
+	reset_control_assert(lvds->rstc);
 
 	lvds->enabled = false;
 }
@@ -479,6 +485,12 @@ static int rcar_lvds_probe(struct platform_device *pdev)
 	if (IS_ERR(lvds->clock)) {
 		dev_err(&pdev->dev, "failed to get clock\n");
 		return PTR_ERR(lvds->clock);
+	}
+
+	lvds->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(lvds->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset\n");
+		return PTR_ERR(lvds->rstc);
 	}
 
 	drm_bridge_add(&lvds->bridge);
