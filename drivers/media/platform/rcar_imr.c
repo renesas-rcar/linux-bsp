@@ -852,14 +852,14 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 		/* ...planar input means planar output; set Y-plane precision */
 		if (cflags & IMR_F_Y8) {
 			/* ...setup Y-plane processing: YCM=0, SY/DY=xx, SUV/DUV=0 */
-			*dl++ = IMR_OP_WTS(IMR_CMRCSR, src_y_fmt | src_uv_fmt | dst_y_fmt | dst_uv_fmt | __imr_luce(type));
+			*dl++ = IMR_OP_WTS(IMR_CMRCSR, src_y_fmt | src_uv_fmt | dst_y_fmt | dst_uv_fmt | __imr_luce(type) | __imr_clce(type));
 
 			/* ...set source/destination strides basing on Y-plane precision */
 			*dl++ = IMR_OP_WTS(IMR_DSTR, W << (cflags & IMR_F_Y10 ? 1 : 0));
 			*dl++ = IMR_OP_WTS(IMR_SSTR, w << (iflags & IMR_F_Y10 ? 1 : 0));
 		} else {
 			/* ...setup UV-plane processing only */
-			*dl++ = IMR_OP_WTS(IMR_CMRCSR, IMR_CMR_YCM | src_uv_fmt | dst_uv_fmt | __imr_clce(type));
+			*dl++ = IMR_OP_WTS(IMR_CMRCSR, IMR_CMR_YCM | src_uv_fmt | dst_uv_fmt | __imr_clce(type) | __imr_luce(type));
 
 			/* ...set source/destination strides basing on UV-plane precision */
 			*dl++ = IMR_OP_WTS(IMR_DSTR, W << (cflags & IMR_F_UV10 ? 1 : 0));
@@ -918,10 +918,10 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 		cfg->src_pa_ptr[1] = dl++;
 
 		/* ...select correction mode */
-		*dl++ = IMR_OP_WTS(IMR_CMRCSR, IMR_CMR_YCM | __imr_clce(type));
+		*dl++ = IMR_OP_WTS(IMR_CMRCSR, IMR_CMR_YCM | __imr_clce(type) | __imr_luce(type));
 
 		/* ...luminance correction bit must be cleared (if it was set) */
-		*dl++ = IMR_OP_WTS(IMR_CMRCCR, IMR_CMR_LUCE);
+		//*dl++ = IMR_OP_WTS(IMR_CMRCCR, IMR_CMR_LUCE);
 
 		/* ...draw triangles */
 		*dl++ = IMR_OP_GOSUB;
