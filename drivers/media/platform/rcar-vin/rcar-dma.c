@@ -814,6 +814,9 @@ static int rvin_setup(struct rvin_dev *vin)
 	case V4L2_PIX_FMT_RGB565:
 		dmr = 0;
 		break;
+	case V4L2_PIX_FMT_ABGR32:
+		dmr = VNDMR_EXRGB | VNDMR_DTMD_ARGB;
+		break;
 	case V4L2_PIX_FMT_XBGR32:
 		/* Note: not supported on M1 */
 		dmr = VNDMR_EXRGB;
