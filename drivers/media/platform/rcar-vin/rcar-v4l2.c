@@ -59,6 +59,10 @@ static const struct rvin_video_format rvin_formats[] = {
 		.bpp			= 2,
 	},
 	{
+		.fourcc			= V4L2_PIX_FMT_ABGR32,
+		.bpp			= 4,
+	},
+	{
 		.fourcc			= V4L2_PIX_FMT_XBGR32,
 		.bpp			= 4,
 	},
@@ -106,7 +110,9 @@ static void rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	    (vin->info->model == RCAR_M1 &&
 	     pix->pixelformat == V4L2_PIX_FMT_XBGR32) ||
 	    (vin->info->model != RCAR_GEN3 &&
-	     pix->pixelformat == V4L2_PIX_FMT_NV12)) {
+	     pix->pixelformat == V4L2_PIX_FMT_NV12) ||
+	    (vin->info->model != RCAR_GEN3 &&
+	     pix->pixelformat == V4L2_PIX_FMT_ABGR32)) {
 		vin_warn(vin, "set default format, so unsupported format\n");
 		pix->pixelformat = RVIN_DEFAULT_FORMAT;
 	}
