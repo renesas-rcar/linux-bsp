@@ -124,6 +124,7 @@
 #define VNDMR_BPSM		(1 << 4)
 #define VNDMR_DTMD_YCSEP	(1 << 1)
 #define VNDMR_DTMD_ARGB		(1 << 0)
+#define VNDMR_DTMD_YCSEP_YCBCR420	(3 << 0)
 
 /* Video n Data Mode Register 2 bits */
 #define VNDMR2_VPS		(1 << 30)
@@ -679,7 +680,8 @@ static void rvin_crop_scale_comp(struct rvin_dev *vin)
 	else
 		rvin_crop_scale_comp_gen3(vin);
 
-	if (vin->format.pixelformat == V4L2_PIX_FMT_NV16)
+	if (vin->format.pixelformat == V4L2_PIX_FMT_NV16 ||
+	    vin->format.pixelformat == V4L2_PIX_FMT_NV12)
 		rvin_write(vin, ALIGN(vin->format.width, 0x20), VNIS_REG);
 	else
 		rvin_write(vin, ALIGN(vin->format.width, 0x10), VNIS_REG);
@@ -784,6 +786,13 @@ static int rvin_setup(struct rvin_dev *vin)
 	 * Output format
 	 */
 	switch (vin->format.pixelformat) {
+	case V4L2_PIX_FMT_NV12:
+		rvin_write(vin,
+			   ALIGN(vin->format.width * vin->format.height, 0x80),
+			   VNUVAOF_REG);
+		dmr = VNDMR_DTMD_YCSEP_YCBCR420;
+		output_is_yuv = true;
+		break;
 	case V4L2_PIX_FMT_NV16:
 		rvin_write(vin,
 			   ALIGN(vin->format.width * vin->format.height, 0x80),
@@ -830,7 +839,8 @@ static int rvin_setup(struct rvin_dev *vin)
 			vnmc |= VNMC_DPINE;
 	}
 
-	if (rvin_is_scaling(vin))
+	if (vin->format.pixelformat != V4L2_PIX_FMT_NV12 &&
+	    rvin_is_scaling(vin))
 		vnmc |= VNMC_SCLE;
 
 	/* Progressive or interlaced mode */
