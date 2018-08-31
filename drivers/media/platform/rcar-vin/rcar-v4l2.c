@@ -659,6 +659,41 @@ static const struct v4l2_ioctl_ops rvin_ioctl_ops = {
  * V4L2 Media Controller
  */
 
+static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
+{
+	struct v4l2_subdev *sd;
+	struct media_pad *pad;
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
+
+	/* Get cropping size */
+	pad = media_entity_remote_pad(&vin->pad);
+	if (!pad)
+		return -EPIPE;
+
+	sd = media_entity_to_v4l2_subdev(pad->entity);
+	if (!sd)
+		return -EPIPE;
+
+	if (v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt))
+		return -EPIPE;
+
+	vin->source.width = pix->width = fmt.format.width;
+	vin->source.height = pix->height = fmt.format.height;
+	vin->crop = vin->source;
+
+	if (fmt.format.field == V4L2_FIELD_ALTERNATE)
+		vin->format.field = V4L2_FIELD_INTERLACED;
+	else
+		vin->format.field = fmt.format.field;
+
+	vin->format.bytesperline =
+		rvin_format_bytesperline(&vin->format);
+
+	return 0;
+}
+
 static void rvin_mc_try_format(struct rvin_dev *vin,
 			       struct v4l2_pix_format *pix)
 {
@@ -699,11 +734,9 @@ static int rvin_mc_s_fmt_vid_cap(struct file *file, void *priv,
 
 	vin->format = f->fmt.pix;
 
-	vin->crop.top = 0;
-	vin->crop.left = 0;
-	vin->crop.width = vin->format.width;
-	vin->crop.height = vin->format.height;
-	vin->compose = vin->crop;
+	vin->compose.top = vin->compose.left = 0;
+	vin->compose.width = vin->format.width;
+	vin->compose.height = vin->format.height;
 
 	return 0;
 }
@@ -720,12 +753,98 @@ static int rvin_mc_enum_input(struct file *file, void *priv,
 	return 0;
 }
 
+static int rvin_mc_g_selection(struct file *file, void *fh,
+			       struct v4l2_selection *s)
+{
+	struct rvin_dev *vin = video_drvdata(file);
+	int ret;
+
+	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	switch (s->target) {
+	case V4L2_SEL_TGT_CROP_BOUNDS:
+	case V4L2_SEL_TGT_CROP_DEFAULT:
+		ret = rvin_get_sd_format(vin, &vin->format);
+		if (ret)
+			return ret;
+		s->r.left = s->r.top = 0;
+		vin->source.width = s->r.width = vin->format.width;
+		vin->source.height = s->r.height = vin->format.height;
+		break;
+	case V4L2_SEL_TGT_CROP:
+		s->r = vin->crop;
+		vin_dbg(vin, "Cropped %dx%d@%d:%d of %dx%d\n",
+			s->r.width, s->r.height, s->r.left, s->r.top,
+			vin->source.width, vin->source.height);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int rvin_mc_s_selection(struct file *file, void *fh,
+			       struct v4l2_selection *s)
+{
+	struct rvin_dev *vin = video_drvdata(file);
+	struct v4l2_rect r = s->r;
+	struct v4l2_rect max_rect;
+	struct v4l2_rect min_rect = {
+		.width = 6,
+		.height = 2,
+	};
+
+	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+		return -EINVAL;
+
+	v4l2_rect_set_min_size(&r, &min_rect);
+
+	switch (s->target) {
+	case V4L2_SEL_TGT_CROP:
+		/* Can't crop outside of source input */
+		max_rect.top = max_rect.left = 0;
+		max_rect.width = vin->source.width;
+		max_rect.height = vin->source.height;
+		v4l2_rect_map_inside(&r, &max_rect);
+
+		v4l_bound_align_image(&r.width, 6, vin->source.width, 0,
+				      &r.height, 2, vin->source.height, 0, 0);
+
+		r.top  = clamp_t(s32, r.top, 0, vin->source.height - r.height);
+		r.left = clamp_t(s32, r.left, 0, vin->source.width - r.width);
+
+		vin->crop = s->r = r;
+
+		vin_dbg(vin, "Cropped %dx%d@%d:%d of %dx%d\n",
+			r.width, r.height, r.left, r.top,
+			vin->source.width, vin->source.height);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int rvin_mc_cropcap(struct file *file, void *priv,
+			   struct v4l2_cropcap *crop)
+{
+	return 0;
+}
+
 static const struct v4l2_ioctl_ops rvin_mc_ioctl_ops = {
 	.vidioc_querycap		= rvin_querycap,
 	.vidioc_try_fmt_vid_cap		= rvin_mc_try_fmt_vid_cap,
 	.vidioc_g_fmt_vid_cap		= rvin_g_fmt_vid_cap,
 	.vidioc_s_fmt_vid_cap		= rvin_mc_s_fmt_vid_cap,
 	.vidioc_enum_fmt_vid_cap	= rvin_enum_fmt_vid_cap,
+
+	.vidioc_g_selection		= rvin_mc_g_selection,
+	.vidioc_s_selection		= rvin_mc_s_selection,
+
+	.vidioc_cropcap			= rvin_mc_cropcap,
 
 	.vidioc_enum_input		= rvin_mc_enum_input,
 	.vidioc_g_input			= rvin_g_input,
@@ -905,6 +1024,8 @@ static int rvin_mc_open(struct file *file)
 	ret = pm_runtime_get_sync(vin->dev);
 	if (ret < 0)
 		goto err_unlock;
+
+	rvin_get_sd_format(vin, &vin->format);
 
 	ret = v4l2_pipeline_pm_use(&vin->vdev.entity, 1);
 	if (ret < 0)
