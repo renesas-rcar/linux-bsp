@@ -2456,6 +2456,7 @@
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			resets = <&cpg 623>;
 
+			renesas,#brs = <2>;
 			renesas,fcp = <&fcpvd0>;
 		};
 
