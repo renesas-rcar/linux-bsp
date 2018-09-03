@@ -943,14 +943,7 @@ static int rsnd_soc_dai_startup(struct snd_pcm_substream *substream,
 	/* rsnd_io_to_runtime() is not yet enabled here */
 	rsnd_soc_hw_constraint(substream, dai);
 
-	/*
-	 * call rsnd_dai_call without spinlock
-	 */
-	ret = rsnd_dai_call(nolock_start, io, priv);
-	if (ret < 0)
-		rsnd_dai_call(nolock_stop, io, priv);
-
-	return ret;
+	return 0;
 }
 
 static void rsnd_soc_dai_shutdown(struct snd_pcm_substream *substream,
@@ -963,7 +956,7 @@ static void rsnd_soc_dai_shutdown(struct snd_pcm_substream *substream,
 	/*
 	 * call rsnd_dai_call without spinlock
 	 */
-	rsnd_dai_call(nolock_stop, io, priv);
+	rsnd_dai_call(cleanup, io, priv);
 
 	rsnd_dai_stream_quit(io);
 }
