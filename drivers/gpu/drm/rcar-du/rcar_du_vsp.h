@@ -17,6 +17,8 @@
 #include <drm/drmP.h>
 #include <drm/drm_crtc.h>
 
+#define VSPDL_CH	0	/* VSPDL channel in r8a7795 and r8a77965 */
+
 struct rcar_du_format_info;
 struct rcar_du_vsp;
 
