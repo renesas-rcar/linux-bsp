@@ -109,9 +109,9 @@ static int rsnd_dmaen_stop(struct rsnd_mod *mod,
 	return 0;
 }
 
-static int rsnd_dmaen_nolock_stop(struct rsnd_mod *mod,
-				   struct rsnd_dai_stream *io,
-				   struct rsnd_priv *priv)
+static int rsnd_dmaen_cleanup(struct rsnd_mod *mod,
+			      struct rsnd_dai_stream *io,
+			      struct rsnd_priv *priv)
 {
 	struct rsnd_dma *dma = rsnd_mod_to_dma(mod);
 	struct rsnd_dmaen *dmaen = rsnd_dma_to_dmaen(dma);
@@ -119,7 +119,7 @@ static int rsnd_dmaen_nolock_stop(struct rsnd_mod *mod,
 	/*
 	 * DMAEngine release uses mutex lock.
 	 * Thus, it shouldn't be called under spinlock.
-	 * Let's call it under nolock_start
+	 * Let's call it under prepare
 	 */
 	if (dmaen->chan)
 		dma_release_channel(dmaen->chan);
@@ -129,9 +129,9 @@ static int rsnd_dmaen_nolock_stop(struct rsnd_mod *mod,
 	return 0;
 }
 
-static int rsnd_dmaen_nolock_start(struct rsnd_mod *mod,
-			    struct rsnd_dai_stream *io,
-			    struct rsnd_priv *priv)
+static int rsnd_dmaen_prepare(struct rsnd_mod *mod,
+			      struct rsnd_dai_stream *io,
+			      struct rsnd_priv *priv)
 {
 	struct rsnd_dma *dma = rsnd_mod_to_dma(mod);
 	struct rsnd_dmaen *dmaen = rsnd_dma_to_dmaen(dma);
@@ -145,7 +145,7 @@ static int rsnd_dmaen_nolock_start(struct rsnd_mod *mod,
 	/*
 	 * DMAEngine request uses mutex lock.
 	 * Thus, it shouldn't be called under spinlock.
-	 * Let's call it under nolock_start
+	 * Let's call it under prepare
 	 */
 	dmaen->chan = rsnd_dmaen_request_channel(io,
 						 dma->mod_from,
@@ -294,8 +294,8 @@ static int rsnd_dmaen_pointer(struct rsnd_mod *mod,
 
 static struct rsnd_mod_ops rsnd_dmaen_ops = {
 	.name	= "audmac",
-	.nolock_start = rsnd_dmaen_nolock_start,
-	.nolock_stop  = rsnd_dmaen_nolock_stop,
+	.prepare = rsnd_dmaen_prepare,
+	.cleanup = rsnd_dmaen_cleanup,
 	.start	= rsnd_dmaen_start,
 	.stop	= rsnd_dmaen_stop,
 	.pointer= rsnd_dmaen_pointer,
