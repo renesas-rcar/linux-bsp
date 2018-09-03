@@ -369,14 +369,13 @@ static struct drm_driver rcar_du_driver = {
  */
 
 #ifdef CONFIG_PM_SLEEP
-static int rcar_du_pm_suspend(struct device *dev)
+static int rcar_du_pm_shutdown(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
 	struct drm_atomic_state *state;
 #if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
 	struct drm_encoder *encoder;
 #endif
-	int i;
 
 	drm_kms_helper_poll_disable(rcdu->ddev);
 	drm_fbdev_cma_set_suspend_unlocked(rcdu->fbdev, true);
@@ -387,9 +386,6 @@ static int rcar_du_pm_suspend(struct device *dev)
 		drm_kms_helper_poll_enable(rcdu->ddev);
 		return PTR_ERR(state);
 	}
-
-	for (i = 0; i < rcdu->num_crtcs; ++i)
-		clk_set_rate(rcdu->crtcs[i].extclock, 0);
 
 #if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
 	list_for_each_entry(encoder,
@@ -403,6 +399,21 @@ static int rcar_du_pm_suspend(struct device *dev)
 	}
 #endif
 	rcdu->suspend_state = state;
+
+	return 0;
+}
+
+static int rcar_du_pm_suspend(struct device *dev)
+{
+	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+	int i, ret;
+
+	ret = rcar_du_pm_shutdown(dev);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < rcdu->num_crtcs; ++i)
+		clk_set_rate(rcdu->crtcs[i].extclock, 0);
 
 	return 0;
 }
@@ -516,6 +527,12 @@ error:
 	return ret;
 }
 
+static void rcar_du_shutdown(struct platform_device *pdev)
+{
+#ifdef CONFIG_PM_SLEEP
+	rcar_du_pm_shutdown(&pdev->dev);
+#endif
+}
 static struct platform_driver rcar_du_platform_driver = {
 	.probe		= rcar_du_probe,
 	.remove		= rcar_du_remove,
@@ -524,6 +541,7 @@ static struct platform_driver rcar_du_platform_driver = {
 		.pm	= &rcar_du_pm_ops,
 		.of_match_table = rcar_du_of_table,
 	},
+	.shutdown       = rcar_du_shutdown,
 };
 
 static int __init rcar_du_init(void)
