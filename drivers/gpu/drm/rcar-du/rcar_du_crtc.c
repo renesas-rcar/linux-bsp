@@ -269,6 +269,17 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 			mode_clock, extrate, rate, escr);
 	}
 
+	/* TODO */
+	if (rcdu->info->lvds_clk_mask & BIT(rcrtc->index)) {
+		/*
+		 * Use the LVDS PLL output as the dot clock when outputting to
+		 * the LVDS encoder on an SoC that supports this clock routing
+		 * option. We use the clock directly in that case, without any
+		 * additional divider.
+		 */
+		escr = ESCR_DCLKSEL_DCLKIN;
+	}
+
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? ESCR2 : ESCR,
 			    escr);
 	rcar_du_group_write(rcrtc->group, rcrtc->index % 2 ? OTAR2 : OTAR, 0);
