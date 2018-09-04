@@ -460,12 +460,13 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp)
 	return mbps;
 }
 
-static int rcsi2_start(struct rcar_csi2 *priv)
+static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 {
 	const struct rcar_csi2_format *format;
-	u32 phycnt, vcdt = 0, vcdt2 = 0;
+	u32 phycnt, vcdt = 0, vcdt2 = 0, fld = 0;
 	unsigned int i;
 	int mbps, ret;
+	v4l2_std_id std = 0;
 
 	dev_dbg(priv->dev, "Input size (%ux%u%c)\n",
 		priv->mf.width, priv->mf.height,
@@ -473,6 +474,17 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 
 	/* Code is validated in set_fmt. */
 	format = rcsi2_code_to_fmt(priv->mf.code);
+
+	ret = v4l2_subdev_call(nextsd, video, g_std, &std);
+	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+		return ret;
+
+	if (priv->mf.field != V4L2_FIELD_NONE) {
+		if (std & V4L2_STD_525_60)
+			fld = FLD_FLD_NUM(2);
+		else
+			fld = FLD_FLD_NUM(1);
+	}
 
 	/*
 	 * Enable all Virtual Channels.
@@ -507,7 +519,7 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 	rcsi2_write(priv, PHTC_REG, 0);
 
 	/* Configure */
-	rcsi2_write(priv, FLD_REG, FLD_FLD_NUM(2) | FLD_FLD_EN4 |
+	rcsi2_write(priv, FLD_REG, fld | FLD_FLD_EN4 |
 		    FLD_FLD_EN3 | FLD_FLD_EN2 | FLD_FLD_EN);
 	rcsi2_write(priv, VCDT_REG, vcdt);
 	rcsi2_write(priv, VCDT2_REG, vcdt2);
@@ -580,7 +592,7 @@ static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
 	if (enable && priv->stream_count == 0) {
 		pm_runtime_get_sync(priv->dev);
 
-		ret = rcsi2_start(priv);
+		ret = rcsi2_start(priv, nextsd);
 		if (ret) {
 			pm_runtime_put(priv->dev);
 			goto out;
