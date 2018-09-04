@@ -455,6 +455,13 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp)
 	 * bps = link_freq * 2
 	 */
 	mbps = v4l2_ctrl_g_ctrl_int64(ctrl) * bpp;
+
+	/* Vblank's margin is 1.05 times of the horizontal size */
+	mbps = div_u64(mbps * 105, 100);
+
+	/* Hblank's margin is 1.13 times of the vertical size */
+	mbps = div_u64(mbps * 113, 100);
+
 	do_div(mbps, priv->lanes * 1000000);
 
 	return mbps;
