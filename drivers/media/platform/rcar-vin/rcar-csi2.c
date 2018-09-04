@@ -14,6 +14,7 @@
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/reset.h>
 #include <linux/sys_soc.h>
 
 #include <media/v4l2-ctrls.h>
@@ -348,6 +349,7 @@ struct rcar_csi2 {
 	struct device *dev;
 	void __iomem *base;
 	const struct rcar_csi2_info *info;
+	struct reset_control *rstc;
 
 	struct v4l2_subdev subdev;
 	struct media_pad pads[NR_OF_RCAR_CSI2_PAD];
@@ -383,13 +385,6 @@ static u32 rcsi2_read(struct rcar_csi2 *priv, unsigned int reg)
 static void rcsi2_write(struct rcar_csi2 *priv, unsigned int reg, u32 data)
 {
 	iowrite32(data, priv->base + reg);
-}
-
-static void rcsi2_reset(struct rcar_csi2 *priv)
-{
-	rcsi2_write(priv, SRST_REG, SRST_SRST);
-	usleep_range(100, 150);
-	rcsi2_write(priv, SRST_REG, 0);
 }
 
 static int rcsi2_wait_phy_start(struct rcar_csi2 *priv)
@@ -522,7 +517,6 @@ static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 
 	/* Init */
 	rcsi2_write(priv, TREF_REG, TREF_TREF);
-	rcsi2_reset(priv);
 	rcsi2_write(priv, PHTC_REG, 0);
 
 	/* Configure */
@@ -580,10 +574,9 @@ static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 static void rcsi2_stop(struct rcar_csi2 *priv)
 {
 	rcsi2_write(priv, PHYCNT_REG, 0);
-
-	rcsi2_reset(priv);
-
 	rcsi2_write(priv, PHTC_REG, PHTC_TESTCLR);
+	reset_control_assert(priv->rstc);
+	usleep_range(100, 150);
 }
 
 static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
@@ -603,6 +596,7 @@ static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (enable && priv->stream_count == 0) {
 		pm_runtime_get_sync(priv->dev);
+		reset_control_deassert(priv->rstc);
 
 		ret = rcsi2_start(priv, nextsd);
 		if (ret) {
@@ -1076,6 +1070,13 @@ static int rcsi2_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(priv->dev, "Failed to get resources\n");
 		return ret;
+	}
+
+	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(priv->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(priv->dev));
+		return PTR_ERR(priv->rstc);
 	}
 
 	platform_set_drvdata(pdev, priv);
