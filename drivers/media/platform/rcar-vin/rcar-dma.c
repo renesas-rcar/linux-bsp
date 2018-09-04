@@ -771,8 +771,12 @@ static int rvin_setup(struct rvin_dev *vin)
 		vnmc = VNMC_IM_FULL | VNMC_FOC;
 		break;
 	case V4L2_FIELD_NONE:
-		vnmc = VNMC_IM_ODD_EVEN;
-		progressive = true;
+		if (vin->continuous) {
+			vnmc = VNMC_IM_ODD_EVEN;
+			progressive = true;
+		} else {
+			vnmc = VNMC_IM_ODD;
+		}
 		break;
 	default:
 		vnmc = VNMC_IM_ODD;
@@ -1008,11 +1012,25 @@ static void rvin_fill_hw_slot(struct rvin_dev *vin, int slot)
 	rvin_set_slot_addr(vin, slot, phys_addr);
 }
 
+static void rvin_capture_on(struct rvin_dev *vin)
+{
+	vin_dbg(vin, "Capture on in %s mode\n",
+		vin->continuous ? "continuous" : "single");
+
+	if (vin->continuous)
+		/* Continuous Frame Capture Mode */
+		rvin_write(vin, VNFC_C_FRAME, VNFC_REG);
+	else
+		/* Single Frame Capture Mode */
+		rvin_write(vin, VNFC_S_FRAME, VNFC_REG);
+}
+
 static int rvin_capture_start(struct rvin_dev *vin)
 {
-	int slot, ret;
+	int slot, ret, limit;
 
-	for (slot = 0; slot < HW_BUFFER_NUM; slot++)
+	limit = vin->continuous ? HW_BUFFER_NUM : 1;
+	for (slot = 0; slot < limit; slot++)
 		rvin_fill_hw_slot(vin, slot);
 
 	rvin_crop_scale_comp(vin);
@@ -1021,10 +1039,7 @@ static int rvin_capture_start(struct rvin_dev *vin)
 	if (ret)
 		return ret;
 
-	vin_dbg(vin, "Starting to capture\n");
-
-	/* Continuous Frame Capture Mode */
-	rvin_write(vin, VNFC_C_FRAME, VNFC_REG);
+	rvin_capture_on(vin);
 
 	vin->state = RUNNING;
 
@@ -1112,6 +1127,17 @@ static irqreturn_t rvin_irq(int irq, void *data)
 
 	/* Prepare for next frame */
 	rvin_fill_hw_slot(vin, slot);
+
+	/*
+	 * The single capturing requires an explicit capture
+	 * operation to fetch the next frame.
+	 */
+	if (!vin->continuous) {
+		if (vin->queue_buf[slot])
+			rvin_capture_on(vin);
+		else
+			vin->state = STALLED;
+	}
 done:
 	spin_unlock_irqrestore(&vin->qlock, flags);
 
@@ -1183,6 +1209,14 @@ static void rvin_buffer_queue(struct vb2_buffer *vb)
 	list_add_tail(to_buf_list(vbuf), &vin->buf_list);
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
+
+	if (!vin->continuous) {
+		if (vin->state == STALLED) {
+			rvin_fill_hw_slot(vin, 0);
+			rvin_capture_on(vin);
+			vin->state = RUNNING;
+		}
+	}
 }
 
 static int rvin_mc_validate_format(struct rvin_dev *vin, struct v4l2_subdev *sd,
@@ -1327,6 +1361,9 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 
 	vin->sequence = 0;
 
+	/* Continuous capture requires more buffers then there are HW slots */
+	vin->continuous = count > HW_BUFFER_NUM;
+
 	ret = rvin_capture_start(vin);
 	if (ret) {
 		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
@@ -1443,7 +1480,7 @@ int rvin_dma_register(struct rvin_dev *vin, int irq)
 	q->ops = &rvin_qops;
 	q->mem_ops = &vb2_dma_contig_memops;
 	q->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
-	q->min_buffers_needed = 4;
+	q->min_buffers_needed = 1;
 	q->dev = vin->dev;
 
 	ret = vb2_queue_init(q);
