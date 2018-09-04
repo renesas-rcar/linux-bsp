@@ -859,6 +859,35 @@ static int rcsi2_phtw_write_mbps(struct rcar_csi2 *priv, unsigned int mbps,
 	return rcsi2_phtw_write(priv, value->reg, code);
 }
 
+static int rcsi2_init_phtw_h3_e2(struct rcar_csi2 *priv, unsigned int mbps)
+{
+	static const struct phtw_value step1[] = {
+		{ .data = 0xcc, .code = 0xe2 },
+		{ .data = 0x01, .code = 0xe3 },
+		{ .data = 0x11, .code = 0xe4 },
+		{ .data = 0x01, .code = 0xe5 },
+		{ .data = 0x10, .code = 0x04 },
+		{ /* sentinel */ },
+	};
+
+	static const struct phtw_value step2[] = {
+		{ .data = 0x38, .code = 0x08 },
+		{ .data = 0x01, .code = 0x00 },
+		{ .data = 0x4b, .code = 0xac },
+		{ .data = 0x03, .code = 0x00 },
+		{ .data = 0x80, .code = 0x07 },
+		{ /* sentinel */ },
+	};
+
+	int ret;
+
+	ret = rcsi2_phtw_write_array(priv, step1);
+	if (ret)
+		return ret;
+
+	return rcsi2_phtw_write_array(priv, step2);
+}
+
 static int rcsi2_init_phtw_h3_v3h_m3n(struct rcar_csi2 *priv, unsigned int mbps)
 {
 	static const struct phtw_value step1[] = {
@@ -952,6 +981,13 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a7795 = {
 	.clear_ulps = true,
 };
 
+static const struct rcar_csi2_info rcar_csi2_info_r8a7795es2 = {
+	.init_phtw = rcsi2_init_phtw_h3_e2,
+	.hsfreqrange = hsfreqrange_h3_v3h_m3n,
+	.csi0clkfreqrange = 0x20,
+	.clear_ulps = true,
+};
+
 static const struct rcar_csi2_info rcar_csi2_info_r8a7795es1 = {
 	.hsfreqrange = hsfreqrange_m3w_h3es1,
 };
@@ -992,10 +1028,14 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 };
 MODULE_DEVICE_TABLE(of, rcar_csi2_of_table);
 
-static const struct soc_device_attribute r8a7795es1[] = {
+static const struct soc_device_attribute r8a7795[] = {
 	{
 		.soc_id = "r8a7795", .revision = "ES1.*",
 		.data = &rcar_csi2_info_r8a7795es1,
+	},
+	{
+		.soc_id = "r8a7795", .revision = "ES2.*",
+		.data = &rcar_csi2_info_r8a7795es2,
 	},
 	{ /* sentinel */ },
 };
@@ -1016,8 +1056,9 @@ static int rcsi2_probe(struct platform_device *pdev)
 	/*
 	 * r8a7795 ES1.x behaves differently than the ES2.0+ but doesn't
 	 * have it's own compatible string.
+	 * PHTW register setting is different between r8a7795 ES2.0 and ES3.0.
 	 */
-	attr = soc_device_match(r8a7795es1);
+	attr = soc_device_match(r8a7795);
 	if (attr)
 		priv->info = attr->data;
 
