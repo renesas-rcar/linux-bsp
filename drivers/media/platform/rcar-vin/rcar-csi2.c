@@ -526,8 +526,6 @@ static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 	rcsi2_write(priv, PHTC_REG, 0);
 
 	/* Configure */
-	rcsi2_write(priv, FLD_REG, fld | FLD_FLD_EN4 |
-		    FLD_FLD_EN3 | FLD_FLD_EN2 | FLD_FLD_EN);
 	rcsi2_write(priv, VCDT_REG, vcdt);
 	rcsi2_write(priv, VCDT2_REG, vcdt2);
 	/* Lanes are zero indexed. */
@@ -557,6 +555,13 @@ static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 	rcsi2_write(priv, PHYCNT_REG, phycnt);
 	rcsi2_write(priv, LINKCNT_REG, LINKCNT_MONITOR_EN |
 		    LINKCNT_REG_MONI_PACT_EN | LINKCNT_ICLK_NONSTOP);
+
+	if (priv->mf.field != V4L2_FIELD_NONE)
+		rcsi2_write(priv, FLD_REG, fld | FLD_FLD_EN4 |
+			    FLD_FLD_EN3 | FLD_FLD_EN2 | FLD_FLD_EN);
+	else
+		rcsi2_write(priv, FLD_REG, 0);
+
 	rcsi2_write(priv, PHYCNT_REG, phycnt | PHYCNT_SHUTDOWNZ);
 	rcsi2_write(priv, PHYCNT_REG, phycnt | PHYCNT_SHUTDOWNZ | PHYCNT_RSTZ);
 
