@@ -2315,6 +2315,9 @@ static int __maybe_unused ravb_suspend(struct device *dev)
 	else
 		ret = ravb_close(ndev);
 
+	if (priv->chip_id != RCAR_GEN2)
+		ravb_ptp_stop(ndev);
+
 	return ret;
 }
 
@@ -2322,6 +2325,7 @@ static int __maybe_unused ravb_resume(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct ravb_private *priv = netdev_priv(ndev);
+	struct platform_device *pdev = priv->pdev;
 	int ret = 0;
 
 	/* If WoL is enabled set reset mode to rearm the WoL logic */
@@ -2349,6 +2353,9 @@ static int __maybe_unused ravb_resume(struct device *dev)
 
 	/* Restore descriptor base address table */
 	ravb_write(ndev, priv->desc_bat_dma, DBAT);
+
+	if (priv->chip_id != RCAR_GEN2)
+		ravb_ptp_init(ndev, pdev);
 
 	if (netif_running(ndev)) {
 		if (priv->wol_enabled) {
