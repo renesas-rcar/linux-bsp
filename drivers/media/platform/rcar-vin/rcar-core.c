@@ -609,6 +609,8 @@ static int rvin_group_notify_complete(struct v4l2_async_notifier *notifier)
 		struct media_pad *source_pad, *sink_pad;
 		struct media_entity *source, *sink;
 		unsigned int source_idx;
+		struct rvin_dev *vin_master;
+		u32 flags;
 
 		/* Check that VIN is part of the group. */
 		if (!vin->group->vin[route->vin])
@@ -633,7 +635,17 @@ static int rvin_group_notify_complete(struct v4l2_async_notifier *notifier)
 		if (media_entity_find_link(source_pad, sink_pad))
 			continue;
 
-		ret = media_create_pad_link(source, source_idx, sink, 0, 0);
+		vin_master =
+			vin->group->vin[rvin_group_id_to_master(route->vin)];
+
+		/* Set default channel */
+		if (route->mask & (0x01 << rvin_get_chsel(vin_master)))
+			flags = MEDIA_LNK_FL_ENABLED;
+		else
+			flags = 0;
+
+		ret = media_create_pad_link(source, source_idx, sink, 0,
+					    flags);
 		if (ret) {
 			vin_err(vin, "Error adding link from %s to %s\n",
 				source->name, sink->name);
