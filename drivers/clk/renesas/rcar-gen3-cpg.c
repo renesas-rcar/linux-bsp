@@ -27,9 +27,19 @@
 #include "renesas-cpg-mssr.h"
 #include "rcar-gen3-cpg.h"
 
+#define CPG_PLLECR		0x00d0
 #define CPG_PLL0CR		0x00d8
 #define CPG_PLL2CR		0x002c
 #define CPG_PLL4CR		0x01f4
+
+#define CPG_PLLECR_PLL0ST	BIT(8)
+#define CPG_PLLECR_PLL2ST	BIT(10)
+#define CPG_PLLCR_STC_MASK	GENMASK(30, 24) /* Bits in PLL0/2/4 CR */
+
+static u32 cpg_quirks;
+
+#define PLL_ERRATA		BIT(0)	/* Missing PLL0/2/4 post-divider */
+#define RCLK_CKSEL_RESEVED	BIT(1)	/* Resverd RCLK clock soruce select */
 
 struct cpg_simple_notifier {
 	struct notifier_block nb;
@@ -62,6 +72,122 @@ static void cpg_simple_notifier_register(struct raw_notifier_head *notifiers,
 	raw_notifier_chain_register(notifiers, &csn->nb);
 }
 
+/* PLL0 Clock and PLL2 Clock */
+struct cpg_pll_clk {
+	struct clk_hw hw;
+	void __iomem *pllcr_reg;
+	void __iomem *pllecr_reg;
+	unsigned int fixed_mult;
+	unsigned long pllecr_pllst_mask;
+};
+
+#define to_pll_clk(_hw)   container_of(_hw, struct cpg_pll_clk, hw)
+
+static unsigned long cpg_pll_clk_recalc_rate(struct clk_hw *hw,
+					     unsigned long parent_rate)
+{
+	struct cpg_pll_clk *pll_clk = to_pll_clk(hw);
+	unsigned int val;
+	unsigned long rate;
+
+	val = (clk_readl(pll_clk->pllcr_reg) & CPG_PLLCR_STC_MASK);
+
+	rate = parent_rate * ((val >> __bf_shf(CPG_PLLCR_STC_MASK)) + 1)
+			   * pll_clk->fixed_mult;
+
+	if (cpg_quirks & PLL_ERRATA)
+		rate *= 2; /* PLL output multiplied by 2 */
+
+	return rate;
+}
+
+static long cpg_pll_clk_round_rate(struct clk_hw *hw, unsigned long rate,
+				   unsigned long *parent_rate)
+{
+	struct cpg_pll_clk *pll_clk = to_pll_clk(hw);
+	unsigned long prate = *parent_rate;
+	unsigned int mult;
+
+	if (cpg_quirks & PLL_ERRATA)
+		prate *= 2; /* PLL output multiplied by 2 */
+
+	mult = DIV_ROUND_CLOSEST_ULL(rate, prate) / pll_clk->fixed_mult;
+
+	rate = prate * mult * pll_clk->fixed_mult;
+
+	return rate;
+}
+
+static int cpg_pll_clk_set_rate(struct clk_hw *hw, unsigned long rate,
+				unsigned long prate)
+{
+	struct cpg_pll_clk *pll_clk = to_pll_clk(hw);
+	unsigned int mult, i;
+	u32 val;
+
+	if (cpg_quirks & PLL_ERRATA)
+		prate *= 2; /* PLL output multiplied by 2 */
+
+	mult = DIV_ROUND_CLOSEST_ULL(rate, prate) / pll_clk->fixed_mult;
+
+	val = clk_readl(pll_clk->pllcr_reg) & ~CPG_PLLCR_STC_MASK;
+	val |= ((mult - 1) << __bf_shf(CPG_PLLCR_STC_MASK))
+		& CPG_PLLCR_STC_MASK;
+	clk_writel(val, pll_clk->pllcr_reg);
+
+	for (i = 1000; i; i--) {
+		if (clk_readl(pll_clk->pllecr_reg) & pll_clk->pllecr_pllst_mask)
+			return 0;
+
+		cpu_relax();
+	}
+
+	if (i == 0)
+		pr_warn("%s(): PLL %s: long settled time: %d\n",
+			__func__, hw->init->name, i);
+
+	return 0;
+}
+
+static const struct clk_ops cpg_pll_clk_ops = {
+	.recalc_rate = cpg_pll_clk_recalc_rate,
+	.round_rate = cpg_pll_clk_round_rate,
+	.set_rate = cpg_pll_clk_set_rate,
+};
+
+static struct clk * __init cpg_pll_clk_register(const char *name,
+						const char *parent_name,
+						void __iomem *cpg_base,
+						unsigned long pllcr_reg,
+						unsigned long pllecr_pllst_mask)
+{
+	struct clk_init_data init;
+	struct cpg_pll_clk *pll_clk;
+	struct clk *clk;
+
+	pll_clk = kzalloc(sizeof(*pll_clk), GFP_KERNEL);
+	if (!pll_clk)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = name;
+	init.ops = &cpg_pll_clk_ops;
+	init.flags = 0;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+
+	pll_clk->pllcr_reg = cpg_base + pllcr_reg;
+	pll_clk->pllecr_reg = cpg_base + CPG_PLLECR;
+	pll_clk->hw.init = &init;
+	pll_clk->pllecr_pllst_mask = pllecr_pllst_mask;
+	pll_clk->fixed_mult = 2; /*PLL reference clock x (setting+1) x 2*/
+
+	clk = clk_register(NULL, &pll_clk->hw);
+	if (IS_ERR(clk))
+		kfree(pll_clk);
+
+	return clk;
+}
+
 /*
  * Z Clock & Z2 Clock & ZG Clock
  *
@@ -71,6 +197,7 @@ static void cpg_simple_notifier_register(struct raw_notifier_head *notifiers,
  * rate - rate is adjustable.  clk->rate = (parent->rate * mult / 32 ) / 2
  * parent - fixed parent.  No clk_set_parent support
  */
+
 #define CPG_FRQCRB			0x00000004
 #define CPG_FRQCRB_KICK			BIT(31)
 #define CPG_FRQCRB_ZGFC_MASK		GENMASK(28, 24)
@@ -84,6 +211,7 @@ struct cpg_z_clk {
 	void __iomem *kick_reg;
 	unsigned int fixed_div;
 	unsigned long mask;
+	unsigned long max_freq;
 };
 
 #define to_z_clk(_hw)	container_of(_hw, struct cpg_z_clk, hw)
@@ -105,12 +233,20 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 				 unsigned long *parent_rate)
 {
-	/* Factor of 2 is for fixed divider */
-	unsigned long prate = *parent_rate / 2;
+	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = *parent_rate / zclk->fixed_div;
 	unsigned int mult;
 
-	mult = div_u64(rate * 32ULL, prate);
+	if (rate <= zclk->max_freq) { /*changing z-clock*/
+		prate = zclk->max_freq; /* Set parent as init value */
+		mult = div_u64((u64)rate * 32, prate);
+	} else {
+		/* Focus on changing parent. Fix z-clock divider is 32/32 */
+		prate = rate;
+		mult = 32;
+	}
 	mult = clamp(mult, 1U, 32U);
+	*parent_rate = prate * zclk->fixed_div;
 
 	return (u64)prate * mult / 32;
 }
@@ -123,8 +259,11 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned int i;
 	u32 val, kick;
 
-	/* Factor of 2 is for fixed divider */
-	mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL * 2, parent_rate);
+	if (rate <= zclk->max_freq)
+		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, zclk->max_freq);
+	else
+		mult = 32;
+
 	mult = clamp(mult, 1U, 32U);
 
 	if (readl(zclk->kick_reg) & CPG_FRQCRB_KICK)
@@ -174,7 +313,7 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 {
 	struct clk_init_data init;
 	struct cpg_z_clk *zclk;
-	struct clk *clk;
+	struct clk *clk, *parent;
 
 	zclk = kzalloc(sizeof(*zclk), GFP_KERNEL);
 	if (!zclk)
@@ -182,18 +321,24 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 
 	init.name = name;
 	init.ops = &cpg_z_clk_ops;
-	init.flags = 0;
 	init.parent_names = &parent_name;
 	init.num_parents = 1;
+	init.flags = CLK_SET_RATE_PARENT;
 
 	zclk->reg = reg + CPG_FRQCRC;
 	zclk->kick_reg = reg + CPG_FRQCRB;
 	zclk->hw.init = &init;
 	zclk->mask = mask;
+	zclk->fixed_div = 2; /* PLLVCO x 1/2 x SYS-CPU divider */
+	zclk->max_freq = 1;
 
 	clk = clk_register(NULL, &zclk->hw);
-	if (IS_ERR(clk))
+	if (IS_ERR(clk)) {
 		kfree(zclk);
+	} else {
+		parent = clk_get_parent(clk);
+		zclk->max_freq = clk_get_rate(parent) / zclk->fixed_div;
+	}
 
 	return clk;
 }
@@ -442,14 +587,9 @@ free_clock:
 	return clk;
 }
 
-
 static const struct rcar_gen3_cpg_pll_config *cpg_pll_config __initdata;
 static unsigned int cpg_clk_extalr __initdata;
 static u32 cpg_mode __initdata;
-static u32 cpg_quirks __initdata;
-
-#define PLL_ERRATA		BIT(0)	/* Missing PLL0/2/4 post-divider */
-#define RCLK_CKSEL_RESEVED	BIT(1)	/* Resverd RCLK clock soruce select */
 
 static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 	{
@@ -488,16 +628,12 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 
 	case CLK_TYPE_GEN3_PLL0:
 		/*
-		 * PLL0 is a configurable multiplier clock. Register it as a
-		 * fixed factor clock for now as there's no generic multiplier
-		 * clock implementation and we currently have no need to change
-		 * the multiplier value.
+		 * The PLL0 is implemented as customized clock,
+		 * it changes the multiplier when cpufreq changes between
+		 * normal and override mode.
 		 */
-		value = readl(base + CPG_PLL0CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
-		if (cpg_quirks & PLL_ERRATA)
-			mult *= 2;
-		break;
+		return cpg_pll_clk_register(core->name, __clk_get_name(parent),
+				base, CPG_PLL0CR, CPG_PLLECR_PLL0ST);
 
 	case CLK_TYPE_GEN3_PLL1:
 		mult = cpg_pll_config->pll1_mult;
@@ -505,17 +641,8 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		break;
 
 	case CLK_TYPE_GEN3_PLL2:
-		/*
-		 * PLL2 is a configurable multiplier clock. Register it as a
-		 * fixed factor clock for now as there's no generic multiplier
-		 * clock implementation and we currently have no need to change
-		 * the multiplier value.
-		 */
-		value = readl(base + CPG_PLL2CR);
-		mult = (((value >> 24) & 0x7f) + 1) * 2;
-		if (cpg_quirks & PLL_ERRATA)
-			mult *= 2;
-		break;
+		return cpg_pll_clk_register(core->name, __clk_get_name(parent),
+				base, CPG_PLL2CR, CPG_PLLECR_PLL2ST);
 
 	case CLK_TYPE_GEN3_PLL3:
 		mult = cpg_pll_config->pll3_mult;
