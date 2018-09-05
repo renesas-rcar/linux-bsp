@@ -1739,6 +1739,9 @@ int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel)
 
 	ifmd = VNCSI_IFMD_DES1 | VNCSI_IFMD_DES0 | VNCSI_IFMD_CSI_CHSEL(chsel);
 
+	if (vin->chip_info & RCAR_VIN_DES1_RESERVED)
+		ifmd &= (u32)~VNCSI_IFMD_DES1;
+
 	rvin_write(vin, ifmd, VNCSI_IFMD_REG);
 
 	vin_dbg(vin, "Set IFMD 0x%x\n", ifmd);
