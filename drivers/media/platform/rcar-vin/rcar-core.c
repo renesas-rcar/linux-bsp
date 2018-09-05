@@ -1130,9 +1130,17 @@ static const struct soc_device_attribute r8a7795es1[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct soc_device_attribute chip_info[] = {
+	{
+		.soc_id = "r8a77990",
+		.data = (void *)RCAR_VIN_DES1_RESERVED,
+	},
+	{ /* sentinel */ }
+};
+
 static int rcar_vin_probe(struct platform_device *pdev)
 {
-	const struct soc_device_attribute *attr;
+	const struct soc_device_attribute *attr, *dev_attr;
 	struct rvin_dev *vin;
 	struct resource *mem;
 	int irq, ret;
@@ -1151,6 +1159,10 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	attr = soc_device_match(r8a7795es1);
 	if (attr)
 		vin->info = attr->data;
+
+	dev_attr = soc_device_match(chip_info);
+	if (dev_attr)
+		vin->chip_info = (uintptr_t)dev_attr->data;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL)
