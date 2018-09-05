@@ -40,6 +40,7 @@ static u32 cpg_quirks;
 
 #define PLL_ERRATA		BIT(0)	/* Missing PLL0/2/4 post-divider */
 #define RCLK_CKSEL_RESEVED	BIT(1)	/* Resverd RCLK clock soruce select */
+#define CPG_Z2FC_BIT_MASK_SFT_8	BIT(2)	/* Use Z2FC bit mask range to [12:8] */
 
 struct cpg_simple_notifier {
 	struct notifier_block nb;
@@ -203,6 +204,7 @@ static struct clk * __init cpg_pll_clk_register(const char *name,
 #define CPG_FRQCRB_ZGFC_MASK		GENMASK(28, 24)
 #define CPG_FRQCRC			0x000000e0
 #define CPG_FRQCRC_ZFC_MASK		GENMASK(12, 8)
+#define CPG_FRQCRC_Z2FC_SFT_8_MASK	GENMASK(12, 8)
 #define CPG_FRQCRC_Z2FC_MASK		GENMASK(4, 0)
 
 #define Z_CLK_ROUND(f)	(100000000 * DIV_ROUND_CLOSEST_ULL((f), 100000000))
@@ -614,6 +616,10 @@ static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 		.soc_id = "r8a7796", .revision = "ES1.0",
 		.data = (void *)RCLK_CKSEL_RESEVED,
 	},
+	{
+		.soc_id = "r8a77990",
+		.data = (void *)CPG_Z2FC_BIT_MASK_SFT_8,
+	},
 	{ /* sentinel */ }
 };
 
@@ -720,6 +726,12 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 					  base, CPG_FRQCRC_ZFC_MASK, core->div);
 
 	case CLK_TYPE_GEN3_Z2:
+		if (cpg_quirks & CPG_Z2FC_BIT_MASK_SFT_8)
+			return cpg_z_clk_register(core->name,
+						  __clk_get_name(parent), base,
+						  CPG_FRQCRC_Z2FC_SFT_8_MASK,
+						  core->div);
+
 		return cpg_z_clk_register(core->name, __clk_get_name(parent),
 					  base, CPG_FRQCRC_Z2FC_MASK,
 					  core->div);
