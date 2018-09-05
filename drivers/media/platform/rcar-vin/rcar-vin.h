@@ -270,5 +270,6 @@ void rvin_v4l2_unregister(struct rvin_dev *vin);
 const struct rvin_video_format *rvin_format_from_pixel(u32 pixelformat);
 
 int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel);
+u32 rvin_get_chsel(struct rvin_dev *vin);
 
 #endif
