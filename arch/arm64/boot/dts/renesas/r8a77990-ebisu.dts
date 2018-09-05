@@ -87,10 +87,32 @@
 		};
 	};
 
+	pwm3_pins: pwm3 {
+		groups = "pwm3_b";
+		function = "pwm3";
+	};
+
+	pwm5_pins: pwm5 {
+		groups = "pwm5_a";
+		function = "pwm5";
+	};
+
 	scif2_pins: scif2 {
 		groups = "scif2_data_a";
 		function = "scif2";
 	};
+};
+
+&pwm3 {
+	pinctrl-0 = <&pwm3_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&pwm5 {
+	princtrl-0 = <&pwm5_pins>;
+	pinctrl-name = "default";
+	status = "okay";
 };
 
 &scif2 {
