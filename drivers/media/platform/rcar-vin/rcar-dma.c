@@ -1422,3 +1422,19 @@ int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel)
 
 	return ret;
 }
+
+u32 rvin_get_chsel(struct rvin_dev *vin)
+{
+	u32 chsel;
+	int ret;
+
+	ret = pm_runtime_get_sync(vin->dev);
+	if (ret < 0)
+		return ret;
+
+	chsel = rvin_read(vin, VNCSI_IFMD_REG) & VNCSI_IFMD_CSI_CHSEL_MASK;
+
+	pm_runtime_put(vin->dev);
+
+	return chsel;
+}
