@@ -506,8 +506,21 @@ static void rcar_du_plane_setup_format_gen3(struct rcar_du_group *rgrp,
 					    unsigned int index,
 					    const struct rcar_du_plane_state *state)
 {
-	rcar_du_plane_write(rgrp, index, PnMR,
-			    PnMR_SPIM_TP_OFF | state->format->pnmr);
+	struct rcar_du_device *rcdu = rgrp->dev;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS)) {
+		rcar_du_plane_write(rgrp, index, PnMR,
+				    PnMR_SPIM_TP_OFF | state->format->pnmr);
+	} else {
+		if (rgrp->index == 0)
+			rcar_du_plane_write(rgrp, index, PnMR,
+					    PnMR_SPIM_TP_OFF |
+					    state->format->pnmr);
+		else
+			rcar_du_plane_write(rgrp, index, PnMR,
+					    PnMR_SPIM_TP_OFF |
+					    PnMR_DDDF_16BPP);
+	}
 
 	rcar_du_plane_write(rgrp, index, PnDDCR4,
 			    state->format->edf | PnDDCR4_CODE);
