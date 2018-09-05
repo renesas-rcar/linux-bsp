@@ -30,6 +30,11 @@ struct rcar_du_device;
 #define RCAR_DU_FEATURE_CRTC_IRQ_CLOCK	(1 << 0)	/* Per-CRTC IRQ and clock */
 #define RCAR_DU_FEATURE_EXT_CTRL_REGS	(1 << 1)	/* Has extended control registers */
 #define RCAR_DU_FEATURE_VSP1_SOURCE	(1 << 2)	/* Has inputs from VSP1 */
+#define RCAR_DU_FEATURE_R8A7795_REGS	(1 << 3)        /* Use R8A7795 registers */
+#define RCAR_DU_FEATURE_R8A7796_REGS	(1 << 4)        /* Use R8A7796 registers */
+#define RCAR_DU_FEATURE_R8A77965_REGS	(1 << 5)        /* Use R8A77965 registers */
+#define RCAR_DU_FEATURE_R8A77990_REGS	(1 << 6)        /* Use R8A77990 registers */
+#define RCAR_DU_FEATURE_R8A77995_REGS	(1 << 7)        /* Use R8A77995 registers */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	(1 << 0)	/* Align pitches to 128 bytes */
 

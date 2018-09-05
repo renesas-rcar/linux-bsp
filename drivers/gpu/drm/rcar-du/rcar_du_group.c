@@ -34,13 +34,88 @@
 #include "rcar_du_group.h"
 #include "rcar_du_regs.h"
 
+static bool rcar_du_register_access_check(struct rcar_du_group *rgrp, u32 reg)
+{
+	struct rcar_du_device *rcdu = rgrp->dev;
+
+	/* ESCR register access check */
+	if (reg == ESCR || reg == ESCR2) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
+			if (rgrp->index == 0 && reg == ESCR2)
+				return false;
+			else if (rgrp->index == 1 && reg == ESCR)
+				return false;
+			else
+				return true;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS)) {
+			if (rgrp->index == 0 && reg == ESCR2)
+				return false;
+			else
+				return true;
+		}
+	}
+
+	/* OTAR register access check */
+	if (reg == OTAR || reg == OTAR2) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
+			if (rgrp->index == 1 && reg == OTAR2)
+				return true;
+			else
+				return false;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS)) {
+			if (rgrp->index == 1 && reg == OTAR)
+				return true;
+			else
+				return false;
+		}
+	}
+
+	return true;
+}
+
+static u32 rcar_du_register_data_mask(struct rcar_du_group *rgrp, u32 reg)
+{
+	struct rcar_du_device *rcdu = rgrp->dev;
+	u32 mask_data = 0;
+
+	/* Set mask for R1 register */
+	if (reg == DORCR && rgrp->index == 1) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS))
+			mask_data = DORCR_PG2T | DORCR_DK2S | DORCR_PG2D_DS2;
+	}
+
+	return mask_data;
+}
+
 u32 rcar_du_group_read(struct rcar_du_group *rgrp, u32 reg)
 {
+	struct rcar_du_device *rcdu = rgrp->dev;
+
+	if (!rcar_du_register_access_check(rgrp, reg)) {
+		dev_warn(rcdu->dev, "reserved register was read\n");
+		return 0;
+	}
+
 	return rcar_du_read(rgrp->dev, rgrp->mmio_offset + reg);
 }
 
 void rcar_du_group_write(struct rcar_du_group *rgrp, u32 reg, u32 data)
 {
+	u32 mask = 0;
+
+	if (!rcar_du_register_access_check(rgrp, reg))
+		return;
+
+	mask = rcar_du_register_data_mask(rgrp, reg);
+	if (mask)
+		data |= mask;
+
 	rcar_du_write(rgrp->dev, rgrp->mmio_offset + reg, data);
 }
 
