@@ -327,6 +327,11 @@ static int sh_mobile_sdhi_select_drive_strength(struct mmc_card *card,
 #define SH_MOBILE_SDHI_SCC_RVSREQ	0x00A
 #define SH_MOBILE_SDHI_SCC_SMPCMP	0x00C
 #define SH_MOBILE_SDHI_SCC_TMPPORT2	0x00E
+#define SH_MOBILE_SDHI_SCC_TMPPORT3	0x014
+#define SH_MOBILE_SDHI_SCC_TMPPORT4	0x016
+#define SH_MOBILE_SDHI_SCC_TMPPORT5	0x018
+#define SH_MOBILE_SDHI_SCC_TMPPORT6	0x01A
+#define SH_MOBILE_SDHI_SCC_TMPPORT7	0x01C
 
 /* Definitions for values the SH_MOBILE_SDHI_SCC_DTCNTL register */
 #define SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN		BIT(0)
@@ -342,6 +347,33 @@ static int sh_mobile_sdhi_select_drive_strength(struct mmc_card *card,
 /* Definitions for values the SH_MOBILE_SDHI_SCC_TMPPORT2 register */
 #define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN	BIT(31)
 #define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL	BIT(4)
+
+/* Definitions for values the SH_MOBILE_SDHI_SCC_TMPPORT3 register */
+#define SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0		3
+#define SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_1		2
+#define SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_2		1
+#define SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3		0
+#define SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_MASK	0x3
+
+/* Definitions for values the SH_MOBILE_SDHI_SCC_TMPPORT4 register */
+#define SH_MOBILE_SDHI_SCC_TMPPORT4_DLL_ACC_START      BIT(0)
+
+/* Definitions for values the SH_MOBILE_SDHI_SCC_TMPPORT5 register */
+#define SH_MOBILE_SDHI_SCC_TMPPORT5_DLL_RW_SEL_R       BIT(8)
+#define SH_MOBILE_SDHI_SCC_TMPPORT5_DLL_RW_SEL_W       (0 << 8)
+#define SH_MOBILE_SDHI_SCC_TMPPORT5_DLL_ADR_MASK       0x3F
+
+/* Definitions for values the SH_MOBILE_SDHI_SCC register */
+#define SH_MOBILE_SDHI_SCC_TMPPORT_DISABLE_WP_CODE     0xa5000000
+#define SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK     0x1f
+#define SH_MOBILE_SDHI_SCC_TMPPORT_MANUAL_MODE         BIT(7)
+
+static const struct soc_device_attribute hs400_manual_calib_match[] = {
+	{ .soc_id = "r8a77965",
+	  .data = (void *)((SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0 << 8) |
+			   0x0), },
+	{ },
+};
 
 static inline u32 sd_scc_read32(struct tmio_mmc_host *host,
 				struct sh_mobile_sdhi *priv, int addr)
@@ -470,6 +502,95 @@ static void sh_mobile_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
+
+	/* execute adjust hs400 offset after setting to HS400 mode */
+	host->needs_adjust_hs400 = true;
+}
+
+static u32 sd_scc_tmpport_read32(struct tmio_mmc_host *host,
+				 struct sh_mobile_sdhi *priv, u32 addr)
+{
+	/* read mode */
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT5,
+		       SH_MOBILE_SDHI_SCC_TMPPORT5_DLL_RW_SEL_R |
+		       (SH_MOBILE_SDHI_SCC_TMPPORT5_DLL_ADR_MASK & addr));
+
+	/* access start and stop */
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT4,
+		       SH_MOBILE_SDHI_SCC_TMPPORT4_DLL_ACC_START);
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT4, 0);
+
+	return sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT7);
+}
+
+static void sd_scc_tmpport_write32(struct tmio_mmc_host *host,
+				   struct sh_mobile_sdhi *priv,
+				   u32 addr, u32 val)
+{
+	/* write mode */
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT5,
+		       SH_MOBILE_SDHI_SCC_TMPPORT5_DLL_RW_SEL_W |
+		       (SH_MOBILE_SDHI_SCC_TMPPORT5_DLL_ADR_MASK & addr));
+
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT6, val);
+
+	/* access start and stop */
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT4,
+		       SH_MOBILE_SDHI_SCC_TMPPORT4_DLL_ACC_START);
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT4, 0);
+}
+
+static void sh_mobile_sdhi_adjust_hs400_mode_enable(struct mmc_host *mmc)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	struct sh_mobile_sdhi *priv = host_to_priv(host);
+	u32 calib_code;
+
+	/* Enabled Manual adjust HS400 mode
+	 *
+	 * 1) Disabled Write Protect
+	 *    W(addr=0x00, WP_DISABLE_CODE)
+	 * 2) Read Calibration code and adjust
+	 *    R(addr=0x26) - adjust value
+	 * 3) Enabled Manual Calibration
+	 *    W(addr=0x22, manual mode | Calibration code)
+	 * 4) Set Offset value to TMPPORT3 Reg
+	 */
+	sd_scc_tmpport_write32(host, priv, 0x00,
+			       SH_MOBILE_SDHI_SCC_TMPPORT_DISABLE_WP_CODE);
+	calib_code = sd_scc_tmpport_read32(host, priv, 0x26);
+	calib_code &= SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK;
+	if (calib_code > host->adjust_hs400_calibrate)
+		calib_code -= host->adjust_hs400_calibrate;
+	else
+		calib_code = 0;
+	sd_scc_tmpport_write32(host, priv, 0x22,
+			       SH_MOBILE_SDHI_SCC_TMPPORT_MANUAL_MODE |
+			       calib_code);
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT3,
+		       host->adjust_hs400_offset);
+
+	/* Clear flag */
+	host->needs_adjust_hs400 = false;
+}
+
+static void sh_mobile_sdhi_adjust_hs400_mode_disable(struct mmc_host *mmc)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	struct sh_mobile_sdhi *priv = host_to_priv(host);
+
+	/* Disabled Manual adjust HS400 mode
+	 *
+	 * 1) Disabled Write Protect
+	 *    W(addr=0x00, WP_DISABLE_CODE)
+	 * 2) Disabled Manual Calibration
+	 *    W(addr=0x22, 0)
+	 * 3) Clear offset value to TMPPORT3 Reg
+	 */
+	sd_scc_tmpport_write32(host, priv, 0x00,
+			       SH_MOBILE_SDHI_SCC_TMPPORT_DISABLE_WP_CODE);
+	sd_scc_tmpport_write32(host, priv, 0x22, 0);
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT3, 0);
 }
 
 static void sh_mobile_sdhi_reset_hs400_mode(struct mmc_host *mmc)
@@ -493,6 +614,9 @@ static void sh_mobile_sdhi_reset_hs400_mode(struct mmc_host *mmc)
 			SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
 			sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2));
 
+	if (host->adjust_hs400_mode_disable)
+		host->adjust_hs400_mode_disable(host->mmc);
+
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
 			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
 }
@@ -509,6 +633,9 @@ static int sh_mobile_sdhi_select_tuning(struct tmio_mmc_host *host)
 	unsigned long match_cnt;/* counter of matching data */
 	unsigned long i;
 	bool select = false;
+
+	/* clear flag */
+	host->needs_adjust_hs400 = false;
 
 	/* Clear SCC_RVSREQ */
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
@@ -659,6 +786,10 @@ static void sh_mobile_sdhi_hw_reset(struct tmio_mmc_host *host)
 			SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
 			sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2));
 
+	/* Disaled adjust HS400 mode */
+	if (host->adjust_hs400_mode_disable)
+		host->adjust_hs400_mode_disable(host->mmc);
+
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
 			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
 
@@ -751,7 +882,9 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	int irq, ret, i;
 	struct tmio_mmc_dma *dma_priv;
 	const struct device_node *np = pdev->dev.of_node;
+	const struct soc_device_attribute *attr;
 	int tmp, drive_strength = 0;
+	u32 value;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
@@ -848,6 +981,7 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	host->clk_disable	= sh_mobile_sdhi_clk_disable;
 	host->multi_io_quirk	= sh_mobile_sdhi_multi_io_quirk;
 	host->drive_strength	= drive_strength;
+	host->needs_adjust_hs400 = false;
 
 	/* SDR speeds are only available on Gen2+ */
 	if (mmc_data->flags & TMIO_MMC_MIN_RCAR2) {
@@ -907,6 +1041,58 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 	ret = tmio_mmc_host_probe(host, mmc_data);
 	if (ret < 0)
 		goto efree;
+
+	/* Adjust HS400 mode */
+	host->adjust_hs400_offset = 0;
+	host->adjust_hs400_calibrate = 0;
+	if (np && !of_property_read_u32(np, "adjust_hs400_offset", &value)) {
+		switch (value) {
+		case 0:
+			host->adjust_hs400_offset =
+				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0;
+			break;
+		case 1:
+			host->adjust_hs400_offset =
+				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_1;
+			break;
+		case 2:
+			host->adjust_hs400_offset =
+				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_2;
+			break;
+		case 3:
+			host->adjust_hs400_offset =
+				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3;
+			break;
+		default:
+			host->adjust_hs400_offset =
+				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3;
+			dev_warn(&host->pdev->dev, "Unknown adjust hs400 offset\n");
+		}
+		if (!of_property_read_u32(np, "adjust_hs400_calibrate", &value))
+			host->adjust_hs400_calibrate = value;
+		host->adjust_hs400_mode_enable =
+			sh_mobile_sdhi_adjust_hs400_mode_enable;
+		host->adjust_hs400_mode_disable =
+			sh_mobile_sdhi_adjust_hs400_mode_disable;
+	} else if (host->mmc->caps2 & MMC_CAP2_HS400) {
+		attr = soc_device_match(hs400_manual_calib_match);
+		if (soc_device_match(hs400_disable_match)) {
+			host->mmc->caps2 &=
+				~(MMC_CAP2_HS400 | MMC_CAP2_HS400_ES);
+		} else if (attr) {
+			value = (uintptr_t)attr->data;
+			host->adjust_hs400_offset =
+				(value >> 8) &
+				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_MASK;
+			host->adjust_hs400_calibrate =
+				value &
+				SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK;
+			host->adjust_hs400_mode_enable =
+				sh_mobile_sdhi_adjust_hs400_mode_enable;
+			host->adjust_hs400_mode_disable =
+				sh_mobile_sdhi_adjust_hs400_mode_disable;
+		}
+	}
 
 	/*
 	 * Some controllers don't have CBSY bit
