@@ -935,11 +935,6 @@ static void rsnd_soc_hw_constraint(struct snd_pcm_substream *substream,
 static int rsnd_soc_dai_startup(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *dai)
 {
-	struct rsnd_dai *rdai = rsnd_dai_to_rdai(dai);
-	struct rsnd_priv *priv = rsnd_rdai_to_priv(rdai);
-	struct rsnd_dai_stream *io = rsnd_rdai_to_io(rdai, substream);
-	int ret;
-
 	/* rsnd_io_to_runtime() is not yet enabled here */
 	rsnd_soc_hw_constraint(substream, dai);
 
