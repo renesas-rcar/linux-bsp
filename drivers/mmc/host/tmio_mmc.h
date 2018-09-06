@@ -150,6 +150,13 @@ static const struct soc_device_attribute hs400_use_8tap_match[] = {
 	{ },
 };
 
+static const struct soc_device_attribute hs400_disable_match[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*", },
+	{ .soc_id = "r8a7796", .revision = "ES1.0", },
+	{ .soc_id = "r8a7796", .revision = "ES1.1", },
+	{ },
+};
+
 struct tmio_mmc_data;
 struct tmio_mmc_host;
 
@@ -218,6 +225,9 @@ struct tmio_mmc_host {
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
 	u32			scc_tappos;
+	u32			adjust_hs400_offset;
+	u32			adjust_hs400_calibrate;
+	bool			needs_adjust_hs400;
 	struct completion	completion;
 	int			drive_strength;
 
@@ -256,6 +266,8 @@ struct tmio_mmc_host {
 	unsigned long tap_set;
 	void (*disable_scc)(struct mmc_host *mmc);
 	void (*prepare_hs400_tuning)(struct mmc_host *mmc, struct mmc_ios *ios);
+	void (*adjust_hs400_mode_enable)(struct mmc_host *mmc);
+	void (*adjust_hs400_mode_disable)(struct mmc_host *mmc);
 	void (*reset_hs400_mode)(struct mmc_host *mmc);
 
 	/* HS400 mode uses 8TAP */

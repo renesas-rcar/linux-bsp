@@ -411,6 +411,11 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 	if (host->check_scc_error && host->check_scc_error(host))
 		mrq->cmd->error = -EILSEQ;
 
+	/* Enabled adjust HS400 mode after CMD13 */
+	if (host->adjust_hs400_mode_enable && host->needs_adjust_hs400 &&
+	    mrq->cmd->opcode == MMC_SEND_STATUS)
+		host->adjust_hs400_mode_enable(host->mmc);
+
 	if (cmd == mrq->sbc) {
 		/* finish SET_BLOCK_COUNT request */
 		complete(&host->completion);
