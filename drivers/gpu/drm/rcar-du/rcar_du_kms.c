@@ -729,7 +729,12 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 	dpad0_sources = rcdu->info->routes[RCAR_DU_OUTPUT_DPAD0].possible_crtcs;
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS))
 		dpad0_sources = dpad0_sources << 1;
-	rcdu->dpad0_source = ffs(dpad0_sources) - 1;
+
+	/* In the case of R8A7799X, default is set to 1.*/
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7799X))
+		rcdu->dpad0_source = 1;
+	else
+		rcdu->dpad0_source = ffs(dpad0_sources) - 1;
 
 	/* Create the CRTCs. */
 	for (swindex = 0, hwindex = 0; swindex < rcdu->num_crtcs; ++hwindex) {
