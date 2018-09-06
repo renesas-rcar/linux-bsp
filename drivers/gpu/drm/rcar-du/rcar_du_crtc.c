@@ -324,12 +324,14 @@ void rcar_du_crtc_route_output(struct drm_crtc *crtc,
 	 * configured when starting the CRTC.
 	 */
 	rcrtc->outputs |= BIT(output);
-
 	/*
 	 * Store RGB routing to DPAD0, the hardware will be configured when
 	 * starting the CRTC.
 	 */
 	if (output == RCAR_DU_OUTPUT_DPAD0)
+		rcdu->dpad0_source = rcrtc->index;
+	else if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7799X) &&
+		 output != RCAR_DU_OUTPUT_LVDS0)
 		rcdu->dpad0_source = rcrtc->index;
 }
 
