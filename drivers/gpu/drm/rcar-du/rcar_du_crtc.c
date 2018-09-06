@@ -331,6 +331,9 @@ void rcar_du_crtc_route_output(struct drm_crtc *crtc,
 	 */
 	if (output == RCAR_DU_OUTPUT_DPAD0)
 		rcdu->dpad0_source = rcrtc->index;
+	else if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7799X) &&
+		 output != RCAR_DU_OUTPUT_LVDS0)
+		rcdu->dpad0_source = rcrtc->index;
 }
 
 static unsigned int plane_zpos(struct rcar_du_plane *plane)
