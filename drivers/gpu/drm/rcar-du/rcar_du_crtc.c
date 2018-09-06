@@ -318,6 +318,10 @@ void rcar_du_crtc_route_output(struct drm_crtc *crtc,
 {
 	struct rcar_du_crtc *rcrtc = to_rcar_crtc(crtc);
 	struct rcar_du_device *rcdu = rcrtc->group->dev;
+	struct drm_device *dev = rcrtc->crtc.dev;
+	struct drm_connector *connector;
+	struct rcar_du_crtc *tmp_rcrtc = NULL;
+	bool dpad_set = false;
 
 	/*
 	 * Store the route from the CRTC output to the DU output. The DU will be
@@ -327,9 +331,25 @@ void rcar_du_crtc_route_output(struct drm_crtc *crtc,
 
 	/*
 	 * Store RGB routing to DPAD0, the hardware will be configured when
-	 * starting the CRTC.
+	 * starting the CRTC. In the case of R8A7799X, because it is LVDS
+	 * output, locate the VGA connector and identify the CRTC.
 	 */
-	if (output == RCAR_DU_OUTPUT_DPAD0)
+	list_for_each_entry(connector,
+			    &dev->mode_config.connector_list, head) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7799X) && connector &&
+		    (connector->connector_type == DRM_MODE_CONNECTOR_VGA) &&
+		    (connector->encoder)) {
+			tmp_rcrtc = to_rcar_crtc(connector->encoder->crtc);
+			break;
+		}
+	}
+
+	if (tmp_rcrtc && (rcrtc->index == tmp_rcrtc->index))
+		dpad_set = true;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7799X) && dpad_set)
+		rcdu->dpad0_source = rcrtc->index;
+	else if (output == RCAR_DU_OUTPUT_DPAD0)
 		rcdu->dpad0_source = rcrtc->index;
 }
 
