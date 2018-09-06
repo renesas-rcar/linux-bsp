@@ -921,6 +921,17 @@
 			dma-channels = <16>;
 		};
 
+		xhci0: usb@ee000000 {
+			compatible = "renesas,xhci-r8a77990",
+				     "renesas,rcar-gen3-xhci";
+			reg = <0 0xee000000 0 0xc00>;
+			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 328>;
+			power-domains = <&sysc R8A77990_PD_ALWAYS_ON>;
+			resets = <&cpg 328>;
+			status = "disabled";
+		};
+
 		usb3_peri0: usb@ee020000 {
 			compatible = "renesas,r8a77990-usb3-peri",
 				     "renesas,rcar-gen3-usb3-peri";
