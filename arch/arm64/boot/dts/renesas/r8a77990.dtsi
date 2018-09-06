@@ -663,8 +663,8 @@
 
 					reg = <1>;
 
-					vin4csi40: endpoint@0 {
-						reg = <0>;
+					vin4csi40: endpoint@2 {
+						reg = <2>;
 						remote-endpoint= <&csi40vin4>;
 					};
 				};
@@ -691,8 +691,8 @@
 
 					reg = <1>;
 
-					vin5csi40: endpoint@0 {
-						reg = <0>;
+					vin5csi40: endpoint@2 {
+						reg = <2>;
 						remote-endpoint= <&csi40vin5>;
 					};
 				};
