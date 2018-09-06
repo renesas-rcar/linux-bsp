@@ -486,11 +486,19 @@ static bool rcar_lvds_mode_fixup(struct drm_bridge *bridge,
 				 const struct drm_display_mode *mode,
 				 struct drm_display_mode *adjusted_mode)
 {
+	struct rcar_lvds *lvds = bridge_to_rcar_lvds(bridge);
+
 	/*
 	 * The internal LVDS encoder has a restricted clock frequency operating
-	 * range (31MHz to 148.5MHz). Clamp the clock accordingly.
+	 * range (31MHz to 148.5MHz). In case of r8a77990/r8a77995, frequency
+	 * operating range (5MHz to 148.5MHz). Clamp the clock accordingly.
 	 */
-	adjusted_mode->clock = clamp(adjusted_mode->clock, 31000, 148500);
+	if (lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)
+		adjusted_mode->clock = clamp(adjusted_mode->clock,
+					     5000, 148500);
+	else
+		adjusted_mode->clock = clamp(adjusted_mode->clock,
+					     31000, 148500);
 
 	return true;
 }
