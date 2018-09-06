@@ -144,6 +144,14 @@
 	clock-frequency = <48000000>;
 };
 
+&i2c0 {
+	status = "okay";
+};
+
+&i2c3 {
+	status = "okay";
+};
+
 &pcie_bus_clk {
 	clock-frequency = <100000000>;
 };
