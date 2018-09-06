@@ -36,6 +36,7 @@ struct rcar_du_device;
 #define RCAR_DU_FEATURE_R8A77990_REGS	(1 << 6)        /* Use R8A77990 registers */
 #define RCAR_DU_FEATURE_R8A77995_REGS	(1 << 7)        /* Use R8A77995 registers */
 #define RCAR_DU_FEATURE_TVM_SYNC	(1 << 8)	/* Has TV switch/sync modes */
+#define RCAR_DU_FEATURE_R8A7799X	(1 << 9)        /* Use R8A7799X */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	(1 << 0)	/* Align pitches to 128 bytes */
 
