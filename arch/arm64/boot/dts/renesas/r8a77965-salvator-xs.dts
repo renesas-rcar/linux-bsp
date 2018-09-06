@@ -81,3 +81,7 @@
 &hdmi0_con {
 	remote-endpoint = <&rcar_dw_hdmi0_out>;
 };
+
+&sata {
+	status = "okay";
+};
