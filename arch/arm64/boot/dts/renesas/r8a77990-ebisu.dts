@@ -140,6 +140,10 @@
 	};
 };
 
+&ehci0 {
+	status = "okay";
+};
+
 &extal_clk {
 	clock-frequency = <48000000>;
 };
@@ -170,6 +174,10 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 	};
+};
+
+&ohci0 {
+	status = "okay";
 };
 
 &pcie_bus_clk {
