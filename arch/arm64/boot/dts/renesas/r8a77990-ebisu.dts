@@ -243,6 +243,11 @@
 		function = "sdhi3";
 		power-source = <1800>;
 	};
+
+	usb0_pins: usb0 {
+		groups = "usb0_b";
+		function = "usb0";
+	};
 };
 
 &pwm3 {
@@ -305,6 +310,13 @@
 	mmc-hs400-1_8v;
 	bus-width = <8>;
 	non-removable;
+	status = "okay";
+};
+
+&usb2_phy0 {
+	pinctrl-0 = <&usb0_pins>;
+	pinctrl-names = "default";
+
 	status = "okay";
 };
 
