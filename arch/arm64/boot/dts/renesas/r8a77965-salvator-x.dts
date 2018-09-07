@@ -31,6 +31,16 @@
 		      "dclkin.0", "dclkin.1", "dclkin.3";
 };
 
+&lvds0 {
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};
+
 &hdmi0 {
 	status = "okay";
 
