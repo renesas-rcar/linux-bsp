@@ -90,13 +90,61 @@
 		};
 	};
 
-	hdmi0-out {
+	hdmi-out {
 		compatible = "hdmi-connector";
 		type = "a";
 
 		port {
-			hdmi0_connector_in: endpoint {
+			hdmi_con_out: endpoint {
 				remote-endpoint = <&adv7511_out>;
+			};
+		};
+	};
+
+	lvds0-decoder {
+		compatible = "thine,thc63lvd1024";
+		vcc-supply = <&reg_3p3v>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in0: endpoint {
+					remote-endpoint = <&lvds0_out>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out0: endpoint {
+					remote-endpoint = <&adv7511_in>;
+				};
+			};
+		};
+	};
+
+	lvds1-decoder {
+		compatible = "thine,thc63lvd1024";
+		vcc-supply = <&reg_3p3v>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in1: endpoint {
+					remote-endpoint = <&lvds1_out>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out1: endpoint {
+					remote-endpoint = <&adv7123_in>;
+				};
 			};
 		};
 	};
@@ -123,7 +171,7 @@
 		};
 
 		port {
-			lvds0_in: endpoint {
+			lvds0_panel_in: endpoint {
 				remote-endpoint = <&du_out_lvds0>;
 			};
 		};
@@ -151,7 +199,7 @@
 		};
 
 		port {
-			lvds1_in: endpoint {
+			lvds1_panel_in: endpoint {
 				remote-endpoint = <&du_out_lvds1>;
 			};
 		};
@@ -164,6 +212,7 @@
 
 		width = <1024>;
 		height = <768>;
+		max-pixelclock = <75000>;
 
 		port {
 			vga_in: endpoint {
@@ -182,7 +231,7 @@
 			port@0 {
 				reg = <0>;
 				adv7123_in: endpoint {
-					remote-endpoint = <&du_out_rgb>;
+					remote-endpoint = <&lvds1_out>;
 				};
 			};
 			port@1 {
@@ -192,6 +241,21 @@
 				};
 			};
 		};
+	};
+
+	reg_3p3v: regulator1 {
+		compatible = "regulator-fixed";
+		regulator-name = "fixed-3.3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	x13_clk: x13 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <74250000>;
 	};
 
 	rsnd_ak4613: sound {
@@ -327,6 +391,40 @@
 	};
 };
 
+&lvds0 {
+	status = "okay";
+
+	clocks = <&cpg CPG_MOD 727>,
+		 <&x13_clk>,
+		 <&extal_clk>;
+	clock-names = "fck", "dclkin.0", "extal";
+
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&thc63lvd1024_in0>;
+			};
+		};
+	};
+};
+
+&lvds1 {
+	status = "okay";
+
+	clocks = <&cpg CPG_MOD 727>,
+		 <&extal_clk>;
+	clock-names = "fck", "extal";
+
+	ports {
+		port@1 {
+			lvds1_out: endpoint {
+				remote-endpoint = <&adv7123_in>;
+			};
+		};
+	};
+};
+
+
 &du {
 	pinctrl-0 = <&du_pins>;
 	pinctrl-names = "default";
@@ -334,25 +432,8 @@
 
 	clocks = <&cpg CPG_MOD 724>,
 		 <&cpg CPG_MOD 723>,
-		 <&cpg CPG_MOD 727>,
-		 <&cpg CPG_MOD 727>,
-		 <&x13_clk>,
-		 <&extal_clk>;
-	clock-names = "du.0", "du.1", "lvds.0", "lvds.1",
-		      "dclkin.0", "extal";
-
-	ports {
-		port@0 {
-			endpoint {
-				remote-endpoint = <&adv7123_in>;
-			};
-		};
-		port@1 {
-			endpoint {
-				remote-endpoint = <&adv7511w_in>;
-			};
-		};
-	};
+		 <&x13_clk>;
+	clock-names = "du.0", "du.1", "dclkin.0";
 };
 
 &ehci0 {
@@ -366,15 +447,11 @@
 &i2c0 {
 	status = "okay";
 
-	adv7511w: hdmi@39 {
+	hdmi-encoder@39 {
 		compatible = "adi,adv7511w";
 		reg = <0x39>;
 		interrupt-parent = <&gpio1>;
-		interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
-
-		/* Depends on LVDS */
-		limit-frequency = <135000000>;
-		lower-refresh = <50>;
+		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;
 
 		adi,input-depth = <8>;
 		adi,input-colorspace = "rgb";
@@ -388,15 +465,15 @@
 
 			port@0 {
 				reg = <0>;
-				adv7511w_in: endpoint {
-					remote-endpoint = <&du_out_lvds0>;
+				adv7511_in: endpoint {
+					remote-endpoint = <&thc63lvd1024_out0>;
 				};
 			};
 
 			port@1 {
 				reg = <1>;
 				adv7511_out: endpoint {
-					remote-endpoint = <&hdmi0_connector_in>;
+					remote-endpoint = <&hdmi_con_out>;
 				};
 			};
 		};
