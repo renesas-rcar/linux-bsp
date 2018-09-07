@@ -58,16 +58,17 @@
 	clocks = <&cpg CPG_MOD 724>,
 		 <&cpg CPG_MOD 723>,
 		 <&cpg CPG_MOD 721>,
-		 <&cpg CPG_MOD 727>,
 		 <&versaclock6 1>,
 		 <&x21_clk>,
 		 <&versaclock6 2>;
-	clock-names = "du.0", "du.1", "du.3", "lvds.0",
+	clock-names = "du.0", "du.1", "du.3",
 		      "dclkin.0", "dclkin.1", "dclkin.3";
+};
 
+&lvds0 {
 	ports {
-		port@2 {
-			endpoint {
+		port@1 {
+			lvds0_out: endpoint {
 				remote-endpoint = <&lvds_in>;
 			};
 		};
