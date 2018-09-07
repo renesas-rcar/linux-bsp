@@ -45,6 +45,16 @@
 		&rsnd_port1>;	/* HDMI0  */
 };
 
+&lvds0 {
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};
+
 &hdmi0 {
 	status = "okay";
 
