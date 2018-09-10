@@ -17,6 +17,7 @@
 #include <linux/wait.h>
 
 #include <media/media-entity.h>
+#include <media/rcar-fcp.h>
 #include <media/v4l2-subdev.h>
 
 #include "vsp1.h"
@@ -287,6 +288,11 @@ int vsp1_pipeline_stop(struct vsp1_pipeline *pipe)
 			pipe->state = VSP1_PIPELINE_STOPPED;
 			spin_unlock_irqrestore(&pipe->irqlock, flags);
 		}
+
+		if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
+		    VI6_IP_VERSION_MODEL_VSPD_GEN3)
+			ret = rcar_fcp_reset(vsp1->fcp);
+
 	} else {
 		/* Otherwise just request a stop and wait. */
 		spin_lock_irqsave(&pipe->irqlock, flags);
