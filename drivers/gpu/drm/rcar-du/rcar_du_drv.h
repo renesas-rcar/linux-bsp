@@ -87,6 +87,7 @@ struct rcar_du_device {
 	struct rcar_du_vsp vsps[RCAR_DU_MAX_VSPS];
 
 	struct {
+		struct drm_property *alpha;
 		struct drm_property *colorkey;
 	} props;
 
