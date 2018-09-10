@@ -255,7 +255,7 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 						   wpf->entity.config,
 						   RWPF_PAD_SOURCE);
 	/* Format */
-	if (!pipe->lif) {
+	if (!pipe->lif || pipe->output->write_back == WB_STAT_CATP_SET) {
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
 		const struct vsp1_format_info *fmtinfo = wpf->fmtinfo;
 
@@ -295,7 +295,11 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 	vsp1_dl_body_write(dlb, VI6_DPR_WPF_FPORCH(wpf->entity.index),
 			   VI6_DPR_WPF_FPORCH_FP_WPFN);
 
-	vsp1_dl_body_write(dlb, VI6_WPF_WRBCK_CTRL, 0);
+	if (pipe->output->write_back == WB_STAT_CATP_SET)
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_WRBCK_CTRL,
+			       VI6_WPF_WRBCK_CTRL_WBMD);
+	else
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_WRBCK_CTRL, 0);
 
 	/*
 	 * Sources. If the pipeline has a single input and BRx is not used,
@@ -402,6 +406,17 @@ static void wpf_configure_partition(struct vsp1_entity *entity,
 	vsp1_wpf_write(wpf, dlb, VI6_WPF_VSZCLIP, VI6_WPF_SZCLIP_EN |
 		       (0 << VI6_WPF_SZCLIP_OFST_SHIFT) |
 		       (height << VI6_WPF_SZCLIP_SIZE_SHIFT));
+
+	if (wpf->write_back == WB_STAT_CATP_SET) {
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_DSTM_ADDR_Y,
+			       wpf->buf_addr[0]);
+		if (format->num_planes > 1)
+			vsp1_wpf_write(wpf, dlb, VI6_WPF_DSTM_ADDR_C0,
+				       wpf->buf_addr[1]);
+		if (format->num_planes > 2)
+			vsp1_wpf_write(wpf, dlb, VI6_WPF_DSTM_ADDR_C1,
+				       wpf->buf_addr[2]);
+	}
 
 	if (pipe->lif)
 		return;

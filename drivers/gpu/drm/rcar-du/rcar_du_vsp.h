@@ -67,6 +67,8 @@ void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc);
 void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc);
 int rcar_du_set_vmute(struct drm_device *dev, void *data,
 		      struct drm_file *file_priv);
+int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+			   struct drm_file *file_priv);
 #else
 static inline int rcar_du_vsp_init(struct rcar_du_vsp *vsp,
 				   struct device_node *np,
@@ -80,6 +82,11 @@ static inline void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc) { };
 static inline void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc) { };
 static inline int rcar_du_set_vmute(struct drm_device *dev, void *data,
 				    struct drm_file *file_priv) { return 0; };
+static inline int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+					 struct drm_file *file_priv)
+{
+	return 0;
+};
 #endif
 
 #endif /* __RCAR_DU_VSP_H__ */
