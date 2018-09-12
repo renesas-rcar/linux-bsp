@@ -339,12 +339,14 @@ bool vsp1_pipeline_ready(struct vsp1_pipeline *pipe)
 
 void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 {
-	struct vsp1_device *vsp1 = pipe->output->entity.vsp1;
+	struct vsp1_device *vsp1;
 	bool completed, interlaced = false;
 	int i;
 
 	if (pipe == NULL)
 		return;
+
+	vsp1 = pipe->output->entity.vsp1;
 
 	for (i = 0; i < vsp1->info->rpf_count; ++i) {
 		if (!pipe->inputs[i])
