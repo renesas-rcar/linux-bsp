@@ -269,7 +269,7 @@
 
 		port {
 			lvds_in: endpoint {
-				remote-endpoint = <&du_out_lvds0>;
+				remote-endpoint = <&lvds0_out>;
 			};
 		};
 	};
