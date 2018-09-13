@@ -407,6 +407,44 @@ static int rvin_enum_fmt_vid_cap(struct file *file, void *priv,
 	return 0;
 }
 
+static int rvin_get_digital_sd_format(struct rvin_dev *vin,
+				      struct v4l2_pix_format *pix)
+{
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+	};
+	int ret;
+
+	fmt.pad = vin->digital->source_pad;
+
+	ret = v4l2_subdev_call(vin_to_source(vin), pad, get_fmt, NULL, &fmt);
+	if (ret)
+		goto end;
+
+	switch (fmt.format.field) {
+	case V4L2_FIELD_TOP:
+	case V4L2_FIELD_BOTTOM:
+	case V4L2_FIELD_NONE:
+	case V4L2_FIELD_INTERLACED_TB:
+	case V4L2_FIELD_INTERLACED_BT:
+	case V4L2_FIELD_INTERLACED:
+	case V4L2_FIELD_SEQ_TB:
+	case V4L2_FIELD_SEQ_BT:
+		break;
+	case V4L2_FIELD_ALTERNATE:
+		/* Use VIN hardware to combine the two fields */
+		fmt.format.field = V4L2_FIELD_INTERLACED;
+		break;
+	default:
+		vin->format.field = V4L2_FIELD_NONE;
+		break;
+	}
+
+	v4l2_fill_pix_format(pix, &fmt.format);
+end:
+	return 0;
+}
+
 static int rvin_g_selection(struct file *file, void *fh,
 			    struct v4l2_selection *s)
 {
@@ -419,9 +457,15 @@ static int rvin_g_selection(struct file *file, void *fh,
 	switch (s->target) {
 	case V4L2_SEL_TGT_CROP_BOUNDS:
 	case V4L2_SEL_TGT_CROP_DEFAULT:
-		ret = rvin_get_sd_format(vin, &vin->format);
-		if (ret)
-			return ret;
+		if (vin->info->use_mc) {
+			ret = rvin_get_sd_format(vin, &vin->format);
+			if (ret)
+				return ret;
+		} else {
+			ret = rvin_get_digital_sd_format(vin, &vin->format);
+			if (ret)
+				return ret;
+		}
 		s->r.left = s->r.top = 0;
 		s->r.width = vin->source.width;
 		s->r.height = vin->source.height;
@@ -922,6 +966,8 @@ static int rvin_initialize_device(struct file *file)
 	ret = rvin_s_fmt_vid_cap(file, NULL, &f);
 	if (ret < 0)
 		goto esfmt;
+
+	rvin_get_digital_sd_format(vin, &vin->format);
 
 	v4l2_ctrl_handler_setup(&vin->ctrl_handler);
 
