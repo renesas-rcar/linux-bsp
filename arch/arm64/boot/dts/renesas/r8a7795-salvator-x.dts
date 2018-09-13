@@ -76,6 +76,10 @@
 	mmngrbuf {
 		compatible = "renesas,mmngrbuf";
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 &adsp {
@@ -211,5 +215,21 @@
 	pinctrl-0 = <&usb2_pins>;
 	pinctrl-names = "default";
 
+	status = "okay";
+};
+
+&vspbc {
+	status = "okay";
+};
+
+&vspbd {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
+&vspi1 {
 	status = "okay";
 };
