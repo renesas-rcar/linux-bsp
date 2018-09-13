@@ -52,6 +52,10 @@
 			reg = <0x00000000 0x70000000 0x0 0x10000000>;
 		};
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 &du {
@@ -93,5 +97,13 @@
 };
 
 &sata {
+	status = "okay";
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
 	status = "okay";
 };
