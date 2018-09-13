@@ -61,6 +61,10 @@
 	mmngrbuf {
 		compatible = "renesas,mmngrbuf";
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 &adsp {
@@ -77,4 +81,12 @@
 		 <&versaclock6 2>;
 	clock-names = "du.0", "du.1", "du.3",
 		      "dclkin.0", "dclkin.1", "dclkin.3";
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
 };
