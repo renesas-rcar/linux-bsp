@@ -2386,44 +2386,66 @@
 			renesas,#fcp_ch = <0>;
 		};
 
-		fdp1@fe940000 {
-			compatible = "renesas,fdp1";
-			reg = <0 0xfe940000 0 0x2400>;
+		fdp0: fdpm@fe940000 {
+			compatible = "renesas,fdpm";
+			reg = <0 0xfe940000 0 0x2400>, <0 0xfe950000 0 0x200>;
 			interrupts = <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 119>;
+			clocks = <&cpg CPG_MOD 119>, <&cpg CPG_MOD 615>;
+			clock-names = "fdp", "fcp";
 			power-domains = <&sysc R8A77965_PD_A3VP>;
-			resets = <&cpg 119>;
-			renesas,fcp = <&fcpf0>;
+			resets = <&cpg 119>, <&cpg 615>;
+			reset-names = "fdp", "fcp";
+			renesas,#ch = <0>;
 		};
 
-		fcpf0: fcp@fe950000 {
-			compatible = "renesas,fcpf";
-			reg = <0 0xfe950000 0 0x200>;
-			clocks = <&cpg CPG_MOD 615>;
-			power-domains = <&sysc R8A77965_PD_A3VP>;
-			resets = <&cpg 615>;
+		fcpvd0: fcp@fea27000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xfea27000 0 0x200>;
+			clocks = <&cpg CPG_MOD 603>;
+			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
+			resets = <&cpg 603>;
 		};
 
-		vspb: vsp@fe960000 {
-			compatible = "renesas,vsp2";
+		fcpvd1: fcp@fea2f000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xfea2f000 0 0x200>;
+			clocks = <&cpg CPG_MOD 602>;
+			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
+			resets = <&cpg 602>;
+		};
+
+		vsp@fe960000 {
+			compatible = "renesas,vspm-vsp2";
 			reg = <0 0xfe960000 0 0x8000>;
-			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 626>;
-			power-domains = <&sysc R8A77965_PD_A3VP>;
-			resets = <&cpg 626>;
-
-			renesas,fcp = <&fcpvb0>;
+			renesas,has-bru;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,#rpf = <5>;
+			renesas,#uds = <0>;
+			renesas,#wpf = <1>;
 		};
 
-		vspi0: vsp@fe9a0000 {
-			compatible = "renesas,vsp2";
-			reg = <0 0xfe9a0000 0 0x8000>;
-			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 631>;
+		vspb: vspm@fe960000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
+			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 626>, <&cpg CPG_MOD 607>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <3>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <6>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-bru;
+			renesas,has-hgo;
+			renesas,#read_outstanding = <0>;
+			renesas,#start_reservation = <2>;
 			power-domains = <&sysc R8A77965_PD_A3VP>;
-			resets = <&cpg 631>;
-
-			renesas,fcp = <&fcpvi0>;
+			resets = <&cpg 626>, <&cpg 607>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
 		};
 
 		vspd0: vsp@fea20000 {
@@ -2448,36 +2470,43 @@
 			renesas,fcp = <&fcpvd1>;
 		};
 
-		fcpvb0: fcp@fe96f000 {
-			compatible = "renesas,fcpv";
-			reg = <0 0xfe96f000 0 0x200>;
-			clocks = <&cpg CPG_MOD 607>;
+		vsp@fe9a0000 {
+			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe9a0000 0 0x8000>;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,#rpf = <1>;
+			renesas,#uds = <1>;
+			renesas,#wpf = <1>;
+		};
+
+		vspi0: vspm@fe9a0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe9a0000 0 0x8000>, <0 0xfe9af000 0 0x200>;
+			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 631>, <&cpg CPG_MOD 611>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <0>;
+			renesas,#rpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
+			renesas,#start_reservation = <2>;
 			power-domains = <&sysc R8A77965_PD_A3VP>;
-			resets = <&cpg 607>;
-		};
-
-		fcpvd0: fcp@fea27000 {
-			compatible = "renesas,fcpv";
-			reg = <0 0xfea27000 0 0x200>;
-			clocks = <&cpg CPG_MOD 603>;
-			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
-			resets = <&cpg 603>;
-		};
-
-		fcpvd1: fcp@fea2f000 {
-			compatible = "renesas,fcpv";
-			reg = <0 0xfea2f000 0 0x200>;
-			clocks = <&cpg CPG_MOD 602>;
-			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
-			resets = <&cpg 602>;
-		};
-
-		fcpvi0: fcp@fe9af000 {
-			compatible = "renesas,fcpv";
-			reg = <0 0xfe9af000 0 0x200>;
-			clocks = <&cpg CPG_MOD 611>;
-			power-domains = <&sysc R8A77965_PD_A3VP>;
-			resets = <&cpg 611>;
+			resets = <&cpg 631>, <&cpg 611>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
 		};
 
 		csi20: csi2@fea80000 {
