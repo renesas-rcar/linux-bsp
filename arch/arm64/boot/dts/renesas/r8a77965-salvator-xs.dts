@@ -61,6 +61,10 @@
 	mmngrbuf {
 		compatible = "renesas,mmngrbuf";
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 &adsp {
@@ -100,5 +104,13 @@
 
 /* SW12-7 must be set 'Off' (MD12 set to 1) which is not the default! */
 &sata {
+	status = "okay";
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
 	status = "okay";
 };
