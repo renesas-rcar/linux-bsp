@@ -69,6 +69,10 @@
 	mmngrbuf {
 		compatible = "renesas,mmngrbuf";
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 &du {
@@ -135,4 +139,12 @@
 			};
 		};
 	};
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
 };
