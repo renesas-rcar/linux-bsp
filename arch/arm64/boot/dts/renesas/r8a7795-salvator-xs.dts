@@ -70,6 +70,10 @@
 			reg = <0x00000000 0x70000000 0x0 0x10000000>;
 		};
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 &du {
@@ -231,5 +235,21 @@
 	pinctrl-0 = <&usb2_ch3_pins>;
 	pinctrl-names = "default";
 
+	status = "okay";
+};
+
+&vspbc {
+	status = "okay";
+};
+
+&vspbd {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
+&vspi1 {
 	status = "okay";
 };
