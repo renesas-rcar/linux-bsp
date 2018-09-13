@@ -61,6 +61,10 @@
 	mmngrbuf {
 		compatible = "renesas,mmngrbuf";
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 &adsp {
@@ -147,3 +151,12 @@
 	dais = <&rsnd_port0	/* ak4613 */
 		&rsnd_port1>;	/* HDMI0  */
 };
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
