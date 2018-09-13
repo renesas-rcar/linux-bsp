@@ -117,3 +117,7 @@
 &vspi0 {
 	status = "okay";
 };
+
+&sdhi2 {
+	/delete-property/ mmc-hs400-1_8v;
+};
