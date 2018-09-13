@@ -1685,7 +1685,7 @@
 			renesas,#start_reservation = <2>;
 			power-domains = <&sysc R8A77990_PD_A3VC>;
 			resets = <&cpg 626>, <&cpg 607>;
-			reset-names = "fdp", "fcp";
+			reset-names = "vsp", "fcp";
 			status = "disabled";
 		};
 
@@ -1724,7 +1724,7 @@
 			renesas,#start_reservation = <2>;
 			power-domains = <&sysc R8A77990_PD_A3VC>;
 			resets = <&cpg 631>, <&cpg 611>;
-			reset-names = "fdp", "fcp";
+			reset-names = "vsp", "fcp";
 			status = "disabled";
 		};
 
