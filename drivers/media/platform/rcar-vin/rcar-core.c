@@ -14,6 +14,8 @@
  * option) any later version.
  */
 
+#include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -1162,6 +1164,22 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	}
 	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
 
+	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->rstc);
+		goto error;
+	}
+
+	vin->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->clk)) {
+		dev_err(&pdev->dev, "failed to get clock%s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->clk);
+		goto error;
+	}
+
 	return 0;
 error:
 	rvin_dma_unregister(vin);
@@ -1211,7 +1229,25 @@ static int rcar_vin_suspend(struct device *dev)
 
 	vin->suspend = true;
 
-	pm_runtime_put(vin->dev);
+	if (vin->info->use_mc) {
+		u32 timeout = MSTP_WAIT_TIME;
+
+		while (1) {
+			bool enable;
+
+			enable = __clk_is_enabled(vin->clk);
+			if (!enable)
+				break;
+			if (!timeout) {
+				dev_warn(vin->dev, "MSTP status timeout\n");
+				break;
+			}
+			usleep_range(10, 15);
+			timeout--;
+		}
+		reset_control_assert(vin->rstc);
+		reset_control_deassert(vin->rstc);
+	}
 
 	return 0;
 }
@@ -1226,7 +1262,6 @@ static int rcar_vin_resume(struct device *dev)
 	if (vin->state == STOPPED)
 		return 0;
 
-	pm_runtime_get_sync(vin->dev);
 	queue_delayed_work_on(0, vin->work_queue, &vin->rvin_resume,
 			      msecs_to_jiffies(CONNECTION_TIME));
 
