@@ -493,7 +493,8 @@ static int rcar_i2c_is_dma(struct rcar_i2c_priv *priv)
 	struct dma_chan *chan = read ? priv->dma_rx : priv->dma_tx;
 
 	/* Do not use DMA if it's not available or for messages < 8 bytes */
-	return !(IS_ERR(chan) || msg->len < 8);
+	return !(IS_ERR(chan) || msg->len < 8 ||
+		 !(msg->flags & I2C_M_DMA_SAFE));
 }
 
 static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
