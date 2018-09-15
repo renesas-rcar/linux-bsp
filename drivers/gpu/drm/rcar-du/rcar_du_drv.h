@@ -30,6 +30,13 @@ struct rcar_du_device;
 #define RCAR_DU_FEATURE_CRTC_IRQ_CLOCK	(1 << 0)	/* Per-CRTC IRQ and clock */
 #define RCAR_DU_FEATURE_EXT_CTRL_REGS	(1 << 1)	/* Has extended control registers */
 #define RCAR_DU_FEATURE_VSP1_SOURCE	(1 << 2)	/* Has inputs from VSP1 */
+#define RCAR_DU_FEATURE_R8A7795_REGS	(1 << 3)        /* Use R8A7795 registers */
+#define RCAR_DU_FEATURE_R8A7796_REGS	(1 << 4)        /* Use R8A7796 registers */
+#define RCAR_DU_FEATURE_R8A77965_REGS	(1 << 5)        /* Use R8A77965 registers */
+#define RCAR_DU_FEATURE_R8A77990_REGS	(1 << 6)        /* Use R8A77990 registers */
+#define RCAR_DU_FEATURE_R8A77995_REGS	(1 << 7)        /* Use R8A77995 registers */
+#define RCAR_DU_FEATURE_TVM_SYNC	(1 << 8)	/* Has TV switch/sync modes */
+#define RCAR_DU_FEATURE_R8A7799X	(1 << 9)        /* Use R8A7799X */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	(1 << 0)	/* Align pitches to 128 bytes */
 
@@ -55,6 +62,7 @@ struct rcar_du_output_routing {
  * @channels_mask: bit mask of available DU channels
  * @routes: array of CRTC to output routes, indexed by output (RCAR_DU_OUTPUT_*)
  * @num_lvds: number of internal LVDS encoders
+ * @lvds_clk_mask: bitmask of channels that can use the LVDS clock as dot clock
  */
 struct rcar_du_device_info {
 	unsigned int gen;
@@ -64,6 +72,7 @@ struct rcar_du_device_info {
 	struct rcar_du_output_routing routes[RCAR_DU_OUTPUT_MAX];
 	unsigned int num_lvds;
 	unsigned int dpll_ch;
+	unsigned int lvds_clk_mask;
 };
 
 #define RCAR_DU_MAX_CRTCS		4
@@ -87,11 +96,15 @@ struct rcar_du_device {
 	struct rcar_du_vsp vsps[RCAR_DU_MAX_VSPS];
 
 	struct {
+		struct drm_property *alpha;
 		struct drm_property *colorkey;
+		struct drm_property *colorkey_alpha;
 	} props;
 
 	unsigned int dpad0_source;
 	unsigned int vspd1_sink;
+	bool vspdl_fix;
+	unsigned int brs_num;
 };
 
 static inline bool rcar_du_has(struct rcar_du_device *rcdu,
