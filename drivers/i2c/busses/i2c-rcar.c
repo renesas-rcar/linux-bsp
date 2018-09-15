@@ -2,7 +2,7 @@
  * Driver for the Renesas R-Car I2C unit
  *
  * Copyright (C) 2014-15 Wolfram Sang <wsa@sang-engineering.com>
- * Copyright (C) 2011-2015 Renesas Electronics Corporation
+ * Copyright (C) 2011-2018 Renesas Electronics Corporation
  *
  * Copyright (C) 2012-14 Renesas Solutions Corp.
  * Kuninori Morimoto <kuninori.morimoto.gx@renesas.com>
@@ -33,6 +33,8 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
+#include <linux/reset.h>
+#include <linux/sys_soc.h>
 
 /* register offsets */
 #define ICSCR	0x00	/* slave ctrl */
@@ -110,6 +112,7 @@
 #define ID_DONE		(1 << 2)
 #define ID_ARBLOST	(1 << 3)
 #define ID_NACK		(1 << 4)
+#define ID_RESTART	(1 << 5)
 /* persistent flags */
 #define ID_P_PM_BLOCKED	(1 << 31)
 #define ID_P_MASK	ID_P_PM_BLOCKED
@@ -141,6 +144,10 @@ struct rcar_i2c_priv {
 	struct dma_chan *dma_rx;
 	struct scatterlist sg;
 	enum dma_data_direction dma_direction;
+	int suspended;
+
+	struct reset_control *rstc;
+	u32 quirks;
 };
 
 #define rcar_i2c_priv_to_dev(p)		((p)->adap.dev.parent)
@@ -148,6 +155,22 @@ struct rcar_i2c_priv {
 
 #define LOOP_TIMEOUT	1024
 
+/* Check LSI revisions and set specific quirk value */
+#define RCAR_I2C_GEN3       BIT(0) /* Gen3 series */
+
+static const struct soc_device_attribute rcar_quirks_match[]  = {
+	{ .soc_id = "r8a7795",
+		.data = (void *)RCAR_I2C_GEN3, },
+	{ .soc_id = "r8a7796",
+		.data = (void *)RCAR_I2C_GEN3, },
+	{ .soc_id = "r8a77965",
+		.data = (void *)RCAR_I2C_GEN3, },
+	{ .soc_id = "r8a77990",
+		.data = (void *)RCAR_I2C_GEN3, },
+	{ .soc_id = "r8a77995",
+		.data = (void *)RCAR_I2C_GEN3, },
+	{/*sentinel*/},
+};
 
 static void rcar_i2c_write(struct rcar_i2c_priv *priv, int reg, u32 val)
 {
@@ -201,12 +224,10 @@ static struct i2c_bus_recovery_info rcar_i2c_bri = {
 };
 static void rcar_i2c_init(struct rcar_i2c_priv *priv)
 {
-	/* reset master mode */
-	rcar_i2c_write(priv, ICMIER, 0);
-	rcar_i2c_write(priv, ICMCR, MDBS);
-	rcar_i2c_write(priv, ICMSR, 0);
 	/* start clock */
 	rcar_i2c_write(priv, ICCCR, priv->icccr);
+	/* 1st bit setup cycle */
+	rcar_i2c_write(priv, ICFBSCR, TCYC17);
 }
 
 static int rcar_i2c_bus_barrier(struct rcar_i2c_priv *priv)
@@ -330,6 +351,7 @@ static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 		priv->flags |= ID_LAST_MSG;
 
 	rcar_i2c_write(priv, ICMAR, (priv->msg->addr << 1) | read);
+	rcar_i2c_write(priv, ICMIER, read ? RCAR_IRQ_RECV : RCAR_IRQ_SEND);
 	/*
 	 * We don't have a test case but the HW engineers say that the write order
 	 * of ICMSR and ICMCR depends on whether we issue START or REP_START. Since
@@ -339,10 +361,12 @@ static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 		rcar_i2c_write(priv, ICMSR, 0);
 		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
 	} else {
-		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
+		if ((priv->flags & ID_RESTART) == 0)
+			rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
+		else
+			priv->flags &= ~ID_RESTART;
 		rcar_i2c_write(priv, ICMSR, 0);
 	}
-	rcar_i2c_write(priv, ICMIER, read ? RCAR_IRQ_RECV : RCAR_IRQ_SEND);
 }
 
 static void rcar_i2c_next_msg(struct rcar_i2c_priv *priv)
@@ -361,16 +385,13 @@ static void rcar_i2c_dma_unmap(struct rcar_i2c_priv *priv)
 	struct dma_chan *chan = priv->dma_direction == DMA_FROM_DEVICE
 		? priv->dma_rx : priv->dma_tx;
 
-	/* Disable DMA Master Received/Transmitted */
-	rcar_i2c_write(priv, ICDMAER, 0);
-
-	/* Reset default delay */
-	rcar_i2c_write(priv, ICFBSCR, TCYC06);
-
 	dma_unmap_single(chan->device->dev, sg_dma_address(&priv->sg),
 			 sg_dma_len(&priv->sg), priv->dma_direction);
 
 	priv->dma_direction = DMA_NONE;
+
+	/* Disable DMA Master Received/Transmitted */
+	rcar_i2c_write(priv, ICDMAER, 0);
 }
 
 static void rcar_i2c_cleanup_dma(struct rcar_i2c_priv *priv)
@@ -456,9 +477,6 @@ static void rcar_i2c_dma(struct rcar_i2c_priv *priv)
 		return;
 	}
 
-	/* Set delay for DMA operations */
-	rcar_i2c_write(priv, ICFBSCR, TCYC17);
-
 	/* Enable DMA Master Received/Transmitted */
 	if (read)
 		rcar_i2c_write(priv, ICDMAER, RMDMAE);
@@ -466,6 +484,17 @@ static void rcar_i2c_dma(struct rcar_i2c_priv *priv)
 		rcar_i2c_write(priv, ICDMAER, TMDMAE);
 
 	dma_async_issue_pending(chan);
+}
+
+static int rcar_i2c_is_dma(struct rcar_i2c_priv *priv)
+{
+	struct i2c_msg *msg = priv->msg;
+	bool read = msg->flags & I2C_M_RD;
+	struct dma_chan *chan = read ? priv->dma_rx : priv->dma_tx;
+
+	/* Do not use DMA if it's not available or for messages < 8 bytes */
+	return !(IS_ERR(chan) || msg->len < 8 ||
+		 !(msg->flags & I2C_M_DMA_SAFE));
 }
 
 static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
@@ -477,22 +506,24 @@ static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
 		return;
 
 	if (priv->pos < msg->len) {
-		/*
-		 * Prepare next data to ICRXTX register.
-		 * This data will go to _SHIFT_ register.
-		 *
-		 *    *
-		 * [ICRXTX] -> [SHIFT] -> [I2C bus]
-		 */
-		rcar_i2c_write(priv, ICRXTX, msg->buf[priv->pos]);
-		priv->pos++;
-
-		/*
-		 * Try to use DMA to transmit the rest of the data if
-		 * address transfer phase just finished.
-		 */
-		if (msr & MAT)
+		if (priv->pos == 0 || !rcar_i2c_is_dma(priv)) {
+			/*
+			 * Prepare next data to ICRXTX register.
+			 * This data will go to _SHIFT_ register.
+			 *
+			 *    *
+			 * [ICRXTX] -> [SHIFT] -> [I2C bus]
+			 */
+			rcar_i2c_write(priv, ICRXTX, msg->buf[priv->pos]);
+			priv->pos++;
+		} else {
+			/*
+			 * Try to use DMA to transmit the rest of the data if
+			 * address transfer pashe just finished.
+			 */
 			rcar_i2c_dma(priv);
+			return;
+		}
 	} else {
 		/*
 		 * The last data was pushed to ICRXTX on _PREV_ empty irq.
@@ -538,15 +569,15 @@ static void rcar_i2c_irq_recv(struct rcar_i2c_priv *priv, u32 msr)
 		priv->pos++;
 	}
 
-	/*
-	 * If next received data is the _LAST_, go to STOP phase. Might be
-	 * overwritten by REP START when setting up a new msg. Not elegant
-	 * but the only stable sequence for REP START I have found so far.
-	 * If you want to change this code, make sure sending one transfer with
-	 * four messages (WR-RD-WR-RD) works!
-	 */
-	if (priv->pos + 1 >= msg->len)
-		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_STOP);
+	/* If next received data is the _LAST_, go to STOP phase. */
+	if (priv->pos + 1 == msg->len) {
+		if (priv->flags & ID_LAST_MSG) {
+			rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_STOP);
+		} else {
+			rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
+			priv->flags |= ID_RESTART;
+		}
+	}
 
 	if (priv->pos == msg->len && !(priv->flags & ID_LAST_MSG))
 		rcar_i2c_next_msg(priv);
@@ -615,8 +646,10 @@ static irqreturn_t rcar_i2c_irq(int irq, void *ptr)
 	u32 msr, val;
 
 	/* Clear START or STOP as soon as we can */
-	val = rcar_i2c_read(priv, ICMCR);
-	rcar_i2c_write(priv, ICMCR, val & RCAR_BUS_MASK_DATA);
+	if ((priv->flags & ID_RESTART) == 0) {
+		val = rcar_i2c_read(priv, ICMCR);
+		rcar_i2c_write(priv, ICMCR, val & RCAR_BUS_MASK_DATA);
+	}
 
 	msr = rcar_i2c_read(priv, ICMSR);
 
@@ -739,6 +772,38 @@ static void rcar_i2c_release_dma(struct rcar_i2c_priv *priv)
 	}
 }
 
+static void rcar_i2c_reset(struct rcar_i2c_priv *priv)
+{
+	int ret, i;
+	struct device *dev = rcar_i2c_priv_to_dev(priv);
+
+	/* do reset */
+	ret = reset_control_assert(priv->rstc);
+	if (ret) {
+		dev_err(dev, "assert reset error %d\n", ret);
+		return;
+	}
+
+	udelay(1);
+
+	/* do reset release */
+	ret = reset_control_deassert(priv->rstc);
+	if (ret)
+		dev_err(dev, "dessert reset error %d\n", ret);
+
+	/* do release wait */
+	for (i = 0; i < LOOP_TIMEOUT; i++) {
+		ret = reset_control_status(priv->rstc);
+		if (!ret)
+			return;
+		else if (ret < 0)
+			break;
+
+		udelay(1);
+	}
+	dev_err(dev, "reset error %d\n", ret);
+}
+
 static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 				struct i2c_msg *msgs,
 				int num)
@@ -748,7 +813,13 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 	int i, ret;
 	long time_left;
 
+	if (priv->suspended)
+		return -EBUSY;
+
 	pm_runtime_get_sync(dev);
+
+	if (priv->quirks & RCAR_I2C_GEN3 && priv->rstc)
+		rcar_i2c_reset(priv);
 
 	rcar_i2c_init(priv);
 
@@ -875,6 +946,7 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct i2c_timings i2c_t;
 	int irq, ret;
+	const struct soc_device_attribute *attr;
 
 	priv = devm_kzalloc(dev, sizeof(struct rcar_i2c_priv), GFP_KERNEL);
 	if (!priv)
@@ -885,6 +957,10 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 		dev_err(dev, "cannot get clock\n");
 		return PTR_ERR(priv->clk);
 	}
+
+	attr = soc_device_match(rcar_quirks_match);
+	if (attr)
+		priv->quirks = (uintptr_t)attr->data;
 
 	priv->res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
@@ -919,6 +995,10 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	ret = rcar_i2c_clock_calculate(priv, &i2c_t);
 	if (ret < 0)
 		goto out_pm_put;
+
+	/* get reset resource */
+	if (priv->quirks & RCAR_I2C_GEN3)
+		priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
 	/* Stay always active when multi-master to keep arbitration working */
 	if (of_property_read_bool(dev->of_node, "multi-master"))
@@ -965,9 +1045,51 @@ static int rcar_i2c_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_i2c_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
+
+	priv->suspended = 1;
+
+	return 0;
+}
+
+static int rcar_i2c_resume(struct device *dev)
+{
+	int ret = 0;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
+	struct i2c_timings i2c_t;
+
+	i2c_parse_fw_timings(dev, &i2c_t, false);
+	pm_runtime_get_sync(dev);
+	ret = rcar_i2c_clock_calculate(priv, &i2c_t);
+	if (ret < 0)
+		dev_err(dev, "Could not calculate clock\n");
+
+	rcar_i2c_init(priv);
+	pm_runtime_put(dev);
+
+	priv->suspended = 0;
+
+	return ret;
+}
+
+static const struct dev_pm_ops rcar_i2c_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(rcar_i2c_suspend, rcar_i2c_resume)
+};
+
+#define DEV_PM_OPS (&rcar_i2c_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_i2c_driver = {
 	.driver	= {
 		.name	= "i2c-rcar",
+		.pm	= DEV_PM_OPS,
 		.of_match_table = rcar_i2c_dt_ids,
 	},
 	.probe		= rcar_i2c_probe,
