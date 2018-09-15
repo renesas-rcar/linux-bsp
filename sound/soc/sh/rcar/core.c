@@ -482,7 +482,7 @@ static int rsnd_status_update(u32 *status,
 			(func_call && (mod)->ops->fn) ? #fn : "");	\
 		if (func_call && (mod)->ops->fn)			\
 			tmp = (mod)->ops->fn(mod, io, param);		\
-		if (tmp)						\
+		if (tmp && (tmp != -EPROBE_DEFER))			\
 			dev_err(dev, "%s[%d] : %s error %d\n",		\
 				rsnd_mod_name(mod), rsnd_mod_id(mod),	\
 						     #fn, tmp);		\
@@ -550,6 +550,15 @@ struct rsnd_dai *rsnd_rdai_get(struct rsnd_priv *priv, int id)
 		return NULL;
 
 	return priv->rdai + id;
+}
+
+static struct snd_soc_dai_driver
+*rsnd_daidrv_get(struct rsnd_priv *priv, int id)
+{
+	if ((id < 0) || (id >= rsnd_rdai_nr(priv)))
+		return NULL;
+
+	return priv->daidrv + id;
 }
 
 #define rsnd_dai_to_priv(dai) snd_soc_dai_get_drvdata(dai)
@@ -877,12 +886,10 @@ static int rsnd_soc_dai_startup(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *dai)
 {
 	struct rsnd_dai *rdai = rsnd_dai_to_rdai(dai);
-	struct rsnd_priv *priv = rsnd_rdai_to_priv(rdai);
 	struct rsnd_dai_stream *io = rsnd_rdai_to_io(rdai, substream);
 	struct snd_pcm_hw_constraint_list *constraint = &rdai->constraint;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	unsigned int max_channels = rsnd_rdai_channels_get(rdai);
-	int ret;
 	int i;
 
 	rsnd_dai_stream_init(io, substream);
@@ -928,14 +935,7 @@ static int rsnd_soc_dai_startup(struct snd_pcm_substream *substream,
 				    SNDRV_PCM_HW_PARAM_RATE, -1);
 	}
 
-	/*
-	 * call rsnd_dai_call without spinlock
-	 */
-	ret = rsnd_dai_call(nolock_start, io, priv);
-	if (ret < 0)
-		rsnd_dai_call(nolock_stop, io, priv);
-
-	return ret;
+	return 0;
 }
 
 static void rsnd_soc_dai_shutdown(struct snd_pcm_substream *substream,
@@ -948,9 +948,19 @@ static void rsnd_soc_dai_shutdown(struct snd_pcm_substream *substream,
 	/*
 	 * call rsnd_dai_call without spinlock
 	 */
-	rsnd_dai_call(nolock_stop, io, priv);
+	rsnd_dai_call(cleanup, io, priv);
 
 	rsnd_dai_stream_quit(io);
+}
+
+static int rsnd_soc_dai_prepare(struct snd_pcm_substream *substream,
+				struct snd_soc_dai *dai)
+{
+	struct rsnd_priv *priv = rsnd_dai_to_priv(dai);
+	struct rsnd_dai *rdai = rsnd_dai_to_rdai(dai);
+	struct rsnd_dai_stream *io = rsnd_rdai_to_io(rdai, substream);
+
+	return rsnd_dai_call(prepare, io, priv);
 }
 
 static const struct snd_soc_dai_ops rsnd_soc_dai_ops = {
@@ -959,6 +969,7 @@ static const struct snd_soc_dai_ops rsnd_soc_dai_ops = {
 	.trigger	= rsnd_soc_dai_trigger,
 	.set_fmt	= rsnd_soc_dai_set_fmt,
 	.set_tdm_slot	= rsnd_soc_set_dai_tdm_slot,
+	.prepare	= rsnd_soc_dai_prepare,
 };
 
 void rsnd_parse_connect_common(struct rsnd_dai *rdai,
@@ -1037,7 +1048,7 @@ static void __rsnd_dai_probe(struct rsnd_priv *priv,
 	int io_i;
 
 	rdai		= rsnd_rdai_get(priv, dai_i);
-	drv		= priv->daidrv + dai_i;
+	drv		= rsnd_daidrv_get(priv, dai_i);
 	io_playback	= &rdai->playback;
 	io_capture	= &rdai->capture;
 
@@ -1083,6 +1094,12 @@ static void __rsnd_dai_probe(struct rsnd_priv *priv,
 
 		of_node_put(playback);
 		of_node_put(capture);
+	}
+
+	if (rsnd_ssi_is_pin_sharing(io_capture) ||
+	    rsnd_ssi_is_pin_sharing(io_playback)) {
+		/* should have symmetric_rates if pin sharing */
+		drv->symmetric_rates = 1;
 	}
 
 	dev_dbg(dev, "%s (%s/%s)\n", rdai->name,
@@ -1549,6 +1566,14 @@ exit_snd_probe:
 		rsnd_dai_call(remove, &rdai->playback, priv);
 		rsnd_dai_call(remove, &rdai->capture, priv);
 	}
+
+	/*
+	 * adg is very special mod which can't use rsnd_dai_call(remove),
+	 * and it registers ADG clock on probe.
+	 * It should be unregister if probe failed.
+	 * Mainly it is assuming -EPROBE_DEFER case
+	 */
+	rsnd_adg_remove(priv);
 
 	return ret;
 }
