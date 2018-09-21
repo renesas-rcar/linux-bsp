@@ -482,7 +482,7 @@ static int rsnd_status_update(u32 *status,
 			(func_call && (mod)->ops->fn) ? #fn : "");	\
 		if (func_call && (mod)->ops->fn)			\
 			tmp = (mod)->ops->fn(mod, io, param);		\
-		if (tmp)						\
+		if (tmp && (tmp != -EPROBE_DEFER))			\
 			dev_err(dev, "%s[%d] : %s error %d\n",		\
 				rsnd_mod_name(mod), rsnd_mod_id(mod),	\
 						     #fn, tmp);		\
@@ -550,6 +550,15 @@ struct rsnd_dai *rsnd_rdai_get(struct rsnd_priv *priv, int id)
 		return NULL;
 
 	return priv->rdai + id;
+}
+
+static struct snd_soc_dai_driver
+*rsnd_daidrv_get(struct rsnd_priv *priv, int id)
+{
+	if ((id < 0) || (id >= rsnd_rdai_nr(priv)))
+		return NULL;
+
+	return priv->daidrv + id;
 }
 
 #define rsnd_dai_to_priv(dai) snd_soc_dai_get_drvdata(dai)
@@ -1037,7 +1046,7 @@ static void __rsnd_dai_probe(struct rsnd_priv *priv,
 	int io_i;
 
 	rdai		= rsnd_rdai_get(priv, dai_i);
-	drv		= priv->daidrv + dai_i;
+	drv		= rsnd_daidrv_get(priv, dai_i);
 	io_playback	= &rdai->playback;
 	io_capture	= &rdai->capture;
 
@@ -1083,6 +1092,12 @@ static void __rsnd_dai_probe(struct rsnd_priv *priv,
 
 		of_node_put(playback);
 		of_node_put(capture);
+	}
+
+	if (rsnd_ssi_is_pin_sharing(io_capture) ||
+	    rsnd_ssi_is_pin_sharing(io_playback)) {
+		/* should have symmetric_rates if pin sharing */
+		drv->symmetric_rates = 1;
 	}
 
 	dev_dbg(dev, "%s (%s/%s)\n", rdai->name,
@@ -1549,6 +1564,14 @@ exit_snd_probe:
 		rsnd_dai_call(remove, &rdai->playback, priv);
 		rsnd_dai_call(remove, &rdai->capture, priv);
 	}
+
+	/*
+	 * adg is very special mod which can't use rsnd_dai_call(remove),
+	 * and it registers ADG clock on probe.
+	 * It should be unregister if probe failed.
+	 * Mainly it is assuming -EPROBE_DEFER case
+	 */
+	rsnd_adg_remove(priv);
 
 	return ret;
 }
