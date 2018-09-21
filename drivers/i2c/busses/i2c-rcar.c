@@ -432,14 +432,14 @@ static void rcar_i2c_dma(struct rcar_i2c_priv *priv)
 	dma_async_issue_pending(chan);
 }
 
-static int rcar_i2c_is_dma(struct rcar_i2c_priv *priv)
+static int rcar_i2c_is_pio(struct rcar_i2c_priv *priv)
 {
 	struct i2c_msg *msg = priv->msg;
 	bool read = msg->flags & I2C_M_RD;
 	struct dma_chan *chan = read ? priv->dma_rx : priv->dma_tx;
 
 	/* Do not use DMA if it's not available or for messages < 8 bytes */
-	return !(IS_ERR(chan) || msg->len < 8);
+	return (IS_ERR(chan) || msg->len < 8);
 }
 
 static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
@@ -451,7 +451,7 @@ static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
 		return;
 
 	if (priv->pos < msg->len) {
-		if (priv->pos == 0 || !rcar_i2c_is_dma(priv)) {
+		if (priv->pos == 0 || rcar_i2c_is_pio(priv)) {
 			/*
 			 * Prepare next data to ICRXTX register.
 			 * This data will go to _SHIFT_ register.
