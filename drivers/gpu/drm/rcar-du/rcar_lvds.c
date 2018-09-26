@@ -8,6 +8,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/of.h>
@@ -64,9 +65,11 @@ struct rcar_lvds {
 		struct clk *dotclkin[2];	/* External DU clocks */
 	} clocks;
 	bool enabled;
+	struct clk_hw lvds_pll;
 
 	struct drm_display_mode display_mode;
 	enum rcar_lvds_mode mode;
+	u32 id;
 };
 
 #define bridge_to_rcar_lvds(bridge) \
@@ -375,11 +378,12 @@ static void rcar_lvds_enable(struct drm_bridge *bridge)
 
 	WARN_ON(lvds->enabled);
 
-	reset_control_deassert(lvds->rstc);
-
-	ret = clk_prepare_enable(lvds->clocks.mod);
-	if (ret < 0)
-		return;
+	if (!(lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)) {
+		reset_control_deassert(lvds->rstc);
+		ret = clk_prepare_enable(lvds->clocks.mod);
+		if (ret < 0)
+			return;
+	}
 
 	/*
 	 * Hardcode the channels and control signals routing for now.
@@ -408,7 +412,8 @@ static void rcar_lvds_enable(struct drm_bridge *bridge)
 	}
 
 	/* PLL clock configuration. */
-	lvds->info->pll_setup(lvds, mode->clock * 1000);
+	if (lvds->info->pll_setup)
+		lvds->info->pll_setup(lvds, mode->clock * 1000);
 
 	/* Set the LVDS mode and select the input. */
 	lvdcr0 = lvds->mode << LVDCR0_LVMD_SHIFT;
@@ -465,7 +470,7 @@ static void rcar_lvds_enable(struct drm_bridge *bridge)
 	lvds->enabled = true;
 }
 
-static void rcar_lvds_disable(struct drm_bridge *bridge)
+static void __rcar_lvds_disable(struct drm_bridge *bridge)
 {
 	struct rcar_lvds *lvds = bridge_to_rcar_lvds(bridge);
 	u32 lvdcr0 = 0;
@@ -503,6 +508,16 @@ static void rcar_lvds_disable(struct drm_bridge *bridge)
 	reset_control_assert(lvds->rstc);
 
 	lvds->enabled = false;
+}
+
+static void rcar_lvds_disable(struct drm_bridge *bridge)
+{
+	struct rcar_lvds *lvds = bridge_to_rcar_lvds(bridge);
+
+	if (lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)
+		return;
+
+	__rcar_lvds_disable(bridge);
 }
 
 static bool rcar_lvds_mode_fixup(struct drm_bridge *bridge,
@@ -632,6 +647,7 @@ static int rcar_lvds_parse_dt(struct rcar_lvds *lvds)
 	struct device_node *node;
 	bool is_bridge = false;
 	int ret = 0;
+	u32 id;
 
 	local_output = of_graph_get_endpoint_by_regs(lvds->dev->of_node, 1, 0);
 	if (!local_output) {
@@ -681,6 +697,12 @@ static int rcar_lvds_parse_dt(struct rcar_lvds *lvds)
 			ret = -EPROBE_DEFER;
 	}
 
+	/* Make sure LVDS id is present and sane */
+	if (!of_property_read_u32(lvds->dev->of_node, "renesas,id", &id))
+		lvds->id = id;
+	else
+		lvds->id = 0;
+
 done:
 	of_node_put(local_output);
 	of_node_put(remote_input);
@@ -688,6 +710,29 @@ done:
 
 	return ret;
 }
+
+static long rcar_lvds_pll_round_rate(struct clk_hw *hw, unsigned long rate,
+				     unsigned long *parent_rate)
+{
+	struct rcar_lvds *lvds = container_of(hw, struct rcar_lvds, lvds_pll);
+	int ret;
+
+	if (rate == 0) {
+		__rcar_lvds_disable(&lvds->bridge);
+	} else {
+		reset_control_deassert(lvds->rstc);
+		ret = clk_prepare_enable(lvds->clocks.mod);
+		if (ret < 0)
+			return ret;
+		rcar_lvds_pll_setup_d3_e3(lvds, rate);
+	}
+
+	return 0;
+}
+
+static const struct clk_ops lvds_pll_ops = {
+	.round_rate	= rcar_lvds_pll_round_rate,
+};
 
 static struct clk *rcar_lvds_get_clock(struct rcar_lvds *lvds, const char *name,
 				       bool optional)
@@ -748,6 +793,9 @@ static int rcar_lvds_probe(struct platform_device *pdev)
 	struct rcar_lvds *lvds;
 	struct resource *mem;
 	int ret;
+	struct clk_init_data init;
+	const char *parent_name;
+	char name[11];
 
 	lvds = devm_kzalloc(&pdev->dev, sizeof(*lvds), GFP_KERNEL);
 	if (lvds == NULL)
@@ -783,6 +831,26 @@ static int rcar_lvds_probe(struct platform_device *pdev)
 	}
 
 	drm_bridge_add(&lvds->bridge);
+
+	if (!(lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL))
+		return 0;
+
+	/* Register clock input mux */
+	memset(&init, 0, sizeof(init));
+
+	parent_name = __clk_get_name(lvds->clocks.mod);
+
+	sprintf(name, "lvds-pll.%d", lvds->id);
+	init.name = name;
+	init.ops = &lvds_pll_ops;
+	init.flags = 0;
+	init.num_parents = 1;
+	init.parent_names = &parent_name;
+	lvds->lvds_pll.init = &init;
+
+	ret = devm_clk_hw_register(&pdev->dev, &lvds->lvds_pll);
+	if (ret)
+		return ret;
 
 	return 0;
 }
@@ -823,14 +891,12 @@ static const struct rcar_lvds_device_info rcar_lvds_r8a77990_info = {
 	.gen = 3,
 	.quirks = RCAR_LVDS_QUIRK_GEN3_LVEN | RCAR_LVDS_QUIRK_EXT_PLL
 		| RCAR_LVDS_QUIRK_DUAL_LINK,
-	.pll_setup = rcar_lvds_pll_setup_d3_e3,
 };
 
 static const struct rcar_lvds_device_info rcar_lvds_r8a77995_info = {
 	.gen = 3,
 	.quirks = RCAR_LVDS_QUIRK_GEN3_LVEN | RCAR_LVDS_QUIRK_PWD
 		| RCAR_LVDS_QUIRK_EXT_PLL | RCAR_LVDS_QUIRK_DUAL_LINK,
-	.pll_setup = rcar_lvds_pll_setup_d3_e3,
 };
 
 static const struct of_device_id rcar_lvds_of_table[] = {
