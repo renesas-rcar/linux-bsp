@@ -1088,6 +1088,7 @@
 			power-domains = <&sysc R8A77995_PD_ALWAYS_ON>;
 			resets = <&cpg 727>;
 			status = "disabled";
+			renesas,id = <0>;
 
 			renesas,companion = <&lvds1>;
 
@@ -1117,6 +1118,7 @@
 			power-domains = <&sysc R8A77995_PD_ALWAYS_ON>;
 			resets = <&cpg 726>;
 			status = "disabled";
+			renesas,id = <1>;
 
 			ports {
 				#address-cells = <1>;
