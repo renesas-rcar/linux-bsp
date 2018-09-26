@@ -12,7 +12,9 @@
  */
 
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/mutex.h>
+#include <linux/of_platform.h>
 #include <linux/sys_soc.h>
 
 #include <drm/drmP.h>
@@ -30,6 +32,7 @@
 #include "rcar_du_plane.h"
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
+#include "rcar_lvds.h"
 
 static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 {
@@ -512,6 +515,13 @@ static void rcar_du_crtc_wait_page_flip(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 {
+	const struct drm_display_mode *mode = &rcrtc->crtc.state->adjusted_mode;
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
+	unsigned long mode_clock = mode->clock * 1000;
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7799X))
+		rcar_lvds_pll_round_rate(rcrtc->index, mode_clock);
+
 	/* Set display off and background to black */
 	rcar_du_crtc_write(rcrtc, DOOR, DOOR_RGB(0, 0, 0));
 	rcar_du_crtc_write(rcrtc, BPOR, BPOR_RGB(0, 0, 0));
@@ -624,6 +634,7 @@ static void rcar_du_crtc_disable_planes(struct rcar_du_crtc *rcrtc)
 
 static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->group->dev;
 	struct drm_crtc *crtc = &rcrtc->crtc;
 
 	/*
@@ -663,6 +674,9 @@ static void rcar_du_crtc_stop(struct rcar_du_crtc *rcrtc)
 				     DSYSR_TVM_SWITCH);
 
 	rcar_du_group_start_stop(rcrtc->group, false);
+
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7799X))
+		rcar_lvds_pll_round_rate(rcrtc->index, 0);
 }
 
 /* -----------------------------------------------------------------------------
