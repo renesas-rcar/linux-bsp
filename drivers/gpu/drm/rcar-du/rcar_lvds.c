@@ -35,6 +35,14 @@ enum rcar_lvds_mode {
 	RCAR_LVDS_MODE_VESA = 4,
 };
 
+enum rcar_lvds_link_mode {
+	RCAR_LVDS_SINGLE = 0,
+	RCAR_LVDS_DUAL,
+};
+
+#define RCAR_LVDS_MAX_NUM		2
+static struct rcar_lvds *g_lvds[RCAR_LVDS_MAX_NUM];
+
 #define RCAR_LVDS_QUIRK_LANES		BIT(0)	/* LVDS lanes 1 and 3 inverted */
 #define RCAR_LVDS_QUIRK_GEN3_LVEN	BIT(1)	/* LVEN bit needs to be set on R8A77970/R8A7799x */
 #define RCAR_LVDS_QUIRK_PWD		BIT(2)	/* PWD bit available (all of Gen3 but E3) */
@@ -69,6 +77,7 @@ struct rcar_lvds {
 
 	struct drm_display_mode display_mode;
 	enum rcar_lvds_mode mode;
+	enum rcar_lvds_link_mode link_mode;
 	u32 id;
 };
 
@@ -350,6 +359,9 @@ static void rcar_lvds_pll_setup_d3_e3(struct rcar_lvds *lvds, unsigned int freq)
 		lvdpllcr |= LVDPLLCR_STP_CLKOUTE | LVDPLLCR_OUTCLKSEL
 			 |  LVDPLLCR_PLLE(pll.pll_e - 1);
 
+	/* Wait 200us until pll-lock */
+	usleep_range(200, 250);
+
 	rcar_lvds_write(lvds, LVDPLLCR, lvdpllcr);
 
 	if (pll.div > 1)
@@ -357,6 +369,75 @@ static void rcar_lvds_pll_setup_d3_e3(struct rcar_lvds *lvds, unsigned int freq)
 				LVDDIV_DIVRESET | LVDDIV_DIV(pll.div - 1));
 	else
 		rcar_lvds_write(lvds, LVDDIV, 0);
+}
+
+static void rcar_lvds_dual_mode(struct rcar_lvds *lvds0,
+				struct rcar_lvds *lvds1)
+{
+	u32 lvdcr0 = 0, lvdcr1 = 0, lvdhcr;
+	u32 lvdcr0_lvres, lvdcr1_lvres;
+
+	lvdcr0_lvres = rcar_lvds_read(lvds0, LVDCR0) & LVDCR0_LVRES;
+	lvdcr1_lvres = rcar_lvds_read(lvds1, LVDCR0) & LVDCR0_LVRES;
+
+	if (lvdcr0_lvres && lvdcr1_lvres)
+		return;
+
+	lvdhcr = LVDCHCR_CHSEL_CH(0, 0) | LVDCHCR_CHSEL_CH(1, 1) |
+		 LVDCHCR_CHSEL_CH(2, 2) | LVDCHCR_CHSEL_CH(3, 3);
+
+	rcar_lvds_write(lvds0, LVDCTRCR, LVDCTRCR_CTR3SEL_ZERO |
+			LVDCTRCR_CTR2SEL_DISP | LVDCTRCR_CTR1SEL_VSYNC |
+			LVDCTRCR_CTR0SEL_HSYNC);
+	rcar_lvds_write(lvds0, LVDCHCR, lvdhcr);
+	rcar_lvds_write(lvds0, LVDSTRIPE, LVDSTRIPE_ST_ON);
+
+	rcar_lvds_write(lvds1, LVDCTRCR, LVDCTRCR_CTR3SEL_ZERO |
+			LVDCTRCR_CTR2SEL_DISP | LVDCTRCR_CTR1SEL_VSYNC |
+			LVDCTRCR_CTR0SEL_HSYNC);
+	rcar_lvds_write(lvds1, LVDCHCR, lvdhcr);
+	rcar_lvds_write(lvds1, LVDSTRIPE, LVDSTRIPE_ST_ON);
+
+	/* Turn all the channels on. */
+	rcar_lvds_write(lvds0, LVDCR1,
+			LVDCR1_CHSTBY(3) | LVDCR1_CHSTBY(2) |
+			LVDCR1_CHSTBY(1) | LVDCR1_CHSTBY(0) | LVDCR1_CLKSTBY);
+	rcar_lvds_write(lvds1, LVDCR1,
+			LVDCR1_CHSTBY(3) | LVDCR1_CHSTBY(2) |
+			LVDCR1_CHSTBY(1) | LVDCR1_CHSTBY(0) | LVDCR1_CLKSTBY);
+
+	/*
+	 * Turn the PLL on, set it to LVDS normal mode, wait for the startup
+	 * delay and turn the output on.
+	 */
+	if ((lvds0->info->quirks & RCAR_LVDS_QUIRK_PWD) ||
+	    (lvds1->info->quirks & RCAR_LVDS_QUIRK_PWD)) {
+		lvdcr0 |= LVDCR0_PWD;
+		rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+
+		lvdcr1 |= LVDCR0_PWD;
+		rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+
+		lvdcr1 |= LVDCR0_LVEN | LVDCR0_LVRES;
+		rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+
+		lvdcr0 |= LVDCR0_LVEN | LVDCR0_LVRES;
+		rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+
+		return;
+	}
+
+	lvdcr0 |= LVDCR0_LVEN;
+	rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+
+	lvdcr1 |= LVDCR0_LVEN;
+	rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+
+	lvdcr1 |= LVDCR0_LVRES;
+	rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+
+	lvdcr0 |= LVDCR0_LVRES;
+	rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
 }
 
 /* -----------------------------------------------------------------------------
@@ -377,6 +458,16 @@ static void rcar_lvds_enable(struct drm_bridge *bridge)
 	int ret;
 
 	WARN_ON(lvds->enabled);
+
+	if ((lvds->info->quirks & RCAR_LVDS_QUIRK_DUAL_LINK) &&
+	    lvds->link_mode == RCAR_LVDS_DUAL) {
+		struct rcar_lvds *lvds0 = g_lvds[0];
+		struct rcar_lvds *lvds1 = g_lvds[1];
+
+		rcar_lvds_dual_mode(lvds0, lvds1);
+
+		goto dual_link;
+	}
 
 	if (!(lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)) {
 		reset_control_deassert(lvds->rstc);
@@ -405,11 +496,6 @@ static void rcar_lvds_enable(struct drm_bridge *bridge)
 		       | LVDCHCR_CHSEL_CH(2, 2) | LVDCHCR_CHSEL_CH(3, 3);
 
 	rcar_lvds_write(lvds, LVDCHCR, lvdhcr);
-
-	if (lvds->info->quirks & RCAR_LVDS_QUIRK_DUAL_LINK) {
-		/* Disable dual-link mode. */
-		rcar_lvds_write(lvds, LVDSTRIPE, 0);
-	}
 
 	/* PLL clock configuration. */
 	if (lvds->info->pll_setup)
@@ -462,6 +548,7 @@ static void rcar_lvds_enable(struct drm_bridge *bridge)
 	lvdcr0 |= LVDCR0_LVRES;
 	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
 
+dual_link:
 	if (lvds->panel) {
 		drm_panel_prepare(lvds->panel);
 		drm_panel_enable(lvds->panel);
@@ -482,30 +569,72 @@ static void __rcar_lvds_disable(struct drm_bridge *bridge)
 		drm_panel_unprepare(lvds->panel);
 	}
 
-	lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVRES;
-	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+	if (lvds->info->quirks & RCAR_LVDS_QUIRK_DUAL_LINK &&
+	    lvds->link_mode == RCAR_LVDS_DUAL) {
+		struct rcar_lvds *lvds_pair;
+		struct rcar_lvds *lvds0 = g_lvds[0];
+		struct rcar_lvds *lvds1 = g_lvds[1];
+		u32 id;
 
-	if (lvds->info->quirks & RCAR_LVDS_QUIRK_GEN3_LVEN) {
-		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVEN;
+		id = lvds->id == 0 ? 1 : 0;
+		lvds_pair = g_lvds[id];
+
+		if (!lvds_pair->enabled) {
+			u32 lvdcr0 = 0, lvdcr1 = 0;
+
+			lvdcr0 = rcar_lvds_read(lvds0, LVDCR0) & ~LVDCR0_LVRES;
+			rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+			lvdcr1 = rcar_lvds_read(lvds1, LVDCR0) & ~LVDCR0_LVRES;
+			rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+
+			lvdcr0 = rcar_lvds_read(lvds0, LVDCR0) & ~LVDCR0_LVEN;
+			rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+			lvdcr1 = rcar_lvds_read(lvds1, LVDCR0) & ~LVDCR0_LVEN;
+			rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+
+			if (lvds->info->quirks & RCAR_LVDS_QUIRK_PWD) {
+				lvdcr0 = rcar_lvds_read(lvds0, LVDCR0)
+							& ~LVDCR0_PWD;
+				rcar_lvds_write(lvds0, LVDCR0, lvdcr0);
+				lvdcr1 = rcar_lvds_read(lvds1, LVDCR0)
+							& ~LVDCR0_PWD;
+				rcar_lvds_write(lvds1, LVDCR0, lvdcr1);
+			}
+			rcar_lvds_write(lvds0, LVDCR1, 0);
+			rcar_lvds_write(lvds1, LVDCR1, 0);
+			rcar_lvds_write(lvds0, LVDPLLCR, 0);
+			rcar_lvds_write(lvds1, LVDPLLCR, 0);
+
+			clk_disable_unprepare(lvds0->clocks.mod);
+			clk_disable_unprepare(lvds1->clocks.mod);
+			reset_control_assert(lvds0->rstc);
+			reset_control_assert(lvds1->rstc);
+		}
+	} else {
+		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVRES;
 		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+		if (lvds->info->quirks & RCAR_LVDS_QUIRK_GEN3_LVEN) {
+			lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVEN;
+			rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+		}
+
+		if (lvds->info->quirks & RCAR_LVDS_QUIRK_PWD) {
+			lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PWD;
+			rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+		}
+
+		if (!(lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)) {
+			lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PLLON;
+			rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+		}
+
+		rcar_lvds_write(lvds, LVDCR1, 0);
+		rcar_lvds_write(lvds, LVDPLLCR, 0);
+
+		clk_disable_unprepare(lvds->clocks.mod);
+		reset_control_assert(lvds->rstc);
 	}
-
-	if (lvds->info->quirks & RCAR_LVDS_QUIRK_PWD) {
-		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PWD;
-		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
-	}
-
-	if (!(lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)) {
-		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PLLON;
-		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
-	}
-
-	rcar_lvds_write(lvds, LVDCR1, 0);
-	rcar_lvds_write(lvds, LVDPLLCR, 0);
-
-	clk_disable_unprepare(lvds->clocks.mod);
-
-	reset_control_assert(lvds->rstc);
 
 	lvds->enabled = false;
 }
@@ -648,6 +777,7 @@ static int rcar_lvds_parse_dt(struct rcar_lvds *lvds)
 	bool is_bridge = false;
 	int ret = 0;
 	u32 id;
+	const char *str;
 
 	local_output = of_graph_get_endpoint_by_regs(lvds->dev->of_node, 1, 0);
 	if (!local_output) {
@@ -703,6 +833,15 @@ static int rcar_lvds_parse_dt(struct rcar_lvds *lvds)
 	else
 		lvds->id = 0;
 
+	if (!of_property_read_string(lvds->dev->of_node, "mode", &str)) {
+		if (!strcmp(str, "dual-link"))
+			lvds->link_mode = RCAR_LVDS_DUAL;
+		else
+			lvds->link_mode = RCAR_LVDS_SINGLE;
+	} else {
+		lvds->link_mode = RCAR_LVDS_SINGLE;
+	}
+
 done:
 	of_node_put(local_output);
 	of_node_put(remote_input);
@@ -720,11 +859,35 @@ static long rcar_lvds_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (rate == 0) {
 		__rcar_lvds_disable(&lvds->bridge);
 	} else {
-		reset_control_deassert(lvds->rstc);
-		ret = clk_prepare_enable(lvds->clocks.mod);
-		if (ret < 0)
-			return ret;
-		rcar_lvds_pll_setup_d3_e3(lvds, rate);
+		if ((lvds->info->quirks & RCAR_LVDS_QUIRK_DUAL_LINK) &&
+		    lvds->link_mode == RCAR_LVDS_DUAL) {
+			bool enable;
+			struct rcar_lvds *lvds0 = g_lvds[0];
+			struct rcar_lvds *lvds1 = g_lvds[1];
+
+			enable = __clk_is_enabled(lvds->clocks.mod);
+			if (enable)
+				goto skip;
+
+			reset_control_deassert(lvds0->rstc);
+			reset_control_deassert(lvds1->rstc);
+
+			ret = clk_prepare_enable(lvds0->clocks.mod);
+			if (ret < 0)
+				return ret;
+
+			ret = clk_prepare_enable(lvds1->clocks.mod);
+			if (ret < 0)
+				return ret;
+skip:
+			rcar_lvds_pll_setup_d3_e3(lvds, rate);
+		} else {
+			reset_control_deassert(lvds->rstc);
+			ret = clk_prepare_enable(lvds->clocks.mod);
+			if (ret < 0)
+				return ret;
+			rcar_lvds_pll_setup_d3_e3(lvds, rate);
+		}
 	}
 
 	return 0;
@@ -851,6 +1014,9 @@ static int rcar_lvds_probe(struct platform_device *pdev)
 	ret = devm_clk_hw_register(&pdev->dev, &lvds->lvds_pll);
 	if (ret)
 		return ret;
+
+	if (lvds->link_mode == RCAR_LVDS_DUAL)
+		g_lvds[lvds->id] = lvds;
 
 	return 0;
 }

@@ -27,7 +27,8 @@ Required properties:
   - On R8A77990 and R8A77995, the LVDS encoder can use the EXTAL or
     DU_DOTCLKINx clocks. Those clocks are optional. When supplied they must be
     named "extal" and "dclkin.x" respectively, with "x" being the DU_DOTCLKIN
-    numerical index.
+    numerical index. In addition, dual-link mode is supported. specify
+    mode = "dual-link" in dts file when enabling.
   - When the clocks property only contains the functional clock, the
     clock-names property may be omitted.
 - resets: A phandle + reset specifier for the module reset
