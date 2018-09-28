@@ -201,8 +201,8 @@
 #define GPSR6_0		F_(SSI_SCK01239,	IP13_23_20)
 
 /* GPSR7 */
-#define GPSR7_3		FM(HDMI1_CEC)
-#define GPSR7_2		FM(HDMI0_CEC)
+#define GPSR7_3		FM(GP7_03)
+#define GPSR7_2		FM(GP7_02)
 #define GPSR7_1		FM(AVS2)
 #define GPSR7_0		FM(AVS1)
 
@@ -585,8 +585,8 @@ static const u16 pinmux_data[] = {
 
 	PINMUX_SINGLE(AVS1),
 	PINMUX_SINGLE(AVS2),
-	PINMUX_SINGLE(HDMI0_CEC),
-	PINMUX_SINGLE(HDMI1_CEC),
+	PINMUX_SINGLE(GP7_02),
+	PINMUX_SINGLE(GP7_03),
 	PINMUX_SINGLE(MSIOF0_RXD),
 	PINMUX_SINGLE(MSIOF0_SCK),
 	PINMUX_SINGLE(MSIOF0_TXD),
@@ -5393,8 +5393,8 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(0, 15),   24, 3 },	/* D15 */
 		{ RCAR_GP_PIN(7,  0),   20, 3 },	/* AVS1 */
 		{ RCAR_GP_PIN(7,  1),   16, 3 },	/* AVS2 */
-		{ RCAR_GP_PIN(7,  2),   12, 3 },	/* HDMI0_CEC */
-		{ RCAR_GP_PIN(7,  3),    8, 3 },	/* HDMI1_CEC */
+		{ RCAR_GP_PIN(7,  2),   12, 3 },	/* GP7_02 */
+		{ RCAR_GP_PIN(7,  3),    8, 3 },	/* GP7_03 */
 		{ PIN_A_NUMBER('P', 7),  4, 2 },	/* DU_DOTCLKIN0 */
 		{ PIN_A_NUMBER('P', 8),  0, 2 },	/* DU_DOTCLKIN1 */
 	} },
@@ -5649,8 +5649,8 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[25] = RCAR_GP_PIN(0, 15),	/* D15 */
 		[26] = RCAR_GP_PIN(7,  0),	/* AVS1 */
 		[27] = RCAR_GP_PIN(7,  1),	/* AVS2 */
-		[28] = RCAR_GP_PIN(7,  2),	/* HDMI0_CEC */
-		[29] = RCAR_GP_PIN(7,  3),	/* HDMI1_CEC */
+		[28] = RCAR_GP_PIN(7,  2),	/* GP7_02 */
+		[29] = RCAR_GP_PIN(7,  3),	/* GP7_03 */
 		[30] = PIN_A_NUMBER('P', 7),	/* DU_DOTCLKIN0 */
 		[31] = PIN_A_NUMBER('P', 8),	/* DU_DOTCLKIN1 */
 	} },
