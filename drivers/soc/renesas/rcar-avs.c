@@ -33,7 +33,7 @@ static int change_default_opp_pattern(struct device_node *avs_node,
 	int size;
 	struct property *pp;
 
-	dev_nums = of_count_phandle_with_args(avs_node, "target_devices", 0);
+	dev_nums = of_count_phandle_with_args(avs_node, "target_devices", NULL);
 
 	for (i = 0; i < dev_nums; i++) {
 		dev_node = of_parse_phandle(avs_node, "target_devices", i);
