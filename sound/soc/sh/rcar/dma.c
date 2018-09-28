@@ -244,6 +244,10 @@ static int rsnd_dmaen_attach(struct rsnd_dai_stream *io,
 	/* try to get DMAEngine channel */
 	chan = rsnd_dmaen_request_channel(io, mod_from, mod_to);
 	if (IS_ERR_OR_NULL(chan)) {
+		/* Let's follow when -EPROBE_DEFER case */
+		if (PTR_ERR(chan) == -EPROBE_DEFER)
+			return PTR_ERR(chan);
+
 		/*
 		 * DMA failed. try to PIO mode
 		 * see
@@ -381,7 +385,7 @@ static void rsnd_dmapp_write(struct rsnd_dma *dma, u32 data, u32 reg)
 	struct rsnd_dma_ctrl *dmac = rsnd_priv_to_dmac(priv);
 	struct device *dev = rsnd_priv_to_dev(priv);
 
-	dev_dbg(dev, "w %p : %08x\n", rsnd_dmapp_addr(dmac, dma, reg), data);
+	dev_dbg(dev, "w 0x%px : %08x\n", rsnd_dmapp_addr(dmac, dma, reg), data);
 
 	iowrite32(data, rsnd_dmapp_addr(dmac, dma, reg));
 }
