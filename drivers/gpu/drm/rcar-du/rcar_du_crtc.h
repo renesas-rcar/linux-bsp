@@ -50,6 +50,7 @@ struct rcar_du_crtc {
 
 	struct clk *clock;
 	struct clk *extclock;
+	struct clk *lvds_clock;
 	unsigned int mmio_offset;
 	unsigned int index;
 	bool initialized;
