@@ -225,6 +225,7 @@ struct tmio_mmc_host {
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
 	u32			scc_tappos;
+	u32			scc_tappos_hs400;
 	u32			adjust_hs400_offset;
 	u32			adjust_hs400_calibrate;
 	bool			needs_adjust_hs400;
