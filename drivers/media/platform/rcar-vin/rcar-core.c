@@ -14,6 +14,8 @@
  * option) any later version.
  */
 
+#include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -1162,6 +1164,22 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	}
 	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
 
+	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->rstc);
+		goto error;
+	}
+
+	vin->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->clk)) {
+		dev_err(&pdev->dev, "failed to get clock%s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->clk);
+		goto error;
+	}
+
 	return 0;
 error:
 	rvin_dma_unregister(vin);
@@ -1206,8 +1224,6 @@ static int rcar_vin_suspend(struct device *dev)
 
 	rvin_suspend_stop_streaming(vin);
 
-	pm_runtime_put(vin->dev);
-
 	return 0;
 }
 
@@ -1219,9 +1235,10 @@ static int rcar_vin_resume(struct device *dev)
 	if (vin->state == STOPPED)
 		return 0;
 
-	pm_runtime_get_sync(vin->dev);
-
 	if (vin->info->use_mc) {
+		pm_runtime_force_resume(vin->dev);
+		pm_runtime_get_sync(vin->dev);
+
 		master = vin->group->vin[rvin_group_id_to_master(vin->id)];
 		rvin_set_channel_routing(master, master->chsel);
 	}
