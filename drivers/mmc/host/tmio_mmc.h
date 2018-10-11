@@ -120,6 +120,11 @@
 /* Check LSI revisions and set specific quirk value */
 #define DTRAEND1_SET_BIT17	BIT(0)
 #define HS400_USE_4TAP		BIT(1)
+#define FORCE_HS200		BIT(2)
+#define HS400_USE_MANUAL_CALIB	BIT(3)
+/* bit[31:16] reserved for HS400 manual calibration */
+#define HS400_CALIB_MASK	GENMASK_ULL(23, 16)
+#define HS400_OFFSET_MASK	GENMASK_ULL(31, 24)
 
 struct tmio_mmc_data;
 struct tmio_mmc_host;
@@ -221,9 +226,13 @@ struct tmio_mmc_host {
 
 	void (*disable_scc)(struct mmc_host *mmc);
 	void (*prepare_hs400_tuning)(struct mmc_host *mmc, struct mmc_ios *ios);
+	void (*adjust_hs400_mode_enable)(struct mmc_host *mmc);
+	void (*adjust_hs400_mode_disable)(struct mmc_host *mmc);
 	void (*reset_hs400_mode)(struct mmc_host *mmc);
 	/* HS400 mode uses 4TAP */
 	bool			hs400_use_4tap;
+	/* Manual caribration for HS400 mode */
+	bool			needs_adjust_hs400;
 
 	/* Sampling data comparison: 1 for match. 0 for mismatch */
 	DECLARE_BITMAP(smpcmp, BITS_PER_BYTE * sizeof(long));
