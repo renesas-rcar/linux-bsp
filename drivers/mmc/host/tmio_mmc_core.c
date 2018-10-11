@@ -1050,6 +1050,11 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 		return;
 	}
 
+	/* Enabled adjust HS400 mode after CMD13 */
+	if (host->adjust_hs400_mode_enable && host->needs_adjust_hs400 &&
+	    mrq->cmd->opcode == MMC_SEND_STATUS)
+		host->adjust_hs400_mode_enable(host->mmc);
+
 	mmc_request_done(host->mmc, mrq);
 }
 
