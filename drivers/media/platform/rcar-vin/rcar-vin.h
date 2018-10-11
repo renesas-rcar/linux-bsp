@@ -17,7 +17,9 @@
 #ifndef __RCAR_VIN__
 #define __RCAR_VIN__
 
+#include <linux/clk.h>
 #include <linux/kref.h>
+#include <linux/reset.h>
 
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
@@ -39,6 +41,8 @@
 /* Time until source device reconnects */
 #define CONNECTION_TIME 2000
 #define SETUP_WAIT_TIME 3000
+
+#define MSTP_WAIT_TIME 100
 
 struct rvin_group;
 
@@ -169,6 +173,8 @@ struct rvin_info {
  * @ctrl_handler:	V4L2 control handler
  * @notifier:		V4L2 asynchronous subdevs notifier
  * @digital:		entity in the DT for local digital subdevice
+ * @rstc:		CPG reset/release control
+ * @clk:		CPG clock control
  *
  * @group:		Gen3 CSI group
  * @id:			Gen3 group id for this VIN
@@ -211,6 +217,8 @@ struct rvin_dev {
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_async_notifier notifier;
 	struct rvin_graph_entity *digital;
+	struct reset_control *rstc;
+	struct clk *clk;
 
 	struct rvin_group *group;
 	unsigned int id;

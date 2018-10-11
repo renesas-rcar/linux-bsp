@@ -1012,10 +1012,6 @@ static int rvin_mc_open(struct file *file)
 	if (ret)
 		return ret;
 
-	ret = pm_runtime_get_sync(vin->dev);
-	if (ret < 0)
-		goto err_unlock;
-
 	rvin_get_sd_format(vin, &vin->format);
 
 	ret = v4l2_pipeline_pm_use(&vin->vdev.entity, 1);
@@ -1034,8 +1030,6 @@ static int rvin_mc_open(struct file *file)
 err_v4l2pm:
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 0);
 err_pm:
-	pm_runtime_put(vin->dev);
-err_unlock:
 	mutex_unlock(&vin->lock);
 
 	return ret;
@@ -1052,7 +1046,6 @@ static int rvin_mc_release(struct file *file)
 	ret = _vb2_fop_release(file, NULL);
 
 	v4l2_pipeline_pm_use(&vin->vdev.entity, 0);
-	pm_runtime_put(vin->dev);
 
 	mutex_unlock(&vin->lock);
 
