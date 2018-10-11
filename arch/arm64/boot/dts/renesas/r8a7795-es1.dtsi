@@ -23,10 +23,6 @@
 	iommus = <&ipmmu_vp0 9>;
 };
 
-&fcpvd2 {
-	iommus = <&ipmmu_vi0 10>;
-};
-
 &gpio1 {
 	gpio-ranges = <&pfc 0 32 28>;
 };
