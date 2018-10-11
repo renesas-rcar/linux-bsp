@@ -1278,6 +1278,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 2>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_ir: mmu@ff8b0000 {
@@ -1286,6 +1287,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 3>;
 			power-domains = <&sysc R8A7796_PD_A3IR>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_mm: mmu@e67b0000 {
@@ -1319,6 +1321,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 6>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_rt: mmu@ffc80000 {
@@ -1327,6 +1330,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 7>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_vc0: mmu@fe6b0000 {
@@ -1335,6 +1339,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 8>;
 			power-domains = <&sysc R8A7796_PD_A3VC>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_vi0: mmu@febd0000 {
