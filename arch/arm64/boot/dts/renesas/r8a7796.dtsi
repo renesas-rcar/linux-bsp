@@ -2906,7 +2906,6 @@
 			clocks = <&cpg CPG_MOD 603>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			resets = <&cpg 603>;
-			iommus = <&ipmmu_vi0 8>;
 		};
 
 		fcpvd1: fcp@fea2f000 {
@@ -2915,7 +2914,6 @@
 			clocks = <&cpg CPG_MOD 602>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			resets = <&cpg 602>;
-			iommus = <&ipmmu_vi0 9>;
 		};
 
 		fcpvd2: fcp@fea37000 {
@@ -2924,7 +2922,6 @@
 			clocks = <&cpg CPG_MOD 601>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			resets = <&cpg 601>;
-			iommus = <&ipmmu_vi0 10>;
 		};
 
 		vsp@fe960000 {
