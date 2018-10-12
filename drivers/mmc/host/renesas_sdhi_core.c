@@ -384,6 +384,9 @@ static void renesas_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 	sd_ctrl_write16(host, CTL_SDIF_MODE, 0x0001 |
 			sd_ctrl_read16(host, CTL_SDIF_MODE));
 
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DT2FF,
+		       priv->scc_tappos_hs400);
+
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
 		       (SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
 			SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) |
@@ -507,6 +510,7 @@ static void renesas_sdhi_reset_hs400_mode(struct mmc_host *mmc)
 	/* Reset HS400 mode */
 	sd_ctrl_write16(host, CTL_SDIF_MODE, ~0x0001 &
 			sd_ctrl_read16(host, CTL_SDIF_MODE));
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DT2FF, priv->scc_tappos);
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
 		       ~(SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
 			 SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
@@ -671,6 +675,7 @@ static void renesas_sdhi_hw_reset(struct tmio_mmc_host *host)
 	/* Reset HS400 mode */
 	sd_ctrl_write16(host, CTL_SDIF_MODE, ~0x0001 &
 			sd_ctrl_read16(host, CTL_SDIF_MODE));
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DT2FF, priv->scc_tappos);
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
 		       ~(SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
 			 SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
@@ -971,6 +976,7 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 			if (taps[i].clk_rate == 0 ||
 			    taps[i].clk_rate == host->mmc->f_max) {
 				priv->scc_tappos = taps->tap;
+				priv->scc_tappos_hs400 = taps->tap_hs400;
 				hit = true;
 				break;
 			}
