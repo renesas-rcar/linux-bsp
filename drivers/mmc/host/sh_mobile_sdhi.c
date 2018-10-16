@@ -454,19 +454,15 @@ static void sh_mobile_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 		SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) |
 		sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2));
 
-	/* HS400 mode sets sampling clock selection range to 4 */
-	if (!host->hs400_use_8tap) {
-		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
-			       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
-			       0x4 << SH_MOBILE_SDHI_SCC_DTCNTL_TAPNUM_SHIFT);
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
+		       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
+		       sd_scc_read32(host, priv,
+				     SH_MOBILE_SDHI_SCC_DTCNTL));
 
+	/* Replace the tuning result of 8TAP with 4TAP */
+	if (!host->hs400_use_8tap)
 		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET,
 			       host->tap_set / 2);
-	} else {
-		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
-			       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
-			       0x8 << SH_MOBILE_SDHI_SCC_DTCNTL_TAPNUM_SHIFT);
-	}
 
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_CKSEL,
 		       SH_MOBILE_SDHI_SCC_CKSEL_DTSEL |
