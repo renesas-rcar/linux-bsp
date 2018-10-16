@@ -1,6 +1,7 @@
 /*
  * Renesas R-Car M3-W System Controller
  *
+ * Copyright (C) 2018 Renesas Electronics Corp.
  * Copyright (C) 2016 Glider bvba
  *
  * This program is free software; you can redistribute it and/or modify
@@ -41,8 +42,10 @@ static const struct rcar_sysc_area r8a7796_areas[] __initconst = {
 	  (PD_NO_CR | PD_ON_ONCE) },
 	{ "a2vc1",	0x3c0, 1, R8A7796_PD_A2VC1,	R8A7796_PD_A3VC,
 	  (PD_NO_CR | PD_ON_ONCE) },
-	{ "3dg-a",	0x100, 0, R8A7796_PD_3DG_A,	R8A7796_PD_ALWAYS_ON },
-	{ "3dg-b",	0x100, 1, R8A7796_PD_3DG_B,	R8A7796_PD_3DG_A },
+	{ "3dg-a",	0x100, 0, R8A7796_PD_3DG_A,	R8A7796_PD_ALWAYS_ON,
+	  (PD_NO_CR | PD_ON_ONCE) },
+	{ "3dg-b",	0x100, 1, R8A7796_PD_3DG_B,	R8A7796_PD_3DG_A,
+	  (PD_NO_CR | PD_ON_ONCE) },
 	{ "a3ir",	0x180, 0, R8A7796_PD_A3IR,	R8A7796_PD_ALWAYS_ON,
 	  (PD_NO_CR | PD_ON_ONCE) },
 };
