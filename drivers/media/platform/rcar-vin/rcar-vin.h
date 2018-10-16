@@ -25,6 +25,7 @@
 #include <media/v4l2-device.h>
 #include <media/videobuf2-v4l2.h>
 
+#define DRV_NAME "rcar-vin"
 /* Number of HW buffers */
 #define HW_BUFFER_NUM 3
 
