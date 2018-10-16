@@ -303,10 +303,12 @@
 
 	vga {
 		compatible = "vga-connector";
+
 		no-use-ddc;
+
 		width = <1024>;
 		height = <768>;
-
+		max-pixelclock = <75000>;
 		port {
 			vga_in: endpoint {
 				remote-endpoint = <&adv7123_out>;
