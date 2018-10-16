@@ -50,6 +50,7 @@
 struct sh_mobile_sdhi_scc {
 	unsigned long clk_rate;	/* clock rate for SDR104 */
 	u32 tap;		/* sampling clock position for SDR104 */
+	u32 tap_hs400;		/* sampling clock position for HS400 */
 };
 
 struct sh_mobile_sdhi_of_data {
@@ -106,6 +107,7 @@ static struct sh_mobile_sdhi_scc rcar_gen3_scc_taps[] = {
 	{
 		.clk_rate = 0,
 		.tap = 0x00000300,
+		.tap_hs400 = 0x00000704,
 	},
 };
 
@@ -481,6 +483,8 @@ static void sh_mobile_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 	/* Set HS400 mode */
 	sd_ctrl_write16(host, CTL_SDIF_MODE, 0x0001 |
 		sd_ctrl_read16(host, CTL_SDIF_MODE));
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DT2FF,
+		       host->scc_tappos_hs400);
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
 		(SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
 		SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) |
@@ -609,6 +613,7 @@ static void sh_mobile_sdhi_reset_hs400_mode(struct mmc_host *mmc)
 	/* Reset HS400 mode */
 	sd_ctrl_write16(host, CTL_SDIF_MODE, ~0x0001 &
 			sd_ctrl_read16(host, CTL_SDIF_MODE));
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DT2FF, host->scc_tappos);
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
 			~(SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
 			SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
@@ -781,6 +786,7 @@ static void sh_mobile_sdhi_hw_reset(struct tmio_mmc_host *host)
 	/* Reset HS400 mode */
 	sd_ctrl_write16(host, CTL_SDIF_MODE, ~0x0001 &
 			sd_ctrl_read16(host, CTL_SDIF_MODE));
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DT2FF, host->scc_tappos);
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
 			~(SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
 			SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
@@ -1114,6 +1120,8 @@ static int sh_mobile_sdhi_probe(struct platform_device *pdev)
 				if (taps[i].clk_rate == 0 ||
 				    taps[i].clk_rate == host->mmc->f_max) {
 					host->scc_tappos = taps->tap;
+					host->scc_tappos_hs400 =
+						taps->tap_hs400;
 					hit = true;
 					break;
 				}
