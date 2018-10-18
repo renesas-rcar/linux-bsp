@@ -34,7 +34,6 @@
 #include "rcar_du_drv.h"
 #include "rcar_du_encoder.h"
 #include "rcar_du_kms.h"
-#include "rcar_du_of.h"
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
 
@@ -601,8 +600,6 @@ static struct platform_driver rcar_du_platform_driver = {
 
 static int __init rcar_du_init(void)
 {
-	rcar_du_of_init(rcar_du_of_table);
-
 	return platform_driver_register(&rcar_du_platform_driver);
 }
 module_init(rcar_du_init);
