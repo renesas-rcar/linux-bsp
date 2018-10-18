@@ -18,6 +18,14 @@ Optional Properties:
 		     "intrq3". All interrupts are optional. The "intrq3" interrupt
 		     is only available on the adv7481
   - interrupts: Specify the interrupt lines for the ADV748x
+  - data-lanes: Specify the data-lanes for the adv7482_txa of ADV748x as follows,
+		data-lanes = <1> or data-lanes = <1,2> data-lanes = <1,2,3,4>
+  - virtual-channel: Specify the same virtual-channel value for the both and adv7482_txa
+		     and adv7482_txb node of ADV748x as follows, If not specified, it is 0.
+		     virtual-channel = <0 or 1 or 2 or 3>;
+  - txa_direction: Output of SD core routed to MIPI CSI 4-lane Tx (TXA)
+		   Please describe option as follows in adv7482_txb endpoint.
+		   txa_direction = "afe";
 
 The device node must contain one 'port' child node per device input and output
 port, in accordance with the video interface bindings defined in
