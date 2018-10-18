@@ -22,3 +22,4 @@ obj-$(CONFIG_SYSC_R8A77995)	+= r8a77995-sysc.o
 # Family
 obj-$(CONFIG_RST_RCAR)		+= rcar-rst.o
 obj-$(CONFIG_SYSC_RCAR)		+= rcar-sysc.o
+obj-$(CONFIG_RCAR_CPU_TOPOLOGY)	+= rcar-topology.o
