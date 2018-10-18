@@ -1,7 +1,7 @@
 /*
  * rcar_du_encoder.c  --  R-Car Display Unit Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -66,9 +66,28 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 	/* Locate the DRM bridge from the encoder DT node. */
 	bridge = of_drm_find_bridge(enc_node);
 	if (!bridge) {
-		ret = -EPROBE_DEFER;
-		goto done;
+		if (output == RCAR_DU_OUTPUT_HDMI0 ||
+		    output == RCAR_DU_OUTPUT_HDMI1) {
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+			ret = -EPROBE_DEFER;
+#else
+			ret = 0;
+#endif
+			goto done;
+		} else if (output == RCAR_DU_OUTPUT_LVDS0 ||
+			   output == RCAR_DU_OUTPUT_LVDS1) {
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+			ret = -EPROBE_DEFER;
+#else
+			ret = 0;
+#endif
+			goto done;
+		} else {
+			ret = -EPROBE_DEFER;
+			goto done;
+		}
 	}
+	renc->bridge = bridge;
 
 	ret = drm_encoder_init(rcdu->ddev, encoder, &encoder_funcs,
 			       DRM_MODE_ENCODER_NONE, NULL);

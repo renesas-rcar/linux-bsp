@@ -2,7 +2,7 @@
 /*
  * vsp1_dl.c  --  R-Car VSP1 Display List
  *
- * Copyright (C) 2015 Renesas Corporation
+ * Copyright (C) 2015-2018 Renesas Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -12,12 +12,17 @@
 #include <linux/gfp.h>
 #include <linux/refcount.h>
 #include <linux/slab.h>
+#include <linux/sys_soc.h>
 #include <linux/workqueue.h>
 
 #include "vsp1.h"
 #include "vsp1_dl.h"
+#include "vsp1_drm.h"
+#include "vsp1_pipe.h"
+#include "vsp1_rwpf.h"
 
 #define VSP1_DL_NUM_ENTRIES		256
+#define VSP1_DL_EXT_NUM_ENTRIES		160
 
 #define VSP1_DLH_INT_ENABLE		(1 << 1)
 #define VSP1_DLH_AUTO_START		(1 << 0)
@@ -32,6 +37,24 @@ struct vsp1_dl_header {
 	struct vsp1_dl_header_list lists[8];
 	u32 next_header;
 	u32 flags;
+	/* if (VI6_DL_EXT_CTRL.EXT) */
+	u32 zero_bits;
+	/* zero_bits:6 + pre_ext_dl_exec:1 + */
+	/* post_ext_dl_exec:1 + zero_bits:8 + pre_ext_dl_num_cmd:16 */
+	u32 pre_post_num;
+	u32 pre_ext_dl_plist;
+	/* zero_bits:16 + post_ext_dl_num_cmd:16 */
+	u32 post_ext_dl_num_cmd;
+	u32 post_ext_dl_p_list;
+} __attribute__((__packed__));
+
+struct vsp1_ext_dl_body {
+	u32 ext_dl_cmd[2];
+	u32 ext_dl_data[2];
+} __attribute__((__packed__));
+
+struct vsp1_ext_addr {
+	u32 addr;
 } __attribute__((__packed__));
 
 struct vsp1_dl_entry {
@@ -45,6 +68,10 @@ struct vsp1_dl_entry {
  * @free: entry in the pool free body list
  * @pool: pool to which this body belongs
  * @vsp1: the VSP1 device
+ * @ext_body: display list extended body
+ * @ext_dma: DMA address for extended body
+ * @src_dst_addr: display list (Auto-FLD) source/destination address
+ * @ext_addr_dma: DMA address for display list (Auto-FLD)
  * @entries: array of entries
  * @dma: DMA address of the entries
  * @size: size of the DMA memory in bytes
@@ -59,6 +86,12 @@ struct vsp1_dl_body {
 
 	struct vsp1_dl_body_pool *pool;
 	struct vsp1_device *vsp1;
+
+	struct vsp1_ext_dl_body *ext_body;
+	dma_addr_t ext_dma;
+
+	struct vsp1_ext_addr *src_dst_addr;
+	dma_addr_t ext_addr_dma;
 
 	struct vsp1_dl_entry *entries;
 	dma_addr_t dma;
@@ -211,12 +244,33 @@ vsp1_dl_body_pool_create(struct vsp1_device *vsp1, unsigned int num_bodies,
 
 	for (i = 0; i < num_bodies; ++i) {
 		struct vsp1_dl_body *dlb = &pool->bodies[i];
+		size_t header_offset;
+		size_t ex_body_offset;
+		size_t ex_addr_offset;
 
 		dlb->pool = pool;
 		dlb->max_entries = num_entries;
 
 		dlb->dma = pool->dma + i * dlb_size;
 		dlb->entries = pool->mem + i * dlb_size;
+
+		if (!(vsp1->ths_quirks & VSP1_AUTO_FLD_NOT_SUPPORT)) {
+			header_offset = dlb->max_entries *
+					sizeof(*dlb->entries);
+			ex_body_offset = sizeof(struct vsp1_dl_header);
+			ex_addr_offset = sizeof(struct vsp1_ext_dl_body);
+
+			dlb->ext_dma = pool->dma + (i * dlb_size) +
+					header_offset + ex_body_offset;
+			dlb->ext_body = pool->mem + (i * dlb_size) +
+					header_offset + ex_body_offset;
+			dlb->ext_addr_dma = pool->dma + (i * dlb_size) +
+					header_offset + ex_body_offset +
+					ex_addr_offset;
+			dlb->src_dst_addr = pool->mem + (i * dlb_size) +
+					header_offset + ex_body_offset +
+					ex_addr_offset;
+		}
 
 		list_add_tail(&dlb->free, &pool->free);
 	}
@@ -316,6 +370,80 @@ void vsp1_dl_body_write(struct vsp1_dl_body *dlb, u32 reg, u32 data)
 /* -----------------------------------------------------------------------------
  * Display List Transaction Management
  */
+
+void vsp1_dl_set_addr_auto_fld(struct vsp1_dl_body *dlb,
+			       struct vsp1_rwpf *rpf,
+			       struct vsp1_rwpf_memory mem)
+{
+	const struct vsp1_format_info *fmtinfo = rpf->fmtinfo;
+	const struct v4l2_rect *crop;
+	u32 y_top_index, y_bot_index;
+	u32 u_top_index, u_bot_index;
+	u32 v_top_index, v_bot_index;
+	dma_addr_t y_top_addr, y_bot_addr;
+	dma_addr_t u_top_addr, u_bot_addr;
+	dma_addr_t v_top_addr, v_bot_addr;
+	u32 width, stride;
+
+	crop = vsp1_rwpf_get_crop(rpf, rpf->entity.config);
+	width = ALIGN(crop->width, 16);
+	stride = width * fmtinfo->bpp[0] / 8;
+
+	y_top_index = rpf->entity.index * 8;
+	y_bot_index = rpf->entity.index * 8 + 1;
+	u_top_index = rpf->entity.index * 8 + 2;
+	u_bot_index = rpf->entity.index * 8 + 3;
+	v_top_index = rpf->entity.index * 8 + 4;
+	v_bot_index = rpf->entity.index * 8 + 5;
+
+	switch (rpf->fmtinfo->fourcc) {
+	case V4L2_PIX_FMT_YUV420M:
+	case V4L2_PIX_FMT_YVU420M:
+		y_top_addr = mem.addr[0];
+		y_bot_addr = mem.addr[0] + stride;
+		u_top_addr = mem.addr[1];
+		u_bot_addr = mem.addr[1] + stride / 2;
+		v_top_addr = mem.addr[2];
+		v_bot_addr = mem.addr[2] + stride / 2;
+		break;
+
+	case V4L2_PIX_FMT_YUV422M:
+	case V4L2_PIX_FMT_YVU422M:
+		y_top_addr = mem.addr[0];
+		y_bot_addr = mem.addr[0] + stride * 2;
+		u_top_addr = mem.addr[1];
+		u_bot_addr = mem.addr[1] + stride;
+		v_top_addr = mem.addr[2];
+		v_bot_addr = mem.addr[2] + stride;
+		break;
+
+	case V4L2_PIX_FMT_YUV444M:
+	case V4L2_PIX_FMT_YVU444M:
+		y_top_addr = mem.addr[0];
+		y_bot_addr = mem.addr[0] + stride * 3;
+		u_top_addr = mem.addr[1];
+		u_bot_addr = mem.addr[1] + stride * 3;
+		v_top_addr = mem.addr[2];
+		v_bot_addr = mem.addr[2] + stride * 3;
+		break;
+
+	default:
+		y_top_addr = mem.addr[0];
+		y_bot_addr = mem.addr[0] + stride;
+		u_top_addr = mem.addr[1];
+		u_bot_addr = mem.addr[1] + stride;
+		v_top_addr = mem.addr[2];
+		v_bot_addr = mem.addr[2] + stride;
+		break;
+	}
+
+	dlb->src_dst_addr[y_top_index].addr = y_top_addr;
+	dlb->src_dst_addr[y_bot_index].addr = y_bot_addr;
+	dlb->src_dst_addr[u_top_index].addr = u_top_addr;
+	dlb->src_dst_addr[u_bot_index].addr = u_bot_addr;
+	dlb->src_dst_addr[v_top_index].addr = v_top_addr;
+	dlb->src_dst_addr[v_bot_index].addr = v_bot_addr;
+}
 
 static struct vsp1_dl_list *vsp1_dl_list_alloc(struct vsp1_dl_manager *dlm)
 {
@@ -519,12 +647,17 @@ int vsp1_dl_list_add_chain(struct vsp1_dl_list *head,
 	return 0;
 }
 
-static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last)
+static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last,
+				     unsigned int pipe_index)
 {
 	struct vsp1_dl_manager *dlm = dl->dlm;
 	struct vsp1_dl_header_list *hdr = dl->header->lists;
 	struct vsp1_dl_body *dlb;
 	unsigned int num_lists = 0;
+	struct vsp1_device *vsp1 = dlm->vsp1;
+	struct vsp1_drm_pipeline *drm_pipe = &vsp1->drm->pipe[pipe_index];
+	struct vsp1_pipeline *pipe = &drm_pipe->pipe;
+	unsigned int i, rpf_update = 0;
 
 	/*
 	 * Fill the header with the display list bodies addresses and sizes. The
@@ -564,6 +697,36 @@ static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last)
 		 */
 		dl->header->next_header = dl->dma;
 		dl->header->flags = VSP1_DLH_INT_ENABLE | VSP1_DLH_AUTO_START;
+
+		for (i = 0; i < vsp1->info->rpf_count; ++i) {
+			if (!pipe->inputs[i])
+				continue;
+
+			rpf_update |= 0x01 << (16 + i);
+		}
+
+		if (!vsp1->info->uapi &&
+		    !(dl->dlm->vsp1->ths_quirks & VSP1_AUTO_FLD_NOT_SUPPORT)) {
+			/* Set extended display list header */
+			/* pre_ext_dl_exec = 1, pre_ext_dl_num_cmd = 1 */
+			dl->header->pre_post_num = (1 << 25) | (0x01);
+			dl->header->pre_ext_dl_plist = dl->body0->ext_dma;
+			dl->header->post_ext_dl_num_cmd = 0;
+			dl->header->post_ext_dl_p_list = 0;
+
+			/* Set extended display list (Auto-FLD) */
+			/* Set opecode */
+			dl->body0->ext_body->ext_dl_cmd[0] = 0x00000003;
+			/* RPF[0]-[4] address is updated */
+			dl->body0->ext_body->ext_dl_cmd[1] =
+						0x00000001 | rpf_update;
+
+			/* Set pointer of source/destination address */
+			dl->body0->ext_body->ext_dl_data[0] =
+						dl->body0->ext_addr_dma;
+			/* Should be set to 0 */
+			dl->body0->ext_body->ext_dl_data[1] = 0;
+		}
 	} else {
 		/*
 		 * Otherwise, in mem-to-mem mode, we work in single-shot mode
@@ -609,6 +772,12 @@ static void vsp1_dl_list_hw_enqueue(struct vsp1_dl_list *dl)
 		vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), dl->body0->dma);
 		vsp1_write(vsp1, VI6_DL_BODY_SIZE, VI6_DL_BODY_SIZE_UPD |
 			(dl->body0->num_entries * sizeof(*dl->header->lists)));
+		if (vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND) {
+			vsp1->dl_addr = dl->body0->dma;
+			vsp1->dl_body = VI6_DL_BODY_SIZE_UPD |
+					(dl->body0->num_entries *
+					sizeof(*dl->header->lists));
+		}
 	} else {
 		/*
 		 * In header mode, program the display list header address. If
@@ -618,6 +787,8 @@ static void vsp1_dl_list_hw_enqueue(struct vsp1_dl_list *dl)
 		 * will be updated with the display list address.
 		 */
 		vsp1_write(vsp1, VI6_DL_HDR_ADDR(dlm->index), dl->dma);
+		if (vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND)
+			vsp1->dl_addr = dl->dma;
 	}
 }
 
@@ -670,7 +841,8 @@ static void vsp1_dl_list_commit_singleshot(struct vsp1_dl_list *dl)
 	dlm->active = dl;
 }
 
-void vsp1_dl_list_commit(struct vsp1_dl_list *dl, bool internal)
+void vsp1_dl_list_commit(struct vsp1_dl_list *dl, bool internal,
+			 unsigned int pipe_index)
 {
 	struct vsp1_dl_manager *dlm = dl->dlm;
 	struct vsp1_dl_list *dl_child;
@@ -678,12 +850,13 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl, bool internal)
 
 	if (dlm->mode == VSP1_DL_MODE_HEADER) {
 		/* Fill the header for the head and chained display lists. */
-		vsp1_dl_list_fill_header(dl, list_empty(&dl->chain));
+		vsp1_dl_list_fill_header(dl, list_empty(&dl->chain),
+					 pipe_index);
 
 		list_for_each_entry(dl_child, &dl->chain, chain) {
 			bool last = list_is_last(&dl_child->chain, &dl->chain);
 
-			vsp1_dl_list_fill_header(dl_child, last);
+			vsp1_dl_list_fill_header(dl_child, last, pipe_index);
 		}
 	}
 
@@ -720,8 +893,10 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl, bool internal)
  * has completed and had been queued with the internal notification flag.
  * Internal notification is only supported for continuous mode.
  */
-unsigned int vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm)
+unsigned int vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm,
+				    bool interlaced)
 {
+	struct vsp1_device *vsp1 = dlm->vsp1;
 	unsigned int flags = 0;
 
 	spin_lock(&dlm->lock);
@@ -746,6 +921,10 @@ unsigned int vsp1_dlm_irq_frame_end(struct vsp1_dl_manager *dlm)
 	if (vsp1_dl_list_hw_update_pending(dlm))
 		goto done;
 
+	if (interlaced && ((vsp1_read(vsp1, VI6_STATUS) &
+	    VI6_STATUS_FLD_STD(dlm->index)) !=
+	    VI6_STATUS_FLD_STD(dlm->index)))
+		goto done;
 	/*
 	 * The device starts processing the queued display list right after the
 	 * frame end interrupt. The display list thus becomes active.
@@ -779,21 +958,28 @@ done:
 }
 
 /* Hardware Setup */
-void vsp1_dlm_setup(struct vsp1_device *vsp1)
+void vsp1_dlm_setup(struct vsp1_device *vsp1, unsigned int pipe_index)
 {
 	u32 ctrl = (256 << VI6_DL_CTRL_AR_WAIT_SHIFT)
 		 | VI6_DL_CTRL_DC2 | VI6_DL_CTRL_DC1 | VI6_DL_CTRL_DC0
 		 | VI6_DL_CTRL_DLE;
 
+	if (!vsp1->info->uapi &&
+	    !(vsp1->ths_quirks & VSP1_AUTO_FLD_NOT_SUPPORT)) {
+		vsp1_write(vsp1, VI6_DL_EXT_CTRL(pipe_index),
+			   (0x02 << VI6_DL_EXT_CTRL_POLINT_SHIFT) |
+			   VI6_DL_EXT_CTRL_DLPRI | VI6_DL_EXT_CTRL_EXT);
+	}
 	/*
 	 * The DRM pipeline operates with display lists in Continuous Frame
 	 * Mode, all other pipelines use manual start.
 	 */
-	if (vsp1->drm)
+	if (vsp1->drm && vsp1->info->uapi)
 		ctrl |= VI6_DL_CTRL_CFM0 | VI6_DL_CTRL_NH0;
 
 	vsp1_write(vsp1, VI6_DL_CTRL, ctrl);
-	vsp1_write(vsp1, VI6_DL_SWAP, VI6_DL_SWAP_LWS);
+	vsp1_write(vsp1, VI6_DL_SWAP(pipe_index), VI6_DL_SWAP_LWS |
+			 ((pipe_index == 1) ? VI6_DL_SWAP_IND : 0));
 }
 
 void vsp1_dlm_reset(struct vsp1_dl_manager *dlm)
@@ -833,6 +1019,13 @@ struct vsp1_dl_manager *vsp1_dlm_create(struct vsp1_device *vsp1,
 	dlm->index = index;
 	dlm->mode = index == 0 && !vsp1->info->uapi
 		  ? VSP1_DL_MODE_HEADERLESS : VSP1_DL_MODE_HEADER;
+
+	if (((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
+	    VI6_IP_VERSION_MODEL_VSPDL_GEN3) ||
+	    (vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
+	    VI6_IP_VERSION_MODEL_VSPD_GEN3)
+		dlm->mode = VSP1_DL_MODE_HEADER;
+
 	dlm->singleshot = vsp1->info->uapi;
 	dlm->vsp1 = vsp1;
 
@@ -850,6 +1043,17 @@ struct vsp1_dl_manager *vsp1_dlm_create(struct vsp1_device *vsp1,
 		    ? ALIGN(sizeof(struct vsp1_dl_header), 8)
 		    : 0;
 
+	if (!vsp1->info->uapi &&
+	    !(vsp1->ths_quirks & VSP1_AUTO_FLD_NOT_SUPPORT)) {
+		size_t ex_addr_offset;
+		size_t ex_addr_size;
+
+		ex_addr_offset = sizeof(struct vsp1_ext_dl_body);
+		ex_addr_size = sizeof(struct vsp1_ext_dl_body)
+				* VSP1_DL_EXT_NUM_ENTRIES;
+		header_size += (ex_addr_offset + ex_addr_size);
+	}
+
 	dlm->pool = vsp1_dl_body_pool_create(vsp1, prealloc + 1,
 					     VSP1_DL_NUM_ENTRIES, header_size);
 	if (!dlm->pool)
@@ -859,8 +1063,10 @@ struct vsp1_dl_manager *vsp1_dlm_create(struct vsp1_device *vsp1,
 		struct vsp1_dl_list *dl;
 
 		dl = vsp1_dl_list_alloc(dlm);
-		if (!dl)
+		if (!dl) {
+			vsp1_dlm_destroy(dlm);
 			return NULL;
+		}
 
 		list_add_tail(&dl->list, &dlm->free);
 	}
