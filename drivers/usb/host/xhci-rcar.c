@@ -30,6 +30,7 @@ MODULE_FIRMWARE(XHCI_RCAR_FIRMWARE_NAME_V2);
 MODULE_FIRMWARE(XHCI_RCAR_FIRMWARE_NAME_V3);
 
 /*** Register Offset ***/
+#define RCAR_USB3_AXH_STA	0x104	/* AXI Host Control Status */
 #define RCAR_USB3_INT_ENA	0x224	/* Interrupt Enable */
 #define RCAR_USB3_DL_CTRL	0x250	/* FW Download Control & Status */
 #define RCAR_USB3_FW_DATA0	0x258	/* FW Data0 */
@@ -42,6 +43,12 @@ MODULE_FIRMWARE(XHCI_RCAR_FIRMWARE_NAME_V3);
 #define RCAR_USB3_TX_POL	0xab8	/* USB3.0 TX Polarity */
 
 /*** Register Settings ***/
+/* AXI Host Control Status */
+#define RCAR_USB3_AXH_STA_B3_PLL_ACTIVE		0x00010000
+#define RCAR_USB3_AXH_STA_B2_PLL_ACTIVE		0x00000001
+#define RCAR_USB3_AXH_STA_PLL_ACTIVE_MASK (RCAR_USB3_AXH_STA_B3_PLL_ACTIVE | \
+					   RCAR_USB3_AXH_STA_B2_PLL_ACTIVE)
+
 /* Interrupt Enable */
 #define RCAR_USB3_INT_XHC_ENA	0x00000001
 #define RCAR_USB3_INT_PME_ENA	0x00000002
@@ -85,6 +92,10 @@ static const struct soc_device_attribute rcar_quirks_match[]  = {
 	},
 	{
 		.soc_id = "r8a77965",
+		.data = (void *)RCAR_XHCI_FIRMWARE_V3,
+	},
+	{
+		.soc_id = "r8a77990",
 		.data = (void *)RCAR_XHCI_FIRMWARE_V3,
 	},
 	{ /* sentinel */ },
@@ -213,6 +224,22 @@ static int xhci_rcar_download_firmware(struct usb_hcd *hcd)
 	return retval;
 }
 
+static bool xhci_rcar_wait_for_pll_active(struct usb_hcd *hcd)
+{
+	int timeout = 1000;
+	u32 val, mask = RCAR_USB3_AXH_STA_PLL_ACTIVE_MASK;
+
+	while (timeout > 0) {
+		val = readl(hcd->regs + RCAR_USB3_AXH_STA);
+		if ((val & mask) == mask)
+			return true;
+		udelay(1);
+		timeout--;
+	}
+
+	return false;
+}
+
 /* This function needs to initialize a "phy" of usb before */
 int xhci_rcar_init_quirk(struct usb_hcd *hcd)
 {
@@ -233,6 +260,10 @@ int xhci_rcar_init_quirk(struct usb_hcd *hcd)
 			xhci_rcar_is_gen3(hcd->self.controller))
 		xhci->quirks |= XHCI_NO_64BIT_SUPPORT;
 
+	if (!xhci_rcar_wait_for_pll_active(hcd))
+		return -ETIMEDOUT;
+
+	xhci->quirks |= XHCI_SLOW_SUSPEND;
 	return xhci_rcar_download_firmware(hcd);
 }
 
