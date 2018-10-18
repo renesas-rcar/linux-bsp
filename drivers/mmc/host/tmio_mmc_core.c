@@ -29,6 +29,7 @@
 
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/dma-mapping.h>
 #include <linux/highmem.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -51,6 +52,8 @@
 #include <linux/workqueue.h>
 
 #include "tmio_mmc.h"
+
+static void tmio_mmc_hw_reset(struct mmc_host *mmc);
 
 static inline void tmio_mmc_start_dma(struct tmio_mmc_host *host,
 				      struct mmc_data *data)
@@ -97,6 +100,7 @@ static inline void tmio_mmc_dataend_dma(struct tmio_mmc_host *host)
 void tmio_mmc_enable_mmc_irqs(struct tmio_mmc_host *host, u32 i)
 {
 	host->sdcard_irq_mask &= ~(i & TMIO_MASK_IRQ);
+	host->sdcard_irq_mask |= TMIO_STAT_SETBIT_MASK;
 	sd_ctrl_write32_as_16_and_16(host, CTL_IRQ_MASK, host->sdcard_irq_mask);
 }
 EXPORT_SYMBOL_GPL(tmio_mmc_enable_mmc_irqs);
@@ -104,9 +108,66 @@ EXPORT_SYMBOL_GPL(tmio_mmc_enable_mmc_irqs);
 void tmio_mmc_disable_mmc_irqs(struct tmio_mmc_host *host, u32 i)
 {
 	host->sdcard_irq_mask |= (i & TMIO_MASK_IRQ);
+	host->sdcard_irq_mask |= TMIO_STAT_SETBIT_MASK;
 	sd_ctrl_write32_as_16_and_16(host, CTL_IRQ_MASK, host->sdcard_irq_mask);
 }
 EXPORT_SYMBOL_GPL(tmio_mmc_disable_mmc_irqs);
+
+void tmio_mmc_set_transtate(struct tmio_mmc_host *host, unsigned int state)
+{
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&host->trans_lock, flags);
+	host->trans_state |= state;
+
+	if (host->trans_state == (TMIO_TRANSTATE_DEND | TMIO_TRANSTATE_AEND)) {
+		spin_unlock_irqrestore(&host->trans_lock, flags);
+		tmio_mmc_dataend_dma(host);
+	} else {
+		spin_unlock_irqrestore(&host->trans_lock, flags);
+	}
+}
+EXPORT_SYMBOL_GPL(tmio_mmc_set_transtate);
+
+void tmio_mmc_clear_transtate(struct tmio_mmc_host *host)
+{
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&host->trans_lock, flags);
+
+	host->trans_state = 0;
+
+	spin_unlock_irqrestore(&host->trans_lock, flags);
+}
+EXPORT_SYMBOL_GPL(tmio_mmc_clear_transtate);
+
+int tmio_mmc_pre_dma_transfer(struct tmio_mmc_host *host,
+			      struct mmc_data *data, int cookie)
+{
+	unsigned int sg_len;
+
+	if (data->host_cookie == COOKIE_PRE_MAPPED)
+		return data->sg_len;
+
+	sg_len = dma_map_sg(&host->pdev->dev, data->sg, data->sg_len,
+			    mmc_get_dma_dir(data));
+	if (sg_len == 0) {
+		dev_err(&host->pdev->dev,
+			"%s: dma_map_sg failed\n", __func__);
+		return 0;
+	}
+	/* This DMAC cannot handle if buffer is not 8-bytes alignment */
+	if (!IS_ALIGNED(sg_dma_address(data->sg), 8)) {
+		dma_unmap_sg(&host->pdev->dev, data->sg, data->sg_len,
+			     mmc_get_dma_dir(data));
+		return 0;
+	}
+
+	data->host_cookie = cookie;
+
+	return sg_len;
+}
+EXPORT_SYMBOL_GPL(tmio_mmc_pre_dma_transfer);
 
 static void tmio_mmc_ack_mmc_irqs(struct tmio_mmc_host *host, u32 i)
 {
@@ -199,6 +260,13 @@ static void tmio_mmc_set_clock(struct tmio_mmc_host *host,
 		tmio_mmc_clk_stop(host);
 		return;
 	}
+	/*
+	 * Both HS400 and HS200/SD104 set 200MHz, but some devices need to
+	 * set 400MHz to distinguish the CPG settings in HS400.
+	 */
+	if (host->mmc->ios.timing == MMC_TIMING_MMC_HS400 &&
+	    host->hs400_use_4tap && new_clock == 200000000)
+		new_clock = 400000000;
 
 	if (host->clk_update)
 		clock = host->clk_update(host, new_clock) / 512;
@@ -209,8 +277,13 @@ static void tmio_mmc_set_clock(struct tmio_mmc_host *host,
 		clock <<= 1;
 
 	/* 1/1 clock is option */
-	if ((host->pdata->flags & TMIO_MMC_CLK_ACTUAL) && ((clk >> 22) & 0x1))
-		clk |= 0xff;
+	if ((host->pdata->flags & TMIO_MMC_CLK_ACTUAL) &&
+	    ((clk >> 22) & 0x1)) {
+		if (!(host->mmc->ios.timing == MMC_TIMING_MMC_HS400))
+			clk |= 0xff;
+		else
+			clk &= ~0xff;
+	}
 
 	if (host->set_clk_div)
 		host->set_clk_div(host->pdev, (clk >> 22) & 1);
@@ -249,6 +322,7 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 						  delayed_reset_work.work);
 	struct mmc_request *mrq;
 	unsigned long flags;
+	u16 clk;
 
 	spin_lock_irqsave(&host->lock, flags);
 	mrq = host->mrq;
@@ -281,7 +355,9 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	tmio_mmc_reset(host);
+	clk = sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL) & CLK_CTL_DIV_MASK;
+	tmio_mmc_hw_reset(host->mmc);
+	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, clk | CLK_CTL_SCLKEN);
 
 	/* Ready for new calls */
 	host->mrq = NULL;
@@ -540,8 +616,10 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 	if (!data)
 		goto out;
 
-	if (stat & TMIO_STAT_CRCFAIL || stat & TMIO_STAT_STOPBIT_ERR ||
-	    stat & TMIO_STAT_TXUNDERRUN)
+	if (stat & TMIO_STAT_DATATIMEOUT)
+		data->error = -ETIMEDOUT;
+	else if (stat & TMIO_STAT_CRCFAIL || stat & TMIO_STAT_STOPBIT_ERR ||
+		 stat & TMIO_STAT_TXUNDERRUN)
 		data->error = -EILSEQ;
 	if (host->chan_tx && (data->flags & MMC_DATA_WRITE) && !host->force_pio) {
 		u32 status = sd_ctrl_read16_and_16_as_32(host, CTL_STATUS);
@@ -564,12 +642,21 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 		}
 
 		if (done) {
-			tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND);
-			tmio_mmc_dataend_dma(host);
+			tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND |
+						  TMIO_STAT_DATATIMEOUT);
+			if (!data->error)
+				tmio_mmc_set_transtate(host,
+						       TMIO_TRANSTATE_AEND);
+			else
+				tmio_mmc_dataend_dma(host);
 		}
 	} else if (host->chan_rx && (data->flags & MMC_DATA_READ) && !host->force_pio) {
-		tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND);
-		tmio_mmc_dataend_dma(host);
+		tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND |
+					  TMIO_STAT_DATATIMEOUT);
+		if (!data->error)
+			tmio_mmc_set_transtate(host, TMIO_TRANSTATE_AEND);
+		else
+			tmio_mmc_dataend_dma(host);
 	} else {
 		tmio_mmc_do_data_irq(host);
 		tmio_mmc_disable_mmc_irqs(host, TMIO_MASK_READOP | TMIO_MASK_WRITEOP);
@@ -611,14 +698,16 @@ static void tmio_mmc_cmd_irq(struct tmio_mmc_host *host, unsigned int stat)
 		cmd->error = -ETIMEDOUT;
 	else if ((stat & TMIO_STAT_CRCFAIL && cmd->flags & MMC_RSP_CRC) ||
 		 stat & TMIO_STAT_STOPBIT_ERR ||
-		 stat & TMIO_STAT_CMD_IDX_ERR)
+		 stat & TMIO_STAT_CMD_IDX_ERR) {
 		cmd->error = -EILSEQ;
-
+		if (stat & TMIO_STAT_DATAEND)
+			tmio_mmc_ack_mmc_irqs(host, TMIO_STAT_DATAEND);
+	}
 	/* If there is data to handle we enable data IRQs here, and
 	 * we will ultimatley finish the request in the data_end handler.
 	 * If theres no data or we encountered an error, finish now.
 	 */
-	if (host->data && (!cmd->error || cmd->error == -EILSEQ)) {
+	if (host->data && !cmd->error) {
 		if (host->data->flags & MMC_DATA_READ) {
 			if (host->force_pio || !host->chan_rx) {
 				tmio_mmc_enable_mmc_irqs(host, TMIO_MASK_READOP);
@@ -682,8 +771,9 @@ static bool __tmio_mmc_sdcard_irq(struct tmio_mmc_host *host, int ireg,
 	}
 
 	/* Data transfer completion */
-	if (ireg & TMIO_STAT_DATAEND) {
-		tmio_mmc_ack_mmc_irqs(host, TMIO_STAT_DATAEND);
+	if (ireg & (TMIO_STAT_DATAEND | TMIO_STAT_DATATIMEOUT)) {
+		tmio_mmc_ack_mmc_irqs(host, TMIO_STAT_DATAEND |
+				      TMIO_STAT_DATATIMEOUT);
 		tmio_mmc_data_irq(host, status);
 		return true;
 	}
@@ -723,12 +813,16 @@ irqreturn_t tmio_mmc_irq(int irq, void *devid)
 	ireg = status & TMIO_MASK_IRQ & ~host->sdcard_irq_mask;
 
 	/* Clear the status except the interrupt status */
-	sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, TMIO_MASK_IRQ);
+	sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, TMIO_MASK_IRQ |
+				     TMIO_STAT_SETBIT_MASK);
 
 	if (__tmio_mmc_card_detect_irq(host, ireg, status))
 		return IRQ_HANDLED;
 	if (__tmio_mmc_sdcard_irq(host, ireg, status))
 		return IRQ_HANDLED;
+	if (host->dma_ops)
+		if (host->dma_ops->dma_irq(host))
+			return IRQ_HANDLED;
 
 	__tmio_mmc_sdio_irq(host);
 
@@ -769,9 +863,43 @@ static int tmio_mmc_start_data(struct tmio_mmc_host *host,
 	return 0;
 }
 
+static void tmio_mmc_post_req(struct mmc_host *mmc, struct mmc_request *req,
+			      int err)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	struct mmc_data *data = req->data;
+
+	if (!host->chan_tx || !host->chan_rx || !data)
+		return;
+
+	if (data->host_cookie != COOKIE_UNMAPPED)
+		dma_unmap_sg(&host->pdev->dev, data->sg, data->sg_len,
+			     mmc_get_dma_dir(data));
+
+	data->host_cookie = COOKIE_UNMAPPED;
+}
+
+static void tmio_mmc_pre_req(struct mmc_host *mmc, struct mmc_request *req)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	struct mmc_data *data = req->data;
+
+	if (!host->chan_tx || !host->chan_rx || !data)
+		return;
+
+	data->host_cookie = COOKIE_UNMAPPED;
+
+	if (tmio_mmc_pre_dma_transfer(host, data, COOKIE_PRE_MAPPED) <= 0)
+		data->host_cookie = COOKIE_UNMAPPED;
+}
+
 static void tmio_mmc_hw_reset(struct mmc_host *mmc)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
+
+	tmio_mmc_reset(host);
+
+	tmio_mmc_abort_dma(host);
 
 	if (host->hw_reset)
 		host->hw_reset(host);
@@ -798,6 +926,7 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	}
 
 	bitmap_zero(host->taps, host->tap_num * 2);
+	bitmap_zero(host->smpcmp, host->tap_num * 2);
 
 	/* Issue CMD19 twice for each tap */
 	for (i = 0; i < 2 * host->tap_num; i++) {
@@ -805,12 +934,11 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 			host->prepare_tuning(host, i % host->tap_num);
 
 		ret = mmc_send_tuning(mmc, opcode, NULL);
-		if (ret && ret != -EILSEQ)
-			goto out;
 		if (ret == 0)
 			set_bit(i, host->taps);
 
-		usleep_range(1000, 1200);
+		if (host->compare_scc_data && !host->compare_scc_data(host))
+			set_bit(i, host->smpcmp);
 	}
 
 	ret = host->select_tuning(host);
@@ -906,17 +1034,26 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	if (mrq->cmd->error || (mrq->data && mrq->data->error))
+	if (mrq->cmd->error || (mrq->data && mrq->data->error)) {
+		/* clear the interrupt flag register */
+		sd_ctrl_write32_as_16_and_16(host, CTL_STATUS,
+					     TMIO_STAT_SETBIT_MASK);
 		tmio_mmc_abort_dma(host);
+	}
 
-	if (host->check_scc_error)
-		host->check_scc_error(host);
+	if (host->check_scc_error && host->check_scc_error(host))
+		mrq->cmd->error = -EILSEQ;
 
 	/* If SET_BLOCK_COUNT, continue with main command */
 	if (host->mrq && !mrq->cmd->error) {
 		tmio_process_mrq(host, mrq);
 		return;
 	}
+
+	/* Enabled adjust HS400 mode after CMD13 */
+	if (host->adjust_hs400_mode_enable && host->needs_adjust_hs400 &&
+	    mrq->cmd->opcode == MMC_SEND_STATUS)
+		host->adjust_hs400_mode_enable(host->mmc);
 
 	mmc_request_done(host->mmc, mrq);
 }
@@ -1003,6 +1140,14 @@ static void tmio_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	struct device *dev = &host->pdev->dev;
 	unsigned long flags;
 
+	if (host->disable_scc)
+		host->disable_scc(mmc);
+
+	/* reset HS400 mode */
+	if (!(ios->timing == MMC_TIMING_MMC_HS400))
+		if (host->reset_hs400_mode)
+			host->reset_hs400_mode(mmc);
+
 	mutex_lock(&host->ios_lock);
 
 	spin_lock_irqsave(&host->lock, flags);
@@ -1053,6 +1198,12 @@ static void tmio_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 			"%s.%d: IOS interrupted: clk %u, mode %u",
 			current->comm, task_pid_nr(current),
 			ios->clock, ios->power_mode);
+
+	/* HS400 Register setting */
+	if (ios->timing == MMC_TIMING_MMC_HS400)
+		if (host->prepare_hs400_tuning)
+			host->prepare_hs400_tuning(mmc, ios);
+
 	host->mrq = NULL;
 
 	host->clk_cache = ios->clock;
@@ -1088,9 +1239,11 @@ static int tmio_multi_io_quirk(struct mmc_card *card,
 }
 
 static const struct mmc_host_ops tmio_mmc_ops = {
+	.post_req	= tmio_mmc_post_req,
+	.pre_req	= tmio_mmc_pre_req,
 	.request	= tmio_mmc_request,
 	.set_ios	= tmio_mmc_set_ios,
-	.get_ro         = tmio_mmc_get_ro,
+	.get_ro		= tmio_mmc_get_ro,
 	.get_cd		= tmio_mmc_get_cd,
 	.enable_sdio_irq = tmio_mmc_enable_sdio_irq,
 	.multi_io_quirk	= tmio_multi_io_quirk,
@@ -1271,8 +1424,9 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host)
 		_host->sdio_irq_mask = TMIO_SDIO_MASK_ALL;
 
 	tmio_mmc_clk_stop(_host);
-	tmio_mmc_reset(_host);
+	tmio_mmc_hw_reset(mmc);
 
+	sd_ctrl_write32_as_16_and_16(_host, CTL_IRQ_MASK, TMIO_MASK_INIT);
 	_host->sdcard_irq_mask = sd_ctrl_read16_and_16_as_32(_host, CTL_IRQ_MASK);
 	tmio_mmc_disable_mmc_irqs(_host, TMIO_MASK_ALL);
 
@@ -1282,6 +1436,9 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host)
 
 	spin_lock_init(&_host->lock);
 	mutex_init(&_host->ios_lock);
+
+	spin_lock_init(&_host->trans_lock);
+	_host->trans_state = 0;
 
 	/* Init delayed work for request timeouts */
 	INIT_DELAYED_WORK(&_host->delayed_reset_work, tmio_mmc_reset_work);
@@ -1371,8 +1528,8 @@ int tmio_mmc_host_runtime_resume(struct device *dev)
 {
 	struct tmio_mmc_host *host = dev_get_drvdata(dev);
 
-	tmio_mmc_reset(host);
 	tmio_mmc_clk_enable(host);
+	tmio_mmc_hw_reset(host->mmc);
 
 	if (host->clk_cache)
 		tmio_mmc_set_clock(host, host->clk_cache);

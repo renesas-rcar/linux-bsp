@@ -46,6 +46,7 @@
 #define CTL_DMA_ENABLE 0xd8
 #define CTL_RESET_SD 0xe0
 #define CTL_VERSION 0xe2
+#define CTL_SDIF_MODE 0xe6
 #define CTL_SDIO_REGS 0x100
 #define CTL_CLK_AND_WAIT_CTL 0x138
 #define CTL_RESET_SDIO 0x1e0
@@ -76,6 +77,7 @@
 #define TMIO_STAT_DAT0		BIT(23)	/* only known on R-Car so far */
 #define TMIO_STAT_RXRDY         BIT(24)
 #define TMIO_STAT_TXRQ          BIT(25)
+#define TMIO_STAT_SETBIT_MASK   BIT(27) /* This bit should always set 1 */
 #define TMIO_STAT_ILL_FUNC      BIT(29) /* only when !TMIO_MMC_HAS_IDLE_WAIT */
 #define TMIO_STAT_SCLKDIVEN     BIT(29) /* only when TMIO_MMC_HAS_IDLE_WAIT */
 #define TMIO_STAT_CMD_BUSY      BIT(30)
@@ -102,15 +104,36 @@
 
 /* Define some IRQ masks */
 /* This is the mask used at reset by the chip */
+#define TMIO_MASK_INIT          0x8b7f031d /* H/W initial value */
 #define TMIO_MASK_ALL           0x837f031d
-#define TMIO_MASK_READOP  (TMIO_STAT_RXRDY | TMIO_STAT_DATAEND)
-#define TMIO_MASK_WRITEOP (TMIO_STAT_TXRQ | TMIO_STAT_DATAEND)
+#define TMIO_MASK_READOP  (TMIO_STAT_RXRDY | TMIO_STAT_DATAEND | \
+			   TMIO_STAT_DATATIMEOUT)
+#define TMIO_MASK_WRITEOP (TMIO_STAT_TXRQ | TMIO_STAT_DATAEND | \
+			   TMIO_STAT_DATATIMEOUT)
 #define TMIO_MASK_CMD     (TMIO_STAT_CMDRESPEND | TMIO_STAT_CMDTIMEOUT | \
 		TMIO_STAT_CARD_REMOVE | TMIO_STAT_CARD_INSERT)
 #define TMIO_MASK_IRQ     (TMIO_MASK_READOP | TMIO_MASK_WRITEOP | TMIO_MASK_CMD)
 
+#define TMIO_TRANSTATE_DEND	0x00000001
+#define TMIO_TRANSTATE_AEND	0x00000002
+
+/* Check LSI revisions and set specific quirk value */
+#define DTRAEND1_SET_BIT17	BIT(0)
+#define HS400_USE_4TAP		BIT(1)
+#define FORCE_HS200		BIT(2)
+#define HS400_USE_MANUAL_CALIB	BIT(3)
+/* bit[31:16] reserved for HS400 manual calibration */
+#define HS400_CALIB_MASK	GENMASK_ULL(23, 16)
+#define HS400_OFFSET_MASK	GENMASK_ULL(31, 24)
+
 struct tmio_mmc_data;
 struct tmio_mmc_host;
+
+enum tmio_cookie {
+	COOKIE_UNMAPPED,
+	COOKIE_PRE_MAPPED,
+	COOKIE_MAPPED,
+};
 
 struct tmio_mmc_dma_ops {
 	void (*start)(struct tmio_mmc_host *host, struct mmc_data *data);
@@ -120,6 +143,7 @@ struct tmio_mmc_dma_ops {
 	void (*release)(struct tmio_mmc_host *host);
 	void (*abort)(struct tmio_mmc_host *host);
 	void (*dataend)(struct tmio_mmc_host *host);
+	bool (*dma_irq)(struct tmio_mmc_host *host);
 };
 
 struct tmio_mmc_host {
@@ -144,6 +168,8 @@ struct tmio_mmc_host {
 	struct platform_device *pdev;
 	struct tmio_mmc_data *pdata;
 
+	u32			sdhi_quirks;
+
 	/* DMA support */
 	bool			force_pio;
 	struct dma_chan		*chan_rx;
@@ -151,6 +177,7 @@ struct tmio_mmc_host {
 	struct tasklet_struct	dma_issue;
 	struct scatterlist	bounce_sg;
 	u8			*bounce_buf;
+	u32			dma_tranend1;
 
 	/* Track lost interrupts */
 	struct delayed_work	delayed_reset_work;
@@ -159,6 +186,7 @@ struct tmio_mmc_host {
 	/* Cache */
 	u32			sdcard_irq_mask;
 	u32			sdio_irq_mask;
+	u32			dma_irq_mask;
 	unsigned int		clk_cache;
 
 	spinlock_t		lock;		/* protect host private data */
@@ -166,6 +194,9 @@ struct tmio_mmc_host {
 	struct mutex		ios_lock;	/* protect set_ios() context */
 	bool			native_hotplug;
 	bool			sdio_irq_enabled;
+
+	spinlock_t		trans_lock;	/* protect trans_state */
+	unsigned int		trans_state;
 
 	/* Mandatory callback */
 	int (*clk_enable)(struct tmio_mmc_host *host);
@@ -191,6 +222,21 @@ struct tmio_mmc_host {
 	/* Tuning values: 1 for success, 0 for failure */
 	DECLARE_BITMAP(taps, BITS_PER_BYTE * sizeof(long));
 	unsigned int tap_num;
+	unsigned long tap_set;
+
+	void (*disable_scc)(struct mmc_host *mmc);
+	void (*prepare_hs400_tuning)(struct mmc_host *mmc, struct mmc_ios *ios);
+	void (*adjust_hs400_mode_enable)(struct mmc_host *mmc);
+	void (*adjust_hs400_mode_disable)(struct mmc_host *mmc);
+	void (*reset_hs400_mode)(struct mmc_host *mmc);
+	/* HS400 mode uses 4TAP */
+	bool			hs400_use_4tap;
+	/* Manual caribration for HS400 mode */
+	bool			needs_adjust_hs400;
+
+	/* Sampling data comparison: 1 for match. 0 for mismatch */
+	DECLARE_BITMAP(smpcmp, BITS_PER_BYTE * sizeof(long));
+	unsigned int (*compare_scc_data)(struct tmio_mmc_host *host);
 
 	const struct tmio_mmc_dma_ops *dma_ops;
 };
@@ -201,6 +247,11 @@ void tmio_mmc_host_free(struct tmio_mmc_host *host);
 int tmio_mmc_host_probe(struct tmio_mmc_host *host);
 void tmio_mmc_host_remove(struct tmio_mmc_host *host);
 void tmio_mmc_do_data_irq(struct tmio_mmc_host *host);
+
+void tmio_mmc_set_transtate(struct tmio_mmc_host *host, unsigned int state);
+void tmio_mmc_clear_transtate(struct tmio_mmc_host *host);
+int tmio_mmc_pre_dma_transfer(struct tmio_mmc_host *host,
+			      struct mmc_data *data, int cookie);
 
 void tmio_mmc_enable_mmc_irqs(struct tmio_mmc_host *host, u32 i);
 void tmio_mmc_disable_mmc_irqs(struct tmio_mmc_host *host, u32 i);
