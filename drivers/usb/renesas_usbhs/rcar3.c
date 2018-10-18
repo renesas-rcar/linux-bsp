@@ -18,7 +18,7 @@
 /* Low Power Status register (LPSTS) */
 #define LPSTS_SUSPM	0x4000
 
-/* R-Car D3 only: USB General control register (UGCTRL) */
+/* R-Car D3/E3 only: USB General control register (UGCTRL) */
 #define UGCTRL_PLLRESET		0x00000001
 #define UGCTRL_CONNECT		0x00000004
 
@@ -32,7 +32,7 @@
 #define UGCTRL2_USB0SEL_OTG	0x00000030
 #define UGCTRL2_VBUSSEL		0x00000400
 
-/* R-Car D3 only: USB General status register (UGSTS) */
+/* R-Car D3/E3 only: USB General status register (UGSTS) */
 #define UGSTS_LOCK		0x00000100
 
 static void usbhs_write32(struct usbhs_priv *priv, u32 reg, u32 data)
@@ -76,7 +76,7 @@ static int usbhs_rcar3_power_ctrl(struct platform_device *pdev,
 	return 0;
 }
 
-/* R-Car D3 needs to release UGCTRL.PLLRESET */
+/* R-Car D3/E3 needs to release UGCTRL.PLLRESET */
 static int usbhs_rcar3_power_and_pll_ctrl(struct platform_device *pdev,
 					  void __iomem *base, int enable)
 {
