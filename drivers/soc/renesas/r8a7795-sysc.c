@@ -1,6 +1,7 @@
 /*
  * Renesas R-Car H3 System Controller
  *
+ * Copyright (C) 2018 Renesas Electronics Corp.
  * Copyright (C) 2016 Glider bvba
  *
  * This program is free software; you can redistribute it and/or modify
@@ -47,11 +48,16 @@ static const struct rcar_sysc_area r8a7795_areas[] __initconst = {
 	  (PD_NO_CR | PD_ON_ONCE) },
 	{ "a2vc1",	0x3c0, 1, R8A7795_PD_A2VC1,	R8A7795_PD_A3VC,
 	  (PD_NO_CR | PD_ON_ONCE) },
-	{ "3dg-a",	0x100, 0, R8A7795_PD_3DG_A,	R8A7795_PD_ALWAYS_ON },
-	{ "3dg-b",	0x100, 1, R8A7795_PD_3DG_B,	R8A7795_PD_3DG_A },
-	{ "3dg-c",	0x100, 2, R8A7795_PD_3DG_C,	R8A7795_PD_3DG_B },
-	{ "3dg-d",	0x100, 3, R8A7795_PD_3DG_D,	R8A7795_PD_3DG_C },
-	{ "3dg-e",	0x100, 4, R8A7795_PD_3DG_E,	R8A7795_PD_3DG_D },
+	{ "3dg-a",	0x100, 0, R8A7795_PD_3DG_A,	R8A7795_PD_ALWAYS_ON,
+	  (PD_NO_CR | PD_ON_ONCE) },
+	{ "3dg-b",	0x100, 1, R8A7795_PD_3DG_B,	R8A7795_PD_3DG_A,
+	  (PD_NO_CR | PD_ON_ONCE) },
+	{ "3dg-c",	0x100, 2, R8A7795_PD_3DG_C,	R8A7795_PD_3DG_B,
+	  (PD_NO_CR | PD_ON_ONCE) },
+	{ "3dg-d",	0x100, 3, R8A7795_PD_3DG_D,	R8A7795_PD_3DG_C,
+	  (PD_NO_CR | PD_ON_ONCE) },
+	{ "3dg-e",	0x100, 4, R8A7795_PD_3DG_E,	R8A7795_PD_3DG_D,
+	  (PD_NO_CR | PD_ON_ONCE) },
 	{ "a3ir",	0x180, 0, R8A7795_PD_A3IR,	R8A7795_PD_ALWAYS_ON,
 	  (PD_NO_CR | PD_ON_ONCE) },
 };
