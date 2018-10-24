@@ -109,9 +109,9 @@ static int rsnd_dmaen_stop(struct rsnd_mod *mod,
 	return 0;
 }
 
-static int rsnd_dmaen_nolock_stop(struct rsnd_mod *mod,
-				   struct rsnd_dai_stream *io,
-				   struct rsnd_priv *priv)
+static int rsnd_dmaen_cleanup(struct rsnd_mod *mod,
+			      struct rsnd_dai_stream *io,
+			      struct rsnd_priv *priv)
 {
 	struct rsnd_dma *dma = rsnd_mod_to_dma(mod);
 	struct rsnd_dmaen *dmaen = rsnd_dma_to_dmaen(dma);
@@ -119,7 +119,7 @@ static int rsnd_dmaen_nolock_stop(struct rsnd_mod *mod,
 	/*
 	 * DMAEngine release uses mutex lock.
 	 * Thus, it shouldn't be called under spinlock.
-	 * Let's call it under nolock_start
+	 * Let's call it under prepare
 	 */
 	if (dmaen->chan)
 		dma_release_channel(dmaen->chan);
@@ -129,23 +129,22 @@ static int rsnd_dmaen_nolock_stop(struct rsnd_mod *mod,
 	return 0;
 }
 
-static int rsnd_dmaen_nolock_start(struct rsnd_mod *mod,
-			    struct rsnd_dai_stream *io,
-			    struct rsnd_priv *priv)
+static int rsnd_dmaen_prepare(struct rsnd_mod *mod,
+			      struct rsnd_dai_stream *io,
+			      struct rsnd_priv *priv)
 {
 	struct rsnd_dma *dma = rsnd_mod_to_dma(mod);
 	struct rsnd_dmaen *dmaen = rsnd_dma_to_dmaen(dma);
 	struct device *dev = rsnd_priv_to_dev(priv);
 
-	if (dmaen->chan) {
-		dev_err(dev, "it already has dma channel\n");
-		return -EIO;
-	}
+	/* maybe suspended */
+	if (dmaen->chan)
+		return 0;
 
 	/*
 	 * DMAEngine request uses mutex lock.
 	 * Thus, it shouldn't be called under spinlock.
-	 * Let's call it under nolock_start
+	 * Let's call it under prepare
 	 */
 	dmaen->chan = rsnd_dmaen_request_channel(io,
 						 dma->mod_from,
@@ -244,6 +243,10 @@ static int rsnd_dmaen_attach(struct rsnd_dai_stream *io,
 	/* try to get DMAEngine channel */
 	chan = rsnd_dmaen_request_channel(io, mod_from, mod_to);
 	if (IS_ERR_OR_NULL(chan)) {
+		/* Let's follow when -EPROBE_DEFER case */
+		if (PTR_ERR(chan) == -EPROBE_DEFER)
+			return PTR_ERR(chan);
+
 		/*
 		 * DMA failed. try to PIO mode
 		 * see
@@ -290,8 +293,8 @@ static int rsnd_dmaen_pointer(struct rsnd_mod *mod,
 
 static struct rsnd_mod_ops rsnd_dmaen_ops = {
 	.name	= "audmac",
-	.nolock_start = rsnd_dmaen_nolock_start,
-	.nolock_stop  = rsnd_dmaen_nolock_stop,
+	.prepare = rsnd_dmaen_prepare,
+	.cleanup = rsnd_dmaen_cleanup,
 	.start	= rsnd_dmaen_start,
 	.stop	= rsnd_dmaen_stop,
 	.pointer= rsnd_dmaen_pointer,
@@ -381,7 +384,7 @@ static void rsnd_dmapp_write(struct rsnd_dma *dma, u32 data, u32 reg)
 	struct rsnd_dma_ctrl *dmac = rsnd_priv_to_dmac(priv);
 	struct device *dev = rsnd_priv_to_dev(priv);
 
-	dev_dbg(dev, "w %p : %08x\n", rsnd_dmapp_addr(dmac, dma, reg), data);
+	dev_dbg(dev, "w 0x%px : %08x\n", rsnd_dmapp_addr(dmac, dma, reg), data);
 
 	iowrite32(data, rsnd_dmapp_addr(dmac, dma, reg));
 }
