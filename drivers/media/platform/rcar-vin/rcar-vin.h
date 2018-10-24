@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2018 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -17,13 +17,17 @@
 #ifndef __RCAR_VIN__
 #define __RCAR_VIN__
 
+#include <linux/clk.h>
 #include <linux/kref.h>
+#include <linux/reset.h>
 
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-dev.h>
 #include <media/v4l2-device.h>
 #include <media/videobuf2-v4l2.h>
+
+#define DRV_NAME "rcar-vin"
 
 /* Number of HW buffers */
 #define HW_BUFFER_NUM 3
@@ -33,6 +37,14 @@
 
 /* Max number on VIN instances that can be in a system */
 #define RCAR_VIN_NUM 8
+
+/* Time until source device reconnects */
+#define CONNECTION_TIME 2000
+#define SETUP_WAIT_TIME 3000
+
+#define MSTP_WAIT_TIME 100
+
+#define RCAR_VIN_DES1_RESERVED		BIT(0)
 
 struct rvin_group;
 
@@ -54,11 +66,13 @@ enum rvin_csi_id {
 /**
  * STOPPED  - No operation in progress
  * RUNNING  - Operation in progress have buffers
+ * STALLED  - No operation in progress have no buffers
  * STOPPING - Stopping operation
  */
 enum rvin_dma_state {
 	STOPPED = 0,
 	RUNNING,
+	STALLED,
 	STOPPING,
 };
 
@@ -85,6 +99,20 @@ struct rvin_graph_entity {
 
 	unsigned int source_pad;
 	unsigned int sink_pad;
+};
+
+/**
+ * struct rvin_uds_regs - UDS register information
+ * @ctrl:		UDS Control register
+ * @scale:		UDS Scaling Factor register
+ * @pass_bwidth:	UDS Passband Register
+ * @clip_size:		UDS Output Size Clipping Register
+ */
+struct rvin_uds_regs {
+	unsigned long ctrl;
+	unsigned long scale;
+	unsigned long pass_bwidth;
+	unsigned long clip_size;
 };
 
 /**
@@ -147,6 +175,8 @@ struct rvin_info {
  * @ctrl_handler:	V4L2 control handler
  * @notifier:		V4L2 asynchronous subdevs notifier
  * @digital:		entity in the DT for local digital subdevice
+ * @rstc:		CPG reset/release control
+ * @clk:		CPG clock control
  *
  * @group:		Gen3 CSI group
  * @id:			Gen3 group id for this VIN
@@ -157,10 +187,11 @@ struct rvin_info {
  * @scratch:		cpu address for scratch buffer
  * @scratch_phys:	physical address of the scratch buffer
  *
- * @qlock:		protects @queue_buf, @buf_list, @sequence
+ * @qlock:		protects @queue_buf, @buf_list, @continuous, @sequence
  *			@state
  * @queue_buf:		Keeps track of buffers given to HW slot
  * @buf_list:		list of queued buffers
+ * @continuous:		tracks if active operation is continuous or single mode
  * @sequence:		V4L2 buffers sequence number
  * @state:		keeps track of operation state
  *
@@ -172,6 +203,12 @@ struct rvin_info {
  * @compose:		active composing
  * @source:		active size of the video source
  * @std:		active video standard of the video source
+ * @work_queue:		work queue at resuming
+ * @rvin_resume:	delayed work at resuming
+ * @chsel:		channel selection
+ * @setup_wait:		wait queue used to setup VIN
+ * @suspend:		suspend flag
+ * @chip_info:         chip information by each device
  */
 struct rvin_dev {
 	struct device *dev;
@@ -183,6 +220,8 @@ struct rvin_dev {
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_async_notifier notifier;
 	struct rvin_graph_entity *digital;
+	struct reset_control *rstc;
+	struct clk *clk;
 
 	struct rvin_group *group;
 	unsigned int id;
@@ -196,6 +235,7 @@ struct rvin_dev {
 	spinlock_t qlock;
 	struct vb2_v4l2_buffer *queue_buf[HW_BUFFER_NUM];
 	struct list_head buf_list;
+	bool continuous;
 	unsigned int sequence;
 	enum rvin_dma_state state;
 
@@ -207,6 +247,13 @@ struct rvin_dev {
 	struct v4l2_rect compose;
 	struct v4l2_rect source;
 	v4l2_std_id std;
+
+	struct workqueue_struct *work_queue;
+	struct delayed_work rvin_resume;
+	unsigned int chsel;
+	wait_queue_head_t setup_wait;
+	bool suspend;
+	u32 chip_info;
 };
 
 #define vin_to_source(vin)		((vin)->digital->subdev)
@@ -255,9 +302,10 @@ void rvin_v4l2_unregister(struct rvin_dev *vin);
 
 const struct rvin_video_format *rvin_format_from_pixel(u32 pixelformat);
 
-/* Cropping, composing and scaling */
-void rvin_crop_scale_comp(struct rvin_dev *vin);
-
 int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel);
+u32 rvin_get_chsel(struct rvin_dev *vin);
+
+void rvin_resume_start_streaming(struct work_struct *work);
+void rvin_suspend_stop_streaming(struct rvin_dev *vin);
 
 #endif

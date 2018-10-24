@@ -1,7 +1,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2018 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -14,6 +14,8 @@
  * option) any later version.
  */
 
+#include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -554,6 +556,7 @@ static int rvin_digital_parse_v4l2(struct device *dev,
 static int rvin_digital_graph_init(struct rvin_dev *vin)
 {
 	int ret;
+	u32 id;
 
 	ret = v4l2_async_notifier_parse_fwnode_endpoints(
 		vin->dev, &vin->notifier,
@@ -567,10 +570,27 @@ static int rvin_digital_graph_init(struct rvin_dev *vin)
 	vin_dbg(vin, "Found digital subdevice %pOF\n",
 		to_of_node(vin->digital->asd.match.fwnode.fwnode));
 
+	/* Make sure VIN id is present and sane */
+	ret = of_property_read_u32(vin->dev->of_node, "renesas,id", &id);
+	if (ret) {
+		vin_err(vin, "%pOF: No renesas,id property found\n",
+			vin->dev->of_node);
+		return -EINVAL;
+	}
+
+	if (id >= RCAR_VIN_NUM) {
+		vin_err(vin, "%pOF: Invalid renesas,id '%u'\n",
+			vin->dev->of_node, id);
+		return -EINVAL;
+	}
+
+	vin->id = id;
+
 	vin->notifier.ops = &rvin_digital_notify_ops;
 	ret = v4l2_async_notifier_register(&vin->v4l2_dev, &vin->notifier);
 	if (ret < 0) {
 		vin_err(vin, "Notifier registration failed\n");
+		v4l2_async_notifier_cleanup(&vin->notifier);
 		return ret;
 	}
 
@@ -609,6 +629,8 @@ static int rvin_group_notify_complete(struct v4l2_async_notifier *notifier)
 		struct media_pad *source_pad, *sink_pad;
 		struct media_entity *source, *sink;
 		unsigned int source_idx;
+		struct rvin_dev *vin_master;
+		u32 flags;
 
 		/* Check that VIN is part of the group. */
 		if (!vin->group->vin[route->vin])
@@ -633,7 +655,17 @@ static int rvin_group_notify_complete(struct v4l2_async_notifier *notifier)
 		if (media_entity_find_link(source_pad, sink_pad))
 			continue;
 
-		ret = media_create_pad_link(source, source_idx, sink, 0, 0);
+		vin_master =
+			vin->group->vin[rvin_group_id_to_master(route->vin)];
+
+		/* Set default channel */
+		if (route->mask & (0x01 << rvin_get_chsel(vin_master)))
+			flags = MEDIA_LNK_FL_ENABLED;
+		else
+			flags = 0;
+
+		ret = media_create_pad_link(source, source_idx, sink, 0,
+					    flags);
 		if (ret) {
 			vin_err(vin, "Error adding link from %s to %s\n",
 				source->name, sink->name);
@@ -781,6 +813,7 @@ static int rvin_mc_parse_of_graph(struct rvin_dev *vin)
 	ret = v4l2_async_notifier_register(&vin->v4l2_dev, &vin->notifier);
 	if (ret < 0) {
 		vin_err(vin, "Notifier registration failed\n");
+		v4l2_async_notifier_cleanup(&vin->notifier);
 		return ret;
 	}
 
@@ -974,6 +1007,66 @@ static const struct rvin_info rcar_info_r8a7796 = {
 	.routes = rcar_info_r8a7796_routes,
 };
 
+static const struct rvin_group_route _rcar_info_r8a77965_routes[] = {
+	{ .csi = RVIN_CSI40, .channel = 0, .vin = 0, .mask = BIT(0) | BIT(3) },
+	{ .csi = RVIN_CSI20, .channel = 0, .vin = 0, .mask = BIT(1) | BIT(4) },
+	{ .csi = RVIN_CSI40, .channel = 1, .vin = 0, .mask = BIT(2) },
+	{ .csi = RVIN_CSI20, .channel = 0, .vin = 1, .mask = BIT(0) },
+	{ .csi = RVIN_CSI40, .channel = 1, .vin = 1, .mask = BIT(1) | BIT(3) },
+	{ .csi = RVIN_CSI40, .channel = 0, .vin = 1, .mask = BIT(2) },
+	{ .csi = RVIN_CSI20, .channel = 1, .vin = 1, .mask = BIT(4) },
+	{ .csi = RVIN_CSI20, .channel = 1, .vin = 2, .mask = BIT(0) },
+	{ .csi = RVIN_CSI40, .channel = 0, .vin = 2, .mask = BIT(1) },
+	{ .csi = RVIN_CSI20, .channel = 0, .vin = 2, .mask = BIT(2) },
+	{ .csi = RVIN_CSI40, .channel = 2, .vin = 2, .mask = BIT(3) },
+	{ .csi = RVIN_CSI20, .channel = 2, .vin = 2, .mask = BIT(4) },
+	{ .csi = RVIN_CSI40, .channel = 1, .vin = 3, .mask = BIT(0) },
+	{ .csi = RVIN_CSI20, .channel = 1, .vin = 3, .mask = BIT(1) | BIT(2) },
+	{ .csi = RVIN_CSI40, .channel = 3, .vin = 3, .mask = BIT(3) },
+	{ .csi = RVIN_CSI20, .channel = 3, .vin = 3, .mask = BIT(4) },
+	{ .csi = RVIN_CSI40, .channel = 0, .vin = 4, .mask = BIT(0) | BIT(3) },
+	{ .csi = RVIN_CSI20, .channel = 0, .vin = 4, .mask = BIT(1) | BIT(4) },
+	{ .csi = RVIN_CSI40, .channel = 1, .vin = 4, .mask = BIT(2) },
+	{ .csi = RVIN_CSI20, .channel = 0, .vin = 5, .mask = BIT(0) },
+	{ .csi = RVIN_CSI40, .channel = 1, .vin = 5, .mask = BIT(1) | BIT(3) },
+	{ .csi = RVIN_CSI40, .channel = 0, .vin = 5, .mask = BIT(2) },
+	{ .csi = RVIN_CSI20, .channel = 1, .vin = 5, .mask = BIT(4) },
+	{ .csi = RVIN_CSI20, .channel = 1, .vin = 6, .mask = BIT(0) },
+	{ .csi = RVIN_CSI40, .channel = 0, .vin = 6, .mask = BIT(1) },
+	{ .csi = RVIN_CSI20, .channel = 0, .vin = 6, .mask = BIT(2) },
+	{ .csi = RVIN_CSI40, .channel = 2, .vin = 6, .mask = BIT(3) },
+	{ .csi = RVIN_CSI20, .channel = 2, .vin = 6, .mask = BIT(4) },
+	{ .csi = RVIN_CSI40, .channel = 1, .vin = 7, .mask = BIT(0) },
+	{ .csi = RVIN_CSI20, .channel = 1, .vin = 7, .mask = BIT(1) | BIT(2) },
+	{ .csi = RVIN_CSI40, .channel = 3, .vin = 7, .mask = BIT(3) },
+	{ .csi = RVIN_CSI20, .channel = 3, .vin = 7, .mask = BIT(4) },
+	{ /* Sentinel */ }
+};
+
+static const struct rvin_info rcar_info_r8a77965 = {
+	.model = RCAR_GEN3,
+	.use_mc = true,
+	.max_width = 4096,
+	.max_height = 4096,
+	.routes = _rcar_info_r8a77965_routes,
+};
+
+static const struct rvin_group_route rcar_info_r8a77990_routes[] = {
+	{ .csi = RVIN_CSI40, .channel = 0, .vin = 4, .mask = BIT(0) | BIT(3) },
+	{ .csi = RVIN_CSI40, .channel = 0, .vin = 5, .mask = BIT(2) },
+	{ .csi = RVIN_CSI40, .channel = 1, .vin = 4, .mask = BIT(2) },
+	{ .csi = RVIN_CSI40, .channel = 1, .vin = 5, .mask = BIT(1) | BIT(3) },
+	{ /* Sentinel */ }
+};
+
+static const struct rvin_info rcar_info_r8a77990 = {
+	.model = RCAR_GEN3,
+	.use_mc = true,
+	.max_width = 4096,
+	.max_height = 4096,
+	.routes = rcar_info_r8a77990_routes,
+};
+
 static const struct rvin_group_route _rcar_info_r8a77970_routes[] = {
 	{ .csi = RVIN_CSI40, .channel = 0, .vin = 0, .mask = BIT(0) | BIT(3) },
 	{ .csi = RVIN_CSI40, .channel = 0, .vin = 1, .mask = BIT(2) },
@@ -985,12 +1078,24 @@ static const struct rvin_group_route _rcar_info_r8a77970_routes[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct rvin_group_route _rcar_info_r8a77995_routes[] = {
+	{ /* Sentinel */ }
+};
+
 static const struct rvin_info rcar_info_r8a77970 = {
 	.model = RCAR_GEN3,
 	.use_mc = true,
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = _rcar_info_r8a77970_routes,
+};
+
+static const struct rvin_info rcar_info_r8a77995 = {
+	.model = RCAR_GEN3,
+	.use_mc = false,
+	.max_width = 4096,
+	.max_height = 4096,
+	.routes = _rcar_info_r8a77995_routes,
 };
 
 static const struct of_device_id rvin_of_id_table[] = {
@@ -1031,8 +1136,20 @@ static const struct of_device_id rvin_of_id_table[] = {
 		.data = &rcar_info_r8a7796,
 	},
 	{
+		.compatible = "renesas,vin-r8a77965",
+		.data = &rcar_info_r8a77965,
+	},
+	{
 		.compatible = "renesas,vin-r8a77970",
 		.data = &rcar_info_r8a77970,
+	},
+	{
+		.compatible = "renesas,vin-r8a77990",
+		.data = &rcar_info_r8a77990,
+	},
+	{
+		.compatible = "renesas,vin-r8a77995",
+		.data = &rcar_info_r8a77995,
 	},
 	{ /* Sentinel */ },
 };
@@ -1046,9 +1163,17 @@ static const struct soc_device_attribute r8a7795es1[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct soc_device_attribute chip_info[] = {
+	{
+		.soc_id = "r8a77990",
+		.data = (void *)RCAR_VIN_DES1_RESERVED,
+	},
+	{ /* sentinel */ }
+};
+
 static int rcar_vin_probe(struct platform_device *pdev)
 {
-	const struct soc_device_attribute *attr;
+	const struct soc_device_attribute *attr, *dev_attr;
 	struct rvin_dev *vin;
 	struct resource *mem;
 	int irq, ret;
@@ -1067,6 +1192,10 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	attr = soc_device_match(r8a7795es1);
 	if (attr)
 		vin->info = attr->data;
+
+	dev_attr = soc_device_match(chip_info);
+	if (dev_attr)
+		vin->chip_info = (uintptr_t)dev_attr->data;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL)
@@ -1094,6 +1223,29 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
+
+	vin->work_queue = create_singlethread_workqueue(dev_name(vin->dev));
+	if (!vin->work_queue) {
+		ret = -ENOMEM;
+		goto error;
+	}
+	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
+
+	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->rstc);
+		goto error;
+	}
+
+	vin->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->clk)) {
+		dev_err(&pdev->dev, "failed to get clock%s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->clk);
+		goto error;
+	}
 
 	return 0;
 error:
@@ -1129,9 +1281,52 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_vin_suspend(struct device *dev)
+{
+	struct rvin_dev *vin = dev_get_drvdata(dev);
+
+	if (vin->state == STOPPED)
+		return 0;
+
+	rvin_suspend_stop_streaming(vin);
+
+	return 0;
+}
+
+static int rcar_vin_resume(struct device *dev)
+{
+	struct rvin_dev *vin = dev_get_drvdata(dev);
+	struct rvin_dev *master;
+
+	if (vin->state == STOPPED)
+		return 0;
+
+	if (vin->info->use_mc) {
+		pm_runtime_force_resume(vin->dev);
+		pm_runtime_get_sync(vin->dev);
+
+		master = vin->group->vin[rvin_group_id_to_master(vin->id)];
+		rvin_set_channel_routing(master, master->chsel);
+	}
+
+	queue_delayed_work_on(0, vin->work_queue, &vin->rvin_resume,
+			      msecs_to_jiffies(CONNECTION_TIME));
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_vin_pm_ops,
+			rcar_vin_suspend, rcar_vin_resume);
+#define DEV_PM_OPS (&rcar_vin_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_vin_driver = {
 	.driver = {
 		.name = "rcar-vin",
+		.pm = DEV_PM_OPS,
 		.of_match_table = rvin_of_id_table,
 	},
 	.probe = rcar_vin_probe,
