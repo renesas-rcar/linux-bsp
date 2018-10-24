@@ -28,6 +28,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-dv-timings.h>
 #include <media/v4l2-ioctl.h>
+#include <media/v4l2-fwnode.h>
 
 #include "adv748x.h"
 
@@ -311,11 +312,69 @@ static const struct adv748x_reg_value adv748x_power_up_txa_4lane[] = {
 	{ADV748X_PAGE_EOR, 0xff, 0xff}	/* End of register table */
 };
 
+static const struct adv748x_reg_value adv748x_power_up_txa_2lane[] = {
+
+	{ADV748X_PAGE_TXA, 0x00, 0x82},	/* Enable 2-lane MIPI */
+	{ADV748X_PAGE_TXA, 0x00, 0xa2},	/* Set Auto DPHY Timing */
+
+	{ADV748X_PAGE_TXA, 0x31, 0x82},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0x1e, 0x40},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0xda, 0x01},	/* i2c_mipi_pll_en - 1'b1 */
+	{ADV748X_PAGE_WAIT, 0x00, 0x02},/* delay 2 */
+	{ADV748X_PAGE_TXA, 0x00, 0x22},	/* Power-up CSI-TX */
+	{ADV748X_PAGE_WAIT, 0x00, 0x01},/* delay 1 */
+	{ADV748X_PAGE_TXA, 0xc1, 0x2b},	/* ADI Required Write */
+	{ADV748X_PAGE_WAIT, 0x00, 0x01},/* delay 1 */
+	{ADV748X_PAGE_TXA, 0x31, 0x80},	/* ADI Required Write */
+
+	{ADV748X_PAGE_EOR, 0xff, 0xff}	/* End of register table */
+};
+
+static const struct adv748x_reg_value adv748x_power_up_txa_1lane[] = {
+
+	{ADV748X_PAGE_TXA, 0x00, 0x81},	/* Enable 1-lane MIPI */
+	{ADV748X_PAGE_TXA, 0x00, 0xa1},	/* Set Auto DPHY Timing */
+
+	{ADV748X_PAGE_TXA, 0x31, 0x82},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0x1e, 0x40},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0xda, 0x01},	/* i2c_mipi_pll_en - 1'b1 */
+	{ADV748X_PAGE_WAIT, 0x00, 0x02},/* delay 2 */
+	{ADV748X_PAGE_TXA, 0x00, 0x21},	/* Power-up CSI-TX */
+	{ADV748X_PAGE_WAIT, 0x00, 0x01},/* delay 1 */
+	{ADV748X_PAGE_TXA, 0xc1, 0x2b},	/* ADI Required Write */
+	{ADV748X_PAGE_WAIT, 0x00, 0x01},/* delay 1 */
+	{ADV748X_PAGE_TXA, 0x31, 0x80},	/* ADI Required Write */
+
+	{ADV748X_PAGE_EOR, 0xff, 0xff}	/* End of register table */
+};
+
 static const struct adv748x_reg_value adv748x_power_down_txa_4lane[] = {
 
 	{ADV748X_PAGE_TXA, 0x31, 0x82},	/* ADI Required Write */
 	{ADV748X_PAGE_TXA, 0x1e, 0x00},	/* ADI Required Write */
 	{ADV748X_PAGE_TXA, 0x00, 0x84},	/* Enable 4-lane MIPI */
+	{ADV748X_PAGE_TXA, 0xda, 0x01},	/* i2c_mipi_pll_en - 1'b1 */
+	{ADV748X_PAGE_TXA, 0xc1, 0x3b},	/* ADI Required Write */
+
+	{ADV748X_PAGE_EOR, 0xff, 0xff}	/* End of register table */
+};
+
+static const struct adv748x_reg_value adv748x_power_down_txa_2lane[] = {
+
+	{ADV748X_PAGE_TXA, 0x31, 0x82},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0x1e, 0x00},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0x00, 0x82},	/* Enable 2-lane MIPI */
+	{ADV748X_PAGE_TXA, 0xda, 0x01},	/* i2c_mipi_pll_en - 1'b1 */
+	{ADV748X_PAGE_TXA, 0xc1, 0x3b},	/* ADI Required Write */
+
+	{ADV748X_PAGE_EOR, 0xff, 0xff}	/* End of register table */
+};
+
+static const struct adv748x_reg_value adv748x_power_down_txa_1lane[] = {
+
+	{ADV748X_PAGE_TXA, 0x31, 0x82},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0x1e, 0x00},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0x00, 0x81},	/* Enable 1-lane MIPI */
 	{ADV748X_PAGE_TXA, 0xda, 0x01},	/* i2c_mipi_pll_en - 1'b1 */
 	{ADV748X_PAGE_TXA, 0xc1, 0x3b},	/* ADI Required Write */
 
@@ -354,6 +413,8 @@ static const struct adv748x_reg_value adv748x_power_down_txb_1lane[] = {
 int adv748x_txa_power(struct adv748x_state *state, bool on)
 {
 	int val;
+	const struct adv748x_reg_value *txa_on;
+	const struct adv748x_reg_value *txa_off;
 
 	val = txa_read(state, ADV748X_CSI_FS_AS_LS);
 	if (val < 0)
@@ -367,10 +428,34 @@ int adv748x_txa_power(struct adv748x_state *state, bool on)
 	WARN_ONCE((on && val & ADV748X_CSI_FS_AS_LS_UNKNOWN),
 			"Enabling with unknown bit set");
 
-	if (on)
-		return adv748x_write_regs(state, adv748x_power_up_txa_4lane);
+	if (state->afe.txa_switch) {
+		if (on)
+			return adv748x_write_regs(state,
+						  adv748x_power_up_txa_1lane);
+		else
+			return adv748x_write_regs(state,
+						  adv748x_power_down_txa_1lane);
+	}
 
-	return adv748x_write_regs(state, adv748x_power_down_txa_4lane);
+	if (on) {
+		if (state->hdmi.use_lane == 1)
+			txa_on = adv748x_power_up_txa_1lane;
+		else if (state->hdmi.use_lane == 2)
+			txa_on = adv748x_power_up_txa_2lane;
+		else
+			txa_on = adv748x_power_up_txa_4lane;
+
+		return adv748x_write_regs(state, txa_on);
+	}
+
+	if (state->hdmi.use_lane == 1)
+		txa_off = adv748x_power_down_txa_1lane;
+	else if (state->hdmi.use_lane == 2)
+		txa_off = adv748x_power_down_txa_2lane;
+	else
+		txa_off = adv748x_power_down_txa_4lane;
+
+	return adv748x_write_regs(state, txa_off);
 }
 
 int adv748x_txb_power(struct adv748x_state *state, bool on)
@@ -552,9 +637,54 @@ static const struct adv748x_reg_value adv748x_init_txb_1lane[] = {
 	{ADV748X_PAGE_EOR, 0xff, 0xff}	/* End of register table */
 };
 
+static const struct adv748x_reg_value adv748x_init_txa_afe_1lane[] = {
+	{ADV748X_PAGE_IO, 0x00, 0x30},	/* Disable chip powerdown Rx */
+	{ADV748X_PAGE_IO, 0x0e, 0xff},	/* LLC/PIX/AUD/SPI PINS TRISTATED */
+	{ADV748X_PAGE_SDP, 0x0f, 0x00},	/* Exit Power Down Mode */
+	{ADV748X_PAGE_SDP, 0x52, 0xcd},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0x00, 0x07},	/* INSEL = CVBS in on Ain 8 */
+	{ADV748X_PAGE_SDP, 0x0e, 0x80},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0x9c, 0x00},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0x9c, 0xff},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0x0e, 0x00},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0x80, 0x51},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0x81, 0x51},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0x82, 0x68},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0x03, 0x42},
+		/* Tri-S Output Drivers, PwrDwn 656 pads */
+	{ADV748X_PAGE_SDP, 0x04, 0xb5},	/* ITU-R BT.656-4 compatible */
+	{ADV748X_PAGE_SDP, 0x13, 0x00},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0x17, 0x41},	/* Select SH1 */
+	{ADV748X_PAGE_SDP, 0x31, 0x12},	/* ADI Required Write */
+	{ADV748X_PAGE_SDP, 0xe6, 0x4f},
+		/* Set V bit end position manually in NTSC mode */
+	{ADV748X_PAGE_IO, 0x10, 0xb8 },
+		/* Enable pixel output and route SD through Pixel port */
+	{ADV748X_PAGE_TXA, 0x00, 0x81},
+		/* Enable 4-lane MIPI, 1-Lane Configuration */
+	{ADV748X_PAGE_TXA, 0x00, 0xa1},	/* Set Auto DPHY Timing */
+	{ADV748X_PAGE_TXA, 0xd2, 0x40},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0xc4, 0x0a},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0x71, 0x33},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0x72, 0x11},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0xf0, 0x00},	/* i2c_dphy_pwdn - 1'b0 */
+	{ADV748X_PAGE_TXA, 0x31, 0x82},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0x1e, 0x40},	/* ADI Required Write */
+	{ADV748X_PAGE_TXA, 0xda, 0x00},	/* i2c_mipi_pll_en - 1'b1 */
+	{ADV748X_PAGE_WAIT, 0x00, 0x02},	/* delay 2 */
+	{ADV748X_PAGE_TXA, 0x00, 0x21},	/* Power-up CSI-TX */
+	{ADV748X_PAGE_WAIT, 0x00, 0x01},	/* delay 1 */
+	{ADV748X_PAGE_TXA, 0xc1, 0x2b},	/* ADI Required Write */
+	{ADV748X_PAGE_WAIT, 0x00, 0x01},	/* delay 1 */
+	{ADV748X_PAGE_TXA, 0x31, 0x80},	/* ADI Required Write */
+
+	{ADV748X_PAGE_EOR, 0xff, 0xff}	/* End of register table */
+};
+
 static int adv748x_reset(struct adv748x_state *state)
 {
 	int ret;
+	u8 value;
 
 	ret = adv748x_write_regs(state, adv748x_sw_reset);
 	if (ret < 0)
@@ -569,20 +699,32 @@ static int adv748x_reset(struct adv748x_state *state)
 	if (ret)
 		return ret;
 
+	if (state->afe.txa_switch) {
+		ret = adv748x_write_regs(state, adv748x_init_txa_afe_1lane);
+		if (ret)
+			return ret;
+	}
+
 	adv748x_txa_power(state, 0);
 
 	/* Init and power down TXB */
-	ret = adv748x_write_regs(state, adv748x_init_txb_1lane);
-	if (ret)
-		return ret;
+	if (!state->afe.txa_switch) {
+		ret = adv748x_write_regs(state, adv748x_init_txb_1lane);
+		if (ret)
+			return ret;
 
-	adv748x_txb_power(state, 0);
+		adv748x_txb_power(state, 0);
+	}
 
 	/* Disable chip powerdown & Enable HDMI Rx block */
 	io_write(state, ADV748X_IO_PD, ADV748X_IO_PD_RX_EN);
 
 	/* Enable 4-lane CSI Tx & Pixel Port */
-	io_write(state, ADV748X_IO_10, ADV748X_IO_10_CSI4_EN |
+	if (state->afe.txa_switch)
+		value = ADV748X_IO_10_OUT_SD_TXA;
+	else
+		value = 0;
+	io_write(state, ADV748X_IO_10, value | ADV748X_IO_10_CSI4_EN |
 				       ADV748X_IO_10_CSI1_EN |
 				       ADV748X_IO_10_PIX_OUT_EN);
 
@@ -643,9 +785,12 @@ static int adv748x_parse_dt(struct adv748x_state *state)
 	struct device_node *ep_np = NULL;
 	struct of_endpoint ep;
 	bool found = false;
+	struct v4l2_fwnode_endpoint v4l2_ep;
 
 	for_each_endpoint_of_node(state->dev->of_node, ep_np) {
 		of_graph_parse_endpoint(ep_np, &ep);
+
+		v4l2_fwnode_endpoint_parse(of_fwnode_handle(ep_np), &v4l2_ep);
 		adv_info(state, "Endpoint %s on port %d",
 				of_node_full_name(ep.local_node),
 				ep.port);
@@ -666,7 +811,23 @@ static int adv748x_parse_dt(struct adv748x_state *state)
 
 		of_node_get(ep_np);
 		state->endpoints[ep.port] = ep_np;
+		if (ep.port == ADV748X_PORT_TXA)
+			state->hdmi.use_lane =
+				v4l2_ep.bus.mipi_csi2.num_data_lanes;
 
+		if (ep.port == ADV748X_PORT_TXB) {
+			const char *str;
+
+			if (!of_property_read_string(ep_np, "txa_direction",
+						     &str)) {
+				if (!strcmp(str, "afe"))
+					state->afe.txa_switch = true;
+				else
+					state->afe.txa_switch = false;
+			} else {
+				state->afe.txa_switch = false;
+			}
+		}
 		found = true;
 	}
 
@@ -802,6 +963,53 @@ static int adv748x_remove(struct i2c_client *client)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int adv748x_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct adv748x_state *state = i2c_get_clientdata(client);
+	struct adv748x_csi2 *txa = &state->txa;
+	struct adv748x_csi2 *txb = &state->txb;
+
+	txa->vc_ch = 0x03 & (tx_read(txa, ADV748X_CSI_VC_REF) >>
+		    ADV748X_CSI_VC_REF_SHIFT);
+	txb->vc_ch = 0x03 & (tx_read(txb, ADV748X_CSI_VC_REF) >>
+		    ADV748X_CSI_VC_REF_SHIFT);
+
+	io_write(state, ADV748X_IO_PD, ADV748X_IO_PD_HDMI);
+
+	return 0;
+}
+
+static int adv748x_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct adv748x_state *state = i2c_get_clientdata(client);
+	struct adv748x_csi2 *txa = &state->txa;
+	struct adv748x_csi2 *txb = &state->txb;
+	int ret;
+
+	/* SW reset ADV748X to its default values */
+	ret = adv748x_reset(state);
+	if (ret)
+		adv_err(state, "Failed to reset hardware");
+
+	/* Initialise the virtual channel */
+	tx_write(txa, ADV748X_CSI_VC_REF,
+		 txa->vc_ch << ADV748X_CSI_VC_REF_SHIFT);
+	tx_write(txb, ADV748X_CSI_VC_REF,
+		 txb->vc_ch << ADV748X_CSI_VC_REF_SHIFT);
+
+	ret = adv748x_hdmi_set_resume_edid(&state->hdmi);
+
+	return ret;
+}
+
+static const struct dev_pm_ops adv748x_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(adv748x_suspend, adv748x_resume)
+};
+#endif
+
 static const struct i2c_device_id adv748x_id[] = {
 	{ "adv7481", 0 },
 	{ "adv7482", 0 },
@@ -819,6 +1027,9 @@ MODULE_DEVICE_TABLE(of, adv748x_of_table);
 static struct i2c_driver adv748x_driver = {
 	.driver = {
 		.name = "adv748x",
+#ifdef CONFIG_PM_SLEEP
+		.pm = &adv748x_pm_ops,
+#endif
 		.of_match_table = adv748x_of_table,
 	},
 	.probe = adv748x_probe,
