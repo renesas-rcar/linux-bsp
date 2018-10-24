@@ -308,7 +308,9 @@ static int __init renesas_soc_init(void)
 						   product & 0xf);
 
 	pr_info("Detected Renesas %s %s %s\n", soc_dev_attr->family,
-		soc_dev_attr->soc_id, soc_dev_attr->revision ?: "");
+		soc_dev_attr->soc_id,
+		chipid && ((product & 0x7fff) == 0x5201) ? "ES1.1/ES1.2" :
+		soc_dev_attr->revision ?: "");
 
 	soc_dev = soc_device_register(soc_dev_attr);
 	if (IS_ERR(soc_dev)) {
