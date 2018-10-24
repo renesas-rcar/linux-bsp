@@ -84,6 +84,12 @@ config DRM_SII902X
 	---help---
 	  Silicon Image sii902x bridge chip driver.
 
+config DRM_THINE_THC63LVD1024
+	tristate "Thine THC63LVD1024 LVDS decoder bridge"
+	depends on OF
+	---help---
+	  Thine THC63LVD1024 LVDS/parallel converter driver.
+
 config DRM_TOSHIBA_TC358767
 	tristate "Toshiba TC358767 eDP bridge"
 	depends on OF
