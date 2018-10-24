@@ -2,6 +2,7 @@
  * r8a7795 Clock Pulse Generator / Module Standby and Software Reset
  *
  * Copyright (C) 2015 Glider bvba
+ * Copyright (C) 2017-2018 Renesas Electronics Corp.
  *
  * Based on clk-rcar-gen3.c
  *
@@ -74,8 +75,9 @@ static struct cpg_core_clk r8a7795_core_clks[] __initdata = {
 	DEF_FIXED(".sdsrc",     CLK_SDSRC,         CLK_PLL1_DIV2,  2, 1),
 
 	/* Core Clock Outputs */
-	DEF_BASE("z",           R8A7795_CLK_Z,     CLK_TYPE_GEN3_Z, CLK_PLL0),
-	DEF_BASE("z2",          R8A7795_CLK_Z2,    CLK_TYPE_GEN3_Z2, CLK_PLL2),
+	DEF_GEN3_Z("z",         R8A7795_CLK_Z,  CLK_TYPE_GEN3_Z,  CLK_PLL0, 2),
+	DEF_GEN3_Z("z2",        R8A7795_CLK_Z2, CLK_TYPE_GEN3_Z2, CLK_PLL2, 2),
+	DEF_GEN3_Z("zg",        R8A7795_CLK_ZG, CLK_TYPE_GEN3_ZG, CLK_PLL4, 4),
 	DEF_FIXED("ztr",        R8A7795_CLK_ZTR,   CLK_PLL1_DIV2,  6, 1),
 	DEF_FIXED("ztrd2",      R8A7795_CLK_ZTRD2, CLK_PLL1_DIV2, 12, 1),
 	DEF_FIXED("zt",         R8A7795_CLK_ZT,    CLK_PLL1_DIV2,  4, 1),
@@ -110,16 +112,22 @@ static struct cpg_core_clk r8a7795_core_clks[] __initdata = {
 	DEF_DIV6P1("mso",       R8A7795_CLK_MSO,   CLK_PLL1_DIV4, 0x014),
 	DEF_DIV6P1("hdmi",      R8A7795_CLK_HDMI,  CLK_PLL1_DIV4, 0x250),
 
-	DEF_DIV6_RO("osc",      R8A7795_CLK_OSC,   CLK_EXTAL, CPG_RCKCR,  8),
-	DEF_DIV6_RO("r_int",    CLK_RINT,          CLK_EXTAL, CPG_RCKCR, 32),
+	DEF_BASE("osc",         R8A7795_CLK_OSC, CLK_TYPE_GEN3_OSC,  CLK_EXTAL),
+	DEF_BASE("r_int",       CLK_RINT,        CLK_TYPE_GEN3_RINT, CLK_EXTAL),
 
 	DEF_BASE("r",           R8A7795_CLK_R,     CLK_TYPE_GEN3_R, CLK_RINT),
 };
 
 static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
+	DEF_MOD("stb",			 104,	R8A7795_CLK_S2D1), /* ES1.x */
+	DEF_MOD("3dge",			 112,	R8A7795_CLK_ZG),
 	DEF_MOD("fdp1-2",		 117,	R8A7795_CLK_S2D1), /* ES1.x */
 	DEF_MOD("fdp1-1",		 118,	R8A7795_CLK_S0D1),
 	DEF_MOD("fdp1-0",		 119,	R8A7795_CLK_S0D1),
+	DEF_MOD("ivdp1c",		 128,	R8A7795_CLK_S2D1), /* ES1.x */
+	DEF_MOD("vcpl4",		 129,	R8A7795_CLK_S2D1), /* ES1.x */
+	DEF_MOD("vcplf",		 130,	R8A7795_CLK_S2D1),
+	DEF_MOD("vdpb",			 131,	R8A7795_CLK_S2D1),
 	DEF_MOD("scif5",		 202,	R8A7795_CLK_S3D4),
 	DEF_MOD("scif4",		 203,	R8A7795_CLK_S3D4),
 	DEF_MOD("scif3",		 204,	R8A7795_CLK_S3D4),
@@ -129,8 +137,8 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("msiof2",		 209,	R8A7795_CLK_MSO),
 	DEF_MOD("msiof1",		 210,	R8A7795_CLK_MSO),
 	DEF_MOD("msiof0",		 211,	R8A7795_CLK_MSO),
-	DEF_MOD("sys-dmac2",		 217,	R8A7795_CLK_S0D3),
-	DEF_MOD("sys-dmac1",		 218,	R8A7795_CLK_S0D3),
+	DEF_MOD("sys-dmac2",		 217,	R8A7795_CLK_S3D1),
+	DEF_MOD("sys-dmac1",		 218,	R8A7795_CLK_S3D1),
 	DEF_MOD("sys-dmac0",		 219,	R8A7795_CLK_S0D3),
 	DEF_MOD("cmt3",			 300,	R8A7795_CLK_R),
 	DEF_MOD("cmt2",			 301,	R8A7795_CLK_R),
@@ -150,10 +158,9 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("usb-dmac0",		 330,	R8A7795_CLK_S3D1),
 	DEF_MOD("usb-dmac1",		 331,	R8A7795_CLK_S3D1),
 	DEF_MOD("rwdt",			 402,	R8A7795_CLK_R),
-	DEF_MOD("intc-ex",		 407,	R8A7795_CLK_CP),
-	DEF_MOD("intc-ap",		 408,	R8A7795_CLK_S0D3),
-	DEF_MOD("audmac1",		 501,	R8A7795_CLK_S0D3),
-	DEF_MOD("audmac0",		 502,	R8A7795_CLK_S0D3),
+	DEF_MOD("audmac1",		 501,	R8A7795_CLK_S1D2),
+	DEF_MOD("audmac0",		 502,	R8A7795_CLK_S1D2),
+	DEF_MOD("adsp",			 506,	R8A7795_CLK_S1D1),
 	DEF_MOD("drif7",		 508,	R8A7795_CLK_S3D2),
 	DEF_MOD("drif6",		 509,	R8A7795_CLK_S3D2),
 	DEF_MOD("drif5",		 510,	R8A7795_CLK_S3D2),
@@ -193,12 +200,12 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("vspi2",		 629,	R8A7795_CLK_S2D1), /* ES1.x */
 	DEF_MOD("vspi1",		 630,	R8A7795_CLK_S0D1),
 	DEF_MOD("vspi0",		 631,	R8A7795_CLK_S0D1),
-	DEF_MOD("ehci3",		 700,	R8A7795_CLK_S3D4),
-	DEF_MOD("ehci2",		 701,	R8A7795_CLK_S3D4),
-	DEF_MOD("ehci1",		 702,	R8A7795_CLK_S3D4),
-	DEF_MOD("ehci0",		 703,	R8A7795_CLK_S3D4),
-	DEF_MOD("hsusb",		 704,	R8A7795_CLK_S3D4),
-	DEF_MOD("hsusb3",		 705,	R8A7795_CLK_S3D4),
+	DEF_MOD("ehci3",		 700,	R8A7795_CLK_S3D2),
+	DEF_MOD("ehci2",		 701,	R8A7795_CLK_S3D2),
+	DEF_MOD("ehci1",		 702,	R8A7795_CLK_S3D2),
+	DEF_MOD("ehci0",		 703,	R8A7795_CLK_S3D2),
+	DEF_MOD("hsusb",		 704,	R8A7795_CLK_S3D2),
+	DEF_MOD("hsusb3",		 705,	R8A7795_CLK_S3D2),
 	DEF_MOD("csi21",		 713,	R8A7795_CLK_CSI0), /* ES1.x */
 	DEF_MOD("csi20",		 714,	R8A7795_CLK_CSI0),
 	DEF_MOD("csi41",		 715,	R8A7795_CLK_CSI0),
@@ -237,6 +244,7 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("can-if0",		 916,	R8A7795_CLK_S3D4),
 	DEF_MOD("i2c6",			 918,	R8A7795_CLK_S0D6),
 	DEF_MOD("i2c5",			 919,	R8A7795_CLK_S0D6),
+	DEF_MOD("adg",			 922,	R8A7795_CLK_S0D1),
 	DEF_MOD("i2c-dvfs",		 926,	R8A7795_CLK_CP),
 	DEF_MOD("i2c4",			 927,	R8A7795_CLK_S0D6),
 	DEF_MOD("i2c3",			 928,	R8A7795_CLK_S0D6),
@@ -271,11 +279,6 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("scu-src0",		1031,	MOD_CLK_ID(1017)),
 };
 
-static const unsigned int r8a7795_crit_mod_clks[] __initconst = {
-	MOD_CLK_ID(408),	/* INTC-AP (GIC) */
-};
-
-
 /*
  * CPG Clock Data
  */
@@ -285,45 +288,69 @@ static const unsigned int r8a7795_crit_mod_clks[] __initconst = {
  * 14 13 19 17	(MHz)
  *-------------------------------------------------------------------
  * 0  0  0  0	16.66 x 1	x180	x192	x144	x192	x144
- * 0  0  0  1	16.66 x 1	x180	x192	x144	x128	x144
- * 0  0  1  0	Prohibited setting
+ * 0  0  0  1	16.66 x 1	x180	x192	x144	x168	x144
+ * 0  0  1  0	16.66 x 1	x180	x192	x144	x144	x144
  * 0  0  1  1	16.66 x 1	x180	x192	x144	x192	x144
  * 0  1  0  0	20    x 1	x150	x160	x120	x160	x120
- * 0  1  0  1	20    x 1	x150	x160	x120	x106	x120
- * 0  1  1  0	Prohibited setting
+ * 0  1  0  1	20    x 1	x150	x160	x120	x140	x120
+ * 0  1  1  0	20    x 1	x150	x160	x120	x120	x120
  * 0  1  1  1	20    x 1	x150	x160	x120	x160	x120
  * 1  0  0  0	25    x 1	x120	x128	x96	x128	x96
- * 1  0  0  1	25    x 1	x120	x128	x96	x84	x96
- * 1  0  1  0	Prohibited setting
+ * 1  0  0  1	25    x 1	x120	x128	x96	x112	x96
+ * 1  0  1  0	25    x 1	x120	x128	x96	x96	x96
  * 1  0  1  1	25    x 1	x120	x128	x96	x128	x96
  * 1  1  0  0	33.33 / 2	x180	x192	x144	x192	x144
- * 1  1  0  1	33.33 / 2	x180	x192	x144	x128	x144
- * 1  1  1  0	Prohibited setting
+ * 1  1  0  1	33.33 / 2	x180	x192	x144	x168	x144
+ * 1  1  1  0	33.33 / 2	x180	x192	x144	x144	x144
  * 1  1  1  1	33.33 / 2	x180	x192	x144	x192	x144
+ *
+ *   MD		Internal
+ * 14 13 19 17	RCLK				OSCCLK
+ *-----------------------------------------------------------------
+ * 0  0  0  0	x 1/512  (x 1/16 x 1/32)	1/128 (x 1/16 x 1/8)
+ * 0  0  0  1	x 1/512  (x 1/16 x 1/32)	1/128 (x 1/16 x 1/8)
+ * 0  0  1  0	x 1/512  (x 1/16 x 1/32)	1/128 (x 1/16 x 1/8)
+ * 0  0  1  1	x 1/512  (x 1/19 x 1/32)	1/128 (x 1/19 x 1/8)
+ * 0  1  0  0	x 1/608  (x 1/19 x 1/32)	1/152 (x 1/19 x 1/8)
+ * 0  1  0  1	x 1/608  (x 1/19 x 1/32)	1/152 (x 1/19 x 1/8)
+ * 0  1  1  0	x 1/608  (x 1/19 x 1/32)	1/152 (x 1/19 x 1/8)
+ * 0  1  1  1	x 1/608  (x 1/19 x 1/32)	1/152 (x 1/19 x 1/8)
+ * 1  0  0  0	x 1/768  (x 1/24 x 1/32)	1/192 (x 1/24 x 1/8)
+ * 1  0  0  1	x 1/768  (x 1/24 x 1/32)	1/192 (x 1/24 x 1/8)
+ * 1  0  1  0	x 1/768  (x 1/24 x 1/32)	1/192 (x 1/24 x 1/8)
+ * 1  0  1  1	x 1/768  (x 1/24 x 1/32)	1/192 (x 1/24 x 1/8)
+ * 1  1  0  0	x 1/1024 (x 1/32 x 1/32)	1/256 (x 1/32 x 1/8)
+ * 1  1  0  1	x 1/1024 (x 1/32 x 1/32)	1/256 (x 1/32 x 1/8)
+ * 1  1  1  0	x 1/1024 (x 1/32 x 1/32)	1/256 (x 1/32 x 1/8)
+ * 1  1  1  1	x 1/1024 (x 1/32 x 1/32)	1/256 (x 1/32 x 1/8)
  */
+
 #define CPG_PLL_CONFIG_INDEX(md)	((((md) & BIT(14)) >> 11) | \
 					 (((md) & BIT(13)) >> 11) | \
 					 (((md) & BIT(19)) >> 18) | \
 					 (((md) & BIT(17)) >> 17))
 
 static const struct rcar_gen3_cpg_pll_config cpg_pll_configs[16] __initconst = {
-	/* EXTAL div	PLL1 mult/div	PLL3 mult/div */
-	{ 1,		192,	1,	192,	1,	},
-	{ 1,		192,	1,	128,	1,	},
-	{ 0, /* Prohibited setting */			},
-	{ 1,		192,	1,	192,	1,	},
-	{ 1,		160,	1,	160,	1,	},
-	{ 1,		160,	1,	106,	1,	},
-	{ 0, /* Prohibited setting */			},
-	{ 1,		160,	1,	160,	1,	},
-	{ 1,		128,	1,	128,	1,	},
-	{ 1,		128,	1,	84,	1,	},
-	{ 0, /* Prohibited setting */			},
-	{ 1,		128,	1,	128,	1,	},
-	{ 2,		192,	1,	192,	1,	},
-	{ 2,		192,	1,	128,	1,	},
-	{ 0, /* Prohibited setting */			},
-	{ 2,		192,	1,	192,	1,	},
+	/*
+	 *						internal R	OSC
+	 * EXTAL div	PLL1 mult/div	PLL3 mult/div	div		div
+	 */
+	{ 1,		192,	1,	192,	1,	512,		128 },
+	{ 1,		192,	1,	168,	1,	512,		128 },
+	{ 1,		192,	1,      144,	1,	512,            128 },
+	{ 1,		192,	1,	192,	1,	512,		128 },
+	{ 1,		160,	1,	160,	1,	608,		152 },
+	{ 1,		160,	1,	140,	1,	608,		152 },
+	{ 1,		160,	1,      120,	1,	608,            152 },
+	{ 1,		160,	1,	160,	1,	608,		152 },
+	{ 1,		128,	1,	128,	1,	768,		192 },
+	{ 1,		128,	1,	112,	1,	768,		192 },
+	{ 1,		128,	1,      96,	1,	768,            192 },
+	{ 1,		128,	1,	128,	1,	768,		192 },
+	{ 2,		192,	1,	192,	1,	1024,		256 },
+	{ 2,		192,	1,	168,	1,	1024,		256 },
+	{ 2,		192,	1,      144,	1,	1024,           256 },
+	{ 2,		192,	1,	192,	1,	1024,		256 },
 };
 
 static const struct soc_device_attribute r8a7795es1[] __initconst = {
@@ -350,7 +377,6 @@ static const struct mssr_mod_reparent r8a7795es1_mod_reparent[] __initconst = {
 	{ MOD_CLK_ID(217), R8A7795_CLK_S3D1 },	/* SYS-DMAC2 */
 	{ MOD_CLK_ID(218), R8A7795_CLK_S3D1 },	/* SYS-DMAC1 */
 	{ MOD_CLK_ID(219), R8A7795_CLK_S3D1 },	/* SYS-DMAC0 */
-	{ MOD_CLK_ID(408), R8A7795_CLK_S3D1 },	/* INTC-AP */
 	{ MOD_CLK_ID(501), R8A7795_CLK_S3D1 },	/* AUDMAC1 */
 	{ MOD_CLK_ID(502), R8A7795_CLK_S3D1 },	/* AUDMAC0 */
 	{ MOD_CLK_ID(523), R8A7795_CLK_S3D4 },	/* PWM */
@@ -404,7 +430,10 @@ static const struct mssr_mod_reparent r8a7795es1_mod_reparent[] __initconst = {
 	 */
 
 static const unsigned int r8a7795es2_mod_nullify[] __initconst = {
+	MOD_CLK_ID(104),			/* STB */
 	MOD_CLK_ID(117),			/* FDP1-2 */
+	MOD_CLK_ID(128),			/* iVDP1C */
+	MOD_CLK_ID(129),			/* VCPL4 */
 	MOD_CLK_ID(327),			/* USB3-IF1 */
 	MOD_CLK_ID(600),			/* FCPVD3 */
 	MOD_CLK_ID(609),			/* FCPVI2 */
@@ -465,10 +494,6 @@ const struct cpg_mssr_info r8a7795_cpg_mssr_info __initconst = {
 	.mod_clks = r8a7795_mod_clks,
 	.num_mod_clks = ARRAY_SIZE(r8a7795_mod_clks),
 	.num_hw_mod_clks = 12 * 32,
-
-	/* Critical Module Clocks */
-	.crit_mod_clks = r8a7795_crit_mod_clks,
-	.num_crit_mod_clks = ARRAY_SIZE(r8a7795_crit_mod_clks),
 
 	/* Callbacks */
 	.init = r8a7795_cpg_mssr_init,
