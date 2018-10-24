@@ -105,6 +105,17 @@
 		regulator-always-on;
 	};
 
+	vbus0_usb2: regulator-vbus0-usb2 {
+		compatible = "regulator-fixed";
+
+		regulator-name = "USB20_VBUS_CN";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+
+		gpio = <&gpio6 4 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
 	vcc_sdhi0: regulator-vcc-sdhi0 {
 		compatible = "regulator-fixed";
 
@@ -244,11 +255,17 @@
 };
 
 &ehci0 {
+	dr_mode = "otg";
 	status = "okay";
 };
 
 &extal_clk {
 	clock-frequency = <48000000>;
+};
+
+&hsusb {
+	dr_mode = "otg";
+	status = "okay";
 };
 
 &i2c0 {
@@ -371,6 +388,7 @@
 };
 
 &ohci0 {
+	dr_mode = "otg";
 	status = "okay";
 };
 
@@ -452,7 +470,7 @@
 	};
 
 	usb0_pins: usb {
-		groups = "usb0_b";
+		groups = "usb0_b", "usb0_id";
 		function = "usb0";
 	};
 
@@ -536,6 +554,7 @@
 	pinctrl-0 = <&usb0_pins>;
 	pinctrl-names = "default";
 
+	vbus-supply = <&vbus0_usb2>;
 	status = "okay";
 };
 
