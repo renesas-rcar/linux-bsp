@@ -14,6 +14,7 @@
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/reset.h>
 #include <linux/sys_soc.h>
 
 #include <media/v4l2-ctrls.h>
@@ -83,6 +84,9 @@ struct rcar_csi2;
 
 /* Interrupt Enable */
 #define INTEN_REG			0x30
+#define INTEN_INT_AFIFO_OF		BIT(27)
+#define INTEN_INT_ERRSOTHS		BIT(4)
+#define INTEN_INT_ERRSOTSYNCHS		BIT(3)
 
 /* Interrupt Source Mask */
 #define INTCLOSE_REG			0x34
@@ -339,6 +343,7 @@ enum rcar_csi2_pads {
 
 struct rcar_csi2_info {
 	int (*init_phtw)(struct rcar_csi2 *priv, unsigned int mbps);
+	int (*init_v3m_e3_phtw)(struct rcar_csi2 *priv, unsigned int mbps);
 	const struct rcsi2_mbps_reg *hsfreqrange;
 	unsigned int csi0clkfreqrange;
 	bool clear_ulps;
@@ -348,6 +353,7 @@ struct rcar_csi2 {
 	struct device *dev;
 	void __iomem *base;
 	const struct rcar_csi2_info *info;
+	struct reset_control *rstc;
 
 	struct v4l2_subdev subdev;
 	struct media_pad pads[NR_OF_RCAR_CSI2_PAD];
@@ -385,11 +391,27 @@ static void rcsi2_write(struct rcar_csi2 *priv, unsigned int reg, u32 data)
 	iowrite32(data, priv->base + reg);
 }
 
-static void rcsi2_reset(struct rcar_csi2 *priv)
+static irqreturn_t rcsi2_irq(int irq, void *data)
 {
-	rcsi2_write(priv, SRST_REG, SRST_SRST);
-	usleep_range(100, 150);
-	rcsi2_write(priv, SRST_REG, 0);
+	struct rcar_csi2 *priv = data;
+	u32 int_status, int_err_status;
+	unsigned int handled = 0;
+
+	int_status = rcsi2_read(priv, INTSTATE_REG);
+	int_err_status = rcsi2_read(priv, INTERRSTATE_REG);
+
+	if (int_status) {
+		rcsi2_write(priv, INTSTATE_REG, int_status);
+		if (int_err_status) {
+			rcsi2_write(priv, INTERRSTATE_REG, int_err_status);
+			dev_err(priv->dev,
+				"Reinitialize for transfer error.\n");
+			reset_control_assert(priv->rstc);
+		}
+		handled = 1;
+	}
+
+	return IRQ_RETVAL(handled);
 }
 
 static int rcsi2_wait_phy_start(struct rcar_csi2 *priv)
@@ -455,17 +477,25 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp)
 	 * bps = link_freq * 2
 	 */
 	mbps = v4l2_ctrl_g_ctrl_int64(ctrl) * bpp;
+
+	/* Vblank's margin is 1.05 times of the horizontal size */
+	mbps = div_u64(mbps * 105, 100);
+
+	/* Hblank's margin is 1.13 times of the vertical size */
+	mbps = div_u64(mbps * 113, 100);
+
 	do_div(mbps, priv->lanes * 1000000);
 
 	return mbps;
 }
 
-static int rcsi2_start(struct rcar_csi2 *priv)
+static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev *nextsd)
 {
 	const struct rcar_csi2_format *format;
-	u32 phycnt, vcdt = 0, vcdt2 = 0;
+	u32 phycnt, vcdt = 0, vcdt2 = 0, fld = 0;
 	unsigned int i;
 	int mbps, ret;
+	v4l2_std_id std = 0;
 
 	dev_dbg(priv->dev, "Input size (%ux%u%c)\n",
 		priv->mf.width, priv->mf.height,
@@ -473,6 +503,17 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 
 	/* Code is validated in set_fmt. */
 	format = rcsi2_code_to_fmt(priv->mf.code);
+
+	ret = v4l2_subdev_call(nextsd, video, g_std, &std);
+	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
+		return ret;
+
+	if (priv->mf.field != V4L2_FIELD_NONE) {
+		if (std & V4L2_STD_525_60)
+			fld = FLD_FLD_NUM(2);
+		else
+			fld = FLD_FLD_NUM(1);
+	}
 
 	/*
 	 * Enable all Virtual Channels.
@@ -503,12 +544,13 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 
 	/* Init */
 	rcsi2_write(priv, TREF_REG, TREF_TREF);
-	rcsi2_reset(priv);
 	rcsi2_write(priv, PHTC_REG, 0);
 
+	/* Enable interrupt */
+	rcsi2_write(priv, INTEN_REG, INTEN_INT_AFIFO_OF |
+		    INTEN_INT_ERRSOTHS | INTEN_INT_ERRSOTSYNCHS);
+
 	/* Configure */
-	rcsi2_write(priv, FLD_REG, FLD_FLD_NUM(2) | FLD_FLD_EN4 |
-		    FLD_FLD_EN3 | FLD_FLD_EN2 | FLD_FLD_EN);
 	rcsi2_write(priv, VCDT_REG, vcdt);
 	rcsi2_write(priv, VCDT2_REG, vcdt2);
 	/* Lanes are zero indexed. */
@@ -538,12 +580,25 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 	rcsi2_write(priv, PHYCNT_REG, phycnt);
 	rcsi2_write(priv, LINKCNT_REG, LINKCNT_MONITOR_EN |
 		    LINKCNT_REG_MONI_PACT_EN | LINKCNT_ICLK_NONSTOP);
+
+	if (priv->mf.field != V4L2_FIELD_NONE)
+		rcsi2_write(priv, FLD_REG, fld | FLD_FLD_EN4 |
+			    FLD_FLD_EN3 | FLD_FLD_EN2 | FLD_FLD_EN);
+	else
+		rcsi2_write(priv, FLD_REG, 0);
+
 	rcsi2_write(priv, PHYCNT_REG, phycnt | PHYCNT_SHUTDOWNZ);
 	rcsi2_write(priv, PHYCNT_REG, phycnt | PHYCNT_SHUTDOWNZ | PHYCNT_RSTZ);
 
 	ret = rcsi2_wait_phy_start(priv);
 	if (ret)
 		return ret;
+
+	if (priv->info->init_v3m_e3_phtw) {
+		ret = priv->info->init_v3m_e3_phtw(priv, mbps);
+		if (ret)
+			return ret;
+	}
 
 	/* Clear Ultra Low Power interrupt. */
 	if (priv->info->clear_ulps)
@@ -556,10 +611,9 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 static void rcsi2_stop(struct rcar_csi2 *priv)
 {
 	rcsi2_write(priv, PHYCNT_REG, 0);
-
-	rcsi2_reset(priv);
-
 	rcsi2_write(priv, PHTC_REG, PHTC_TESTCLR);
+	reset_control_assert(priv->rstc);
+	usleep_range(100, 150);
 }
 
 static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
@@ -579,8 +633,9 @@ static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (enable && priv->stream_count == 0) {
 		pm_runtime_get_sync(priv->dev);
+		reset_control_deassert(priv->rstc);
 
-		ret = rcsi2_start(priv);
+		ret = rcsi2_start(priv, nextsd);
 		if (ret) {
 			pm_runtime_put(priv->dev);
 			goto out;
@@ -741,8 +796,8 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 
 	ep = of_graph_get_endpoint_by_regs(priv->dev->of_node, 0, 0);
 	if (!ep) {
-		dev_err(priv->dev, "Not connected to subdevice\n");
-		return -EINVAL;
+		dev_dbg(priv->dev, "Not connected to subdevice\n");
+		return 0;
 	}
 
 	ret = v4l2_fwnode_endpoint_parse(of_fwnode_handle(ep), &v4l2_ep);
@@ -840,6 +895,35 @@ static int rcsi2_phtw_write_mbps(struct rcar_csi2 *priv, unsigned int mbps,
 	return rcsi2_phtw_write(priv, value->reg, code);
 }
 
+static int rcsi2_init_phtw_h3_e2(struct rcar_csi2 *priv, unsigned int mbps)
+{
+	static const struct phtw_value step1[] = {
+		{ .data = 0xcc, .code = 0xe2 },
+		{ .data = 0x01, .code = 0xe3 },
+		{ .data = 0x11, .code = 0xe4 },
+		{ .data = 0x01, .code = 0xe5 },
+		{ .data = 0x10, .code = 0x04 },
+		{ /* sentinel */ },
+	};
+
+	static const struct phtw_value step2[] = {
+		{ .data = 0x38, .code = 0x08 },
+		{ .data = 0x01, .code = 0x00 },
+		{ .data = 0x4b, .code = 0xac },
+		{ .data = 0x03, .code = 0x00 },
+		{ .data = 0x80, .code = 0x07 },
+		{ /* sentinel */ },
+	};
+
+	int ret;
+
+	ret = rcsi2_phtw_write_array(priv, step1);
+	if (ret)
+		return ret;
+
+	return rcsi2_phtw_write_array(priv, step2);
+}
+
 static int rcsi2_init_phtw_h3_v3h_m3n(struct rcar_csi2 *priv, unsigned int mbps)
 {
 	static const struct phtw_value step1[] = {
@@ -883,11 +967,11 @@ static int rcsi2_init_phtw_h3_v3h_m3n(struct rcar_csi2 *priv, unsigned int mbps)
 static int rcsi2_init_phtw_v3m_e3(struct rcar_csi2 *priv, unsigned int mbps)
 {
 	static const struct phtw_value step1[] = {
-		{ .data = 0xed, .code = 0x34 },
-		{ .data = 0xed, .code = 0x44 },
-		{ .data = 0xed, .code = 0x54 },
-		{ .data = 0xed, .code = 0x84 },
-		{ .data = 0xed, .code = 0x94 },
+		{ .data = 0xee, .code = 0x34 },
+		{ .data = 0xee, .code = 0x44 },
+		{ .data = 0xee, .code = 0x54 },
+		{ .data = 0xee, .code = 0x84 },
+		{ .data = 0xee, .code = 0x94 },
 		{ /* sentinel */ },
 	};
 
@@ -923,11 +1007,19 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 	if (irq < 0)
 		return irq;
 
-	return 0;
+	return devm_request_irq(&pdev->dev, irq, rcsi2_irq, IRQF_SHARED,
+				dev_name(&pdev->dev), priv);
 }
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a7795 = {
 	.init_phtw = rcsi2_init_phtw_h3_v3h_m3n,
+	.hsfreqrange = hsfreqrange_h3_v3h_m3n,
+	.csi0clkfreqrange = 0x20,
+	.clear_ulps = true,
+};
+
+static const struct rcar_csi2_info rcar_csi2_info_r8a7795es2 = {
+	.init_phtw = rcsi2_init_phtw_h3_e2,
 	.hsfreqrange = hsfreqrange_h3_v3h_m3n,
 	.csi0clkfreqrange = 0x20,
 	.clear_ulps = true,
@@ -949,7 +1041,11 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a77965 = {
 };
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a77970 = {
-	.init_phtw = rcsi2_init_phtw_v3m_e3,
+	.init_v3m_e3_phtw = rcsi2_init_phtw_v3m_e3,
+};
+
+static const struct rcar_csi2_info rcar_csi2_info_r8a77990 = {
+	.init_v3m_e3_phtw = rcsi2_init_phtw_v3m_e3,
 };
 
 static const struct of_device_id rcar_csi2_of_table[] = {
@@ -969,14 +1065,22 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 		.compatible = "renesas,r8a77970-csi2",
 		.data = &rcar_csi2_info_r8a77970,
 	},
+	{
+		.compatible = "renesas,r8a77990-csi2",
+		.data = &rcar_csi2_info_r8a77990,
+	},
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, rcar_csi2_of_table);
 
-static const struct soc_device_attribute r8a7795es1[] = {
+static const struct soc_device_attribute r8a7795[] = {
 	{
 		.soc_id = "r8a7795", .revision = "ES1.*",
 		.data = &rcar_csi2_info_r8a7795es1,
+	},
+	{
+		.soc_id = "r8a7795", .revision = "ES2.*",
+		.data = &rcar_csi2_info_r8a7795es2,
 	},
 	{ /* sentinel */ },
 };
@@ -997,8 +1101,9 @@ static int rcsi2_probe(struct platform_device *pdev)
 	/*
 	 * r8a7795 ES1.x behaves differently than the ES2.0+ but doesn't
 	 * have it's own compatible string.
+	 * PHTW register setting is different between r8a7795 ES2.0 and ES3.0.
 	 */
-	attr = soc_device_match(r8a7795es1);
+	attr = soc_device_match(r8a7795);
 	if (attr)
 		priv->info = attr->data;
 
@@ -1011,6 +1116,13 @@ static int rcsi2_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(priv->dev, "Failed to get resources\n");
 		return ret;
+	}
+
+	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(priv->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(priv->dev));
+		return PTR_ERR(priv->rstc);
 	}
 
 	platform_set_drvdata(pdev, priv);
