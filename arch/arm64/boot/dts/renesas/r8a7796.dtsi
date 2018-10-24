@@ -28,6 +28,10 @@
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
 		i2c7 = &i2c_dvfs;
+		spi0 = &msiof0;
+		spi1 = &msiof1;
+		spi2 = &msiof2;
+		spi3 = &msiof3;
 	};
 
 	/*
@@ -60,24 +64,25 @@
 		clock-frequency = <0>;
 	};
 
-	cluster0_opp: opp_table0 {
+	cluster0_opp0: opp_table0 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
 		opp-500000000 {
 			opp-hz = /bits/ 64 <500000000>;
-			opp-microvolt = <820000>;
+			opp-microvolt = <830000>;
 			clock-latency-ns = <300000>;
 		};
 		opp-1000000000 {
 			opp-hz = /bits/ 64 <1000000000>;
-			opp-microvolt = <820000>;
+			opp-microvolt = <830000>;
 			clock-latency-ns = <300000>;
 		};
 		opp-1500000000 {
 			opp-hz = /bits/ 64 <1500000000>;
-			opp-microvolt = <820000>;
+			opp-microvolt = <830000>;
 			clock-latency-ns = <300000>;
+			opp-suspend;
 		};
 		opp-1600000000 {
 			opp-hz = /bits/ 64 <1600000000>;
@@ -99,7 +104,288 @@
 		};
 	};
 
-	cluster1_opp: opp_table1 {
+	cluster0_opp1: opp_table1 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <820000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <820000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <820000>;
+			clock-latency-ns = <300000>;
+			opp-suspend;
+		};
+		opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <890000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <890000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <950000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+	};
+
+	cluster0_opp2: opp_table2 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <810000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <810000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <810000>;
+			clock-latency-ns = <300000>;
+			opp-suspend;
+		};
+		opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <930000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+	};
+
+	cluster0_opp3: opp_table3 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <800000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <800000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <800000>;
+			clock-latency-ns = <300000>;
+			opp-suspend;
+		};
+		opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <870000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <870000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <910000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+	};
+
+	cluster0_opp4: opp_table4 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <790000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <790000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <790000>;
+			clock-latency-ns = <300000>;
+			opp-suspend;
+		};
+		opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <860000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <860000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <890000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+	};
+
+	cluster0_opp5: opp_table5 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <780000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <780000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <780000>;
+			clock-latency-ns = <300000>;
+			opp-suspend;
+		};
+		opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <850000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <850000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+	};
+
+	cluster0_opp6: opp_table6 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <770000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <770000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <770000>;
+			clock-latency-ns = <300000>;
+			opp-suspend;
+		};
+		opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <840000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <840000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <870000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+	};
+
+	cluster0_opp7: opp_table7 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <760000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <760000>;
+			clock-latency-ns = <300000>;
+		};
+		opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <760000>;
+			clock-latency-ns = <300000>;
+			opp-suspend;
+		};
+		opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <830000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <830000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <860000>;
+			clock-latency-ns = <300000>;
+			turbo-mode;
+		};
+
+	};
+
+	cluster1_opp: opp_table10 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
@@ -117,6 +403,7 @@
 			opp-hz = /bits/ 64 <1200000000>;
 			opp-microvolt = <820000>;
 			clock-latency-ns = <300000>;
+			opp-suspend;
 		};
 		opp-1300000000 {
 			opp-hz = /bits/ 64 <1300000000>;
@@ -130,6 +417,32 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&a57_0>;
+				};
+				core1 {
+					cpu = <&a57_1>;
+				};
+			};
+
+			cluster1 {
+				core0 {
+					cpu = <&a53_0>;
+				};
+				core1 {
+					cpu = <&a53_1>;
+				};
+				core2 {
+					cpu = <&a53_2>;
+				};
+				core3 {
+					cpu = <&a53_3>;
+				};
+			};
+		};
+
 		a57_0: cpu@0 {
 			compatible = "arm,cortex-a57", "arm,armv8";
 			reg = <0x0>;
@@ -137,9 +450,18 @@
 			power-domains = <&sysc R8A7796_PD_CA57_CPU0>;
 			next-level-cache = <&L2_CA57>;
 			enable-method = "psci";
+			dynamic-power-coefficient = <854>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
+			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z>;
-			operating-points-v2 = <&cluster0_opp>;
+			operating-points-v2 = <&cluster0_opp0>,
+				<&cluster0_opp1>, <&cluster0_opp2>,
+				<&cluster0_opp3>, <&cluster0_opp4>,
+				<&cluster0_opp5>, <&cluster0_opp6>,
+				<&cluster0_opp7>;
 			#cooling-cells = <2>;
+			capacity-dmips-mhz = <1024>;
 		};
 
 		a57_1: cpu@1 {
@@ -149,9 +471,15 @@
 			power-domains = <&sysc R8A7796_PD_CA57_CPU1>;
 			next-level-cache = <&L2_CA57>;
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z>;
-			operating-points-v2 = <&cluster0_opp>;
+			operating-points-v2 = <&cluster0_opp0>,
+				<&cluster0_opp1>, <&cluster0_opp2>,
+				<&cluster0_opp3>, <&cluster0_opp4>,
+				<&cluster0_opp5>, <&cluster0_opp6>,
+				<&cluster0_opp7>;
 			#cooling-cells = <2>;
+			capacity-dmips-mhz = <1024>;
 		};
 
 		a53_0: cpu@100 {
@@ -161,8 +489,14 @@
 			power-domains = <&sysc R8A7796_PD_CA53_CPU0>;
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
+			dynamic-power-coefficient = <277>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
+			cpu-idle-states = <&CPU_SLEEP_1>;
 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z2>;
 			operating-points-v2 = <&cluster1_opp>;
+			capacity-dmips-mhz = <543>;
 		};
 
 		a53_1: cpu@101 {
@@ -172,8 +506,10 @@
 			power-domains = <&sysc R8A7796_PD_CA53_CPU1>;
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_1>;
 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z2>;
 			operating-points-v2 = <&cluster1_opp>;
+			capacity-dmips-mhz = <543>;
 		};
 
 		a53_2: cpu@102 {
@@ -183,8 +519,10 @@
 			power-domains = <&sysc R8A7796_PD_CA53_CPU2>;
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_1>;
 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z2>;
 			operating-points-v2 = <&cluster1_opp>;
+			capacity-dmips-mhz = <543>;
 		};
 
 		a53_3: cpu@103 {
@@ -194,8 +532,10 @@
 			power-domains = <&sysc R8A7796_PD_CA53_CPU3>;
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_1>;
 			clocks =<&cpg CPG_CORE R8A7796_CLK_Z2>;
 			operating-points-v2 = <&cluster1_opp>;
+			capacity-dmips-mhz = <543>;
 		};
 
 		L2_CA57: cache-controller-0 {
@@ -211,6 +551,36 @@
 			cache-unified;
 			cache-level = <2>;
 		};
+
+		idle-states {
+			entry-method = "psci";
+
+			CPU_SLEEP_0: cpu-sleep-0 {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				local-timer-stop;
+				entry-latency-us = <400>;
+				exit-latency-us = <500>;
+				min-residency-us = <4000>;
+				status = "okay";
+			};
+
+			CPU_SLEEP_1: cpu-sleep-1 {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				local-timer-stop;
+				entry-latency-us = <700>;
+				exit-latency-us = <700>;
+				min-residency-us = <5000>;
+				status = "okay";
+			};
+		};
+	};
+
+	avs: avs@e60a013c {
+		compatible = "renesas,r8a7796-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
+		target_devices = <&a57_0>, <&a57_1>, <&gsx>;
 	};
 
 	extal_clk: extal {
@@ -262,12 +632,41 @@
 		clock-frequency = <0>;
 	};
 
+	/* MSIOF reference clock - to be overridden by boards that provide it */
+	msiof_ref_clk: msiof-ref-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
 	soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
+
+		mfis: mfis@e6260000 {
+			compatible = "renesas,mfis-lock-r8a7796",
+				     "renesas,mfis-lock";
+			reg = <0 0xe6260000 0 0x1000>;
+			#hwlock-cells = <1>;
+
+			mfis_as: mfis-as {
+				compatible = "renesas,mfis-as-r8a7796",
+					     "renesas,mfis-as";
+				interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "eicr0";
+				renesas,mfis-ch = <0>;
+			};
+		};
 
 		wdt0: watchdog@e6020000 {
 			compatible = "renesas,r8a7796-wdt",
@@ -451,9 +850,7 @@
 				      GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH
 				      GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH
 				      GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 407>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
-			resets = <&cpg 407>;
 		};
 
 		i2c0: i2c@e6500000 {
@@ -859,12 +1256,23 @@
 			       <&ipmmu_ds1 30>, <&ipmmu_ds1 31>;
 		};
 
+		ipmmu_mm: mmu@e67b0000 {
+			compatible = "renesas,ipmmu-r8a7796";
+			reg = <0 0xe67b0000 0 0x1000>;
+			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
 		ipmmu_ds0: mmu@e6740000 {
 			compatible = "renesas,ipmmu-r8a7796";
 			reg = <0 0xe6740000 0 0x1000>;
 			renesas,ipmmu-main = <&ipmmu_mm 0>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_ds1: mmu@e7740000 {
@@ -873,6 +1281,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 1>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_hc: mmu@e6570000 {
@@ -881,6 +1290,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 2>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_ir: mmu@ff8b0000 {
@@ -889,15 +1299,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 3>;
 			power-domains = <&sysc R8A7796_PD_A3IR>;
 			#iommu-cells = <1>;
-		};
-
-		ipmmu_mm: mmu@e67b0000 {
-			compatible = "renesas,ipmmu-r8a7796";
-			reg = <0 0xe67b0000 0 0x1000>;
-			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
-			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
-			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_mp: mmu@ec670000 {
@@ -906,6 +1308,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 4>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_pv0: mmu@fd800000 {
@@ -914,6 +1317,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 5>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_pv1: mmu@fd950000 {
@@ -922,6 +1326,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 6>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_rt: mmu@ffc80000 {
@@ -930,14 +1335,16 @@
 			renesas,ipmmu-main = <&ipmmu_mm 7>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_vc0: mmu@fe6b0000 {
-			compatible = "renesas,ipmmu-r8a7796";
+			compatible = "renesas,ipmmu-mmu-r8a7796";
 			reg = <0 0xfe6b0000 0 0x1000>;
 			renesas,ipmmu-main = <&ipmmu_mm 8>;
 			power-domains = <&sysc R8A7796_PD_A3VC>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_vi0: mmu@febd0000 {
@@ -946,6 +1353,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 9>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		avb: ethernet@e6800000 {
@@ -988,7 +1396,6 @@
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			resets = <&cpg 812>;
 			phy-mode = "rgmii";
-			iommus = <&ipmmu_ds0 16>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -1223,7 +1630,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6e90000 0 0x0064>;
 			interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 211>;
+			clocks = <&cpg CPG_MOD 211>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			dmas = <&dmac1 0x41>, <&dmac1 0x40>,
 			       <&dmac2 0x41>, <&dmac2 0x40>;
 			dma-names = "tx", "rx", "tx", "rx";
@@ -1239,7 +1647,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6ea0000 0 0x0064>;
 			interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 210>;
+			clocks = <&cpg CPG_MOD 210>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			dmas = <&dmac1 0x43>, <&dmac1 0x42>,
 			       <&dmac2 0x43>, <&dmac2 0x42>;
 			dma-names = "tx", "rx", "tx", "rx";
@@ -1255,7 +1664,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6c00000 0 0x0064>;
 			interrupts = <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 209>;
+			clocks = <&cpg CPG_MOD 209>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			dmas = <&dmac0 0x45>, <&dmac0 0x44>;
 			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
@@ -1270,7 +1680,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6c10000 0 0x0064>;
 			interrupts = <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 208>;
+			clocks = <&cpg CPG_MOD 208>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			dmas = <&dmac0 0x47>, <&dmac0 0x46>;
 			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
@@ -2101,20 +2512,61 @@
 			      <0x0 0xf1060000 0 0x20000>;
 			interrupts = <GIC_PPI 9
 					(GIC_CPU_MASK_SIMPLE(6) | IRQ_TYPE_LEVEL_HIGH)>;
-			clocks = <&cpg CPG_MOD 408>;
-			clock-names = "clk";
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
-			resets = <&cpg 408>;
 		};
 
 		pciec0: pcie@fe000000 {
+			compatible = "renesas,pcie-r8a7796",
+				     "renesas,pcie-rcar-gen3";
 			reg = <0 0xfe000000 0 0x80000>;
-			/* placeholder */
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+			ranges = <0x01000000 0 0x00000000 0 0xfe100000 0 0x00100000
+				0x02000000 0 0xfe200000 0 0xfe200000 0 0x00200000
+				0x02000000 0 0x30000000 0 0x30000000 0 0x08000000
+				0x42000000 0 0x38000000 0 0x38000000 0 0x08000000>;
+			/* Map all possible DDR as inbound ranges */
+			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+			interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>;
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0>;
+			interrupt-map = <0 0 0 0 &gic GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 319>, <&pcie_bus_clk>;
+			clock-names = "pcie", "pcie_bus";
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			resets = <&cpg 319>;
+			status = "disabled";
 		};
 
 		pciec1: pcie@ee800000 {
+			compatible = "renesas,pcie-r8a7796",
+				     "renesas,pcie-rcar-gen3";
 			reg = <0 0xee800000 0 0x80000>;
-			/* placeholder */
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+			ranges = <0x01000000 0 0x00000000 0 0xee900000 0 0x00100000
+				0x02000000 0 0xeea00000 0 0xeea00000 0 0x00200000
+				0x02000000 0 0xc0000000 0 0xc0000000 0 0x08000000
+				0x42000000 0 0xc8000000 0 0xc8000000 0 0x08000000>;
+			/* Map all possible DDR as inbound ranges */
+			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+			interrupts = <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 149 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0>;
+			interrupt-map = <0 0 0 0 &gic GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 318>, <&pcie_bus_clk>;
+			clock-names = "pcie", "pcie_bus";
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			resets = <&cpg 318>;
+			status = "disabled";
 		};
 
 		imr-lx4@fe860000 {
@@ -2137,39 +2589,315 @@
 			resets = <&cpg 822>;
 		};
 
-		fdp1@fe940000 {
-			compatible = "renesas,fdp1";
-			reg = <0 0xfe940000 0 0x2400>;
+		gsx_opp0: gsx_opp_table0 {
+			compatible = "operating-points-v2";
+
+			opp-200000000 {
+				opp-hz = /bits/ 64 <200000000>;
+				opp-microvolt = <830000>;
+			};
+			opp-300000000 {
+				opp-hz = /bits/ 64 <300000000>;
+				opp-microvolt = <830000>;
+			};
+			opp-400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <830000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <830000>;
+			};
+		};
+
+		gsx_opp1: gsx_opp_table1 {
+			compatible = "operating-points-v2";
+
+			opp-200000000 {
+				opp-hz = /bits/ 64 <200000000>;
+				opp-microvolt = <820000>;
+			};
+			opp-300000000 {
+				opp-hz = /bits/ 64 <300000000>;
+				opp-microvolt = <820000>;
+			};
+			opp-400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <820000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <820000>;
+			};
+		};
+
+		gsx_opp2: gsx_opp_table2 {
+			compatible = "operating-points-v2";
+
+			opp-200000000 {
+				opp-hz = /bits/ 64 <200000000>;
+				opp-microvolt = <810000>;
+			};
+			opp-300000000 {
+				opp-hz = /bits/ 64 <300000000>;
+				opp-microvolt = <810000>;
+			};
+			opp-400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <810000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <810000>;
+			};
+		};
+
+		gsx_opp3: gsx_opp_table3 {
+			compatible = "operating-points-v2";
+
+			opp-200000000 {
+				opp-hz = /bits/ 64 <200000000>;
+				opp-microvolt = <800000>;
+			};
+			opp-300000000 {
+				opp-hz = /bits/ 64 <300000000>;
+				opp-microvolt = <800000>;
+			};
+			opp-400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <800000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <800000>;
+			};
+		};
+
+		gsx_opp4: gsx_opp_table4 {
+			compatible = "operating-points-v2";
+
+			opp-200000000 {
+				opp-hz = /bits/ 64 <200000000>;
+				opp-microvolt = <790000>;
+			};
+			opp-300000000 {
+				opp-hz = /bits/ 64 <300000000>;
+				opp-microvolt = <790000>;
+			};
+			opp-400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <790000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <790000>;
+			};
+		};
+
+		gsx_opp5: gsx_opp_table5 {
+			compatible = "operating-points-v2";
+
+			opp-200000000 {
+				opp-hz = /bits/ 64 <200000000>;
+				opp-microvolt = <780000>;
+			};
+			opp-300000000 {
+				opp-hz = /bits/ 64 <300000000>;
+				opp-microvolt = <780000>;
+			};
+			opp-400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <780000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <780000>;
+			};
+		};
+
+		gsx_opp6: gsx_opp_table6 {
+			compatible = "operating-points-v2";
+
+			opp-200000000 {
+				opp-hz = /bits/ 64 <200000000>;
+				opp-microvolt = <770000>;
+			};
+			opp-300000000 {
+				opp-hz = /bits/ 64 <300000000>;
+				opp-microvolt = <770000>;
+			};
+			opp-400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <770000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <770000>;
+			};
+		};
+
+		gsx_opp7: gsx_opp_table7 {
+			compatible = "operating-points-v2";
+
+			opp-200000000 {
+				opp-hz = /bits/ 64 <200000000>;
+				opp-microvolt = <760000>;
+			};
+			opp-300000000 {
+				opp-hz = /bits/ 64 <300000000>;
+				opp-microvolt = <760000>;
+			};
+			opp-400000000 {
+				opp-hz = /bits/ 64 <400000000>;
+				opp-microvolt = <760000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <760000>;
+			};
+		};
+
+		qos@e67e0000 {
+			compatible = "renesas,qos";
+			reg = <0 0xe67e0000 0 0x10090>;
+		};
+
+		adsp: adsp@ec800000 {
+			compatible = "renesas,r8a7796-adsp", "renesas,rcar-gen3-adsp";
+			reg = <0 0xec800000 0 0x80fc>,
+			      <0 0xece60000 0 0x10000>,
+			      <0 0xece78000 0 0x8000>,
+			      <0 0xece80000 0 0x10000>,
+			      <0 0xece90000 0 0x10000>;
+			interrupts = <GIC_SPI 237 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 506>,
+				 <&cpg CPG_MOD 1005>,
+				 <&cpg CPG_MOD 1006>, <&cpg CPG_MOD 1007>,
+				 <&cpg CPG_MOD 1008>, <&cpg CPG_MOD 1009>,
+				 <&cpg CPG_MOD 1010>, <&cpg CPG_MOD 1011>,
+				 <&cpg CPG_MOD 1012>, <&cpg CPG_MOD 1013>,
+				 <&cpg CPG_MOD 1014>, <&cpg CPG_MOD 1015>,
+				 <&cpg CPG_MOD 1022>, <&cpg CPG_MOD 1023>,
+				 <&cpg CPG_MOD 1024>, <&cpg CPG_MOD 1025>,
+				 <&cpg CPG_MOD 1026>, <&cpg CPG_MOD 1027>,
+				 <&cpg CPG_MOD 1028>, <&cpg CPG_MOD 1029>,
+				 <&cpg CPG_MOD 1030>, <&cpg CPG_MOD 1031>,
+				 <&cpg CPG_MOD 1020>, <&cpg CPG_MOD 1021>,
+				 <&cpg CPG_MOD 1020>, <&cpg CPG_MOD 1021>,
+				 <&cpg CPG_MOD 1019>, <&cpg CPG_MOD 1018>,
+				 <&cpg CPG_MOD 501>, <&cpg CPG_MOD 502>,
+				 <&cpg CPG_MOD 922>;
+			clock-names = "adsp",
+				      "ssi-all",
+				      "ssi.9", "ssi.8", "ssi.7", "ssi.6",
+				      "ssi.5", "ssi.4", "ssi.3", "ssi.2",
+				      "ssi.1", "ssi.0",
+				      "src.9", "src.8", "src.7", "src.6",
+				      "src.5", "src.4", "src.3", "src.2",
+				      "src.1", "src.0",
+				      "mix.1", "mix.0",
+				      "ctu.1", "ctu.0",
+				      "dvc.0", "dvc.1",
+				      "audmac.1", "audmac.0",
+				      "adg";
+			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
+			resets = <&cpg 506>,
+				 <&cpg 1005>,
+				 <&cpg 1006>, <&cpg 1007>,
+				 <&cpg 1008>, <&cpg 1009>,
+				 <&cpg 1010>, <&cpg 1011>,
+				 <&cpg 1012>, <&cpg 1013>,
+				 <&cpg 1014>, <&cpg 1015>,
+				 <&cpg 501>, <&cpg 502>,
+				 <&cpg 922>;
+			reset-names = "adsp",
+				      "ssi-all",
+				      "ssi.9", "ssi.8", "ssi.7", "ssi.6",
+				      "ssi.5", "ssi.4", "ssi.3", "ssi.2",
+				      "ssi.1", "ssi.0",
+				      "audmac.1", "audmac.0",
+				      "adg";
+			status = "disabled";
+		};
+
+		gsx: gsx@fd000000 {
+			compatible = "renesas,gsx";
+			reg = <0 0xfd000000 0 0x40000>;
+			interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 112>;
+			operating-points-v2 = <&gsx_opp0>, <&gsx_opp1>,
+					      <&gsx_opp2>, <&gsx_opp3>,
+					      <&gsx_opp4>, <&gsx_opp5>,
+					      <&gsx_opp6>, <&gsx_opp7>;
+			power-domains = <&sysc R8A7796_PD_3DG_B>;
+			resets = <&cpg 112>;
+		};
+
+		vcplf: vcp4@fe910000 {
+			compatible = "renesas,vcp4-vcplf";
+			reg = <0 0xfe910000 0 0x200>, <0 0xfe910200 0 0x200>;
+			interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 130>;
+			power-domains = <&sysc R8A7796_PD_A2VC1>;
+			resets = <&cpg 130>;
+			renesas,#ch = <0>;
+			renesas,#fcp_ch = <0>;
+		};
+
+		vdpb: vcp4@fe900000 {
+			compatible = "renesas,vcp4-vdpb";
+			reg = <0 0xfe900000 0 0x200>, <0 0xfe900200 0 0x200>;
+			interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 131>;
+			power-domains = <&sysc R8A7796_PD_A2VC0>;
+			resets = <&cpg 131>;
+			renesas,#ch = <1>;
+			renesas,#fcp_ch = <0>;
+		};
+
+		ivdp1c: vcp4@fe8d0000 {
+			compatible = "renesas,vcp4-ivdp1c";
+			reg = <0 0xfe8d0000 0 0x200>, <0 0xfe8d0200 0 0x200>;
+			interrupts = <GIC_SPI 380 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 381 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 128>;
+			power-domains = <&sysc R8A7796_PD_A2VC0>;
+			resets = <&cpg 128>;
+			renesas,#ch = <2>;
+			renesas,#fcp_ch = <1>;
+		};
+
+		fcpcs: vcp4@fe90f000 {
+			compatible = "renesas,vcp4-fcpcs";
+			reg = <0 0xfe90f000 0 0x200>;
+			clocks = <&cpg CPG_MOD 619>;
+			power-domains = <&sysc R8A7796_PD_A3VC>;
+			resets = <&cpg 619>;
+			renesas,#ch = <0>;
+		};
+
+		fcpci0: vcp4@fe8df000 {
+			compatible = "renesas,vcp4-fcpci0";
+			reg = <0 0xfe8df000 0 0x200>;
+			clocks = <&cpg CPG_MOD 617>;
+			power-domains = <&sysc R8A7796_PD_A3VC>;
+			resets = <&cpg 617>;
+			renesas,#ch = <1>;
+		};
+
+		fdp0: fdpm@fe940000 {
+			compatible = "renesas,fdpm";
+			reg = <0 0xfe940000 0 0x2400>, <0 0xfe950000 0 0x200>;
 			interrupts = <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 119>;
+			clocks = <&cpg CPG_MOD 119>, <&cpg CPG_MOD 615>;
+			clock-names = "fdp", "fcp";
 			power-domains = <&sysc R8A7796_PD_A3VC>;
-			resets = <&cpg 119>;
-			renesas,fcp = <&fcpf0>;
-		};
-
-		fcpf0: fcp@fe950000 {
-			compatible = "renesas,fcpf";
-			reg = <0 0xfe950000 0 0x200>;
-			clocks = <&cpg CPG_MOD 615>;
-			power-domains = <&sysc R8A7796_PD_A3VC>;
-			resets = <&cpg 615>;
-		};
-
-		fcpvb0: fcp@fe96f000 {
-			compatible = "renesas,fcpv";
-			reg = <0 0xfe96f000 0 0x200>;
-			clocks = <&cpg CPG_MOD 607>;
-			power-domains = <&sysc R8A7796_PD_A3VC>;
-			resets = <&cpg 607>;
-		};
-
-		fcpvi0: fcp@fe9af000 {
-			compatible = "renesas,fcpv";
-			reg = <0 0xfe9af000 0 0x200>;
-			clocks = <&cpg CPG_MOD 611>;
-			power-domains = <&sysc R8A7796_PD_A3VC>;
-			resets = <&cpg 611>;
-			iommus = <&ipmmu_vc0 19>;
+			resets = <&cpg 119>, <&cpg 615>;
+			reset-names = "fdp", "fcp";
+			renesas,#ch = <0>;
 		};
 
 		fcpvd0: fcp@fea27000 {
@@ -2178,7 +2906,6 @@
 			clocks = <&cpg CPG_MOD 603>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			resets = <&cpg 603>;
-			iommus = <&ipmmu_vi0 8>;
 		};
 
 		fcpvd1: fcp@fea2f000 {
@@ -2187,7 +2914,6 @@
 			clocks = <&cpg CPG_MOD 602>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			resets = <&cpg 602>;
-			iommus = <&ipmmu_vi0 9>;
 		};
 
 		fcpvd2: fcp@fea37000 {
@@ -2196,23 +2922,84 @@
 			clocks = <&cpg CPG_MOD 601>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			resets = <&cpg 601>;
-			iommus = <&ipmmu_vi0 10>;
 		};
 
-		vspb: vsp@fe960000 {
-			compatible = "renesas,vsp2";
+		vsp@fe960000 {
+			compatible = "renesas,vspm-vsp2";
 			reg = <0 0xfe960000 0 0x8000>;
-			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 626>;
-			power-domains = <&sysc R8A7796_PD_A3VC>;
-			resets = <&cpg 626>;
+			renesas,has-bru;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,#rpf = <5>;
+			renesas,#uds = <0>;
+			renesas,#wpf = <1>;
+		};
 
-			renesas,fcp = <&fcpvb0>;
+		vspb: vspm@fe960000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe960000 0 0x8000>, <0 0xfe96f000 0 0x200>;
+			interrupts = <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 626>, <&cpg CPG_MOD 607>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <3>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <6>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-bru;
+			renesas,has-hgo;
+			renesas,#read_outstanding = <0>;
+			renesas,#start_reservation = <1>;
+			power-domains = <&sysc R8A7796_PD_A3VC>;
+			resets = <&cpg 626>, <&cpg 607>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
+
+		vsp@fe9a0000 {
+			compatible = "renesas,vspm-vsp2";
+			reg = <0 0xfe9a0000 0 0x8000>;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,#rpf = <1>;
+			renesas,#uds = <1>;
+			renesas,#wpf = <1>;
+		};
+
+		vspi0: vspm@fe9a0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xfe9a0000 0 0x8000>, <0 0xfe9af000 0 0x200>;
+			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 631>, <&cpg CPG_MOD 611>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <0>;
+			renesas,#rpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
+			renesas,#start_reservation = <1>;
+			power-domains = <&sysc R8A7796_PD_A3VC>;
+			resets = <&cpg 631>, <&cpg 611>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
 		};
 
 		vspd0: vsp@fea20000 {
 			compatible = "renesas,vsp2";
-			reg = <0 0xfea20000 0 0x8000>;
+			reg = <0 0xfea20000 0 0x4000>;
 			interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 623>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
@@ -2223,7 +3010,7 @@
 
 		vspd1: vsp@fea28000 {
 			compatible = "renesas,vsp2";
-			reg = <0 0xfea28000 0 0x8000>;
+			reg = <0 0xfea28000 0 0x4000>;
 			interrupts = <GIC_SPI 467 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 622>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
@@ -2234,24 +3021,13 @@
 
 		vspd2: vsp@fea30000 {
 			compatible = "renesas,vsp2";
-			reg = <0 0xfea30000 0 0x8000>;
+			reg = <0 0xfea30000 0 0x4000>;
 			interrupts = <GIC_SPI 468 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 621>;
 			power-domains = <&sysc R8A7796_PD_ALWAYS_ON>;
 			resets = <&cpg 621>;
 
 			renesas,fcp = <&fcpvd2>;
-		};
-
-		vspi0: vsp@fe9a0000 {
-			compatible = "renesas,vsp2";
-			reg = <0 0xfe9a0000 0 0x8000>;
-			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 631>;
-			power-domains = <&sysc R8A7796_PD_A3VC>;
-			resets = <&cpg 631>;
-
-			renesas,fcp = <&fcpvi0>;
 		};
 
 		csi20: csi2@fea80000 {
@@ -2394,19 +3170,45 @@
 			};
 		};
 
+		lvds0: lvds@feb90000 {
+			compatible = "renesas,r8a7796-lvds";
+			reg = <0 0xfeb90000 0 0x14>;
+			clocks = <&cpg CPG_MOD 727>;
+			resets = <&cpg 727>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					lvds0_in: endpoint {
+						remote-endpoint = <&du_out_lvds0>;
+					};
+				};
+				port@1 {
+					reg = <1>;
+					lvds0_out: endpoint {
+					};
+				};
+			};
+		};
+
 		du: display@feb00000 {
 			compatible = "renesas,du-r8a7796";
-			reg = <0 0xfeb00000 0 0x70000>,
-			      <0 0xfeb90000 0 0x14>;
-			reg-names = "du", "lvds.0";
+			reg = <0 0xfeb00000 0 0x70000>;
+			reg-names = "du";
 			interrupts = <GIC_SPI 256 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 268 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 269 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 724>,
 				 <&cpg CPG_MOD 723>,
-				 <&cpg CPG_MOD 722>,
-				 <&cpg CPG_MOD 727>;
-			clock-names = "du.0", "du.1", "du.2", "lvds.0";
+				 <&cpg CPG_MOD 722>;
+			clock-names = "du.0", "du.1", "du.2";
+			resets = <&cpg 724>,
+				 <&cpg 724>,
+				 <&cpg 722>;
+			reset-names = "du.0", "du.1", "du.2";
 			status = "disabled";
 
 			vsps = <&vspd0 &vspd1 &vspd2>;
@@ -2429,6 +3231,7 @@
 				port@2 {
 					reg = <2>;
 					du_out_lvds0: endpoint {
+						remote-endpoint = <&lvds0_in>;
 					};
 				};
 			};
@@ -2439,82 +3242,84 @@
 			reg = <0 0xfff00044 0 4>;
 		};
 	};
-
 	thermal-zones {
+		emergency {
+			polling-delay = <1000>;
+			on-temperature = <110000>;
+			off-temperature = <95000>;
+			target_cpus = <&a57_1>,
+				      <&a53_0>,
+				      <&a53_1>,
+				      <&a53_2>,
+				      <&a53_3>;
+			status = "disabled";
+		};
+
 		sensor_thermal1: sensor-thermal1 {
 			polling-delay-passive = <250>;
-			polling-delay = <1000>;
+			polling-delay = <0>;
 			thermal-sensors = <&tsc 0>;
+			sustainable-power = <3874>;
 
 			trips {
-				sensor1_passive: sensor1-passive {
-					temperature = <95000>;
-					hysteresis = <1000>;
-					type = "passive";
-				};
 				sensor1_crit: sensor1-crit {
 					temperature = <120000>;
 					hysteresis = <1000>;
 					type = "critical";
 				};
 			};
-
-			cooling-maps {
-				map0 {
-					trip = <&sensor1_passive>;
-					cooling-device = <&a57_0 5 5>;
-				};
-			};
 		};
 
 		sensor_thermal2: sensor-thermal2 {
 			polling-delay-passive = <250>;
-			polling-delay = <1000>;
+			polling-delay = <0>;
 			thermal-sensors = <&tsc 1>;
+			sustainable-power = <3874>;
 
 			trips {
-				sensor2_passive: sensor2-passive {
-					temperature = <95000>;
-					hysteresis = <1000>;
-					type = "passive";
-				};
 				sensor2_crit: sensor2-crit {
 					temperature = <120000>;
 					hysteresis = <1000>;
 					type = "critical";
 				};
 			};
-
-			cooling-maps {
-				map0 {
-					trip = <&sensor2_passive>;
-					cooling-device = <&a57_0 5 5>;
-				};
-			};
 		};
 
 		sensor_thermal3: sensor-thermal3 {
 			polling-delay-passive = <250>;
-			polling-delay = <1000>;
+			polling-delay = <0>;
 			thermal-sensors = <&tsc 2>;
+			sustainable-power = <3874>;
 
 			trips {
-				sensor3_passive: sensor3-passive {
-					temperature = <95000>;
+				threshold: trip-point@0 {
+					temperature = <90000>;
 					hysteresis = <1000>;
 					type = "passive";
 				};
+
+				target: trip-point@1 {
+					temperature = <100000>;
+					hysteresis = <1000>;
+					type = "passive";
+				};
+
 				sensor3_crit: sensor3-crit {
 					temperature = <120000>;
 					hysteresis = <1000>;
 					type = "critical";
 				};
 			};
-
 			cooling-maps {
 				map0 {
-					trip = <&sensor3_passive>;
-					cooling-device = <&a57_0 5 5>;
+					trip = <&target>;
+					cooling-device = <&a57_0 0 2>;
+					contribution = <1024>;
+				};
+				map1 {
+					trip = <&target>;
+					cooling-device = <&a53_0 0 2>;
+					contribution = <1024>;
 				};
 			};
 		};

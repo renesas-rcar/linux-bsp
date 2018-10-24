@@ -1,7 +1,7 @@
 /*
  * Device Tree Source for the M3ULCB (R-Car Starter Kit Pro) board
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2018 Renesas Electronics Corp.
  * Copyright (C) 2016 Cogent Embedded, Inc.
  *
  * This file is licensed under the terms of the GNU General Public License
@@ -17,6 +17,12 @@
 	model = "Renesas M3ULCB board based on r8a7796";
 	compatible = "renesas,m3ulcb", "renesas,r8a7796";
 
+	cpus {
+		idle-states {
+			/delete-node/ cpu-sleep-1;
+		};
+	};
+
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
@@ -27,16 +33,86 @@
 		device_type = "memory";
 		reg = <0x6 0x00000000 0x0 0x40000000>;
 	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* device specific region for Lossy Decompression */
+		lossy_decompress: linux,lossy_decompress {
+			no-map;
+			reg = <0x00000000 0x54000000 0x0 0x03000000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x57000000 0x0 0x19000000>;
+			linux,cma-default;
+		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x70000000 0x0 0x10000000>;
+		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+
+	versaclock5_out3: versaclk-3 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* Initial value of versaclock out3 */
+		clock-frequency = <33000000>;
+	};
+};
+
+&a53_0 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_1 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_2 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_3 {
+	/delete-property/ cpu-idle-states;
 };
 
 &du {
 	clocks = <&cpg CPG_MOD 724>,
 		 <&cpg CPG_MOD 723>,
 		 <&cpg CPG_MOD 722>,
-		 <&cpg CPG_MOD 727>,
 		 <&versaclock5 1>,
-		 <&versaclock5 3>,
+		 <&versaclock5_out3>,
 		 <&versaclock5 2>;
-	clock-names = "du.0", "du.1", "du.2", "lvds.0",
+	clock-names = "du.0", "du.1", "du.2",
 		      "dclkin.0", "dclkin.1", "dclkin.2";
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
 };
