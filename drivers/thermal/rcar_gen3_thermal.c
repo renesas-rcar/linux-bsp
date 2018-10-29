@@ -266,7 +266,19 @@ static int rcar_gen3_thermal_convert_temp(struct rcar_gen3_thermal_tsc *tsc)
 			}
 			old = new;
 		}
-		mcelsius = MCELSIUS((reg * 5) - 65);
+		/*
+		 * As hardware description, there are 2 formulas to
+		 * calculate temperature on E3 when CTEMP[5:0] is less than
+		 * and greater or equal to 24.
+		 */
+		if (reg < 24)
+			mcelsius = MCELSIUS(((reg * 55) - 720) / 10);
+			/*
+			 * Equal to mcelsius = MCELSIUS((reg * 5.5) - 72)
+			 * to avoid mismatch between float and integer
+			 */
+		else
+			mcelsius = MCELSIUS((reg * 5) - 60);
 	}
 
 	return mcelsius;
@@ -303,7 +315,20 @@ static int rcar_gen3_thermal_mcelsius_to_temp(struct rcar_gen3_thermal_tsc *tsc,
 
 		ctemp = INT_FIXPT(val);
 	} else {
-		ctemp = (celsius + 65) / 5;
+		/*
+		 * Similarly, to calculate register CTEMP[5:0] for E3
+		 * there are 2 formulas to measure CTEMP[5:0] which is
+		 * depending on temperature changes from less than
+		 * to greater or equal to 60 degrees celsius.
+		 */
+		if (celsius < 60)
+			ctemp = (celsius + 72) * 10  / 55;
+			/*
+			 * Equal to ctemp = (celsius + 72) / 5.5
+			 * to avoid mismatch between float and integer
+			 */
+		else
+			ctemp = (celsius + 60) / 5;
 	}
 
 	return ctemp;
