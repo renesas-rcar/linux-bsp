@@ -104,6 +104,16 @@
 	status = "okay";
 };
 
+&lvds0 {
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};
+
 &vspbd {
 	status = "okay";
 };
