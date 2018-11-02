@@ -48,6 +48,16 @@
 		      "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
 };
 
+&lvds0 {
+	ports {
+		port@1 {
+			endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};
+
 &ehci2 {
 	status = "okay";
 };
