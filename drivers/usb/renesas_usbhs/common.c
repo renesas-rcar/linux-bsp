@@ -12,6 +12,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/pm_runtime.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/sysfs.h>
 #include "common.h"
@@ -582,6 +583,10 @@ static int usbhs_probe(struct platform_device *pdev)
 			return PTR_ERR(priv->edev);
 	}
 
+	priv->rsts = devm_reset_control_array_get_optional_shared(&pdev->dev);
+	if (IS_ERR(priv->rsts))
+		return PTR_ERR(priv->rsts);
+
 	/*
 	 * care platform info
 	 */
@@ -657,6 +662,10 @@ static int usbhs_probe(struct platform_device *pdev)
 	/* dev_set_drvdata should be called after usbhs_mod_init */
 	platform_set_drvdata(pdev, priv);
 
+	ret = reset_control_deassert(priv->rsts);
+	if (ret)
+		goto probe_fail_rst;
+
 	/*
 	 * deviece reset here because
 	 * USB device might be used in boot loader.
@@ -710,6 +719,8 @@ static int usbhs_probe(struct platform_device *pdev)
 	return ret;
 
 probe_end_mod_exit:
+	reset_control_assert(priv->rsts);
+probe_fail_rst:
 	usbhs_mod_remove(priv);
 probe_end_fifo_exit:
 	usbhs_fifo_remove(priv);
@@ -738,6 +749,7 @@ static int usbhs_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 
 	usbhs_platform_call(priv, hardware_exit, pdev);
+	reset_control_assert(priv->rsts);
 	usbhs_mod_remove(priv);
 	usbhs_fifo_remove(priv);
 	usbhs_pipe_remove(priv);
