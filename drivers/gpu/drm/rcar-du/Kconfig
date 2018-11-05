@@ -21,6 +21,7 @@ config DRM_RCAR_DW_HDMI
 config DRM_RCAR_LVDS
 	tristate "R-Car DU LVDS Encoder Support"
 	depends on DRM && DRM_BRIDGE && OF
+	depends on DRM_RCAR_DU
 	select DRM_PANEL
 	help
 	  Enable support for the R-Car Display Unit embedded LVDS encoders.
