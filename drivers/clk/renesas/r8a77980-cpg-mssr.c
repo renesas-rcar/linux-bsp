@@ -112,6 +112,8 @@ static const struct cpg_core_clk r8a77980_core_clks[] __initconst = {
 };
 
 static const struct mssr_mod_clk r8a77980_mod_clks[] __initconst = {
+	DEF_MOD("disp",			 101,	R8A77980_CLK_S1D1),
+	DEF_MOD("umf",			 102,	R8A77980_CLK_S1D1),
 	DEF_MOD("tmu4",			 121,	R8A77980_CLK_S0D6),
 	DEF_MOD("tmu3",			 122,	R8A77980_CLK_S0D6),
 	DEF_MOD("tmu2",			 123,	R8A77980_CLK_S0D6),
@@ -197,6 +199,14 @@ static const struct mssr_mod_clk r8a77980_mod_clks[] __initconst = {
 	DEF_MOD("i2c2",			 929,	R8A77980_CLK_S3D2),
 	DEF_MOD("i2c1",			 930,	R8A77980_CLK_S3D2),
 	DEF_MOD("i2c0",			 931,	R8A77980_CLK_S3D2),
+	DEF_MOD("cle4",			1000,	R8A77980_CLK_S1D1),
+	DEF_MOD("cle3",			1001,	R8A77980_CLK_S1D1),
+	DEF_MOD("cle2",			1002,	R8A77980_CLK_S1D1),
+	DEF_MOD("cle1",			1003,	R8A77980_CLK_S1D1),
+	DEF_MOD("cle0",			1004,	R8A77980_CLK_S1D1),
+	DEF_MOD("smd_post",		1100,	R8A77980_CLK_S0D3),
+	DEF_MOD("smd_est",		1101,	R8A77980_CLK_S0D3),
+	DEF_MOD("smd_ps",		1102,	R8A77980_CLK_S0D3),
 };
 
 static const unsigned int r8a77980_crit_mod_clks[] __initconst = {
