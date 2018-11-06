@@ -25,6 +25,7 @@
 #define Val_Ratio(x, nth)	((x & 0xFF) << (24 - (8 * nth)))
 #define FUNC_CFG1	0x16
 #define FUNC_CFG2	0x17
+#define FUNC_CFG3	0x1E
 
 /* DEVICE_ID */
 #define REVISION_MASK	(0x7)
@@ -54,8 +55,11 @@
 
 /* FUNC_CFG1 */
 #define CLKSKIPEN	(1 << 7)
+#define ENDEV3		(1 << 4)
 #define REFCLKDIV(x)	(((x) & 0x3) << 3)
 #define REFCLKDIV_MASK	REFCLKDIV(0x3)
+#define RMODSEL(x)	(((x) & 0x7) << 5)
+#define RMODSEL_MASK	RMODSEL(0x7)
 
 /* FUNC_CFG2 */
 #define LFRATIO_MASK	(1 << 3)
@@ -71,6 +75,11 @@
 #define REF_CLK	1
 #define CLK_MAX 2
 
+enum cs2x00_type {
+	DEVICE_CS2000,
+	DEVICE_CS2300
+};
+
 struct cs2000_priv {
 	struct clk_hw hw;
 	struct i2c_client *client;
@@ -80,16 +89,20 @@ struct cs2000_priv {
 	/* suspend/resume */
 	unsigned long saved_rate;
 	unsigned long saved_parent_rate;
+
+	enum cs2x00_type type;
 };
 
 static const struct of_device_id cs2000_of_match[] = {
-	{ .compatible = "cirrus,cs2000-cp", },
+	{ .compatible = "cirrus,cs2000-cp", .data = (void *)DEVICE_CS2000},
+	{ .compatible = "cirrus,cs2300-cp", .data = (void *)DEVICE_CS2300},
 	{},
 };
 MODULE_DEVICE_TABLE(of, cs2000_of_match);
 
 static const struct i2c_device_id cs2000_id[] = {
-	{ "cs2000-cp", },
+	{ "cs2000-cp", DEVICE_CS2000},
+	{ "cs2300-cp", DEVICE_CS2300},
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, cs2000_id);
@@ -127,8 +140,13 @@ static int cs2000_enable_dev_config(struct cs2000_priv *priv, bool enable)
 	if (ret < 0)
 		return ret;
 
-	ret = cs2000_bset(priv, FUNC_CFG1, CLKSKIPEN,
-			  enable ? CLKSKIPEN : 0);
+	if (priv->type == DEVICE_CS2000) {
+		ret = cs2000_bset(priv, FUNC_CFG1, CLKSKIPEN,
+				  enable ? CLKSKIPEN : 0);
+	} else {
+		ret = cs2000_bset(priv, FUNC_CFG1, CLKSKIPEN | ENDEV3,
+				  enable ? (CLKSKIPEN | ENDEV3) : 0);
+	}
 	if (ret < 0)
 		return ret;
 
@@ -158,6 +176,15 @@ static int cs2000_clk_in_bound_rate(struct cs2000_priv *priv,
 	return cs2000_bset(priv, FUNC_CFG1,
 			   REFCLKDIV_MASK,
 			   REFCLKDIV(val));
+}
+
+
+static int cs2300_clk_rmod_set(struct cs2000_priv *priv,
+				    u32 rmod)
+{
+	return cs2000_bset(priv, FUNC_CFG1,
+			   RMODSEL_MASK,
+			   RMODSEL(rmod));
 }
 
 static int cs2000_wait_pll_lock(struct cs2000_priv *priv)
@@ -313,17 +340,27 @@ static int __cs2000_set_rate(struct cs2000_priv *priv, int ch,
 {
 	int ret;
 
-	ret = cs2000_clk_in_bound_rate(priv, parent_rate);
-	if (ret < 0)
-		return ret;
+	if (priv->type == DEVICE_CS2000) {
+		ret = cs2000_clk_in_bound_rate(priv, parent_rate);
+		if (ret < 0)
+			return ret;
 
-	ret = cs2000_ratio_set(priv, ch, parent_rate, rate);
-	if (ret < 0)
-		return ret;
+		ret = cs2000_ratio_set(priv, ch, parent_rate, rate);
+		if (ret < 0)
+			return ret;
 
-	ret = cs2000_ratio_select(priv, ch);
-	if (ret < 0)
-		return ret;
+		ret = cs2000_ratio_select(priv, ch);
+		if (ret < 0)
+			return ret;
+	} else {
+		ret = cs2300_clk_rmod_set(priv, 0);
+		if (ret < 0)
+			return ret;
+
+		ret = cs2000_ratio_set(priv, 0, parent_rate, rate);
+		if (ret < 0)
+			return ret;
+	}
 
 	priv->saved_rate	= rate;
 	priv->saved_parent_rate	= parent_rate;
@@ -380,8 +417,12 @@ static void cs2000_disable(struct clk_hw *hw)
 
 static u8 cs2000_get_parent(struct clk_hw *hw)
 {
-	/* always return REF_CLK */
-	return REF_CLK;
+	struct cs2000_priv *priv = hw_to_priv(hw);
+
+	if (priv->type == DEVICE_CS2000)
+		return REF_CLK;
+	else
+		return CLK_IN;
 }
 
 static const struct clk_ops cs2000_ops = {
@@ -396,17 +437,19 @@ static const struct clk_ops cs2000_ops = {
 static int cs2000_clk_get(struct cs2000_priv *priv)
 {
 	struct device *dev = priv_to_dev(priv);
-	struct clk *clk_in, *ref_clk;
+	struct clk *clk_in, *ref_clk = NULL;
 
 	clk_in = devm_clk_get(dev, "clk_in");
 	/* not yet provided */
 	if (IS_ERR(clk_in))
 		return -EPROBE_DEFER;
 
-	ref_clk = devm_clk_get(dev, "ref_clk");
-	/* not yet provided */
-	if (IS_ERR(ref_clk))
-		return -EPROBE_DEFER;
+	if (priv->type == DEVICE_CS2000) {
+		ref_clk = devm_clk_get(dev, "ref_clk");
+		/* not yet provided */
+		if (IS_ERR(ref_clk))
+			return -EPROBE_DEFER;
+	}
 
 	priv->clk_in	= clk_in;
 	priv->ref_clk	= ref_clk;
@@ -432,19 +475,26 @@ static int cs2000_clk_register(struct cs2000_priv *priv)
 	 * otherwise .set_rate which setup ratio
 	 * is never called if user requests 1/1 rate
 	 */
-	rate = clk_get_rate(priv->ref_clk);
+	if (priv->type == DEVICE_CS2000)
+		rate = clk_get_rate(priv->ref_clk);
+	else
+		rate = clk_get_rate(priv->clk_in);
 	ret = __cs2000_set_rate(priv, ch, rate, rate);
 	if (ret < 0)
 		return ret;
 
 	parent_names[CLK_IN]	= __clk_get_name(priv->clk_in);
-	parent_names[REF_CLK]	= __clk_get_name(priv->ref_clk);
+	if (priv->type == DEVICE_CS2000)
+		parent_names[REF_CLK]	= __clk_get_name(priv->ref_clk);
 
 	init.name		= name;
 	init.ops		= &cs2000_ops;
 	init.flags		= CLK_SET_RATE_GATE;
 	init.parent_names	= parent_names;
-	init.num_parents	= ARRAY_SIZE(parent_names);
+	if (priv->type == DEVICE_CS2000)
+		init.num_parents = ARRAY_SIZE(parent_names);
+	else
+		init.num_parents = 1;
 
 	priv->hw.init = &init;
 
@@ -471,7 +521,7 @@ static int cs2000_version_print(struct cs2000_priv *priv)
 	if (val < 0)
 		return val;
 
-	/* CS2000 should be 0x0 */
+	/* CS2000/CS2300 should be 0x0 */
 	if (val >> 3)
 		return -EIO;
 
@@ -517,6 +567,7 @@ static int cs2000_probe(struct i2c_client *client,
 
 	priv->client = client;
 	i2c_set_clientdata(client, priv);
+	priv->type = (enum cs2x00_type)id->driver_data;
 
 	ret = cs2000_clk_get(priv);
 	if (ret < 0)
@@ -553,7 +604,7 @@ static struct i2c_driver cs2000_driver = {
 	.driver = {
 		.name = "cs2000-cp",
 		.pm	= &cs2000_pm_ops,
-		.of_match_table = cs2000_of_match,
+		.of_match_table = of_match_ptr(cs2000_of_match),
 	},
 	.probe		= cs2000_probe,
 	.remove		= cs2000_remove,
