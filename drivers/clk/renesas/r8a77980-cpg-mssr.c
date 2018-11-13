@@ -75,6 +75,7 @@ static const struct cpg_core_clk r8a77980_core_clks[] __initconst = {
 		 R8A77980_CLK_RPC),
 
 	/* Core Clock Outputs */
+	DEF_GEN3_Z("z2",	R8A77980_CLK_Z2,    CLK_TYPE_GEN3_Z, CLK_PLL2, 2, 0),
 	DEF_FIXED("ztr",	R8A77980_CLK_ZTR,   CLK_PLL1_DIV2,  6, 1),
 	DEF_FIXED("ztrd2",	R8A77980_CLK_ZTRD2, CLK_PLL1_DIV2, 12, 1),
 	DEF_FIXED("zt",		R8A77980_CLK_ZT,    CLK_PLL1_DIV2,  4, 1),
