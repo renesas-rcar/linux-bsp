@@ -753,14 +753,15 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 
 	pm_runtime_get_sync(dev);
 
+	/* Check bus state before init otherwise bus busy info will be lost */
+	ret = rcar_i2c_bus_barrier(priv);
+	if (ret < 0)
+		goto out;
+
 	if (priv->srcr && priv->srstclr) {
 		rcar_i2c_reset(priv);
 		rcar_i2c_init(priv);
 	}
-
-	ret = rcar_i2c_bus_barrier(priv);
-	if (ret < 0)
-		goto out;
 
 	for (i = 0; i < num; i++) {
 		/* This HW can't send STOP after address phase */
