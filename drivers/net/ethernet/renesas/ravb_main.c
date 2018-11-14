@@ -968,6 +968,12 @@ static const struct soc_device_attribute r8a7795es10[] = {
 	{ /* sentinel */ }
 };
 
+static const struct soc_device_attribute ravb_quirks_match[] = {
+	{ .soc_id = "r8a77990", .revision = "ES1.*" },
+	{ .soc_id = "r8a77995", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 /* PHY init function */
 static int ravb_phy_init(struct net_device *ndev)
 {
@@ -1005,7 +1011,8 @@ static int ravb_phy_init(struct net_device *ndev)
 	/* This driver only support 10/100Mbit speeds on R-Car H3 ES1.0
 	 * at this time.
 	 */
-	if (soc_device_match(r8a7795es10)) {
+	if (soc_device_match(r8a7795es10) ||
+	    soc_device_match(ravb_quirks_match)) {
 		err = phy_set_max_speed(phydev, SPEED_100);
 		if (err) {
 			netdev_err(ndev, "failed to limit PHY to 100Mbit/s\n");
@@ -1893,6 +1900,9 @@ static void ravb_set_delay_mode(struct net_device *ndev)
 {
 	struct ravb_private *priv = netdev_priv(ndev);
 	int set = 0;
+
+	if (soc_device_match(ravb_quirks_match))
+		return;
 
 	if (priv->phy_interface == PHY_INTERFACE_MODE_RGMII_ID ||
 	    priv->phy_interface == PHY_INTERFACE_MODE_RGMII_RXID)
