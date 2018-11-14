@@ -116,6 +116,15 @@
 
 /* -------------------------------------------------------]*/
 static unsigned int ths_type;
+static int ths_tj;
+static int tj_2;
+
+/* default THCODE values if FUSEs are missing */
+static int thcode[TSC_MAX_NUM][3] = {
+	{ 3397, 2800, 2221 },
+	{ 3393, 2795, 2216 },
+	{ 3389, 2805, 2237 },
+};
 
 /* Structure for thermal temperature calculation */
 struct equation_coefs {
@@ -130,6 +139,7 @@ struct rcar_gen3_thermal_tsc {
 	struct thermal_zone_device *zone;
 	struct equation_coefs coef;
 	bool irq_cap;
+	int id; /* thermal channel id */
 };
 
 struct rcar_gen3_thermal_priv {
@@ -177,22 +187,24 @@ static inline void rcar_gen3_thermal_write(struct rcar_gen3_thermal_tsc *tsc,
 #define RCAR3_THERMAL_GRAN 500 /* mili Celsius */
 
 /* no idea where these constants come from */
-#define TJ_1 116
-#define TJ_3 -41
+#define THS_TJ_1	126 /* Use for H3 and M3N */
+#define THS_TJ_1_M3	116 /* Use for M3 */
+
+#define TJ_1 (ths_tj)		/* Tj_H: Contain THS_TJ_1 or THS_TJ_1_M3 */
+#define TJ_2 (INT_FIXPT(tj_2))	/* Tj_T */
+#define TJ_3 -41		/* Tj_L */
 
 static void rcar_gen3_thermal_calc_coefs(struct equation_coefs *coef,
 					 int *ptat, int *thcode)
 {
-	int tj_2;
-
 	/* TODO: Find documentation and document constant calculation formula */
 
 	/*
 	 * Division is not scaled in BSP and if scaled it might overflow
 	 * the dividend (4095 * 4095 << 14 > INT_MAX) so keep it unscaled
 	 */
-	tj_2 = (FIXPT_INT((ptat[1] - ptat[2]) * 157)
-		/ (ptat[0] - ptat[2])) - FIXPT_INT(41);
+	tj_2 = (FIXPT_INT((ptat[1] - ptat[2]) * (TJ_1 - TJ_3))
+		/ (ptat[0] - ptat[2])) + FIXPT_INT(TJ_3);
 
 	coef->a1 = FIXPT_DIV(FIXPT_INT(thcode[1] - thcode[2]),
 			     tj_2 - FIXPT_INT(TJ_3));
@@ -215,7 +227,7 @@ static int rcar_gen3_thermal_round(int temp)
 
 static int rcar_gen3_thermal_convert_temp(struct rcar_gen3_thermal_tsc *tsc)
 {
-	int mcelsius = 0, val1, val2;
+	int mcelsius = 0, val;
 	long reg;
 
 	if (is_ths_typeA) {
@@ -224,10 +236,15 @@ static int rcar_gen3_thermal_convert_temp(struct rcar_gen3_thermal_tsc *tsc)
 		/* Read register and convert value to signed variable type */
 		reg = rcar_gen3_thermal_read(tsc, REG_GEN3_TEMP) & CTEMP_MASK;
 
-		val1 = FIXPT_DIV(FIXPT_INT(reg) - tsc->coef.b1, tsc->coef.a1);
-		val2 = FIXPT_DIV(FIXPT_INT(reg) - tsc->coef.b2, tsc->coef.a2);
-		mcelsius = rcar_gen3_thermal_round(FIXPT_TO_MCELSIUS(
-							(val1 + val2) / 2));
+		if (reg <= thcode[tsc->id][1])
+			val = FIXPT_DIV(FIXPT_INT(reg) - tsc->coef.b1,
+					tsc->coef.a1);
+		else
+			val = FIXPT_DIV(FIXPT_INT(reg) - tsc->coef.b2,
+					tsc->coef.a2);
+
+		mcelsius = rcar_gen3_thermal_round(FIXPT_TO_MCELSIUS(val));
+
 	} else {
 		int i;
 		u32 old, new;
@@ -274,15 +291,17 @@ static int rcar_gen3_thermal_get_temp(void *devdata, int *temp)
 static int rcar_gen3_thermal_mcelsius_to_temp(struct rcar_gen3_thermal_tsc *tsc,
 					      int mcelsius)
 {
-	int celsius, val1, val2;
+	int celsius, val;
 	int ctemp = 0;
 
 	celsius = DIV_ROUND_CLOSEST(mcelsius, 1000);
 	if (is_ths_typeA) {
-		val1 = celsius * tsc->coef.a1 + tsc->coef.b1;
-		val2 = celsius * tsc->coef.a2 + tsc->coef.b2;
+		if (celsius <= TJ_2)
+			val = celsius * tsc->coef.a1 + tsc->coef.b1;
+		else
+			val = celsius * tsc->coef.a2 + tsc->coef.b2;
 
-		ctemp = INT_FIXPT((val1 + val2) / 2);
+		ctemp = INT_FIXPT(val);
 	} else {
 		ctemp = (celsius + 65) / 5;
 	}
@@ -501,11 +520,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 	/* default values if FUSEs are missing */
 	int ptat[3] = { 2631, 1509, 435 };
-	int thcode[TSC_MAX_NUM][3] = {
-		{ 3397, 2800, 2221 },
-		{ 3393, 2795, 2216 },
-		{ 3389, 2805, 2237 },
-	};
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -518,6 +532,12 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	if (!of_device_is_compatible(pdev->dev.of_node,
 				"renesas,r8a77990-thermal")) {
 		ths_type = RCAR_GEN3_THS_TYPE_A;
+
+		if (!of_device_is_compatible(pdev->dev.of_node,
+				"renesas,r8a7796-thermal"))
+			ths_tj = THS_TJ_1;
+		else
+			ths_tj = THS_TJ_1_M3;
 	} else {
 		ths_type = RCAR_GEN3_THS_TYPE_B;
 		priv->thermal_init = rcar_gen3_thermal_init_r8a77990;
@@ -598,6 +618,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 			ret = PTR_ERR(tsc->base);
 			goto error_unregister;
 		}
+		tsc->id = i;
 
 		priv->tscs[i] = tsc;
 
