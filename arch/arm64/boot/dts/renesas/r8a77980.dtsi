@@ -821,6 +821,19 @@
 			status = "disabled";
 		};
 
+		qspi0: spi@ee200000 {
+			compatible = "renesas,qspi-rpc-r8a77980";
+			reg = <0 0xee200000 0 0x1f0>,
+			      <0 0x08000000 0 0x04000000>,
+			      <0 0xee208000 0 0x100>;
+			interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 917>;
+			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
 		msiof0: spi@e6e90000 {
 			compatible = "renesas,msiof-r8a77980",
 				     "renesas,rcar-gen3-msiof";
