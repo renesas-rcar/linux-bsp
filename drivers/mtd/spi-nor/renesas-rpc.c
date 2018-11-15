@@ -1225,6 +1225,12 @@ static int rpc_spi_probe(struct platform_device *pdev)
 		nor->mtd.writebufsize <<= 1;
 	}
 
+	/* Workaround data size limitation */
+	if (nor->page_size > WRITE_BUF_SIZE) {
+		nor->page_size = WRITE_BUF_SIZE;
+		nor->mtd.writebufsize = WRITE_BUF_SIZE;
+	}
+
 	ret = mtd_device_register(&nor->mtd, NULL, 0);
 	if (ret) {
 		dev_err(&pdev->dev, "mtd_device_register error.\n");
