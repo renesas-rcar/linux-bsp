@@ -555,7 +555,7 @@ static void rpc_setup_write_mode_command_and_adr(struct rpc_spi *rpc,
 	rpc_write(rpc, SMENR, val);
 }
 
-static int rpc_setup_write_mode(struct rpc_spi *rpc)
+static int rpc_setup_write_mode(struct rpc_spi *rpc, u8 opcode)
 {
 	u32 val;
 
@@ -576,7 +576,11 @@ static int rpc_setup_write_mode(struct rpc_spi *rpc)
 	val = rpc_read(rpc, SMENR);
 	val &= ~(SMENR_OCDB_MASK | SMENR_DME | SMENR_OCDE | SMENR_SPIDB_MASK
 		 | SMENR_ADB_MASK | SMENR_OPDE_MASK | SMENR_SPIDE_MASK);
-	val |= SMENR_SPIDE_32B;
+	if (opcode != SPINOR_OP_PP)
+		val |= SMENR_SPIDE_32B;
+	else
+		val |= SMENR_SPIDE_8B;
+
 	rpc_write(rpc, SMENR, val);
 
 	return 0;
@@ -750,7 +754,7 @@ static ssize_t rpc_write_flash(struct spi_nor *nor, loff_t to, size_t len,
 	bo = to & (WRITE_BUF_ADR_MASK);
 
 	rpc_flush_cache(rpc);
-	rpc_setup_write_mode(rpc);
+	rpc_setup_write_mode(rpc, nor->program_opcode);
 	rpc_setup_write_mode_command_and_adr(rpc, nor->addr_width, true);
 	rpc_setup_writemode_nbits(rpc, 1, 1, 1);
 
@@ -767,7 +771,7 @@ static ssize_t rpc_write_flash(struct spi_nor *nor, loff_t to, size_t len,
 		size_t min = (len < (WRITE_BUF_SIZE - bo)) ? len : (WRITE_BUF_SIZE - bo);
 
 		rpc_write_unaligned(nor, to, min, buf, full);
-		rpc_setup_write_mode(rpc);
+		rpc_setup_write_mode(rpc, nor->program_opcode);
 
 		len -= min;
 		buf += min;
