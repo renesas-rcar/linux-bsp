@@ -14,6 +14,8 @@
  */
 
 #include <linux/clk.h>
+#include <linux/dma-mapping.h>
+#include <linux/dmaengine.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -73,7 +75,7 @@
 #define DRCR_SSLE		(0x1)
 #define DRCR_RBE		(0x1 << 8)
 #define DRCR_RCF		(0x1 << 9)
-#define DRCR_RBURST_32		(0x1f << 16)
+#define DRCR_RBURST_32		(0x1f)
 
 /* SMENR */
 #define SMENR_CDB_MASK		(0x03 << 30)
@@ -240,6 +242,9 @@ struct rpc_spi {
 	void __iomem *base;
 	void __iomem *read_area;
 	void __iomem *write_area;
+	dma_addr_t read_area_dma;
+	struct completion comp;
+	struct dma_chan	*dma_chan;
 	struct clk *clk;
 	unsigned int irq;
 	struct spi_nor	spi_nor;
@@ -252,6 +257,13 @@ struct rpc_spi {
 
 /* IP block use it's own clock divigion register */
 #define OWN_CLOCK_DIVIDER	BIT(0)
+
+#define RPC_DMA_BURST		((DRCR_RBURST_32 + 1) << 3)
+#define RPC_DMA_SIZE_MIN	(RPC_DMA_BURST << 3)
+
+static bool use_dma = true;
+module_param(use_dma, bool, 0);
+MODULE_PARM_DESC(use_dma, "DMA support. 0 = Disable, 1 = Enable");
 
 /* debug */
 static void __maybe_unused regs_dump(struct rpc_spi *rpc)
@@ -280,6 +292,70 @@ static void __maybe_unused regs_dump(struct rpc_spi *rpc)
 	for (i = 0; i < ARRAY_SIZE(regs); i++)
 		dev_dbg(&rpc->pdev->dev, "%s = 0x%08x\n", names[i],
 			readl(rpc->base + regs[i]));
+}
+
+static void rpc_dma_complete_func(void *completion)
+{
+	complete(completion);
+}
+
+static int rpc_dma_read(struct rpc_spi *rpc, void *buf,
+			loff_t from, ssize_t *plen)
+{
+	struct dma_device *dma_dev;
+	enum dma_ctrl_flags flags;
+	dma_addr_t dma_dst_addr;
+	struct dma_async_tx_descriptor *tx = NULL;
+	dma_cookie_t cookie;
+	int retval = 0;
+	ssize_t len;
+
+	len = *plen;
+
+	if (!rpc->dma_chan || len < RPC_DMA_SIZE_MIN)
+		return -ENODEV;
+
+	dma_dev = rpc->dma_chan->device;
+
+	/* Align size to RBURST */
+	len -= len % RPC_DMA_BURST;
+
+	dma_dst_addr = dma_map_single(dma_dev->dev, buf, len, DMA_FROM_DEVICE);
+	if (dma_mapping_error(dma_dev->dev, dma_dst_addr)) {
+		dev_err(&rpc->pdev->dev, "Failed to dma_map_single\n");
+		return -ENXIO;
+	}
+
+	flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
+	tx = dma_dev->device_prep_dma_memcpy(rpc->dma_chan, dma_dst_addr,
+					     rpc->read_area_dma + from,
+					     len, flags);
+	if (!tx) {
+		dev_err(&rpc->pdev->dev, "Failed to prepare DMA memcpy\n");
+		retval = -EIO;
+		goto out_dma;
+	}
+
+	init_completion(&rpc->comp);
+	tx->callback = rpc_dma_complete_func;
+	tx->callback_param = &rpc->comp;
+
+	cookie = tx->tx_submit(tx);
+	retval = dma_submit_error(cookie);
+	if (retval) {
+		dev_err(&rpc->pdev->dev, "Failed to do DMA tx_submit\n");
+		goto out_dma;
+	}
+
+	dma_async_issue_pending(rpc->dma_chan);
+	wait_for_completion(&rpc->comp);
+
+	/* Update length with actual transfer size */
+	*plen = len;
+
+out_dma:
+	dma_unmap_single(dma_dev->dev, dma_dst_addr, len, DMA_FROM_DEVICE);
+	return retval;
 }
 
 /* register acces */
@@ -430,7 +506,7 @@ static int rpc_setup_ext_mode(struct rpc_spi *rpc)
 	/* ...enable burst and clear cache */
 	val = rpc_read(rpc, DRCR);
 	val &= ~(DRCR_RBURST_MASK | DRCR_RBE | DRCR_SSLE);
-	val |= DRCR_RBURST(0x1f) | DRCR_RBE;
+	val |= DRCR_RBURST(DRCR_RBURST_32) | DRCR_RBE;
 
 	if (cmncr & CMNCR_MD)
 		val |= DRCR_RCF;
@@ -847,6 +923,8 @@ static ssize_t rpc_read_flash(struct spi_nor *nor, loff_t from, size_t len,
 	rpc_write(rpc, DRENR, val);
 
 	while (len > 0) {
+		int retval;
+
 		/* ...setup address */
 		rpc_setup_extmode_read_addr(rpc, adr_width, from);
 		/* ...use adr [25...0] */
@@ -855,7 +933,10 @@ static ssize_t rpc_read_flash(struct spi_nor *nor, loff_t from, size_t len,
 		readlen = READ_ADR_MASK - _from + 1;
 		readlen = readlen > len ? len : readlen;
 
-		memcpy_fromio(buf, rpc->read_area + _from, readlen);
+		retval = rpc_dma_read(rpc, buf, _from, &readlen);
+		if (retval)
+			memcpy_fromio(buf, rpc->read_area + _from, readlen);
+
 		buf += readlen;
 		from += readlen;
 		len -= readlen;
@@ -1157,6 +1238,7 @@ static int rpc_spi_probe(struct platform_device *pdev)
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 
+	rpc->read_area_dma = res->start;
 	rpc->read_area = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(rpc->base)) {
 		dev_err(&pdev->dev, "cannot get resources\n");
@@ -1235,10 +1317,23 @@ static int rpc_spi_probe(struct platform_device *pdev)
 		nor->mtd.writebufsize = WRITE_BUF_SIZE;
 	}
 
+	if (use_dma) {
+		dma_cap_mask_t mask;
+
+		dma_cap_zero(mask);
+		dma_cap_set(DMA_MEMCPY, mask);
+		rpc->dma_chan = dma_request_channel(mask, NULL, NULL);
+		if (!rpc->dma_chan)
+			dev_warn(&pdev->dev, "Failed to request DMA channel\n");
+		else
+			dev_info(&pdev->dev, "Using DMA read (%s)\n",
+				 dma_chan_name(rpc->dma_chan));
+	}
+
 	ret = mtd_device_register(&nor->mtd, NULL, 0);
 	if (ret) {
 		dev_err(&pdev->dev, "mtd_device_register error.\n");
-		goto error_clk_disable;
+		goto error_dma;
 	}
 
 	dev_info(&pdev->dev, "probed as %s\n",
@@ -1246,6 +1341,9 @@ static int rpc_spi_probe(struct platform_device *pdev)
 
 	return 0;
 
+error_dma:
+	if (rpc->dma_chan)
+		dma_release_channel(rpc->dma_chan);
 error_clk_disable:
 	clk_disable_unprepare(rpc->clk);
 error:
@@ -1259,6 +1357,8 @@ static int rpc_spi_remove(struct platform_device *pdev)
 	/* HW shutdown */
 	clk_disable_unprepare(rpc->clk);
 	mtd_device_unregister(&rpc->spi_nor.mtd);
+	if (rpc->dma_chan)
+		dma_release_channel(rpc->dma_chan);
 	return 0;
 }
 
