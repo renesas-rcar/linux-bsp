@@ -39,6 +39,10 @@
 
 #include "io-pgtable.h"
 
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+#include "ipmmu-vmsa-whitelist.h"
+#endif
+
 #define IPMMU_CTX_MAX 8
 
 struct ipmmu_features {
@@ -48,6 +52,9 @@ struct ipmmu_features {
 	bool setup_imbuscr;
 	bool twobit_imttbcr_sl0;
 	bool reserved_context;
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	bool whitelist;
+#endif
 };
 
 #ifdef CONFIG_RCAR_DDR_BACKUP
@@ -77,6 +84,9 @@ struct ipmmu_vmsa_device {
 
 	struct iommu_group *group;
 	struct dma_iommu_mapping *mapping;
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	struct ipmmu_whitelist **whitelist;
+#endif
 };
 
 struct ipmmu_vmsa_domain {
@@ -901,11 +911,47 @@ static int ipmmu_init_platform_device(struct device *dev,
 	return 0;
 }
 
-static bool ipmmu_slave_whitelist(struct device *dev)
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+static bool ipmmu_slave_whitelist(struct device *dev, u32 *ids)
 {
+	struct ipmmu_vmsa_device *mmu = to_ipmmu(dev);
+	int i;
+	int ret;
+
+	if (!mmu) {
+		pr_debug("%s Cannot get mmu for %s\n", __func__, dev_name(dev));
+		goto exit;
+	}
+
+	if (!mmu->whitelist[0]) {
+		pr_debug("%s Whitelist not found on %s!!!\n",
+			 __func__, dev_name(mmu->dev));
+		goto exit;
+	}
+
+	for (i = 0; i < IPMMU_CACHE_MAX; i++) {
+		if (!mmu->whitelist[i])
+			break;
+
+		if (!strcmp(dev_name(mmu->dev),
+			    mmu->whitelist[i]->ipmmu_name)) {
+			ret = test_bit(ids[0], mmu->whitelist[i]->ultb);
+
+			pr_debug("%s: %s whitelist for %s <utlb %d>\n",
+				 __func__, mmu->whitelist[i]->ipmmu_name,
+				 dev_name(dev), ids[0]);
+
+			if (ret)
+				return true;
+		}
+	}
+
+exit:
 	/* By default, do not allow use of IPMMU */
+	pr_info("IPMMU support is not available for %s\n", dev_name(dev));
 	return false;
 }
+#endif
 
 static const struct soc_device_attribute soc_rcar_gen3[] = {
 	{ .soc_id = "r8a7795", },
@@ -918,9 +964,16 @@ static const struct soc_device_attribute soc_rcar_gen3[] = {
 static int ipmmu_of_xlate(struct device *dev,
 			  struct of_phandle_args *spec)
 {
-	/* For R-Car Gen3 use a white list to opt-in slave devices */
-	if (soc_device_match(soc_rcar_gen3) && !ipmmu_slave_whitelist(dev))
+	int ret;
+
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	/* Use a white list to opt-in slave devices
+	 * Whitelist needs mmu info to get the corresponding whitelist bitmap
+	 * In case of no mmu is available, whitelist will check later
+	 */
+	if (to_ipmmu(dev) && !ipmmu_slave_whitelist(dev, spec->args))
 		return -ENODEV;
+#endif
 
 	iommu_fwspec_add_ids(dev, spec->args, 1);
 
@@ -928,7 +981,16 @@ static int ipmmu_of_xlate(struct device *dev,
 	if (to_ipmmu(dev))
 		return 0;
 
-	return ipmmu_init_platform_device(dev, spec);
+	ret = ipmmu_init_platform_device(dev, spec);
+	if (ret)
+		return ret;
+
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	/* For the first initialzation when mmu info is available */
+	if (!ipmmu_slave_whitelist(dev, spec->args))
+		return -ENODEV;
+#endif
+	return 0;
 }
 
 static int ipmmu_init_arm_mapping(struct device *dev)
@@ -1118,6 +1180,9 @@ static const struct ipmmu_features ipmmu_features_default = {
 	.setup_imbuscr = true,
 	.twobit_imttbcr_sl0 = false,
 	.reserved_context = false,
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	.whitelist = false,
+#endif
 };
 
 static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
@@ -1127,6 +1192,9 @@ static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
 	.setup_imbuscr = false,
 	.twobit_imttbcr_sl0 = true,
 	.reserved_context = true,
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	.whitelist = true,
+#endif
 };
 
 static const struct of_device_id ipmmu_of_ids[] = {
@@ -1151,6 +1219,47 @@ static const struct of_device_id ipmmu_of_ids[] = {
 };
 
 MODULE_DEVICE_TABLE(of, ipmmu_of_ids);
+
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+static int ipmmu_bm_init(struct ipmmu_vmsa_device *mmu)
+{
+	bool found = false;
+	int i;
+
+	for (i = 0; i < IPMMU_CACHE_MAX; i++) {
+		if (!mmu->whitelist[i])
+			break;
+
+		if (!strcmp(dev_name(mmu->dev),
+			    mmu->whitelist[i]->ipmmu_name)) {
+			pr_debug("%s, match found with mmu %s\n",
+				 __func__, dev_name(mmu->dev));
+			bitmap_from_u64(mmu->whitelist[i]->ultb,
+					mmu->whitelist[i]->ip_masters);
+			found = true;
+			break;
+		}
+	}
+
+	if (!found)
+		pr_warn("IPMMU whitelist support is not available for %s\n",
+			dev_name(mmu->dev));
+
+	return 0;
+}
+
+static int ipmmu_whitelist_init(struct ipmmu_vmsa_device *mmu)
+{
+	/* Whitelist set up depend per SoC */
+
+	mmu->whitelist = NULL;
+
+	if (!mmu->whitelist[0])
+		return -1;
+
+	return ipmmu_bm_init(mmu);
+}
+#endif /* CONFIG_IPMMU_VMSA_WHITELIST */
 
 static int ipmmu_probe(struct platform_device *pdev)
 {
@@ -1260,6 +1369,19 @@ static int ipmmu_probe(struct platform_device *pdev)
 			bus_set_iommu(&platform_bus_type, &ipmmu_ops);
 #endif
 	}
+
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	/*
+	 * Set up whitelist
+	 */
+	if (mmu->features->whitelist && !ipmmu_is_root(mmu)) {
+		ret = ipmmu_whitelist_init(mmu);
+		if (ret) {
+			dev_err(&pdev->dev, "no valid IPMMU whitelist found\n");
+			return ret;
+		}
+	}
+#endif
 
 	/*
 	 * We can't create the ARM mapping here as it requires the bus to have
