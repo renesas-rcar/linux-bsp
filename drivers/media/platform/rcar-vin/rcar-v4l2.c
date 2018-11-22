@@ -914,6 +914,10 @@ static int rvin_power_on(struct rvin_dev *vin)
 	ret = v4l2_subdev_call(sd, core, s_power, 1);
 	if (ret < 0 && ret != -ENOIOCTLCMD && ret != -ENODEV)
 		return ret;
+
+	reset_control_assert(vin->rstc);
+	reset_control_deassert(vin->rstc);
+
 	return 0;
 }
 
