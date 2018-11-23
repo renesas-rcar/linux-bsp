@@ -60,6 +60,7 @@
 
 		width = <800>;
 		height = <600>;
+		max-pixelclock = <50000>;
 
 		port {
 			hdmi_con_in: endpoint {
