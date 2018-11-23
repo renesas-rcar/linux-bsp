@@ -213,6 +213,8 @@
 	vga {
 		compatible = "vga-connector";
 
+		no-use-ddc;
+
 		port {
 			vga_in: endpoint {
 				remote-endpoint = <&adv7123_out>;
