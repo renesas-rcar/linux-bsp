@@ -103,6 +103,16 @@
 	remote-endpoint = <&rcar_dw_hdmi1_out>;
 };
 
+&lvds0 {
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};
+
 &hsusb3 {
 	dr_mode = "otg";
 	status = "okay";
