@@ -3758,6 +3758,11 @@
 				 <&cpg CPG_MOD 721>;
 			clock-names = "du.0", "du.1", "du.2", "du.3";
 			vsps = <&vspd0 0>, <&vspd1 0>, <&vspd2 0>, <&vspd0 1>;
+			resets = <&cpg 724>,
+				 <&cpg 724>,
+				 <&cpg 722>,
+				 <&cpg 722>;
+			reset-names = "du.0", "du.1", "du.2", "du.3";
 			status = "disabled";
 
 			ports {
