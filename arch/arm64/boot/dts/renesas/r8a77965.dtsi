@@ -850,6 +850,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 0>;
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_ds1: mmu@e7740000 {
@@ -858,6 +859,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 1>;
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_hc: mmu@e6570000 {
@@ -866,6 +868,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 2>;
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_mm: mmu@e67b0000 {
@@ -875,6 +878,7 @@
 				     <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_mp: mmu@ec670000 {
@@ -883,6 +887,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 4>;
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_pv0: mmu@fd800000 {
@@ -891,6 +896,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 6>;
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_rt: mmu@ffc80000 {
@@ -899,6 +905,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 10>;
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_vc0: mmu@fe6b0000 {
@@ -907,6 +914,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 12>;
 			power-domains = <&sysc R8A77965_PD_A3VC>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_vi0: mmu@febd0000 {
@@ -915,6 +923,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 14>;
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_vp0: mmu@fe990000 {
@@ -923,6 +932,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 16>;
 			power-domains = <&sysc R8A77965_PD_A3VP>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		qos@e67e0000 {
