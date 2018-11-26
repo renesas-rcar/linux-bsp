@@ -2625,8 +2625,8 @@ done:
 	s->rx_frame = (10000 * bits) / (baud / 100);
 #ifdef CONFIG_SERIAL_SH_SCI_DMA
 	s->rx_timeout = s->buf_len_rx * 2 * s->rx_frame;
-	if (s->rx_timeout < 20)
-		s->rx_timeout = 20;
+	if (s->rx_timeout < 20000)
+		s->rx_timeout = 20000;
 #endif
 
 	if ((termios->c_cflag & CREAD) != 0)
