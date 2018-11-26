@@ -285,6 +285,45 @@
 				 M_SYS_DMAC_46 | M_SYS_DMAC_47 | \
 				 M_SDHI0 | M_SDHI1 | M_SDHI2 | M_SDHI3)
 
+/* Support masters for r8a77990 */
+#define E3_IPMMU_VI0_MASTER	(M_VIN_4_5 | M_FCPVD_0 | M_FCPVD_1)
+#define E3_IPMMU_HC_MASTER	(M_PCIE_0 | M_USB2H_0 | M_USB_DMAC_0 | \
+				 M_USB_DMAC_1 | M_USB3H_0 | M_USB3F_0)
+#define E3_IPMMU_MP_MASTER	(M_AUDIO_DMAC_0 | M_AUDIO_DMAC_1 | \
+				 M_AUDIO_DMAC_2 | M_AUDIO_DMAC_3 | \
+				 M_AUDIO_DMAC_4 | M_AUDIO_DMAC_5 | \
+				 M_AUDIO_DMAC_6 | M_AUDIO_DMAC_7 | \
+				 M_AUDIO_DMAC_8 | M_AUDIO_DMAC_9 | \
+				 M_AUDIO_DMAC_10 | M_AUDIO_DMAC_11 | \
+				 M_AUDIO_DMAC_12 | M_AUDIO_DMAC_13 | \
+				 M_AUDIO_DMAC_14 | M_AUDIO_DMAC_15)
+#define E3_IPMMU_DS0_MASTER	(M_SYS_DMAC_0 | M_SYS_DMAC_1 | \
+				 M_SYS_DMAC_2 | M_SYS_DMAC_3 | \
+				 M_SYS_DMAC_4 | M_SYS_DMAC_5 | \
+				 M_SYS_DMAC_6 | M_SYS_DMAC_7 | \
+				 M_SYS_DMAC_8 | M_SYS_DMAC_9 | \
+				 M_SYS_DMAC_10 | M_SYS_DMAC_11 | \
+				 M_SYS_DMAC_12 | M_SYS_DMAC_13 | \
+				 M_SYS_DMAC_14 | M_SYS_DMAC_15 | \
+				 M_ETHERNET)
+#define E3_IPMMU_DS1_MASTER	(M_SYS_DMAC_16 | M_SYS_DMAC_17 | \
+				 M_SYS_DMAC_18 | M_SYS_DMAC_19 | \
+				 M_SYS_DMAC_20 | M_SYS_DMAC_21 | \
+				 M_SYS_DMAC_22 | M_SYS_DMAC_23 | \
+				 M_SYS_DMAC_24 | M_SYS_DMAC_25 | \
+				 M_SYS_DMAC_26 | M_SYS_DMAC_27 | \
+				 M_SYS_DMAC_28 | M_SYS_DMAC_29 | \
+				 M_SYS_DMAC_30 | M_SYS_DMAC_31 | \
+				 M_SYS_DMAC_32 | M_SYS_DMAC_33 | \
+				 M_SYS_DMAC_34 | M_SYS_DMAC_35 | \
+				 M_SYS_DMAC_36 | M_SYS_DMAC_37 | \
+				 M_SYS_DMAC_38 | M_SYS_DMAC_39 | \
+				 M_SYS_DMAC_40 | M_SYS_DMAC_41 | \
+				 M_SYS_DMAC_42 | M_SYS_DMAC_43 | \
+				 M_SYS_DMAC_44 | M_SYS_DMAC_45 | \
+				 M_SYS_DMAC_46 | M_SYS_DMAC_47 | \
+				 M_SDHI0 | M_SDHI1 | M_SDHI3)
+
 struct ipmmu_whitelist {
 	const char *ipmmu_name;
 	unsigned int base_addr;
