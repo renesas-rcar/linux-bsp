@@ -229,6 +229,45 @@ static struct ipmmu_whitelist *r8a77965_whitelist[] = {
 	NULL, /* Terminator */
 };
 
+/* R-Car E3 (R8A77990) */
+static struct ipmmu_whitelist r8a77990_ipmmu_vi0 = {
+	.ipmmu_name	= "febd0000.mmu",
+	.base_addr	= IPMMU_VI0_BASE,
+	.ip_masters	= E3_IPMMU_VI0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77990_ipmmu_hc = {
+	.ipmmu_name	= "e6570000.mmu",
+	.base_addr	= IPMMU_HC_BASE,
+	.ip_masters	= E3_IPMMU_HC_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77990_ipmmu_mp = {
+	.ipmmu_name	= "ec670000.mmu",
+	.base_addr	= IPMMU_MP_BASE,
+	.ip_masters	= E3_IPMMU_MP_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77990_ipmmu_ds0 = {
+	.ipmmu_name	= "e6740000.mmu",
+	.base_addr	= IPMMU_DS0_BASE,
+	.ip_masters	= E3_IPMMU_DS0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77990_ipmmu_ds1 = {
+	.ipmmu_name	= "e7740000.mmu",
+	.base_addr	= IPMMU_DS1_BASE,
+	.ip_masters	= E3_IPMMU_DS1_MASTER,
+};
+
+static struct ipmmu_whitelist *r8a77990_whitelist[] = {
+	&r8a77990_ipmmu_vi0,
+	&r8a77990_ipmmu_hc,
+	&r8a77990_ipmmu_mp,
+	&r8a77990_ipmmu_ds0,
+	&r8a77990_ipmmu_ds1,
+	NULL, /* Terminator */
+};
 #endif /* CONFIG_IPMMU_VMSA_WHITELIST */
 
 #define TLB_LOOP_TIMEOUT		100	/* 100us */
@@ -999,6 +1038,11 @@ static const struct soc_device_attribute r8a77965[]  = {
 	{ /* sentinel */ }
 };
 
+static const struct soc_device_attribute r8a77990[]  = {
+	{ .soc_id = "r8a77990" },
+	{ /* sentinel */ }
+};
+
 static bool ipmmu_slave_whitelist(struct device *dev, u32 *ids)
 {
 	struct ipmmu_vmsa_device *mmu = to_ipmmu(dev);
@@ -1340,6 +1384,8 @@ static int ipmmu_whitelist_init(struct ipmmu_vmsa_device *mmu)
 		mmu->whitelist = r8a7796_whitelist;
 	else if (soc_device_match(r8a77965))
 		mmu->whitelist = r8a77965_whitelist;
+	else if (soc_device_match(r8a77990))
+		mmu->whitelist = r8a77990_whitelist;
 	else
 		mmu->whitelist = NULL;
 
