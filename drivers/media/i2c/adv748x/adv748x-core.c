@@ -718,7 +718,8 @@ static int adv748x_parse_dt(struct adv748x_state *state)
 {
 	struct device_node *ep_np = NULL;
 	struct of_endpoint ep;
-	bool found = false;
+	bool out_found = false;
+	bool in_found = false;
 	struct v4l2_fwnode_endpoint v4l2_ep;
 
 	for_each_endpoint_of_node(state->dev->of_node, ep_np) {
@@ -749,10 +750,17 @@ static int adv748x_parse_dt(struct adv748x_state *state)
 			state->hdmi.use_lane =
 				v4l2_ep.bus.mipi_csi2.num_data_lanes;
 
-		found = true;
+		/*
+		 * At least one input endpoint and one output endpoint shall
+		 * be defined.
+		 */
+		if (ep.port < ADV748X_PORT_TXA)
+			in_found = true;
+		else
+			out_found = true;
 	}
 
-	return found ? 0 : -ENODEV;
+	return in_found && out_found ? 0 : -ENODEV;
 }
 
 static void adv748x_dt_cleanup(struct adv748x_state *state)
@@ -783,6 +791,17 @@ static int adv748x_probe(struct i2c_client *client,
 	state->client = client;
 	state->i2c_clients[ADV748X_PAGE_IO] = client;
 	i2c_set_clientdata(client, state);
+
+	/*
+	 * We can not use container_of to get back to the state with two TXs;
+	 * Initialize the TXs's fields unconditionally on the endpoint
+	 * presence to access them later.
+	 */
+	state->txa.state = state->txb.state = state;
+	state->txa.page = ADV748X_PAGE_TXA;
+	state->txb.page = ADV748X_PAGE_TXB;
+	state->txa.port = ADV748X_PORT_TXA;
+	state->txb.port = ADV748X_PORT_TXB;
 
 	/* Discover and process ports declared by the Device tree endpoints */
 	ret = adv748x_parse_dt(state);

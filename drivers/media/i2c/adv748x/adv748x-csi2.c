@@ -282,17 +282,10 @@ int adv748x_csi2_init(struct adv748x_state *state, struct adv748x_csi2 *tx)
 	int ret;
 	unsigned int ch;
 
-	/* We can not use container_of to get back to the state with two TXs */
-	tx->state = state;
-	tx->page = is_txa(tx) ? ADV748X_PAGE_TXA : ADV748X_PAGE_TXB;
+	if (!is_tx_enabled(tx))
+		return 0;
 
-	ep = state->endpoints[is_txa(tx) ? ADV748X_PORT_TXA : ADV748X_PORT_TXB];
-	if (!ep) {
-		adv_err(state, "No endpoint found for %s\n",
-				is_txa(tx) ? "txa" : "txb");
-		return -ENODEV;
-	}
-
+	ep = state->endpoints[tx->port];
 	if (of_property_read_u32(ep, "virtual-channel", &ch))
 		ch = 0;
 
@@ -340,6 +333,9 @@ err_free_media:
 
 void adv748x_csi2_cleanup(struct adv748x_csi2 *tx)
 {
+	if (!is_tx_enabled(tx))
+		return;
+
 	v4l2_async_unregister_subdev(&tx->sd);
 	media_entity_cleanup(&tx->sd.entity);
 	v4l2_ctrl_handler_free(&tx->ctrl_hdl);
