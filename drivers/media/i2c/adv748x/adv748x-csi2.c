@@ -82,12 +82,9 @@ static int adv748x_csi2_registered(struct v4l2_subdev *sd)
 			sd->name);
 
 	/*
-	 * The adv748x hardware allows the AFE to route through the TXA, however
-	 * this is not currently supported in this driver.
-	 *
-	 * Link HDMI->TXA, and AFE->TXB directly.
+	 * The adv748x hardware allows the AFE to route through the TXA.
 	 */
-	if (is_txa(tx)) {
+	if (is_txa(tx) && !state->afe.txa_switch) {
 		return adv748x_csi2_register_link(tx, sd->v4l2_dev,
 						  &state->hdmi.sd,
 						  ADV748X_HDMI_SOURCE);
