@@ -480,6 +480,9 @@ static int rcar_du_pm_resume(struct device *dev)
 	drm_atomic_helper_resume(rcdu->ddev, rcdu->suspend_state);
 	drm_fbdev_cma_set_suspend_unlocked(rcdu->fbdev, false);
 	drm_kms_helper_poll_enable(rcdu->ddev);
+#if IS_ENABLED(CONFIG_DRM_I2C_ADV7511)
+	drm_helper_hpd_irq_event(rcdu->ddev);
+#endif
 
 	return 0;
 }
