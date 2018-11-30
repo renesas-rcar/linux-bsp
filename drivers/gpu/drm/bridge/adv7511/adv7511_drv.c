@@ -1262,6 +1262,33 @@ static int adv7511_remove(struct i2c_client *i2c)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int adv7511_pm_suspend(struct device *dev)
+{
+	struct i2c_client *i2c = to_i2c_client(dev);
+	struct adv7511 *adv7511 = i2c_get_clientdata(i2c);
+
+	adv7511_power_off(adv7511);
+
+	return 0;
+}
+
+static int adv7511_pm_resume(struct device *dev)
+{
+	struct i2c_client *i2c = to_i2c_client(dev);
+	struct adv7511 *adv7511 = i2c_get_clientdata(i2c);
+
+	adv7511_detect(adv7511, &adv7511->connector);
+	adv7511_power_on(adv7511);
+
+	return 0;
+}
+#endif
+
+static const struct dev_pm_ops adv7511_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(adv7511_pm_suspend, adv7511_pm_resume)
+};
+
 static const struct i2c_device_id adv7511_i2c_ids[] = {
 	{ "adv7511", ADV7511 },
 	{ "adv7511w", ADV7511 },
@@ -1292,6 +1319,7 @@ static struct i2c_driver adv7511_driver = {
 	.driver = {
 		.name = "adv7511",
 		.of_match_table = adv7511_of_ids,
+		.pm = &adv7511_pm_ops,
 	},
 	.id_table = adv7511_i2c_ids,
 	.probe = adv7511_probe,
