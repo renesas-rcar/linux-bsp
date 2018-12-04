@@ -51,7 +51,6 @@ struct rwdt_priv {
 	void __iomem *base;
 	struct watchdog_device wdev;
 	unsigned long clk_rate;
-	u16 time_left;
 	u8 cks;
 };
 
@@ -270,10 +269,9 @@ static int __maybe_unused rwdt_suspend(struct device *dev)
 {
 	struct rwdt_priv *priv = dev_get_drvdata(dev);
 
-	if (watchdog_active(&priv->wdev)) {
-		priv->time_left = readw(priv->base + RWTCNT);
+	if (watchdog_active(&priv->wdev))
 		rwdt_stop(&priv->wdev);
-	}
+
 	return 0;
 }
 
@@ -281,10 +279,9 @@ static int __maybe_unused rwdt_resume(struct device *dev)
 {
 	struct rwdt_priv *priv = dev_get_drvdata(dev);
 
-	if (watchdog_active(&priv->wdev)) {
+	if (watchdog_active(&priv->wdev))
 		rwdt_start(&priv->wdev);
-		rwdt_write(priv, priv->time_left, RWTCNT);
-	}
+
 	return 0;
 }
 
