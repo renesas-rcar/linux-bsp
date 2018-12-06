@@ -5259,7 +5259,9 @@ static void r8a77990_pinmux_set_bias(struct sh_pfc *pfc, unsigned int pin,
 	if (bias == PIN_CONFIG_BIAS_PULL_UP)
 		updown |= BIT(bit);
 
-	sh_pfc_write(pfc, reg->pud, updown);
+	if (pin != RCAR_GP_PIN(6, 9))
+		sh_pfc_write(pfc, reg->pud, updown);
+
 	sh_pfc_write(pfc, reg->puen, enable);
 }
 
