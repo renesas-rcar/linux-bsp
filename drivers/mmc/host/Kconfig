@@ -607,6 +607,16 @@ config MMC_SDHI_INTERNAL_DMAC
 	  using on-chip bus mastering. This supports the controllers
 	  found in arm64 based SoCs.
 
+config MMC_SDHI_PIO
+	bool "Renesas SDHI PIO transfer mode setting"
+	depends on MMC_SDHI
+	help
+	  This setting switches the transfer mode of the PIO and DMA.
+
+	  Select Yes or No according to the following.
+	  When switching the transfer mode from DMA to PIO, say Y here.
+	  When switching the transfer mode from PIO to DMA, say N here.
+
 config MMC_CB710
 	tristate "ENE CB710 MMC/SD Interface support"
 	depends on PCI
