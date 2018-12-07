@@ -18,7 +18,7 @@
 /* Low Power Status register (LPSTS) */
 #define LPSTS_SUSPM	0x4000
 
-/* R-Car D3 only: USB General control register (UGCTRL) */
+/* R-Car D3/E3 only: USB General control register (UGCTRL) */
 #define UGCTRL_PLLRESET		0x00000001
 #define UGCTRL_CONNECT		0x00000004
 
@@ -27,12 +27,11 @@
  * Remarks: bit[31:11] and bit[9:6] should be 0
  */
 #define UGCTRL2_RESERVED_3	0x00000001	/* bit[3:0] should be B'0001 */
-#define UGCTRL2_USB0SEL_EHCI	0x00000010
 #define UGCTRL2_USB0SEL_HSUSB	0x00000020
 #define UGCTRL2_USB0SEL_OTG	0x00000030
 #define UGCTRL2_VBUSSEL		0x00000400
 
-/* R-Car D3 only: USB General status register (UGSTS) */
+/* R-Car D3/E3 only: USB General status register (UGSTS) */
 #define UGSTS_LOCK		0x00000100
 
 static void usbhs_write32(struct usbhs_priv *priv, u32 reg, u32 data)
@@ -48,14 +47,6 @@ static u32 usbhs_read32(struct usbhs_priv *priv, u32 reg)
 static void usbhs_rcar3_set_ugctrl2(struct usbhs_priv *priv, u32 val)
 {
 	usbhs_write32(priv, UGCTRL2, val | UGCTRL2_RESERVED_3);
-}
-
-static void usbhs_rcar3_set_usbsel(struct usbhs_priv *priv, bool ehci)
-{
-	if (ehci)
-		usbhs_rcar3_set_ugctrl2(priv, UGCTRL2_USB0SEL_EHCI);
-	else
-		usbhs_rcar3_set_ugctrl2(priv, UGCTRL2_USB0SEL_HSUSB);
 }
 
 static int usbhs_rcar3_power_ctrl(struct platform_device *pdev,
@@ -76,21 +67,18 @@ static int usbhs_rcar3_power_ctrl(struct platform_device *pdev,
 	return 0;
 }
 
-/* R-Car D3 needs to release UGCTRL.PLLRESET */
+/* R-Car D3/E3 needs to release UGCTRL.PLLRESET */
 static int usbhs_rcar3_power_and_pll_ctrl(struct platform_device *pdev,
 					  void __iomem *base, int enable)
 {
 	struct usbhs_priv *priv = usbhs_pdev_to_priv(pdev);
 	u32 val;
 	int timeout = 1000;
-	bool is_host = false;
 
 	if (enable) {
 		usbhs_write32(priv, UGCTRL, 0);	/* release PLLRESET */
-		if (priv->edev)
-			is_host = extcon_get_state(priv->edev, EXTCON_USB_HOST);
-
-		usbhs_rcar3_set_usbsel(priv, is_host);
+		usbhs_rcar3_set_ugctrl2(priv,
+					UGCTRL2_USB0SEL_OTG | UGCTRL2_VBUSSEL);
 
 		usbhs_bset(priv, LPSTS, LPSTS_SUSPM, LPSTS_SUSPM);
 		do {
@@ -112,16 +100,6 @@ static int usbhs_rcar3_get_id(struct platform_device *pdev)
 	return USBHS_GADGET;
 }
 
-static int usbhs_rcar3_notifier(struct notifier_block *nb, unsigned long event,
-				void *data)
-{
-	struct usbhs_priv *priv = container_of(nb, struct usbhs_priv, nb);
-
-	usbhs_rcar3_set_usbsel(priv, !!event);
-
-	return NOTIFY_DONE;
-}
-
 const struct renesas_usbhs_platform_callback usbhs_rcar3_ops = {
 	.power_ctrl = usbhs_rcar3_power_ctrl,
 	.get_id = usbhs_rcar3_get_id,
@@ -130,5 +108,4 @@ const struct renesas_usbhs_platform_callback usbhs_rcar3_ops = {
 const struct renesas_usbhs_platform_callback usbhs_rcar3_with_pll_ops = {
 	.power_ctrl = usbhs_rcar3_power_and_pll_ctrl,
 	.get_id = usbhs_rcar3_get_id,
-	.notifier = usbhs_rcar3_notifier,
 };
