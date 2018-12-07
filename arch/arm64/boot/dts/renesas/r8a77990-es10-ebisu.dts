@@ -1,18 +1,18 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Device Tree Source for the ebisu board
+ * Device Tree Source for the ebisu board with R-Car E3 ES1.0
  *
  * Copyright (C) 2018 Renesas Electronics Corp.
  */
 
 /dts-v1/;
-#include "r8a77990.dtsi"
+#include "r8a77990-es10.dtsi"
 #include <dt-bindings/clock/r8a77990-cpg-mssr.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/power/r8a77990-sysc.h>
 
 / {
-	model = "Renesas Ebisu board based on r8a77990";
+	model = "Renesas Ebisu board based on r8a77990 ES1.0";
 	compatible = "renesas,ebisu", "renesas,r8a77990";
 
 	aliases {

@@ -1,11 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Device Tree Source for common parts of Salvator-X board variants
  *
- * Copyright (C) 2015-2016 Renesas Electronics Corp.
- *
- * This file is licensed under the terms of the GNU General Public License
- * version 2.  This program is licensed "as is" without any warranty of any
- * kind, whether express or implied.
+ * Copyright (C) 2015-2017 Renesas Electronics Corp.
  */
 
 /*
@@ -55,6 +52,16 @@
 		clock-frequency = <12288000>;
 	};
 
+	avb-mch@ec5a0100 {
+		compatible = "renesas,avb-mch-gen3";
+		reg =	<0 0xec5a0100 0 0x100>;  /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
+		resets = <&cpg 922>;
+	};
+
 	backlight: backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm1 0 50000>;
@@ -85,6 +92,35 @@
 		port {
 			hdmi_in_con: endpoint {
 				remote-endpoint = <&adv7482_hdmi>;
+			};
+		};
+	};
+
+	lvds {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+		enable-gpios = <&gpio6 7 GPIO_ACTIVE_HIGH>;
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds_in: endpoint {
+				remote-endpoint = <&lvds0_out>;
 			};
 		};
 	};
@@ -207,6 +243,8 @@
 
 	vga {
 		compatible = "vga-connector";
+		no-use-ddc;
+		max-pixelclock = <100000>;
 
 		port {
 			vga_in: endpoint {
@@ -261,6 +299,10 @@
 		#clock-cells = <0>;
 		clock-frequency = <25000000>;
 	};
+};
+
+&a57_0 {
+	cpu-supply = <&dvfs>;
 };
 
 &audio_clk_a {
@@ -339,6 +381,14 @@
 
 &extalr_clk {
 	clock-frequency = <32768>;
+};
+
+&hscif1 {
+	pinctrl-0 = <&hscif1_pins>;
+	pinctrl-names = "default";
+
+	/* Please use exclusively to the scif1 node */
+	/* status = "okay"; */
 };
 
 &hsusb {
@@ -440,7 +490,7 @@
 			};
 		};
 
-		port@10 {
+		port@a {
 			reg = <10>;
 
 			adv7482_txa: endpoint {
@@ -450,7 +500,7 @@
 			};
 		};
 
-		port@11 {
+		port@b {
 			reg = <11>;
 
 			adv7482_txb: endpoint {
@@ -464,6 +514,8 @@
 
 &i2c_dvfs {
 	status = "okay";
+
+	clock-frequency = <400000>;
 
 	pmic: pmic@30 {
 		pinctrl-0 = <&irq0_pins>;
@@ -496,6 +548,10 @@
 		reg = <0x50>;
 		pagesize = <8>;
 	};
+};
+
+&lvds0 {
+	status = "okay";
 };
 
 &ohci0 {
@@ -546,6 +602,11 @@
 		function = "du";
 	};
 
+	hscif1_pins: hscif1 {
+		groups = "hscif1_data_a", "hscif1_ctrl_a";
+		function = "hscif1";
+	};
+
 	i2c2_pins: i2c2 {
 		groups = "i2c2_a";
 		function = "i2c2";
@@ -559,6 +620,11 @@
 	pwm1_pins: pwm1 {
 		groups = "pwm1_a";
 		function = "pwm1";
+	};
+
+	pwm2_pins: pwm2 {
+		groups = "pwm2_a";
+		function = "pwm2";
 	};
 
 	scif1_pins: scif1 {
@@ -589,13 +655,13 @@
 	};
 
 	sdhi2_pins: sd2 {
-		groups = "sdhi2_data8", "sdhi2_ctrl";
+		groups = "sdhi2_data8", "sdhi2_ctrl", "sdhi2_ds";
 		function = "sdhi2";
 		power-source = <3300>;
 	};
 
 	sdhi2_pins_uhs: sd2_uhs {
-		groups = "sdhi2_data8", "sdhi2_ctrl";
+		groups = "sdhi2_data8", "sdhi2_ctrl", "sdhi2_ds";
 		function = "sdhi2";
 		power-source = <1800>;
 	};
@@ -658,6 +724,13 @@
 	status = "okay";
 };
 
+&pwm2 {
+	pinctrl-0 = <&pwm2_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
 &rcar_sound {
 	pinctrl-0 = <&sound_pins &sound_clk_pins>;
 	pinctrl-names = "default";
@@ -691,7 +764,10 @@
 		 <&cpg CPG_CORE CPG_AUDIO_CLK_I>;
 
 	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		rsnd_port0: port@0 {
+			reg = <0>;
 			rsnd_endpoint0: endpoint {
 				remote-endpoint = <&ak4613_endpoint>;
 
@@ -706,11 +782,17 @@
 	};
 };
 
+&rwdt {
+	timeout-sec = <60>;
+	status = "okay";
+};
+
 &scif1 {
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
 
 	uart-has-rtscts;
+	/* Please use exclusively to the hscif1 node */
 	status = "okay";
 };
 
@@ -736,6 +818,7 @@
 	wp-gpios = <&gpio3 13 GPIO_ACTIVE_HIGH>;
 	bus-width = <4>;
 	sd-uhs-sdr50;
+	sd-uhs-sdr104;
 	status = "okay";
 };
 
@@ -749,6 +832,7 @@
 	vqmmc-supply = <&reg_1p8v>;
 	bus-width = <8>;
 	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
 	non-removable;
 	fixed-emmc-driver-type = <1>;
 	status = "okay";
@@ -765,6 +849,7 @@
 	wp-gpios = <&gpio4 16 GPIO_ACTIVE_HIGH>;
 	bus-width = <4>;
 	sd-uhs-sdr50;
+	sd-uhs-sdr104;
 	status = "okay";
 };
 
@@ -835,11 +920,6 @@
 };
 
 &vin7 {
-	status = "okay";
-};
-
-&wdt0 {
-	timeout-sec = <60>;
 	status = "okay";
 };
 
