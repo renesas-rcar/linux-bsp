@@ -2,7 +2,7 @@
 /*
  * vsp1_rpf.c  --  R-Car VSP1 Read Pixel Formatter
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -56,6 +56,7 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	unsigned int top = 0;
 	u32 pstride;
 	u32 infmt;
+	u32 alph_sel = 0;
 
 	/* Stride */
 	pstride = format->plane_fmt[0].bytesperline
@@ -64,7 +65,10 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 		pstride |= format->plane_fmt[1].bytesperline
 			<< VI6_RPF_SRCM_PSTRIDE_C_SHIFT;
 
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_PSTRIDE, pstride);
+	if (rpf->interlaced)
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_PSTRIDE, pstride * 2);
+	else
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_PSTRIDE, pstride);
 
 	/* Format */
 	sink_format = vsp1_entity_get_pad_format(&rpf->entity,
@@ -100,9 +104,14 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 		top = compose->top;
 	}
 
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_LOC,
-		       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
-		       (top << VI6_RPF_LOC_VCOORD_SHIFT));
+	if (rpf->interlaced)
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_LOC,
+			       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
+			       ((top / 2) << VI6_RPF_LOC_VCOORD_SHIFT));
+	else
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_LOC,
+			       (left << VI6_RPF_LOC_HCOORD_SHIFT) |
+			       (top << VI6_RPF_LOC_VCOORD_SHIFT));
 
 	/*
 	 * On Gen2 use the alpha channel (extended to 8 bits) when available or
@@ -127,21 +136,47 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	 *
 	 * In all cases, disable color keying.
 	 */
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_ALPH_SEL, VI6_RPF_ALPH_SEL_AEXT_EXT |
-		       (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
-				       : VI6_RPF_ALPH_SEL_ASEL_FIXED));
+	switch (fmtinfo->fourcc) {
+	case V4L2_PIX_FMT_ARGB555:
+		if (CONFIG_VIDEO_RENESAS_VSP_ALPHA_BIT_ARGB1555 == 1)
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   VI6_RPF_ALPH_SEL_ALPHA1_MASK |
+				   (rpf->alpha &
+				   VI6_RPF_ALPH_SEL_ALPHA0_MASK);
+		else
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   ((rpf->alpha & 0xff) << 8) |
+				   VI6_RPF_ALPH_SEL_ALPHA0_MASK;
+		break;
+	case V4L2_PIX_FMT_ARGB444:
+		alph_sel = VI6_RPF_ALPH_SEL_AEXT_ONE;
+		break;
+	case V4L2_PIX_FMT_ABGR32:
+	case V4L2_PIX_FMT_ARGB32:
+		break;
+	default:
+		alph_sel = VI6_RPF_ALPH_SEL_AEXT_EXT |
+			   (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
+			   : VI6_RPF_ALPH_SEL_ASEL_FIXED);
+		break;
+	}
+
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_ALPH_SEL, alph_sel);
 
 	if (entity->vsp1->info->gen == 3) {
 		u32 mult;
 
-		if (fmtinfo->alpha) {
+		if (fmtinfo->alpha &&
+		    fmtinfo->fourcc != V4L2_PIX_FMT_ARGB555) {
 			/*
 			 * When the input contains an alpha channel enable the
 			 * alpha multiplier. If the input is premultiplied we
 			 * need to multiply both the alpha channel and the pixel
 			 * components by the global alpha value to keep them
 			 * premultiplied. Otherwise multiply the alpha channel
-			 * only.
+			 * only. The alpha multiplier is disabled in ARGB1555.
 			 */
 			bool premultiplied = format->flags
 					   & V4L2_PIX_FMT_FLAG_PREMUL_ALPHA;
@@ -165,8 +200,15 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	}
 
 	vsp1_rpf_write(rpf, dlb, VI6_RPF_MSK_CTRL, 0);
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_CKEY_CTRL, 0);
 
+	if (rpf->colorkey_en) {
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_CKEY_SET0,
+			       (rpf->colorkey_alpha << 24) | rpf->colorkey);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_CKEY_CTRL,
+			       VI6_RPF_CKEY_CTRL_SAPE0);
+	} else {
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_CKEY_CTRL, 0);
+	}
 }
 
 static void rpf_configure_frame(struct vsp1_entity *entity,
@@ -195,6 +237,15 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 	const struct vsp1_format_info *fmtinfo = rpf->fmtinfo;
 	const struct v4l2_pix_format_mplane *format = &rpf->format;
 	struct v4l2_rect crop;
+	u32 crop_width, crop_height, crop_x, crop_y, fourcc;
+	u32 i;
+
+	if (pipe->vmute_flag) {
+		for (i = 0; i < vsp1->info->rpf_count; ++i)
+			vsp1_rpf_write(rpf, dlb, VI6_DPR_RPF_ROUTE(i),
+				       VI6_DPR_NODE_UNUSED);
+		return;
+	}
 
 	/*
 	 * Source size and crop offsets.
@@ -221,21 +272,63 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 		crop.left += pipe->partition->rpf.left;
 	}
 
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_BSIZE,
-		       (crop.width << VI6_RPF_SRC_BSIZE_BHSIZE_SHIFT) |
-		       (crop.height << VI6_RPF_SRC_BSIZE_BVSIZE_SHIFT));
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_ESIZE,
-		       (crop.width << VI6_RPF_SRC_ESIZE_EHSIZE_SHIFT) |
-		       (crop.height << VI6_RPF_SRC_ESIZE_EVSIZE_SHIFT));
+	crop_width = crop.width;
+	crop_x = crop.left;
+	fourcc = rpf->fmtinfo->fourcc;
 
-	mem.addr[0] += crop.top * format->plane_fmt[0].bytesperline
-		     + crop.left * fmtinfo->bpp[0] / 8;
+	if (rpf->interlaced) {
+		crop_height = crop.height / 2;
+		crop_y = crop.top / 2;
+
+		if (fourcc == V4L2_PIX_FMT_UYVY ||
+		    fourcc == V4L2_PIX_FMT_VYUY ||
+		    fourcc == V4L2_PIX_FMT_YUYV ||
+		    fourcc == V4L2_PIX_FMT_YVYU) {
+			crop_width = round_down(crop_width, 2);
+			crop_x = round_down(crop_x, 2);
+		} else if ((fourcc == V4L2_PIX_FMT_NV12M) ||
+			   (fourcc == V4L2_PIX_FMT_NV21M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_height = round_down(crop_height, 2);
+			crop_x = round_down(crop_x, 2);
+			crop_y = round_down(crop_y, 2);
+		} else if ((fourcc == V4L2_PIX_FMT_NV16M) ||
+			   (fourcc == V4L2_PIX_FMT_NV61M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_x = round_down(crop_x, 2);
+		} else if ((fourcc == V4L2_PIX_FMT_YUV420M) ||
+			   (fourcc == V4L2_PIX_FMT_YUV444M) ||
+			   (fourcc == V4L2_PIX_FMT_YVU420M) ||
+			   (fourcc == V4L2_PIX_FMT_YVU444M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_height = round_down(crop_height, 2);
+		} else if ((fourcc == V4L2_PIX_FMT_YUV422M) ||
+			   (fourcc == V4L2_PIX_FMT_YVU422M)) {
+			crop_width = round_down(crop_width, 2);
+			crop_height = round_down(crop_height, 2);
+			crop_x = round_down(crop_x, 2);
+			crop_y = round_down(crop_y, 2);
+		}
+	} else {
+		crop_height = crop.height;
+		crop_y = crop.top;
+	}
+
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_BSIZE,
+		       (crop_width << VI6_RPF_SRC_BSIZE_BHSIZE_SHIFT) |
+		       (crop_height << VI6_RPF_SRC_BSIZE_BVSIZE_SHIFT));
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRC_ESIZE,
+		       (crop_width << VI6_RPF_SRC_ESIZE_EHSIZE_SHIFT) |
+		       (crop_height << VI6_RPF_SRC_ESIZE_EVSIZE_SHIFT));
+
+	mem.addr[0] += crop_y * format->plane_fmt[0].bytesperline
+		     + crop_x * fmtinfo->bpp[0] / 8;
 
 	if (format->num_planes > 1) {
 		unsigned int offset;
 
-		offset = crop.top * format->plane_fmt[1].bytesperline
-		       + crop.left / fmtinfo->hsub
+		offset = crop_y * format->plane_fmt[1].bytesperline
+		       + crop_x / fmtinfo->hsub
 		       * fmtinfo->bpp[1] / 8;
 		mem.addr[1] += offset;
 		mem.addr[2] += offset;
@@ -249,9 +342,13 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 	    fmtinfo->swap_uv)
 		swap(mem.addr[1], mem.addr[2]);
 
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_Y, mem.addr[0]);
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C0, mem.addr[1]);
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C1, mem.addr[2]);
+	if (!(vsp1->ths_quirks & VSP1_AUTO_FLD_NOT_SUPPORT)) {
+		vsp1_dl_set_addr_auto_fld(dlb, rpf, mem);
+	} else {
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_Y, mem.addr[0]);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C0, mem.addr[1]);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_SRCM_ADDR_C1, mem.addr[2]);
+	}
 }
 
 static void rpf_partition(struct vsp1_entity *entity,

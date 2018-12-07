@@ -2,7 +2,7 @@
 /*
  * vsp1_drm.h  --  R-Car VSP1 DRM/KMS Interface
  *
- * Copyright (C) 2015 Renesas Electronics Corporation
+ * Copyright (C) 2015-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -72,5 +72,7 @@ to_vsp1_drm_pipeline(struct vsp1_pipeline *pipe)
 
 int vsp1_drm_init(struct vsp1_device *vsp1);
 void vsp1_drm_cleanup(struct vsp1_device *vsp1);
+void vsp1_drm_display_start(struct vsp1_device *vsp1, unsigned int pipe_index,
+			    struct vsp1_pipeline *pipe);
 
 #endif /* __VSP1_DRM_H__ */

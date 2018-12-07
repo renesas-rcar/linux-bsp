@@ -1,7 +1,7 @@
 /*
  * R-Car Gen3 HDMI PHY
  *
- * Copyright (C) 2016 Renesas Electronics Corporation
+ * Copyright (C) 2016-2017 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -16,9 +16,14 @@
 
 #include <drm/bridge/dw_hdmi.h>
 
+#include "rcar_du_drv.h"
+
 #define RCAR_HDMI_PHY_OPMODE_PLLCFG	0x06	/* Mode of operation and PLL dividers */
+#define RCAR_HDMI_PHY_CKSYMTXCTRL	0x09	/* Clock Symbol and Transmitter Control Register */
+#define RCAR_HDMI_PHY_VLEVCTRL		0x0e	/* Voltage Level Control Register */
 #define RCAR_HDMI_PHY_PLLCURRGMPCTRL	0x10	/* PLL current and Gmp (conductance) */
 #define RCAR_HDMI_PHY_PLLDIVCTRL	0x11	/* PLL dividers */
+#define RCAR_HDMI_PHY_TXTERM		0x19	/* Transmission Termination Register */
 
 struct rcar_hdmi_phy_params {
 	unsigned long mpixelclock;
@@ -27,16 +32,29 @@ struct rcar_hdmi_phy_params {
 	u16 div;	/* PLL dividers */
 };
 
+struct rcar_hdmi_phy_params_2 {
+	unsigned long mpixelclock;
+	u16 clk;	/* Clock Symbol and Transmitter Control Register */
+	u16 vol_level;	/* Voltage Level */
+	u16 trans;	/* Transmission Termination Register */
+};
+
 static const struct rcar_hdmi_phy_params rcar_hdmi_phy_params[] = {
-	{ 35500000,  0x0003, 0x0344, 0x0328 },
-	{ 44900000,  0x0003, 0x0285, 0x0128 },
-	{ 71000000,  0x0002, 0x1184, 0x0314 },
-	{ 90000000,  0x0002, 0x1144, 0x0114 },
-	{ 140250000, 0x0001, 0x20c4, 0x030a },
-	{ 182750000, 0x0001, 0x2084, 0x010a },
-	{ 281250000, 0x0000, 0x0084, 0x0305 },
-	{ 297000000, 0x0000, 0x0084, 0x0105 },
+	{ 35500000,  0x0003, 0x0283, 0x0628 },
+	{ 44900000,  0x0003, 0x0285, 0x0228 },
+	{ 71000000,  0x0002, 0x1183, 0x0614 },
+	{ 90000000,  0x0002, 0x1142, 0x0214 },
+	{ 140250000, 0x0001, 0x20c0, 0x060a },
+	{ 182750000, 0x0001, 0x2080, 0x020a },
+	{ 281250000, 0x0000, 0x3040, 0x0605 },
+	{ 297000000, 0x0000, 0x3041, 0x0205 },
 	{ ~0UL,      0x0000, 0x0000, 0x0000 },
+};
+
+static const struct rcar_hdmi_phy_params_2 rcar_hdmi_phy_params_2[] = {
+	{ 165000000,  0x8c88, 0x0180, 0x0007},
+	{ 297000000,  0x83c8, 0x0180, 0x0004},
+	{ ~0UL,       0x0000, 0x0000, 0x0000},
 };
 
 static int rcar_hdmi_phy_configure(struct dw_hdmi *hdmi,
@@ -44,6 +62,7 @@ static int rcar_hdmi_phy_configure(struct dw_hdmi *hdmi,
 				   unsigned long mpixelclock)
 {
 	const struct rcar_hdmi_phy_params *params = rcar_hdmi_phy_params;
+	const struct rcar_hdmi_phy_params_2 *params_2 = rcar_hdmi_phy_params_2;
 
 	for (; params->mpixelclock != ~0UL; ++params) {
 		if (mpixelclock <= params->mpixelclock)
@@ -59,11 +78,49 @@ static int rcar_hdmi_phy_configure(struct dw_hdmi *hdmi,
 			      RCAR_HDMI_PHY_PLLCURRGMPCTRL);
 	dw_hdmi_phy_i2c_write(hdmi, params->div, RCAR_HDMI_PHY_PLLDIVCTRL);
 
+	for (; params_2->mpixelclock != ~0UL; ++params_2) {
+		if (mpixelclock <= params_2->mpixelclock)
+			break;
+	}
+
+	if (params_2->mpixelclock == ~0UL)
+		return -EINVAL;
+
+	dw_hdmi_phy_i2c_write(hdmi, params_2->clk, RCAR_HDMI_PHY_CKSYMTXCTRL);
+	dw_hdmi_phy_i2c_write(hdmi, params_2->vol_level,
+			      RCAR_HDMI_PHY_VLEVCTRL);
+	dw_hdmi_phy_i2c_write(hdmi, params_2->trans, RCAR_HDMI_PHY_TXTERM);
+
 	return 0;
+}
+
+static enum drm_mode_status rcar_hdmi_mode_valid(
+				struct drm_connector *connector,
+				const struct drm_display_mode *mode)
+{
+	struct drm_device *ddev = connector->dev;
+	struct rcar_du_device *rcdu = ddev->dev_private;
+
+	if (rcdu->info->gen != 3)
+		return MODE_OK;
+
+	if (mode->hdisplay > 3840 || mode->vdisplay > 2160)
+		return MODE_BAD;
+
+	if (mode->hdisplay == 3840 && mode->vdisplay == 2160 &&
+	    mode->vrefresh > 30)
+		return MODE_BAD;
+
+	if (mode->clock > 297000)
+		return MODE_BAD;
+
+	return MODE_OK;
 }
 
 static const struct dw_hdmi_plat_data rcar_dw_hdmi_plat_data = {
 	.configure_phy	= rcar_hdmi_phy_configure,
+	.mode_valid	= rcar_hdmi_mode_valid,
+	.dev_type	= RCAR_HDMI,
 };
 
 static int rcar_dw_hdmi_probe(struct platform_device *pdev)
