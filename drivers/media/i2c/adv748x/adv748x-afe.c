@@ -124,9 +124,6 @@ static void adv748x_afe_fill_format(struct adv748x_afe *afe,
 
 	fmt->width = 720;
 	fmt->height = afe->curr_norm & V4L2_STD_525_60 ? 480 : 576;
-
-	/* Field height */
-	fmt->height /= 2;
 }
 
 static int adv748x_afe_std(v4l2_std_id std)
@@ -155,7 +152,8 @@ static void adv748x_afe_set_video_standard(struct adv748x_state *state,
 					  int sdpstd)
 {
 	sdp_clrset(state, ADV748X_SDP_VID_SEL, ADV748X_SDP_VID_SEL_MASK,
-		   (sdpstd & 0xf) << ADV748X_SDP_VID_SEL_SHIFT);
+		   (sdpstd & 0xf) << ADV748X_SDP_VID_SEL_SHIFT |
+		   ADV748X_SDP_VID_RESERVED_BIT);
 }
 
 static int adv748x_afe_s_input(struct adv748x_afe *afe, unsigned int input)
@@ -279,7 +277,10 @@ static int adv748x_afe_s_stream(struct v4l2_subdev *sd, int enable)
 			goto unlock;
 	}
 
-	ret = adv748x_txb_power(state, enable);
+	if (state->afe.txa_switch)
+		ret = adv748x_txa_power(state, enable);
+	else
+		ret = adv748x_txb_power(state, enable);
 	if (ret)
 		goto unlock;
 
@@ -314,17 +315,17 @@ static const struct v4l2_subdev_video_ops adv748x_afe_video_ops = {
 static int adv748x_afe_propagate_pixelrate(struct adv748x_afe *afe)
 {
 	struct v4l2_subdev *tx;
-	unsigned int width, height, fps;
 
 	tx = adv748x_get_remote_sd(&afe->pads[ADV748X_AFE_SOURCE]);
 	if (!tx)
 		return -ENOLINK;
 
-	width = 720;
-	height = afe->curr_norm & V4L2_STD_525_60 ? 480 : 576;
-	fps = afe->curr_norm & V4L2_STD_525_60 ? 30 : 25;
-
-	return adv748x_csi2_set_pixelrate(tx, width * height * fps);
+	/*
+	 * The ADV748x ADC sampling frequency is twice the externally supplied
+	 * clock whose frequency is required to be 28.63636 MHz. It oversamples
+	 * with a factor of 4 resulting in a pixel rate of 14.3180180 MHz.
+	 */
+	return adv748x_csi2_set_pixelrate(tx, 14318180);
 }
 
 static int adv748x_afe_enum_mbus_code(struct v4l2_subdev *sd,
@@ -345,6 +346,7 @@ static int adv748x_afe_get_format(struct v4l2_subdev *sd,
 {
 	struct adv748x_afe *afe = adv748x_sd_to_afe(sd);
 	struct v4l2_mbus_framefmt *mbusformat;
+	v4l2_std_id std = 0;
 
 	/* It makes no sense to get the format of the analog sink pads */
 	if (sdformat->pad != ADV748X_AFE_SOURCE)
@@ -354,6 +356,9 @@ static int adv748x_afe_get_format(struct v4l2_subdev *sd,
 		mbusformat = v4l2_subdev_get_try_format(sd, cfg, sdformat->pad);
 		sdformat->format = *mbusformat;
 	} else {
+		/* Set std_id automatically */
+		adv748x_afe_querystd(sd, &std);
+		adv748x_afe_s_std(sd, std);
 		adv748x_afe_fill_format(afe, &sdformat->format);
 		adv748x_afe_propagate_pixelrate(afe);
 	}

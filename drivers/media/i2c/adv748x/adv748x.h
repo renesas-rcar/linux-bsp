@@ -94,14 +94,17 @@ struct adv748x_csi2 {
 	struct adv748x_state *state;
 	struct v4l2_mbus_framefmt format;
 	unsigned int page;
+	unsigned int port;
 
 	struct media_pad pads[ADV748X_CSI2_NR_PADS];
 	struct v4l2_ctrl_handler ctrl_hdl;
 	struct v4l2_subdev sd;
+	unsigned int vc_ch;
 };
 
 #define notifier_to_csi2(n) container_of(n, struct adv748x_csi2, notifier)
 #define adv748x_sd_to_csi2(sd) container_of(sd, struct adv748x_csi2, sd)
+#define is_tx_enabled(_tx) ((_tx)->state->endpoints[(_tx)->port] != NULL)
 
 enum adv748x_hdmi_pads {
 	ADV748X_HDMI_SINK,
@@ -123,6 +126,7 @@ struct adv748x_hdmi {
 		u32 present;
 		unsigned int blocks;
 	} edid;
+	unsigned int use_lane;
 };
 
 #define adv748x_ctrl_to_hdmi(ctrl) \
@@ -151,6 +155,7 @@ struct adv748x_afe {
 	bool streaming;
 	v4l2_std_id curr_norm;
 	unsigned int input;
+	bool txa_switch;
 };
 
 #define adv748x_ctrl_to_afe(ctrl) \
@@ -201,6 +206,7 @@ struct adv748x_state {
 
 /* IO Map */
 #define ADV748X_IO_PD			0x00	/* power down controls */
+#define ADV748X_IO_PD_HDMI		BIT(5)
 #define ADV748X_IO_PD_RX_EN		BIT(6)
 
 #define ADV748X_IO_REG_04		0x04
@@ -216,6 +222,7 @@ struct adv748x_state {
 #define ADV748X_IO_10_CSI4_EN		BIT(7)
 #define ADV748X_IO_10_CSI1_EN		BIT(6)
 #define ADV748X_IO_10_PIX_OUT_EN	BIT(5)
+#define ADV748X_IO_10_OUT_SD_TXA	BIT(3)
 
 #define ADV748X_IO_CHIP_REV_ID_1	0xdf
 #define ADV748X_IO_CHIP_REV_ID_2	0xe0
@@ -266,6 +273,7 @@ struct adv748x_state {
 #define ADV748X_SDP_INSEL		0x00	/* user_map_rw_reg_00 */
 
 #define ADV748X_SDP_VID_SEL		0x02	/* user_map_rw_reg_02 */
+#define ADV748X_SDP_VID_RESERVED_BIT	0x04
 #define ADV748X_SDP_VID_SEL_MASK	0xf0
 #define ADV748X_SDP_VID_SEL_SHIFT	4
 
@@ -421,5 +429,6 @@ int adv748x_csi2_set_pixelrate(struct v4l2_subdev *sd, s64 rate);
 
 int adv748x_hdmi_init(struct adv748x_hdmi *hdmi);
 void adv748x_hdmi_cleanup(struct adv748x_hdmi *hdmi);
+int adv748x_hdmi_set_resume_edid(struct adv748x_hdmi *hdmi);
 
 #endif /* _ADV748X_H_ */
