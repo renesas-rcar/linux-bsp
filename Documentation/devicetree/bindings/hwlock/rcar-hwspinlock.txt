@@ -1,0 +1,25 @@
+DT bindings for the Renesas R-Car Hardware spinlock driver
+----------------------------------------------------------
+
+Required properties :
+- compatible : shall contain only one of the following:
+	- "renesas,mfis-lock-r8a7795", "renesas,mfis-lock";
+	- "renesas,mfis-lock-r8a7796", "renesas,mfis-lock";
+	- "renesas,mfis-lock-r8a77965", "renesas,mfis-lock";
+
+- reg : start address and length for MFIS registers.
+
+- #hwlock-cells : should be 1. hwspinlock users specify the hwspinlock id
+	to request a specific hwspinlock.
+
+Please look at the generic hwlock binding for usage information for consumers,
+"Documentation/devicetree/bindings/hwlock/hwlock.txt"
+
+Examples:
+
+mfis: mfis@e6260000 {
+	compatible = "renesas,mfis-lock-r8a7795",
+		     "renesas,mfis-lock";
+	reg = <0 0xe6260000 0 0x1000>;
+	#hwlock-cells = <1>;
+};
