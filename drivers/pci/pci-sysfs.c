@@ -488,12 +488,22 @@ static ssize_t remove_store(struct device *dev, struct device_attribute *attr,
 			    const char *buf, size_t count)
 {
 	unsigned long val;
+	struct kernfs_node *kn;
+
+	kn = sysfs_break_active_protection(&dev->kobj, &attr->attr);
+	WARN_ON_ONCE(!kn);
 
 	if (kstrtoul(buf, 0, &val) < 0)
 		return -EINVAL;
 
-	if (val && device_remove_file_self(dev, attr))
+	if (val) {
+		device_remove_file(dev, attr);
 		pci_stop_and_remove_bus_device_locked(to_pci_dev(dev));
+	}
+
+	if (kn)
+		sysfs_unbreak_active_protection(kn);
+
 	return count;
 }
 static struct device_attribute dev_remove_attr = __ATTR(remove,
@@ -505,10 +515,14 @@ static ssize_t dev_bus_rescan_store(struct device *dev,
 				    const char *buf, size_t count)
 {
 	unsigned long val;
+	struct kernfs_node *kn;
 	struct pci_bus *bus = to_pci_bus(dev);
 
 	if (kstrtoul(buf, 0, &val) < 0)
 		return -EINVAL;
+
+	kn = sysfs_break_active_protection(&dev->kobj, &attr->attr);
+	WARN_ON_ONCE(!kn);
 
 	if (val) {
 		pci_lock_rescan_remove();
@@ -518,6 +532,10 @@ static ssize_t dev_bus_rescan_store(struct device *dev,
 			pci_rescan_bus(bus);
 		pci_unlock_rescan_remove();
 	}
+
+	if (kn)
+		sysfs_unbreak_active_protection(kn);
+
 	return count;
 }
 static DEVICE_ATTR(rescan, (S_IWUSR|S_IWGRP), NULL, dev_bus_rescan_store);
