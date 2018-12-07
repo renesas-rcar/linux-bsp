@@ -23,6 +23,7 @@
  *			 ksz9477
  */
 
+#include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/phy.h>
@@ -727,6 +728,13 @@ static int kszphy_suspend(struct phy_device *phydev)
 static int kszphy_resume(struct phy_device *phydev)
 {
 	int ret;
+
+	if (!phydev->attached_dev) {
+		/* If the PHY is not attached, toggle the reset */
+		phy_device_reset(phydev, 1);
+		udelay(1);
+		phy_device_reset(phydev, 0);
+	}
 
 	genphy_resume(phydev);
 
