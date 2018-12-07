@@ -196,6 +196,10 @@
 		memory-region = <&mmp_reserved>;
 	};
 
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
 	reg_1p8v: regulator0 {
 		compatible = "regulator-fixed";
 		regulator-name = "fixed-1.8V";
