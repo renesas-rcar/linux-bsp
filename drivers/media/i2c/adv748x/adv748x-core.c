@@ -1,7 +1,7 @@
 /*
  * Driver for Analog Devices ADV748X HDMI receiver with AFE
  *
- * Copyright (C) 2017 Renesas Electronics Corp.
+ * Copyright (C) 2017-2019 Renesas Electronics Corp.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -273,7 +273,8 @@ static int adv748x_write_regs(struct adv748x_state *state,
 
 	while (regs->page != ADV748X_PAGE_EOR) {
 		if (regs->page == ADV748X_PAGE_WAIT) {
-			msleep(regs->value);
+			usleep_range(regs->value * 1000,
+				     (regs->value * 1000) + 1000);
 		} else {
 			ret = adv748x_write(state, regs->page, regs->reg,
 				      regs->value);
