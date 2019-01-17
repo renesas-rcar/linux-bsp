@@ -278,7 +278,7 @@ static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	{ .soc_id = "r8a77990",
 	  .data = (void *)(HS400_USE_MANUAL_CALIB |
 			   (SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0 << 24) |
-			   (0x2 << 16)), },
+			   (0x4 << 16)), },
 	{/*sentinel*/},
 };
 
