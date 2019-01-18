@@ -119,7 +119,7 @@
 
 	sound_card: sound {
 		compatible = "audio-graph-card2";
-		label = "rcar-sound";
+		label = "ak4613";
 
 		links = <&rsnd_port0	/* ak4613 */
 			 &rsnd_port1	/* HDMI0  */
