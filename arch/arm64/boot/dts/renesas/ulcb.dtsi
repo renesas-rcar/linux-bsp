@@ -104,7 +104,7 @@
 
 	sound_card: sound {
 		compatible = "audio-graph-card";
-		label = "rcar-sound";
+		label = "ak4613";
 
 		dais = <&rsnd_port0	/* ak4613 */
 			&rsnd_port1	/* HDMI0  */
