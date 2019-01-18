@@ -147,7 +147,7 @@
 	/delete-node/sound;
 	sound_card: sound@1 {
 		compatible = "audio-graph-card";
-		label = "rcar-sound";
+		label = "ak4613";
 
 		dais = <&rsnd_port2	/* ak4613 */
 			&rsnd_port3	/* HDMI0  */
