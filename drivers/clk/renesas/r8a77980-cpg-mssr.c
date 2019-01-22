@@ -112,6 +112,8 @@ static const struct cpg_core_clk r8a77980_core_clks[] __initconst = {
 };
 
 static const struct mssr_mod_clk r8a77980_mod_clks[] __initconst = {
+	DEF_MOD("rt-dmac1",		  16,	R8A77980_CLK_S0D3),
+	DEF_MOD("rt-dmac0",		  21,	R8A77980_CLK_S0D3),
 	DEF_MOD("tmu4",			 121,	R8A77980_CLK_S0D6),
 	DEF_MOD("tmu3",			 122,	R8A77980_CLK_S0D6),
 	DEF_MOD("tmu2",			 123,	R8A77980_CLK_S0D6),
