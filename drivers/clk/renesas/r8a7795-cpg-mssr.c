@@ -126,6 +126,8 @@ static struct cpg_core_clk r8a7795_core_clks[] __initdata = {
 };
 
 static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
+	DEF_MOD("rt-dmac1",		  16,	R8A7795_CLK_S0D3),
+	DEF_MOD("rt-dmac0",		  21,	R8A7795_CLK_S0D3),
 	DEF_MOD("stb",			 104,	R8A7795_CLK_S2D1), /* ES1.x */
 	DEF_MOD("3dge",			 112,	R8A7795_CLK_ZG),
 	DEF_MOD("fdp1-2",		 117,	R8A7795_CLK_S2D1), /* ES1.x */
