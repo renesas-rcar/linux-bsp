@@ -885,11 +885,11 @@ static int ravb_poll(struct napi_struct *napi, int budget)
 		}
 		/* Processing TX Descriptor Ring */
 		if (tis & mask) {
+			spin_lock_irqsave(&priv->lock, flags);
 			/* Timestamp updated */
 			if (q == RAVB_NC)
 				ravb_get_tx_tstamp(ndev);
 
-			spin_lock_irqsave(&priv->lock, flags);
 			/* Clear TX interrupt */
 			ravb_write(ndev, ~(mask | TIS_RESERVED), TIS);
 			ravb_tx_free(ndev, q, true);
