@@ -417,11 +417,16 @@ static int imr_queue_setup(struct vb2_queue *vq,
 {
 	struct imr_ctx     *ctx = vb2_get_drv_priv(vq);
 	struct imr_q_data  *q_data = &ctx->queue[V4L2_TYPE_IS_OUTPUT(vq->type) ? 0 : 1];
-	int                 w = q_data->fmt.width;
+	int                 s = q_data->fmt.bytesperline;
 	int                 h = q_data->fmt.height;
 
 	/* ...we use only single-plane formats */
 	*nplanes = 1;
+
+	v4l2_dbg(1, debug, &ctx->imr->v4l2_dev, "format: %c%c%c%c, s=%d, h=%d\n",
+		(q_data->fmt.pixelformat >> 0) & 0xff, (q_data->fmt.pixelformat >> 8) & 0xff,
+		(q_data->fmt.pixelformat >> 16) & 0xff, (q_data->fmt.pixelformat >> 24) & 0xff,
+		s, h);
 
 	/* ...specify plane size */
 	switch (q_data->fmt.pixelformat) {
@@ -429,16 +434,16 @@ static int imr_queue_setup(struct vb2_queue *vq,
 	case V4L2_PIX_FMT_YUYV:
 	case V4L2_PIX_FMT_VYUY:
 	case V4L2_PIX_FMT_YVYU:
-	case V4L2_PIX_FMT_NV16:
 	case V4L2_PIX_FMT_Y10:
 	case V4L2_PIX_FMT_Y12:
 	case V4L2_PIX_FMT_Y16:
-		sizes[0] = w * h * 2;
-		break;
-
 	case V4L2_PIX_FMT_UV8:
 	case V4L2_PIX_FMT_GREY:
-		sizes[0] = w * h;
+		sizes[0] = s * h;
+		break;
+
+	case V4L2_PIX_FMT_NV16:
+		sizes[0] = s * h * 2;
 		break;
 
 	default:
@@ -781,8 +786,10 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 	u16     dst_uv_fmt = (cflags & IMR_F_UV12 ? 2 : (cflags & IMR_F_UV10 ? 1 : 0)) << IMR_CMR_DUV_SHIFT;
 	int     w = ctx->queue[0].fmt.width;
 	int     h = ctx->queue[0].fmt.height;
+	int     s = ctx->queue[0].fmt.bytesperline;
 	int     W = ctx->queue[1].fmt.width;
 	int     H = ctx->queue[1].fmt.height;
+	int     S = ctx->queue[1].fmt.bytesperline;
 	u32     tricr = ctx->color & 0xFFFFFF;
 	int     i;
 
@@ -855,15 +862,15 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 			*dl++ = IMR_OP_WTS(IMR_CMRCSR, src_y_fmt | src_uv_fmt | dst_y_fmt | dst_uv_fmt | __imr_luce(type) | __imr_clce(type));
 
 			/* ...set source/destination strides basing on Y-plane precision */
-			*dl++ = IMR_OP_WTS(IMR_DSTR, W << (cflags & IMR_F_Y10 ? 1 : 0));
-			*dl++ = IMR_OP_WTS(IMR_SSTR, w << (iflags & IMR_F_Y10 ? 1 : 0));
+			*dl++ = IMR_OP_WTS(IMR_DSTR, S);
+			*dl++ = IMR_OP_WTS(IMR_SSTR, s);
 		} else {
 			/* ...setup UV-plane processing only */
 			*dl++ = IMR_OP_WTS(IMR_CMRCSR, IMR_CMR_YCM | src_uv_fmt | dst_uv_fmt | __imr_clce(type) | __imr_luce(type));
 
 			/* ...set source/destination strides basing on UV-plane precision */
-			*dl++ = IMR_OP_WTS(IMR_DSTR, W << (cflags & IMR_F_UV10 ? 1 : 0));
-			*dl++ = IMR_OP_WTS(IMR_SSTR, w << (iflags & IMR_F_UV10 ? 1 : 0));
+			*dl++ = IMR_OP_WTS(IMR_DSTR, S);
+			*dl++ = IMR_OP_WTS(IMR_SSTR, s);
 		}
 	} else {
 		u16		src_fmt = (iflags & IMR_F_UV_SWAP ? IMR_CMR2_UVFORM : 0) | (iflags & IMR_F_YUV_SWAP ? IMR_CMR2_YUV422FORM : 0);
@@ -878,19 +885,22 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 		*dl++ = IMR_OP_WTS(IMR_CMRCSR, src_y_fmt | src_uv_fmt | dst_y_fmt | dst_uv_fmt | __imr_clce(type) | __imr_luce(type));
 
 		/* ...set source stride basing on precision (2 or 4 bytes/pixel) */
-		*dl++ = IMR_OP_WTS(IMR_SSTR, w << (iflags & IMR_F_Y10 ? 2 : 1));
+		*dl++ = IMR_OP_WTS(IMR_SSTR, s/* << (iflags & IMR_F_Y10 ? 2 : 1)*/);
 
 		/* ...if output is planar, put the offset value */
 		if (oflags & IMR_F_PLANAR) {
 			/* ...specify offset of a destination UV plane */
 			*dl++ = IMR_OP_WTL(IMR_DSOR, 1);
-			*dl++ = W * H;
+			*dl++ = S * H;
+
+			/* ...force planar output */
+			*dl++ = IMR_OP_WTS(IMR_CMRCSR, IMR_CMR_YISM);
 
 			/* ...destination stride is 1 or 2 bytes/pixel (same for both Y and UV planes) */
-			*dl++ = IMR_OP_WTS(IMR_DSTR, W << (cflags & IMR_F_Y10 ? 1 : 0));
+			*dl++ = IMR_OP_WTS(IMR_DSTR, S);
 		} else {
 			/* ...destination stride if 2 or 4 bytes/pixel (Y and UV planes interleaved) */
-			*dl++ = IMR_OP_WTS(IMR_DSTR, W << (cflags & IMR_F_Y10 ? 2 : 1));
+			*dl++ = IMR_OP_WTS(IMR_DSTR, S);
 		}
 	}
 
@@ -919,9 +929,6 @@ static inline void imr_dl_program_setup(struct imr_ctx *ctx, struct imr_cfg *cfg
 
 		/* ...select correction mode */
 		*dl++ = IMR_OP_WTS(IMR_CMRCSR, IMR_CMR_YCM | __imr_clce(type) | __imr_luce(type));
-
-		/* ...luminance correction bit must be cleared (if it was set) */
-		//*dl++ = IMR_OP_WTS(IMR_CMRCCR, IMR_CMR_LUCE);
 
 		/* ...draw triangles */
 		*dl++ = IMR_OP_GOSUB;
@@ -1225,6 +1232,43 @@ static int imr_extstride_set(struct imr_ctx *ctx, struct imr_rse_param *param)
  * V4L2 I/O controls
  ******************************************************************************/
 
+/* ...check the format stride */
+static inline int __imr_verify_fmt_stride(struct v4l2_pix_format *pix)
+{
+	int     stride;
+
+	switch (pix->pixelformat) {
+	case V4L2_PIX_FMT_NV16:
+	case V4L2_PIX_FMT_GREY:
+	case V4L2_PIX_FMT_UV8:
+		/* ...single byte per pixel */
+		stride = pix->width;
+		break;
+
+	case V4L2_PIX_FMT_UYVY:
+	case V4L2_PIX_FMT_VYUY:
+	case V4L2_PIX_FMT_YUYV:
+	case V4L2_PIX_FMT_YVYU:
+	case V4L2_PIX_FMT_Y10:
+	case V4L2_PIX_FMT_Y12:
+		/* ...two bytes per pixel */
+		stride = pix->width * 2;
+		break;
+
+	default:
+		/* ...unsupported format */
+		return -1;
+	}
+
+	if (pix->bytesperline)
+		return (pix->bytesperline >= stride ? 0 : -1);
+
+	/* ...no stride is specified; use default one */
+	pix->bytesperline = stride;
+
+	return 0;
+}
+
 /* ...test for a format supported */
 static int __imr_try_fmt(struct imr_ctx *ctx, struct v4l2_format *f)
 {
@@ -1232,22 +1276,30 @@ static int __imr_try_fmt(struct imr_ctx *ctx, struct v4l2_format *f)
 	u32     fourcc = pix->pixelformat;
 	int     i;
 
+	/* ...fix-up format stride if needed */
+	if (__imr_verify_fmt_stride(pix) < 0)
+		return -EINVAL;
+
 	/* ...both output and capture interface have the same set of supported formats */
 	for (i = 0; i < ARRAY_SIZE(imr_lx4_formats); i++) {
 		if (fourcc == imr_lx4_formats[i].fourcc) {
 			/* ...fix-up format specification as needed */
 			pix->field = V4L2_FIELD_NONE;
 
-			v4l2_dbg(1, debug, &ctx->imr->v4l2_dev, "format request: '%c%c%c%c', %d*%d\n",
+			v4l2_dbg(1, debug, &ctx->imr->v4l2_dev, "%s-format request: '%c%c%c%c', %d*%d\n",
+				(V4L2_TYPE_IS_OUTPUT(f->type) ? "output" : "capture"),
 				(fourcc >> 0) & 0xff, (fourcc >> 8) & 0xff,
 				(fourcc >> 16) & 0xff, (fourcc >> 24) & 0xff,
 				pix->width, pix->height);
 
 			/* ...verify source/destination image dimensions */
 			if (V4L2_TYPE_IS_OUTPUT(f->type))
-				v4l_bound_align_image(&pix->width, 128, 2048, 7, &pix->height, 1, 2048, 0, 0);
+				v4l_bound_align_image(&pix->bytesperline, 256, 8192, 8, &pix->height, 1, 2048, 0, 0);
 			else
-				v4l_bound_align_image(&pix->width, 64, 2048, 6, &pix->height, 1, 2048, 0, 0);
+				v4l_bound_align_image(&pix->bytesperline, 64, 8192, 6, &pix->height, 1, 2048, 0, 0);
+
+			/* ...verify width is not exceeding the maximal value */
+			(pix->width > 2048 ? pix->width = 2048 : 0);
 
 			return i;
 		}
@@ -1750,8 +1802,8 @@ static void imr_device_run(void *priv)
 
 	/* ...adjust source/destination parameters of the UV-plane as needed */
 	if (cfg->src_pa_ptr[1] && cfg->dst_pa_ptr[1]) {
-		*cfg->src_pa_ptr[1] = src_addr + ctx->queue[0].fmt.width * ctx->queue[0].fmt.height;
-		*cfg->dst_pa_ptr[1] = dst_addr + ctx->queue[1].fmt.width * ctx->queue[1].fmt.height;
+		*cfg->src_pa_ptr[1] = src_addr + ctx->queue[0].fmt.bytesperline * ctx->queue[0].fmt.height;
+		*cfg->dst_pa_ptr[1] = dst_addr + ctx->queue[1].fmt.bytesperline * ctx->queue[1].fmt.height;
 	}
 
 	v4l2_dbg(3, debug, &imr->v4l2_dev, "process buffer-pair 0x%08x:0x%08x\n",
