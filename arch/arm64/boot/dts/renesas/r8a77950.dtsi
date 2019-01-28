@@ -121,6 +121,12 @@
 
 	/delete-node/ usb-phy@ee0e0200;
 
+	ivdp1c: vcp4@fe8d0000 {
+		clocks = <&cpg CPG_MOD 128>;
+		power-domains = <&sysc R8A7795_PD_A2VC0>;
+		resets = <&cpg 128>;
+	};
+
 	vcp4@fe8f0000 {
 		compatible = "renesas,vcp4-vcpl4";
 		reg = <0 0xfe8f0000 0 0x200>, <0 0xfe8f0200 0 0x200>;
