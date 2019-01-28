@@ -2,7 +2,7 @@
 /*
  * Device Tree Source for the R-Car M3-W (R8A77960) SoC
  *
- * Copyright (C) 2016-2017 Renesas Electronics Corp.
+ * Copyright (C) 2016-2019 Renesas Electronics Corp.
  */
 
 #include <dt-bindings/clock/r8a7796-cpg-mssr.h>
@@ -632,7 +632,7 @@
 		clock-frequency = <0>;
 	};
 
-	soc {
+	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
 		#address-cells = <2>;
@@ -2919,20 +2919,11 @@
 			resets = <&cpg 822>;
 		};
 
-		fcpci0: vcp4@fe8df000 {
-			compatible = "renesas,vcp4-fcpci0";
-			reg = <0 0xfe8df000 0 0x200>;
-			clocks = <&cpg CPG_MOD 617>;
-			power-domains = <&sysc R8A7796_PD_A3VC>;
-			resets = <&cpg 617>;
-			renesas,#ch = <1>;
-		};
-
 		fcpcs: vcp4@fe90f000 {
 			compatible = "renesas,vcp4-fcpcs";
 			reg = <0 0xfe90f000 0 0x200>;
 			clocks = <&cpg CPG_MOD 619>;
-			power-domains = <&sysc R8A7796_PD_A3VC>;
+			power-domains = <&sysc R8A7796_PD_A2VC1>;
 			resets = <&cpg 619>;
 			renesas,#ch = <0>;
 		};
@@ -2943,9 +2934,9 @@
 			interrupts = <GIC_SPI 380 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 381 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 128>;
-			power-domains = <&sysc R8A7796_PD_A2VC0>;
-			resets = <&cpg 128>;
+			clocks = <&cpg CPG_MOD 130>;
+			power-domains = <&sysc R8A7796_PD_A2VC1>;
+			resets = <&cpg 130>;
 			renesas,#ch = <2>;
 			renesas,#fcp_ch = <1>;
 		};
@@ -2968,7 +2959,7 @@
 			interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 131>;
-			power-domains = <&sysc R8A7796_PD_A2VC0>;
+			power-domains = <&sysc R8A7796_PD_A2VC1>;
 			resets = <&cpg 131>;
 			renesas,#ch = <1>;
 			renesas,#fcp_ch = <0>;
