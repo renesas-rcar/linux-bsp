@@ -3,7 +3,7 @@
  * r8a7796 Clock Pulse Generator / Module Standby and Software Reset
  *
  * Copyright (C) 2016 Glider bvba
- * Copyright (C) 2018 Renesas Electronics Corp.
+ * Copyright (C) 2018-2019 Renesas Electronics Corp.
  *
  * Based on r8a7795-cpg-mssr.c
  *
@@ -15,6 +15,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/soc/renesas/rcar-rst.h>
+#include <linux/sys_soc.h>
 
 #include <dt-bindings/clock/r8a7796-cpg-mssr.h>
 
@@ -117,7 +118,7 @@ static const struct cpg_core_clk r8a7796_core_clks[] __initconst = {
 	DEF_BASE("r",           R8A7796_CLK_R,     CLK_TYPE_GEN3_R, CLK_RINT),
 };
 
-static const struct mssr_mod_clk r8a7796_mod_clks[] __initconst = {
+static struct mssr_mod_clk r8a7796_mod_clks[] __initdata = {
 	DEF_MOD("3dge",			 112,	R8A7796_CLK_ZG),
 	DEF_MOD("fdp1-0",		 119,	R8A7796_CLK_S0D1),
 	DEF_MOD("ivdp1c",		 128,	R8A7796_CLK_S0D2),
@@ -304,6 +305,20 @@ static const struct rcar_gen3_cpg_pll_config cpg_pll_configs[16] __initconst = {
 	{ 2,		192,	1,	192,	1,	32,	},
 };
 
+static const struct soc_device_attribute r8a7796es1[] __initconst = {
+	{ .soc_id = "r8a7796", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
+	/*
+	 * Fixups for R-Car M3 ES3.x
+	 */
+
+static const unsigned int r8a7796es3_mod_nullify[] __initconst = {
+	MOD_CLK_ID(128),			/* iVDP1C  */
+	MOD_CLK_ID(617),			/* FCPCI0  */
+};
+
 static int __init r8a7796_cpg_mssr_init(struct device *dev)
 {
 	const struct rcar_gen3_cpg_pll_config *cpg_pll_config;
@@ -313,6 +328,12 @@ static int __init r8a7796_cpg_mssr_init(struct device *dev)
 	error = rcar_rst_read_mode_pins(&cpg_mode);
 	if (error)
 		return error;
+
+	if (!soc_device_match(r8a7796es1))
+		mssr_mod_nullify(r8a7796_mod_clks,
+				 ARRAY_SIZE(r8a7796_mod_clks),
+				 r8a7796es3_mod_nullify,
+				 ARRAY_SIZE(r8a7796es3_mod_nullify));
 
 	cpg_pll_config = &cpg_pll_configs[CPG_PLL_CONFIG_INDEX(cpg_mode)];
 	if (!cpg_pll_config->extal_div) {
