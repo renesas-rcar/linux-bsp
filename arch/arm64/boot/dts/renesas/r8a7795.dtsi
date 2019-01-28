@@ -2,7 +2,7 @@
 /*
  * Device Tree Source for the R-Car H3 (R8A77950) SoC
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corp.
+ * Copyright (C) 2015-2019 Renesas Electronics Corp.
  */
 
 #include <dt-bindings/clock/r8a7795-cpg-mssr.h>
@@ -3299,9 +3299,9 @@
 			interrupts = <GIC_SPI 380 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 381 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 128>;
-			power-domains = <&sysc R8A7795_PD_A2VC0>;
-			resets = <&cpg 128>;
+			clocks = <&cpg CPG_MOD 130>;
+			power-domains = <&sysc R8A7795_PD_A2VC1>;
+			resets = <&cpg 130>;
 			renesas,#ch = <2>;
 			renesas,#fcp_ch = <0>;
 		};

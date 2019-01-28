@@ -2,7 +2,7 @@
 /*
  * Device Tree Source for the R-Car H3 (R8A77950) ES1.x SoC
  *
- * Copyright (C) 2015 Renesas Electronics Corp.
+ * Copyright (C) 2015-2019 Renesas Electronics Corp.
  */
 
 #include "r8a7795.dtsi"
@@ -98,6 +98,12 @@
 	/delete-node/ usb@ee0e0100;
 
 	/delete-node/ usb-phy@ee0e0200;
+
+	ivdp1c: vcp4@fe8d0000 {
+		clocks = <&cpg CPG_MOD 128>;
+		power-domains = <&sysc R8A7795_PD_A2VC0>;
+		resets = <&cpg 128>;
+	};
 
 	vcp4@fe8f0000 {
 		compatible = "renesas,vcp4-vcpl4";
