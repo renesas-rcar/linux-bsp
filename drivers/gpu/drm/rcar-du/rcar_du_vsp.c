@@ -1,7 +1,7 @@
 /*
- * rcar_du_vsp.h  --  R-Car Display Unit VSP-Based Compositor
+ * rcar_du_vsp.c  --  R-Car Display Unit VSP-Based Compositor
  *
- * Copyright (C) 2015-2018 Renesas Electronics Corporation
+ * Copyright (C) 2015-2019 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  *
@@ -227,7 +227,7 @@ static int rcar_du_vsp_plane_prepare_fb(struct drm_plane *plane,
 	struct rcar_du_vsp_plane_state *rstate = to_rcar_vsp_plane_state(state);
 	struct rcar_du_vsp *vsp = to_rcar_vsp_plane(plane)->vsp;
 	struct rcar_du_device *rcdu = vsp->dev;
-	unsigned int i;
+	unsigned int i, j;
 	int ret;
 
 	/*
@@ -260,7 +260,7 @@ static int rcar_du_vsp_plane_prepare_fb(struct drm_plane *plane,
 
 			src = gem->sgt->sgl;
 			dst = sgt->sgl;
-			for (i = 0; i < gem->sgt->orig_nents; ++i) {
+			for (j = 0; j < gem->sgt->orig_nents; ++j) {
 				sg_set_page(dst, sg_page(src), src->length,
 					    src->offset);
 				src = sg_next(src);
