@@ -1,7 +1,7 @@
 /*
  * Driver for Analog Devices ADV748X HDMI receiver with AFE
  *
- * Copyright (C) 2017 Renesas Electronics Corp.
+ * Copyright (C) 2017-2019 Renesas Electronics Corp.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -273,7 +273,8 @@ static int adv748x_write_regs(struct adv748x_state *state,
 
 	while (regs->page != ADV748X_PAGE_EOR) {
 		if (regs->page == ADV748X_PAGE_WAIT) {
-			msleep(regs->value);
+			usleep_range(regs->value * 1000,
+				     (regs->value * 1000) + 1000);
 		} else {
 			ret = adv748x_write(state, regs->page, regs->reg,
 				      regs->value);
@@ -848,7 +849,7 @@ static int adv748x_probe(struct i2c_client *client,
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA))
 		return -EIO;
 
-	state = kzalloc(sizeof(struct adv748x_state), GFP_KERNEL);
+	state = devm_kzalloc(&client->dev, sizeof(*state), GFP_KERNEL);
 	if (!state)
 		return -ENOMEM;
 
@@ -946,7 +947,6 @@ err_cleanup_dt:
 	adv748x_dt_cleanup(state);
 err_free_mutex:
 	mutex_destroy(&state->mutex);
-	kfree(state);
 
 	return ret;
 }
@@ -964,8 +964,6 @@ static int adv748x_remove(struct i2c_client *client)
 	adv748x_unregister_clients(state);
 	adv748x_dt_cleanup(state);
 	mutex_destroy(&state->mutex);
-
-	kfree(state);
 
 	return 0;
 }
