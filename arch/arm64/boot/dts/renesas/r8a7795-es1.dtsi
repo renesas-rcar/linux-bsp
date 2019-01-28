@@ -50,6 +50,11 @@
 	/delete-node/ dma-controller@e6460000;
 	/delete-node/ dma-controller@e6470000;
 
+	ivdp1c: vcp4@fe8d0000 {
+		clocks = <&cpg CPG_MOD 128>;
+		resets = <&cpg 128>;
+	};
+
 	vcp4@fe8f0000 {
 		compatible = "renesas,vcp4-vcpl4";
 		reg = <0 0xfe8f0000 0 0x200>, <0 0xfe8f0200 0 0x200>;
