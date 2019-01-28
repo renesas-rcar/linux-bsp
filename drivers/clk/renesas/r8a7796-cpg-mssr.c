@@ -326,6 +326,7 @@ static const struct rcar_gen3_cpg_pll_config cpg_pll_configs[16] __initconst = {
 	 */
 
 static const unsigned int r8a77961_mod_nullify[] __initconst = {
+	MOD_CLK_ID(128),			/* iVDP1C  */
 	MOD_CLK_ID(617),			/* FCPCI0  */
 };
 
