@@ -3,6 +3,8 @@
  * Renesas R-Car M3-W System Controller
  *
  * Copyright (C) 2016 Glider bvba
+ * Copyright (C) 2018-2019 Renesas Electronics Corporation.
+ *
  */
 
 #include <linux/bitops.h>
@@ -14,7 +16,7 @@
 
 #include "rcar-sysc.h"
 
-static const struct rcar_sysc_area r8a7796_areas[] __initconst = {
+static struct rcar_sysc_area r8a7796_areas[] __initdata = {
 	{ "always-on",	    0, 0, R8A7796_PD_ALWAYS_ON,	-1, PD_ALWAYS_ON },
 	{ "ca57-scu",	0x1c0, 0, R8A7796_PD_CA57_SCU,	R8A7796_PD_ALWAYS_ON,
 	  PD_SCU },
@@ -41,15 +43,20 @@ static const struct rcar_sysc_area r8a7796_areas[] __initconst = {
 	{ "a3ir",	0x180, 0, R8A7796_PD_A3IR,	R8A7796_PD_ALWAYS_ON },
 };
 
-static const struct soc_device_attribute r8a7796es1[] __initconst = {
-	{ .soc_id = "r8a7796", .revision = "ES1.*" },
+static const struct soc_device_attribute r8a7796es3[] __initconst = {
+	{ .soc_id = "r8a7796", .revision = "ES3.0" },
 	{ /* sentinel */ }
 };
 
 static int __init r8a7796_sysc_init(void)
 {
-	if (soc_device_match(r8a7796es1))
+	if (soc_device_match(r8a7796es3)) {
+		rcar_sysc_nullify(r8a7796_areas, ARRAY_SIZE(r8a7796_areas),
+				  R8A7796_PD_A2VC0);
+	} else {
+		/* Do not apply SYSCEXTMASK for ES1.* */
 		r8a7796_sysc_info.extra_regs->sysc_extmask_msks = 0;
+	}
 
 	return 0;
 }
