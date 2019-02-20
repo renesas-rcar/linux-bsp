@@ -35,6 +35,7 @@ struct renesas_sdhi_of_data {
 	int taps_num;
 	unsigned int max_blk_count;
 	unsigned short max_segs;
+	unsigned short max_segs_on_iommu;
 };
 
 struct tmio_mmc_dma {

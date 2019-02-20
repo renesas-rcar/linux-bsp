@@ -101,6 +101,8 @@ static const struct renesas_sdhi_of_data of_rcar_gen3_compatible = {
 	/* DMAC can handle 0xffffffff blk count but only 1 segment */
 	.max_blk_count	= 0xffffffff,
 	.max_segs	= 1,
+	/* If this device's IOMMU is enabled, it can use multiple segments */
+	.max_segs_on_iommu = 512,
 };
 
 static const struct of_device_id renesas_sdhi_internal_dmac_of_match[] = {

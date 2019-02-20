@@ -853,7 +853,10 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		mmc_data->capabilities2 |= of_data->capabilities2;
 		mmc_data->dma_rx_offset = of_data->dma_rx_offset;
 		mmc_data->max_blk_count = of_data->max_blk_count;
-		mmc_data->max_segs = of_data->max_segs;
+		if (pdev->dev.iommu_group)
+			mmc_data->max_segs = of_data->max_segs_on_iommu;
+		else
+			mmc_data->max_segs = of_data->max_segs;
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 		host->bus_shift = of_data->bus_shift;
 		priv->scc_offset = of_data->scc_offset;
