@@ -2,6 +2,7 @@
  * R-Car Gen3 Clock Pulse Generator
  *
  * Copyright (C) 2015-2018 Glider bvba
+ * Copyright (C) 2019 Renesas Electronics Corp.
  *
  * Based on clk-rcar-gen3.c
  *
@@ -530,8 +531,6 @@ struct sd_clock {
 	const struct sd_div_table *div_table;
 	struct cpg_simple_notifier csn;
 	unsigned int div_num;
-	unsigned int div_min;
-	unsigned int div_max;
 	unsigned int cur_div_idx;
 };
 
@@ -606,14 +605,20 @@ static unsigned int cpg_sd_clock_calc_div(struct sd_clock *clock,
 					  unsigned long rate,
 					  unsigned long parent_rate)
 {
-	unsigned int div;
+	unsigned long calc_rate, best_rate = 0, diff, diff_min = ULONG_MAX;
+	unsigned int i;
 
-	if (!rate)
-		rate = 1;
+	for (i = 0; i < clock->div_num; i++) {
+		calc_rate = DIV_ROUND_CLOSEST(parent_rate,
+					      clock->div_table[i].div);
+		diff = calc_rate > rate ? calc_rate - rate : rate - calc_rate;
+		if (diff <= diff_min) {
+			best_rate = calc_rate;
+			diff_min = diff;
+		}
+	}
 
-	div = DIV_ROUND_CLOSEST(parent_rate, rate);
-
-	return clamp_t(unsigned int, div, clock->div_min, clock->div_max);
+	return DIV_ROUND_CLOSEST(parent_rate, best_rate);
 }
 
 static long cpg_sd_clock_round_rate(struct clk_hw *hw, unsigned long rate,
@@ -695,13 +700,6 @@ static struct clk * __init cpg_sd_clk_register(const struct cpg_core_clk *core,
 	}
 
 	clock->cur_div_idx = i;
-
-	clock->div_max = clock->div_table[0].div;
-	clock->div_min = clock->div_max;
-	for (i = 1; i < clock->div_num; i++) {
-		clock->div_max = max(clock->div_max, clock->div_table[i].div);
-		clock->div_min = min(clock->div_min, clock->div_table[i].div);
-	}
 
 	clk = clk_register(NULL, &clock->hw);
 	if (IS_ERR(clk))
