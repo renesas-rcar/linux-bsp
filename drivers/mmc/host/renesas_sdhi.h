@@ -30,6 +30,7 @@ struct renesas_sdhi_of_data {
 	dma_addr_t dma_rx_offset;
 	unsigned int bus_shift;
 	int scc_offset;
+	unsigned int scc_base_f_min;
 	struct renesas_sdhi_scc *taps;
 	int taps_num;
 	unsigned int max_blk_count;
@@ -55,6 +56,7 @@ struct renesas_sdhi {
 	u32 scc_tappos;
 	u32 scc_tappos_hs400;
 	int scc_offset;
+	unsigned int scc_base_f_min;
 	u32 adjust_hs400_offset;
 	u32 adjust_hs400_calibrate;
 };

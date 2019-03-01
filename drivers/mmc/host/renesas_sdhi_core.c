@@ -128,6 +128,13 @@ static unsigned int renesas_sdhi_clk_update(struct tmio_mmc_host *host,
 	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2))
 		return clk_get_rate(priv->clk);
 
+	/* In SDR104/HS200/HS400 mode, SDnH clock must supply for SCC */
+	if (new_clock < priv->scc_base_f_min &&
+	    (host->mmc->ios.timing == MMC_TIMING_UHS_SDR104 ||
+	     host->mmc->ios.timing == MMC_TIMING_MMC_HS200 ||
+	     host->mmc->ios.timing == MMC_TIMING_MMC_HS400))
+		new_clock = priv->scc_base_f_min;
+
 	/*
 	 * We want the bus clock to be as close as possible to, but no
 	 * greater than, new_clock.  As we can divide by 1 << i for
@@ -850,6 +857,7 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 		host->bus_shift = of_data->bus_shift;
 		priv->scc_offset = of_data->scc_offset;
+		priv->scc_base_f_min = of_data->scc_base_f_min;
 	}
 
 	host->write16_hook	= renesas_sdhi_write16_hook;
