@@ -94,6 +94,8 @@ static const struct renesas_sdhi_of_data of_rcar_gen3_compatible = {
 	.capabilities2	= MMC_CAP2_NO_WRITE_PROTECT,
 	.bus_shift	= 2,
 	.scc_offset	= 0x1000,
+	/* SCC module clock (SDnH) is enabled at 100MHz or more */
+	.scc_base_f_min = 100000000,
 	.taps		= rcar_gen3_scc_taps,
 	.taps_num	= ARRAY_SIZE(rcar_gen3_scc_taps),
 	/* DMAC can handle 0xffffffff blk count but only 1 segment */
