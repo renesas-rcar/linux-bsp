@@ -22,6 +22,7 @@
 #include <linux/module.h>
 
 #include <linux/mfd/bd9571mwv.h>
+#include <linux/mfd/bd9574mwf.h>
 
 static const struct mfd_cell bd9571mwv_cells[] = {
 	{ .name = "bd9571mwv-regulator", },
@@ -30,6 +31,7 @@ static const struct mfd_cell bd9571mwv_cells[] = {
 
 static const struct bd957x_data *bd_data;
 
+/* Regmap for BD9571MWV */
 static const struct regmap_range bd9571mwv_readable_yes_ranges[] = {
 	regmap_reg_range(BD9571MWV_VENDOR_CODE, BD9571MWV_PRODUCT_REVISION),
 	regmap_reg_range(BD9571MWV_BKUP_MODE_CNT, BD9571MWV_BKUP_MODE_CNT),
@@ -113,6 +115,102 @@ static struct regmap_irq_chip bd9571mwv_irq_chip = {
 	.num_irqs	= ARRAY_SIZE(bd9571mwv_irqs),
 };
 
+/* Regmap for BD9574MWF */
+static const struct regmap_range bd9574mwf_readable_yes_ranges[] = {
+	regmap_reg_range(BD9574MWF_VENDOR_CODE, BD9574MWF_PRODUCT_REVISION),
+	regmap_reg_range(BD9574MWF_VDCORE_VINIT, BD9574MWF_VDCORE_VINIT),
+	regmap_reg_range(BD9574MWF_VD09_VINIT, BD9574MWF_VD09_VINIT),
+	regmap_reg_range(BD9574MWF_VDCORE_SETVMAX, BD9574MWF_VDCORE_MONIVDAC),
+	regmap_reg_range(BD9574MWF_GPIO_IN, BD9574MWF_GPIO_IN),
+	regmap_reg_range(BD9574MWF_GPIO_INT, BD9574MWF_GPIO_INTMASK),
+	regmap_reg_range(BD9574MWF_GPIO_MUX, BD9574MWF_GPIO_MUX),
+	regmap_reg_range(BD9574MWF_INT_INTREQ, BD9574MWF_INT_INTMASK),
+};
+
+static const struct regmap_access_table bd9574mwf_readable_table = {
+	.yes_ranges	= bd9574mwf_readable_yes_ranges,
+	.n_yes_ranges	= ARRAY_SIZE(bd9574mwf_readable_yes_ranges),
+};
+
+static const struct regmap_range bd9574mwf_writable_yes_ranges[] = {
+	regmap_reg_range(BD9574MWF_GPIO_DIR, BD9574MWF_GPIO_OUT),
+	regmap_reg_range(BD9574MWF_VDCORE_SETVID, BD9574MWF_VDCORE_SETVID),
+	regmap_reg_range(BD9574MWF_GPIO_INT_SET, BD9574MWF_GPIO_INTMASK),
+	regmap_reg_range(BD9574MWF_GPIO_MUX, BD9574MWF_GPIO_MUX),
+	regmap_reg_range(BD9574MWF_INT_INTREQ, BD9574MWF_INT_INTMASK),
+};
+
+static const struct regmap_access_table bd9574mwf_writable_table = {
+	.yes_ranges	= bd9574mwf_writable_yes_ranges,
+	.n_yes_ranges	= ARRAY_SIZE(bd9574mwf_writable_yes_ranges),
+};
+
+static const struct regmap_range bd9574mwf_volatile_yes_ranges[] = {
+	regmap_reg_range(BD9574MWF_VDCORE_MONIVDAC, BD9574MWF_VDCORE_MONIVDAC),
+	regmap_reg_range(BD9574MWF_GPIO_IN, BD9574MWF_GPIO_IN),
+	regmap_reg_range(BD9574MWF_GPIO_INT, BD9574MWF_GPIO_INT),
+	regmap_reg_range(BD9574MWF_INT_INTREQ, BD9574MWF_INT_INTREQ),
+};
+
+static const struct regmap_access_table bd9574mwf_volatile_table = {
+	.yes_ranges	= bd9574mwf_volatile_yes_ranges,
+	.n_yes_ranges	= ARRAY_SIZE(bd9574mwf_volatile_yes_ranges),
+};
+
+static const struct regmap_config bd9574mwf_regmap_config = {
+	.reg_bits	= 8,
+	.val_bits	= 8,
+	.cache_type	= REGCACHE_RBTREE,
+	.rd_table	= &bd9574mwf_readable_table,
+	.wr_table	= &bd9574mwf_writable_table,
+	.volatile_table	= &bd9574mwf_volatile_table,
+	.max_register	= 0xff,
+};
+
+static const struct regmap_irq bd9574mwf_irqs[] = {
+	REGMAP_IRQ_REG(BD9574MWF_IRQ_MD1, 0,
+		       BD9574MWF_INT_INTREQ_MD1_INT),
+	REGMAP_IRQ_REG(BD9574MWF_IRQ_MD2_E1, 0,
+		       BD9574MWF_INT_INTREQ_MD2_E1_INT),
+	REGMAP_IRQ_REG(BD9574MWF_IRQ_MD2_E2, 0,
+		       BD9574MWF_INT_INTREQ_MD2_E2_INT),
+	REGMAP_IRQ_REG(BD9574MWF_IRQ_PROT_ERR, 0,
+		       BD9574MWF_INT_INTREQ_PROT_ERR_INT),
+	REGMAP_IRQ_REG(BD9574MWF_IRQ_GP, 0,
+		       BD9574MWF_INT_INTREQ_GP_INT),
+	REGMAP_IRQ_REG(BD9574MWF_IRQ_BKUP_HOLD_OF, 0,
+		       BD9574MWF_INT_INTREQ_BKUP_HOLD_OF_INT),
+	REGMAP_IRQ_REG(BD9574MWF_IRQ_WDT_OF, 0,
+		       BD9574MWF_INT_INTREQ_WDT_OF_INT),
+	REGMAP_IRQ_REG(BD9574MWF_IRQ_BKUP_TRG, 0,
+		       BD9574MWF_INT_INTREQ_BKUP_TRG_INT),
+};
+
+static struct regmap_irq_chip bd9574mwf_irq_chip = {
+	.name		= "bd9574mwf",
+	.status_base	= BD9574MWF_INT_INTREQ,
+	.mask_base	= BD9574MWF_INT_INTMASK,
+	.ack_base	= BD9574MWF_INT_INTREQ,
+	.init_ack_masked = true,
+	.num_regs	= 1,
+	.irqs		= bd9574mwf_irqs,
+	.num_irqs	= ARRAY_SIZE(bd9574mwf_irqs),
+};
+
+static const struct bd957x_data bd9571mwv_data __initconst = {
+	.product_code_val = BD9571MWV_PRODUCT_CODE_VAL,
+	.part_number = BD9571MWV_PART_NUMBER,
+	.regmap_config = &bd9571mwv_regmap_config,
+	.irq_chip = &bd9571mwv_irq_chip,
+};
+
+static const struct bd957x_data bd9574mwf_data __initconst = {
+	.product_code_val = BD9574MWF_PRODUCT_CODE_VAL,
+	.part_number = BD9574MWF_PART_NUMBER,
+	.regmap_config = &bd9574mwf_regmap_config,
+	.irq_chip = &bd9574mwf_irq_chip,
+};
+
 static const struct of_device_id bd9571mwv_of_match_table[] = {
 	{ .compatible = "rohm,bd9571mwv", },
 	{ /* sentinel */ }
@@ -124,13 +222,6 @@ static const struct i2c_device_id bd9571mwv_id_table[] = {
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(i2c, bd9571mwv_id_table);
-
-static const struct bd957x_data bd9571mwv_data __initconst = {
-	.product_code_val = BD9571MWV_PRODUCT_CODE_VAL,
-	.part_number = BD9571MWV_PART_NUMBER,
-	.regmap_config = &bd9571mwv_regmap_config,
-	.irq_chip = &bd9571mwv_irq_chip,
-};
 
 static int bd9571mwv_identify(struct bd9571mwv *bd)
 {
@@ -202,6 +293,8 @@ static int bd9571mwv_probe(struct i2c_client *client,
 
 	if (product_code == BD9571MWV_PRODUCT_CODE_VAL)
 		bd_data = &bd9571mwv_data;
+	else /* BD9574MWF */
+		bd_data = &bd9574mwf_data;
 
 	bd->regmap = devm_regmap_init_i2c(client, bd_data->regmap_config);
 	if (IS_ERR(bd->regmap)) {
