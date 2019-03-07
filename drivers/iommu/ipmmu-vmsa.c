@@ -1054,6 +1054,13 @@ static bool ipmmu_slave_whitelist(struct device *dev, u32 *ids)
 		goto exit;
 	}
 
+	/*
+	 * For R-Car Gen3 SoCs, use a white list to check the uTLB set up
+	 * For other SoCs, return true
+	 */
+	if (!mmu->features->whitelist)
+		return true;
+
 	if (!mmu->whitelist[0]) {
 		pr_debug("%s Whitelist not found on %s!!!\n",
 			 __func__, dev_name(mmu->dev));
