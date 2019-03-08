@@ -273,6 +273,22 @@
 	renesas,ipmmu-main = <&ipmmu_mm 7>;
 };
 
+&sdhi0 {
+	/delete-property/ iommus;
+};
+
+&sdhi1 {
+	/delete-property/ iommus;
+};
+
+&sdhi2 {
+	/delete-property/ iommus;
+};
+
+&sdhi3 {
+	/delete-property/ iommus;
+};
+
 &du {
 	vsps = <&vspd0 &vspd1 &vspd2 &vspd3>;
 };
