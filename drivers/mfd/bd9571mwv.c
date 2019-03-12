@@ -197,14 +197,14 @@ static struct regmap_irq_chip bd9574mwf_irq_chip = {
 	.num_irqs	= ARRAY_SIZE(bd9574mwf_irqs),
 };
 
-static const struct bd957x_data bd9571mwv_data __initconst = {
+static const struct bd957x_data bd9571mwv_data = {
 	.product_code_val = BD9571MWV_PRODUCT_CODE_VAL,
 	.part_number = BD9571MWV_PART_NUMBER,
 	.regmap_config = &bd9571mwv_regmap_config,
 	.irq_chip = &bd9571mwv_irq_chip,
 };
 
-static const struct bd957x_data bd9574mwf_data __initconst = {
+static const struct bd957x_data bd9574mwf_data = {
 	.product_code_val = BD9574MWF_PRODUCT_CODE_VAL,
 	.part_number = BD9574MWF_PART_NUMBER,
 	.regmap_config = &bd9574mwf_regmap_config,
@@ -248,7 +248,7 @@ static int bd9571mwv_identify(struct bd9571mwv *bd)
 			ret);
 		return ret;
 	}
-
+	/* Confirm the product code */
 	if (value != bd_data->product_code_val) {
 		dev_err(dev, "Invalid product code ID %02x (expected %02x)\n",
 			value, bd_data->product_code_val);
@@ -282,6 +282,7 @@ static int bd9571mwv_probe(struct i2c_client *client,
 	bd->dev = &client->dev;
 	bd->irq = client->irq;
 
+	/* Read the PMIC product code */
 	ret = i2c_smbus_read_byte_data(client, BD9571MWV_PRODUCT_CODE);
 	if (ret < 0) {
 		dev_err(&client->dev, "failed reading at 0x%02x\n",
@@ -291,9 +292,10 @@ static int bd9571mwv_probe(struct i2c_client *client,
 
 	product_code = (unsigned int)ret;
 
+	/* Init data for PMIC device base on product code */
 	if (product_code == BD9571MWV_PRODUCT_CODE_VAL)
 		bd_data = &bd9571mwv_data;
-	else /* BD9574MWF */
+	else
 		bd_data = &bd9574mwf_data;
 
 	bd->regmap = devm_regmap_init_i2c(client, bd_data->regmap_config);
