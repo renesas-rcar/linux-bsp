@@ -853,7 +853,9 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		mmc_data->capabilities2 |= of_data->capabilities2;
 		mmc_data->dma_rx_offset = of_data->dma_rx_offset;
 		mmc_data->max_blk_count = of_data->max_blk_count;
-		if (pdev->dev.iommu_group)
+		/* IOMMU multiple segments applies only No-SDIO port */
+		if (pdev->dev.iommu_group &&
+		    host->mmc->caps2 & MMC_CAP2_NO_SDIO)
 			mmc_data->max_segs = of_data->max_segs_on_iommu;
 		else
 			mmc_data->max_segs = of_data->max_segs;
