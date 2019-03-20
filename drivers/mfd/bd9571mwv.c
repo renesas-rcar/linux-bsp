@@ -29,6 +29,10 @@ static const struct mfd_cell bd9571mwv_cells[] = {
 	{ .name = "bd9571mwv-gpio", },
 };
 
+static const struct mfd_cell bd9574mwf_cells[] = {
+	{ .name = "bd9571mwv-gpio", },
+};
+
 static const struct bd957x_data *bd_data;
 
 /* Regmap for BD9571MWV */
@@ -315,9 +319,17 @@ static int bd9571mwv_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	ret = mfd_add_devices(bd->dev, PLATFORM_DEVID_AUTO, bd9571mwv_cells,
-			      ARRAY_SIZE(bd9571mwv_cells), NULL, 0,
-			      regmap_irq_get_domain(bd->irq_data));
+	if (product_code == BD9571MWV_PRODUCT_CODE_VAL) {
+		ret = mfd_add_devices(bd->dev, PLATFORM_DEVID_AUTO,
+				      bd9571mwv_cells,
+				      ARRAY_SIZE(bd9571mwv_cells), NULL, 0,
+				      regmap_irq_get_domain(bd->irq_data));
+	} else {
+		ret = mfd_add_devices(bd->dev, PLATFORM_DEVID_AUTO,
+				      bd9574mwf_cells,
+				      ARRAY_SIZE(bd9574mwf_cells), NULL, 0,
+				      regmap_irq_get_domain(bd->irq_data));
+	}
 	if (ret) {
 		regmap_del_irq_chip(bd->irq, bd->irq_data);
 		return ret;
