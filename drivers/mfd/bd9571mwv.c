@@ -122,9 +122,6 @@ static struct regmap_irq_chip bd9571mwv_irq_chip = {
 /* Regmap for BD9574MWF */
 static const struct regmap_range bd9574mwf_readable_yes_ranges[] = {
 	regmap_reg_range(BD9574MWF_VENDOR_CODE, BD9574MWF_PRODUCT_REVISION),
-	regmap_reg_range(BD9574MWF_VDCORE_VINIT, BD9574MWF_VDCORE_VINIT),
-	regmap_reg_range(BD9574MWF_VD09_VINIT, BD9574MWF_VD09_VINIT),
-	regmap_reg_range(BD9574MWF_VDCORE_SETVMAX, BD9574MWF_VDCORE_MONIVDAC),
 	regmap_reg_range(BD9574MWF_GPIO_IN, BD9574MWF_GPIO_IN),
 	regmap_reg_range(BD9574MWF_GPIO_INT, BD9574MWF_GPIO_INTMASK),
 	regmap_reg_range(BD9574MWF_GPIO_MUX, BD9574MWF_GPIO_MUX),
@@ -138,9 +135,7 @@ static const struct regmap_access_table bd9574mwf_readable_table = {
 
 static const struct regmap_range bd9574mwf_writable_yes_ranges[] = {
 	regmap_reg_range(BD9574MWF_GPIO_DIR, BD9574MWF_GPIO_OUT),
-	regmap_reg_range(BD9574MWF_VDCORE_SETVID, BD9574MWF_VDCORE_SETVID),
 	regmap_reg_range(BD9574MWF_GPIO_INT_SET, BD9574MWF_GPIO_INTMASK),
-	regmap_reg_range(BD9574MWF_GPIO_MUX, BD9574MWF_GPIO_MUX),
 	regmap_reg_range(BD9574MWF_INT_INTREQ, BD9574MWF_INT_INTMASK),
 };
 
@@ -150,7 +145,6 @@ static const struct regmap_access_table bd9574mwf_writable_table = {
 };
 
 static const struct regmap_range bd9574mwf_volatile_yes_ranges[] = {
-	regmap_reg_range(BD9574MWF_VDCORE_MONIVDAC, BD9574MWF_VDCORE_MONIVDAC),
 	regmap_reg_range(BD9574MWF_GPIO_IN, BD9574MWF_GPIO_IN),
 	regmap_reg_range(BD9574MWF_GPIO_INT, BD9574MWF_GPIO_INT),
 	regmap_reg_range(BD9574MWF_INT_INTREQ, BD9574MWF_INT_INTREQ),
