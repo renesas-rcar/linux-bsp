@@ -2357,7 +2357,7 @@
 			compatible = "renesas,vcp4-fcpcs";
 			reg = <0 0xfe90f000 0 0x200>;
 			clocks = <&cpg CPG_MOD 619>;
-			power-domains = <&sysc R8A77965_PD_A3VC>;
+			power-domains = <&sysc R8A77965_PD_A2VC1>;
 			resets = <&cpg 619>;
 			renesas,#ch = <0>;
 		};
