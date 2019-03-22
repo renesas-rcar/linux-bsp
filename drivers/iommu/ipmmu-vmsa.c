@@ -76,8 +76,6 @@ struct ipmmu_vmsa_device {
 	DECLARE_BITMAP(ctx, IPMMU_CTX_MAX);
 	struct ipmmu_vmsa_domain *domains[IPMMU_CTX_MAX];
 	struct hw_register *reg_backup[IPMMU_CTX_MAX];
-	unsigned int *utlbs_val;
-	unsigned int *asids_val;
 
 	struct iommu_group *group;
 	struct dma_iommu_mapping *mapping;
@@ -99,6 +97,8 @@ struct ipmmu_vmsa_domain {
 
 struct ipmmu_vmsa_backup {
 	struct device *dev;
+	unsigned int *utlbs_val;
+	unsigned int *asids_val;
 	struct list_head list;
 };
 
@@ -1257,9 +1257,8 @@ static int ipmmu_add_device(struct device *dev)
 {
 	struct device *root_dev;
 	struct iommu_group *group;
-	struct ipmmu_vmsa_backup *dev_backup;
-	struct iommu_fwspec *fwspec;
-	struct ipmmu_vmsa_device *mmu;
+	struct ipmmu_vmsa_backup *backup_data;
+	struct iommu_fwspec *fwspec = dev->iommu_fwspec;
 	unsigned int *utlbs_val, *asids_val;
 
 	/*
@@ -1288,45 +1287,51 @@ static int ipmmu_add_device(struct device *dev)
 
 	iommu_group_put(group);
 
-	dev_backup = kzalloc(sizeof(*dev_backup), GFP_KERNEL);
-	dev_backup->dev = dev;
-	fwspec = dev->iommu_fwspec;
-	mmu = to_ipmmu(dev);
-
-	spin_lock(&ipmmu_devices_backup_lock);
-	list_add(&dev_backup->list, &ipmmu_devices_backup);
-	spin_unlock(&ipmmu_devices_backup_lock);
-
+	/*
+	 * Backup data
+	 */
 	utlbs_val = kcalloc(fwspec->num_ids, sizeof(*utlbs_val), GFP_KERNEL);
 	if (!utlbs_val)
 		return -ENOMEM;
 
 	asids_val = kcalloc(fwspec->num_ids, sizeof(*asids_val), GFP_KERNEL);
-	if (!asids_val)
+	if (!asids_val) {
+		kfree(utlbs_val);
 		return -ENOMEM;
+	}
 
-	mmu->utlbs_val = utlbs_val;
-	mmu->asids_val = asids_val;
+	backup_data = kzalloc(sizeof(*backup_data), GFP_KERNEL);
+	if (!backup_data) {
+		kfree(utlbs_val);
+		kfree(asids_val);
+		return -ENOMEM;
+	}
+
+	backup_data->dev = dev;
+	backup_data->utlbs_val = utlbs_val;
+	backup_data->asids_val = asids_val;
+
+	spin_lock(&ipmmu_devices_backup_lock);
+	list_add(&backup_data->list, &ipmmu_devices_backup);
+	spin_unlock(&ipmmu_devices_backup_lock);
 
 	return 0;
 }
 
 static void ipmmu_remove_device(struct device *dev)
 {
-	struct ipmmu_vmsa_device *mmu = to_ipmmu(dev);
-	struct ipmmu_vmsa_backup *slave_dev;
+	struct ipmmu_vmsa_backup *backup_data;
 
 	spin_lock(&ipmmu_devices_backup_lock);
-	list_for_each_entry(slave_dev, &ipmmu_devices_backup, list) {
-		if (slave_dev->dev == dev) {
-			list_del(&slave_dev->list);
-			kfree(slave_dev);
+	list_for_each_entry(backup_data, &ipmmu_devices_backup, list) {
+		if (backup_data->dev == dev) {
+			list_del(&backup_data->list);
+			kfree(backup_data->utlbs_val);
+			kfree(backup_data->asids_val);
+			kfree(backup_data);
 		}
 	}
 	spin_unlock(&ipmmu_devices_backup_lock);
-
-	kfree(mmu->utlbs_val);
-	kfree(mmu->asids_val);
 
 	arm_iommu_detach_device(dev);
 	iommu_group_remove_device(dev);
@@ -1627,32 +1632,32 @@ static int ipmmu_utlbs_backup(struct ipmmu_vmsa_device *mmu)
 {
 	unsigned int i;
 	struct ipmmu_vmsa_device *slave_mmu = NULL;
-	struct ipmmu_vmsa_backup *slave_dev = NULL;
+	struct ipmmu_vmsa_backup *backup_data = NULL;
 	struct iommu_fwspec *slave_fwspec = NULL;
 
 	pr_debug("%s: Handle UTLB backup\n", dev_name(mmu->dev));
 
 	spin_lock(&ipmmu_devices_backup_lock);
 
-	list_for_each_entry(slave_dev, &ipmmu_devices_backup, list) {
-		slave_mmu = to_ipmmu(slave_dev->dev);
-		slave_fwspec = slave_dev->dev->iommu_fwspec;
+	list_for_each_entry(backup_data, &ipmmu_devices_backup, list) {
+		slave_mmu = to_ipmmu(backup_data->dev);
+		slave_fwspec = backup_data->dev->iommu_fwspec;
 
 		if (slave_mmu != mmu)
 			continue;
 
 		for (i = 0; i < slave_fwspec->num_ids; ++i) {
-			slave_mmu->utlbs_val[i] =
+			backup_data->utlbs_val[i] =
 				ipmmu_read(slave_mmu,
 					   IMUCTR(slave_fwspec->ids[i]));
-			slave_mmu->asids_val[i] =
+			backup_data->asids_val[i] =
 				ipmmu_read(slave_mmu,
 					   IMUASID(slave_fwspec->ids[i]));
 			pr_debug("%d: Backup UTLB[%d]: 0x%x, ASID[%d]: %d\n",
 				 i, slave_fwspec->ids[i],
-				 slave_mmu->utlbs_val[i],
+				 backup_data->utlbs_val[i],
 				 slave_fwspec->ids[i],
-				 slave_mmu->asids_val[i]);
+				 backup_data->asids_val[i]);
 		}
 	}
 
@@ -1665,16 +1670,16 @@ static int ipmmu_utlbs_restore(struct ipmmu_vmsa_device *mmu)
 {
 	unsigned int i;
 	struct ipmmu_vmsa_device *slave_mmu = NULL;
-	struct ipmmu_vmsa_backup *slave_dev = NULL;
+	struct ipmmu_vmsa_backup *backup_data = NULL;
 	struct iommu_fwspec *slave_fwspec = NULL;
 
 	pr_debug("%s: Handle UTLB restore\n", dev_name(mmu->dev));
 
 	spin_lock(&ipmmu_devices_backup_lock);
 
-	list_for_each_entry(slave_dev, &ipmmu_devices_backup, list) {
-		slave_mmu = to_ipmmu(slave_dev->dev);
-		slave_fwspec = slave_dev->dev->iommu_fwspec;
+	list_for_each_entry(backup_data, &ipmmu_devices_backup, list) {
+		slave_mmu = to_ipmmu(backup_data->dev);
+		slave_fwspec = backup_data->dev->iommu_fwspec;
 
 		if (slave_mmu != mmu)
 			continue;
@@ -1682,10 +1687,10 @@ static int ipmmu_utlbs_restore(struct ipmmu_vmsa_device *mmu)
 		for (i = 0; i < slave_fwspec->num_ids; ++i) {
 			ipmmu_write(slave_mmu,
 				    IMUASID(slave_fwspec->ids[i]),
-				    slave_mmu->asids_val[i]);
+				    backup_data->asids_val[i]);
 			ipmmu_write(slave_mmu,
 				    IMUCTR(slave_fwspec->ids[i]),
-				    slave_mmu->utlbs_val[i]);
+				    backup_data->utlbs_val[i]);
 			pr_debug("%d: Restore UTLB[%d]: 0x%x, ASID[%d]: %d\n",
 				 i, slave_fwspec->ids[i],
 				 ipmmu_read(slave_mmu,
