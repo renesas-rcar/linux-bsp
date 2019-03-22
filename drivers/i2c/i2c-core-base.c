@@ -871,6 +871,8 @@ EXPORT_SYMBOL_GPL(i2c_new_device);
  */
 void i2c_unregister_device(struct i2c_client *client)
 {
+	if (!client)
+		return;
 	if (client->dev.of_node) {
 		of_node_clear_flag(client->dev.of_node, OF_POPULATED);
 		of_node_put(client->dev.of_node);
@@ -1483,8 +1485,7 @@ static int __unregister_client(struct device *dev, void *dummy)
 static int __unregister_dummy(struct device *dev, void *dummy)
 {
 	struct i2c_client *client = i2c_verify_client(dev);
-	if (client)
-		i2c_unregister_device(client);
+	i2c_unregister_device(client);
 	return 0;
 }
 
