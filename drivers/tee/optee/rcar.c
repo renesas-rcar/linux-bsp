@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, Renesas Electronics Corporation
+ * Copyright (c) 2015-2019, Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -52,25 +52,32 @@ static int debug_log_kthread(void *arg)
 {
 	struct rcar_debug_log_info *dlog;
 	struct rcar_debug_log_node *node;
-	struct rcar_debug_log_node *ntmp;
 	bool thread_exit = false;
 
 	dlog = (struct rcar_debug_log_info *)arg;
 
 	while (1) {
-		list_for_each_entry_safe(node, ntmp, &dlog->queue, list) {
+		spin_lock(&dlog->q_lock);
+		while (!list_empty(&dlog->queue)) {
+			node = list_first_entry(&dlog->queue,
+						struct rcar_debug_log_node,
+						list);
+			spin_unlock(&dlog->q_lock);
+
 			if (node->logmsg)
 				pr_alert("%s", node->logmsg);
 			else
 				thread_exit = true;
+
 			spin_lock(&dlog->q_lock);
 			list_del(&node->list);
-			spin_unlock(&dlog->q_lock);
 			kfree(node);
 		}
+		spin_unlock(&dlog->q_lock);
 		if (thread_exit)
 			break;
-		wait_event(dlog->waitq, !list_empty(&dlog->queue));
+		wait_event_interruptible(dlog->waitq,
+					 !list_empty(&dlog->queue));
 	}
 
 	pr_info("%s Exit\n", __func__);
@@ -103,7 +110,7 @@ void handle_rpc_func_cmd_debug_log(struct optee_msg_arg *arg)
 				spin_lock(&dlog->q_lock);
 				list_add_tail(&node->list, &dlog->queue);
 				spin_unlock(&dlog->q_lock);
-				wake_up(&dlog->waitq);
+				wake_up_interruptible(&dlog->waitq);
 				arg->ret = TEEC_SUCCESS;
 			} else {
 				arg->ret = TEEC_ERROR_OUT_OF_MEMORY;
