@@ -128,6 +128,13 @@ static unsigned int renesas_sdhi_clk_update(struct tmio_mmc_host *host,
 	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2))
 		return clk_get_rate(priv->clk);
 
+	/* In SDR104/HS200/HS400 mode, SDnH clock must supply for SCC */
+	if (new_clock < priv->scc_base_f_min &&
+	    (host->mmc->ios.timing == MMC_TIMING_UHS_SDR104 ||
+	     host->mmc->ios.timing == MMC_TIMING_MMC_HS200 ||
+	     host->mmc->ios.timing == MMC_TIMING_MMC_HS400))
+		new_clock = priv->scc_base_f_min;
+
 	/*
 	 * We want the bus clock to be as close as possible to, but no
 	 * greater than, new_clock.  As we can divide by 1 << i for
@@ -278,7 +285,7 @@ static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	{ .soc_id = "r8a77990",
 	  .data = (void *)(HS400_USE_MANUAL_CALIB |
 			   (SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0 << 24) |
-			   (0x2 << 16)), },
+			   (0x4 << 16)), },
 	{/*sentinel*/},
 };
 
@@ -846,10 +853,16 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		mmc_data->capabilities2 |= of_data->capabilities2;
 		mmc_data->dma_rx_offset = of_data->dma_rx_offset;
 		mmc_data->max_blk_count = of_data->max_blk_count;
-		mmc_data->max_segs = of_data->max_segs;
+		/* IOMMU multiple segments applies only No-SDIO port */
+		if (pdev->dev.iommu_group &&
+		    host->mmc->caps2 & MMC_CAP2_NO_SDIO)
+			mmc_data->max_segs = of_data->max_segs_on_iommu;
+		else
+			mmc_data->max_segs = of_data->max_segs;
 		dma_priv->dma_buswidth = of_data->dma_buswidth;
 		host->bus_shift = of_data->bus_shift;
 		priv->scc_offset = of_data->scc_offset;
+		priv->scc_base_f_min = of_data->scc_base_f_min;
 	}
 
 	host->write16_hook	= renesas_sdhi_write16_hook;

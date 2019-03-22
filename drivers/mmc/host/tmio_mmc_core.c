@@ -856,7 +856,10 @@ static int tmio_mmc_start_data(struct tmio_mmc_host *host,
 
 	/* Set transfer length / blocksize */
 	sd_ctrl_write16(host, CTL_SD_XFER_LEN, data->blksz);
-	sd_ctrl_write16(host, CTL_XFER_BLK_COUNT, data->blocks);
+	if (host->mmc->max_blk_count >= SZ_64K)
+		sd_ctrl_write32(host, CTL_XFER_BLK_COUNT, data->blocks);
+	else
+		sd_ctrl_write16(host, CTL_XFER_BLK_COUNT, data->blocks);
 
 	tmio_mmc_start_dma(host, data);
 
@@ -1383,9 +1386,10 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host)
 	 * Since swiotlb has memory size limitation, this will calculate
 	 * the maximum size locally (because we don't have any APIs for it now)
 	 * and check the current max_req_size. And then, this will update
-	 * the max_req_size if needed as a workaround.
+	 * the max_req_size if needed as a workaround. However, if the driver
+	 * runs on IOMMU, this workaround doesn't need.
 	 */
-	if (swiotlb_max_segment()) {
+	if (swiotlb_max_segment() && !pdev->dev.iommu_group) {
 		unsigned int max_size = (1 << IO_TLB_SHIFT) * IO_TLB_SEGSIZE;
 
 		if (mmc->max_req_size > max_size)
