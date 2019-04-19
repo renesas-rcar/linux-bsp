@@ -1407,7 +1407,7 @@ static enum dma_status rcar_dmac_tx_status(struct dma_chan *chan,
 	spin_unlock_irqrestore(&rchan->lock, flags);
 
 	/* if there's no residue, the cookie is complete */
-	if (!residue && !rchan->desc.running->cyclic)
+	if (!residue)
 		return DMA_COMPLETE;
 
 	dma_set_residue(txstate, residue);
