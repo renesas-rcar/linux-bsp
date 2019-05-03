@@ -53,6 +53,7 @@ struct ipmmu_features {
 	bool setup_imbuscr;
 	bool twobit_imttbcr_sl0;
 	bool reserved_context;
+	bool cache_snoop;
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
 	bool whitelist;
 #endif
@@ -763,18 +764,21 @@ static int ipmmu_domain_init_context(struct ipmmu_vmsa_domain *domain)
 
 	/*
 	 * TTBCR
-	 * We use long descriptors with inner-shareable WBWA tables and allocate
-	 * the whole 32-bit VA space to TTBR0.
+	 * We use long descriptors and allocate the whole 32-bit VA space to
+	 * TTBR0.
 	 */
 	if (domain->mmu->features->twobit_imttbcr_sl0)
 		tmp = IMTTBCR_SL0_TWOBIT_LVL_1;
 	else
 		tmp = IMTTBCR_SL0_LVL_1;
 
+	if (domain->mmu->features->cache_snoop)
+		tmp |= IMTTBCR_SH0_INNER_SHAREABLE | IMTTBCR_ORGN0_WB_WA |
+		       IMTTBCR_IRGN0_WB_WA;
+
 	ipmmu_ctx_write_root(domain, IMTTBCR,
 			     ipmmu_ctx_read_root(domain, IMTTBCR) |
-			     IMTTBCR_EAE | IMTTBCR_SH0_INNER_SHAREABLE |
-			     IMTTBCR_ORGN0_WB_WA | IMTTBCR_IRGN0_WB_WA | tmp);
+			     IMTTBCR_EAE | tmp);
 
 	/* MAIR0 */
 	ipmmu_ctx_write_root(domain, IMMAIR0,
@@ -1390,6 +1394,7 @@ static const struct ipmmu_features ipmmu_features_default = {
 	.setup_imbuscr = true,
 	.twobit_imttbcr_sl0 = false,
 	.reserved_context = false,
+	.cache_snoop = true,
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
 	.whitelist = false,
 #endif
@@ -1402,6 +1407,7 @@ static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
 	.setup_imbuscr = false,
 	.twobit_imttbcr_sl0 = true,
 	.reserved_context = true,
+	.cache_snoop = false,
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
 	.whitelist = true,
 #endif
