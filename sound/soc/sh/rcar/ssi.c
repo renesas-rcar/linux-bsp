@@ -296,6 +296,8 @@ static int rsnd_ssi_master_clk_start(struct rsnd_mod *mod,
 		return 0;
 	}
 
+	chan = rsnd_channel_normalization(chan);
+
 	main_rate = rsnd_ssi_clk_query(priv, rate, chan, &idx);
 	if (!main_rate) {
 		dev_err(dev, "unsupported clock rate\n");

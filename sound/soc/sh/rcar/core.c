@@ -112,6 +112,8 @@ static const struct of_device_id rsnd_of_match[] = {
 	{ .compatible = "renesas,rcar_sound-gen1", .data = (void *)RSND_GEN1 },
 	{ .compatible = "renesas,rcar_sound-gen2", .data = (void *)RSND_GEN2 },
 	{ .compatible = "renesas,rcar_sound-gen3", .data = (void *)RSND_GEN3 },
+	/* Special Handling */
+	{ .compatible = "renesas,rcar_sound-r8a77990", .data = (void *)(RSND_GEN3 | RSND_SOC_E) },
 	{},
 };
 MODULE_DEVICE_TABLE(of, rsnd_of_match);
@@ -239,6 +241,18 @@ int rsnd_runtime_channel_after_ctu_with_params(struct rsnd_dai_stream *io,
 	return chan;
 }
 
+int rsnd_channel_normalization(int chan)
+{
+	if ((chan > 8) || (chan < 0))
+		return 0;
+
+	/* TDM Extend Mode needs 8ch */
+	if (chan == 6)
+		chan = 8;
+
+	return chan;
+}
+
 int rsnd_runtime_channel_for_ssi_with_params(struct rsnd_dai_stream *io,
 					     struct snd_pcm_hw_params *params)
 {
@@ -251,11 +265,7 @@ int rsnd_runtime_channel_for_ssi_with_params(struct rsnd_dai_stream *io,
 	if (rsnd_runtime_is_ssi_multi(io))
 		chan /= rsnd_rdai_ssi_lane_get(rdai);
 
-	/* TDM Extend Mode needs 8ch */
-	if (chan == 6)
-		chan = 8;
-
-	return chan;
+	return rsnd_channel_normalization(chan);
 }
 
 int rsnd_runtime_is_ssi_multi(struct rsnd_dai_stream *io)
