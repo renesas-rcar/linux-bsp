@@ -1,7 +1,7 @@
 /*
  * Renesas R-Car Gen3 for USB2.0 PHY driver
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2019 Renesas Electronics Corporation
  *
  * This is based on the phy-rcar-gen2 driver:
  * Copyright (C) 2014 Renesas Solutions Corp.
@@ -67,6 +67,7 @@
 					 USB2_OBINT_IDDIGCHG)
 
 /* VBCTRL */
+#define USB2_VBCTRL_OCCLREN		BIT(16)
 #define USB2_VBCTRL_DRVVBUSSEL		BIT(8)
 
 /* LINECTRL1 */
@@ -312,11 +313,15 @@ static int rcar_gen3_phy_usb2_init(struct phy *p)
 {
 	struct rcar_gen3_chan *channel = phy_get_drvdata(p);
 	void __iomem *usb2_base = channel->base;
+	u32 val;
 
 	/* Initialize USB2 part */
 	writel(USB2_INT_ENABLE_INIT, usb2_base + USB2_INT_ENABLE);
 	writel(USB2_SPD_RSM_TIMSET_INIT, usb2_base + USB2_SPD_RSM_TIMSET);
 	writel(USB2_OC_TIMSET_INIT, usb2_base + USB2_OC_TIMSET);
+	val = readl(usb2_base + USB2_VBCTRL);
+	val &= ~USB2_VBCTRL_OCCLREN;
+	writel(val, usb2_base + USB2_VBCTRL);
 
 	/* Initialize otg part */
 	if (channel->has_otg_pins)
