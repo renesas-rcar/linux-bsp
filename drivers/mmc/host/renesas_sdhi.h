@@ -50,6 +50,7 @@ struct renesas_sdhi_quirks {
 	bool hs400_disabled;
 	bool hs400_4taps;
 	bool dtranend1_bit17;
+	bool hs400_manual_correction;
 	bool hs400_manual_calib;
 	u32 hs400_offset;
 	u32 hs400_calib;
@@ -71,6 +72,7 @@ struct renesas_sdhi {
 	u32 adjust_hs400_offset;
 	u32 adjust_hs400_calibrate;
 	bool doing_tune;
+	bool hs400_manual_correction;
 };
 
 #define host_to_priv(host) \
