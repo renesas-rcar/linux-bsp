@@ -395,6 +395,7 @@ static void renesas_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	struct renesas_sdhi *priv = host_to_priv(host);
+	 unsigned long new_tap;
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
@@ -422,6 +423,26 @@ static void renesas_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 		       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
 		       sd_scc_read32(host, priv,
 				     SH_MOBILE_SDHI_SCC_DTCNTL));
+
+	/* Avoid bad TAP */
+	if (!host->hs400_use_4tap &&
+	    (priv->hs400_bad_tap & (1 << host->tap_set))) {
+		new_tap = (host->tap_set +
+			   host->tap_num + 1) % host->tap_num;
+
+		if (priv->hs400_bad_tap & (1 << new_tap))
+			new_tap = (host->tap_set +
+				   host->tap_num - 1) % host->tap_num;
+
+		if (priv->hs400_bad_tap & (1 << new_tap)) {
+			new_tap = host->tap_set;
+			pr_debug("Three consecutive bad tap is prohibited\n");
+		}
+
+		host->tap_set = new_tap;
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET,
+			       host->tap_set);
+	}
 
 	/* Replace the tuning result of 8TAP with 4TAP */
 	if (host->hs400_use_4tap)
@@ -663,6 +684,7 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host)
 	struct renesas_sdhi *priv = host_to_priv(host);
 	u32 val;
 	u32 smpcmp;
+	unsigned long new_tap = host->tap_set;
 
 	val = sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ);
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
@@ -686,16 +708,21 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host)
 		case 0:
 			return false;   /* No error in CMD signal */
 		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQUP:
-			host->tap_set = (host->tap_set +
-					 host->tap_num + 1) % host->tap_num;
+			new_tap = (host->tap_set +
+				   host->tap_num + 1) % host->tap_num;
 			break;
 		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQDOWN:
-			host->tap_set = (host->tap_set +
-					 host->tap_num - 1) % host->tap_num;
+			new_tap = (host->tap_set +
+				   host->tap_num - 1) % host->tap_num;
 			break;
 		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_ERR:
 			return true;    /* Need re-tune */
 		}
+
+		if (priv->hs400_bad_tap & (1 << new_tap))
+			return false;   /* cannot change */
+
+		host->tap_set = new_tap;
 	} else {
 		if (val & SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR)
 			return true;    /* Need re-tune */
@@ -953,6 +980,7 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 			of_data->hs400_scc_correction_disabled;
 		priv->hs400_ignore_dat_correction =
 			of_data->hs400_ignore_dat_correction;
+		priv->hs400_bad_tap = of_data->hs400_bad_tap;
 	}
 
 	host->write16_hook	= renesas_sdhi_write16_hook;
