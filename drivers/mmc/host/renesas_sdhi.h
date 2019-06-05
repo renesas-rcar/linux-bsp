@@ -60,6 +60,7 @@ struct renesas_sdhi {
 	unsigned int scc_base_f_min;
 	u32 adjust_hs400_offset;
 	u32 adjust_hs400_calibrate;
+	bool doing_tune;
 };
 
 #define host_to_priv(host) \
