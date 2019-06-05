@@ -278,22 +278,30 @@ static const struct renesas_sdhi_quirks sdhi_quirks_4tap_nohs400 = {
 
 static const struct renesas_sdhi_quirks sdhi_quirks_4tap = {
 	.hs400_4taps = true,
+	.hs400_manual_correction = true,
+};
+
+static const struct renesas_sdhi_quirks sdhi_quirks_hs400 = {
+	.hs400_manual_correction = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev1 = {
 	.hs400_4taps = true,
+	.hs400_manual_correction = true,
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
 	.hs400_calib = 0x9,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
+	.hs400_manual_correction = true,
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
 	.hs400_calib = 0x0,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77990 = {
+	.hs400_manual_correction = true,
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
 	.hs400_calib = 0x4,
@@ -304,12 +312,16 @@ static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	  .data = &sdhi_quirks_4tap_nohs400_bit17, },
 	{ .soc_id = "r8a7795", .revision = "ES2.0",
 	  .data = &sdhi_quirks_4tap, },
+	{ .soc_id = "r8a7795",
+	  .data = &sdhi_quirks_hs400, },
 	{ .soc_id = "r8a7796", .revision = "ES1.0",
 	  .data = &sdhi_quirks_4tap_nohs400_bit17, },
 	{ .soc_id = "r8a7796", .revision = "ES1.1",
 	  .data = &sdhi_quirks_4tap_nohs400, },
 	{ .soc_id = "r8a7796", .revision = "ES1.*",
 	  .data = &sdhi_quirks_r8a7796_rev1, },
+	{ .soc_id = "r8a7796",
+	  .data = &sdhi_quirks_hs400, },
 	{ .soc_id = "r8a77965",
 	  .data = &sdhi_quirks_r8a77965, },
 	{ .soc_id = "r8a77990",
@@ -427,6 +439,12 @@ static void renesas_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DT2FF,
 		       priv->scc_tappos_hs400);
+
+	if (priv->hs400_manual_correction)
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSCNTL,
+			       ~SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN &
+			       sd_scc_read32(host, priv,
+					     SH_MOBILE_SDHI_SCC_RVSCNTL));
 
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
 		       (SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
@@ -924,6 +942,8 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		(quirks && quirks->hs400_4taps) ? true : false;
 	priv->dtranend1_bit17 =
 		(quirks && quirks->dtranend1_bit17) ? true : false;
+	priv->hs400_manual_correction =
+		(quirks && quirks->hs400_manual_correction) ? true : false;
 
 	if (of_data) {
 		mmc_data->flags |= of_data->tmio_flags;
