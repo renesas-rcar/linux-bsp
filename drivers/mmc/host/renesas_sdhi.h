@@ -71,6 +71,7 @@ struct renesas_sdhi {
 	bool dtranend1_bit17;
 	u32 adjust_hs400_offset;
 	u32 adjust_hs400_calibrate;
+	bool doing_tune;
 };
 
 #define host_to_priv(host) \
