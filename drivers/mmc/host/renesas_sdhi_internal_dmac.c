@@ -103,6 +103,8 @@ static const struct renesas_sdhi_of_data of_rcar_gen3_compatible = {
 	.max_segs	= 1,
 	/* If this device's IOMMU is enabled, it can use multiple segments */
 	.max_segs_on_iommu = 512,
+	/* Gen3 cannot use SCC sampling clock position correction in HS400 */
+	.hs400_scc_correction_disabled = true,
 };
 
 static const struct of_device_id renesas_sdhi_internal_dmac_of_match[] = {
