@@ -37,6 +37,7 @@ struct renesas_sdhi_of_data {
 	unsigned short max_segs;
 	unsigned short max_segs_on_iommu;
 	bool hs400_scc_correction_disabled;
+	bool hs400_ignore_dat_correction;
 };
 
 struct tmio_mmc_dma {
@@ -63,6 +64,7 @@ struct renesas_sdhi {
 	u32 adjust_hs400_calibrate;
 	bool doing_tune;
 	bool hs400_scc_correction_disabled;
+	bool hs400_ignore_dat_correction;
 };
 
 #define host_to_priv(host) \

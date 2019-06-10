@@ -241,6 +241,10 @@ static int renesas_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 #define SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR	BIT(2)
 #define SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPUP	BIT(1)
 #define SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPDOWN	BIT(0)
+/* Definitions for values the SH_MOBILE_SDHI_SCC_SMPCMP register */
+#define SH_MOBILE_SDHI_SCC_SMPCMP_CMD_ERR	(BIT(24) | BIT(8))
+#define SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQUP	BIT(24)
+#define SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQDOWN	BIT(8)
 /* Definitions for values the SH_MOBILE_SDHI_SCC_TMPPORT2 register */
 #define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL	BIT(4)
 #define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN	BIT(31)
@@ -658,6 +662,7 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host)
 {
 	struct renesas_sdhi *priv = host_to_priv(host);
 	u32 val;
+	u32 smpcmp;
 
 	val = sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ);
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
@@ -667,16 +672,42 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host)
 		return false;
 
 	/* Change TAP position according to correction status */
-	if (val & SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR)
-		return true;    /* Need re-tune */
-	else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPUP)
-		host->tap_set = (host->tap_set +
-				 host->tap_num + 1) % host->tap_num;
-	else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPDOWN)
-		host->tap_set = (host->tap_set +
-				 host->tap_num - 1) % host->tap_num;
-	else
-		return false;
+	if (priv->hs400_ignore_dat_correction &&
+	    host->mmc->ios.timing == MMC_TIMING_MMC_HS400) {
+		/*
+		 * Correction Error Status contains CMD and DAT signal status.
+		 * In HS400, DAT signal based on DS signal, not CLK.
+		 * Therefore, use only CMD status.
+		 */
+		smpcmp = sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_SMPCMP) &
+			 SH_MOBILE_SDHI_SCC_SMPCMP_CMD_ERR;
+
+		switch (smpcmp) {
+		case 0:
+			return false;   /* No error in CMD signal */
+		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQUP:
+			host->tap_set = (host->tap_set +
+					 host->tap_num + 1) % host->tap_num;
+			break;
+		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQDOWN:
+			host->tap_set = (host->tap_set +
+					 host->tap_num - 1) % host->tap_num;
+			break;
+		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_ERR:
+			return true;    /* Need re-tune */
+		}
+	} else {
+		if (val & SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR)
+			return true;    /* Need re-tune */
+		else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPUP)
+			host->tap_set = (host->tap_set +
+					 host->tap_num + 1) % host->tap_num;
+		else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPDOWN)
+			host->tap_set = (host->tap_set +
+					 host->tap_num - 1) % host->tap_num;
+		else
+			return false;
+	}
 
 	/* Set TAP position */
 	if (host->hs400_use_4tap)
@@ -920,6 +951,8 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		priv->scc_base_f_min = of_data->scc_base_f_min;
 		priv->hs400_scc_correction_disabled =
 			of_data->hs400_scc_correction_disabled;
+		priv->hs400_ignore_dat_correction =
+			of_data->hs400_ignore_dat_correction;
 	}
 
 	host->write16_hook	= renesas_sdhi_write16_hook;
