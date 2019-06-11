@@ -239,6 +239,12 @@ static int renesas_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 #define SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN	BIT(0)
 /* Definitions for values the SH_MOBILE_SDHI_SCC_RVSREQ register */
 #define SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR	BIT(2)
+#define SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPUP	BIT(1)
+#define SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPDOWN	BIT(0)
+/* Definitions for values the SH_MOBILE_SDHI_SCC_SMPCMP register */
+#define SH_MOBILE_SDHI_SCC_SMPCMP_CMD_ERR	(BIT(24) | BIT(8))
+#define SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQUP	BIT(24)
+#define SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQDOWN	BIT(8)
 /* Definitions for values the SH_MOBILE_SDHI_SCC_TMPPORT2 register */
 #define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL	BIT(4)
 #define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN	BIT(31)
@@ -343,6 +349,8 @@ static void renesas_sdhi_prepare_tuning(struct tmio_mmc_host *host,
 {
 	struct renesas_sdhi *priv = host_to_priv(host);
 
+	priv->doing_tune = true;
+
 	/* Set sampling clock position */
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET, tap);
 }
@@ -387,6 +395,7 @@ static void renesas_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	struct renesas_sdhi *priv = host_to_priv(host);
+	 unsigned long new_tap;
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
@@ -398,6 +407,12 @@ static void renesas_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DT2FF,
 		       priv->scc_tappos_hs400);
 
+	if (priv->hs400_scc_correction_disabled)
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSCNTL,
+			       ~SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN &
+			       sd_scc_read32(host, priv,
+					     SH_MOBILE_SDHI_SCC_RVSCNTL));
+
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2,
 		       (SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN |
 			SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) |
@@ -408,6 +423,26 @@ static void renesas_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 		       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
 		       sd_scc_read32(host, priv,
 				     SH_MOBILE_SDHI_SCC_DTCNTL));
+
+	/* Avoid bad TAP */
+	if (!host->hs400_use_4tap &&
+	    (priv->hs400_bad_tap & (1 << host->tap_set))) {
+		new_tap = (host->tap_set +
+			   host->tap_num + 1) % host->tap_num;
+
+		if (priv->hs400_bad_tap & (1 << new_tap))
+			new_tap = (host->tap_set +
+				   host->tap_num - 1) % host->tap_num;
+
+		if (priv->hs400_bad_tap & (1 << new_tap)) {
+			new_tap = host->tap_set;
+			pr_debug("Three consecutive bad tap is prohibited\n");
+		}
+
+		host->tap_set = new_tap;
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET,
+			       host->tap_set);
+	}
 
 	/* Replace the tuning result of 8TAP with 4TAP */
 	if (host->hs400_use_4tap)
@@ -549,6 +584,7 @@ static int renesas_sdhi_select_tuning(struct tmio_mmc_host *host)
 
 	/* clear flag */
 	host->needs_adjust_hs400 = false;
+	priv->doing_tune = false;
 
 	/* Clear SCC_RVSREQ */
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
@@ -643,6 +679,89 @@ static int renesas_sdhi_select_tuning(struct tmio_mmc_host *host)
 	return 0;
 }
 
+static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host)
+{
+	struct renesas_sdhi *priv = host_to_priv(host);
+	u32 val;
+	u32 smpcmp;
+	unsigned long new_tap = host->tap_set;
+
+	val = sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ);
+	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
+
+	/* No error */
+	if (!val)
+		return false;
+
+	/* Change TAP position according to correction status */
+	if (priv->hs400_ignore_dat_correction &&
+	    host->mmc->ios.timing == MMC_TIMING_MMC_HS400) {
+		/*
+		 * Correction Error Status contains CMD and DAT signal status.
+		 * In HS400, DAT signal based on DS signal, not CLK.
+		 * Therefore, use only CMD status.
+		 */
+		smpcmp = sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_SMPCMP) &
+			 SH_MOBILE_SDHI_SCC_SMPCMP_CMD_ERR;
+
+		switch (smpcmp) {
+		case 0:
+			return false;   /* No error in CMD signal */
+		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQUP:
+			new_tap = (host->tap_set +
+				   host->tap_num + 1) % host->tap_num;
+			break;
+		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQDOWN:
+			new_tap = (host->tap_set +
+				   host->tap_num - 1) % host->tap_num;
+			break;
+		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_ERR:
+			return true;    /* Need re-tune */
+		}
+
+		if (priv->hs400_bad_tap & (1 << new_tap))
+			return false;   /* cannot change */
+
+		host->tap_set = new_tap;
+	} else {
+		if (val & SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR)
+			return true;    /* Need re-tune */
+		else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPUP)
+			host->tap_set = (host->tap_set +
+					 host->tap_num + 1) % host->tap_num;
+		else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPDOWN)
+			host->tap_set = (host->tap_set +
+					 host->tap_num - 1) % host->tap_num;
+		else
+			return false;
+	}
+
+	/* Set TAP position */
+	if (host->hs400_use_4tap)
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET,
+			       host->tap_set / 2);
+	else
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET,
+			       host->tap_set);
+
+	return false;
+}
+
+static bool renesas_sdhi_auto_correction(struct tmio_mmc_host *host)
+{
+	struct renesas_sdhi *priv = host_to_priv(host);
+
+	/* Check SCC error */
+	if (sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ) &
+	    SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR) {
+		/* Clear SCC error */
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
+		return true;
+	}
+
+	return false;
+}
+
 static bool renesas_sdhi_check_scc_error(struct tmio_mmc_host *host)
 {
 	struct renesas_sdhi *priv = host_to_priv(host);
@@ -653,20 +772,14 @@ static bool renesas_sdhi_check_scc_error(struct tmio_mmc_host *host)
 	      !host->hs400_use_4tap))
 		return false;
 
-	if (host->mmc->doing_retune == 1)
+	if (host->mmc->doing_retune == 1 || priv->doing_tune)
 		return false;
 
-	/* Check SCC error */
 	if (sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSCNTL) &
-	    SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN &&
-	    sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ) &
-	    SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR) {
-		/* Clear SCC error */
-		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
-		return true;
-	}
+	    SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN)
+		return renesas_sdhi_auto_correction(host);
 
-	return false;
+	return renesas_sdhi_manual_correction(host);
 }
 
 static void renesas_sdhi_hw_reset(struct tmio_mmc_host *host)
@@ -863,6 +976,11 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		host->bus_shift = of_data->bus_shift;
 		priv->scc_offset = of_data->scc_offset;
 		priv->scc_base_f_min = of_data->scc_base_f_min;
+		priv->hs400_scc_correction_disabled =
+			of_data->hs400_scc_correction_disabled;
+		priv->hs400_ignore_dat_correction =
+			of_data->hs400_ignore_dat_correction;
+		priv->hs400_bad_tap = of_data->hs400_bad_tap;
 	}
 
 	host->write16_hook	= renesas_sdhi_write16_hook;
