@@ -403,9 +403,11 @@ static irqreturn_t rcar_gen3_thermal_irq(int irq, void *data)
 							REG_GEN3_IRQSTR);
 			rcar_gen3_thermal_write(priv->tscs[i],
 						REG_GEN3_IRQSTR, 0);
-			if (status)
+			if (status) {
+				rcar_gen3_thermal_set_irq_temp(priv->tscs[i]);
 				thermal_zone_device_update(priv->tscs[i]->zone,
 						   THERMAL_EVENT_UNSPECIFIED);
+			}
 		}
 	} else {
 		for (i = 0; i < priv->num_tscs; i++) {
@@ -413,9 +415,11 @@ static irqreturn_t rcar_gen3_thermal_irq(int irq, void *data)
 							REG_GEN3_B_STR);
 			rcar_gen3_thermal_write(priv->tscs[i],
 						REG_GEN3_B_STR, 0);
-			if (status)
+			if (status) {
+				rcar_gen3_thermal_set_irq_temp(priv->tscs[i]);
 				thermal_zone_device_update(priv->tscs[i]->zone,
 						   THERMAL_EVENT_UNSPECIFIED);
+			}
 		}
 	}
 
