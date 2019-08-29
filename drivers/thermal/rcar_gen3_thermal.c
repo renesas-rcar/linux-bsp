@@ -545,6 +545,33 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 		priv->thermal_init = rcar_gen3_thermal_init_r8a77990;
 	}
 
+	platform_set_drvdata(pdev, priv);
+
+	/*
+	 * Request 2 (of the 3 possible) IRQs, the driver only needs to
+	 * to trigger on the low and high trip points of the current
+	 * temp window at this point.
+	 */
+	for (i = 0; i < 2; i++) {
+		irq = platform_get_irq(pdev, i);
+		if (irq < 0)
+			return irq;
+
+		irqname = devm_kasprintf(dev, GFP_KERNEL, "%s:ch%d",
+					 dev_name(dev), i);
+		if (!irqname)
+			return -ENOMEM;
+
+		ret = devm_request_threaded_irq(dev, irq, NULL,
+						rcar_gen3_thermal_irq,
+						IRQF_ONESHOT, irqname, priv);
+		if (ret)
+			return ret;
+	}
+
+	pm_runtime_enable(dev);
+	pm_runtime_get_sync(dev);
+
 	if (is_ths_typeA) {
 		/* Use FUSE default values if they are missing.
 		 * If not, fetch them from registers.
@@ -572,34 +599,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 		iounmap(ptat_base);
 	}
-
-
-	platform_set_drvdata(pdev, priv);
-
-	/*
-	 * Request 2 (of the 3 possible) IRQs, the driver only needs to
-	 * to trigger on the low and high trip points of the current
-	 * temp window at this point.
-	 */
-	for (i = 0; i < 2; i++) {
-		irq = platform_get_irq(pdev, i);
-		if (irq < 0)
-			return irq;
-
-		irqname = devm_kasprintf(dev, GFP_KERNEL, "%s:ch%d",
-					 dev_name(dev), i);
-		if (!irqname)
-			return -ENOMEM;
-
-		ret = devm_request_threaded_irq(dev, irq, NULL,
-						rcar_gen3_thermal_irq,
-						IRQF_ONESHOT, irqname, priv);
-		if (ret)
-			return ret;
-	}
-
-	pm_runtime_enable(dev);
-	pm_runtime_get_sync(dev);
 
 	for (i = 0; i < TSC_MAX_NUM; i++) {
 		struct rcar_gen3_thermal_tsc *tsc;
