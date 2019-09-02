@@ -1019,7 +1019,8 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 			if (taps[i].clk_rate == 0 ||
 			    taps[i].clk_rate == host->mmc->f_max) {
 				priv->scc_tappos = taps->tap;
-				priv->scc_tappos_hs400 = taps->tap_hs400;
+				priv->scc_tappos_hs400 = host->hs400_use_4tap ?
+					taps->tap_hs400_4tap : taps->tap_hs400;
 				hit = true;
 				break;
 			}
