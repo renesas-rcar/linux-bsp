@@ -287,7 +287,7 @@ renesas_sdhi_internal_dmac_request_dma(struct tmio_mmc_host *host,
 	/* Each value is set to non-zero to assume "enabling" each DMA */
 	host->chan_rx = host->chan_tx = (void *)0xdeadbeaf;
 
-	host->dma_tranend1 = (host->sdhi_quirks & DTRAEND1_SET_BIT17) ?
+	host->dma_tranend1 = (priv->dtranend1_bit17) ?
 		INFO1_DTRANEND1_BIT17 : INFO1_DTRANEND1_BIT20;
 
 	tasklet_init(&priv->dma_priv.dma_complete,
