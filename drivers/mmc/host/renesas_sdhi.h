@@ -46,6 +46,15 @@ struct tmio_mmc_dma {
 	struct tasklet_struct	dma_complete;
 };
 
+struct renesas_sdhi_quirks {
+	bool hs400_disabled;
+	bool hs400_4taps;
+	bool dtranend1_bit17;
+	bool hs400_manual_calib;
+	u32 hs400_offset;
+	u32 hs400_calib;
+};
+
 struct renesas_sdhi {
 	struct clk *clk;
 	struct clk *clk_cd;
@@ -58,6 +67,7 @@ struct renesas_sdhi {
 	u32 scc_tappos_hs400;
 	int scc_offset;
 	unsigned int scc_base_f_min;
+	bool dtranend1_bit17;
 	u32 adjust_hs400_offset;
 	u32 adjust_hs400_calibrate;
 };

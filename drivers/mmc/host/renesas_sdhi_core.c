@@ -263,29 +263,55 @@ static int renesas_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 #define SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK	0x1f
 #define SH_MOBILE_SDHI_SCC_TMPPORT_MANUAL_MODE		BIT(7)
 
+static const struct renesas_sdhi_quirks sdhi_quirks_4tap_nohs400_bit17 = {
+	.hs400_disabled = true,
+	.hs400_4taps = true,
+	.dtranend1_bit17 = true,
+};
+
+static const struct renesas_sdhi_quirks sdhi_quirks_4tap_nohs400 = {
+	.hs400_disabled = true,
+	.hs400_4taps = true,
+};
+
+static const struct renesas_sdhi_quirks sdhi_quirks_4tap = {
+	.hs400_4taps = true,
+};
+
+static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev1 = {
+	.hs400_4taps = true,
+	.hs400_manual_calib = true,
+	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
+	.hs400_calib = 0x9,
+};
+
+static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
+	.hs400_manual_calib = true,
+	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
+	.hs400_calib = 0x0,
+};
+
+static const struct renesas_sdhi_quirks sdhi_quirks_r8a77990 = {
+	.hs400_manual_calib = true,
+	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
+	.hs400_calib = 0x4,
+};
+
 static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*",
-	  .data = (void *)(DTRAEND1_SET_BIT17 | HS400_USE_4TAP |
-			   FORCE_HS200), },
+	  .data = &sdhi_quirks_4tap_nohs400_bit17, },
 	{ .soc_id = "r8a7795", .revision = "ES2.0",
-	  .data = (void *)HS400_USE_4TAP, },
+	  .data = &sdhi_quirks_4tap, },
 	{ .soc_id = "r8a7796", .revision = "ES1.0",
-	  .data = (void *)(DTRAEND1_SET_BIT17 | HS400_USE_4TAP |
-			   FORCE_HS200), },
+	  .data = &sdhi_quirks_4tap_nohs400_bit17, },
 	{ .soc_id = "r8a7796", .revision = "ES1.1",
-	  .data = (void *)(HS400_USE_4TAP | FORCE_HS200), },
+	  .data = &sdhi_quirks_4tap_nohs400, },
 	{ .soc_id = "r8a7796", .revision = "ES1.*",
-	  .data = (void *)(HS400_USE_4TAP | HS400_USE_MANUAL_CALIB |
-			   (SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0 << 24) |
-			   (0x9 << 16)), },
+	  .data = &sdhi_quirks_r8a7796_rev1, },
 	{ .soc_id = "r8a77965",
-	  .data = (void *)(HS400_USE_MANUAL_CALIB |
-			   (SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0 << 24) |
-			   (0x0 << 16)), },
+	  .data = &sdhi_quirks_r8a77965, },
 	{ .soc_id = "r8a77990",
-	  .data = (void *)(HS400_USE_MANUAL_CALIB |
-			   (SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0 << 24) |
-			   (0x4 << 16)), },
+	  .data = &sdhi_quirks_r8a77990, },
 	{/*sentinel*/},
 };
 
@@ -780,6 +806,7 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		       const struct tmio_mmc_dma_ops *dma_ops)
 {
 	struct tmio_mmc_data *mmd = pdev->dev.platform_data;
+	const struct renesas_sdhi_quirks *quirks = NULL;
 	const struct renesas_sdhi_of_data *of_data;
 	struct tmio_mmc_data *mmc_data;
 	struct tmio_mmc_dma *dma_priv;
@@ -841,10 +868,12 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 
 	attr = soc_device_match(sdhi_quirks_match);
 	if (attr)
-		host->sdhi_quirks = (uintptr_t)attr->data;
+		quirks = attr->data;
 
-	host->hs400_use_4tap = (host->sdhi_quirks & HS400_USE_4TAP) ?
-				true : false;
+	host->hs400_use_4tap =
+		(quirks && quirks->hs400_4taps) ? true : false;
+	priv->dtranend1_bit17 =
+		(quirks && quirks->dtranend1_bit17) ? true : false;
 
 	if (of_data) {
 		mmc_data->flags |= of_data->tmio_flags;
@@ -924,15 +953,15 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		host->adjust_hs400_mode_disable =
 			renesas_sdhi_adjust_hs400_mode_disable;
 	} else if (host->mmc->caps2 & MMC_CAP2_HS400) {
-		if (host->sdhi_quirks & FORCE_HS200) {
+		if (quirks && quirks->hs400_disabled) {
 			host->mmc->caps2 &=
 				~(MMC_CAP2_HS400 | MMC_CAP2_HS400_ES);
-		} else if (host->sdhi_quirks & HS400_USE_MANUAL_CALIB) {
+		} else if (quirks && quirks->hs400_manual_calib) {
 			priv->adjust_hs400_offset =
-				(host->sdhi_quirks >> 24) &
+				quirks->hs400_offset &
 				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_MASK;
 			priv->adjust_hs400_calibrate =
-				(host->sdhi_quirks >> 16) &
+				quirks->hs400_calib &
 				SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK;
 			host->adjust_hs400_mode_enable =
 				renesas_sdhi_adjust_hs400_mode_enable;
