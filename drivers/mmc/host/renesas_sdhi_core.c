@@ -284,25 +284,35 @@ static const struct renesas_sdhi_quirks sdhi_quirks_4tap = {
 	.hs400_4taps = true,
 	.hs400_manual_correction = true,
 	.hs400_ignore_dat_correction = true,
+	.hs400_bad_tap = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 };
 
-static const struct renesas_sdhi_quirks sdhi_quirks_hs400 = {
+static const struct renesas_sdhi_quirks sdhi_quirks_r8a7795 = {
 	.hs400_manual_correction = true,
 	.hs400_ignore_dat_correction = true,
+	.hs400_bad_tap = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev1 = {
 	.hs400_4taps = true,
 	.hs400_manual_correction = true,
 	.hs400_ignore_dat_correction = true,
+	.hs400_bad_tap = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
 	.hs400_calib = 0x9,
 };
 
+static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev3 = {
+	.hs400_manual_correction = true,
+	.hs400_ignore_dat_correction = true,
+	.hs400_bad_tap = BIT(1) | BIT(3) | BIT(5) | BIT(7),
+};
+
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
 	.hs400_manual_correction = true,
 	.hs400_ignore_dat_correction = true,
+	.hs400_bad_tap = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
 	.hs400_calib = 0x0,
@@ -322,7 +332,7 @@ static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	{ .soc_id = "r8a7795", .revision = "ES2.0",
 	  .data = &sdhi_quirks_4tap, },
 	{ .soc_id = "r8a7795",
-	  .data = &sdhi_quirks_hs400, },
+	  .data = &sdhi_quirks_r8a7795, },
 	{ .soc_id = "r8a7796", .revision = "ES1.0",
 	  .data = &sdhi_quirks_4tap_nohs400_bit17, },
 	{ .soc_id = "r8a7796", .revision = "ES1.1",
@@ -330,7 +340,7 @@ static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	{ .soc_id = "r8a7796", .revision = "ES1.*",
 	  .data = &sdhi_quirks_r8a7796_rev1, },
 	{ .soc_id = "r8a7796",
-	  .data = &sdhi_quirks_hs400, },
+	  .data = &sdhi_quirks_r8a7796_rev3, },
 	{ .soc_id = "r8a77965",
 	  .data = &sdhi_quirks_r8a77965, },
 	{ .soc_id = "r8a77990",
@@ -438,6 +448,7 @@ static void renesas_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
 	struct renesas_sdhi *priv = host_to_priv(host);
+	unsigned long new_tap;
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
 		sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
@@ -465,6 +476,25 @@ static void renesas_sdhi_prepare_hs400_tuning(struct mmc_host *mmc,
 		       SH_MOBILE_SDHI_SCC_DTCNTL_TAPEN |
 		       sd_scc_read32(host, priv,
 				     SH_MOBILE_SDHI_SCC_DTCNTL));
+
+	/* Avoid bad TAP */
+	if (priv->hs400_bad_tap & (1 << host->tap_set)) {
+		new_tap = (host->tap_set +
+			   host->tap_num + 1) % host->tap_num;
+
+		if (priv->hs400_bad_tap & (1 << new_tap))
+			new_tap = (host->tap_set +
+				   host->tap_num - 1) % host->tap_num;
+
+		if (priv->hs400_bad_tap & (1 << new_tap)) {
+			new_tap = host->tap_set;
+			pr_debug("Three consecutive bad tap is prohibited\n");
+		}
+
+		host->tap_set = new_tap;
+		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET,
+			       host->tap_set);
+	}
 
 	/* Replace the tuning result of 8TAP with 4TAP */
 	if (host->hs400_use_4tap)
@@ -706,6 +736,8 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host)
 	struct renesas_sdhi *priv = host_to_priv(host);
 	u32 val;
 	u32 smpcmp;
+	unsigned long new_tap = host->tap_set;
+	unsigned long error_tap = host->tap_set;
 
 	val = sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ);
 
@@ -730,16 +762,35 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host)
 		case 0:
 			return false;	/* No error in CMD signal */
 		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQUP:
-			host->tap_set = (host->tap_set +
-					 host->tap_num + 1) % host->tap_num;
+			new_tap = (host->tap_set +
+				   host->tap_num + 1) % host->tap_num;
+			error_tap = (host->tap_set +
+				     host->tap_num - 1) % host->tap_num;
 			break;
 		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQDOWN:
-			host->tap_set = (host->tap_set +
-					 host->tap_num - 1) % host->tap_num;
+			new_tap = (host->tap_set +
+				   host->tap_num - 1) % host->tap_num;
+			error_tap = (host->tap_set +
+				     host->tap_num + 1) % host->tap_num;
 			break;
 		default:
 			return true;	/* Need re-tune */
 		}
+
+		if (priv->hs400_bad_tap & (1 << new_tap)) {
+			/*
+			 * New tap is bad tap (cannot change).
+			 * Compare with HS200 tuning result.
+			 * In HS200 tuning, when smpcmp[error_tap]
+			 * is OK, retune is executed.
+			 */
+			if (test_bit(error_tap, host->smpcmp))
+				return true;	/* Need retune */
+
+			return false;	/* cannot change */
+		}
+
+		host->tap_set = new_tap;
 	} else {
 		if (val & SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR)
 			return true;	/* Need re-tune */
@@ -982,6 +1033,9 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		(quirks && quirks->hs400_manual_correction) ? true : false;
 	priv->hs400_ignore_dat_correction =
 		(quirks && quirks->hs400_ignore_dat_correction) ? true : false;
+
+	if (quirks && quirks->hs400_bad_tap)
+		priv->hs400_bad_tap = quirks->hs400_bad_tap;
 
 	if (of_data) {
 		mmc_data->flags |= of_data->tmio_flags;
