@@ -241,6 +241,10 @@ static int renesas_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 #define SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR	BIT(2)
 #define SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPUP	BIT(1)
 #define SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPDOWN	BIT(0)
+/* Definitions for values the SH_MOBILE_SDHI_SCC_SMPCMP register */
+#define SH_MOBILE_SDHI_SCC_SMPCMP_CMD_ERR	(BIT(24) | BIT(8))
+#define SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQUP	BIT(24)
+#define SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQDOWN	BIT(8)
 /* Definitions for values the SH_MOBILE_SDHI_SCC_TMPPORT2 register */
 #define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL	BIT(4)
 #define SH_MOBILE_SDHI_SCC_TMPPORT2_HS400EN	BIT(31)
@@ -279,15 +283,18 @@ static const struct renesas_sdhi_quirks sdhi_quirks_4tap_nohs400 = {
 static const struct renesas_sdhi_quirks sdhi_quirks_4tap = {
 	.hs400_4taps = true,
 	.hs400_manual_correction = true,
+	.hs400_ignore_dat_correction = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_hs400 = {
 	.hs400_manual_correction = true,
+	.hs400_ignore_dat_correction = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev1 = {
 	.hs400_4taps = true,
 	.hs400_manual_correction = true,
+	.hs400_ignore_dat_correction = true,
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
 	.hs400_calib = 0x9,
@@ -295,6 +302,7 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev1 = {
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
 	.hs400_manual_correction = true,
+	.hs400_ignore_dat_correction = true,
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
 	.hs400_calib = 0x0,
@@ -302,6 +310,7 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77990 = {
 	.hs400_manual_correction = true,
+	.hs400_ignore_dat_correction = true,
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
 	.hs400_calib = 0x4,
@@ -696,6 +705,7 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host)
 {
 	struct renesas_sdhi *priv = host_to_priv(host);
 	u32 val;
+	u32 smpcmp;
 
 	val = sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ);
 
@@ -706,16 +716,42 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host)
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
 
 	/* Change TAP position according to correction status */
-	if (val & SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR)
-		return true;    /* Need re-tune */
-	else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPUP)
-		host->tap_set = (host->tap_set +
-				 host->tap_num + 1) % host->tap_num;
-	else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPDOWN)
-		host->tap_set = (host->tap_set +
-				 host->tap_num - 1) % host->tap_num;
-	else
-		return false;
+	if (priv->hs400_ignore_dat_correction &&
+	    host->mmc->ios.timing == MMC_TIMING_MMC_HS400) {
+		/*
+		 * Correction Error Status contains CMD and DAT signal status.
+		 * In HS400, DAT signal based on DS signal, not CLK.
+		 * Therefore, use only CMD status.
+		 */
+		smpcmp = sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_SMPCMP) &
+			 SH_MOBILE_SDHI_SCC_SMPCMP_CMD_ERR;
+
+		switch (smpcmp) {
+		case 0:
+			return false;	/* No error in CMD signal */
+		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQUP:
+			host->tap_set = (host->tap_set +
+					 host->tap_num + 1) % host->tap_num;
+			break;
+		case SH_MOBILE_SDHI_SCC_SMPCMP_CMD_REQDOWN:
+			host->tap_set = (host->tap_set +
+					 host->tap_num - 1) % host->tap_num;
+			break;
+		default:
+			return true;	/* Need re-tune */
+		}
+	} else {
+		if (val & SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR)
+			return true;	/* Need re-tune */
+		else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPUP)
+			host->tap_set = (host->tap_set +
+					 host->tap_num + 1) % host->tap_num;
+		else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPDOWN)
+			host->tap_set = (host->tap_set +
+					 host->tap_num - 1) % host->tap_num;
+		else
+			return false;
+	}
 
 	/* Set TAP position */
 	if (host->hs400_use_4tap)
@@ -944,6 +980,8 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		(quirks && quirks->dtranend1_bit17) ? true : false;
 	priv->hs400_manual_correction =
 		(quirks && quirks->hs400_manual_correction) ? true : false;
+	priv->hs400_ignore_dat_correction =
+		(quirks && quirks->hs400_ignore_dat_correction) ? true : false;
 
 	if (of_data) {
 		mmc_data->flags |= of_data->tmio_flags;
