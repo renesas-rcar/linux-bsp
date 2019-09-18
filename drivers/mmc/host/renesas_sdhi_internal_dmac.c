@@ -94,6 +94,7 @@ static const struct renesas_sdhi_of_data of_rcar_gen3_compatible = {
 			  MMC_CAP_CMD23,
 	.capabilities2	= MMC_CAP2_NO_WRITE_PROTECT,
 	.bus_shift	= 2,
+	.mmc0_addr	= 0xee140000,
 	.scc_offset	= 0x1000,
 	/* SCC module clock (SDnH) is enabled at 100MHz or more */
 	.scc_base_f_min = 100000000,
