@@ -268,6 +268,42 @@ static int renesas_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 #define SH_MOBILE_SDHI_SCC_TMPPORT_DISABLE_WP_CODE	0xa5000000
 #define SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK	0x1f
 #define SH_MOBILE_SDHI_SCC_TMPPORT_MANUAL_MODE		BIT(7)
+#define CALIB_TABLE_MAX	(SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK + 1)
+
+static const u32 r8a7795_calib_table[2][CALIB_TABLE_MAX] = {
+	{ 0,  0,  0,  0,  0,  1,  1,  2,  3,  4,  5,  5,  6,  6,  7, 11,
+	 15, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 19, 20, 21, 21 },
+	{ 3,  3,  4,  4,  5,  6,  6,  7,  8,  8,  9,  9, 10, 11, 12, 15,
+	 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 19, 20, 21, 22, 22 }
+};
+
+static const u32 r8a7796_rev1_calib_table[2][CALIB_TABLE_MAX] = {
+	{ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  2,  3,  4,  9,
+	 15, 15, 15, 16, 16, 16, 16, 16, 17, 18, 19, 20, 21, 21, 22, 22 },
+	{ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,
+	  2,  9, 16, 17, 17, 17, 18, 18, 18, 18, 19, 20, 21, 22, 23, 24}
+};
+
+static const u32 r8a7796_rev3_calib_table[2][CALIB_TABLE_MAX] = {
+	{ 0,  0,  0,  0,  2,  3,  4,  4,  5,  6,  7,  7,  8,  9,  9, 10,
+	 11, 12, 13, 15, 16, 17, 17, 18, 19, 19, 20, 21, 21, 22, 23, 23 },
+	{ 1,  2,  2,  3,  4,  4,  5,  6,  6,  7,  8,  9,  9, 10, 11, 12,
+	 13, 14, 15, 16, 17, 17, 18, 19, 20, 20, 21, 22, 22, 23, 24, 24 }
+};
+
+static const u32 r8a77965_calib_table[2][CALIB_TABLE_MAX] = {
+	{ 0,  1,  2,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 15,
+	 16, 17, 18, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29 },
+	{ 0,  1,  2,  2,  2,  3,  4,  5,  6,  7,  9, 10, 11, 12, 13, 15,
+	 16, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 31 }
+};
+
+static const u32 r8a77990_calib_table[2][CALIB_TABLE_MAX] = {
+	{ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+	{ 0,  0,  1,  2,  3,  4,  4,  4,  4,  5,  5,  6,  7,  8, 10, 11,
+	 12, 13, 14, 16, 17, 18, 18, 18, 19, 19, 20, 24, 26, 26, 26, 26 }
+};
 
 static const struct renesas_sdhi_quirks sdhi_quirks_4tap_nohs400_bit17 = {
 	.hs400_disabled = true,
@@ -291,6 +327,9 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a7795 = {
 	.hs400_manual_correction = true,
 	.hs400_ignore_dat_correction = true,
 	.hs400_bad_tap = BIT(2) | BIT(3) | BIT(6) | BIT(7),
+	.hs400_manual_calib = true,
+	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3,
+	.hs400_calib_table = r8a7795_calib_table[0],
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev1 = {
@@ -300,13 +339,16 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev1 = {
 	.hs400_bad_tap = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
-	.hs400_calib = 0x9,
+	.hs400_calib_table = r8a7796_rev1_calib_table[0],
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev3 = {
 	.hs400_manual_correction = true,
 	.hs400_ignore_dat_correction = true,
 	.hs400_bad_tap = BIT(1) | BIT(3) | BIT(5) | BIT(7),
+	.hs400_manual_calib = true,
+	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3,
+	.hs400_calib_table = r8a7796_rev3_calib_table[0],
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
@@ -315,7 +357,7 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
 	.hs400_bad_tap = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
-	.hs400_calib = 0x0,
+	.hs400_calib_table = r8a77965_calib_table[0],
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77990 = {
@@ -323,7 +365,7 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a77990 = {
 	.hs400_ignore_dat_correction = true,
 	.hs400_manual_calib = true,
 	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0,
-	.hs400_calib = 0x4,
+	.hs400_calib_table = r8a77990_calib_table[0],
 };
 
 static const struct soc_device_attribute sdhi_quirks_match[]  = {
@@ -550,27 +592,28 @@ static void renesas_sdhi_adjust_hs400_mode_enable(struct mmc_host *mmc)
 	struct renesas_sdhi *priv = host_to_priv(host);
 	u32 calib_code;
 
+	if (!priv->adjust_hs400_calib_table)
+		return;
+
 	/* Enabled Manual adjust HS400 mode
 	 *
 	 * 1) Disabled Write Protect
 	 *    W(addr=0x00, WP_DISABLE_CODE)
-	 * 2) Read Calibration code and adjust
-	 *    R(addr=0x26) - adjust value
-	 * 3) Enabled Manual Calibration
+	 * 2) Read Calibration code
+	 *    read_value = R(addr=0x26)
+	 * 3) Refer to calibration table
+	 *    Calibration code = table[read_value]
+	 * 4) Enabled Manual Calibration
 	 *    W(addr=0x22, manual mode | Calibration code)
-	 * 4) Set Offset value to TMPPORT3 Reg
+	 * 5) Set Offset value to TMPPORT3 Reg
 	 */
 	sd_scc_tmpport_write32(host, priv, 0x00,
 			       SH_MOBILE_SDHI_SCC_TMPPORT_DISABLE_WP_CODE);
 	calib_code = sd_scc_tmpport_read32(host, priv, 0x26);
 	calib_code &= SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK;
-	if (calib_code > priv->adjust_hs400_calibrate)
-		calib_code -= priv->adjust_hs400_calibrate;
-	else
-		calib_code = 0;
 	sd_scc_tmpport_write32(host, priv, 0x22,
 			       SH_MOBILE_SDHI_SCC_TMPPORT_MANUAL_MODE |
-			       calib_code);
+			       priv->adjust_hs400_calib_table[calib_code]);
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT3,
 		       priv->adjust_hs400_offset);
 
@@ -970,8 +1013,7 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 	struct resource *res;
 	const struct soc_device_attribute *attr;
 	int irq, ret, i;
-	const struct device_node *np = pdev->dev.of_node;
-	u32 value;
+	int port_num_offset = 0;
 
 	of_data = of_device_get_match_data(&pdev->dev);
 
@@ -1054,6 +1096,8 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 		host->bus_shift = of_data->bus_shift;
 		priv->scc_offset = of_data->scc_offset;
 		priv->scc_base_f_min = of_data->scc_base_f_min;
+		if (res->start != of_data->mmc0_addr)
+			port_num_offset = CALIB_TABLE_MAX;
 	}
 
 	host->write16_hook	= renesas_sdhi_write16_hook;
@@ -1082,39 +1126,9 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 
 	/* Adjust HS400 mode */
 	priv->adjust_hs400_offset = 0;
-	priv->adjust_hs400_calibrate = 0;
+	priv->adjust_hs400_calib_table = NULL;
 
-	if (np && !of_property_read_u32(np, "adjust_hs400_offset", &value)) {
-		/* DeviceTree can invalidate SoC attribute for HS400 */
-		switch (value) {
-		case 0:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0;
-			break;
-		case 1:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_1;
-			break;
-		case 2:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_2;
-			break;
-		case 3:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3;
-			break;
-		default:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3;
-			dev_warn(&host->pdev->dev, "Unknown adjust hs400 offset\n");
-		}
-		if (!of_property_read_u32(np, "adjust_hs400_calibrate", &value))
-			priv->adjust_hs400_calibrate = value;
-		host->adjust_hs400_mode_enable =
-			renesas_sdhi_adjust_hs400_mode_enable;
-		host->adjust_hs400_mode_disable =
-			renesas_sdhi_adjust_hs400_mode_disable;
-	} else if (host->mmc->caps2 & MMC_CAP2_HS400) {
+	if (host->mmc->caps2 & MMC_CAP2_HS400) {
 		if (quirks && quirks->hs400_disabled) {
 			host->mmc->caps2 &=
 				~(MMC_CAP2_HS400 | MMC_CAP2_HS400_ES);
@@ -1122,9 +1136,8 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 			priv->adjust_hs400_offset =
 				quirks->hs400_offset &
 				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_MASK;
-			priv->adjust_hs400_calibrate =
-				quirks->hs400_calib &
-				SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK;
+			priv->adjust_hs400_calib_table =
+				quirks->hs400_calib_table + port_num_offset;
 			host->adjust_hs400_mode_enable =
 				renesas_sdhi_adjust_hs400_mode_enable;
 			host->adjust_hs400_mode_disable =

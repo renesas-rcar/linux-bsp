@@ -30,6 +30,7 @@ struct renesas_sdhi_of_data {
 	enum dma_slave_buswidth dma_buswidth;
 	dma_addr_t dma_rx_offset;
 	unsigned int bus_shift;
+	phys_addr_t mmc0_addr;
 	int scc_offset;
 	unsigned int scc_base_f_min;
 	struct renesas_sdhi_scc *taps;
@@ -55,7 +56,7 @@ struct renesas_sdhi_quirks {
 	bool hs400_ignore_dat_correction;
 	bool hs400_manual_calib;
 	u32 hs400_offset;
-	u32 hs400_calib;
+	const u32 *hs400_calib_table;
 	u32 hs400_bad_tap;
 };
 
@@ -73,7 +74,7 @@ struct renesas_sdhi {
 	unsigned int scc_base_f_min;
 	bool dtranend1_bit17;
 	u32 adjust_hs400_offset;
-	u32 adjust_hs400_calibrate;
+	const u32 *adjust_hs400_calib_table;
 	bool doing_tune;
 	bool hs400_manual_correction;
 	bool hs400_ignore_dat_correction;
