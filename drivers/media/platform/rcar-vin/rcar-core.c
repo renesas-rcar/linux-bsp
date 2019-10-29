@@ -153,7 +153,7 @@ static int rvin_group_link_notify(struct media_link *link, u32 flags,
 	vin = container_of(vdev, struct rvin_dev, vdev);
 	master_id = rvin_group_id_to_master(vin->id);
 
-	if (WARN_ON(!group->vin[master_id])) {
+	if (!vin->parallel && WARN_ON(!group->vin[master_id])) {
 		ret = -ENODEV;
 		goto out;
 	}
