@@ -11,12 +11,26 @@ menuconfig MTD_SPI_NOR
 if MTD_SPI_NOR
 
 
-config SPI_RENESAS_RPC
+config MTD_RENESAS_RPC
 	tristate "Renesas RPC controller"
-	depends on ARCH_R8A7795 || ARCH_R8A7796 || ARCH_R8A77970 || ARCH_R8A77980 || COMPILE_TEST
+	depends on ARCH_RENESAS || COMPILE_TEST
 	help
-	  QSPI driver for Renesas SPI Multi I/O Bus controller. This controller
-	  supports normal, dual and quad spi for one or two SPI NOR Flashes.
+	  Renesas RPC interface driver. This controller support QSPI and HyperFlash
+	  devices.
+
+config MTD_RENESAS_RPC_HYPERFLASH
+	tristate "Renesas RPC HyperFlash"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	select MTD_RENESAS_RPC
+	help
+	  HyperFlash driver for Renesas RPC Multi I/O Bus controller controller.
+
+config MTD_RENESAS_RPC_QSPI
+	tristate "Renesas RPC QSPI"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	select MTD_RENESAS_RPC
+	help
+	  QSPI driver for Renesas RPC Multi I/O Bus controller.
 
 config MTD_SPI_NOR_USE_4K_SECTORS
 	bool "Use small 4096 B erase sectors"
