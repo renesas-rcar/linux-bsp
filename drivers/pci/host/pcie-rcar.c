@@ -94,8 +94,11 @@
 #define  LINK_SPEED_2_5GTS	(1 << 16)
 #define  LINK_SPEED_5_0GTS	(2 << 16)
 #define MACCTLR			0x011058
+#define  MACCTLR_NFTS_MASK	GENMASK(23, 16)	/* The name is from SH7786 */
 #define  SPEED_CHANGE		BIT(24)
 #define  SCRAMBLE_DISABLE	BIT(27)
+#define  LTSMDIS		BIT(31)
+#define  MACCTLR_INIT_VAL	(LTSMDIS | MACCTLR_NFTS_MASK)
 #define PMSR			0x01105c
 #define  L1FAEG			BIT(31)
 #define  PM_ENTER_L1RX		BIT(23)
@@ -255,6 +258,7 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 	if (val == 0 || (rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN)) {
 		/* Wait PCI Express link is re-initialized */
 		dev_info(&bus->dev, "Wait PCI Express link is re-initialized\n");
+		rcar_pci_write_reg(pcie, MACCTLR_INIT_VAL, MACCTLR);
 		rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
 		ret = rcar_pcie_wait_for_dl(pcie);
 		if (ret)
@@ -680,6 +684,8 @@ static int rcar_pcie_hw_init(struct rcar_pcie *pcie)
 	/* Enable MSI */
 	if (IS_ENABLED(CONFIG_PCI_MSI))
 		rcar_pci_write_reg(pcie, 0x801f0000, PCIEMSITXR);
+
+	rcar_pci_write_reg(pcie, MACCTLR_INIT_VAL, MACCTLR);
 
 	/* Finish initialization - establish a PCI Express link */
 	rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
