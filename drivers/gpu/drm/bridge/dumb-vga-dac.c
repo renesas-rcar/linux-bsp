@@ -2,6 +2,7 @@
 /*
  * Copyright (C) 2015-2016 Free Electrons
  * Copyright (C) 2015-2016 NextThing Co
+ * Copyright (C) 2019 Renesas Electronics Corporation
  *
  * Maxime Ripard <maxime.ripard@free-electrons.com>
  */
@@ -22,6 +23,7 @@ struct dumb_vga {
 
 	struct i2c_adapter	*ddc;
 	struct regulator	*vdd;
+	bool			ddc_flag;
 };
 
 static inline struct dumb_vga *
@@ -77,6 +79,13 @@ static enum drm_connector_status
 dumb_vga_connector_detect(struct drm_connector *connector, bool force)
 {
 	struct dumb_vga *vga = drm_connector_to_dumb_vga(connector);
+
+	/*
+	 * Set connector_status_connected forcibly when EDID is not used
+	 * by option.
+	 */
+	if (!vga->ddc_flag)
+		return connector_status_connected;
 
 	/*
 	 * Even if we have an I2C bus, we can't assume that the cable
@@ -156,10 +165,16 @@ static struct i2c_adapter *dumb_vga_retrieve_ddc(struct device *dev)
 {
 	struct device_node *phandle, *remote;
 	struct i2c_adapter *ddc;
+	struct dumb_vga *vga = dev_get_drvdata(dev);
 
 	remote = of_graph_get_remote_node(dev->of_node, 1, -1);
 	if (!remote)
 		return ERR_PTR(-EINVAL);
+
+	if (of_find_property(remote, "no-use-ddc", NULL))
+		vga->ddc_flag = false;
+	else
+		vga->ddc_flag = true;
 
 	phandle = of_parse_phandle(remote, "ddc-i2c-bus", 0);
 	of_node_put(remote);
