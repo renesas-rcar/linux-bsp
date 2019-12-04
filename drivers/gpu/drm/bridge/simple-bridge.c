@@ -2,6 +2,7 @@
 /*
  * Copyright (C) 2015-2016 Free Electrons
  * Copyright (C) 2015-2016 NextThing Co
+ * Copyright (C) 2019 Renesas Electronics Corporation
  *
  * Maxime Ripard <maxime.ripard@free-electrons.com>
  */
@@ -32,6 +33,7 @@ struct simple_bridge {
 	struct drm_bridge	*next_bridge;
 	struct regulator	*vdd;
 	struct gpio_desc	*enable;
+	bool			ddc_flag;
 };
 
 static inline struct simple_bridge *
@@ -86,6 +88,13 @@ static enum drm_connector_status
 simple_bridge_connector_detect(struct drm_connector *connector, bool force)
 {
 	struct simple_bridge *sbridge = drm_connector_to_simple_bridge(connector);
+
+	/*
+	 * Set connector_status_connected forcibly when EDID is not used
+	 * by option.
+	 */
+	if (!sbridge->ddc_flag)
+		return connector_status_connected;
 
 	return drm_bridge_detect(sbridge->next_bridge);
 }
@@ -180,6 +189,11 @@ static int simple_bridge_probe(struct platform_device *pdev)
 	remote = of_graph_get_remote_node(pdev->dev.of_node, 1, -1);
 	if (!remote)
 		return -EINVAL;
+
+	if (of_find_property(remote, "no-use-ddc", NULL))
+		sbridge->ddc_flag = false;
+	else
+		sbridge->ddc_flag = true;
 
 	sbridge->next_bridge = of_drm_find_bridge(remote);
 	of_node_put(remote);
