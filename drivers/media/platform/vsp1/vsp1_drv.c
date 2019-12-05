@@ -814,13 +814,6 @@ static int vsp1_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	ret = devm_request_irq(&pdev->dev, irq->start, vsp1_irq_handler,
-			      IRQF_SHARED, dev_name(&pdev->dev), vsp1);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to request IRQ\n");
-		return ret;
-	}
-
 	/* FCP (optional). */
 	fcp_node = of_parse_phandle(pdev->dev.of_node, "renesas,fcp", 0);
 	if (fcp_node) {
@@ -868,6 +861,28 @@ static int vsp1_probe(struct platform_device *pdev)
 	}
 
 	dev_dbg(&pdev->dev, "IP version 0x%08x\n", vsp1->version);
+
+	/* Disable interrupts before request irq.
+	 * If the interrupt is not cleared and starts up,
+	 * the driver may be malfunctioned.
+	 */
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0)
+		goto done;
+
+	for (i = 0; i < vsp1->info->lif_count; ++i) {
+		vsp1_write(vsp1, VI6_DISP_IRQ_ENB(i), 0);
+		vsp1_write(vsp1, VI6_WPF_IRQ_ENB(i), 0);
+	}
+
+	pm_runtime_put_sync(&pdev->dev);
+
+	ret = devm_request_irq(&pdev->dev, irq->start, vsp1_irq_handler,
+			       IRQF_SHARED, dev_name(&pdev->dev), vsp1);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to request IRQ\n");
+		goto done;
+	}
 
 	/* Instantiate entities. */
 	ret = vsp1_create_entities(vsp1);
