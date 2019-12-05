@@ -140,12 +140,18 @@ static void rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	}
 
 	/* HW limit width to a multiple of 32 (2^5) for NV16/12 else 2 (2^1) */
-	walign = vin->format.pixelformat ==
-		 (V4L2_PIX_FMT_NV16 || V4L2_PIX_FMT_NV12) ? 5 : 1;
+	if (pix->pixelformat == V4L2_PIX_FMT_NV12 ||
+	    pix->pixelformat == V4L2_PIX_FMT_NV16)
+		walign = 5;
+	else if (pix->pixelformat == V4L2_PIX_FMT_YUYV ||
+		 pix->pixelformat == V4L2_PIX_FMT_UYVY)
+		walign = 1;
+	else
+		walign = 0;
 
 	/* Limit to VIN capabilities */
-	v4l_bound_align_image(&pix->width, 2, vin->info->max_width, walign,
-			      &pix->height, 4, vin->info->max_height, 2, 0);
+	v4l_bound_align_image(&pix->width, 5, vin->info->max_width, walign,
+			      &pix->height, 2, vin->info->max_height, 0, 0);
 
 	pix->bytesperline = rvin_format_bytesperline(vin, pix);
 	pix->sizeimage = rvin_format_sizeimage(pix);
