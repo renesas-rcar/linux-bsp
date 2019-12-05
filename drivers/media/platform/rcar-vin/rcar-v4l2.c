@@ -706,6 +706,10 @@ static int rvin_mc_s_fmt_vid_cap(struct file *file, void *priv,
 	if (vb2_is_busy(&vin->queue))
 		return -EBUSY;
 
+	vin->compose.top = vin->compose.left = 0;
+	vin->compose.width = f->fmt.pix.width;
+	vin->compose.height = f->fmt.pix.height;
+
 	rvin_mc_try_format(vin, &f->fmt.pix);
 
 	vin->format = f->fmt.pix;
@@ -714,7 +718,6 @@ static int rvin_mc_s_fmt_vid_cap(struct file *file, void *priv,
 	vin->crop.left = 0;
 	vin->crop.width = vin->format.width;
 	vin->crop.height = vin->format.height;
-	vin->compose = vin->crop;
 
 	return 0;
 }
