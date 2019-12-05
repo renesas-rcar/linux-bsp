@@ -50,7 +50,13 @@ properties:
   interrupts: true
 
   interrupt-names: true
-
+  virtual-channel:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description:
+      Specify the same virtual-channel value for both the adv7482_txa
+      and adv7482_txb nodes of ADV748x. If not specified, it is 0.
+    enum: [0, 1, 2, 3]
+    default: 0
   ports:
     $ref: /schemas/graph.yaml#/properties/ports
 
