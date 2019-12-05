@@ -84,6 +84,11 @@ static void rcar_lvds_write(struct rcar_lvds *lvds, u32 reg, u32 data)
 	iowrite32(data, lvds->mmio + reg);
 }
 
+static u32 rcar_lvds_read(struct rcar_lvds *lvds, u32 reg)
+{
+	return ioread32(lvds->mmio + reg);
+}
+
 /* -----------------------------------------------------------------------------
  * Connector & Panel
  */
@@ -530,13 +535,31 @@ static void rcar_lvds_enable(struct drm_bridge *bridge)
 static void rcar_lvds_disable(struct drm_bridge *bridge)
 {
 	struct rcar_lvds *lvds = bridge_to_rcar_lvds(bridge);
+	u32 lvdcr0 = 0;
 
 	if (lvds->panel) {
 		drm_panel_disable(lvds->panel);
 		drm_panel_unprepare(lvds->panel);
 	}
 
-	rcar_lvds_write(lvds, LVDCR0, 0);
+	lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVRES;
+	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+	if (lvds->info->quirks & RCAR_LVDS_QUIRK_GEN3_LVEN) {
+		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVEN;
+		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+	}
+
+	if (lvds->info->quirks & RCAR_LVDS_QUIRK_PWD) {
+		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PWD;
+		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+	}
+
+	if (!(lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)) {
+		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PLLON;
+		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+	}
+
 	rcar_lvds_write(lvds, LVDCR1, 0);
 	rcar_lvds_write(lvds, LVDPLLCR, 0);
 
