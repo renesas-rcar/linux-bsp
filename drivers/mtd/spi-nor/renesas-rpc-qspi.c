@@ -458,7 +458,11 @@ static ssize_t rpc_read_flash(struct spi_nor *nor, loff_t from, size_t len,
 
 	/* ...setup read sequence */
 	val = rpc_readl(rpc, RPC_DRENR);
-	val |= RPC_DRENR_DME | RPC_DRENR_CDE;
+	if (nor->read_dummy)
+		val |= RPC_DRENR_DME;
+	else
+		val &= ~RPC_DRENR_DME;
+	val |= RPC_DRENR_CDE;
 	rpc_writel(rpc, RPC_DRENR, val);
 
 	rpc_do_read_flash(rpc, from, len, buf, nor->addr_width > 3);
