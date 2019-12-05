@@ -632,6 +632,25 @@ static int adv748x_hdmi_set_edid(struct v4l2_subdev *sd, struct v4l2_edid *edid)
 	return 0;
 }
 
+int adv748x_hdmi_set_resume_edid(struct adv748x_hdmi *hdmi)
+{
+	struct v4l2_edid g_edid;
+	int err;
+
+	g_edid.pad = 0;
+	g_edid.start_block = 0;
+	g_edid.blocks = 2;
+	g_edid.edid = (__u8 *)g_edid_data;
+
+	err = adv748x_hdmi_set_edid(&hdmi->sd, &g_edid);
+	if (err < 0) {
+		v4l2_err(&hdmi->sd, "edid set error %d\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
 static bool adv748x_hdmi_check_dv_timings(const struct v4l2_dv_timings *timings,
 					  void *hdl)
 {
