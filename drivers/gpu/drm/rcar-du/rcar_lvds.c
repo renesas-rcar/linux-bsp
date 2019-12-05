@@ -15,6 +15,7 @@
 #include <linux/of_device.h>
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 
 #include <drm/drm_atomic.h>
@@ -50,6 +51,7 @@ struct rcar_lvds_device_info {
 struct rcar_lvds {
 	struct device *dev;
 	const struct rcar_lvds_device_info *info;
+	struct reset_control *rstc;
 
 	struct drm_bridge bridge;
 
@@ -372,6 +374,8 @@ int rcar_lvds_clk_enable(struct drm_bridge *bridge, unsigned long freq)
 
 	dev_dbg(lvds->dev, "enabling LVDS PLL, freq=%luHz\n", freq);
 
+	reset_control_deassert(lvds->rstc);
+
 	ret = clk_prepare_enable(lvds->clocks.mod);
 	if (ret < 0)
 		return ret;
@@ -394,6 +398,8 @@ void rcar_lvds_clk_disable(struct drm_bridge *bridge)
 	rcar_lvds_write(lvds, LVDPLLCR, 0);
 
 	clk_disable_unprepare(lvds->clocks.mod);
+
+	reset_control_assert(lvds->rstc);
 }
 EXPORT_SYMBOL_GPL(rcar_lvds_clk_disable);
 
@@ -408,6 +414,8 @@ static void rcar_lvds_enable(struct drm_bridge *bridge)
 	u32 lvdhcr;
 	u32 lvdcr0;
 	int ret;
+
+	reset_control_deassert(lvds->rstc);
 
 	ret = clk_prepare_enable(lvds->clocks.mod);
 	if (ret < 0)
@@ -537,6 +545,7 @@ static void rcar_lvds_disable(struct drm_bridge *bridge)
 		lvds->companion->funcs->disable(lvds->companion);
 
 	clk_disable_unprepare(lvds->clocks.mod);
+	reset_control_assert(lvds->rstc);
 }
 
 static bool rcar_lvds_mode_fixup(struct drm_bridge *bridge,
@@ -873,6 +882,12 @@ static int rcar_lvds_probe(struct platform_device *pdev)
 	ret = rcar_lvds_get_clocks(lvds);
 	if (ret < 0)
 		return ret;
+
+	lvds->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(lvds->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset\n");
+		return PTR_ERR(lvds->rstc);
+	}
 
 	drm_bridge_add(&lvds->bridge);
 
