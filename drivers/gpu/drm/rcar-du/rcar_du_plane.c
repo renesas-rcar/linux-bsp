@@ -569,6 +569,9 @@ int __rcar_du_plane_atomic_check(struct drm_plane *plane,
 	struct drm_device *dev = plane->dev;
 	struct drm_crtc_state *crtc_state;
 	int ret;
+	struct rcar_du_vsp_plane *rplane = to_rcar_vsp_plane(plane);
+	struct rcar_du_device *rcdu = rplane->vsp->dev;
+	int hdis, vdis;
 
 	if (!state->crtc) {
 		/*
@@ -578,6 +581,20 @@ int __rcar_du_plane_atomic_check(struct drm_plane *plane,
 		state->visible = false;
 		*format = NULL;
 		return 0;
+	}
+
+	hdis = state->crtc->mode.hdisplay;
+	vdis = state->crtc->mode.vdisplay;
+
+	if ((hdis > 0 && vdis > 0) &&
+	    state->plane->type == DRM_PLANE_TYPE_OVERLAY &&
+	    (((state->crtc_w + state->crtc_x) > hdis) ||
+	    ((state->crtc_h + state->crtc_y) > vdis))) {
+		dev_err(rcdu->dev,
+			"%s: specify (%dx%d) + (%d, %d) < (%dx%d).\n",
+			__func__, state->crtc_w, state->crtc_h, state->crtc_x,
+			state->crtc_y, hdis, vdis);
+		return -EINVAL;
 	}
 
 	crtc_state = drm_atomic_get_crtc_state(state->state, state->crtc);
