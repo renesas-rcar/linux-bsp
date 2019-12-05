@@ -31,6 +31,10 @@
 
 static const struct rvin_video_format rvin_formats[] = {
 	{
+		.fourcc			= V4L2_PIX_FMT_NV12,
+		.bpp			= 1,
+	},
+	{
 		.fourcc			= V4L2_PIX_FMT_NV16,
 		.bpp			= 1,
 	},
@@ -100,6 +104,9 @@ static u32 rvin_format_sizeimage(struct v4l2_pix_format *pix)
 	if (pix->pixelformat == V4L2_PIX_FMT_NV16)
 		return pix->bytesperline * pix->height * 2;
 
+	if (pix->pixelformat == V4L2_PIX_FMT_NV12)
+		return pix->bytesperline * pix->height * 3 / 2;
+
 	return pix->bytesperline * pix->height;
 }
 
@@ -132,8 +139,9 @@ static void rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 		break;
 	}
 
-	/* HW limit width to a multiple of 32 (2^5) for NV16 else 2 (2^1) */
-	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
+	/* HW limit width to a multiple of 32 (2^5) for NV16/12 else 2 (2^1) */
+	walign = vin->format.pixelformat ==
+		 (V4L2_PIX_FMT_NV16 || V4L2_PIX_FMT_NV12) ? 5 : 1;
 
 	/* Limit to VIN capabilities */
 	v4l_bound_align_image(&pix->width, 2, vin->info->max_width, walign,
