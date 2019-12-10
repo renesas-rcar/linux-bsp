@@ -112,6 +112,7 @@ struct rcar_du_device {
 	struct drm_bridge *dsi[RCAR_DU_MAX_DSI];
 
 	struct {
+		struct drm_property *alpha;
 		struct drm_property *colorkey;
 	} props;
 
