@@ -2,7 +2,7 @@
 /*
  * vsp1_dl.c  --  R-Car VSP1 Display List
  *
- * Copyright (C) 2015 Renesas Corporation
+ * Copyright (C) 2015-2018 Renesas Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -12,6 +12,7 @@
 #include <linux/gfp.h>
 #include <linux/refcount.h>
 #include <linux/slab.h>
+#include <linux/sys_soc.h>
 #include <linux/workqueue.h>
 
 #include "vsp1.h"
@@ -859,6 +860,8 @@ static void vsp1_dl_list_hw_enqueue(struct vsp1_dl_list *dl)
 	 * address.
 	 */
 	vsp1_write(vsp1, VI6_DL_HDR_ADDR(dlm->index), dl->dma);
+		if (vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND)
+			vsp1->dl_addr = dl->dma;
 }
 
 static void vsp1_dl_list_commit_continuous(struct vsp1_dl_list *dl)
