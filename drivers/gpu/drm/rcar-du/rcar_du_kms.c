@@ -617,6 +617,14 @@ static int rcar_du_properties_init(struct rcar_du_device *rcdu)
 	if (rcdu->props.colorkey == NULL)
 		return -ENOMEM;
 
+	if (rcdu->info->gen == 3) {
+		rcdu->props.colorkey_alpha =
+			drm_property_create_range(rcdu->ddev, 0,
+						  "colorkey_alpha", 0, 255);
+		if (!rcdu->props.colorkey_alpha)
+			return -ENOMEM;
+	}
+
 	return 0;
 }
 

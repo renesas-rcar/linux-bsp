@@ -2,7 +2,7 @@
 /*
  * rcar_du_plane.c  --  R-Car Display Unit Planes
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -314,9 +314,6 @@ int rcar_du_atomic_check_planes(struct drm_device *dev,
  * Plane Setup
  */
 
-#define RCAR_DU_COLORKEY_NONE		(0 << 24)
-#define RCAR_DU_COLORKEY_SOURCE		(1 << 24)
-#define RCAR_DU_COLORKEY_MASK		(1 << 24)
 
 static void rcar_du_plane_write(struct rcar_du_group *rgrp,
 				unsigned int index, u32 reg, u32 data)
