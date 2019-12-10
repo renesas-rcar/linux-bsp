@@ -120,3 +120,16 @@ config VIDEO_RCAR_DRIF
 
 	  To compile this driver as a module, choose M here; the module
 	  will be called rcar_drif.
+
+config VIDEO_RENESAS_VSP_ALPHA_BIT_ARGB1555
+       int "Renesas VSP alpha bit function of ARGB1555"
+       depends on VIDEO_RENESAS_VSP1
+       range 0 1
+       default 1
+       help
+         Choose this option if you select A bit function of ARGB1555.
+         If you set value to 0, pixel alpha blending is performed
+         when the value of A is 0.
+         If you set value to 1, pixel alpha blending is performed
+         when the value of A is 1.
+
