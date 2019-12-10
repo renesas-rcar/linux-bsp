@@ -2,7 +2,7 @@
 /*
  * rcar_du_plane.h  --  R-Car Display Unit Planes
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -40,6 +40,12 @@ static inline struct rcar_du_plane *to_rcar_plane(struct drm_plane *plane)
 	return container_of(plane, struct rcar_du_plane, plane);
 }
 
+#define RCAR_DU_COLORKEY_NONE		(0 << 24)
+#define RCAR_DU_COLORKEY_MASK		BIT(24)
+#define RCAR_DU_COLORKEY_EN_MASK	RCAR_DU_COLORKEY_MASK
+#define RCAR_DU_COLORKEY_COLOR_MASK	0xFFFFFF
+#define RCAR_DU_COLORKEY_ALPHA_MASK	0xFF
+
 /**
  * struct rcar_du_plane_state - Driver-specific plane state
  * @state: base DRM plane state
@@ -47,6 +53,7 @@ static inline struct rcar_du_plane *to_rcar_plane(struct drm_plane *plane)
  * @hwindex: 0-based hardware plane index, -1 means unused
  * @alpha: value of the plane alpha property
  * @colorkey: value of the plane colorkey property
+ * @colorkey_alpha: alpha to be used for pixels with color equal to colorkey
  */
 struct rcar_du_plane_state {
 	struct drm_plane_state state;
@@ -57,6 +64,7 @@ struct rcar_du_plane_state {
 
 	unsigned int alpha;
 	unsigned int colorkey;
+	unsigned int colorkey_alpha;
 };
 
 static inline struct rcar_du_plane_state *
