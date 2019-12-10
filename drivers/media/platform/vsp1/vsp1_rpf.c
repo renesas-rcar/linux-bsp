@@ -2,7 +2,7 @@
 /*
  * vsp1_rpf.c  --  R-Car VSP1 Read Pixel Formatter
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -69,6 +69,7 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	unsigned int top = 0;
 	u32 pstride;
 	u32 infmt;
+	u32 alph_sel = 0;
 
 	/* Stride */
 	pstride = format->plane_fmt[0].bytesperline
@@ -151,21 +152,47 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	 *
 	 * In all cases, disable color keying.
 	 */
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_ALPH_SEL, VI6_RPF_ALPH_SEL_AEXT_EXT |
-		       (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
-				       : VI6_RPF_ALPH_SEL_ASEL_FIXED));
+	switch (fmtinfo->fourcc) {
+	case V4L2_PIX_FMT_ARGB555:
+		if (CONFIG_VIDEO_RENESAS_VSP_ALPHA_BIT_ARGB1555 == 0)
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   VI6_RPF_ALPH_SEL_ALPHA1_MASK |
+				   (rpf->alpha &
+				   VI6_RPF_ALPH_SEL_ALPHA0_MASK);
+		else
+			alph_sel = VI6_RPF_ALPH_SEL_ASEL_SELECT |
+				   VI6_RPF_ALPH_SEL_AEXT_EXT |
+				   ((rpf->alpha & 0xff) << 8) |
+				   VI6_RPF_ALPH_SEL_ALPHA0_MASK;
+		break;
+	case V4L2_PIX_FMT_ARGB444:
+		alph_sel = VI6_RPF_ALPH_SEL_AEXT_ONE;
+		break;
+	case V4L2_PIX_FMT_ABGR32:
+	case V4L2_PIX_FMT_ARGB32:
+		break;
+	default:
+		alph_sel = VI6_RPF_ALPH_SEL_AEXT_EXT |
+			   (fmtinfo->alpha ? VI6_RPF_ALPH_SEL_ASEL_PACKED
+			   : VI6_RPF_ALPH_SEL_ASEL_FIXED);
+		break;
+	}
+
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_ALPH_SEL, alph_sel);
 
 	if (entity->vsp1->info->gen == 3) {
 		u32 mult;
 
-		if (fmtinfo->alpha) {
+		if (fmtinfo->alpha &&
+		    fmtinfo->fourcc != V4L2_PIX_FMT_ARGB555) {
 			/*
 			 * When the input contains an alpha channel enable the
 			 * alpha multiplier. If the input is premultiplied we
 			 * need to multiply both the alpha channel and the pixel
 			 * components by the global alpha value to keep them
 			 * premultiplied. Otherwise multiply the alpha channel
-			 * only.
+			 * only. The alpha multiplier is disabled in ARGB1555.
 			 */
 			bool premultiplied = format->flags
 					   & V4L2_PIX_FMT_FLAG_PREMUL_ALPHA;
