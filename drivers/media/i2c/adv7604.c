@@ -2,6 +2,7 @@
 /*
  * adv7604 - Analog Devices ADV7604 video decoder driver
  *
+ * Copyright (C) 2017 Renesas Electronics Corp.
  * Copyright 2012 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *
  */
@@ -70,6 +71,8 @@ MODULE_LICENSE("GPL");
 #define ADV76XX_OP_CH_SEL_RBG				(5 << 5)
 
 #define ADV76XX_OP_SWAP_CB_CR				(1 << 0)
+
+#define ADV7612_CP_VID_ADJ_ENABLE			(1 << 7)
 
 #define ADV76XX_MAX_ADDRS (3)
 
@@ -1198,6 +1201,15 @@ static int adv76xx_s_ctrl(struct v4l2_ctrl *ctrl)
 		&container_of(ctrl->handler, struct adv76xx_state, hdl)->sd;
 
 	struct adv76xx_state *state = to_state(sd);
+	int ret;
+	u8 val;
+
+	/* Enable video adjustment first */
+	val = cp_read(sd, 0x3e);
+	val |= ADV7612_CP_VID_ADJ_ENABLE;
+	ret = cp_write(sd, 0x3e, val);
+	if (ret < 0)
+		return ret;
 
 	switch (ctrl->id) {
 	case V4L2_CID_BRIGHTNESS:
@@ -3479,7 +3491,7 @@ static int adv76xx_probe(struct i2c_client *client,
 	v4l2_ctrl_new_std(hdl, &adv76xx_ctrl_ops,
 			V4L2_CID_SATURATION, 0, 255, 1, 128);
 	v4l2_ctrl_new_std(hdl, &adv76xx_ctrl_ops,
-			V4L2_CID_HUE, 0, 128, 1, 0);
+			V4L2_CID_HUE, 0, 255, 1, 0);
 	ctrl = v4l2_ctrl_new_std_menu(hdl, &adv76xx_ctrl_ops,
 			V4L2_CID_DV_RX_IT_CONTENT_TYPE, V4L2_DV_IT_CONTENT_TYPE_NO_ITC,
 			0, V4L2_DV_IT_CONTENT_TYPE_NO_ITC);
