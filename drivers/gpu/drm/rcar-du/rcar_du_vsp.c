@@ -152,6 +152,11 @@ static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
 		.pitch = fb->pitches[0],
 		.alpha = state->alpha,
 		.zpos = state->state.zpos,
+		.colorkey = state->colorkey & RCAR_DU_COLORKEY_COLOR_MASK,
+		.colorkey_en =
+			((state->colorkey & RCAR_DU_COLORKEY_EN_MASK) != 0),
+		.colorkey_alpha =
+			(state->colorkey_alpha & RCAR_DU_COLORKEY_ALPHA_MASK),
 	};
 	u32 fourcc = state->format->fourcc;
 	unsigned int i;
@@ -350,6 +355,8 @@ rcar_du_vsp_plane_atomic_duplicate_state(struct drm_plane *plane)
 
 	__drm_atomic_helper_plane_duplicate_state(plane, &copy->state);
 	copy->alpha = to_rcar_vsp_plane_state(plane->state)->alpha;
+	copy->colorkey = to_rcar_vsp_plane_state(plane->state)->colorkey;
+	copy->colorkey_alpha = to_rcar_vsp_plane_state(plane->state)->colorkey_alpha;
 
 	return &copy->state;
 }
@@ -376,6 +383,8 @@ static void rcar_du_vsp_plane_reset(struct drm_plane *plane)
 
 	__drm_atomic_helper_plane_reset(plane, &state->state);
 	state->alpha = 255;
+	state->colorkey = RCAR_DU_COLORKEY_NONE;
+	state->colorkey_alpha = 0;
 	plane->state = &state->state;
 	plane->state->plane = plane;
 }
@@ -503,6 +512,10 @@ static int rcar_du_vsp_plane_atomic_set_property(struct drm_plane *plane,
 
 	if (property == rcdu->props.alpha)
 		rstate->alpha = val;
+	else if (property == rcdu->props.colorkey)
+		rstate->colorkey = val;
+	else if (property == rcdu->props.colorkey_alpha)
+		rstate->colorkey_alpha = val;
 	else
 		return -EINVAL;
 
@@ -519,6 +532,10 @@ static int rcar_du_vsp_plane_atomic_get_property(struct drm_plane *plane,
 
 	if (property == rcdu->props.alpha)
 		*val = rstate->alpha;
+	else if (property == rcdu->props.colorkey)
+		*val = rstate->colorkey;
+	else if (property == rcdu->props.colorkey_alpha)
+		*val = rstate->colorkey_alpha;
 	else
 		return -EINVAL;
 
@@ -605,6 +622,13 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp, struct device_node *np,
 
 		drm_object_attach_property(&plane->plane.base,
 						   rcdu->props.alpha, 255);
+		drm_object_attach_property(&plane->plane.base,
+						rcdu->props.colorkey,
+						RCAR_DU_COLORKEY_NONE);
+		if (rcdu->props.colorkey_alpha)
+			drm_object_attach_property(&plane->plane.base,
+							rcdu->props.colorkey_alpha,
+							0);
 		drm_plane_create_zpos_property(&plane->plane, i, 0,
 					       num_planes - 1);
 
