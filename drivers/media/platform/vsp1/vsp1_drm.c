@@ -615,6 +615,24 @@ int vsp1_du_init(struct device *dev)
 }
 EXPORT_SYMBOL_GPL(vsp1_du_init);
 
+int vsp1_du_if_set_mute(struct device *dev, bool on, unsigned int pipe_index)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_drm_pipeline *drm_pipe;
+	struct vsp1_pipeline *pipe;
+
+	drm_pipe = &vsp1->drm->pipe[pipe_index];
+	pipe = &drm_pipe->pipe;
+
+	if (on)
+		pipe->vmute_flag = true;
+	else
+		pipe->vmute_flag = false;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vsp1_du_if_set_mute);
+
 /**
  * vsp1_du_setup_lif - Setup the output part of the VSP pipeline
  * @dev: the VSP device
