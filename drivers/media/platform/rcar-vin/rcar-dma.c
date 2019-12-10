@@ -102,6 +102,7 @@
 #define VNMC_IM_ODD_EVEN	(1 << 3)
 #define VNMC_IM_EVEN		(2 << 3)
 #define VNMC_IM_FULL		(3 << 3)
+#define VNMC_IM_MASK		0x18
 #define VNMC_BPS		(1 << 1)
 #define VNMC_ME			(1 << 0)
 
@@ -772,6 +773,12 @@ static int rvin_setup(struct rvin_dev *vin)
 	case V4L2_FIELD_INTERLACED_BT:
 		vnmc = VNMC_IM_FULL | VNMC_FOC;
 		break;
+	case V4L2_FIELD_SEQ_TB:
+		vnmc = VNMC_IM_ODD;
+		break;
+	case V4L2_FIELD_SEQ_BT:
+		vnmc = VNMC_IM_EVEN;
+		break;
 	case V4L2_FIELD_NONE:
 		if (vin->continuous) {
 			vnmc = VNMC_IM_ODD_EVEN;
@@ -1078,6 +1085,55 @@ static void rvin_capture_stop(struct rvin_dev *vin)
 #define RVIN_TIMEOUT_MS 100
 #define RVIN_RETRIES 10
 
+static bool rvin_seq_field_done(struct rvin_dev *vin)
+{
+	dma_addr_t phys_addr;
+	u32 vnmc, next;
+
+	/* Only handle sequential formats */
+	if (vin->format.field != V4L2_FIELD_SEQ_TB &&
+	    vin->format.field != V4L2_FIELD_SEQ_BT)
+		return true;
+
+	/* Update field for next capture */
+	vnmc = rvin_read(vin, VNMC_REG);
+	next = (vnmc & VNMC_IM_MASK) == VNMC_IM_ODD ?
+		VNMC_IM_EVEN : VNMC_IM_ODD;
+
+	vin_dbg(vin, "SEQ Mode: %s Cap: %s Next: %s\n",
+		vin->format.field == V4L2_FIELD_SEQ_TB ? "TB" : "BT",
+		(vnmc & VNMC_IM_MASK) == VNMC_IM_ODD ? "T" : "B",
+		next == VNMC_IM_ODD ? "T" : "B");
+
+	vnmc = (vnmc & ~VNMC_IM_MASK) | next;
+	rvin_write(vin, vnmc, VNMC_REG);
+
+	/* If capture is second part of frame signal frame done */
+	if ((vin->format.field == V4L2_FIELD_SEQ_TB && next == VNMC_IM_ODD) ||
+	    (vin->format.field == V4L2_FIELD_SEQ_BT && next == VNMC_IM_EVEN)) {
+		vin_dbg(vin, "SEQ frame done\n");
+		return true;
+	}
+
+	/*
+	 * Need to capture second half of the frame. Increment the
+	 * offset for the capture buffer so it appends to the already
+	 * captured first field. Start one new capture (in single mode)
+	 * and signal that frame is not complete.
+	 */
+
+	vin_dbg(vin, "SEQ frame need to capture other half, frame not done\n");
+
+	phys_addr =
+		vb2_dma_contig_plane_dma_addr(&vin->queue_buf[0]->vb2_buf, 0) +
+		vin->format.sizeimage / 2;
+	rvin_set_slot_addr(vin, 0, phys_addr);
+
+	rvin_capture_on(vin);
+
+	return false;
+}
+
 static irqreturn_t rvin_irq(int irq, void *data)
 {
 	struct rvin_dev *vin = data;
@@ -1114,6 +1170,9 @@ static irqreturn_t rvin_irq(int irq, void *data)
 		vin_dbg(vin, "IRQ while state stopping\n");
 		goto done;
 	}
+
+	if (!rvin_seq_field_done(vin))
+		goto done;
 
 	/* Prepare for capture and update state */
 	vnms = rvin_read(vin, VNMS_REG);
@@ -1363,6 +1422,11 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 
 	/* Continuous capture requires more buffers then there are HW slots */
 	vin->continuous = count > HW_BUFFER_NUM;
+
+	/* We can't support continues mode for sequential field formats */
+	if (vin->format.field == V4L2_FIELD_SEQ_TB ||
+	    vin->format.field == V4L2_FIELD_SEQ_BT)
+		vin->continuous = false;
 
 	if (!vin->continuous)
 		goto buffer_skip;
