@@ -90,6 +90,7 @@ struct rcar_du_device {
 	struct drm_bridge *lvds[RCAR_DU_MAX_LVDS];
 
 	struct {
+		struct drm_property *alpha;
 		struct drm_property *colorkey;
 	} props;
 
