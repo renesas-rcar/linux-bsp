@@ -2,7 +2,7 @@
 /*
  * vsp1_drv.c  --  R-Car VSP1 Driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -16,6 +16,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/sys_soc.h>
 #include <linux/videodev2.h>
 
 #include <media/rcar-fcp.h>
@@ -38,13 +39,87 @@
 #include "vsp1_uif.h"
 #include "vsp1_video.h"
 
+static void __iomem *fcpv_reg[4];
+static const unsigned int fcpvd_offset[] = {
+	FCPVD0_REG, FCPVD1_REG, FCPVD2_REG, FCPVD3_REG
+};
+
+static const struct soc_device_attribute ths_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*",
+	  .data = (void *)(VSP1_UNDERRUN_WORKAROUND), },
+	{ .soc_id = "r8a7795", .revision = "ES2.0",
+	  .data = NULL, },
+	{ .soc_id = "r8a7796",
+	  .data = NULL, },
+	{/*sentinel*/}
+};
+
+void vsp1_underrun_workaround(struct vsp1_device *vsp1, bool reset)
+{
+	unsigned int timeout = 0;
+
+	/* 1. Disable clock stop of VSP */
+	vsp1_write(vsp1, VI6_CLK_CTRL0, VI6_CLK_CTRL0_WORKAROUND);
+	vsp1_write(vsp1, VI6_CLK_CTRL1, VI6_CLK_CTRL1_WORKAROUND);
+	vsp1_write(vsp1, VI6_CLK_DCSWT, VI6_CLK_DCSWT_WORKAROUND1);
+	vsp1_write(vsp1, VI6_CLK_DCSM0, VI6_CLK_DCSM0_WORKAROUND);
+	vsp1_write(vsp1, VI6_CLK_DCSM1, VI6_CLK_DCSM1_WORKAROUND);
+
+	/* 2. Stop operation of VSP except bus access with module reset */
+	vsp1_write(vsp1, VI6_MRESET_ENB0, VI6_MRESET_ENB0_WORKAROUND1);
+	vsp1_write(vsp1, VI6_MRESET_ENB1, VI6_MRESET_ENB1_WORKAROUND);
+	vsp1_write(vsp1, VI6_MRESET, VI6_MRESET_WORKAROUND);
+
+	/* 3. Stop operation of FCPV with software reset */
+	iowrite32(FCP_RST_SOFTRST, fcpv_reg[vsp1->index] + FCP_RST_REG);
+
+	/* 4. Wait until FCP_STA.ACT become 0. */
+	while (1) {
+		if ((ioread32(fcpv_reg[vsp1->index] + FCP_STA_REG) &
+			FCP_STA_ACT) != FCP_STA_ACT)
+			break;
+
+		if (timeout == 100)
+			break;
+
+		timeout++;
+		udelay(1);
+	}
+
+	/* 5. Initialize the whole FCPV with module reset */
+	iowrite32(FCP_RST_WORKAROUND, fcpv_reg[vsp1->index] + FCP_RST_REG);
+
+	/* 6. Stop the whole operation of VSP with module reset */
+	/*    (note that register setting is not cleared) */
+	vsp1_write(vsp1, VI6_MRESET_ENB0, VI6_MRESET_ENB0_WORKAROUND2);
+	vsp1_write(vsp1, VI6_MRESET_ENB1, VI6_MRESET_ENB1_WORKAROUND);
+	vsp1_write(vsp1, VI6_MRESET, VI6_MRESET_WORKAROUND);
+
+	/* 7. Enable clock stop of VSP */
+	vsp1_write(vsp1, VI6_CLK_CTRL0, 0);
+	vsp1_write(vsp1, VI6_CLK_CTRL1, 0);
+	vsp1_write(vsp1, VI6_CLK_DCSWT, VI6_CLK_DCSWT_WORKAROUND2);
+	vsp1_write(vsp1, VI6_CLK_DCSM0, 0);
+	vsp1_write(vsp1, VI6_CLK_DCSM1, 0);
+
+	/* 8. Restart VSPD */
+	if (!reset) {
+		/* Necessary when headerless display list */
+		vsp1_write(vsp1, VI6_DL_HDR_ADDR(0), vsp1->dl_addr);
+		if (vsp1->dl_body)
+			vsp1_write(vsp1, VI6_DL_BODY_SIZE, vsp1->dl_body);
+		vsp1_write(vsp1, VI6_CMD(0), VI6_CMD_STRCMD);
+	}
+}
+
 /* -----------------------------------------------------------------------------
  * Interrupt Handling
  */
 
 static irqreturn_t vsp1_irq_handler(int irq, void *data)
 {
-	u32 mask = VI6_WFP_IRQ_STA_DFE | VI6_WFP_IRQ_STA_FRE;
+	u32 mask = VI6_WFP_IRQ_STA_DFE | VI6_WFP_IRQ_STA_FRE |
+		   VI6_WFP_IRQ_STA_UND;
 	struct vsp1_device *vsp1 = data;
 	irqreturn_t ret = IRQ_NONE;
 	unsigned int i;
@@ -52,6 +127,7 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 
 	for (i = 0; i < vsp1->info->wpf_count; ++i) {
 		struct vsp1_rwpf *wpf = vsp1->wpf[i];
+		bool underrun = false;
 
 		if (wpf == NULL)
 			continue;
@@ -59,10 +135,16 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		status = vsp1_read(vsp1, VI6_WPF_IRQ_STA(i));
 		vsp1_write(vsp1, VI6_WPF_IRQ_STA(i), ~status & mask);
 
+		if (status & VI6_WFP_IRQ_STA_UND)
+			underrun = true;
+
 		if (status & VI6_WFP_IRQ_STA_DFE) {
 			vsp1_pipeline_frame_end(wpf->entity.pipe);
 			ret = IRQ_HANDLED;
 		}
+
+		if ((vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND) && underrun)
+			vsp1_underrun_workaround(vsp1, false);
 	}
 
 	return ret;
@@ -489,7 +571,11 @@ int vsp1_reset_wpf(struct vsp1_device *vsp1, unsigned int index)
 	if (!(status & VI6_STATUS_SYS_ACT(index)))
 		return 0;
 
-	vsp1_write(vsp1, VI6_SRESET, VI6_SRESET_SRTS(index));
+	if (vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND)
+		vsp1_underrun_workaround(vsp1, true);
+	else
+		vsp1_write(vsp1, VI6_SRESET, VI6_SRESET_SRTS(index));
+
 	for (timeout = 10; timeout > 0; --timeout) {
 		status = vsp1_read(vsp1, VI6_STATUS);
 		if (!(status & VI6_STATUS_SYS_ACT(index)))
@@ -791,6 +877,7 @@ static int vsp1_probe(struct platform_device *pdev)
 	struct resource *io;
 	unsigned int i;
 	int ret;
+	const struct soc_device_attribute *attr;
 
 	vsp1 = devm_kzalloc(&pdev->dev, sizeof(*vsp1), GFP_KERNEL);
 	if (vsp1 == NULL)
@@ -845,6 +932,12 @@ static int vsp1_probe(struct platform_device *pdev)
 	vsp1->version = vsp1_read(vsp1, VI6_IP_VERSION);
 	pm_runtime_put_sync(&pdev->dev);
 
+	attr = soc_device_match(ths_quirks_match);
+	if (attr)
+		vsp1->ths_quirks = (uintptr_t)attr->data;
+
+	pr_debug("%s: ths_quirks: 0x%x\n", __func__, vsp1->ths_quirks);
+
 	for (i = 0; i < ARRAY_SIZE(vsp1_device_infos); ++i) {
 		if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
 		    vsp1_device_infos[i].version) {
@@ -891,6 +984,19 @@ static int vsp1_probe(struct platform_device *pdev)
 		goto done;
 	}
 
+	/* Set VSPD index */
+	if (strcmp(dev_name(vsp1->dev), "fea20000.vsp") == 0)
+		vsp1->index = 0;
+	else if (strcmp(dev_name(vsp1->dev), "fea28000.vsp") == 0)
+		vsp1->index = 1;
+	else if (strcmp(dev_name(vsp1->dev), "fea30000.vsp") == 0)
+		vsp1->index = 2;
+	else if (strcmp(dev_name(vsp1->dev), "fea38000.vsp") == 0)
+		vsp1->index = 3;
+
+	if (vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND)
+		fcpv_reg[vsp1->index] =
+			ioremap(fcpvd_offset[vsp1->index], 0x20);
 done:
 	if (ret)
 		pm_runtime_disable(&pdev->dev);
@@ -906,6 +1012,9 @@ static int vsp1_remove(struct platform_device *pdev)
 	rcar_fcp_put(vsp1->fcp);
 
 	pm_runtime_disable(&pdev->dev);
+
+	if (vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND)
+		iounmap(fcpv_reg[vsp1->index]);
 
 	return 0;
 }
