@@ -359,6 +359,92 @@ static void rcar_du_vsp_plane_reset(struct drm_plane *plane)
 	state->state.zpos = plane->type == DRM_PLANE_TYPE_PRIMARY ? 0 : 1;
 }
 
+int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+			   struct drm_file *file_priv)
+{
+	int ret;
+	struct rcar_du_screen_shot *sh = (struct rcar_du_screen_shot *)data;
+	struct drm_mode_object *obj;
+	struct drm_crtc *crtc;
+	struct rcar_du_crtc *rcrtc;
+	struct rcar_du_device *rcdu;
+	const struct drm_display_mode *mode;
+	u32 pixelformat, bpp;
+	unsigned int pitch;
+	dma_addr_t mem[3];
+
+	obj = drm_mode_object_find(dev, file_priv, sh->crtc_id,
+				   DRM_MODE_OBJECT_CRTC);
+	if (!obj)
+		return -EINVAL;
+
+	crtc = obj_to_crtc(obj);
+	rcrtc = to_rcar_crtc(crtc);
+	rcdu = rcrtc->group->dev;
+	mode = &rcrtc->crtc.state->adjusted_mode;
+
+	switch (sh->fmt) {
+	case DRM_FORMAT_RGB565:
+		bpp = 16;
+		pixelformat = V4L2_PIX_FMT_RGB565;
+		break;
+	case DRM_FORMAT_ARGB1555:
+		bpp = 16;
+		pixelformat = V4L2_PIX_FMT_ARGB555;
+		break;
+	case DRM_FORMAT_ARGB8888:
+		bpp = 32;
+		pixelformat = V4L2_PIX_FMT_ABGR32;
+		break;
+	default:
+		dev_err(rcdu->dev, "specified format is not supported.\n");
+		return -EINVAL;
+	}
+
+	pitch = mode->hdisplay * bpp / 8;
+
+	mem[0] = sh->buff;
+	mem[1] = 0;
+	mem[2] = 0;
+
+	if (sh->width != mode->hdisplay ||
+	    sh->height != mode->vdisplay)
+		return -EINVAL;
+
+	if ((pitch * mode->vdisplay) > sh->buff_len)
+		return -EINVAL;
+
+	ret = vsp1_du_setup_wb(rcrtc->vsp->vsp, pixelformat, pitch, mem,
+			       rcrtc->vsp_pipe);
+	if (ret != 0)
+		return ret;
+
+	ret = vsp1_du_wait_wb(rcrtc->vsp->vsp, WB_STAT_CATP_SET,
+			      rcrtc->vsp_pipe);
+	if (ret != 0)
+		return ret;
+
+	ret = rcar_du_async_commit(dev, crtc);
+	if (ret != 0)
+		return ret;
+
+	ret = vsp1_du_wait_wb(rcrtc->vsp->vsp, WB_STAT_CATP_START,
+			      rcrtc->vsp_pipe);
+	if (ret != 0)
+		return ret;
+
+	ret = rcar_du_async_commit(dev, crtc);
+	if (ret != 0)
+		return ret;
+
+	ret = vsp1_du_wait_wb(rcrtc->vsp->vsp, WB_STAT_CATP_DONE,
+			      rcrtc->vsp_pipe);
+	if (ret != 0)
+		return ret;
+
+	return ret;
+}
+
 int rcar_du_set_vmute(struct drm_device *dev, void *data,
 		      struct drm_file *file_priv)
 {

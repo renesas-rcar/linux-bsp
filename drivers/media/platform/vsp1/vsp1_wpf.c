@@ -280,7 +280,8 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 						   RWPF_PAD_SOURCE);
 
 	/* Format */
-	if (!pipe->lif || wpf->writeback) {
+	if (!pipe->lif || wpf->writeback ||
+	    pipe->output->write_back == WB_STAT_CATP_SET) {
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
 		const struct vsp1_format_info *fmtinfo = wpf->fmtinfo;
 
@@ -363,7 +364,9 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 	}
 
 	vsp1_dl_body_write(dlb, VI6_WPF_WRBCK_CTRL(index),
-			   wpf->writeback ? VI6_WPF_WRBCK_CTRL_WBMD : 0);
+			   wpf->writeback ||
+			   (pipe->output->write_back == WB_STAT_CATP_SET) ?
+			   VI6_WPF_WRBCK_CTRL_WBMD : 0);
 }
 
 static void wpf_configure_frame(struct vsp1_entity *entity,

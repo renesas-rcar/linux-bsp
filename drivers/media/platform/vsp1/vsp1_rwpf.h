@@ -64,6 +64,9 @@ struct vsp1_rwpf {
 	bool writeback;
 
 	struct vsp1_dl_manager *dlm;
+
+	int write_back;
+	dma_addr_t buf_addr[3];
 };
 
 static inline struct vsp1_rwpf *to_rwpf(struct v4l2_subdev *subdev)
