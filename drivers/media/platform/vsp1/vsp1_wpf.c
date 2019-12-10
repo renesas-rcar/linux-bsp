@@ -10,6 +10,7 @@
 #include <linux/device.h>
 
 #include <media/v4l2-subdev.h>
+#include <media/vsp1.h>
 
 #include "vsp1.h"
 #include "vsp1_dl.h"
@@ -268,6 +269,9 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 	u32 srcrpf = 0;
 	int ret;
 
+	if (pipe->vmute_flag)
+		return;
+
 	sink_format = vsp1_entity_get_pad_format(&wpf->entity,
 						 wpf->entity.config,
 						 RWPF_PAD_SINK);
@@ -373,6 +377,9 @@ static void wpf_configure_frame(struct vsp1_entity *entity,
 	unsigned long flags;
 	u32 outfmt;
 
+	if (pipe->vmute_flag)
+		return;
+
 	spin_lock_irqsave(&wpf->flip.lock, flags);
 	wpf->flip.active = (wpf->flip.active & ~mask)
 			 | (wpf->flip.pending & mask);
@@ -405,6 +412,16 @@ static void wpf_configure_partition(struct vsp1_entity *entity,
 	unsigned int offset;
 	unsigned int flip;
 	unsigned int i;
+
+	if (pipe->vmute_flag) {
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_SRCRPF,
+			       VI6_WPF_SRCRPF_VIRACT_MST);
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_HSZCLIP, 0);
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_VSZCLIP, 0);
+		vsp1_wpf_write(wpf, dlb, VI6_DPR_WPF_FPORCH(wpf->entity.index),
+			       VI6_DPR_WPF_FPORCH_FP_WPFN);
+		return;
+	}
 
 	sink_format = vsp1_entity_get_pad_format(&wpf->entity,
 						 wpf->entity.config,
