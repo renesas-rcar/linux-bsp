@@ -460,6 +460,18 @@ config VIDEO_ROCKCHIP_RGA
 
 	  To compile this driver as a module choose m here.
 
+config VIDEO_RENESAS_VSP_ALPHA_BIT_ARGB1555
+	int "Renesas VSP alpha bit function of ARGB1555"
+	depends on VIDEO_RENESAS_VSP1
+	range 0 1
+	default 1
+	help
+	  Choose this option if you select A bit function of ARGB1555.
+	  If you set value to 0, pixel alpha blending is performed
+	  when the value of A is 0.
+	  If you set value to 1, pixel alpha blending is performed
+	  when the value of A is 1.
+
 config VIDEO_TI_VPE
 	tristate "TI VPE (Video Processing Engine) driver"
 	depends on VIDEO_DEV && VIDEO_V4L2
