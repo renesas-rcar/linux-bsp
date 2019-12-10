@@ -30,6 +30,35 @@
  * Interrupt Handling
  */
 
+void vsp1_drm_display_start(struct vsp1_device *vsp1, unsigned int pipe_index,
+			    struct vsp1_pipeline *pipe)
+{
+	if (pipe->output->write_back == WB_STAT_CATP_REQUEST) {
+		pipe->output->write_back = WB_STAT_CATP_SET;
+		wake_up_interruptible(&pipe->event_wait);
+	} else if (pipe->completed) {
+		bool writeback;
+
+		if ((vsp1_read(vsp1, VI6_WPF_WRBCK_CTRL(pipe_index)) &
+		    VI6_WPF_WRBCK_CTRL_WBMD) == VI6_WPF_WRBCK_CTRL_WBMD)
+			writeback = true;
+		else
+			writeback = false;
+
+		if (pipe->output->write_back == WB_STAT_CATP_SET &&
+		    writeback) {
+			pipe->output->write_back = WB_STAT_CATP_START;
+			wake_up_interruptible(&pipe->event_wait);
+		} else if (pipe->output->write_back == WB_STAT_CATP_START &&
+			   !writeback) {
+			pipe->output->write_back = WB_STAT_CATP_DONE;
+			wake_up_interruptible(&pipe->event_wait);
+		}
+	}
+
+	pipe->completed = false;
+}
+
 static void vsp1_du_pipeline_frame_end(struct vsp1_pipeline *pipe,
 				       unsigned int completion)
 {
@@ -757,7 +786,7 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int pipe_index,
 
 	/* Disable the display interrupts. */
 	vsp1_write(vsp1, VI6_DISP_IRQ_STA(pipe_index), 0);
-	vsp1_write(vsp1, VI6_DISP_IRQ_ENB(pipe_index), 0);
+	vsp1_write(vsp1, VI6_DISP_IRQ_ENB(pipe_index), VI6_DISP_IRQ_ENB_DSTE);
 
 	/* Configure all entities in the pipeline. */
 	vsp1_du_pipeline_configure(pipe);
@@ -944,6 +973,62 @@ void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt)
 }
 EXPORT_SYMBOL_GPL(vsp1_du_unmap_sg);
 
+int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
+		     dma_addr_t mem[2], unsigned int pipe_index)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_drm_pipeline *drm_pipe = &vsp1->drm->pipe[pipe_index];
+	struct vsp1_pipeline *pipe = &drm_pipe->pipe;
+	struct vsp1_rwpf *wpf = pipe->output;
+	const struct vsp1_format_info *fmtinfo;
+	int i;
+
+	fmtinfo = vsp1_get_format_info(vsp1, pixelformat);
+	if (!fmtinfo) {
+		dev_err(vsp1->dev, "Unsupport pixel format %08x for RPF\n",
+			pixelformat);
+		return -EINVAL;
+	}
+
+	if (pipe->interlaced) {
+		dev_err(vsp1->dev, "Prohibited in interlaced mode\n");
+		return -EINVAL;
+	}
+
+	wpf->fmtinfo = fmtinfo;
+	wpf->format.num_planes = fmtinfo->planes;
+	wpf->format.plane_fmt[0].bytesperline = pitch;
+	wpf->format.plane_fmt[1].bytesperline = pitch;
+
+	for (i = 0; i < wpf->format.num_planes; ++i)
+		wpf->buf_addr[i] = mem[i];
+
+	pipe->output->write_back = WB_STAT_CATP_REQUEST;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vsp1_du_setup_wb);
+
+int vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int pipe_index)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_drm_pipeline *drm_pipe = &vsp1->drm->pipe[pipe_index];
+	struct vsp1_pipeline *pipe = &drm_pipe->pipe;
+	int tmp_wb;
+
+	wait_event_interruptible_timeout(pipe->event_wait,
+					 ((tmp_wb = pipe->output->write_back)
+					 <= count), HZ / 10);
+
+	if (tmp_wb != count) {
+		dev_dbg(vsp1->dev,
+			"State transition fail, because high load.\n");
+		return -1;
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(vsp1_du_wait_wb);
+
 /* -----------------------------------------------------------------------------
  * Initialization
  */
@@ -979,6 +1064,8 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 		pipe->output->entity.pipe = pipe;
 		pipe->output->entity.sink = pipe->lif;
 		pipe->output->entity.sink_pad = 0;
+		pipe->output->write_back = WB_STAT_CATP_DONE;
+		init_waitqueue_head(&pipe->event_wait);
 		list_add_tail(&pipe->output->entity.list_pipe, &pipe->entities);
 
 		pipe->lif->pipe = pipe;

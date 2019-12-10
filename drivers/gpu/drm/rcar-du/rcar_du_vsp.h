@@ -64,6 +64,8 @@ void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc);
 void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc);
 int rcar_du_set_vmute(struct drm_device *dev, void *data,
 		      struct drm_file *file_priv);
+int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+			   struct drm_file *file_priv);
 int rcar_du_vsp_map_fb(struct rcar_du_vsp *vsp, struct drm_framebuffer *fb,
 		       struct sg_table sg_tables[3]);
 void rcar_du_vsp_unmap_fb(struct rcar_du_vsp *vsp, struct drm_framebuffer *fb,
@@ -81,6 +83,11 @@ static inline void rcar_du_vsp_atomic_begin(struct rcar_du_crtc *crtc) { };
 static inline void rcar_du_vsp_atomic_flush(struct rcar_du_crtc *crtc) { };
 static inline int rcar_du_set_vmute(struct drm_device *dev, void *data,
 				    struct drm_file *file_priv) { return 0; };
+static inline int rcar_du_vsp_write_back(struct drm_device *dev, void *data,
+					 struct drm_file *file_priv)
+{
+	return 0;
+};
 static inline int rcar_du_vsp_map_fb(struct rcar_du_vsp *vsp,
 				     struct drm_framebuffer *fb,
 				     struct sg_table sg_tables[3])
