@@ -460,6 +460,15 @@ config VIDEO_ROCKCHIP_RGA
 
 	  To compile this driver as a module choose m here.
 
+config VIDEO_RENESAS_DEBUG
+	bool "Renesas VSP1 underrun debug messages"
+	depends on VIDEO_RENESAS_VSP1
+	---help---
+	  Enable debug underrun messages on Renesas VSP1 Video Processing
+	  Engine driver.
+	  If you set to enable, When an underrun occurred, a debug underrun
+	  message is output.
+
 config VIDEO_RENESAS_VSP_ALPHA_BIT_ARGB1555
 	int "Renesas VSP alpha bit function of ARGB1555"
 	depends on VIDEO_RENESAS_VSP1
