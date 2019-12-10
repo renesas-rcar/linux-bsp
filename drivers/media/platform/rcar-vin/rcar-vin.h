@@ -40,6 +40,8 @@
 
 #define MSTP_WAIT_TIME 100
 
+#define RCAR_VIN_DES1_RESERVED		BIT(0)
+
 struct rvin_group;
 
 enum model_id {
@@ -215,6 +217,7 @@ struct rvin_info {
  * @chsel:		channel selection
  * @setup_wait:		wait queue used to setup VIN
  * @suspend:		suspend flag
+ * @chip_info:         chip information by each device
  */
 struct rvin_dev {
 	struct device *dev;
@@ -263,6 +266,7 @@ struct rvin_dev {
 	unsigned int chsel;
 	wait_queue_head_t setup_wait;
 	bool suspend;
+	u32 chip_info;
 };
 
 #define vin_to_source(vin)		((vin)->parallel->subdev)
