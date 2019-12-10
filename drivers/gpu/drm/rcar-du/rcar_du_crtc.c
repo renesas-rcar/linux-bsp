@@ -89,6 +89,10 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 	unsigned int fdpll;
 	unsigned int m;
 	unsigned int n;
+	bool clk_high = false;
+
+	if (target > 148500000)
+		clk_high = true;
 
 	/*
 	 *   fin                                 fvco        fout       fclkout
@@ -139,6 +143,9 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 
 				output = fout / (fdpll + 1);
 				if (output >= 400 * 1000 * 1000)
+					continue;
+
+				if (clk_high && output < target)
 					continue;
 
 				diff = abs((long)output - (long)target);
