@@ -839,10 +839,6 @@ static int rvin_open(struct file *file)
 	struct rvin_dev *vin = video_drvdata(file);
 	int ret;
 
-	ret = pm_runtime_get_sync(vin->dev);
-	if (ret < 0)
-		return ret;
-
 	ret = mutex_lock_interruptible(&vin->lock);
 	if (ret)
 		goto err_pm;
@@ -878,7 +874,6 @@ err_open:
 err_unlock:
 	mutex_unlock(&vin->lock);
 err_pm:
-	pm_runtime_put(vin->dev);
 
 	return ret;
 }
@@ -905,8 +900,6 @@ static int rvin_release(struct file *file)
 	}
 
 	mutex_unlock(&vin->lock);
-
-	pm_runtime_put(vin->dev);
 
 	return ret;
 }
