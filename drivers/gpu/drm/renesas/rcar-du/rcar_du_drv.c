@@ -623,6 +623,7 @@ const char *rcar_du_output_name(enum rcar_du_output output)
 
 static const struct drm_ioctl_desc rcar_du_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(RCAR_DU_SET_VMUTE, rcar_du_set_vmute, 0),
+	DRM_IOCTL_DEF_DRV(RCAR_DU_SCRSHOT, rcar_du_vsp_write_back, 0),
 };
 
 DEFINE_DRM_GEM_DMA_FOPS(rcar_du_fops);
