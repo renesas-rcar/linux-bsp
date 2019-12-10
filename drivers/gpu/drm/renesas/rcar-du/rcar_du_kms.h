@@ -2,7 +2,7 @@
 /*
  * R-Car Display Unit Mode Setting
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -36,6 +36,8 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu);
 
 int rcar_du_dumb_create(struct drm_file *file, struct drm_device *dev,
 			struct drm_mode_create_dumb *args);
+
+int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc);
 
 struct drm_gem_object *rcar_du_gem_prime_import_sg_table(struct drm_device *dev,
 				struct dma_buf_attachment *attach,

@@ -125,6 +125,7 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int pipe_index,
 			  const struct vsp1_du_atomic_pipe_config *cfg);
 int vsp1_du_map_sg(struct device *dev, struct sg_table *sgt);
 void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt);
+int vsp1_du_if_set_mute(struct device *dev, bool on, unsigned int pipe_index);
 
 /* -----------------------------------------------------------------------------
  * VSP1 ISP interface
