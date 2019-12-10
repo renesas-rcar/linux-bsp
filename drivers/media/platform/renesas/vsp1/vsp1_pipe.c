@@ -282,6 +282,7 @@ void vsp1_pipeline_init(struct vsp1_pipeline *pipe)
 	INIT_LIST_HEAD(&pipe->entities);
 	pipe->state = VSP1_PIPELINE_STOPPED;
 	pipe->vmute_flag = false;
+	pipe->completed = false;
 }
 
 /* Must be called with the pipe irqlock held. */
@@ -385,6 +386,8 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 	 * active frame was finished or postponed.
 	 */
 	flags = vsp1_dlm_irq_frame_end(pipe->output->dlm);
+	if (flags & VSP1_DL_FRAME_END_COMPLETED)
+		pipe->completed = true;
 
 	if (pipe->hgo)
 		vsp1_hgo_frame_end(pipe->hgo);
