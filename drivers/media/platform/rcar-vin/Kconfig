@@ -24,3 +24,13 @@ config VIDEO_RCAR_VIN
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called rcar-vin.
+
+config VIDEO_RCAR_VIN_DEBUG
+	bool "R-Car VIN overflow debug messages"
+	depends on VIDEO_RCAR_VIN
+	---help---
+	  Enable debug overflow messages on R-Car Video
+	  Input driver.
+	  If you set to enable, When an overflow occurred,
+	  a debug overflow message is output.
+
