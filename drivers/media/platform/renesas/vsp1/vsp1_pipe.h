@@ -98,6 +98,8 @@ struct vsp1_partition {
  * @partitions: The number of partitions used to process one frame
  * @part_table: The pre-calculated partitions used by the pipeline
  * @vmute_flag: Enable mute flag of VSPD
+ * @event_wait: wait queue to wait for write back state
+ * @completed: display update completion flag
  */
 struct vsp1_pipeline {
 	struct media_pipeline pipe;
@@ -140,6 +142,8 @@ struct vsp1_pipeline {
 	struct vsp1_partition *part_table;
 	u32 underrun_count;
 	bool vmute_flag;
+	wait_queue_head_t event_wait;
+	bool completed;
 };
 
 void vsp1_pipeline_reset(struct vsp1_pipeline *pipe);
