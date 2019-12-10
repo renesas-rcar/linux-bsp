@@ -280,7 +280,8 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 						   RWPF_PAD_SOURCE);
 
 	/* Format */
-	if (!pipe->lif || wpf->writeback) {
+	if (!pipe->lif || wpf->writeback ||
+	    pipe->output->write_back == WB_STAT_CATP_SET) {
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
 		const struct vsp1_format_info *fmtinfo = wpf->fmtinfo;
 
@@ -363,7 +364,9 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 	}
 
 	vsp1_dl_body_write(dlb, VI6_WPF_WRBCK_CTRL(index),
-			   wpf->writeback ? VI6_WPF_WRBCK_CTRL_WBMD : 0);
+			   wpf->writeback ||
+			   (pipe->output->write_back == WB_STAT_CATP_SET) ?
+			   VI6_WPF_WRBCK_CTRL_WBMD : 0);
 }
 
 static void wpf_configure_frame(struct vsp1_entity *entity,
@@ -445,6 +448,17 @@ static void wpf_configure_partition(struct vsp1_entity *entity,
 	vsp1_wpf_write(wpf, dlb, VI6_WPF_VSZCLIP, VI6_WPF_SZCLIP_EN |
 		       (0 << VI6_WPF_SZCLIP_OFST_SHIFT) |
 		       (height << VI6_WPF_SZCLIP_SIZE_SHIFT));
+
+	if (pipe->output->write_back == WB_STAT_CATP_SET) {
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_DSTM_ADDR_Y,
+				wpf->buf_addr[0]);
+		if (format->num_planes > 1)
+			vsp1_wpf_write(wpf, dlb, VI6_WPF_DSTM_ADDR_C0,
+				wpf->buf_addr[1]);
+		if (format->num_planes > 2)
+			vsp1_wpf_write(wpf, dlb, VI6_WPF_DSTM_ADDR_C1,
+				wpf->buf_addr[2]);
+	}
 
 	/*
 	 * For display pipelines without writeback enabled there's no memory
