@@ -73,8 +73,25 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 			return PTR_ERR(bridge);
 	} else {
 		bridge = of_drm_find_bridge(enc_node);
-		if (!bridge)
-			return -EPROBE_DEFER;
+		if (!bridge) {
+			if (output == RCAR_DU_OUTPUT_HDMI0 ||
+			    output == RCAR_DU_OUTPUT_HDMI1) {
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+				return -EPROBE_DEFER;
+#else
+				return 0;
+#endif
+			} else if (output == RCAR_DU_OUTPUT_LVDS0 ||
+				   output == RCAR_DU_OUTPUT_LVDS1) {
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+				return -EPROBE_DEFER;
+#else
+				return 0;
+#endif
+			} else {
+				return -EPROBE_DEFER;
+			}
+		}
 
 		if (output == RCAR_DU_OUTPUT_LVDS0 ||
 		    output == RCAR_DU_OUTPUT_LVDS1)
