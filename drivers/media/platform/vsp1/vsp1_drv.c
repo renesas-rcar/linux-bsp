@@ -201,6 +201,10 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		if (disp_st & VI6_DISP_IRQ_STA_DST) {
 			vsp1_drm_display_start(vsp1, i, wpf->entity.pipe);
 			ret = IRQ_HANDLED;
+			if (wpf->entity.pipe->dst_cnt) {
+				if (--wpf->entity.pipe->dst_cnt == 0)
+					wake_up(&wpf->entity.pipe->dst_wait);
+			}
 		}
 
 		if ((vsp1->ths_quirks & VSP1_UNDERRUN_WORKAROUND) && underrun)
