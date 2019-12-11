@@ -803,9 +803,13 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 
 		rgrp = &rcdu->groups[hwindex / 2];
 
-		ret = rcar_du_crtc_create(rgrp, swindex++, hwindex);
+		ret = rcar_du_crtc_create(rgrp, swindex, hwindex);
 		if (ret < 0)
 			return ret;
+
+		rcar_du_pre_group_set_routing(rgrp, &rcdu->crtcs[swindex],
+					      swindex);
+		swindex++;
 	}
 
 	/* Initialize the encoders. */
