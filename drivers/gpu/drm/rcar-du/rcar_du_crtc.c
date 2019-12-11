@@ -10,6 +10,7 @@
 #include <linux/clk.h>
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
+#include <linux/sys_soc.h>
 
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
@@ -210,6 +211,11 @@ static void rcar_du_escr_divider(struct clk *clk, unsigned long target,
 	}
 }
 
+static const struct soc_device_attribute rcar_du_r8a7795_es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 {
 	const struct drm_display_mode *mode = &rcrtc->crtc.state->adjusted_mode;
@@ -230,6 +236,20 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		 * DU channels that have a display PLL can't use the internal
 		 * system clock, and have no internal clock divider.
 		 */
+
+		/*
+		 * The H3 ES1.x exhibits dot clock duty cycle stability issues.
+		 * We can work around them by configuring the DPLL to twice the
+		 * desired frequency, coupled with a /2 post-divider. Restrict
+		 * the workaround to H3 ES1.x as ES2.0 and all other SoCs have
+		 * no post-divider when a display PLL is present (as shown by
+		 * the workaround breaking HDMI output on M3-W during testing).
+		 */
+		if (soc_device_match(rcar_du_r8a7795_es1)) {
+			target *= 2;
+			div = 1;
+		}
+
 		extclk = clk_get_rate(rcrtc->extclock);
 		rcar_du_dpll_divider(rcrtc, &dpll, extclk, target);
 
@@ -238,12 +258,15 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		       | DPLLCR_N(dpll.n) | DPLLCR_M(dpll.m)
 		       | DPLLCR_STBY;
 
-		if (rcrtc->index == 1)
+		if (rcrtc->index == 1) {
 			dpllcr |= DPLLCR_PLCS1
 			       |  DPLLCR_INCS_DOTCLKIN1;
-		else
+		} else {
 			dpllcr |= DPLLCR_PLCS0
 			       |  DPLLCR_INCS_DOTCLKIN0;
+			if (soc_device_match(rcar_du_r8a7795_es1))
+				dpllcr |= DPLLCR_PLCS0_H3ES1X_WA;
+		}
 
 		rcar_du_group_write(rcrtc->group, DPLLCR, dpllcr);
 
