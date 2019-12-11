@@ -652,7 +652,9 @@ static int rcar_du_remove(struct platform_device *pdev)
 static void rcar_du_shutdown(struct platform_device *pdev)
 {
 	struct rcar_du_device *rcdu = platform_get_drvdata(pdev);
-
+#ifdef CONFIG_PM_SLEEP
+	rcar_du_pm_suspend(&pdev->dev);
+#endif
 	drm_atomic_helper_shutdown(&rcdu->ddev);
 }
 
