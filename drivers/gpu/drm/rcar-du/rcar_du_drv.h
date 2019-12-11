@@ -32,6 +32,11 @@ struct rcar_du_device;
 #define RCAR_DU_FEATURE_INTERLACED	BIT(3)	/* HW supports interlaced */
 #define RCAR_DU_FEATURE_TVM_SYNC	BIT(4)	/* Has TV switch/sync modes */
 #define RCAR_DU_FEATURE_NO_BLENDING	BIT(5)	/* PnMR.SPIM does not have ALP nor EOR bits */
+#define RCAR_DU_FEATURE_R8A7795_REGS	BIT(6)	/* Use R8A7795 registers */
+#define RCAR_DU_FEATURE_R8A7796_REGS	BIT(7)	/* Use R8A7796 registers */
+#define RCAR_DU_FEATURE_R8A77965_REGS	BIT(8)	/* Use R8A77965 registers */
+#define RCAR_DU_FEATURE_R8A77990_REGS	BIT(9)	/* Use R8A77990 registers */
+#define RCAR_DU_FEATURE_R8A77995_REGS	BIT(10)	/* Use R8A77995 registers */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	BIT(0)	/* Align pitches to 128 bytes */
 

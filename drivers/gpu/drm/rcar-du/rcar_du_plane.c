@@ -511,7 +511,19 @@ static void rcar_du_plane_setup_format_gen3(struct rcar_du_group *rgrp,
 		pnmr &= ~(PnMR_SPIM_ALP | PnMR_SPIM_EOR);
 	}
 
-	rcar_du_plane_write(rgrp, index, PnMR, pnmr);
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS)) {
+		rcar_du_plane_write(rgrp, index, PnMR,
+				    PnMR_SPIM_TP_OFF | state->format->pnmr);
+	} else {
+		if (rgrp->index == 0)
+			rcar_du_plane_write(rgrp, index, PnMR,
+					    PnMR_SPIM_TP_OFF |
+					    state->format->pnmr);
+		else
+			rcar_du_plane_write(rgrp, index, PnMR,
+					    PnMR_SPIM_TP_OFF |
+					    PnMR_DDDF_16BPP);
+	}
 
 	rcar_du_plane_write(rgrp, index, PnDDCR4,
 			    state->format->edf | PnDDCR4_CODE);
