@@ -30,6 +30,22 @@
 #include "rcar_du_group.h"
 #include "rcar_du_regs.h"
 
+static u32 rcar_du_register_data_mask(struct rcar_du_group *rgrp, u32 reg)
+{
+	struct rcar_du_device *rcdu = rgrp->dev;
+	u32 mask_data = 0;
+
+	/* Set mask for R1 register */
+	if (reg == DORCR && rgrp->index == 1) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS))
+			mask_data = DORCR_PG2T | DORCR_DK2S | DORCR_PG2D_DS2;
+	}
+
+	return mask_data;
+}
+
 u32 rcar_du_group_read(struct rcar_du_group *rgrp, u32 reg)
 {
 	return rcar_du_read(rgrp->dev, rgrp->mmio_offset + reg);
@@ -37,6 +53,12 @@ u32 rcar_du_group_read(struct rcar_du_group *rgrp, u32 reg)
 
 void rcar_du_group_write(struct rcar_du_group *rgrp, u32 reg, u32 data)
 {
+	u32 mask = 0;
+
+	mask = rcar_du_register_data_mask(rgrp, reg);
+	if (mask)
+		data |= mask;
+
 	rcar_du_write(rgrp->dev, rgrp->mmio_offset + reg, data);
 }
 
@@ -98,7 +120,7 @@ static void rcar_du_group_setup_didsr(struct rcar_du_group *rgrp)
 	 * clock, do so. Otherwise route DU_DOTCLKINn signal to DUn.
 	 *
 	 * Each channel can then select between the dot clock configured here
-	 * and the clock provided by the CPG through the ESCR register.
+	 * and the clock provided by the CPG through the ESCR02 register.
 	 */
 	if (rcdu->info->gen < 3 && rgrp->index == 0) {
 		/*
