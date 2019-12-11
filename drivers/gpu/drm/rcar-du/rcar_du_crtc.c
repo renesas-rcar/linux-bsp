@@ -1192,10 +1192,15 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int swindex,
 	rcrtc->index = hwindex;
 	rcrtc->dsysr = (rcrtc->index % 2 ? 0 : DSYSR_DRES) | DSYSR_TVM_TVSYNC;
 
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
+		/* If the BRS number of VSPDL is 0, skip CRTC initialization */
+		if (rcdu->vspdl_fix && rcrtc->vsp_pipe == 1 &&
+		    rcdu->brs_num == 0)
+			return 0;
 		primary = &rcrtc->vsp->planes[rcrtc->vsp_pipe].plane;
-	else
+	} else {
 		primary = &rgrp->planes[swindex % 2].plane;
+	}
 
 	ret = drm_crtc_init_with_planes(rcdu->ddev, crtc, primary, NULL,
 					rcdu->info->gen <= 2 ?
