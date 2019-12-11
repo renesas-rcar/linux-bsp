@@ -120,6 +120,8 @@ struct rcar_du_device {
 	unsigned int dpad0_source;
 	unsigned int dpad1_source;
 	unsigned int vspd1_sink;
+	bool vspdl_fix;
+	unsigned int brs_num;
 };
 
 static inline struct rcar_du_device *to_rcar_du_device(struct drm_device *dev)
