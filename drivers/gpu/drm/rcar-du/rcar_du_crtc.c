@@ -256,12 +256,15 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		       | DPLLCR_N(dpll.n) | DPLLCR_M(dpll.m)
 		       | DPLLCR_STBY;
 
-		if (rcrtc->index == 1)
+		if (rcrtc->index == 1) {
 			dpllcr |= DPLLCR_PLCS1
 			       |  DPLLCR_INCS_DOTCLKIN1;
-		else
+		} else {
 			dpllcr |= DPLLCR_PLCS0
 			       |  DPLLCR_INCS_DOTCLKIN0;
+			if (soc_device_match(rcar_du_r8a7795_es1))
+				dpllcr |= DPLLCR_PLCS0_H3ES1X_WA;
+		}
 
 		rcar_du_group_write(rcrtc->group, DPLLCR, dpllcr);
 
