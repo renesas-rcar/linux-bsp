@@ -578,6 +578,33 @@ int rcar_du_vsp_init(struct rcar_du_vsp *vsp, struct device_node *np,
 		plane->vsp = vsp;
 		plane->index = i;
 
+		/* Fix possible crtcs for plane when using VSPDL */
+		if (rcdu->vspdl_fix && vsp->index == VSPDL_CH) {
+			u32 pair_ch;
+			enum rcar_du_output pair_con = RCAR_DU_OUTPUT_DPAD0;
+
+			pair_ch = rcdu->info->routes[pair_con].possible_crtcs;
+
+			if (rcdu->brs_num == 0) {
+				crtcs = BIT(0);
+				if (i > 0)
+					type = DRM_PLANE_TYPE_OVERLAY;
+			} else if (rcdu->brs_num == 1) {
+				if (type == DRM_PLANE_TYPE_PRIMARY)
+					i == 1 ? (crtcs = pair_ch) :
+						 (crtcs = BIT(0));
+				else
+					crtcs = BIT(0);
+			} else {
+				if (type == DRM_PLANE_TYPE_PRIMARY)
+					i == 1 ? (crtcs = pair_ch) :
+						 (crtcs = BIT(0));
+				else
+					i == 4 ? (crtcs = pair_ch) :
+						 (crtcs = BIT(0));
+			}
+		}
+
 		ret = drm_universal_plane_init(rcdu->ddev, &plane->plane, crtcs,
 					       &rcar_du_vsp_plane_funcs,
 					       rcar_du_vsp_formats,
