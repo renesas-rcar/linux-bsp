@@ -12,6 +12,8 @@
 
 #include <drm/drm_plane.h>
 
+#define VSPDL_CH	0	/* VSPDL channel in r8a7795 and r8a77965 */
+
 struct drm_framebuffer;
 struct rcar_du_format_info;
 struct rcar_du_vsp;
