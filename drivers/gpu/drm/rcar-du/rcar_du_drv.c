@@ -493,6 +493,9 @@ static int rcar_du_pm_resume(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
 
+#if IS_ENABLED(CONFIG_DRM_I2C_ADV7511)
+	drm_helper_hpd_irq_event(rcdu->ddev);
+#endif
 	return drm_mode_config_helper_resume(rcdu->ddev);
 }
 #endif
