@@ -797,10 +797,18 @@ unlock:
 	if (ret < 0)
 		return ret;
 
+	if (pipe->state == VSP1_PIPELINE_STOPPED)
+		pipe->dst_cnt = 1;
+
 	/* Start the pipeline. */
 	spin_lock_irqsave(&pipe->irqlock, flags);
 	vsp1_pipeline_run(pipe);
 	spin_unlock_irqrestore(&pipe->irqlock, flags);
+
+	/* Check display start interrupt */
+	if (!wait_event_timeout(pipe->dst_wait, pipe->dst_cnt == 0,
+				msecs_to_jiffies(100)))
+		dev_warn(vsp1->dev, "display interrupt timeout\n");
 
 	dev_dbg(vsp1->dev, "%s: pipeline enabled\n", __func__);
 
@@ -1070,6 +1078,7 @@ int vsp1_drm_init(struct vsp1_device *vsp1)
 		pipe->output->write_back = WB_STAT_CATP_DONE;
 		init_waitqueue_head(&pipe->event_wait);
 		list_add_tail(&pipe->output->entity.list_pipe, &pipe->entities);
+		init_waitqueue_head(&pipe->dst_wait);
 
 		pipe->lif->pipe = pipe;
 		list_add_tail(&pipe->lif->list_pipe, &pipe->entities);
