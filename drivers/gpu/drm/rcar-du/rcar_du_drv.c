@@ -18,8 +18,10 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 
+#include <drm/bridge/dw_hdmi.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_drv.h>
+#include "rcar_du_encoder.h"
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_gem_dma_helper.h>
 #include <drm/drm_managed.h>
@@ -616,13 +618,41 @@ static const struct drm_driver rcar_du_driver = {
 static int rcar_du_pm_suspend(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	struct drm_encoder *encoder;
+#endif
 
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	list_for_each_entry(encoder,
+			    &rcdu->ddev.mode_config.encoder_list,
+			    head) {
+		struct rcar_du_encoder *renc = to_rcar_encoder(encoder);
+
+		if (renc->bridge && (renc->output == RCAR_DU_OUTPUT_HDMI0 ||
+		    renc->output == RCAR_DU_OUTPUT_HDMI1))
+			dw_hdmi_s2r_ctrl(renc->bridge, false);
+	}
+#endif
 	return drm_mode_config_helper_suspend(&rcdu->ddev);
 }
 
 static int rcar_du_pm_resume(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	struct drm_encoder *encoder;
+
+	list_for_each_entry(encoder,
+			    &rcdu->ddev.mode_config.encoder_list,
+			    head) {
+		struct rcar_du_encoder *renc = to_rcar_encoder(encoder);
+
+		if (renc->bridge && (renc->output == RCAR_DU_OUTPUT_HDMI0 ||
+		    renc->output == RCAR_DU_OUTPUT_HDMI1))
+			dw_hdmi_s2r_ctrl(renc->bridge, true);
+	}
+#endif
+
 #if IS_ENABLED(CONFIG_DRM_I2C_ADV7511)
 	drm_helper_hpd_irq_event(&rcdu->ddev);
 #endif

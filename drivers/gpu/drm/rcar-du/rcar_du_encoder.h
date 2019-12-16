@@ -2,7 +2,7 @@
 /*
  * R-Car Display Unit Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -11,12 +11,13 @@
 #define __RCAR_DU_ENCODER_H__
 
 #include <drm/drm_encoder.h>
-
+#include "rcar_du_drv.h"
 struct rcar_du_device;
 
 struct rcar_du_encoder {
 	struct drm_encoder base;
 	enum rcar_du_output output;
+	struct drm_bridge *bridge;
 };
 
 #define to_rcar_encoder(e) \

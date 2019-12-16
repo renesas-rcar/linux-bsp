@@ -2,7 +2,7 @@
 /*
  * R-Car Display Unit Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -36,7 +36,6 @@ static unsigned int rcar_du_encoder_count_ports(struct device_node *node)
 		if (of_node_name_eq(port, "port"))
 			num_ports++;
 	}
-
 	of_node_put(ports);
 
 	return num_ports;
@@ -130,6 +129,7 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 		return PTR_ERR(renc);
 
 	renc->output = output;
+	renc->bridge = bridge;
 
 	/* Attach the bridge to the encoder. */
 	ret = drm_bridge_attach(&renc->base, bridge, NULL,
