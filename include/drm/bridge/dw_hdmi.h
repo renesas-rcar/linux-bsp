@@ -7,6 +7,7 @@
 #ifndef __DW_HDMI__
 #define __DW_HDMI__
 
+struct drm_bridge;
 struct drm_connector;
 struct drm_display_mode;
 struct drm_encoder;
@@ -171,6 +172,7 @@ void dw_hdmi_set_high_tmds_clock_ratio(struct dw_hdmi *hdmi);
 void dw_hdmi_phy_i2c_set_addr(struct dw_hdmi *hdmi, u8 address);
 void dw_hdmi_phy_i2c_write(struct dw_hdmi *hdmi, unsigned short data,
 			   unsigned char addr);
+void dw_hdmi_s2r_ctrl(struct drm_bridge *bridge, int flag);
 
 void dw_hdmi_phy_gen2_pddq(struct dw_hdmi *hdmi, u8 enable);
 void dw_hdmi_phy_gen2_txpwron(struct dw_hdmi *hdmi, u8 enable);

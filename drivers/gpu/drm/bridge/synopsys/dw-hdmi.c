@@ -2451,6 +2451,43 @@ static void dw_hdmi_bridge_enable(struct drm_bridge *bridge)
 	mutex_unlock(&hdmi->mutex);
 }
 
+/*
+ * This function controls clocks of dw_hdmi through drm_bridge
+ * at system suspend/resume.
+ * Arguments:
+ *  bridge: drm_bridge that contains dw_hdmi.
+ *  flag: controlled flag.
+ *		false: is used when suspend.
+ *		true: is used when resume.
+ */
+void dw_hdmi_s2r_ctrl(struct drm_bridge *bridge, int flag)
+{
+	struct dw_hdmi *hdmi = bridge->driver_private;
+
+	if (!hdmi)
+		return;
+
+	if (flag) { /* enable clk */
+		if (hdmi->isfr_clk)
+			clk_prepare_enable(hdmi->isfr_clk);
+		if (hdmi->iahb_clk)
+			clk_prepare_enable(hdmi->iahb_clk);
+
+		if (hdmi->plat_data->dev_type == RCAR_HDMI)
+			initialize_hdmi_rcar_ih_mutes(hdmi);
+		else
+			initialize_hdmi_ih_mutes(hdmi);
+		dw_hdmi_i2c_init(hdmi);
+		dw_hdmi_phy_setup_hpd(hdmi, NULL);
+	} else { /* disable clk */
+		if (hdmi->isfr_clk)
+			clk_disable_unprepare(hdmi->isfr_clk);
+		if (hdmi->iahb_clk)
+			clk_disable_unprepare(hdmi->iahb_clk);
+	}
+}
+EXPORT_SYMBOL_GPL(dw_hdmi_s2r_ctrl);
+
 static const struct drm_bridge_funcs dw_hdmi_bridge_funcs = {
 	.attach = dw_hdmi_bridge_attach,
 	.detach = dw_hdmi_bridge_detach,
