@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
+ * Copyright (C) 2018 Renesas Electronics Corporation
  * Copyright (C) 2011 Freescale Semiconductor, Inc.
  */
 
@@ -81,6 +82,10 @@ enum {
 	DW_HDMI_RES_MAX,
 };
 
+enum dw_hdmi_devtype {
+	RCAR_HDMI = 1,
+};
+
 enum dw_hdmi_phy_type {
 	DW_HDMI_PHY_DWC_HDMI_TX_PHY = 0x00,
 	DW_HDMI_PHY_DWC_MHL_PHY_HEAC = 0xb2,
@@ -122,6 +127,7 @@ struct dw_hdmi_phy_ops {
 };
 
 struct dw_hdmi_plat_data {
+	enum dw_hdmi_devtype dev_type;
 	struct regmap *regm;
 	enum drm_mode_status (*mode_valid)(struct drm_connector *connector,
 					   const struct drm_display_mode *mode);
