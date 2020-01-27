@@ -33,6 +33,10 @@
 		ethernet0 = &avb;
 		mmc0 = &sdhi2;
 		mmc1 = &sdhi0;
+		spi0 = &msiof0;
+		spi1 = &msiof1;
+		spi2 = &msiof2;
+		spi3 = &msiof3;
 	};
 
 	chosen {
