@@ -56,6 +56,8 @@ static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
 			else
 				return true;
 		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+			return false;
 	}
 
 	/* OTAR register access check */
@@ -73,6 +75,8 @@ static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
 			else
 				return false;
 		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+			return false;
 	}
 
 	return true;
