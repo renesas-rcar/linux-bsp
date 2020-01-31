@@ -167,10 +167,12 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	}
 	rcar_du_group_write(rgrp, DEFR5, DEFR5_CODE | DEFR5_DEFE5);
 
-	rcar_du_group_setup_pins(rgrp);
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+		rcar_du_group_setup_pins(rgrp);
 
 	if (rcdu->info->gen >= 2) {
-		rcar_du_group_setup_defr8(rgrp);
+		if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+			rcar_du_group_setup_defr8(rgrp);
 		rcar_du_group_setup_didsr(rgrp);
 	}
 
