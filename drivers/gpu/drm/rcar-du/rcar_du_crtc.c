@@ -1355,6 +1355,11 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int swindex,
 	rcrtc->index = hwindex;
 	rcrtc->dsysr = rcrtc->index % 2 ? 0 : DSYSR_DRES;
 
+	/* In V3U, the bit TVM and SCM are always set to 0 */
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+		rcrtc->dsysr = rcrtc->dsysr &
+				~(DSYSR_SCM_MASK | DSYSR_TVM_MASK);
+
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_TVM_SYNC))
 		rcrtc->dsysr |= DSYSR_TVM_TVSYNC;
 
