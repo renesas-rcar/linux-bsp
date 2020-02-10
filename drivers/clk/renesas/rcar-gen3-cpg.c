@@ -35,6 +35,7 @@
 #define CPG_PLLCR_STC_MASK	GENMASK(30, 24) /* Bits in PLL0/2/4 CR */
 #define CPG_RCKCR_CKSEL	BIT(15)	/* RCLK Clock Source Select */
 
+#define Z2FC_BIT_MASK_SFT_8	BIT(2)	/* Use Z2FC bit mask range to [12:8] */
 static u32 cpg_quirks;
 #define PLL_ERRATA		BIT(0)	/* Missing PLL0/2/4 post-divider */
 #define RCKCR_CKSEL		BIT(1)	/* Resverd RCLK clock soruce select */
@@ -697,6 +698,10 @@ static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 	{
 		.soc_id = "r8a7796", .revision = "ES1.1",
 		.data = (void *)SD_SKIP_FIRST,
+	},
+	{
+		.soc_id = "r8a77990",
+		.data = (void *)(Z2FC_BIT_MASK_SFT_8),
 	},
 	{ /* sentinel */ }
 };
