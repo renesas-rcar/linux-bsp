@@ -82,6 +82,7 @@ static const struct cpg_core_clk r8a77990_core_clks[] __initconst = {
 	DEF_FIXED("za2",       R8A77990_CLK_ZA2,   CLK_PLL0D24,    1, 1),
 	DEF_FIXED("za8",       R8A77990_CLK_ZA8,   CLK_PLL0D8,     1, 1),
 	DEF_GEN3_Z("z2",       R8A77990_CLK_Z2,    CLK_TYPE_GEN3_Z, CLK_PLL0, 4, 8),
+	DEF_GEN3_Z("zg",       R8A77990_CLK_ZG,    CLK_TYPE_GEN3_ZG, CLK_PLL0, 8, 24),
 	DEF_FIXED("ztr",       R8A77990_CLK_ZTR,   CLK_PLL1,       6, 1),
 	DEF_FIXED("zt",        R8A77990_CLK_ZT,    CLK_PLL1,       4, 1),
 	DEF_FIXED("zx",        R8A77990_CLK_ZX,    CLK_PLL1,       3, 1),
@@ -123,6 +124,7 @@ static const struct cpg_core_clk r8a77990_core_clks[] __initconst = {
 };
 
 static const struct mssr_mod_clk r8a77990_mod_clks[] __initconst = {
+	DEF_MOD("3dge",			 112,	R8A77990_CLK_ZG),
 	DEF_MOD("scif5",		 202,	R8A77990_CLK_S3D4C),
 	DEF_MOD("scif4",		 203,	R8A77990_CLK_S3D4C),
 	DEF_MOD("scif3",		 204,	R8A77990_CLK_S3D4C),
