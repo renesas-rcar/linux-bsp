@@ -172,6 +172,7 @@ static struct clk * __init cpg_pll_clk_register(const char *name,
 #define CPG_FRQCRB			0x00000004
 #define CPG_FRQCRB_KICK			BIT(31)
 #define CPG_FRQCRC			0x000000e0
+#define Z_CLK_ROUND(f)	(100000000 * DIV_ROUND_CLOSEST_ULL((f), 100000000))
 
 struct cpg_z_clk {
 	struct clk_hw hw;
@@ -188,14 +189,14 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 					   unsigned long parent_rate)
 {
 	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
 	u32 val;
 
 	val = readl(zclk->reg) & zclk->mask;
 	mult = 32 - (val >> __ffs(zclk->mask));
 
-	return DIV_ROUND_CLOSEST_ULL((u64)parent_rate * mult,
-				     32 * zclk->fixed_div);
+	return Z_CLK_ROUND(prate * mult / 32);
 }
 
 static int cpg_z_clk_determine_rate(struct clk_hw *hw,
