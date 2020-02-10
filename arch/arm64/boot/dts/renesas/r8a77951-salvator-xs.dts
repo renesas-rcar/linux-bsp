@@ -69,6 +69,11 @@
 	};
 };
 
+&adsp {
+	status = "okay";
+	memory-region = <&adsp_reserved>;
+};
+
 &du {
 	clocks = <&cpg CPG_MOD 724>,
 		 <&cpg CPG_MOD 723>,
