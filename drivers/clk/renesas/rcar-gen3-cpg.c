@@ -222,11 +222,18 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 			      unsigned long parent_rate)
 {
 	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
 	unsigned int i;
 
 	mult = DIV64_U64_ROUND_CLOSEST(rate * 32ULL * zclk->fixed_div,
 				       parent_rate);
+	if (!zclk->max_rate)
+		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, prate);
+	else if (rate <= zclk->max_rate)
+		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, zclk->max_rate);
+	else
+		mult = 32;
 	mult = clamp(mult, 1U, 32U);
 
 	if (readl(zclk->kick_reg) & CPG_FRQCRB_KICK)
