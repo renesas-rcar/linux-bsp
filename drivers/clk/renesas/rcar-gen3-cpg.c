@@ -241,7 +241,10 @@ static long cpg_z_clk_round_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned long prate = *parent_rate / zclk->fixed_div;
 	unsigned int mult;
 
-	if (rate <= zclk->max_freq) {
+	if (!zclk->max_freq) {
+		/* Set parent as aargment */
+		mult = div_u64((u64)rate * 32, prate);
+	} else if (rate <= zclk->max_freq) {
 		prate = zclk->max_freq; /* Set parent as init value */
 		mult = div_u64((u64)rate * 32, prate);
 	} else {
@@ -259,10 +262,13 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 			      unsigned long parent_rate)
 {
 	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
 	unsigned int i;
 
-	if (rate <= zclk->max_freq)
+	if (!zclk->max_freq)
+		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, prate);
+	else if (rate <= zclk->max_freq)
 		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, zclk->max_freq);
 	else
 		mult = 32;
