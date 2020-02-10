@@ -123,6 +123,9 @@ static struct mssr_mod_clk r8a7795_mod_clks[] __initdata = {
 	DEF_MOD("fdp1-2",		 117,	R8A7795_CLK_S2D1), /* ES1.x */
 	DEF_MOD("fdp1-1",		 118,	R8A7795_CLK_S0D1),
 	DEF_MOD("fdp1-0",		 119,	R8A7795_CLK_S0D1),
+	DEF_MOD("vcpl4",		 129,	R8A7795_CLK_S2D1), /* ES1.x */
+	DEF_MOD("vcplf",		 130,	R8A7795_CLK_S2D1),
+	DEF_MOD("vdpb",			 131,	R8A7795_CLK_S2D1),
 	DEF_MOD("scif5",		 202,	R8A7795_CLK_S3D4),
 	DEF_MOD("scif4",		 203,	R8A7795_CLK_S3D4),
 	DEF_MOD("scif3",		 204,	R8A7795_CLK_S3D4),
@@ -406,6 +409,7 @@ static const struct mssr_mod_reparent r8a7795es1_mod_reparent[] __initconst = {
 
 static const unsigned int r8a7795es2_mod_nullify[] __initconst = {
 	MOD_CLK_ID(117),			/* FDP1-2 */
+	MOD_CLK_ID(129),			/* VCPL4 */
 	MOD_CLK_ID(327),			/* USB3-IF1 */
 	MOD_CLK_ID(600),			/* FCPVD3 */
 	MOD_CLK_ID(609),			/* FCPVI2 */
