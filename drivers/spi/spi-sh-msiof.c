@@ -26,6 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/sh_dma.h>
+#include <linux/sys_soc.h>
 
 #include <linux/spi/sh_msiof.h>
 #include <linux/spi/spi.h>
@@ -63,6 +64,7 @@ struct sh_msiof_spi_priv {
 	bool native_cs_inited;
 	bool native_cs_high;
 	bool slave_aborted;
+	unsigned int quirks;
 };
 
 #define MAX_SS	3	/* Maximum number of native chip selects */
@@ -93,6 +95,7 @@ struct sh_msiof_spi_priv {
 #define MDR1_SYNCMD_LR	   (3 << 28)/*   L/R mode */
 #define MDR1_SYNCAC_SHIFT  25       /* Sync Polarity (1 = Active-low) */
 #define MDR1_BITLSB_SHIFT  24       /* MSB/LSB First (1 = LSB first) */
+#define MDR1_DTDL_MASK   0x00700000 /* Data Pin Bit Delay Mask */
 #define MDR1_DTDL_SHIFT	   20       /* Data Pin Bit Delay for MSIOF_SYNC */
 #define MDR1_SYNCDL_SHIFT  16       /* Frame Sync Signal Timing Delay */
 #define MDR1_FLD_MASK	   GENMASK(3, 2) /* Frame Sync Signal Interval (0-3) */
@@ -195,7 +198,17 @@ struct sh_msiof_spi_priv {
 #define IER_RFUDFE	BIT(4)  /* Receive FIFO Underflow Enable */
 #define IER_RFOVFE	BIT(3)  /* Receive FIFO Overflow Enable */
 
+/* Check LSI revisions and set specific quirk value */
+#define TRANSFER_WORKAROUND_H3WS10  BIT(0) /* H3ES1.0 workaround */
+#define TRANSFER_WORKAROUND_H3WS11  BIT(1) /* H3ES1.1 workaround */
 
+static const struct soc_device_attribute rcar_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.0",
+		.data = (void *)TRANSFER_WORKAROUND_H3WS10, },
+	{ .soc_id = "r8a7795", .revision = "ES1.1",
+		.data = (void *)TRANSFER_WORKAROUND_H3WS11, },
+	{/*sentinel*/},
+};
 static u32 sh_msiof_read(struct sh_msiof_spi_priv *p, int reg_offs)
 {
 	switch (reg_offs) {
@@ -365,12 +378,37 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p, u32 ss,
 	tmp |= !cs_high << MDR1_SYNCAC_SHIFT;
 	tmp |= lsb_first << MDR1_BITLSB_SHIFT;
 	tmp |= sh_msiof_spi_get_dtdl_and_syncdl(p);
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS10) {
+		if (!spi_controller_is_slave(p->ctlr)) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 0 << MDR1_DTDL_SHIFT;
+		}
+	}
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS11) {
+		if (!spi_controller_is_slave(p->ctlr)) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 1 << MDR1_DTDL_SHIFT;
+		}
+	}
+
 	if (spi_controller_is_slave(p->ctlr)) {
 		sh_msiof_write(p, TMDR1, tmp | TMDR1_PCON);
 	} else {
 		sh_msiof_write(p, TMDR1,
 			       tmp | MDR1_TRMD | TMDR1_PCON |
 			       (ss < MAX_SS ? ss : 0) << TMDR1_SYNCCH_SHIFT);
+	}
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS10) {
+		if (!spi_controller_is_slave(p->ctlr)) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 2 << MDR1_DTDL_SHIFT;
+		}
+	}
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS11) {
+		if (!spi_controller_is_slave(p->ctlr)) {
+			tmp &= ~MDR1_DTDL_MASK;
+			tmp |= 1 << MDR1_DTDL_SHIFT;
+		}
 	}
 	if (p->ctlr->flags & SPI_CONTROLLER_MUST_TX) {
 		/* These bits are reserved if RX needs TX */
@@ -379,8 +417,18 @@ static void sh_msiof_spi_set_pin_regs(struct sh_msiof_spi_priv *p, u32 ss,
 	sh_msiof_write(p, RMDR1, tmp);
 
 	tmp = 0;
-	tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
-	tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+	if (p->quirks & TRANSFER_WORKAROUND_H3WS10) {
+		if (!spi_controller_is_slave(p->ctlr)) {
+			tmp |= 0 << CTR_TSCKIZ_POL_SHIFT;
+			tmp |= 0 << CTR_RSCKIZ_POL_SHIFT;
+		} else {
+			tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
+			tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+		}
+	} else {
+		tmp |= CTR_TSCKIZ_SCK | cpol << CTR_TSCKIZ_POL_SHIFT;
+		tmp |= CTR_RSCKIZ_SCK | cpol << CTR_RSCKIZ_POL_SHIFT;
+	}
 
 	edge = cpol ^ !cpha;
 
@@ -1318,6 +1366,7 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	struct sh_msiof_spi_priv *p;
 	int i;
 	int ret;
+	const struct soc_device_attribute *attr;
 
 	chipdata = of_device_get_match_data(&pdev->dev);
 	if (chipdata) {
@@ -1347,6 +1396,10 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	p->ctlr = ctlr;
 	p->info = info;
 	p->min_div_pow = chipdata->min_div_pow;
+
+	attr = soc_device_match(rcar_quirks_match);
+	if (attr)
+		p->quirks = (uintptr_t)attr->data;
 
 	init_completion(&p->done);
 	init_completion(&p->done_txdma);
