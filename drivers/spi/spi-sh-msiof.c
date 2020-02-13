@@ -41,6 +41,10 @@ struct sh_msiof_chipdata {
 	u32 flags;
 };
 
+#ifdef CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG
+#define TRANSFAR_SYNC_DELAY (CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG_MSLEEP)
+#endif /* CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG */
+
 struct sh_msiof_spi_priv {
 	struct spi_controller *ctlr;
 	void __iomem *mapbase;
@@ -863,6 +867,11 @@ static int sh_msiof_transfer_one(struct spi_controller *ctlr,
 		if (tx_buf)
 			copy32(p->tx_dma_page, tx_buf, l / 4);
 
+#ifdef CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG
+		if (!!spi_controller_is_target(p->ctlr))
+			msleep(TRANSFAR_SYNC_DELAY);
+#endif /* CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG */
+
 		ret = sh_msiof_dma_once(p, tx_buf, rx_buf, l, max_wdlen);
 		if (ret == -EAGAIN) {
 			dev_warn_once(&p->pdev->dev,
@@ -935,6 +944,11 @@ static int sh_msiof_transfer_one(struct spi_controller *ctlr,
 	words = len / bytes_per_word;
 
 	while (words > 0) {
+#ifdef CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG
+		if (!!spi_controller_is_target(p->ctlr))
+			msleep(TRANSFAR_SYNC_DELAY);
+#endif /* CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG */
+
 		n = sh_msiof_spi_txrx_once(p, tx_fifo, rx_fifo, tx_buf, rx_buf,
 					   words, bits);
 		if (n < 0)
