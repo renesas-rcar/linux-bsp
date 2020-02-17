@@ -148,6 +148,8 @@ static void rcar_du_group_setup_didsr(struct rcar_du_group *rgrp)
 			      |  DIDSR_PDCS_CLK(i, 0);
 		else if (rcdu->info->dsi_clk_mask & BIT(rcrtc->index))
 			didsr |= DIDSR_LDCS_DSI(i);
+		else if (rcdu->info->mipi_dsi_clk_mask & BIT(rcrtc->index))
+			didsr |= DIDSR_LDCS_LVDS0(i);
 		else
 			didsr |= DIDSR_LDCS_DCLKIN(i)
 			      |  DIDSR_PDCS_CLK(i, 0);
