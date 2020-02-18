@@ -2,7 +2,7 @@
 /*
  * Device Tree Source for the H3ULCB (R-Car Starter Kit Premier) board
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2017 Renesas Electronics Corp.
  * Copyright (C) 2016 Cogent Embedded, Inc.
  */
 
@@ -34,4 +34,8 @@
 		device_type = "memory";
 		reg = <0x7 0x00000000 0x0 0x40000000>;
 	};
+};
+
+&sdhi2 {
+	/delete-property/ mmc-hs400-1_8v;
 };
