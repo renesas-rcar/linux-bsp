@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015-2016, Linaro Limited
+ * Copyright (c) 2018, Renesas Electronics Corporation
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
  */
 #include <linux/device.h>
 #include <linux/dma-buf.h>
@@ -15,41 +26,43 @@ static void tee_shm_release(struct tee_shm *shm)
 {
 	struct tee_device *teedev = shm->teedev;
 
-	mutex_lock(&teedev->mutex);
-	idr_remove(&teedev->idr, shm->id);
-	if (shm->ctx)
-		list_del(&shm->link);
-	mutex_unlock(&teedev->mutex);
+	if (shm->kaddr) {
+		mutex_lock(&teedev->mutex);
+		idr_remove(&teedev->idr, shm->id);
+		if (shm->ctx)
+			list_del(&shm->link);
+		mutex_unlock(&teedev->mutex);
 
-	if (shm->flags & TEE_SHM_POOL) {
-		struct tee_shm_pool_mgr *poolm;
+		if (shm->flags & TEE_SHM_POOL) {
+			struct tee_shm_pool_mgr *poolm;
 
-		if (shm->flags & TEE_SHM_DMA_BUF)
-			poolm = teedev->pool->dma_buf_mgr;
-		else
-			poolm = teedev->pool->private_mgr;
+			if (shm->flags & TEE_SHM_DMA_BUF)
+				poolm = teedev->pool->dma_buf_mgr;
+			else
+				poolm = teedev->pool->private_mgr;
 
-		poolm->ops->free(poolm, shm);
-	} else if (shm->flags & TEE_SHM_REGISTER) {
-		size_t n;
-		int rc = teedev->desc->ops->shm_unregister(shm->ctx, shm);
+			poolm->ops->free(poolm, shm);
+		} else if (shm->flags & TEE_SHM_REGISTER) {
+			size_t n;
+			int rc = teedev->desc->ops->shm_unregister(shm->ctx, shm);
 
-		if (rc)
-			dev_err(teedev->dev.parent,
-				"unregister shm %p failed: %d", shm, rc);
+			if (rc)
+				dev_err(teedev->dev.parent,
+					"unregister shm %p failed: %d", shm, rc);
 
-		for (n = 0; n < shm->num_pages; n++)
-			put_page(shm->pages[n]);
+			for (n = 0; n < shm->num_pages; n++)
+				put_page(shm->pages[n]);
 
-		kfree(shm->pages);
+			kfree(shm->pages);
+		}
+
+		if (shm->ctx)
+			teedev_ctx_put(shm->ctx);
+
+		kfree(shm);
+
+		tee_device_put(teedev);
 	}
-
-	if (shm->ctx)
-		teedev_ctx_put(shm->ctx);
-
-	kfree(shm);
-
-	tee_device_put(teedev);
 }
 
 static struct sg_table *tee_shm_op_map_dma_buf(struct dma_buf_attachment
@@ -368,8 +381,8 @@ void tee_shm_free(struct tee_shm *shm)
 	 */
 	if (shm->flags & TEE_SHM_DMA_BUF)
 		dma_buf_put(shm->dmabuf);
-	else
-		tee_shm_release(shm);
+
+	tee_shm_release(shm);
 }
 EXPORT_SYMBOL_GPL(tee_shm_free);
 
