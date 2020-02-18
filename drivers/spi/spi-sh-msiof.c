@@ -1329,6 +1329,7 @@ static void sh_msiof_release_dma(struct sh_msiof_spi_priv *p)
 			 DMA_FROM_DEVICE);
 	dma_unmap_single(ctlr->dma_tx->device->dev, p->tx_dma_addr, PAGE_SIZE,
 			 DMA_TO_DEVICE);
+
 	free_page((unsigned long)p->rx_dma_page);
 	free_page((unsigned long)p->tx_dma_page);
 	dma_release_channel(ctlr->dma_rx);
@@ -1345,6 +1346,8 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	int i;
 	int ret;
 	const struct soc_device_attribute *attr;
+	struct clk *ref_clk;
+	u32 clk_rate = 0;
 
 	chipdata = of_device_get_match_data(&pdev->dev);
 	if (chipdata) {
@@ -1449,6 +1452,17 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "devm_spi_register_controller error.\n");
 		goto err2;
+	}
+
+	/* MSIOF module clock setup */
+	ref_clk = devm_clk_get(&pdev->dev, "msiof_ref_clk");
+	if (!IS_ERR(ref_clk)) {
+		clk_rate = clk_get_rate(ref_clk);
+		if (clk_rate) {
+			clk_prepare_enable(p->clk);
+			clk_set_rate(p->clk, clk_rate);
+			clk_disable_unprepare(p->clk);
+		}
 	}
 
 	return 0;
