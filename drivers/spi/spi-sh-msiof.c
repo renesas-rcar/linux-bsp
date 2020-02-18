@@ -3,7 +3,7 @@
  * SuperH MSIOF SPI Controller Interface
  *
  * Copyright (c) 2009 Magnus Damm
- * Copyright (C) 2014-2017 Renesas Electronics Corporation
+ * Copyright (C) 2014-2018 Renesas Electronics Corporation
  * Copyright (C) 2014-2017 Glider bvba
  */
 
@@ -94,6 +94,7 @@ struct sh_msiof_spi_priv {
 #define SIMDR1_BITLSB_SHIFT	24		/* MSB/LSB First (1 = LSB first) */
 #define SIMDR1_DTDL_MASK	0x00700000	/* Data Pin Bit Delay Mask */
 #define SIMDR1_DTDL_SHIFT	20		/* Data Pin Bit Delay for MSIOF_SYNC */
+#define SIMDR1_DTDL_2CLK	200		/*   2-clock-cycle delay */
 #define SIMDR1_SYNCDL_SHIFT	16		/* Frame Sync Signal Timing Delay */
 #define SIMDR1_FLD_MASK		GENMASK(3, 2)	/* Frame Sync Signal Interval (0-3) */
 #define SIMDR1_FLD_SHIFT	2
@@ -198,12 +199,15 @@ struct sh_msiof_spi_priv {
 /* Check LSI revisions and set specific quirk value */
 #define TRANSFER_WORKAROUND_H3WS10  BIT(0) /* H3ES1.0 workaround */
 #define TRANSFER_WORKAROUND_H3WS11  BIT(1) /* H3ES1.1 workaround */
+#define TRANSFER_2CLK_DELAY_H3WS30  BIT(2) /* H3ES3.0 specification */
 
 static const struct soc_device_attribute rcar_quirks_match[]  = {
 	{ .soc_id = "r8a7795", .revision = "ES1.0",
 		.data = (void *)TRANSFER_WORKAROUND_H3WS10, },
 	{ .soc_id = "r8a7795", .revision = "ES1.1",
 		.data = (void *)TRANSFER_WORKAROUND_H3WS11, },
+	{ .soc_id = "r8a7795", .revision = "ES3.0",
+		.data = (void *)TRANSFER_2CLK_DELAY_H3WS30, },
 	{/*sentinel*/},
 };
 
@@ -1436,6 +1440,15 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 			clk_set_rate(p->clk, clk_rate);
 			clk_disable_unprepare(p->clk);
 		}
+	}
+
+	if (p->quirks & TRANSFER_2CLK_DELAY_H3WS30 &&
+	    !spi_controller_is_slave(p->ctlr)) {
+		if (info->dtdl)
+			dev_warn(&pdev->dev,
+				 "Set 2 clock delay for R-Car H3 Ver.3.0 only\n"
+				);
+		info->dtdl = SIMDR1_DTDL_2CLK;
 	}
 
 	return 0;
