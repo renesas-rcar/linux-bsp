@@ -36,10 +36,6 @@ Required properties:
 - max-frequency: Maximum operating clock frequency, driver uses default clock
   frequency if it is not set.
 
-- hs400_auto_calib: Force auto calibration mode.
-- adjust_hs400_offset: use the user-defined manual calibration offset.
-- adjust_hs400_calibrate: use the user-defined manual calibration table.
-
 
 Example: R8A7790 (R-Car H2) MMCIF0
 
@@ -51,27 +47,4 @@ Example: R8A7790 (R-Car H2) MMCIF0
 		dmas = <&dmac0 0xd1>, <&dmac0 0xd2>;
 		dma-names = "tx", "rx";
 		max-frequency = <97500000>;
-	};
-
-Example: R8A7795 (R-Car H3) SDHI2
-
-	&sdhi2 {
-		/* used for on-board 8bit eMMC */
-		pinctrl-0 = <&sdhi2_pins>;
-		pinctrl-1 = <&sdhi2_pins_uhs>;
-		pinctrl-names = "default", "state_uhs";
-		iommus = <&ipmmu_ds1 34>;
-		vmmc-supply = <&reg_3p3v>;
-		vqmmc-supply = <&reg_1p8v>;
-		bus-width = <8>;
-		mmc-hs200-1_8v;
-		mmc-hs400-1_8v;
-		adjust_hs400_offset = <3>;
-		adjust_hs400_calibrate = <0  1  2  3  4  5  6  7  8  9
-					  10 11 12 13 14 15 16 17 18 19
-					  20 21 22 23 24 25 26 27 28 29
-					  30 31>;
-		non-removable;
-		fixed-emmc-driver-type = <1>;
-		status = "okay";
 	};
