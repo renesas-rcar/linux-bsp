@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015-2016, Linaro Limited
+ * Copyright (c) 2017, Renesas Electronics Corporation
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -11,6 +22,8 @@
 #include <linux/tee_drv.h>
 #include "optee_private.h"
 #include "optee_smc.h"
+
+#include "optee_rcar.h"
 
 struct wq_entry {
 	struct list_head link;
@@ -381,6 +394,9 @@ static void handle_rpc_func_cmd(struct tee_context *ctx, struct optee *optee,
 		break;
 	case OPTEE_MSG_RPC_CMD_SHM_FREE:
 		handle_rpc_func_cmd_shm_free(ctx, arg);
+		break;
+	case OPTEE_MSG_RPC_CMD_DEBUG_LOG:
+		handle_rpc_func_cmd_debug_log(arg);
 		break;
 	default:
 		handle_rpc_supp_cmd(ctx, arg);
