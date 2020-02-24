@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2015-2017, Renesas Electronics Corporation
+ * Copyright (c) 2015-2018, Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -28,37 +28,67 @@
 #include "optee_smc.h"
 
 #include <linux/suspend.h>
+#include <linux/kthread.h>
 #include "optee_rcar.h"
 
 static char *remaped_log_buffer;
-struct optee *rcar_optee;
+static struct optee *rcar_optee;
+static struct rcar_debug_log_info dlog_info;
 
 #define TEE_LOG_NS_BASE		(0x0407FEC000U)
 #define TEE_LOG_NS_SIZE		(81920U)
 #define LOG_NS_CPU_AREA_SIZE	(1024U)
 #define TEE_CORE_NB_CORE	(8U)
 
-static void debug_log_work_handler(struct work_struct *work);
+static int debug_log_kthread(void *arg);
 static int tz_rcar_suspend(void);
 static int tz_rcar_power_event(struct notifier_block *this,
 			       unsigned long event, void *ptr);
 static int rcar_optee_add_suspend_callback(void);
 static void rcar_optee_del_suspend_callback(void);
 static int rcar_optee_init_debug_log(void);
+static void rcar_optee_final_debug_log(void);
 
-static void debug_log_work_handler(struct work_struct *work)
+static int debug_log_kthread(void *arg)
 {
-	pr_alert("%s", (int8_t *)(&work[1]));
-	kfree(work);
+	struct rcar_debug_log_info *dlog;
+	struct rcar_debug_log_node *node;
+	struct rcar_debug_log_node *ntmp;
+	bool thread_exit = false;
+
+	dlog = (struct rcar_debug_log_info *)arg;
+
+	while (1) {
+		list_for_each_entry_safe(node, ntmp, &dlog->queue, list) {
+			if (node->logmsg)
+				pr_alert("%s", node->logmsg);
+			else
+				thread_exit = true;
+
+			spin_lock(&dlog->q_lock);
+			list_del(&node->list);
+		       spin_unlock(&dlog->q_lock);
+			kfree(node);
+		}
+		if (thread_exit)
+			break;
+		wait_event(dlog->waitq, !list_empty(&dlog->queue));
+	}
+
+	pr_info("%s Exit\n", __func__);
+	return 0;
 }
 
 void handle_rpc_func_cmd_debug_log(struct optee_msg_arg *arg)
 {
+	struct rcar_debug_log_info *dlog;
 	struct optee_msg_param *params;
 	u32 cpu_id;
 	char *p;
-	struct work_struct *work = NULL;
-	size_t logmsg_size;
+	struct rcar_debug_log_node *node = NULL;
+	size_t alloc_size;
+
+	dlog = (struct rcar_debug_log_info *)&dlog_info;
 
 	if (arg->num_params == 1) {
 		params = arg->params;
@@ -66,16 +96,20 @@ void handle_rpc_func_cmd_debug_log(struct optee_msg_arg *arg)
 
 		if (cpu_id < TEE_CORE_NB_CORE) {
 			p = &remaped_log_buffer[cpu_id * LOG_NS_CPU_AREA_SIZE];
-			logmsg_size = strlen(p) + 1;
-			work = kmalloc(sizeof(*work) + logmsg_size, GFP_KERNEL);
-			if (work) {
-				strcpy((int8_t *)(&work[1]), p);
-				INIT_WORK(work, debug_log_work_handler);
-				schedule_work(work);
+			alloc_size = sizeof(*node) + strlen(p) + 1;
+			node = kmalloc(alloc_size, GFP_KERNEL);
+			if (node) {
+				node->logmsg = (char *)&node[1];
+				INIT_LIST_HEAD(&node->list);
+				strcpy(node->logmsg, p);
+				spin_lock(&dlog->q_lock);
+				list_add_tail(&node->list, &dlog->queue);
+				spin_unlock(&dlog->q_lock);
+				wake_up_interruptible(&dlog->waitq);
+				arg->ret = TEEC_SUCCESS;
 			} else {
-				pr_alert("%s", p);
+				arg->ret = TEEC_ERROR_OUT_OF_MEMORY;
 			}
-			arg->ret = TEEC_SUCCESS;
 		} else {
 			arg->ret = TEEC_ERROR_BAD_PARAMETERS;
 		}
@@ -150,6 +184,7 @@ static void rcar_optee_del_suspend_callback(void)
 static int rcar_optee_init_debug_log(void)
 {
 	int ret = 0;
+	struct task_struct *thread;
 
 	remaped_log_buffer = ioremap_nocache(TEE_LOG_NS_BASE, TEE_LOG_NS_SIZE);
 	if (!remaped_log_buffer) {
@@ -157,7 +192,37 @@ static int rcar_optee_init_debug_log(void)
 		ret = -ENOMEM;
 	}
 
+	if (ret == 0) {
+		init_waitqueue_head(&dlog_info.waitq);
+		INIT_LIST_HEAD(&dlog_info.queue);
+		spin_lock_init(&dlog_info.q_lock);
+
+		thread = kthread_run(debug_log_kthread, &dlog_info,
+				     "optee_debug_log");
+		if (IS_ERR(thread)) {
+			pr_err("failed to kthread_run\n");
+			ret = -ENOMEM;
+		}
+	}
+
 	return ret;
+}
+
+static void rcar_optee_final_debug_log(void)
+{
+	struct rcar_debug_log_node *node;
+
+	node = kmalloc(sizeof(*node), GFP_KERNEL);
+	if (node) {
+		INIT_LIST_HEAD(&node->list);
+		node->logmsg = NULL; /* exit kthread */
+		spin_lock(&dlog_info.q_lock);
+		list_add_tail(&node->list, &dlog_info.queue);
+		spin_unlock(&dlog_info.q_lock);
+		wake_up(&dlog_info.waitq);
+	} else {
+		pr_err("failed to kmalloc(rcar_debug_log_node)\n");
+	}
 }
 
 int optee_rcar_probe(struct optee *optee)
@@ -166,7 +231,7 @@ int optee_rcar_probe(struct optee *optee)
 
 	rcar_optee = optee;
 
-	pr_info("R-Car Rev.%s\n", VERSION_OF_RENESAS);
+	pr_info("optee driver R-Car Rev.%s\n", VERSION_OF_RENESAS);
 
 	ret = rcar_optee_add_suspend_callback();
 	if (ret == 0) {
@@ -180,5 +245,6 @@ int optee_rcar_probe(struct optee *optee)
 
 void optee_rcar_remove(void)
 {
+	rcar_optee_final_debug_log();
 	rcar_optee_del_suspend_callback();
 }
