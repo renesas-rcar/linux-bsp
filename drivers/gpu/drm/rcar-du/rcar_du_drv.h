@@ -37,6 +37,7 @@ struct rcar_du_device;
 #define RCAR_DU_FEATURE_R8A77965_REGS	BIT(8)	/* Use R8A77965 registers */
 #define RCAR_DU_FEATURE_R8A77990_REGS	BIT(9)	/* Use R8A77990 registers */
 #define RCAR_DU_FEATURE_R8A77995_REGS	BIT(10)	/* Use R8A77995 registers */
+#define RCAR_DU_FEATURE_R8A779A0_REGS	BIT(11)  /* Use R8A779A0 registers */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	BIT(0)	/* Align pitches to 128 bytes */
 
@@ -50,6 +51,8 @@ enum rcar_du_output {
 	RCAR_DU_OUTPUT_LVDS0,
 	RCAR_DU_OUTPUT_LVDS1,
 	RCAR_DU_OUTPUT_TCON,
+	RCAR_DU_OUTPUT_MIPI_DSI0,
+	RCAR_DU_OUTPUT_MIPI_DSI1,
 	RCAR_DU_OUTPUT_MAX,
 };
 
@@ -75,10 +78,13 @@ struct rcar_du_output_routing {
  * @channels_mask: bit mask of available DU channels
  * @routes: array of CRTC to output routes, indexed by output (RCAR_DU_OUTPUT_*)
  * @num_lvds: number of internal LVDS encoders
+ * @num_mipi_dsi: number of internal MIPI DSI device
  * @num_rpf: number of RPFs in VSP
  * @dpll_mask: bit mask of DU channels equipped with a DPLL
  * @dsi_clk_mask: bitmask of channels that can use the DSI clock as dot clock
  * @lvds_clk_mask: bitmask of channels that can use the LVDS clock as dot clock
+ * @mipi_dsi_clk_mask: bitmask of channels that can use
+ *						the MIPI DSI clock as dot clock
  */
 struct rcar_du_device_info {
 	unsigned int gen;
@@ -87,10 +93,12 @@ struct rcar_du_device_info {
 	unsigned int channels_mask;
 	struct rcar_du_output_routing routes[RCAR_DU_OUTPUT_MAX];
 	unsigned int num_lvds;
+	unsigned int num_mipi_dsi;
 	unsigned int num_rpf;
 	unsigned int dpll_mask;
 	unsigned int dsi_clk_mask;
 	unsigned int lvds_clk_mask;
+	unsigned int mipi_dsi_clk_mask;
 };
 
 #define RCAR_DU_MAX_CRTCS		4

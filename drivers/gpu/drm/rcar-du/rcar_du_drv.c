@@ -513,21 +513,23 @@ static const struct rcar_du_device_info rcar_du_r8a779a0_info = {
 	.gen = 3,
 	.features = RCAR_DU_FEATURE_CRTC_IRQ
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
-		  | RCAR_DU_FEATURE_NO_BLENDING,
+		  | RCAR_DU_FEATURE_R8A779A0_REGS,
 	.channels_mask = BIT(1) | BIT(0),
 	.routes = {
-		/* R8A779A0 has two MIPI DSI outputs. */
-		[RCAR_DU_OUTPUT_DSI0] = {
+		/*
+		 * R8A779A0 has two MIPI DSI output.
+		 */
+		[RCAR_DU_OUTPUT_MIPI_DSI0] = {
 			.possible_crtcs = BIT(0),
 			.port = 0,
 		},
-		[RCAR_DU_OUTPUT_DSI1] = {
+		[RCAR_DU_OUTPUT_MIPI_DSI1] = {
 			.possible_crtcs = BIT(1),
 			.port = 1,
 		},
 	},
-	.num_rpf = 5,
-	.dsi_clk_mask =  BIT(1) | BIT(0),
+	.num_mipi_dsi = 2,
+	.mipi_dsi_clk_mask = BIT(1) | BIT(0),
 };
 
 static const struct of_device_id rcar_du_of_table[] = {
