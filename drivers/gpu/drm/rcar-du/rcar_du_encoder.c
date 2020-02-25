@@ -102,6 +102,14 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 				ret = 0;
 #endif
 				goto done;
+			} else if (output == RCAR_DU_OUTPUT_MIPI_DSI0 ||
+				   output == RCAR_DU_OUTPUT_MIPI_DSI1) {
+#if IS_ENABLED(CONFIG_DRM_RCAR_MIPI_DSI)
+				ret = -EPROBE_DEFER;
+#else
+				ret = 0;
+#endif
+				goto done;
 			} else {
 				ret = -EPROBE_DEFER;
 				goto done;
