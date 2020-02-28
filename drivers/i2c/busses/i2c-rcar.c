@@ -473,6 +473,18 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 	return true;
 }
 
+static int rcar_i2c_is_pio(struct rcar_i2c_priv *priv)
+{
+	struct i2c_msg *msg = priv->msg;
+	bool read = msg->flags & I2C_M_RD;
+	struct dma_chan *chan = read ? priv->dma_rx : priv->dma_tx;
+
+	/* Do various checks to see if DMA is feasible at all */
+	return (IS_ERR(chan) || msg->len < 8
+		|| !(msg->flags & I2C_M_DMA_SAFE) ||
+		(read && priv->flags & ID_P_NO_RXDMA));
+}
+
 static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
 {
 	struct i2c_msg *msg = priv->msg;
@@ -486,15 +498,24 @@ static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
 		return;
 
 	if (priv->pos < msg->len) {
-		/*
-		 * Prepare next data to ICRXTX register.
-		 * This data will go to _SHIFT_ register.
-		 *
-		 *    *
-		 * [ICRXTX] -> [SHIFT] -> [I2C bus]
-		 */
-		rcar_i2c_write(priv, ICRXTX, msg->buf[priv->pos]);
-		priv->pos++;
+		if (priv->pos == 0 || rcar_i2c_is_pio(priv)) {
+			/*
+			 * Prepare next data to ICRXTX register.
+			 * This data will go to _SHIFT_ register.
+			 *
+			 *    *
+			 * [ICRXTX] -> [SHIFT] -> [I2C bus]
+			 */
+			rcar_i2c_write(priv, ICRXTX, msg->buf[priv->pos]);
+			priv->pos++;
+		} else {
+			/*
+			 * Try to use DMA to transmit the rest of the data if
+			 * address transfer pashe just finished.
+			 */
+			rcar_i2c_dma(priv);
+			return;
+		}
 	} else {
 		/*
 		 * The last data was pushed to ICRXTX on _PREV_ empty irq.
