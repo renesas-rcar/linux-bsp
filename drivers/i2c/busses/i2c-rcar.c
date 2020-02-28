@@ -140,6 +140,7 @@ struct rcar_i2c_priv {
 
 	struct reset_control *rstc;
 	int irq;
+	int suspended;
 };
 
 #define rcar_i2c_priv_to_dev(p)		((p)->adap.dev.parent)
@@ -797,6 +798,9 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 	int i, ret;
 	long time_left;
 
+	if (priv->suspended)
+		return -EBUSY;
+
 	pm_runtime_get_sync(dev);
 
 	/* Check bus state before init otherwise bus busy info will be lost */
@@ -1047,16 +1051,31 @@ static int rcar_i2c_suspend(struct device *dev)
 {
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
 
+	priv->suspended = 1;
 	i2c_mark_adapter_suspended(&priv->adap);
 	return 0;
 }
 
 static int rcar_i2c_resume(struct device *dev)
 {
+	int ret = 0;
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
+	struct i2c_timings i2c_t;
+
+	i2c_parse_fw_timings(dev, &i2c_t, false);
+	pm_runtime_get_sync(dev);
+	ret = rcar_i2c_clock_calculate(priv, &i2c_t);
+	if (ret < 0)
+		dev_err(dev, "Could not calculate clock\n");
+
+	rcar_i2c_init(priv);
+	pm_runtime_put(dev);
+
+	priv->suspended = 0;
 
 	i2c_mark_adapter_resumed(&priv->adap);
-	return 0;
+
+	return ret;
 }
 
 static const struct dev_pm_ops rcar_i2c_pm_ops = {
