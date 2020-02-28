@@ -168,6 +168,7 @@
 	pinctrl-names = "default";
 	renesas,no-ether-link;
 	phy-handle = <&phy0>;
+	phy-mode = "rgmii";
 	status = "okay";
 
 	phy0: ethernet-phy@0 {
