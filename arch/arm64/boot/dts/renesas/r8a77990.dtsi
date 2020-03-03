@@ -24,6 +24,10 @@
 		i2c6 = &i2c6;
 		i2c7 = &i2c_dvfs;
 		i2c8 = &i2c7;
+		spi0 = &msiof0;
+		spi1 = &msiof1;
+		spi2 = &msiof2;
+		spi3 = &msiof3;
 	};
 
 	/*
