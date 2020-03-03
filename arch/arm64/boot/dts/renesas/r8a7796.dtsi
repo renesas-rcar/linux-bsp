@@ -448,6 +448,8 @@
 			next-level-cache = <&L2_CA57>;
 			enable-method = "psci";
 			dynamic-power-coefficient = <854>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&cpg CPG_CORE R8A7796_CLK_Z>;
 			operating-points-v2 = <&cluster0_opp0>,
@@ -486,6 +488,8 @@
 			enable-method = "psci";
 			#cooling-cells = <2>;
 			dynamic-power-coefficient = <277>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
 			cpu-idle-states = <&CPU_SLEEP_1>;
 			clocks = <&cpg CPG_CORE R8A7796_CLK_Z2>;
 			operating-points-v2 = <&cluster1_opp>;
@@ -3193,7 +3197,7 @@
 			cooling-maps {
 				map0 {
 					trip = <&target>;
-					cooling-device = <&a57_0 2 4>;
+					cooling-device = <&a57_0 2 2>;
 					contribution = <1024>;
 				};
 				map1 {
@@ -3203,6 +3207,11 @@
 				};
 			};
 			trips {
+			        threshold: trip-point0 {
+					temperature = <90000>;
+					hysteresis = <1000>;
+					type = "passive";
+				};
 				target: trip-point1 {
 					temperature = <100000>;
 					hysteresis = <1000>;
