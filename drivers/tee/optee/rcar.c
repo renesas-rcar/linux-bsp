@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2015-2018, Renesas Electronics Corporation
+ * Copyright (c) 2015-2019, Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -72,7 +72,8 @@ static int debug_log_kthread(void *arg)
 		}
 		if (thread_exit)
 			break;
-		wait_event(dlog->waitq, !list_empty(&dlog->queue));
+		wait_event_interruptible(dlog->waitq,
+					 !list_empty(&dlog->queue));
 	}
 
 	pr_info("%s Exit\n", __func__);
