@@ -1,0 +1,10 @@
+config RCAR_MFIS
+       tristate "R-Car MFIS driver"
+       depends on OF
+       depends on ARM || ARM64
+       depends on ARCH_RENESAS
+       help
+         MFIS (Multifunctional Interface) allows inter-processor communication for R-Car Gen3 SoC.
+
+         To compile this driver as a module, choose M here. The module
+         will be called rcar-mfis.
