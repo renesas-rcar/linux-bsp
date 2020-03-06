@@ -1,0 +1,13 @@
+config DRM_RCAR_RVGC
+	tristate "DRM Support for R-Car Virtual Graphics Card"
+	depends on DRM
+	depends on ARM || ARM64
+	depends on ARCH_RENESAS || COMPILE_TEST
+	select DRM_KMS_HELPER
+	select DRM_KMS_CMA_HELPER
+	select DRM_GEM_CMA_HELPER
+	select VIDEOMODE_HELPERS
+	select RCAR_MFIS
+	select RPMSG
+	help
+	  Choose this option if you have an R-Car chipset.
