@@ -320,6 +320,8 @@ source "drivers/gpu/drm/atmel-hlcdc/Kconfig"
 
 source "drivers/gpu/drm/rcar-du/Kconfig"
 
+source "drivers/gpu/drm/rcar-rvgc/Kconfig"
+
 source "drivers/gpu/drm/shmobile/Kconfig"
 
 source "drivers/gpu/drm/sun4i/Kconfig"
