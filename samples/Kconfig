@@ -99,6 +99,14 @@ config SAMPLE_RPMSG_CLIENT
 	  to communicate with an AMP-configured remote processor over
 	  the rpmsg bus.
 
+config SAMPLE_TAURUS_CLIENT
+	tristate "Build Taurus client sample -- loadable modules only"
+	depends on RPMSG && m
+	help
+	  Build an Renesas Taurus client sample driver, which demonstrates how
+	  to communicate with an AMP-configured remote processor over
+	  the rpmsg bus and the Taurus interface.
+
 config SAMPLE_LIVEPATCH
 	tristate "Build live patching samples -- loadable modules only"
 	depends on LIVEPATCH && m
