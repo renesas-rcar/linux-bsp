@@ -654,7 +654,8 @@ static unsigned int rvin_ratio_to_bwidth(unsigned int ratio)
 static bool rvin_gen3_need_scaling(struct rvin_dev *vin)
 {
 	if (vin->info->model != RCAR_GEN3 ||
-	    vin->format.pixelformat == V4L2_PIX_FMT_NV12)
+	    vin->format.pixelformat == V4L2_PIX_FMT_NV12 ||
+	    vin->chip_info == RCAR_VIN_R8A779A0_FEATURE)
 		return false;
 
 	return vin->crop.width != vin->compose.width ||
@@ -926,7 +927,8 @@ static int rvin_setup(struct rvin_dev *vin)
 	vnmc |= VNMC_VUP;
 
 	/* If input and output use the same colorspace, use bypass mode */
-	if (input_is_yuv == output_is_yuv)
+	if (input_is_yuv == output_is_yuv &&
+	   !(vin->chip_info & RCAR_VIN_R8A779A0_FEATURE))
 		vnmc |= VNMC_BPS;
 
 	if (vin->info->model == RCAR_GEN3) {
@@ -950,7 +952,8 @@ static int rvin_setup(struct rvin_dev *vin)
 	}
 
 	/* Check INF bit in VnMR register setting */
-	if (vin->info->model == RCAR_GEN3) {
+	if ((vin->info->model == RCAR_GEN3) &&
+	    !(vin->chip_info & RCAR_VIN_R8A779A0_FEATURE)) {
 		if (vin->is_csi) {
 			if (((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV8_BT656) ||
 			    ((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV10_BT656) ||
@@ -967,6 +970,14 @@ static int rvin_setup(struct rvin_dev *vin)
 
 				return -EINVAL;
 			}
+		}
+	} else if (vin->chip_info & RCAR_VIN_R8A779A0_FEATURE) {
+		if (((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV8_BT656) ||
+		    ((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV10_BT656) ||
+		    ((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV16)) {
+			vin_err(vin, "Invalid when ISP (Channel Selector)\n");
+
+			return -EINVAL;
 		}
 	}
 
@@ -1803,6 +1814,9 @@ int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel)
 	u32 ifmd = 0;
 	u32 vnmc;
 	int ret;
+
+	if (vin->chip_info & RCAR_VIN_R8A779A0_FEATURE)
+		return 0;
 
 	ret = pm_runtime_get_sync(vin->dev);
 	if (ret < 0) {
