@@ -908,7 +908,8 @@ static int rvin_setup(struct rvin_dev *vin)
 	vnmc |= VNMC_VUP;
 
 	/* If input and output use the same colorspace, use bypass mode */
-	if (input_is_yuv == output_is_yuv)
+	if (input_is_yuv == output_is_yuv &&
+	   !(vin->chip_info & RCAR_VIN_BPS_RESERVED))
 		vnmc |= VNMC_BPS;
 
 	if (vin->info->model == RCAR_GEN3) {

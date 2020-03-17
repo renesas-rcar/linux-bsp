@@ -32,7 +32,7 @@
 #define HW_BUFFER_MASK 0x7f
 
 /* Max number on VIN instances that can be in a system */
-#define RCAR_VIN_NUM 8
+#define RCAR_VIN_NUM 32
 
 /* Time until source device reconnects */
 #define CONNECTION_TIME 2000
@@ -41,6 +41,7 @@
 #define MSTP_WAIT_TIME 100
 
 #define RCAR_VIN_DES1_RESERVED		BIT(0)
+#define RCAR_VIN_BPS_RESERVED		BIT(1)
 
 struct rvin_group;
 
@@ -57,6 +58,14 @@ enum rvin_csi_id {
 	RVIN_CSI40,
 	RVIN_CSI41,
 	RVIN_CSI_MAX,
+};
+
+enum rvin_r8a779a0_csi_id {
+	RV3U_CSI40,
+	RV3U_CSI41,
+	RV3U_CSI42,
+	RV3U_CSI43,
+	RV3U_CSI_MAX,
 };
 
 /**
