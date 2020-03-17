@@ -31,6 +31,14 @@
 	gpio-ranges = <&pfc 0 32 28>;
 };
 
+&ipmmu_mm {
+	status = "disabled";
+};
+
+&ipmmu_ds1 {
+	status = "disabled";
+};
+
 &ipmmu_vi0 {
 	renesas,ipmmu-main = <&ipmmu_mm 11>;
 };
