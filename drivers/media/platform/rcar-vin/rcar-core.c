@@ -42,7 +42,10 @@
  * routing for other VIN's. We can figure out which VIN is
  * master by looking at a VINs id.
  */
-#define rvin_group_id_to_master(vin) ((vin) < 4 ? 0 : 4)
+#define rvin_group_id_to_master(vin) ((vin) < 4 ? 0 : (vin) < 8 ? 4 : \
+				     (vin) < 12 ? 8 : (vin) < 16 ? 12 : \
+				     (vin) < 20 ? 16 : (vin) < 24 ? 20 : \
+				     (vin) < 28 ? 24 : (vin) < 32 ? 28 : 32)
 
 #define v4l2_dev_to_vin(d)	container_of(d, struct rvin_dev, v4l2_dev)
 
@@ -1269,6 +1272,35 @@ static const struct rvin_info rcar_info_r8a77995 = {
 	.scalers = rcar_info_r8a77995_scalers,
 };
 
+/* Currently it is statically assigned, but it should be general purpose. */
+static const struct rvin_group_route rcar_info_r8a779a0_routes[] = {
+	{ .csi = RV3U_CSI40, .channel = 0, .vin = 0,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI40, .channel = 1, .vin = 1,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI40, .channel = 2, .vin = 2,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI40, .channel = 3, .vin = 3,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI41, .channel = 0, .vin = 8,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI41, .channel = 1, .vin = 9,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI41, .channel = 2, .vin = 10, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI41, .channel = 3, .vin = 11, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI42, .channel = 0, .vin = 16, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI42, .channel = 1, .vin = 17, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI42, .channel = 2, .vin = 18, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI42, .channel = 3, .vin = 19, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI43, .channel = 0, .vin = 24, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI43, .channel = 1, .vin = 25, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI43, .channel = 2, .vin = 26, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI43, .channel = 3, .vin = 27, .mask = 0xffffffff },
+	{ /* Sentinel */ }
+};
+
+static const struct rvin_info rcar_info_r8a779a0 = {
+	.model = RCAR_GEN3,
+	.use_mc = true,
+	.max_width = 4096,
+	.max_height = 4096,
+	.routes = rcar_info_r8a779a0_routes,
+};
+
 static const struct of_device_id rvin_of_id_table[] = {
 	{
 		.compatible = "renesas,vin-r8a774a1",
@@ -1346,6 +1378,10 @@ static const struct of_device_id rvin_of_id_table[] = {
 		.compatible = "renesas,vin-r8a77995",
 		.data = &rcar_info_r8a77995,
 	},
+	{
+		.compatible = "renesas,vin-r8a779a0",
+		.data = &rcar_info_r8a779a0,
+	},
 	{ /* Sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, rvin_of_id_table);
@@ -1358,9 +1394,17 @@ static const struct soc_device_attribute r8a7795es1[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct soc_device_attribute chip_info[] = {
+	{
+		.soc_id = "r8a779a0",
+		.data = (void *)RCAR_VIN_R8A779A0_FEATURE,
+	},
+	{ /* sentinel */ }
+};
+
 static int rcar_vin_probe(struct platform_device *pdev)
 {
-	const struct soc_device_attribute *attr;
+	const struct soc_device_attribute *attr, *dev_attr;
 	struct rvin_dev *vin;
 	int irq, ret;
 
@@ -1379,6 +1423,10 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	attr = soc_device_match(r8a7795es1);
 	if (attr)
 		vin->info = attr->data;
+
+	dev_attr = soc_device_match(chip_info);
+	if (dev_attr)
+		vin->chip_info = (uintptr_t)dev_attr->data;
 
 	vin->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(vin->base))
