@@ -209,6 +209,7 @@ struct rvin_info {
  * @dev:		(OF) device
  * @base:		device I/O register space remapped to virtual memory
  * @info:		info about VIN instance
+ * @isp:		ISP device
  *
  * @vdev:		V4L2 video device associated with VIN
  * @v4l2_dev:		V4L2 device
@@ -257,6 +258,7 @@ struct rvin_dev {
 	struct device *dev;
 	void __iomem *base;
 	const struct rvin_info *info;
+	struct rcar_isp_device *isp;
 
 	struct video_device vdev;
 	struct v4l2_device v4l2_dev;
