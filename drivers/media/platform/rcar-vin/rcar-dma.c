@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
 
+#include <media/rcar-isp.h>
 #include <media/videobuf2-dma-contig.h>
 
 #include "rcar-vin.h"
@@ -1094,6 +1095,8 @@ static int rvin_capture_start(struct rvin_dev *vin)
 	if (ret)
 		return ret;
 
+	rcar_isp_init(vin->isp, vin->mbus_code);
+
 	rvin_capture_on(vin);
 
 	vin->state = STARTING;
@@ -1444,7 +1447,10 @@ static int rvin_set_stream(struct rvin_dev *vin, int on)
 			return 0;
 
 		media_pipeline_stop(&vin->vdev.entity);
-		return v4l2_subdev_call(sd, video, s_stream, 0);
+		ret = v4l2_subdev_call(sd, video, s_stream, 0);
+		rcar_isp_disable(vin->isp);
+
+		return ret;
 	}
 
 	ret = rvin_mc_validate_format(vin, sd, pad);
@@ -1464,6 +1470,8 @@ static int rvin_set_stream(struct rvin_dev *vin, int on)
 	mutex_unlock(&mdev->graph_mutex);
 	if (ret)
 		return ret;
+
+	rcar_isp_enable(vin->isp);
 
 	ret = v4l2_subdev_call(sd, video, s_stream, 1);
 	if (ret == -ENOIOCTLCMD)
