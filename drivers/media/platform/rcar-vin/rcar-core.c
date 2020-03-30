@@ -24,6 +24,7 @@
 #include <media/v4l2-async.h>
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-mc.h>
+#include <media/rcar-isp.h>
 
 #include "rcar-vin.h"
 
@@ -1407,6 +1408,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	const struct soc_device_attribute *attr, *dev_attr;
 	struct rvin_dev *vin;
 	int irq, ret;
+	struct device_node *isp_node;
 
 	vin = devm_kzalloc(&pdev->dev, sizeof(*vin), GFP_KERNEL);
 	if (!vin)
@@ -1415,6 +1417,20 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	vin->dev = &pdev->dev;
 	vin->info = of_device_get_match_data(&pdev->dev);
 	vin->alpha = 0xff;
+
+	/* ISP (optional) for r8a779a0 */
+	isp_node = of_parse_phandle(pdev->dev.of_node, "renesas,isp", 0);
+	if (isp_node) {
+		vin->isp = rcar_isp_get(isp_node);
+		of_node_put(isp_node);
+		if (IS_ERR(vin->isp)) {
+			dev_dbg(&pdev->dev, "ISP not found (%ld)\n",
+				PTR_ERR(vin->isp));
+			return PTR_ERR(vin->isp);
+		}
+	} else {
+		vin->isp = NULL;
+	}
 
 	/*
 	 * Special care is needed on r8a7795 ES1.x since it
@@ -1508,6 +1524,8 @@ error_dma_unregister:
 static int rcar_vin_remove(struct platform_device *pdev)
 {
 	struct rvin_dev *vin = platform_get_drvdata(pdev);
+
+	rcar_isp_put(vin->isp);
 
 	cancel_delayed_work_sync(&vin->rvin_resume);
 	destroy_workqueue(vin->work_queue);
