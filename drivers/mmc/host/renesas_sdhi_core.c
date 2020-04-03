@@ -270,42 +270,26 @@ static int renesas_sdhi_start_signal_voltage_switch(struct mmc_host *mmc,
 #define SH_MOBILE_SDHI_SCC_TMPPORT_MANUAL_MODE		BIT(7)
 #define CALIB_TABLE_MAX	(SH_MOBILE_SDHI_SCC_TMPPORT_CALIB_CODE_MASK + 1)
 
-static const u32 r8a7795_calib_table[2][CALIB_TABLE_MAX] = {
-	{ 0,  0,  0,  0,  0,  1,  1,  2,  3,  4,  5,  5,  6,  6,  7, 11,
-	 15, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 19, 20, 21, 21 },
-	{ 3,  3,  4,  4,  5,  6,  6,  7,  8,  8,  9,  9, 10, 11, 12, 15,
-	 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 19, 20, 21, 22, 22 }
-};
-
 static const u32 r8a7796_rev1_calib_table[2][CALIB_TABLE_MAX] = {
-	{ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  2,  3,  4,  9,
-	 15, 15, 15, 16, 16, 16, 16, 16, 17, 18, 19, 20, 21, 21, 22, 22 },
-	{ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,
-	  2,  9, 16, 17, 17, 17, 18, 18, 18, 18, 19, 20, 21, 22, 23, 24}
-};
-
-static const u32 r8a7796_rev3_calib_table[2][CALIB_TABLE_MAX] = {
-	{ 0,  0,  0,  0,  2,  3,  4,  4,  5,  6,  7,  7,  8,  9,  9, 10,
-	 11, 12, 13, 15, 16, 17, 17, 18, 19, 19, 20, 21, 21, 22, 23, 23 },
-	{ 1,  2,  2,  3,  4,  4,  5,  6,  6,  7,  8,  9,  9, 10, 11, 12,
-	 13, 14, 15, 16, 17, 17, 18, 19, 20, 20, 21, 22, 22, 23, 24, 24 }
+	{ 3,  3,  3,  3,  3,  3,  3,  4,  4,  5,  6,  7,  8,  9, 10, 15,
+	 16, 16, 16, 16, 16, 16, 17, 18, 18, 19, 20, 21, 22, 23, 24, 25 },
+	{ 5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  5,  6,  7,  8, 11,
+	 12, 17, 18, 18, 18, 18, 18, 18, 18, 19, 20, 21, 22, 23, 25, 25 }
 };
 
 static const u32 r8a77965_calib_table[2][CALIB_TABLE_MAX] = {
-	{ 0,  1,  2,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 15,
-	 16, 17, 18, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29 },
-	{ 0,  1,  2,  2,  2,  3,  4,  5,  6,  7,  9, 10, 11, 12, 13, 15,
-	 16, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 31 }
+	{ 1,  2,  6,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 15, 15, 16,
+	 17, 18, 19, 20, 21, 22, 23, 24, 25, 25, 26, 27, 28, 29, 30, 31 },
+	{ 2,  3,  4,  4,  5,  6,  7,  9, 10, 11, 12, 13, 14, 15, 16, 17,
+	 17, 17, 20, 21, 22, 23, 24, 25, 27, 28, 29, 30, 31, 31, 31, 31 }
 };
 
 static const u32 r8a77990_calib_table[2][CALIB_TABLE_MAX] = {
 	{ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 	  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-	{ 0,  0,  1,  2,  3,  4,  4,  4,  4,  5,  5,  6,  7,  8, 10, 11,
-	 12, 13, 14, 16, 17, 18, 18, 18, 19, 19, 20, 24, 26, 26, 26, 26 }
+	{ 0,  0,  0,  1,  2,  3,  3,  4,  4,  4,  5,  5,  6,  8,  9, 10,
+	 11, 12, 13, 15, 16, 17, 17, 18, 18, 19, 20, 22, 24, 25, 26, 26 }
 };
-
-static u32 custom_calib_table[2][CALIB_TABLE_MAX];
 
 static const struct renesas_sdhi_quirks sdhi_quirks_4tap_nohs400_bit17 = {
 	.hs400_disabled = true,
@@ -329,9 +313,6 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a7795 = {
 	.hs400_manual_correction = true,
 	.hs400_ignore_dat_correction = true,
 	.hs400_bad_tap = BIT(2) | BIT(3) | BIT(6) | BIT(7),
-	.hs400_manual_calib = true,
-	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3,
-	.hs400_calib_table = r8a7795_calib_table[0],
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev1 = {
@@ -348,9 +329,6 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_rev3 = {
 	.hs400_manual_correction = true,
 	.hs400_ignore_dat_correction = true,
 	.hs400_bad_tap = BIT(1) | BIT(3) | BIT(5) | BIT(7),
-	.hs400_manual_calib = true,
-	.hs400_offset = SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3,
-	.hs400_calib_table = r8a7796_rev3_calib_table[0],
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
@@ -1014,8 +992,6 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 	struct renesas_sdhi *priv;
 	struct resource *res;
 	const struct soc_device_attribute *attr;
-	const struct device_node *np = pdev->dev.of_node;
-	u32 value;
 	int irq, ret, i;
 	int port_num_offset = 0;
 
@@ -1132,43 +1108,7 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 	priv->adjust_hs400_offset = 0;
 	priv->adjust_hs400_calib_table = NULL;
 
-	if ((host->mmc->caps2 & MMC_CAP2_HS400) && np &&
-	    !of_property_read_u32(np, "adjust_hs400_offset", &value) &&
-	    !of_property_read_u32_array(np, "adjust_hs400_calibrate",
-					custom_calib_table[0] +
-					port_num_offset,
-					CALIB_TABLE_MAX)) {
-		/* DeviceTree can invalidate SoC attribute for HS400 */
-		switch (value) {
-		case 0:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_0;
-			break;
-		case 1:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_1;
-			break;
-		case 2:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_2;
-			break;
-		case 3:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3;
-			break;
-		default:
-			priv->adjust_hs400_offset =
-				SH_MOBILE_SDHI_SCC_TMPPORT3_OFFSET_3;
-			dev_warn(&host->pdev->dev, "Unknown adjust hs400 offset\n");
-		}
-
-		priv->adjust_hs400_calib_table =
-			custom_calib_table[0] + port_num_offset;
-		host->adjust_hs400_mode_enable =
-			renesas_sdhi_adjust_hs400_mode_enable;
-		host->adjust_hs400_mode_disable =
-			renesas_sdhi_adjust_hs400_mode_disable;
-	} else if (host->mmc->caps2 & MMC_CAP2_HS400) {
+	if (host->mmc->caps2 & MMC_CAP2_HS400) {
 		if (quirks && quirks->hs400_disabled) {
 			host->mmc->caps2 &=
 				~(MMC_CAP2_HS400 | MMC_CAP2_HS400_ES);
@@ -1183,12 +1123,6 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 			host->adjust_hs400_mode_disable =
 				renesas_sdhi_adjust_hs400_mode_disable;
 		}
-	}
-
-	if (np && of_get_property(np, "hs400_auto_calib", NULL)) {
-		/* Force auto calibration */
-		host->adjust_hs400_mode_enable = NULL;
-		host->adjust_hs400_mode_disable = NULL;
 	}
 
 	/* Orginally registers were 16 bit apart, could be 32 or 64 nowadays */
