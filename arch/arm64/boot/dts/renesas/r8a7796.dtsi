@@ -1034,6 +1034,8 @@
 		avs: avs@e60a013c {
 			compatible = "renesas,r8a7796-avs", "renesas,rcar-gen3-avs";
 			reg = <0 0xe60a013c 0 0x04>;
+			clocks = <&cpg CPG_MOD 925>;
+			resets = <&cpg 925>;
 			target_devices = <&a57_0>, <&a57_1>, <&gsx>;
 		};
 
