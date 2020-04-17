@@ -6039,7 +6039,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ PIN_A_NUMBER('P', 8),  0, 2 },	/* DU_DOTCLKIN1 */
 	} },
 	{ PINMUX_DRIVE_REG("DRVCTRL12", 0xe6060330) {
-		{ PIN_A_NUMBER('R', 8),  28, 2 },	/* DU_DOTCLKIN3 */
+		{ PIN_A_NUMBER('R', 8),  24, 2 },	/* DU_DOTCLKIN3 */
 		{ PIN_A_NUMBER('D', 38), 20, 2 },	/* FSCLKST */
 		{ PIN_A_NUMBER('R', 30),  4, 2 },	/* TMS */
 	} },
@@ -6293,8 +6293,8 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[31] = PIN_A_NUMBER('P', 8),	/* DU_DOTCLKIN1 */
 	} },
 	{ PINMUX_BIAS_REG("PUEN3", 0xe606040c, "PUD3", 0xe606044c) {
-		[ 0] = PIN_A_NUMBER('R', 8),	/* DU_DOTCLKIN3 */
-		[ 1] = PIN_NONE,
+		[ 0] = PIN_NONE,
+		[ 1] = PIN_A_NUMBER('R', 8),	/* DU_DOTCLKIN3 */
 		[ 2] = PIN_A_NUMBER('D', 38),	/* FSCLKST */
 		[ 3] = PIN_A_NUMBER('D', 39),	/* EXTALR*/
 		[ 4] = PIN_A_NUMBER('R', 26),	/* TRST# */
