@@ -81,6 +81,13 @@
 		/* Initial value of versaclock out3 */
 		clock-frequency = <33000000>;
 	};
+
+	versaclock5_out4: versaclk-4 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* Initial value of versaclock out4 */
+		clock-frequency = <33000000>;
+	};
 };
 
 &du {
@@ -90,7 +97,7 @@
 		 <&cpg CPG_MOD 721>,
 		 <&versaclock5 1>,
 		 <&versaclock5_out3>,
-		 <&versaclock5 4>,
+		 <&versaclock5_out4>,
 		 <&versaclock5 2>;
 	clock-names = "du.0", "du.1", "du.2", "du.3",
 		      "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
