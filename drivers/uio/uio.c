@@ -652,6 +652,20 @@ out:
 	return retval ? retval : sizeof(s32);
 }
 
+static long uio_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+	struct uio_listener *listener = filep->private_data;
+	struct uio_device *idev = listener->dev;
+
+	if (!idev->info)
+		return -EIO;
+
+	if (!idev->info->ioctl)
+		return -ENOTTY;
+
+	return idev->info->ioctl(idev->info, cmd, arg);
+}
+
 static int uio_find_mem_index(struct vm_area_struct *vma)
 {
 	struct uio_device *idev = vma->vm_private_data;
@@ -821,6 +835,7 @@ static const struct file_operations uio_fops = {
 	.write		= uio_write,
 	.mmap		= uio_mmap,
 	.poll		= uio_poll,
+	.unlocked_ioctl	= uio_ioctl,
 	.fasync		= uio_fasync,
 	.llseek		= noop_llseek,
 };
