@@ -5,6 +5,7 @@
  * Userspace I/O platform driver with generic IRQ handling code.
  *
  * Copyright (C) 2008 Magnus Damm
+ * Copyright (C) 2020 by Renesas Electronics Corporation
  *
  * Based on uio_pdrv.c by Uwe Kleine-Koenig,
  * Copyright (C) 2008 by Digi International Inc.
@@ -19,12 +20,16 @@
 #include <linux/interrupt.h>
 #include <linux/stringify.h>
 #include <linux/pm_runtime.h>
+#include <linux/clk.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/irq.h>
 
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
+#include <linux/uaccess.h>
+#include <uapi/linux/renesas_uioctl.h>
 
 #define DRIVER_NAME "uio_pdrv_genirq"
 
@@ -33,19 +38,79 @@ struct uio_pdrv_genirq_platdata {
 	spinlock_t lock;
 	unsigned long flags;
 	struct platform_device *pdev;
+	struct clk *clk;
+	struct reset_control *rst;
+	int pwr_cnt;
+	int clk_cnt;
 };
+
+static int local_pm_runtime_get_sync(struct uio_pdrv_genirq_platdata *priv);
+static int local_pm_runtime_put_sync(struct uio_pdrv_genirq_platdata *priv);
+static int local_clk_enable(struct uio_pdrv_genirq_platdata *priv);
+static void local_clk_disable(struct uio_pdrv_genirq_platdata *priv);
+static void priv_set_pwr(struct uio_info *info, int value);
+static int priv_get_pwr(struct uio_info *info);
+static void priv_set_clk(struct uio_info *info, int value);
+static int priv_get_clk(struct uio_info *info);
+static void priv_set_rst(struct uio_info *info, int value);
+static int priv_get_rst(struct uio_info *info);
 
 /* Bits in uio_pdrv_genirq_platdata.flags */
 enum {
 	UIO_IRQ_DISABLED = 0,
 };
 
+static int local_pm_runtime_get_sync(struct uio_pdrv_genirq_platdata *priv)
+{
+	if (priv->pwr_cnt == 0) {
+		priv->pwr_cnt++;
+		priv->clk_cnt++;
+		return pm_runtime_get_sync(&priv->pdev->dev);
+	}
+
+	return 0;
+}
+
+static int local_pm_runtime_put_sync(struct uio_pdrv_genirq_platdata *priv)
+{
+	if (priv->pwr_cnt > 0) {
+		priv->pwr_cnt--;
+		priv->clk_cnt--;
+		if ((priv->clk != NULL) && (priv->clk_cnt < 0)) {
+			clk_enable(priv->clk);
+			priv->clk_cnt = 0;
+		}
+
+		return pm_runtime_put_sync(&priv->pdev->dev);
+	}
+
+	return 0;
+}
+
+static int local_clk_enable(struct uio_pdrv_genirq_platdata *priv)
+{
+	if (priv->clk_cnt == 0) {
+		clk_enable(priv->clk);
+		priv->clk_cnt++;
+	}
+
+	return 0;
+}
+
+static void local_clk_disable(struct uio_pdrv_genirq_platdata *priv)
+{
+	if (priv->clk_cnt > 0) {
+		clk_disable(priv->clk);
+		priv->clk_cnt--;
+	}
+}
+
 static int uio_pdrv_genirq_open(struct uio_info *info, struct inode *inode)
 {
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
 	/* Wait until the Runtime PM code has woken up the device */
-	pm_runtime_get_sync(&priv->pdev->dev);
+	local_pm_runtime_get_sync(priv);
 	return 0;
 }
 
@@ -54,7 +119,7 @@ static int uio_pdrv_genirq_release(struct uio_info *info, struct inode *inode)
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
 	/* Tell the Runtime PM code that the device has become idle */
-	pm_runtime_put_sync(&priv->pdev->dev);
+	local_pm_runtime_put_sync(priv);
 	return 0;
 }
 
@@ -72,6 +137,144 @@ static irqreturn_t uio_pdrv_genirq_handler(int irq, struct uio_info *dev_info)
 	spin_unlock(&priv->lock);
 
 	return IRQ_HANDLED;
+}
+
+/**
+ * Changes the drivers power state
+ * if value == 0, calls pm_runtime_put_sync
+ * if value == 1, calls pm_runtime_get_sync
+ */
+static void priv_set_pwr(struct uio_info *info, int value)
+{
+	struct uio_pdrv_genirq_platdata *priv = info->priv;
+
+	if (((value == 0) && priv->pwr_cnt > 0) || ((value != 0)
+		    && priv->pwr_cnt == 0)) {
+		if (value == 0)
+			local_pm_runtime_put_sync(priv);
+		else
+			local_pm_runtime_get_sync(priv);
+	}
+
+	dev_dbg(&priv->pdev->dev, "Set power state value=0x%x pwr_cnt=%d, clk_cnt=%d\n",
+		value, priv->pwr_cnt, priv->clk_cnt);
+}
+
+/**
+ * Gets the power status of the driver, priv->pwr_cnt is returned
+ */
+static int priv_get_pwr(struct uio_info *info)
+{
+	struct uio_pdrv_genirq_platdata *priv = info->priv;
+
+	dev_dbg(&priv->pdev->dev, "Get power state pwr_cnt=%d, clk_cnt=%d\n",
+		priv->pwr_cnt, priv->clk_cnt);
+
+	return priv->pwr_cnt;
+}
+
+/**
+ * Changes the drivers clock state
+ * if value == 0, calls local_clk_disable
+ * if value == 1, calls local_clk_enable
+ */
+static void priv_set_clk(struct uio_info *info, int value)
+{
+	struct uio_pdrv_genirq_platdata *priv = info->priv;
+
+	if (value == 0)
+		local_clk_disable(priv);
+	else
+		local_clk_enable(priv);
+
+	dev_dbg(&priv->pdev->dev, "Set clock state - value = 0x%x clk_cnt=%d\n",
+		value, priv->clk_cnt);
+}
+
+/**
+ * Gets the clock status of the driver
+ * Returns priv->clk_cnt
+ */
+static int priv_get_clk(struct uio_info *info)
+{
+	struct uio_pdrv_genirq_platdata *priv = info->priv;
+
+	dev_dbg(&priv->pdev->dev, "Get clock state - clk_cnt=%d\n",
+		priv->clk_cnt);
+
+	return priv->clk_cnt;
+}
+
+static void priv_set_rst(struct uio_info *info, int value)
+{
+	struct uio_pdrv_genirq_platdata *priv = info->priv;
+	int status;
+
+	status = reset_control_status(priv->rst);
+
+	switch (value) {
+	case 0:
+		if (status > 0)
+			reset_control_deassert(priv->rst);
+		break;
+	case 1:
+		reset_control_reset(priv->rst);
+		break;
+	default:
+		if (status == 0)
+			reset_control_assert(priv->rst);
+		break;
+	}
+
+	dev_dbg(&priv->pdev->dev, "Set reset state - value = 0x%x\n", value);
+}
+
+static int priv_get_rst(struct uio_info *info)
+{
+	struct uio_pdrv_genirq_platdata *priv = info->priv;
+	int status;
+
+	status = reset_control_status(priv->rst);
+	dev_dbg(&priv->pdev->dev, "Get reset state 0x%x\n", status);
+
+	return status;
+}
+
+static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
+				 unsigned long arg)
+{
+	int value;
+
+	switch (cmd) {
+	case UIO_PDRV_SET_PWR:
+		copy_from_user(&value, (int *)arg, sizeof(value));
+		priv_set_pwr(info, value);
+		break;
+	case UIO_PDRV_GET_PWR:
+		value = priv_get_pwr(info);
+		copy_to_user((int *)arg, &value, sizeof(value));
+		arg = value;
+		break;
+	case UIO_PDRV_SET_CLK:
+		copy_from_user(&value, (int *)arg, sizeof(value));
+		priv_set_clk(info, value);
+		break;
+	case UIO_PDRV_GET_CLK:
+		value = priv_get_clk(info);
+		copy_to_user((int *)arg, &value, sizeof(value));
+		arg = value;
+		break;
+	case UIO_PDRV_SET_RESET:
+		copy_from_user(&value, (int *)arg, sizeof(value));
+		priv_set_rst(info, value);
+		break;
+	case UIO_PDRV_GET_RESET:
+		value = priv_get_rst(info);
+		copy_to_user((int *)arg, &value, sizeof(value));
+		break;
+	}
+
+	return 0;
 }
 
 static int uio_pdrv_genirq_irqcontrol(struct uio_info *dev_info, s32 irq_on)
@@ -159,6 +362,13 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 	priv->flags = 0; /* interrupt is enabled to begin with */
 	priv->pdev = pdev;
 
+	priv->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(priv->clk))
+		priv->clk = NULL;
+
+	priv->clk_cnt = 0;
+	priv->pwr_cnt = 0;
+
 	if (!uioinfo->irq) {
 		ret = platform_get_irq_optional(pdev, 0);
 		uioinfo->irq = ret;
@@ -231,6 +441,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 	uioinfo->irqcontrol = uio_pdrv_genirq_irqcontrol;
 	uioinfo->open = uio_pdrv_genirq_open;
 	uioinfo->release = uio_pdrv_genirq_release;
+	uioinfo->ioctl = uio_pdrv_genirq_ioctl;
 	uioinfo->priv = priv;
 
 	/* Enable Runtime PM for this device:
