@@ -100,6 +100,7 @@ struct uio_device {
  * @mmap:		mmap operation for this uio device
  * @open:		open operation for this uio device
  * @release:		release operation for this uio device
+ * @ioctl:		ioctl handler
  * @irqcontrol:		disable/enable irqs when 0/1 is written to /dev/uioX
  */
 struct uio_info {
@@ -116,6 +117,8 @@ struct uio_info {
 	int (*open)(struct uio_info *info, struct inode *inode);
 	int (*release)(struct uio_info *info, struct inode *inode);
 	int (*irqcontrol)(struct uio_info *info, s32 irq_on);
+	int (*ioctl)(struct uio_info *info, unsigned int cmd,
+		     unsigned long arg);
 };
 
 extern int __must_check
