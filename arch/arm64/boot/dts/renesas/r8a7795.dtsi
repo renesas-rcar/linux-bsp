@@ -1403,8 +1403,6 @@
 			compatible = "arm,cryptocell-630p-ree";
 			interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
 			reg = <0x0 0xe6601000 0 0x1000>;
-			clocks = <&cpg CPG_MOD 229>;
-			resets = <&cpg 229>;
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 		};
 
