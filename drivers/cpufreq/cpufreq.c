@@ -2517,6 +2517,9 @@ static int cpufreq_boost_set_sw(int state)
 		ret = freq_qos_update_request(policy->max_freq_req, policy->max);
 		if (ret < 0)
 			break;
+		else
+			/* If there is no error, return 0 as success. */
+			ret = 0;
 	}
 
 	return ret;
