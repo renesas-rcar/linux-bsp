@@ -2,7 +2,7 @@
 /*
  * Device Tree Source for common parts of Salvator-X board variants
  *
- * Copyright (C) 2015-2016 Renesas Electronics Corp.
+ * Copyright (C) 2015-2017 Renesas Electronics Corp.
  */
 
 /*
@@ -51,6 +51,16 @@
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <12288000>;
+	};
+
+	avb-mch@ec5a0100 {
+		compatible = "renesas,avb-mch-gen3";
+		reg =	<0 0xec5a0100 0 0x100>;  /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
+		resets = <&cpg 922>;
 	};
 
 	backlight: backlight {
@@ -166,6 +176,35 @@
 		};
 	};
 
+	lvds {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+		enable-gpios = <&gpio6 7 GPIO_ACTIVE_HIGH>;
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds_in: endpoint {
+				remote-endpoint = <&lvds0_out>;
+			};
+		};
+	};
+
 	reg_1p8v: regulator0 {
 		compatible = "regulator-fixed";
 		regulator-name = "fixed-1.8V";
@@ -262,6 +301,8 @@
 
 	vga {
 		compatible = "vga-connector";
+		no-use-ddc;
+		max-pixelclock = <100000>;
 
 		port {
 			vga_in: endpoint {
@@ -316,6 +357,10 @@
 		#clock-cells = <0>;
 		clock-frequency = <25000000>;
 	};
+};
+
+&a57_0 {
+	cpu-supply = <&dvfs>;
 };
 
 &audio_clk_a {
@@ -567,6 +612,10 @@
 	};
 };
 
+&lvds0 {
+	status = "okay";
+};
+
 &ohci0 {
 	dr_mode = "otg";
 	status = "okay";
@@ -638,6 +687,11 @@
 	pwm1_pins: pwm1 {
 		groups = "pwm1_a";
 		function = "pwm1";
+	};
+
+	pwm2_pins: pwm2 {
+		groups = "pwm2_a";
+		function = "pwm2";
 	};
 
 	scif1_pins: scif1 {
@@ -726,6 +780,13 @@
 
 &pwm1 {
 	pinctrl-0 = <&pwm1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&pwm2 {
+	pinctrl-0 = <&pwm2_pins>;
 	pinctrl-names = "default";
 
 	status = "okay";
@@ -828,11 +889,15 @@
 	pinctrl-1 = <&sdhi2_pins>;
 	pinctrl-names = "default", "state_uhs";
 
+	iommus = <&ipmmu_ds1 34>;
+
 	vmmc-supply = <&reg_3p3v>;
 	vqmmc-supply = <&reg_1p8v>;
 	bus-width = <8>;
 	mmc-hs200-1_8v;
 	mmc-hs400-1_8v;
+	no-sd;
+	no-sdio;
 	non-removable;
 	fixed-emmc-driver-type = <1>;
 	status = "okay";

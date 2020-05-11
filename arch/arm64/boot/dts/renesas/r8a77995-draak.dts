@@ -35,8 +35,112 @@
 		stdout-path = "serial0:115200n8";
 	};
 
-	composite-in {
-		compatible = "composite-video-connector";
+
+	lvds0-decoder {
+		compatible = "thine,thc63lvd1024";
+		vcc-supply = <&reg_3p3v>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in0: endpoint {
+					remote-endpoint = <&lvds0_out>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out0: endpoint {
+					remote-endpoint = <&adv7511_in>;
+				};
+			};
+		};
+	};
+
+	lvds1-decoder {
+		compatible = "thine,thc63lvd1024";
+		vcc-supply = <&reg_3p3v>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in1: endpoint {
+					remote-endpoint = <&lvds1_out>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out1: endpoint {
+				};
+			};
+		};
+	};
+
+	lvds0 {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+		enable-gpios = <&gpio2 31 GPIO_ACTIVE_HIGH>;
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds0_panel_in: endpoint {
+			};
+		};
+	};
+
+	lvds1 {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+		enable-gpios = <&gpio4 0 GPIO_ACTIVE_HIGH>;
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds1_panel_in: endpoint {
+			};
+		};
+	};
+
+        composite-in {
+                compatible = "composite-video-connector";
 
 		port {
 			composite_con_in: endpoint {
@@ -48,6 +152,10 @@
 	hdmi-in {
 		compatible = "hdmi-connector";
 		type = "a";
+
+		width = <800>;
+		height = <600>;
+		max-pixelclock = <50000>;
 
 		port {
 			hdmi_con_in: endpoint {
@@ -63,30 +171,6 @@
 		port {
 			hdmi_con_out: endpoint {
 				remote-endpoint = <&adv7511_out>;
-			};
-		};
-	};
-
-	lvds-decoder {
-		compatible = "thine,thc63lvd1024";
-		vcc-supply = <&reg_3p3v>;
-
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-				thc63lvd1024_in: endpoint {
-					remote-endpoint = <&lvds0_out>;
-				};
-			};
-
-			port@2 {
-				reg = <2>;
-				thc63lvd1024_out: endpoint {
-					remote-endpoint = <&adv7511_in>;
-				};
 			};
 		};
 	};
@@ -126,6 +210,8 @@
 
 	vga {
 		compatible = "vga-connector";
+
+		no-use-ddc;
 
 		port {
 			vga_in: endpoint {
@@ -168,6 +254,7 @@
 	pinctrl-names = "default";
 	renesas,no-ether-link;
 	phy-handle = <&phy0>;
+	phy-mode = "rgmii";
 	status = "okay";
 
 	phy0: ethernet-phy@0 {
@@ -294,7 +381,7 @@
 			port@0 {
 				reg = <0>;
 				adv7511_in: endpoint {
-					remote-endpoint = <&thc63lvd1024_out>;
+					remote-endpoint = <&thc63lvd1024_out0>;
 				};
 			};
 
@@ -368,7 +455,7 @@
 	ports {
 		port@1 {
 			lvds0_out: endpoint {
-				remote-endpoint = <&thc63lvd1024_in>;
+				remote-endpoint = <&thc63lvd1024_in0>;
 			};
 		};
 	};
@@ -383,9 +470,15 @@
 	status = "okay";
 
 	clocks = <&cpg CPG_MOD 727>,
-		 <&x12_clk>,
 		 <&extal_clk>;
-	clock-names = "fck", "dclkin.0", "extal";
+	clock-names = "fck", "extal";
+	ports {
+		port@1 {
+			lvds1_out: endpoint {
+				remote-endpoint = <&thc63lvd1024_in1>;
+			};
+		};
+	};
 };
 
 &ohci0 {
@@ -525,4 +618,8 @@
 			};
 		};
 	};
+};
+
+&vspbs {
+	status = "okay";
 };
