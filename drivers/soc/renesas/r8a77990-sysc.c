@@ -5,6 +5,7 @@
  * Copyright (C) 2018 Renesas Electronics Corp.
  */
 
+#include <linux/bitops.h>
 #include <linux/bug.h>
 #include <linux/kernel.h>
 #include <linux/sys_soc.h>
@@ -46,8 +47,13 @@ static int __init r8a77990_sysc_init(void)
 	return 0;
 }
 
+static struct rcar_sysc_extra_regs r8a77990_extra_regs = {
+	.sysc_extmask_offs = 0x2F8, .sysc_extmask_msks = BIT(0)
+};
+
 const struct rcar_sysc_info r8a77990_sysc_info __initconst = {
 	.init = r8a77990_sysc_init,
 	.areas = r8a77990_areas,
 	.num_areas = ARRAY_SIZE(r8a77990_areas),
+	.extra_regs = &r8a77990_extra_regs,
 };

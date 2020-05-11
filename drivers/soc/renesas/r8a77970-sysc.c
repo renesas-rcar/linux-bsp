@@ -5,6 +5,7 @@
  * Copyright (C) 2017 Cogent Embedded Inc.
  */
 
+#include <linux/bitops.h>
 #include <linux/bug.h>
 #include <linux/kernel.h>
 
@@ -29,7 +30,12 @@ static const struct rcar_sysc_area r8a77970_areas[] __initconst = {
 	{ "a2sc1",	0x400, 5, R8A77970_PD_A2SC1,	R8A77970_PD_A3IR },
 };
 
+static struct rcar_sysc_extra_regs r8a77970_extra_regs = {
+	.sysc_extmask_offs = 0x1B0, .sysc_extmask_msks = BIT(0)
+};
+
 const struct rcar_sysc_info r8a77970_sysc_info __initconst = {
 	.areas = r8a77970_areas,
 	.num_areas = ARRAY_SIZE(r8a77970_areas),
+	.extra_regs = &r8a77970_extra_regs,
 };
