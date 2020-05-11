@@ -2,7 +2,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2018 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -10,6 +10,8 @@
  * Based on the soc-camera rcar_vin driver
  */
 
+#include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -1278,9 +1280,17 @@ static const struct soc_device_attribute r8a7795es1[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct soc_device_attribute chip_info[] = {
+	{
+		.soc_id = "r8a77990",
+		.data = (void *)RCAR_VIN_DES1_RESERVED,
+	},
+	{ /* sentinel */ }
+};
+
 static int rcar_vin_probe(struct platform_device *pdev)
 {
-	const struct soc_device_attribute *attr;
+	const struct soc_device_attribute *attr, *dev_attr;
 	struct rvin_dev *vin;
 	struct resource *mem;
 	int irq, ret;
@@ -1300,6 +1310,10 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	attr = soc_device_match(r8a7795es1);
 	if (attr)
 		vin->info = attr->data;
+
+	dev_attr = soc_device_match(chip_info);
+	if (dev_attr)
+		vin->chip_info = (uintptr_t)dev_attr->data;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (mem == NULL)
@@ -1332,7 +1346,32 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
+	vin->work_queue = create_singlethread_workqueue(dev_name(vin->dev));
+	if (!vin->work_queue) {
+		ret = -ENOMEM;
+		goto error;
+	}
+	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
+
+	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->rstc);
+		goto error;
+	}
+
+	vin->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->clk)) {
+		dev_err(&pdev->dev, "failed to get clock%s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->clk);
+		goto error;
+	}
+
 	return 0;
+error:
+	pm_runtime_disable(&pdev->dev);
 
 error_group_unregister:
 	v4l2_ctrl_handler_free(&vin->ctrl_handler);
@@ -1381,9 +1420,52 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_vin_suspend(struct device *dev)
+{
+	struct rvin_dev *vin = dev_get_drvdata(dev);
+
+	if (vin->state == STOPPED)
+		return 0;
+
+	rvin_suspend_stop_streaming(vin);
+
+	return 0;
+}
+
+static int rcar_vin_resume(struct device *dev)
+{
+	struct rvin_dev *vin = dev_get_drvdata(dev);
+	struct rvin_dev *master;
+
+	if (vin->state == STOPPED)
+		return 0;
+
+	if (vin->info->use_mc) {
+		pm_runtime_force_resume(vin->dev);
+		pm_runtime_get_sync(vin->dev);
+
+		master = vin->group->vin[rvin_group_id_to_master(vin->id)];
+		rvin_set_channel_routing(master, master->chsel);
+	}
+
+	queue_delayed_work_on(0, vin->work_queue, &vin->rvin_resume,
+			      msecs_to_jiffies(CONNECTION_TIME));
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_vin_pm_ops,
+			rcar_vin_suspend, rcar_vin_resume);
+#define DEV_PM_OPS (&rcar_vin_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_vin_driver = {
 	.driver = {
 		.name = "rcar-vin",
+		.pm = DEV_PM_OPS,
 		.of_match_table = rvin_of_id_table,
 	},
 	.probe = rcar_vin_probe,
