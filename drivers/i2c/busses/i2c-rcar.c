@@ -140,6 +140,7 @@ struct rcar_i2c_priv {
 
 	struct reset_control *rstc;
 	int irq;
+	int suspended;
 };
 
 #define rcar_i2c_priv_to_dev(p)		((p)->adap.dev.parent)
@@ -207,13 +208,9 @@ static struct i2c_bus_recovery_info rcar_i2c_bri = {
 };
 static void rcar_i2c_init(struct rcar_i2c_priv *priv)
 {
-	/* reset master mode */
-	rcar_i2c_write(priv, ICMIER, 0);
-	rcar_i2c_write(priv, ICMCR, MDBS);
-	rcar_i2c_write(priv, ICMSR, 0);
 	/* start clock */
 	rcar_i2c_write(priv, ICCCR, priv->icccr);
-
+	/* 1st bit setup cycle */
 	if (priv->devtype == I2C_RCAR_GEN3)
 		rcar_i2c_write(priv, ICFBSCR, TCYC17);
 
@@ -334,6 +331,7 @@ static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 		priv->flags |= ID_LAST_MSG;
 
 	rcar_i2c_write(priv, ICMAR, i2c_8bit_addr_from_msg(priv->msg));
+	rcar_i2c_write(priv, ICMIER, read ? RCAR_IRQ_RECV : RCAR_IRQ_SEND);
 	/*
 	 * We don't have a test case but the HW engineers say that the write order
 	 * of ICMSR and ICMCR depends on whether we issue START or REP_START. Since
@@ -349,7 +347,6 @@ static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 			rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
 		rcar_i2c_write(priv, ICMSR, 0);
 	}
-	rcar_i2c_write(priv, ICMIER, read ? RCAR_IRQ_RECV : RCAR_IRQ_SEND);
 }
 
 static void rcar_i2c_next_msg(struct rcar_i2c_priv *priv)
@@ -473,6 +470,18 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 	return true;
 }
 
+static int rcar_i2c_is_pio(struct rcar_i2c_priv *priv)
+{
+	struct i2c_msg *msg = priv->msg;
+	bool read = msg->flags & I2C_M_RD;
+	struct dma_chan *chan = read ? priv->dma_rx : priv->dma_tx;
+
+	/* Do various checks to see if DMA is feasible at all */
+	return (IS_ERR(chan) || msg->len < 8
+		|| !(msg->flags & I2C_M_DMA_SAFE) ||
+		(read && priv->flags & ID_P_NO_RXDMA));
+}
+
 static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
 {
 	struct i2c_msg *msg = priv->msg;
@@ -486,15 +495,24 @@ static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
 		return;
 
 	if (priv->pos < msg->len) {
-		/*
-		 * Prepare next data to ICRXTX register.
-		 * This data will go to _SHIFT_ register.
-		 *
-		 *    *
-		 * [ICRXTX] -> [SHIFT] -> [I2C bus]
-		 */
-		rcar_i2c_write(priv, ICRXTX, msg->buf[priv->pos]);
-		priv->pos++;
+		if (priv->pos == 0 || rcar_i2c_is_pio(priv)) {
+			/*
+			 * Prepare next data to ICRXTX register.
+			 * This data will go to _SHIFT_ register.
+			 *
+			 *    *
+			 * [ICRXTX] -> [SHIFT] -> [I2C bus]
+			 */
+			rcar_i2c_write(priv, ICRXTX, msg->buf[priv->pos]);
+			priv->pos++;
+		} else {
+			/*
+			 * Try to use DMA to transmit the rest of the data if
+			 * address transfer pashe just finished.
+			 */
+			rcar_i2c_dma(priv);
+			return;
+		}
 	} else {
 		/*
 		 * The last data was pushed to ICRXTX on _PREV_ empty irq.
@@ -780,6 +798,9 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 	int i, ret;
 	long time_left;
 
+	if (priv->suspended)
+		return -EBUSY;
+
 	pm_runtime_get_sync(dev);
 
 	/* Check bus state before init otherwise bus busy info will be lost */
@@ -1030,16 +1051,31 @@ static int rcar_i2c_suspend(struct device *dev)
 {
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
 
+	priv->suspended = 1;
 	i2c_mark_adapter_suspended(&priv->adap);
 	return 0;
 }
 
 static int rcar_i2c_resume(struct device *dev)
 {
+	int ret = 0;
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
+	struct i2c_timings i2c_t;
+
+	i2c_parse_fw_timings(dev, &i2c_t, false);
+	pm_runtime_get_sync(dev);
+	ret = rcar_i2c_clock_calculate(priv, &i2c_t);
+	if (ret < 0)
+		dev_err(dev, "Could not calculate clock\n");
+
+	rcar_i2c_init(priv);
+	pm_runtime_put(dev);
+
+	priv->suspended = 0;
 
 	i2c_mark_adapter_resumed(&priv->adap);
-	return 0;
+
+	return ret;
 }
 
 static const struct dev_pm_ops rcar_i2c_pm_ops = {
