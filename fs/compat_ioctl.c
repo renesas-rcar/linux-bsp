@@ -72,6 +72,8 @@
 #include <asm/fbio.h>
 #endif
 
+#include <linux/renesas_uioctl.h>
+
 #define convert_in_user(srcptr, dstptr)			\
 ({							\
 	typeof(*srcptr) val;				\
@@ -915,6 +917,12 @@ IGNORE_IOCTL(FBIOGETCMAP32)
 IGNORE_IOCTL(FBIOSCURSOR32)
 IGNORE_IOCTL(FBIOGCURSOR32)
 #endif
+COMPATIBLE_IOCTL(UIO_PDRV_SET_PWR)
+COMPATIBLE_IOCTL(UIO_PDRV_GET_PWR)
+COMPATIBLE_IOCTL(UIO_PDRV_SET_CLK)
+COMPATIBLE_IOCTL(UIO_PDRV_GET_CLK)
+COMPATIBLE_IOCTL(UIO_PDRV_SET_RESET)
+COMPATIBLE_IOCTL(UIO_PDRV_GET_RESET)
 };
 
 /*
