@@ -247,30 +247,36 @@ static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
 
 	switch (cmd) {
 	case UIO_PDRV_SET_PWR:
-		copy_from_user(&value, (int *)arg, sizeof(value));
+		if (copy_from_user(&value, (int __user *)arg, sizeof(value)))
+			return -EFAULT;
 		priv_set_pwr(info, value);
 		break;
 	case UIO_PDRV_GET_PWR:
 		value = priv_get_pwr(info);
-		copy_to_user((int *)arg, &value, sizeof(value));
+		if (copy_to_user((int __user *)arg, &value, sizeof(value)))
+			return -EFAULT;
 		arg = value;
 		break;
 	case UIO_PDRV_SET_CLK:
-		copy_from_user(&value, (int *)arg, sizeof(value));
+		if (copy_from_user(&value, (int __user *)arg, sizeof(value)))
+			return -EFAULT;
 		priv_set_clk(info, value);
 		break;
 	case UIO_PDRV_GET_CLK:
 		value = priv_get_clk(info);
-		copy_to_user((int *)arg, &value, sizeof(value));
+		if (copy_to_user((int __user *)arg, &value, sizeof(value)))
+			return -EFAULT;
 		arg = value;
 		break;
 	case UIO_PDRV_SET_RESET:
-		copy_from_user(&value, (int *)arg, sizeof(value));
+		if (copy_from_user(&value, (int __user *)arg, sizeof(value)))
+			return -EFAULT;
 		priv_set_rst(info, value);
 		break;
 	case UIO_PDRV_GET_RESET:
 		value = priv_get_rst(info);
-		copy_to_user((int *)arg, &value, sizeof(value));
+		if (copy_to_user((int __user *)arg, &value, sizeof(value)))
+			return -EFAULT;
 		break;
 	}
 
