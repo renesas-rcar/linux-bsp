@@ -27,6 +27,7 @@ Required Properties:
     - "renesas,ipmmu-r8a77980" for the R8A77980 (R-Car V3H) IPMMU.
     - "renesas,ipmmu-r8a77990" for the R8A77990 (R-Car E3) IPMMU.
     - "renesas,ipmmu-r8a77995" for the R8A77995 (R-Car D3) IPMMU.
+    - "renesas,ipmmu-r8a779a0" for the R8A779A0 (R-Car V3U) IPMMU.
     - "renesas,ipmmu-vmsa" for generic R-Car Gen2 or RZ/G1 VMSA-compatible
 			   IPMMU.
 
