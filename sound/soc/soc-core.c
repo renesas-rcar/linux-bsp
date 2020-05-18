@@ -1007,7 +1007,8 @@ static int soc_probe_component(struct snd_soc_card *card,
 		return 0;
 
 	if (component->card) {
-		if (component->card != card) {
+		if (component->card != card &&
+		    component->registered_as_component) {
 			dev_err(component->dev,
 				"Trying to bind component to card \"%s\" but is already bound to card \"%s\"\n",
 				card->name, component->card->name);
@@ -2855,6 +2856,9 @@ int snd_soc_add_component(struct device *dev,
 	if (ret)
 		goto err_free;
 
+	if (num_dai == 1)
+		component->registered_as_component = true;
+
 	if (component_driver->endianness) {
 		for (i = 0; i < num_dai; i++) {
 			convert_endianness_formats(&dai_drv[i].playback);
@@ -2909,7 +2913,7 @@ static int __snd_soc_unregister_component(struct device *dev)
 
 	mutex_lock(&client_mutex);
 	for_each_component(component) {
-		if (dev != component->dev)
+		if (dev != component->dev || !component->registered_as_component)
 			continue;
 
 		snd_soc_tplg_component_remove(component,
