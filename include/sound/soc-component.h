@@ -114,6 +114,7 @@ struct snd_soc_component {
 
 	unsigned int active;
 
+	unsigned int registered_as_component:1;
 	unsigned int suspended:1; /* is in suspend PM state */
 
 	struct list_head list;
