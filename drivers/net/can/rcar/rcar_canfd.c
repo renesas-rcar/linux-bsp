@@ -1829,7 +1829,9 @@ static SIMPLE_DEV_PM_OPS(rcar_canfd_pm_ops, rcar_canfd_suspend,
 			 rcar_canfd_resume);
 
 static const struct of_device_id rcar_canfd_of_table[] = {
+	{ .compatible = "renesas,r8a779a0-canfd" },
 	{ .compatible = "renesas,rcar-gen3-canfd" },
+	{ .compatible = "renesas,rcar-gen4-canfd" },
 	{ }
 };
 
