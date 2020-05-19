@@ -28,8 +28,8 @@
 
 struct rcar_sysc_area {
 	const char *name;
-	u16 chan_offs;		/* Offset of PWRSR register for this area */
-	u8 chan_bit;		/* Bit in PWR* (except for PWRUP in PWRSR) */
+	u16 chan_offs;		/* Offset of PWRSR(Gen3)/PDRSR(V3U) register for this area */
+	u8 chan_bit;		/* Bit in PWR*(Gen3)/PDR*(V3U) (except for PWRUP in PWRSR) */
 	u8 isr_bit;		/* Bit in SYSCI*R */
 	int parent;		/* -1 if none */
 	unsigned int flags;	/* See PD_* */
@@ -71,7 +71,7 @@ extern const struct rcar_sysc_info r8a77970_sysc_info;
 extern const struct rcar_sysc_info r8a77980_sysc_info;
 extern const struct rcar_sysc_info r8a77990_sysc_info;
 extern const struct rcar_sysc_info r8a77995_sysc_info;
-
+extern const struct rcar_sysc_info r8a779a0_sysc_info;
 
     /*
      * Helpers for fixing up power area tables depending on SoC revision
