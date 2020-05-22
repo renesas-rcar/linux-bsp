@@ -879,6 +879,9 @@ config SND_SOC_PCM3168A_SPI
 	select SND_SOC_PCM3168A
 	select REGMAP_SPI
 
+config SND_SOC_SI468X
+	tristate "Dummy sound driver for Si468x radio"
+
 config SND_SOC_PCM5102A
 	tristate
 
