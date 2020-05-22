@@ -18,6 +18,8 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/slab.h>
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
 
 /* Change the default opp_table pattern in device tree.
  * Set opp_pattern_num is default.
@@ -77,6 +79,7 @@ static const struct of_device_id rcar_avs_matches[] = {
 
 static int __init rcar_avs_init(void)
 {
+	struct clk *clk;
 	u32 avs_val, volcond_val;
 	struct device_node *np;
 	void __iomem *advadjp;
@@ -89,6 +92,13 @@ static int __init rcar_avs_init(void)
 		return -ENODEV;
 	}
 
+	clk = of_clk_get(np, 0);
+
+	if (IS_ERR(clk)) {
+		pr_err("avs could not get clk\n");
+		return PTR_ERR(clk);
+	}
+
 	advadjp = of_iomap(np, 0); /* ADVADJP register from dts */
 	if (!advadjp) {
 		pr_warn("%s: Cannot map regs\n", np->full_name);
@@ -98,8 +108,10 @@ static int __init rcar_avs_init(void)
 	/* Get and check avs value */
 	avs_val = 0; /* default avs table value */
 
+	clk_prepare_enable(clk);
 	volcond_val = ioread32(advadjp);
 	volcond_val &= VOLCOND_MASK;
+	clk_disable_unprepare(clk);
 
 	iounmap(advadjp);
 
