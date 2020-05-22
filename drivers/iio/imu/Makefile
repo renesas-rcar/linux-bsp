@@ -13,6 +13,8 @@ adis_lib-$(CONFIG_IIO_ADIS_LIB_BUFFER) += adis_trigger.o
 adis_lib-$(CONFIG_IIO_ADIS_LIB_BUFFER) += adis_buffer.o
 obj-$(CONFIG_IIO_ADIS_LIB) += adis_lib.o
 
+obj-$(CONFIG_LSM9DS0) += lsm9ds0.o
+
 obj-y += bmi160/
 obj-y += inv_mpu6050/
 
