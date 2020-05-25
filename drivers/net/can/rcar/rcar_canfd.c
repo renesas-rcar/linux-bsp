@@ -464,7 +464,7 @@
 #define RCANFD_FIFO_DEPTH		8	/* Tx FIFO depth */
 #define RCANFD_NAPI_WEIGHT		8	/* Rx poll quota */
 
-#define RCANFD_NUM_CHANNELS		2	/* Two channels max */
+#define RCANFD_NUM_CHANNELS		8	/* 8 channels max */
 #define RCANFD_CHANNELS_MASK		BIT((RCANFD_NUM_CHANNELS) - 1)
 
 #define RCANFD_GAFL_PAGENUM(entry)	((entry) / 16)
@@ -503,6 +503,10 @@ struct rcar_canfd_channel {
 	spinlock_t tx_lock;			/* To protect tx path */
 };
 
+struct rcar_canfd_of_data {
+	unsigned long max_channels;
+};
+
 /* Global priv data */
 struct rcar_canfd_global {
 	struct rcar_canfd_channel *ch[RCANFD_NUM_CHANNELS];
@@ -513,6 +517,7 @@ struct rcar_canfd_global {
 	enum rcar_canfd_fcanclk fcan;	/* CANFD or Ext clock */
 	unsigned long channels_mask;	/* Enabled channels mask */
 	bool fdmode;			/* CAN FD or Classical CAN only mode */
+	unsigned long max_channels;
 };
 
 /* CAN FD mode nominal rate constants */
@@ -660,7 +665,7 @@ static int rcar_canfd_reset_controller(struct rcar_canfd_global *gpriv)
 				     RCANFD_GRMCFG_RCMC);
 
 	/* Transition all Channels to reset mode */
-	for_each_set_bit(ch, &gpriv->channels_mask, RCANFD_NUM_CHANNELS) {
+	for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels) {
 		rcar_canfd_clear_bit(gpriv->base,
 				     RCANFD_CCTR(ch), RCANFD_CCTR_CSLPR);
 
@@ -701,7 +706,7 @@ static void rcar_canfd_configure_controller(struct rcar_canfd_global *gpriv)
 	rcar_canfd_set_bit(gpriv->base, RCANFD_GCFG, cfg);
 
 	/* Channel configuration settings */
-	for_each_set_bit(ch, &gpriv->channels_mask, RCANFD_NUM_CHANNELS) {
+	for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels) {
 		rcar_canfd_set_bit(gpriv->base, RCANFD_CCTR(ch),
 				   RCANFD_CCTR_ERRD);
 		rcar_canfd_update_bit(gpriv->base, RCANFD_CCTR(ch),
@@ -1081,7 +1086,7 @@ static irqreturn_t rcar_canfd_global_interrupt(int irq, void *dev_id)
 	/* Global error interrupts still indicate a condition specific
 	 * to a channel. RxFIFO interrupt is a global interrupt.
 	 */
-	for_each_set_bit(ch, &gpriv->channels_mask, RCANFD_NUM_CHANNELS) {
+	for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels) {
 		priv = gpriv->ch[ch];
 		ndev = priv->ndev;
 		ridx = ch + RCANFD_RFFIFO_IDX;
@@ -1148,7 +1153,7 @@ static irqreturn_t rcar_canfd_channel_interrupt(int irq, void *dev_id)
 	u16 txerr, rxerr;
 
 	/* Common FIFO is a per channel resource */
-	for_each_set_bit(ch, &gpriv->channels_mask, RCANFD_NUM_CHANNELS) {
+	for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels) {
 		priv = gpriv->ch[ch];
 		ndev = priv->ndev;
 
@@ -1636,19 +1641,26 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	struct rcar_canfd_global *gpriv;
 	struct device_node *of_child;
 	unsigned long channels_mask = 0;
-	int err, ch_irq, g_irq;
+	int err, ch_irq, g_irq, i;
 	bool fdmode = true;			/* CAN FD only mode - default */
+	const struct rcar_canfd_of_data *of_data;
+	char *name[RCANFD_NUM_CHANNELS] = {
+		"channel0", "channel1", "channel2", "channel3",
+		"channel4", "channel5", "channel6", "channel7",
+		};
 
 	if (of_property_read_bool(pdev->dev.of_node, "renesas,no-can-fd"))
 		fdmode = false;			/* Classical CAN only mode */
 
-	of_child = of_get_child_by_name(pdev->dev.of_node, "channel0");
-	if (of_child && of_device_is_available(of_child))
-		channels_mask |= BIT(0);	/* Channel 0 */
+	of_data = of_device_get_match_data(&pdev->dev);
+	if (!of_data)
+		return -EINVAL;
 
-	of_child = of_get_child_by_name(pdev->dev.of_node, "channel1");
-	if (of_child && of_device_is_available(of_child))
-		channels_mask |= BIT(1);	/* Channel 1 */
+	for (i = 0; i < of_data->max_channels; i++) {
+		of_child = of_get_child_by_name(pdev->dev.of_node, name[i]);
+		if (of_child && of_device_is_available(of_child))
+			channels_mask |= BIT(i);	/* Channel i */
+	}
 
 	ch_irq = platform_get_irq(pdev, 0);
 	if (ch_irq < 0) {
@@ -1671,6 +1683,7 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	gpriv->pdev = pdev;
 	gpriv->channels_mask = channels_mask;
 	gpriv->fdmode = fdmode;
+	gpriv->max_channels = of_data->max_channels;
 
 	/* Peripheral clock */
 	gpriv->clkp = devm_clk_get(&pdev->dev, "fck");
@@ -1748,7 +1761,7 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	rcar_canfd_configure_controller(gpriv);
 
 	/* Configure per channel attributes */
-	for_each_set_bit(ch, &gpriv->channels_mask, RCANFD_NUM_CHANNELS) {
+	for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels) {
 		/* Configure Channel's Rx fifo */
 		rcar_canfd_configure_rx(gpriv, ch);
 
@@ -1774,7 +1787,7 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 		goto fail_mode;
 	}
 
-	for_each_set_bit(ch, &gpriv->channels_mask, RCANFD_NUM_CHANNELS) {
+	for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels) {
 		err = rcar_canfd_channel_probe(gpriv, ch, fcan_freq);
 		if (err)
 			goto fail_channel;
@@ -1786,7 +1799,7 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	return 0;
 
 fail_channel:
-	for_each_set_bit(ch, &gpriv->channels_mask, RCANFD_NUM_CHANNELS)
+	for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels)
 		rcar_canfd_channel_remove(gpriv, ch);
 fail_mode:
 	rcar_canfd_disable_global_interrupts(gpriv);
@@ -1804,7 +1817,7 @@ static int rcar_canfd_remove(struct platform_device *pdev)
 	rcar_canfd_reset_controller(gpriv);
 	rcar_canfd_disable_global_interrupts(gpriv);
 
-	for_each_set_bit(ch, &gpriv->channels_mask, RCANFD_NUM_CHANNELS) {
+	for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels) {
 		rcar_canfd_disable_channel_interrupts(gpriv->ch[ch]);
 		rcar_canfd_channel_remove(gpriv, ch);
 	}
@@ -1828,10 +1841,27 @@ static int __maybe_unused rcar_canfd_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(rcar_canfd_pm_ops, rcar_canfd_suspend,
 			 rcar_canfd_resume);
 
+static const struct rcar_canfd_of_data of_rcanfd_v4_0_compatible = {
+	.max_channels = 8,
+};
+
+static const struct rcar_canfd_of_data of_rcanfd_v3_0_compatible = {
+	.max_channels = 2,
+};
+
 static const struct of_device_id rcar_canfd_of_table[] = {
-	{ .compatible = "renesas,r8a779a0-canfd" },
-	{ .compatible = "renesas,rcar-gen3-canfd" },
-	{ .compatible = "renesas,rcar-gen4-canfd" },
+	{
+		.compatible = "renesas,r8a779a0-canfd",
+		.data = &of_rcanfd_v4_0_compatible,
+	},
+	{
+		.compatible = "renesas,rcar-gen3-canfd",
+		.data = &of_rcanfd_v3_0_compatible,
+	},
+	{
+		.compatible = "renesas,rcar-gen4-canfd",
+		.data = &of_rcanfd_v4_0_compatible,
+	},
 	{ }
 };
 
