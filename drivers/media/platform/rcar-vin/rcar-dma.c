@@ -751,6 +751,13 @@ static void rvin_crop_scale_comp(struct rvin_dev *vin)
 
 	fmt = rvin_format_from_pixel(vin, vin->format.pixelformat);
 	stride = vin->format.bytesperline / fmt->bpp;
+
+	/* For RAW8 format bpp is 1, but the hardware process RAW8
+	 * format in 2 pixel unit hence configure VNIS_REG as stride / 2.
+	 */
+	if (vin->format.pixelformat == V4L2_PIX_FMT_SRGGB8)
+		stride /= 2;
+
 	rvin_write(vin, stride, VNIS_REG);
 }
 
@@ -854,6 +861,9 @@ static int rvin_setup(struct rvin_dev *vin)
 		if (vin->chip_info & RCAR_VIN_R8A779A0_REATURE)
 			vnmc |= VNMC_INF_RAWX_RGB565;
 		break;
+	case MEDIA_BUS_FMT_SRGGB8_1X8:
+		vnmc |= VNMC_INF_RAW8;
+		break;
 	default:
 		break;
 	}
@@ -923,6 +933,9 @@ static int rvin_setup(struct rvin_dev *vin)
 	case V4L2_PIX_FMT_Y10:
 		if (vin->chip_info & RCAR_VIN_R8A779A0_REATURE)
 			dmr = VNDMR_RMODE_RAW10 | VNDMR_YC_THR;
+		break;
+	case V4L2_PIX_FMT_SRGGB8:
+		dmr = 0;
 		break;
 	default:
 		vin_err(vin, "Invalid pixelformat (0x%x)\n",
