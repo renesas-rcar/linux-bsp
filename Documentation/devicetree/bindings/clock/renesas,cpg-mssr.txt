@@ -32,6 +32,7 @@ Required Properties:
       - "renesas,r8a77980-cpg-mssr" for the r8a77980 SoC (R-Car V3H)
       - "renesas,r8a77990-cpg-mssr" for the r8a77990 SoC (R-Car E3)
       - "renesas,r8a77995-cpg-mssr" for the r8a77995 SoC (R-Car D3)
+      - "renesas,r8a779a0-cpg-mssr" for the r8a779a0 SoC (R-Car V3U)
 
   - reg: Base address and length of the memory resource used by the CPG/MSSR
     block
@@ -42,8 +43,9 @@ Required Properties:
       - "extal" (r7s9210, r8a7743, r8a7744, r8a7745, r8a77470, r8a774a1,
 		 r8a774c0, r8a7790, r8a7791, r8a7792, r8a7793, r8a7794,
 		 r8a7795, r8a7796, r8a77965, r8a77970, r8a77980, r8a77990,
-		 r8a77995)
-      - "extalr" (r8a774a1, r8a7795, r8a7796, r8a77965, r8a77970, r8a77980)
+		 r8a77995, r8a779a0)
+      - "extalr" (r8a774a1, r8a7795, r8a7796, r8a77965, r8a77970, r8a77980,
+		  r8a779a0)
       - "usb_extal" (r8a7743, r8a7744, r8a7745, r8a77470, r8a7790, r8a7791,
 		     r8a7793, r8a7794)
 
