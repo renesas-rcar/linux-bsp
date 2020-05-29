@@ -25,6 +25,7 @@
 #include <linux/sizes.h>
 #include <linux/slab.h>
 #include <linux/sys_soc.h>
+#include <linux/pci.h>
 
 #if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
 #include <asm/dma-iommu.h>
@@ -39,7 +40,11 @@
 #define IPMMU_CTX_MAX		8U
 #define IPMMU_CTX_INVALID	-1
 
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+#include "ipmmu-vmsa-whitelist.h"
+#else
 #define IPMMU_UTLB_MAX		48U
+#endif
 
 struct ipmmu_features {
 	bool use_ns_alias_offset;
@@ -50,6 +55,9 @@ struct ipmmu_features {
 	bool twobit_imttbcr_sl0;
 	bool reserved_context;
 	bool cache_snoop;
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	bool whitelist;
+#endif
 };
 
 struct ipmmu_vmsa_device {
@@ -66,6 +74,9 @@ struct ipmmu_vmsa_device {
 
 	struct iommu_group *group;
 	struct dma_iommu_mapping *mapping;
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	struct ipmmu_whitelist **whitelist;
+#endif
 };
 
 struct ipmmu_vmsa_domain {
@@ -91,6 +102,175 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 	return fwspec ? fwspec->iommu_priv : NULL;
 }
 
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+/* R-Car H3 (R8A7795) */
+static struct ipmmu_whitelist r8a7795_ipmmu_vi0 = {
+	.ipmmu_name	= "febd0000.mmu",
+	.base_addr	= IPMMU_VI0_BASE,
+	.ip_masters	= H3_IPMMU_VI0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a7795_ipmmu_vi1 = {
+	.ipmmu_name	= "febe0000.mmu",
+	.base_addr	= IPMMU_VI1_BASE,
+	.ip_masters	= H3_IPMMU_VI1_MASTER,
+};
+
+static struct ipmmu_whitelist r8a7795_ipmmu_hc = {
+	.ipmmu_name	= "e6570000.mmu",
+	.base_addr	= IPMMU_HC_BASE,
+	.ip_masters	= H3_IPMMU_HC_MASTER,
+};
+
+static struct ipmmu_whitelist r8a7795_ipmmu_mp = {
+	.ipmmu_name	= "ec670000.mmu",
+	.base_addr	= IPMMU_MP_BASE,
+	.ip_masters	= H3_IPMMU_MP_MASTER,
+};
+
+static struct ipmmu_whitelist r8a7795_ipmmu_ds0 = {
+	.ipmmu_name	= "e6740000.mmu",
+	.base_addr	= IPMMU_DS0_BASE,
+	.ip_masters	= H3_IPMMU_DS0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a7795_ipmmu_ds1 = {
+	.ipmmu_name	= "e7740000.mmu",
+	.base_addr	= IPMMU_DS1_BASE,
+	.ip_masters	= H3_IPMMU_DS1_MASTER,
+};
+
+static struct ipmmu_whitelist *r8a7795_whitelist[] = {
+	&r8a7795_ipmmu_vi0,
+	&r8a7795_ipmmu_vi1,
+	&r8a7795_ipmmu_hc,
+	&r8a7795_ipmmu_mp,
+	&r8a7795_ipmmu_ds0,
+	&r8a7795_ipmmu_ds1,
+	NULL, /* Terminator */
+};
+
+/* R-Car M3 (R8A7796) */
+static struct ipmmu_whitelist r8a7796_ipmmu_vi0 = {
+	.ipmmu_name	= "febd0000.mmu",
+	.base_addr	= IPMMU_VI0_BASE,
+	.ip_masters	= M3_IPMMU_VI0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a7796_ipmmu_hc = {
+	.ipmmu_name	= "e6570000.mmu",
+	.base_addr	= IPMMU_HC_BASE,
+	.ip_masters	= M3_IPMMU_HC_MASTER,
+};
+
+static struct ipmmu_whitelist r8a7796_ipmmu_mp = {
+	.ipmmu_name	= "ec670000.mmu",
+	.base_addr	= IPMMU_MP_BASE,
+	.ip_masters	= M3_IPMMU_MP_MASTER,
+};
+
+static struct ipmmu_whitelist r8a7796_ipmmu_ds0 = {
+	.ipmmu_name	= "e6740000.mmu",
+	.base_addr	= IPMMU_DS0_BASE,
+	.ip_masters	= M3_IPMMU_DS0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a7796_ipmmu_ds1 = {
+	.ipmmu_name	= "e7740000.mmu",
+	.base_addr	= IPMMU_DS1_BASE,
+	.ip_masters	= M3_IPMMU_DS1_MASTER,
+};
+
+static struct ipmmu_whitelist *r8a7796_whitelist[] = {
+	&r8a7796_ipmmu_vi0,
+	&r8a7796_ipmmu_hc,
+	&r8a7796_ipmmu_mp,
+	&r8a7796_ipmmu_ds0,
+	&r8a7796_ipmmu_ds1,
+	NULL, /* Terminator */
+};
+
+/* R-Car M3N (R8A77965) */
+static struct ipmmu_whitelist r8a77965_ipmmu_vi0 = {
+	.ipmmu_name	= "febd0000.mmu",
+	.base_addr	= IPMMU_VI0_BASE,
+	.ip_masters	= M3N_IPMMU_VI0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77965_ipmmu_hc = {
+	.ipmmu_name	= "e6570000.mmu",
+	.base_addr	= IPMMU_HC_BASE,
+	.ip_masters	= M3N_IPMMU_HC_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77965_ipmmu_mp = {
+	.ipmmu_name	= "ec670000.mmu",
+	.base_addr	= IPMMU_MP_BASE,
+	.ip_masters	= M3N_IPMMU_MP_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77965_ipmmu_ds0 = {
+	.ipmmu_name	= "e6740000.mmu",
+	.base_addr	= IPMMU_DS0_BASE,
+	.ip_masters	= M3N_IPMMU_DS0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77965_ipmmu_ds1 = {
+	.ipmmu_name	= "e7740000.mmu",
+	.base_addr	= IPMMU_DS1_BASE,
+	.ip_masters	= M3N_IPMMU_DS1_MASTER,
+};
+
+static struct ipmmu_whitelist *r8a77965_whitelist[] = {
+	&r8a77965_ipmmu_vi0,
+	&r8a77965_ipmmu_hc,
+	&r8a77965_ipmmu_mp,
+	&r8a77965_ipmmu_ds0,
+	&r8a77965_ipmmu_ds1,
+	NULL, /* Terminator */
+};
+
+/* R-Car E3 (R8A77990) */
+static struct ipmmu_whitelist r8a77990_ipmmu_vi0 = {
+	.ipmmu_name	= "febd0000.mmu",
+	.base_addr	= IPMMU_VI0_BASE,
+	.ip_masters	= E3_IPMMU_VI0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77990_ipmmu_hc = {
+	.ipmmu_name	= "e6570000.mmu",
+	.base_addr	= IPMMU_HC_BASE,
+	.ip_masters	= E3_IPMMU_HC_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77990_ipmmu_mp = {
+	.ipmmu_name	= "ec670000.mmu",
+	.base_addr	= IPMMU_MP_BASE,
+	.ip_masters	= E3_IPMMU_MP_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77990_ipmmu_ds0 = {
+	.ipmmu_name	= "e6740000.mmu",
+	.base_addr	= IPMMU_DS0_BASE,
+	.ip_masters	= E3_IPMMU_DS0_MASTER,
+};
+
+static struct ipmmu_whitelist r8a77990_ipmmu_ds1 = {
+	.ipmmu_name	= "e7740000.mmu",
+	.base_addr	= IPMMU_DS1_BASE,
+	.ip_masters	= E3_IPMMU_DS1_MASTER,
+};
+
+static struct ipmmu_whitelist *r8a77990_whitelist[] = {
+	&r8a77990_ipmmu_vi0,
+	&r8a77990_ipmmu_hc,
+	&r8a77990_ipmmu_mp,
+	&r8a77990_ipmmu_ds0,
+	&r8a77990_ipmmu_ds1,
+	NULL, /* Terminator */
+};
+#endif /* CONFIG_IPMMU_VMSA_WHITELIST */
+
 #define TLB_LOOP_TIMEOUT		100	/* 100us */
 
 /* -----------------------------------------------------------------------------
@@ -104,7 +284,8 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMCTR				0x0000
 #define IMCTR_TRE			(1 << 17)
 #define IMCTR_AFE			(1 << 16)
-#define IMCTR_RTSEL_MASK		(3 << 4)
+#define IMCTR_RTSEL_MASK_GEN2		(3 << 4)
+#define IMCTR_RTSEL_MASK_GEN3		(7 << 4)
 #define IMCTR_RTSEL_SHIFT		4
 #define IMCTR_TREN			(1 << 3)
 #define IMCTR_INTEN			(1 << 2)
@@ -163,9 +344,13 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)
 
 #define IMTTLBR0			0x0010
+#define IMTTLBR0_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR0			0x0014
+#define IMTTUBR0_TTBR_MASK		(0xff << 0)
 #define IMTTLBR1			0x0018
+#define IMTTLBR1_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR1			0x001c
+#define IMTTUBR1_TTBR_MASK		(0xff << 0)
 
 #define IMSTR				0x0020
 #define IMSTR_ERRLVL_MASK		(3 << 12)
@@ -337,7 +522,8 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 	ipmmu_write(mmu, IMUASID(utlb), 0);
 	/* TODO: Do we need to flush the microTLB ? */
 	ipmmu_write(mmu, IMUCTR(utlb),
-		    IMUCTR_TTSEL_MMU(domain->context_id) | IMUCTR_FLUSH |
+		    ipmmu_read(mmu, IMUCTR(utlb)) |
+		    IMUCTR_TTSEL_MMU(domain->context_id) |
 		    IMUCTR_MMUEN);
 	mmu->utlb_ctx[utlb] = domain->context_id;
 }
@@ -417,8 +603,9 @@ static void ipmmu_domain_setup_context(struct ipmmu_vmsa_domain *domain)
 
 	/* TTBR0 */
 	ttbr = domain->cfg.arm_lpae_s1_cfg.ttbr[0];
-	ipmmu_ctx_write_root(domain, IMTTLBR0, ttbr);
-	ipmmu_ctx_write_root(domain, IMTTUBR0, ttbr >> 32);
+	ipmmu_ctx_write_root(domain, IMTTLBR0, ttbr & IMTTLBR0_TTBR_MASK);
+	ipmmu_ctx_write_root(domain, IMTTUBR0,
+			     (ttbr >> 32) & IMTTUBR0_TTBR_MASK);
 
 	/*
 	 * TTBCR
@@ -434,7 +621,10 @@ static void ipmmu_domain_setup_context(struct ipmmu_vmsa_domain *domain)
 		tmp |= IMTTBCR_SH0_INNER_SHAREABLE | IMTTBCR_ORGN0_WB_WA |
 		       IMTTBCR_IRGN0_WB_WA;
 
-	ipmmu_ctx_write_root(domain, IMTTBCR, IMTTBCR_EAE | tmp);
+	ipmmu_ctx_write_root(domain, IMTTBCR,
+			     ipmmu_ctx_read_root(domain, IMTTBCR) |
+			     IMTTBCR_EAE | IMTTBCR_SH0_INNER_SHAREABLE |
+			     IMTTBCR_ORGN0_WB_WA | IMTTBCR_IRGN0_WB_WA | tmp);
 
 	/* MAIR0 */
 	ipmmu_ctx_write_root(domain, IMMAIR0,
@@ -566,6 +756,9 @@ static irqreturn_t ipmmu_domain_irq(struct ipmmu_vmsa_domain *domain)
 
 	if (!(status & (IMSTR_PF | IMSTR_TF)))
 		return IRQ_NONE;
+
+	/* Flush the TLB as required when IPMMU translation error occurred. */
+	ipmmu_tlb_invalidate(domain);
 
 	/*
 	 * Try to handle page faults and translation faults.
@@ -796,6 +989,7 @@ static const struct soc_device_attribute soc_rcar_gen3[] = {
 static const struct soc_device_attribute soc_rcar_gen3_whitelist[] = {
 	{ .soc_id = "r8a774c0", },
 	{ .soc_id = "r8a7795", .revision = "ES3.*" },
+	{ .soc_id = "r8a7796", },
 	{ .soc_id = "r8a77965", },
 	{ .soc_id = "r8a77990", },
 	{ .soc_id = "r8a77995", },
@@ -803,8 +997,109 @@ static const struct soc_device_attribute soc_rcar_gen3_whitelist[] = {
 };
 
 static const char * const rcar_gen3_slave_whitelist[] = {
+	"fea27000.fcp",
+	"fea2f000.fcp",
+	"fea37000.fcp",
+	"ee300000.sata",
+	"ee100000.sd",
+	"ee140000.sd",
+	"ee160000.sd",
+	"ee080100.usb",
+	"ee0a0100.usb",
+	"ee0c0100.usb",
+	"ee0e0100.usb",
+	"ee080000.usb",
+	"ee0a0000.usb",
+	"ee0c0000.usb",
+	"ee0e0000.usb",
+	"ee000000.usb",
+	"ee020000.usb",
+	"e6ef0000.video",
+	"e6ef1000.video",
+	"e6ef2000.video",
+	"e6ef3000.video",
+	"e6ef4000.video",
+	"e6ef5000.video",
+	"e6ef6000.video",
+	"e6ef7000.video",
+	"e6700000.dma-controller",
+	"e7300000.dma-controller",
+	"e7310000.dma-controller",
+	"ec700000.dma-controller",
+	"e65a0000.dma-controller",
+	"e65b0000.dma-controller",
+	"ec720000.dma-controller",
+	"e6800000.ethernet",
+	"fe000000.pcie",
+};
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+static const struct soc_device_attribute r8a7795[]  = {
+	{ .soc_id = "r8a7795" },
+	{ /* sentinel */ }
 };
 
+static const struct soc_device_attribute r8a7796[]  = {
+	{ .soc_id = "r8a7796" },
+	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute r8a77965[]  = {
+	{ .soc_id = "r8a77965" },
+	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute r8a77990[]  = {
+	{ .soc_id = "r8a77990" },
+	{ /* sentinel */ }
+};
+
+static bool ipmmu_slave_whitelist(struct device *dev, u32 *ids)
+{
+	struct ipmmu_vmsa_device *mmu = to_ipmmu(dev);
+	int i;
+	int ret;
+
+	if (!mmu) {
+		pr_debug("%s Cannot get mmu for %s\n", __func__, dev_name(dev));
+		goto exit;
+	}
+
+	/*
+	 * For R-Car Gen3 SoCs, use a white list to check the uTLB set up
+	 * For other SoCs, return true
+	 */
+	if (!mmu->features->whitelist)
+		return true;
+
+	if (!mmu->whitelist[0]) {
+		pr_debug("%s Whitelist not found on %s!!!\n",
+			 __func__, dev_name(mmu->dev));
+		goto exit;
+	}
+
+	for (i = 0; i < IPMMU_CACHE_MAX; i++) {
+		if (!mmu->whitelist[i])
+			break;
+
+		if (!strcmp(dev_name(mmu->dev),
+			    mmu->whitelist[i]->ipmmu_name)) {
+			ret = test_bit(ids[0], mmu->whitelist[i]->ultb);
+
+			pr_debug("%s: %s whitelist for %s <utlb %d>\n",
+				 __func__, mmu->whitelist[i]->ipmmu_name,
+				 dev_name(dev), ids[0]);
+
+			if (ret)
+				return true;
+		}
+	}
+
+exit:
+	/* By default, do not allow use of IPMMU */
+	pr_info("IPMMU support is not available for %s\n", dev_name(dev));
+	return false;
+}
+#else
 static bool ipmmu_slave_whitelist(struct device *dev)
 {
 	unsigned int i;
@@ -829,20 +1124,40 @@ static bool ipmmu_slave_whitelist(struct device *dev)
 	/* Otherwise, do not allow use of IPMMU */
 	return false;
 }
+#endif /* CONFIG_IPMMU_VMSA_WHITELIST */
 
 static int ipmmu_of_xlate(struct device *dev,
 			  struct of_phandle_args *spec)
 {
+	int ret;
+
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	/* Use a white list to opt-in slave devices
+	 * Whitelist needs mmu info to get the corresponding whitelist bitmap
+	 * In case of no mmu is available, whitelist will check later
+	 */
+	if (to_ipmmu(dev) && !ipmmu_slave_whitelist(dev, spec->args))
+		return -ENODEV;
+#else
 	if (!ipmmu_slave_whitelist(dev))
 		return -ENODEV;
-
+#endif
 	iommu_fwspec_add_ids(dev, spec->args, 1);
 
 	/* Initialize once - xlate() will call multiple times */
 	if (to_ipmmu(dev))
 		return 0;
 
-	return ipmmu_init_platform_device(dev, spec);
+	ret = ipmmu_init_platform_device(dev, spec);
+	if (ret)
+		return ret;
+
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	/* For the first initialzation when mmu info is available */
+	if (!ipmmu_slave_whitelist(dev, spec->args))
+		return -ENODEV;
+#endif
+	return 0;
 }
 
 static int ipmmu_init_arm_mapping(struct device *dev)
@@ -906,9 +1221,22 @@ error:
 	return ret;
 }
 
+static struct device *ipmmu_get_pci_host_device(struct device *dev)
+{
+	struct pci_dev *pdev = to_pci_dev(dev);
+	struct pci_bus *bus = pdev->bus;
+
+	/* Walk up to the root bus to look for PCI Host controller */
+	while (!pci_is_root_bus(bus))
+		bus = bus->parent;
+
+	return bus->bridge->parent;
+}
+
 static int ipmmu_add_device(struct device *dev)
 {
 	struct ipmmu_vmsa_device *mmu = to_ipmmu(dev);
+	struct device *root_dev;
 	struct iommu_group *group;
 	int ret;
 
@@ -923,6 +1251,17 @@ static int ipmmu_add_device(struct device *dev)
 		if (ret)
 			return ret;
 	} else {
+	    /*
+	     * The IOMMU can't distinguish between different PCI Functions.
+	     * Use PCI Host controller as a proxy for all connected PCI devices
+	     */
+		if (dev_is_pci(dev)) {
+			root_dev = ipmmu_get_pci_host_device(dev);
+
+			if (root_dev->iommu_group)
+				dev->iommu_group = root_dev->iommu_group;
+		}
+
 		group = iommu_group_get_for_dev(dev);
 		if (IS_ERR(group))
 			return PTR_ERR(group);
@@ -997,17 +1336,23 @@ static const struct ipmmu_features ipmmu_features_default = {
 	.twobit_imttbcr_sl0 = false,
 	.reserved_context = false,
 	.cache_snoop = true,
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	.whitelist = false,
+#endif
 };
 
 static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
 	.use_ns_alias_offset = false,
 	.has_cache_leaf_nodes = true,
-	.number_of_contexts = 8,
+	.number_of_contexts = CONFIG_IPMMU_VMSA_CTX_NUM,
 	.num_utlbs = 48,
 	.setup_imbuscr = false,
 	.twobit_imttbcr_sl0 = true,
 	.reserved_context = true,
 	.cache_snoop = false,
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	.whitelist = true,
+#endif
 };
 
 static const struct of_device_id ipmmu_of_ids[] = {
@@ -1042,6 +1387,55 @@ static const struct of_device_id ipmmu_of_ids[] = {
 		/* Terminator */
 	},
 };
+
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+static int ipmmu_bm_init(struct ipmmu_vmsa_device *mmu)
+{
+	bool found = false;
+	int i;
+
+	for (i = 0; i < IPMMU_CACHE_MAX; i++) {
+		if (!mmu->whitelist[i])
+			break;
+
+		if (!strcmp(dev_name(mmu->dev),
+			    mmu->whitelist[i]->ipmmu_name)) {
+			pr_debug("%s, match found with mmu %s\n",
+				 __func__, dev_name(mmu->dev));
+			bitmap_from_u64(mmu->whitelist[i]->ultb,
+					mmu->whitelist[i]->ip_masters);
+			found = true;
+			break;
+		}
+	}
+
+		if (!found)
+			pr_warn("IPMMU whitelist support is not available for %s\n",
+				 dev_name(mmu->dev));
+
+	return 0;
+}
+
+static int ipmmu_whitelist_init(struct ipmmu_vmsa_device *mmu)
+{
+	/* Whitelist set up depend per SoC */
+	if (soc_device_match(r8a7795))
+		mmu->whitelist = r8a7795_whitelist;
+	else if (soc_device_match(r8a7796))
+		mmu->whitelist = r8a7796_whitelist;
+	else if (soc_device_match(r8a77965))
+		mmu->whitelist = r8a77965_whitelist;
+	else if (soc_device_match(r8a77990))
+		mmu->whitelist = r8a77990_whitelist;
+	else
+		mmu->whitelist = NULL;
+
+	if (!mmu->whitelist[0])
+		return -1;
+
+	return ipmmu_bm_init(mmu);
+}
+#endif /* CONFIG_IPMMU_VMSA_WHITELIST */
 
 static int ipmmu_probe(struct platform_device *pdev)
 {
@@ -1147,6 +1541,19 @@ static int ipmmu_probe(struct platform_device *pdev)
 			bus_set_iommu(&platform_bus_type, &ipmmu_ops);
 #endif
 	}
+
+#ifdef CONFIG_IPMMU_VMSA_WHITELIST
+	/*
+	 * Set up whitelist
+	 */
+	if (mmu->features->whitelist && !ipmmu_is_root(mmu)) {
+		ret = ipmmu_whitelist_init(mmu);
+		if (ret) {
+			dev_err(&pdev->dev, "no valid IPMMU whitelist found\n");
+			return ret;
+		}
+	}
+#endif
 
 	/*
 	 * We can't create the ARM mapping here as it requires the bus to have
