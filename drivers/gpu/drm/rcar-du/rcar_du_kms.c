@@ -17,6 +17,7 @@
 #include <drm/drm_probe_helper.h>
 #include <drm/drm_vblank.h>
 
+#include <linux/dma-buf.h>
 #include <linux/of_graph.h>
 #include <linux/wait.h>
 
@@ -282,6 +283,44 @@ const struct rcar_du_format_info *rcar_du_format_info(u32 fourcc)
  * Frame buffer
  */
 
+struct drm_gem_object *rcar_du_gem_prime_import_sg_table(struct drm_device *dev,
+				struct dma_buf_attachment *attach,
+				struct sg_table *sgt)
+{
+	struct rcar_du_device *rcdu = dev->dev_private;
+	struct drm_gem_cma_object *cma_obj;
+	struct drm_gem_object *gem_obj;
+	int ret;
+
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
+		return drm_gem_cma_prime_import_sg_table(dev, attach, sgt);
+
+	/* Create a CMA GEM buffer. */
+	cma_obj = kzalloc(sizeof(*cma_obj), GFP_KERNEL);
+	if (!cma_obj)
+		return ERR_PTR(-ENOMEM);
+	gem_obj = &cma_obj->base;
+
+	ret = drm_gem_object_init(dev, gem_obj, attach->dmabuf->size);
+	if (ret)
+		goto error;
+
+	ret = drm_gem_create_mmap_offset(gem_obj);
+	if (ret) {
+		drm_gem_object_release(gem_obj);
+		goto error;
+	}
+
+	cma_obj->paddr = 0;
+	cma_obj->sgt = sgt;
+
+	return gem_obj;
+
+error:
+	kfree(cma_obj);
+	return ERR_PTR(ret);
+}
+
 int rcar_du_dumb_create(struct drm_file *file, struct drm_device *dev,
 			struct drm_mode_create_dumb *args)
 {
@@ -420,6 +459,43 @@ static void rcar_du_atomic_commit_tail(struct drm_atomic_state *old_state)
 	drm_atomic_helper_cleanup_planes(dev, old_state);
 }
 
+int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
+{
+	int ret = 0;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	struct drm_mode_config *config = &dev->mode_config;
+
+	drm_modeset_lock_all(dev);
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	state->crtcs->state = crtc_state;
+	state->crtcs->old_state = crtc->state;
+	state->crtcs->new_state = crtc_state;
+	state->crtcs->ptr = crtc;
+	crtc_state->state = state;
+	crtc_state->active = true;
+
+	state->acquire_ctx = config->acquire_ctx;
+	ret = drm_atomic_commit(state);
+	drm_atomic_state_put(state);
+err:
+	drm_modeset_unlock_all(dev);
+
+	return ret;
+}
+
 /* -----------------------------------------------------------------------------
  * Initialization
  */
@@ -525,6 +601,11 @@ static int rcar_du_encoders_init(struct rcar_du_device *rcdu)
 
 static int rcar_du_properties_init(struct rcar_du_device *rcdu)
 {
+	rcdu->props.alpha =
+		drm_property_create_range(rcdu->ddev, 0, "alpha", 0, 255);
+	if (rcdu->props.alpha == NULL)
+		return -ENOMEM;
+
 	/*
 	 * The color key is expressed as an RGB888 triplet stored in a 32-bit
 	 * integer in XRGB8888 format. Bit 24 is used as a flag to disable (0)
@@ -535,6 +616,14 @@ static int rcar_du_properties_init(struct rcar_du_device *rcdu)
 					  0, 0x01ffffff);
 	if (rcdu->props.colorkey == NULL)
 		return -ENOMEM;
+
+	if (rcdu->info->gen == 3) {
+		rcdu->props.colorkey_alpha =
+			drm_property_create_range(rcdu->ddev, 0,
+						  "colorkey_alpha", 0, 255);
+		if (!rcdu->props.colorkey_alpha)
+			return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -563,12 +652,18 @@ static int rcar_du_vsps_init(struct rcar_du_device *rcdu)
 
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
 		unsigned int j;
+		unsigned int brs_num = 0;
 
 		ret = of_parse_phandle_with_fixed_args(np, "vsps", cells, i,
 						       &args);
 		if (ret < 0)
 			goto error;
 
+		ret = of_property_read_u32(args.np, "renesas,#brs", &brs_num);
+		if (brs_num > 2) {
+			dev_err(rcdu->dev, "error: brs number\n");
+			goto error;
+		}
 		/*
 		 * Add the VSP to the list or update the corresponding existing
 		 * entry if the VSP has already been added.
@@ -588,6 +683,13 @@ static int rcar_du_vsps_init(struct rcar_du_device *rcdu)
 		/* Store the VSP pointer and pipe index in the CRTC. */
 		rcdu->crtcs[i].vsp = &rcdu->vsps[j];
 		rcdu->crtcs[i].vsp_pipe = cells >= 1 ? args.args[0] : 0;
+
+		/* Has VSPDL */
+		if (rcdu->crtcs[i].vsp_pipe) {
+			if (!ret)
+				rcdu->vspdl_fix = true;
+			rcdu->brs_num = brs_num;
+		}
 	}
 
 	/*
@@ -651,6 +753,8 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 	}
 
 	rcdu->num_crtcs = hweight8(rcdu->info->channels_mask);
+	rcdu->vspdl_fix = false;
+	rcdu->brs_num = 0;
 
 	ret = rcar_du_properties_init(rcdu);
 	if (ret < 0)
@@ -714,9 +818,13 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 
 		rgrp = &rcdu->groups[hwindex / 2];
 
-		ret = rcar_du_crtc_create(rgrp, swindex++, hwindex);
+		ret = rcar_du_crtc_create(rgrp, swindex, hwindex);
 		if (ret < 0)
 			return ret;
+
+		rcar_du_pre_group_set_routing(rgrp, &rcdu->crtcs[swindex],
+					      swindex);
+		swindex++;
 	}
 
 	/* Initialize the encoders. */

@@ -28,6 +28,11 @@ struct rcar_du_encoder;
 #define RCAR_DU_FEATURE_VSP1_SOURCE	BIT(1)	/* Has inputs from VSP1 */
 #define RCAR_DU_FEATURE_INTERLACED	BIT(2)	/* HW supports interlaced */
 #define RCAR_DU_FEATURE_TVM_SYNC	BIT(3)	/* Has TV switch/sync modes */
+#define RCAR_DU_FEATURE_R8A7795_REGS	BIT(4)	/* Use R8A7795 registers */
+#define RCAR_DU_FEATURE_R8A7796_REGS	BIT(5)	/* Use R8A7796 registers */
+#define RCAR_DU_FEATURE_R8A77965_REGS	BIT(6)	/* Use R8A77965 registers */
+#define RCAR_DU_FEATURE_R8A77990_REGS	BIT(7)	/* Use R8A77990 registers */
+#define RCAR_DU_FEATURE_R8A77995_REGS	BIT(8)	/* Use R8A77995 registers */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	BIT(0)	/* Align pitches to 128 bytes */
 
@@ -88,12 +93,16 @@ struct rcar_du_device {
 	struct rcar_du_vsp vsps[RCAR_DU_MAX_VSPS];
 
 	struct {
+		struct drm_property *alpha;
 		struct drm_property *colorkey;
+		struct drm_property *colorkey_alpha;
 	} props;
 
 	unsigned int dpad0_source;
 	unsigned int dpad1_source;
 	unsigned int vspd1_sink;
+	bool vspdl_fix;
+	unsigned int brs_num;
 };
 
 static inline bool rcar_du_has(struct rcar_du_device *rcdu,
