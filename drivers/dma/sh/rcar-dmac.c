@@ -842,8 +842,8 @@ static int rcar_dmac_chan_pause(struct dma_chan *chan)
  * Descriptors preparation
  */
 
-static void rcar_dmac_chan_configure_desc(struct rcar_dmac_chan *chan,
-					  struct rcar_dmac_desc *desc)
+static int rcar_dmac_chan_configure_desc(struct rcar_dmac_chan *chan,
+					 struct rcar_dmac_desc *desc)
 {
 	static const u32 chcr_ts[] = {
 		RCAR_DMACHCR_TS_1B, RCAR_DMACHCR_TS_2B,
@@ -876,8 +876,13 @@ static void rcar_dmac_chan_configure_desc(struct rcar_dmac_chan *chan,
 		break;
 	}
 
+	if (xfer_size > 0x40)	/* bus width */
+		return -EINVAL;
+
 	desc->xfer_shift = ilog2(xfer_size);
 	desc->chcr = chcr | chcr_ts[desc->xfer_shift];
+
+	return 0;
 }
 
 /*
@@ -904,6 +909,7 @@ rcar_dmac_chan_prep_sg(struct rcar_dmac_chan *chan, struct scatterlist *sgl,
 	unsigned int full_size = 0;
 	bool cross_boundary = false;
 	unsigned int i;
+	int ret;
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 	u32 high_dev_addr;
 	u32 high_mem_addr;
@@ -919,7 +925,11 @@ rcar_dmac_chan_prep_sg(struct rcar_dmac_chan *chan, struct scatterlist *sgl,
 	desc->cyclic = cyclic;
 	desc->direction = dir;
 
-	rcar_dmac_chan_configure_desc(chan, desc);
+	ret = rcar_dmac_chan_configure_desc(chan, desc);
+	if (ret) {
+		rcar_dmac_desc_put(chan, desc);
+		return NULL;
+	}
 
 	max_chunk_size = RCAR_DMATCR_MASK << desc->xfer_shift;
 
