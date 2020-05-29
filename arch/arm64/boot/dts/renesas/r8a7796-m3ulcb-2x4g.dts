@@ -1,33 +1,33 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
  * Device Tree Source for the M3ULCB (R-Car Starter Kit Pro) board
+ * with R-Car M3 ES3.0+
  *
- * Copyright (C) 2016-2017 Renesas Electronics Corp.
- * Copyright (C) 2016 Cogent Embedded, Inc.
+ * Copyright (C) 2020 Renesas Electronics Corp.
  */
 
 /dts-v1/;
-#include "r8a7796-es1.dtsi"
+#include "r8a7796.dtsi"
 #include "ulcb.dtsi"
 
 / {
-	model = "Renesas M3ULCB board based on r8a7796 ES1.0";
+	model = "Renesas M3ULCB board based on r8a7796 ES3.0+ with 8GiB (2 x 4 GiB)";
 	compatible = "renesas,m3ulcb", "renesas,r8a7796";
-	cpus {
-		idle-states {
-			/delete-node/ cpu-sleep-1;
-		};
-	};
 
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
-		reg = <0x0 0x48000000 0x0 0x38000000>;
+		reg = <0x0 0x48000000 0x0 0x78000000>;
+	};
+
+	memory@480000000 {
+		device_type = "memory";
+		reg = <0x4 0x80000000 0x0 0x80000000>;
 	};
 
 	memory@600000000 {
 		device_type = "memory";
-		reg = <0x6 0x00000000 0x0 0x40000000>;
+		reg = <0x6 0x00000000 0x1 0x00000000>;
 	};
 
 	reserved-memory {
@@ -78,21 +78,6 @@
 	};
 };
 
-&a53_0 {
-	/delete-property/ cpu-idle-states;
-};
-
-&a53_1 {
-	/delete-property/ cpu-idle-states;
-};
-
-&a53_2 {
-	/delete-property/ cpu-idle-states;
-};
-
-&a53_3 {
-	/delete-property/ cpu-idle-states;
-};
 &du {
 	clocks = <&cpg CPG_MOD 724>,
 		 <&cpg CPG_MOD 723>,
