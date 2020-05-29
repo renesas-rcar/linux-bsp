@@ -93,9 +93,18 @@
 #define  LINK_SPEED_2_5GTS	(1 << 16)
 #define  LINK_SPEED_5_0GTS	(2 << 16)
 #define MACCTLR			0x011058
+#define  MACCTLR_NFTS_MASK     GENMASK(23, 16) /* The name is from SH7786 */
 #define  SPEED_CHANGE		BIT(24)
 #define  SCRAMBLE_DISABLE	BIT(27)
+#define  LTSMDIS               BIT(31)
+#define  MACCTLR_INIT_VAL      (LTSMDIS | MACCTLR_NFTS_MASK)
 #define PMSR			0x01105c
+#define  L1FAEG			BIT(31)
+#define  PM_ENTER_L1RX		BIT(23)
+#define  PMSTATE		(BIT(18) | BIT(17) | BIT(16))
+#define  PMSTATE_L1		(BIT(17) | BIT(16))
+#define PMCTLR			0x011060
+#define  L1_INIT		BIT(31)
 #define MACS2R			0x011078
 #define MACCGSPSETR		0x011084
 #define  SPCNGRSN		BIT(31)
@@ -194,6 +203,7 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 		unsigned int devfn, int where, u32 *data)
 {
 	unsigned int dev, func, reg, index;
+	u32 val;
 
 	dev = PCI_SLOT(devfn);
 	func = PCI_FUNC(devfn);
@@ -234,6 +244,22 @@ static int rcar_pcie_config_access(struct rcar_pcie *pcie,
 
 	if (pcie->root_bus_nr < 0)
 		return PCIBIOS_DEVICE_NOT_FOUND;
+
+	/*
+	 * If we are not in L1 link state and we have received PM_ENTER_L1 DLLP,
+	 * transition to L1 link state. The HW will handle coming of of L1.
+	 */
+	val = rcar_pci_read_reg(pcie, PMSR);
+	if ((val & PM_ENTER_L1RX) && ((val & PMSTATE) != PMSTATE_L1)) {
+		rcar_pci_write_reg(pcie, L1_INIT, PMCTLR);
+
+		/* Wait until we are in L1 */
+		while (!(val & L1FAEG))
+			val = rcar_pci_read_reg(pcie, PMSR);
+
+		/* Clear flags indicating link has transitioned to L1 */
+		rcar_pci_write_reg(pcie, L1FAEG | PM_ENTER_L1RX, PMSR);
+	}
 
 	/* Clear errors */
 	rcar_pci_write_reg(pcie, rcar_pci_read_reg(pcie, PCIEERRFR), PCIEERRFR);
@@ -451,6 +477,36 @@ done:
 		 (macsr & LINK_SPEED) == LINK_SPEED_5_0GTS ? "5" : "2.5");
 }
 
+static int rcar_pcie_hw_enable(struct rcar_pcie *pcie)
+{
+	struct resource_entry *win;
+	LIST_HEAD(res);
+	int i = 0;
+
+	/* Try setting 5 GT/s link speed */
+	rcar_pcie_force_speedup(pcie);
+
+	/* Setup PCI resources */
+	resource_list_for_each_entry(win, &pcie->resources) {
+		struct resource *res = win->res;
+
+		if (!res->flags)
+			continue;
+
+		switch (resource_type(res)) {
+		case IORESOURCE_IO:
+		case IORESOURCE_MEM:
+			rcar_pcie_setup_window(i, pcie, res);
+			i++;
+			break;
+		default:
+			continue;
+		}
+	}
+
+	return 0;
+}
+
 static int rcar_pcie_enable(struct rcar_pcie *pcie)
 {
 	struct device *dev = pcie->dev;
@@ -614,6 +670,8 @@ static int rcar_pcie_hw_init(struct rcar_pcie *pcie)
 	/* Enable MSI */
 	if (IS_ENABLED(CONFIG_PCI_MSI))
 		rcar_pci_write_reg(pcie, 0x801f0000, PCIEMSITXR);
+
+	rcar_pci_write_reg(pcie, MACCTLR_INIT_VAL, MACCTLR);
 
 	/* Finish initialization - establish a PCI Express link */
 	rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
@@ -886,6 +944,23 @@ static void rcar_pcie_unmap_msi(struct rcar_pcie *pcie)
 	}
 
 	irq_domain_remove(msi->domain);
+}
+
+static int rcar_pcie_hw_enable_msi(struct rcar_pcie *pcie)
+{
+	struct rcar_msi *msi = &pcie->msi;
+	unsigned long base;
+
+	/* setup MSI data target */
+	base = virt_to_phys((void *)msi->pages);
+
+	rcar_pci_write_reg(pcie, base | MSIFE, PCIEMSIALR);
+	rcar_pci_write_reg(pcie, 0, PCIEMSIAUR);
+
+	/* enable all MSI interrupts */
+	rcar_pci_write_reg(pcie, 0xffffffff, PCIEMSIIER);
+
+	return 0;
 }
 
 static int rcar_pcie_enable_msi(struct rcar_pcie *pcie)
@@ -1228,30 +1303,106 @@ err_free_bridge:
 	return err;
 }
 
+#ifdef CONFIG_PM_SLEEP
 static int rcar_pcie_resume_noirq(struct device *dev)
 {
 	struct rcar_pcie *pcie = dev_get_drvdata(dev);
+	unsigned int data;
+	int err;
+	int (*hw_init_fn)(struct rcar_pcie *);
 
 	if (rcar_pci_read_reg(pcie, PMSR) &&
 	    !(rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN))
 		return 0;
 
 	/* Re-establish the PCIe link */
+	rcar_pci_write_reg(pcie, MACCTLR_INIT_VAL, MACCTLR);
 	rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
-	return rcar_pcie_wait_for_dl(pcie);
+	err = rcar_pcie_wait_for_dl(pcie);
+	if (err)
+		return err;
+
+	/* HW initialize on Resume */
+	if (!pcie) {
+		dev_warn(dev, "%s: %s: pcie NULL\n", __func__, dev_name(dev));
+		return 0; /* resume of the whole system continues */
+	}
+
+	err = rcar_pcie_parse_map_dma_ranges(pcie, dev->of_node);
+	if (err) {
+		dev_err(dev, "%s: %s: parse map dma ranges fail, err=%d\n",
+			__func__, dev_name(dev), err);
+		return 0; /* resume of the whole system continues */
+	}
+
+	/* Failure to get a link might just be that no cards are inserted */
+	hw_init_fn = of_device_get_match_data(dev);
+	err = hw_init_fn(pcie);
+	if (err) {
+		dev_err(dev, "PCIe link down\n");
+		dev_dbg(dev, "%s: %s: re-init hw fail, err=%d\n",
+			__func__, dev_name(dev), err);
+		pm_runtime_put(dev);
+		return 0; /* resume of the whole system continues */
+	}
+
+	data = rcar_pci_read_reg(pcie, MACSR);
+	dev_info(dev, "PCIe x%d: link up\n", (data >> 20) & 0x3f);
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		/* enable MSI */
+		rcar_pcie_hw_enable_msi(pcie);
+		dev_dbg(dev, "%s: %s: enable MSI\n", __func__, dev_name(dev));
+	}
+	rcar_pcie_hw_enable(pcie);
+
+	return 0;
 }
 
 static const struct dev_pm_ops rcar_pcie_pm_ops = {
 	.resume_noirq = rcar_pcie_resume_noirq,
 };
 
+#define DEV_PM_OPS (&rcar_pcie_pm_ops)
+#else /* CONFIG_PM_SLEEP */
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_pcie_driver = {
 	.driver = {
 		.name = "rcar-pcie",
 		.of_match_table = rcar_pcie_of_match,
-		.pm = &rcar_pcie_pm_ops,
+		.pm = DEV_PM_OPS,
 		.suppress_bind_attrs = true,
 	},
 	.probe = rcar_pcie_probe,
 };
 builtin_platform_driver(rcar_pcie_driver);
+
+static int rcar_pcie_pci_notifier(struct notifier_block *nb,
+				  unsigned long action, void *data)
+{
+	struct device *dev = data;
+
+	switch (action) {
+	case BUS_NOTIFY_BOUND_DRIVER:
+		/* Force the DMA mask to lower 32-bits */
+		dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block device_nb = {
+	.notifier_call = rcar_pcie_pci_notifier,
+};
+
+static int __init register_rcar_pcie_pci_notifier(void)
+{
+	return bus_register_notifier(&pci_bus_type, &device_nb);
+}
+
+arch_initcall(register_rcar_pcie_pci_notifier);

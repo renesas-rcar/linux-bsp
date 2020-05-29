@@ -260,8 +260,7 @@ int devm_of_pci_get_host_bridge_resources(struct device *dev,
 			struct list_head *resources, resource_size_t *io_base)
 {
 	struct device_node *dev_node = dev->of_node;
-	struct resource *res, tmp_res;
-	struct resource *bus_range;
+	struct resource res;
 	struct of_pci_range range;
 	struct of_pci_range_parser parser;
 	char range_type[4];
@@ -270,25 +269,21 @@ int devm_of_pci_get_host_bridge_resources(struct device *dev,
 	if (io_base)
 		*io_base = (resource_size_t)OF_BAD_ADDR;
 
-	bus_range = devm_kzalloc(dev, sizeof(*bus_range), GFP_KERNEL);
-	if (!bus_range)
-		return -ENOMEM;
-
 	dev_info(dev, "host bridge %pOF ranges:\n", dev_node);
 
-	err = of_pci_parse_bus_range(dev_node, bus_range);
+	err = of_pci_parse_bus_range(dev_node, &res);
 	if (err) {
-		bus_range->start = busno;
-		bus_range->end = bus_max;
-		bus_range->flags = IORESOURCE_BUS;
-		dev_info(dev, "  No bus range found for %pOF, using %pR\n",
-			 dev_node, bus_range);
+		res.start = busno;
+		res.end = bus_max;
+		res.flags = IORESOURCE_BUS;
+		pr_err("  No bus range found for %s\n", dev_node->full_name);
 	} else {
-		if (bus_range->end > bus_range->start + bus_max)
-			bus_range->end = bus_range->start + bus_max;
+		if (res.end > res.start + bus_max)
+			res.end = res.start + bus_max;
 	}
-	pci_add_resource(resources, bus_range);
 
+	res.flags |= IORESOURCE_AUTO;
+	pci_add_resource(resources, &res);
 	/* Check for ranges property */
 	err = of_pci_range_parser_init(&parser, dev_node);
 	if (err)
@@ -314,17 +309,11 @@ int devm_of_pci_get_host_bridge_resources(struct device *dev,
 		if (range.cpu_addr == OF_BAD_ADDR || range.size == 0)
 			continue;
 
-		err = of_pci_range_to_resource(&range, dev_node, &tmp_res);
+		err = of_pci_range_to_resource(&range, dev_node, &res);
 		if (err)
 			continue;
 
-		res = devm_kmemdup(dev, &tmp_res, sizeof(tmp_res), GFP_KERNEL);
-		if (!res) {
-			err = -ENOMEM;
-			goto failed;
-		}
-
-		if (resource_type(res) == IORESOURCE_IO) {
+		if (resource_type(&res) == IORESOURCE_IO) {
 			if (!io_base) {
 				dev_err(dev, "I/O range found for %pOF. Please provide an io_base pointer to save CPU base address\n",
 					dev_node);
@@ -337,7 +326,9 @@ int devm_of_pci_get_host_bridge_resources(struct device *dev,
 			*io_base = range.cpu_addr;
 		}
 
-		pci_add_resource_offset(resources, res,	res->start - range.pci_addr);
+		res.flags |= IORESOURCE_AUTO;
+		pci_add_resource_offset(resources, &res,
+					res.start - range.pci_addr);
 	}
 
 	return 0;
