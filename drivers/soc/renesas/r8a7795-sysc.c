@@ -5,6 +5,7 @@
  * Copyright (C) 2016-2017 Glider bvba
  */
 
+#include <linux/bitops.h>
 #include <linux/bug.h>
 #include <linux/kernel.h>
 #include <linux/sys_soc.h>
@@ -59,17 +60,30 @@ static const struct soc_device_attribute r8a7795es1[] __initconst = {
 	{ /* sentinel */ }
 };
 
+static const struct soc_device_attribute r8a7795es2[] __initconst = {
+	{ .soc_id = "r8a7795", .revision = "ES2.*" },
+	{ /* sentinel */ }
+};
+
 static int __init r8a7795_sysc_init(void)
 {
 	if (!soc_device_match(r8a7795es1))
 		rcar_sysc_nullify(r8a7795_areas, ARRAY_SIZE(r8a7795_areas),
 				  R8A7795_PD_A2VC0);
 
+	if (soc_device_match(r8a7795es1) || soc_device_match(r8a7795es2))
+		r8a7795_sysc_info.extra_regs->sysc_extmask_msks = 0;
+
 	return 0;
 }
+
+static struct rcar_sysc_extra_regs r8a7795_extra_regs = {
+	.sysc_extmask_offs = 0x2F8, .sysc_extmask_msks = BIT(0)
+};
 
 const struct rcar_sysc_info r8a7795_sysc_info __initconst = {
 	.init = r8a7795_sysc_init,
 	.areas = r8a7795_areas,
 	.num_areas = ARRAY_SIZE(r8a7795_areas),
+	.extra_regs = &r8a7795_extra_regs,
 };
