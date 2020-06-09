@@ -2,7 +2,7 @@
 /*
  * vsp1_wpf.c  --  R-Car VSP1 Write Pixel Formatter
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -10,6 +10,7 @@
 #include <linux/device.h>
 
 #include <media/v4l2-subdev.h>
+#include <media/vsp1.h>
 
 #include "vsp1.h"
 #include "vsp1_dl.h"
@@ -268,6 +269,9 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 	u32 srcrpf = 0;
 	int ret;
 
+	if (pipe->vmute_flag)
+		return;
+
 	sink_format = vsp1_entity_get_pad_format(&wpf->entity,
 						 wpf->entity.config,
 						 RWPF_PAD_SINK);
@@ -276,7 +280,8 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 						   RWPF_PAD_SOURCE);
 
 	/* Format */
-	if (!pipe->lif || wpf->writeback) {
+	if (!pipe->lif || wpf->writeback ||
+	    pipe->output->write_back == WB_STAT_CATP_SET) {
 		const struct v4l2_pix_format_mplane *format = &wpf->format;
 		const struct vsp1_format_info *fmtinfo = wpf->fmtinfo;
 
@@ -342,7 +347,7 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 	/* Enable interrupts. */
 	vsp1_dl_body_write(dlb, VI6_WPF_IRQ_STA(index), 0);
 	vsp1_dl_body_write(dlb, VI6_WPF_IRQ_ENB(index),
-			   VI6_WFP_IRQ_ENB_DFEE);
+			   VI6_WFP_IRQ_ENB_DFEE | VI6_WFP_IRQ_ENB_UNDE);
 
 	/*
 	 * Configure writeback for display pipelines (the wpf writeback flag is
@@ -359,7 +364,9 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 	}
 
 	vsp1_dl_body_write(dlb, VI6_WPF_WRBCK_CTRL(index),
-			   wpf->writeback ? VI6_WPF_WRBCK_CTRL_WBMD : 0);
+			   wpf->writeback ||
+			   (pipe->output->write_back == WB_STAT_CATP_SET) ?
+			   VI6_WPF_WRBCK_CTRL_WBMD : 0);
 }
 
 static void wpf_configure_frame(struct vsp1_entity *entity,
@@ -372,6 +379,9 @@ static void wpf_configure_frame(struct vsp1_entity *entity,
 	struct vsp1_rwpf *wpf = to_rwpf(&entity->subdev);
 	unsigned long flags;
 	u32 outfmt;
+
+	if (pipe->vmute_flag)
+		return;
 
 	spin_lock_irqsave(&wpf->flip.lock, flags);
 	wpf->flip.active = (wpf->flip.active & ~mask)
@@ -405,6 +415,16 @@ static void wpf_configure_partition(struct vsp1_entity *entity,
 	unsigned int offset;
 	unsigned int flip;
 	unsigned int i;
+
+	if (pipe->vmute_flag) {
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_SRCRPF,
+			       VI6_WPF_SRCRPF_VIRACT_MST);
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_HSZCLIP, 0);
+		vsp1_wpf_write(wpf, dlb, VI6_WPF_VSZCLIP, 0);
+		vsp1_wpf_write(wpf, dlb, VI6_DPR_WPF_FPORCH(wpf->entity.index),
+			       VI6_DPR_WPF_FPORCH_FP_WPFN);
+		return;
+	}
 
 	sink_format = vsp1_entity_get_pad_format(&wpf->entity,
 						 wpf->entity.config,

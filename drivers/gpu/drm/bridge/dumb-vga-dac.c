@@ -2,6 +2,7 @@
 /*
  * Copyright (C) 2015-2016 Free Electrons
  * Copyright (C) 2015-2016 NextThing Co
+ * Copyright (C) 2019 Renesas Electronics Corporation
  *
  * Maxime Ripard <maxime.ripard@free-electrons.com>
  */
@@ -22,6 +23,10 @@ struct dumb_vga {
 
 	struct i2c_adapter	*ddc;
 	struct regulator	*vdd;
+	bool			ddc_flag;
+	u32			width;
+	u32			height;
+	u32			max_pixclk;
 };
 
 static inline struct dumb_vga *
@@ -64,19 +69,42 @@ fallback:
 	ret = drm_add_modes_noedid(connector, 1920, 1200);
 
 	/* And prefer a mode pretty much anyone can handle */
-	drm_set_preferred_mode(connector, 1024, 768);
+	drm_set_preferred_mode(connector, vga->width, vga->height);
 
 	return ret;
 }
 
+static enum drm_mode_status
+dumb_vga_mode_valid(struct drm_connector *connector,
+		    struct drm_display_mode *mode)
+{
+	struct dumb_vga *vga = drm_connector_to_dumb_vga(connector);
+
+	if (!vga->max_pixclk)
+		return MODE_OK;
+
+	if (mode->clock > vga->max_pixclk)
+		return MODE_BAD;
+
+	return MODE_OK;
+}
+
 static const struct drm_connector_helper_funcs dumb_vga_con_helper_funcs = {
 	.get_modes	= dumb_vga_get_modes,
+	.mode_valid	= dumb_vga_mode_valid,
 };
 
 static enum drm_connector_status
 dumb_vga_connector_detect(struct drm_connector *connector, bool force)
 {
 	struct dumb_vga *vga = drm_connector_to_dumb_vga(connector);
+
+	/*
+	 * Set connector_status_connected forcibly when EDID is not used
+	 * by option.
+	 */
+	if (!vga->ddc_flag)
+		return connector_status_connected;
 
 	/*
 	 * Even if we have an I2C bus, we can't assume that the cable
@@ -156,10 +184,25 @@ static struct i2c_adapter *dumb_vga_retrieve_ddc(struct device *dev)
 {
 	struct device_node *phandle, *remote;
 	struct i2c_adapter *ddc;
+	struct dumb_vga *vga = dev_get_drvdata(dev);
 
 	remote = of_graph_get_remote_node(dev->of_node, 1, -1);
 	if (!remote)
 		return ERR_PTR(-EINVAL);
+
+	if (of_find_property(remote, "no-use-ddc", NULL))
+		vga->ddc_flag = false;
+	else
+		vga->ddc_flag = true;
+
+	of_property_read_u32(remote, "width", &vga->width);
+	of_property_read_u32(remote, "height", &vga->height);
+	if (vga->width == 0 || vga->height == 0) {
+		vga->width = 1024;
+		vga->height = 768;
+	}
+
+	of_property_read_u32(remote, "max-pixelclock", &vga->max_pixclk);
 
 	phandle = of_parse_phandle(remote, "ddc-i2c-bus", 0);
 	of_node_put(remote);
