@@ -537,6 +537,14 @@ static const struct of_device_id rcar_gen3_phy_usb2_match_table[] = {
 		.data = &rcar_gen3_phy_usb2_ops,
 	},
 	{
+		.compatible = "renesas,usb2-phy-r8a77995",
+		.data = &rcar_gen3_phy_usb2_ops,
+	},
+	{
+		.compatible = "renesas,usb2-phy-r8a77990",
+		.data = &rcar_gen3_phy_usb2_ops,
+	},
+	{
 		.compatible = "renesas,rcar-gen3-usb2-phy",
 		.data = &rcar_gen3_phy_usb2_ops,
 	},
@@ -614,7 +622,7 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 		return PTR_ERR(channel->base);
 
 	/* call request_irq for OTG */
-	irq = platform_get_irq(pdev, 0);
+	irq = platform_get_irq_optional(pdev, 0);
 	if (irq >= 0) {
 		INIT_WORK(&channel->work, rcar_gen3_phy_usb2_work);
 		irq = devm_request_irq(dev, irq, rcar_gen3_phy_usb2_irq,
