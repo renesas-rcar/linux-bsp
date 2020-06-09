@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2015-2019, Renesas Electronics Corporation
+ * Copyright (c) 2015-2020, Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License Version 2 as
@@ -46,7 +46,7 @@ static int tz_rcar_power_event(struct notifier_block *this,
 			       unsigned long event, void *ptr);
 static int rcar_optee_add_suspend_callback(void);
 static void rcar_optee_del_suspend_callback(void);
-static int rcar_optee_init_debug_log(void);
+static int rcar_optee_init_debug_log(struct optee *optee);
 static void rcar_optee_final_debug_log(void);
 
 static int debug_log_kthread(void *arg)
@@ -187,10 +187,11 @@ static void rcar_optee_del_suspend_callback(void)
 	pr_info("%s: unregister tz_rcar_power_event function\n", __func__);
 }
 
-static int rcar_optee_init_debug_log(void)
+static int rcar_optee_init_debug_log(struct optee *optee)
 {
 	int ret = 0;
 	struct task_struct *thread;
+	struct arm_smccc_res smccc;
 
 	remaped_log_buffer = ioremap_nocache(TEE_LOG_NS_BASE, TEE_LOG_NS_SIZE);
 	if (!remaped_log_buffer) {
@@ -208,9 +209,15 @@ static int rcar_optee_init_debug_log(void)
 		if (IS_ERR(thread)) {
 			pr_err("failed to kthread_run\n");
 			ret = -ENOMEM;
+			goto end;
 		}
 	}
 
+	/* Notify the start of debug log output to optee_os */
+	optee->invoke_fn(OPTEE_SMC_GET_SHM_CONFIG, SMC_RCAR_CMD,
+		START_DLOG_OUTPUT, 0, 0, 0, 0, 0, &smccc);
+
+end:
 	return ret;
 }
 
@@ -241,7 +248,7 @@ int optee_rcar_probe(struct optee *optee)
 
 	ret = rcar_optee_add_suspend_callback();
 	if (ret == 0) {
-		ret = rcar_optee_init_debug_log();
+		ret = rcar_optee_init_debug_log(optee);
 		if (ret != 0)
 			rcar_optee_del_suspend_callback();
 	}
