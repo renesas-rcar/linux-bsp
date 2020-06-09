@@ -340,6 +340,29 @@ config IPMMU_VMSA
 
 	  If unsure, say N.
 
+config IPMMU_VMSA_CTX_NUM
+	int "Input MMU number of MMU's really used"
+	depends on IPMMU_VMSA
+	range 1 8
+	default 8
+	help
+	 Specify the number of MMU contexts that you want to use.
+
+	 The specified number of MMU contexts are used for the Renesas
+	 IPMMU driver and the remaining contexts are unused.
+
+config IPMMU_VMSA_WHITELIST
+	bool "IPMMU Whitelist Support"
+	depends on IPMMU_VMSA
+	def_bool y
+	help
+	  Support whitelisting the devices for the Renesas VMSA-compatible
+	  IPMMU found in the R-Car Gen3 SoCs.
+
+	  For unsupported devices, IPMMU will not do address translation.
+
+	  If unsure, say N here.
+
 config SPAPR_TCE_IOMMU
 	bool "sPAPR TCE IOMMU Support"
 	depends on PPC_POWERNV || PPC_PSERIES
