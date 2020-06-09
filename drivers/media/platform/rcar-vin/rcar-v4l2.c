@@ -423,18 +423,22 @@ static int rvin_s_selection(struct file *file, void *fh,
 
 	switch (s->target) {
 	case V4L2_SEL_TGT_CROP:
-		/* Can't crop outside of source input */
-		max_rect.top = max_rect.left = 0;
-		max_rect.width = vin->source.width;
-		max_rect.height = vin->source.height;
-		v4l2_rect_map_inside(&r, &max_rect);
+		if (!vin->info->use_mc) {
+			/* Can't crop outside of source input */
+			max_rect.top = max_rect.left = 0;
+			max_rect.width = vin->source.width;
+			max_rect.height = vin->source.height;
+			v4l2_rect_map_inside(&r, &max_rect);
 
-		v4l_bound_align_image(&r.width, 6, vin->source.width, 0,
-				      &r.height, 2, vin->source.height, 0, 0);
+			v4l_bound_align_image(&r.width, 6, vin->source.width,
+					      0, &r.height, 2,
+					      vin->source.height, 0, 0);
 
-		r.top  = clamp_t(s32, r.top, 0, vin->source.height - r.height);
-		r.left = clamp_t(s32, r.left, 0, vin->source.width - r.width);
-
+			r.top  = clamp_t(s32, r.top, 0,
+					 vin->source.height - r.height);
+			r.left = clamp_t(s32, r.left, 0,
+					 vin->source.width - r.width);
+		}
 		vin->crop = s->r = r;
 
 		vin_dbg(vin, "Cropped %dx%d@%d:%d of %dx%d\n",
@@ -771,11 +775,6 @@ static int rvin_mc_s_fmt_vid_cap(struct file *file, void *priv,
 
 	vin->format = f->fmt.pix;
 
-	vin->crop.top = 0;
-	vin->crop.left = 0;
-	vin->crop.width = vin->format.width;
-	vin->crop.height = vin->format.height;
-
 	return 0;
 }
 
@@ -797,6 +796,9 @@ static const struct v4l2_ioctl_ops rvin_mc_ioctl_ops = {
 	.vidioc_g_fmt_vid_cap		= rvin_g_fmt_vid_cap,
 	.vidioc_s_fmt_vid_cap		= rvin_mc_s_fmt_vid_cap,
 	.vidioc_enum_fmt_vid_cap	= rvin_enum_fmt_vid_cap,
+
+	.vidioc_g_selection		= rvin_g_selection,
+	.vidioc_s_selection		= rvin_s_selection,
 
 	.vidioc_enum_input		= rvin_mc_enum_input,
 	.vidioc_g_input			= rvin_g_input,
