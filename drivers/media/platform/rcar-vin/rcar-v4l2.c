@@ -31,6 +31,10 @@
 
 static const struct rvin_video_format rvin_formats[] = {
 	{
+		.fourcc			= V4L2_PIX_FMT_NV12,
+		.bpp			= 1,
+	},
+	{
 		.fourcc			= V4L2_PIX_FMT_NV16,
 		.bpp			= 1,
 	},
@@ -100,12 +104,38 @@ static u32 rvin_format_sizeimage(struct v4l2_pix_format *pix)
 	if (pix->pixelformat == V4L2_PIX_FMT_NV16)
 		return pix->bytesperline * pix->height * 2;
 
+	if (pix->pixelformat == V4L2_PIX_FMT_NV12)
+		return pix->bytesperline * pix->height * 3 / 2;
+
 	return pix->bytesperline * pix->height;
+}
+
+static void __rvin_format_aling_update(struct rvin_dev *vin,
+				       struct v4l2_pix_format *pix)
+{
+	u32 walign;
+
+	/* HW limit width to a multiple of 32 (2^5) for NV16/12 else 2 (2^1) */
+	if (pix->pixelformat == V4L2_PIX_FMT_NV12 ||
+	    pix->pixelformat == V4L2_PIX_FMT_NV16)
+		walign = 5;
+	else if (pix->pixelformat == V4L2_PIX_FMT_YUYV ||
+		 pix->pixelformat == V4L2_PIX_FMT_UYVY)
+		walign = 1;
+	else
+		walign = 0;
+
+	/* Limit to VIN capabilities */
+	v4l_bound_align_image(&pix->width, 5, vin->info->max_width, walign,
+			      &pix->height, 2, vin->info->max_height, 0, 0);
+
+	pix->bytesperline = rvin_format_bytesperline(vin, pix);
+	pix->sizeimage = rvin_format_sizeimage(pix);
 }
 
 static void rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 {
-	u32 walign;
+	int width;
 
 	if (!rvin_format_from_pixel(vin, pix->pixelformat))
 		pix->pixelformat = RVIN_DEFAULT_FORMAT;
@@ -117,6 +147,44 @@ static void rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	case V4L2_FIELD_INTERLACED_TB:
 	case V4L2_FIELD_INTERLACED_BT:
 	case V4L2_FIELD_INTERLACED:
+		break;
+	case V4L2_FIELD_SEQ_TB:
+	case V4L2_FIELD_SEQ_BT:
+		/*
+		 * Due to extra hardware alignment restrictions on
+		 * buffer addresses for multi plane formats they
+		 * are not (yet) supported. This would be much simpler
+		 * once support for the UDS scaler is added.
+		 *
+		 * Support for multi plane formats could be supported
+		 * by having a different partitioning strategy when
+		 * capturing the second field (start capturing one
+		 * quarter in to the buffer instead of one half).
+		 */
+
+		if (pix->pixelformat == V4L2_PIX_FMT_NV16)
+			pix->pixelformat = RVIN_DEFAULT_FORMAT;
+
+		/*
+		 * For sequential formats it's needed to write to
+		 * the same buffer two times to capture both the top
+		 * and bottom field. The second time it is written
+		 * an offset is needed as to not overwrite the
+		 * previous captured field. Due to hardware limitations
+		 * the offsets must be a multiple of 128. Try to
+		 * increase the width of the image until a size is
+		 * found which can satisfy this constraint.
+		 */
+
+		width = pix->width;
+		while (width < vin->info->max_width) {
+			pix->width = width++;
+
+			__rvin_format_aling_update(vin, pix);
+
+			if (((pix->sizeimage / 2) & HW_BUFFER_MASK) == 0)
+				break;
+		}
 		break;
 	case V4L2_FIELD_ALTERNATE:
 		/*
@@ -132,15 +200,7 @@ static void rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 		break;
 	}
 
-	/* HW limit width to a multiple of 32 (2^5) for NV16 else 2 (2^1) */
-	walign = vin->format.pixelformat == V4L2_PIX_FMT_NV16 ? 5 : 1;
-
-	/* Limit to VIN capabilities */
-	v4l_bound_align_image(&pix->width, 2, vin->info->max_width, walign,
-			      &pix->height, 4, vin->info->max_height, 2, 0);
-
-	pix->bytesperline = rvin_format_bytesperline(vin, pix);
-	pix->sizeimage = rvin_format_sizeimage(pix);
+	__rvin_format_aling_update(vin, pix);
 
 	vin_dbg(vin, "Format %ux%u bpl: %u size: %u\n",
 		pix->width, pix->height, pix->bytesperline, pix->sizeimage);
@@ -363,18 +423,22 @@ static int rvin_s_selection(struct file *file, void *fh,
 
 	switch (s->target) {
 	case V4L2_SEL_TGT_CROP:
-		/* Can't crop outside of source input */
-		max_rect.top = max_rect.left = 0;
-		max_rect.width = vin->source.width;
-		max_rect.height = vin->source.height;
-		v4l2_rect_map_inside(&r, &max_rect);
+		if (!vin->info->use_mc) {
+			/* Can't crop outside of source input */
+			max_rect.top = max_rect.left = 0;
+			max_rect.width = vin->source.width;
+			max_rect.height = vin->source.height;
+			v4l2_rect_map_inside(&r, &max_rect);
 
-		v4l_bound_align_image(&r.width, 6, vin->source.width, 0,
-				      &r.height, 2, vin->source.height, 0, 0);
+			v4l_bound_align_image(&r.width, 6, vin->source.width,
+					      0, &r.height, 2,
+					      vin->source.height, 0, 0);
 
-		r.top  = clamp_t(s32, r.top, 0, vin->source.height - r.height);
-		r.left = clamp_t(s32, r.left, 0, vin->source.width - r.width);
-
+			r.top  = clamp_t(s32, r.top, 0,
+					 vin->source.height - r.height);
+			r.left = clamp_t(s32, r.left, 0,
+					 vin->source.width - r.width);
+		}
 		vin->crop = s->r = r;
 
 		vin_dbg(vin, "Cropped %dx%d@%d:%d of %dx%d\n",
@@ -409,9 +473,6 @@ static int rvin_s_selection(struct file *file, void *fh,
 	default:
 		return -EINVAL;
 	}
-
-	/* HW supports modifying configuration while running */
-	rvin_crop_scale_comp(vin);
 
 	return 0;
 }
@@ -706,15 +767,13 @@ static int rvin_mc_s_fmt_vid_cap(struct file *file, void *priv,
 	if (vb2_is_busy(&vin->queue))
 		return -EBUSY;
 
+	vin->compose.top = vin->compose.left = 0;
+	vin->compose.width = f->fmt.pix.width;
+	vin->compose.height = f->fmt.pix.height;
+
 	rvin_mc_try_format(vin, &f->fmt.pix);
 
 	vin->format = f->fmt.pix;
-
-	vin->crop.top = 0;
-	vin->crop.left = 0;
-	vin->crop.width = vin->format.width;
-	vin->crop.height = vin->format.height;
-	vin->compose = vin->crop;
 
 	return 0;
 }
@@ -737,6 +796,9 @@ static const struct v4l2_ioctl_ops rvin_mc_ioctl_ops = {
 	.vidioc_g_fmt_vid_cap		= rvin_g_fmt_vid_cap,
 	.vidioc_s_fmt_vid_cap		= rvin_mc_s_fmt_vid_cap,
 	.vidioc_enum_fmt_vid_cap	= rvin_enum_fmt_vid_cap,
+
+	.vidioc_g_selection		= rvin_g_selection,
+	.vidioc_s_selection		= rvin_s_selection,
 
 	.vidioc_enum_input		= rvin_mc_enum_input,
 	.vidioc_g_input			= rvin_g_input,
@@ -779,10 +841,6 @@ static int rvin_open(struct file *file)
 	struct rvin_dev *vin = video_drvdata(file);
 	int ret;
 
-	ret = pm_runtime_get_sync(vin->dev);
-	if (ret < 0)
-		return ret;
-
 	ret = mutex_lock_interruptible(&vin->lock);
 	if (ret)
 		goto err_pm;
@@ -818,7 +876,6 @@ err_open:
 err_unlock:
 	mutex_unlock(&vin->lock);
 err_pm:
-	pm_runtime_put(vin->dev);
 
 	return ret;
 }
@@ -845,8 +902,6 @@ static int rvin_release(struct file *file)
 	}
 
 	mutex_unlock(&vin->lock);
-
-	pm_runtime_put(vin->dev);
 
 	return ret;
 }
