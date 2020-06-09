@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 /* PTP 1588 clock using the Renesas Ethernet AVB
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2017 Renesas Electronics Corporation
  * Copyright (C) 2015 Renesas Solutions Corp.
  * Copyright (C) 2015-2016 Cogent Embedded, Inc. <source@cogentembedded.com>
  */
@@ -301,10 +301,11 @@ static const struct ptp_clock_info ravb_ptp_info = {
 };
 
 /* Caller must hold the lock */
-void ravb_ptp_interrupt(struct net_device *ndev)
+irqreturn_t ravb_ptp_interrupt(struct net_device *ndev)
 {
 	struct ravb_private *priv = netdev_priv(ndev);
 	u32 gis = ravb_read(ndev, GIS);
+	irqreturn_t result = IRQ_NONE;
 
 	gis &= ravb_read(ndev, GIC);
 	if (gis & GIS_PTCF) {
@@ -314,6 +315,9 @@ void ravb_ptp_interrupt(struct net_device *ndev)
 		event.index = 0;
 		event.timestamp = ravb_read(ndev, GCPT);
 		ptp_clock_event(priv->ptp.clock, &event);
+
+		result = IRQ_HANDLED;
+		ravb_write(ndev, ~GIS_PTCF, GIS);
 	}
 	if (gis & GIS_PTMF) {
 		struct ravb_ptp_perout *perout = priv->ptp.perout;
@@ -322,9 +326,12 @@ void ravb_ptp_interrupt(struct net_device *ndev)
 			perout->target += perout->period;
 			ravb_ptp_update_compare(priv, perout->target);
 		}
+
+		result = IRQ_HANDLED;
+		ravb_write(ndev, ~GIS_PTMF, GIS);
 	}
 
-	ravb_write(ndev, ~(gis | GIS_RESERVED), GIS);
+	return result;
 }
 
 void ravb_ptp_init(struct net_device *ndev, struct platform_device *pdev)

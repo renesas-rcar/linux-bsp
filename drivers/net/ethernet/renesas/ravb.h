@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /* Renesas Ethernet AVB device driver
  *
- * Copyright (C) 2014-2015 Renesas Electronics Corporation
+ * Copyright (C) 2014-2017 Renesas Electronics Corporation
  * Copyright (C) 2015 Renesas Solutions Corp.
  * Copyright (C) 2015-2016 Cogent Embedded, Inc. <source@cogentembedded.com>
  *
@@ -81,6 +81,7 @@ enum ravb_reg {
 	RQC3	= 0x00A0,
 	RQC4	= 0x00A4,
 	RPC	= 0x00B0,
+	RTC	= 0x00B4,	/* R-Car Gen3 only */
 	UFCW	= 0x00BC,
 	UFCS	= 0x00C0,
 	UFCV0	= 0x00C4,
@@ -126,14 +127,56 @@ enum ravb_reg {
 	SFP29	= 0x0174,
 	SFP30	= 0x0178,
 	SFP31	= 0x017C,
+	SFV0	= 0x01B8,	/* R-Car Gen3 only */
+	SFV1	= 0x01BC,	/* R-Car Gen3 only */
 	SFM0	= 0x01C0,
 	SFM1	= 0x01C4,
+	SFL	= 0x01C8,	/* R-Car Gen3 only */
+	PCRC	= 0x01CC,	/* R-Car Gen3 only */
+	CIAR0	= 0x0200,	/* R-Car Gen3 only */
+	CIAR1	= 0x0204,	/* R-Car Gen3 only */
+	CIAR2	= 0x0208,	/* R-Car Gen3 only */
+	CIAR3	= 0x020C,	/* R-Car Gen3 only */
+	CIAR4	= 0x0210,	/* R-Car Gen3 only */
+	CIAR5	= 0x0214,	/* R-Car Gen3 only */
+	CIAR6	= 0x0218,	/* R-Car Gen3 only */
+	CIAR7	= 0x021C,	/* R-Car Gen3 only */
+	CIAR8	= 0x0220,	/* R-Car Gen3 only */
+	CIAR9	= 0x0224,	/* R-Car Gen3 only */
+	CIAR10	= 0x0228,	/* R-Car Gen3 only */
+	CIAR11	= 0x022C,	/* R-Car Gen3 only */
+	CIAR12	= 0x0230,	/* R-Car Gen3 only */
+	CIAR13	= 0x0234,	/* R-Car Gen3 only */
+	CIAR14	= 0x0238,	/* R-Car Gen3 only */
+	CIAR15	= 0x023C,	/* R-Car Gen3 only */
+	CIAR16	= 0x0240,	/* R-Car Gen3 only */
+	CIAR17	= 0x0244,	/* R-Car Gen3 only */
+	LIAR0	= 0x0280,	/* R-Car Gen3 only */
+	LIAR1	= 0x0284,	/* R-Car Gen3 only */
+	LIAR2	= 0x0288,	/* R-Car Gen3 only */
+	LIAR3	= 0x028C,	/* R-Car Gen3 only */
+	LIAR4	= 0x0290,	/* R-Car Gen3 only */
+	LIAR5	= 0x0294,	/* R-Car Gen3 only */
+	LIAR6	= 0x0298,	/* R-Car Gen3 only */
+	LIAR7	= 0x029C,	/* R-Car Gen3 only */
+	LIAR8	= 0x02A0,	/* R-Car Gen3 only */
+	LIAR9	= 0x02A4,	/* R-Car Gen3 only */
+	LIAR10	= 0x02A8,	/* R-Car Gen3 only */
+	LIAR11	= 0x02AC,	/* R-Car Gen3 only */
+	LIAR12	= 0x02B0,	/* R-Car Gen3 only */
+	LIAR13	= 0x02B4,	/* R-Car Gen3 only */
+	LIAR14	= 0x02B8,	/* R-Car Gen3 only */
+	LIAR15	= 0x02BC,	/* R-Car Gen3 only */
+	LIAR16	= 0x02C0,	/* R-Car Gen3 only */
+	LIAR17	= 0x02C4,	/* R-Car Gen3 only */
 	TGC	= 0x0300,
 	TCCR	= 0x0304,
 	TSR	= 0x0308,
+	MFA	= 0x030C,
 	TFA0	= 0x0310,
 	TFA1	= 0x0314,
 	TFA2	= 0x0318,
+	VRR	= 0x031C,	/* R-Car Gen3 only */
 	CIVR0	= 0x0320,
 	CIVR1	= 0x0324,
 	CDVR0	= 0x0328,
@@ -156,6 +199,8 @@ enum ravb_reg {
 	TIS	= 0x037C,
 	ISS	= 0x0380,
 	CIE	= 0x0384,	/* R-Car Gen3 only */
+	RIC3	= 0x0388,	/* R-Car Gen3 only */
+	RIS3	= 0x038C,	/* R-Car Gen3 only */
 	GCCR	= 0x0390,
 	GMTT	= 0x0394,
 	GPTC	= 0x0398,
@@ -169,15 +214,48 @@ enum ravb_reg {
 	GCT0	= 0x03B8,
 	GCT1	= 0x03BC,
 	GCT2	= 0x03C0,
+	GSR	= 0x03C4,	/* R-Car Gen3 only */
 	GIE	= 0x03CC,	/* R-Car Gen3 only */
 	GID	= 0x03D0,	/* R-Car Gen3 only */
+	GIL	= 0x03D4,	/* R-Car Gen3 only */
+	GACP	= 0x03DC,	/* R-Car Gen3 only */
+	GPTF0	= 0x03E0,	/* R-Car Gen3 only */
+	GPTF1	= 0x03E4,	/* R-Car Gen3 only */
+	GPTF2	= 0x03E8,	/* R-Car Gen3 only */
+	GPTF3	= 0x03EC,	/* R-Car Gen3 only */
+	GCAT0	= 0x0400,	/* R-Car Gen3 only */
+	GCAT1	= 0x0404,	/* R-Car Gen3 only */
+	GCAT2	= 0x0408,	/* R-Car Gen3 only */
+	GCAT3	= 0x040C,	/* R-Car Gen3 only */
+	GCAT4	= 0x0410,	/* R-Car Gen3 only */
+	GCAT5	= 0x0414,	/* R-Car Gen3 only */
+	GCAT6	= 0x0418,	/* R-Car Gen3 only */
+	GCAT7	= 0x041C,	/* R-Car Gen3 only */
+	GCAT8	= 0x0420,	/* R-Car Gen3 only */
+	GCAT9	= 0x0424,	/* R-Car Gen3 only */
+	GCAT10	= 0x0428,	/* R-Car Gen3 only */
+	GCAT11	= 0x042C,	/* R-Car Gen3 only */
+	GCAT12	= 0x0430,	/* R-Car Gen3 only */
+	GCAT13	= 0x0434,	/* R-Car Gen3 only */
+	GCAT14	= 0x0438,	/* R-Car Gen3 only */
+	GCAT15	= 0x043C,	/* R-Car Gen3 only */
 	DIL	= 0x0440,	/* R-Car Gen3 only */
+	EIL	= 0x0444,	/* R-Car Gen3 only */
+	TIL	= 0x0448,	/* R-Car Gen3 only */
+	DIE	= 0x0450,	/* R-Car Gen3 only */
+	DID	= 0x0454,	/* R-Car Gen3 only */
+	EIE	= 0x0458,	/* R-Car Gen3 only */
+	EID	= 0x045C,	/* R-Car Gen3 only */
 	RIE0	= 0x0460,	/* R-Car Gen3 only */
 	RID0	= 0x0464,	/* R-Car Gen3 only */
+	RIE1	= 0x0468,	/* R-Car Gen3 only */
+	RID1	= 0x046C,	/* R-Car Gen3 only */
 	RIE2	= 0x0470,	/* R-Car Gen3 only */
 	RID2	= 0x0474,	/* R-Car Gen3 only */
 	TIE	= 0x0478,	/* R-Car Gen3 only */
 	TID	= 0x047c,	/* R-Car Gen3 only */
+	RIE3	= 0x0488,	/* R-Car Gen3 only */
+	RID3	= 0x048C,	/* R-Car Gen3 only */
 
 	/* E-MAC registers */
 	ECMR	= 0x0500,
@@ -187,9 +265,12 @@ enum ravb_reg {
 	PIR	= 0x0520,
 	PSR	= 0x0528,
 	PIPR	= 0x052c,
+	APR	= 0x0554,	/* R-Car Gen3 only */
 	MPR	= 0x0558,
 	PFTCR	= 0x055c,
 	PFRCR	= 0x0560,
+	TPAUSER	= 0x0564,	/* R-Car Gen3 only */
+	PFTTCR	= 0x0568,	/* R-Car Gen3 only */
 	GECMR	= 0x05b0,
 	MAHR	= 0x05c0,
 	MALR	= 0x05c8,
@@ -319,6 +400,14 @@ enum SFO_BIT {
 enum RTC_BIT {
 	RTC_MFL0	= 0x00000FFF,
 	RTC_MFL1	= 0x0FFF0000,
+};
+
+/* SFL */
+enum SFL_BIT {
+	SFL_LC		= 0x0000001F,
+	SFL_LC_SFM	= 0x0000001D,
+	SFL_LC_SFO	= 0x0000001E,
+	SFL_LC_LOADABLE	= 0x0000001F,
 };
 
 /* TGC */
@@ -723,6 +812,52 @@ enum RID0_BIT {
 	RID0_FRD17	= 0x00020000,
 };
 
+/* RIE1 (R-Car Gen3 only) */
+enum RIE1_BIT {
+	RIE1_RWS0	= 0x00000001,
+	RIE1_RWS1	= 0x00000002,
+	RIE1_RWS2	= 0x00000004,
+	RIE1_RWS3	= 0x00000008,
+	RIE1_RWS4	= 0x00000010,
+	RIE1_RWS5	= 0x00000020,
+	RIE1_RWS6	= 0x00000040,
+	RIE1_RWS7	= 0x00000080,
+	RIE1_RWS8	= 0x00000100,
+	RIE1_RWS9	= 0x00000200,
+	RIE1_RWS10	= 0x00000400,
+	RIE1_RWS11	= 0x00000800,
+	RIE1_RWS12	= 0x00001000,
+	RIE1_RWS13	= 0x00002000,
+	RIE1_RWS14	= 0x00004000,
+	RIE1_RWS15	= 0x00008000,
+	RIE1_RWS16	= 0x00010000,
+	RIE1_RWS17	= 0x00020000,
+	RIE1_RFWS	= 0x80000000,
+};
+
+/* RID1 (R-Car Gen3 only) */
+enum RID1_BIT {
+	RID1_RWD0	= 0x00000001,
+	RID1_RWD1	= 0x00000002,
+	RID1_RWD2	= 0x00000004,
+	RID1_RWD3	= 0x00000008,
+	RID1_RWD4	= 0x00000010,
+	RID1_RWD5	= 0x00000020,
+	RID1_RWD6	= 0x00000040,
+	RID1_RWD7	= 0x00000080,
+	RID1_RWD8	= 0x00000100,
+	RID1_RWD9	= 0x00000200,
+	RID1_RWD10	= 0x00000400,
+	RID1_RWD11	= 0x00000800,
+	RID1_RWD12	= 0x00001000,
+	RID1_RWD13	= 0x00002000,
+	RID1_RWD14	= 0x00004000,
+	RID1_RWD15	= 0x00008000,
+	RID1_RWD16	= 0x00010000,
+	RID1_RWD17	= 0x00020000,
+	RID1_RFWD	= 0x80000000,
+};
+
 /* RIE2 (R-Car Gen3 only) */
 enum RIE2_BIT {
 	RIE2_QFS0	= 0x00000001,
@@ -1058,7 +1193,7 @@ void ravb_modify(struct net_device *ndev, enum ravb_reg reg, u32 clear,
 		 u32 set);
 int ravb_wait(struct net_device *ndev, enum ravb_reg reg, u32 mask, u32 value);
 
-void ravb_ptp_interrupt(struct net_device *ndev);
+irqreturn_t ravb_ptp_interrupt(struct net_device *ndev);
 void ravb_ptp_init(struct net_device *ndev, struct platform_device *pdev);
 void ravb_ptp_stop(struct net_device *ndev);
 
