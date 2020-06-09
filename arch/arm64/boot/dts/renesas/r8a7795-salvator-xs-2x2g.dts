@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the Salvator-X 2nd version board with R-Car H3 ES3.0
+ *
+ * Copyright (C) 2018 Renesas Electronics Corp.
+ */
+
+#include "r8a7795-salvator-xs.dts"
+
+/ {
+	model = "Renesas Salvator-X 2nd version board based on r8a7795 ES3.0+ with 4GiB (2 x 2 GiB)";
+	compatible = "renesas,salvator-xs", "renesas,r8a7795";
+
+	memory@48000000 {
+		device_type = "memory";
+		/* first 128MB is reserved for secure area. */
+		reg = <0x0 0x48000000 0x0 0x78000000>;
+	};
+
+	memory@500000000 {
+		device_type = "memory";
+		reg = <0x5 0x00000000 0x0 0x80000000>;
+	};
+
+	/delete-node/ memory@600000000;
+	/delete-node/ memory@700000000;
+};
+
+&pciec0 {
+	/* Map all possible DDR as inbound ranges */
+	dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+};
+
+&pciec1 {
+	/* Map all possible DDR as inbound ranges */
+	dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+};

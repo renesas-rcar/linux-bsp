@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Device Tree Source for the ebisu board
+ * Device Tree Source for the ebisu board with R-Car E3 ES1.0
  *
  * Copyright (C) 2018 Renesas Electronics Corp.
  */
 
 /dts-v1/;
-#include "r8a77990.dtsi"
+#include "r8a77990-es10.dtsi"
+#include <dt-bindings/clock/r8a77990-cpg-mssr.h>
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/power/r8a77990-sysc.h>
 
 / {
-	model = "Renesas Ebisu board based on r8a77990";
+	model = "Renesas Ebisu board based on r8a77990 ES1.0";
 	compatible = "renesas,ebisu", "renesas,r8a77990";
 
 	aliases {
@@ -19,8 +21,42 @@
 	};
 
 	chosen {
-		bootargs = "ignore_loglevel rw root=/dev/nfs ip=on";
+		bootargs = "ignore_loglevel";
 		stdout-path = "serial0:115200n8";
+	};
+
+	memory@48000000 {
+		device_type = "memory";
+		/* first 128MB is reserved for secure area. */
+		reg = <0x0 0x48000000 0x0 0x38000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* For Audio DSP */
+		adsp_reserved: linux,adsp@57000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x57000000 0x0 0x01000000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma@58000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x10000000>;
+			linux,cma-default;
+		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia@68000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x68000000 0x0 0x04000000>;
+		};
 	};
 
 	audio_clkout: audio-clkout {
@@ -41,16 +77,6 @@
 		clocks = <&cpg CPG_MOD 922>;
 		clock-names = "adg";
 		resets = <&cpg 922>;
-	};
-
-	backlight: backlight {
-		compatible = "pwm-backlight";
-		pwms = <&pwm3 0 50000>;
-
-		brightness-levels = <512 511 505 494 473 440 392 327 241 133 0>;
-		default-brightness-level = <10>;
-
-		power-supply = <&reg_12p0v>;
 	};
 
 	cvbs-in {
@@ -111,49 +137,6 @@
 		};
 	};
 
-	memory@48000000 {
-		device_type = "memory";
-		/* first 128MB is reserved for secure area. */
-		reg = <0x0 0x48000000 0x0 0x38000000>;
-	};
-
-	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
-		ranges;
-
-		/* For Audio DSP */
-		adsp_reserved: linux,adsp@57000000 {
-			compatible = "shared-dma-pool";
-			reusable;
-			reg = <0x00000000 0x57000000 0x0 0x01000000>;
-		};
-
-		/* global autoconfigured region for contiguous allocations */
-		linux,cma@58000000 {
-			compatible = "shared-dma-pool";
-			reusable;
-			reg = <0x00000000 0x58000000 0x0 0x10000000>;
-			linux,cma-default;
-		};
-
-		/* device specific region for contiguous allocations */
-		mmp_reserved: linux,multimedia@68000000 {
-			compatible = "shared-dma-pool";
-			reusable;
-			reg = <0x00000000 0x68000000 0x0 0x04000000>;
-		};
-	};
-
-	mmngr {
-		compatible = "renesas,mmngr";
-		memory-region = <&mmp_reserved>;
-	};
-
-	mmngrbuf {
-		compatible = "renesas,mmngrbuf";
-	};
-
 	lvds0 {
 		compatible = "panel-lvds";
 
@@ -208,6 +191,15 @@
 		};
 	};
 
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
 	reg_1p8v: regulator0 {
 		compatible = "regulator-fixed";
 		regulator-name = "fixed-1.8V";
@@ -226,30 +218,12 @@
 		regulator-always-on;
 	};
 
-	reg_12p0v: regulator2 {
-		compatible = "regulator-fixed";
-		regulator-name = "D12.0V";
-		regulator-min-microvolt = <12000000>;
-		regulator-max-microvolt = <12000000>;
-		regulator-boot-on;
-		regulator-always-on;
-	};
+	sound_card: sound {
+		compatible = "audio-graph-card";
 
-	rsnd_ak4613: sound {
-		compatible = "simple-audio-card";
+		label = "rcar-sound";
 
-		simple-audio-card,name = "rsnd-ak4613";
-		simple-audio-card,format = "left_j";
-		simple-audio-card,bitclock-master = <&sndcpu>;
-		simple-audio-card,frame-master = <&sndcpu>;
-
-		sndcodec: simple-audio-card,codec {
-			sound-dai = <&ak4613>;
-		};
-
-		sndcpu: simple-audio-card,cpu {
-			sound-dai = <&rcar_sound>;
-		};
+		dais = <&rsnd_port0>;
 	};
 
 	vbus0_usb2: regulator-vbus0-usb2 {
@@ -274,6 +248,17 @@
 		enable-active-high;
 	};
 
+	vcc_sdhi1: regulator-vcc-sdhi1 {
+		compatible = "regulator-fixed";
+
+		regulator-name = "SDHI1 Vcc";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+
+		gpio = <&gpio0 4 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
 	vccq_sdhi0: regulator-vccq-sdhi0 {
 		compatible = "regulator-gpio";
 
@@ -285,17 +270,6 @@
 		gpios-states = <1>;
 		states = <3300000 1
 			  1800000 0>;
-	};
-
-	vcc_sdhi1: regulator-vcc-sdhi1 {
-		compatible = "regulator-fixed";
-
-		regulator-name = "SDHI1 Vcc";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-
-		gpio = <&gpio0 4 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
 	};
 
 	vccq_sdhi1: regulator-vccq-sdhi1 {
@@ -388,24 +362,6 @@
 		interrupt-parent = <&gpio2>;
 		interrupts = <21 IRQ_TYPE_LEVEL_LOW>;
 		reset-gpios = <&gpio1 20 GPIO_ACTIVE_LOW>;
-		/*
-		 * TX clock internal delay mode is required for reliable
-		 * 1Gbps communication using the KSZ9031RNX phy present on
-		 * the Ebisu board, however, TX clock internal delay mode
-		 * isn't supported on r8a77990.  Thus, limit speed to
-		 * 100Mbps for reliable communication.
-		 */
-		max-speed = <100>;
-	};
-};
-
-&canfd {
-	pinctrl-0 = <&canfd0_pins>;
-	pinctrl-names = "default";
-	status = "okay";
-
-	channel0 {
-		status = "okay";
 	};
 };
 
@@ -452,15 +408,6 @@
 
 &i2c0 {
 	status = "okay";
-
-	io_expander: gpio@20 {
-		compatible = "onnn,pca9654";
-		reg = <0x20>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		interrupt-parent = <&gpio2>;
-		interrupts = <22 IRQ_TYPE_LEVEL_LOW>;
-	};
 
 	hdmi-encoder@39 {
 		compatible = "adi,adv7511w";
@@ -551,6 +498,12 @@
 		asahi-kasei,out4-single-end;
 		asahi-kasei,out5-single-end;
 		asahi-kasei,out6-single-end;
+
+		port {
+			ak4613_endpoint: endpoint {
+				remote-endpoint = <&rsnd_endpoint0>;
+			};
+		};
 	};
 
 	cs2000: clk-multiplier@4f {
@@ -564,6 +517,7 @@
 		assigned-clock-rates = <24576000>; /* 1/1 divide */
 	};
 };
+
 
 &i2c_dvfs {
 	status = "okay";
@@ -582,8 +536,6 @@
 		#interrupt-cells = <2>;
 		gpio-controller;
 		#gpio-cells = <2>;
-		rohm,ddr-backup-power = <0x1>;
-		rohm,rstbmode-level;
 	};
 };
 
@@ -605,11 +557,6 @@
 };
 
 &lvds1 {
-	/*
-	 * Even though the LVDS1 output is not connected, the encoder must be
-	 * enabled to supply a pixel clock to the DU for the DPAD output when
-	 * LVDS0 is in use.
-	 */
 	status = "okay";
 
 	clocks = <&cpg CPG_MOD 727>,
@@ -646,14 +593,14 @@
 		};
 	};
 
-	canfd0_pins: canfd0 {
-		groups = "canfd0_data";
-		function = "canfd0";
-	};
-
 	du_pins: du {
 		groups = "du_rgb888", "du_sync", "du_disp", "du_clk_out_0";
 		function = "du";
+	};
+
+	i2c3_pins: i2c3 {
+		groups = "i2c3";
+		function = "i2c3";
 	};
 
 	irq0_pins: irq0 {
@@ -712,15 +659,15 @@
 		power-source = <1800>;
 	};
 
+	sound_pins: sound {
+		groups = "ssi01239_ctrl", "ssi0_data", "ssi1_data";
+		function = "ssi";
+	};
+
 	sound_clk_pins: sound_clk {
 		groups = "audio_clk_a", "audio_clk_b_a", "audio_clk_c_a",
 			 "audio_clkout_a", "audio_clkout1_a";
 		function = "audio_clk";
-	};
-
-	sound_pins: sound {
-		groups = "ssi01239_ctrl", "ssi0_data", "ssi1_data";
-		function = "ssi";
 	};
 
 	usb0_pins: usb {
@@ -745,6 +692,11 @@
 	pinctrl-0 = <&pwm5_pins>;
 	pinctrl-names = "default";
 
+	status = "okay";
+};
+
+&rwdt {
+	timeout-sec = <60>;
 	status = "okay";
 };
 
@@ -780,18 +732,20 @@
 		 <&audio_clk_a>, <&cs2000>, <&audio_clk_c>,
 		 <&cpg CPG_CORE R8A77990_CLK_ZA2>;
 
-	rcar_sound,dai {
-		dai0 {
-			playback = <&ssi0 &src0 &dvc0>;
-			capture  = <&ssi1 &src1 &dvc1>;
+	ports {
+		rsnd_port0: port@0 {
+			rsnd_endpoint0: endpoint {
+				remote-endpoint = <&ak4613_endpoint>;
+
+				dai-format = "left_j";
+				bitclock-master = <&rsnd_endpoint0>;
+				frame-master = <&rsnd_endpoint0>;
+
+				playback = <&ssi0 &src0 &dvc0>;
+				capture  = <&ssi1 &src1 &dvc1>;
+			};
 		};
 	};
-
-};
-
-&rwdt {
-	timeout-sec = <60>;
-	status = "okay";
 };
 
 &scif2 {
@@ -836,8 +790,6 @@
 	pinctrl-1 = <&sdhi3_pins_uhs>;
 	pinctrl-names = "default", "state_uhs";
 
-	iommus = <&ipmmu_ds1 35>;
-
 	vmmc-supply = <&reg_3p3v>;
 	vqmmc-supply = <&reg_1p8v>;
 	mmc-hs200-1_8v;
@@ -861,7 +813,6 @@
 };
 
 &usb3_peri0 {
-	companion = <&xhci0>;
 	status = "okay";
 };
 
