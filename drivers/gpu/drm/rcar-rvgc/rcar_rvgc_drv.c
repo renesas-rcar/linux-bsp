@@ -29,7 +29,7 @@
 #include <linux/of_reserved_mem.h>
 #include "r_taurus_rvgc_protocol.h"
 
-#define RCAR_RVGC_DRM_NAME     "rcar-rvgc"
+#define RCAR_RVGC_DRM_NAME     "rcar-du"
 
 
 /* -----------------------------------------------------------------------------
