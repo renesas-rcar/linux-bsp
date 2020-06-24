@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the Condor board
+ *
+ * Copyright (C) 2020 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a779a0.dtsi"
+
+/ {
+	model = "Renesas Falcon board based on r8a779a0";
+	compatible = "renesas,falcon", "renesas,r8a779a0";
+
+	aliases {
+		/* T.B.D. */
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+};
+
+&extal_clk {
+	clock-frequency = <16666666>;
+};
+
+&extalr_clk {
+	clock-frequency = <32768>;
+};
+
+&pfc {
+	/* T.B.D. */
+};
