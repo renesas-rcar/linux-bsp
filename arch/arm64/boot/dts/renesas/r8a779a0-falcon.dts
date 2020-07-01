@@ -14,6 +14,7 @@
 	compatible = "renesas,falcon", "renesas,r8a779a0";
 
 	aliases {
+		serial0 = &scif0;
 		ethernet0 = &avb0;
 	};
 
@@ -149,6 +150,16 @@
 			drive-strength = <24>;
 		};
 	};
+
+	scif0_pins: scif0 {
+		groups = "scif0_data", "scif0_ctrl";
+		function = "scif0";
+	};
+
+	scif_clk_pins: scif_clk {
+		groups = "scif_clk";
+		function = "scif_clk";
+	};
 };
 
 &i2c0 {
@@ -256,4 +267,19 @@
 		interrupts = <16 IRQ_TYPE_LEVEL_LOW>;
 		reset-gpios = <&gpio9 15 GPIO_ACTIVE_LOW>;
 	};
+};
+
+&scif0 {
+	pinctrl-0 = <&scif0_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&scif_clk {
+	pinctrl-0 = <&scif_clk_pins>;
+	pinctrl-names = "default";
+
+	clock-frequency = <24000000>;
+	status = "okay";
 };
