@@ -304,3 +304,25 @@
 &pciec3 {
 	status = "disabled";
 };
+
+&du {
+	status = "okay";
+};
+
+&dsi0 {
+	status = "okay";
+
+	clocks = <&cpg CPG_MOD 415>,
+			 <&cpg CPG_CORE R8A779A0_CLK_DSI>,
+			 <&extal_clk>;
+	clock-names = "fck", "dsi", "extal";
+
+	ports {
+		port@1 {
+			endpoint {
+				remote-endpoint = <&sn65dsi86_in>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+};
