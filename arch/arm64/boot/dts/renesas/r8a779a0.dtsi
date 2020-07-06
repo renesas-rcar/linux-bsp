@@ -1242,5 +1242,237 @@
 				status = "disabled";
 			};
 		};
+
+		pciec0: pcie@e65d0000 {
+			compatible = "renesas,r8a779a0-pcie";
+			reg = <0 0xe65d0000 0 0x3000>,
+			      <0 0xe65d3000 0 0x2000>,
+			      <0 0xe65d5000 0 0x1200>,
+			      <0 0xe65d6200 0 0x0e00>,
+			      <0 0xe65d7000 0 0x1000>,
+			      <0 0xfe000000 0 0x100000>;
+			reg-names = "dbi",
+				    "atu",
+				    "dma",
+				    "app",
+				    "phy",
+				    "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+				  /* downstream IO (1 MB) */
+			ranges = <0x01000000 0 0x00000000 0 0xfe100000 0 0x00100000
+				  /* 32-bit non-prefetchable memory (2 MB) */
+				  0x02000000 0 0xfe200000 0 0xfe200000 0 0x00200000
+				  /* 32-bit non-prefetchable memory (128 MB) */
+				  0x02000000 0 0x30000000 0 0x30000000 0 0x08000000
+				  /* 32-bit prefetchable memory (128 MB) */
+				  0x42000000 0 0x38000000 0 0x38000000 0 0x08000000>;
+			interrupts = <GIC_SPI 224 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 225 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 417 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 418 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 419 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma", "err", "fatal",
+					  "nonfatal", "lp", "vndmsg";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 224 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 2 &gic GIC_SPI 224 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 224 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 224 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 624>,
+				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
+				 <&cpg CPG_CORE R8A779A0_CLK_S1D8>,
+				 <&pcie_bus_clk>;
+			clock-names = "pcie_axi",
+				      "pcie_apb",
+				      "pcie_phy",
+				      "pcie_bus";
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 624>;
+				 //<&cpg 1121>;
+			num-lanes = <2>;
+			snps,enable-cdm-check = "true";
+			max-link-speed = <2>;
+			status = "disabled";
+		};
+
+		pciec1: pcie@e65d8000 {
+			compatible = "renesas,r8a779a0-pcie";
+			reg = <0 0xe65d8000 0 0x3000>,
+			      <0 0xe65db000 0 0x2000>,
+			      <0 0xe65dd000 0 0x1200>,
+			      <0 0xe65de200 0 0x0e00>,
+			      <0 0xe65df000 0 0x1000>,
+			      <0 0xee900000 0 0x100000>;
+			reg-names = "dbi",
+				    "atu",
+				    "dma",
+				    "app",
+				    "phy",
+				    "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+				  /* downstream IO (1 MB) */
+			ranges = <0x01000000 0 0x00000000 0 0xeea00000 0 0x00100000
+				  /* 32-bit non-prefetchable memory (2 MB) */
+				  0x02000000 0 0xeeb00000 0 0xeeb00000 0 0x00200000
+				  /* 32-bit non-prefetchable memory (128 MB) */
+				  0x02000000 0 0xc0000000 0 0xc0000000 0 0x08000000
+				  /* 32-bit prefetchable memory (128 MB) */
+				  0x42000000 0 0xc8000000 0 0xc8000000 0 0x08000000>;
+			interrupts = <GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 228 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 229 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 420 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 421 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 422 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma", "err", "fatal",
+					  "nonfatal", "lp", "vndmsg";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 2 &gic GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 625>,
+				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
+				 <&cpg CPG_CORE R8A779A0_CLK_S1D8>,
+				 <&pcie_bus_clk>;
+			clock-names = "pcie_axi",
+				      "pcie_apb",
+				      "pcie_phy",
+				      "pcie_bus";
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 625>;
+				 //<&cpg 1122>;
+			num-lanes = <2>;
+			snps,enable-cdm-check = "true";
+			max-link-speed = <2>;
+			status = "disabled";
+		};
+
+		pciec2: pcie@e65f0000 {
+			compatible = "renesas,r8a779a0-pcie";
+			reg = <0 0xe65f0000 0 0x3000>,
+			      <0 0xe65f3000 0 0x2000>,
+			      <0 0xe65f5000 0 0x1200>,
+			      <0 0xe65f6200 0 0x0e00>,
+			      <0 0xe65f7000 0 0x1000>,
+			      <0 0xfdb00000 0 0x100000>;
+			reg-names = "dbi",
+				    "atu",
+				    "dma",
+				    "app",
+				    "phy",
+				    "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+				  /* downstream IO (1 MB) */
+			ranges = <0x01000000 0 0x00000000 0 0xfdc00000 0 0x00100000
+				  /* 32-bit non-prefetchable memory (2 MB) */
+				  0x02000000 0 0xfdd00000 0 0xfdd00000 0 0x00200000
+				  /* 32-bit non-prefetchable memory (128 MB) */
+				  0x02000000 0 0xd0000000 0 0xd0000000 0 0x08000000
+				  /* 32-bit prefetchable memory (128 MB) */
+				  0x42000000 0 0xd8000000 0 0xd8000000 0 0x08000000>;
+			interrupts = <GIC_SPI 230 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 231 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 232 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 425 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 426 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 427 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma", "err", "fatal",
+					  "nonfatal", "lp", "vndmsg";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 230 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 2 &gic GIC_SPI 230 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 230 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 230 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 626>,
+				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
+				 <&cpg CPG_CORE R8A779A0_CLK_S1D8>,
+				 <&pcie_bus_clk>;
+			clock-names = "pcie_axi",
+				      "pcie_apb",
+				      "pcie_phy",
+				      "pcie_bus";
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 626>;
+				 //<&cpg 1123>;
+			num-lanes = <2>;
+			snps,enable-cdm-check = "true";
+			max-link-speed = <2>;
+			status = "disabled";
+		};
+
+		pciec3: pcie@e65f8000 {
+			compatible = "renesas,r8a779a0-pcie";
+			reg = <0 0xe65f8000 0 0x3000>,
+			      <0 0xe65fb000 0 0x2000>,
+			      <0 0xe65fd000 0 0x1200>,
+			      <0 0xe65fe200 0 0x0e00>,
+			      <0 0xe65ff000 0 0x1000>,
+			      <0 0xee500000 0 0x100000>;
+			reg-names = "dbi",
+				    "atu",
+				    "dma",
+				    "app",
+				    "phy",
+				    "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+				  /* downstream IO (1 MB) */
+			ranges = <0x01000000 0 0x00000000 0 0xee600000 0 0x00100000
+				  /* 32-bit non-prefetchable memory (2 MB) */
+				  0x02000000 0 0xee700000 0 0xee700000 0 0x00200000
+				  /* 32-bit non-prefetchable memory (128 MB) */
+				  0x02000000 0 0x20000000 0 0x20000000 0 0x08000000
+				  /* 32-bit prefetchable memory (128 MB) */
+				  0x42000000 0 0x28000000 0 0x28000000 0 0x08000000>;
+			interrupts = <GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 234 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 428 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 429 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 430 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 431 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma", "err", "fatal",
+					  "nonfatal", "lp", "vndmsg";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 2 &gic GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 627>,
+				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
+				 <&cpg CPG_CORE R8A779A0_CLK_S1D8>,
+				 <&pcie_bus_clk>;
+			clock-names = "pcie_axi",
+				      "pcie_apb",
+				      "pcie_phy",
+				      "pcie_bus";
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 627>;
+				 //<&cpg 1124>;
+			num-lanes = <2>;
+			snps,enable-cdm-check = "true";
+			max-link-speed = <2>;
+			status = "disabled";
+		};
 	};
 };
