@@ -21,6 +21,16 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
+
+	dsi-con {
+		compatible = "dsi-connector";
+
+		port {
+			dsi_con_out: endpoint {
+			remote-endpoint = <&sn65dsi86_out>;
+			};
+		};
+	};
 };
 
 &extal_clk {
@@ -176,6 +186,31 @@
 
 	status = "okay";
 	clock-frequency = <400000>;
+
+	sn65dsi86@2c {
+		compatible = "ti,sn65dsi86";
+		reg = <0x2c>;
+		dp-connector;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				sn65dsi86_in: endpoint {
+					remote-endpoint = <&dsi0_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				sn65dsi86_out: endpoint {
+					remote-endpoint = <&dsi_con_out>;
+				};
+			};
+		};
+	};
 };
 
 &avb0 {
