@@ -1116,6 +1116,11 @@ static bool ipmmu_slave_whitelist(struct device *dev)
 	if (!soc_device_match(soc_rcar_gen3_whitelist))
 		return false;
 
+#if defined(CONFIG_PCI)
+	if (dev_is_pci(dev))
+		return true;
+#endif
+
 	/* Check whether this slave device can work with the IPMMU */
 	for (i = 0; i < ARRAY_SIZE(rcar_gen3_slave_whitelist); i++) {
 		if (!strcmp(dev_name(dev), rcar_gen3_slave_whitelist[i]))
@@ -1538,6 +1543,10 @@ static int ipmmu_probe(struct platform_device *pdev)
 			return ret;
 
 #if defined(CONFIG_IOMMU_DMA)
+#if defined(CONFIG_PCI)
+		if (!iommu_present(&pci_bus_type))
+			bus_set_iommu(&pci_bus_type, &ipmmu_ops);
+#endif
 		if (!iommu_present(&platform_bus_type))
 			bus_set_iommu(&platform_bus_type, &ipmmu_ops);
 #endif
