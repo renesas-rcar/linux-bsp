@@ -134,6 +134,27 @@
 		reg = <0x51>;
 		pagesize = <8>;
 	};
+
+	io_expander2: gpio@21 {
+		compatible = "onnn,pca9654";
+		reg = <0x21>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	io_expander3: gpio@22 {
+		compatible = "onnn,pca9654";
+		reg = <0x22>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	io_expander4: gpio@23 {
+		compatible = "onnn,pca9654";
+		reg = <0x23>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
 };
 
 &i2c1 {
@@ -164,6 +185,260 @@
 				sn65dsi86_out: endpoint {
 					remote-endpoint = <&dsi_con_out>;
 				};
+			};
+		};
+	};
+
+	gmsl0: gmsl-deserializer@49 {
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		compatible = "maxim,max96712";
+		reg = <0x49>, <0x01>, <0x02>, <0x03>, <0x04>;
+		gpios = <&io_expander2 0 GPIO_ACTIVE_HIGH>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96712_in0: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96712_in1: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96712_in2: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96712_in3: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96712_out0: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi40_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
+
+	gmsl1: gmsl-deserializer@4b {
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		compatible = "maxim,max96712";
+		reg = <0x4b>, <0x05>, <0x06>, <0x07>, <0x08>;
+		gpios = <&io_expander3 0 GPIO_ACTIVE_HIGH>;
+		maxim,invert_phy-pol;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96712_in4: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96712_in5: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96712_in6: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96712_in7: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96712_out1: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi42_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
+
+	gmsl2: gmsl-deserializer@6b {
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		compatible = "maxim,max96712";
+		reg = <0x6b>, <0x09>, <0x0a>, <0x0b>, <0x0c>;
+		gpios = <&io_expander4 0 GPIO_ACTIVE_HIGH>;
+		maxim,invert_phy-pol;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96712_in8: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96712_in9: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96712_in10: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96712_in11: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96712_out2: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi43_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
 			};
 		};
 	};
@@ -326,3 +601,111 @@
 		};
 	};
 };
+
+&csi40 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi40_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96712_out0>;
+			};
+		};
+	};
+};
+
+&csi42 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi42_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96712_out1>;
+			};
+		};
+	};
+};
+
+&csi43 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi43_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96712_out2>;
+			};
+		};
+	};
+};
+
+&vin00 {
+	status = "okay";
+};
+
+&vin01 {
+	status = "okay";
+};
+
+&vin02 {
+	status = "okay";
+};
+
+&vin03 {
+	status = "okay";
+};
+
+&vin20 {
+	status = "okay";
+};
+
+&vin21 {
+	status = "okay";
+};
+
+&vin22 {
+	status = "okay";
+};
+
+&vin23 {
+	status = "okay";
+};
+
+&vin30 {
+	status = "okay";
+};
+
+&vin31 {
+	status = "okay";
+};
+
+&vin32 {
+	status = "okay";
+};
+
+&vin33 {
+	status = "okay";
+};
+
+/* FAKRA Overlay */
+#include "falcon-fakra.dtsi"
