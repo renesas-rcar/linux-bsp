@@ -140,6 +140,27 @@
 		reg = <0x51>;
 		pagesize = <8>;
 	};
+
+	io_expander2: gpio@21 {
+		compatible = "onnn,pca9654";
+		reg = <0x21>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	io_expander3: gpio@22 {
+		compatible = "onnn,pca9654";
+		reg = <0x22>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	io_expander4: gpio@23 {
+		compatible = "onnn,pca9654";
+		reg = <0x23>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
 };
 
 &i2c1 {
@@ -317,3 +338,111 @@
 		};
 	};
 };
+
+&csi40 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi40_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96712_out0>;
+			};
+		};
+	};
+};
+
+&csi42 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi42_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96712_out1>;
+			};
+		};
+	};
+};
+
+&csi43 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi43_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96712_out2>;
+			};
+		};
+	};
+};
+
+&vin00 {
+	status = "okay";
+};
+
+&vin01 {
+	status = "okay";
+};
+
+&vin02 {
+	status = "okay";
+};
+
+&vin03 {
+	status = "okay";
+};
+
+&vin20 {
+	status = "okay";
+};
+
+&vin21 {
+	status = "okay";
+};
+
+&vin22 {
+	status = "okay";
+};
+
+&vin23 {
+	status = "okay";
+};
+
+&vin24 {
+	status = "okay";
+};
+
+&vin25 {
+	status = "okay";
+};
+
+&vin26 {
+	status = "okay";
+};
+
+&vin27 {
+	status = "okay";
+};
+
+/* FAKRA Overlay */
+#include "falcon-fakra.dtsi"
