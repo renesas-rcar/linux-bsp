@@ -858,6 +858,7 @@
 	no-sd;
 	no-sdio;
 	non-removable;
+	full-pwr-cycle-in-suspend;
 	status = "okay";
 };
 
