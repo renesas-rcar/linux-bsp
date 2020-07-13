@@ -1,0 +1,11 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Device Tree Source for the Ebisu-4D board
+ *
+ * Copyright (C) 2020 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a77990-es10-ebisu-4d.dts"
+#include "ebisu-4d_cr7_rproc.dtsi"
+
