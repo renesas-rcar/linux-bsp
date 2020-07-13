@@ -1,0 +1,100 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Device Tree Source for the Ebisu-4D board
+ *
+ * Copyright (C) 2020 Renesas Electronics Corp.
+ */
+
+/ {
+	aliases {
+		/delete-property/ i2c0;
+	};
+
+	cpus {
+		/delete-property/ idle-states;
+	};
+
+	reserved-memory {
+		cma: linux,cma@58000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x0 0x58000000 0x0 0x14000000>;
+			linux,cma-default;
+		};
+
+		/delete-node/ linux,multimedia@68000000;
+
+		mmp_reserved: linux,multimedia@6c000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x0 0x6c000000 0x0 0x4000000>;
+		};
+
+		cr7: linux,cr7@70000000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x0 0x70000000 0x0 0x10000000>;
+		};
+	};
+
+	cr7 {
+		compatible = "renesas,rcar-cr7";
+		memory-region = <&cr7>;
+	};
+
+	rvgc {
+		#address-cells = <0x2>;
+		#size-cells = <0x2>;
+
+		nr-displays = <0x1>;
+		display-mappings = <0x0>;
+		display-layer = <0x4>;
+
+		// dma-ranges = <0x0 0x58000000 0x0 0x58000000 0x0 0x18000000>;
+		dma-ranges = <0x0 0x0 0x0 0x0 0x1 0x0>;
+
+		rvgc-memory {
+			memory-region = <&cma>;
+		};
+	};
+
+	/delete-node/ cvbs-in;
+	/delete-node/ hdmi-in;
+	/delete-node/ hdmi-out;
+	/delete-node/ lvds-decoder;
+	/delete-node/ lvds0;
+	/delete-node/ lvds1;
+	/delete-node/ vga;
+	/delete-node/ vga-encoder;
+};
+
+&csi40 {
+	/delete-property/ status;
+
+	ports {
+		/delete-node/ port@0;
+	};
+};
+
+&soc {
+	mfis: mfis@e6260000 {
+		compatible = "renesas,mfis";
+		reg = <0x00 0xe6260000 0x00 0x200>;
+		interrupts = <0x00 0xe0 0x04 0x00 0xe1 0x04 0x00 0xe2 0x04 0x00 0xe3 0x04 0x00 0xe4 0x04 0x00 0xe5 0x04 0x00 0xe6 0x04 0x00 0xe7 0x04>;
+		interrupt-names = "eicr0\0eicr1\0eicr2\0eicr3\0eicr4\0eicr5\0eicr6\0eicr7";
+		renesas,mfis-channels = <0x00 0x01 0x02 0x03>;
+		status = "okay";
+
+		/delete-node/ mfis-as;
+	};
+};
+
+/delete-node/ &i2c0;
+/delete-node/ &fcpvd0;
+/delete-node/ &fcpvd1;
+/delete-node/ &vspd0;
+/delete-node/ &vspd1;
+/delete-node/ &du;
+/delete-node/ &lvds0;
+/delete-node/ &lvds1;
+
