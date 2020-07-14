@@ -268,4 +268,13 @@ config PCIE_AL
 	  required only for DT-based platforms. ACPI platforms with the
 	  Annapurna Labs PCIe controller don't need to enable this.
 
+config PCIE_RENESAS_PLAT
+	bool "Renesas R-Car PCIe 4.0 Host controller"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	depends on PCI_MSI_IRQ_DOMAIN
+	select PCIE_DW_HOST
+	default y
+	help
+	  Say Y here if you want PCIe 4.0 controller support on R-Car Gen4 SoCs.
+
 endmenu
