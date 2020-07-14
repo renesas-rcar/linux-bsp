@@ -1515,8 +1515,7 @@
 		};
 
 		imrlx4_ims0: ims@fe860000 {
-			compatible = "renesas,r8a779a0-imr-lx4",
-				     "renesas,imr-lx4";
+			compatible = "generic-uio";
 			reg = <0 0xfe860000 0 0x10000>;
 			interrupts = <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 529>;
@@ -1525,8 +1524,7 @@
 		};
 
 		imrlx4_ims1: ims@fe870000 {
-			compatible = "renesas,r8a779a0-imr-lx4",
-				     "renesas,imr-lx4";
+			compatible = "generic-uio";
 			reg = <0 0xfe870000 0 0x10000>;
 			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 530>;
@@ -1535,8 +1533,7 @@
 		};
 
 		imrlx4_imr0: imr@fe880000 {
-			compatible = "renesas,r8a779a0-imr-lx4",
-				     "renesas,imr-lx4";
+			compatible = "generic-uio";
 			reg = <0 0xfe880000 0 0x10000>;
 			interrupts = <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 525>;
@@ -1545,8 +1542,7 @@
 		};
 
 		imrlx4_imr1: imr@fe890000 {
-			compatible = "renesas,r8a779a0-imr-lx4",
-				     "renesas,imr-lx4";
+			compatible = "generic-uio";
 			reg = <0 0xfe890000 0 0x10000>;
 			interrupts = <GIC_SPI 147 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 526>;
@@ -1555,8 +1551,7 @@
 		};
 
 		imrlx4_imr2: imr@fe8a0000 {
-			compatible = "renesas,r8a779a0-imr-lx4",
-				     "renesas,imr-lx4";
+			compatible = "generic-uio";
 			reg = <0 0xfe8a0000 0 0x10000>;
 			interrupts = <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 527>;
@@ -1565,8 +1560,7 @@
 		};
 
 		imrlx4_imr3: imr@fe8b0000 {
-			compatible = "renesas,r8a779a0-imr-lx4",
-				     "renesas,imr-lx4";
+			compatible = "generic-uio";
 			reg = <0 0xfe8b0000 0 0x10000>;
 			interrupts = <GIC_SPI 149 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 528>;
