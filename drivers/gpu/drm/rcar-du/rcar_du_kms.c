@@ -391,10 +391,21 @@ rcar_du_fb_create(struct drm_device *dev, struct drm_file *file_priv,
 	}
 
 	for (i = 1; i < format->planes; ++i) {
-		if (mode_cmd->pitches[i] != mode_cmd->pitches[0]) {
-			dev_dbg(dev->dev,
-				"luma and chroma pitches do not match\n");
-			return ERR_PTR(-EINVAL);
+		if (format->fourcc != DRM_FORMAT_YUV420 &&
+			format->fourcc != DRM_FORMAT_YVU420 &&
+			format->fourcc != DRM_FORMAT_YUV422 &&
+			format->fourcc != DRM_FORMAT_YVU422) {
+			if (mode_cmd->pitches[i] != mode_cmd->pitches[0]) {
+				dev_dbg(dev->dev,
+					"luma and chroma pitches do not match\n");
+				return ERR_PTR(-EINVAL);
+			}
+		} else {
+			if (mode_cmd->pitches[i] != mode_cmd->pitches[0] / 2) {
+				dev_dbg(dev->dev,
+					"luma and chroma pitches do not match\n");
+				return ERR_PTR(-EINVAL);
+			}
 		}
 	}
 
