@@ -207,6 +207,8 @@ struct rcar_dmac_chan {
  * @n_channels: number of available channels
  * @channels: array of DMAC channels
  * @channels_mask: bitfield of which DMA channels are managed by this driver
+ * @fixed_source: fixed source address mode
+ * @fixed_dest: fixed destination address mode
  * @rate_rd: bus read rate control
  * @rate_wr: bus write rate control
  * @modules: bitmask of client modules in use
@@ -222,6 +224,9 @@ struct rcar_dmac {
 	unsigned int n_channels;
 	struct rcar_dmac_chan *channels;
 	unsigned int channels_mask;
+
+	bool fixed_source;
+	bool fixed_dest;
 
 	unsigned int rate_rd;
 	unsigned int rate_wr;
@@ -924,6 +929,7 @@ static int rcar_dmac_chan_configure_desc(struct rcar_dmac_chan *chan,
 
 	unsigned int xfer_size;
 	u32 chcr;
+	struct rcar_dmac *dmac = to_rcar_dmac(chan->chan.device);
 
 	switch (desc->direction) {
 	case DMA_DEV_TO_MEM:
@@ -940,8 +946,12 @@ static int rcar_dmac_chan_configure_desc(struct rcar_dmac_chan *chan,
 
 	case DMA_MEM_TO_MEM:
 	default:
-		chcr = RCAR_DMACHCR_DM_INC | RCAR_DMACHCR_SM_INC
+		chcr = RCAR_DMACHCR_DM_FIXED | RCAR_DMACHCR_SM_FIXED
 		     | RCAR_DMACHCR_RS_AUTO;
+		if (!dmac->fixed_source)
+			chcr = chcr | RCAR_DMACHCR_SM_INC;
+		if (!dmac->fixed_dest)
+			chcr = chcr | RCAR_DMACHCR_DM_INC;
 		xfer_size = RCAR_DMAC_MEMCPY_XFER_SIZE;
 		break;
 	}
@@ -1885,6 +1895,10 @@ static int rcar_dmac_parse_of(struct device *dev, struct rcar_dmac *dmac)
 	}
 
 	dmac->channels_mask = GENMASK(dmac->n_channels - 1, 0);
+
+	/* Checking fixed address optional property */
+	dmac->fixed_source = of_property_read_bool(np, "fixed-source");
+	dmac->fixed_dest = of_property_read_bool(np, "fixed-dest");
 
 	/* Checking Bus read rate control optional property */
 	ret = of_property_read_u32(np, "rate-read", &dmac->rate_rd);
