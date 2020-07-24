@@ -196,6 +196,8 @@ struct rcar_dmac_chan {
  * @channels_mask: bitfield of which DMA channels are managed by this driver
  * @fixed_source: fixed source address mode
  * @fixed_dest: fixed destination address mode
+ * @rate_rd: bus read rate control
+ * @rate_wr: bus write rate control
  * @modules: bitmask of client modules in use
  */
 struct rcar_dmac {
@@ -211,6 +213,9 @@ struct rcar_dmac {
 	bool fixed_source;
 	bool fixed_dest;
 
+	u32 rate_rd;
+	u32 rate_wr;
+
 	DECLARE_BITMAP(modules, 256);
 };
 
@@ -224,10 +229,12 @@ struct rcar_dmac {
  * struct rcar_dmac_of_data - This driver's OF data
  * @chan_offset_base: DMAC channels base offset
  * @chan_offset_stride: DMAC channels offset stride
+ * @rate_control: Suport status of bus rate control
  */
 struct rcar_dmac_of_data {
 	u32 chan_offset_base;
 	u32 chan_offset_stride;
+	bool rate_control;
 };
 
 /* -----------------------------------------------------------------------------
@@ -303,6 +310,10 @@ struct rcar_dmac_of_data {
 #define RCAR_DMAFIXSAR			0x0010
 #define RCAR_DMAFIXDAR			0x0014
 #define RCAR_DMAFIXDPBASE		0x0060
+
+#define RCAR_RATE_RD			0x00f4
+#define RCAR_RATE_WR			0x00f8
+#define RCAR_RATE_CNT_EN		(1 << 31)
 
 /* For R-Car V3U */
 #define RCAR_V3U_DMACHCLR		0x0100
@@ -492,6 +503,12 @@ static int rcar_dmac_init(struct rcar_dmac *dmac)
 		dev_warn(dmac->dev, "DMAOR initialization failed.\n");
 		return -EIO;
 	}
+
+	if (dmac->rate_rd)
+		rcar_dmac_write(dmac, RCAR_RATE_RD, RCAR_RATE_CNT_EN | dmac->rate_rd);
+
+	if (dmac->rate_wr)
+		rcar_dmac_write(dmac, RCAR_RATE_WR, RCAR_RATE_CNT_EN | dmac->rate_wr);
 
 	return 0;
 }
@@ -1832,7 +1849,8 @@ static int rcar_dmac_chan_probe(struct rcar_dmac *dmac,
 
 #define RCAR_DMAC_MAX_CHANNELS	32
 
-static int rcar_dmac_parse_of(struct device *dev, struct rcar_dmac *dmac)
+static int rcar_dmac_parse_of(struct device *dev, struct rcar_dmac *dmac,
+			      const struct rcar_dmac_of_data *data)
 {
 	struct device_node *np = dev->of_node;
 	int ret;
@@ -1865,6 +1883,32 @@ static int rcar_dmac_parse_of(struct device *dev, struct rcar_dmac *dmac)
 	dmac->fixed_source = of_property_read_bool(np, "fixed-source");
 	dmac->fixed_dest = of_property_read_bool(np, "fixed-dest");
 
+	/* Checking Bus read rate control optional property */
+	ret = of_property_read_u32(np, "rate-read", &dmac->rate_rd);
+	if (!ret) {
+		if (data->rate_control) {
+			if (dmac->rate_rd < 0x03 || dmac->rate_rd > 0xff)
+				dmac->rate_rd = 0;
+		} else {
+			dmac->rate_rd = 0;
+		}
+	} else {
+		dmac->rate_rd = 0;
+	}
+
+	/* Checking Bus write rate control optional property */
+	ret = of_property_read_u32(np, "rate-write", &dmac->rate_wr);
+	if (!ret) {
+		if (data->rate_control) {
+			if (dmac->rate_wr < 0x03 || dmac->rate_wr > 0xff)
+				dmac->rate_wr = 0;
+		} else {
+			dmac->rate_wr = 0;
+		}
+	} else {
+		dmac->rate_wr = 0;
+	}
+
 	return 0;
 }
 
@@ -1895,7 +1939,7 @@ static int rcar_dmac_probe(struct platform_device *pdev)
 	dma_set_max_seg_size(dmac->dev, RCAR_DMATCR_MASK);
 	dma_set_mask_and_coherent(dmac->dev, DMA_BIT_MASK(40));
 
-	ret = rcar_dmac_parse_of(&pdev->dev, dmac);
+	ret = rcar_dmac_parse_of(&pdev->dev, dmac, data);
 	if (ret < 0)
 		return ret;
 
@@ -2030,16 +2074,19 @@ static void rcar_dmac_shutdown(struct platform_device *pdev)
 static const struct rcar_dmac_of_data rcar_dmac_data = {
 	.chan_offset_base	= 0x8000,
 	.chan_offset_stride	= 0x80,
+	.rate_control		= false,
 };
 
 static const struct rcar_dmac_of_data rcar_v3u_dmac_data = {
 	.chan_offset_base	= 0x0,
 	.chan_offset_stride	= 0x1000,
+	.rate_control		= true,
 };
 
 static const struct rcar_dmac_of_data rcar_gen4_dmac_data = {
 	.chan_offset_base       = 0x0,
 	.chan_offset_stride     = 0x1000,
+	.rate_control		= true,
 };
 
 static const struct of_device_id rcar_dmac_of_ids[] = {
