@@ -207,6 +207,8 @@ struct rcar_dmac_chan {
  * @n_channels: number of available channels
  * @channels: array of DMAC channels
  * @channels_mask: bitfield of which DMA channels are managed by this driver
+ * @rate_rd: bus read rate control
+ * @rate_wr: bus write rate control
  * @modules: bitmask of client modules in use
  */
 struct rcar_dmac {
@@ -220,6 +222,9 @@ struct rcar_dmac {
 	unsigned int n_channels;
 	struct rcar_dmac_chan *channels;
 	unsigned int channels_mask;
+
+	unsigned int rate_rd;
+	unsigned int rate_wr;
 
 	DECLARE_BITMAP(modules, 256);
 };
@@ -301,6 +306,10 @@ struct rcar_dmac {
 #define RCAR_DMAFIXSAR			0x0010
 #define RCAR_DMAFIXDAR			0x0014
 #define RCAR_DMAFIXDPBASE		0x0060
+
+#define RCAR_RATE_RD			0x00f4
+#define RCAR_RATE_WR			0x00f8
+#define RCAR_RATE_CNT_EN		(1 << 31)
 
 /* Hardcode the MEMCPY transfer size to 4 bytes. */
 #define RCAR_DMAC_MEMCPY_XFER_SIZE	4
@@ -502,6 +511,14 @@ static int rcar_dmac_init(struct rcar_dmac *dmac)
 		dev_warn(dmac->dev, "DMAOR initialization failed.\n");
 		return -EIO;
 	}
+
+	if (dmac->rate_rd)
+		rcar_dmac_write(dmac, RCAR_RATE_RD,
+				RCAR_RATE_CNT_EN | dmac->rate_rd);
+
+	if (dmac->rate_wr)
+		rcar_dmac_write(dmac, RCAR_RATE_WR,
+				RCAR_RATE_CNT_EN | dmac->rate_wr);
 
 	return 0;
 }
@@ -1868,6 +1885,38 @@ static int rcar_dmac_parse_of(struct device *dev, struct rcar_dmac *dmac)
 	}
 
 	dmac->channels_mask = GENMASK(dmac->n_channels - 1, 0);
+
+	/* Checking Bus read rate control optional property */
+	ret = of_property_read_u32(np, "rate-read", &dmac->rate_rd);
+	if (!ret) {
+		switch (dmac->info->model) {
+		case RCAR_V3U_DMAC:
+			if (dmac->rate_rd < 0x03 || dmac->rate_rd > 0xff)
+				dmac->rate_rd = 0;
+			break;
+		case RCAR_GEN2_3_DMAC:
+			dmac->rate_rd = 0;
+			break;
+		}
+	} else {
+		dmac->rate_rd = 0;
+	}
+
+	/* Checking Bus write rate control optional property */
+	ret = of_property_read_u32(np, "rate-write", &dmac->rate_wr);
+	if (!ret) {
+		switch (dmac->info->model) {
+		case RCAR_V3U_DMAC:
+			if (dmac->rate_wr < 0x03 || dmac->rate_wr > 0xff)
+				dmac->rate_wr = 0;
+			break;
+		case RCAR_GEN2_3_DMAC:
+			dmac->rate_wr = 0;
+			break;
+		}
+	} else {
+		dmac->rate_wr = 0;
+	}
 
 	return 0;
 }
