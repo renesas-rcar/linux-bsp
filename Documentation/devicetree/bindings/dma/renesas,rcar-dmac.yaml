@@ -113,6 +113,16 @@ properties:
     description: To enable fixed destination address mode.
     type: boolean
 
+  rate-read:
+    description: Read rate control (slow speed mode), only available on R-Car V3U/S4
+    mininum: 0x03
+    maximum: 0xff
+
+  rate-write:
+    description: Write rate control (slow speed mode), only available on R-Car V3U/S4
+    mininum: 0x03
+    maximum: 0xff
+
 required:
   - compatible
   - reg
