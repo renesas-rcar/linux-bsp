@@ -59,6 +59,16 @@ Required Properties:
   connected to the DMA client
 - dma-channels: number of DMA channels
 
+Optional Properties:
+
+- fixed-source: to enable fixed source address mode.
+- fixed-dest: to enable fixed destination address mode.
+
+- rate-read: read rate control (slow speed mode), only available on R-Car V3U
+  the valid value is in [0x03, 0xff].
+- rate-write: write rate control (slow speed mode), only available on R-Car V3U
+  the valid value is in [0x03, 0xff].
+
 Example: R8A7790 (R-Car H2) SYS-DMACs
 
 	dmac0: dma-controller@e6700000 {
@@ -154,6 +164,10 @@ Example: R8A779A0 (R-Car V3U) SYS-DMAC
 		clock-names = "fck";
 		#dma-cells = <1>;
 		dma-channels = <16>;
+		fixed-source;
+		fixed-dest;
+		rate-read = <0x03>;
+		rate-write = <0xff>;
 	};
 
 Example: R8A779A0 (R-Car V3U) RT-DMAC
