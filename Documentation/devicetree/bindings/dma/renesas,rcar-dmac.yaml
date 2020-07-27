@@ -99,6 +99,14 @@ properties:
   resets:
     maxItems: 1
 
+  fixed-source:
+    description: To enable fixed source address mode.
+    type: boolean
+
+  fixed-dest:
+    description: To enable fixed destination address mode.
+    type: boolean
+
 required:
   - compatible
   - reg
@@ -149,4 +157,6 @@ examples:
         resets = <&cpg 219>;
         #dma-cells = <1>;
         dma-channels = <15>;
+	fixed-source;
+	fixed-dest;
     };
