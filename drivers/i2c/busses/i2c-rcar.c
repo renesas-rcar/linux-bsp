@@ -650,16 +650,17 @@ static irqreturn_t rcar_i2c_irq(int irq, void *ptr)
 	struct rcar_i2c_priv *priv = ptr;
 	u32 msr, val;
 
+	/* Check unintended interrupt */
+	msr = rcar_i2c_read(priv, ICMSR);
+	msr &= rcar_i2c_read(priv, ICMIER);
+
 	/* Clear START or STOP immediately, except for REPSTART after read */
-	if (likely(!(priv->flags & ID_P_REP_AFTER_RD))) {
+	if (likely(!(priv->flags & ID_P_REP_AFTER_RD)) && msr) {
 		val = rcar_i2c_read(priv, ICMCR);
 		rcar_i2c_write(priv, ICMCR, val & RCAR_BUS_MASK_DATA);
 	}
 
-	msr = rcar_i2c_read(priv, ICMSR);
-
 	/* Only handle interrupts that are currently enabled */
-	msr &= rcar_i2c_read(priv, ICMIER);
 	if (!msr) {
 		if (rcar_i2c_slave_irq(priv))
 			return IRQ_HANDLED;
