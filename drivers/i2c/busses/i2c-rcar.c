@@ -27,6 +27,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
+#include <linux/sys_soc.h>
 
 /* register offsets */
 #define ICSCR	0x00	/* slave ctrl */
@@ -110,6 +111,9 @@
 #define ID_P_PM_BLOCKED		BIT(31)
 #define ID_P_MASK		GENMASK(31, 29)
 
+/* quirk options */
+#define R8A779A0_IRQ_DELAY	BIT(0)
+
 enum rcar_i2c_type {
 	I2C_RCAR_GEN1,
 	I2C_RCAR_GEN2,
@@ -128,6 +132,7 @@ struct rcar_i2c_priv {
 	int pos;
 	u32 icccr;
 	u32 flags;
+	u32 quirks;
 	u8 recovery_icmcr;	/* protected by adapter lock */
 	enum rcar_i2c_type devtype;
 	struct i2c_client *slave;
@@ -141,6 +146,11 @@ struct rcar_i2c_priv {
 	struct reset_control *rstc;
 	int irq;
 	int suspended;
+};
+
+static const struct soc_device_attribute r8a779a0[] = {
+	{ .soc_id = "r8a779a0"},
+	{ /* sentinel */ }
 };
 
 #define rcar_i2c_priv_to_dev(p)		((p)->adap.dev.parent)
@@ -643,6 +653,9 @@ static irqreturn_t rcar_i2c_irq(int irq, void *ptr)
 	struct rcar_i2c_priv *priv = ptr;
 	u32 msr, val;
 
+	if (priv->quirks & R8A779A0_IRQ_DELAY)
+		mdelay(2);
+
 	/* Clear START or STOP immediately, except for REPSTART after read */
 	if (likely(!(priv->flags & ID_P_REP_AFTER_RD))) {
 		val = rcar_i2c_read(priv, ICMCR);
@@ -956,6 +969,9 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 		dev_err(dev, "cannot get clock\n");
 		return PTR_ERR(priv->clk);
 	}
+
+	if (soc_device_match(r8a779a0))
+		priv->quirks = R8A779A0_IRQ_DELAY;
 
 	priv->res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
