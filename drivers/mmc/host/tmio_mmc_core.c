@@ -951,6 +951,19 @@ static void tmio_mmc_set_bus_width(struct tmio_mmc_host *host,
 	sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, reg);
 }
 
+static void tmio_mmc_max_busy_timeout(struct tmio_mmc_host *host)
+{
+	u16 reg = sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT);
+	unsigned int clk_kz = DIV_ROUND_UP(host->mmc->actual_clock, 1000);
+	unsigned int count = reg & CARD_OPT_EXTOP ? 1 << 14 : 1 << 13;
+
+	count <<= ((reg & CARD_OPT_TC_MASK) >> 4);
+	if (clk_kz)
+		host->mmc->max_busy_timeout = count / clk_kz;
+	else
+		host->mmc->max_busy_timeout = 0;
+}
+
 /* Set MMC clock / power.
  * Note: This controller uses a simple divider scheme therefore it cannot
  * run a MMC card at full speed (20MHz). The max clock is 24MHz on SD, but as
@@ -1008,6 +1021,9 @@ static void tmio_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		tmio_mmc_set_bus_width(host, ios->bus_width);
 		break;
 	}
+
+	/* update max_busy_timeout [ms] */
+	tmio_mmc_max_busy_timeout(host);
 
 	/* Let things settle. delay taken from winCE driver */
 	usleep_range(140, 200);

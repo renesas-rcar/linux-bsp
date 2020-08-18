@@ -83,6 +83,8 @@
 /* Definitions for values the CTL_SD_MEM_CARD_OPT register can take */
 #define CARD_OPT_WIDTH8		BIT(13)
 #define CARD_OPT_WIDTH		BIT(15)
+#define CARD_OPT_EXTOP		BIT(9)
+#define CARD_OPT_TC_MASK	0x00f0
 
 /* Definitions for values the CTL_SDIO_STATUS register can take */
 #define TMIO_SDIO_STAT_IOIRQ	0x0001
