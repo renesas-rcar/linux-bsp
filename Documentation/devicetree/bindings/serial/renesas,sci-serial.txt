@@ -66,6 +66,8 @@ Required properties:
     - "renesas,hscif-r8a77990" for R8A77990 (R-Car E3) HSCIF compatible UART.
     - "renesas,scif-r8a77995" for R8A77995 (R-Car D3) SCIF compatible UART.
     - "renesas,hscif-r8a77995" for R8A77995 (R-Car D3) HSCIF compatible UART.
+    - "renesas,scif-r8a779a0" for R8A779A0 (R-Car V3U) SCIF compatible UART.
+    - "renesas,hscif-r8a779a0" for R8A779A0 (R-Car V3U) HSCIF compatible UART.
     - "renesas,scifa-sh73a0" for SH73A0 (SH-Mobile AG5) SCIFA compatible UART.
     - "renesas,scifb-sh73a0" for SH73A0 (SH-Mobile AG5) SCIFB compatible UART.
     - "renesas,rcar-gen1-scif" for R-Car Gen1 SCIF compatible UART,
