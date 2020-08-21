@@ -2636,7 +2636,7 @@
 			reg = <0 0xfed00000 0 0x10000>;
 			interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 612>;
-			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+                        power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 612>;
 			renesas,id = <0>;
 		};
@@ -2646,7 +2646,7 @@
 			reg = <0 0xfed20000 0 0x10000>;
 			interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 613>;
-			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+                        power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 613>;
 			renesas,id = <1>;
 		};
@@ -2656,7 +2656,7 @@
 			reg = <0 0xfed30000 0 0x10000>;
 			interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 614>;
-			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+                        power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 614>;
 			renesas,id = <2>;
 		};
@@ -2666,7 +2666,7 @@
 			reg = <0 0xfed40000 0 0x10000>;
 			interrupts = <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 615>;
-			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+                        power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 615>;
 			renesas,id = <3>;
 		};
