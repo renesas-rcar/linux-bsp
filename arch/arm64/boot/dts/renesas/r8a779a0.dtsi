@@ -2700,7 +2700,7 @@
 		};
 
 		isp0: isp@fed00000 {
-			compatible = "renesas,r8a779a0-isp";
+			compatible = "renesas,r8a779a0-isp", "generic-uio";
 			reg = <0 0xfed00000 0 0x10000>;
 			interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 612>;
@@ -2783,7 +2783,7 @@
 		};
 
 		isp1: isp@fed20000 {
-			compatible = "renesas,r8a779a0-isp";
+			compatible = "renesas,r8a779a0-isp", "generic-uio";
 			reg = <0 0xfed20000 0 0x10000>;
 			interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 613>;
@@ -2866,7 +2866,7 @@
 		};
 
 		isp2: isp@fed30000 {
-			compatible = "renesas,r8a779a0-isp";
+			compatible = "renesas,r8a779a0-isp", "generic-uio";
 			reg = <0 0xfed30000 0 0x10000>;
 			interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 614>;
@@ -2949,7 +2949,7 @@
 		};
 
 		isp3: isp@fed40000 {
-			compatible = "renesas,r8a779a0-isp";
+			compatible = "renesas,r8a779a0-isp", "generic-uio";
 			reg = <0 0xfed40000 0 0x10000>;
 			interrupts = <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 615>;
@@ -3029,6 +3029,42 @@
 					};
 				};
 			};
+		};
+
+		cisp0: cisp@fec00000 {
+			compatible = "generic-uio";
+			reg = <0 0xfec00000 0 0x20000>;
+			interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 16>;
+			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
+			resets = <&cpg 16>;
+		};
+
+		cisp1: cisp@fee00000 {
+			compatible = "generic-uio";
+			reg = <0 0xfee00000 0 0x20000>;
+			interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 17>;
+			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
+			resets = <&cpg 17>;
+		};
+
+		cisp2: cisp@fef00000 {
+			compatible = "generic-uio";
+			reg = <0 0xfef00000 0 0x20000>;
+			interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 18>;
+			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
+			resets = <&cpg 18>;
+		};
+
+		cisp3: cisp@fe400000 {
+			compatible = "generic-uio";
+			reg = <0 0xfe400000 0 0x20000>;
+			interrupts = <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 19>;
+			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
+			resets = <&cpg 19>;
 		};
 
 		impldma: dma-controller@f1f00000 {
