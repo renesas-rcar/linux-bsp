@@ -49,6 +49,7 @@
 #define SN_CHA_VERTICAL_FRONT_PORCH_REG		0x3A
 #define SN_ENH_FRAME_REG			0x5A
 #define  VSTREAM_ENABLE				BIT(3)
+#define  ASSR_CONTROL				BIT(0)
 #define SN_DATA_FORMAT_REG			0x5B
 #define SN_HPD_DISABLE_REG			0x5C
 #define  HPD_DISABLE				BIT(0)
@@ -67,6 +68,8 @@
 #define SN_DATARATE_CONFIG_REG			0x94
 #define  DP_DATARATE_MASK			GENMASK(7, 5)
 #define  DP_DATARATE(x)				((x) << 5)
+#define SN_TRAINING_SETTING_REG		0x95
+#define  SCRAMBLE_DISABLE			BIT(4)
 #define SN_ML_TX_MODE_REG			0x96
 #define  ML_TX_MAIN_LINK_OFF			0
 #define  ML_TX_NORMAL_MODE			BIT(0)
@@ -99,6 +102,9 @@ struct ti_sn_bridge {
 	struct drm_panel		*panel;
 	struct gpio_desc		*enable_gpio;
 	struct regulator_bulk_data	supplies[SN_REGULATOR_SUPPLY_NUM];
+	bool					no_gpio;
+	bool					no_use_scramble;
+	bool					hpd_poll;
 };
 
 static const struct regmap_range ti_sn_bridge_volatile_ranges[] = {
@@ -227,12 +233,23 @@ static struct drm_connector_helper_funcs ti_sn_bridge_connector_helper_funcs = {
 static enum drm_connector_status
 ti_sn_bridge_connector_detect(struct drm_connector *connector, bool force)
 {
+	struct ti_sn_bridge *pdata = connector_to_ti_sn_bridge(connector);
+	int val;
+
 	/**
 	 * TODO: Currently if drm_panel is present, then always
 	 * return the status as connected. Need to add support to detect
 	 * device state for hot pluggable scenarios.
 	 */
-	return connector_status_connected;
+	if (pdata->hpd_poll) {
+		regmap_read(pdata->regmap, SN_HPD_DISABLE_REG, &val);
+		if (val)
+			return connector_status_connected;
+		else
+			return connector_status_disconnected;
+	} else {
+		return connector_status_connected;
+	}
 }
 
 static const struct drm_connector_funcs ti_sn_bridge_connector_funcs = {
@@ -273,6 +290,11 @@ static int ti_sn_bridge_attach(struct drm_bridge *bridge)
 						   .channel = 0,
 						   .node = NULL,
 						 };
+
+	if (pdata->hpd_poll) {
+		pdata->connector.polled = DRM_CONNECTOR_POLL_CONNECT |
+					  DRM_CONNECTOR_POLL_DISCONNECT;
+	}
 
 	ret = drm_connector_init(bridge->dev, &pdata->connector,
 				 &ti_sn_bridge_connector_funcs,
@@ -511,6 +533,11 @@ static void ti_sn_bridge_enable(struct drm_bridge *bridge)
 	/* set dsi/dp clk frequency value */
 	ti_sn_bridge_set_dsi_dp_rate(pdata);
 
+	/* Using Standard DP Scrambler Seed when Scramble mode is disable*/
+	if (pdata->no_use_scramble)
+		regmap_update_bits(pdata->regmap, SN_ENH_FRAME_REG,
+						ASSR_CONTROL, 0);
+
 	/* enable DP PLL */
 	regmap_write(pdata->regmap, SN_PLL_ENABLE_REG, 1);
 
@@ -521,6 +548,11 @@ static void ti_sn_bridge_enable(struct drm_bridge *bridge)
 		DRM_ERROR("DP_PLL_LOCK polling failed (%d)\n", ret);
 		return;
 	}
+
+	/* Disable Scrambling Mode */
+	if (pdata->no_use_scramble)
+		regmap_update_bits(pdata->regmap, SN_TRAINING_SETTING_REG,
+						SCRAMBLE_DISABLE, SCRAMBLE_DISABLE);
 
 	/**
 	 * The SN65DSI86 only supports ASSR Display Authentication method and
@@ -580,7 +612,11 @@ static void ti_sn_bridge_pre_enable(struct drm_bridge *bridge)
 	 * change this to be conditional on someone specifying that HPD should
 	 * be used.
 	 */
-	regmap_update_bits(pdata->regmap, SN_HPD_DISABLE_REG, HPD_DISABLE,
+	if (pdata->hpd_poll)
+		regmap_update_bits(pdata->regmap, SN_HPD_DISABLE_REG, HPD_DISABLE,
+			   0);
+	else
+		regmap_update_bits(pdata->regmap, SN_HPD_DISABLE_REG, HPD_DISABLE,
 			   HPD_DISABLE);
 
 	drm_panel_prepare(pdata->panel);
@@ -728,13 +764,30 @@ static int ti_sn_bridge_probe(struct i2c_client *client,
 
 	dev_set_drvdata(&client->dev, pdata);
 
-	pdata->enable_gpio = devm_gpiod_get(pdata->dev, "enable",
-					    GPIOD_OUT_LOW);
-	if (IS_ERR(pdata->enable_gpio)) {
-		DRM_ERROR("failed to get enable gpio from DT\n");
-		ret = PTR_ERR(pdata->enable_gpio);
-		return ret;
+	if (of_find_property(pdata->dev->of_node, "no-use-gpio", NULL))
+		pdata->no_gpio = true;
+	else
+		pdata->no_gpio = false;
+
+	if (!pdata->no_gpio) {
+		pdata->enable_gpio = devm_gpiod_get(pdata->dev, "enable",
+						    GPIOD_OUT_LOW);
+		if (IS_ERR(pdata->enable_gpio)) {
+			DRM_ERROR("failed to get enable gpio from DT\n");
+			ret = PTR_ERR(pdata->enable_gpio);
+			return ret;
+		}
 	}
+
+	if (of_find_property(pdata->dev->of_node, "no-use-scramble", NULL))
+		pdata->no_use_scramble = true;
+	else
+		pdata->no_use_scramble = false;
+
+	if (of_find_property(pdata->dev->of_node, "hpd-poll", NULL))
+		pdata->hpd_poll = true;
+	else
+		pdata->hpd_poll = false;
 
 	ret = ti_sn_bridge_parse_regulators(pdata);
 	if (ret) {
