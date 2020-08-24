@@ -610,7 +610,8 @@ ssize_t rpcif_dirmap_read(struct rpcif *rpc, u64 offs, size_t len, void *buf)
 	pm_runtime_get_sync(rpc->dev);
 
 	regmap_update_bits(rpc->regmap, RPCIF_CMNCR, RPCIF_CMNCR_MD, 0);
-	regmap_write(rpc->regmap, RPCIF_DRCR, 0);
+	regmap_write(rpc->regmap, RPCIF_DRCR,
+		     RPCIF_DRCR_RBURST(32) | RPCIF_DRCR_RBE);
 	regmap_write(rpc->regmap, RPCIF_DRCMR, rpc->command);
 	regmap_write(rpc->regmap, RPCIF_DREAR,
 		     RPCIF_DREAR_EAV(offs >> 25) | RPCIF_DREAR_EAC(1));
