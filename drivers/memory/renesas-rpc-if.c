@@ -685,7 +685,8 @@ ssize_t rpcif_dirmap_read(struct device *dev, u64 offs, size_t len, void *buf)
 		return ret;
 
 	regmap_update_bits(rpc->regmap, RPCIF_CMNCR, RPCIF_CMNCR_MD, 0);
-	regmap_write(rpc->regmap, RPCIF_DRCR, 0);
+	regmap_write(rpc->regmap, RPCIF_DRCR,
+		     RPCIF_DRCR_RBURST(32) | RPCIF_DRCR_RBE);
 	regmap_write(rpc->regmap, RPCIF_DRCMR, rpc->command);
 	regmap_write(rpc->regmap, RPCIF_DREAR,
 		     RPCIF_DREAR_EAV(offs >> 25) | RPCIF_DREAR_EAC(1));
