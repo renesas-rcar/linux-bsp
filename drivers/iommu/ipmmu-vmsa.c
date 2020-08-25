@@ -1031,6 +1031,7 @@ static const char * const rcar_gen3_slave_whitelist[] = {
 	"ec720000.dma-controller",
 	"e6800000.ethernet",
 	"fe000000.pcie",
+	"ee800000.pcie",
 };
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
 static const struct soc_device_attribute r8a7795[]  = {
