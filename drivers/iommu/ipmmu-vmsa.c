@@ -855,7 +855,7 @@ static const char * const rcar_gen3_slave_whitelist[] = {
 	"ee800000.pcie",
 };
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
-static bool ipmmu_slave_whitelist(struct device *dev, u32 *ids)
+static bool ipmmu_utlb_whitelist(struct device *dev, u32 *ids)
 {
 	struct ipmmu_vmsa_device *mmu = to_ipmmu(dev);
 	int i;
@@ -926,15 +926,15 @@ static int ipmmu_of_xlate(struct device *dev,
 {
 	int ret;
 
+	if (!ipmmu_slave_whitelist(dev))
+		return -ENODEV;
+
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
 	/* Use a white list to opt-in slave devices
 	 * Whitelist needs mmu info to get the corresponding whitelist bitmap
 	 * In case of no mmu is available, whitelist will check later
 	 */
-	if (to_ipmmu(dev) && !ipmmu_slave_whitelist(dev, spec->args))
-		return -ENODEV;
-#else
-	if (!ipmmu_slave_whitelist(dev))
+	if (to_ipmmu(dev) && !ipmmu_utlb_whitelist(dev, spec->args))
 		return -ENODEV;
 #endif
 	iommu_fwspec_add_ids(dev, spec->args, 1);
@@ -949,7 +949,7 @@ static int ipmmu_of_xlate(struct device *dev,
 
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
 	/* For the first initialzation when mmu info is available */
-	if (!ipmmu_slave_whitelist(dev, spec->args))
+	if (!ipmmu_utlb_whitelist(dev, spec->args))
 		return -ENODEV;
 #endif
 	return 0;
