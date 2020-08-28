@@ -2975,49 +2975,84 @@
 			linux,uio-name = "impcnn2";
 		};
 
-		impspmi0: imp-ram@ed200000 {
+		impspmi0_mem: imp-ram@ed200000 {
 			compatible = "generic-uio";
-			reg = <0 0xed200000 0 0x100000>,
-			      <0 0xffa8c000 0 0x4000>;
+			reg = <0 0xed200000 0 0x100000>;
 			clocks = <&cpg CPG_MOD 120>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
-			linux,uio-name = "impspmi0";
+			linux,uio-name = "impspmi0_mem";
 		};
 
-		impspmi1: imp-ram@eda00000 {
+		impspmi0_ctrl: imp-ram@ffa8c000 {
 			compatible = "generic-uio";
-			reg = <0 0xeda00000 0 0x100000>,
-			      <0 0xffb8c000 0 0x4000>;
+			reg = <0 0xffa8c000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 120>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "impspmi0_ctrl";
+		};
+
+		impspmi1_mem: imp-ram@eda00000 {
+			compatible = "generic-uio";
+			reg = <0 0xeda00000 0 0x100000>;
 			clocks = <&cpg CPG_MOD 121>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			linux,uio-name = "impspmi1";
 		};
 
-		impspmc0: cnn-ram@ed600000 {
+		impspmi1_ctrl: imp-ram@ffb8c000 {
 			compatible = "generic-uio";
-			reg = <0 0xed600000 0 0x200000>,
-			      <0 0xffab0000 0 0x4000>;
+			reg = <0 0xffb8c000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 121>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "impspmi1_ctrl";
+		};
+
+		impspmc0_mem: cnn-ram@ed600000 {
+			compatible = "generic-uio";
+			reg = <0 0xed600000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 23>;
 			power-domains = <&sysc R8A779A0_PD_A2CN0>;
-			linux,uio-name = "impspmc0";
+			linux,uio-name = "impspmc0_mem";
 		};
 
-		impspmc1: cnn-ram@edc00000 {
+		impspmc0_ctrl: cnn-ram@ffab0000 {
 			compatible = "generic-uio";
-			reg = <0 0xedc00000 0 0x200000>,
-			      <0 0xffbd0000 0 0x4000>;
+			reg = <0 0xffab0000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 23>;
+			power-domains = <&sysc R8A779A0_PD_A2CN0>;
+			linux,uio-name = "impspmc0_ctrl";
+		};
+
+		impspmc1_mem: cnn-ram@edc00000 {
+			compatible = "generic-uio";
+			reg = <0 0xedc00000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 109>;
 			power-domains = <&sysc R8A779A0_PD_A2CN1>;
-			linux,uio-name = "impspmc1";
+			linux,uio-name = "impspmc1_mem";
 		};
 
-		impspmc2: cnn-ram@ed400000 {
+		impspmc1_ctrl: cnn-ram@ffbd0000 {
 			compatible = "generic-uio";
-			reg = <0 0xed400000 0 0x200000>,
-			      <0 0xffad0000 0 0x4000>;
+			reg = <0 0xffbd0000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 109>;
+			power-domains = <&sysc R8A779A0_PD_A2CN1>;
+			linux,uio-name = "impspmc1_ctrl";
+		};
+
+		impspmc2_mem: cnn-ram@ed400000 {
+			compatible = "generic-uio";
+			reg = <0 0xed400000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 102>;
 			power-domains = <&sysc R8A779A0_PD_A2CN2>;
-			linux,uio-name = "impspmc2";
+			linux,uio-name = "impspmc2_mem";
+		};
+
+		impspmc2_ctrl: cnn-ram@ffad0000 {
+			compatible = "generic-uio";
+			reg = <0 0xffad0000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 102>;
+			power-domains = <&sysc R8A779A0_PD_A2CN2>;
+			linux,uio-name = "impspmc2_ctrl";
 		};
 
 		impdta0: imp-dta@ffa88000 {
