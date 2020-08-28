@@ -368,7 +368,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 	priv->pwr_cnt = 0;
 
 	if (!uioinfo->irq) {
-		ret = platform_get_irq(pdev, 0);
+		ret = platform_get_irq_optional(pdev, 0);
 		uioinfo->irq = ret;
 		if (ret == -ENXIO && pdev->dev.of_node)
 			uioinfo->irq = UIO_IRQ_NONE;
