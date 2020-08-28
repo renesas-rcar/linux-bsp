@@ -2769,6 +2769,8 @@
 			interrupts = <GIC_SPI 582 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			interrupt-controller;
+			#interrupt-cells = <1>;
 		};
 
 		imp0: imp-core@ffa00000 {
