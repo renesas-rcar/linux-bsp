@@ -103,6 +103,7 @@ static const struct soc_device_attribute soc_rcar_gen3[] = {
 	{ .soc_id = "r8a77970", },
 	{ .soc_id = "r8a77990", },
 	{ .soc_id = "r8a77995", },
+	{ .soc_id = "r8a779a0", },
 	{ /* sentinel */ }
 };
 
@@ -113,6 +114,7 @@ static const struct soc_device_attribute soc_rcar_gen3_whitelist[] = {
 	{ .soc_id = "r8a77965", },
 	{ .soc_id = "r8a77990", },
 	{ .soc_id = "r8a77995", },
+	{ .soc_id = "r8a779a0", },
 	{ /* sentinel */ }
 };
 
