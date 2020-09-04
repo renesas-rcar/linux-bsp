@@ -1683,6 +1683,166 @@
 			status = "disabled";
 		};
 
+		stv_sts_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a00000 0 0x10000>;
+			interrupts = <GIC_SPI 554 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 1>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP0>;
+			resets = <&cpg 1>;
+			linux,uio-name = "stv_sts_00";
+		};
+
+		stv_err_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a00000 0 0x10000>;
+			interrupts = <GIC_SPI 555 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 1>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP0>;
+			resets = <&cpg 1>;
+			linux,uio-name = "stv_err_00";
+		};
+
+		stv_sts_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7ba0000 0 0x10000>;
+			interrupts = <GIC_SPI 556 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 2>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP0>;
+			resets = <&cpg 2>;
+			linux,uio-name = "stv_sts_01";
+		};
+
+		stv_err_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7ba0000 0 0x10000>;
+			interrupts = <GIC_SPI 557 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 2>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP0>;
+			resets = <&cpg 2>;
+			linux,uio-name = "stv_err_01";
+		};
+
+		dof_sts_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a10000 0 0x10000>;
+			interrupts = <GIC_SPI 570 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 9>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP1>;
+			resets = <&cpg 9>;
+			linux,uio-name = "dof_sts_00";
+		};
+
+		dof_err_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a10000 0 0x10000>;
+			interrupts = <GIC_SPI 571 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 9>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP1>;
+			resets = <&cpg 9>;
+			linux,uio-name = "dof_err_00";
+		};
+
+		dof_sts_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7bb0000 0 0x10000>;
+			interrupts = <GIC_SPI 572 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 10>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP3>;
+			resets = <&cpg 10>;
+			linux,uio-name = "dof_sts_01";
+		};
+
+		dof_err_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7bb0000 0 0x10000>;
+			interrupts = <GIC_SPI 573 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 10>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP3>;
+			resets = <&cpg 10>;
+			linux,uio-name = "dof_err_01";
+		};
+
+		acf_sts_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a50000 0 0x10000>;
+			interrupts = <GIC_SPI 544 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 11>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP2>;
+			resets = <&cpg 11>;
+			linux,uio-name = "acf_sts_00";
+		};
+
+		acf_err_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a50000 0 0x10000>;
+			interrupts = <GIC_SPI 545 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 11>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP2>;
+			resets = <&cpg 11>;
+			linux,uio-name = "acf_err_00";
+		};
+
+		acf_sts_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a60000 0 0x10000>;
+			interrupts = <GIC_SPI 546 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 12>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP2>;
+			resets = <&cpg 12>;
+			linux,uio-name = "acf_sts_01";
+		};
+
+		acf_err_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a60000 0 0x10000>;
+			interrupts = <GIC_SPI 547 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 12>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP2>;
+			resets = <&cpg 12>;
+			linux,uio-name = "acf_err_01";
+		};
+
+		acf_sts_02 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a70000 0 0x10000>;
+			interrupts = <GIC_SPI 548 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 13>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP2>;
+			resets = <&cpg 13>;
+			linux,uio-name = "acf_sts_02";
+		};
+
+		acf_err_02 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a70000 0 0x10000>;
+			interrupts = <GIC_SPI 549 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 13>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP2>;
+			resets = <&cpg 13>;
+			linux,uio-name = "acf_err_02";
+		};
+
+		acf_sts_03 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a80000 0 0x10000>;
+			interrupts = <GIC_SPI 550 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 14>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP2>;
+			resets = <&cpg 14>;
+			linux,uio-name = "acf_sts_03";
+		};
+
+		acf_err_03 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a80000 0 0x10000>;
+			interrupts = <GIC_SPI 551 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 14>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP2>;
+			resets = <&cpg 14>;
+			linux,uio-name = "acf_err_03";
+		};
+
 		imrlx4_ims0: ims@fe860000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe860000 0 0x10000>;
