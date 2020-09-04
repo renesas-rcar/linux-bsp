@@ -2714,7 +2714,7 @@
 			clocks = <&cpg CPG_MOD 16>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 16>;
-			linux,uio-name = "cisp0";
+			linux,uio-name = "cisp_00";
 		};
 
 		tisp0: tisp@fed00000 {
@@ -2724,7 +2724,7 @@
 			clocks = <&cpg CPG_MOD 16>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 16>;
-			linux,uio-name = "tisp0";
+			linux,uio-name = "tisp_00";
 		};
 
 		cisp1: cisp@fee00000 {
@@ -2734,7 +2734,7 @@
 			clocks = <&cpg CPG_MOD 17>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 17>;
-			linux,uio-name = "cisp1";
+			linux,uio-name = "cisp_01";
 		};
 
 		tisp1: tisp@fed20000 {
@@ -2744,7 +2744,7 @@
 			clocks = <&cpg CPG_MOD 17>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 17>;
-			linux,uio-name = "tisp1";
+			linux,uio-name = "tisp_01";
 		};
 
 		cisp2: cisp@fef00000 {
@@ -2754,7 +2754,7 @@
 			clocks = <&cpg CPG_MOD 18>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 18>;
-			linux,uio-name = "cisp2";
+			linux,uio-name = "cisp_02";
 		};
 
 		tisp2: tisp@fed30000 {
@@ -2764,7 +2764,7 @@
 			clocks = <&cpg CPG_MOD 18>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 18>;
-			linux,uio-name = "tisp2";
+			linux,uio-name = "tisp_02";
 		};
 
 		cisp3: cisp@fe400000 {
@@ -2774,7 +2774,7 @@
 			clocks = <&cpg CPG_MOD 19>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 19>;
-			linux,uio-name = "cisp3";
+			linux,uio-name = "cisp_03";
 		};
 
 		tisp3: tisp@fed40000 {
@@ -2784,7 +2784,7 @@
 			clocks = <&cpg CPG_MOD 19>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 19>;
-			linux,uio-name = "tisp3";
+			linux,uio-name = "tisp_03";
 		};
 
 		impldma: dma-controller@f1f00000 {
