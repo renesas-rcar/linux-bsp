@@ -2793,6 +2793,7 @@
 			interrupts = <GIC_SPI 584 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 117>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			resets = <&cpg 117>;
 			linux,uio-name = "imp_ldma_00";
 		};
 
@@ -2804,6 +2805,7 @@
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
+			resets = <&cpg 118>;
 			linux,uio-name = "imp_ctrl_00";
 		};
 
@@ -2812,6 +2814,7 @@
 			reg = <0 0xffa00000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 24>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
+			resets = <&cpg 24>;
 			linux,uio-name = "imp_imp_00";
 		};
 
@@ -2820,6 +2823,7 @@
 			reg = <0 0xffa20000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 25>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
+			resets = <&cpg 25>;
 			linux,uio-name = "imp_imp_01";
 		};
 
@@ -2828,6 +2832,7 @@
 			reg = <0 0xffb00000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 103>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
+			resets = <&cpg 103>;
 			linux,uio-name = "imp_imp_02";
 		};
 
@@ -2836,6 +2841,7 @@
 			reg = <0 0xffb20000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 104>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
+			resets = <&cpg 104>;
 			linux,uio-name = "imp_imp_03";
 		};
 
@@ -2844,6 +2850,7 @@
 			reg = <0 0xffa40000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 28>;
 			power-domains = <&sysc R8A779A0_PD_A2CV0>;
+			resets = <&cpg 28>;
 			linux,uio-name = "imp_cve_00";
 		};
 
@@ -2852,6 +2859,7 @@
 			reg = <0 0xffa50000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 29>;
 			power-domains = <&sysc R8A779A0_PD_A2CV1>;
+			resets = <&cpg 29>;
 			linux,uio-name = "imp_cve_01";
 		};
 
@@ -2860,6 +2868,7 @@
 			reg = <0 0xffb40000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 30>;
 			power-domains = <&sysc R8A779A0_PD_A2CV2>;
+			resets = <&cpg 30>;
 			linux,uio-name = "imp_cve_02";
 		};
 
@@ -2868,6 +2877,7 @@
 			reg = <0 0xffb50000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 31>;
 			power-domains = <&sysc R8A779A0_PD_A2CV3>;
+			resets = <&cpg 31>;
 			linux,uio-name = "imp_cve_03";
 		};
 
@@ -2876,6 +2886,7 @@
 			reg = <0 0xffa60000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 100>;
 			power-domains = <&sysc R8A779A0_PD_A2CV4>;
+			resets = <&cpg 100>;
 			linux,uio-name = "imp_cve_04";
 		};
 
@@ -2884,6 +2895,7 @@
 			reg = <0 0xffb60000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 107>;
 			power-domains = <&sysc R8A779A0_PD_A2CV5>;
+			resets = <&cpg 107>;
 			linux,uio-name = "imp_cve_05";
 		};
 
@@ -2892,6 +2904,7 @@
 			reg = <0 0xffa70000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 313>;
 			power-domains = <&sysc R8A779A0_PD_A2CV6>;
+			resets = <&cpg 313>;
 			linux,uio-name = "imp_cve_06";
 		};
 
@@ -2900,6 +2913,7 @@
 			reg = <0 0xffb70000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 314>;
 			power-domains = <&sysc R8A779A0_PD_A2CV7>;
+			resets = <&cpg 314>;
 			linux,uio-name = "imp_cve_07";
 		};
 
@@ -2908,6 +2922,7 @@
 			reg = <0 0xffa80000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 26>;
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
+			resets = <&cpg 26>;
 			linux,uio-name = "imp_dma_00_00";
 		};
 
@@ -2916,6 +2931,7 @@
 			reg = <0 0xffa81000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 26>;
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
+			resets = <&cpg 26>;
 			linux,uio-name = "imp_dma_00_01";
 		};
 
@@ -2924,6 +2940,7 @@
 			reg = <0 0xffb80000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 105>;
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
+			resets = <&cpg 105>;
 			linux,uio-name = "imp_dma_01_00";
 		};
 
@@ -2932,6 +2949,7 @@
 			reg = <0 0xffb81000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 105>;
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
+			resets = <&cpg 105>;
 			linux,uio-name = "imp_dma_01_01";
 		};
 
@@ -2940,6 +2958,7 @@
 			reg = <0 0xffa84000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 27>;
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
+			resets = <&cpg 27>;
 			linux,uio-name = "imp_psc_00";
 		};
 
@@ -2948,6 +2967,7 @@
 			reg = <0 0xffb84000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 106>;
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
+			resets = <&cpg 106>;
 			linux,uio-name = "imp_psc_01";
 		};
 
@@ -2956,6 +2976,7 @@
 			reg = <0 0xffaa0000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 22>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN0>;
+			resets = <&cpg 22>;
 			linux,uio-name = "imp_cnn_00";
 		};
 
@@ -2964,6 +2985,7 @@
 			reg = <0 0xffbc0000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 108>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN1>;
+			resets = <&cpg 108>;
 			linux,uio-name = "imp_cnn_01";
 		};
 
@@ -2972,6 +2994,7 @@
 			reg = <0 0xffac0000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 101>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN2>;
+			resets = <&cpg 101>;
 			linux,uio-name = "imp_cnn_02";
 		};
 
@@ -2980,6 +3003,7 @@
 			reg = <0 0xed200000 0 0x100000>;
 			clocks = <&cpg CPG_MOD 120>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			resets = <&cpg 120>;
 			linux,uio-name = "imp_spmi_00_00";
 		};
 
@@ -2988,6 +3012,7 @@
 			reg = <0 0xffa8c000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 120>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			resets = <&cpg 120>;
 			linux,uio-name = "imp_spmi_00_01";
 		};
 
@@ -2996,6 +3021,7 @@
 			reg = <0 0xeda00000 0 0x100000>;
 			clocks = <&cpg CPG_MOD 121>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			resets = <&cpg 121>;
 			linux,uio-name = "imp_spmi_01_00";
 		};
 
@@ -3004,6 +3030,7 @@
 			reg = <0 0xffb8c000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 121>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			resets = <&cpg 121>;
 			linux,uio-name = "imp_spmi_01_01";
 		};
 
@@ -3012,6 +3039,7 @@
 			reg = <0 0xed600000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 23>;
 			power-domains = <&sysc R8A779A0_PD_A2CN0>;
+			resets = <&cpg 23>;
 			linux,uio-name = "imp_spmc_00_00";
 		};
 
@@ -3020,6 +3048,7 @@
 			reg = <0 0xffab0000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 23>;
 			power-domains = <&sysc R8A779A0_PD_A2CN0>;
+			resets = <&cpg 23>;
 			linux,uio-name = "imp_spmc_00_01";
 		};
 
@@ -3028,6 +3057,7 @@
 			reg = <0 0xedc00000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 109>;
 			power-domains = <&sysc R8A779A0_PD_A2CN1>;
+			resets = <&cpg 109>;
 			linux,uio-name = "imp_spmc_01_00";
 		};
 
@@ -3036,6 +3066,7 @@
 			reg = <0 0xffbd0000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 109>;
 			power-domains = <&sysc R8A779A0_PD_A2CN1>;
+			resets = <&cpg 109>;
 			linux,uio-name = "imp_spmc_01_01";
 		};
 
@@ -3044,6 +3075,7 @@
 			reg = <0 0xed400000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 102>;
 			power-domains = <&sysc R8A779A0_PD_A2CN2>;
+			resets = <&cpg 102>;
 			linux,uio-name = "imp_spmc_02_00";
 		};
 
@@ -3052,6 +3084,7 @@
 			reg = <0 0xffad0000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 102>;
 			power-domains = <&sysc R8A779A0_PD_A2CN2>;
+			resets = <&cpg 102>;
 			linux,uio-name = "imp_spmc_02_01";
 		};
 
@@ -3060,6 +3093,7 @@
 			reg = <0 0xffa88000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 116>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			resets = <&cpg 116>;
 			linux,uio-name = "imp_dta_00";
 		};
 
