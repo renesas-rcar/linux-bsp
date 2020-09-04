@@ -1690,7 +1690,7 @@
 			clocks = <&cpg CPG_MOD 529>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 529>;
-			linux,uio-name = "imrlx4_ims0";
+			linux,uio-name = "imrlx4_ims_00";
 		};
 
 		imrlx4_ims1: ims@fe870000 {
@@ -1700,7 +1700,7 @@
 			clocks = <&cpg CPG_MOD 530>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 530>;
-			linux,uio-name = "imrlx4_ims1";
+			linux,uio-name = "imrlx4_ims_01";
 		};
 
 		imrlx4_imr0: imr@fe880000 {
@@ -1710,7 +1710,7 @@
 			clocks = <&cpg CPG_MOD 525>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 525>;
-			linux,uio-name = "imrlx4_imr0";
+			linux,uio-name = "imrlx4_imr_00";
 		};
 
 		imrlx4_imr1: imr@fe890000 {
@@ -1720,7 +1720,7 @@
 			clocks = <&cpg CPG_MOD 526>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 526>;
-			linux,uio-name = "imrlx4_imr1";
+			linux,uio-name = "imrlx4_imr_01";
 		};
 
 		imrlx4_imr2: imr@fe8a0000 {
@@ -1730,7 +1730,7 @@
 			clocks = <&cpg CPG_MOD 527>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 527>;
-			linux,uio-name = "imrlx4_imr2";
+			linux,uio-name = "imrlx4_imr_02";
 		};
 
 		imrlx4_imr3: imr@fe8b0000 {
@@ -1740,7 +1740,7 @@
 			clocks = <&cpg CPG_MOD 528>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 528>;
-			linux,uio-name = "imrlx4_imr3";
+			linux,uio-name = "imrlx4_imr_03";
 		};
 
 		vspd0: vsp@fea20000 {
