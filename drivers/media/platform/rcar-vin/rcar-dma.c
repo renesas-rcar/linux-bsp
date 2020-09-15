@@ -755,8 +755,16 @@ static void rvin_crop_scale_comp(struct rvin_dev *vin)
 	/* For RAW8 format bpp is 1, but the hardware process RAW8
 	 * format in 2 pixel unit hence configure VNIS_REG as stride / 2.
 	 */
-	if (vin->format.pixelformat == V4L2_PIX_FMT_SRGGB8)
+	switch (vin->format.pixelformat) {
+	case MEDIA_BUS_FMT_SBGGR8_1X8:
+	case MEDIA_BUS_FMT_SGBRG8_1X8:
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+	case MEDIA_BUS_FMT_SRGGB8_1X8:
 		stride /= 2;
+		break;
+	default:
+		break;
+	}
 
 	rvin_write(vin, stride, VNIS_REG);
 }
@@ -861,6 +869,9 @@ static int rvin_setup(struct rvin_dev *vin)
 		if (vin->chip_info & RCAR_VIN_R8A779A0_REATURE)
 			vnmc |= VNMC_INF_RAWX_RGB565;
 		break;
+	case MEDIA_BUS_FMT_SBGGR8_1X8:
+	case MEDIA_BUS_FMT_SGBRG8_1X8:
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
 	case MEDIA_BUS_FMT_SRGGB8_1X8:
 		vnmc |= VNMC_INF_RAW8;
 		break;
@@ -934,6 +945,9 @@ static int rvin_setup(struct rvin_dev *vin)
 		if (vin->chip_info & RCAR_VIN_R8A779A0_REATURE)
 			dmr = VNDMR_RMODE_RAW10 | VNDMR_YC_THR;
 		break;
+	case V4L2_PIX_FMT_SBGGR8:
+	case V4L2_PIX_FMT_SGBRG8:
+	case V4L2_PIX_FMT_SGRBG8:
 	case V4L2_PIX_FMT_SRGGB8:
 		dmr = 0;
 		break;
@@ -1414,6 +1428,18 @@ static int rvin_mc_validate_format(struct rvin_dev *vin, struct v4l2_subdev *sd,
 	case MEDIA_BUS_FMT_UYVY10_2X10:
 	case MEDIA_BUS_FMT_Y10_1X10:
 	case MEDIA_BUS_FMT_RGB888_1X24:
+		break;
+	case MEDIA_BUS_FMT_SBGGR8_1X8:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SBGGR8)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGBRG8_1X8:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGBRG8)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGRBG8)
+			return -EPIPE;
 		break;
 	case MEDIA_BUS_FMT_SRGGB8_1X8:
 		if (vin->format.pixelformat != V4L2_PIX_FMT_SRGGB8)
