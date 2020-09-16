@@ -363,6 +363,18 @@ config IPMMU_VMSA_WHITELIST
 
 	  If unsure, say N here.
 
+config IPMMU_VMSA_RCAR_V3U
+	bool "IPMMU R-Car V3U SoC Support"
+	depends on IPMMU_VMSA
+	def_bool y
+	help
+	  Enable support for the Renesas VMSA-compatible IPMMU
+	  for R-Car V3U SoC.
+
+	  For unsupported devices, IPMMU will not do address translation.
+
+	  If unsure, say N here.
+
 config SPAPR_TCE_IOMMU
 	bool "sPAPR TCE IOMMU Support"
 	depends on PPC_POWERNV || PPC_PSERIES

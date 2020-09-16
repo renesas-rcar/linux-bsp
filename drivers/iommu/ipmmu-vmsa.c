@@ -1031,6 +1031,7 @@ static const char * const rcar_gen3_slave_whitelist[] = {
 	"ec720000.dma-controller",
 	"e6800000.ethernet",
 	"fe000000.pcie",
+	"ee800000.pcie",
 };
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
 static const struct soc_device_attribute r8a7795[]  = {
@@ -1053,7 +1054,7 @@ static const struct soc_device_attribute r8a77990[]  = {
 	{ /* sentinel */ }
 };
 
-static bool ipmmu_slave_whitelist(struct device *dev, u32 *ids)
+static bool ipmmu_utlb_whitelist(struct device *dev, u32 *ids)
 {
 	struct ipmmu_vmsa_device *mmu = to_ipmmu(dev);
 	int i;
@@ -1099,7 +1100,8 @@ exit:
 	pr_info("IPMMU support is not available for %s\n", dev_name(dev));
 	return false;
 }
-#else
+#endif /* CONFIG_IPMMU_VMSA_WHITELIST */
+
 static bool ipmmu_slave_whitelist(struct device *dev)
 {
 	unsigned int i;
@@ -1115,6 +1117,11 @@ static bool ipmmu_slave_whitelist(struct device *dev)
 	if (!soc_device_match(soc_rcar_gen3_whitelist))
 		return false;
 
+#if defined(CONFIG_PCI)
+	if (dev_is_pci(dev))
+		return true;
+#endif
+
 	/* Check whether this slave device can work with the IPMMU */
 	for (i = 0; i < ARRAY_SIZE(rcar_gen3_slave_whitelist); i++) {
 		if (!strcmp(dev_name(dev), rcar_gen3_slave_whitelist[i]))
@@ -1124,24 +1131,24 @@ static bool ipmmu_slave_whitelist(struct device *dev)
 	/* Otherwise, do not allow use of IPMMU */
 	return false;
 }
-#endif /* CONFIG_IPMMU_VMSA_WHITELIST */
 
 static int ipmmu_of_xlate(struct device *dev,
 			  struct of_phandle_args *spec)
 {
 	int ret;
 
+	if (!ipmmu_slave_whitelist(dev))
+		return -ENODEV;
+
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
 	/* Use a white list to opt-in slave devices
 	 * Whitelist needs mmu info to get the corresponding whitelist bitmap
 	 * In case of no mmu is available, whitelist will check later
 	 */
-	if (to_ipmmu(dev) && !ipmmu_slave_whitelist(dev, spec->args))
-		return -ENODEV;
-#else
-	if (!ipmmu_slave_whitelist(dev))
+	if (to_ipmmu(dev) && !ipmmu_utlb_whitelist(dev, spec->args))
 		return -ENODEV;
 #endif
+
 	iommu_fwspec_add_ids(dev, spec->args, 1);
 
 	/* Initialize once - xlate() will call multiple times */
@@ -1154,7 +1161,7 @@ static int ipmmu_of_xlate(struct device *dev,
 
 #ifdef CONFIG_IPMMU_VMSA_WHITELIST
 	/* For the first initialzation when mmu info is available */
-	if (!ipmmu_slave_whitelist(dev, spec->args))
+	if (!ipmmu_utlb_whitelist(dev, spec->args))
 		return -ENODEV;
 #endif
 	return 0;
@@ -1537,6 +1544,10 @@ static int ipmmu_probe(struct platform_device *pdev)
 			return ret;
 
 #if defined(CONFIG_IOMMU_DMA)
+#if defined(CONFIG_PCI)
+		if (!iommu_present(&pci_bus_type))
+			bus_set_iommu(&pci_bus_type, &ipmmu_ops);
+#endif
 		if (!iommu_present(&platform_bus_type))
 			bus_set_iommu(&platform_bus_type, &ipmmu_ops);
 #endif
