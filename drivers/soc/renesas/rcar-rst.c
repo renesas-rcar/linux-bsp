@@ -12,10 +12,17 @@
 
 #define WDTRSTCR_RESET		0xA55A0002
 #define WDTRSTCR		0x0054
+#define WDTRSTCR_R8A779A0	0x0010
 
 static int rcar_rst_enable_wdt_reset(void __iomem *base)
 {
 	iowrite32(WDTRSTCR_RESET, base + WDTRSTCR);
+	return 0;
+}
+
+static int rcar_rst_enable_wdt_reset_r8a779a0(void __iomem *base)
+{
+	iowrite32(WDTRSTCR_RESET, base + WDTRSTCR_R8A779A0);
 	return 0;
 }
 
@@ -35,6 +42,11 @@ static const struct rst_config rcar_rst_gen2 __initconst = {
 
 static const struct rst_config rcar_rst_gen3 __initconst = {
 	.modemr = 0x60,
+};
+
+static const struct rst_config rcar_rst_r8a779a0 __initconst = {
+	.modemr = 0x00,
+	.configure = rcar_rst_enable_wdt_reset_r8a779a0,
 };
 
 static const struct of_device_id rcar_rst_matches[] __initconst = {
@@ -63,6 +75,8 @@ static const struct of_device_id rcar_rst_matches[] __initconst = {
 	{ .compatible = "renesas,r8a77980-rst", .data = &rcar_rst_gen3 },
 	{ .compatible = "renesas,r8a77990-rst", .data = &rcar_rst_gen3 },
 	{ .compatible = "renesas,r8a77995-rst", .data = &rcar_rst_gen3 },
+	/* R-Car Gen4 */
+	{ .compatible = "renesas,r8a779a0-rst", .data = &rcar_rst_r8a779a0 },
 	{ /* sentinel */ }
 };
 
