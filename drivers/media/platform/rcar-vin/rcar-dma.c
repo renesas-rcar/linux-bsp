@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
 
+#include <media/rcar-isp.h>
 #include <media/videobuf2-dma-contig.h>
 
 #include "rcar-vin.h"
@@ -908,7 +909,8 @@ static int rvin_setup(struct rvin_dev *vin)
 	vnmc |= VNMC_VUP;
 
 	/* If input and output use the same colorspace, use bypass mode */
-	if (input_is_yuv == output_is_yuv)
+	if (input_is_yuv == output_is_yuv &&
+	   !(vin->chip_info & RCAR_VIN_BPS_RESERVED))
 		vnmc |= VNMC_BPS;
 
 	if (vin->info->model == RCAR_GEN3) {
@@ -1079,6 +1081,8 @@ static int rvin_capture_start(struct rvin_dev *vin)
 	ret = rvin_setup(vin);
 	if (ret)
 		return ret;
+
+	rcar_isp_init(vin->isp);
 
 	rvin_capture_on(vin);
 
@@ -1430,7 +1434,10 @@ static int rvin_set_stream(struct rvin_dev *vin, int on)
 			return 0;
 
 		media_pipeline_stop(&vin->vdev.entity);
-		return v4l2_subdev_call(sd, video, s_stream, 0);
+		ret = v4l2_subdev_call(sd, video, s_stream, 0);
+		rcar_isp_disable(vin->isp);
+
+		return ret;
 	}
 
 	ret = rvin_mc_validate_format(vin, sd, pad);
@@ -1450,6 +1457,8 @@ static int rvin_set_stream(struct rvin_dev *vin, int on)
 	mutex_unlock(&mdev->graph_mutex);
 	if (ret)
 		return ret;
+
+	rcar_isp_enable(vin->isp);
 
 	ret = v4l2_subdev_call(sd, video, s_stream, 1);
 	if (ret == -ENOIOCTLCMD)

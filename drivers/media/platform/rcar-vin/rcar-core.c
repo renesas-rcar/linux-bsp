@@ -24,6 +24,7 @@
 #include <media/v4l2-async.h>
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-mc.h>
+#include <media/rcar-isp.h>
 
 #include "rcar-vin.h"
 
@@ -42,7 +43,10 @@
  * routing for other VIN's. We can figure out which VIN is
  * master by looking at a VINs id.
  */
-#define rvin_group_id_to_master(vin) ((vin) < 4 ? 0 : 4)
+#define rvin_group_id_to_master(vin) ((vin) < 4 ? 0 : (vin) < 8 ? 4 : \
+				     (vin) < 12 ? 8 : (vin) < 16 ? 12 : \
+				     (vin) < 20 ? 16 : (vin) < 24 ? 20 : \
+				     (vin) < 28 ? 24 : (vin) < 32 ? 28 : 32)
 
 #define v4l2_dev_to_vin(d)	container_of(d, struct rvin_dev, v4l2_dev)
 
@@ -1203,6 +1207,35 @@ static const struct rvin_info rcar_info_r8a77995 = {
 	.routes = rcar_info_r8a77995_routes,
 };
 
+/* Currently it is statically assigned, but it should be general purpose. */
+static const struct rvin_group_route rcar_info_r8a779a0_routes[] = {
+	{ .csi = RV3U_CSI40, .channel = 0, .vin = 0,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI40, .channel = 1, .vin = 1,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI40, .channel = 2, .vin = 2,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI40, .channel = 3, .vin = 3,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI41, .channel = 0, .vin = 8,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI41, .channel = 1, .vin = 9,  .mask = 0xffffffff },
+	{ .csi = RV3U_CSI41, .channel = 2, .vin = 10, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI41, .channel = 3, .vin = 11, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI42, .channel = 0, .vin = 16, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI42, .channel = 1, .vin = 17, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI42, .channel = 2, .vin = 18, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI42, .channel = 3, .vin = 19, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI43, .channel = 0, .vin = 24, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI43, .channel = 1, .vin = 25, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI43, .channel = 2, .vin = 26, .mask = 0xffffffff },
+	{ .csi = RV3U_CSI43, .channel = 3, .vin = 27, .mask = 0xffffffff },
+	{ /* Sentinel */ }
+};
+
+static const struct rvin_info rcar_info_r8a779a0 = {
+	.model = RCAR_GEN3,
+	.use_mc = true,
+	.max_width = 4096,
+	.max_height = 4096,
+	.routes = rcar_info_r8a779a0_routes,
+};
+
 static const struct of_device_id rvin_of_id_table[] = {
 	{
 		.compatible = "renesas,vin-r8a774a1",
@@ -1268,6 +1301,10 @@ static const struct of_device_id rvin_of_id_table[] = {
 		.compatible = "renesas,vin-r8a77995",
 		.data = &rcar_info_r8a77995,
 	},
+	{
+		.compatible = "renesas,vin-r8a779a0",
+		.data = &rcar_info_r8a779a0,
+	},
 	{ /* Sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, rvin_of_id_table);
@@ -1285,6 +1322,10 @@ static const struct soc_device_attribute chip_info[] = {
 		.soc_id = "r8a77990",
 		.data = (void *)RCAR_VIN_DES1_RESERVED,
 	},
+	{
+		.soc_id = "r8a779a0",
+		.data = (void *)RCAR_VIN_BPS_RESERVED,
+	},
 	{ /* sentinel */ }
 };
 
@@ -1294,6 +1335,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	struct rvin_dev *vin;
 	struct resource *mem;
 	int irq, ret;
+	struct device_node *isp_node;
 
 	vin = devm_kzalloc(&pdev->dev, sizeof(*vin), GFP_KERNEL);
 	if (!vin)
@@ -1302,6 +1344,20 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	vin->dev = &pdev->dev;
 	vin->info = of_device_get_match_data(&pdev->dev);
 	vin->alpha = 0xff;
+
+	/* ISP (optional) for r8a779a0 */
+	isp_node = of_parse_phandle(pdev->dev.of_node, "renesas,isp", 0);
+	if (isp_node) {
+		vin->isp = rcar_isp_get(isp_node);
+		of_node_put(isp_node);
+		if (IS_ERR(vin->isp)) {
+			dev_dbg(&pdev->dev, "ISP not found (%ld)\n",
+				PTR_ERR(vin->isp));
+			return PTR_ERR(vin->isp);
+		}
+	} else {
+		vin->isp = NULL;
+	}
 
 	/*
 	 * Special care is needed on r8a7795 ES1.x since it
