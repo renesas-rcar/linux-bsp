@@ -30,9 +30,64 @@
 #include "rcar_du_vsp.h"
 #include "rcar_lvds.h"
 
+static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
+{
+	struct rcar_du_device *rcdu = rcrtc->dev;
+	struct rcar_du_group *rgrp = rcrtc->group;
+	u32 escr13 = ESCR13 + DU1_REG_OFFSET;
+	u32 otar13 = OTAR13 + DU1_REG_OFFSET;
+
+	/* ESCR register access check */
+	if (reg == ESCR02 || reg == escr13) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
+			if (rgrp->index == 0 && reg == escr13)
+				return false;
+			else if (rgrp->index == 1 && reg == ESCR02)
+				return false;
+			else
+				return true;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS)) {
+			if (rgrp->index == 0 && reg == escr13)
+				return false;
+			else
+				return true;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+			return false;
+	}
+
+	/* OTAR register access check */
+	if (reg == OTAR02 || reg == otar13) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
+			if (rgrp->index == 1 && reg == otar13)
+				return true;
+			else
+				return false;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS)) {
+			if (rgrp->index == 1 && reg == OTAR02)
+				return true;
+			else
+				return false;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+			return false;
+	}
+
+	return true;
+}
+
 static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 {
 	struct rcar_du_device *rcdu = rcrtc->dev;
+
+	if (!rcar_du_register_access_check(rcrtc, reg)) {
+		dev_warn(rcdu->dev, "reserved register was read\n");
+		return 0;
+	}
 
 	return rcar_du_read(rcdu, rcrtc->mmio_offset + reg);
 }
@@ -40,6 +95,9 @@ static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 static void rcar_du_crtc_write(struct rcar_du_crtc *rcrtc, u32 reg, u32 data)
 {
 	struct rcar_du_device *rcdu = rcrtc->dev;
+
+	if (!rcar_du_register_access_check(rcrtc, reg))
+		return;
 
 	rcar_du_write(rcdu, rcrtc->mmio_offset + reg, data);
 }
@@ -1191,6 +1249,10 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int swindex,
 	rcrtc->mmio_offset = mmio_offsets[hwindex];
 	rcrtc->index = hwindex;
 	rcrtc->dsysr = (rcrtc->index % 2 ? 0 : DSYSR_DRES) | DSYSR_TVM_TVSYNC;
+	/* In V3U, the bit TVM and SCM are always set to 0 */
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+		rcrtc->dsysr = rcrtc->dsysr &
+				~(DSYSR_SCM_MASK | DSYSR_TVM_MASK);
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
 		/* If the BRS number of VSPDL is 0, skip CRTC initialization */
