@@ -13,6 +13,8 @@ Required properties:
   - "renesas,r8a77980-canfd" for R8A77980 (R-Car V3H) compatible controller.
   - "renesas,r8a77990-canfd" for R8A77990 (R-Car E3) compatible controller.
   - "renesas,r8a77995-canfd" for R8A77995 (R-Car D3) compatible controller.
+  - "renesas,r8a779a0-canfd" for R8A779A0 (R-Car V3U) compatible controller.
+  - "renesas,rcar-gen4-canfd" for R-Car Gen4 compatible controllers.
 
   When compatible with the generic version, nodes must list the
   SoC-specific version corresponding to the platform first, followed by the
@@ -32,7 +34,7 @@ child node supports the "status" property only, which is used to
 enable/disable the respective channel.
 
 Required properties for R8A774A1, R8A774C0, R8A7795, R8A7796, R8A77965,
-R8A77990, and R8A77995:
+R8A77990, R8A77995 and R8A779A0:
 In the denoted SoCs, canfd clock is a div6 clock and can be used by both CAN
 and CAN FD controller at the same time. It needs to be scaled to maximum
 frequency if any of these controllers use it. This is done using the below
