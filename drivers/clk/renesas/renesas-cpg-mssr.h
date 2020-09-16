@@ -116,6 +116,7 @@ struct device_node;
      * @stbyctrl: This device has Standby Control Registers which are 8-bits
      *            wide, no status registers (MSTPSR) and have different address
      *            offsets.
+     * @mstpctrl: This device has only MSTP Control Registers
      */
 
 struct cpg_mssr_info {
@@ -130,7 +131,9 @@ struct cpg_mssr_info {
 	unsigned int num_core_clks;
 	unsigned int last_dt_core_clk;
 	unsigned int num_total_core_clks;
+	unsigned int gen;
 	bool stbyctrl;
+	bool mstpctrl;
 
 	/* Module Clocks */
 	const struct mssr_mod_clk *mod_clks;
@@ -171,6 +174,7 @@ extern const struct cpg_mssr_info r8a77970_cpg_mssr_info;
 extern const struct cpg_mssr_info r8a77980_cpg_mssr_info;
 extern const struct cpg_mssr_info r8a77990_cpg_mssr_info;
 extern const struct cpg_mssr_info r8a77995_cpg_mssr_info;
+extern const struct cpg_mssr_info r8a779a0_cpg_mssr_info;
 
 void __init cpg_mssr_early_init(struct device_node *np,
 				const struct cpg_mssr_info *info);
