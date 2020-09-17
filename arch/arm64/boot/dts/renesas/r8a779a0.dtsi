@@ -3158,9 +3158,9 @@
 			linux,uio-name = "imp_cnn_02";
 		};
 
-		impspmi0_mem: imp-ram@ed200000 {
+		impspmi0_mem: imp-ram@ed300000 {
 			compatible = "generic-uio";
-			reg = <0 0xed200000 0 0x100000>;
+			reg = <0 0xed300000 0 0x100000>;
 			clocks = <&cpg CPG_MOD 120>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			resets = <&cpg 120>;
@@ -3212,9 +3212,9 @@
 			linux,uio-name = "imp_spmc_00_01";
 		};
 
-		impspmc1_mem: cnn-ram@edc00000 {
+		impspmc1_mem: cnn-ram@ed800000 {
 			compatible = "generic-uio";
-			reg = <0 0xedc00000 0 0x200000>;
+			reg = <0 0xed800000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 109>;
 			power-domains = <&sysc R8A779A0_PD_A2CN1>;
 			resets = <&cpg 109>;
