@@ -1180,4 +1180,8 @@ config VIDEO_ST_MIPID02
 
 endmenu
 
+source "drivers/media/i2c/gmsl/Kconfig"
+source "drivers/media/i2c/fpdlink/Kconfig"
+source "drivers/media/i2c/imagers/Kconfig"
+
 endif
