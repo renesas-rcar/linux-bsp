@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0
+obj-$(CONFIG_VIDEO_MAX9286_STAGING)	+= max9286.o
+obj-$(CONFIG_VIDEO_MAX9288)	+= max9288.o
+obj-$(CONFIG_VIDEO_MAX9296)	+= max9296.o
+obj-$(CONFIG_VIDEO_MAX96712)	+= max96712.o
