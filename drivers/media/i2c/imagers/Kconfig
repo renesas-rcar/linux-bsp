@@ -1,0 +1,13 @@
+#
+# LVDS camera video device configuration
+#
+
+config VIDEO_LVDS_CAMERA
+	tristate "LVDS camera support"
+	depends on I2C && VIDEO_V4L2_SUBDEV_API && MEDIA_CONTROLLER
+	select V4L2_FWNODE
+	help
+	  This is a GMSL/FPDLink cameras support
+
+	  This camera should be used in conjunction with a GMSL or
+	  or FPDLink deserialiser
