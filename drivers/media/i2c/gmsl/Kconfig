@@ -1,0 +1,55 @@
+#
+# GMSL video device configuration
+#
+
+config VIDEO_MAX9286_STAGING
+	tristate "MAXIM MAX9286 GMSL deserializer support for ov10635"
+	depends on I2C && I2C_MUX
+	depends on OF_GPIO
+	select V4L2_FWNODE
+	select VIDEO_V4L2_SUBDEV_API
+	select MEDIA_CONTROLLER
+	help
+	  This is a MAXIM MAX9286 GMSL deserializer driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called max9286.
+
+config VIDEO_MAX9288
+	tristate "MAXIM MAX9288 GMSL deserializer support"
+	depends on I2C && I2C_MUX
+	depends on OF_GPIO
+	select V4L2_FWNODE
+	select VIDEO_V4L2_SUBDEV_API
+	select MEDIA_CONTROLLER
+	help
+	  This is a MAXIM MAX9288 GMSL deserializer driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called max9288.
+
+config VIDEO_MAX9296
+	tristate "MAXIM MAX9296 GMSL2 deserializer support"
+	depends on I2C && I2C_MUX
+	depends on OF_GPIO
+	select V4L2_FWNODE
+	select VIDEO_V4L2_SUBDEV_API
+	select MEDIA_CONTROLLER
+	help
+	  This is a MAXIM MAX9296 GMSL2 deserializer driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called max9296.
+
+config VIDEO_MAX96712
+	tristate "MAXIM MAX96712 GMSL2 deserializer support"
+	depends on I2C && I2C_MUX
+	depends on OF_GPIO
+	select V4L2_FWNODE
+	select VIDEO_V4L2_SUBDEV_API
+	select MEDIA_CONTROLLER
+	help
+	  This is a MAXIM MAX96712 GMSL2 deserializer driver
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called max96712.

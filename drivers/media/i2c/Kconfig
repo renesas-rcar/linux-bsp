@@ -477,6 +477,8 @@ config VIDEO_MAX9286
 	  To compile this driver as a module, choose M here: the
 	  module will be called max9286.
 
+source "drivers/media/i2c/gmsl/Kconfig"
+
 comment "Video and audio decoders"
 
 config VIDEO_MAX96712_STAGING
@@ -1266,6 +1268,10 @@ config VIDEO_S5C73M3
 	help
 	  This is a V4L2 sensor driver for Samsung S5C73M3
 	  8 Mpixel camera.
+
+source "drivers/media/i2c/fpdlink/Kconfig"
+source "drivers/media/i2c/imagers/Kconfig"
+
 
 endmenu
 
