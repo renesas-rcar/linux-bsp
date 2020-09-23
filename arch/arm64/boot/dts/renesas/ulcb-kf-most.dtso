@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Overlay for the H3/M3ULCB Kingfisher board:
+ *  this overrides GPS in favour MOST on GP5_24/GP5_25 R-CAR pins
+ *
+ * Copyright (C) 2017-2020 Renesas Electronics Corp.
+ * Copyright (C) 2017-2020 Cogent Embedded, Inc.
+ */
+
+/dts-v1/;
+/plugin/;
+
+&pfc {
+	mlp_pins: mlp {
+		groups = "mlb_3pin";
+		function = "mlb_3pin";
+	};
+};
+
+&scif1 {
+	status = "disabled";
+};
+
+&mlp {
+	pinctrl-0 = <&mlp_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	microchip,clock-speed = "1024fs";
+};

@@ -1,0 +1,297 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Overlay for the H3ULCB Kingfisher board:
+ *  use CN11 instead default CN29/CN48
+ *  use GMSL2 card on CN11
+ *
+ * Copyright (C) 2017-2020 Renesas Electronics Corp.
+ * Copyright (C) 2017-2020 Cogent Embedded, Inc.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include "camera.dtsi"
+
+/ {
+	fragment@101 {
+		target-path = "/";
+
+		__overlay__ {
+
+			cs2300_ref_clk: cs2300_ref_clk {
+				compatible = "fixed-clock";
+				#clock-cells = <0>;
+				clock-frequency = <25000000>;
+			};
+
+			iio_hwmon_b: hwmon_b@0 {
+				compatible = "iio-hwmon";
+				io-channels = <&max2008x_b 0>, <&max2008x_b 2>, /* current */
+					      <&max2008x_b 4>, <&max2008x_b 6>, /* voltage */
+					      <&max2008x_b 8>, <&max2008x_b 9>; /* misc voltages */
+				io-channel-names = "camera-B-0-Iout", "camera-B-1-Iout",
+						   "camera-B-0-Vout", "camera-B-1-Vout",
+						   "cameras-B-Vregulator", "cameras-B-3v3";
+			};
+		};
+	};
+};
+
+&csi41 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi41_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&deser_out1>;
+			};
+		};
+	};
+};
+
+&i2cswitch4 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/* Slot B (CN11) */
+	i2c@2 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <2>;
+
+		deser_b@29 {
+			compatible = "maxim,max96712", "maxim,max9296";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x29 0x48>;
+			reg-names = "max96712", "max9296";
+			regs = <0x0c 0x0d 0x0e 0x0f>;
+			clocks = <&cs2300_b>;
+			clock-names = "ref_clk";
+			shutdown-gpios = <&gpio_exp_b_5c 13 GPIO_ACTIVE_LOW>;
+
+			poc0-supply = <&vdd_cam_b_0>;
+			poc1-supply = <&vdd_cam_b_1>;
+			poc2-supply = <&vdd_cam_b_2>;
+			poc3-supply = <&vdd_cam_b_3>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					deser_in4: endpoint {
+						remote-endpoint = <&camera_out4>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					deser_in5: endpoint {
+						remote-endpoint = <&camera_out5>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					deser_in6: endpoint {
+						remote-endpoint = <&camera_out6>;
+					};
+				};
+
+				port@3 {
+					reg = <3>;
+					deser_in7: endpoint {
+						remote-endpoint = <&camera_out7>;
+					};
+				};
+
+				port@4 {
+					reg = <4>;
+					deser_out1: endpoint {
+						clock-lanes = <0>;
+						data-lanes = <1 2 3 4>;
+						remote-endpoint = <&csi41_in>;
+					};
+				};
+			};
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				camera@60 {
+					compatible = LVDS_CAMERA;
+					reg = <0x60 0x0c>;
+
+					port {
+						camera_out4: endpoint {
+							remote-endpoint = <&deser_in4>;
+						};
+					};
+				};
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				camera@61 {
+					compatible = LVDS_CAMERA;
+					reg = <0x61 0x0d>;
+
+					port {
+						camera_out5: endpoint {
+							remote-endpoint = <&deser_in5>;
+						};
+					};
+				};
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				camera@62 {
+					compatible = LVDS_CAMERA;
+					reg = <0x62 0x0e>;
+
+					port {
+						camera_out6: endpoint {
+							remote-endpoint = <&deser_in6>;
+						};
+					};
+				};
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				camera@63 {
+					compatible = LVDS_CAMERA;
+					reg = <0x63 0x0f>;
+
+					port {
+						camera_out7: endpoint {
+							remote-endpoint = <&deser_in7>;
+						};
+					};
+				};
+			};
+		};
+	};
+
+	i2cswitch4_i2c6: i2c@6 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <6>;
+		/* Slot B (CN11) */
+
+		gpio_exp_b_5c: gpio@5c {
+			compatible = "maxim,max7325";
+			reg = <0x5c>;
+			gpio-controller;
+			#gpio-cells = <2>;
+
+			video_b_des_cfg2 {
+				gpio-hog;
+				gpios = <4 GPIO_ACTIVE_HIGH>;
+				input;
+				line-name = "Video-B cfg2";
+			};
+			video_b_des_cfg1 {
+				gpio-hog;
+				gpios = <6 GPIO_ACTIVE_HIGH>;
+				input;
+				line-name = "Video-B cfg1";
+			};
+			video_b_des_cfg0 {
+				gpio-hog;
+				gpios = <7 GPIO_ACTIVE_HIGH>;
+				input;
+				line-name = "Video-B cfg0";
+			};
+			video_b_pwr_shdn {
+				gpio-hog;
+				gpios = <14 GPIO_ACTIVE_HIGH>;
+				output-high;
+				line-name = "Video-B PWR_SHDN";
+			};
+			video_b_led {
+				gpio-hog;
+				gpios = <12 GPIO_ACTIVE_HIGH>;
+				output-low;
+				line-name = "Video-B LED";
+			};
+		};
+
+		cs2300_b: clk_multiplier_b@4e {
+			#clock-cells = <0>;
+			compatible = "cirrus,cs2300-cp";
+			reg = <0x4e>;
+			clocks = <&cs2300_ref_clk>;
+			clock-names = "clk_in";
+			assigned-clocks = <&cs2300_b>;
+			assigned-clock-rates = <25000000>;
+		};
+
+		max2008x_b: vcam_switch_b@28 {
+			compatible = "maxim,max2008x";
+			reg = <0x28>;
+			#io-channel-cells = <1>;
+
+			regulators {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				vdd_cam_b_0: SW0 {
+					reg = <0>;
+					regulator-name = "Camera-B-0";
+				};
+				vdd_cam_b_3: SW1 {
+					reg = <1>;
+					regulator-name = "Camera-B-3";
+				};
+				vdd_cam_b_1: SW2 {
+					reg = <2>;
+					regulator-name = "Camera-B-1";
+				};
+				vdd_cam_b_2: SW3 {
+					reg = <3>;
+					regulator-name = "Camera-B-2";
+				};
+			};
+		};
+	};
+};
+
+&vin4 {
+	status = "okay";
+};
+
+&vin5 {
+	status = "okay";
+};
+
+&vin6 {
+	status = "okay";
+};
+
+&vin7 {
+	status = "okay";
+};
