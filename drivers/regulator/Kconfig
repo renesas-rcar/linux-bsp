@@ -545,6 +545,12 @@ config REGULATOR_MAX8998
 	  via I2C bus. The provided regulator is suitable for S3C6410
 	  and S5PC1XX chips to control VCC_CORE and VCC_USIM voltages.
 
+config REGULATOR_MAX2008X
+	tristate "Maxim 20086-20089 Dual/Quad Camera Power Protector reguator"
+	help
+	  This driver controls  MAX20086-MAX20089 dual/quad camera power
+	  protector IC.
+
 config REGULATOR_MAX77686
 	tristate "Maxim 77686 regulator"
 	depends on MFD_MAX77686
