@@ -13,7 +13,7 @@
 / {
 	soc {
 		imp_distributer: imp_ctrl_00 {
-			compatible = "renesas,impx4-distributer";
+			compatible = "generic-uio";
 			reg = <0 0xffa00000 0 0x10000>;
 			interrupts = <GIC_SPI 281 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 830>;
@@ -23,91 +23,100 @@
 		};
 
 		imp_imp_00 {
-			compatible = "renesas,impx4-legacy";
+			compatible = "generic-uio";
 			reg = <0 0xff900000 0 0x20000>;
 			interrupt-parent = <&imp_distributer>;
 			interrupts = <0>;
 			clocks = <&cpg CPG_MOD 827>;
 			power-domains = <&sysc R8A77970_PD_A2IR0>;
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		imp_imp_01 {
-			compatible = "renesas,impx4-legacy";
+			compatible = "generic-uio";
 			reg = <0 0xff920000 0 0x20000>;
 			interrupt-parent = <&imp_distributer>;
 			interrupts = <1>;
 			clocks = <&cpg CPG_MOD 826>;
 			power-domains = <&sysc R8A77970_PD_A2IR1>;
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		imp_imp_02 {
-			compatible = "renesas,impx4-legacy";
+			compatible = "generic-uio";
 			reg = <0 0xff940000 0 0x20000>;
 			interrupt-parent = <&imp_distributer>;
 			interrupts = <2>;
 			clocks = <&cpg CPG_MOD 825>;
 			power-domains = <&sysc R8A77970_PD_A2DP>;
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		imp_imp_03 {
-			compatible = "renesas,impx4-legacy";
+			compatible = "generic-uio";
 			reg = <0 0xff960000 0 0x20000>;
 			interrupt-parent = <&imp_distributer>;
 			interrupts = <3>;
 			clocks = <&cpg CPG_MOD 824>;
 			power-domains = <&sysc R8A77970_PD_A2CN>;
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		imp_ocv_00 {
-			compatible = "renesas,impx4-shader";
+			compatible = "generic-uio";
 			reg = <0 0xff980000 0 0x10000>;
 			interrupt-parent = <&imp_distributer>;
 			interrupts = <4>;
 			clocks = <&cpg CPG_MOD 829>;
 			power-domains = <&sysc R8A77970_PD_A2SC0>;
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		imp_ocv_01 {
-			compatible = "renesas,impx4-shader";
+			compatible = "generic-uio";
 			reg = <0 0xff990000 0 0x10000>;
 			interrupt-parent = <&imp_distributer>;
 			interrupts = <5>;
 			clocks = <&cpg CPG_MOD 828>;
 			power-domains = <&sysc R8A77970_PD_A2SC1>;
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		imp_dma_00 {
-			compatible = "renesas,impx5-dmac";
+			compatible = "generic-uio";
 			reg = <0 0xffa10000 0 0x1000>;
 			interrupt-parent = <&imp_distributer>;
 			interrupts = <16>;
 			clocks = <&cpg CPG_MOD 830>;
 			power-domains = <&sysc R8A77970_PD_A3IR>;
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		imp_dma_01 {
-			compatible = "renesas,impx5-dmac";
+			compatible = "generic-uio";
 			reg = <0 0xffa10000 0 0x1000>,
 			      <0 0xffa10800 0 0x0800>;
 			interrupt-parent = <&imp_distributer>;
 			interrupts = <17>;
 			clocks = <&cpg CPG_MOD 830>;
 			power-domains = <&sysc R8A77970_PD_A3IR>;
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		imp_psc_00 {
-			compatible = "renesas,impx5+-psc";
+			compatible = "generic-uio";
 			reg = <0 0xffa20000 0 0x4000>;
 			interrupt-parent = <&imp_distributer>;
 			interrupts = <12>;
 			clocks = <&cpg CPG_MOD 830>;
 			power-domains = <&sysc R8A77970_PD_A3IR>;
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		/delete-node/imp_cnn_00;
 
 		imp_mem_00 {
-			compatible = "renesas,impx4-memory";
+			compatible = "generic-uio";
 			reg = <0 0xed000000 0 0xe0000>;
 			clocks = <&cpg CPG_MOD 830>;
 			power-domains = <&sysc R8A77970_PD_A3IR>;
