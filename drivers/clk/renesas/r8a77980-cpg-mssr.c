@@ -23,7 +23,7 @@
 
 enum clk_ids {
 	/* Core Clock Outputs exported to DT */
-	LAST_DT_CORE_CLK = R8A77980_CLK_OSC,
+	LAST_DT_CORE_CLK = R8A77980_CLK_POST4,
 
 	/* External Input Clocks */
 	CLK_EXTAL,
@@ -106,6 +106,9 @@ static const struct cpg_core_clk r8a77980_core_clks[] __initconst = {
 	DEF_DIV6P1("canfd",	R8A77980_CLK_CANFD, CLK_PLL1_DIV4, 0x244),
 	DEF_DIV6P1("csi0",	R8A77980_CLK_CSI0,  CLK_PLL1_DIV4, 0x00c),
 	DEF_DIV6P1("mso",	R8A77980_CLK_MSO,   CLK_PLL1_DIV4, 0x014),
+	DEF_DIV6P1("post",	R8A77980_CLK_POST,  CLK_PLL1_DIV4, 0x08c),
+	DEF_DIV6P1("post2",	R8A77980_CLK_POST2, CLK_PLL1_DIV4, 0x09c),
+	DEF_DIV6P1("post4",	R8A77980_CLK_POST4, CLK_PLL1_DIV4, 0x260),
 
 	DEF_GEN3_OSC("osc",	R8A77980_CLK_OSC,   CLK_EXTAL,     8),
 	DEF_GEN3_MDSEL("r",	R8A77980_CLK_R, 29, CLK_EXTALR, 1, CLK_OCO, 1),
@@ -119,6 +122,7 @@ static const struct mssr_mod_clk r8a77980_mod_clks[] __initconst = {
 	DEF_MOD("tmu2",			 123,	R8A77980_CLK_S0D6),
 	DEF_MOD("tmu1",			 124,	R8A77980_CLK_S0D6),
 	DEF_MOD("tmu0",			 125,	R8A77980_CLK_CP),
+	DEF_MOD("ivcp1e",		 127,	R8A77980_CLK_S2D1),
 	DEF_MOD("scif4",		 203,	R8A77980_CLK_S3D4),
 	DEF_MOD("scif3",		 204,	R8A77980_CLK_S3D4),
 	DEF_MOD("scif1",		 206,	R8A77980_CLK_S3D4),
