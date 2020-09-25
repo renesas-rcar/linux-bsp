@@ -29,7 +29,7 @@ enum r8a77970_clk_types {
 
 enum clk_ids {
 	/* Core Clock Outputs exported to DT */
-	LAST_DT_CORE_CLK = R8A77970_CLK_OSC,
+	LAST_DT_CORE_CLK = R8A77970_CLK_POST2,
 
 	/* External Input Clocks */
 	CLK_EXTAL,
@@ -102,6 +102,8 @@ static const struct cpg_core_clk r8a77970_core_clks[] __initconst = {
 	DEF_DIV6P1("canfd",	R8A77970_CLK_CANFD, CLK_PLL1_DIV4, 0x244),
 	DEF_DIV6P1("mso",	R8A77970_CLK_MSO,   CLK_PLL1_DIV4, 0x014),
 	DEF_DIV6P1("csi0",	R8A77970_CLK_CSI0,  CLK_PLL1_DIV4, 0x00c),
+	DEF_DIV6P1("post",	R8A77970_CLK_POST,  CLK_PLL1_DIV4, 0x08c),
+	DEF_DIV6P1("post2",	R8A77970_CLK_POST2, CLK_PLL1_DIV4, 0x09c),
 
 	DEF_FIXED("osc",	R8A77970_CLK_OSC,   CLK_PLL1_DIV2, 12*1024, 1),
 	DEF_FIXED("r",		R8A77970_CLK_R,	    CLK_EXTALR,	   1, 1),
