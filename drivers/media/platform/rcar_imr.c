@@ -357,7 +357,7 @@ static struct imr_cfg * imr_cfg_create(struct imr_ctx *ctx, u32 dl_size, u32 dl_
 	}
 
 	/* ...allocate contiguous memory for a display list */
-	cfg->dl_vaddr = dma_alloc_writecombine(imr->dev, dl_size, &cfg->dl_dma_addr, GFP_KERNEL);
+	cfg->dl_vaddr = dma_alloc_wc(imr->dev, dl_size, &cfg->dl_dma_addr, GFP_KERNEL);
 	if (!cfg->dl_vaddr) {
 		v4l2_err(&imr->v4l2_dev, "failed to allocate %u bytes for a DL\n", dl_size);
 		kfree(cfg);
@@ -396,7 +396,7 @@ static void imr_cfg_unref(struct imr_ctx *ctx, struct imr_cfg *cfg)
 
 	/* ...release memory allocated for a display list */
 	if (cfg->dl_vaddr)
-		dma_free_writecombine(imr->dev, cfg->dl_size, cfg->dl_vaddr, cfg->dl_dma_addr);
+		dma_free_wc(imr->dev, cfg->dl_size, cfg->dl_vaddr, cfg->dl_dma_addr);
 
 	/* ...destroy the configuration structure */
 	kfree(cfg);
@@ -1473,6 +1473,7 @@ static int imr_streamoff(struct file *file, void *priv, enum v4l2_buf_type type)
 	return v4l2_m2m_streamoff(file, ctx->m2m_ctx, type);
 }
 
+#if 0
 static int imr_g_crop(struct file *file, void *priv, struct v4l2_crop *cr)
 {
 	struct imr_ctx  *ctx = fh_to_ctx(priv);
@@ -1507,6 +1508,7 @@ static int imr_s_crop(struct file *file, void *priv, const struct v4l2_crop *cr)
 
 	return 0;
 }
+#endif
 
 /* ...customized I/O control processing */
 static long imr_default(struct file *file, void *fh, bool valid_prio, unsigned int cmd, void *arg)
@@ -1559,8 +1561,10 @@ static const struct v4l2_ioctl_ops imr_ioctl_ops = {
 	.vidioc_streamon            = imr_streamon,
 	.vidioc_streamoff           = imr_streamoff,
 
+#if 0
 	.vidioc_g_crop              = imr_g_crop,
 	.vidioc_s_crop              = imr_s_crop,
+#endif
 
 	.vidioc_default             = imr_default,
 };
@@ -2057,6 +2061,10 @@ static int imr_probe(struct platform_device *pdev)
 	imr->video_dev.lock         = &imr->mutex;
 	imr->video_dev.v4l2_dev     = &imr->v4l2_dev;
 	imr->video_dev.vfl_dir      = VFL_DIR_M2M;
+	imr->video_dev.device_caps  = V4L2_CAP_VIDEO_CAPTURE |
+				      V4L2_CAP_VIDEO_OUTPUT |
+				      V4L2_CAP_VIDEO_M2M |
+				      V4L2_CAP_STREAMING;
 
 	ret = video_register_device(&imr->video_dev, VFL_TYPE_GRABBER, -1);
 	if (ret) {
