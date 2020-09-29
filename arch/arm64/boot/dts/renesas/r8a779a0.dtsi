@@ -2037,7 +2037,7 @@
 		};
 
 		vin00: video@e6ef0000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef0000 0 0x1000>;
 			interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 730>;
@@ -2045,6 +2045,7 @@
 			resets = <&cpg 730>;
 			renesas,id = <0>;
 			renesas,isp = <&isp0>;
+			linux,uio-name = "vin_00";
 			status = "disabled";
 
 			ports {
@@ -2066,7 +2067,7 @@
 		};
 
 		vin01: video@e6ef1000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef1000 0 0x1000>;
 			interrupts = <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 731>;
@@ -2074,6 +2075,7 @@
 			resets = <&cpg 731>;
 			renesas,id = <1>;
 			renesas,isp = <&isp0>;
+			linux,uio-name = "vin_01";
 			status = "disabled";
 
 			ports {
@@ -2095,7 +2097,7 @@
 		};
 
 		vin02: video@e6ef2000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef2000 0 0x1000>;
 			interrupts = <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 800>;
@@ -2103,6 +2105,7 @@
 			resets = <&cpg 800>;
 			renesas,id = <2>;
 			renesas,isp = <&isp0>;
+			linux,uio-name = "vin_02";
 			status = "disabled";
 
 			ports {
@@ -2124,7 +2127,7 @@
 		};
 
 		vin03: video@e6ef3000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef3000 0 0x1000>;
 			interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 801>;
@@ -2132,6 +2135,7 @@
 			resets = <&cpg 801>;
 			renesas,id = <3>;
 			renesas,isp = <&isp0>;
+			linux,uio-name = "vin_03";
 			status = "disabled";
 
 			ports {
@@ -2153,51 +2157,55 @@
 		};
 
 		vin04: video@e6ef4000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef4000 0 0x1000>;
 			interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 802>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 802>;
 			renesas,id = <4>;
+			linux,uio-name = "vin_04";
 			status = "disabled";
 		};
 
 		vin05: video@e6ef5000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef5000 0 0x1000>;
 			interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 803>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 803>;
 			renesas,id = <5>;
+			linux,uio-name = "vin_05";
 			status = "disabled";
 		};
 
 		vin06: video@e6ef6000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef6000 0 0x1000>;
 			interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 804>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 804>;
 			renesas,id = <6>;
+			linux,uio-name = "vin_06";
 			status = "disabled";
 		};
 
 		vin07: video@e6ef7000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef7000 0 0x1000>;
 			interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 805>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 805>;
 			renesas,id = <7>;
+			linux,uio-name = "vin_07";
 			status = "disabled";
 		};
 
 		vin10: video@e6ef8000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef8000 0 0x1000>;
 			interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 806>;
@@ -2205,6 +2213,7 @@
 			resets = <&cpg 806>;
 			renesas,id = <8>;
 			renesas,isp = <&isp1>;
+			linux,uio-name = "vin_10";
 			status = "disabled";
 
 			ports {
@@ -2226,7 +2235,7 @@
 		};
 
 		vin11: video@e6ef9000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ef9000 0 0x1000>;
 			interrupts = <GIC_SPI 169 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 807>;
@@ -2234,6 +2243,7 @@
 			resets = <&cpg 807>;
 			renesas,id = <9>;
 			renesas,isp = <&isp1>;
+			linux,uio-name = "vin_11";
 			status = "disabled";
 
 			ports {
@@ -2255,7 +2265,7 @@
 		};
 
 		vin12: video@e6efa000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6efa000 0 0x1000>;
 			interrupts = <GIC_SPI 170 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 808>;
@@ -2263,6 +2273,7 @@
 			resets = <&cpg 808>;
 			renesas,id = <10>;
 			renesas,isp = <&isp1>;
+			linux,uio-name = "vin_12";
 			status = "disabled";
 
 			ports {
@@ -2284,7 +2295,7 @@
 		};
 
 		vin13: video@e6efb000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6efb000 0 0x1000>;
 			interrupts = <GIC_SPI 171 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 809>;
@@ -2292,6 +2303,7 @@
 			resets = <&cpg 809>;
 			renesas,id = <11>;
 			renesas,isp = <&isp1>;
+			linux,uio-name = "vin_13";
 			status = "disabled";
 
 			ports {
@@ -2313,51 +2325,55 @@
 		};
 
 		vin14: video@e6efc000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6efc000 0 0x1000>;
 			interrupts = <GIC_SPI 172 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 810>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 810>;
 			renesas,id = <12>;
+			linux,uio-name = "vin_14";
 			status = "disabled";
 		};
 
 		vin15: video@e6efd000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6efd000 0 0x1000>;
 			interrupts = <GIC_SPI 173 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 811>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 811>;
 			renesas,id = <13>;
+			linux,uio-name = "vin_15";
 			status = "disabled";
 		};
 
 		vin16: video@e6efe000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6efe000 0 0x1000>;
 			interrupts = <GIC_SPI 174 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 812>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 812>;
 			renesas,id = <14>;
+			linux,uio-name = "vin_16";
 			status = "disabled";
 		};
 
 		vin17: video@e6eff000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6eff000 0 0x1000>;
 			interrupts = <GIC_SPI 175 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 813>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 813>;
 			renesas,id = <15>;
+			linux,uio-name = "vin_17";
 			status = "disabled";
 		};
 
 		vin20: video@e6ed0000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed0000 0 0x1000>;
 			interrupts = <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 814>;
@@ -2365,6 +2381,7 @@
 			resets = <&cpg 814>;
 			renesas,id = <16>;
 			renesas,isp = <&isp2>;
+			linux,uio-name = "vin_20";
 			status = "disabled";
 
 			ports {
@@ -2386,7 +2403,7 @@
 		};
 
 		vin21: video@e6ed1000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed1000 0 0x1000>;
 			interrupts = <GIC_SPI 177 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 815>;
@@ -2394,6 +2411,7 @@
 			resets = <&cpg 815>;
 			renesas,id = <17>;
 			renesas,isp = <&isp2>;
+			linux,uio-name = "vin_21";
 			status = "disabled";
 
 			ports {
@@ -2415,7 +2433,7 @@
 		};
 
 		vin22: video@e6ed2000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed2000 0 0x1000>;
 			interrupts = <GIC_SPI 178 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 816>;
@@ -2423,6 +2441,7 @@
 			resets = <&cpg 816>;
 			renesas,id = <18>;
 			renesas,isp = <&isp2>;
+			linux,uio-name = "vin_22";
 			status = "disabled";
 
 			ports {
@@ -2444,7 +2463,7 @@
 		};
 
 		vin23: video@e6ed3000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed3000 0 0x1000>;
 			interrupts = <GIC_SPI 179 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 817>;
@@ -2452,6 +2471,7 @@
 			resets = <&cpg 817>;
 			renesas,id = <19>;
 			renesas,isp = <&isp2>;
+			linux,uio-name = "vin_23";
 			status = "disabled";
 
 			ports {
@@ -2473,51 +2493,55 @@
 		};
 
 		vin24: video@e6ed4000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed4000 0 0x1000>;
 			interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 818>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 818>;
 			renesas,id = <20>;
+			linux,uio-name = "vin_24";
 			status = "disabled";
 		};
 
 		vin25: video@e6ed5000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed5000 0 0x1000>;
 			interrupts = <GIC_SPI 181 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 819>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 819>;
 			renesas,id = <21>;
+			linux,uio-name = "vin_25";
 			status = "disabled";
 		};
 
 		vin26: video@e6ed6000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed6000 0 0x1000>;
 			interrupts = <GIC_SPI 182 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 820>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 820>;
 			renesas,id = <22>;
+			linux,uio-name = "vin_26";
 			status = "disabled";
 		};
 
 		vin27: video@e6ed7000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed7000 0 0x1000>;
 			interrupts = <GIC_SPI 183 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 821>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 821>;
 			renesas,id = <23>;
+			linux,uio-name = "vin_27";
 			status = "disabled";
 		};
 
 		vin30: video@e6ed8000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed8000 0 0x1000>;
 			interrupts = <GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 822>;
@@ -2525,6 +2549,7 @@
 			resets = <&cpg 822>;
 			renesas,id = <24>;
 			renesas,isp = <&isp3>;
+			linux,uio-name = "vin_30";
 			status = "disabled";
 
 			ports {
@@ -2546,7 +2571,7 @@
 		};
 
 		vin31: video@e6ed9000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ed9000 0 0x1000>;
 			interrupts = <GIC_SPI 185 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 823>;
@@ -2554,6 +2579,7 @@
 			resets = <&cpg 823>;
 			renesas,id = <25>;
 			renesas,isp = <&isp3>;
+			linux,uio-name = "vin_31";
 			status = "disabled";
 
 			ports {
@@ -2575,7 +2601,7 @@
 		};
 
 		vin32: video@e6eda000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6eda000 0 0x1000>;
 			interrupts = <GIC_SPI 186 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 824>;
@@ -2583,6 +2609,7 @@
 			resets = <&cpg 824>;
 			renesas,id = <26>;
 			renesas,isp = <&isp3>;
+			linux,uio-name = "vin_32";
 			status = "disabled";
 
 			ports {
@@ -2604,7 +2631,7 @@
 		};
 
 		vin33: video@e6edb000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6edb000 0 0x1000>;
 			interrupts = <GIC_SPI 187 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 825>;
@@ -2612,6 +2639,7 @@
 			resets = <&cpg 825>;
 			renesas,id = <27>;
 			renesas,isp = <&isp3>;
+			linux,uio-name = "vin_33";
 			status = "disabled";
 
 			ports {
@@ -2633,56 +2661,61 @@
 		};
 
 		vin34: video@e6edc000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6edc000 0 0x1000>;
 			interrupts = <GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 826>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 826>;
 			renesas,id = <28>;
+			linux,uio-name = "vin_34";
 			status = "disabled";
 		};
 
 		vin35: video@e6edd000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6edd000 0 0x1000>;
 			interrupts = <GIC_SPI 189 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 827>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 827>;
 			renesas,id = <29>;
+			linux,uio-name = "vin_35";
 			status = "disabled";
 		};
 
 		vin36: video@e6ede000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6ede000 0 0x1000>;
 			interrupts = <GIC_SPI 190 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 828>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 828>;
 			renesas,id = <30>;
+			linux,uio-name = "vin_36";
 			status = "disabled";
 		};
 
 		vin37: video@e6edf000 {
-			compatible = "renesas,vin-r8a779a0";
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
 			reg = <0 0xe6edf000 0 0x1000>;
 			interrupts = <GIC_SPI 191 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 829>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 829>;
 			renesas,id = <31>;
+			linux,uio-name = "vin_37";
 			status = "disabled";
 		};
 
 		csi40: csi2@feaa0000 {
-			compatible = "renesas,r8a779a0-csi2";
+			compatible = "renesas,r8a779a0-csi2", "generic-uio";
 			reg = <0 0xfeaa0000 0 0x10000>;
 			interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 331>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 331>;
+			linux,uio-name = "csi_00";
 			status = "disabled";
 
 			ports {
@@ -2716,12 +2749,13 @@
 		};
 
 		csi41: csi2@feab0000 {
-			compatible = "renesas,r8a779a0-csi2";
+			compatible = "renesas,r8a779a0-csi2", "generic-uio";
 			reg = <0 0xfeab0000 0 0x10000>;
 			interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 400>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 400>;
+			linux,uio-name = "csi_01";
 			status = "disabled";
 
 			ports {
@@ -2755,12 +2789,13 @@
 		};
 
 		csi42: csi2@fed60000 {
-			compatible = "renesas,r8a779a0-csi2";
+			compatible = "renesas,r8a779a0-csi2", "generic-uio";
 			reg = <0 0xfed60000 0 0x10000>;
 			interrupts = <GIC_SPI 194 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 401>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 401>;
+			linux,uio-name = "csi_02";
 			status = "disabled";
 
 			ports {
@@ -2794,12 +2829,13 @@
 		};
 
 		csi43: csi2@fed70000 {
-			compatible = "renesas,r8a779a0-csi2";
+			compatible = "renesas,r8a779a0-csi2", "generic-uio";
 			reg = <0 0xfed70000 0 0x10000>;
 			interrupts = <GIC_SPI 195 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 402>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 402>;
+			linux,uio-name = "csi_03";
 			status = "disabled";
 			ports {
 				#address-cells = <1>;
