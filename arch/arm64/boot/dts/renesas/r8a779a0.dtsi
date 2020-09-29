@@ -1904,7 +1904,7 @@
 		};
 
 		vspd0: vsp@fea20000 {
-			compatible = "renesas,vsp2";
+			compatible = "renesas,vsp2", "generic-uio";
 			reg = <0 0xfea20000 0 0x4000>;
 			interrupts = <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 830>;
@@ -1912,10 +1912,11 @@
 			resets = <&cpg 830>;
 
 			renesas,fcp = <&fcpvd0>;
+			linux,uio-name = "vsp_00";
 		};
 
 		vspd1: vsp@fea28000 {
-			compatible = "renesas,vsp2";
+			compatible = "renesas,vsp2", "generic-uio";
 			reg = <0 0xfea28000 0 0x4000>;
 			interrupts = <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 831>;
@@ -1923,6 +1924,7 @@
 			resets = <&cpg 831>;
 
 			renesas,fcp = <&fcpvd1>;
+			linux,uio-name = "vsp_01";
 		};
 
 		fcpvd0: fcp@fea10000 {
@@ -1942,7 +1944,7 @@
 		};
 
 		du: display@feb00000 {
-			compatible = "renesas,du-r8a779a0";
+			compatible = "renesas,du-r8a779a0", "generic-uio";
 			reg = <0 0xfeb00000 0 0x40000>;
 			interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH>,
 						 <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>;
@@ -1952,6 +1954,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 411>;
 			vsps = <&vspd0 0>, <&vspd1 0>;
+			linux,uio-name = "du_00";
 			status = "disabled";
 
 			ports {
@@ -1975,13 +1978,14 @@
 		};
 
 		dsi0: dsi-encoder@fed80000 {
-			compatible = "renesas,r8a779a0-mipi-dsi";
+			compatible = "renesas,r8a779a0-mipi-dsi", "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			clocks = <&cpg CPG_MOD 415>,
 					 <&cpg CPG_CORE R8A779A0_CLK_DSI>;
 			clock-names = "fck", "dsi";
 			resets = <&cpg 415>;
+			linux,uio-name = "dsi_00";
 			status = "disabled";
 
 			ports {
@@ -2004,7 +2008,7 @@
 		};
 
 		dsi1: dsi-encoder@fed90000 {
-			compatible = "renesas,r8a779a0-mipi-dsi";
+			compatible = "renesas,r8a779a0-mipi-dsi", "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			clocks = <&cpg CPG_MOD 416>,
