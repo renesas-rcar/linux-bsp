@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 #include <linux/rcar-imr.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-fh.h>
@@ -1975,6 +1976,8 @@ static int imr_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	int ret;
 	struct device *adev;
+	phandle *prop;
+	struct device_node *node;
 
 	imr = devm_kzalloc(&pdev->dev, sizeof(*imr), GFP_KERNEL);
 	if (!imr)
@@ -2048,10 +2051,15 @@ static int imr_probe(struct platform_device *pdev)
 		ret = PTR_ERR(adev);
 		goto m2m_init_rollback;
 	}
+
 	adev->dma_mask = &adev->coherent_dma_mask;
 	adev->coherent_dma_mask = DMA_BIT_MASK(32);
-	arch_setup_dma_ops(adev, 0, DMA_BIT_MASK(32) + 1, NULL, true);
 	imr->alloc_dev = adev;
+	prop = of_get_property(np, "alloc-dev", NULL);
+	if (prop) {
+		node = of_find_node_by_phandle(be32_to_cpup(prop));
+		of_dma_configure(adev, node, true);
+	}
 
 	strlcpy(imr->video_dev.name, dev_name(&pdev->dev), sizeof(imr->video_dev.name));
 	imr->video_dev.fops         = &imr_fops;
@@ -2095,7 +2103,6 @@ static int imr_remove(struct platform_device *pdev)
 
 	//pm_runtime_disable(imr->v4l2_dev.dev);
 	video_unregister_device(&imr->video_dev);
-	//device_destroy(imr->alloc_dev, MKDEV(0, 0));
 	v4l2_m2m_release(imr->m2m_dev);
 	v4l2_device_unregister(&imr->v4l2_dev);
 
@@ -2163,7 +2170,26 @@ static struct platform_driver imr_platform_driver = {
 	},
 };
 
-module_platform_driver(imr_platform_driver);
+static int __init imr_module_init(void)
+{
+	return platform_driver_register(&imr_platform_driver);
+}
+
+static int imr_device_destroy(struct device *dev, void *data)
+{
+	device_destroy(imr_alloc_class, dev->devt);
+	return 0;
+}
+
+static void __exit imr_module_exit(void)
+{
+	class_for_each_device(imr_alloc_class, NULL, NULL, imr_device_destroy);
+	class_destroy(imr_alloc_class);
+	platform_driver_unregister(&imr_platform_driver);
+}
+
+module_init(imr_module_init);
+module_exit(imr_module_exit);
 
 MODULE_ALIAS("imr");
 MODULE_AUTHOR("Cogent Embedded Inc. <sources@cogentembedded.com>");
