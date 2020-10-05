@@ -821,8 +821,8 @@
 			status = "disabled";
 		};
 
-		qspi0: spi@ee200000 {
-			compatible = "renesas,qspi-rpc-r8a77980";
+		rpc0: spi@ee200000 {
+			compatible = "renesas,rpc-r8a77980", "renesas,rpc";
 			reg = <0 0xee200000 0 0x1f0>,
 			      <0 0x08000000 0 0x04000000>,
 			      <0 0xee208000 0 0x100>;
