@@ -581,7 +581,7 @@
 	};
 };
 
-&qspi0 {
+&rpc0 {
 	pinctrl-0 = <&qspi0_pins &qspi1_pins>;
 	pinctrl-names = "default";
 
