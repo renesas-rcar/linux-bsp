@@ -226,6 +226,16 @@
 		power-source = <1800>;
 	};
 
+	qspi0_pins: qspi0 {
+		groups = "qspi0_ctrl", "qspi0_data4";
+		function = "qspi0";
+	};
+
+	qspi1_pins: qspi1 {
+		groups = "qspi1_ctrl", "qspi1_data4";
+		function = "qspi1";
+	};
+
 	scif0_pins: scif0 {
 		groups = "scif0_data";
 		function = "scif0";
@@ -234,6 +244,68 @@
 	scif_clk_pins: scif_clk {
 		groups = "scif_clk_b";
 		function = "scif_clk";
+	};
+};
+
+&qspi0 {
+	pinctrl-0 = <&qspi0_pins &qspi1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+
+	flash@0 {
+		compatible = "spansion,s25fs512s", "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+		spi-rx-bus-width = <4>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			bootparam@0 {
+				reg = <0x00000000 0x040000>;
+				read-only;
+			};
+			cr7@00040000 {
+				reg = <0x00040000 0x080000>;
+				read-only;
+			};
+			cert_header_sa3@000C0000 {
+				reg = <0x000C0000 0x080000>;
+				read-only;
+			};
+			bl2@00140000 {
+				reg = <0x00140000 0x040000>;
+				read-only;
+			};
+			cert_header_sa6@00180000 {
+				reg = <0x00180000 0x040000>;
+				read-only;
+			};
+			bl31@001C0000 {
+				reg = <0x001C0000 0x480000>;
+				read-only;
+			};
+			uboot@00640000 {
+				reg = <0x00640000 0x0C0000>;
+				read-only;
+			};
+			uboot-env@00700000 {
+				reg = <0x00700000 0x040000>;
+				read-only;
+			};
+			dtb@00740000 {
+				reg = <0x00740000 0x080000>;
+			};
+			kernel@007C0000 {
+				reg = <0x007C0000 0x1400000>;
+			};
+			user@01BC0000 {
+				reg = <0x01BC0000 0x2440000>;
+			};
+		};
 	};
 };
 
