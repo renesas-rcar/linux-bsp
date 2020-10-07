@@ -110,6 +110,36 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	vsp1_rpf_write(rpf, dlb, VI6_RPF_INFMT, infmt);
 	vsp1_rpf_write(rpf, dlb, VI6_RPF_DSWAP, fmtinfo->swap);
 
+	/* Setting new pixel format for V3U */
+	if (fmtinfo->hwfmt == VI6_FMT_RGB10_RGB10A2_A2RGB10) {
+		if (fmtinfo->fourcc == V4L2_PIX_FMT_RGB10) {
+			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0,
+					VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10);
+			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1,
+					VI6_RPF_EXT_INFMT1_RGB10);
+			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2,
+					VI6_RPF_EXT_INFMT2_RGB10);
+		}
+
+		if (fmtinfo->fourcc == V4L2_PIX_FMT_A2RGB10) {
+			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0,
+					VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10);
+			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1,
+					VI6_RPF_EXT_INFMT1_A2RGB10);
+			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2,
+					VI6_RPF_EXT_INFMT2_A2RGB10);
+		}
+
+		if (fmtinfo->fourcc == V4L2_PIX_FMT_RGB10A2) {
+			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0,
+					VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10);
+			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1,
+					VI6_RPF_EXT_INFMT1_RGB10A2);
+			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2,
+					VI6_RPF_EXT_INFMT2_RGB10A2);
+		}
+	}
+
 	/* Output location. */
 	if (pipe->brx) {
 		const struct v4l2_rect *compose;
