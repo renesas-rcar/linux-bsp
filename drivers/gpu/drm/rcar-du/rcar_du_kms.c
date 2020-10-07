@@ -258,6 +258,24 @@ static const struct rcar_du_format_info rcar_du_format_infos[] = {
 		.planes = 1,
 		.hsub = 1,
 	}, {
+		.fourcc = DRM_FORMAT_XRGB2101010,
+		.v4l2 = V4L2_PIX_FMT_RGB10,
+		.bpp = 32,
+		.planes = 1,
+		.hsub = 1,
+	}, {
+		.fourcc = DRM_FORMAT_ARGB2101010,
+		.v4l2 = V4L2_PIX_FMT_A2RGB10,
+		.bpp = 32,
+		.planes = 1,
+		.hsub = 1,
+	}, {
+		.fourcc = DRM_FORMAT_RGBA1010102,
+		.v4l2 = V4L2_PIX_FMT_RGB10A2,
+		.bpp = 32,
+		.planes = 1,
+		.hsub = 1,
+	}, {
 		.fourcc = DRM_FORMAT_YVYU,
 		.v4l2 = V4L2_PIX_FMT_YVYU,
 		.bpp = 16,
