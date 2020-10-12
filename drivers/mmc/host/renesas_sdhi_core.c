@@ -542,7 +542,7 @@ static void renesas_sdhi_reset_hs400_mode(struct tmio_mmc_host *host,
 			 SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
 			sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2));
 
-	if (priv->adjust_hs400_calib_table)
+	if (priv->quirks && priv->quirks->hs400_calib_reg)
 		renesas_sdhi_adjust_hs400_mode_disable(host);
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
@@ -877,6 +877,7 @@ static const struct renesas_sdhi_quirks sdhi_quirks_4tap = {
 	.hs400_4taps = true,
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_ignore_dat = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_nohs400 = {
@@ -886,11 +887,13 @@ static const struct renesas_sdhi_quirks sdhi_quirks_nohs400 = {
 static const struct renesas_sdhi_quirks sdhi_quirks_bad_taps1357 = {
 	.hs400_bad_taps = BIT(1) | BIT(3) | BIT(5) | BIT(7),
 	.hs400_ignore_dat = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_bad_taps2367 = {
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_ignore_dat = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_es13 = {
@@ -898,17 +901,20 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_es13 = {
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_calib_table = r8a7796_es13_calib_table,
 	.hs400_ignore_dat = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_calib_table = r8a77965_calib_table,
 	.hs400_ignore_dat = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77990 = {
 	.hs400_calib_table = r8a77990_calib_table,
 	.hs400_ignore_dat = true,
+	.hs400_calib_reg = true,
 };
 
 /*
