@@ -385,7 +385,7 @@ static void renesas_sdhi_hs400_complete(struct mmc_host *mmc)
 		       priv->scc_tappos_hs400);
 
 	/* Gen3 can't do automatic tap correction with HS400, so disable it */
-	if (sd_ctrl_read16(host, CTL_VERSION) == SDHI_VER_GEN3_SDMMC)
+	if (priv->quirks && priv->quirks->hs400_ignore_dat)
 		sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSCNTL,
 			       ~SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN &
 			       sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSCNTL));
@@ -709,7 +709,7 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host, bool use_
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSREQ, 0);
 
 	/* Change TAP position according to correction status */
-	if (sd_ctrl_read16(host, CTL_VERSION) == SDHI_VER_GEN3_SDMMC &&
+	if (priv->quirks && priv->quirks->hs400_ignore_dat &&
 	    host->mmc->ios.timing == MMC_TIMING_MMC_HS400) {
 		u32 bad_taps = priv->quirks ? priv->quirks->hs400_bad_taps : 0;
 		/*
@@ -876,6 +876,7 @@ static const struct renesas_sdhi_quirks sdhi_quirks_4tap_nohs400 = {
 static const struct renesas_sdhi_quirks sdhi_quirks_4tap = {
 	.hs400_4taps = true,
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
+	.hs400_ignore_dat = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_nohs400 = {
@@ -884,25 +885,30 @@ static const struct renesas_sdhi_quirks sdhi_quirks_nohs400 = {
 
 static const struct renesas_sdhi_quirks sdhi_quirks_bad_taps1357 = {
 	.hs400_bad_taps = BIT(1) | BIT(3) | BIT(5) | BIT(7),
+	.hs400_ignore_dat = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_bad_taps2367 = {
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
+	.hs400_ignore_dat = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_es13 = {
 	.hs400_4taps = true,
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_calib_table = r8a7796_es13_calib_table,
+	.hs400_ignore_dat = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_calib_table = r8a77965_calib_table,
+	.hs400_ignore_dat = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77990 = {
 	.hs400_calib_table = r8a77990_calib_table,
+	.hs400_ignore_dat = true,
 };
 
 /*
