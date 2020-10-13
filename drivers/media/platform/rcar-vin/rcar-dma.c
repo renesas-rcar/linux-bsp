@@ -1569,7 +1569,7 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	int ret;
 
 	/* Continuous capture requires more buffers then there are HW slots */
-	vin->continuous = count > HW_BUFFER_NUM;
+	vin->continuous = vq->num_buffers > HW_BUFFER_NUM;
 
 	/* We can't support continues mode for sequential field formats */
 	if (vin->format.field == V4L2_FIELD_SEQ_TB ||
