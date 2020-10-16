@@ -143,14 +143,14 @@
 		compatible = "btwilink";
 	};
 
-#if 0
 	/delete-node/sound;
-	sound_card: sound@1 {
+
+	sound_card: sound@0 {
 		compatible = "audio-graph-card";
 		label = "ak4613";
 
-		dais = <&rsnd_port2	/* ak4613 */
-			&rsnd_port3	/* HDMI0  */
+		dais = <&rsnd_port0	/* ak4613 */
+			&rsnd_port1	/* HDMI0  */
 			>;
 	};
 
@@ -158,12 +158,11 @@
 		compatible = "audio-graph-card";
 		label = "pcm3168a";
 
-		dais = <&rsnd_port0	/* playback */
-			&rsnd_port1	/* capture  */
+		dais = <&rsnd_port2	/* playback */
+			&rsnd_port3	/* capture  */
 			>;
 	};
-#endif
-#if 0
+
 	sound_radio: sound@2 {
 		compatible = "audio-graph-card";
 		label = "radio";
@@ -177,7 +176,7 @@
 
 		dais = <&rsnd_port5>;
 	};
-#endif
+
 	lvds: lvds {
 		port {
 			lvds_in: endpoint {
@@ -1113,16 +1112,6 @@
 		interrupt-parent = <&gpio1>;
 		interrupts = <25 IRQ_TYPE_EDGE_FALLING>;
 	};
-};
-
-&sound_card {
-	dais = <&rsnd_port0	/* ak4613 */
-		&rsnd_port1	/* HDMI0  */
-		&rsnd_port2	/* pcm3168a playback */
-		&rsnd_port3	/* pcm3168a capture  */
-		&rsnd_port4	/* si468x */
-		&rsnd_port5	/* wl18xx */
-		>;
 };
 
 &ssi4 {
