@@ -1061,8 +1061,8 @@
 				remote-endpoint = <&si468x_endpoint>;
 
 				dai-format = "i2s";
-				bitclock-master = <&rsnd_for_si468x>;
-				frame-master = <&rsnd_for_si468x>;
+				bitclock-master = <&si468x_endpoint>;
+				frame-master = <&si468x_endpoint>;
 
 				capture = <&ssi6>;
 			};
@@ -1073,8 +1073,8 @@
 				remote-endpoint = <&wl18xx_endpoint>;
 
 				simple-audio-card,format = "i2s";
-				bitclock-master = <&rsnd_for_wl18xx>;
-				frame-master = <&rsnd_for_wl18xx>;
+				bitclock-master = <&wl18xx_endpoint>;
+				frame-master = <&wl18xx_endpoint>;
 
 				playback = <&ssi7>;
 				capture = <&ssi8>;
