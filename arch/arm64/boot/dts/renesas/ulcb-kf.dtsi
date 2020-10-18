@@ -158,23 +158,21 @@
 		compatible = "audio-graph-card";
 		label = "pcm3168a";
 
-		dais = <&rsnd_port2	/* playback */
-			&rsnd_port3	/* capture  */
-			>;
+		dais = <&rsnd_port2>;
 	};
 
 	sound_radio: sound@2 {
 		compatible = "audio-graph-card";
 		label = "radio";
 
-		dais = <&rsnd_port4>;
+		dais = <&rsnd_port3>;
 	};
 
 	sound_wl18xx: sound@3 {
 		compatible = "audio-graph-card";
 		label = "wl18xx";
 
-		dais = <&rsnd_port5>;
+		dais = <&rsnd_port4>;
 	};
 
 	lvds: lvds {
@@ -451,6 +449,7 @@
 				reg = <0x44>;
 				clocks = <&clksndsel>;
 				clock-names = "scki";
+				tdm;
 
 				VDD1-supply	= <&snd_3p3v>;
 				VDD2-supply	= <&snd_3p3v>;
@@ -459,23 +458,10 @@
 				VCCDA1-supply	= <&snd_vcc5v>;
 				VCCDA2-supply	= <&snd_vcc5v>;
 
-				ports {
-					#address-cells = <1>;
-					#size-cells = <0>;
-					mclk-fs = <512>;
-					port@0 {
-						reg = <0>;
-						pcm3168a_endpoint_p: endpoint {
-							remote-endpoint = <&rsnd_for_pcm3168a_play>;
-							clocks = <&clksndsel>;
-						};
-					};
-					port@1 {
-						reg = <1>;
-						pcm3168a_endpoint_c: endpoint {
-							remote-endpoint = <&rsnd_for_pcm3168a_capture>;
-							clocks = <&clksndsel>;
-						};
+				port {
+					pcm3168a_endpoint: endpoint {
+						remote-endpoint = <&rsnd_for_pcm3168a>;
+						clocks = <&clksndsel>;
 					};
 				};
 			};
@@ -1031,32 +1017,21 @@
 		/* rsnd_port0/1 are in ulcb.dtsi */
 		rsnd_port2: port@2 {
 			reg = <2>;
-			rsnd_for_pcm3168a_play: endpoint {
-				remote-endpoint = <&pcm3168a_endpoint_p>;
+			rsnd_for_pcm3168a: endpoint {
+				remote-endpoint = <&pcm3168a_endpoint>;
 
 				dai-format = "i2s";
-				bitclock-master = <&rsnd_for_pcm3168a_play>;
-				frame-master = <&rsnd_for_pcm3168a_play>;
+				bitclock-master = <&rsnd_for_pcm3168a>;
+				frame-master = <&rsnd_for_pcm3168a>;
 				dai-tdm-slot-num = <8>;
+				dai-tdm-slot-width = <32>;
 
 				playback = <&ssi3>;
+				capture  = <&ssi4>;
 			};
 		};
 		rsnd_port3: port@3 {
 			reg = <3>;
-			rsnd_for_pcm3168a_capture: endpoint {
-				remote-endpoint = <&pcm3168a_endpoint_c>;
-
-				dai-format = "i2s";
-				bitclock-master = <&rsnd_for_pcm3168a_capture>;
-				frame-master = <&rsnd_for_pcm3168a_capture>;
-				dai-tdm-slot-num = <6>;
-
-				capture  = <&ssi4>;
-			};
-		};
-		rsnd_port4: port@4 {
-			reg = <4>;
 			rsnd_for_si468x: endpoint {
 				remote-endpoint = <&si468x_endpoint>;
 
@@ -1067,8 +1042,8 @@
 				capture = <&ssi6>;
 			};
 		};
-		rsnd_port5: port@5 {
-			reg = <5>;
+		rsnd_port4: port@4 {
+			reg = <4>;
 			rsnd_for_wl18xx: endpoint {
 				remote-endpoint = <&wl18xx_endpoint>;
 
