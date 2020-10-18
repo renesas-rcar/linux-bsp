@@ -66,7 +66,7 @@ extern void pcm3168a_remove(struct device *dev);
 #define PCM3168A_ADC_MSAD_SHIFT			4
 #define PCM3168A_ADC_MSAD_MASK			0x70
 #define PCM3168A_ADC_FMTAD_SHIFT		0
-#define PCM3168A_ADC_FMTAD_MASK			0x7
+#define PCM3168A_ADC_FMTAD_MASK			0xf
 
 #define PCM3168A_ADC_PWR_HPFB			0x52
 #define PCM3168A_ADC_PSVAD_SHIFT		4
