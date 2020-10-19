@@ -12,7 +12,7 @@
 
 / {
 	soc {
-		/delete-node/imr_03@fe890000;
+		/delete-node/imr_ims_03@fe890000;
 		/delete-node/imr_rtt_ims_03;
 
 		/delete-node/imp_psc_01;
