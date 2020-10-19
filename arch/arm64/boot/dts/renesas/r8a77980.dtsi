@@ -1402,7 +1402,7 @@
 			dma-coherent;
 		};
 
-		imrlx4_ch0: imr_00@fe860000 {
+		imrlx4_ch0: imr_ims_00@fe860000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe860000 0 0x2000>;
@@ -1414,7 +1414,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0>;
 		};
 
-		imrlx4_ch1: imr_01@fe870000 {
+		imrlx4_ch1: imr_ims_01@fe870000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe870000 0 0x2000>;
@@ -1426,7 +1426,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0>;
 		};
 
-		imrlx4_ch2: imr_02@fe880000 {
+		imrlx4_ch2: imr_ims_02@fe880000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe880000 0 0x2000>;
@@ -1438,7 +1438,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0>;
 		};
 
-		imrlx4_ch3: imr_03@fe890000 {
+		imrlx4_ch3: imr_ims_03@fe890000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe890000 0 0x2000>;
@@ -1450,7 +1450,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0>;
 		};
 
-		imrlx4_ch4: imr_04@fe8a0000 {
+		imrlx4_ch4: imr_imr_00@fe8a0000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe8a0000 0 0x2000>;
@@ -1462,7 +1462,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0>;
 		};
 
-		imrlx4_ch5: imr_05@fe8b0000 {
+		imrlx4_ch5: imr_imr_01@fe8b0000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe8b0000 0 0x2000>;
