@@ -30,6 +30,17 @@ dtb-$(CONFIG_ARCH_R8A779A0) += r8a779a0-falcon.dtb
 dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-eagle-function.dtb
 dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-es1-eagle.dtb r8a77970-es1-eagle-function.dtb
 dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-es1-v3msk.dtb
+dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-v3msk-vbm.dtb r8a77970-es1-v3msk-vbm.dtb
+dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-v3msk-vbm-v2.dtb r8a77970-es1-v3msk-vbm-v2.dtb
+dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-v3msk-vbm-v3.dtb r8a77970-es1-v3msk-vbm-v3.dtb
+dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-v3msk-view.dtb r8a77970-es1-v3msk-view.dtb
+
+dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vb-4ch.dtb r8a77980-v3hsk-vb-8ch.dtb
+dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vb-gmsl-8ch.dtb
+dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vb-gmsl2-2x2.dtb
+dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vb-gmsl2-4.dtb
+dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vb-gmsl2-8.dtb
+
 dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-es2-condor.dtb
 dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-es2-v3hsk.dtb
 
@@ -43,6 +54,10 @@ ulcb-kf-dtbo := ulcb-kf-cn11.dtbo ulcb-kf-most.dtbo ulcb-kf-sd3.dtbo \
 		ulcb-kf-panel-mitsubishi-aa121td01-1280x800.dtbo \
 		ulcb-kf-imx219.dtbo
 
+vb-dtbo := vb-fdplink-output.dtbo
+
 dtb-$(CONFIG_ARCH_R8A7795) += $(ulcb-kf-dtbo)
 dtb-$(CONFIG_ARCH_R8A7796) += $(ulcb-kf-dtbo)
 dtb-$(CONFIG_ARCH_R8A77965) += $(ulcb-kf-dtbo)
+dtb-$(CONFIG_ARCH_R8A77970) += $(vb-dtbo)
+dtb-$(CONFIG_ARCH_R8A77980) += $(vb-dtbo)
