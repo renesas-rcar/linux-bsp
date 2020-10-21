@@ -1,0 +1,793 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the V3HSK 8ch Videobox board on r8a77980
+ *
+ * Copyright (C) 2018-2020 Cogent Embedded, Inc.
+ */
+
+#include "r8a77980-v3hsk.dts"
+#include <dt-bindings/gpio/gpio.h>
+#include "camera.dtsi"
+
+/ {
+	model = "Renesas V3HSK 8ch Videobox board based on r8a77980";
+
+	aliases {
+		serial1 = &scif3;
+		ethernet1 = &avb;
+	};
+
+	cs2300_ref_clk: cs2300_ref_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25000000>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led0 {
+			label = "board:status";
+			gpios = <&gpio2 12 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+		};
+	};
+
+	mpcie_1v8: regulator2 {
+		compatible = "regulator-fixed";
+		regulator-name = "mPCIe 1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	mpcie_3v3: regulator3 {
+		compatible = "regulator-fixed";
+		regulator-name = "mPCIe 3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	common_3v3: regulator4 {
+		compatible = "regulator-fixed";
+		regulator-name = "main 3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd_cam0_a: regulator-vdd-cam0-a {
+		compatible = "regulator-fixed";
+		regulator-name = "Video PWR0";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_a_6c 8 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam1_a: regulator-vdd-cam1-a {
+		compatible = "regulator-fixed";
+		regulator-name = "Video PWR1";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_a_6c 9 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam2_a: regulator-vdd-cam2-a {
+		compatible = "regulator-fixed";
+		regulator-name = "Video PWR2";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_a_6c 10 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam3_a: regulator-vdd-cam3-a {
+		compatible = "regulator-fixed";
+		regulator-name = "Video PWR3";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_a_6c 11 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam0_b: regulator-vdd-cam0-b {
+		compatible = "regulator-fixed";
+		regulator-name = "Video PWR0";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_b_6c 8 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam1_b: regulator-vdd-cam1-b {
+		compatible = "regulator-fixed";
+		regulator-name = "Video PWR1";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_b_6c 9 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam2_b: regulator-vdd-cam2-b {
+		compatible = "regulator-fixed";
+		regulator-name = "Video PWR2";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_b_6c 10 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam3_b: regulator-vdd-cam3-b {
+		compatible = "regulator-fixed";
+		regulator-name = "Video PWR3";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_b_6c 11 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+};
+
+&avb {
+	pinctrl-0 = <&avb_pins>;
+	pinctrl-names = "default";
+	renesas,no-ether-link;
+	phy-handle = <&avb_phy0>;
+	status = "okay";
+	phy-int-gpio = <&gpio1 17 GPIO_ACTIVE_LOW>;
+
+	avb_phy0: eavb-phy@0 {
+		rxc-skew-ps = <1500>;
+		rxdv-skew-ps = <420>; /* default */
+		rxd0-skew-ps = <420>; /* default */
+		rxd1-skew-ps = <420>; /* default */
+		rxd2-skew-ps = <420>; /* default */
+		rxd3-skew-ps = <420>; /* default */
+		txc-skew-ps = <900>; /* default */
+		txen-skew-ps = <420>; /* default */
+		txd0-skew-ps = <420>; /* default */
+		txd1-skew-ps = <420>; /* default */
+		txd2-skew-ps = <420>; /* default */
+		txd3-skew-ps = <420>; /* default */
+		reg = <3>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <17 IRQ_TYPE_LEVEL_LOW>;
+		max-speed = <1000>;
+	};
+};
+
+&canfd {
+	pinctrl-0 = <&canfd0_pins &canfd1_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	channel0 {
+		status = "okay";
+	};
+
+	channel1 {
+		status = "okay";
+	};
+};
+
+&csi40 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi40_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&deser_out0>;
+			};
+		};
+	};
+};
+
+&csi41 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi41_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&deser_out1>;
+			};
+		};
+	};
+};
+
+&i2c1 {
+	pinctrl-0 = <&i2c1_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	clock-frequency = <400000>;
+	multi-master;
+
+	i2cswitch1: i2c-switch@74 {
+		compatible = "nxp,pca9548";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x74>;
+		reset-gpios = <&gpio2 28 GPIO_ACTIVE_LOW>;
+
+		i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+
+			cs2300: clk_multiplier@4e {
+				#clock-cells = <0>;
+				compatible = "cirrus,cs2300-cp";
+				reg = <0x4e>;
+				clocks = <&cs2300_ref_clk>;
+				clock-names = "clk_in";
+
+				assigned-clocks = <&cs2300>;
+				assigned-clock-rates = <25000000>;
+			};
+
+			gpio_exp_b_6c: gpio@6c {
+				compatible = "maxim,max7325";
+				reg = <0x6c>;
+				gpio-controller;
+				#gpio-cells = <2>;
+
+				ch1_virq {
+					gpio-hog;
+					gpios = <5 GPIO_ACTIVE_HIGH>;
+					input;
+					line-name = "CH1_VIRQ";
+				};
+				ch1_des_cfg0 {
+					gpio-hog;
+					gpios = <6 GPIO_ACTIVE_HIGH>;
+					input;
+					line-name = "CH1_CNFG0";
+				};
+				ch1_des_cfg1 {
+					gpio-hog;
+					gpios = <7 GPIO_ACTIVE_HIGH>;
+					input;
+					line-name = "CH1_CNFG1";
+				};
+			};
+		};
+
+		i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+
+			deser@3a {
+				compatible = "ti,ub9x4";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x3a>;
+				regs = <0x0c 0x0d 0x0e 0x0f>;
+				clocks = <&cs2300>;
+				clock-names = "ref_clk";
+				ti,csi-rate = <1200>;
+				shutdown-gpios = <&gpio_exp_a_6c 13 GPIO_ACTIVE_LOW>;
+
+				poc0-supply = <&vdd_cam0_a>;
+				poc1-supply = <&vdd_cam1_a>;
+				poc2-supply = <&vdd_cam2_a>;
+				poc3-supply = <&vdd_cam3_a>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						deser_in0: endpoint {
+							remote-endpoint = <&camera_out0>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						deser_in1: endpoint {
+							remote-endpoint = <&camera_out1>;
+						};
+					};
+
+					port@2 {
+						reg = <2>;
+						deser_in2: endpoint {
+							remote-endpoint = <&camera_out2>;
+						};
+					};
+
+					port@3 {
+						reg = <3>;
+						deser_in3: endpoint {
+							remote-endpoint = <&camera_out3>;
+						};
+					};
+
+					port@4 {
+						reg = <4>;
+						deser_out0: endpoint {
+							clock-lanes = <0>;
+							data-lanes = <1 2 3 4>;
+							remote-endpoint = <&csi40_in>;
+						};
+					};
+				};
+
+				i2c@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+
+					camera@60 {
+						compatible = LVDS_CAMERA;
+						reg = <0x60 0x0c>;
+
+						port {
+							camera_out0: endpoint {
+								remote-endpoint = <&deser_in0>;
+							};
+						};
+					};
+				};
+
+				i2c@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <1>;
+
+					camera@61 {
+						compatible = LVDS_CAMERA;
+						reg = <0x61 0x0d>;
+
+						port {
+							camera_out1: endpoint {
+								remote-endpoint = <&deser_in1>;
+							};
+						};
+					};
+				};
+
+				i2c@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <2>;
+
+					camera@62 {
+						compatible = LVDS_CAMERA;
+						reg = <0x62 0x0e>;
+
+						port {
+							camera_out2: endpoint {
+								remote-endpoint = <&deser_in2>;
+							};
+						};
+					};
+				};
+
+				i2c@3 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <3>;
+
+					camera@63 {
+						compatible = LVDS_CAMERA;
+						reg = <0x63 0x0f>;
+
+						port {
+							camera_out3: endpoint {
+								remote-endpoint = <&deser_in3>;
+							};
+						};
+					};
+				};
+			};
+		};
+
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+
+			gpio_exp_a_6c: gpio@6c {
+				compatible = "maxim,max7325";
+				reg = <0x6c>;
+				gpio-controller;
+				#gpio-cells = <2>;
+
+				ch0_virq {
+					gpio-hog;
+					gpios = <5 GPIO_ACTIVE_HIGH>;
+					input;
+					line-name = "CH0_VIRQ";
+				};
+				ch0_des_cfg0 {
+					gpio-hog;
+					gpios = <6 GPIO_ACTIVE_HIGH>;
+					input;
+					line-name = "CH0_CNFG0";
+				};
+				ch0_des_cfg1 {
+					gpio-hog;
+					gpios = <7 GPIO_ACTIVE_HIGH>;
+					input;
+					line-name = "CH0_CNFG1";
+				};
+			};
+		};
+
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+
+			deser@3a {
+				compatible = "ti,ub9x4";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x3a>;
+				regs = <0x1c 0x1d 0x1e 0x1f>;
+				clocks = <&cs2300>;
+				clock-names = "ref_clk";
+				ti,csi-rate = <1200>;
+				shutdown-gpios = <&gpio_exp_b_6c 13 GPIO_ACTIVE_LOW>;
+
+				poc0-supply = <&vdd_cam0_b>;
+				poc1-supply = <&vdd_cam1_b>;
+				poc2-supply = <&vdd_cam2_b>;
+				poc3-supply = <&vdd_cam3_b>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						deser_in4: endpoint {
+							remote-endpoint = <&camera_out4>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						deser_in5: endpoint {
+							remote-endpoint = <&camera_out5>;
+						};
+					};
+
+					port@2 {
+						reg = <2>;
+						deser_in6: endpoint {
+							remote-endpoint = <&camera_out6>;
+						};
+					};
+
+					port@3 {
+						reg = <3>;
+						deser_in7: endpoint {
+							remote-endpoint = <&camera_out7>;
+						};
+					};
+
+					port@4 {
+						reg = <4>;
+						deser_out1: endpoint {
+							clock-lanes = <0>;
+							data-lanes = <1 2 3 4>;
+							remote-endpoint = <&csi41_in>;
+						};
+					};
+				};
+
+				i2c@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+
+					camera@64 {
+						compatible = LVDS_CAMERA;
+						reg = <0x64 0x1c>;
+
+						port {
+							camera_out4: endpoint {
+								remote-endpoint = <&deser_in4>;
+							};
+						};
+					};
+				};
+
+				i2c@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <1>;
+
+					camera@65 {
+						compatible = LVDS_CAMERA;
+						reg = <0x65 0x1d>;
+
+						port {
+							camera_out5: endpoint {
+								remote-endpoint = <&deser_in5>;
+							};
+						};
+					};
+				};
+
+				i2c@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <2>;
+
+					camera@66 {
+						compatible = LVDS_CAMERA;
+						reg = <0x66 0x1e>;
+
+						port {
+							camera_out6: endpoint {
+								remote-endpoint = <&deser_in6>;
+							};
+						};
+					};
+				};
+
+				i2c@3 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <3>;
+
+					camera@67 {
+						compatible = LVDS_CAMERA;
+						reg = <0x67 0x1f>;
+
+						port {
+							camera_out7: endpoint {
+								remote-endpoint = <&deser_in7>;
+							};
+						};
+					};
+				};
+			};
+		};
+
+		i2c@4 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <4>;
+
+			dac_vcam: dac_vcam@60 {
+				compatible = "microchip,mcp4725";
+				reg = <0x60>;
+				vdd-supply = <&common_3v3>;
+			};
+		};
+
+		i2c@5 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <5>;
+
+			/* fan node - lm96063 */
+			fan_ctrl: lm96063@4c {
+				compatible = "lm96163";
+				reg = <0x4c>;
+			};
+		};
+
+		i2c@7 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <7>;
+
+			/* ext connector nodes here */
+		};
+
+	};
+};
+
+&gpio0 {
+	fpdl_shdn {
+		gpio-hog;
+		gpios = <1 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "FPDL_SHDN";
+	};
+
+	cam_pwr_en {
+		gpio-hog;
+		gpios = <11 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "VIPWR_En";
+	};
+
+	wake_pin_8 {
+		gpio-hog;
+		gpios = <0 GPIO_ACTIVE_HIGH>;
+		input;
+		line-name = "WAKE INPUT PIN 8";
+	};
+};
+
+&gpio1 {
+	md_buf_en {
+		gpio-hog;
+		gpios = <19 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "CPLD_If_En";
+	};
+};
+
+&gpio2 {
+	m2_rst {
+		gpio-hog;
+		gpios = <11 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "M.2 RST#";
+	};
+
+	can0_load {
+		gpio-hog;
+		gpios = <16 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "CAN0Loff";
+	};
+
+	can0_stby {
+		gpio-hog;
+		gpios = <27 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "CAN0STBY";
+	};
+
+	can1_load {
+		gpio-hog;
+		gpios = <29 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "CAN1Loff";
+	};
+
+	can1_stby {
+		gpio-hog;
+		gpios = <22 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "CAN1STBY";
+	};
+
+	wake_pin_7 {
+		gpio-hog;
+		gpios = <19 GPIO_ACTIVE_HIGH>;
+		input;
+		line-name = "WAKE INPUT PIN 7";
+	};
+
+	vi1_gpioext_rst {
+		gpio-hog;
+		gpios = <13 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "VIP1_RST";
+	};
+};
+
+&gpio3 {
+	vi0_gpioext_rst {
+		gpio-hog;
+		gpios = <4 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "VIP0_RST";
+	};
+};
+
+&pcie_bus_clk {
+	clock-frequency = <100000000>;
+	status = "okay";
+};
+
+&pciec {
+	pcie3v3-supply = <&mpcie_3v3>;
+	pcie1v8-supply = <&mpcie_1v8>;
+	status = "okay";
+};
+
+&pcie_phy {
+	status = "okay";
+};
+
+&pfc {
+	canfd0_pins: canfd0 {
+		groups = "canfd0_data_a";
+		function = "canfd0";
+	};
+
+	canfd1_pins: canfd1 {
+		groups = "canfd1_data";
+		function = "canfd1";
+	};
+
+	avb_pins: avb {
+		groups = "avb_mdio", "avb_rgmii";
+		function = "avb";
+	};
+
+	i2c1_pins: i2c1 {
+		groups = "i2c1";
+		function = "i2c1";
+	};
+
+	pwm0_pins: pwm0 {
+		groups = "pwm0_a";
+		function = "pwm0";
+	};
+
+	scif3_pins: scif3 {
+		groups = "scif3_data";
+		function = "scif3";
+	};
+};
+
+&pwm0 {
+	pinctrl-0 = <&pwm0_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&scif3 {
+	pinctrl-0 = <&scif3_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&tpu {
+	status = "disabled";
+};
+
+&vin0 {
+	status = "okay";
+};
+
+&vin1 {
+	status = "okay";
+};
+
+&vin2 {
+	status = "okay";
+};
+
+&vin3 {
+	status = "okay";
+};
+
+&vin4 {
+	status = "okay";
+};
+
+&vin5 {
+	status = "okay";
+};
+
+&vin6 {
+	status = "okay";
+};
+
+&vin7 {
+	status = "okay";
+};
