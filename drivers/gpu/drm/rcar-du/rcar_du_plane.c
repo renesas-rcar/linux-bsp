@@ -503,20 +503,20 @@ static void rcar_du_plane_setup_format_gen3(struct rcar_du_group *rgrp,
 					    const struct rcar_du_plane_state *state)
 {
 	struct rcar_du_device *rcdu = rgrp->dev;
+	u32 pnmr;
 
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS)) {
-		rcar_du_plane_write(rgrp, index, PnMR,
-				    PnMR_SPIM_TP_OFF | state->format->pnmr);
+		pnmr = PnMR_SPIM_TP_OFF | state->format->pnmr;
+	} else if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS)) {
+		pnmr = PnMR_SPIM_TP_OFF | (state->format->pnmr & ~PnMR_SPIM_ALP);
 	} else {
 		if (rgrp->index == 0)
-			rcar_du_plane_write(rgrp, index, PnMR,
-					    PnMR_SPIM_TP_OFF |
-					    state->format->pnmr);
+			pnmr = PnMR_SPIM_TP_OFF | state->format->pnmr;
 		else
-			rcar_du_plane_write(rgrp, index, PnMR,
-					    PnMR_SPIM_TP_OFF |
-					    PnMR_DDDF_16BPP);
+			pnmr = PnMR_SPIM_TP_OFF | PnMR_DDDF_16BPP;
 	}
+
+	rcar_du_plane_write(rgrp, index, PnMR, pnmr);
 
 	rcar_du_plane_write(rgrp, index, PnDDCR4,
 			    state->format->edf | PnDDCR4_CODE);
