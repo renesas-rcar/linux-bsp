@@ -22,7 +22,7 @@
 			reg = <0 0xffa18000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 524>;
 			power-domains = <&sysc R8A77980_PD_A2DP1>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		/* TBD: can fd channel 3 */
