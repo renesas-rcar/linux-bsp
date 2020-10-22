@@ -101,6 +101,7 @@
 #define VNMC_INF_YUV16		(5 << 16)
 #define VNMC_INF_RGB888		(6 << 16)
 #define VNMC_INF_RGB666		(7 << 16)
+#define VNMC_INF_RAWX_RGB565	(7 << 16) /* r8a779a0 only */
 #define VNMC_INF_MASK		(7 << 16)
 #define VNMC_VUP		(1 << 10)
 #define VNMC_IM_ODD		(0 << 3)
@@ -135,6 +136,12 @@
 /* Video n Data Mode Register bits */
 #define VNDMR_A8BIT(n)		(((n) & 0xff) << 24)
 #define VNDMR_A8BIT_MASK	(0xff << 24)
+#define VNDMR_RMODE_RAW8	(0 << 19)
+#define VNDMR_RMODE_RAW10	(2 << 19)
+#define VNDMR_RMODE_RAW12	(3 << 19)
+#define VNDMR_RMODE_RAW14	(4 << 19)
+#define VNDMR_RMODE_RAW20	(5 << 19)
+#define VNDMR_YC_THR		(1 << 11)
 #define VNDMR_EXRGB		(1 << 8)
 #define VNDMR_BPSM		(1 << 4)
 #define VNDMR_ABIT		(1 << 2)
@@ -714,7 +721,13 @@ static void rvin_crop_scale_comp(struct rvin_dev *vin)
 
 	/* Set Start/End Pixel/Line Pre-Clip */
 	rvin_write(vin, vin->crop.left, VNSPPRC_REG);
-	rvin_write(vin, vin->crop.left + vin->crop.width - 1, VNEPPRC_REG);
+
+	if (vin->format.pixelformat == V4L2_PIX_FMT_Y10)
+		rvin_write(vin, vin->crop.left + (vin->crop.width * 2) - 1,
+			   VNEPPRC_REG);
+	else
+		rvin_write(vin, vin->crop.left + vin->crop.width - 1,
+			   VNEPPRC_REG);
 
 	switch (vin->format.field) {
 	case V4L2_FIELD_INTERLACED:
@@ -758,7 +771,7 @@ static bool rvin_is_scaling(struct rvin_dev *vin)
 
 static int rvin_setup(struct rvin_dev *vin)
 {
-	u32 vnmc, dmr, dmr2, interrupts;
+	u32 vnmc, dmr = 0, dmr2, interrupts;
 	bool progressive = false, output_is_yuv = false, input_is_yuv = false;
 
 	switch (vin->format.field) {
@@ -836,6 +849,11 @@ static int rvin_setup(struct rvin_dev *vin)
 
 		input_is_yuv = true;
 		break;
+	case MEDIA_BUS_FMT_Y10_1X10:
+		 /* RAW8/10/12/14/16/RGB565 in case of R8A779A0 */
+		if (vin->chip_info & RCAR_VIN_R8A779A0_REATURE)
+			vnmc |= VNMC_INF_RAWX_RGB565;
+		break;
 	default:
 		break;
 	}
@@ -901,6 +919,10 @@ static int rvin_setup(struct rvin_dev *vin)
 		break;
 	case V4L2_PIX_FMT_ABGR32:
 		dmr = VNDMR_A8BIT(vin->alpha) | VNDMR_EXRGB | VNDMR_DTMD_ARGB;
+		break;
+	case V4L2_PIX_FMT_Y10:
+		if (vin->chip_info & RCAR_VIN_R8A779A0_REATURE)
+			dmr = VNDMR_RMODE_RAW10 | VNDMR_YC_THR;
 		break;
 	default:
 		vin_err(vin, "Invalid pixelformat (0x%x)\n",
@@ -1377,6 +1399,7 @@ static int rvin_mc_validate_format(struct rvin_dev *vin, struct v4l2_subdev *sd,
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 	case MEDIA_BUS_FMT_UYVY8_2X8:
 	case MEDIA_BUS_FMT_UYVY10_2X10:
+	case MEDIA_BUS_FMT_Y10_1X10:
 	case MEDIA_BUS_FMT_RGB888_1X24:
 		vin->mbus_code = fmt.format.code;
 		break;

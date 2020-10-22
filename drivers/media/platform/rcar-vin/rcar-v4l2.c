@@ -47,6 +47,10 @@ static const struct rvin_video_format rvin_formats[] = {
 		.bpp			= 2,
 	},
 	{
+		.fourcc			= V4L2_PIX_FMT_Y10,
+		.bpp			= 4,
+	},
+	{
 		.fourcc			= V4L2_PIX_FMT_RGB565,
 		.bpp			= 2,
 	},
