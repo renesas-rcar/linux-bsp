@@ -12,7 +12,7 @@
 
 / {
 	soc {
-		imp_distributer: imp_ctrl_00 {
+		imp_distributer: imp_top_00 {
 			compatible = "generic-uio";
 			reg = <0 0xffa00000 0 0x10000>;
 			interrupts = <GIC_SPI 281 IRQ_TYPE_LEVEL_HIGH>;
@@ -22,7 +22,7 @@
 			#interrupt-cells = <1>;
 		};
 
-		imp_imp_00 {
+		imp_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff900000 0 0x20000>;
 			interrupt-parent = <&imp_distributer>;
@@ -32,7 +32,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_imp_01 {
+		imp_01 {
 			compatible = "generic-uio";
 			reg = <0 0xff920000 0 0x20000>;
 			interrupt-parent = <&imp_distributer>;
@@ -42,7 +42,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_imp_02 {
+		imp_02 {
 			compatible = "generic-uio";
 			reg = <0 0xff940000 0 0x20000>;
 			interrupt-parent = <&imp_distributer>;
@@ -52,7 +52,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_imp_03 {
+		imp_03 {
 			compatible = "generic-uio";
 			reg = <0 0xff960000 0 0x20000>;
 			interrupt-parent = <&imp_distributer>;
