@@ -1229,6 +1229,7 @@
 			power-domains = <&sysc R8A77980_PD_A3IR>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		irq_imp_ctrl_00_01 {
@@ -1396,6 +1397,7 @@
 			reg = <0 0xed000000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 830>;
 			power-domains = <&sysc R8A77980_PD_A3IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imr_v4l2_alloc: imr_alloc {
@@ -2386,6 +2388,7 @@
 			reg = <0 0xfff80000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 707>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
+			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
 		imr_rtt_imr_01 {
@@ -2393,6 +2396,7 @@
 			reg = <0 0xfff81000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 706>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
+			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
 		imr_rtt_ims_00 {
@@ -2400,6 +2404,7 @@
 			reg = <0 0xfff90000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 823>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
+			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
 		imr_rtt_ims_01 {
@@ -2407,6 +2412,7 @@
 			reg = <0 0xfff91000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 822>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
+			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
 		imr_rtt_ims_02 {
@@ -2414,6 +2420,7 @@
 			reg = <0 0xfff92000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 821>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
+			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
 		imr_rtt_ims_03 {
@@ -2421,6 +2428,7 @@
 			reg = <0 0xfff93000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 820>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
+			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
 		viprtt_dof_00 {
@@ -2428,6 +2436,7 @@
 			reg = <0 0xe7930000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 102>;
 			power-domains = <&sysc R8A77980_PD_A3VIP1>;
+			ipmmu-id = <RCAR_IPMMU_VIP0 0>;
 		};
 
 		viprtt_stv_00 {
@@ -2435,6 +2444,7 @@
 			reg = <0 0xe7950000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 101>;
 			power-domains = <&sysc R8A77980_PD_A3VIP0>;
+			ipmmu-id = <RCAR_IPMMU_VIP0 0>;
 		};
 
 		viprtt_acf_00 {
@@ -2442,6 +2452,7 @@
 			reg = <0 0xe7940000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 1004>;
 			power-domains = <&sysc R8A77980_PD_A3VIP2>;
+			ipmmu-id = <RCAR_IPMMU_VIP1 0>;
 		};
 
 		viprtt_acf_01 {
@@ -2449,6 +2460,7 @@
 			reg = <0 0xe7941000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 1002>;
 			power-domains = <&sysc R8A77980_PD_A3VIP2>;
+			ipmmu-id = <RCAR_IPMMU_VIP1 0>;
 		};
 
 		imp_rtt_imp_00 {
@@ -2456,6 +2468,7 @@
 			reg = <0 0xff8d0000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 827>;
 			power-domains = <&sysc R8A77980_PD_A2IR0>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_imp_01 {
@@ -2463,6 +2476,7 @@
 			reg = <0 0xfff50000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 826>;
 			power-domains = <&sysc R8A77980_PD_A2IR1>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_imp_02 {
@@ -2470,6 +2484,7 @@
 			reg = <0 0xfff60000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 825>;
 			power-domains = <&sysc R8A77980_PD_A2IR2>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_imp_03 {
@@ -2477,6 +2492,7 @@
 			reg = <0 0xfff70000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 824>;
 			power-domains = <&sysc R8A77980_PD_A2IR3>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_imp_04 {
@@ -2484,6 +2500,7 @@
 			reg = <0 0xff8d1000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 521>;
 			power-domains = <&sysc R8A77980_PD_A2IR4>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_ocv_00 {
@@ -2491,6 +2508,7 @@
 			reg = <0 0xfffa0000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 829>;
 			power-domains = <&sysc R8A77980_PD_A2SC0>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_ocv_01 {
@@ -2498,6 +2516,7 @@
 			reg = <0 0xfffb0000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 828>;
 			power-domains = <&sysc R8A77980_PD_A2SC1>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_ocv_02 {
@@ -2505,6 +2524,7 @@
 			reg = <0 0xff8d2000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 531>;
 			power-domains = <&sysc R8A77980_PD_A2SC2>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_ocv_03 {
@@ -2512,6 +2532,7 @@
 			reg = <0 0xff8d3000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 529>;
 			power-domains = <&sysc R8A77980_PD_A2SC3>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_ocv_04 {
@@ -2519,6 +2540,7 @@
 			reg = <0 0xff8d4000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 528>;
 			power-domains = <&sysc R8A77980_PD_A2SC4>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_dp_00 {
@@ -2526,6 +2548,7 @@
 			reg = <0 0xff8d5000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 525>;
 			power-domains = <&sysc R8A77980_PD_A2DP0>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_dp_01 {
@@ -2533,6 +2556,7 @@
 			reg = <0 0xff8d6000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 524>;
 			power-domains = <&sysc R8A77980_PD_A2DP1>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_cnn_00 {
@@ -2540,6 +2564,7 @@
 			reg = <0 0xff8d7000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 831>;
 			power-domains = <&sysc R8A77980_PD_A2CN>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_rtt_slim_00 {
@@ -2547,6 +2572,7 @@
 			reg = <0 0xff8dc000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 500>;
 			power-domains = <&sysc R8A77980_PD_A2IR5>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 	};
 
