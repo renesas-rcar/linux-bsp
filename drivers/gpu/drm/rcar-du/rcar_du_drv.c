@@ -627,7 +627,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 		if (ret != -EPROBE_DEFER)
 			dev_err(&pdev->dev,
 				"failed to initialize DRM/KMS (%d)\n", ret);
-		goto error;
+		goto modeset_err;
 	}
 
 	ddev->irq_enabled = 1;
@@ -649,7 +649,12 @@ static int rcar_du_probe(struct platform_device *pdev)
 	return 0;
 
 error:
-	rcar_du_remove(pdev);
+	drm_kms_helper_poll_fini(ddev);
+	drm_atomic_helper_shutdown(ddev);
+
+modeset_err:
+	drm_mode_config_cleanup(ddev);
+	drm_dev_put(ddev);
 
 	return ret;
 }
