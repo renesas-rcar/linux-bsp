@@ -2435,18 +2435,21 @@ int cpufreq_get_policy(struct cpufreq_policy *policy, unsigned int cpu)
 }
 EXPORT_SYMBOL(cpufreq_get_policy);
 
-/**
+/*
  * cpufreq_set_policy - Modify cpufreq policy parameters.
  * @policy: Policy object to modify.
  * @new_gov: Policy governor pointer.
  * @new_pol: Policy value (for drivers with built-in governors).
  *
  * Invoke the cpufreq driver's ->verify() callback to sanity-check the frequency
- * limits to be set for the policy, update @policy with the verified limits
- * values and either invoke the driver's ->setpolicy() callback (if present) or
- * carry out a governor update for @policy.  That is, run the current governor's
- * ->limits() callback (if @new_gov points to the same object as the one in
- * @policy) or replace the governor for @policy with @new_gov.
+ * limits to be set for the policy, run the installed policy notifiers for it
+ * with the CPUFREQ_ADJUST value, pass it to the driver's ->verify() callback
+ * again and run the notifiers for it again with the CPUFREQ_NOTIFY value,
+ * update @policy with the verified limits values and either invoke the driver's
+ * ->setpolicy() callback (if present) or carry out a governor update for
+ * @policy. That is, run the current governor's ->limits() callback (if @new_gov
+ * points to the same object as the one in @policy) or replace the governor for
+ * @policy  with @new_gov.
  *
  * The cpuinfo part of @policy is not updated by this function.
  */
@@ -2478,6 +2481,22 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	ret = cpufreq_driver->verify(&new_data);
 	if (ret)
 		return ret;
+
+	/* adjust if necessary - all reasons */
+	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+					CPUFREQ_ADJUST, &new_data);
+
+	/*
+	 * verify the cpu speed can be set within this limit, which might be
+	 * different to the first one
+	 */
+	ret = cpufreq_driver->verify(&new_data);
+	if (ret)
+		return ret;
+
+	/* notification of the new policy */
+	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+					CPUFREQ_NOTIFY, &new_data);
 
 	policy->min = new_data.min;
 	policy->max = new_data.max;
