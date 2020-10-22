@@ -1210,7 +1210,7 @@
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
-		imp_distributer: imp_ctrl_00 {
+		imp_distributer: imp_top_00 {
 			compatible = "generic-uio";
 			reg = <0 0xffa00000 0 0x10000>;
 			interrupts = <GIC_SPI 281 IRQ_TYPE_LEVEL_HIGH>;
@@ -1221,7 +1221,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		irq_imp_ctrl_00_01 {
+		irq_imp_top_00_01 {
 			compatible = "generic-uio";
 			reg = <0 0xffa00000 0 0x10000>;
 			interrupts = <GIC_SPI 282 IRQ_TYPE_LEVEL_HIGH>;
@@ -1229,7 +1229,7 @@
 			power-domains = <&sysc R8A77980_PD_A3IR>;
 		};
 
-		irq_imp_ctrl_00_02 {
+		irq_imp_top_00_02 {
 			compatible = "generic-uio";
 			reg = <0 0xffa00000 0 0x10000>;
 			interrupts = <GIC_SPI 283 IRQ_TYPE_LEVEL_HIGH>;
@@ -1237,7 +1237,7 @@
 			power-domains = <&sysc R8A77980_PD_A3IR>;
 		};
 
-		irq_imp_ctrl_00_03 {
+		irq_imp_top_00_03 {
 			compatible = "generic-uio";
 			reg = <0 0xffa00000 0 0x10000>;
 			interrupts = <GIC_SPI 284 IRQ_TYPE_LEVEL_HIGH>;
@@ -1245,7 +1245,7 @@
 			power-domains = <&sysc R8A77980_PD_A3IR>;
 		};
 
-		irq_imp_ctrl_00_04 {
+		irq_imp_top_00_04 {
 			compatible = "generic-uio";
 			reg = <0 0xffa00000 0 0x10000>;
 			interrupts = <GIC_SPI 285 IRQ_TYPE_LEVEL_HIGH>;
@@ -1253,7 +1253,7 @@
 			power-domains = <&sysc R8A77980_PD_A3IR>;
 		};
 
-		imp_imp_00 {
+		imp_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff900000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 827>;
@@ -1261,7 +1261,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_imp_01 {
+		imp_01 {
 			compatible = "generic-uio";
 			reg = <0 0xff920000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 826>;
@@ -1269,7 +1269,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_imp_02 {
+		imp_02 {
 			compatible = "generic-uio";
 			reg = <0 0xff940000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 825>;
@@ -1277,7 +1277,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_imp_03 {
+		imp_03 {
 			compatible = "generic-uio";
 			reg = <0 0xff960000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 824>;
@@ -1285,7 +1285,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_imp_04 {
+		imp_04 {
 			compatible = "generic-uio";
 			reg = <0 0xffa80000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 521>;
@@ -1393,7 +1393,7 @@
 			dma-coherent;
 		};
 
-		imrlx4_ch0: imr_ims_00@fe860000 {
+		imrlx4_ch0: ims_00@fe860000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe860000 0 0x2000>;
@@ -1405,7 +1405,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imrlx4_ch1: imr_ims_01@fe870000 {
+		imrlx4_ch1: ims_01@fe870000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe870000 0 0x2000>;
@@ -1417,7 +1417,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imrlx4_ch2: imr_ims_02@fe880000 {
+		imrlx4_ch2: ims_02@fe880000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe880000 0 0x2000>;
@@ -1429,7 +1429,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imrlx4_ch3: imr_ims_03@fe890000 {
+		imrlx4_ch3: ims_03@fe890000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe890000 0 0x2000>;
@@ -1441,7 +1441,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imrlx4_ch4: imr_imr_00@fe8a0000 {
+		imrlx4_ch4: imr_00@fe8a0000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe8a0000 0 0x2000>;
@@ -1453,7 +1453,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imrlx4_ch5: imr_imr_01@fe8b0000 {
+		imrlx4_ch5: imr_01@fe8b0000 {
 			compatible = "generic-uio",
 				     "renesas,imr-lx4";
 			reg = <0 0xfe8b0000 0 0x2000>;
@@ -2381,21 +2381,21 @@
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 		};
 
-		rtt_fbc_finish {
+		fbc_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff830000 0 0x10000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			interrupts = <GIC_SPI 14 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
-		rtt_fbc_pre {
+		irq_fbc_00_01 {
 			compatible = "generic-uio";
 			reg = <0 0xff830000 0 0x10000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			interrupts = <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
-		imr_rtt_imr_00 {
+		fba_imr_00 {
 			compatible = "generic-uio";
 			reg = <0 0xfff80000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 707>;
@@ -2403,7 +2403,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imr_rtt_imr_01 {
+		fba_imr_01 {
 			compatible = "generic-uio";
 			reg = <0 0xfff81000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 706>;
@@ -2411,7 +2411,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imr_rtt_ims_00 {
+		fba_ims_00 {
 			compatible = "generic-uio";
 			reg = <0 0xfff90000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 823>;
@@ -2419,7 +2419,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imr_rtt_ims_01 {
+		fba_ims_01 {
 			compatible = "generic-uio";
 			reg = <0 0xfff91000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 822>;
@@ -2427,7 +2427,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imr_rtt_ims_02 {
+		fba_ims_02 {
 			compatible = "generic-uio";
 			reg = <0 0xfff92000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 821>;
@@ -2435,7 +2435,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		imr_rtt_ims_03 {
+		fba_ims_03 {
 			compatible = "generic-uio";
 			reg = <0 0xfff93000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 820>;
@@ -2443,7 +2443,7 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		viprtt_dof_00 {
+		fba_dof_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe7930000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 102>;
@@ -2451,7 +2451,7 @@
 			ipmmu-id = <RCAR_IPMMU_VIP0 0>;
 		};
 
-		viprtt_stv_00 {
+		fba_stv_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe7950000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 101>;
@@ -2459,7 +2459,7 @@
 			ipmmu-id = <RCAR_IPMMU_VIP0 0>;
 		};
 
-		viprtt_acf_00 {
+		fba_acf_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe7940000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 1004>;
@@ -2467,7 +2467,7 @@
 			ipmmu-id = <RCAR_IPMMU_VIP1 0>;
 		};
 
-		viprtt_acf_01 {
+		fba_acf_01 {
 			compatible = "generic-uio";
 			reg = <0 0xe7941000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 1002>;
@@ -2475,7 +2475,7 @@
 			ipmmu-id = <RCAR_IPMMU_VIP1 0>;
 		};
 
-		imp_rtt_imp_00 {
+		fba_imp_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff8d0000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 827>;
@@ -2483,7 +2483,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_imp_01 {
+		fba_imp_01 {
 			compatible = "generic-uio";
 			reg = <0 0xfff50000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 826>;
@@ -2491,7 +2491,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_imp_02 {
+		fba_imp_02 {
 			compatible = "generic-uio";
 			reg = <0 0xfff60000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 825>;
@@ -2499,7 +2499,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_imp_03 {
+		fba_imp_03 {
 			compatible = "generic-uio";
 			reg = <0 0xfff70000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 824>;
@@ -2507,7 +2507,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_imp_04 {
+		fba_imp_04 {
 			compatible = "generic-uio";
 			reg = <0 0xff8d1000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 521>;
@@ -2515,7 +2515,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_ocv_00 {
+		fba_ocv_00 {
 			compatible = "generic-uio";
 			reg = <0 0xfffa0000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 829>;
@@ -2523,7 +2523,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_ocv_01 {
+		fba_ocv_01 {
 			compatible = "generic-uio";
 			reg = <0 0xfffb0000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 828>;
@@ -2531,7 +2531,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_ocv_02 {
+		fba_ocv_02 {
 			compatible = "generic-uio";
 			reg = <0 0xff8d2000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 531>;
@@ -2539,7 +2539,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_ocv_03 {
+		fba_ocv_03 {
 			compatible = "generic-uio";
 			reg = <0 0xff8d3000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 529>;
@@ -2547,7 +2547,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_ocv_04 {
+		fba_ocv_04 {
 			compatible = "generic-uio";
 			reg = <0 0xff8d4000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 528>;
@@ -2555,7 +2555,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_dp_00 {
+		fba_dp_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff8d5000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 525>;
@@ -2563,7 +2563,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_dp_01 {
+		fba_dp_01 {
 			compatible = "generic-uio";
 			reg = <0 0xff8d6000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 524>;
@@ -2571,7 +2571,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_cnn_00 {
+		fba_cnn_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff8d7000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 831>;
@@ -2579,7 +2579,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_rtt_slim_00 {
+		fba_slim_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff8dc000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 500>;
