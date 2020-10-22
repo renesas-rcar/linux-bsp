@@ -856,7 +856,7 @@
 			resets = <&cpg 811>;
 			renesas,id = <0>;
 			status = "enabled";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -885,7 +885,7 @@
 			resets = <&cpg 810>;
 			renesas,id = <1>;
 			status = "enabled";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -914,7 +914,7 @@
 			resets = <&cpg 809>;
 			renesas,id = <2>;
 			status = "enabled";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -943,7 +943,7 @@
 			resets = <&cpg 808>;
 			renesas,id = <3>;
 			status = "enabled";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -978,7 +978,7 @@
 			reg = <0 0xff900000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 827>;
 			power-domains = <&sysc R8A77970_PD_A2IR0>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_imp_01 {
@@ -986,7 +986,7 @@
 			reg = <0 0xff920000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 827>;
 			power-domains = <&sysc R8A77970_PD_A2IR0>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_imp_02 {
@@ -994,7 +994,7 @@
 			reg = <0 0xff940000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 826>;
 			power-domains = <&sysc R8A77970_PD_A2IR1>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_imp_03 {
@@ -1002,7 +1002,7 @@
 			reg = <0 0xff960000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 826>;
 			power-domains = <&sysc R8A77970_PD_A2IR1>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_ocv_00 {
@@ -1010,7 +1010,7 @@
 			reg = <0 0xff980000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 829>;
 			power-domains = <&sysc R8A77970_PD_A2SC0>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_ocv_01 {
@@ -1018,7 +1018,7 @@
 			reg = <0 0xff990000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 828>;
 			power-domains = <&sysc R8A77970_PD_A2SC1>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_dma_00 {
@@ -1026,7 +1026,7 @@
 			reg = <0 0xffa10000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 825>;
 			power-domains = <&sysc R8A77970_PD_A2DP>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_psc_00 {
@@ -1034,7 +1034,7 @@
 			reg = <0 0xffa20000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 825>;
 			power-domains = <&sysc R8A77970_PD_A2DP>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_cnn_00 {
@@ -1042,7 +1042,7 @@
 			reg = <0 0xff9e0000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 824>;
 			power-domains = <&sysc R8A77970_PD_A2CN>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp_mem_00 {
@@ -1065,7 +1065,7 @@
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
 			resets = <&cpg 823>;
 			alloc-dev = <&imr_v4l2_alloc>;
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		imrlx4_ch1: imr_ims_01@fe870000 {
@@ -1077,7 +1077,7 @@
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
 			resets = <&cpg 822>;
 			alloc-dev = <&imr_v4l2_alloc>;
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		imrlx4_ch2: imr_ims_02@fe880000 {
@@ -1089,7 +1089,7 @@
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
 			resets = <&cpg 821>;
 			alloc-dev = <&imr_v4l2_alloc>;
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		imrlx4_ch3: imr_ims_03@fe890000 {
@@ -1101,7 +1101,7 @@
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
 			resets = <&cpg 820>;
 			alloc-dev = <&imr_v4l2_alloc>;
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		isp0: isp@fec00000 {
@@ -1120,7 +1120,7 @@
 			interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 817>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		cisp0: cisp_00 {
@@ -1129,7 +1129,7 @@
 			interrupts = <GIC_SPI 26 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 817>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		sadc0: adc@ffce0000 {
@@ -1245,14 +1245,14 @@
 			compatible = "generic-uio";
 			reg = <0 0xe7740000 0 0x1000>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
-			ipmmu-id = <RCAR_IPMMU_DS1>;
+			ipmmu-id = <RCAR_IPMMU_DS1 0>;
 		};
 
 		ipmmu_ir {
 			compatible = "generic-uio";
 			reg = <0 0xff8b0000 0 0x1000>;
 			power-domains = <&sysc R8A77970_PD_A3IR>;
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		ipmmu_mm {
@@ -1260,7 +1260,7 @@
 			reg = <0 0xe67b0000 0 0x1000>;
 			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
-			ipmmu-id = <RCAR_IPMMU_MM>;
+			ipmmu-id = <RCAR_IPMMU_MM 0>;
 		};
 
 		irq_ipmmu_mm_01 {
@@ -1268,21 +1268,21 @@
 			reg = <0 0xe67b0000 0 0x1000>;
 			interrupts = <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
-			ipmmu-id = <RCAR_IPMMU_MM>;
+			ipmmu-id = <RCAR_IPMMU_MM 0>;
 		};
 
 		ipmmu_rt {
 			compatible = "generic-uio";
 			reg = <0 0xffc80000 0 0x1000>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
-			ipmmu-id = <RCAR_IPMMU_RT0>;
+			ipmmu-id = <RCAR_IPMMU_RT0 0>;
 		};
 
 		ipmmu_vi0 {
 			compatible = "generic-uio";
 			reg = <0 0xfebd0000 0 0x1000>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		mmc0: mmc@ee140000 {
@@ -1608,7 +1608,7 @@
 			clocks = <&cpg CPG_MOD 127>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
 			interrupts = <GIC_SPI 300 IRQ_TYPE_LEVEL_HIGH>;
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		irq_ivcp1e_00_01 {
