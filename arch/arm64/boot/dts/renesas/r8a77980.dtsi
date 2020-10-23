@@ -1663,7 +1663,7 @@
 
 		tisp0: tisp_00 {
 			compatible = "generic-uio";
-			reg = <0 0xfed00000 0 0x10000>;
+			reg = <0 0xfed00000 0 0x20000>;
 			interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 817>;
 			resets = <&cpg 817>;
@@ -1673,7 +1673,7 @@
 
 		cisp0: cisp_00 {
 			compatible = "generic-uio";
-			reg = <0 0xfec00000 0 0x20000>;
+			reg = <0 0xfec00000 0 0x100000>;
 			interrupts = <GIC_SPI 26 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 817>;
 			resets = <&cpg 817>;
@@ -1683,7 +1683,7 @@
 
 		tisp1: tisp_01 {
 			compatible = "generic-uio";
-			reg = <0 0xfed20000 0 0x10000>;
+			reg = <0 0xfed20000 0 0x20000>;
 			interrupts = <GIC_SPI 27 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 814>;
 			resets = <&cpg 814>;
@@ -1693,7 +1693,7 @@
 
 		cisp1: cisp_01 {
 			compatible = "generic-uio";
-			reg = <0 0xfee00000 0 0x20000>;
+			reg = <0 0xfee00000 0 0x100000>;
 			interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 814>;
 			resets = <&cpg 814>;
