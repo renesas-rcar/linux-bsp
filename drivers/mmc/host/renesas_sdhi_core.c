@@ -561,7 +561,7 @@ static void renesas_sdhi_reset(struct tmio_mmc_host *host)
 {
 	struct renesas_sdhi *priv = host_to_priv(host);
 
-	renesas_sdhi_reset_scc(host, priv);
+	renesas_sdhi_disable_scc(host->mmc);
 	renesas_sdhi_reset_hs400_mode(host, priv);
 	priv->needs_adjust_hs400 = false;
 
