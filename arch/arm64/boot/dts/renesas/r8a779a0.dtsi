@@ -8,6 +8,7 @@
 #include <dt-bindings/clock/r8a779a0-cpg-mssr.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/r8a779a0-sysc.h>
+#include <dt-bindings/ipmmu/rcar-ipmmu.h>
 
 / {
 	compatible = "renesas,r8a779a0";
@@ -2360,106 +2361,128 @@
 		};
 
 		ipmmu_rt0: iommu@ee480000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xee480000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 10>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_rt_00";
+			ipmmu-id = <RCAR_IPMMU_RT0>;
 		};
 
 		ipmmu_rt1: iommu@ee4c0000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xee4c0000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 19>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_rt_01";
+			ipmmu-id = <RCAR_IPMMU_RT1>;
 		};
 
 		ipmmu_ds0: iommu@eed00000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeed00000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 0>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_ds_00";
+			ipmmu-id = <RCAR_IPMMU_DS0>;
 		};
 
 		ipmmu_ds1: iommu@eed40000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeed40000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 1>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_ds_01";
+			ipmmu-id = <RCAR_IPMMU_DS1>;
 		};
 
 		ipmmu_ir: iommu@eed80000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeed80000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 3>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_ir_00";
+			ipmmu-id = <RCAR_IPMMU_IR>;
 		};
 
 		ipmmu_vc0: iommu@eedc0000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeedc0000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 12>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_vc_00";
+			ipmmu-id = <RCAR_IPMMU_VC0>;
 		};
 
 		ipmmu_vi0: iommu@eee80000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeee80000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 14>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_vi_00";
+			ipmmu-id = <RCAR_IPMMU_VI0>;
 		};
 
 		ipmmu_vi1: iommu@eeec0000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeeec0000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 15>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_vi_01";
+			ipmmu-id = <RCAR_IPMMU_VI1>;
 		};
 
 		ipmmu_3dg: iommu@eee00000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeee00000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 6>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_3dg_00";
+			ipmmu-id = <RCAR_IPMMU_3DG>;
 		};
 
 		ipmmu_vip0: iommu@eef00000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeef00000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 5>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_vip_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0>;
 		};
 
 		ipmmu_vip1: iommu@eef40000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeef40000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 11>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			linux,uio-name = "ipmmu_vip_01";
+			ipmmu-id = <RCAR_IPMMU_VIP1>;
 		};
 
 		ipmmu_mm: iommu@eefc0000 {
-			compatible = "renesas,ipmmu-r8a779a0",
+			compatible = "renesas,ipmmu-r8a779a0", "generic-uio",
 				     "renesas,rcar-gen4-ipmmu-vmsa";
 			reg = <0 0xeefc0000 0 0x20000>;
 			interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>,
