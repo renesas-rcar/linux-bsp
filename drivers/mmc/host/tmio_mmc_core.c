@@ -211,6 +211,21 @@ static void tmio_mmc_reset(struct tmio_mmc_host *host)
 	}
 }
 
+static void tmio_mmc_set_bus_width(struct tmio_mmc_host *host,
+				   unsigned char bus_width)
+{
+	u16 reg = sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT)
+				& ~(CARD_OPT_WIDTH | CARD_OPT_WIDTH8);
+
+	/* reg now applies to MMC_BUS_WIDTH_4 */
+	if (bus_width == MMC_BUS_WIDTH_1)
+		reg |= CARD_OPT_WIDTH;
+	else if (bus_width == MMC_BUS_WIDTH_8)
+		reg |= CARD_OPT_WIDTH8;
+
+	sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, reg);
+}
+
 static void tmio_mmc_reset_work(struct work_struct *work)
 {
 	struct tmio_mmc_host *host = container_of(work, struct tmio_mmc_host,
@@ -250,6 +265,9 @@ static void tmio_mmc_reset_work(struct work_struct *work)
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	tmio_mmc_reset(host);
+	tmio_mmc_set_bus_width(host, host->mmc->ios.bus_width);
+	if (host->mmc->can_retune)
+		mmc_retune_needed(host->mmc);   /* to enable SCC */
 
 	/* Ready for new calls */
 	host->mrq = NULL;
@@ -934,21 +952,6 @@ static void tmio_mmc_power_off(struct tmio_mmc_host *host)
 
 	if (host->set_pwr)
 		host->set_pwr(host->pdev, 0);
-}
-
-static void tmio_mmc_set_bus_width(struct tmio_mmc_host *host,
-				   unsigned char bus_width)
-{
-	u16 reg = sd_ctrl_read16(host, CTL_SD_MEM_CARD_OPT)
-				& ~(CARD_OPT_WIDTH | CARD_OPT_WIDTH8);
-
-	/* reg now applies to MMC_BUS_WIDTH_4 */
-	if (bus_width == MMC_BUS_WIDTH_1)
-		reg |= CARD_OPT_WIDTH;
-	else if (bus_width == MMC_BUS_WIDTH_8)
-		reg |= CARD_OPT_WIDTH8;
-
-	sd_ctrl_write16(host, CTL_SD_MEM_CARD_OPT, reg);
 }
 
 static unsigned int tmio_mmc_get_timeout_cycles(struct tmio_mmc_host *host)
