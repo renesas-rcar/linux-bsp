@@ -774,6 +774,7 @@ static void cc_prepare_aead_data_mlli(struct cc_drvdata *drvdata,
 	unsigned int authsize = areq_ctx->req_authsize;
 	struct device *dev = drvdata_to_dev(drvdata);
 	struct scatterlist *sg;
+	int i;
 
 	if (req->src == req->dst) {
 		/*INPLACE*/
@@ -807,7 +808,11 @@ static void cc_prepare_aead_data_mlli(struct cc_drvdata *drvdata,
 					areq_ctx->mac_buf_dma_addr;
 			}
 		} else { /* Contig. ICV */
-			sg = &areq_ctx->src_sgl[areq_ctx->src.nents - 1];
+			sg = areq_ctx->src_sgl;
+			for (i = 0 ; i < (areq_ctx->src.nents - 1) ; i++) {
+				WARN_ON(!sg);
+				sg = sg_next(sg);
+			}
 			/*Should hanlde if the sg is not contig.*/
 			areq_ctx->icv_dma_addr = sg_dma_address(sg) +
 				(*src_last_bytes - authsize);
@@ -839,7 +844,11 @@ static void cc_prepare_aead_data_mlli(struct cc_drvdata *drvdata,
 			areq_ctx->icv_virt_addr = areq_ctx->backup_mac;
 
 		} else { /* Contig. ICV */
-			sg = &areq_ctx->src_sgl[areq_ctx->src.nents - 1];
+			sg = areq_ctx->src_sgl;
+			for (i = 0 ; i < (areq_ctx->src.nents - 1) ; i++) {
+				WARN_ON(!sg);
+				sg = sg_next(sg);
+			}
 			/*Should hanlde if the sg is not contig.*/
 			areq_ctx->icv_dma_addr = sg_dma_address(sg) +
 				(*src_last_bytes - authsize);
@@ -863,7 +872,11 @@ static void cc_prepare_aead_data_mlli(struct cc_drvdata *drvdata,
 				       *dst_last_bytes);
 
 		if (!areq_ctx->is_icv_fragmented) {
-			sg = &areq_ctx->dst_sgl[areq_ctx->dst.nents - 1];
+			sg = areq_ctx->dst_sgl;
+			for (i = 0 ; i < (areq_ctx->dst.nents - 1) ; i++) {
+				WARN_ON(!sg);
+				sg = sg_next(sg);
+			}
 			/* Contig. ICV */
 			areq_ctx->icv_dma_addr = sg_dma_address(sg) +
 				(*dst_last_bytes - authsize);
