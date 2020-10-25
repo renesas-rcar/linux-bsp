@@ -22,6 +22,7 @@ struct cipher_req_ctx {
 	u32 out_mlli_nents;
 	u8 *iv;
 	struct mlli_params mlli_params;
+	enum cc_secure_dir_type sec_dir;
 };
 
 int cc_cipher_alloc(struct cc_drvdata *drvdata);

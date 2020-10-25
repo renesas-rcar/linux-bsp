@@ -51,6 +51,16 @@ enum cc_std_body {
 	CC_STD_ALL = 0x3
 };
 
+#define SECURE_KEY_RESTRICT_KEY_TYPE \
+	GENMASK(CC_SECURE_KEY_RESTRICT_KEY_TYPE_BIT_SIZE + \
+		CC_SECURE_KEY_RESTRICT_KEY_TYPE_BIT_SHIFT - 1, \
+		CC_SECURE_KEY_RESTRICT_KEY_TYPE_BIT_SHIFT)
+
+#define SECURE_KEY_RESTRICT_MODE \
+	GENMASK(CC_SECURE_KEY_RESTRICT_MODE_BIT_SIZE + \
+		CC_SECURE_KEY_RESTRICT_MODE_BIT_SHIFT - 1, \
+		CC_SECURE_KEY_RESTRICT_MODE_BIT_SHIFT)
+
 #define CC_COHERENT_CACHE_PARAMS 0xEEE
 
 #define CC_PINS_FULL	0x0
@@ -169,6 +179,7 @@ struct cc_crypto_alg {
 	int cipher_mode;
 	int flow_mode; /* Note: currently, refers to the cipher mode only. */
 	int auth_mode;
+	bool is_secure_key;
 	unsigned int data_unit;
 	struct cc_drvdata *drvdata;
 	struct skcipher_alg skcipher_alg;
@@ -186,6 +197,7 @@ struct cc_alg_template {
 	int cipher_mode;
 	int flow_mode; /* Note: currently, refers to the cipher mode only. */
 	int auth_mode;
+	bool is_secure_key;
 	u32 min_hw_rev;
 	enum cc_std_body std_body;
 	bool sec_func;
