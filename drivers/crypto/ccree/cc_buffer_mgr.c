@@ -92,6 +92,61 @@ static unsigned int cc_get_sgl_nents(struct device *dev,
 }
 
 /**
+ * cc_buffer_is_phy_cont()
+ *
+ * @dev: Device object
+ * @sg_list: SG list
+ * @nbytes: [IN] Total SGL data bytes.
+ *
+ * This function check the if all entry of scatter-gather list
+ * is in continuous physical memory area.
+ * Checking by:
+ * - Get base physical address of entry and add with its length,
+ * - Compare above value with base physical address of next entry.
+ * - If they are not equal, so the two entries are not on continuous
+ *   physical memory area.
+ */
+static bool cc_buffer_is_phy_cont(struct device *dev,
+				  struct scatterlist *sg_list, unsigned int nbytes)
+{
+	dma_addr_t old_addr = 0;
+	bool is_cont = true;
+
+	while (nbytes != 0) {
+		if (sg_list->length != 0) {
+			dev_dbg(dev, "[%d] sg_list->length %d\n", __LINE__,
+				sg_list->length);
+			/* get the number of bytes in the last entry */
+			nbytes -= (sg_list->length > nbytes) ?
+				   nbytes : sg_list->length;
+
+			old_addr = page_to_phys(sg_page(sg_list));
+			old_addr += sg_list->length;
+			dev_dbg(dev, "[%d] old_addr 0x%llx\n", __LINE__,
+				old_addr);
+			dev_dbg(dev, "[%d] page 0x%llx\n", __LINE__,
+				(unsigned long long)sg_page(sg_list));
+			dev_dbg(dev, "[%d] phy addr 0x%llx\n", __LINE__,
+				page_to_phys(sg_page(sg_list)));
+			sg_list = sg_next(sg_list);
+			if (nbytes != 0 && sg_list->length != 0) {
+				dev_dbg(dev, "[%d] dma_address 0x%llx\n",
+					__LINE__,
+					sg_list->dma_address);
+
+				if (old_addr != page_to_phys(sg_page(sg_list)))
+					is_cont = false;
+			}
+		} else {
+			sg_list = (struct scatterlist *)sg_page(sg_list);
+		}
+	}
+
+	dev_dbg(dev, "is_cont %d\n", is_cont);
+	return is_cont;
+}
+
+/**
  * cc_copy_sg_portion() - Copy scatter list data,
  * from to_skip to end, to dest and vice versa
  *
@@ -281,6 +336,9 @@ static int cc_map_sg(struct device *dev, struct scatterlist *sg,
 	}
 
 	*mapped_nents = ret;
+
+	if (cc_buffer_is_phy_cont(dev, sg, nbytes))
+		*mapped_nents = 1;
 
 	return 0;
 }
