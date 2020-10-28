@@ -223,6 +223,13 @@
 		clock-frequency = <24000000>;
 		clock-output-names = "mclk";
 	};
+
+	ov5647_camera_clk: camera_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25000000>;
+		clock-output-names = "xclk";
+	};
 };
 
 &can0 {
@@ -271,16 +278,20 @@
 };
 
 &csi20 {
-	status = "disabled";
+	status = "okay";
 
-	port {
+	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		csi20_ep: endpoint {
-			clock-lanes = <0>;
-			data-lanes = <1 2>;
-			csi-rate = <280>;
+		port@0 {
+			reg = <0>;
+
+			csi20_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&ov5647_camera_out>;
+			};
 		};
 	};
 };
@@ -713,26 +724,27 @@
 			reg = <3>;
 			/* MOST node(s) */
 		};
-/*
+
 		i2c@4 {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <4>;
 
-			rpi_camera: ov5647@36 {
+			ov5647_camera: ov5647@36 {
 				compatible = "ovti,ov5647";
 				reg = <0x36>;
+				clocks = <&ov5647_camera_clk>;
 
 				port@0 {
-					rpi_camera_in: endpoint {
+					ov5647_camera_out: endpoint {
 						clock-lanes = <0>;
 						data-lanes = <1 2>;
-						remote-endpoint = <&vin4ep0>;
+						remote-endpoint = <&csi20_in>;
 					};
 				};
 			};
 		};
-*/
+
 		i2c@5 {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -1120,30 +1132,11 @@
 	status = "okay";
 };
 
-/*
+
 &vin4 {
-	status = "disabled";
-
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		port@0 {
-			vin4ep0: endpoint {
-				csi,select = "csi20";
-				virtual,channel = <0>;
-				remote-endpoint = <&rpi_camera_in>;
-				data-lanes = <1 2>;
-			};
-		};
-		port@1 {
-			csi2ep0: endpoint {
-				remote-endpoint = <&csi20_ep>;
-			};
-		};
-	};
+	status = "okay";
 };
-*/
+
 
 &vin5 {
 	pinctrl-0 = <&vin5_pins>;
