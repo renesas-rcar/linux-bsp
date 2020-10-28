@@ -6,6 +6,9 @@
  */
 
 /dts-v1/;
+/*Reserved 1MB memory for boot loader secure area */
+/memreserve/ 0x50000000 0x00100000;
+
 #include "r8a779a0.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 
