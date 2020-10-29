@@ -608,6 +608,7 @@ static int ov5647_probe(struct i2c_client *client)
 	mutex_init(&sensor->lock);
 
 	sd = &sensor->sd;
+	sd->fwnode = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
 	v4l2_i2c_subdev_init(sd, client, &ov5647_subdev_ops);
 	sensor->sd.internal_ops = &ov5647_subdev_internal_ops;
 	sensor->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
