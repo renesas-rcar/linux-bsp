@@ -28,6 +28,7 @@
 #include <linux/of_graph.h>
 #include <linux/slab.h>
 #include <linux/videodev2.h>
+#include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-image-sizes.h>
@@ -86,6 +87,7 @@ struct ov5647 {
 	unsigned int			height;
 	int				power_count;
 	struct clk			*xclk;
+	struct v4l2_ctrl_handler	ctrls;
 };
 
 static inline struct ov5647 *to_state(struct v4l2_subdev *sd)
@@ -720,6 +722,14 @@ static int ov5647_probe(struct i2c_client *client)
 	if (ret < 0)
 		goto mutex_remove;
 
+	v4l2_ctrl_handler_init(&sensor->ctrls, 1);
+	v4l2_ctrl_new_std(&sensor->ctrls, NULL, V4L2_CID_PIXEL_RATE,
+			  70000000, 70000000, 1, 70000000);
+	sensor->sd.ctrl_handler = &sensor->ctrls;
+	ret = sensor->ctrls.error;
+	if (ret)
+		goto error;
+
 	ret = ov5647_detect(sd);
 	if (ret < 0)
 		goto error;
@@ -733,6 +743,7 @@ static int ov5647_probe(struct i2c_client *client)
 error:
 	media_entity_cleanup(&sd->entity);
 mutex_remove:
+	v4l2_ctrl_handler_free(&sensor->ctrls);
 	mutex_destroy(&sensor->lock);
 	return ret;
 }
@@ -744,6 +755,7 @@ static int ov5647_remove(struct i2c_client *client)
 
 	v4l2_async_unregister_subdev(&ov5647->sd);
 	media_entity_cleanup(&ov5647->sd.entity);
+	v4l2_ctrl_handler_free(&ov5647->ctrls);
 	v4l2_device_unregister_subdev(sd);
 	mutex_destroy(&ov5647->lock);
 
