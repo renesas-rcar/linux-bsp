@@ -228,6 +228,11 @@
 		function = "scif0";
 	};
 
+	hscif0_pins: hscif0 {
+		groups = "hscif0_data", "hscif0_ctrl";
+		function = "hscif0";
+	};
+
 	scif_clk_pins: scif_clk {
 		groups = "scif_clk";
 		function = "scif_clk";
@@ -746,7 +751,18 @@
 	pinctrl-0 = <&scif0_pins>;
 	pinctrl-names = "default";
 
+	uart-has-rtscts;
+	/* Please use exclusively to the hscif0 node */
 	status = "okay";
+};
+
+&hscif0 {
+	pinctrl-0 = <&hscif0_pins>;
+	pinctrl-names = "default";
+
+	uart-has-rtscts;
+	/* Please use exclusively to the scif0 node */
+	/* status = "okay"; */
 };
 
 &scif_clk {
