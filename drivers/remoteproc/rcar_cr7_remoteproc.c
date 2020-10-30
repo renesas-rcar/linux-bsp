@@ -16,7 +16,8 @@
 #include <linux/notifier.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/of_reserved_mem.h>
+#include <linux/of_address.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/remoteproc.h>
 #include <linux/delay.h>
@@ -61,6 +62,10 @@ MODULE_PARM_DESC(rcar_cr7_fw_name,
 struct rcar_cr7_rproc {
 	struct rproc *rproc;
 	struct work_struct workqueue;
+	bool cr7_already_running;
+	void __iomem *mem_va;
+	phys_addr_t mem_da;
+	u64 mem_len;
 };
 
 /**
@@ -103,6 +108,22 @@ static struct notifier_block rcar_cr7_notifier_block = {
 	.notifier_call = cr7_interrupt_cb,
 };
 
+static int is_cr7_running(void)
+{
+	void *mmio_apmu_base;
+	u32 regval;
+
+	/* CR7 Power Status Register (CR7PSTR) */
+	mmio_apmu_base = ioremap_nocache(APMU_CR7PSTR, 4);
+	regval = ioread32(mmio_apmu_base);
+	iounmap(mmio_apmu_base);
+
+	if ((regval & 3) == 0)
+		return 1;
+
+	return 0;
+}
+
 static int rcar_cr7_rproc_start(struct rproc *rproc)
 {
 	struct device *dev = rproc->dev.parent;
@@ -116,6 +137,10 @@ static int rcar_cr7_rproc_start(struct rproc *rproc)
 
 
 	dev_dbg(dev, "%s\n", __FUNCTION__);
+
+	/* If the CR7 is already running, leave it alone */
+	if (is_cr7_running())
+		return 0;
 
 	// CR7 Power-Up Sequence (Sec. 5A.3.3 R-Car Gen3 HW User Manual)
 	//////// 1. clear write protection for CPG register
@@ -200,36 +225,114 @@ static void rcar_cr7_rproc_kick(struct rproc *rproc, int vqid)
 	}
 }
 
+static void *rcar_cr7_da_to_va(struct rproc *rproc, u64 da, int len)
+{
+	struct rcar_cr7_rproc *rrproc = rproc->priv;
+	int offset;
+
+	offset = da - rrproc->mem_da;
+	if (offset < 0 || offset + len > rrproc->mem_len)
+		return NULL;
+
+	return rrproc->mem_va + offset;
+}
+
+static int rcar_cr7_rproc_elf_load_segments(struct rproc *rproc,
+					    const struct firmware *fw)
+{
+	struct rcar_cr7_rproc *rrproc = rproc->priv;
+
+	/* If the CR7 is already running, do not download the image */
+	if (!rrproc->cr7_already_running) {
+		return rproc_elf_load_segments(rproc, fw);
+	}
+
+	return 0;
+}
+
+static int rcar_cr7_rproc_parse_fw(struct rproc *rproc, const struct firmware *fw)
+{
+	return rproc_elf_load_rsc_table(rproc, fw);
+}
+
+static struct resource_table *
+rcar_cr7_rproc_elf_find_loaded_rsc_table(struct rproc *rproc,
+				         const struct firmware *fw)
+{
+	return rproc_elf_find_loaded_rsc_table(rproc, fw);
+}
+
+static int rcar_cr7_rproc_elf_sanity_check(struct rproc *rproc,
+					   const struct firmware *fw)
+{
+	return rproc_elf_sanity_check(rproc, fw);
+}
+
+static u32 rcar_cr7_rproc_elf_get_boot_addr(struct rproc *rproc,
+					    const struct firmware *fw)
+{
+	return rproc_elf_get_boot_addr(rproc, fw);
+}
+
 static const struct rproc_ops rcar_cr7_rproc_ops = {
 	.start = rcar_cr7_rproc_start,
 	.stop = rcar_cr7_rproc_stop,
 	.kick = rcar_cr7_rproc_kick,
+	.da_to_va = rcar_cr7_da_to_va,
+	.load = rcar_cr7_rproc_elf_load_segments,
+	.parse_fw = rcar_cr7_rproc_parse_fw,
+	.find_loaded_rsc_table = rcar_cr7_rproc_elf_find_loaded_rsc_table,
+	.sanity_check = rcar_cr7_rproc_elf_sanity_check,
+	.get_boot_addr = rcar_cr7_rproc_elf_get_boot_addr,
 };
 
 static int rcar_cr7_rproc_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct rcar_cr7_rproc *rrproc;
+	struct device_node *np = dev->of_node;
+	struct device_node *node;
+	struct resource res;
 	struct rproc *rproc;
 	int ret;
 
-	if (dev->of_node) {
-		ret = of_reserved_mem_device_init(dev);
-		if (ret) {
-			dev_err(dev, "device does not have specific CMA pool: %d\n", ret);
-			return ret;
-		}
-	}
-
 	rproc = rproc_alloc(dev, "cr7", &rcar_cr7_rproc_ops, rcar_cr7_fw_name, sizeof(*rrproc));
 	if (!rproc) {
-		ret = -ENOMEM;
-		goto free_mem;
+		return -ENOMEM;
 	}
 
 	rrproc = rproc->priv;
 	rrproc->rproc = rproc;
 	rproc->has_iommu = false;
+
+	node = of_parse_phandle(np, "memory-region", 0);
+	if (!node) {
+		dev_err(dev, "no memory-region specified\n");
+		ret = -EINVAL;
+		goto free_rproc;
+	}
+
+	ret = of_address_to_resource(node, 0, &res);
+	if (ret) {
+		dev_err(dev, "unable to resolve memory region\n");
+		goto free_rproc;
+	}
+
+	rrproc->mem_da = res.start;
+	rrproc->mem_len = resource_size(&res);
+	rrproc->mem_va = devm_ioremap_wc(dev, rrproc->mem_da, rrproc->mem_len);
+	if (IS_ERR(rrproc->mem_va)) {
+		dev_err(dev, "unable to map memory region: %pa+%llx\n",
+			&res.start, rrproc->mem_len);
+		ret = PTR_ERR(rrproc->mem_va);
+		goto free_rproc;
+	}
+
+	/* If the CR7 is already running, don't download new firmware.
+	 * Note that we still require the matching elf firmware to be present in
+	 * the file system, as we use that to extract the resource table info. */
+	if (is_cr7_running())
+		rrproc->cr7_already_running = true;
 
 	INIT_WORK(&rrproc->workqueue, handle_event);
 
@@ -254,9 +357,6 @@ unregister_notifier:
 	flush_work(&rrproc->workqueue);
 free_rproc:
 	rproc_free(rproc);
-free_mem:
-	if (dev->of_node)
-		of_reserved_mem_device_release(dev);
 	return ret;
 }
 
@@ -264,14 +364,11 @@ static int rcar_cr7_rproc_remove(struct platform_device *pdev)
 {
 	struct rcar_cr7_rproc *rrproc = platform_get_drvdata(pdev);
 	struct rproc *rproc = rrproc->rproc;
-	struct device *dev = &pdev->dev;
 
 	rcar_mfis_unregister_notifier(MFIS_CHANNEL, &rcar_cr7_notifier_block);
 	flush_work(&rrproc->workqueue);
 	rproc_del(rproc);
 	rproc_free(rproc);
-	if (dev->of_node)
-		of_reserved_mem_device_release(dev);
 
 	return 0;
 }
