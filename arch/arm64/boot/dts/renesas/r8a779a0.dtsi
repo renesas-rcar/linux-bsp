@@ -1028,8 +1028,8 @@
 				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			// dmas = <&dmac0 0x31>, <&dmac0 0x30>;
-			// dma-names = "tx", "rx";
+			dmas = <&dmac1 0x31>, <&dmac1 0x30>;
+			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 514>;
 			status = "disabled";
@@ -1044,8 +1044,8 @@
 				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			// dmas = <&dmac0 0x33>, <&dmac0 0x32>;
-			// dma-names = "tx", "rx";
+			dmas = <&dmac1 0x33>, <&dmac1 0x32>;
+			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 515>;
 			status = "disabled";
@@ -1060,8 +1060,8 @@
 				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			// dmas = <&dmac0 0x35>, <&dmac0 0x34>;
-			// dma-names = "tx", "rx";
+			dmas = <&dmac1 0x35>, <&dmac1 0x34>;
+			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 516>;
 			status = "disabled";
@@ -1076,8 +1076,8 @@
 				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			// dmas = <&dmac0 0x37>, <&dmac0 0x36>;
-			// dma-names = "tx", "rx";
+			dmas = <&dmac1 0x37>, <&dmac1 0x36>;
+			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 517>;
 			status = "disabled";
@@ -1092,8 +1092,8 @@
 				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			// dmas = <&dmac0 0x51>, <&dmac0 0x50>;
-			// dma-names = "tx", "rx";
+			dmas = <&dmac1 0x51>, <&dmac1 0x50>;
+			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 702>;
 			status = "disabled";
@@ -1108,8 +1108,8 @@
 				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			// dmas = <&dmac0 0x53>, <&dmac0 0x52>;
-			// dma-names = "tx", "rx";
+			dmas = <&dmac1 0x53>, <&dmac1 0x52>;
+			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 703>;
 			status = "disabled";
@@ -1124,8 +1124,8 @@
 				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			// dmas = <&dmac0 0x57>, <&dmac0 0x56>;
-			// dma-names = "tx", "rx";
+			dmas = <&dmac1 0x57>, <&dmac1 0x56>;
+			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 704>;
 			status = "disabled";
@@ -1140,8 +1140,8 @@
 				 <&cpg CPG_CORE R8A779A0_CLK_S1D2>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			// dmas = <&dmac0 0x59>, <&dmac0 0x58>;
-			// dma-names = "tx", "rx";
+			dmas = <&dmac1 0x59>, <&dmac1 0x58>;
+			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 705>;
 			status = "disabled";
