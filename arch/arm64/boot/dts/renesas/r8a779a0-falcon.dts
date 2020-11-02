@@ -114,18 +114,17 @@
 			groups = "avb0_link", "avb0_mdio", "avb0_rgmii", "avb0_txcrefclk";
 			function = "avb0";
 		};
-#if 0
+
 		pins_mdio {
 			groups = "avb0_mdio";
 			drive-strength = <24>;
 		};
 
 		pins_mii_tx {
-			pins = "PIN_AVB0_TX_CTL", "PIN_AVB0_TXC", "PIN_AVB0_TD0",
-				"PIN_AVB0_TD1", "PIN_AVB0_TD2", "PIN_AVB0_TD3", "PIN_AVB0_TXCREFCLK";
+			groups = "avb0_rgmii";
 			drive-strength = <24>;
 		};
-#endif
+
 	};
 
 	avb1_pins: avb1 {
@@ -140,8 +139,7 @@
 		};
 
 		pins_mii_tx {
-			pins = "PIN_AVB1_TX_CTL", "PIN_AVB1_TXC", "PIN_AVB1_TD0",
-				"PIN_AVB1_TD1", "PIN_AVB1_TD2", "PIN_AVB1_TD3", "PIN_AVB1_TXCREFCLK";
+			groups = "avb1_rgmii";
 			drive-strength = <24>;
 		};
 	};
@@ -158,8 +156,7 @@
 		};
 
 		pins_mii_tx {
-			pins = "PIN_AVB2_TX_CTL", "PIN_AVB2_TXC", "PIN_AVB2_TD0",
-				"PIN_AVB2_TD1", "PIN_AVB2_TD2", "PIN_AVB2_TD3", "PIN_AVB2_TXCREFCLK";
+			groups = "avb2_rgmii";
 			drive-strength = <24>;
 		};
 	};
@@ -176,8 +173,7 @@
 		};
 
 		pins_mii_tx {
-			pins = "PIN_AVB3_TX_CTL", "PIN_AVB3_TXC", "PIN_AVB3_TD0",
-				"PIN_AVB3_TD1", "PIN_AVB3_TD2", "PIN_AVB3_TD3", "PIN_AVB3_TXCREFCLK";
+			groups = "avb3_rgmii";
 			drive-strength = <24>;
 		};
 	};
@@ -194,8 +190,7 @@
 		};
 
 		pins_mii_tx {
-			pins = "PIN_AVB4_TX_CTL", "PIN_AVB4_TXC", "PIN_AVB4_TD0",
-				"PIN_AVB4_TD1", "PIN_AVB4_TD2", "PIN_AVB4_TD3", "PIN_AVB4_TXCREFCLK";
+			groups = "avb4_rgmii";
 			drive-strength = <24>;
 		};
 	};
@@ -212,8 +207,7 @@
 		};
 
 		pins_mii_tx {
-			pins = "PIN_AVB5_TX_CTL", "PIN_AVB5_TXC", "PIN_AVB5_TD0",
-				"PIN_AVB5_TD1", "PIN_AVB5_TD2", "PIN_AVB5_TD3", "PIN_AVB5_TXCREFCLK";
+			groups = "avb5_rgmii";
 			drive-strength = <24>;
 		};
 	};
