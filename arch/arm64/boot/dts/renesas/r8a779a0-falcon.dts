@@ -277,6 +277,26 @@
 		groups = "canfd7_data";
 		function = "canfd7";
 	};
+
+	pcie0_pins: pcie0 {
+		groups = "pcie0_clkreq_n";
+		function = "pcie";
+	};
+
+	pcie1_pins: pcie1 {
+		groups = "pcie1_clkreq_n";
+		function = "pcie";
+	};
+
+	pcie2_pins: pcie2 {
+		groups = "pcie2_clkreq_n";
+		function = "pcie";
+	};
+
+	pcie3_pins: pcie3 {
+		groups = "pcie3_clkreq_n";
+		function = "pcie";
+	};
 };
 
 &rpc {
@@ -808,18 +828,26 @@
 
 &pciec0 {
 	status = "okay";
+	pinctrl-0 = <&pcie0_pins>;
+	pinctrl-names = "default";
 };
 
 &pciec1 {
 	status = "disabled";
+	pinctrl-0 = <&pcie1_pins>;
+	pinctrl-names = "default";
 };
 
 &pciec2 {
 	status = "disabled";
+	pinctrl-0 = <&pcie2_pins>;
+	pinctrl-names = "default";
 };
 
 &pciec3 {
 	status = "disabled";
+	pinctrl-0 = <&pcie3_pins>;
+	pinctrl-names = "default";
 };
 
 &du {
