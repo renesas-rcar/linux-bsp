@@ -1035,7 +1035,7 @@ static int scif_set_rtrg(struct uart_port *port, int rx_trig)
 
 	/* HSCIF can be set to an arbitrary level. */
 	if (sci_getreg(port, HSRTRGR)->size) {
-		serial_port_out(port, HSRTRGR, rx_trig);
+		serial_port_out(port, HSRTRGR, rx_trig & HSCIF_RTRG_MASK);
 		return rx_trig;
 	}
 
