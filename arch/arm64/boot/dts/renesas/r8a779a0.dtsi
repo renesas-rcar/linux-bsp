@@ -7,7 +7,7 @@
 
 #include <dt-bindings/clock/r8a779a0-cpg-mssr.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-/* #include <dt-bindings/power/r8a779a0-sysc.h> */
+#include <dt-bindings/power/r8a779a0-sysc.h>
 
 / {
 	compatible = "renesas,r8a779a0";
@@ -1084,6 +1084,30 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 705>;
 			status = "disabled";
+		};
+
+		sysc: system-controller@e6180000 {
+			compatible = "renesas,r8a779a0-sysc";
+			reg = <0 0xe6180000 0 0x4000>;
+			#power-domain-cells = <1>;
+		};
+
+		sysc1: system-controller@e6184000 {
+			compatible = "renesas,r8a779a0-sysc";
+			reg = <0 0xe6184000 0 0x4000>;
+			#power-domain-cells = <1>;
+		};
+
+		sysc2: system-controller@e6188000 {
+			compatible = "renesas,r8a779a0-sysc";
+			reg = <0 0xe6188000 0 0x4000>;
+			#power-domain-cells = <1>;
+		};
+
+		sysc3: system-controller@e618c000 {
+			compatible = "renesas,r8a779a0-sysc";
+			reg = <0 0xe618c000 0 0x4000>;
+			#power-domain-cells = <1>;
 		};
 
 		dmac1: dma-controller@e7350000 {
