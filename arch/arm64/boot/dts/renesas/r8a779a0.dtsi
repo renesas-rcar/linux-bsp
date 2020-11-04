@@ -2867,6 +2867,24 @@
 			};
 		};
 
+		ivcp1e_00_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfea00000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 616>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
+			linux,uio-name = "ivcp1e_00_00";
+		};
+
+		ivcp1e_00_01 {
+			compatible = "generic-uio";
+			reg = <0 0xfea00000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 616>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			interrupts = <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>;
+			linux,uio-name = "ivcp1e_00_01";
+		};
+
 		isp0: isp@fed00000 {
 			compatible = "renesas,isp-r8a779a0";
 			reg = <0 0xfed00000 0 0x10000>;
