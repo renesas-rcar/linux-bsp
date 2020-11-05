@@ -4014,5 +4014,24 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "vcpl4_00_01";
 		};
+
+		fbc0: fbc@ff830000 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x10000>;
+			interrupts = <GIC_SPI 538 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 1117>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 1117>;
+			linux,uio-name = "fbc_00_00";
+		};
+
+		fbc1 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x10000>;
+			interrupts = <GIC_SPI 539 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 1117>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "fbc_00_01";
+		};
 	};
 };
