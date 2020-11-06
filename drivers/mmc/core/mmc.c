@@ -1981,11 +1981,12 @@ static void mmc_remove(struct mmc_host *host)
 	/*
 	 * Disable power_off_notification byte in the ext_csd register
 	 */
-	if (host->card->ext_csd.rev >= 6) {
+	if (host->card->ext_csd.rev >= 6 && !mmc_card_suspended(host->card)) {
 		mmc_claim_host(host);
 		mmc_poweroff_notify(host->card, EXT_CSD_NO_POWER_NOTIFICATION);
 		mmc_release_host(host);
 	}
+	mmc_card_clr_suspended(host->card);
 
 	mmc_remove_card(host->card);
 	host->card = NULL;
