@@ -266,7 +266,7 @@ const struct cpg_mssr_info r8a779a0_cpg_mssr_info __initconst = {
 	/* Module Clocks */
 	.mod_clks = r8a779a0_mod_clks,
 	.num_mod_clks = ARRAY_SIZE(r8a779a0_mod_clks),
-	.num_hw_mod_clks = 15 * 32,
+	.num_hw_mod_clks = 24 * 32,
 
 	/* Callbacks */
 	.init = r8a779a0_cpg_mssr_init,
