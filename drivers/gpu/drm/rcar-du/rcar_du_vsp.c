@@ -75,6 +75,9 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 		.colorkey = 0,
 	};
 
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+		state.format = rcar_du_format_info(DRM_FORMAT_XRGB8888);
+
 	if (rcdu->info->gen >= 3)
 		state.hwindex = (crtc->index % 2) ? 2 : 0;
 	else
