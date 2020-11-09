@@ -371,4 +371,12 @@ config XEN_VIRTIO_FORCE_GRANT
 	  of the guest memory. This will need support on the backend side
 	  (e.g. qemu or kernel, depending on the virtio device types used).
 
+config SCMI_FULL_HW_VIRTUALIZATION
+    bool "Enable support for scmi full hardware virtualization"
+    depends on (ARM || ARM64) && ARM_SCMI_PROTOCOL
+    help
+        As default environment, hypervisor just support para virtualization,
+        enable this configure to indicate that full hadrware virtualization
+        is supported for scmi.
+
 endmenu
