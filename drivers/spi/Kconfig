@@ -642,6 +642,26 @@ config SPI_SH_MSIOF
 	help
 	  SPI driver for SuperH and SH Mobile MSIOF blocks.
 
+config SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG
+	bool "Transfer Synchronization Debug support for MSIOF"
+	depends on SPI_SH_MSIOF
+	default n
+	help
+	  In data transfer, the slave needs to have completed
+	  a transfer preparation before the master.
+	  As a test environment, it was to be able to put a sleep wait
+	  before the data transfer of the master.
+
+config SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG_MSLEEP
+	int "Master of sleep latency (msec time)"
+	default 1
+	depends on SPI_SH_MSIOF && SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG
+	help
+	  Select Sleep latency of the previous data transfer
+	  at the time of master mode.
+	  Examples:
+	    N => N msec
+
 config SPI_SH
 	tristate "SuperH SPI controller"
 	depends on SUPERH || COMPILE_TEST

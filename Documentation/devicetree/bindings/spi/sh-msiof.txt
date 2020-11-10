@@ -42,7 +42,9 @@ Required properties:
 - #size-cells          : Must be <0>
 
 Optional properties:
-- clocks               : Must contain a reference to the functional clock.
+- clocks               : Specify a clock handling and a module clock.
+			 If HW supports the change of module clock, specify the module clock.
+
 - num-cs               : Total number of chip selects (default is 1).
 			 Up to 3 native chip selects are supported:
 			   0: MSIOF_SYNC
