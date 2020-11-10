@@ -190,6 +190,11 @@ static const struct renesas_soc soc_rcar_d3 __initconst __maybe_unused = {
 	.id	= 0x58,
 };
 
+static const struct renesas_soc soc_rcar_v3u __initconst __maybe_unused = {
+	.family	= &fam_rcar_gen3,
+	.id	= 0x59,
+};
+
 static const struct renesas_soc soc_shmobile_ag5 __initconst __maybe_unused = {
 	.family	= &fam_shmobile,
 	.id	= 0x37,
@@ -271,6 +276,9 @@ static const struct of_device_id renesas_socs[] __initconst = {
 #endif
 #ifdef CONFIG_ARCH_R8A77995
 	{ .compatible = "renesas,r8a77995",	.data = &soc_rcar_d3 },
+#endif
+#ifdef CONFIG_ARCH_R8A779A0
+	{ .compatible = "renesas,r8a779a0",	.data = &soc_rcar_v3u },
 #endif
 #ifdef CONFIG_ARCH_SH73A0
 	{ .compatible = "renesas,sh73a0",	.data = &soc_shmobile_ag5 },
@@ -363,7 +371,9 @@ done:
 						   eslo);
 
 	pr_info("Detected Renesas %s %s %s\n", soc_dev_attr->family,
-		soc_dev_attr->soc_id, soc_dev_attr->revision ?: "");
+		soc_dev_attr->soc_id,
+		chipid && ((product & 0x7fff) == 0x5201) ? "ES1.1/ES1.2" :
+		soc_dev_attr->revision ?: "");
 
 	soc_dev = soc_device_register(soc_dev_attr);
 	if (IS_ERR(soc_dev)) {
