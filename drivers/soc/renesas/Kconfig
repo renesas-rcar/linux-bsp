@@ -234,6 +234,13 @@ config ARCH_R8A77995
 	help
 	  This enables support for the Renesas R-Car D3 SoC.
 
+config ARCH_R8A779A0
+        bool "Renesas R-Car V3U SoC Platform"
+        select ARCH_RCAR_GEN3
+        select SYSC_R8A779A0
+        help
+          This enables support for the Renesas R-Car V3U SoC.
+
 endif # ARM64
 
 # SoC
@@ -303,6 +310,10 @@ config SYSC_R8A77990
 
 config SYSC_R8A77995
 	bool "R-Car D3 System Controller support" if COMPILE_TEST
+	select SYSC_RCAR
+
+config SYSC_R8A779A0
+	bool "R-Car V3U System Controller support" if COMPILE_TEST
 	select SYSC_RCAR
 
 # Family
