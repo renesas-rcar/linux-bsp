@@ -1879,9 +1879,9 @@
 		mlp: mlp@ec520000 {
 			compatible = "rcar,medialb-dim2";
 			reg = <0 0xec520000 0 0x800>;
-			interrupts = <GIC_SPI 385 IRQ_TYPE_LEVEL_HIGH>,
+			interrupts = <GIC_SPI 384 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 385 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 386 IRQ_TYPE_LEVEL_HIGH>,
-				<GIC_SPI 384 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 387 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 388 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 802>;
