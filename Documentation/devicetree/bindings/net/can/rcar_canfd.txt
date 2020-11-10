@@ -13,6 +13,7 @@ Required properties:
   - "renesas,r8a77980-canfd" for R8A77980 (R-Car V3H) compatible controller.
   - "renesas,r8a77990-canfd" for R8A77990 (R-Car E3) compatible controller.
   - "renesas,r8a77995-canfd" for R8A77995 (R-Car D3) compatible controller.
+  - "renesas,r8a779a0-canfd" for R8A779a0 (R-Car V3U) compatible controller.
 
   When compatible with the generic version, nodes must list the
   SoC-specific version corresponding to the platform first, followed by the
