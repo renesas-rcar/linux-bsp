@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the R-Car M3 (R8A7796) ES1.x SoC
+ *
+ * Copyright (C) 2019 Renesas Electronics Corp.
+ */
+
+#include "r8a7796.dtsi"
+
+&soc {
+	fcpci0: vcp4@fe8df000 {
+		compatible = "renesas,vcp4-fcpci0";
+		reg = <0 0xfe8df000 0 0x200>;
+		clocks = <&cpg CPG_MOD 617>;
+		power-domains = <&sysc R8A7796_PD_A3VC>;
+		resets = <&cpg 617>;
+		renesas,#ch = <1>;
+	};
+
+	fcpcs: vcp4@fe90f000 {
+		power-domains = <&sysc R8A7796_PD_A3VC>;
+	};
+
+	ivdp1c: vcp4@fe8d0000 {
+		clocks = <&cpg CPG_MOD 128>;
+		power-domains = <&sysc R8A7796_PD_A2VC0>;
+		resets = <&cpg 128>;
+	};
+
+	vdpb: vcp4@fe900000 {
+		power-domains = <&sysc R8A7796_PD_A2VC0>;
+	};
+};

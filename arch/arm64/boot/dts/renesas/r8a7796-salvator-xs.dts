@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Device Tree Source for the Salvator-X 2nd version board with R-Car M3-W
+ * Device Tree Source for the Salvator-X 2nd version board with R-Car M3-W ES1.x
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corp.
+ * Copyright (C) 2015-2019 Renesas Electronics Corp.
  */
 
 /dts-v1/;
-#include "r8a7796.dtsi"
+#include "r8a7796-es1.dtsi"
 #include "salvator-xs.dtsi"
 
 / {
-	model = "Renesas Salvator-X 2nd version board based on r8a7796";
+	model = "Renesas Salvator-X 2nd version board based on r8a7796 ES1.x";
 	compatible = "renesas,salvator-xs", "renesas,r8a7796";
 
 	memory@48000000 {
@@ -23,6 +23,58 @@
 		device_type = "memory";
 		reg = <0x6 0x00000000 0x0 0x80000000>;
 	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* device specific region for Lossy Decompression */
+		lossy_decompress: linux,lossy_decompress@54000000 {
+			no-map;
+			reg = <0x00000000 0x54000000 0x0 0x03000000>;
+		};
+
+		/* For Audio DSP */
+		adsp_reserved: linux,adsp@57000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x57000000 0x0 0x01000000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma@58000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x18000000>;
+			linux,cma-default;
+		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia@70000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x70000000 0x0 0x10000000>;
+		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+};
+
+&adsp {
+	status = "okay";
+	memory-region = <&adsp_reserved>;
 };
 
 &du {
@@ -59,6 +111,16 @@
 	remote-endpoint = <&rcar_dw_hdmi0_out>;
 };
 
+&lvds0 {
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};
+
 &rcar_sound {
 	ports {
 		/* rsnd_port0 is on salvator-common */
@@ -81,3 +143,12 @@
 	dais = <&rsnd_port0	/* ak4613 */
 		&rsnd_port1>;	/* HDMI0  */
 };
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
