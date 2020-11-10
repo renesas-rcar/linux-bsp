@@ -8,6 +8,8 @@
  */
 
 #include <linux/device.h>
+#include <linux/delay.h>
+#include <linux/io.h>
 #include <linux/dma-mapping.h>
 #include <linux/list.h>
 #include <linux/module.h>
@@ -23,10 +25,18 @@ struct rcar_fcp_device {
 	struct list_head list;
 	struct device *dev;
 	struct device_dma_parameters dma_parms;
+	void __iomem *base;
 };
 
 static LIST_HEAD(fcp_devices);
 static DEFINE_MUTEX(fcp_lock);
+
+#define FCP_VCR			0x00
+#define FCP_CFG0		0x04
+#define FCP_RST			0x10
+#define FCP_RST_SOFTRST		BIT(0)
+#define FCP_STA			0x18
+#define FCP_STA_ACT		BIT(0)
 
 /* -----------------------------------------------------------------------------
  * Public API
@@ -42,6 +52,16 @@ static DEFINE_MUTEX(fcp_lock);
  * Return a pointer to the FCP instance, or an ERR_PTR if the instance can't be
  * found.
  */
+static void fcp_write(struct rcar_fcp_device *fcp, u32 value, u32 offset)
+{
+	iowrite32(value, fcp->base + offset);
+}
+
+static u32 fcp_read(struct rcar_fcp_device *fcp, u32 offset)
+{
+	return ioread32(fcp->base + offset);
+}
+
 struct rcar_fcp_device *rcar_fcp_get(const struct device_node *np)
 {
 	struct rcar_fcp_device *fcp;
@@ -128,9 +148,34 @@ EXPORT_SYMBOL_GPL(rcar_fcp_disable);
  * Platform Driver
  */
 
+int rcar_fcp_reset(struct rcar_fcp_device *fcp)
+{
+	unsigned int timeout;
+	u32 status;
+
+	fcp_write(fcp, FCP_RST_SOFTRST, FCP_RST);
+
+	for (timeout = 10; timeout > 0; --timeout) {
+		status = fcp_read(fcp, FCP_STA);
+		if (!(status & FCP_STA_ACT))
+			break;
+
+		usleep_range(1000, 2000);
+	}
+
+	if (!timeout) {
+		dev_err(fcp->dev, "failed to reset\n");
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(rcar_fcp_reset);
+
 static int rcar_fcp_probe(struct platform_device *pdev)
 {
 	struct rcar_fcp_device *fcp;
+	struct resource *mem;
 
 	fcp = devm_kzalloc(&pdev->dev, sizeof(*fcp), GFP_KERNEL);
 	if (fcp == NULL)
@@ -140,6 +185,14 @@ static int rcar_fcp_probe(struct platform_device *pdev)
 
 	fcp->dev->dma_parms = &fcp->dma_parms;
 	dma_set_max_seg_size(fcp->dev, DMA_BIT_MASK(32));
+
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!mem)
+		return -EINVAL;
+
+	fcp->base = devm_ioremap_resource(fcp->dev, mem);
+	if (IS_ERR(fcp->base))
+		return PTR_ERR(fcp->base);
 
 	pm_runtime_enable(&pdev->dev);
 
