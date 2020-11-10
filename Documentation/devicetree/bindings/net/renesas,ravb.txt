@@ -27,6 +27,7 @@ Required properties:
       - "renesas,etheravb-r8a77980" for the R8A77980 SoC.
       - "renesas,etheravb-r8a77990" for the R8A77990 SoC.
       - "renesas,etheravb-r8a77995" for the R8A77995 SoC.
+      - "renesas,etheravb-r8a779a0" for the R8A779A0 SoC.
       - "renesas,etheravb-rcar-gen3" as a fallback for the above
 		R-Car Gen3 and RZ/G2 devices.
 
