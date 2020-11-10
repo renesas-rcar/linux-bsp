@@ -2,6 +2,7 @@
  * ROHM BD9571MWV-M driver
  *
  * Copyright (C) 2017 Marek Vasut <marek.vasut+renesas@gmail.com>
+ * Copyright (C) 2019 Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License version 2 as
@@ -91,6 +92,8 @@
 
 #define BD9571MWV_ACCESS_KEY			0xff
 
+#define BD9571MWV_PART_NUMBER			"BD9571MWV"
+
 /* Define the BD9571MWV IRQ numbers */
 enum bd9571mwv_irqs {
 	BD9571MWV_IRQ_MD1,
@@ -117,4 +120,15 @@ struct bd9571mwv {
 	struct regmap_irq_chip_data *irq_data;
 };
 
+/**
+ * struct bd957x_data - internal data for the bd957x driver
+ *
+ * Internal data to distinguish bd9571mwv chip and bd9574mwf chip
+ */
+struct bd957x_data {
+	int product_code_val;
+	char *part_number;
+	const struct regmap_config *regmap_config;
+	const struct regmap_irq_chip *irq_chip;
+};
 #endif /* __LINUX_MFD_BD9571MWV_H */
