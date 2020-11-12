@@ -40,6 +40,7 @@ struct ov2311_priv {
 	struct media_pad		pad;
 	struct v4l2_rect		rect;
 	int				subsampling;
+	int				fps_numerator;
 	int				fps_denominator;
 	int				init_complete;
 	u8				id[6];
@@ -254,6 +255,40 @@ static int ov2311_g_mbus_config(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int ov2311_g_frame_interval(struct v4l2_subdev *sd,
+				   struct v4l2_subdev_frame_interval *ival)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov2311_priv *priv = to_ov2311(client);
+
+	ival->interval.numerator = priv->fps_numerator;
+	ival->interval.denominator = priv->fps_denominator;
+
+	return 0;
+}
+
+static int ov2311_s_frame_interval(struct v4l2_subdev *sd,
+				   struct v4l2_subdev_frame_interval *ival)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov2311_priv *priv = to_ov2311(client);
+	int ret = 0;
+	int vts;
+
+	if (priv->fps_denominator != ival->interval.denominator ||
+	    priv->fps_numerator != ival->interval.numerator) {
+		vts = 0x05ca * 60 * ival->interval.numerator / ival->interval.denominator;
+
+		ret = reg16_write(client, 0x380e, vts >> 8);	/* VTS MSB */
+		ret = reg16_write(client, 0x380f, vts & 0xff);	/* VTS LSB */
+
+		priv->fps_numerator = ival->interval.numerator;
+		priv->fps_denominator = ival->interval.denominator;
+	}
+
+	return ret;
+}
+
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 static int ov2311_g_register(struct v4l2_subdev *sd,
 			     struct v4l2_dbg_register *reg)
@@ -360,6 +395,8 @@ static const struct v4l2_ctrl_ops ov2311_ctrl_ops = {
 static struct v4l2_subdev_video_ops ov2311_video_ops = {
 	.s_stream	= ov2311_s_stream,
 	.g_mbus_config	= ov2311_g_mbus_config,
+	.g_frame_interval = ov2311_g_frame_interval,
+	.s_frame_interval = ov2311_s_frame_interval,
 };
 
 static const struct v4l2_subdev_pad_ops ov2311_subdev_pad_ops = {
@@ -477,7 +514,8 @@ static int ov2311_probe(struct i2c_client *client,
 	priv->rect.top = 0;
 	priv->rect.width = OV2311_MAX_WIDTH;
 	priv->rect.height = OV2311_MAX_HEIGHT;
-	priv->fps_denominator = 30;
+	priv->fps_numerator = 1;
+	priv->fps_denominator = 60;
 
 	v4l2_ctrl_handler_init(&priv->hdl, 4);
 	v4l2_ctrl_new_std(&priv->hdl, &ov2311_ctrl_ops,
