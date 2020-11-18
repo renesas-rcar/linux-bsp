@@ -94,6 +94,10 @@
 	clock-frequency = <32768>;
 };
 
+&ref_clk {
+	clock-frequency = <38400000>;
+};
+
 &pfc {
 	i2c0_pins: i2c0 {
 		groups = "i2c0";
@@ -305,6 +309,11 @@
 		compatible = "ti,sn65dsi86";
 		reg = <0x2c>;
 		dp-connector;
+		clocks = <&ref_clk>;
+		clock-names = "refclk";
+		no-use-gpio;
+		no-use-scramble;
+		hpd-poll;
 
 		ports {
 			#address-cells = <1>;
