@@ -301,11 +301,14 @@ static int tpu_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	period >>= 2 * prescaler;
 
-	if (duty_ns)
+	if (duty_ns) {
 		duty = mul_u64_u64_div_u64(clk_rate, duty_ns,
 					   (u64)NSEC_PER_SEC << (2 * prescaler));
-	else
+		if (duty > period || duty == 0)
+			return -EINVAL;
+	} else {
 		duty = 0;
+	}
 
 	dev_dbg(&tpu->pdev->dev,
 		"rate %u, prescaler %u, period %u, duty %u\n",
