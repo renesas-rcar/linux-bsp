@@ -672,7 +672,7 @@ static void imx219_set_default_format(struct imx219 *imx219)
 	struct v4l2_mbus_framefmt *fmt;
 
 	fmt = &imx219->fmt;
-	fmt->code = MEDIA_BUS_FMT_SRGGB10_1X10;
+	fmt->code = MEDIA_BUS_FMT_SBGGR8_1X8;
 	fmt->colorspace = V4L2_COLORSPACE_SRGB;
 	fmt->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_MAP_QUANTIZATION_DEFAULT(true,
@@ -1312,12 +1312,12 @@ static int imx219_init_controls(struct imx219 *imx219)
 			  IMX219_DGTL_GAIN_STEP, IMX219_DGTL_GAIN_DEFAULT);
 
 	imx219->hflip = v4l2_ctrl_new_std(ctrl_hdlr, &imx219_ctrl_ops,
-					  V4L2_CID_HFLIP, 0, 1, 1, 0);
+					  V4L2_CID_HFLIP, 0, 1, 1, 1);
 	if (imx219->hflip)
 		imx219->hflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
 
 	imx219->vflip = v4l2_ctrl_new_std(ctrl_hdlr, &imx219_ctrl_ops,
-					  V4L2_CID_VFLIP, 0, 1, 1, 0);
+					  V4L2_CID_VFLIP, 0, 1, 1, 1);
 	if (imx219->vflip)
 		imx219->vflip->flags |= V4L2_CTRL_FLAG_MODIFY_LAYOUT;
 
