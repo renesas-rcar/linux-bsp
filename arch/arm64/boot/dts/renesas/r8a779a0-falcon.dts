@@ -220,6 +220,11 @@
 		function = "qspi0";
 	};
 
+	tpu_pin: tpu {
+		groups = "tpu_to1";
+		function = "tpu";
+	};
+
 	scif0_pins: scif0 {
 		groups = "scif0_data", "scif0_ctrl";
 		function = "scif0";
@@ -329,6 +334,13 @@
 			};
 		};
 	};
+};
+
+&tpu {
+	pinctrl-0 = <&tpu_pin>;
+	pinctrl-names = "default";
+
+	status = "okay";
 };
 
 &i2c0 {
