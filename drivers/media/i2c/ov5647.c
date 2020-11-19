@@ -86,6 +86,7 @@ struct ov5647 {
 	unsigned int			width;
 	unsigned int			height;
 	int				power_count;
+	int				test_pattern;
 	struct clk			*xclk;
 	struct v4l2_ctrl_handler	ctrls;
 };
@@ -94,6 +95,22 @@ static inline struct ov5647 *to_state(struct v4l2_subdev *sd)
 {
 	return container_of(sd, struct ov5647, sd);
 }
+
+static const char * const ov5647_test_pattern_menu[] = {
+	"Disabled",
+	"Color Bars",
+	"Color Squares",
+	"Random Data",
+	"Input Data"
+};
+
+static u8 ov5647_test_pattern_val[] = {
+	0x00,	/* Disabled */
+	0x80,	/* Color Bars */
+	0x82,	/* Color Squares */
+	0x81,	/* Random Data */
+	0x83,	/* Input Data */
+};
 
 static struct regval_list sensor_oe_disable_regs[] = {
 	{0x3000, 0x00},
@@ -389,6 +406,11 @@ static int ov5647_stream_on(struct v4l2_subdev *sd)
 {
 	int ret;
 
+	/* Apply customized values from user */
+	ret =  __v4l2_ctrl_handler_setup(sd->ctrl_handler);
+	if (ret)
+		return ret;
+
 	ret = ov5647_write(sd, OV5647_REG_MIPI_CTRL00, MIPI_CTRL00_BUS_IDLE);
 	if (ret < 0)
 		return ret;
@@ -657,6 +679,29 @@ static const struct v4l2_subdev_internal_ops ov5647_subdev_internal_ops = {
 	.open = ov5647_open,
 };
 
+static int ov5647_set_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct ov5647 *ov5647 = container_of(ctrl->handler,
+					     struct ov5647, ctrls);
+	struct v4l2_subdev *sd = &ov5647->sd;
+	int ret = -EINVAL;
+
+	switch (ctrl->id) {
+	case V4L2_CID_TEST_PATTERN:
+		ret = ov5647_write(sd, 0x503d,
+				   ov5647_test_pattern_val[ctrl->val]);
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
+static const struct v4l2_ctrl_ops ov5647_ctrl_ops = {
+	.s_ctrl = ov5647_set_ctrl,
+};
+
 static int ov5647_parse_dt(struct device_node *np)
 {
 	struct v4l2_fwnode_endpoint bus_cfg = { .bus_type = 0 };
@@ -722,9 +767,17 @@ static int ov5647_probe(struct i2c_client *client)
 	if (ret < 0)
 		goto mutex_remove;
 
-	v4l2_ctrl_handler_init(&sensor->ctrls, 1);
-	v4l2_ctrl_new_std(&sensor->ctrls, NULL, V4L2_CID_PIXEL_RATE,
+	v4l2_ctrl_handler_init(&sensor->ctrls, 2);
+	sensor->ctrls.lock = &sensor->lock;
+
+	v4l2_ctrl_new_std(&sensor->ctrls, &ov5647_ctrl_ops, V4L2_CID_PIXEL_RATE,
 			  70000000, 70000000, 1, 70000000);
+
+	v4l2_ctrl_new_std_menu_items(&sensor->ctrls, &ov5647_ctrl_ops,
+				     V4L2_CID_TEST_PATTERN,
+				     ARRAY_SIZE(ov5647_test_pattern_menu) - 1,
+				     0, 0, ov5647_test_pattern_menu);
+
 	sensor->sd.ctrl_handler = &sensor->ctrls;
 	ret = sensor->ctrls.error;
 	if (ret)
