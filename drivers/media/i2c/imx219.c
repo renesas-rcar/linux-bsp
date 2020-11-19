@@ -1492,6 +1492,7 @@ static int imx219_probe(struct i2c_client *client)
 	imx219->sd.internal_ops = &imx219_internal_ops;
 	imx219->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	imx219->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
+	imx219->sd.fwnode = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
 
 	/* Initialize source pad */
 	imx219->pad.flags = MEDIA_PAD_FL_SOURCE;
