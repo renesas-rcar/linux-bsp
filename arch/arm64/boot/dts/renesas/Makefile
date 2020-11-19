@@ -34,7 +34,8 @@ ulcb-kf-dtbo := ulcb-kf-cn11.dtbo ulcb-kf-most.dtbo ulcb-kf-sd3.dtbo \
 		ulcb-kf-cn10-gmsl2.dtbo ulcb-kf-cn11-gmsl2.dtbo \
 		ulcb-kf-panel-koe-tx31d200vm0baa-1280x480.dtbo \
 		ulcb-kf-panel-mitsubishi-aa104xd12-1024x768.dtbo \
-		ulcb-kf-panel-mitsubishi-aa121td01-1280x800.dtbo
+		ulcb-kf-panel-mitsubishi-aa121td01-1280x800.dtbo \
+		ulcb-kf-imx219.dtbo
 
 dtb-$(CONFIG_ARCH_R8A7795) += $(ulcb-kf-dtbo)
 dtb-$(CONFIG_ARCH_R8A7796) += $(ulcb-kf-dtbo)
