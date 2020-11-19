@@ -1,0 +1,85 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the Kingfisher (ULCB extension) OV5647 camera
+ *
+ * Copyright (C) 2018-2020 Renesas Electronics Corp.
+ * Copyright (C) 2018-2020 Cogent Embedded, Inc.
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&vin4>;
+
+		__overlay__ {
+			status = "okay";
+		};
+	};
+
+	fragment@1 {
+		target = <&csi20>;
+		__overlay__ {
+			status = "okay";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+
+					csi20_in: endpoint {
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						remote-endpoint = <&imx219_camera_out>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@2 {
+		target-path = "/";
+		__overlay__ {
+			imx219_camera_clk: imx219_camera_clk {
+				compatible = "fixed-clock";
+				#clock-cells = <0>;
+				clock-frequency = <24000000>;
+				clock-output-names = "xclk";
+			};
+		};
+	};
+
+	fragment@3 {
+		target = <&i2cswitch4>;
+
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@4 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <4>;
+
+				imx219_camera: imx219@10 {
+					compatible = "sony,imx219";
+					reg = <0x10>;
+					clocks = <&imx219_camera_clk>;
+					clock-names = "xclk";
+
+					port@0 {
+						imx219_camera_out: endpoint {
+							clock-lanes = <0>;
+							data-lanes = <1 2>;
+							link-frequencies = /bits/ 64 <456000000>;
+							remote-endpoint = <&csi20_in>;
+						};
+					};
+				};
+			};
+		};
+	};
+};
