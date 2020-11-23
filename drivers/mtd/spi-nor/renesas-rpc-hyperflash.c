@@ -118,7 +118,9 @@ static void rpc_hf_mode_ext(struct rpc_info *rpc)
 	 * bit8 RBE             = 1     : Read burst enable
 	 */
 	rpc_writel(rpc, RPC_DRCR,
-		   RPC_DRCR_RBURST(0x1F) | RPC_DRCR_RCF | RPC_DRCR_RBE);
+		   rpc->flags & RPC_HF_ZERO_READ_BURST ?
+		   RPC_DRCR_RCF | RPC_DRCR_RBE | RPC_DRCR_RBURST(0x0) :
+		   RPC_DRCR_RCF | RPC_DRCR_RBE | RPC_DRCR_RBURST(0x1F));
 
 	rpc_writel(rpc, RPC_DRCMR, RPC_DRCMR_CMD(0xA0));
 	rpc_writel(rpc, RPC_DRENR,
