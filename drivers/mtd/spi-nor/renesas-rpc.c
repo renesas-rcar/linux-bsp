@@ -250,6 +250,7 @@ static int rpc_probe(struct platform_device *pdev)
 		return -ENOTSUPP;
 	}
 
+	rpc->flags = (uintptr_t)of_device_get_match_data(&pdev->dev);
 	rpc->mtdtype = of_find_property(pdev->dev.of_node, "dual", NULL) ?
 		       RPC_DUAL : RPC_SINGLE;
 
@@ -334,9 +335,12 @@ static const struct of_device_id rpc_of_match[] = {
 	{ .compatible = "renesas,rpc-r8a77965" },
 	{
 		.compatible = "renesas,rpc-r8a77970",
-		.data = (void *)RPC_OWN_CLOCK_DIVIDER,
+		.data = (void *)(RPC_OWN_CLOCK_DIVIDER | RPC_HF_ZERO_READ_BURST),
 	},
-	{ .compatible = "renesas,rpc-r8a77980" },
+	{
+		.compatible = "renesas,rpc-r8a77980",
+		.data = (void *)RPC_HF_ZERO_READ_BURST,
+	},
 	{ },
 };
 

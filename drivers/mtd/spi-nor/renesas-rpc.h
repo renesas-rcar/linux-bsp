@@ -188,6 +188,7 @@
 
 /* Device flags */
 #define RPC_OWN_CLOCK_DIVIDER	BIT(0)
+#define RPC_HF_ZERO_READ_BURST	BIT(1)
 
 enum rpc_size {
 	/* singe flash: 8 bit; dual flash: 16 bit */
@@ -218,6 +219,7 @@ struct rpc_info {
 	struct clk *clk;
 	unsigned int irq;
 	enum rpc_type mtdtype;
+	u32 flags;
 };
 
 /* Register access */
