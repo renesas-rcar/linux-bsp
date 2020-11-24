@@ -1,12 +1,14 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Device Tree Source for the Ebisu-4D board
+ * Device Tree Source for the Ebisu-4D board Cortex-R7 (CR7) Taurus virtio display
  *
  * Copyright (C) 2020 Renesas Electronics Corp.
  */
 
 / {
 	aliases {
+		/* The CR7 controls the adv7511 hdmi-encoder so exclusively uses
+		 * i2c0, i.e. Linux can no longer use it for anything */
 		/delete-property/ i2c0;
 	};
 
@@ -15,21 +17,12 @@
 	};
 
 	reserved-memory {
+		/* global autoconfigured region for contiguous allocations */
+		/* Only added a label so rvgc can refer to it */
 		cma: linux,cma@58000000 {
-			compatible = "shared-dma-pool";
-			reusable;
-			reg = <0x0 0x58000000 0x0 0x14000000>;
-			linux,cma-default;
 		};
 
-		/delete-node/ linux,multimedia@68000000;
-
-		mmp_reserved: linux,multimedia@6c000000 {
-			compatible = "shared-dma-pool";
-			reusable;
-			reg = <0x0 0x6c000000 0x0 0x4000000>;
-		};
-
+		/* Memory used by the CR7, including virtual display buffers */
 		cr7: linux,cr7@70000000 {
 			compatible = "shared-dma-pool";
 			no-map;
@@ -43,23 +36,26 @@
 	};
 
 	rvgc {
-		#address-cells = <0x2>;
-		#size-cells = <0x2>;
+		#address-cells = <2>;
+		#size-cells = <2>;
 
-		nr-displays = <0x1>;
-		display-mappings = <0x0>;
-		display-layer = <0x4>;
+		nr-displays = <1>;
+		display-mappings = <0>;
+		display-layer = <4>;
 
-		// dma-ranges = <0x0 0x58000000 0x0 0x58000000 0x0 0x18000000>;
-		dma-ranges = <0x0 0x0 0x0 0x0 0x1 0x0>;
+		/* 1:1 mapping for the cma address space */
+		dma-ranges = <0x0 0x58000000 0x0 0x58000000 0x0 0x10000000>;
 
 		rvgc-memory {
 			memory-region = <&cma>;
 		};
 	};
 
+	/* No longer accessible due to i2c0 use by CR7 */
 	/delete-node/ cvbs-in;
 	/delete-node/ hdmi-in;
+
+	/* Under CR7 control */
 	/delete-node/ hdmi-out;
 	/delete-node/ lvds-decoder;
 	/delete-node/ lvds0;
@@ -69,6 +65,7 @@
 };
 
 &csi40 {
+	/* No longer accessible due to i2c0 use by CR7 */
 	/delete-property/ status;
 
 	ports {
@@ -79,16 +76,17 @@
 &soc {
 	mfis: mfis@e6260000 {
 		compatible = "renesas,mfis";
-		reg = <0x00 0xe6260000 0x00 0x200>;
+		reg = <0x0 0xe6260000 0x0 0x200>;
 		interrupts = <0x00 0xe0 0x04 0x00 0xe1 0x04 0x00 0xe2 0x04 0x00 0xe3 0x04 0x00 0xe4 0x04 0x00 0xe5 0x04 0x00 0xe6 0x04 0x00 0xe7 0x04>;
-		interrupt-names = "eicr0\0eicr1\0eicr2\0eicr3\0eicr4\0eicr5\0eicr6\0eicr7";
-		renesas,mfis-channels = <0x00 0x01 0x02 0x03>;
+		interrupt-names = "eicr0", "eicr1", "eicr2", "eicr3", "eicr4", "eicr5", "eicr6", "eicr7";
+		renesas,mfis-channels = <0 1 2 3>;
 		status = "okay";
 
 		/delete-node/ mfis-as;
 	};
 };
 
+/* Under CR7 control */
 /delete-node/ &i2c0;
 /delete-node/ &fcpvd0;
 /delete-node/ &fcpvd1;
