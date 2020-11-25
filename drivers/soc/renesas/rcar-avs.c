@@ -97,13 +97,15 @@ static int __init rcar_avs_init(void)
 
 	if (IS_ERR(clk)) {
 		pr_err("avs could not get clk\n");
-		return PTR_ERR(clk);
+		ret = PTR_ERR(clk);
+		goto err;
 	}
 
 	advadjp = of_iomap(np, 0); /* ADVADJP register from dts */
 	if (!advadjp) {
 		pr_warn("%s: Cannot map regs\n", np->full_name);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err;
 	}
 
 	/* Get and check avs value */
@@ -127,6 +129,8 @@ static int __init rcar_avs_init(void)
 
 	/* Apply avs value */
 	ret = change_default_opp_pattern(np, avs_val);
+err:
+	of_node_put(np);
 
 	return ret;
 }
