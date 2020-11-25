@@ -163,6 +163,7 @@ static unsigned int renesas_sdhi_clk_update(struct tmio_mmc_host *host,
 static void renesas_sdhi_set_clock(struct tmio_mmc_host *host,
 				   unsigned int new_clock)
 {
+	struct renesas_sdhi *priv = host_to_priv(host);
 	u32 clk = 0, clock;
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
@@ -181,10 +182,12 @@ static void renesas_sdhi_set_clock(struct tmio_mmc_host *host,
 
 	/* 1/1 clock is option */
 	if ((host->pdata->flags & TMIO_MMC_CLK_ACTUAL) && ((clk >> 22) & 0x1)) {
-		if (!(host->mmc->ios.timing == MMC_TIMING_MMC_HS400))
+		if (!(host->mmc->ios.timing == MMC_TIMING_MMC_HS400)) {
 			clk |= 0xff;
-		else
+		} else {
+			clk_set_phase(priv->clk, 1);	/* HS400 */
 			clk &= ~0xff;
+		}
 	}
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, clk & CLK_CTL_DIV_MASK);
@@ -342,6 +345,10 @@ static unsigned int renesas_sdhi_init_tuning(struct tmio_mmc_host *host)
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
 			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
+
+	/* set CDnCKCR */
+	if (host->mmc->ios.timing == MMC_TIMING_MMC_HS200)
+		clk_set_phase(priv->clk, 0);	/* HS200 */
 
 	/* set sampling clock selection range */
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
