@@ -479,7 +479,7 @@ static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 		.data = (void *)(RCKCR_CKSEL),
 	},
 	{
-		.soc_id = "r8a7796", .revision = "ES1.0",
+		.soc_id = "r8a7796", .revision = "ES1.*",
 		.data = (void *)(RCKCR_CKSEL),
 	},
 	{
