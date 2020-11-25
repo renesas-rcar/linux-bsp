@@ -42,6 +42,7 @@ static u32 cpg_quirks;
 #define RCKCR_CKSEL	BIT(1)		/* Manual RCLK parent selection */
 #define SD_SKIP_FIRST	BIT(2)		/* Skip first clock in SD table */
 #define ZG_PARENT_PLL0	BIT(3)		/* Use PLL0 as ZG clock parent */
+#define SD_HS400_4TAP	BIT(4)		/* SDnCKCR 4TAP Setting */
 
 /* PLL0 Clock and PLL2 Clock */
 struct cpg_pll_clk {
@@ -556,23 +557,23 @@ static u32 cpg_mode __initdata;
 static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 	{
 		.soc_id = "r8a7795", .revision = "ES1.0",
-		.data = (void *)(PLL_ERRATA | RCKCR_CKSEL | SD_SKIP_FIRST),
+		.data = (void *)(PLL_ERRATA | RCKCR_CKSEL | SD_HS400_4TAP),
 	},
 	{
 		.soc_id = "r8a7795", .revision = "ES1.*",
-		.data = (void *)(RCKCR_CKSEL | SD_SKIP_FIRST),
+		.data = (void *)(RCKCR_CKSEL | SD_HS400_4TAP),
 	},
 	{
 		.soc_id = "r8a7795", .revision = "ES2.0",
-		.data = (void *)SD_SKIP_FIRST,
+		.data = (void *)SD_HS400_4TAP,
 	},
 	{
 		.soc_id = "r8a7796", .revision = "ES1.0",
-		.data = (void *)(RCKCR_CKSEL | SD_SKIP_FIRST),
+		.data = (void *)(RCKCR_CKSEL | SD_HS400_4TAP),
 	},
 	{
 		.soc_id = "r8a7796", .revision = "ES1.*",
-		.data = (void *)SD_SKIP_FIRST,
+		.data = (void *)SD_HS400_4TAP,
 	},
 	{
 		.soc_id = "r8a77990",
@@ -639,7 +640,8 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 	case CLK_TYPE_GEN3_SD:
 		return cpg_sd_clk_register(core->name, base, core->offset,
 					   __clk_get_name(parent), notifiers,
-					   cpg_quirks & SD_SKIP_FIRST);
+					   cpg_quirks & SD_SKIP_FIRST,
+					   cpg_quirks & SD_HS400_4TAP);
 
 	case CLK_TYPE_GEN3_R:
 		if (cpg_quirks & RCKCR_CKSEL) {
