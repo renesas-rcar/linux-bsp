@@ -90,19 +90,20 @@ struct sd_clock {
 	struct cpg_simple_notifier csn;
 	unsigned int div_num;
 	unsigned int cur_div_idx;
+	bool hs400_4taps;
 };
 
 /* SDn divider
  *           sd_srcfc   sd_fc   div
  * stp_hck   (div)      (div)     = sd_srcfc x sd_fc
  *---------------------------------------------------------
- *  0         0 (1)      1 (4)      4 : SDR104 / HS200 / HS400 (8 TAP)
+ *  0         0 (1)      1 (4)      4 : SDR104 / HS200 / HS400
  *  0         1 (2)      1 (4)      8 : SDR50
  *  1         2 (4)      1 (4)     16 : HS / SDR25
  *  1         3 (8)      1 (4)     32 : NS / SDR12
  *  1         4 (16)     1 (4)     64
  *  0         0 (1)      0 (2)      2
- *  0         1 (2)      0 (2)      4 : SDR104 / HS200 / HS400 (4 TAP)
+ *  0         1 (2)      0 (2)      4
  *  1         2 (4)      0 (2)      8
  *  1         3 (8)      0 (2)     16
  *  1         4 (16)     0 (2)     32
@@ -213,6 +214,30 @@ static int cpg_sd_clock_set_rate(struct clk_hw *hw, unsigned long rate,
 	return 0;
 }
 
+/*
+ * W/A for R-Car Gen3 SDHI
+ * degrees: 0=HS200, 1=HS400
+ */
+static int cpg_sd_clock_set_phase(struct clk_hw *hw, int degrees)
+{
+	struct sd_clock *clock = to_sd_clock(hw);
+	u32 val = clock->div_table[clock->cur_div_idx].val;
+
+	if (!(clock->hs400_4taps))
+		return 0;
+
+	val &= ~CPG_SD_FC_MASK;
+	if (degrees == 1)
+		val |= 0x0004;	/* HS400: SRCFC=1, FC=0 */
+	else
+		val |= 0x0001;	/* HS200: SRCFC=0, FC=1 */
+
+	cpg_reg_modify(clock->csn.reg, CPG_SD_STP_MASK | CPG_SD_FC_MASK,
+		       val & (CPG_SD_STP_MASK | CPG_SD_FC_MASK));
+
+	return 0;
+}
+
 static const struct clk_ops cpg_sd_clock_ops = {
 	.enable = cpg_sd_clock_enable,
 	.disable = cpg_sd_clock_disable,
@@ -220,11 +245,12 @@ static const struct clk_ops cpg_sd_clock_ops = {
 	.recalc_rate = cpg_sd_clock_recalc_rate,
 	.determine_rate = cpg_sd_clock_determine_rate,
 	.set_rate = cpg_sd_clock_set_rate,
+	.set_phase = cpg_sd_clock_set_phase,
 };
 
 struct clk * __init cpg_sd_clk_register(const char *name,
 	void __iomem *base, unsigned int offset, const char *parent_name,
-	struct raw_notifier_head *notifiers, bool skip_first)
+	struct raw_notifier_head *notifiers, bool skip_first, bool hs400_4taps)
 {
 	struct clk_init_data init = {};
 	struct sd_clock *clock;
@@ -250,6 +276,8 @@ struct clk * __init cpg_sd_clk_register(const char *name,
 		clock->div_table++;
 		clock->div_num--;
 	}
+
+	clock->hs400_4taps = hs400_4taps;
 
 	val = readl(clock->csn.reg) & ~CPG_SD_FC_MASK;
 	val |= CPG_SD_STP_MASK | (clock->div_table[0].val & CPG_SD_FC_MASK);
