@@ -40,6 +40,7 @@ static u32 cpg_quirks;
 #define RCKCR_CKSEL		BIT(1)	/* Resverd RCLK clock soruce select */
 #define SD_SKIP_FIRST		BIT(2)  /* Skip first clock in SD table */
 #define ZG_PARENT_PLL0		BIT(3)	/* Use PLL0 as ZG clock parent */
+#define SD_HS400_4TAP		BIT(4)	/* SDnCKCR 4TAP Setting */
 
 static spinlock_t cpg_lock;
 
@@ -535,13 +536,13 @@ struct sd_clock {
  *                     sd_srcfc   sd_fc   div
  * stp_hck   stp_ck    (div)      (div)     = sd_srcfc x sd_fc
  *-------------------------------------------------------------------
- *  0         0         0 (1)      1 (4)      4 : SDR104 / HS200 / HS400 (8 TAP)
+ *  0         0         0 (1)      1 (4)      4 : SDR104 / HS200 / HS400
  *  0         0         1 (2)      1 (4)      8 : SDR50
  *  1         0         2 (4)      1 (4)     16 : HS / SDR25
  *  1         0         3 (8)      1 (4)     32 : NS / SDR12
  *  1         0         4 (16)     1 (4)     64
  *  0         0         0 (1)      0 (2)      2
- *  0         0         1 (2)      0 (2)      4 : SDR104 / HS200 / HS400 (4 TAP)
+ *  0         0         1 (2)      0 (2)      4
  *  1         0         2 (4)      0 (2)      8
  *  1         0         3 (8)      0 (2)     16
  *  1         0         4 (16)     0 (2)     32
@@ -652,6 +653,30 @@ static int cpg_sd_clock_set_rate(struct clk_hw *hw, unsigned long rate,
 	return 0;
 }
 
+/*
+ * W/A for R-Car Gen3 SDHI
+ * degrees: 0=HS200, 1=HS400
+ */
+static int cpg_sd_clock_set_phase(struct clk_hw *hw, int degrees)
+{
+	struct sd_clock *clock = to_sd_clock(hw);
+	u32 val = clock->div_table[clock->cur_div_idx].val;
+
+	if (!(cpg_quirks & SD_HS400_4TAP))
+		return 0;
+
+	val &= ~CPG_SD_FC_MASK;
+	if (degrees == 1)
+		val |= 0x0004;	/* HS400: SRCFC=1, FC=0 */
+	else
+		val |= 0x0001;	/* HS200: SRCFC=0, FC=1 */
+
+	cpg_reg_modify(clock->csn.reg, CPG_SD_STP_MASK | CPG_SD_FC_MASK,
+		       val & (CPG_SD_STP_MASK | CPG_SD_FC_MASK));
+
+	return 0;
+}
+
 static const struct clk_ops cpg_sd_clock_ops = {
 	.enable = cpg_sd_clock_enable,
 	.disable = cpg_sd_clock_disable,
@@ -659,6 +684,7 @@ static const struct clk_ops cpg_sd_clock_ops = {
 	.recalc_rate = cpg_sd_clock_recalc_rate,
 	.round_rate = cpg_sd_clock_round_rate,
 	.set_rate = cpg_sd_clock_set_rate,
+	.set_phase = cpg_sd_clock_set_phase,
 };
 
 static struct clk * __init cpg_sd_clk_register(const char *name,
@@ -802,23 +828,23 @@ static u32 cpg_mode __initdata;
 static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 	{
 		.soc_id = "r8a7795", .revision = "ES1.0",
-		.data = (void *)(PLL_ERRATA | RCKCR_CKSEL | SD_SKIP_FIRST),
+		.data = (void *)(PLL_ERRATA | RCKCR_CKSEL | SD_HS400_4TAP),
 	},
 	{
 		.soc_id = "r8a7795", .revision = "ES1.*",
-		.data = (void *)(RCKCR_CKSEL | SD_SKIP_FIRST),
+		.data = (void *)(RCKCR_CKSEL | SD_HS400_4TAP),
 	},
 	{
 		.soc_id = "r8a7795", .revision = "ES2.0",
-		.data = (void *)SD_SKIP_FIRST,
+		.data = (void *)SD_HS400_4TAP,
 	},
 	{
 		.soc_id = "r8a7796", .revision = "ES1.0",
-		.data = (void *)(RCKCR_CKSEL | SD_SKIP_FIRST),
+		.data = (void *)(RCKCR_CKSEL | SD_HS400_4TAP),
 	},
 	{
 		.soc_id = "r8a7796", .revision = "ES1.*",
-		.data = (void *)SD_SKIP_FIRST,
+		.data = (void *)SD_HS400_4TAP,
 	},
 	{
 		.soc_id = "r8a77990",
