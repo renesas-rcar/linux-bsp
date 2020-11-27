@@ -697,8 +697,8 @@ static void cc_setup_secure_key_readiv_desc(struct crypto_tfm *tfm,
 	set_cipher_config0(&desc[*seq_size], direction);
 	set_flow_mode(&desc[*seq_size], flow_mode);
 	set_cipher_mode(&desc[*seq_size], cipher_mode);
-	if ((flow_mode == S_DIN_to_AES) &&
-		(cipher_mode == DRV_SECURE_KEY_CIPHER_CTR)) {
+	if ((cipher_mode == DRV_SECURE_KEY_CIPHER_CTR) &&
+				(flow_mode == S_AES_to_DOUT)) {
 		set_setup_mode(&desc[*seq_size], SETUP_WRITE_STATE1);
 	} else {
 		set_setup_mode(&desc[*seq_size], SETUP_WRITE_STATE0);
