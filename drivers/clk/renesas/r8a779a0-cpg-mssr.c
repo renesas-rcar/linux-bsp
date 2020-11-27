@@ -228,6 +228,7 @@ static const struct mssr_mod_clk r8a779a0_mod_clks[] __initconst = {
 	DEF_MOD("ispcs2",		 614,	R8A779A0_CLK_S1D1),
 	DEF_MOD("ispcs3",		 615,	R8A779A0_CLK_S1D1),
 	DEF_MOD("ivcp1e",		 616,	R8A779A0_CLK_S1D1),
+	DEF_MOD("mfis",		 	 617,	R8A779A0_CLK_S1D4),
 	DEF_MOD("msi0",			 618,	R8A779A0_CLK_MSO),
 	DEF_MOD("msi1",			 619,	R8A779A0_CLK_MSO),
 	DEF_MOD("msi2",			 620,	R8A779A0_CLK_MSO),
