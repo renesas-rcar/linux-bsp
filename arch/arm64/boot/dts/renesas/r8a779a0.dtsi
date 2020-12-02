@@ -3011,7 +3011,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "ivcp1e_00_00";
-			ipmmu-id = <RCAR_IPMMU_VC0>;
+			ipmmu-id = <RCAR_IPMMU_VC0 14>;
 		};
 
 		ivcp1e_00_01 {
@@ -3021,7 +3021,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			interrupts = <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "ivcp1e_00_01";
-			ipmmu-id = <RCAR_IPMMU_VC0>;
+			ipmmu-id = <RCAR_IPMMU_VC0 14>;
 		};
 
 		isp0: isp@fed00000 {
