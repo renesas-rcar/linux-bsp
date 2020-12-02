@@ -2715,7 +2715,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 529>;
 			linux,uio-name = "ims_00";
-			ipmmu-id = <RCAR_IPMMU_VC0>;
+			ipmmu-id = <RCAR_IPMMU_VC0 8>;
 		};
 
 		imrlx4_ims1: ims@fe870000 {
@@ -2726,7 +2726,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 530>;
 			linux,uio-name = "ims_01";
-			ipmmu-id = <RCAR_IPMMU_VC0>;
+			ipmmu-id = <RCAR_IPMMU_VC0 9>;
 		};
 
 		imrlx4_imr0: imr@fe880000 {
@@ -2737,7 +2737,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 525>;
 			linux,uio-name = "imr_00";
-			ipmmu-id = <RCAR_IPMMU_VC0>;
+			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
 		imrlx4_imr1: imr@fe890000 {
@@ -2748,7 +2748,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 526>;
 			linux,uio-name = "imr_01";
-			ipmmu-id = <RCAR_IPMMU_VC0>;
+			ipmmu-id = <RCAR_IPMMU_VC0 1>;
 		};
 
 		imrlx4_imr2: imr@fe8a0000 {
@@ -2759,7 +2759,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 527>;
 			linux,uio-name = "imr_02";
-			ipmmu-id = <RCAR_IPMMU_VC0>;
+			ipmmu-id = <RCAR_IPMMU_VC0 2>;
 		};
 
 		imrlx4_imr3: imr@fe8b0000 {
@@ -2770,7 +2770,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 528>;
 			linux,uio-name = "imr_03";
-			ipmmu-id = <RCAR_IPMMU_VC0>;
+			ipmmu-id = <RCAR_IPMMU_VC0 3>;
 		};
 
 		fcpvd0: fcp@fea10000 {
