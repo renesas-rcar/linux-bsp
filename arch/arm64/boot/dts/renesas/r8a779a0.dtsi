@@ -2985,7 +2985,7 @@
 			resets = <&cpg 612>;
 			status = "disabled";
 			linux,uio-name = "tisp_00";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -3070,7 +3070,7 @@
 			resets = <&cpg 613>;
 			status = "disabled";
 			linux,uio-name = "tisp_01";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -3155,7 +3155,8 @@
 			resets = <&cpg 614>;
 			status = "disabled";
 			linux,uio-name = "tisp_02";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -3239,7 +3240,7 @@
 			resets = <&cpg 615>;
 			status = "disabled";
 			linux,uio-name = "tisp_03";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -3323,6 +3324,7 @@
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 16>;
 			linux,uio-name = "cisp_00";
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		cisp1: cisp@fee00000 {
@@ -3333,7 +3335,7 @@
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 17>;
 			linux,uio-name = "cisp_01";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		cisp2: cisp@fef00000 {
@@ -3344,7 +3346,7 @@
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 18>;
 			linux,uio-name = "cisp_02";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		cisp3: cisp@fe400000 {
@@ -3355,7 +3357,7 @@
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 19>;
 			linux,uio-name = "cisp_03";
-			ipmmu-id = <RCAR_IPMMU_VI0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		impldma: dma-controller@f1f00000 {
