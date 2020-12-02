@@ -111,6 +111,8 @@ struct rcar_du_device {
 	unsigned int vspd1_sink;
 	bool vspdl_fix;
 	unsigned int brs_num;
+
+	bool mode_config_initialized;
 };
 
 static inline bool rcar_du_has(struct rcar_du_device *rcdu,
