@@ -3235,7 +3235,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
 			resets = <&cpg 24>;
 			linux,uio-name = "imp_imp_00";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp1: imp-core@ffa20000 {
@@ -3245,7 +3245,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
 			resets = <&cpg 25>;
 			linux,uio-name = "imp_imp_01";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp2: imp-core@ffb00000 {
@@ -3255,7 +3255,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
 			resets = <&cpg 103>;
 			linux,uio-name = "imp_imp_02";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imp3: imp-core@ffb20000 {
@@ -3265,7 +3265,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
 			resets = <&cpg 104>;
 			linux,uio-name = "imp_imp_03";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcve0: imp-cve@ffa40000 {
@@ -3275,7 +3275,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2CV0>;
 			resets = <&cpg 28>;
 			linux,uio-name = "imp_cve_00";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcve1: imp-cve@ffa50000 {
@@ -3285,7 +3285,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2CV1>;
 			resets = <&cpg 29>;
 			linux,uio-name = "imp_cve_01";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcve2: imp-cve@ffb40000 {
@@ -3295,7 +3295,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2CV2>;
 			resets = <&cpg 30>;
 			linux,uio-name = "imp_cve_02";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcve3: imp-cve@ffb50000 {
@@ -3305,7 +3305,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2CV3>;
 			resets = <&cpg 31>;
 			linux,uio-name = "imp_cve_03";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcve4: imp-cve@ffa60000 {
@@ -3315,7 +3315,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2CV4>;
 			resets = <&cpg 100>;
 			linux,uio-name = "imp_cve_04";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcve5: imp-cve@ffb60000 {
@@ -3325,7 +3325,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2CV5>;
 			resets = <&cpg 107>;
 			linux,uio-name = "imp_cve_05";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcve6: imp-cve@ffa70000 {
@@ -3335,7 +3335,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2CV6>;
 			resets = <&cpg 313>;
 			linux,uio-name = "imp_cve_06";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcve7: imp-cve@ffb70000 {
@@ -3345,7 +3345,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2CV7>;
 			resets = <&cpg 314>;
 			linux,uio-name = "imp_cve_07";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impdma00: dma-controller@ffa80000 {
@@ -3355,7 +3355,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
 			resets = <&cpg 26>;
 			linux,uio-name = "imp_dma_00_00";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impdma01: dma-controller@ffa81000 {
@@ -3365,7 +3365,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
 			resets = <&cpg 26>;
 			linux,uio-name = "imp_dma_00_01";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impdma10: dma-controller@ffb80000 {
@@ -3375,7 +3375,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
 			resets = <&cpg 105>;
 			linux,uio-name = "imp_dma_01_00";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impdma11: dma-controller@ffb81000 {
@@ -3385,7 +3385,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
 			resets = <&cpg 105>;
 			linux,uio-name = "imp_dma_01_01";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imppsc0: imp-psc@ffa84000 {
@@ -3395,7 +3395,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
 			resets = <&cpg 27>;
 			linux,uio-name = "imp_psc_00";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		imppsc1: imp-psc@ffb84000 {
@@ -3405,7 +3405,7 @@
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
 			resets = <&cpg 106>;
 			linux,uio-name = "imp_psc_01";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcnn0: imp-cnn@ffaa0000 {
@@ -3415,7 +3415,7 @@
 			power-domains = <&sysc R8A779A0_PD_A1CNN0>;
 			resets = <&cpg 22>;
 			linux,uio-name = "imp_cnn_00";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcnn1: imp-cnn@ffbc0000 {
@@ -3425,7 +3425,7 @@
 			power-domains = <&sysc R8A779A0_PD_A1CNN1>;
 			resets = <&cpg 108>;
 			linux,uio-name = "imp_cnn_01";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impcnn2: imp-cnn@ffac0000 {
@@ -3435,7 +3435,7 @@
 			power-domains = <&sysc R8A779A0_PD_A1CNN2>;
 			resets = <&cpg 101>;
 			linux,uio-name = "imp_cnn_02";
-			ipmmu-id = <RCAR_IPMMU_IR>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
 		impspmi0_mem: imp-ram@ed300000 {
