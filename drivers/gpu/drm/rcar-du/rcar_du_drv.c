@@ -675,6 +675,9 @@ static int rcar_du_remove(struct platform_device *pdev)
 	struct rcar_du_device *rcdu = platform_get_drvdata(pdev);
 	struct drm_device *ddev = &rcdu->ddev;
 
+	if (rcdu->mode_config_initialized)
+		drm_atomic_helper_shutdown(ddev);
+
 	drm_dev_unregister(ddev);
 	drm_atomic_helper_shutdown(ddev);
 
@@ -748,6 +751,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 	DRM_INFO("Device %s probed\n", dev_name(&pdev->dev));
 
 	drm_fbdev_generic_setup(&rcdu->ddev, 32);
+	rcdu->mode_config_initialized = true;
 
 	return 0;
 
