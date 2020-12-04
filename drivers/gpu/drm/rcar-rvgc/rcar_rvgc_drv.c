@@ -9,6 +9,8 @@
  * (at your option) any later version.
  */
 
+//#define DEBUG
+
 #include <linux/device.h>
 #include <linux/mm.h>
 #include <linux/module.h>
@@ -29,25 +31,28 @@
 #include <linux/of_reserved_mem.h>
 #include "r_taurus_rvgc_protocol.h"
 
-#define RCAR_RVGC_DRM_NAME     "rcar-du"
+#pragma GCC optimize ("-Og")
 
+//#define RCAR_RVGC_DRM_NAME     "rcar-rvgc"
+#define RCAR_RVGC_DRM_NAME     "rcar-du"
+static bool update_primary_plane = 1;
+module_param(update_primary_plane, bool, 0);
 
 /* -----------------------------------------------------------------------------
  * RPMSG operations
  */
 
-static int rcar_rvgc_cb(struct rpmsg_device *rpdev, void *data, int len,
-			void *priv, u32 src)
-{
-	struct rcar_rvgc_device *rcrvgc = dev_get_drvdata(&rpdev->dev);
-	struct taurus_event_list *event;
-	struct list_head *i;
-	struct taurus_rvgc_res_msg *res = (struct taurus_rvgc_res_msg*)data;
+static int rcar_rvgc_cb(struct rpmsg_device* rpdev, void* data, int len,
+			void* priv, u32 src) {
+	struct rcar_rvgc_device* rcrvgc = dev_get_drvdata(&rpdev->dev);
+	struct taurus_event_list* event;
+	struct list_head* i;
+	struct taurus_rvgc_res_msg* res = (struct taurus_rvgc_res_msg*)data;
 	uint32_t res_id = res->hdr.Id;
 
 	dev_dbg(&rpdev->dev, "%s():%d\n", __FUNCTION__, __LINE__);
 
-	if ((res->hdr.Result == R_TAURUS_CMD_NOP) && (res_id ==0)) {
+	if ((res->hdr.Result == R_TAURUS_CMD_NOP) && (res_id == 0)) {
 		/* This is an asynchronous signal sent from the
 		 * peripheral, and not an answer of a previously sent
 		 * command. Just process the signal and return.*/
@@ -55,21 +60,21 @@ static int rcar_rvgc_cb(struct rpmsg_device *rpdev, void *data, int len,
 		dev_dbg(&rpdev->dev, "Signal received! Aux = %llx\n", res->hdr.Aux);
 
 		switch (res->hdr.Aux) {
-		case RVGC_PROTOCOL_EVENT_VBLANK_DISPLAY0:
-			set_bit(0, (long unsigned int*) &rcrvgc->vblank_pending);
-			break;
-		case RVGC_PROTOCOL_EVENT_VBLANK_DISPLAY1:
-			set_bit(1, (long unsigned int*) &rcrvgc->vblank_pending);
-			break;
-		case RVGC_PROTOCOL_EVENT_VBLANK_DISPLAY2:
-			set_bit(2, (long unsigned int*) &rcrvgc->vblank_pending);
-			break;
-		case RVGC_PROTOCOL_EVENT_VBLANK_DISPLAY3:
-			set_bit(3, (long unsigned int*) &rcrvgc->vblank_pending);
-			break;
-		default:
-			/* event not recognized */
-			return 0;
+		  case RVGC_PROTOCOL_EVENT_VBLANK_DISPLAY0:
+			  set_bit(0, (long unsigned int*)&rcrvgc->vblank_pending);
+			  break;
+		  case RVGC_PROTOCOL_EVENT_VBLANK_DISPLAY1:
+			  set_bit(1, (long unsigned int*)&rcrvgc->vblank_pending);
+			  break;
+		  case RVGC_PROTOCOL_EVENT_VBLANK_DISPLAY2:
+			  set_bit(2, (long unsigned int*)&rcrvgc->vblank_pending);
+			  break;
+		  case RVGC_PROTOCOL_EVENT_VBLANK_DISPLAY3:
+			  set_bit(3, (long unsigned int*)&rcrvgc->vblank_pending);
+			  break;
+		  default:
+			  /* event not recognized */
+			  return 0;
 		}
 
 		wake_up_interruptible(&rcrvgc->vblank_pending_wait_queue);
@@ -86,7 +91,7 @@ static int rcar_rvgc_cb(struct rpmsg_device *rpdev, void *data, int len,
 
 			memcpy(event->result, data, len);
 
-			if(event->ack_received) {
+			if (event->ack_received) {
 				complete(&event->completed);
 			} else {
 				event->ack_received = 1;
@@ -105,16 +110,14 @@ static int rcar_rvgc_cb(struct rpmsg_device *rpdev, void *data, int len,
  * DRM operations
  */
 
-static void rcar_rvgc_lastclose(struct drm_device *dev)
-{
-	struct rcar_rvgc_device *rcrvgc = dev->dev_private;
+static void rcar_rvgc_lastclose(struct drm_device* dev) {
+	struct rcar_rvgc_device* rcrvgc = dev->dev_private;
 
 	drm_fbdev_cma_restore_mode(rcrvgc->fbdev);
 }
 
-static int rcar_rvgc_dumb_create(struct drm_file *file, struct drm_device *dev,
-				struct drm_mode_create_dumb *args)
-{
+static int rcar_rvgc_dumb_create(struct drm_file* file, struct drm_device* dev,
+				 struct drm_mode_create_dumb* args) {
 	unsigned int min_pitch = DIV_ROUND_UP(args->width * args->bpp, 8);
 	unsigned int align;
 
@@ -129,7 +132,7 @@ DEFINE_DRM_GEM_CMA_FOPS(rcar_rvgc_fops);
 
 static struct drm_driver rcar_rvgc_driver = {
 	.driver_features	= DRIVER_GEM | DRIVER_MODESET | DRIVER_PRIME
-				| DRIVER_ATOMIC,
+	| DRIVER_ATOMIC,
 	.gem_free_object_unlocked = drm_gem_cma_free_object,
 	.gem_vm_ops		= &drm_gem_cma_vm_ops,
 	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
@@ -149,8 +152,6 @@ static struct drm_driver rcar_rvgc_driver = {
 	.date			= "20190408",
 	.fops			= &rcar_rvgc_fops,
 	.lastclose		= rcar_rvgc_lastclose,
-	.enable_vblank		= rcar_rvgc_crtc_enable_vblank,
-	.disable_vblank		= rcar_rvgc_crtc_disable_vblank,
 };
 
 
@@ -158,12 +159,11 @@ static struct drm_driver rcar_rvgc_driver = {
  * Platform driver
  */
 
-static void rcar_rvgc_remove(struct rpmsg_device *rpdev)
-{
-	struct rcar_rvgc_device *rcrvgc = dev_get_drvdata(&rpdev->dev);
-	struct drm_device *ddev = rcrvgc->ddev;
+static void rcar_rvgc_remove(struct rpmsg_device* rpdev) {
+	struct rcar_rvgc_device* rcrvgc = dev_get_drvdata(&rpdev->dev);
+	struct drm_device* ddev = rcrvgc->ddev;
 
-	if (!rcrvgc->vsync_thread) 
+	if (!rcrvgc->vsync_thread)
 		dev_warn(rcrvgc->dev, "vsync_thread is not running\n");
 	else
 		kthread_stop(rcrvgc->vsync_thread);
@@ -177,15 +177,13 @@ static void rcar_rvgc_remove(struct rpmsg_device *rpdev)
 		drm_mode_config_cleanup(ddev);
 		drm_dev_unref(ddev);
 	}
-
 	return;
 }
 
-static int rcar_rvgc_probe(struct rpmsg_device *rpdev)
-{
-	struct rcar_rvgc_device *rcrvgc;
-	struct drm_device *ddev;
-	struct device_node *rvgc_node;
+static int rcar_rvgc_probe(struct rpmsg_device* rpdev) {
+	struct rcar_rvgc_device* rcrvgc;
+	struct drm_device* ddev;
+	struct device_node* rvgc_node;
 	int ret = 0;
 
 	printk(KERN_ERR "%s():%d\n", __FUNCTION__, __LINE__);
@@ -196,10 +194,12 @@ static int rcar_rvgc_probe(struct rpmsg_device *rpdev)
 		return -ENOMEM;
 
 	dev_set_drvdata(&rpdev->dev, rcrvgc);
+	rcrvgc->update_primary_plane = update_primary_plane;
 
 	/* Save a link to struct device and struct rpmsg_device */
 	rcrvgc->dev = &rpdev->dev;
 	rcrvgc->rpdev = rpdev;
+	/* TODO: store update_primary_plane parameter in driver struct */
 
 	/* Initialize vblank_pending state */
 	rcrvgc->vblank_pending = 0;
@@ -264,7 +264,7 @@ static int rcar_rvgc_probe(struct rpmsg_device *rpdev)
 
 	return 0;
 
-error:
+ error:
 	rcar_rvgc_remove(rpdev);
 
 	return ret;
