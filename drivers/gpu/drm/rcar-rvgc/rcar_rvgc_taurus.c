@@ -10,18 +10,16 @@
 
 static atomic_t rpmsg_id_counter = ATOMIC_INIT(0);
 
-static int rvgc_taurus_get_uniq_id(void)
-{
+static int rvgc_taurus_get_uniq_id(void) {
 	return atomic_inc_return(&rpmsg_id_counter);
 }
 
-static int rvgc_taurus_send_command(struct rcar_rvgc_device *rcrvgc,
-				struct taurus_rvgc_cmd_msg *cmd_msg,
-				struct taurus_rvgc_res_msg *res_msg)
-{
-	struct taurus_event_list *event;
-	struct rpmsg_device *rpdev = rcrvgc->rpdev;
-	struct device *dev = rcrvgc->dev;
+static int rvgc_taurus_send_command(struct rcar_rvgc_device* rcrvgc,
+				    struct taurus_rvgc_cmd_msg* cmd_msg,
+				    struct taurus_rvgc_res_msg* res_msg) {
+	struct taurus_event_list* event;
+	struct rpmsg_device* rpdev = rcrvgc->rpdev;
+	struct device* dev = rcrvgc->dev;
 	int ret = 0;
 
 	event = devm_kzalloc(dev, sizeof(*event), GFP_KERNEL);
@@ -75,24 +73,54 @@ static int rvgc_taurus_send_command(struct rcar_rvgc_device *rcrvgc,
 
 	memcpy(res_msg, event->result, sizeof(struct taurus_rvgc_res_msg));
 
-cleanup_3:
+ cleanup_3:
 	write_lock(&rcrvgc->event_list_lock);
 	list_del(&event->list);
 	write_unlock(&rcrvgc->event_list_lock);
 	devm_kfree(&rpdev->dev, event->result);
-cleanup_2:
+ cleanup_2:
 	devm_kfree(&rpdev->dev, event);
-cleanup_1:
+ cleanup_1:
 	return ret;
 }
 
-int rvgc_taurus_display_init(struct rcar_rvgc_device *rcrvgc,
-			uint32_t display,
-			uint32_t layer,
-			struct taurus_rvgc_res_msg *res_msg)
-{
+int rvgc_taurus_plane_reserve(struct rcar_rvgc_device* rcrvgc,
+			      uint32_t display,
+			      uint32_t layer,
+			      struct taurus_rvgc_res_msg* res_msg) {
 	struct taurus_rvgc_cmd_msg cmd_msg;
 	int ret;
+
+	if (!res_msg)
+		return -EINVAL;
+
+	cmd_msg.hdr.Id = rvgc_taurus_get_uniq_id();
+	cmd_msg.hdr.Channel = RVGC_TAURUS_CHANNEL;
+	cmd_msg.hdr.Cmd = R_TAURUS_CMD_IOCTL;
+	cmd_msg.hdr.Par1 = RVGC_PROTOCOL_IOC_LAYER_RESERVE;
+	cmd_msg.type = RVGC_PROTOCOL_IOC_LAYER_RESERVE;
+	cmd_msg.params.ioc_layer_reserve.cookie = cmd_msg.hdr.Id;
+	cmd_msg.params.ioc_layer_reserve.display = display;
+	cmd_msg.params.ioc_layer_reserve.layer = layer;
+
+	ret = rvgc_taurus_send_command(rcrvgc, &cmd_msg, res_msg);
+	if (ret)
+		return -EPIPE;
+
+	if ((res_msg->hdr.Result != R_TAURUS_RES_COMPLETE) ||
+	    (res_msg->params.ioc_layer_reserve.res != 0)) {
+		return -EIO;
+	}
+
+	return 0;
+}
+
+
+int rvgc_taurus_display_init(struct rcar_rvgc_device* rcrvgc,
+			     uint32_t display,
+			     struct taurus_rvgc_res_msg* res_msg) {
+	struct taurus_rvgc_cmd_msg cmd_msg;
+	int ret = 0;
 
 	if (!res_msg)
 		return -EINVAL;
@@ -110,35 +138,15 @@ int rvgc_taurus_display_init(struct rcar_rvgc_device *rcrvgc,
 		return -EPIPE;
 
 	if ((res_msg->hdr.Result != R_TAURUS_RES_COMPLETE) ||
-		(res_msg->params.ioc_display_init.res != 0)) {
+	    (res_msg->params.ioc_display_init.res != 0)) {
 		return -EIO;
 	}
-
-	cmd_msg.hdr.Id = rvgc_taurus_get_uniq_id();
-	cmd_msg.hdr.Channel = RVGC_TAURUS_CHANNEL;
-	cmd_msg.hdr.Cmd = R_TAURUS_CMD_IOCTL;
-	cmd_msg.hdr.Par1 = RVGC_PROTOCOL_IOC_LAYER_RESERVE;
-	cmd_msg.type = RVGC_PROTOCOL_IOC_LAYER_RESERVE;
-	cmd_msg.params.ioc_layer_reserve.cookie = cmd_msg.hdr.Id;
-	cmd_msg.params.ioc_layer_reserve.display = display;
-	cmd_msg.params.ioc_layer_reserve.layer = layer;
-
-	ret = rvgc_taurus_send_command(rcrvgc, &cmd_msg, res_msg);
-	if (ret)
-		return -EPIPE;
-
-	if ((res_msg->hdr.Result != R_TAURUS_RES_COMPLETE) ||
-		(res_msg->params.ioc_layer_reserve.res != 0)) {
-		return -EIO;
-	}
-
-	return 0;
+	return ret;
 }
 
-int rvgc_taurus_display_get_info(struct rcar_rvgc_device *rcrvgc,
-				uint32_t display,
-				struct taurus_rvgc_res_msg *res_msg)
-{
+int rvgc_taurus_display_get_info(struct rcar_rvgc_device* rcrvgc,
+				 uint32_t display,
+				 struct taurus_rvgc_res_msg* res_msg) {
 	struct taurus_rvgc_cmd_msg cmd_msg;
 	int ret;
 
@@ -158,18 +166,17 @@ int rvgc_taurus_display_get_info(struct rcar_rvgc_device *rcrvgc,
 		return -EPIPE;
 
 	if ((res_msg->hdr.Result != R_TAURUS_RES_COMPLETE) ||
-		(res_msg->params.ioc_display_get_info.res != 0)) {
+	    (res_msg->params.ioc_display_get_info.res != 0)) {
 		return -EIO;
 	}
 
 	return 0;
 }
 
-int rvgc_taurus_display_flush(struct rcar_rvgc_device *rcrvgc,
-			uint32_t display,
-			uint32_t blocking,
-			struct taurus_rvgc_res_msg *res_msg)
-{
+int rvgc_taurus_display_flush(struct rcar_rvgc_device* rcrvgc,
+			      uint32_t display,
+			      uint32_t blocking,
+			      struct taurus_rvgc_res_msg* res_msg) {
 	struct taurus_rvgc_cmd_msg cmd_msg;
 	int ret;
 
@@ -190,20 +197,19 @@ int rvgc_taurus_display_flush(struct rcar_rvgc_device *rcrvgc,
 		return -EPIPE;
 
 	if ((res_msg->hdr.Result != R_TAURUS_RES_COMPLETE) ||
-		(res_msg->params.ioc_display_flush.res != 0)) {
+	    (res_msg->params.ioc_display_flush.res != 0)) {
 		return -EIO;
 	}
 
 	return 0;
 }
 
-int rvgc_taurus_layer_set_size(struct rcar_rvgc_device *rcrvgc,
-			uint32_t display,
-			uint32_t layer,
-			uint32_t width,
-			uint32_t height,
-			struct taurus_rvgc_res_msg *res_msg)
-{
+int rvgc_taurus_layer_set_size(struct rcar_rvgc_device* rcrvgc,
+			       uint32_t display,
+			       uint32_t layer,
+			       uint32_t width,
+			       uint32_t height,
+			       struct taurus_rvgc_res_msg* res_msg) {
 	struct taurus_rvgc_cmd_msg cmd_msg;
 	int ret;
 
@@ -226,19 +232,53 @@ int rvgc_taurus_layer_set_size(struct rcar_rvgc_device *rcrvgc,
 		return -EPIPE;
 
 	if ((res_msg->hdr.Result != R_TAURUS_RES_COMPLETE) ||
-		(res_msg->params.ioc_layer_set_size.res != 0)) {
+	    (res_msg->params.ioc_layer_set_size.res != 0)) {
 		return -EIO;
 	}
 
 	return 0;
 }
 
-int rvgc_taurus_layer_set_addr(struct rcar_rvgc_device *rcrvgc,
-			uint32_t display,
-			uint32_t layer,
-			uint32_t paddr,
-			struct taurus_rvgc_res_msg *res_msg)
-{
+int rvgc_taurus_layer_set_pos(struct rcar_rvgc_device* rcrvgc,
+			      uint32_t display,
+			      uint32_t layer,
+			      uint32_t pos_x,
+			      uint32_t pos_y,
+			      struct taurus_rvgc_res_msg* res_msg) {
+	struct taurus_rvgc_cmd_msg cmd_msg;
+	int ret;
+
+	if (!res_msg)
+		return -EINVAL;
+
+	cmd_msg.hdr.Id = rvgc_taurus_get_uniq_id();
+	cmd_msg.hdr.Channel = RVGC_TAURUS_CHANNEL;
+	cmd_msg.hdr.Cmd = R_TAURUS_CMD_IOCTL;
+	cmd_msg.hdr.Par1 = RVGC_PROTOCOL_IOC_LAYER_SET_POS;
+	cmd_msg.type = RVGC_PROTOCOL_IOC_LAYER_SET_POS;
+	cmd_msg.params.ioc_layer_set_pos.cookie =  cmd_msg.hdr.Id;
+	cmd_msg.params.ioc_layer_set_pos.display = display;
+	cmd_msg.params.ioc_layer_set_pos.layer = layer;
+	cmd_msg.params.ioc_layer_set_pos.pos_x = pos_x;
+	cmd_msg.params.ioc_layer_set_pos.pos_y = pos_y;
+
+	ret = rvgc_taurus_send_command(rcrvgc, &cmd_msg, res_msg);
+	if (ret)
+		return -EPIPE;
+
+	if ((res_msg->hdr.Result != R_TAURUS_RES_COMPLETE) ||
+	    (res_msg->params.ioc_layer_set_pos.res != 0)) {
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int rvgc_taurus_layer_set_addr(struct rcar_rvgc_device* rcrvgc,
+			       uint32_t display,
+			       uint32_t layer,
+			       uint32_t paddr,
+			       struct taurus_rvgc_res_msg* res_msg) {
 	struct taurus_rvgc_cmd_msg cmd_msg;
 	int ret;
 
@@ -260,7 +300,38 @@ int rvgc_taurus_layer_set_addr(struct rcar_rvgc_device *rcrvgc,
 		return -EPIPE;
 
 	if ((res_msg->hdr.Result != R_TAURUS_RES_COMPLETE) ||
-		(res_msg->params.ioc_layer_set_addr.res != 0)) {
+	    (res_msg->params.ioc_layer_set_addr.res != 0)) {
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int rvgc_taurus_layer_release(struct rcar_rvgc_device* rcrvgc,
+			      uint32_t display,
+			      uint32_t layer,
+			      struct taurus_rvgc_res_msg* res_msg) {
+	struct taurus_rvgc_cmd_msg cmd_msg;
+	int ret;
+
+	if (!res_msg)
+		return -EINVAL;
+
+	cmd_msg.hdr.Id = rvgc_taurus_get_uniq_id();
+	cmd_msg.hdr.Channel = RVGC_TAURUS_CHANNEL;
+	cmd_msg.hdr.Cmd = R_TAURUS_CMD_IOCTL;
+	cmd_msg.hdr.Par1 = RVGC_PROTOCOL_IOC_LAYER_RELEASE;
+	cmd_msg.type = RVGC_PROTOCOL_IOC_LAYER_RELEASE;
+	cmd_msg.params.ioc_layer_release.cookie =  cmd_msg.hdr.Id;
+	cmd_msg.params.ioc_layer_release.display = display;
+	cmd_msg.params.ioc_layer_release.layer = layer;
+
+	ret = rvgc_taurus_send_command(rcrvgc, &cmd_msg, res_msg);
+	if (ret)
+		return -EPIPE;
+
+	if ((res_msg->hdr.Result != R_TAURUS_RES_COMPLETE) ||
+	    (res_msg->params.ioc_layer_release.res != 0)) {
 		return -EIO;
 	}
 

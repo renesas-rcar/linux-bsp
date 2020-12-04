@@ -3,7 +3,8 @@
 #define R_TAURUS_BRIDGE_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /* This is file defines the basic command protocol between TAURUS and its guest.
@@ -31,25 +32,25 @@ extern "C" {
 #include <stdint.h>
 #endif
 
-    
+
 /*******************************************************************************
   Section: Global Defines
 */
 
 
 /* TAURUS command identifier */
-    
+
 #define R_TAURUS_CMD_NOP           0
 #define R_TAURUS_CMD_OPEN          1
 #define R_TAURUS_CMD_CLOSE         2
-#define R_TAURUS_CMD_READ          3 
+#define R_TAURUS_CMD_READ          3
 #define R_TAURUS_CMD_WRITE         4
 #define R_TAURUS_CMD_IOCTL         5
 #define R_TAURUS_CMD_STATUS        6
 #define R_TAURUS_CMD_EXIT          7
 
 /* TAURUS command result values */
-   
+
 #define R_TAURUS_RES_ACK           0
 #define R_TAURUS_RES_NACK          1
 #define R_TAURUS_RES_COMPLETE      2
@@ -62,8 +63,8 @@ extern "C" {
 #define R_TAURUS_SIG_FATAL_ERROR   0x30     /* TAURUS detected a fatal problem and does not work reliable */
 #define R_TAURUS_SIG_REBOOTING     0x40     /* TAURUS will reboot */
 #define R_TAURUS_SIG_REBOOT        0x50     /* TAURUS asks the guest to reboot */
-#define R_TAURUS_SIG_RESET         0x60     /* TAURUS will reset the entire system including the guest */    
-    
+#define R_TAURUS_SIG_RESET         0x60     /* TAURUS will reset the entire system including the guest */
+
 
 /*******************************************************************************
   Section: Global Types
@@ -83,15 +84,15 @@ extern "C" {
   Par2          - Auxiliary parameter, typically size
   Par3          - Auxiliary parameter
 */
-    
+
 typedef struct {
-    uint32_t          Id;
-    uint32_t          Per;
-    uint32_t          Channel;
-    uint32_t          Cmd;
-    uint64_t          Par1;
-    uint64_t          Par2;
-    uint64_t          Par3;
+	uint32_t          Id;
+	uint32_t          Per;
+	uint32_t          Channel;
+	uint32_t          Cmd;
+	uint64_t          Par1;
+	uint64_t          Par2;
+	uint64_t          Par3;
 } R_TAURUS_CmdMsg_t;
 
 
@@ -106,13 +107,13 @@ typedef struct {
   Result        - Result (ACK, NAK, COMP, ERR)
   Aux           - Auxiliary result parameter (e.g. written data lentgh)
 */
-    
+
 typedef struct {
-    uint32_t        Id;
-    uint32_t        Per;
-    uint32_t        Channel;
-    uint32_t        Result;
-    uint64_t        Aux;
+	uint32_t        Id;
+	uint32_t        Per;
+	uint32_t        Channel;
+	uint32_t        Result;
+	uint64_t        Aux;
 } R_TAURUS_ResultMsg_t;
 
 

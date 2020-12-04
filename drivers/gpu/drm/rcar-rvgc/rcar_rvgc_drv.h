@@ -21,7 +21,7 @@ struct taurus_rvgc_res_msg;
 
 struct taurus_event_list {
 	uint32_t id;
-	struct taurus_rvgc_res_msg *result;
+	struct taurus_rvgc_res_msg* result;
 	struct list_head list;
 	struct completion ack;
 	bool ack_received;
@@ -29,23 +29,30 @@ struct taurus_event_list {
 };
 
 struct rcar_rvgc_device {
-	struct device *dev;
+	struct device* dev;
 
-	struct drm_device *ddev;
-	struct drm_fbdev_cma *fbdev;
+	struct drm_device* ddev;
+	struct drm_fbdev_cma* fbdev;
 
-	struct rpmsg_device *rpdev;
+	struct rpmsg_device* rpdev;
 
 	unsigned int nr_rvgc_pipes;
-	struct rcar_rvgc_pipe *rvgc_pipes;
+	struct rcar_rvgc_pipe* rvgc_pipes;
 
+	/* needed for taurus configuration */
 	uint8_t vblank_pending;
 	wait_queue_head_t vblank_pending_wait_queue;
 
-	struct task_struct *vsync_thread;
+	/* needed for drm communication */
+	wait_queue_head_t vblank_enable_wait_queue;
+	atomic_t global_vblank_enable;
+
+	struct task_struct* vsync_thread;
 
 	struct list_head taurus_event_list_head;
 	rwlock_t event_list_lock;
+
+	bool update_primary_plane;
 };
 
 #endif /* __RCAR_RVGC_DRV_H__ */
