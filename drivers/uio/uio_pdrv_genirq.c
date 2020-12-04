@@ -21,6 +21,7 @@
 #include <linux/stringify.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
 
@@ -51,6 +52,8 @@ static void priv_set_pwr(struct uio_info *info, int value);
 static int priv_get_pwr(struct uio_info *info);
 static void priv_set_clk(struct uio_info *info, int value);
 static int priv_get_clk(struct uio_info *info);
+static int priv_clk_get_div(struct uio_info *info);
+static int priv_clk_set_div(struct uio_info *info, int value);
 static void priv_set_rst(struct uio_info *info, int value);
 static int priv_get_rst(struct uio_info *info);
 
@@ -204,6 +207,45 @@ static int priv_get_clk(struct uio_info *info)
 	return priv->clk_cnt;
 }
 
+static int priv_clk_get_div(struct uio_info *info)
+{
+	struct uio_pdrv_genirq_platdata *priv = info->priv;
+	unsigned long rate, div;
+	struct clk *parent;
+
+	rate = clk_get_rate(priv->clk);
+	if (!rate)
+		return 0;
+
+	parent = clk_get_parent(priv->clk);
+	div = clk_get_rate(parent) / rate;
+
+	dev_dbg(&priv->pdev->dev, "Get clock div = %lu\n", div);
+
+	return div;
+}
+
+static int priv_clk_set_div(struct uio_info *info, int div)
+{
+	struct uio_pdrv_genirq_platdata *priv = info->priv;
+	struct clk *parent;
+	unsigned long value;
+
+	if (div <= 0)
+		return -EINVAL;
+
+	value = __clk_get_flags(priv->clk);
+	if (value & CLK_SET_RATE_PARENT)
+		return -ENOTSUPP;
+
+	parent = clk_get_parent(priv->clk);
+	value = clk_get_rate(parent) / div;
+
+	dev_dbg(&priv->pdev->dev, "Set clock div = %i\n", div);
+
+	return clk_set_rate(priv->clk, value);
+}
+
 static void priv_set_rst(struct uio_info *info, int value)
 {
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
@@ -267,6 +309,16 @@ static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
 			return -EFAULT;
 		arg = value;
 		break;
+	case UIO_PDRV_CLK_GET_DIV:
+		value = priv_clk_get_div(info);
+		if (copy_to_user((int __user *)arg, &value, sizeof(value)))
+			return -EFAULT;
+		arg = value;
+		break;
+	case UIO_PDRV_CLK_SET_DIV:
+		if (copy_from_user(&value, (int __user *)arg, sizeof(value)))
+			return -EFAULT;
+		return priv_clk_set_div(info, value);
 	case UIO_PDRV_SET_RESET:
 		if (copy_from_user(&value, (int __user *)arg, sizeof(value)))
 			return -EFAULT;
