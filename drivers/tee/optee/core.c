@@ -737,7 +737,6 @@ static int __init optee_driver_init(void)
 	if (IS_ERR(optee))
 		return PTR_ERR(optee);
 
-	rc = optee_enumerate_devices();
 	if (rc) {
 		optee_remove(optee);
 		return rc;
