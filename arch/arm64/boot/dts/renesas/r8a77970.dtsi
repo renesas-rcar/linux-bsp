@@ -1681,6 +1681,20 @@
 			interrupts = <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
+		wwdt_00 {
+			compatible = "generic-uio";
+			reg = <0 0xffc90000 0 0x1000>;
+			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
+			resets = <&cpg 325>;
+		};
+
+		wwdt_01 {
+			compatible = "generic-uio";
+			reg = <0 0xffca0000 0 0x1000>;
+			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
+			resets = <&cpg 324>;
+		};
+
 		fba_ims_00 {
 			compatible = "generic-uio";
 			reg = <0 0xfff80000 0 0x1000>;
