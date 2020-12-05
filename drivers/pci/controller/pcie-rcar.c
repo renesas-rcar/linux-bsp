@@ -1006,7 +1006,7 @@ static int rcar_pcie_enable_msi(struct rcar_pcie *pcie)
 	}
 
 	/* setup MSI data target */
-	msi->pages = __get_free_pages(GFP_KERNEL, 0);
+	msi->pages = __get_free_pages(GFP_KERNEL | GFP_DMA32, 0);
 	if (!msi->pages) {
 		err = -ENOMEM;
 		goto err;
