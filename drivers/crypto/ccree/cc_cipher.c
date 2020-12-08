@@ -22,6 +22,9 @@
 
 struct cc_cipher_handle {
 	struct list_head alg_list;
+	/* This field is used for the secure key dropped flows */
+	uint32_t  dropped_buffer;
+	dma_addr_t  dropped_buffer_dma_addr;
 };
 
 struct cc_user_key_info {
@@ -53,6 +56,8 @@ struct cc_cipher_ctx {
 	int cipher_mode;
 	int flow_mode;
 	unsigned int flags;
+	bool is_aes_ctr_prot;
+	bool is_secure_key;
 	enum cc_key_type key_type;
 	struct cc_user_key_info user;
 	union {
@@ -101,8 +106,19 @@ static int validate_keys_sizes(struct cc_cipher_ctx *ctx_p, u32 size)
 			return 0;
 		break;
 	case S_DIN_to_SM4:
-		if (size == SM4_KEY_SIZE)
-			return 0;
+		/* In Cryptocell Rev630, MULTI2 was supported, and in later
+		 * revision than Cryptocell Rev630, SM4 was supported
+		 */
+		if (ctx_p->drvdata->hw_rev == CC_HW_REV_630) {
+			/*S_DIN_to_MULTI2*/
+			if (size == CC_MULTI2_SYSTEM_N_DATA_KEY_SIZE)
+				return 0;
+		} else {
+			/*S_DIN_to_SM4*/
+			if (size == SM4_KEY_SIZE)
+				return 0;
+		}
+		break;
 	default:
 		break;
 	}
@@ -139,16 +155,35 @@ static int validate_data_size(struct cc_cipher_ctx *ctx_p,
 			return 0;
 		break;
 	case S_DIN_to_SM4:
-		switch (ctx_p->cipher_mode) {
-		case DRV_CIPHER_CTR:
-			return 0;
-		case DRV_CIPHER_ECB:
-		case DRV_CIPHER_CBC:
-			if (IS_ALIGNED(size, SM4_BLOCK_SIZE))
+		/* In Cryptocell Rev630, MULTI2 was supported, and in later
+		 * revision than Cryptocell Rev630, SM4 was supported
+		 */
+		if (ctx_p->drvdata->hw_rev == CC_HW_REV_630) {
+			/*S_DIN_to_MULTI2*/
+			switch (ctx_p->cipher_mode) {
+			case DRV_MULTI2_CBC:
+				if (IS_ALIGNED(size, CC_MULTI2_BLOCK_SIZE))
+					return 0;
+				break;
+			case DRV_MULTI2_OFB:
 				return 0;
-		default:
-			break;
+			default:
+				break;
+			}
+		} else {
+			/*S_DIN_to_SM4*/
+			switch (ctx_p->cipher_mode) {
+			case DRV_CIPHER_CTR:
+				return 0;
+			case DRV_CIPHER_ECB:
+			case DRV_CIPHER_CBC:
+				if (IS_ALIGNED(size, SM4_BLOCK_SIZE))
+					return 0;
+			default:
+				break;
+			}
 		}
+		break;
 	default:
 		break;
 	}
@@ -172,6 +207,7 @@ static int cc_cipher_init(struct crypto_tfm *tfm)
 
 	ctx_p->cipher_mode = cc_alg->cipher_mode;
 	ctx_p->flow_mode = cc_alg->flow_mode;
+	ctx_p->is_secure_key = cc_alg->is_secure_key;
 	ctx_p->drvdata = cc_alg->drvdata;
 
 	if (ctx_p->cipher_mode == DRV_CIPHER_ESSIV) {
@@ -399,6 +435,13 @@ static int cc_cipher_setkey(struct crypto_skcipher *sktfm, const u8 *key,
 
 	/* STAT_PHASE_0: Init and sanity checks */
 
+	/*Mode MULTI2:
+	 * last byte of key buffer is round number and should not be a part
+	 * of key size
+	 */
+	if (ctx_p->flow_mode == S_DIN_to_MULTI2)
+		keylen -= 1;
+
 	if (validate_keys_sizes(ctx_p, keylen)) {
 		dev_err(dev, "Unsupported key size %d.\n", keylen);
 		crypto_tfm_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
@@ -431,24 +474,37 @@ static int cc_cipher_setkey(struct crypto_skcipher *sktfm, const u8 *key,
 	dma_sync_single_for_cpu(dev, ctx_p->user.key_dma_addr,
 				max_key_buf_size, DMA_TO_DEVICE);
 
-	memcpy(ctx_p->user.key, key, keylen);
-	if (keylen == 24)
-		memset(ctx_p->user.key + 24, 0, CC_AES_KEY_SIZE_MAX - 24);
+	if (ctx_p->flow_mode == S_DIN_to_MULTI2) {
+		memcpy(ctx_p->user.key, key, CC_MULTI2_SYSTEM_N_DATA_KEY_SIZE);
+		ctx_p->key_round_number =
+			key[CC_MULTI2_SYSTEM_N_DATA_KEY_SIZE];
+		if ((ctx_p->key_round_number < CC_MULTI2_MIN_NUM_ROUNDS) ||
+		    (ctx_p->key_round_number > CC_MULTI2_MAX_NUM_ROUNDS)) {
+			crypto_tfm_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
+			dev_dbg(dev, "CC_HAS_MULTI2 einval");
+			return -EINVAL;
+		}
+	} else {
+		memcpy(ctx_p->user.key, key, keylen);
+		if (keylen == 24)
+			memset(ctx_p->user.key + 24, 0,
+					CC_AES_KEY_SIZE_MAX - 24);
 
-	if (ctx_p->cipher_mode == DRV_CIPHER_ESSIV) {
-		/* sha256 for key2 - use sw implementation */
-		int key_len = keylen >> 1;
-		int err;
+		if (ctx_p->cipher_mode == DRV_CIPHER_ESSIV) {
+			/* sha256 for key2 - use sw implementation */
+			int key_len = keylen >> 1;
+			int err;
 
-		SHASH_DESC_ON_STACK(desc, ctx_p->shash_tfm);
+			SHASH_DESC_ON_STACK(desc, ctx_p->shash_tfm);
 
-		desc->tfm = ctx_p->shash_tfm;
+			desc->tfm = ctx_p->shash_tfm;
 
-		err = crypto_shash_digest(desc, ctx_p->user.key, key_len,
-					  ctx_p->user.key + key_len);
-		if (err) {
-			dev_err(dev, "Failed to hash ESSIV key.\n");
-			return err;
+			err = crypto_shash_digest(desc, ctx_p->user.key,
+					key_len, ctx_p->user.key + key_len);
+			if (err) {
+				dev_err(dev, "Failed to hash ESSIV key.\n");
+				return err;
+			}
 		}
 	}
 	dma_sync_single_for_device(dev, ctx_p->user.key_dma_addr,
@@ -456,6 +512,71 @@ static int cc_cipher_setkey(struct crypto_skcipher *sktfm, const u8 *key,
 	ctx_p->keylen = keylen;
 
 	dev_dbg(dev, "return safely");
+	return 0;
+}
+
+static int cc_cipher_secure_key_setkey(struct crypto_skcipher *sktfm,
+					   const u8 *key, unsigned int keylen)
+{
+	struct crypto_tfm *tfm = crypto_skcipher_tfm(sktfm);
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	struct device *dev = drvdata_to_dev(ctx_p->drvdata);
+	struct cc_crypto_alg *cc_alg =
+			container_of(tfm->__crt_alg, struct cc_crypto_alg,
+				     skcipher_alg.base);
+	unsigned int max_key_buf_size = cc_alg->skcipher_alg.max_keysize;
+	uint32_t skConfig = 0;
+
+	dev_dbg(dev, "Setting key in context @%p for %s. keylen=%u\n",
+		ctx_p, crypto_tfm_alg_name(tfm), keylen);
+
+	if (keylen != CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES)
+		return -EINVAL;
+
+	/* STAT_PHASE_0: Init and sanity checks */
+	/* No sanity checks */
+	memcpy(&skConfig,
+	       &key[CC_SECURE_KEY_RESTRICT_CONFIG_OFFSET * sizeof(u32)],
+	       sizeof(u32));
+	/* STAT_PHASE_1: Copy key to ctx */
+	/* The secure key is working only with one key size */
+	dma_sync_single_for_cpu(dev, ctx_p->user.key_dma_addr,
+					max_key_buf_size, DMA_TO_DEVICE);
+
+	memcpy(ctx_p->user.key, key, max_key_buf_size);
+	dma_sync_single_for_device(dev, ctx_p->user.key_dma_addr,
+					max_key_buf_size, DMA_TO_DEVICE);
+	/* Get the key size for the IV loading descriptor */
+	switch (FIELD_GET(SECURE_KEY_RESTRICT_KEY_TYPE, skConfig)) {
+	case DRV_SECURE_KEY_AES_KEY128:
+		ctx_p->keylen = CC_AES_128_BIT_KEY_SIZE;
+		break;
+	case DRV_SECURE_KEY_AES_KEY256:
+		ctx_p->keylen = CC_AES_256_BIT_KEY_SIZE;
+		break;
+
+	case DRV_SECURE_KEY_MULTI2:
+		/*
+		 * The keylen is not use in the multi2 IV loading descriptor.
+		 * The field is init to value that is converted to 0 in the
+		 * descriptor
+		 */
+		ctx_p->keylen = CC_AES_128_BIT_KEY_SIZE;
+		break;
+	case DRV_SECURE_KEY_BYPASS:
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	switch (FIELD_GET(SECURE_KEY_RESTRICT_MODE, skConfig)) {
+	case DRV_SECURE_KEY_CIPHER_CTR_NONCE_PROT:
+	case DRV_SECURE_KEY_CIPHER_CTR_NONCE_CTR_PROT_NSP:
+		ctx_p->is_aes_ctr_prot = 1;
+		break;
+	default:
+		ctx_p->is_aes_ctr_prot = 0;
+	}
 	return 0;
 }
 
@@ -467,6 +588,14 @@ static int cc_out_setup_mode(struct cc_cipher_ctx *ctx_p)
 	case S_DIN_to_DES:
 		return S_DES_to_DOUT;
 	case S_DIN_to_SM4:
+		/* In Cryptocell Rev630, MULTI2 was supported, and in later
+		 * revision than Cryptocell Rev630, SM4 was supported
+		 */
+		if (ctx_p->drvdata->hw_rev == CC_HW_REV_630) {
+			/*S_DIN_to_MULTI2:*/
+			return S_MULTI2_to_DOUT;
+		}
+		/*S_DIN_to_SM4*/
 		return S_SM4_to_DOUT;
 	default:
 		return ctx_p->flow_mode;
@@ -529,6 +658,54 @@ static void cc_setup_readiv_desc(struct crypto_tfm *tfm,
 	}
 }
 
+static void cc_setup_multi2_readiv_desc(struct crypto_tfm *tfm,
+				 struct cipher_req_ctx *req_ctx,
+				 unsigned int ivsize, struct cc_hw_desc desc[],
+				 unsigned int *seq_size)
+{
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	int cipher_mode = ctx_p->cipher_mode;
+	int flow_mode = cc_out_setup_mode(ctx_p);
+	int direction = req_ctx->gen_ctx.op_type;
+	dma_addr_t iv_dma_addr = req_ctx->gen_ctx.iv_dma_addr;
+
+	/* Read next IV */
+	hw_desc_init(&desc[*seq_size]);
+	set_dout_dlli(&desc[*seq_size], iv_dma_addr, ivsize, NS_BIT, 1);
+	set_cipher_config0(&desc[*seq_size], direction);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	set_cipher_mode(&desc[*seq_size], cipher_mode);
+	set_setup_mode(&desc[*seq_size], SETUP_WRITE_STATE0);
+	set_queue_last_ind(ctx_p->drvdata, &desc[*seq_size]);
+	(*seq_size)++;
+}
+
+static void cc_setup_secure_key_readiv_desc(struct crypto_tfm *tfm,
+				 struct cipher_req_ctx *req_ctx,
+				 unsigned int ivsize, struct cc_hw_desc desc[],
+				 unsigned int *seq_size)
+{
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	int cipher_mode = ctx_p->cipher_mode;
+	int flow_mode = cc_out_setup_mode(ctx_p);
+	int direction = req_ctx->gen_ctx.op_type;
+	dma_addr_t iv_dma_addr = req_ctx->gen_ctx.iv_dma_addr;
+
+	/* Read next IV */
+	hw_desc_init(&desc[*seq_size]);
+	set_dout_dlli(&desc[*seq_size], iv_dma_addr, ivsize, NS_BIT, 1);
+	set_cipher_config0(&desc[*seq_size], direction);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	set_cipher_mode(&desc[*seq_size], cipher_mode);
+	if ((cipher_mode == DRV_SECURE_KEY_CIPHER_CTR) &&
+				(flow_mode == S_AES_to_DOUT)) {
+		set_setup_mode(&desc[*seq_size], SETUP_WRITE_STATE1);
+	} else {
+		set_setup_mode(&desc[*seq_size], SETUP_WRITE_STATE0);
+	}
+	set_queue_last_ind(ctx_p->drvdata, &desc[*seq_size]);
+	(*seq_size)++;
+}
 
 static void cc_setup_state_desc(struct crypto_tfm *tfm,
 				 struct cipher_req_ctx *req_ctx,
@@ -582,6 +759,73 @@ static void cc_setup_state_desc(struct crypto_tfm *tfm,
 	}
 }
 
+static void cc_setup_multi2_state_desc(struct crypto_tfm *tfm,
+				 struct cipher_req_ctx *req_ctx,
+				 unsigned int ivsize, struct cc_hw_desc desc[],
+				 unsigned int *seq_size)
+{
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	int cipher_mode = ctx_p->cipher_mode;
+	int flow_mode = ctx_p->flow_mode;
+	int direction = req_ctx->gen_ctx.op_type;
+	dma_addr_t key_dma_addr = ctx_p->user.key_dma_addr;
+	dma_addr_t iv_dma_addr = req_ctx->gen_ctx.iv_dma_addr;
+
+	/* load data key */
+	hw_desc_init(&desc[*seq_size]);
+	set_din_type(&desc[*seq_size], DMA_DLLI,
+		     (key_dma_addr + CC_MULTI2_SYSTEM_KEY_SIZE),
+		     CC_MULTI2_DATA_KEY_SIZE, NS_BIT);
+	set_multi2_num_rounds(&desc[*seq_size], ctx_p->key_round_number);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	set_cipher_mode(&desc[*seq_size], cipher_mode);
+	set_cipher_config0(&desc[*seq_size], direction);
+	set_setup_mode(&desc[*seq_size], SETUP_LOAD_STATE0);
+	(*seq_size)++;
+
+	/* Set state */
+	hw_desc_init(&desc[*seq_size]);
+	set_din_type(&desc[*seq_size], DMA_DLLI, iv_dma_addr,
+		     ivsize, NS_BIT);
+	set_cipher_config0(&desc[*seq_size], direction);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	set_cipher_mode(&desc[*seq_size], cipher_mode);
+	set_setup_mode(&desc[*seq_size], SETUP_LOAD_STATE1);
+	(*seq_size)++;
+}
+
+static inline void
+cc_cipher_secure_key_state_desc(struct crypto_tfm *tfm,
+	struct cipher_req_ctx *req_ctx, unsigned int ivsize,
+	struct cc_hw_desc desc[], unsigned int *seq_size)
+{
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	unsigned int key_len = ctx_p->keylen;
+	int cipher_mode = ctx_p->cipher_mode;
+	int flow_mode = ctx_p->flow_mode;
+	int direction = req_ctx->gen_ctx.op_type;
+	dma_addr_t iv_dma_addr = req_ctx->gen_ctx.iv_dma_addr;
+
+	/* Load state */
+	hw_desc_init(&desc[*seq_size]);
+	set_din_type(&desc[*seq_size], DMA_DLLI, iv_dma_addr,
+			     ivsize, NS_BIT);
+	set_cipher_config0(&desc[*seq_size], direction);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	set_cipher_mode(&desc[*seq_size], cipher_mode);
+	/*
+	 * The state is loaded in any case of SKP-multi2 or SKP-CTR(AES)
+	 * with SETUP_LOAD_STATE1 all other case with SETUP_LOAD_STATE0
+	 */
+	if ((flow_mode == S_DIN_to_MULTI2) ||
+	    (cipher_mode == DRV_SECURE_KEY_CIPHER_CTR)) {
+		set_setup_mode(&desc[*seq_size], SETUP_LOAD_STATE1);
+	} else {
+		set_setup_mode(&desc[*seq_size], SETUP_LOAD_STATE0);
+	}
+	set_key_size_aes(&desc[*seq_size], key_len);
+	(*seq_size)++;
+}
 
 static void cc_setup_xex_state_desc(struct crypto_tfm *tfm,
 				 struct cipher_req_ctx *req_ctx,
@@ -659,6 +903,14 @@ static int cc_out_flow_mode(struct cc_cipher_ctx *ctx_p)
 	case S_DIN_to_DES:
 		return DIN_DES_DOUT;
 	case S_DIN_to_SM4:
+		/* In Cryptocell Rev630, MULTI2 was supported, and in later
+		 * revision than Cryptocell Rev630, SM4 was supported
+		 */
+		if (ctx_p->drvdata->hw_rev == CC_HW_REV_630) {
+			/*S_DIN_to_MULTI2*/
+			return DIN_MULTI2_DOUT;
+		}
+		/*S_DIN_to_SM4*/
 		return DIN_SM4_DOUT;
 	default:
 		return ctx_p->flow_mode;
@@ -748,6 +1000,71 @@ static void cc_setup_key_desc(struct crypto_tfm *tfm,
 	}
 }
 
+static void cc_setup_multi2_key_desc(struct crypto_tfm *tfm,
+			      struct cipher_req_ctx *req_ctx,
+			      struct cc_hw_desc desc[], unsigned int *seq_size)
+{
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	int cipher_mode = ctx_p->cipher_mode;
+	int flow_mode = ctx_p->flow_mode;
+	int direction = req_ctx->gen_ctx.op_type;
+	dma_addr_t key_dma_addr = ctx_p->user.key_dma_addr;
+
+	/* Load system key */
+	hw_desc_init(&desc[*seq_size]);
+	set_cipher_mode(&desc[*seq_size], cipher_mode);
+	set_cipher_config0(&desc[*seq_size], direction);
+	set_din_type(&desc[*seq_size], DMA_DLLI, key_dma_addr,
+		     CC_MULTI2_SYSTEM_KEY_SIZE, NS_BIT);
+	set_setup_mode(&desc[*seq_size], SETUP_LOAD_KEY0);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	(*seq_size)++;
+}
+
+static inline void
+cc_cipher_setup_secure_key_desc(struct crypto_tfm *tfm,
+			      struct cc_hw_desc desc[], unsigned int *seq_size)
+{
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	dma_addr_t key_dma_addr = ctx_p->user.key_dma_addr;
+
+	/* Load system key */
+	hw_desc_init(&desc[*seq_size]);
+	set_din_type(&desc[*seq_size], NO_DMA, key_dma_addr,
+			     CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			     NS_BIT);
+	set_cipher_stop_queue(&desc[*seq_size]);
+	(*seq_size)++;
+}
+
+static inline void
+cc_cipher_create_disable_secure_key_setup_desc(struct crypto_tfm *tfm,
+	struct cipher_req_ctx *req_ctx,
+	struct cc_hw_desc desc[], unsigned int *seq_size)
+{
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	int cipher_mode = ctx_p->cipher_mode;
+	unsigned int flow_mode = ctx_p->flow_mode;
+	int direction = req_ctx->gen_ctx.op_type;
+
+	switch (flow_mode) {
+	case BYPASS:
+		flow_mode = S_DIN_to_AES;
+		break;
+	default:
+		break;
+	}
+
+	hw_desc_init(&desc[*seq_size]);
+	set_cipher_mode(&desc[*seq_size], cipher_mode);
+	set_cipher_config0(&desc[*seq_size], direction);
+	set_din_const(&desc[*seq_size], 0, CC_AES_128_BIT_KEY_SIZE);
+	set_key_size_aes(&desc[*seq_size], CC_AES_128_BIT_KEY_SIZE);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	set_setup_mode(&desc[*seq_size], SETUP_LOAD_KEY0);
+	(*seq_size)++;
+}
+
 static void cc_setup_mlli_desc(struct crypto_tfm *tfm,
 			       struct cipher_req_ctx *req_ctx,
 			       struct scatterlist *dst, struct scatterlist *src,
@@ -834,6 +1151,159 @@ static void cc_setup_flow_desc(struct crypto_tfm *tfm,
 		set_flow_mode(&desc[*seq_size], flow_mode);
 		(*seq_size)++;
 	}
+}
+
+static inline void
+cc_setup_secure_key_flow_desc(struct crypto_tfm *tfm,
+	struct cipher_req_ctx *req_ctx,
+	struct scatterlist *dst, struct scatterlist *src,
+	unsigned int nbytes,
+	struct cc_hw_desc desc[], unsigned int *seq_size)
+{
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	struct device *dev = drvdata_to_dev(ctx_p->drvdata);
+	struct cc_cipher_handle *cipher_handle = ctx_p->drvdata->cipher_handle;
+	unsigned int flow_mode = cc_out_flow_mode(ctx_p);
+	int is_aes_ctr_prot = ctx_p->is_aes_ctr_prot;
+
+	/* Process */
+	hw_desc_init(&desc[*seq_size]);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	if (req_ctx->dma_buf_type == CC_DMA_BUF_DLLI) {
+		dev_dbg(dev, " data params addr %pad length 0x%X\n",
+			&sg_dma_address(src), nbytes);
+		dev_dbg(dev, " data params addr %pad length 0x%X\n",
+			&sg_dma_address(dst), nbytes);
+		if (!is_aes_ctr_prot) {
+			set_din_type(&desc[*seq_size], DMA_DLLI,
+				sg_dma_address(src), nbytes, NS_BIT);
+			set_dout_dlli(&desc[*seq_size], sg_dma_address(dst),
+				nbytes, NS_BIT, 0);
+		} else {
+			/*
+			 * In case of counter protection the operation
+			 * is done in the SEP so the stop queue and NO DMA
+			 * should be set
+			 */
+			set_din_type(&desc[*seq_size], NO_DMA,
+				sg_dma_address(src), nbytes, NS_BIT);
+			set_dout_type(&desc[*seq_size], NO_DMA,
+				sg_dma_address(dst), nbytes, NS_BIT);
+		}
+	} else {
+		/*The MLLI table was already loaded before */
+		if (req_ctx->sec_dir != CC_NO_DMA_IS_SECURE) {
+			if (req_ctx->sec_dir == CC_SRC_DMA_IS_SECURE) {
+				set_din_type(&desc[*seq_size], DMA_DLLI,
+					sg_dma_address(src), nbytes, NS_BIT);
+				set_dout_mlli(&desc[*seq_size],
+					ctx_p->drvdata->mlli_sram_addr,
+					req_ctx->out_mlli_nents, NS_BIT,
+					!is_aes_ctr_prot);
+			} else {
+				set_din_type(&desc[*seq_size], DMA_MLLI,
+					ctx_p->drvdata->mlli_sram_addr,
+					req_ctx->in_mlli_nents, NS_BIT);
+				set_dout_dlli(&desc[*seq_size],
+					sg_dma_address(dst),
+					nbytes, NS_BIT, !is_aes_ctr_prot);
+			}
+		} else {
+			/*
+			 * In case of counter protection the flow is done in the
+			 * SEP and it can be done MLLI to MLLI
+			 */
+			set_din_type(&desc[*seq_size], NO_DMA,
+				ctx_p->drvdata->mlli_sram_addr,
+				req_ctx->in_mlli_nents, NS_BIT);
+			if (req_ctx->out_nents == 0) {
+				set_dout_type(&desc[*seq_size], NO_DMA,
+					ctx_p->drvdata->mlli_sram_addr,
+					req_ctx->out_mlli_nents, NS_BIT);
+			} else {
+				set_dout_type(&desc[*seq_size], NO_DMA,
+				(ctx_p->drvdata->mlli_sram_addr +
+				LLI_ENTRY_BYTE_SIZE * req_ctx->in_mlli_nents),
+				req_ctx->out_mlli_nents, NS_BIT);
+			}
+		}
+	}
+	if (is_aes_ctr_prot)
+		set_cipher_stop_queue(&desc[*seq_size]);
+	(*seq_size)++;
+	if (is_aes_ctr_prot) {
+		/* dummy completion descriptor */
+		hw_desc_init(&desc[*seq_size]);
+		set_din_type(&desc[*seq_size], DMA_DLLI,
+			cipher_handle->dropped_buffer_dma_addr,
+			sizeof(cipher_handle->dropped_buffer), NS_BIT);
+		set_dout_dlli(&desc[*seq_size],
+			cipher_handle->dropped_buffer_dma_addr,
+			sizeof(cipher_handle->dropped_buffer), NS_BIT, 0);
+		set_flow_mode(&desc[*seq_size], flow_mode);
+		(*seq_size)++;
+	}
+}
+
+static inline void
+cc_setup_secure_bypass_flow_desc(struct crypto_tfm *tfm,
+	struct cipher_req_ctx *req_ctx,
+	struct scatterlist *dst, struct scatterlist *src,
+	unsigned int nbytes,
+	struct cc_hw_desc desc[], unsigned int *seq_size)
+{
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	struct device *dev = drvdata_to_dev(ctx_p->drvdata);
+	struct cc_cipher_handle *cipher_handle = ctx_p->drvdata->cipher_handle;
+	unsigned int flow_mode = cc_out_flow_mode(ctx_p);
+
+	switch (flow_mode) {
+	case BYPASS:
+		break;
+	default:
+		dev_err(dev, "invalid flow mode, flow_mode = %d\n", flow_mode);
+		return;
+	}
+
+	/* Process */
+	hw_desc_init(&desc[*seq_size]);
+	if (req_ctx->dma_buf_type == CC_DMA_BUF_DLLI) {
+		dev_dbg(dev, " data params addr %pad length 0x%X\n",
+			&sg_dma_address(src), nbytes);
+		dev_dbg(dev, " data params addr %pad length 0x%X\n",
+			&sg_dma_address(dst), nbytes);
+		set_din_type(&desc[*seq_size], NO_DMA, sg_dma_address(src),
+					nbytes, NS_BIT);
+		set_dout_dlli(&desc[*seq_size], sg_dma_address(dst),
+					nbytes, NS_BIT, 0);
+	} else {
+		/*The MLLI table was already loaded before */
+		set_din_type(&desc[*seq_size], NO_DMA,
+			ctx_p->drvdata->mlli_sram_addr,
+			req_ctx->in_mlli_nents, NS_BIT);
+		/*
+		 * The Dout is holding the type of the input
+		 * as the input must be NO_DMA for the special descriptor
+		 * and the output must be DLLI due to the restrictions
+		 */
+		set_dout_mlli(&desc[*seq_size], sg_dma_address(dst),
+				      nbytes, NS_BIT, 0);
+	}
+	set_cipher_stop_queue(&desc[*seq_size]);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	(*seq_size)++;
+
+	/* dummy completion register */
+	hw_desc_init(&desc[*seq_size]);
+	set_din_type(&desc[*seq_size], DMA_DLLI,
+			     cipher_handle->dropped_buffer_dma_addr,
+			     sizeof(cipher_handle->dropped_buffer), NS_BIT);
+	set_dout_dlli(&desc[*seq_size],
+			      cipher_handle->dropped_buffer_dma_addr,
+			      sizeof(cipher_handle->dropped_buffer),
+			      NS_BIT, 1);
+	set_flow_mode(&desc[*seq_size], flow_mode);
+	(*seq_size)++;
 }
 
 static void cc_cipher_complete(struct device *dev, void *cc_req, int err)
@@ -927,18 +1397,57 @@ static int cc_cipher_process(struct skcipher_request *req,
 
 	/* STAT_PHASE_2: Create sequence */
 
-	/* Setup state (IV)  */
-	cc_setup_state_desc(tfm, req_ctx, ivsize, nbytes, desc, &seq_len);
-	/* Setup MLLI line, if needed */
-	cc_setup_mlli_desc(tfm, req_ctx, dst, src, nbytes, req, desc, &seq_len);
-	/* Setup key */
-	cc_setup_key_desc(tfm, req_ctx, nbytes, desc, &seq_len);
-	/* Setup state (IV and XEX key)  */
-	cc_setup_xex_state_desc(tfm, req_ctx, ivsize, nbytes, desc, &seq_len);
-	/* Data processing */
-	cc_setup_flow_desc(tfm, req_ctx, dst, src, nbytes, desc, &seq_len);
-	/* Read next IV */
-	cc_setup_readiv_desc(tfm, req_ctx, ivsize, desc, &seq_len);
+	if (ctx_p->is_secure_key == 1) {
+		/* Setup key */
+		cc_cipher_setup_secure_key_desc(tfm, desc, &seq_len);
+		/* Setup MLLI line, if needed */
+		cc_setup_mlli_desc(tfm, req_ctx, dst, src, nbytes, req,
+							desc, &seq_len);
+		/* Setup IV used */
+		cc_cipher_secure_key_state_desc(tfm, req_ctx, ivsize,
+							desc, &seq_len);
+		/* Data processing */
+		cc_setup_secure_key_flow_desc(tfm, req_ctx, dst, src,
+							nbytes, desc, &seq_len);
+		/* Read next IV */
+		cc_setup_secure_key_readiv_desc(tfm, req_ctx, ivsize,
+							desc, &seq_len);
+		/* Load key to disable the secure key restrictions */
+		cc_cipher_create_disable_secure_key_setup_desc(tfm, req_ctx,
+							desc, &seq_len);
+	} else if (ctx_p->flow_mode == S_DIN_to_MULTI2) {
+		/* Setup key */
+		cc_setup_multi2_key_desc(tfm, req_ctx, desc, &seq_len);
+		/* Setup MLLI line, if needed */
+		cc_setup_mlli_desc(tfm, req_ctx, dst, src, nbytes,
+							req, desc, &seq_len);
+		/* Setup IV used */
+		cc_setup_multi2_state_desc(tfm, req_ctx, ivsize,
+							desc, &seq_len);
+		/* Data processing */
+		cc_setup_flow_desc(tfm, req_ctx, dst, src, nbytes,
+							desc, &seq_len);
+		/* Read next IV */
+		cc_setup_multi2_readiv_desc(tfm, req_ctx, ivsize,
+							desc, &seq_len);
+	} else {
+		/* Setup state (IV)  */
+		cc_setup_state_desc(tfm, req_ctx, ivsize, nbytes,
+							desc, &seq_len);
+		/* Setup MLLI line, if needed */
+		cc_setup_mlli_desc(tfm, req_ctx, dst, src, nbytes, req,
+							desc, &seq_len);
+		/* Setup key */
+		cc_setup_key_desc(tfm, req_ctx, nbytes, desc, &seq_len);
+		/* Setup state (IV and XEX key)  */
+		cc_setup_xex_state_desc(tfm, req_ctx, ivsize, nbytes,
+							desc, &seq_len);
+		/* Data processing */
+		cc_setup_flow_desc(tfm, req_ctx, dst, src, nbytes,
+							desc, &seq_len);
+		/* Read next IV */
+		cc_setup_readiv_desc(tfm, req_ctx, ivsize, desc, &seq_len);
+	}
 
 	/* STAT_PHASE_3: Lock HW and push sequence */
 
@@ -955,6 +1464,87 @@ exit_process:
 	if (rc != -EINPROGRESS && rc != -EBUSY) {
 		kzfree(req_ctx->iv);
 	}
+
+	return rc;
+}
+
+static int cc_cipher_process_secure_bypass(struct skcipher_request *req)
+{
+	struct crypto_skcipher *sk_tfm = crypto_skcipher_reqtfm(req);
+	struct crypto_tfm *tfm = crypto_skcipher_tfm(sk_tfm);
+	struct cc_cipher_ctx *ctx_p = crypto_tfm_ctx(tfm);
+	struct cipher_req_ctx *req_ctx = skcipher_request_ctx(req);
+	struct device *dev = drvdata_to_dev(ctx_p->drvdata);
+	struct cc_hw_desc desc[MAX_ABLKCIPHER_SEQ_LEN];
+	struct cc_crypto_req cc_req = {};
+	struct scatterlist *dst = req->dst;
+	struct scatterlist *src = req->src;
+	unsigned int nbytes = req->cryptlen;
+	unsigned int ivsize = crypto_skcipher_ivsize(sk_tfm);
+	void *iv = req->iv;
+	int rc;
+	unsigned int seq_len = 0;
+	gfp_t flags = cc_gfp_flags(&req->base);
+
+	dev_dbg(dev, "req=%p info=%p nbytes=%d\n", req, iv, nbytes);
+
+	/* STAT_PHASE_0: Init and sanity checks */
+	if (nbytes == 0) {
+		/* No data to process is valid */
+		rc = 0;
+		goto exit_process;
+	}
+
+	req_ctx->iv = kmemdup(iv, ivsize, flags);
+	if (!req_ctx->iv) {
+		rc = -ENOMEM;
+		goto exit_process;
+	}
+
+	/* Setup DX request structure */
+	cc_req.user_cb = cc_cipher_complete;
+	cc_req.user_arg = req;
+
+	/* STAT_PHASE_1: Map buffers */
+	rc = cc_map_cipher_request(ctx_p->drvdata, req_ctx, ivsize, nbytes,
+				      req_ctx->iv, src, dst, flags);
+	if (rc) {
+		dev_err(dev, "map_request() failed\n");
+		goto exit_process;
+	}
+	if (req_ctx->sec_dir == CC_SRC_DMA_IS_SECURE) {
+		rc = -ENOMEM;
+		goto free_mem;
+	}
+
+	/* STAT_PHASE_2: Create sequence */
+	/* Setup key */
+	cc_cipher_setup_secure_key_desc(tfm, desc, &seq_len);
+	/* Setup MLLI line, if needed */
+	cc_setup_mlli_desc(tfm, req_ctx, dst, src, nbytes,
+						req, desc, &seq_len);
+	/* Data processing */
+	cc_setup_secure_bypass_flow_desc(tfm, req_ctx, dst, src,
+						nbytes, desc, &seq_len);
+	/* Load key to disable the secure key restrictions */
+	cc_cipher_create_disable_secure_key_setup_desc(tfm, req_ctx,
+						desc, &seq_len);
+
+	/* STAT_PHASE_3: Lock HW and push sequence */
+	rc = cc_send_request(ctx_p->drvdata, &cc_req, desc,
+						seq_len, &req->base);
+
+free_mem:
+	if ((rc != -EINPROGRESS) && (rc != -EBUSY)) {
+		/* Failed to send the request or request completed
+		 * synchronously
+		 */
+		cc_unmap_cipher_request(dev, req_ctx, ivsize, src, dst);
+	}
+
+exit_process:
+	if ((rc != -EINPROGRESS) && (rc != -EBUSY))
+		kzfree(req_ctx->iv);
 
 	return rc;
 }
@@ -1636,6 +2226,147 @@ static const struct cc_alg_template skcipher_algs[] = {
 		.std_body = CC_STD_OSCCA,
 		.sec_func = true,
 	},
+	{
+		.name = "cbc(multi2)",
+		.driver_name = "cbc-multi2-ccree",
+		.blocksize = CC_MULTI2_BLOCK_SIZE,
+		.template_skcipher = {
+			.setkey = cc_cipher_setkey,
+			.encrypt = cc_cipher_encrypt,
+			.decrypt = cc_cipher_decrypt,
+			.min_keysize = CC_MULTI2_SYSTEM_N_DATA_KEY_SIZE + 1,
+			.max_keysize = CC_MULTI2_SYSTEM_N_DATA_KEY_SIZE + 1,
+			.ivsize = CC_MULTI2_IV_SIZE,
+			},
+		.cipher_mode = DRV_MULTI2_CBC,
+		.flow_mode = S_DIN_to_MULTI2,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+	},
+	{
+		.name = "ofb(multi2)",
+		.driver_name = "ofb-multi2-ccree",
+		.blocksize = 1,
+		.template_skcipher = {
+			.setkey = cc_cipher_setkey,
+			.encrypt = cc_cipher_encrypt,
+			.decrypt = cc_cipher_encrypt,
+			.min_keysize = CC_MULTI2_SYSTEM_N_DATA_KEY_SIZE + 1,
+			.max_keysize = CC_MULTI2_SYSTEM_N_DATA_KEY_SIZE + 1,
+			.ivsize = CC_MULTI2_IV_SIZE,
+			},
+		.cipher_mode = DRV_MULTI2_OFB,
+		.flow_mode = S_DIN_to_MULTI2,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+	},
+	{
+		.name = "cbc(saes)",
+		.driver_name = "cbc-saes-ccree",
+		.blocksize = AES_BLOCK_SIZE,
+		.template_skcipher = {
+			.setkey = cc_cipher_secure_key_setkey,
+			.encrypt = cc_cipher_encrypt,
+			.decrypt = cc_cipher_decrypt,
+			.min_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.max_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.ivsize = AES_BLOCK_SIZE,
+			},
+		.cipher_mode = DRV_SECURE_KEY_CIPHER_CBC,
+		.flow_mode = S_DIN_to_AES,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+		.is_secure_key = 1,
+	},
+	{
+		.name = "cts(cbc(saes))",
+		.driver_name = "cts-cbc-saes-ccree",
+		.blocksize = AES_BLOCK_SIZE,
+		.template_skcipher = {
+			.setkey = cc_cipher_secure_key_setkey,
+			.encrypt = cc_cipher_encrypt,
+			.decrypt = cc_cipher_decrypt,
+			.min_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.max_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.ivsize = AES_BLOCK_SIZE,
+			},
+		.cipher_mode = DRV_SECURE_KEY_CIPHER_CBC_CTS,
+		.flow_mode = S_DIN_to_AES,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+		.is_secure_key = 1,
+	},
+	{
+		.name = "ctr(saes)",
+		.driver_name = "ctr-saes-ccree",
+		.blocksize = 1,
+		.template_skcipher = {
+			.setkey = cc_cipher_secure_key_setkey,
+			.encrypt = cc_cipher_encrypt,
+			.decrypt = cc_cipher_decrypt,
+			.min_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.max_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.ivsize = AES_BLOCK_SIZE,
+			},
+		.cipher_mode = DRV_SECURE_KEY_CIPHER_CTR,
+		.flow_mode = S_DIN_to_AES,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+		.is_secure_key = 1,
+	},
+	{
+		.name = "cbc(smulti2)",
+		.driver_name = "cbc-smulti2-ccree",
+		.blocksize = CC_MULTI2_BLOCK_SIZE,
+		.template_skcipher = {
+			.setkey = cc_cipher_secure_key_setkey,
+			.encrypt = cc_cipher_encrypt,
+			.decrypt = cc_cipher_decrypt,
+			.min_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.max_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.ivsize = CC_MULTI2_IV_SIZE,
+			},
+		.cipher_mode = DRV_MULTI2_CBC,
+		.flow_mode = S_DIN_to_MULTI2,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+		.is_secure_key = 1,
+	},
+	{
+		.name = "ofb(smulti2)",
+		.driver_name = "ofb-smulti2-ccree",
+		.blocksize = 1,
+		.template_skcipher = {
+			.setkey = cc_cipher_secure_key_setkey,
+			.encrypt = cc_cipher_encrypt,
+			.decrypt = cc_cipher_encrypt,
+			.min_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.max_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.ivsize = CC_MULTI2_IV_SIZE,
+			},
+		.cipher_mode = DRV_MULTI2_OFB,
+		.flow_mode = S_DIN_to_MULTI2,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+		.is_secure_key = 1,
+	},
+	{
+		.name = "sbypass",
+		.driver_name = "sbypass-ccree",
+		.blocksize = 1,
+		.template_skcipher = {
+			.setkey = cc_cipher_secure_key_setkey,
+			.encrypt = cc_cipher_process_secure_bypass,
+			.decrypt = cc_cipher_process_secure_bypass,
+			.min_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.max_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			},
+		.cipher_mode = DRV_SECURE_KEY_CIPHER_NULL_MODE,
+		.flow_mode = BYPASS,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+		.is_secure_key = 1,
+	},
 };
 
 static struct cc_crypto_alg *cc_create_alg(const struct cc_alg_template *tmpl,
@@ -1668,6 +2399,7 @@ static struct cc_crypto_alg *cc_create_alg(const struct cc_alg_template *tmpl,
 	t_alg->cipher_mode = tmpl->cipher_mode;
 	t_alg->flow_mode = tmpl->flow_mode;
 	t_alg->data_unit = tmpl->data_unit;
+	t_alg->is_secure_key = tmpl->is_secure_key;
 
 	return t_alg;
 }
@@ -1676,6 +2408,7 @@ int cc_cipher_free(struct cc_drvdata *drvdata)
 {
 	struct cc_crypto_alg *t_alg, *n;
 	struct cc_cipher_handle *cipher_handle = drvdata->cipher_handle;
+	struct device *dev = drvdata_to_dev(drvdata);
 
 	if (cipher_handle) {
 		/* Remove registered algs */
@@ -1684,6 +2417,13 @@ int cc_cipher_free(struct cc_drvdata *drvdata)
 			crypto_unregister_skcipher(&t_alg->skcipher_alg);
 			list_del(&t_alg->entry);
 			kfree(t_alg);
+		}
+		if (cipher_handle->dropped_buffer_dma_addr != 0) {
+			dma_unmap_single(dev,
+				cipher_handle->dropped_buffer_dma_addr,
+				sizeof(cipher_handle->dropped_buffer),
+				DMA_TO_DEVICE);
+			cipher_handle->dropped_buffer_dma_addr = 0;
 		}
 		kfree(cipher_handle);
 		drvdata->cipher_handle = NULL;
@@ -1702,6 +2442,22 @@ int cc_cipher_alloc(struct cc_drvdata *drvdata)
 	cipher_handle = kmalloc(sizeof(*cipher_handle), GFP_KERNEL);
 	if (!cipher_handle)
 		return -ENOMEM;
+
+	cipher_handle->dropped_buffer_dma_addr = dma_map_single(
+		dev, &cipher_handle->dropped_buffer,
+		sizeof(cipher_handle->dropped_buffer),
+		DMA_TO_DEVICE);
+	if (cipher_handle->dropped_buffer_dma_addr == 0) {
+		dev_err(dev, "Mapping dummy DMA failed\n");
+		goto fail0;
+	}
+
+	/*set 32 low bits*/
+	cc_iowrite(drvdata, CC_REG(DSCRPTR_FILTER_DROPPED_ADDRESS),
+		       (cipher_handle->dropped_buffer_dma_addr & UINT_MAX));
+	/*set 32 high bits*/
+	cc_iowrite(drvdata, CC_REG(DSCRPTR_FILTER_DROPPED_ADDRESS_HIGH),
+		       (cipher_handle->dropped_buffer_dma_addr >> 32));
 
 	INIT_LIST_HEAD(&cipher_handle->alg_list);
 	drvdata->cipher_handle = cipher_handle;
