@@ -2,6 +2,7 @@
 /*
  * adv7604 - Analog Devices ADV7604 video decoder driver
  *
+ * Copyright (C) 2017 Renesas Electronics Corp.
  * Copyright 2012 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *
  */
@@ -70,6 +71,8 @@ MODULE_LICENSE("GPL");
 #define ADV76XX_OP_CH_SEL_RBG				(5 << 5)
 
 #define ADV76XX_OP_SWAP_CB_CR				(1 << 0)
+
+#define ADV7612_CP_VID_ADJ_ENABLE			(1 << 7)
 
 #define ADV76XX_MAX_ADDRS (3)
 
@@ -313,6 +316,61 @@ static const struct adv76xx_video_standards adv76xx_prim_mode_hdmi_gr[] = {
 static const struct v4l2_event adv76xx_ev_fmt = {
 	.type = V4L2_EVENT_SOURCE_CHANGE,
 	.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
+};
+
+static const __u8 g_edid_data[256] = {
+/* Header information(0-19th byte) */ /* Fixed header pattern */
+	0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00,
+	0x34, 0xd0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x01, 0x0C, 0x01, 0x03,
+/* Basic display parameters(20-24th byte) */
+	0x80, 0x50, 0x2D, 0x78, 0x0A,
+/* Chromaticity coordinates(25-34th byte) */
+	0x0D, 0xC9, 0xA0, 0x57, 0x47, 0x98, 0x27, 0x12,
+	0x48, 0x4C,
+/* Established timing bitmap(35-37th byte) */
+	0x23, 0x09, 0x00,
+/* Standard timing information(38-53th byte) */
+/* Because they are unused, in this field, all values are 0101h. */
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+/* Descriptor blocks of Descriptor 1(54-71th byte) */
+	0x01, 0x1D, 0x80, 0x18, 0x71, 0x1C, 0x16, 0x20,
+	0x58, 0x2C, 0x25, 0x00, 0x20, 0xC2, 0x31, 0x00,
+	0x00, 0x98,
+/* Descriptor blocks of Descriptor 2(72-89th byte) */
+	0x8C, 0x0A, 0xD0, 0x8A, 0x20, 0xE0, 0x2D, 0x10,
+	0x10, 0x3E, 0x96, 0x00, 0x58, 0xC2, 0x21, 0x00,
+	0x00, 0x18,
+/* Descriptor blocks of Descriptor 3(90-107th byte) */
+	0x00, 0x00, 0x00, 0xFC, 0x00, 0x4D, 0x59, 0x20,
+	0x48, 0x44, 0x54, 0x56, 0x0A, 0x20, 0x20, 0x20,
+	0x20, 0x20,
+/* Descriptor blocks of Descriptor 4(108-125th byte) */
+	0x00, 0x00, 0x00, 0xFD, 0x00, 0x3B, 0x3D, 0x0F,
+	0x2E, 0x08, 0x00, 0x0A, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20,
+/* Number of extensions to follow(126th byte) */
+	0x01,	/* Extension enable */
+/* Checksum(127th byte) */
+	0x65,
+/* CEA EDID Timing Extension Version 3 */
+	0x02, 0x03, 0x34, 0x40, 0x83, 0x7F, 0x00, 0x00,
+	0x35, 0x0F, 0x06, 0x07, 0x17, 0x1F, 0x38, 0x1F,
+	0x07, 0x30, 0x2F, 0x07, 0x72, 0x3F, 0x7F, 0x72,
+	0x57, 0x7F, 0x00, 0x37, 0x7F, 0x72, 0x67, 0x03,
+	0x0C, 0x00, 0x10, 0x00, 0x88, 0x2D, 0x4D, 0x82,
+	0x03, 0x11, 0x12, 0x04, 0x13, 0x10, 0x1F, 0x05,
+	0x14, 0x22, 0x43, 0x00, 0x00, 0x00, 0x00, 0xFF,
+	0x00, 0x0A, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00,
+	0x00, 0xFF, 0x00, 0x0A, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x00, 0x00, 0x00, 0xFF, 0x00, 0x0A, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0B,
 };
 
 /* ----------------------------------------------------------------------- */
@@ -1198,6 +1256,15 @@ static int adv76xx_s_ctrl(struct v4l2_ctrl *ctrl)
 		&container_of(ctrl->handler, struct adv76xx_state, hdl)->sd;
 
 	struct adv76xx_state *state = to_state(sd);
+	int ret;
+	u8 val;
+
+	/* Enable video adjustment first */
+	val = cp_read(sd, 0x3e);
+	val |= ADV7612_CP_VID_ADJ_ENABLE;
+	ret = cp_write(sd, 0x3e, val);
+	if (ret < 0)
+		return ret;
 
 	switch (ctrl->id) {
 	case V4L2_CID_BRIGHTNESS:
@@ -1905,6 +1972,11 @@ static int adv76xx_get_format(struct v4l2_subdev *sd,
 		fmt = v4l2_subdev_get_try_format(sd, cfg, format->pad);
 		format->format.code = fmt->code;
 	} else {
+		struct v4l2_dv_timings timings;
+
+		adv76xx_query_dv_timings(&state->sd, &timings);
+		state->timings = timings;
+
 		format->format.code = state->format->code;
 	}
 
@@ -2774,6 +2846,20 @@ static int adv76xx_core_init(struct v4l2_subdev *sd)
 	struct adv76xx_state *state = to_state(sd);
 	const struct adv76xx_chip_info *info = state->info;
 	struct adv76xx_platform_data *pdata = &state->pdata;
+	int err;
+	struct v4l2_edid g_edid;
+	__u8 edid[256];
+
+	g_edid.pad = 0;
+	g_edid.start_block = 0;
+	g_edid.blocks = 2;
+	memcpy(edid, g_edid_data, 256);
+	g_edid.edid = (__u8 *)edid;
+	err = adv76xx_set_edid(sd, &g_edid);
+	if (err < 0) {
+		v4l2_err(sd, "edid set error %d\n", err);
+		return err;
+	}
 
 	hdmi_write(sd, 0x48,
 		(pdata->disable_pwrdnb ? 0x80 : 0) |
@@ -3479,7 +3565,7 @@ static int adv76xx_probe(struct i2c_client *client,
 	v4l2_ctrl_new_std(hdl, &adv76xx_ctrl_ops,
 			V4L2_CID_SATURATION, 0, 255, 1, 128);
 	v4l2_ctrl_new_std(hdl, &adv76xx_ctrl_ops,
-			V4L2_CID_HUE, 0, 128, 1, 0);
+			V4L2_CID_HUE, 0, 255, 1, 0);
 	ctrl = v4l2_ctrl_new_std_menu(hdl, &adv76xx_ctrl_ops,
 			V4L2_CID_DV_RX_IT_CONTENT_TYPE, V4L2_DV_IT_CONTENT_TYPE_NO_ITC,
 			0, V4L2_DV_IT_CONTENT_TYPE_NO_ITC);
@@ -3616,9 +3702,51 @@ static int adv76xx_remove(struct i2c_client *client)
 
 /* ----------------------------------------------------------------------- */
 
+#ifdef CONFIG_PM_SLEEP
+static int adv76xx_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	u8 value;
+
+	value = io_read(sd, 0x0c) | (u8)0x20;
+	io_write(sd, 0x0c, value);
+
+	return 0;
+}
+
+static int adv76xx_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct adv76xx_state *state = to_state(sd);
+	int i;
+	int ret;
+
+	for (i = 1; i < ADV76XX_PAGE_MAX; ++i) {
+		if (!(BIT(i) & state->info->page_mask))
+			continue;
+		ret = io_write(sd, 0xf2 + i,
+			       state->pdata.i2c_addresses[i] << 1);
+		if (ret)
+			return ret;
+	}
+
+	return adv76xx_core_init(sd);
+}
+
+static SIMPLE_DEV_PM_OPS(adv76xx_pm_ops, adv76xx_suspend, adv76xx_resume);
+#define ADV76XX_PM_OPS (&adv76xx_pm_ops)
+#else
+#define ADV76XX_PM_OPS (NULL)
+#endif
+
+/* ----------------------------------------------------------------------- */
+
 static struct i2c_driver adv76xx_driver = {
 	.driver = {
 		.name = "adv7604",
+		.pm = ADV76XX_PM_OPS,
 		.of_match_table = of_match_ptr(adv76xx_of_id),
 	},
 	.probe = adv76xx_probe,

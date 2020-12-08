@@ -796,6 +796,53 @@ static int adv748x_remove(struct i2c_client *client)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int adv748x_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct adv748x_state *state = i2c_get_clientdata(client);
+	struct adv748x_csi2 *txa = &state->txa;
+	struct adv748x_csi2 *txb = &state->txb;
+
+	txa->vc_ch = 0x03 & (tx_read(txa, ADV748X_CSI_VC_REF) >>
+		    ADV748X_CSI_VC_REF_SHIFT);
+	txb->vc_ch = 0x03 & (tx_read(txb, ADV748X_CSI_VC_REF) >>
+		    ADV748X_CSI_VC_REF_SHIFT);
+
+	io_write(state, ADV748X_IO_PD, ADV748X_IO_PD_HDMI);
+
+	return 0;
+}
+
+static int adv748x_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct adv748x_state *state = i2c_get_clientdata(client);
+	struct adv748x_csi2 *txa = &state->txa;
+	struct adv748x_csi2 *txb = &state->txb;
+	int ret;
+
+	/* SW reset ADV748X to its default values */
+	ret = adv748x_reset(state);
+	if (ret)
+		adv_err(state, "Failed to reset hardware");
+
+	/* Initialise the virtual channel */
+	tx_write(txa, ADV748X_CSI_VC_REF,
+		 txa->vc_ch << ADV748X_CSI_VC_REF_SHIFT);
+	tx_write(txb, ADV748X_CSI_VC_REF,
+		 txb->vc_ch << ADV748X_CSI_VC_REF_SHIFT);
+
+	ret = adv748x_hdmi_set_resume_edid(&state->hdmi);
+
+	return ret;
+}
+
+static const struct dev_pm_ops adv748x_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(adv748x_suspend, adv748x_resume)
+};
+#endif
+
 static const struct of_device_id adv748x_of_table[] = {
 	{ .compatible = "adi,adv7481", },
 	{ .compatible = "adi,adv7482", },
@@ -806,6 +853,9 @@ MODULE_DEVICE_TABLE(of, adv748x_of_table);
 static struct i2c_driver adv748x_driver = {
 	.driver = {
 		.name = "adv748x",
+#ifdef CONFIG_PM_SLEEP
+		.pm = &adv748x_pm_ops,
+#endif
 		.of_match_table = adv748x_of_table,
 	},
 	.probe_new = adv748x_probe,
