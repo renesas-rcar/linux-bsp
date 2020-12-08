@@ -311,7 +311,7 @@
 	pinctrl-0 = <&qspi0_pins>;
 	pinctrl-names = "default";
 
-	status = "okay";
+	/* status = "okay"; */
 
 	flash@0 {
 		compatible = "jedec,spi-nor";
