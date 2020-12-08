@@ -81,7 +81,11 @@
 #define	CLK_CTL_SCLKEN		BIT(8)
 
 /* Definitions for values the CTL_SD_MEM_CARD_OPT register can take */
+#define CARD_OPT_TOP_MASK	0xf0
+#define CARD_OPT_TOP_SHIFT	4
+#define CARD_OPT_EXTOP		BIT(9) /* first appeared on R-Car Gen3 SDHI */
 #define CARD_OPT_WIDTH8		BIT(13)
+#define CARD_OPT_ALWAYS1	BIT(14)
 #define CARD_OPT_WIDTH		BIT(15)
 
 /* Definitions for values the CTL_SDIO_STATUS register can take */
@@ -105,6 +109,9 @@
 		TMIO_STAT_CARD_REMOVE | TMIO_STAT_CARD_INSERT)
 #define TMIO_MASK_IRQ     (TMIO_MASK_READOP | TMIO_MASK_WRITEOP | TMIO_MASK_CMD)
 
+#define TMIO_TRANSTATE_DEND	0x00000001
+#define TMIO_TRANSTATE_AEND	0x00000002
+
 #define TMIO_MAX_BLK_SIZE 512
 
 struct tmio_mmc_data;
@@ -118,6 +125,10 @@ struct tmio_mmc_dma_ops {
 	void (*release)(struct tmio_mmc_host *host);
 	void (*abort)(struct tmio_mmc_host *host);
 	void (*dataend)(struct tmio_mmc_host *host);
+	bool (*dma_irq)(struct tmio_mmc_host *host);
+
+	/* optional */
+	void (*end)(struct tmio_mmc_host *host);	/* held host->lock */
 };
 
 struct tmio_mmc_host {
@@ -156,6 +167,7 @@ struct tmio_mmc_host {
 	/* Cache */
 	u32			sdcard_irq_mask;
 	u32			sdio_irq_mask;
+	u32			dma_irq_mask;
 	unsigned int		clk_cache;
 	u32			sdcard_irq_setbit_mask;
 
@@ -165,6 +177,9 @@ struct tmio_mmc_host {
 	bool			native_hotplug;
 	bool			runtime_synced;
 	bool			sdio_irq_enabled;
+
+	spinlock_t		trans_lock;	/* protect trans_state */
+	unsigned int		trans_state;
 
 	/* Mandatory callback */
 	int (*clk_enable)(struct tmio_mmc_host *host);
@@ -176,21 +191,9 @@ struct tmio_mmc_host {
 			      unsigned int direction, int blk_size);
 	int (*write16_hook)(struct tmio_mmc_host *host, int addr);
 	void (*reset)(struct tmio_mmc_host *host);
-	void (*hw_reset)(struct tmio_mmc_host *host);
-	void (*prepare_tuning)(struct tmio_mmc_host *host, unsigned long tap);
-	bool (*check_scc_error)(struct tmio_mmc_host *host);
-
-	/*
-	 * Mandatory callback for tuning to occur which is optional for SDR50
-	 * and mandatory for SDR104.
-	 */
-	unsigned int (*init_tuning)(struct tmio_mmc_host *host);
-	int (*select_tuning)(struct tmio_mmc_host *host);
-
-	/* Tuning values: 1 for success, 0 for failure */
-	DECLARE_BITMAP(taps, BITS_PER_BYTE * sizeof(long));
-	unsigned int tap_num;
-	unsigned long tap_set;
+	bool (*check_retune)(struct tmio_mmc_host *host);
+	void (*fixup_request)(struct tmio_mmc_host *host, struct mmc_request *mrq);
+	unsigned int (*get_timeout_cycles)(struct tmio_mmc_host *host);
 
 	void (*prepare_hs400_tuning)(struct tmio_mmc_host *host);
 	void (*hs400_downgrade)(struct tmio_mmc_host *host);
@@ -205,6 +208,9 @@ void tmio_mmc_host_free(struct tmio_mmc_host *host);
 int tmio_mmc_host_probe(struct tmio_mmc_host *host);
 void tmio_mmc_host_remove(struct tmio_mmc_host *host);
 void tmio_mmc_do_data_irq(struct tmio_mmc_host *host);
+
+void tmio_mmc_set_transtate(struct tmio_mmc_host *host, unsigned int state);
+void tmio_mmc_clear_transtate(struct tmio_mmc_host *host);
 
 void tmio_mmc_enable_mmc_irqs(struct tmio_mmc_host *host, u32 i);
 void tmio_mmc_disable_mmc_irqs(struct tmio_mmc_host *host, u32 i);
