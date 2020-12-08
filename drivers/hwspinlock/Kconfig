@@ -68,3 +68,16 @@ config HSEM_U8500
 	  SoC.
 
 	  If unsure, say N.
+
+config HWSPINLOCK_RCAR
+	bool "R-Car Hardware Spinlock functionality"
+	depends on HWSPINLOCK
+	depends on ARCH_RENESAS
+	default y
+	help
+	  Say y here to support the R-Car Hardware Spinlock functionality, which
+	  provides a synchronisation mechanism for the various processor on the
+	  SoC.
+	  This function is implemented with MFIS device.
+
+	  If unsure, say N.
