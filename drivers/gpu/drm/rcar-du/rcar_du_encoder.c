@@ -119,6 +119,10 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 		if (output == RCAR_DU_OUTPUT_LVDS0 ||
 		    output == RCAR_DU_OUTPUT_LVDS1)
 			rcdu->lvds[output - RCAR_DU_OUTPUT_LVDS0] = bridge;
+
+		if (output == RCAR_DU_OUTPUT_MIPI_DSI0 ||
+		    output == RCAR_DU_OUTPUT_MIPI_DSI1)
+			rcdu->mipi_dsi[output - RCAR_DU_OUTPUT_MIPI_DSI0] = bridge;
 	}
 
 	/*
