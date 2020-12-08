@@ -28,6 +28,7 @@ Required properties:
 		"renesas,sdhi-r8a77980" - SDHI IP on R8A77980 SoC
 		"renesas,sdhi-r8a77990" - SDHI IP on R8A77990 SoC
 		"renesas,sdhi-r8a77995" - SDHI IP on R8A77995 SoC
+		"renesas,sdhi-r8a779a0" - SDHI IP on R8A779A0 SoC
 		"renesas,sdhi-shmobile" - a generic sh-mobile SDHI controller
 		"renesas,rcar-gen1-sdhi" - a generic R-Car Gen1 SDHI controller
 		"renesas,rcar-gen2-sdhi" - a generic R-Car Gen2 and RZ/G1 SDHI
