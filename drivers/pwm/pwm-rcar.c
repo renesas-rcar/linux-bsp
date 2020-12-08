@@ -18,6 +18,7 @@
 #include <linux/slab.h>
 
 #define RCAR_PWM_MAX_DIVISION	24
+#define RCAR_PWM_MIN_CYCLE	2
 #define RCAR_PWM_MAX_CYCLE	1023
 
 #define RCAR_PWMCR		0x00
@@ -70,10 +71,16 @@ static void rcar_pwm_update(struct rcar_pwm_chip *rp, u32 mask, u32 data,
 static int rcar_pwm_get_clock_division(struct rcar_pwm_chip *rp, int period_ns)
 {
 	unsigned long clk_rate = clk_get_rate(rp->clk);
+	unsigned long long min; /* min cycle / nanoseconds */
 	u64 div, tmp;
 
 	if (clk_rate == 0)
 		return -EINVAL;
+
+	min = (unsigned long long)NSEC_PER_SEC * RCAR_PWM_MIN_CYCLE;
+	do_div(min, clk_rate);
+	if (period_ns < min)
+		return -ERANGE;
 
 	div = (u64)NSEC_PER_SEC * RCAR_PWM_MAX_CYCLE;
 	tmp = (u64)period_ns * clk_rate + div - 1;
