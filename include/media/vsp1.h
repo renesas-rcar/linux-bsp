@@ -13,6 +13,14 @@
 #include <linux/types.h>
 #include <linux/videodev2.h>
 
+/* write back stat */
+enum {
+	WB_STAT_CATP_DONE = 0,
+	WB_STAT_CATP_START,
+	WB_STAT_CATP_SET,
+	WB_STAT_CATP_REQUEST,
+};
+
 struct device;
 
 int vsp1_du_init(struct device *dev);
@@ -51,6 +59,9 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int pipe_index,
  * @dst: destination rectangle on the display (integer coordinates)
  * @alpha: alpha value (0: fully transparent, 255: fully opaque)
  * @zpos: Z position of the plane (from 0 to number of planes minus 1)
+ * @colorkey: colorkey value
+ * @colorkey_alpha: colorkey alpha value
+ * @colorkey_en: colorkey enable value
  */
 struct vsp1_du_atomic_config {
 	u32 pixelformat;
@@ -60,6 +71,9 @@ struct vsp1_du_atomic_config {
 	struct v4l2_rect dst;
 	unsigned int alpha;
 	unsigned int zpos;
+	u32 colorkey;
+	u32 colorkey_alpha;
+	bool colorkey_en;
 };
 
 /**
@@ -114,5 +128,9 @@ void vsp1_du_atomic_flush(struct device *dev, unsigned int pipe_index,
 			  const struct vsp1_du_atomic_pipe_config *cfg);
 int vsp1_du_map_sg(struct device *dev, struct sg_table *sgt);
 void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt);
+int vsp1_du_if_set_mute(struct device *dev, bool on, unsigned int pipe_index);
+int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
+		     dma_addr_t mem[2], unsigned int pipe_index);
+int vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int pipe_index);
 
 #endif /* __MEDIA_VSP1_H__ */
