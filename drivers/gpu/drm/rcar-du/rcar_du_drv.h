@@ -106,6 +106,7 @@ struct rcar_du_device_info {
 #define RCAR_DU_MAX_VSPS		4
 #define RCAR_DU_MAX_LVDS		2
 #define RCAR_DU_MAX_DSI			2
+#define RCAR_DU_MAX_MIPI_DSI	2
 
 struct rcar_du_device {
 	struct device *dev;
@@ -123,6 +124,7 @@ struct rcar_du_device {
 	struct rcar_du_vsp vsps[RCAR_DU_MAX_VSPS];
 	struct drm_bridge *lvds[RCAR_DU_MAX_LVDS];
 	struct drm_bridge *dsi[RCAR_DU_MAX_DSI];
+	struct drm_bridge *mipi_dsi[RCAR_DU_MAX_MIPI_DSI];
 
 	struct {
 		struct drm_property *alpha;
