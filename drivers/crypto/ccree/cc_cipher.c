@@ -1178,7 +1178,7 @@ cc_setup_secure_key_flow_desc(struct crypto_tfm *tfm,
 			set_din_type(&desc[*seq_size], DMA_DLLI,
 				sg_dma_address(src), nbytes, NS_BIT);
 			set_dout_dlli(&desc[*seq_size], sg_dma_address(dst),
-				nbytes, NS_BIT, 1);
+				nbytes, NS_BIT, 0);
 		} else {
 			/*
 			 * In case of counter protection the operation
@@ -1239,7 +1239,7 @@ cc_setup_secure_key_flow_desc(struct crypto_tfm *tfm,
 			sizeof(cipher_handle->dropped_buffer), NS_BIT);
 		set_dout_dlli(&desc[*seq_size],
 			cipher_handle->dropped_buffer_dma_addr,
-			sizeof(cipher_handle->dropped_buffer), NS_BIT, 1);
+			sizeof(cipher_handle->dropped_buffer), NS_BIT, 0);
 		set_flow_mode(&desc[*seq_size], flow_mode);
 		(*seq_size)++;
 	}
