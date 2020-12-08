@@ -576,6 +576,7 @@
 			resets = <&cpg 706>;
 			max-frequency = <200000000>;
 			status = "disabled";
+			iommus = <&ipmmu_ds0 32>;
 		};
 
 		msiof0: spi@e6e90000 {
@@ -1380,7 +1381,6 @@
 			#iommu-cells = <1>;
 			linux,uio-name = "ipmmu_mm_00";
 			ipmmu-id = <RCAR_IPMMU_MM>;
-			status = "disabled";
 		};
 
 		ipmmu_rt0: iommu@ee480000 {
@@ -1413,8 +1413,6 @@
 			#iommu-cells = <1>;
 			linux,uio-name = "ipmmu_ds_00";
 			ipmmu-id = <RCAR_IPMMU_DS0>;
-
-			status = "disabled";
 		};
 
 		ipmmu_ds1: iommu@eed40000 {
