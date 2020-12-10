@@ -3,6 +3,12 @@ config SOC_RENESAS
 	bool "Renesas SoC driver support" if COMPILE_TEST && !ARCH_RENESAS
 	default y if ARCH_RENESAS
 	select SOC_BUS
+config RCAR_CPU_TOPOLOGY
+	depends on (ARCH_R8A7795 || ARCH_R8A7796)
+	bool "R-Car CPU Topology"
+	default y
+	help
+	  This enables the capacity awareness feature for R-Car series.
 
 if SOC_RENESAS
 
