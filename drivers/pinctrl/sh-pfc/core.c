@@ -174,11 +174,35 @@ u32 sh_pfc_read(struct sh_pfc *pfc, u32 reg)
 	return sh_pfc_read_raw_reg(sh_pfc_phys_to_virt(pfc, reg), 32);
 }
 
+u32 sh_pfc_get_unlock_reg(struct sh_pfc *pfc, u32 reg)
+{
+	u32 unlock_reg;
+	unsigned int i;
+
+	if (pfc->info->unlock_reg)
+		return pfc->info->unlock_reg;
+
+	for (i = 0; i < pfc->info->unlock_regs_size; i++) {
+		unlock_reg = *(pfc->info->unlock_regs_table + i);
+
+		if (reg < unlock_reg)
+			continue;
+		if (reg > unlock_reg + pfc->info->writable_area)
+			continue;
+		return unlock_reg;
+	}
+
+	BUG();
+	return 0;
+}
+
 void sh_pfc_write(struct sh_pfc *pfc, u32 reg, u32 data)
 {
-	if (pfc->info->unlock_reg)
+	if ((pfc->info->unlock_reg != 0) ||
+	    (pfc->info->unlock_regs_table != NULL))
 		sh_pfc_write_raw_reg(
-			sh_pfc_phys_to_virt(pfc, pfc->info->unlock_reg), 32,
+			sh_pfc_phys_to_virt(pfc,
+				sh_pfc_get_unlock_reg(pfc, reg)), 32,
 			~data);
 
 	sh_pfc_write_raw_reg(sh_pfc_phys_to_virt(pfc, reg), 32, data);
@@ -226,9 +250,11 @@ static void sh_pfc_write_config_reg(struct sh_pfc *pfc,
 	data &= mask;
 	data |= value;
 
-	if (pfc->info->unlock_reg)
+	if ((pfc->info->unlock_reg != 0) ||
+	    (pfc->info->unlock_regs_table != NULL))
 		sh_pfc_write_raw_reg(
-			sh_pfc_phys_to_virt(pfc, pfc->info->unlock_reg), 32,
+			sh_pfc_phys_to_virt(pfc,
+				sh_pfc_get_unlock_reg(pfc, crp->reg)), 32,
 			~data);
 
 	sh_pfc_write_raw_reg(mapped_reg, crp->reg_width, data);
@@ -609,6 +635,12 @@ static const struct of_device_id sh_pfc_of_table[] = {
 	{
 		.compatible = "renesas,pfc-r8a77995",
 		.data = &r8a77995_pinmux_info,
+	},
+#endif
+#ifdef CONFIG_PINCTRL_PFC_R8A779A0
+	{
+		.compatible = "renesas,pfc-r8a779a0",
+		.data = &r8a779a0_pinmux_info,
 	},
 #endif
 #ifdef CONFIG_PINCTRL_PFC_SH73A0
