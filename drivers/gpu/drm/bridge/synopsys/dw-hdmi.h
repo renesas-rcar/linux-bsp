@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
+ * Copyright (C) 2018 Renesas Electronics Corporation
  * Copyright (C) 2011 Freescale Semiconductor, Inc.
  */
 
@@ -104,9 +105,11 @@
 #define HDMI_FC_AUDICONF2                       0x1027
 #define HDMI_FC_AUDICONF3                       0x1028
 #define HDMI_FC_VSDIEEEID0                      0x1029
+#define HDMI_RCAR_FC_VSDIEEEID2                 0x1029
 #define HDMI_FC_VSDSIZE                         0x102A
 #define HDMI_FC_VSDIEEEID1                      0x1030
 #define HDMI_FC_VSDIEEEID2                      0x1031
+#define HDMI_RCAR_FC_VSDIEEEID0                 0x1031
 #define HDMI_FC_VSDPAYLOAD0                     0x1032
 #define HDMI_FC_VSDPAYLOAD1                     0x1033
 #define HDMI_FC_VSDPAYLOAD2                     0x1034
@@ -475,6 +478,9 @@
 #define HDMI_A_PRESETUP                         0x501A
 #define HDMI_A_SRM_BASE                         0x5020
 
+/* Misc Mask Regigter for R-Car only */
+#define HDMI_MISC_MASK                          0x7D02
+
 /* I2C Master Registers (E-DDC) */
 #define HDMI_I2CM_SLAVE                         0x7E00
 #define HDMI_I2CM_ADDRESS                       0x7E01
@@ -534,6 +540,10 @@ enum {
 	HDMI_IH_PHY_STAT0_TX_PHY_LOCK = 0x2,
 	HDMI_IH_PHY_STAT0_HPD = 0x1,
 
+/* IH_I2CMPHY_STAT0 field values */
+	HDMI_IH_I2CMPHY_STAT0_I2CMPHYDONE = 0x2,
+	HDMI_IH_I2CMPHY_STAT0_I2CMPHYERROR = 0x1,
+
 /* IH_I2CM_STAT0 and IH_MUTE_I2CM_STAT0 field values */
 	HDMI_IH_I2CM_STAT0_DONE = 0x2,
 	HDMI_IH_I2CM_STAT0_ERROR = 0x1,
@@ -562,6 +572,9 @@ enum {
 	HDMI_IH_MUTE_AHBDMAAUD_STAT0_DONE = 0x04,
 	HDMI_IH_MUTE_AHBDMAAUD_STAT0_BUFFFULL = 0x02,
 	HDMI_IH_MUTE_AHBDMAAUD_STAT0_BUFFEMPTY = 0x01,
+
+/* IH_MUTE_PHY_STAT0 field values */
+	HDMI_IH_MUTE_PHY_STAT0_MASK = 0x3f,
 
 /* IH_MUTE field values */
 	HDMI_IH_MUTE_MUTE_WAKEUP_INTERRUPT = 0x2,
@@ -946,6 +959,7 @@ enum {
 /* MC_SWRSTZ field values */
 	HDMI_MC_SWRSTZ_I2SSWRST_REQ = 0x08,
 	HDMI_MC_SWRSTZ_TMDSSWRST_REQ = 0x02,
+	HDMI_MC_SWRSTZ_TMDSSWRST_MASK = 0x02,
 
 /* MC_FLOWCTRL field values */
 	HDMI_MC_FLOWCTRL_FEED_THROUGH_OFF_MASK = 0x1,
@@ -1046,6 +1060,9 @@ enum {
 	HDMI_I2CM_CTLINT_NAC_MASK = 0x40,
 	HDMI_I2CM_CTLINT_ARB_POL = 0x8,
 	HDMI_I2CM_CTLINT_ARB_MASK = 0x4,
+
+/* I2CM_DIV field values */
+	HDMI_I2CM_DIV_FAST_STD_MODE_MASK = 0x08,
 };
 
 /*

@@ -2,12 +2,13 @@
 /*
  * rcar_du_drv.c  --  R-Car Display Unit DRM driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
 
 #include <linux/clk.h>
+#include <linux/dma-mapping.h>
 #include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/module.h>
@@ -17,17 +18,23 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 
+#include <drm/bridge/dw_hdmi.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_drv.h>
 #include <drm/drm_gem_cma_helper.h>
 #include <drm/drm_probe_helper.h>
+#include <drm/rcar_du_drm.h>
+
+#include <media/vsp1.h>
 
 #include "rcar_du_drv.h"
+#include "rcar_du_encoder.h"
 #include "rcar_du_kms.h"
 #include "rcar_du_of.h"
 #include "rcar_du_regs.h"
+#include "rcar_du_vsp.h"
 
 /* -----------------------------------------------------------------------------
  * Device Information
@@ -276,7 +283,8 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
 		  | RCAR_DU_FEATURE_INTERLACED
-		  | RCAR_DU_FEATURE_TVM_SYNC,
+		  | RCAR_DU_FEATURE_TVM_SYNC
+		  | RCAR_DU_FEATURE_R8A7795_REGS,
 	.channels_mask = BIT(3) | BIT(2) | BIT(1) | BIT(0),
 	.routes = {
 		/*
@@ -309,7 +317,8 @@ static const struct rcar_du_device_info rcar_du_r8a7796_info = {
 	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
 		  | RCAR_DU_FEATURE_INTERLACED
-		  | RCAR_DU_FEATURE_TVM_SYNC,
+		  | RCAR_DU_FEATURE_TVM_SYNC
+		  | RCAR_DU_FEATURE_R8A7796_REGS,
 	.channels_mask = BIT(2) | BIT(1) | BIT(0),
 	.routes = {
 		/*
@@ -338,7 +347,8 @@ static const struct rcar_du_device_info rcar_du_r8a77965_info = {
 	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
 		  | RCAR_DU_FEATURE_INTERLACED
-		  | RCAR_DU_FEATURE_TVM_SYNC,
+		  | RCAR_DU_FEATURE_TVM_SYNC
+		  | RCAR_DU_FEATURE_R8A77965_REGS,
 	.channels_mask = BIT(3) | BIT(1) | BIT(0),
 	.routes = {
 		/*
@@ -410,6 +420,29 @@ static const struct rcar_du_device_info rcar_du_r8a7799x_info = {
 	.lvds_clk_mask =  BIT(1) | BIT(0),
 };
 
+static const struct rcar_du_device_info rcar_du_r8a779a0_info = {
+	.gen = 3,
+	.features = RCAR_DU_FEATURE_CRTC_IRQ_CLOCK
+		  | RCAR_DU_FEATURE_VSP1_SOURCE
+		  | RCAR_DU_FEATURE_R8A779A0_REGS,
+	.channels_mask = BIT(1) | BIT(0),
+	.routes = {
+		/*
+		 * R8A779A0 has two MIPI DSI output.
+		 */
+		[RCAR_DU_OUTPUT_MIPI_DSI0] = {
+			.possible_crtcs = BIT(0),
+			.port = 0,
+		},
+		[RCAR_DU_OUTPUT_MIPI_DSI1] = {
+			.possible_crtcs = BIT(1),
+			.port = 1,
+		},
+	},
+	.num_mipi_dsi = 2,
+	.mipi_dsi_clk_mask = BIT(1) | BIT(0),
+};
+
 static const struct of_device_id rcar_du_of_table[] = {
 	{ .compatible = "renesas,du-r8a7743", .data = &rzg1_du_r8a7743_info },
 	{ .compatible = "renesas,du-r8a7744", .data = &rzg1_du_r8a7743_info },
@@ -429,6 +462,7 @@ static const struct of_device_id rcar_du_of_table[] = {
 	{ .compatible = "renesas,du-r8a77970", .data = &rcar_du_r8a77970_info },
 	{ .compatible = "renesas,du-r8a77990", .data = &rcar_du_r8a7799x_info },
 	{ .compatible = "renesas,du-r8a77995", .data = &rcar_du_r8a7799x_info },
+	{ .compatible = "renesas,du-r8a779a0", .data = &rcar_du_r8a779a0_info },
 	{ }
 };
 
@@ -437,6 +471,13 @@ MODULE_DEVICE_TABLE(of, rcar_du_of_table);
 /* -----------------------------------------------------------------------------
  * DRM operations
  */
+
+static const struct drm_ioctl_desc rcar_du_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
+			  DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(RCAR_DU_SCRSHOT, rcar_du_vsp_write_back,
+			  DRM_UNLOCKED),
+};
 
 DEFINE_DRM_GEM_CMA_FOPS(rcar_du_fops);
 
@@ -447,7 +488,7 @@ static struct drm_driver rcar_du_driver = {
 	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
 	.prime_fd_to_handle	= drm_gem_prime_fd_to_handle,
 	.gem_prime_get_sg_table	= drm_gem_cma_prime_get_sg_table,
-	.gem_prime_import_sg_table = drm_gem_cma_prime_import_sg_table,
+	.gem_prime_import_sg_table = rcar_du_gem_prime_import_sg_table,
 	.gem_prime_vmap		= drm_gem_cma_prime_vmap,
 	.gem_prime_vunmap	= drm_gem_cma_prime_vunmap,
 	.gem_prime_mmap		= drm_gem_cma_prime_mmap,
@@ -458,6 +499,8 @@ static struct drm_driver rcar_du_driver = {
 	.date			= "20130110",
 	.major			= 1,
 	.minor			= 0,
+	.ioctls			= rcar_du_ioctls,
+	.num_ioctls		= ARRAY_SIZE(rcar_du_ioctls),
 };
 
 /* -----------------------------------------------------------------------------
@@ -468,7 +511,21 @@ static struct drm_driver rcar_du_driver = {
 static int rcar_du_pm_suspend(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	struct drm_encoder *encoder;
+#endif
 
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	list_for_each_entry(encoder,
+			    &rcdu->ddev->mode_config.encoder_list,
+			    head) {
+		struct rcar_du_encoder *renc = to_rcar_encoder(encoder);
+
+		if (renc->bridge && (renc->output == RCAR_DU_OUTPUT_HDMI0 ||
+		    renc->output == RCAR_DU_OUTPUT_HDMI1))
+			dw_hdmi_s2r_ctrl(encoder->bridge, false);
+	}
+#endif
 	return drm_mode_config_helper_suspend(rcdu->ddev);
 }
 
@@ -476,6 +533,23 @@ static int rcar_du_pm_resume(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
 
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	struct drm_encoder *encoder;
+
+	list_for_each_entry(encoder,
+			    &rcdu->ddev->mode_config.encoder_list,
+			    head) {
+		struct rcar_du_encoder *renc = to_rcar_encoder(encoder);
+
+		if (renc->bridge && (renc->output == RCAR_DU_OUTPUT_HDMI0 ||
+		    renc->output == RCAR_DU_OUTPUT_HDMI1))
+			dw_hdmi_s2r_ctrl(encoder->bridge, true);
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_I2C_ADV7511)
+	drm_helper_hpd_irq_event(rcdu->ddev);
+#endif
 	return drm_mode_config_helper_resume(rcdu->ddev);
 }
 #endif
@@ -493,6 +567,9 @@ static int rcar_du_remove(struct platform_device *pdev)
 	struct rcar_du_device *rcdu = platform_get_drvdata(pdev);
 	struct drm_device *ddev = rcdu->ddev;
 
+	if (rcdu->mode_config_initialized)
+		drm_atomic_helper_shutdown(ddev);
+
 	drm_dev_unregister(ddev);
 
 	drm_kms_helper_poll_fini(ddev);
@@ -508,6 +585,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 	struct rcar_du_device *rcdu;
 	struct drm_device *ddev;
 	struct resource *mem;
+	unsigned int mask;
 	int ret;
 
 	/* Allocate and initialize the R-Car device structure. */
@@ -525,6 +603,16 @@ static int rcar_du_probe(struct platform_device *pdev)
 	rcdu->mmio = devm_ioremap_resource(&pdev->dev, mem);
 	if (IS_ERR(rcdu->mmio))
 		return PTR_ERR(rcdu->mmio);
+
+	/*
+	 * Set the DMA coherent mask to reflect the DU 32-bit DMA address space
+	 * limitations. When sourcing frames from a VSP the DU doesn't perform
+	 * any memory access so set the mask to 40 bits to accept all buffers.
+	 */
+	mask = rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE) ? 40 : 32;
+	ret = dma_coerce_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(mask));
+	if (ret)
+		return ret;
 
 	/* DRM/KMS objects */
 	ddev = drm_dev_alloc(&rcar_du_driver, &pdev->dev);
@@ -556,12 +644,21 @@ static int rcar_du_probe(struct platform_device *pdev)
 
 	drm_fbdev_generic_setup(ddev, 32);
 
+	rcdu->mode_config_initialized = true;
+
 	return 0;
 
 error:
 	rcar_du_remove(pdev);
 
 	return ret;
+}
+
+static void rcar_du_shutdown(struct platform_device *pdev)
+{
+#ifdef CONFIG_PM_SLEEP
+	rcar_du_pm_suspend(&pdev->dev);
+#endif
 }
 
 static struct platform_driver rcar_du_platform_driver = {
@@ -572,6 +669,7 @@ static struct platform_driver rcar_du_platform_driver = {
 		.pm	= &rcar_du_pm_ops,
 		.of_match_table = rcar_du_of_table,
 	},
+	.shutdown       = rcar_du_shutdown,
 };
 
 static int __init rcar_du_init(void)
