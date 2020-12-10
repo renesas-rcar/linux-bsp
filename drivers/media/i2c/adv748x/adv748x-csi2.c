@@ -278,12 +278,27 @@ static int adv748x_csi2_init_controls(struct adv748x_csi2 *tx)
 int adv748x_csi2_init(struct adv748x_state *state, struct adv748x_csi2 *tx)
 {
 	int ret;
+	unsigned int ch;
+	struct device_node *ep;
 
 	if (!is_tx_enabled(tx))
 		return 0;
 
+	ep = state->endpoints[is_txa(tx) ? ADV748X_PORT_TXA : ADV748X_PORT_TXB];
+	if (!ep) {
+		adv_err(state, "No endpoint found for %s\n",
+				is_txa(tx) ? "txa" : "txb");
+		return -ENODEV;
+	}
+
+	if (of_property_read_u32(ep, "virtual-channel", &ch))
+		ch = 0;
+
+	if (ch > 3)
+		return -EINVAL;
+
 	/* Initialise the virtual channel */
-	adv748x_csi2_set_virtual_channel(tx, 0);
+	adv748x_csi2_set_virtual_channel(tx, ch);
 
 	adv748x_subdev_init(&tx->sd, state, &adv748x_csi2_ops,
 			    MEDIA_ENT_F_VID_IF_BRIDGE,
