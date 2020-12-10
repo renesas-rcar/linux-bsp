@@ -22,6 +22,7 @@ Required properties:
 	         - "renesas,r8a77970-wdt" (R-Car V3M)
 	         - "renesas,r8a77990-wdt" (R-Car E3)
 	         - "renesas,r8a77995-wdt" (R-Car D3)
+	         - "renesas,r8a779a0-wdt" (R-Car V3U)
 	         - "renesas,r7s72100-wdt" (RZ/A1)
 	         - "renesas,r7s9210-wdt"  (RZ/A2)
 		The generic compatible string must be:
