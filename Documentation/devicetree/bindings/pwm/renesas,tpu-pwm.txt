@@ -13,6 +13,8 @@ Required Properties:
 			      controller.
     - "renesas,tpu-r8a77980": for R8A77980 (R-Car V3H) compatible PWM
 			      controller.
+    - "renesas,tpu-r8a779a0": for R8A779A0 (R-Car V3U) compatible PWM
+			      controller.
     - "renesas,tpu": for the generic TPU PWM controller; this is a fallback for
 		     the entries listed above.
 
