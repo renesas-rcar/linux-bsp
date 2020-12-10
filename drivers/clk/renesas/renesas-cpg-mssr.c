@@ -52,17 +52,23 @@
  * Module Stop Status Register offsets
  */
 
+#define MSTPSR_MAX_SIZE 15
+
+static const u16 mstpsr_r8a779a0[] = {
+	0x2E00, 0x2E04, 0x2E08, 0x2E0C, 0x2E10, 0x2E14, 0x2E18, 0x2E1C,
+	0x2E20, 0x2E24, 0x2E28, 0x2E2C, 0x2E30, 0x2E34, 0x2E38,
+};
+
 static const u16 mstpsr[] = {
 	0x030, 0x038, 0x040, 0x048, 0x04C, 0x03C, 0x1C0, 0x1C4,
 	0x9A0, 0x9A4, 0x9A8, 0x9AC,
 };
 
-#define	MSTPSR(i)	mstpsr[i]
-
-
 /*
  * System Module Stop Control Register offsets
  */
+
+#define MSTPCR(i)	(mstpsr_r8a779a0[i] - 0x100)
 
 static const u16 smstpcr[] = {
 	0x130, 0x134, 0x138, 0x13C, 0x140, 0x144, 0x148, 0x14C,
@@ -93,17 +99,21 @@ static const u16 srcr[] = {
 };
 
 #define	SRCR(i)		srcr[i]
+#define SRCR_R8779A0(i)	(0x2C00 + (i) * 4)
 
 
 /* Realtime Module Stop Control Register offsets */
-#define RMSTPCR(i)	(smstpcr[i] - 0x20)
+#define RMSTPCR(i)	((i) < 8 ? smstpcr[i] - 0x20 : smstpcr[i] - 0x10)
 
 /* Modem Module Stop Control Register offsets (r8a73a4) */
 #define MMSTPCR(i)	(smstpcr[i] + 0x20)
 
 /* Software Reset Clearing Register offsets */
 #define	SRSTCLR(i)	(0x940 + (i) * 4)
+#define SRSTCLR_R8A779A0(i)	(0x2C80 + (i) * 4)
 
+/* CPG Write Protect Register for R8A779a0*/
+#define CPGWPR_R8A779A0	0x000
 
 /**
  * Clock Pulse Generator / Module Standby and Software Reset Private Data
@@ -116,10 +126,13 @@ static const u16 srcr[] = {
  * @num_core_clks: Number of Core Clocks in clks[]
  * @num_mod_clks: Number of Module Clocks in clks[]
  * @last_dt_core_clk: ID of the last Core Clock exported to DT
+ * @gen: device generation
  * @stbyctrl: This device has Standby Control Registers
+ * @mstpctrl: This device has only MSTP Control Registers
  * @notifiers: Notifier chain to save/restore clock state for system resume
- * @smstpcr_saved[].mask: Mask of SMSTPCR[] bits under our control
- * @smstpcr_saved[].val: Saved values of SMSTPCR[]
+ * @mstpcr_saved[].mask: Mask of MSTPCR[](R8A779A0)/SMSTPCR[](Gen3)
+ *			 bits under our control
+ * @mstpcr_saved[].val: Saved values of MSTPCR[](R8A779A0)/SMSTPCR[](Gen3)
  * @clks: Array containing all Core and Module Clocks
  */
 struct cpg_mssr_priv {
@@ -134,13 +147,15 @@ struct cpg_mssr_priv {
 	unsigned int num_core_clks;
 	unsigned int num_mod_clks;
 	unsigned int last_dt_core_clk;
+	unsigned int gen;
 	bool stbyctrl;
+	bool mstpctrl;
 
 	struct raw_notifier_head notifiers;
 	struct {
 		u32 mask;
 		u32 val;
-	} smstpcr_saved[ARRAY_SIZE(smstpcr)];
+	} mstpcr_saved[MSTPSR_MAX_SIZE];
 
 	struct clk *clks[];
 };
@@ -161,6 +176,33 @@ struct mstp_clock {
 
 #define to_mstp_clock(_hw) container_of(_hw, struct mstp_clock, hw)
 
+u16 get_mstpsr_register(struct cpg_mssr_priv *priv, unsigned int index)
+{
+	if (priv->mstpctrl) {
+		return mstpsr_r8a779a0[index];
+	} else {
+		return mstpsr[index];
+	}
+}
+
+u16 get_srcr_register(struct cpg_mssr_priv *priv, unsigned int index)
+{
+	if (priv->mstpctrl) {
+		return SRCR_R8779A0(index);
+	} else {
+		return SRCR(index);
+	}
+}
+
+u16 get_srstclr_register(struct cpg_mssr_priv *priv, unsigned int index)
+{
+	if (priv->mstpctrl) {
+		return SRSTCLR_R8A779A0(index);
+	} else {
+		return SRSTCLR(index);
+	}
+}
+
 static int cpg_mstp_clock_endisable(struct clk_hw *hw, bool enable)
 {
 	struct mstp_clock *clock = to_mstp_clock(hw);
@@ -172,6 +214,7 @@ static int cpg_mstp_clock_endisable(struct clk_hw *hw, bool enable)
 	unsigned long flags;
 	unsigned int i;
 	u32 value;
+	u16 reg_offset = priv->mstpctrl ? MSTPCR(reg) : SMSTPCR(reg);
 
 	dev_dbg(dev, "MSTP %u%02u/%pC %s\n", reg, bit, hw->clk,
 		enable ? "ON" : "OFF");
@@ -189,12 +232,18 @@ static int cpg_mstp_clock_endisable(struct clk_hw *hw, bool enable)
 		readb(priv->base + STBCR(reg));
 		barrier_data(priv->base + STBCR(reg));
 	} else {
-		value = readl(priv->base + SMSTPCR(reg));
+		value = readl(priv->base + reg_offset);
 		if (enable)
 			value &= ~bitmask;
 		else
 			value |= bitmask;
-		writel(value, priv->base + SMSTPCR(reg));
+		/* In V3U, to write the data to CPG's register,
+		 * we need to write inverted value to base address
+		 * before write the actual value to register
+		 */
+		if (priv->mstpctrl)
+			writel(~value, priv->base + CPGWPR_R8A779A0);
+		writel(value, priv->base + reg_offset);
 	}
 
 	spin_unlock_irqrestore(&priv->rmw_lock, flags);
@@ -203,14 +252,15 @@ static int cpg_mstp_clock_endisable(struct clk_hw *hw, bool enable)
 		return 0;
 
 	for (i = 1000; i > 0; --i) {
-		if (!(readl(priv->base + MSTPSR(reg)) & bitmask))
+		if (!(readl(priv->base + get_mstpsr_register(priv, reg)) & bitmask))
 			break;
 		cpu_relax();
 	}
 
 	if (!i) {
-		dev_err(dev, "Failed to enable SMSTP %p[%d]\n",
-			priv->base + SMSTPCR(reg), bit);
+		dev_err(dev, "Failed to enable %s %p[%d]\n",
+			priv->mstpctrl ? "MSTP" : "SMSTP",
+			priv->base + reg_offset, bit);
 		return -ETIMEDOUT;
 	}
 
@@ -236,7 +286,7 @@ static int cpg_mstp_clock_is_enabled(struct clk_hw *hw)
 	if (priv->stbyctrl)
 		value = readb(priv->base + STBCR(clock->index / 32));
 	else
-		value = readl(priv->base + MSTPSR(clock->index / 32));
+		value = readl(priv->base + get_mstpsr_register(priv, clock->index / 32));
 
 	return !(value & BIT(clock->index % 32));
 }
@@ -438,7 +488,7 @@ static void __init cpg_mssr_register_mod_clk(const struct mssr_mod_clk *mod,
 
 	dev_dbg(dev, "Module clock %pC at %lu Hz\n", clk, clk_get_rate(clk));
 	priv->clks[id] = clk;
-	priv->smstpcr_saved[clock->index / 32].mask |= BIT(clock->index % 32);
+	priv->mstpcr_saved[clock->index / 32].mask |= BIT(clock->index % 32);
 	return;
 
 fail:
@@ -577,13 +627,13 @@ static int cpg_mssr_reset(struct reset_controller_dev *rcdev,
 	dev_dbg(priv->dev, "reset %u%02u\n", reg, bit);
 
 	/* Reset module */
-	writel(bitmask, priv->base + SRCR(reg));
+	writel(bitmask, priv->base + get_srcr_register(priv, reg));
 
 	/* Wait for at least one cycle of the RCLK clock (@ ca. 32 kHz) */
 	udelay(35);
 
 	/* Release module from reset state */
-	writel(bitmask, priv->base + SRSTCLR(reg));
+	writel(bitmask, priv->base + get_srstclr_register(priv, reg));
 
 	return 0;
 }
@@ -597,7 +647,7 @@ static int cpg_mssr_assert(struct reset_controller_dev *rcdev, unsigned long id)
 
 	dev_dbg(priv->dev, "assert %u%02u\n", reg, bit);
 
-	writel(bitmask, priv->base + SRCR(reg));
+	writel(bitmask, priv->base + get_srcr_register(priv, reg));
 	return 0;
 }
 
@@ -611,7 +661,7 @@ static int cpg_mssr_deassert(struct reset_controller_dev *rcdev,
 
 	dev_dbg(priv->dev, "deassert %u%02u\n", reg, bit);
 
-	writel(bitmask, priv->base + SRSTCLR(reg));
+	writel(bitmask, priv->base + get_srstclr_register(priv, reg));
 	return 0;
 }
 
@@ -623,7 +673,7 @@ static int cpg_mssr_status(struct reset_controller_dev *rcdev,
 	unsigned int bit = id % 32;
 	u32 bitmask = BIT(bit);
 
-	return !!(readl(priv->base + SRCR(reg)) & bitmask);
+	return !!(readl(priv->base + get_srcr_register(priv, reg)) & bitmask);
 }
 
 static const struct reset_control_ops cpg_mssr_reset_ops = {
@@ -779,6 +829,12 @@ static const struct of_device_id cpg_mssr_match[] = {
 		.data = &r8a77995_cpg_mssr_info,
 	},
 #endif
+#ifdef CONFIG_CLK_R8A779A0
+	{
+		.compatible = "renesas,r8a779a0-cpg-mssr",
+		.data = &r8a779a0_cpg_mssr_info,
+	},
+#endif
 	{ /* sentinel */ }
 };
 
@@ -792,17 +848,21 @@ static int cpg_mssr_suspend_noirq(struct device *dev)
 {
 	struct cpg_mssr_priv *priv = dev_get_drvdata(dev);
 	unsigned int reg;
+	u16 reg_offset;
 
 	/* This is the best we can do to check for the presence of PSCI */
 	if (!psci_ops.cpu_suspend)
 		return 0;
 
 	/* Save module registers with bits under our control */
-	for (reg = 0; reg < ARRAY_SIZE(priv->smstpcr_saved); reg++) {
-		if (priv->smstpcr_saved[reg].mask)
-			priv->smstpcr_saved[reg].val = priv->stbyctrl ?
+	for (reg = 0; reg < ARRAY_SIZE(priv->mstpcr_saved); reg++) {
+		if (priv->mstpcr_saved[reg].mask) {
+			reg_offset = priv->mstpctrl ?
+					MSTPCR(reg) : SMSTPCR(reg);
+			priv->mstpcr_saved[reg].val = priv->stbyctrl ?
 				readb(priv->base + STBCR(reg)) :
-				readl(priv->base + SMSTPCR(reg));
+				readl(priv->base + reg_offset);
+		}
 	}
 
 	/* Save core clocks */
@@ -816,6 +876,7 @@ static int cpg_mssr_resume_noirq(struct device *dev)
 	struct cpg_mssr_priv *priv = dev_get_drvdata(dev);
 	unsigned int reg, i;
 	u32 mask, oldval, newval;
+	u16 reg_offset;
 
 	/* This is the best we can do to check for the presence of PSCI */
 	if (!psci_ops.cpu_suspend)
@@ -825,17 +886,18 @@ static int cpg_mssr_resume_noirq(struct device *dev)
 	raw_notifier_call_chain(&priv->notifiers, PM_EVENT_RESUME, NULL);
 
 	/* Restore module clocks */
-	for (reg = 0; reg < ARRAY_SIZE(priv->smstpcr_saved); reg++) {
-		mask = priv->smstpcr_saved[reg].mask;
+	for (reg = 0; reg < ARRAY_SIZE(priv->mstpcr_saved); reg++) {
+		reg_offset = priv->mstpctrl ? MSTPCR(reg) : SMSTPCR(reg);
+		mask = priv->mstpcr_saved[reg].mask;
 		if (!mask)
 			continue;
 
 		if (priv->stbyctrl)
 			oldval = readb(priv->base + STBCR(reg));
 		else
-			oldval = readl(priv->base + SMSTPCR(reg));
+			oldval = readl(priv->base + reg_offset);
 		newval = oldval & ~mask;
-		newval |= priv->smstpcr_saved[reg].val & mask;
+		newval |= priv->mstpcr_saved[reg].val & mask;
 		if (newval == oldval)
 			continue;
 
@@ -845,25 +907,33 @@ static int cpg_mssr_resume_noirq(struct device *dev)
 			readb(priv->base + STBCR(reg));
 			barrier_data(priv->base + STBCR(reg));
 			continue;
-		} else
-			writel(newval, priv->base + SMSTPCR(reg));
+		} else {
+			if (priv->mstpctrl)
+				writel(~newval, priv->base + CPGWPR_R8A779A0);
+			writel(newval, priv->base + reg_offset);
+		}
 
 		/* Wait until enabled clocks are really enabled */
-		mask &= ~priv->smstpcr_saved[reg].val;
+		mask &= ~priv->mstpcr_saved[reg].val;
 		if (!mask)
 			continue;
 
 		for (i = 1000; i > 0; --i) {
-			oldval = readl(priv->base + MSTPSR(reg));
+			oldval = readl(priv->base + get_mstpsr_register(priv, reg));
 			if (!(oldval & mask))
 				break;
 			cpu_relax();
 		}
 
-		if (!i)
+		if (!i) {
+			if (priv->mstpctrl)
+				dev_warn(dev, "Failed to enable MSTP %p[0x%x]\n",
+					 priv->base + reg_offset, oldval & mask);
+			else
 			dev_warn(dev, "Failed to enable %s%u[0x%x]\n",
 				 priv->stbyctrl ? "STB" : "SMSTP", reg,
 				 oldval & mask);
+		}
 	}
 
 	return 0;
@@ -913,6 +983,8 @@ static int __init cpg_mssr_common_init(struct device *dev,
 	priv->last_dt_core_clk = info->last_dt_core_clk;
 	RAW_INIT_NOTIFIER_HEAD(&priv->notifiers);
 	priv->stbyctrl = info->stbyctrl;
+	priv->mstpctrl = info->mstpctrl;
+	priv->gen = info->gen;
 
 	for (i = 0; i < nclks; i++)
 		priv->clks[i] = ERR_PTR(-ENOENT);
