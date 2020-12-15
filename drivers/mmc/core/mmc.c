@@ -1162,12 +1162,12 @@ static int mmc_select_hs400(struct mmc_card *card)
 		return err;
 	}
 
-	/* Set host controller to HS timing */
-	mmc_set_timing(card->host, MMC_TIMING_MMC_HS);
-
 	/* Prepare host to downgrade to HS timing */
 	if (host->ops->hs400_downgrade)
 		host->ops->hs400_downgrade(host);
+
+	/* Set host controller to HS timing */
+	mmc_set_timing(host, MMC_TIMING_MMC_HS);
 
 	/* Reduce frequency to HS frequency */
 	max_dtr = card->ext_csd.hs_max_dtr;
@@ -1247,6 +1247,9 @@ int mmc_hs400_to_hs200(struct mmc_card *card)
 	if (err)
 		goto out_err;
 
+	if (host->ops->hs400_downgrade)
+		host->ops->hs400_downgrade(host);
+
 	mmc_set_timing(host, MMC_TIMING_MMC_DDR52);
 
 	err = mmc_switch_status(card);
@@ -1261,9 +1264,6 @@ int mmc_hs400_to_hs200(struct mmc_card *card)
 		goto out_err;
 
 	mmc_set_timing(host, MMC_TIMING_MMC_HS);
-
-	if (host->ops->hs400_downgrade)
-		host->ops->hs400_downgrade(host);
 
 	err = mmc_switch_status(card);
 	if (err)
@@ -1757,13 +1757,17 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		goto free_card;
 
 	if (mmc_card_hs200(card)) {
+		host->doing_init_tune = 1;
+
 		err = mmc_hs200_tuning(card);
+		if (!err)
+			err = mmc_select_hs400(card);
+
+		host->doing_init_tune = 0;
+
 		if (err)
 			goto free_card;
 
-		err = mmc_select_hs400(card);
-		if (err)
-			goto free_card;
 	} else if (!mmc_card_hs400es(card)) {
 		/* Select the desired bus width optionally */
 		err = mmc_select_bus_width(card);
@@ -1969,11 +1973,35 @@ static int mmc_poweroff_notify(struct mmc_card *card, unsigned int notify_type)
 	return err;
 }
 
+static int _mmc_resume(struct mmc_host *host);
 /*
  * Host is being removed. Free up the current card.
  */
 static void mmc_remove(struct mmc_host *host)
 {
+	/*
+	 * The mmc and host driver will be in the following modes here:
+	 *  1. mmc_card_suspended() == false &&
+	 *     power_off_notification == EXT_CSD_POWER_ON
+	 *  2. mmc_card_suspended() == true &&
+	 *     power_off_notification == EXT_CSD_POWER_OFF_{SHORT,LONG}
+	 *  3. mmc_card_suspended() == true && mmc_sleep() was called
+	 *
+	 * So, call _mmc_resume() here anyway for the cases. Otherwise:
+	 *  - _mmc_resume will be called via mmc_runtime_resume() and then
+	 *    power_off_notification will be set to EXT_CSD_POWER_ON.
+	 *  - timeout will happen in mmc_blk_part_switch() via mmc_blk_remove()
+	 *    if "part_curr" of mmc block is not set to default.
+	 */
+	_mmc_resume(host);
+
+	/* Disable power_off_notification byte in the ext_csd register */
+	if (host->card->ext_csd.rev >= 6) {
+		mmc_claim_host(host);
+		mmc_poweroff_notify(host->card, EXT_CSD_NO_POWER_NOTIFICATION);
+		mmc_release_host(host);
+	}
+
 	mmc_remove_card(host->card);
 	host->card = NULL;
 }
@@ -2028,7 +2056,8 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 		goto out;
 
 	if (mmc_can_poweroff_notify(host->card) &&
-		((host->caps2 & MMC_CAP2_FULL_PWR_CYCLE) || !is_suspend))
+	    ((host->caps2 & MMC_CAP2_FULL_PWR_CYCLE) || !is_suspend ||
+	     (host->caps2 & MMC_CAP2_FULL_PWR_CYCLE_IN_SUSPEND)))
 		err = mmc_poweroff_notify(host->card, notify_type);
 	else if (mmc_can_sleep(host->card))
 		err = mmc_sleep(host);
