@@ -3174,7 +3174,6 @@
 		impldmc1: dma-controller@f1f10000 {
 			compatible = "generic-uio";
 			reg = <0 0xf1f10000 0 0x1000>;
-			interrupts = <GIC_SPI 584 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 117>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			resets = <&cpg 117>;
