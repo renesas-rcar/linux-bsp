@@ -24,6 +24,17 @@
 
 #include "../dmaengine.h"
 
+/* DMA Models */
+enum rcar_dmac_model {
+	RCAR_GEN2_3_DMAC,
+	RCAR_V3U_DMAC,
+};
+
+struct rcar_dmac_info {
+	enum rcar_dmac_model model;
+	bool rt_dmac;
+};
+
 /*
  * struct rcar_dmac_xfer_chunk - Descriptor for a hardware transfer
  * @node: entry in the parent's chunks list
@@ -187,23 +198,38 @@ struct rcar_dmac_chan {
 
 /*
  * struct rcar_dmac - R-Car Gen2 DMA Controller
+ * @info: DMAC hardware model information
  * @engine: base DMA engine object
  * @dev: the hardware device
  * @iomem: remapped I/O memory base
+ * @chan_base_iomem: remapped channel I/O memory base if memory map
+ *		     is not consecutive
  * @n_channels: number of available channels
  * @channels: array of DMAC channels
  * @channels_mask: bitfield of which DMA channels are managed by this driver
+ * @fixed_source: fixed source address mode
+ * @fixed_dest: fixed destination address mode
+ * @rate_rd: bus read rate control
+ * @rate_wr: bus write rate control
  * @modules: bitmask of client modules in use
  */
 struct rcar_dmac {
+	const struct rcar_dmac_info *info;
 	struct dma_device engine;
 	struct device *dev;
 	void __iomem *iomem;
+	void __iomem *chan_base_iomem;
 	struct device_dma_parameters parms;
 
 	unsigned int n_channels;
 	struct rcar_dmac_chan *channels;
 	unsigned int channels_mask;
+
+	bool fixed_source;
+	bool fixed_dest;
+
+	unsigned int rate_rd;
+	unsigned int rate_wr;
 
 	DECLARE_BITMAP(modules, 256);
 };
@@ -286,8 +312,17 @@ struct rcar_dmac {
 #define RCAR_DMAFIXDAR			0x0014
 #define RCAR_DMAFIXDPBASE		0x0060
 
+#define RCAR_RATE_RD			0x00f4
+#define RCAR_RATE_WR			0x00f8
+#define RCAR_RATE_CNT_EN		(1 << 31)
+
 /* Hardcode the MEMCPY transfer size to 4 bytes. */
 #define RCAR_DMAC_MEMCPY_XFER_SIZE	4
+
+/* For R-Car V3U */
+#define RCAR_V3U_DMAC_CHAN_OFFSET(i)	((i) * 0x1000)
+#define RCAR_V3U_DMACHCLR		0x0100
+#define RCAR_V3U_DMACHCLR_OFFSET(i)	((i) * 0x1000)
 
 /* -----------------------------------------------------------------------------
  * Device access
@@ -323,6 +358,28 @@ static void rcar_dmac_chan_write(struct rcar_dmac_chan *chan, u32 reg, u32 data)
 		writew(data, chan->iomem + reg);
 	else
 		writel(data, chan->iomem + reg);
+}
+
+static void rcar_dmac_chan_clear(struct rcar_dmac *dmac, u32 chan)
+{
+	if (dmac->info->model == RCAR_V3U_DMAC) {
+		u32 reg = RCAR_V3U_DMACHCLR_OFFSET(chan) + RCAR_V3U_DMACHCLR;
+
+		writel(1, dmac->chan_base_iomem + reg);
+	} else {
+		rcar_dmac_write(dmac, RCAR_DMACHCLR, 1 << chan);
+	}
+}
+
+static void rcar_dmac_chan_clear_all(struct rcar_dmac *dmac)
+{
+	unsigned int i;
+
+	if (dmac->info->model == RCAR_V3U_DMAC)
+		for (i = 0; i < dmac->n_channels; ++i)
+			rcar_dmac_chan_clear(dmac, i);
+	else
+		rcar_dmac_write(dmac, RCAR_DMACHCLR, dmac->channels_mask);
 }
 
 /* -----------------------------------------------------------------------------
@@ -408,6 +465,7 @@ static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 		else
 			chcr |= RCAR_DMACHCR_DPM_INFINITE;
 	} else {
+		struct rcar_dmac *dmac = to_rcar_dmac(chan->chan.device);
 		struct rcar_dmac_xfer_chunk *chunk = desc->running;
 
 		dev_dbg(chan->chan.device->dev,
@@ -429,6 +487,14 @@ static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 				     chunk->size >> desc->xfer_shift);
 
 		chcr |= RCAR_DMACHCR_DPM_DISABLED | RCAR_DMACHCR_IE;
+
+		/* On R-Car V3U, the BUFMODE register initial value of RT-DMAC
+		 * is 0 (Normal OS: 256B x 2outst) but the initial value of
+		 * BUFCRn.ULB is 0x400 (1024B), so it might cause problems.
+		 * Let re-init it.
+		 */
+		if (dmac->info->model == RCAR_V3U_DMAC && dmac->info->rt_dmac)
+			rcar_dmac_chan_write(chan, RCAR_DMABUFCR, 0x800200);
 	}
 
 	rcar_dmac_chan_write(chan, RCAR_DMACHCR,
@@ -440,7 +506,8 @@ static int rcar_dmac_init(struct rcar_dmac *dmac)
 	u16 dmaor;
 
 	/* Clear all channels and enable the DMAC globally. */
-	rcar_dmac_write(dmac, RCAR_DMACHCLR, dmac->channels_mask);
+	rcar_dmac_chan_clear_all(dmac);
+
 	rcar_dmac_write(dmac, RCAR_DMAOR,
 			RCAR_DMAOR_PRI_FIXED | RCAR_DMAOR_DME);
 
@@ -449,6 +516,14 @@ static int rcar_dmac_init(struct rcar_dmac *dmac)
 		dev_warn(dmac->dev, "DMAOR initialization failed.\n");
 		return -EIO;
 	}
+
+	if (dmac->rate_rd)
+		rcar_dmac_write(dmac, RCAR_RATE_RD,
+				RCAR_RATE_CNT_EN | dmac->rate_rd);
+
+	if (dmac->rate_wr)
+		rcar_dmac_write(dmac, RCAR_RATE_WR,
+				RCAR_RATE_CNT_EN | dmac->rate_wr);
 
 	return 0;
 }
@@ -842,8 +917,8 @@ static int rcar_dmac_chan_pause(struct dma_chan *chan)
  * Descriptors preparation
  */
 
-static void rcar_dmac_chan_configure_desc(struct rcar_dmac_chan *chan,
-					  struct rcar_dmac_desc *desc)
+static int rcar_dmac_chan_configure_desc(struct rcar_dmac_chan *chan,
+					 struct rcar_dmac_desc *desc)
 {
 	static const u32 chcr_ts[] = {
 		RCAR_DMACHCR_TS_1B, RCAR_DMACHCR_TS_2B,
@@ -854,6 +929,7 @@ static void rcar_dmac_chan_configure_desc(struct rcar_dmac_chan *chan,
 
 	unsigned int xfer_size;
 	u32 chcr;
+	struct rcar_dmac *dmac = to_rcar_dmac(chan->chan.device);
 
 	switch (desc->direction) {
 	case DMA_DEV_TO_MEM:
@@ -870,14 +946,23 @@ static void rcar_dmac_chan_configure_desc(struct rcar_dmac_chan *chan,
 
 	case DMA_MEM_TO_MEM:
 	default:
-		chcr = RCAR_DMACHCR_DM_INC | RCAR_DMACHCR_SM_INC
+		chcr = RCAR_DMACHCR_DM_FIXED | RCAR_DMACHCR_SM_FIXED
 		     | RCAR_DMACHCR_RS_AUTO;
+		if (!dmac->fixed_source)
+			chcr = chcr | RCAR_DMACHCR_SM_INC;
+		if (!dmac->fixed_dest)
+			chcr = chcr | RCAR_DMACHCR_DM_INC;
 		xfer_size = RCAR_DMAC_MEMCPY_XFER_SIZE;
 		break;
 	}
 
+	if (xfer_size > 0x40)	/* bus width */
+		return -EINVAL;
+
 	desc->xfer_shift = ilog2(xfer_size);
 	desc->chcr = chcr | chcr_ts[desc->xfer_shift];
+
+	return 0;
 }
 
 /*
@@ -904,6 +989,7 @@ rcar_dmac_chan_prep_sg(struct rcar_dmac_chan *chan, struct scatterlist *sgl,
 	unsigned int full_size = 0;
 	bool cross_boundary = false;
 	unsigned int i;
+	int ret;
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 	u32 high_dev_addr;
 	u32 high_mem_addr;
@@ -919,7 +1005,11 @@ rcar_dmac_chan_prep_sg(struct rcar_dmac_chan *chan, struct scatterlist *sgl,
 	desc->cyclic = cyclic;
 	desc->direction = dir;
 
-	rcar_dmac_chan_configure_desc(chan, desc);
+	ret = rcar_dmac_chan_configure_desc(chan, desc);
+	if (ret) {
+		rcar_dmac_desc_put(chan, desc);
+		return NULL;
+	}
 
 	max_chunk_size = RCAR_DMATCR_MASK << desc->xfer_shift;
 
@@ -1559,7 +1649,7 @@ static irqreturn_t rcar_dmac_isr_channel(int irq, void *dev)
 		 * because channel is already stopped in error case.
 		 * We need to clear register and check DE bit as recovery.
 		 */
-		rcar_dmac_write(dmac, RCAR_DMACHCLR, 1 << chan->index);
+		rcar_dmac_chan_clear(dmac, chan->index);
 		rcar_dmac_chcr_de_barrier(chan);
 		reinit = true;
 		goto spin_lock_end;
@@ -1735,7 +1825,11 @@ static int rcar_dmac_chan_probe(struct rcar_dmac *dmac,
 	int ret;
 
 	rchan->index = index;
-	rchan->iomem = dmac->iomem + RCAR_DMAC_CHAN_OFFSET(index);
+	if (dmac->info->model == RCAR_V3U_DMAC)
+		rchan->iomem = dmac->chan_base_iomem +
+			       RCAR_V3U_DMAC_CHAN_OFFSET(index);
+	else
+		rchan->iomem = dmac->iomem + RCAR_DMAC_CHAN_OFFSET(index);
 	rchan->mid_rid = -EINVAL;
 
 	spin_lock_init(&rchan->lock);
@@ -1802,6 +1896,42 @@ static int rcar_dmac_parse_of(struct device *dev, struct rcar_dmac *dmac)
 
 	dmac->channels_mask = GENMASK(dmac->n_channels - 1, 0);
 
+	/* Checking fixed address optional property */
+	dmac->fixed_source = of_property_read_bool(np, "fixed-source");
+	dmac->fixed_dest = of_property_read_bool(np, "fixed-dest");
+
+	/* Checking Bus read rate control optional property */
+	ret = of_property_read_u32(np, "rate-read", &dmac->rate_rd);
+	if (!ret) {
+		switch (dmac->info->model) {
+		case RCAR_V3U_DMAC:
+			if (dmac->rate_rd < 0x03 || dmac->rate_rd > 0xff)
+				dmac->rate_rd = 0;
+			break;
+		case RCAR_GEN2_3_DMAC:
+			dmac->rate_rd = 0;
+			break;
+		}
+	} else {
+		dmac->rate_rd = 0;
+	}
+
+	/* Checking Bus write rate control optional property */
+	ret = of_property_read_u32(np, "rate-write", &dmac->rate_wr);
+	if (!ret) {
+		switch (dmac->info->model) {
+		case RCAR_V3U_DMAC:
+			if (dmac->rate_wr < 0x03 || dmac->rate_wr > 0xff)
+				dmac->rate_wr = 0;
+			break;
+		case RCAR_GEN2_3_DMAC:
+			dmac->rate_wr = 0;
+			break;
+		}
+	} else {
+		dmac->rate_wr = 0;
+	}
+
 	return 0;
 }
 
@@ -1826,6 +1956,8 @@ static int rcar_dmac_probe(struct platform_device *pdev)
 	dmac->dev->dma_parms = &dmac->parms;
 	dma_set_max_seg_size(dmac->dev, RCAR_DMATCR_MASK);
 	dma_set_mask_and_coherent(dmac->dev, DMA_BIT_MASK(40));
+
+	dmac->info = of_device_get_match_data(&pdev->dev);
 
 	ret = rcar_dmac_parse_of(&pdev->dev, dmac);
 	if (ret < 0)
@@ -1852,6 +1984,13 @@ static int rcar_dmac_probe(struct platform_device *pdev)
 	dmac->iomem = devm_ioremap_resource(&pdev->dev, mem);
 	if (IS_ERR(dmac->iomem))
 		return PTR_ERR(dmac->iomem);
+
+	if (dmac->info->model == RCAR_V3U_DMAC) {
+		mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+		dmac->chan_base_iomem = devm_ioremap_resource(&pdev->dev, mem);
+		if (IS_ERR(dmac->chan_base_iomem))
+			return PTR_ERR(dmac->chan_base_iomem);
+	}
 
 	/* Enable runtime PM and initialize the device. */
 	pm_runtime_enable(&pdev->dev);
@@ -1948,8 +2087,33 @@ static void rcar_dmac_shutdown(struct platform_device *pdev)
 	rcar_dmac_stop_all_chan(dmac);
 }
 
+static const struct rcar_dmac_info rcar_dmac_info_gen2_3 = {
+	.model = RCAR_GEN2_3_DMAC,
+};
+
+static const struct rcar_dmac_info rcar_dmac_info_v3u = {
+	.model = RCAR_V3U_DMAC,
+	.rt_dmac = false,
+};
+
+static const struct rcar_dmac_info rcar_rt_dmac_info_v3u = {
+	.model = RCAR_V3U_DMAC,
+	.rt_dmac = true,
+};
+
 static const struct of_device_id rcar_dmac_of_ids[] = {
-	{ .compatible = "renesas,rcar-dmac", },
+	{
+		.compatible = "renesas,rcar-dmac",
+		.data = &rcar_dmac_info_gen2_3,
+	},
+	{
+		.compatible = "renesas,rcar-v3u-dmac",
+		.data = &rcar_dmac_info_v3u,
+	},
+	{
+		.compatible = "renesas,rcar-v3u-rt-dmac",
+		.data = &rcar_rt_dmac_info_v3u,
+	},
 	{ /* Sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, rcar_dmac_of_ids);
