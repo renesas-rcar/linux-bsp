@@ -241,55 +241,45 @@ struct flash_info {
 #define JEDEC_MFR(info)	((info)->id[0])
 
 /**
- * spi_nor_spimem_xfer_data() - helper function to read/write data to
- *                              flash's memory region
+ * spi_nor_spimem_bounce() - check if a bounce buffer is needed for the data
+ *                           transfer
  * @nor:        pointer to 'struct spi_nor'
  * @op:         pointer to 'struct spi_mem_op' template for transfer
  *
- * Return: number of bytes transferred on success, -errno otherwise
+ * If we have to use the bounce buffer, the data field in @op will be updated.
+ *
+ * Return: true if the bounce buffer is needed, false if not
  */
-static ssize_t spi_nor_spimem_xfer_data(struct spi_nor *nor,
-					struct spi_mem_op *op)
+static bool spi_nor_spimem_bounce(struct spi_nor *nor, struct spi_mem_op *op)
 {
-	bool usebouncebuf = false;
-	void *rdbuf = NULL;
-	const void *buf;
-	int ret;
-
-	if (op->data.dir == SPI_MEM_DATA_IN)
-		buf = op->data.buf.in;
-	else
-		buf = op->data.buf.out;
-
-	if (object_is_on_stack(buf) || !virt_addr_valid(buf))
-		usebouncebuf = true;
-
-	if (usebouncebuf) {
+	/* op->data.buf.in occupies the same memory as op->data.buf.out */
+	if (object_is_on_stack(op->data.buf.in) ||
+	    !virt_addr_valid(op->data.buf.in)) {
 		if (op->data.nbytes > nor->bouncebuf_size)
 			op->data.nbytes = nor->bouncebuf_size;
-
-		if (op->data.dir == SPI_MEM_DATA_IN) {
-			rdbuf = op->data.buf.in;
-			op->data.buf.in = nor->bouncebuf;
-		} else {
-			op->data.buf.out = nor->bouncebuf;
-			memcpy(nor->bouncebuf, buf,
-			       op->data.nbytes);
-		}
+		op->data.buf.in = nor->bouncebuf;
+		return true;
 	}
 
-	ret = spi_mem_adjust_op_size(nor->spimem, op);
-	if (ret)
-		return ret;
+	return false;
+}
 
-	ret = spi_mem_exec_op(nor->spimem, op);
-	if (ret)
-		return ret;
+/**
+ * spi_nor_spimem_exec_op() - execute a memory operation
+ * @nor:        pointer to 'struct spi_nor'
+ * @op:         pointer to 'struct spi_mem_op' template for transfer
+ *
+ * Return: 0 on success, -error otherwise.
+ */
+static int spi_nor_spimem_exec_op(struct spi_nor *nor, struct spi_mem_op *op)
+{
+	int error;
 
-	if (usebouncebuf && op->data.dir == SPI_MEM_DATA_IN)
-		memcpy(rdbuf, nor->bouncebuf, op->data.nbytes);
+	error = spi_mem_adjust_op_size(nor->spimem, op);
+	if (error)
+		return error;
 
-	return op->data.nbytes;
+	return spi_mem_exec_op(nor->spimem, op);
 }
 
 /**
@@ -310,6 +300,9 @@ static ssize_t spi_nor_spimem_read_data(struct spi_nor *nor, loff_t from,
 			   SPI_MEM_OP_ADDR(nor->addr_width, from, 1),
 			   SPI_MEM_OP_DUMMY(nor->read_dummy, 1),
 			   SPI_MEM_OP_DATA_IN(len, buf, 1));
+	bool usebouncebuf;
+	ssize_t nbytes;
+	int error;
 
 	/* get transfer protocols. */
 	op.cmd.buswidth = spi_nor_get_protocol_inst_nbits(nor->read_proto);
@@ -320,7 +313,22 @@ static ssize_t spi_nor_spimem_read_data(struct spi_nor *nor, loff_t from,
 	/* convert the dummy cycles to the number of bytes */
 	op.dummy.nbytes = (nor->read_dummy * op.dummy.buswidth) / 8;
 
-	return spi_nor_spimem_xfer_data(nor, &op);
+	usebouncebuf = spi_nor_spimem_bounce(nor, &op);
+
+	if (nor->dirmap.rdesc) {
+		nbytes = spi_mem_dirmap_read(nor->dirmap.rdesc, op.addr.val,
+					     op.data.nbytes, op.data.buf.in);
+	} else {
+		error = spi_nor_spimem_exec_op(nor, &op);
+		if (error)
+			return error;
+		nbytes = op.data.nbytes;
+	}
+
+	if (usebouncebuf && nbytes > 0)
+		memcpy(buf, op.data.buf.in, nbytes);
+
+	return nbytes;
 }
 
 /**
@@ -359,6 +367,8 @@ static ssize_t spi_nor_spimem_write_data(struct spi_nor *nor, loff_t to,
 			   SPI_MEM_OP_ADDR(nor->addr_width, to, 1),
 			   SPI_MEM_OP_NO_DUMMY,
 			   SPI_MEM_OP_DATA_OUT(len, buf, 1));
+	ssize_t nbytes;
+	int error;
 
 	op.cmd.buswidth = spi_nor_get_protocol_inst_nbits(nor->write_proto);
 	op.addr.buswidth = spi_nor_get_protocol_addr_nbits(nor->write_proto);
@@ -367,7 +377,20 @@ static ssize_t spi_nor_spimem_write_data(struct spi_nor *nor, loff_t to,
 	if (nor->program_opcode == SPINOR_OP_AAI_WP && nor->sst_write_second)
 		op.addr.nbytes = 0;
 
-	return spi_nor_spimem_xfer_data(nor, &op);
+	if (spi_nor_spimem_bounce(nor, &op))
+		memcpy(nor->bouncebuf, buf, op.data.nbytes);
+
+	if (nor->dirmap.wdesc) {
+		nbytes = spi_mem_dirmap_write(nor->dirmap.wdesc, op.addr.val,
+					      op.data.nbytes, op.data.buf.out);
+	} else {
+		error = spi_nor_spimem_exec_op(nor, &op);
+		if (error)
+			return error;
+		nbytes = op.data.nbytes;
+	}
+
+	return nbytes;
 }
 
 /**
@@ -2143,6 +2166,27 @@ static struct spi_nor_fixups gd25q256_fixups = {
 	.default_init = gd25q256_default_init,
 };
 
+static int
+s25fs_s_post_bfpt_fixups(struct spi_nor *nor,
+			 const struct sfdp_parameter_header *bfpt_header,
+			 const struct sfdp_bfpt *bfpt,
+			 struct spi_nor_flash_parameter *params)
+{
+	/*
+	 * The S25FS-S chip family reports 512-byte pages in BFPT but
+	 * in reality the write buffer still wraps at the safe default
+	 * of 256 bytes.  Overwrite the page size advertised by BFPT
+	 * to get the writes working.
+	 */
+	params->page_size = 256;
+
+	return 0;
+}
+
+static struct spi_nor_fixups s25fs_s_fixups = {
+	.post_bfpt = s25fs_s_post_bfpt_fixups,
+};
+
 /* NOTE: double check command sets and memory organization when you add
  * more nor chips.  This current list focusses on newer chips, which
  * have been converging on command sets which including JEDEC ID.
@@ -2351,7 +2395,9 @@ static const struct flash_info spi_nor_ids[] = {
 	{ "s25fl512s",  INFO6(0x010220, 0x4d0080, 256 * 1024, 256,
 			SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ |
 			SPI_NOR_HAS_LOCK | USE_CLSR) },
-	{ "s25fs512s",  INFO6(0x010220, 0x4d0081, 256 * 1024, 256, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | USE_CLSR) },
+	{ "s25fs512s",  INFO6(0x010220, 0x4d0081, 256 * 1024, 256,
+			      SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | USE_CLSR)
+	  .fixups = &s25fs_s_fixups, },
 	{ "s70fl01gs",  INFO(0x010221, 0x4d00, 256 * 1024, 256, 0) },
 	{ "s25sl12800", INFO(0x012018, 0x0300, 256 * 1024,  64, 0) },
 	{ "s25sl12801", INFO(0x012018, 0x0301,  64 * 1024, 256, 0) },
@@ -4978,6 +5024,58 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 }
 EXPORT_SYMBOL_GPL(spi_nor_scan);
 
+static int spi_nor_create_read_dirmap(struct spi_nor *nor)
+{
+	struct spi_mem_dirmap_info info = {
+		.op_tmpl = SPI_MEM_OP(SPI_MEM_OP_CMD(nor->read_opcode, 1),
+				      SPI_MEM_OP_ADDR(nor->addr_width, 0, 1),
+				      SPI_MEM_OP_DUMMY(nor->read_dummy, 1),
+				      SPI_MEM_OP_DATA_IN(0, NULL, 1)),
+		.offset = 0,
+		.length = nor->mtd.size,
+	};
+	struct spi_mem_op *op = &info.op_tmpl;
+
+	/* get transfer protocols. */
+	op->cmd.buswidth = spi_nor_get_protocol_inst_nbits(nor->read_proto);
+	op->addr.buswidth = spi_nor_get_protocol_addr_nbits(nor->read_proto);
+	op->dummy.buswidth = op->addr.buswidth;
+	op->data.buswidth = spi_nor_get_protocol_data_nbits(nor->read_proto);
+
+	/* convert the dummy cycles to the number of bytes */
+	op->dummy.nbytes = (nor->read_dummy * op->dummy.buswidth) / 8;
+
+	nor->dirmap.rdesc = devm_spi_mem_dirmap_create(nor->dev, nor->spimem,
+						       &info);
+	return PTR_ERR_OR_ZERO(nor->dirmap.rdesc);
+}
+
+static int spi_nor_create_write_dirmap(struct spi_nor *nor)
+{
+	struct spi_mem_dirmap_info info = {
+		.op_tmpl = SPI_MEM_OP(SPI_MEM_OP_CMD(nor->program_opcode, 1),
+				      SPI_MEM_OP_ADDR(nor->addr_width, 0, 1),
+				      SPI_MEM_OP_NO_DUMMY,
+				      SPI_MEM_OP_DATA_OUT(0, NULL, 1)),
+		.offset = 0,
+		.length = nor->mtd.size,
+	};
+	struct spi_mem_op *op = &info.op_tmpl;
+
+	/* get transfer protocols. */
+	op->cmd.buswidth = spi_nor_get_protocol_inst_nbits(nor->write_proto);
+	op->addr.buswidth = spi_nor_get_protocol_addr_nbits(nor->write_proto);
+	op->dummy.buswidth = op->addr.buswidth;
+	op->data.buswidth = spi_nor_get_protocol_data_nbits(nor->write_proto);
+
+	if (nor->program_opcode == SPINOR_OP_AAI_WP && nor->sst_write_second)
+		op->addr.nbytes = 0;
+
+	nor->dirmap.wdesc = devm_spi_mem_dirmap_create(nor->dev, nor->spimem,
+						       &info);
+	return PTR_ERR_OR_ZERO(nor->dirmap.wdesc);
+}
+
 static int spi_nor_probe(struct spi_mem *spimem)
 {
 	struct spi_device *spi = spimem->spi;
@@ -5038,6 +5136,14 @@ static int spi_nor_probe(struct spi_mem *spimem)
 		if (!nor->bouncebuf)
 			return -ENOMEM;
 	}
+
+	ret = spi_nor_create_read_dirmap(nor);
+	if (ret)
+		return ret;
+
+	ret = spi_nor_create_write_dirmap(nor);
+	if (ret)
+		return ret;
 
 	return mtd_device_register(&nor->mtd, data ? data->parts : NULL,
 				   data ? data->nr_parts : 0);
