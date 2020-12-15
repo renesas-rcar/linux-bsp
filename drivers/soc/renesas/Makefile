@@ -20,6 +20,7 @@ obj-$(CONFIG_SYSC_R8A77970)	+= r8a77970-sysc.o
 obj-$(CONFIG_SYSC_R8A77980)	+= r8a77980-sysc.o
 obj-$(CONFIG_SYSC_R8A77990)	+= r8a77990-sysc.o
 obj-$(CONFIG_SYSC_R8A77995)	+= r8a77995-sysc.o
+obj-$(CONFIG_SYSC_R8A779A0)	+= r8a779a0-sysc.o
 ifdef CONFIG_SMP
 obj-$(CONFIG_ARCH_R9A06G032)	+= r9a06g032-smp.o
 endif
@@ -29,5 +30,6 @@ obj-$(CONFIG_RCAR_POWER_AVS)     += rcar-avs.o
 
 # Family
 obj-$(CONFIG_RST_RCAR)		+= rcar-rst.o
-obj-$(CONFIG_SYSC_RCAR)		+= rcar-sysc.o
+obj-$(CONFIG_SYSC_RCAR)		+= rcar-sysc.o rcar-v3u-sysc.o
+
 obj-$(CONFIG_SYSC_RMOBILE)	+= rmobile-sysc.o
