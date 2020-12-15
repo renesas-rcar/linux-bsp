@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Device Tree Source for the Salvator-X board with R-Car M3-W ES1.x
+ * Device Tree Source for the Salvator-X 2nd version board with R-Car M3 ES3.0+
  *
- * Copyright (C) 2016-2019 Renesas Electronics Corp.
+ * Copyright (C) 2018-2019 Renesas Electronics Corp.
  */
 
 /dts-v1/;
-#include "r8a7796-es1.dtsi"
-#include "salvator-x.dtsi"
+#include "r8a7796.dtsi"
+#include "salvator-xs.dtsi"
 
 / {
-	model = "Renesas Salvator-X board based on r8a7796 ES1.x";
-	compatible = "renesas,salvator-x", "renesas,r8a7796";
+	model = "Renesas Salvator-X 2nd version board based on r8a7796 ES3.0+ with 8GiB (2 x 4 GiB)";
+	compatible = "renesas,salvator-xs", "renesas,r8a7796";
 
 	memory@48000000 {
 		device_type = "memory";
@@ -19,9 +19,14 @@
 		reg = <0x0 0x48000000 0x0 0x78000000>;
 	};
 
+	memory@480000000 {
+		device_type = "memory";
+		reg = <0x4 0x80000000 0x0 0x80000000>;
+	};
+
 	memory@600000000 {
 		device_type = "memory";
-		reg = <0x6 0x00000000 0x0 0x80000000>;
+		reg = <0x6 0x00000000 0x1 0x00000000>;
 	};
 
 	reserved-memory {
@@ -81,11 +86,16 @@
 	clocks = <&cpg CPG_MOD 724>,
 		 <&cpg CPG_MOD 723>,
 		 <&cpg CPG_MOD 722>,
-		 <&versaclock5 1>,
+		 <&versaclock6 1>,
 		 <&x21_clk>,
-		 <&versaclock5 2>;
+		 <&versaclock6 2>;
 	clock-names = "du.0", "du.1", "du.2",
 		      "dclkin.0", "dclkin.1", "dclkin.2";
+};
+
+&sound_card {
+	dais = <&rsnd_port0	/* ak4613 */
+		&rsnd_port1>;	/* HDMI0  */
 };
 
 &hdmi0 {
@@ -125,7 +135,6 @@
 	ports {
 		/* rsnd_port0 is on salvator-common */
 		rsnd_port1: port@1 {
-			reg = <1>;
 			rsnd_endpoint1: endpoint {
 				remote-endpoint = <&dw_hdmi0_snd_in>;
 
@@ -139,11 +148,6 @@
 	};
 };
 
-&sound_card {
-	dais = <&rsnd_port0	/* ak4613 */
-		&rsnd_port1>;	/* HDMI0  */
-};
-
 &vspb {
 	status = "okay";
 };
@@ -151,4 +155,3 @@
 &vspi0 {
 	status = "okay";
 };
-
