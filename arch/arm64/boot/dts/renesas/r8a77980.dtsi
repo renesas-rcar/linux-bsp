@@ -1223,7 +1223,7 @@
 
 		imp_distributer: imp_top_00 {
 			compatible = "generic-uio";
-			reg = <0 0xffa00000 0 0x10000>;
+			reg = <0 0xffa00000 0 0x20000>;
 			interrupts = <GIC_SPI 281 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 830>;
 			power-domains = <&sysc R8A77980_PD_A3IR>;
@@ -1354,7 +1354,7 @@
 
 		imp_dma_00 {
 			compatible = "generic-uio";
-			reg = <0 0xffa10000 0 0x1000>;
+			reg = <0 0xffa10000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 527>;
 			power-domains = <&sysc R8A77980_PD_A2DP0>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
@@ -1362,7 +1362,7 @@
 
 		imp_dma_01 {
 			compatible = "generic-uio";
-			reg = <0 0xffa14000 0 0x1000>;
+			reg = <0 0xffa14000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 526>;
 			power-domains = <&sysc R8A77980_PD_A2DP1>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
@@ -1392,7 +1392,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		imp_mem_00 {
+		imp_spmi_00 {
 			compatible = "generic-uio";
 			reg = <0 0xed000000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 830>;
