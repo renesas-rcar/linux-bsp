@@ -124,5 +124,7 @@ rdacm20-camera_module-objs	:= rdacm20.o max9271.o
 obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20-camera_module.o
 obj-$(CONFIG_VIDEO_ST_MIPID02) += st-mipid02.o
 obj-$(CONFIG_VIDEO_MAX96712_STAGING)	+= max96712.o
+dummy-camera_module-objs	:= dummy-camera.o
+obj-$(CONFIG_VIDEO_DUMMY_CAMERA)	+= dummy-camera_module.o
 
 obj-$(CONFIG_SDR_MAX2175) += max2175.o
