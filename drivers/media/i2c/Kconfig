@@ -1319,6 +1319,16 @@ endmenu
 menu "Flash devices"
 	visible if MEDIA_CAMERA_SUPPORT
 
+config VIDEO_DUMMY_CAMERA
+	tristate "Dummy camera support"
+	depends on I2C && VIDEO_V4L2_SUBDEV_API && MEDIA_CONTROLLER
+	select V4L2_FWNODE
+	help
+	  This driver supports the dummy camera.
+
+	  This camera should be used in conjunction with a GMSL2
+	  deserialiser such as the MAX96712.
+
 config VIDEO_ADP1653
 	tristate "ADP1653 flash support"
 	depends on I2C && VIDEO_V4L2
