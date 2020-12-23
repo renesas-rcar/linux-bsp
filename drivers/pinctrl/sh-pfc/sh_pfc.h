@@ -299,6 +299,9 @@ struct sh_pfc_soc_info {
 	unsigned int gpio_irq_size;
 
 	u32 unlock_reg;
+	const u32 *unlock_regs_table;
+	unsigned int unlock_regs_size;
+	u32 writable_area;
 };
 
 extern const struct sh_pfc_soc_info emev2_pinmux_info;
@@ -325,6 +328,7 @@ extern const struct sh_pfc_soc_info r8a77970_pinmux_info;
 extern const struct sh_pfc_soc_info r8a77980_pinmux_info;
 extern const struct sh_pfc_soc_info r8a77990_pinmux_info;
 extern const struct sh_pfc_soc_info r8a77995_pinmux_info;
+extern const struct sh_pfc_soc_info r8a779a0_pinmux_info;
 extern const struct sh_pfc_soc_info sh7203_pinmux_info;
 extern const struct sh_pfc_soc_info sh7264_pinmux_info;
 extern const struct sh_pfc_soc_info sh7269_pinmux_info;
