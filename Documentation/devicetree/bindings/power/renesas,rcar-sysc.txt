@@ -26,6 +26,7 @@ Required properties:
       - "renesas,r8a77980-sysc" (R-Car V3H)
       - "renesas,r8a77990-sysc" (R-Car E3)
       - "renesas,r8a77995-sysc" (R-Car D3)
+      - "renesas,r8a779a0-sysc" (R-Car V3U)
   - reg: Address start and address range for the device.
   - #power-domain-cells: Must be 1.
 
