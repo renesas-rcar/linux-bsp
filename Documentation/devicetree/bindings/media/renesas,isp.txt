@@ -1,0 +1,59 @@
+Renesas R-Car ISP
+------------------------
+
+The R-Car device provides Channel selector of ISP (Image Signal Processor)
+capabilities for the Renesas R-Car. It is used in conjunction with
+the R-Car VIN module, which provides the video capture capabilities.
+
+Mandatory properties
+--------------------
+ - compatible: Must be one or more of the following
+   - "renesas,isp-r8a779a0" for the R8A779A0 device.
+
+ - reg: the register base and size for the device registers
+ - interrupts: the interrupt for the device
+ - clocks: A phandle + clock specifier for the module clock
+ - resets: A phandle + reset specifier for the module reset
+
+Example:
+
+		isp0: isp@fed00000 {
+			compatible = "renesas,isp-r8a779a0";
+			reg = <0 0xfed00000 0 0x10000>;
+			interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 612>;
+			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
+			resets = <&cpg 612>;
+			renesas,id = <0>;
+		};
+
+		vin00: video@e6ef0000 {
+			compatible = "renesas,vin-r8a779a0", "generic-uio";
+			reg = <0 0xe6ef0000 0 0x1000>;
+			interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 730>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 730>;
+			renesas,id = <0>;
+			renesas,isp = <&isp0>;
+			linux,uio-name = "vin_00";
+			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <1>;
+
+					vin0csi40: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&csi40vin0>;
+					};
+				};
+			};
+		};
