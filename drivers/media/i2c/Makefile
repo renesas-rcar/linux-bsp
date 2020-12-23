@@ -7,6 +7,10 @@ obj-$(CONFIG_VIDEO_ET8EK8)	+= et8ek8/
 obj-$(CONFIG_VIDEO_CX25840) += cx25840/
 obj-$(CONFIG_VIDEO_M5MOLS)	+= m5mols/
 
+obj-y				+= imagers/
+obj-y				+= gmsl/
+obj-y				+= fpdlink/
+
 obj-$(CONFIG_VIDEO_APTINA_PLL) += aptina-pll.o
 obj-$(CONFIG_VIDEO_TVAUDIO) += tvaudio.o
 obj-$(CONFIG_VIDEO_TDA7432) += tda7432.o
@@ -67,6 +71,7 @@ obj-$(CONFIG_VIDEO_OV2640) += ov2640.o
 obj-$(CONFIG_VIDEO_OV2680) += ov2680.o
 obj-$(CONFIG_VIDEO_OV2685) += ov2685.o
 obj-$(CONFIG_VIDEO_OV5640) += ov5640.o
+obj-$(CONFIG_VIDEO_OV5642) += ov5642.o
 obj-$(CONFIG_VIDEO_OV5645) += ov5645.o
 obj-$(CONFIG_VIDEO_OV5647) += ov5647.o
 obj-$(CONFIG_VIDEO_OV5670) += ov5670.o
@@ -110,6 +115,7 @@ obj-$(CONFIG_VIDEO_ML86V7667)	+= ml86v7667.o
 obj-$(CONFIG_VIDEO_OV2659)	+= ov2659.o
 obj-$(CONFIG_VIDEO_TC358743)	+= tc358743.o
 obj-$(CONFIG_VIDEO_IMX214)	+= imx214.o
+obj-$(CONFIG_VIDEO_IMX219)	+= imx219.o
 obj-$(CONFIG_VIDEO_IMX258)	+= imx258.o
 obj-$(CONFIG_VIDEO_IMX274)	+= imx274.o
 obj-$(CONFIG_VIDEO_IMX319)	+= imx319.o

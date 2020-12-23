@@ -433,6 +433,17 @@ config VIDEO_RENESAS_FCP
 	  To compile this driver as a module, choose M here: the module
 	  will be called rcar-fcp.
 
+config VIDEO_RENESAS_IMR
+	tristate "Renesas Image Renderer (Distortion Correction) Unit"
+	depends on VIDEO_DEV && VIDEO_V4L2
+	select VIDEOBUF2_DMA_CONTIG
+	select V4L2_MEM2MEM_DEV
+	---help---
+	  This is a V4L2 driver for the Renesas IMR-X2/LX2/LX4 Processing Unit.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called rcar_imr.
+
 config VIDEO_RENESAS_VSP1
 	tristate "Renesas VSP1 Video Processing Engine"
 	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API

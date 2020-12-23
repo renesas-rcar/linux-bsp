@@ -84,6 +84,7 @@ struct chip_desc {
 struct pca954x {
 	const struct chip_desc *chip;
 
+	struct gpio_desc *gpio;	/* reset gpio */
 	u8 last_chan;		/* last register value */
 	/* MUX_IDLE_AS_IS, MUX_IDLE_DISCONNECT or >= 0 for channel */
 	s8 idle_state;
@@ -246,6 +247,15 @@ static int pca954x_select_chan(struct i2c_mux_core *muxc, u32 chan)
 	/* Only select the channel if its different from the last channel */
 	if (data->last_chan != regval) {
 		ret = pca954x_reg_write(muxc->parent, client, regval);
+		if (ret < 0) {
+			dev_err(&data->client->dev, "error selecting channed %d (was 0x%02x), reseting mux\n",
+				chan, data->last_chan);
+			gpiod_set_value(data->gpio, 1);
+			usleep_range(1, 10);
+			gpiod_set_value(data->gpio, 0);
+			/* retry */
+			ret = pca954x_reg_write(muxc->parent, client, regval);
+		}
 		data->last_chan = ret < 0 ? 0 : regval;
 	}
 
@@ -257,6 +267,7 @@ static int pca954x_deselect_mux(struct i2c_mux_core *muxc, u32 chan)
 	struct pca954x *data = i2c_mux_priv(muxc);
 	struct i2c_client *client = data->client;
 	s8 idle_state;
+	int ret;
 
 	idle_state = READ_ONCE(data->idle_state);
 	if (idle_state >= 0)
@@ -266,8 +277,16 @@ static int pca954x_deselect_mux(struct i2c_mux_core *muxc, u32 chan)
 	if (idle_state == MUX_IDLE_DISCONNECT) {
 		/* Deselect active channel */
 		data->last_chan = 0;
-		return pca954x_reg_write(muxc->parent, client,
-					 data->last_chan);
+		ret = pca954x_reg_write(muxc->parent, client, data->last_chan);
+		if (ret < 0) {
+			dev_err(&data->client->dev, "error deselecting channed %d, reseting mux\n", chan);
+			gpiod_set_value(data->gpio, 1);
+			usleep_range(1, 10);
+			gpiod_set_value(data->gpio, 0);
+			/* retry */
+			ret = pca954x_reg_write(muxc->parent, client, data->last_chan);
+		}
+		return ret;
 	}
 
 	/* otherwise leave as-is */
@@ -412,7 +431,6 @@ static int pca954x_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	struct device_node *np = dev->of_node;
 	bool idle_disconnect_dt;
-	struct gpio_desc *gpio;
 	struct i2c_mux_core *muxc;
 	struct pca954x *data;
 	int num;
@@ -431,12 +449,12 @@ static int pca954x_probe(struct i2c_client *client,
 	data->client = client;
 
 	/* Reset the mux if a reset GPIO is specified. */
-	gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
-	if (IS_ERR(gpio))
-		return PTR_ERR(gpio);
-	if (gpio) {
+	data->gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(data->gpio))
+		return PTR_ERR(data->gpio);
+	if (data->gpio) {
 		udelay(1);
-		gpiod_set_value_cansleep(gpio, 0);
+		gpiod_set_value_cansleep(data->gpio, 0);
 		/* Give the chip some time to recover. */
 		udelay(1);
 	}

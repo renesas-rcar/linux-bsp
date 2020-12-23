@@ -578,6 +578,17 @@ config VIDEO_IMX214
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx214.
 
+config VIDEO_IMX219
+	tristate "Sony IMX219 sensor support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the Sony
+	  IMX219 camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called imx219.
+
 config VIDEO_IMX258
 	tristate "Sony IMX258 sensor support"
 	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
@@ -676,6 +687,16 @@ config VIDEO_OV5640
 	help
 	  This is a Video4Linux2 sensor driver for the Omnivision
 	  OV5640 camera sensor with a MIPI CSI-2 interface.
+
+config VIDEO_OV5642
+	tristate "OmniVision OV5642 sensor support"
+	depends on OF
+	depends on GPIOLIB && VIDEO_V4L2 && I2C && VIDEO_V4L2_SUBDEV_API
+	depends on MEDIA_CAMERA_SUPPORT
+	select V4L2_FWNODE
+	---help---
+	  This is a Video4Linux2 sensor driver for the Omnivision
+	  OV5642 camera sensor with a DVP parallel interface.
 
 config VIDEO_OV5645
 	tristate "OmniVision OV5645 sensor support"
@@ -1169,5 +1190,9 @@ config VIDEO_ST_MIPID02
 	  module will be called st-mipid02.
 
 endmenu
+
+source "drivers/media/i2c/gmsl/Kconfig"
+source "drivers/media/i2c/fpdlink/Kconfig"
+source "drivers/media/i2c/imagers/Kconfig"
 
 endif

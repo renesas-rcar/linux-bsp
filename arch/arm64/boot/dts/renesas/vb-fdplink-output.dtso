@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for VideoBox FDPLink output.
+ *
+ * Copyright (C) 2019-2020 Renesas Electronics Corp.
+ * Copyright (C) 2019-2020 Cogent Embedded, Inc.
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@101 {
+		target-path = "/";
+
+		__overlay__ {
+
+			lvds {
+				compatible = "panel-lvds";
+
+				width-mm = <210>;
+				height-mm = <158>;
+
+				data-mapping = "jeida-24";
+
+				panel-timing {
+					/* 1280x800 @60Hz */
+					clock-frequency = <65000000>;
+					hactive = <1280>;
+					vactive = <800>;
+					hsync-len = <40>;
+					hfront-porch = <80>;
+					hback-porch = <40>;
+					vfront-porch = <14>;
+					vback-porch = <14>;
+					vsync-len = <4>;
+				};
+
+				port {
+					lvds_in: endpoint {
+						remote-endpoint = <&lvds0_out>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@102 {
+		target = <&lvds0>;
+		__overlay__ {
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@1 {
+					reg = <1>;
+					lvds0_out: endpoint {
+						/* FDPLink output */
+						remote-endpoint = <&lvds_in>;
+					};
+				};
+			};
+		};
+	};
+};

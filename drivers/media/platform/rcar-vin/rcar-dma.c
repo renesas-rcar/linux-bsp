@@ -141,6 +141,7 @@
 #define VNDMR_RMODE_RAW12	(3 << 19)
 #define VNDMR_RMODE_RAW14	(4 << 19)
 #define VNDMR_RMODE_RAW20	(5 << 19)
+#define VNDMR_YMODE_Y8		(1 << 12)
 #define VNDMR_YC_THR		(1 << 11)
 #define VNDMR_EXRGB		(1 << 8)
 #define VNDMR_BPSM		(1 << 4)
@@ -751,6 +752,22 @@ static void rvin_crop_scale_comp(struct rvin_dev *vin)
 
 	fmt = rvin_format_from_pixel(vin, vin->format.pixelformat);
 	stride = vin->format.bytesperline / fmt->bpp;
+
+	/* For RAW8 format bpp is 1, but the hardware process RAW8
+	 * format in 2 pixel unit hence configure VNIS_REG as stride / 2.
+	 */
+	switch (vin->format.pixelformat) {
+	case V4L2_PIX_FMT_SBGGR8:
+	case V4L2_PIX_FMT_SGBRG8:
+	case V4L2_PIX_FMT_SGRBG8:
+	case V4L2_PIX_FMT_SRGGB8:
+	case V4L2_PIX_FMT_GREY: /* Y8 bypass */
+		stride /= 2;
+		break;
+	default:
+		break;
+	}
+
 	rvin_write(vin, stride, VNIS_REG);
 }
 
@@ -854,6 +871,13 @@ static int rvin_setup(struct rvin_dev *vin)
 		if (vin->chip_info & RCAR_VIN_R8A779A0_REATURE)
 			vnmc |= VNMC_INF_RAWX_RGB565;
 		break;
+	case MEDIA_BUS_FMT_SBGGR8_1X8:
+	case MEDIA_BUS_FMT_SGBRG8_1X8:
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+	case MEDIA_BUS_FMT_SRGGB8_1X8:
+	case MEDIA_BUS_FMT_Y8_1X8:
+		vnmc |= VNMC_INF_RAW8;
+		break;
 	default:
 		break;
 	}
@@ -923,6 +947,19 @@ static int rvin_setup(struct rvin_dev *vin)
 	case V4L2_PIX_FMT_Y10:
 		if (vin->chip_info & RCAR_VIN_R8A779A0_REATURE)
 			dmr = VNDMR_RMODE_RAW10 | VNDMR_YC_THR;
+		break;
+	case V4L2_PIX_FMT_SBGGR8:
+	case V4L2_PIX_FMT_SGBRG8:
+	case V4L2_PIX_FMT_SGRBG8:
+	case V4L2_PIX_FMT_SRGGB8:
+		dmr = 0;
+		break;
+	case V4L2_PIX_FMT_GREY:
+		if (input_is_yuv) {
+			dmr = VNDMR_DTMD_YCSEP | VNDMR_YMODE_Y8;
+			output_is_yuv = true;
+		} else
+			dmr = 0;
 		break;
 	default:
 		vin_err(vin, "Invalid pixelformat (0x%x)\n",
@@ -1401,11 +1438,31 @@ static int rvin_mc_validate_format(struct rvin_dev *vin, struct v4l2_subdev *sd,
 	case MEDIA_BUS_FMT_UYVY10_2X10:
 	case MEDIA_BUS_FMT_Y10_1X10:
 	case MEDIA_BUS_FMT_RGB888_1X24:
-		vin->mbus_code = fmt.format.code;
+		break;
+	case MEDIA_BUS_FMT_SBGGR8_1X8:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SBGGR8)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGBRG8_1X8:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGBRG8)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGRBG8)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SRGGB8_1X8:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SRGGB8)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_Y8_1X8:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_GREY)
+			return -EPIPE;
 		break;
 	default:
 		return -EPIPE;
 	}
+	vin->mbus_code = fmt.format.code;
 
 	switch (fmt.format.field) {
 	case V4L2_FIELD_TOP:
@@ -1512,7 +1569,7 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	int ret;
 
 	/* Continuous capture requires more buffers then there are HW slots */
-	vin->continuous = count > HW_BUFFER_NUM;
+	vin->continuous = vq->num_buffers > HW_BUFFER_NUM;
 
 	/* We can't support continues mode for sequential field formats */
 	if (vin->format.field == V4L2_FIELD_SEQ_TB ||

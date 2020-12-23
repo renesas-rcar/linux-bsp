@@ -11,7 +11,6 @@ menuconfig MTD
 	  particular hardware and users of MTD devices. If unsure, say N.
 
 if MTD
-
 config MTD_TESTS
 	tristate "MTD tests support (DANGEROUS)"
 	depends on m

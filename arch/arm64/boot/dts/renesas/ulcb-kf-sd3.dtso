@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Overlay for the H3/M3ULCB Kingfisher board:
+ *  this overrides WIFI in favour SD on SDHI3
+ *
+ * Copyright (C) 2017-2020 Renesas Electronics Corp.
+ * Copyright (C) 2017-2020 Cogent Embedded, Inc.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	fragment@101 {
+		target-path = "/";
+
+		__overlay__ {
+
+			vcc_sdhi3: regulator-vcc-sdhi3 {
+				compatible = "regulator-fixed";
+
+				regulator-name = "SDHI3 Vcc";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+
+				gpio = <&gpio4 17 GPIO_ACTIVE_HIGH>;
+				enable-active-high;
+			};
+
+			vccq_sdhi3: regulator-vccq-sdhi3 {
+				compatible = "regulator-gpio";
+				regulator-name = "SDHI3 VccQ";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+
+				gpios = <&gpio3 14 GPIO_ACTIVE_HIGH>;
+				gpios-states = <1>;
+				states = <3300000 1
+					  1800000 0>;
+			};
+		};
+	};
+};
+
+&sd_wifi_mux {
+	enable-active-high;	/* Connect SD */
+};
+
+&sdhi3 {
+	/* in uboot type:
+	 *  fdt rm /soc/sd@ee160000 no-1-8-v
+	 *  fdt rm /soc/sd@ee160000 non-removable;
+	 *  fdt rm /soc/sd@ee160000 cap-power-off-card;
+	 *  fdt rm /soc/sd@ee160000 keep-power-in-suspend;
+	 *  fdt rm /soc/sd@ee160000 max-frequency;
+	 */
+
+	vmmc-supply = <&vcc_sdhi3>;
+	vqmmc-supply = <&vccq_sdhi3>;
+	cd-gpios = <&gpio4 15 GPIO_ACTIVE_LOW>;
+	wp-gpios = <&gpio4 16 GPIO_ACTIVE_HIGH>;
+//	sd-uhs-sdr50;
+//	sd-uhs-sdr104;
+};
+
+&wlcore {
+	status = "disabled";
+};
