@@ -4196,7 +4196,7 @@
 			clocks = <&cpg CPG_MOD 2012>;
 			power-domains = <&sysc R8A779A0_PD_A2CV0>;
 			resets = <&cpg 2012>;
-			linux,uio-name = "fba_imp_cve_00";
+			linux,uio-name = "fba_imp_ocv_00";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4206,7 +4206,7 @@
 			clocks = <&cpg CPG_MOD 2013>;
 			power-domains = <&sysc R8A779A0_PD_A2CV1>;
 			resets = <&cpg 2013>;
-			linux,uio-name = "fba_imp_cve_01";
+			linux,uio-name = "fba_imp_ocv_01";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4216,7 +4216,7 @@
 			clocks = <&cpg CPG_MOD 2014>;
 			power-domains = <&sysc R8A779A0_PD_A2CV2>;
 			resets = <&cpg 2014>;
-			linux,uio-name = "fba_imp_cve_02";
+			linux,uio-name = "fba_imp_ocv_02";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4226,7 +4226,7 @@
 			clocks = <&cpg CPG_MOD 2015>;
 			power-domains = <&sysc R8A779A0_PD_A2CV3>;
 			resets = <&cpg 2015>;
-			linux,uio-name = "fba_imp_cve_03";
+			linux,uio-name = "fba_imp_ocv_03";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4236,7 +4236,7 @@
 			clocks = <&cpg CPG_MOD 2016>;
 			power-domains = <&sysc R8A779A0_PD_A2CV4>;
 			resets = <&cpg 2016>;
-			linux,uio-name = "fba_imp_cve_04";
+			linux,uio-name = "fba_imp_ocv_04";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4246,7 +4246,7 @@
 			clocks = <&cpg CPG_MOD 2017>;
 			power-domains = <&sysc R8A779A0_PD_A2CV5>;
 			resets = <&cpg 2017>;
-			linux,uio-name = "fba_imp_cve_05";
+			linux,uio-name = "fba_imp_ocv_05";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4256,7 +4256,7 @@
 			clocks = <&cpg CPG_MOD 2220>;
 			power-domains = <&sysc R8A779A0_PD_A2CV6>;
 			resets = <&cpg 2220>;
-			linux,uio-name = "fba_imp_cve_06";
+			linux,uio-name = "fba_imp_ocv_06";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4266,7 +4266,7 @@
 			clocks = <&cpg CPG_MOD 2221>;
 			power-domains = <&sysc R8A779A0_PD_A2CV7>;
 			resets = <&cpg 2221>;
-			linux,uio-name = "fba_imp_cve_07";
+			linux,uio-name = "fba_imp_ocv_07";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
