@@ -1,11 +1,13 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
+ * Copyright (C) 2018 Renesas Electronics Corporation
  * Copyright (C) 2011 Freescale Semiconductor, Inc.
  */
 
 #ifndef __DW_HDMI__
 #define __DW_HDMI__
 
+struct drm_bridge;
 struct drm_connector;
 struct drm_display_mode;
 struct drm_encoder;
@@ -80,6 +82,10 @@ enum {
 	DW_HDMI_RES_MAX,
 };
 
+enum dw_hdmi_devtype {
+	RCAR_HDMI = 1,
+};
+
 enum dw_hdmi_phy_type {
 	DW_HDMI_PHY_DWC_HDMI_TX_PHY = 0x00,
 	DW_HDMI_PHY_DWC_MHL_PHY_HEAC = 0xb2,
@@ -121,6 +127,7 @@ struct dw_hdmi_phy_ops {
 };
 
 struct dw_hdmi_plat_data {
+	enum dw_hdmi_devtype dev_type;
 	struct regmap *regm;
 	enum drm_mode_status (*mode_valid)(struct drm_connector *connector,
 					   const struct drm_display_mode *mode);
@@ -165,6 +172,7 @@ void dw_hdmi_set_high_tmds_clock_ratio(struct dw_hdmi *hdmi);
 void dw_hdmi_phy_i2c_set_addr(struct dw_hdmi *hdmi, u8 address);
 void dw_hdmi_phy_i2c_write(struct dw_hdmi *hdmi, unsigned short data,
 			   unsigned char addr);
+void dw_hdmi_s2r_ctrl(struct drm_bridge *bridge, int flag);
 
 void dw_hdmi_phy_gen2_pddq(struct dw_hdmi *hdmi, u8 enable);
 void dw_hdmi_phy_gen2_txpwron(struct dw_hdmi *hdmi, u8 enable);

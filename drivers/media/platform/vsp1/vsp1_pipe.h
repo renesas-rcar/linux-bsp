@@ -2,7 +2,7 @@
 /*
  * vsp1_pipe.h  --  R-Car VSP1 Pipeline
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -108,6 +108,11 @@ struct vsp1_partition {
  * @partitions: The number of partitions used to process one frame
  * @partition: The current partition for configuration to process
  * @part_table: The pre-calculated partitions used by the pipeline
+ * @vmute_flag: Enable mute flag of VSPD
+ * @event_wait: wait queue to wait for write back state
+ * @completed: display update completion flag
+ * @dst_cnt: display interrupt count
+ * @dst_wait: wait queue used to display interrupt signal
  */
 struct vsp1_pipeline {
 	struct media_pipeline pipe;
@@ -148,6 +153,12 @@ struct vsp1_pipeline {
 	unsigned int partitions;
 	struct vsp1_partition *partition;
 	struct vsp1_partition *part_table;
+
+	bool vmute_flag;
+	wait_queue_head_t event_wait;
+	bool completed;
+	unsigned int dst_cnt;
+	wait_queue_head_t dst_wait;
 };
 
 void vsp1_pipeline_reset(struct vsp1_pipeline *pipe);
