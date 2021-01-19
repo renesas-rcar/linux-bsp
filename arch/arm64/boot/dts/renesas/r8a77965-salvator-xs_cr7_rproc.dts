@@ -1,0 +1,16 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Device Tree Source for the Salvator-X 2nd version board with R-Car M3N
+ *
+ * Copyright (C) 2020 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a77965-salvator-xs.dts"
+#include "salvator-xs_cr7_rproc.dtsi"
+
+&rcar_sound {
+	ports {
+		/delete-node/ port@2;
+	};
+};
