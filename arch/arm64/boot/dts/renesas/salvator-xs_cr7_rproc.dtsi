@@ -1,0 +1,126 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Device Tree Source for the Salvator-X 2nd version board Cortex-R7 (CR7) Taurus virtio display
+ *
+ * Copyright (C) 2020 Renesas Electronics Corp.
+ */
+
+/ {
+	aliases {
+		/* The CR7 will control video input so exclusively uses i2c4
+		 * as it needs to access the adv7482, i.e. Linux can no longer
+		 * use i2c4 for anything */
+		/delete-property/ i2c4;
+	};
+
+	cpus {
+		/delete-property/ idle-states;
+	};
+
+	reserved-memory {
+		/* global autoconfigured region for contiguous allocations */
+		/* Only added a label so rvgc can refer to it */
+		cma: linux,cma@58000000 {
+			reg = <0x0 0x58000000 0x0 0x10000000>;
+		};
+
+		/delete-node/ linux,multimedia@70000000;
+
+		mmp_reserved: linux,multimedia@6c000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x0 0x6c000000 0x0 0x4000000>;
+		};
+
+		/* Memory used by the CR7 */
+		cr7: linux,cr7@70000000 {
+			no-map;
+			reg = <0x0 0x70000000 0x0 0x10000000>;
+		};
+	};
+
+	cr7 {
+		compatible = "renesas,rcar-cr7";
+		memory-region = <&cr7>;
+	};
+
+	rvgc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+
+		/* 1:1 mapping for the cma address space */
+		dma-ranges = <0x0 0x58000000 0x0 0x58000000 0x0 0x10000000>;
+
+		rvgc-memory {
+			memory-region = <&cma>;
+		};
+
+		displays {
+			display-0 {
+				display-map = <1>;
+				layers {
+					primary{
+						/* Position the layer in the centre of a 1920x720 display */
+						layer-map=<0x4>;
+						size-w=<800>;
+						size-h=<600>;
+						pos-x=<560>;	// (1920 - 800)/2
+						pos-y=<60>;	// (720 - 600)/2
+						pos-override;
+					};
+				};
+			};
+		};
+	};
+
+	/delete-node/ cvbs-in;
+	/delete-node/ hdmi-in;
+	/delete-node/ hdmi-out;
+	/delete-node/ lvds;
+	/delete-node/ vga;
+	/delete-node/ vga-encoder;
+};
+
+&csi20 {
+	/delete-property/ status;
+	ports {
+		/delete-node/ port@0;
+	};
+};
+
+&csi40 {
+	/delete-property/ status;
+	ports {
+		/delete-node/ port@0;
+	};
+};
+
+&soc {
+	mfis: mfis@e6260000 {
+		compatible = "renesas,mfis";
+		reg = <0x0 0xe6260000 0x0 0x200>;
+		interrupts = <0x00 0xe0 0x04 0x00 0xe1 0x04 0x00 0xe2 0x04 0x00 0xe3 0x04 0x00 0xe4 0x04 0x00 0xe5 0x04 0x00 0xe6 0x04 0x00 0xe7 0x04>;
+		interrupt-names = "eicr0", "eicr1", "eicr2", "eicr3", "eicr4", "eicr5", "eicr6", "eicr7";
+		renesas,mfis-channels = <0 1 2 3>;
+		status = "okay";
+
+		/delete-node/ mfis-as;
+	};
+};
+
+/delete-node/ &i2c4;
+/delete-node/ &fcpvd0;
+/delete-node/ &fcpvd1;
+/delete-node/ &vspd0;
+/delete-node/ &vspd1;
+/delete-node/ &du;
+/delete-node/ &sound_card;
+/delete-node/ &lvds0;
+/delete-node/ &hdmi0;
+/delete-node/ &hdmi0_con;
+
+&rcar_sound {
+	ports {
+		/delete-node/ port@1;
+	};
+};
