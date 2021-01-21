@@ -214,7 +214,6 @@ void rvgc_crtc_atomic_flush(struct drm_crtc* crtc,
 	int ret;
 	struct rcar_rvgc_pipe* rvgc_pipe = container_of(crtc, struct rcar_rvgc_pipe, crtc);
 	struct rcar_rvgc_device* rcrvgc    = rvgc_pipe->rcar_rvgc_dev;
-	unsigned int display_idx = rvgc_pipe->idx;
 	unsigned long flags;
 	struct taurus_rvgc_res_msg res_msg;
 
@@ -228,7 +227,7 @@ void rvgc_crtc_atomic_flush(struct drm_crtc* crtc,
 	}
 	/* Ask the Taurus server to flush the changes */
 	ret = rvgc_taurus_display_flush(rcrvgc,
-					display_idx,
+					rvgc_pipe->display_mapping,
 					0,
 					&res_msg);
 	if (ret) {
