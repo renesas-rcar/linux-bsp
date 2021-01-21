@@ -230,8 +230,10 @@ int rcar_rvgc_modeset_init(struct rcar_rvgc_device* rcrvgc) {
 			of_property_read_u32(layer_node, "layer-map", &cur_plane->hw_plane);
 			cur_plane->no_scan = of_property_read_bool(layer_node, "no-scan");
 			cur_plane->size_override = of_property_read_bool(layer_node, "size-override");
-			of_property_read_u32(layer_node, "size-w", &cur_plane->size_w);
-			of_property_read_u32(layer_node, "size-h", &cur_plane->size_h);
+			if (of_property_read_u32(layer_node, "size-w", &cur_plane->size_w))
+				cur_plane->size_w = rvgc_pipe->display_width;
+			if (of_property_read_u32(layer_node, "size-h", &cur_plane->size_h))
+				cur_plane->size_h = rvgc_pipe->display_height;
 			cur_plane->pos_override = of_property_read_bool(layer_node, "pos-override");
 			of_property_read_u32(layer_node, "pos-x", &cur_plane->pos_x);
 			of_property_read_u32(layer_node, "pos-y", &cur_plane->pos_y);
