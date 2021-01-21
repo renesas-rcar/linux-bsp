@@ -51,12 +51,12 @@
 				layers{
 					/* layer-map correspond to vpsd rpf (lower values are higher "z") */
 					primary{
+						/* Position the layer in the centre of a 1920x720 display */
 						layer-map=<0x4>;
-						size-w=<640>;
-						size-h=<480>;
-						pos-x=<100>;
-						pos-y=<100>;
-						/* override the default 0,0 position */
+						size-w=<800>;
+						size-h=<600>;
+						pos-x=<560>;	// (1920 - 800)/2
+						pos-y=<60>;	// (720 - 600)/2
 						pos-override;
 						/* don't actually output the plane to vspd */
 						// no-scan;
