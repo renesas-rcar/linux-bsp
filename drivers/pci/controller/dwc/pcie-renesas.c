@@ -288,7 +288,7 @@ static void renesas_pcie_init_rc(struct renesas_pcie *pcie)
 
 static int renesas_pcie_host_enable(struct renesas_pcie *pcie)
 {
-	struct dw_pcie *pci = pcie->pci;
+/*	struct dw_pcie *pci = pcie->pci;
 	int ret;
 
 	ret = clk_prepare_enable(pcie->bus_clk);
@@ -300,15 +300,15 @@ static int renesas_pcie_host_enable(struct renesas_pcie *pcie)
 	ret = reset_control_deassert(pcie->rst);
 	if (ret)
 		goto err_clk_disable;
-
+*/
 	renesas_pcie_init_rc(pcie);
 
 	return 0;
 
-err_clk_disable:
+/*err_clk_disable:
 	clk_disable_unprepare(pcie->bus_clk);
 
-	return ret;
+	return ret;*/
 }
 
 static int renesas_pcie_get_resources(struct renesas_pcie *pcie,
@@ -332,7 +332,7 @@ static int renesas_pcie_get_resources(struct renesas_pcie *pcie,
 	if (IS_ERR(pcie->phy_base))
 		return PTR_ERR(pcie->phy_base);
 
-	pcie->bus_clk = devm_clk_get(dev, "pcie_bus");
+/*	pcie->bus_clk = devm_clk_get(dev, "pcie_bus");
 	if (IS_ERR(pcie->bus_clk)) {
 		dev_err(dev, "cannot get pcie bus clock\n");
 		return PTR_ERR(pcie->bus_clk);
@@ -343,7 +343,7 @@ static int renesas_pcie_get_resources(struct renesas_pcie *pcie,
 		dev_err(dev, "failed to get Cold-reset\n");
 		return PTR_ERR(pcie->rst);
 	}
-
+*/
 	return 0;
 }
 
