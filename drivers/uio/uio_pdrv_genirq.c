@@ -427,6 +427,12 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 	priv->clk_cnt = 0;
 	priv->pwr_cnt = 0;
 
+	priv->rst = devm_reset_control_get_optional_exclusive(&pdev->dev, NULL);
+	if (IS_ERR(priv->rst)) {
+		dev_err(&pdev->dev, "failed to get cpg reset\n");
+		return PTR_ERR(priv->rst);
+	}
+
 	if (!uioinfo->irq) {
 		ret = platform_get_irq_optional(pdev, 0);
 		uioinfo->irq = ret;
