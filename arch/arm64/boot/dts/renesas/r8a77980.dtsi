@@ -1681,7 +1681,6 @@
 			reg = <0 0xfed00000 0 0x20000>;
 			interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 817>;
-			resets = <&cpg 817>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
@@ -1701,7 +1700,6 @@
 			reg = <0 0xfed20000 0 0x20000>;
 			interrupts = <GIC_SPI 27 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 814>;
-			resets = <&cpg 814>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
