@@ -842,6 +842,7 @@ static bool ipmmu_slave_whitelist(struct device *dev)
 {
 	unsigned int i;
 
+	return true;
 	/*
 	 * For R-Car Gen3 use a white list to opt-in slave devices.
 	 * For Other SoCs, this returns true anyway.
