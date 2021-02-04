@@ -276,6 +276,9 @@ static int priv_get_rst(struct uio_info *info)
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 	int status;
 
+	if (!priv->rst)
+		return -EOPNOTSUPP;
+
 	status = reset_control_status(priv->rst);
 	dev_dbg(&priv->pdev->dev, "Get reset state 0x%x\n", status);
 
