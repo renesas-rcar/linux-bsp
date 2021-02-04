@@ -40,6 +40,11 @@
 
 #define IPMMU_UTLB_MAX		48U
 
+enum ipmmu_reg_layout {
+	IPMMU_REG_LAYOUT_RCAR_GEN2_AND_GEN3 = 0,
+	IPMMU_REG_LAYOUT_RCAR_V3U,
+};
+
 struct ipmmu_features {
 	bool use_ns_alias_offset;
 	bool has_cache_leaf_nodes;
@@ -50,8 +55,11 @@ struct ipmmu_features {
 	bool reserved_context;
 	bool cache_snoop;
 	unsigned int ctx_offset_base;
+	unsigned int ctx_offset_base_2;
 	unsigned int ctx_offset_stride;
+	unsigned int ctx_offset_stride_adj;
 	unsigned int utlb_offset_base;
+	enum ipmmu_reg_layout reg_layout;
 };
 
 struct ipmmu_vmsa_device {
@@ -190,9 +198,25 @@ static void ipmmu_write(struct ipmmu_vmsa_device *mmu, unsigned int offset,
 	iowrite32(data, mmu->base + offset);
 }
 
+/*
+ * Offset adresss of R-Car V3U:
+ * (n = 0 to 7)
+ * Base-address + H'40 * n + H'1000 * n
+ * (n = 8 to 15)
+ * Base-address-2 + H'40 * (n - 8) + H'1000 * n
+ *
+ * for ASID and uTLB is same as Gen2 and Gen3.
+ */
+
 static unsigned int ipmmu_ctx_reg(struct ipmmu_vmsa_device *mmu,
 				  unsigned int context_id, unsigned int reg)
 {
+	if (mmu->features->reg_layout == IPMMU_REG_LAYOUT_RCAR_V3U &&
+	    context_id >= 8)
+		return mmu->features->ctx_offset_base_2 +
+		       context_id * mmu->features->ctx_offset_stride +
+		       reg - mmu->features->ctx_offset_stride_adj;
+
 	return mmu->features->ctx_offset_base +
 	       context_id * mmu->features->ctx_offset_stride + reg;
 }
@@ -983,7 +1007,9 @@ static const struct ipmmu_features ipmmu_features_default = {
 	.reserved_context = false,
 	.cache_snoop = true,
 	.ctx_offset_base = 0,
+	.ctx_offset_base_2 = 0,
 	.ctx_offset_stride = 0x40,
+	.ctx_offset_stride_adj = 0,
 	.utlb_offset_base = 0,
 };
 
@@ -997,8 +1023,27 @@ static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
 	.reserved_context = true,
 	.cache_snoop = false,
 	.ctx_offset_base = 0,
+	.ctx_offset_base_2 = 0,
 	.ctx_offset_stride = 0x40,
+	.ctx_offset_stride_adj = 0,
 	.utlb_offset_base = 0,
+};
+
+static const struct ipmmu_features ipmmu_features_rcar_v3u = {
+	.use_ns_alias_offset = false,
+	.has_cache_leaf_nodes = true,
+	.number_of_contexts = 16,
+	.num_utlbs = 64,
+	.setup_imbuscr = false,
+	.twobit_imttbcr_sl0 = true,
+	.reserved_context = true,
+	.cache_snoop = false,
+	.ctx_offset_base = 0x10000,
+	.ctx_offset_base_2 = 0x10800,
+	.ctx_offset_stride = 0x40,
+	.ctx_offset_stride_adj = (0x40 * 8),
+	.utlb_offset_base = 0x3000,
+	.reg_layout = IPMMU_REG_LAYOUT_RCAR_V3U,
 };
 
 static const struct of_device_id ipmmu_of_ids[] = {
@@ -1038,6 +1083,9 @@ static const struct of_device_id ipmmu_of_ids[] = {
 	}, {
 		.compatible = "renesas,ipmmu-r8a77995",
 		.data = &ipmmu_features_rcar_gen3,
+	}, {
+		.compatible = "renesas,ipmmu-r8a779a0",
+		.data = &ipmmu_features_rcar_v3u,
 	}, {
 		/* Terminator */
 	},
