@@ -260,11 +260,11 @@ static void priv_set_rst(struct uio_info *info, int value)
 			reset_control_deassert(priv->rst);
 		break;
 	case 1:
-		reset_control_reset(priv->rst);
+		reset_control_assert(priv->rst);
 		break;
 	default:
 		if (status == 0)
-			reset_control_assert(priv->rst);
+			reset_control_reset(priv->rst);
 		break;
 	}
 
