@@ -35,6 +35,14 @@
 #define REG_GEN3_THCODE2	0x54
 #define REG_GEN3_THCODE3	0x58
 
+/* FUSE register base and offsets */
+#define PTAT_BASE               0xE6198000
+#define REG_GEN3_PTAT1          0x5C
+#define REG_GEN3_PTAT2          0x60
+#define REG_GEN3_PTAT3          0x64
+#define REG_GEN3_THSCP          0x68
+#define REG_GEN3_MAX_SIZE       (REG_GEN3_THSCP + 0x4)
+
 /* IRQ{STR,MSK,EN} bits */
 #define IRQ_TEMP1		BIT(0)
 #define IRQ_TEMP2		BIT(1)
@@ -42,6 +50,9 @@
 #define IRQ_TEMPD1		BIT(3)
 #define IRQ_TEMPD2		BIT(4)
 #define IRQ_TEMPD3		BIT(5)
+
+/* THSCP bit */
+#define COR_PARA_VLD            (0x3 << 14)
 
 /* CTSR bits */
 #define CTSR_PONM	BIT(8)
@@ -63,7 +74,7 @@
 #define TSC_MAX_NUM	3
 
 /* default THCODE values if FUSEs are missing */
-static const int thcodes[TSC_MAX_NUM][3] = {
+static int thcodes[TSC_MAX_NUM][3] = {
 	{ 3397, 2800, 2221 },
 	{ 3393, 2795, 2216 },
 	{ 3389, 2805, 2237 },
@@ -371,10 +382,33 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	struct thermal_zone_device *zone;
 	int ret, irq, i;
 	char *irqname;
+	void __iomem *ptat_base;
+	unsigned int cor_para_value;
 
 	/* default values if FUSEs are missing */
-	/* TODO: Read values from hardware on supported platforms */
 	int ptat[3] = { 2631, 1509, 435 };
+
+	/* Use FUSE default values if they are missing.
+	 * If not, fetch them from registers.
+	 */
+	ptat_base = ioremap(PTAT_BASE, REG_GEN3_MAX_SIZE);
+	if (!ptat_base) {
+		dev_err(dev, "Cannot map FUSE register\n");
+		return -ENOMEM;
+	}
+
+	cor_para_value = ioread32(ptat_base + REG_GEN3_THSCP) & COR_PARA_VLD;
+
+	if (cor_para_value != COR_PARA_VLD) {
+		dev_info(dev, "is using pseudo fixed FUSE values\n");
+	} else {
+		dev_info(dev, "is using FUSE values\n");
+		ptat[0] = ioread32(ptat_base + REG_GEN3_PTAT1) & GEN3_FUSE_MASK;
+		ptat[1] = ioread32(ptat_base + REG_GEN3_PTAT2) & GEN3_FUSE_MASK;
+		ptat[2] = ioread32(ptat_base + REG_GEN3_PTAT3) & GEN3_FUSE_MASK;
+	}
+
+	iounmap(ptat_base);
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -434,6 +468,16 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 		priv->tscs[i] = tsc;
 
 		priv->thermal_init(tsc);
+
+		if (cor_para_value == COR_PARA_VLD) {
+			thcodes[i][0] = GEN3_FUSE_MASK &
+				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE1);
+			thcodes[i][1] = GEN3_FUSE_MASK &
+				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE2);
+			thcodes[i][2] = GEN3_FUSE_MASK &
+				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE3);
+		}
+
 		rcar_gen3_thermal_calc_coefs(tsc, ptat, thcodes[i], *ths_tj_1);
 
 		zone = devm_thermal_zone_of_sensor_register(dev, i, tsc,
