@@ -1356,7 +1356,6 @@
 			resets = <&cpg 706>;
 			max-frequency = <200000000>;
 			status = "disabled";
-			iommus = <&ipmmu_ds0 32>;
 		};
 
 		gic: interrupt-controller@f1000000 {
