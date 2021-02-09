@@ -1524,7 +1524,7 @@
 		};
 
 		ipmmu_vc0: iommu@fe6b0000 {
-			compatible = "renesas,ipmmu-r8a7795";
+			compatible = "renesas,ipmmu-mmu-r8a7795";
 			reg = <0 0xfe6b0000 0 0x1000>;
 			renesas,ipmmu-main = <&ipmmu_mm 12>;
 			power-domains = <&sysc R8A7795_PD_A3VC>;
@@ -1533,7 +1533,7 @@
 		};
 
 		ipmmu_vc1: iommu@fe6f0000 {
-			compatible = "renesas,ipmmu-r8a7795";
+			compatible = "renesas,ipmmu-mmu-r8a7795";
 			reg = <0 0xfe6f0000 0 0x1000>;
 			renesas,ipmmu-main = <&ipmmu_mm 13>;
 			power-domains = <&sysc R8A7795_PD_A3VC>;
@@ -1559,7 +1559,7 @@
 		};
 
 		ipmmu_vp0: iommu@fe990000 {
-			compatible = "renesas,ipmmu-r8a7795";
+			compatible = "renesas,ipmmu-mmu-r8a7795";
 			reg = <0 0xfe990000 0 0x1000>;
 			renesas,ipmmu-main = <&ipmmu_mm 16>;
 			power-domains = <&sysc R8A7795_PD_A3VP>;
@@ -1568,7 +1568,7 @@
 		};
 
 		ipmmu_vp1: iommu@fe980000 {
-			compatible = "renesas,ipmmu-r8a7795";
+			compatible = "renesas,ipmmu-mmu-r8a7795";
 			reg = <0 0xfe980000 0 0x1000>;
 			renesas,ipmmu-main = <&ipmmu_mm 17>;
 			power-domains = <&sysc R8A7795_PD_A3VP>;
