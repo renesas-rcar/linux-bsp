@@ -31,7 +31,7 @@
 	       <&ipmmu_mp1 30>, <&ipmmu_mp1 31>;
 };
 
-&cluster0_opp {
+&cluster0_opp0 {
 	/delete-node/ opp-1600000000;
 	/delete-node/ opp-1700000000;
 };
