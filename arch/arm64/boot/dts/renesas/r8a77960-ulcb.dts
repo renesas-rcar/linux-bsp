@@ -14,6 +14,12 @@
 	model = "Renesas M3ULCB board based on r8a77960";
 	compatible = "renesas,m3ulcb", "renesas,r8a7796";
 
+	cpus {
+		idle-states {
+			/delete-node/ cpu-sleep-1;
+		};
+	};
+
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
@@ -24,6 +30,22 @@
 		device_type = "memory";
 		reg = <0x6 0x00000000 0x0 0x40000000>;
 	};
+};
+
+&a53_0 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_1 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_2 {
+	/delete-property/ cpu-idle-states;
+};
+
+&a53_3 {
+	/delete-property/ cpu-idle-states;
 };
 
 &du {
