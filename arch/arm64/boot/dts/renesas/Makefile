@@ -48,6 +48,7 @@ dtb-$(CONFIG_ARCH_R8A77965) += r8a77965-ulcb-kf.dtb
 
 dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-eagle.dtb
 dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-v3msk.dtb
+#dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-v3msk-kf.dtb r8a77970-es1-v3msk-kf.dtb
 
 dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-condor.dtb
 dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk.dtb
@@ -59,3 +60,16 @@ dtb-$(CONFIG_ARCH_R8A77990) += r8a77990-es10-ebisu.dtb r8a77990-es10-ebisu-4d.dt
 dtb-$(CONFIG_ARCH_R8A77995) += r8a77995-draak.dtb
 
 dtb-$(CONFIG_ARCH_R8A779A0) += r8a779a0-falcon.dtb
+
+# overlays
+DTC_FLAGS += -@
+ulcb-kf-dtbo := ulcb-kf-cn11.dtbo ulcb-kf-most.dtbo ulcb-kf-sd3.dtbo \
+		ulcb-kf-cn10-pca.dtbo ulcb-kf-cn11-pca.dtbo \
+		ulcb-kf-cn10-gmsl2.dtbo ulcb-kf-cn11-gmsl2.dtbo \
+		ulcb-kf-panel-koe-tx31d200vm0baa-1280x480.dtbo \
+		ulcb-kf-panel-mitsubishi-aa104xd12-1024x768.dtbo \
+		ulcb-kf-panel-mitsubishi-aa121td01-1280x800.dtbo
+
+dtb-$(CONFIG_ARCH_R8A77951) += $(ulcb-kf-dtbo)
+dtb-$(CONFIG_ARCH_R8A77961) += $(ulcb-kf-dtbo)
+dtb-$(CONFIG_ARCH_R8A77965) += $(ulcb-kf-dtbo)
