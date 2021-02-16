@@ -86,6 +86,15 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
+
+	vddq_vin01: regulator-2 {
+		compatible = "regulator-fixed";
+		regulator-name = "VDDQ_VIN01";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
 };
 
 &du {
@@ -175,6 +184,20 @@
 	};
 };
 
+&mmc0 {
+	/* used for on-board eMMC */
+	pinctrl-0 = <&mmc_pins>;
+	pinctrl-1 = <&mmc_pins>;
+	pinctrl-names = "default", "state_uhs";
+
+	vmmc-supply = <&vcc3v3_d5>;
+	vqmmc-supply = <&vddq_vin01>;
+	mmc-hs200-1_8v;
+	bus-width = <8>;
+	non-removable;
+	status = "okay";
+};
+
 &pfc {
 	gether_pins: gether {
 		groups = "gether_mdio_a", "gether_rgmii",
@@ -190,6 +213,12 @@
 	qspi0_pins: qspi0 {
 		groups = "qspi0_ctrl", "qspi0_data4";
 		function = "qspi0";
+	};
+
+	mmc_pins: mmc {
+		groups = "mmc_data8", "mmc_ctrl", "mmc_ds";
+		function = "mmc";
+		power-source = <1800>;
 	};
 
 	scif0_pins: scif0 {
