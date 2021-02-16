@@ -3162,7 +3162,7 @@
 			linux,uio-name = "imp_ldma_00";
 		};
 
-		impx6_distributer: imp-distributer@ff900000 {
+		impslv0: imp-distributer@ff900000 {
 			compatible = "generic-uio";
 			reg = <0 0xff900000 0 0x4000>;
 			interrupts = <GIC_SPI 582 IRQ_TYPE_LEVEL_HIGH>;
@@ -3171,7 +3171,61 @@
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			resets = <&cpg 118>;
-			linux,uio-name = "imp_ctrl_00";
+			linux,uio-name = "imp_top_00_00";
+		};
+
+		impslv1 {
+			compatible = "generic-uio";
+			reg = <0 0xff900000 0 0x4000>;
+			interrupts = <GIC_SPI 576 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 118>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "imp_top_00_01";
+		};
+
+		impslv2 {
+			compatible = "generic-uio";
+			reg = <0 0xff900000 0 0x4000>;
+			interrupts = <GIC_SPI 577 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 118>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "imp_top_00_02";
+		};
+
+		impslv3 {
+			compatible = "generic-uio";
+			reg = <0 0xff900000 0 0x4000>;
+			interrupts = <GIC_SPI 578 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 118>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "imp_top_00_03";
+		};
+
+		impslv4 {
+			compatible = "generic-uio";
+			reg = <0 0xff900000 0 0x4000>;
+			interrupts = <GIC_SPI 579 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 118>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "imp_top_00_04";
+		};
+
+		impslv5 {
+			compatible = "generic-uio";
+			reg = <0 0xff900000 0 0x4000>;
+			interrupts = <GIC_SPI 580 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 118>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "imp_top_00_05";
+		};
+
+		impslv6 {
+			compatible = "generic-uio";
+			reg = <0 0xff900000 0 0x4000>;
+			interrupts = <GIC_SPI 581 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 118>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "imp_top_00_06";
 		};
 
 		imp0: imp-core@ffa00000 {
