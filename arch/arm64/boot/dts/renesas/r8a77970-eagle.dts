@@ -2,13 +2,14 @@
 /*
  * Device Tree Source for the Eagle board with R-Car V3M
  *
- * Copyright (C) 2016-2017 Renesas Electronics Corp.
- * Copyright (C) 2017 Cogent Embedded, Inc.
+ * Copyright (C) 2016-2020 Renesas Electronics Corp.
+ * Copyright (C) 2017-2020 Cogent Embedded, Inc.
  */
 
 /dts-v1/;
 #include "r8a77970.dtsi"
 #include <dt-bindings/gpio/gpio.h>
+#include "camera.dtsi"
 
 / {
 	model = "Renesas Eagle board based on r8a77970";
@@ -122,7 +123,12 @@
 	status = "okay";
 
 	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		port@0 {
+			reg = <0>;
+
 			csi40_in: endpoint {
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
@@ -389,5 +395,22 @@
 	pinctrl-0 = <&scif0_pins>;
 	pinctrl-names = "default";
 
+	status = "okay";
+};
+
+
+&vin0 {
+	status = "okay";
+};
+
+&vin1 {
+	status = "okay";
+};
+
+&vin2 {
+	status = "okay";
+};
+
+&vin3 {
 	status = "okay";
 };

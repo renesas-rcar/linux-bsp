@@ -2,10 +2,11 @@
 /*
  * Device Tree Source for the Condor board with R-Car V3H
  *
- * Copyright (C) 2018 Renesas Electronics Corp.
- * Copyright (C) 2018 Cogent Embedded, Inc.
+ * Copyright (C) 2018-2020 Renesas Electronics Corp.
+ * Copyright (C) 2018-2020 Cogent Embedded, Inc.
  */
 #include <dt-bindings/gpio/gpio.h>
+#include "camera.dtsi"
 
 / {
 	aliases {
@@ -112,7 +113,12 @@
 	status = "okay";
 
 	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		port@0 {
+			reg = <0>;
+
 			csi40_in: endpoint {
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
@@ -126,7 +132,12 @@
 	status = "okay";
 
 	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		port@0 {
+			reg = <0>;
+
 			csi41_in: endpoint {
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
@@ -545,4 +556,36 @@
 
 &scif_clk {
 	clock-frequency = <14745600>;
+};
+
+&vin0 {
+	status = "okay";
+};
+
+&vin1 {
+	status = "okay";
+};
+
+&vin2 {
+	status = "okay";
+};
+
+&vin3 {
+	status = "okay";
+};
+
+&vin4 {
+	status = "okay";
+};
+
+&vin5 {
+	status = "okay";
+};
+
+&vin6 {
+	status = "okay";
+};
+
+&vin7 {
+	status = "okay";
 };
