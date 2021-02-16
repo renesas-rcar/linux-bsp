@@ -581,6 +581,24 @@
 			status = "disabled";
 		};
 
+		sysc1: system-controller@e6184000 {
+			compatible = "renesas,r8a779a0-sysc";
+			reg = <0 0xe6184000 0 0x4000>;
+			#power-domain-cells = <1>;
+		};
+
+		sysc2: system-controller@e6188000 {
+			compatible = "renesas,r8a779a0-sysc";
+			reg = <0 0xe6188000 0 0x4000>;
+			#power-domain-cells = <1>;
+		};
+
+		sysc3: system-controller@e618c000 {
+			compatible = "renesas,r8a779a0-sysc";
+			reg = <0 0xe618c000 0 0x4000>;
+			#power-domain-cells = <1>;
+		};
+
 		hscif0: serial@e6540000 {
 			compatible = "renesas,hscif-r8a779a0",
 				     "renesas,rcar-gen3-hscif", "renesas,hscif";
