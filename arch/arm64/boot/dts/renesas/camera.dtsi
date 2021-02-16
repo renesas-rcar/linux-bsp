@@ -1,0 +1,20 @@
+/*
+ * Device Tree Source for the LVDS cameras
+ *
+ * Copyright (C) 2020 Cogent Embedded, Inc.
+ *
+ * This file is licensed under the terms of the GNU General Public License
+ * version 2.  This program is licensed "as is" without any warranty of any
+ * kind, whether express or implied.
+ */
+
+#define LVDS_CAMERA		\
+	"onnn,ap0101",		\
+	"onnn,ap0201",		\
+	"ovti,ov10635",		\
+	"ovti,ov2311",		\
+	"ovti,ov490",		\
+	"ovti,ov495",		\
+	"sony,isx016",		\
+	"sony,isx019",		\
+	"dummy,camera"
