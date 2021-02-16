@@ -232,6 +232,11 @@
 		compatible = "ti,sn65dsi86";
 		reg = <0x2c>;
 		dp-connector;
+		clocks = <&ref_clk>;
+		clock-names = "refclk";
+		no-use-gpio;
+		no-use-scramble;
+		hpd-poll;
 
 		ports {
 			#address-cells = <1>;
@@ -542,6 +547,10 @@
 
 	clock-frequency = <24000000>;
 	status = "okay";
+};
+
+&ref_clk {
+	clock-frequency = <38400000>;
 };
 
 &pfc {
