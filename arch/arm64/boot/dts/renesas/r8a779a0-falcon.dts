@@ -249,3 +249,23 @@
 &tmu4 {
 	status = "okay";
 };
+
+&pcie_bus_clk {
+	clock-frequency = <100000000>;
+};
+
+&pciec0 {
+	status = "okay";
+};
+
+&pciec1 {
+	status = "disabled";
+};
+
+&pciec2 {
+	status = "disabled";
+};
+
+&pciec3 {
+	status = "disabled";
+};
