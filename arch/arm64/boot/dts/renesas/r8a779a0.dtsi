@@ -2552,6 +2552,218 @@
 			resets = <&cpg 615>;
 			renesas,id = <3>;
 		};
+
+		impldma: dma-controller@f1f00000 {
+			compatible = "generic-uio";
+			reg = <0 0xf1f00000 0 0x2000>;
+			interrupts = <GIC_SPI 584 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 117>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+		};
+
+		impx6_distributer: imp-distributer@ff900000 {
+			compatible = "generic-uio";
+			reg = <0 0xff900000 0 0x4000>;
+			interrupts = <GIC_SPI 582 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 118>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			interrupt-controller;
+			#interrupt-cells = <1>;
+		};
+
+		imp0: imp-core@ffa00000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa00000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 24>;
+			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
+		};
+
+		imp1: imp-core@ffa20000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa20000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 25>;
+			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
+		};
+
+		imp2: imp-core@ffb00000 {
+			compatible = "generic-uio";
+			reg = <0 0xffb00000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 103>;
+			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
+		};
+
+		imp3: imp-core@ffb20000 {
+			compatible = "generic-uio";
+			reg = <0 0xffb20000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 104>;
+			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
+		};
+
+		impcve0: imp-cve@ffa40000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa40000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 28>;
+			power-domains = <&sysc R8A779A0_PD_A2CV0>;
+		};
+
+		impcve1: imp-cve@ffa50000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa50000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 29>;
+			power-domains = <&sysc R8A779A0_PD_A2CV1>;
+		};
+
+		impcve2: imp-cve@ffb40000 {
+			compatible = "generic-uio";
+			reg = <0 0xffb40000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 30>;
+			power-domains = <&sysc R8A779A0_PD_A2CV2>;
+		};
+
+		impcve3: imp-cve@ffb50000 {
+			compatible = "generic-uio";
+			reg = <0 0xffb50000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 31>;
+			power-domains = <&sysc R8A779A0_PD_A2CV3>;
+		};
+
+		impcve4: imp-cve@ffa60000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa60000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 100>;
+			power-domains = <&sysc R8A779A0_PD_A2CV4>;
+		};
+
+		impcve5: imp-cve@ffb60000 {
+			compatible = "generic-uio";
+			reg = <0 0xffb60000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 107>;
+			power-domains = <&sysc R8A779A0_PD_A2CV5>;
+		};
+
+		impcve6: imp-cve@ffa70000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa70000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 313>;
+			power-domains = <&sysc R8A779A0_PD_A2CV6>;
+		};
+
+		impcve7: imp-cve@ffb70000 {
+			compatible = "generic-uio";
+			reg = <0 0xffb70000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 314>;
+			power-domains = <&sysc R8A779A0_PD_A2CV7>;
+		};
+
+		impdma00: dma-controller@ffa80000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa80000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 26>;
+			power-domains = <&sysc R8A779A0_PD_A2DP0>;
+		};
+
+		impdma01: dma-controller@ffa81000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa81000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 26>;
+			power-domains = <&sysc R8A779A0_PD_A2DP0>;
+		};
+
+		impdma10: dma-controller@ffb80000 {
+			compatible = "generic-uio";
+			reg = <0 0xffb80000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 105>;
+			power-domains = <&sysc R8A779A0_PD_A2DP1>;
+		};
+
+		impdma11: dma-controller@ffb81000 {
+			compatible = "generic-uio";
+			reg = <0 0xffb81000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 105>;
+			power-domains = <&sysc R8A779A0_PD_A2DP1>;
+		};
+
+		imppsc0: imp-psc@ffa84000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa84000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 27>;
+			power-domains = <&sysc R8A779A0_PD_A2DP0>;
+		};
+
+		imppsc1: imp-psc@ffb84000 {
+			compatible = "generic-uio";
+			reg = <0 0xffb84000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 106>;
+			power-domains = <&sysc R8A779A0_PD_A2DP1>;
+		};
+
+		impcnn0: imp-cnn@ffaa0000 {
+			compatible = "generic-uio";
+			reg = <0 0xffaa0000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 22>;
+			power-domains = <&sysc R8A779A0_PD_A1CNN0>;
+		};
+
+		impcnn1: imp-cnn@ffbc0000 {
+			compatible = "generic-uio";
+			reg = <0 0xffbc0000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 108>;
+			power-domains = <&sysc R8A779A0_PD_A1CNN1>;
+		};
+
+		impcnn2: imp-cnn@ffac0000 {
+			compatible = "generic-uio";
+			reg = <0 0xffac0000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 101>;
+			power-domains = <&sysc R8A779A0_PD_A1CNN2>;
+		};
+
+		impspmi0: imp-ram@ed200000 {
+			compatible = "generic-uio";
+			reg = <0 0xed200000 0 0x100000>,
+			      <0 0xffa8c000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 120>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+		};
+
+		impspmi1: imp-ram@eda00000 {
+			compatible = "generic-uio";
+			reg = <0 0xeda00000 0 0x100000>,
+			      <0 0xffb8c000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 121>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+		};
+
+		impspmc0: cnn-ram@ed600000 {
+			compatible = "generic-uio";
+			reg = <0 0xed600000 0 0x200000>,
+			      <0 0xffab0000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 23>;
+			power-domains = <&sysc R8A779A0_PD_A2CN0>;
+		};
+
+		impspmc1: cnn-ram@edc00000 {
+			compatible = "generic-uio";
+			reg = <0 0xedc00000 0 0x200000>,
+			      <0 0xffbd0000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 109>;
+			power-domains = <&sysc R8A779A0_PD_A2CN1>;
+		};
+
+		impspmc2: cnn-ram@ed400000 {
+			compatible = "generic-uio";
+			reg = <0 0xed400000 0 0x200000>,
+			      <0 0xffad0000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 102>;
+			power-domains = <&sysc R8A779A0_PD_A2CN2>;
+		};
+
+		impdta0: imp-dta@ffa88000 {
+			compatible = "generic-uio";
+			reg = <0 0xffa88000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 116>;
+			power-domains = <&sysc R8A779A0_PD_A3IR>;
+		};
 	};
 
 	thermal-zones {
