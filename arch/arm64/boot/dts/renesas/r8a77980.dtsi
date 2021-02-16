@@ -44,6 +44,7 @@
 			power-domains = <&sysc R8A77980_PD_CA53_CPU0>;
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
+			operating-points-v2 = <&cluster0_opp_tb0>;
 		};
 
 		a53_1: cpu@1 {
@@ -54,6 +55,7 @@
 			power-domains = <&sysc R8A77980_PD_CA53_CPU1>;
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
+			operating-points-v2 = <&cluster0_opp_tb0>;
 		};
 
 		a53_2: cpu@2 {
@@ -64,6 +66,7 @@
 			power-domains = <&sysc R8A77980_PD_CA53_CPU2>;
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
+			operating-points-v2 = <&cluster0_opp_tb0>;
 		};
 
 		a53_3: cpu@3 {
@@ -74,6 +77,7 @@
 			power-domains = <&sysc R8A77980_PD_CA53_CPU3>;
 			next-level-cache = <&L2_CA53>;
 			enable-method = "psci";
+			operating-points-v2 = <&cluster0_opp_tb0>;
 		};
 
 		L2_CA53: cache-controller {
@@ -81,6 +85,17 @@
 			power-domains = <&sysc R8A77980_PD_CA53_SCU>;
 			cache-unified;
 			cache-level = <2>;
+		};
+	};
+
+	cluster0_opp_tb0: opp_table0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp@1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <850000>; /* TBD; section 87.2 */
+			clock-latency-ns = <300000>;
 		};
 	};
 
