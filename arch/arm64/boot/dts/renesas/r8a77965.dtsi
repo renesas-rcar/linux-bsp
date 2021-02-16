@@ -116,6 +116,8 @@
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			#cooling-cells = <2>;
 			dynamic-power-coefficient = <854>;
+			cooling-min-level = <0>;
+			cooling-max-level = <2>;
 			clocks = <&cpg CPG_CORE R8A77965_CLK_Z>;
 			operating-points-v2 = <&cluster0_opp>;
 		};
@@ -3080,6 +3082,13 @@
 			sustainable-power = <2439>;
 
 			trips {
+				threshold: trip-point0 {
+					/* miliCelsius  */
+					temperature = <90000>;
+					hysteresis = <1000>;
+					type = "passive";
+				};
+
 				target: trip-point1 {
 					/* miliCelsius  */
 					temperature = <100000>;
@@ -3097,7 +3106,7 @@
 			cooling-maps {
 				map0 {
 					trip = <&target>;
-					cooling-device = <&a57_0 2 4>;
+					cooling-device = <&a57_0 0 2>;
 					contribution = <1024>;
 				};
 			};
