@@ -215,6 +215,10 @@
 	status = "okay";
 };
 
+&ref_clk {
+	clock-frequency = <38400000>;
+};
+
 &pfc {
 	avb0_pins: avb0 {
 		mux {
