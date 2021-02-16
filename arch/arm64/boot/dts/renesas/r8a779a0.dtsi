@@ -1350,6 +1350,7 @@
 			clocks = <&cpg CPG_MOD 529>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 529>;
+			linux,uio-name = "imrlx4_ims0";
 		};
 
 		imrlx4_ims1: ims@fe870000 {
@@ -1359,6 +1360,7 @@
 			clocks = <&cpg CPG_MOD 530>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 530>;
+			linux,uio-name = "imrlx4_ims1";
 		};
 
 		imrlx4_imr0: imr@fe880000 {
@@ -1368,6 +1370,7 @@
 			clocks = <&cpg CPG_MOD 525>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 525>;
+			linux,uio-name = "imrlx4_imr0";
 		};
 
 		imrlx4_imr1: imr@fe890000 {
@@ -1377,6 +1380,7 @@
 			clocks = <&cpg CPG_MOD 526>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 526>;
+			linux,uio-name = "imrlx4_imr1";
 		};
 
 		imrlx4_imr2: imr@fe8a0000 {
@@ -1386,6 +1390,7 @@
 			clocks = <&cpg CPG_MOD 527>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 527>;
+			linux,uio-name = "imrlx4_imr2";
 		};
 
 		imrlx4_imr3: imr@fe8b0000 {
@@ -1395,6 +1400,7 @@
 			clocks = <&cpg CPG_MOD 528>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 528>;
+			linux,uio-name = "imrlx4_imr3";
 		};
 
 		fcpvd0: fcp@fea10000 {
@@ -2686,6 +2692,7 @@
 			clocks = <&cpg CPG_MOD 16>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 16>;
+			linux,uio-name = "cisp0";
 		};
 
 		tisp0: tisp@fed00000 {
@@ -2695,6 +2702,7 @@
 			clocks = <&cpg CPG_MOD 16>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 16>;
+			linux,uio-name = "tisp0";
 		};
 
 		cisp1: cisp@fee00000 {
@@ -2704,6 +2712,7 @@
 			clocks = <&cpg CPG_MOD 17>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 17>;
+			linux,uio-name = "cisp1";
 		};
 
 		tisp1: tisp@fed20000 {
@@ -2713,6 +2722,7 @@
 			clocks = <&cpg CPG_MOD 17>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 17>;
+			linux,uio-name = "tisp1";
 		};
 
 		cisp2: cisp@fef00000 {
@@ -2722,6 +2732,7 @@
 			clocks = <&cpg CPG_MOD 18>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 18>;
+			linux,uio-name = "cisp2";
 		};
 
 		tisp2: tisp@fed30000 {
@@ -2731,6 +2742,7 @@
 			clocks = <&cpg CPG_MOD 18>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 18>;
+			linux,uio-name = "tisp2";
 		};
 
 		cisp3: cisp@fe400000 {
@@ -2740,6 +2752,7 @@
 			clocks = <&cpg CPG_MOD 19>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 19>;
+			linux,uio-name = "cisp3";
 		};
 
 		tisp3: tisp@fed40000 {
@@ -2749,6 +2762,7 @@
 			clocks = <&cpg CPG_MOD 19>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 19>;
+			linux,uio-name = "tisp3";
 		};
 
 		impldma: dma-controller@f1f00000 {
@@ -2757,6 +2771,7 @@
 			interrupts = <GIC_SPI 584 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 117>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "impldma";
 		};
 
 		impx6_distributer: imp-distributer@ff900000 {
@@ -2767,6 +2782,7 @@
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
+			linux,uio-name = "impx6-distributer";
 		};
 
 		imp0: imp-core@ffa00000 {
@@ -2774,6 +2790,7 @@
 			reg = <0 0xffa00000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 24>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
+			linux,uio-name = "imp0";
 		};
 
 		imp1: imp-core@ffa20000 {
@@ -2781,6 +2798,7 @@
 			reg = <0 0xffa20000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 25>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
+			linux,uio-name = "imp1";
 		};
 
 		imp2: imp-core@ffb00000 {
@@ -2788,6 +2806,7 @@
 			reg = <0 0xffb00000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 103>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
+			linux,uio-name = "imp2";
 		};
 
 		imp3: imp-core@ffb20000 {
@@ -2795,6 +2814,7 @@
 			reg = <0 0xffb20000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 104>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
+			linux,uio-name = "imp3";
 		};
 
 		impcve0: imp-cve@ffa40000 {
@@ -2802,6 +2822,7 @@
 			reg = <0 0xffa40000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 28>;
 			power-domains = <&sysc R8A779A0_PD_A2CV0>;
+			linux,uio-name = "impcve0";
 		};
 
 		impcve1: imp-cve@ffa50000 {
@@ -2809,6 +2830,7 @@
 			reg = <0 0xffa50000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 29>;
 			power-domains = <&sysc R8A779A0_PD_A2CV1>;
+			linux,uio-name = "impcve1";
 		};
 
 		impcve2: imp-cve@ffb40000 {
@@ -2816,6 +2838,7 @@
 			reg = <0 0xffb40000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 30>;
 			power-domains = <&sysc R8A779A0_PD_A2CV2>;
+			linux,uio-name = "impcve2";
 		};
 
 		impcve3: imp-cve@ffb50000 {
@@ -2823,6 +2846,7 @@
 			reg = <0 0xffb50000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 31>;
 			power-domains = <&sysc R8A779A0_PD_A2CV3>;
+			linux,uio-name = "impcve3";
 		};
 
 		impcve4: imp-cve@ffa60000 {
@@ -2830,6 +2854,7 @@
 			reg = <0 0xffa60000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 100>;
 			power-domains = <&sysc R8A779A0_PD_A2CV4>;
+			linux,uio-name = "impcve4";
 		};
 
 		impcve5: imp-cve@ffb60000 {
@@ -2837,6 +2862,7 @@
 			reg = <0 0xffb60000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 107>;
 			power-domains = <&sysc R8A779A0_PD_A2CV5>;
+			linux,uio-name = "impcve5";
 		};
 
 		impcve6: imp-cve@ffa70000 {
@@ -2844,6 +2870,7 @@
 			reg = <0 0xffa70000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 313>;
 			power-domains = <&sysc R8A779A0_PD_A2CV6>;
+			linux,uio-name = "impcve6";
 		};
 
 		impcve7: imp-cve@ffb70000 {
@@ -2851,6 +2878,7 @@
 			reg = <0 0xffb70000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 314>;
 			power-domains = <&sysc R8A779A0_PD_A2CV7>;
+			linux,uio-name = "impcve7";
 		};
 
 		impdma00: dma-controller@ffa80000 {
@@ -2858,6 +2886,7 @@
 			reg = <0 0xffa80000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 26>;
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
+			linux,uio-name = "impdma00";
 		};
 
 		impdma01: dma-controller@ffa81000 {
@@ -2865,6 +2894,7 @@
 			reg = <0 0xffa81000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 26>;
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
+			linux,uio-name = "impdma01";
 		};
 
 		impdma10: dma-controller@ffb80000 {
@@ -2872,6 +2902,7 @@
 			reg = <0 0xffb80000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 105>;
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
+			linux,uio-name = "impdma10";
 		};
 
 		impdma11: dma-controller@ffb81000 {
@@ -2879,6 +2910,7 @@
 			reg = <0 0xffb81000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 105>;
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
+			linux,uio-name = "impdma11";
 		};
 
 		imppsc0: imp-psc@ffa84000 {
@@ -2886,6 +2918,7 @@
 			reg = <0 0xffa84000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 27>;
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
+			linux,uio-name = "imppsc0";
 		};
 
 		imppsc1: imp-psc@ffb84000 {
@@ -2893,6 +2926,7 @@
 			reg = <0 0xffb84000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 106>;
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
+			linux,uio-name = "imppsc1";
 		};
 
 		impcnn0: imp-cnn@ffaa0000 {
@@ -2900,6 +2934,7 @@
 			reg = <0 0xffaa0000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 22>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN0>;
+			linux,uio-name = "impcnn0";
 		};
 
 		impcnn1: imp-cnn@ffbc0000 {
@@ -2907,6 +2942,7 @@
 			reg = <0 0xffbc0000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 108>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN1>;
+			linux,uio-name = "impcnn1";
 		};
 
 		impcnn2: imp-cnn@ffac0000 {
@@ -2914,6 +2950,7 @@
 			reg = <0 0xffac0000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 101>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN2>;
+			linux,uio-name = "impcnn2";
 		};
 
 		impspmi0: imp-ram@ed200000 {
@@ -2922,6 +2959,7 @@
 			      <0 0xffa8c000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 120>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "impspmi0";
 		};
 
 		impspmi1: imp-ram@eda00000 {
@@ -2930,6 +2968,7 @@
 			      <0 0xffb8c000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 121>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "impspmi1";
 		};
 
 		impspmc0: cnn-ram@ed600000 {
@@ -2938,6 +2977,7 @@
 			      <0 0xffab0000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 23>;
 			power-domains = <&sysc R8A779A0_PD_A2CN0>;
+			linux,uio-name = "impspmc0";
 		};
 
 		impspmc1: cnn-ram@edc00000 {
@@ -2946,6 +2986,7 @@
 			      <0 0xffbd0000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 109>;
 			power-domains = <&sysc R8A779A0_PD_A2CN1>;
+			linux,uio-name = "impspmc1";
 		};
 
 		impspmc2: cnn-ram@ed400000 {
@@ -2954,6 +2995,7 @@
 			      <0 0xffad0000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 102>;
 			power-domains = <&sysc R8A779A0_PD_A2CN2>;
+			linux,uio-name = "impspmc2";
 		};
 
 		impdta0: imp-dta@ffa88000 {
@@ -2961,6 +3003,7 @@
 			reg = <0 0xffa88000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 116>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			linux,uio-name = "impdta0";
 		};
 	};
 
