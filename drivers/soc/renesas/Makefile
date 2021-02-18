@@ -32,4 +32,5 @@ endif
 # Family
 obj-$(CONFIG_RST_RCAR)		+= rcar-rst.o
 obj-$(CONFIG_SYSC_RCAR)		+= rcar-sysc.o
+obj-$(CONFIG_RCAR_CPU_TOPOLOGY)	+= rcar-topology.o
 obj-$(CONFIG_SYSC_RMOBILE)	+= rmobile-sysc.o
