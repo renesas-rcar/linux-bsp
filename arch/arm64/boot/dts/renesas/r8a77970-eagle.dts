@@ -94,6 +94,14 @@
 			reusable;
 			reg = <0x00000000 0x7f000000 0x0 0x01000000>;
 		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma@58000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x18000000>;
+			linux,cma-default;
+		};
 	};
 
 	reserved-memory {
