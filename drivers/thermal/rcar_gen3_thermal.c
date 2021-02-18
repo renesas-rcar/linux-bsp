@@ -39,6 +39,10 @@
 #define REG_GEN3_PTAT3		0x64
 #define REG_GEN3_THSCP		0x68
 
+/* FUSE register base and offsets */
+#define PTAT_BASE               0xE6198000
+#define REG_GEN3_MAX_SIZE       (REG_GEN3_THSCP + 0x4)
+
 /* IRQ{STR,MSK,EN} bits */
 #define IRQ_TEMP1		BIT(0)
 #define IRQ_TEMP2		BIT(1)
@@ -432,6 +436,22 @@ static int rcar_gen3_thermal_request_irqs(struct rcar_gen3_thermal_priv *priv,
 	char *irqname;
 	int ret, irq;
 
+
+	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	priv->thermal_init = rcar_gen3_thermal_init;
+	if (soc_device_match(r8a7795es1))
+		priv->thermal_init = rcar_gen3_thermal_init_r8a7795es1;
+
+	platform_set_drvdata(pdev, priv);
+
+	/*
+	 * Request 2 (of the 3 possible) IRQs, the driver only needs to
+	 * trigger on the low and high trip points of the current
+	 * temp window at this point.
+	 */
 	for (i = 0; i < 2; i++) {
 		irq = platform_get_irq_optional(pdev, i);
 		if (irq < 0)
@@ -461,6 +481,11 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	struct thermal_zone_device *zone;
 	unsigned int i;
 	int ret;
+	void __iomem *ptat_base;
+	unsigned int cor_para_value;
+
+	/* default values if FUSEs are missing */
+	int ptat[3] = { 2631, 1509, 435 };
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -477,6 +502,28 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
+
+	/* Use FUSE default values if they are missing.
+	 * If not, fetch them from registers.
+	 */
+	ptat_base = ioremap(PTAT_BASE, REG_GEN3_MAX_SIZE);
+	if (!ptat_base) {
+		dev_err(dev, "Cannot map FUSE register\n");
+		return -ENOMEM;
+	}
+
+	cor_para_value = ioread32(ptat_base + REG_GEN3_THSCP) & THSCP_COR_PARA_VLD;
+
+	if (cor_para_value != THSCP_COR_PARA_VLD) {
+		dev_info(dev, "is using pseudo fixed FUSE values\n");
+	} else {
+		dev_info(dev, "is using FUSE values\n");
+		ptat[0] = ioread32(ptat_base + REG_GEN3_PTAT1) & GEN3_FUSE_MASK;
+		ptat[1] = ioread32(ptat_base + REG_GEN3_PTAT2) & GEN3_FUSE_MASK;
+		ptat[2] = ioread32(ptat_base + REG_GEN3_PTAT3) & GEN3_FUSE_MASK;
+	}
+
+	iounmap(ptat_base);
 
 	for (i = 0; i < TSC_MAX_NUM; i++) {
 		struct rcar_gen3_thermal_tsc *tsc;
