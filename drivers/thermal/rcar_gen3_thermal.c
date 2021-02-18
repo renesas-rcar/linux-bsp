@@ -396,28 +396,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	/* default values if FUSEs are missing */
 	int ptat[3] = { 2631, 1509, 435 };
 
-	/* Use FUSE default values if they are missing.
-	 * If not, fetch them from registers.
-	 */
-	ptat_base = ioremap(PTAT_BASE, REG_GEN3_MAX_SIZE);
-	if (!ptat_base) {
-		dev_err(dev, "Cannot map FUSE register\n");
-		return -ENOMEM;
-	}
-
-	cor_para_value = ioread32(ptat_base + REG_GEN3_THSCP) & COR_PARA_VLD;
-
-	if (cor_para_value != COR_PARA_VLD) {
-		dev_info(dev, "is using pseudo fixed FUSE values\n");
-	} else {
-		dev_info(dev, "is using FUSE values\n");
-		ptat[0] = ioread32(ptat_base + REG_GEN3_PTAT1) & GEN3_FUSE_MASK;
-		ptat[1] = ioread32(ptat_base + REG_GEN3_PTAT2) & GEN3_FUSE_MASK;
-		ptat[2] = ioread32(ptat_base + REG_GEN3_PTAT3) & GEN3_FUSE_MASK;
-	}
-
-	iounmap(ptat_base);
-
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -452,6 +430,28 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
+
+	/* Use FUSE default values if they are missing.
+	 * If not, fetch them from registers.
+	 */
+	ptat_base = ioremap(PTAT_BASE, REG_GEN3_MAX_SIZE);
+	if (!ptat_base) {
+		dev_err(dev, "Cannot map FUSE register\n");
+		return -ENOMEM;
+	}
+
+	cor_para_value = ioread32(ptat_base + REG_GEN3_THSCP) & COR_PARA_VLD;
+
+	if (cor_para_value != COR_PARA_VLD) {
+		dev_info(dev, "is using pseudo fixed FUSE values\n");
+	} else {
+		dev_info(dev, "is using FUSE values\n");
+		ptat[0] = ioread32(ptat_base + REG_GEN3_PTAT1) & GEN3_FUSE_MASK;
+		ptat[1] = ioread32(ptat_base + REG_GEN3_PTAT2) & GEN3_FUSE_MASK;
+		ptat[2] = ioread32(ptat_base + REG_GEN3_PTAT3) & GEN3_FUSE_MASK;
+	}
+
+	iounmap(ptat_base);
 
 	for (i = 0; i < TSC_MAX_NUM; i++) {
 		struct rcar_gen3_thermal_tsc *tsc;
