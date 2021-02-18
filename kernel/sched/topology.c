@@ -1534,6 +1534,7 @@ static struct cpumask		***sched_domains_numa_masks;
 	(SD_SHARE_CPUCAPACITY	|	\
 	 SD_SHARE_PKG_RESOURCES |	\
 	 SD_NUMA		|	\
+	 SD_ASYM_CPUCAPACITY	|	\
 	 SD_ASYM_PACKING)
 
 static struct sched_domain *
