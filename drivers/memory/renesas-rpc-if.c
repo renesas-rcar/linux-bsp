@@ -165,20 +165,39 @@ static const struct regmap_config rpcif_regmap_config = {
 	.volatile_table	= &rpcif_volatile_table,
 };
 
+static void rpc_write8(struct rpcif *rpc, u32 offset, u8 data)
+{
+	iowrite8(data, rpc->base + offset);
+}
+
+static void rpc_write16(struct rpcif *rpc, u32 offset, u16 data)
+{
+	iowrite16(data, rpc->base + offset);
+}
+
+static u8 rpc_read8(struct rpcif *rpc, u32 offset)
+{
+	return ioread8(rpc->base + offset);
+}
+
+static u16 rpc_read16(struct rpcif *rpc, u32 offset)
+{
+	return ioread16(rpc->base + offset);
+}
+
 int rpcif_sw_init(struct rpcif *rpc, struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct resource *res;
-	void __iomem *base;
 
 	rpc->dev = dev;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "regs");
-	base = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(base))
-		return PTR_ERR(base);
+	rpc->base = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(rpc->base))
+		return PTR_ERR(rpc->base);
 
-	rpc->regmap = devm_regmap_init_mmio(&pdev->dev, base,
+	rpc->regmap = devm_regmap_init_mmio(&pdev->dev, rpc->base,
 					    &rpcif_regmap_config);
 	if (IS_ERR(rpc->regmap)) {
 		dev_err(&pdev->dev,
@@ -271,6 +290,8 @@ static u8 rpcif_bits_set(struct rpcif *rpc, u32 nbytes)
 	if (rpc->bus_size == 2)
 		nbytes /= 2;
 	nbytes = clamp(nbytes, 1U, 4U);
+	if (nbytes == 3)
+		nbytes = 2;
 	return GENMASK(3, 4 - nbytes);
 }
 
@@ -384,6 +405,7 @@ int rpcif_manual_xfer(struct rpcif *rpc)
 	regmap_write(rpc->regmap, RPCIF_SMOPR, rpc->option);
 	regmap_write(rpc->regmap, RPCIF_SMDMCR, rpc->dummy);
 	regmap_write(rpc->regmap, RPCIF_SMDRENR, rpc->ddr);
+	regmap_write(rpc->regmap, RPCIF_SMADR, rpc->smadr);
 	smenr = rpc->enable;
 
 	switch (rpc->dir) {
@@ -393,9 +415,19 @@ int rpcif_manual_xfer(struct rpcif *rpc)
 			u32 data[2];
 
 			smcr = rpc->smcr | RPCIF_SMCR_SPIE;
+
+			if (max == 8)
+				if (nbytes >= 5 && nbytes <= 7)
+					max = 4;
+
 			if (nbytes > max) {
 				nbytes = max;
 				smcr |= RPCIF_SMCR_SSLKP;
+			} else if (nbytes == 3) {
+				nbytes = 2;
+				smcr |= RPCIF_SMCR_SSLKP;
+			} else {
+				nbytes = nbytes;
 			}
 
 			memcpy(data, rpc->buffer + pos, nbytes);
@@ -407,14 +439,16 @@ int rpcif_manual_xfer(struct rpcif *rpc)
 			} else if (nbytes > 2) {
 				regmap_write(rpc->regmap, RPCIF_SMWDR0,
 					     data[0]);
+			} else if (nbytes > 1) {
+				rpc_write16(rpc, RPCIF_SMWDR0, (u16)data[0]);
 			} else	{
-				regmap_write(rpc->regmap, RPCIF_SMWDR0,
-					     data[0] << 16);
+				rpc_write8(rpc, RPCIF_SMWDR0, (u8)data[0]);
 			}
 
-			regmap_write(rpc->regmap, RPCIF_SMADR,
-				     rpc->smadr + pos);
 			regmap_write(rpc->regmap, RPCIF_SMENR, smenr);
+			regmap_update_bits(rpc->regmap, RPCIF_SMENR,
+					   RPCIF_SMENR_SPIDE(0xF),
+					   RPCIF_SMENR_SPIDE(rpcif_bits_set(rpc, nbytes)));
 			regmap_write(rpc->regmap, RPCIF_SMCR, smcr);
 			ret = wait_msg_xfer_end(rpc);
 			if (ret)
@@ -457,12 +491,23 @@ int rpcif_manual_xfer(struct rpcif *rpc)
 			u32 nbytes = rpc->xferlen - pos;
 			u32 data[2];
 
+			if (max == 8)
+				if (nbytes >= 5 && nbytes <= 7)
+					max = 4;
+
 			if (nbytes > max)
 				nbytes = max;
+			else if (nbytes == 3)
+				nbytes = 2;
+			else
+				nbytes = nbytes;
 
 			regmap_write(rpc->regmap, RPCIF_SMADR,
 				     rpc->smadr + pos);
 			regmap_write(rpc->regmap, RPCIF_SMENR, smenr);
+			regmap_update_bits(rpc->regmap, RPCIF_SMENR,
+					   RPCIF_SMENR_SPIDE(0xF),
+					   RPCIF_SMENR_SPIDE(rpcif_bits_set(rpc, nbytes)));
 			regmap_write(rpc->regmap, RPCIF_SMCR,
 				     rpc->smcr | RPCIF_SMCR_SPIE);
 			ret = wait_msg_xfer_end(rpc);
@@ -477,11 +522,12 @@ int rpcif_manual_xfer(struct rpcif *rpc)
 			} else if (nbytes > 2) {
 				regmap_read(rpc->regmap, RPCIF_SMRDR0,
 					    &data[0]);
-			} else	{
-				regmap_read(rpc->regmap, RPCIF_SMRDR0,
-					    &data[0]);
-				data[0] >>= 16;
+			} else if (nbytes > 1) {
+				data[0] = rpc_read16(rpc, RPCIF_SMRDR0);
+			} else {
+				data[0] = rpc_read8(rpc, RPCIF_SMRDR0);
 			}
+
 			memcpy(rpc->buffer + pos, data, nbytes);
 
 			pos += nbytes;
