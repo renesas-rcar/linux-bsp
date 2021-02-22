@@ -18,8 +18,6 @@
 
 #include <memory/renesas-rpc-if.h>
 
-#include <asm/unaligned.h>
-
 #define RPCIF_CMNCR		0x0000	/* R/W */
 #define RPCIF_CMNCR_MD		BIT(31)
 #define RPCIF_CMNCR_MOIIO3(val)	(((val) & 0x3) << 22)
@@ -386,24 +384,13 @@ int rpcif_manual_xfer(struct rpcif *rpc)
 	regmap_write(rpc->regmap, RPCIF_SMOPR, rpc->option);
 	regmap_write(rpc->regmap, RPCIF_SMDMCR, rpc->dummy);
 	regmap_write(rpc->regmap, RPCIF_SMDRENR, rpc->ddr);
-	regmap_write(rpc->regmap, RPCIF_SMADR, rpc->smadr);
 	smenr = rpc->enable;
 
 	switch (rpc->dir) {
 	case RPCIF_DATA_OUT:
 		while (pos < rpc->xferlen) {
 			u32 nbytes = rpc->xferlen - pos;
-
-			if (nbytes >= 4) {
-				regmap_write(rpc->regmap, RPCIF_SMWDR0,
-					     get_unaligned((u32 *)
-					     (rpc->buffer + pos)));
-			} else {
-				regmap_write(rpc->regmap, RPCIF_SMWDR0,
-					     get_unaligned((u32 *)
-					     (rpc->buffer + pos)) |
-					     GENMASK(31, nbytes * 8));
-			}
+			u32 data[2];
 
 			smcr = rpc->smcr | RPCIF_SMCR_SPIE;
 			if (nbytes > max) {
@@ -411,6 +398,22 @@ int rpcif_manual_xfer(struct rpcif *rpc)
 				smcr |= RPCIF_SMCR_SSLKP;
 			}
 
+			memcpy(data, rpc->buffer + pos, nbytes);
+			if (nbytes > 4) {
+				regmap_write(rpc->regmap, RPCIF_SMWDR1,
+					     data[0]);
+				regmap_write(rpc->regmap, RPCIF_SMWDR0,
+					     data[1]);
+			} else if (nbytes > 2) {
+				regmap_write(rpc->regmap, RPCIF_SMWDR0,
+					     data[0]);
+			} else	{
+				regmap_write(rpc->regmap, RPCIF_SMWDR0,
+					     data[0] << 16);
+			}
+
+			regmap_write(rpc->regmap, RPCIF_SMADR,
+				     rpc->smadr + pos);
 			regmap_write(rpc->regmap, RPCIF_SMENR, smenr);
 			regmap_write(rpc->regmap, RPCIF_SMCR, smcr);
 			ret = wait_msg_xfer_end(rpc);
