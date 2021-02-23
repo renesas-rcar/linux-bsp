@@ -356,12 +356,12 @@ void cc_unmap_cipher_request(struct device *dev, void *ctx,
 			      req_ctx->mlli_params.mlli_dma_addr);
 	}
 
-	if (src != dst) {
+	if (src != dst && req_ctx->sec_dir != CC_DST_DMA_IS_SECURE) {
 		dma_unmap_sg(dev, src, req_ctx->in_nents, DMA_TO_DEVICE);
 		dma_unmap_sg(dev, dst, req_ctx->out_nents, DMA_FROM_DEVICE);
 		dev_dbg(dev, "Unmapped req->dst=%pK\n", sg_virt(dst));
 		dev_dbg(dev, "Unmapped req->src=%pK\n", sg_virt(src));
-	} else {
+	} else if (req_ctx->sec_dir != CC_SRC_DMA_IS_SECURE) {
 		dma_unmap_sg(dev, src, req_ctx->in_nents, DMA_BIDIRECTIONAL);
 		dev_dbg(dev, "Unmapped req->src=%pK\n", sg_virt(src));
 	}
@@ -381,6 +381,7 @@ int cc_map_cipher_request(struct cc_drvdata *drvdata, void *ctx,
 	u32 mapped_nents = 0;
 	int src_direction = (src != dst ? DMA_TO_DEVICE : DMA_BIDIRECTIONAL);
 
+	req_ctx->sec_dir = 0;
 	req_ctx->dma_buf_type = CC_DMA_BUF_DLLI;
 	mlli_params->curr_pool = NULL;
 	sg_data.num_of_buffers = 0;
@@ -402,14 +403,30 @@ int cc_map_cipher_request(struct cc_drvdata *drvdata, void *ctx,
 	}
 
 	/* Map the src SGL */
-	rc = cc_map_sg(dev, src, nbytes, src_direction, &req_ctx->in_nents,
+	if (sg_is_last(src) && !sg_page(src) && sg_dma_address(src)) {
+		/* The source is secure hence, no mapping is needed */
+		req_ctx->sec_dir = CC_SRC_DMA_IS_SECURE;
+		req_ctx->in_nents = 1;
+	} else {
+		rc = cc_map_sg(dev, src, nbytes, src_direction, &req_ctx->in_nents,
 		       LLI_MAX_NUM_OF_DATA_ENTRIES, &dummy, &mapped_nents);
-	if (rc)
-		goto cipher_exit;
-	if (mapped_nents > 1)
-		req_ctx->dma_buf_type = CC_DMA_BUF_MLLI;
+
+		rc = cc_map_sg(dev, src, nbytes, src_direction,
+			       &req_ctx->in_nents, LLI_MAX_NUM_OF_DATA_ENTRIES,
+			       &dummy, &mapped_nents);
+		if (rc)
+			goto cipher_exit;
+		if (mapped_nents > 1)
+			req_ctx->dma_buf_type = CC_DMA_BUF_MLLI;
+	}
 
 	if (src == dst) {
+		if (req_ctx->sec_dir == CC_SRC_DMA_IS_SECURE) {
+			dev_err(dev, "In-place operation for SKP is un-supported\n");
+			/* both sides are secure */
+			rc = -ENOMEM;
+			goto cipher_exit;
+		}
 		/* Handle inplace operation */
 		if (req_ctx->dma_buf_type == CC_DMA_BUF_MLLI) {
 			req_ctx->out_nents = 0;
@@ -418,22 +435,38 @@ int cc_map_cipher_request(struct cc_drvdata *drvdata, void *ctx,
 					&req_ctx->in_mlli_nents);
 		}
 	} else {
-		/* Map the dst sg */
-		rc = cc_map_sg(dev, dst, nbytes, DMA_FROM_DEVICE,
+		if (sg_is_last(dst) && !sg_page(dst) &&
+		    sg_dma_address(dst)) {
+			if (req_ctx->sec_dir == CC_SRC_DMA_IS_SECURE) {
+				dev_err(dev, "SKP in both sides is un-supported\n");
+				/* both sides are secure */
+				rc = -ENOMEM;
+				goto cipher_exit;
+			}
+			/* The dest is secure no mapping is needed */
+			req_ctx->sec_dir = CC_DST_DMA_IS_SECURE;
+			req_ctx->out_nents = 1;
+		} else {
+			/* Map the dst sg */
+			rc = cc_map_sg(dev, dst, nbytes, DMA_FROM_DEVICE,
 			       &req_ctx->out_nents, LLI_MAX_NUM_OF_DATA_ENTRIES,
 			       &dummy, &mapped_nents);
-		if (rc)
-			goto cipher_exit;
-		if (mapped_nents > 1)
-			req_ctx->dma_buf_type = CC_DMA_BUF_MLLI;
+
+			if (rc)
+				goto cipher_exit;
+			if (mapped_nents > 1)
+				req_ctx->dma_buf_type = CC_DMA_BUF_MLLI;
+		}
 
 		if (req_ctx->dma_buf_type == CC_DMA_BUF_MLLI) {
-			cc_add_sg_entry(dev, &sg_data, req_ctx->in_nents, src,
-					nbytes, 0, true,
-					&req_ctx->in_mlli_nents);
-			cc_add_sg_entry(dev, &sg_data, req_ctx->out_nents, dst,
-					nbytes, 0, true,
-					&req_ctx->out_mlli_nents);
+			if (req_ctx->sec_dir != CC_SRC_DMA_IS_SECURE)
+				cc_add_sg_entry(dev, &sg_data, req_ctx->in_nents, src,
+						nbytes, 0, true,
+						&req_ctx->in_mlli_nents);
+			if (req_ctx->sec_dir != CC_SRC_DMA_IS_SECURE)
+				cc_add_sg_entry(dev, &sg_data, req_ctx->out_nents, dst,
+						nbytes, 0, true,
+						&req_ctx->out_mlli_nents);
 		}
 	}
 
