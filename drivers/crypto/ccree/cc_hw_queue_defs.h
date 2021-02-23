@@ -633,4 +633,9 @@ static inline void set_cipher_do(struct cc_hw_desc *pdesc,
 				(config & HW_KEY_MASK_CIPHER_DO));
 }
 
+static inline void set_cipher_stop_queue(struct cc_hw_desc *pdesc)
+{
+	pdesc->word[1] |= FIELD_PREP(WORD1_LOCK_QUEUE, 1);
+}
+
 #endif /*__CC_HW_QUEUE_DEFS_H__*/
