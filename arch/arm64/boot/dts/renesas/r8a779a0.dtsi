@@ -3165,7 +3165,7 @@
 			clocks = <&cpg CPG_MOD 117>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			resets = <&cpg 117>;
-			linux,uio-name = "imp_ldmc_master_00";
+			linux,uio-name = "imp_ldmac_master_00";
 		};
 
 		impldmc1: dma-controller@f1f10000 {
@@ -3173,7 +3173,7 @@
 			reg = <0 0xf1f10000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 117>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
-			linux,uio-name = "imp_ldmc_checker_00";
+			linux,uio-name = "imp_ldmac_checker_00";
 		};
 
 		impslv0: imp-distributer0@ff900000 {
@@ -3213,7 +3213,7 @@
 		impslv3: imp-distributer3@ff900000 {
 			compatible = "generic-uio";
 			reg = <0 0xff900000 0 0x4000>;
-			interrupts = <GIC_SPI 580 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 579 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			interrupt-controller;
@@ -3224,7 +3224,7 @@
 		impslv4: imp-distributer4@ff900000 {
 			compatible = "generic-uio";
 			reg = <0 0xff900000 0 0x4000>;
-			interrupts = <GIC_SPI 581 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 580 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			interrupt-controller;
@@ -3235,7 +3235,7 @@
 		impslv5: imp-distributer5@ff900000 {
 			compatible = "generic-uio";
 			reg = <0 0xff900000 0 0x4000>;
-			interrupts = <GIC_SPI 582 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 581 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			interrupt-controller;
@@ -3246,7 +3246,7 @@
 		impslv6: imp-distributer6@ff900000 {
 			compatible = "generic-uio";
 			reg = <0 0xff900000 0 0x4000>;
-			interrupts = <GIC_SPI 579 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 582 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			interrupt-controller;
@@ -3444,46 +3444,22 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		impspmi0_mem: imp-ram@ed300000 {
-			compatible = "generic-uio";
-			reg = <0 0xed300000 0 0x100000>;
-			clocks = <&cpg CPG_MOD 120>;
-			power-domains = <&sysc R8A779A0_PD_A3IR>;
-			linux,uio-name = "imp_spmi_00";
-		};
-
 		impspmi0_ctrl: imp-ram@ffa8c000 {
 			compatible = "generic-uio";
-			reg = <0 0xffa8c000 0 0x10000>;
+			reg = <0 0xffa8c000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 120>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			resets = <&cpg 120>;
 			linux,uio-name = "imp_reg_spmi_00";
 		};
 
-		impspmi1_mem: imp-ram@eda00000 {
-			compatible = "generic-uio";
-			reg = <0 0xeda00000 0 0x100000>;
-			clocks = <&cpg CPG_MOD 121>;
-			power-domains = <&sysc R8A779A0_PD_A3IR>;
-			linux,uio-name = "imp_spmi_01";
-		};
-
 		impspmi1_ctrl: imp-ram@ffb8c000 {
 			compatible = "generic-uio";
-			reg = <0 0xffb8c000 0 0x10000>;
+			reg = <0 0xffb8c000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 121>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
 			resets = <&cpg 121>;
 			linux,uio-name = "imp_reg_spmi_01";
-		};
-
-		impspmc0_mem: cnn-ram@ed600000 {
-			compatible = "generic-uio";
-			reg = <0 0xed600000 0 0x200000>;
-			clocks = <&cpg CPG_MOD 23>;
-			power-domains = <&sysc R8A779A0_PD_A2CN0>;
-			linux,uio-name = "imp_spmc_00";
 		};
 
 		impspmc0_ctrl: cnn-ram@ffab0000 {
@@ -3495,14 +3471,6 @@
 			linux,uio-name = "imp_reg_spmc_00";
 		};
 
-		impspmc1_mem: cnn-ram@ed800000 {
-			compatible = "generic-uio";
-			reg = <0 0xed800000 0 0x200000>;
-			clocks = <&cpg CPG_MOD 109>;
-			power-domains = <&sysc R8A779A0_PD_A2CN1>;
-			linux,uio-name = "imp_spmc_01";
-		};
-
 		impspmc1_ctrl: cnn-ram@ffbd0000 {
 			compatible = "generic-uio";
 			reg = <0 0xffbd0000 0 0x4000>;
@@ -3510,15 +3478,6 @@
 			power-domains = <&sysc R8A779A0_PD_A2CN1>;
 			resets = <&cpg 109>;
 			linux,uio-name = "imp_reg_spmc_01";
-		};
-
-		impspmc2_mem: cnn-ram@ed400000 {
-			compatible = "generic-uio";
-			reg = <0 0xed400000 0 0x200000>;
-			clocks = <&cpg CPG_MOD 102>;
-			power-domains = <&sysc R8A779A0_PD_A2CN2>;
-			resets = <&cpg 102>;
-			linux,uio-name = "imp_spmc_02";
 		};
 
 		impspmc2_ctrl: cnn-ram@ffad0000 {
@@ -3666,9 +3625,9 @@
 			linux,uio-name = "rfso_10";
 		};
 
-		impradsp0: radsp@eb800000 {
+		impradsp0: radsp@eb860000 {
 			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
+			reg = <0 0xeb860000 0 0x8000>;
 			interrupts = <GIC_SPI 585 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 20>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
@@ -3679,7 +3638,7 @@
 
 		impradsp0_dmac0 {
 			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
+			reg = <0 0xeb840000 0 0x20000>;
 			interrupts = <GIC_SPI 880 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 20>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
@@ -3688,7 +3647,7 @@
 
 		impradsp0_dmac1 {
 			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
+			reg = <0 0xeb840000 0 0x20000>;
 			interrupts = <GIC_SPI 881 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 20>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
@@ -3697,7 +3656,7 @@
 
 		impradsp0_dmac2 {
 			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
+			reg = <0 0xeb840000 0 0x20000>;
 			interrupts = <GIC_SPI 882 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 20>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
@@ -3706,124 +3665,16 @@
 
 		impradsp0_dmac3 {
 			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
+			reg = <0 0xeb840000 0 0x20000>;
 			interrupts = <GIC_SPI 883 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 20>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
 			linux,uio-name = "imp_radsp_dmac_00_03";
 		};
 
-		impradsp0_dmac4 {
+		impradsp1: radsp@eb8e0000 {
 			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 884 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_04";
-		};
-
-		impradsp0_dmac5 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 885 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_05";
-		};
-
-		impradsp0_dmac6 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 886 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_06";
-		};
-
-		impradsp0_dmac7 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 887 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_07";
-		};
-
-		impradsp0_dmac8 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 888 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_08";
-		};
-
-		impradsp0_dmac9 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 889 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_09";
-		};
-
-		impradsp0_dmac10 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 890 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_10";
-		};
-
-		impradsp0_dmac11 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 891 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_11";
-		};
-
-		impradsp0_dmac12 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 892 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_12";
-		};
-
-		impradsp0_dmac13 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 893 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_13";
-		};
-
-		impradsp0_dmac14 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 894 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_14";
-		};
-
-		impradsp0_dmac15 {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 895 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dmac_00_15";
-		};
-
-		impradsp1: radsp@eb880000 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
+			reg = <0 0xeb8e0000 0 0x8000>;
 			interrupts = <GIC_SPI 586 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 21>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
@@ -3834,7 +3685,7 @@
 
 		impradsp1_dmac0 {
 			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
+			reg = <0 0xeb8c0000 0 0x20000>;
 			interrupts = <GIC_SPI 896 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 21>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
@@ -3843,7 +3694,7 @@
 
 		impradsp1_dmac1 {
 			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
+			reg = <0 0xeb8c0000 0 0x20000>;
 			interrupts = <GIC_SPI 897 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 21>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
@@ -3852,7 +3703,7 @@
 
 		impradsp1_dmac2 {
 			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
+			reg = <0 0xeb8c0000 0 0x20000>;
 			interrupts = <GIC_SPI 898 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 21>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
@@ -3861,137 +3712,11 @@
 
 		impradsp1_dmac3 {
 			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
+			reg = <0 0xeb8c0000 0 0x20000>;
 			interrupts = <GIC_SPI 899 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 21>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
 			linux,uio-name = "imp_radsp_dmac_01_03";
-		};
-
-		impradsp1_dmac4 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 900 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_04";
-		};
-
-		impradsp1_dmac5 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 901 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_05";
-		};
-
-		impradsp1_dmac6 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 902 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_06";
-		};
-
-		impradsp1_dmac7 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 903 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_07";
-		};
-
-		impradsp1_dmac8 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 904 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_08";
-		};
-
-		impradsp1_dmac9 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 905 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_09";
-		};
-
-		impradsp1_dmac10 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 906 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_10";
-		};
-
-		impradsp1_dmac11 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 907 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_11";
-		};
-
-		impradsp1_dmac12 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 908 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_12";
-		};
-
-		impradsp1_dmac13 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 909 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_13";
-		};
-
-		impradsp1_dmac14 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 910 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_14";
-		};
-
-		impradsp1_dmac15 {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 911 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dmac_01_15";
-		};
-
-		impradsp0_dspw {
-			compatible = "generic-uio";
-			reg = <0 0xeb800000 0 0x80000>;
-			interrupts = <GIC_SPI 912 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 20>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
-			linux,uio-name = "imp_radsp_dspw_00_00";
-		};
-
-		impradsp1_dspw {
-			compatible = "generic-uio";
-			reg = <0 0xeb880000 0 0x80000>;
-			interrupts = <GIC_SPI 913 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 21>;
-			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
-			linux,uio-name = "imp_radsp_dspw_01_00";
 		};
 
 		vcp4_00: vcpl4@fe910000 {
