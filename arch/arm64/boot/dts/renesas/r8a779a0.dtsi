@@ -3857,9 +3857,9 @@
 			ipmmu-id = <RCAR_IPMMU_VC0 9>;
 		};
 
-		fba_imp0: fba@fe8c0000 {
+		fba_imp0: fba@ff8c0000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8c0000 0 0x1000>;
+			reg = <0 0xff8c0000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 1925>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
 			resets = <&cpg 1925>;
@@ -3867,9 +3867,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp1: fba@fe8c1000 {
+		fba_imp1: fba@ff8c1000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8c1000 0 0x1000>;
+			reg = <0 0xff8c1000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 1926>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP01>;
 			resets = <&cpg 1926>;
@@ -3877,9 +3877,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp2: fba@fe8c2000 {
+		fba_imp2: fba@ff8c2000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8c2000 0 0x1000>;
+			reg = <0 0xff8c2000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 1927>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
 			resets = <&cpg 1927>;
@@ -3887,9 +3887,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp3: fba@fe8c3000 {
+		fba_imp3: fba@ff8c3000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8c3000 0 0x1000>;
+			reg = <0 0xff8c3000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 1928>;
 			power-domains = <&sysc R8A779A0_PD_A2IMP23>;
 			resets = <&cpg 1928>;
@@ -3897,9 +3897,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_cve0: fba@fe8c4000 {
+		fba_imp_cve0: fba@ff8c4000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8c4000 0 0x1000>;
+			reg = <0 0xff8c4000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2012>;
 			power-domains = <&sysc R8A779A0_PD_A2CV0>;
 			resets = <&cpg 2012>;
@@ -3907,9 +3907,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_cve1: fba@fe8c5000 {
+		fba_imp_cve1: fba@ff8c5000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8c5000 0 0x1000>;
+			reg = <0 0xff8c5000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2013>;
 			power-domains = <&sysc R8A779A0_PD_A2CV1>;
 			resets = <&cpg 2013>;
@@ -3917,9 +3917,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_cve2: fba@fe8c6000 {
+		fba_imp_cve2: fba@ff8c6000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8c6000 0 0x1000>;
+			reg = <0 0xff8c6000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2014>;
 			power-domains = <&sysc R8A779A0_PD_A2CV2>;
 			resets = <&cpg 2014>;
@@ -3927,9 +3927,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_cve3: fba@fe8c7000 {
+		fba_imp_cve3: fba@ff8c7000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8c7000 0 0x1000>;
+			reg = <0 0xff8c7000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2015>;
 			power-domains = <&sysc R8A779A0_PD_A2CV3>;
 			resets = <&cpg 2015>;
@@ -3937,9 +3937,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_cve4: fba@fe8f0000 {
+		fba_imp_cve4: fba@ff8f0000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8f0000 0 0x1000>;
+			reg = <0 0xff8f0000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2016>;
 			power-domains = <&sysc R8A779A0_PD_A2CV4>;
 			resets = <&cpg 2016>;
@@ -3947,9 +3947,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_cve5: fba@fe8f1000 {
+		fba_imp_cve5: fba@ff8f1000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8f1000 0 0x1000>;
+			reg = <0 0xff8f1000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2017>;
 			power-domains = <&sysc R8A779A0_PD_A2CV5>;
 			resets = <&cpg 2017>;
@@ -3957,9 +3957,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_cve6: fba@fe8f2000 {
+		fba_imp_cve6: fba@ff8f2000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8f2000 0 0x1000>;
+			reg = <0 0xff8f2000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2220>;
 			power-domains = <&sysc R8A779A0_PD_A2CV6>;
 			resets = <&cpg 2220>;
@@ -3967,9 +3967,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_cve7: fba@fe8f3000 {
+		fba_imp_cve7: fba@ff8f3000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe8f3000 0 0x1000>;
+			reg = <0 0xff8f3000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2221>;
 			power-domains = <&sysc R8A779A0_PD_A2CV7>;
 			resets = <&cpg 2221>;
@@ -3977,9 +3977,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_dp0: fba@fff56000 {
+		fba_imp_dp0: fba@ff5f6000 {
 			compatible = "generic-uio";
-			reg = <0 0xfff56000 0 0x1000>;
+			reg = <0 0xff5f6000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2020>;
 			power-domains = <&sysc R8A779A0_PD_A2DP0>;
 			resets = <&cpg 2020>;
@@ -3987,9 +3987,9 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_imp_dp1: fba@fff57000 {
+		fba_imp_dp1: fba@ff5f7000 {
 			compatible = "generic-uio";
-			reg = <0 0xfff57000 0 0x1000>;
+			reg = <0 0xff5f7000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2021>;
 			power-domains = <&sysc R8A779A0_PD_A2DP1>;
 			resets = <&cpg 2021>;
@@ -4003,7 +4003,7 @@
 			clocks = <&cpg CPG_MOD 1831>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN0>;
 			resets = <&cpg 1831>;
-			linux,uio-name = "fba_imp_cnn_00_00";
+			linux,uio-name = "fba_imp_cnn_main_00";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4013,7 +4013,7 @@
 			clocks = <&cpg CPG_MOD 1900>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN0>;
 			resets = <&cpg 1900>;
-			linux,uio-name = "fba_imp_cnn_00_01";
+			linux,uio-name = "fba_imp_cnn_00_sub_00";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4023,7 +4023,7 @@
 			clocks = <&cpg CPG_MOD 1901>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN0>;
 			resets = <&cpg 1901>;
-			linux,uio-name = "fba_imp_cnn_00_02";
+			linux,uio-name = "fba_imp_cnn_00_sub_01";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4033,7 +4033,7 @@
 			clocks = <&cpg CPG_MOD 1902>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN0>;
 			resets = <&cpg 1902>;
-			linux,uio-name = "fba_imp_cnn_00_03";
+			linux,uio-name = "fba_imp_cnn_00_sub_02";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4043,7 +4043,7 @@
 			clocks = <&cpg CPG_MOD 1903>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN0>;
 			resets = <&cpg 1903>;
-			linux,uio-name = "fba_imp_cnn_00_04";
+			linux,uio-name = "fba_imp_cnn_00_sub_03";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4053,7 +4053,7 @@
 			clocks = <&cpg CPG_MOD 1904>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN1>;
 			resets = <&cpg 1904>;
-			linux,uio-name = "fba_imp_cnn_01_00";
+			linux,uio-name = "fba_imp_cnn_main_01";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4063,7 +4063,7 @@
 			clocks = <&cpg CPG_MOD 1905>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN1>;
 			resets = <&cpg 1905>;
-			linux,uio-name = "fba_imp_cnn_01_01";
+			linux,uio-name = "fba_imp_cnn_01_sub_00";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4073,7 +4073,7 @@
 			clocks = <&cpg CPG_MOD 1906>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN1>;
 			resets = <&cpg 1906>;
-			linux,uio-name = "fba_imp_cnn_01_02";
+			linux,uio-name = "fba_imp_cnn_01_sub_01";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4083,7 +4083,7 @@
 			clocks = <&cpg CPG_MOD 1907>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN1>;
 			resets = <&cpg 1907>;
-			linux,uio-name = "fba_imp_cnn_01_03";
+			linux,uio-name = "fba_imp_cnn_01_sub_02";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4093,7 +4093,7 @@
 			clocks = <&cpg CPG_MOD 1908>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN1>;
 			resets = <&cpg 1908>;
-			linux,uio-name = "fba_imp_cnn_01_04";
+			linux,uio-name = "fba_imp_cnn_01_sub_03";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4103,7 +4103,7 @@
 			clocks = <&cpg CPG_MOD 1909>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN2>;
 			resets = <&cpg 1909>;
-			linux,uio-name = "fba_imp_cnn_02_00";
+			linux,uio-name = "fba_imp_cnn_main_02";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4113,7 +4113,7 @@
 			clocks = <&cpg CPG_MOD 1910>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN2>;
 			resets = <&cpg 1910>;
-			linux,uio-name = "fba_imp_cnn_02_01";
+			linux,uio-name = "fba_imp_cnn_02_sub_00";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4123,7 +4123,7 @@
 			clocks = <&cpg CPG_MOD 1911>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN2>;
 			resets = <&cpg 1911>;
-			linux,uio-name = "fba_imp_cnn_02_02";
+			linux,uio-name = "fba_imp_cnn_02_sub_01";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4133,7 +4133,7 @@
 			clocks = <&cpg CPG_MOD 1912>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN2>;
 			resets = <&cpg 1912>;
-			linux,uio-name = "fba_imp_cnn_02_03";
+			linux,uio-name = "fba_imp_cnn_02_sub_02";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4143,7 +4143,7 @@
 			clocks = <&cpg CPG_MOD 1913>;
 			power-domains = <&sysc R8A779A0_PD_A1CNN2>;
 			resets = <&cpg 1913>;
-			linux,uio-name = "fba_imp_cnn_02_04";
+			linux,uio-name = "fba_imp_cnn_02_sub_03";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4180,7 +4180,7 @@
 			clocks = <&cpg CPG_MOD 1923>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP0>;
 			resets = <&cpg 1923>;
-			linux,uio-name = "fba_imp_radsp_00";
+			linux,uio-name = "fba_imp_dsp_00";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -4190,7 +4190,7 @@
 			clocks = <&cpg CPG_MOD 1924>;
 			power-domains = <&sysc R8A779A0_PD_A1DSP1>;
 			resets = <&cpg 1924>;
-			linux,uio-name = "fba_imp_radsp_01";
+			linux,uio-name = "fba_imp_dsp_01";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
