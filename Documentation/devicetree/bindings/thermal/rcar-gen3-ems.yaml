@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+# Copyright (C) 2020 Renesas Electronics Corp.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/thermal/rcar-gen3-ems.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Renesas R-Car Gen3 Emergency shutdown(EMS)
+
+description:
+Emergency shutdown functionality provides the specific cooling mechanism
+for R-Car Gen3. In case of high temperature(e.g over 100 degrees),
+it has the ability to rapidly cool down the system.
+
+properties:
+  compatible:
+    enum:
+      - renesas,r8a7795-thermal  # R-Car H3
+      - renesas,r8a7796-thermal  # R-Car M3-W
+      - renesas,r8a77961-thermal # R-Car M3-W+
+      - renesas,r8a77965-thermal # R-Car M3-N
+      - renesas,r8a77980-thermal # R-Car V3H
+
+  polling-delay:
+    type: unsigned
+    description:
+        The maximum number of milliseconds to wait between polls
+        when checking temperature for emergency shutdown.
+
+  on-temperature:
+    type: unsigned
+    description:
+        This value indicates the emergency temperature to invoke
+        emergency shutdown functionality when exceeding this temperature.
+
+  off-temperature:
+    type: unsigned
+    description:
+        This value indicates the emergency temperature to bring
+        the system back to normal operation when being lower
+        this temperature.
+
+  status:
+    type: string
+    description: Should be "disabled" always.
+
+  target_cpus:
+    type: phandle
+    description:
+        This property indicates which CPU will be targeted for shutdown.
+
+required:
+  - polling-delay
+  - on-temperature
+  - off-temperature
+  - status
+  - target_cpus
+
+examples:
+  -
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+    #include <dt-bindings/power/r8a7795-sysc.h>
+
+    thermal-zones {
+        emergency {
+            polling-delay = <1000>;    /* milliseconds */
+            on-temperature = <110000>; /* millicelsius */
+            off-temperature = <95000>; /* millicelsius */
+            target_cpus = <&a57_1>,
+                      <&a57_2>,
+                      <&a57_3>;
+            status = "disabled";
+        };
+    };
