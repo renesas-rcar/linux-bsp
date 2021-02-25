@@ -1711,16 +1711,16 @@
 		fba_ims_00 {
 			compatible = "generic-uio";
 			reg = <0 0xfff80000 0 0x1000>;
-			clocks = <&cpg CPG_MOD 823>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
+			resets = <&cpg 819>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
 		fba_ims_01 {
 			compatible = "generic-uio";
 			reg = <0 0xfff90000 0 0x1000>;
-			clocks = <&cpg CPG_MOD 821>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
+			resets = <&cpg 818>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
