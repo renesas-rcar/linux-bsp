@@ -3541,7 +3541,7 @@
 			reg = <0 0xffe80000 0 0x1000>;
 			interrupts = <GIC_SPI 524 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_00";
+			linux,uio-name = "rfso_000";
 		};
 
 		rfso1: rfso@ffe81000 {
@@ -3549,7 +3549,7 @@
 			reg = <0 0xffe81000 0 0x1000>;
 			interrupts = <GIC_SPI 525 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_01";
+			linux,uio-name = "rfso_001";
 		};
 
 		rfso2: rfso@ffe82000 {
@@ -3557,7 +3557,7 @@
 			reg = <0 0xffe82000 0 0x1000>;
 			interrupts = <GIC_SPI 526 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_02";
+			linux,uio-name = "rfso_002";
 		};
 
 		rfso3: rfso@ffe83000 {
@@ -3565,7 +3565,7 @@
 			reg = <0 0xffe83000 0 0x1000>;
 			interrupts = <GIC_SPI 527 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_03";
+			linux,uio-name = "rfso_003";
 		};
 
 		rfso4: rfso@ffe84000 {
@@ -3573,7 +3573,7 @@
 			reg = <0 0xffe84000 0 0x1000>;
 			interrupts = <GIC_SPI 528 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_04";
+			linux,uio-name = "rfso_004";
 		};
 
 		rfso5: rfso@ffe85000 {
@@ -3581,7 +3581,7 @@
 			reg = <0 0xffe85000 0 0x1000>;
 			interrupts = <GIC_SPI 529 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_05";
+			linux,uio-name = "rfso_005";
 		};
 
 		rfso6: rfso@ffe86000 {
@@ -3589,7 +3589,7 @@
 			reg = <0 0xffe86000 0 0x1000>;
 			interrupts = <GIC_SPI 530 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_06";
+			linux,uio-name = "rfso_006";
 		};
 
 		rfso7: rfso@ffe87000 {
@@ -3597,7 +3597,7 @@
 			reg = <0 0xffe87000 0 0x1000>;
 			interrupts = <GIC_SPI 531 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_07";
+			linux,uio-name = "rfso_007";
 		};
 
 		rfso8: rfso@ffe88000 {
@@ -3605,7 +3605,7 @@
 			reg = <0 0xffe88000 0 0x1000>;
 			interrupts = <GIC_SPI 532 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_08";
+			linux,uio-name = "rfso_008";
 		};
 
 		rfso9: rfso@ffe89000 {
@@ -3613,7 +3613,7 @@
 			reg = <0 0xffe89000 0 0x1000>;
 			interrupts = <GIC_SPI 533 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_09";
+			linux,uio-name = "rfso_009";
 		};
 
 		rfso10: rfso@ffe8A000 {
@@ -3621,7 +3621,7 @@
 			reg = <0 0xffe8A000 0 0x1000>;
 			interrupts = <GIC_SPI 534 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "rfso_10";
+			linux,uio-name = "rfso_010";
 		};
 
 		impradsp0: radsp@eb860000 {
