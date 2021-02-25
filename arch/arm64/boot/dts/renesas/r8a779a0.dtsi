@@ -4738,6 +4738,42 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "wwdt_09_01";
 		};
+
+		fba_smps0: fba@e7b64000 {
+			compatible = "generic-uio";
+			reg = <0 0xe7b64000 0 0x1000>;
+			linux,uio-name = "fba_smps_00";
+		};
+
+		fba_smps1: fba@e7b85000 {
+			compatible = "generic-uio";
+			reg = <0 0xe7b85000 0 0x1000>;
+			linux,uio-name = "fba_smps_01";
+		};
+
+		fba_smes0: fba@e7b62000 {
+			compatible = "generic-uio";
+			reg = <0 0xe7b62000 0 0x1000>;
+			linux,uio-name = "fba_smes_00";
+		};
+
+		fba_smes1: fba@e7b83000 {
+			compatible = "generic-uio";
+			reg = <0 0xe7b83000 0 0x1000>;
+			linux,uio-name = "fba_smes_01";
+		};
+
+		fba_smpo0: fba@e7b63000 {
+			compatible = "generic-uio";
+			reg = <0 0xe7b63000 0 0x1000>;
+			linux,uio-name = "fba_smpo_00";
+		};
+
+		fba_smpo1: fba@e7b84000 {
+			compatible = "generic-uio";
+			reg = <0 0xe7b84000 0 0x1000>;
+			linux,uio-name = "fba_smpo_01";
+		};
 	};
 
 	thermal-zones {
