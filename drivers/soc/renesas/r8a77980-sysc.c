@@ -7,13 +7,20 @@
  */
 
 #include <linux/bug.h>
+#include <linux/io.h>
+#include <linux/bits.h>
+#include <linux/device.h>
 #include <linux/kernel.h>
+#include <linux/sys_soc.h>
 
 #include <dt-bindings/power/r8a77980-sysc.h>
 
 #include "rcar-sysc.h"
 
-static const struct rcar_sysc_area r8a77980_areas[] __initconst = {
+#define SYSCPDMD_ADDR			0xe6180064
+#define PDMODE					(BIT(0) | BIT(1))
+
+static struct rcar_sysc_area r8a77980_areas[] __initdata = {
 	{ "always-on",	    0, 0, R8A77980_PD_ALWAYS_ON, -1, PD_ALWAYS_ON },
 	{ "ca53-scu",	0x140, 0, R8A77980_PD_CA53_SCU,	R8A77980_PD_ALWAYS_ON,
 	  PD_SCU },
@@ -46,7 +53,65 @@ static const struct rcar_sysc_area r8a77980_areas[] __initconst = {
 	{ "a3vip2",	0x280, 0, R8A77980_PD_A3VIP2,	R8A77980_PD_ALWAYS_ON },
 };
 
+/* Fixups for R-Car V3H ES2.0 revision */
+static const struct soc_device_attribute r8a77980[] __initconst = {
+	{ .soc_id = "r8a77980", .revision = "ES2.0" },
+	{ /* sentinel */ }
+};
+
+static int __init r8a77980_sysc_init(void)
+{
+	int i, pd_mode = 0;
+	void __iomem *syscpdmd;
+
+	if (!soc_device_match(r8a77980))
+		return 0;
+
+	/* Get PDMODE bitfield */
+	syscpdmd = ioremap(SYSCPDMD_ADDR, 0x04);
+	pd_mode = readl(syscpdmd) & PDMODE;
+
+	if (pd_mode == 1) {
+		/* Handle power on/off for A2IR1-4 by A2IR0 */
+		for (i = 9; i < 13; i++) {
+			r8a77980_areas[i].chan_offs = r8a77980_areas[8].chan_offs;
+			r8a77980_areas[i].chan_bit = r8a77980_areas[8].chan_bit;
+			r8a77980_areas[i].isr_bit = r8a77980_areas[8].isr_bit;
+			r8a77980_areas[i].parent = r8a77980_areas[8].parent;
+		}
+
+		/* Handle power on/off for A2SC1-4 by A2SC0 */
+		for (i = 15; i < 19; i++) {
+			r8a77980_areas[i].chan_offs = r8a77980_areas[14].chan_offs;
+			r8a77980_areas[i].chan_bit = r8a77980_areas[14].chan_bit;
+			r8a77980_areas[i].isr_bit = r8a77980_areas[14].isr_bit;
+			r8a77980_areas[i].parent = r8a77980_areas[14].parent;
+		}
+
+		/* Handle power on/off for A2DP1 by A2DP0 */
+		r8a77980_areas[20].chan_offs = r8a77980_areas[19].chan_offs;
+		r8a77980_areas[20].chan_bit = r8a77980_areas[19].chan_bit;
+		r8a77980_areas[20].isr_bit = r8a77980_areas[19].isr_bit;
+		r8a77980_areas[20].parent = r8a77980_areas[19].parent;
+	}
+
+	if (pd_mode == 3) {
+		/* Handle power on/off for A2IR1-5/A2SC0-4/A2DP0-1/A2CN0 by A2IR0 */
+		for (i = 9; i < 22; i++) {
+			r8a77980_areas[i].chan_offs = r8a77980_areas[8].chan_offs;
+			r8a77980_areas[i].chan_bit = r8a77980_areas[8].chan_bit;
+			r8a77980_areas[i].isr_bit = r8a77980_areas[8].isr_bit;
+			r8a77980_areas[i].parent = r8a77980_areas[8].parent;
+		}
+	}
+
+	pr_debug("%s: pdmode %d is selected\n", __func__, pd_mode);
+
+	return 0;
+}
+
 const struct rcar_sysc_info r8a77980_sysc_info __initconst = {
+	.init = r8a77980_sysc_init,
 	.areas = r8a77980_areas,
 	.num_areas = ARRAY_SIZE(r8a77980_areas),
 };
