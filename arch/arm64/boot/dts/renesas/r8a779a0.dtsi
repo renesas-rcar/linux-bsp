@@ -4774,6 +4774,78 @@
 			reg = <0 0xe7b84000 0 0x1000>;
 			linux,uio-name = "fba_smpo_01";
 		};
+
+		fba_ca76d0: fba@ff870000 {
+			compatible = "generic-uio";
+			reg = <0 0xff870000 0 0x1000>;
+			linux,uio-name = "fba_ca76d_00";
+		};
+
+		fba_ca76d1: fba@ff871000 {
+			compatible = "generic-uio";
+			reg = <0 0xff871000 0 0x1000>;
+			linux,uio-name = "fba_ca76d_01";
+		};
+
+		fba_ca76d2: fba@ff850000 {
+			compatible = "generic-uio";
+			reg = <0 0xff850000 0 0x1000>;
+			linux,uio-name = "fba_ca76d_02";
+		};
+
+		fba_ca76d3: fba@ff851000 {
+			compatible = "generic-uio";
+			reg = <0 0xff851000 0 0x1000>;
+			linux,uio-name = "fba_ca76d_03";
+		};
+
+		fba_ca760: fba@ff872000 {
+			compatible = "generic-uio";
+			reg = <0 0xff872000 0 0x1000>;
+			linux,uio-name = "fba_ca76_00";
+		};
+
+		fba_ca761: fba@ff873000 {
+			compatible = "generic-uio";
+			reg = <0 0xff873000 0 0x1000>;
+			linux,uio-name = "fba_ca76_01";
+		};
+
+		fba_ca762: fba@ff874000 {
+			compatible = "generic-uio";
+			reg = <0 0xff874000 0 0x1000>;
+			linux,uio-name = "fba_ca76_02";
+		};
+
+		fba_ca763: fba@ff875000 {
+			compatible = "generic-uio";
+			reg = <0 0xff875000 0 0x1000>;
+			linux,uio-name = "fba_ca76_03";
+		};
+
+		fba_ca764: fba@ff852000 {
+			compatible = "generic-uio";
+			reg = <0 0xff852000 0 0x1000>;
+			linux,uio-name = "fba_ca76_04";
+		};
+
+		fba_ca765: fba@ff853000 {
+			compatible = "generic-uio";
+			reg = <0 0xff853000 0 0x1000>;
+			linux,uio-name = "fba_ca76_05";
+		};
+
+		fba_ca766: fba@ff854000 {
+			compatible = "generic-uio";
+			reg = <0 0xff854000 0 0x1000>;
+			linux,uio-name = "fba_ca76_06";
+		};
+
+		fba_ca767: fba@ff855000 {
+			compatible = "generic-uio";
+			reg = <0 0xff855000 0 0x1000>;
+			linux,uio-name = "fba_ca76_07";
+		};
 	};
 
 	thermal-zones {
