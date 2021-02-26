@@ -4332,52 +4332,52 @@
 			linux,uio-name = "fcprr_imp_01";
 		};
 
-		fcprr_imr0: fcprr@fe9c0000 {
+		fcprr_ims0: fcprr@fe9c0000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe9c0000 0 0x1000>;
+			linux,uio-name = "fcprr_ims_00";
+		};
+
+		fcprr_ims1: fcprr@fe9c1000 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c1000 0 0x1000>;
+			linux,uio-name = "fcprr_ims_01";
+		};
+
+		fcprw_imr0: fcprw@fe9c6000 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c6000 0 0x1000>;
+			linux,uio-name = "fcprw_imr_00";
+		};
+
+		fcprr_imr0: fcprr@fe9c4000 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c4000 0 0x1000>;
 			linux,uio-name = "fcprr_imr_00";
 		};
 
-		fcprr_imr1: fcprr@fe9c1000 {
+		fcprw_imr1: fcprw@fe9c7000 {
 			compatible = "generic-uio";
-			reg = <0 0xfe9c1000 0 0x1000>;
+			reg = <0 0xfe9c7000 0 0x1000>;
+			linux,uio-name = "fcprw_imr_01";
+		};
+
+		fcprr_imr1: fcprr@fe9c5000 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c5000 0 0x1000>;
 			linux,uio-name = "fcprr_imr_01";
 		};
 
-		fcprw_imre0: fcprw@fe9c6000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c6000 0 0x1000>;
-			linux,uio-name = "fcprw_imre_00";
-		};
-
-		fcprr_imre0: fcprr@fe9c4000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c4000 0 0x1000>;
-			linux,uio-name = "fcprr_imre_00";
-		};
-
-		fcprw_imre1: fcprw@fe9c5000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c5000 0 0x1000>;
-			linux,uio-name = "fcprw_imre_01";
-		};
-
-		fcprr_imre1: fcprr@fe9c7000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c7000 0 0x1000>;
-			linux,uio-name = "fcprr_imre_01";
-		};
-
-		fcprr_imre2: fcprr@fe9c8000 {
+		fcprr_imr2: fcprr@fe9c8000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe9c8000 0 0x1000>;
-			linux,uio-name = "fcprr_imre_02";
+			linux,uio-name = "fcprr_imr_02";
 		};
 
-		fcprr_imre3: fcprr@fe9c9000 {
+		fcprr_imr3: fcprr@fe9c9000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe9c9000 0 0x1000>;
-			linux,uio-name = "fcprr_imre_03";
+			linux,uio-name = "fcprr_imr_03";
 		};
 
 		fcprr_vspd0: fcprr@fea90000 {
