@@ -1610,51 +1610,160 @@
 			power-domains = <&sysc R8A77980_PD_A3VIP2>;
 		};
 
-		fcpr_vip_00 {
+		fcprr_stv_00 {
 			compatible = "generic-uio";
-			reg = <0 0xe7aa0000 0 0x20000>;
+			reg = <0 0xe7aa0000 0 0x1000>;
 		};
 
-		fcpr_ir_00 {
+		fcprw_dof_00 {
 			compatible = "generic-uio";
-			reg = <0 0xff8d8000 0 0x10000>;
+			reg = <0 0xe7ab1000 0 0x1000>;
 		};
 
-		fcpr_vio_00 {
+		fcprr_dof_00 {
 			compatible = "generic-uio";
-			reg = <0 0xfe9c0000 0 0x10000>;
+			reg = <0 0xe7aa1000 0 0x1000>;
 		};
 
-		fcpr_vio_01 {
+		fcprr_acf_00 {
 			compatible = "generic-uio";
-			reg = <0 0xfea90000 0 0x10000>;
+			reg = <0 0xe7aa5000 0 0x1000>;
 		};
 
-		fcpr_rt_00 {
+		fcprr_acf_01 {
 			compatible = "generic-uio";
-			reg = <0 0xffc70000 0 0x10000>;
+			reg = <0 0xe7aa6000 0 0x1000>;
 		};
 
-		fcpr_peri_00 {
+		fcprr_acf_02 {
 			compatible = "generic-uio";
-			reg = <0 0xe7320000 0 0x10000>;
+			reg = <0 0xe7aa7000 0 0x1000>;
 		};
 
-		fcpra_peri_00 {
+		fcprr_acf_03 {
 			compatible = "generic-uio";
-			reg = <0 0xe7410000 0 0x10000>;
+			reg = <0 0xe7aa8000 0 0x1000>;
 		};
 
-		fcpr_c53_00 {
+		fcprr_acf_04 {
 			compatible = "generic-uio";
-			reg = <0 0xf12a0000 0 0x10000>;
+			reg = <0 0xe7aa9000 0 0x1000>;
 		};
 
-		fcpra_c53_00 {
+		fcprw_imp_00 {
 			compatible = "generic-uio";
-			reg = <0 0xf12f0000 0 0x10000>;
+			reg = <0 0xff8da000 0 0x1000>;
 		};
 
+		fcprr_imp_00 {
+			compatible = "generic-uio";
+			reg = <0 0xff8d8000 0 0x1000>;
+		};
+
+		fcprw_imp_01 {
+			compatible = "generic-uio";
+			reg = <0 0xff8db000 0 0x1000>;
+		};
+
+		fcprr_imp_01 {
+			compatible = "generic-uio";
+			reg = <0 0xff8d9000 0 0x1000>;
+		};
+
+		fcprr_ims_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c0000 0 0x1000>;
+		};
+
+		fcprr_ims_01 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c1000 0 0x1000>;
+		};
+
+		fcprr_ims_02 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c2000 0 0x1000>;
+		};
+
+		fcprw_imr_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c6000 0 0x1000>;
+		};
+
+		fcprr_imr_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c4000 0 0x1000>;
+		};
+
+		fcprw_imr_01 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c7000 0 0x1000>;
+		};
+
+		fcprr_imr_01 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9c5000 0 0x1000>;
+		};
+
+		fcprr_vspd_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfea90000 0 0x1000>;
+		};
+
+		fcprr_ivcp1e_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfea91000 0 0x1000>;
+		};
+
+		fcprr_pcie_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfea92000 0 0x1000>;
+		};
+
+		fcprw_isp_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfea96000 0 0x1000>;
+		};
+
+		fcprw_isp_01 {
+			compatible = "generic-uio";
+			reg = <0 0xfea98000 0 0x1000>;
+		};
+
+		fcprr_ca53_00 {
+			compatible = "generic-uio";
+			reg = <0 0xf12f0000 0 0x1000>;
+		};
+
+		fcpra_vip_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7aaa000 0 0x1000>;
+		};
+
+		fcpra_vip_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7ab5000 0 0x1000>;
+		};
+
+		fcpra_imp_00 {
+			compatible = "generic-uio";
+			reg = <0 0xff8dd000 0 0x1000>;
+		};
+
+		fcpra_imr_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfe9cf000 0 0x1000>;
+		};
+
+		fcpra_vio_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfea9a000 0 0x1000>;
+		};
+
+		fcpra_ca53_00 {
+			compatible = "generic-uio";
+			reg = <0 0xf12a0000 0 0x1000>;
+		};
 
 		isp0: isp@fec00000 {
 			compatible = "renesas,isp-r8a77980";
