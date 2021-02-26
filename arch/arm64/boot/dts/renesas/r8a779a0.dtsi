@@ -3824,21 +3824,772 @@
 
 		fbc0: fbc@ff830000 {
 			compatible = "generic-uio";
-			reg = <0 0xff830000 0 0x10000>;
-			interrupts = <GIC_SPI 538 IRQ_TYPE_LEVEL_HIGH>;
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 640 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 1117>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1117>;
-			linux,uio-name = "fbc_00_00";
+			linux,uio-name = "fbc_00";
 		};
 
-		fbc1 {
+		irq_fbc1 {
 			compatible = "generic-uio";
-			reg = <0 0xff830000 0 0x10000>;
-			interrupts = <GIC_SPI 539 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 1117>;
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 641 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "fbc_00_01";
+			linux,uio-name = "irq_fbc_00_001";
+		};
+
+		irq_fbc2 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 642 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_002";
+		};
+
+		irq_fbc3 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 643 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_003";
+		};
+
+		irq_fbc4 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 644 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_004";
+		};
+
+		irq_fbc5 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 645 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_005";
+		};
+
+		irq_fbc6 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 646 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_006";
+		};
+
+		irq_fbc7 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 647 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_007";
+		};
+
+		irq_fbc8 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 648 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_008";
+		};
+
+		irq_fbc9 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 649 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_009";
+		};
+
+		irq_fbc10 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 650 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_010";
+		};
+
+		irq_fbc11 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 651 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_011";
+		};
+
+		irq_fbc12 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 652 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_012";
+		};
+
+		irq_fbc13 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 653 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_013";
+		};
+
+		irq_fbc14 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 654 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_014";
+		};
+
+		irq_fbc15 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 655 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_015";
+		};
+
+		irq_fbc16 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 656 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_016";
+		};
+
+		irq_fbc17 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 657 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_017";
+		};
+
+		irq_fbc18 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 658 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_018";
+		};
+
+		irq_fbc19 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 659 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_019";
+		};
+
+		irq_fbc20 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 660 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_020";
+		};
+
+		irq_fbc21 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 661 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_021";
+		};
+
+		irq_fbc22 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 662 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_022";
+		};
+
+		irq_fbc23 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 663 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_023";
+		};
+
+		irq_fbc24 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 664 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_024";
+		};
+
+		irq_fbc25 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 665 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_025";
+		};
+
+		irq_fbc26 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 666 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_026";
+		};
+
+		irq_fbc27 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 667 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_027";
+		};
+
+		irq_fbc28 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 668 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_028";
+		};
+
+		irq_fbc29 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 669 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_029";
+		};
+
+		irq_fbc30 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 670 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_030";
+		};
+
+		irq_fbc31 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 671 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_031";
+		};
+
+		irq_fbc32 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 672 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_032";
+		};
+
+		irq_fbc33 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_033";
+		};
+
+		irq_fbc34 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 674 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_034";
+		};
+
+		irq_fbc35 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 675 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_035";
+		};
+
+		irq_fbc36 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 676 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_036";
+		};
+
+		irq_fbc37 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 677 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_037";
+		};
+
+		irq_fbc38 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 678 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_038";
+		};
+
+		irq_fbc39 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 679 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_039";
+		};
+
+		irq_fbc40 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 680 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_040";
+		};
+
+		irq_fbc41 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 681 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_041";
+		};
+
+		irq_fbc42 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 682 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_042";
+		};
+
+		irq_fbc43 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 683 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_043";
+		};
+
+		irq_fbc44 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 684 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_044";
+		};
+
+		irq_fbc45 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 685 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_045";
+		};
+
+		irq_fbc46 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 686 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_046";
+		};
+
+		irq_fbc47 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 687 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_047";
+		};
+
+		irq_fbc48 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 688 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_048";
+		};
+
+		irq_fbc49 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 689 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_049";
+		};
+
+		irq_fbc50 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 690 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_050";
+		};
+
+		irq_fbc51 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 691 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_051";
+		};
+
+		irq_fbc52 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 692 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_052";
+		};
+
+		irq_fbc53 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 693 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_053";
+		};
+
+		irq_fbc54 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 694 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_054";
+		};
+
+		irq_fbc55 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 695 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_055";
+		};
+
+		irq_fbc56 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 696 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_056";
+		};
+
+		irq_fbc57 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 697 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_057";
+		};
+
+		irq_fbc58 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 698 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_058";
+		};
+
+		irq_fbc59 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 699 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_059";
+		};
+
+		irq_fbc60 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 700 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_060";
+		};
+
+		irq_fbc61 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 701 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_061";
+		};
+
+		irq_fbc62 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 702 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_062";
+		};
+
+		irq_fbc63 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 703 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_063";
+		};
+
+		irq_fbc64 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 704 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_064";
+		};
+
+		irq_fbc65 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 705 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_065";
+		};
+
+		irq_fbc66 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 706 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_066";
+		};
+
+		irq_fbc67 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 707 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_067";
+		};
+
+		irq_fbc68 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 708 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_068";
+		};
+
+		irq_fbc69 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 709 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_069";
+		};
+
+		irq_fbc70 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 710 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_070";
+		};
+
+		irq_fbc71 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 711 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_071";
+		};
+
+		irq_fbc72 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 712 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_072";
+		};
+
+		irq_fbc73 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 713 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_073";
+		};
+
+		irq_fbc74 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 714 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_074";
+		};
+
+		irq_fbc75 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 715 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_005_07";
+		};
+
+		irq_fbc76 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 716 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_076";
+		};
+
+		irq_fbc77 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 717 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_077";
+		};
+
+		irq_fbc78 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 718 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_078";
+		};
+
+		irq_fbc79 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 719 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_079";
+		};
+
+		irq_fbc80 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 720 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_080";
+		};
+
+		irq_fbc81 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 721 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_081";
+		};
+
+		irq_fbc82 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 722 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_082";
+		};
+
+		irq_fbc83 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 723 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_083";
+		};
+
+		irq_fbc84 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 724 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_084";
+		};
+
+		irq_fbc85 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 725 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_085";
+		};
+
+		irq_fbc86 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 726 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_086";
+		};
+
+		irq_fbc87 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 727 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_087";
+		};
+
+		irq_fbc88 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 728 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_088";
+		};
+
+		irq_fbc89 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 729 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_089";
+		};
+
+		irq_fbc90 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 730 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_090";
+		};
+
+		irq_fbc91 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 731 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_091";
+		};
+
+		irq_fbc92 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 732 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_092";
+		};
+
+		irq_fbc93 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 733 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_093";
+		};
+
+		irq_fbc94 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 734 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_094";
+		};
+
+		irq_fbc95 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			interrupts = <GIC_SPI 735 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_fbc_00_095";
 		};
 
 		fba_isp0: fba@feac1000 {
