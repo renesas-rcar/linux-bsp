@@ -19,6 +19,7 @@
 		serial1 = &hscif0;
 		serial2 = &scif1;
 		serial3 = &hscif1;
+		mmc2 = &sdhi3;
 	};
 
 	clksndsel: clksndsel {
