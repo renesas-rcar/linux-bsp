@@ -5287,16 +5287,16 @@
 			linux,uio-name = "fcpra_vip_02";
 		};
 
-		fcpra_ir: fcpra@ff8dd000 {
+		fcpra_imp: fcpra@ff8dd000 {
 			compatible = "generic-uio";
 			reg = <0 0xff8dd000 0 0x1000>;
-			linux,uio-name = "fcpra_ir_00";
+			linux,uio-name = "fcpra_imp_00";
 		};
 
-		fcpra_vc: fcpra@fe9cd000 {
+		fcpra_imr: fcpra@fe9cd000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe9cd000 0 0x1000>;
-			linux,uio-name = "fcpra_vc_00";
+			linux,uio-name = "fcpra_imr_00";
 		};
 
 		fcpra_vio: fcpra@fea95000 {
