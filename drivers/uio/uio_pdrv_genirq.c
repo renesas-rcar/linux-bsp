@@ -230,12 +230,14 @@ static int priv_clk_set_div(struct uio_info *info, int div)
 {
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 	struct clk *parent;
+	struct clk_hw *hw;
 	unsigned long value;
 
 	if (div <= 0)
 		return -EINVAL;
 
-	value = __clk_get_flags(priv->clk);
+	hw = __clk_get_hw(priv->clk);
+	value = clk_hw_get_flags(hw);
 	if (value & CLK_SET_RATE_PARENT)
 		return -EOPNOTSUPP;
 
