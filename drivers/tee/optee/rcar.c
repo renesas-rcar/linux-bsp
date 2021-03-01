@@ -193,9 +193,9 @@ static int rcar_optee_init_debug_log(struct optee *optee)
 	struct task_struct *thread;
 	struct arm_smccc_res smccc;
 
-	remaped_log_buffer = ioremap_nocache(TEE_LOG_NS_BASE, TEE_LOG_NS_SIZE);
+	remaped_log_buffer = ioremap(TEE_LOG_NS_BASE, TEE_LOG_NS_SIZE);
 	if (!remaped_log_buffer) {
-		pr_err("failed to ioremap_nocache(TEE_LOG_NS_BASE)\n");
+		pr_err("failed to ioremap(TEE_LOG_NS_BASE)\n");
 		ret = -ENOMEM;
 	}
 	if (ret == 0) {
