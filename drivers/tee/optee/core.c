@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015, Linaro Limited
+ * Copyright (c) 2017, Renesas Electronics Corporation
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -20,6 +31,8 @@
 #include <linux/workqueue.h>
 #include "optee_private.h"
 #include "optee_smc.h"
+
+#include "optee_rcar.h"
 #include "shm_pool.h"
 
 #define DRIVER_NAME "optee"
@@ -575,6 +588,7 @@ static optee_invoke_fn *get_invoke_func(struct device *dev)
 static int optee_remove(struct platform_device *pdev)
 {
 	struct optee *optee = platform_get_drvdata(pdev);
+	optee_rcar_remove();
 
 	/*
 	 * Ask OP-TEE to free all cached shared memory objects to decrease
@@ -679,6 +693,10 @@ static int optee_probe(struct platform_device *pdev)
 	if (rc)
 		goto err;
 
+	rc = optee_rcar_probe(optee);
+	if (rc)
+		goto err;
+
 	mutex_init(&optee->call_queue.mutex);
 	INIT_LIST_HEAD(&optee->call_queue.waiters);
 	optee_wait_queue_init(&optee->wait_queue);
@@ -738,6 +756,6 @@ module_platform_driver(optee_driver);
 MODULE_AUTHOR("Linaro");
 MODULE_DESCRIPTION("OP-TEE driver");
 MODULE_SUPPORTED_DEVICE("");
-MODULE_VERSION("1.0");
+MODULE_VERSION(VERSION_OF_RENESAS);
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:optee");
