@@ -22,6 +22,13 @@
 #include "rcar_version.h"
 
 #define OPTEE_RPC_CMD_DEBUG_LOG    (0x3F000000U)
+/*
+ * Define the information of debug log that communicates between Normal
+ * World and Secure World.
+ */
+#define SMC_RCAR_CMD       (12345U)
+
+#define START_DLOG_OUTPUT  (1U)
 
 struct rcar_debug_log_info {
 	wait_queue_head_t waitq;
