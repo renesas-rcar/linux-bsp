@@ -237,7 +237,7 @@ static int priv_clk_set_div(struct uio_info *info, int div)
 
 	value = __clk_get_flags(priv->clk);
 	if (value & CLK_SET_RATE_PARENT)
-		return -ENOTSUPP;
+		return -EOPNOTSUPP;
 
 	parent = clk_get_parent(priv->clk);
 	value = clk_get_rate(parent) / div;
