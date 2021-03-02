@@ -12,16 +12,6 @@
 
 / {
 	soc {
-		imp_distributer: imp_top_00 {
-			compatible = "generic-uio";
-			reg = <0 0xffa00000 0 0x10000>;
-			interrupts = <GIC_SPI 281 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 830>;
-			power-domains = <&sysc R8A77970_PD_A3IR>;
-			interrupt-controller;
-			#interrupt-cells = <1>;
-		};
-
 		imp_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff900000 0 0x20000>;
