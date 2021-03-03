@@ -159,6 +159,15 @@ static void rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	if (!rvin_format_from_pixel(vin, pix->pixelformat))
 		pix->pixelformat = RVIN_DEFAULT_FORMAT;
 
+	switch (pix->pixelformat) {
+	case V4L2_PIX_FMT_NV16:
+		pix->width = ALIGN(pix->width, 0x20);
+		break;
+	default:
+		pix->width = ALIGN(pix->width, 0x10);
+		break;
+	}
+
 	switch (pix->field) {
 	case V4L2_FIELD_TOP:
 	case V4L2_FIELD_BOTTOM:
