@@ -147,6 +147,28 @@ struct rvin_group_route {
 };
 
 /**
+ * struct rvin_group_scaler - describes a scaler attached to a VIN
+ *
+ * @vin:	Numerical VIN id that have access to a UDS.
+ * @companion:  Numerical VIN id that @vin share the UDS with.
+ *
+ * -- note::
+ *	Some R-Car VIN instances have access to a Up Down Scaler (UDS).
+ *	If a VIN have a UDS attached it's almost always shared between
+ *	two VIN instances. The UDS can only be used by one VIN at a time,
+ *	so the companion relationship needs to be described as well.
+ *
+ *	There are at most two VINs sharing a UDS. For each UDS shared
+ *	between two VINs there needs to be two instances of struct
+ *	rvin_group_scaler describing each of the VINs individually. If
+ *	a VIN do not share its UDS set companion to -1.
+ */
+struct rvin_group_scaler {
+	int vin;
+	int companion;
+};
+
+/**
  * struct rvin_info - Information about the particular VIN implementation
  * @model:		VIN model
  * @use_mc:		use media controller instead of controlling subdevice
@@ -155,6 +177,7 @@ struct rvin_group_route {
  * @max_height:		max input height the VIN supports
  * @routes:		list of possible routes from the CSI-2 recivers to
  *			all VINs. The list mush be NULL terminated.
+ * @scalers:		List of available scalers, must be NULL terminated.
  */
 struct rvin_info {
 	enum model_id model;
@@ -164,6 +187,7 @@ struct rvin_info {
 	unsigned int max_width;
 	unsigned int max_height;
 	const struct rvin_group_route *routes;
+	const struct rvin_group_scaler *scalers;
 };
 
 /**
