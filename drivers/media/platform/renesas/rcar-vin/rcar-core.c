@@ -1170,6 +1170,14 @@ static const struct rvin_group_route rcar_info_r8a7795_routes[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct rvin_group_scaler rcar_info_h3_m3w_m3n_scalers[] = {
+	{ .vin = 0, .companion = 1 },
+	{ .vin = 1, .companion = 0 },
+	{ .vin = 4, .companion = 5 },
+	{ .vin = 5, .companion = 4 },
+	{ /* Sentinel */ }
+};
+
 static const struct rvin_info rcar_info_r8a7795 = {
 	.model = RCAR_GEN3,
 	.use_mc = true,
@@ -1177,6 +1185,7 @@ static const struct rvin_info rcar_info_r8a7795 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a7795_routes,
+	.scalers = rcar_info_h3_m3w_m3n_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a7795es1_routes[] = {
@@ -1195,6 +1204,7 @@ static const struct rvin_info rcar_info_r8a7795es1 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a7795es1_routes,
+	.scalers = rcar_info_h3_m3w_m3n_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a7796_routes[] = {
@@ -1212,6 +1222,7 @@ static const struct rvin_info rcar_info_r8a7796 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a7796_routes,
+	.scalers = rcar_info_h3_m3w_m3n_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a77965_routes[] = {
@@ -1229,6 +1240,7 @@ static const struct rvin_info rcar_info_r8a77965 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a77965_routes,
+	.scalers = rcar_info_h3_m3w_m3n_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a77970_routes[] = {
@@ -1277,6 +1289,11 @@ static const struct rvin_group_route rcar_info_r8a77995_routes[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct rvin_group_scaler rcar_info_r8a77995_scalers[] = {
+	{ .vin = 4, .companion = -1 },
+	{ /* Sentinel */ }
+};
+
 static const struct rvin_info rcar_info_r8a77995 = {
 	.model = RCAR_GEN3,
 	.use_mc = true,
@@ -1284,6 +1301,7 @@ static const struct rvin_info rcar_info_r8a77995 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a77995_routes,
+	.scalers = rcar_info_r8a77995_scalers,
 };
 
 static const struct rvin_info rcar_info_r8a779a0 = {
