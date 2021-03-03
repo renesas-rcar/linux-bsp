@@ -33,6 +33,10 @@
 /* Max number on VIN instances that can be in a system */
 #define RCAR_VIN_NUM 8
 
+/* Time until source device reconnects */
+#define CONNECTION_TIME 2000
+#define SETUP_WAIT_TIME 3000
+
 struct rvin_group;
 
 enum model_id {
@@ -201,6 +205,12 @@ struct rvin_info {
  * @std:		active video standard of the video source
  *
  * @alpha:		Alpha component to fill in for supported pixel formats
+ *
+ * @work_queue:		work queue at resuming
+ * @rvin_resume:	delayed work at resuming
+ * @chsel:		channel selection
+ * @setup_wait:		wait queue used to setup VIN
+ * @suspend:		suspend flag
  */
 struct rvin_dev {
 	struct device *dev;
@@ -244,6 +254,12 @@ struct rvin_dev {
 	v4l2_std_id std;
 
 	unsigned int alpha;
+
+	struct workqueue_struct *work_queue;
+	struct delayed_work rvin_resume;
+	unsigned int chsel;
+	wait_queue_head_t setup_wait;
+	bool suspend;
 };
 
 #define vin_to_source(vin)		((vin)->parallel->subdev)
@@ -298,5 +314,8 @@ void rvin_crop_scale_comp(struct rvin_dev *vin);
 
 int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel);
 void rvin_set_alpha(struct rvin_dev *vin, unsigned int alpha);
+
+void rvin_resume_start_streaming(struct work_struct *work);
+void rvin_suspend_stop_streaming(struct rvin_dev *vin);
 
 #endif
