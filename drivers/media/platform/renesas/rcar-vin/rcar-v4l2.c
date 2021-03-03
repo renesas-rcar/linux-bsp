@@ -991,7 +991,6 @@ err_open:
 err_unlock:
 	mutex_unlock(&vin->lock);
 err_pm:
-	pm_runtime_put(vin->dev);
 
 	return ret;
 }
@@ -1018,8 +1017,6 @@ static int rvin_release(struct file *file)
 	}
 
 	mutex_unlock(&vin->lock);
-
-	pm_runtime_put(vin->dev);
 
 	return ret;
 }
