@@ -110,8 +110,13 @@ static int __init r8a77980_sysc_init(void)
 	return 0;
 }
 
+static struct rcar_sysc_extra_regs r8a77980_extra_regs = {
+	.sysc_extmask_offs = 0x138, .sysc_extmask_msks = BIT(0)
+};
+
 const struct rcar_sysc_info r8a77980_sysc_info __initconst = {
 	.init = r8a77980_sysc_init,
 	.areas = r8a77980_areas,
 	.num_areas = ARRAY_SIZE(r8a77980_areas),
+	.extra_regs = &r8a77980_extra_regs,
 };
