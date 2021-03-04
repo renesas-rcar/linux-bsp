@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the V3MSK Videobox Mini board V2 on r8a77970
+ *
+ * Copyright (C) 2018-2020 Cogent Embedded, Inc.
+ */
+
+#include "r8a77970-v3msk-vbm.dts"
+
+/ {
+	model = "Renesas V3MSK Videobox Mini board V2 based on r8a77970";
+
+	leds {
+		compatible = "gpio-leds";
+
+		led5 {
+			label = "board:status";
+			gpios = <&gpio3 16 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+};
+
+&gpio0 {
+	/delete-node/can0stby;
+
+	can0_stby {
+		gpio-hog;
+		gpios = <12 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "CAN0STBY";
+	};
+
+	can1_stby {
+		gpio-hog;
+		gpios = <14 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "CAN1STBY";
+	};
+};
+
+&msiof1 {
+	pinctrl-0 = <&msiof1_pins>;
+	pinctrl-names = "default";
+	cs-gpios = <&gpio3 3 0>;
+
+	status = "okay";
+	spidev@0 {
+		compatible = "renesas,sh-msiof";
+		reg = <0>;
+		spi-max-frequency = <66666666>;
+	};
+};
+
+&msiof2 {
+	pinctrl-0 = <&msiof2_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	slave;
+};
+
+&pfc {
+	msiof1_pins: msiof1 {
+		groups = "msiof1_clk", "msiof1_txd", "msiof1_rxd";
+		function = "msiof1";
+	};
+
+	msiof2_pins: msiof2 {
+		groups = "msiof2_clk", "msiof2_sync", "msiof2_txd", "msiof2_rxd";
+		function = "msiof2";
+	};
+};
+
+&scif3 {
+	/* pin conflict with msiof2 */
+	/* set R240 and remove R241 before enabling */
+	status = "disabled";
+};
