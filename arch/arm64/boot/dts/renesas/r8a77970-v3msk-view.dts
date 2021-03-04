@@ -1,0 +1,192 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the V3MSK View board on r8a77970
+ *
+ * Copyright (C) 2017-2020 Cogent Embedded, Inc.
+ */
+
+#include "r8a77970-v3msk.dts"
+#include <dt-bindings/gpio/gpio.h>
+#include "camera.dtsi"
+
+/ {
+	model = "Renesas V3MSK View board based on r8a77970";
+};
+
+&csi40 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi40_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max9286_out0>;
+			};
+		};
+	};
+};
+
+&i2c3 {
+	pinctrl-0 = <&i2c3_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	clock-frequency = <400000>;
+
+	max9286@6c {
+		compatible = "maxim,max9286";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x6c>;
+		regs = <0x0c 0x0d 0x0e 0x0f>;
+		shutdown-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max9286_in0: endpoint {
+					remote-endpoint = <&camera_out0>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max9286_in1: endpoint {
+					remote-endpoint = <&camera_out1>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max9286_in2: endpoint {
+					remote-endpoint = <&camera_out2>;
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max9286_in3: endpoint {
+					remote-endpoint = <&camera_out3>;
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max9286_out0: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi40_in>;
+				};
+			};
+		};
+
+		i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+
+			camera@60 {
+				compatible = LVDS_CAMERA;
+				reg = <0x60 0x0c>;
+
+				port {
+					camera_out0: endpoint {
+						remote-endpoint = <&max9286_in0>;
+					};
+				};
+			};
+		};
+
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+
+			camera@61 {
+				compatible = LVDS_CAMERA;
+				reg = <0x61 0x0d>;
+
+				port {
+					camera_out1: endpoint {
+						remote-endpoint = <&max9286_in1>;
+					};
+				};
+			};
+		};
+
+		i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+
+			camera@62 {
+				compatible = LVDS_CAMERA;
+				reg = <0x62 0x0e>;
+
+				port {
+					camera_out2: endpoint {
+						remote-endpoint = <&max9286_in2>;
+					};
+				};
+			};
+		};
+
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+
+			camera@63 {
+				compatible = LVDS_CAMERA;
+				reg = <0x63 0x0f>;
+
+				port {
+					camera_out3: endpoint {
+						remote-endpoint = <&max9286_in3>;
+					};
+				};
+			};
+		};
+	};
+};
+
+&gpio2 {
+	gpio_pwdn1 {
+		gpio-hog;
+		gpios = <12 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "GPIO_PWDN1#";
+	};
+};
+
+&pfc {
+	i2c3_pins: i2c3 {
+		groups = "i2c3";
+		function = "i2c3";
+	};
+};
+
+&vin0 {
+	status = "okay";
+};
+
+&vin1 {
+	status = "okay";
+};
+
+&vin2 {
+	status = "okay";
+};
+
+&vin3 {
+	status = "okay";
+};
