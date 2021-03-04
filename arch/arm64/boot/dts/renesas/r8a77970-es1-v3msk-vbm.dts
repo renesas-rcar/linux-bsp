@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the V3MSK Videobox Mini board on r8a77970 ES1.0
+ *
+ * Copyright (C) 2018-2020 Renesas Electronics Corp.
+ * Copyright (C) 2018-2020 Cogent Embedded, Inc.
+ */
+
+#include "r8a77970-v3msk-vbm.dts"
+#include "r8a77970-es1.dtsi"
+
+/ {
+	model = "Renesas V3MSK Videobox Mini board based on r8a77970 ES1.0";
+};
