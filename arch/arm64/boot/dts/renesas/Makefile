@@ -78,19 +78,19 @@ dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-es2-condor.dtb
 dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-es2-v3hsk.dtb
 
 # overlays
-DTC_FLAGS += -@
-ulcb-kf-dtbo := ulcb-kf-cn11.dtbo ulcb-kf-most.dtbo ulcb-kf-sd3.dtbo \
-		ulcb-kf-cn10-pca.dtbo ulcb-kf-cn11-pca.dtbo \
-		ulcb-kf-cn10-gmsl2.dtbo ulcb-kf-cn11-gmsl2.dtbo \
-		ulcb-kf-panel-koe-tx31d200vm0baa-1280x480.dtbo \
-		ulcb-kf-panel-mitsubishi-aa104xd12-1024x768.dtbo \
-		ulcb-kf-panel-mitsubishi-aa121td01-1280x800.dtbo \
-		ulcb-kf-imx219.dtbo
+# DTC_FLAGS += -@
+# ulcb-kf-dtbo := ulcb-kf-cn11.dtbo ulcb-kf-most.dtbo ulcb-kf-sd3.dtbo \
+#		ulcb-kf-cn10-pca.dtbo ulcb-kf-cn11-pca.dtbo \
+#		ulcb-kf-cn10-gmsl2.dtbo ulcb-kf-cn11-gmsl2.dtbo \
+#		ulcb-kf-panel-koe-tx31d200vm0baa-1280x480.dtbo \
+#		ulcb-kf-panel-mitsubishi-aa104xd12-1024x768.dtbo \
+#		ulcb-kf-panel-mitsubishi-aa121td01-1280x800.dtbo \
+#		ulcb-kf-imx219.dtbo
 
-vb-dtbo := vb-fdplink-output.dtbo
+# vb-dtbo := vb-fdplink-output.dtbo
 
-dtb-$(CONFIG_ARCH_R8A77951) += $(ulcb-kf-dtbo)
-dtb-$(CONFIG_ARCH_R8A77961) += $(ulcb-kf-dtbo)
-dtb-$(CONFIG_ARCH_R8A77965) += $(ulcb-kf-dtbo)
-dtb-$(CONFIG_ARCH_R8A77970) += $(vb-dtbo)
-dtb-$(CONFIG_ARCH_R8A77980) += $(vb-dtbo)
+# dtb-$(CONFIG_ARCH_R8A77951) += $(ulcb-kf-dtbo)
+# dtb-$(CONFIG_ARCH_R8A77961) += $(ulcb-kf-dtbo)
+# dtb-$(CONFIG_ARCH_R8A77965) += $(ulcb-kf-dtbo)
+# dtb-$(CONFIG_ARCH_R8A77970) += $(vb-dtbo)
+# dtb-$(CONFIG_ARCH_R8A77980) += $(vb-dtbo)
