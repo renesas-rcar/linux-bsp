@@ -22,9 +22,8 @@
 		cma: linux,cma@58000000 {
 		};
 
-		/* Memory used by the CR7, including virtual display buffers */
+		/* Memory used by the CR7 */
 		cr7: linux,cr7@70000000 {
-			compatible = "shared-dma-pool";
 			no-map;
 			reg = <0x0 0x70000000 0x0 0x10000000>;
 		};
