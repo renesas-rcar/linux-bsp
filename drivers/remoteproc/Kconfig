@@ -292,7 +292,7 @@ config RCAR_CR7_REMOTEPROC
 	tristate "R-Car Gen3 Cortex-R7 remoteproc support"
 	depends on RCAR_MFIS
 	depends on DMA_CMA
-	select RPMSG_VIRTIO
+	depends on RPMSG_VIRTIO
 	help
 	  Say y here to support ARM Cortex-R7 remote processors via the
 	  remote processor framework on R-Car Gen3 SOCs.
