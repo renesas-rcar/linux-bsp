@@ -167,7 +167,7 @@ static void rcar_rvgc_remove(struct rpmsg_device* rpdev) {
 		drm_dev_unregister(ddev);
 		drm_kms_helper_poll_fini(ddev);
 		drm_mode_config_cleanup(ddev);
-		drm_dev_unref(ddev);
+		drm_dev_put(ddev);
 	}
 	return;
 }
