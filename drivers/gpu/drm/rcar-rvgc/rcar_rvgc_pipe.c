@@ -488,7 +488,7 @@ static int overlay_pipe_init(struct rcar_rvgc_device* rvgc_dev,
 		return ret;
 	connector = rvgc_connector_create(rvgc_pipe);
 
-	return drm_mode_connector_attach_encoder(connector, encoder);
+	return drm_connector_attach_encoder(connector, encoder);
 
 }
 
