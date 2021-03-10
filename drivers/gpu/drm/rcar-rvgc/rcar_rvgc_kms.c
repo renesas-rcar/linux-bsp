@@ -6,6 +6,7 @@
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_fb_cma_helper.h>
+#include <drm/drm_gem_framebuffer_helper.h>
 
 #include <linux/kthread.h>
 #include <linux/delay.h>
@@ -65,7 +66,7 @@ static struct drm_framebuffer* rcar_rvgc_fb_create(struct drm_device* dev, struc
 		return ERR_PTR(-EINVAL);
 	}
 
-	return drm_fb_cma_create(dev, file_priv, mode_cmd);
+	return drm_gem_fb_create(dev, file_priv, mode_cmd);
 }
 
 /********** VBlank Handling **********/
