@@ -114,7 +114,7 @@ static int is_cr7_running(void)
 	u32 regval;
 
 	/* CR7 Power Status Register (CR7PSTR) */
-	mmio_apmu_base = ioremap_nocache(APMU_CR7PSTR, 4);
+	mmio_apmu_base = ioremap(APMU_CR7PSTR, 4);
 	regval = ioread32(mmio_apmu_base);
 	iounmap(mmio_apmu_base);
 
@@ -144,14 +144,14 @@ static int rcar_cr7_rproc_start(struct rproc *rproc)
 
 	// CR7 Power-Up Sequence (Sec. 5A.3.3 R-Car Gen3 HW User Manual)
 	//////// 1. clear write protection for CPG register
-	mmio_cpg_base = ioremap_nocache(CPG_BASE, 4);
+	mmio_cpg_base = ioremap(CPG_BASE, 4);
 	// Clear CPG Write Protect (CPGWPCR.WPE)
 	iowrite32(0x5a5affff, (mmio_cpg_base + CPG_WPR_OFFSET));
 	iowrite32(0xa5a50000, (mmio_cpg_base + CPG_WPCR_OFFSET));
 
 	//////// 2. Set boot address
 	// Get Reset Controller node (RST)
-	mmio_rst_base = ioremap_nocache(RST_BASE, 4);
+	mmio_rst_base = ioremap(RST_BASE, 4);
 	if (rproc->bootaddr & ~0xfffc0000)
 		dev_warn(dev, "Boot address (0x%x) not aligned!\n", rproc->bootaddr);
 	regval = (rproc->bootaddr & 0xfffc0000); //Set Boot Addr
@@ -160,7 +160,7 @@ static int rcar_cr7_rproc_start(struct rproc *rproc)
 
 	//////// 3. CR7 Power-On set
 	// Get System Controller node (SYSC)
-	mmio_sysc_base = ioremap_nocache(SYSC_BASE, 4);
+	mmio_sysc_base = ioremap(SYSC_BASE, 4);
 	regval = 0x1; //Start power-resume sequence
 	iowrite32(regval, (mmio_sysc_base + SYSC_PWRONCR7_OFFSET));
 
@@ -168,7 +168,7 @@ static int rcar_cr7_rproc_start(struct rproc *rproc)
 	//////// 4. Wait until Power-On
 	// Get Advanced Power Management Unit (APMU)
 	// CR7 Power Status Register (CR7PSTR)
-	mmio_apmu_base = ioremap_nocache(APMU_CR7PSTR, 4);
+	mmio_apmu_base = ioremap(APMU_CR7PSTR, 4);
 	do {
 		regval = ioread32(mmio_apmu_base) & 0x3; //APMU_CR7PSTR
 		regval |= ioread32(mmio_sysc_base+SYSC_PWRSR7_OFFSET) &0x10;
