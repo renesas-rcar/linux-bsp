@@ -23,6 +23,7 @@
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_cma_helper.h>
+#include <drm/drm_fb_helper.h>
 
 #include "rcar_rvgc_drv.h"
 #include "rcar_rvgc_kms.h"
@@ -110,12 +111,6 @@ static int rcar_rvgc_cb(struct rpmsg_device* rpdev, void* data, int len,
  * DRM operations
  */
 
-static void rcar_rvgc_lastclose(struct drm_device* dev) {
-	struct rcar_rvgc_device* rcrvgc = dev->dev_private;
-
-	drm_fbdev_cma_restore_mode(rcrvgc->fbdev);
-}
-
 static int rcar_rvgc_dumb_create(struct drm_file* file, struct drm_device* dev,
 				 struct drm_mode_create_dumb* args) {
 	unsigned int min_pitch = DIV_ROUND_UP(args->width * args->bpp, 8);
@@ -151,7 +146,6 @@ static struct drm_driver rcar_rvgc_driver = {
 	.desc			= "Renesas Virtual Graphics Card",
 	.date			= "20190408",
 	.fops			= &rcar_rvgc_fops,
-	.lastclose		= rcar_rvgc_lastclose,
 };
 
 
@@ -167,9 +161,6 @@ static void rcar_rvgc_remove(struct rpmsg_device* rpdev) {
 		dev_warn(rcrvgc->dev, "vsync_thread is not running\n");
 	else
 		kthread_stop(rcrvgc->vsync_thread);
-
-	if (rcrvgc->fbdev)
-		drm_fbdev_cma_fini(rcrvgc->fbdev);
 
 	if (rcrvgc->ddev) {
 		drm_dev_unregister(ddev);
@@ -259,6 +250,8 @@ static int rcar_rvgc_probe(struct rpmsg_device* rpdev) {
 	ret = drm_dev_register(ddev, 0);
 	if (ret)
 		goto error;
+
+	drm_fbdev_generic_setup(ddev, 32);
 
 	DRM_INFO("Device %s probed\n", dev_name(&rpdev->dev));
 

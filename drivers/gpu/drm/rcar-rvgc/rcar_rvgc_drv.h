@@ -32,7 +32,6 @@ struct rcar_rvgc_device {
 	struct device* dev;
 
 	struct drm_device* ddev;
-	struct drm_fbdev_cma* fbdev;
 
 	struct rpmsg_device* rpdev;
 

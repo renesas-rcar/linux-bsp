@@ -1,7 +1,6 @@
 //#define DEBUG
 
 
-#include <drm/drmP.h>
 #include <drm/drm_device.h>
 
 #include "rcar_rvgc_drv.h"
