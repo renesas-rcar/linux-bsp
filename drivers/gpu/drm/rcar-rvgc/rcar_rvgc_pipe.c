@@ -92,7 +92,6 @@ static int rvgc_connector_get_modes(struct drm_connector* connector) {
 
 static const struct drm_connector_helper_funcs rvgc_connector_hfuncs = {
 	.get_modes = rvgc_connector_get_modes,
-	.best_encoder = drm_atomic_helper_best_encoder,
 };
 
 static enum drm_connector_status
