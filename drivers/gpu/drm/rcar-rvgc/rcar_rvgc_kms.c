@@ -2,7 +2,6 @@
 
 
 
-#include <drm/drmP.h>
 #include <drm/drm_device.h>
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
@@ -148,7 +147,6 @@ static const struct drm_mode_config_helper_funcs rcar_rvgc_mode_config_helper = 
 
 int rcar_rvgc_modeset_init(struct rcar_rvgc_device* rcrvgc) {
 	struct drm_device* dev = rcrvgc->ddev;
-	struct drm_fbdev_cma* fbdev;
 	struct device_node* displays_node;
 	struct device_node* display_node;
 	int ret = 0;
@@ -283,17 +281,6 @@ int rcar_rvgc_modeset_init(struct rcar_rvgc_device* rcrvgc) {
 		}
 	}
 
-	/*
-	 * Initializes drm_fbdev_cma struct
-	 */
-	fbdev = drm_fbdev_cma_init(dev, 32, dev->mode_config.num_connector);
-	ret = IS_ERR(fbdev);
-	if (ret) {
-		dev_err(rcrvgc->dev, "drm_fbdev_cma_init failed: %d\n", ret);
-		goto exit;
-	}
-
-	rcrvgc->fbdev = fbdev;
  exit:
 	return ret;
 }
