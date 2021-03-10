@@ -177,7 +177,7 @@ static int rcar_mfis_probe(struct platform_device *pdev)
 
 	/* Map MFIS registers */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	mmio_base = (u32 __iomem *)devm_ioremap_nocache(dev, res->start, resource_size(res));
+	mmio_base = (u32 __iomem *)devm_ioremap(dev, res->start, resource_size(res));
 	if (IS_ERR(mmio_base)) {
 		dev_err(dev, "Failed to remap MFIS registers.\n");
 		ret = PTR_ERR(mmio_base);
