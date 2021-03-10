@@ -225,7 +225,7 @@ static void rcar_cr7_rproc_kick(struct rproc *rproc, int vqid)
 	}
 }
 
-static void *rcar_cr7_da_to_va(struct rproc *rproc, u64 da, int len)
+static void *rcar_cr7_da_to_va(struct rproc *rproc, u64 da, size_t len)
 {
 	struct rcar_cr7_rproc *rrproc = rproc->priv;
 	int offset;
@@ -268,7 +268,7 @@ static int rcar_cr7_rproc_elf_sanity_check(struct rproc *rproc,
 	return rproc_elf_sanity_check(rproc, fw);
 }
 
-static u32 rcar_cr7_rproc_elf_get_boot_addr(struct rproc *rproc,
+static u64 rcar_cr7_rproc_elf_get_boot_addr(struct rproc *rproc,
 					    const struct firmware *fw)
 {
 	return rproc_elf_get_boot_addr(rproc, fw);
