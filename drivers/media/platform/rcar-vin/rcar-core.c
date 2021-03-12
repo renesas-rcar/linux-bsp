@@ -1412,7 +1412,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
 			dev_name(vin->dev));
 		ret = PTR_ERR(vin->rstc);
-		goto error;
+		goto error_destroy_workqueue;
 	}
 
 	vin->clk = devm_clk_get(&pdev->dev, NULL);
@@ -1420,10 +1420,14 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get clock%s\n",
 			dev_name(vin->dev));
 		ret = PTR_ERR(vin->clk);
-		goto error;
+		goto error_destroy_workqueue;
 	}
 
 	return 0;
+
+error_destroy_workqueue:
+	destroy_workqueue(vin->work_queue);
+
 error:
 	pm_runtime_disable(&pdev->dev);
 
@@ -1449,6 +1453,9 @@ error_dma_unregister:
 static int rcar_vin_remove(struct platform_device *pdev)
 {
 	struct rvin_dev *vin = platform_get_drvdata(pdev);
+
+	cancel_delayed_work_sync(&vin->rvin_resume);
+	destroy_workqueue(vin->work_queue);
 
 	pm_runtime_disable(&pdev->dev);
 
