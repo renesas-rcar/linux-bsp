@@ -371,7 +371,7 @@ static int rcar_isp_probe(struct platform_device *pdev)
 	if (IS_ERR(isp->base))
 		return PTR_ERR(isp->base);
 
-	isp->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	isp->rstc = devm_reset_control_get_optional_shared(&pdev->dev, NULL);
 	if (IS_ERR(isp->rstc)) {
 		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
 			dev_name(&pdev->dev));
