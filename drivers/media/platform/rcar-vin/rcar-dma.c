@@ -1622,8 +1622,6 @@ static void rvin_stop_streaming(struct vb2_queue *vq)
 			usleep_range(10, 15);
 			timeout--;
 		}
-		reset_control_assert(vin->rstc);
-		reset_control_deassert(vin->rstc);
 	}
 
 	/* Free scratch buffer. */
@@ -1708,8 +1706,6 @@ void rvin_suspend_stop_streaming(struct rvin_dev *vin)
 			usleep_range(10, 15);
 			timeout--;
 		}
-		reset_control_assert(vin->rstc);
-		reset_control_deassert(vin->rstc);
 	}
 
 	vin->suspend = true;
