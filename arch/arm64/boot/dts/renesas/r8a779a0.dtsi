@@ -49,10 +49,10 @@
 			next-level-cache = <&L3_CA76_0>;
 		};
 
-		a76_1: cpu@1 {
+		a76_1: cpu@100 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a76", "arm,armv8";
-			reg = <1>;
+			reg = <0x100>;
 			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
 			power-domains = <&sysc R8A779A0_PD_A1E0D0C1>;
 			enable-method = "psci";
