@@ -219,7 +219,10 @@
 
 	pmu_a76 {
 		compatible = "arm,cortex-a76-pmu";
-		interrupts-extended = <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster0>;
+		interrupts-extended = <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster0>,
+				      <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster1>,
+				      <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster2>,
+				      <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster3>;
 	};
 
 	soc {
@@ -260,6 +263,15 @@
 			ppi-partitions {
 				ppi_cluster0: interrupt-partition-0 {
 					affinity = <&a76_0 &a76_1>;
+				};
+				ppi_cluster1: interrupt-partition-1 {
+					affinity = <&a76_2 &a76_3>;
+				};
+				ppi_cluster2: interrupt-partition-2 {
+					affinity = <&a76_4 &a76_5>;
+				};
+				ppi_cluster3: interrupt-partition-3 {
+					affinity = <&a76_6 &a76_7>;
 				};
 			};
 		};
