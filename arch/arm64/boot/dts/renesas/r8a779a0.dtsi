@@ -45,6 +45,33 @@
 					cpu = <&a76_1>;
 				};
 			};
+
+			cluster1 {
+				core0 {
+					cpu = <&a76_2>;
+				};
+				core1 {
+					cpu = <&a76_3>;
+				};
+			};
+
+			cluster2 {
+				core0 {
+					cpu = <&a76_4>;
+				};
+				core1 {
+					cpu = <&a76_5>;
+				};
+			};
+
+			cluster3 {
+				core0 {
+					cpu = <&a76_6>;
+				};
+				core1 {
+					cpu = <&a76_7>;
+				};
+			};
 		};
 
 		a76_0: cpu@0 {
@@ -63,6 +90,66 @@
 			reg = <0x100>;
 			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
 			power-domains = <&sysc R8A779A0_PD_CA76_CPU1>;
+			enable-method = "psci";
+			next-level-cache = <&L2_CA76>;
+		};
+
+		a76_2: cpu@10000 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x10000>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_CA76_CPU2>;
+			enable-method = "psci";
+			next-level-cache = <&L2_CA76>;
+		};
+
+		a76_3: cpu@10100 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x10100>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_CA76_CPU3>;
+			enable-method = "psci";
+			next-level-cache = <&L2_CA76>;
+		};
+
+		a76_4: cpu@20000 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x20000>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_CA76_CPU4>;
+			enable-method = "psci";
+			next-level-cache = <&L2_CA76>;
+		};
+
+		a76_5: cpu@20100 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x20100>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_CA76_CPU5>;
+			enable-method = "psci";
+			next-level-cache = <&L2_CA76>;
+		};
+
+		a76_6: cpu@30000 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x30000>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_CA76_CPU6>;
+			enable-method = "psci";
+			next-level-cache = <&L2_CA76>;
+		};
+
+		a76_7: cpu@30100 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x30100>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_CA76_CPU7>;
 			enable-method = "psci";
 			next-level-cache = <&L2_CA76>;
 		};
@@ -124,10 +211,10 @@
 
 	timer {
 		compatible = "arm,armv8-timer";
-		interrupts-extended = <&gic GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW) 0>,
-				      <&gic GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW) 0>,
-				      <&gic GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW) 0>,
-				      <&gic GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(2) | IRQ_TYPE_LEVEL_LOW) 0>;
+		interrupts-extended = <&gic GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW) 0>,
+				      <&gic GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW) 0>,
+				      <&gic GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW) 0>,
+				      <&gic GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW) 0>;
 	};
 
 	pmu_a76 {
@@ -166,7 +253,7 @@
 			interrupt-controller;
 			reg = <0x0 0xf1000000 0x0 0x20000>,
 			      <0x0 0xf1060000 0x0 0x110000>;
-			interrupts = <GIC_PPI 9	(GIC_CPU_MASK_SIMPLE(2) |
+			interrupts = <GIC_PPI 9	(GIC_CPU_MASK_SIMPLE(8) |
 				      IRQ_TYPE_LEVEL_HIGH) 0>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 
