@@ -38,6 +38,33 @@
 					cpu = <&a76_1>;
 				};
 			};
+
+			cluster1 {
+				core0 {
+					cpu = <&a76_2>;
+				};
+				core1 {
+					cpu = <&a76_3>;
+				};
+			};
+
+			cluster2 {
+				core0 {
+					cpu = <&a76_4>;
+				};
+				core1 {
+					cpu = <&a76_5>;
+				};
+			};
+
+			cluster3 {
+				core0 {
+					cpu = <&a76_6>;
+				};
+				core1 {
+					cpu = <&a76_7>;
+				};
+			};
 		};
 
 		a76_0: cpu@0 {
@@ -55,6 +82,66 @@
 			reg = <0x100>;
 			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
 			power-domains = <&sysc R8A779A0_PD_A1E0D0C1>;
+			enable-method = "psci";
+			next-level-cache = <&L3_CA76_0>;
+		};
+
+		a76_2: cpu@10000 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x10000>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_A1E0D1C0>;
+			enable-method = "psci";
+			next-level-cache = <&L3_CA76_0>;
+		};
+
+		a76_3: cpu@10100 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x10100>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_A1E0D1C1>;
+			enable-method = "psci";
+			next-level-cache = <&L3_CA76_0>;
+		};
+
+		a76_4: cpu@20000 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x20000>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_A1E1D0C0>;
+			enable-method = "psci";
+			next-level-cache = <&L3_CA76_0>;
+		};
+
+		a76_5: cpu@20100 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x20100>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_A1E1D0C1>;
+			enable-method = "psci";
+			next-level-cache = <&L3_CA76_0>;
+		};
+
+		a76_6: cpu@30000 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x30000>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_A1E1D1C0>;
+			enable-method = "psci";
+			next-level-cache = <&L3_CA76_0>;
+		};
+
+		a76_7: cpu@30100 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a76", "arm,armv8";
+			reg = <0x30100>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_Z0>;
+			power-domains = <&sysc R8A779A0_PD_A1E1D1C1>;
 			enable-method = "psci";
 			next-level-cache = <&L3_CA76_0>;
 		};
