@@ -2584,7 +2584,7 @@
 		};
 
 		fbc_00 {
-			compatible = "generic-uio";
+			compatible = "renesas,uio-fbc";
 			reg = <0 0xff830000 0 0x2000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			interrupts = <GIC_SPI 14 IRQ_TYPE_LEVEL_HIGH>;
