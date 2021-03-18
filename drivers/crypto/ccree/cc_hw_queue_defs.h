@@ -108,6 +108,7 @@ enum cc_flow_mode {
 	AES_to_AES_to_HASH	= 14,
 	AES_to_HASH_and_AES	= 15,
 	DIN_SM4_DOUT		= 16,
+	DIN_MULTI2_DOUT		= 16,
 	DIN_AES_AESMAC		= 17,
 	HASH_to_DOUT		= 18,
 	/* setup flows */
@@ -116,10 +117,12 @@ enum cc_flow_mode {
 	S_DIN_to_DES		= 34,
 	S_DIN_to_RC4		= 35,
 	S_DIN_to_SM4		= 36,
+	S_DIN_to_MULTI2		= 36,
 	S_DIN_to_HASH		= 37,
 	S_AES_to_DOUT		= 38,
 	S_AES2_to_DOUT		= 39,
 	S_SM4_to_DOUT		= 40,
+	S_MULTI2_to_DOUT		= 40,
 	S_RC4_to_DOUT		= 41,
 	S_DES_to_DOUT		= 42,
 	S_HASH_to_DOUT		= 43,
@@ -628,6 +631,11 @@ static inline void set_cipher_do(struct cc_hw_desc *pdesc,
 {
 	pdesc->word[4] |= FIELD_PREP(WORD4_CIPHER_DO,
 				(config & HW_KEY_MASK_CIPHER_DO));
+}
+
+static inline void set_cipher_stop_queue(struct cc_hw_desc *pdesc)
+{
+	pdesc->word[1] |= FIELD_PREP(WORD1_LOCK_QUEUE, 1);
 }
 
 #endif /*__CC_HW_QUEUE_DEFS_H__*/
