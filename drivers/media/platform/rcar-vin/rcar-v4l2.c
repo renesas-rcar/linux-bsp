@@ -159,6 +159,15 @@ static void rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	if (!rvin_format_from_pixel(vin, pix->pixelformat))
 		pix->pixelformat = RVIN_DEFAULT_FORMAT;
 
+	switch (pix->pixelformat) {
+	case V4L2_PIX_FMT_NV16:
+		pix->width = ALIGN(pix->width, 0x20);
+		break;
+	default:
+		pix->width = ALIGN(pix->width, 0x10);
+		break;
+	}
+
 	switch (pix->field) {
 	case V4L2_FIELD_TOP:
 	case V4L2_FIELD_BOTTOM:
@@ -181,14 +190,18 @@ static void rvin_format_align(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	case V4L2_PIX_FMT_NV16:
 		walign = 5;
 		break;
-	default:
+	case V4L2_PIX_FMT_YUYV:
+	case V4L2_PIX_FMT_UYVY:
 		walign = 1;
+		break;
+	default:
+		walign = 0;
 		break;
 	}
 
 	/* Limit to VIN capabilities */
-	v4l_bound_align_image(&pix->width, 2, vin->info->max_width, walign,
-			      &pix->height, 4, vin->info->max_height, 2, 0);
+	v4l_bound_align_image(&pix->width, 5, vin->info->max_width, walign,
+			      &pix->height, 2, vin->info->max_height, 0, 0);
 
 	pix->bytesperline = rvin_format_bytesperline(vin, pix);
 	pix->sizeimage = rvin_format_sizeimage(pix);
@@ -516,9 +529,6 @@ static int rvin_s_selection(struct file *file, void *fh,
 	default:
 		return -EINVAL;
 	}
-
-	/* HW supports modifying configuration while running */
-	rvin_crop_scale_comp(vin);
 
 	return 0;
 }
@@ -870,12 +880,6 @@ static int rvin_open(struct file *file)
 	struct rvin_dev *vin = video_drvdata(file);
 	int ret;
 
-	ret = pm_runtime_get_sync(vin->dev);
-	if (ret < 0) {
-		pm_runtime_put_noidle(vin->dev);
-		return ret;
-	}
-
 	ret = mutex_lock_interruptible(&vin->lock);
 	if (ret)
 		goto err_pm;
@@ -911,7 +915,6 @@ err_open:
 err_unlock:
 	mutex_unlock(&vin->lock);
 err_pm:
-	pm_runtime_put(vin->dev);
 
 	return ret;
 }
@@ -938,8 +941,6 @@ static int rvin_release(struct file *file)
 	}
 
 	mutex_unlock(&vin->lock);
-
-	pm_runtime_put(vin->dev);
 
 	return ret;
 }
