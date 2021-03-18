@@ -2792,7 +2792,7 @@
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		fba_dp_00 {
+		fba_imp_dp_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff8d5000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 525>;
