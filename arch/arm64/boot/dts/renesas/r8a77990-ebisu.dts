@@ -16,6 +16,9 @@
 	aliases {
 		serial0 = &scif2;
 		ethernet0 = &avb;
+		mmc0 = &sdhi3;
+		mmc1 = &sdhi0;
+		mmc2 = &sdhi1;
 	};
 
 	chosen {
@@ -31,6 +34,16 @@
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <11289600>;
+	};
+
+	avb-mch@ec5a0100 {
+		compatible = "renesas,avb-mch-gen3";
+		reg =	<0 0xec5a0100 0 0x100>;  /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
+		resets = <&cpg 922>;
 	};
 
 	backlight: backlight {
@@ -92,6 +105,12 @@
 				};
 			};
 
+			port@1 {
+				reg = <1>;
+				thc63lvd1024_in_dual_link: endpoint {
+				};
+			};
+
 			port@2 {
 				reg = <2>;
 				thc63lvd1024_out: endpoint {
@@ -105,6 +124,97 @@
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
 		reg = <0x0 0x48000000 0x0 0x38000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* For Audio DSP */
+		adsp_reserved: linux,adsp@57000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x57000000 0x0 0x01000000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma@58000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x10000000>;
+			linux,cma-default;
+		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia@68000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x68000000 0x0 0x04000000>;
+		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
+	lvds0 {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds0_panel_in: endpoint {
+			};
+		};
+	};
+
+	lvds1 {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds1_panel_in: endpoint {
+			};
+		};
 	};
 
 	reg_1p8v: regulator0 {
@@ -211,6 +321,12 @@
 	vga {
 		compatible = "vga-connector";
 
+		no-use-ddc;
+
+		width = <1024>;
+		height = <768>;
+		max-pixelclock = <75000>;
+
 		port {
 			vga_in: endpoint {
 				remote-endpoint = <&adv7123_out>;
@@ -240,6 +356,10 @@
 		};
 	};
 
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+
 	x12_clk: x12 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -253,6 +373,11 @@
 	};
 };
 
+&adsp {
+	status = "okay";
+	memory-region = <&adsp_reserved>;
+};
+
 &audio_clk_a {
 	clock-frequency = <22579200>;
 };
@@ -261,6 +386,7 @@
 	pinctrl-0 = <&avb_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy0>;
+	phy-mode = "rgmii";
 	status = "okay";
 
 	phy0: ethernet-phy@0 {
@@ -500,9 +626,15 @@
 	status = "okay";
 
 	clocks = <&cpg CPG_MOD 727>,
-		 <&x13_clk>,
 		 <&extal_clk>;
-	clock-names = "fck", "dclkin.0", "extal";
+	clock-names = "fck", "extal";
+
+	ports {
+		port@1 {
+			lvds1_out: endpoint {
+			};
+		};
+	};
 };
 
 &ohci0 {
@@ -579,6 +711,12 @@
 	};
 
 	sdhi3_pins: sd3 {
+		groups = "sdhi3_data8", "sdhi3_ctrl", "sdhi3_ds";
+		function = "sdhi3";
+		power-source = <3300>;
+	};
+
+	sdhi3_pins_uhs: sd3_uhs {
 		groups = "sdhi3_data8", "sdhi3_ctrl", "sdhi3_ds";
 		function = "sdhi3";
 		power-source = <1800>;
@@ -704,14 +842,18 @@
 &sdhi3 {
 	/* used for on-board 8bit eMMC */
 	pinctrl-0 = <&sdhi3_pins>;
-	pinctrl-1 = <&sdhi3_pins>;
+	pinctrl-1 = <&sdhi3_pins_uhs>;
 	pinctrl-names = "default", "state_uhs";
+
+	iommus = <&ipmmu_ds1 35>;
 
 	vmmc-supply = <&reg_3p3v>;
 	vqmmc-supply = <&reg_1p8v>;
 	mmc-hs200-1_8v;
 	mmc-hs400-1_8v;
 	bus-width = <8>;
+	no-sd;
+	no-sdio;
 	non-removable;
 	full-pwr-cycle-in-suspend;
 	status = "okay";
@@ -739,6 +881,14 @@
 };
 
 &vin5 {
+	status = "okay";
+};
+
+&vspb {
+	status = "okay";
+};
+
+&vspi0 {
 	status = "okay";
 };
 
