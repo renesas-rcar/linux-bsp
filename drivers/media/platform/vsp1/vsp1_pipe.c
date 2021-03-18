@@ -13,6 +13,7 @@
 #include <linux/wait.h>
 
 #include <media/media-entity.h>
+#include <media/rcar-fcp.h>
 #include <media/v4l2-subdev.h>
 
 #include "vsp1.h"
@@ -146,6 +147,18 @@ static const struct vsp1_format_info vsp1_video_formats[] = {
 	  VI6_FMT_ARGB_8888, VI6_RPF_DSWAP_P_LLS | VI6_RPF_DSWAP_P_LWS |
 	  VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
 	  1, { 32, 0, 0 }, false, false, 1, 1, false },
+	{ V4L2_PIX_FMT_RGB10, MEDIA_BUS_FMT_AYUV8_1X32,
+	  VI6_FMT_RGB10_RGB10A2_A2RGB10, VI6_RPF_DSWAP_P_LLS |
+	  VI6_RPF_DSWAP_P_LWS | VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
+	  1, { 32, 0, 0 }, false, true, 1, 1, false },
+	{ V4L2_PIX_FMT_A2RGB10, MEDIA_BUS_FMT_AYUV8_1X32,
+	  VI6_FMT_RGB10_RGB10A2_A2RGB10, VI6_RPF_DSWAP_P_LLS |
+	  VI6_RPF_DSWAP_P_LWS | VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
+	  1, { 32, 0, 0 }, false, true, 1, 1, false },
+	{ V4L2_PIX_FMT_RGB10A2, MEDIA_BUS_FMT_AYUV8_1X32,
+	  VI6_FMT_RGB10_RGB10A2_A2RGB10, VI6_RPF_DSWAP_P_LLS |
+	  VI6_RPF_DSWAP_P_LWS | VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
+	  1, { 32, 0, 0 }, false, true, 1, 1, false },
 	{ V4L2_PIX_FMT_UYVY, MEDIA_BUS_FMT_AYUV8_1X32,
 	  VI6_FMT_YUYV_422, VI6_RPF_DSWAP_P_LLS | VI6_RPF_DSWAP_P_LWS |
 	  VI6_RPF_DSWAP_P_WDS | VI6_RPF_DSWAP_P_BTS,
@@ -281,6 +294,8 @@ void vsp1_pipeline_init(struct vsp1_pipeline *pipe)
 
 	INIT_LIST_HEAD(&pipe->entities);
 	pipe->state = VSP1_PIPELINE_STOPPED;
+	pipe->vmute_flag = false;
+	pipe->completed = false;
 }
 
 /* Must be called with the pipe irqlock held. */
@@ -327,6 +342,11 @@ int vsp1_pipeline_stop(struct vsp1_pipeline *pipe)
 			pipe->state = VSP1_PIPELINE_STOPPED;
 			spin_unlock_irqrestore(&pipe->irqlock, flags);
 		}
+
+		if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
+		    VI6_IP_VERSION_MODEL_VSPD_GEN3)
+			ret = rcar_fcp_reset(vsp1->fcp);
+
 	} else {
 		/* Otherwise just request a stop and wait. */
 		spin_lock_irqsave(&pipe->irqlock, flags);
@@ -384,6 +404,8 @@ void vsp1_pipeline_frame_end(struct vsp1_pipeline *pipe)
 	 * active frame was finished or postponed.
 	 */
 	flags = vsp1_dlm_irq_frame_end(pipe->output->dlm);
+	if (flags & VSP1_DL_FRAME_END_COMPLETED)
+		pipe->completed = true;
 
 	if (pipe->hgo)
 		vsp1_hgo_frame_end(pipe->hgo);
