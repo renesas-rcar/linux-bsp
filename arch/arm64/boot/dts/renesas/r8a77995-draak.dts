@@ -71,7 +71,6 @@
 			port@0 {
 				reg = <0>;
 				thc63lvd1024_in1: endpoint {
-					remote-endpoint = <&lvds1_out>;
 				};
 			};
 
@@ -482,7 +481,6 @@
 	ports {
 		port@1 {
 			lvds1_out: endpoint {
-				remote-endpoint = <&thc63lvd1024_in1>;
 			};
 		};
 	};
