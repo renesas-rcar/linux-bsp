@@ -219,10 +219,7 @@
 
 	pmu_a76 {
 		compatible = "arm,cortex-a76-pmu";
-		interrupts-extended = <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster0>,
-				      <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster1>,
-				      <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster2>,
-				      <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster3>;
+		interrupts-extended = <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH 0>;
 	};
 
 	soc {
