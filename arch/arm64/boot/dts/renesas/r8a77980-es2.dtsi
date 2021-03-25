@@ -23,6 +23,7 @@
 			clocks = <&cpg CPG_MOD 524>;
 			power-domains = <&sysc R8A77980_PD_A2DP1>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			resets = <&cpg 524>;
 		};
 
 		/* TBD: can fd channel 3 */
