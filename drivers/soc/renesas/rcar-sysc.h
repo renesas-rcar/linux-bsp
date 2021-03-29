@@ -52,6 +52,7 @@ struct rcar_sysc_info {
 	const struct rcar_sysc_area *areas;
 	unsigned int num_areas;
 	struct rcar_sysc_extra_regs *extra_regs;
+	unsigned int *mode; /* Optional - handle PDMODE on R-Car V3H v2.0 */
 };
 
 extern const struct rcar_sysc_info r8a7743_sysc_info;
