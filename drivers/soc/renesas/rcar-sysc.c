@@ -4,11 +4,13 @@
  *
  * Copyright (C) 2014  Magnus Damm
  * Copyright (C) 2015-2017 Glider bvba
+ * Copyright (C) 2021 Renesas Electronics Corporation
  */
 
 #include <dt-bindings/power/r8a7795-sysc.h>
 #include <dt-bindings/power/r8a7796-sysc.h>
 #include <dt-bindings/power/r8a77965-sysc.h>
+#include <dt-bindings/power/r8a77980-sysc.h>
 #include <linux/clk/renesas.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -59,6 +61,9 @@
 #define SYSCISR_DELAY_US	10
 
 #define RCAR_PD_ALWAYS_ON	32	/* Always-on power area */
+
+/* Number of areas need to fixup data when enable PDMODE */
+#define NUM_FIXUP_AREAS		14
 
 /* Module Stop Control/Status Register */
 #define MSTPSR5_ADDR           0xE615003C
@@ -113,6 +118,48 @@ const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
 static const struct soc_device_attribute r8a77980[] __initconst = {
 		{ .soc_id = "r8a77980"},
 		{ /* sentinel */ }
+};
+
+static struct
+rcar_sysc_area r8a77980_fixup_areas[3][NUM_FIXUP_AREAS] __initdata = {
+{
+	/* Fix-up area for PDMODE = 1 */
+	{ "a2ir0",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir1",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir2",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir3",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir4",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir5",	0x400, 5, R8A77980_PD_A2IR5,	R8A77980_PD_A3IR },
+	{ "a2sc0",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2sc1",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2sc2",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2sc3",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2sc4",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2dp0",	0x400, 11, R8A77980_PD_A2DP0,	R8A77980_PD_A3IR },
+	{ "a2dp1",	0x400, 11, R8A77980_PD_A2DP0,	R8A77980_PD_A3IR },
+	{ "a2cn",	0x400, 13, R8A77980_PD_A2CN,	R8A77980_PD_A3IR },
+},
+{
+    /* No handle for PDMODE = 2 */
+},
+{
+	/* Fix-up area for PDMODE = 3 */
+	{ "a2ir0",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir1",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir2",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir3",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir4",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir5",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc0",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc1",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc2",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc3",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc4",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2dp0",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2dp1",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2cn",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+}
+
 };
 
 static u32 rcar_sysc_quirks;
@@ -320,6 +367,9 @@ static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 {
 	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
 
+	if (rcar_sysc_power_is_off(&pd->ch))
+		return 0;
+
 	/* Disable IMP clock before power off A3IR */
 	if (has_clk_crl && (!strcmp("a3ir", genpd->name)))
 		rcar_sysc_a3ir_clk_ctrl(false);
@@ -331,6 +381,9 @@ static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 static int rcar_sysc_pd_power_on(struct generic_pm_domain *genpd)
 {
 	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
+
+	if (!rcar_sysc_power_is_off(&pd->ch))
+		return 0;
 
 	/* Enable IMP clock before power on A3IR */
 	if (has_clk_crl && (!strcmp("a3ir", genpd->name)))
@@ -518,6 +571,23 @@ struct rcar_pm_domains {
 
 static struct genpd_onecell_data *rcar_sysc_onecell_data;
 
+/* Fix up power domain area in case PDMODE != 0 */
+static void rcar_sysc_fixup_area(struct rcar_sysc_pd *pd, unsigned int mode)
+{
+	int i;
+
+	/* Convert PDMODE to fix-up array position */
+	mode = mode - 1;
+
+	for (i = 0; i < NUM_FIXUP_AREAS; i++) {
+		if (!strcmp(pd->genpd.name, r8a77980_fixup_areas[mode][i].name)) {
+			pd->ch.chan_offs = r8a77980_fixup_areas[mode][i].chan_offs;
+			pd->ch.chan_bit = r8a77980_fixup_areas[mode][i].chan_bit;
+			pd->ch.isr_bit = r8a77980_fixup_areas[mode][i].isr_bit;
+		}
+	}
+}
+
 static int __init rcar_sysc_pd_init(void)
 {
 	const struct rcar_sysc_info *info;
@@ -525,7 +595,7 @@ static int __init rcar_sysc_pd_init(void)
 	struct rcar_pm_domains *domains;
 	struct device_node *np;
 	void __iomem *base;
-	unsigned int i;
+	unsigned int i, mode;
 	int error;
 	const struct soc_device_attribute *attr;
 
@@ -577,6 +647,11 @@ static int __init rcar_sysc_pd_init(void)
 	domains->onecell_data.num_domains = ARRAY_SIZE(domains->domains);
 	rcar_sysc_onecell_data = &domains->onecell_data;
 
+	if (info->mode)
+		mode = *info->mode;
+	else
+		mode = 0;	/* No handle PDMODE */
+
 	for (i = 0; i < info->num_areas; i++) {
 		const struct rcar_sysc_area *area = &info->areas[i];
 		struct rcar_sysc_pd *pd;
@@ -598,6 +673,9 @@ static int __init rcar_sysc_pd_init(void)
 		pd->ch.chan_bit = area->chan_bit;
 		pd->ch.isr_bit = area->isr_bit;
 		pd->flags = area->flags;
+
+		if (mode)
+			rcar_sysc_fixup_area(pd, mode);
 
 		if (rcar_sysc_quirks & BIT(pd->ch.isr_bit))
 			pd->flags |= PD_NO_CR;
