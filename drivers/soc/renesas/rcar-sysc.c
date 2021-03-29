@@ -60,6 +60,18 @@
 
 #define RCAR_PD_ALWAYS_ON	32	/* Always-on power area */
 
+/* Module Stop Control/Status Register */
+#define MSTPSR5_ADDR           0xE615003C
+#define MSTPSR8_ADDR           0xE61509A0
+#define SMSTPCR5_ADDR          0xE6150144
+#define SMSTPCR8_ADDR          0xE6150990
+
+/* Mask for IMP clock in Module Stop Control/Status Register 8 */
+#define IMPx8_MASK                     0xff000000
+
+/* Mask for IMP clock in Module Stop Control/Status Register 5 */
+#define IMPx5_MASK                     0xbf200001
+
 struct rcar_sysc_ch {
 	u16 chan_offs;
 	u8 chan_bit;
@@ -97,7 +109,14 @@ const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
 	{ /* sentinel */ }
 };
 
+/* Fixups for R-Car V3H revision */
+static const struct soc_device_attribute r8a77980[] __initconst = {
+		{ .soc_id = "r8a77980"},
+		{ /* sentinel */ }
+};
+
 static u32 rcar_sysc_quirks;
+static bool has_clk_crl;
 
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
@@ -241,9 +260,69 @@ static inline const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch)
 	return container_of(sysc_ch, struct rcar_sysc_pd, ch)->genpd.name;
 }
 
+/* On V3H, necessary to enable/disable IMP clock before A3IR on/off */
+static int  rcar_sysc_a3ir_clk_ctrl(bool clk_en)
+{
+		void __iomem *mstpsr5, *mstpsr8;
+		void __iomem *smstpcr5, *smstpcr8;
+		u32 val, timeout = 0;
+
+		smstpcr5 = ioremap(SMSTPCR5_ADDR, 0x04);
+		smstpcr8 = ioremap(SMSTPCR8_ADDR, 0x04);
+		mstpsr5 = ioremap(MSTPSR5_ADDR, 0x04);
+		mstpsr8 = ioremap(MSTPSR8_ADDR, 0x04);
+
+		if (clk_en) {
+			val = readl(smstpcr5) & ~IMPx5_MASK;
+			writel(val, smstpcr5);
+			val = readl(smstpcr8) & ~IMPx8_MASK;
+			writel(val, smstpcr8);
+
+			while ((readl(mstpsr5) & IMPx5_MASK) |
+				   (readl(mstpsr8) & IMPx8_MASK)) {
+				udelay(1);
+				timeout++;
+
+				if (timeout > 100)
+					break;
+			}
+		} else {
+			val = readl(smstpcr5) | IMPx5_MASK;
+			writel(val, smstpcr5);
+			val = readl(smstpcr8) | IMPx8_MASK;
+			writel(val, smstpcr8);
+
+			while (!((readl(mstpsr5) & IMPx5_MASK) &
+					(readl(mstpsr8) & IMPx8_MASK))) {
+				udelay(1);
+				timeout++;
+
+				if (timeout > 100)
+					break;
+				}
+	}
+
+	if (timeout > 100) {
+		pr_debug("%s : Fail in %s IMP clock\n", __func__,
+			 clk_en ? "enable" : "disable");
+		return -EBUSY;
+	}
+
+	iounmap(smstpcr5);
+	iounmap(smstpcr8);
+	iounmap(mstpsr5);
+	iounmap(mstpsr8);
+
+	return 0;
+}
+
 static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 {
 	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
+
+	/* Disable IMP clock before power off A3IR */
+	if (has_clk_crl && (!strcmp("a3ir", genpd->name)))
+		rcar_sysc_a3ir_clk_ctrl(false);
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, false);
@@ -252,6 +331,10 @@ static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 static int rcar_sysc_pd_power_on(struct generic_pm_domain *genpd)
 {
 	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
+
+	/* Enable IMP clock before power on A3IR */
+	if (has_clk_crl && (!strcmp("a3ir", genpd->name)))
+		rcar_sysc_a3ir_clk_ctrl(true);
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, true);
@@ -445,6 +528,12 @@ static int __init rcar_sysc_pd_init(void)
 	unsigned int i;
 	int error;
 	const struct soc_device_attribute *attr;
+
+	/* Implement for R-Car V3H only */
+	if (soc_device_match(r8a77980))
+		has_clk_crl = true;
+	else
+		has_clk_crl = false;
 
 	np = of_find_matching_node_and_match(NULL, rcar_sysc_matches, &match);
 	if (!np)
