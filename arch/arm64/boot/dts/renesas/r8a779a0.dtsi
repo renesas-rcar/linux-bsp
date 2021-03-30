@@ -3266,7 +3266,7 @@
 		cisp0: cisp@fec00000 {
 			compatible = "generic-uio";
 			reg = <0 0xfec00000 0 0x20000>;
-			interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 16>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 16>;
@@ -3277,7 +3277,7 @@
 		tisp0: tisp@fed00000 {
 			compatible = "generic-uio";
 			reg = <0 0xfed00000 0 0x10000>;
-			interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupts = <GIC_SPI 152 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 612>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 612>;
@@ -3288,7 +3288,7 @@
 		cisp1: cisp@fee00000 {
 			compatible = "generic-uio";
 			reg = <0 0xfee00000 0 0x20000>;
-			interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 17>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 17>;
@@ -3299,7 +3299,7 @@
 		tisp1: tisp@fed20000 {
 			compatible = "generic-uio";
 			reg = <0 0xfed20000 0 0x10000>;
-			interrupts = <GIC_SPI 155 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 613>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP01>;
 			resets = <&cpg 613>;
@@ -3310,7 +3310,7 @@
 		cisp2: cisp@fef00000 {
 			compatible = "generic-uio";
 			reg = <0 0xfef00000 0 0x20000>;
-			interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 18>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 18>;
@@ -3321,7 +3321,7 @@
 		tisp2: tisp@fed30000 {
 			compatible = "generic-uio";
 			reg = <0 0xfed30000 0 0x10000>;
-			interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 614>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 614>;
@@ -3332,7 +3332,7 @@
 		cisp3: cisp@fe400000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe400000 0 0x20000>;
-			interrupts = <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupts = <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 19>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 19>;
@@ -3343,7 +3343,7 @@
 		tisp3: tisp@fed40000 {
 			compatible = "generic-uio";
 			reg = <0 0xfed40000 0 0x10000>;
-			interrupts = <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupts = <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 615>;
 			power-domains = <&sysc R8A779A0_PD_A3ISP23>;
 			resets = <&cpg 615>;
