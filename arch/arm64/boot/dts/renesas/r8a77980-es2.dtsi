@@ -14,6 +14,7 @@
 	soc {
 		/delete-node/ims_03@fe890000;
 		/delete-node/fba_ims_03;
+		/delete-node/post_fba_ims_03;
 
 		/delete-node/imp_psc_01;
 
