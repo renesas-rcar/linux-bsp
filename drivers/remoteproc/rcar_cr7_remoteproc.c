@@ -153,7 +153,7 @@ static int rcar_cr7_rproc_start(struct rproc *rproc)
 	// Get Reset Controller node (RST)
 	mmio_rst_base = ioremap(RST_BASE, 4);
 	if (rproc->bootaddr & ~0xfffc0000)
-		dev_warn(dev, "Boot address (0x%x) not aligned!\n", rproc->bootaddr);
+		dev_warn(dev, "Boot address (0x%llx) not aligned!\n", rproc->bootaddr);
 	regval = (rproc->bootaddr & 0xfffc0000); //Set Boot Addr
 	regval |= 0x10; //Enable BAR
 	iowrite32(regval, (mmio_rst_base + RST_CR7BAR_OFFSET));

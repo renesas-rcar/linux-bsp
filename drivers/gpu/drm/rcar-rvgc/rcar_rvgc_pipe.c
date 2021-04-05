@@ -276,6 +276,7 @@ static int rvgc_plane_atomic_check(struct drm_plane* plane,
 	return 0;
 }
 
+#if 0
 static int plane_not_changed_drm_send_event(struct drm_plane* plane,
 					    struct drm_plane_state* old_state) {
 	struct drm_plane_state* new_plane_state = plane->state;
@@ -306,6 +307,7 @@ static int check_refresh_primary(struct drm_plane* plane) {
 	struct rcar_rvgc_device* rcrvgc          = dev_get_drvdata(ddev);
 	return ((plane_type == DRM_PLANE_TYPE_PRIMARY) && !rcrvgc->update_primary_plane);
 }
+#endif
 
 static void rvgc_plane_atomic_update(struct drm_plane* plane,
 				     struct drm_plane_state* old_state) {
@@ -495,8 +497,9 @@ static int overlay_pipe_init(struct rcar_rvgc_device* rvgc_dev,
 
 static int taurus_init(struct rcar_rvgc_device* rvgc_dev,
 		       struct rcar_rvgc_pipe* rvgc_pipe) {
-
+#if 0
 	struct rcar_rvgc_device* rcrvgc = rvgc_pipe->rcar_rvgc_dev;
+#endif
 	int ret = 0;
 	struct taurus_rvgc_res_msg res_msg;
 
