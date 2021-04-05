@@ -129,6 +129,8 @@ struct snd_soc_component_driver {
 		       struct snd_pcm_substream *substream, int cmd);
 	int (*sync_stop)(struct snd_soc_component *component,
 			 struct snd_pcm_substream *substream);
+	int (*ack)(struct snd_soc_component *component,
+				struct snd_pcm_substream *substream);
 	snd_pcm_uframes_t (*pointer)(struct snd_soc_component *component,
 				     struct snd_pcm_substream *substream);
 	int (*get_time_info)(struct snd_soc_component *component,
