@@ -118,7 +118,9 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)	/* R-Car Gen2 only */
 
 #define IMTTLBR0			0x0010		/* R-Car Gen2/3 */
+#define IMTTLBR0_TTBR_MASK		(0xfffff << 12)
 #define IMTTUBR0			0x0014		/* R-Car Gen2/3 */
+#define IMTTUBR0_TTBR_MASK		(0xff << 0)
 
 #define IMSTR				0x0020		/* R-Car Gen2/3 */
 #define IMSTR_MHIT			(1 << 4)	/* R-Car Gen2/3 */
@@ -292,8 +294,10 @@ static void ipmmu_utlb_enable(struct ipmmu_vmsa_domain *domain,
 	/* TODO: What should we set the ASID to ? */
 	ipmmu_imuasid_write(mmu, utlb, 0);
 	/* TODO: Do we need to flush the microTLB ? */
-	ipmmu_imuctr_write(mmu, utlb, IMUCTR_TTSEL_MMU(domain->context_id) |
-				      IMUCTR_FLUSH | IMUCTR_MMUEN);
+	ipmmu_imuctr_write(mmu, utlb,
+			   ipmmu_read(mmu, ipmmu_utlb_reg(mmu, IMUCTR(utlb))) |
+			   IMUCTR_TTSEL_MMU(domain->context_id) |
+			   IMUCTR_MMUEN);
 	mmu->utlb_ctx[utlb] = domain->context_id;
 }
 
@@ -372,8 +376,9 @@ static void ipmmu_domain_setup_context(struct ipmmu_vmsa_domain *domain)
 
 	/* TTBR0 */
 	ttbr = domain->cfg.arm_lpae_s1_cfg.ttbr;
-	ipmmu_ctx_write_root(domain, IMTTLBR0, ttbr);
-	ipmmu_ctx_write_root(domain, IMTTUBR0, ttbr >> 32);
+	ipmmu_ctx_write_root(domain, IMTTLBR0, ttbr & IMTTLBR0_TTBR_MASK);
+	ipmmu_ctx_write_root(domain, IMTTUBR0,
+			     (ttbr >> 32) & IMTTUBR0_TTBR_MASK);
 
 	/*
 	 * TTBCR
@@ -389,7 +394,10 @@ static void ipmmu_domain_setup_context(struct ipmmu_vmsa_domain *domain)
 		tmp |= IMTTBCR_SH0_INNER_SHAREABLE | IMTTBCR_ORGN0_WB_WA |
 		       IMTTBCR_IRGN0_WB_WA;
 
-	ipmmu_ctx_write_root(domain, IMTTBCR, IMTTBCR_EAE | tmp);
+	ipmmu_ctx_write_root(domain, IMTTBCR,
+			     ipmmu_ctx_read_root(domain, IMTTBCR) |
+			     IMTTBCR_EAE | IMTTBCR_SH0_INNER_SHAREABLE |
+			     IMTTBCR_ORGN0_WB_WA | IMTTBCR_IRGN0_WB_WA | tmp);
 
 	/* MAIR0 */
 	ipmmu_ctx_write_root(domain, IMMAIR0,
@@ -521,6 +529,9 @@ static irqreturn_t ipmmu_domain_irq(struct ipmmu_vmsa_domain *domain)
 
 	if (!(status & (IMSTR_PF | IMSTR_TF)))
 		return IRQ_NONE;
+
+	/* Flush the TLB as required when IPMMU translation error occurred. */
+	ipmmu_tlb_invalidate(domain);
 
 	/*
 	 * Try to handle page faults and translation faults.
@@ -755,6 +766,7 @@ static const struct soc_device_attribute soc_rcar_gen3_whitelist[] = {
 	{ .soc_id = "r8a774c0", },
 	{ .soc_id = "r8a774e1", },
 	{ .soc_id = "r8a7795", .revision = "ES3.*" },
+	{ .soc_id = "r8a7796", },
 	{ .soc_id = "r8a77961", },
 	{ .soc_id = "r8a77965", },
 	{ .soc_id = "r8a77990", },
@@ -763,6 +775,42 @@ static const struct soc_device_attribute soc_rcar_gen3_whitelist[] = {
 };
 
 static const char * const rcar_gen3_slave_whitelist[] = {
+	"fea27000.fcp",
+	"fea2f000.fcp",
+	"fea37000.fcp",
+	"ee300000.sata",
+	"ee100000.sd",
+	"ee120000.sd",
+	"ee140000.sd",
+	"ee160000.sd",
+	"ee080100.usb",
+	"ee0a0100.usb",
+	"ee0c0100.usb",
+	"ee0e0100.usb",
+	"ee080000.usb",
+	"ee0a0000.usb",
+	"ee0c0000.usb",
+	"ee0e0000.usb",
+	"ee000000.usb",
+	"ee020000.usb",
+	"e6ef0000.video",
+	"e6ef1000.video",
+	"e6ef2000.video",
+	"e6ef3000.video",
+	"e6ef4000.video",
+	"e6ef5000.video",
+	"e6ef6000.video",
+	"e6ef7000.video",
+	"e6700000.dma-controller",
+	"e7300000.dma-controller",
+	"e7310000.dma-controller",
+	"ec700000.dma-controller",
+	"e65a0000.dma-controller",
+	"e65b0000.dma-controller",
+	"ec720000.dma-controller",
+	"e6800000.ethernet",
+	"fe000000.pcie",
+	"ee800000.pcie",
 };
 
 static bool ipmmu_slave_whitelist(struct device *dev)
@@ -942,7 +990,7 @@ static const struct ipmmu_features ipmmu_features_default = {
 static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
 	.use_ns_alias_offset = false,
 	.has_cache_leaf_nodes = true,
-	.number_of_contexts = 8,
+	.number_of_contexts = CONFIG_IPMMU_VMSA_CTX_NUM,
 	.num_utlbs = 48,
 	.setup_imbuscr = false,
 	.twobit_imttbcr_sl0 = true,
