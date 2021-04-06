@@ -46,6 +46,7 @@ properties:
               - renesas,gpio-r8a77980     # R-Car V3H
               - renesas,gpio-r8a77990     # R-Car E3
               - renesas,gpio-r8a77995     # R-Car D3
+              - renesas,gpio-r8a779a0     # R-Car V3U
           - const: renesas,rcar-gen3-gpio # R-Car Gen3 or RZ/G2
 
   reg:
