@@ -44,6 +44,9 @@ struct vsp1_rwpf {
 	unsigned int brx_input;
 
 	unsigned int alpha;
+	u32 colorkey;
+	bool colorkey_en;
+	u32 colorkey_alpha;
 
 	u32 mult_alpha;
 	u32 outfmt;
@@ -64,6 +67,9 @@ struct vsp1_rwpf {
 	bool writeback;
 
 	struct vsp1_dl_manager *dlm;
+
+	int write_back;
+	dma_addr_t buf_addr[3];
 };
 
 static inline struct vsp1_rwpf *to_rwpf(struct v4l2_subdev *subdev)
