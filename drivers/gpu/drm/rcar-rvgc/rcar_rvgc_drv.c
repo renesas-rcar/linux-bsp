@@ -17,6 +17,7 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 #include <linux/kthread.h>
+#include <linux/dma-mapping.h>
 
 #include <drm/drm_device.h>
 #include <drm/drm_atomic_helper.h>
@@ -243,6 +244,7 @@ static int rcar_rvgc_probe(struct rpmsg_device* rpdev) {
 	}
 
 	ddev->irq_enabled = 1;
+	ddev->dev->coherent_dma_mask = DMA_BIT_MASK(32);
 
 	/*
 	 * Register the DRM device with the core and the connectors with
