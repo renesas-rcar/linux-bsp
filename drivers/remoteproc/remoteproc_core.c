@@ -804,9 +804,15 @@ static int rproc_alloc_carveout(struct rproc *rproc,
 		 * Don't stop rproc_start sequence as coprocessor may
 		 * build pa to da translation on its side.
 		 */
-		if (mem->da != (u32)dma)
-			dev_warn(dev->parent,
-				 "Allocated carveout doesn't fit device address request\n");
+		if (mem->da != (u32)dma) {
+			if (rproc->has_pa_to_da) {
+				dev_warn(dev->parent,
+					 "Allocated carveout doesn't fit device address request\n");
+			} else {
+				dev_dbg(dev, "Bad carveout rsc configuration. Try to use dynamic alloc.\n");
+				goto dynamic_alloc;
+			}
+		}
 	}
 
 	/*
@@ -856,6 +862,7 @@ static int rproc_alloc_carveout(struct rproc *rproc,
 	}
 
 	if (mem->da == FW_RSC_ADDR_ANY) {
+dynamic_alloc:
 		/* Update device address as undefined by requester */
 		if ((u64)dma & HIGH_BITS_MASK)
 			dev_warn(dev, "DMA address cast in 32bit to fit resource table format\n");
