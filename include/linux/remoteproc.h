@@ -506,6 +506,7 @@ struct rproc_dump_segment {
  * @cached_table: copy of the resource table
  * @table_sz: size of @cached_table
  * @has_iommu: flag to indicate if remote processor is behind an MMU
+ * @has_pa_to_da: flag to indicate if remote processor translates pa to da itself
  * @auto_boot: flag to indicate if remote processor should be auto-started
  * @autonomous: true if an external entity has booted the remote processor
  * @skip_fw_load: remote processor has been preloaded before start sequence
@@ -544,6 +545,7 @@ struct rproc {
 	struct resource_table *cached_table;
 	size_t table_sz;
 	bool has_iommu;
+	bool has_pa_to_da;
 	bool auto_boot;
 	bool autonomous;
 	bool skip_fw_load;
