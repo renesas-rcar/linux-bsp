@@ -31,7 +31,6 @@ struct rcar_isp_device {
 	struct list_head list;
 	struct device *dev;
 	void __iomem *base;
-	struct reset_control *rstc;
 	const struct rcar_isp_info *info;
 	u32 id;
 };
@@ -96,6 +95,10 @@ static DEFINE_MUTEX(isp_lock);
 #define MIPI_DT_RAW14			0x2d
 #define MIPI_DT_RAW16			0x2e
 #define MIPI_DT_RAW20			0x2f
+
+#define SRCR6				0xE6152C18
+#define SRSTCLR6			0xE6152C98
+#define SR_REG_OFFSET			12
 
 static void isp_write(struct rcar_isp_device *isp, u32 value, u32 offset)
 {
@@ -177,6 +180,7 @@ EXPORT_SYMBOL_GPL(rcar_isp_get_device);
 int rcar_isp_enable(struct rcar_isp_device *isp)
 {
 	int ret;
+	void __iomem *srstclr6_reg;
 
 	if (!isp)
 		return 0;
@@ -185,9 +189,9 @@ int rcar_isp_enable(struct rcar_isp_device *isp)
 	if (ret < 0)
 		return ret;
 
-	ret = reset_control_deassert(isp->rstc);
-	if (ret < 0)
-		return ret;
+	srstclr6_reg = ioremap(SRSTCLR6, 0x04);
+	writel((0x01 << (isp->id + SR_REG_OFFSET)), srstclr6_reg);
+	iounmap(srstclr6_reg);
 
 	return 0;
 }
@@ -203,7 +207,11 @@ EXPORT_SYMBOL_GPL(rcar_isp_enable);
 void rcar_isp_disable(struct rcar_isp_device *isp)
 {
 	if (isp) {
-		reset_control_assert(isp->rstc);
+		void __iomem *srcr6_reg;
+
+		srcr6_reg = ioremap(SRCR6, 0x04);
+		writel((0x01 << (isp->id + SR_REG_OFFSET)), srcr6_reg);
+		iounmap(srcr6_reg);
 		pm_runtime_put(isp->dev);
 	}
 }
@@ -370,13 +378,6 @@ static int rcar_isp_probe(struct platform_device *pdev)
 	isp->base = devm_ioremap_resource(isp->dev, mem);
 	if (IS_ERR(isp->base))
 		return PTR_ERR(isp->base);
-
-	isp->rstc = devm_reset_control_get(&pdev->dev, NULL);
-	if (IS_ERR(isp->rstc)) {
-		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
-			dev_name(&pdev->dev));
-		return PTR_ERR(isp->rstc);
-	}
 
 	pm_runtime_enable(&pdev->dev);
 
