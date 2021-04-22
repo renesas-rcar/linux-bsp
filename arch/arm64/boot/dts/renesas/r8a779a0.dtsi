@@ -1861,6 +1861,8 @@
 				      GIC_SPI 22 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+
+			status = "disabled";
 		};
 
 		ipmmu_rt0: iommu@ee480000 {
