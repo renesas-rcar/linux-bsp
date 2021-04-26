@@ -68,6 +68,10 @@
 		memory-region = <&mmp_reserved>;
 	};
 
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
 	dsi-con {
 		compatible = "dsi-connector";
 
