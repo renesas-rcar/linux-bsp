@@ -54,6 +54,18 @@
 			reg = <0x00000000 0x58000000 0x0 0x18000000>;
 			linux,cma-default;
 		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia@7f000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x7f000000 0x0 0x01000000>;
+		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>;
 	};
 
 	dsi-con {
