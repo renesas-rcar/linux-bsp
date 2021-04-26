@@ -3978,10 +3978,17 @@
 			compatible = "generic-uio";
 			reg = <0 0xff830000 0 0x2000>;
 			interrupts = <GIC_SPI 640 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_CORE R8A779A0_CLK_POST>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1117>;
 			linux,uio-name = "fbc_00";
+		};
+
+		post_fbc0 {
+			compatible = "generic-uio";
+			reg = <0 0xff830000 0 0x2000>;
+			clocks = <&cpg CPG_CORE R8A779A0_CLK_POST>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "post_fbc_00";
 		};
 
 		irq_fbc1 {
