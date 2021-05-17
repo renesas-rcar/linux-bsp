@@ -3274,6 +3274,7 @@
 			resets = <&cpg 16>;
 			linux,uio-name = "cisp_00";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 10>, <&ipmmu_vi0 14>;
 		};
 
 		tisp0: tisp@fed00000 {
@@ -3296,6 +3297,7 @@
 			resets = <&cpg 17>;
 			linux,uio-name = "cisp_01";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 11>, <&ipmmu_vi0 15>;
 		};
 
 		tisp1: tisp@fed20000 {
@@ -3318,6 +3320,7 @@
 			resets = <&cpg 18>;
 			linux,uio-name = "cisp_02";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 12>, <&ipmmu_vi0 16>;
 		};
 
 		tisp2: tisp@fed30000 {
@@ -3457,6 +3460,10 @@
 			resets = <&cpg 24>;
 			linux,uio-name = "imp_00";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 16>, <&ipmmu_ir 17>,
+				 <&ipmmu_ir 18>, <&ipmmu_ir 19>,
+				 <&ipmmu_ir 20>, <&ipmmu_ir 21>,
+				 <&ipmmu_ir 22>, <&ipmmu_ir 23>;
 		};
 
 		imp1: imp-core@ffa20000 {
@@ -3467,6 +3474,10 @@
 			resets = <&cpg 25>;
 			linux,uio-name = "imp_01";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 16>, <&ipmmu_ir 17>,
+				 <&ipmmu_ir 18>, <&ipmmu_ir 19>,
+				 <&ipmmu_ir 20>, <&ipmmu_ir 21>,
+				 <&ipmmu_ir 22>, <&ipmmu_ir 23>;
 		};
 
 		imp2: imp-core@ffb00000 {
@@ -3497,6 +3508,10 @@
 			resets = <&cpg 28>;
 			linux,uio-name = "imp_ocv_00";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 16>, <&ipmmu_ir 17>,
+				 <&ipmmu_ir 18>, <&ipmmu_ir 19>,
+				 <&ipmmu_ir 20>, <&ipmmu_ir 21>,
+				 <&ipmmu_ir 22>, <&ipmmu_ir 23>;
 		};
 
 		impcve1: imp-cve@ffa50000 {
@@ -3507,6 +3522,10 @@
 			resets = <&cpg 29>;
 			linux,uio-name = "imp_ocv_01";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 16>, <&ipmmu_ir 17>,
+				 <&ipmmu_ir 18>, <&ipmmu_ir 19>,
+				 <&ipmmu_ir 20>, <&ipmmu_ir 21>,
+				 <&ipmmu_ir 22>, <&ipmmu_ir 23>;
 		};
 
 		impcve2: imp-cve@ffb40000 {
