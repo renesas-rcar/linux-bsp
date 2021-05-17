@@ -928,7 +928,7 @@ static void tmio_mmc_hw_reset(struct mmc_host *mmc)
 static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 {
 	struct tmio_mmc_host *host = mmc_priv(mmc);
-	int i, ret = 0;
+	int i, ret = 0, cmd_error = 0;
 
 	if (!host->init_tuning || !host->select_tuning)
 		/* Tuning is not supported */
@@ -953,12 +953,18 @@ static int tmio_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		if (host->prepare_tuning)
 			host->prepare_tuning(host, i % host->tap_num);
 
-		ret = mmc_send_tuning(mmc, opcode, NULL);
+		ret = mmc_send_tuning(mmc, opcode, &cmd_error);
 		if (ret == 0)
 			set_bit(i, host->taps);
 
 		if (host->compare_scc_data && !host->compare_scc_data(host))
 			set_bit(i, host->smpcmp);
+
+		/* send stop after store result of smpcmp */
+		if (cmd_error) {
+			mmc_abort_tuning(mmc, opcode);
+			host->mmc->need_retune = 0;
+		}
 	}
 
 	ret = host->select_tuning(host);
