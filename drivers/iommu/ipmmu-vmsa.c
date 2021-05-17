@@ -822,6 +822,13 @@ static const char * const devices_allowlist[] = {
 	"e6800000.ethernet",
 	"fe000000.pcie",
 	"ee800000.pcie",
+	"ffa00000.imp-core",
+	"ffa20000.imp-core",
+	"ffa40000.imp-cve",
+	"ffa50000.imp-cve",
+	"fec00000.cisp",
+	"fee00000.cisp",
+	"fef00000.cisp",
 };
 
 static bool ipmmu_device_is_allowed(struct device *dev)
