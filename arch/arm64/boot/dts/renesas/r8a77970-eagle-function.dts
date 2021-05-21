@@ -1,5 +1,5 @@
 /*
- * Device Tree Source for the Eagle Function board on r8a7797
+ * Device Tree Source for the Eagle Function board on r8a77970
  *
  * Copyright (C) 2017 Renesas Electronics Corp.
  * Copyright (C) 2017 Cogent Embedded, Inc.
@@ -12,7 +12,7 @@
 #include "r8a77970-eagle.dts"
 
 / {
-	model = "Renesas Eagle Function board based on r8a7797";
+	model = "Renesas Eagle Function board based on r8a77970";
 
 	vcc_3v3: regulator0 {
 		compatible = "regulator-fixed";
