@@ -42,7 +42,7 @@ static DEFINE_MUTEX(fcp_lock);
  * Public API
  */
 
-/**
+/*
  * rcar_fcp_get - Find and acquire a reference to an FCP instance
  * @np: Device node of the FCP instance
  *
