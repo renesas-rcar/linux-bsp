@@ -1995,7 +1995,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xee480000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_rt_00";
+			linux,uio-name = "ipmmu_cache_rt_00";
 			ipmmu-id = <RCAR_IPMMU_RT0 0>;
 		};
 
@@ -2003,7 +2003,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xee4c0000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_rt_01";
+			linux,uio-name = "ipmmu_cache_rt_01";
 			ipmmu-id = <RCAR_IPMMU_RT1 0>;
 		};
 
@@ -2011,7 +2011,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xeed00000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_ds_00";
+			linux,uio-name = "ipmmu_cache_ds_00";
 			ipmmu-id = <RCAR_IPMMU_DS0 0>;
 		};
 
@@ -2019,7 +2019,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xeed40000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_ds_01";
+			linux,uio-name = "ipmmu_cache_ds_01";
 			ipmmu-id = <RCAR_IPMMU_DS1 0>;
 		};
 
@@ -2027,7 +2027,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xeed80000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
-			linux,uio-name = "ipmmu_ir_00";
+			linux,uio-name = "ipmmu_cache_ir_00";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
@@ -2035,7 +2035,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xeedc0000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vc_00";
+			linux,uio-name = "ipmmu_cache_vc_00";
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
@@ -2043,7 +2043,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xeee00000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_3dg_00";
+			linux,uio-name = "ipmmu_cache_3dg_00";
 			ipmmu-id = <RCAR_IPMMU_3DG 0>;
 		};
 
@@ -2051,7 +2051,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xeee80000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vi_00";
+			linux,uio-name = "ipmmu_cache_vi_00";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
@@ -2059,7 +2059,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xeeec0000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vi_01";
+			linux,uio-name = "ipmmu_cache_vi_01";
 			ipmmu-id = <RCAR_IPMMU_VI1 0>;
 		};
 
@@ -2067,7 +2067,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xeef00000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vip_00";
+			linux,uio-name = "ipmmu_cache_vip_00";
 			ipmmu-id = <RCAR_IPMMU_VIP0 0>;
 		};
 
@@ -2075,7 +2075,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xeef40000 0 0x20000>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vip_01";
+			linux,uio-name = "ipmmu_cache_vip_01";
 			ipmmu-id = <RCAR_IPMMU_VIP1 0>;
 		};
 
