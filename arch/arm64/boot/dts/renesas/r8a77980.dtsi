@@ -1936,6 +1936,8 @@
 			renesas,ipmmu-main = <&ipmmu_mm 0>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+
+			status = "disabled";
 		};
 
 		ipmmu_ir: mmu@ff8b0000 {
@@ -1944,6 +1946,8 @@
 			renesas,ipmmu-main = <&ipmmu_mm 3>;
 			power-domains = <&sysc R8A77980_PD_A3IR>;
 			#iommu-cells = <1>;
+
+			status = "disabled";
 		};
 
 		ipmmu_mm: mmu@e67b0000 {
@@ -1953,6 +1957,8 @@
 				     <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+
+			status = "disabled";
 		};
 
 		ipmmu_rt: mmu@ffc80000 {
@@ -1961,6 +1967,8 @@
 			renesas,ipmmu-main = <&ipmmu_mm 10>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+
+			status = "disabled";
 		};
 
 		ipmmu_vc0: mmu@fe990000 {
@@ -1969,6 +1977,8 @@
 			renesas,ipmmu-main = <&ipmmu_mm 12>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+
+			status = "disabled";
 		};
 
 		ipmmu_vi0: mmu@febd0000 {
@@ -1977,6 +1987,8 @@
 			renesas,ipmmu-main = <&ipmmu_mm 14>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+
+			status = "disabled";
 		};
 
 		ipmmu_vip0: mmu@e7b00000 {
@@ -1985,6 +1997,8 @@
 			renesas,ipmmu-main = <&ipmmu_mm 4>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+
+			status = "disabled";
 		};
 
 		ipmmu_vip1: mmu@e7960000 {
@@ -1993,23 +2007,25 @@
 			renesas,ipmmu-main = <&ipmmu_mm 11>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+
+			status = "disabled";
 		};
 
-		ipmmu_ds1 {
+		ipmmu_cache_ds_01 {
 			compatible = "generic-uio";
 			reg = <0 0xe7740000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_DS1 0>;
 		};
 
-		ipmmu_ir {
+		ipmmu_cache_ir_00 {
 			compatible = "generic-uio";
 			reg = <0 0xff8b0000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_A3IR>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
 
-		ipmmu_mm {
+		ipmmu_mm_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe67b0000 0 0x1000>;
 			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>;
@@ -2017,7 +2033,7 @@
 			ipmmu-id = <RCAR_IPMMU_MM 0>;
 		};
 
-		irq_ipmmu_mm_01 {
+		irq_ipmmu_mm_00_01 {
 			compatible = "generic-uio";
 			reg = <0 0xe67b0000 0 0x1000>;
 			interrupts = <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
@@ -2025,35 +2041,35 @@
 			ipmmu-id = <RCAR_IPMMU_MM 0>;
 		};
 
-		ipmmu_rt {
+		ipmmu_cache_rt_00 {
 			compatible = "generic-uio";
 			reg = <0 0xffc80000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_RT0 0>;
 		};
 
-		ipmmu_vc0 {
+		ipmmu_cache_vc_00 {
 			compatible = "generic-uio";
 			reg = <0 0xfe990000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		ipmmu_vi0 {
+		ipmmu_cache_vi_00 {
 			compatible = "generic-uio";
 			reg = <0 0xfebd0000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
-		ipmmu_vip0 {
+		ipmmu_cache_vip_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe7b00000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_VIP0 0>;
 		};
 
-		ipmmu_vip1 {
+		ipmmu_cache_vip_01 {
 			compatible = "generic-uio";
 			reg = <0 0xe7960000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
