@@ -124,6 +124,7 @@ static int validate_data_size(struct cc_cipher_ctx *ctx_p,
 		switch (ctx_p->cipher_mode) {
 		case DRV_CIPHER_XTS:
 		case DRV_CIPHER_CBC_CTS:
+		case DRV_CIPHER_CBC_CTS1:
 			if (size >= AES_BLOCK_SIZE)
 				return 0;
 			break;
@@ -1355,6 +1356,7 @@ static int cc_cipher_process(struct skcipher_request *req,
 	struct cc_hw_desc desc[MAX_SKCIPHER_SEQ_LEN];
 	struct cc_crypto_req cc_req = {};
 	int rc;
+	int cts1_restore_flag = 0;
 	unsigned int seq_len = 0;
 	gfp_t flags = cc_gfp_flags(&req->base);
 
@@ -1393,6 +1395,20 @@ static int cc_cipher_process(struct skcipher_request *req,
 	if (!req_ctx->iv) {
 		rc = -ENOMEM;
 		goto exit_process;
+	}
+
+	/* <Implemented NIST 800-38A CBC-CS2> for cts1(cbc)
+	 * - In case of data size aligned to block size(AES_BLOCK_SIZE):
+	 *  + Output CBC and CBC-CS2 are the same: Use CBC mode
+	 * - In case of data size not aligned to block size(AES_BLOCK_SIZE):
+	 *  + Output CBC-CS2 and CBC-CS3 are the same
+	 */
+	if (ctx_p->cipher_mode == DRV_CIPHER_CBC_CTS1) {
+		cts1_restore_flag = 1;
+		if ((nbytes % AES_BLOCK_SIZE) == 0)
+			ctx_p->cipher_mode = DRV_CIPHER_CBC;
+		else
+			ctx_p->cipher_mode = DRV_CIPHER_CBC_CTS;
 	}
 
 	/* Setup request structure */
@@ -1480,6 +1496,9 @@ static int cc_cipher_process(struct skcipher_request *req,
 	}
 
 exit_process:
+	if (cts1_restore_flag)
+		ctx_p->cipher_mode = DRV_CIPHER_CBC_CTS1;
+
 	if (rc != -EINPROGRESS && rc != -EBUSY) {
 		kfree_sensitive(req_ctx->iv);
 	}
@@ -1818,6 +1837,23 @@ static const struct cc_alg_template skcipher_algs[] = {
 		.std_body = CC_STD_NIST,
 	},
 	{
+		.name = "cts1(cbc(aes))",
+		.driver_name = "cts1-cbc-aes-ccree",
+		.blocksize = AES_BLOCK_SIZE,
+		.template_skcipher = {
+			.setkey = cc_cipher_setkey,
+			.encrypt = cc_cipher_encrypt,
+			.decrypt = cc_cipher_decrypt,
+			.min_keysize = AES_MIN_KEY_SIZE,
+			.max_keysize = AES_MAX_KEY_SIZE,
+			.ivsize = AES_BLOCK_SIZE,
+			},
+		.cipher_mode = DRV_CIPHER_CBC_CTS1,
+		.flow_mode = S_DIN_to_AES,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+	},
+	{
 		.name = "ctr(aes)",
 		.driver_name = "ctr-aes-ccree",
 		.blocksize = 1,
@@ -2054,6 +2090,24 @@ static const struct cc_alg_template skcipher_algs[] = {
 			.ivsize = AES_BLOCK_SIZE,
 		},
 		.cipher_mode = DRV_SECURE_KEY_CIPHER_CBC_CTS,
+		.flow_mode = S_DIN_to_AES,
+		.min_hw_rev = CC_HW_REV_630,
+		.std_body = CC_STD_NIST,
+		.is_secure_key = 1,
+	},
+	{
+		.name = "cts1(cbc(saes))",
+		.driver_name = "cts1-cbc-saes-ccree",
+		.blocksize = AES_BLOCK_SIZE,
+		.template_skcipher = {
+			.setkey = cc_cipher_secure_key_setkey,
+			.encrypt = cc_cipher_encrypt,
+			.decrypt = cc_cipher_decrypt,
+			.min_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.max_keysize = CC_SECURE_KEY_PACKAGE_BUF_SIZE_IN_BYTES,
+			.ivsize = AES_BLOCK_SIZE,
+		},
+		.cipher_mode = DRV_SECURE_KEY_CIPHER_CBC_CTS1,
 		.flow_mode = S_DIN_to_AES,
 		.min_hw_rev = CC_HW_REV_630,
 		.std_body = CC_STD_NIST,
