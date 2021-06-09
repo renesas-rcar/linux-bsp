@@ -1944,6 +1944,8 @@ static const struct of_device_id ravb_match_table[] = {
 	{ .compatible = "renesas,etheravb-r8a7794", .data = (void *)RCAR_GEN2 },
 	{ .compatible = "renesas,etheravb-rcar-gen2", .data = (void *)RCAR_GEN2 },
 	{ .compatible = "renesas,etheravb-r8a7795", .data = (void *)RCAR_GEN3 },
+	{ .compatible = "renesas,etheravb-r8a7796", .data = (void *)RCAR_GEN3 },
+	{ .compatible = "renesas,etheravb-r8a77961", .data = (void *)RCAR_GEN3 },
 	{ .compatible = "renesas,etheravb-rcar-gen3", .data = (void *)RCAR_GEN3 },
 	{ }
 };
