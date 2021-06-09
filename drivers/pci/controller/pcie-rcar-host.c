@@ -891,6 +891,8 @@ static const struct of_device_id rcar_pcie_of_match[] = {
 	  .data = rcar_pcie_phy_init_gen2 },
 	{ .compatible = "renesas,pcie-r8a7795",
 	  .data = rcar_pcie_phy_init_gen3 },
+	{ .compatible = "renesas,pcie-r8a77961",
+	  .data = rcar_pcie_phy_init_gen3 },
 	{ .compatible = "renesas,pcie-rcar-gen3",
 	  .data = rcar_pcie_phy_init_gen3 },
 	{},
