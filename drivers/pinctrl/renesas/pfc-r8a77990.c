@@ -30,7 +30,7 @@
 	PORT_GP_CFG_11(4, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE), \
 	PORT_GP_CFG_20(5, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_9(6, fn, sfx, CFG_FLAGS), \
-	PORT_GP_CFG_1(6, 9, fn, sfx, SH_PFC_PIN_CFG_PULL_UP), \
+	PORT_GP_1(6, 9, fn, sfx), \
 	PORT_GP_CFG_1(6, 10, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_1(6, 11, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_1(6, 12, fn, sfx, CFG_FLAGS), \
@@ -5333,7 +5333,7 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[27] = SH_PFC_PIN_NONE,
 		[28] = SH_PFC_PIN_NONE,
 		[29] = SH_PFC_PIN_NONE,
-		[30] = RCAR_GP_PIN(6,  9),	/* PUEN_USB30_OVC */
+		[30] = SH_PFC_PIN_NONE,
 		[31] = RCAR_GP_PIN(6, 17),	/* PUEN_USB30_PWEN */
 	} },
 	{ /* sentinel */ },
