@@ -70,6 +70,13 @@
 		clock-frequency = <0>;
 	};
 
+	/* MSIOF reference clock - to be overridden by boards that provide it */
+	msiof_ref_clk: msiof-ref-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -932,7 +939,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6e90000 0 0x0064>;
 			interrupts = <GIC_SPI 245 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 618>;
+			clocks = <&cpg CPG_MOD 618>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 618>;
 			dmas = <&dmac1 0x41>, <&dmac1 0x40>;
@@ -947,7 +955,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6ea0000 0 0x0064>;
 			interrupts = <GIC_SPI 246 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 619>;
+			clocks = <&cpg CPG_MOD 619>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 619>;
 			dmas = <&dmac1 0x43>, <&dmac1 0x42>;
@@ -962,7 +971,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6c00000 0 0x0064>;
 			interrupts = <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 620>;
+			clocks = <&cpg CPG_MOD 620>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 620>;
 			dmas = <&dmac1 0x45>, <&dmac1 0x44>;
@@ -977,7 +987,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6c10000 0 0x0064>;
 			interrupts = <GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 621>;
+			clocks = <&cpg CPG_MOD 621>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 621>;
 			dmas = <&dmac1 0x47>, <&dmac1 0x46>;
@@ -992,7 +1003,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6c20000 0 0x0064>;
 			interrupts = <GIC_SPI 249 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 622>;
+			clocks = <&cpg CPG_MOD 622>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 622>;
 			dmas = <&dmac1 0x49>, <&dmac1 0x48>;
@@ -1007,7 +1019,8 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6c28000 0 0x0064>;
 			interrupts = <GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 623>;
+			clocks = <&cpg CPG_MOD 623>, <&msiof_ref_clk>;
+			clock-names = "msiof_clk", "msiof_ref_clk";
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 623>;
 			dmas = <&dmac1 0x4b>, <&dmac1 0x4a>;
