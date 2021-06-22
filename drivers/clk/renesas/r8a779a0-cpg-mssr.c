@@ -82,14 +82,14 @@ static const struct cpg_core_clk r8a779a0_core_clks[] __initconst = {
 	DEF_FIXED(".s2",	 CLK_S2,	   CLK_PLL1_DIV2,   133, 50),
 	DEF_FIXED(".s3",	 CLK_S3,	   CLK_PLL1_DIV2,   4, 1),
 	DEF_FIXED(".sg",	 CLK_SG,	   CLK_PLL1_DIV2,   1, 1),
-	DEF_BASE(".rpcsrc",	 CLK_RPCSRC,	   CLK_TYPE_R8A779A0_RPCSRC, CLK_PLL5),
+	//DEF_BASE(".rpcsrc",	 CLK_RPCSRC,	   CLK_TYPE_R8A779A0_RPCSRC, CLK_PLL5),
 	DEF_FIXED(".sdsrc",	 CLK_SDSRC,  	   CLK_PLL5_DIV4,   1, 1),
 	DEF_RATE(".oco",	 CLK_OCO,           32768),
 
-	DEF_BASE("rpc",		 R8A779A0_CLK_RPC, CLK_TYPE_R8A779A0_RPC,
-		 CLK_RPCSRC),
-	DEF_BASE("rpcd2",	 R8A779A0_CLK_RPCD2, CLK_TYPE_R8A779A0_RPCD2,
-		 R8A779A0_CLK_RPC),
+	//DEF_BASE("rpc",		 R8A779A0_CLK_RPC, CLK_TYPE_R8A779A0_RPC,
+	//	 CLK_RPCSRC),
+	//DEF_BASE("rpcd2",	 R8A779A0_CLK_RPCD2, CLK_TYPE_R8A779A0_RPCD2,
+	//	 R8A779A0_CLK_RPC),
 
 	/* Core Clock Outputs */
 	DEF_R8A779A0_Z("z0", R8A779A0_CLK_Z0,    CLK_TYPE_R8A779A0_Z, CLK_PLL20_DIV2,  1, 1),
@@ -241,7 +241,7 @@ static const struct mssr_mod_clk r8a779a0_mod_clks[] __initconst = {
 	DEF_MOD("pci2",			 626,	R8A779A0_CLK_S1D1),
 	DEF_MOD("pci3",			 627,	R8A779A0_CLK_S1D1),
 	DEF_MOD("pwm0",			 628,	R8A779A0_CLK_S1D8),
-	DEF_MOD("rpc-if",		 629,	R8A779A0_CLK_RPCD2),
+	//DEF_MOD("rpc-if",		 629,	R8A779A0_CLK_RPCD2),
 	DEF_MOD("rtdm0",		 630,	R8A779A0_CLK_SGD4),
 	DEF_MOD("rtdm1",		 631,	R8A779A0_CLK_SGD4),
 	DEF_MOD("rtdm2",		 700,	R8A779A0_CLK_SGD4),
