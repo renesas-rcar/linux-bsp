@@ -656,6 +656,13 @@ static const char * const rcar_v3u_slave_whitelist[] = {
 	"e65d8000.pcie",
 	"e65f0000.pcie",
 	"e65f8000.pcie",
+	"ffa00000.imp-core",
+	"ffa20000.imp-core",
+	"ffa40000.imp-cve",
+	"ffa50000.imp-cve",
+	"fec00000.cisp",
+	"fee00000.cisp",
+	"fef00000.cisp",
 };
 
 static bool ipmmu_slave_whitelist(struct device *dev)
