@@ -5,7 +5,7 @@
  * Userspace I/O platform driver with generic IRQ handling code.
  *
  * Copyright (C) 2008 Magnus Damm
- * Copyright (C) 2020 by Renesas Electronics Corporation
+ * Copyright (C) 2020-2021 by Renesas Electronics Corporation
  *
  * Based on uio_pdrv.c by Uwe Kleine-Koenig,
  * Copyright (C) 2008 by Digi International Inc.
@@ -49,13 +49,13 @@ static int local_pm_runtime_get_sync(struct uio_pdrv_genirq_platdata *priv);
 static int local_pm_runtime_put_sync(struct uio_pdrv_genirq_platdata *priv);
 static int local_clk_enable(struct uio_pdrv_genirq_platdata *priv);
 static void local_clk_disable(struct uio_pdrv_genirq_platdata *priv);
-static void priv_set_pwr(struct uio_info *info, int value);
+static int priv_set_pwr(struct uio_info *info, int value);
 static int priv_get_pwr(struct uio_info *info);
-static void priv_set_clk(struct uio_info *info, int value);
+static int priv_set_clk(struct uio_info *info, int value);
 static int priv_get_clk(struct uio_info *info);
 static int priv_clk_get_div(struct uio_info *info);
 static int priv_clk_set_div(struct uio_info *info, int value);
-static void priv_set_rst(struct uio_info *info, int value);
+static int priv_set_rst(struct uio_info *info, int value);
 static int priv_get_rst(struct uio_info *info);
 
 /* Bits in uio_pdrv_genirq_platdata.flags */
@@ -92,12 +92,14 @@ static int local_pm_runtime_put_sync(struct uio_pdrv_genirq_platdata *priv)
 
 static int local_clk_enable(struct uio_pdrv_genirq_platdata *priv)
 {
+	int ret = 0;
+
 	if (priv->clk_cnt == 0) {
-		clk_enable(priv->clk);
+		ret = clk_enable(priv->clk);
 		priv->clk_cnt++;
 	}
 
-	return 0;
+	return ret;
 }
 
 static void local_clk_disable(struct uio_pdrv_genirq_platdata *priv)
@@ -147,20 +149,23 @@ static irqreturn_t uio_pdrv_genirq_handler(int irq, struct uio_info *dev_info)
  * if value == 0, calls pm_runtime_put_sync
  * if value == 1, calls pm_runtime_get_sync
  */
-static void priv_set_pwr(struct uio_info *info, int value)
+static int priv_set_pwr(struct uio_info *info, int value)
 {
+	int ret = 0;
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
 	if (((value == 0) && priv->pwr_cnt > 0) || ((value != 0)
 		    && priv->pwr_cnt == 0)) {
 		if (value == 0)
-			local_pm_runtime_put_sync(priv);
+			ret = local_pm_runtime_put_sync(priv);
 		else
-			local_pm_runtime_get_sync(priv);
+			ret = local_pm_runtime_get_sync(priv);
 	}
 
 	dev_dbg(&priv->pdev->dev, "Set power state value=0x%x pwr_cnt=%d, clk_cnt=%d\n",
 		value, priv->pwr_cnt, priv->clk_cnt);
+
+	return ret;
 }
 
 /**
@@ -181,17 +186,20 @@ static int priv_get_pwr(struct uio_info *info)
  * if value == 0, calls local_clk_disable
  * if value == 1, calls local_clk_enable
  */
-static void priv_set_clk(struct uio_info *info, int value)
+static int priv_set_clk(struct uio_info *info, int value)
 {
+	int ret = 0;
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
 	if (value == 0)
 		local_clk_disable(priv);
 	else
-		local_clk_enable(priv);
+		ret = local_clk_enable(priv);
 
 	dev_dbg(&priv->pdev->dev, "Set clock state - value = 0x%x clk_cnt=%d\n",
 		value, priv->clk_cnt);
+
+	return ret;
 }
 
 /**
@@ -249,28 +257,30 @@ static int priv_clk_set_div(struct uio_info *info, int div)
 	return clk_set_rate(priv->clk, value);
 }
 
-static void priv_set_rst(struct uio_info *info, int value)
+static int priv_set_rst(struct uio_info *info, int value)
 {
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
-	int status;
+	int status, ret;
 
 	status = reset_control_status(priv->rst);
 
 	switch (value) {
 	case 0:
 		if (status > 0)
-			reset_control_deassert(priv->rst);
+			ret = reset_control_deassert(priv->rst);
 		break;
 	case 1:
-		reset_control_assert(priv->rst);
+		ret = reset_control_assert(priv->rst);
 		break;
 	default:
 		if (status == 0)
-			reset_control_reset(priv->rst);
+			ret = reset_control_reset(priv->rst);
 		break;
 	}
 
 	dev_dbg(&priv->pdev->dev, "Set reset state - value = 0x%x\n", value);
+
+	return ret;
 }
 
 static int priv_get_rst(struct uio_info *info)
@@ -290,13 +300,13 @@ static int priv_get_rst(struct uio_info *info)
 static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
 				 unsigned long arg)
 {
-	int value;
+	int value, ret = 0;
 
 	switch (cmd) {
 	case UIO_PDRV_SET_PWR:
 		if (copy_from_user(&value, (int __user *)arg, sizeof(value)))
 			return -EFAULT;
-		priv_set_pwr(info, value);
+		ret = priv_set_pwr(info, value);
 		break;
 	case UIO_PDRV_GET_PWR:
 		value = priv_get_pwr(info);
@@ -307,7 +317,7 @@ static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
 	case UIO_PDRV_SET_CLK:
 		if (copy_from_user(&value, (int __user *)arg, sizeof(value)))
 			return -EFAULT;
-		priv_set_clk(info, value);
+		ret = priv_set_clk(info, value);
 		break;
 	case UIO_PDRV_GET_CLK:
 		value = priv_get_clk(info);
@@ -328,7 +338,7 @@ static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
 	case UIO_PDRV_SET_RESET:
 		if (copy_from_user(&value, (int __user *)arg, sizeof(value)))
 			return -EFAULT;
-		priv_set_rst(info, value);
+		ret = priv_set_rst(info, value);
 		break;
 	case UIO_PDRV_GET_RESET:
 		value = priv_get_rst(info);
@@ -337,7 +347,7 @@ static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
 		break;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int uio_pdrv_genirq_irqcontrol(struct uio_info *dev_info, s32 irq_on)
