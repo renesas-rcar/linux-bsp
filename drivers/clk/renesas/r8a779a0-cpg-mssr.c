@@ -35,6 +35,9 @@ enum rcar_r8a779a0_clk_types {
 	CLK_TYPE_R8A779A0_PLL5,
 	CLK_TYPE_R8A779A0_SD,
 	CLK_TYPE_R8A779A0_MDSEL,	/* Select parent/divider using mode pin */
+	CLK_TYPE_R8A779A0_RPCSRC,
+	CLK_TYPE_R8A779A0_RPC,
+	CLK_TYPE_R8A779A0_RPCD2,
 	CLK_TYPE_R8A779A0_OSC,	/* OSC EXTAL predivider and fixed divider */
 };
 
@@ -95,6 +98,96 @@ enum clk_ids {
 #define DEF_OSC(_name, _id, _parent, _div)		\
 	DEF_BASE(_name, _id, CLK_TYPE_R8A779A0_OSC, _parent, .div = _div)
 
+#define R8A779A0_CPG_RPCCKCR	0x874
+
+struct r8a779a0_rpc_clock {
+	struct clk_divider div;
+	struct clk_gate gate;
+	/*
+	 * One notifier covers both RPC and RPCD2 clocks as they are both
+	 * controlled by the same RPCCKCR register...
+	 */
+	struct cpg_simple_notifier csn;
+};
+
+static const struct clk_div_table r8a779a0_cpg_rpcsrc_div_table[] = {
+	{ 2, 5 }, { 3, 6 }, { 0, 0 },
+};
+
+static const struct clk_div_table r8a779a0_cpg_rpc_div_table[] = {
+	{ 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 8 }, { 0, 0 },
+};
+
+static struct clk * __init r8a779a0_cpg_rpc_clk_register(const char *name,
+	void __iomem *base, const char *parent_name,
+	struct raw_notifier_head *notifiers)
+{
+	struct r8a779a0_rpc_clock *rpc;
+	struct clk *clk;
+
+	rpc = kzalloc(sizeof(*rpc), GFP_KERNEL);
+	if (!rpc)
+		return ERR_PTR(-ENOMEM);
+
+	rpc->div.reg = base + R8A779A0_CPG_RPCCKCR;
+	rpc->div.width = 3;
+	rpc->div.table = r8a779a0_cpg_rpc_div_table;
+	rpc->div.lock = &cpg_lock;
+
+	rpc->gate.reg = base + R8A779A0_CPG_RPCCKCR;
+	rpc->gate.bit_idx = 8;
+	rpc->gate.flags = CLK_GATE_SET_TO_DISABLE;
+	rpc->gate.lock = &cpg_lock;
+
+	rpc->csn.reg = base + R8A779A0_CPG_RPCCKCR;
+
+	clk = clk_register_composite(NULL, name, &parent_name, 1, NULL, NULL,
+				     &rpc->div.hw,  &clk_divider_ops,
+				     &rpc->gate.hw, &clk_gate_ops,
+				     CLK_SET_RATE_PARENT);
+	if (IS_ERR(clk)) {
+		kfree(rpc);
+		return clk;
+	}
+
+	cpg_simple_notifier_register(notifiers, &rpc->csn);
+	return clk;
+}
+
+struct r8a779a0_rpcd2_clock {
+	struct clk_fixed_factor fixed;
+	struct clk_gate gate;
+};
+
+static struct clk * __init r8a779a0_cpg_rpcd2_clk_register(const char *name,
+						  void __iomem *base,
+						  const char *parent_name)
+{
+	struct r8a779a0_rpcd2_clock *rpcd2;
+	struct clk *clk;
+
+	rpcd2 = kzalloc(sizeof(*rpcd2), GFP_KERNEL);
+	if (!rpcd2)
+		return ERR_PTR(-ENOMEM);
+
+	rpcd2->fixed.mult = 1;
+	rpcd2->fixed.div = 2;
+
+	rpcd2->gate.reg = base + R8A779A0_CPG_RPCCKCR;
+	rpcd2->gate.bit_idx = 9;
+	rpcd2->gate.flags = CLK_GATE_SET_TO_DISABLE;
+	rpcd2->gate.lock = &cpg_lock;
+
+	clk = clk_register_composite(NULL, name, &parent_name, 1, NULL, NULL,
+				     &rpcd2->fixed.hw, &clk_fixed_factor_ops,
+				     &rpcd2->gate.hw, &clk_gate_ops,
+				     CLK_SET_RATE_PARENT);
+	if (IS_ERR(clk))
+		kfree(rpcd2);
+
+	return clk;
+}
+
 static const struct cpg_core_clk r8a779a0_core_clks[] __initconst = {
 	/* External Clock Inputs */
 	DEF_INPUT("extal",  CLK_EXTAL),
@@ -120,6 +213,10 @@ static const struct cpg_core_clk r8a779a0_core_clks[] __initconst = {
 	DEF_FIXED(".s3",		CLK_S3,		CLK_PLL1_DIV2,	4, 1),
 	DEF_FIXED(".sdsrc",		CLK_SDSRC,	CLK_PLL5_DIV4,	1, 1),
 	DEF_RATE(".oco",		CLK_OCO,	32768),
+
+	DEF_BASE(".rpcsrc",		CLK_RPCSRC,	CLK_TYPE_R8A779A0_RPCSRC, CLK_PLL5),
+	DEF_BASE("rpc",			R8A779A0_CLK_RPC, CLK_TYPE_R8A779A0_RPC, CLK_RPCSRC),
+	DEF_BASE("rpcd2",		R8A779A0_CLK_RPCD2, CLK_TYPE_R8A779A0_RPCD2, R8A779A0_CLK_RPC),
 
 	/* Core Clock Outputs */
 	DEF_FIXED("zx",		R8A779A0_CLK_ZX,	CLK_PLL20_DIV2,	2, 1),
@@ -255,6 +352,7 @@ static const struct mssr_mod_clk r8a779a0_mod_clks[] __initconst = {
 	DEF_MOD("pci2",		626,	R8A779A0_CLK_S1D1),
 	DEF_MOD("pci3",		627,	R8A779A0_CLK_S1D1),
 	DEF_MOD("pwm0",		628,	R8A779A0_CLK_S1D8),
+	DEF_MOD("rpc-if",	629,	R8A779A0_CLK_RPCD2),
 	DEF_MOD("rtdm0",	630,	R8A779A0_CLK_S1D2),
 	DEF_MOD("rtdm1",	631,	R8A779A0_CLK_S1D2),
 	DEF_MOD("rtdm2",	700,	R8A779A0_CLK_S1D2),
@@ -450,6 +548,20 @@ static struct clk * __init rcar_r8a779a0_cpg_clk_register(struct device *dev,
 		 */
 		div = cpg_pll_config->osc_prediv * core->div;
 		break;
+
+	case CLK_TYPE_R8A779A0_RPCSRC:
+		return clk_register_divider_table(NULL, core->name,
+						  __clk_get_name(parent), 0,
+						  base + R8A779A0_CPG_RPCCKCR, 3, 2, 0,
+						  r8a779a0_cpg_rpcsrc_div_table,
+						  &cpg_lock);
+	case CLK_TYPE_R8A779A0_RPC:
+		return r8a779a0_cpg_rpc_clk_register(core->name, base,
+					    __clk_get_name(parent), notifiers);
+
+	case CLK_TYPE_R8A779A0_RPCD2:
+		return r8a779a0_cpg_rpcd2_clk_register(core->name, base,
+					      __clk_get_name(parent));
 
 	default:
 		return ERR_PTR(-EINVAL);
