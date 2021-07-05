@@ -748,7 +748,6 @@ static const struct soc_device_attribute soc_denylist[] = {
 	{ .soc_id = "r8a774a1", },
 	{ .soc_id = "r8a7795", .revision = "ES1.*" },
 	{ .soc_id = "r8a7795", .revision = "ES2.*" },
-	{ .soc_id = "r8a7796", },
 	{ /* sentinel */ }
 };
 
