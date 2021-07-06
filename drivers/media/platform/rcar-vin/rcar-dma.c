@@ -653,7 +653,8 @@ static unsigned int rvin_ratio_to_bwidth(unsigned int ratio)
 
 static bool rvin_gen3_need_scaling(struct rvin_dev *vin)
 {
-	if (vin->info->model != RCAR_GEN3)
+	if (vin->info->model != RCAR_GEN3 ||
+	    vin->format.pixelformat == V4L2_PIX_FMT_NV12)
 		return false;
 
 	return vin->crop.width != vin->compose.width ||
@@ -1421,10 +1422,17 @@ static int rvin_mc_validate_format(struct rvin_dev *vin, struct v4l2_subdev *sd,
 				return -EBUSY;
 		}
 	} else {
-		if (fmt.format.width != vin->format.width ||
-		    fmt.format.height != vin->format.height ||
-		    fmt.format.code != vin->mbus_code)
-			return -EPIPE;
+		if (vin->format.pixelformat == V4L2_PIX_FMT_NV12) {
+			if (ALIGN(fmt.format.width, 32) != vin->format.width ||
+			    ALIGN(fmt.format.height, 32) != vin->format.height ||
+			    fmt.format.code != vin->mbus_code)
+				return -EPIPE;
+		} else {
+			if (fmt.format.width != vin->format.width ||
+			    fmt.format.height != vin->format.height ||
+			    fmt.format.code != vin->mbus_code)
+				return -EPIPE;
+		}
 	}
 
 	return 0;
