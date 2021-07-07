@@ -1391,8 +1391,10 @@ static int rvin_mc_validate_format(struct rvin_dev *vin, struct v4l2_subdev *sd,
 		return -EPIPE;
 	}
 
-	vin->crop.width = fmt.format.width;
-	vin->crop.height = fmt.format.height;
+	if (vin->crop.width == 0)
+		vin->crop.width = fmt.format.width;
+	if (vin->crop.height == 0)
+		vin->crop.height = fmt.format.height;
 
 	if (rvin_gen3_need_scaling(vin)) {
 		const struct rvin_group_scaler *scaler;
