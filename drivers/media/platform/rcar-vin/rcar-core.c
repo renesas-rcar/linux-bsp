@@ -1234,6 +1234,12 @@ static const struct rvin_group_route rcar_info_r8a77990_routes[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct rvin_group_scaler rcar_info_r8a77990_scalers[] = {
+	{ .vin = 4, .companion = 5 },
+	{ .vin = 5, .companion = 4 },
+	{ /* Sentinel */ }
+};
+
 static const struct rvin_info rcar_info_r8a77990 = {
 	.model = RCAR_GEN3,
 	.use_mc = true,
@@ -1241,6 +1247,7 @@ static const struct rvin_info rcar_info_r8a77990 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a77990_routes,
+	.scalers = rcar_info_r8a77990_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a77995_routes[] = {
