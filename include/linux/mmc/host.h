@@ -374,6 +374,7 @@ struct mmc_host {
 #define MMC_CAP2_CQE_DCMD	(1 << 24)	/* CQE can issue a direct command */
 #define MMC_CAP2_AVOID_3_3V	(1 << 25)	/* Host must negotiate down from 3.3V */
 #define MMC_CAP2_MERGE_CAPABLE	(1 << 26)	/* Host can merge a segment over the segment size */
+#define MMC_CAP2_STOP_TUNE_SD	(1 << 27)	/* Host need to send stop command during tuning in SD */
 
 	int			fixed_drv_type;	/* fixed driver type for non-removable media */
 
