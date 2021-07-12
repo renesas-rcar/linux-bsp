@@ -26,6 +26,7 @@
 #include <drm/drm_panel.h>
 #include <drm/drm_print.h>
 #include <drm/drm_probe_helper.h>
+#include <drm/drm_edid.h>
 
 #define SN_DEVICE_REV_REG			0x08
 #define SN_DPPLL_SRC_REG			0x0A
@@ -56,6 +57,7 @@
 #define  VSTREAM_ENABLE				BIT(3)
 #define  LN_POLRS_OFFSET			4
 #define  LN_POLRS_MASK				0xf0
+#define  ASSR_CONTROL				BIT(0)
 #define SN_DATA_FORMAT_REG			0x5B
 #define  BPP_18_RGB				BIT(0)
 #define SN_HPD_DISABLE_REG			0x5C
@@ -83,6 +85,8 @@
 #define SN_DATARATE_CONFIG_REG			0x94
 #define  DP_DATARATE_MASK			GENMASK(7, 5)
 #define  DP_DATARATE(x)				((x) << 5)
+#define SN_TRAINING_SETTING_REG		0x95
+#define  SCRAMBLE_DISABLE			BIT(4)
 #define SN_ML_TX_MODE_REG			0x96
 #define  ML_TX_MAIN_LINK_OFF			0
 #define  ML_TX_NORMAL_MODE			BIT(0)
@@ -90,6 +94,7 @@
 #define  AUX_IRQ_STATUS_AUX_RPLY_TOUT		BIT(3)
 #define  AUX_IRQ_STATUS_AUX_SHORT		BIT(5)
 #define  AUX_IRQ_STATUS_NAT_I2C_FAIL		BIT(6)
+#define SN_EDID_I2C_ADDR_DEFAULT		0x50
 
 #define MIN_DSI_CLK_FREQ_MHZ	40
 
@@ -133,6 +138,13 @@
  *                bitmap so we can do atomic ops on it without an extra
  *                lock so concurrent users of our 4 GPIOs don't stomp on
  *                each other's read-modify-write.
+ *
+ * @i2c_edid:     I2c for getting edid information
+ * @edid_buf:     Edid buffer
+ * @no_gpio:      No use gpio flag
+ * @no_use_scramble: No use scramble mode
+ * @hpd_poll:     Hot plug polling flag
+ * @dp_connector: Display port connector flag
  */
 struct ti_sn_bridge {
 	struct device			*dev;
@@ -155,6 +167,13 @@ struct ti_sn_bridge {
 	struct gpio_chip		gchip;
 	DECLARE_BITMAP(gchip_output, SN_NUM_GPIOS);
 #endif
+
+	struct i2c_client		*i2c_edid;
+	uint8_t				edid_buf[256];
+	bool				no_gpio;
+	bool				no_use_scramble;
+	bool				hpd_poll;
+	bool				dp_connector;
 };
 
 static const struct regmap_range ti_sn_bridge_volatile_ranges[] = {
@@ -253,6 +272,66 @@ static void ti_sn_debugfs_remove(struct ti_sn_bridge *pdata)
 }
 
 /* Connector funcs */
+static int ti_sn_get_edid_block(void *data, u8 *buf, unsigned int block,
+				  size_t len)
+{
+	struct ti_sn_bridge *pdata = data;
+	struct i2c_msg xfer[2];
+	uint8_t offset;
+	unsigned int i;
+	int ret;
+
+	if (len > 128)
+		return -EINVAL;
+
+	regmap_write(pdata->regmap, 0x60, 0xA1);
+
+	xfer[0].addr = pdata->i2c_edid->addr;
+	xfer[0].flags = 0;
+	xfer[0].len = 1;
+	xfer[0].buf = &offset;
+	xfer[1].addr = pdata->i2c_edid->addr;
+	xfer[1].flags = I2C_M_RD;
+	xfer[1].len = 64;
+	xfer[1].buf = pdata->edid_buf;
+
+	offset = 0;
+
+	for (i = 0; i < 4; ++i) {
+		ret = i2c_transfer(pdata->i2c_edid->adapter, xfer,
+				   ARRAY_SIZE(xfer));
+		if (ret < 0)
+			return ret;
+		else if (ret != 2)
+			return -EIO;
+
+		xfer[1].buf += 64;
+		offset += 64;
+	}
+
+	regmap_write(pdata->regmap, 0x60, 0xA0);
+
+	if (block % 2 == 0)
+		memcpy(buf, pdata->edid_buf, len);
+	else
+		memcpy(buf, pdata->edid_buf + 128, len);
+
+	return 0;
+}
+
+static int ti_sn_get_modes(struct ti_sn_bridge *pdata,
+			     struct drm_connector *connector)
+{
+	struct edid *edid;
+	unsigned int count;
+
+	edid = drm_do_get_edid(connector, ti_sn_get_edid_block, pdata);
+	drm_connector_update_edid_property(connector, edid);
+	count = drm_add_edid_modes(connector, edid);
+
+	return count;
+}
+
 static struct ti_sn_bridge *
 connector_to_ti_sn_bridge(struct drm_connector *connector)
 {
@@ -263,7 +342,10 @@ static int ti_sn_bridge_connector_get_modes(struct drm_connector *connector)
 {
 	struct ti_sn_bridge *pdata = connector_to_ti_sn_bridge(connector);
 
-	return drm_panel_get_modes(pdata->panel, connector);
+	if (pdata->dp_connector)
+		return ti_sn_get_modes(pdata, connector);
+	else
+		return drm_panel_get_modes(pdata->panel, connector);
 }
 
 static enum drm_mode_status
@@ -285,12 +367,31 @@ static struct drm_connector_helper_funcs ti_sn_bridge_connector_helper_funcs = {
 static enum drm_connector_status
 ti_sn_bridge_connector_detect(struct drm_connector *connector, bool force)
 {
+	struct ti_sn_bridge *pdata = connector_to_ti_sn_bridge(connector);
+	enum drm_connector_status status;
+	int val;
+
 	/**
 	 * TODO: Currently if drm_panel is present, then always
 	 * return the status as connected. Need to add support to detect
 	 * device state for hot pluggable scenarios.
 	 */
-	return connector_status_connected;
+	if (pdata->hpd_poll) {
+		regmap_read(pdata->regmap, SN_HPD_DISABLE_REG, &val);
+		if (val)
+			status = connector_status_connected;
+		else
+			status =  connector_status_disconnected;
+	} else {
+		status = connector_status_connected;
+	}
+
+	if (status == connector_status_connected
+		&& connector->status != status) {
+		ti_sn_get_modes(pdata, connector);
+	}
+
+	return status;
 }
 
 static const struct drm_connector_funcs ti_sn_bridge_connector_funcs = {
@@ -338,9 +439,19 @@ static int ti_sn_bridge_attach(struct drm_bridge *bridge,
 		return -EINVAL;
 	}
 
-	ret = drm_connector_init(bridge->dev, &pdata->connector,
-				 &ti_sn_bridge_connector_funcs,
-				 DRM_MODE_CONNECTOR_eDP);
+	if (pdata->hpd_poll) {
+		pdata->connector.polled = DRM_CONNECTOR_POLL_CONNECT |
+					  DRM_CONNECTOR_POLL_DISCONNECT;
+	}
+
+	if (pdata->dp_connector)
+		ret = drm_connector_init(bridge->dev, &pdata->connector,
+					 &ti_sn_bridge_connector_funcs,
+					 DRM_MODE_CONNECTOR_DisplayPort);
+	else
+		ret = drm_connector_init(bridge->dev, &pdata->connector,
+					 &ti_sn_bridge_connector_funcs,
+					 DRM_MODE_CONNECTOR_eDP);
 	if (ret) {
 		DRM_ERROR("Failed to initialize connector with drm\n");
 		return ret;
@@ -512,6 +623,15 @@ static const unsigned int ti_sn_bridge_dp_rate_lut[] = {
 	0, 1620, 2160, 2430, 2700, 3240, 4320, 5400
 };
 
+/**
+ * LUT index for Display Port ver 1.2
+ * In DP ver 1.2, only three values are supported.
+ * All other values are RESERVED
+ */
+static const unsigned int ti_sn_bridge_dp_rate_displayport_lut[] = {
+	0, 1620, 0, 0, 2700, 0, 0, 5400
+};
+
 static int ti_sn_bridge_calc_min_dp_rate_idx(struct ti_sn_bridge *pdata)
 {
 	unsigned int bit_rate_khz, dp_rate_mhz;
@@ -527,8 +647,13 @@ static int ti_sn_bridge_calc_min_dp_rate_idx(struct ti_sn_bridge *pdata)
 				   1000 * pdata->dp_lanes * DP_CLK_FUDGE_DEN);
 
 	for (i = 1; i < ARRAY_SIZE(ti_sn_bridge_dp_rate_lut) - 1; i++)
-		if (ti_sn_bridge_dp_rate_lut[i] >= dp_rate_mhz)
-			break;
+		if (pdata->dp_connector) {
+			if (ti_sn_bridge_dp_rate_displayport_lut[i] > dp_rate_mhz)
+				break;
+		} else {
+			if (ti_sn_bridge_dp_rate_lut[i] >= dp_rate_mhz)
+				break;
+		}
 
 	return i;
 }
@@ -678,6 +803,11 @@ static int ti_sn_link_training(struct ti_sn_bridge *pdata, int dp_rate_idx,
 	regmap_update_bits(pdata->regmap, SN_DATARATE_CONFIG_REG,
 			   DP_DATARATE_MASK, DP_DATARATE(dp_rate_idx));
 
+	/* Using Standard DP Scrambler Seed when Scramble mode is disable*/
+	if (pdata->no_use_scramble)
+		regmap_update_bits(pdata->regmap, SN_ENH_FRAME_REG,
+						ASSR_CONTROL, 0);
+
 	/* enable DP PLL */
 	regmap_write(pdata->regmap, SN_PLL_ENABLE_REG, 1);
 
@@ -734,6 +864,11 @@ static void ti_sn_bridge_enable(struct drm_bridge *bridge)
 
 	/* set dsi clk frequency value */
 	ti_sn_bridge_set_dsi_rate(pdata);
+
+	/* Disable Scrambling Mode */
+	if (pdata->no_use_scramble)
+		regmap_update_bits(pdata->regmap, SN_TRAINING_SETTING_REG,
+				   SCRAMBLE_DISABLE, SCRAMBLE_DISABLE);
 
 	/**
 	 * The SN65DSI86 only supports ASSR Display Authentication method and
@@ -806,8 +941,15 @@ static void ti_sn_bridge_pre_enable(struct drm_bridge *bridge)
 	 * change this to be conditional on someone specifying that HPD should
 	 * be used.
 	 */
-	regmap_update_bits(pdata->regmap, SN_HPD_DISABLE_REG, HPD_DISABLE,
-			   HPD_DISABLE);
+	if (pdata->hpd_poll)
+		regmap_update_bits(pdata->regmap, SN_HPD_DISABLE_REG,
+				   HPD_DISABLE, 0);
+	else
+		regmap_update_bits(pdata->regmap, SN_HPD_DISABLE_REG,
+				   HPD_DISABLE, HPD_DISABLE);
+
+	if (pdata->dp_connector)
+		return;
 
 	drm_panel_prepare(pdata->panel);
 }
@@ -1181,22 +1323,46 @@ static int ti_sn_bridge_probe(struct i2c_client *client,
 
 	pdata->dev = &client->dev;
 
-	ret = drm_of_find_panel_or_bridge(pdata->dev->of_node, 1, 0,
-					  &pdata->panel, NULL);
-	if (ret) {
-		DRM_ERROR("could not find any panel node\n");
-		return ret;
+	if (of_find_property(pdata->dev->of_node, "dp-connector", NULL))
+		pdata->dp_connector = true;
+	else
+		pdata->dp_connector = false;
+
+	if (!pdata->dp_connector) {
+		ret = drm_of_find_panel_or_bridge(pdata->dev->of_node, 1, 0,
+						  &pdata->panel, NULL);
+		if (ret) {
+			DRM_ERROR("could not find any panel node\n");
+			return ret;
+		}
 	}
 
 	dev_set_drvdata(&client->dev, pdata);
 
-	pdata->enable_gpio = devm_gpiod_get(pdata->dev, "enable",
-					    GPIOD_OUT_LOW);
-	if (IS_ERR(pdata->enable_gpio)) {
-		DRM_ERROR("failed to get enable gpio from DT\n");
-		ret = PTR_ERR(pdata->enable_gpio);
-		return ret;
+	if (of_find_property(pdata->dev->of_node, "no-use-gpio", NULL))
+		pdata->no_gpio = true;
+	else
+		pdata->no_gpio = false;
+
+	if (!pdata->no_gpio) {
+		pdata->enable_gpio = devm_gpiod_get(pdata->dev, "enable",
+						    GPIOD_OUT_LOW);
+		if (IS_ERR(pdata->enable_gpio)) {
+			DRM_ERROR("failed to get enable gpio from DT\n");
+			ret = PTR_ERR(pdata->enable_gpio);
+			return ret;
+		}
 	}
+
+	if (of_find_property(pdata->dev->of_node, "no-use-scramble", NULL))
+		pdata->no_use_scramble = true;
+	else
+		pdata->no_use_scramble = false;
+
+	if (of_find_property(pdata->dev->of_node, "hpd-poll", NULL))
+		pdata->hpd_poll = true;
+	else
+		pdata->hpd_poll = false;
 
 	ti_sn_bridge_parse_lanes(pdata, client->dev.of_node);
 
@@ -1218,6 +1384,13 @@ static int ti_sn_bridge_probe(struct i2c_client *client,
 	ret = ti_sn_bridge_parse_dsi_host(pdata);
 	if (ret)
 		return ret;
+
+	pdata->i2c_edid = i2c_new_ancillary_device(client, "edid",
+						   SN_EDID_I2C_ADDR_DEFAULT);
+	if (IS_ERR(pdata->i2c_edid)) {
+		ret = PTR_ERR(pdata->i2c_edid);
+		DRM_ERROR("failed to get i2c edid\n");
+	}
 
 	pm_runtime_enable(pdata->dev);
 
@@ -1250,6 +1423,9 @@ static int ti_sn_bridge_remove(struct i2c_client *client)
 
 	if (!pdata)
 		return -EINVAL;
+
+	drm_dp_aux_unregister(&pdata->aux);
+	i2c_unregister_device(pdata->i2c_edid);
 
 	ti_sn_debugfs_remove(pdata);
 

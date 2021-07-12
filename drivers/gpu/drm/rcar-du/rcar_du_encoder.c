@@ -2,7 +2,7 @@
 /*
  * rcar_du_encoder.c  --  R-Car Display Unit Encoder
  *
- * Copyright (C) 2013-2014 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -38,7 +38,6 @@ static unsigned int rcar_du_encoder_count_ports(struct device_node *node)
 		if (of_node_name_eq(port, "port"))
 			num_ports++;
 	}
-
 	of_node_put(ports);
 
 	return num_ports;
@@ -87,13 +86,43 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 	} else {
 		bridge = of_drm_find_bridge(enc_node);
 		if (!bridge) {
-			ret = -EPROBE_DEFER;
-			goto done;
+			if (output == RCAR_DU_OUTPUT_HDMI0 ||
+			    output == RCAR_DU_OUTPUT_HDMI1) {
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+				ret = -EPROBE_DEFER;
+#else
+				ret = 0;
+#endif
+				goto done;
+			} else if (output == RCAR_DU_OUTPUT_LVDS0 ||
+				   output == RCAR_DU_OUTPUT_LVDS1) {
+#if IS_ENABLED(CONFIG_DRM_RCAR_LVDS)
+				ret = -EPROBE_DEFER;
+#else
+				ret = 0;
+#endif
+				goto done;
+			} else if (output == RCAR_DU_OUTPUT_MIPI_DSI0 ||
+				   output == RCAR_DU_OUTPUT_MIPI_DSI1) {
+#if IS_ENABLED(CONFIG_DRM_RCAR_MIPI_DSI)
+				ret = -EPROBE_DEFER;
+#else
+				ret = 0;
+#endif
+				goto done;
+			} else {
+				ret = -EPROBE_DEFER;
+				goto done;
+			}
 		}
 
 		if (output == RCAR_DU_OUTPUT_LVDS0 ||
 		    output == RCAR_DU_OUTPUT_LVDS1)
 			rcdu->lvds[output - RCAR_DU_OUTPUT_LVDS0] = bridge;
+
+		if (output == RCAR_DU_OUTPUT_MIPI_DSI0 ||
+		    output == RCAR_DU_OUTPUT_MIPI_DSI1)
+			rcdu->mipi_dsi[output - RCAR_DU_OUTPUT_MIPI_DSI0] = bridge;
 	}
 
 	/*
@@ -106,6 +135,8 @@ int rcar_du_encoder_init(struct rcar_du_device *rcdu,
 			goto done;
 		}
 	}
+
+	renc->bridge = bridge;
 
 	ret = drm_simple_encoder_init(rcdu->ddev, encoder,
 				      DRM_MODE_ENCODER_NONE);
