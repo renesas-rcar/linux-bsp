@@ -1512,8 +1512,7 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 		return -ENOMEM;
 	}
 
-	if (vin->info->use_mc)
-		pm_runtime_get_sync(vin->dev);
+	pm_runtime_get_sync(vin->dev);
 
 	ret = rvin_set_stream(vin, 1);
 	if (ret) {
@@ -1538,8 +1537,7 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 
 	return 0;
 out:
-	if (vin->info->use_mc)
-		pm_runtime_put(vin->dev);
+	pm_runtime_put(vin->dev);
 
 	if (ret)
 		dma_free_coherent(vin->dev, vin->format.sizeimage, vin->scratch,
