@@ -326,6 +326,9 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
 	};
 
+	if (!vin->info->use_mc)
+		return 0;
+
 	/* Get cropping size */
 	pad = media_pad_remote_pad_first(&vin->pad);
 	if (!pad)

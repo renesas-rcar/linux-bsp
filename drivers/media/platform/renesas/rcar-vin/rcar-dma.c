@@ -1557,8 +1557,7 @@ int rvin_start_streaming(struct rvin_dev *vin)
 	unsigned long flags;
 	int ret;
 
-	if (vin->info->use_mc)
-		pm_runtime_get_sync(vin->dev);
+	pm_runtime_get_sync(vin->dev);
 
 	ret = rvin_set_stream(vin, 1);
 	if (ret)
@@ -1576,8 +1575,7 @@ int rvin_start_streaming(struct rvin_dev *vin)
 
 	return 0;
 out:
-	if (vin->info->use_mc)
-		pm_runtime_put(vin->dev);
+	pm_runtime_put(vin->dev);
 
 	return ret;
 }
