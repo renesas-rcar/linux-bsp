@@ -6567,6 +6567,90 @@
 			clocks = <&cpg CPG_CORE R8A779A0_CLK_POST2>;
 			linux,uio-name = "post_fba_ca76_07";
 		};
+
+		smd_ps_sts_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a20000 0 0x10000>;
+			interrupts = <GIC_SPI 566 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 7>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP1>;
+			resets = <&cpg 7>;
+			linux,uio-name = "smd_ps_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0 2>;
+		};
+
+		smd_ps_err_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a20000 0 0x10000>;
+			interrupts = <GIC_SPI 567 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 7>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP1>;
+			linux,uio-name = "irq_smd_ps_00_01";
+			ipmmu-id = <RCAR_IPMMU_VIP0 2>;
+		};
+
+		smd_ps_sts_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7bc0000 0 0x10000>;
+			interrupts = <GIC_SPI 568 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 8>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP3>;
+			resets = <&cpg 8>;
+			linux,uio-name = "smd_ps_01";
+			ipmmu-id = <RCAR_IPMMU_VIP1 9>;
+		};
+
+		smd_ps_err_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7bc0000 0 0x10000>;
+			interrupts = <GIC_SPI 569 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 8>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP3>;
+			linux,uio-name = "irq_smd_ps_01_01";
+			ipmmu-id = <RCAR_IPMMU_VIP1 9>;
+		};
+
+		smd_post_sts_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a40000 0 0x10000>;
+			interrupts = <GIC_SPI 562 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 5>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP1>;
+			resets = <&cpg 5>;
+			linux,uio-name = "smd_post_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0 1>;
+		};
+
+		smd_post_err_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a40000 0 0x10000>;
+			interrupts = <GIC_SPI 563 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 5>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP1>;
+			linux,uio-name = "irq_smd_post_00_01";
+			ipmmu-id = <RCAR_IPMMU_VIP0 1>;
+		};
+
+		smd_post_sts_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7be0000 0 0x10000>;
+			interrupts = <GIC_SPI 564 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 6>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP3>;
+			resets = <&cpg 6>;
+			linux,uio-name = "smd_post_01";
+			ipmmu-id = <RCAR_IPMMU_VIP1 8>;
+		};
+
+		smd_post_err_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe7be0000 0 0x10000>;
+			interrupts = <GIC_SPI 565 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 6>;
+			power-domains = <&sysc R8A779A0_PD_A3VIP3>;
+			linux,uio-name = "irq_smd_post_01_01";
+			ipmmu-id = <RCAR_IPMMU_VIP1 8>;
+		};
 	};
 
 	thermal-zones {
