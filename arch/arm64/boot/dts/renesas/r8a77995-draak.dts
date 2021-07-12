@@ -430,7 +430,6 @@
 				 * VIN4 here.
 				 */
 				adv7180_out: endpoint {
-					remote-endpoint = <&vin4_in>;
 				};
 			};
 		};
@@ -500,6 +499,7 @@
 					pclk-sample = <0>;
 					hsync-active = <0>;
 					vsync-active = <0>;
+					remote-endpoint = <&vin4_in>;
 				};
 			};
 		};
@@ -749,7 +749,7 @@
 	ports {
 		port {
 			vin4_in: endpoint {
-				remote-endpoint = <&adv7180_out>;
+				remote-endpoint = <&adv7612_out>;
 			};
 		};
 	};
