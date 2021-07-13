@@ -524,6 +524,12 @@ static void rcar_du_plane_setup_format_gen3(struct rcar_du_group *rgrp,
 
 	rcar_du_plane_write(rgrp, index, PnDDCR4,
 			    state->format->edf | PnDDCR4_CODE);
+
+	/* In Gen3, PnALPHAR register need to be set to 0
+	 * to avoid black screen issue when alpha blend is enable
+	 * on DU module
+	 */
+	rcar_du_plane_write(rgrp, index, PnALPHAR, 0x00000000);
 }
 
 static void rcar_du_plane_setup_format(struct rcar_du_group *rgrp,
