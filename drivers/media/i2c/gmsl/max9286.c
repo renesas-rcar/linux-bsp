@@ -1113,8 +1113,17 @@ static struct i2c_driver max9286_i2c_driver = {
 	.id_table	= max9286_id,
 };
 
-module_i2c_driver(max9286_i2c_driver);
+static int __init max9286_init(void)
+{
+	return i2c_add_driver(&max9286_i2c_driver);
+}
+late_initcall(max9286_init);
 
+static void __exit max9286_exit(void)
+{
+	i2c_del_driver(&max9286_i2c_driver);
+}
+module_exit(max9286_exit);
 MODULE_DESCRIPTION("GMSL driver for MAX9286");
 MODULE_AUTHOR("Vladimir Barinov");
 MODULE_LICENSE("GPL");
