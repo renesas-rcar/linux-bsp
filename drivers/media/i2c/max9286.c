@@ -1316,7 +1316,17 @@ static struct i2c_driver max9286_i2c_driver = {
 	.remove		= max9286_remove,
 };
 
-module_i2c_driver(max9286_i2c_driver);
+static int __init max9286_init(void)
+{
+	return i2c_add_driver(&max9286_i2c_driver);
+}
+late_initcall(max9286_init);
+
+static void __exit max9286_exit(void)
+{
+	i2c_del_driver(&max9286_i2c_driver);
+}
+module_exit(max9286_exit);
 
 MODULE_DESCRIPTION("Maxim MAX9286 GMSL Deserializer Driver");
 MODULE_AUTHOR("Jacopo Mondi, Kieran Bingham, Laurent Pinchart, Niklas Söderlund, Vladimir Barinov");
