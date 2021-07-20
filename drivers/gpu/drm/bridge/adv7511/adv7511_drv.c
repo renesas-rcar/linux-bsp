@@ -27,7 +27,7 @@ static const struct reg_sequence adv7511_fixed_registers[] = {
 	{ 0x98, 0x03 },
 	{ 0x9a, 0xe0 },
 	{ 0x9c, 0x30 },
-	{ 0x9d, 0x61 },
+	{ 0x9d, 0x01 },
 	{ 0xa2, 0xa4 },
 	{ 0xa3, 0xa4 },
 	{ 0xe0, 0xd0 },
@@ -323,6 +323,8 @@ static void adv7511_set_link_config(struct adv7511 *adv7511,
 	adv7511->hsync_polarity = config->hsync_polarity;
 	adv7511->vsync_polarity = config->vsync_polarity;
 	adv7511->rgb = config->input_colorspace == HDMI_COLORSPACE_RGB;
+	adv7511->limit_vref = config->limit_freq_option;
+	adv7511->limit_freq = config->limit_vrefresh_option;
 }
 
 static void __adv7511_power_on(struct adv7511 *adv7511)
@@ -686,6 +688,16 @@ static enum drm_mode_status adv7511_mode_valid(struct adv7511 *adv7511,
 {
 	if (mode->clock > 165000)
 		return MODE_CLOCK_HIGH;
+
+	if (adv7511->limit_freq) {
+		if (mode->clock > (adv7511->limit_freq / 1000))
+			return MODE_CLOCK_HIGH;
+	}
+
+	if (adv7511->limit_vref) {
+		if (drm_mode_vrefresh(mode) < adv7511->limit_vref)
+			return MODE_BAD;
+	}
 
 	return MODE_OK;
 }
@@ -1149,6 +1161,16 @@ static int adv7511_parse_dt(struct device_node *np,
 	config->vsync_polarity = ADV7511_SYNC_POLARITY_PASSTHROUGH;
 	config->hsync_polarity = ADV7511_SYNC_POLARITY_PASSTHROUGH;
 
+	ret = of_property_read_u32(np, "limit-frequency",
+				   &config->limit_vrefresh_option);
+	if (ret < 0)
+		config->limit_vrefresh_option = 0;
+
+	ret = of_property_read_u32(np, "lower-refresh",
+				   &config->limit_freq_option);
+	if (ret < 0)
+		config->limit_freq_option = 0;
+
 	return 0;
 }
 
@@ -1328,6 +1350,33 @@ static int adv7511_remove(struct i2c_client *i2c)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int adv7511_pm_suspend(struct device *dev)
+{
+	struct i2c_client *i2c = to_i2c_client(dev);
+	struct adv7511 *adv7511 = i2c_get_clientdata(i2c);
+
+	adv7511_power_off(adv7511);
+
+	return 0;
+}
+
+static int adv7511_pm_resume(struct device *dev)
+{
+	struct i2c_client *i2c = to_i2c_client(dev);
+	struct adv7511 *adv7511 = i2c_get_clientdata(i2c);
+
+	adv7511_detect(adv7511, &adv7511->connector);
+	adv7511_power_on(adv7511);
+
+	return 0;
+}
+#endif
+
+static const struct dev_pm_ops adv7511_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(adv7511_pm_suspend, adv7511_pm_resume)
+};
+
 static const struct i2c_device_id adv7511_i2c_ids[] = {
 	{ "adv7511", ADV7511 },
 	{ "adv7511w", ADV7511 },
@@ -1356,6 +1405,7 @@ static struct i2c_driver adv7511_driver = {
 	.driver = {
 		.name = "adv7511",
 		.of_match_table = adv7511_of_ids,
+		.pm = &adv7511_pm_ops,
 	},
 	.id_table = adv7511_i2c_ids,
 	.probe = adv7511_probe,
