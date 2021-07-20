@@ -2,7 +2,7 @@
 /*
  * Driver for Renesas R-Car VIN
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2018 Renesas Electronics Corp.
  * Copyright (C) 2011-2013 Renesas Solutions Corp.
  * Copyright (C) 2013 Cogent Embedded, Inc., <source@cogentembedded.com>
  * Copyright (C) 2008 Magnus Damm
@@ -10,6 +10,8 @@
  * Based on the soc-camera rcar_vin driver
  */
 
+#include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -1015,6 +1017,14 @@ static const struct rvin_group_route rcar_info_r8a7795_routes[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct rvin_group_scaler rcar_info_h3_m3w_m3n_scalers[] = {
+	{ .vin = 0, .companion = 1 },
+	{ .vin = 1, .companion = 0 },
+	{ .vin = 4, .companion = 5 },
+	{ .vin = 5, .companion = 4 },
+	{ /* Sentinel */ }
+};
+
 static const struct rvin_info rcar_info_r8a7795 = {
 	.model = RCAR_GEN3,
 	.use_mc = true,
@@ -1022,6 +1032,7 @@ static const struct rvin_info rcar_info_r8a7795 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a7795_routes,
+	.scalers = rcar_info_h3_m3w_m3n_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a7795es1_routes[] = {
@@ -1076,6 +1087,7 @@ static const struct rvin_info rcar_info_r8a7795es1 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a7795es1_routes,
+	.scalers = rcar_info_h3_m3w_m3n_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a7796_routes[] = {
@@ -1117,6 +1129,7 @@ static const struct rvin_info rcar_info_r8a7796 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a7796_routes,
+	.scalers = rcar_info_h3_m3w_m3n_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a77965_routes[] = {
@@ -1162,6 +1175,7 @@ static const struct rvin_info rcar_info_r8a77965 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a77965_routes,
+	.scalers = rcar_info_h3_m3w_m3n_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a77970_routes[] = {
@@ -1220,6 +1234,12 @@ static const struct rvin_group_route rcar_info_r8a77990_routes[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct rvin_group_scaler rcar_info_r8a77990_scalers[] = {
+	{ .vin = 4, .companion = 5 },
+	{ .vin = 5, .companion = 4 },
+	{ /* Sentinel */ }
+};
+
 static const struct rvin_info rcar_info_r8a77990 = {
 	.model = RCAR_GEN3,
 	.use_mc = true,
@@ -1227,19 +1247,26 @@ static const struct rvin_info rcar_info_r8a77990 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a77990_routes,
+	.scalers = rcar_info_r8a77990_scalers,
 };
 
 static const struct rvin_group_route rcar_info_r8a77995_routes[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct rvin_group_scaler rcar_info_r8a77995_scalers[] = {
+	{ .vin = 4, .companion = -1 },
+	{ /* Sentinel */ }
+};
+
 static const struct rvin_info rcar_info_r8a77995 = {
 	.model = RCAR_GEN3,
-	.use_mc = true,
+	.use_mc = false,
 	.nv12 = true,
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a77995_routes,
+	.scalers = rcar_info_r8a77995_scalers,
 };
 
 static const struct of_device_id rvin_of_id_table[] = {
@@ -1293,6 +1320,10 @@ static const struct of_device_id rvin_of_id_table[] = {
 	},
 	{
 		.compatible = "renesas,vin-r8a7796",
+		.data = &rcar_info_r8a7796,
+	},
+	{
+		.compatible = "renesas,vin-r8a77961",
 		.data = &rcar_info_r8a7796,
 	},
 	{
@@ -1376,7 +1407,36 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
+	vin->work_queue = create_singlethread_workqueue(dev_name(vin->dev));
+	if (!vin->work_queue) {
+		ret = -ENOMEM;
+		goto error;
+	}
+	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
+
+	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->rstc)) {
+		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->rstc);
+		goto error_destroy_workqueue;
+	}
+
+	vin->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->clk)) {
+		dev_err(&pdev->dev, "failed to get clock%s\n",
+			dev_name(vin->dev));
+		ret = PTR_ERR(vin->clk);
+		goto error_destroy_workqueue;
+	}
+
 	return 0;
+
+error_destroy_workqueue:
+	destroy_workqueue(vin->work_queue);
+
+error:
+	pm_runtime_disable(&pdev->dev);
 
 error_group_unregister:
 	v4l2_ctrl_handler_free(&vin->ctrl_handler);
@@ -1401,6 +1461,9 @@ static int rcar_vin_remove(struct platform_device *pdev)
 {
 	struct rvin_dev *vin = platform_get_drvdata(pdev);
 
+	cancel_delayed_work_sync(&vin->rvin_resume);
+	destroy_workqueue(vin->work_queue);
+
 	pm_runtime_disable(&pdev->dev);
 
 	rvin_v4l2_unregister(vin);
@@ -1421,9 +1484,52 @@ static int rcar_vin_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int rcar_vin_suspend(struct device *dev)
+{
+	struct rvin_dev *vin = dev_get_drvdata(dev);
+
+	if (vin->state == STOPPED)
+		return 0;
+
+	rvin_suspend_stop_streaming(vin);
+
+	return 0;
+}
+
+static int rcar_vin_resume(struct device *dev)
+{
+	struct rvin_dev *vin = dev_get_drvdata(dev);
+	struct rvin_dev *master;
+
+	if (vin->state == STOPPED)
+		return 0;
+
+	if (vin->info->use_mc) {
+		pm_runtime_force_resume(vin->dev);
+		pm_runtime_get_sync(vin->dev);
+
+		master = vin->group->vin[rvin_group_id_to_master(vin->id)];
+		rvin_set_channel_routing(master, master->chsel);
+	}
+
+	queue_delayed_work_on(0, vin->work_queue, &vin->rvin_resume,
+			      msecs_to_jiffies(CONNECTION_TIME));
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rcar_vin_pm_ops,
+			rcar_vin_suspend, rcar_vin_resume);
+#define DEV_PM_OPS (&rcar_vin_pm_ops)
+#else
+#define DEV_PM_OPS NULL
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_driver rcar_vin_driver = {
 	.driver = {
 		.name = "rcar-vin",
+		.pm = DEV_PM_OPS,
 		.of_match_table = rvin_of_id_table,
 	},
 	.probe = rcar_vin_probe,
