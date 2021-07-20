@@ -29,7 +29,7 @@ enum r8a77970_clk_types {
 
 enum clk_ids {
 	/* Core Clock Outputs exported to DT */
-	LAST_DT_CORE_CLK = R8A77970_CLK_OSC,
+	LAST_DT_CORE_CLK = R8A77970_CLK_POST2,
 
 	/* External Input Clocks */
 	CLK_EXTAL,
@@ -76,6 +76,7 @@ static const struct cpg_core_clk r8a77970_core_clks[] __initconst = {
 	DEF_FIXED(".pll1_div4",	CLK_PLL1_DIV4,	CLK_PLL1_DIV2,	2, 1),
 
 	/* Core Clock Outputs */
+	DEF_GEN3_Z("z2",	R8A77970_CLK_Z2,    CLK_TYPE_GEN3_Z, CLK_PLL1_DIV4, 1, 0),
 	DEF_FIXED("ztr",	R8A77970_CLK_ZTR,   CLK_PLL1_DIV2,  6, 1),
 	DEF_FIXED("ztrd2",	R8A77970_CLK_ZTRD2, CLK_PLL1_DIV2, 12, 1),
 	DEF_FIXED("zt",		R8A77970_CLK_ZT,    CLK_PLL1_DIV2,  4, 1),
@@ -101,6 +102,8 @@ static const struct cpg_core_clk r8a77970_core_clks[] __initconst = {
 	DEF_DIV6P1("canfd",	R8A77970_CLK_CANFD, CLK_PLL1_DIV4, 0x244),
 	DEF_DIV6P1("mso",	R8A77970_CLK_MSO,   CLK_PLL1_DIV4, 0x014),
 	DEF_DIV6P1("csi0",	R8A77970_CLK_CSI0,  CLK_PLL1_DIV4, 0x00c),
+	DEF_DIV6P1("post",	R8A77970_CLK_POST,  CLK_PLL1_DIV4, 0x08c),
+	DEF_DIV6P1("post2",	R8A77970_CLK_POST2, CLK_PLL1_DIV4, 0x09c),
 
 	DEF_FIXED("osc",	R8A77970_CLK_OSC,   CLK_PLL1_DIV2, 12*1024, 1),
 	DEF_FIXED("r",		R8A77970_CLK_R,	    CLK_EXTALR,	   1, 1),
@@ -149,6 +152,18 @@ static const struct mssr_mod_clk r8a77970_mod_clks[] __initconst = {
 	DEF_MOD("vin1",			 810,	R8A77970_CLK_S2D1),
 	DEF_MOD("vin0",			 811,	R8A77970_CLK_S2D1),
 	DEF_MOD("etheravb",		 812,	R8A77970_CLK_S2D2),
+	DEF_MOD("isp",			 817,	R8A77970_CLK_S2D1),
+	DEF_MOD("imr3",			 820,	R8A77970_CLK_S2D1),
+	DEF_MOD("imr2",			 821,	R8A77970_CLK_S2D1),
+	DEF_MOD("imr1",			 822,	R8A77970_CLK_S2D1),
+	DEF_MOD("imr0",			 823,	R8A77970_CLK_S2D1),
+	DEF_MOD("imp3",			 824,	R8A77970_CLK_S1D1),
+	DEF_MOD("imp2",			 825,	R8A77970_CLK_S1D1),
+	DEF_MOD("imp1",			 826,	R8A77970_CLK_S1D1),
+	DEF_MOD("imp0",			 827,	R8A77970_CLK_S1D1),
+	DEF_MOD("imp-ocv1",		 828,	R8A77970_CLK_S1D1),
+	DEF_MOD("imp-ocv0",		 829,	R8A77970_CLK_S1D1),
+	DEF_MOD("impram",		 830,	R8A77970_CLK_S1D1),
 	DEF_MOD("gpio5",		 907,	R8A77970_CLK_CP),
 	DEF_MOD("gpio4",		 908,	R8A77970_CLK_CP),
 	DEF_MOD("gpio3",		 909,	R8A77970_CLK_CP),

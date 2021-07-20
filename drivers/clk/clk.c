@@ -2657,7 +2657,10 @@ int clk_set_phase(struct clk *clk, int degrees)
 	if (clk->exclusive_count)
 		clk_core_rate_unprotect(clk->core);
 
-	ret = clk_core_set_phase_nolock(clk->core, degrees);
+	if (clk->core->flags & CLK_SET_RATE_PARENT)
+		ret = clk_core_set_phase_nolock(clk->core->parent, degrees);
+	else
+		ret = clk_core_set_phase_nolock(clk->core, degrees);
 
 	if (clk->exclusive_count)
 		clk_core_rate_protect(clk->core);
