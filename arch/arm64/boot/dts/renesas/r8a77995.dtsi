@@ -2,13 +2,14 @@
 /*
  * Device Tree Source for the R-Car D3 (R8A77995) SoC
  *
- * Copyright (C) 2016 Renesas Electronics Corp.
+ * Copyright (C) 2016-2021 Renesas Electronics Corp.
  * Copyright (C) 2017 Glider bvba
  */
 
 #include <dt-bindings/clock/r8a77995-cpg-mssr.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/r8a77995-sysc.h>
+#include <dt-bindings/ipmmu/rcar-ipmmu.h>
 
 / {
 	compatible = "renesas,r8a77995";
@@ -1470,6 +1471,17 @@
 		prr: chipid@fff00044 {
 			compatible = "renesas,prr";
 			reg = <0 0xfff00044 0 4>;
+		};
+
+		imrlx4_imr0 {
+			compatible = "generic-uio";
+			reg = <0 0xfe860000 0 0x2000>;
+			interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 823>;
+			power-domains = <&sysc R8A77995_PD_ALWAYS_ON>;
+			resets = <&cpg 823>;
+			linux,uio-name = "imr_00";
+			ipmmu-id = <RCAR_IPMMU_VC0 1>;
 		};
 	};
 
