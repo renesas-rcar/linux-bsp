@@ -3,6 +3,7 @@
  * Device Tree Source for the R-Car M3-N (R8A77965) SoC
  *
  * Copyright (C) 2018 Jacopo Mondi <jacopo+renesas@jmondi.org>
+ * Copyright (C) 2021 Renesas Electronics Corp.
  *
  * Based on r8a7796.dtsi
  * Copyright (C) 2016 Renesas Electronics Corp.
@@ -11,6 +12,7 @@
 #include <dt-bindings/clock/r8a77965-cpg-mssr.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/r8a77965-sysc.h>
+#include <dt-bindings/ipmmu/rcar-ipmmu.h>
 
 #define CPG_AUDIO_CLK_I		R8A77965_CLK_S0D4
 
@@ -3020,6 +3022,28 @@
 		prr: chipid@fff00044 {
 			compatible = "renesas,prr";
 			reg = <0 0xfff00044 0 4>;
+		};
+
+		imrlx4_imr0 {
+			compatible = "generic-uio";
+			reg = <0 0xfe860000 0 0x2000>;
+			interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 823>;
+			power-domains = <&sysc R8A77965_PD_A3VC>;
+			resets = <&cpg 823>;
+			linux,uio-name = "imr_00";
+			ipmmu-id = <RCAR_IPMMU_VC0 1>;
+		};
+
+		imrlx4_imr1 {
+			compatible = "generic-uio";
+			reg = <0 0xfe870000 0 0x2000>;
+			interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 822>;
+			power-domains = <&sysc R8A77965_PD_A3VC>;
+			resets = <&cpg 822>;
+			linux,uio-name = "imr_01";
+			ipmmu-id = <RCAR_IPMMU_VC0 1>;
 		};
 	};
 
