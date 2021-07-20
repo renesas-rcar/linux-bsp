@@ -231,16 +231,16 @@ static int rvin_reset_format(struct rvin_dev *vin)
 
 	v4l2_fill_pix_format(&vin->format, &fmt.format);
 
-	vin->src_rect.top = 0;
-	vin->src_rect.left = 0;
-	vin->src_rect.width = vin->format.width;
-	vin->src_rect.height = vin->format.height;
-
 	/*  Make use of the hardware interlacer by default. */
 	if (vin->format.field == V4L2_FIELD_ALTERNATE) {
 		vin->format.field = V4L2_FIELD_INTERLACED;
 		vin->format.height *= 2;
 	}
+
+	vin->src_rect.top = 0;
+	vin->src_rect.left = 0;
+	vin->src_rect.width = vin->format.width;
+	vin->src_rect.height = vin->format.height;
 
 	rvin_format_align(vin, &vin->format);
 
@@ -248,8 +248,6 @@ static int rvin_reset_format(struct rvin_dev *vin)
 
 	vin->compose.top = 0;
 	vin->compose.left = 0;
-	vin->compose.width = vin->format.width;
-	vin->compose.height = vin->format.height;
 
 	return 0;
 }
@@ -332,6 +330,40 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 	if (v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt))
 		return -EPIPE;
 
+	switch (fmt.format.field) {
+	case V4L2_FIELD_TOP:
+	case V4L2_FIELD_BOTTOM:
+	case V4L2_FIELD_NONE:
+	case V4L2_FIELD_INTERLACED_TB:
+	case V4L2_FIELD_INTERLACED_BT:
+	case V4L2_FIELD_INTERLACED:
+	case V4L2_FIELD_SEQ_TB:
+	case V4L2_FIELD_SEQ_BT:
+		/* Supported natively */
+		break;
+	case V4L2_FIELD_ALTERNATE:
+		switch (vin->format.field) {
+		case V4L2_FIELD_TOP:
+		case V4L2_FIELD_BOTTOM:
+		case V4L2_FIELD_NONE:
+		case V4L2_FIELD_ALTERNATE:
+			break;
+		case V4L2_FIELD_INTERLACED_TB:
+		case V4L2_FIELD_INTERLACED_BT:
+		case V4L2_FIELD_INTERLACED:
+		case V4L2_FIELD_SEQ_TB:
+		case V4L2_FIELD_SEQ_BT:
+			/* Use VIN hardware to combine the two fields */
+			fmt.format.height *= 2;
+			break;
+		default:
+			return -EPIPE;
+		}
+		break;
+	default:
+		return -EPIPE;
+	}
+
 	vin->src_rect.width = pix->width = fmt.format.width;
 	vin->src_rect.height = pix->height = fmt.format.height;
 	vin->crop = vin->src_rect;
@@ -389,8 +421,19 @@ static int rvin_s_fmt_vid_cap(struct file *file, void *priv,
 	fmt_rect.width = vin->format.width;
 	fmt_rect.height = vin->format.height;
 
+	switch (vin->format.field) {
+	case V4L2_FIELD_INTERLACED_TB:
+	case V4L2_FIELD_INTERLACED_BT:
+	case V4L2_FIELD_INTERLACED:
+	case V4L2_FIELD_SEQ_TB:
+	case V4L2_FIELD_SEQ_BT:
+		src_rect.height *= 2;
+		break;
+	default:
+		break;
+	}
+
 	v4l2_rect_map_inside(&vin->crop, &src_rect);
-	v4l2_rect_map_inside(&vin->compose, &fmt_rect);
 	vin->src_rect = src_rect;
 
 	return 0;
@@ -943,6 +986,9 @@ static int rvin_open(struct file *file)
 		ret = v4l2_pipeline_pm_get(&vin->vdev.entity);
 	else if (v4l2_fh_is_singular_file(file))
 		ret = rvin_power_parallel(vin, true);
+
+	if (!vin->info->use_mc)
+		rvin_reset_format(vin);
 
 	if (ret < 0)
 		goto err_open;
