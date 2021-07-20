@@ -1,0 +1,56 @@
+/*
+ * Device Tree Source for the Eagle Function board on r8a7797
+ *
+ * Copyright (C) 2017 Renesas Electronics Corp.
+ * Copyright (C) 2017 Cogent Embedded, Inc.
+ *
+ * This file is licensed under the terms of the GNU General Public License
+ * version 2.  This program is licensed "as is" without any warranty of any
+ * kind, whether express or implied.
+ */
+
+#include "r8a77970-eagle.dts"
+
+/ {
+	model = "Renesas Eagle Function board based on r8a7797";
+
+	vcc_3v3: regulator0 {
+		compatible = "regulator-fixed";
+		regulator-name = "fixed-VCC3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vcc_vddq_vin0: regulator1 {
+		compatible = "regulator-fixed";
+		regulator-name = "VCC-VDDQ-VIN0";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+};
+
+&pfc {
+	sdhi2_pins_1v8: sdhi2_1v8 {
+		groups = "mmc_data8", "mmc_ctrl";
+		function = "mmc";
+		power-source = <1800>;
+	};
+};
+
+&mmc0 {
+	/* used for on-board eMMC */
+	pinctrl-0 = <&sdhi2_pins_1v8>;
+	pinctrl-1 = <&sdhi2_pins_1v8>;
+	pinctrl-names = "default", "state_uhs";
+
+	vmmc-supply = <&vcc_3v3>;
+	vqmmc-supply = <&vcc_vddq_vin0>;
+	mmc-hs200-1_8v;
+	bus-width = <8>;
+	non-removable;
+	status = "okay";
+};

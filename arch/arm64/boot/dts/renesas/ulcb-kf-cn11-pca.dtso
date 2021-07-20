@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Overlay for the H3ULCB Kingfisher board:
+ *  use CN11 instead default CN29/CN48
+ *  use deprecated card with PCA9535
+ *
+ * Copyright (C) 2017-2020 Renesas Electronics Corp.
+ * Copyright (C) 2017-2020 Cogent Embedded, Inc.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+&vdd_cam_b_0 {
+	gpio = <&gpio_exp_b_27 13 GPIO_ACTIVE_HIGH>;
+};
+
+&vdd_cam_b_1 {
+	gpio = <&gpio_exp_b_27 12 GPIO_ACTIVE_HIGH>;
+};
+
+&vdd_cam_b_2 {
+	gpio = <&gpio_exp_b_27 15 GPIO_ACTIVE_HIGH>;
+};
+
+&vdd_cam_b_3 {
+	gpio = <&gpio_exp_b_27 14 GPIO_ACTIVE_HIGH>;
+};
+
+&i2cswitch4_i2c6 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/* PCA9535 is a redundant/deprecated card */
+	gpio_exp_b_27: gpio@27 {
+		compatible = "nxp,pca9535";
+		reg = <0x27>;
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		video_b_des_cfg1 {
+			gpio-hog;
+			gpios = <5 GPIO_ACTIVE_HIGH>;
+			input;
+			line-name = "Video-B cfg1";
+		};
+		video_b_des_cfg0 {
+			gpio-hog;
+			gpios = <6 GPIO_ACTIVE_HIGH>;
+			input;
+			line-name = "Video-B cfg0";
+		};
+		video_b_pwr_shdn {
+			gpio-hog;
+			gpios = <3 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "Video-B PWR_SHDN";
+		};
+		video_b_des_shdn {
+			gpio-hog;
+			gpios = <4 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "Video-B DES_SHDN";
+		};
+		video_b_des_led {
+			gpio-hog;
+			gpios = <7 GPIO_ACTIVE_HIGH>;
+			output-low;
+			line-name = "Video-B led";
+		};
+	};
+};

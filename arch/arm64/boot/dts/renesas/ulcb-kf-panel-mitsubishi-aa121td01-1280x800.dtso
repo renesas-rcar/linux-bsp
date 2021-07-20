@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the Kingfisher (ULCB extension) LVDS panel
+ *
+ * Copyright (C) 2018-2020 Renesas Electronics Corp.
+ * Copyright (C) 2018-2020 Cogent Embedded, Inc.
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&lvds>;
+
+		__overlay__ {
+			compatible = "panel-lvds";
+
+			width-mm = <261>;
+			height-mm = <163>;
+
+			data-mapping = "jeida-24";
+
+			panel-timing {
+				/* 1280x800 @60Hz Mitsubishi AA121TD01 compatible panel */
+				clock-frequency = <71000000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hsync-len = <70>;
+				hfront-porch = <20>;
+				hback-porch = <70>;
+				vsync-len = <5>;
+				vfront-porch = <3>;
+				vback-porch = <15>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target = <&gpio2>;
+
+		__overlay__ {
+			gpio@2 {
+				gpio-hog;
+				gpios = <2 GPIO_ACTIVE_HIGH>;
+				output-low;
+				line-name = "LVDS ISP 6-Bit Compatibility Mode";
+			};
+
+			gpio@3 {
+				gpio-hog;
+				gpios = <3 GPIO_ACTIVE_HIGH>;
+				output-low;
+				line-name = "LVDS Scan Direction Normal";
+			};
+		};
+	};
+};
