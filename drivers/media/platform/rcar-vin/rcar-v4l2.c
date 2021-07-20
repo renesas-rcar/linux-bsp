@@ -228,16 +228,16 @@ static int rvin_reset_format(struct rvin_dev *vin)
 
 	v4l2_fill_pix_format(&vin->format, &fmt.format);
 
-	vin->src_rect.top = 0;
-	vin->src_rect.left = 0;
-	vin->src_rect.width = vin->format.width;
-	vin->src_rect.height = vin->format.height;
-
 	/*  Make use of the hardware interlacer by default. */
 	if (vin->format.field == V4L2_FIELD_ALTERNATE) {
 		vin->format.field = V4L2_FIELD_INTERLACED;
 		vin->format.height *= 2;
 	}
+
+	vin->src_rect.top = 0;
+	vin->src_rect.left = 0;
+	vin->src_rect.width = vin->format.width;
+	vin->src_rect.height = vin->format.height;
 
 	rvin_format_align(vin, &vin->format);
 
@@ -328,6 +328,40 @@ static int rvin_get_sd_format(struct rvin_dev *vin, struct v4l2_pix_format *pix)
 
 	if (v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt))
 		return -EPIPE;
+
+	switch (fmt.format.field) {
+	case V4L2_FIELD_TOP:
+	case V4L2_FIELD_BOTTOM:
+	case V4L2_FIELD_NONE:
+	case V4L2_FIELD_INTERLACED_TB:
+	case V4L2_FIELD_INTERLACED_BT:
+	case V4L2_FIELD_INTERLACED:
+	case V4L2_FIELD_SEQ_TB:
+	case V4L2_FIELD_SEQ_BT:
+		/* Supported natively */
+		break;
+	case V4L2_FIELD_ALTERNATE:
+		switch (vin->format.field) {
+		case V4L2_FIELD_TOP:
+		case V4L2_FIELD_BOTTOM:
+		case V4L2_FIELD_NONE:
+		case V4L2_FIELD_ALTERNATE:
+			break;
+		case V4L2_FIELD_INTERLACED_TB:
+		case V4L2_FIELD_INTERLACED_BT:
+		case V4L2_FIELD_INTERLACED:
+		case V4L2_FIELD_SEQ_TB:
+		case V4L2_FIELD_SEQ_BT:
+			/* Use VIN hardware to combine the two fields */
+			fmt.format.height *= 2;
+			break;
+		default:
+			return -EPIPE;
+		}
+		break;
+	default:
+		return -EPIPE;
+	}
 
 	vin->src_rect.width = pix->width = fmt.format.width;
 	vin->src_rect.height = pix->height = fmt.format.height;
