@@ -706,7 +706,7 @@ out:
 }
 EXPORT_SYMBOL_GPL(mmc_send_tuning);
 
-int mmc_abort_tuning(struct mmc_host *host, u32 opcode)
+int mmc_send_abort_tuning(struct mmc_host *host, u32 opcode)
 {
 	struct mmc_command cmd = {};
 
@@ -715,7 +715,8 @@ int mmc_abort_tuning(struct mmc_host *host, u32 opcode)
 	 * command, but SD specification does not, so do nothing unless it is
 	 * eMMC.
 	 */
-	if (opcode != MMC_SEND_TUNING_BLOCK_HS200)
+	if (!(host->caps2 & MMC_CAP2_STOP_TUNE_SD) &&
+	    opcode != MMC_SEND_TUNING_BLOCK_HS200)
 		return 0;
 
 	cmd.opcode = MMC_STOP_TRANSMISSION;
@@ -729,7 +730,7 @@ int mmc_abort_tuning(struct mmc_host *host, u32 opcode)
 
 	return mmc_wait_for_cmd(host, &cmd, 0);
 }
-EXPORT_SYMBOL_GPL(mmc_abort_tuning);
+EXPORT_SYMBOL_GPL(mmc_send_abort_tuning);
 
 static int
 mmc_send_bus_test(struct mmc_card *card, struct mmc_host *host, u8 opcode,

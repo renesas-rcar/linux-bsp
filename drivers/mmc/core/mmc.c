@@ -1990,11 +1990,35 @@ static int mmc_poweroff_notify(struct mmc_card *card, unsigned int notify_type)
 	return err;
 }
 
+static int _mmc_resume(struct mmc_host *host);
 /*
  * Host is being removed. Free up the current card.
  */
 static void mmc_remove(struct mmc_host *host)
 {
+	/*
+	 * The mmc and host driver will be in the following modes here:
+	 *  1. mmc_card_suspended() == false &&
+	 *     power_off_notification == EXT_CSD_POWER_ON
+	 *  2. mmc_card_suspended() == true &&
+	 *     power_off_notification == EXT_CSD_POWER_OFF_{SHORT,LONG}
+	 *  3. mmc_card_suspended() == true && mmc_sleep() was called
+	 *
+	 * So, call _mmc_resume() here anyway for the cases. Otherwise:
+	 *  - _mmc_resume will be called via mmc_runtime_resume() and then
+	 *    power_off_notification will be set to EXT_CSD_POWER_ON.
+	 *  - timeout will happen in mmc_blk_part_switch() via mmc_blk_remove()
+	 *    if "part_curr" of mmc block is not set to default.
+	 */
+	_mmc_resume(host);
+
+	/* Disable power_off_notification byte in the ext_csd register */
+	if (host->card->ext_csd.rev >= 6) {
+		mmc_claim_host(host);
+		mmc_poweroff_notify(host->card, EXT_CSD_NO_POWER_NOTIFICATION);
+		mmc_release_host(host);
+	}
+
 	mmc_remove_card(host->card);
 	host->card = NULL;
 }
