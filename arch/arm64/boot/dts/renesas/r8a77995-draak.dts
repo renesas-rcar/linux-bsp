@@ -496,9 +496,6 @@
 				 * not connected here.
 				 */
 				adv7612_out: endpoint {
-					pclk-sample = <0>;
-					hsync-active = <0>;
-					vsync-active = <0>;
 					remote-endpoint = <&vin4_in>;
 				};
 			};
@@ -749,6 +746,9 @@
 	ports {
 		port {
 			vin4_in: endpoint {
+				pclk-sample = <0>;
+				hsync-active = <0>;
+				vsync-active = <0>;
 				remote-endpoint = <&adv7612_out>;
 			};
 		};
