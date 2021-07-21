@@ -2,7 +2,7 @@
 /*
  * vsp1_regs.h  --  R-Car VSP1 Registers Definitions
  *
- * Copyright (C) 2013 Renesas Electronics Corporation
+ * Copyright (C) 2013-2021 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -32,10 +32,12 @@
 #define VI6_STATUS_SYS_ACT(n)		BIT((n) + 8)
 
 #define VI6_WPF_IRQ_ENB(n)		(0x0048 + (n) * 12)
+#define VI6_WFP_IRQ_ENB_UNDE		BIT(16)
 #define VI6_WFP_IRQ_ENB_DFEE		BIT(1)
 #define VI6_WFP_IRQ_ENB_FREE		BIT(0)
 
 #define VI6_WPF_IRQ_STA(n)		(0x004c + (n) * 12)
+#define VI6_WFP_IRQ_STA_UND		BIT(16)
 #define VI6_WFP_IRQ_STA_DFE		BIT(1)
 #define VI6_WFP_IRQ_STA_FRE		BIT(0)
 
@@ -227,6 +229,36 @@
 #define VI6_RPF_MULT_ALPHA_P_MMD_BOTH	(3 << 8)
 #define VI6_RPF_MULT_ALPHA_RATIO_MASK	(0xff << 0)
 #define VI6_RPF_MULT_ALPHA_RATIO_SHIFT	0
+
+#define VI6_RPF_EXT_INFMT0		0x0370
+#define VI6_RPF_EXT_INFMT0_F2B_LSB		(0 << 12)
+#define VI6_RPF_EXT_INFMT0_F2B_MSB		(1 << 12)
+#define VI6_RPF_EXT_INFMT0_IPBD_Y_8		(0 << 8)
+#define VI6_RPF_EXT_INFMT0_IPBD_Y_10	(1 << 8)
+#define VI6_RPF_EXT_INFMT0_IPBD_Y_12	(2 << 8)
+#define VI6_RPF_EXT_INFMT0_IPBD_C_8		(0 << 4)
+#define VI6_RPF_EXT_INFMT0_IPBD_C_10	(1 << 4)
+#define VI6_RPF_EXT_INFMT0_IPBD_C_12	(2 << 4)
+#define VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10	(3 << 0)
+#define VI6_RPF_EXT_INFMT0_BYPP_M1_N_RGB10	(0 << 0)
+
+#define VI6_RPF_EXT_INFMT1		0x0374
+#define VI6_RPF_EXT_INFMT1_RGB10	0x000a1400
+#define VI6_RPF_EXT_INFMT1_RGB10A2	0x000a141e
+#define VI6_RPF_EXT_INFMT1_A2RGB10	0x020c1600
+#define VI6_RPF_EXT_INFMT1_DEFAULT	0x00000000
+
+#define VI6_RPF_EXT_INFMT2		0x0378
+#define VI6_RPF_EXT_INFMT2_RGB10	0x0a0a0a00
+#define VI6_RPF_EXT_INFMT2_RGB10A2	0x0a0a0a02
+#define VI6_RPF_EXT_INFMT2_A2RGB10	0x0a0a0a02
+#define VI6_RPF_EXT_INFMT2_DEFAULT	0x00000000
+
+#define VI6_RPF_BRDITH_CTRL		0x03e0
+#define VI6_RPF_BRDITH_CTRL_ODE_EN	(1 << 8)
+#define VI6_RPF_BRDITH_CTRL_ODE_DIS	(0 << 8)
+#define VI6_RPF_BRDITH_CTRL_CBRM_RO	(1 << 0)
+#define VI6_RPF_BRDITH_CTRL_CBRM_TR	(0 << 0)
 
 /* -----------------------------------------------------------------------------
  * WPF Control Registers
@@ -766,6 +798,7 @@
 #define VI6_IP_VERSION_MODEL_VSPD_V3	(0x18 << 8)
 #define VI6_IP_VERSION_MODEL_VSPDL_GEN3	(0x19 << 8)
 #define VI6_IP_VERSION_MODEL_VSPBS_GEN3	(0x1a << 8)
+#define VI6_IP_VERSION_MODEL_VSPD_V3U	(0x1c << 8)
 #define VI6_IP_VERSION_SOC_MASK		(0xff << 0)
 #define VI6_IP_VERSION_SOC_H2		(0x01 << 0)
 #define VI6_IP_VERSION_SOC_V2H		(0x01 << 0)
@@ -777,6 +810,7 @@
 #define VI6_IP_VERSION_SOC_D3		(0x04 << 0)
 #define VI6_IP_VERSION_SOC_M3N		(0x04 << 0)
 #define VI6_IP_VERSION_SOC_E3		(0x04 << 0)
+#define VI6_IP_VERSION_SOC_AD		(0x05 << 0)
 
 /* -----------------------------------------------------------------------------
  * RPF CLUT Registers
@@ -836,6 +870,7 @@
 #define VI6_FMT_XBXGXR_262626		0x21
 #define VI6_FMT_ABGR_8888		0x22
 #define VI6_FMT_XXRGB_88565		0x23
+#define VI6_FMT_RGB10_RGB10A2_A2RGB10	0x30
 
 #define VI6_FMT_Y_UV_444		0x40
 #define VI6_FMT_Y_UV_422		0x41
@@ -847,5 +882,45 @@
 #define VI6_FMT_Y_U_V_444		0x4a
 #define VI6_FMT_Y_U_V_422		0x4b
 #define VI6_FMT_Y_U_V_420		0x4c
+
+/* -----------------------------------------------------------------------------
+ * for workaround in H3(ES1.x)
+ */
+#define	FCPVD0_REG			0xfea27000
+#define	FCPVD1_REG			0xfea2f000
+#define	FCPVD2_REG			0xfea37000
+#define	FCPVD3_REG			0xfea3f000
+
+#define FCP_RST_REG			0x0010
+#define FCP_RST_SOFTRST			0x00000001
+#define FCP_RST_WORKAROUND		0x00000010
+
+#define FCP_STA_REG			0x0018
+#define FCP_STA_ACT			0x00000001
+
+#define VI6_CLK_CTRL0			0x0010
+#define VI6_CLK_CTRL0_WORKAROUND	0x10010f1f
+
+#define VI6_CLK_CTRL1			0x0014
+#define VI6_CLK_CTRL1_WORKAROUND	0xff00ffff
+
+#define VI6_CLK_DCSWT_WORKAROUND1	0x00130808
+#define VI6_CLK_DCSWT_WORKAROUND2	0x00000808
+
+#define VI6_CLK_DCSM0			0x001c
+#define VI6_CLK_DCSM0_WORKAROUND	0x1fff0f1f
+
+#define VI6_CLK_DCSM1			0x0020
+#define VI6_CLK_DCSM1_WORKAROUND	0xff00ffff
+
+#define VI6_MRESET_ENB0			0x002c
+#define VI6_MRESET_ENB0_WORKAROUND1	0x0000001f
+#define VI6_MRESET_ENB0_WORKAROUND2	0x30000f1f
+
+#define VI6_MRESET_ENB1			0x0030
+#define VI6_MRESET_ENB1_WORKAROUND	0xff00ffff
+
+#define VI6_MRESET			0x0034
+#define VI6_MRESET_WORKAROUND		0x00000001
 
 #endif /* __VSP1_REGS_H__ */
