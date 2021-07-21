@@ -6139,6 +6139,11 @@
 			linux,uio-name = "irq_iccom_00_07";
 		};
 
+		qos@e67e0000 {
+			compatible = "renesas,qos";
+			reg = <0 0xe67e0000 0 0x10090>;
+		};
+
 		wwdt00: wwdt@ffc90000 {
 			compatible = "generic-uio";
 			reg = <0 0xffc90000 0 0x10000>;
