@@ -12,6 +12,12 @@
 
 #include "cc_driver.h"
 
+enum cc_secure_dir_type {
+	CC_NO_DMA_IS_SECURE = 0,
+	CC_SRC_DMA_IS_SECURE = 1,
+	CC_DST_DMA_IS_SECURE = 2
+};
+
 enum cc_req_dma_buf_type {
 	CC_DMA_BUF_NULL = 0,
 	CC_DMA_BUF_DLLI,

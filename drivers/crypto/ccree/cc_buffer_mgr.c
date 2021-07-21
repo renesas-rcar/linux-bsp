@@ -92,6 +92,61 @@ static unsigned int cc_get_sgl_nents(struct device *dev,
 }
 
 /**
+ * cc_buffer_is_phy_cont()
+ *
+ * @dev: Device object
+ * @sg_list: SG list
+ * @nbytes: [IN] Total SGL data bytes.
+ *
+ * This function check the if all entry of scatter-gather list
+ * is in continuous physical memory area.
+ * Checking by:
+ * - Get base physical address of entry and add with its length,
+ * - Compare above value with base physical address of next entry.
+ * - If they are not equal, so the two entries are not on continuous
+ *   physical memory area.
+ */
+static bool cc_buffer_is_phy_cont(struct device *dev,
+				  struct scatterlist *sg_list, unsigned int nbytes)
+{
+	dma_addr_t old_addr = 0;
+	bool is_cont = true;
+
+	while (nbytes != 0) {
+		if (sg_list->length != 0) {
+			dev_dbg(dev, "[%d] sg_list->length %d\n", __LINE__,
+				sg_list->length);
+			/* get the number of bytes in the last entry */
+			nbytes -= (sg_list->length > nbytes) ?
+				   nbytes : sg_list->length;
+
+			old_addr = page_to_phys(sg_page(sg_list));
+			old_addr += sg_list->length;
+			dev_dbg(dev, "[%d] old_addr 0x%llx\n", __LINE__,
+				old_addr);
+			dev_dbg(dev, "[%d] page 0x%llx\n", __LINE__,
+				(unsigned long long)sg_page(sg_list));
+			dev_dbg(dev, "[%d] phy addr 0x%llx\n", __LINE__,
+				page_to_phys(sg_page(sg_list)));
+			sg_list = sg_next(sg_list);
+			if (nbytes != 0 && sg_list->length != 0) {
+				dev_dbg(dev, "[%d] dma_address 0x%llx\n",
+					__LINE__,
+					sg_list->dma_address);
+
+				if (old_addr != page_to_phys(sg_page(sg_list)))
+					is_cont = false;
+			}
+		} else {
+			sg_list = (struct scatterlist *)sg_page(sg_list);
+		}
+	}
+
+	dev_dbg(dev, "is_cont %d\n", is_cont);
+	return is_cont;
+}
+
+/**
  * cc_copy_sg_portion() - Copy scatter list data,
  * from to_skip to end, to dest and vice versa
  *
@@ -275,6 +330,9 @@ static int cc_map_sg(struct device *dev, struct scatterlist *sg,
 
 	*mapped_nents = ret;
 
+	if (cc_buffer_is_phy_cont(dev, sg, nbytes))
+		*mapped_nents = 1;
+
 	return 0;
 }
 
@@ -349,10 +407,12 @@ void cc_unmap_cipher_request(struct device *dev, void *ctx,
 			      req_ctx->mlli_params.mlli_dma_addr);
 	}
 
-	dma_unmap_sg(dev, src, req_ctx->in_nents, DMA_BIDIRECTIONAL);
-	dev_dbg(dev, "Unmapped req->src=%pK\n", sg_virt(src));
+	if (req_ctx->sec_dir != CC_SRC_DMA_IS_SECURE) {
+		dma_unmap_sg(dev, src, req_ctx->in_nents, DMA_BIDIRECTIONAL);
+		dev_dbg(dev, "Unmapped req->src=%pK\n", sg_virt(src));
+	}
 
-	if (src != dst) {
+	if (src != dst && req_ctx->sec_dir != CC_DST_DMA_IS_SECURE) {
 		dma_unmap_sg(dev, dst, req_ctx->out_nents, DMA_BIDIRECTIONAL);
 		dev_dbg(dev, "Unmapped req->dst=%pK\n", sg_virt(dst));
 	}
@@ -371,6 +431,7 @@ int cc_map_cipher_request(struct cc_drvdata *drvdata, void *ctx,
 	int rc = 0;
 	u32 mapped_nents = 0;
 
+	req_ctx->sec_dir = 0;
 	req_ctx->dma_buf_type = CC_DMA_BUF_DLLI;
 	mlli_params->curr_pool = NULL;
 	sg_data.num_of_buffers = 0;
@@ -392,14 +453,27 @@ int cc_map_cipher_request(struct cc_drvdata *drvdata, void *ctx,
 	}
 
 	/* Map the src SGL */
-	rc = cc_map_sg(dev, src, nbytes, DMA_BIDIRECTIONAL, &req_ctx->in_nents,
-		       LLI_MAX_NUM_OF_DATA_ENTRIES, &dummy, &mapped_nents);
-	if (rc)
-		goto cipher_exit;
-	if (mapped_nents > 1)
-		req_ctx->dma_buf_type = CC_DMA_BUF_MLLI;
+	if (sg_is_last(src) && !sg_page(src) && sg_dma_address(src)) {
+		/* The source is secure hence, no mapping is needed */
+		req_ctx->sec_dir = CC_SRC_DMA_IS_SECURE;
+		req_ctx->in_nents = 1;
+	} else {
+		rc = cc_map_sg(dev, src, nbytes, DMA_BIDIRECTIONAL,
+			       &req_ctx->in_nents, LLI_MAX_NUM_OF_DATA_ENTRIES,
+			       &dummy, &mapped_nents);
+		if (rc)
+			goto cipher_exit;
+		if (mapped_nents > 1)
+			req_ctx->dma_buf_type = CC_DMA_BUF_MLLI;
+	}
 
 	if (src == dst) {
+		if (req_ctx->sec_dir == CC_SRC_DMA_IS_SECURE) {
+			dev_err(dev, "In-place operation for SKP is un-supported\n");
+			/* both sides are secure */
+			rc = -ENOMEM;
+			goto cipher_exit;
+		}
 		/* Handle inplace operation */
 		if (req_ctx->dma_buf_type == CC_DMA_BUF_MLLI) {
 			req_ctx->out_nents = 0;
@@ -408,22 +482,38 @@ int cc_map_cipher_request(struct cc_drvdata *drvdata, void *ctx,
 					&req_ctx->in_mlli_nents);
 		}
 	} else {
-		/* Map the dst sg */
-		rc = cc_map_sg(dev, dst, nbytes, DMA_BIDIRECTIONAL,
-			       &req_ctx->out_nents, LLI_MAX_NUM_OF_DATA_ENTRIES,
-			       &dummy, &mapped_nents);
-		if (rc)
-			goto cipher_exit;
-		if (mapped_nents > 1)
-			req_ctx->dma_buf_type = CC_DMA_BUF_MLLI;
+		if (sg_is_last(dst) && !sg_page(dst) &&
+		    sg_dma_address(dst)) {
+			if (req_ctx->sec_dir == CC_SRC_DMA_IS_SECURE) {
+				dev_err(dev, "SKP in both sides is un-supported\n");
+				/* both sides are secure */
+				rc = -ENOMEM;
+				goto cipher_exit;
+			}
+			/* The dest is secure no mapping is needed */
+			req_ctx->sec_dir = CC_DST_DMA_IS_SECURE;
+			req_ctx->out_nents = 1;
+		} else {
+			/* Map the dst sg */
+			rc = cc_map_sg(dev, dst, nbytes, DMA_BIDIRECTIONAL,
+				       &req_ctx->out_nents,
+				       LLI_MAX_NUM_OF_DATA_ENTRIES,
+				       &dummy, &mapped_nents);
+			if (rc)
+				goto cipher_exit;
+			if (mapped_nents > 1)
+				req_ctx->dma_buf_type = CC_DMA_BUF_MLLI;
+		}
 
 		if (req_ctx->dma_buf_type == CC_DMA_BUF_MLLI) {
-			cc_add_sg_entry(dev, &sg_data, req_ctx->in_nents, src,
-					nbytes, 0, true,
-					&req_ctx->in_mlli_nents);
-			cc_add_sg_entry(dev, &sg_data, req_ctx->out_nents, dst,
-					nbytes, 0, true,
-					&req_ctx->out_mlli_nents);
+			if (req_ctx->sec_dir != CC_SRC_DMA_IS_SECURE)
+				cc_add_sg_entry(dev, &sg_data, req_ctx->in_nents, src,
+						nbytes, 0, true,
+						&req_ctx->in_mlli_nents);
+			if (req_ctx->sec_dir != CC_SRC_DMA_IS_SECURE)
+				cc_add_sg_entry(dev, &sg_data, req_ctx->out_nents, dst,
+						nbytes, 0, true,
+						&req_ctx->out_mlli_nents);
 		}
 	}
 
@@ -674,6 +764,7 @@ static void cc_prepare_aead_data_mlli(struct cc_drvdata *drvdata,
 	unsigned int authsize = areq_ctx->req_authsize;
 	struct device *dev = drvdata_to_dev(drvdata);
 	struct scatterlist *sg;
+	int i;
 
 	if (req->src == req->dst) {
 		/*INPLACE*/
@@ -707,7 +798,11 @@ static void cc_prepare_aead_data_mlli(struct cc_drvdata *drvdata,
 					areq_ctx->mac_buf_dma_addr;
 			}
 		} else { /* Contig. ICV */
-			sg = &areq_ctx->src_sgl[areq_ctx->src.nents - 1];
+			sg = areq_ctx->src_sgl;
+			for (i = 0 ; i < (areq_ctx->src.nents - 1) ; i++) {
+				WARN_ON(!sg);
+				sg = sg_next(sg);
+			}
 			/*Should hanlde if the sg is not contig.*/
 			areq_ctx->icv_dma_addr = sg_dma_address(sg) +
 				(*src_last_bytes - authsize);
@@ -739,7 +834,11 @@ static void cc_prepare_aead_data_mlli(struct cc_drvdata *drvdata,
 			areq_ctx->icv_virt_addr = areq_ctx->backup_mac;
 
 		} else { /* Contig. ICV */
-			sg = &areq_ctx->src_sgl[areq_ctx->src.nents - 1];
+			sg = areq_ctx->src_sgl;
+			for (i = 0 ; i < (areq_ctx->src.nents - 1) ; i++) {
+				WARN_ON(!sg);
+				sg = sg_next(sg);
+			}
 			/*Should hanlde if the sg is not contig.*/
 			areq_ctx->icv_dma_addr = sg_dma_address(sg) +
 				(*src_last_bytes - authsize);
@@ -763,7 +862,11 @@ static void cc_prepare_aead_data_mlli(struct cc_drvdata *drvdata,
 				       *dst_last_bytes);
 
 		if (!areq_ctx->is_icv_fragmented) {
-			sg = &areq_ctx->dst_sgl[areq_ctx->dst.nents - 1];
+			sg = areq_ctx->dst_sgl;
+			for (i = 0 ; i < (areq_ctx->dst.nents - 1) ; i++) {
+				WARN_ON(!sg);
+				sg = sg_next(sg);
+			}
 			/* Contig. ICV */
 			areq_ctx->icv_dma_addr = sg_dma_address(sg) +
 				(*dst_last_bytes - authsize);
