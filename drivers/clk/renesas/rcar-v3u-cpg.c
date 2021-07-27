@@ -712,7 +712,7 @@ struct rpc_clock {
 };
 
 static const struct clk_div_table cpg_rpcsrc_div_table[] = {
-	{ 0, 4 }, { 1, 6 }, { 2, 5 }, { 3, 6 },
+	{ 0, 4 }, { 1, 6 }, { 2, 5 }, { 3, 6 }, { 0, 0 },
 };
 
 static const struct clk_div_table cpg_rpc_div_table[] = {
