@@ -1579,7 +1579,7 @@
 			dma-channels = <16>;
 		};
 
-		ipmmu_mm: mmu@e67b0000 {
+		ipmmu_mm: iommu@e67b0000 {
 			compatible = "renesas,ipmmu-r8a7795";
 			reg = <0 0xe67b0000 0 0x1000>;
 			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>,
