@@ -83,7 +83,7 @@ dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-v3msk-vbm-v2.dtb r8a77970-es1-v3msk-vbm-
 dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-v3msk-vbm-v3.dtb r8a77970-es1-v3msk-vbm-v3.dtb
 dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-v3msk-view.dtb r8a77970-es1-v3msk-view.dtb
 
-dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vb-4ch.dtb r8a77980-v3hsk-vb-8ch.dtb
+dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vbm.dtb r8a77980-v3hsk-vb-4ch.dtb r8a77980-v3hsk-vb-8ch.dtb
 dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vb-gmsl-8ch.dtb
 dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vb-gmsl2-4.dtb
 dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk-vb-gmsl2-8.dtb
