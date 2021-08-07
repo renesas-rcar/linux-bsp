@@ -57,7 +57,11 @@ MODULE_PARM_DESC(rcar_cr7_fw_name,
 /**
  * struct rcar_cr7_rproc - rcar_cr7 remote processor instance state
  * @rproc: rproc handle
- * @mem: internal memory regions data
+ * @workqueue: work queue list
+ * @cr7_already_running: indicate Cortex-R7 core is already running or not
+ * @mem_va: virtual memory address
+ * @mem_da: device memory address
+ * @mem_len: length of internal memory regions data
  */
 struct rcar_cr7_rproc {
 	struct rproc *rproc;
@@ -70,6 +74,7 @@ struct rcar_cr7_rproc {
 
 /**
  * handle_event() - inbound virtqueue message workqueue function
+ * @work: work queue list
  *
  * This callback is registered with the R-Car MFIS atomic notifier
  * chain and is called every time the remote processor (Cortex-R7)
@@ -87,6 +92,9 @@ static void handle_event(struct work_struct *work)
 
 /**
  * cr7_interrupt_cb()
+ * @self: R-Car Cortex CR7 notifer block
+ * @action: type of interrupt request
+ * @data: message data
  *
  * This callback is registered with the R-Car MFIS atomic notifier
  * chain and is called every time the remote processor (Cortex-R7)
@@ -110,7 +118,7 @@ static struct notifier_block rcar_cr7_notifier_block = {
 
 static int is_cr7_running(void)
 {
-	void *mmio_apmu_base;
+	void __iomem *mmio_apmu_base;
 	u32 regval;
 
 	/* CR7 Power Status Register (CR7PSTR) */
@@ -129,10 +137,10 @@ static int rcar_cr7_rproc_start(struct rproc *rproc)
 	struct device *dev = rproc->dev.parent;
 	//struct rcar_cr7_rproc *rrproc = (struct rcar_cr7_rproc *)rproc->priv;
 
-	void* mmio_cpg_base;
-	void* mmio_rst_base;
-	void* mmio_sysc_base;
-	void* mmio_apmu_base;
+	void __iomem *mmio_cpg_base;
+	void __iomem *mmio_rst_base;
+	void __iomem *mmio_sysc_base;
+	void __iomem *mmio_apmu_base;
 	u32 regval;
 
 
@@ -234,7 +242,7 @@ static void *rcar_cr7_da_to_va(struct rproc *rproc, u64 da, size_t len)
 	if (offset < 0 || offset + len > rrproc->mem_len)
 		return NULL;
 
-	return rrproc->mem_va + offset;
+	return (void __force *)rrproc->mem_va + offset;
 }
 
 static int rcar_cr7_rproc_elf_load_segments(struct rproc *rproc,
