@@ -538,7 +538,7 @@ static int rcar_taurus_can_init_ch(struct rcar_taurus_can_drv *rctcan, int ch_id
 	if (err) {
 		dev_err(&rpdev->dev, "register_candev() failed, error %d\n",
 			err);
-		rctcan->channels[ch_id] = 0;
+		rctcan->channels[ch_id] = NULL;
 		goto fail_candev;
 	}
 
