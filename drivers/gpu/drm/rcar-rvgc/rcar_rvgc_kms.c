@@ -14,6 +14,7 @@
 #include <linux/delay.h>
 
 #include "rcar_rvgc_drv.h"
+#include "rcar_rvgc_kms.h"
 #include "rcar_rvgc_pipe.h"
 
 #include "rcar_rvgc_taurus.h"
@@ -25,12 +26,6 @@
 //#pragma GCC pop_options
 #endif
 
-
-struct rcar_rvgc_format_info {
-	u32 fourcc;
-	unsigned int bpp;
-	unsigned int planes;
-};
 
 /********** Fromat Info **********/
 static const struct rcar_rvgc_format_info rcar_rvgc_format_infos[] = {

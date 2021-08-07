@@ -119,8 +119,9 @@ static const struct drm_connector_funcs rvgc_connector_funcs = {
 	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
 };
 
-struct drm_connector*
-rvgc_connector_create(struct rcar_rvgc_pipe* rvgc_pipe) {
+static struct drm_connector
+*rvgc_connector_create(struct rcar_rvgc_pipe *rvgc_pipe)
+{
 	struct rcar_rvgc_device* rvgc_dev = rvgc_pipe->rcar_rvgc_dev;
 	struct drm_device* drm = rvgc_dev->ddev;
 	struct rvgc_connector* rconn;
@@ -204,15 +205,17 @@ static void rvgc_crtc_enable(struct drm_crtc* crtc,
 	drm_crtc_vblank_get(crtc);
 }
 
-static void rvgc_crtc_disable(struct drm_crtc* crtc,
-			      struct drm_crtc_state* old_state) {
+static void rvgc_crtc_disable(struct drm_crtc *crtc,
+			      struct drm_crtc_state *old_state)
+{
 	//printk(KERN_ERR "%s():%d", __FUNCTION__, __LINE__);
 	drm_crtc_vblank_off(crtc);
 	drm_crtc_vblank_put(crtc);
 }
 
-void rvgc_crtc_atomic_flush(struct drm_crtc* crtc,
-			    struct drm_crtc_state* old_crtc_state) {
+static void rvgc_crtc_atomic_flush(struct drm_crtc *crtc,
+				   struct drm_crtc_state *old_crtc_state)
+{
 	int ret;
 	struct rcar_rvgc_pipe* rvgc_pipe = container_of(crtc, struct rcar_rvgc_pipe, crtc);
 	struct rcar_rvgc_device* rcrvgc    = rvgc_pipe->rcar_rvgc_dev;
@@ -327,7 +330,7 @@ static void rvgc_plane_atomic_update(struct drm_plane* plane,
 
 	/* Accomodate as many use case as possible by fdt/powervr.ini overrides */
 	if (rvgc_plane->no_scan) {
-		if ((0 == old_state->fb) && (0 != plane->state->fb)) {
+		if (!old_state->fb && plane->state->fb) {
 			dev_info(rcrvgc->dev, "id=%d is NOT being displayed (FDT has no-scan)\n", plane->base.id);
 		}
 	} else {
@@ -349,7 +352,7 @@ static void rvgc_plane_atomic_update(struct drm_plane* plane,
 		}
 
 		/* determine why we're here...*/
-		if ((0 == old_state->fb) && (0 != plane->state->fb)) {
+		if (!old_state->fb && plane->state->fb) {
 			dev_info(rcrvgc->dev, "Reserve id=%d, layer=%d (via %s):%sx=%d, y=%d, %sw=%d, h=%d\n",
 				 plane->base.id, hw_plane, (pos_z_via_pvr) ? "PVR":"FDT",
 				 (rvgc_plane->pos_override) ? "Force Pos,":"", pos_x, pos_y,
@@ -395,7 +398,7 @@ static void rvgc_plane_atomic_update(struct drm_plane* plane,
 			return;
 		}
 
-		if ((0 != old_state->fb) && (0 == plane->state->fb)) {
+		if (old_state->fb && !plane->state->fb) {
 			/* disabling */
 			dev_info(rcrvgc->dev, "Release id=%d, layer=%d\n", plane->base.id, hw_plane);
 			ret = rvgc_taurus_layer_release(rcrvgc, display_idx, hw_plane, &res_msg);
@@ -407,7 +410,7 @@ static void rvgc_plane_atomic_update(struct drm_plane* plane,
 			return;
 		}
 
-		if (0 != plane->state->fb) {
+		if (plane->state->fb) {
 			/* updating fb */
 			gem_obj = drm_fb_cma_get_gem_obj(fb, 0); //we support only single planar formats
 			ret = rvgc_taurus_layer_set_addr(rcrvgc, display_idx, hw_plane, gem_obj->paddr, &res_msg);
