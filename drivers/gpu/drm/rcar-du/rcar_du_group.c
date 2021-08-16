@@ -30,6 +30,22 @@
 #include "rcar_du_group.h"
 #include "rcar_du_regs.h"
 
+static u32 rcar_du_register_data_mask(struct rcar_du_group *rgrp, u32 reg)
+{
+	struct rcar_du_device *rcdu = rgrp->dev;
+	u32 mask_data = 0;
+
+	/* Set mask for R1 register */
+	if (reg == DORCR && rgrp->index == 1) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS))
+			mask_data = DORCR_PG2T | DORCR_DK2S | DORCR_PG2D_DS2;
+	}
+
+	return mask_data;
+}
+
 u32 rcar_du_group_read(struct rcar_du_group *rgrp, u32 reg)
 {
 	return rcar_du_read(rgrp->dev, rgrp->mmio_offset + reg);
@@ -37,6 +53,12 @@ u32 rcar_du_group_read(struct rcar_du_group *rgrp, u32 reg)
 
 void rcar_du_group_write(struct rcar_du_group *rgrp, u32 reg, u32 data)
 {
+	u32 mask = 0;
+
+	mask = rcar_du_register_data_mask(rgrp, reg);
+	if (mask)
+		data |= mask;
+
 	rcar_du_write(rgrp->dev, rgrp->mmio_offset + reg, data);
 }
 
@@ -98,7 +120,7 @@ static void rcar_du_group_setup_didsr(struct rcar_du_group *rgrp)
 	 * clock, do so. Otherwise route DU_DOTCLKINn signal to DUn.
 	 *
 	 * Each channel can then select between the dot clock configured here
-	 * and the clock provided by the CPG through the ESCR register.
+	 * and the clock provided by the CPG through the ESCR02 register.
 	 */
 	if (rcdu->info->gen < 3 && rgrp->index == 0) {
 		/*
@@ -124,6 +146,8 @@ static void rcar_du_group_setup_didsr(struct rcar_du_group *rgrp)
 		if (rcdu->info->lvds_clk_mask & BIT(rcrtc->index))
 			didsr |= DIDSR_LCDS_LVDS0(i)
 			      |  DIDSR_PDCS_CLK(i, 0);
+		else if (rcdu->info->mipi_dsi_clk_mask & BIT(rcrtc->index))
+			didsr |= DIDSR_LCDS_LVDS0(i);
 		else
 			didsr |= DIDSR_LCDS_DCLKIN(i)
 			      |  DIDSR_PDCS_CLK(i, 0);
@@ -146,7 +170,8 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	}
 	rcar_du_group_write(rgrp, DEFR5, DEFR5_CODE | DEFR5_DEFE5);
 
-	rcar_du_group_setup_pins(rgrp);
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+		rcar_du_group_setup_pins(rgrp);
 
 	/*
 	 * TODO: Handle routing of the DU output to CMM dynamically, as we
@@ -158,7 +183,8 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	rcar_du_group_write(rgrp, DEFR7, defr7);
 
 	if (rcdu->info->gen >= 2) {
-		rcar_du_group_setup_defr8(rgrp);
+		if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+			rcar_du_group_setup_defr8(rgrp);
 		rcar_du_group_setup_didsr(rgrp);
 	}
 
@@ -176,6 +202,28 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	rcar_du_group_write(rgrp, DPTSR, (rgrp->dptsr_planes << 16) |
 			    rgrp->dptsr_planes);
 	mutex_unlock(&rgrp->lock);
+}
+
+void rcar_du_pre_group_set_routing(struct rcar_du_group *rgrp,
+				   struct rcar_du_crtc *rcrtc,
+				   unsigned int swindex)
+{
+	unsigned int possible_crtcs =
+		rgrp->dev->info->routes[RCAR_DU_OUTPUT_DPAD0].possible_crtcs;
+	u32 crtc = ffs(possible_crtcs) - 1;
+
+	if (swindex != crtc)
+		return;
+
+	clk_prepare_enable(rcrtc->clock);
+	rcar_du_group_setup(rgrp);
+	rcar_du_group_write(rgrp, DSYSR,
+			    (rcar_du_group_read(rgrp, DSYSR) &
+			    ~(DSYSR_DRES | DSYSR_DEN)) | DSYSR_DEN);
+	rcar_du_group_write(rgrp, DSYSR,
+			    (rcar_du_group_read(rgrp, DSYSR) &
+			    ~(DSYSR_DRES | DSYSR_DEN)) | DSYSR_DRES);
+	clk_disable_unprepare(rcrtc->clock);
 }
 
 /*

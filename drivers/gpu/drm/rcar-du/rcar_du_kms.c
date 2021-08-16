@@ -258,6 +258,24 @@ static const struct rcar_du_format_info rcar_du_format_infos[] = {
 		.planes = 1,
 		.hsub = 1,
 	}, {
+		.fourcc = DRM_FORMAT_XRGB2101010,
+		.v4l2 = V4L2_PIX_FMT_RGB10,
+		.bpp = 32,
+		.planes = 1,
+		.hsub = 1,
+	}, {
+		.fourcc = DRM_FORMAT_ARGB2101010,
+		.v4l2 = V4L2_PIX_FMT_A2RGB10,
+		.bpp = 32,
+		.planes = 1,
+		.hsub = 1,
+	}, {
+		.fourcc = DRM_FORMAT_RGBA1010102,
+		.v4l2 = V4L2_PIX_FMT_RGB10A2,
+		.bpp = 32,
+		.planes = 1,
+		.hsub = 1,
+	}, {
 		.fourcc = DRM_FORMAT_YVYU,
 		.v4l2 = V4L2_PIX_FMT_YVYU,
 		.bpp = 16,
@@ -472,6 +490,43 @@ static void rcar_du_atomic_commit_tail(struct drm_atomic_state *old_state)
 	drm_atomic_helper_cleanup_planes(dev, old_state);
 }
 
+int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
+{
+	int ret = 0;
+	struct drm_atomic_state *state;
+	struct drm_crtc_state *crtc_state;
+	struct drm_mode_config *config = &dev->mode_config;
+
+	drm_modeset_lock_all(dev);
+
+	state = drm_atomic_state_alloc(dev);
+	if (!state) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	if (!crtc_state) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	state->crtcs->state = crtc_state;
+	state->crtcs->old_state = crtc->state;
+	state->crtcs->new_state = crtc_state;
+	state->crtcs->ptr = crtc;
+	crtc_state->state = state;
+	crtc_state->active = true;
+
+	state->acquire_ctx = config->acquire_ctx;
+	ret = drm_atomic_commit(state);
+	drm_atomic_state_put(state);
+err:
+	drm_modeset_unlock_all(dev);
+
+	return ret;
+}
+
 /* -----------------------------------------------------------------------------
  * Initialization
  */
@@ -577,6 +632,11 @@ static int rcar_du_encoders_init(struct rcar_du_device *rcdu)
 
 static int rcar_du_properties_init(struct rcar_du_device *rcdu)
 {
+	rcdu->props.alpha =
+		drm_property_create_range(rcdu->ddev, 0, "alpha", 0, 255);
+	if (rcdu->props.alpha == NULL)
+		return -ENOMEM;
+
 	/*
 	 * The color key is expressed as an RGB888 triplet stored in a 32-bit
 	 * integer in XRGB8888 format. Bit 24 is used as a flag to disable (0)
@@ -587,6 +647,14 @@ static int rcar_du_properties_init(struct rcar_du_device *rcdu)
 					  0, 0x01ffffff);
 	if (rcdu->props.colorkey == NULL)
 		return -ENOMEM;
+
+	if (rcdu->info->gen == 3) {
+		rcdu->props.colorkey_alpha =
+			drm_property_create_range(rcdu->ddev, 0,
+						  "colorkey_alpha", 0, 255);
+		if (!rcdu->props.colorkey_alpha)
+			return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -622,11 +690,18 @@ static int rcar_du_vsps_init(struct rcar_du_device *rcdu)
 
 	for (i = 0; i < rcdu->num_crtcs; ++i) {
 		unsigned int j;
+		unsigned int brs_num = 0;
 
 		ret = of_parse_phandle_with_fixed_args(np, vsps_prop_name,
 						       cells, i, &args);
 		if (ret < 0)
 			goto error;
+
+		ret = of_property_read_u32(args.np, "renesas,#brs", &brs_num);
+		if (brs_num > 2) {
+			dev_err(rcdu->dev, "error: brs number\n");
+			goto error;
+		}
 
 		/*
 		 * Add the VSP to the list or update the corresponding existing
@@ -651,6 +726,13 @@ static int rcar_du_vsps_init(struct rcar_du_device *rcdu)
 		 */
 		rcdu->crtcs[i].vsp = &rcdu->vsps[j];
 		rcdu->crtcs[i].vsp_pipe = cells >= 1 ? args.args[0] : 0;
+
+		/* Has VSPDL */
+		if (rcdu->crtcs[i].vsp_pipe) {
+			if (!ret)
+				rcdu->vspdl_fix = true;
+			rcdu->brs_num = brs_num;
+		}
 	}
 
 	/*
@@ -785,6 +867,8 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 	}
 
 	rcdu->num_crtcs = hweight8(rcdu->info->channels_mask);
+	rcdu->vspdl_fix = false;
+	rcdu->brs_num = 0;
 
 	ret = rcar_du_properties_init(rcdu);
 	if (ret < 0)
@@ -853,9 +937,13 @@ int rcar_du_modeset_init(struct rcar_du_device *rcdu)
 
 		rgrp = &rcdu->groups[hwindex / 2];
 
-		ret = rcar_du_crtc_create(rgrp, swindex++, hwindex);
+		ret = rcar_du_crtc_create(rgrp, swindex, hwindex);
 		if (ret < 0)
 			return ret;
+
+		rcar_du_pre_group_set_routing(rgrp, &rcdu->crtcs[swindex],
+					      swindex);
+		swindex++;
 	}
 
 	/* Initialize the encoders. */
