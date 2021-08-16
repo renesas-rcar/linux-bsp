@@ -42,6 +42,7 @@ struct gpio_rcar_priv {
 	atomic_t wakeup_path;
 	bool has_outdtsel;
 	bool has_both_edge_trigger;
+	bool has_inen;
 	struct gpio_rcar_bank_info bank_info;
 };
 
@@ -58,6 +59,7 @@ struct gpio_rcar_priv {
 #define FILONOFF 0x28	/* Chattering Prevention On/Off Register */
 #define OUTDTSEL 0x40	/* Output Data Select Register */
 #define BOTHEDGE 0x4c	/* One Edge/Both Edge Select Register */
+#define INEN	0x50	/* General Input Enable Register */
 
 #define RCAR_MAX_GPIO_PER_BANK		32
 
@@ -125,6 +127,10 @@ static void gpio_rcar_config_interrupt_input_mode(struct gpio_rcar_priv *p,
 	/* Select one edge or both edges in BOTHEDGE */
 	if (p->has_both_edge_trigger)
 		gpio_rcar_modify_bit(p, BOTHEDGE, hwirq, both);
+
+	/* Select "Input Enable" in INEN */
+	if (p->has_inen)
+		gpio_rcar_modify_bit(p, INEN, hwirq, true);
 
 	/* Select "Interrupt Input Mode" in IOINTSEL */
 	gpio_rcar_modify_bit(p, IOINTSEL, hwirq, true);
@@ -230,6 +236,10 @@ static void gpio_rcar_config_general_input_output_mode(struct gpio_chip *chip,
 
 	/* Configure positive logic in POSNEG */
 	gpio_rcar_modify_bit(p, POSNEG, gpio, false);
+
+	/* Select "Input Enable/Disable" in INEN */
+	if (p->has_inen)
+		gpio_rcar_modify_bit(p, INEN, gpio, !output);
 
 	/* Select "General Input/Output Mode" in IOINTSEL */
 	gpio_rcar_modify_bit(p, IOINTSEL, gpio, false);
@@ -349,16 +359,25 @@ static int gpio_rcar_direction_output(struct gpio_chip *chip, unsigned offset,
 struct gpio_rcar_info {
 	bool has_outdtsel;
 	bool has_both_edge_trigger;
+	bool has_inen;
 };
 
 static const struct gpio_rcar_info gpio_rcar_info_gen1 = {
 	.has_outdtsel = false,
 	.has_both_edge_trigger = false,
+	.has_inen = false,
 };
 
 static const struct gpio_rcar_info gpio_rcar_info_gen2 = {
 	.has_outdtsel = true,
 	.has_both_edge_trigger = true,
+	.has_inen = false,
+};
+
+static const struct gpio_rcar_info gpio_rcar_info_v3u = {
+	.has_outdtsel = true,
+	.has_both_edge_trigger = true,
+	.has_inen = true,
 };
 
 static const struct of_device_id gpio_rcar_of_table[] = {
@@ -390,6 +409,13 @@ static const struct of_device_id gpio_rcar_of_table[] = {
 		/* Gen3 GPIO is identical to Gen2. */
 		.data = &gpio_rcar_info_gen2,
 	}, {
+		.compatible = "renesas,gpio-r8a77961",
+		/* Gen3 GPIO is identical to Gen2. */
+		.data = &gpio_rcar_info_gen2,
+	}, {
+		.compatible = "renesas,gpio-r8a779a0",
+		.data = &gpio_rcar_info_v3u,
+	}, {
 		.compatible = "renesas,rcar-gen1-gpio",
 		.data = &gpio_rcar_info_gen1,
 	}, {
@@ -419,6 +445,7 @@ static int gpio_rcar_parse_dt(struct gpio_rcar_priv *p, unsigned int *npins)
 	info = of_device_get_match_data(p->dev);
 	p->has_outdtsel = info->has_outdtsel;
 	p->has_both_edge_trigger = info->has_both_edge_trigger;
+	p->has_inen = info->has_inen;
 
 	ret = of_parse_phandle_with_fixed_args(np, "gpio-ranges", 3, 0, &args);
 	*npins = ret == 0 ? args.args[2] : RCAR_MAX_GPIO_PER_BANK;
