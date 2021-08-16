@@ -66,6 +66,9 @@ properties:
     maxItems: 1
 
   clocks:
+    description:
+      Specify a clock handling and a module clock.
+      If HW supports the change of module clock, specify the module clock.
     maxItems: 1
 
   num-cs:
