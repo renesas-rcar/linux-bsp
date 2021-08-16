@@ -882,8 +882,8 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 
 	ep = of_graph_get_endpoint_by_regs(priv->dev->of_node, 0, 0);
 	if (!ep) {
-		dev_err(priv->dev, "Not connected to subdevice\n");
-		return -EINVAL;
+		dev_dbg(priv->dev, "Not connected to subdevice\n");
+		return 0;
 	}
 
 	ret = v4l2_fwnode_endpoint_parse(of_fwnode_handle(ep), &v4l2_ep);
@@ -1160,6 +1160,10 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 	},
 	{
 		.compatible = "renesas,r8a7796-csi2",
+		.data = &rcar_csi2_info_r8a7796,
+	},
+	{
+		.compatible = "renesas,r8a77961-csi2",
 		.data = &rcar_csi2_info_r8a7796,
 	},
 	{
