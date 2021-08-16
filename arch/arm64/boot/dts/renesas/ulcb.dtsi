@@ -42,6 +42,17 @@
 		clock-frequency = <12288000>;
 	};
 
+	avb-mch {
+		compatible = "renesas,avb-mch-gen3";
+		reg = <0 0xec5a0100 0 0x100>; /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
+		resets = <&cpg 922>;
+		reset-names = "adg";
+	};
+
 	hdmi0-out {
 		compatible = "hdmi-connector";
 		type = "a";
@@ -95,7 +106,7 @@
 
 	sound_card: sound {
 		compatible = "audio-graph-card";
-		label = "rcar-sound";
+		label = "ak4613";
 
 		dais = <&rsnd_port0	/* ak4613 */
 			&rsnd_port1	/* HDMI0  */
@@ -146,7 +157,7 @@
 	pinctrl-0 = <&avb_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy0>;
-	phy-mode = "rgmii-txid";
+	tx-internal-delay-ps = <2000>;
 	status = "okay";
 
 	phy0: ethernet-phy@0 {
@@ -156,6 +167,10 @@
 		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
 		reset-gpios = <&gpio2 10 GPIO_ACTIVE_LOW>;
 	};
+};
+
+&a57_0 {
+	cpu-supply = <&dvfs>;
 };
 
 &du {
@@ -367,7 +382,7 @@
 };
 
 &rcar_sound {
-	pinctrl-0 = <&sound_pins &sound_clk_pins>;
+	pinctrl-0 = <&sound_pins>, <&sound_clk_pins>;
 	pinctrl-names = "default";
 
 	/* Single DAI */
@@ -410,8 +425,8 @@
 				bitclock-master = <&rsnd_for_ak4613>;
 				frame-master = <&rsnd_for_ak4613>;
 
-				playback = <&ssi0 &src0 &dvc0>;
-				capture  = <&ssi1 &src1 &dvc1>;
+				playback = <&ssi0>, <&src0>, <&dvc0>;
+				capture  = <&ssi1>, <&src1>, <&dvc1>;
 			};
 		};
 		rsnd_port1: port@1 {
@@ -424,6 +439,59 @@
 				frame-master = <&rsnd_for_hdmi>;
 
 				playback = <&ssi2>;
+			};
+		};
+	};
+};
+
+&rpc0 {
+	status = "okay";
+
+	flash@0 {
+		compatible = "cfi-flash";
+		reg = <0>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			bootparam@0 {
+				reg = <0x00000000 0x040000>;
+				read-only;
+			};
+			bl2@00040000 {
+				reg = <0x00040000 0x140000>;
+				read-only;
+			};
+			cert_header_sa6@00180000 {
+				reg = <0x00180000 0x040000>;
+				read-only;
+			};
+			bl31@001C0000 {
+				reg = <0x001C0000 0x040000>;
+				read-only;
+			};
+			tee@00200000 {
+				reg = <0x00200000 0x440000>;
+				read-only;
+			};
+			uboot@00640000 {
+				reg = <0x00640000 0x0C0000>;
+				read-only;
+			};
+			uboot-env@00700000 {
+				reg = <0x00700000 0x040000>;
+				read-only;
+			};
+			dtb@00740000 {
+				reg = <0x00740000 0x080000>;
+			};
+			kernel@007C0000 {
+				reg = <0x007C0000 0x1400000>;
+			};
+			user@01BC0000 {
+				reg = <0x01BC0000 0x2440000>;
 			};
 		};
 	};
@@ -465,11 +533,15 @@
 	pinctrl-1 = <&sdhi2_pins>;
 	pinctrl-names = "default", "state_uhs";
 
+	iommus = <&ipmmu_ds1 34>;
+
 	vmmc-supply = <&reg_3p3v>;
 	vqmmc-supply = <&reg_1p8v>;
 	bus-width = <8>;
 	mmc-hs200-1_8v;
 	mmc-hs400-1_8v;
+	no-sd;
+	no-sdio;
 	non-removable;
 	full-pwr-cycle-in-suspend;
 	status = "okay";

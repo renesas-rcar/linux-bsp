@@ -14,3 +14,6 @@
 	compatible = "shimafuji,kingfisher", "renesas,h3ulcb",
 		     "renesas,r8a7795";
 };
+
+/* use CN11 instead default CN29/CN48 (H3 only) */
+//#include "ulcb-kf-cn11.dtsi"

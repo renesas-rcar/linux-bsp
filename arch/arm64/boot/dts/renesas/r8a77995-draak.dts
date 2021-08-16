@@ -19,6 +19,16 @@
 		ethernet0 = &avb;
 	};
 
+	audio_clkout: audio-clkout {
+		/*
+		 * This is same as <&rcar_sound 0>
+		 * but needed to avoid cs2000/rcar_sound probe dead-lock
+		 */
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <12288000>;
+	};
+
 	backlight: backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm1 0 50000>;
@@ -35,8 +45,120 @@
 		stdout-path = "serial0:115200n8";
 	};
 
-	composite-in {
-		compatible = "composite-video-connector";
+	avb-mch@ec5a0100 {
+		compatible = "renesas,avb-mch-gen3";
+		reg =	<0 0xec5a0100 0 0x100>;  /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
+		resets = <&cpg 922>;
+	};
+
+	lvds0-decoder {
+		compatible = "thine,thc63lvd1024";
+		vcc-supply = <&reg_3p3v>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in0: endpoint {
+					remote-endpoint = <&lvds0_out>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out0: endpoint {
+					remote-endpoint = <&adv7511_in>;
+				};
+			};
+		};
+	};
+
+	lvds1-decoder {
+		compatible = "thine,thc63lvd1024";
+		vcc-supply = <&reg_3p3v>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in1: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out1: endpoint {
+				};
+			};
+		};
+	};
+
+	lvds0 {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+		enable-gpios = <&gpio2 31 GPIO_ACTIVE_HIGH>;
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds0_panel_in: endpoint {
+			};
+		};
+	};
+
+	lvds1 {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+		enable-gpios = <&gpio4 0 GPIO_ACTIVE_HIGH>;
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds1_panel_in: endpoint {
+			};
+		};
+	};
+
+        composite-in {
+                compatible = "composite-video-connector";
 
 		port {
 			composite_con_in: endpoint {
@@ -48,6 +170,10 @@
 	hdmi-in {
 		compatible = "hdmi-connector";
 		type = "a";
+
+		width = <800>;
+		height = <600>;
+		max-pixelclock = <50000>;
 
 		port {
 			hdmi_con_in: endpoint {
@@ -67,34 +193,24 @@
 		};
 	};
 
-	lvds-decoder {
-		compatible = "thine,thc63lvd1024";
-		vcc-supply = <&reg_3p3v>;
-
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-				thc63lvd1024_in: endpoint {
-					remote-endpoint = <&lvds0_out>;
-				};
-			};
-
-			port@2 {
-				reg = <2>;
-				thc63lvd1024_out: endpoint {
-					remote-endpoint = <&adv7511_in>;
-				};
-			};
-		};
-	};
-
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
 		reg = <0x0 0x48000000 0x0 0x18000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x8000000>;
+			linux,cma-default;
+		};
 	};
 
 	reg_1p8v: regulator-1p8v {
@@ -124,8 +240,18 @@
 		regulator-always-on;
 	};
 
+	sound_card: sound {
+		compatible = "audio-graph-card";
+
+		dais = <&rsnd_port0	/* ak4613 */
+			/* HDMI is not yet supported */
+		>;
+	};
+
 	vga {
 		compatible = "vga-connector";
+
+		no-use-ddc;
 
 		port {
 			vga_in: endpoint {
@@ -161,6 +287,25 @@
 		#clock-cells = <0>;
 		clock-frequency = <74250000>;
 	};
+
+	x19_clk: x19 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24576000>;
+	};
+};
+
+&audio_clk_b {
+	/*
+	 * X11 is connected to VI4_FIELD/SCIF_CLK/AUDIO_CLKB,
+	 * and R-Car Sound uses AUDIO_CLKB.
+	 * Note is that schematic indicates VI4_FIELD conection only
+	 * not AUDIO_CLKB at SoC page.
+	 * And this VI4_FIELD/SCIF_CLK/AUDIO_CLKB is connected to SW60.
+	 * SW60 should be 1-2.
+	 */
+
+	clock-frequency = <22579200>;
 };
 
 &avb {
@@ -236,6 +381,28 @@
 	pinctrl-names = "default";
 	status = "okay";
 
+	ak4613: codec@10 {
+		compatible = "asahi-kasei,ak4613";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
+		clocks = <&rcar_sound 0>; /* audio_clkout */
+
+		asahi-kasei,in1-single-end;
+		asahi-kasei,in2-single-end;
+		asahi-kasei,out1-single-end;
+		asahi-kasei,out2-single-end;
+		asahi-kasei,out3-single-end;
+		asahi-kasei,out4-single-end;
+		asahi-kasei,out5-single-end;
+		asahi-kasei,out6-single-end;
+
+		port {
+			ak4613_endpoint: endpoint {
+				remote-endpoint = <&rsnd_for_ak4613>;
+			};
+		};
+	};
+
 	composite-in@20 {
 		compatible = "adi,adv7180cp";
 		reg = <0x20>;
@@ -263,7 +430,6 @@
 				 * VIN4 here.
 				 */
 				adv7180_out: endpoint {
-					remote-endpoint = <&vin4_in>;
 				};
 			};
 		};
@@ -292,7 +458,7 @@
 			port@0 {
 				reg = <0>;
 				adv7511_in: endpoint {
-					remote-endpoint = <&thc63lvd1024_out>;
+					remote-endpoint = <&thc63lvd1024_out0>;
 				};
 			};
 
@@ -334,12 +500,21 @@
 				 * not connected here.
 				 */
 				adv7612_out: endpoint {
-					pclk-sample = <0>;
-					hsync-active = <0>;
-					vsync-active = <0>;
+					remote-endpoint = <&vin4_in>;
 				};
 			};
 		};
+	};
+
+	cs2000: clk-multiplier@4f {
+		#clock-cells = <0>;
+		compatible = "cirrus,cs2000-cp";
+		reg = <0x4f>;
+		clocks = <&audio_clkout>, <&x19_clk>; /* audio_clkout_1, x19 */
+		clock-names = "clk_in", "ref_clk";
+
+		assigned-clocks = <&cs2000>;
+		assigned-clock-rates = <24576000>; /* 1/1 divide */
 	};
 
 	eeprom@50 {
@@ -366,7 +541,7 @@
 	ports {
 		port@1 {
 			lvds0_out: endpoint {
-				remote-endpoint = <&thc63lvd1024_in>;
+				remote-endpoint = <&thc63lvd1024_in0>;
 			};
 		};
 	};
@@ -381,9 +556,14 @@
 	status = "okay";
 
 	clocks = <&cpg CPG_MOD 727>,
-		 <&x12_clk>,
 		 <&extal_clk>;
-	clock-names = "fck", "dclkin.0", "extal";
+	clock-names = "fck", "extal";
+	ports {
+		port@1 {
+			lvds1_out: endpoint {
+			};
+		};
+	};
 };
 
 &ohci0 {
@@ -449,6 +629,17 @@
 		power-source = <1800>;
 	};
 
+	sound_pins: sound {
+		groups = "ssi34_ctrl", "ssi3_data", "ssi4_data_a";
+		function = "ssi";
+	};
+
+	sound_clk_pins: sound-clk {
+		groups = "audio_clk_a", "audio_clk_b",
+			 "audio_clkout", "audio_clkout1";
+		function = "audio_clk";
+	};
+
 	usb0_pins: usb0 {
 		groups = "usb0";
 		function = "usb0";
@@ -474,6 +665,42 @@
 	status = "okay";
 };
 
+&rcar_sound {
+	pinctrl-0 = <&sound_pins>, <&sound_clk_pins>;
+	pinctrl-names = "default";
+
+	/* Single DAI */
+	#sound-dai-cells = <0>;
+
+	/* audio_clkout0/1 */
+	#clock-cells = <1>;
+	clock-frequency = <12288000 11289600>;
+
+	status = "okay";
+
+	clocks = <&cpg CPG_MOD 1005>,
+		 <&cpg CPG_MOD 1011>, <&cpg CPG_MOD 1012>,
+		 <&cpg CPG_MOD 1025>, <&cpg CPG_MOD 1026>,
+		 <&cpg CPG_MOD 1020>, <&cpg CPG_MOD 1021>,
+		 <&cpg CPG_MOD 1020>, <&cpg CPG_MOD 1021>,
+		 <&cpg CPG_MOD 1019>, <&cpg CPG_MOD 1018>,
+		 <&cs2000>, <&audio_clk_b>,
+		 <&cpg CPG_CORE R8A77995_CLK_ZA2>;
+
+	ports {
+		rsnd_port0: port {
+			rsnd_for_ak4613: endpoint {
+				remote-endpoint = <&ak4613_endpoint>;
+				dai-format = "left_j";
+				bitclock-master = <&rsnd_for_ak4613>;
+				frame-master = <&rsnd_for_ak4613>;
+				playback = <&ssi3>, <&src5>;
+				capture  = <&ssi4>, <&src6>;
+			};
+		};
+	};
+};
+
 &rwdt {
 	timeout-sec = <60>;
 	status = "okay";
@@ -492,12 +719,20 @@
 	pinctrl-1 = <&sdhi2_pins_uhs>;
 	pinctrl-names = "default", "state_uhs";
 
+	iommus = <&ipmmu_ds1 34>;
+
 	vmmc-supply = <&reg_3p3v>;
 	vqmmc-supply = <&reg_1p8v>;
 	bus-width = <8>;
 	mmc-hs200-1_8v;
+	no-sd;
+	no-sdio;
 	non-removable;
 	status = "okay";
+};
+
+&ssi4 {
+	shared-pin;
 };
 
 &usb2_phy0 {
@@ -517,8 +752,15 @@
 	ports {
 		port {
 			vin4_in: endpoint {
-				remote-endpoint = <&adv7180_out>;
+				pclk-sample = <0>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				remote-endpoint = <&adv7612_out>;
 			};
 		};
 	};
+};
+
+&vspbs {
+	status = "okay";
 };
