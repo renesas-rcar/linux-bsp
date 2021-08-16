@@ -288,6 +288,22 @@ config TI_K3_R5_REMOTEPROC
 	  It's safe to say N here if you're not interested in utilizing
 	  a slave processor.
 
+config RCAR_CR7_REMOTEPROC
+	tristate "R-Car Gen3 Cortex-R7 remoteproc support"
+	depends on RCAR_MFIS
+	depends on DMA_CMA
+	depends on RPMSG_VIRTIO
+	help
+	  Say y here to support ARM Cortex-R7 remote processors via the
+	  remote processor framework on R-Car Gen3 SOCs.
+
+	  This module controls the name of the firmware file that is
+	  executed by the CR7.
+	  This file must reside in the /lib/firmware directory.  It
+	  can be specified via the module parameter
+	  rcar_cr7_fw_name=<filename>, and if not specified will default
+	  to "rproc-cr7-fw".
+
 endif # REMOTEPROC
 
 endmenu

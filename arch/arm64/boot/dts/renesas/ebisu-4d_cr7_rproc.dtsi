@@ -1,0 +1,134 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Device Tree Source for the Ebisu-4D board Cortex-R7 (CR7) Taurus virtio display
+ *
+ * Copyright (C) 2020 Renesas Electronics Corp.
+ */
+
+/ {
+	aliases {
+		/* The CR7 controls the adv7511 hdmi-encoder so exclusively uses
+		 * i2c0, i.e. Linux can no longer use it for anything */
+		/delete-property/ i2c0;
+	};
+
+	cpus {
+		/delete-property/ idle-states;
+	};
+
+	reserved-memory {
+		/* global autoconfigured region for contiguous allocations */
+		/* Only added a label so rvgc can refer to it */
+		cma: linux,cma@58000000 {
+		};
+
+		/* Memory used by the CR7 */
+		cr7: linux,cr7@70000000 {
+			no-map;
+			reg = <0x0 0x70000000 0x0 0x10000000>;
+		};
+	};
+
+	cr7 {
+		compatible = "renesas,rcar-cr7";
+		memory-region = <&cr7>;
+	};
+
+	rvgc {
+		#address-cells = <2>;
+		#size-cells = <2>;
+
+		/* 1:1 mapping for the cma address space */
+		dma-ranges = <0x0 0x58000000 0x0 0x58000000 0x0 0x10000000>;
+
+		rvgc-memory {
+			memory-region = <&cma>;
+		};
+
+		displays {
+			display-0 {
+				display-map = <0x0>;
+				layers{
+					/* layer-map correspond to vpsd rpf (lower values are higher "z") */
+					primary{
+						/* Position the layer in the centre of a 1920x720 display */
+						layer-map=<0x4>;
+						size-w=<800>;
+						size-h=<600>;
+						pos-x=<560>;	// (1920 - 800)/2
+						pos-y=<60>;	// (720 - 600)/2
+						pos-override;
+						/* don't actually output the plane to vspd */
+						// no-scan;
+					};
+					overlay-0{
+						layer-map=<0x3>;
+						size-w=<640>;
+						size-h=<480>;
+						pos-x=<200>;
+						pos-y=<200>;
+					};
+					overlay-1{
+						layer-map=<0x2>;
+						size-w=<640>;
+						size-h=<480>;
+						pos-x=<300>;
+						pos-y=<300>;
+					};
+					overlay-2{
+						layer-map=<0x1>;
+						size-w=<640>;
+						size-h=<480>;
+						pos-x=<0>;
+						pos-y=<200>;
+					};
+				};
+			};
+		};
+	};
+
+	/* No longer accessible due to i2c0 use by CR7 */
+	/delete-node/ cvbs-in;
+	/delete-node/ hdmi-in;
+
+	/* Under CR7 control */
+	/delete-node/ hdmi-out;
+	/delete-node/ lvds-decoder;
+	/delete-node/ lvds0;
+	/delete-node/ lvds1;
+	/delete-node/ vga;
+	/delete-node/ vga-encoder;
+};
+
+&csi40 {
+	/* No longer accessible due to i2c0 use by CR7 */
+	/delete-property/ status;
+
+	ports {
+		/delete-node/ port@0;
+	};
+};
+
+&soc {
+	mfis: mfis@e6260000 {
+		compatible = "renesas,mfis";
+		reg = <0x0 0xe6260000 0x0 0x200>;
+		interrupts = <0x00 0xe0 0x04 0x00 0xe1 0x04 0x00 0xe2 0x04 0x00 0xe3 0x04 0x00 0xe4 0x04 0x00 0xe5 0x04 0x00 0xe6 0x04 0x00 0xe7 0x04>;
+		interrupt-names = "eicr0", "eicr1", "eicr2", "eicr3", "eicr4", "eicr5", "eicr6", "eicr7";
+		renesas,mfis-channels = <0 1 2 3>;
+		status = "okay";
+
+		/delete-node/ mfis-as;
+	};
+};
+
+/* Under CR7 control */
+/delete-node/ &i2c0;
+/delete-node/ &fcpvd0;
+/delete-node/ &fcpvd1;
+/delete-node/ &vspd0;
+/delete-node/ &vspd1;
+/delete-node/ &du;
+/delete-node/ &lvds0;
+/delete-node/ &lvds1;
+

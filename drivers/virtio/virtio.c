@@ -264,6 +264,7 @@ static int virtio_dev_probe(struct device *_d)
 	if (err)
 		goto err;
 
+
 	/* If probe didn't do it, mark device DRIVER_OK ourselves. */
 	if (!(dev->config->get_status(dev) & VIRTIO_CONFIG_S_DRIVER_OK))
 		virtio_device_ready(dev);

@@ -1,0 +1,10 @@
+config CAN_RCAR_TAURUS
+	tristate "Renesas R-Car Taurus CAN driver"
+	depends on ARCH_RENESAS || ARM
+	help
+	  Say Y here if you want to use the Renesas Taurus CAN virtual
+	  driver for R-Car Gen3 SoCs.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called rcar_taurus_can.
+

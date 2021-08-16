@@ -29,11 +29,13 @@ dtb-$(CONFIG_ARCH_R8A77950) += r8a77950-ulcb-kf.dtb
 
 dtb-$(CONFIG_ARCH_R8A77951) += r8a77951-salvator-x.dtb
 dtb-$(CONFIG_ARCH_R8A77951) += r8a77951-salvator-xs.dtb
+dtb-$(CONFIG_ARCH_R8A77951) += r8a77951-salvator-xs_cr7_rproc.dtb
 dtb-$(CONFIG_ARCH_R8A77951) += r8a77951-ulcb.dtb
 dtb-$(CONFIG_ARCH_R8A77951) += r8a77951-ulcb-kf.dtb
 
 dtb-$(CONFIG_ARCH_R8A77951) += r8a779m1-salvator-x.dtb
 dtb-$(CONFIG_ARCH_R8A77951) += r8a779m1-salvator-xs.dtb
+dtb-$(CONFIG_ARCH_R8A77951) += r8a779m1-salvator-xs_cr7_rproc.dtb
 dtb-$(CONFIG_ARCH_R8A77951) += r8a779m1-ulcb.dtb
 dtb-$(CONFIG_ARCH_R8A77951) += r8a779m1-ulcb-kf.dtb
 
@@ -43,6 +45,7 @@ dtb-$(CONFIG_ARCH_R8A77960) += r8a77960-ulcb.dtb
 dtb-$(CONFIG_ARCH_R8A77960) += r8a77960-ulcb-kf.dtb
 
 dtb-$(CONFIG_ARCH_R8A77961) += r8a77961-salvator-xs.dtb
+dtb-$(CONFIG_ARCH_R8A77961) += r8a77961-salvator-xs_cr7_rproc.dtb
 dtb-$(CONFIG_ARCH_R8A77961) += r8a77961-ulcb.dtb
 dtb-$(CONFIG_ARCH_R8A77961) += r8a77961-ulcb-kf.dtb
 
@@ -50,6 +53,7 @@ dtb-$(CONFIG_ARCH_R8A77961) += r8a779m3-salvator-xs.dtb
 
 dtb-$(CONFIG_ARCH_R8A77965) += r8a77965-salvator-x.dtb
 dtb-$(CONFIG_ARCH_R8A77965) += r8a77965-salvator-xs.dtb
+dtb-$(CONFIG_ARCH_R8A77965) += r8a77965-salvator-xs_cr7_rproc.dtb
 dtb-$(CONFIG_ARCH_R8A77965) += r8a77965-ulcb.dtb
 dtb-$(CONFIG_ARCH_R8A77965) += r8a77965-ulcb-kf.dtb
 
@@ -65,7 +69,9 @@ dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-v3hsk.dtb
 
 dtb-$(CONFIG_ARCH_R8A77990) += r8a77990-ebisu.dtb
 dtb-$(CONFIG_ARCH_R8A77990) += r8a77990-ebisu-4d.dtb
+dtb-$(CONFIG_ARCH_R8A77990) += r8a77990-ebisu-4d_cr7_rproc.dtb
 dtb-$(CONFIG_ARCH_R8A77990) += r8a77990-es10-ebisu.dtb r8a77990-es10-ebisu-4d.dtb
+dtb-$(CONFIG_ARCH_R8A77990) += r8a77990-es10-ebisu-4d_cr7_rproc.dtb
 
 dtb-$(CONFIG_ARCH_R8A77995) += r8a77995-draak.dtb
 

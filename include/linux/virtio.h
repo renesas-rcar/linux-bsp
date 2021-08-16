@@ -34,6 +34,16 @@ struct virtqueue {
 	void *priv;
 };
 
+int dma_virtqueue_add_outbuf(struct virtqueue *vq,
+			     struct scatterlist sg[], unsigned int num,
+			     void *data,
+			     gfp_t gfp);
+
+int dma_virtqueue_add_inbuf(struct virtqueue *vq,
+			    struct scatterlist sg[], unsigned int num,
+			    void *data,
+			    gfp_t gfp);
+
 int virtqueue_add_outbuf(struct virtqueue *vq,
 			 struct scatterlist sg[], unsigned int num,
 			 void *data,
