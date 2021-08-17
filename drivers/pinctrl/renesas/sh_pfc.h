@@ -342,6 +342,7 @@ extern const struct sh_pfc_soc_info r8a77990_pinmux_info;
 extern const struct sh_pfc_soc_info r8a77995_pinmux_info;
 extern const struct sh_pfc_soc_info r8a779a0_pinmux_info;
 extern const struct sh_pfc_soc_info r8a779g0_pinmux_info;
+extern const struct sh_pfc_soc_info r8a779f0_pinmux_info;
 extern const struct sh_pfc_soc_info sh7203_pinmux_info;
 extern const struct sh_pfc_soc_info sh7264_pinmux_info;
 extern const struct sh_pfc_soc_info sh7269_pinmux_info;
@@ -445,6 +446,16 @@ extern const struct sh_pfc_soc_info shx3_pinmux_info;
  */
 #define PINMUX_IPSR_PHYS(ipsr, fn, psel) \
 	PINMUX_DATA(fn##_MARK, FN_##psel, FN_##ipsr)
+
+/*
+ * Describe a pinmux configuration in which a pin is physically multiplexed
+ * with other pins and has no representation in a Peripheral Function Select
+ * Register (IPSR)
+ *   - fn: Function name
+ *   - psel: Physical multiplexing selector
+ */
+#define PINMUX_IPSR_PHYS_NOFN(fn, psel) \
+	PINMUX_DATA(fn##_MARK, FN_##psel)
 
 /*
  * Describe a pinmux configuration for a single-function pin with GPIO
