@@ -27,6 +27,7 @@ Required properties:
 	"renesas,i2c-r8a77990" if the device is a part of a R8A77990 SoC.
 	"renesas,i2c-r8a77995" if the device is a part of a R8A77995 SoC.
 	"renesas,i2c-r8a779g0" if the device is a part of a R8A779G0 SoC.
+	"renesas,i2c-r8a779f0" if the device is a part of a R8A779F0 SoC.
 	"renesas,rcar-gen1-i2c" for a generic R-Car Gen1 compatible device.
 	"renesas,rcar-gen2-i2c" for a generic R-Car Gen2 or RZ/G1 compatible
 				device.
