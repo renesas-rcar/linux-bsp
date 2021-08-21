@@ -2020,14 +2020,14 @@
 			status = "disabled";
 		};
 
-		ipmmu_cache_ds_01 {
+		ipmmu_cache_ds1 {
 			compatible = "generic-uio";
 			reg = <0 0xe7740000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_DS1 0>;
 		};
 
-		ipmmu_cache_ir_00 {
+		ipmmu_cache_ir {
 			compatible = "generic-uio";
 			reg = <0 0xff8b0000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_A3IR>;
@@ -2042,43 +2042,35 @@
 			ipmmu-id = <RCAR_IPMMU_MM 0>;
 		};
 
-		irq_ipmmu_mm_00_01 {
-			compatible = "generic-uio";
-			reg = <0 0xe67b0000 0 0x1000>;
-			interrupts = <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
-			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
-			ipmmu-id = <RCAR_IPMMU_MM 0>;
-		};
-
-		ipmmu_cache_rt_00 {
+		ipmmu_cache_rt0 {
 			compatible = "generic-uio";
 			reg = <0 0xffc80000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_RT0 0>;
 		};
 
-		ipmmu_cache_vc_00 {
+		ipmmu_cache_vc0 {
 			compatible = "generic-uio";
 			reg = <0 0xfe990000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
 
-		ipmmu_cache_vi_00 {
+		ipmmu_cache_vi0 {
 			compatible = "generic-uio";
 			reg = <0 0xfebd0000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
 
-		ipmmu_cache_vip_00 {
+		ipmmu_cache_vip0 {
 			compatible = "generic-uio";
 			reg = <0 0xe7b00000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_VIP0 0>;
 		};
 
-		ipmmu_cache_vip_01 {
+		ipmmu_cache_vip1 {
 			compatible = "generic-uio";
 			reg = <0 0xe7960000 0 0x1000>;
 			power-domains = <&sysc R8A77980_PD_ALWAYS_ON>;
