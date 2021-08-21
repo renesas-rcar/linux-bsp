@@ -5934,10 +5934,10 @@
 			linux,uio-name = "fcprr_ims_01";
 		};
 
-		fcprw_imr0: fcprw@fe9c6000 {
+		fcprw_imr01: fcprw@fe9c6000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe9c6000 0 0x1000>;
-			linux,uio-name = "fcprw_imr_00";
+			linux,uio-name = "fcprw_imr_00_01";
 		};
 
 		fcprr_imr0: fcprr@fe9c4000 {
@@ -5946,10 +5946,10 @@
 			linux,uio-name = "fcprr_imr_00";
 		};
 
-		fcprw_imr1: fcprw@fe9c7000 {
+		fcprw_imr23: fcprw@fe9c7000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe9c7000 0 0x1000>;
-			linux,uio-name = "fcprw_imr_01";
+			linux,uio-name = "fcprw_imr_02_03";
 		};
 
 		fcprr_imr1: fcprr@fe9c5000 {
@@ -6006,64 +6006,64 @@
 			linux,uio-name = "fcprr_vspx_03";
 		};
 
-		fcprw_vin0: fcprw@fea93000 {
+		fcprw_vin029: fcprw@fea93000 {
 			compatible = "generic-uio";
 			reg = <0 0xfea93000 0 0x1000>;
-			linux,uio-name = "fcprw_vin_00";
+			linux,uio-name = "fcprw_vin_00_29";
 		};
 
-		fcprw_isp0: fcprw@fea96000 {
+		fcprw_isp03: fcprw@fea96000 {
 			compatible = "generic-uio";
 			reg = <0 0xfea96000 0 0x1000>;
-			linux,uio-name = "fcprw_isp_00";
+			linux,uio-name = "fcprw_isp_00_03";
 		};
 
-		fcprr_rtdmac: fcprr@fec70000 {
+		fcprr_rtdmac03: fcprr@fec70000 {
 			compatible = "generic-uio";
 			reg = <0 0xfec70000 0 0x1000>;
-			linux,uio-name = "fcprr_rtdmac_03";
+			linux,uio-name = "fcprr_rtdmac_00_03";
 		};
 
 		fcpra_vip0: fcpra@e7aaa000 {
 			compatible = "generic-uio";
 			reg = <0 0xe7aaa000 0 0x1000>;
-			linux,uio-name = "fcpra_vip_00";
+			linux,uio-name = "fcpra_vip0";
 		};
 
 		fcpra_vip1: fcpra@e7ab5000 {
 			compatible = "generic-uio";
 			reg = <0 0xe7ab5000 0 0x1000>;
-			linux,uio-name = "fcpra_vip_01";
+			linux,uio-name = "fcpra_vip1";
 		};
 
 		fcpra_vip2: fcpra@e7abb000 {
 			compatible = "generic-uio";
 			reg = <0 0xe7abb000 0 0x1000>;
-			linux,uio-name = "fcpra_vip_02";
+			linux,uio-name = "fcpra_vip2";
 		};
 
 		fcpra_imp: fcpra@ff8dd000 {
 			compatible = "generic-uio";
 			reg = <0 0xff8dd000 0 0x1000>;
-			linux,uio-name = "fcpra_imp_00";
+			linux,uio-name = "fcpra_imp";
 		};
 
-		fcpra_imr: fcpra@fe9cd000 {
+		fcpra_vc: fcpra@fe9cd000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe9cd000 0 0x1000>;
-			linux,uio-name = "fcpra_imr_00";
+			linux,uio-name = "fcpra_vc";
 		};
 
 		fcpra_vio: fcpra@fea95000 {
 			compatible = "generic-uio";
 			reg = <0 0xfea95000 0 0x1000>;
-			linux,uio-name = "fcpra_vio_00";
+			linux,uio-name = "fcpra_vio";
 		};
 
-		fcpra_rt: fcpra@ffc79000 {
+		fcpra_rtdmac: fcpra@ffc79000 {
 			compatible = "generic-uio";
 			reg = <0 0xffc79000 0 0x1000>;
-			linux,uio-name = "fcpra_rt_00";
+			linux,uio-name = "fcpra_rtdmac";
 		};
 
 		iccom00: mfis@e6260000 {
