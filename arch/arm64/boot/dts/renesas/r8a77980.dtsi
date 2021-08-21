@@ -1720,6 +1720,16 @@
 			reg = <0 0xfea92000 0 0x1000>;
 		};
 
+		fcprw_vin_00_03 {
+			compatible = "generic-uio";
+			reg = <0 0xfea93000 0 0x1000>;
+		};
+
+		fcprw_vin_04_07 {
+			compatible = "generic-uio";
+			reg = <0 0xfea94000 0 0x1000>;
+		};
+
 		fcprw_isp_00 {
 			compatible = "generic-uio";
 			reg = <0 0xfea96000 0 0x1000>;
@@ -1730,37 +1740,47 @@
 			reg = <0 0xfea98000 0 0x1000>;
 		};
 
+		fcprr_rtdmac_00 {
+			compatible = "generic-uio";
+			reg = <0 0xffc71000 0 0x1000>;
+		};
+
 		fcprr_ca53_00 {
 			compatible = "generic-uio";
 			reg = <0 0xf12f0000 0 0x1000>;
 		};
 
-		fcpra_vip_00 {
+		fcpra_vip0 {
 			compatible = "generic-uio";
 			reg = <0 0xe7aaa000 0 0x1000>;
 		};
 
-		fcpra_vip_01 {
+		fcpra_vip1 {
 			compatible = "generic-uio";
 			reg = <0 0xe7ab5000 0 0x1000>;
 		};
 
-		fcpra_imp_00 {
+		fcpra_imp {
 			compatible = "generic-uio";
 			reg = <0 0xff8dd000 0 0x1000>;
 		};
 
-		fcpra_imr_00 {
+		fcpra_imr {
 			compatible = "generic-uio";
 			reg = <0 0xfe9cf000 0 0x1000>;
 		};
 
-		fcpra_vio_00 {
+		fcpra_vio {
 			compatible = "generic-uio";
 			reg = <0 0xfea9a000 0 0x1000>;
 		};
 
-		fcpra_ca53_00 {
+		fcpra_rtdmac {
+			compatible = "generic-uio";
+			reg = <0 0xffc79000 0 0x1000>;
+		};
+
+		fcpra_ca53 {
 			compatible = "generic-uio";
 			reg = <0 0xf12a0000 0 0x1000>;
 		};
