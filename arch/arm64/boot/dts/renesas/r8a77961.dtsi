@@ -3110,7 +3110,7 @@
 			power-domains = <&sysc R8A77961_PD_A2VC1>;
 			resets = <&cpg 130>;
 			renesas,#ch = <2>;
-			renesas,#fcp_ch = <1>;
+			renesas,#fcp_ch = <0>;
 		};
 
 		vcplf: vcp4@fe910000 {
