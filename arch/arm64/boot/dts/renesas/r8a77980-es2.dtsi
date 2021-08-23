@@ -18,6 +18,11 @@
 
 		/delete-node/imp_psc_01;
 
+		/delete-node/fcprw_vin_00_03;
+		/delete-node/fcprw_vin_04_07;
+		/delete-node/fcprr_rtdmac_00;
+		/delete-node/fcpra_rtdmac;
+
 		imp_dma_slim_00 {
 			compatible = "generic-uio";
 			reg = <0 0xffa18000 0 0x4000>;
