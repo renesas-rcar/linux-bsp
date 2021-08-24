@@ -66,7 +66,8 @@ properties:
 
       - items:
           - enum:
-              - renesas,scif-r8a779g0     # R-Car SV4H
+              - renesas,scif-r8a779g0     # R-Car V4H
+              - renesas,scif-r8a779f0     # R-Car S4
           - const: renesas,rcar-gen4-scif # R-Car Gen4
           - const: renesas,scif           # generic SCIF compatible UART
 
