@@ -1615,7 +1615,9 @@
 			compatible = "generic-uio";
 			reg = <0 0xeefc0000 0 0x20000>;
 			interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 603>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 603>;
 			linux,uio-name = "ipmmu_mm_00";
 			ipmmu-id = <RCAR_IPMMU_MM 0>;
 		};
@@ -1623,7 +1625,9 @@
 		ipmmu_rt0 {
 			compatible = "generic-uio";
 			reg = <0 0xee480000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 605>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 605>;
 			linux,uio-name = "ipmmu_cache_rt0";
 			ipmmu-id = <RCAR_IPMMU_RT0 0>;
 		};
@@ -1631,7 +1635,9 @@
 		ipmmu_rt1 {
 			compatible = "generic-uio";
 			reg = <0 0xee4c0000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 606>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 606>;
 			linux,uio-name = "ipmmu_cache_rt1";
 			ipmmu-id = <RCAR_IPMMU_RT1 0>;
 		};
@@ -1639,7 +1645,9 @@
 		ipmmu_ds0 {
 			compatible = "generic-uio";
 			reg = <0 0xeed00000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 601>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 601>;
 			linux,uio-name = "ipmmu_cache_ds0";
 			ipmmu-id = <RCAR_IPMMU_DS0 0>;
 		};
@@ -1647,7 +1655,9 @@
 		ipmmu_ds1 {
 			compatible = "generic-uio";
 			reg = <0 0xeed40000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 602>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 602>;
 			linux,uio-name = "ipmmu_cache_ds1";
 			ipmmu-id = <RCAR_IPMMU_DS1 0>;
 		};
@@ -1655,7 +1665,9 @@
 		ipmmu_ir {
 			compatible = "generic-uio";
 			reg = <0 0xeed80000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 119>;
 			power-domains = <&sysc R8A779A0_PD_A3IR>;
+			resets = <&cpg 119>;
 			linux,uio-name = "ipmmu_cache_ir";
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 		};
@@ -1663,7 +1675,9 @@
 		ipmmu_vc0 {
 			compatible = "generic-uio";
 			reg = <0 0xeedc0000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 607>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 607>;
 			linux,uio-name = "ipmmu_cache_vc0";
 			ipmmu-id = <RCAR_IPMMU_VC0 0>;
 		};
@@ -1679,7 +1693,9 @@
 		ipmmu_vi0 {
 			compatible = "generic-uio";
 			reg = <0 0xeee80000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 412>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 412>;
 			linux,uio-name = "ipmmu_cache_vi0";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
 		};
@@ -1687,7 +1703,9 @@
 		ipmmu_vi1 {
 			compatible = "generic-uio";
 			reg = <0 0xeeec0000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 413>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 413>;
 			linux,uio-name = "ipmmu_cache_vi1";
 			ipmmu-id = <RCAR_IPMMU_VI1 0>;
 		};
@@ -1695,7 +1713,9 @@
 		ipmmu_vip0 {
 			compatible = "generic-uio";
 			reg = <0 0xeef00000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 609>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 609>;
 			linux,uio-name = "ipmmu_cache_vip0";
 			ipmmu-id = <RCAR_IPMMU_VIP0 0>;
 		};
@@ -1703,7 +1723,9 @@
 		ipmmu_vip1 {
 			compatible = "generic-uio";
 			reg = <0 0xeef40000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 610>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 610>;
 			linux,uio-name = "ipmmu_cache_vip1";
 			ipmmu-id = <RCAR_IPMMU_VIP1 0>;
 		};
