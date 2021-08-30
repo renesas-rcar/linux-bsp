@@ -191,7 +191,6 @@ struct cpg_z_clk {
 	void __iomem *kick_reg;
 	unsigned long max_rate;		/* Maximum rate for normal mode */
 	unsigned int fixed_div;
-	unsigned long max_freq;
 	u32 mask;
 
 };
@@ -259,10 +258,10 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned int mult;
 	unsigned int i;
 
-	if (!zclk->max_freq)
+	if (!zclk->max_rate)
 		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, prate);
-	else if (rate <= zclk->max_freq)
-		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, zclk->max_freq);
+	else if (rate <= zclk->max_rate)
+		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, zclk->max_rate);
 	else
 		mult = 32;
 
@@ -330,14 +329,14 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 	zclk->hw.init = &init;
 	zclk->mask = GENMASK(offset + 4, offset);
 	zclk->fixed_div = div; /* PLLVCO x 1/div x SYS-CPU divider */
-	zclk->max_freq = 1;
+	zclk->max_rate = 1;
 
 	clk = clk_register(NULL, &zclk->hw);
 	if (IS_ERR(clk)) {
 		kfree(zclk);
 	} else {
 		parent = clk_get_parent(clk);
-		zclk->max_freq = clk_get_rate(parent) / zclk->fixed_div;
+		zclk->max_rate = clk_get_rate(parent) / zclk->fixed_div;
 	}
 
 	return clk;
