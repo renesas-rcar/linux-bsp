@@ -2037,6 +2037,11 @@ static const struct rcar_dmac_of_data rcar_v3u_dmac_data = {
 	.chan_offset_stride	= 0x1000,
 };
 
+static const struct rcar_dmac_of_data rcar_gen4_dmac_data = {
+	.chan_offset_base       = 0x0,
+	.chan_offset_stride     = 0x1000,
+};
+
 static const struct of_device_id rcar_dmac_of_ids[] = {
 	{
 		.compatible = "renesas,rcar-dmac",
@@ -2044,6 +2049,9 @@ static const struct of_device_id rcar_dmac_of_ids[] = {
 	}, {
 		.compatible = "renesas,dmac-r8a779a0",
 		.data = &rcar_v3u_dmac_data,
+	}, {
+		.compatible = "renesas,dmac-r8a779f0",
+		.data = &rcar_gen4_dmac_data,
 	},
 	{ /* Sentinel */ }
 };
