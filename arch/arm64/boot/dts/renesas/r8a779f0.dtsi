@@ -62,6 +62,13 @@
 		interrupts-extended = <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_LOW>;
 	};
 
+	/* External PCIe clock - can be overridden by the board */
+	pcie_bus_clk: pcie_bus {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	/* External SCIF clock - to be overridden by boards that provide it */
 	scif_clk: scif {
 		compatible = "fixed-clock";
@@ -659,6 +666,108 @@
 			renesas,ipmmu-main = <&ipmmu_mm 2>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		pciec0: pcie@e65d0000 {
+			compatible = "renesas,r8a779f0-pcie";
+			reg = <0 0xe65d0000 0 0x3000>,
+			      <0 0xe65d3000 0 0x2000>,
+			      <0 0xe65d5000 0 0x1200>,
+			      <0 0xe65d6200 0 0x0e00>,
+			      <0 0xe65d7000 0 0x1000>,
+			      <0 0xfe000000 0 0x10000>;
+			reg-names = "dbi",
+				    "atu",
+				    "dma",
+				    "app",
+				    "phy",
+				    "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+				 /* downstream IO */
+			ranges = <0x81000000 0 0x00000000 0 0xfe010000 0 0x00010000
+				 /* non-prefetchable memory */
+				  0x82000000 0 0xfe020000 0 0xfe020000 0 0x003e0000>;
+				     /* Map all possible DDR as inbound ranges */
+			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+			interrupts = <GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 417 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 418 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 419 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 420 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 421 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 422 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma", "err", "fatal",
+					  "nonfatal", "lp", "vndmsg";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 2 &gic GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 624>,
+				 <&pcie_bus_clk>;
+			clock-names = "pcie",
+				      "pcie_bus";
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			resets = <&cpg 624>;
+			num-lanes = <2>;
+			snps,enable-cdm-check = "true";
+			max-link-speed = <4>;
+			status = "disabled";
+		};
+
+		pciec1: pcie@e65d8000 {
+			compatible = "renesas,r8a779f0-pcie";
+			reg = <0 0xe65d8000 0 0x3000>,
+			      <0 0xe65db000 0 0x2000>,
+			      <0 0xe65dd000 0 0x1200>,
+			      <0 0xe65de200 0 0x0e00>,
+			      <0 0xe65df000 0 0x1000>,
+			      <0 0xee900000 0 0x10000>;
+			reg-names = "dbi",
+				    "atu",
+				    "dma",
+				    "app",
+				    "phy",
+				    "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+				 /* downstream IO */
+			ranges = <0x81000000 0 0x00000000 0 0xeea00000 0 0x00010000
+				 /* non-prefetchable memory */
+				 0x82000000 0 0xc0000000 0 0xc0000000 0 0x10000000>;
+				     /* Map all possible DDR as inbound ranges */
+			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+			interrupts = <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 425 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 426 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 427 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 428 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 429 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma", "err", "fatal",
+					  "nonfatal", "lp", "vndmsg";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 2 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 625>,
+				 <&pcie_bus_clk>;
+			clock-names = "pcie",
+				      "pcie_bus";
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			resets = <&cpg 625>;
+			num-lanes = <2>;
+			snps,enable-cdm-check = "true";
+			max-link-speed = <4>;
 			status = "disabled";
 		};
 	};
