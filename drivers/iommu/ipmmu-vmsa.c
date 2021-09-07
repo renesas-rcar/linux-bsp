@@ -126,7 +126,7 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_DVM			(1 << 2)	/* R-Car Gen2 only */
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)	/* R-Car Gen2 only */
 
-#define IMSCTLR				0x0500		/* R-Car Gen3 only */
+#define IMSCTLR				0x01500		/* R-Car V3U/S4 only */
 #define IMSCTLR_USE_SECGRP		BIT(28)
 
 #define IMTTLBR0			0x0010		/* R-Car Gen2/3 */
