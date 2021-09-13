@@ -53,9 +53,9 @@ static struct rcar_sysc_area r8a77980_areas[] __initdata = {
 	{ "a3vip2",	0x280, 0, R8A77980_PD_A3VIP2,	R8A77980_PD_ALWAYS_ON },
 };
 
-/* Fixups for R-Car V3H ES2.0 revision */
+/* Fixups for R-Car V3H ES2.* revision */
 static const struct soc_device_attribute r8a77980[] __initconst = {
-	{ .soc_id = "r8a77980", .revision = "ES2.0" },
+	{ .soc_id = "r8a77980", .revision = "ES2.*" },
 	{ /* sentinel */ }
 };
 
