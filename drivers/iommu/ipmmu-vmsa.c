@@ -36,10 +36,15 @@
 #define arm_iommu_detach_device(...)	do {} while (0)
 #endif
 
-#define IPMMU_CTX_MAX		8U
+#define IPMMU_CTX_MAX		16U
 #define IPMMU_CTX_INVALID	-1
 
-#define IPMMU_UTLB_MAX		48U
+#define IPMMU_UTLB_MAX		64U
+
+enum ipmmu_reg_layout {
+	IPMMU_REG_LAYOUT_RCAR_GEN3 = 0,
+	IPMMU_REG_LAYOUT_RCAR_S4,
+};
 
 struct ipmmu_features {
 	bool use_ns_alias_offset;
@@ -51,8 +56,11 @@ struct ipmmu_features {
 	bool reserved_context;
 	bool cache_snoop;
 	unsigned int ctx_offset_base;
+	unsigned int ctx_offset_base_2;
 	unsigned int ctx_offset_stride;
+	unsigned int ctx_offset_stride_adj;
 	unsigned int utlb_offset_base;
+	enum ipmmu_reg_layout reg_layout;
 };
 
 struct ipmmu_vmsa_device {
@@ -118,7 +126,7 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_DVM			(1 << 2)	/* R-Car Gen2 only */
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)	/* R-Car Gen2 only */
 
-#define IMSCTLR				0x0500		/* R-Car Gen3 only */
+#define IMSCTLR				0x01500		/* R-Car V3U/S4 only */
 #define IMSCTLR_USE_SECGRP		BIT(28)
 
 #define IMTTLBR0			0x0010		/* R-Car Gen2/3 */
@@ -194,11 +202,23 @@ static void ipmmu_write(struct ipmmu_vmsa_device *mmu, unsigned int offset,
 	iowrite32(data, mmu->base + offset);
 }
 
+/*
+ * Offset adresss of R-Car S4 is the same as R-Car V3U
+ * so we continues to use offset calculating for R-Car V3U.
+ */
+
 static unsigned int ipmmu_ctx_reg(struct ipmmu_vmsa_device *mmu,
 				  unsigned int context_id, unsigned int reg)
 {
+	if (mmu->features->reg_layout == IPMMU_REG_LAYOUT_RCAR_S4 &&
+	    context_id >= 8)
+		return mmu->features->ctx_offset_base_2 +
+		       (context_id - 8) * mmu->features->ctx_offset_stride +
+		       context_id * mmu->features->ctx_offset_stride_adj + reg;
+
 	return mmu->features->ctx_offset_base +
-	       context_id * mmu->features->ctx_offset_stride + reg;
+	       context_id * mmu->features->ctx_offset_stride +
+	       context_id * mmu->features->ctx_offset_stride_adj + reg;
 }
 
 static u32 ipmmu_ctx_read(struct ipmmu_vmsa_device *mmu,
@@ -1012,7 +1032,9 @@ static const struct ipmmu_features ipmmu_features_default = {
 	.reserved_context = false,
 	.cache_snoop = true,
 	.ctx_offset_base = 0,
+	.ctx_offset_base_2 = 0,
 	.ctx_offset_stride = 0x40,
+	.ctx_offset_stride_adj = 0,
 	.utlb_offset_base = 0,
 };
 
@@ -1026,8 +1048,27 @@ static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
 	.reserved_context = true,
 	.cache_snoop = false,
 	.ctx_offset_base = 0,
+	.ctx_offset_base_2 = 0,
 	.ctx_offset_stride = 0x40,
+	.ctx_offset_stride_adj = 0,
 	.utlb_offset_base = 0,
+};
+
+static const struct ipmmu_features ipmmu_features_rcar_s4 = {
+	.use_ns_alias_offset = false,
+	.has_cache_leaf_nodes = true,
+	.number_of_contexts = 16,
+	.num_utlbs = 64,
+	.setup_imbuscr = false,
+	.twobit_imttbcr_sl0 = true,
+	.reserved_context = true,
+	.cache_snoop = false,
+	.ctx_offset_base = 0x10000,
+	.ctx_offset_base_2 = 0x10800,
+	.ctx_offset_stride = 0x40,
+	.ctx_offset_stride_adj = 0x1000,
+	.utlb_offset_base = 0x3000,
+	.reg_layout = IPMMU_REG_LAYOUT_RCAR_S4,
 };
 
 static const struct of_device_id ipmmu_of_ids[] = {
@@ -1067,6 +1108,9 @@ static const struct of_device_id ipmmu_of_ids[] = {
 	}, {
 		.compatible = "renesas,ipmmu-r8a77995",
 		.data = &ipmmu_features_rcar_gen3,
+	}, {
+		.compatible = "renesas,ipmmu-r8a779f0",
+		.data = &ipmmu_features_rcar_s4,
 	}, {
 		/* Terminator */
 	},
