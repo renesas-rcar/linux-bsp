@@ -464,6 +464,10 @@ static const struct of_device_id renesas_pcie_of_match[] = {
 		.compatible = "renesas,r8a779a0-pcie-ep",
 		.data = &renesas_pcie_ep_of_data,
 	},
+	{
+		.compatible = "renesas,r8a779f0-pcie-ep",
+		.data = &renesas_pcie_ep_of_data,
+	},
 	{},
 };
 
