@@ -702,9 +702,9 @@
 			bus-range = <0x00 0xff>;
 			device_type = "pci";
 				 /* downstream IO */
-			ranges = <0x81000000 0 0x00000000 0 0xfe010000 0 0x00010000
+			ranges =  <0x81000000 0 0x00000000 0 0xfe000000 0 0x00010000
 				 /* non-prefetchable memory */
-				  0x82000000 0 0xfe020000 0 0xfe020000 0 0x003e0000>;
+				  0x82000000 0 0x30000000 0 0x30000000 0 0x10000000>;
 				     /* Map all possible DDR as inbound ranges */
 			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
 			interrupts = <GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>,
@@ -723,14 +723,16 @@
 					 0 0 0 3 &gic GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 624>,
+				 <&cpg CPG_MOD 625>,
 				 <&pcie_bus_clk>;
-			clock-names = "pcie",
+			clock-names = "pcie0",
+				      "pcie1",
 				      "pcie_bus";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 624>;
 			num-lanes = <2>;
 			snps,enable-cdm-check = "true";
-			max-link-speed = <4>;
+			max-link-speed = <2>;
 			status = "disabled";
 		};
 
@@ -753,7 +755,7 @@
 			bus-range = <0x00 0xff>;
 			device_type = "pci";
 				 /* downstream IO */
-			ranges = <0x81000000 0 0x00000000 0 0xeea00000 0 0x00010000
+			ranges = <0x81000000 0 0x00000000 0 0xee900000 0 0x00010000
 				 /* non-prefetchable memory */
 				 0x82000000 0 0xc0000000 0 0xc0000000 0 0x10000000>;
 				     /* Map all possible DDR as inbound ranges */
@@ -773,15 +775,17 @@
 					 0 0 0 2 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 3 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 625>,
+			clocks = <&cpg CPG_MOD 624>,
+				 <&cpg CPG_MOD 625>,
 				 <&pcie_bus_clk>;
-			clock-names = "pcie",
+			clock-names = "pcie0",
+				      "pcie1",
 				      "pcie_bus";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 625>;
 			num-lanes = <2>;
 			snps,enable-cdm-check = "true";
-			max-link-speed = <4>;
+			max-link-speed = <2>;
 			status = "disabled";
 		};
 
