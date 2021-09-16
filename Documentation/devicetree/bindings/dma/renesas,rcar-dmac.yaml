@@ -45,6 +45,7 @@ properties:
           - const: renesas,dmac-r8a779a0 # R-Car V3U
 
       - items:
+          - const: renesas,dmac-r8a779f0 # R-Car S4
           - const: renesas,dmac-r8a779g0 # R-Car V4H
 
   reg: true
@@ -114,12 +115,12 @@ properties:
     type: boolean
 
   rate-read:
-    description: Read rate control (slow speed mode), only available on R-Car V3U/V4H
+    description: Read rate control (slow speed mode), only available on R-Car V3U/S4/V4H
     mininum: 0x03
     maximum: 0xff
 
   rate-write:
-    description: Write rate control (slow speed mode), only available on R-Car V3U/V4H
+    description: Write rate control (slow speed mode), only available on R-Car V3U/S4/V4H
     mininum: 0x03
     maximum: 0xff
 
@@ -141,6 +142,7 @@ if:
       contains:
         enum:
           - renesas,dmac-r8a779a0
+          - renesas,dmac-r8a779f0
           - renesas,dmac-r8a779g0
 then:
   properties:
