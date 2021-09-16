@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * PCIe host controller driver for Renesas R-Car V3U Series SoCs
+ * PCIe host controller driver for Renesas R-Car V3U and Gen4 Series SoCs
  *  Copyright (C) 2020-2021 Renesas Electronics Corporation
  *
  * Author: Hoang Vo <hoang.vo.eb@renesas.com>
@@ -406,6 +406,7 @@ err_pm_put:
 
 static const struct of_device_id renesas_pcie_of_match[] = {
 	{ .compatible = "renesas,r8a779a0-pcie", },
+	{ .compatible = "renesas,r8a779f0-pcie", },
 	{},
 };
 
