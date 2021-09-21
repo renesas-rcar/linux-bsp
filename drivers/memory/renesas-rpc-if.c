@@ -261,8 +261,10 @@ void rpcif_hw_init(struct rpcif *rpc, bool hyperflash)
 		regmap_update_bits(rpc->regmap, RPCIF_PHYINT,
 				   RPCIF_PHYINT_WPVAL, 0);
 
-	regmap_update_bits(rpc->regmap, RPCIF_CMNCR, RPCIF_CMNCR_BSZ(3),
-			   RPCIF_CMNCR_BSZ(hyperflash ? 1 : 0));
+	regmap_update_bits(rpc->regmap, RPCIF_CMNCR,
+			   RPCIF_CMNCR_BSZ(3) | RPCIF_CMNCR_MOIIO_HIZ,
+			   RPCIF_CMNCR_BSZ(hyperflash ? 1 : 0) |
+			   RPCIF_CMNCR_MOIIO_HIZ);
 	/* Set RCF after BSZ update */
 	regmap_write(rpc->regmap, RPCIF_DRCR, RPCIF_DRCR_RCF);
 	/* Dummy read according to spec */
