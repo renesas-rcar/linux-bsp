@@ -15,7 +15,7 @@
 
 	aliases {
 		eth0 = &rswitch;
-        };
+		};
 };
 
 &i2c4 {
@@ -54,20 +54,40 @@
 
 &rswitch {
 	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
 
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		port@0 {
-			pinctrl-0 = <&tsn0_pins>;
-			pinctrl-names = "default";
-			/* phy-mode = "rgmii-txid"; */
 			reg = <0>;
 			phy-handle = <&etha0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			etha0: ethernet-phy@1 {
+			etha0: ethernet-phy@0 {
 				reg = <1>;
+				compatible = "ethernet-phy-ieee802.3-c45";
+			};
+		};
+		port@1 {
+			reg = <1>;
+			phy-handle = <&etha0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			etha1: ethernet-phy@1 {
+				reg = <2>;
+				compatible = "ethernet-phy-ieee802.3-c45";
+			};
+		};
+		port@2 {
+			reg = <2>;
+			phy-handle = <&etha0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			etha2: ethernet-phy@2 {
+				reg = <3>;
+				compatible = "ethernet-phy-ieee802.3-c45";
 			};
 		};
 	};
