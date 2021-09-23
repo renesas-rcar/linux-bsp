@@ -6584,6 +6584,426 @@
 			linux,uio-name = "irq_smd_post_01_01";
 			ipmmu-id = <RCAR_IPMMU_VIP1 8>;
 		};
+
+		caiplite0 {
+			compatible = "generic-uio";
+			reg = <0 0xe7800000 0 0x1000>;
+			interrupts = <GIC_SPI 929 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 721>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 721>;
+			linux,uio-name = "caiplite_00";
+		};
+
+		caiplite1 {
+			compatible = "generic-uio";
+			reg = <0 0xe7801000 0 0x1000>;
+			interrupts = <GIC_SPI 931 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 722>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 722>;
+			linux,uio-name = "caiplite_01";
+		};
+
+		caiplite2 {
+			compatible = "generic-uio";
+			reg = <0 0xe7802000 0 0x1000>;
+			interrupts = <GIC_SPI 933 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 723>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 723>;
+			linux,uio-name = "caiplite_02";
+		};
+
+		caiplite3 {
+			compatible = "generic-uio";
+			reg = <0 0xe7803000 0 0x1000>;
+			interrupts = <GIC_SPI 935 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 724>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 724>;
+			linux,uio-name = "caiplite_03";
+		};
+
+		caiplite4 {
+			compatible = "generic-uio";
+			reg = <0 0xe7804000 0 0x1000>;
+			interrupts = <GIC_SPI 937 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 725>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 725>;
+			linux,uio-name = "caiplite_04";
+		};
+
+		caiplite5 {
+			compatible = "generic-uio";
+			reg = <0 0xe7805000 0 0x1000>;
+			interrupts = <GIC_SPI 939 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 726>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 726>;
+			linux,uio-name = "caiplite_05";
+		};
+
+		caiplite6 {
+			compatible = "generic-uio";
+			reg = <0 0xe7806000 0 0x1000>;
+			interrupts = <GIC_SPI 941 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 727>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 727>;
+			linux,uio-name = "caiplite_06";
+		};
+
+		caiplite7 {
+			compatible = "generic-uio";
+			reg = <0 0xe7807000 0 0x1000>;
+			interrupts = <GIC_SPI 943 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 728>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 728>;
+			linux,uio-name = "caiplite_07";
+		};
+
+		wcrc_caiplite0 {
+			compatible = "generic-uio";
+			reg = <0 0xe7080000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 903>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 903>;
+			linux,uio-name = "wcrc_caiplite_00";
+		};
+
+		wcrc_caiplite1 {
+			compatible = "generic-uio";
+			reg = <0 0xe7090000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 904>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 904>;
+			linux,uio-name = "wcrc_caiplite_01";
+		};
+
+		wcrc_caiplite2 {
+			compatible = "generic-uio";
+			reg = <0 0xe70a0000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 905>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 905>;
+			linux,uio-name = "wcrc_caiplite_02";
+		};
+
+		wcrc_caiplite3 {
+			compatible = "generic-uio";
+			reg = <0 0xe70b0000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 906>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 906>;
+			linux,uio-name = "wcrc_caiplite_03";
+		};
+
+		rtdmac_control00: rtdmac_control@ffc10000 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 630>;
+			linux,uio-name = "rtdmac_control_00";
+		};
+
+		rtdmac_control01 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_01";
+		};
+
+		rtdmac_control02 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_02";
+		};
+
+		rtdmac_control03 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_03";
+		};
+
+		rtdmac_control04 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_04";
+		};
+
+		rtdmac_control05 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_05";
+		};
+
+		rtdmac_control06 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_06";
+		};
+
+		rtdmac_control07 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_07";
+		};
+
+		rtdmac_control08 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_08";
+		};
+
+		rtdmac_control09 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_09";
+		};
+
+		rtdmac_control010 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_10";
+		};
+
+		rtdmac_control011 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_11";
+		};
+
+		rtdmac_control012 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_12";
+		};
+
+		rtdmac_control013 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_13";
+		};
+
+		rtdmac_control014 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 78 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_14";
+		};
+
+		rtdmac_control015 {
+			compatible = "generic-uio";
+			reg = <0 0xffc10000 0 0x10000>;
+			interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 630>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_00_15";
+		};
+
+		rtdmac_control02: rtdmac_control@ffd70000 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			resets = <&cpg 700>;
+			linux,uio-name = "rtdmac_control_02";
+		};
+
+                rtdmac_control21 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_01";
+		};
+
+		rtdmac_control22 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_02";
+		};
+
+		rtdmac_control23 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_03";
+		};
+
+		rtdmac_control24 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_04";
+		};
+
+		rtdmac_control25 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_05";
+		};
+
+		rtdmac_control26 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_06";
+		};
+
+		rtdmac_control27 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_07";
+		};
+
+		rtdmac_control28 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_08";
+		};
+
+		rtdmac_control29 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_09";
+		};
+
+		rtdmac_control210 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_10";
+		};
+
+		rtdmac_control211 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_11";
+		};
+
+		rtdmac_control212 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_12";
+		};
+
+		rtdmac_control213 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_13";
+		};
+
+		rtdmac_control214 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_14";
+		};
+
+		rtdmac_control215 {
+			compatible = "generic-uio";
+			reg = <0 0xffd70000 0 0x10000>;
+			interrupts = <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&cpg CPG_MOD 700>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_rtdmac_control_02_15";
+		};
+
+		rtdmac_descriptor0: rtdmac_descriptor@ffd60020 {
+			compatible = "generic-uio";
+			reg = <0 0xffd60020 0 0x1000>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "rtdmac_descriptor_00";
+		};
+
+		rtdmac_descriptor2: rtdmac_descriptor@ffd62020 {
+			compatible = "generic-uio";
+			reg = <0 0xffd62020 0 0x1000>;
+			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+			linux,uio-name = "rtdmac_descriptor_02";
+		};
 	};
 
 	thermal-zones {
