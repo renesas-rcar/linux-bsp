@@ -335,10 +335,12 @@
 			status = "disabled";
 		};
 
-		rswitch: ethernet@e6880000 {
+		rswitch: ethernet@e68c0000 {
 			compatible = "renesas,etherswitch-r8a779f0",
 				     "renesas,etherswitch";
-			reg = <0 0xe6880000 0 0x00020000>;
+			reg = <0 0xe68c0000 0 0x00020000>,
+			      <0 0xe6444000 0 0x2800>;
+			reg-names = "iobase", "serdes";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			clocks = <&cpg CPG_MOD 1505>,
