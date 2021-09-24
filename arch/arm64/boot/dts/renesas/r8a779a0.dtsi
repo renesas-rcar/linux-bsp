@@ -2386,7 +2386,7 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_01";
 			status = "disabled";
-			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
 
 			ports {
 				#address-cells = <1>;
@@ -2417,7 +2417,7 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_02";
 			status = "disabled";
-			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 2>;
 
 			ports {
 				#address-cells = <1>;
@@ -2448,7 +2448,7 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_03";
 			status = "disabled";
-			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			ipmmu-id = <RCAR_IPMMU_VI0 3>;
 
 			ports {
 				#address-cells = <1>;
