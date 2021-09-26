@@ -1650,9 +1650,9 @@ static int rswitch_etha_mii_read(struct mii_bus *bus, int addr, int regnum)
 	struct rswitch_etha *etha = bus->priv;
 	int mode, devad, regad, val;
 
-	mode = regnum & ACCESS_MODE;
-	devad = regnum && DEV_MASK;
-	regad = regnum && REG_MASK;
+	mode = regnum & MII_ADDR_C45;
+	devad = (regnum >> MII_DEVADDR_C45_SHIFT) & 0x1f;
+	regad = regnum & MII_REGADDR_C45_MASK;
 
 	/* Not support Clause 22 access method */
 	if (!mode)
@@ -1679,9 +1679,9 @@ static int rswitch_etha_mii_write(struct mii_bus *bus, int addr, int regnum, u16
 	struct rswitch_etha *etha = bus->priv;
 	int mode, devad, regad, ret;
 
-	mode = regnum & ACCESS_MODE;
-	devad = regnum && DEV_MASK;
-	regad = regnum && REG_MASK;
+	mode = regnum & MII_ADDR_C45;
+	devad = (regnum >> MII_DEVADDR_C45_SHIFT) & 0x1f;
+	regad = regnum & MII_REGADDR_C45_MASK;
 
 	/* Not support Clause 22 access method */
 	if (!mode)
