@@ -295,6 +295,7 @@
 			clocks = <&cpg CPG_MOD 915>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1330>;
+			status = "disabled";
 		};
 
 		gpio2: gpio@e6050980 {
@@ -309,6 +310,7 @@
 			clocks = <&cpg CPG_MOD 915>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1330>;
+			status = "disabled";
 		};
 
 		gpio0: gpio@e6058180 {
@@ -323,6 +325,7 @@
 			clocks = <&cpg CPG_MOD 916>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1331>;
+			status = "disabled";
 		};
 
 		gpio3: gpio@e6058980 {
@@ -337,6 +340,7 @@
 			clocks = <&cpg CPG_MOD 916>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1331>;
+			status = "disabled";
 		};
 
 		gpio4: gpio@e6060180 {
@@ -365,6 +369,7 @@
 			clocks = <&cpg CPG_MOD 917>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1400>;
+			status = "disabled";
 		};
 
 		gpio6: gpio@e6068180 {
@@ -379,6 +384,7 @@
 			clocks = <&cpg CPG_MOD 918>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1401>;
+			status = "disabled";
 		};
 
 		gpio7: gpio@e6068980 {
@@ -393,6 +399,7 @@
 			clocks = <&cpg CPG_MOD 918>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1401>;
+			status = "disabled";
 		};
 
 		gpio8: gpio@e6069180 {
@@ -407,6 +414,7 @@
 			clocks = <&cpg CPG_MOD 918>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1401>;
+			status = "disabled";
 		};
 
 		gpio9: gpio@e6069980 {
@@ -421,6 +429,7 @@
 			clocks = <&cpg CPG_MOD 918>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1401>;
+			status = "disabled";
 		};
 
 		gpio1_00 {
@@ -1704,6 +1713,7 @@
 			resets = <&cpg 630>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
+			status = "disabled";
 		};
 
 		rt_dmac1: dma-controller@ffd61000 {
@@ -1774,6 +1784,7 @@
 			resets = <&cpg 700>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
+			status = "disabled";
 		};
 
 		rt_dmac3: dma-controller@ffd63000 {
