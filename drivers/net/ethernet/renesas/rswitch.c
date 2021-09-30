@@ -1151,7 +1151,7 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 		/* TODO: get_ts */
 		skb_put(skb, pkt_len);
 		skb->protocol = eth_type_trans(skb, ndev);
-		napi_gro_receive(&rdev->napi, skb);
+		netif_receive_skb(skb);
 		rdev->ndev->stats.rx_packets++;
 		rdev->ndev->stats.rx_bytes += pkt_len;
 
@@ -1388,7 +1388,6 @@ static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 {
 	int err;
-	u32 prio;
 
 	/* Change to CONFIG Mode */
 	err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
@@ -1399,9 +1398,6 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 		return err;
 
 	rswitch_rmac_setting(etha, mac);
-
-	for (prio = 0; prio < RSWITCH_MAX_CTAG_PCP; prio++)
-		rswitch_etha_write(etha, 0x7ff, EATDQDC0 + prio * 4);
 
 	/* Change to OPERATION Mode */
 	err = rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
