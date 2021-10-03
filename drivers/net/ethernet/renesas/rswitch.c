@@ -2523,8 +2523,6 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 {
 	struct rswitch_private *priv;
 	struct resource *res, *res_serdes;
-	void __iomem *rsw_clk, *rsw_clk_status;
-	u32 val;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	res_serdes = platform_get_resource(pdev, IORESOURCE_MEM, 1);
@@ -2548,14 +2546,6 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->serdes_addr);
 
 	debug_addr = priv->addr;
-
-	rsw_clk = ioremap(0xe6152d3c, 4);
-	rsw_clk_status = ioremap(0xe6152e3c, 4);
-
-	val = ioread32(rsw_clk_status);
-	val &= ~BIT(5) & ~BIT(6);
-
-	iowrite32(val, rsw_clk);
 
 	/* Fixed to use GWCA0 */
 	priv->gwca.index = 3;
