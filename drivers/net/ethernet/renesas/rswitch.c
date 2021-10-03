@@ -16,6 +16,8 @@
 #include <linux/of_irq.h>
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
+#include <linux/clk.h>
+#include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/timer.h>
@@ -1018,6 +1020,9 @@ struct rswitch_private {
 	struct rswitch_gwca gwca;
 	struct rswitch_etha etha[RSWITCH_MAX_NUM_ETHA];
 	struct rswitch_mfwd mfwd;
+
+	struct clk *rsw_clk;
+	struct clk *phy_clk;
 };
 
 static int num_ndev = 3;
@@ -2535,6 +2540,18 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 
+	priv->rsw_clk = devm_clk_get(&pdev->dev, "rsw2");
+	if (IS_ERR(priv->rsw_clk)) {
+		dev_err(&pdev->dev, "Failed to get rsw2 clock: %ld\n", PTR_ERR(priv->rsw_clk));
+		return -PTR_ERR(priv->rsw_clk);
+	}
+
+	priv->phy_clk = devm_clk_get(&pdev->dev, "eth-phy");
+	if (IS_ERR(priv->phy_clk)) {
+		dev_err(&pdev->dev, "Failed to get eth-phy clock: %ld\n", PTR_ERR(priv->phy_clk));
+		return -PTR_ERR(priv->phy_clk);
+	}
+
 	platform_set_drvdata(pdev, priv);
 	priv->pdev = pdev;
 	priv->addr = devm_ioremap_resource(&pdev->dev, res);
@@ -2555,6 +2572,11 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (!priv->gwca.chains)
 		return -ENOMEM;
 
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
+	clk_prepare(priv->phy_clk);
+	clk_enable(priv->phy_clk);
+
 	rswitch_init(priv);
 
 	device_set_wakeup_capable(&pdev->dev, 1);
@@ -2570,6 +2592,10 @@ static int renesas_eth_sw_remove(struct platform_device *pdev)
 
 	/* Disable R-Switch clock */
 	rs_write32(RCDC_RCD, rdev->priv->addr + RCDC);
+
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+	clk_disable(priv->phy_clk);
 
 	dma_free_coherent(ndev->dev.parent, priv->desc_bat_size, priv->desc_bat,
 			  priv->desc_bat_dma);
