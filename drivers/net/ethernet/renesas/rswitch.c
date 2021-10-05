@@ -1385,6 +1385,18 @@ static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 #endif
 }
 
+static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
+{
+	rswitch_etha_modify(etha, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
+			    MPIC_PSMCS(0x05) | MPIC_PSMHT(0x06));
+	rswitch_etha_modify(etha, MPSM, 0, MPSM_MFF_C45);
+}
+
+static void rswitch_etha_disable_mii(struct rswitch_etha *etha)
+{
+	rswitch_etha_modify(etha, MPIC, MPIC_PSMCS_MASK, 0);
+}
+
 static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 {
 	int err;
@@ -1398,6 +1410,7 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 		return err;
 
 	rswitch_rmac_setting(etha, mac);
+	rswitch_etha_enable_mii(etha);
 
 	/* Change to OPERATION Mode */
 	err = rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
@@ -1581,13 +1594,6 @@ static int __maybe_unused rswitch_serdes_init(struct rswitch_etha *etha)
 	return 0;
 }
 
-static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
-{
-	rswitch_etha_modify(etha, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
-			    MPIC_PSMCS(0x05) | MPIC_PSMHT(0x06));
-	rswitch_etha_modify(etha, MPSM, 0, MPSM_MFF_C45);
-}
-
 static int rswitch_etha_set_access(struct rswitch_etha *etha, bool read,
 				   int phyad, int devad, int regad, int data)
 {
@@ -1636,15 +1642,11 @@ static int rswitch_etha_set_access(struct rswitch_etha *etha, bool read,
 	return ret;
 }
 
-static void rswitch_etha_disable_mii(struct rswitch_etha *etha)
-{
-	rswitch_etha_modify(etha, MPIC, MPIC_PSMCS_MASK, 0);
-}
 
 static int rswitch_etha_mii_read(struct mii_bus *bus, int addr, int regnum)
 {
 	struct rswitch_etha *etha = bus->priv;
-	int mode, devad, regad, val;
+	int mode, devad, regad;
 
 	mode = regnum & MII_ADDR_C45;
 	devad = (regnum >> MII_DEVADDR_C45_SHIFT) & 0x1f;
@@ -1654,26 +1656,13 @@ static int rswitch_etha_mii_read(struct mii_bus *bus, int addr, int regnum)
 	if (!mode)
 		return 0;
 
-	/* Change to disable mode */
-	rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
-
-	/* Change to config mode */
-	rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
-
-	rswitch_etha_enable_mii(etha);
-	val = rswitch_etha_set_access(etha, true, addr, devad, regad, 0);
-	rswitch_etha_disable_mii(etha);
-
-	/* Change to disable mode */
-	rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
-
-	return val;
+	return rswitch_etha_set_access(etha, true, addr, devad, regad, 0);
 }
 
 static int rswitch_etha_mii_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 {
 	struct rswitch_etha *etha = bus->priv;
-	int mode, devad, regad, ret;
+	int mode, devad, regad;
 
 	mode = regnum & MII_ADDR_C45;
 	devad = (regnum >> MII_DEVADDR_C45_SHIFT) & 0x1f;
@@ -1683,20 +1672,7 @@ static int rswitch_etha_mii_write(struct mii_bus *bus, int addr, int regnum, u16
 	if (!mode)
 		return 0;
 
-	/* Change to disable mode */
-	rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
-
-	/* Change to config mode */
-	rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
-
-	rswitch_etha_enable_mii(etha);
-	ret = rswitch_etha_set_access(etha, false, addr, devad, regad, val);
-	rswitch_etha_disable_mii(etha);
-
-	/* Change to disable mode */
-	rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
-
-	return ret;
+	return rswitch_etha_set_access(etha, false, addr, devad, regad, val);
 }
 
 static int rswitch_etha_mii_reset(struct mii_bus *bus)
@@ -1850,6 +1826,9 @@ static int rswitch_open(struct net_device *ndev)
 	napi_enable(&rdev->napi);
 
 	if (rdev->etha) {
+		err = rswitch_etha_hw_init(rdev->etha, ndev->dev_addr);
+		if (err < 0)
+			goto out;
 		err = rswitch_mii_register(rdev);
 		if (err < 0)
 			goto out;
@@ -1862,9 +1841,6 @@ static int rswitch_open(struct net_device *ndev)
 		if (err < 0)
 			goto out;
 #endif
-		err = rswitch_etha_hw_init(rdev->etha, ndev->dev_addr);
-		if (err < 0)
-			goto out;
 	}
 
 	netif_start_queue(ndev);
@@ -1892,7 +1868,11 @@ out:
 
 static int rswitch_stop(struct net_device *ndev)
 {
+	struct rswitch_device *rdev = netdev_priv(ndev);
+
 	/* FIXME: low prio for VPF env */
+	if (rdev->etha)
+		rswitch_etha_disable_mii(rdev->etha);
 
 	return 0;
 };
