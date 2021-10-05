@@ -1835,12 +1835,12 @@ static int rswitch_open(struct net_device *ndev)
 		err = rswitch_phy_init(rdev);
 		if (err < 0)
 			goto out;
-#if 0
+
 		phy_start(ndev->phydev);
+
 		err = rswitch_serdes_init(rdev->etha);
 		if (err < 0)
 			goto out;
-#endif
 	}
 
 	netif_start_queue(ndev);
