@@ -390,6 +390,17 @@ config PWM_RCAR
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-rcar.
 
+config PWM_RENESAS_TAU
+	tristate "Renesas TAU PWM support"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	depends on HAS_IOMEM
+	help
+	  This driver exposes the Timer Array Unit (TAU) PWM controller found
+	  in Renesas chips through the PWM API.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-renesas-tau.
+
 config PWM_RENESAS_TPU
 	tristate "Renesas TPU PWM support"
 	depends on ARCH_RENESAS || COMPILE_TEST
