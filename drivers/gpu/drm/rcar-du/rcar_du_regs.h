@@ -386,6 +386,7 @@
 #define PnALPHAR_ABIT_1		(0 << 12)
 #define PnALPHAR_ABIT_0		(1 << 12)
 #define PnALPHAR_ABIT_X		(2 << 12)
+#define PnALPHAR_BRSL		(0 << 8)
 
 #define PnDSXR			0x00110
 #define PnDSYR			0x00114
