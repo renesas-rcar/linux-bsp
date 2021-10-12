@@ -21,6 +21,7 @@
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <linux/tee_drv.h>
+#include <linux/freezer.h>
 #include "optee_private.h"
 #include "optee_smc.h"
 #include "optee_rcar.h"
@@ -180,7 +181,13 @@ static void wq_sleep(struct optee_wait_queue *wq, u32 key)
 	struct wq_entry *w = wq_entry_get(wq, key);
 
 	if (w) {
-		wait_for_completion(&w->c);
+		/*
+		 * wait_for_completion but allow hibernation/suspend
+		 * to freeze the waiting task
+		 */
+		while (wait_for_completion_interruptible(&w->c))
+			try_to_freeze();
+
 		mutex_lock(&wq->mu);
 		list_del(&w->link);
 		mutex_unlock(&wq->mu);
