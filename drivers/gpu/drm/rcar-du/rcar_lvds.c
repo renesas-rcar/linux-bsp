@@ -397,6 +397,38 @@ int rcar_lvds_clk_enable(struct drm_bridge *bridge, unsigned long freq)
 }
 EXPORT_SYMBOL_GPL(rcar_lvds_clk_enable);
 
+static void __rcar_lvds_disable(struct drm_bridge *bridge)
+{
+	struct rcar_lvds *lvds = bridge_to_rcar_lvds(bridge);
+	u32 lvdcr0 = 0;
+
+	if (lvds->panel) {
+		drm_panel_disable(lvds->panel);
+		drm_panel_unprepare(lvds->panel);
+	}
+
+	lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVRES;
+	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+
+	if (lvds->info->quirks & RCAR_LVDS_QUIRK_GEN3_LVEN) {
+		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVEN;
+		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+	}
+
+	if (lvds->info->quirks & RCAR_LVDS_QUIRK_PWD) {
+		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PWD;
+		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+	}
+
+	if (!(lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)) {
+		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PLLON;
+		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
+	}
+
+	rcar_lvds_write(lvds, LVDCR1, 0);
+	rcar_lvds_write(lvds, LVDPLLCR, 0);
+}
+
 void rcar_lvds_clk_disable(struct drm_bridge *bridge)
 {
 	struct rcar_lvds *lvds = bridge_to_rcar_lvds(bridge);
@@ -406,7 +438,7 @@ void rcar_lvds_clk_disable(struct drm_bridge *bridge)
 
 	dev_dbg(lvds->dev, "disabling LVDS PLL\n");
 
-	rcar_lvds_write(lvds, LVDPLLCR, 0);
+	__rcar_lvds_disable(&lvds->bridge);
 
 	clk_disable_unprepare(lvds->clocks.mod);
 
@@ -621,33 +653,11 @@ static void rcar_lvds_atomic_disable(struct drm_bridge *bridge,
 				     struct drm_bridge_state *old_bridge_state)
 {
 	struct rcar_lvds *lvds = bridge_to_rcar_lvds(bridge);
-	u32 lvdcr0 = 0;
 
-	if (lvds->panel) {
-		drm_panel_disable(lvds->panel);
-		drm_panel_unprepare(lvds->panel);
-	}
+	if (lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)
+		return;
 
-	lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVRES;
-	rcar_lvds_write(lvds, LVDCR0, lvdcr0);
-
-	if (lvds->info->quirks & RCAR_LVDS_QUIRK_GEN3_LVEN) {
-		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_LVEN;
-		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
-	}
-
-	if (lvds->info->quirks & RCAR_LVDS_QUIRK_PWD) {
-		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PWD;
-		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
-	}
-
-	if (!(lvds->info->quirks & RCAR_LVDS_QUIRK_EXT_PLL)) {
-		lvdcr0 = rcar_lvds_read(lvds, LVDCR0) & ~LVDCR0_PLLON;
-		rcar_lvds_write(lvds, LVDCR0, lvdcr0);
-	}
-
-	rcar_lvds_write(lvds, LVDCR1, 0);
-	rcar_lvds_write(lvds, LVDPLLCR, 0);
+	__rcar_lvds_disable(&lvds->bridge);
 
 	/* Disable the companion LVDS encoder in dual-link mode. */
 	if (lvds->link_type != RCAR_LVDS_SINGLE_LINK && lvds->companion)
