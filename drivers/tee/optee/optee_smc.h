@@ -443,4 +443,32 @@ static inline bool __optee_smc_return_is_rpc(u32 ret)
 			OPTEE_SMC_RETURN_RPC_PREFIX;
 }
 
+/*
+ * Synchronize until OP-TEE allows the transition of 'Suspend to RAM'
+ *
+ * When secure world is idle this function returns OPTEE_SMC_RETURN_OK
+ * and the cache is enabled.
+ * If secure world isn't idle OPTEE_SMC_RETURN_EBUSY is returned.
+ *
+ * Call register usage:
+ * a0	SMC Function ID, OPTEE_SMC_RCAR_SUSPEND_SYNC
+ * a1-6	Not used
+ * a7	Hypervisor Client ID register
+ *
+ * Normal return register usage:
+ * a0	OPTEE_SMC_RETURN_OK
+ * a1-7	Preserved
+ *
+ * Not idle return register usage:
+ * a0	OPTEE_SMC_RETURN_EBUSY
+ * a1-7	Preserved
+ */
+#define OPTEE_SMC_FUNCID_RCAR_SUSPEND_SYNC	20
+#define OPTEE_SMC_RCAR_SUSPEND_SYNC \
+	OPTEE_SMC_FAST_CALL_VAL(OPTEE_SMC_FUNCID_RCAR_SUSPEND_SYNC)
+
+#define OPTEE_SMC_FUNCID_RCAR_RESUME		21
+#define OPTEE_SMC_RCAR_RESUME \
+	OPTEE_SMC_FAST_CALL_VAL(OPTEE_SMC_FUNCID_RCAR_RESUME)
+
 #endif /* OPTEE_SMC_H */
