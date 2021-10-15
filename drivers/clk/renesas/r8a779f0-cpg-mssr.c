@@ -162,6 +162,7 @@ static const struct mssr_mod_clk r8a779f0_mod_clks[] __initconst = {
 	DEF_MOD("rsw2",		1505,	R8A779F0_CLK_RSW2),
 	DEF_MOD("ethphy",	1506,	R8A779F0_CLK_S0D2),
 	DEF_MOD("ufs0",		1514,	R8A779F0_CLK_S0D4),
+	DEF_MOD("thermal",      919,    R8A779F0_CLK_CL16M),
 };
 
 /*
