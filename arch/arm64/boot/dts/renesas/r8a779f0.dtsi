@@ -897,7 +897,7 @@
 		tau_pwm0: tau@dfbf4000 {
 			compatible = "renesas,tau-pwm";
 			reg = <0 0xdfbf4000 0 0x1000>,
-			      <0 0xdf980000 0 0x8000>,
+			      <0 0xdf980000 0 0x10000>,
 			      <0 0xe6160000 0 0x8>;
 			reg-names = "taud", "clkc", "modemr";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
@@ -907,7 +907,7 @@
 		tau_pwm1: tau@dfbf5000 {
 			compatible = "renesas,tau-pwm";
 			reg = <0 0xdfbf4000 0 0x1000>,
-			      <0 0xdf980000 0 0x8000>,
+			      <0 0xdf980000 0 0x10000>,
 			      <0 0xe6160000 0 0x8>;
 			reg-names = "taud", "clkc", "modemr";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
