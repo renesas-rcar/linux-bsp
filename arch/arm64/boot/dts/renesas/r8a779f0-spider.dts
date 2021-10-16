@@ -50,6 +50,11 @@
 		groups = "pcie1_clkreq_n";
 		function = "pcie";
 	};
+
+	taud0_pwm_pins: taud0_pwm {
+		groups = "taud0_pwm1", "taud0_pwm2";
+		function = "taud0_pwm";
+	};
 };
 
 &rswitch {
@@ -113,4 +118,11 @@
 	status = "disabled";
 	pinctrl-0 = <&pcie1_pins>;
 	pinctrl-names = "default";
+};
+
+&tau_pwm0 {
+	pinctrl-0 = <&taud0_pwm_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
 };
