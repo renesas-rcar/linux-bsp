@@ -195,46 +195,43 @@ static int tau_pwm_update_params(struct tau_pwm_device *dev, u64 period_ns, u64 
 {
 	struct tau_pwm_params *tau_params = &dev->params;
 
-	u64 pclk;
+	u64 pclk, calc_clk;
 	int prescaler, prescaler_max = 15;
-	int div, div_max = 15;
+	int div, div_max = 256;
 	u64 period_ns_max, period_counter_max = GENMASK(15, 0);
 
 	pclk = tau_pwm_get_pclk(dev);
 
 	for (prescaler = 0; prescaler <= prescaler_max; prescaler++) {
-		period_ns_max =  div64_u64(period_counter_max * NSEC_PER_SEC,
-					   (pclk >> prescaler));
-		if (period_ns_max < period_ns)
-			continue;
+		calc_clk = pclk >> prescaler;
+		period_ns_max = div64_u64(period_counter_max * NSEC_PER_SEC,
+					  calc_clk);
+		if (period_ns_max >= period_ns)
+			break;
 	}
+	prescaler = min(prescaler, prescaler_max);
 
-	if (prescaler > prescaler_max) {
-		for (div = 0; div <= div_max; div++) {
-			period_ns_max =  div64_u64(period_counter_max * NSEC_PER_SEC,
-						   (pclk >> prescaler) / div);
-			if (period_ns_max < period_ns)
-				continue;
-		}
+	for (div = 1; div <= div_max; div++) {
+		calc_clk = div64_u64(calc_clk, div);
+		period_ns_max = div64_u64(period_counter_max * NSEC_PER_SEC,
+					  calc_clk);
+		if (period_ns_max >= period_ns)
+			break;
 	}
+	period_counter_max = min(period_counter_max,
+				 div64_u64(period_ns_max * calc_clk, NSEC_PER_SEC));
 
 	if (period_ns_max < period_ns)
 		return -EINVAL;
 
 	tau_params->clk_rate = pclk;
+	tau_params->clk_sel = 3;
 	tau_params->clk_prescaler = prescaler;
+	tau_params->clk_division = div;
 
-	if (prescaler <= prescaler_max) {
-		tau_params->clk_sel = 0;
-		tau_params->clk_division = 0;
-	} else {
-		tau_params->clk_sel = 3;
-		tau_params->clk_division = div;
-	}
+	tau_params->period = div64_u64(period_counter_max * period_ns, period_ns_max);
 
-	tau_params->period = div64_u64(period_ns_max * period_ns, period_ns_max);
-
-	tau_params->duty = div64_u64(tau_params->period * duty_cycle_ns, period_ns);
+	tau_params->duty = div64_u64(period_counter_max * duty_cycle_ns, period_ns_max);
 	tau_params->duty = min(tau_params->duty, tau_params->period);
 
 	return 0;
@@ -270,7 +267,7 @@ static int tau_pwm_update_clk(struct tau_pwm_device *dev)
 	if (tau_params->clk_sel == 3) {
 		val = tau_pwm_read(8, tau_chip, taud, TAUD_BRS);
 		val &= ~TAUD_BRS_MASK;
-		val |= ((tau_params->clk_division) << TAUD_BRS_SHIFT) & TAUD_BRS_MASK;
+		val |= ((tau_params->clk_division - 1) << TAUD_BRS_SHIFT) & TAUD_BRS_MASK;
 		tau_pwm_write(8, tau_chip, taud, TAUD_BRS, val);
 	}
 
