@@ -104,9 +104,9 @@
 #define MODEMR1_MD40_39_SHIFT		7
 #define MODEMR1_MD40_39_MASK		GENMASK(8, 7)
 
-#define TAUD_CHANNEL_MAX		8
-#define TAUD_CHANNEL_MASTER(a)		(((a) % 8) * 2)
-#define TAUD_CHANNEL_SLAVE(a)		(((a) % 8) * 2 + 1)
+#define TAUD_DEVICE_CHANNEL_MAX		8
+#define TAUD_DEVICE_CHANNEL_MASTER(a)	(((a) % TAUD_DEVICE_CHANNEL_MAX) * 2)
+#define TAUD_DEVICE_CHANNEL_SLAVE(a)	(((a) % TAUD_DEVICE_CHANNEL_MAX) * 2 + 1)
 
 #define TAUD_CHIP_CHANNEL_MAX		2
 
@@ -316,7 +316,7 @@ static int tau_pwm_update_channel(struct tau_pwm_device *dev)
 	struct tau_pwm_params *tau_params = &dev->params;
 	u32 val;
 
-	val = tau_pwm_read(16, tau_chip, taud, TAUD_CMOR(TAUD_CHANNEL_MASTER(dev->channel)));
+	val = tau_pwm_read(16, tau_chip, taud, TAUD_CMOR(TAUD_DEVICE_CHANNEL_MASTER(dev->channel)));
 	val &= ~TAUD_CMOR_CKS_MASK;
 	val |= (tau_params->clk_sel << TAUD_CMOR_CKS_SHIFT) & TAUD_CMOR_CKS_MASK;
 	val &= ~TAUD_CMOR_CCS_MASK;
@@ -326,13 +326,13 @@ static int tau_pwm_update_channel(struct tau_pwm_device *dev)
 	val &= ~TAUD_CMOR_COS_MASK;
 	val &= ~TAUD_CMOR_MD_MASK;
 	val |= (BIT(0) << TAUD_CMOR_MD_SHIFT) & TAUD_CMOR_MD_MASK;
-	tau_pwm_write(16, tau_chip, taud, TAUD_CMOR(TAUD_CHANNEL_MASTER(dev->channel)), val);
+	tau_pwm_write(16, tau_chip, taud, TAUD_CMOR(TAUD_DEVICE_CHANNEL_MASTER(dev->channel)), val);
 
-	val = tau_pwm_read(8, tau_chip, taud, TAUD_CMUR(TAUD_CHANNEL_MASTER(dev->channel)));
+	val = tau_pwm_read(8, tau_chip, taud, TAUD_CMUR(TAUD_DEVICE_CHANNEL_MASTER(dev->channel)));
 	val &= ~TAUD_CMUR_TIS_MASK;
-	tau_pwm_write(8, tau_chip, taud, TAUD_CMUR(TAUD_CHANNEL_MASTER(dev->channel)), val);
+	tau_pwm_write(8, tau_chip, taud, TAUD_CMUR(TAUD_DEVICE_CHANNEL_MASTER(dev->channel)), val);
 
-	val = tau_pwm_read(16, tau_chip, taud, TAUD_CMOR(TAUD_CHANNEL_SLAVE(dev->channel)));
+	val = tau_pwm_read(16, tau_chip, taud, TAUD_CMOR(TAUD_DEVICE_CHANNEL_SLAVE(dev->channel)));
 	val &= ~TAUD_CMOR_CKS_MASK;
 	val |= (tau_params->clk_sel << TAUD_CMOR_CKS_SHIFT) & TAUD_CMOR_CKS_MASK;
 	val &= ~TAUD_CMOR_CCS_MASK;
@@ -343,74 +343,74 @@ static int tau_pwm_update_channel(struct tau_pwm_device *dev)
 	val &= ~TAUD_CMOR_COS_MASK;
 	val &= ~TAUD_CMOR_MD_MASK;
 	val |= ((BIT(3) | BIT(0)) << TAUD_CMOR_MD_SHIFT) & TAUD_CMOR_MD_MASK;
-	tau_pwm_write(16, tau_chip, taud, TAUD_CMOR(TAUD_CHANNEL_SLAVE(dev->channel)), val);
+	tau_pwm_write(16, tau_chip, taud, TAUD_CMOR(TAUD_DEVICE_CHANNEL_SLAVE(dev->channel)), val);
 
-	val = tau_pwm_read(8, tau_chip, taud, TAUD_CMUR(TAUD_CHANNEL_SLAVE(dev->channel)));
+	val = tau_pwm_read(8, tau_chip, taud, TAUD_CMUR(TAUD_DEVICE_CHANNEL_SLAVE(dev->channel)));
 	val &= ~TAUD_CMUR_TIS_MASK;
-	tau_pwm_write(8, tau_chip, taud, TAUD_CMUR(TAUD_CHANNEL_SLAVE(dev->channel)), val);
+	tau_pwm_write(8, tau_chip, taud, TAUD_CMUR(TAUD_DEVICE_CHANNEL_SLAVE(dev->channel)), val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TOE);
-	val |= (BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TOE, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TOM);
-	val |= (BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TOM, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TOC);
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TOC, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TOL);
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TOL, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TDE);
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TDE, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TDM);
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TDM, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TDL);
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TDL, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TRE);
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TRE, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TRO);
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TRO, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TRC);
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TRC, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TME);
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TME, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_RDE);
-	val |= (BIT(0) << TAUD_CHANNEL_MASTER(dev->channel));
-	val |= (BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_MASTER(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_RDE, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_RDS);
-	val &= ~(BIT(0) << TAUD_CHANNEL_MASTER(dev->channel));
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_MASTER(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_RDS, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_RDM);
-	val &= ~(BIT(0) << TAUD_CHANNEL_MASTER(dev->channel));
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_MASTER(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_RDM, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_RDC);
-	val &= ~(BIT(0) << TAUD_CHANNEL_MASTER(dev->channel));
-	val &= ~(BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_MASTER(dev->channel));
+	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_RDC, val);
 
 	return 0;
@@ -422,10 +422,10 @@ static int tau_pwm_update_counter(struct tau_pwm_device *dev)
 	struct tau_pwm_params *tau_params = &dev->params;
 
 	tau_pwm_write(16, tau_chip, taud,
-		      TAUD_CDR(TAUD_CHANNEL_MASTER(dev->channel)),
+		      TAUD_CDR(TAUD_DEVICE_CHANNEL_MASTER(dev->channel)),
 		      tau_params->period);
 	tau_pwm_write(16, tau_chip, taud,
-		      TAUD_CDR(TAUD_CHANNEL_SLAVE(dev->channel)),
+		      TAUD_CDR(TAUD_DEVICE_CHANNEL_SLAVE(dev->channel)),
 		      tau_params->duty);
 
 	return 0;
@@ -437,8 +437,8 @@ static int tpu_pwm_start(struct tau_pwm_device *dev)
 	u16 val;
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TS);
-	val |= (BIT(0) << TAUD_CHANNEL_MASTER(dev->channel));
-	val |= (BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_MASTER(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TS, val);
 
 	return 0;
@@ -450,8 +450,8 @@ static int tpu_pwm_stop(struct tau_pwm_device *dev)
 	u16 val;
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_TT);
-	val |= (BIT(0) << TAUD_CHANNEL_MASTER(dev->channel));
-	val |= (BIT(0) << TAUD_CHANNEL_SLAVE(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_MASTER(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_TT, val);
 
 	return 0;
@@ -465,7 +465,7 @@ static int tpu_pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
 	struct tau_pwm_chip *tau_chip = to_tau_pwm(chip);
 	struct tau_pwm_device *tau_dev;
 
-	if (pwm->hwpwm >= TAUD_CHANNEL_MAX)
+	if (pwm->hwpwm >= TAUD_DEVICE_CHANNEL_MAX)
 		return -EINVAL;
 
 	tau_dev = devm_kzalloc(chip->dev, sizeof(*tau_dev), GFP_KERNEL);
@@ -570,7 +570,7 @@ static int tau_probe(struct platform_device *pdev)
 
 	tau->chip.dev = &pdev->dev;
 	tau->chip.ops = &tau_pwm_ops;
-	tau->chip.npwm = TAUD_CHANNEL_MAX;
+	tau->chip.npwm = TAUD_DEVICE_CHANNEL_MAX;
 
 	/* Initialize and register the device. */
 	platform_set_drvdata(pdev, tau);
