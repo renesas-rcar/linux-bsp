@@ -563,8 +563,8 @@ static int tau_probe(struct platform_device *pdev)
 		return PTR_ERR(tau->clkc_base);
 
 	tau->modemr_base = devm_platform_ioremap_resource_byname(pdev, "modemr");
-	if (IS_ERR(tau->clkc_base))
-		return PTR_ERR(tau->clkc_base);
+	if (IS_ERR(tau->modemr_base))
+		return PTR_ERR(tau->modemr_base);
 
 	tau->channel = channel;
 
