@@ -31,6 +31,11 @@
 #define CLKD_PLLS_PLLCLKDSYNC_SHIFT	1
 #define CLKD_PLLS_PLLCLKDSYNC_MASK	BIT(1)
 
+#define CLKD_MSR_TAUD			(0x1130u)
+#define CLKD_MSR_TAUD_CH(a)		(1u << (a))
+
+#define CLKD_MSRKCPROT			(0x1710u)
+
 #define CLKD_HSOSCS			(0x8100u)
 #define CLKD_HSOSCS_HSOSCSTAB_SHIFT	1
 #define CLKD_HSOSCS_HSOSCSTAB_MASK	BIT(1)
@@ -103,8 +108,11 @@
 #define TAUD_CHANNEL_MASTER(a)		(((a) % 8) * 2)
 #define TAUD_CHANNEL_SLAVE(a)		(((a) % 8) * 2 + 1)
 
+#define TAUD_CHIP_CHANNEL_MAX		2
+
 struct tau_pwm_chip {
 	struct pwm_chip chip;
+	int channel;
 	void __iomem *taud_base;
 	void __iomem *clkc_base;
 	void __iomem *modemr_base;
@@ -154,6 +162,34 @@ static u32 clk_hsb_table[CLK_HSB_SOURCE_MAX][CLK_HSB_SELECT_MAX] = {
 	/*	2'b00		2'b01		2'b10		2'b11	*/
 	{	20000000,	25000000,	33333333,	33333333},
 };
+
+static int tau_pwm_runtime_suspend(struct device *dev)
+{
+	struct tau_pwm_chip *tau_chip = dev_get_drvdata(dev);
+	u32 val;
+
+	tau_pwm_write(32, tau_chip, clkc, CLKD_MSRKCPROT, 0xA5A5A501);
+	val = tau_pwm_read(32, tau_chip, clkc, CLKD_MSR_TAUD);
+	val &= ~CLKD_MSR_TAUD_CH(tau_chip->channel);
+	tau_pwm_write(32, tau_chip, clkc, CLKD_MSR_TAUD, val);
+	tau_pwm_write(32, tau_chip, clkc, CLKD_MSRKCPROT, 0xA5A5A500);
+
+	return 0;
+}
+
+static int tau_pwm_runtime_resume(struct device *dev)
+{
+	struct tau_pwm_chip *tau_chip = dev_get_drvdata(dev);
+	u32 val;
+
+	tau_pwm_write(32, tau_chip, clkc, CLKD_MSRKCPROT, 0xA5A5A501);
+	val = tau_pwm_read(32, tau_chip, clkc, CLKD_MSR_TAUD);
+	val |= CLKD_MSR_TAUD_CH(tau_chip->channel);
+	tau_pwm_write(32, tau_chip, clkc, CLKD_MSR_TAUD, val);
+	tau_pwm_write(32, tau_chip, clkc, CLKD_MSRKCPROT, 0xA5A5A500);
+
+	return 0;
+}
 
 static u64 tau_pwm_get_pclk(struct tau_pwm_device *dev)
 {
@@ -443,6 +479,8 @@ static int tpu_pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
 
 	tau_dev->timer_on = false;
 
+	pm_runtime_get_sync(chip->dev);
+
 	pwm_set_chip_data(pwm, tau_dev);
 
 	return 0;
@@ -453,6 +491,8 @@ static void tpu_pwm_free(struct pwm_chip *chip, struct pwm_device *pwm)
 	struct tau_pwm_device *tau_dev = pwm_get_chip_data(pwm);
 
 	tpu_pwm_stop(tau_dev);
+
+	pm_runtime_put(chip->dev);
 }
 
 static int tau_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
@@ -502,7 +542,13 @@ static const struct pwm_ops tau_pwm_ops = {
 static int tau_probe(struct platform_device *pdev)
 {
 	struct tau_pwm_chip *tau;
-	int ret;
+	int ret, channel;
+
+	if (of_property_read_u32(pdev->dev.of_node, "renesas,channel", &channel))
+		channel = 0;
+
+	if (!(channel < TAUD_CHIP_CHANNEL_MAX))
+		return -EINVAL;
 
 	tau = devm_kzalloc(&pdev->dev, sizeof(*tau), GFP_KERNEL);
 	if (!tau)
@@ -520,6 +566,8 @@ static int tau_probe(struct platform_device *pdev)
 	if (IS_ERR(tau->clkc_base))
 		return PTR_ERR(tau->clkc_base);
 
+	tau->channel = channel;
+
 	tau->chip.dev = &pdev->dev;
 	tau->chip.ops = &tau_pwm_ops;
 	tau->chip.npwm = TAUD_CHANNEL_MAX;
@@ -527,9 +575,12 @@ static int tau_probe(struct platform_device *pdev)
 	/* Initialize and register the device. */
 	platform_set_drvdata(pdev, tau);
 
+	pm_runtime_enable(&pdev->dev);
+
 	ret = pwmchip_add(&tau->chip);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to register PWM chip\n");
+		pm_runtime_disable(&pdev->dev);
 		return ret;
 	}
 
@@ -539,8 +590,13 @@ static int tau_probe(struct platform_device *pdev)
 static int tau_remove(struct platform_device *pdev)
 {
 	struct tau_pwm_chip *tau = platform_get_drvdata(pdev);
+	int ret;
 
-	return pwmchip_remove(&tau->chip);
+	ret = pwmchip_remove(&tau->chip);
+
+	pm_runtime_disable(&pdev->dev);
+
+	return ret;
 }
 
 static const struct of_device_id tau_of_table[] = {
@@ -550,12 +606,19 @@ static const struct of_device_id tau_of_table[] = {
 
 MODULE_DEVICE_TABLE(of, tau_of_table);
 
+static const struct dev_pm_ops tau_pwm_pm_ops = {
+	SET_RUNTIME_PM_OPS(tau_pwm_runtime_suspend,
+			   tau_pwm_runtime_resume,
+			   NULL)
+};
+
 static struct platform_driver tau_driver = {
 	.probe		= tau_probe,
 	.remove		= tau_remove,
 	.driver		= {
 		.name	= "renesas-tau-pwm",
 		.of_match_table = of_match_ptr(tau_of_table),
+		.pm = &tau_pwm_pm_ops,
 	}
 };
 
