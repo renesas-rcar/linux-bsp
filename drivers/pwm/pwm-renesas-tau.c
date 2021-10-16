@@ -96,8 +96,8 @@
 #define TAUD_TME			(0x050u)
 
 #define MODEMR1				(0x4u)
-#define MODEMR1_MD14_13_SHIFT		13
-#define MODEMR1_MD14_13_MASK		GENMASK(14, 13)
+#define MODEMR1_MD40_39_SHIFT		7
+#define MODEMR1_MD40_39_MASK		GENMASK(8, 7)
 
 #define TAUD_CHANNEL_MAX		8
 #define TAUD_CHANNEL_MASTER(a)		(((a) % 8) * 2)
@@ -181,7 +181,7 @@ static u64 tau_pwm_get_pclk(struct tau_pwm_device *dev)
 	}
 
 	sel = tau_pwm_read(32, tau_chip, modemr, MODEMR1);
-	sel = (sel & MODEMR1_MD14_13_MASK) >> MODEMR1_MD14_13_SHIFT;
+	sel = (sel & MODEMR1_MD40_39_MASK) >> MODEMR1_MD40_39_SHIFT;
 
 	if (!div)
 		pclk = 0;
