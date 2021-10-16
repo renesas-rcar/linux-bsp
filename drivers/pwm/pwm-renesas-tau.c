@@ -170,7 +170,7 @@ static int tau_pwm_runtime_suspend(struct device *dev)
 
 	tau_pwm_write(32, tau_chip, clkc, CLKD_MSRKCPROT, 0xA5A5A501);
 	val = tau_pwm_read(32, tau_chip, clkc, CLKD_MSR_TAUD);
-	val &= ~CLKD_MSR_TAUD_CH(tau_chip->channel);
+	val |= CLKD_MSR_TAUD_CH(tau_chip->channel);
 	tau_pwm_write(32, tau_chip, clkc, CLKD_MSR_TAUD, val);
 	tau_pwm_write(32, tau_chip, clkc, CLKD_MSRKCPROT, 0xA5A5A500);
 
@@ -184,7 +184,7 @@ static int tau_pwm_runtime_resume(struct device *dev)
 
 	tau_pwm_write(32, tau_chip, clkc, CLKD_MSRKCPROT, 0xA5A5A501);
 	val = tau_pwm_read(32, tau_chip, clkc, CLKD_MSR_TAUD);
-	val |= CLKD_MSR_TAUD_CH(tau_chip->channel);
+	val &= ~CLKD_MSR_TAUD_CH(tau_chip->channel);
 	tau_pwm_write(32, tau_chip, clkc, CLKD_MSR_TAUD, val);
 	tau_pwm_write(32, tau_chip, clkc, CLKD_MSRKCPROT, 0xA5A5A500);
 
