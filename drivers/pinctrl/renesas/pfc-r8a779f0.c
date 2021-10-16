@@ -2048,7 +2048,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		GP_3_1_FN,	GPSR3_1,
 		GP_3_0_FN,	GPSR3_0, ))
 	},
-	{ PINMUX_CFG_REG("GPSR4", 0xffd90040, 32, 1, GROUP(
+	{ PINMUX_CFG_REG("GPSR4", 0xdfd90040, 32, 1, GROUP(
 		0, 0,
 		GP_4_30_FN,	GPSR4_30,
 		GP_4_29_FN,	GPSR4_29,
@@ -2082,7 +2082,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		GP_4_1_FN,	GPSR4_1,
 		GP_4_0_FN,	GPSR4_0, ))
 	},
-	{ PINMUX_CFG_REG("GPSR5", 0xffd90840, 32, 1, GROUP(
+	{ PINMUX_CFG_REG("GPSR5", 0xdfd90840, 32, 1, GROUP(
 		0, 0,
 		0, 0,
 		0, 0,
@@ -2116,7 +2116,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		GP_5_1_FN,	GPSR5_1,
 		GP_5_0_FN,	GPSR5_0, ))
 	},
-	{ PINMUX_CFG_REG("GPSR6", 0xffd91040, 32, 1, GROUP(
+	{ PINMUX_CFG_REG("GPSR6", 0xdfd91040, 32, 1, GROUP(
 		GP_6_31_FN,	GPSR6_31,
 		0, 0,
 		0, 0,
@@ -2150,7 +2150,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		GP_6_1_FN,	GPSR6_1,
 		GP_6_0_FN,	GPSR6_0, ))
 	},
-	{ PINMUX_CFG_REG("GPSR7", 0xffd91840, 32, 1, GROUP(
+	{ PINMUX_CFG_REG("GPSR7", 0xdfd91840, 32, 1, GROUP(
 		GP_7_31_FN,	GPSR7_31,
 		GP_7_30_FN,	GPSR7_30,
 		GP_7_29_FN,	GPSR7_29,
@@ -2229,7 +2229,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP0SR1_7_4
 		IP0SR1_3_0))
 	},
-	{ PINMUX_CFG_REG("IP0SR4", 0xffd90060, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP0SR4", 0xdfd90060, 32, 4, GROUP(
 		IP0SR4_31_28
 		IP0SR4_27_24
 		IP0SR4_23_20
@@ -2239,7 +2239,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP0SR4_7_4
 		IP0SR4_3_0))
 	},
-	{ PINMUX_CFG_REG("IP1SR4", 0xffd90064, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP1SR4", 0xdfd90064, 32, 4, GROUP(
 		IP1SR4_31_28
 		IP1SR4_27_24
 		IP1SR4_23_20
@@ -2249,7 +2249,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP1SR4_7_4
 		IP1SR4_3_0))
 	},
-	{ PINMUX_CFG_REG("IP2SR4", 0xffd90068, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP2SR4", 0xdfd90068, 32, 4, GROUP(
 		IP2SR4_31_28
 		IP2SR4_27_24
 		IP2SR4_23_20
@@ -2259,7 +2259,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP2SR4_7_4
 		IP2SR4_3_0))
 	},
-	{ PINMUX_CFG_REG("IP3SR4", 0xffd9006c, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP3SR4", 0xdfd9006c, 32, 4, GROUP(
 		IP3SR4_31_28
 		IP3SR4_27_24
 		IP3SR4_23_20
@@ -2269,7 +2269,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP3SR4_7_4
 		IP3SR4_3_0))
 	},
-	{ PINMUX_CFG_REG("IP0SR5", 0xffd90860, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP0SR5", 0xdfd90860, 32, 4, GROUP(
 		IP0SR5_31_28
 		IP0SR5_27_24
 		IP0SR5_23_20
@@ -2279,7 +2279,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP0SR5_7_4
 		IP0SR5_3_0))
 	},
-	{ PINMUX_CFG_REG("IP0SR6", 0xffd91060, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP0SR6", 0xdfd91060, 32, 4, GROUP(
 		IP0SR6_31_28
 		IP0SR6_27_24
 		IP0SR6_23_20
@@ -2289,7 +2289,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP0SR6_7_4
 		IP0SR6_3_0))
 	},
-	{ PINMUX_CFG_REG("IP1SR6", 0xffd91064, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP1SR6", 0xdfd91064, 32, 4, GROUP(
 		IP1SR6_31_28
 		IP1SR6_27_24
 		IP1SR6_23_20
@@ -2299,7 +2299,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP1SR6_7_4
 		IP1SR6_3_0))
 	},
-	{ PINMUX_CFG_REG("IP2SR6", 0xffd91068, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP2SR6", 0xdfd91068, 32, 4, GROUP(
 		IP2SR6_31_28
 		IP2SR6_27_24
 		IP2SR6_23_20
@@ -2309,7 +2309,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP2SR6_7_4
 		IP2SR6_3_0))
 	},
-	{ PINMUX_CFG_REG("IP0SR7", 0xffd91860, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP0SR7", 0xdfd91860, 32, 4, GROUP(
 		IP0SR7_31_28
 		IP0SR7_27_24
 		IP0SR7_23_20
@@ -2319,7 +2319,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP0SR7_7_4
 		IP0SR7_3_0))
 	},
-	{ PINMUX_CFG_REG("IP1SR7", 0xffd91864, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP1SR7", 0xdfd91864, 32, 4, GROUP(
 		IP1SR7_31_28
 		IP1SR7_27_24
 		IP1SR7_23_20
@@ -2329,7 +2329,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP1SR7_7_4
 		IP1SR7_3_0))
 	},
-	{ PINMUX_CFG_REG("IP2SR7", 0xffd91868, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP2SR7", 0xdfd91868, 32, 4, GROUP(
 		IP2SR7_31_28
 		IP2SR7_27_24
 		IP2SR7_23_20
@@ -2339,7 +2339,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP2SR7_7_4
 		IP2SR7_3_0))
 	},
-	{ PINMUX_CFG_REG("IP3SR7", 0xffd9186c, 32, 4, GROUP(
+	{ PINMUX_CFG_REG("IP3SR7", 0xdfd9186c, 32, 4, GROUP(
 		IP3SR7_31_28
 		IP3SR7_27_24
 		IP3SR7_23_20
@@ -2486,7 +2486,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(3, 17),  4, 3 },	/* TSN0_AVTP_MATCH */
 		{ RCAR_GP_PIN(3, 16),  0, 3 },	/* TSN0_AVTP_PPS */
 	} },
-	{ PINMUX_DRIVE_REG("DRV0CTRL4", 0xffd90080) {
+	{ PINMUX_DRIVE_REG("DRV0CTRL4", 0xdfd90080) {
 		{ RCAR_GP_PIN(4,  7), 28, 3 },	/* GP4_07 */
 		{ RCAR_GP_PIN(4,  6), 24, 3 },	/* GP4_06 */
 		{ RCAR_GP_PIN(4,  5), 20, 3 },	/* GP4_05 */
@@ -2496,7 +2496,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(4,  1),  4, 3 },	/* GP4_01 */
 		{ RCAR_GP_PIN(4,  0),  0, 3 },	/* GP4_00 */
 	} },
-	{ PINMUX_DRIVE_REG("DRV1CTRL4", 0xffd90084) {
+	{ PINMUX_DRIVE_REG("DRV1CTRL4", 0xdfd90084) {
 		{ RCAR_GP_PIN(4, 15), 28, 3 },	/* GP4_15 */
 		{ RCAR_GP_PIN(4, 14), 24, 3 },	/* GP4_14 */
 		{ RCAR_GP_PIN(4, 13), 20, 3 },	/* GP4_13 */
@@ -2506,7 +2506,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(4,  9),  4, 3 },	/* GP4_09 */
 		{ RCAR_GP_PIN(4,  8),  0, 3 },	/* GP4_08 */
 	} },
-	{ PINMUX_DRIVE_REG("DRV2CTRL4", 0xffd90088) {
+	{ PINMUX_DRIVE_REG("DRV2CTRL4", 0xdfd90088) {
 		{ RCAR_GP_PIN(4, 23), 28, 3 },	/* MSPI0CSS1 */
 		{ RCAR_GP_PIN(4, 22), 24, 3 },	/* MSPI0SO_MSPI0DCS */
 		{ RCAR_GP_PIN(4, 21), 20, 3 },	/* MSPI0SI */
@@ -2516,7 +2516,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(4, 17),  4, 3 },	/* GP4_17 */
 		{ RCAR_GP_PIN(4, 16),  0, 3 },	/* GP4_16 */
 	} },
-	{ PINMUX_DRIVE_REG("DRV3CTRL4", 0xffd9008c) {
+	{ PINMUX_DRIVE_REG("DRV3CTRL4", 0xdfd9008c) {
 		{ RCAR_GP_PIN(4, 30), 24, 3 },	/* MSPI1CSS1 */
 		{ RCAR_GP_PIN(4, 29), 20, 3 },	/* MSPI1CSS2 */
 		{ RCAR_GP_PIN(4, 28), 16, 3 },	/* MSPI1SC */
@@ -2525,7 +2525,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(4, 25),  4, 3 },	/* MSPI1SI */
 		{ RCAR_GP_PIN(4, 24),  0, 3 },	/* MSPI0CSS0 */
 	} },
-	{ PINMUX_DRIVE_REG("DRV0CTRL5", 0xffd90880) {
+	{ PINMUX_DRIVE_REG("DRV0CTRL5", 0xdfd90880) {
 		{ RCAR_GP_PIN(5,  7), 28, 3 },	/* ETNB0RXD3 */
 		{ RCAR_GP_PIN(5,  6), 24, 3 },	/* ETNB0RXER */
 		{ RCAR_GP_PIN(5,  5), 20, 3 },	/* ETNB0MDC */
@@ -2535,7 +2535,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(5,  1),  4, 3 },	/* RIIC0SDA */
 		{ RCAR_GP_PIN(5,  0),  0, 3 },	/* RIIC0SCL */
 	} },
-	{ PINMUX_DRIVE_REG("DRV1CTRL5", 0xffd90884) {
+	{ PINMUX_DRIVE_REG("DRV1CTRL5", 0xdfd90884) {
 		{ RCAR_GP_PIN(5, 15), 28, 3 },	/* ETNB0TXCLK */
 		{ RCAR_GP_PIN(5, 14), 24, 3 },	/* ETNB0TXD3 */
 		{ RCAR_GP_PIN(5, 13), 20, 3 },	/* ETNB0TXER */
@@ -2545,13 +2545,13 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(5,  9),  4, 3 },	/* ETNB0RXD2*/
 		{ RCAR_GP_PIN(5,  8),  0, 3 },	/* ETNB0RXD1 */
 	} },
-	{ PINMUX_DRIVE_REG("DRV2CTRL5", 0xffd90888) {
+	{ PINMUX_DRIVE_REG("DRV2CTRL5", 0xdfd90888) {
 		{ RCAR_GP_PIN(5, 19), 12, 3 },	/* ETNB0TXD0 */
 		{ RCAR_GP_PIN(5, 18),  8, 3 },	/* ETNB0TXEN */
 		{ RCAR_GP_PIN(5, 17),  4, 3 },	/* ETNB0TXD2 */
 		{ RCAR_GP_PIN(5, 16),  0, 3 },	/* ETNB0TXD1 */
 	} },
-	{ PINMUX_DRIVE_REG("DRV0CTRL6", 0xffd91080) {
+	{ PINMUX_DRIVE_REG("DRV0CTRL6", 0xdfd91080) {
 		{ RCAR_GP_PIN(6,  7), 28, 3 },	/* RLIN34RX_INTP20 */
 		{ RCAR_GP_PIN(6,  6), 24, 3 },	/* RLIN34TX */
 		{ RCAR_GP_PIN(6,  5), 20, 3 },	/* RLIN35RX_INTP21 */
@@ -2561,7 +2561,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(6,  1),  4, 3 },	/* RLIN37RX_INTP23 */
 		{ RCAR_GP_PIN(6,  0),  0, 3 },	/* RLIN37TX */
 	} },
-	{ PINMUX_DRIVE_REG("DRV1CTRL6", 0xffd91084) {
+	{ PINMUX_DRIVE_REG("DRV1CTRL6", 0xdfd91084) {
 		{ RCAR_GP_PIN(6, 15), 28, 3 },	/* RLIN30RX_INTP16 */
 		{ RCAR_GP_PIN(6, 14), 24, 3 },	/* RLIN30TX */
 		{ RCAR_GP_PIN(6, 13), 20, 3 },	/* RLIN31RX_INTP17 */
@@ -2571,7 +2571,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(6,  9),  4, 3 },	/* RLIN33RX_INTP19*/
 		{ RCAR_GP_PIN(6,  8),  0, 3 },	/* RLIN33TX */
 	} },
-	{ PINMUX_DRIVE_REG("DRV2CTRL6", 0xffd91088) {
+	{ PINMUX_DRIVE_REG("DRV2CTRL6", 0xdfd91088) {
 		{ RCAR_GP_PIN(6, 22), 24, 3 },	/* NMI1 */
 		{ RCAR_GP_PIN(6, 21), 20, 3 },	/* INTP32 */
 		{ RCAR_GP_PIN(6, 20), 16, 3 },	/* INTP33 */
@@ -2580,10 +2580,10 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(6, 17),  4, 3 },	/* INTP36 */
 		{ RCAR_GP_PIN(6, 16),  0, 3 },	/* INTP37 */
 	} },
-	{ PINMUX_DRIVE_REG("DRV3CTRL6", 0xffd9108c) {
+	{ PINMUX_DRIVE_REG("DRV3CTRL6", 0xdfd9108c) {
 		{ RCAR_GP_PIN(6, 31), 28, 3 },	/* PRESETOUT1_N */
 	} },
-	{ PINMUX_DRIVE_REG("DRV0CTRL7", 0xffd91880) {
+	{ PINMUX_DRIVE_REG("DRV0CTRL7", 0xdfd91880) {
 		{ RCAR_GP_PIN(7,  7), 28, 3 },	/* CAN3RX_INTP3 */
 		{ RCAR_GP_PIN(7,  6), 24, 3 },	/* CAN3TX */
 		{ RCAR_GP_PIN(7,  5), 20, 3 },	/* CAN2RX_INTP2 */
@@ -2593,7 +2593,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(7,  1),  4, 3 },	/* CAN0RX_INTP0 */
 		{ RCAR_GP_PIN(7,  0),  0, 3 },	/* CAN0TX */
 	} },
-	{ PINMUX_DRIVE_REG("DRV1CTRL7", 0xffd91884) {
+	{ PINMUX_DRIVE_REG("DRV1CTRL7", 0xdfd91884) {
 		{ RCAR_GP_PIN(7, 15), 28, 3 },	/* CAN7RX_INTP7 */
 		{ RCAR_GP_PIN(7, 14), 24, 3 },	/* CAN7TX */
 		{ RCAR_GP_PIN(7, 13), 20, 3 },	/* CAN6RX_INTP6 */
@@ -2603,7 +2603,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(7,  9),  4, 3 },	/* CAN4RX_INTP4 */
 		{ RCAR_GP_PIN(7,  8),  0, 3 },	/* CAN4TX */
 	} },
-	{ PINMUX_DRIVE_REG("DRV2CTRL7", 0xffd91888) {
+	{ PINMUX_DRIVE_REG("DRV2CTRL7", 0xdfd91888) {
 		{ RCAR_GP_PIN(7, 23), 28, 3 },	/* CAN11RX_INTP11 */
 		{ RCAR_GP_PIN(7, 22), 24, 3 },	/* CAN11TX */
 		{ RCAR_GP_PIN(7, 21), 20, 3 },	/* CAN10RX_INTP10 */
@@ -2613,7 +2613,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(7, 17),  4, 3 },	/* CAN8RX_INTP8 */
 		{ RCAR_GP_PIN(7, 16),  0, 3 },	/* CAN8TX */
 	} },
-	{ PINMUX_DRIVE_REG("DRV3CTRL7", 0xffd9188c) {
+	{ PINMUX_DRIVE_REG("DRV3CTRL7", 0xdfd9188c) {
 		{ RCAR_GP_PIN(7, 31), 28, 3 },	/* CAN15RX_INTP15 */
 		{ RCAR_GP_PIN(7, 30), 24, 3 },	/* CAN15TX */
 		{ RCAR_GP_PIN(7, 29), 20, 3 },	/* CAN14RX_INTP14 */
@@ -2643,10 +2643,10 @@ static const struct pinmux_ioctrl_reg pinmux_ioctrl_regs[] = {
 	[POC1] = { 0xe60508a0, },
 	[POC2] = { 0xe60510a0, },
 	[POC3] = { 0xe60518a0, },
-	[POC4] = { 0xffd900a0, },
-	[POC5] = { 0xffd908a0, },
-	[POC6] = { 0xffd910a0, },
-	[POC7] = { 0xffd918a0, },
+	[POC4] = { 0xdfd900a0, },
+	[POC5] = { 0xdfd908a0, },
+	[POC6] = { 0xdfd910a0, },
+	[POC7] = { 0xdfd918a0, },
 	[TD0SEL1] = { 0xe6058120, },
 	{ /* sentinel */ },
 };
@@ -2808,7 +2808,7 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[30] = SH_PFC_PIN_NONE,
 		[31] = SH_PFC_PIN_NONE,
 	} },
-	{ PINMUX_BIAS_REG("PUEN4", 0xffd900c0, "PUD4", 0xffd900e0) {
+	{ PINMUX_BIAS_REG("PUEN4", 0xdfd900c0, "PUD4", 0xdfd900e0) {
 		[ 0] = RCAR_GP_PIN(4,  0),	/* GP4_00 */
 		[ 1] = RCAR_GP_PIN(4,  1),	/* GP4_01 */
 		[ 2] = RCAR_GP_PIN(4,  2),	/* GP4_02 */
@@ -2842,7 +2842,7 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[30] = RCAR_GP_PIN(4, 30),	/* MSPI1CSS1 */
 		[31] = SH_PFC_PIN_NONE,
 	} },
-	{ PINMUX_BIAS_REG("PUEN5", 0xffd908c0, "PUD5", 0xffd908e0) {
+	{ PINMUX_BIAS_REG("PUEN5", 0xdfd908c0, "PUD5", 0xdfd908e0) {
 		[ 0] = RCAR_GP_PIN(5,  0),	/* RIIC0SCL */
 		[ 1] = RCAR_GP_PIN(5,  1),	/* RIIC0SDA */
 		[ 2] = RCAR_GP_PIN(5,  2),	/* ETNB0MD */
@@ -2876,7 +2876,7 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[30] = SH_PFC_PIN_NONE,
 		[31] = SH_PFC_PIN_NONE,
 	} },
-	{ PINMUX_BIAS_REG("PUEN6", 0xffd910c0, "PUD6", 0xffd910e0) {
+	{ PINMUX_BIAS_REG("PUEN6", 0xdfd910c0, "PUD6", 0xdfd910e0) {
 		[ 0] = RCAR_GP_PIN(6,  0),	/* RLIN37TX */
 		[ 1] = RCAR_GP_PIN(6,  1),	/* RLIN37RX_INTP23 */
 		[ 2] = RCAR_GP_PIN(6,  2),	/* RLIN36TX */
@@ -2910,7 +2910,7 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[30] = SH_PFC_PIN_NONE,
 		[31] = RCAR_GP_PIN(6, 31),	/* PRESETOUT1_N */
 	} },
-	{ PINMUX_BIAS_REG("PUEN7", 0xffd918c0, "PUD7", 0xffd918e0) {
+	{ PINMUX_BIAS_REG("PUEN7", 0xdfd918c0, "PUD7", 0xdfd918e0) {
 		[ 0] = RCAR_GP_PIN(7,  0),	/* CAN0TX */
 		[ 1] = RCAR_GP_PIN(7,  1),	/* CAN0RX_INTP0 */
 		[ 2] = RCAR_GP_PIN(7,  2),	/* CAN1TX */
