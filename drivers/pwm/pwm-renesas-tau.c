@@ -158,10 +158,10 @@ static u32 clk_hsb_table[CLK_HSB_SOURCE_MAX][CLK_HSB_SELECT_MAX] = {
 	{	80000000,	80000000,	80000000,	80000000 },
 	/* CLK_IOSC : LS IntOSC */
 	/*	2'b00		2'b01		2'b10		2'b11	*/
-	{	24000,		30000,		24000,		40000 },
+	{	40000,		40000,		30000,		24000 },
 	/* CLK_IOSC : HS IntOSC */
 	/*	2'b00		2'b01		2'b10		2'b11	*/
-	{	20000000,	25000000,	33333333,	33333333},
+	{	33333333,	33333333,	25000000,	20000000},
 };
 
 static int tau_pwm_runtime_suspend(struct device *dev)
@@ -200,13 +200,11 @@ static u64 tau_pwm_get_pclk(struct tau_pwm_device *dev)
 	if (!(tau_pwm_read(32, tau_chip, clkc, CLKC_CPUS)
 	     & CLKC_CPUS_CLKSCSID_MASK)) {
 		src = CLK_HSB_SOURCE_PLLO;
-		if (!(tau_pwm_read(32, tau_chip, clkc, CLKD_PLLC)
+		if (!(tau_pwm_read(32, tau_chip, clkc, CLKD_PLLS)
 		     & CLKD_PLLS_PLLCLKDSYNC_MASK)) {
 			div = 0;
 		} else {
-			div = tau_pwm_read(32, tau_chip, clkc, CLKD_PLLS);
-			div = (div & CLKD_PLLC_PLLCLKDCSID_MASK)
-			       >> CLKD_PLLC_PLLCLKDCSID_SHIFT;
+			div = tau_pwm_read(32, tau_chip, clkc, CLKD_PLLC);
 		}
 	} else if (tau_pwm_read(32, tau_chip, clkc, CLKD_HSOSCS)
 		  & CLKD_HSOSCS_HSOSCSTAB_MASK) {
