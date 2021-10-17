@@ -85,6 +85,7 @@
 #define TAUD_RDM			(0x264u)
 #define TAUD_RDS			(0x268u)
 #define TAUD_RDC			(0x26cu)
+#define TAUD_RDT			(0x044u)
 
 #define TAUD_TOE			(0x5cu)
 #define TAUD_TOM			(0x248u)
@@ -409,8 +410,8 @@ static int tau_pwm_update_channel(struct tau_pwm_device *dev)
 	tau_pwm_write(16, tau_chip, taud, TAUD_RDM, val);
 
 	val = tau_pwm_read(16, tau_chip, taud, TAUD_RDC);
-	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_MASTER(dev->channel));
-	val &= ~(BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_MASTER(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
 	tau_pwm_write(16, tau_chip, taud, TAUD_RDC, val);
 
 	return 0;
@@ -420,6 +421,7 @@ static int tau_pwm_update_counter(struct tau_pwm_device *dev)
 {
 	struct tau_pwm_chip *tau_chip = dev->tau_chip;
 	struct tau_pwm_params *tau_params = &dev->params;
+	u16 val;
 
 	tau_pwm_write(16, tau_chip, taud,
 		      TAUD_CDR(TAUD_DEVICE_CHANNEL_MASTER(dev->channel)),
@@ -427,6 +429,11 @@ static int tau_pwm_update_counter(struct tau_pwm_device *dev)
 	tau_pwm_write(16, tau_chip, taud,
 		      TAUD_CDR(TAUD_DEVICE_CHANNEL_SLAVE(dev->channel)),
 		      tau_params->duty);
+
+	val = tau_pwm_read(16, tau_chip, taud, TAUD_RDT);
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_MASTER(dev->channel));
+	val |= (BIT(0) << TAUD_DEVICE_CHANNEL_SLAVE(dev->channel));
+	tau_pwm_write(16, tau_chip, taud, TAUD_RDT, val);
 
 	return 0;
 }
