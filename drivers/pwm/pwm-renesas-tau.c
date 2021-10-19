@@ -18,6 +18,20 @@
 #include <linux/pwm.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/iopoll.h>
+
+#define PLLE				(0u)
+#define PLLE_PLLENTRG			BIT(1)
+
+#define PLLS				(0x004u)
+#define PLLS_PLLCLKEN			BIT(0)
+#define PLLS_PLLCLKSTAB			BIT(1)
+
+#define CKSC_CPUC			(0x100u)
+#define CKSC_CPUC_CPUCLKSCSID_PLLO	0
+
+#define CKSC_CPUS			(0x108u)
+#define CKSC_CPUS_CPUCLKSACT		BIT(0)
 
 #define CLKC_CPUS			(0x100u)
 #define CLKC_CPUS_CLKSCSID_SHIFT	0
@@ -26,15 +40,26 @@
 #define CLKD_PLLC			(0x120u)
 #define CLKD_PLLC_PLLCLKDCSID_SHIFT	0
 #define CLKD_PLLC_PLLCLKDCSID_MASK	GENMASK(3, 0)
+#define CLKD_PLLC_PLLCLKDCSID_DIV_1	(0x001u)
+#define CLKD_PLLC_PLLCLKDCSID_DIV_2	(0x002u)
 
 #define CLKD_PLLS			(0x128u)
 #define CLKD_PLLS_PLLCLKDSYNC_SHIFT	1
 #define CLKD_PLLS_PLLCLKDSYNC_MASK	BIT(1)
 
+#define CLKKCPROT1			(0x0700u)
+
 #define CLKD_MSR_TAUD			(0x1130u)
 #define CLKD_MSR_TAUD_CH(a)		(1u << (a))
 
 #define CLKD_MSRKCPROT			(0x1710u)
+
+#define MOSCE				(0x8000u)
+#define MOSCE_MOSCENTRG			BIT(0)
+
+#define MOSCS				(0x8004u)
+#define MOSCS_MOSCEN			BIT(0)
+#define MOSCS_MOSCSTAB			BIT(1)
 
 #define CLKD_HSOSCS			(0x8100u)
 #define CLKD_HSOSCS_HSOSCSTAB_SHIFT	1
@@ -192,7 +217,57 @@ static int tau_pwm_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static u64 tau_pwm_get_pclk(struct tau_pwm_device *dev)
+#define INTERVAL_USEC	10
+#define TIMEOUT_USEC	1000
+
+static int tau_pwm_shift_clk_to_pllo(struct tau_pwm_device *dev)
+{
+	struct tau_pwm_chip *tau_chip = dev->tau_chip;
+	u32 val;
+	int ret;
+
+	tau_pwm_write(32, tau_chip, clkc, CLKKCPROT1, 0xA5A5A501);
+
+	val = tau_pwm_read(32, tau_chip, clkc, MOSCS);
+	if (!(val & MOSCS_MOSCEN))
+		tau_pwm_write(32, tau_chip, clkc, MOSCE, MOSCE_MOSCENTRG);
+
+	ret = readl_poll_timeout(tau_chip->clkc_base + MOSCS, val, val & MOSCS_MOSCSTAB,
+				 INTERVAL_USEC, TIMEOUT_USEC);
+	if (ret)
+		return ret;
+
+	val = tau_pwm_read(32, tau_chip, clkc, PLLS);
+	if (!(val & PLLS_PLLCLKEN))
+		tau_pwm_write(32, tau_chip, clkc, PLLE, PLLE_PLLENTRG);
+
+	ret = readl_poll_timeout(tau_chip->clkc_base + PLLS, val, val & PLLS_PLLCLKSTAB,
+				 INTERVAL_USEC, TIMEOUT_USEC);
+	if (ret)
+		return ret;
+
+	tau_pwm_write(32, tau_chip, clkc, CLKD_PLLC, CLKD_PLLC_PLLCLKDCSID_DIV_2);
+	ret = readl_poll_timeout(tau_chip->clkc_base + CLKD_PLLS, val,
+				 val & CLKD_PLLS_PLLCLKDSYNC_MASK, INTERVAL_USEC, TIMEOUT_USEC);
+	if (ret)
+		return ret;
+
+	tau_pwm_write(32, tau_chip, clkc, CKSC_CPUC, CKSC_CPUC_CPUCLKSCSID_PLLO);
+	ret = readl_poll_timeout(tau_chip->clkc_base + CKSC_CPUS, val,
+				 !(val & CKSC_CPUS_CPUCLKSACT), INTERVAL_USEC, TIMEOUT_USEC);
+	if (ret)
+		return ret;
+
+	tau_pwm_write(32, tau_chip, clkc, CLKD_PLLC, CLKD_PLLC_PLLCLKDCSID_DIV_1);
+	ret = readl_poll_timeout(tau_chip->clkc_base + CLKD_PLLS, val,
+				 val & CLKD_PLLS_PLLCLKDSYNC_MASK, INTERVAL_USEC, TIMEOUT_USEC);
+
+	tau_pwm_write(32, tau_chip, clkc, CLKKCPROT1, 0xA5A5A500);
+
+	return ret;
+}
+
+static u64 tau_pwm_get_pclk(struct tau_pwm_device *dev, bool *use_pllo)
 {
 	struct tau_pwm_chip *tau_chip = dev->tau_chip;
 	u64 pclk, div, src, sel;
@@ -206,13 +281,18 @@ static u64 tau_pwm_get_pclk(struct tau_pwm_device *dev)
 		} else {
 			div = tau_pwm_read(32, tau_chip, clkc, CLKD_PLLC);
 		}
+
+		*use_pllo = true;
+
 	} else if (tau_pwm_read(32, tau_chip, clkc, CLKD_HSOSCS)
 		  & CLKD_HSOSCS_HSOSCSTAB_MASK) {
 		src = CLK_HSB_SOURCE_HS_INTOSC;
 		div = 1;
+		*use_pllo = false;
 	} else {
 		src = CLK_HSB_SOURCE_LS_INTOSC;
 		div = 1;
+		*use_pllo = false;
 	}
 
 	sel = tau_pwm_read(32, tau_chip, modemr, MODEMR1);
@@ -234,8 +314,16 @@ static int tau_pwm_update_params(struct tau_pwm_device *dev, u64 period_ns, u64 
 	int prescaler, prescaler_max = 15;
 	int div, div_max = 256;
 	u64 period_ns_max, period_counter_max = GENMASK(15, 0);
+	bool use_pllo;
 
-	pclk = tau_pwm_get_pclk(dev);
+	pclk = tau_pwm_get_pclk(dev, &use_pllo);
+
+	if (!use_pllo) {
+		if (tau_pwm_shift_clk_to_pllo(dev))
+			pr_info("Cannot shift clock to PLLO\n");
+
+		pclk = tau_pwm_get_pclk(dev, &use_pllo);
+	}
 
 	for (prescaler = 0; prescaler <= prescaler_max; prescaler++) {
 		calc_clk = pclk >> prescaler;
