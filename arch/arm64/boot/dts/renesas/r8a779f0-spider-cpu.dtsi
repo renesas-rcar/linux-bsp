@@ -50,6 +50,17 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
+
+	vcc_sdhi: regulator-vcc-sdhi {
+		compatible = "regulator-fixed";
+
+		regulator-name = "SDHI Vcc";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+
+		gpio = <&gpio1 24 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
 };
 
 &extal_clk {
@@ -90,10 +101,19 @@
 	};
 };
 
-/*
- * This board also has a microSD slot which we will not support upstream
- * because we cannot directly switch voltages in software.
- */
+#ifdef S4_USE_SD
+&mmc0 {
+	pinctrl-0 = <&sd_pins>;
+	pinctrl-1 = <&sd_pins>;
+	pinctrl-names = "default", "state_uhs";
+
+	vmmc-supply = <&vcc_sdhi>;
+	vqmmc-supply = <&vcc_sdhi>;
+	cd-gpios = <&gpio1 23 GPIO_ACTIVE_LOW>;
+	bus-width = <4>;
+	status = "okay";
+};
+#else
 &mmc0 {
 	pinctrl-0 = <&mmc_pins>;
 	pinctrl-1 = <&mmc_pins>;
@@ -110,6 +130,7 @@
 	full-pwr-cycle-in-suspend;
 	status = "okay";
 };
+#endif
 
 &pfc {
 	pinctrl-0 = <&scif_clk_pins>;
@@ -129,6 +150,12 @@
 		groups = "mmc_data8", "mmc_ctrl", "mmc_ds";
 		function = "mmc";
 		power-source = <1800>;
+	};
+
+	sd_pins: sd {
+		groups = "mmc_data4", "mmc_ctrl";
+		function = "mmc";
+		power-source = <3300>;
 	};
 
 	scif0_pins: scif0 {
