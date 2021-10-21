@@ -30,6 +30,7 @@
 			power-domains = <&sysc R8A77980_PD_A2DP1>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
 			resets = <&cpg 524>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		/* TBD: can fd channel 3 */
