@@ -124,5 +124,9 @@
 	pinctrl-0 = <&taud0_pwm_pins>;
 	pinctrl-names = "default";
 
-	status = "okay";
+	status = "disable";
+};
+
+&gpio4 {
+	status = "disable";
 };
