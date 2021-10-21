@@ -112,6 +112,10 @@ const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
 			| BIT(R8A7796_PD_A3IR) | BIT(R8A7796_PD_3DG_A)
 			| BIT(R8A7796_PD_3DG_B)),
 	},
+	{
+		.soc_id = "r8a77980",
+		.data = (void *)(BIT(R8A77980_PD_CR7)),
+	},
 	{ /* sentinel */ }
 };
 
