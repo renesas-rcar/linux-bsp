@@ -13,6 +13,15 @@
 };
 
 &cluster0_opp0 {
+	opp-1600000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1700000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1800000000 {
+		/delete-property/turbo-mode;
+	};
 	opp-2000000000 {
 		opp-hz = /bits/ 64 <2000000000>;
 		opp-microvolt = <960000>;
@@ -22,6 +31,15 @@
 };
 
 &cluster0_opp1 {
+	opp-1600000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1700000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1800000000 {
+		/delete-property/turbo-mode;
+	};
 	opp-2000000000 {
 		opp-hz = /bits/ 64 <2000000000>;
 		opp-microvolt = <960000>;
@@ -30,6 +48,15 @@
 };
 
 &cluster0_opp2 {
+	opp-1600000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1700000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1800000000 {
+		/delete-property/turbo-mode;
+	};
 	opp-2000000000 {
 		opp-hz = /bits/ 64 <2000000000>;
 		opp-microvolt = <960000>;
@@ -38,6 +65,15 @@
 };
 
 &cluster0_opp3 {
+	opp-1600000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1700000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1800000000 {
+		/delete-property/turbo-mode;
+	};
 	opp-2000000000 {
 		opp-hz = /bits/ 64 <2000000000>;
 		opp-microvolt = <960000>;
@@ -46,6 +82,15 @@
 };
 
 &cluster0_opp4 {
+	opp-1600000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1700000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1800000000 {
+		/delete-property/turbo-mode;
+	};
 	opp-2000000000 {
 		opp-hz = /bits/ 64 <2000000000>;
 		opp-microvolt = <960000>;
@@ -54,6 +99,15 @@
 };
 
 &cluster0_opp5 {
+	opp-1600000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1700000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1800000000 {
+		/delete-property/turbo-mode;
+	};
 	opp-2000000000 {
 		opp-hz = /bits/ 64 <2000000000>;
 		opp-microvolt = <960000>;
@@ -62,6 +116,15 @@
 };
 
 &cluster0_opp6 {
+	opp-1600000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1700000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1800000000 {
+		/delete-property/turbo-mode;
+	};
 	opp-2000000000 {
 		opp-hz = /bits/ 64 <2000000000>;
 		opp-microvolt = <960000>;
@@ -70,6 +133,15 @@
 };
 
 &cluster0_opp7 {
+	opp-1600000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1700000000 {
+		/delete-property/turbo-mode;
+	};
+	opp-1800000000 {
+		/delete-property/turbo-mode;
+	};
 	opp-2000000000 {
 		opp-hz = /bits/ 64 <2000000000>;
 		opp-microvolt = <960000>;
