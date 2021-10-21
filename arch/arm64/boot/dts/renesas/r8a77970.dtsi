@@ -962,6 +962,7 @@
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		irq_imp_top_00_01 {
@@ -1003,6 +1004,7 @@
 			power-domains = <&sysc R8A77970_PD_A2IR0>;
 			resets = <&cpg 827>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imp_01 {
@@ -1011,6 +1013,7 @@
 			clocks = <&cpg CPG_MOD 827>;
 			power-domains = <&sysc R8A77970_PD_A2IR0>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imp_02 {
@@ -1020,6 +1023,7 @@
 			power-domains = <&sysc R8A77970_PD_A2IR1>;
 			resets = <&cpg 826>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imp_03 {
@@ -1028,6 +1032,7 @@
 			clocks = <&cpg CPG_MOD 826>;
 			power-domains = <&sysc R8A77970_PD_A2IR1>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imp_ocv_00 {
@@ -1037,6 +1042,7 @@
 			power-domains = <&sysc R8A77970_PD_A2SC0>;
 			resets = <&cpg 829>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imp_ocv_01 {
@@ -1046,6 +1052,7 @@
 			power-domains = <&sysc R8A77970_PD_A2SC1>;
 			resets = <&cpg 828>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imp_dma_00 {
@@ -1054,6 +1061,7 @@
 			clocks = <&cpg CPG_MOD 825>;
 			power-domains = <&sysc R8A77970_PD_A2DP>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imp_psc_00 {
@@ -1063,6 +1071,7 @@
 			power-domains = <&sysc R8A77970_PD_A2DP>;
 			resets = <&cpg 825>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imp_cnn_00 {
@@ -1072,6 +1081,7 @@
 			power-domains = <&sysc R8A77970_PD_A2CN>;
 			resets = <&cpg 824>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imp_spmi_00 {
@@ -1080,6 +1090,7 @@
 			clocks = <&cpg CPG_MOD 830>;
 			power-domains = <&sysc R8A77970_PD_A3IR>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
 		imr_v4l2_alloc: imr_alloc {
@@ -1096,6 +1107,7 @@
 			resets = <&cpg 823>;
 			alloc-dev = <&imr_v4l2_alloc>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 2>;
 		};
 
 		imrlx4_ch1: ims_01@fe870000 {
@@ -1108,6 +1120,7 @@
 			resets = <&cpg 822>;
 			alloc-dev = <&imr_v4l2_alloc>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 2>;
 		};
 
 		imrlx4_ch2: ims_02@fe880000 {
@@ -1120,6 +1133,7 @@
 			resets = <&cpg 821>;
 			alloc-dev = <&imr_v4l2_alloc>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 3>;
 		};
 
 		imrlx4_ch3: ims_03@fe890000 {
@@ -1132,6 +1146,7 @@
 			resets = <&cpg 820>;
 			alloc-dev = <&imr_v4l2_alloc>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 3>;
 		};
 
 		isp0: isp@fec00000 {
@@ -1151,6 +1166,7 @@
 			clocks = <&cpg CPG_MOD 817>;
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 6>;
 		};
 
 		cisp0: cisp_00 {
@@ -1161,6 +1177,7 @@
 			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
 			resets = <&cpg 817>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 7>;
 		};
 
 		sadc0: adc@ffce0000 {
@@ -1667,6 +1684,7 @@
 			resets = <&cpg 127>;
 			interrupts = <GIC_SPI 300 IRQ_TYPE_LEVEL_HIGH>;
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 4>;
 		};
 
 		irq_ivcp1e_00_01 {
