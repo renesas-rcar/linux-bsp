@@ -104,8 +104,8 @@
 			compatible = "renesas,pfc-r8a779f0";
 			reg = <0 0xe6050000 0 0x16c>, <0 0xe6050800 0 0x16c>,
 			      <0 0xe6051000 0 0x16c>, <0 0xe6051800 0 0x16c>,
-			      <0 0xffd90000 0 0x16c>, <0 0xffd90800 0 0x16c>,
-			      <0 0xffd91000 0 0x16c>, <0 0xffd91800 0 0x16c>;
+			      <0 0xdfd90000 0 0x16c>, <0 0xdfd90800 0 0x16c>,
+			      <0 0xdfd91000 0 0x16c>, <0 0xdfd91800 0 0x16c>;
 		};
 
 		gpio0: gpio@e6050180 {
@@ -157,6 +157,20 @@
 			#gpio-cells = <2>;
 			gpio-controller;
 			gpio-ranges = <&pfc 0 96 19>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+			clocks = <&cpg CPG_MOD 915>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			resets = <&cpg 915>;
+		};
+
+		gpio4: gpio@dfd90180 {
+			compatible = "renesas,gpio-r8a779f0";
+			reg = <0 0xdfd90180 0 0x54>;
+			interrupts = <GIC_SPI 826 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 128 31>;
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			clocks = <&cpg CPG_MOD 915>;
@@ -897,20 +911,22 @@
 		tau_pwm0: tau@dfbf4000 {
 			compatible = "renesas,tau-pwm";
 			reg = <0 0xdfbf4000 0 0x1000>,
-			      <0 0xdf980000 0 0x8000>,
+			      <0 0xdf980000 0 0x10000>,
 			      <0 0xe6160000 0 0x8>;
 			reg-names = "taud", "clkc", "modemr";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			renesas,channel = <0>;
 			status = "disabled";
 		};
 
 		tau_pwm1: tau@dfbf5000 {
 			compatible = "renesas,tau-pwm";
-			reg = <0 0xdfbf4000 0 0x1000>,
-			      <0 0xdf980000 0 0x8000>,
+			reg = <0 0xdfbf5000 0 0x1000>,
+			      <0 0xdf980000 0 0x10000>,
 			      <0 0xe6160000 0 0x8>;
 			reg-names = "taud", "clkc", "modemr";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			renesas,channel = <1>;
 			status = "disabled";
 		};
 
