@@ -89,6 +89,15 @@
 #define MACCGSPSETR		0x011084
 #define  SPCNGRSN		BIT(31)
 
+/* L1 Support */
+#define PMSR                    0x01105c
+#define  L1FAEG                 BIT(31)
+#define  PM_ENTER_L1RX          BIT(23)
+#define  PMSTATE                (BIT(18) | BIT(17) | BIT(16))
+#define  PMSTATE_L1             (BIT(17) | BIT(16))
+#define PMCTLR                  0x011060
+#define  L1_INIT                BIT(31)
+
 /* R-Car H1 PHY */
 #define H1_PCIEPHYADRR		0x04000c
 #define  WRITE_CMD		BIT(16)
