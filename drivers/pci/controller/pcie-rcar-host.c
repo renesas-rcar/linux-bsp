@@ -76,6 +76,7 @@ static int rcar_pcie_config_access(struct rcar_pcie_host *host,
 {
 	struct rcar_pcie *pcie = &host->pcie;
 	unsigned int dev, func, reg, index;
+	u32 val;
 
 	dev = PCI_SLOT(devfn);
 	func = PCI_FUNC(devfn);
@@ -107,6 +108,22 @@ static int rcar_pcie_config_access(struct rcar_pcie_host *host,
 			rcar_pci_write_reg(pcie, *data, PCICONF(index));
 
 		return PCIBIOS_SUCCESSFUL;
+	}
+
+	/*
+	 * If we are not in L1 link state and we have received PM_ENTER_L1 DLLP,
+	 * transition to L1 link state. The HW will handle coming of L1.
+	 */
+	val = rcar_pci_read_reg(pcie, PMSR);
+	if ((val & PM_ENTER_L1RX) && ((val & PMSTATE) != PMSTATE_L1)) {
+		rcar_pci_write_reg(pcie, L1_INIT, PMCTLR);
+
+		/* Wait until we are in L1 */
+		while (!(val & L1FAEG))
+			val = rcar_pci_read_reg(pcie, PMSR);
+
+		/* Clear flags indicating link has transitioned to L1 */
+		rcar_pci_write_reg(pcie, L1FAEG | PM_ENTER_L1RX, PMSR);
 	}
 
 	/* Clear errors */
