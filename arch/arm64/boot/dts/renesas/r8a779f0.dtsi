@@ -23,15 +23,63 @@
 		i2c5 = &i2c5;
 	};
 
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&a55_0>;
+				};
+				core1 {
+					cpu = <&a55_1>;
+				};
+			};
+			cluster1 {
+				core0 {
+					cpu = <&a55_2>;
+				};
+				core1 {
+					cpu = <&a55_3>;
+				};
+			};
+		};
 
 		a55_0: cpu@0 {
 			compatible = "arm,cortex-a55";
 			reg = <0>;
 			device_type = "cpu";
 			power-domains = <&sysc R8A779F0_PD_A1E0D0C0>;
+			enable-method = "psci";
+			next-level-cache = <&L3_CA55_0>;
+		};
+
+		a55_1: cpu@100 {
+			compatible = "arm,cortex-a55";
+			reg = <0x100>;
+			device_type = "cpu";
+			power-domains = <&sysc R8A779F0_PD_A1E0D0C0>;
+			enable-method = "psci";
+			next-level-cache = <&L3_CA55_0>;
+		};
+
+		a55_2: cpu@10000 {
+			compatible = "arm,cortex-a55";
+			reg = <0x10000>;
+			device_type = "cpu";
+			power-domains = <&sysc R8A779F0_PD_A1E0D0C1>;
+			enable-method = "psci";
+			next-level-cache = <&L3_CA55_0>;
+		};
+
+		a55_3: cpu@10100 {
+			compatible = "arm,cortex-a55";
+			reg = <0x10100>;
+			device_type = "cpu";
+			power-domains = <&sysc R8A779F0_PD_A1E0D0C1>;
+			enable-method = "psci";
 			next-level-cache = <&L3_CA55_0>;
 		};
 
@@ -41,6 +89,11 @@
 			cache-unified;
 			cache-level = <3>;
 		};
+	};
+
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "smc";
 	};
 
 	extal_clk: extal {
@@ -601,7 +654,7 @@
 			reg = <0x0 0xf1000000 0 0x20000>,
 			      <0x0 0xf1060000 0 0x110000>;
 			interrupts = <GIC_PPI 9
-				      (GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_HIGH)>;
+				      (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
 		};
 
 		prr: chipid@fff00044 {
@@ -1249,9 +1302,9 @@
 
 	timer {
 		compatible = "arm,armv8-timer";
-		interrupts-extended = <&gic GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_LOW)>,
-				      <&gic GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_LOW)>,
-				      <&gic GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_LOW)>,
-				      <&gic GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_LOW)>;
+		interrupts-extended = <&gic GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+				      <&gic GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+				      <&gic GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+				      <&gic GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
 	};
 };
