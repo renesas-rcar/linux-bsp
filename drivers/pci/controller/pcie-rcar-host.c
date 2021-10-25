@@ -168,7 +168,18 @@ static int rcar_pcie_config_access(struct rcar_pcie_host *host,
 {
 	struct rcar_pcie *pcie = &host->pcie;
 	unsigned int dev, func, reg, index;
+	u32 val;
 	int ret;
+
+	val = rcar_pci_read_reg(pcie, PMSR);
+	if (val == 0 || (rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN)) {
+		/* Wait PCI Express link is re-initialized */
+		dev_info(&bus->dev, "Wait PCI Express link is re-initialized\n");
+		rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
+		ret = rcar_pcie_wait_for_dl(pcie);
+		if (ret)
+			return ret;
+	}
 
 	/* Wake the bus up in case it is in L1 state. */
 	ret = rcar_pcie_wakeup(pcie->dev, pcie->base);
