@@ -75,7 +75,7 @@ static int rcar_pcie_config_access(struct rcar_pcie_host *host,
 		unsigned int devfn, int where, u32 *data)
 {
 	struct rcar_pcie *pcie = &host->pcie;
-	unsigned int dev, func, reg, index;
+	unsigned int dev, func, reg, index, ret;
 	u32 val;
 
 	dev = PCI_SLOT(devfn);
@@ -115,6 +115,16 @@ static int rcar_pcie_config_access(struct rcar_pcie_host *host,
 	 * transition to L1 link state. The HW will handle coming of L1.
 	 */
 	val = rcar_pci_read_reg(pcie, PMSR);
+
+	if (val == 0 || (rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN)) {
+		/* Wait PCI Express link is re-initialized */
+		dev_info(&bus->dev, "Wait PCI Express link is re-initialized\n");
+		rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
+		ret = rcar_pcie_wait_for_dl(pcie);
+		if (ret)
+			return ret;
+	}
+
 	if ((val & PM_ENTER_L1RX) && ((val & PMSTATE) != PMSTATE_L1)) {
 		rcar_pci_write_reg(pcie, L1_INIT, PMCTLR);
 
