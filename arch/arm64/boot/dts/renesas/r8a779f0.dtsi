@@ -1298,7 +1298,7 @@
 
 		iccom00: mfis@e6260000 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 320 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "iccom_00";
@@ -1306,7 +1306,7 @@
 
 		iccom01 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 321 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_01";
@@ -1314,7 +1314,7 @@
 
 		iccom02 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 322 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_02";
@@ -1322,7 +1322,7 @@
 
 		iccom03 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 323 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_03";
@@ -1330,7 +1330,7 @@
 
 		iccom04 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 324 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_04";
@@ -1338,7 +1338,7 @@
 
 		iccom05 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 325 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_05";
@@ -1346,7 +1346,7 @@
 
 		iccom06 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 326 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_06";
@@ -1354,7 +1354,7 @@
 
 		iccom07 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 327 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_07";
@@ -1362,7 +1362,7 @@
 
 		iccom08 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 328 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_08";
@@ -1370,7 +1370,7 @@
 
 		iccom09 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_09";
@@ -1378,7 +1378,7 @@
 
 		iccom010 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_10";
@@ -1387,7 +1387,7 @@
 
 		iccom011 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 331 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_11";
@@ -1395,7 +1395,7 @@
 
 		iccom012 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 332 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_12";
@@ -1403,7 +1403,7 @@
 
 		iccom013 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 333 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_13";
@@ -1411,7 +1411,7 @@
 
 		iccom014 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 334 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_14";
@@ -1419,7 +1419,7 @@
 
 		iccom015 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 335 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_00_15";
@@ -1427,7 +1427,7 @@
 
 		iccom100 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 336 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_00";
@@ -1435,7 +1435,7 @@
 
 		iccom101 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 338 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_01";
@@ -1443,7 +1443,7 @@
 
 		iccom102 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 340 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_02";
@@ -1451,7 +1451,7 @@
 
 		iccom103 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 342 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_03";
@@ -1459,7 +1459,7 @@
 
 		iccom104 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 344 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_04";
@@ -1467,7 +1467,7 @@
 
 		iccom105 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 346 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_05";
@@ -1475,7 +1475,7 @@
 
 		iccom106 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 348 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_06";
@@ -1483,7 +1483,7 @@
 
 		iccom107 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 350 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_07";
@@ -1491,7 +1491,7 @@
 
 		iccom108 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 354 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_08";
@@ -1499,7 +1499,7 @@
 
 		iccom109 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 356 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_09";
@@ -1507,7 +1507,7 @@
 
 		iccom110 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 358 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_10";
@@ -1515,7 +1515,7 @@
 
 		iccom111 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 360 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_11";
@@ -1523,7 +1523,7 @@
 
 		iccom112 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 362 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_12";
@@ -1531,7 +1531,7 @@
 
 		iccom113 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 364 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_13";
@@ -1539,7 +1539,7 @@
 
 		iccom114 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 366 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_14";
@@ -1547,7 +1547,7 @@
 
 		iccom115 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 368 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_iccom_01_15";
