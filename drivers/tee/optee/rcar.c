@@ -41,7 +41,6 @@ static struct rcar_debug_log_info dlog_info;
 #define TEE_CORE_NB_CORE   (8U)
 
 static int debug_log_kthread(void *arg);
-static int tz_rcar_suspend(void);
 static int tz_rcar_power_event(struct notifier_block *this,
 	unsigned long event, void *ptr);
 static int rcar_optee_add_suspend_callback(void);
@@ -124,31 +123,6 @@ void handle_rpc_func_cmd_debug_log(struct optee_msg_arg *arg)
 	}
 }
 
-/*
- * It makes no sense to go into suspend while the OP-TEE is running.
- */
-static int tz_rcar_suspend(void)
-{
-	int empty;
-	int ret;
-	struct optee *optee;
-
-	optee = rcar_optee;
-
-	mutex_lock(&optee->call_queue.mutex);
-	empty = list_empty(&optee->call_queue.waiters);
-	mutex_unlock(&optee->call_queue.mutex);
-
-	if (empty) {
-		ret = NOTIFY_DONE;
-	} else {
-		pr_err("Linux cannot be suspended while the OP-TEE is in use\n");
-		ret = notifier_from_errno(-EBUSY);
-	}
-
-	return ret;
-}
-
 static int tz_rcar_power_event(struct notifier_block *this,
 	unsigned long event, void *ptr)
 {
@@ -156,7 +130,12 @@ static int tz_rcar_power_event(struct notifier_block *this,
 
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
-		ret = tz_rcar_suspend();
+		optee_rcar_suspend_sync(rcar_optee);
+		ret = NOTIFY_DONE;
+		break;
+	case PM_POST_SUSPEND:
+		optee_rcar_resume(rcar_optee);
+		ret = NOTIFY_DONE;
 		break;
 	default:
 		ret = NOTIFY_DONE;
