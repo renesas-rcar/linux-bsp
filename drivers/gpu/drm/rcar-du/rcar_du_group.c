@@ -378,6 +378,8 @@ static void rcar_du_group_set_dpad_levels(struct rcar_du_group *rgrp)
 
 		rcrtc = &rcdu->crtcs[rgrp->index * 2 + i];
 		rstate = to_rcar_crtc_state(rcrtc->crtc.state);
+		if (!rstate)
+			continue;
 
 		if (!(rstate->outputs & dpad_mask))
 			doflr |= doflr_values[i];
