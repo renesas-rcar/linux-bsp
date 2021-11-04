@@ -68,6 +68,21 @@
 						pos-y=<60>;	// (720 - 600)/2
 						pos-override;
 					};
+					overlay-0 {
+						layer-map = <0x2>;
+						size-w = <640>;
+						size-h = <480>;
+						pos-x = <200>;
+						pos-y = <200>;
+					};
+
+					overlay-1 {
+						layer-map = <0x1>;
+						size-w = <640>;
+						size-h = <480>;
+						pos-x = <300>;
+						pos-y = <300>;
+					};
 				};
 			};
 		};
