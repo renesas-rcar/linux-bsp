@@ -24,12 +24,12 @@
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
-		reg = <0x0 0x48000000 0x0 0x78000000>;
+		linux,usable-memory = <0x0 0x48000000 0x0 0x38000000>;
 	};
 
 	memory@480000000 {
 		device_type = "memory";
-		reg = <0x4 0x80000000 0x0 0x80000000>;
+		reg = <0x4 0x40000000 0x0 0x40000000>;
 	};
 
 	reg_1p8v: regulator-1p8v {
