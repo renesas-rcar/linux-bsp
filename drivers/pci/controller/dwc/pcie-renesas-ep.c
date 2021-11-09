@@ -187,9 +187,7 @@ static const struct pci_epc_features renesas_pcie_epc_features = {
 	.linkup_notifier = false,
 	.msi_capable = true,
 	.msix_capable = false,
-	/* use 64-bit BARs so mark BAR[1,5] as reserved */
-	.reserved_bar = 1 << BAR_1 | 1 << BAR_5,
-	.bar_fixed_64bit = 1 << BAR_0 | 1 << BAR_4,
+	.align = SZ_1M,
 };
 
 static const struct pci_epc_features*
