@@ -1068,6 +1068,23 @@ int gnttab_dma_alloc_pages(struct gnttab_dma_alloc_args *args)
 	if (args->nr_pages < 0 || args->nr_pages > (INT_MAX >> PAGE_SHIFT))
 		return -ENOMEM;
 
+	if (IS_ENABLED(CONFIG_XEN_UNPOPULATED_ALLOC)) {
+		ret = xen_alloc_unpopulated_contiguous_pages(args->dev, args->nr_pages,
+				args->pages);
+		if (ret < 0)
+			goto fallback;
+
+		ret = gnttab_pages_set_private(args->nr_pages, args->pages);
+		if (ret < 0)
+			goto fail;
+
+		args->vaddr = page_to_virt(args->pages[0]);
+		args->dev_bus_addr = page_to_phys(args->pages[0]);
+
+		return ret;
+	}
+
+fallback:
 	size = args->nr_pages << PAGE_SHIFT;
 	if (args->coherent)
 		args->vaddr = dma_alloc_coherent(args->dev, size,
@@ -1123,6 +1140,13 @@ int gnttab_dma_free_pages(struct gnttab_dma_alloc_args *args)
 	int i, ret;
 
 	gnttab_pages_clear_private(args->nr_pages, args->pages);
+
+	if (IS_ENABLED(CONFIG_XEN_UNPOPULATED_ALLOC) &&
+			is_xen_unpopulated_page(args->pages[0])) {
+		xen_free_unpopulated_contiguous_pages(args->dev, args->nr_pages,
+				args->pages);
+		return 0;
+	}
 
 	for (i = 0; i < args->nr_pages; i++)
 		args->frames[i] = page_to_xen_pfn(args->pages[i]);
