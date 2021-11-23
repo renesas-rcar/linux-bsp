@@ -941,6 +941,9 @@ static int rvin_setup(struct rvin_dev *vin)
 	/* Enable VSYNC Rising Edge Detection. */
 	interrupts |= VNIE_VRE;
 
+	if (vin->format.field == V4L2_FIELD_ALTERNATE)
+		interrupts = VNIE_FIE;
+
 	/* Enable Overflow */
 	if (vin_debug) {
 		vin_dbg(vin, "Enable Overflow\n");
