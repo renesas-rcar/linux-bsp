@@ -974,6 +974,9 @@ static int rvin_setup(struct rvin_dev *vin)
 	/* Progressive or interlaced mode */
 	interrupts = progressive ? VNIE_FIE : VNIE_EFE;
 
+	if (vin->format.field == V4L2_FIELD_ALTERNATE)
+		interrupts = VNIE_FIE;
+
 	/* Enable Overflow */
 	if (vin_debug) {
 		vin_dbg(vin, "Enable Overflow\n");
