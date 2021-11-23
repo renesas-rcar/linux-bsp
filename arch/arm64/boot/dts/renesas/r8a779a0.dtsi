@@ -6552,7 +6552,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xffc90000 0 0x10000>;
 			interrupts = <GIC_SPI 480 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1200>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1200>;
 			linux,uio-name = "wwdt01";
@@ -6563,7 +6562,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xffca0000 0 0x10000>;
 			interrupts = <GIC_SPI 482 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1201>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1201>;
 			linux,uio-name = "wwdt02";
@@ -6573,7 +6571,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xffcb0000 0 0x10000>;
 			interrupts = <GIC_SPI 484 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1202>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1202>;
 			linux,uio-name = "wwdt03";
@@ -6583,7 +6580,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xffcc0000 0 0x10000>;
 			interrupts = <GIC_SPI 486 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1203>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1203>;
 			linux,uio-name = "wwdt04";
@@ -6593,7 +6589,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xffcf0000 0 0x10000>;
 			interrupts = <GIC_SPI 488 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1204>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1204>;
 			linux,uio-name = "wwdt05";
@@ -6603,7 +6598,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xffef0000 0 0x10000>;
 			interrupts = <GIC_SPI 490 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1205>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1205>;
 			linux,uio-name = "wwdt06";
@@ -6613,7 +6607,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfff10000 0 0x10000>;
 			interrupts = <GIC_SPI 492 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1206>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1206>;
 			linux,uio-name = "wwdt07";
@@ -6623,7 +6616,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfff20000 0 0x10000>;
 			interrupts = <GIC_SPI 494 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1207>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1207>;
 			linux,uio-name = "wwdt08";
@@ -6633,7 +6625,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfff30000 0 0x10000>;
 			interrupts = <GIC_SPI 496 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1208>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1208>;
 			linux,uio-name = "wwdt09";
@@ -6643,7 +6634,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfff40000 0 0x10000>;
 			interrupts = <GIC_SPI 498 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1209>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 1209>;
 			linux,uio-name = "wwdt10";
