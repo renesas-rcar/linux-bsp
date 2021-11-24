@@ -1705,13 +1705,6 @@
 			interrupts = <GIC_SPI 14 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
-		irq_fbc_00_01 {
-			compatible = "generic-uio";
-			reg = <0 0xff830000 0 0x2000>;
-			power-domains = <&sysc R8A77970_PD_ALWAYS_ON>;
-			interrupts = <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
 		wwdt_00 {
 			compatible = "generic-uio";
 			reg = <0 0xffc90000 0 0x1000>;
