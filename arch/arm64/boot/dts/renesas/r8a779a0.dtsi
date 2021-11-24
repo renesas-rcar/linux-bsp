@@ -1787,7 +1787,7 @@
 		};
 
 		du: display@feb00000 {
-			compatible = "renesas,du-r8a779a0";
+			compatible = "renesas,du-r8a779a0", "generic-uio";
 			reg = <0 0xfeb00000 0 0x40000>;
 			interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH 0>,
 					<GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -1797,6 +1797,7 @@
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			resets = <&cpg 411>;
 			vsps = <&vspd0 0>, <&vspd1 0>;
+			linux,uio-name = "du_00";
 			status = "disabled";
 
 			ports {
@@ -1819,25 +1820,12 @@
 			};
 		};
 
-		du_00:display@feb00000 {
-			compatible = "generic-uio";
-			reg = <0 0xfeb00000 0 0x40000>;
-			interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1>;
-			clock-names = "du.0";
-			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			resets = <&cpg 1>;
-			linux,uio-name = "du_00";
-		};
-
 		du_01 {
 			compatible = "generic-uio";
 			reg = <0 0xfeb00000 0 0x40000>;
 			interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&cpg CPG_MOD 1>;
-			clock-names = "du.1";
+			clocks = <&cpg CPG_MOD 411>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
-			resets = <&cpg 1>;
 			linux,uio-name = "irq_du_00_01";
 		};
 
