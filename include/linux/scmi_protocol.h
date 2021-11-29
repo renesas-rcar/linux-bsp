@@ -15,6 +15,9 @@
 #define SCMI_MAX_STR_SIZE	16
 #define SCMI_MAX_NUM_RATES	16
 
+#define SCMI_PINCTRL_MAX_PINS_CNT 512
+#define SCMI_PINCTRL_MAX_GROUPS_CNT 512
+
 /**
  * struct scmi_revision_info - version information structure
  *
@@ -253,6 +256,48 @@ struct scmi_notify_ops {
 };
 
 /**
+* struct scmi_pinctrl_ops - represents the various operations provided
+* by SCMI Pinctrl Protocol
+*
+* @get_groups_count: returns count of the registered groups
+* @get_group_name: returns group name by index
+* @get_group_pins: returns the set of pins, assigned to the specified group
+* @get_functions_count: returns count of the registered fucntions
+* @get_function_name: returns function name by indes
+* @get_function_groups: returns the set of groups, assigned to the specified
+*	function
+* @set_mux: set muxing funtion for groups of pins
+* @get_pins: returns the set of pins, registered in driver
+* @get_config: returns configuration parameter for pin
+* @set_config: sets the configuration parameter for pin
+* @get_config_group: returns the configuration parameter for a group of pins
+* @set_config_group: sets the configuration parameter for a groups of pins
+*/
+struct scmi_pinctrl_ops {
+	int (*get_groups_count)(const struct scmi_handle *handle);
+	int (*get_group_name)(const struct scmi_handle *handles, u32 selector,
+						  const char **name);
+	int (*get_group_pins)(const struct scmi_handle *handle, u32 selector,
+						  const unsigned **pins, unsigned *nr_pins);
+	int (*get_functions_count)(const struct scmi_handle *handle);
+	int (*get_function_name)(const struct scmi_handle *handle, u32 selector,
+							 const char **name);
+	int (*get_function_groups)(const struct scmi_handle *handle, u32 selector,
+							   u32 *nr_groups, const u16 **groups);
+	int (*set_mux)(const struct scmi_handle *handle, u32 selector, u32 group);
+	int (*get_pins)(const struct scmi_handle *handle, u32 *nr_pins,
+					const u16 **pins);
+	int (*get_config)(const struct scmi_handle *handle, u32 pin,
+					  u32 *config);
+	int (*set_config)(const struct scmi_handle *handle, u32 pin,
+					  u32 config);
+	int (*get_config_group)(const struct scmi_handle *handle, u32 group,
+					  u32 *config);
+	int (*set_config_group)(const struct scmi_handle *handle, u32 group,
+					  u32 config);
+};
+
+/**
  * struct scmi_handle - Handle returned to ARM SCMI clients for usage.
  *
  * @dev: pointer to the SCMI device
@@ -263,6 +308,7 @@ struct scmi_notify_ops {
  * @sensor_ops: pointer to set of sensor protocol operations
  * @reset_ops: pointer to set of reset protocol operations
  * @notify_ops: pointer to set of notifications related operations
+ * @pinctrl_ops: pointer to set of pinctrl protocol operations
  * @perf_priv: pointer to private data structure specific to performance
  *	protocol(for internal use only)
  * @clk_priv: pointer to private data structure specific to clock
@@ -275,6 +321,8 @@ struct scmi_notify_ops {
  *	protocol(for internal use only)
  * @notify_priv: pointer to private data structure specific to notifications
  *	(for internal use only)
+ * @pinctrl_priv: pointer to private data structure specific to pinctrl
+ *	(for internal use only)
  */
 struct scmi_handle {
 	struct device *dev;
@@ -285,6 +333,7 @@ struct scmi_handle {
 	const struct scmi_sensor_ops *sensor_ops;
 	const struct scmi_reset_ops *reset_ops;
 	const struct scmi_notify_ops *notify_ops;
+	const struct scmi_pinctrl_ops *pinctrl_ops;
 	/* for protocol internal use */
 	void *perf_priv;
 	void *clk_priv;
@@ -293,6 +342,7 @@ struct scmi_handle {
 	void *reset_priv;
 	void *notify_priv;
 	void *system_priv;
+	void *pinctrl_priv;
 };
 
 enum scmi_std_protocol {
@@ -303,6 +353,7 @@ enum scmi_std_protocol {
 	SCMI_PROTOCOL_CLOCK = 0x14,
 	SCMI_PROTOCOL_SENSOR = 0x15,
 	SCMI_PROTOCOL_RESET = 0x16,
+	SCMI_PROTOCOL_PINCTRL = 0x18,
 };
 
 enum scmi_system_events {
