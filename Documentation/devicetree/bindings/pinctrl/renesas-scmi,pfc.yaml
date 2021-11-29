@@ -1,0 +1,745 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pinctrl/scmi,pinctrl.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: SCMI Pin Function Controller for Renesas H3ULCB board
+
+maintainers:
+  - Oleksii Moisieiev <oleksii_moisieiev@epam.com>
+
+description:
+  SCMI Pin Function Controller provides interface to SCP firmware pinctrl
+  driver. Pins and registers can be operated from the OS via SCMI protocol
+  (see DEN0056C document for additional information) using SMC as transport.
+  SCP firmware driver provides all necessary information about pin bindings
+  and gives functionality to configure pins.
+  This file describes the set of bindings, needed to work with SCP firmware
+  pinctrl driver for Renesas H3ULCB board based on r8a77951.
+  All pin states should be defined in protocol@18 node, which represents the
+  number of SCMI protocol, assigned to PINCTRL.
+
+  Reference to DEN0056C document
+    https://developer.arm.com/documentation/den0056/latest
+
+properties:
+  compatible:
+    const: arm,scmi-smc # Select SCMI driver using SMC
+
+  reg:
+    maxItems: 1
+
+  shmem:
+    description: Pointer to the shared memory region, needed for SCMI buffers.
+
+  arm,smc-id:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: SMC Identifier, set in SCP firmware for SCMI protocol.
+    const: 0x82000002
+
+required:
+  - compatible
+  - reg
+  - shmem
+  - arm,scm-id
+
+additionalProperties:
+  anyOf:
+    - type: object
+      allOf:
+        - $ref: pincfg-node.yaml#
+        - $ref: pinmux-node.yaml#
+
+      description:
+        Pin controller client devices use pin configuration subnodes (children
+        and grandchildren) for desired pin configuration.
+        Client device subnodes use below standard properties.
+
+      properties:
+        phandle: true
+        function:
+            enum: [
+              0, #audio_clk
+              1, #avb
+              2, #can0
+              3, #can1
+              4, #can_clk
+              5, #canfd0
+              6, #canfd1
+              7, #du
+              8, #hscif0
+              9, #hscif1
+              10, #hscif2
+              11, #hscif3
+              12, #hscif4
+              13, #i2c0
+              14, #i2c1
+              15, #i2c2
+              16, #i2c3
+              17, #i2c5
+              18, #i2c6
+              19, #intc_ex
+              20, #mlb_3pin
+              21, #msiof0
+              22, #msiof1
+              23, #msiof2
+              24, #msiof3
+              25, #pwm0
+              26, #pwm1
+              27, #pwm2
+              28, #pwm3
+              29, #pwm4
+              30, #pwm5
+              31, #pwm6
+              32, #sata0
+              33, #scif0
+              34, #scif1
+              35, #scif2
+              36, #scif3
+              37, #scif4
+              38, #scif5
+              39, #scif_clk
+              40, #sdhi0
+              41, #sdhi1
+              42, #sdhi2
+              43, #sdhi3
+              44, #ssi
+              45, #tmu
+              46, #tpu
+              47, #usb0
+              48, #usb1
+              49, #usb2
+              50, #usb2_ch3
+              51, #usb30
+              52, #vin4
+              53, #vin5
+              60, #drif0
+              61, #drif1
+              62, #drif2
+              63, #drif3
+            ]
+        groups:
+            enum: [
+              0, #audio_clk_a_a
+              1, #audio_clk_a_b
+              2, #audio_clk_a_c
+              3, #audio_clk_b_a
+              4, #audio_clk_b_b
+              5, #audio_clk_c_a
+              6, #audio_clk_c_b
+              7, #audio_clkout_a
+              8, #audio_clkout_b
+              9, #audio_clkout_c
+              10, #audio_clkout_d
+              11, #audio_clkout1_a
+              12, #audio_clkout1_b
+              13, #audio_clkout2_a
+              14, #audio_clkout2_b
+              15, #audio_clkout3_a
+              16, #audio_clkout3_b
+              17, #avb_link
+              18, #avb_magic
+              19, #avb_phy_int
+              20, #avb_mdc
+              21, #avb_mdio
+              22, #avb_mii
+              23, #avb_avtp_pps
+              24, #avb_avtp_match_a
+              25, #avb_avtp_capture_a
+              26, #avb_avtp_match_b
+              27, #avb_avtp_capture_b
+              28, #can0_data_a
+              29, #can0_data_b
+              30, #can1_data
+              31, #can_clk
+              32, #canfd0_data_a
+              33, #canfd0_data_b
+              34, #canfd1_data
+              35, #du_rgb666
+              36, #du_rgb888
+              37, #du_clk_out_0
+              38, #du_clk_out_1
+              39, #du_sync
+              40, #du_oddf
+              41, #du_cde
+              42, #du_disp
+              43, #hscif0_data
+              44, #hscif0_clk
+              45, #hscif0_ctrl
+              46, #hscif1_data_a
+              47, #hscif1_clk_a
+              48, #hscif1_ctrl_a
+              49, #hscif1_data_b
+              50, #hscif1_clk_b
+              51, #hscif1_ctrl_b
+              52, #hscif2_data_a
+              53, #hscif2_clk_a
+              54, #hscif2_ctrl_a
+              55, #hscif2_data_b
+              56, #hscif2_clk_b
+              57, #hscif2_ctrl_b
+              58, #hscif2_data_c
+              59, #hscif2_clk_c
+              60, #hscif2_ctrl_c
+              61, #hscif3_data_a
+              62, #hscif3_clk
+              63, #hscif3_ctrl
+              64, #hscif3_data_b
+              65, #hscif3_data_c
+              66, #hscif3_data_d
+              67, #hscif4_data_a
+              68, #hscif4_clk
+              69, #hscif4_ctrl
+              70, #hscif4_data_b
+              71, #i2c0
+              72, #i2c1_a
+              73, #i2c1_b
+              74, #i2c2_a
+              75, #i2c2_b
+              76, #i2c3
+              77, #i2c5
+              78, #i2c6_a
+              79, #i2c6_b
+              80, #i2c6_c
+              81, #intc_ex_irq0
+              82, #intc_ex_irq1
+              83, #intc_ex_irq2
+              84, #intc_ex_irq3
+              85, #intc_ex_irq4
+              86, #intc_ex_irq5
+              87, #mlb_3pin
+              88, #msiof0_clk
+              89, #msiof0_sync
+              90, #msiof0_ss1
+              91, #msiof0_ss2
+              92, #msiof0_txd
+              93, #msiof0_rxd
+              94, #msiof1_clk_a
+              95, #msiof1_sync_a
+              96, #msiof1_ss1_a
+              97, #msiof1_ss2_a
+              98, #msiof1_txd_a
+              99, #msiof1_rxd_a
+              100, #msiof1_clk_b
+              101, #msiof1_sync_b
+              102, #msiof1_ss1_b
+              103, #msiof1_ss2_b
+              104, #msiof1_txd_b
+              105, #msiof1_rxd_b
+              106, #msiof1_clk_c
+              107, #msiof1_sync_c
+              108, #msiof1_ss1_c
+              109, #msiof1_ss2_c
+              110, #msiof1_txd_c
+              111, #msiof1_rxd_c
+              112, #msiof1_clk_d
+              113, #msiof1_sync_d
+              114, #msiof1_ss1_d
+              115, #msiof1_ss2_d
+              116, #msiof1_txd_d
+              117, #msiof1_rxd_d
+              118, #msiof1_clk_e
+              119, #msiof1_sync_e
+              120, #msiof1_ss1_e
+              121, #msiof1_ss2_e
+              122, #msiof1_txd_e
+              123, #msiof1_rxd_e
+              124, #msiof1_clk_f
+              125, #msiof1_sync_f
+              126, #msiof1_ss1_f
+              127, #msiof1_ss2_f
+              128, #msiof1_txd_f
+              129, #msiof1_rxd_f
+              130, #msiof1_clk_g
+              131, #msiof1_sync_g
+              132, #msiof1_ss1_g
+              133, #msiof1_ss2_g
+              134, #msiof1_txd_g
+              135, #msiof1_rxd_g
+              136, #msiof2_clk_a
+              137, #msiof2_sync_a
+              138, #msiof2_ss1_a
+              139, #msiof2_ss2_a
+              140, #msiof2_txd_a
+              141, #msiof2_rxd_a
+              142, #msiof2_clk_b
+              143, #msiof2_sync_b
+              144, #msiof2_ss1_b
+              145, #msiof2_ss2_b
+              146, #msiof2_txd_b
+              147, #msiof2_rxd_b
+              148, #msiof2_clk_c
+              149, #msiof2_sync_c
+              150, #msiof2_ss1_c
+              151, #msiof2_ss2_c
+              152, #msiof2_txd_c
+              153, #msiof2_rxd_c
+              154, #msiof2_clk_d
+              155, #msiof2_sync_d
+              156, #msiof2_ss1_d
+              157, #msiof2_ss2_d
+              158, #msiof2_txd_d
+              159, #msiof2_rxd_d
+              160, #msiof3_clk_a
+              161, #msiof3_sync_a
+              162, #msiof3_ss1_a
+              163, #msiof3_ss2_a
+              164, #msiof3_txd_a
+              165, #msiof3_rxd_a
+              166, #msiof3_clk_b
+              167, #msiof3_sync_b
+              168, #msiof3_ss1_b
+              169, #msiof3_ss2_b
+              170, #msiof3_txd_b
+              171, #msiof3_rxd_b
+              172, #msiof3_clk_c
+              173, #msiof3_sync_c
+              174, #msiof3_txd_c
+              175, #msiof3_rxd_c
+              176, #msiof3_clk_d
+              177, #msiof3_sync_d
+              178, #msiof3_ss1_d
+              179, #msiof3_txd_d
+              180, #msiof3_rxd_d
+              181, #msiof3_clk_e
+              182, #msiof3_sync_e
+              183, #msiof3_ss1_e
+              184, #msiof3_ss2_e
+              185, #msiof3_txd_e
+              186, #msiof3_rxd_e
+              187, #pwm0
+              188, #pwm1_a
+              189, #pwm1_b
+              190, #pwm2_a
+              191, #pwm2_b
+              192, #pwm3_a
+              193, #pwm3_b
+              194, #pwm4_a
+              195, #pwm4_b
+              196, #pwm5_a
+              197, #pwm5_b
+              198, #pwm6_a
+              199, #pwm6_b
+              200, #sata0_devslp_a
+              201, #sata0_devslp_b
+              202, #scif0_data
+              203, #scif0_clk
+              204, #scif0_ctrl
+              205, #scif1_data_a
+              206, #scif1_clk
+              207, #scif1_ctrl
+              208, #scif1_data_b
+              209, #scif2_data_a
+              210, #scif2_clk
+              211, #scif2_data_b
+              212, #scif3_data_a
+              213, #scif3_clk
+              214, #scif3_ctrl
+              215, #scif3_data_b
+              216, #scif4_data_a
+              217, #scif4_clk_a
+              218, #scif4_ctrl_a
+              219, #scif4_data_b
+              220, #scif4_clk_b
+              221, #scif4_ctrl_b
+              222, #scif4_data_c
+              223, #scif4_clk_c
+              224, #scif4_ctrl_c
+              225, #scif5_data_a
+              226, #scif5_clk_a
+              227, #scif5_data_b
+              228, #scif5_clk_b
+              229, #scif_clk_a
+              230, #scif_clk_b
+              231, #sdhi0_data1
+              232, #sdhi0_data4
+              233, #sdhi0_ctrl
+              234, #sdhi0_cd
+              235, #sdhi0_wp
+              236, #sdhi1_data1
+              237, #sdhi1_data4
+              238, #sdhi1_ctrl
+              239, #sdhi1_cd
+              240, #sdhi1_wp
+              241, #sdhi2_data1
+              242, #sdhi2_data4
+              243, #sdhi2_data8
+              244, #sdhi2_ctrl
+              245, #sdhi2_cd_a
+              246, #sdhi2_wp_a
+              247, #sdhi2_cd_b
+              248, #sdhi2_wp_b
+              249, #sdhi2_ds
+              250, #sdhi3_data1
+              251, #sdhi3_data4
+              252, #sdhi3_data8
+              253, #sdhi3_ctrl
+              254, #sdhi3_cd
+              255, #sdhi3_wp
+              256, #sdhi3_ds
+              257, #ssi0_data
+              258, #ssi01239_ctrl
+              259, #ssi1_data_a
+              260, #ssi1_data_b
+              261, #ssi1_ctrl_a
+              262, #ssi1_ctrl_b
+              263, #ssi2_data_a
+              264, #ssi2_data_b
+              265, #ssi2_ctrl_a
+              266, #ssi2_ctrl_b
+              267, #ssi3_data
+              268, #ssi349_ctrl
+              269, #ssi4_data
+              270, #ssi4_ctrl
+              271, #ssi5_data
+              272, #ssi5_ctrl
+              273, #ssi6_data
+              274, #ssi6_ctrl
+              275, #ssi7_data
+              276, #ssi78_ctrl
+              277, #ssi8_data
+              278, #ssi9_data_a
+              279, #ssi9_data_b
+              280, #ssi9_ctrl_a
+              281, #ssi9_ctrl_b
+              282, #tmu_tclk1_a
+              283, #tmu_tclk1_b
+              284, #tmu_tclk2_a
+              285, #tmu_tclk2_b
+              286, #tpu_to0
+              287, #tpu_to1
+              288, #tpu_to2
+              289, #tpu_to3
+              290, #usb0
+              291, #usb1
+              292, #usb2
+              293, #usb2_ch3
+              294, #usb30
+              295, #vin4_data1
+              296, #vin4_data2
+              297, #vin4_data3
+              298, #vin4_data4
+              299, #vin4_data18_a
+              300, #vin4_data5
+              301, #vin4_data6
+              302, #vin4_data7
+              303, #vin4_data8
+              304, #vin4_data9
+              305, #vin4_data10
+              306, #vin4_data18_b
+              307, #vin4_data11
+              308, #vin4_data12
+              309, #vin4_data8_sft8
+              310, #vin4_sync
+              311, #vin4_field
+              312, #vin4_clkenb
+              313, #vin4_clk
+              314, #vin5_data1
+              315, #vin5_data2
+              316, #vin5_data3
+              317, #vin5_data4
+              318, #vin5_data8_sft8
+              319, #vin5_sync
+              320, #vin5_field
+              321, #vin5_clkenb
+              322, #vin5_clk
+              323, #drif0_ctrl_a
+              324, #drif0_data0_a
+              325, #drif0_data1_a
+              326, #drif0_ctrl_b
+              327, #drif0_data0_b
+              328, #drif0_data1_b
+              329, #drif0_ctrl_c
+              330, #drif0_data0_c
+              331, #drif0_data1_c
+              332, #drif1_ctrl_a
+              333, #drif1_data0_a
+              334, #drif1_data1_a
+              335, #drif1_ctrl_b
+              336, #drif1_data0_b
+              337, #drif1_data1_b
+              338, #drif1_ctrl_c
+              339, #drif1_data0_c
+              340, #drif1_data1_c
+              341, #drif2_ctrl_a
+              342, #drif2_data0_a
+              343, #drif2_data1_a
+              344, #drif2_ctrl_b
+              345, #drif2_data0_b
+              346, #drif2_data1_b
+              347, #drif3_ctrl_a
+              348, #drif3_data0_a
+              349, #drif3_data1_a
+              350, #drif3_ctrl_b
+              351, #drif3_data0_b
+              352, #drif3_data1_b
+              353, #vin5_data8
+              354, #vin5_data8_a
+              355, #vin5_data10
+              356, #vin5_data10_a
+              357, #vin5_data10_b
+              358, #vin5_data12
+              359, #vin5_data16
+              360, #vin4_data8_a
+              361, #vin4_data10_a
+              362, #vin4_data12_a
+              363, #vin4_data16_a
+              364, #vin4_data20_a
+              365, #vin4_data24_a
+              366, #vin4_data8_b
+              367, #vin4_data10_b
+              368, #vin4_data12_b
+              369, #vin4_data16_b
+              370, #vin4_data20_b
+              371, #vin4_data24_b
+          ]
+        pins:
+          enum: [
+              0, # GP_0_0
+              1, # GP_0_1
+              2, # GP_0_2
+              3, # GP_0_3
+              4, # GP_0_4
+              5, # GP_0_5
+              6, # GP_0_6
+              7, # GP_0_7
+              8, # GP_0_8
+              9, # GP_0_9
+              10, # GP_0_10
+              11, # GP_0_11
+              12, # GP_0_12
+              13, # GP_0_13
+              14, # GP_0_14
+              15, # GP_0_15
+              32, # GP_1_0
+              33, # GP_1_1
+              34, # GP_1_2
+              35, # GP_1_3
+              36, # GP_1_4
+              37, # GP_1_5
+              38, # GP_1_6
+              39, # GP_1_7
+              40, # GP_1_8
+              41, # GP_1_9
+              42, # GP_1_10
+              43, # GP_1_11
+              44, # GP_1_12
+              45, # GP_1_13
+              46, # GP_1_14
+              47, # GP_1_15
+              48, # GP_1_16
+              49, # GP_1_17
+              50, # GP_1_18
+              51, # GP_1_19
+              52, # GP_1_20
+              53, # GP_1_21
+              54, # GP_1_22
+              55, # GP_1_23
+              56, # GP_1_24
+              57, # GP_1_25
+              58, # GP_1_26
+              59, # GP_1_27
+              60, # GP_1_28
+              64, # GP_2_0
+              65, # GP_2_1
+              66, # GP_2_2
+              67, # GP_2_3
+              68, # GP_2_4
+              69, # GP_2_5
+              70, # GP_2_6
+              71, # GP_2_7
+              72, # GP_2_8
+              73, # GP_2_9
+              74, # GP_2_10
+              75, # GP_2_11
+              76, # GP_2_12
+              77, # GP_2_13
+              78, # GP_2_14
+              96, # GP_3_0
+              97, # GP_3_1
+              98, # GP_3_2
+              99, # GP_3_3
+              100, # GP_3_4
+              101, # GP_3_5
+              102, # GP_3_6
+              103, # GP_3_7
+              104, # GP_3_8
+              105, # GP_3_9
+              106, # GP_3_10
+              107, # GP_3_11
+              108, # GP_3_12
+              109, # GP_3_13
+              110, # GP_3_14
+              111, # GP_3_15
+              128, # GP_4_0
+              129, # GP_4_1
+              130, # GP_4_2
+              131, # GP_4_3
+              132, # GP_4_4
+              133, # GP_4_5
+              134, # GP_4_6
+              135, # GP_4_7
+              136, # GP_4_8
+              137, # GP_4_9
+              138, # GP_4_10
+              139, # GP_4_11
+              140, # GP_4_12
+              141, # GP_4_13
+              142, # GP_4_14
+              143, # GP_4_15
+              144, # GP_4_16
+              145, # GP_4_17
+              160, # GP_5_0
+              161, # GP_5_1
+              162, # GP_5_2
+              163, # GP_5_3
+              164, # GP_5_4
+              165, # GP_5_5
+              166, # GP_5_6
+              167, # GP_5_7
+              168, # GP_5_8
+              169, # GP_5_9
+              170, # GP_5_10
+              171, # GP_5_11
+              172, # GP_5_12
+              173, # GP_5_13
+              174, # GP_5_14
+              175, # GP_5_15
+              176, # GP_5_16
+              177, # GP_5_17
+              178, # GP_5_18
+              179, # GP_5_19
+              180, # GP_5_20
+              181, # GP_5_21
+              182, # GP_5_22
+              183, # GP_5_23
+              184, # GP_5_24
+              185, # GP_5_25
+              192, # GP_6_0
+              193, # GP_6_1
+              194, # GP_6_2
+              195, # GP_6_3
+              196, # GP_6_4
+              197, # GP_6_5
+              198, # GP_6_6
+              199, # GP_6_7
+              200, # GP_6_8
+              201, # GP_6_9
+              202, # GP_6_10
+              203, # GP_6_11
+              204, # GP_6_12
+              205, # GP_6_13
+              206, # GP_6_14
+              207, # GP_6_15
+              208, # GP_6_16
+              209, # GP_6_17
+              210, # GP_6_18
+              211, # GP_6_19
+              212, # GP_6_20
+              213, # GP_6_21
+              214, # GP_6_22
+              215, # GP_6_23
+              216, # GP_6_24
+              217, # GP_6_25
+              218, # GP_6_26
+              219, # GP_6_27
+              220, # GP_6_28
+              221, # GP_6_29
+              222, # GP_6_30
+              223, # GP_6_31
+              224, # GP_7_0
+              225, # GP_7_1
+              226, # GP_7_2
+              227, # GP_7_3
+              228, # PIN_ASEBRK
+              229, # PIN_AVB_MDIO
+              230, # PIN_AVB_RD0
+              231, # PIN_AVB_RD1
+              232, # PIN_AVB_RD2
+              233, # PIN_AVB_RD3
+              234, # PIN_AVB_RXC
+              235, # PIN_AVB_RX_CTL
+              236, # PIN_AVB_TD0
+              237, # PIN_AVB_TD1
+              238, # PIN_AVB_TD2
+              239, # PIN_AVB_TD3
+              240, # PIN_AVB_TXC
+              241, # PIN_AVB_TXCREFCLK
+              242, # PIN_AVB_TX_CTL
+              243, # PIN_DU_DOTCLKIN0
+              244, # PIN_DU_DOTCLKIN1
+              245, # PIN_DU_DOTCLKIN2
+              246, # PIN_DU_DOTCLKIN3
+              247, # PIN_EXTALR
+              248, # PIN_FSCLKST#
+              249, # PIN_MLB_REF
+              250, # PIN_PRESETOUT#
+              251, # PIN_QSPI0_IO2
+              252, # PIN_QSPI0_IO3
+              253, # PIN_QSPI0_MISO_IO1
+              254, # PIN_QSPI0_MOSI_IO0
+              255, # PIN_QSPI0_SPCLK
+              256, # PIN_QSPI0_SSL
+              257, # PIN_QSPI1_IO2
+              258, # PIN_QSPI1_IO3
+              259, # PIN_QSPI1_MISO_IO1
+              260, # PIN_QSPI1_MOSI_IO0
+              261, # PIN_QSPI1_SPCLK
+              262, # PIN_QSPI1_SSL
+              263, # PIN_RPC_INT#
+              264, # PIN_RPC_RESET#
+              265, # PIN_RPC_WP#
+              266, # PIN_TCK
+              267, # PIN_TDI
+              268, # PIN_TDO
+              269, # PIN_TMS
+              270, # PIN_TRST
+          ]
+        bias-disable: true
+        bias-pull-down: true
+        bias-pull-up: true
+        drive-strength:
+          enum: [ 3, 6, 9, 12, 15, 18, 21, 24 ] # Superset of supported values
+        power-source:
+          enum: [ 1800, 3300 ]
+        input: true
+        output-high: true
+        output-low: true
+
+      additionalProperties: false
+
+    - type: object
+      properties:
+        phandle: true
+
+examples:
+  - |
+    cpu_scp_shm: scp-shmem@0x53FF0000 {
+        compatible = "arm,scmi-shmem";
+        reg = <0x0 0x53FF0000 0x0 0x1000>;
+    };
+
+    firmware {
+        scmi {
+            compatible = "arm,scmi-smc";
+            arm,smc-id = <0x82000002>;
+            shmem = <&cpu_scp_shm>;
+            #address-cells = <1>;
+            #size-cells = <0>;
+            scmi_pinctrl: protocol@18 {
+                reg = <0x18>;
+                #pinctrl-cells = <0>;
+
+                i2c2_pins: i2c2 {
+                    groups = <74>; /* i2c2_a */
+                    function = <15>; /* i2c2 */
+                };
+            };
+        };
+    };
+
+    &i2c2 {
+        pinctrl-0 = <&i2c2_pins>;
+        pinctrl-names = "default";
+    };
