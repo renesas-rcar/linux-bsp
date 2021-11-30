@@ -903,13 +903,9 @@ static int rvin_mc_init(struct rvin_dev *vin)
 	if (ret)
 		return ret;
 
-	ret = rvin_mc_parse_of_graph(vin);
-	if (ret)
-		rvin_group_put(vin);
-
 	ret = v4l2_ctrl_handler_init(&vin->ctrl_handler, 1);
 	if (ret < 0)
-		return ret;
+		goto error;
 
 	v4l2_ctrl_new_std(&vin->ctrl_handler, &rvin_ctrl_ops,
 			  V4L2_CID_ALPHA_COMPONENT, 0, 255, 1, 255);
@@ -917,10 +913,19 @@ static int rvin_mc_init(struct rvin_dev *vin)
 	if (vin->ctrl_handler.error) {
 		ret = vin->ctrl_handler.error;
 		v4l2_ctrl_handler_free(&vin->ctrl_handler);
-		return ret;
+		goto error;
 	}
 
 	vin->vdev.ctrl_handler = &vin->ctrl_handler;
+
+	ret = rvin_mc_parse_of_graph(vin);
+	if (ret)
+		goto error;
+
+	return ret;
+
+error:
+	rvin_group_put(vin);
 
 	return ret;
 }
