@@ -431,4 +431,13 @@ config PINCTRL_EQUILIBRIUM
 	  pin functions, configure GPIO attributes for LGM SoC pins. Pinmux and
 	  pinconf settings are retrieved from device tree.
 
+config PINCTRL_SCMI
+	bool "Pinctrl driver controlled via SCMI interface"
+	depends on ARM_SCMI_PROTOCOL || COMPILE_TEST
+	help
+	  This driver provides support for pinctrl which is controlled
+	  by firmware that implements the SCMI interface.
+	  It uses SCMI Message Protocol to interact with the
+	  firmware providing all the pinctrl controls.
+
 endif
