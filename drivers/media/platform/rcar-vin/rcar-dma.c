@@ -1438,11 +1438,6 @@ static int rvin_mc_validate_format(struct rvin_dev *vin, struct v4l2_subdev *sd,
 			    rvin_gen3_need_scaling(companion))
 				return -EBUSY;
 		}
-	} else {
-		if (fmt.format.width < vin->format.width ||
-		    fmt.format.height < vin->format.height ||
-		    fmt.format.code != vin->mbus_code)
-			return -EPIPE;
 	}
 
 	return 0;

@@ -75,7 +75,8 @@ static int rcar_pcie_config_access(struct rcar_pcie_host *host,
 		unsigned int devfn, int where, u32 *data)
 {
 	struct rcar_pcie *pcie = &host->pcie;
-	unsigned int dev, func, reg, index;
+	unsigned int dev, func, reg, index, ret;
+	u32 val;
 
 	dev = PCI_SLOT(devfn);
 	func = PCI_FUNC(devfn);
@@ -107,6 +108,32 @@ static int rcar_pcie_config_access(struct rcar_pcie_host *host,
 			rcar_pci_write_reg(pcie, *data, PCICONF(index));
 
 		return PCIBIOS_SUCCESSFUL;
+	}
+
+	/*
+	 * If we are not in L1 link state and we have received PM_ENTER_L1 DLLP,
+	 * transition to L1 link state. The HW will handle coming of L1.
+	 */
+	val = rcar_pci_read_reg(pcie, PMSR);
+
+	if (val == 0 || (rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN)) {
+		/* Wait PCI Express link is re-initialized */
+		dev_info(&bus->dev, "Wait PCI Express link is re-initialized\n");
+		rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
+		ret = rcar_pcie_wait_for_dl(pcie);
+		if (ret)
+			return ret;
+	}
+
+	if ((val & PM_ENTER_L1RX) && ((val & PMSTATE) != PMSTATE_L1)) {
+		rcar_pci_write_reg(pcie, L1_INIT, PMCTLR);
+
+		/* Wait until we are in L1 */
+		while (!(val & L1FAEG))
+			val = rcar_pci_read_reg(pcie, PMSR);
+
+		/* Clear flags indicating link has transitioned to L1 */
+		rcar_pci_write_reg(pcie, L1FAEG | PM_ENTER_L1RX, PMSR);
 	}
 
 	/* Clear errors */
@@ -1118,3 +1145,31 @@ static struct platform_driver rcar_pcie_driver = {
 	.probe = rcar_pcie_probe,
 };
 builtin_platform_driver(rcar_pcie_driver);
+
+static int rcar_pcie_pci_notifier(struct notifier_block *nb,
+				  unsigned long action, void *data)
+{
+	struct device *dev = data;
+
+	switch (action) {
+	case BUS_NOTIFY_BOUND_DRIVER:
+		/* Force the DMA mask to lower 32-bits */
+		dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block device_nb = {
+	.notifier_call = rcar_pcie_pci_notifier,
+};
+
+static int __init register_rcar_pcie_pci_notifier(void)
+{
+	return bus_register_notifier(&pci_bus_type, &device_nb);
+}
+
+arch_initcall(register_rcar_pcie_pci_notifier);

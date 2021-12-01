@@ -197,13 +197,6 @@
 		};
 	};
 
-	/* MSIOF reference clock - to be overridden by boards that provide it */
-	msiof_ref_clk: msiof-ref-clock {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <0>;
-	};
-
 	/* External PCIe clock - can be overridden by the board */
 	pcie_bus_clk: pcie_bus {
 		compatible = "fixed-clock";
@@ -243,14 +236,6 @@
 				     "renesas,mfis-lock";
 			reg = <0 0xe6260000 0 0x1000>;
 			#hwlock-cells = <1>;
-
-			mfis_as: mfis-as {
-				compatible = "renesas,mfis-as-r8a77965",
-					     "renesas,mfis-as";
-				interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
-				interrupt-names = "eicr0";
-				renesas,mfis-ch = <0>;
-			};
 		};
 
 		rwdt: watchdog@e6020000 {
@@ -1355,8 +1340,10 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6e90000 0 0x0064>;
 			interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 211>, <&msiof_ref_clk>;
-			clock-names = "msiof_clk", "msiof_ref_clk";
+			clocks = <&cpg CPG_MOD 211>, <&cpg CPG_CORE R8A77965_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A77965_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
 			dmas = <&dmac1 0x41>, <&dmac1 0x40>,
 			       <&dmac2 0x41>, <&dmac2 0x40>;
 			dma-names = "tx", "rx", "tx", "rx";
@@ -1372,8 +1359,10 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6ea0000 0 0x0064>;
 			interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 210>, <&msiof_ref_clk>;
-			clock-names = "msiof_clk", "msiof_ref_clk";
+			clocks = <&cpg CPG_MOD 210>, <&cpg CPG_CORE R8A77965_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A77965_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
 			dmas = <&dmac1 0x43>, <&dmac1 0x42>,
 			       <&dmac2 0x43>, <&dmac2 0x42>;
 			dma-names = "tx", "rx", "tx", "rx";
@@ -1389,8 +1378,10 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6c00000 0 0x0064>;
 			interrupts = <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 209>, <&msiof_ref_clk>;
-			clock-names = "msiof_clk", "msiof_ref_clk";
+			clocks = <&cpg CPG_MOD 209>, <&cpg CPG_CORE R8A77965_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A77965_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
 			dmas = <&dmac0 0x45>, <&dmac0 0x44>;
 			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
@@ -1405,8 +1396,10 @@
 				     "renesas,rcar-gen3-msiof";
 			reg = <0 0xe6c10000 0 0x0064>;
 			interrupts = <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 208>, <&msiof_ref_clk>;
-			clock-names = "msiof_clk", "msiof_ref_clk";
+			clocks = <&cpg CPG_MOD 208>, <&cpg CPG_CORE R8A77965_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A77965_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
 			dmas = <&dmac0 0x47>, <&dmac0 0x46>;
 			dma-names = "tx", "rx";
 			power-domains = <&sysc R8A77965_PD_ALWAYS_ON>;
