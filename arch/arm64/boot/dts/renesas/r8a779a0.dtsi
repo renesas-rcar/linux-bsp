@@ -6481,7 +6481,7 @@
 
 		iccom00: mfis@e6260000 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 440 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 617>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
@@ -6491,7 +6491,7 @@
 
 		iccom01 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 441 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 617>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
@@ -6500,7 +6500,7 @@
 
 		iccom02 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 442 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 617>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
@@ -6509,7 +6509,7 @@
 
 		iccom03 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 443 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 617>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
@@ -6518,7 +6518,7 @@
 
 		iccom04 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 617>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
@@ -6527,7 +6527,7 @@
 
 		iccom05 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 445 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 617>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
@@ -6536,7 +6536,7 @@
 
 		iccom06 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 446 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 617>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
@@ -6545,7 +6545,7 @@
 
 		iccom07 {
 			compatible = "generic-uio";
-			reg = <0 0xe6260000 0 0x1000>;
+			reg = <0 0xe6260000 0 0x10000>;
 			interrupts = <GIC_SPI 447 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&cpg CPG_MOD 617>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
