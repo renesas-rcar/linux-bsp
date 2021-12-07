@@ -776,6 +776,8 @@ enum rswitch_gwca_mode {
 
 #define GWDCC_OFFS(chain)	(GWDCC0 + (chain) * 4)
 /* COMA */
+#define RRC_RR		BIT(0)
+#define RRC_RR_CLR	(0)
 #define RCEC_RCE	BIT(16)
 #define RCDC_RCD	BIT(16)
 
@@ -948,6 +950,7 @@ struct rswitch_etha {
 	bool external_phy;
 	struct mii_bus *mii;
 	phy_interface_t phy_interface;
+	u8 mac_addr[MAX_ADDR_LEN];
 };
 
 struct rswitch_gwca_chain {
@@ -990,7 +993,6 @@ struct rswitch_device {
 	bool gptp_master;
 	struct rswitch_gwca_chain *tx_chain;
 	struct rswitch_gwca_chain *rx_chain;
-	unsigned char mac_addr[MAX_ADDR_LEN];
 	spinlock_t lock;
 
 	int port;
@@ -1338,6 +1340,20 @@ static int rswitch_etha_change_mode(struct rswitch_etha *etha,
 		rswitch_agent_clock_ctrl(base_addr, etha->index, 0);
 
 	return ret;
+}
+
+static void rswitch_etha_read_mac_address(struct rswitch_etha *etha)
+{
+	u8 *mac = &etha->mac_addr[0];
+	u32 mrmac0 = rswitch_etha_read(etha, MRMAC0);
+	u32 mrmac1 = rswitch_etha_read(etha, MRMAC1);
+
+	mac[0] = (mrmac0 >>  8) & 0xFF;
+	mac[1] = (mrmac0 >>  0) & 0xFF;
+	mac[2] = (mrmac1 >> 24) & 0xFF;
+	mac[3] = (mrmac1 >> 16) & 0xFF;
+	mac[4] = (mrmac1 >>  8) & 0xFF;
+	mac[5] = (mrmac1 >>  0) & 0xFF;
 }
 
 static void rswitch_etha_set_mac_address(struct rswitch_etha *etha, const u8 *mac)
@@ -1975,6 +1991,12 @@ static void rswitch_clock_enable(struct rswitch_private *priv)
 	rs_write32(GENMASK(RSWITCH_NUM_HW, 0) | RCEC_RCE, priv->addr + RCEC);
 }
 
+static void rswitch_reset(struct rswitch_private *priv)
+{
+	rs_write32(RRC_RR, priv->addr + RRC);
+	rs_write32(RRC_RR_CLR, priv->addr + RRC);
+}
+
 static void rswitch_etha_init(struct rswitch_private *priv, int index)
 {
 	struct rswitch_etha *etha = &priv->etha[index];
@@ -2324,6 +2346,9 @@ static int rswitch_ndev_register(struct rswitch_private *priv, int index)
 		ether_addr_copy(ndev->dev_addr, mac);
 
 	if (!is_valid_ether_addr(ndev->dev_addr))
+		ether_addr_copy(ndev->dev_addr, rdev->etha->mac_addr);
+
+	if (!is_valid_ether_addr(ndev->dev_addr))
 		eth_hw_addr_random(ndev);
 
 	/* Network device register */
@@ -2487,6 +2512,9 @@ static int rswitch_init(struct rswitch_private *priv)
 
 	/* Hardware initializations */
 	rswitch_clock_enable(priv);
+	for (i = 0; i < num_ndev; i++)
+		rswitch_etha_read_mac_address(&priv->etha[i]);
+	rswitch_reset(priv);
 	err = rswitch_gwca_hw_init(priv);
 	if (err < 0)
 		goto out;
