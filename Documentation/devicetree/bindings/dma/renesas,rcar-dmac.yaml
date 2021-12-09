@@ -44,6 +44,9 @@ properties:
       - items:
           - const: renesas,dmac-r8a779a0 # R-Car V3U
 
+      - items:
+          - const: renesas,dmac-r8a779g0 # R-Car V4H
+
   reg: true
 
   interrupts:
@@ -128,6 +131,7 @@ if:
       contains:
         enum:
           - renesas,dmac-r8a779a0
+          - renesas,dmac-r8a779g0
 then:
   properties:
     reg:
