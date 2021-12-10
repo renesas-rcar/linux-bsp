@@ -52,6 +52,7 @@ struct ipmmu_features {
 	bool cache_snoop;
 	unsigned int ctx_offset_base;
 	unsigned int ctx_offset_stride;
+	unsigned int ctx_offset_stride_adj;
 	unsigned int utlb_offset_base;
 };
 
@@ -118,7 +119,7 @@ static struct ipmmu_vmsa_device *to_ipmmu(struct device *dev)
 #define IMBUSCR_DVM			(1 << 2)	/* R-Car Gen2 only */
 #define IMBUSCR_BUSSEL_MASK		(3 << 0)	/* R-Car Gen2 only */
 
-#define IMSCTLR				0x0500		/* R-Car Gen3 only */
+#define IMSCTLR				0x0500		/* R-Car Gen3/4 */
 #define IMSCTLR_USE_SECGRP		BIT(28)
 
 #define IMTTLBR0			0x0010		/* R-Car Gen2/3 */
@@ -380,7 +381,7 @@ static void ipmmu_domain_free_context(struct ipmmu_vmsa_device *mmu,
 static void ipmmu_domain_setup_context(struct ipmmu_vmsa_domain *domain)
 {
 	u64 ttbr;
-	u32 tmp, tmp_cache, tmp_root;
+	u32 tmp;
 
 	/* TTBR0 */
 	ttbr = domain->cfg.arm_lpae_s1_cfg.ttbr;
@@ -417,13 +418,20 @@ static void ipmmu_domain_setup_context(struct ipmmu_vmsa_domain *domain)
 				     ipmmu_ctx_read_root(domain, IMBUSCR) &
 				     ~(IMBUSCR_DVM | IMBUSCR_BUSSEL_MASK));
 
-	tmp_root = ipmmu_read(domain->mmu->root, IMSCTLR) & ~IMSCTLR_USE_SECGRP;
-	tmp_cache = ipmmu_read(domain->mmu, IMSCTLR) & ~IMSCTLR_USE_SECGRP;
+	/* IMSCTLR */
+	if (domain->mmu != domain->mmu->root) {
+		tmp = ipmmu_read(domain->mmu, IMSCTLR
+				 + domain->mmu->features->ctx_offset_stride_adj)
+				 & ~IMSCTLR_USE_SECGRP;
+		ipmmu_write(domain->mmu, IMSCTLR
+			    + domain->mmu->features->ctx_offset_stride_adj, tmp);
+	}
 
-	if (domain->mmu != domain->mmu->root)
-		ipmmu_write(domain->mmu, IMSCTLR, tmp_cache);
-
-	ipmmu_write(domain->mmu->root, IMSCTLR, tmp_root);
+	tmp = ipmmu_read(domain->mmu->root,
+			 IMSCTLR + domain->mmu->features->ctx_offset_stride_adj)
+			 & ~IMSCTLR_USE_SECGRP;
+	ipmmu_write(domain->mmu->root,
+		    IMSCTLR + domain->mmu->features->ctx_offset_stride_adj, tmp);
 
 	/*
 	 * IMSTR
@@ -1017,6 +1025,7 @@ static const struct ipmmu_features ipmmu_features_default = {
 	.cache_snoop = true,
 	.ctx_offset_base = 0,
 	.ctx_offset_stride = 0x40,
+	.ctx_offset_stride_adj = 0,
 	.utlb_offset_base = 0,
 };
 
@@ -1031,6 +1040,7 @@ static const struct ipmmu_features ipmmu_features_rcar_gen3 = {
 	.cache_snoop = false,
 	.ctx_offset_base = 0,
 	.ctx_offset_stride = 0x40,
+	.ctx_offset_stride_adj = 0,
 	.utlb_offset_base = 0,
 };
 
@@ -1045,6 +1055,7 @@ static const struct ipmmu_features ipmmu_features_rcar_gen4 = {
 	.cache_snoop = false,
 	.ctx_offset_base = 0x10000,
 	.ctx_offset_stride = 0x1040,
+	.ctx_offset_stride_adj = 0x1000,
 	.utlb_offset_base = 0x3000,
 };
 
