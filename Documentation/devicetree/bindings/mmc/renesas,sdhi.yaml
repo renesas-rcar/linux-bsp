@@ -63,6 +63,7 @@ properties:
       - items:
           - enum:
               - renesas,sdhi-r8a779f0 # R-Car S4
+              - renesas,sdhi-r8a779g0 # R-Car V4H
           - const: renesas,rcar-gen4-sdhi # R-Car Gen4
 
   reg:
