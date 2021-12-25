@@ -29,6 +29,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
+#include <linux/sys_soc.h>
 
 /* register offsets */
 #define ICSCR	0x00	/* slave ctrl */
@@ -41,6 +42,7 @@
 #define ICSAR	0x1C	/* slave address */
 #define ICMAR	0x20	/* master address */
 #define ICRXTX	0x24	/* data port */
+#define ICCCR2	0x28	/* Clock control 2 */
 #define ICFBSCR	0x38	/* first bit setup cycle (Gen3) */
 #define ICDMAER	0x3c	/* DMA enable (Gen3) */
 
@@ -83,6 +85,9 @@
 #define TSDMAE	(1 << 2)	/* DMA Slave Transmitted Enable */
 #define RMDMAE	(1 << 1)	/* DMA Master Received Enable */
 #define TMDMAE	(1 << 0)	/* DMA Master Transmitted Enable */
+
+/* ICCCR2 */
+#define FMPE	(1 << 7)	/* Fast Mode Plus Enable */
 
 /* ICFBSCR */
 #define TCYC17	0x0f		/* 17*Tcyc delay 1st bit between SDA and SCL */
@@ -133,6 +138,7 @@ struct rcar_i2c_priv {
 	u8 recovery_icmcr;	/* protected by adapter lock */
 	enum rcar_i2c_type devtype;
 	struct i2c_client *slave;
+	bool fast_mode_plus;
 
 	struct resource *res;
 	struct dma_chan *dma_tx;
@@ -200,6 +206,12 @@ static int rcar_i2c_get_bus_free(struct i2c_adapter *adap)
 
 };
 
+static const struct soc_device_attribute fm_plus_match[] = {
+	{ .soc_id = "r8a779a0" },
+	{ .soc_id = "r8a779g0" },
+	{ /* sentinel */ }
+};
+
 static struct i2c_bus_recovery_info rcar_i2c_bri = {
 	.get_scl = rcar_i2c_get_scl,
 	.set_scl = rcar_i2c_set_scl,
@@ -211,6 +223,9 @@ static void rcar_i2c_init(struct rcar_i2c_priv *priv)
 {
 	/* start clock */
 	rcar_i2c_write(priv, ICCCR, priv->icccr);
+	/* fast mode plus support */
+	if (priv->fast_mode_plus)
+		rcar_i2c_write(priv, ICCCR2, rcar_i2c_read(priv, ICCCR2) | FMPE);
 	/* 1st bit setup cycle */
 	if (priv->devtype == I2C_RCAR_GEN3)
 		rcar_i2c_write(priv, ICFBSCR, TCYC17);
@@ -247,6 +262,10 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 
 	/* Fall back to previously used values if not supplied */
 	i2c_parse_fw_timings(dev, &t, false);
+
+	/* Fast mode plus is only available on R-Car V3U/V4H */
+	if (t.bus_freq_hz == I2C_MAX_FAST_MODE_PLUS_FREQ && soc_device_match(fm_plus_match))
+		priv->fast_mode_plus = true;
 
 	switch (priv->devtype) {
 	case I2C_RCAR_GEN1:
@@ -963,10 +982,12 @@ static const struct of_device_id rcar_i2c_dt_ids[] = {
 	{ .compatible = "renesas,i2c-r8a7795", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-r8a7796", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-r8a77961", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,i2c-r8a779g0", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-rcar", .data = (void *)I2C_RCAR_GEN1 },	/* Deprecated */
 	{ .compatible = "renesas,rcar-gen1-i2c", .data = (void *)I2C_RCAR_GEN1 },
 	{ .compatible = "renesas,rcar-gen2-i2c", .data = (void *)I2C_RCAR_GEN2 },
 	{ .compatible = "renesas,rcar-gen3-i2c", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,rcar-gen4-i2c", .data = (void *)I2C_RCAR_GEN3 },
 	{},
 };
 MODULE_DEVICE_TABLE(of, rcar_i2c_dt_ids);
