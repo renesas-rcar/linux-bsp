@@ -1095,6 +1095,7 @@ enum RAVB_QUEUE {
 /* TX descriptors per packet */
 #define NUM_TX_DESC_GEN2	2
 #define NUM_TX_DESC_GEN3	1
+#define NUM_TX_DESC_GEN4	1
 
 struct ravb_tstamp_skb {
 	struct list_head list;
@@ -1122,6 +1123,7 @@ struct ravb_ptp {
 enum ravb_chip_id {
 	RCAR_GEN2,
 	RCAR_GEN3,
+	RCAR_GEN4,
 };
 
 struct ravb_private {
