@@ -20,8 +20,9 @@
 
 #define WPF_GEN2_MAX_WIDTH			2048U
 #define WPF_GEN2_MAX_HEIGHT			2048U
-#define WPF_GEN3_MAX_WIDTH			8190U
-#define WPF_GEN3_MAX_HEIGHT			8190U
+#define WPF_GEN3_4_MAX_WIDTH			8190U
+#define WPF_GEN3_4_MAX_HEIGHT			8190U
+
 
 /* -----------------------------------------------------------------------------
  * Device Access
@@ -543,10 +544,10 @@ static void wpf_configure_partition(struct vsp1_entity *entity,
 	}
 
 	/*
-	 * On Gen3 hardware the SPUVS bit has no effect on 3-planar
+	 * On Gen3 / Gen4 hardware the SPUVS bit has no effect on 3-planar
 	 * formats. Swap the U and V planes manually in that case.
 	 */
-	if (vsp1->info->gen == 3 && format->num_planes == 3 &&
+	if (vsp1->info->gen >= 3 && format->num_planes == 3 &&
 	    fmtinfo->swap_uv)
 		swap(mem.addr[1], mem.addr[2]);
 
@@ -605,8 +606,8 @@ struct vsp1_rwpf *vsp1_wpf_create(struct vsp1_device *vsp1, unsigned int index)
 		wpf->max_width = WPF_GEN2_MAX_WIDTH;
 		wpf->max_height = WPF_GEN2_MAX_HEIGHT;
 	} else {
-		wpf->max_width = WPF_GEN3_MAX_WIDTH;
-		wpf->max_height = WPF_GEN3_MAX_HEIGHT;
+		wpf->max_width = WPF_GEN3_4_MAX_WIDTH;
+		wpf->max_height = WPF_GEN3_4_MAX_HEIGHT;
 	}
 
 	wpf->entity.ops = &wpf_entity_ops;
