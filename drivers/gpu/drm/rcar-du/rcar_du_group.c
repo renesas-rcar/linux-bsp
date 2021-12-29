@@ -129,7 +129,7 @@ static void rcar_du_group_setup_didsr(struct rcar_du_group *rgrp)
 		 */
 		rcrtc = rcdu->crtcs;
 		num_crtcs = rcdu->num_crtcs;
-	} else if (rcdu->info->gen == 3 && rgrp->num_crtcs > 1) {
+	} else if (rcdu->info->gen >= 3 && rgrp->num_crtcs > 1) {
 		/*
 		 * On Gen3 dot clocks are setup through per-group registers,
 		 * only available when the group has two channels.
@@ -170,7 +170,8 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	}
 	rcar_du_group_write(rgrp, DEFR5, DEFR5_CODE | DEFR5_DEFE5);
 
-	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) &&
+		!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
 		rcar_du_group_setup_pins(rgrp);
 
 	/*
@@ -183,7 +184,8 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	rcar_du_group_write(rgrp, DEFR7, defr7);
 
 	if (rcdu->info->gen >= 2) {
-		if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+		if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) &&
+			!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
 			rcar_du_group_setup_defr8(rgrp);
 		rcar_du_group_setup_didsr(rgrp);
 	}

@@ -55,7 +55,7 @@ struct rcar_du_output_routing {
 
 /*
  * struct rcar_du_device_info - DU model-specific information
- * @gen: device generation (2 or 3)
+ * @gen: device generation (2 or 3 or 4)
  * @features: device features (RCAR_DU_FEATURE_*)
  * @quirks: device quirks (RCAR_DU_QUIRK_*)
  * @channels_mask: bit mask of available DU channels
