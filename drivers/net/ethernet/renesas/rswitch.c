@@ -20,7 +20,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
-#include <linux/timer.h>
 
 static void *debug_addr;
 static inline u32 rs_read32(void *addr)
@@ -36,10 +35,6 @@ static inline void rs_write32(u32 data, void *addr)
 #define RSWITCH_NUM_HW		5
 #define RSWITCH_MAX_NUM_ETHA	3
 #define RSWITCH_MAX_NUM_CHAINS	128
-#define RSWITCH_NUM_IRQS	54
-#define RSWITCH_DATA_IRQ_BASE	22
-#define RSWITCH_NUM_DATA_IRQS	8
-#define RSWITCH_TIMER_INTERVAL	1
 
 #define TX_RING_SIZE		1024
 #define RX_RING_SIZE		1024
@@ -970,11 +965,7 @@ struct rswitch_gwca_chain {
 	struct net_device *ndev;	/* chain to ndev for irq */
 };
 
-#if 0
 #define RSWITCH_NUM_IRQ_REGS	(RSWITCH_MAX_NUM_CHAINS / BITS_PER_TYPE(u32))
-#endif
-
-#define RSWITCH_NUM_IRQ_REGS	(1)	// For VPF
 struct rswitch_gwca {
 	int index;
 	struct rswitch_gwca_chain *chains;
@@ -997,8 +988,6 @@ struct rswitch_device {
 
 	int port;
 	struct rswitch_etha *etha;
-
-	struct timer_list timer;
 };
 
 struct rswitch_mfwd_mac_table_entry {
@@ -1196,22 +1185,6 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 	return boguscnt <= 0;
 }
 
-static bool rswitch_is_chain_xmitted(struct rswitch_gwca_chain *c, u8 expected)
-{
-	u32 cur = c->cur, dirty = c->dirty;
-	int entry;
-	struct rswitch_desc *desc; /* FIXME: Use normal descritor for now */
-
-	for (; cur - dirty > 0; dirty++) {
-		entry = dirty % c->num_ring;
-		desc = &c->ring[entry];
-		if ((desc->die_dt & DT_MASK) == expected)
-			return true;
-	}
-
-	return false;
-}
-
 static int rswitch_tx_free(struct net_device *ndev, bool free_txed_only)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
@@ -1247,44 +1220,23 @@ static int rswitch_tx_free(struct net_device *ndev, bool free_txed_only)
 	return free_num;
 }
 
-static bool rswitch_is_data_irq(struct rswitch_device *rdev, u32 *dis, bool tx)
-{
-	int c_index = tx ? rdev->tx_chain->index : rdev->rx_chain->index;
-	int index = c_index / 32;
-	u32 bit = BIT(c_index % 32);
-
-	return dis[index] & bit ? true : false;
-}
-
 static int rswitch_poll(struct napi_struct *napi, int budget)
 {
 	struct net_device *ndev = napi->dev;
 	struct rswitch_device *rdev = netdev_priv(ndev);
 	struct rswitch_private *priv = rdev->priv;
 	int quota = budget;
-	u32 dis[RSWITCH_NUM_IRQ_REGS];
 
-	while (1) {
-		rswitch_get_data_irq_status(priv, dis);
-		pr_debug("%s: %08x %08x %08x %08x\n", __func__, dis[0], dis[1], dis[2], dis[3]);
-		if (!rswitch_is_data_irq(rdev, dis, true) &&
-		    !rswitch_is_data_irq(rdev, dis, false))
-			break;
+retry:
+	rswitch_tx_free(ndev, true);
 
-		/* TODO: what's desc_end? */
-		/* TODO: what's frame_check? */
-		if (rswitch_is_data_irq(rdev, dis, false)) {
-			rswitch_ack_data_irq(priv, rdev->rx_chain->index);
-			if (rswitch_rx(ndev, &quota))
-				goto out;
-		}
-		if (rswitch_is_data_irq(rdev, dis, true)) {
-			rswitch_ack_data_irq(priv, rdev->tx_chain->index);
-			rswitch_tx_free(ndev, true);
-			netif_wake_subqueue(ndev, 0);
-			__iowmb();
-		}
-	}
+	if (rswitch_rx(ndev, &quota))
+		goto out;
+	else if (rswitch_is_chain_rxed(rdev->rx_chain, DT_FEMPTY))
+		goto retry;
+
+	netif_wake_subqueue(ndev, 0);
+
 	napi_complete(napi);
 
 	/* Re-enable RX/TX interrupts */
@@ -1828,17 +1780,6 @@ out:
 	return err;
 }
 
-static void rswitch_timer(struct timer_list *t)
-{
-	struct rswitch_device *rdev = from_timer(rdev, t, timer);
-	int tmp = 64;
-
-	if (rswitch_is_chain_rxed(rdev->rx_chain, DT_FEMPTY))
-		rswitch_rx(rdev->ndev, &tmp);
-
-	mod_timer(&rdev->timer, jiffies + msecs_to_jiffies(RSWITCH_TIMER_INTERVAL));
-}
-
 static int rswitch_open(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
@@ -1872,17 +1813,11 @@ static int rswitch_open(struct net_device *ndev)
 
 	/* Enable RX */
 	rswitch_modify(rdev->addr, GWTRC0, 0, BIT(rdev->rx_chain->index));
-	timer_setup(&rdev->timer, rswitch_timer, 0);
-	mod_timer(&rdev->timer, jiffies + msecs_to_jiffies(RSWITCH_TIMER_INTERVAL));
 
 	/* Enable interrupt */
 	pr_debug("%s: tx = %d, rx = %d\n", __func__, rdev->tx_chain->index, rdev->rx_chain->index);
 	rswitch_enadis_data_irq(rdev->priv, rdev->tx_chain->index, true);
 	rswitch_enadis_data_irq(rdev->priv, rdev->rx_chain->index, true);
-{
-	u32 dis[1];
-	rswitch_get_data_irq_status(rdev->priv, dis);
-}
 out:
 	return err;
 };
@@ -1939,24 +1874,7 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	c->cur++;
 	rswitch_modify(rdev->addr, GWTRC0, 0, BIT(c->index));
-#if 0
-{
-	u32 dis[RSWITCH_NUM_IRQ_REGS];
-	rswitch_get_data_irq_status(rdev->addr, dis);
-	printk("%s: dis = %08x\n", __func__, dis[0]);
-}
-#endif
-#if 1
-	if (c->cur - c->dirty > (c->num_ring - 1) &&
-	    !rswitch_tx_free(ndev, true))
-		netif_stop_subqueue(ndev, 0);
-#else
-	if (!rswitch_tx_free(ndev, true))
-		netif_stop_subqueue(ndev, 0);
-#endif
 
-	if (rswitch_is_chain_xmitted(c, DT_FEMPTY))
-		rswitch_tx_free(ndev, true);
 out:
 	spin_unlock_irqrestore(&rdev->lock, flags);
 
@@ -2305,15 +2223,6 @@ static int rswitch_ndev_register(struct rswitch_private *priv, int index)
 	if (!ndev)
 		return -ENOMEM;
 
-#if 0
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0) {
-		err = irq;
-		goto out_release;
-	}
-	ndev->irq = irq;
-#endif
-
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 	ether_setup(ndev);
 
@@ -2417,7 +2326,6 @@ static irqreturn_t __maybe_unused rswitch_data_irq(struct rswitch_private *priv,
 	int i;
 	int index, bit;
 
-	printk("%s: check!\n", __func__);
 	for (i = 0; i < priv->gwca.num_chains; i++) {
 		c = &priv->gwca.chains[i];
 		index = c->index / 32;
@@ -2425,57 +2333,44 @@ static irqreturn_t __maybe_unused rswitch_data_irq(struct rswitch_private *priv,
 		if (!(dis[index] & bit))
 			continue;
 
+		rswitch_ack_data_irq(priv, c->index);
 		rswitch_queue_interrupt(c->ndev);
 	}
 
 	return IRQ_HANDLED;
 }
 
-#if 0
 static irqreturn_t rswitch_irq(int irq, void *dev_id)
 {
 	struct rswitch_private *priv = dev_id;
 	irqreturn_t ret = IRQ_NONE;
 	u32 dis[RSWITCH_NUM_IRQ_REGS];
 
-	printk("%s: enter! %llx\n", __func__, (u64)priv->addr);
-#if 1
-	mdelay(10);
+	rswitch_get_data_irq_status(priv, dis);
 
-	rswitch_get_data_irq_status(priv->addr, dis);
-
-	printk("%s: check!\n", __func__);
 	if (rswitch_is_any_data_irq(priv, dis, true) ||
 	    rswitch_is_any_data_irq(priv, dis, false))
 		ret = rswitch_data_irq(priv, dis);
-#endif
 
 	return ret;
 }
 
 static int rswitch_request_irqs(struct rswitch_private *priv)
 {
-	int i, irq, err = 0;
+	int irq, err;
 
-	goto out;
+	/* FIXME: other queues */
+	irq = platform_get_irq_byname(priv->pdev, "gwca0_rxtx0");
+	if (irq < 0)
+		goto out;
 
-//	for (i = RSWITCH_DATA_IRQ_BASE; i < RSWITCH_DATA_IRQ_BASE + RSWITCH_NUM_DATA_IRQS; i++) {
-	for (i = 0; i < 52; i++) {
-		irq = platform_get_irq(priv->pdev, i);
-		if (irq < 0)
-			goto out;
+	err = request_irq(irq, rswitch_irq, 0, "rswitch: gwca0_rxtx0", priv);
+	if (err < 0)
+		goto out;
 
-		err = request_irq(irq, rswitch_irq, 0, dev_name(&priv->pdev->dev), priv);
-		if (err < 0)
-			goto out;
-	}
-
-	return err;
 out:
-	/* FIXME: free_irqs */
 	return err;
 }
-#endif
 
 static void rswitch_fwd_init(struct rswitch_private *priv)
 {
@@ -2531,19 +2426,12 @@ static int rswitch_init(struct rswitch_private *priv)
 	if (err < 0)
 		goto out;
 
-#if 0
-	rswitch_modify(priv->addr, FWPC10 + 0x10 * (RSWITCH_NUM_HW - 1), 0, FWPC1_DDE);
-
-	/* TODO: rswitch2_drv_probe_getinterrupts(): interrupts from gpio */
-#endif
-
 	rswitch_fwd_init(priv);
 
-#if 0
 	err = rswitch_request_irqs(priv);
 	if (err < 0)
 		goto out;
-#endif
+
 	return 0;
 
 out:
