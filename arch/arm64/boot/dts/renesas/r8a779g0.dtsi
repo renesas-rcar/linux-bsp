@@ -705,6 +705,102 @@
 				      (GIC_CPU_MASK_SIMPLE(1) | IRQ_TYPE_LEVEL_HIGH)>;
 		};
 
+		msiof0: spi@e6e90000 {
+			compatible = "renesas,msiof-r8a779g0";
+			reg = <0 0xe6e90000 0 0x0064>;
+			interrupts = <GIC_SPI 239 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 618>, <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			/* dmas and dma-names placeholder */
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 618>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof1: spi@e6ea0000 {
+			compatible = "renesas,msiof-r8a779g0";
+			reg = <0 0xe6ea0000 0 0x0064>;
+			interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 619>, <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			/* dmas and dma-names placeholder */
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 619>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof2: spi@e6c00000 {
+			compatible = "renesas,msiof-r8a779g0";
+			reg = <0 0xe6c00000 0 0x0064>;
+			interrupts = <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 620>, <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			/* dmas and dma-names placeholder */
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 620>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof3: spi@e6c10000 {
+			compatible = "renesas,msiof-r8a779g0";
+			reg = <0 0xe6c10000 0 0x0064>;
+			interrupts = <GIC_SPI 242 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 621>, <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			/* dmas and dma-names placeholder */
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 621>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof4: spi@e6c20000 {
+			compatible = "renesas,msiof-r8a779g0";
+			reg = <0 0xe6c20000 0 0x0064>;
+			interrupts = <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 622>, <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			/* dmas and dma-names placeholder */
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 622>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof5: spi@e6c28000 {
+			compatible = "renesas,msiof-r8a779g0";
+			reg = <0 0xe6c28000 0 0x0064>;
+			interrupts = <GIC_SPI 244 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 623>, <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			/* dmas and dma-names placeholder */
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 623>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
 		imrlx6_ims0: ims@fe860000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe860000 0 0x10000>;
