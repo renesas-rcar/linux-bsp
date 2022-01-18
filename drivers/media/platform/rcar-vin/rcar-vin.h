@@ -42,6 +42,7 @@
 #define MSTP_WAIT_TIME 100
 
 #define RCAR_VIN_R8A779A0_FEATURE	BIT(0)
+#define RCAR_VIN_R8A779G0_FEATURE	BIT(1)
 
 struct rvin_group;
 
@@ -50,6 +51,7 @@ enum model_id {
 	RCAR_M1,
 	RCAR_GEN2,
 	RCAR_GEN3,
+	RCAR_GEN4,
 };
 
 enum rvin_csi_id {
@@ -66,6 +68,12 @@ enum rvin_r8a779a0_csi_id {
 	RV3U_CSI42,
 	RV3U_CSI43,
 	RV3U_CSI_MAX,
+};
+
+enum rvin_r8a779g0_csi_id {
+	RV4U_CSI40,
+	RV4U_CSI41,
+	RV4U_CSI_MAX,
 };
 
 /**
