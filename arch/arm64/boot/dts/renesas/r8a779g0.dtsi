@@ -1424,64 +1424,6 @@
 			linux,uio-name = "irq_vdsp_03_11";
 		};
 
-		dof_sts_00 {
-			compatible = "generic-uio";
-			reg = <0 0xe7a10000 0 0x10000>;
-			interrupts = <GIC_SPI 242 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 9>;
-			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
-			resets = <&cpg 9>;
-			linux,uio-name = "dof_00";
-		};
-
-		dof_err_00 {
-			compatible = "generic-uio";
-			reg = <0 0xe7a10000 0 0x10000>;
-			interrupts = <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 9>;
-			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
-			linux,uio-name = "irq_dof_00_01";
-		};
-
-		smd_ps_sts_00 {
-			compatible = "generic-uio";
-			reg = <0 0xe7a20000 0 0x10000>;
-			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 7>;
-			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
-			resets = <&cpg 7>;
-			linux,uio-name = "smd_ps_00";
-			status = "disabled";
-		};
-
-		smd_ps_err_00 {
-			compatible = "generic-uio";
-			reg = <0 0xe7a20000 0 0x10000>;
-			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 7>;
-			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
-			linux,uio-name = "irq_smd_ps_00_01";
-		};
-
-		smd_post_sts_00 {
-			compatible = "generic-uio";
-			reg = <0 0xe7a40000 0 0x10000>;
-			interrupts = <GIC_SPI 173 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 5>;
-			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
-			resets = <&cpg 5>;
-			linux,uio-name = "smd_post_00";
-		};
-
-		smd_post_err_00 {
-			compatible = "generic-uio";
-			reg = <0 0xe7a40000 0 0x10000>;
-			interrupts = <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 5>;
-			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
-			linux,uio-name = "irq_smd_post_00_01";
-		};
-
 		prr: chipid@fff00044 {
 			compatible = "renesas,prr";
 			reg = <0 0xfff00044 0 4>;
