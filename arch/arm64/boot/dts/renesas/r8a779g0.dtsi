@@ -1862,6 +1862,16 @@
 			linux,uio-name = "vspx_01";
 		};
 
+		gsx: gsx@fd000000 {
+			compatible = "generic-uio";
+			reg = <0 0xfd000000 0 0x800000>;
+			interrupts = <GIC_SPI 464 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 0>;
+			power-domains = <&sysc R8A779G0_PD_A33DGA>;
+			resets = <&cpg 0>;
+			linux,uio-name = "gsx_00";
+		};
+
 		rt_dmac0: dma-controller@ffd60000 {
 			compatible = "renesas,dmac-r8a779g0";
 			reg = <0 0xffd60000 0 0x1000>,
