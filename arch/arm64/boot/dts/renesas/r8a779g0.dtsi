@@ -1968,6 +1968,53 @@
 			linux,uio-name = "irq_iccom_00_11";
 		};
 
+		ivcp1e_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfea00000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 616>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 616>;
+			interrupts = <GIC_SPI 855 IRQ_TYPE_LEVEL_HIGH>;
+			linux,uio-name = "ivcp1e_00";
+		};
+
+		irq_ivcp1e_00_01 {
+			compatible = "generic-uio";
+			reg = <0 0xfea00000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 616>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			interrupts = <GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>;
+			linux,uio-name = "irq_ivcp1e_00_01";
+		};
+
+		vcp4_00: vcpl4@fe910000 {
+			compatible = "generic-uio";
+			reg = <0 0xfe910000 0 0x10000>;
+			interrupts = <GIC_SPI 858 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 729>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 729>;
+			linux,uio-name = "vcp4_00";
+		};
+
+		irq_vcp4_00_01 {
+			compatible = "generic-uio";
+			reg = <0 0xfe910000 0 0x10000>;
+			interrupts = <GIC_SPI 859 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 729>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_vcp4_00_01";
+		};
+
+		fcpc_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfe90f000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 507>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 507>;
+			linux,uio-name = "fcpc_00";
+		};
+
 		rt_dmac0: dma-controller@ffd60000 {
 			compatible = "renesas,dmac-r8a779g0";
 			reg = <0 0xffd60000 0 0x1000>,
