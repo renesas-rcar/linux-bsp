@@ -2527,6 +2527,94 @@
 			linux,uio-name = "post_fba_ca763";
 		};
 
+		rfso0: rfso@ffe80000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe80000 0 0x1000>;
+			interrupts = <GIC_SPI 227 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_00";
+		};
+
+		rfso1: rfso@ffe81000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe81000 0 0x1000>;
+			interrupts = <GIC_SPI 228 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_01";
+		};
+
+		rfso2: rfso@ffe82000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe82000 0 0x1000>;
+			interrupts = <GIC_SPI 229 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_02";
+		};
+
+		rfso3: rfso@ffe83000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe83000 0 0x1000>;
+			interrupts = <GIC_SPI 230 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_03";
+		};
+
+		rfso4: rfso@ffe84000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe84000 0 0x1000>;
+			interrupts = <GIC_SPI 231 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_04";
+		};
+
+		rfso5: rfso@ffe85000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe85000 0 0x1000>;
+			interrupts = <GIC_SPI 232 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_05";
+		};
+
+		rfso6: rfso@ffe86000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe86000 0 0x1000>;
+			interrupts = <GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_06";
+		};
+
+		rfso7: rfso@ffe87000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe87000 0 0x1000>;
+			interrupts = <GIC_SPI 234 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_07";
+		};
+
+		rfso8: rfso@ffe88000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe88000 0 0x1000>;
+			interrupts = <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_08";
+		};
+
+		rfso9: rfso@ffe89000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe89000 0 0x1000>;
+			interrupts = <GIC_SPI 236 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_09";
+		};
+
+		rfso10: rfso@ffe8a000 {
+			compatible = "generic-uio";
+			reg = <0 0xffe8a000 0 0x1000>;
+			interrupts = <GIC_SPI 237 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "rfso_10";
+		};
+
 		rt_dmac0: dma-controller@ffd60000 {
 			compatible = "renesas,dmac-r8a779g0";
 			reg = <0 0xffd60000 0 0x1000>,
