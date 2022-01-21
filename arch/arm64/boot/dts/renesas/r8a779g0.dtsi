@@ -1710,6 +1710,98 @@
 			linux,uio-name = "vdsp_03_03";
 		};
 
+		dof_sts_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a10000 0 0x10000>;
+			interrupts = <GIC_SPI 861 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 9>;
+			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
+			resets = <&cpg 9>;
+			linux,uio-name = "dof_00";
+		};
+
+		dof_err_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a10000 0 0x10000>;
+			interrupts = <GIC_SPI 862 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 9>;
+			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
+			linux,uio-name = "irq_dof_00_01";
+		};
+
+		smd_ps_sts_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a20000 0 0x10000>;
+			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>; /* Waiting confirm the SPI number */
+			clocks = <&cpg CPG_MOD 7>;
+			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
+			resets = <&cpg 7>;
+			linux,uio-name = "smd_ps_00";
+			status = "disabled";
+		};
+
+		smd_ps_err_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a20000 0 0x10000>;
+			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 7>;
+			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
+			linux,uio-name = "irq_smd_ps_00_01";
+		};
+
+		smd_post_sts_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a40000 0 0x10000>;
+			interrupts = <GIC_SPI 173 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 5>;
+			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
+			resets = <&cpg 5>;
+			linux,uio-name = "smd_post_00";
+		};
+
+		smd_post_err_00 {
+			compatible = "generic-uio";
+			reg = <0 0xe7a40000 0 0x10000>;
+			interrupts = <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH>; /* Waiting confirm the SPI number */
+			clocks = <&cpg CPG_MOD 5>;
+			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
+			linux,uio-name = "irq_smd_post_00_01";
+			status = "disabled";
+		};
+
+		dof_fcprm {
+			compatible = "generic-uio";
+			reg = <0 0xe7ab1000 0 0x1000>;
+			linux,uio-name = "dof_fcprm_00";
+		};
+
+		dof_wrap {
+			compatible = "generic-uio";
+			reg = <0 0xe7b3b000 0 0x400>;
+			clocks = <&cpg CPG_MOD 9>;
+			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
+			resets = <&cpg 9>;
+			linux,uio-name = "dof_wrap_00";
+		};
+
+		smd_ps_wrap {
+			compatible = "generic-uio";
+			reg = <0 0xe7b3b400 0 0x400>;
+			clocks = <&cpg CPG_MOD 7>;
+			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
+			resets = <&cpg 7>;
+			linux,uio-name = "smd_ps_wrap_00";
+		};
+
+		smd_post_wrap {
+			compatible = "generic-uio";
+			reg = <0 0xe7b3bc00 0 0x400>;
+			clocks = <&cpg CPG_MOD 5>;
+			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
+			resets = <&cpg 5>;
+			linux,uio-name = "smd_post_wrap_00";
+		};
+
 		rt_dmac0: dma-controller@ffd60000 {
 			compatible = "renesas,dmac-r8a779g0";
 			reg = <0 0xffd60000 0 0x1000>,
