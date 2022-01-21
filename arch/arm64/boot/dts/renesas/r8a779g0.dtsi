@@ -2927,6 +2927,118 @@
 			linux,uio-name = "fcpra_rt_00";
 		};
 
+		wwdt_00: wwdt@ffc90000 {
+			compatible = "generic-uio";
+			reg = <0 0xffc90000 0 0x10000>;
+			interrupts = <GIC_SPI 310 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "wwdt_00";
+		};
+
+		wwdt01_01 {
+			compatible = "generic-uio";
+			reg = <0 0xffc90000 0 0x10000>;
+			interrupts = <GIC_SPI 311 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_wwdt_01_01";
+		};
+
+		wwdt_01: wwdt@ffca0000 {
+			compatible = "generic-uio";
+			reg = <0 0xffca0000 0 0x10000>;
+			interrupts = <GIC_SPI 312 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "wwdt_01";
+		};
+
+		wwdt02_01 {
+			compatible = "generic-uio";
+			reg = <0 0xffca0000 0 0x10000>;
+			interrupts = <GIC_SPI 313 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_wwdt_02_01";
+		};
+
+		wwdt_02: wwdt@ffcb0000 {
+			compatible = "generic-uio";
+			reg = <0 0xffcb0000 0 0x10000>;
+			interrupts = <GIC_SPI 314 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "wwdt_02";
+		};
+
+		wwdt03_01 {
+			compatible = "generic-uio";
+			reg = <0 0xffcb0000 0 0x10000>;
+			interrupts = <GIC_SPI 315 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_wwdt_03_01";
+		};
+
+		wwdt_03: wwdt@ffcc0000 {
+			compatible = "generic-uio";
+			reg = <0 0xffcc0000 0 0x10000>;
+			interrupts = <GIC_SPI 316 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "wwdt_03";
+		};
+
+		wwdt04_01 {
+			compatible = "generic-uio";
+			reg = <0 0xffcc0000 0 0x10000>;
+			interrupts = <GIC_SPI 317 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_wwdt_04_01";
+		};
+
+		wwdt_04: wwdt@ffcf0000 {
+			compatible = "generic-uio";
+			reg = <0 0xffcf0000 0 0x10000>;
+			interrupts = <GIC_SPI 318 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "wwdt_04";
+		};
+
+		wwdt05_01 {
+			compatible = "generic-uio";
+			reg = <0 0xffcf0000 0 0x10000>;
+			interrupts = <GIC_SPI 319 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_wwdt_05_01";
+		};
+
+		wwdt_05: wwdt@ffef0000 {
+			compatible = "generic-uio";
+			reg = <0 0xffef0000 0 0x10000>;
+			interrupts = <GIC_SPI 320 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "wwdt_05";
+		};
+
+		wwdt06_01 {
+			compatible = "generic-uio";
+			reg = <0 0xffef0000 0 0x10000>;
+			interrupts = <GIC_SPI 321 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_wwdt_06_01";
+		};
+
+		wwdt_06: wwdt@fff10000 {
+			compatible = "generic-uio";
+			reg = <0 0xfff10000 0 0x10000>;
+			interrupts = <GIC_SPI 322 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "wwdt_06";
+		};
+
+		wwdt07_01 {
+			compatible = "generic-uio";
+			reg = <0 0xfff10000 0 0x10000>;
+			interrupts = <GIC_SPI 323 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_wwdt_07_01";
+		};
+
 		rt_dmac0: dma-controller@ffd60000 {
 			compatible = "renesas,dmac-r8a779g0";
 			reg = <0 0xffd60000 0 0x1000>,
