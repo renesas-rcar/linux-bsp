@@ -1872,6 +1872,102 @@
 			linux,uio-name = "gsx_00";
 		};
 
+		iccom00: mfis@e6260000 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "iccom_00";
+		};
+
+		iccom01 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_01";
+		};
+
+		iccom02 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_02";
+		};
+
+		iccom03 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_03";
+		};
+
+		iccom04 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_04";
+		};
+
+		iccom05 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_05";
+		};
+
+		iccom06 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 135 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_06";
+		};
+
+		iccom07 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_07";
+		};
+
+		iccom08 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 916 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_08";
+		};
+
+		iccom09 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 918 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_09";
+		};
+
+		iccom10 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 920 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_10";
+		};
+
+		iccom11 {
+			compatible = "generic-uio";
+			reg = <0 0xe6260000 0 0x10000>;
+			interrupts = <GIC_SPI 922 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_iccom_00_11";
+		};
+
 		rt_dmac0: dma-controller@ffd60000 {
 			compatible = "renesas,dmac-r8a779g0";
 			reg = <0 0xffd60000 0 0x1000>,
