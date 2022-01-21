@@ -1011,56 +1011,6 @@
 			status = "disabled";
 		};
 
-		imrlx6_ims0: ims@fe860000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe860000 0 0x10000>;
-			interrupts = <GIC_SPI 579 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 529>;
-			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			resets = <&cpg 529>;
-			linux,uio-name = "ims_00";
-		};
-
-		imrlx6_ims1: ims@fe870000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe870000 0 0x10000>;
-			interrupts = <GIC_SPI 580 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 530>;
-			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			resets = <&cpg 530>;
-			linux,uio-name = "ims_01";
-		};
-
-		imrlx6_imr0: imr@fe880000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe880000 0 0x10000>;
-			interrupts = <GIC_SPI 581 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 525>;
-			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			resets = <&cpg 525>;
-			linux,uio-name = "imr_00";
-		};
-
-		imrlx6_imr1: imr@fe890000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe890000 0 0x10000>;
-			interrupts = <GIC_SPI 582 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 526>;
-			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			resets = <&cpg 526>;
-			linux,uio-name = "imr_01";
-		};
-
-		imrlx6_imr2: imr@fe8a0000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe8a0000 0 0x10000>;
-			interrupts = <GIC_SPI 583 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 527>;
-			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			resets = <&cpg 527>;
-			linux,uio-name = "imr_02";
-		};
-
 		prr: chipid@fff00044 {
 			compatible = "renesas,prr";
 			reg = <0 0xfff00044 0 4>;
