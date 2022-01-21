@@ -1802,6 +1802,66 @@
 			linux,uio-name = "smd_post_wrap_00";
 		};
 
+		cisp0: cisp@fec00000 {
+			compatible = "generic-uio";
+			reg = <0 0xfec00000 0 0x100000>;
+			interrupts = <GIC_SPI 475 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 16>;
+			power-domains = <&sysc R8A779G0_PD_A3ISP0>;
+			resets = <&cpg 16>;
+			linux,uio-name = "cisp_00";
+		};
+
+		tisp0: tisp@fed00000 {
+			compatible = "generic-uio";
+			reg = <0 0xfed00000 0 0x10000>;
+			interrupts = <GIC_SPI 473 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 612>;
+			power-domains = <&sysc R8A779G0_PD_A3ISP0>;
+			resets = <&cpg 612>;
+			linux,uio-name = "tisp_00";
+		};
+
+		cisp1: cisp@fee00000 {
+			compatible = "generic-uio";
+			reg = <0 0xfee00000 0 0x100000>;
+			interrupts = <GIC_SPI 476 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 17>;
+			power-domains = <&sysc R8A779G0_PD_A3ISP1>;
+			resets = <&cpg 17>;
+			linux,uio-name = "cisp_01";
+		};
+
+		tisp1: tisp@fed20000 {
+			compatible = "generic-uio";
+			reg = <0 0xfed20000 0 0x10000>;
+			interrupts = <GIC_SPI 474 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 613>;
+			power-domains = <&sysc R8A779G0_PD_A3ISP1>;
+			resets = <&cpg 613>;
+			linux,uio-name = "tisp_01";
+		};
+
+		vspx0: vspx@fedd0000 {
+			compatible = "generic-uio";
+			reg = <0 0xfedd0000 0 0x8000>;
+			interrupts = <GIC_SPI 556 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 1028>;
+			power-domains = <&sysc R8A779G0_PD_A3ISP0>;
+			resets = <&cpg 1028>;
+			linux,uio-name = "vspx_00";
+		};
+
+		vspx1: vspx@fedd8000 {
+			compatible = "generic-uio";
+			reg = <0 0xfedd8000 0 0x8000>;
+			interrupts = <GIC_SPI 557 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 1029>;
+			power-domains = <&sysc R8A779G0_PD_A3ISP1>;
+			resets = <&cpg 1029>;
+			linux,uio-name = "vspx_01";
+		};
+
 		rt_dmac0: dma-controller@ffd60000 {
 			compatible = "renesas,dmac-r8a779g0";
 			reg = <0 0xffd60000 0 0x1000>,
