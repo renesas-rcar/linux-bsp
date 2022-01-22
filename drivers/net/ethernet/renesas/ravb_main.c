@@ -454,7 +454,7 @@ static int ravb_dmac_init(struct net_device *ndev)
 	ravb_write(ndev, TCCR_TFEN, TCCR);
 
 	/* Interrupt init: */
-	if (priv->chip_id == RCAR_GEN3) {
+	if (priv->chip_id != RCAR_GEN2) {
 		/* Clear DIL.DPLx */
 		ravb_write(ndev, 0, DIL);
 		/* Set queue specific interrupt */
@@ -1598,7 +1598,7 @@ static struct net_device_stats *ravb_get_stats(struct net_device *ndev)
 	stats0 = &priv->stats[RAVB_BE];
 	stats1 = &priv->stats[RAVB_NC];
 
-	if (priv->chip_id == RCAR_GEN3) {
+	if (priv->chip_id != RCAR_GEN2) {
 		nstats->tx_dropped += ravb_read(ndev, TROCR);
 		ravb_write(ndev, 0, TROCR);	/* (write clear) */
 	}
@@ -1863,6 +1863,7 @@ static const struct of_device_id ravb_match_table[] = {
 	{ .compatible = "renesas,etheravb-r8a7796", .data = (void *)RCAR_GEN3 },
 	{ .compatible = "renesas,etheravb-r8a77961", .data = (void *)RCAR_GEN3 },
 	{ .compatible = "renesas,etheravb-rcar-gen3", .data = (void *)RCAR_GEN3 },
+	{ .compatible = "renesas,etheravb-rcar-gen4", .data = (void *)RCAR_GEN4 },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, ravb_match_table);
@@ -2003,7 +2004,7 @@ static int ravb_probe(struct platform_device *pdev)
 
 	chip_id = (enum ravb_chip_id)of_device_get_match_data(&pdev->dev);
 
-	if (chip_id == RCAR_GEN3)
+	if (chip_id != RCAR_GEN2)
 		irq = platform_get_irq_byname(pdev, "ch22");
 	else
 		irq = platform_get_irq(pdev, 0);
@@ -2039,7 +2040,7 @@ static int ravb_probe(struct platform_device *pdev)
 	priv->avb_link_active_low =
 		of_property_read_bool(np, "renesas,ether-link-active-low");
 
-	if (chip_id == RCAR_GEN3) {
+	if (chip_id != RCAR_GEN2) {
 		irq = platform_get_irq_byname(pdev, "ch24");
 		if (irq < 0) {
 			error = irq;
@@ -2075,8 +2076,19 @@ static int ravb_probe(struct platform_device *pdev)
 	ndev->max_mtu = 2048 - (ETH_HLEN + VLAN_HLEN + ETH_FCS_LEN);
 	ndev->min_mtu = ETH_MIN_MTU;
 
-	priv->num_tx_desc = chip_id == RCAR_GEN2 ?
-		NUM_TX_DESC_GEN2 : NUM_TX_DESC_GEN3;
+	switch (chip_id) {
+	case RCAR_GEN2:
+		priv->num_tx_desc = NUM_TX_DESC_GEN2;
+		break;
+	case RCAR_GEN3:
+		priv->num_tx_desc = NUM_TX_DESC_GEN3;
+		break;
+	case RCAR_GEN4:
+		priv->num_tx_desc = NUM_TX_DESC_GEN4;
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	/* Set function */
 	ndev->netdev_ops = &ravb_netdev_ops;

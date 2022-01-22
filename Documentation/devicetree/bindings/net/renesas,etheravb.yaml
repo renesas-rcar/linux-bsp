@@ -43,6 +43,11 @@ properties:
 	      - renesas,etheravb-r8a779a0     # R-Car V3U
           - const: renesas,etheravb-rcar-gen3 # R-Car Gen3 and RZ/G2
 
+      - items:
+          - enum:
+             - renesas,etheravb-r8a779g0     # R-Car V4H
+          - const: renesas,etheravb-rcar-gen4 # R-Car Gen4
+
   reg: true
 
   interrupts: true
