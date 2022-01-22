@@ -64,6 +64,12 @@ properties:
           - const: renesas,rcar-gen3-scif # R-Car Gen3 and RZ/G2
           - const: renesas,scif           # generic SCIF compatible UART
 
+      - items:
+          - enum:
+              - renesas,scif-r8a779g0     # R-Car SV4H
+          - const: renesas,rcar-gen4-scif # R-Car Gen4
+          - const: renesas,scif           # generic SCIF compatible UART
+
   reg:
     maxItems: 1
 
@@ -147,6 +153,7 @@ if:
         enum:
           - renesas,rcar-gen2-scif
           - renesas,rcar-gen3-scif
+          - renesas,rcar-gen4-scif
 then:
   required:
     - resets
