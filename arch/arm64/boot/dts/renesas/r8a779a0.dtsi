@@ -1840,7 +1840,7 @@
 			resets = <&cpg 415>;
 			linux,uio-name = "dsi_00";
 			status = "disabled";
-			ipmmu-id = <RCAR_IPMMU_VC1 18>;
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
 
 			ports {
@@ -1873,7 +1873,7 @@
 			resets = <&cpg 416>;
 			linux,uio-name = "dsi_01";
 			status = "disabled";
-			ipmmu-id = <RCAR_IPMMU_VC1 19>;
+			ipmmu-id = <RCAR_IPMMU_VI1 19>;
 			iommus = <&ipmmu_vi1 19>;
 
 			ports {
@@ -2397,7 +2397,7 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_01";
-			ipmmu-id = <RCAR_IPMMU_VC1 18>;
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 		};
 
 		dsi_02 {
@@ -2407,7 +2407,7 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_02";
-			ipmmu-id = <RCAR_IPMMU_VC1 18>;
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 		};
 
 		dsi_03 {
@@ -2417,7 +2417,7 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_03";
-			ipmmu-id = <RCAR_IPMMU_VC1 18>;
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 		};
 
 		dsi_04 {
@@ -2427,7 +2427,7 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_04";
-			ipmmu-id = <RCAR_IPMMU_VC1 18>;
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 		};
 
 		dsi_05 {
@@ -2437,7 +2437,7 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_05";
-			ipmmu-id = <RCAR_IPMMU_VC1 18>;
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 		};
 
 		dsi_06 {
@@ -2447,7 +2447,7 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_06";
-			ipmmu-id = <RCAR_IPMMU_VC1 18>;
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 		};
 
 		dsi_07 {
@@ -2457,7 +2457,7 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_07";
-			ipmmu-id = <RCAR_IPMMU_VC1 18>;
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 		};
 
 		dsi_08 {
@@ -2467,7 +2467,7 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_08";
-			ipmmu-id = <RCAR_IPMMU_VC1 18>;
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 		};
 
 		dsi_11 {
@@ -2477,7 +2477,7 @@
 			clocks = <&cpg CPG_MOD 416>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_01_01";
-			ipmmu-id = <RCAR_IPMMU_VC1 19>;
+			ipmmu-id = <RCAR_IPMMU_VI1 19>;
 		};
 
 		dsi_12 {
@@ -2487,7 +2487,7 @@
 			clocks = <&cpg CPG_MOD 416>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_01_02";
-			ipmmu-id = <RCAR_IPMMU_VC1 19>;
+			ipmmu-id = <RCAR_IPMMU_VI1 19>;
 		};
 
 		dsi_13 {
@@ -2497,7 +2497,7 @@
 			clocks = <&cpg CPG_MOD 416>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_01_03";
-			ipmmu-id = <RCAR_IPMMU_VC1 19>;
+			ipmmu-id = <RCAR_IPMMU_VI1 19>;
 		};
 
 		dsi_14 {
@@ -2507,7 +2507,7 @@
 			clocks = <&cpg CPG_MOD 416>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_01_04";
-			ipmmu-id = <RCAR_IPMMU_VC1 19>;
+			ipmmu-id = <RCAR_IPMMU_VI1 19>;
 			};
 
 		dsi_15 {
@@ -2517,7 +2517,7 @@
 			clocks = <&cpg CPG_MOD 416>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_01_05";
-			ipmmu-id = <RCAR_IPMMU_VC1 19>;
+			ipmmu-id = <RCAR_IPMMU_VI1 19>;
 		};
 
 		dsi_16 {
@@ -2527,7 +2527,7 @@
 			clocks = <&cpg CPG_MOD 416>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_01_06";
-			ipmmu-id = <RCAR_IPMMU_VC1 19>;
+			ipmmu-id = <RCAR_IPMMU_VI1 19>;
 		};
 
 		dsi_17 {
@@ -2537,7 +2537,7 @@
 			clocks = <&cpg CPG_MOD 416>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_01_07";
-			ipmmu-id = <RCAR_IPMMU_VC1 19>;
+			ipmmu-id = <RCAR_IPMMU_VI1 19>;
 		};
 
 		dsi_18 {
@@ -2547,7 +2547,7 @@
 			clocks = <&cpg CPG_MOD 416>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_01_08";
-			ipmmu-id = <RCAR_IPMMU_VC1 19>;
+			ipmmu-id = <RCAR_IPMMU_VI1 19>;
 		};
 
 		vin00: video@e6ef0000 {
