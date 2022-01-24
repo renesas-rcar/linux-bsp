@@ -1917,6 +1917,7 @@ static const struct net_device_ops rswitch_netdev_ops = {
 	.ndo_start_xmit = rswitch_start_xmit,
 	.ndo_get_stats = rswitch_get_stats,
 	.ndo_validate_addr = eth_validate_addr,
+	.ndo_set_mac_address = eth_mac_addr,
 //	.ndo_change_mtu = eth_change_mtu,
 };
 
