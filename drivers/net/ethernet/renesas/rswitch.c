@@ -947,6 +947,7 @@ struct rswitch_etha {
 	phy_interface_t phy_interface;
 	u8 mac_addr[MAX_ADDR_LEN];
 	int link;
+	bool operated;
 };
 
 struct rswitch_gwca_chain {
@@ -1309,13 +1310,6 @@ static void rswitch_etha_read_mac_address(struct rswitch_etha *etha)
 	mac[5] = (mrmac1 >>  0) & 0xFF;
 }
 
-static void rswitch_etha_set_mac_address(struct rswitch_etha *etha, const u8 *mac)
-{
-	rswitch_etha_write(etha, mac[5] | (mac[4] << 8) | (mac[3] << 16) |
-				 (mac[2] << 24), MRMAC1);
-	rswitch_etha_write(etha, (mac[0] << 8) | mac[1], MRMAC0);
-}
-
 static bool rswitch_etha_wait_link_verification(struct rswitch_etha *etha)
 {
 	/* Request Link Verification */
@@ -1326,9 +1320,6 @@ static bool rswitch_etha_wait_link_verification(struct rswitch_etha *etha)
 static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 {
 	/* FIXME */
-	/* Set MAC address */
-	rswitch_etha_set_mac_address(etha, mac);
-
 	/* Set xMII type */
 	rswitch_etha_write(etha, MPIC_PIS_GMII | MPIC_LSC_1G, MPIC);
 
@@ -1747,6 +1738,12 @@ out:
 	return err;
 }
 
+static void rswitch_mii_unregister(struct rswitch_device *rdev)
+{
+	mdiobus_unregister(rdev->etha->mii);
+	mdiobus_free(rdev->etha->mii);
+}
+
 static void rswitch_adjust_link(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
@@ -1786,25 +1783,33 @@ static int rswitch_open(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
 	int err = 0;
+	bool phy_started = false;
 
 	napi_enable(&rdev->napi);
 
 	if (rdev->etha) {
-		err = rswitch_etha_hw_init(rdev->etha, ndev->dev_addr);
-		if (err < 0)
-			goto out;
-		err = rswitch_mii_register(rdev);
-		if (err < 0)
-			goto out;
-		err = rswitch_phy_init(rdev);
-		if (err < 0)
-			goto out;
+		if (!rdev->etha->operated) {
+			err = rswitch_etha_hw_init(rdev->etha, ndev->dev_addr);
+			if (err < 0)
+				goto error;
+			err = rswitch_mii_register(rdev);
+			if (err < 0)
+				goto error;
+			err = rswitch_phy_init(rdev);
+			if (err < 0)
+				goto error;
+		}
 
 		phy_start(ndev->phydev);
+		phy_started = true;
 
-		err = rswitch_serdes_init(rdev->etha);
-		if (err < 0)
-			goto out;
+		if (!rdev->etha->operated) {
+			err = rswitch_serdes_init(rdev->etha);
+			if (err < 0)
+				goto error;
+		}
+
+		rdev->etha->operated = true;
 	}
 
 	netif_start_queue(ndev);
@@ -1818,15 +1823,24 @@ static int rswitch_open(struct net_device *ndev)
 	rswitch_enadis_data_irq(rdev->priv, rdev->rx_chain->index, true);
 out:
 	return err;
+
+error:
+	if (phy_started)
+		phy_stop(ndev->phydev);
+	napi_disable(&rdev->napi);
+	goto out;
 };
 
 static int rswitch_stop(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
 
-	/* FIXME: low prio for VPF env */
-	if (rdev->etha)
+	if (rdev->etha) {
+		phy_stop(ndev->phydev);
 		rswitch_etha_disable_mii(rdev->etha);
+	}
+
+	napi_disable(&rdev->napi);
 
 	return 0;
 };
@@ -2513,6 +2527,9 @@ static int renesas_eth_sw_remove(struct platform_device *pdev)
 
 	dma_free_coherent(ndev->dev.parent, priv->desc_bat_size, priv->desc_bat,
 			  priv->desc_bat_dma);
+
+	if (rdev->etha && rdev->etha->operated)
+		rswitch_mii_unregister(rdev);
 
 	unregister_netdev(ndev);
 	netif_napi_del(&rdev->napi);
