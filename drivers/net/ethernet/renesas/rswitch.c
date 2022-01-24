@@ -946,6 +946,7 @@ struct rswitch_etha {
 	struct mii_bus *mii;
 	phy_interface_t phy_interface;
 	u8 mac_addr[MAX_ADDR_LEN];
+	int link;
 };
 
 struct rswitch_gwca_chain {
@@ -1748,8 +1749,13 @@ out:
 
 static void rswitch_adjust_link(struct net_device *ndev)
 {
-//	struct rswitch_device *rdev = netdev_priv(ndev)
-	/* TODO */
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct phy_device *phydev = ndev->phydev;
+
+	if (phydev->link != rdev->etha->link) {
+		phy_print_status(phydev);
+		rdev->etha->link = phydev->link;
+	}
 }
 
 static int rswitch_phy_init(struct rswitch_device *rdev)
@@ -1770,10 +1776,6 @@ static int rswitch_phy_init(struct rswitch_device *rdev)
 	}
 
 	phy_attached_info(phydev);
-
-	/* pseudo link up with 1000Mbps */
-	phydev->link = 1;
-	phydev->speed = 1000;
 
 out:
 	of_node_put(phy);
@@ -1806,10 +1808,6 @@ static int rswitch_open(struct net_device *ndev)
 	}
 
 	netif_start_queue(ndev);
-
-	/* pseudo attach and carrier on */
-	netif_device_attach(ndev);
-	netif_carrier_on(ndev);
 
 	/* Enable RX */
 	rswitch_modify(rdev->addr, GWTRC0, 0, BIT(rdev->rx_chain->index));
