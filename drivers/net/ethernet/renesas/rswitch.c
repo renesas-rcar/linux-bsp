@@ -2004,8 +2004,6 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	rs_write32(0, priv->addr + GWTTFC);
 	rs_write32(lower_32_bits(priv->desc_bat_dma), priv->addr + GWDCBAC1);
 	rs_write32(upper_32_bits(priv->desc_bat_dma), priv->addr + GWDCBAC0);
-	rs_write32(2048, priv->addr + GWIICBSC);
-	rswitch_modify(priv->addr, GWMDNC, 0, GWMDNC_TXDMN(0xf));
 
 	err = rswitch_gwca_change_mode(priv, GWMC_OPC_DISABLE);
 	if (err < 0)
