@@ -28,6 +28,7 @@ properties:
               - renesas,r8a77980-canfd     # R-Car V3H
               - renesas,r8a77990-canfd     # R-Car E3
               - renesas,r8a77995-canfd     # R-Car D3
+              - renesas,r8a779a0-canfd     # R-Car V3U
           - const: renesas,rcar-gen3-canfd # R-Car Gen3 and RZ/G2
 
   reg:
