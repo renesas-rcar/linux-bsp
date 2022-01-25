@@ -2586,6 +2586,7 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 {
 	struct rswitch_private *priv;
 	struct resource *res, *res_serdes;
+	int ret;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	res_serdes = platform_get_resource(pdev, IORESOURCE_MEM, 1);
@@ -2621,6 +2622,12 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->serdes_addr);
 
 	debug_addr = priv->addr;
+	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
+	if (ret < 0) {
+		ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+		if (ret < 0)
+			return ret;
+	}
 
 	/* Fixed to use GWCA0 */
 	priv->gwca.index = 3;
