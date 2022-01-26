@@ -179,7 +179,7 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("avb1",			212,	R8A779G0_CLK_S0D8_HSC),
 	DEF_MOD("avb2",			213,	R8A779G0_CLK_S0D8_HSC),
 
-	DEF_MOD("can-fd",		328,	R8A779G0_CLK_S0D3),
+	DEF_MOD("can-fd",		328,	R8A779G0_CLK_CANFD),
 	DEF_MOD("cr0",			329,	R8A779G0_CLK_S0D3),
 	DEF_MOD("csdbgpap",		330,	R8A779G0_CLK_S0D3),
 	DEF_MOD("csitop0",		331,	R8A779G0_CLK_S0D3),
