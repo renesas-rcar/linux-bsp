@@ -23,6 +23,13 @@
 		i2c5 = &i2c5;
 	};
 
+	/* External CAN clock - to be overridden by boards that provide it */
+	can_clk: can {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -3233,6 +3240,54 @@
 			resets = <&cpg 701>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
+		};
+
+		canfd: can@e6660000 {
+			compatible = "renesas,r8a779g0-canfd";
+			reg = <0 0xe6660000 0 0x8600>;
+			interrupts = <GIC_SPI 412 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 413 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 328>,
+				 <&cpg CPG_CORE R8A779G0_CLK_CANFD>,
+				 <&can_clk>;
+			clock-names = "fck", "canfd", "can_clk";
+			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_CANFD>;
+			assigned-clock-rates = <80000000>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 328>;
+			status = "disabled";
+
+			channel0 {
+				status = "disabled";
+			};
+
+			channel1 {
+				status = "disabled";
+			};
+
+			channel2 {
+				status = "disabled";
+			};
+
+			channel3 {
+				status = "disabled";
+			};
+
+			channel4 {
+				status = "disabled";
+			};
+
+			channel5 {
+				status = "disabled";
+			};
+
+			channel6 {
+				status = "disabled";
+			};
+
+			channel7 {
+				status = "disabled";
+			};
 		};
 	};
 
