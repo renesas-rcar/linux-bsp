@@ -2493,7 +2493,6 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	clk_prepare(priv->phy_clk);
 	clk_enable(priv->phy_clk);
 
-	dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64));
 	rswitch_init(priv);
 
 	device_set_wakeup_capable(&pdev->dev, 1);
