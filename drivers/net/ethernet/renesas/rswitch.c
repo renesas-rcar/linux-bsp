@@ -1932,7 +1932,7 @@ MODULE_DEVICE_TABLE(of, renesas_eth_sw_of_table);
 
 static void rswitch_clock_enable(struct rswitch_private *priv)
 {
-	rs_write32(GENMASK(RSWITCH_NUM_HW, 0) | RCEC_RCE, priv->addr + RCEC);
+	rs_write32(GENMASK(RSWITCH_NUM_HW - 1, 0) | RCEC_RCE, priv->addr + RCEC);
 }
 
 static void rswitch_reset(struct rswitch_private *priv)
