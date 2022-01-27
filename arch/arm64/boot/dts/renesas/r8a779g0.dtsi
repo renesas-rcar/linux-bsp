@@ -952,6 +952,18 @@
 			       <&ipmmu_ds0 30>, <&ipmmu_ds0 31>;
 		};
 
+		mmc0: mmc@ee140000 {
+			compatible = "renesas,sdhi-r8a779g0",
+				     "renesas,rcar-gen4-sdhi";
+			reg = <0 0xee140000 0 0x2000>;
+			interrupts = <GIC_SPI 440 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 706>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 706>;
+			max-frequency = <200000000>;
+			status = "disabled";
+		};
+
 		rpc: spi@ee200000 {
 			compatible = "renesas,r8a779g0-rpc-if",
 				     "renesas,rcar-gen4-rpc-if";
