@@ -1493,7 +1493,7 @@
 			interrupts = <GIC_SPI 479 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2821>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
-			resets = <&cpg 2825>;
+			// resets = <&cpg 2825>;
 			linux,uio-name = "irq_vdsp_00_00_01";
 		};
 
@@ -1503,7 +1503,7 @@
 			interrupts = <GIC_SPI 480 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2821>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
-			resets = <&cpg 2825>;
+			// resets = <&cpg 2825>;
 			linux,uio-name = "irq_vdsp_00_00_02";
 		};
 
@@ -1513,7 +1513,7 @@
 			interrupts = <GIC_SPI 481 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2821>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
-			resets = <&cpg 2825>;
+			// resets = <&cpg 2825>;
 			linux,uio-name = "irq_vdsp_00_00_03";
 		};
 
@@ -1523,7 +1523,7 @@
 			interrupts = <GIC_SPI 482 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2821>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
-			resets = <&cpg 2825>;
+			// resets = <&cpg 2825>;
 			linux,uio-name = "irq_vdsp_00_00_04";
 		};
 
@@ -1571,7 +1571,7 @@
 			interrupts = <GIC_SPI 484 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2830>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
-			resets = <&cpg 2902>;
+			// resets = <&cpg 2902>;
 			linux,uio-name = "irq_vdsp_01_00_01";
 		};
 
@@ -1581,7 +1581,7 @@
 			interrupts = <GIC_SPI 485 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2830>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
-			resets = <&cpg 2902>;
+			// resets = <&cpg 2902>;
 			linux,uio-name = "irq_vdsp_01_00_02";
 		};
 
@@ -1591,7 +1591,7 @@
 			interrupts = <GIC_SPI 486 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2830>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
-			resets = <&cpg 2902>;
+			// resets = <&cpg 2902>;
 			linux,uio-name = "irq_vdsp_01_00_03";
 		};
 
@@ -1601,7 +1601,7 @@
 			interrupts = <GIC_SPI 487 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2830>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
-			resets = <&cpg 2902>;
+			// resets = <&cpg 2902>;
 			linux,uio-name = "irq_vdsp_01_00_04";
 		};
 
@@ -1649,7 +1649,7 @@
 			interrupts = <GIC_SPI 489 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2907>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
-			resets = <&cpg 2911>;
+			// resets = <&cpg 2911>;
 			linux,uio-name = "irq_vdsp_02_00_01";
 		};
 
@@ -1659,7 +1659,7 @@
 			interrupts = <GIC_SPI 490 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2907>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
-			resets = <&cpg 2911>;
+			// resets = <&cpg 2911>;
 			linux,uio-name = "irq_vdsp_02_00_02";
 		};
 
@@ -1669,7 +1669,7 @@
 			interrupts = <GIC_SPI 491 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2907>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
-			resets = <&cpg 2911>;
+			// resets = <&cpg 2911>;
 			linux,uio-name = "irq_vdsp_02_00_03";
 		};
 
@@ -1679,7 +1679,7 @@
 			interrupts = <GIC_SPI 492 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2907>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
-			resets = <&cpg 2911>;
+			// resets = <&cpg 2911>;
 			linux,uio-name = "irq_vdsp_02_00_04";
 		};
 
@@ -1727,7 +1727,7 @@
 			interrupts = <GIC_SPI 494 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2916>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
-			resets = <&cpg 2920>;
+			// resets = <&cpg 2920>;
 			linux,uio-name = "irq_vdsp_03_00_01";
 		};
 
@@ -1737,7 +1737,7 @@
 			interrupts = <GIC_SPI 495 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2916>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
-			resets = <&cpg 2920>;
+			// resets = <&cpg 2920>;
 			linux,uio-name = "irq_vdsp_03_00_02";
 		};
 
@@ -1747,7 +1747,7 @@
 			interrupts = <GIC_SPI 496 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2916>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
-			resets = <&cpg 2920>;
+			// resets = <&cpg 2920>;
 			linux,uio-name = "irq_vdsp_03_00_03";
 		};
 
@@ -1757,7 +1757,7 @@
 			interrupts = <GIC_SPI 497 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2916>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
-			resets = <&cpg 2920>;
+			// resets = <&cpg 2920>;
 			linux,uio-name = "irq_vdsp_03_00_04";
 		};
 
@@ -1859,7 +1859,7 @@
 			reg = <0 0xe7b3b000 0 0x400>;
 			clocks = <&cpg CPG_MOD 9>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
-			resets = <&cpg 9>;
+			// resets = <&cpg 9>;
 			linux,uio-name = "dof_wrap_00";
 		};
 
@@ -1877,7 +1877,7 @@
 			reg = <0 0xe7b3bc00 0 0x400>;
 			clocks = <&cpg CPG_MOD 5>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
-			resets = <&cpg 5>;
+			// resets = <&cpg 5>;
 			linux,uio-name = "smd_post_wrap_00";
 		};
 
