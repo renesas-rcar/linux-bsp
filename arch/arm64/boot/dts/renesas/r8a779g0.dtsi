@@ -265,8 +265,8 @@
 		i2c2: i2c@e6510000 {
 			compatible = "renesas,i2c-r8a779g0",
 				     "renesas,rcar-gen4-i2c";
-			reg = <GIC_SPI 0xe6510000 0 0x40>;
-			interrupts = <0 612 IRQ_TYPE_LEVEL_HIGH>;
+			reg = <0 0xe6510000 0 0x40>;
+			interrupts = <GIC_SPI 612 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 520>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 520>;
