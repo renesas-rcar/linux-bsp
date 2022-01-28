@@ -1,4 +1,19 @@
 # SPDX-License-Identifier: GPL-2.0
+config VIDEO_RCAR_ISP
+	tristate "R-Car Image Signal Processor (ISP)"
+	depends on VIDEO_V4L2 && OF
+	depends on ARCH_RENESAS || COMPILE_TEST
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select RESET_CONTROLLER
+	select V4L2_FWNODE
+	help
+	  Support for Renesas Image Signal Processor
+	  Supports R-Car Gen3 SoCs.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called rcar-isp.
+
 config VIDEO_RCAR_CSI2
 	tristate "R-Car MIPI CSI-2 Receiver"
 	depends on VIDEO_V4L2 && OF
