@@ -57,7 +57,8 @@ static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
 			else
 				return true;
 		}
-		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) ||
+			rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
 			return false;
 	}
 
@@ -76,7 +77,8 @@ static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
 			else
 				return false;
 		}
-		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) ||
+			rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
 			return false;
 	}
 
@@ -1208,7 +1210,7 @@ static const struct drm_crtc_funcs crtc_funcs_gen2 = {
 	.disable_vblank = rcar_du_crtc_disable_vblank,
 };
 
-static const struct drm_crtc_funcs crtc_funcs_gen3 = {
+static const struct drm_crtc_funcs crtc_funcs_gen3_4 = {
 	.reset = rcar_du_crtc_reset,
 	.destroy = rcar_du_crtc_cleanup,
 	.set_config = drm_atomic_helper_set_config,
@@ -1328,7 +1330,8 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int swindex,
 	rcrtc->index = hwindex;
 	rcrtc->dsysr = (rcrtc->index % 2 ? 0 : DSYSR_DRES) | DSYSR_TVM_TVSYNC;
 	/* In V3U, the bit TVM and SCM are always set to 0 */
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) ||
+		rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
 		rcrtc->dsysr = rcrtc->dsysr &
 				~(DSYSR_SCM_MASK | DSYSR_TVM_MASK);
 
@@ -1344,7 +1347,7 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int swindex,
 
 	ret = drm_crtc_init_with_planes(rcdu->ddev, crtc, primary, NULL,
 					rcdu->info->gen <= 2 ?
-					&crtc_funcs_gen2 : &crtc_funcs_gen3,
+					&crtc_funcs_gen2 : &crtc_funcs_gen3_4,
 					NULL);
 	if (ret < 0)
 		return ret;
