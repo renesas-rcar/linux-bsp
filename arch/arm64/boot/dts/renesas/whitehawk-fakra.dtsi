@@ -1,0 +1,231 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Device Tree Source (overlay) for the WhiteHawk V4H FAKRA connectors
+ *
+ * Copyright (C) 2022 Renesas Electronics Corp.
+ *
+ * This overlay allows you to define cameras connected to the FAKRA connectors
+ * on the WhiteHawk-V4H (or compatible) board.
+ *
+ * Enable the cameras by specifying the camera compatible on the appropriate
+ * line. Comment out the defines to disconnect the camera from the DTB.
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+
+#define FALCON_CAMERA0  "dummy,camera"
+#define FALCON_CAMERA1  "dummy,camera"
+#define FALCON_CAMERA2  "dummy,camera"
+#define FALCON_CAMERA3  "dummy,camera"
+#define FALCON_CAMERA4  "dummy,camera"
+#define FALCON_CAMERA5  "dummy,camera"
+#define FALCON_CAMERA6  "dummy,camera"
+#define FALCON_CAMERA7  "dummy,camera"
+
+/* Define the endpoint links */
+#ifdef FALCON_CAMERA0
+&max96712_in0 {
+	remote-endpoint = <&fakra_con0>;
+};
+#endif
+
+#ifdef FALCON_CAMERA1
+&max96712_in1 {
+	remote-endpoint = <&fakra_con1>;
+};
+#endif
+
+#ifdef FALCON_CAMERA2
+&max96712_in2 {
+	remote-endpoint = <&fakra_con2>;
+};
+#endif
+
+#ifdef FALCON_CAMERA3
+&max96712_in3 {
+	remote-endpoint = <&fakra_con3>;
+};
+#endif
+
+#ifdef FALCON_CAMERA4
+&max96712_in4 {
+	remote-endpoint = <&fakra_con4>;
+};
+#endif
+
+#ifdef FALCON_CAMERA5
+&max96712_in5 {
+	remote-endpoint = <&fakra_con5>;
+};
+#endif
+
+#ifdef FALCON_CAMERA6
+&max96712_in6 {
+	remote-endpoint = <&fakra_con6>;
+};
+#endif
+
+#ifdef FALCON_CAMERA7
+&max96712_in7 {
+	remote-endpoint = <&fakra_con7>;
+};
+#endif
+
+/* Cameras are 'attached' to the GMSL I2C busses */
+&gmsl0 {
+
+#if defined(FALCON_CAMERA0) || defined(FALCON_CAMERA1) || \
+    defined(FALCON_CAMERA2) || defined(FALCON_CAMERA3)
+	status = "okay";
+
+#endif
+
+	i2c-mux {
+#ifdef FALCON_CAMERA0
+		i2c@0 {
+			status = "okay";
+
+			camera@51 {
+				compatible = FALCON_CAMERA0;
+				reg = <0x51>;
+
+				port {
+					fakra_con0: endpoint {
+						remote-endpoint = <&max96712_in0>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef FALCON_CAMERA1
+		i2c@1 {
+			status = "okay";
+
+			camera@52 {
+				compatible = FALCON_CAMERA1;
+				reg = <0x52>;
+
+				port {
+					fakra_con1: endpoint {
+						remote-endpoint = <&max96712_in1>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef FALCON_CAMERA2
+		i2c@2 {
+			status = "okay";
+
+			camera@53 {
+				compatible = FALCON_CAMERA2;
+				reg = <0x53>;
+
+				port {
+					fakra_con2: endpoint {
+						remote-endpoint = <&max96712_in2>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef FALCON_CAMERA3
+		i2c@3 {
+			status = "okay";
+
+			camera@54 {
+				compatible = FALCON_CAMERA3;
+				reg = <0x54>;
+
+				port {
+					fakra_con3: endpoint {
+						remote-endpoint = <&max96712_in3>;
+					};
+				};
+			};
+		};
+#endif
+	};
+};
+
+&gmsl1 {
+
+#if defined(FALCON_CAMERA4) || defined(FALCON_CAMERA5) || \
+    defined(FALCON_CAMERA6) || defined(FALCON_CAMERA7)
+	status = "okay";
+
+#endif
+
+	i2c-mux {
+#ifdef FALCON_CAMERA4
+		i2c@0 {
+			status = "okay";
+
+			camera@51 {
+				compatible = FALCON_CAMERA4;
+				reg = <0x51>;
+
+				port {
+					fakra_con4: endpoint {
+						remote-endpoint = <&max96712_in4>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef FALCON_CAMERA5
+		i2c@1 {
+			status = "okay";
+
+			camera@52 {
+				compatible = FALCON_CAMERA5;
+				reg = <0x52>;
+
+				port {
+					fakra_con5: endpoint {
+						remote-endpoint = <&max96712_in5>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef FALCON_CAMERA6
+		i2c@2 {
+			status = "okay";
+
+			camera@53 {
+				compatible = FALCON_CAMERA6;
+				reg = <0x53>;
+
+				port {
+					fakra_con6: endpoint {
+						remote-endpoint = <&max96712_in6>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef FALCON_CAMERA7
+		i2c@3 {
+			status = "okay";
+
+			camera@54 {
+				compatible = FALCON_CAMERA7;
+				reg = <0x54>;
+
+				port {
+					fakra_con7: endpoint {
+						remote-endpoint = <&max96712_in7>;
+					};
+				};
+			};
+		};
+#endif
+	};
+};
