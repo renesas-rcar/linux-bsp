@@ -28,24 +28,15 @@
 		reg = <0x0 0x48000000 0x0 0x78000000>;
 	};
 
-/*
-	memory@500000000 {
+	memory@480000000 {
 		device_type = "memory";
-		reg = <0x5 0x00000000 0x0 0x80000000>;
+		reg = <0x4 0x80000000 0x0 0x80000000>;
 	};
-*/
 
 	memory@600000000 {
 		device_type = "memory";
-		reg = <0x6 0x00000000 0x0 0x80000000>;
+		reg = <0x6 0x00000000 0x1 0x00000000>;
 	};
-
-/*
-	memory@700000000 {
-		device_type = "memory";
-		reg = <0x7 0x00000000 0x0 0x80000000>;
-	};
-*/
 
 	reg_1p8v: regulator-1p8v {
 			compatible = "regulator-fixed";
