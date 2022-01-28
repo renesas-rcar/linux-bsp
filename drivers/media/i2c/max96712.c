@@ -577,7 +577,7 @@ static void max96712_gmsl2_initial_setup(struct max96712_priv *priv)
 
 static int max96712_mipi_setup(struct max96712_priv *priv)
 {
-	u32 csi_rate = 1800;
+	u32 csi_rate = 1300;
 
 	max96712_write_reg(priv, MAX96712_VIDEO_PIPE_EN, 0);
 
@@ -585,8 +585,11 @@ static int max96712_mipi_setup(struct max96712_priv *priv)
 	max96712_write_reg(priv, MAX_MIPI_PHY3, 0xe4);
 	max96712_write_reg(priv, MAX_MIPI_PHY4, 0xe4);
 
-	max96712_write_reg(priv, MAX_MIPI_TX10(1), 0xc0);
-	max96712_write_reg(priv, MAX_MIPI_TX10(2), 0xc0);
+	max96712_write_reg(priv, MAX_MIPI_TX10(1), 0xa0);
+	max96712_write_reg(priv, MAX_MIPI_TX10(2), 0xa0);
+
+	max96712_write_reg(priv, 0x08AD, 0x3F);
+	max96712_write_reg(priv, 0x08AE, 0x7D);
 
 	max96712_update_bits(priv, MAX_BACKTOP22(0), 0x3f,
 			     ((csi_rate / 100) & 0x1f) | BIT(5));
@@ -636,7 +639,7 @@ static void max96712_pipe_override(struct max96712_priv *priv,
 		max96712_update_bits(priv, MAX_BACKTOP15(bank), 0x3f, dt);
 		max96712_update_bits(priv, bank ? MAX_BACKTOP28(0) :
 				     MAX_BACKTOP22(0), BIT(6), BIT(6));
-		max96712_write_reg(priv, MAX_BACKTOP22(0), 0xe4);
+		max96712_write_reg(priv, MAX_BACKTOP22(0), 0xed);
 		break;
 	case 1:
 		/* Pipe Y: 1 or 5 */
@@ -649,6 +652,7 @@ static void max96712_pipe_override(struct max96712_priv *priv,
 				     (dt & 0x30) << 2);
 		max96712_update_bits(priv, bank ? MAX_BACKTOP28(0) :
 				     MAX_BACKTOP22(0), BIT(7), BIT(7));
+		max96712_write_reg(priv, MAX_BACKTOP22(0), 0xed);
 		break;
 	case 2:
 		/* Pipe Z: 2 or 6 */
@@ -663,6 +667,7 @@ static void max96712_pipe_override(struct max96712_priv *priv,
 				     (dt & 0x3c) << 2);
 		max96712_update_bits(priv, bank ? MAX_BACKTOP30(0) :
 				     MAX_BACKTOP25(0), BIT(6), BIT(6));
+		max96712_write_reg(priv, MAX_BACKTOP25(0), 0xed);
 		break;
 	case 3:
 		/* Pipe U: 3 or 7 */
@@ -674,6 +679,7 @@ static void max96712_pipe_override(struct max96712_priv *priv,
 				     dt << 2);
 		max96712_update_bits(priv, bank ? MAX_BACKTOP30(0) :
 				     MAX_BACKTOP25(0), BIT(7), BIT(7));
+		max96712_write_reg(priv, MAX_BACKTOP25(0), 0xed);
 		break;
 	}
 }
@@ -763,7 +769,8 @@ static int max96712_gmsl2_reverse_channel_setup(struct max96712_priv *priv,
 	int ret = 0;
 	int val = 0, i, j = 0;
 
-	max96712_update_bits(priv, MAX96712_REG6, 0xff, 0xf0 | BIT(link_n));
+//	max96712_update_bits(priv, MAX96712_REG6, 0xff, 0xf0 | BIT(link_n));
+	max96712_write_reg(priv, MAX96712_REG6, 0xFF);
 	max96712_reset_oneshot(priv, BIT(link_n));
 
 	/*
@@ -1034,7 +1041,7 @@ static int max96712_init(struct device *dev)
 
 	v4l2_ctrl_handler_init(&priv->ctrls, 1);
 
-	mbps = 74230000 * bpp;	/* 1920x1020@30Hz, RAW10 bpp = 10 */
+	mbps = 1300000000;	/* 1920x1020@30Hz, RAW10 bpp = 10 */
 #if DEBUG_COLOR_PATTERN
 	mbps = DEBUG_MBPS;
 #endif
