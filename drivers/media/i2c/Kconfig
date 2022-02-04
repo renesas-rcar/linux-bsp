@@ -479,6 +479,17 @@ config VIDEO_MAX9286
 
 comment "Video and audio decoders"
 
+config VIDEO_MAX96712_STAGING
+	tristate "Maxim MAX96712 GMSL2 deserializer support"
+	depends on I2C && I2C_MUX
+	depends on VIDEO_V4L2_SUBDEV_API && MEDIA_CONTROLLER
+	select V4L2_FWNODE
+	help
+	  This driver supports the Maxim MAX96712 GMSL2 deserializer.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called MAX96712.
+
 config VIDEO_SAA717X
 	tristate "Philips SAA7171/3/4 audio/video decoders"
 	depends on VIDEO_V4L2 && I2C
@@ -1307,6 +1318,16 @@ endmenu
 
 menu "Flash devices"
 	visible if MEDIA_CAMERA_SUPPORT
+
+config VIDEO_DUMMY_CAMERA
+	tristate "Dummy camera support"
+	depends on I2C && VIDEO_V4L2_SUBDEV_API && MEDIA_CONTROLLER
+	select V4L2_FWNODE
+	help
+	  This driver supports the dummy camera.
+
+	  This camera should be used in conjunction with a GMSL2
+	  deserialiser such as the MAX96712.
 
 config VIDEO_ADP1653
 	tristate "ADP1653 flash support"
