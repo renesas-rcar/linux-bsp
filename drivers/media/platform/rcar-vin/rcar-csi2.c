@@ -183,6 +183,10 @@ struct rcar_csi2;
 
 #define CORE_DIG_COMMON_RW_DESKEW_FINE_MEM		0x23FE0
 
+#define CORE_DIG_CLANE_1_RW_CFG_0				0x2A400
+
+#define CORE_DIG_CLANE_1_RW_HS_TX_6				0x2A60C
+
 #define CORE_DIG_DLANE_0_RW_CFG(n)				(0x26000 + (n * 2))	/* n = 0 - 2 */
 
 #define CORE_DIG_DLANE_0_RW_LP(n)				(0x26080 + (n * 2))	/* n = 0 - 1 */
@@ -527,6 +531,10 @@ struct rcar_csi2 {
 	unsigned short lanes;
 	unsigned char lane_swap[4];
 };
+
+static int board = 1;
+MODULE_PARM_DESC(board, "board quirks (0=none(default), 1=V4H WhiteHawk");
+module_param(board, int, 0644);
 
 static inline struct rcar_csi2 *sd_to_csi2(struct v4l2_subdev *sd)
 {
@@ -967,6 +975,12 @@ static int rcsi2_v4h_start_receiver(struct rcar_csi2 *priv)
 	rcsi2_write16(priv, CORE_DIG_RW_TRIO1(1), 0x0023);
 	rcsi2_write16(priv, CORE_DIG_RW_TRIO2(1), 0x0023);
 #endif
+
+	if (board == 1) {
+		/* For WhiteHawk board */
+		rcsi2_write16(priv, CORE_DIG_CLANE_1_RW_CFG_0, 0xf5);
+		rcsi2_write16(priv, CORE_DIG_CLANE_1_RW_HS_TX_6, 0x5000);
+	}
 
 	/* Step T4: Leave Shutdown mode */
 	rcsi2_write(priv, DPHY_RSTZ, BIT(0));
