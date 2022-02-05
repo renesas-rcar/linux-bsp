@@ -8,6 +8,7 @@
  */
 
 #include <linux/device.h>
+#include <linux/module.h>
 
 #include <media/v4l2-subdev.h>
 
@@ -31,6 +32,10 @@ struct vsp1_extcmd_auto_fld_body {
 	u32 reserved0;
 	u32 reserved1;
 } __packed;
+
+static int csc;
+MODULE_PARM_DESC(csc, "color space conversion (0=off (default), 1=YCbCr422 10bit");
+module_param(csc, int, 0644);
 
 /* -----------------------------------------------------------------------------
  * Device Access
@@ -107,8 +112,15 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	if (sink_format->code != source_format->code)
 		infmt |= VI6_RPF_INFMT_CSC;
 
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_INFMT, infmt);
-	vsp1_rpf_write(rpf, dlb, VI6_RPF_DSWAP, fmtinfo->swap);
+	if (csc == 1) {
+		/* YCbCr422 10bit */
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_INFMT, 0x00000147);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_DSWAP, 0x00000f0e);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0, 0x00000110);
+	} else {
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_INFMT, infmt);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_DSWAP, fmtinfo->swap);
+	}
 
 	/* Setting new pixel format for V3U */
 	if (fmtinfo->hwfmt == VI6_FMT_RGB10_RGB10A2_A2RGB10) {
