@@ -183,6 +183,13 @@
 		clock-frequency = <0>;
 	};
 
+	ufs30_clk: ufs30_refclk_v {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* This value must be overridden by the board */
+		clock-frequency = <0>;
+	};
+
 	firmware {
 		optee {
 			compatible = "linaro,optee-tz";
@@ -2107,6 +2114,18 @@
 			reg = <0 0xe6300000 0 0x60000>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "system_ram_00";
+		};
+
+		ufs: scsi@e6860000 {
+			compatible = "renesas,r8a779f0-ufs";
+			reg = <0 0xe6860000 0 0x100>;
+			interrupts = <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 1514>, <&ufs30_clk>;
+			clock-names = "fck", "ref_clk";
+			freq-table-hz = <200000000 200000000>, <38400000 38400000>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			resets = <&cpg 1514>;
+			status = "disabled";
 		};
 	};
 
