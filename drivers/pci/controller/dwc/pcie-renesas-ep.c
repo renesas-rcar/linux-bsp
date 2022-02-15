@@ -51,6 +51,8 @@
 #define  PHY0_RX1_TERM_ACDC	BIT(14)
 #define  PHY0_RX0_TERM_ACDC	BIT(13)
 
+#define REFCLKCTRLP0		0x0B8
+
 /* Shadow regs */
 #define BAR0MASKF0		0x10
 #define BAR1MASKF0		0x14
@@ -242,7 +244,7 @@ static void renesas_pcie_init_ep(struct renesas_pcie_ep *pcie)
 
 	/* Device type selection - Endpoint */
 	val = renesas_pcie_readl(pcie, PCIEMSR0);
-	val |= BIFUR_MOD_SET_ON | DEVICE_TYPE_EP;
+	val |= DEVICE_TYPE_EP;
 	renesas_pcie_writel(pcie, PCIEMSR0, val);
 
 	/* Enable DBI read-only registers for writing */
@@ -278,6 +280,10 @@ static void renesas_pcie_init_ep(struct renesas_pcie_ep *pcie)
 	val = renesas_pcie_phy_readl(pcie, RCVRCTRLP0);
 	val |= PHY0_RX0_TERM_ACDC | PHY0_RX1_TERM_ACDC;
 	renesas_pcie_phy_writel(pcie, RCVRCTRLP0, val);
+
+	val = renesas_pcie_phy_readl(pcie, REFCLKCTRLP0);
+	val |= BIT(10) | BIT(9);
+	renesas_pcie_phy_writel(pcie, REFCLKCTRLP0, val);
 }
 
 static int renesas_pcie_ep_enable(struct renesas_pcie_ep *pcie)
@@ -462,6 +468,10 @@ static const struct renesas_pcie_of_data renesas_pcie_ep_of_data = {
 static const struct of_device_id renesas_pcie_of_match[] = {
 	{
 		.compatible = "renesas,r8a779a0-pcie-ep",
+		.data = &renesas_pcie_ep_of_data,
+	},
+	{
+		.compatible = "renesas,r8a779g0-pcie-ep",
 		.data = &renesas_pcie_ep_of_data,
 	},
 	{},
