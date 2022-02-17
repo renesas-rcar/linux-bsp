@@ -176,6 +176,11 @@
 
 };
 
+&rwdt {
+        timeout-sec = <60>;
+        status = "okay";
+};
+
 &i2c0 {
 	io_expander2: gpio@21 {
 		compatible = "onnn,pca9654";
