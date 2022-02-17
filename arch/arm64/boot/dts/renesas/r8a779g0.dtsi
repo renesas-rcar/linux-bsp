@@ -1940,18 +1940,17 @@
 		smd_ps_sts_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe7a20000 0 0x10000>;
-			interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>; /* Waiting confirm the SPI number */
+			interrupts = <GIC_SPI 873 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 7>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			resets = <&cpg 7>;
 			linux,uio-name = "smd_ps_00";
-			status = "disabled";
 		};
 
 		smd_ps_err_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe7a20000 0 0x10000>;
-			interrupts = <GIC_SPI 151 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 874 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 7>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			linux,uio-name = "irq_smd_ps_00_01";
@@ -1960,7 +1959,7 @@
 		smd_post_sts_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe7a40000 0 0x10000>;
-			interrupts = <GIC_SPI 173 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 871 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 5>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			resets = <&cpg 5>;
@@ -1970,11 +1969,10 @@
 		smd_post_err_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe7a40000 0 0x10000>;
-			interrupts = <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH>; /* Waiting confirm the SPI number */
+			interrupts = <GIC_SPI 872 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 5>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			linux,uio-name = "irq_smd_post_00_01";
-			status = "disabled";
 		};
 
 		dof_fcprm {
@@ -1988,7 +1986,6 @@
 			reg = <0 0xe7b3b000 0 0x400>;
 			clocks = <&cpg CPG_MOD 9>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
-			// resets = <&cpg 9>;
 			linux,uio-name = "dof_wrap_00";
 		};
 
@@ -1997,7 +1994,6 @@
 			reg = <0 0xe7b3b400 0 0x400>;
 			clocks = <&cpg CPG_MOD 7>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
-			resets = <&cpg 7>;
 			linux,uio-name = "smd_ps_wrap_00";
 		};
 
@@ -2006,7 +2002,6 @@
 			reg = <0 0xe7b3bc00 0 0x400>;
 			clocks = <&cpg CPG_MOD 5>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
-			// resets = <&cpg 5>;
 			linux,uio-name = "smd_post_wrap_00";
 		};
 
