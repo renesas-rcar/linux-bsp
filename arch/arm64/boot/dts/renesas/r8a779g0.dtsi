@@ -2065,6 +2065,24 @@
 			linux,uio-name = "vspx_01";
 		};
 
+		fcpvx0: fcpvs@fedb0000 {
+			compatible = "generic-uio";
+			reg = <0 0xfedb0000 0 0x8000>;
+			clocks =<&cpg CPG_MOD 1100>;
+			power-domains = <&sysc R8A779G0_PD_A3ISP0>;
+			resets = <&cpg 1100>;
+			linux,uio-name = "fcpvx_00";
+		};
+
+		fcpvx1: fcpvs@fedb8000 {
+			compatible = "generic-uio";
+			reg = <0 0xfedb8000 0 0x8000>;
+			clocks =<&cpg CPG_MOD 1101>;
+			power-domains = <&sysc R8A779G0_PD_A3ISP1>;
+			resets = <&cpg 1101>;
+			linux,uio-name = "fcpvx_01";
+		};
+
 		gsx: gsx@fd000000 {
 			compatible = "generic-uio";
 			reg = <0 0xfd000000 0 0x800000>;
