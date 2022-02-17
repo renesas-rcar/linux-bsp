@@ -2872,77 +2872,77 @@
 			compatible = "generic-uio";
 			reg = <0 0xeee80000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vi_00";
+			linux,uio-name = "ipmmu_vi0";
 		};
 
 		ipmmu_vi1 {
 			compatible = "generic-uio";
 			reg = <0 0xeeec0000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vi_01";
+			linux,uio-name = "ipmmu_vi1";
 		};
 
 		ipmmu_vc0 {
 			compatible = "generic-uio";
 			reg = <0 0xeedc0000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vc_00";
+			linux,uio-name = "ipmmu_vc0";
 		};
 
 		ipmmu_ir0 {
 			compatible = "generic-uio";
 			reg = <0 0xeed80000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_A3IR>;
-			linux,uio-name = "ipmmu_ir_00";
+			linux,uio-name = "ipmmu_ir";
 		};
 
 		ipmmu_rt0 {
 			compatible = "generic-uio";
 			reg = <0 0xee480000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_rt_00";
+			linux,uio-name = "ipmmu_rt0";
 		};
 
 		ipmmu_rt1 {
 			compatible = "generic-uio";
 			reg = <0 0xee4c0000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_rt_01";
+			linux,uio-name = "ipmmu_rt1";
 		};
 
 		ipmmu_ds0 {
 			compatible = "generic-uio";
 			reg = <0 0xeed00000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_ds_00";
+			linux,uio-name = "ipmmu_ds0";
 		};
 
 		ipmmu_ds1 {
 			compatible = "generic-uio";
 			reg = <0 0xeed40000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_ds_01";
+			linux,uio-name = "ipmmu_hsc";
 		};
 
 		ipmmu_vip0 {
 			compatible = "generic-uio";
 			reg = <0 0xeef00000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vip_00";
+			linux,uio-name = "ipmmu_vip0";
 		};
 
 		ipmmu_vip1 {
 			compatible = "generic-uio";
 			reg = <0 0xeef40000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_vip_01";
+			linux,uio-name = "ipmmu_vip1";
 		};
 
 		ipmmu_3dg0 {
 			compatible = "generic-uio";
 			reg = <0 0xeee00000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			linux,uio-name = "ipmmu_3dg_00";
+			linux,uio-name = "ipmmu_3dg";
 		};
 
 		fcprw_dof0: fcprw@e7ab1000 {
