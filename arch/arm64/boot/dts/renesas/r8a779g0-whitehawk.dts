@@ -192,6 +192,26 @@
         status = "okay";
 };
 
+&tmu0 {
+        status = "okay";
+};
+
+&tmu1 {
+        status = "okay";
+};
+
+&tmu2 {
+        status = "okay";
+};
+
+&tmu3 {
+        status = "okay";
+};
+
+&tmu4 {
+        status = "okay";
+};
+
 &rwdt {
         timeout-sec = <60>;
         status = "okay";
