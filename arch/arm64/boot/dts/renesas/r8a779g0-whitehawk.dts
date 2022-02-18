@@ -59,6 +59,21 @@
 	};
 };
 
+&rtsn0 {
+	pinctrl-0 = <&tsn0_pins>;
+	pinctrl-names = "default";
+	phy-handle = <&phy3>;
+	status = "okay";
+
+	phy3: ethernet-phy@3 {
+		rxc-skew-ps = <1500>;
+		reg = <0>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&gpio1 23 GPIO_ACTIVE_LOW>;
+	};
+};
+
 &canfd {
 	pinctrl-0 = <&canfd0_pins>, <&canfd1_pins>, <&canfd2_pins>,
 		<&canfd3_pins>, <&canfd4_pins>, <&canfd5_pins>,
@@ -114,6 +129,25 @@
 
 		pins_mii {
 			groups = "avb0_rgmii";
+			drive-strength = <21>;
+		};
+
+	};
+
+	tsn0_pins: tsn0 {
+		mux {
+			groups = "tsn0_link", "tsn0_mdio", "tsn0_rgmii",
+				 "tsn0_txcrefclk";
+			function = "tsn0";
+		};
+
+		pins_mdio {
+			groups = "tsn0_mdio";
+			drive-strength = <21>;
+		};
+
+		pins_mii {
+			groups = "tsn0_rgmii";
 			drive-strength = <21>;
 		};
 
