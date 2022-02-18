@@ -44,8 +44,8 @@ static int rswitch_ptp_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	return 0;
 }
 
-static int rswitch_ptp_getime(struct ptp_clock_info *ptp,
-			      struct timespec64 *ts)
+static int rswitch_ptp_gettime(struct ptp_clock_info *ptp,
+			       struct timespec64 *ts)
 {
 	struct rswitch_ptp_private *ptp_priv = ptp_to_priv(ptp);
 	const struct rswitch_ptp_reg_offset *offs = ptp_priv->offs;
@@ -57,8 +57,8 @@ static int rswitch_ptp_getime(struct ptp_clock_info *ptp,
 	return 0;
 }
 
-static int rswitch_ptp_setime(struct ptp_clock_info *ptp,
-			      const struct timespec64 *ts)
+static int rswitch_ptp_settime(struct ptp_clock_info *ptp,
+			       const struct timespec64 *ts)
 {
 	struct rswitch_ptp_private *ptp_priv = ptp_to_priv(ptp);
 	const struct rswitch_ptp_reg_offset *offs = ptp_priv->offs;
@@ -80,10 +80,10 @@ static int rswitch_ptp_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	struct timespec64 ts;
 	s64 now;
 
-	rswitch_ptp_getime(ptp, &ts);
+	rswitch_ptp_gettime(ptp, &ts);
 	now = ktime_to_ns(timespec64_to_ktime(ts));
 	ts = ns_to_timespec64(now + delta);
-	rswitch_ptp_setime(ptp, &ts);
+	rswitch_ptp_settime(ptp, &ts);
 
 	return 0;
 }
@@ -100,8 +100,8 @@ static struct ptp_clock_info rswitch_ptp_info = {
 	.max_adj = 50000000,
 	.adjfine = rswitch_ptp_adjfine,
 	.adjtime = rswitch_ptp_adjtime,
-	.gettime64 = rswitch_ptp_getime,
-	.settime64 = rswitch_ptp_setime,
+	.gettime64 = rswitch_ptp_gettime,
+	.settime64 = rswitch_ptp_settime,
 	.enable = rswitch_ptp_enable,
 };
 
