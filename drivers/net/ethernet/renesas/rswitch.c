@@ -956,7 +956,7 @@ struct rswitch_gwca_chain {
 	bool dir_tx;
 	bool gptp;
 	union {
-		struct rswitch_desc *ring;
+		struct rswitch_ext_desc *ring;
 		struct rswitch_ext_ts_desc *ts_ring;
 	};
 	dma_addr_t ring_dma;
@@ -988,6 +988,7 @@ struct rswitch_device {
 	struct rswitch_gwca_chain *tx_chain;
 	struct rswitch_gwca_chain *rx_chain;
 	spinlock_t lock;
+	u8 ts_tag;
 
 	int port;
 	struct rswitch_etha *etha;
@@ -1192,8 +1193,7 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 static int rswitch_tx_free(struct net_device *ndev, bool free_txed_only)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
-	/* FIXME: how to support ts desc? */
-	struct rswitch_desc *desc;
+	struct rswitch_ext_desc *desc;
 	int free_num = 0;
 	int entry, size;
 	dma_addr_t dma_addr;
@@ -1858,7 +1858,7 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	int ret = NETDEV_TX_OK;
 	int entry;
 	dma_addr_t dma_addr;
-	struct rswitch_desc *desc;
+	struct rswitch_ext_desc *desc;
 	unsigned long flags;
 	struct rswitch_gwca_chain *c = rdev->tx_chain;
 
@@ -1884,7 +1884,12 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	desc->dptrh = cpu_to_le32(upper_32_bits(dma_addr));
 	desc->info_ds = cpu_to_le16(skb->len);
 
-	/* TODO: TX timestamp */
+	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
+		rdev->ts_tag++;
+		desc->info1 = (rdev->ts_tag << 8) | BIT(3);
+		/* FIXME: IPV required? */
+	}
 
 	skb_tx_timestamp(skb);
 	dma_wmb();
@@ -2078,7 +2083,7 @@ static int rswitch_gwca_chain_init(struct net_device *ndev,
 				(c->num_ring + 1), &c->ring_dma, GFP_KERNEL);
 	else
 		c->ring = dma_alloc_coherent(ndev->dev.parent,
-				sizeof(struct rswitch_desc) *
+				sizeof(struct rswitch_ext_desc) *
 				(c->num_ring + 1), &c->ring_dma, GFP_KERNEL);
 	if (!c->ts_ring && !c->ring)
 		goto out;
@@ -2102,7 +2107,7 @@ static int rswitch_gwca_chain_format(struct net_device *ndev,
 				struct rswitch_private *priv,
 				struct rswitch_gwca_chain *c)
 {
-	struct rswitch_desc *ring;
+	struct rswitch_ext_desc *ring;
 	struct rswitch_desc *desc;
 	int tx_ring_size = sizeof(*ring) * c->num_ring;
 	int i;
@@ -2133,8 +2138,8 @@ static int rswitch_gwca_chain_format(struct net_device *ndev,
 	desc->dptrh = cpu_to_le32(upper_32_bits(c->ring_dma));
 
 	/* FIXME: GWDCC_DCP */
-	rs_write32(GWDCC_BALR | (c->dir_tx ? GWDCC_DQT : 0),
-		  priv->addr + GWDCC_OFFS(c->index));
+	rs_write32(GWDCC_BALR | (c->dir_tx ? GWDCC_DQT : 0) | GWDCC_EDE,
+		   priv->addr + GWDCC_OFFS(c->index));
 
 	return 0;
 }
