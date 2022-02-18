@@ -391,7 +391,7 @@
                                      <GIC_SPI 294 IRQ_TYPE_LEVEL_HIGH>;
                         clocks = <&cpg CPG_MOD 714>;
                         clock-names = "fck";
-                        power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
+                        power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
                         resets = <&cpg 714>;
                         status = "disabled";
                 };
