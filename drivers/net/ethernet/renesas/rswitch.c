@@ -1113,10 +1113,10 @@ static void rswitch_ack_data_irq(struct rswitch_private *priv, int index)
 static bool rswitch_is_chain_rxed(struct rswitch_gwca_chain *c, u8 unexpected)
 {
 	int entry;
-	struct rswitch_desc *desc; /* FIXME: Use normal descritor for now */
+	struct rswitch_ext_ts_desc *desc;
 
 	entry = c->dirty % c->num_ring;
-	desc = &c->ring[entry];
+	desc = &c->ts_ring[entry];
 
 	if ((desc->die_dt & DT_MASK) != unexpected)
 		return true;
@@ -1128,10 +1128,9 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
 	struct rswitch_gwca_chain *c = rdev->rx_chain;
-	/* FIXME: how to support ts desc? */
 	int boguscnt = c->dirty + c->num_ring - c->cur;
 	int entry = c->cur % c->num_ring;
-	struct rswitch_desc *desc = &c->ring[entry];
+	struct rswitch_ext_ts_desc *desc = &c->ts_ring[entry];
 	int limit;
 	u16 pkt_len;
 	struct sk_buff *skb;
@@ -1157,13 +1156,13 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 		rdev->ndev->stats.rx_bytes += pkt_len;
 
 		entry = (++c->cur) % c->num_ring;
-		desc = &c->ring[entry];
+		desc = &c->ts_ring[entry];
 	}
 
 	/* Refill the RX ring buffers */
 	for (; c->cur - c->dirty > 0; c->dirty++) {
 		entry = c->dirty % c->num_ring;
-		desc = &c->ring[entry];
+		desc = &c->ts_ring[entry];
 		desc->info_ds = cpu_to_le16(PKT_BUF_SZ);
 
 		if (!c->skb[entry]) {
@@ -2140,33 +2139,34 @@ static int rswitch_gwca_chain_format(struct net_device *ndev,
 	return 0;
 }
 
-#if 0
 static int rswitch_gwca_chain_ts_format(struct net_device *ndev,
-				struct rswitch_private *priv,
-				struct rswitch_gwca_chain *c)
+					struct rswitch_private *priv,
+					struct rswitch_gwca_chain *c)
 {
-	struct rswitch_ext_ts_desc *ts_ring;
+	struct rswitch_ext_ts_desc *ring;
 	struct rswitch_desc *desc;
-	int tx_ts_ring_size = sizeof(*ts_ring) * c->num_ring;
+	int tx_ts_ring_size = sizeof(*ring) * c->num_ring;
 	int i;
 	dma_addr_t dma_addr;
 
 	memset(c->ts_ring, 0, tx_ts_ring_size);
-	for (i = 0, ts_ring = c->ts_ring; i < c->num_ring; i++, ts_ring++) {
+	for (i = 0, ring = c->ts_ring; i < c->num_ring; i++, ring++) {
 		if (!c->dir_tx) {
 			dma_addr = dma_map_single(ndev->dev.parent,
 					c->skb[i]->data, PKT_BUF_SZ,
 					DMA_FROM_DEVICE);
 			if (!dma_mapping_error(ndev->dev.parent, dma_addr))
-				ts_ring->info_ds = cpu_to_le16(PKT_BUF_SZ);
-			ts_ring->dptrl = cpu_to_le32(lower_32_bits(dma_addr));
-			ts_ring->dptrh = cpu_to_le32(upper_32_bits(dma_addr));
+				ring->info_ds = cpu_to_le16(PKT_BUF_SZ);
+			ring->dptrl = cpu_to_le32(lower_32_bits(dma_addr));
+			ring->dptrh = cpu_to_le32(upper_32_bits(dma_addr));
+			ring->die_dt = DT_FEMPTY | DIE;
+		} else {
+			ring->die_dt = DT_EEMPTY | DIE;
 		}
-		ts_ring->die_dt = DT_EEMPTY;
 	}
-	ts_ring->dptrl = cpu_to_le32(lower_32_bits(c->ring_dma));
-	ts_ring->dptrh = cpu_to_le32(upper_32_bits(c->ring_dma));
-	ts_ring->die_dt = DT_LINKFIX;
+	ring->dptrl = cpu_to_le32(lower_32_bits(c->ring_dma));
+	ring->dptrh = cpu_to_le32(upper_32_bits(c->ring_dma));
+	ring->die_dt = DT_LINKFIX;
 
 	desc = &priv->desc_bat[c->index];
 	desc->die_dt = DT_LINKFIX;
@@ -2179,7 +2179,6 @@ static int rswitch_gwca_chain_ts_format(struct net_device *ndev,
 
 	return 0;
 }
-#endif
 
 static int rswitch_desc_alloc(struct rswitch_private *priv)
 {
@@ -2278,7 +2277,7 @@ static int rswitch_rxdmac_init(struct net_device *ndev,
 	if (err < 0)
 		goto out_init;
 
-	err = rswitch_gwca_chain_format(ndev, priv, rdev->rx_chain);
+	err = rswitch_gwca_chain_ts_format(ndev, priv, rdev->rx_chain);
 	if (err < 0)
 		goto out_format;
 
