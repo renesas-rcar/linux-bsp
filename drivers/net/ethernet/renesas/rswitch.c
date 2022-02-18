@@ -11,6 +11,7 @@
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/module.h>
+#include <linux/net_tstamp.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
@@ -20,6 +21,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+
+#include "rtsn_ptp.h"
 
 static void *debug_addr;
 static inline u32 rs_read32(void *addr)
@@ -49,6 +52,7 @@ static inline void rs_write32(u32 data, void *addr)
 #define RSWITCH_ETHA_SIZE	0x00002000	/* with RMAC */
 #define RSWITCH_GWCA0_OFFSET	0x00010000
 #define RSWITCH_GWCA1_OFFSET	0x00012000
+#define RSWITCH_GPTP_OFFSET    0x00018000
 
 #define FWRO	0
 #define CARO	RSWITCH_COMA_OFFSET
@@ -1008,6 +1012,7 @@ struct rswitch_private {
 	struct platform_device *pdev;
 	void __iomem *addr;
 	void __iomem *serdes_addr;
+	struct rtsn_ptp_private *ptp_priv;
 	struct rswitch_desc *desc_bat;
 	dma_addr_t desc_bat_dma;
 	u32 desc_bat_size;
@@ -1136,6 +1141,7 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 	u16 pkt_len;
 	struct sk_buff *skb;
 	dma_addr_t dma_addr;
+	u32 get_ts;
 
 	boguscnt = min(boguscnt, *quota);
 	limit = boguscnt;
@@ -1149,7 +1155,17 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 		c->skb[entry] = NULL;
 		dma_addr = le32_to_cpu(desc->dptrl) | ((__le64)le32_to_cpu(desc->dptrh) << 32);
 		dma_unmap_single(ndev->dev.parent, dma_addr, PKT_BUF_SZ, DMA_FROM_DEVICE);
-		/* TODO: get_ts */
+		get_ts = rdev->priv->ptp_priv->tstamp_rx_ctrl & RTSN_RXTSTAMP_TYPE_V2_L2_EVENT;
+		if (get_ts) {
+			struct skb_shared_hwtstamps *shhwtstamps;
+			struct timespec64 ts;
+
+			shhwtstamps = skb_hwtstamps(skb);
+			memset(shhwtstamps, 0, sizeof(*shhwtstamps));
+			ts.tv_sec = (u64)le32_to_cpu(desc->ts_sec);
+			ts.tv_nsec = le32_to_cpu(desc->ts_nsec & 0x3FFFFFFF);
+			shhwtstamps->hwtstamp = timespec64_to_ktime(ts);
+		}
 		skb_put(skb, pkt_len);
 		skb->protocol = eth_type_trans(skb, ndev);
 		netif_receive_skb(skb);
@@ -1190,6 +1206,14 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 	return boguscnt <= 0;
 }
 
+static void rswitch_get_timestamp(struct rswitch_private *priv,
+				  struct timespec64 *ts)
+{
+	struct rtsn_ptp_private *ptp_priv = priv->ptp_priv;
+
+	ptp_priv->info.gettime64(&ptp_priv->info, ts);
+}
+
 static int rswitch_tx_free(struct net_device *ndev, bool free_txed_only)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
@@ -1198,6 +1222,7 @@ static int rswitch_tx_free(struct net_device *ndev, bool free_txed_only)
 	int entry, size;
 	dma_addr_t dma_addr;
 	struct rswitch_gwca_chain *c = rdev->tx_chain;
+	struct sk_buff *skb;
 
 	for (; c->cur - c->dirty > 0; c->dirty++) {
 		entry = c->dirty % c->num_ring;
@@ -1207,7 +1232,17 @@ static int rswitch_tx_free(struct net_device *ndev, bool free_txed_only)
 
 		dma_rmb();
 		size = le16_to_cpu(desc->info_ds) & TX_DS;
-		if (c->skb[entry]) {
+		skb = c->skb[entry];
+		if (skb) {
+			if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+				struct skb_shared_hwtstamps shhwtstamps;
+				struct timespec64 ts;
+
+				rswitch_get_timestamp(rdev->priv, &ts);
+				memset(&shhwtstamps, 0, sizeof(shhwtstamps));
+				shhwtstamps.hwtstamp = timespec64_to_ktime(ts);
+				skb_tstamp_tx(skb, &shhwtstamps);
+			}
 			dma_addr = le32_to_cpu(desc->dptrl) |
 				   ((__le64)le32_to_cpu(desc->dptrh) << 32);
 			dma_unmap_single(ndev->dev.parent, dma_addr,
@@ -1828,6 +1863,9 @@ static int rswitch_open(struct net_device *ndev)
 	pr_debug("%s: tx = %d, rx = %d\n", __func__, rdev->tx_chain->index, rdev->rx_chain->index);
 	rswitch_enadis_data_irq(rdev->priv, rdev->tx_chain->index, true);
 	rswitch_enadis_data_irq(rdev->priv, rdev->rx_chain->index, true);
+
+	rtsn_ptp_init(rdev->priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
+
 out:
 	return err;
 
@@ -1888,7 +1926,6 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
 		rdev->ts_tag++;
 		desc->info1 = (rdev->ts_tag << 8) | BIT(3);
-		/* FIXME: IPV required? */
 	}
 
 	skb_tx_timestamp(skb);
@@ -1915,17 +1952,123 @@ static struct net_device_stats *rswitch_get_stats(struct net_device *ndev)
 	return &ndev->stats;
 }
 
+static int rswitch_hwstamp_get(struct net_device *ndev, struct ifreq *req)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_private *priv = rdev->priv;
+	struct rtsn_ptp_private *ptp_priv = priv->ptp_priv;
+	struct hwtstamp_config config;
+
+	config.flags = 0;
+	config.tx_type = ptp_priv->tstamp_tx_ctrl ? HWTSTAMP_TX_ON :
+						    HWTSTAMP_TX_OFF;
+	switch (ptp_priv->tstamp_rx_ctrl & RTSN_RXTSTAMP_TYPE) {
+	case RTSN_RXTSTAMP_TYPE_V2_L2_EVENT:
+		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L2_EVENT;
+		break;
+	case RTSN_RXTSTAMP_TYPE_ALL:
+		config.rx_filter = HWTSTAMP_FILTER_ALL;
+		break;
+	default:
+		config.rx_filter = HWTSTAMP_FILTER_NONE;
+		break;
+	}
+
+	return copy_to_user(req->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
+}
+
+static int rswitch_hwstamp_set(struct net_device *ndev, struct ifreq *req)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_private *priv = rdev->priv;
+	struct rtsn_ptp_private *ptp_priv = priv->ptp_priv;
+	struct hwtstamp_config config;
+	u32 tstamp_rx_ctrl = RTSN_RXTSTAMP_ENABLED;
+	u32 tstamp_tx_ctrl;
+
+	if (copy_from_user(&config, req->ifr_data, sizeof(config)))
+		return -EFAULT;
+
+	if (config.flags)
+		return -EINVAL;
+
+	switch (config.tx_type) {
+	case HWTSTAMP_TX_OFF:
+		tstamp_tx_ctrl = 0;
+		break;
+	case HWTSTAMP_TX_ON:
+		tstamp_tx_ctrl = RTSN_TXTSTAMP_ENABLED;
+		break;
+	default:
+		return -ERANGE;
+	}
+
+	switch (config.rx_filter) {
+	case HWTSTAMP_FILTER_NONE:
+		tstamp_rx_ctrl = 0;
+		break;
+	case HWTSTAMP_FILTER_PTP_V2_L2_EVENT:
+		tstamp_rx_ctrl |= RTSN_RXTSTAMP_TYPE_V2_L2_EVENT;
+		break;
+	default:
+		config.rx_filter = HWTSTAMP_FILTER_ALL;
+		tstamp_rx_ctrl |= RTSN_RXTSTAMP_TYPE_ALL;
+		break;
+	}
+
+	ptp_priv->tstamp_tx_ctrl = tstamp_tx_ctrl;
+	ptp_priv->tstamp_rx_ctrl = tstamp_rx_ctrl;
+
+	return copy_to_user(req->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
+}
+
+static int rswitch_do_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
+{
+	if (!netif_running(ndev))
+		return -EINVAL;
+
+	switch (cmd) {
+	case SIOCGHWTSTAMP:
+		return rswitch_hwstamp_get(ndev, req);
+	case SIOCSHWTSTAMP:
+		return rswitch_hwstamp_set(ndev, req);
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 static const struct net_device_ops rswitch_netdev_ops = {
 	.ndo_open = rswitch_open,
 	.ndo_stop = rswitch_stop,
 	.ndo_start_xmit = rswitch_start_xmit,
 	.ndo_get_stats = rswitch_get_stats,
+	.ndo_do_ioctl = rswitch_do_ioctl,
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_mac_address = eth_mac_addr,
 //	.ndo_change_mtu = eth_change_mtu,
 };
 
+static int rswitch_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *info)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+
+	info->phc_index = ptp_clock_index(rdev->priv->ptp_priv->clock);
+	info->so_timestamping = SOF_TIMESTAMPING_TX_SOFTWARE |
+				SOF_TIMESTAMPING_RX_SOFTWARE |
+				SOF_TIMESTAMPING_SOFTWARE |
+				SOF_TIMESTAMPING_TX_HARDWARE |
+				SOF_TIMESTAMPING_RX_HARDWARE |
+				SOF_TIMESTAMPING_RAW_HARDWARE;
+	info->tx_types = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
+	info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
+
+	return 0;
+}
+
 static const struct ethtool_ops rswitch_ethtool_ops = {
+	.get_ts_info = rswitch_get_ts_info,
 };
 
 static const struct of_device_id renesas_eth_sw_of_table[] = {
@@ -2602,6 +2745,10 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 
+	priv->ptp_priv = rtsn_ptp_alloc(pdev);
+	if (!priv->ptp_priv)
+		return -ENOMEM;
+
 	priv->rsw_clk = devm_clk_get(&pdev->dev, "rsw2");
 	if (IS_ERR(priv->rsw_clk)) {
 		dev_err(&pdev->dev, "Failed to get rsw2 clock: %ld\n", PTR_ERR(priv->rsw_clk));
@@ -2620,6 +2767,7 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->addr))
 		return PTR_ERR(priv->addr);
 
+	priv->ptp_priv->addr = priv->addr + RSWITCH_GPTP_OFFSET;
 	priv->serdes_addr = devm_ioremap_resource(&pdev->dev, res_serdes);
 	if (IS_ERR(priv->serdes_addr))
 		return PTR_ERR(priv->serdes_addr);
