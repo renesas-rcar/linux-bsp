@@ -2165,6 +2165,74 @@ static const unsigned int pwm9_mux[] = {
 	PWM9_MARK,
 };
 
+/* - TSN0 ------------------------------------------------ */
+static const unsigned int tsn0_link_pins[] = {
+	/* TSN0_LINK */
+	RCAR_GP_PIN(4, 4),
+};
+static const unsigned int tsn0_link_mux[] = {
+	TSN0_LINK_MARK,
+};
+static const unsigned int tsn0_phy_int_pins[] = {
+	/* TSN0_PHY_INT */
+	RCAR_GP_PIN(4, 3),
+};
+static const unsigned int tsn0_phy_int_mux[] = {
+	TSN0_PHY_INT_MARK,
+};
+static const unsigned int tsn0_mdio_pins[] = {
+	/* TSN0_MDC, TSN0_MDIO */
+	RCAR_GP_PIN(4, 1), RCAR_GP_PIN(4, 0),
+};
+static const unsigned int tsn0_mdio_mux[] = {
+	TSN0_MDC_MARK, TSN0_MDIO_MARK,
+};
+static const unsigned int tsn0_rgmii_pins[] = {
+	/*
+	 * TSN0_TX_CTL, TSN0_TXC, TSN0_TD0, TSN0_TD1, TSN0_TD2, TSN0_TD3,
+	 * TSN0_RX_CTL, TSN0_RXC, TSN0_RD0, TSN0_RD1, TSN0_RD2, TSN0_RD3,
+	 */
+	RCAR_GP_PIN(4, 9), RCAR_GP_PIN(4, 12),
+	RCAR_GP_PIN(4, 15), RCAR_GP_PIN(4, 14),
+	RCAR_GP_PIN(4, 19), RCAR_GP_PIN(4, 18),
+	RCAR_GP_PIN(4, 7), RCAR_GP_PIN(4, 11),
+	RCAR_GP_PIN(4, 10), RCAR_GP_PIN(4, 13),
+	RCAR_GP_PIN(4, 17), RCAR_GP_PIN(4, 16),
+};
+static const unsigned int tsn0_rgmii_mux[] = {
+	TSN0_TX_CTL_MARK, TSN0_TXC_MARK,
+	TSN0_TD0_MARK, TSN0_TD1_MARK, TSN0_TD2_MARK, TSN0_TD3_MARK,
+	TSN0_RX_CTL_MARK, TSN0_RXC_MARK,
+	TSN0_RD0_MARK, TSN0_RD1_MARK, TSN0_RD2_MARK, TSN0_RD3_MARK,
+};
+static const unsigned int tsn0_txcrefclk_pins[] = {
+	/* TSN0_TXCREFCLK */
+	RCAR_GP_PIN(4, 20),
+};
+static const unsigned int tsn0_txcrefclk_mux[] = {
+	TSN0_TXCREFCLK_MARK,
+};
+static const unsigned int tsn0_avtp_pps_pins[] = {
+	/* TSN0_AVTP_PPS0, TSN0_AVTP_PPS1 */
+	RCAR_GP_PIN(4, 8), RCAR_GP_PIN(4, 2),
+};
+static const unsigned int tsn0_avtp_pps_mux[] = {
+	TSN0_AVTP_PPS0_MARK, TSN0_AVTP_PPS1_MARK,
+};
+static const unsigned int tsn0_avtp_capture_pins[] = {
+	/* TSN0_AVTP_CAPTURE */
+	RCAR_GP_PIN(4, 6),
+};
+static const unsigned int tsn0_avtp_capture_mux[] = {
+	TSN0_AVTP_CAPTURE_MARK,
+};
+static const unsigned int tsn0_avtp_match_pins[] = {
+	/* TSN0_AVTP_MATCH */
+	RCAR_GP_PIN(4, 5),
+};
+static const unsigned int tsn0_avtp_match_mux[] = {
+	TSN0_AVTP_MATCH_MARK,
+};
 /* - TPU ------------------------------------------------------------------- */
 static const unsigned int tpu_to0_pins[] = {
 	/* TPU0TO0 */
@@ -2414,6 +2482,15 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(pwm7),
 	SH_PFC_PIN_GROUP(pwm8),
 	SH_PFC_PIN_GROUP(pwm9),
+
+	SH_PFC_PIN_GROUP(tsn0_link),
+	SH_PFC_PIN_GROUP(tsn0_phy_int),
+	SH_PFC_PIN_GROUP(tsn0_mdio),
+	SH_PFC_PIN_GROUP(tsn0_rgmii),
+	SH_PFC_PIN_GROUP(tsn0_txcrefclk),
+	SH_PFC_PIN_GROUP(tsn0_avtp_pps),
+	SH_PFC_PIN_GROUP(tsn0_avtp_capture),
+	SH_PFC_PIN_GROUP(tsn0_avtp_match),
 
 	SH_PFC_PIN_GROUP(tpu_to0),
 	SH_PFC_PIN_GROUP(tpu_to1),
@@ -2681,6 +2758,17 @@ static const char * const pwm9_groups[] = {
 	"pwm9",
 };
 
+static const char * const tsn0_groups[] = {
+	"tsn0_link",
+	"tsn0_phy_int",
+	"tsn0_mdio",
+	"tsn0_rgmii",
+	"tsn0_txcrefclk",
+	"tsn0_avtp_pps",
+	"tsn0_avtp_capture",
+	"tsn0_avtp_match",
+};
+
 static const char * const tpu_groups[] = {
 	"tpu_to0",
 	"tpu_to1",
@@ -2765,6 +2853,8 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(pwm7),
 	SH_PFC_FUNCTION(pwm8),
 	SH_PFC_FUNCTION(pwm9),
+
+	SH_PFC_FUNCTION(tsn0),
 
 	SH_PFC_FUNCTION(tpu),
 
