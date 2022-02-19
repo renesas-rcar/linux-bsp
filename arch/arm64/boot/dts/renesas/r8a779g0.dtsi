@@ -4227,6 +4227,107 @@
 			linux,uio-name = "irq_wwdt_07_01";
 		};
 
+		hsm0: hsm@ff000000 {
+			compatible = "generic-uio";
+			reg = <0 0xff000000 0 0x80000>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			resets = <&cpg 2806>;
+			linux,uio-name = "hsm_00";
+		};
+
+		dcm0: dcm@ff080000 {
+			compatible = "generic-uio";
+			reg = <0 0xff080000 0 0x64000>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "dcm_00";
+		};
+
+		cbf0: cbf@ff0e8000 {
+			compatible = "generic-uio";
+			reg = <0 0xff0e8000 0 0x3000>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "cbf_00";
+		};
+
+		sbf0: sbf@ff0ec000 {
+			compatible = "generic-uio";
+			reg = <0 0xff0ec000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "sbf_00";
+		};
+
+		osm: osm@ff0f0000 {
+			compatible = "generic-uio";
+			reg = <0 0xff0f0000 0 0x10000>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "osm_00";
+		};
+
+		ism0: ism@ff100000 {
+			compatible = "generic-uio";
+			reg = <0 0xff100000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "ism_00";
+		};
+
+		ism1: ism@ff120000 {
+			compatible = "generic-uio";
+			reg = <0 0xff120000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "ism_01";
+		};
+
+		sdma0: sdma@ff180000 {
+			compatible = "generic-uio";
+			reg = <0 0xff180000 0 0x10000>;
+			interrupts = <GIC_SPI 213 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 2807>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			resets = <&cpg 2807>;
+			linux,uio-name = "sdma_00";
+		};
+
+		sdma0_01 {
+			compatible = "generic-uio";
+			reg = <0 0xff180000 0 0x10000>;
+			interrupts = <GIC_SPI 214 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 2807>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "irq_sdma_00_01";
+		};
+
+		fbs: fbs@ff200000 {
+			compatible = "generic-uio";
+			reg = <0 0xff200000 0 0x80000>;
+			interrupts = <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "fbs_00";
+		};
+
+		apb: apb@ff290000 {
+			compatible = "generic-uio";
+			reg = <0 0xff290000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "apb_00";
+		};
+
+		dul: dul@ff298000 {
+			compatible = "generic-uio";
+			reg = <0 0xff298000 0 0x1000>;
+			clocks = <&cpg CPG_MOD 2806>;
+			power-domains = <&sysc R8A779G0_PD_A3DUL>;
+			linux,uio-name = "dul_00";
+		};
+
 		isp0: isp@fed00000 {
 			compatible = "renesas,isp-r8a779g0";
 			reg = <0 0xfed00000 0 0x10000>;
