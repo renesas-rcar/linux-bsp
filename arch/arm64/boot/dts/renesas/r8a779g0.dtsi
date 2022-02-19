@@ -4328,6 +4328,12 @@
 			linux,uio-name = "dul_00";
 		};
 
+		system_ram: systemram@e6300000 {
+			compatible = "generic-uio";
+			reg = <0 0xe6300000 0 0x100000>;
+			linux,uio-name = "system_ram_00";
+		};
+
 		isp0: isp@fed00000 {
 			compatible = "renesas,isp-r8a779g0";
 			reg = <0 0xfed00000 0 0x10000>;
