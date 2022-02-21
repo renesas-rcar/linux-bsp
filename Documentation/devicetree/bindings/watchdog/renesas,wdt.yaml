@@ -53,6 +53,11 @@ properties:
               - renesas,r8a779a0-wdt     # R-Car V3U
           - const: renesas,rcar-gen3-wdt # R-Car Gen3 and RZ/G2
 
+      - items:
+          - enum:
+              - renesas,r8a779g0-wdt     # R-Car V4H
+          - const: renesas,rcar-gen4-wdt # generic R-Car Gen4
+
   reg:
     maxItems: 1
 
