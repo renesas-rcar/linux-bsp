@@ -153,6 +153,7 @@ static const struct mssr_mod_clk r8a779f0_mod_clks[] __initconst = {
 	DEF_MOD("tmu2",		715,	R8A779F0_CLK_S0D6_RT),
 	DEF_MOD("tmu3",		716,	R8A779F0_CLK_S0D6_RT),
 	DEF_MOD("tmu4",		717,	R8A779F0_CLK_S0D6_RT),
+	DEF_MOD("ships0",	719,	R8A779F0_CLK_S0D2),
 	DEF_MOD("caiplite0",	721,	R8A779F0_CLK_S0D2),
 	DEF_MOD("caiplite1",	722,	R8A779F0_CLK_S0D2),
 	DEF_MOD("caiplite2",	723,	R8A779F0_CLK_S0D2),
@@ -173,6 +174,8 @@ static const struct mssr_mod_clk r8a779f0_mod_clks[] __initconst = {
 	DEF_MOD("pfc0",		915,	R8A779F0_CLK_CL16M),
 	DEF_MOD("rsw2",		1505,	R8A779F0_CLK_RSW2),
 	DEF_MOD("ethphy",	1506,	R8A779F0_CLK_S0D2),
+	DEF_MOD("ships1",	1511,	R8A779F0_CLK_S0D2),
+	DEF_MOD("ships2",	1512,	R8A779F0_CLK_S0D2),
 	DEF_MOD("ufs0",		1514,	R8A779F0_CLK_S0D4),
 	DEF_MOD("thermal",      919,    R8A779F0_CLK_CL16M),
 };
