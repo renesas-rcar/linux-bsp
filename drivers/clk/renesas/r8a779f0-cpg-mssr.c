@@ -43,7 +43,6 @@ enum clk_ids {
 	CLK_PLL6_DIV2,
 	CLK_S0,
 	CLK_SDSRC,
-	CLK_RPCSRC,
 	CLK_OCO,
 
 	/* Module Clocks */
@@ -73,8 +72,6 @@ static const struct cpg_core_clk r8a779f0_core_clks[] __initconst = {
 
 	DEF_BASE(".sdsrc",	CLK_SDSRC,	CLK_TYPE_GEN4_SDSRC, CLK_PLL5),
 	DEF_RATE(".oco",	CLK_OCO,	32768),
-
-	DEF_BASE(".rpcsrc",	CLK_RPCSRC,	CLK_TYPE_GEN4_RPCSRC, CLK_PLL5),
 
 	/* Core Clock Outputs */
 	DEF_GEN4_Z("z0",	R8A779F0_CLK_Z0,	CLK_TYPE_GEN4_Z,	CLK_PLL2,	2, 0),
@@ -115,9 +112,6 @@ static const struct cpg_core_clk r8a779f0_core_clks[] __initconst = {
 
 	DEF_GEN4_SDH("sd0h",	R8A779F0_CLK_SD0H,	CLK_SDSRC,	   0x870),
 	DEF_GEN4_SD("sd0",	R8A779F0_CLK_SD0,	R8A779F0_CLK_SD0H, 0x870),
-
-	DEF_BASE("rpc",		R8A779F0_CLK_RPC,	CLK_TYPE_GEN4_RPC, CLK_RPCSRC),
-	DEF_BASE("rpcd2",	R8A779F0_CLK_RPCD2,	CLK_TYPE_GEN4_RPCD2, R8A779F0_CLK_RPC),
 
 	DEF_DIV6P1("mso",	R8A779F0_CLK_MSO,	CLK_PLL5_DIV4,	0x87c),
 
