@@ -68,36 +68,42 @@ static const u32 phtw[] = {
 	0x0101011f,		/* 1Gbps testing */
 };
 
+static const u32 phtw_v4h[] = {
+	0x01010100, 0x01030173,
+	0x01000174, 0x01500175,
+	0x01030176, 0x01040166,
+	0x010201ad,
+	0x01020100, 0x01010172,
+	0x01570170, 0x01060171,
+	0x01110172,
+};
+
 static const u32 phtw2[] = {
-	0x010c0130, 0x010c0140, /* General testing */
-	0x010c0150, 0x010c0180, /* General testing */
-	0x010c0190,
-	0x010a0160, 0x010a0170,
-	0x01800164, 0x01800174,	/* 1Gbps testing */
+	0x01090160, 0x01090170,
 };
 
 static const u32 hsfreqrange_table[][2] = {
-	{80000000,   0x00}, {90000000,   0x10}, {100000000,  0x20},
-	{110000000,  0x30}, {120000000,  0x01}, {130000000,  0x11},
-	{140000000,  0x21}, {150000000,  0x31}, {160000000,  0x02},
-	{170000000,  0x12}, {180000000,  0x22}, {190000000,  0x32},
-	{205000000,  0x03}, {220000000,  0x13}, {235000000,  0x23},
-	{250000000,  0x33}, {275000000,  0x04}, {300000000,  0x14},
-	{325000000,  0x25}, {350000000,  0x35}, {400000000,  0x05},
-	{450000000,  0x16}, {500000000,  0x26}, {550000000,  0x37},
-	{600000000,  0x07}, {650000000,  0x18}, {700000000,  0x28},
-	{750000000,  0x39}, {800000000,  0x09}, {850000000,  0x19},
-	{900000000,  0x29}, {950000000,  0x3a}, {1000000000, 0x0a},
-	{1050000000, 0x1a}, {1100000000, 0x2a}, {1150000000, 0x3b},
-	{1200000000, 0x0b}, {1250000000, 0x1b}, {1300000000, 0x2b},
-	{1350000000, 0x3c}, {1400000000, 0x0c}, {1450000000, 0x1c},
-	{1500000000, 0x2c}, {1550000000, 0x3d}, {1600000000, 0x0d},
-	{1650000000, 0x1d}, {1700000000, 0x2e}, {1750000000, 0x3e},
-	{1800000000, 0x0e}, {1850000000, 0x1e}, {1900000000, 0x2f},
-	{1950000000, 0x3f}, {2000000000, 0x0f}, {2050000000, 0x40},
-	{2100000000, 0x41}, {2150000000, 0x42}, {2200000000, 0x43},
-	{2250000000, 0x44}, {2300000000, 0x45}, {2350000000, 0x46},
-	{2400000000, 0x47}, {2450000000, 0x48}, {2500000000, 0x49},
+	{80,   0x00}, {90,   0x10}, {100,  0x20},
+	{110,  0x30}, {120,  0x01}, {130,  0x11},
+	{140,  0x21}, {150,  0x31}, {160,  0x02},
+	{170,  0x12}, {180,  0x22}, {190,  0x32},
+	{205,  0x03}, {220,  0x13}, {235,  0x23},
+	{250,  0x33}, {275,  0x04}, {300,  0x14},
+	{325,  0x25}, {350,  0x35}, {400,  0x05},
+	{450,  0x16}, {500,  0x26}, {550,  0x37},
+	{600,  0x07}, {650,  0x18}, {700,  0x28},
+	{750,  0x39}, {800,  0x09}, {850,  0x19},
+	{900,  0x29}, {950,  0x3a}, {1000, 0x0a},
+	{1050, 0x1a}, {1100, 0x2a}, {1150, 0x3b},
+	{1200, 0x0b}, {1250, 0x1b}, {1300, 0x2b},
+	{1350, 0x3c}, {1400, 0x0c}, {1450, 0x1c},
+	{1500, 0x2c}, {1550, 0x3d}, {1600, 0x0d},
+	{1650, 0x1d}, {1700, 0x2e}, {1750, 0x3e},
+	{1800, 0x0e}, {1850, 0x1e}, {1900, 0x2f},
+	{1950, 0x3f}, {2000, 0x0f}, {2050, 0x40},
+	{2100, 0x41}, {2150, 0x42}, {2200, 0x43},
+	{2250, 0x44}, {2300, 0x45}, {2350, 0x46},
+	{2400, 0x47}, {2450, 0x48}, {2500, 0x49},
 	{ /* sentinel */ },
 };
 
@@ -181,6 +187,9 @@ struct dsi_setup_info {
 	u16 prop_cntrl;
 	u16 hsfreqrange;
 	u16 div;
+	u16 int_contrl;
+	u16 cpbias_cntrl;
+	u16 gmp_cntrl;
 	unsigned int m;
 	unsigned int n;
 };
@@ -189,7 +198,7 @@ static void rcar_mipi_dsi_parametters_calc(struct rcar_mipi_dsi *mipi_dsi,
 					struct clk *clk, unsigned long target,
 					struct dsi_setup_info *setup_info)
 {
-
+#if 0
 	const struct vco_cntrl_value *vco_cntrl;
 	unsigned long fout_target;
 	unsigned long fin, fout;
@@ -227,6 +236,7 @@ static void rcar_mipi_dsi_parametters_calc(struct rcar_mipi_dsi *mipi_dsi,
 
 	/* Find hsfreqrange */
 	hsfreq = fout_target * 2;
+	do_div(hsfreq, 1000000);
 	for (i = 0; i < ARRAY_SIZE(hsfreqrange_table); i++) {
 		if (hsfreq > hsfreqrange_table[i][0] &&
 			hsfreq <= hsfreqrange_table[i+1][0]) {
@@ -273,6 +283,17 @@ done:
 		setup_info->vco_cntrl,
 		setup_info->prop_cntrl,
 		setup_info->hsfreqrange);
+#endif
+
+	setup_info->vco_cntrl = 0x10;
+	setup_info->m = 856;
+	setup_info->n = 1;
+	setup_info->prop_cntrl = 0x0A;
+	setup_info->int_contrl = 0x08;
+	setup_info->cpbias_cntrl = 0x00;
+	setup_info->gmp_cntrl = 0;
+	setup_info->hsfreqrange = 0x29;
+	setup_info->div = 2;
 }
 
 static void rcar_mipi_dsi_set_display_timing(struct rcar_mipi_dsi *mipi_dsi)
@@ -373,11 +394,13 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	phy_setup |= PHYSETUP_HSFREQRANGE(setup_info.hsfreqrange);
 	rcar_mipi_dsi_write(mipi_dsi, PHYSETUP, phy_setup);
 
-	for (i = 0; i < ARRAY_SIZE(phtw); i++) {
-		ret = rcar_mipi_dsi_phtw_test(mipi_dsi, phtw[i]);
+	for (i = 0; i < ARRAY_SIZE(phtw_v4h); i++) {
+		ret = rcar_mipi_dsi_phtw_test(mipi_dsi, phtw_v4h[i]);
 		if (ret < 0)
 			return ret;
 	}
+
+	rcar_mipi_dsi_set(mipi_dsi, CLOCKSET1, 0x0100000C);
 
 	/* PLL Clock Setting */
 	rcar_mipi_dsi_clr(mipi_dsi, CLOCKSET1, CLOCKSET1_SHADOW_CLEAR);
@@ -387,9 +410,9 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	clockset2 = CLOCKSET2_M(setup_info.m) | CLOCKSET2_N(setup_info.n) |
 		    CLOCKSET2_VCO_CNTRL(setup_info.vco_cntrl);
 	clockset3 = CLOCKSET3_PROP_CNTRL(setup_info.prop_cntrl) |
-		    CLOCKSET3_INT_CNTRL(0) |
-		    CLOCKSET3_CPBIAS_CNTRL(0x10) |
-		    CLOCKSET3_GMP_CNTRL(1);
+		    CLOCKSET3_INT_CNTRL(setup_info.int_contrl) |
+		    CLOCKSET3_CPBIAS_CNTRL(setup_info.cpbias_cntrl) |
+		    CLOCKSET3_GMP_CNTRL(setup_info.gmp_cntrl);
 	rcar_mipi_dsi_write(mipi_dsi, CLOCKSET2, clockset2);
 	rcar_mipi_dsi_write(mipi_dsi, CLOCKSET3, clockset3);
 
@@ -512,7 +535,7 @@ static int rcar_mipi_dsi_start_video(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	if (!timeout) {
-		dev_err(mipi_dsi->dev, "Failed to enable Video clock\n");
+		dev_err(mipi_dsi->dev, "Link busy\n");
 		return -ETIMEDOUT;
 	}
 
@@ -528,7 +551,7 @@ static int rcar_mipi_dsi_start_video(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	if (!timeout) {
-		dev_err(mipi_dsi->dev, "Failed to enable Video clock\n");
+		dev_err(mipi_dsi->dev, "Clear Video mode FIFO error\n");
 		return -ETIMEDOUT;
 	}
 
@@ -542,7 +565,7 @@ static int rcar_mipi_dsi_start_video(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	if (!timeout) {
-		dev_err(mipi_dsi->dev, "Failed to enable Video clock\n");
+		dev_err(mipi_dsi->dev, "Cannot enable Video mode\n");
 		return -ETIMEDOUT;
 	}
 
@@ -883,6 +906,7 @@ static int rcar_mipi_dsi_remove(struct platform_device *pdev)
 
 static const struct of_device_id rcar_mipi_dsi_of_table[] = {
 	{ .compatible = "renesas,r8a779a0-mipi-dsi" },
+	{ .compatible = "renesas,r8a779g0-mipi-dsi" },
 	{ }
 };
 
