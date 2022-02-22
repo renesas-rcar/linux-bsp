@@ -445,6 +445,7 @@ static const struct of_device_id tpu_of_table[] = {
 	{ .compatible = "renesas,tpu-r8a7740", },
 	{ .compatible = "renesas,tpu-r8a7790", },
 	{ .compatible = "renesas,tpu-r8a779a0", },
+	{ .compatible = "renesas,tpu-r8a779g0", },
 	{ .compatible = "renesas,tpu", },
 	{ },
 };
