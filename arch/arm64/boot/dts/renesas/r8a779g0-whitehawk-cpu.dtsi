@@ -55,6 +55,30 @@
 			regulator-boot-on;
 			regulator-always-on;
 	};
+
+	audio_clkout: audio-clkout {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <12288000>;
+	};
+
+	/*
+	 * Without the OPT-INT(PORT300), the AK4118A operates in X'tal mode.
+	 * which is the 24.576MHz clock.
+	*/
+	xtal_clk: xtal {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24576000>;
+	};
+
+	sound_card: sound {
+		compatible = "audio-graph-card";
+
+		label = "rcar-sound";
+
+		dais = <&rsnd_port0>;	/* ak4619 */
+	};
 };
 
 &extal_clk {
@@ -78,6 +102,46 @@
 		reg = <0x50>;
 		pagesize = <8>;
 	};
+
+	/*
+	 * T.B.D
+	 * Audio codec is AK4619.
+	 * Which I2C channel is used to access the internal registers of AK4619?
+	 * There's no Documentation/devicetree/bindings/sound/ak4619.yaml
+	*/
+	ak4619: codec@10 {
+		compatible = "asahi-kasei,ak4619";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
+		clocks = <&rcar_sound>;
+
+		asahi-kasei,in1-single-end;
+		asahi-kasei,in2-single-end;
+		asahi-kasei,in3-single-end;
+		asahi-kasei,in4-single-end;
+		asahi-kasei,out1-single-end;
+		asahi-kasei,out2-single-end;
+
+		port {
+			ak4619_endpoint: endpoint {
+				remote-endpoint = <&rsnd_endpoint0>;
+			};
+		};
+	};
+
+	/*
+	 * T.B.D
+	 * Digital audio interface chip
+	 * AK4118A U300: DIR, DIT and X'tal oscillator.
+	 * How to define reset-gpios and irq-gpios?
+	*/
+    ak4118: ak4118@13 {
+		#sound-dai-cells = <0>;
+		compatible = "asahi-kasei,ak4118";
+		reg = <0x13>;
+		//reset-gpios = <&gpio 0 GPIO_ACTIVE_LOW>
+		//irq-gpios = <&gpio 1 GPIO_ACTIVE_HIGH>;
+    };
 };
 
 &i2c5 {
@@ -144,6 +208,16 @@
 			function = "mmc";
 			power-source = <1800>;
 	};
+
+	sound_pins: sound {
+		groups = "ssi_ctrl", "ssi_data";
+		function = "ssi";
+	};
+
+	sound_clk_pins: sound_clk {
+		groups = "audio_clkin", "audio_clkout";
+		function = "audio_clk";
+	};
 };
 
 &rpc {
@@ -195,4 +269,52 @@
 	uart-has-rtscts;
 	/* Please use exclusively to the scif0 node */
 	status = "okay";
+};
+
+	/*
+	 * Default setting: [B1] fs = 48kHz, BICK = 64fs, MCLK = 256fs (12.288MHz)
+	*/
+&audio_clkin {
+	clock-frequency = <12288000>;
+};
+
+&rcar_sound {
+	pinctrl-0 = <&sound_pins>, <&sound_clk_pins>;
+	pinctrl-names = "default";
+
+	/* Single DAI */
+	#sound-dai-cells = <0>;
+
+	/*
+	 * T.B.D
+	 * clock-frequency should be updated.
+	*/
+	/* Only 1 audio_clkout */
+	#clock-cells = <0>;
+	clock-frequency = <12288000>; /* fs=48.0kHz */
+
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		/*
+		 * T.B.D
+		 * remote-endpoint (ak4619) + playback/capture route should be updated.
+		 * Playback and capture cannot be used at the same time. What is the default?
+		*/
+		rsnd_port0: port@0 {
+			reg = <0>;
+			rsnd_endpoint0: endpoint {
+				remote-endpoint = <&ak4619_endpoint>;
+
+				dai-format = "left_j";
+				bitclock-master = <&rsnd_endpoint0>;
+				frame-master = <&rsnd_endpoint0>;
+
+				playback = <&ssi0>;
+				capture  = <&ssi0>;
+			};
+		};
+	};
 };
