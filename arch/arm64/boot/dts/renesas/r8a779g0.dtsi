@@ -2385,7 +2385,7 @@
 		};
 
 		fbc0: fbc@ff830000 {
-			compatible = "generic-uio";
+			compatible = "renesas,uio-fbc";
 			reg = <0 0xff830000 0 0x2000>;
 			interrupts = <GIC_SPI 852 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
