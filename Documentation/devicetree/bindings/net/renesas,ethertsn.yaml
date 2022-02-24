@@ -1,0 +1,90 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/net/renesas,ethertsn.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Renesas Ethernet TSN
+
+maintainers:
+  - T.B.D
+
+properties:
+  compatible:
+    oneOf:
+      - items:
+          - enum:
+             - renesas,ethertsn-r8a779g0      # R-Car V4H
+
+  reg: true
+
+  interrupts: true
+
+  interrupt-names: true
+
+  clocks:
+    maxItems: 1
+
+  resets:
+    maxItems: 1
+
+  phy-mode: true
+
+  phy-handle: true
+
+  '#address-cells':
+    description: Number of address cells for the MDIO bus.
+    const: 1
+
+  '#size-cells':
+    description: Number of size cells on the MDIO bus.
+    const: 0
+
+patternProperties:
+  "^ethernet-phy@[0-9a-f]$":
+    type: object
+    $ref: ethernet-phy.yaml#
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - clocks
+  - power-domains
+  - resets
+  - phy-mode
+  - phy-handle
+  - '#address-cells'
+  - '#size-cells'
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/clock/r8a779g0-cpg-mssr.h>
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+    #include <dt-bindings/power/r8a779g0-sysc.h>
+    #include <dt-bindings/gpio/gpio.h>
+
+	rtsn0: ethernet@e6460000 {
+		compatible = "renesas,ethertsn-r8a779g0";
+		reg = <0 0xe6460000 0 0x4000>;
+		interrupts = <GIC_SPI 429 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 430 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "tx_data", "rx_data";
+		clocks = <&cpg CPG_MOD 2723>;
+		power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+		resets = <&cpg 2723>;
+		phy-mode = "rgmii";
+		phy-handle = <&phy3>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	phy3: ethernet-phy@3 {
+		rxc-skew-ps = <1500>;
+		reg = <0>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&gpio1 23 GPIO_ACTIVE_LOW>;
+	};
