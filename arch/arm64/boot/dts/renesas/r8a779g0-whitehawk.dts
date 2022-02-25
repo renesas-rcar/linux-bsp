@@ -247,8 +247,8 @@
 };
 
 &rwdt {
-        timeout-sec = <60>;
-        status = "okay";
+	timeout-sec = <60>;
+	status = "okay";
 };
 
 &i2c0 {
