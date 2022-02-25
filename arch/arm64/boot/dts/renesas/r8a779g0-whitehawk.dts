@@ -211,39 +211,39 @@
 };
 
 &cmt0 {
-        status = "okay";
+	status = "okay";
 };
 
 &cmt1 {
-        status = "okay";
+	status = "okay";
 };
 
 &cmt2 {
-        status = "okay";
+	status = "okay";
 };
 
 &cmt3 {
-        status = "okay";
+	status = "okay";
 };
 
 &tmu0 {
-        status = "okay";
+	status = "okay";
 };
 
 &tmu1 {
-        status = "okay";
+	status = "okay";
 };
 
 &tmu2 {
-        status = "okay";
+	status = "okay";
 };
 
 &tmu3 {
-        status = "okay";
+	status = "okay";
 };
 
 &tmu4 {
-        status = "okay";
+	status = "okay";
 };
 
 &rwdt {
