@@ -1,0 +1,595 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the White Hawk CPU boards with R-Car V4H
+ *
+ * Copyright (C) 2021 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a779g0-whitehawk-cpu.dtsi"
+
+/ {
+	model = "Renesas White Hawk CPU boards based on r8a779g0";
+	compatible = "renesas,whitehawk-cpu", "renesas,r8a779g0";
+
+	aliases {
+		ethernet0 = &avb0;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma@58000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x18000000>;
+			linux,cma-default;
+		};
+	};
+
+	dsi-con {
+		compatible = "dsi-connector";
+
+		port {
+			dsi_con_out: endpoint {
+			remote-endpoint = <&sn65dsi86_out>;
+			};
+		};
+	};
+};
+
+&avb0 {
+	pinctrl-0 = <&avb0_pins>;
+	pinctrl-names = "default";
+	phy-handle = <&phy0>;
+	tx-internal-delay-ps = <2000>;
+	status = "okay";
+
+	phy0: ethernet-phy@0 {
+		compatible = "ethernet-phy-id0022.1622",
+			     "ethernet-phy-ieee802.3-c22";
+		rxc-skew-ps = <1500>;
+		reg = <0>;
+		interrupt-parent = <&gpio7>;
+		interrupts = <5 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&gpio7 10 GPIO_ACTIVE_LOW>;
+	};
+};
+
+&rtsn0 {
+	pinctrl-0 = <&tsn0_pins>;
+	pinctrl-names = "default";
+	phy-handle = <&phy3>;
+	status = "okay";
+
+	phy3: ethernet-phy@3 {
+		rxc-skew-ps = <1500>;
+		reg = <0>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&gpio1 23 GPIO_ACTIVE_LOW>;
+	};
+};
+
+&canfd {
+	pinctrl-0 = <&canfd0_pins>, <&canfd1_pins>, <&canfd2_pins>,
+		<&canfd3_pins>, <&canfd4_pins>, <&canfd5_pins>,
+		<&canfd6_pins>, <&canfd7_pins>;
+		pinctrl-names = "default";
+	status = "okay";
+
+	channel0 {
+		status = "okay";
+	};
+
+	channel1 {
+		status = "okay";
+	};
+
+	channel2 {
+		status = "okay";
+	};
+
+	channel3 {
+		status = "okay";
+	};
+
+	channel4 {
+		status = "okay";
+	};
+
+	channel5 {
+		status = "okay";
+	};
+
+	channel6 {
+		status = "okay";
+	};
+
+	channel7 {
+		status = "okay";
+	};
+};
+
+&pfc {
+	avb0_pins: avb0 {
+		mux {
+			groups = "avb0_link", "avb0_mdio", "avb0_rgmii",
+				 "avb0_txcrefclk";
+			function = "avb0";
+		};
+
+		pins_mdio {
+			groups = "avb0_mdio";
+			drive-strength = <21>;
+		};
+
+		pins_mii {
+			groups = "avb0_rgmii";
+			drive-strength = <21>;
+		};
+
+	};
+
+	tsn0_pins: tsn0 {
+		mux {
+			groups = "tsn0_link", "tsn0_mdio", "tsn0_rgmii",
+				 "tsn0_txcrefclk";
+			function = "tsn0";
+		};
+
+		pins_mdio {
+			groups = "tsn0_mdio";
+			drive-strength = <21>;
+		};
+
+		pins_mii {
+			groups = "tsn0_rgmii";
+			drive-strength = <21>;
+		};
+
+	};
+
+	i2c1_pins: i2c1 {
+		groups = "i2c1";
+		function = "i2c1";
+	};
+
+	canfd0_pins: canfd0 {
+		groups = "canfd0_data";
+		function = "canfd0";
+	};
+
+	canfd1_pins: canfd1 {
+		groups = "canfd1_data";
+		function = "canfd1";
+	};
+
+	canfd2_pins: canfd2 {
+		groups = "canfd2_data";
+		function = "canfd2";
+	};
+
+	canfd3_pins: canfd3 {
+		groups = "canfd3_data";
+		function = "canfd3";
+	};
+
+	canfd4_pins: canfd4 {
+		groups = "canfd4_data";
+		function = "canfd4";
+	};
+
+	canfd5_pins: canfd5 {
+		groups = "canfd5_data";
+		function = "canfd5";
+	};
+
+	canfd6_pins: canfd6 {
+		groups = "canfd6_data";
+		function = "canfd6";
+	};
+
+	canfd7_pins: canfd7 {
+		groups = "canfd7_data";
+		function = "canfd7";
+	};
+
+	pcie0_pins: pcie0 {
+		groups = "pcie0_clkreq_n";
+		function = "pcie";
+	};
+
+	pcie1_pins: pcie1 {
+		groups = "pcie1_clkreq_n";
+		function = "pcie";
+	};
+
+};
+
+&cmt0 {
+        status = "okay";
+};
+
+&cmt1 {
+        status = "okay";
+};
+
+&cmt2 {
+        status = "okay";
+};
+
+&cmt3 {
+        status = "okay";
+};
+
+&tmu0 {
+        status = "okay";
+};
+
+&tmu1 {
+        status = "okay";
+};
+
+&tmu2 {
+        status = "okay";
+};
+
+&tmu3 {
+        status = "okay";
+};
+
+&tmu4 {
+        status = "okay";
+};
+
+&rwdt {
+        timeout-sec = <60>;
+        status = "okay";
+};
+
+&i2c0 {
+	io_expander2: gpio@21 {
+		compatible = "onnn,pca9654";
+		reg = <0x21>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	io_expander3: gpio@22 {
+		compatible = "onnn,pca9654";
+		reg = <0x22>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+};
+
+&i2c1 {
+	pinctrl-0 = <&i2c1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	clock-frequency = <400000>;
+
+	sn65dsi86@2c {
+		compatible = "ti,sn65dsi86";
+		reg = <0x2c>;
+		dp-connector;
+		clocks = <&ref_clk>;
+		clock-names = "refclk";
+		no-use-gpio;
+		no-use-scramble;
+		hpd-poll;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				sn65dsi86_in: endpoint {
+					remote-endpoint = <&dsi0_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				sn65dsi86_out: endpoint {
+					remote-endpoint = <&dsi_con_out>;
+				};
+			};
+		};
+	};
+
+	gmsl0: gmsl-deserializer@49 {
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		compatible = "maxim,max96712";
+		reg = <0x49>, <0x01>, <0x02>, <0x03>, <0x04>;
+		gpios = <&io_expander2 0 GPIO_ACTIVE_HIGH>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96712_in0: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96712_in1: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96712_in2: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96712_in3: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96712_out0: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi40_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
+
+	gmsl1: gmsl-deserializer@4b {
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		compatible = "maxim,max96712";
+		reg = <0x4b>, <0x05>, <0x06>, <0x07>, <0x08>;
+		gpios = <&io_expander3 0 GPIO_ACTIVE_HIGH>;
+		maxim,invert_phy-pol;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96712_in4: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96712_in5: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96712_in6: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96712_in7: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96712_out1: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi41_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
+};
+
+&pcie_bus_clk {
+	clock-frequency = <100000000>;
+};
+
+&pciec0 {
+	status = "okay";
+	pinctrl-0 = <&pcie0_pins>;
+	pinctrl-names = "default";
+};
+
+&pciec1 {
+	status = "disabled";
+	pinctrl-0 = <&pcie1_pins>;
+	pinctrl-names = "default";
+};
+
+&pciec0_ep {
+	status = "disabled";
+	pinctrl-0 = <&pcie0_pins>;
+	pinctrl-names = "default";
+};
+
+&du {
+	status = "okay";
+};
+
+&dsi0 {
+	status = "okay";
+
+	clocks = <&cpg CPG_MOD 415>,
+			 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>,
+			 <&extal_clk>;
+	clock-names = "fck", "dsi", "extal";
+
+	ports {
+		port@1 {
+			endpoint {
+				remote-endpoint = <&sn65dsi86_in>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+};
+
+&ref_clk {
+	clock-frequency = <38400000>;
+};
+
+&csi40 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi40_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96712_out0>;
+			};
+		};
+	};
+};
+
+&csi41 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi41_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96712_out1>;
+			};
+		};
+	};
+};
+
+&vin00 {
+	status = "okay";
+};
+
+&vin01 {
+	status = "okay";
+};
+
+&vin02 {
+	status = "okay";
+};
+
+&vin03 {
+	status = "okay";
+};
+
+&vin10 {
+	status = "okay";
+};
+
+&vin11 {
+	status = "okay";
+};
+
+&vin12 {
+	status = "okay";
+};
+
+&vin13 {
+	status = "okay";
+};
+/* FAKRA Overlay */
+#include "whitehawk-fakra.dtsi"
