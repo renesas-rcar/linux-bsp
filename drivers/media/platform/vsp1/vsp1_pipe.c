@@ -343,9 +343,13 @@ int vsp1_pipeline_stop(struct vsp1_pipeline *pipe)
 			spin_unlock_irqrestore(&pipe->irqlock, flags);
 		}
 
-		if ((vsp1->version & VI6_IP_VERSION_MODEL_MASK) ==
-		    VI6_IP_VERSION_MODEL_VSPD_GEN3)
+		switch (vsp1->version & VI6_IP_VERSION_MODEL_MASK) {
+		case VI6_IP_VERSION_MODEL_VSPD_GEN3:
+		case VI6_IP_VERSION_MODEL_VSPD_GEN4_R8A779A0:
 			ret = rcar_fcp_reset(vsp1->fcp);
+		default:
+			break;
+		}
 
 	} else {
 		/* Otherwise just request a stop and wait. */
