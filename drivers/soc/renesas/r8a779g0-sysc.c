@@ -80,6 +80,7 @@ static struct r8a779g0_sysc_area r8a779g0_areas[] __initdata = {
 	{ "a1dsp1",	R8A779G0_PD_A1DSP1, R8A779G0_PD_A2CN0 },
 	{ "a1dsp2",	R8A779G0_PD_A1DSP2, R8A779G0_PD_A2CN0 },
 	{ "a1dsp3",	R8A779G0_PD_A1DSP3, R8A779G0_PD_A2CN0 },
+	{ "a3dul",	R8A779G0_PD_A3DUL, R8A779G0_PD_ALWAYS_ON },
 };
 
 static const struct r8a779g0_sysc_info r8a779g0_sysc_info __initconst = {

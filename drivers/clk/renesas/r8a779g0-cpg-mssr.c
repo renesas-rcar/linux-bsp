@@ -326,6 +326,8 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("vdsp1_bus",		2802,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
 	DEF_MOD("vdsp2_bus",		2803,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
 	DEF_MOD("vdsp3_bus",		2804,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
+	DEF_MOD("paptop",               2806,    R8A779G0_CLK_S0D6_PER),
+	DEF_MOD("papsdma",              2807,    R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("fcprc",		2817,	R8A779G0_CLK_S0D2_MM),
 	DEF_MOD("dsc",			2819,	R8A779G0_CLK_VIOBUSD2),
 	DEF_MOD("vdsp0_csb",		2821,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
