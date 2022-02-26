@@ -9,6 +9,8 @@
 
 #include <linux/phy.h>
 
+#include "rtsn_ptp.h"
+
 #define AXIRO	0
 #define MHDRO	0x1000
 #define	RMRO	0x2000
@@ -290,10 +292,12 @@ enum rtsn_reg {
 #define AXIRC_RREON_DEFAULT	(0x01 << AXIRC_RREON_SHIFT)
 #define AXIRC_RRPON_DEFAULT	(0x08 << AXIRC_RRPON_SHIFT)
 
+#define TATLS0_TEDE		BIT(1)
 #define TATLS0_TATEN_SHIFT	(24)
 #define TATLS0_TATEN(n)		((n) << TATLS0_TATEN_SHIFT)
 #define TATLR_TATL		BIT(31)
 
+#define RATLS0_REDE		BIT(3)
 #define RATLS0_RATEN_SHIFT	(24)
 #define RATLS0_RATEN(n)		((n) << RATLS0_RATEN_SHIFT)
 #define RATLR_RATL		BIT(31)
@@ -411,10 +415,33 @@ struct rtsn_ts_desc {
 	__le32 ts_sec;
 } __packed;
 
+struct rtsn_ext_desc {
+	__le16 info_ds;
+	__u8 info;
+	u8 die_dt;
+	__le32 dptr;
+	__le64 info1;
+} __packed;
+
+struct rtsn_ext_ts_desc {
+	__le16 info_ds;
+	__u8 info;
+	u8 die_dt;
+	__le32 dptr;
+	__le64 info1;
+	__le32 ts_nsec;
+	__le32 ts_sec;
+} __packed;
+
+enum EXT_INFO_DS_BIT {
+	TXC = 0x40,
+};
+
 struct rtsn_private {
 	struct net_device *ndev;
 	struct platform_device *pdev;
 	void __iomem *addr;
+	struct rtsn_ptp_private *ptp_priv;
 	struct clk *clk;
 	u32 num_tx_ring;
 	u32 num_rx_ring;
@@ -426,8 +453,8 @@ struct rtsn_private {
 	struct rtsn_desc *rx_desc_bat;
 	dma_addr_t tx_desc_dma;
 	dma_addr_t rx_desc_dma;
-	struct rtsn_desc *tx_ring;
-	struct rtsn_desc *rx_ring;
+	struct rtsn_ext_desc *tx_ring;
+	struct rtsn_ext_ts_desc *rx_ring;
 	struct sk_buff **tx_skb;
 	struct sk_buff **rx_skb;
 	spinlock_t lock;	/* Register access lock */
@@ -435,6 +462,7 @@ struct rtsn_private {
 	u32 dirty_tx;
 	u32 cur_rx;
 	u32 dirty_rx;
+	u8 ts_tag;
 	struct napi_struct napi;
 
 	struct mii_bus *mii;
