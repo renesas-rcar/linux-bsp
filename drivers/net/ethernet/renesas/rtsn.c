@@ -11,6 +11,7 @@
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/module.h>
+#include <linux/net_tstamp.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
@@ -23,6 +24,7 @@
 #include <linux/iopoll.h>
 
 #include "rtsn.h"
+#include "rtsn_ptp.h"
 
 u32 rtsn_read(void __iomem *addr)
 {
@@ -52,8 +54,6 @@ int rtsn_reg_wait(void __iomem *addr, u32 mask, u32 expected)
 
 static void rtsn_ctrl_data_irq(struct rtsn_private *priv, bool enable)
 {
-	/* TODO: Support Timestamp */
-
 	/* Only use one TX/RX chain */
 	if (enable) {
 		rtsn_write(DIE_DID_TDICX(0) | DIE_DID_RDICX(0), priv->addr + DIE);
@@ -66,12 +66,20 @@ static void rtsn_ctrl_data_irq(struct rtsn_private *priv, bool enable)
 	}
 }
 
+static void rtsn_get_timestamp(struct rtsn_private *priv, struct timespec64 *ts)
+{
+	struct rtsn_ptp_private *ptp_priv = priv->ptp_priv;
+
+	ptp_priv->info.gettime64(&ptp_priv->info, ts);
+}
+
 static int rtsn_tx_free(struct net_device *ndev, bool free_txed_only)
 {
 	struct rtsn_private *priv = netdev_priv(ndev);
-	struct rtsn_desc *desc;
+	struct rtsn_ext_desc *desc;
 	int free_num = 0;
 	int entry, size;
+	struct sk_buff *skb;
 
 	for (; priv->cur_tx - priv->dirty_tx > 0; priv->dirty_tx++) {
 		entry = priv->dirty_tx % priv->num_tx_ring;
@@ -81,7 +89,17 @@ static int rtsn_tx_free(struct net_device *ndev, bool free_txed_only)
 
 		dma_rmb();
 		size = le16_to_cpu(desc->info_ds) & TX_DS;
-		if (priv->tx_skb[entry]) {
+		skb = priv->tx_skb[entry];
+		if (skb) {
+			if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+				struct skb_shared_hwtstamps shhwtstamps;
+				struct timespec64 ts;
+
+				rtsn_get_timestamp(priv, &ts);
+				memset(&shhwtstamps, 0, sizeof(shhwtstamps));
+				shhwtstamps.hwtstamp = timespec64_to_ktime(ts);
+				skb_tstamp_tx(skb, &shhwtstamps);
+			}
 			dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
 					 size, DMA_TO_DEVICE);
 			dev_kfree_skb_any(priv->tx_skb[entry]);
@@ -100,11 +118,12 @@ static bool rtsn_rx(struct net_device *ndev, int *quota)
 	struct rtsn_private *priv = netdev_priv(ndev);
 	int entry = priv->cur_rx % priv->num_rx_ring;
 	int boguscnt = priv->dirty_rx + priv->num_rx_ring - priv->cur_rx;
-	struct rtsn_desc *desc = &priv->rx_ring[entry];
+	struct rtsn_ext_ts_desc *desc = &priv->rx_ring[entry];
 	int limit;
 	u16 pkt_len;
 	struct sk_buff *skb;
 	dma_addr_t dma_addr;
+	u32 get_ts;
 
 	boguscnt = min(boguscnt, *quota);
 	limit = boguscnt;
@@ -119,7 +138,17 @@ static bool rtsn_rx(struct net_device *ndev, int *quota)
 		priv->rx_skb[entry] = NULL;
 		dma_addr = le32_to_cpu(desc->dptr);
 		dma_unmap_single(ndev->dev.parent, dma_addr, PKT_BUF_SZ, DMA_FROM_DEVICE);
-		/* TODO: get Timestamp */
+		get_ts = priv->ptp_priv->tstamp_rx_ctrl & RTSN_RXTSTAMP_TYPE_V2_L2_EVENT;
+		if (get_ts) {
+			struct skb_shared_hwtstamps *shhwtstamps;
+			struct timespec64 ts;
+
+			shhwtstamps = skb_hwtstamps(skb);
+			memset(shhwtstamps, 0, sizeof(*shhwtstamps));
+			ts.tv_sec = (u64)le32_to_cpu(desc->ts_sec);
+			ts.tv_nsec = le32_to_cpu(desc->ts_nsec & 0x3FFFFFFF);
+			shhwtstamps->hwtstamp = timespec64_to_ktime(ts);
+		}
 		skb_put(skb, pkt_len);
 		skb->protocol = eth_type_trans(skb, ndev);
 		netif_receive_skb(skb);
@@ -227,13 +256,11 @@ static void rtsn_chain_free(struct rtsn_private *priv)
 {
 	struct device *dev = &priv->pdev->dev;
 
-	/* TODO: Support timestamp */
-
-	dma_free_coherent(dev, sizeof(struct rtsn_desc) * (priv->num_tx_ring + 1),
+	dma_free_coherent(dev, sizeof(struct rtsn_ext_desc) * (priv->num_tx_ring + 1),
 			  priv->tx_ring, priv->tx_desc_dma);
 	priv->tx_ring = NULL;
 
-	dma_free_coherent(dev, sizeof(struct rtsn_desc) * (priv->num_rx_ring + 1),
+	dma_free_coherent(dev, sizeof(struct rtsn_ext_ts_desc) * (priv->num_rx_ring + 1),
 			  priv->rx_ring, priv->rx_desc_dma);
 	priv->rx_ring = NULL;
 
@@ -267,14 +294,12 @@ static int rtsn_chain_init(struct rtsn_private *priv, int tx_size, int rx_size)
 		priv->rx_skb[i] = skb;
 	}
 
-	/* TODO: Support timestamp */
-
 	/* Allocate TX, RX descriptors */
 	priv->tx_ring = dma_alloc_coherent(ndev->dev.parent,
-					   sizeof(struct rtsn_desc) * (tx_size + 1),
+					   sizeof(struct rtsn_ext_desc) * (tx_size + 1),
 					   &priv->tx_desc_dma, GFP_KERNEL);
 	priv->rx_ring = dma_alloc_coherent(ndev->dev.parent,
-					   sizeof(struct rtsn_desc) * (rx_size + 1),
+					   sizeof(struct rtsn_ext_ts_desc) * (rx_size + 1),
 					   &priv->rx_desc_dma, GFP_KERNEL);
 
 	if (!priv->tx_ring || !priv->rx_ring)
@@ -292,8 +317,8 @@ static void rtsn_chain_format(struct rtsn_private *priv)
 {
 	struct net_device *ndev = priv->ndev;
 	struct rtsn_desc *bat_desc;
-	struct rtsn_desc *tx_desc;
-	struct rtsn_desc *rx_desc;
+	struct rtsn_ext_desc *tx_desc;
+	struct rtsn_ext_ts_desc *rx_desc;
 	int tx_ring_size = sizeof(*tx_desc) * priv->num_tx_ring;
 	int rx_ring_size = sizeof(*rx_desc) * priv->num_rx_ring;
 	dma_addr_t dma_addr;
@@ -459,7 +484,7 @@ static int rtsn_axibmi_init(struct rtsn_private *priv)
 	rtsn_write(AXIRC_RREON_DEFAULT | AXIRC_RRPON_DEFAULT, priv->addr + AXIRC);
 
 	/* TX Descritor chain setting */
-	rtsn_write(TATLS0_TATEN(TX_NUM_CHAINS), priv->addr + TATLS0);
+	rtsn_write(TATLS0_TEDE | TATLS0_TATEN(TX_NUM_CHAINS), priv->addr + TATLS0);
 	rtsn_write(priv->tx_desc_bat_dma, priv->addr + TATLS1);
 	rtsn_write(TATLR_TATL, priv->addr + TATLR);
 
@@ -468,8 +493,7 @@ static int rtsn_axibmi_init(struct rtsn_private *priv)
 		return ret;
 
 	/* RX Descriptor chain setting */
-	/* TODO: Support Timestamp */
-	rtsn_write(RATLS0_RATEN(RX_NUM_CHAINS), priv->addr + RATLS0);
+	rtsn_write(RATLS0_REDE | RATLS0_RATEN(RX_NUM_CHAINS), priv->addr + RATLS0);
 	rtsn_write(priv->rx_desc_bat_dma, priv->addr + RATLS1);
 	rtsn_write(RATLR_RATL, priv->addr + RATLR);
 
@@ -773,6 +797,8 @@ static int rtsn_open(struct net_device *ndev)
 
 	netif_start_queue(ndev);
 
+	rtsn_ptp_init(priv->ptp_priv, RTSN_PTP_REG_LAYOUT_V4H, RTSN_PTP_CLOCK_V4H);
+
 	return 0;
 
 out_napi_off:
@@ -794,7 +820,7 @@ static int rtsn_stop(struct net_device *ndev)
 static netdev_tx_t rtsn_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	struct rtsn_private *priv = netdev_priv(ndev);
-	struct rtsn_desc *desc;
+	struct rtsn_ext_desc *desc;
 	unsigned long flags;
 	int entry;
 	dma_addr_t dma_addr;
@@ -821,7 +847,12 @@ static netdev_tx_t rtsn_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	desc->dptr = cpu_to_le32(dma_addr);
 	desc->info_ds = cpu_to_le16(skb->len);
 
-	/* TODO: Support Timestamp */
+	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
+		priv->ts_tag++;
+		desc->info_ds |= TXC;
+		desc->info = priv->ts_tag;
+	}
 
 	skb_tx_timestamp(skb);
 	dma_wmb();
@@ -846,18 +877,119 @@ static struct net_device_stats *rtsn_get_stats(struct net_device *ndev)
 	return &ndev->stats;
 }
 
+static int rtsn_hwstamp_get(struct net_device *ndev, struct ifreq *req)
+{
+	struct rtsn_private *priv = netdev_priv(ndev);
+	struct rtsn_ptp_private *ptp_priv = priv->ptp_priv;
+	struct hwtstamp_config config;
+
+	config.flags = 0;
+	config.tx_type = ptp_priv->tstamp_tx_ctrl ? HWTSTAMP_TX_ON : HWTSTAMP_TX_OFF;
+	switch (ptp_priv->tstamp_rx_ctrl & RTSN_RXTSTAMP_TYPE) {
+	case RTSN_RXTSTAMP_TYPE_V2_L2_EVENT:
+		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L2_EVENT;
+		break;
+	case RTSN_RXTSTAMP_TYPE_ALL:
+		config.rx_filter = HWTSTAMP_FILTER_ALL;
+		break;
+	default:
+		config.rx_filter = HWTSTAMP_FILTER_NONE;
+	}
+
+	return copy_to_user(req->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
+}
+
+static int rtsn_hwstamp_set(struct net_device *ndev, struct ifreq *req)
+{
+	struct rtsn_private *priv = netdev_priv(ndev);
+	struct rtsn_ptp_private *ptp_priv = priv->ptp_priv;
+	struct hwtstamp_config config;
+	u32 tstamp_rx_ctrl = RTSN_RXTSTAMP_ENABLED;
+	u32 tstamp_tx_ctrl;
+
+	if (copy_from_user(&config, req->ifr_data, sizeof(config)))
+		return -EFAULT;
+
+	if (config.flags)
+		return -EINVAL;
+
+	switch (config.tx_type) {
+	case HWTSTAMP_TX_OFF:
+		tstamp_tx_ctrl = 0;
+		break;
+	case HWTSTAMP_TX_ON:
+		tstamp_tx_ctrl = RTSN_TXTSTAMP_ENABLED;
+		break;
+	default:
+		return -ERANGE;
+	}
+
+	switch (config.rx_filter) {
+	case HWTSTAMP_FILTER_NONE:
+		tstamp_rx_ctrl = 0;
+		break;
+	case HWTSTAMP_FILTER_PTP_V2_L2_EVENT:
+		tstamp_rx_ctrl |= RTSN_RXTSTAMP_TYPE_V2_L2_EVENT;
+		break;
+	default:
+		config.rx_filter = HWTSTAMP_FILTER_ALL;
+		tstamp_rx_ctrl |= RTSN_RXTSTAMP_TYPE_ALL;
+	}
+
+	ptp_priv->tstamp_tx_ctrl = tstamp_tx_ctrl;
+	ptp_priv->tstamp_rx_ctrl = tstamp_rx_ctrl;
+
+	return copy_to_user(req->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
+}
+
+static int rtsn_do_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
+{
+	if (!netif_running(ndev))
+		return -EINVAL;
+
+	switch (cmd) {
+	case SIOCGHWTSTAMP:
+		return rtsn_hwstamp_get(ndev, req);
+	case SIOCSHWTSTAMP:
+		return rtsn_hwstamp_set(ndev, req);
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 static const struct net_device_ops rtsn_netdev_ops = {
 	.ndo_open		= rtsn_open,
 	.ndo_stop		= rtsn_stop,
 	.ndo_start_xmit		= rtsn_start_xmit,
 	.ndo_get_stats		= rtsn_get_stats,
+	.ndo_do_ioctl		= rtsn_do_ioctl,
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_set_mac_address	= eth_mac_addr,
 };
 
+static int rtsn_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *info)
+{
+	struct rtsn_private *priv = netdev_priv(ndev);
+
+	info->phc_index = ptp_clock_index(priv->ptp_priv->clock);
+	info->so_timestamping = SOF_TIMESTAMPING_TX_SOFTWARE |
+				SOF_TIMESTAMPING_RX_SOFTWARE |
+				SOF_TIMESTAMPING_SOFTWARE |
+				SOF_TIMESTAMPING_TX_HARDWARE |
+				SOF_TIMESTAMPING_RX_HARDWARE |
+				SOF_TIMESTAMPING_RAW_HARDWARE;
+	info->tx_types = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
+	info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
+
+	return 0;
+}
+
 static const struct ethtool_ops rtsn_ethtool_ops = {
 	.nway_reset		= phy_ethtool_nway_reset,
 	.get_link		= ethtool_op_get_link,
+	.get_ts_info		= rtsn_get_ts_info,
 	.get_link_ksettings	= phy_ethtool_get_link_ksettings,
 	.set_link_ksettings	= phy_ethtool_set_link_ksettings,
 };
@@ -873,12 +1005,13 @@ static int rtsn_probe(struct platform_device *pdev)
 {
 	struct net_device *ndev;
 	struct rtsn_private *priv;
-	struct resource *res;
+	struct resource *res, *res_ptp;
 	const u8 *mac_addr;
 	int ret;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "tsnes");
+	res_ptp = platform_get_resource_byname(pdev, IORESOURCE_MEM, "gptp");
+	if (!res || !res_ptp) {
 		dev_err(&pdev->dev, "invalid resource\n");
 		return -EINVAL;
 	}
@@ -892,10 +1025,15 @@ static int rtsn_probe(struct platform_device *pdev)
 
 	priv = netdev_priv(ndev);
 	priv->ndev = ndev;
+	priv->ptp_priv = rtsn_ptp_alloc(pdev);
 
 	priv->addr = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(priv->addr))
 		return PTR_ERR(priv->addr);
+
+	priv->ptp_priv->addr = devm_ioremap_resource(&pdev->dev, res_ptp);
+	if (IS_ERR(priv->ptp_priv->addr))
+		return PTR_ERR(priv->ptp_priv->addr);
 
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(priv->clk))
