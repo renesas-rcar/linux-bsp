@@ -510,9 +510,8 @@
 	status = "okay";
 
 	clocks = <&cpg CPG_MOD 415>,
-			 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>,
-			 <&extal_clk>;
-	clock-names = "fck", "dsi", "extal";
+		 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>;
+	clock-names = "mod", "dsi";
 
 	ports {
 		port@1 {
