@@ -808,6 +808,8 @@ enum rswitch_gwca_mode {
 #define	FWPBFC(i)		(FWPBFCi + (i) * 0x10)
 #define	FWPBFC_PBDV_MASK	(GENMASK(RSWITCH_NUM_HW - 1, 0)
 
+#define FWPBFCSDC(j, i)         (FWPBFCSDC00 + (i) * 0x10 + (j) * 0x04)
+
 /* SerDes */
 enum rswitch_serdes_mode {
 	USXGMII,
@@ -2668,11 +2670,14 @@ static void rswitch_fwd_init(struct rswitch_private *priv)
 	}
 	/*
 	 * FIXME: hardcoded setting. Make a macro about port vector calc.
-	 * ETHA0 = forward to GWCA0, GWCA0 = forward to ETHA0.
-	 * others = disabled
+	 * ETHA0 = forward to GWCA0, GWCA0 = forward to ETHA0,...
+	 * Currently, always forward to GWCA0.
 	 */
-	rs_write32(8, priv->addr + FWPBFC(0));
-	rs_write32(1, priv->addr + FWPBFC(3));
+	for (i = 0; i < num_ndev; i++) {
+		rs_write32(priv->rdev[i]->rx_chain->index, priv->addr + FWPBFCSDC(0, i));
+		rs_write32(8, priv->addr + FWPBFC(i));
+	}
+	rs_write32(0x07, priv->addr + FWPBFC(3));
 
 	/* TODO: add chrdev for fwd */
 	/* TODO: add proc for fwd */
