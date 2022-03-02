@@ -32,12 +32,44 @@
 		mux {
 			groups = "tsn0_link", "tsn0_mdio";
 			function = "tsn0";
-			drive-strength = <12>;
+			drive-strength = <18>;
+			power-source = <1800>;
 		};
 
 		pins_mdio {
 			groups = "tsn0_mdio";
-			drive-strength = <12>;
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+	};
+
+	tsn1_pins: tsn1 {
+		mux {
+			groups = "tsn1_link", "tsn1_mdio";
+			function = "tsn1";
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+
+		pins_mdio {
+			groups = "tsn1_mdio";
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+	};
+
+	tsn2_pins: tsn2 {
+		mux {
+			groups = "tsn2_link", "tsn2_mdio";
+			function = "tsn2";
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+
+		pins_mdio {
+			groups = "tsn2_mdio";
+			drive-strength = <18>;
+			power-source = <1800>;
 		};
 	};
 
@@ -59,6 +91,8 @@
 
 &rswitch {
 	status = "okay";
+	pinctrl-0 = <&tsn0_pins &tsn1_pins &tsn2_pins>;
+	pinctrl-names = "default";
 	#address-cells = <1>;
 	#size-cells = <0>;
 
@@ -77,7 +111,7 @@
 		};
 		port@1 {
 			reg = <1>;
-			phy-handle = <&etha0>;
+			phy-handle = <&etha1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			etha1: ethernet-phy@1 {
@@ -87,7 +121,7 @@
 		};
 		port@2 {
 			reg = <2>;
-			phy-handle = <&etha0>;
+			phy-handle = <&etha2>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			etha2: ethernet-phy@2 {
