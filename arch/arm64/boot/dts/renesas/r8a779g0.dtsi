@@ -3924,6 +3924,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 630>;
 			linux,uio-name = "rtdmac_control_00";
+			status = "disabled";
 		};
 
 		rtdmac_control001 {
@@ -3933,6 +3934,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_01";
+			status = "disabled";
 		};
 
 		rtdmac_control002 {
@@ -3942,6 +3944,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_02";
+			status = "disabled";
 		};
 
 		rtdmac_control003 {
@@ -3951,6 +3954,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_03";
+			status = "disabled";
 		};
 
 		rtdmac_control004 {
@@ -3960,6 +3964,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_04";
+			status = "disabled";
 		};
 
 		rtdmac_control005 {
@@ -3969,6 +3974,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_05";
+			status = "disabled";
 		};
 
 		rtdmac_control006 {
@@ -3978,6 +3984,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_06";
+			status = "disabled";
 		};
 
 		rtdmac_control007 {
@@ -3987,6 +3994,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_07";
+			status = "disabled";
 		};
 
 		rtdmac_control008 {
@@ -3996,6 +4004,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_08";
+			status = "disabled";
 		};
 
 		rtdmac_control009 {
@@ -4005,6 +4014,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_09";
+			status = "disabled";
 		};
 
 		rtdmac_control010 {
@@ -4014,6 +4024,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_10";
+			status = "disabled";
 		};
 
 		rtdmac_control011 {
@@ -4023,6 +4034,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_11";
+			status = "disabled";
 		};
 
 		rtdmac_control012 {
@@ -4032,6 +4044,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_12";
+			status = "disabled";
 		};
 
 		rtdmac_control013 {
@@ -4041,6 +4054,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_13";
+			status = "disabled";
 		};
 
 		rtdmac_control014 {
@@ -4050,6 +4064,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_14";
+			status = "disabled";
 		};
 
 		rtdmac_control015 {
@@ -4059,6 +4074,7 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_15";
+			status = "disabled";
 		};
 
 		rtdmac_control1: rtdmac_control@ffc20000 {
@@ -4069,6 +4085,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 631>;
 			linux,uio-name = "rtdmac_control_01";
+			status = "disabled";
 		};
 
 		rtdmac_control101 {
@@ -4078,6 +4095,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_01";
+			status = "disabled";
 		};
 
 		rtdmac_control102 {
@@ -4087,6 +4105,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_02";
+			status = "disabled";
 		};
 
 		rtdmac_control103 {
@@ -4096,6 +4115,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_03";
+			status = "disabled";
 		};
 
 		rtdmac_control104 {
@@ -4105,6 +4125,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_04";
+			status = "disabled";
 		};
 
 		rtdmac_control105 {
@@ -4114,6 +4135,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_05";
+			status = "disabled";
 		};
 
 
@@ -4124,6 +4146,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_06";
+			status = "disabled";
 		};
 
 		rtdmac_control107 {
@@ -4133,6 +4156,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_07";
+			status = "disabled";
 		};
 
 		rtdmac_control108 {
@@ -4142,6 +4166,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_08";
+			status = "disabled";
 		};
 
 		rtdmac_control109 {
@@ -4151,6 +4176,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_09";
+			status = "disabled";
 		};
 
 		rtdmac_control110 {
@@ -4160,6 +4186,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_10";
+			status = "disabled";
 		};
 
 		rtdmac_control111 {
@@ -4169,6 +4196,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_11";
+			status = "disabled";
 		};
 
 		rtdmac_control112 {
@@ -4178,6 +4206,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_12";
+			status = "disabled";
 		};
 
 		rtdmac_control113 {
@@ -4187,6 +4216,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_13";
+			status = "disabled";
 		};
 
 		rtdmac_control114 {
@@ -4196,6 +4226,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_14";
+			status = "disabled";
 		};
 
 		rtdmac_control115 {
@@ -4205,6 +4236,7 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_15";
+			status = "disabled";
 		};
 
 		rtdmac_control2: rtdmac_control@ffd70000 {
@@ -4215,6 +4247,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 700>;
 			linux,uio-name = "rtdmac_control_02";
+			status = "disabled";
 		};
 
 		rtdmac_control201 {
@@ -4224,6 +4257,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_01";
+			status = "disabled";
 		};
 
 		rtdmac_control202 {
@@ -4233,6 +4267,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_02";
+			status = "disabled";
 		};
 
 		rtdmac_control203 {
@@ -4242,6 +4277,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_03";
+			status = "disabled";
 		};
 
 		rtdmac_control204 {
@@ -4251,6 +4287,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_04";
+			status = "disabled";
 		};
 
 		rtdmac_control205 {
@@ -4260,6 +4297,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_05";
+			status = "disabled";
 		};
 
 		rtdmac_control206 {
@@ -4269,6 +4307,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_06";
+			status = "disabled";
 		};
 
 		rtdmac_control207 {
@@ -4278,6 +4317,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_07";
+			status = "disabled";
 		};
 
 		rtdmac_control208 {
@@ -4287,6 +4327,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_08";
+			status = "disabled";
 		};
 
 		rtdmac_control209 {
@@ -4296,6 +4337,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_09";
+			status = "disabled";
 		};
 
 		rtdmac_control210 {
@@ -4305,6 +4347,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_10";
+			status = "disabled";
 		};
 
 		rtdmac_control211 {
@@ -4314,6 +4357,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_11";
+			status = "disabled";
 		};
 
 		rtdmac_control212 {
@@ -4323,6 +4367,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_12";
+			status = "disabled";
 		};
 
 		rtdmac_control213 {
@@ -4332,6 +4377,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_13";
+			status = "disabled";
 		};
 
 		rtdmac_control214 {
@@ -4341,6 +4387,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_14";
+			status = "disabled";
 		};
 
 		rtdmac_control215 {
@@ -4350,6 +4397,7 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_15";
+			status = "disabled";
 		};
 
 		rtdmac_control3: rtdmac_control@ffd80000 {
@@ -4360,6 +4408,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 701>;
 			linux,uio-name = "rtdmac_control_03";
+			status = "disabled";
 		};
 
 		rtdmac_control301 {
@@ -4369,6 +4418,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_01";
+			status = "disabled";
 		};
 
 		rtdmac_control302 {
@@ -4378,6 +4428,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_02";
+			status = "disabled";
 		};
 
 		rtdmac_control303 {
@@ -4387,6 +4438,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_03";
+			status = "disabled";
 		};
 
 		rtdmac_control304 {
@@ -4396,6 +4448,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_04";
+			status = "disabled";
 		};
 
 		rtdmac_control305 {
@@ -4405,6 +4458,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_05";
+			status = "disabled";
 		};
 
 
@@ -4415,6 +4469,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_06";
+			status = "disabled";
 		};
 
 		rtdmac_control307 {
@@ -4424,6 +4479,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_07";
+			status = "disabled";
 		};
 
 		rtdmac_control308 {
@@ -4433,6 +4489,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_08";
+			status = "disabled";
 		};
 
 		rtdmac_control309 {
@@ -4442,6 +4499,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_09";
+			status = "disabled";
 		};
 
 		rtdmac_control310 {
@@ -4451,6 +4509,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_10";
+			status = "disabled";
 		};
 
 		rtdmac_control311 {
@@ -4460,6 +4519,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_11";
+			status = "disabled";
 		};
 
 		rtdmac_control312 {
@@ -4469,6 +4529,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_12";
+			status = "disabled";
 		};
 
 		rtdmac_control313 {
@@ -4478,6 +4539,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_13";
+			status = "disabled";
 		};
 
 		rtdmac_control314 {
@@ -4487,6 +4549,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_14";
+			status = "disabled";
 		};
 
 		rtdmac_control315 {
@@ -4496,6 +4559,7 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_15";
+			status = "disabled";
 		};
 
 		rtdmac_descriptor0: rtdmac_descriptor@ffd60000 {
