@@ -3925,6 +3925,15 @@
 			resets = <&cpg 630>;
 			linux,uio-name = "rtdmac_control_00";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control001 {
@@ -3935,6 +3944,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_01";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control002 {
@@ -3945,6 +3963,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_02";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control003 {
@@ -3955,6 +3982,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_03";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control004 {
@@ -3965,6 +4001,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_04";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control005 {
@@ -3975,6 +4020,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_05";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control006 {
@@ -3985,6 +4039,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_06";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control007 {
@@ -3995,6 +4058,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_07";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control008 {
@@ -4005,6 +4077,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_08";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control009 {
@@ -4015,6 +4096,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_09";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control010 {
@@ -4025,6 +4115,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_10";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control011 {
@@ -4035,6 +4134,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_11";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control012 {
@@ -4045,6 +4153,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_12";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control013 {
@@ -4055,6 +4172,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_13";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control014 {
@@ -4065,6 +4191,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_14";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control015 {
@@ -4075,6 +4210,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_15";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
+				 <&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
+				 <&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
+				 <&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
+				 <&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
+				 <&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
+				 <&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
+				 <&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control1: rtdmac_control@ffc20000 {
@@ -4086,6 +4230,15 @@
 			resets = <&cpg 631>;
 			linux,uio-name = "rtdmac_control_01";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control101 {
@@ -4096,6 +4249,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_01";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control102 {
@@ -4106,6 +4268,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_02";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control103 {
@@ -4116,6 +4287,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_03";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control104 {
@@ -4126,6 +4306,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_04";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control105 {
@@ -4136,6 +4325,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_05";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 
@@ -4147,6 +4345,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_06";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control107 {
@@ -4157,6 +4364,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_07";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control108 {
@@ -4167,6 +4383,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_08";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control109 {
@@ -4177,6 +4402,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_09";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control110 {
@@ -4187,6 +4421,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_10";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control111 {
@@ -4197,6 +4440,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_11";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control112 {
@@ -4207,6 +4459,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_12";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control113 {
@@ -4217,6 +4478,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_13";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control114 {
@@ -4227,6 +4497,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_14";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control115 {
@@ -4237,6 +4516,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_15";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>, <&ipmmu_rt1 17>,
+				 <&ipmmu_rt1 18>, <&ipmmu_rt1 19>,
+				 <&ipmmu_rt1 20>, <&ipmmu_rt1 21>,
+				 <&ipmmu_rt1 22>, <&ipmmu_rt1 23>,
+				 <&ipmmu_rt1 24>, <&ipmmu_rt1 25>,
+				 <&ipmmu_rt1 26>, <&ipmmu_rt1 27>,
+				 <&ipmmu_rt1 28>, <&ipmmu_rt1 29>,
+				 <&ipmmu_rt1 30>, <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control2: rtdmac_control@ffd70000 {
@@ -4248,6 +4536,15 @@
 			resets = <&cpg 700>;
 			linux,uio-name = "rtdmac_control_02";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control201 {
@@ -4258,6 +4555,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_01";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control202 {
@@ -4268,6 +4574,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_02";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control203 {
@@ -4278,6 +4593,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_03";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control204 {
@@ -4288,6 +4612,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_04";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control205 {
@@ -4298,6 +4631,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_05";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control206 {
@@ -4308,6 +4650,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_06";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control207 {
@@ -4318,6 +4669,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_07";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control208 {
@@ -4328,6 +4688,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_08";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control209 {
@@ -4338,6 +4707,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_09";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control210 {
@@ -4348,6 +4726,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_10";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control211 {
@@ -4358,6 +4745,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_11";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control212 {
@@ -4368,6 +4764,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_12";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control213 {
@@ -4378,6 +4783,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_13";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control214 {
@@ -4388,6 +4802,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_14";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control215 {
@@ -4398,6 +4821,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_15";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>, <&ipmmu_rt1 33>,
+				 <&ipmmu_rt1 34>, <&ipmmu_rt1 35>,
+				 <&ipmmu_rt1 36>, <&ipmmu_rt1 37>,
+				 <&ipmmu_rt1 38>, <&ipmmu_rt1 39>,
+				 <&ipmmu_rt1 40>, <&ipmmu_rt1 41>,
+				 <&ipmmu_rt1 42>, <&ipmmu_rt1 43>,
+				 <&ipmmu_rt1 44>, <&ipmmu_rt1 45>,
+				 <&ipmmu_rt1 46>, <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control3: rtdmac_control@ffd80000 {
@@ -4409,6 +4841,15 @@
 			resets = <&cpg 701>;
 			linux,uio-name = "rtdmac_control_03";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control301 {
@@ -4419,6 +4860,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_01";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control302 {
@@ -4429,6 +4879,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_02";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control303 {
@@ -4439,6 +4898,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_03";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control304 {
@@ -4449,6 +4917,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_04";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control305 {
@@ -4459,6 +4936,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_05";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 
@@ -4470,6 +4956,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_06";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control307 {
@@ -4480,6 +4975,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_07";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control308 {
@@ -4490,6 +4994,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_08";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control309 {
@@ -4500,6 +5013,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_09";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control310 {
@@ -4510,6 +5032,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_10";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control311 {
@@ -4520,6 +5051,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_11";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control312 {
@@ -4530,6 +5070,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_12";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control313 {
@@ -4540,6 +5089,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_13";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control314 {
@@ -4550,6 +5108,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_14";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_control315 {
@@ -4560,6 +5127,15 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_15";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>, <&ipmmu_rt1 49>,
+				 <&ipmmu_rt1 50>, <&ipmmu_rt1 51>,
+				 <&ipmmu_rt1 52>, <&ipmmu_rt1 53>,
+				 <&ipmmu_rt1 54>, <&ipmmu_rt1 55>,
+				 <&ipmmu_rt1 56>, <&ipmmu_rt1 57>,
+				 <&ipmmu_rt1 58>, <&ipmmu_rt1 59>,
+				 <&ipmmu_rt1 60>, <&ipmmu_rt1 61>,
+				 <&ipmmu_rt1 62>, <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_descriptor0: rtdmac_descriptor@ffd60000 {
