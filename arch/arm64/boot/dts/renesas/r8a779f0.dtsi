@@ -8,7 +8,7 @@
 #include <dt-bindings/clock/r8a779f0-cpg-mssr.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/r8a779f0-sysc.h>
-
+#include <dt-bindings/ipmmu/rcar-ipmmu.h>
 / {
 	compatible = "renesas,r8a779f0";
 	#address-cells = <2>;
@@ -1660,6 +1660,8 @@
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 630>;
 			linux,uio-name = "rtdmac_control_00";
+			ipmmu-id = <RCAR_IPMMU_RT1 0>;
+			iommus = <&ipmmu_rt1 0>;
 		};
 
 		rtdmac_control001 {
@@ -1669,6 +1671,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_01";
+			ipmmu-id = <RCAR_IPMMU_RT1 1>;
+			iommus = <&ipmmu_rt1 1>;
 		};
 
 		rtdmac_control002 {
@@ -1678,6 +1682,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_02";
+			ipmmu-id = <RCAR_IPMMU_RT1 2>;
+			iommus = <&ipmmu_rt1 2>;
 		};
 
 		rtdmac_control003 {
@@ -1687,6 +1693,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_03";
+			ipmmu-id = <RCAR_IPMMU_RT1 3>;
+			iommus = <&ipmmu_rt1 3>;
 		};
 
 		rtdmac_control004 {
@@ -1696,6 +1704,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_04";
+			ipmmu-id = <RCAR_IPMMU_RT1 4>;
+			iommus = <&ipmmu_rt1 4>;
 		};
 
 		rtdmac_control005 {
@@ -1704,7 +1714,9 @@
 			interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			ipmmu-id = <RCAR_IPMMU_RT1 5>;
 			linux,uio-name = "irq_rtdmac_control_00_05";
+			iommus = <&ipmmu_rt1 5>;
 		};
 
 		rtdmac_control006 {
@@ -1714,6 +1726,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_06";
+			ipmmu-id = <RCAR_IPMMU_RT1 6>;
+			iommus = <&ipmmu_rt1 6>;
 		};
 
 		rtdmac_control007 {
@@ -1723,6 +1737,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_07";
+			ipmmu-id = <RCAR_IPMMU_RT1 7>;
+			iommus = <&ipmmu_rt1 7>;
 		};
 
 		rtdmac_control008 {
@@ -1732,6 +1748,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_08";
+			ipmmu-id = <RCAR_IPMMU_RT1 8>;
+			iommus = <&ipmmu_rt1 8>;
 		};
 
 		rtdmac_control009 {
@@ -1741,6 +1759,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_09";
+			ipmmu-id = <RCAR_IPMMU_RT1 9>;
+			iommus = <&ipmmu_rt1 9>;
 		};
 
 		rtdmac_control010 {
@@ -1750,6 +1770,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_10";
+			ipmmu-id = <RCAR_IPMMU_RT1 10>;
+			iommus = <&ipmmu_rt1 10>;
 		};
 
 		rtdmac_control011 {
@@ -1759,6 +1781,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_11";
+			ipmmu-id = <RCAR_IPMMU_RT1 11>;
+			iommus = <&ipmmu_rt1 11>;
 		};
 
 		rtdmac_control012 {
@@ -1768,6 +1792,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_12";
+			ipmmu-id = <RCAR_IPMMU_RT1 12>;
+			iommus = <&ipmmu_rt1 12>;
 		};
 
 		rtdmac_control013 {
@@ -1776,7 +1802,9 @@
 			interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			ipmmu-id = <RCAR_IPMMU_RT1 13>;
 			linux,uio-name = "irq_rtdmac_control_00_13";
+			iommus = <&ipmmu_rt1 13>;
 		};
 
 		rtdmac_control014 {
@@ -1785,7 +1813,9 @@
 			interrupts = <GIC_SPI 44 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			ipmmu-id = <RCAR_IPMMU_RT1 14>;
 			linux,uio-name = "irq_rtdmac_control_00_14";
+			iommus = <&ipmmu_rt1 14>;
 		};
 
 		rtdmac_control015 {
@@ -1795,6 +1825,8 @@
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_00_15";
+			ipmmu-id = <RCAR_IPMMU_RT1 15>;
+			iommus = <&ipmmu_rt1 15>;
 		};
 
 		rtdmac_control1: rtdmac_control@ffc20000 {
@@ -1805,6 +1837,8 @@
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 631>;
 			linux,uio-name = "rtdmac_control_01";
+			ipmmu-id = <RCAR_IPMMU_RT1 16>;
+			iommus = <&ipmmu_rt1 16>;
 		};
 
 		rtdmac_control101 {
@@ -1814,6 +1848,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_01";
+			ipmmu-id = <RCAR_IPMMU_RT1 17>;
+			iommus = <&ipmmu_rt1 17>;
 		};
 
 		rtdmac_control102 {
@@ -1823,6 +1859,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_02";
+			ipmmu-id = <RCAR_IPMMU_RT1 18>;
+			iommus = <&ipmmu_rt1 18>;
 		};
 
 		rtdmac_control103 {
@@ -1832,6 +1870,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_03";
+			ipmmu-id = <RCAR_IPMMU_RT1 19>;
+			iommus = <&ipmmu_rt1 19>;
 		};
 
 		rtdmac_control104 {
@@ -1841,6 +1881,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_04";
+			ipmmu-id = <RCAR_IPMMU_RT1 20>;
+			iommus = <&ipmmu_rt1 20>;
 		};
 
 		rtdmac_control105 {
@@ -1850,6 +1892,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_05";
+			ipmmu-id = <RCAR_IPMMU_RT1 21>;
+			iommus = <&ipmmu_rt1 21>;
 		};
 
 
@@ -1860,6 +1904,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_06";
+			ipmmu-id = <RCAR_IPMMU_RT1 22>;
+			iommus = <&ipmmu_rt1 22>;
 		};
 
 		rtdmac_control107 {
@@ -1869,6 +1915,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_07";
+			ipmmu-id = <RCAR_IPMMU_RT1 23>;
+			iommus = <&ipmmu_rt1 23>;
 		};
 
 		rtdmac_control108 {
@@ -1878,6 +1926,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_08";
+			ipmmu-id = <RCAR_IPMMU_RT1 24>;
+			iommus = <&ipmmu_rt1 24>;
 		};
 
 		rtdmac_control109 {
@@ -1887,6 +1937,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_09";
+			ipmmu-id = <RCAR_IPMMU_RT1 25>;
+			iommus = <&ipmmu_rt1 25>;
 		};
 
 		rtdmac_control110 {
@@ -1896,6 +1948,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_10";
+			ipmmu-id = <RCAR_IPMMU_RT1 26>;
+			iommus = <&ipmmu_rt1 26>;
 		};
 
 		rtdmac_control111 {
@@ -1905,6 +1959,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_11";
+			ipmmu-id = <RCAR_IPMMU_RT1 27>;
+			iommus = <&ipmmu_rt1 27>;
 		};
 
 		rtdmac_control112 {
@@ -1914,6 +1970,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_12";
+			ipmmu-id = <RCAR_IPMMU_RT1 28>;
+			iommus = <&ipmmu_rt1 28>;
 		};
 
 		rtdmac_control113 {
@@ -1923,6 +1981,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_13";
+			ipmmu-id = <RCAR_IPMMU_RT1 29>;
+			iommus = <&ipmmu_rt1 29>;
 		};
 
 		rtdmac_control114 {
@@ -1932,6 +1992,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_14";
+			ipmmu-id = <RCAR_IPMMU_RT1 30>;
+			iommus = <&ipmmu_rt1 30>;
 		};
 
 		rtdmac_control115 {
@@ -1941,6 +2003,8 @@
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_01_15";
+			ipmmu-id = <RCAR_IPMMU_RT1 31>;
+			iommus = <&ipmmu_rt1 31>;
 		};
 
 		rtdmac_control2: rtdmac_control@ffd70000 {
@@ -1951,6 +2015,8 @@
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 700>;
 			linux,uio-name = "rtdmac_control_02";
+			ipmmu-id = <RCAR_IPMMU_RT1 32>;
+			iommus = <&ipmmu_rt1 32>;
 		};
 
 		rtdmac_control201 {
@@ -1960,6 +2026,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_01";
+			ipmmu-id = <RCAR_IPMMU_RT1 33>;
+			iommus = <&ipmmu_rt1 33>;
 		};
 
 		rtdmac_control202 {
@@ -1969,6 +2037,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_02";
+			ipmmu-id = <RCAR_IPMMU_RT1 34>;
+			iommus = <&ipmmu_rt1 34>;
 		};
 
 		rtdmac_control203 {
@@ -1978,6 +2048,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_03";
+			ipmmu-id = <RCAR_IPMMU_RT1 35>;
+			iommus = <&ipmmu_rt1 35>;
 		};
 
 		rtdmac_control204 {
@@ -1987,6 +2059,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_04";
+			ipmmu-id = <RCAR_IPMMU_RT1 36>;
+			iommus = <&ipmmu_rt1 36>;
 		};
 
 		rtdmac_control205 {
@@ -1996,8 +2070,9 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_05";
+			ipmmu-id = <RCAR_IPMMU_RT1 37>;
+			iommus = <&ipmmu_rt1 37>;
 		};
-
 
 		rtdmac_control206 {
 			compatible = "generic-uio";
@@ -2006,6 +2081,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_06";
+			ipmmu-id = <RCAR_IPMMU_RT1 38>;
+			iommus = <&ipmmu_rt1 38>;
 		};
 
 		rtdmac_control207 {
@@ -2015,6 +2092,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_07";
+			ipmmu-id = <RCAR_IPMMU_RT1 39>;
+			iommus = <&ipmmu_rt1 39>;
 		};
 
 		rtdmac_control208 {
@@ -2024,6 +2103,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_08";
+			ipmmu-id = <RCAR_IPMMU_RT1 40>;
+			iommus = <&ipmmu_rt1 40>;
 		};
 
 		rtdmac_control209 {
@@ -2033,6 +2114,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_09";
+			ipmmu-id = <RCAR_IPMMU_RT1 41>;
+			iommus = <&ipmmu_rt1 41>;
 		};
 
 		rtdmac_control210 {
@@ -2042,6 +2125,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_10";
+			ipmmu-id = <RCAR_IPMMU_RT1 42>;
+			iommus = <&ipmmu_rt1 42>;
 		};
 
 		rtdmac_control211 {
@@ -2051,6 +2136,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_11";
+			ipmmu-id = <RCAR_IPMMU_RT1 43>;
+			iommus = <&ipmmu_rt1 43>;
 		};
 
 		rtdmac_control212 {
@@ -2060,6 +2147,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_12";
+			ipmmu-id = <RCAR_IPMMU_RT1 44>;
+			iommus = <&ipmmu_rt1 44>;
 		};
 
 		rtdmac_control213 {
@@ -2069,6 +2158,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_13";
+			ipmmu-id = <RCAR_IPMMU_RT1 45>;
+			iommus = <&ipmmu_rt1 45>;
 		};
 
 		rtdmac_control214 {
@@ -2078,6 +2169,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_14";
+			ipmmu-id = <RCAR_IPMMU_RT1 46>;
+			iommus = <&ipmmu_rt1 46>;
 		};
 
 		rtdmac_control215 {
@@ -2087,6 +2180,8 @@
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_02_15";
+			ipmmu-id = <RCAR_IPMMU_RT1 47>;
+			iommus = <&ipmmu_rt1 47>;
 		};
 
 		rtdmac_control3: rtdmac_control@ffd80000 {
@@ -2097,6 +2192,8 @@
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 701>;
 			linux,uio-name = "rtdmac_control_03";
+			ipmmu-id = <RCAR_IPMMU_RT1 48>;
+			iommus = <&ipmmu_rt1 48>;
 		};
 
 		rtdmac_control301 {
@@ -2106,6 +2203,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_01";
+			ipmmu-id = <RCAR_IPMMU_RT1 49>;
+			iommus = <&ipmmu_rt1 49>;
 		};
 
 		rtdmac_control302 {
@@ -2115,6 +2214,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_02";
+			ipmmu-id = <RCAR_IPMMU_RT1 50>;
+			iommus = <&ipmmu_rt1 50>;
 		};
 
 		rtdmac_control303 {
@@ -2124,6 +2225,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_03";
+			ipmmu-id = <RCAR_IPMMU_RT1 51>;
+			iommus = <&ipmmu_rt1 51>;
 		};
 
 		rtdmac_control304 {
@@ -2133,6 +2236,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_04";
+			ipmmu-id = <RCAR_IPMMU_RT1 52>;
+			iommus = <&ipmmu_rt1 52>;
 		};
 
 		rtdmac_control305 {
@@ -2142,6 +2247,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_05";
+			ipmmu-id = <RCAR_IPMMU_RT1 53>;
+			iommus = <&ipmmu_rt1 53>;
 		};
 
 		rtdmac_control306 {
@@ -2151,6 +2258,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_06";
+			ipmmu-id = <RCAR_IPMMU_RT1 54>;
+			iommus = <&ipmmu_rt1 54>;
 		};
 
 		rtdmac_control307 {
@@ -2160,6 +2269,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_07";
+			ipmmu-id = <RCAR_IPMMU_RT1 55>;
+			iommus = <&ipmmu_rt1 55>;
 		};
 
 		rtdmac_control308 {
@@ -2169,6 +2280,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_08";
+			ipmmu-id = <RCAR_IPMMU_RT1 56>;
+			iommus = <&ipmmu_rt1 56>;
 		};
 
 		rtdmac_control309 {
@@ -2178,6 +2291,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_09";
+			ipmmu-id = <RCAR_IPMMU_RT1 57>;
+			iommus = <&ipmmu_rt1 57>;
 		};
 
 		rtdmac_control310 {
@@ -2187,6 +2302,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_10";
+			ipmmu-id = <RCAR_IPMMU_RT1 58>;
+			iommus = <&ipmmu_rt1 58>;
 		};
 
 		rtdmac_control311 {
@@ -2196,6 +2313,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_11";
+			ipmmu-id = <RCAR_IPMMU_RT1 59>;
+			iommus = <&ipmmu_rt1 59>;
 		};
 
 		rtdmac_control312 {
@@ -2205,6 +2324,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_12";
+			ipmmu-id = <RCAR_IPMMU_RT1 60>;
+			iommus = <&ipmmu_rt1 60>;
 		};
 
 		rtdmac_control313 {
@@ -2214,6 +2335,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_13";
+			ipmmu-id = <RCAR_IPMMU_RT1 61>;
+			iommus = <&ipmmu_rt1 61>;
 		};
 
 		rtdmac_control314 {
@@ -2223,6 +2346,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_14";
+			ipmmu-id = <RCAR_IPMMU_RT1 62>;
+			iommus = <&ipmmu_rt1 62>;
 		};
 
 		rtdmac_control315 {
@@ -2232,6 +2357,8 @@
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_rtdmac_control_03_15";
+			ipmmu-id = <RCAR_IPMMU_RT1 63>;
+			iommus = <&ipmmu_rt1 63>;
 		};
 
 		rtdmac_descriptor0: rtdmac_descriptor@ffd60000 {
