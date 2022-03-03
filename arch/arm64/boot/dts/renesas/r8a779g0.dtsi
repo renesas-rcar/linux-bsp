@@ -5293,6 +5293,8 @@
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			resets = <&cpg 2806>;
 			linux,uio-name = "hsm_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		dcm0: dcm@ff080000 {
@@ -5301,6 +5303,8 @@
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			linux,uio-name = "dcm_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		cbf0: cbf@ff0e8000 {
@@ -5309,6 +5313,8 @@
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			linux,uio-name = "cbf_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		sbf0: sbf@ff0ec000 {
@@ -5325,6 +5331,8 @@
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			linux,uio-name = "osm_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		ism0: ism@ff100000 {
@@ -5333,6 +5341,8 @@
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			linux,uio-name = "ism_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		ism1: ism@ff120000 {
@@ -5341,6 +5351,8 @@
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			linux,uio-name = "ism_01";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		sdmac0: sdma@ff180000 {
@@ -5351,6 +5363,8 @@
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			resets = <&cpg 2807>;
 			linux,uio-name = "sdmac_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		sdma0_01 {
@@ -5360,6 +5374,8 @@
 			clocks = <&cpg CPG_MOD 2807>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			linux,uio-name = "irq_sdma_00_01";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		fbs: fbs@ff200000 {
@@ -5369,6 +5385,8 @@
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			linux,uio-name = "fbs_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		apb: apb@ff290000 {
@@ -5377,6 +5395,8 @@
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			linux,uio-name = "apb_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		dul: dul@ff298000 {
@@ -5385,6 +5405,8 @@
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			linux,uio-name = "dul_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 16>;
+			iommus = <&ipmmu_vi1 16>;
 		};
 
 		system_ram: systemram@e6300000 {
