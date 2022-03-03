@@ -1438,6 +1438,8 @@
 
 			renesas,fcp = <&fcpvd0>;
 			linux,uio-name = "vsp_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 6>;
+			iommus = <&ipmmu_vi1 6>;
 		};
 
 		vspd1: vsp@fea28000 {
@@ -1450,6 +1452,8 @@
 
 			renesas,fcp = <&fcpvd1>;
 			linux,uio-name = "vsp_01";
+			ipmmu-id = <RCAR_IPMMU_VI1 7>;
+			iommus = <&ipmmu_vi1 7>;
 		};
 
 		du: display@feb00000 {
@@ -5415,6 +5419,8 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_00";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -5445,6 +5451,8 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_01";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -5475,6 +5483,8 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_02";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -5505,6 +5515,8 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_03";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 0>;
 
 			ports {
 				#address-cells = <1>;
@@ -5534,6 +5546,8 @@
 			renesas,id = <4>;
 			linux,uio-name = "vin_04";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 0>;
 		};
 
 		vin05: video@e6ef5000 {
@@ -5546,6 +5560,8 @@
 			renesas,id = <5>;
 			linux,uio-name = "vin_05";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 0>;
 		};
 
 		vin06: video@e6ef6000 {
@@ -5558,6 +5574,8 @@
 			renesas,id = <6>;
 			linux,uio-name = "vin_06";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 0>;
 		};
 
 		vin07: video@e6ef7000 {
@@ -5570,6 +5588,8 @@
 			renesas,id = <7>;
 			linux,uio-name = "vin_07";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
+			iommus = <&ipmmu_vi0 1>;
 		};
 
 		vin10: video@e6ef8000 {
@@ -5583,6 +5603,8 @@
 			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_10";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
+			iommus = <&ipmmu_vi0 1>;
 
 			ports {
 				#address-cells = <1>;
@@ -5613,6 +5635,8 @@
 			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_11";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
+			iommus = <&ipmmu_vi0 1>;
 
 			ports {
 				#address-cells = <1>;
@@ -5643,6 +5667,8 @@
 			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_12";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
+			iommus = <&ipmmu_vi0 1>;
 
 			ports {
 				#address-cells = <1>;
@@ -5673,6 +5699,8 @@
 			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_13";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
+			iommus = <&ipmmu_vi0 1>;
 
 			ports {
 				#address-cells = <1>;
@@ -5702,6 +5730,8 @@
 			renesas,id = <12>;
 			linux,uio-name = "vin_14";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
+			iommus = <&ipmmu_vi0 1>;
 		};
 
 		vin15: video@e6efd000 {
@@ -5714,6 +5744,8 @@
 			renesas,id = <13>;
 			linux,uio-name = "vin_15";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
+			iommus = <&ipmmu_vi0 1>;
 		};
 
 		vin16: video@e6efe000 {
@@ -5726,6 +5758,8 @@
 			renesas,id = <14>;
 			linux,uio-name = "vin_16";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
+			iommus = <&ipmmu_vi0 1>;
 		};
 
 		vin17: video@e6eff000 {
@@ -5738,6 +5772,8 @@
 			renesas,id = <15>;
 			linux,uio-name = "vin_17";
 			status = "disabled";
+			ipmmu-id = <RCAR_IPMMU_VI0 1>;
+			iommus = <&ipmmu_vi0 1>;
 		};
 
 		csi40: csi2@fe500000 {
