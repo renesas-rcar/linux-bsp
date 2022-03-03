@@ -2800,6 +2800,8 @@
 			resets = <&cpg 616>;
 			interrupts = <GIC_SPI 855 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "ivcp1e_00";
+			ipmmu-id = <RCAR_IPMMU_VC 14>;
+			iommus = <&ipmmu_vc 14>;
 		};
 
 		irq_ivcp1e_00_01 {
@@ -2809,6 +2811,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			interrupts = <GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "irq_ivcp1e_00_01";
+			ipmmu-id = <RCAR_IPMMU_VC 14>;
 		};
 
 		vcp4_00: vcpl4@fe910000 {
