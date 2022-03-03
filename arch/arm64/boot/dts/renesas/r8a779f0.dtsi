@@ -1441,6 +1441,7 @@
 			linux,uio-name = "rtdmac_control_00";
 			ipmmu-id = <RCAR_IPMMU_RT1 0>;
 			iommus = <&ipmmu_rt1 0>;
+			status = "disabled";
 		};
 
 		rtdmac_control001 {
@@ -1452,6 +1453,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_01";
 			ipmmu-id = <RCAR_IPMMU_RT1 1>;
 			iommus = <&ipmmu_rt1 1>;
+			status = "disabled";
 		};
 
 		rtdmac_control002 {
@@ -1463,6 +1465,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_02";
 			ipmmu-id = <RCAR_IPMMU_RT1 2>;
 			iommus = <&ipmmu_rt1 2>;
+			status = "disabled";
 		};
 
 		rtdmac_control003 {
@@ -1474,6 +1477,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_03";
 			ipmmu-id = <RCAR_IPMMU_RT1 3>;
 			iommus = <&ipmmu_rt1 3>;
+			status = "disabled";
 		};
 
 		rtdmac_control004 {
@@ -1485,6 +1489,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_04";
 			ipmmu-id = <RCAR_IPMMU_RT1 4>;
 			iommus = <&ipmmu_rt1 4>;
+			status = "disabled";
 		};
 
 		rtdmac_control005 {
@@ -1496,6 +1501,7 @@
 			ipmmu-id = <RCAR_IPMMU_RT1 5>;
 			linux,uio-name = "irq_rtdmac_control_00_05";
 			iommus = <&ipmmu_rt1 5>;
+			status = "disabled";
 		};
 
 		rtdmac_control006 {
@@ -1507,6 +1513,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_06";
 			ipmmu-id = <RCAR_IPMMU_RT1 6>;
 			iommus = <&ipmmu_rt1 6>;
+			status = "disabled";
 		};
 
 		rtdmac_control007 {
@@ -1518,6 +1525,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_07";
 			ipmmu-id = <RCAR_IPMMU_RT1 7>;
 			iommus = <&ipmmu_rt1 7>;
+			status = "disabled";
 		};
 
 		rtdmac_control008 {
@@ -1529,6 +1537,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_08";
 			ipmmu-id = <RCAR_IPMMU_RT1 8>;
 			iommus = <&ipmmu_rt1 8>;
+			status = "disabled";
 		};
 
 		rtdmac_control009 {
@@ -1540,6 +1549,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_09";
 			ipmmu-id = <RCAR_IPMMU_RT1 9>;
 			iommus = <&ipmmu_rt1 9>;
+			status = "disabled";
 		};
 
 		rtdmac_control010 {
@@ -1551,6 +1561,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_10";
 			ipmmu-id = <RCAR_IPMMU_RT1 10>;
 			iommus = <&ipmmu_rt1 10>;
+			status = "disabled";
 		};
 
 		rtdmac_control011 {
@@ -1562,6 +1573,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_11";
 			ipmmu-id = <RCAR_IPMMU_RT1 11>;
 			iommus = <&ipmmu_rt1 11>;
+			status = "disabled";
 		};
 
 		rtdmac_control012 {
@@ -1573,6 +1585,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_12";
 			ipmmu-id = <RCAR_IPMMU_RT1 12>;
 			iommus = <&ipmmu_rt1 12>;
+			status = "disabled";
 		};
 
 		rtdmac_control013 {
@@ -1584,6 +1597,7 @@
 			ipmmu-id = <RCAR_IPMMU_RT1 13>;
 			linux,uio-name = "irq_rtdmac_control_00_13";
 			iommus = <&ipmmu_rt1 13>;
+			status = "disabled";
 		};
 
 		rtdmac_control014 {
@@ -1595,6 +1609,7 @@
 			ipmmu-id = <RCAR_IPMMU_RT1 14>;
 			linux,uio-name = "irq_rtdmac_control_00_14";
 			iommus = <&ipmmu_rt1 14>;
+			status = "disabled";
 		};
 
 		rtdmac_control015 {
@@ -1606,6 +1621,7 @@
 			linux,uio-name = "irq_rtdmac_control_00_15";
 			ipmmu-id = <RCAR_IPMMU_RT1 15>;
 			iommus = <&ipmmu_rt1 15>;
+			status = "disabled";
 		};
 
 		rtdmac_control1: rtdmac_control@ffc20000 {
@@ -1618,6 +1634,7 @@
 			linux,uio-name = "rtdmac_control_01";
 			ipmmu-id = <RCAR_IPMMU_RT1 16>;
 			iommus = <&ipmmu_rt1 16>;
+			status = "disabled";
 		};
 
 		rtdmac_control101 {
@@ -1629,6 +1646,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_01";
 			ipmmu-id = <RCAR_IPMMU_RT1 17>;
 			iommus = <&ipmmu_rt1 17>;
+			status = "disabled";
 		};
 
 		rtdmac_control102 {
@@ -1640,6 +1658,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_02";
 			ipmmu-id = <RCAR_IPMMU_RT1 18>;
 			iommus = <&ipmmu_rt1 18>;
+			status = "disabled";
 		};
 
 		rtdmac_control103 {
@@ -1651,6 +1670,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_03";
 			ipmmu-id = <RCAR_IPMMU_RT1 19>;
 			iommus = <&ipmmu_rt1 19>;
+			status = "disabled";
 		};
 
 		rtdmac_control104 {
@@ -1662,6 +1682,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_04";
 			ipmmu-id = <RCAR_IPMMU_RT1 20>;
 			iommus = <&ipmmu_rt1 20>;
+			status = "disabled";
 		};
 
 		rtdmac_control105 {
@@ -1673,8 +1694,8 @@
 			linux,uio-name = "irq_rtdmac_control_01_05";
 			ipmmu-id = <RCAR_IPMMU_RT1 21>;
 			iommus = <&ipmmu_rt1 21>;
+			status = "disabled";
 		};
-
 
 		rtdmac_control106 {
 			compatible = "generic-uio";
@@ -1685,6 +1706,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_06";
 			ipmmu-id = <RCAR_IPMMU_RT1 22>;
 			iommus = <&ipmmu_rt1 22>;
+			status = "disabled";
 		};
 
 		rtdmac_control107 {
@@ -1696,6 +1718,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_07";
 			ipmmu-id = <RCAR_IPMMU_RT1 23>;
 			iommus = <&ipmmu_rt1 23>;
+			status = "disabled";
 		};
 
 		rtdmac_control108 {
@@ -1707,6 +1730,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_08";
 			ipmmu-id = <RCAR_IPMMU_RT1 24>;
 			iommus = <&ipmmu_rt1 24>;
+			status = "disabled";
 		};
 
 		rtdmac_control109 {
@@ -1718,6 +1742,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_09";
 			ipmmu-id = <RCAR_IPMMU_RT1 25>;
 			iommus = <&ipmmu_rt1 25>;
+			status = "disabled";
 		};
 
 		rtdmac_control110 {
@@ -1729,6 +1754,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_10";
 			ipmmu-id = <RCAR_IPMMU_RT1 26>;
 			iommus = <&ipmmu_rt1 26>;
+			status = "disabled";
 		};
 
 		rtdmac_control111 {
@@ -1740,6 +1766,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_11";
 			ipmmu-id = <RCAR_IPMMU_RT1 27>;
 			iommus = <&ipmmu_rt1 27>;
+			status = "disabled";
 		};
 
 		rtdmac_control112 {
@@ -1751,6 +1778,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_12";
 			ipmmu-id = <RCAR_IPMMU_RT1 28>;
 			iommus = <&ipmmu_rt1 28>;
+			status = "disabled";
 		};
 
 		rtdmac_control113 {
@@ -1762,6 +1790,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_13";
 			ipmmu-id = <RCAR_IPMMU_RT1 29>;
 			iommus = <&ipmmu_rt1 29>;
+			status = "disabled";
 		};
 
 		rtdmac_control114 {
@@ -1773,6 +1802,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_14";
 			ipmmu-id = <RCAR_IPMMU_RT1 30>;
 			iommus = <&ipmmu_rt1 30>;
+			status = "disabled";
 		};
 
 		rtdmac_control115 {
@@ -1784,6 +1814,7 @@
 			linux,uio-name = "irq_rtdmac_control_01_15";
 			ipmmu-id = <RCAR_IPMMU_RT1 31>;
 			iommus = <&ipmmu_rt1 31>;
+			status = "disabled";
 		};
 
 		rtdmac_control2: rtdmac_control@ffd70000 {
@@ -1796,6 +1827,7 @@
 			linux,uio-name = "rtdmac_control_02";
 			ipmmu-id = <RCAR_IPMMU_RT1 32>;
 			iommus = <&ipmmu_rt1 32>;
+			status = "disabled";
 		};
 
 		rtdmac_control201 {
@@ -1807,6 +1839,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_01";
 			ipmmu-id = <RCAR_IPMMU_RT1 33>;
 			iommus = <&ipmmu_rt1 33>;
+			status = "disabled";
 		};
 
 		rtdmac_control202 {
@@ -1818,6 +1851,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_02";
 			ipmmu-id = <RCAR_IPMMU_RT1 34>;
 			iommus = <&ipmmu_rt1 34>;
+			status = "disabled";
 		};
 
 		rtdmac_control203 {
@@ -1829,6 +1863,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_03";
 			ipmmu-id = <RCAR_IPMMU_RT1 35>;
 			iommus = <&ipmmu_rt1 35>;
+			status = "disabled";
 		};
 
 		rtdmac_control204 {
@@ -1840,6 +1875,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_04";
 			ipmmu-id = <RCAR_IPMMU_RT1 36>;
 			iommus = <&ipmmu_rt1 36>;
+			status = "disabled";
 		};
 
 		rtdmac_control205 {
@@ -1851,6 +1887,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_05";
 			ipmmu-id = <RCAR_IPMMU_RT1 37>;
 			iommus = <&ipmmu_rt1 37>;
+			status = "disabled";
 		};
 
 		rtdmac_control206 {
@@ -1862,6 +1899,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_06";
 			ipmmu-id = <RCAR_IPMMU_RT1 38>;
 			iommus = <&ipmmu_rt1 38>;
+			status = "disabled";
 		};
 
 		rtdmac_control207 {
@@ -1873,6 +1911,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_07";
 			ipmmu-id = <RCAR_IPMMU_RT1 39>;
 			iommus = <&ipmmu_rt1 39>;
+			status = "disabled";
 		};
 
 		rtdmac_control208 {
@@ -1884,6 +1923,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_08";
 			ipmmu-id = <RCAR_IPMMU_RT1 40>;
 			iommus = <&ipmmu_rt1 40>;
+			status = "disabled";
 		};
 
 		rtdmac_control209 {
@@ -1895,6 +1935,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_09";
 			ipmmu-id = <RCAR_IPMMU_RT1 41>;
 			iommus = <&ipmmu_rt1 41>;
+			status = "disabled";
 		};
 
 		rtdmac_control210 {
@@ -1906,6 +1947,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_10";
 			ipmmu-id = <RCAR_IPMMU_RT1 42>;
 			iommus = <&ipmmu_rt1 42>;
+			status = "disabled";
 		};
 
 		rtdmac_control211 {
@@ -1917,6 +1959,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_11";
 			ipmmu-id = <RCAR_IPMMU_RT1 43>;
 			iommus = <&ipmmu_rt1 43>;
+			status = "disabled";
 		};
 
 		rtdmac_control212 {
@@ -1928,6 +1971,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_12";
 			ipmmu-id = <RCAR_IPMMU_RT1 44>;
 			iommus = <&ipmmu_rt1 44>;
+			status = "disabled";
 		};
 
 		rtdmac_control213 {
@@ -1939,6 +1983,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_13";
 			ipmmu-id = <RCAR_IPMMU_RT1 45>;
 			iommus = <&ipmmu_rt1 45>;
+			status = "disabled";
 		};
 
 		rtdmac_control214 {
@@ -1950,6 +1995,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_14";
 			ipmmu-id = <RCAR_IPMMU_RT1 46>;
 			iommus = <&ipmmu_rt1 46>;
+			status = "disabled";
 		};
 
 		rtdmac_control215 {
@@ -1961,6 +2007,7 @@
 			linux,uio-name = "irq_rtdmac_control_02_15";
 			ipmmu-id = <RCAR_IPMMU_RT1 47>;
 			iommus = <&ipmmu_rt1 47>;
+			status = "disabled";
 		};
 
 		rtdmac_control3: rtdmac_control@ffd80000 {
@@ -1973,6 +2020,7 @@
 			linux,uio-name = "rtdmac_control_03";
 			ipmmu-id = <RCAR_IPMMU_RT1 48>;
 			iommus = <&ipmmu_rt1 48>;
+			status = "disabled";
 		};
 
 		rtdmac_control301 {
@@ -1995,6 +2043,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_02";
 			ipmmu-id = <RCAR_IPMMU_RT1 50>;
 			iommus = <&ipmmu_rt1 50>;
+			status = "disabled";
 		};
 
 		rtdmac_control303 {
@@ -2006,6 +2055,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_03";
 			ipmmu-id = <RCAR_IPMMU_RT1 51>;
 			iommus = <&ipmmu_rt1 51>;
+			status = "disabled";
 		};
 
 		rtdmac_control304 {
@@ -2017,6 +2067,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_04";
 			ipmmu-id = <RCAR_IPMMU_RT1 52>;
 			iommus = <&ipmmu_rt1 52>;
+			status = "disabled";
 		};
 
 		rtdmac_control305 {
@@ -2028,6 +2079,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_05";
 			ipmmu-id = <RCAR_IPMMU_RT1 53>;
 			iommus = <&ipmmu_rt1 53>;
+			status = "disabled";
 		};
 
 		rtdmac_control306 {
@@ -2039,6 +2091,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_06";
 			ipmmu-id = <RCAR_IPMMU_RT1 54>;
 			iommus = <&ipmmu_rt1 54>;
+			status = "disabled";
 		};
 
 		rtdmac_control307 {
@@ -2050,6 +2103,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_07";
 			ipmmu-id = <RCAR_IPMMU_RT1 55>;
 			iommus = <&ipmmu_rt1 55>;
+			status = "disabled";
 		};
 
 		rtdmac_control308 {
@@ -2061,6 +2115,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_08";
 			ipmmu-id = <RCAR_IPMMU_RT1 56>;
 			iommus = <&ipmmu_rt1 56>;
+			status = "disabled";
 		};
 
 		rtdmac_control309 {
@@ -2072,6 +2127,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_09";
 			ipmmu-id = <RCAR_IPMMU_RT1 57>;
 			iommus = <&ipmmu_rt1 57>;
+			status = "disabled";
 		};
 
 		rtdmac_control310 {
@@ -2083,6 +2139,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_10";
 			ipmmu-id = <RCAR_IPMMU_RT1 58>;
 			iommus = <&ipmmu_rt1 58>;
+			status = "disabled";
 		};
 
 		rtdmac_control311 {
@@ -2094,6 +2151,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_11";
 			ipmmu-id = <RCAR_IPMMU_RT1 59>;
 			iommus = <&ipmmu_rt1 59>;
+			status = "disabled";
 		};
 
 		rtdmac_control312 {
@@ -2105,6 +2163,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_12";
 			ipmmu-id = <RCAR_IPMMU_RT1 60>;
 			iommus = <&ipmmu_rt1 60>;
+			status = "disabled";
 		};
 
 		rtdmac_control313 {
@@ -2116,6 +2175,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_13";
 			ipmmu-id = <RCAR_IPMMU_RT1 61>;
 			iommus = <&ipmmu_rt1 61>;
+			status = "disabled";
 		};
 
 		rtdmac_control314 {
@@ -2127,6 +2187,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_14";
 			ipmmu-id = <RCAR_IPMMU_RT1 62>;
 			iommus = <&ipmmu_rt1 62>;
+			status = "disabled";
 		};
 
 		rtdmac_control315 {
@@ -2138,6 +2199,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_15";
 			ipmmu-id = <RCAR_IPMMU_RT1 63>;
 			iommus = <&ipmmu_rt1 63>;
+			status = "disabled";
 		};
 
 		rtdmac_descriptor0: rtdmac_descriptor@ffd60000 {
