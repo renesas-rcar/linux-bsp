@@ -5339,14 +5339,14 @@
 			linux,uio-name = "ism_01";
 		};
 
-		sdma0: sdma@ff180000 {
+		sdmac0: sdma@ff180000 {
 			compatible = "generic-uio";
 			reg = <0 0xff180000 0 0x10000>;
 			interrupts = <GIC_SPI 213 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2807>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
 			resets = <&cpg 2807>;
-			linux,uio-name = "sdma_00";
+			linux,uio-name = "sdmac_00";
 		};
 
 		sdma0_01 {
