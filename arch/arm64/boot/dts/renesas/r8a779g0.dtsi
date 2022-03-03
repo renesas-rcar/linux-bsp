@@ -2611,6 +2611,10 @@
 			power-domains = <&sysc R8A779G0_PD_A3ISP0>;
 			resets = <&cpg 16>;
 			linux,uio-name = "cisp_00";
+			ipmmu-id = <RCAR_IPMMU_VI0 10>;
+			iommus = <&ipmmu_vi0 10>, <&ipmmu_vi0 14>,
+				 <&ipmmu_vi0 18>, <&ipmmu_vi0 22>,
+				 <&ipmmu_vi0 26>;
 		};
 
 		tisp0: tisp@fed00000 {
@@ -2631,6 +2635,10 @@
 			power-domains = <&sysc R8A779G0_PD_A3ISP1>;
 			resets = <&cpg 17>;
 			linux,uio-name = "cisp_01";
+			ipmmu-id = <RCAR_IPMMU_VI0 11>;
+			iommus = <&ipmmu_vi0 11>, <&ipmmu_vi0 15>,
+				 <&ipmmu_vi0 19>, <&ipmmu_vi0 23>,
+				 <&ipmmu_vi0 27>; 
 		};
 
 		tisp1: tisp@fed20000 {
@@ -2651,6 +2659,8 @@
 			power-domains = <&sysc R8A779G0_PD_A3ISP0>;
 			resets = <&cpg 1028>;
 			linux,uio-name = "vspx_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 24>;
+			iommus = <&ipmmu_vi1 24>;
 		};
 
 		vspx1: vspx@fedd8000 {
@@ -2661,6 +2671,8 @@
 			power-domains = <&sysc R8A779G0_PD_A3ISP1>;
 			resets = <&cpg 1029>;
 			linux,uio-name = "vspx_01";
+			ipmmu-id = <RCAR_IPMMU_VI1 25>;
+			iommus = <&ipmmu_vi1 25>;
 		};
 
 		fcpvx0: fcpvs@fedb0000 {
@@ -2670,6 +2682,8 @@
 			power-domains = <&sysc R8A779G0_PD_A3ISP0>;
 			resets = <&cpg 1100>;
 			linux,uio-name = "fcpvx_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 24>;
+			iommus = <&ipmmu_vi1 24>;
 		};
 
 		fcpvx1: fcpvs@fedb8000 {
@@ -2679,6 +2693,8 @@
 			power-domains = <&sysc R8A779G0_PD_A3ISP1>;
 			resets = <&cpg 1101>;
 			linux,uio-name = "fcpvx_01";
+			ipmmu-id = <RCAR_IPMMU_VI1 25>;
+			iommus = <&ipmmu_vi1 25>;
 		};
 
 		gsx: gsx@fd000000 {
