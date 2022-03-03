@@ -2507,6 +2507,8 @@
 			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
 			resets = <&cpg 9>;
 			linux,uio-name = "dof_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0 3>;
+			iommus = <&ipmmu_vip0 13>;
 		};
 
 		dof_err_00 {
@@ -2516,6 +2518,7 @@
 			clocks = <&cpg CPG_MOD 9>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
 			linux,uio-name = "irq_dof_00_01";
+			ipmmu-id = <RCAR_IPMMU_VIP0 3>;
 		};
 
 		smd_ps_sts_00 {
@@ -2526,6 +2529,8 @@
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			resets = <&cpg 7>;
 			linux,uio-name = "smd_ps_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0 2>;
+			iommus = <&ipmmu_vip0 2>;
 		};
 
 		smd_ps_err_00 {
@@ -2535,6 +2540,7 @@
 			clocks = <&cpg CPG_MOD 7>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			linux,uio-name = "irq_smd_ps_00_01";
+			ipmmu-id = <RCAR_IPMMU_VIP0 2>;
 		};
 
 		smd_post_sts_00 {
@@ -2545,6 +2551,8 @@
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			resets = <&cpg 5>;
 			linux,uio-name = "smd_post_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0 1>;
+			iommus = <&ipmmu_vip0 1>;
 		};
 
 		smd_post_err_00 {
@@ -2554,12 +2562,15 @@
 			clocks = <&cpg CPG_MOD 5>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			linux,uio-name = "irq_smd_post_00_01";
+			ipmmu-id = <RCAR_IPMMU_VIP0 1>;
 		};
 
 		dof_fcprm {
 			compatible = "generic-uio";
 			reg = <0 0xe7ab1000 0 0x1000>;
 			linux,uio-name = "dof_fcprm_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0 3>;
+			iommus = <&ipmmu_vip0 3>;
 		};
 
 		dof_wrap {
@@ -2568,6 +2579,8 @@
 			clocks = <&cpg CPG_MOD 9>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
 			linux,uio-name = "dof_wrap_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0 3>;
+			iommus = <&ipmmu_vip0 3>;
 		};
 
 		smd_ps_wrap {
@@ -2576,6 +2589,8 @@
 			clocks = <&cpg CPG_MOD 7>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			linux,uio-name = "smd_ps_wrap_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0 2>;
+			iommus = <&ipmmu_vip0 2>;
 		};
 
 		smd_post_wrap {
@@ -2584,6 +2599,8 @@
 			clocks = <&cpg CPG_MOD 5>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
 			linux,uio-name = "smd_post_wrap_00";
+			ipmmu-id = <RCAR_IPMMU_VIP0 1>;
+			iommus = <&ipmmu_vip0 1>;
 		};
 
 		cisp0: cisp@fec00000 {
