@@ -8,6 +8,7 @@
 #include <dt-bindings/clock/r8a779g0-cpg-mssr.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/r8a779g0-sysc.h>
+#include <dt-bindings/ipmmu/rcar-ipmmu.h>
 
 / {
 	compatible = "renesas,r8a779g0";
@@ -1766,6 +1767,8 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 529>;
 			linux,uio-name = "ims_00";
+			ipmmu-id = <RCAR_IPMMU_VC 8>;
+			iommus = <&ipmmu_vc 8>;
 		};
 
 		imrlx6_ims1: ims@fe870000 {
@@ -1776,6 +1779,8 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 530>;
 			linux,uio-name = "ims_01";
+			ipmmu-id = <RCAR_IPMMU_VC 9>;
+			iommus = <&ipmmu_vc 9>;
 		};
 
 		imrlx6_imr0: imr@fe880000 {
@@ -1786,6 +1791,8 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 525>;
 			linux,uio-name = "imr_00";
+			ipmmu-id = <RCAR_IPMMU_VC 0>;
+			iommus = <&ipmmu_vc 0>, <&ipmmu_vc 4>;
 		};
 
 		imrlx6_imr1: imr@fe890000 {
@@ -1796,6 +1803,8 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 526>;
 			linux,uio-name = "imr_01";
+			ipmmu-id = <RCAR_IPMMU_VC 1>;
+			iommus = <&ipmmu_vc 1>, <&ipmmu_vc 5>;
 		};
 
 		imrlx6_imr2: imr@fe8a0000 {
@@ -1806,6 +1815,8 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 527>;
 			linux,uio-name = "imr_02";
+			ipmmu-id = <RCAR_IPMMU_VC 2>;
+			iommus = <&ipmmu_vc 2>, <&ipmmu_vc 6>;
 		};
 
 		impslv0: imp-distributer0@ff900000 {
