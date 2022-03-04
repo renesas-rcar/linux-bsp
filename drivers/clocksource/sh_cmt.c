@@ -338,19 +338,11 @@ static int sh_cmt_enable(struct sh_cmt_channel *ch)
 		sh_cmt_write_cmcsr(ch, SH_CMT16_CMCSR_CMIE |
 				   SH_CMT16_CMCSR_CKS512);
 	} else {
-		switch (ch->cmt->info->model) {
-		case SH_CMT0_RCAR_GEN2:
-		case SH_CMT1_RCAR_GEN2:
-			sh_cmt_write_cmcsr(ch, SH_CMT32_CMCSR_CMM |
-					   SH_CMT32_CMCSR_CMR_IRQ |
-					   SH_CMT32_CMCSR_CKS_RCLK8);
-			break;
-		default:
-			sh_cmt_write_cmcsr(ch, SH_CMT32_CMCSR_CMM |
-					   SH_CMT32_CMCSR_CMTOUT_IE |
-					   SH_CMT32_CMCSR_CMR_IRQ |
-					   SH_CMT32_CMCSR_CKS_RCLK8);
-		}
+		u32 cmtout = ch->cmt->info->model <= SH_CMT_48BIT ?
+			      SH_CMT32_CMCSR_CMTOUT_IE : 0;
+		sh_cmt_write_cmcsr(ch, cmtout | SH_CMT32_CMCSR_CMM |
+				   SH_CMT32_CMCSR_CMR_IRQ |
+				   SH_CMT32_CMCSR_CKS_RCLK8);
 	}
 
 	sh_cmt_write_cmcor(ch, 0xffffffff);
