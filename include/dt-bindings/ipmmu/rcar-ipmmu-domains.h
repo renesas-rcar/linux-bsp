@@ -32,6 +32,7 @@
 #define RCAR_IPMMU_VIP0		19
 #define RCAR_IPMMU_VIP1		20
 #define RCAR_IPMMU_3DG		21
+#define RCAR_IPMMU_VC		22
 
 #endif /* __LINUX_RCAR_IPMMU_DOMAINS_H__ */
 
