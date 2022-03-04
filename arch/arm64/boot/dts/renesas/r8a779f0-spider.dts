@@ -120,6 +120,12 @@
 	pinctrl-names = "default";
 };
 
+&pciec1_ep {
+	status = "disabled";
+	pinctrl-0 = <&pcie1_pins>;
+	pinctrl-names = "default";
+};
+
 &tau_pwm0 {
 	pinctrl-0 = <&taud0_pwm_pins>;
 	pinctrl-names = "default";
