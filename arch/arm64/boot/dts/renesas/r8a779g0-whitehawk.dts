@@ -496,6 +496,12 @@
 	pinctrl-names = "default";
 };
 
+&pciec1_ep {
+        status = "disabled";
+        pinctrl-0 = <&pcie1_pins>;
+        pinctrl-names = "default";
+};
+
 &du {
 	status = "okay";
 };
