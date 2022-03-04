@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * PCIe host controller driver for Renesas R-Car V3U Series SoCs
- *  Copyright (C) 2020-2021 Renesas Electronics Corporation
+ * PCIe host controller driver for Renesas R-Car V3U and Gen4 Series SoCs
+ *  Copyright (C) 2022 Renesas Electronics Corporation
  *
  * Author: Hoang Vo <hoang.vo.eb@renesas.com>
  */
@@ -54,6 +54,8 @@
 #define RCVRCTRLP0		0x0040
 #define  PHY0_RX1_TERM_ACDC	BIT(14)
 #define  PHY0_RX0_TERM_ACDC	BIT(13)
+
+#define REFCLKCTRLP0		0x0B8
 
 /* PCI Shadow offset */
 #define SHADOW_REG(x)		(0x2000 + (x))
@@ -238,7 +240,7 @@ static void renesas_pcie_init_rc(struct renesas_pcie *pcie)
 
 	/* Device type selection - Root Complex */
 	val = renesas_pcie_readl(pcie, PCIEMSR0);
-	val |= BIFUR_MOD_SET_ON | DEVICE_TYPE_RC;
+	val |= DEVICE_TYPE_RC;
 	renesas_pcie_writel(pcie, PCIEMSR0, val);
 
 	/* Enable DBI read-only registers for writing */
@@ -284,6 +286,10 @@ static void renesas_pcie_init_rc(struct renesas_pcie *pcie)
 	val = renesas_pcie_phy_readl(pcie, RCVRCTRLP0);
 	val |= PHY0_RX0_TERM_ACDC | PHY0_RX1_TERM_ACDC;
 	renesas_pcie_phy_writel(pcie, RCVRCTRLP0, val);
+
+	val = renesas_pcie_phy_readl(pcie, REFCLKCTRLP0);
+	val |= BIT(10) | BIT(9);
+	renesas_pcie_phy_writel(pcie, REFCLKCTRLP0, val);
 }
 
 static int renesas_pcie_host_enable(struct renesas_pcie *pcie)
@@ -406,6 +412,7 @@ err_pm_put:
 
 static const struct of_device_id renesas_pcie_of_match[] = {
 	{ .compatible = "renesas,r8a779a0-pcie", },
+	{ .compatible = "renesas,r8a779g0-pcie", },
 	{},
 };
 
