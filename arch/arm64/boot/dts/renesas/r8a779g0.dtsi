@@ -60,6 +60,7 @@
 			device_type = "cpu";
 			power-domains = <&sysc R8A779G0_PD_A1E0D0C0>;
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0>;
 			next-level-cache = <&L3_CA76_0>;
 		};
 
@@ -69,6 +70,7 @@
 			reg = <0x100>;
 			power-domains = <&sysc R8A779G0_PD_A1E0D0C1>;
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0>;
 			next-level-cache = <&L3_CA76_0>;
 		};
 
@@ -78,6 +80,7 @@
 			reg = <0x10000>;
 			power-domains = <&sysc R8A779G0_PD_A1E0D1C0>;
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0>;
 			next-level-cache = <&L3_CA76_1>;
 		};
 
@@ -87,8 +90,23 @@
 			reg = <0x10100>;
 			power-domains = <&sysc R8A779G0_PD_A1E0D1C1>;
 			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0>;
 			next-level-cache = <&L3_CA76_1>;
 		};
+
+		idle-states {
+			entry-method = "psci";
+
+			CPU_SLEEP_0: cpu-sleep-0 {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010001>;
+				local-timer-stop;
+				entry-latency-us = <400>;
+				exit-latency-us = <500>;
+				min-residency-us = <4000>;
+				status = "okay";
+			};
+	       };
 
 		L3_CA76_0: cache-controller-0 {
 			compatible = "cache";
