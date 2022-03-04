@@ -599,9 +599,7 @@
 
 		rtsn0: ethernet@e6460000 {
 			compatible = "renesas,ethertsn-r8a779g0";
-			reg = <0 0xe6460000 0 0x4000>,
-			      <0 0xe6449000 0 0x500>;
-			reg-names = "tsnes", "gptp";
+			reg = <0 0xe6460000 0 0x4000>;
 			interrupts = <GIC_SPI 429 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 430 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "tx_data", "rx_data";
