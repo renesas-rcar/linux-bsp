@@ -183,6 +183,13 @@
 		clock-frequency = <0>;
 	};
 
+	ufs30_clk: ufs30_refclk_v {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* This value must be overridden by the board */
+		clock-frequency = <0>;
+	};
+
 	firmware {
 		optee {
 			compatible = "linaro,optee-tz";
@@ -1009,10 +1016,8 @@
 					 0 0 0 3 &gic GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 624>,
-				 <&cpg CPG_MOD 625>,
 				 <&pcie_bus_clk>;
 			clock-names = "pcie0",
-				      "pcie1",
 				      "pcie_bus";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 624>;
@@ -1042,10 +1047,8 @@
 			interrupt-names = "msi", "dma", "err", "fatal",
 					  "nonfatal", "lp", "vndmsg";
 			clocks = <&cpg CPG_MOD 624>,
-				 <&cpg CPG_MOD 625>,
 				 <&pcie_bus_clk>;
 			clock-names = "pcie0",
-				      "pcie1",
 				      "pcie_bus";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 624>;
@@ -1095,17 +1098,47 @@
 					 0 0 0 2 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 3 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 624>,
-				 <&cpg CPG_MOD 625>,
+			clocks = <&cpg CPG_MOD 625>,
 				 <&pcie_bus_clk>;
-			clock-names = "pcie0",
-				      "pcie1",
+			clock-names = "pcie1",
 				      "pcie_bus";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 625>;
 			num-lanes = <2>;
 			snps,enable-cdm-check = "true";
 			max-link-speed = <2>;
+			status = "disabled";
+		};
+
+		pciec1_ep: pciec1_ep@e65d8000 {
+			compatible = "renesas,r8a779f0-pcie-ep";
+			reg = <0 0xe65d8000 0 0x1000>, <0 0xe65d9000 0 0x1000>,
+			      <0 0xe65da000 0 0x1000>, <0 0xe65db000 0 0x2000>,
+			      <0 0xe65dd000 0 0x1200>, <0 0xe65de200 0 0x0e00>,
+			      <0 0xe65df000 0 0x1000>, <0 0xee900000 0 0x400000>;
+			reg-names = "dbi", "dbi2",
+				    "shadow", "atu",
+				    "dma", "app",
+				    "phy", "addr_space";
+			interrupts = <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 425 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 426 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 427 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 428 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 429 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma", "err", "fatal",
+					  "nonfatal", "lp", "vndmsg";
+			clocks = <&cpg CPG_MOD 625>,
+				 <&pcie_bus_clk>;
+			clock-names = "pcie1",
+				      "pcie_bus";
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			resets = <&cpg 625>;
+			num-lanes = <2>;
+			max-link-speed = <2>;
+			num-ib-windows = <16>;
+			num-ob-windows = <16>;
 			status = "disabled";
 		};
 
@@ -2305,6 +2338,18 @@
 			reg = <0 0xe6300000 0 0x60000>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "system_ram_00";
+		};
+
+		ufs: scsi@e6860000 {
+			compatible = "renesas,r8a779f0-ufs";
+			reg = <0 0xe6860000 0 0x100>;
+			interrupts = <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 1514>, <&ufs30_clk>;
+			clock-names = "fck", "ref_clk";
+			freq-table-hz = <200000000 200000000>, <38400000 38400000>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			resets = <&cpg 1514>;
+			status = "disabled";
 		};
 	};
 
