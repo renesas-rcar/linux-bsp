@@ -5367,13 +5367,13 @@
 			iommus = <&ipmmu_vi1 16>;
 		};
 
-		sdma0_01 {
+		sdmac0_01 {
 			compatible = "generic-uio";
 			reg = <0 0xff180000 0 0x10000>;
 			interrupts = <GIC_SPI 214 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2807>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			linux,uio-name = "irq_sdma_00_01";
+			linux,uio-name = "irq_sdmac_00_01";
 			ipmmu-id = <RCAR_IPMMU_VI1 16>;
 			iommus = <&ipmmu_vi1 16>;
 		};
