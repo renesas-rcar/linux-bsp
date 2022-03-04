@@ -1017,6 +1017,38 @@
 			status = "disabled";
 		};
 
+		pciec1_ep: pciec1_ep@e65d8000 {
+			compatible = "renesas,r8a779g0-pcie-ep";
+			reg = <0 0xe65d8000 0 0x1000>, <0 0xe65d9000 0 0x1000>,
+			      <0 0xe65da000 0 0x1000>, <0 0xe65db000 0 0x2000>,
+			      <0 0xe65dd000 0 0x1200>, <0 0xe65de200 0 0x0e00>,
+			      <0 0xe65df000 0 0x1000>, <0 0xee900000 0 0x400000>;
+			reg-names = "dbi", "dbi2",
+				    "shadow", "atu",
+				    "dma", "app",
+				    "phy", "addr_space";
+			interrupts = <GIC_SPI 456 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 457 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 458 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 459 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 460 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 461 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 462 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi", "dma", "err", "fatal",
+					  "nonfatal", "lp", "vndmsg";
+			clocks = <&cpg CPG_MOD 625>,
+				 <&pcie_bus_clk>;
+			clock-names = "pcie1",
+				      "pcie_bus";
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 625>;
+			num-lanes = <2>;
+			max-link-speed = <2>;
+			num-ib-windows = <16>;
+			num-ob-windows = <16>;
+			status = "disabled";
+		};
+
 		scif0: serial@e6e60000 {
 			compatible = "renesas,scif-r8a779g0",
 				     "renesas,rcar-gen4-scif", "renesas,scif";
