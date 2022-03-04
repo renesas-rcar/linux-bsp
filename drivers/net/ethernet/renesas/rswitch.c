@@ -953,6 +953,7 @@ struct rswitch_etha {
 	phy_interface_t phy_interface;
 	u8 mac_addr[MAX_ADDR_LEN];
 	int link;
+	int speed;
 	bool operated;
 };
 
@@ -1357,9 +1358,25 @@ static bool rswitch_etha_wait_link_verification(struct rswitch_etha *etha)
 
 static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 {
+	u32 val;
+
 	/* FIXME */
 	/* Set xMII type */
-	rswitch_etha_write(etha, MPIC_PIS_GMII | MPIC_LSC_1G, MPIC);
+	switch (etha->speed) {
+	case 10:
+		val = MPIC_LSC_10M;
+		break;
+	case 100:
+		val = MPIC_LSC_100M;
+		break;
+	case 1000:
+		val = MPIC_LSC_1G;
+		break;
+	default:
+		return;
+	}
+
+	rswitch_etha_write(etha, MPIC_PIS_GMII | val, MPIC);
 
 #if 0
 	/* Set Interrupt enable */
@@ -1603,7 +1620,7 @@ static int __maybe_unused rswitch_serdes_init(struct rswitch_etha *etha)
 		return ret;
 
 	/* Set speed (bps) */
-	ret = rswitch_serdes_set_speed(etha, mode, 1000);
+	ret = rswitch_serdes_set_speed(etha, mode, etha->speed);
 	if (ret)
 		return ret;
 
@@ -1728,8 +1745,25 @@ static struct device_node *rswitch_get_phy_node(struct rswitch_device *rdev)
 		pr_info("%s PHY interface = %s", __func__, phy_modes(rdev->etha->phy_interface));
 
 		phy = of_parse_phandle(port, "phy-handle", 0);
-		if (phy)
+		if (phy) {
+			rdev->etha->speed = 1000;
 			break;
+		} else {
+			if (of_phy_is_fixed_link(port)) {
+				struct device_node *fixed_link;
+
+				fixed_link = of_get_child_by_name(port, "fixed-link");
+				err = of_property_read_u32(fixed_link, "speed", &rdev->etha->speed);
+				if (err)
+					break;
+
+				err = of_phy_register_fixed_link(port);
+				if (err)
+					break;
+
+				phy = of_node_get(port);
+			}
+		}
 	}
 
 	of_node_put(ports);
@@ -1814,15 +1848,10 @@ static void rswitch_adjust_link(struct net_device *ndev)
 	}
 }
 
-static int rswitch_phy_init(struct rswitch_device *rdev)
+static int rswitch_phy_init(struct rswitch_device *rdev, struct device_node *phy)
 {
-	struct device_node *phy;
 	struct phy_device *phydev;
 	int err = 0;
-
-	phy = rswitch_get_phy_node(rdev);
-	if (!phy)
-		return -ENOENT;
 
 	phydev = of_phy_connect(rdev->ndev, phy, rswitch_adjust_link, 0,
 				rdev->etha->phy_interface);
@@ -1834,21 +1863,36 @@ static int rswitch_phy_init(struct rswitch_device *rdev)
 	phy_attached_info(phydev);
 
 out:
-	of_node_put(phy);
 	return err;
 }
 
 static void rswitch_phy_deinit(struct rswitch_device *rdev)
 {
 	if (rdev->ndev->phydev) {
+		struct device_node *ports, *port;
+		u32 index;
+
 		phy_disconnect(rdev->ndev->phydev);
 		rdev->ndev->phydev = NULL;
+
+		ports = of_get_child_by_name(rdev->ndev->dev.parent->of_node, "ports");
+		for_each_child_of_node(ports, port) {
+			of_property_read_u32(port, "reg", &index);
+			if (index == rdev->etha->index)
+				break;
+		}
+
+		if (of_phy_is_fixed_link(port))
+			of_phy_deregister_fixed_link(port);
+
+		of_node_put(ports);
 	}
 }
 
 static int rswitch_open(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct device_node *phy;
 	int err = 0;
 	bool phy_started = false;
 
@@ -1856,13 +1900,16 @@ static int rswitch_open(struct net_device *ndev)
 
 	if (rdev->etha) {
 		if (!rdev->etha->operated) {
+			phy = rswitch_get_phy_node(rdev);
+			if (!phy)
+				goto error;
 			err = rswitch_etha_hw_init(rdev->etha, ndev->dev_addr);
 			if (err < 0)
 				goto error;
 			err = rswitch_mii_register(rdev);
 			if (err < 0)
 				goto error;
-			err = rswitch_phy_init(rdev);
+			err = rswitch_phy_init(rdev, phy);
 			if (err < 0)
 				goto error;
 		}
@@ -1892,6 +1939,7 @@ static int rswitch_open(struct net_device *ndev)
 	rswitch_ptp_init(rdev->priv->ptp_priv, RSWITCH_PTP_REG_LAYOUT_S4, RSWITCH_PTP_CLOCK_S4);
 
 out:
+	of_node_put(phy);
 	return err;
 
 error:
