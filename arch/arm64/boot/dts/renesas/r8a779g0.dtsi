@@ -2201,6 +2201,7 @@
 			clocks = <&cpg CPG_MOD 2821>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2825>;
+			reset-names = "core";
 			linux,uio-name = "vdsp00_00";
 			ipmmu-id = <RCAR_IPMMU_IR 13>;
 			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
@@ -2256,7 +2257,7 @@
 			clocks = <&cpg CPG_MOD 2801>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2821>, <&cpg 2822>;
-			reset-names = "cbs", "reg";
+			reset-names = "csb", "reg";
 			linux,uio-name = "vdsp00_01";
 			ipmmu-id = <RCAR_IPMMU_IR 13>;
 			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
@@ -2269,6 +2270,8 @@
 			resets = <&cpg 2823>, <&cpg 2824>;
 			reset-names = "global", "sys";
 			linux,uio-name = "vdsp00_02";
+			ipmmu-id = <RCAR_IPMMU_IR 13>;
+			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_03: vdsp@f15c0000 {
@@ -2344,7 +2347,7 @@
 			clocks = <&cpg CPG_MOD 2802>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2830>, <&cpg 2831>;
-			reset-names = "cbs", "reg";
+			reset-names = "csb", "reg";
 			linux,uio-name = "vdsp01_01";
 			ipmmu-id = <RCAR_IPMMU_IR 13>;
 			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
@@ -2434,7 +2437,7 @@
 			clocks = <&cpg CPG_MOD 2803>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2907>, <&cpg 2908>;
-			reset-names = "cbs", "reg";
+			reset-names = "csb", "reg";
 			linux,uio-name = "vdsp02_01";
 			ipmmu-id = <RCAR_IPMMU_IR 13>;
 			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
@@ -2447,6 +2450,8 @@
 			resets = <&cpg 2909>, <&cpg 2910>;
 			reset-names = "global", "sys";
 			linux,uio-name = "vdsp02_02";
+			ipmmu-id = <RCAR_IPMMU_IR 13>;
+			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_03: vdsp@f19c0000 {
@@ -2522,7 +2527,7 @@
 			clocks = <&cpg CPG_MOD 2804>;
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2916>, <&cpg 2917>;
-			reset-names = "cbs", "reg";
+			reset-names = "csb", "reg";
 			linux,uio-name = "vdsp03_01";
 			ipmmu-id = <RCAR_IPMMU_IR 13>;
 			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
