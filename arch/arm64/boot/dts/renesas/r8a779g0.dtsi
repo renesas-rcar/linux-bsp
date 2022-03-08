@@ -5860,7 +5860,7 @@
 
 		csi40: csi2@fe500000 {
 			compatible = "renesas,r8a779g0-csi2", "generic-uio";
-			reg = <0 0xfe500000 0 0x30000>;
+			reg = <0 0xfe500000 0 0x40000>;
 			interrupts = <GIC_SPI 499 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 331>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
@@ -5900,7 +5900,7 @@
 
 		csi41: csi2@fe540000 {
 			compatible = "renesas,r8a779g0-csi2", "generic-uio";
-			reg = <0 0xfe540000 0 0x30000>;
+			reg = <0 0xfe540000 0 0x40000>;
 			interrupts = <GIC_SPI 500 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 400>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
