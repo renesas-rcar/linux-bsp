@@ -240,6 +240,7 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("secrom",		707,	R8A779G0_CLK_S0D4),
 	DEF_MOD("sydm1",		709,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("sydm2",		710,	R8A779G0_CLK_S0D6_PER),
+	DEF_MOD("system_ram",		711,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("tmu0",			713,	R8A779G0_CLK_SASYNCRT),
 	DEF_MOD("tmu1",			714,	R8A779G0_CLK_SASYNCPERD2),
 	DEF_MOD("tmu2",			715,	R8A779G0_CLK_SASYNCPERD2),
