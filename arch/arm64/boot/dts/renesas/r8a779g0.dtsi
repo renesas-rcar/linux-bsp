@@ -2888,6 +2888,7 @@
 			interrupts = <GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "irq_ivcp1e_00_01";
 			ipmmu-id = <RCAR_IPMMU_VC 14>;
+			iommus = <&ipmmu_vc 14>;
 		};
 
 		vcp4_00: vcpl4@fe910000 {
