@@ -9,4 +9,6 @@ ravb-objs := ravb_main.o ravb_ptp.o
 
 obj-$(CONFIG_RAVB) += ravb.o
 
-obj-$(CONFIG_RENESAS_ETHER_SWITCH) += rswitch.o
+rswitch_drv-objs += rswitch.o rswitch_ptp.o
+
+obj-$(CONFIG_RENESAS_ETHER_SWITCH) += rswitch_drv.o
