@@ -3893,6 +3893,14 @@
 			linux,uio-name = "fcpra_rt_00";
 		};
 
+		caiplite_wrapper {
+			compatible = "generic-uio";
+			clocks = <&cpg CPG_MOD 720>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 720>;
+			linux,uio-name = "caiplite_wrapper_00";
+		};
+
 		caiplite0 {
 			compatible = "generic-uio";
 			reg = <0 0xe7800000 0 0x1000>;
