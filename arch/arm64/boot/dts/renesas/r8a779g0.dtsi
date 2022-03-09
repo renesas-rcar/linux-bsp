@@ -2758,7 +2758,7 @@
 		};
 
 		gsx: gsx@fd000000 {
-			compatible = "renesas,gfx";
+			compatible = "renesas,gsx";
 			reg = <0 0xfd000000 0 0x800000>;
 			interrupts = <GIC_SPI 464 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 0>;
@@ -2766,7 +2766,6 @@
 					<&sysc R8A779G0_PD_A23DGB>;
 			power-domain-names = "3dg_a_pd0", "3dg_a_pd1";
 			resets = <&cpg 0>;
-			linux,uio-name = "gsx_00";
 			ipmmu-id = <RCAR_IPMMU_3DG 0>;
 			iommus = <&ipmmu_3dg 0>, <&ipmmu_3dg 1>,
 				 <&ipmmu_3dg 2>, <&ipmmu_3dg 3>,
