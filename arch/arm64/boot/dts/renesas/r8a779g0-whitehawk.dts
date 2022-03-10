@@ -343,8 +343,9 @@
 			port@4 {
 				reg = <4>;
 				max96712_out0: endpoint {
+					bus-type = <1>;
 					clock-lanes = <0>;
-					data-lanes = <1 2 3 4>;
+					data-lanes = <1 2 3>;
 					remote-endpoint = <&csi40_in>;
 				};
 			};
@@ -428,8 +429,9 @@
 			port@4 {
 				reg = <4>;
 				max96712_out1: endpoint {
+					bus-type = <1>;
 					clock-lanes = <0>;
-					data-lanes = <1 2 3 4>;
+					data-lanes = <1 2 3>;
 					remote-endpoint = <&csi41_in>;
 				};
 			};
@@ -529,6 +531,7 @@
 
 &csi40 {
 	status = "okay";
+	pin-swap;
 
 	ports {
 		#address-cells = <1>;
@@ -538,8 +541,9 @@
 			reg = <0>;
 
 			csi40_in: endpoint {
+				bus-type = <1>;
 				clock-lanes = <0>;
-				data-lanes = <1 2 3 4>;
+				data-lanes = <1 2 3>;
 				remote-endpoint = <&max96712_out0>;
 			};
 		};
@@ -548,6 +552,7 @@
 
 &csi41 {
 	status = "okay";
+	pin-swap;
 
 	ports {
 		#address-cells = <1>;
@@ -557,8 +562,9 @@
 			reg = <0>;
 
 			csi41_in: endpoint {
+				bus-type = <1>;
 				clock-lanes = <0>;
-				data-lanes = <1 2 3 4>;
+				data-lanes = <1 2 3>;
 				remote-endpoint = <&max96712_out1>;
 			};
 		};
