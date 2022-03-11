@@ -166,7 +166,3 @@
 
 	status = "disable";
 };
-
-&gpio4 {
-	status = "disable";
-};
