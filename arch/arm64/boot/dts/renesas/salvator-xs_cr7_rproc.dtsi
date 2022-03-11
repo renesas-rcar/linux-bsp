@@ -144,6 +144,7 @@
 /delete-node/ &lvds0;
 /delete-node/ &hdmi0;
 /delete-node/ &hdmi0_con;
+/delete-node/ &rt_dmac0;
 
 &rcar_sound {
 	ports {
