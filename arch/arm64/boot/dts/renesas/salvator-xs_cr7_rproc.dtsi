@@ -88,6 +88,17 @@
 		};
 	};
 
+	rcar-vivid {
+		#address-cells = <0x2>;
+		#size-cells = <0x2>;
+
+		dma-ranges = <0x0 0x80000000 0x0 0x80000000 0x0 0x10000000>;
+
+		rvivid-memory {
+			memory-region = <&cma>;
+		};
+	};
+
 	/delete-node/ cvbs-in;
 	/delete-node/ hdmi-in;
 	/delete-node/ hdmi-out;
