@@ -227,7 +227,7 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("msi5",			623,	R8A779G0_CLK_MSO),
 	DEF_MOD("pcie0",		624,	R8A779G0_CLK_S0D2),
 	DEF_MOD("pcie1",		625,	R8A779G0_CLK_S0D2),
-	DEF_MOD("pwm",			628,	R8A779G0_CLK_RPCD2),
+	DEF_MOD("pwm",			628,	R8A779G0_CLK_SASYNCPERD4),
 	DEF_MOD("rpc",			629,	R8A779G0_CLK_RPCD2),
 	DEF_MOD("rtdm0",		630,	R8A779G0_CLK_S0D4_RT),
 	DEF_MOD("rtdm1",		631,	R8A779G0_CLK_S0D4_RT),
