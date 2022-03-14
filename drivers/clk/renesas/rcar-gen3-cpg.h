@@ -40,10 +40,10 @@ enum rcar_gen3_clk_types {
 		 (_parent0) << 16 | (_parent1),		\
 		 .div = (_div0) << 16 | (_div1), .offset = _md)
 
-#define DEF_GEN3_PE(_name, _id, _parent_clean, _div_clean, _parent_sscg, \
-		    _div_sscg) \
-	DEF_GEN3_MDSEL(_name, _id, 12, _parent_clean, _div_clean,	\
-		       _parent_sscg, _div_sscg)
+#define DEF_GEN3_PE(_name, _id, _parent_sscg, _div_sscg, _parent_clean, \
+		    _div_clean) \
+	DEF_GEN3_MDSEL(_name, _id, 12, _parent_sscg, _div_sscg,	\
+		       _parent_clean, _div_clean)
 
 #define DEF_GEN3_OSC(_name, _id, _parent, _div)		\
 	DEF_BASE(_name, _id, CLK_TYPE_GEN3_OSC, _parent, .div = _div)
