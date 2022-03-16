@@ -151,6 +151,7 @@ static const u32 rcar_du_vsp_formats[] = {
 	DRM_FORMAT_YVU422,
 	DRM_FORMAT_YUV444,
 	DRM_FORMAT_YVU444,
+	DRM_FORMAT_Y210,
 };
 
 static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
