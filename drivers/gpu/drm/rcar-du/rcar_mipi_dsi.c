@@ -179,6 +179,8 @@ struct rcar_mipi_dsi {
 	enum mipi_dsi_pixel_format format;
 	unsigned int num_data_lanes;
 	unsigned int lanes;
+
+	bool use_extal_clk;
 };
 
 #define bridge_to_rcar_mipi_dsi(b) \
@@ -441,7 +443,8 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	if (mipi_dsi->info->init_phtw)
 		mipi_dsi->info->init_phtw(mipi_dsi);
 
-	rcar_mipi_dsi_set(mipi_dsi, CLOCKSET1, 0x0100000C);
+	if (mipi_dsi->use_extal_clk)
+		rcar_mipi_dsi_set(mipi_dsi, CLOCKSET1, 0x0100000C);
 
 	/* PLL Clock Setting */
 	rcar_mipi_dsi_clr(mipi_dsi, CLOCKSET1, CLOCKSET1_SHADOW_CLEAR);
@@ -756,6 +759,12 @@ static int rcar_mipi_dsi_parse_dt(struct rcar_mipi_dsi *mipi_dsi)
 	bool is_bridge = false;
 	int ret = 0;
 	int len, num_lanes;
+
+
+	if (of_find_property(mipi_dsi->dev->of_node, "use-extal-clk", NULL))
+		mipi_dsi->use_extal_clk = true;
+	else
+		mipi_dsi->use_extal_clk = false;
 
 	local_output = of_graph_get_endpoint_by_regs(mipi_dsi->dev->of_node,
 						     1, 0);
