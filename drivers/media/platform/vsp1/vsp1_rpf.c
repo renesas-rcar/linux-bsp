@@ -69,7 +69,12 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	unsigned int top = 0;
 	u32 pstride;
 	u32 infmt;
+	u32 ex_infmt0, ex_infmt1, ex_infmt2;
 	u32 alph_sel = 0;
+	u16 ip_version;
+
+	/* Get IP version for setting 10bit format */
+	ip_version = entity->vsp1->version & VI6_IP_VERSION_MODEL_MASK;
 
 	/* Stride */
 	pstride = format->plane_fmt[0].bytesperline
@@ -110,34 +115,43 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	vsp1_rpf_write(rpf, dlb, VI6_RPF_INFMT, infmt);
 	vsp1_rpf_write(rpf, dlb, VI6_RPF_DSWAP, fmtinfo->swap);
 
-	/* Setting new pixel format for V3U */
-	if (fmtinfo->hwfmt == VI6_FMT_RGB10_RGB10A2_A2RGB10) {
-		if (fmtinfo->fourcc == V4L2_PIX_FMT_RGB10) {
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0,
-					VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1,
-					VI6_RPF_EXT_INFMT1_RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2,
-					VI6_RPF_EXT_INFMT2_RGB10);
+	if (ip_version == VI6_IP_VERSION_MODEL_VSPD_GEN4) {
+		switch (fmtinfo->fourcc) {
+			case V4L2_PIX_FMT_Y210:
+				ex_infmt0 = VI6_RPF_EXT_INFMT0_IPBD_Y_10 |
+						VI6_RPF_EXT_INFMT0_IPBD_C_10;
+				ex_infmt1 = 0x0;
+				ex_infmt2 = 0x0;
+				break;
+
+			case V4L2_PIX_FMT_RGB10:
+				ex_infmt0 = VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10;
+				ex_infmt1 = VI6_RPF_EXT_INFMT1_RGB10;
+				ex_infmt2 = VI6_RPF_EXT_INFMT2_RGB10;
+				break;
+
+			case V4L2_PIX_FMT_A2RGB10:
+				ex_infmt0 = VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10;
+				ex_infmt1 = VI6_RPF_EXT_INFMT1_A2RGB10;
+				ex_infmt2 = VI6_RPF_EXT_INFMT2_A2RGB10;
+				break;
+
+			case V4L2_PIX_FMT_RGB10A2:
+				ex_infmt0 = VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10;
+				ex_infmt1 = VI6_RPF_EXT_INFMT1_RGB10A2;
+				ex_infmt2 = VI6_RPF_EXT_INFMT2_RGB10A2;
+				break;
+
+			default:
+				ex_infmt0 = 0x0;
+				ex_infmt1 = 0x0;
+				ex_infmt2 = 0x0;
+				break;
 		}
 
-		if (fmtinfo->fourcc == V4L2_PIX_FMT_A2RGB10) {
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0,
-					VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1,
-					VI6_RPF_EXT_INFMT1_A2RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2,
-					VI6_RPF_EXT_INFMT2_A2RGB10);
-		}
-
-		if (fmtinfo->fourcc == V4L2_PIX_FMT_RGB10A2) {
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0,
-					VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1,
-					VI6_RPF_EXT_INFMT1_RGB10A2);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2,
-					VI6_RPF_EXT_INFMT2_RGB10A2);
-		}
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0, ex_infmt0);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1, ex_infmt1);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2, ex_infmt2);
 	}
 
 	/* Output location. */
