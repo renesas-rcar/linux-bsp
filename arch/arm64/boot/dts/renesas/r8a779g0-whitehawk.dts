@@ -511,6 +511,7 @@
 &dsi0 {
 	status = "okay";
 
+	use-extal-clk;
 	clocks = <&cpg CPG_MOD 415>,
 		 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>;
 	clock-names = "mod", "dsi";
