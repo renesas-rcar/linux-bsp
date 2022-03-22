@@ -275,7 +275,6 @@ static int vivid_querycap(struct file *file, void *priv,
     strlcpy(cap->card, "R_Car_VIVID", sizeof(cap->card));
     snprintf(cap->bus_info, sizeof(cap->bus_info), "platform:%s",
          dev_name(vivid->dev));
-    cap->capabilities = V4L2_CAP_DEVICE_CAPS | V4L2_CAP_VBI_CAPTURE | V4L2_CAP_STREAMING;
     return 0;
 }
 
@@ -290,7 +289,17 @@ static int vivid_try_fmt_vid_cap(struct file *file, void *priv,
     ret |= (f->fmt.pix.pixelformat!= vivid->format.pixelformat);
     ret |= (f->fmt.pix.field != vivid->format.field);
 
+	pr_info("Capturing with: %dx%d, format:%d, field:%d\n",
+		f->fmt.pix.width, f->fmt.pix.height,
+		f->fmt.pix.pixelformat, f->fmt.pix.field);
+
     if(ret) {
+	/* Right now only support 1 format
+	 * w:720, h:480, pf: 875713089(ABGR32), field: 1(NONE)
+	 */
+	pr_err("Support only: %dx%d, format:%d(ABGR32), field:%d(NONE)\n",
+		vivid->format.width, vivid->format.height,
+		vivid->format.pixelformat, vivid->format.field);
         return -EPIPE;
     }
     f->fmt.pix.colorspace = vivid->format.colorspace;
