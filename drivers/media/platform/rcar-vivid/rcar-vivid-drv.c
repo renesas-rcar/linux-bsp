@@ -210,6 +210,8 @@ static int rcar_vivid_probe(struct rpmsg_device *rpdev)
     rvivid->dev = &rpdev->dev;
     rvivid->rpdev = rpdev;
 
+	rvivid->dev->coherent_dma_mask = DMA_BIT_MASK(32);
+
     /* Initialize taurus event list and its lock */
     INIT_LIST_HEAD(&rvivid->taurus_event_list_head);
     rwlock_init(&rvivid->event_list_lock);
