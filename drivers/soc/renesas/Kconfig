@@ -4,7 +4,7 @@ menuconfig SOC_RENESAS
 	default y if ARCH_RENESAS
 	select SOC_BUS
 config RCAR_CPU_TOPOLOGY
-	depends on (ARCH_R8A7795 || ARCH_R8A7796)
+	depends on (ARCH_R8A77950 || ARCH_R8A77951 || ARCH_R8A77960 || ARCH_R8A77961)
 	bool "R-Car CPU Topology"
 	default y
 	help

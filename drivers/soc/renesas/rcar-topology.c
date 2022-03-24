@@ -37,7 +37,8 @@ static struct sched_domain_topology_level rcar_topology[] = {
 static int __init rcar_topology_init(void)
 {
 	if (of_machine_is_compatible("renesas,r8a7795") ||
-	    of_machine_is_compatible("renesas,r8a7796"))
+	    of_machine_is_compatible("renesas,r8a77960") ||
+	    of_machine_is_compatible("renesas,r8a77961"))
 		set_sched_topology(rcar_topology);
 
 	return 0;
