@@ -2762,9 +2762,7 @@
 			reg = <0 0xfd000000 0 0x800000>;
 			interrupts = <GIC_SPI 464 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 0>;
-			power-domains = <&sysc R8A779G0_PD_A33DGA>,
-					<&sysc R8A779G0_PD_A23DGB>;
-			power-domain-names = "3dg_a_pd0", "3dg_a_pd1";
+			power-domains = <&sysc R8A779G0_PD_A23DGB>;
 			resets = <&cpg 0>;
 			ipmmu-id = <RCAR_IPMMU_3DG 0>;
 			iommus = <&ipmmu_3dg 0>, <&ipmmu_3dg 1>,
