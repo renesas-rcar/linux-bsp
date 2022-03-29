@@ -223,7 +223,7 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 
 	vsp1_rpf_write(rpf, dlb, VI6_RPF_ALPH_SEL, alph_sel);
 
-	if (entity->vsp1->info->gen >= 3) {
+	if (entity->vsp1->info->gen == 3) {
 		u32 mult;
 
 		if (fmtinfo->alpha &&
@@ -385,10 +385,10 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 	}
 
 	/*
-	 * On Gen3 / Gen4 hardware the SPUVS bit has no effect on 3-planar
+	 * On Gen3 hardware the SPUVS bit has no effect on 3-planar
 	 * formats. Swap the U and V planes manually in that case.
 	 */
-	if (vsp1->info->gen >= 3 && format->num_planes == 3 &&
+	if (vsp1->info->gen == 3 && format->num_planes == 3 &&
 	    fmtinfo->swap_uv)
 		swap(mem.addr[1], mem.addr[2]);
 
