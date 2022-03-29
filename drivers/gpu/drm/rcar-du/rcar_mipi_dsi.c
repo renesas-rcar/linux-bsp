@@ -68,18 +68,12 @@ static const u32 phtw[] = {
 	0x0101011f,		/* 1Gbps testing */
 };
 
-static const u32 phtw_v4h[] = {
-	0x01010100, 0x01030173,
-	0x01000174, 0x01500175,
-	0x01030176, 0x01040166,
-	0x010201ad,
-	0x01020100, 0x01010172,
-	0x01570170, 0x01060171,
-	0x01110172,
-};
-
 static const u32 phtw2[] = {
-	0x01090160, 0x01090170,
+	0x010c0130, 0x010c0140, /* General testing */
+	0x010c0150, 0x010c0180, /* General testing */
+	0x010c0190,
+	0x010a0160, 0x010a0170,
+	0x01800164, 0x01800174,	/* 1Gbps testing */
 };
 
 static const u32 hsfreqrange_table[][2] = {
@@ -187,9 +181,6 @@ struct dsi_setup_info {
 	u16 prop_cntrl;
 	u16 hsfreqrange;
 	u16 div;
-	u16 int_contrl;
-	u16 cpbias_cntrl;
-	u16 gmp_cntrl;
 	unsigned int m;
 	unsigned int n;
 };
@@ -198,7 +189,7 @@ static void rcar_mipi_dsi_parametters_calc(struct rcar_mipi_dsi *mipi_dsi,
 					struct clk *clk, unsigned long target,
 					struct dsi_setup_info *setup_info)
 {
-#if 0
+
 	const struct vco_cntrl_value *vco_cntrl;
 	unsigned long fout_target;
 	unsigned long fin, fout;
@@ -283,17 +274,6 @@ done:
 		setup_info->vco_cntrl,
 		setup_info->prop_cntrl,
 		setup_info->hsfreqrange);
-#endif
-
-	setup_info->vco_cntrl = 0x10;
-	setup_info->m = 856;
-	setup_info->n = 1;
-	setup_info->prop_cntrl = 0x0A;
-	setup_info->int_contrl = 0x08;
-	setup_info->cpbias_cntrl = 0x00;
-	setup_info->gmp_cntrl = 0;
-	setup_info->hsfreqrange = 0x29;
-	setup_info->div = 2;
 }
 
 static void rcar_mipi_dsi_set_display_timing(struct rcar_mipi_dsi *mipi_dsi)
@@ -394,13 +374,11 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	phy_setup |= PHYSETUP_HSFREQRANGE(setup_info.hsfreqrange);
 	rcar_mipi_dsi_write(mipi_dsi, PHYSETUP, phy_setup);
 
-	for (i = 0; i < ARRAY_SIZE(phtw_v4h); i++) {
-		ret = rcar_mipi_dsi_phtw_test(mipi_dsi, phtw_v4h[i]);
+	for (i = 0; i < ARRAY_SIZE(phtw); i++) {
+		ret = rcar_mipi_dsi_phtw_test(mipi_dsi, phtw[i]);
 		if (ret < 0)
 			return ret;
 	}
-
-	rcar_mipi_dsi_set(mipi_dsi, CLOCKSET1, 0x0100000C);
 
 	/* PLL Clock Setting */
 	rcar_mipi_dsi_clr(mipi_dsi, CLOCKSET1, CLOCKSET1_SHADOW_CLEAR);
@@ -410,9 +388,9 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	clockset2 = CLOCKSET2_M(setup_info.m) | CLOCKSET2_N(setup_info.n) |
 		    CLOCKSET2_VCO_CNTRL(setup_info.vco_cntrl);
 	clockset3 = CLOCKSET3_PROP_CNTRL(setup_info.prop_cntrl) |
-		    CLOCKSET3_INT_CNTRL(setup_info.int_contrl) |
-		    CLOCKSET3_CPBIAS_CNTRL(setup_info.cpbias_cntrl) |
-		    CLOCKSET3_GMP_CNTRL(setup_info.gmp_cntrl);
+		    CLOCKSET3_INT_CNTRL(0) |
+		    CLOCKSET3_CPBIAS_CNTRL(0x10) |
+		    CLOCKSET3_GMP_CNTRL(1);
 	rcar_mipi_dsi_write(mipi_dsi, CLOCKSET2, clockset2);
 	rcar_mipi_dsi_write(mipi_dsi, CLOCKSET3, clockset3);
 
@@ -535,7 +513,7 @@ static int rcar_mipi_dsi_start_video(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	if (!timeout) {
-		dev_err(mipi_dsi->dev, "Link busy\n");
+		dev_err(mipi_dsi->dev, "Failed to enable Video clock\n");
 		return -ETIMEDOUT;
 	}
 
@@ -551,7 +529,7 @@ static int rcar_mipi_dsi_start_video(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	if (!timeout) {
-		dev_err(mipi_dsi->dev, "Clear Video mode FIFO error\n");
+		dev_err(mipi_dsi->dev, "Failed to enable Video clock\n");
 		return -ETIMEDOUT;
 	}
 
@@ -565,7 +543,7 @@ static int rcar_mipi_dsi_start_video(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	if (!timeout) {
-		dev_err(mipi_dsi->dev, "Cannot enable Video mode\n");
+		dev_err(mipi_dsi->dev, "Failed to enable Video clock\n");
 		return -ETIMEDOUT;
 	}
 
@@ -906,7 +884,6 @@ static int rcar_mipi_dsi_remove(struct platform_device *pdev)
 
 static const struct of_device_id rcar_mipi_dsi_of_table[] = {
 	{ .compatible = "renesas,r8a779a0-mipi-dsi" },
-	{ .compatible = "renesas,r8a779g0-mipi-dsi" },
 	{ }
 };
 
