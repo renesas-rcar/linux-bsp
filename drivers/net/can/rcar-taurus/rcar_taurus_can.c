@@ -73,18 +73,32 @@
 #include "rcar_taurus_can_conn.h"
 
 #define RCAR_TAURUS_CAN_DRV_NAME	"rcar-taurus-can"
-#define RCAR_CAN_NAPI_WEIGHT		4
-#define RCAR_CAN_FIFO_DEPTH		4 /* must be power of 2 */
+#define RCAR_CAN_NAPI_WEIGHT		8
+#define RCAR_CAN_FIFO_DEPTH		8 /* must be power of 2 */
 
-static const struct can_bittiming_const rcar_taurus_can_bittiming_const = {
+/* CAN FD mode nominal rate constants */
+static const struct can_bittiming_const rcar_taurus_can_nom_bittiming_const = {
 	.name = RCAR_TAURUS_CAN_DRV_NAME,
-	.tseg1_min = 4,
+	.tseg1_min = 2,
+	.tseg1_max = 128,
+	.tseg2_min = 2,
+	.tseg2_max = 32,
+	.sjw_max = 32,
+	.brp_min = 1,
+	.brp_max = 1024,
+	.brp_inc = 1,
+};
+
+/* CAN FD mode data rate constants */
+static const struct can_bittiming_const rcar_taurus_can_data_bittiming_const = {
+	.name = RCAR_TAURUS_CAN_DRV_NAME,
+	.tseg1_min = 2,
 	.tseg1_max = 16,
 	.tseg2_min = 2,
 	.tseg2_max = 8,
-	.sjw_max = 4,
+	.sjw_max = 8,
 	.brp_min = 1,
-	.brp_max = 1024,
+	.brp_max = 256,
 	.brp_inc = 1,
 };
 
@@ -362,7 +376,7 @@ static netdev_tx_t rcar_taurus_can_start_xmit(struct sk_buff *skb,
 {
 	struct rcar_taurus_can_channel *channel = netdev_priv(ndev);
 	struct rcar_taurus_can_drv *rctcan = channel->parent;
-	struct can_frame *cf = (struct can_frame *)skb->data;
+	struct canfd_frame *cf = (struct canfd_frame *)skb->data;
 	unsigned long flags;
 	unsigned long head;
 	unsigned long tail;
@@ -384,7 +398,7 @@ static netdev_tx_t rcar_taurus_can_start_xmit(struct sk_buff *skb,
 		rcar_taurus_can_conn_queue_write(rctcan,
 						channel->ch_id,
 						(cf->can_id & CAN_EFF_MASK),
-						cf->can_dlc,
+						cf->len,
 						&cf->data[0],
 						queued_tx_msg);
 
@@ -415,7 +429,7 @@ static const struct net_device_ops rcar_taurus_can_netdev_ops = {
 static int rcar_taurus_can_rx_pkt(struct rcar_taurus_can_channel *channel)
 {
 	struct net_device_stats *stats = &channel->ndev->stats;
-	struct can_frame *cf;
+	struct canfd_frame *cf;
 	struct sk_buff *skb;
 	u8 dlc;
 	int ret = 0;
@@ -434,20 +448,20 @@ static int rcar_taurus_can_rx_pkt(struct rcar_taurus_can_channel *channel)
 		/* extract one item from the buffer */
 		struct taurus_can_res_msg *res_msg = &channel->rx_buf[tail];
 
-		skb = alloc_can_skb(channel->ndev, &cf);
+		skb = alloc_canfd_skb(channel->ndev, &cf);
 		if (!skb) {
 			ret = -ENOMEM;
 			goto out_unlock;
 		}
 
-		cf->can_id = (res_msg->params.read.node_id | CAN_EFF_MASK);
-		cf->can_dlc = get_can_dlc(res_msg->params.read.data_len);
-		for (dlc = 0; dlc < cf->can_dlc; dlc++)
+		cf->can_id = res_msg->params.read.node_id;
+		cf->len = res_msg->params.read.data_len;
+		for (dlc = 0; dlc < cf->len; dlc++)
 			cf->data[dlc] = res_msg->params.read.data[dlc];
 
 		can_led_event(channel->ndev, CAN_LED_EVENT_RX);
 
-		stats->rx_bytes += cf->can_dlc;
+		stats->rx_bytes += cf->len;
 		stats->rx_packets++;
 		netif_receive_skb(skb);
 
@@ -526,7 +540,9 @@ static int rcar_taurus_can_init_ch(struct rcar_taurus_can_drv *rctcan, int ch_id
 	channel->ndev = ndev;
 	channel->parent = rctcan;
 
-	channel->can.bittiming_const = &rcar_taurus_can_bittiming_const;
+	channel->can.bittiming_const = &rcar_taurus_can_nom_bittiming_const;
+	channel->can.data_bittiming_const = &rcar_taurus_can_data_bittiming_const;
+	can_set_static_ctrlmode(ndev, CAN_CTRLMODE_FD);
 	channel->can.do_set_mode = rcar_taurus_can_do_set_mode;
 	channel->can.do_get_berr_counter = rcar_taurus_can_get_berr_counter;
 	channel->can.ctrlmode_supported = CAN_CTRLMODE_BERR_REPORTING;
