@@ -449,6 +449,7 @@ static void vivid_capture_stop(struct vivid_v4l2_device *vivid)
 {
     struct taurus_camera_res_msg res_msg;
     vivid_taurus_channel_stop(vivid, &res_msg);
+    vivid_taurus_channel_release(vivid, &res_msg);
     return;
 }
 static int vivid_capture_start(struct vivid_v4l2_device *vivid)
