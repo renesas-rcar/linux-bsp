@@ -76,15 +76,29 @@
 #define RCAR_CAN_NAPI_WEIGHT		4
 #define RCAR_CAN_FIFO_DEPTH		4 /* must be power of 2 */
 
-static const struct can_bittiming_const rcar_taurus_can_bittiming_const = {
+/* CAN FD mode nominal rate constants */
+static const struct can_bittiming_const rcar_taurus_can_nom_bittiming_const = {
 	.name = RCAR_TAURUS_CAN_DRV_NAME,
-	.tseg1_min = 4,
+	.tseg1_min = 2,
+	.tseg1_max = 128,
+	.tseg2_min = 2,
+	.tseg2_max = 32,
+	.sjw_max = 32,
+	.brp_min = 1,
+	.brp_max = 1024,
+	.brp_inc = 1,
+};
+
+/* CAN FD mode data rate constants */
+static const struct can_bittiming_const rcar_taurus_can_data_bittiming_const = {
+	.name = RCAR_TAURUS_CAN_DRV_NAME,
+	.tseg1_min = 2,
 	.tseg1_max = 16,
 	.tseg2_min = 2,
 	.tseg2_max = 8,
-	.sjw_max = 4,
+	.sjw_max = 8,
 	.brp_min = 1,
-	.brp_max = 1024,
+	.brp_max = 256,
 	.brp_inc = 1,
 };
 
@@ -526,7 +540,9 @@ static int rcar_taurus_can_init_ch(struct rcar_taurus_can_drv *rctcan, int ch_id
 	channel->ndev = ndev;
 	channel->parent = rctcan;
 
-	channel->can.bittiming_const = &rcar_taurus_can_bittiming_const;
+	channel->can.bittiming_const = &rcar_taurus_can_nom_bittiming_const;
+	channel->can.data_bittiming_const = &rcar_taurus_can_data_bittiming_const;
+	can_set_static_ctrlmode(ndev, CAN_CTRLMODE_FD);
 	channel->can.do_set_mode = rcar_taurus_can_do_set_mode;
 	channel->can.do_get_berr_counter = rcar_taurus_can_get_berr_counter;
 	channel->can.ctrlmode_supported = CAN_CTRLMODE_BERR_REPORTING;
