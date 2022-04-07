@@ -5383,7 +5383,10 @@
 			reg = <0 0xff080000 0 0x64000>;
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2806>;*/
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2806>;
+			*/
 			linux,uio-name = "dcm_00";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
@@ -5394,7 +5397,10 @@
 			reg = <0 0xff0e8000 0 0x3000>;
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2806>; */
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2806>;
+			*/
 			linux,uio-name = "cbf_00";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
@@ -5405,7 +5411,10 @@
 			reg = <0 0xff0ec000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2806>; */
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2806>;
+			*/
 			linux,uio-name = "sbf_00";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
@@ -5416,7 +5425,10 @@
 			reg = <0 0xff0f0000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2806>; */
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2806>;
+			*/
 			linux,uio-name = "osm_00";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
@@ -5427,7 +5439,10 @@
 			reg = <0 0xff100000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2806>; */
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2806>;
+			*/
 			linux,uio-name = "ism_00";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
@@ -5438,7 +5453,10 @@
 			reg = <0 0xff120000 0 0x20000>;
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2806>; */
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2806>;
+			*/
 			linux,uio-name = "ism_01";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
@@ -5462,7 +5480,10 @@
 			interrupts = <GIC_SPI 214 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2807>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2807>; */
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2807>;
+			*/
 			linux,uio-name = "irq_sdmac_00_01";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
@@ -5474,7 +5495,10 @@
 			interrupts = <GIC_SPI 223 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2806>; */
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2806>;
+			*/
 			linux,uio-name = "fbs_00";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
@@ -5485,7 +5509,10 @@
 			reg = <0 0xff290000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2806>; */
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2806>;
+			*/
 			linux,uio-name = "apb_00";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
@@ -5496,7 +5523,10 @@
 			reg = <0 0xff298000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 2806>;
 			power-domains = <&sysc R8A779G0_PD_A3DUL>;
-			/* resets = <&cpg 2806>; */
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 2806>;
+			*/
 			linux,uio-name = "dul_00";
 			ipmmu-id = <RCAR_IPMMU_VIP1 16>;
 			iommus = <&ipmmu_vip1 16>;
