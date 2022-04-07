@@ -2628,39 +2628,26 @@
 			reg = <0 0xe7ab1000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 9>;
 			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
+			/**
+			* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 9>;
+			*/
 			linux,uio-name = "dof_fcprm_00";
 			ipmmu-id = <RCAR_IPMMU_VIP0 3>;
 			iommus = <&ipmmu_vip0 3>;
 		};
 
-		dof_wrap {
+		vip_wrap {
 			compatible = "generic-uio";
-			reg = <0 0xe7b3b000 0 0x400>;
-			clocks = <&cpg CPG_MOD 9>;
-			power-domains = <&sysc R8A779G0_PD_A3VIP0>;
-			linux,uio-name = "dof_wrap_00";
+			reg = <0 0xe7b3b000 0 0x1000>;
+			/* Unsupported control multiple nodes to the same reset resource
+			* resets = <&cpg 5>, <&cpg 7>, <&cpg 9>;
+			* (smd_post_00, smd_ps_00, dof_00)
+			*/
+			linux,uio-name = "vip_wrap_00";
 			ipmmu-id = <RCAR_IPMMU_VIP0 3>;
-			iommus = <&ipmmu_vip0 3>;
-		};
-
-		smd_ps_wrap {
-			compatible = "generic-uio";
-			reg = <0 0xe7b3b400 0 0x400>;
-			clocks = <&cpg CPG_MOD 7>;
-			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
-			linux,uio-name = "smd_ps_wrap_00";
-			ipmmu-id = <RCAR_IPMMU_VIP0 2>;
-			iommus = <&ipmmu_vip0 2>;
-		};
-
-		smd_post_wrap {
-			compatible = "generic-uio";
-			reg = <0 0xe7b3bc00 0 0x400>;
-			clocks = <&cpg CPG_MOD 5>;
-			power-domains = <&sysc R8A779G0_PD_A3VIP2>;
-			linux,uio-name = "smd_post_wrap_00";
-			ipmmu-id = <RCAR_IPMMU_VIP0 1>;
-			iommus = <&ipmmu_vip0 1>;
+			iommus = <&ipmmu_vip0 3>, <&ipmmu_vi0 2>,
+				<&ipmmu_vi0 1>;
 		};
 
 		cisp0: cisp@fec00000 {
