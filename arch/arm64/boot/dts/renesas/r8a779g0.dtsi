@@ -5524,6 +5524,166 @@
 			linux,uio-name = "system_ram_00";
 		};
 
+		icumx_cmd0: icumx_cmd@e6610000 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 878 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "icumx_cmd_00";
+		};
+
+		icumx_cmd0_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 879 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_01";
+		};
+
+		icumx_cmd0_02 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 880 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_02";
+		};
+
+		icumx_cmd0_03 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 881 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_03";
+		};
+
+		icumx_cmd0_04 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 882 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_04";
+		};
+
+		icumx_cmd0_05 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 883 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_05";
+		};
+
+		icumx_cmd0_06 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 884 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_06";
+		};
+
+		icumx_cmd0_07 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 885 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_07";
+		};
+
+		icumx_cmd0_08 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 886 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_08";
+		};
+
+		icumx_cmd0_09 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 887 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_09";
+		};
+
+		icumx_cmd0_10 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 888 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_10";
+		};
+
+		icumx_cmd0_11 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 889 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_11";
+		};
+
+		icumx_cmd0_12 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 890 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_12";
+		};
+
+		icumx_cmd0_13 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 891 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_13";
+		};
+
+		icumx_cmd0_14 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 892 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_14";
+		};
+
+		icumx_cmd0_15 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 893 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_15";
+		};
+
+		icumx_cmd0_16 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 894 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_16";
+		};
+
+		icumx_cmd0_17 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 895 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_17";
+		};
+
+		icumx_cmd0_18 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 896 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_18";
+		};
+
+		icumx_cmd0_19 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 897 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_19";
+		};
+
 		isp0: isp@fed00000 {
 			compatible = "renesas,isp-r8a779g0";
 			reg = <0 0xfed00000 0 0x10000>;
