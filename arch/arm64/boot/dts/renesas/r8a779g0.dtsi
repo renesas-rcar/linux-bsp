@@ -3571,6 +3571,14 @@
 			linux,uio-name = "ipmmu_mm_00";
 		};
 
+		ipmmu_mm0_01 {
+			compatible = "generic-uio";
+			reg = <0 0xeefc0000 0 0x20000>;
+			interrupts = <GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_ipmmu_mm_00_01";
+		};
+
 		ipmmu_vi0 {
 			compatible = "generic-uio";
 			reg = <0 0xeee80000 0 0x20000>;
