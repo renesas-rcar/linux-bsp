@@ -2283,6 +2283,17 @@
 			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
+		impvdsp00_04 {
+			compatible = "generic-uio";
+			/* No define "IO/address" and "IO/range" */
+			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
+			resets = <&cpg 2828>;
+			reset-names = "syspo";
+			linux,uio-name = "vdsp00_05";
+			ipmmu-id = <RCAR_IPMMU_IR 13>;
+			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
+		};
+
 		impvdsp01_00: vdsp@f1600000 {
 			compatible = "generic-uio";
 			reg = <0 0xf1600000 0 0x1a0000>;
@@ -2369,6 +2380,17 @@
 			resets = <&cpg 2903>, <&cpg 2904>;
 			reset-names = "ocem", "apbdbg";
 			linux,uio-name = "vdsp01_03";
+			ipmmu-id = <RCAR_IPMMU_IR 13>;
+			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
+		};
+
+		impvdsp01_04 {
+			compatible = "generic-uio";
+			/* No define "IO/address" and "IO/range" */
+			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
+			resets = <&cpg 2905>;
+			reset-names = "syspo";
+			linux,uio-name = "vdsp01_04";
 			ipmmu-id = <RCAR_IPMMU_IR 13>;
 			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
@@ -2463,6 +2485,17 @@
 			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
+		impvdsp02_04 {
+			compatible = "generic-uio";
+			/* No define "IO/address" and "IO/range" */
+			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
+			resets = <&cpg 2914>;
+			reset-names = "syspo";
+			linux,uio-name = "vdsp02_04";
+			ipmmu-id = <RCAR_IPMMU_IR 13>;
+			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
+		};
+
 		impvdsp03_00: vdsp@f1a00000 {
 			compatible = "generic-uio";
 			reg = <0 0xf1a00000 0 0x1a0000>;
@@ -2549,6 +2582,17 @@
 			resets = <&cpg 2921>, <&cpg 2922>;
 			reset-names = "ocem", "apbdbg";
 			linux,uio-name = "vdsp03_03";
+			ipmmu-id = <RCAR_IPMMU_IR 13>;
+			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
+		};
+
+		impvdsp03_04 {
+			compatible = "generic-uio";
+			/* No define "IO/address" and "IO/range" */
+			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
+			resets = <&cpg 2923>;
+			reset-names = "syspo";
+			linux,uio-name = "vdsp03_04";
 			ipmmu-id = <RCAR_IPMMU_IR 13>;
 			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
