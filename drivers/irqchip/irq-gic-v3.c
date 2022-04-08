@@ -105,11 +105,13 @@ static refcount_t *ppi_nmi_refs;
 
 static struct gic_kvm_info gic_v3_kvm_info;
 static DEFINE_PER_CPU(bool, has_rss);
+static raw_spinlock_t  gic_wa_lock[4];
 
 #define MPIDR_RS(mpidr)			(((mpidr) & 0xF0UL) >> 4)
 #define gic_data_rdist()		(this_cpu_ptr(gic_data.rdists.rdist))
 #define gic_data_rdist_rd_base()	(gic_data_rdist()->rd_base)
 #define gic_data_rdist_sgi_base()	(gic_data_rdist_rd_base() + SZ_64K)
+#define gic_data_cluster()		(gic_wa_lock[smp_processor_id()/2])
 
 /* Our default, arbitrary priority value. Linux only uses one anyway. */
 #define DEFAULT_PMR_VALUE	0xf0
@@ -216,10 +218,18 @@ static void gic_redist_wait_for_rwp(void)
 
 static u64 __maybe_unused gic_read_iar(void)
 {
-	if (cpus_have_const_cap(ARM64_WORKAROUND_CAVIUM_23154))
-		return gic_read_iar_cavium_thunderx();
-	else
-		return gic_read_iar_common();
+	u64 ret;
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&gic_data_cluster(), flags);
+	if (cpus_have_const_cap(ARM64_WORKAROUND_CAVIUM_23154)){
+		ret = gic_read_iar_cavium_thunderx();
+	}else{
+		ret = gic_read_iar_common();
+	}
+	dsb(sy);
+	raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
+	return ret;
 }
 #endif
 
@@ -228,6 +238,7 @@ static void gic_enable_redist(bool enable)
 	void __iomem *rbase;
 	u32 count = 1000000;	/* 1s! */
 	u32 val;
+	unsigned long flags;
 
 	if (gic_data.flags & FLAGS_WORKAROUND_GICR_WAKER_MSM8996)
 		return;
@@ -240,7 +251,11 @@ static void gic_enable_redist(bool enable)
 		val &= ~GICR_WAKER_ProcessorSleep;
 	else
 		val |= GICR_WAKER_ProcessorSleep;
+
+	raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 	writel_relaxed(val, rbase + GICR_WAKER);
+	dsb(sy);
+	raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 
 	if (!enable) {		/* Check that GICR_WAKER is writeable */
 		val = readl_relaxed(rbase + GICR_WAKER);
@@ -534,7 +549,12 @@ static void gic_irq_nmi_teardown(struct irq_data *d)
 
 static void gic_eoi_irq(struct irq_data *d)
 {
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 	gic_write_eoir(gic_irq(d));
+	dsb(sy);
+	raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 }
 
 static void gic_eoimode1_eoi_irq(struct irq_data *d)
@@ -614,11 +634,16 @@ static u64 gic_mpidr_to_affinity(unsigned long mpidr)
 
 static void gic_deactivate_unhandled(u32 irqnr)
 {
+	unsigned long flags;
+
 	if (static_branch_likely(&supports_deactivate_key)) {
 		if (irqnr < 8192)
 			gic_write_dir(irqnr);
 	} else {
+		raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 		gic_write_eoir(irqnr);
+		dsb(sy);
+		raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 	}
 }
 
@@ -626,12 +651,17 @@ static inline void gic_handle_nmi(u32 irqnr, struct pt_regs *regs)
 {
 	bool irqs_enabled = interrupts_enabled(regs);
 	int err;
+	unsigned long flags;
 
 	if (irqs_enabled)
 		nmi_enter();
 
-	if (static_branch_likely(&supports_deactivate_key))
+	if (static_branch_likely(&supports_deactivate_key)){
+		raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 		gic_write_eoir(irqnr);
+		dsb(sy);
+		raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
+	}
 	/*
 	 * Leave the PSR.I bit set to prevent other NMIs to be
 	 * received while handling this one.
@@ -649,6 +679,7 @@ static inline void gic_handle_nmi(u32 irqnr, struct pt_regs *regs)
 static asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs)
 {
 	u32 irqnr;
+	unsigned long flags;
 
 	irqnr = gic_read_iar();
 
@@ -667,10 +698,14 @@ static asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs
 		gic_arch_enable_irqs();
 	}
 
-	if (static_branch_likely(&supports_deactivate_key))
+	if (static_branch_likely(&supports_deactivate_key)){
+		raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 		gic_write_eoir(irqnr);
-	else
+		dsb(sy);
+		raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
+	}else{
 		isb();
+	}
 
 	if (handle_domain_irq(gic_data.domain, irqnr, regs)) {
 		WARN_ONCE(true, "Unexpected interrupt received!\n");
@@ -694,6 +729,7 @@ static bool gic_has_group0(void)
 {
 	u32 val;
 	u32 old_pmr;
+	unsigned long flags;
 
 	old_pmr = gic_read_pmr();
 
@@ -708,10 +744,16 @@ static bool gic_has_group0(void)
 	 * becomes 0x80. Reading it back returns 0, indicating that
 	 * we're don't have access to Group0.
 	 */
+	raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 	gic_write_pmr(BIT(8 - gic_get_pribits()));
+	dsb(sy);
+	raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 	val = gic_read_pmr();
 
+	raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 	gic_write_pmr(old_pmr);
+	dsb(sy);
+	raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 
 	return val != 0;
 }
@@ -833,6 +875,8 @@ static int __gic_populate_rdist(struct redist_region *region, void __iomem *ptr)
 	if ((typer >> 32) == aff) {
 		u64 offset = ptr - region->redist_base;
 		raw_spin_lock_init(&gic_data_rdist()->rd_lock);
+		pr_info("raw_spin_lock_init for SGI\n");
+		raw_spin_lock_init(&gic_data_cluster());
 		gic_data_rdist_rd_base() = ptr;
 		gic_data_rdist()->phys_base = region->phys_base + offset;
 
@@ -911,6 +955,7 @@ static void gic_cpu_sys_reg_init(void)
 	u64 need_rss = MPIDR_RS(mpidr);
 	bool group0;
 	u32 pribits;
+	unsigned long flags;
 
 	/*
 	 * Need to check that the SRE bit has actually been set. If
@@ -922,7 +967,10 @@ static void gic_cpu_sys_reg_init(void)
 	if (!gic_enable_sre())
 		pr_err("GIC: unable to set SRE (disabled at EL2), panic ahead\n");
 
+	raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 	pribits = gic_get_pribits();
+	dsb(sy);
+	raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 
 	group0 = gic_has_group0();
 
@@ -955,10 +1003,16 @@ static void gic_cpu_sys_reg_init(void)
 
 	if (static_branch_likely(&supports_deactivate_key)) {
 		/* EOI drops priority only (mode 1) */
+		raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 		gic_write_ctlr(ICC_CTLR_EL1_EOImode_drop);
+		dsb(sy);
+		raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 	} else {
 		/* EOI deactivates interrupt too (mode 0) */
+		raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 		gic_write_ctlr(ICC_CTLR_EL1_EOImode_drop_dir);
+		dsb(sy);
+		raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 	}
 
 	/* Always whack Group0 before Group1 */
@@ -997,7 +1051,10 @@ static void gic_cpu_sys_reg_init(void)
 	isb();
 
 	/* ... and let's hit the road... */
+	raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 	gic_write_grpen1(1);
+	dsb(sy);
+	raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 
 	/* Keep the RSS capability status in per_cpu variable */
 	per_cpu(has_rss, cpu) = !!(gic_read_ctlr() & ICC_CTLR_EL1_RSS);
@@ -1065,6 +1122,7 @@ static void gic_cpu_init(void)
 
 	/* initialise system registers */
 	gic_cpu_sys_reg_init();
+
 }
 
 #ifdef CONFIG_SMP
@@ -1116,6 +1174,7 @@ out:
 static void gic_send_sgi(u64 cluster_id, u16 tlist, unsigned int irq)
 {
 	u64 val;
+	unsigned long flags;
 
 	val = (MPIDR_TO_SGI_AFFINITY(cluster_id, 3)	|
 	       MPIDR_TO_SGI_AFFINITY(cluster_id, 2)	|
@@ -1125,7 +1184,10 @@ static void gic_send_sgi(u64 cluster_id, u16 tlist, unsigned int irq)
 	       tlist << ICC_SGI1R_TARGET_LIST_SHIFT);
 
 	pr_devel("CPU%d: ICC_SGI1R_EL1 %llx\n", smp_processor_id(), val);
+	raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 	gic_write_sgi1r(val);
+	dsb(sy);
+	raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 }
 
 static void gic_ipi_send_mask(struct irq_data *d, const struct cpumask *mask)
@@ -1234,12 +1296,17 @@ static int gic_retrigger(struct irq_data *data)
 static int gic_cpu_pm_notifier(struct notifier_block *self,
 			       unsigned long cmd, void *v)
 {
+	unsigned long flags;
+
 	if (cmd == CPU_PM_EXIT) {
 		if (gic_dist_security_disabled())
 			gic_enable_redist(true);
 		gic_cpu_sys_reg_init();
 	} else if (cmd == CPU_PM_ENTER && gic_dist_security_disabled()) {
+		raw_spin_lock_irqsave(&gic_data_cluster(), flags);
 		gic_write_grpen1(0);
+		dsb(sy);
+		raw_spin_unlock_irqrestore(&gic_data_cluster(), flags);
 		gic_enable_redist(false);
 	}
 	return NOTIFY_OK;
