@@ -103,7 +103,6 @@ static int rct_eth_cb(struct rpmsg_device *rpdev, void *data, int len, void *pri
 		pkt_addr = lower_32_bits(res->hdr.Aux);
 		pkt_len = upper_32_bits(res->hdr.Aux);
 
-		pkt_data = ioremap(pkt_addr - ETH_MAC_HEADER_LEN, pkt_len);
 		pkt_len = pkt_len + ETH_MAC_HEADER_LEN;
 
 		skb = netdev_alloc_skb(chan->ndev, PKT_BUF_SZ + RCT_ETH_ALIGN - 1);
@@ -113,6 +112,7 @@ static int rct_eth_cb(struct rpmsg_device *rpdev, void *data, int len, void *pri
 		skb_reserve(skb, NET_IP_ALIGN);
 		skb_checksum_none_assert(skb);
 
+		pkt_data = ioremap(pkt_addr - ETH_MAC_HEADER_LEN, pkt_len);
 		memcpy_fromio(skb->data, pkt_data, pkt_len);
 
 		skb_put(skb, pkt_len);
@@ -430,7 +430,7 @@ static netdev_tx_t rct_eth_start_xmit(struct sk_buff *skb, struct net_device *nd
 	if (!tx_skb)
 		goto out;
 
-	tx_skb->skb = skb_get(skb);
+	tx_skb->skb = skb;
 	list_add_tail(&tx_skb->list, &chan->tx_skb_list);
 
 	skb_tx_timestamp(skb);
