@@ -406,6 +406,8 @@ static int gic_irq_set_irqchip_state(struct irq_data *d,
 		return -EINVAL;
 	}
 
+	WARN(reg == GICD_ISACTIVER, "Activation by GICD_ISACTIVER occurs\n");
+
 	gic_poke_irq(d, reg);
 	return 0;
 }
