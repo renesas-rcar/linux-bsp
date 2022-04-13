@@ -441,6 +441,8 @@ static void gic_irq_set_prio(struct irq_data *d, u8 prio)
 	void __iomem *base = gic_dist_base(d);
 	u32 offset, index;
 
+	WARN(prio != GICD_INT_DEF_PRI, "Change GIC priority occurs\n");
+
 	offset = convert_offset_index(d, GICD_IPRIORITYR, &index);
 
 	writeb_relaxed(prio, base + offset + index);
