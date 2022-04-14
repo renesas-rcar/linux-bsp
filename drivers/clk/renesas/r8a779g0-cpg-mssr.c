@@ -248,7 +248,7 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("tmu2",			715,	R8A779G0_CLK_SASYNCPERD2),
 	DEF_MOD("tmu3",			716,	R8A779G0_CLK_SASYNCPERD2),
 	DEF_MOD("tmu4",			717,	R8A779G0_CLK_SASYNCPERD2),
-	DEF_MOD("tpu",			718,	R8A779G0_CLK_S0D6_RT),
+	DEF_MOD("tpu",			718,	R8A779G0_CLK_SASYNCPERD4),
 	DEF_MOD("caiplite_wrapper0",    720,    R8A779G0_CLK_S0D2),
 	DEF_MOD("caiplite0",            721,    R8A779G0_CLK_S0D1_VIO),
 	DEF_MOD("caiplite1",            722,    R8A779G0_CLK_S0D1_VIO),
