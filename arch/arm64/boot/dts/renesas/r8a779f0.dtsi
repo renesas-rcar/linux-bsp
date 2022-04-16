@@ -437,6 +437,7 @@
 			reg = <0 0xe6198000 0 0x200>,
 			      <0 0xe61a0000 0 0x200>,
 			      <0 0xe61a8000 0 0x200>;
+			interrupts = <GIC_SPI 768 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 919>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 919>;
@@ -2533,7 +2534,7 @@
 	thermal-zones {
 		sensor_thermal1: sensor1-thermal {
 			polling-delay-passive = <250>;
-			polling-delay = <1000>;
+			polling-delay = <0>;
 			thermal-sensors = <&tsc 0>;
 
 			trips {
@@ -2547,7 +2548,7 @@
 
 		sensor_thermal2: sensor2-thermal {
 			polling-delay-passive = <250>;
-			polling-delay = <1000>;
+			polling-delay = <0>;
 			thermal-sensors = <&tsc 1>;
 
 			trips {
@@ -2561,7 +2562,7 @@
 
 		sensor_thermal3: sensor3-thermal {
 			polling-delay-passive = <250>;
-			polling-delay = <1000>;
+			polling-delay = <0>;
 			thermal-sensors = <&tsc 2>;
 
 			trips {
