@@ -11,6 +11,7 @@
 #include <dt-bindings/power/r8a7796-sysc.h>
 #include <dt-bindings/power/r8a77965-sysc.h>
 #include <dt-bindings/power/r8a77980-sysc.h>
+#include <dt-bindings/power/r8a779f0-sysc.h>
 #include <linux/clk/renesas.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -560,6 +561,9 @@ static const struct of_device_id rcar_sysc_matches[] __initconst = {
 #endif
 #ifdef CONFIG_SYSC_R8A77995
 	{ .compatible = "renesas,r8a77995-sysc", .data = &r8a77995_sysc_info },
+#endif
+#ifdef CONFIG_SYSC_R8A779F0
+	{ .compatible = "renesas,r8a779f0-sysc", .data = &r8a779f0_sysc_info },
 #endif
 	{ /* sentinel */ }
 };
