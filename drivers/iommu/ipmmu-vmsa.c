@@ -1100,6 +1100,9 @@ static const struct of_device_id ipmmu_of_ids[] = {
 		.compatible = "renesas,ipmmu-r8a779a0",
 		.data = &ipmmu_features_rcar_gen4,
 	}, {
+		.compatible = "renesas,ipmmu-r8a779f0",
+		.data = &ipmmu_features_rcar_gen4,
+	}, {
 		.compatible = "renesas,ipmmu-r8a779g0",
 		.data = &ipmmu_features_rcar_gen4,
 	}, {
