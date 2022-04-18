@@ -520,6 +520,18 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 		priv->tscs[i] = tsc;
 
+		if (cor_para_value == COR_PARA_VLD) {
+			thcodes[i][0] = GEN3_FUSE_MASK &
+				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE1);
+			thcodes[i][1] = GEN3_FUSE_MASK &
+				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE2);
+			thcodes[i][2] = GEN3_FUSE_MASK &
+				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE3);
+		}
+
+		rcar_gen3_thermal_calc_coefs(tsc, ptat, thcodes[i],
+					     *rcar_gen3_ths_tj_1_const);
+
 		for_each_node_with_property(tz_nd, "polling-delay") {
 			u32 zone_id, idle;
 
@@ -546,18 +558,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 		tsc->zone = zone;
 
 		priv->thermal_init(tsc);
-
-		if (cor_para_value == COR_PARA_VLD) {
-			thcodes[i][0] = GEN3_FUSE_MASK &
-				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE1);
-			thcodes[i][1] = GEN3_FUSE_MASK &
-				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE2);
-			thcodes[i][2] = GEN3_FUSE_MASK &
-				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE3);
-		}
-
-		rcar_gen3_thermal_calc_coefs(tsc, ptat, thcodes[i],
-					     *rcar_gen3_ths_tj_1_const);
 
 		tsc->zone->tzp->no_hwmon = false;
 		ret = thermal_add_hwmon_sysfs(tsc->zone);
