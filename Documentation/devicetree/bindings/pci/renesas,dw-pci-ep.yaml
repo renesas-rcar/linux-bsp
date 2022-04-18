@@ -17,6 +17,7 @@ Required properties:
   compatible:
     enum:
       - renesas,r8a779a0-pcie-ep  # R-Car V3U
+      - renesas,r8a779f0-pcie-ep  # R-Car S4
       - renesas,r8a779g0-pcie-ep  # R-Car V4H
   reg:
         description:
