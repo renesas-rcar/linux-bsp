@@ -2078,6 +2078,7 @@
 			linux,uio-name = "irq_rtdmac_control_03_01";
 			ipmmu-id = <RCAR_IPMMU_RT1 49>;
 			iommus = <&ipmmu_rt1 49>;
+			status = "disabled";
 		};
 
 		rtdmac_control302 {
