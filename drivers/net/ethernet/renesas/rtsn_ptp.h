@@ -9,13 +9,17 @@
 
 #include <linux/ptp_clock_kernel.h>
 
+#define PTPTIVC_INIT	0x19000000	/* 320MHz */
+
 #define GTIVC_INIT	0x50000000	/* 100MHz */
 
 /* for rtsn_ptp_init */
 enum rtsn_ptp_reg_layout {
-	RTSN_PTP_REG_LAYOUT_V4H
+	RTSN_PTP_REG_LAYOUT_S4,
+	RTSN_PTP_REG_LAYOUT_V4H,
 };
 
+#define RTSN_PTP_CLOCK_S4	PTPTIVC_INIT
 #define RTSN_PTP_CLOCK_V4H	GTIVC_INIT
 
 /* driver's definitions */
@@ -27,6 +31,18 @@ enum rtsn_ptp_reg_layout {
 #define RTSN_TXTSTAMP_ENABLED		BIT(0)
 
 #define PTPRO			0
+
+enum rswitch_ptp_reg_s4 {
+	PTPTMEC		= PTPRO + 0x0010,
+	PTPTMDC		= PTPRO + 0x0014,
+	PTPTIVC0	= PTPRO + 0x0020,
+	PTPTOVC00	= PTPRO + 0x0030,
+	PTPTOVC10	= PTPRO + 0x0034,
+	PTPTOVC20	= PTPRO + 0x0038,
+	PTPGPTPTM00	= PTPRO + 0x0050,
+	PTPGPTPTM10	= PTPRO + 0x0054,
+	PTPGPTPTM20	= PTPRO + 0x0058,
+};
 
 enum rtsn_ptp_reg_v4h {
 	TME	= PTPRO + 0x0000,
