@@ -50,7 +50,10 @@ properties:
           - const: renesas,rcar-gen3-gpio # R-Car Gen3 or RZ/G2
 
       - items:
-          - const: renesas,gpio-r8a779g0 # R-Car V4H
+          - enum:
+              - renesas,gpio-r8a779f0     # R-Car S4
+              - renesas,gpio-r8a779g0     # R-Car V4H
+          - const: renesas,rcar-gen4-gpio # R-Car Gen4
 
   reg:
     maxItems: 1
