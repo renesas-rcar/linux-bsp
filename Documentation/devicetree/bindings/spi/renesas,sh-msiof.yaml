@@ -51,6 +51,7 @@ properties:
                                             # compatible device
       - items:
           - enum:
+              - renesas,msiof-r8a779f0      # R-Car S4
               - renesas,msiof-r8a779g0      # R-Car V4h
           - const: renesas,rcar-gen4-msiof  # generic R-Car Gen4
                                             # compatible device
