@@ -14,6 +14,18 @@
 #include "rtsn_ptp.h"
 #define ptp_to_priv(ptp)	container_of(ptp, struct rtsn_ptp_private, info)
 
+static const struct rtsn_ptp_reg_offset s4_offs = {
+	.enable = PTPTMEC,
+	.disable = PTPTMDC,
+	.increment = PTPTIVC0,
+	.config_t0 = PTPTOVC00,
+	.config_t1 = PTPTOVC10,
+	.config_t2 = PTPTOVC20,
+	.monitor_t0 = PTPGPTPTM00,
+	.monitor_t1 = PTPGPTPTM10,
+	.monitor_t2 = PTPGPTPTM20,
+};
+
 static const struct rtsn_ptp_reg_offset v4h_offs = {
 	.enable		= TME,
 	.disable	= TMD,
@@ -105,6 +117,9 @@ static struct ptp_clock_info rtsn_ptp_info = {
 static void rtsn_ptp_set_offs(struct rtsn_ptp_private *ptp_priv, enum rtsn_ptp_reg_layout layout)
 {
 	switch (layout) {
+	case RTSN_PTP_REG_LAYOUT_S4:
+		ptp_priv->offs = &s4_offs;
+		break;
 	case RTSN_PTP_REG_LAYOUT_V4H:
 		ptp_priv->offs = &v4h_offs;
 		break;
