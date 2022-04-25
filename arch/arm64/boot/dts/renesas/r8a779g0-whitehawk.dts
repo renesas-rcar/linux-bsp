@@ -343,8 +343,9 @@
 			port@4 {
 				reg = <4>;
 				max96712_out0: endpoint {
+					bus-type = <1>;
 					clock-lanes = <0>;
-					data-lanes = <1 2 3 4>;
+					data-lanes = <1 2 3>;
 					remote-endpoint = <&csi40_in>;
 				};
 			};
@@ -428,8 +429,9 @@
 			port@4 {
 				reg = <4>;
 				max96712_out1: endpoint {
+					bus-type = <1>;
 					clock-lanes = <0>;
-					data-lanes = <1 2 3 4>;
+					data-lanes = <1 2 3>;
 					remote-endpoint = <&csi41_in>;
 				};
 			};
@@ -502,17 +504,19 @@
         pinctrl-names = "default";
 };
 
+/*
 &du {
 	status = "okay";
 };
+*/
 
 &dsi0 {
 	status = "okay";
 
+	use-extal-clk;
 	clocks = <&cpg CPG_MOD 415>,
-			 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>,
-			 <&extal_clk>;
-	clock-names = "fck", "dsi", "extal";
+		 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>;
+	clock-names = "mod", "dsi";
 
 	ports {
 		port@1 {
@@ -530,6 +534,7 @@
 
 &csi40 {
 	status = "okay";
+	pin-swap;
 
 	ports {
 		#address-cells = <1>;
@@ -539,8 +544,9 @@
 			reg = <0>;
 
 			csi40_in: endpoint {
+				bus-type = <1>;
 				clock-lanes = <0>;
-				data-lanes = <1 2 3 4>;
+				data-lanes = <1 2 3>;
 				remote-endpoint = <&max96712_out0>;
 			};
 		};
@@ -549,6 +555,7 @@
 
 &csi41 {
 	status = "okay";
+	pin-swap;
 
 	ports {
 		#address-cells = <1>;
@@ -558,8 +565,9 @@
 			reg = <0>;
 
 			csi41_in: endpoint {
+				bus-type = <1>;
 				clock-lanes = <0>;
-				data-lanes = <1 2 3 4>;
+				data-lanes = <1 2 3>;
 				remote-endpoint = <&max96712_out1>;
 			};
 		};
