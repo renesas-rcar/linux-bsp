@@ -73,6 +73,16 @@
 
 #define TSC_MAX_NUM	3
 
+/* ECM register base and offsets */
+#define ECM_TSC         16
+#define ECM_BASE        0xE6250000
+#define CTLR(m)         (0x0000 + (4 * (m)))
+#define STSR(m)         (0x0100 + (4 * (m)))
+#define TGTR(m)         (0x0200 + (4 * (m)))
+#define ECMWPCNTR       (0x0A00)
+#define ECM_MAX_SIZE    (ECMWPCNTR + 0x04)
+#define ECM_SET         (0xFFF << 14)
+
 /* default THCODE values if FUSEs are missing */
 static int thcodes[TSC_MAX_NUM][3] = {
 	{ 3397, 2800, 2221 },
@@ -142,6 +152,31 @@ static inline void rcar_gen3_thermal_write(struct rcar_gen3_thermal_tsc *tsc,
 
 /* no idea where these constants come from */
 #define TJ_3 -41
+
+static inline void ecm_write(u32 value, u32 base, u32 reg)
+{
+	void __iomem *ecm_base;
+
+	ecm_base = ioremap_cache(base, ECM_MAX_SIZE);
+
+	iowrite32(value, ecm_base + reg);
+
+	iounmap(ecm_base);
+}
+
+static void init_ecm_registers(void)
+{
+	ecm_write(0xACCE0001, ECM_BASE, ECMWPCNTR);
+	usleep_range(1000, 2000);
+	ecm_write(ECM_SET, ECM_BASE, CTLR(ECM_TSC));
+	ecm_write(ECM_SET, ECM_BASE, STSR(ECM_TSC));
+	ecm_write(ECM_SET, ECM_BASE, TGTR(ECM_TSC));
+}
+
+static const struct soc_device_attribute r8a779f0[] = {
+	{ .soc_id = "r8a779f0"},
+	{ /* sentinel */ }
+};
 
 static void rcar_gen3_thermal_calc_coefs(struct rcar_gen3_thermal_tsc *tsc,
 					 int *ptat, const int *thcode,
@@ -250,6 +285,8 @@ static irqreturn_t rcar_gen3_thermal_irq(int irq, void *data)
 	for (i = 0; i < priv->num_tscs; i++) {
 		status = rcar_gen3_thermal_read(priv->tscs[i], REG_GEN3_IRQSTR);
 		rcar_gen3_thermal_write(priv->tscs[i], REG_GEN3_IRQSTR, 0);
+		if (soc_device_match(r8a779f0))
+			ecm_write(ECM_SET, ECM_BASE, STSR(ECM_TSC)); /* Clear the ECM status */
 		if (status)
 			thermal_zone_device_update(priv->tscs[i]->zone,
 						   THERMAL_EVENT_UNSPECIFIED);
@@ -348,6 +385,10 @@ static const struct of_device_id rcar_gen3_thermal_dt_ids[] = {
 		.compatible = "renesas,r8a77980-thermal",
 		.data = &rcar_gen3_ths_tj_1,
 	},
+	{
+		.compatible = "renesas,r8a779f0-thermal",
+		.data = &rcar_gen3_ths_tj_1,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, rcar_gen3_thermal_dt_ids);
@@ -373,11 +414,17 @@ static int rcar_gen3_thermal_request_irqs(struct rcar_gen3_thermal_priv *priv,
 					  struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	unsigned int i;
+	unsigned int i, irq_num;
 	char *irqname;
 	int ret, irq;
 
-	for (i = 0; i < 2; i++) {
+	irq_num = 2;
+	if (soc_device_match(r8a779f0)) {
+		init_ecm_registers();
+		irq_num = 1;
+	}
+
+	for (i = 0; i < irq_num; i++) {
 		irq = platform_get_irq_optional(pdev, i);
 		if (irq < 0)
 			return irq;
@@ -473,6 +520,18 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 		priv->tscs[i] = tsc;
 
+		if (cor_para_value == COR_PARA_VLD) {
+			thcodes[i][0] = GEN3_FUSE_MASK &
+				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE1);
+			thcodes[i][1] = GEN3_FUSE_MASK &
+				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE2);
+			thcodes[i][2] = GEN3_FUSE_MASK &
+				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE3);
+		}
+
+		rcar_gen3_thermal_calc_coefs(tsc, ptat, thcodes[i],
+					     *rcar_gen3_ths_tj_1_const);
+
 		for_each_node_with_property(tz_nd, "polling-delay") {
 			u32 zone_id, idle;
 
@@ -499,18 +558,6 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 		tsc->zone = zone;
 
 		priv->thermal_init(tsc);
-
-		if (cor_para_value == COR_PARA_VLD) {
-			thcodes[i][0] = GEN3_FUSE_MASK &
-				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE1);
-			thcodes[i][1] = GEN3_FUSE_MASK &
-				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE2);
-			thcodes[i][2] = GEN3_FUSE_MASK &
-				rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE3);
-		}
-
-		rcar_gen3_thermal_calc_coefs(tsc, ptat, thcodes[i],
-					     *rcar_gen3_ths_tj_1_const);
 
 		tsc->zone->tzp->no_hwmon = false;
 		ret = thermal_add_hwmon_sysfs(tsc->zone);
