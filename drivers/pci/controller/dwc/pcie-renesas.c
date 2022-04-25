@@ -412,6 +412,7 @@ err_pm_put:
 
 static const struct of_device_id renesas_pcie_of_match[] = {
 	{ .compatible = "renesas,r8a779a0-pcie", },
+	{ .compatible = "renesas,r8a779f0-pcie", },
 	{ .compatible = "renesas,r8a779g0-pcie", },
 	{},
 };
