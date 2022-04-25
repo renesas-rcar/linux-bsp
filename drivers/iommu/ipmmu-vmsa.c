@@ -1100,6 +1100,9 @@ static const struct of_device_id ipmmu_of_ids[] = {
 		.compatible = "renesas,ipmmu-r8a779a0",
 		.data = &ipmmu_features_rcar_gen4,
 	}, {
+		.compatible = "renesas,ipmmu-r8a779f0",
+		.data = &ipmmu_features_rcar_gen4,
+	}, {
 		.compatible = "renesas,ipmmu-r8a779g0",
 		.data = &ipmmu_features_rcar_gen4,
 	}, {
@@ -1198,11 +1201,7 @@ static int ipmmu_probe(struct platform_device *pdev)
 		if (ret)
 			return ret;
 
-		iommu_device_set_ops(&mmu->iommu, &ipmmu_ops);
-		iommu_device_set_fwnode(&mmu->iommu,
-					&pdev->dev.of_node->fwnode);
-
-		ret = iommu_device_register(&mmu->iommu);
+		ret = iommu_device_register(&mmu->iommu, &ipmmu_ops, &pdev->dev);
 		if (ret)
 			return ret;
 
