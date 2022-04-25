@@ -26,11 +26,157 @@
 #include "rcar_mipi_dsi.h"
 #include "rcar_mipi_dsi_regs.h"
 
+/* Clock setting definition */
+#define DSI_CLOCK_SETTING(mi, ma, vco, di, cpb, gmp, intc, pro, divi) \
+	.min_freq = (mi), \
+	.max_freq = (ma), \
+	.vco_cntrl = (vco), \
+	.div = (di), \
+	.cpbias_cntrl = (cpb), \
+	.gmp_cntrl = (gmp), \
+	.int_cntrl = (intc), \
+	.prop_cntrl = (pro), \
+	.divider = (divi)
+
+struct clockset_values {
+	u16 min_freq;
+	u16 max_freq;
+	u8 vco_cntrl;
+	u8 div;
+	u8 cpbias_cntrl;
+	u8 gmp_cntrl;
+	u8 int_cntrl;
+	u8 prop_cntrl;
+	u8 divider;
+};
+
+static const struct clockset_values clockset_setting_table_r8a779a0[] = {
+	{ DSI_CLOCK_SETTING(   40,   55, 0x3f, 0x03, 0x10, 0x01, 0x00, 0x0b, 8 ) },
+	{ DSI_CLOCK_SETTING(   52,   80, 0x39, 0x03, 0x10, 0x01, 0x00, 0x0b, 8 ) },
+	{ DSI_CLOCK_SETTING(   80,  110, 0x2f, 0x02, 0x10, 0x01, 0x00, 0x0b, 4 ) },
+	{ DSI_CLOCK_SETTING(  105,  160, 0x29, 0x02, 0x10, 0x01, 0x00, 0x0b, 4 ) },
+	{ DSI_CLOCK_SETTING(  160,  220, 0x1f, 0x01, 0x10, 0x01, 0x00, 0x0b, 2 ) },
+	{ DSI_CLOCK_SETTING(  210,  320, 0x19, 0x01, 0x10, 0x01, 0x00, 0x0b, 2 ) },
+	{ DSI_CLOCK_SETTING(  320,  440, 0x0f, 0x00, 0x10, 0x01, 0x00, 0x0b, 1 ) },
+	{ DSI_CLOCK_SETTING(  420,  660, 0x09, 0x00, 0x10, 0x01, 0x00, 0x0b, 1 ) },
+	{ DSI_CLOCK_SETTING(  630, 1149, 0x03, 0x00, 0x10, 0x01, 0x00, 0x0b, 1 ) },
+	{ DSI_CLOCK_SETTING( 1100, 1152, 0x01, 0x00, 0x10, 0x01, 0x00, 0x0b, 1 ) },
+	{ DSI_CLOCK_SETTING( 1150, 1250, 0x01, 0x00, 0x10, 0x01, 0x00, 0x0c, 1 ) },
+	{ /* sentinel */ },
+};
+
+static const struct clockset_values clockset_setting_table_r8a779g0[] = {
+	{ DSI_CLOCK_SETTING(   40,   46, 0x2b, 0x05, 0x00, 0x00, 0x08, 0x0a, 64 ) },
+	{ DSI_CLOCK_SETTING(   44,   56, 0x28, 0x05, 0x00, 0x00, 0x08, 0x0a, 64 ) },
+	{ DSI_CLOCK_SETTING(   53,   62, 0x28, 0x05, 0x00, 0x00, 0x08, 0x0a, 64 ) },
+	{ DSI_CLOCK_SETTING(   62,   77, 0x27, 0x04, 0x00, 0x00, 0x08, 0x0a, 32 ) },
+	{ DSI_CLOCK_SETTING(   73,   93, 0x23, 0x04, 0x00, 0x00, 0x08, 0x0a, 32 ) },
+	{ DSI_CLOCK_SETTING(   88,  121, 0x20, 0x04, 0x00, 0x00, 0x08, 0x0a, 32 ) },
+	{ DSI_CLOCK_SETTING(  106,  125, 0x20, 0x04, 0x00, 0x00, 0x08, 0x0a, 32 ) },
+	{ DSI_CLOCK_SETTING(  125,  154, 0x1f, 0x03, 0x00, 0x00, 0x08, 0x0a, 16 ) },
+	{ DSI_CLOCK_SETTING(  146,  186, 0x1b, 0x03, 0x00, 0x00, 0x08, 0x0a, 16 ) },
+	{ DSI_CLOCK_SETTING(  176,  224, 0x18, 0x03, 0x00, 0x00, 0x08, 0x0a, 16 ) },
+	{ DSI_CLOCK_SETTING(  213,  250, 0x18, 0x03, 0x00, 0x00, 0x08, 0x0a, 16 ) },
+	{ DSI_CLOCK_SETTING(  250,  307, 0x17, 0x02, 0x00, 0x00, 0x08, 0x0a,  8 ) },
+	{ DSI_CLOCK_SETTING(  292,  371, 0x13, 0x02, 0x00, 0x00, 0x08, 0x0a,  8 ) },
+	{ DSI_CLOCK_SETTING(  353,  484, 0x10, 0x02, 0x00, 0x00, 0x08, 0x0a,  8 ) },
+	{ DSI_CLOCK_SETTING(  426,  500, 0x10, 0x02, 0x00, 0x00, 0x08, 0x0a,  8 ) },
+	{ DSI_CLOCK_SETTING(  500,  615, 0x0f, 0x01, 0x00, 0x00, 0x08, 0x0a,  4 ) },
+	{ DSI_CLOCK_SETTING(  585,  743, 0x0b, 0x01, 0x00, 0x00, 0x08, 0x0a,  4 ) },
+	{ DSI_CLOCK_SETTING(  707,  899, 0x08, 0x01, 0x00, 0x00, 0x08, 0x0a,  4 ) },
+	{ DSI_CLOCK_SETTING(  853, 1000, 0x08, 0x01, 0x00, 0x00, 0x08, 0x0a,  4 ) },
+	{ DSI_CLOCK_SETTING( 1000, 1230, 0x07, 0x00, 0x00, 0x00, 0x08, 0x0a,  2 ) },
+	{ DSI_CLOCK_SETTING( 1170, 1250, 0x03, 0x00, 0x00, 0x00, 0x08, 0x0a,  2 ) },
+	{ /* sentinel */ },
+};
+
+struct rcar_mipi_dsi_hsfeq {
+	u16 mbps;
+	u16 value;
+};
+
+static const struct rcar_mipi_dsi_hsfeq hsfreqrange_table_r8a779g0_r8a779a0[] = {
+	{ .mbps =   80, .value = 0x00},
+	{ .mbps =   90, .value = 0x10},
+	{ .mbps =  100, .value = 0x20},
+	{ .mbps =  110, .value = 0x30},
+	{ .mbps =  120, .value = 0x01},
+	{ .mbps =  130, .value = 0x11},
+	{ .mbps =  140, .value = 0x21},
+	{ .mbps =  150, .value = 0x31},
+	{ .mbps =  160, .value = 0x02},
+	{ .mbps =  170, .value = 0x12},
+	{ .mbps =  180, .value = 0x22},
+	{ .mbps =  190, .value = 0x32},
+	{ .mbps =  205, .value = 0x03},
+	{ .mbps =  220, .value = 0x13},
+	{ .mbps =  235, .value = 0x23},
+	{ .mbps =  250, .value = 0x33},
+	{ .mbps =  275, .value = 0x04},
+	{ .mbps =  300, .value = 0x14},
+	{ .mbps =  325, .value = 0x25},
+	{ .mbps =  350, .value = 0x35},
+	{ .mbps =  400, .value = 0x05},
+	{ .mbps =  450, .value = 0x16},
+	{ .mbps =  500, .value = 0x26},
+	{ .mbps =  550, .value = 0x37},
+	{ .mbps =  600, .value = 0x07},
+	{ .mbps =  650, .value = 0x18},
+	{ .mbps =  700, .value = 0x28},
+	{ .mbps =  750, .value = 0x39},
+	{ .mbps =  800, .value = 0x09},
+	{ .mbps =  850, .value = 0x19},
+	{ .mbps =  900, .value = 0x29},
+	{ .mbps =  950, .value = 0x3a},
+	{ .mbps = 1000, .value = 0x0a},
+	{ .mbps = 1050, .value = 0x1a},
+	{ .mbps = 1100, .value = 0x2a},
+	{ .mbps = 1150, .value = 0x3b},
+	{ .mbps = 1200, .value = 0x0b},
+	{ .mbps = 1250, .value = 0x1b},
+	{ .mbps = 1300, .value = 0x2b},
+	{ .mbps = 1350, .value = 0x3c},
+	{ .mbps = 1400, .value = 0x0c},
+	{ .mbps = 1450, .value = 0x1c},
+	{ .mbps = 1500, .value = 0x2c},
+	{ .mbps = 1550, .value = 0x3d},
+	{ .mbps = 1600, .value = 0x0d},
+	{ .mbps = 1650, .value = 0x1d},
+	{ .mbps = 1700, .value = 0x2e},
+	{ .mbps = 1750, .value = 0x3e},
+	{ .mbps = 1800, .value = 0x0e},
+	{ .mbps = 1850, .value = 0x1e},
+	{ .mbps = 1900, .value = 0x2f},
+	{ .mbps = 1950, .value = 0x3f},
+	{ .mbps = 2000, .value = 0x0f},
+	{ .mbps = 2050, .value = 0x40},
+	{ .mbps = 2100, .value = 0x41},
+	{ .mbps = 2150, .value = 0x42},
+	{ .mbps = 2200, .value = 0x43},
+	{ .mbps = 2250, .value = 0x44},
+	{ .mbps = 2300, .value = 0x45},
+	{ .mbps = 2350, .value = 0x46},
+	{ .mbps = 2400, .value = 0x47},
+	{ .mbps = 2450, .value = 0x48},
+	{ .mbps = 2500, .value = 0x49},
+	{ /* sentinel */ },
+};
+
 struct rcar_mipi_dsi;
+
+struct rcar_mipi_dsi_info {
+	int (*init_phtw)(struct rcar_mipi_dsi *mipi_dsi);
+	int (*post_init_phtw)(struct rcar_mipi_dsi *mipi_dsi);
+	const struct rcar_mipi_dsi_hsfeq *hsfeqrange_values;
+	const struct clockset_values *clkset_values;
+	u8 m_offset;
+	u8 n_offset;
+	u8 freq_mul;
+};
 
 struct rcar_mipi_dsi {
 	struct device *dev;
-	const struct rcar_mipi_dsi_device_info *info;
+	const struct rcar_mipi_dsi_info *info;
 	struct reset_control *rstc;
 
 	struct mipi_dsi_host host;
@@ -41,7 +187,6 @@ struct rcar_mipi_dsi {
 	void __iomem *mmio;
 	struct {
 		struct clk *mod;
-		struct clk *extal;
 		struct clk *dsi;
 	} clocks;
 
@@ -49,6 +194,8 @@ struct rcar_mipi_dsi {
 	enum mipi_dsi_pixel_format format;
 	unsigned int num_data_lanes;
 	unsigned int lanes;
+
+	bool use_extal_clk;
 };
 
 #define bridge_to_rcar_mipi_dsi(b) \
@@ -59,74 +206,6 @@ struct rcar_mipi_dsi {
 
 #define host_to_rcar_mipi_dsi(c) \
 	container_of(c, struct rcar_mipi_dsi, host)
-
-static const u32 phtw[] = {
-	0x01020114, 0x01600115, /* General testing */
-	0x01030116, 0x0102011d, /* General testing */
-	0x011101a4, 0x018601a4, /* 1Gbps testing */
-	0x014201a0, 0x010001a3, /* 1Gbps testing */
-	0x0101011f,		/* 1Gbps testing */
-};
-
-static const u32 phtw_v4h[] = {
-	0x01010100, 0x01030173,
-	0x01000174, 0x01500175,
-	0x01030176, 0x01040166,
-	0x010201ad,
-	0x01020100, 0x01010172,
-	0x01570170, 0x01060171,
-	0x01110172,
-};
-
-static const u32 phtw2[] = {
-	0x01090160, 0x01090170,
-};
-
-static const u32 hsfreqrange_table[][2] = {
-	{80,   0x00}, {90,   0x10}, {100,  0x20},
-	{110,  0x30}, {120,  0x01}, {130,  0x11},
-	{140,  0x21}, {150,  0x31}, {160,  0x02},
-	{170,  0x12}, {180,  0x22}, {190,  0x32},
-	{205,  0x03}, {220,  0x13}, {235,  0x23},
-	{250,  0x33}, {275,  0x04}, {300,  0x14},
-	{325,  0x25}, {350,  0x35}, {400,  0x05},
-	{450,  0x16}, {500,  0x26}, {550,  0x37},
-	{600,  0x07}, {650,  0x18}, {700,  0x28},
-	{750,  0x39}, {800,  0x09}, {850,  0x19},
-	{900,  0x29}, {950,  0x3a}, {1000, 0x0a},
-	{1050, 0x1a}, {1100, 0x2a}, {1150, 0x3b},
-	{1200, 0x0b}, {1250, 0x1b}, {1300, 0x2b},
-	{1350, 0x3c}, {1400, 0x0c}, {1450, 0x1c},
-	{1500, 0x2c}, {1550, 0x3d}, {1600, 0x0d},
-	{1650, 0x1d}, {1700, 0x2e}, {1750, 0x3e},
-	{1800, 0x0e}, {1850, 0x1e}, {1900, 0x2f},
-	{1950, 0x3f}, {2000, 0x0f}, {2050, 0x40},
-	{2100, 0x41}, {2150, 0x42}, {2200, 0x43},
-	{2250, 0x44}, {2300, 0x45}, {2350, 0x46},
-	{2400, 0x47}, {2450, 0x48}, {2500, 0x49},
-	{ /* sentinel */ },
-};
-
-struct vco_cntrl_value {
-	u32 min_freq;
-	u32 max_freq;
-	u16 value;
-};
-
-static const struct vco_cntrl_value vco_cntrl_table[] = {
-	{ .min_freq = 40000000,   .max_freq = 55000000,   .value = 0x3f},
-	{ .min_freq = 52500000,   .max_freq = 80000000,   .value = 0x39},
-	{ .min_freq = 80000000,   .max_freq = 110000000,  .value = 0x2f},
-	{ .min_freq = 105000000,  .max_freq = 160000000,  .value = 0x29},
-	{ .min_freq = 160000000,  .max_freq = 220000000,  .value = 0x1f},
-	{ .min_freq = 210000000,  .max_freq = 320000000,  .value = 0x19},
-	{ .min_freq = 320000000,  .max_freq = 440000000,  .value = 0x0f},
-	{ .min_freq = 420000000,  .max_freq = 660000000,  .value = 0x09},
-	{ .min_freq = 630000000,  .max_freq = 1149000000, .value = 0x03},
-	{ .min_freq = 1100000000, .max_freq = 1152000000, .value = 0x01},
-	{ .min_freq = 1150000000, .max_freq = 1250000000, .value = 0x01},
-	{ /* sentinel */ },
-};
 
 static void rcar_mipi_dsi_write(struct rcar_mipi_dsi *mipi_dsi,
 				u32 reg, u32 data)
@@ -153,43 +232,86 @@ static void rcar_mipi_dsi_set(struct rcar_mipi_dsi *mipi_dsi,
 			    rcar_mipi_dsi_read(mipi_dsi, reg) | set);
 }
 
-static int rcar_mipi_dsi_phtw_test(struct rcar_mipi_dsi *mipi_dsi, u32 phtw)
+/* PHTW init */
+
+static int rcar_mipi_dsi_write_phtw(struct rcar_mipi_dsi *mipi_dsi, const u32 *phtw_values)
 {
 	unsigned int timeout;
 	u32 status;
+	const u32 *phtw_value;
 
-	rcar_mipi_dsi_write(mipi_dsi, PHTW, phtw);
+	for (phtw_value = phtw_values; *phtw_value; phtw_value++) {
+		rcar_mipi_dsi_write(mipi_dsi, PHTW, *phtw_value);
 
-	for (timeout = 10; timeout > 0; --timeout) {
-		status = rcar_mipi_dsi_read(mipi_dsi, PHTW);
-		if (!(status & PHTW_DWEN) &&
-		    !(status & PHTW_CWEN))
-			break;
+		for (timeout = 10; timeout > 0; --timeout) {
+			status = rcar_mipi_dsi_read(mipi_dsi, PHTW);
+			if (!(status & PHTW_DWEN) && !(status & PHTW_CWEN))
+				break;
 
-		usleep_range(1000, 2000);
-	}
+			usleep_range(1000, 2000);
+		}
 
-	if (!timeout) {
-		dev_err(mipi_dsi->dev,
-			"failed to test phtw with data %x\n", phtw);
-		return -ETIMEDOUT;
+		if (!timeout) {
+			dev_err(mipi_dsi->dev, "failed to write PHTW\n");
+			return -ETIMEDOUT;
+		}
 	}
 
 	return timeout;
+}
+
+static int rcar_mipi_dsi_init_phtw_v3u(struct rcar_mipi_dsi *mipi_dsi)
+{
+	static const u32 phtw_init[] = {
+		0x01020114, 0x01600115, 0x01030116, 0x0102011d,
+		0x011101a4, 0x018601a4, 0x014201a0, 0x010001a3,
+		0x0101011f,
+		0,
+	};
+
+	return rcar_mipi_dsi_write_phtw (mipi_dsi, phtw_init);
+}
+
+static int rcar_mipi_dsi_post_init_phtw_v3u(struct rcar_mipi_dsi *mipi_dsi)
+{
+	static const u32 phtw_post_init[] = {
+		0x010c0130, 0x010c0140, 0x010c0150, 0x010c0180,
+		0x010c0190, 0x010a0160, 0x010a0170, 0x01800164,
+		0x01800174,
+		0,
+	};
+
+	return rcar_mipi_dsi_write_phtw (mipi_dsi, phtw_post_init);
+}
+
+static int rcar_mipi_dsi_init_phtw_v4h(struct rcar_mipi_dsi *mipi_dsi)
+{
+	static const u32 phtw_init[] = {
+		0x01010100, 0x01030173, 0x01000174, 0x01500175,
+		0x01030176, 0x01040166, 0x010201ad, 0x01020100,
+		0x01010172, 0x01570170, 0x01060171, 0x01110172,
+		0,
+	};
+
+	return rcar_mipi_dsi_write_phtw (mipi_dsi, phtw_init);
+}
+
+static int rcar_mipi_dsi_post_init_phtw_v4h(struct rcar_mipi_dsi *mipi_dsi)
+{
+	static const u32 phtw_post_init[] = {
+		0x01090160, 0x01090170,
+		0,
+	};
+
+	return rcar_mipi_dsi_write_phtw (mipi_dsi, phtw_post_init);
 }
 
 /* -----------------------------------------------------------------------------
  * Hardware Setup
  */
 struct dsi_setup_info {
-	unsigned int err;
-	u16 vco_cntrl;
-	u16 prop_cntrl;
-	u16 hsfreqrange;
-	u16 div;
-	u16 int_contrl;
-	u16 cpbias_cntrl;
-	u16 gmp_cntrl;
+	struct rcar_mipi_dsi_hsfeq hsfeq;
+	struct clockset_values clk_setting;
 	unsigned int m;
 	unsigned int n;
 };
@@ -198,15 +320,14 @@ static void rcar_mipi_dsi_parametters_calc(struct rcar_mipi_dsi *mipi_dsi,
 					struct clk *clk, unsigned long target,
 					struct dsi_setup_info *setup_info)
 {
-#if 0
-	const struct vco_cntrl_value *vco_cntrl;
+	const struct clockset_values *clkset_value;
+	const struct rcar_mipi_dsi_hsfeq *hsfreq_value;
 	unsigned long fout_target;
-	unsigned long fin, fout;
-	unsigned long hsfreq;
-	unsigned int divider;
+	unsigned long fin;
+	unsigned long fpfd;
+	unsigned long mbps;
 	unsigned int n;
-	unsigned int i;
-	unsigned int err;
+	unsigned int m;
 
 	/*
 	 * Calculate Fout = dot clock * ColorDepth / (2 * Lane Count)
@@ -215,85 +336,50 @@ static void rcar_mipi_dsi_parametters_calc(struct rcar_mipi_dsi *mipi_dsi,
 	fout_target = target *
 			mipi_dsi_pixel_format_to_bpp(mipi_dsi->format) /
 			(2 * mipi_dsi->lanes);
-	if (fout_target < 40000000 || fout_target > 1250000000)
+	do_div(fout_target, 1000000);
+	if (fout_target < 40 || fout_target > 1250) {
+		dev_err(mipi_dsi->dev, "clock is out of range\n");
 		return;
+	}
 
-	/* Find vco_cntrl */
-	for (vco_cntrl = vco_cntrl_table; vco_cntrl->min_freq != 0; vco_cntrl++) {
-		if (fout_target > vco_cntrl->min_freq &&
-			fout_target <= vco_cntrl->max_freq) {
-			setup_info->vco_cntrl = vco_cntrl->value;
-			if (fout_target >= 1150000000)
-				setup_info->prop_cntrl = 0x0c;
-			else
-				setup_info->prop_cntrl = 0x0b;
+	/* Find clk setting */
+	for (clkset_value = mipi_dsi->info->clkset_values;
+		 clkset_value->min_freq;
+		 clkset_value++) {
+		if (fout_target > clkset_value->min_freq &&
+			fout_target <= clkset_value->max_freq) {
+			setup_info->clk_setting = *clkset_value;
 			break;
 		}
 	}
 
-	/* Add divider */
-	setup_info->div = (setup_info->vco_cntrl & 0x30) >> 4;
-
 	/* Find hsfreqrange */
-	hsfreq = fout_target * 2;
-	do_div(hsfreq, 1000000);
-	for (i = 0; i < ARRAY_SIZE(hsfreqrange_table); i++) {
-		if (hsfreq > hsfreqrange_table[i][0] &&
-			hsfreq <= hsfreqrange_table[i+1][0]) {
-			setup_info->hsfreqrange = hsfreqrange_table[i+1][1];
+	mbps = fout_target * 2;
+	for (hsfreq_value = mipi_dsi->info->hsfeqrange_values;
+		 hsfreq_value->mbps;
+		 hsfreq_value++) {
+		if (hsfreq_value->mbps >= mbps) {
+			setup_info->hsfeq = *hsfreq_value;
 			break;
 		}
 	}
 
 	/*
 	 * Calculate n and m for PLL clock
-	 * Following the HW manual the ranges of n and m are
-	 * n = [3-8] and m = [64-625]
+	 * There is variety of [n, m] sets.
+	 * However, to reduce compulation cost, n = 0 is used
 	 */
 	fin = clk_get_rate(clk);
-	divider = 1 << setup_info->div;
-	for (n = 3; n < 9; n++) {
-		unsigned long fpfd;
-		unsigned int m;
 
-		fpfd = fin / n;
+	setup_info->n = 0;
+	n = mipi_dsi->info->n_offset;
 
-		for (m = 64; m < 626; m++) {
-			fout = fpfd * m / divider;
-			err = abs((long)(fout - fout_target) * 10000 /
-					(long)fout_target);
-			if (err < setup_info->err) {
-				setup_info->m = m - 2;
-				setup_info->n = n - 1;
-				setup_info->err = err;
-				if (err == 0)
-					goto done;
-			}
-		}
-	}
+	fpfd = fin / (n
+		* mipi_dsi->info->freq_mul
+		* setup_info->clk_setting.divider);
 
-done:
-	dev_dbg(mipi_dsi->dev,
-		"%pC %lu Hz -> Fout %lu Hz (target %lu Hz, error %d.%02u%%), PLL M/N/DIV %u/%u/%u\n",
-		clk, fin, fout, fout_target, setup_info->err / 100,
-		setup_info->err % 100, setup_info->m,
-		setup_info->n, setup_info->div);
-	dev_dbg(mipi_dsi->dev,
-		"vco_cntrl = 0x%x\tprop_cntrl = 0x%x\thsfreqrange = 0x%x\n",
-		setup_info->vco_cntrl,
-		setup_info->prop_cntrl,
-		setup_info->hsfreqrange);
-#endif
-
-	setup_info->vco_cntrl = 0x10;
-	setup_info->m = 856;
-	setup_info->n = 1;
-	setup_info->prop_cntrl = 0x0A;
-	setup_info->int_contrl = 0x08;
-	setup_info->cpbias_cntrl = 0x00;
-	setup_info->gmp_cntrl = 0;
-	setup_info->hsfreqrange = 0x29;
-	setup_info->div = 2;
+	m = fout_target * 1000000 / fpfd;
+	setup_info->m = m - mipi_dsi->info->m_offset;
 }
 
 static void rcar_mipi_dsi_set_display_timing(struct rcar_mipi_dsi *mipi_dsi)
@@ -356,9 +442,8 @@ static void rcar_mipi_dsi_set_display_timing(struct rcar_mipi_dsi *mipi_dsi)
 static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 {
 	struct drm_display_mode *mode = &mipi_dsi->display_mode;
-	struct dsi_setup_info setup_info = {.err = -1 };
+	struct dsi_setup_info setup_info;
 	unsigned int timeout;
-	int ret, i;
 	int dsi_format;
 	u32 phy_setup;
 	u32 clockset2, clockset3;
@@ -373,7 +458,7 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	/* Parametters Calulation */
-	rcar_mipi_dsi_parametters_calc(mipi_dsi, mipi_dsi->clocks.extal,
+	rcar_mipi_dsi_parametters_calc(mipi_dsi, mipi_dsi->clocks.mod,
 					mode->clock * 1000, &setup_info);
 
 	/* LPCLK enable */
@@ -391,16 +476,14 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	/* PHY setting */
 	phy_setup = rcar_mipi_dsi_read(mipi_dsi, PHYSETUP);
 	phy_setup &= ~PHYSETUP_HSFREQRANGE_MASK;
-	phy_setup |= PHYSETUP_HSFREQRANGE(setup_info.hsfreqrange);
+	phy_setup |= PHYSETUP_HSFREQRANGE(setup_info.hsfeq.value);
 	rcar_mipi_dsi_write(mipi_dsi, PHYSETUP, phy_setup);
 
-	for (i = 0; i < ARRAY_SIZE(phtw_v4h); i++) {
-		ret = rcar_mipi_dsi_phtw_test(mipi_dsi, phtw_v4h[i]);
-		if (ret < 0)
-			return ret;
-	}
+	if (mipi_dsi->info->init_phtw)
+		mipi_dsi->info->init_phtw(mipi_dsi);
 
-	rcar_mipi_dsi_set(mipi_dsi, CLOCKSET1, 0x0100000C);
+	if (mipi_dsi->use_extal_clk)
+		rcar_mipi_dsi_set(mipi_dsi, CLOCKSET1, 0x0100000C);
 
 	/* PLL Clock Setting */
 	rcar_mipi_dsi_clr(mipi_dsi, CLOCKSET1, CLOCKSET1_SHADOW_CLEAR);
@@ -408,11 +491,12 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	rcar_mipi_dsi_clr(mipi_dsi, CLOCKSET1, CLOCKSET1_SHADOW_CLEAR);
 
 	clockset2 = CLOCKSET2_M(setup_info.m) | CLOCKSET2_N(setup_info.n) |
-		    CLOCKSET2_VCO_CNTRL(setup_info.vco_cntrl);
-	clockset3 = CLOCKSET3_PROP_CNTRL(setup_info.prop_cntrl) |
-		    CLOCKSET3_INT_CNTRL(setup_info.int_contrl) |
-		    CLOCKSET3_CPBIAS_CNTRL(setup_info.cpbias_cntrl) |
-		    CLOCKSET3_GMP_CNTRL(setup_info.gmp_cntrl);
+		    CLOCKSET2_VCO_CNTRL(setup_info.clk_setting.vco_cntrl);
+	clockset3 = CLOCKSET3_PROP_CNTRL(setup_info.clk_setting.prop_cntrl) |
+		    CLOCKSET3_INT_CNTRL(setup_info.clk_setting.int_cntrl) |
+		    CLOCKSET3_CPBIAS_CNTRL(setup_info.clk_setting.cpbias_cntrl) |
+		    CLOCKSET3_GMP_CNTRL(setup_info.clk_setting.gmp_cntrl);
+
 	rcar_mipi_dsi_write(mipi_dsi, CLOCKSET2, clockset2);
 	rcar_mipi_dsi_write(mipi_dsi, CLOCKSET3, clockset3);
 
@@ -443,11 +527,8 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 		return -ETIMEDOUT;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(phtw2); i++) {
-		ret = rcar_mipi_dsi_phtw_test(mipi_dsi, phtw2[i]);
-		if (ret < 0)
-			return ret;
-	}
+	if (mipi_dsi->info->post_init_phtw)
+		mipi_dsi->info->post_init_phtw(mipi_dsi);
 
 	/* Enable DOT clock */
 	vclkset = VCLKSET_CKEN;
@@ -463,7 +544,7 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 		dev_warn(mipi_dsi->dev, "unsupported format");
 		return -EINVAL;
 	}
-	vclkset |= VCLKSET_COLOR_RGB | VCLKSET_DIV(setup_info.div) |
+	vclkset |= VCLKSET_COLOR_RGB | VCLKSET_DIV(setup_info.clk_setting.div) |
 			VCLKSET_LANE(mipi_dsi->lanes - 1);
 
 	rcar_mipi_dsi_set(mipi_dsi, VCLKSET, vclkset);
@@ -535,7 +616,7 @@ static int rcar_mipi_dsi_start_video(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	if (!timeout) {
-		dev_err(mipi_dsi->dev, "Link busy\n");
+		dev_err(mipi_dsi->dev, "Failed to enable Video clock\n");
 		return -ETIMEDOUT;
 	}
 
@@ -551,7 +632,7 @@ static int rcar_mipi_dsi_start_video(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	if (!timeout) {
-		dev_err(mipi_dsi->dev, "Clear Video mode FIFO error\n");
+		dev_err(mipi_dsi->dev, "Failed to enable Video clock\n");
 		return -ETIMEDOUT;
 	}
 
@@ -565,7 +646,7 @@ static int rcar_mipi_dsi_start_video(struct rcar_mipi_dsi *mipi_dsi)
 	}
 
 	if (!timeout) {
-		dev_err(mipi_dsi->dev, "Cannot enable Video mode\n");
+		dev_err(mipi_dsi->dev, "Failed to enable Video clock\n");
 		return -ETIMEDOUT;
 	}
 
@@ -718,6 +799,12 @@ static int rcar_mipi_dsi_parse_dt(struct rcar_mipi_dsi *mipi_dsi)
 	int ret = 0;
 	int len, num_lanes;
 
+
+	if (of_find_property(mipi_dsi->dev->of_node, "use-extal-clk", NULL))
+		mipi_dsi->use_extal_clk = true;
+	else
+		mipi_dsi->use_extal_clk = false;
+
 	local_output = of_graph_get_endpoint_by_regs(mipi_dsi->dev->of_node,
 						     1, 0);
 	if (!local_output) {
@@ -820,23 +907,9 @@ static int rcar_mipi_dsi_get_clocks(struct rcar_mipi_dsi *mipi_dsi)
 	if (IS_ERR(mipi_dsi->clocks.mod))
 		return PTR_ERR(mipi_dsi->clocks.mod);
 
-	mipi_dsi->clocks.extal = rcar_mipi_dsi_get_clock(mipi_dsi,
-							 "extal",
-							 true);
-	if (IS_ERR(mipi_dsi->clocks.extal))
-		return PTR_ERR(mipi_dsi->clocks.extal);
-
-	mipi_dsi->clocks.dsi = rcar_mipi_dsi_get_clock(mipi_dsi,
-							    "dsi",
-							    true);
+	mipi_dsi->clocks.dsi = rcar_mipi_dsi_get_clock(mipi_dsi, "dsi", true);
 	if (IS_ERR(mipi_dsi->clocks.dsi))
 		return PTR_ERR(mipi_dsi->clocks.dsi);
-
-	if (!mipi_dsi->clocks.extal && !mipi_dsi->clocks.dsi) {
-		dev_err(mipi_dsi->dev,
-			"no input clock (extal, dclkin.0)\n");
-		return -EINVAL;
-	}
 
 	return 0;
 }
@@ -904,10 +977,36 @@ static int rcar_mipi_dsi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct rcar_mipi_dsi_info rcar_mipi_dsi_info_r8a779a0 = {
+	.init_phtw = rcar_mipi_dsi_init_phtw_v3u,
+	.post_init_phtw = rcar_mipi_dsi_post_init_phtw_v3u,
+	.hsfeqrange_values = hsfreqrange_table_r8a779g0_r8a779a0,
+	.clkset_values = clockset_setting_table_r8a779a0,
+	.m_offset = 0,
+	.n_offset = 2,
+	.freq_mul = 1,
+};
+
+static const struct rcar_mipi_dsi_info rcar_mipi_dsi_info_r8a779g0 = {
+	.init_phtw = rcar_mipi_dsi_init_phtw_v4h,
+	.post_init_phtw = rcar_mipi_dsi_post_init_phtw_v4h,
+	.hsfeqrange_values = hsfreqrange_table_r8a779g0_r8a779a0,
+	.clkset_values = clockset_setting_table_r8a779g0,
+	.m_offset = 0,
+	.n_offset = 1,
+	.freq_mul = 2,
+};
+
 static const struct of_device_id rcar_mipi_dsi_of_table[] = {
-	{ .compatible = "renesas,r8a779a0-mipi-dsi" },
-	{ .compatible = "renesas,r8a779g0-mipi-dsi" },
-	{ }
+	{
+		.compatible = "renesas,r8a779a0-mipi-dsi",
+		.data = &rcar_mipi_dsi_info_r8a779a0,
+	},
+	{
+		.compatible = "renesas,r8a779g0-mipi-dsi",
+		.data = &rcar_mipi_dsi_info_r8a779g0,
+	},
+	{ /* sentinel */ },
 };
 
 MODULE_DEVICE_TABLE(of, rcar_mipi_dsi_of_table);

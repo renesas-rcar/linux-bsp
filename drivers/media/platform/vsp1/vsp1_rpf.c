@@ -8,7 +8,6 @@
  */
 
 #include <linux/device.h>
-#include <linux/module.h>
 
 #include <media/v4l2-subdev.h>
 
@@ -32,10 +31,6 @@ struct vsp1_extcmd_auto_fld_body {
 	u32 reserved0;
 	u32 reserved1;
 } __packed;
-
-static int csc;
-MODULE_PARM_DESC(csc, "color space conversion (0=off (default), 1=YCbCr422 10bit");
-module_param(csc, int, 0644);
 
 /* -----------------------------------------------------------------------------
  * Device Access
@@ -74,7 +69,12 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	unsigned int top = 0;
 	u32 pstride;
 	u32 infmt;
+	u32 ex_infmt0, ex_infmt1, ex_infmt2;
 	u32 alph_sel = 0;
+	u16 ip_version;
+
+	/* Get IP version for setting 10bit format */
+	ip_version = entity->vsp1->version & VI6_IP_VERSION_MODEL_MASK;
 
 	/* Stride */
 	pstride = format->plane_fmt[0].bytesperline
@@ -112,44 +112,46 @@ static void rpf_configure_stream(struct vsp1_entity *entity,
 	if (sink_format->code != source_format->code)
 		infmt |= VI6_RPF_INFMT_CSC;
 
-	if (csc == 1) {
-		/* YCbCr422 10bit */
-		vsp1_rpf_write(rpf, dlb, VI6_RPF_INFMT, 0x00000147);
-		vsp1_rpf_write(rpf, dlb, VI6_RPF_DSWAP, 0x00000f0e);
-		vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0, 0x00000110);
-	} else {
-		vsp1_rpf_write(rpf, dlb, VI6_RPF_INFMT, infmt);
-		vsp1_rpf_write(rpf, dlb, VI6_RPF_DSWAP, fmtinfo->swap);
-	}
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_INFMT, infmt);
+	vsp1_rpf_write(rpf, dlb, VI6_RPF_DSWAP, fmtinfo->swap);
 
-	/* Setting new pixel format for V3U */
-	if (fmtinfo->hwfmt == VI6_FMT_RGB10_RGB10A2_A2RGB10) {
-		if (fmtinfo->fourcc == V4L2_PIX_FMT_RGB10) {
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0,
-					VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1,
-					VI6_RPF_EXT_INFMT1_RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2,
-					VI6_RPF_EXT_INFMT2_RGB10);
+	if (ip_version == VI6_IP_VERSION_MODEL_VSPD_GEN4) {
+		switch (fmtinfo->fourcc) {
+			case V4L2_PIX_FMT_Y210:
+				ex_infmt0 = VI6_RPF_EXT_INFMT0_IPBD_Y_10 |
+						VI6_RPF_EXT_INFMT0_IPBD_C_10;
+				ex_infmt1 = 0x0;
+				ex_infmt2 = 0x0;
+				break;
+
+			case V4L2_PIX_FMT_RGB10:
+				ex_infmt0 = VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10;
+				ex_infmt1 = VI6_RPF_EXT_INFMT1_RGB10;
+				ex_infmt2 = VI6_RPF_EXT_INFMT2_RGB10;
+				break;
+
+			case V4L2_PIX_FMT_A2RGB10:
+				ex_infmt0 = VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10;
+				ex_infmt1 = VI6_RPF_EXT_INFMT1_A2RGB10;
+				ex_infmt2 = VI6_RPF_EXT_INFMT2_A2RGB10;
+				break;
+
+			case V4L2_PIX_FMT_RGB10A2:
+				ex_infmt0 = VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10;
+				ex_infmt1 = VI6_RPF_EXT_INFMT1_RGB10A2;
+				ex_infmt2 = VI6_RPF_EXT_INFMT2_RGB10A2;
+				break;
+
+			default:
+				ex_infmt0 = 0x0;
+				ex_infmt1 = 0x0;
+				ex_infmt2 = 0x0;
+				break;
 		}
 
-		if (fmtinfo->fourcc == V4L2_PIX_FMT_A2RGB10) {
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0,
-					VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1,
-					VI6_RPF_EXT_INFMT1_A2RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2,
-					VI6_RPF_EXT_INFMT2_A2RGB10);
-		}
-
-		if (fmtinfo->fourcc == V4L2_PIX_FMT_RGB10A2) {
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0,
-					VI6_RPF_EXT_INFMT0_BYPP_M1_RGB10);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1,
-					VI6_RPF_EXT_INFMT1_RGB10A2);
-			vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2,
-					VI6_RPF_EXT_INFMT2_RGB10A2);
-		}
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT0, ex_infmt0);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT1, ex_infmt1);
+		vsp1_rpf_write(rpf, dlb, VI6_RPF_EXT_INFMT2, ex_infmt2);
 	}
 
 	/* Output location. */
@@ -375,11 +377,11 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 		     + crop.left * fmtinfo->bpp[0] / 8;
 
 	if (format->num_planes > 1) {
+		unsigned int bpl = format->plane_fmt[1].bytesperline;
 		unsigned int offset;
 
-		offset = crop.top * format->plane_fmt[1].bytesperline
-		       + crop.left / fmtinfo->hsub
-		       * fmtinfo->bpp[1] / 8;
+		offset = crop.top / fmtinfo->vsub * bpl
+		       + crop.left / fmtinfo->hsub * fmtinfo->bpp[1] / 8;
 		mem.addr[1] += offset;
 		mem.addr[2] += offset;
 	}

@@ -87,15 +87,6 @@ void rcar_du_vsp_enable(struct rcar_du_crtc *crtc)
 
 	__rcar_du_plane_setup(crtc->group, &state);
 
-	/*
-	 * Ensure that the plane source configuration takes effect by requesting
-	 * a restart of the group. See rcar_du_plane_atomic_update() for a more
-	 * detailed explanation.
-	 *
-	 * TODO: Check whether this is still needed on Gen3.
-	 */
-	crtc->group->need_restart = true;
-
 	vsp1_du_setup_lif(crtc->vsp->vsp, crtc->vsp_pipe, &cfg);
 }
 
@@ -151,6 +142,7 @@ static const u32 rcar_du_vsp_formats[] = {
 	DRM_FORMAT_YVU422,
 	DRM_FORMAT_YUV444,
 	DRM_FORMAT_YVU444,
+	DRM_FORMAT_Y210,
 };
 
 static void rcar_du_vsp_plane_setup(struct rcar_du_vsp_plane *plane)
@@ -198,17 +190,43 @@ int rcar_du_vsp_map_fb(struct rcar_du_vsp *vsp, struct drm_framebuffer *fb,
 		       struct sg_table sg_tables[3])
 {
 	struct rcar_du_device *rcdu = vsp->dev;
-	unsigned int i;
+	unsigned int i, j;
 	int ret;
 
 	for (i = 0; i < fb->format->num_planes; ++i) {
 		struct drm_gem_cma_object *gem = drm_fb_cma_get_gem_obj(fb, i);
 		struct sg_table *sgt = &sg_tables[i];
 
-		ret = dma_get_sgtable(rcdu->dev, sgt, gem->vaddr, gem->paddr,
-				      gem->base.size);
-		if (ret)
-			goto fail;
+		if (gem->sgt) {
+			struct scatterlist *src;
+			struct scatterlist *dst;
+
+			/*
+			 * If the GEM buffer has a scatter gather table, it has
+			 * been imported from a dma-buf and has no physical
+			 * address as it might not be physically contiguous.
+			 * Copy the original scatter gather table to map it to
+			 * the VSP.
+			 */
+			ret = sg_alloc_table(sgt, gem->sgt->orig_nents,
+					     GFP_KERNEL);
+			if (ret)
+				goto fail;
+
+			src = gem->sgt->sgl;
+			dst = sgt->sgl;
+			for (j = 0; j < gem->sgt->orig_nents; ++j) {
+				sg_set_page(dst, sg_page(src), src->length,
+					    src->offset);
+				src = sg_next(src);
+				dst = sg_next(dst);
+			}
+		} else {
+			ret = dma_get_sgtable(rcdu->dev, sgt, gem->vaddr,
+					      gem->paddr, gem->base.size);
+			if (ret)
+				goto fail;
+		}
 
 		ret = vsp1_du_map_sg(vsp->vsp, sgt);
 		if (ret) {
