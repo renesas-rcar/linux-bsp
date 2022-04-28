@@ -2180,7 +2180,8 @@
 			reg = <0 0xffd60000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
-			linux,uio-name = "rtdmac_descriptor_00";
+			resets = <&cpg 630>;
+			linux,uio-name = "rtdmac_descriptor0_00";
 		};
 
 		rtdmac_descriptor1: rtdmac_descriptor@ffd61000 {
@@ -2188,7 +2189,8 @@
 			reg = <0 0xffd61000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
-			linux,uio-name = "rtdmac_descriptor_01";
+			resets = <&cpg 631>;
+			linux,uio-name = "rtdmac_descriptor1_00";
 		};
 
 		rtdmac_descriptor2: rtdmac_descriptor@ffd62000 {
@@ -2196,7 +2198,8 @@
 			reg = <0 0xffd62000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
-			linux,uio-name = "rtdmac_descriptor_02";
+			resets = <&cpg 700>;
+			linux,uio-name = "rtdmac_descriptor2_00";
 		};
 
 		rtdmac_descriptor3: rtdmac_descriptor@ffd63000 {
@@ -2204,7 +2207,8 @@
 			reg = <0 0xffd63000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
-			linux,uio-name = "rtdmac_descriptor_03";
+			resets = <&cpg 701>;
+			linux,uio-name = "rtdmac_descriptor3_00";
 		};
 
 		ships0: ships0@e7810000 {
