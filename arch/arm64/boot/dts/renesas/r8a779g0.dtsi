@@ -5056,8 +5056,6 @@
 		system_ram: systemram@e6300000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6300000 0 0x100000>;
-			clocks = <&cpg CPG_MOD 711>;
-			resets = <&cpg 711>;
 			linux,uio-name = "system_ram_00";
 		};
 
