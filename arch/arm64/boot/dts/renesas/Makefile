@@ -114,6 +114,7 @@ dtb-$(CONFIG_ARCH_R8A77980) += r8a77980-es2-v3hsk.dtb
 # dtb-$(CONFIG_ARCH_R8A77980) += $(vb-dtbo)
 
 dtb-$(CONFIG_ARCH_R8A779F0) += r8a779f0-spider.dtb
+dtb-$(CONFIG_ARCH_R8A779F0) += r8a779f0-s4sk.dtb
 
 dtb-$(CONFIG_ARCH_R8A779G0) += r8a779g0-white-hawk.dtb
 
