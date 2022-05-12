@@ -1913,6 +1913,8 @@ static int rswitch_open(struct net_device *ndev)
 			err = rswitch_phy_init(rdev, phy);
 			if (err < 0)
 				goto error;
+
+			of_node_put(phy);
 		}
 
 		phy_start(ndev->phydev);
@@ -1940,7 +1942,6 @@ static int rswitch_open(struct net_device *ndev)
 	rtsn_ptp_init(rdev->priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
 
 out:
-	of_node_put(phy);
 	return err;
 
 error:
