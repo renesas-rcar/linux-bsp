@@ -1235,7 +1235,7 @@
 			status = "disabled";
 		};
 
-		dmac1: dma-controller@e7350000 {
+		dmac0: dma-controller@e7350000 {
 			compatible = "renesas,dmac-r8a779g0";
 			reg = <0 0xe7350000 0 0x1000>,
 			      <0 0xe7300000 0 0x10000>;
@@ -1277,7 +1277,7 @@
 			       <&ipmmu_ds0 14>, <&ipmmu_ds0 15>;
 		};
 
-		dmac2: dma-controller@e7351000 {
+		dmac1: dma-controller@e7351000 {
 			compatible = "renesas,dmac-r8a779g0";
 			reg = <0 0xe7351000 0 0x1000>,
 			      <0 0xe7310000 0 0x10000>;
