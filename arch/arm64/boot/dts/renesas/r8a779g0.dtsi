@@ -4841,7 +4841,7 @@
 
 		rtdmac_descriptor0: rtdmac_descriptor@ffd60000 {
 			compatible = "generic-uio";
-			reg = <0 0xffd60000 0 0x10000>;
+			reg = <0 0xffd60000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 630>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 630>;
@@ -4850,7 +4850,7 @@
 
 		rtdmac_descriptor1: rtdmac_descriptor@ffd61000 {
 			compatible = "generic-uio";
-			reg = <0 0xffd61000 0 0x10000>;
+			reg = <0 0xffd61000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 631>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 631>;
@@ -4859,7 +4859,7 @@
 
 		rtdmac_descriptor2: rtdmac_descriptor@ffd62000 {
 			compatible = "generic-uio";
-			reg = <0 0xffd62000 0 0x10000>;
+			reg = <0 0xffd62000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 700>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 700>;
@@ -4868,7 +4868,7 @@
 
 		rtdmac_descriptor3: rtdmac_descriptor@ffd63000 {
 			compatible = "generic-uio";
-			reg = <0 0xffd63000 0 0x10000>;
+			reg = <0 0xffd63000 0 0x1000>;
 			clocks = <&cpg CPG_MOD 701>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 701>;
