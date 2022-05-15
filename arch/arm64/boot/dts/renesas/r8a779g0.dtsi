@@ -1622,6 +1622,8 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "dsi_00";
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
+			iommus = <&ipmmu_vi1 18>;
 		};
 
 		dsi0_01 {
@@ -1631,6 +1633,8 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_01";
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
+			iommus = <&ipmmu_vi1 18>;
 		};
 
 		dsi0_02 {
@@ -1640,6 +1644,8 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_02";
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
+			iommus = <&ipmmu_vi1 18>;
 		};
 
 		dsi0_03 {
@@ -1649,6 +1655,8 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_03";
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
+			iommus = <&ipmmu_vi1 18>;
 		};
 
 		dsi0_04 {
@@ -1658,6 +1666,8 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_04";
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
+			iommus = <&ipmmu_vi1 18>;
 		};
 
 		dsi0_05 {
@@ -1667,6 +1677,8 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_05";
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
+			iommus = <&ipmmu_vi1 18>;
 		};
 
 		dsi0_06 {
@@ -1676,6 +1688,8 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_06";
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
+			iommus = <&ipmmu_vi1 18>;
 		};
 
 		dsi0_07 {
@@ -1685,6 +1699,8 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_07";
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
+			iommus = <&ipmmu_vi1 18>;
 		};
 
 		dsi0_08 {
@@ -1694,6 +1710,8 @@
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_dsi_00_08";
+			ipmmu-id = <RCAR_IPMMU_VI1 18>;
+			iommus = <&ipmmu_vi1 18>;
 		};
 
 		dsi1 {
