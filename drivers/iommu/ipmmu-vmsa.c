@@ -780,6 +780,9 @@ static const struct soc_device_attribute soc_denylist[] = {
 	{ .soc_id = "r8a774a1", },
 	{ .soc_id = "r8a7795", .revision = "ES1.*" },
 	{ .soc_id = "r8a7795", .revision = "ES2.*" },
+	{ .soc_id = "r8a77970", },
+	{ .soc_id = "r8a77980", },
+	{ .soc_id = "r8a77995", },
 	{ /* sentinel */ }
 };
 
@@ -1179,13 +1182,7 @@ static const struct of_device_id ipmmu_of_ids[] = {
 		.compatible = "renesas,ipmmu-r8a77965",
 		.data = &ipmmu_features_rcar_gen3,
 	}, {
-		.compatible = "renesas,ipmmu-r8a77970",
-		.data = &ipmmu_features_rcar_gen3,
-	}, {
 		.compatible = "renesas,ipmmu-r8a77990",
-		.data = &ipmmu_features_rcar_gen3,
-	}, {
-		.compatible = "renesas,ipmmu-r8a77995",
 		.data = &ipmmu_features_rcar_gen3,
 	}, {
 		.compatible = "renesas,ipmmu-r8a779a0",
