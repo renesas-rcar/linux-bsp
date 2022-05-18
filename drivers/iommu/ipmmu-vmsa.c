@@ -813,6 +813,8 @@ static const char * const devices_allowlist[] = {
 	"e6700000.dma-controller",
 	"e7300000.dma-controller",
 	"e7310000.dma-controller",
+	"e7350000.dma-controller",
+	"e7351000.dma-controller",
 	"ffc10000.dma-controller",
 	"ffc20000.dma-controller",
 	"ec700000.dma-controller",
