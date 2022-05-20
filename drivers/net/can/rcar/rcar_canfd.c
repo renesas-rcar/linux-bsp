@@ -784,7 +784,7 @@ static void rcar_canfd_configure_afl_rules(struct rcar_canfd_global *gpriv,
 	} else {
 		/* Get number of Channel 0 rules and adjust */
 		cfg = rcar_canfd_read(gpriv->base, RCANFD_GAFLCFG(ch));
-		if (gpriv->chip_id == GEN5)
+		if (gpriv->chip_id == RENESAS_R8A779A0 || gpriv->chip_id == GEN5)
 			start = ch * num_rules;
 		else
 			start = RCANFD_GAFLCFG_GETRNC(gpriv, 0, cfg);
