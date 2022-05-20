@@ -307,7 +307,6 @@
 			gpio-ranges = <&pfc 0 0 28>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		gpio1: gpio@e6050180 {
@@ -322,7 +321,6 @@
 			gpio-ranges = <&pfc 0 32 31>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		gpio2: gpio@e6050980 {
@@ -337,7 +335,6 @@
 			gpio-ranges = <&pfc 0 64 25>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		gpio3: gpio@e6058980 {
@@ -352,7 +349,6 @@
 			gpio-ranges = <&pfc 0 96 17>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		gpio4: gpio@e6060180 {
@@ -367,7 +363,6 @@
 			gpio-ranges = <&pfc 0 128 27>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		gpio5: gpio@e6060980 {
@@ -382,7 +377,6 @@
 			gpio-ranges = <&pfc 0 160 21>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		gpio6: gpio@e6068180 {
@@ -397,7 +391,6 @@
 			gpio-ranges = <&pfc 0 192 21>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		gpio7: gpio@e6068980 {
@@ -412,7 +405,6 @@
 			gpio-ranges = <&pfc 0 224 21>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		gpio8: gpio@e6069180 {
@@ -427,7 +419,6 @@
 			gpio-ranges = <&pfc 0 256 21>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		gpio9: gpio@e6069980 {
@@ -442,7 +433,6 @@
 			gpio-ranges = <&pfc 0 288 21>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			status = "disabled";
 		};
 
 		cmt0: timer@e60f0000 {
