@@ -2223,6 +2223,206 @@
 			linux,uio-name = "system_ram_00";
 		};
 
+		icumx_cmd0: icumx_cmd@e6610000 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "icumx_cmd_00";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_01 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_01";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_02 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 194 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_02";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_03 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 195 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_03";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_04 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_04";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_05 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 197 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_05";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_06 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 198 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_06";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_07 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 199 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_07";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_08 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 200 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_08";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_09 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 201 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_09";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_10 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 202 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_10";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_11 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 203 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_11";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_12 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_12";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_13 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 205 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_13";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_14 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 206 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_14";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_15 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 207 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_15";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_16 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_16";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_17 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 209 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_17";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_18 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_18";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
+		icumx_cmd0_19 {
+			compatible = "generic-uio";
+			reg = <0 0xe6610000 0 0x8000>;
+			interrupts = <GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "irq_icumx_cmd_00_19";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
+		};
+
 		ufs: scsi@e6860000 {
 			compatible = "renesas,r8a779f0-ufs";
 			reg = <0 0xe6860000 0 0x100>;
