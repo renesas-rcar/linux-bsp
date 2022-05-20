@@ -33,6 +33,12 @@
 			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
 		};
 
+		system_ram: systemram@e6300000 {
+			compatible = "generic-uio";
+			reg = <0 0xe6300000 0 0x60000>;
+			linux,uio-name = "system_ram_00";
+		};
+
 		/* TBD: can fd channel 3 */
 	};
 };
