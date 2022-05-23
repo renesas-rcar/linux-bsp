@@ -63,7 +63,7 @@
 	pinctrl-0 = <&tsn0_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy3>;
-	status = "okay";
+	status = "disabled";
 
 	phy3: ethernet-phy@3 {
 		rxc-skew-ps = <1500>;
