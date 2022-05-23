@@ -967,6 +967,11 @@
 			status = "disabled";
 		};
 
+                qos@e6700000 {
+                        compatible = "renesas,qos";
+                        reg = <0 0xe6700000 0 0x10090>;
+                };
+
 		pciec0: pcie@e65d0000 {
 			compatible = "renesas,r8a779f0-pcie";
 			reg = <0 0xe65d0000 0 0x3000>,
