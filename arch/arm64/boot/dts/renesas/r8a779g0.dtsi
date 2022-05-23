@@ -2174,7 +2174,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xffab0000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 23>;
-			power-domains = <&sysc R8A779G0_PD_A2CN0>;
+			power-domains = <&sysc R8A779G0_PD_A1CNN0>;
 			resets = <&cpg 23>;
 			linux,uio-name = "imp_reg_spmc_00";
 			ipmmu-id = <RCAR_IPMMU_IR 24>;
@@ -2201,7 +2201,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xed400000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 23>;
-			power-domains = <&sysc R8A779G0_PD_A2CN0>;
+			power-domains = <&sysc R8A779G0_PD_A1CNN0>;
 			linux,uio-name = "imp_spmc_00";
 			ipmmu-id = <RCAR_IPMMU_IR 24>;
 			iommus = <&ipmmu_ir 24>, <&ipmmu_ir 25>,
