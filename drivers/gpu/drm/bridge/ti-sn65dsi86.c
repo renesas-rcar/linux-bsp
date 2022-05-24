@@ -356,6 +356,15 @@ ti_sn_bridge_connector_mode_valid(struct drm_connector *connector,
 	if (mode->clock > 594000)
 		return MODE_CLOCK_HIGH;
 
+	/**
+	 * In some monitor, the value of Horizontal Back Porch
+	 * is larger than 0xff while the SN_CHA_HORIZONTAL_BACK_PORCH_REG
+	 * is only 8 bits register, so there is need to remove those
+	 * resolution from EDID table.
+	 */
+	if ((mode->htotal - mode->hsync_end) > 0xff)
+		return MODE_HBLANK_WIDE;
+
 	return MODE_OK;
 }
 
