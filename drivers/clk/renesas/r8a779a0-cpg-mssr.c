@@ -118,11 +118,15 @@ static const struct cpg_core_clk r8a779a0_core_clks[] __initconst = {
 	DEF_FIXED("cp",		R8A779A0_CLK_CP,	CLK_EXTAL,	2, 1),
 	DEF_FIXED("cl16mck",	R8A779A0_CLK_CL16MCK,	CLK_PLL1_DIV2,	64, 1),
 
-	DEF_GEN4_SD("sd0",	R8A779A0_CLK_SD0,	R8A779A0_CLK_SD0H, 0x870),
+	DEF_GEN4_SD("sd0",	R8A779A0_CLK_SD0,	CLK_SDSRC, 0x870),
 
 	DEF_DIV6P1("mso",	R8A779A0_CLK_MSO,	CLK_PLL5_DIV4,	0x87c),
 	DEF_DIV6P1("canfd",	R8A779A0_CLK_CANFD,	CLK_PLL5_DIV4,	0x878),
 	DEF_DIV6P1("csi0",	R8A779A0_CLK_CSI0,	CLK_PLL5_DIV4,	0x880),
+	DEF_DIV6P1("post",	R8A779A0_CLK_POST,   CLK_PLL5_DIV4, 0x890),
+	DEF_DIV6P1("post2",	R8A779A0_CLK_POST2,  CLK_PLL5_DIV4, 0x894),
+	DEF_DIV6P1("post3",	R8A779A0_CLK_POST3,  CLK_PLL5_DIV4, 0x898),
+	DEF_DIV6P1("post4",	R8A779A0_CLK_POST4,  CLK_PLL5_DIV4, 0x89c),
 
 	DEF_GEN4_OSC("osc",	R8A779A0_CLK_OSC,	CLK_EXTAL,	8),
 	DEF_GEN4_MDSEL("r",	R8A779A0_CLK_R, 29, CLK_EXTALR, 1, CLK_OCO, 1),
@@ -131,6 +135,10 @@ static const struct cpg_core_clk r8a779a0_core_clks[] __initconst = {
 static const struct mssr_mod_clk r8a779a0_mod_clks[] __initconst = {
 	DEF_MOD("stv0",		 1,	R8A779A0_CLK_VIP),
 	DEF_MOD("stv1",		 2,	R8A779A0_CLK_VIP),
+	DEF_MOD("smd_post0",	 5,	R8A779A0_CLK_VIP),
+	DEF_MOD("smd_post1",	 6,	R8A779A0_CLK_VIP),
+	DEF_MOD("smd_ps0",	 7,	R8A779A0_CLK_VIP),
+	DEF_MOD("smd_ps1",	 8,	R8A779A0_CLK_VIP),
 	DEF_MOD("dof0",		 9,	R8A779A0_CLK_VIP),
 	DEF_MOD("dof1",		10,	R8A779A0_CLK_VIP),
 	DEF_MOD("acf0",		11,	R8A779A0_CLK_VIP),
@@ -207,6 +215,15 @@ static const struct mssr_mod_clk r8a779a0_mod_clks[] __initconst = {
 	DEF_MOD("imr5",		528,	R8A779A0_CLK_S1D1),
 	DEF_MOD("imr0",		529,	R8A779A0_CLK_S1D1),
 	DEF_MOD("imr1",		530,	R8A779A0_CLK_S1D1),
+	DEF_MOD("ipmmuds0",	601,	R8A779A0_CLK_S1D1),
+	DEF_MOD("ipmmuds1",	602,	R8A779A0_CLK_S1D1),
+	DEF_MOD("ipmmumm",	603,	R8A779A0_CLK_S1D1),
+	DEF_MOD("ipmmupv0",	604,	R8A779A0_CLK_S1D1),
+	DEF_MOD("ipmmurt0",	605,	R8A779A0_CLK_S1D1),
+	DEF_MOD("ipmmurt1",	606,	R8A779A0_CLK_S1D1),
+	DEF_MOD("ipmmuvc",	607,	R8A779A0_CLK_S1D1),
+	DEF_MOD("ipmmuvip0",	609,	R8A779A0_CLK_S1D1),
+	DEF_MOD("ipmmuvip1",	610,	R8A779A0_CLK_S1D1),
 	DEF_MOD("ispcs0",	612,	R8A779A0_CLK_S1D1),
 	DEF_MOD("ispcs1",	613,	R8A779A0_CLK_S1D1),
 	DEF_MOD("ispcs2",	614,	R8A779A0_CLK_S1D1),
@@ -242,6 +259,14 @@ static const struct mssr_mod_clk r8a779a0_mod_clks[] __initconst = {
 	DEF_MOD("tmu3",		716,	R8A779A0_CLK_S1D4),
 	DEF_MOD("tmu4",		717,	R8A779A0_CLK_S1D4),
 	DEF_MOD("tpu0",		718,	R8A779A0_CLK_S1D8),
+	DEF_MOD("caiplite0",	721,	R8A779A0_CLK_S1D1),
+	DEF_MOD("caiplite1",	722,	R8A779A0_CLK_S1D1),
+	DEF_MOD("caiplite2",	723,	R8A779A0_CLK_S1D1),
+	DEF_MOD("caiplite3",	724,	R8A779A0_CLK_S1D1),
+	DEF_MOD("caiplite4",	725,	R8A779A0_CLK_S1D1),
+	DEF_MOD("caiplite5",	726,	R8A779A0_CLK_S1D1),
+	DEF_MOD("caiplite6",	727,	R8A779A0_CLK_S1D1),
+	DEF_MOD("caiplite7",	728,	R8A779A0_CLK_S1D1),
 	DEF_MOD("vcpl4",	729,	R8A779A0_CLK_S1D1),
 	DEF_MOD("vin00",	730,	R8A779A0_CLK_S1D1),
 	DEF_MOD("vin01",	731,	R8A779A0_CLK_S1D1),
@@ -277,6 +302,10 @@ static const struct mssr_mod_clk r8a779a0_mod_clks[] __initconst = {
 	DEF_MOD("vin37",	829,	R8A779A0_CLK_S1D1),
 	DEF_MOD("vspd0",	830,	R8A779A0_CLK_S3D1),
 	DEF_MOD("vspd1",	831,	R8A779A0_CLK_S3D1),
+	DEF_MOD("wcrc_caiplite0",	903,	R8A779A0_CLK_S1D1),
+	DEF_MOD("wcrc_caiplite1",	904,	R8A779A0_CLK_S1D1),
+	DEF_MOD("wcrc_caiplite2",	905,	R8A779A0_CLK_S1D1),
+	DEF_MOD("wcrc_caiplite3",	906,	R8A779A0_CLK_S1D1),
 	DEF_MOD("rwdt",		907,	R8A779A0_CLK_R),
 	DEF_MOD("cmt0",		910,	R8A779A0_CLK_R),
 	DEF_MOD("cmt1",		911,	R8A779A0_CLK_R),
@@ -373,11 +402,11 @@ static const unsigned int r8a779a0_crit_mod_clks[] __initconst = {
 #define CPG_PLL_CONFIG_INDEX(md)	((((md) & BIT(14)) >> 13) | \
 					 (((md) & BIT(13)) >> 13))
 static const struct rcar_gen4_cpg_pll_config cpg_pll_configs[4] = {
-	/* EXTAL div	PLL1 mult/div	PLL2 mult/div	PLL3 mult/div	PLL5 mult/div	PLL6 mult/div	OSC prediv */
-	{ 1,		128,	1,	0,	0,	0,	0,	192,	1,	0,	0,	16,	},
-	{ 1,		106,	1,	0,	0,	0,	0,	160,	1,	0,	0,	19,	},
-	{ 0,		0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	},
-	{ 2,		128,	1,	0,	0,	0,	0,	192,	1,	0,	0,	32,	},
+	/* EXTAL div	PLL1 mult/div	PLL2 mult/div	PLL3 mult/div	PLL4 mult/div	PLL5 mult/div	PLL6 mult/div	OSC prediv */
+	{ 1,		128,	1,	0,	0,	0,	0,	0,	0,	192,	1,	0,	0,	16,	},
+	{ 1,		106,	1,	0,	0,	0,	0,	0,	0,	160,	1,	0,	0,	19,	},
+	{ 0,		0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	},
+	{ 2,		128,	1,	0,	0,	0,	0,	0,	0,	192,	1,	0,	0,	32,	},
 };
 
 
