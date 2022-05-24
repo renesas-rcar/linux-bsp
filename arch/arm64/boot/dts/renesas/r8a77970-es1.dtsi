@@ -1,6 +1,6 @@
 /*
- * Device Tree Source for the r8a7797 SoC ES1.0 SoC
- *   (append to r8a7797 SoC ES2.0 SoC)
+ * Device Tree Source for the r8a77970 SoC ES1.0 SoC
+ *   (append to r8a77970 SoC ES2.0 SoC)
  *
  * Copyright (C) 2018 Renesas Electronics Corp.
  * Copyright (C) 2018 Cogent Embedded, Inc.

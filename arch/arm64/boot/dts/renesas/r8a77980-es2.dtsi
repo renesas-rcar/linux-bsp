@@ -13,9 +13,15 @@
 / {
 	soc {
 		/delete-node/ims_03@fe890000;
-		/delete-node/fba_ims_03;
+		/delete-node/fba_ims3;
+		/delete-node/post_fba_ims3;
 
 		/delete-node/imp_psc_01;
+
+		/delete-node/fcprw_vin_00_03;
+		/delete-node/fcprw_vin_04_07;
+		/delete-node/fcprr_rtdmac_00;
+		/delete-node/fcpra_rtdmac;
 
 		imp_dma_slim_00 {
 			compatible = "generic-uio";
@@ -23,6 +29,14 @@
 			clocks = <&cpg CPG_MOD 524>;
 			power-domains = <&sysc R8A77980_PD_A2DP1>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			resets = <&cpg 524>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
+		};
+
+		system_ram: systemram@e6300000 {
+			compatible = "generic-uio";
+			reg = <0 0xe6300000 0 0x60000>;
+			linux,uio-name = "system_ram_00";
 		};
 
 		/* TBD: can fd channel 3 */

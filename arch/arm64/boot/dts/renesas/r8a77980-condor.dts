@@ -88,14 +88,8 @@
 		#size-cells = <2>;
 		ranges;
 
-		/* device specific region for Lossy Decompression */
-		lossy_decompress: linux,lossy_decompress {
-			no-map;
-			reg = <0x00000000 0x7c000000 0x0 0x03000000>;
-		};
-
 		/* device specific region for contiguous allocations */
-		mmp_reserved: linux,multimedia {
+		mmp_reserved: linux,multimedia@7f000000 {
 			compatible = "shared-dma-pool";
 			reusable;
 			reg = <0x00000000 0x7f000000 0x0 0x01000000>;
@@ -118,7 +112,7 @@
 
 	mmngr {
 		compatible = "renesas,mmngr";
-		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+		memory-region = <&mmp_reserved>;
 	};
 
 	mmngrbuf {
@@ -543,7 +537,7 @@
 
 &mmc0 {
 	pinctrl-0 = <&mmc_pins>;
-	pinctrl-1 = <&mmc_pins_uhs>;
+	pinctrl-1 = <&mmc_pins>;
 	pinctrl-names = "default", "state_uhs";
 
 	vmmc-supply = <&d3_3v>;
@@ -591,12 +585,6 @@
 	};
 
 	mmc_pins: mmc {
-		groups = "mmc_data8", "mmc_ctrl", "mmc_ds";
-		function = "mmc";
-		power-source = <3300>;
-	};
-
-	mmc_pins_uhs: mmc_uhs {
 		groups = "mmc_data8", "mmc_ctrl", "mmc_ds";
 		function = "mmc";
 		power-source = <1800>;
