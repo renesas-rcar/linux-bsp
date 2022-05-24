@@ -504,11 +504,9 @@
         pinctrl-names = "default";
 };
 
-/*
 &du {
-	status = "okay";
+	status = "disabled";
 };
-*/
 
 &dsi0 {
 	status = "okay";
