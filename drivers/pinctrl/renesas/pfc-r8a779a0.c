@@ -2611,6 +2611,43 @@ static const unsigned int tpu_to3_mux[] = {
 	TPU0TO3_MARK,
 };
 
+/* - PCIE ------------------------------------------------------------------- */
+static const unsigned int pcie0_clkreq_n_pins[] = {
+	/* PCIE0_CLKREQ# */
+	RCAR_GP_PIN(4, 21),
+};
+
+static const unsigned int pcie0_clkreq_n_mux[] = {
+	PCIE0_CLKREQ_N_MARK,
+};
+
+static const unsigned int pcie1_clkreq_n_pins[] = {
+	/* PCIE1_CLKREQ# */
+	RCAR_GP_PIN(4, 22),
+};
+
+static const unsigned int pcie1_clkreq_n_mux[] = {
+	PCIE1_CLKREQ_N_MARK,
+};
+
+static const unsigned int pcie2_clkreq_n_pins[] = {
+	/* PCIE2_CLKREQ# */
+	RCAR_GP_PIN(4, 23),
+};
+
+static const unsigned int pcie2_clkreq_n_mux[] = {
+	PCIE2_CLKREQ_N_MARK,
+};
+
+static const unsigned int pcie3_clkreq_n_pins[] = {
+	/* PCIE3_CLKREQ# */
+	RCAR_GP_PIN(4, 24),
+};
+
+static const unsigned int pcie3_clkreq_n_mux[] = {
+	PCIE3_CLKREQ_N_MARK,
+};
+
 static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(avb0_link),
 	SH_PFC_PIN_GROUP(avb0_magic),
@@ -2799,6 +2836,12 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(tpu_to1),
 	SH_PFC_PIN_GROUP(tpu_to2),
 	SH_PFC_PIN_GROUP(tpu_to3),
+
+	SH_PFC_PIN_GROUP(pcie0_clkreq_n),
+	SH_PFC_PIN_GROUP(pcie1_clkreq_n),
+	SH_PFC_PIN_GROUP(pcie2_clkreq_n),
+	SH_PFC_PIN_GROUP(pcie3_clkreq_n),
+
 };
 
 static const char * const avb0_groups[] = {
@@ -3118,6 +3161,13 @@ static const char * const tpu_groups[] = {
 	"tpu_to3",
 };
 
+static const char * const pcie_groups[] = {
+	"pcie0_clkreq_n",
+	"pcie1_clkreq_n",
+	"pcie2_clkreq_n",
+	"pcie3_clkreq_n",
+};
+
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(avb0),
 	SH_PFC_FUNCTION(avb1),
@@ -3180,6 +3230,8 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(tmu),
 
 	SH_PFC_FUNCTION(tpu),
+
+	SH_PFC_FUNCTION(pcie),
 };
 
 static const struct pinmux_cfg_reg pinmux_config_regs[] = {
