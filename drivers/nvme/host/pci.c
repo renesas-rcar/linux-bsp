@@ -3244,6 +3244,10 @@ static const struct pci_device_id nvme_id_table[] = {
 		.driver_data = NVME_QUIRK_DELAY_BEFORE_CHK_RDY, },
 	{ PCI_DEVICE(0x1c5f, 0x0540),	/* Memblaze Pblaze4 adapter */
 		.driver_data = NVME_QUIRK_DELAY_BEFORE_CHK_RDY, },
+	{ PCI_DEVICE(0x144d, 0xa804),	/* Samsung 960 Pro */
+		.driver_data = NVME_QUIRK_NO_DEEPEST_PS },
+	{ PCI_DEVICE(0x144d, 0xa808),	/* Samsung 970 Pro */
+		.driver_data = NVME_QUIRK_NO_DEEPEST_PS },
 	{ PCI_DEVICE(0x144d, 0xa821),   /* Samsung PM1725 */
 		.driver_data = NVME_QUIRK_DELAY_BEFORE_CHK_RDY, },
 	{ PCI_DEVICE(0x144d, 0xa822),   /* Samsung PM1725a */
