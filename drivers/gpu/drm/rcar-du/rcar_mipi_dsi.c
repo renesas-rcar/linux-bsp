@@ -982,8 +982,8 @@ static const struct rcar_mipi_dsi_info rcar_mipi_dsi_info_r8a779a0 = {
 	.post_init_phtw = rcar_mipi_dsi_post_init_phtw_v3u,
 	.hsfeqrange_values = hsfreqrange_table_r8a779g0_r8a779a0,
 	.clkset_values = clockset_setting_table_r8a779a0,
-	.m_offset = 0,
-	.n_offset = 2,
+	.m_offset = 2,
+	.n_offset = 1,
 	.freq_mul = 1,
 };
 
