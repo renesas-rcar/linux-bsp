@@ -800,11 +800,6 @@
 &dsi0 {
 	status = "okay";
 
-	clocks = <&cpg CPG_MOD 415>,
-			 <&cpg CPG_CORE R8A779A0_CLK_DSI>,
-			 <&extal_clk>;
-	clock-names = "fck", "dsi", "extal";
-
 	ports {
 		port@1 {
 			endpoint {
