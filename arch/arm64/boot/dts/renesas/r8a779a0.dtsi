@@ -1825,8 +1825,8 @@
 			interrupts = <GIC_SPI 196 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			clocks = <&cpg CPG_MOD 415>,
-				 <&cpg CPG_CORE R8A779A0_CLK_DSI>;
-			clock-names = "fck", "dsi";
+				 <&cpg CPG_CORE R8A779A0_CLK_DSIEXT>;
+			clock-names = "mod", "dsi";
 			resets = <&cpg 415>;
 			linux,uio-name = "dsi_00";
 			status = "disabled";
@@ -1858,8 +1858,8 @@
 			interrupts = <GIC_SPI 205 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&sysc R8A779A0_PD_ALWAYS_ON>;
 			clocks = <&cpg CPG_MOD 416>,
-				 <&cpg CPG_CORE R8A779A0_CLK_DSI>;
-			clock-names = "fck", "dsi";
+				 <&cpg CPG_CORE R8A779A0_CLK_DSIEXT>;
+			clock-names = "mod", "dsi";
 			resets = <&cpg 416>;
 			linux,uio-name = "dsi_01";
 			status = "disabled";
