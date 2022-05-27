@@ -477,6 +477,8 @@ config VIDEO_MAX9286
 	  To compile this driver as a module, choose M here: the
 	  module will be called max9286.
 
+source "drivers/media/i2c/gmsl/Kconfig"
+
 comment "Video and audio decoders"
 
 config VIDEO_MAX96712_STAGING
@@ -906,6 +908,17 @@ config VIDEO_OV5640
 	  This is a Video4Linux2 sensor driver for the Omnivision
 	  OV5640 camera sensor with a MIPI CSI-2 interface.
 
+config VIDEO_OV5642
+	tristate "OmniVision OV5642 sensor support"
+	depends on OF
+	depends on GPIOLIB && VIDEO_V4L2 && I2C
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the Omnivision
+	  OV5642 camera sensor with a DVP parallel interface.
+
 config VIDEO_OV5645
 	tristate "OmniVision OV5645 sensor support"
 	depends on OF
@@ -1255,6 +1268,10 @@ config VIDEO_S5C73M3
 	help
 	  This is a V4L2 sensor driver for Samsung S5C73M3
 	  8 Mpixel camera.
+
+source "drivers/media/i2c/fpdlink/Kconfig"
+source "drivers/media/i2c/imagers/Kconfig"
+
 
 endmenu
 
