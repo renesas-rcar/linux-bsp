@@ -212,6 +212,7 @@
 		adi,input-depth = <8>;
 		adi,input-colorspace = "rgb";
 		adi,input-clock = "1x";
+		adi,input-justification = "evenly";
 
 		ports {
 			#address-cells = <1>;
