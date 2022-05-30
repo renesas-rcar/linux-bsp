@@ -325,11 +325,11 @@ static void rpf_configure_partition(struct vsp1_entity *entity,
 		     + crop_x * fmtinfo->bpp[0] / 8;
 
 	if (format->num_planes > 1) {
+		unsigned int bpl = format->plane_fmt[1].bytesperline;
 		unsigned int offset;
 
-		offset = crop_y * format->plane_fmt[1].bytesperline
-		       + crop_x / fmtinfo->hsub
-		       * fmtinfo->bpp[1] / 8;
+		offset = crop_y / fmtinfo->vsub * bpl
+		       + crop_x / fmtinfo->hsub * fmtinfo->bpp[1] / 8;
 		mem.addr[1] += offset;
 		mem.addr[2] += offset;
 	}
