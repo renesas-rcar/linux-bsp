@@ -3726,7 +3726,7 @@
 			linux,uio-name = "ipmmu_cache_vc";
 		};
 
-		ipmmu_cache_ir0 {
+		ipmmu_cache_ir {
 			compatible = "generic-uio";
 			reg = <0 0xeed80000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_A3IR>;
@@ -3754,7 +3754,7 @@
 			linux,uio-name = "ipmmu_cache_ds0";
 		};
 
-		ipmmu_cache_ds1 {
+		ipmmu_cache_hsc {
 			compatible = "generic-uio";
 			reg = <0 0xeed40000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
@@ -3775,7 +3775,7 @@
 			linux,uio-name = "ipmmu_cache_vip1";
 		};
 
-		ipmmu_cache_3dg0 {
+		ipmmu_cache_3dg {
 			compatible = "generic-uio";
 			reg = <0 0xeee00000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
