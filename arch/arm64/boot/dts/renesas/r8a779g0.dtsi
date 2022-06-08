@@ -2436,7 +2436,7 @@
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2905>;
 			reset-names = "vdsp1_syspo";
-			linux,uio-name = "vdsp01_06";
+			linux,uio-name = "vdsp01_07";
 		};
 
 		impvdsp02_00: vdsp@f1800000 {
