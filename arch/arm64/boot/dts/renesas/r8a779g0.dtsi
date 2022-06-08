@@ -2269,8 +2269,6 @@
 			resets = <&cpg 2821>;
 			reset-names = "vdsp0_csb";
 			linux,uio-name = "vdsp00_01";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_02 {
@@ -2279,8 +2277,6 @@
 			resets = <&cpg 2822>;
 			reset-names = "reg";
 			linux,uio-name = "vdsp00_02";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_03 {
@@ -2289,52 +2285,38 @@
 			resets = <&cpg 2823>;
 			reset-names = "global";
 			linux,uio-name = "vdsp00_03";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_04 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2824>;
 			reset-names = "sys";
 			linux,uio-name = "vdsp00_04";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_05 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2826>;
 			reset-names = "vdsp0_ocem";
 			linux,uio-name = "vdsp00_05";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_06 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2827>;
 			reset-names = "vdsp0_apbdbg";
 			linux,uio-name = "vdsp00_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_07 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2828>;
 			reset-names = "vdsp0_syspo";
 			linux,uio-name = "vdsp00_07";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_00: vdsp@f1600000 {
@@ -2407,8 +2389,6 @@
 			resets = <&cpg 2830>;
 			reset-names = "vdsp1_csb";
 			linux,uio-name = "vdsp01_01";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_02 {
@@ -2417,8 +2397,6 @@
 			resets = <&cpg 2831>;
 			reset-names = "vdsp1_reg";
 			linux,uio-name = "vdsp01_02";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_03 {
@@ -2427,52 +2405,38 @@
 			resets = <&cpg 2900>;
 			reset-names = "vdsp1_global";
 			linux,uio-name = "vdsp01_03";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_04 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2901>;
 			reset-names = "vdsp1_sys";
 			linux,uio-name = "vdsp01_04";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_05 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2903>;
 			reset-names = "vdsp1_ocem";
 			linux,uio-name = "vdsp01_05";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_06 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2904>;
 			reset-names = "vdsp1_apbdbg";
 			linux,uio-name = "vdsp01_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_07 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2905>;
 			reset-names = "vdsp1_syspo";
 			linux,uio-name = "vdsp01_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_00: vdsp@f1800000 {
@@ -2545,8 +2509,6 @@
 			resets = <&cpg 2907>;
 			reset-names = "vdsp2_csb";
 			linux,uio-name = "vdsp02_01";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_02 {
@@ -2555,8 +2517,6 @@
 			resets = <&cpg 2908>;
 			reset-names = "vdsp2_reg";
 			linux,uio-name = "vdsp02_02";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_03 {
@@ -2565,52 +2525,38 @@
 			resets = <&cpg 2909>;
 			reset-names = "vdsp2_global";
 			linux,uio-name = "vdsp02_03";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_04 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2910>;
 			reset-names = "vdsp2_sys";
 			linux,uio-name = "vdsp02_04";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_05 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2912>;
 			reset-names = "vdsp2_ocem";
 			linux,uio-name = "vdsp02_05";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_06 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2913>;
 			reset-names = "vdsp2_apbdbg";
 			linux,uio-name = "vdsp02_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_07 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2914>;
 			reset-names = "vdsp2_syspo";
 			linux,uio-name = "vdsp02_07";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_00: vdsp@f1a00000 {
@@ -2683,8 +2629,6 @@
 			resets = <&cpg 2916>;
 			reset-names = "vdsp3_csb";
 			linux,uio-name = "vdsp03_01";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_02 {
@@ -2693,8 +2637,6 @@
 			resets = <&cpg 2917>;
 			reset-names = "vdsp3_reg";
 			linux,uio-name = "vdsp03_02";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_03 {
@@ -2703,52 +2645,38 @@
 			resets = <&cpg 2918>;
 			reset-names = "vdsp3_global";
 			linux,uio-name = "vdsp03_03";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_04 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2919>;
 			reset-names = "vdsp3_sys";
 			linux,uio-name = "vdsp03_04";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_05 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2921>;
 			reset-names = "vdsp3_ocem";
 			linux,uio-name = "vdsp03_05";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_06 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2922>;
 			reset-names = "vdsp3_apbdbg";
 			linux,uio-name = "vdsp03_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_07 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2923>;
 			reset-names = "vdsp3_syspo";
 			linux,uio-name = "vdsp03_07";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		dof_sts_00 {
