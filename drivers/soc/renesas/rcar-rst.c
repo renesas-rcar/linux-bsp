@@ -12,12 +12,19 @@
 
 #define WDTRSTCR_RESET		0xA55A0002
 #define WDTRSTCR		0x0054
+#define GEN4_WDTRSTCR		0x0010
 
 static int rcar_rst_enable_wdt_reset(void __iomem *base)
 {
 	iowrite32(WDTRSTCR_RESET, base + WDTRSTCR);
 	return 0;
 }
+
+static int rcar_rst_gen4_enable_wdt_reset(void __iomem *base)
+{
+	iowrite32(WDTRSTCR_RESET, base + GEN4_WDTRSTCR);
+	return 0;
+};
 
 struct rst_config {
 	unsigned int modemr;		/* Mode Monitoring Register Offset */
@@ -43,6 +50,7 @@ static const struct rst_config rcar_rst_r8a779a0 __initconst = {
 
 static const struct rst_config rcar_rst_gen4 __initconst = {
 	.modemr = 0x00,		/* MODEMR0 and it has CPG related bits */
+	.configure = rcar_rst_gen4_enable_wdt_reset,
 };
 
 
