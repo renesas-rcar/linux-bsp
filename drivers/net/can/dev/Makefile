@@ -6,3 +6,4 @@ can-dev-y			+= dev.o
 can-dev-y			+= rx-offload.o
 
 can-dev-$(CONFIG_CAN_LEDS)	+= led.o
+can-dev-$(CONFIG_CAN_CALC_BITTIMING) += calc_bittiming.o
