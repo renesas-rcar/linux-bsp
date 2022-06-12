@@ -1488,14 +1488,7 @@
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "rtdmac_control0_00";
 			ipmmu-id = <RCAR_IPMMU_RT1 0>;
-			iommus = <&ipmmu_rt1 0>, <&ipmmu_rt1 1>,
-				<&ipmmu_rt1 2>, <&ipmmu_rt1 3>,
-				<&ipmmu_rt1 4>, <&ipmmu_rt1 5>,
-				<&ipmmu_rt1 6>, <&ipmmu_rt1 7>,
-				<&ipmmu_rt1 8>, <&ipmmu_rt1 9>,
-				<&ipmmu_rt1 10>, <&ipmmu_rt1 11>,
-				<&ipmmu_rt1 12>, <&ipmmu_rt1 13>,
-				<&ipmmu_rt1 14>, <&ipmmu_rt1 15>;
+			iommus = <&ipmmu_rt1 0>;
 		};
 
 		rtdmac_control0_01: rtdmac_control@ffc11000 {
