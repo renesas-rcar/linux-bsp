@@ -1041,6 +1041,10 @@ static int num_etha_ports = 3;
 module_param(num_etha_ports, int, 0644);
 MODULE_PARM_DESC(num_etha_ports, "Number of using ETHA ports");
 
+static bool parallel_mode;
+module_param(parallel_mode, bool, 0644);
+MODULE_PARM_DESC(parallel_mode, "Operate simultaneously with Realtime core");
+
 #define RSWITCH_TIMEOUT_MS	1000
 static int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
 {
@@ -1902,7 +1906,7 @@ static int rswitch_open(struct net_device *ndev)
 
 	napi_enable(&rdev->napi);
 
-	if (rdev->etha) {
+	if (!parallel_mode && rdev->etha) {
 		if (!rdev->etha->operated) {
 			phy = rswitch_get_phy_node(rdev);
 			if (!phy)
@@ -2162,8 +2166,37 @@ static void rswitch_clock_enable(struct rswitch_private *priv)
 
 static void rswitch_reset(struct rswitch_private *priv)
 {
-	rs_write32(RRC_RR, priv->addr + RRC);
-	rs_write32(RRC_RR_CLR, priv->addr + RRC);
+	if (!parallel_mode) {
+		rs_write32(RRC_RR, priv->addr + RRC);
+		rs_write32(RRC_RR_CLR, priv->addr + RRC);
+	} else {
+		int gwca_idx;
+		u32 gwro_offset;
+		int mode;
+		int count;
+
+		if (priv->gwca.index == RSWITCH_GWCA_IDX_TO_HW_NUM(0)) {
+			gwca_idx = 1;
+			gwro_offset = RSWITCH_GWCA1_OFFSET;
+		} else {
+			gwca_idx = 0;
+			gwro_offset = RSWITCH_GWCA0_OFFSET;
+		}
+
+		count = 0;
+		do {
+			mode = rs_read32(priv->addr + gwro_offset + 0x0004) & GWMS_OPS_MASK;
+			if (mode == GWMC_OPC_OPERATION)
+				break;
+
+			count++;
+			if (!(count % 100))
+				pr_info(" rswitch wait for GWMS%d %d==%d\n", gwca_idx, mode,
+					GWMC_OPC_OPERATION);
+
+			mdelay(10);
+		} while (1);
+	}
 }
 
 static void rswitch_etha_init(struct rswitch_private *priv, int index)
@@ -2750,7 +2783,8 @@ static int rswitch_init(struct rswitch_private *priv)
 		return -ENOMEM;
 
 	/* Hardware initializations */
-	rswitch_clock_enable(priv);
+	if (!parallel_mode)
+		rswitch_clock_enable(priv);
 	for (i = 0; i < num_ndev; i++)
 		rswitch_etha_read_mac_address(&priv->etha[i]);
 	rswitch_reset(priv);
@@ -2766,11 +2800,13 @@ static int rswitch_init(struct rswitch_private *priv)
 
 	/* TODO: chrdev register */
 
-	err = rswitch_bpool_config(priv);
-	if (err < 0)
-		goto out;
+	if (!parallel_mode) {
+		err = rswitch_bpool_config(priv);
+		if (err < 0)
+			goto out;
 
-	rswitch_fwd_init(priv);
+		rswitch_fwd_init(priv);
+	}
 
 	err = rswitch_request_irqs(priv);
 	if (err < 0)
@@ -2831,16 +2867,28 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (!priv->ptp_priv)
 		return -ENOMEM;
 
-	priv->rsw_clk = devm_clk_get(&pdev->dev, "rsw2");
-	if (IS_ERR(priv->rsw_clk)) {
-		dev_err(&pdev->dev, "Failed to get rsw2 clock: %ld\n", PTR_ERR(priv->rsw_clk));
-		return -PTR_ERR(priv->rsw_clk);
+	if (!parallel_mode)
+		parallel_mode = of_property_read_bool(pdev->dev.of_node, "parallel_mode");
+
+	if (parallel_mode) {
+		num_ndev = 1;
+		num_etha_ports = 1;
 	}
 
-	priv->phy_clk = devm_clk_get(&pdev->dev, "eth-phy");
-	if (IS_ERR(priv->phy_clk)) {
-		dev_err(&pdev->dev, "Failed to get eth-phy clock: %ld\n", PTR_ERR(priv->phy_clk));
-		return -PTR_ERR(priv->phy_clk);
+	if (!parallel_mode) {
+		priv->rsw_clk = devm_clk_get(&pdev->dev, "rsw2");
+		if (IS_ERR(priv->rsw_clk)) {
+			dev_err(&pdev->dev, "Failed to get rsw2 clock: %ld\n",
+				PTR_ERR(priv->rsw_clk));
+			return -PTR_ERR(priv->rsw_clk);
+		}
+
+		priv->phy_clk = devm_clk_get(&pdev->dev, "eth-phy");
+		if (IS_ERR(priv->phy_clk)) {
+			dev_err(&pdev->dev, "Failed to get eth-phy clock: %ld\n",
+				PTR_ERR(priv->phy_clk));
+			return -PTR_ERR(priv->phy_clk);
+		}
 	}
 
 	platform_set_drvdata(pdev, priv);
@@ -2870,10 +2918,12 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (!priv->gwca.chains)
 		return -ENOMEM;
 
-	pm_runtime_enable(&pdev->dev);
-	pm_runtime_get_sync(&pdev->dev);
-	clk_prepare(priv->phy_clk);
-	clk_enable(priv->phy_clk);
+	if (!parallel_mode) {
+		pm_runtime_enable(&pdev->dev);
+		pm_runtime_get_sync(&pdev->dev);
+		clk_prepare(priv->phy_clk);
+		clk_enable(priv->phy_clk);
+	}
 
 	rswitch_init(priv);
 
@@ -2886,13 +2936,15 @@ static int renesas_eth_sw_remove(struct platform_device *pdev)
 {
 	struct rswitch_private *priv = platform_get_drvdata(pdev);
 
-	/* Disable R-Switch clock */
-	rs_write32(RCDC_RCD, priv->addr + RCDC);
-	rswitch_deinit(priv);
+	if (!parallel_mode) {
+		/* Disable R-Switch clock */
+		rs_write32(RCDC_RCD, priv->addr + RCDC);
+		rswitch_deinit(priv);
 
-	pm_runtime_put(&pdev->dev);
-	pm_runtime_disable(&pdev->dev);
-	clk_disable(priv->phy_clk);
+		pm_runtime_put(&pdev->dev);
+		pm_runtime_disable(&pdev->dev);
+		clk_disable(priv->phy_clk);
+	}
 
 	rswitch_desc_free(priv);
 
