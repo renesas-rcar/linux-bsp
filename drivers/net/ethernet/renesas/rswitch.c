@@ -40,6 +40,9 @@ static inline void rs_write32(u32 data, void *addr)
 #define RSWITCH_MAX_NUM_NDEV	8
 #define RSWITCH_MAX_NUM_CHAINS	128
 
+#define RSWITCH_GWCA_IDX_TO_HW_NUM(i)	((i) + RSWITCH_MAX_NUM_ETHA)
+#define RSWITCH_HW_NUM_TO_GWCA_IDX(i)	((i) - RSWITCH_MAX_NUM_ETHA)
+
 #define TX_RING_SIZE		1024
 #define RX_RING_SIZE		1024
 
@@ -56,8 +59,8 @@ static inline void rs_write32(u32 data, void *addr)
 
 #define FWRO	0
 #define CARO	RSWITCH_COMA_OFFSET
-//#define GWRO	RSWITCH_GWCA1_OFFSET
-#define GWRO	RSWITCH_GWCA0_OFFSET
+#define GWRO	RSWITCH_GWCA1_OFFSET
+/*#define GWRO	RSWITCH_GWCA0_OFFSET*/
 #define TARO	0
 #define RMRO	0x1000
 enum rswitch_reg {
@@ -2684,11 +2687,11 @@ static int rswitch_request_irqs(struct rswitch_private *priv)
 	int irq, err;
 
 	/* FIXME: other queues */
-	irq = platform_get_irq_byname(priv->pdev, "gwca0_rxtx0");
+	irq = platform_get_irq_byname(priv->pdev, "gwca1_rxtx0");
 	if (irq < 0)
 		goto out;
 
-	err = request_irq(irq, rswitch_irq, 0, "rswitch: gwca0_rxtx0", priv);
+	err = request_irq(irq, rswitch_irq, 0, "rswitch: gwca1_rxtx0", priv);
 	if (err < 0)
 		goto out;
 
@@ -2700,7 +2703,7 @@ static int rswitch_free_irqs(struct rswitch_private *priv)
 {
 	int irq;
 
-	irq = platform_get_irq_byname(priv->pdev, "gwca0_rxtx0");
+	irq = platform_get_irq_byname(priv->pdev, "gwca1_rxtx0");
 	if (irq < 0)
 		return irq;
 
@@ -2712,6 +2715,7 @@ static int rswitch_free_irqs(struct rswitch_private *priv)
 static void rswitch_fwd_init(struct rswitch_private *priv)
 {
 	int i;
+	int gwca_hw_idx = RSWITCH_HW_NUM_TO_GWCA_IDX(priv->gwca.index);
 
 	for (i = 0; i < RSWITCH_NUM_HW; i++) {
 		rs_write32(FWPC0_DEFAULT, priv->addr + FWPC00 + (i * 0x10));
@@ -2720,13 +2724,13 @@ static void rswitch_fwd_init(struct rswitch_private *priv)
 	/*
 	 * FIXME: hardcoded setting. Make a macro about port vector calc.
 	 * ETHA0 = forward to GWCA0, GWCA0 = forward to ETHA0,...
-	 * Currently, always forward to GWCA0.
+	 * Currently, always forward to GWCA1.
 	 */
-	for (i = 0; i < num_ndev; i++) {
-		rs_write32(priv->rdev[i]->rx_chain->index, priv->addr + FWPBFCSDC(0, i));
-		rs_write32(8, priv->addr + FWPBFC(i));
+	for (i = 0; i < num_etha_ports; i++) {
+		rs_write32(priv->rdev[i]->rx_chain->index, priv->addr + FWPBFCSDC(gwca_hw_idx, i));
+		rs_write32(BIT(priv->gwca.index), priv->addr + FWPBFC(i));
 	}
-	rs_write32(0x07, priv->addr + FWPBFC(3));
+	rs_write32(GENMASK(num_etha_ports - 1, 0), priv->addr + FWPBFC(priv->gwca.index));
 
 	/* TODO: add chrdev for fwd */
 	/* TODO: add proc for fwd */
@@ -2858,8 +2862,8 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-	/* Fixed to use GWCA0 */
-	priv->gwca.index = 3;
+	/* Fixed to use GWCA1 */
+	priv->gwca.index = 4;
 	priv->gwca.num_chains = num_ndev * NUM_CHAINS_PER_NDEV;
 	priv->gwca.chains = devm_kcalloc(&pdev->dev, priv->gwca.num_chains,
 					 sizeof(*priv->gwca.chains), GFP_KERNEL);
