@@ -2875,6 +2875,8 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 		num_etha_ports = 1;
 	}
 
+	priv->ptp_priv->parallel_mode = parallel_mode;
+
 	if (!parallel_mode) {
 		priv->rsw_clk = devm_clk_get(&pdev->dev, "rsw2");
 		if (IS_ERR(priv->rsw_clk)) {
