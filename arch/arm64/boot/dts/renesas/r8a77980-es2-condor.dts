@@ -15,3 +15,7 @@
 / {
 	model = "Renesas Condor board based on r8a7798 ES2.0";
 };
+
+&mmc0 {
+	mmc-hs400-1_8v;
+};
