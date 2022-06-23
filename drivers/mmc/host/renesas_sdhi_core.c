@@ -954,7 +954,7 @@ static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	{ .soc_id = "r8a7796", .revision = "ES1.*", .data = &sdhi_quirks_r8a7796_es13 },
 	{ .soc_id = "r8a77961", .data = &sdhi_quirks_bad_taps1357 },
 	{ .soc_id = "r8a77965", .data = &sdhi_quirks_r8a77965 },
-	{ .soc_id = "r8a77980", .data = &sdhi_quirks_nohs400 },
+	{ .soc_id = "r8a77980", .revision = "ES1.*", .data = &sdhi_quirks_nohs400 },
 	{ .soc_id = "r8a77990", .data = &sdhi_quirks_r8a77990 },
 	{ .soc_id = "r8a77995", .data = &sdhi_quirks_nohs400 },
 	{ /* Sentinel. */ },
