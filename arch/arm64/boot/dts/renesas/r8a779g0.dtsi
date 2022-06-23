@@ -2269,8 +2269,6 @@
 			resets = <&cpg 2821>;
 			reset-names = "vdsp0_csb";
 			linux,uio-name = "vdsp00_01";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_02 {
@@ -2279,8 +2277,6 @@
 			resets = <&cpg 2822>;
 			reset-names = "reg";
 			linux,uio-name = "vdsp00_02";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_03 {
@@ -2289,52 +2285,38 @@
 			resets = <&cpg 2823>;
 			reset-names = "global";
 			linux,uio-name = "vdsp00_03";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_04 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2824>;
 			reset-names = "sys";
 			linux,uio-name = "vdsp00_04";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_05 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2826>;
 			reset-names = "vdsp0_ocem";
 			linux,uio-name = "vdsp00_05";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_06 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2827>;
 			reset-names = "vdsp0_apbdbg";
 			linux,uio-name = "vdsp00_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp00_07 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2828>;
 			reset-names = "vdsp0_syspo";
 			linux,uio-name = "vdsp00_07";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_00: vdsp@f1600000 {
@@ -2407,8 +2389,6 @@
 			resets = <&cpg 2830>;
 			reset-names = "vdsp1_csb";
 			linux,uio-name = "vdsp01_01";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_02 {
@@ -2417,8 +2397,6 @@
 			resets = <&cpg 2831>;
 			reset-names = "vdsp1_reg";
 			linux,uio-name = "vdsp01_02";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_03 {
@@ -2427,52 +2405,38 @@
 			resets = <&cpg 2900>;
 			reset-names = "vdsp1_global";
 			linux,uio-name = "vdsp01_03";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_04 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2901>;
 			reset-names = "vdsp1_sys";
 			linux,uio-name = "vdsp01_04";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_05 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2903>;
 			reset-names = "vdsp1_ocem";
 			linux,uio-name = "vdsp01_05";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_06 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2904>;
 			reset-names = "vdsp1_apbdbg";
 			linux,uio-name = "vdsp01_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp01_07 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2905>;
 			reset-names = "vdsp1_syspo";
-			linux,uio-name = "vdsp01_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
+			linux,uio-name = "vdsp01_07";
 		};
 
 		impvdsp02_00: vdsp@f1800000 {
@@ -2545,8 +2509,6 @@
 			resets = <&cpg 2907>;
 			reset-names = "vdsp2_csb";
 			linux,uio-name = "vdsp02_01";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_02 {
@@ -2555,8 +2517,6 @@
 			resets = <&cpg 2908>;
 			reset-names = "vdsp2_reg";
 			linux,uio-name = "vdsp02_02";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_03 {
@@ -2565,52 +2525,38 @@
 			resets = <&cpg 2909>;
 			reset-names = "vdsp2_global";
 			linux,uio-name = "vdsp02_03";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_04 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2910>;
 			reset-names = "vdsp2_sys";
 			linux,uio-name = "vdsp02_04";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_05 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2912>;
 			reset-names = "vdsp2_ocem";
 			linux,uio-name = "vdsp02_05";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_06 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2913>;
 			reset-names = "vdsp2_apbdbg";
 			linux,uio-name = "vdsp02_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp02_07 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2914>;
 			reset-names = "vdsp2_syspo";
 			linux,uio-name = "vdsp02_07";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_00: vdsp@f1a00000 {
@@ -2683,8 +2629,6 @@
 			resets = <&cpg 2916>;
 			reset-names = "vdsp3_csb";
 			linux,uio-name = "vdsp03_01";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_02 {
@@ -2693,8 +2637,6 @@
 			resets = <&cpg 2917>;
 			reset-names = "vdsp3_reg";
 			linux,uio-name = "vdsp03_02";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_03 {
@@ -2703,52 +2645,38 @@
 			resets = <&cpg 2918>;
 			reset-names = "vdsp3_global";
 			linux,uio-name = "vdsp03_03";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_04 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2919>;
 			reset-names = "vdsp3_sys";
 			linux,uio-name = "vdsp03_04";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_05 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2921>;
 			reset-names = "vdsp3_ocem";
 			linux,uio-name = "vdsp03_05";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_06 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2922>;
 			reset-names = "vdsp3_apbdbg";
 			linux,uio-name = "vdsp03_06";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		impvdsp03_07 {
 			compatible = "generic-uio";
-			/* No define "IO/address" and "IO/range" */
 			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2923>;
 			reset-names = "vdsp3_syspo";
 			linux,uio-name = "vdsp03_07";
-			ipmmu-id = <RCAR_IPMMU_IR 13>;
-			iommus = <&ipmmu_ir 13>, <&ipmmu_ir 14>;
 		};
 
 		dof_sts_00 {
@@ -3798,7 +3726,7 @@
 			linux,uio-name = "ipmmu_cache_vc";
 		};
 
-		ipmmu_cache_ir0 {
+		ipmmu_cache_ir {
 			compatible = "generic-uio";
 			reg = <0 0xeed80000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_A3IR>;
@@ -3826,7 +3754,7 @@
 			linux,uio-name = "ipmmu_cache_ds0";
 		};
 
-		ipmmu_cache_ds1 {
+		ipmmu_cache_hsc {
 			compatible = "generic-uio";
 			reg = <0 0xeed40000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
@@ -3847,238 +3775,11 @@
 			linux,uio-name = "ipmmu_cache_vip1";
 		};
 
-		ipmmu_cache_3dg0 {
+		ipmmu_cache_3dg {
 			compatible = "generic-uio";
 			reg = <0 0xeee00000 0 0x20000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "ipmmu_cache_3dg";
-		};
-
-		fcprw_dof0: fcprw@e7ab1000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7ab1000 0 0x1000>;
-			linux,uio-name = "fcprw_dof_00";
-		};
-
-		fcprr_dof0: fcprr@e7aa1000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7aa1000 0 0x1000>;
-			linux,uio-name = "fcprr_dof_00";
-		};
-
-		fcprw_dof1: fcprw@e7abd000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7abd000 0 0x1000>;
-			linux,uio-name = "fcprw_dof_01";
-		};
-
-		fcprr_dof1: fcprr@e7ab7000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7ab7000 0 0x1000>;
-			linux,uio-name = "fcprr_dof_01";
-		};
-
-		fcprr_stv0: fcprr@e7aa0000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7aa0000 0 0x1000>;
-			linux,uio-name = "fcprr_stv_00";
-		};
-
-		fcprr_stv1: fcprr@e7ab6000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7ab6000 0 0x1000>;
-			linux,uio-name = "fcprr_stv_01";
-		};
-
-		fcprr_acf0: fcprr@e7aa5000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7aa5000 0 0x1000>;
-			linux,uio-name = "fcprr_acf_00";
-		};
-
-		fcprr_acf1: fcprr@e7aa6000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7aa6000 0 0x1000>;
-			linux,uio-name = "fcprr_acf_01";
-		};
-
-		fcprr_acf2: fcprr@e7aa7000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7aa7000 0 0x1000>;
-			linux,uio-name = "fcprr_acf_02";
-		};
-
-		fcprr_acf3: fcprr@e7aa8000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7aa8000 0 0x1000>;
-			linux,uio-name = "fcprr_acf_03";
-		};
-
-		fcprw_imp0: fcprw@ff8da000 {
-			compatible = "generic-uio";
-			reg = <0 0xff8da000 0 0x1000>;
-			linux,uio-name = "fcprw_imp_00";
-		};
-
-		fcprr_imp0: fcprr@ff8d8000 {
-			compatible = "generic-uio";
-			reg = <0 0xff8d8000 0 0x1000>;
-			linux,uio-name = "fcprr_imp_00";
-		};
-
-		fcprw_imp1: fcprw@ff8db000 {
-			compatible = "generic-uio";
-			reg = <0 0xff8db000 0 0x1000>;
-			linux,uio-name = "fcprw_imp_01";
-		};
-
-		fcprr_imp1: fcprr@ff8d9000 {
-			compatible = "generic-uio";
-			reg = <0 0xff8d9000 0 0x1000>;
-			linux,uio-name = "fcprr_imp_01";
-		};
-
-		fcprr_ims0: fcprr@fe9c0000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c0000 0 0x1000>;
-			linux,uio-name = "fcprr_ims_00";
-		};
-
-		fcprr_ims1: fcprr@fe9c1000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c1000 0 0x1000>;
-			linux,uio-name = "fcprr_ims_01";
-		};
-
-		fcprw_imr0: fcprw@fe9c6000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c6000 0 0x1000>;
-			linux,uio-name = "fcprw_imr_00";
-		};
-
-		fcprw_imr1: fcprw@fe9c7000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c7000 0 0x1000>;
-			linux,uio-name = "fcprw_imr_01";
-		};
-
-		fcprr_imr0: fcprr@fe9c4000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c4000 0 0x1000>;
-			linux,uio-name = "fcprr_imr_00";
-		};
-
-		fcprr_imr1: fcprr@fe9c5000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c5000 0 0x1000>;
-			linux,uio-name = "fcprr_imr_01";
-		};
-
-		fcprr_imr2: fcprr@fe9c8000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c8000 0 0x1000>;
-			linux,uio-name = "fcprr_imr_02";
-		};
-
-		fcprr_imr3: fcprr@fe9c9000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9c9000 0 0x1000>;
-			linux,uio-name = "fcprr_imr_03";
-		};
-
-		fcprr_vspd0: fcprr@fea90000 {
-			compatible = "generic-uio";
-			reg = <0 0xfea90000 0 0x1000>;
-			linux,uio-name = "fcprr_vspd_00";
-		};
-
-		fcprr_vspd1: fcprr@fea9b000 {
-			compatible = "generic-uio";
-			reg = <0 0xfea9b000 0 0x1000>;
-			linux,uio-name = "fcprr_vspd_01";
-		};
-
-		fcprr_vspx0: fcprr@fea9c000 {
-			compatible = "generic-uio";
-			reg = <0 0xfea9c000 0 0x1000>;
-			linux,uio-name = "fcprr_vspx_00";
-		};
-
-		fcprr_vspx1: fcprr@fea9d000 {
-			compatible = "generic-uio";
-			reg = <0 0xfea9d000 0 0x1000>;
-			linux,uio-name = "fcprr_vspx_01";
-		};
-
-		fcprr_vspx2: fcprr@fea9e000 {
-			compatible = "generic-uio";
-			reg = <0 0xfea9e000 0 0x1000>;
-			linux,uio-name = "fcprr_vspx_02";
-		};
-
-		fcprr_vspx3: fcprr@fea9f000 {
-			compatible = "generic-uio";
-			reg = <0 0xfea9f000 0 0x1000>;
-			linux,uio-name = "fcprr_vspx_03";
-		};
-
-		fcprw_vin0: fcprw@fea93000 {
-			compatible = "generic-uio";
-			reg = <0 0xfea93000 0 0x1000>;
-			linux,uio-name = "fcprw_vin_00";
-		};
-
-		fcprw_isp0: fcprw@fea96000 {
-			compatible = "generic-uio";
-			reg = <0 0xfea96000 0 0x1000>;
-			linux,uio-name = "fcprw_isp_00";
-		};
-
-		fcprr_rtdmac3: fcprr@fec70000 {
-			compatible = "generic-uio";
-			reg = <0 0xfec70000 0 0x1000>;
-			linux,uio-name = "fcprr_rtdmac_03";
-		};
-
-		fcpra_vip0: fcpra@e7aaa000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7aaa000 0 0x1000>;
-			linux,uio-name = "fcpra_vip_00";
-		};
-
-		fcpra_vip1: fcpra@e7ab5000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7ab5000 0 0x1000>;
-			linux,uio-name = "fcpra_vip_01";
-		};
-
-		fcpra_vip2: fcpra@e7abb000 {
-			compatible = "generic-uio";
-			reg = <0 0xe7abb000 0 0x1000>;
-			linux,uio-name = "fcpra_vip_02";
-		};
-
-		fcpra_imp0: fcpra@ff8dd000 {
-			compatible = "generic-uio";
-			reg = <0 0xff8dd000 0 0x1000>;
-			linux,uio-name = "fcpra_imp_00";
-		};
-		fcpra_imr0: fcpra@fe9cd000 {
-			compatible = "generic-uio";
-			reg = <0 0xfe9cd000 0 0x1000>;
-			linux,uio-name = "fcpra_imr_00";
-		};
-
-		fcpra_vio0: fcpra@fea95000 {
-			compatible = "generic-uio";
-			reg = <0 0xfea95000 0 0x1000>;
-			linux,uio-name = "fcpra_vio_00";
-		};
-
-		fcpra_rt0: fcpra@ffc79000 {
-			compatible = "generic-uio";
-			reg = <0 0xffc79000 0 0x1000>;
-			linux,uio-name = "fcpra_rt_00";
 		};
 
 		caiplite_wrapper {
