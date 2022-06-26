@@ -149,11 +149,49 @@
 &pciec1 {
 	status = "disabled";
 	clkreq-gpios = <&gpio2 16 GPIO_ACTIVE_LOW>;
+
+	reg = <0 0xe65d8000 0 0x3000>,
+	      <0 0xe65db000 0 0x2000>,
+	      <0 0xe65dd000 0 0x1200>,
+	      <0 0xe65de200 0 0x0e00>,
+	      <0 0xe65df000 0 0x1000>,
+	      <0 0xee900000 0 0x10000>,
+	      <0 0xe65d6200 0 0x0e00>;
+	reg-names = "dbi",
+		    "atu",
+		    "dma",
+		    "app",
+		    "phy",
+		    "config",
+		    "shared";
+	clocks = <&cpg CPG_MOD 625>,
+		 <&pcie_bus_clk>,
+		 <&cpg CPG_MOD 624>;
+	clock-names = "pcie1",
+		      "pcie_bus",
+		      "shared";
 };
 
 &pciec1_ep {
 	status = "disabled";
 	clkreq-gpios = <&gpio2 16 GPIO_ACTIVE_LOW>;
+
+	reg = <0 0xe65d8000 0 0x1000>, <0 0xe65d9000 0 0x1000>,
+	      <0 0xe65da000 0 0x1000>, <0 0xe65db000 0 0x2000>,
+	      <0 0xe65dd000 0 0x1200>, <0 0xe65de200 0 0x0e00>,
+	      <0 0xe65df000 0 0x1000>, <0 0xee900000 0 0x400000>,
+	      <0 0xe65d6200 0 0x0e00>;
+	reg-names = "dbi", "dbi2",
+		    "shadow", "atu",
+		    "dma", "app",
+		    "phy", "addr_space",
+		    "shared";
+	clocks = <&cpg CPG_MOD 625>,
+		 <&pcie_bus_clk>,
+		 <&cpg CPG_MOD 624>;
+	clock-names = "pcie1",
+		      "pcie_bus",
+		      "shared";
 };
 
 &tau_pwm0 {
