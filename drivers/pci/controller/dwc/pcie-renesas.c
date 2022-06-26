@@ -21,6 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
+#include <linux/gpio/consumer.h>
 
 #include "../../pci.h"
 #include "pcie-designware.h"
@@ -100,6 +101,7 @@ struct renesas_pcie {
 	void __iomem			*phy_base;
 	struct clk			*bus_clk;
 	struct reset_control		*rst;
+	struct gpio_desc		*clkreq;
 };
 
 static const struct of_device_id renesas_pcie_of_match[];
@@ -370,10 +372,14 @@ static int renesas_pcie_host_enable(struct renesas_pcie *pcie)
 	struct dw_pcie *pci = pcie->pci;
 	int ret;
 
+
+	if (pcie->clkreq)
+		gpiod_set_value(pcie->clkreq, 1);
+
 	ret = clk_prepare_enable(pcie->bus_clk);
 	if (ret) {
 		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
-		return ret;
+		goto err_clkreq_off;
 	}
 
 	ret = reset_control_deassert(pcie->rst);
@@ -386,6 +392,10 @@ static int renesas_pcie_host_enable(struct renesas_pcie *pcie)
 
 err_clk_disable:
 	clk_disable_unprepare(pcie->bus_clk);
+
+err_clkreq_off:
+	if (pcie->clkreq)
+		gpiod_set_value(pcie->clkreq, 0);
 
 	return ret;
 }
@@ -422,6 +432,10 @@ static int renesas_pcie_get_resources(struct renesas_pcie *pcie,
 		dev_err(dev, "failed to get Cold-reset\n");
 		return PTR_ERR(pcie->rst);
 	}
+
+	pcie->clkreq =  devm_gpiod_get(dev, "clkreq", GPIOD_OUT_LOW);
+	if (IS_ERR(pcie->clkreq))
+		pcie->clkreq = NULL;
 
 	return 0;
 }
@@ -475,6 +489,8 @@ static int renesas_pcie_probe(struct platform_device *pdev)
 err_host_disable:
 	reset_control_assert(pcie->rst);
 	clk_disable_unprepare(pcie->bus_clk);
+	if (pcie->clkreq)
+		gpiod_set_value(pcie->clkreq, 0);
 
 err_pm_put:
 	pm_runtime_put(dev);
