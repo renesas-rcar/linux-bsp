@@ -138,26 +138,22 @@
 
 &pciec0 {
 	status = "okay";
-	pinctrl-0 = <&pcie0_pins>;
-	pinctrl-names = "default";
+	clkreq-gpios = <&gpio2 15 GPIO_ACTIVE_LOW>;
 };
 
 &pciec0_ep {
 	status = "disabled";
-	pinctrl-0 = <&pcie0_pins>;
-	pinctrl-names = "default";
+	clkreq-gpios = <&gpio2 15 GPIO_ACTIVE_LOW>;
 };
 
 &pciec1 {
 	status = "disabled";
-	pinctrl-0 = <&pcie1_pins>;
-	pinctrl-names = "default";
+	clkreq-gpios = <&gpio2 16 GPIO_ACTIVE_LOW>;
 };
 
 &pciec1_ep {
 	status = "disabled";
-	pinctrl-0 = <&pcie1_pins>;
-	pinctrl-names = "default";
+	clkreq-gpios = <&gpio2 16 GPIO_ACTIVE_LOW>;
 };
 
 &tau_pwm0 {
