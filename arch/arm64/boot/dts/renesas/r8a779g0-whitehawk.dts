@@ -576,6 +576,10 @@
 	};
 };
 
+&dsc {
+	status = "okay";
+};
+
 &dsi1 {
 	status = "okay";
 
