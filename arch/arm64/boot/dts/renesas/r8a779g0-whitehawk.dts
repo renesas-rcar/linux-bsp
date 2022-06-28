@@ -30,12 +30,22 @@
 		};
 	};
 
-	dsi-con {
+	dsi-con0 {
 		compatible = "dsi-connector";
 
 		port {
-			dsi_con_out: endpoint {
-			remote-endpoint = <&sn65dsi86_out>;
+			dsi_con_out0: endpoint {
+			remote-endpoint = <&sn65dsi86_out0>;
+			};
+		};
+	};
+
+	dsi-con1 {
+		compatible = "dsi-connector";
+
+		port {
+			dsi_con_out1: endpoint {
+			remote-endpoint = <&sn65dsi86_out1>;
 			};
 		};
 	};
@@ -158,6 +168,11 @@
 		function = "i2c1";
 	};
 
+	i2c4_pins: i2c4 {
+		groups = "i2c4";
+		function = "i2c4";
+	};
+
 	canfd0_pins: canfd0 {
 		groups = "canfd0_data";
 		function = "canfd0";
@@ -274,7 +289,7 @@
 	status = "okay";
 	clock-frequency = <400000>;
 
-	sn65dsi86@2c {
+	sn65dsi86_0@2c {
 		compatible = "ti,sn65dsi86";
 		reg = <0x2c>;
 		dp-connector;
@@ -290,15 +305,15 @@
 
 			port@0 {
 				reg = <0>;
-				sn65dsi86_in: endpoint {
+				sn65dsi86_in0: endpoint {
 					remote-endpoint = <&dsi0_out>;
 				};
 			};
 
 			port@1 {
 				reg = <1>;
-				sn65dsi86_out: endpoint {
-					remote-endpoint = <&dsi_con_out>;
+				sn65dsi86_out0: endpoint {
+					remote-endpoint = <&dsi_con_out0>;
 				};
 			};
 		};
@@ -476,6 +491,44 @@
 	};
 };
 
+&i2c4 {
+	pinctrl-0 = <&i2c4_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	clock-frequency = <400000>;
+
+	sn65dsi86_1@2c {
+		compatible = "ti,sn65dsi86";
+		reg = <0x2c>;
+		dp-connector;
+		clocks = <&ref_clk>;
+		clock-names = "refclk";
+		no-use-gpio;
+		no-use-scramble;
+		hpd-poll;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				sn65dsi86_in1: endpoint {
+					remote-endpoint = <&dsi1_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				sn65dsi86_out1: endpoint {
+					remote-endpoint = <&dsi_con_out1>;
+				};
+			};
+		};
+	};
+};
+
 &pcie_bus_clk {
 	clock-frequency = <100000000>;
 };
@@ -512,14 +565,26 @@
 	status = "okay";
 
 	use-extal-clk;
-	clocks = <&cpg CPG_MOD 415>,
-		 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>;
-	clock-names = "mod", "dsi";
 
 	ports {
 		port@1 {
 			endpoint {
-				remote-endpoint = <&sn65dsi86_in>;
+				remote-endpoint = <&sn65dsi86_in0>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+};
+
+&dsi1 {
+	status = "okay";
+
+	use-extal-clk;
+
+	ports {
+		port@1 {
+			endpoint {
+				remote-endpoint = <&sn65dsi86_in1>;
 				data-lanes = <1 2 3 4>;
 			};
 		};

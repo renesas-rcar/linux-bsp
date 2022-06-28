@@ -1640,7 +1640,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			clocks = <&cpg CPG_MOD 415>,
 				 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>;
-			clock-names = "fck", "dsi";
+			clock-names = "mod", "dsi";
 			resets = <&cpg 415>;
 			status = "disabled";
 
@@ -1669,7 +1669,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			clocks = <&cpg CPG_MOD 416>,
 				 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>;
-			clock-names = "fck", "dsi";
+			clock-names = "mod", "dsi";
 			resets = <&cpg 416>;
 			status = "disabled";
 
