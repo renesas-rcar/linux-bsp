@@ -11,6 +11,9 @@
 
 #define CAN_SYNC_SEG 1
 
+#define CAN_BITRATE_UNSET 0
+#define CAN_BITRATE_UNKNOWN (-1U)
+
 /* Kilobits and Megabits per second */
 #define CAN_KBPS 1000UL
 #define CAN_MBPS 1000000UL
