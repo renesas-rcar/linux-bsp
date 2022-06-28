@@ -53,6 +53,12 @@ config DRM_RCAR_VSP
 	help
 	  Enable support to expose the R-Car VSP Compositor as KMS planes.
 
+config DRM_RCAR_DSC
+	tristate "R-Car Display Stream Compression Support"
+	depends on DRM && DRM_BRIDGE && OF
+	help
+	  Enable Display Strem Compression module.
+
 config DRM_RCAR_WRITEBACK
 	bool
 	default y if ARM64
