@@ -23,6 +23,31 @@
 		i2c5 = &i2c5;
 	};
 
+	cluster1_opp: opp_table10 {
+		compatible = "operating-points-v2";
+		opp-shared;
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+			opp-suspend;
+		};
+	};
 
 	cpus {
 		#address-cells = <1>;
@@ -70,6 +95,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E0D0C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_0>;
 		};
 
@@ -80,6 +107,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E0D0C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_0>;
 		};
 
@@ -90,6 +119,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E0D1C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_1>;
 		};
 
@@ -100,6 +131,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E0D1C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_1>;
 		};
 
@@ -110,6 +143,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E1D0C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_2>;
 		};
 
@@ -120,6 +155,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E1D0C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_2>;
 		};
 
@@ -130,6 +167,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E1D1C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_3>;
 		};
 
@@ -140,6 +179,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E1D1C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_3>;
 		};
 
