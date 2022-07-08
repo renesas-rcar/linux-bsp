@@ -21,6 +21,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/reset.h>
 
 #include "rtsn_ptp.h"
 
@@ -822,7 +823,6 @@ enum rswitch_serdes_mode {
 
 #define RSWITCH_SERDES_OFFSET                   0x0400
 #define RSWITCH_SERDES_BANK_SELECT              0x03fc
-#define RSWITCH_SERDES_FUSE_OVERRIDE(n)         (0x2600 - (n) * 0x400)
 
 #define BANK_180                                0x0180
 #define VR_XS_PMA_MP_12G_16G_25G_SRAM           0x026c
@@ -1031,6 +1031,8 @@ struct rswitch_private {
 
 	struct clk *rsw_clk;
 	struct clk *phy_clk;
+
+	struct reset_control *sd_rst;
 };
 
 static int num_ndev = 3;
@@ -1474,18 +1476,17 @@ static int rswitch_serdes_reg_wait(void __iomem *addr, u32 offs, u32 bank, u32 m
 
 static int rswitch_serdes_common_init_ram(struct rswitch_etha *etha)
 {
-	void __iomem *addr = etha->serdes_addr - etha->index * RSWITCH_SERDES_OFFSET;
+	void __iomem *common_addr = etha->serdes_addr - etha->index * RSWITCH_SERDES_OFFSET;
 	int ret;
 
-	ret = rswitch_serdes_reg_wait(addr, VR_XS_PMA_MP_12G_16G_25G_SRAM, BANK_180, BIT(0), 0x01);
+	ret = rswitch_serdes_reg_wait(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_SRAM, BANK_180,
+				      BIT(0), 0x01);
 	if (ret)
 		return ret;
 
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_SRAM, BANK_180, 0x03);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_16G_25G_SRAM, BANK_180, 0x03);
 
-	ret = rswitch_serdes_reg_wait(addr, SR_XS_PCS_CTRL1, BANK_300, BIT(15), 0);
-
-	return ret;
+	return 0;
 }
 
 static int rswitch_serdes_common_setting(struct rswitch_etha *etha, enum rswitch_serdes_mode mode)
@@ -1515,7 +1516,6 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha, enum rswitch_s
 
 	switch (mode) {
 	case SGMII:
-		rswitch_serdes_write32(addr, SR_XS_PCS_CTRL2, BANK_300, 0x01);
 		rswitch_serdes_write32(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x2000);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_MPLL_CMN_CTRL,
 				       BANK_180, 0x11);
@@ -1531,7 +1531,7 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha, enum rswitch_s
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_RX_EQ_CTRL0, BANK_180, 0x07);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_10G_RX_IQ_CTRL0, BANK_180, 0);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_GENCTRL1, BANK_180, 0x310);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_TX_GENCTRL2, BANK_380, 0x101);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_TX_GENCTRL2, BANK_180, 0x101);
 		ret = rswitch_serdes_reg_wait(addr, VR_XS_PMA_MP_12G_16G_TX_GENCTRL2,
 					      BANK_180, BIT(0), 0);
 		if (ret)
@@ -1548,6 +1548,7 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha, enum rswitch_s
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_EQ_CTRL0,
 				       BANK_180, 0x1800);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_EQ_CTRL1, BANK_180, 0);
+		rswitch_serdes_write32(addr, SR_XS_PCS_CTRL2, BANK_300, 0x01);
 		rswitch_serdes_write32(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x2100);
 		ret = rswitch_serdes_reg_wait(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, BIT(8), 0);
 		if (ret)
@@ -1572,8 +1573,6 @@ static int rswitch_serdes_set_speed(struct rswitch_etha *etha, enum rswitch_serd
 			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x140);
 		else if (speed == 100)
 			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x2100);
-		else if (speed == 10)
-			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x100);
 
 		break;
 	default:
@@ -1600,25 +1599,33 @@ static int __maybe_unused rswitch_serdes_init(struct rswitch_etha *etha)
 		return -EOPNOTSUPP;
 	}
 
-	/* Disable FUSE_OVERRIDE_EN */
-	if (ioread32(etha->serdes_addr + RSWITCH_SERDES_FUSE_OVERRIDE(etha->index)))
-		iowrite32(0, etha->serdes_addr + RSWITCH_SERDES_FUSE_OVERRIDE(etha->index));
-
 	/* Initialize SRAM */
 	ret = rswitch_serdes_common_init_ram(etha);
 	if (ret)
 		return ret;
+
+	ret = rswitch_serdes_reg_wait(etha->serdes_addr, SR_XS_PCS_CTRL1, BANK_300, BIT(15), 0);
+	if (ret)
+		return ret;
+
+	rswitch_serdes_write32(etha->serdes_addr, 0x03d4, BANK_380, 0x443);
 
 	/* Set common setting */
 	ret = rswitch_serdes_common_setting(etha, mode);
 	if (ret)
 		return ret;
 
+	rswitch_serdes_write32(etha->serdes_addr, 0x03d0, BANK_380, 0x01);
+
 	/* Assert softreset for PHY */
 	rswitch_serdes_write32(common_addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x8000);
 
 	/* Initialize SRAM */
 	ret = rswitch_serdes_common_init_ram(etha);
+	if (ret)
+		return ret;
+
+	ret = rswitch_serdes_reg_wait(common_addr, VR_XS_PCS_DIG_CTRL1, BANK_380, BIT(15), 0);
 	if (ret)
 		return ret;
 
@@ -1631,6 +1638,9 @@ static int __maybe_unused rswitch_serdes_init(struct rswitch_etha *etha)
 	ret = rswitch_serdes_set_speed(etha, mode, etha->speed);
 	if (ret)
 		return ret;
+
+	rswitch_serdes_write32(etha->serdes_addr, 0x03c0, BANK_380, 0);
+	rswitch_serdes_write32(etha->serdes_addr, 0x03d0, BANK_380, 0);
 
 	ret = rswitch_serdes_reg_wait(etha->serdes_addr, SR_XS_PCS_STS1, BANK_300, BIT(2), BIT(2));
 	if (ret) {
@@ -2169,6 +2179,10 @@ static void rswitch_reset(struct rswitch_private *priv)
 	if (!parallel_mode) {
 		rs_write32(RRC_RR, priv->addr + RRC);
 		rs_write32(RRC_RR_CLR, priv->addr + RRC);
+
+		reset_control_assert(priv->sd_rst);
+		mdelay(1);
+		reset_control_deassert(priv->sd_rst);
 	} else {
 		int gwca_idx;
 		u32 gwro_offset;
@@ -2892,6 +2906,8 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 			return -PTR_ERR(priv->phy_clk);
 		}
 	}
+
+	priv->sd_rst = devm_reset_control_get(&pdev->dev, "eth-phy");
 
 	platform_set_drvdata(pdev, priv);
 	priv->pdev = pdev;
