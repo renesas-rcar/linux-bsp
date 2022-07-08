@@ -565,6 +565,7 @@
 			clock-names = "rsw2", "eth-phy";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 1505>, <&cpg 1506>;
+			reset-names = "rsw2", "eth-phy";
 			status = "disabled";
 		};
 
