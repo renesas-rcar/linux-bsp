@@ -23,6 +23,31 @@
 		i2c5 = &i2c5;
 	};
 
+	cluster1_opp: opp_table10 {
+		compatible = "operating-points-v2";
+		opp-shared;
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+			opp-suspend;
+		};
+	};
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -74,6 +99,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 		};
 
 		a55_1: cpu@100 {
@@ -85,6 +111,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 		};
 
 		a55_2: cpu@10000 {
@@ -96,6 +123,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 		};
 
 		a55_3: cpu@10100 {
@@ -107,6 +135,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 		};
 
 		a55_4: cpu@20000 {
@@ -118,6 +147,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 		};
 
 		a55_5: cpu@20100 {
@@ -129,6 +159,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 		};
 
 		a55_6: cpu@30000 {
@@ -140,6 +171,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 		};
 
 		a55_7: cpu@30100 {
@@ -151,6 +183,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 		};
 
 		L3_CA55_0: cache-controller-0 {
