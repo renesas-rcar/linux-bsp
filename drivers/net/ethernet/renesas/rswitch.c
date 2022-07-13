@@ -1934,6 +1934,9 @@ static int rswitch_open(struct net_device *ndev)
 			of_node_put(phy);
 		}
 
+		ndev->phydev->speed = rdev->etha->speed;
+		phy_set_max_speed(ndev->phydev, rdev->etha->speed);
+
 		phy_start(ndev->phydev);
 		phy_started = true;
 
