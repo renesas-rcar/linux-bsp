@@ -38,14 +38,12 @@ static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
 {
 	struct rcar_du_device *rcdu = rcrtc->dev;
 	struct rcar_du_group *rgrp = rcrtc->group;
-	u32 escr13 = ESCR13 + DU1_REG_OFFSET;
-	u32 otar13 = OTAR13 + DU1_REG_OFFSET;
 
 	/* ESCR register access check */
-	if (reg == ESCR02 || reg == escr13) {
+	if (reg == ESCR02 || reg == ESCR13) {
 		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
 		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
-			if (rgrp->index == 0 && reg == escr13)
+			if (rgrp->index == 0 && reg == ESCR13)
 				return false;
 			else if (rgrp->index == 1 && reg == ESCR02)
 				return false;
@@ -53,7 +51,7 @@ static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
 				return true;
 		}
 		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS)) {
-			if (rgrp->index == 0 && reg == escr13)
+			if (rgrp->index == 0 && reg == ESCR13)
 				return false;
 			else
 				return true;
@@ -64,10 +62,10 @@ static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
 	}
 
 	/* OTAR register access check */
-	if (reg == OTAR02 || reg == otar13) {
+	if (reg == OTAR02 || reg == OTAR13) {
 		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
 		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
-			if (rgrp->index == 1 && reg == otar13)
+			if (rgrp->index == 1 && reg == OTAR13)
 				return true;
 			else
 				return false;
