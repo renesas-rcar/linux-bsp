@@ -622,7 +622,9 @@
 			interrupts = <GIC_SPI 230 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 618>, <&msiof_ref_clk>;
 			clock-names = "msiof_clk", "msiof_ref_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x41>, <&dmac0 0x40>,
+			       <&dmac1 0x41>, <&dmac1 0x40>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 618>;
 			#address-cells = <1>;
@@ -637,7 +639,9 @@
 			interrupts = <GIC_SPI 231 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 619>, <&msiof_ref_clk>;
 			clock-names = "msiof_clk", "msiof_ref_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x43>, <&dmac0 0x42>,
+			       <&dmac1 0x43>, <&dmac1 0x42>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 619>;
 			#address-cells = <1>;
@@ -652,7 +656,9 @@
 			interrupts = <GIC_SPI 232 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 620>, <&msiof_ref_clk>;
 			clock-names = "msiof_clk", "msiof_ref_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x45>, <&dmac0 0x44>,
+			       <&dmac1 0x45>, <&dmac1 0x44>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 620>;
 			#address-cells = <1>;
@@ -667,7 +673,9 @@
 			interrupts = <GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 621>, <&msiof_ref_clk>;
 			clock-names = "msiof_clk", "msiof_ref_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x47>, <&dmac0 0x46>,
+			       <&dmac1 0x47>, <&dmac1 0x46>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 621>;
 			#address-cells = <1>;
