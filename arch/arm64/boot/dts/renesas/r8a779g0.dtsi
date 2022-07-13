@@ -1131,7 +1131,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x41>, <&dmac0 0x40>,
+			       <&dmac1 0x41>, <&dmac1 0x40>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 618>;
 			#address-cells = <1>;
@@ -1147,7 +1149,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x43>, <&dmac0 0x42>,
+			       <&dmac1 0x43>, <&dmac1 0x42>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 619>;
 			#address-cells = <1>;
@@ -1163,7 +1167,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x45>, <&dmac0 0x44>,
+			       <&dmac1 0x45>, <&dmac1 0x44>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 620>;
 			#address-cells = <1>;
@@ -1179,7 +1185,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x47>, <&dmac0 0x46>,
+			       <&dmac1 0x47>, <&dmac1 0x46>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 621>;
 			#address-cells = <1>;
@@ -1195,7 +1203,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x49>, <&dmac0 0x48>,
+			       <&dmac1 0x49>, <&dmac1 0x48>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 622>;
 			#address-cells = <1>;
@@ -1211,7 +1221,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x4B>, <&dmac0 0x4A>,
+			       <&dmac1 0x4B>, <&dmac1 0x4A>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 623>;
 			#address-cells = <1>;
