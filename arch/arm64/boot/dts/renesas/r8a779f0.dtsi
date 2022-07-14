@@ -347,7 +347,9 @@
 			clocks = <&cpg CPG_MOD 518>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 518>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x91>, <&dmac0 0x90>,
+			       <&dmac1 0x91>, <&dmac1 0x90>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -362,7 +364,9 @@
 			clocks = <&cpg CPG_MOD 519>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 519>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x93>, <&dmac0 0x92>,
+			       <&dmac1 0x93>, <&dmac1 0x92>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -377,7 +381,9 @@
 			clocks = <&cpg CPG_MOD 520>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 520>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x95>, <&dmac0 0x94>,
+			       <&dmac1 0x95>, <&dmac1 0x94>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -392,7 +398,9 @@
 			clocks = <&cpg CPG_MOD 521>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 521>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x97>, <&dmac0 0x96>,
+			       <&dmac1 0x97>, <&dmac1 0x96>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -407,7 +415,9 @@
 			clocks = <&cpg CPG_MOD 522>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 522>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x99>, <&dmac0 0x98>,
+			       <&dmac1 0x99>, <&dmac1 0x98>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -422,7 +432,9 @@
 			clocks = <&cpg CPG_MOD 523>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 523>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x9b>, <&dmac0 0x9a>,
+			       <&dmac1 0x9b>, <&dmac1 0x9a>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
