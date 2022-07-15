@@ -37,3 +37,12 @@ Examples:
                 target_devices = <&a57_0>, <&a57_1>;
         };
 
+- Below is device tree definition for R-Car V4H:
+	avs: avs@e60a0080 {
+		compatible = "renesas,r8a779g0-avs", "renesas,rcar-gen4-avs";
+		reg = <0 0xe60a0080 0 0x04>;
+		clocks = <&cpg CPG_MOD 123>;
+		resets = <&cpg 123>;
+		target_devices = <&a76_0>, <&a76_1>, <&a76_2>, <&a76_3>;
+	};
+
