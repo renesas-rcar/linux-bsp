@@ -4031,7 +4031,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "rtdmac_control0_03";
 			ipmmu-id = <RCAR_IPMMU_RT1 3>;
-			iommus = <&ipmmu_rt1 2>;
+			iommus = <&ipmmu_rt1 3>;
 		};
 
 		rtdmac_control0_04: rtdmac_control@ffc14000 {
