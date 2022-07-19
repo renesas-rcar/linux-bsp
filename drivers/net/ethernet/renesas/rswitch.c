@@ -703,6 +703,8 @@ enum rswitch_etha_mode {
 };
 #define EAMS_OPS_MASK	EAMC_OPC_OPERATION
 
+#define EAVCC_VEM_SC_TAG	(0x3 << 16)
+
 #define MPIC_PIS_MII	0x00
 #define MPIC_PIS_GMII	0x02
 #define MPIC_PIS_XGMII	0x04
@@ -1433,6 +1435,8 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 	err = rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
 	if (err < 0)
 		return err;
+
+	rs_write32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
 
 	rswitch_rmac_setting(etha, mac);
 	rswitch_etha_enable_mii(etha);
