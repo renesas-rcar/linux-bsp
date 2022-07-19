@@ -2581,13 +2581,40 @@ static void rswitch_rxdmac_free(struct net_device *ndev,
 	rswitch_gwca_put(priv, rdev->rx_chain);
 }
 
+static void rswitch_set_mac_address(struct rswitch_device *rdev)
+{
+	struct net_device *ndev = rdev->ndev;
+	struct device_node *ports, *port;
+	u32 index;
+	const u8 *mac;
+
+	ports = of_get_child_by_name(ndev->dev.parent->of_node, "ports");
+
+	for_each_child_of_node(ports, port) {
+		of_property_read_u32(port, "reg", &index);
+		if (index == rdev->etha->index)
+			break;
+	}
+
+	mac = of_get_mac_address(port);
+	if (!IS_ERR(mac))
+		ether_addr_copy(ndev->dev_addr, mac);
+
+	if (!is_valid_ether_addr(ndev->dev_addr))
+		ether_addr_copy(ndev->dev_addr, rdev->etha->mac_addr);
+
+	if (!is_valid_ether_addr(ndev->dev_addr))
+		eth_hw_addr_random(ndev);
+
+	of_node_put(ports);
+}
+
 static int rswitch_ndev_register(struct rswitch_private *priv, int index)
 {
 	struct platform_device *pdev = priv->pdev;
 	struct net_device *ndev;
 	struct rswitch_device *rdev;
 	int err;
-	const u8 *mac;
 
 	ndev = alloc_etherdev_mqs(sizeof(struct rswitch_device), 1, 1);
 	if (!ndev)
@@ -2621,15 +2648,7 @@ static int rswitch_ndev_register(struct rswitch_private *priv, int index)
 
 	netif_napi_add(ndev, &rdev->napi, rswitch_poll, 64);
 
-	mac = of_get_mac_address(pdev->dev.of_node);
-	if (!IS_ERR(mac))
-		ether_addr_copy(ndev->dev_addr, mac);
-
-	if (!is_valid_ether_addr(ndev->dev_addr))
-		ether_addr_copy(ndev->dev_addr, rdev->etha->mac_addr);
-
-	if (!is_valid_ether_addr(ndev->dev_addr))
-		eth_hw_addr_random(ndev);
+	rswitch_set_mac_address(rdev);
 
 	/* Network device register */
 	err = register_netdev(ndev);
