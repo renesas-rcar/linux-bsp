@@ -62,6 +62,11 @@ enum rpcif_type {
 	RPCIF_RZ_G2L,
 };
 
+struct rpcif_info {
+	enum rpcif_type type;
+	u8 strtim;
+};
+
 struct rpcif {
 	struct device *dev;
 	void __iomem *dirmap;
