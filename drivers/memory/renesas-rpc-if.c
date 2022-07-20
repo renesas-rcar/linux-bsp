@@ -12,9 +12,11 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
+#include <linux/sys_soc.h>
 
 #include <memory/renesas-rpc-if.h>
 
@@ -251,9 +253,29 @@ static const struct regmap_config rpcif_regmap_config = {
 	.volatile_table	= &rpcif_volatile_table,
 };
 
+static const struct rpcif_info rpcif_info_r8a7795_es1 = {
+	.strtim = 0,
+};
+
+static const struct rpcif_info rpcif_info_r8a7796_es1 = {
+	.strtim = 6,
+};
+
+static const struct rpcif_info rpcif_info_gen3 = {
+	.strtim = 7,
+};
+
+static const struct soc_device_attribute rpcif_quirks_match[]  = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*", .data = &rpcif_info_r8a7795_es1 },
+	{ .soc_id = "r8a7796", .revision = "ES1.*", .data = &rpcif_info_r8a7796_es1 },
+	{ /* Sentinel. */ }
+};
+
 int rpcif_sw_init(struct rpcif *rpc, struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	const struct soc_device_attribute *attr;
+	const struct rpcif_info *info;
 	struct resource *res;
 
 	rpc->dev = dev;
@@ -275,6 +297,14 @@ int rpcif_sw_init(struct rpcif *rpc, struct device *dev)
 	rpc->dirmap = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(rpc->dirmap))
 		rpc->dirmap = NULL;
+
+	info = of_device_get_match_data(dev);
+	attr = soc_device_match(rpcif_quirks_match);
+	if (attr)
+		info = attr->data;
+
+	rpc->strtim = info->strtim;
+
 	rpc->size = resource_size(res);
 
 	rpc->rstc = devm_reset_control_get_exclusive(&pdev->dev, NULL);
@@ -305,7 +335,7 @@ void rpcif_hw_init(struct rpcif *rpc, bool hyperflash)
 			   RPCIF_PHYCNT_PHYMEM(hyperflash ? 3 : 0));
 
 	regmap_update_bits(rpc->regmap, RPCIF_PHYCNT,
-			   RPCIF_PHYCNT_STRTIM(7), RPCIF_PHYCNT_STRTIM(7));
+			   RPCIF_PHYCNT_STRTIM(7), RPCIF_PHYCNT_STRTIM(rpc->strtim));
 
 	regmap_update_bits(rpc->regmap, RPCIF_PHYOFFSET1, RPCIF_PHYOFFSET1_DDRTMG(3),
 			   RPCIF_PHYOFFSET1_DDRTMG(3));
@@ -696,7 +726,7 @@ static int rpcif_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id rpcif_of_match[] = {
-	{ .compatible = "renesas,rcar-gen3-rpc-if", },
+	{ .compatible = "renesas,rcar-gen3-rpc-if", .data = &rpcif_info_gen3},
 	{},
 };
 MODULE_DEVICE_TABLE(of, rpcif_of_match);
