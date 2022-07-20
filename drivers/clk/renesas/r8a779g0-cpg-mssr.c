@@ -96,6 +96,7 @@ static const struct cpg_core_clk r8a779g0_core_clks[] __initconst = {
 	DEF_BASE("rpcd2",	R8A779G0_CLK_RPCD2,	CLK_TYPE_GEN4_RPCD2,  R8A779G0_CLK_RPC),
 
 	/* Core Clock Outputs */
+	DEF_GEN4_Z("z0",	R8A779G0_CLK_Z0,	CLK_TYPE_GEN4_Z,	CLK_PLL2,	2, 0),
 	DEF_FIXED("s0d2",	R8A779G0_CLK_S0D2,	CLK_S0,		2, 1),
 	DEF_FIXED("s0d3",	R8A779G0_CLK_S0D3,	CLK_S0,		3, 1),
 	DEF_FIXED("s0d4",	R8A779G0_CLK_S0D4,	CLK_S0,		4, 1),
@@ -185,8 +186,6 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("avb2",			213,	R8A779G0_CLK_S0D8_HSC),
 
 	DEF_MOD("can-fd",		328,	R8A779G0_CLK_CANFD),
-	DEF_MOD("cr0",			329,	R8A779G0_CLK_S0D3),
-	DEF_MOD("csdbgpap",		330,	R8A779G0_CLK_S0D3),
 	DEF_MOD("csitop0",		331,	R8A779G0_CLK_CSI),
 
 	DEF_MOD("csitop1",		400,	R8A779G0_CLK_CSI),
@@ -198,7 +197,6 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("fcpcs",		507,	R8A779G0_CLK_S0D3),
 	DEF_MOD("fcpvd0",		508,	R8A779G0_CLK_S0D3),
 	DEF_MOD("fcpvd1",		509,	R8A779G0_CLK_S0D3),
-	DEF_MOD("fray00",		513,	R8A779G0_CLK_S0D3),
 	DEF_MOD("hscif0",		514,	R8A779G0_CLK_RCLK),
 	DEF_MOD("hscif1",		515,	R8A779G0_CLK_RCLK),
 	DEF_MOD("hscif2",		516,	R8A779G0_CLK_RCLK),
@@ -215,7 +213,6 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("ims0",			529,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("ims1",			530,	R8A779G0_CLK_S0D6_PER),
 
-	DEF_MOD("ipc",			601,	R8A779G0_CLK_MSO),
 	DEF_MOD("ispcs0",		612,	R8A779G0_CLK_MSO),
 	DEF_MOD("ispcs1",		613,	R8A779G0_CLK_MSO),
 	DEF_MOD("ivcp1e",		616,	R8A779G0_CLK_MSO),
@@ -239,10 +236,8 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("scif3",		704,	R8A779G0_CLK_RCLK),
 	DEF_MOD("scif4",		705,	R8A779G0_CLK_RCLK),
 	DEF_MOD("sdhi0",		706,	R8A779G0_CLK_SD0),
-	DEF_MOD("secrom",		707,	R8A779G0_CLK_S0D4),
 	DEF_MOD("sydm1",		709,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("sydm2",		710,	R8A779G0_CLK_S0D6_PER),
-	DEF_MOD("system_ram",		711,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("tmu0",			713,	R8A779G0_CLK_SASYNCRT),
 	DEF_MOD("tmu1",			714,	R8A779G0_CLK_SASYNCPERD2),
 	DEF_MOD("tmu2",			715,	R8A779G0_CLK_SASYNCPERD2),
@@ -292,29 +287,12 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("pfc1",			916,	R8A779G0_CLK_CL16M),
 	DEF_MOD("pfc2",			917,	R8A779G0_CLK_CL16M),
 	DEF_MOD("pfc3",			918,	R8A779G0_CLK_CL16M),
-	DEF_MOD("tsc4:tsc3:tsc2:tsc1",	919,	R8A779G0_CLK_CL16M),
-	DEF_MOD("ucmt",			920,	R8A779G0_CLK_CL16M),
 
 	DEF_MOD("vspx0",		1028,	R8A779G0_CLK_S0D1_VIO),
 	DEF_MOD("vspx1",		1029,	R8A779G0_CLK_S0D1_VIO),
 
 	DEF_MOD("fcpvx0",		1100,	R8A779G0_CLK_S0D2_VC),
 	DEF_MOD("fcpvx1",		1101,	R8A779G0_CLK_S0D2_VC),
-	DEF_MOD("aurora2",		1106,	R8A779G0_CLK_S0D2_HSC),
-	DEF_MOD("aurora4",		1107,	R8A779G0_CLK_S0D2_HSC),
-
-	DEF_MOD("advfsc",		1223,	R8A779G0_CLK_CL16M),
-	DEF_MOD("crc0",			1225,	R8A779G0_CLK_S0D2_RT),
-	DEF_MOD("crc1",			1226,	R8A779G0_CLK_S0D2_RT),
-	DEF_MOD("crc2",			1227,	R8A779G0_CLK_S0D2_RT),
-	DEF_MOD("crc3",			1228,	R8A779G0_CLK_S0D2_RT),
-	DEF_MOD("fso",			1230,	R8A779G0_CLK_S0D2),
-	DEF_MOD("kcrc4",		1231,	R8A779G0_CLK_S0D2_RT),
-
-	DEF_MOD("kcrc5",		1300,	R8A779G0_CLK_S0D2_RT),
-	DEF_MOD("kcrc6",		1301,	R8A779G0_CLK_S0D2_RT),
-	DEF_MOD("kcrc7",		1302,	R8A779G0_CLK_S0D2_RT),
-	DEF_MOD("mti",			1304,	R8A779G0_CLK_S0D1_VIO),
 
 	DEF_MOD("cve0",			2706,	R8A779G0_CLK_SVD1_IR),
 	DEF_MOD("cve1",			2707,	R8A779G0_CLK_SVD1_IR),
@@ -323,22 +301,19 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("impsdmac0",		2712,	R8A779G0_CLK_SVD1_VIP),
 	DEF_MOD("impsdmac1",		2713,	R8A779G0_CLK_SVD1_VIP),
 	DEF_MOD("tsn",			2723,	R8A779G0_CLK_S0D8_HSC),
-	DEF_MOD("csbrg_ir_a3",		2728,	R8A779G0_CLK_ZT),
-	DEF_MOD("csbrg_ir_a2",		2729,	R8A779G0_CLK_ZT),
 
-	DEF_MOD("vdsp0_bus",		2801,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
-	DEF_MOD("vdsp1_bus",		2802,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
-	DEF_MOD("vdsp2_bus",		2803,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
-	DEF_MOD("vdsp3_bus",		2804,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
+	DEF_MOD("vdsp0_bus",		2801,	R8A779G0_CLK_SVD1_IR),
+	DEF_MOD("vdsp1_bus",		2802,	R8A779G0_CLK_SVD1_IR),
+	DEF_MOD("vdsp2_bus",		2803,	R8A779G0_CLK_SVD1_IR),
+	DEF_MOD("vdsp3_bus",		2804,	R8A779G0_CLK_SVD1_IR),
 	DEF_MOD("paptop",               2806,    R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("papsdma",              2807,    R8A779G0_CLK_S0D6_PER),
-	DEF_MOD("fcprc",		2817,	R8A779G0_CLK_S0D2_MM),
 	DEF_MOD("dsc",			2819,	R8A779G0_CLK_VIOBUSD2),
-	DEF_MOD("vdsp0_csb",		2821,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
-	DEF_MOD("vdsp1_csb",		2830,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
+	DEF_MOD("vdsp0_csb",		2821,	R8A779G0_CLK_SVD1_IR),
+	DEF_MOD("vdsp1_csb",		2830,	R8A779G0_CLK_SVD1_IR),
 
-	DEF_MOD("vdsp2_csb",		2907,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
-	DEF_MOD("vdsp3_csb",		2916,	R8A779G0_CLK_SVD1_IR), /* T.B.D. */
+	DEF_MOD("vdsp2_csb",		2907,	R8A779G0_CLK_SVD1_IR),
+	DEF_MOD("vdsp3_csb",		2916,	R8A779G0_CLK_SVD1_IR),
 	DEF_MOD("ssiu",			2926,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("ssi",			2927,	R8A779G0_CLK_S0D6_PER),
 
