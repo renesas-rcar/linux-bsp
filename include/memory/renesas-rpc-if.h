@@ -18,6 +18,10 @@ enum rpcif_data_dir {
 	RPCIF_DATA_OUT,
 };
 
+struct rpcif_info {
+	u8 strtim;
+};
+
 struct	rpcif_op {
 	struct {
 		u8 buswidth;
@@ -66,6 +70,7 @@ struct	rpcif {
 	enum rpcif_data_dir dir;
 	u8 bus_size;
 	u8 xfer_size;
+	u8 strtim;
 	void *buffer;
 	u32 xferlen;
 	u32 smcr;
