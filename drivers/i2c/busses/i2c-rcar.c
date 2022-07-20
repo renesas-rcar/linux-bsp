@@ -43,6 +43,9 @@
 #define ICMAR	0x20	/* master address */
 #define ICRXTX	0x24	/* data port */
 #define ICCCR2	0x28	/* Clock control 2 */
+#define ICMPR	0x2C	/* SCL mask control */
+#define ICHPR	0x30	/* SCL HIGH control */
+#define ICLPR	0x34	/* SCL LOW control */
 #define ICFBSCR	0x38	/* first bit setup cycle (Gen3) */
 #define ICDMAER	0x3c	/* DMA enable (Gen3) */
 
@@ -88,6 +91,9 @@
 
 /* ICCCR2 */
 #define FMPE	(1 << 7)	/* Fast Mode Plus Enable */
+#define CDFD	BIT(2)	/* CDF Disable */
+#define HLSE	BIT(1)	/* HIGH/LOW Separate Control Enable */
+#define SME	BIT(0)	/* SCL Mask Enable */
 
 /* ICFBSCR */
 #define TCYC17	0x0f		/* 17*Tcyc delay 1st bit between SDA and SCL */
@@ -135,6 +141,8 @@ struct rcar_i2c_priv {
 
 	int pos;
 	u32 icccr;
+	u32 icmpr;
+	u32 ichpr;
 	u8 recovery_icmcr;	/* protected by adapter lock */
 	enum rcar_i2c_type devtype;
 	struct i2c_client *slave;
@@ -221,11 +229,17 @@ static struct i2c_bus_recovery_info rcar_i2c_bri = {
 };
 static void rcar_i2c_init(struct rcar_i2c_priv *priv)
 {
+	/* fast mode plus support */
+	if (priv->fast_mode_plus) {
+		rcar_i2c_write(priv, ICMPR, rcar_i2c_read(priv, ICMPR) | priv->icmpr);
+		rcar_i2c_write(priv, ICHPR, rcar_i2c_read(priv, ICHPR) | priv->ichpr);
+		/* SCHD:SCLD ratio is 1:1 */
+		rcar_i2c_write(priv, ICLPR, rcar_i2c_read(priv, ICLPR) | priv->ichpr);
+		rcar_i2c_write(priv, ICCCR2,
+			       rcar_i2c_read(priv, ICCCR2) | FMPE | CDFD | HLSE | SME);
+	}
 	/* start clock */
 	rcar_i2c_write(priv, ICCCR, priv->icccr);
-	/* fast mode plus support */
-	if (priv->fast_mode_plus)
-		rcar_i2c_write(priv, ICCCR2, rcar_i2c_read(priv, ICCCR2) | FMPE);
 	/* 1st bit setup cycle */
 	if (priv->devtype == I2C_RCAR_GEN3)
 		rcar_i2c_write(priv, ICFBSCR, TCYC17);
@@ -251,6 +265,7 @@ static int rcar_i2c_bus_barrier(struct rcar_i2c_priv *priv)
 static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 {
 	u32 scgd, cdf, round, ick, sum, scl, cdf_width;
+	u32 smd = 0, schd = 0;
 	unsigned long rate;
 	struct device *dev = rcar_i2c_priv_to_dev(priv);
 	struct i2c_timings t = {
@@ -294,13 +309,25 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 	 * intd : LSI internal delay
 	 * clkp : peripheral_clk
 	 * F[]  : integer up-valuation
+	 *
+	 * in case of fast mode plus, calculate the SCL high/low duty
+	 * see
+	 *	ICCCR2
+	 *
+	 * SCL	= clkp / (8 + SMD * 2 + SCLD + SCHD +F[(ticf + tr + intd) * clkp])
+	 *
 	 */
 	rate = clk_get_rate(priv->clk);
-	cdf = rate / 20000000;
-	if (cdf >= 1U << cdf_width) {
-		dev_err(dev, "Input clock %lu too high\n", rate);
-		return -EIO;
-	}
+
+	if (!priv->fast_mode_plus) {
+		cdf = rate / 20000000;
+		if (cdf >= 1U << cdf_width) {
+			dev_err(dev, "Input clock %lu too high\n", rate);
+			return -EIO;
+		}
+	} else
+		cdf = 0;
+
 	ick = rate / (cdf + 1);
 
 	/*
@@ -315,25 +342,42 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 	round = (ick + 500000) / 1000000 * sum;
 	round = (round + 500) / 1000;
 
-	/*
-	 * SCL	= ick / (20 + SCGD * 8 + F[(ticf + tr + intd) * ick])
-	 *
-	 * Calculation result (= SCL) should be less than
-	 * bus_speed for hardware safety
-	 *
-	 * We could use something along the lines of
-	 *	div = ick / (bus_speed + 1) + 1;
-	 *	scgd = (div - 20 - round + 7) / 8;
-	 *	scl = ick / (20 + (scgd * 8) + round);
-	 * (not fully verified) but that would get pretty involved
-	 */
-	for (scgd = 0; scgd < 0x40; scgd++) {
-		scl = ick / (20 + (scgd * 8) + round);
-		if (scl <= t.bus_freq_hz)
-			goto scgd_find;
+	if (!priv->fast_mode_plus) {
+		/*
+		 * SCL	= ick / (20 + SCGD * 8 + F[(ticf + tr + intd) * ick])
+		 *
+		 * Calculation result (= SCL) should be less than
+		 * bus_speed for hardware safety
+		 *
+		 * We could use something along the lines of
+		 *	div = ick / (bus_speed + 1) + 1;
+		 *	scgd = (div - 20 - round + 7) / 8;
+		 *	scl = ick / (20 + (scgd * 8) + round);
+		 * (not fully verified) but that would get pretty involved
+		 */
+		for (scgd = 0; scgd < 0x40; scgd++) {
+			scl = ick / (20 + (scgd * 8) + round);
+			if (scl <= t.bus_freq_hz)
+				goto scgd_find;
+		}
+	} else {
+		/*
+		 * SCL	= clkp / (8 + SMD * 2 + SCLD + SCHD + F[(ticf + tr + intd) * clkp])
+		 * SMD should be smaller than SCLD and SCHD
+		 * SCHD:SCLD ratio is 1:1
+		 */
+		for (schd = 2; schd < 0xffff; schd++)
+			for (smd = 1; smd < schd; smd++) {
+				scl = ick / (8 + (smd * 2) + (schd * 2)  + round);
+				if (scl <= t.bus_freq_hz)
+					goto schd_find;
+			}
 	}
 	dev_err(dev, "it is impossible to calculate best SCL\n");
 	return -EIO;
+schd_find:
+	scgd = 0;
+	dev_dbg(dev, "SMD:0x%x, SCHD:0x%x, SCLD: 0x%x\n", smd, schd, schd);
 
 scgd_find:
 	dev_dbg(dev, "clk %d/%d(%lu), round %u, CDF:0x%x, SCGD: 0x%x\n",
@@ -341,6 +385,8 @@ scgd_find:
 
 	/* keep icccr value */
 	priv->icccr = scgd << cdf_width | cdf;
+	priv->icmpr = smd;
+	priv->ichpr = schd;
 
 	return 0;
 }
