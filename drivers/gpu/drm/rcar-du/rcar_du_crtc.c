@@ -32,6 +32,7 @@
 #include "rcar_du_vsp.h"
 #include "rcar_lvds.h"
 #include "rcar_mipi_dsi.h"
+#include "rcar_dsc.h"
 
 static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
 {
@@ -619,6 +620,7 @@ static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 
 static int rcar_du_crtc_get(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->dev;
 	int ret;
 
 	/*
@@ -627,6 +629,24 @@ static int rcar_du_crtc_get(struct rcar_du_crtc *rcrtc)
 	 */
 	if (rcrtc->initialized)
 		return 0;
+
+	/*
+	 * The dot clock is provided by the MIPI DSI encoder which is attached
+	 * to DU. So, the MIPI DSI module should be enable before starting DU.
+	 */
+	if (rcdu->info->mipi_dsi_clk_mask) {
+		struct drm_bridge *bridge = rcdu->mipi_dsi[rcrtc->index];
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS) &&
+			rcrtc->index == 1)
+		{
+			struct rcar_dsc *dsc = bridge->driver_private;
+			rcar_mipi_dsi_clk_enable(dsc->next_bridge);
+		}
+		else
+		{
+			rcar_mipi_dsi_clk_enable(bridge);
+		}
+	}
 
 	ret = clk_prepare_enable(rcrtc->clock);
 	if (ret < 0)
@@ -654,10 +674,26 @@ error_clock:
 
 static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->dev;
+
 	rcar_du_group_put(rcrtc->group);
 
 	clk_disable_unprepare(rcrtc->extclock);
 	clk_disable_unprepare(rcrtc->clock);
+
+	if (rcdu->info->mipi_dsi_clk_mask) {
+		struct drm_bridge *bridge = rcdu->mipi_dsi[rcrtc->index];
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS) &&
+			rcrtc->index == 1)
+		{
+			struct rcar_dsc *dsc = bridge->driver_private;
+			rcar_mipi_dsi_clk_disable(dsc->next_bridge);
+		}
+		else
+		{
+			rcar_mipi_dsi_clk_disable(bridge);
+		}
+	}
 
 	rcrtc->initialized = false;
 }
@@ -811,15 +847,6 @@ static void rcar_du_crtc_atomic_enable(struct drm_crtc *crtc,
 		rcar_lvds_clk_enable(bridge, mode->clock * 1000);
 	}
 
-	/*
-	 * On V3U the dot clock is provided by the MIPI DSI encoder which is attached
-	 * to DU. So, the MIPI DSI module should be enable before starting DU.
-	 */
-	if (rcdu->info->mipi_dsi_clk_mask & BIT(rcrtc->index)) {
-		struct drm_bridge *bridge = rcdu->mipi_dsi[rcrtc->index];
-		rcar_mipi_dsi_clk_enable(bridge);
-	}
-
 	rcar_du_crtc_start(rcrtc);
 
 	/*
@@ -849,15 +876,6 @@ static void rcar_du_crtc_atomic_disable(struct drm_crtc *crtc,
 		 * rcar_du_crtc_atomic_enable().
 		 */
 		rcar_lvds_clk_disable(bridge);
-	}
-
-	if (rcdu->info->mipi_dsi_clk_mask & BIT(rcrtc->index)) {
-		struct drm_bridge *bridge = rcdu->mipi_dsi[rcrtc->index];
-
-		/*
-		 * Disable the MIPI DSI clock output
-		 */
-		rcar_mipi_dsi_clk_disable(bridge);
 	}
 
 	spin_lock_irq(&crtc->dev->event_lock);
