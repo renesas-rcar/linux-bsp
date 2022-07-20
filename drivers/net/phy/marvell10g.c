@@ -35,6 +35,10 @@
 enum {
 	MV_PMA_FW_VER0		= 0xc011,
 	MV_PMA_FW_VER1		= 0xc012,
+	MV_PMA_PORT_CTRL			= 0xc04a,
+	MV_PMA_PORT_CTRL_SWRST			= BIT(15),
+	MV_PMA_PORT_CTRL_MAC_TYPE_MASK		= 0x0007,
+
 	MV_PMA_BOOT		= 0xc050,
 	MV_PMA_BOOT_FATAL	= BIT(0),
 
@@ -76,6 +80,10 @@ enum {
 	MV_AN_CTRL1000		= 0x8000, /* 1000base-T control register */
 	MV_AN_STAT1000		= 0x8001, /* 1000base-T status register */
 
+	MV_SD_CTRL2			= 0x800F,
+	MV_SD_CTRL2_SD_INIT		= BIT(15),
+	MV_SD_CTRL2_SD_DIS_AUTO_INIT	= BIT(13),
+
 	/* Vendor2 MMD registers */
 	MV_V2_PORT_CTRL		= 0xf001,
 	MV_V2_PORT_CTRL_SWRST	= BIT(15),
@@ -89,6 +97,11 @@ enum {
 	MV_V2_TEMP_CTRL_DISABLE	= 0xc000,
 	MV_V2_TEMP		= 0xf08c,
 	MV_V2_TEMP_UNKNOWN	= 0x9600, /* unknown function */
+
+	MV_MOD_CONF		= 0xf000,
+	MV_MOD_CONF_SPEED_MASK	= 0x00c0,
+	MV_MOD_CONF_SPEED_1000	= BIT(7),
+	MV_MOD_CONF_SPEED_100	= BIT(6),
 };
 
 struct mv3310_priv {
@@ -537,6 +550,67 @@ static int mv3310_config_mdix(struct phy_device *phydev)
 	return err;
 }
 
+static void mv2110_set_mode_config(struct phy_device *phydev)
+{
+	u16 reg;
+
+	reg = phy_read_mmd(phydev, MDIO_MMD_VEND2, MV_MOD_CONF);
+	reg &= ~MV_MOD_CONF_SPEED_MASK;
+
+	switch (phydev->speed) {
+	case SPEED_1000:
+		reg |= MV_MOD_CONF_SPEED_1000;
+		break;
+	case SPEED_100:
+		reg |= MV_MOD_CONF_SPEED_100;
+		break;
+	default:
+		return;
+	}
+
+	phy_write_mmd(phydev, MDIO_MMD_VEND2, MV_MOD_CONF, reg);
+}
+
+static int mv2110_set_mac_type(struct phy_device *phydev)
+{
+	struct mv3310_priv *priv = dev_get_drvdata(&phydev->mdio.dev);
+	u16 val;
+	int timeout;
+
+	if (priv->rate_match) {
+		val = 0x06;
+	} else {
+		if (phydev->autoneg == AUTONEG_DISABLE)
+			val = 0x05;
+		else
+			val = 0x04;
+	}
+
+	val |= MV_PMA_PORT_CTRL_SWRST | phy_read_mmd(phydev, MDIO_MMD_PMAPMD, MV_PMA_PORT_CTRL);
+	phy_write_mmd(phydev, MDIO_MMD_PMAPMD, MV_PMA_PORT_CTRL, val);
+
+	/* Re-initialize SerDes interface */
+	val = phy_read_mmd(phydev, MDIO_MMD_AN, MV_SD_CTRL2);
+	val |= MV_SD_CTRL2_SD_INIT | MV_SD_CTRL2_SD_DIS_AUTO_INIT;
+	phy_write_mmd(phydev, MDIO_MMD_AN, MV_SD_CTRL2, val);
+
+	do {
+		val = phy_read_mmd(phydev, MDIO_MMD_AN, MV_SD_CTRL2);
+
+		if (timeout > 10000)
+			return -ETIMEDOUT;
+
+		timeout++;
+		mdelay(1);
+
+	} while (val & MV_SD_CTRL2_SD_INIT);
+
+	val &= ~MV_SD_CTRL2_SD_DIS_AUTO_INIT;
+	phy_write_mmd(phydev, MDIO_MMD_AN, MV_SD_CTRL2, val);
+
+	return 0;
+}
+
 static int mv3310_config_aneg(struct phy_device *phydev)
 {
 	bool changed = false;
@@ -546,6 +620,13 @@ static int mv3310_config_aneg(struct phy_device *phydev)
 	ret = mv3310_config_mdix(phydev);
 	if (ret < 0)
 		return ret;
+
+	if (phydev->drv->phy_id == MARVELL_PHY_ID_88E2110) {
+		mv2110_set_mode_config(phydev);
+		mv2110_set_mac_type(phydev);
+		if (ret < 0)
+			return ret;
+	}
 
 	if (phydev->autoneg == AUTONEG_DISABLE)
 		return genphy_c45_pma_setup_forced(phydev);

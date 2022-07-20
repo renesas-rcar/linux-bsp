@@ -21,6 +21,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/reset.h>
 
 #include "rtsn_ptp.h"
 
@@ -40,6 +41,9 @@ static inline void rs_write32(u32 data, void *addr)
 #define RSWITCH_MAX_NUM_NDEV	8
 #define RSWITCH_MAX_NUM_CHAINS	128
 
+#define RSWITCH_GWCA_IDX_TO_HW_NUM(i)	((i) + RSWITCH_MAX_NUM_ETHA)
+#define RSWITCH_HW_NUM_TO_GWCA_IDX(i)	((i) - RSWITCH_MAX_NUM_ETHA)
+
 #define TX_RING_SIZE		1024
 #define RX_RING_SIZE		1024
 
@@ -56,8 +60,8 @@ static inline void rs_write32(u32 data, void *addr)
 
 #define FWRO	0
 #define CARO	RSWITCH_COMA_OFFSET
-//#define GWRO	RSWITCH_GWCA1_OFFSET
-#define GWRO	RSWITCH_GWCA0_OFFSET
+#define GWRO	RSWITCH_GWCA1_OFFSET
+/*#define GWRO	RSWITCH_GWCA0_OFFSET*/
 #define TARO	0
 #define RMRO	0x1000
 enum rswitch_reg {
@@ -699,6 +703,8 @@ enum rswitch_etha_mode {
 };
 #define EAMS_OPS_MASK	EAMC_OPC_OPERATION
 
+#define EAVCC_VEM_SC_TAG	(0x3 << 16)
+
 #define MPIC_PIS_MII	0x00
 #define MPIC_PIS_GMII	0x02
 #define MPIC_PIS_XGMII	0x04
@@ -819,7 +825,6 @@ enum rswitch_serdes_mode {
 
 #define RSWITCH_SERDES_OFFSET                   0x0400
 #define RSWITCH_SERDES_BANK_SELECT              0x03fc
-#define RSWITCH_SERDES_FUSE_OVERRIDE(n)         (0x2600 - (n) * 0x400)
 
 #define BANK_180                                0x0180
 #define VR_XS_PMA_MP_12G_16G_25G_SRAM           0x026c
@@ -1028,6 +1033,8 @@ struct rswitch_private {
 
 	struct clk *rsw_clk;
 	struct clk *phy_clk;
+
+	struct reset_control *sd_rst;
 };
 
 static int num_ndev = 3;
@@ -1037,6 +1044,10 @@ MODULE_PARM_DESC(num_ndev, "Number of creating network devices");
 static int num_etha_ports = 3;
 module_param(num_etha_ports, int, 0644);
 MODULE_PARM_DESC(num_etha_ports, "Number of using ETHA ports");
+
+static bool parallel_mode;
+module_param(parallel_mode, bool, 0644);
+MODULE_PARM_DESC(parallel_mode, "Operate simultaneously with Realtime core");
 
 #define RSWITCH_TIMEOUT_MS	1000
 static int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
@@ -1425,6 +1436,8 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 	if (err < 0)
 		return err;
 
+	rs_write32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
+
 	rswitch_rmac_setting(etha, mac);
 	rswitch_etha_enable_mii(etha);
 
@@ -1467,18 +1480,17 @@ static int rswitch_serdes_reg_wait(void __iomem *addr, u32 offs, u32 bank, u32 m
 
 static int rswitch_serdes_common_init_ram(struct rswitch_etha *etha)
 {
-	void __iomem *addr = etha->serdes_addr - etha->index * RSWITCH_SERDES_OFFSET;
+	void __iomem *common_addr = etha->serdes_addr - etha->index * RSWITCH_SERDES_OFFSET;
 	int ret;
 
-	ret = rswitch_serdes_reg_wait(addr, VR_XS_PMA_MP_12G_16G_25G_SRAM, BANK_180, BIT(0), 0x01);
+	ret = rswitch_serdes_reg_wait(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_SRAM, BANK_180,
+				      BIT(0), 0x01);
 	if (ret)
 		return ret;
 
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_SRAM, BANK_180, 0x03);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_16G_25G_SRAM, BANK_180, 0x03);
 
-	ret = rswitch_serdes_reg_wait(addr, SR_XS_PCS_CTRL1, BANK_300, BIT(15), 0);
-
-	return ret;
+	return 0;
 }
 
 static int rswitch_serdes_common_setting(struct rswitch_etha *etha, enum rswitch_serdes_mode mode)
@@ -1508,7 +1520,6 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha, enum rswitch_s
 
 	switch (mode) {
 	case SGMII:
-		rswitch_serdes_write32(addr, SR_XS_PCS_CTRL2, BANK_300, 0x01);
 		rswitch_serdes_write32(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x2000);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_MPLL_CMN_CTRL,
 				       BANK_180, 0x11);
@@ -1524,7 +1535,7 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha, enum rswitch_s
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_RX_EQ_CTRL0, BANK_180, 0x07);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_10G_RX_IQ_CTRL0, BANK_180, 0);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_GENCTRL1, BANK_180, 0x310);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_TX_GENCTRL2, BANK_380, 0x101);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_TX_GENCTRL2, BANK_180, 0x101);
 		ret = rswitch_serdes_reg_wait(addr, VR_XS_PMA_MP_12G_16G_TX_GENCTRL2,
 					      BANK_180, BIT(0), 0);
 		if (ret)
@@ -1541,6 +1552,7 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha, enum rswitch_s
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_EQ_CTRL0,
 				       BANK_180, 0x1800);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_EQ_CTRL1, BANK_180, 0);
+		rswitch_serdes_write32(addr, SR_XS_PCS_CTRL2, BANK_300, 0x01);
 		rswitch_serdes_write32(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x2100);
 		ret = rswitch_serdes_reg_wait(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, BIT(8), 0);
 		if (ret)
@@ -1565,8 +1577,6 @@ static int rswitch_serdes_set_speed(struct rswitch_etha *etha, enum rswitch_serd
 			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x140);
 		else if (speed == 100)
 			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x2100);
-		else if (speed == 10)
-			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x100);
 
 		break;
 	default:
@@ -1593,25 +1603,33 @@ static int __maybe_unused rswitch_serdes_init(struct rswitch_etha *etha)
 		return -EOPNOTSUPP;
 	}
 
-	/* Disable FUSE_OVERRIDE_EN */
-	if (ioread32(etha->serdes_addr + RSWITCH_SERDES_FUSE_OVERRIDE(etha->index)))
-		iowrite32(0, etha->serdes_addr + RSWITCH_SERDES_FUSE_OVERRIDE(etha->index));
-
 	/* Initialize SRAM */
 	ret = rswitch_serdes_common_init_ram(etha);
 	if (ret)
 		return ret;
+
+	ret = rswitch_serdes_reg_wait(etha->serdes_addr, SR_XS_PCS_CTRL1, BANK_300, BIT(15), 0);
+	if (ret)
+		return ret;
+
+	rswitch_serdes_write32(etha->serdes_addr, 0x03d4, BANK_380, 0x443);
 
 	/* Set common setting */
 	ret = rswitch_serdes_common_setting(etha, mode);
 	if (ret)
 		return ret;
 
+	rswitch_serdes_write32(etha->serdes_addr, 0x03d0, BANK_380, 0x01);
+
 	/* Assert softreset for PHY */
 	rswitch_serdes_write32(common_addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x8000);
 
 	/* Initialize SRAM */
 	ret = rswitch_serdes_common_init_ram(etha);
+	if (ret)
+		return ret;
+
+	ret = rswitch_serdes_reg_wait(common_addr, VR_XS_PCS_DIG_CTRL1, BANK_380, BIT(15), 0);
 	if (ret)
 		return ret;
 
@@ -1624,6 +1642,9 @@ static int __maybe_unused rswitch_serdes_init(struct rswitch_etha *etha)
 	ret = rswitch_serdes_set_speed(etha, mode, etha->speed);
 	if (ret)
 		return ret;
+
+	rswitch_serdes_write32(etha->serdes_addr, 0x03c0, BANK_380, 0);
+	rswitch_serdes_write32(etha->serdes_addr, 0x03d0, BANK_380, 0);
 
 	ret = rswitch_serdes_reg_wait(etha->serdes_addr, SR_XS_PCS_STS1, BANK_300, BIT(2), BIT(2));
 	if (ret) {
@@ -1899,7 +1920,7 @@ static int rswitch_open(struct net_device *ndev)
 
 	napi_enable(&rdev->napi);
 
-	if (rdev->etha) {
+	if (!parallel_mode && rdev->etha) {
 		if (!rdev->etha->operated) {
 			phy = rswitch_get_phy_node(rdev);
 			if (!phy)
@@ -1916,6 +1937,9 @@ static int rswitch_open(struct net_device *ndev)
 
 			of_node_put(phy);
 		}
+
+		ndev->phydev->speed = rdev->etha->speed;
+		phy_set_max_speed(ndev->phydev, rdev->etha->speed);
 
 		phy_start(ndev->phydev);
 		phy_started = true;
@@ -2159,8 +2183,41 @@ static void rswitch_clock_enable(struct rswitch_private *priv)
 
 static void rswitch_reset(struct rswitch_private *priv)
 {
-	rs_write32(RRC_RR, priv->addr + RRC);
-	rs_write32(RRC_RR_CLR, priv->addr + RRC);
+	if (!parallel_mode) {
+		rs_write32(RRC_RR, priv->addr + RRC);
+		rs_write32(RRC_RR_CLR, priv->addr + RRC);
+
+		reset_control_assert(priv->sd_rst);
+		mdelay(1);
+		reset_control_deassert(priv->sd_rst);
+	} else {
+		int gwca_idx;
+		u32 gwro_offset;
+		int mode;
+		int count;
+
+		if (priv->gwca.index == RSWITCH_GWCA_IDX_TO_HW_NUM(0)) {
+			gwca_idx = 1;
+			gwro_offset = RSWITCH_GWCA1_OFFSET;
+		} else {
+			gwca_idx = 0;
+			gwro_offset = RSWITCH_GWCA0_OFFSET;
+		}
+
+		count = 0;
+		do {
+			mode = rs_read32(priv->addr + gwro_offset + 0x0004) & GWMS_OPS_MASK;
+			if (mode == GWMC_OPC_OPERATION)
+				break;
+
+			count++;
+			if (!(count % 100))
+				pr_info(" rswitch wait for GWMS%d %d==%d\n", gwca_idx, mode,
+					GWMC_OPC_OPERATION);
+
+			mdelay(10);
+		} while (1);
+	}
 }
 
 static void rswitch_etha_init(struct rswitch_private *priv, int index)
@@ -2524,13 +2581,40 @@ static void rswitch_rxdmac_free(struct net_device *ndev,
 	rswitch_gwca_put(priv, rdev->rx_chain);
 }
 
+static void rswitch_set_mac_address(struct rswitch_device *rdev)
+{
+	struct net_device *ndev = rdev->ndev;
+	struct device_node *ports, *port;
+	u32 index;
+	const u8 *mac;
+
+	ports = of_get_child_by_name(ndev->dev.parent->of_node, "ports");
+
+	for_each_child_of_node(ports, port) {
+		of_property_read_u32(port, "reg", &index);
+		if (index == rdev->etha->index)
+			break;
+	}
+
+	mac = of_get_mac_address(port);
+	if (!IS_ERR(mac))
+		ether_addr_copy(ndev->dev_addr, mac);
+
+	if (!is_valid_ether_addr(ndev->dev_addr))
+		ether_addr_copy(ndev->dev_addr, rdev->etha->mac_addr);
+
+	if (!is_valid_ether_addr(ndev->dev_addr))
+		eth_hw_addr_random(ndev);
+
+	of_node_put(ports);
+}
+
 static int rswitch_ndev_register(struct rswitch_private *priv, int index)
 {
 	struct platform_device *pdev = priv->pdev;
 	struct net_device *ndev;
 	struct rswitch_device *rdev;
 	int err;
-	const u8 *mac;
 
 	ndev = alloc_etherdev_mqs(sizeof(struct rswitch_device), 1, 1);
 	if (!ndev)
@@ -2564,15 +2648,7 @@ static int rswitch_ndev_register(struct rswitch_private *priv, int index)
 
 	netif_napi_add(ndev, &rdev->napi, rswitch_poll, 64);
 
-	mac = of_get_mac_address(pdev->dev.of_node);
-	if (!IS_ERR(mac))
-		ether_addr_copy(ndev->dev_addr, mac);
-
-	if (!is_valid_ether_addr(ndev->dev_addr))
-		ether_addr_copy(ndev->dev_addr, rdev->etha->mac_addr);
-
-	if (!is_valid_ether_addr(ndev->dev_addr))
-		eth_hw_addr_random(ndev);
+	rswitch_set_mac_address(rdev);
 
 	/* Network device register */
 	err = register_netdev(ndev);
@@ -2684,11 +2760,11 @@ static int rswitch_request_irqs(struct rswitch_private *priv)
 	int irq, err;
 
 	/* FIXME: other queues */
-	irq = platform_get_irq_byname(priv->pdev, "gwca0_rxtx0");
+	irq = platform_get_irq_byname(priv->pdev, "gwca1_rxtx0");
 	if (irq < 0)
 		goto out;
 
-	err = request_irq(irq, rswitch_irq, 0, "rswitch: gwca0_rxtx0", priv);
+	err = request_irq(irq, rswitch_irq, 0, "rswitch: gwca1_rxtx0", priv);
 	if (err < 0)
 		goto out;
 
@@ -2700,7 +2776,7 @@ static int rswitch_free_irqs(struct rswitch_private *priv)
 {
 	int irq;
 
-	irq = platform_get_irq_byname(priv->pdev, "gwca0_rxtx0");
+	irq = platform_get_irq_byname(priv->pdev, "gwca1_rxtx0");
 	if (irq < 0)
 		return irq;
 
@@ -2712,6 +2788,7 @@ static int rswitch_free_irqs(struct rswitch_private *priv)
 static void rswitch_fwd_init(struct rswitch_private *priv)
 {
 	int i;
+	int gwca_hw_idx = RSWITCH_HW_NUM_TO_GWCA_IDX(priv->gwca.index);
 
 	for (i = 0; i < RSWITCH_NUM_HW; i++) {
 		rs_write32(FWPC0_DEFAULT, priv->addr + FWPC00 + (i * 0x10));
@@ -2720,13 +2797,13 @@ static void rswitch_fwd_init(struct rswitch_private *priv)
 	/*
 	 * FIXME: hardcoded setting. Make a macro about port vector calc.
 	 * ETHA0 = forward to GWCA0, GWCA0 = forward to ETHA0,...
-	 * Currently, always forward to GWCA0.
+	 * Currently, always forward to GWCA1.
 	 */
-	for (i = 0; i < num_ndev; i++) {
-		rs_write32(priv->rdev[i]->rx_chain->index, priv->addr + FWPBFCSDC(0, i));
-		rs_write32(8, priv->addr + FWPBFC(i));
+	for (i = 0; i < num_etha_ports; i++) {
+		rs_write32(priv->rdev[i]->rx_chain->index, priv->addr + FWPBFCSDC(gwca_hw_idx, i));
+		rs_write32(BIT(priv->gwca.index), priv->addr + FWPBFC(i));
 	}
-	rs_write32(0x07, priv->addr + FWPBFC(3));
+	rs_write32(GENMASK(num_etha_ports - 1, 0), priv->addr + FWPBFC(priv->gwca.index));
 
 	/* TODO: add chrdev for fwd */
 	/* TODO: add proc for fwd */
@@ -2746,7 +2823,8 @@ static int rswitch_init(struct rswitch_private *priv)
 		return -ENOMEM;
 
 	/* Hardware initializations */
-	rswitch_clock_enable(priv);
+	if (!parallel_mode)
+		rswitch_clock_enable(priv);
 	for (i = 0; i < num_ndev; i++)
 		rswitch_etha_read_mac_address(&priv->etha[i]);
 	rswitch_reset(priv);
@@ -2762,11 +2840,13 @@ static int rswitch_init(struct rswitch_private *priv)
 
 	/* TODO: chrdev register */
 
-	err = rswitch_bpool_config(priv);
-	if (err < 0)
-		goto out;
+	if (!parallel_mode) {
+		err = rswitch_bpool_config(priv);
+		if (err < 0)
+			goto out;
 
-	rswitch_fwd_init(priv);
+		rswitch_fwd_init(priv);
+	}
 
 	err = rswitch_request_irqs(priv);
 	if (err < 0)
@@ -2827,17 +2907,33 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (!priv->ptp_priv)
 		return -ENOMEM;
 
-	priv->rsw_clk = devm_clk_get(&pdev->dev, "rsw2");
-	if (IS_ERR(priv->rsw_clk)) {
-		dev_err(&pdev->dev, "Failed to get rsw2 clock: %ld\n", PTR_ERR(priv->rsw_clk));
-		return -PTR_ERR(priv->rsw_clk);
+	if (!parallel_mode)
+		parallel_mode = of_property_read_bool(pdev->dev.of_node, "parallel_mode");
+
+	if (parallel_mode) {
+		num_ndev = 1;
+		num_etha_ports = 1;
 	}
 
-	priv->phy_clk = devm_clk_get(&pdev->dev, "eth-phy");
-	if (IS_ERR(priv->phy_clk)) {
-		dev_err(&pdev->dev, "Failed to get eth-phy clock: %ld\n", PTR_ERR(priv->phy_clk));
-		return -PTR_ERR(priv->phy_clk);
+	priv->ptp_priv->parallel_mode = parallel_mode;
+
+	if (!parallel_mode) {
+		priv->rsw_clk = devm_clk_get(&pdev->dev, "rsw2");
+		if (IS_ERR(priv->rsw_clk)) {
+			dev_err(&pdev->dev, "Failed to get rsw2 clock: %ld\n",
+				PTR_ERR(priv->rsw_clk));
+			return -PTR_ERR(priv->rsw_clk);
+		}
+
+		priv->phy_clk = devm_clk_get(&pdev->dev, "eth-phy");
+		if (IS_ERR(priv->phy_clk)) {
+			dev_err(&pdev->dev, "Failed to get eth-phy clock: %ld\n",
+				PTR_ERR(priv->phy_clk));
+			return -PTR_ERR(priv->phy_clk);
+		}
 	}
+
+	priv->sd_rst = devm_reset_control_get(&pdev->dev, "eth-phy");
 
 	platform_set_drvdata(pdev, priv);
 	priv->pdev = pdev;
@@ -2858,18 +2954,20 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-	/* Fixed to use GWCA0 */
-	priv->gwca.index = 3;
+	/* Fixed to use GWCA1 */
+	priv->gwca.index = 4;
 	priv->gwca.num_chains = num_ndev * NUM_CHAINS_PER_NDEV;
 	priv->gwca.chains = devm_kcalloc(&pdev->dev, priv->gwca.num_chains,
 					 sizeof(*priv->gwca.chains), GFP_KERNEL);
 	if (!priv->gwca.chains)
 		return -ENOMEM;
 
-	pm_runtime_enable(&pdev->dev);
-	pm_runtime_get_sync(&pdev->dev);
-	clk_prepare(priv->phy_clk);
-	clk_enable(priv->phy_clk);
+	if (!parallel_mode) {
+		pm_runtime_enable(&pdev->dev);
+		pm_runtime_get_sync(&pdev->dev);
+		clk_prepare(priv->phy_clk);
+		clk_enable(priv->phy_clk);
+	}
 
 	rswitch_init(priv);
 
@@ -2882,13 +2980,15 @@ static int renesas_eth_sw_remove(struct platform_device *pdev)
 {
 	struct rswitch_private *priv = platform_get_drvdata(pdev);
 
-	/* Disable R-Switch clock */
-	rs_write32(RCDC_RCD, priv->addr + RCDC);
-	rswitch_deinit(priv);
+	if (!parallel_mode) {
+		/* Disable R-Switch clock */
+		rs_write32(RCDC_RCD, priv->addr + RCDC);
+		rswitch_deinit(priv);
 
-	pm_runtime_put(&pdev->dev);
-	pm_runtime_disable(&pdev->dev);
-	clk_disable(priv->phy_clk);
+		pm_runtime_put(&pdev->dev);
+		pm_runtime_disable(&pdev->dev);
+		clk_disable(priv->phy_clk);
+	}
 
 	rswitch_desc_free(priv);
 

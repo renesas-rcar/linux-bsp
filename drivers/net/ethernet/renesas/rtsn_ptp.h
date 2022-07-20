@@ -74,6 +74,7 @@ struct rtsn_ptp_private {
 	u32 tstamp_rx_ctrl;
 	s64 default_addend;
 	bool initialized;
+	bool parallel_mode;
 };
 
 int rtsn_ptp_init(struct rtsn_ptp_private *ptp_priv, enum rtsn_ptp_reg_layout layout, u32 clock);
