@@ -23,6 +23,31 @@
 		i2c5 = &i2c5;
 	};
 
+	cluster1_opp: opp_table10 {
+		compatible = "operating-points-v2";
+		opp-shared;
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+			opp-suspend;
+		};
+	};
 
 	cpus {
 		#address-cells = <1>;
@@ -70,6 +95,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E0D0C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_0>;
 		};
 
@@ -80,6 +107,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E0D0C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_0>;
 		};
 
@@ -90,6 +119,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E0D1C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_1>;
 		};
 
@@ -100,6 +131,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E0D1C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_1>;
 		};
 
@@ -110,6 +143,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E1D0C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_2>;
 		};
 
@@ -120,6 +155,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E1D0C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_2>;
 		};
 
@@ -130,6 +167,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E1D1C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_3>;
 		};
 
@@ -140,6 +179,8 @@
 			power-domains = <&sysc R8A779F0_PD_A1E1D1C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779F0_CLK_Z1>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA55_3>;
 		};
 
@@ -221,13 +262,6 @@
 	pmu_a76 {
 		compatible = "arm,cortex-a55-pmu";
 		interrupts-extended = <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_LOW>;
-	};
-
-	/* MSIOF reference clock - to be overridden by boards that provide it */
-	msiof_ref_clk: msiof-ref-clock {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <0>;
 	};
 
 	/* External PCIe clock - can be overridden by the board */
@@ -354,7 +388,9 @@
 			clocks = <&cpg CPG_MOD 518>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 518>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x91>, <&dmac0 0x90>,
+			       <&dmac1 0x91>, <&dmac1 0x90>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -369,7 +405,9 @@
 			clocks = <&cpg CPG_MOD 519>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 519>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x93>, <&dmac0 0x92>,
+			       <&dmac1 0x93>, <&dmac1 0x92>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -384,7 +422,9 @@
 			clocks = <&cpg CPG_MOD 520>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 520>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x95>, <&dmac0 0x94>,
+			       <&dmac1 0x95>, <&dmac1 0x94>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -399,7 +439,9 @@
 			clocks = <&cpg CPG_MOD 521>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 521>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x97>, <&dmac0 0x96>,
+			       <&dmac1 0x97>, <&dmac1 0x96>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -414,7 +456,9 @@
 			clocks = <&cpg CPG_MOD 522>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 522>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x99>, <&dmac0 0x98>,
+			       <&dmac1 0x99>, <&dmac1 0x98>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -429,7 +473,9 @@
 			clocks = <&cpg CPG_MOD 523>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 523>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x9b>, <&dmac0 0x9a>,
+			       <&dmac1 0x9b>, <&dmac1 0x9a>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -458,7 +504,9 @@
 				 <&cpg CPG_CORE R8A779F0_CLK_S0D3>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x31>, <&dmac0 0x30>,
+			       <&dmac1 0x31>, <&dmac1 0x30>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 514>;
 			status = "disabled";
@@ -473,7 +521,9 @@
 				 <&cpg CPG_CORE R8A779F0_CLK_S0D3>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x33>, <&dmac0 0x32>,
+			       <&dmac1 0x33>, <&dmac1 0x32>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 515>;
 			status = "disabled";
@@ -488,7 +538,9 @@
 				 <&cpg CPG_CORE R8A779F0_CLK_S0D3>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x35>, <&dmac0 0x34>,
+			       <&dmac1 0x35>, <&dmac1 0x34>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 516>;
 			status = "disabled";
@@ -503,7 +555,9 @@
 				 <&cpg CPG_CORE R8A779F0_CLK_S0D3>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x37>, <&dmac0 0x36>,
+			       <&dmac1 0x37>, <&dmac1 0x36>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 517>;
 			status = "disabled";
@@ -552,6 +606,7 @@
 			clock-names = "rsw2", "eth-phy";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 1505>, <&cpg 1506>;
+			reset-names = "rsw2", "eth-phy";
 			status = "disabled";
 		};
 
@@ -564,7 +619,9 @@
 				 <&cpg CPG_CORE R8A779F0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x51>, <&dmac0 0x50>,
+			       <&dmac1 0x51>, <&dmac1 0x50>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 702>;
 			status = "disabled";
@@ -579,7 +636,9 @@
 				 <&cpg CPG_CORE R8A779F0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x53>, <&dmac0 0x52>,
+			       <&dmac1 0x53>, <&dmac1 0x52>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 703>;
 			status = "disabled";
@@ -594,7 +653,9 @@
 				 <&cpg CPG_CORE R8A779F0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x57>, <&dmac0 0x56>,
+			       <&dmac1 0x57>, <&dmac1 0x56>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 704>;
 			status = "disabled";
@@ -609,7 +670,9 @@
 				 <&cpg CPG_CORE R8A779F0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x59>, <&dmac0 0x58>,
+			       <&dmac1 0x59>, <&dmac1 0x58>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 705>;
 			status = "disabled";
@@ -620,9 +683,13 @@
 				     "renesas,rcar-gen4-msiof";
 			reg = <0 0xe6e90000 0 0x0064>;
 			interrupts = <GIC_SPI 230 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 618>, <&msiof_ref_clk>;
-			clock-names = "msiof_clk", "msiof_ref_clk";
-			/* dmas and dma-names placeholder */
+			clocks = <&cpg CPG_MOD 618>, <&cpg CPG_CORE R8A779F0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779F0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac0 0x41>, <&dmac0 0x40>,
+			       <&dmac1 0x41>, <&dmac1 0x40>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 618>;
 			#address-cells = <1>;
@@ -635,9 +702,13 @@
 				     "renesas,rcar-gen4-msiof";
 			reg = <0 0xe6ea0000 0 0x0064>;
 			interrupts = <GIC_SPI 231 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 619>, <&msiof_ref_clk>;
-			clock-names = "msiof_clk", "msiof_ref_clk";
-			/* dmas and dma-names placeholder */
+			clocks = <&cpg CPG_MOD 619>, <&cpg CPG_CORE R8A779F0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779F0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac0 0x43>, <&dmac0 0x42>,
+			       <&dmac1 0x43>, <&dmac1 0x42>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 619>;
 			#address-cells = <1>;
@@ -650,9 +721,13 @@
 				     "renesas,rcar-gen4-msiof";
 			reg = <0 0xe6c00000 0 0x0064>;
 			interrupts = <GIC_SPI 232 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 620>, <&msiof_ref_clk>;
-			clock-names = "msiof_clk", "msiof_ref_clk";
-			/* dmas and dma-names placeholder */
+			clocks = <&cpg CPG_MOD 620>, <&cpg CPG_CORE R8A779F0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779F0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac0 0x45>, <&dmac0 0x44>,
+			       <&dmac1 0x45>, <&dmac1 0x44>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 620>;
 			#address-cells = <1>;
@@ -665,9 +740,13 @@
 				     "renesas,rcar-gen4-msiof";
 			reg = <0 0xe6c10000 0 0x0064>;
 			interrupts = <GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 621>, <&msiof_ref_clk>;
-			clock-names = "msiof_clk", "msiof_ref_clk";
-			/* dmas and dma-names placeholder */
+			clocks = <&cpg CPG_MOD 621>, <&cpg CPG_CORE R8A779F0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779F0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac0 0x47>, <&dmac0 0x46>,
+			       <&dmac1 0x47>, <&dmac1 0x46>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 621>;
 			#address-cells = <1>;

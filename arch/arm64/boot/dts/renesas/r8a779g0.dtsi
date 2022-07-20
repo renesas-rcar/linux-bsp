@@ -31,6 +31,38 @@
 		clock-frequency = <0>;
 	};
 
+	cluster1_opp: opp_table10 {
+		compatible = "operating-points-v2";
+		opp-shared;
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <825000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <825000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <825000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <825000>;
+			clock-latency-ns = <500000>;
+			opp-suspend;
+		};
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+			turbo-mode;
+		};
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -62,6 +94,8 @@
 			power-domains = <&sysc R8A779G0_PD_A1E0D0C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779G0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA76_0>;
 		};
 
@@ -72,6 +106,8 @@
 			power-domains = <&sysc R8A779G0_PD_A1E0D0C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779G0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA76_0>;
 		};
 
@@ -82,6 +118,8 @@
 			power-domains = <&sysc R8A779G0_PD_A1E0D1C0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779G0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA76_1>;
 		};
 
@@ -92,6 +130,8 @@
 			power-domains = <&sysc R8A779G0_PD_A1E0D1C1>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks =<&cpg CPG_CORE R8A779G0_CLK_Z0>;
+			operating-points-v2 = <&cluster1_opp>;
 			next-level-cache = <&L3_CA76_1>;
 		};
 
@@ -560,6 +600,14 @@
 			status = "disabled";
 		};
 
+		avs: avs@e60a0080 {
+			compatible = "renesas,r8a779g0-avs", "renesas,rcar-gen4-avs";
+			reg = <0 0xe60a0080 0 0x04>;
+			clocks = <&cpg CPG_MOD 123>;
+			resets = <&cpg 123>;
+			target_devices = <&a76_0>, <&a76_1>, <&a76_2>, <&a76_3>;
+		};
+
 		cpg: clock-controller@e6150000 {
 			compatible = "renesas,r8a779g0-cpg-mssr";
 			reg = <0 0xe6150000 0 0x4000>;
@@ -604,7 +652,9 @@
 			clocks = <&cpg CPG_MOD 518>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 518>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x91>, <&dmac0 0x90>,
+			       <&dmac1 0x91>, <&dmac1 0x90>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -619,7 +669,9 @@
 			clocks = <&cpg CPG_MOD 519>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 519>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x93>, <&dmac0 0x92>,
+			       <&dmac1 0x93>, <&dmac1 0x92>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -634,7 +686,9 @@
 			clocks = <&cpg CPG_MOD 520>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 520>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x95>, <&dmac0 0x94>,
+			       <&dmac1 0x95>, <&dmac1 0x94>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -649,7 +703,9 @@
 			clocks = <&cpg CPG_MOD 521>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 521>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x97>, <&dmac0 0x96>,
+			       <&dmac1 0x97>, <&dmac1 0x96>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -664,7 +720,9 @@
 			clocks = <&cpg CPG_MOD 522>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 522>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x99>, <&dmac0 0x98>,
+			       <&dmac1 0x99>, <&dmac1 0x98>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -679,7 +737,9 @@
 			clocks = <&cpg CPG_MOD 523>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 523>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x9b>, <&dmac0 0x9a>,
+			       <&dmac1 0x9b>, <&dmac1 0x9a>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -695,7 +755,9 @@
 				 <&cpg CPG_CORE R8A779G0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x31>, <&dmac0 0x30>,
+			       <&dmac1 0x31>, <&dmac1 0x30>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 514>;
 			status = "disabled";
@@ -710,7 +772,9 @@
 				 <&cpg CPG_CORE R8A779G0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x33>, <&dmac0 0x32>,
+			       <&dmac1 0x33>, <&dmac1 0x32>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 515>;
 			status = "disabled";
@@ -725,7 +789,9 @@
 				 <&cpg CPG_CORE R8A779G0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x35>, <&dmac0 0x34>,
+			       <&dmac1 0x35>, <&dmac1 0x34>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 516>;
 			status = "disabled";
@@ -740,7 +806,9 @@
 				 <&cpg CPG_CORE R8A779G0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x37>, <&dmac0 0x36>,
+			       <&dmac1 0x37>, <&dmac1 0x36>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 517>;
 			status = "disabled";
@@ -1061,7 +1129,9 @@
 				 <&cpg CPG_CORE R8A779G0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x51>, <&dmac0 0x50>,
+			       <&dmac1 0x51>, <&dmac1 0x50>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 702>;
 			status = "disabled";
@@ -1076,7 +1146,9 @@
 				 <&cpg CPG_CORE R8A779G0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x53>, <&dmac0 0x52>,
+			       <&dmac1 0x53>, <&dmac1 0x52>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 703>;
 			status = "disabled";
@@ -1091,7 +1163,9 @@
 				 <&cpg CPG_CORE R8A779G0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x57>, <&dmac0 0x56>,
+			       <&dmac1 0x57>, <&dmac1 0x56>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 704>;
 			status = "disabled";
@@ -1106,7 +1180,9 @@
 				 <&cpg CPG_CORE R8A779G0_CLK_S0D3_PER>,
 				 <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x59>, <&dmac0 0x58>,
+			       <&dmac1 0x59>, <&dmac1 0x58>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 705>;
 			status = "disabled";
@@ -1131,7 +1207,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x41>, <&dmac0 0x40>,
+			       <&dmac1 0x41>, <&dmac1 0x40>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 618>;
 			#address-cells = <1>;
@@ -1147,7 +1225,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x43>, <&dmac0 0x42>,
+			       <&dmac1 0x43>, <&dmac1 0x42>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 619>;
 			#address-cells = <1>;
@@ -1163,7 +1243,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x45>, <&dmac0 0x44>,
+			       <&dmac1 0x45>, <&dmac1 0x44>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 620>;
 			#address-cells = <1>;
@@ -1179,7 +1261,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x47>, <&dmac0 0x46>,
+			       <&dmac1 0x47>, <&dmac1 0x46>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 621>;
 			#address-cells = <1>;
@@ -1195,7 +1279,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x49>, <&dmac0 0x48>,
+			       <&dmac1 0x49>, <&dmac1 0x48>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 622>;
 			#address-cells = <1>;
@@ -1211,7 +1297,9 @@
 			clock-names = "msiof_clk", "mso";
 			assigned-clocks = <&cpg CPG_CORE R8A779G0_CLK_MSO>;
 			assigned-clock-rates = <20000000>;
-			/* dmas and dma-names placeholder */
+			dmas = <&dmac0 0x4B>, <&dmac0 0x4A>,
+			       <&dmac1 0x4B>, <&dmac1 0x4A>;
+			dma-names = "tx", "rx", "tx", "rx";
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 623>;
 			#address-cells = <1>;
@@ -3943,7 +4031,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "rtdmac_control0_03";
 			ipmmu-id = <RCAR_IPMMU_RT1 3>;
-			iommus = <&ipmmu_rt1 2>;
+			iommus = <&ipmmu_rt1 3>;
 		};
 
 		rtdmac_control0_04: rtdmac_control@ffc14000 {
@@ -4921,6 +5009,8 @@
 			interrupts = <GIC_SPI 878 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "icumx_cmd_00";
+			ipmmu-id = <RCAR_IPMMU_RT0 1>;
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_01 {
@@ -4929,6 +5019,7 @@
 			interrupts = <GIC_SPI 879 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_01";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_02 {
@@ -4937,6 +5028,7 @@
 			interrupts = <GIC_SPI 880 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_02";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_03 {
@@ -4945,6 +5037,7 @@
 			interrupts = <GIC_SPI 881 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_03";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_04 {
@@ -4953,6 +5046,7 @@
 			interrupts = <GIC_SPI 882 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_04";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_05 {
@@ -4961,6 +5055,7 @@
 			interrupts = <GIC_SPI 883 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_05";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_06 {
@@ -4969,6 +5064,7 @@
 			interrupts = <GIC_SPI 884 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_06";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_07 {
@@ -4977,6 +5073,7 @@
 			interrupts = <GIC_SPI 885 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_07";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_08 {
@@ -4985,6 +5082,7 @@
 			interrupts = <GIC_SPI 886 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_08";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_09 {
@@ -4993,6 +5091,7 @@
 			interrupts = <GIC_SPI 887 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_09";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_10 {
@@ -5001,6 +5100,7 @@
 			interrupts = <GIC_SPI 888 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_10";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_11 {
@@ -5009,6 +5109,7 @@
 			interrupts = <GIC_SPI 889 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_11";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_12 {
@@ -5017,6 +5118,7 @@
 			interrupts = <GIC_SPI 890 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_12";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_13 {
@@ -5025,6 +5127,7 @@
 			interrupts = <GIC_SPI 891 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_13";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_14 {
@@ -5033,6 +5136,7 @@
 			interrupts = <GIC_SPI 892 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_14";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_15 {
@@ -5041,6 +5145,7 @@
 			interrupts = <GIC_SPI 893 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_15";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_16 {
@@ -5049,6 +5154,7 @@
 			interrupts = <GIC_SPI 894 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_16";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_17 {
@@ -5057,6 +5163,7 @@
 			interrupts = <GIC_SPI 895 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_17";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_18 {
@@ -5065,6 +5172,7 @@
 			interrupts = <GIC_SPI 896 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_18";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		icumx_cmd0_19 {
@@ -5073,6 +5181,7 @@
 			interrupts = <GIC_SPI 897 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_icumx_cmd_00_19";
+			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
 		isp0: isp@fed00000 {
