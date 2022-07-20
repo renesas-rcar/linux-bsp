@@ -697,7 +697,6 @@ static int rpcif_remove(struct platform_device *pdev)
 
 static const struct of_device_id rpcif_of_match[] = {
 	{ .compatible = "renesas,rcar-gen3-rpc-if", },
-	{ .compatible = "renesas,rcar-gen4-rpc-if", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, rpcif_of_match);
