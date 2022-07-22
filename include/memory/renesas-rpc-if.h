@@ -18,6 +18,16 @@ enum rpcif_data_dir {
 	RPCIF_DATA_OUT,
 };
 
+enum rpcif_type {
+	RPCIF_RCAR_GEN3,
+	RPCIF_RCAR_GEN4,
+};
+
+struct rpcif_info {
+	enum rpcif_type type;
+	u8 strtim;
+};
+
 struct	rpcif_op {
 	struct {
 		u8 buswidth;
@@ -63,9 +73,11 @@ struct	rpcif {
 	struct regmap *regmap;
 	struct reset_control *rstc;
 	size_t size;
+	enum rpcif_type type;
 	enum rpcif_data_dir dir;
 	u8 bus_size;
 	u8 xfer_size;
+	u8 strtim;
 	void *buffer;
 	u32 xferlen;
 	u32 smcr;
