@@ -553,9 +553,9 @@
 			interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
-		qos@e6700000 {
+		qos@e67e0000 {
 			compatible = "renesas,qos";
-			reg = <0 0xe6700000 0 0x10090>;
+			reg = <0 0xe67e0000 0 0x10090>;
 		};
 
 		prr: chipid@fff00044 {
