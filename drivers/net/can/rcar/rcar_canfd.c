@@ -1342,7 +1342,7 @@ static void rcar_canfd_set_bittiming(struct net_device *dev)
 	/* Nominal bit timing settings */
 	brp = bt->brp - 1;
 	sjw = bt->sjw - 1;
-	tseg1 = bt->prop_seg + bt->phase_seg1 - 1;
+	tseg1 = bt->prop_seg + bt->phase_seg1 + 1;
 	tseg2 = bt->phase_seg2 - 1;
 
 	if (priv->can.ctrlmode & CAN_CTRLMODE_FD) {
@@ -1365,7 +1365,7 @@ static void rcar_canfd_set_bittiming(struct net_device *dev)
 		/* Data bit timing settings */
 		brp = dbt->brp - 1;
 		sjw = dbt->sjw - 1;
-		tseg1 = dbt->prop_seg + dbt->phase_seg1 - 1;
+		tseg1 = dbt->prop_seg + dbt->phase_seg1 + 1;
 		tseg2 = dbt->phase_seg2 - 1;
 
 		if ((gpriv->chip_id == R8A779A0) || (gpriv->chip_id == R8A779G0)) {
