@@ -235,7 +235,7 @@
 };
 
 &ufs {
-	status = "okay";
+	status = "disabled";
 };
 
 &ufs30_clk {
