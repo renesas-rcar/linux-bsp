@@ -245,6 +245,12 @@ static int priv_clk_set_div(struct uio_info *info, int div)
 		return -EINVAL;
 
 	hw = __clk_get_hw(priv->clk);
+
+	if (!hw) {
+		dev_err(&priv->pdev->dev, "No define clock for device\n");
+		return -EINVAL;
+	}
+
 	value = clk_hw_get_flags(hw);
 	if (value & CLK_SET_RATE_PARENT)
 		return -EOPNOTSUPP;
