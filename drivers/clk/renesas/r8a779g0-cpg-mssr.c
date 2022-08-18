@@ -361,6 +361,10 @@ static int __init r8a779g0_cpg_mssr_init(struct device *dev)
 	return rcar_gen4_cpg_init(cpg_pll_config, CLK_EXTALR, cpg_mode);
 }
 
+static const unsigned int r8a779g0_crit_mod_clks[] __initconst = {
+	MOD_CLK_ID(330),	/* csdbgpap */
+};
+
 const struct cpg_mssr_info r8a779g0_cpg_mssr_info __initconst = {
 	/* Core Clocks */
 	.core_clks = r8a779g0_core_clks,
@@ -372,6 +376,10 @@ const struct cpg_mssr_info r8a779g0_cpg_mssr_info __initconst = {
 	.mod_clks = r8a779g0_mod_clks,
 	.num_mod_clks = ARRAY_SIZE(r8a779g0_mod_clks),
 	.num_hw_mod_clks = 30 * 32,
+
+	/* Critical Module Clocks */
+	.crit_mod_clks = r8a779g0_crit_mod_clks,
+	.num_crit_mod_clks = ARRAY_SIZE(r8a779g0_crit_mod_clks),
 
 	/* Callbacks */
 	.init = r8a779g0_cpg_mssr_init,
