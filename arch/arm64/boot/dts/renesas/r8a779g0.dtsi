@@ -140,7 +140,7 @@
 
 			CPU_SLEEP_0: cpu-sleep-0 {
 				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x0010001>;
+				arm,psci-suspend-param = <0x0010000>;
 				local-timer-stop;
 				entry-latency-us = <400>;
 				exit-latency-us = <500>;
@@ -1529,9 +1529,9 @@
 			status = "disabled";
 		};
 
-		qos@e6700000 {
+		qos@e67e0000 {
 			compatible = "renesas,qos";
-			reg = <0 0xe6700000 0 0x10090>;
+			reg = <0 0xe67e0000 0 0x10090>;
 		};
 
 		prr: chipid@fff00044 {
@@ -1610,7 +1610,7 @@
 				port@1 {
 					reg = <1>;
 					du_out_dsi1: endpoint {
-						remote-endpoint = <&dsi1_in>;
+						remote-endpoint = <&dsc_in>;
 					};
 				};
 			};
@@ -1640,7 +1640,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			clocks = <&cpg CPG_MOD 415>,
 				 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>;
-			clock-names = "fck", "dsi";
+			clock-names = "mod", "dsi";
 			resets = <&cpg 415>;
 			status = "disabled";
 
@@ -1663,13 +1663,42 @@
 			};
 		};
 
+		dsc: stream-compression@feb8d000 {
+			compatible = "renesas,r8a779g0-dsc";
+			reg = <0 0xfeb8d000 0 0x300>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			clocks = <&cpg CPG_MOD 2819>;
+			resets = <&cpg 2819>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dsc_in: endpoint {
+						remote-endpoint = <&du_out_dsi1>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					dsc_out: endpoint {
+						remote-endpoint = <&dsi1_in>;
+					};
+				};
+			};
+
+		};
+
 		dsi1: dsi-encoder@fed90000 {
 			compatible = "renesas,r8a779g0-mipi-dsi";
 			reg = <0 0xfed90000 0 0x10000>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			clocks = <&cpg CPG_MOD 416>,
 				 <&cpg CPG_CORE R8A779G0_CLK_DSIEXT>;
-			clock-names = "fck", "dsi";
+			clock-names = "mod", "dsi";
 			resets = <&cpg 416>;
 			status = "disabled";
 
@@ -1680,7 +1709,7 @@
 				port@0 {
 					reg = <0>;
 					dsi1_in: endpoint {
-						remote-endpoint = <&du_out_dsi1>;
+						remote-endpoint = <&dsc_out>;
 					};
 				};
 
