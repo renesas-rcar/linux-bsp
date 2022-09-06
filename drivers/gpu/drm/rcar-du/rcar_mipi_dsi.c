@@ -15,6 +15,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
+#include <linux/iopoll.h>
 
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
@@ -233,31 +234,37 @@ static void rcar_mipi_dsi_set(struct rcar_mipi_dsi *mipi_dsi,
 }
 
 /* PHTW init */
-
-static int rcar_mipi_dsi_write_phtw(struct rcar_mipi_dsi *mipi_dsi, const u32 *phtw_values)
+static int rcar_mipi_dsi_write_phtw(struct rcar_mipi_dsi *mipi_dsi, u32 phtw_value)
 {
-	unsigned int timeout;
 	u32 status;
-	const u32 *phtw_value;
+	int ret;
 
-	for (phtw_value = phtw_values; *phtw_value; phtw_value++) {
-		rcar_mipi_dsi_write(mipi_dsi, PHTW, *phtw_value);
+	rcar_mipi_dsi_write(mipi_dsi, PHTW, phtw_value);
 
-		for (timeout = 10; timeout > 0; --timeout) {
-			status = rcar_mipi_dsi_read(mipi_dsi, PHTW);
-			if (!(status & PHTW_DWEN) && !(status & PHTW_CWEN))
-				break;
+	ret = read_poll_timeout(rcar_mipi_dsi_read, status,
+			!(status & PHTW_DWEN) && !(status & PHTW_CWEN),
+			2000, 10000, false, mipi_dsi, PHTW);
 
-			usleep_range(1000, 2000);
-		}
-
-		if (!timeout) {
-			dev_err(mipi_dsi->dev, "failed to write PHTW\n");
-			return -ETIMEDOUT;
-		}
+	if (ret < 0) {
+		dev_err(mipi_dsi->dev, "failed to write PHTW\n");
+		return ret;
 	}
 
-	return timeout;
+	return 0;
+}
+
+static int rcar_mipi_dsi_write_phtw_arr(struct rcar_mipi_dsi *mipi_dsi, const u32 *phtw_values)
+{
+	const u32 *phtw_value;
+	int ret;
+
+	for (phtw_value = phtw_values; *phtw_value; phtw_value++) {
+		ret = rcar_mipi_dsi_write_phtw(mipi_dsi, *phtw_value);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
 }
 
 static int rcar_mipi_dsi_init_phtw_v3u(struct rcar_mipi_dsi *mipi_dsi)
@@ -269,7 +276,7 @@ static int rcar_mipi_dsi_init_phtw_v3u(struct rcar_mipi_dsi *mipi_dsi)
 		0,
 	};
 
-	return rcar_mipi_dsi_write_phtw (mipi_dsi, phtw_init);
+	return rcar_mipi_dsi_write_phtw_arr(mipi_dsi, phtw_init);
 }
 
 static int rcar_mipi_dsi_post_init_phtw_v3u(struct rcar_mipi_dsi *mipi_dsi)
@@ -281,7 +288,7 @@ static int rcar_mipi_dsi_post_init_phtw_v3u(struct rcar_mipi_dsi *mipi_dsi)
 		0,
 	};
 
-	return rcar_mipi_dsi_write_phtw (mipi_dsi, phtw_post_init);
+	return rcar_mipi_dsi_write_phtw_arr(mipi_dsi, phtw_post_init);
 }
 
 static int rcar_mipi_dsi_init_phtw_v4h(struct rcar_mipi_dsi *mipi_dsi)
@@ -293,7 +300,7 @@ static int rcar_mipi_dsi_init_phtw_v4h(struct rcar_mipi_dsi *mipi_dsi)
 		0,
 	};
 
-	return rcar_mipi_dsi_write_phtw (mipi_dsi, phtw_init);
+	return rcar_mipi_dsi_write_phtw_arr(mipi_dsi, phtw_init);
 }
 
 static int rcar_mipi_dsi_post_init_phtw_v4h(struct rcar_mipi_dsi *mipi_dsi)
@@ -303,7 +310,7 @@ static int rcar_mipi_dsi_post_init_phtw_v4h(struct rcar_mipi_dsi *mipi_dsi)
 		0,
 	};
 
-	return rcar_mipi_dsi_write_phtw (mipi_dsi, phtw_post_init);
+	return rcar_mipi_dsi_write_phtw_arr(mipi_dsi, phtw_post_init);
 }
 
 /* -----------------------------------------------------------------------------
