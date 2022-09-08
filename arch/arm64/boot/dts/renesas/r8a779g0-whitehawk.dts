@@ -280,6 +280,13 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 	};
+
+	io_expander4: gpio@27 {
+		compatible = "onnn,pca9654";
+		reg = <0x27>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
 };
 
 &i2c1 {
@@ -314,6 +321,29 @@
 				reg = <1>;
 				sn65dsi86_out0: endpoint {
 					remote-endpoint = <&dsi_con_out0>;
+				};
+			};
+		};
+	};
+
+	max96789@60 {
+		compatible = "maxim,max96789";
+		reg = <0x60>;
+		enable-gpios = <&io_expander4 0 GPIO_ACTIVE_HIGH>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96789_in: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96789_out: endpoint {
 				};
 			};
 		};
