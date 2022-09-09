@@ -166,6 +166,9 @@
 #define PHTW_CWEN		(1 << 8)
 #define PHTW_TESTDIN_CODE(x)	(((x) & 0xff) << 0)
 
+#define PHTR			0x1038
+#define PHTR_TEST		(1 << 16)
+
 #define PHTC			0x103c
 #define PHTC_TESTCLR		(1 << 0)
 
