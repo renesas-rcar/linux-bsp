@@ -1727,6 +1727,7 @@
 			interrupts = <GIC_SPI 502 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 415>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 415>;
 			linux,uio-name = "dsi_00";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
