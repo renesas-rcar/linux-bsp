@@ -592,7 +592,7 @@
 };
 
 &dsi0 {
-	status = "okay";
+	status = "disabled";
 
 	use-extal-clk;
 
@@ -607,11 +607,11 @@
 };
 
 &dsc {
-	status = "okay";
+	status = "disabled";
 };
 
 &dsi1 {
-	status = "okay";
+	status = "disabled";
 
 	use-extal-clk;
 
