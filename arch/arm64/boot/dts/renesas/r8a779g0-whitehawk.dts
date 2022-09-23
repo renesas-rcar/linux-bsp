@@ -69,14 +69,15 @@
 	};
 };
 
-&rtsn0 {
+&tsn0 {
 	pinctrl-0 = <&tsn0_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy3>;
-	status = "disabled";
+	tx-internal-delay;
+	status = "okay";
 
 	phy3: ethernet-phy@3 {
-		rxc-skew-ps = <1500>;
+		compatible = "ethernet-phy-ieee802.3-c45";
 		reg = <0>;
 		interrupt-parent = <&gpio4>;
 		interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
