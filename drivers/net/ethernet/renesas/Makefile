@@ -12,3 +12,5 @@ obj-$(CONFIG_RAVB) += ravb.o
 rswitch_drv-objs := rswitch.o rcar_gen4_ptp.o
 
 obj-$(CONFIG_RENESAS_ETHER_SWITCH) += rswitch_drv.o
+
+obj-$(CONFIG_RTSN) += rtsn.o
