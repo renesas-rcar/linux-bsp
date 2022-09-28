@@ -50,6 +50,8 @@ static const char *ravb_tx_irqs[NUM_TX_QUEUE] = {
 	"ch19", /* RAVB_NC */
 };
 
+static const struct soc_device_attribute r8a779g0[];
+
 void ravb_modify(struct net_device *ndev, enum ravb_reg reg, u32 clear,
 		 u32 set)
 {
@@ -471,6 +473,10 @@ static int ravb_dmac_init(struct net_device *ndev)
 
 	/* Setting the control will start the AVB-DMAC process. */
 	ravb_modify(ndev, CCC, CCC_OPC, CCC_OPC_OPERATION);
+
+	/* Setting TX internal delay of R-Car V4H */
+	if (soc_device_match(r8a779g0))
+		ravb_write(ndev, GPOUT_TDM, GPOUT);
 
 	return 0;
 }
@@ -955,6 +961,11 @@ static const struct soc_device_attribute r8a7795es10[] = {
 	{ /* sentinel */ }
 };
 
+static const struct soc_device_attribute r8a779g0[] = {
+	{ .soc_id = "r8a779g0" },
+	{ /* sentinel */ }
+};
+
 static const struct soc_device_attribute ravb_quirks_match[] = {
 	{ .soc_id = "r8a77990", .revision = "ES1.*" },
 	{ .soc_id = "r8a77995", .revision = "ES1.*" },
@@ -1021,6 +1032,9 @@ static int ravb_phy_init(struct net_device *ndev)
 	/* Half Duplex is not supported */
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Half_BIT);
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Half_BIT);
+
+	if (phydev->is_c45)
+		phydev->autoneg = 0;
 
 	phy_attached_info(phydev);
 
