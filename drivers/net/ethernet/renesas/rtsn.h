@@ -13,7 +13,8 @@
 
 #define AXIRO	0
 #define MHDRO	0x1000
-#define	RMRO	0x2000
+#define RMSO	0x2000
+#define RMRO	0x3800
 
 enum rtsn_reg {
 	AXIWC		= AXIRO + 0x0000,
@@ -100,7 +101,7 @@ enum rtsn_reg {
 	RID		= MHDRO + 0x0048,
 	TGC1		= MHDRO + 0x0050,
 	TGC2		= MHDRO + 0x0054,
-	TSF0		= MHDRO + 0x0060,
+	TFS0		= MHDRO + 0x0060,
 	TCF0		= MHDRO + 0x0070,
 	TCR1		= MHDRO + 0x0080,
 	TCR2		= MHDRO + 0x0084,
@@ -235,6 +236,9 @@ enum rtsn_reg {
 	MQSFTMSD	= MHDRO + 0x0A88,
 	MQSFTGMI	= MHDRO + 0x0A8C,
 
+	CFCR0           = RMSO + 0x0800,
+	FMSCR           = RMSO + 0x0C10,
+
 	MMC		= RMRO + 0x0000,
 	MPSM		= RMRO + 0x0010,
 	MPIC		= RMRO + 0x0014,
@@ -274,6 +278,8 @@ enum rtsn_reg {
 	MMIE2		= RMRO + 0x0534,
 	MMID2		= RMRO + 0x0538,
 	MXMS		= RMRO + 0x0600,
+
+	GPOUT		= AXIRO + 0x6000,
 };
 
 /* AXIBMI */
@@ -282,21 +288,15 @@ enum rtsn_reg {
 #define RR_RST			(RR_RATRR | RR_TATRR)
 #define RR_RST_COMPLETE		(0x03)
 
-#define AXIWC_WREON_SHIFT	(12)
-#define AXIWC_WRPON_SHIFT	(8)
-#define AXIWC_WREON_DEFAULT	(0x04 << AXIWC_WREON_SHIFT)
-#define AXIWC_WRPON_DEFAULT	(0x01 << AXIWC_WRPON_SHIFT)
-
-#define AXIRC_RREON_SHIFT	(12)
-#define AXIRC_RRPON_SHIFT	(8)
-#define AXIRC_RREON_DEFAULT	(0x01 << AXIRC_RREON_SHIFT)
-#define AXIRC_RRPON_DEFAULT	(0x08 << AXIRC_RRPON_SHIFT)
+#define AXIWC_DEFAULT		(0xffff)
+#define AXIRC_DEFAULT		(0xffff)
 
 #define TATLS0_TEDE		BIT(1)
 #define TATLS0_TATEN_SHIFT	(24)
 #define TATLS0_TATEN(n)		((n) << TATLS0_TATEN_SHIFT)
 #define TATLR_TATL		BIT(31)
 
+#define RATLS0_RETS		BIT(2)
 #define RATLS0_REDE		BIT(3)
 #define RATLS0_RATEN_SHIFT	(24)
 #define RATLS0_RATEN(n)		((n) << RATLS0_RATEN_SHIFT)
@@ -314,19 +314,34 @@ enum rtsn_reg {
 #define SWR_SWR			BIT(0)
 
 #define TGC1_TQTM_SFM		(0xff00)
+#define TGC1_STTV_DEFAULT	(0x03)
+
+#define TMS_MFS_MAX		(0x2800)
+
+/* RMAC System */
+#define CFCR_SDID(n)		((n) << 16)
+#define FMSCR_FMSIE(n)		((n) << 0)
 
 /* RMAC */
+#define MPIC_PIS_MASK		GENMASK(1, 0)
 #define MPIC_PIS_MII		(0)
 #define MPIC_PIS_RMII		(0x01)
 #define MPIC_PIS_GMII		(0x02)
 #define MPIC_PIS_RGMII		(0x03)
-#define MPIC_LSC_10M		(0)
-#define MPIC_LSC_100M		(0x01)
-#define MPIC_LSC_1G		(0x02)
+#define MPIC_LSC_SHIFT		(2)
+#define MPIC_LSC_MASK		GENMASK(3, MPIC_LSC_SHIFT)
+#define MPIC_LSC_10M		(0 << MPIC_LSC_SHIFT)
+#define MPIC_LSC_100M		(0x01 << MPIC_LSC_SHIFT)
+#define MPIC_LSC_1G		(0x02 << MPIC_LSC_SHIFT)
 #define MPIC_PSMCS_SHIFT	(16)
 #define MPIC_PSMCS_MASK		GENMASK(21, MPIC_PSMCS_SHIFT)
-#define MPIC_PSMCS_DEFAULT	(0x1a << MPIC_PSMCS_SHIFT)
+#define MPIC_PSMCS_DEFAULT	(0x0a << MPIC_PSMCS_SHIFT)
+#define MPIC_PSMHT_SHIFT	(24)
+#define MPIC_PSMHT_MASK		GENMASK(26, MPIC_PSMHT_SHIFT)
+#define MPIC_PSMHT_DEFAULT	(0x07 << MPIC_PSMHT_SHIFT)
 
+#define MLVC_PASE		BIT(8)
+#define MLVC_PSE		BIT(16)
 #define MLVC_PLV		BIT(17)
 
 #define MPSM_PSME		BIT(0)
@@ -341,6 +356,9 @@ enum rtsn_reg {
 #define MPSM_PRD_SET(n)		((n) << MPSM_PRD_SHIFT)
 #define MPSM_PRD_GET(n)		((n) >> MPSM_PRD_SHIFT)
 
+#define GPOUT_RDM		BIT(13)
+#define GPOUT_TDM		BIT(14)
+
 /* RTSN */
 #define RTSN_INTERVAL_US	1000
 #define RTSN_TIMEOUT_US		1000000
@@ -350,6 +368,12 @@ enum rtsn_reg {
 
 #define TX_CHAIN_SIZE		1024
 #define RX_CHAIN_SIZE		1024
+
+#define TX_CHAIN_IDX		0
+#define RX_CHAIN_IDX		0
+
+#define TX_CHAIN_ADDR_OFFSET	(sizeof(struct rtsn_desc) * TX_CHAIN_IDX)
+#define RX_CHAIN_ADDR_OFFSET	(sizeof(struct rtsn_desc) * RX_CHAIN_IDX)
 
 #define PKT_BUF_SZ		1584
 #define RTSN_ALIGN		128
@@ -434,7 +458,7 @@ struct rtsn_ext_ts_desc {
 } __packed;
 
 enum EXT_INFO_DS_BIT {
-	TXC = 0x40,
+	TXC = 0x4000,
 };
 
 struct rtsn_private {
@@ -469,7 +493,11 @@ struct rtsn_private {
 	phy_interface_t iface;
 	int link;
 	int speed;
-	u8 mac_addr[MAX_ADDR_LEN];
+
+	int tx_data_irq;
+	int rx_data_irq;
+
+	struct reset_control *rst;
 };
 
 u32 rtsn_read(void __iomem *addr);
