@@ -441,6 +441,7 @@
 		no-use-gpio;
 		no-use-scramble;
 		hpd-poll;
+		status = "disabled";
 
 		ports {
 			#address-cells = <1>;
@@ -466,6 +467,7 @@
 		compatible = "maxim,max96789";
 		reg = <0x60>;
 		enable-gpios = <&io_expander4 0 GPIO_ACTIVE_HIGH>;
+		status = "disabled";
 
 		ports {
 			#address-cells = <1>;
@@ -673,6 +675,7 @@
 		no-use-gpio;
 		no-use-scramble;
 		hpd-poll;
+		status = "disabled";
 
 		ports {
 			#address-cells = <1>;
