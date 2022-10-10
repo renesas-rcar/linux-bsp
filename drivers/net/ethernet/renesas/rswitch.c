@@ -988,6 +988,7 @@ struct rswitch_gwca {
 	DECLARE_BITMAP(used, RSWITCH_MAX_NUM_CHAINS);
 	u32 tx_irq_bits[RSWITCH_NUM_IRQ_REGS];
 	u32 rx_irq_bits[RSWITCH_NUM_IRQ_REGS];
+	int speed;
 };
 
 #define NUM_CHAINS_PER_NDEV	2
@@ -1088,6 +1089,24 @@ static void rswitch_etha_modify(struct rswitch_etha *etha, enum rswitch_reg reg,
 static void rswitch_modify(void __iomem *addr, enum rswitch_reg reg, u32 clear, u32 set)
 {
 	rs_write32((rs_read32(addr + reg) & ~clear) | set, addr + reg);
+}
+
+static void rswitch_gwca_set_rate_limit(struct rswitch_private *priv, int rate)
+{
+	u32 gwgrlulc, gwgrlc;
+
+	switch (rate) {
+	case 1000:
+		gwgrlulc = 0x0000005f;
+		gwgrlc = 0x00010260;
+		break;
+	default:
+		dev_err(&priv->pdev->dev, "%s: This rate is not supported (%d)\n", __func__, rate);
+		return;
+	}
+
+	rs_write32(gwgrlulc, priv->addr + GWGRLULC);
+	rs_write32(gwgrlc, priv->addr + GWGRLC);
 }
 
 static bool __maybe_unused rswitch_is_any_data_irq(struct rswitch_private *priv, u32 *dis, bool tx)
@@ -2284,6 +2303,9 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	rs_write32(0, priv->addr + GWTTFC);
 	rs_write32(lower_32_bits(priv->desc_bat_dma), priv->addr + GWDCBAC1);
 	rs_write32(upper_32_bits(priv->desc_bat_dma), priv->addr + GWDCBAC0);
+
+	priv->gwca.speed = 1000;
+	rswitch_gwca_set_rate_limit(priv, priv->gwca.speed);
 
 	err = rswitch_gwca_change_mode(priv, GWMC_OPC_DISABLE);
 	if (err < 0)
