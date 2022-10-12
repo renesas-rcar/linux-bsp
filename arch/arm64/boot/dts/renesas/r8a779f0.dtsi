@@ -2250,7 +2250,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xe7810000 0 0x10000>;
 			interrupts = <GIC_SPI 949 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 719>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_ships_00_01";
 		};
@@ -2269,7 +2268,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xe7820000 0 0x10000>;
 			interrupts = <GIC_SPI 951 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 1511>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_ships_01_01";
 		};
@@ -2288,7 +2286,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xe7830000 0 0x10000>;
 			interrupts = <GIC_SPI 953 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 1512>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			linux,uio-name = "irq_ships_02_01";
 		};
