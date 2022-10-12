@@ -5231,6 +5231,36 @@
 			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
+		chipid0: prr@fff00044 {
+			compatible = "generic-uio";
+			reg = <0 0xfff00044 0 0x1000>;
+			linux,uio-name = "chipid_00";
+		};
+
+		qos0: qos0@e67e0000 {
+			compatible = "generic-uio";
+			reg = <0 0xe67e0000 0 0x11000>;
+			linux,uio-name = "qos_00";
+		};
+
+		rcarbusmoni0: rcarbusmoni0@e67e0000 {
+			compatible = "generic-uio";
+			reg = <0 0xe67e0000 0 0x11000>;
+			linux,uio-name = "rcarbusmoni_00";
+		};
+
+		rcarbusmoni1: rcarbusmoni1@e67a4000 {
+			compatible = "generic-uio";
+			reg = <0 0xe67a4000 0 0x3800>;
+			linux,uio-name = "rcarbusmoni_01";
+		};
+
+		rcarbusmoni2: rcarbusmoni1@e67a8000 {
+			compatible = "generic-uio";
+			reg = <0 0xe67a8000 0 0x3800>;
+			linux,uio-name = "rcarbusmoni_02";
+		};
+
 		isp0: isp@fed00000 {
 			compatible = "renesas,isp-r8a779g0";
 			reg = <0 0xfed00000 0 0x10000>;
