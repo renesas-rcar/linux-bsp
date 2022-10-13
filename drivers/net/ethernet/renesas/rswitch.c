@@ -988,6 +988,7 @@ struct rswitch_gwca {
 	DECLARE_BITMAP(used, RSWITCH_MAX_NUM_CHAINS);
 	u32 tx_irq_bits[RSWITCH_NUM_IRQ_REGS];
 	u32 rx_irq_bits[RSWITCH_NUM_IRQ_REGS];
+	int speed;
 };
 
 #define NUM_CHAINS_PER_NDEV	2
@@ -1088,6 +1089,24 @@ static void rswitch_etha_modify(struct rswitch_etha *etha, enum rswitch_reg reg,
 static void rswitch_modify(void __iomem *addr, enum rswitch_reg reg, u32 clear, u32 set)
 {
 	rs_write32((rs_read32(addr + reg) & ~clear) | set, addr + reg);
+}
+
+static void rswitch_gwca_set_rate_limit(struct rswitch_private *priv, int rate)
+{
+	u32 gwgrlulc, gwgrlc;
+
+	switch (rate) {
+	case 1000:
+		gwgrlulc = 0x0000005f;
+		gwgrlc = 0x00010260;
+		break;
+	default:
+		dev_err(&priv->pdev->dev, "%s: This rate is not supported (%d)\n", __func__, rate);
+		return;
+	}
+
+	rs_write32(gwgrlulc, priv->addr + GWGRLULC);
+	rs_write32(gwgrlc, priv->addr + GWGRLC);
 }
 
 static bool __maybe_unused rswitch_is_any_data_irq(struct rswitch_private *priv, u32 *dis, bool tx)
@@ -2285,6 +2304,9 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	rs_write32(lower_32_bits(priv->desc_bat_dma), priv->addr + GWDCBAC1);
 	rs_write32(upper_32_bits(priv->desc_bat_dma), priv->addr + GWDCBAC0);
 
+	priv->gwca.speed = 1000;
+	rswitch_gwca_set_rate_limit(priv, priv->gwca.speed);
+
 	err = rswitch_gwca_change_mode(priv, GWMC_OPC_DISABLE);
 	if (err < 0)
 		return err;
@@ -2609,7 +2631,7 @@ static void rswitch_set_mac_address(struct rswitch_device *rdev)
 	of_node_put(ports);
 }
 
-static int rswitch_ndev_register(struct rswitch_private *priv, int index)
+static int rswitch_ndev_create(struct rswitch_private *priv, int index)
 {
 	struct platform_device *pdev = priv->pdev;
 	struct net_device *ndev;
@@ -2650,11 +2672,6 @@ static int rswitch_ndev_register(struct rswitch_private *priv, int index)
 
 	rswitch_set_mac_address(rdev);
 
-	/* Network device register */
-	err = register_netdev(ndev);
-	if (err)
-		goto out_reg_netdev;
-
 	/* FIXME: it seems S4 VPF has FWPBFCSDC0/1 only so that we cannot set
 	 * CSD = 1 (rx_chain->index = 1) for FWPBFCS03. So, use index = 0
 	 * for the RX.
@@ -2676,9 +2693,6 @@ out_txdmac:
 	rswitch_rxdmac_free(ndev, priv);
 
 out_rxdmac:
-	unregister_netdev(ndev);
-
-out_reg_netdev:
 	netif_napi_del(&rdev->napi);
 	free_netdev(ndev);
 
@@ -2833,7 +2847,7 @@ static int rswitch_init(struct rswitch_private *priv)
 		goto out;
 
 	for (i = 0; i < num_ndev; i++) {
-		err = rswitch_ndev_register(priv, i);
+		err = rswitch_ndev_create(priv, i);
 		if (err < 0)
 			goto out;
 	}
@@ -2851,6 +2865,13 @@ static int rswitch_init(struct rswitch_private *priv)
 	err = rswitch_request_irqs(priv);
 	if (err < 0)
 		goto out;
+	/* Register devices so Linux network stack can access them now */
+
+	for (i = 0; i < num_ndev; i++) {
+		err = register_netdev(priv->rdev[i]->ndev);
+		if (err)
+			goto out;
+	}
 
 	return 0;
 
