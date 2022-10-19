@@ -304,7 +304,8 @@
 		};
 
 		gpio0: gpio@e6050180 {
-			compatible = "renesas,gpio-r8a779f0";
+			compatible = "renesas,gpio-r8a779f0",
+				     "renesas,rcar-gen4-gpio";
 			reg = <0 0xe6050180 0 0x54>;
 			interrupts = <GIC_SPI 822 IRQ_TYPE_LEVEL_HIGH>;
 			#gpio-cells = <2>;
@@ -318,7 +319,8 @@
 		};
 
 		gpio1: gpio@e6050980 {
-			compatible = "renesas,gpio-r8a779f0";
+			compatible = "renesas,gpio-r8a779f0",
+				     "renesas,rcar-gen4-gpio";
 			reg = <0 0xe6050980 0 0x54>;
 			interrupts = <GIC_SPI 823 IRQ_TYPE_LEVEL_HIGH>;
 			#gpio-cells = <2>;
@@ -332,7 +334,8 @@
 		};
 
 		gpio2: gpio@e6051180 {
-			compatible = "renesas,gpio-r8a779f0";
+			compatible = "renesas,gpio-r8a779f0",
+				     "renesas,rcar-gen4-gpio";
 			reg = <0 0xe6051180 0 0x54>;
 			interrupts = <GIC_SPI 824 IRQ_TYPE_LEVEL_HIGH>;
 			#gpio-cells = <2>;
@@ -346,7 +349,8 @@
 		};
 
 		gpio3: gpio@e6051980 {
-			compatible = "renesas,gpio-r8a779f0";
+			compatible = "renesas,gpio-r8a779f0",
+				     "renesas,rcar-gen4-gpio";
 			reg = <0 0xe6051980 0 0x54>;
 			interrupts = <GIC_SPI 825 IRQ_TYPE_LEVEL_HIGH>;
 			#gpio-cells = <2>;
