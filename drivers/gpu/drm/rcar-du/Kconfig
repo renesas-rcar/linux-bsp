@@ -39,6 +39,12 @@ config DRM_RCAR_LVDS
 	help
 	  Enable support for the R-Car Display Unit embedded LVDS encoders.
 
+config DRM_RCAR_MIPI_DSI
+	tristate "R-Car DU MIPI DSI Encoder Support"
+	depends on DRM && DRM_BRIDGE && OF
+	help
+	  Enable support for the R-Car Display Unit embedded MIPI DSI encoders.
+
 config DRM_RCAR_VSP
 	bool "R-Car DU VSP Compositor Support" if ARM
 	default y if ARM64
@@ -46,6 +52,12 @@ config DRM_RCAR_VSP
 	depends on VIDEO_RENESAS_VSP1=y || (VIDEO_RENESAS_VSP1 && DRM_RCAR_DU=m)
 	help
 	  Enable support to expose the R-Car VSP Compositor as KMS planes.
+
+config DRM_RCAR_DSC
+	tristate "R-Car Display Stream Compression Support"
+	depends on DRM && DRM_BRIDGE && OF
+	help
+	  Enable Display Strem Compression module.
 
 config DRM_RCAR_WRITEBACK
 	bool
