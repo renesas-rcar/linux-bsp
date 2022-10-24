@@ -3,6 +3,12 @@ menuconfig SOC_RENESAS
 	bool "Renesas SoC driver support" if COMPILE_TEST && !ARCH_RENESAS
 	default y if ARCH_RENESAS
 	select SOC_BUS
+config RCAR_CPU_TOPOLOGY
+	depends on (ARCH_R8A77950 || ARCH_R8A77951 || ARCH_R8A77960 || ARCH_R8A77961)
+	bool "R-Car CPU Topology"
+	default y
+	help
+	  This enables the capacity awareness feature for R-Car series.
 
 if SOC_RENESAS
 
@@ -24,6 +30,15 @@ config ARCH_RCAR_GEN2
 	select SYS_SUPPORTS_SH_CMT
 
 config ARCH_RCAR_GEN3
+	bool
+	select PM
+	select PM_GENERIC_DOMAINS
+	select RENESAS_IRQC
+	select RST_RCAR
+	select SYS_SUPPORTS_SH_CMT
+	select SYS_SUPPORTS_SH_TMU
+
+config ARCH_RCAR_GEN4
 	bool
 	select PM
 	select PM_GENERIC_DOMAINS
@@ -250,6 +265,20 @@ config ARCH_R8A779A0
 	select SYSC_R8A779A0
 	help
 	  This enables support for the Renesas R-Car V3U SoC.
+
+config ARCH_R8A779G0
+	bool "ARM64 Platform support for R-Car V4H"
+	select ARCH_RCAR_GEN4
+	select SYSC_R8A779G0
+	help
+	  This enables support for the Renesas R-Car V4H SoC.
+
+config ARCH_R8A779F0
+	bool "ARM64 Platform support for R-Car S4"
+	select ARCH_RCAR_GEN4
+	select SYSC_R8A779F0
+	help
+	  This enables support for the Renesas R-Car S4 SoC.
 
 config ARCH_R8A774C0
 	bool "ARM64 Platform support for RZ/G2E"
