@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the V3MSK Videobox Mini board V3 on r8a77970
+ *
+ * Copyright (C) 2018-2020 Cogent Embedded, Inc.
+ */
+
+#include "r8a77970-v3msk-vbm-v2.dts"
+
+
+/ {
+	model = "Renesas V3MSK Videobox Mini board V3 based on r8a77970";
+};
+
+&gpio0 {
+	can0_load {
+		gpio-hog;
+		gpios = <19 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "can0_120R_load";
+	};
+};
+
+&gpio1 {
+	ex_v3m {
+		gpio-hog;
+		gpios = <19 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "ExV3M";
+	};
+};
+
+&gpio2 {
+	/delete-node/can0_load;
+};

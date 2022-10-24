@@ -2,8 +2,8 @@
 /*
  * Device Tree Source for the Kingfisher (ULCB extension) board
  *
- * Copyright (C) 2017 Renesas Electronics Corp.
- * Copyright (C) 2017 Cogent Embedded, Inc.
+ * Copyright (C) 2017-2020 Renesas Electronics Corp.
+ * Copyright (C) 2017-2020 Cogent Embedded, Inc.
  */
 
 /*
@@ -12,10 +12,13 @@
  *	arecord -D plughw:0,3 xxx.wav
  */
 
+#include "camera.dtsi"
+
 / {
 	aliases {
 		serial1 = &hscif0;
 		serial2 = &scif1;
+		serial3 = &hscif1;
 		mmc2 = &sdhi3;
 	};
 
@@ -51,6 +54,183 @@
 		startup-delay-us = <70000>;
 		enable-active-high;
 	};
+
+	sd_wifi_mux: regulator@9 {
+		compatible = "regulator-fixed";
+		regulator-name = "SD WiFi mux";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio_exp_74 5 0>;
+		enable-active-low;	/* Connect WL1837 */
+		regulator-always-on;
+	};
+
+	radio_switch: regulator@11 {
+		compatible = "regulator-fixed";
+		regulator-name = "radio_on";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio_exp_74 13 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	mpcie_3v3: regulator@12 {
+		compatible = "regulator-fixed";
+		regulator-name = "mPCIe 3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio_exp_77 14 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	mpcie_1v8: regulator@13 {
+		compatible = "regulator-fixed";
+		regulator-name = "mPCIe 1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpio = <&gpio_exp_77 15 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <200000>;
+		enable-active-high;
+	};
+
+	vdd_cam_a_0: regulator@14 {
+		compatible = "regulator-fixed";
+		regulator-name = "Video-A PWR0";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_a_5c 9 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam_a_1: regulator@15 {
+		compatible = "regulator-fixed";
+		regulator-name = "Video-A PWR1";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_a_5c 8 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam_a_2: regulator@16 {
+		compatible = "regulator-fixed";
+		regulator-name = "Video-A PWR2";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_a_5c 11 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	vdd_cam_a_3: regulator@17 {
+		compatible = "regulator-fixed";
+		regulator-name = "Video-A PWR3";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_exp_a_5c 10 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	kim {
+		compatible = "kim";
+		shutdown-gpios = <&gpio_exp_74 3 GPIO_ACTIVE_HIGH>;
+		/* serial1 */
+		dev_name = "/dev/ttySC1";
+		flow_cntrl = <1>;
+		/* int div 8 hscif@26.6666656MHz */
+		baud_rate = <3333332>;
+	};
+
+	btwilink {
+		compatible = "btwilink";
+	};
+
+	/delete-node/sound;
+
+	sound_card: sound@0 {
+		compatible = "audio-graph-card";
+		label = "ak4613";
+
+		dais = <&rsnd_port0	/* ak4613 */
+			&rsnd_port1	/* HDMI0  */
+			>;
+	};
+
+	sound_ext: sound@1 {
+		compatible = "audio-graph-card";
+		label = "pcm3168a";
+
+		dais = <&rsnd_port2>;
+	};
+
+	sound_radio: sound@2 {
+		compatible = "audio-graph-card";
+		label = "radio";
+
+		dais = <&rsnd_port3>;
+	};
+
+	sound_wl18xx: sound@3 {
+		compatible = "audio-graph-card";
+		label = "wl18xx";
+
+		dais = <&rsnd_port4>;
+	};
+
+	lvds: lvds {
+		port {
+			lvds_in: endpoint {
+				remote-endpoint = <&lvds0_out>;
+			};
+		};
+	};
+
+	hdmi-out {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi_con: endpoint {
+				remote-endpoint = <&adv7513_out>;
+			};
+		};
+	};
+
+	radio: si468x@0 {
+		compatible = "si,si468x-pcm";
+		status = "okay";
+
+		port {
+			si468x_endpoint: endpoint {
+				remote-endpoint = <&rsnd_for_si468x>;
+				system-clock-frequency = <12288000>;
+			};
+		};
+	};
+
+	wl18xx_pcm: wl18xx_pcm@0 {
+		compatible = "ti,wl18xx-pcm";
+		status = "okay";
+
+		port {
+			wl18xx_endpoint: endpoint {
+				remote-endpoint = <&rsnd_for_wl18xx>;
+			};
+		};
+	};
+
+	camera_clk: camera_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		clock-output-names = "mclk";
+	};
+
+	ov5647_camera_clk: camera_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25000000>;
+		clock-output-names = "xclk";
+	};
 };
 
 &can0 {
@@ -65,9 +245,84 @@
 	status = "okay";
 };
 
+&canfd {
+	pinctrl-0 = <&canfd0_pins &canfd1_pins>;
+	pinctrl-names = "default";
+	status = "disabled";
+
+	channel0 {
+		status = "okay";
+	};
+
+	channel1 {
+		status = "okay";
+	};
+};
+
+&csi40 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi40_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&deser_out0>;
+			};
+		};
+	};
+};
+
+&csi20 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi20_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&ov5647_camera_out>;
+			};
+		};
+	};
+};
+
+&du {
+	pinctrl-0 = <&du_pins>;
+	pinctrl-names = "default";
+};
+
 &ehci0 {
 	dr_mode = "otg";
 	status = "okay";
+};
+
+&gpio4 {
+	most_rst {
+		gpio-hog;
+		gpios = <14 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "MOST RST";
+	};
+};
+
+&gpio6 {
+	audio_sw {
+		gpio-hog;
+		gpios = <21 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "Onboard MCh Audio";
+	};
 };
 
 &hscif0 {
@@ -78,18 +333,121 @@
 	status = "okay";
 };
 
+&hscif1 {
+	pinctrl-0 = <&hscif1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
 &hsusb {
 	dr_mode = "otg";
 	status = "okay";
 };
 
 &i2c2 {
+	clock-frequency = <100000>;
+
 	i2cswitch2: i2c-switch@71 {
 		compatible = "nxp,pca9548";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <0x71>;
 		reset-gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
+		i2c-mux-idle-disconnect;
+
+		i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			/* BCM node(s) */
+		};
+
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+			/* USB3.0 HUB node(s) */
+		};
+
+		i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+			/* Power amp node(s) */
+		};
+
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+			/* Radio node(s) */
+		};
+
+		i2c@4 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <4>;
+
+			hdmi@3d {
+				compatible = "adi,adv7513";
+				reg = <0x3d>;
+//				interrupt-parent = <&gpio2>;
+//				interrupts = <0 IRQ_TYPE_EDGE_BOTH>;
+				pd-gpios = <&gpio_exp_75 5 GPIO_ACTIVE_LOW>;
+
+				interlace-allowed;
+				adi,input-depth = <8>;
+				adi,input-colorspace = "rgb";
+				adi,input-clock = "1x";
+				adi,input-style = <1>;
+				adi,input-justification = "evenly";
+				adi,clock-delay = <1200>;
+
+				limit-frequency = <100000000>;
+//				lower-refresh = <50>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						adv7513_in: endpoint {
+							remote-endpoint = <&du_out_rgb>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						adv7513_out: endpoint {
+							remote-endpoint = <&hdmi_con>;
+						};
+					};
+				};
+			};
+		};
+
+		i2c@5 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <5>;
+			/* PCIe node(s) */
+		};
+
+		i2c@6 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <6>;
+			/* LVDS display node(s) */
+
+			polytouch: edt-ft5x06@38 {
+				compatible = "edt,edt-ft5x06";
+				reg = <0x38>;
+				interrupt-parent = <&gpio5>;
+				interrupts = <6 IRQ_TYPE_EDGE_FALLING>;
+			};
+		};
 
 		/* Audio_SDA, Audio_SCL */
 		i2c@7 {
@@ -103,6 +461,7 @@
 				reg = <0x44>;
 				clocks = <&clksndsel>;
 				clock-names = "scki";
+				tdm;
 
 				VDD1-supply	= <&snd_3p3v>;
 				VDD2-supply	= <&snd_3p3v>;
@@ -111,26 +470,25 @@
 				VCCDA1-supply	= <&snd_vcc5v>;
 				VCCDA2-supply	= <&snd_vcc5v>;
 
-				ports {
-					#address-cells = <1>;
-					#size-cells = <0>;
-					mclk-fs = <512>;
-					port@0 {
-						reg = <0>;
-						pcm3168a_endpoint_p: endpoint {
-							remote-endpoint = <&rsnd_for_pcm3168a_play>;
-							clocks = <&clksndsel>;
-						};
-					};
-					port@1 {
-						reg = <1>;
-						pcm3168a_endpoint_c: endpoint {
-							remote-endpoint = <&rsnd_for_pcm3168a_capture>;
-							clocks = <&clksndsel>;
-						};
+				port {
+					pcm3168a_endpoint: endpoint {
+						remote-endpoint = <&rsnd_for_pcm3168a>;
+						clocks = <&clksndsel>;
 					};
 				};
 			};
+
+			lsm9ds0_acc_mag@1d {
+				compatible = "st,lsm9ds0";
+				reg = <0x1d>;
+			};
+
+			lsm9ds0_gyr@6b {
+				compatible = "st,lsm9ds0";
+				reg = <0x6b>;
+			};
+
+			/* GPS@ 0x42 */
 		};
 	};
 
@@ -140,53 +498,47 @@
 		reg = <0x74>;
 		gpio-controller;
 		#gpio-cells = <2>;
+/*
 		interrupt-controller;
 		interrupt-parent = <&gpio6>;
 		interrupts = <8 IRQ_TYPE_EDGE_FALLING>;
-
-		audio_out_off {
+*/
+		audio-out-off-hog {
 			gpio-hog;
 			gpios = <0 GPIO_ACTIVE_HIGH>; /* P00 */
 			output-high;
 			line-name = "Audio_Out_OFF";
 		};
 
-		hub_pwen {
+		hub-pwen-hog {
 			gpio-hog;
 			gpios = <6 GPIO_ACTIVE_HIGH>;
 			output-high;
 			line-name = "HUB pwen";
 		};
 
-		hub_rst {
+		hub-rst-hog {
 			gpio-hog;
 			gpios = <7 GPIO_ACTIVE_HIGH>;
 			output-high;
 			line-name = "HUB rst";
 		};
 
-		otg_extlpn {
+		otg-extlpn-hog {
 			gpio-hog;
 			gpios = <9 GPIO_ACTIVE_HIGH>;
 			output-high;
 			line-name = "OTG EXTLPn";
 		};
 
-		otg_offvbusn {
+		otg-offvbusn-hog {
 			gpio-hog;
 			gpios = <8 GPIO_ACTIVE_HIGH>;
 			output-low;
 			line-name = "OTG OFFVBUSn";
 		};
 
-		sd-wifi-mux {
-			gpio-hog;
-			gpios = <5 GPIO_ACTIVE_HIGH>;
-			output-low;	/* Connect WL1837 */
-			line-name = "SD WiFi mux";
-		};
-
-		snd_rst {
+		snd-rst-hog {
 			gpio-hog;
 			gpios = <15 GPIO_ACTIVE_HIGH>; /* P17 */
 			output-high;
@@ -203,6 +555,19 @@
 		interrupt-controller;
 		interrupt-parent = <&gpio6>;
 		interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+
+		gps_rst {
+			gpio-hog;
+			gpios = <6 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "GPS rst";
+		};
+		fpdl_shdn {
+			gpio-hog;
+			gpios = <9 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "FPDLink shdn";
+		};
 	};
 };
 
@@ -213,6 +578,237 @@
 		#size-cells = <0>;
 		reg = <0x71>;
 		reset-gpios = <&gpio3 15 GPIO_ACTIVE_LOW>;
+
+		/* SAM node(s) */
+		i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+		};
+
+		/* Slot A (CN10) */
+		i2cswitch4_i2c1: i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+
+			deser@2c {
+				compatible = "maxim,max9286", "ti,ub9x4";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0x2c 0x3a>;
+				reg-names = "max9286", "ub9x4";
+				regs = <0x0c 0x0d 0x0e 0x0f>;
+				shutdown-gpios = <&gpio_exp_a_5c 13 GPIO_ACTIVE_LOW>;
+
+				poc0-supply = <&vdd_cam_a_0>;
+				poc1-supply = <&vdd_cam_a_1>;
+				poc2-supply = <&vdd_cam_a_2>;
+				poc3-supply = <&vdd_cam_a_3>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						deser_in0: endpoint {
+							remote-endpoint = <&camera_out0>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						deser_in1: endpoint {
+							remote-endpoint = <&camera_out1>;
+						};
+					};
+
+					port@2 {
+						reg = <2>;
+						deser_in2: endpoint {
+							remote-endpoint = <&camera_out2>;
+						};
+					};
+
+					port@3 {
+						reg = <3>;
+						deser_in3: endpoint {
+							remote-endpoint = <&camera_out3>;
+						};
+					};
+
+					port@4 {
+						reg = <4>;
+						deser_out0: endpoint {
+							clock-lanes = <0>;
+							data-lanes = <1 2 3 4>;
+							remote-endpoint = <&csi40_in>;
+						};
+					};
+				};
+
+				i2c@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+
+					camera@60 {
+						compatible = LVDS_CAMERA;
+						reg = <0x60 0x0c>;
+
+						port {
+							camera_out0: endpoint {
+								remote-endpoint = <&deser_in0>;
+							};
+						};
+					};
+				};
+
+
+				i2c@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <1>;
+
+					camera@61 {
+						compatible = LVDS_CAMERA;
+						reg = <0x61 0x0d>;
+
+						port {
+							camera_out1: endpoint {
+								remote-endpoint = <&deser_in1>;
+							};
+						};
+					};
+				};
+
+				i2c@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <2>;
+
+					camera@62 {
+						compatible = LVDS_CAMERA;
+						reg = <0x62 0x0e>;
+
+						port {
+							camera_out2: endpoint {
+								remote-endpoint = <&deser_in2>;
+							};
+						};
+					};
+				};
+
+				i2c@3 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <3>;
+
+					camera@63 {
+						compatible = LVDS_CAMERA;
+						reg = <0x63 0x0f>;
+
+						port {
+							camera_out3: endpoint {
+								remote-endpoint = <&deser_in3>;
+							};
+						};
+					};
+				};
+			};
+		};
+
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+			/* MOST node(s) */
+		};
+
+		i2c@4 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <4>;
+
+			ov5647_camera: ov5647@36 {
+				compatible = "ovti,ov5647";
+				reg = <0x36>;
+				clocks = <&ov5647_camera_clk>;
+
+				port@0 {
+					ov5647_camera_out: endpoint {
+						clock-lanes = <0>;
+						data-lanes = <1 2>;
+						remote-endpoint = <&csi20_in>;
+					};
+				};
+			};
+		};
+
+		i2c@5 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <5>;
+
+			cmos_camera: ov5642@3c {
+				compatible = "ovti,ov5642";
+				reg = <0x3c>;
+				clocks = <&camera_clk>;
+				clock-names = "mclk";
+
+				port@0 {
+					cmos_camera_out: endpoint {
+						remote-endpoint = <&vin5_in>;
+					};
+				};
+			};
+		};
+
+		i2cswitch4_i2c7: i2c@7 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <7>;
+
+			/* Slot A (CN10) */
+			gpio_exp_a_5c: gpio@5c {
+				compatible = "maxim,max7325";
+				reg = <0x5c>;
+				gpio-controller;
+				#gpio-cells = <2>;
+
+				video_a_des_cfg2 {
+					gpio-hog;
+					gpios = <4 GPIO_ACTIVE_HIGH>;
+					input;
+					line-name = "Video-A cfg2";
+				};
+				video_a_des_cfg1 {
+					gpio-hog;
+					gpios = <6 GPIO_ACTIVE_HIGH>;
+					input;
+					line-name = "Video-A cfg1";
+				};
+				video_a_des_cfg0 {
+					gpio-hog;
+					gpios = <7 GPIO_ACTIVE_HIGH>;
+					input;
+					line-name = "Video-A cfg0";
+				};
+				video_a_pwr_shdn {
+					gpio-hog;
+					gpios = <14 GPIO_ACTIVE_HIGH>;
+					output-high;
+					line-name = "Video-A PWR_SHDN";
+				};
+				video_a_led {
+					gpio-hog;
+					gpios = <12 GPIO_ACTIVE_HIGH>;
+					output-low;
+					line-name = "Video-A LED";
+				};
+			};
+		};
 	};
 
 	gpio_exp_76: gpio@76 {
@@ -223,6 +819,76 @@
 		interrupt-controller;
 		interrupt-parent = <&gpio7>;
 		interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+
+		port_b_a0 {
+			gpio-hog;
+			gpios = <0 GPIO_ACTIVE_HIGH>;
+			output-low;
+			line-name = "Video-B A0";
+		};
+		port_b_a1 {
+			gpio-hog;
+			gpios = <1 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "Video-B A1";
+		};
+		port_a_a0 {
+			gpio-hog;
+			gpios = <2 GPIO_ACTIVE_HIGH>;
+			output-low;
+			line-name = "Video-A A0";
+		};
+		port_a_a1 {
+			gpio-hog;
+			gpios = <3 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "Video-A A1";
+		};
+		cmos_pwdn {
+			gpio-hog;
+			gpios = <8 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "CMOS PWDN";
+		};
+		cmos_rst {
+			gpio-hog;
+			gpios = <9 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "CMOS RST";
+		};
+		/* pin 12 - CAM_CLK */
+		rpi_cam_io_1 {
+			gpio-hog;
+			gpios = <10 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "RaspB_IO1";
+		};
+		/* pin 11 - CAM_GPIO - assume pwdn */
+		rpi_cam_io_0 {
+			gpio-hog;
+			gpios = <11 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "RaspB_IO0";
+		};
+		sam_rst {
+			gpio-hog;
+			gpios = <4 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "SAM RST";
+		};
+		sam_pwr {
+			gpio-hog;
+			gpios = <5 GPIO_ACTIVE_HIGH>;
+			output-low;
+			line-name = "SAM PWR";
+		};
+		/* 0 - FPDLink output, 1 - LVDS output */
+		lvds_vs_fpdl {
+			gpio-hog;
+			gpios = <14 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "LVDS switch";
+		};
 	};
 
 	gpio_exp_77: gpio@77 {
@@ -230,10 +896,40 @@
 		reg = <0x77>;
 		gpio-controller;
 		#gpio-cells = <2>;
+/*
 		interrupt-controller;
 		interrupt-parent = <&gpio5>;
 		interrupts = <9 IRQ_TYPE_EDGE_FALLING>;
+*/
+		mpcie_wake {
+			gpio-hog;
+			gpios = <0 GPIO_ACTIVE_HIGH>;
+			output-low;
+			line-name = "mPCIe WAKE#";
+		};
+		mpcie_wdisable {
+			gpio-hog;
+			gpios = <1 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "mPCIe W_DISABLE";
+		};
+		mpcie_clreq {
+			gpio-hog;
+			gpios = <2 GPIO_ACTIVE_HIGH>;
+			input;
+			line-name = "mPCIe CLKREQ#";
+		};
+		mpcie_ovc {
+			gpio-hog;
+			gpios = <3 GPIO_ACTIVE_HIGH>;
+			input;
+			line-name = "mPCIe OVC";
+		};
 	};
+};
+
+&msiof1 {
+	status = "disabled";
 };
 
 &ohci0 {
@@ -243,6 +939,7 @@
 
 &pcie_bus_clk {
 	clock-frequency = <100000000>;
+	status = "okay";
 };
 
 &pciec0 {
@@ -251,6 +948,9 @@
 
 &pciec1 {
 	status = "okay";
+
+	pcie3v3-supply = <&mpcie_3v3>;
+	pcie1v8-supply = <&mpcie_1v8>;
 };
 
 &pfc {
@@ -264,13 +964,33 @@
 		function = "can1";
 	};
 
+	canfd0_pins: canfd0 {
+		groups = "canfd0_data_a";
+		function = "canfd0";
+	};
+
+	canfd1_pins: canfd1 {
+		groups = "canfd1_data";
+		function = "canfd1";
+	};
+
+	du_pins: du {
+		groups = "du_rgb888", "du_sync", "du_clk_out_0", "du_disp";
+		function = "du";
+	};
+
 	hscif0_pins: hscif0 {
 		groups = "hscif0_data", "hscif0_ctrl";
 		function = "hscif0";
 	};
 
+	hscif1_pins: hscif1 {
+		groups = "hscif1_data_a", "hscif1_ctrl_a";
+		function = "hscif1";
+	};
+
 	scif1_pins: scif1 {
-		groups = "scif1_data_b", "scif1_ctrl";
+		groups = "scif1_data_b";
 		function = "scif1";
 	};
 
@@ -281,13 +1001,20 @@
 	};
 
 	sound_pcm_pins: sound-pcm {
-		groups = "ssi349_ctrl", "ssi3_data", "ssi4_data";
+		groups = "ssi349_ctrl", "ssi3_data", "ssi4_data",
+			 "ssi6_ctrl", "ssi6_data",
+			 "ssi78_ctrl", "ssi7_data", "ssi8_data";
 		function = "ssi";
 	};
 
 	usb0_pins: usb0 {
 		groups = "usb0";
 		function = "usb0";
+	};
+
+	vin5_pins: vin5 {
+		groups = "vin5_data8", "vin5_sync", "vin5_clk";
+		function = "vin5";
 	};
 };
 
@@ -296,32 +1023,49 @@
 		     &sound_clk_pins
 		     &sound_pcm_pins>;
 
+	/* Multi DAI */
+	#sound-dai-cells = <1>;
+
 	ports {
-		/* rsnd_port0/1 are on salvator-common */
+		/* rsnd_port0/1 are in ulcb.dtsi */
 		rsnd_port2: port@2 {
 			reg = <2>;
-			rsnd_for_pcm3168a_play: endpoint {
-				remote-endpoint = <&pcm3168a_endpoint_p>;
+			rsnd_for_pcm3168a: endpoint {
+				remote-endpoint = <&pcm3168a_endpoint>;
 
 				dai-format = "i2s";
-				bitclock-master = <&rsnd_for_pcm3168a_play>;
-				frame-master = <&rsnd_for_pcm3168a_play>;
+				bitclock-master = <&rsnd_for_pcm3168a>;
+				frame-master = <&rsnd_for_pcm3168a>;
 				dai-tdm-slot-num = <8>;
+				dai-tdm-slot-width = <32>;
 
 				playback = <&ssi3>;
+				capture  = <&ssi4>;
 			};
 		};
 		rsnd_port3: port@3 {
 			reg = <3>;
-			rsnd_for_pcm3168a_capture: endpoint {
-				remote-endpoint = <&pcm3168a_endpoint_c>;
+			rsnd_for_si468x: endpoint {
+				remote-endpoint = <&si468x_endpoint>;
 
 				dai-format = "i2s";
-				bitclock-master = <&rsnd_for_pcm3168a_capture>;
-				frame-master = <&rsnd_for_pcm3168a_capture>;
-				dai-tdm-slot-num = <6>;
+				bitclock-master = <&si468x_endpoint>;
+				frame-master = <&si468x_endpoint>;
 
-				capture  = <&ssi4>;
+				capture = <&ssi6>;
+			};
+		};
+		rsnd_port4: port@4 {
+			reg = <4>;
+			rsnd_for_wl18xx: endpoint {
+				remote-endpoint = <&wl18xx_endpoint>;
+
+				simple-audio-card,format = "i2s";
+				bitclock-master = <&wl18xx_endpoint>;
+				frame-master = <&wl18xx_endpoint>;
+
+				playback = <&ssi7>;
+				capture = <&ssi8>;
 			};
 		};
 	};
@@ -330,7 +1074,6 @@
 &scif1 {
 	pinctrl-0 = <&scif1_pins>;
 	pinctrl-names = "default";
-	uart-has-rtscts;
 
 	status = "okay";
 };
@@ -346,7 +1089,7 @@
 	non-removable;
 	cap-power-off-card;
 	keep-power-in-suspend;
-	max-frequency = <26000000>;
+	max-frequency = <50000000>;
 	status = "okay";
 
 	#address-cells = <1>;
@@ -359,15 +1102,11 @@
 	};
 };
 
-&sound_card {
-	dais = <&rsnd_port0	/* ak4613 */
-		&rsnd_port1	/* HDMI0  */
-		&rsnd_port2	/* pcm3168a playback */
-		&rsnd_port3	/* pcm3168a capture  */
-		>;
+&ssi4 {
+	shared-pin;
 };
 
-&ssi4 {
+&ssi8 {
 	shared-pin;
 };
 
@@ -378,6 +1117,74 @@
 	status = "okay";
 };
 
+&vin0 {
+	status = "okay";
+};
+
+&vin1 {
+	status = "okay";
+};
+
+&vin2 {
+	status = "okay";
+};
+
+&vin3 {
+	status = "okay";
+};
+
+
+&vin4 {
+	status = "okay";
+};
+
+
+&vin5 {
+	pinctrl-0 = <&vin5_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin5_in: endpoint@0 {
+				bus-width = <8>;
+				vsync-active = <1>;
+				hsync-active = <0>;
+				data-enable-active = <0>;
+				remote-endpoint = <&cmos_camera_out>;
+			};
+		};
+	};
+};
+
 &xhci0 {
 	status = "okay";
 };
+
+&du {
+	ports {
+		port@0 {
+			endpoint {
+				remote-endpoint = <&adv7513_in>;
+			};
+		};
+	};
+};
+
+&lvds0 {
+	status = "okay";
+
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};
+
+/* set LVDS panel timings and pins */
+#include "ulcb-kf-panel.dtsi"
