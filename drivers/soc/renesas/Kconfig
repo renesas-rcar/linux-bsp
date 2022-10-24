@@ -287,6 +287,13 @@ config RST_RCAR
 config SYSC_RCAR
 	bool "System Controller support for R-Car" if COMPILE_TEST
 
+config RCAR_POWER_AVS
+	bool "Renesas R-Car Gen3 AVS (Adaptive Voltage Scaling)"
+	depends on ARCH_R8A77951 || ARCH_R8A77960 || ARCH_R8A77961
+	default y
+	help
+	  Enable this option if you want to have support for AVS on R-Car Gen3.
+
 config SYSC_R8A77995
 	bool "System Controller support for R-Car D3" if COMPILE_TEST
 	select SYSC_RCAR

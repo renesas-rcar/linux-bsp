@@ -1,0 +1,48 @@
+R-Car AVS driver
+
+It is a simple driver that checks AVS (Adaptive Voltage Scaling) value of
+chip. It helps to AVS user device select the best opp table (appropriate table with
+avs value) to apply for the chip at runtime.
+
+Required properties:
+ - reg: address and offset for registers of AVS.
+ - target_devices: all target devices (e.g. cpu, gpu...) that will apply avs value.
+    Note: when adding cpu nodes, it needs to list all
+    cpu nodes that are on same cluster together.
+
+Optional properties:
+ - None
+
+Examples:
+ - Below is device tree definition for R-Car H3/M3:
+
+  For R-Car H3 ES2.0+:
+	avs: avs@e60a013c {
+		compatible = "renesas,r8a77951-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
+		target_devices = <&a57_0>, <&a57_1>, <&a57_2>, <&a57_3>;
+	};
+
+  For R-Car M3 ES1.x:
+	avs: avs@e60a013c {
+		compatible = "renesas,r8a77960-avs", "renesas,rcar-gen3-avs";
+		reg = <0 0xe60a013c 0 0x04>;
+		target_devices = <&a57_0>, <&a57_1>;
+	};
+
+  For R-Car M3 ES3.0:
+        avs: avs@e60a013c {
+                compatible = "renesas,r8a77961-avs", "renesas,rcar-gen3-avs";
+                reg = <0 0xe60a013c 0 0x04>;
+                target_devices = <&a57_0>, <&a57_1>;
+        };
+
+- Below is device tree definition for R-Car V4H:
+	avs: avs@e60a0080 {
+		compatible = "renesas,r8a779g0-avs", "renesas,rcar-gen4-avs";
+		reg = <0 0xe60a0080 0 0x04>;
+		clocks = <&cpg CPG_MOD 123>;
+		resets = <&cpg 123>;
+		target_devices = <&a76_0>, <&a76_1>, <&a76_2>, <&a76_3>;
+	};
+
