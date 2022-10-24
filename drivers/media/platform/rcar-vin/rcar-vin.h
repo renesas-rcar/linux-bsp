@@ -13,7 +13,9 @@
 #ifndef __RCAR_VIN__
 #define __RCAR_VIN__
 
+#include <linux/clk.h>
 #include <linux/kref.h>
+#include <linux/reset.h>
 
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
@@ -22,6 +24,8 @@
 #include <media/v4l2-fwnode.h>
 #include <media/videobuf2-v4l2.h>
 
+#define DRV_NAME "rcar-vin"
+
 /* Number of HW buffers */
 #define HW_BUFFER_NUM 3
 
@@ -29,7 +33,16 @@
 #define HW_BUFFER_MASK 0x7f
 
 /* Max number on VIN instances that can be in a system */
-#define RCAR_VIN_NUM 8
+#define RCAR_VIN_NUM 32
+
+/* Time until source device reconnects */
+#define CONNECTION_TIME 2000
+#define SETUP_WAIT_TIME 3000
+
+#define MSTP_WAIT_TIME 100
+
+#define RCAR_VIN_R8A779A0_FEATURE	BIT(0)
+#define RCAR_VIN_R8A779G0_FEATURE	BIT(1)
 
 struct rvin_group;
 
@@ -38,6 +51,7 @@ enum model_id {
 	RCAR_M1,
 	RCAR_GEN2,
 	RCAR_GEN3,
+	RCAR_GEN4,
 };
 
 enum rvin_csi_id {
@@ -46,6 +60,20 @@ enum rvin_csi_id {
 	RVIN_CSI40,
 	RVIN_CSI41,
 	RVIN_CSI_MAX,
+};
+
+enum rvin_r8a779a0_csi_id {
+	RV3U_CSI40,
+	RV3U_CSI41,
+	RV3U_CSI42,
+	RV3U_CSI43,
+	RV3U_CSI_MAX,
+};
+
+enum rvin_r8a779g0_csi_id {
+	RV4U_CSI40,
+	RV4U_CSI41,
+	RV4U_CSI_MAX,
 };
 
 /**
@@ -141,6 +169,28 @@ struct rvin_group_route {
 };
 
 /**
+ * struct rvin_group_scaler - describes a scaler attached to a VIN
+ *
+ * @vin:	Numerical VIN id that have access to a UDS.
+ * @companion:  Numerical VIN id that @vin share the UDS with.
+ *
+ * -- note::
+ *	Some R-Car VIN instances have access to a Up Down Scaler (UDS).
+ *	If a VIN have a UDS attached it's almost always shared between
+ *	two VIN instances. The UDS can only be used by one VIN at a time,
+ *	so the companion relationship needs to be described as well.
+ *
+ *	There are at most two VINs sharing a UDS. For each UDS shared
+ *	between two VINs there needs to be two instances of struct
+ *	rvin_group_scaler describing each of the VINs individually. If
+ *	a VIN do not share its UDS set companion to -1.
+ */
+struct rvin_group_scaler {
+	int vin;
+	int companion;
+};
+
+/**
  * struct rvin_info - Information about the particular VIN implementation
  * @model:		VIN model
  * @use_mc:		use media controller instead of controlling subdevice
@@ -149,6 +199,7 @@ struct rvin_group_route {
  * @max_height:		max input height the VIN supports
  * @routes:		list of possible routes from the CSI-2 recivers to
  *			all VINs. The list mush be NULL terminated.
+ * @scalers:		List of available scalers, must be NULL terminated.
  */
 struct rvin_info {
 	enum model_id model;
@@ -158,6 +209,7 @@ struct rvin_info {
 	unsigned int max_width;
 	unsigned int max_height;
 	const struct rvin_group_route *routes;
+	const struct rvin_group_scaler *scalers;
 };
 
 /**
@@ -165,6 +217,7 @@ struct rvin_info {
  * @dev:		(OF) device
  * @base:		device I/O register space remapped to virtual memory
  * @info:		info about VIN instance
+ * @isp:		ISP device
  *
  * @vdev:		V4L2 video device associated with VIN
  * @v4l2_dev:		V4L2 device
@@ -172,6 +225,8 @@ struct rvin_info {
  * @notifier:		V4L2 asynchronous subdevs notifier
  *
  * @parallel:		parallel input subdevice descriptor
+ * @rstc:		CPG reset/release control
+ * @clk:		CPG clock control
  *
  * @group:		Gen3 CSI group
  * @id:			Gen3 group id for this VIN
@@ -199,11 +254,19 @@ struct rvin_info {
  * @std:		active video standard of the video source
  *
  * @alpha:		Alpha component to fill in for supported pixel formats
+ *
+ * @work_queue:		work queue at resuming
+ * @rvin_resume:	delayed work at resuming
+ * @chsel:		channel selection
+ * @setup_wait:		wait queue used to setup VIN
+ * @suspend:		suspend flag
+ * @chip_info:	chip information by each device
  */
 struct rvin_dev {
 	struct device *dev;
 	void __iomem *base;
 	const struct rvin_info *info;
+	struct rcar_isp_device *isp;
 
 	struct video_device vdev;
 	struct v4l2_device v4l2_dev;
@@ -211,6 +274,8 @@ struct rvin_dev {
 	struct v4l2_async_notifier notifier;
 
 	struct rvin_parallel_entity *parallel;
+	struct reset_control *rstc;
+	struct clk *clk;
 
 	struct rvin_group *group;
 	unsigned int id;
@@ -242,6 +307,13 @@ struct rvin_dev {
 	v4l2_std_id std;
 
 	unsigned int alpha;
+
+	struct workqueue_struct *work_queue;
+	struct delayed_work rvin_resume;
+	unsigned int chsel;
+	wait_queue_head_t setup_wait;
+	bool suspend;
+	u32 chip_info;
 };
 
 #define vin_to_source(vin)		((vin)->parallel->subdev)
@@ -291,10 +363,10 @@ const struct rvin_video_format *rvin_format_from_pixel(struct rvin_dev *vin,
 						       u32 pixelformat);
 
 
-/* Cropping, composing and scaling */
-void rvin_crop_scale_comp(struct rvin_dev *vin);
-
 int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel);
 void rvin_set_alpha(struct rvin_dev *vin, unsigned int alpha);
+
+void rvin_resume_start_streaming(struct work_struct *work);
+void rvin_suspend_stop_streaming(struct rvin_dev *vin);
 
 #endif
