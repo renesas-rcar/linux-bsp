@@ -1,3 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ * r_taurus_ether_protocol.h  --  R-Car Ethernet Taurus Protocol
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #ifndef R_TAURUS_ETHER_PROTOCOL_H
 #define R_TAURUS_ETHER_PROTOCOL_H
 
