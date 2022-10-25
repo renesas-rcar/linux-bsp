@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * taurus_client_sample.c  --  Renesas Taurus client sample driver
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #define DEBUG
 
 #include <linux/kernel.h>

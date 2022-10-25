@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ * r_virtdev_drv_api_priv.h  --  Renesas Taurus client sample driver
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
 
 #ifndef R_VIRTDEV_DRV_API_PRIV_H
 #define R_VIRTDEV_DRV_API_PRIV_H
