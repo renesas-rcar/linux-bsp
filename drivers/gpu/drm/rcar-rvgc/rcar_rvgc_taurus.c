@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ *  rcar_rvgc_taurus.c --  R-Car RVGC Taurus
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #include "rcar_rvgc_taurus.h"
 
 #include <linux/rpmsg.h>

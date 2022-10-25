@@ -1,3 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ * rcar_rvgc_kms.h  --  R-Car RVGC DRM driver
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #ifndef __RCAR_RVGC_KMS_H__
 #define __RCAR_RVGC_KMS_H__
 

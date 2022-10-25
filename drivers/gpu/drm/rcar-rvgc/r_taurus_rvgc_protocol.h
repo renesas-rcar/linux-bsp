@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ * r_taurus_rvgc_protocol.h  --  R-Car Taurus RVGC Protocol
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
 
 #ifndef R_TAURUS_RVGC_PROTOCOL_H
 #define R_TAURUS_RVGC_PROTOCOL_H

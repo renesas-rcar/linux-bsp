@@ -1,5 +1,9 @@
-//#define DEBUG
-
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * rcar_rvgc_pipe.c  --  R-Car RVGC DRM driver
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
 
 #include <drm/drm_device.h>
 

@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ *  r_taurus_bridge.h --  R-Car Taurus Bridge
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
 
 #ifndef R_TAURUS_BRIDGE_H
 #define R_TAURUS_BRIDGE_H
