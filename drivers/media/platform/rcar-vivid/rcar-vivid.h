@@ -1,3 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ * rcar-vivid.h  --  R-Car VIVID driver
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #ifndef __RCAR_VIVID__
 #define __RCAR_VIVID__
 

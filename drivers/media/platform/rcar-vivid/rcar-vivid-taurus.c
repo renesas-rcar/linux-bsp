@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * rcar-vivid-taurus.c  --  R-Car VIVID driver
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #include <linux/atomic.h>
 #include <linux/rpmsg.h>
 

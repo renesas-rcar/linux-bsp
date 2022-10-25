@@ -1,3 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ *  r_taurus_camera_protocol.h --  R-Car Taurus Camera Protocol
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #ifndef R_TAURUS_CAMERA_PROTOCOL_H
 #define R_TAURUS_CAMERA_PROTOCOL_H
 

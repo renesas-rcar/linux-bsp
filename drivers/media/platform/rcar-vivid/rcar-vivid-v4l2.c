@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * rcar-vivid-v4l2.c  --  R-Car VIVID V4L2 driver
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #include <linux/pm_runtime.h>
 #include <linux/delay.h>
 #include <media/v4l2-event.h>
