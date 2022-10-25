@@ -1,3 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ * rcar_taurus_can.h  --  R-Car Para-CAN driver
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #ifndef __RCAR_TAURUS_CAN_H__
 #define __RCAR_TAURUS_CAN_H__
 

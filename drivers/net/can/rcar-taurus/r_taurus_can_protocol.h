@@ -1,3 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ * r_taurus_can_protocol.h  --  R-Car CAN Taurus Protocol
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #ifndef R_TAURUS_CAN_PROTOCOL_H
 #define R_TAURUS_CAN_PROTOCOL_H
 
