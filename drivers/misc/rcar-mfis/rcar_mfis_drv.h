@@ -1,3 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0-only OR MIT */
+/*
+ * rcar_mfis_drv.h --  R-Car MFIS
+ *
+ * Copyright (C) 2022 Renesas Electronics Corporation
+ */
+
 #ifndef _RCAR_MFIS_H_
 #define _RCAR_MFIS_H_
 
