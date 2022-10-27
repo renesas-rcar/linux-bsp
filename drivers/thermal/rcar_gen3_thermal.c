@@ -83,6 +83,40 @@
 #define ECM_MAX_SIZE    (ECMWPCNTR + 0x04)
 #define ECM_SET         (0xFFF << 14)
 
+enum rcar_thermal_chip_id {
+	RCAR_THERMAL_GEN3 = 0,
+	RCAR_THERMAL_GEN3_M3_W,
+	RCAR_THERMAL_GEN4,
+};
+
+struct rcar_thermal_data {
+	enum rcar_thermal_chip_id chip_id;
+	int rcar_ths_tj_1;
+	unsigned int irq_num;
+	bool has_ecm;
+};
+
+static const struct rcar_thermal_data data_gen3 = {
+	.chip_id = RCAR_THERMAL_GEN3,
+	.rcar_ths_tj_1 = 126,
+	.irq_num = 2,
+	.has_ecm = false,
+};
+
+static const struct rcar_thermal_data data_m3_w = {
+	.chip_id = RCAR_THERMAL_GEN3,
+	.rcar_ths_tj_1 = 116,
+	.irq_num = 2,
+	.has_ecm = false,
+};
+
+static const struct rcar_thermal_data data_gen4 = {
+	.chip_id = RCAR_THERMAL_GEN4,
+	.rcar_ths_tj_1 = 126,
+	.irq_num = 1,
+	.has_ecm = true,
+};
+
 /* Structure for thermal temperature calculation */
 struct equation_coefs {
 	int a1;
@@ -103,6 +137,7 @@ struct rcar_gen3_thermal_priv {
 	struct rcar_gen3_thermal_tsc *tscs[TSC_MAX_NUM];
 	unsigned int num_tscs;
 	void (*thermal_init)(struct rcar_gen3_thermal_tsc *tsc);
+	const struct rcar_thermal_data *data;
 	int ptat[3];
 };
 
@@ -279,7 +314,7 @@ static irqreturn_t rcar_gen3_thermal_irq(int irq, void *data)
 	for (i = 0; i < priv->num_tscs; i++) {
 		status = rcar_gen3_thermal_read(priv->tscs[i], REG_GEN3_IRQSTR);
 		rcar_gen3_thermal_write(priv->tscs[i], REG_GEN3_IRQSTR, 0);
-		if (soc_device_match(r8a779f0))
+		if (priv->data->has_ecm)
 			ecm_write(ECM_SET, ECM_BASE, STSR(ECM_TSC)); /* Clear the ECM status */
 		if (status)
 			thermal_zone_device_update(priv->tscs[i]->zone,
@@ -402,52 +437,51 @@ static void rcar_gen3_thermal_init(struct rcar_gen3_thermal_tsc *tsc)
 	usleep_range(1000, 2000);
 }
 
-static const int rcar_gen3_ths_tj_1 = 126;
-static const int rcar_gen3_ths_tj_1_m3_w = 116;
+
 static const struct of_device_id rcar_gen3_thermal_dt_ids[] = {
 	{
 		.compatible = "renesas,r8a774a1-thermal",
-		.data = &rcar_gen3_ths_tj_1_m3_w,
+		.data = &data_m3_w,
 	},
 	{
 		.compatible = "renesas,r8a774b1-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a774e1-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a7795-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a7796-thermal",
-		.data = &rcar_gen3_ths_tj_1_m3_w,
+		.data = &data_m3_w,
 	},
 	{
 		.compatible = "renesas,r8a77961-thermal",
-		.data = &rcar_gen3_ths_tj_1_m3_w,
+		.data = &data_m3_w,
 	},
 	{
 		.compatible = "renesas,r8a77965-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a77980-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a779a0-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a779f0-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a779f0-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{},
 };
@@ -523,7 +557,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 {
 	struct rcar_gen3_thermal_priv *priv;
 	struct device *dev = &pdev->dev;
-	const int *ths_tj_1 = of_device_get_match_data(dev);
+	const struct rcar_thermal_data *of_data = NULL;
 	struct resource *res;
 	struct thermal_zone_device *zone;
 	unsigned int i;
@@ -537,6 +571,10 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
+	of_data = of_device_get_match_data(dev);
+	if (of_data)
+		priv->data = of_data;
 
 	priv->thermal_init = rcar_gen3_thermal_init;
 	if (soc_device_match(r8a7795es1))
@@ -612,7 +650,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 		tsc->zone = zone;
 
 		priv->thermal_init(tsc);
-		rcar_gen3_thermal_calc_coefs(priv, tsc, *ths_tj_1);
+		rcar_gen3_thermal_calc_coefs(priv, tsc, priv->data->rcar_ths_tj_1);
 
 		tsc->zone->tzp->no_hwmon = false;
 		ret = thermal_add_hwmon_sysfs(tsc->zone);
