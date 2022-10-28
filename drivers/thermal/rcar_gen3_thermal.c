@@ -34,14 +34,32 @@
 #define REG_GEN3_THCODE1	0x50
 #define REG_GEN3_THCODE2	0x54
 #define REG_GEN3_THCODE3	0x58
-#define REG_GEN3_PTAT1		0x5c
-#define REG_GEN3_PTAT2		0x60
-#define REG_GEN3_PTAT3		0x64
-#define REG_GEN3_THSCP		0x68
+#define REG_GEN4_THCODE3	0x180 /*THSFMON00*/
+#define REG_GEN4_THCODE1	0x184 /*THSFMON01*/
+#define REG_GEN4_THCODE2	0x188 /*THSFMON02*/
+#define REG_GEN4_PTAT3      0x1BC /*THSFMON15*/
+#define REG_GEN4_PTAT1      0x1C0 /*THSFMON16*/
+#define REG_GEN4_PTAT2      0x1C4 /*THSFMON17*/
+
+/* Generic THCODE */
+#define REG_THCODE1(priv)	reg_gen4(priv, REG_GEN4_THCODE1, REG_GEN3_THCODE1)
+#define REG_THCODE2(priv)	reg_gen4(priv, REG_GEN4_THCODE2, REG_GEN3_THCODE2)
+#define REG_THCODE3(priv)	reg_gen4(priv, REG_GEN4_THCODE3, REG_GEN3_THCODE3)
 
 /* FUSE register base and offsets */
 #define PTAT_BASE               0xE6198000
+#define REG_GEN3_PTAT1          0x5C
+#define REG_GEN3_PTAT2          0x60
+#define REG_GEN3_PTAT3          0x64
+#define REG_GEN3_THSCP          0x68
 #define REG_GEN3_MAX_SIZE       (REG_GEN3_THSCP + 0x4)
+#define REG_GEN4_MAX_SIZE       (REG_GEN4_PTAT2 + 0x4)
+#define REG_MAX_SIZE(priv)      reg_gen4(priv, REG_GEN4_MAX_SIZE, REG_GEN3_MAX_SIZE)
+
+/* Generic PTAT */
+#define REG_PTAT1(priv)         reg_gen4(priv, REG_GEN4_PTAT1, REG_GEN3_PTAT1)
+#define REG_PTAT2(priv)         reg_gen4(priv, REG_GEN4_PTAT2, REG_GEN3_PTAT2)
+#define REG_PTAT3(priv)         reg_gen4(priv, REG_GEN4_PTAT3, REG_GEN3_PTAT3)
 
 /* IRQ{STR,MSK,EN} bits */
 #define IRQ_TEMP1		BIT(0)
@@ -69,7 +87,7 @@
 #define CTEMP_MASK	0xFFF
 
 #define MCELSIUS(temp)	((temp) * 1000)
-#define GEN3_FUSE_MASK	0xFFF
+#define FUSE_MASK	0xFFF
 
 #define TSC_MAX_NUM	5
 
@@ -199,6 +217,12 @@ static void init_ecm_registers(void)
 	ecm_write(ECM_SET, ECM_BASE, CTLR(ECM_TSC));
 	ecm_write(ECM_SET, ECM_BASE, STSR(ECM_TSC));
 	ecm_write(ECM_SET, ECM_BASE, TGTR(ECM_TSC));
+}
+
+static inline u32 reg_gen4(struct rcar_gen3_thermal_priv *priv,
+			   u32 gen4, u32 not_gen4)
+{
+	return (priv->data->chip_id == RCAR_THERMAL_GEN4) ? gen4 : not_gen4;
 }
 
 static const struct soc_device_attribute r8a779f0[] = {
@@ -367,21 +391,21 @@ static bool rcar_gen3_thermal_read_fuses(struct rcar_gen3_thermal_priv *priv)
 	 * TSC while THCODEs are fused for each TSC.
 	 */
 	priv->ptat[0] = rcar_gen3_thermal_read(priv->tscs[0], REG_GEN3_PTAT1) &
-		GEN3_FUSE_MASK;
+		FUSE_MASK;
 	priv->ptat[1] = rcar_gen3_thermal_read(priv->tscs[0], REG_GEN3_PTAT2) &
-		GEN3_FUSE_MASK;
+		FUSE_MASK;
 	priv->ptat[2] = rcar_gen3_thermal_read(priv->tscs[0], REG_GEN3_PTAT3) &
-		GEN3_FUSE_MASK;
+		FUSE_MASK;
 
 	for (i = 0; i < priv->num_tscs; i++) {
 		struct rcar_gen3_thermal_tsc *tsc = priv->tscs[i];
 
 		tsc->thcode[0] = rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE1) &
-			GEN3_FUSE_MASK;
+			FUSE_MASK;
 		tsc->thcode[1] = rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE2) &
-			GEN3_FUSE_MASK;
+			FUSE_MASK;
 		tsc->thcode[2] = rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE3) &
-			GEN3_FUSE_MASK;
+			FUSE_MASK;
 	}
 
 	return true;
@@ -591,7 +615,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	/* Use FUSE default values if they are missing.
 	 * If not, fetch them from registers.
 	 */
-	ptat_base = ioremap(PTAT_BASE, REG_GEN3_MAX_SIZE);
+	ptat_base = ioremap(PTAT_BASE, REG_MAX_SIZE(priv));
 	if (!ptat_base) {
 		dev_err(dev, "Cannot map FUSE register\n");
 		return -ENOMEM;
@@ -603,9 +627,9 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 		dev_info(dev, "is using pseudo fixed FUSE values\n");
 	} else {
 		dev_info(dev, "is using FUSE values\n");
-		ptat[0] = ioread32(ptat_base + REG_GEN3_PTAT1) & GEN3_FUSE_MASK;
-		ptat[1] = ioread32(ptat_base + REG_GEN3_PTAT2) & GEN3_FUSE_MASK;
-		ptat[2] = ioread32(ptat_base + REG_GEN3_PTAT3) & GEN3_FUSE_MASK;
+		ptat[0] = ioread32(ptat_base + REG_PTAT1(priv)) & FUSE_MASK;
+		ptat[1] = ioread32(ptat_base + REG_PTAT2(priv)) & FUSE_MASK;
+		ptat[2] = ioread32(ptat_base + REG_PTAT3(priv)) & FUSE_MASK;
 	}
 
 	iounmap(ptat_base);
