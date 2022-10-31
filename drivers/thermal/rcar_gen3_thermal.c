@@ -73,6 +73,36 @@
 
 #define TSC_MAX_NUM	3
 
+enum rcar_thermal_chip_id {
+	RCAR_THERMAL_GEN3 = 0,
+	RCAR_THERMAL_GEN3_M3_W,
+	RCAR_THERMAL_GEN4,
+};
+
+struct rcar_thermal_data {
+	enum rcar_thermal_chip_id chip_id;
+	int rcar_ths_tj_1;
+	unsigned int irq_num;
+};
+
+static const struct rcar_thermal_data data_gen3 = {
+	.chip_id = RCAR_THERMAL_GEN3,
+	.rcar_ths_tj_1 = 126,
+	.irq_num = 2,
+};
+
+static const struct rcar_thermal_data data_m3_w = {
+	.chip_id = RCAR_THERMAL_GEN3,
+	.rcar_ths_tj_1 = 116,
+	.irq_num = 2,
+};
+
+static const struct rcar_thermal_data data_gen4 = {
+	.chip_id = RCAR_THERMAL_GEN4,
+	.rcar_ths_tj_1 = 126,
+	.irq_num = 1,
+};
+
 /* default THCODE values if FUSEs are missing */
 static int thcodes[TSC_MAX_NUM][3] = {
 	{ 3397, 2800, 2221 },
@@ -101,6 +131,7 @@ struct rcar_gen3_thermal_priv {
 	struct rcar_gen3_thermal_tsc *tscs[TSC_MAX_NUM];
 	unsigned int num_tscs;
 	void (*thermal_init)(struct rcar_gen3_thermal_tsc *tsc);
+	const struct rcar_thermal_data *data;
 };
 
 static inline u32 rcar_gen3_thermal_read(struct rcar_gen3_thermal_tsc *tsc,
@@ -313,44 +344,42 @@ static void rcar_gen3_thermal_init(struct rcar_gen3_thermal_tsc *tsc)
 	usleep_range(1000, 2000);
 }
 
-static const int rcar_gen3_ths_tj_1 = 126;
-static const int rcar_gen3_ths_tj_1_m3_w = 116;
 static const struct of_device_id rcar_gen3_thermal_dt_ids[] = {
 	{
 		.compatible = "renesas,r8a774a1-thermal",
-		.data = &rcar_gen3_ths_tj_1_m3_w,
+		.data = &data_m3_w,
 	},
 	{
 		.compatible = "renesas,r8a774b1-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a774e1-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a7795-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a7796-thermal",
-		.data = &rcar_gen3_ths_tj_1_m3_w,
+		.data = &data_m3_w,
 	},
 	{
 		.compatible = "renesas,r8a77961-thermal",
-		.data = &rcar_gen3_ths_tj_1_m3_w,
+		.data = &data_m3_w,
 	},
 	{
 		.compatible = "renesas,r8a77965-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a77980-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen3,
 	},
 	{
 		.compatible = "renesas,r8a779f0-thermal",
-		.data = &rcar_gen3_ths_tj_1,
+		.data = &data_gen4,
 	},
 	{},
 };
@@ -381,7 +410,7 @@ static int rcar_gen3_thermal_request_irqs(struct rcar_gen3_thermal_priv *priv,
 	char *irqname;
 	int ret, irq;
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < priv->data->irq_num; i++) {
 		irq = platform_get_irq_optional(pdev, i);
 		if (irq < 0)
 			return irq;
@@ -405,7 +434,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 {
 	struct rcar_gen3_thermal_priv *priv;
 	struct device *dev = &pdev->dev;
-	const int *rcar_gen3_ths_tj_1_const = of_device_get_match_data(dev);
+	const struct rcar_thermal_data *of_data = NULL;
 	struct resource *res;
 	struct thermal_zone_device *zone;
 	unsigned int i;
@@ -420,6 +449,10 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
+	of_data = of_device_get_match_data(dev);
+	if (of_data)
+		priv->data = of_data;
 
 	priv->thermal_init = rcar_gen3_thermal_init;
 	if (soc_device_match(r8a7795es1))
@@ -514,7 +547,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 		}
 
 		rcar_gen3_thermal_calc_coefs(tsc, ptat, thcodes[i],
-					     *rcar_gen3_ths_tj_1_const);
+					     priv->data->rcar_ths_tj_1);
 
 		tsc->zone->tzp->no_hwmon = false;
 		ret = thermal_add_hwmon_sysfs(tsc->zone);
