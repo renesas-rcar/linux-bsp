@@ -2224,6 +2224,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		GP_3_1_FN,	GPSR3_1,
 		GP_3_0_FN,	GPSR3_0, ))
 	},
+#ifdef ENABLE_ACCESS_TO_CONTROL_DOMAIN
 	{ PINMUX_CFG_REG("GPSR4", 0xdfd90040, 32, 1, GROUP(
 		0, 0,
 		GP_4_30_FN,	GPSR4_30,
@@ -2360,6 +2361,8 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		GP_7_1_FN,	GPSR7_1,
 		GP_7_0_FN,	GPSR7_0, ))
 	},
+#endif /* ENABLE_ACCESS_TO_CONTROL_DOMAIN */
+
 #undef F_
 #undef FM
 
@@ -2405,6 +2408,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP0SR1_7_4
 		IP0SR1_3_0))
 	},
+#ifdef ENABLE_ACCESS_TO_CONTROL_DOMAIN
 	{ PINMUX_CFG_REG("IP0SR4", 0xdfd90060, 32, 4, GROUP(
 		IP0SR4_31_28
 		IP0SR4_27_24
@@ -2525,6 +2529,8 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 		IP3SR7_7_4
 		IP3SR7_3_0))
 	},
+#endif /* ENABLE_ACCESS_TO_CONTROL_DOMAIN */
+
 #undef F_
 #undef FM
 
@@ -2662,6 +2668,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(3, 17),  4, 3 },	/* TSN0_AVTP_MATCH */
 		{ RCAR_GP_PIN(3, 16),  0, 3 },	/* TSN0_AVTP_PPS */
 	} },
+#ifdef ENABLE_ACCESS_TO_CONTROL_DOMAIN
 	{ PINMUX_DRIVE_REG("DRV0CTRL4", 0xdfd90080) {
 		{ RCAR_GP_PIN(4,  7), 28, 3 },	/* GP4_07 */
 		{ RCAR_GP_PIN(4,  6), 24, 3 },	/* GP4_06 */
@@ -2799,6 +2806,7 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(7, 25),  4, 3 },	/* CAN12RX_INTP12 */
 		{ RCAR_GP_PIN(7, 24),  0, 3 },	/* CAN12TX */
 	} },
+#endif /* ENABLE_ACCESS_TO_CONTROL_DOMAIN */
 	{ },
 };
 
@@ -2819,10 +2827,12 @@ static const struct pinmux_ioctrl_reg pinmux_ioctrl_regs[] = {
 	[POC1] = { 0xe60508a0, },
 	[POC2] = { 0xe60510a0, },
 	[POC3] = { 0xe60518a0, },
+#ifdef ENABLE_ACCESS_TO_CONTROL_DOMAIN
 	[POC4] = { 0xdfd900a0, },
 	[POC5] = { 0xdfd908a0, },
 	[POC6] = { 0xdfd910a0, },
 	[POC7] = { 0xdfd918a0, },
+#endif /* ENABLE_ACCESS_TO_CONTROL_DOMAIN */
 	[TD0SEL1] = { 0xe6058120, },
 	{ /* sentinel */ },
 };
@@ -2984,6 +2994,7 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[30] = SH_PFC_PIN_NONE,
 		[31] = SH_PFC_PIN_NONE,
 	} },
+#ifdef ENABLE_ACCESS_TO_CONTROL_DOMAIN
 	{ PINMUX_BIAS_REG("PUEN4", 0xdfd900c0, "PUD4", 0xdfd900e0) {
 		[ 0] = RCAR_GP_PIN(4,  0),	/* GP4_00 */
 		[ 1] = RCAR_GP_PIN(4,  1),	/* GP4_01 */
@@ -3120,6 +3131,7 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[30] = RCAR_GP_PIN(7, 30),	/* CAN15TX */
 		[31] = RCAR_GP_PIN(7, 31),	/* CAN15RX_INTP15 */
 	} },
+#endif /* ENABLE_ACCESS_TO_CONTROL_DOMAIN */
 	{ /* sentinel */ },
 };
 
