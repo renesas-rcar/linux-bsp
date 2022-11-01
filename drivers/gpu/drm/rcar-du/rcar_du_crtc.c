@@ -31,10 +31,67 @@
 #include "rcar_du_regs.h"
 #include "rcar_du_vsp.h"
 #include "rcar_lvds.h"
+#include "rcar_mipi_dsi.h"
+#include "rcar_dsc.h"
+
+static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
+{
+	struct rcar_du_device *rcdu = rcrtc->dev;
+	struct rcar_du_group *rgrp = rcrtc->group;
+
+	/* ESCR register access check */
+	if (reg == ESCR02 || reg == ESCR13) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
+			if (rgrp->index == 0 && reg == ESCR13)
+				return false;
+			else if (rgrp->index == 1 && reg == ESCR02)
+				return false;
+			else
+				return true;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS)) {
+			if (rgrp->index == 0 && reg == ESCR13)
+				return false;
+			else
+				return true;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) ||
+			rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
+			return false;
+	}
+
+	/* OTAR register access check */
+	if (reg == OTAR02 || reg == OTAR13) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
+			if (rgrp->index == 1 && reg == OTAR13)
+				return true;
+			else
+				return false;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS)) {
+			if (rgrp->index == 1 && reg == OTAR02)
+				return true;
+			else
+				return false;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) ||
+			rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
+			return false;
+	}
+
+	return true;
+}
 
 static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 {
 	struct rcar_du_device *rcdu = rcrtc->dev;
+
+	if (!rcar_du_register_access_check(rcrtc, reg)) {
+		dev_warn(rcdu->dev, "reserved register was read\n");
+		return 0;
+	}
 
 	return rcar_du_read(rcdu, rcrtc->mmio_offset + reg);
 }
@@ -42,6 +99,9 @@ static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 static void rcar_du_crtc_write(struct rcar_du_crtc *rcrtc, u32 reg, u32 data)
 {
 	struct rcar_du_device *rcdu = rcrtc->dev;
+
+	if (!rcar_du_register_access_check(rcrtc, reg))
+		return;
 
 	rcar_du_write(rcdu, rcrtc->mmio_offset + reg, data);
 }
@@ -91,6 +151,10 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 	unsigned int fdpll;
 	unsigned int m;
 	unsigned int n;
+	bool clk_high = false;
+
+	if (target > 148500000)
+		clk_high = true;
 
 	/*
 	 *   fin                                 fvco        fout       fclkout
@@ -141,6 +205,9 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 
 				output = fout / (fdpll + 1);
 				if (output >= 400 * 1000 * 1000)
+					continue;
+
+				if (clk_high && output < target)
 					continue;
 
 				diff = abs((long)output - (long)target);
@@ -252,12 +319,15 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		       | DPLLCR_N(dpll.n) | DPLLCR_M(dpll.m)
 		       | DPLLCR_STBY;
 
-		if (rcrtc->index == 1)
+		if (rcrtc->index == 1) {
 			dpllcr |= DPLLCR_PLCS1
 			       |  DPLLCR_INCS_DOTCLKIN1;
-		else
+		} else {
 			dpllcr |= DPLLCR_PLCS0
 			       |  DPLLCR_INCS_DOTCLKIN0;
+			if (soc_device_match(rcar_du_r8a7795_es1))
+				dpllcr |= DPLLCR_PLCS0_H3ES1X_WA;
+		}
 
 		rcar_du_group_write(rcrtc->group, DPLLCR, dpllcr);
 
@@ -548,6 +618,7 @@ static void rcar_du_crtc_setup(struct rcar_du_crtc *rcrtc)
 
 static int rcar_du_crtc_get(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->dev;
 	int ret;
 
 	/*
@@ -556,6 +627,24 @@ static int rcar_du_crtc_get(struct rcar_du_crtc *rcrtc)
 	 */
 	if (rcrtc->initialized)
 		return 0;
+
+	/*
+	 * The dot clock is provided by the MIPI DSI encoder which is attached
+	 * to DU. So, the MIPI DSI module should be enable before starting DU.
+	 */
+	if (rcdu->info->mipi_dsi_clk_mask) {
+		struct drm_bridge *bridge = rcdu->mipi_dsi[rcrtc->index];
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS) &&
+			rcrtc->index == 1)
+		{
+			struct rcar_dsc *dsc = bridge->driver_private;
+			rcar_mipi_dsi_clk_enable(dsc->next_bridge);
+		}
+		else
+		{
+			rcar_mipi_dsi_clk_enable(bridge);
+		}
+	}
 
 	ret = clk_prepare_enable(rcrtc->clock);
 	if (ret < 0)
@@ -583,10 +672,26 @@ error_clock:
 
 static void rcar_du_crtc_put(struct rcar_du_crtc *rcrtc)
 {
+	struct rcar_du_device *rcdu = rcrtc->dev;
+
 	rcar_du_group_put(rcrtc->group);
 
 	clk_disable_unprepare(rcrtc->extclock);
 	clk_disable_unprepare(rcrtc->clock);
+
+	if (rcdu->info->mipi_dsi_clk_mask) {
+		struct drm_bridge *bridge = rcdu->mipi_dsi[rcrtc->index];
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS) &&
+			rcrtc->index == 1)
+		{
+			struct rcar_dsc *dsc = bridge->driver_private;
+			rcar_mipi_dsi_clk_disable(dsc->next_bridge);
+		}
+		else
+		{
+			rcar_mipi_dsi_clk_disable(bridge);
+		}
+	}
 
 	rcrtc->initialized = false;
 }
@@ -1133,7 +1238,7 @@ static const struct drm_crtc_funcs crtc_funcs_gen2 = {
 	.disable_vblank = rcar_du_crtc_disable_vblank,
 };
 
-static const struct drm_crtc_funcs crtc_funcs_gen3 = {
+static const struct drm_crtc_funcs crtc_funcs_gen3_4 = {
 	.reset = rcar_du_crtc_reset,
 	.destroy = rcar_du_crtc_cleanup,
 	.set_config = drm_atomic_helper_set_config,
@@ -1252,15 +1357,25 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int swindex,
 	rcrtc->mmio_offset = mmio_offsets[hwindex];
 	rcrtc->index = hwindex;
 	rcrtc->dsysr = (rcrtc->index % 2 ? 0 : DSYSR_DRES) | DSYSR_TVM_TVSYNC;
+	/* In V3U, the bit TVM and SCM are always set to 0 */
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) ||
+		rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
+		rcrtc->dsysr = rcrtc->dsysr &
+				~(DSYSR_SCM_MASK | DSYSR_TVM_MASK);
 
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
+		/* If the BRS number of VSPDL is 0, skip CRTC initialization */
+		if (rcdu->vspdl_fix && rcrtc->vsp_pipe == 1 &&
+		    rcdu->brs_num == 0)
+			return 0;
 		primary = &rcrtc->vsp->planes[rcrtc->vsp_pipe].plane;
-	else
+	} else {
 		primary = &rgrp->planes[swindex % 2].plane;
+	}
 
 	ret = drm_crtc_init_with_planes(rcdu->ddev, crtc, primary, NULL,
 					rcdu->info->gen <= 2 ?
-					&crtc_funcs_gen2 : &crtc_funcs_gen3,
+					&crtc_funcs_gen2 : &crtc_funcs_gen3_4,
 					NULL);
 	if (ret < 0)
 		return ret;
