@@ -27,6 +27,9 @@
 #include "rcar_mipi_dsi.h"
 #include "rcar_mipi_dsi_regs.h"
 
+#define RCAR_DSI_R8A779A0_REGS	BIT(0)
+#define RCAR_DSI_R8A779G0_REGS	BIT(1)
+
 /* Clock setting definition */
 #define DSI_CLOCK_SETTING(mi, ma, vco, di, cpb, gmp, intc, pro, divi) \
 	.min_freq = (mi), \
@@ -170,6 +173,7 @@ struct rcar_mipi_dsi_info {
 	int (*post_init_phtw)(struct rcar_mipi_dsi *mipi_dsi);
 	const struct rcar_mipi_dsi_hsfeq *hsfeqrange_values;
 	const struct clockset_values *clkset_values;
+	unsigned int features;
 	u8 m_offset;
 	u8 n_offset;
 	u8 freq_mul;
@@ -630,8 +634,13 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 		dev_warn(mipi_dsi->dev, "unsupported format");
 		return -EINVAL;
 	}
-	vclkset |= VCLKSET_COLOR_RGB | VCLKSET_DIV(setup_info.clk_setting.div) |
+	vclkset |= VCLKSET_COLOR_RGB |
 			VCLKSET_LANE(mipi_dsi->lanes - 1);
+
+	if (mipi_dsi->info->features == RCAR_DSI_R8A779A0_REGS)
+		vclkset |= VCLKSET_DIV_2BIT(setup_info.clk_setting.div);
+	else
+		vclkset |= VCLKSET_DIV_3BIT(setup_info.clk_setting.div);
 
 	rcar_mipi_dsi_set(mipi_dsi, VCLKSET, vclkset);
 
@@ -1068,6 +1077,7 @@ static const struct rcar_mipi_dsi_info rcar_mipi_dsi_info_r8a779a0 = {
 	.post_init_phtw = rcar_mipi_dsi_post_init_phtw_v3u,
 	.hsfeqrange_values = hsfreqrange_table_r8a779g0_r8a779a0,
 	.clkset_values = clockset_setting_table_r8a779a0,
+	.features = RCAR_DSI_R8A779A0_REGS,
 	.m_offset = 2,
 	.n_offset = 1,
 	.freq_mul = 1,
@@ -1078,6 +1088,7 @@ static const struct rcar_mipi_dsi_info rcar_mipi_dsi_info_r8a779g0 = {
 	.post_init_phtw = rcar_mipi_dsi_post_init_phtw_v4h,
 	.hsfeqrange_values = hsfreqrange_table_r8a779g0_r8a779a0,
 	.clkset_values = clockset_setting_table_r8a779g0,
+	.features = RCAR_DSI_R8A779G0_REGS,
 	.m_offset = 0,
 	.n_offset = 1,
 	.freq_mul = 2,
