@@ -1316,6 +1316,7 @@ int __read_mostly		node_reclaim_distance = RECLAIM_DISTANCE;
 	(SD_SHARE_CPUCAPACITY	|	\
 	 SD_SHARE_PKG_RESOURCES |	\
 	 SD_NUMA		|	\
+	 SD_ASYM_CPUCAPACITY	|	\
 	 SD_ASYM_PACKING)
 
 static struct sched_domain *
