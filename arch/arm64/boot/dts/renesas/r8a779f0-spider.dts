@@ -1,0 +1,168 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the Spider CPU and Breakout boards
+ *
+ * Copyright (C) 2021 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a779f0-spider-cpu.dtsi"
+#include "r8a779f0-spider-ethernet.dtsi"
+
+/ {
+	model = "Renesas Spider CPU and Breakout boards based on r8a779f0";
+	compatible = "renesas,spider-breakout", "renesas,spider-cpu", "renesas,r8a779f0";
+
+	aliases {
+		eth0 = &rswitch;
+		};
+};
+
+&i2c4 {
+	eeprom@51 {
+		compatible = "rohm,br24g01", "atmel,24c01";
+		label = "breakout-board";
+		reg = <0x51>;
+		pagesize = <8>;
+	};
+};
+
+&pfc {
+	tsn0_pins: tsn0 {
+		mux {
+			groups = "tsn0_link", "tsn0_mdio";
+			function = "tsn0";
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+
+		pins_mdio {
+			groups = "tsn0_mdio";
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+	};
+
+	tsn1_pins: tsn1 {
+		mux {
+			groups = "tsn1_link", "tsn1_mdio";
+			function = "tsn1";
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+
+		pins_mdio {
+			groups = "tsn1_mdio";
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+	};
+
+	tsn2_pins: tsn2 {
+		mux {
+			groups = "tsn2_link", "tsn2_mdio";
+			function = "tsn2";
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+
+		pins_mdio {
+			groups = "tsn2_mdio";
+			drive-strength = <18>;
+			power-source = <1800>;
+		};
+	};
+
+	pcie0_pins: pcie0 {
+		groups = "pcie0_clkreq_n";
+		function = "pcie";
+	};
+
+	pcie1_pins: pcie1 {
+		groups = "pcie1_clkreq_n";
+		function = "pcie";
+	};
+
+	taud0_pwm_pins: taud0_pwm {
+		groups = "taud0_pwm1", "taud0_pwm2";
+		function = "taud0_pwm";
+	};
+};
+
+&rswitch {
+	status = "okay";
+	pinctrl-0 = <&tsn0_pins &tsn1_pins &tsn2_pins>;
+	pinctrl-names = "default";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			phy-handle = <&etha0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			etha0: ethernet-phy@0 {
+				reg = <1>;
+				compatible = "ethernet-phy-ieee802.3-c45";
+			};
+		};
+		port@1 {
+			reg = <1>;
+			phy-handle = <&etha1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			etha1: ethernet-phy@1 {
+				reg = <2>;
+				compatible = "ethernet-phy-ieee802.3-c45";
+			};
+		};
+		port@2 {
+			reg = <2>;
+			phy-handle = <&etha2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			etha2: ethernet-phy@2 {
+				reg = <3>;
+				compatible = "ethernet-phy-ieee802.3-c45";
+			};
+		};
+	};
+};
+
+&pcie_bus_clk {
+	clock-frequency = <100000000>;
+};
+
+&pciec0 {
+	status = "okay";
+	pinctrl-0 = <&pcie0_pins>;
+	pinctrl-names = "default";
+};
+
+&pciec0_ep {
+	status = "disabled";
+	pinctrl-0 = <&pcie0_pins>;
+	pinctrl-names = "default";
+};
+
+&pciec1 {
+	status = "disabled";
+	pinctrl-0 = <&pcie1_pins>;
+	pinctrl-names = "default";
+};
+
+&pciec1_ep {
+	status = "disabled";
+	pinctrl-0 = <&pcie1_pins>;
+	pinctrl-names = "default";
+};
+
+&tau_pwm0 {
+	pinctrl-0 = <&taud0_pwm_pins>;
+	pinctrl-names = "default";
+
+	status = "disable";
+};
