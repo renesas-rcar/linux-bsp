@@ -61,6 +61,8 @@
 
 #define SDHI_GEN3_MMC0_ADDR	0xee140000
 
+// #define SDHI_R8A779G0_ENABLE_MANUAL_TAP (1)
+
 static void renesas_sdhi_sdbuf_width(struct tmio_mmc_host *host, int width)
 {
 	u32 val;
@@ -940,6 +942,12 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a77990 = {
 	.hs400_calib_reg = true,
 };
 
+#ifdef SDHI_R8A779G0_ENABLE_MANUAL_TAP
+static const struct renesas_sdhi_quirks sdhi_quirks_manual_tap = {
+	.hs400_ignore_dat = true,
+};
+#endif /* SDHI_R8A779G0_ENABLE_MANUAL_TAP */
+
 /*
  * Note for r8a7796 / r8a774a1: we can't distinguish ES1.1 and 1.2 as of now.
  * So, we want to treat them equally and only have a match for ES1.2 to enforce
@@ -957,6 +965,9 @@ static const struct soc_device_attribute sdhi_quirks_match[]  = {
 	{ .soc_id = "r8a77980", .revision = "ES1.*", .data = &sdhi_quirks_nohs400 },
 	{ .soc_id = "r8a77990", .data = &sdhi_quirks_r8a77990 },
 	{ .soc_id = "r8a77995", .data = &sdhi_quirks_nohs400 },
+#ifdef SDHI_R8A779G0_ENABLE_MANUAL_TAP
+	{ .soc_id = "r8a779g0", .data = &sdhi_quirks_manual_tap },
+#endif /* SDHI_R8A779G0_ENABLE_MANUAL_TAP */
 	{ /* Sentinel. */ },
 };
 
