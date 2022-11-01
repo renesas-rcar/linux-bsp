@@ -46,7 +46,14 @@ properties:
               - renesas,gpio-r8a77980     # R-Car V3H
               - renesas,gpio-r8a77990     # R-Car E3
               - renesas,gpio-r8a77995     # R-Car D3
+              - renesas,gpio-r8a779a0     # R-Car V3U
           - const: renesas,rcar-gen3-gpio # R-Car Gen3 or RZ/G2
+
+      - items:
+          - enum:
+              - renesas,gpio-r8a779f0     # R-Car S4
+              - renesas,gpio-r8a779g0     # R-Car V4H
+          - const: renesas,rcar-gen4-gpio # R-Car Gen4
 
   reg:
     maxItems: 1
