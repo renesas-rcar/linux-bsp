@@ -9,14 +9,16 @@
 
 #include <linux/ptp_clock_kernel.h>
 
-#define PTPTIVC_INIT	0x19000000	/* 320MHz */
+#define PTPTIVC_INIT_200MHZ	0x28000000	/* 200MHz */
+#define PTPTIVC_INIT_320MHZ	0x19000000	/* 320MHz */
 
 /* for rcar_gen4_ptp_init */
 enum rcar_gen4_ptp_reg_layout {
 	RCAR_GEN4_PTP_REG_LAYOUT,
 };
 
-#define RCAR_GEN4_PTP_CLOCK	PTPTIVC_INIT
+#define RCAR_GEN4_PTP_CLOCK_S4		PTPTIVC_INIT_320MHZ
+#define RCAR_GEN4_PTP_CLOCK_V4H		PTPTIVC_INIT_200MHZ
 
 /* driver's definitions */
 #define RCAR_GEN4_RXTSTAMP_ENABLED		BIT(0)

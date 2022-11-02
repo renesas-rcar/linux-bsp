@@ -1959,7 +1959,7 @@ static int rswitch_open(struct net_device *ndev)
 	rswitch_enadis_data_irq(rdev->priv, rdev->tx_chain->index, true);
 	rswitch_enadis_data_irq(rdev->priv, rdev->rx_chain->index, true);
 
-	rcar_gen4_ptp_init(rdev->priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK);
+	rcar_gen4_ptp_init(rdev->priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK_S4);
 
 out:
 	return err;

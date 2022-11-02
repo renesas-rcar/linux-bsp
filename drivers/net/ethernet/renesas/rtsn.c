@@ -936,7 +936,7 @@ static int rtsn_open(struct net_device *ndev)
 
 	netif_start_queue(ndev);
 
-	rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK);
+	rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK_V4H);
 
 	return 0;
 
