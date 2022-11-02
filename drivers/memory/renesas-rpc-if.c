@@ -152,6 +152,11 @@
 
 #define RPCIF_DIRMAP_SIZE	0x4000000
 
+// #define RPCIF_ENABLE_MANUAL_PHY_STROBE_TIMING (1)
+#ifdef RPCIF_ENABLE_MANUAL_PHY_STROBE_TIMING
+#define RPCIF_PHYCTL_STRTIM_VAL	(7)
+#endif /* RPCIF_ENABLE_MANUAL_PHY_STROBE_TIMING */
+
 static const struct regmap_range rpcif_volatile_ranges[] = {
 	regmap_reg_range(RPCIF_SMRDR0, RPCIF_SMRDR1),
 	regmap_reg_range(RPCIF_SMWDR0, RPCIF_SMWDR1),
@@ -270,7 +275,11 @@ static const struct rpcif_info rpcif_info_gen3 = {
 
 static const struct rpcif_info rpcif_info_gen4 = {
 	.type = RPCIF_RCAR_GEN4,
+#ifdef RPCIF_ENABLE_MANUAL_PHY_STROBE_TIMING
+	.strtim = RPCIF_PHYCTL_STRTIM_VAL,
+#else	/* RPCIF_ENABLE_MANUAL_PHY_STROBE_TIMING */
 	.strtim = 15,
+#endif	/* RPCIF_ENABLE_MANUAL_PHY_STROBE_TIMING */
 };
 
 static const struct soc_device_attribute rpcif_quirks_match[]  = {
@@ -494,8 +503,13 @@ int rpcif_manual_xfer(struct rpcif *rpc)
 
 	pm_runtime_get_sync(rpc->dev);
 
+#ifdef	RPCIF_ENABLE_MANUAL_TAP
+	regmap_update_bits(rpc->regmap, RPCIF_PHYCNT,
+			   RPCIF_PHYCNT_STRTIM(15), RPCIF_PHYCNT_STRTIM(rpc->strtim));
+#else	/* RPCIF_ENABLE_MANUAL_TAP */
 	regmap_update_bits(rpc->regmap, RPCIF_PHYCNT,
 			   RPCIF_PHYCNT_CAL, RPCIF_PHYCNT_CAL);
+#endif	/* RPCIF_ENABLE_MANUAL_TAP */
 	regmap_update_bits(rpc->regmap, RPCIF_CMNCR,
 			   RPCIF_CMNCR_MD, RPCIF_CMNCR_MD);
 	regmap_write(rpc->regmap, RPCIF_SMCMR, rpc->command);
