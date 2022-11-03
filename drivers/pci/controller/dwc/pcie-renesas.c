@@ -32,6 +32,9 @@
 #define	PCI_EXP_LNKCAP_MLW_X2	BIT(5)
 #define	PCI_EXP_LNKCAP_MLW_X4	BIT(6)
 
+/* Link Status & Link Control */
+#define	EXPCAP4			0x0080
+
 /* ASPM L1 PM Substates */
 #define L1PSCAP(x)		(0x01BC + (x))
 
@@ -87,6 +90,8 @@
 
 #define DWC_VERSION		0x520A
 
+#define	MAX_RETRIES		10
+
 #define to_renesas_pcie(x)	dev_get_drvdata((x)->dev)
 
 struct renesas_pcie {
@@ -125,6 +130,25 @@ static void renesas_pcie_ltssm_enable(struct renesas_pcie *pcie,
 	renesas_pcie_writel(pcie, PCIERSTCTRL1, val);
 }
 
+static void renesas_pcie_retrain_link(struct dw_pcie *pci)
+{
+	u32 val, lnksta, retries;
+
+	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCTL));
+	val |= PCI_EXP_LNKCTL_RL;
+	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCTL), val);
+
+	/* Wait for link retrain */
+	for (retries = 0; retries <= MAX_RETRIES; retries++) {
+		val = dw_pcie_readl_dbi(pci, EXPCAP4);
+		lnksta = (val >> 16);
+
+		/* Stop retraining link if current link speed achieved 16GB/s */
+		if ((lnksta & PCI_EXP_LNKSTA_CLS) == PCI_EXP_LNKSTA_CLS_16_0GB)
+			break;
+	}
+}
+
 static int renesas_pcie_link_up(struct dw_pcie *pci)
 {
 	struct renesas_pcie *pcie = to_renesas_pcie(pci);
@@ -132,6 +156,8 @@ static int renesas_pcie_link_up(struct dw_pcie *pci)
 
 	val = renesas_pcie_readl(pcie, PCIEINTSTS0);
 	mask = RDLH_LINK_UP | SMLH_LINK_UP;
+
+	renesas_pcie_retrain_link(pci);
 
 	return (val & mask) == mask;
 }
