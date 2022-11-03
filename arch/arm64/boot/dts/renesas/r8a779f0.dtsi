@@ -864,6 +864,7 @@
 		prr: chipid@fff00044 {
 			compatible = "renesas,prr";
 			reg = <0 0xfff00044 0 4>;
+			status = "disabled";
 		};
 
 		rt_dmac0: dma-controller@ffd60000 {
@@ -1053,6 +1054,7 @@
                 qos@e67e0000 {
                         compatible = "renesas,qos";
                         reg = <0 0xe67e0000 0 0x10090>;
+			status = "disabled";
                 };
 
 		pciec0: pcie@e65d0000 {
