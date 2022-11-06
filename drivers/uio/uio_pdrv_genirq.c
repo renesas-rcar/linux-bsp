@@ -43,6 +43,7 @@ struct uio_pdrv_genirq_platdata {
 	struct reset_control *rst;
 	int pwr_cnt;
 	int clk_cnt;
+	bool pd;
 };
 
 static int local_pm_runtime_get_sync(struct uio_pdrv_genirq_platdata *priv);
@@ -154,6 +155,11 @@ static int priv_set_pwr(struct uio_info *info, int value)
 	int ret = 0;
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
+	if (priv->pd) {
+		dev_err(&priv->pdev->dev, "device has not power-domains to set\n");
+		return -EOPNOTSUPP;
+	}
+
 	if (((value == 0) && priv->pwr_cnt > 0) || ((value != 0)
 		    && priv->pwr_cnt == 0)) {
 		if (value == 0)
@@ -175,6 +181,11 @@ static int priv_get_pwr(struct uio_info *info)
 {
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
+	if (priv->pd) {
+		dev_err(&priv->pdev->dev, "device has not power-domains to get\n");
+		return -EOPNOTSUPP;
+	}
+
 	dev_dbg(&priv->pdev->dev, "Get power state pwr_cnt=%d, clk_cnt=%d\n",
 		priv->pwr_cnt, priv->clk_cnt);
 
@@ -190,6 +201,11 @@ static int priv_set_clk(struct uio_info *info, int value)
 {
 	int ret = 0;
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
+
+	if (!priv->clk) {
+		dev_err(&priv->pdev->dev, "device has not clk to set\n");
+		return -EOPNOTSUPP;
+	}
 
 	if (value == 0)
 		local_clk_disable(priv);
@@ -209,6 +225,11 @@ static int priv_set_clk(struct uio_info *info, int value)
 static int priv_get_clk(struct uio_info *info)
 {
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
+
+	if (!priv->clk) {
+		dev_err(&priv->pdev->dev, "device has not clk to get\n");
+		return -EOPNOTSUPP;
+	}
 
 	dev_dbg(&priv->pdev->dev, "Get clock state - clk_cnt=%d\n",
 		priv->clk_cnt);
@@ -268,6 +289,11 @@ static int priv_set_rst(struct uio_info *info, int value)
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 	int status, ret;
 
+	if (!priv->rst) {
+		dev_err(&priv->pdev->dev, "device has not reset to set\n");
+		return -EOPNOTSUPP;
+	}
+
 	status = reset_control_status(priv->rst);
 
 	switch (value) {
@@ -294,8 +320,10 @@ static int priv_get_rst(struct uio_info *info)
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 	int status;
 
-	if (!priv->rst)
+	if (!priv->rst) {
+		dev_err(&priv->pdev->dev, "device has not reset to get\n");
 		return -EOPNOTSUPP;
+	}
 
 	status = reset_control_status(priv->rst);
 	dev_dbg(&priv->pdev->dev, "Get reset state 0x%x\n", status);
@@ -535,6 +563,14 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 	 * hardware and enable clocks at open().
 	 */
 	pm_runtime_enable(&pdev->dev);
+
+	if (!of_property_read_bool(node, "power-domains")) {
+		dev_dbg(&pdev->dev, "device has not power-domains property\n");
+		pm_runtime_get_sync(&pdev->dev);
+		pm_runtime_put_sync(&pdev->dev);
+		pm_runtime_disable(&pdev->dev);
+		priv->pd = 1;
+        }
 
 	ret = devm_add_action_or_reset(&pdev->dev, uio_pdrv_genirq_cleanup,
 				       &pdev->dev);
