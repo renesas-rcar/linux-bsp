@@ -25,6 +25,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
+#include <linux/of_gpio.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
@@ -2052,6 +2053,28 @@ static void ravb_set_delay_mode(struct net_device *ndev)
 	ravb_modify(ndev, APSR, APSR_DM, set);
 }
 
+static int ravb_reset_phy(struct net_device *ndev, struct platform_device *pdev)
+{
+	struct gpio_desc *gpiod;
+	int error;
+
+	gpiod = devm_gpiod_get_index(&pdev->dev, "phy-reset", 0, GPIOD_OUT_LOW);
+	if (IS_ERR(gpiod)) {
+		error = PTR_ERR(gpiod);
+		if (error != -ENOENT) {
+			dev_err(&pdev->dev, "ravb couldn't get GPIO phy reset\n");
+			return error;
+		}
+	} else {
+		gpiod_set_value_cansleep(gpiod, 1);
+		mdelay(4);
+		gpiod_set_value_cansleep(gpiod, 0);
+		devm_gpiod_put(&pdev->dev, gpiod);
+	}
+
+	return 0;
+}
+
 static int ravb_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -2228,6 +2251,13 @@ static int ravb_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev,
 			 "no valid MAC address supplied, using a random one\n");
 		eth_hw_addr_random(ndev);
+	}
+
+	/* De-assert PHY GPIO resets */
+	if (soc_device_match(r8a779g0)) {
+		error = ravb_reset_phy(ndev, pdev);
+		if (error)
+			goto out_release;
 	}
 
 	/* MDIO bus init */
