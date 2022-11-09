@@ -1697,7 +1697,7 @@ static int rswitch_etha_set_access(struct rswitch_etha *etha, bool read,
 		return ret;
 
 	/* Clear address completion flag */
-	rswitch_modify(etha, MMIS1, MMIS1_PAACS, MMIS1_PAACS);
+	rswitch_etha_modify(etha, MMIS1, MMIS1_PAACS, MMIS1_PAACS);
 
 	/* Read/Write PHY register */
 	if (read) {
