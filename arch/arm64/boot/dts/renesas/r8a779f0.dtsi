@@ -1104,7 +1104,7 @@
 			resets = <&cpg 624>;
 			num-lanes = <2>;
 			snps,enable-cdm-check = "true";
-			max-link-speed = <2>;
+			max-link-speed = <4>;
 			status = "disabled";
 		};
 
@@ -1134,7 +1134,7 @@
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 624>;
 			num-lanes = <2>;
-			max-link-speed = <2>;
+			max-link-speed = <4>;
 			num-ib-windows = <16>;
 			num-ob-windows = <16>;
 			status = "disabled";
@@ -1187,7 +1187,7 @@
 			resets = <&cpg 625>;
 			num-lanes = <2>;
 			snps,enable-cdm-check = "true";
-			max-link-speed = <2>;
+			max-link-speed = <4>;
 			status = "disabled";
 		};
 
@@ -1217,7 +1217,7 @@
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 625>;
 			num-lanes = <2>;
-			max-link-speed = <2>;
+			max-link-speed = <4>;
 			num-ib-windows = <16>;
 			num-ob-windows = <16>;
 			status = "disabled";
