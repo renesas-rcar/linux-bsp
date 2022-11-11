@@ -115,6 +115,8 @@ static const struct cpg_core_clk r8a779f0_core_clks[] __initconst = {
 
 	DEF_GEN4_SD("sd0",	R8A779F0_CLK_SD0,	CLK_SDSRC,	0x870),
 	DEF_DIV6P1("mso",       R8A779F0_CLK_MSO,       CLK_PLL5_DIV4, 0x087C),
+	DEF_DIV6P1("post",      R8A779F0_CLK_POST,   	CLK_PLL5_DIV4, 0x890),
+	DEF_DIV6P1("post2",     R8A779F0_CLK_POST2,  	CLK_PLL5_DIV4, 0x894),
 
 	DEF_GEN4_OSC("osc",	R8A779F0_CLK_OSC,	CLK_EXTAL,	8),
 	DEF_GEN4_MDSEL("r",	R8A779F0_CLK_R, 29, CLK_EXTALR, 1, CLK_OCO, 1),
