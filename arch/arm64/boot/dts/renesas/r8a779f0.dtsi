@@ -2523,6 +2523,113 @@
 			linux,uio-name = "rcarbusmoni_01";
 		};
 
+		fbc0: fbc@ff830000 {
+			compatible = "renesas,uio-fbc";
+			reg = <0 0xff830000 0 0x2000>;
+			clocks = <&cpg CPG_CORE R8A779F0_CLK_POST>,
+				 <&cpg CPG_CORE R8A779F0_CLK_POST2>;
+			clock-names = "fbc_post", "fbc_post2";
+			interrupts = <GIC_SPI 740 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "fbc_00";
+		};
+
+		fba_ca55d0: fba@ff870000 {
+			compatible = "generic-uio";
+			reg = <0 0xff870000 0 0x1000>;
+			interrupts = <GIC_SPI 621 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "fba_ca55d0";
+		};
+
+		post_fba_ca55d0 {
+			compatible = "generic-uio";
+			reg = <0 0xff870000 0 0x1000>;
+			clocks = <&cpg CPG_CORE R8A779F0_CLK_POST2>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "post_fba_ca55d1";
+		};
+
+		fba_ca55d1: fba@ff871000 {
+			compatible = "generic-uio";
+			reg = <0 0xff871000 0 0x1000>;
+			interrupts = <GIC_SPI 624 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "fba_ca55d1";
+		};
+
+		post_fba_ca55d1 {
+			compatible = "generic-uio";
+			reg = <0 0xff871000 0 0x1000>;
+			clocks = <&cpg CPG_CORE R8A779F0_CLK_POST2>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "post_fba_ca55d1";
+		};
+
+		fba_ca550: fba@ff872000 {
+			compatible = "generic-uio";
+			reg = <0 0xff872000 0 0x1000>;
+			interrupts = <GIC_SPI 622 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "fba_ca550";
+		};
+
+		post_fba_ca550 {
+			compatible = "generic-uio";
+			reg = <0 0xff872000 0 0x1000>;
+			clocks = <&cpg CPG_CORE R8A779F0_CLK_POST2>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "post_fba_ca550";
+		};
+
+		fba_ca551: fba@ff873000 {
+			compatible = "generic-uio";
+			reg = <0 0xff873000 0 0x1000>;
+			interrupts = <GIC_SPI 623 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "fba_ca551";
+		};
+
+		post_fba_ca551 {
+			compatible = "generic-uio";
+			reg = <0 0xff873000 0 0x1000>;
+			clocks = <&cpg CPG_CORE R8A779F0_CLK_POST2>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "post_fba_ca551";
+		};
+
+		fba_ca552: fba@ff874000 {
+			compatible = "generic-uio";
+			reg = <0 0xff874000 0 0x1000>;
+			interrupts = <GIC_SPI 625 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "fba_ca552";
+		};
+
+		post_fba_ca552 {
+			compatible = "generic-uio";
+			reg = <0 0xff874000 0 0x1000>;
+			clocks = <&cpg CPG_CORE R8A779F0_CLK_POST2>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "post_fba_ca552";
+		};
+
+		fba_ca553: fba@ff875000 {
+			compatible = "generic-uio";
+			reg = <0 0xff875000 0 0x1000>;
+			interrupts = <GIC_SPI 626 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "fba_ca553";
+		};
+
+		post_fba_ca553 {
+			compatible = "generic-uio";
+			reg = <0 0xff875000 0 0x1000>;
+			clocks = <&cpg CPG_CORE R8A779F0_CLK_POST2>;
+			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
+			linux,uio-name = "post_fba_ca553";
+		};
+
 		ufs: scsi@e6860000 {
 			compatible = "renesas,r8a779f0-ufs";
 			reg = <0 0xe6860000 0 0x100>;
