@@ -24,31 +24,57 @@
 #include "../../pci.h"
 #include "pcie-designware.h"
 
+/* PCI Express capability */
+#define	EXPCAP(x)               (0x0070 + (x))
+
 /* Configuration */
 #define PCICONF3		0x000C
-#define  MULTI_FUNC		BIT(23)
+#define	MULTI_FUNC		BIT(23)
 #define EXPCAP3			0x007C
-#define  MLW_X1			BIT(4)
-#define  MLW_X2			BIT(5)
-#define  MLW_X4			BIT(6)
+#define	LNKCAP_CLKPM		BIT(18)
+#define	MLW_X1			BIT(4)
+#define	MLW_X2			BIT(5)
+#define	MLW_X4			BIT(6)
 #define EXPCAP12		0x00A0
 
 /* Renesas-specific */
 #define PCIEMSR0		0x0000
-#define  BIFUR_MOD_SET_ON	(0x1 << 0)
-#define  DEVICE_TYPE_EP		(0x0 << 2)
+#define	BIFUR_MOD_SET_ON	(0x1 << 0)
+#define	DEVICE_TYPE_EP		(0x0 << 2)
+#define	APP_SRIS_MODE		BIT(6)
 
 #define PCIERSTCTRL1		0x0014
-#define  APP_HOLD_PHY_RST	BIT(16)
-#define  APP_LTSSM_ENABLE	BIT(0)
+#define	APP_HOLD_PHY_RST	BIT(16)
+#define	APP_LTSSM_ENABLE	BIT(0)
+
+#define	PCIELTRMSGCTRL1		0x0054
+#define	LTR_EN			BIT(31)
 
 #define PCIEINTSTS0		0x0084
-#define  SMLH_LINK_UP		BIT(7)
-#define  RDLH_LINK_UP		BIT(6)
+#define	SMLH_LINK_UP		BIT(7)
+#define RDLH_LINK_UP		BIT(6)
+
+#define	PCIEERRSTS0EN		0x030C
+#define	CFG_SYS_ERR_RC		GENMASK(10, 9)
+#define	CFG_SAFETY_UNCORR_CORR	GENMASK(5, 4)
+
+/* Power Management */
+#define PCIEPWRMNGCTRL		0x0070
+#define CLK_REG			BIT(11)
+#define CLK_PM			BIT(10)
+#define READY_ENTR		GENMASK(6, 5)
+
+/* Error Status Clear */
+#define PCIEERRSTS0CLR		0x033C
+#define PCIEERRSTS1CLR		0x035C
+#define PCIEERRSTS2CLR		0x0360
+#define ERRSTS0_EN		GENMASK(10, 6)
+#define ERRSTS1_EN		GENMASK(29, 0)
+#define	ERRSTS2_EN		GENMASK(5, 0)
 
 /* PORT LOGIC */
-#define PRTLGC5			0x0714
-#define INSERT_LANE_SKEW	BIT(6)
+#define PRTLGC2			0x708
+#define DO_DESKEW_FOR_SRIS	BIT(23)
 
 /* Shadow regs */
 #define BAR0MASKF0		0x10
@@ -228,11 +254,46 @@ static void renesas_pcie_init_ep(struct renesas_pcie_ep *pcie)
 
 	/* Device type selection - Endpoint */
 	val = renesas_pcie_readl(pcie, PCIEMSR0);
-	val |= DEVICE_TYPE_EP;
+	if (pcie->num_lanes == 2)
+		val |= DEVICE_TYPE_EP | BIFUR_MOD_SET_ON;
+	else
+		val |= DEVICE_TYPE_EP;
 	renesas_pcie_writel(pcie, PCIEMSR0, val);
+
+	/* Enable SRIS mode */
+	val = renesas_pcie_readl(pcie, PCIEMSR0);
+	val |= APP_SRIS_MODE;
+	renesas_pcie_writel(pcie, PCIEMSR0, val);
+
+	/* Power Management */
+	val = renesas_pcie_readl(pcie, PCIEPWRMNGCTRL);
+	val |= CLK_REG | CLK_PM | READY_ENTR;
+	renesas_pcie_writel(pcie, PCIEPWRMNGCTRL, val);
+
+	/* Error Status Enable */
+	val = renesas_pcie_readl(pcie, PCIEERRSTS0EN);
+	val |= CFG_SYS_ERR_RC | CFG_SAFETY_UNCORR_CORR;
+	renesas_pcie_writel(pcie, PCIEERRSTS0EN, val);
+
+	/* Error Status Clear */
+	val = renesas_pcie_readl(pcie, PCIEERRSTS0CLR);
+	val |= ERRSTS0_EN;
+	renesas_pcie_writel(pcie, PCIEERRSTS0CLR, val);
+
+	val = renesas_pcie_readl(pcie, PCIEERRSTS1CLR);
+	val |= ERRSTS1_EN;
+	renesas_pcie_writel(pcie, PCIEERRSTS1CLR, val);
+
+	val = renesas_pcie_readl(pcie, PCIEERRSTS2CLR);
+	val |= ERRSTS2_EN;
+	renesas_pcie_writel(pcie, PCIEERRSTS2CLR, val);
 
 	/* Enable DBI read-only registers for writing */
 	dw_pcie_dbi_ro_wr_en(pci);
+
+	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCAP));
+	val |= PCI_EXP_LNKCAP_CLKPM;
+	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCAP), val);
 
 	/* Single function */
 	val = dw_pcie_readl_dbi(pci, PCICONF3);
@@ -244,7 +305,7 @@ static void renesas_pcie_init_ep(struct renesas_pcie_ep *pcie)
 	writel(0x0, pcie->shadow_base + BAR3MASKF0);
 
 	/* Set Max Link Width */
-	val = dw_pcie_readl_dbi(pci, EXPCAP3);
+	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCAP));
 	val &= ~PCI_EXP_LNKCAP_MLW;
 	switch (pcie->num_lanes) {
 	case 1:
@@ -257,13 +318,19 @@ static void renesas_pcie_init_ep(struct renesas_pcie_ep *pcie)
 		val |= MLW_X4;
 		break;
 	}
-	dw_pcie_writel_dbi(pci, EXPCAP3, val);
+	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCAP), val);
 
-	val = dw_pcie_readl_dbi(pci, PRTLGC5);
-	val |= INSERT_LANE_SKEW;
-	dw_pcie_writel_dbi(pci, PRTLGC5, val);
+	/* Enable SRIS mode */
+	val = dw_pcie_readl_dbi(pci, PRTLGC2);
+	val |= DO_DESKEW_FOR_SRIS;
+	dw_pcie_writel_dbi(pci, PRTLGC2, val);
 
 	dw_pcie_dbi_ro_wr_dis(pci);
+
+	/* Enable LTR */
+	val = renesas_pcie_readl(pcie, PCIELTRMSGCTRL1);
+	val |= LTR_EN;
+	renesas_pcie_writel(pcie, PCIELTRMSGCTRL1, val);
 
 }
 
