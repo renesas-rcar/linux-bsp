@@ -100,6 +100,8 @@ struct renesas_pcie_ep {
 	struct gpio_desc		*clkreq;
 	u32				num_lanes;
 	enum dw_pcie_device_mode        mode;
+	void __iomem			*base_shared;
+	struct clk			*clk_shared;
 };
 
 struct renesas_pcie_of_data {
@@ -116,6 +118,16 @@ static u32 renesas_pcie_readl(struct renesas_pcie_ep *pcie, u32 reg)
 static void renesas_pcie_writel(struct renesas_pcie_ep *pcie, u32 reg, u32 val)
 {
 	writel(val, pcie->base + reg);
+}
+
+static u32 renesas_pcie_shared_readl(struct renesas_pcie_ep *pcie, u32 reg)
+{
+	return readl(pcie->base_shared + reg);
+}
+
+static void renesas_pcie_shared_writel(struct renesas_pcie_ep *pcie, u32 reg, u32 val)
+{
+	writel(val, pcie->base_shared + reg);
 }
 
 static void renesas_pcie_ltssm_enable(struct renesas_pcie_ep *pcie,
@@ -261,6 +273,14 @@ static void renesas_pcie_init_ep(struct renesas_pcie_ep *pcie)
 	else
 		val |= DEVICE_TYPE_EP;
 	renesas_pcie_writel(pcie, PCIEMSR0, val);
+
+	if (pcie->base_shared) {
+		clk_prepare_enable(pcie->clk_shared);
+		val = renesas_pcie_shared_readl(pcie, PCIEMSR0);
+		val |= BIFUR_MOD_SET_ON;
+		renesas_pcie_shared_writel(pcie, PCIEMSR0, val);
+		clk_disable_unprepare(pcie->clk_shared);
+	}
 
 	/* Enable SRIS mode */
 	val = renesas_pcie_readl(pcie, PCIEMSR0);
@@ -428,6 +448,14 @@ static int renesas_pcie_ep_get_resources(struct renesas_pcie_ep *pcie,
 	if (IS_ERR(pcie->clkreq))
 		pcie->clkreq = NULL;
 
+	pcie->base_shared = devm_platform_ioremap_resource_byname(pdev, "shared");
+	if (IS_ERR(pcie->base_shared))
+		pcie->base_shared = NULL;
+
+	pcie->clk_shared = devm_clk_get(dev, "shared");
+	if (IS_ERR(pcie->clk_shared))
+		pcie->clk_shared = NULL;
+
 	of_property_read_u32(np, "num-lanes", &pcie->num_lanes);
 	if (!pcie->num_lanes) {
 		dev_info(dev, "property num-lanes isn't found\n");
@@ -514,6 +542,8 @@ static int renesas_pcie_ep_probe(struct platform_device *pdev)
 err_ep_disable:
 	reset_control_assert(pcie->rst);
 	clk_disable_unprepare(pcie->bus_clk);
+	if (pcie->clk_shared)
+		clk_disable_unprepare(pcie->clk_shared);
 	if (pcie->clkreq)
 		gpiod_set_value(pcie->clkreq, 0);
 
