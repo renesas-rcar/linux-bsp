@@ -102,6 +102,8 @@ struct renesas_pcie {
 	struct clk			*bus_clk;
 	struct reset_control		*rst;
 	struct gpio_desc		*clkreq;
+	void __iomem			*base_shared;
+	struct clk			*clk_shared;
 };
 
 static const struct of_device_id renesas_pcie_of_match[];
@@ -114,6 +116,16 @@ static u32 renesas_pcie_readl(struct renesas_pcie *pcie, u32 reg)
 static void renesas_pcie_writel(struct renesas_pcie *pcie, u32 reg, u32 val)
 {
 	writel(val, pcie->base + reg);
+}
+
+static u32 renesas_pcie_shared_readl(struct renesas_pcie *pcie, u32 reg)
+{
+	return readl(pcie->base_shared + reg);
+}
+
+static void renesas_pcie_shared_writel(struct renesas_pcie *pcie, u32 reg, u32 val)
+{
+	writel(val, pcie->base_shared + reg);
 }
 
 static void renesas_pcie_ltssm_enable(struct renesas_pcie *pcie,
@@ -283,6 +295,14 @@ static void renesas_pcie_init_rc(struct renesas_pcie *pcie)
 	val |= DEVICE_TYPE_RC;
 	renesas_pcie_writel(pcie, PCIEMSR0, val);
 
+	if (pcie->base_shared) {
+		clk_prepare_enable(pcie->clk_shared);
+		val = renesas_pcie_shared_readl(pcie, PCIEMSR0);
+		val |= BIFUR_MOD_SET_ON;
+		renesas_pcie_shared_writel(pcie, PCIEMSR0, val);
+		clk_disable_unprepare(pcie->clk_shared);
+	}
+
 	/* Enable SRIS mode */
 	val = renesas_pcie_readl(pcie, PCIEMSR0);
 	val |= APP_SRIS_MODE;
@@ -437,6 +457,14 @@ static int renesas_pcie_get_resources(struct renesas_pcie *pcie,
 	if (IS_ERR(pcie->clkreq))
 		pcie->clkreq = NULL;
 
+	pcie->base_shared = devm_platform_ioremap_resource_byname(pdev, "shared");
+	if (IS_ERR(pcie->base_shared))
+		pcie->base_shared = NULL;
+
+	pcie->clk_shared = devm_clk_get(dev, "shared");
+	if (IS_ERR(pcie->clk_shared))
+		pcie->clk_shared = NULL;
+
 	return 0;
 }
 
@@ -489,6 +517,8 @@ static int renesas_pcie_probe(struct platform_device *pdev)
 err_host_disable:
 	reset_control_assert(pcie->rst);
 	clk_disable_unprepare(pcie->bus_clk);
+	if (pcie->clk_shared)
+		clk_disable_unprepare(pcie->clk_shared);
 	if (pcie->clkreq)
 		gpiod_set_value(pcie->clkreq, 0);
 
