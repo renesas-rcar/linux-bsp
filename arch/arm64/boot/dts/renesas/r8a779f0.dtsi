@@ -1147,13 +1147,15 @@
 			      <0 0xe65dd000 0 0x1200>,
 			      <0 0xe65de200 0 0x0e00>,
 			      <0 0xe65df000 0 0x1000>,
-			      <0 0xee900000 0 0x10000>;
+			      <0 0xee900000 0 0x10000>,
+			      <0 0xe65d6200 0 0x0e00>;
 			reg-names = "dbi",
 				    "atu",
 				    "dma",
 				    "app",
 				    "phy",
-				    "config";
+				    "config",
+				    "shared";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			bus-range = <0x00 0xff>;
@@ -1180,9 +1182,11 @@
 					 0 0 0 3 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 625>,
-				 <&pcie_bus_clk>;
+				 <&pcie_bus_clk>,
+				 <&cpg CPG_MOD 624>;
 			clock-names = "pcie1",
-				      "pcie_bus";
+				      "pcie_bus",
+				      "shared";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 625>;
 			num-lanes = <2>;
@@ -1196,11 +1200,13 @@
 			reg = <0 0xe65d8000 0 0x1000>, <0 0xe65d9000 0 0x1000>,
 			      <0 0xe65da000 0 0x1000>, <0 0xe65db000 0 0x2000>,
 			      <0 0xe65dd000 0 0x1200>, <0 0xe65de200 0 0x0e00>,
-			      <0 0xe65df000 0 0x1000>, <0 0xee900000 0 0x400000>;
+			      <0 0xe65df000 0 0x1000>, <0 0xee900000 0 0x400000>,
+			      <0 0xe65d6200 0 0x0e00>;
 			reg-names = "dbi", "dbi2",
 				    "shadow", "atu",
 				    "dma", "app",
-				    "phy", "addr_space";
+				    "phy", "addr_space",
+				    "shared";
 			interrupts = <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 425 IRQ_TYPE_LEVEL_HIGH>,
@@ -1211,9 +1217,11 @@
 			interrupt-names = "msi", "dma", "err", "fatal",
 					  "nonfatal", "lp", "vndmsg";
 			clocks = <&cpg CPG_MOD 625>,
-				 <&pcie_bus_clk>;
+				 <&pcie_bus_clk>,
+				 <&cpg CPG_MOD 624>;
 			clock-names = "pcie1",
-				      "pcie_bus";
+				      "pcie_bus",
+				      "shared";
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 625>;
 			num-lanes = <2>;
