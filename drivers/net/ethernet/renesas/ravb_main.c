@@ -476,10 +476,6 @@ static int ravb_dmac_init(struct net_device *ndev)
 	/* Setting the control will start the AVB-DMAC process. */
 	ravb_modify(ndev, CCC, CCC_OPC, CCC_OPC_OPERATION);
 
-	/* Setting TX internal delay of R-Car V4H */
-	if (soc_device_match(r8a779g0))
-		ravb_write(ndev, GPOUT_TDM, GPOUT);
-
 	return 0;
 }
 
