@@ -216,6 +216,88 @@ static int _rsnd_gen_regmap_init(struct rsnd_priv *priv,
 }
 
 /*
+ *		Gen4
+ */
+static int rsnd_gen4_probe(struct rsnd_priv *priv)
+{
+	static const struct rsnd_regmap_field_conf conf_ssiu_sdmc[] = {
+		RSND_GEN_M_REG(SSI_BUSIF,		0x8000,	0x80),
+	};
+	static const struct rsnd_regmap_field_conf conf_ssiu[] = {
+		RSND_GEN_S_REG(SSI_SYS_INT_ENABLE0, 0x850),
+		RSND_GEN_S_REG(SSI_SYS_INT_ENABLE2, 0x858),
+		RSND_GEN_S_REG(SSI_SYS_INT_ENABLE4, 0x890),
+		RSND_GEN_S_REG(SSI_SYS_INT_ENABLE6, 0x898),
+		RSND_GEN_S_REG(SSI_SYS_STATUS0,	0x840),
+		RSND_GEN_S_REG(SSI_SYS_STATUS2,	0x848),
+		RSND_GEN_S_REG(SSI_SYS_STATUS4,	0x880),
+		RSND_GEN_S_REG(SSI_SYS_STATUS6,	0x888),
+
+		RSND_GEN_M_REG(SSI_BUSIF0_MODE,		0x0,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF0_ADINR,	0x4,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF0_DALIGN,	0x8,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF1_MODE,		0x20,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF1_ADINR,	0x24,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF1_DALIGN,	0x28,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF2_MODE,		0x40,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF2_ADINR,	0x44,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF2_DALIGN,	0x48,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF3_MODE,		0x60,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF3_ADINR,	0x64,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF3_DALIGN,	0x68,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF4_MODE,		0x500,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF4_ADINR,	0x504,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF4_DALIGN,	0x508,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF5_MODE,		0x520,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF5_ADINR,	0x524,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF5_DALIGN,	0x528,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF6_MODE,		0x540,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF6_ADINR,	0x544,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF6_DALIGN,	0x548,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF7_MODE,		0x560,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF7_ADINR,	0x564,	0x80),
+		RSND_GEN_M_REG(SSI_BUSIF7_DALIGN,	0x568,	0x80),
+		RSND_GEN_M_REG(SSI_CTRL,			0x010,	0x80),
+		RSND_GEN_M_REG(SSI_INT_ENABLE,		0x018,	0x80),
+		RSND_GEN_M_REG(SSI_INT_ENABLE2,		0xa18,	0x80),
+		RSND_GEN_M_REG(SSI_MODE,			0x00c,	0x80),
+		RSND_GEN_M_REG(SSI_MODE2,			0xa0c,	0x80),
+		RSND_GEN_M_REG(SSI_STATUS,			0x014,	0x80),
+		RSND_GEN_M_REG(SSI_STATUS2,			0xa14,	0x80),
+	};
+	static const struct rsnd_regmap_field_conf conf_adg[] = {
+		RSND_GEN_S_REG(BRRA,		0x00),
+		RSND_GEN_S_REG(BRRB,		0x04),
+		RSND_GEN_S_REG(BRGCKR,		0x08),
+		RSND_GEN_S_REG(AUDIO_CLK_SEL0,	0x0c),
+	};
+	static const struct rsnd_regmap_field_conf conf_ssi[] = {
+		RSND_GEN_M_REG(SSICR,		0x00,	0x40),
+		RSND_GEN_M_REG(SSISR,		0x04,	0x40),
+		RSND_GEN_M_REG(SSITDR,		0x08,	0x40),
+		RSND_GEN_M_REG(SSIRDR,		0x0c,	0x40),
+		RSND_GEN_M_REG(SSIWSR,		0x20,	0x40),
+	};
+	int ret_ssi_sdmc;
+	int ret_ssiu;
+	int ret_adg;
+	int ret_ssi;
+
+	ret_ssi_sdmc = rsnd_gen_regmap_init(priv, 10, RSND_GEN4_SSI_SDMC,
+					   "ssi_sdmc", conf_ssiu_sdmc);
+	ret_ssiu = rsnd_gen_regmap_init(priv, 10, RSND_GEN4_SSIU, "ssiu", conf_ssiu);
+	ret_adg  = rsnd_gen_regmap_init(priv, 10, RSND_GEN4_ADG,  "adg",  conf_adg);
+	ret_ssi  = rsnd_gen_regmap_init(priv, 10, RSND_GEN4_SSI,  "ssi",  conf_ssi);
+	if (ret_ssi_sdmc < 0 ||
+	    ret_ssiu  < 0 ||
+	    ret_adg  < 0 ||
+	    ret_ssi  < 0)
+		return ret_ssi_sdmc | ret_ssiu | ret_adg | ret_ssi;
+
+	return 0;
+}
+
+/*
  *		Gen2
  */
 static int rsnd_gen2_probe(struct rsnd_priv *priv)
@@ -484,6 +566,8 @@ int rsnd_gen_probe(struct rsnd_priv *priv)
 	else if (rsnd_is_gen2(priv) ||
 		 rsnd_is_gen3(priv))
 		ret = rsnd_gen2_probe(priv);
+	else if (rsnd_is_gen4(priv))
+		ret = rsnd_gen4_probe(priv);
 
 	if (ret < 0)
 		dev_err(dev, "unknown generation R-Car sound device\n");

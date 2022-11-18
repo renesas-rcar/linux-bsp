@@ -334,6 +334,7 @@ int rsnd_adg_ssi_clk_try_start(struct rsnd_mod *ssi_mod, unsigned int rate)
 	struct rsnd_mod *adg_mod = rsnd_mod_get(adg);
 	int data;
 	u32 ckr = 0;
+	u32 mask = (rsnd_is_gen4(priv)) ? 0x80000000 : 0x80770000;
 
 	data = rsnd_adg_clk_query(priv, rate);
 	if (data < 0)
@@ -349,7 +350,7 @@ int rsnd_adg_ssi_clk_try_start(struct rsnd_mod *ssi_mod, unsigned int rate)
 			ckr = 0x80000000;
 	}
 
-	rsnd_mod_bset(adg_mod, BRGCKR, 0x80770000, adg->ckr | ckr);
+	rsnd_mod_bset(adg_mod, BRGCKR, mask, adg->ckr | ckr);
 	rsnd_mod_write(adg_mod, BRRA,  adg->rbga);
 	rsnd_mod_write(adg_mod, BRRB,  adg->rbgb);
 
@@ -546,7 +547,8 @@ static int rsnd_adg_get_clkout(struct rsnd_priv *priv)
 			if (BRRx_MASK(rbgx) == rbgx) {
 				rbga = rbgx;
 				adg->rbga_rate_for_441khz = rate / div;
-				ckr |= brg_table[i] << 20;
+				if (!rsnd_is_gen4(priv))
+					ckr |= brg_table[i] << 20;
 				if (req_441kHz_rate &&
 				    !rsnd_flags_has(adg, AUDIO_OUT_48))
 					parent_clk_name = __clk_get_name(clk);
@@ -562,7 +564,8 @@ static int rsnd_adg_get_clkout(struct rsnd_priv *priv)
 			if (BRRx_MASK(rbgx) == rbgx) {
 				rbgb = rbgx;
 				adg->rbgb_rate_for_48khz = rate / div;
-				ckr |= brg_table[i] << 16;
+				if (!rsnd_is_gen4(priv))
+					ckr |= brg_table[i] << 16;
 				if (req_48kHz_rate &&
 				    rsnd_flags_has(adg, AUDIO_OUT_48))
 					parent_clk_name = __clk_get_name(clk);
