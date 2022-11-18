@@ -545,6 +545,8 @@ static struct rsnd_mod_ops rsnd_dmapp_ops = {
  *	RSND_xxx_O_N	for Audio DMAC output
  *	RSND_xxx_I_P	for Audio DMAC peri peri input
  *	RSND_xxx_O_P	for Audio DMAC peri peri output
+ *	RSND_xxx_I_S	for SYS-DMAC input
+ *	RSND_xxx_O_S	for SYS-DMAC output
  *
  *	ex) R-Car H2 case
  *	      mod        / DMAC in    / DMAC out   / DMAC PP in / DMAC pp out
@@ -552,6 +554,12 @@ static struct rsnd_mod_ops rsnd_dmapp_ops = {
  *	SSIU: 0xec541000 / 0xec100000 / 0xec100000 / 0xec400000 / 0xec400000
  *	SCU : 0xec500000 / 0xec000000 / 0xec004000 / 0xec300000 / 0xec304000
  *	CMD : 0xec500000 /            / 0xec008000                0xec308000
+ *
+ *	ex) R-Car V4H case
+ *	      mod        / SYS-DMAC in    / SYS-DMAC out
+ *	SSI : 0xec541000 / - / -
+ *	SSIU: 0xec540000 / - / -
+ *	SSI_SDMC: 0xec400000 / 0xec400000 / 0xec400000
  */
 #define RDMA_SSI_I_N(addr, i)	(addr ##_reg - 0x00300000 + (0x40 * i) + 0x8)
 #define RDMA_SSI_O_N(addr, i)	(addr ##_reg - 0x00300000 + (0x40 * i) + 0xc)
@@ -570,6 +578,10 @@ static struct rsnd_mod_ops rsnd_dmapp_ops = {
 
 #define RDMA_CMD_O_N(addr, i)	(addr ##_reg - 0x004f8000 + (0x400 * i))
 #define RDMA_CMD_O_P(addr, i)	(addr ##_reg - 0x001f8000 + (0x400 * i))
+
+/* V4H */
+#define RDMA_SSIU_I_S(addr, i)	(addr ##_reg + (0x8000 * i))
+#define RDMA_SSIU_O_S(addr, i)	RDMA_SSIU_I_S(addr, i)
 
 static dma_addr_t
 rsnd_gen2_dma_addr(struct rsnd_dai_stream *io,
@@ -646,6 +658,39 @@ rsnd_gen2_dma_addr(struct rsnd_dai_stream *io,
 		dma_addrs[is_ssi][is_play][use_src + use_cmd].in_addr;
 }
 
+static dma_addr_t
+rsnd_gen4_dma_addr(struct rsnd_dai_stream *io,
+		   struct rsnd_mod *mod,
+		   int is_play, int is_from)
+{
+	struct rsnd_priv *priv = rsnd_io_to_priv(io);
+	struct device *dev = rsnd_priv_to_dev(priv);
+	phys_addr_t ssi_sdmc_reg = rsnd_gen_get_phy_addr(priv, RSND_GEN4_SSI_SDMC);
+	int id = rsnd_mod_id(mod);
+	int busif = rsnd_mod_id_sub(rsnd_io_to_mod_ssiu(io));
+	struct dma_addr {
+		dma_addr_t out_addr;
+		dma_addr_t in_addr;
+	} dma_addrs[2] = {
+		/* SSIU */
+		/* Capture */
+		{ RDMA_SSIU_O_S(ssi_sdmc, id),	0 },
+		 /* Playback */
+		{ 0,			RDMA_SSIU_I_S(ssi_sdmc, id) },
+	};
+
+	/*
+	 * SSI1-9 is not supported
+	 */
+	if (id >= 1 && busif >= 1)
+		dev_err(dev, "This driver doesn't support SSI%d-%d, so far",
+			id, busif);
+
+	return (is_from) ?
+		dma_addrs[is_play].out_addr :
+		dma_addrs[is_play].in_addr;
+}
+
 static dma_addr_t rsnd_dma_addr(struct rsnd_dai_stream *io,
 				struct rsnd_mod *mod,
 				int is_play, int is_from)
@@ -661,7 +706,10 @@ static dma_addr_t rsnd_dma_addr(struct rsnd_dai_stream *io,
 	if (!mod)
 		return 0;
 
-	return rsnd_gen2_dma_addr(io, mod, is_play, is_from);
+	if (rsnd_is_gen4(priv))
+		return rsnd_gen4_dma_addr(io, mod, is_play, is_from);
+	else
+		return rsnd_gen2_dma_addr(io, mod, is_play, is_from);
 }
 
 #define MOD_MAX (RSND_MOD_MAX + 1) /* +Memory */
@@ -811,6 +859,8 @@ static int rsnd_dma_alloc(struct rsnd_dai_stream *io, struct rsnd_mod *mod,
 		attach	= rsnd_dmaen_attach;
 		dma_id	= dmac->dmaen_num;
 		type	= RSND_MOD_AUDMA;
+		if (rsnd_is_gen4(priv))
+			ops->name = "dmac";
 	}
 
 	/* for Gen1, overwrite */
@@ -878,18 +928,25 @@ int rsnd_dma_probe(struct rsnd_priv *priv)
 	/*
 	 * for Gen2 or later
 	 */
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "audmapp");
 	dmac = devm_kzalloc(dev, sizeof(*dmac), GFP_KERNEL);
-	if (!dmac || !res) {
+	if (!dmac) {
 		dev_err(dev, "dma allocate failed\n");
 		return 0; /* it will be PIO mode */
 	}
 
-	dmac->dmapp_num = 0;
-	dmac->ppres  = res->start;
-	dmac->ppbase = devm_ioremap_resource(dev, res);
-	if (IS_ERR(dmac->ppbase))
-		return PTR_ERR(dmac->ppbase);
+	if (!rsnd_is_gen4(priv)) {
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "audmapp");
+		if (!res) {
+			dev_err(dev, "lack of audmapp in DT\n");
+			return 0; /* it will be PIO mode */
+		}
+
+		dmac->dmapp_num = 0;
+		dmac->ppres  = res->start;
+		dmac->ppbase = devm_ioremap_resource(dev, res);
+		if (IS_ERR(dmac->ppbase))
+			return PTR_ERR(dmac->ppbase);
+	}
 
 	priv->dma = dmac;
 
