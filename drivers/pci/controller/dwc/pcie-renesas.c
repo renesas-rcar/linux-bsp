@@ -32,9 +32,6 @@
 #define	PCI_EXP_LNKCAP_MLW_X2	BIT(5)
 #define	PCI_EXP_LNKCAP_MLW_X4	BIT(6)
 
-/* Link Status & Link Control */
-#define	EXPCAP4			0x0080
-
 /* ASPM L1 PM Substates */
 #define L1PSCAP(x)		(0x01BC + (x))
 
@@ -139,12 +136,12 @@ static void renesas_pcie_retrain_link(struct dw_pcie *pci)
 
 	/* Wait for link retrain */
 	for (retries = 0; retries <= MAX_RETRIES; retries++) {
-		val = dw_pcie_readl_dbi(pci, EXPCAP4);
-		lnksta = (val >> 16);
+		lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
 
-		/* Stop retraining link if current link speed achieved 16GB/s */
-		if ((lnksta & PCI_EXP_LNKSTA_CLS) == PCI_EXP_LNKSTA_CLS_16_0GB)
+		/* Check retrain flag */
+		if (!(lnksta & PCI_EXP_LNKSTA_LT))
 			break;
+		msleep(1);
 	}
 }
 
