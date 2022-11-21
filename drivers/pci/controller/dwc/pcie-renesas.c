@@ -145,6 +145,16 @@ static void renesas_pcie_retrain_link(struct dw_pcie *pci)
 	}
 }
 
+static void renesas_pcie_check_speed(struct dw_pcie *pci)
+{
+	u32 lnkcap, lnksta;
+
+	lnkcap = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCAP));
+	lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
+
+	if ((lnksta & PCI_EXP_LNKSTA_CLS) != (lnkcap & PCI_EXP_LNKCAP_SLS))
+		renesas_pcie_retrain_link(pci);
+}
 static int renesas_pcie_link_up(struct dw_pcie *pci)
 {
 	struct renesas_pcie *pcie = to_renesas_pcie(pci);
@@ -153,7 +163,7 @@ static int renesas_pcie_link_up(struct dw_pcie *pci)
 	val = renesas_pcie_readl(pcie, PCIEINTSTS0);
 	mask = RDLH_LINK_UP | SMLH_LINK_UP;
 
-	renesas_pcie_retrain_link(pci);
+	renesas_pcie_check_speed(pci);
 
 	return (val & mask) == mask;
 }
