@@ -262,6 +262,7 @@ Required properties:
 				  "renesas,rcar_sound-gen1" if generation1, and
 				  "renesas,rcar_sound-gen2" if generation2 (or RZ/G1)
 				  "renesas,rcar_sound-gen3" if generation3 (or RZ/G2)
+				  "renesas,rcar_sound-gen4" if generation4
 				  Examples with soctypes are:
 				    - "renesas,rcar_sound-r8a7742" (RZ/G1H)
 				    - "renesas,rcar_sound-r8a7743" (RZ/G1M)
@@ -283,15 +284,18 @@ Required properties:
 				    - "renesas,rcar_sound-r8a77965" (R-Car M3-N)
 				    - "renesas,rcar_sound-r8a77990" (R-Car E3)
 				    - "renesas,rcar_sound-r8a77995" (R-Car D3)
+				    - "renesas,rcar_sound-r8a779g0" (R-Car V4H)
 - reg				: Should contain the register physical address.
 				  required register is
 				   SRU/ADG/SSI      if generation1
 				   SRU/ADG/SSIU/SSI/AUDIO-DMAC-periperi if generation2/generation3
+				   ADG/SSIU/SSI if generation4
 				   Select extended AUDIO-DMAC-periperi address if SoC has it,
-				   otherwise select normal AUDIO-DMAC-periperi address.
+				   otherwise select normal AUDIO-DMAC-periperi address. R-Car V4H use SYS-DMA.
 - reg-names			: Should contain the register names.
 				   scu/adg/ssi	if generation1
 				   scu/adg/ssiu/ssi/audmapp if generation2/generation3
+				   adg/ssiu/ssi if generation4
 - rcar_sound,ssi		: Should contain SSI feature.
 				  The number of SSI subnode should be same as HW.
 				  see below for detail.
