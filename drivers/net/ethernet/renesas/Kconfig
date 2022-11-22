@@ -42,12 +42,28 @@ config RAVB
 	  This driver supports the following SoCs:
 		- R8A779x.
 
+config RCAR_GEN4_PTP
+	tristate "Renesas R-Car Gen4 gPTP support"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	select CRC32
+	select MII
+	select PHYLIB
+	help
+	  Renesas R-Car Gen4 gPTP driver.
+	  This driver supports the following SoCs:
+		- R8A779Fx, R8A779Gx.
+
+	  To compile this driver as a module, choose M here,
+	  and also choose M for both RENESAS_ETHER_SWITCH
+	  and CONFIG_RTSN.
+
 config RENESAS_ETHER_SWITCH
 	tristate "Renesas Ethernet Switch support"
 	depends on ARCH_RENESAS || COMPILE_TEST
 	select CRC32
 	select MII
 	select PHYLIB
+	select RCAR_GEN4_PTP
 	help
 	  Renesas Ethernet Switch device driver.
 	  This driver supports the following SoCs:
@@ -61,6 +77,7 @@ config RTSN
 	select CRC32
 	select MII
 	select PHYLIB
+	select RCAR_GEN4_PTP
 	help
 	  Renesas Ethernet-TSN device driver.
 	  This driver supports the following SoCs:
