@@ -1067,7 +1067,6 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 625>;
 			num-lanes = <2>;
-			snps,enable-cdm-check = "true";
 			max-link-speed = <4>;
 			status = "disabled";
 		};
