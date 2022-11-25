@@ -55,6 +55,12 @@
 			regulator-boot-on;
 			regulator-always-on;
 	};
+
+	sound_card: sound {
+		compatible = "audio-graph-card";
+
+		label = "rcar-sound";
+	};
 };
 
 &extal_clk {
@@ -144,6 +150,16 @@
 			function = "mmc";
 			power-source = <1800>;
 	};
+
+	sound_pins: sound {
+		groups = "ssi_ctrl", "ssi_data";
+		function = "ssi";
+	};
+
+	sound_clk_pins: sound_clk {
+		groups = "audio_clkin", "audio_clkout";
+		function = "audio_clk";
+	};
 };
 
 &rpc {
@@ -195,4 +211,18 @@
 	uart-has-rtscts;
 	/* Please use exclusively to the scif0 node */
 	status = "okay";
+};
+
+&rcar_sound {
+	pinctrl-0 = <&sound_clk_pins>, <&sound_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+
+	/* Single DAI */
+	#sound-dai-cells = <0>;
+
+	/* audio_clkout0 */
+	#clock-cells = <0>;
+	clock-frequency = <11289600>;
 };

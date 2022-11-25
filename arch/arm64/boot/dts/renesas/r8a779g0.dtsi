@@ -202,6 +202,15 @@
 		clock-frequency = <0>;
 	};
 
+	/*
+	 * The clock from AUDIO_CLKIN pin are configured as 0 Hz fixed frequency
+	 */
+	audio_clkin: audio_clkin {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -829,7 +838,7 @@
 		avb0: ethernet@e6800000 {
 			compatible = "renesas,etheravb-r8a779g0",
 				     "renesas,etheravb-rcar-gen4";
-			reg = <0 0xe6800000 0 0x2000>;
+			reg = <0 0xe6800000 0 0x800>;
 			interrupts = <GIC_SPI 335 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 336 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 337 IRQ_TYPE_LEVEL_HIGH>,
@@ -876,7 +885,7 @@
 		avb1: ethernet@e6810000 {
 			compatible = "renesas,etheravb-r8a779g0",
 				     "renesas,etheravb-rcar-gen4";
-			reg = <0 0xe6810000 0 0x2000>;
+			reg = <0 0xe6810000 0 0x800>;
 			interrupts = <GIC_SPI 360 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 361 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 362 IRQ_TYPE_LEVEL_HIGH>,
@@ -923,7 +932,7 @@
 		avb2: ethernet@e6820000 {
 			compatible = "renesas,etheravb-r8a779g0",
 				     "renesas,etheravb-rcar-gen4";
-			reg = <0 0xe6820000 0 0x2000>;
+			reg = <0 0xe6820000 0 0x1000>;
 			interrupts = <GIC_SPI 385 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 386 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 387 IRQ_TYPE_LEVEL_HIGH>,
@@ -1549,11 +1558,13 @@
 		qos@e67e0000 {
 			compatible = "renesas,qos";
 			reg = <0 0xe67e0000 0 0x10090>;
+			status = "disabled";
 		};
 
 		prr: chipid@fff00044 {
 			compatible = "renesas,prr";
 			reg = <0 0xfff00044 0 4>;
+			status = "disabled";
 		};
 
 		fcpvd0: fcp@fea10000 {
@@ -5231,6 +5242,36 @@
 			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
+		chipid0: prr@fff00044 {
+			compatible = "generic-uio";
+			reg = <0 0xfff00044 0 0x1000>;
+			linux,uio-name = "chipid_00";
+		};
+
+		qos0: qos0@e67e0000 {
+			compatible = "generic-uio";
+			reg = <0 0xe67e0000 0 0x11000>;
+			linux,uio-name = "qos_00";
+		};
+
+		rcarbusmoni0: rcarbusmoni0@e67e0000 {
+			compatible = "generic-uio";
+			reg = <0 0xe67e0000 0 0x11000>;
+			linux,uio-name = "rcarbusmoni_00";
+		};
+
+		rcarbusmoni1: rcarbusmoni1@e67a4000 {
+			compatible = "generic-uio";
+			reg = <0 0xe67a4000 0 0x3800>;
+			linux,uio-name = "rcarbusmoni_01";
+		};
+
+		rcarbusmoni2: rcarbusmoni1@e67a8000 {
+			compatible = "generic-uio";
+			reg = <0 0xe67a8000 0 0x3800>;
+			linux,uio-name = "rcarbusmoni_02";
+		};
+
 		isp0: isp@fed00000 {
 			compatible = "renesas,isp-r8a779g0";
 			reg = <0 0xfed00000 0 0x10000>;
@@ -5884,6 +5925,77 @@
 
 			channel7 {
 				status = "disabled";
+			};
+		};
+
+		rcar_sound: sound@ec400000 {
+			/*
+			 * #sound-dai-cells is required
+			 *
+			 * Single DAI : #sound-dai-cells = <0>;	<&rcar_sound>;
+			 * Multi  DAI : #sound-dai-cells = <1>;	<&rcar_sound N>;
+			 */
+			/*
+			 * #clock-cells is required
+			 *
+			 * clkout	: #clock-cells = <0>;	<&rcar_sound>;
+			 * audio_clkout0/1/2/3	: #clock-cells = <1>;	<&rcar_sound N>;
+			 */
+			compatible =  "renesas,rcar_sound-r8a779g0", "renesas,rcar_sound-gen4";
+			reg =	<0 0xec400000 0 0x40000>, /* SSI_SDMC */
+				<0 0xec540000 0 0x1000>, /* SSIU */
+				<0 0xec541000 0 0x050>,  /* SSI */
+				<0 0xec5a0000 0 0x020>;  /* ADG */
+			reg-names = "ssi_sdmc", "ssiu", "ssi", "adg" ;
+
+			clocks = <&cpg CPG_MOD 2926>, <&cpg CPG_MOD 2927>,
+				 <&audio_clkin>;
+			clock-names = "ssiu.0", "ssi.0",
+						"clk_a";
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
+			resets = <&cpg 2926>, <&cpg 2927>;
+			reset-names = "ssiu.0", "ssi.0";
+			status = "disabled";
+
+			rcar_sound,ssiu {
+				ssiu00: ssiu-0 {
+					dmas = <&dmac0 0x6e>, <&dmac0 0x6f>;
+					dma-names = "tx", "rx";
+				};
+				ssiu01: ssiu-1 {
+					dmas = <&dmac0 0x6c>, <&dmac0 0x6d>;
+					dma-names = "tx", "rx";
+				};
+				ssiu02: ssiu-2 {
+					dmas = <&dmac0 0x6a>, <&dmac0 0x6b>;
+					dma-names = "tx", "rx";
+				};
+				ssiu03: ssiu-3 {
+					dmas = <&dmac0 0x68>, <&dmac0 0x69>;
+					dma-names = "tx", "rx";
+				};
+				ssiu04: ssiu-4 {
+					dmas = <&dmac0 0x66>, <&dmac0 0x67>;
+					dma-names = "tx", "rx";
+				};
+				ssiu05: ssiu-5 {
+					dmas = <&dmac0 0x64>, <&dmac0 0x65>;
+					dma-names = "tx", "rx";
+				};
+				ssiu06: ssiu-6 {
+					dmas = <&dmac0 0x62>, <&dmac0 0x63>;
+					dma-names = "tx", "rx";
+				};
+				ssiu07: ssiu-7 {
+					dmas = <&dmac0 0x60>, <&dmac0 0x61>;
+					dma-names = "tx", "rx";
+				};
+			};
+
+			rcar_sound,ssi {
+				ssi0: ssi-0 {
+					interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>;
+				};
 			};
 		};
 	};
