@@ -203,7 +203,7 @@
 #define RCANFD_FDCFG_FDOE		BIT(28)
 #define RCANFD_FDCFG_TDCE		BIT(9)
 #define RCANFD_FDCFG_TDCOC		BIT(8)
-#define RCANFD_FDCFG_TDCO(x)		(((x) & 0x7f) >> 16)
+#define RCANFD_FDCFG_TDCO(x)		(((x) & 0xff) << 16)
 
 /* RSCFDnCFDRFCCx */
 #define RCANFD_RFCC_RFIM		BIT(12)
@@ -1332,6 +1332,38 @@ static irqreturn_t rcar_canfd_channel_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static void rcar_canfd_set_samplepoint(struct net_device *dev)
+{
+	struct rcar_canfd_channel *priv = netdev_priv(dev);
+	u32 ch = priv->channel;
+	u16 tdco;
+	u32 cfg;
+	struct rcar_canfd_global *gpriv = priv->gpriv;
+
+	/* Sample point settings */
+	tdco = 2; /* TDCO = 2Tq */
+
+	/* Transceiver Delay Compensation Offset Configuration */
+	if (gpriv->chip_id == R8A779A0 || gpriv->chip_id == R8A779G0) {
+		cfg = (RCANFD_FDCFG_TDCE |
+			   RCANFD_FDCFG_TDCO(tdco));
+		rcar_canfd_set_bit(priv->base, RCANFD_V3U_FDCFG(ch), cfg);
+	}
+}
+
+static void rcar_canfd_unset_samplepoint(struct net_device *dev)
+{
+	struct rcar_canfd_channel *priv = netdev_priv(dev);
+	u32 ch = priv->channel;
+	u32 cfg;
+	struct rcar_canfd_global *gpriv = priv->gpriv;
+
+	if (gpriv->chip_id == R8A779A0 || gpriv->chip_id == R8A779G0) {
+		cfg = RCANFD_FDCFG_TDCE; /* Disable TDC */
+		rcar_canfd_clear_bit(priv->base, RCANFD_V3U_FDCFG(ch), cfg);
+	}
+}
+
 static void rcar_canfd_set_bittiming(struct net_device *dev)
 {
 	struct rcar_canfd_channel *priv = netdev_priv(dev);
@@ -1370,6 +1402,12 @@ static void rcar_canfd_set_bittiming(struct net_device *dev)
 		sjw = dbt->sjw - 1;
 		tseg1 = dbt->prop_seg + dbt->phase_seg1 - 1;
 		tseg2 = dbt->phase_seg2 - 1;
+
+		/* Set Secondary Sample Point for high baud rate */
+		if (brp == 0 && tseg1 <= 5 && tseg2 == 1)
+			rcar_canfd_set_samplepoint(dev);
+		else
+			rcar_canfd_unset_samplepoint(dev);
 
 		if (gpriv->chip_id == R8A779A0 || gpriv->chip_id == R8A779G0) {
 			cfg = (RCANFD_V3U_DCFG_DTSEG1(tseg1) |
