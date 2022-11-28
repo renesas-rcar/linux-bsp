@@ -21,6 +21,12 @@
 		#size-cells = <2>;
 		ranges;
 
+		/* region for cr core application */
+		cr_region: linux,cr_region@60000000 {
+			no-map;
+			reg = <0x00000000 0x60000000 0x0 0x20000000>;
+		};
+
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma@80000000 {
 			compatible = "shared-dma-pool";
