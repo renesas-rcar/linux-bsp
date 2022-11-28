@@ -838,6 +838,20 @@ config VIDEO_IMX355
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx355.
 
+config VIDEO_IMX728
+	tristate "Sony IMX728 sensor support"
+	depends on I2C && VIDEO_V4L2
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	default y
+	help
+	  This is a Video4Linux2 sensor driver for the Sony
+	  IMX728 camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called imx728.
+
 config VIDEO_OV2640
 	tristate "OmniVision OV2640 sensor support"
 	depends on VIDEO_V4L2 && I2C
