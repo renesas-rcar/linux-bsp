@@ -25,6 +25,7 @@
 struct rcar_isp_info {
 	int ch_start;
 	int ch_end;
+	u32 features;
 };
 
 struct rcar_isp_device {
@@ -33,6 +34,9 @@ struct rcar_isp_device {
 	void __iomem *base;
 	const struct rcar_isp_info *info;
 	u32 id;
+	u32 use_emb8;
+	bool is_enable;
+	bool is_setting;
 };
 
 static LIST_HEAD(isp_devices);
@@ -83,6 +87,7 @@ static DEFINE_MUTEX(isp_lock);
 #define ISPCS_DI_FILTER_CTRL_CH(n)	(0x3040 + (0x100 * m))
 #define ISPCS_DI_FILTER_LUT_CH(p, n)	(0x3080 + (0x4 * p) + (0x100 * n))
 
+#define MIPI_DT_EMB8			0x12
 #define MIPI_DT_YUV420_8		0x18
 #define MIPI_DT_YUV420_10		0x19
 #define MIPI_DT_YUV422_8		0x1e
@@ -99,6 +104,8 @@ static DEFINE_MUTEX(isp_lock);
 #define SRCR6				0xE6152C18
 #define SRSTCLR6			0xE6152C98
 #define SR_REG_OFFSET			12
+
+#define RCAR_ISP_PV4M_EMC_FEATURE	BIT(0)
 
 static void isp_write(struct rcar_isp_device *isp, u32 value, u32 offset)
 {
@@ -185,6 +192,10 @@ int rcar_isp_enable(struct rcar_isp_device *isp)
 	if (!isp)
 		return 0;
 
+	if (isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE &&
+		isp->is_enable)
+		return 0;
+
 	ret = pm_runtime_get_sync(isp->dev);
 	if (ret < 0)
 		return ret;
@@ -192,6 +203,9 @@ int rcar_isp_enable(struct rcar_isp_device *isp)
 	srstclr6_reg = ioremap(SRSTCLR6, 0x04);
 	writel((0x01 << (isp->id + SR_REG_OFFSET)), srstclr6_reg);
 	iounmap(srstclr6_reg);
+
+	if (isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE)
+		isp->is_enable = true;
 
 	return 0;
 }
@@ -213,6 +227,9 @@ void rcar_isp_disable(struct rcar_isp_device *isp)
 		writel((0x01 << (isp->id + SR_REG_OFFSET)), srcr6_reg);
 		iounmap(srcr6_reg);
 		pm_runtime_put(isp->dev);
+
+		if (isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE)
+			isp->is_enable = false;
 	}
 }
 EXPORT_SYMBOL_GPL(rcar_isp_disable);
@@ -221,8 +238,15 @@ static inline int rcar_mbus_to_data_type(struct rcar_isp_device *isp,
 					 u32 mbus_code)
 {
 	switch (mbus_code) {
+	case MEDIA_BUS_FMT_Y8_1X8:
+		if(isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE)
+			return MIPI_DT_EMB8;
+		else
+			return MIPI_DT_RAW8;
 	case MEDIA_BUS_FMT_Y10_1X10:
 		return MIPI_DT_RAW10;
+	case MEDIA_BUS_FMT_Y12_1X12:
+		return MIPI_DT_RAW12;
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 	case MEDIA_BUS_FMT_YUYV8_1X16:
 	case MEDIA_BUS_FMT_UYVY8_2X8:
@@ -253,6 +277,8 @@ static inline int rcar_data_type_to_proc_mode(struct rcar_isp_device *isp,
 		return 0x04;
 	case MIPI_DT_RAW20:
 		return 0x05;
+	case MIPI_DT_EMB8:
+		return 0x07;
 	case MIPI_DT_YUV420_8:
 		return 0x0a;
 	case MIPI_DT_YUV420_10:
@@ -281,9 +307,13 @@ static void rcar_isp_pre_init(struct rcar_isp_device *isp,
 	isp_write(isp, (0x01 << vc), ISPCS_FILTER_ID_CH(ch));
 	isp_write(isp, 0x00000000, ISPCS_LC_MODULO_CH(ch));
 
-	dt_code_val = (data_type << 24) | (data_type << 16) |
-		      (data_type << 8) | data_type;
-	isp_write(isp, DT_CODE03_ALL_EN | dt_code_val, ISPCS_DT_CODE03_CH(ch));
+	if(isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE) {
+		isp_write(isp, DT_CODE03_EN0 | data_type, ISPCS_DT_CODE03_CH(ch));
+	} else {
+		dt_code_val = (data_type << 24) | (data_type << 16) |
+			      (data_type << 8) | data_type;
+		isp_write(isp, DT_CODE03_ALL_EN | dt_code_val, ISPCS_DT_CODE03_CH(ch));
+	}
 
 	/* Filer slot4,5,6,7 are not used */
 	isp_write(isp, 0x00000000, ISPCS_DT_CODE47_CH(ch));
@@ -308,6 +338,10 @@ int rcar_isp_init(struct rcar_isp_device *isp, u32 mbus_code)
 	if (!isp)
 		return 0;
 
+	if (isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE &&
+		isp->is_setting)
+		return 0;
+
 	data_type = rcar_mbus_to_data_type(isp, mbus_code);
 	proc_val = rcar_data_type_to_proc_mode(isp, data_type);
 
@@ -317,18 +351,31 @@ int rcar_isp_init(struct rcar_isp_device *isp, u32 mbus_code)
 	for (ch = ch_s, vc = 0; ch < ch_e && vc < 4; ch++, vc++)
 		rcar_isp_pre_init(isp, ch, vc, data_type);
 
+	if(isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE &&
+		isp->use_emb8)
+		rcar_isp_pre_init(isp, ch_e, 0, MIPI_DT_EMB8);
+
 	isp_write(isp, ISPWP_UNLOCK_CODE_U | ISPWP_UNLOCK_CODE_L, ISPWP_CTRL);
 	if (isp->id % 2)
 		sel_csi = ISPINPUTSEL0_SEL_CSI0;
 	isp_write(isp, isp_read(isp, ISPINPUTSEL0) | sel_csi, ISPINPUTSEL0);
 	isp_write(isp, isp_read(isp, ISP_PADDING_CTRL) | 0x20,
 		  ISP_PADDING_CTRL);
-	isp_write(isp, (proc_val << 24) | (proc_val << 16) | (proc_val << 8) |
-		  proc_val, ISPPROCMODE_DT(data_type));
+	if(isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE) {
+		isp_write(isp, proc_val, ISPPROCMODE_DT(data_type));
+		if (isp->use_emb8)
+			isp_write(isp, 0x07, ISPPROCMODE_DT(MIPI_DT_EMB8));
+	} else {
+		isp_write(isp, (proc_val << 24) | (proc_val << 16) | (proc_val << 8) |
+			  proc_val, ISPPROCMODE_DT(data_type));
+	}
 	isp_write(isp, ISPWP_UNLOCK_CODE_U | ISPWP_UNLOCK_CODE_L, ISPWP_CTRL);
 
 	isp_write(isp, FIFOCTRL_FIFO_PUSH_CSI, ISPFIFOCTRL);
 	isp_write(isp, ISPSTART_START_ISP, ISPSTART);
+
+	if(isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE)
+		isp->is_setting = true;
 
 	return 0;
 }
@@ -341,6 +388,7 @@ static int rcar_isp_parse(struct rcar_isp_device *isp)
 {
 	struct device_node *np;
 	u32 id;
+	u32 emb8;
 	int ret;
 
 	np = isp->dev->of_node;
@@ -352,6 +400,16 @@ static int rcar_isp_parse(struct rcar_isp_device *isp)
 		return -EINVAL;
 	}
 	isp->id = id;
+
+	if (isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE) {
+		ret = of_property_read_u32(np, "renesas,emb8", &emb8);
+		if (ret) {
+			dev_err(isp->dev, "%pOF: No renesas,emb8 property found\n",
+				isp->dev->of_node);
+			return -EINVAL;
+		}
+		isp->use_emb8 = emb8;
+	}
 
 	return 0;
 }
@@ -414,6 +472,12 @@ static const struct rcar_isp_info rcar_isp_info_r8a779g0 = {
 	.ch_end = 8,
 };
 
+static const struct rcar_isp_info rcar_isp_info_pv4m_emc = {
+	.ch_start = 4,
+	.ch_end = 5,
+	.features = RCAR_ISP_PV4M_EMC_FEATURE,
+};
+
 static const struct of_device_id rcar_isp_of_match[] = {
 	{
 		.compatible = "renesas,isp-r8a779a0",
@@ -422,6 +486,10 @@ static const struct of_device_id rcar_isp_of_match[] = {
 	{
 		.compatible = "renesas,isp-r8a779g0",
 		.data = &rcar_isp_info_r8a779g0,
+	},
+	{
+		.compatible = "renesas,isp-pv4m-emc",
+		.data = &rcar_isp_info_pv4m_emc,
 	},
 	{ },
 };

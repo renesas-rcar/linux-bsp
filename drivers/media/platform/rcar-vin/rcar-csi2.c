@@ -143,6 +143,8 @@ struct rcar_csi2;
 
 #define IDIC			0x0810
 
+#define OVR1			0x0848
+
 #define PHY_EN			0x2000
 
 #define ST_PHYST		0x2814
@@ -155,6 +157,7 @@ struct rcar_csi2;
 
 /* V4H PPI registers */
 #define PPI_STARTUP_RW_COMMON_DPHY(n)		(0x21800 + (n *2 ))	/* n = 0 - 9 */
+#define PPI_STARTUP_RW_COMMON_DPHY_10		0x21820
 #define PPI_STARTUP_RW_COMMON_STARTUP_1_1	0x21822
 #define PPI_CALIBCTRL_RW_COMMON_BG_0		0x2184C
 #define PPI_RW_LPDCOCAL_TIMEBASE			0x21C02
@@ -232,6 +235,7 @@ struct rcar_csi2;
 #define CORE_DIG_CLANE_2_RW_HS_RX(n)			(0x2A900 + (n * 2)) /* n = 0 ~ 6 */
 
 #define RCAR_CSI2_R8A779G0_FEATURE	BIT(0)
+#define RCAR_CSI2_PV4M_EMC_FEATURE	BIT(1)
 
 #define CSI1300		1
 
@@ -291,6 +295,99 @@ static const struct rcsi2_cphy_setting cphy_setting_table_r8a779g0[] = {
 	{ CSI2_CPHY_SETTING(3300,0xce, 0x084a, 0x0001, 0x04, 0x0ad4, 0x1c00) },
 	{ CSI2_CPHY_SETTING(3400,0xd4, 0x084a, 0x0001, 0x04, 0x0ad4, 0x1c00) },
 	{ CSI2_CPHY_SETTING(3500,0xda, 0x084a, 0x0001, 0x04, 0x0ad4, 0x1c00) },
+	{ /* sentinel */ },
+};
+
+#define CSI2_DPHY_SETTING(bps, d7, dc3, dc1, dc5, a28, a212, a213, a229, rx0, c1, rx2, rx3, rx6, a29, a229hs, a215) \
+	.mbps = (bps), \
+	.rw_common_dphy_7 = (d7), \
+	.rw_ddlcal_cfg_3 = (dc3), \
+	.rw_ddlcal_cfg_1 = (dc1), \
+	.rw_ddlcal_cfg_5 = (dc5), \
+	.rw_afe_lane_ctrl_2_8 = (a28), \
+	.rw_afe_lane_ctrl_2_12 = (a212), \
+	.rw_afe_lane_ctrl_2_13 = (a213), \
+	.rw_afe_lane2_ctrl_2_9 = (a229), \
+	.rw_hs_rx_0 = (rx0), \
+	.rw_cfg_1 = (c1), \
+	.rw_hs_rx_2 = (rx2), \
+	.rw_hs_rx_3 = (rx3), \
+	.rw_hs_rx_6 = (rx6), \
+	.rw_afe_lane_ctrl_2_9 = (a29), \
+	.rw_afe_lane2_ctrl_2_9 = (a229hs), \
+	.rw_afe_lane_ctrl_2_15 = (a215)
+
+#define DPHY_NA	(0xFFFF)
+
+struct rcsi2_dphy_setting {
+	u16 mbps;
+	u16 rw_common_dphy_7;
+	u16 rw_ddlcal_cfg_3;
+	u16 rw_ddlcal_cfg_1;
+	u16 rw_ddlcal_cfg_5;
+	u16 rw_afe_lane_ctrl_2_8;
+	u16 rw_afe_lane_ctrl_2_12;
+	u16 rw_afe_lane_ctrl_2_13;
+	u16 rw_afe_lane2_ctrl_2_9;
+	u16 rw_hs_rx_0;
+	u16 rw_cfg_1;
+	u16 rw_hs_rx_2;
+	u16 rw_hs_rx_3;
+	u16 rw_hs_rx_6;
+	u16 rw_afe_lane_ctrl_2_9;
+	u16 rw_afe_lane2_ctrl_2_9_hs;
+	u16 rw_afe_lane_ctrl_2_15;
+};
+
+static const struct rcsi2_dphy_setting dphy_setting_table_r8a779g0[] = {
+	/*                   bps,     d7,     dc3,     dc1,     dc5,     a28,   a212,   a213,   a229,    rx0,     c1,    rx2,     rx3,     rx6,    a29, a229hs,   a215  */
+	{ CSI2_DPHY_SETTING(  80, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0020, 0x1B00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0020, 0x0000) },
+	{ CSI2_DPHY_SETTING( 100, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0020, 0x1800, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0020, 0x0000) },
+	{ CSI2_DPHY_SETTING( 200, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0040, 0x1200, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0040, 0x0000) },
+	{ CSI2_DPHY_SETTING( 300, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0040, 0x1000, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0040, 0x0000) },
+	{ CSI2_DPHY_SETTING( 400, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0060, 0x0F00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0060, 0x0000) },
+	{ CSI2_DPHY_SETTING( 500, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0060, 0x0F00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0060, 0x0000) },
+	{ CSI2_DPHY_SETTING( 600, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0060, 0x0E00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0060, 0x0000) },
+	{ CSI2_DPHY_SETTING( 700, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0080, 0x0E00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0080, 0x0000) },
+	{ CSI2_DPHY_SETTING( 800, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0080, 0x0E00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0080, 0x0000) },
+	{ CSI2_DPHY_SETTING( 900, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0080, 0x0E00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0080, 0x0000) },
+	{ CSI2_DPHY_SETTING(1000, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0080, 0x0E00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0080, 0x0000) },
+	{ CSI2_DPHY_SETTING(1100, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0080, 0x0E00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0080, 0x0000) },
+	{ CSI2_DPHY_SETTING(1200, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x0080, 0x0D00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x0080, 0x0000) },
+	{ CSI2_DPHY_SETTING(1300, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x00A0, 0x0D00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x00A0, 0x0000) },
+	{ CSI2_DPHY_SETTING(1400, 0x0068, DPHY_NA, DPHY_NA, DPHY_NA, DPHY_NA, 0x0802, 0x0002, 0x00A0, 0x0D00, 0x0008, 0xE69B, DPHY_NA, DPHY_NA, 0x0000, 0x00A0, 0x0000) },
+	{ CSI2_DPHY_SETTING(1500, 0x0068, DPHY_NA,  0x138F,  0x0113,  0x0000, 0x0802, 0x0002, 0x00A0, 0x0D00, 0x0008, 0xE69B,  0x9221,  0x1D02, 0x0000, 0x00A0, 0x0000) },
+	{ CSI2_DPHY_SETTING(1600, 0x0028,  0x007D,  0x1387,  0x0102,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9221,  0x1B02, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(1700, 0x0028,  0x0085,  0x137F,  0x00F2,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9221,  0x1A02, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(1800, 0x0028,  0x008D,  0x1377,  0x00E2,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9219,  0x1802, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(1900, 0x0028,  0x0095,  0x1377,  0x00E2,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9219,  0x1802, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2000, 0x0028,  0x009D,  0x136F,  0x00D2,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9219,  0x1702, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2100, 0x0028,  0x00A5,  0x1367,  0x00C1,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9219,  0x1502, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2142, 0x0028,  0x00A8,  0x1367,  0x00C1,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9219,  0x1502, 0x0004, 0x00A4, 0x0003) },/*★*/
+	{ CSI2_DPHY_SETTING(2200, 0x0028,  0x00AC,  0x1367,  0x00C1,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9219,  0x1502, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2300, 0x0028,  0x00B4,  0x135F,  0x00B1,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9219,  0x1302, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2400, 0x0028,  0x00BC,  0x135F,  0x00B1,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9219,  0x1302, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2500, 0x0028,  0x00C4,  0x1357,  0x00A1,  0x0000, 0x0800, 0x0000, 0x00A0, 0x0D00, 0x0004, 0xE69B,  0x9219,  0x1202, 0x0004, 0x00A4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2600, 0x0028,  0x00CC,  0x1357,  0x00A1,  0x0000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9219,  0x1202, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2700, 0x0028,  0x00D3,  0x134F,  0x0091,  0x0000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x1002, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2800, 0x0028,  0x00DB,  0x134F,  0x0091,  0x0000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x1002, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(2900, 0x0028,  0x00E3,  0x134F,  0x0091,  0x0000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x1002, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3000, 0x0028,  0x00EB,  0x1347,  0x0080,  0x0000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x0F02, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3100, 0x0028,  0x00F3,  0x1347,  0x0080,  0x0000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x0F02, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3200, 0x0028,  0x00FA,  0x1347,  0x0080,  0x0000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x0F02, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3300, 0x0028,  0x0102,  0x1357,  0x00A1,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9219,  0x1202, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3400, 0x0028,  0x010A,  0x1357,  0x00A1,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9219,  0x1202, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3500, 0x0028,  0x0112,  0x1357,  0x00A1,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9219,  0x1202, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3600, 0x0028,  0x011A,  0x134F,  0x0091,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x1002, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3700, 0x0028,  0x0122,  0x134F,  0x0091,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x1002, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3800, 0x0028,  0x0129,  0x134F,  0x0091,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x1002, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(3900, 0x0028,  0x0131,  0x134F,  0x0091,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x1002, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(4000, 0x0028,  0x0139,  0x1347,  0x0081,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x0F02, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(4100, 0x0028,  0x0141,  0x1347,  0x0081,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x0F02, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(4200, 0x0028,  0x0149,  0x1347,  0x0081,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x0F02, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(4300, 0x0028,  0x0150,  0x1347,  0x0081,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x0F02, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(4400, 0x0028,  0x0158,  0x1347,  0x0081,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x0F02, 0x0014, 0x00D4, 0x0003) },
+	{ CSI2_DPHY_SETTING(4500, 0x0028,  0x0160,  0x133F,  0x0070,  0x1000, 0x0800, 0x0000, 0x00C0, 0x0D00, 0x0004, 0x669B,  0x9211,  0x0D02, 0x0014, 0x00D4, 0x0003) },
 	{ /* sentinel */ },
 };
 
@@ -591,6 +688,7 @@ static const struct rcar_csi2_format rcar_csi2_formats[] = {
 	{ .code = MEDIA_BUS_FMT_SGRBG8_1X8,     .datatype = 0x2a, .bpp = 8 },
 	{ .code = MEDIA_BUS_FMT_SRGGB8_1X8,     .datatype = 0x2a, .bpp = 8 },
 	{ .code = MEDIA_BUS_FMT_Y8_1X8,		.datatype = 0x2a, .bpp = 8 },
+	{ .code = MEDIA_BUS_FMT_Y12_1X12,	.datatype = 0x2c, .bpp = 12 },
 };
 
 static const struct rcar_csi2_format *rcsi2_code_to_fmt(unsigned int code)
@@ -648,6 +746,7 @@ struct rcar_csi2 {
 
 	bool cphy_connection;
 	bool pin_swap;
+	u32 data_rate;
 };
 
 static inline struct rcar_csi2 *sd_to_csi2(struct v4l2_subdev *sd)
@@ -1056,7 +1155,312 @@ static int rcsi2_c_phy_setting(struct rcar_csi2 *priv, int data_rate)
 
 static int rcsi2_d_phy_setting(struct rcar_csi2 *priv, int data_rate)
 {
-	/* T.B.D. */
+	const struct rcsi2_dphy_setting *dphy_setting_value;
+	unsigned int timeout;
+	u32 status;
+
+	for ( dphy_setting_value = dphy_setting_table_r8a779g0;
+			dphy_setting_value->mbps != 0; dphy_setting_value++ ) {
+		if (dphy_setting_value->mbps >= data_rate)
+			break;
+	}
+
+	if (!dphy_setting_value->mbps) {
+		dev_err(priv->dev, "Unsupported PHY speed for mbps setting (%u Mbps)", data_rate);
+		return -ERANGE;
+	}
+
+	/* Step T3: D-PHY specific */
+	rcsi2_write16(priv, CORE_DIG_RW_COMMON(7), 0x0000);
+	rcsi2_write16(priv, PPI_STARTUP_RW_COMMON_DPHY(7), dphy_setting_value->rw_common_dphy_7);
+	rcsi2_write16(priv, PPI_STARTUP_RW_COMMON_DPHY(8), 0x0050);
+
+	rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(0), 0x0063);
+	rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(7), 0x1132);
+	rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(1), 0x1340);
+	rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(2), 0x4B13);
+	rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(4), 0x000A);
+	rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(6), 0x800A);
+	rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(7), 0x1109);
+	if(dphy_setting_value->rw_ddlcal_cfg_3 != DPHY_NA)
+		rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(3), dphy_setting_value->rw_ddlcal_cfg_3);
+	if(dphy_setting_value->rw_ddlcal_cfg_1 != DPHY_NA)
+		rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(1), dphy_setting_value->rw_ddlcal_cfg_1);
+	if(dphy_setting_value->rw_ddlcal_cfg_5 != DPHY_NA)
+		rcsi2_write16(priv, PPI_RW_DDLCAL_CFG(5), dphy_setting_value->rw_ddlcal_cfg_5);
+
+	if(dphy_setting_value->rw_afe_lane_ctrl_2_8 != DPHY_NA) {
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(8), dphy_setting_value->rw_afe_lane_ctrl_2_8);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(8), dphy_setting_value->rw_afe_lane_ctrl_2_8);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(8), dphy_setting_value->rw_afe_lane_ctrl_2_8);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(8), dphy_setting_value->rw_afe_lane_ctrl_2_8);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2(8), dphy_setting_value->rw_afe_lane_ctrl_2_8);
+	}
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_LP(0), 0x463C);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_LP(0), 0x463C);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_LP(0), 0x463C);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_LP(0), 0x463C);
+
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(2), 0x0000);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(2), 0x0000);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(2), 0x0001);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(2), 0x0000);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2(2), 0x0000);
+
+	rcsi2_write16(priv, CORE_DIG_RW_COMMON(6), 0x0009);
+
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(12), dphy_setting_value->rw_afe_lane_ctrl_2_12);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(12), dphy_setting_value->rw_afe_lane_ctrl_2_12);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(12), dphy_setting_value->rw_afe_lane_ctrl_2_12);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(12), dphy_setting_value->rw_afe_lane_ctrl_2_12);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2(12), dphy_setting_value->rw_afe_lane_ctrl_2_12);
+
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(13), dphy_setting_value->rw_afe_lane_ctrl_2_13);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(13), dphy_setting_value->rw_afe_lane_ctrl_2_13);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(13), dphy_setting_value->rw_afe_lane_ctrl_2_13);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(13), dphy_setting_value->rw_afe_lane_ctrl_2_13);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2(13), dphy_setting_value->rw_afe_lane_ctrl_2_13);
+
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(9), dphy_setting_value->rw_afe_lane2_ctrl_2_9);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_CLK_RW_HS_RX(0), 0x091C);
+	rcsi2_write16(priv, CORE_DIG_DLANE_CLK_RW_HS_RX(7), 0x3B06);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(0), dphy_setting_value->rw_hs_rx_0);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(0), dphy_setting_value->rw_hs_rx_0);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(0), dphy_setting_value->rw_hs_rx_0);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(0), dphy_setting_value->rw_hs_rx_0);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_CFG(1), dphy_setting_value->rw_cfg_1);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_CFG(1), dphy_setting_value->rw_cfg_1);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_CFG(1), dphy_setting_value->rw_cfg_1);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_CFG(1), dphy_setting_value->rw_cfg_1);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_LP(0), 0x163C);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_LP(0), 0x163C);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_LP(0), 0x163C);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_LP(0), 0x163C);
+	rcsi2_write16(priv, CORE_DIG_DLANE_CLK_RW_LP(0), 0x163C);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(1), 0x4010);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(1), 0x4010);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(1), 0x4010);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(1), 0x4010);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(2), dphy_setting_value->rw_hs_rx_2);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(3), 0x9209);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(3), 0x9209);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(3), 0x9209);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(3), 0x9209);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(4), 0x0096);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(4), 0x0096);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(4), 0x0096);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(4), 0x0096);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(5), 0x0100);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(5), 0x0100);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(5), 0x0100);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(5), 0x0100);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(6), 0x2D02);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(6), 0x2D02);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(6), 0x2D02);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(6), 0x2D02);
+
+	rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(7), 0x3B06);
+	rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(7), 0x3B06);
+	rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(7), 0x3B06);
+	rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(7), 0x3B06);
+
+	if(dphy_setting_value->rw_hs_rx_3 != DPHY_NA) {
+		rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(3), dphy_setting_value->rw_hs_rx_3);
+		rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(3), dphy_setting_value->rw_hs_rx_3);
+		rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(3), dphy_setting_value->rw_hs_rx_3);
+		rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(3), dphy_setting_value->rw_hs_rx_3);
+	}
+
+	if(dphy_setting_value->rw_hs_rx_6 != DPHY_NA) {
+		rcsi2_write16(priv, CORE_DIG_DLANE_0_RW_HS_RX(6), dphy_setting_value->rw_hs_rx_6);
+		rcsi2_write16(priv, CORE_DIG_DLANE_1_RW_HS_RX(6), dphy_setting_value->rw_hs_rx_6);
+		rcsi2_write16(priv, CORE_DIG_DLANE_2_RW_HS_RX(6), dphy_setting_value->rw_hs_rx_6);
+		rcsi2_write16(priv, CORE_DIG_DLANE_3_RW_HS_RX(6), dphy_setting_value->rw_hs_rx_6);
+	}
+
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0404);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x040C);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0414);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x041C);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0423);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0429);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0430);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x043A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0445);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x044A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0450);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x045A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0465);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0469);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0472);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x047A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0485);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0489);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0490);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x049A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04A4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04AC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04B4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04BC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04C4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04CC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04D4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04DC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04E4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04EC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04F4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x04FC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0504);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x050C);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0514);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x051C);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0523);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0529);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0530);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x053A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0545);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x054A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0550);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x055A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0565);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0569);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0572);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x057A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0585);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0589);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0590);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x059A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05A4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05AC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05B4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05BC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05C4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05CC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05D4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05DC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05E4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05EC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05F4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x05FC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0604);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x060C);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0614);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x061C);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0623);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0629);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0632);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x063A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0645);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x064A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0650);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x065A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0665);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0669);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0672);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x067A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0685);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0689);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0690);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x069A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06A4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06AC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06B4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06BC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06C4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06CC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06D4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06DC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06E4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06EC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06F4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x06FC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0704);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x070C);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0714);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x071C);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0723);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x072A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0730);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x073A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0745);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x074A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0750);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x075A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0765);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0769);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0772);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x077A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0785);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0789);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x0790);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x079A);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07A4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07AC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07B4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07BC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07C4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07CC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07D4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07DC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07E4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07EC);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07F4);
+	rcsi2_write16(priv, CORE_DIG_COMMON_RW_DESKEW_FINE_MEM, 0x07FC);
+
+	/* Step T4: Leave Shutdown mode */
+	rcsi2_write(priv, PHY_SHUTDOWNZ, BIT(0));
+	rcsi2_write(priv, DPHY_RSTZ, BIT(0));
+
+	/* Step T5: wating for calibration */
+	for (timeout = 10; timeout > 0; --timeout) {
+		status = rcsi2_read(priv, ST_PHYST);
+		if (status & ST_PHY_READY)
+			break;
+		usleep_range(1000, 2000);
+	}
+
+	if (!timeout) {
+		dev_err(priv->dev, "PHY calibration failed\n");
+		return -ETIMEDOUT;
+	}
+
+	/* Step T6: D-PHY HS Receivers specific */
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(9), dphy_setting_value->rw_afe_lane_ctrl_2_9);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(9), dphy_setting_value->rw_afe_lane_ctrl_2_9);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(9), dphy_setting_value->rw_afe_lane2_ctrl_2_9_hs);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(9), dphy_setting_value->rw_afe_lane_ctrl_2_9);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2(9), dphy_setting_value->rw_afe_lane_ctrl_2_9);
+
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(15), dphy_setting_value->rw_afe_lane_ctrl_2_15);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(15), dphy_setting_value->rw_afe_lane_ctrl_2_15);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(15), dphy_setting_value->rw_afe_lane_ctrl_2_15);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(15), dphy_setting_value->rw_afe_lane_ctrl_2_15);
+	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2(15), dphy_setting_value->rw_afe_lane_ctrl_2_15);
+
 	return 0;
 }
 
@@ -1073,9 +1477,13 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 	if (ret)
 		return ret;
 
-	data_rate = rcsi2_calc_mbps(priv, format->bpp, lanes);
-	if (data_rate < 0)
-		return data_rate;
+	if (priv->info->features & RCAR_CSI2_PV4M_EMC_FEATURE) {
+		data_rate = priv->data_rate;
+	} else {
+		data_rate = rcsi2_calc_mbps(priv, format->bpp, lanes);
+		if (data_rate < 0)
+			return data_rate;
+	}
 
 	if (priv->cphy_connection)
 		do_div(data_rate, 2.8);
@@ -1087,17 +1495,26 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 
 	/* Step T1: PHY static setting */
 	rcsi2_write(priv, PHY_EN, BIT(0));
+	if (priv->info->features & RCAR_CSI2_PV4M_EMC_FEATURE)
+		rcsi2_write(priv, OVR1, (BIT(8)|BIT(9)));
 	rcsi2_write(priv, FLDC, 0);
 	rcsi2_write(priv, FLDD, 0);
 	rcsi2_write(priv, IDIC, 0);
-	rcsi2_write(priv, PHY_MODE, BIT(0));
-	rcsi2_write(priv,N_LANES, lanes - 1);
+	if (priv->cphy_connection)
+		rcsi2_write(priv, PHY_MODE, BIT(0));
+	else
+		rcsi2_write(priv, PHY_MODE, 0);
+	rcsi2_write(priv, N_LANES, lanes - 1);
 
 	/* Step T2: Reset CSI2 */
 	rcsi2_write(priv, CSI2_RESETN, BIT(0));
 
 	/* Step T3: Registers static setting through APB */
 	/* Common setting */
+	if (priv->info->features & RCAR_CSI2_PV4M_EMC_FEATURE) {
+		rcsi2_write16(priv, PPI_STARTUP_RW_COMMON_DPHY_10, 0x0030);
+		rcsi2_write16(priv, CORE_DIG_ANACTRL_RW_COMMON_ANACTRL(2), 0x1444);
+	}
 	rcsi2_write16(priv, CORE_DIG_ANACTRL_RW_COMMON_ANACTRL(0), 0x1BFD);
 	rcsi2_write16(priv, PPI_STARTUP_RW_COMMON_STARTUP_1_1, 0x0233);
 	rcsi2_write16(priv, PPI_STARTUP_RW_COMMON_DPHY(6), 0x0027);
@@ -1112,6 +1529,20 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 	rcsi2_write16(priv, PPI_RW_LPDCOCAL_COARSE_CFG, 0x0105);
 	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(6), 0x1000);
 	rcsi2_write16(priv, PPI_RW_COMMON_CFG, 0x0003);
+	if (priv->info->features & RCAR_CSI2_PV4M_EMC_FEATURE) {
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(0), 0x0000);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(1), 0x0400);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(3), 0x41F6);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(0), 0x0000);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(3), 0x43F6);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(6), 0x2000);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(7), 0x0000);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(6), 0x3000);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(7), 0x0000);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(6), 0x7000);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(7), 0x0000);
+		rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2(5), 0x4000);
+	}
 
 	if (priv->cphy_connection) {
 		ret = rcsi2_c_phy_setting(priv, data_rate);
@@ -1136,10 +1567,17 @@ static int rcsi2_wait_phy_start_v4h(struct rcar_csi2 *priv)
 	/* Step T7: wait for stopstate_N */
 	for (timeout = 10; timeout > 0; --timeout) {
 		status = rcsi2_read(priv, ST_PHYST);
-		if (status & ST_STOPSTATE_0 &&
-			status & ST_STOPSTATE_1 &&
-			status & ST_STOPSTATE_2)
-			return 0;
+		if(priv->cphy_connection) {
+			if (status & ST_STOPSTATE_0 &&
+				status & ST_STOPSTATE_1 &&
+				status & ST_STOPSTATE_2)
+				return 0;
+		} else {
+			if (status & ST_STOPSTATE_DCK &&
+				status & ST_STOPSTATE_0 &&
+				status & ST_STOPSTATE_1)
+				return 0;
+		}
 		usleep_range(1000, 2000);
 	}
 
@@ -1393,6 +1831,7 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 	struct fwnode_handle *fwnode;
 	struct device_node *ep;
 	struct v4l2_fwnode_endpoint v4l2_ep = { .bus_type = 0 };
+	u32 data_rate;
 	int ret;
 
 	if (of_find_property(priv->dev->of_node, "pin-swap", NULL))
@@ -1411,6 +1850,17 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		dev_err(priv->dev, "Could not parse v4l2 endpoint\n");
 		of_node_put(ep);
 		return -EINVAL;
+	}
+
+	if (priv->info->features & RCAR_CSI2_PV4M_EMC_FEATURE) {
+		ret = of_property_read_u32(ep, "data-rate", &data_rate);
+		if (ret) {
+			dev_err(priv->dev, "Could not found data-rate property\n");
+			of_node_put(ep);
+			return -EINVAL;
+		}
+		priv->data_rate = data_rate / 1000000;
+		priv->pin_swap = false;
 	}
 
 	ret = rcsi2_parse_v4l2(priv, &v4l2_ep);
@@ -1736,6 +2186,11 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a779a0 = {
 	.has_phyfrx_reg = true,
 };
 
+static const struct rcar_csi2_info rcar_csi2_info_pv4m_emc = {
+	.features = (RCAR_CSI2_R8A779G0_FEATURE | RCAR_CSI2_PV4M_EMC_FEATURE),
+	.num_channels = 16,
+};
+
 static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a774a1-csi2",
@@ -1788,6 +2243,10 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a779a0-csi2",
 		.data = &rcar_csi2_info_r8a779a0,
+	},
+	{
+		.compatible = "renesas,pv4m-emc-csi2",
+		.data = &rcar_csi2_info_pv4m_emc,
 	},
 	{ /* sentinel */ },
 };
