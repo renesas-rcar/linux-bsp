@@ -19,6 +19,9 @@
 	};
 
 	sound_card: sound {
+		compatible = "audio-graph-card";
+
+		label = "rcar-sound";
 		dais = <&rsnd_port0>;	/* DA7212 Audio Codec */
 	};
 };
@@ -60,6 +63,8 @@
 };
 
 &rcar_sound {
+	status = "okay";
+
 	ports {
 		rsnd_port0: port@0 {
 			rsnd_endpoint: endpoint {

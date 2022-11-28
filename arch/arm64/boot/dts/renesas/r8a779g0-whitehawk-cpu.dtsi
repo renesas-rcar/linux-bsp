@@ -55,12 +55,6 @@
 			regulator-boot-on;
 			regulator-always-on;
 	};
-
-	sound_card: sound {
-		compatible = "audio-graph-card";
-
-		label = "rcar-sound";
-	};
 };
 
 &extal_clk {
@@ -217,7 +211,7 @@
 	pinctrl-0 = <&sound_clk_pins>, <&sound_pins>;
 	pinctrl-names = "default";
 
-	status = "okay";
+	status = "disabled";
 
 	/* Single DAI */
 	#sound-dai-cells = <0>;
