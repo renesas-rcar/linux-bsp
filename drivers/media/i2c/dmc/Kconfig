@@ -1,0 +1,30 @@
+#
+# DMC video device configuration
+#
+
+config VIDEO_CXD4963
+	tristate "Sony CXD4963 deserializer support"
+	depends on I2C && I2C_MUX && VIDEO_V4L2
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	default y
+	help
+	  This driver supports the Sony CXD4963 serializer
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called CXD4963.
+
+config VIDEO_DMC_IMAGER
+	tristate "DMC image sensor support"
+	depends on I2C && I2C_MUX && VIDEO_V4L2
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	default y
+	help
+	  This is a Video4Linux2 sensor driver for the Sony
+	  camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called DMC_IMAGER.
