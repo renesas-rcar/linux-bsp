@@ -22,10 +22,10 @@
 		ranges;
 
 		/* global autoconfigured region for contiguous allocations */
-		linux,cma@58000000 {
+		linux,cma@80000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x58000000 0x0 0x18000000>;
+			reg = <0x00000000 0x80000000 0x0 0x23000000>;
 			linux,cma-default;
 		};
 	};
