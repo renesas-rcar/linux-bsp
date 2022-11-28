@@ -52,6 +52,7 @@ enum model_id {
 	RCAR_GEN2,
 	RCAR_GEN3,
 	RCAR_GEN4,
+	RCAR_PV4M_EMC,
 };
 
 enum rvin_csi_id {

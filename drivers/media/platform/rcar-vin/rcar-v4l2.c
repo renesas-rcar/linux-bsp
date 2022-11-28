@@ -92,6 +92,21 @@ static const struct rvin_video_format rvin_formats[] = {
 	},
 };
 
+static const struct rvin_video_format rvin_formats_pv4m_emc[] = {
+	{
+		.fourcc			= V4L2_PIX_FMT_Y10,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_Y12,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_GREY,
+		.bpp			= 1,
+	},
+};
+
 const struct rvin_video_format *rvin_format_from_pixel(struct rvin_dev *vin,
 						       u32 pixelformat)
 {
@@ -114,9 +129,15 @@ const struct rvin_video_format *rvin_format_from_pixel(struct rvin_dev *vin,
 		break;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(rvin_formats); i++)
-		if (rvin_formats[i].fourcc == pixelformat)
-			return rvin_formats + i;
+	if (vin->info->model == RCAR_PV4M_EMC) {
+		for (i = 0; i < ARRAY_SIZE(rvin_formats_pv4m_emc); i++)
+			if (rvin_formats_pv4m_emc[i].fourcc == pixelformat)
+				return rvin_formats_pv4m_emc + i;
+	} else {
+		for (i = 0; i < ARRAY_SIZE(rvin_formats); i++)
+			if (rvin_formats[i].fourcc == pixelformat)
+				return rvin_formats + i;
+	}
 
 	return NULL;
 }
@@ -500,6 +521,30 @@ static int rvin_enum_fmt_vid_cap(struct file *file, void *priv,
 			return -EINVAL;
 		f->pixelformat = V4L2_PIX_FMT_SRGGB8;
 		return 0;
+	case MEDIA_BUS_FMT_Y10_1X10:
+		if (vin->info->model == RCAR_PV4M_EMC) {
+			if (f->index)
+				return -EINVAL;
+			f->pixelformat = V4L2_PIX_FMT_Y10;
+			return 0;
+		}
+		break;
+	case MEDIA_BUS_FMT_Y12_1X12:
+		if (vin->info->model == RCAR_PV4M_EMC) {
+			if (f->index)
+				return -EINVAL;
+			f->pixelformat = V4L2_PIX_FMT_Y12;
+			return 0;
+		}
+		break;
+	case MEDIA_BUS_FMT_Y8_1X8:
+		if (vin->info->model == RCAR_PV4M_EMC) {
+			if (f->index)
+				return -EINVAL;
+			f->pixelformat = V4L2_PIX_FMT_GREY;
+			return 0;
+		}
+		break;
 	default:
 		return -EINVAL;
 	}

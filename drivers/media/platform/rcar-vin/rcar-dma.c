@@ -100,8 +100,9 @@
 #define VNMC_INF_YUV16		(5 << 16)
 #define VNMC_INF_RGB888		(6 << 16)
 #define VNMC_INF_RGB666		(7 << 16)
-#define VNMC_INF_RAWX_RGB565	(7 << 16) /* r8a779a0 only */
+#define VNMC_INF_RAWX_RGB565	(7 << 16) /* r8a779a0 and r8a779g0 only */
 #define VNMC_INF_MASK		(7 << 16)
+#define VNMC_EXINF_RAW8		(1 << 12)
 #define VNMC_VUP		(1 << 10)
 #define VNMC_IM_ODD		(0 << 3)
 #define VNMC_IM_ODD_EVEN	(1 << 3)
@@ -723,7 +724,8 @@ static void rvin_crop_scale_comp(struct rvin_dev *vin)
 	/* Set Start/End Pixel/Line Pre-Clip */
 	rvin_write(vin, vin->crop.left, VNSPPRC_REG);
 
-	if (vin->format.pixelformat == V4L2_PIX_FMT_Y10)
+	if (vin->format.pixelformat == V4L2_PIX_FMT_Y10 &&
+		vin->info->model != RCAR_PV4M_EMC)
 		rvin_write(vin, vin->crop.left + (vin->crop.width * 2) - 1,
 			   VNEPPRC_REG);
 	else
@@ -855,11 +857,17 @@ static int rvin_setup(struct rvin_dev *vin)
 	case MEDIA_BUS_FMT_SGBRG8_1X8:
 	case MEDIA_BUS_FMT_SGRBG8_1X8:
 	case MEDIA_BUS_FMT_SRGGB8_1X8:
-	case MEDIA_BUS_FMT_Y8_1X8:
 		vnmc |= VNMC_INF_RAW8;
 		break;
+	case MEDIA_BUS_FMT_Y8_1X8:
+		if (vin->info->model == RCAR_PV4M_EMC)
+			vnmc |= VNMC_INF_RAW8 | VNMC_EXINF_RAW8;
+		else
+			vnmc |= VNMC_INF_RAW8;
+		break;
 	case MEDIA_BUS_FMT_Y10_1X10:
-		 /* RAW8/10/12/14/16/RGB565 in case of R8A779A0 */
+	case MEDIA_BUS_FMT_Y12_1X12:
+		 /* RAW8/10/12/14/16/RGB565 in case of R8A779A0 and R8A779G0 */
 		if (vin->chip_info & RCAR_VIN_R8A779A0_FEATURE ||
 			vin->chip_info & RCAR_VIN_R8A779G0_FEATURE)
 			vnmc |= VNMC_INF_RAWX_RGB565;
@@ -942,9 +950,18 @@ static int rvin_setup(struct rvin_dev *vin)
 		dmr = 0;
 		break;
 	case V4L2_PIX_FMT_Y10:
-		if (vin->chip_info & RCAR_VIN_R8A779A0_FEATURE ||
-			vin->chip_info & RCAR_VIN_R8A779G0_FEATURE)
+		if ((vin->chip_info & RCAR_VIN_R8A779A0_FEATURE ||
+			vin->chip_info & RCAR_VIN_R8A779G0_FEATURE) &&
+			vin->info->model != RCAR_PV4M_EMC)
 			dmr = VNDMR_RMODE_RAW10 | VNDMR_YC_THR;
+		if (vin->chip_info & RCAR_VIN_R8A779G0_FEATURE &&
+			vin->info->model == RCAR_PV4M_EMC)
+			dmr = VNDMR_RMODE_RAW10;
+		break;
+	case V4L2_PIX_FMT_Y12:
+		if (vin->chip_info & RCAR_VIN_R8A779G0_FEATURE &&
+			vin->info->model == RCAR_PV4M_EMC)
+			dmr = VNDMR_RMODE_RAW12;
 		break;
 	case V4L2_PIX_FMT_GREY:
 		if (input_is_yuv) {
@@ -1407,6 +1424,7 @@ static int rvin_mc_validate_format(struct rvin_dev *vin, struct v4l2_subdev *sd,
 	case MEDIA_BUS_FMT_UYVY8_2X8:
 	case MEDIA_BUS_FMT_UYVY10_2X10:
 	case MEDIA_BUS_FMT_Y10_1X10:
+	case MEDIA_BUS_FMT_Y12_1X12:
 	case MEDIA_BUS_FMT_RGB888_1X24:
 		break;
 	case MEDIA_BUS_FMT_SBGGR8_1X8:

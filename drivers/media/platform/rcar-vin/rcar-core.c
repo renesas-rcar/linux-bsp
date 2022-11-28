@@ -469,6 +469,7 @@ static int rvin_parallel_subdevice_attach(struct rvin_dev *vin,
 		case MEDIA_BUS_FMT_UYVY8_2X8:
 		case MEDIA_BUS_FMT_UYVY10_2X10:
 		case MEDIA_BUS_FMT_Y10_1X10:
+		case MEDIA_BUS_FMT_Y12_1X12:
 		case MEDIA_BUS_FMT_RGB888_1X24:
 			vin->mbus_code = code.code;
 			vin_dbg(vin, "Found media bus format for %s: %d\n",
@@ -1312,6 +1313,13 @@ static const struct rvin_group_route rcar_info_r8a779g0_routes[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct rvin_group_route rcar_info_pv4m_emc_routes[] = {
+	{ .csi = RV4U_CSI40, .channel = 0, .vin = 0,  .mask = 0xffffffff },
+	{ .csi = RV4U_CSI40, .channel = 0, .vin = 1,  .mask = 0xffffffff },
+	{ .csi = RV4U_CSI41, .channel = 0, .vin = 8,  .mask = 0xffffffff },
+	{ /* Sentinel */ }
+};
+
 static const struct rvin_info rcar_info_r8a779a0 = {
 	.model = RCAR_GEN3,
 	.use_mc = true,
@@ -1326,6 +1334,14 @@ static const struct rvin_info rcar_info_r8a779g0 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a779g0_routes,
+};
+
+static const struct rvin_info rcar_info_pv4m_emc = {
+	.model = RCAR_PV4M_EMC,
+	.use_mc = true,
+	.max_width = 4096,
+	.max_height = 4096,
+	.routes = rcar_info_pv4m_emc_routes,
 };
 
 static const struct of_device_id rvin_of_id_table[] = {
@@ -1412,6 +1428,10 @@ static const struct of_device_id rvin_of_id_table[] = {
 	{
 		.compatible = "renesas,vin-r8a779g0",
 		.data = &rcar_info_r8a779g0,
+	},
+	{
+		.compatible = "renesas,vin-pv4m-emc",
+		.data = &rcar_info_pv4m_emc,
 	},
 	{ /* Sentinel */ },
 };
