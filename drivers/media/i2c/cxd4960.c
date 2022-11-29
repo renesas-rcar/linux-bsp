@@ -615,7 +615,7 @@ static int cxd4960_probe(struct i2c_client *client)
 
 	/* Request optional enable pin */
 	cxd4960->reset_gpio = devm_gpiod_get_optional(dev, "reset",
-						     GPIOD_OUT_HIGH);
+						     GPIOD_OUT_LOW);
 
 	ret = cxd4960_power_on(dev);
 	if (ret)
