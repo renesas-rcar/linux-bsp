@@ -101,6 +101,48 @@
 
 	status = "okay";
 	clock-frequency = <400000>;
+
+	gvif0: gvif-deserializer@23 {
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		compatible = "sony.cxd4960";
+		reg = <0x23>, <0x01>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				cxd4960_in: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				cxd4960_out: endpoint {
+					bus-type = <4>;
+					clock-lanes = <0>;
+					data-lanes = <1 2>;
+					remote-endpoint = <&csi41_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+		};
+	};
 };
 
 &i2c2 {
@@ -108,7 +150,30 @@
 	pinctrl-names = "default";
 
 	status = "okay";
-	clock-frequency = <400000>;
+	clock-frequency = <1000000>;
+
+	camera: imx728@1a {
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		compatible = "sony.imx728";
+		reg = <0x1a>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				imx728_out: endpoint {
+					bus-type = <4>;
+					clock-lanes = <0>;
+					data-lanes = <1 2>;
+					remote-endpoint = <&csi40_in>;
+				};
+			};
+		};
+	};
 };
 
 &i2c3 {
@@ -203,3 +268,121 @@
 		spi-tx-bus-width = <8>;
 	};
 };
+
+&csi40 {
+	compatible = "renesas,pv4m-emc-csi2", "generic-uio";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			data-rate = <2142000000>;
+
+			csi40_in: endpoint {
+				bus-type = <4>;
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&imx728_out>;
+			};
+		};
+
+		port@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			reg = <1>;
+
+			csi40vin0: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&vin0csi40>;
+			};
+			csi40vin1: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&vin1csi40>;
+			};
+		};
+	};
+};
+
+&csi41 {
+	compatible = "renesas,pv4m-emc-csi2", "generic-uio";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			data-rate = <800000000>;
+
+			csi41_in: endpoint {
+				bus-type = <4>;
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&cxd4960_out>;
+			};
+		};
+
+		port@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			reg = <1>;
+
+			csi41vin8: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&vin8csi41>;
+			};
+		};
+	};
+};
+
+&isp0 {
+	compatible = "renesas,isp-pv4m-emc";
+	renesas,emb8 = <1>;
+};
+
+&isp1 {
+	compatible = "renesas,isp-pv4m-emc";
+	renesas,emb8 = <0>;
+};
+
+&vin00 {
+	compatible = "renesas,vin-pv4m-emc", "generic-uio";
+	status = "okay";
+};
+
+&vin01 {
+	compatible = "renesas,vin-pv4m-emc", "generic-uio";
+	status = "okay";
+};
+
+&vin02 {
+	status = "disabled";
+};
+
+&vin03 {
+	status = "disabled";
+};
+
+&vin10 {
+	compatible = "renesas,vin-pv4m-emc", "generic-uio";
+	status = "okay";
+};
+
+&vin11 {
+	status = "disabled";
+};
+
+&vin12 {
+	status = "disabled";
+};
+
+&vin13 {
+	status = "disabled";
+};
+
+/* DMC Overlay */
+#include "pv4m-emc-gvif.dtsi"
