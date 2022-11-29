@@ -6058,7 +6058,7 @@ static int imx728_probe(struct i2c_client *client)
 
 	/* Request optional enable pin */
 	imx728->reset_gpio = devm_gpiod_get_optional(dev, "reset",
-						     GPIOD_OUT_HIGH);
+						     GPIOD_OUT_LOW);
 
 	ret = imx728_power_on(dev);
 	if (ret)
