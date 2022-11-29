@@ -1,0 +1,80 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Device Tree Source (overlay) for the WhiteHawk V4H FAKRA connectors
+ *
+ * Copyright (C) 2022 Renesas Electronics Corp.
+ *
+ * This overlay allows you to define cameras connected to the FAKRA connectors
+ * on the WhiteHawk-V4H (or compatible) board.
+ *
+ * Enable the cameras by specifying the camera compatible on the appropriate
+ * line. Comment out the defines to disconnect the camera from the DTB.
+ */
+
+#define PV4M_SER  "sony,cxd4963"
+#define PV4M_IMAGER  "sony,imager"
+
+/* Define the endpoint links */
+&cxd4960_in {
+	remote-endpoint = <&cxd4963_out>;
+};
+
+/* Cameras are 'attached' to the GVIF2 I2C busses */
+
+&gvif0 {
+	status = "okay";
+
+	i2c-mux {
+		i2c@0 {
+			status = "okay";
+
+			cxd4963: gvif-serializer@22 {
+				compatible = PV4M_SER;
+				reg = <0x22>, <0x01>;
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {
+						reg = <0>;
+						cxd4963_in: endpoint {
+							remote-endpoint = <&imager_out>;
+						};
+					};
+
+					port@1 {
+						reg = <1>;
+						cxd4963_out: endpoint {
+							remote-endpoint = <&cxd4960_in>;
+						};
+					};
+				};
+			};
+		};
+	};
+};
+
+&cxd4963 {
+	status = "okay";
+
+	i2c-mux {
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			status = "okay";
+
+			imager@60 {
+				compatible = PV4M_IMAGER;
+				reg = <0x60>;
+
+				port {
+					imager_out: endpoint {
+						remote-endpoint = <&cxd4963_in>;
+					};
+				};
+			};
+		};
+	};
+};
