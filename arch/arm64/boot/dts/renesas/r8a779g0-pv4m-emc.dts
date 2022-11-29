@@ -5,6 +5,8 @@
  * Copyright (C) 2022 Renesas Electronics Corp.
  */
 
+#include <dt-bindings/gpio/gpio.h>
+
 /dts-v1/;
 #include "r8a779g0.dtsi"
 
@@ -108,6 +110,7 @@
 
 		compatible = "sony.cxd4960";
 		reg = <0x23>, <0x01>;
+		reset-gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
 
 		ports {
 			#address-cells = <1>;
@@ -158,6 +161,7 @@
 
 		compatible = "sony.imx728";
 		reg = <0x1a>;
+		reset-gpios = <&gpio7 9 GPIO_ACTIVE_LOW>;
 
 		ports {
 			#address-cells = <1>;
@@ -252,6 +256,21 @@
 		groups = "qspi1_ctrl", "qspi1_data4";
 		function = "qspi1";
 	};
+
+	msiof1_pins: msiof1 {
+		groups = "msiof1_clk";
+		function = "msiof1";
+	};
+
+	msiof3_pins: msiof3 {
+		groups = "msiof3_clk";
+		function = "msiof3";
+	};
+
+	pwm3_pins: pwm3 {
+		groups = "pwm3";
+		function = "pwm3";
+	};
 };
 
 &rpc {
@@ -267,6 +286,27 @@
 		spi-rx-bus-width = <8>;
 		spi-tx-bus-width = <8>;
 	};
+};
+
+&msiof1 {
+	pinctrl-0 = <&msiof1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&msiof3 {
+	pinctrl-0 = <&msiof3_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&pwm3 {
+	pinctrl-0 = <&pwm3_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
 };
 
 &csi40 {
