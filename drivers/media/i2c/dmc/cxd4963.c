@@ -122,6 +122,7 @@ static inline struct cxd4963 *notifier_to_cxd4963(struct v4l2_async_notifier *n)
 }
 
 /* Read registers up to 2 at a time */
+#if 0
 static int cxd4963_read_reg(struct cxd4963 *cxd4963, u16 reg, u32 len, u32 *val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&cxd4963->sd);
@@ -153,6 +154,7 @@ static int cxd4963_read_reg(struct cxd4963 *cxd4963, u16 reg, u32 len, u32 *val)
 
 	return 0;
 }
+#endif
 
 /* Write registers up to 2 at a time */
 static int cxd4963_write_reg(struct cxd4963 *cxd4963, u16 reg, u32 len, u32 val)
@@ -408,13 +410,6 @@ static int cxd4963_check_hwcfg(struct device *dev)
 	/* Check the link frequency set in device tree */
 	if (!ep_cfg.nr_of_link_frequencies) {
 		dev_err(dev, "link-frequency property not found in DT\n");
-		goto error_out;
-	}
-
-	if (ep_cfg.nr_of_link_frequencies != 1 ||
-	    ep_cfg.link_frequencies[0] != CXD4963_DEFAULT_LINK_FREQ) {
-		dev_err(dev, "Link frequency not supported: %lld\n",
-			ep_cfg.link_frequencies[0]);
 		goto error_out;
 	}
 

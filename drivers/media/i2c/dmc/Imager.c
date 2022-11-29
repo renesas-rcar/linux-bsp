@@ -427,6 +427,7 @@ static inline struct imager *notifier_to_imager(struct v4l2_async_notifier *n)
 }
 
 /* Read registers up to 2 at a time */
+#if 0
 static int imager_read_reg(struct imager *imager, u16 reg, u32 len, u32 *val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&imager->sd);
@@ -458,6 +459,7 @@ static int imager_read_reg(struct imager *imager, u16 reg, u32 len, u32 *val)
 
 	return 0;
 }
+#endif
 
 /* Write registers up to 2 at a time */
 static int imager_write_reg(struct imager *imager, u16 reg, u32 len, u32 val)
@@ -501,7 +503,6 @@ static int imager_write_regs(struct imager *imager,
 static int imager_start_streaming(struct imager *imager)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&imager->sd);
-	u32 val;
 	int ret;
 
 	ret = pm_runtime_get_sync(&client->dev);
@@ -802,7 +803,7 @@ static int imager_parse(struct imager *priv)
 	if (IS_ERR(asd))
 		return PTR_ERR(asd);
 
-	ret = v4l2_async_subdev_notifier_register(&priv->subdev,
+	ret = v4l2_async_subdev_notifier_register(&priv->sd,
 						  &priv->notifier);
 	if (ret)
 		v4l2_async_notifier_cleanup(&priv->notifier);
