@@ -44,7 +44,7 @@ static unsigned long ImagerStatus;
 #define MSIOF_BRDV			0x0000
 #define MSIOF_TRMD			0x80000000
 #define MSIOF_TSCKIZ		0x00000000
-#define MSIOF_TSCKE			0x000000
+#define MSIOF_TSCKE			0x00008000
 
 /* FSYNC_1R8V */
 #define PWM_BASE		0xE6E30000
