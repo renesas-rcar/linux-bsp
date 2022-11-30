@@ -59,6 +59,18 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
+	emc-bz {
+	      compatible = "emc-bz";
+	          gpios = <&gpio2 10 GPIO_ACTIVE_LOW>;
+	};
+	emc-ig {
+	      compatible = "emc-ig";
+	          gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
+	};
+	emc-ht {
+	      compatible = "emc-ht";
+	          gpios = <&gpio4 24 GPIO_ACTIVE_LOW>;
+	};
 };
 
 &canfd {
