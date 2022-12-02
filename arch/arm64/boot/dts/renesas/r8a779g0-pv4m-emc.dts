@@ -120,9 +120,9 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 
-		compatible = "sony.cxd4960";
+		compatible = "sony,cxd4960";
 		reg = <0x23>, <0x01>;
-		reset-gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
+		gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>;
 
 		ports {
 			#address-cells = <1>;
@@ -171,9 +171,9 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 
-		compatible = "sony.imx728";
+		compatible = "sony,imx728";
 		reg = <0x1a>;
-		reset-gpios = <&gpio7 9 GPIO_ACTIVE_LOW>;
+		gpios = <&gpio7 9 GPIO_ACTIVE_HIGH>;
 
 		ports {
 			#address-cells = <1>;
@@ -270,18 +270,93 @@
 	};
 
 	msiof1_pins: msiof1 {
-		groups = "msiof1_clk";
+		groups = "msiof1_clk", "msiof1_sync", "msiof1_ss1", "msiof1_ss2", "msiof1_txd", "msiof1_rxd";
 		function = "msiof1";
 	};
 
 	msiof3_pins: msiof3 {
-		groups = "msiof3_clk";
+		groups = "msiof3_clk", "msiof3_sync", "msiof3_ss1", "msiof3_ss2", "msiof3_txd", "msiof3_rxd";
 		function = "msiof3";
 	};
 
 	pwm3_pins: pwm3 {
 		groups = "pwm3";
 		function = "pwm3";
+	};
+};
+
+&gpio1 {
+	des_ce {
+		gpio-hog;
+		gpios = <0 GPIO_ACTIVE_HIGH>;
+		bias-disable;
+		output-low;
+		drive-strength = <21>;
+		power-source = <1800>;
+		line-name = "DES_CE";
+	};
+};
+
+&gpio2 {
+	lcanstb_mon {
+		gpio-hog;
+		gpios = <9 GPIO_ACTIVE_HIGH>;
+		bias-pull-up;
+		input;
+		power-source = <3300>;
+		line-name = "LCANSTB_MON";
+	};
+
+	gcanstb {
+		gpio-hog;
+		gpios = <12 GPIO_ACTIVE_HIGH>;
+		bias-disable;
+		output-low;
+		drive-strength = <21>;
+		power-source = <3300>;
+		line-name = "GCANSTB";
+	};
+};
+
+&gpio4 {
+	gcanstb_mon {
+		gpio-hog;
+		gpios = <23 GPIO_ACTIVE_HIGH>;
+		bias-pull-down;
+		input;
+		power-source = <3300>;
+		line-name = "GCANSTB_MON";
+	};
+
+	gcan_en {
+		gpio-hog;
+		gpios = <21 GPIO_ACTIVE_HIGH>;
+		bias-pull-down;
+		output-low;
+		drive-strength = <21>;
+		power-source = <3300>;
+		line-name = "GCAN_EN";
+	};
+};
+
+&gpio7 {
+	xclr {
+		gpio-hog;
+		gpios = <9 GPIO_ACTIVE_HIGH>;
+		bias-disable;
+		output-high;
+		drive-strength = <21>;
+		power-source = <1800>;
+		line-name = "X_CLR";
+	};
+
+	xerr {
+		gpio-hog;
+		gpios = <18 GPIO_ACTIVE_HIGH>;
+		bias-pull-up;
+		input;
+		power-source = <1800>;
+		line-name = "X_ERR";
 	};
 };
 
