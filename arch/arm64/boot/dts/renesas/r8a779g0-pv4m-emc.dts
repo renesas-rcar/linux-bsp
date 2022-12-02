@@ -305,6 +305,13 @@
 	pinctrl-names = "default";
 
 	status = "okay";
+	assigned-clock-rates = <100000000>;
+
+	slavedev {
+		compatible = "maker,slavedev";
+		reg = <0>;
+		spi-max-frequency = <25000000>;
+	};
 };
 
 &msiof3 {
@@ -312,6 +319,13 @@
 	pinctrl-names = "default";
 
 	status = "okay";
+	assigned-clock-rates = <100000000>;
+
+	slavedev {
+		compatible = "maker,slavedev";
+		reg = <0>;
+		spi-max-frequency = <25000000>;
+	};
 };
 
 &pwm3 {
