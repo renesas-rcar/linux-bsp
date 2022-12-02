@@ -698,8 +698,10 @@ static int cxd4960_probe(struct i2c_client *client)
 	msleep(25);
 
 	/* Request optional enable pin */
-	cxd4960->reset_gpio = devm_gpiod_get_optional(dev, "reset",
+	cxd4960->reset_gpio = devm_gpiod_get_optional(dev, NULL,
 						     GPIOD_OUT_LOW);
+	if (!cxd4960->reset_gpio)
+		return -ENOENT;
 
 	ret = cxd4960_power_on(dev);
 	if (ret)
@@ -723,6 +725,8 @@ static int cxd4960_probe(struct i2c_client *client)
 	iounmap(mapped);
 
 	msleep(1);
+
+	dev_info(dev, "probed.\n");
 
 	return 0;
 
