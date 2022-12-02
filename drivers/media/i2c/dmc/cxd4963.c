@@ -569,6 +569,8 @@ static int cxd4963_probe(struct i2c_client *client)
 	if (ret)
 		return ret;
 
+	dev_info(dev, "probed.\n");
+
 	return 0;
 
 };
