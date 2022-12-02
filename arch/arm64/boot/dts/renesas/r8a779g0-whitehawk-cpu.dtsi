@@ -160,8 +160,6 @@
 	pinctrl-0 = <&qspi0_pins>;
 	pinctrl-names = "default";
 
-	status = "okay";
-
 	flash@0 {
 		compatible = "spansion,s25fs512s", "jedec,spi-nor";
 		reg = <0>;
