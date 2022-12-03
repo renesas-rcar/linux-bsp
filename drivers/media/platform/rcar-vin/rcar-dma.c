@@ -186,6 +186,7 @@ static void *map_sysram;
 #define SYSTEMRAM_ADDR			0xE6300000
 #define SYSTEMRAM_PAGE_SIZE		0x100000
 #define SYSRAM_DSM_STROBE_CTRL	0x0210
+#define SYSRAM_DSM_SSCG_CTRL	0x0211
 
 #ifdef CONFIG_VIDEO_RCAR_VIN_DEBUG
 #define VIN_IRQ_DEBUG(fmt, args...)					\
@@ -1067,6 +1068,7 @@ static int rvin_s_routing8(struct rvin_dev *vin)
 	struct media_pad *pad;
 	int ret = 0;
 	static u8 dsm_strobe_ctrl = 1;
+	static u8 dsm_sscg_ctrl = 0x00;
 	u8 val;
 
 	pad = media_entity_remote_pad(&vin->pad);
@@ -1081,6 +1083,14 @@ static int rvin_s_routing8(struct rvin_dev *vin)
 		if (ret)
 			return ret;
 		dsm_strobe_ctrl = val;
+	}
+
+	val = ioread8(map_sysram + SYSRAM_DSM_SSCG_CTRL);
+	if (val != dsm_sscg_ctrl) {
+		ret = v4l2_subdev_call(sd, video, s_routing, val, 0, 2);
+		if (ret)
+			return ret;
+		dsm_sscg_ctrl = val;
 	}
 
 	return ret;
