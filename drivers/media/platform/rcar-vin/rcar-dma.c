@@ -182,6 +182,11 @@ module_param_named(debug, vin_debug, int, 0600);
 static int overflow_video[RCAR_VIN_NUM];
 module_param_array(overflow_video, int, NULL, 0600);
 
+static void *map_sysram;
+#define SYSTEMRAM_ADDR			0xE6300000
+#define SYSTEMRAM_PAGE_SIZE		0x100000
+#define SYSRAM_DSM_STROBE_CTRL	0x0210
+
 #ifdef CONFIG_VIDEO_RCAR_VIN_DEBUG
 #define VIN_IRQ_DEBUG(fmt, args...)					\
 	do {								\
@@ -1056,6 +1061,46 @@ static int rvin_setup(struct rvin_dev *vin)
 	return 0;
 }
 
+static int rvin_s_routing8(struct rvin_dev *vin)
+{
+	struct v4l2_subdev *sd;
+	struct media_pad *pad;
+	int ret = 0;
+	static u8 dsm_strobe_ctrl = 1;
+	u8 val;
+
+	pad = media_entity_remote_pad(&vin->pad);
+	if (!pad)
+		return -EPIPE;
+
+	sd = media_entity_to_v4l2_subdev(pad->entity);
+
+	val = ioread8(map_sysram + SYSRAM_DSM_STROBE_CTRL);
+	if (val != dsm_strobe_ctrl) {
+		ret = v4l2_subdev_call(sd, video, s_routing, val, 0, 1);
+		if (ret)
+			return ret;
+		dsm_strobe_ctrl = val;
+	}
+
+	return ret;
+}
+
+static int rvin_s_routing(struct rvin_dev *vin)
+{
+	int ret;
+
+	switch (vin->id) {
+	case 8:
+		ret = rvin_s_routing8(vin);
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 static void rvin_disable_interrupts(struct rvin_dev *vin)
 {
 	rvin_write(vin, 0, VNIE_REG);
@@ -1312,6 +1357,10 @@ static irqreturn_t rvin_irq(int irq, void *data)
 
 	/* Prepare for next frame */
 	rvin_fill_hw_slot(vin, slot);
+
+	/* Periodic process */
+	if (vin->info->model == RCAR_PV4M_EMC)
+		rvin_s_routing(vin);
 done:
 	spin_unlock_irqrestore(&vin->qlock, flags);
 
@@ -1855,6 +1904,10 @@ int rvin_dma_register(struct rvin_dev *vin, int irq)
 		vin_err(vin, "failed to initialize VB2 queue\n");
 		goto error;
 	}
+
+	/* SystemRAM remap */
+	if (vin->info->model == RCAR_PV4M_EMC)
+		map_sysram = ioremap(SYSTEMRAM_ADDR, SYSTEMRAM_PAGE_SIZE);
 
 	/* irq */
 	ret = devm_request_irq(vin->dev, irq, rvin_irq, IRQF_SHARED,

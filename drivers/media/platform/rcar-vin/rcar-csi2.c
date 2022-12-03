@@ -1649,6 +1649,26 @@ out:
 	return ret;
 }
 
+static int rcsi2_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 config)
+{
+	struct rcar_csi2 *priv = sd_to_csi2(sd);
+	int ret = 0;
+
+	mutex_lock(&priv->lock);
+
+	if (!priv->remote) {
+		mutex_unlock(&priv->lock);
+		return -ENODEV;
+	}
+
+	if (priv->info->features & RCAR_CSI2_PV4M_EMC_FEATURE)
+		ret = v4l2_subdev_call(priv->remote, video, s_routing, input, output, config);
+
+	mutex_unlock(&priv->lock);
+
+	return ret;
+}
+
 static int rcsi2_set_pad_format(struct v4l2_subdev *sd,
 				struct v4l2_subdev_pad_config *cfg,
 				struct v4l2_subdev_format *format)
@@ -1685,6 +1705,7 @@ static int rcsi2_get_pad_format(struct v4l2_subdev *sd,
 
 static const struct v4l2_subdev_video_ops rcar_csi2_video_ops = {
 	.s_stream = rcsi2_s_stream,
+	.s_routing = rcsi2_s_routing,
 };
 
 static const struct v4l2_subdev_pad_ops rcar_csi2_pad_ops = {
