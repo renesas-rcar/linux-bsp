@@ -76,10 +76,13 @@
 
 #define CXD4960_REG_VIDEO_OUTPUT_ENABLE		0x76
 #define CXD4960_VALUE_VIDEO_OUTPUT_ENABLE	1
+#define CXD4960_VALUE_VIDEO_OUTPUT_DISABLE	0
 
 #define CXD4960_REG_ERROR_CLEAR			0x1F
 #define CXD4960_VALUE_ERROR_NOTCLEAR	0x00
 #define CXD4960_VALUE_ERROR_CLEAR		0x01
+
+#define CXD4960_REG_SSCG_CONTROL		0x80
 
 struct cxd4960_reg {
 	u16 address;
@@ -253,6 +256,20 @@ static int cxd4960_strobe_led_control(struct cxd4960 *cxd4960, u32 input, u32 ou
 	return ret;
 }
 
+static int cxd4960_sscg_control(struct cxd4960 *cxd4960, u32 control)
+{
+	int ret;
+
+	/* Desrializa SSCG ON/OFF Control */
+	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_DISABLE);
+	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_SSCG_CONTROL, CXD4960_REG_VALUE_08BIT, control);
+	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_ENABLE);
+	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_CLEAR);
+	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_NOTCLEAR);
+
+	return ret;
+}
+
 static int cxd4960_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 config)
 {
 	struct cxd4960 *cxd4960 = to_cxd4960(sd);
@@ -269,6 +286,10 @@ static int cxd4960_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 
 	case 1:
 		/* Strobe LED Control */
 		ret = cxd4960_strobe_led_control(cxd4960, input, output, config);
+		break;
+	case 2:
+		/* SSCG ON/OFF Control */
+		ret = cxd4960_sscg_control(cxd4960, input);
 		break;
 	default:
 		dev_err(&client->dev, "Not supported command[%d]\n", config);
