@@ -244,6 +244,43 @@ static int cxd4960_write_regs(struct cxd4960 *cxd4960,
 	return 0;
 }
 
+static int cxd4960_strobe_led_control(struct cxd4960 *cxd4960, u32 input, u32 output, u32 config)
+{
+	int ret;
+
+	ret = v4l2_subdev_call(cxd4960->remote, video, s_routing, input, output, config);
+
+	return ret;
+}
+
+static int cxd4960_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 config)
+{
+	struct cxd4960 *cxd4960 = to_cxd4960(sd);
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
+	int ret = 0;
+
+	mutex_lock(&cxd4960->mutex);
+	if (!cxd4960->streaming) {
+		mutex_unlock(&cxd4960->mutex);
+		return 0;
+	}
+
+	switch (config) {
+	case 1:
+		/* Strobe LED Control */
+		ret = cxd4960_strobe_led_control(cxd4960, input, output, config);
+		break;
+	default:
+		dev_err(&client->dev, "Not supported command[%d]\n", config);
+		ret = -EINVAL;
+		break;
+	}
+
+	mutex_unlock(&cxd4960->mutex);
+
+	return ret;
+}
+
 static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
@@ -444,6 +481,7 @@ static const struct v4l2_subdev_core_ops cxd4960_core_ops = {
 
 static const struct v4l2_subdev_video_ops cxd4960_video_ops = {
 	.s_stream = cxd4960_set_stream,
+	.s_routing = cxd4960_s_routing,
 };
 
 static const struct v4l2_subdev_ops cxd4960_subdev_ops = {

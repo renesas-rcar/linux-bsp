@@ -371,6 +371,27 @@ static const struct imager_reg init_dmc_imeger_set_regs_step2[] = {
 	{0x3016,0xf0},
 };/* init_dmc_imeger_set_regs_step2 */
 
+static const struct imager_reg strobe_led_on_set_regs[] = {
+	{0x3501,0x00},
+	{0x3502,0xAA},
+	{0x3927,0x00},
+	{0x3928,0xAA},
+	{0x3929,0x09},
+	{0x392A,0x53},
+};/* strobe_led_on_set_regs */
+
+static const struct imager_reg strobe_led_off_set_regs[] = {
+	{0x3501,0x00},
+	{0x3502,0x00},
+	{0x3927,0x00},
+	{0x3928,0x00},
+	{0x3929,0x09},
+	{0x392A,0xFD},
+};/* strobe_led_off_set_regs */
+
+#define IMAGER_REG_STROBE_CONTROL	(0x3006)
+#define IMAGER_STROBE_ONOFF			(0x08)
+
 /* regulator supplies */
 static const char * const imager_supply_name[] = {
 	/* Supplies can be enabled in any order */
@@ -427,7 +448,6 @@ static inline struct imager *notifier_to_imager(struct v4l2_async_notifier *n)
 }
 
 /* Read registers up to 2 at a time */
-#if 0
 static int imager_read_reg(struct imager *imager, u16 reg, u32 len, u32 *val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&imager->sd);
@@ -459,7 +479,6 @@ static int imager_read_reg(struct imager *imager, u16 reg, u32 len, u32 *val)
 
 	return 0;
 }
-#endif
 
 /* Write registers up to 2 at a time */
 static int imager_write_reg(struct imager *imager, u16 reg, u32 len, u32 val)
@@ -498,6 +517,58 @@ static int imager_write_regs(struct imager *imager,
 	}
 
 	return 0;
+}
+
+static int imager_strobe_led_control(struct imager *imager, u32 enable)
+{
+	int ret;
+	u32 val;
+
+	if (enable) {
+		/* Strobe LED ON setting */
+		ret = imager_write_regs(imager, strobe_led_on_set_regs, ARRAY_SIZE(strobe_led_on_set_regs));
+
+		/* Stroe Enable */
+		ret = imager_read_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, &val);
+		ret = imager_write_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, val | IMAGER_STROBE_ONOFF);
+	} else {
+		/* Strobe LED OFF setting */
+		ret = imager_write_regs(imager, strobe_led_off_set_regs, ARRAY_SIZE(strobe_led_off_set_regs));
+
+		/* Strobe disable */
+		ret = imager_read_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, &val);
+		ret = imager_write_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, val & ~IMAGER_STROBE_ONOFF);
+	}
+
+	return ret;
+}
+
+static int imager_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 config)
+{
+	struct imager *imager = to_imager(sd);
+	struct i2c_client *client = v4l2_get_subdevdata(&imager->sd);
+	int ret = 0;
+
+	mutex_lock(&imager->mutex);
+	if (!imager->streaming) {
+		mutex_unlock(&imager->mutex);
+		return 0;
+	}
+
+	switch (config) {
+	case 1:
+		/* Strobe LED Control */
+		ret = imager_strobe_led_control(imager, input);
+		break;
+	default:
+		dev_err(&client->dev, "Not supported command[%d]\n", config);
+		ret = -EINVAL;
+		break;
+	}
+
+	mutex_unlock(&imager->mutex);
+
+	return ret;
 }
 
 static int imager_start_streaming(struct imager *imager)
@@ -669,6 +740,7 @@ static const struct v4l2_subdev_core_ops imager_core_ops = {
 
 static const struct v4l2_subdev_video_ops imager_video_ops = {
 	.s_stream = imager_set_stream,
+	.s_routing = imager_s_routing,
 };
 
 static const struct v4l2_subdev_ops imager_subdev_ops = {
