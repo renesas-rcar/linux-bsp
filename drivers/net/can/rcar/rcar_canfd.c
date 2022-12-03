@@ -557,6 +557,34 @@ enum rcar_canfd_fcanclk {
 	RCANFD_EXTCLK,			/* Externally input clock */
 };
 
+/* Page Size */
+#define GPIO_PAGE_SIZE	0x1000
+
+/* LCANSTB_MON_CAN_V4M_3R3V, GCANSTB_V4M_CAN_3R3V */
+#define GPIO23_BASE				0xE6058000
+#define GPIO2_REG_PMMC			0x0000
+#define GPIO2_REG_POC			0x00A0
+#define GPIO2_REG_PUEN			0x00C0
+#define GPIO2_REG_PUD			0x00E0
+#define GPIO2_POC_LCANSTB_MON	0x00000200
+#define GPIO2_POC_GCANSTB		0x00001000
+#define GPIO2_PUEN_LCANSTB_MON	0x00000200
+#define GPIO2_PUEN_GCANSTB		0x00001000
+#define GPIO2_PUD_LCANSTB_MON	0x00000200
+
+/* GCANSTB_MON_CAN_V4M_3R3V, GCAN_EN_V4M_CAN_3R3V */
+#define GPIO45_BASE				0xE6060000
+#define GPIO4_REG_PMMC			0x0000
+#define GPIO4_REG_POC			0x00A0
+#define GPIO4_REG_PUEN			0x00C0
+#define GPIO4_REG_PUD			0x00E0
+#define GPIO4_POC_GCANSTB_MON	0x00080000
+#define GPIO4_POC_GCAN_EN		0x00020000
+#define GPIO4_PUEN_GCANSTB_MON	0x00080000
+#define GPIO4_PUEN_GCAN_EN		0x00020000
+#define GPIO4_PUD_GCANSTB_MON	0x00080000
+#define GPIO4_PUD_GCAN_EN		0x00020000
+
 struct rcar_canfd_global;
 
 /* Channel priv data */
@@ -1934,6 +1962,8 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 		"channel0", "channel1", "channel2", "channel3",
 		"channel4", "channel5", "channel6", "channel7",
 		};
+	void *mapped;
+	u32 gpioreg;
 
 	if (of_property_read_bool(pdev->dev.of_node, "renesas,no-can-fd"))
 		fdmode = false;			/* Classical CAN only mode */
@@ -2082,6 +2112,45 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, gpriv);
 	dev_info(&pdev->dev, "global operational state (clk %d, fdmode %d)\n",
 		 gpriv->fcan, gpriv->fdmode);
+
+	/* GPIO setting LCANSTB_MON,GCANSTB */
+	/* set parameter (addr should be aligned by GPIO_PAGE_SIZE) */
+	mapped = ioremap(GPIO23_BASE, GPIO_PAGE_SIZE);
+
+	gpioreg = ioread32(mapped + GPIO2_REG_POC);
+	gpioreg |= GPIO2_POC_LCANSTB_MON | GPIO2_POC_GCANSTB;
+	iowrite32(~gpioreg, mapped + GPIO2_REG_PMMC);
+	iowrite32(gpioreg, mapped + GPIO2_REG_POC);
+	gpioreg = ioread32(mapped + GPIO2_REG_PUD);
+	gpioreg |= GPIO2_PUD_LCANSTB_MON;
+	iowrite32(~gpioreg, mapped + GPIO2_REG_PMMC);
+	iowrite32(gpioreg, mapped + GPIO2_REG_PUD);
+	gpioreg = ioread32(mapped + GPIO2_REG_PUEN);
+	gpioreg &= ~GPIO2_PUEN_GCANSTB;
+	gpioreg |= GPIO2_PUEN_LCANSTB_MON;
+	iowrite32(~gpioreg, mapped + GPIO2_REG_PMMC);
+	iowrite32(gpioreg, mapped + GPIO2_REG_PUEN);
+
+	iounmap(mapped);
+
+	/* GPIO setting GCANSTB_MON,GCAN_EN */
+	/* set parameter (addr should be aligned by GPIO_PAGE_SIZE) */
+	mapped = ioremap(GPIO45_BASE, GPIO_PAGE_SIZE);
+
+	gpioreg = ioread32(mapped + GPIO4_REG_POC);
+	gpioreg |= GPIO2_POC_LCANSTB_MON | GPIO2_POC_GCANSTB;
+	iowrite32(~gpioreg, mapped + GPIO4_REG_PMMC);
+	iowrite32(gpioreg, mapped + GPIO4_REG_POC);
+	gpioreg = ioread32(mapped + GPIO4_REG_PUD);
+	gpioreg &= ~(GPIO4_PUD_GCANSTB_MON | GPIO4_PUD_GCAN_EN);
+	iowrite32(~gpioreg, mapped + GPIO4_REG_PMMC);
+	iowrite32(gpioreg, mapped + GPIO4_REG_PUD);
+	gpioreg = ioread32(mapped + GPIO4_REG_PUEN);
+	gpioreg |= GPIO4_PUEN_GCANSTB_MON | GPIO4_PUEN_GCAN_EN;
+	iowrite32(~gpioreg, mapped + GPIO4_REG_PMMC);
+	iowrite32(gpioreg, mapped + GPIO4_REG_PUEN);
+
+	iounmap(mapped);
 	return 0;
 
 fail_channel:
