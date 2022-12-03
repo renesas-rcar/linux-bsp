@@ -33,6 +33,7 @@
 /* Page Size */
 #define MSIOF_PAGE_SIZE	0x1000
 #define PWM_PAGE_SIZE	0x4000
+#define GPIO_PAGE_SIZE	0x1000
 
 /* DES_REFCLK_1R8V */
 #define MSIOF3_BASE			0xE6C10000
@@ -55,6 +56,14 @@
 #define PWM_SS0			0x00000010
 #define PWM_CYC0		0x032E0000
 #define PWM_PH0			0x00000197
+
+/* DES_CE_1R8V */
+#define GPIO01_BASE		0xE6050000
+#define GPIO1_REG_PMMR	0x0800
+#define GPIO1_REG_POC	0x08A0
+#define GPIO1_REG_PUEN	0x08C0
+#define GPIO1_POC_CE	0x00000001
+#define GPIO1_PUEN_CE	0x00000001
 
 #define CXD4960_REG_VALUE_08BIT	1
 #define CXD4960_REG_VALUE_16BIT	2
@@ -582,6 +591,7 @@ static int cxd4960_probe(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	struct cxd4960 *cxd4960;
 	int ret;
+	u32 gpioreg;
 
 	void *mapped;
 
@@ -598,6 +608,21 @@ static int cxd4960_probe(struct i2c_client *client)
 	ret = cxd4960_parse(cxd4960);
 	if (ret)
 		return ret;
+
+	/* GPIO setting DES_CE */
+	/* set parameter (addr should be aligned by GPIO_PAGE_SIZE) */
+	mapped = ioremap(GPIO01_BASE, GPIO_PAGE_SIZE);
+
+	gpioreg = ioread32(mapped + GPIO1_REG_POC);
+	gpioreg &= ~GPIO1_POC_CE;
+	iowrite32(~gpioreg, mapped + GPIO1_REG_PMMR);
+	iowrite32(gpioreg, mapped + GPIO1_REG_POC);
+	gpioreg = ioread32(mapped + GPIO1_REG_PUEN);
+	gpioreg &= ~GPIO1_PUEN_CE;
+	iowrite32(~gpioreg, mapped + GPIO1_REG_PMMR);
+	iowrite32(gpioreg, mapped + GPIO1_REG_PUEN);
+
+	iounmap(mapped);
 
 	/* Des電源起動の判定はSystemRAMのTPS78412Vout_状態を確認。 */
 
