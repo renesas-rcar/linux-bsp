@@ -344,7 +344,7 @@
 		gpio-hog;
 		gpios = <9 GPIO_ACTIVE_HIGH>;
 		bias-disable;
-		output-high;
+		output-low;
 		drive-strength = <21>;
 		power-source = <1800>;
 		line-name = "X_CLR";
@@ -412,6 +412,8 @@
 
 &csi40 {
 	compatible = "renesas,pv4m-emc-csi2", "generic-uio";
+	status = "okay";
+	data-rate = <2142000000>;
 
 	ports {
 		#address-cells = <1>;
@@ -419,7 +421,6 @@
 
 		port@0 {
 			reg = <0>;
-			data-rate = <2142000000>;
 
 			csi40_in: endpoint {
 				bus-type = <4>;
@@ -449,6 +450,8 @@
 
 &csi41 {
 	compatible = "renesas,pv4m-emc-csi2", "generic-uio";
+	status = "okay";
+	data-rate = <800000000>;
 
 	ports {
 		#address-cells = <1>;
@@ -456,7 +459,6 @@
 
 		port@0 {
 			reg = <0>;
-			data-rate = <800000000>;
 
 			csi41_in: endpoint {
 				bus-type = <4>;
