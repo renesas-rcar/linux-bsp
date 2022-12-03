@@ -1860,6 +1860,17 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 	else
 		priv->pin_swap = false;
 
+	if (priv->info->features & RCAR_CSI2_PV4M_EMC_FEATURE) {
+		ret = of_property_read_u32(priv->dev->of_node, "data-rate", &data_rate);
+		if (ret) {
+			dev_err(priv->dev, "Could not found data-rate property\n");
+			of_node_put(ep);
+			return -EINVAL;
+		}
+		priv->data_rate = data_rate / 1000000;
+		priv->pin_swap = false;
+	}
+
 	ep = of_graph_get_endpoint_by_regs(priv->dev->of_node, 0, 0);
 	if (!ep) {
 		dev_dbg(priv->dev, "Not connected to subdevice\n");
@@ -1871,17 +1882,6 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		dev_err(priv->dev, "Could not parse v4l2 endpoint\n");
 		of_node_put(ep);
 		return -EINVAL;
-	}
-
-	if (priv->info->features & RCAR_CSI2_PV4M_EMC_FEATURE) {
-		ret = of_property_read_u32(ep, "data-rate", &data_rate);
-		if (ret) {
-			dev_err(priv->dev, "Could not found data-rate property\n");
-			of_node_put(ep);
-			return -EINVAL;
-		}
-		priv->data_rate = data_rate / 1000000;
-		priv->pin_swap = false;
 	}
 
 	ret = rcsi2_parse_v4l2(priv, &v4l2_ep);
