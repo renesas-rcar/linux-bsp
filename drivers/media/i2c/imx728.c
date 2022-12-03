@@ -34,6 +34,7 @@ static unsigned long ImagerStatus;
 /* Page Size = 4KB */
 #define MSIOF_PAGE_SIZE	0x1000
 #define PWM_PAGE_SIZE	0x4000
+#define GPIO_PAGE_SIZE	0x1000
 
 /* INCK_V4IM_1R8V_MD14 */
 #define MSIOF1_BASE			0xE6EA0000
@@ -56,6 +57,18 @@ static unsigned long ImagerStatus;
 #define PWM_SS0			0x00000010
 #define PWM_CYC0		0x032E0000
 #define PWM_PH0			0x00000197
+
+/* XCLR_V4MIMG_1R8V, XERR_IMGV4M_1R8V */
+#define GPIO67_BASE		0xE6061000
+#define GPIO7_REG_PMMR	0x0800
+#define GPIO7_REG_POC	0x08A0
+#define GPIO7_REG_PUEN	0x08C0
+#define GPIO7_REG_PUD	0x08E0
+#define GPIO7_POC_XCLR	0x00000200
+#define GPIO7_POC_XERR	0x00040000
+#define GPIO7_PUEN_XCLR	0x00000200
+#define GPIO7_PUEN_XERR	0x00040000
+#define GPIO7_PUD_XERR	0x00040000
 
 /* Standby Setting */
 #define IMX728_REG_STANDBY	0x1B05
@@ -6023,6 +6036,7 @@ static int imx728_probe(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	struct imx728 *imx728;
 	u32 val;
+	u32 gpioreg;
 	int i;
 	int ret;
 
@@ -6044,7 +6058,29 @@ static int imx728_probe(struct i2c_client *client)
 		return ret;
 	}
 
+	/* GPIO setting XCLR,XERR */
+	/* set parameter (addr should be aligned by GPIO_PAGE_SIZE) */
+	mapped = ioremap(GPIO67_BASE, GPIO_PAGE_SIZE);
+
+	gpioreg = ioread32(mapped + GPIO7_REG_POC);
+	gpioreg &= ~(GPIO7_POC_XCLR | GPIO7_POC_XERR);
+	iowrite32(~gpioreg, mapped + GPIO7_REG_PMMR);
+	iowrite32(gpioreg, mapped + GPIO7_REG_POC);
+	gpioreg = ioread32(mapped + GPIO7_REG_PUD);
+	gpioreg |= GPIO7_PUD_XERR;
+	iowrite32(~gpioreg, mapped + GPIO7_REG_PMMR);
+	iowrite32(gpioreg, mapped + GPIO7_REG_PUD);
+	gpioreg = ioread32(mapped + GPIO7_REG_PUEN);
+	gpioreg &= ~GPIO7_PUEN_XCLR;
+	gpioreg |= GPIO7_PUEN_XERR;
+	iowrite32(~gpioreg, mapped + GPIO7_REG_PMMR);
+	iowrite32(gpioreg, mapped + GPIO7_REG_PUEN);
+
+	iounmap(mapped);
+
 	/* INCK */
+	/* set by msiof driver */
+#if 0
 	/* set parameter (addr should be aligned by MSIOF_PAGE_SIZE) */
 	mapped = ioremap(MSIOF1_BASE, MSIOF_PAGE_SIZE);
 
@@ -6053,7 +6089,7 @@ static int imx728_probe(struct i2c_client *client)
 	iowrite32(MSIOF_TSCKIZ | MSIOF_TSCKE, mapped + MSIOF_REG_SICTR);
 
 	iounmap(mapped);
-
+#endif
 	msleep(1);
 
 	/* Request optional enable pin */
