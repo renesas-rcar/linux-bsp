@@ -8,10 +8,80 @@
 
 #include "core.h"
 
+//#define MICRON_ST_WRITE_CONFIG_ENABLE (1)
+
+#ifdef MICRON_ST_WRITE_CONFIG_ENABLE
+#define SPINOR_OP_MT_WR_ANY_REG	0x81	/* Write volatile register */
+
+#define MICRON_ST_NOR_WR_ANY_REG_OP(naddr, addr, ndata, buf)		\
+	SPI_MEM_OP(SPI_MEM_OP_CMD(SPINOR_OP_MT_WR_ANY_REG, 0),		\
+		   SPI_MEM_OP_ADDR(naddr, addr, 0),			\
+		   SPI_MEM_OP_NO_DUMMY,					\
+		   SPI_MEM_OP_DATA_OUT(ndata, buf, 0))
+
+static void mt35xu512aba_default_init(struct spi_nor *nor)
+{
+	struct spi_mem_op op;
+	u8 *buf = nor->bouncebuf;
+	int ret;
+
+	/* I/O mode */
+	buf[0] = 0xFF;
+	op = (struct spi_mem_op)MICRON_ST_NOR_WR_ANY_REG_OP(3, 0, 1, buf);
+	ret = spi_nor_write_any_volatile_reg(nor, &op, nor->reg_proto);
+	if (ret)
+		return ret;
+
+	/* Dummy cycle configuration */
+	buf[0] = 0x1F;
+	op = (struct spi_mem_op)MICRON_ST_NOR_WR_ANY_REG_OP(3, 1, 1, buf);
+	ret = spi_nor_write_any_volatile_reg(nor, &op, nor->reg_proto);
+	if (ret)
+		return;
+
+	/* Programmable output drive strength */
+	buf[0] = 0xFF;
+	op = (struct spi_mem_op)MICRON_ST_NOR_WR_ANY_REG_OP(3, 3, 1, buf);
+	ret = spi_nor_write_any_volatile_reg(nor, &op, nor->reg_proto);
+	if (ret)
+		return;
+
+	/* Beyond 128Mb address configuration */
+	buf[0] = 0xFF;
+	op = (struct spi_mem_op)MICRON_ST_NOR_WR_ANY_REG_OP(3, 5, 1, buf);
+	ret = spi_nor_write_any_volatile_reg(nor, &op, nor->reg_proto);
+	if (ret)
+		return;
+
+	/* XIP configuration */
+	buf[0] = 0xFF;
+	op = (struct spi_mem_op)MICRON_ST_NOR_WR_ANY_REG_OP(3, 6, 1, buf);
+	ret = spi_nor_write_any_volatile_reg(nor, &op, nor->reg_proto);
+	if (ret)
+		return;
+
+	/* Wrap configuration */
+	buf[0] = 0xFF;
+	op = (struct spi_mem_op)MICRON_ST_NOR_WR_ANY_REG_OP(3, 7, 1, buf);
+	ret = spi_nor_write_any_volatile_reg(nor, &op, nor->reg_proto);
+	if (ret)
+		return;
+
+	return;
+}
+#else	/* MICRON_ST_WRITE_CONFIG_ENABLE */
+static void mt35xu512aba_default_init(struct spi_nor *nor) {}
+#endif	/* MICRON_ST_WRITE_CONFIG_ENABLE */
+
+static const struct spi_nor_fixups mt35xu512aba_fixups = {
+	.default_init = mt35xu512aba_default_init,
+};
+
 static const struct flash_info micron_parts[] = {
 	{ "mt35xu512aba", INFO(0x2c5b1a, 0, 128 * 1024, 512,
 			       SECT_4K | USE_FSR | SPI_NOR_OCTAL_READ |
-			       SPI_NOR_4B_OPCODES) },
+			       SPI_NOR_4B_OPCODES)
+			       .fixups = &mt35xu512aba_fixups },
 	{ "mt35xu02g", INFO(0x2c5b1c, 0, 128 * 1024, 2048,
 			    SECT_4K | USE_FSR | SPI_NOR_OCTAL_READ |
 			    SPI_NOR_4B_OPCODES) },
