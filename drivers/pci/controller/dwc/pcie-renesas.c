@@ -21,6 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
+#include <linux/gpio/consumer.h>
 
 #include "../../pci.h"
 #include "pcie-designware.h"
@@ -28,31 +29,55 @@
 /* PCI Express capability */
 #define EXPCAP(x)		(0x0070 + (x))
 /* Link Capabilities - Maximum Link Width */
-#define  PCI_EXP_LNKCAP_MLW_X1	BIT(4)
-#define  PCI_EXP_LNKCAP_MLW_X2	BIT(5)
-#define  PCI_EXP_LNKCAP_MLW_X4	BIT(6)
+#define	PCI_EXP_LNKCAP_MLW_X1	BIT(4)
+#define	PCI_EXP_LNKCAP_MLW_X2	BIT(5)
+#define	PCI_EXP_LNKCAP_MLW_X4	BIT(6)
 
 /* ASPM L1 PM Substates */
 #define L1PSCAP(x)		(0x01BC + (x))
 
 /* Renesas-specific */
-#define PCIEMSR0		0x0000
-#define	 BIFUR_MOD_SET_ON	(0x1 << 0)
-#define  DEVICE_TYPE_RC		(0x4 << 2)
+#define	PCIEMSR0		0x0000
+#define	BIFUR_MOD_SET_ON	(0x1 << 0)
+#define	DEVICE_TYPE_RC		(0x4 << 2)
 
-#define PCIERSTCTRL1		0x0014
-#define  APP_HOLD_PHY_RST	BIT(16)
-#define  APP_LTSSM_ENABLE	BIT(0)
+#define	PCIERSTCTRL1		0x0014
+#define	APP_HOLD_PHY_RST	BIT(16)
+#define	APP_LTSSM_ENABLE	BIT(0)
 
+#define	MSICAP0F0		0x0050
+#define	MSIE			BIT(16)
 #define PCIEINTSTS0		0x0084
 #define PCIEINTSTS0EN		0x0310
-#define  MSI_CTRL_INT		BIT(26)
-#define  SMLH_LINK_UP		BIT(7)
-#define  RDLH_LINK_UP		BIT(6)
+#define	MSI_CTRL_INT		BIT(26)
+#define	SMLH_LINK_UP		BIT(7)
+#define	RDLH_LINK_UP		BIT(6)
+
+/* Max Payload Size */
+#define	MPS_256			BIT(5)
+
+/*Power Management*/
+#define	PCIEPWRMNGCTRL		0x0070
+#define CLK_REG			BIT(11)
+#define CLK_PM			BIT(10)
+#define	PMCAP1F0		0x0044
+#define	PMEE_EN			BIT(8)
+
+/* Error Status Clear */
+#define	PCIEERRSTS0CLR		0x033C
+#define	PCIEERRSTS1CLR		0x035C
+#define	PCIEERRSTS2CLR		0x0360
+#define	ERRSTS0_EN		GENMASK(10, 6)
+#define	ERRSTS1_EN		GENMASK(29, 0)
+#define	ERRSTS2_EN		GENMASK(5, 0)
 
 /* PORT LOGIC */
 #define PRTLGC5			0x0714
 #define INSERT_LANE_SKEW	BIT(6)
+
+#define PCIEERRSTS0EN           0x030C
+#define CFG_SYS_ERR_RC          GENMASK(10, 9)
+#define CFG_SAFETY_UNCORR_CORR  GENMASK(5, 4)
 
 /* PCI Shadow offset */
 #define SHADOW_REG(x)		(0x2000 + (x))
@@ -62,6 +87,8 @@
 
 #define DWC_VERSION		0x520A
 
+#define	MAX_RETRIES		10
+
 #define to_renesas_pcie(x)	dev_get_drvdata((x)->dev)
 
 struct renesas_pcie {
@@ -70,6 +97,9 @@ struct renesas_pcie {
 	void __iomem			*phy_base;
 	struct clk			*bus_clk;
 	struct reset_control		*rst;
+	struct gpio_desc		*clkreq;
+	void __iomem			*base_shared;
+	struct clk			*clk_shared;
 };
 
 static const struct of_device_id renesas_pcie_of_match[];
@@ -82,6 +112,16 @@ static u32 renesas_pcie_readl(struct renesas_pcie *pcie, u32 reg)
 static void renesas_pcie_writel(struct renesas_pcie *pcie, u32 reg, u32 val)
 {
 	writel(val, pcie->base + reg);
+}
+
+static u32 renesas_pcie_shared_readl(struct renesas_pcie *pcie, u32 reg)
+{
+	return readl(pcie->base_shared + reg);
+}
+
+static void renesas_pcie_shared_writel(struct renesas_pcie *pcie, u32 reg, u32 val)
+{
+	writel(val, pcie->base_shared + reg);
 }
 
 static void renesas_pcie_ltssm_enable(struct renesas_pcie *pcie,
@@ -100,6 +140,35 @@ static void renesas_pcie_ltssm_enable(struct renesas_pcie *pcie,
 	renesas_pcie_writel(pcie, PCIERSTCTRL1, val);
 }
 
+static void renesas_pcie_retrain_link(struct dw_pcie *pci)
+{
+	u32 val, lnksta, retries;
+
+	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCTL));
+	val |= PCI_EXP_LNKCTL_RL;
+	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCTL), val);
+
+	/* Wait for link retrain */
+	for (retries = 0; retries <= MAX_RETRIES; retries++) {
+		lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
+
+		/* Check retrain flag */
+		if (!(lnksta & PCI_EXP_LNKSTA_LT))
+			break;
+		msleep(1);
+	}
+}
+
+static void renesas_pcie_check_speed(struct dw_pcie *pci)
+{
+	u32 lnkcap, lnksta;
+
+	lnkcap = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCAP));
+	lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
+
+	if ((lnksta & PCI_EXP_LNKSTA_CLS) != (lnkcap & PCI_EXP_LNKCAP_SLS))
+		renesas_pcie_retrain_link(pci);
+}
 static int renesas_pcie_link_up(struct dw_pcie *pci)
 {
 	struct renesas_pcie *pcie = to_renesas_pcie(pci);
@@ -107,6 +176,8 @@ static int renesas_pcie_link_up(struct dw_pcie *pci)
 
 	val = renesas_pcie_readl(pcie, PCIEINTSTS0);
 	mask = RDLH_LINK_UP | SMLH_LINK_UP;
+
+	renesas_pcie_check_speed(pci);
 
 	return (val & mask) == mask;
 }
@@ -230,8 +301,43 @@ static void renesas_pcie_init_rc(struct renesas_pcie *pcie)
 	val |= DEVICE_TYPE_RC;
 	renesas_pcie_writel(pcie, PCIEMSR0, val);
 
+	if (pcie->base_shared) {
+		clk_prepare_enable(pcie->clk_shared);
+		val = renesas_pcie_shared_readl(pcie, PCIEMSR0);
+		val |= BIFUR_MOD_SET_ON;
+		renesas_pcie_shared_writel(pcie, PCIEMSR0, val);
+		clk_disable_unprepare(pcie->clk_shared);
+	}
+
+	/* Error Status Enable */
+	val = renesas_pcie_readl(pcie, PCIEERRSTS0EN);
+	val |= CFG_SYS_ERR_RC | CFG_SAFETY_UNCORR_CORR;
+	renesas_pcie_writel(pcie, PCIEERRSTS0EN, val);
+
+	/* Error Status Clear */
+	val = renesas_pcie_readl(pcie, PCIEERRSTS0CLR);
+	val |= ERRSTS0_EN;
+	renesas_pcie_writel(pcie, PCIEERRSTS0CLR, val);
+
+	val = renesas_pcie_readl(pcie, PCIEERRSTS1CLR);
+	val |= ERRSTS1_EN;
+	renesas_pcie_writel(pcie, PCIEERRSTS1CLR, val);
+
+	val = renesas_pcie_readl(pcie, PCIEERRSTS2CLR);
+	val |= ERRSTS2_EN;
+	renesas_pcie_writel(pcie, PCIEERRSTS2CLR, val);
+
+	/* Power Management */
+	val = renesas_pcie_readl(pcie, PCIEPWRMNGCTRL);
+	val |= CLK_REG | CLK_PM;
+	renesas_pcie_writel(pcie, PCIEPWRMNGCTRL, val);
+
 	/* Enable DBI read-only registers for writing */
 	dw_pcie_dbi_ro_wr_en(pci);
+
+	val = dw_pcie_readl_dbi(pci, MSICAP0F0);
+	val |= MSIE;
+	dw_pcie_writel_dbi(pci, MSICAP0F0, val);
 
 	/* Enable L1 Substates */
 	val = dw_pcie_readl_dbi(pci, L1PSCAP(PCI_L1SS_CTL1));
@@ -244,18 +350,18 @@ static void renesas_pcie_init_rc(struct renesas_pcie *pcie)
 	dw_pcie_writel_dbi(pci, SHADOW_REG(BAR0_MASK), 0x0);
 	dw_pcie_writel_dbi(pci, SHADOW_REG(BAR1_MASK), 0x0);
 
+	/* Set Max Payload Size */
+	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_DEVCTL));
+	val &= ~PCI_EXP_DEVCTL_PAYLOAD;
+	val |= MPS_256;
+	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_DEVCTL), val);
+
 	/* Set Root Control */
 	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_RTCTL));
 	val |= PCI_EXP_RTCTL_SECEE | PCI_EXP_RTCTL_SENFEE |
 		PCI_EXP_RTCTL_SEFEE | PCI_EXP_RTCTL_PMEIE |
 		PCI_EXP_RTCTL_CRSSVE;
 	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_RTCTL), val);
-
-	/* Set Interrupt Disable, SERR# Enable, Parity Error Response */
-	val = dw_pcie_readl_dbi(pci, PCI_COMMAND);
-	val |= PCI_COMMAND_PARITY | PCI_COMMAND_SERR |
-		PCI_COMMAND_INTX_DISABLE;
-	dw_pcie_writel_dbi(pci, PCI_COMMAND, val);
 
 	/* Enable SERR */
 	val = dw_pcie_readb_dbi(pci, PCI_BRIDGE_CONTROL);
@@ -268,9 +374,15 @@ static void renesas_pcie_init_rc(struct renesas_pcie *pcie)
 		PCI_EXP_DEVCTL_FERE | PCI_EXP_DEVCTL_URRE;
 	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_DEVCTL), val);
 
+	/* V4H Workaround */
 	val = dw_pcie_readl_dbi(pci, PRTLGC5);
 	val |= INSERT_LANE_SKEW;
 	dw_pcie_writel_dbi(pci, PRTLGC5, val);
+
+	/* Enable PME */
+	val = dw_pcie_readl_dbi(pci, PMCAP1F0);
+	val |= PMEE_EN;
+	dw_pcie_writel_dbi(pci, PMCAP1F0, val);
 
 	dw_pcie_dbi_ro_wr_dis(pci);
 
@@ -281,10 +393,14 @@ static int renesas_pcie_host_enable(struct renesas_pcie *pcie)
 	struct dw_pcie *pci = pcie->pci;
 	int ret;
 
+
+	if (pcie->clkreq)
+		gpiod_set_value(pcie->clkreq, 1);
+
 	ret = clk_prepare_enable(pcie->bus_clk);
 	if (ret) {
 		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
-		return ret;
+		goto err_clkreq_off;
 	}
 
 	ret = reset_control_deassert(pcie->rst);
@@ -297,6 +413,10 @@ static int renesas_pcie_host_enable(struct renesas_pcie *pcie)
 
 err_clk_disable:
 	clk_disable_unprepare(pcie->bus_clk);
+
+err_clkreq_off:
+	if (pcie->clkreq)
+		gpiod_set_value(pcie->clkreq, 0);
 
 	return ret;
 }
@@ -333,6 +453,18 @@ static int renesas_pcie_get_resources(struct renesas_pcie *pcie,
 		dev_err(dev, "failed to get Cold-reset\n");
 		return PTR_ERR(pcie->rst);
 	}
+
+	pcie->clkreq =  devm_gpiod_get(dev, "clkreq", GPIOD_OUT_LOW);
+	if (IS_ERR(pcie->clkreq))
+		pcie->clkreq = NULL;
+
+	pcie->base_shared = devm_platform_ioremap_resource_byname(pdev, "shared");
+	if (IS_ERR(pcie->base_shared))
+		pcie->base_shared = NULL;
+
+	pcie->clk_shared = devm_clk_get(dev, "shared");
+	if (IS_ERR(pcie->clk_shared))
+		pcie->clk_shared = NULL;
 
 	return 0;
 }
@@ -386,6 +518,10 @@ static int renesas_pcie_probe(struct platform_device *pdev)
 err_host_disable:
 	reset_control_assert(pcie->rst);
 	clk_disable_unprepare(pcie->bus_clk);
+	if (pcie->clk_shared)
+		clk_disable_unprepare(pcie->clk_shared);
+	if (pcie->clkreq)
+		gpiod_set_value(pcie->clkreq, 0);
 
 err_pm_put:
 	pm_runtime_put(dev);

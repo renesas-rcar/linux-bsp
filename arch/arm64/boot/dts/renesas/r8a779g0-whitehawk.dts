@@ -720,6 +720,7 @@
 	status = "disabled";
 	pinctrl-0 = <&pcie1_pins>;
 	pinctrl-names = "default";
+	clkreq-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 };
 
 &pciec0_ep {
@@ -729,9 +730,10 @@
 };
 
 &pciec1_ep {
-        status = "disabled";
-        pinctrl-0 = <&pcie1_pins>;
-        pinctrl-names = "default";
+	status = "disabled";
+	pinctrl-0 = <&pcie1_pins>;
+	pinctrl-names = "default";
+	clkreq-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 };
 
 &du {
