@@ -998,9 +998,6 @@ enum GECMR_BIT {
 	GECMR_SPEED_1000 = 0x00000001,
 };
 
-#define GPOUT		0x1000
-#define GPOUT_TDM	BIT(14)
-
 /* The Ethernet AVB descriptor definitions. */
 struct ravb_desc {
 	__le16 ds;		/* Descriptor size */
