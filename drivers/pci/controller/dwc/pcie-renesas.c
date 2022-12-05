@@ -458,9 +458,12 @@ static int renesas_pcie_get_resources(struct renesas_pcie *pcie,
 	if (IS_ERR(pcie->clkreq))
 		pcie->clkreq = NULL;
 
-	pcie->base_shared = devm_platform_ioremap_resource_byname(pdev, "shared");
-	if (IS_ERR(pcie->base_shared))
-		pcie->base_shared = NULL;
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "shared");
+	if (res) {
+		pcie->base_shared = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(pcie->base_shared))
+			pcie->base_shared = NULL;
+	}
 
 	pcie->clk_shared = devm_clk_get(dev, "shared");
 	if (IS_ERR(pcie->clk_shared))
