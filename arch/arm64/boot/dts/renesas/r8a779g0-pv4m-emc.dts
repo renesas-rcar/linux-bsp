@@ -230,21 +230,25 @@
 	hscif0_pins: hscif0 {
 		groups = "hscif0_data", "hscif0_ctrl";
 		function = "hscif0";
+		power-source = <1800>;
 	};
 
 	i2c1_pins: i2c1 {
 		groups = "i2c1";
 		function = "i2c1";
+		power-source = <1800>;
 	};
 
 	i2c2_pins: i2c2 {
 		groups = "i2c2";
 		function = "i2c2";
+		power-source = <1800>;
 	};
 
 	i2c3_pins: i2c3 {
 		groups = "i2c3";
 		function = "i2c3";
+		power-source = <1800>;
 	};
 
 	mmc_pins: mmc {
@@ -256,26 +260,31 @@
 	qspi0_pins: qspi0 {
 		groups = "qspi0_ctrl", "qspi0_data4";
 		function = "qspi0";
+		power-source = <1800>;
 	};
 
 	qspi1_pins: qspi1 {
 		groups = "qspi1_ctrl", "qspi1_data4";
 		function = "qspi1";
+		power-source = <1800>;
 	};
 
 	msiof1_pins: msiof1 {
 		groups = "msiof1_clk", "msiof1_sync", "msiof1_ss1", "msiof1_ss2", "msiof1_txd", "msiof1_rxd";
 		function = "msiof1";
+		power-source = <1800>;
 	};
 
 	msiof3_pins: msiof3 {
 		groups = "msiof3_clk", "msiof3_sync", "msiof3_ss1", "msiof3_ss2", "msiof3_txd", "msiof3_rxd";
 		function = "msiof3";
+		power-source = <1800>;
 	};
 
 	pwm3_pins: pwm3 {
 		groups = "pwm3";
 		function = "pwm3";
+		power-source = <1800>;
 	};
 };
 
