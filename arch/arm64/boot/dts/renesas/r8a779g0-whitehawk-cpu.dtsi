@@ -25,7 +25,7 @@
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
-		reg = <0x0 0x48000000 0x0 0x58000000>;
+		reg = <0x0 0x48000000 0x0 0x78000000>;
 	};
 
 	memory@480000000 {
@@ -144,6 +144,16 @@
 			function = "mmc";
 			power-source = <1800>;
 	};
+
+	sound_pins: sound {
+		groups = "ssi_ctrl", "ssi_data";
+		function = "ssi";
+	};
+
+	sound_clk_pins: sound_clk {
+		groups = "audio_clkin", "audio_clkout";
+		function = "audio_clk";
+	};
 };
 
 &rpc {
@@ -195,4 +205,18 @@
 	uart-has-rtscts;
 	/* Please use exclusively to the scif0 node */
 	status = "okay";
+};
+
+&rcar_sound {
+	pinctrl-0 = <&sound_clk_pins>, <&sound_pins>;
+	pinctrl-names = "default";
+
+	status = "disabled";
+
+	/* Single DAI */
+	#sound-dai-cells = <0>;
+
+	/* audio_clkout0 */
+	#clock-cells = <0>;
+	clock-frequency = <11289600>;
 };
