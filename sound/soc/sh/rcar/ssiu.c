@@ -29,8 +29,8 @@ struct rsnd_ssiu {
 	     i++)
 
 /*
- *	SSI	Gen2		Gen3
- *	0	BUSIF0-3	BUSIF0-7
+ *	SSI	Gen2		Gen3		Gen4
+ *	0	BUSIF0-3	BUSIF0-7	BUSIF0-7
  *	1	BUSIF0-3	BUSIF0-7
  *	2	BUSIF0-3	BUSIF0-7
  *	3	BUSIF0		BUSIF0-7
@@ -40,10 +40,11 @@ struct rsnd_ssiu {
  *	7	BUSIF0		BUSIF0
  *	8	BUSIF0		BUSIF0
  *	9	BUSIF0-3	BUSIF0-7
- *	total	22		52
+ *	total	22		52			8
  */
 static const int gen2_id[] = { 0, 4,  8, 12, 13, 14, 15, 16, 17, 18 };
 static const int gen3_id[] = { 0, 8, 16, 24, 32, 40, 41, 42, 43, 44 };
+static const int gen4_id[] = { 0 };
 
 /* enable busif buffer over/under run interrupt. */
 #define rsnd_ssiu_busif_err_irq_enable(mod)  rsnd_ssiu_busif_err_irq_ctrl(mod, 1)
@@ -152,59 +153,57 @@ static int rsnd_ssiu_init(struct rsnd_mod *mod,
 	/* clear status */
 	rsnd_ssiu_busif_err_status_clear(mod);
 
-	/*
-	 * SSI_MODE0
-	 */
-	rsnd_mod_bset(mod, SSI_MODE0, (1 << id), !use_busif << id);
+	if (!rsnd_is_gen4(priv)) {
+		/* SSI_MODE0 */
+		rsnd_mod_bset(mod, SSI_MODE0, (1 << id), !use_busif << id);
 
-	/*
-	 * SSI_MODE1 / SSI_MODE2
-	 *
-	 * FIXME
-	 * sharing/multi with SSI0 are mainly supported
-	 */
-	val1 = rsnd_mod_read(mod, SSI_MODE1);
-	val2 = rsnd_mod_read(mod, SSI_MODE2);
-	if (rsnd_ssi_is_pin_sharing(io)) {
-
-		ssis |= (1 << id);
-
-	} else if (ssis) {
 		/*
-		 * Multi SSI
+		 * SSI_MODE1 / SSI_MODE2
 		 *
-		 * set synchronized bit here
+		 * FIXME
+		 * sharing/multi with SSI0 are mainly supported
 		 */
+		val1 = rsnd_mod_read(mod, SSI_MODE1);
+		val2 = rsnd_mod_read(mod, SSI_MODE2);
+		if (rsnd_ssi_is_pin_sharing(io)) {
+			ssis |= (1 << id);
+		} else if (ssis) {
+			/*
+			 * Multi SSI
+			 *
+			 * set synchronized bit here
+			 */
 
-		/* SSI4 is synchronized with SSI3 */
+			/* SSI4 is synchronized with SSI3 */
+			if (ssis & (1 << 4))
+				val1 |= (1 << 20);
+			/* SSI012 are synchronized */
+			if (ssis == 0x0006)
+				val1 |= (1 << 4);
+			/* SSI0129 are synchronized */
+			if (ssis == 0x0206)
+				val2 |= (1 << 4);
+		}
+
+		/* SSI1 is sharing pin with SSI0 */
+		if (ssis & (1 << 1))
+			val1 |= is_clk_master ? 0x2 : 0x1;
+
+		/* SSI2 is sharing pin with SSI0 */
+		if (ssis & (1 << 2))
+			val1 |= is_clk_master ?	0x2 << 2 :
+						0x1 << 2;
+		/* SSI4 is sharing pin with SSI3 */
 		if (ssis & (1 << 4))
-			val1 |= (1 << 20);
-		/* SSI012 are synchronized */
-		if (ssis == 0x0006)
-			val1 |= (1 << 4);
-		/* SSI0129 are synchronized */
-		if (ssis == 0x0206)
-			val2 |= (1 << 4);
+			val1 |= is_clk_master ? 0x2 << 16 :
+						0x1 << 16;
+		/* SSI9 is sharing pin with SSI0 */
+		if (ssis & (1 << 9))
+			val2 |= is_clk_master ? 0x2 : 0x1;
+
+		rsnd_mod_bset(mod, SSI_MODE1, 0x0013001f, val1);
+		rsnd_mod_bset(mod, SSI_MODE2, 0x00000017, val2);
 	}
-
-	/* SSI1 is sharing pin with SSI0 */
-	if (ssis & (1 << 1))
-		val1 |= is_clk_master ? 0x2 : 0x1;
-
-	/* SSI2 is sharing pin with SSI0 */
-	if (ssis & (1 << 2))
-		val1 |= is_clk_master ?	0x2 << 2 :
-					0x1 << 2;
-	/* SSI4 is sharing pin with SSI3 */
-	if (ssis & (1 << 4))
-		val1 |= is_clk_master ? 0x2 << 16 :
-					0x1 << 16;
-	/* SSI9 is sharing pin with SSI0 */
-	if (ssis & (1 << 9))
-		val2 |= is_clk_master ? 0x2 : 0x1;
-
-	rsnd_mod_bset(mod, SSI_MODE1, 0x0013001f, val1);
-	rsnd_mod_bset(mod, SSI_MODE2, 0x00000017, val2);
 
 	/*
 	 * Enable busif buffer over/under run interrupt.
@@ -233,6 +232,93 @@ static struct rsnd_mod_ops rsnd_ssiu_ops_gen1 = {
 	.quit		= rsnd_ssiu_quit,
 	.get_status	= rsnd_ssiu_get_status,
 };
+
+static int rsnd_ssiu_init_gen4(struct rsnd_mod *mod,
+			       struct rsnd_dai_stream *io,
+			       struct rsnd_priv *priv)
+{
+	struct rsnd_ssiu *ssiu = rsnd_mod_to_ssiu(mod);
+	int ret;
+	u32 mode = 0;
+
+	ret = rsnd_ssiu_init(mod, io, priv);
+	if (ret < 0)
+		return ret;
+
+	ssiu->usrcnt++;
+
+	/*
+	 * TDM Extend/Split Mode
+	 * see
+	 *	rsnd_ssi_config_init()
+	 */
+	if (rsnd_runtime_is_tdm(io))
+		mode = TDM_EXT;
+	else if (rsnd_runtime_is_tdm_split(io))
+		mode = TDM_SPLIT;
+
+	rsnd_mod_write(mod, SSI_MODE, mode);
+
+	if (rsnd_ssi_use_busif(io)) {
+		int id = rsnd_mod_id(mod);
+		int busif = rsnd_mod_id_sub(mod);
+		enum rsnd_reg adinr_reg, mode_reg, dalign_reg;
+
+		if (id == 9 && busif >= 4) {
+			adinr_reg = SSI9_BUSIF_ADINR(busif);
+			mode_reg = SSI9_BUSIF_MODE(busif);
+			dalign_reg = SSI9_BUSIF_DALIGN(busif);
+		} else {
+			adinr_reg = SSI_BUSIF_ADINR(busif);
+			mode_reg = SSI_BUSIF_MODE(busif);
+			dalign_reg = SSI_BUSIF_DALIGN(busif);
+		}
+
+		rsnd_mod_write(mod, adinr_reg,
+			       rsnd_get_adinr_bit(mod, io) |
+			       (rsnd_io_is_play(io) ?
+				rsnd_runtime_channel_after_ctu(io) :
+				rsnd_runtime_channel_original(io)));
+		rsnd_mod_write(mod, mode_reg,
+			       rsnd_get_busif_shift(io, mod) | 1);
+		rsnd_mod_write(mod, dalign_reg,
+			       rsnd_get_dalign(mod, io));
+	}
+
+	return 0;
+}
+
+static int rsnd_ssiu_start_gen4(struct rsnd_mod *mod,
+				struct rsnd_dai_stream *io,
+				struct rsnd_priv *priv)
+{
+	int busif = rsnd_mod_id_sub(mod);
+
+	if (!rsnd_ssi_use_busif(io))
+		return 0;
+
+	rsnd_mod_bset(mod, SSI_CTRL, 1 << (busif * 4), 1 << (busif * 4));
+
+	return 0;
+}
+
+static int rsnd_ssiu_stop_gen4(struct rsnd_mod *mod,
+			       struct rsnd_dai_stream *io,
+			       struct rsnd_priv *priv)
+{
+	struct rsnd_ssiu *ssiu = rsnd_mod_to_ssiu(mod);
+	int busif = rsnd_mod_id_sub(mod);
+
+	if (!rsnd_ssi_use_busif(io))
+		return 0;
+
+	rsnd_mod_bset(mod, SSI_CTRL, 1 << (busif * 4), 0);
+
+	if (--ssiu->usrcnt)
+		return 0;
+
+	return 0;
+}
 
 static int rsnd_ssiu_init_gen2(struct rsnd_mod *mod,
 			       struct rsnd_dai_stream *io,
@@ -425,6 +511,16 @@ static struct rsnd_mod_ops rsnd_ssiu_ops_gen2 = {
 	DEBUG_INFO
 };
 
+static struct rsnd_mod_ops rsnd_ssiu_ops_gen4 = {
+	.name		= SSIU_NAME,
+	.dma_req	= rsnd_ssiu_dma_req,
+	.init		= rsnd_ssiu_init_gen4,
+	.start		= rsnd_ssiu_start_gen4,
+	.stop		= rsnd_ssiu_stop_gen4,
+	.get_status	= rsnd_ssiu_get_status,
+	DEBUG_INFO
+};
+
 static struct rsnd_mod *rsnd_ssiu_mod_get(struct rsnd_priv *priv, int id)
 {
 	if (WARN_ON(id < 0 || id >= rsnd_ssiu_nr(priv)))
@@ -531,13 +627,15 @@ int rsnd_ssiu_probe(struct rsnd_priv *priv)
 
 	if (rsnd_is_gen1(priv))
 		ops = &rsnd_ssiu_ops_gen1;
+	else if (rsnd_is_gen4(priv))
+		ops = &rsnd_ssiu_ops_gen4;
 	else
 		ops = &rsnd_ssiu_ops_gen2;
 
 	/* Keep compatibility */
 	nr = 0;
 	if ((node) &&
-	    (ops == &rsnd_ssiu_ops_gen2)) {
+	    ((ops == &rsnd_ssiu_ops_gen2) || (ops == &rsnd_ssiu_ops_gen4))) {
 		ops->id		= rsnd_ssiu_id;
 		ops->id_sub	= rsnd_ssiu_id_sub;
 
@@ -547,6 +645,9 @@ int rsnd_ssiu_probe(struct rsnd_priv *priv)
 		} else if (rsnd_is_gen3(priv)) {
 			list	= gen3_id;
 			nr	= ARRAY_SIZE(gen3_id);
+		} else if (rsnd_is_gen4(priv)) {
+			list	= gen4_id;
+			nr	= ARRAY_SIZE(gen4_id);
 		} else {
 			dev_err(dev, "unknown SSIU\n");
 			return -ENODEV;
