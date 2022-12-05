@@ -117,9 +117,6 @@
 	clock-frequency = <400000>;
 
 	gvif0: gvif-deserializer@23 {
-		gpio-controller;
-		#gpio-cells = <2>;
-
 		compatible = "sony,cxd4960";
 		reg = <0x23>, <0x01>;
 		gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>;
@@ -168,9 +165,6 @@
 	clock-frequency = <1000000>;
 
 	camera: imx728@1a {
-		gpio-controller;
-		#gpio-cells = <2>;
-
 		compatible = "sony,imx728";
 		reg = <0x1a>;
 		gpios = <&gpio7 9 GPIO_ACTIVE_HIGH>;
