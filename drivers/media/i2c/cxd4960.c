@@ -62,8 +62,10 @@
 #define GPIO1_REG_PMMR	0x0800
 #define GPIO1_REG_POC	0x08A0
 #define GPIO1_REG_PUEN	0x08C0
+#define GPIO1_REG_OUTDT	0x0988
 #define GPIO1_POC_CE	0x00000001
 #define GPIO1_PUEN_CE	0x00000001
+#define GPIO1_OUTDT_CE	0x00000001
 
 #define CXD4960_REG_VALUE_08BIT	1
 #define CXD4960_REG_VALUE_16BIT	2
@@ -121,16 +123,6 @@ static const struct cxd4960_reg init_des_set_regs_step4[] = {
 	{0x90, 0x20},
 };/* init_des_set_regs_step4 */
 
-/* regulator supplies */
-static const char * const cxd4960_supply_name[] = {
-	/* Supplies can be enabled in any order */
-	"VANA",  /* Analog (2.8V) supply */
-	"VDIG",  /* Digital Core (1.8V) supply */
-	"VDDL",  /* IF (1.2V) supply */
-};
-
-#define CXD4960_NUM_SUPPLIES ARRAY_SIZE(cxd4960_supply_name)
-
 struct cxd4960 {
 	struct v4l2_subdev sd;
 	struct media_pad pad;
@@ -141,10 +133,7 @@ struct cxd4960 {
 
 	struct v4l2_mbus_framefmt fmt;
 
-	struct clk *xclk; /* system clock to CXD4960 */
-
 	struct gpio_desc *reset_gpio;
-	struct regulator_bulk_data supplies[CXD4960_NUM_SUPPLIES];
 
 	struct v4l2_ctrl_handler ctrl_handler;
 	/* V4L2 Controls */
@@ -420,29 +409,33 @@ err_unlock:
 }
 
 /* Power/clock management functions */
+static void cxd4960_control_ce(u32 io)
+{
+	u32 gpioreg;
+	void *mapped;
+
+	mapped = ioremap(GPIO01_BASE, GPIO_PAGE_SIZE);
+
+	gpioreg = ioread32(mapped + GPIO1_REG_OUTDT);
+	if (io)
+		gpioreg |= GPIO1_OUTDT_CE;
+	else
+		gpioreg &= ~GPIO1_OUTDT_CE;
+	iowrite32(gpioreg, mapped + GPIO1_REG_OUTDT);
+
+	iounmap(mapped);
+
+	return;
+}
+
 static int cxd4960_power_on(struct device *dev)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct cxd4960 *cxd4960 = to_cxd4960(sd);
-	int ret;
+//	struct i2c_client *client = to_i2c_client(dev);
+//	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+//	struct cxd4960 *cxd4960 = to_cxd4960(sd);
 
-	ret = regulator_bulk_enable(CXD4960_NUM_SUPPLIES,
-				    cxd4960->supplies);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable regulators\n",
-			__func__);
-		return ret;
-	}
-
-	ret = clk_prepare_enable(cxd4960->xclk);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable clock\n",
-			__func__);
-		return ret;
-	}
-
-	gpiod_set_value_cansleep(cxd4960->reset_gpio, 1);
+//	gpiod_set_value_cansleep(cxd4960->reset_gpio, 1);
+	cxd4960_control_ce(1);
 	msleep(10);
 
 	return 0;
@@ -450,13 +443,12 @@ static int cxd4960_power_on(struct device *dev)
 
 static int cxd4960_power_off(struct device *dev)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct cxd4960 *cxd4960 = to_cxd4960(sd);
+//	struct i2c_client *client = to_i2c_client(dev);
+//	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+//	struct cxd4960 *cxd4960 = to_cxd4960(sd);
 
-	gpiod_set_value_cansleep(cxd4960->reset_gpio, 0);
-	regulator_bulk_disable(CXD4960_NUM_SUPPLIES, cxd4960->supplies);
-	clk_disable_unprepare(cxd4960->xclk);
+//	gpiod_set_value_cansleep(cxd4960->reset_gpio, 0);
+	cxd4960_control_ce(0);
 
 	return 0;
 }
@@ -524,30 +516,30 @@ static int cxd4960_check_hwcfg(struct device *dev)
 	};
 	int ret = -EINVAL;
 
-	endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
-	if (!endpoint) {
-		dev_err(dev, "endpoint node not found\n");
-		return -EINVAL;
+	for (endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
+		endpoint != NULL;
+		endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(dev), endpoint)) {
+		if (!endpoint) {
+			dev_err(dev, "endpoint node not found\n");
+			return -EINVAL;
+		}
+
+		if (v4l2_fwnode_endpoint_alloc_parse(endpoint, &ep_cfg)) {
+			dev_err(dev, "could not parse endpoint\n");
+			goto error_out;
+		}
+
+		/* Check the number of MIPI CSI2 data lanes */
+		if (ep_cfg.bus.mipi_csi2.num_data_lanes != 2) {
+			/* check next endpoint */
+			continue;
+		} else {
+			ret = 0;
+		}
 	}
 
-	if (v4l2_fwnode_endpoint_alloc_parse(endpoint, &ep_cfg)) {
-		dev_err(dev, "could not parse endpoint\n");
-		goto error_out;
-	}
-
-	/* Check the number of MIPI CSI2 data lanes */
-	if (ep_cfg.bus.mipi_csi2.num_data_lanes != 2) {
+	if (ret)
 		dev_err(dev, "only 2 data lanes are currently supported\n");
-		goto error_out;
-	}
-
-	/* Check the link frequency set in device tree */
-	if (!ep_cfg.nr_of_link_frequencies) {
-		dev_err(dev, "link-frequency property not found in DT\n");
-		goto error_out;
-	}
-
-	ret = 0;
 
 error_out:
 	v4l2_fwnode_endpoint_free(&ep_cfg);
@@ -610,7 +602,7 @@ static int cxd4960_parse(struct cxd4960 *priv)
 
 	int ret;
 
-	ep = of_graph_get_endpoint_by_regs(client->dev.of_node, 0, 0);
+	ep = of_graph_get_endpoint_by_regs(client->dev.of_node, 1, -1);
 	if (!ep) {
 		dev_dbg(&client->dev, "Not connected to subdevice\n");
 		return 0;
