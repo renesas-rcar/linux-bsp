@@ -64,11 +64,13 @@ static unsigned long ImagerStatus;
 #define GPIO7_REG_POC	0x08A0
 #define GPIO7_REG_PUEN	0x08C0
 #define GPIO7_REG_PUD	0x08E0
+#define GPIO7_REG_OUTDT	0x0988
 #define GPIO7_POC_XCLR	0x00000200
 #define GPIO7_POC_XERR	0x00040000
 #define GPIO7_PUEN_XCLR	0x00000200
 #define GPIO7_PUEN_XERR	0x00040000
 #define GPIO7_PUD_XERR	0x00040000
+#define GPIO7_OUTDT_XCLR	0x00000200
 
 /* Standby Setting */
 #define IMX728_REG_STANDBY	0x1B05
@@ -5604,27 +5606,13 @@ static const struct imx728_reg streaming_set_regs_step2[] = {
 	{0xFFFF,0x05},
 };/* streaming_set_regs_step2 */
 
-/* regulator supplies */
-static const char * const imx728_supply_name[] = {
-	/* Supplies can be enabled in any order */
-	"VANA",  /* Analog (2.8V) supply */
-	"VDIG",  /* Digital Core (1.8V) supply */
-	"VDDL",  /* IF (1.2V) supply */
-};
-
-#define IMX728_NUM_SUPPLIES ARRAY_SIZE(imx728_supply_name)
-
 struct imx728 {
 	struct v4l2_subdev sd;
 	struct media_pad pad;
 
 	struct v4l2_mbus_framefmt fmt;
 
-	struct clk *xclk; /* system clock to IMX728 */
-	u32 xclk_freq;
-
 	struct gpio_desc *reset_gpio;
-	struct regulator_bulk_data supplies[IMX728_NUM_SUPPLIES];
 
 	struct v4l2_ctrl_handler ctrl_handler;
 	/* V4L2 Controls */
@@ -5890,22 +5878,33 @@ err_unlock:
 }
 
 /* Power/clock management functions */
+static void imx728_control_xclr(u32 io)
+{
+	u32 gpioreg;
+	void *mapped;
+
+	mapped = ioremap(GPIO67_BASE, GPIO_PAGE_SIZE);
+
+	gpioreg = ioread32(mapped + GPIO7_REG_OUTDT);
+	if (io)
+		gpioreg |= GPIO7_OUTDT_XCLR;
+	else
+		gpioreg &= ~GPIO7_OUTDT_XCLR;
+	iowrite32(gpioreg, mapped + GPIO7_REG_OUTDT);
+
+	iounmap(mapped);
+
+	return;
+}
+
 static int imx728_power_on(struct device *dev)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct imx728 *imx728 = to_imx728(sd);
-	int ret;
+//	struct i2c_client *client = to_i2c_client(dev);
+//	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+//	struct imx728 *imx728 = to_imx728(sd);
 
-	ret = regulator_bulk_enable(IMX728_NUM_SUPPLIES,
-				    imx728->supplies);
-	if (ret) {
-		dev_err(&client->dev, "%s: failed to enable regulators\n",
-			__func__);
-		return ret;
-	}
-
-	gpiod_set_value_cansleep(imx728->reset_gpio, 1);
+//	gpiod_set_value_cansleep(imx728->reset_gpio, 1);
+	imx728_control_xclr(1);
 	msleep(15);
 
 	return 0;
@@ -5913,13 +5912,12 @@ static int imx728_power_on(struct device *dev)
 
 static int imx728_power_off(struct device *dev)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct imx728 *imx728 = to_imx728(sd);
+//	struct i2c_client *client = to_i2c_client(dev);
+//	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+//	struct imx728 *imx728 = to_imx728(sd);
 
-	gpiod_set_value_cansleep(imx728->reset_gpio, 0);
-	regulator_bulk_disable(IMX728_NUM_SUPPLIES, imx728->supplies);
-	clk_disable_unprepare(imx728->xclk);
+//	gpiod_set_value_cansleep(imx728->reset_gpio, 0);
+	imx728_control_xclr(0);
 
 	return 0;
 }
@@ -5956,19 +5954,6 @@ error:
 	imx728->streaming = false;
 
 	return ret;
-}
-
-static int imx728_get_regulators(struct imx728 *imx728)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(&imx728->sd);
-	unsigned int i;
-
-	for (i = 0; i < IMX728_NUM_SUPPLIES; i++)
-		imx728->supplies[i].supply = imx728_supply_name[i];
-
-	return devm_regulator_bulk_get(&client->dev,
-				       IMX728_NUM_SUPPLIES,
-				       imx728->supplies);
 }
 
 static const struct v4l2_subdev_core_ops imx728_core_ops = {
@@ -6016,12 +6001,6 @@ static int imx728_check_hwcfg(struct device *dev)
 		goto error_out;
 	}
 
-	/* Check the link frequency set in device tree */
-	if (!ep_cfg.nr_of_link_frequencies) {
-		dev_err(dev, "link-frequency property not found in DT\n");
-		goto error_out;
-	}
-
 	ret = 0;
 
 error_out:
@@ -6051,12 +6030,6 @@ static int imx728_probe(struct i2c_client *client)
 	/* Check the hardware configuration in device tree */
 	if (imx728_check_hwcfg(dev))
 		return -EINVAL;
-
-	ret = imx728_get_regulators(imx728);
-	if (ret) {
-		dev_err(dev, "failed to get regulators\n");
-		return ret;
-	}
 
 	/* GPIO setting XCLR,XERR */
 	/* set parameter (addr should be aligned by GPIO_PAGE_SIZE) */
@@ -6093,10 +6066,14 @@ static int imx728_probe(struct i2c_client *client)
 	msleep(1);
 
 	/* Request optional enable pin */
+#if 0
+	/* Get from device tree, I/O error is happened. */
+	/* So this logic is avoided temporary. */
 	imx728->reset_gpio = devm_gpiod_get_optional(dev, NULL,
 						     GPIOD_OUT_LOW);
 	if (!imx728->reset_gpio)
 		return -ENOENT;
+#endif
 
 	ret = imx728_power_on(dev);
 	if (ret)
