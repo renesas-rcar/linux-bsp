@@ -133,10 +133,35 @@ static int rpcif_spi_probe(struct platform_device *pdev)
 	struct spi_controller *ctlr;
 	struct rpcif *rpc;
 	int error;
+	void __iomem *reg;
+	u32 data;
 
 	ctlr = devm_spi_alloc_master(&pdev->dev, sizeof(*rpc));
 	if (!ctlr)
 		return -ENOMEM;
+
+	/* Start debug for DRV setting */
+#define PFC_PMMR3				0xE6058800
+#define	PFC_OFFSET_DRV2CTRL3	0x00000088
+#define	PFC_OFFSET_DRV3CTRL2	0x0000008C
+
+	reg = ioremap(PFC_PMMR3, 0x100);
+	/* DRV2CTRL3 3/4 -> 4/4 */
+	data = ioread32(reg + PFC_OFFSET_DRV2CTRL3);
+	data &= ~0x77777777;
+	data |=  0x32333333;
+	iowrite32(~data, reg);
+	iowrite32(data, reg + PFC_OFFSET_DRV2CTRL3);
+
+	/* DRV3CTRL2 3/4 -> 4/4 */
+	data = ioread32(reg + PFC_OFFSET_DRV3CTRL2);
+	data &= ~0x00777777;
+	data |=  0x00222323;
+	iowrite32(~data, reg);
+	iowrite32(data, reg + PFC_OFFSET_DRV3CTRL2);
+
+	iounmap(reg);
+	/* End debug for DRV setting */
 
 	rpc = spi_controller_get_devdata(ctlr);
 	error = rpcif_sw_init(rpc, parent);
