@@ -4,7 +4,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
-#include <linux/spi/spi-adconverter.h>
+#include <linux/iio/dummy_adc.h>
 
 #define EMC_HT_MODNAME			"emc-ht"
 
@@ -16,7 +16,7 @@
 #define OFF_PIN_VOL_THRESHOLD		3					// OFF異常:端子電圧条件の閾値(0.<OFF_PIN_VOL_THRESHOLD>)
 #define OFF_ERR_THRESHOLD_CNT		625					// OFF異常:判定の閾値(回数)
 
-										// adc_spi_getdata() 用ID定義
+										// dummy_adc_getdata() 用ID定義
 #define ID_AD_BZ			9					// AD_BZ_A/D値
 #define ID_AD_PB			1					// AD_+B_A/D値
 
@@ -69,7 +69,7 @@ static int get_ad_bz(void)
 	int val = 0;
 
 	// 〔AD_BZ_A/D値〕を取得
-	val = adc_spi_getdata(ID_AD_BZ);
+	val = dummy_adc_getdata(ID_AD_BZ);
 
 	pr_debug("%s: val = %d\n", __func__, val);
 	return val;
@@ -80,7 +80,7 @@ static int get_ad_pb(void)
 	int val = 0;
 
 	// 〔AD_+B_A/D値〕を取得
-	val = adc_spi_getdata(ID_AD_PB);
+	val = dummy_adc_getdata(ID_AD_PB);
 
 	pr_debug("%s: val = %d\n", __func__, val);
 	return val;
