@@ -142,10 +142,19 @@ static int rpcif_spi_probe(struct platform_device *pdev)
 
 	/* Start debug for DRV setting */
 #define PFC_PMMR3				0xE6058800
+#define	PFC_OFFSET_DRV1CTRL3	0x00000084
 #define	PFC_OFFSET_DRV2CTRL3	0x00000088
 #define	PFC_OFFSET_DRV3CTRL2	0x0000008C
 
 	reg = ioremap(PFC_PMMR3, 0x100);
+
+	/* DRV1CTRL3 3/4 -> 4/4 */
+	data = ioread32(reg + PFC_OFFSET_DRV1CTRL3);
+	data &= ~0x77777777;
+	data |=  0x32266666;
+	iowrite32(~data, reg);
+	iowrite32(data, reg + PFC_OFFSET_DRV1CTRL3);
+
 	/* DRV2CTRL3 3/4 -> 4/4 */
 	data = ioread32(reg + PFC_OFFSET_DRV2CTRL3);
 	data &= ~0x77777777;
@@ -156,7 +165,7 @@ static int rpcif_spi_probe(struct platform_device *pdev)
 	/* DRV3CTRL2 3/4 -> 4/4 */
 	data = ioread32(reg + PFC_OFFSET_DRV3CTRL2);
 	data &= ~0x00777777;
-	data |=  0x00222323;
+	data |=  0x00223323;
 	iowrite32(~data, reg);
 	iowrite32(data, reg + PFC_OFFSET_DRV3CTRL2);
 
