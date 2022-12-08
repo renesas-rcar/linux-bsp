@@ -4,7 +4,7 @@
 #include <linux/pwm.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
-#include <linux/spi/spi-adconverter.h>
+#include <linux/iio/dummy_adc.h>
 
 // 定数定義
 #define EMC_DSM_MODNAME		"emc-dsm"
@@ -32,7 +32,7 @@
 #define DSM_GND_FAIL_VAL	99					// 〔DSM地絡異常判定条件値〕      DSM地絡異常判定条件 (LSB) (0〜65535)
 #define DSM_GND_FAIL_TIME	80					// 〔DSM地絡異常判定時間〕        DSM地絡異常判定時間 (回)  (0〜65535)
 
-									// adc_spi_getdata() 用ID定義
+									// dummy_adc_getdata() 用ID定義
 #define ID_AD_PB		1					// AD_+B_A/D値
 #define ID_DSM_VOL		5					// DSM電源A/D値
 
@@ -70,7 +70,7 @@ static int get_ig_vol(void)
 	int val = 0;
 
 	// 〔AD_+B_A/D値〕(IG電圧) の値を取得する。
-	val = adc_spi_getdata(ID_AD_PB);
+	val = dummy_adc_getdata(ID_AD_PB);
 
 	pr_debug("%s: IG_VOL = %d\n", __func__, val);
 	return val;
@@ -81,7 +81,7 @@ static int get_dsm_vol(void)
 	int val = 0;
 
 	// 〔DSM電源AD値〕(DSM電圧) の値を取得する。
-	val = adc_spi_getdata(ID_DSM_VOL);
+	val = dummy_adc_getdata(ID_DSM_VOL);
 
 	pr_debug("%s: DSM_VOL = %d\n", __func__, val);
 	return val;
