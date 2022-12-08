@@ -1,0 +1,5 @@
+
+config EMC_BZ
+	tristate "EMC Buzzer control driver"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	default y
