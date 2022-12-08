@@ -1,0 +1,33 @@
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	emc-bz {
+		compatible = "emc-bz";
+		gpios = <&gpio2 10 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+/ {
+	emc-ht {
+		compatible = "emc-ht";
+		gpios = <&gpio4 24 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+/ {
+	emc-ig {
+		compatible = "emc-ig";
+		gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
+	};
+};
+
+&pwm1 {
+	status = "okay";
+};
+
+/ {
+	emc-dsm {
+		compatible = "emc-dsm";
+		pwms = <&pwm1 0 33333>;		/* 30kHz = 33333.333... (ns) */
+	};
+};

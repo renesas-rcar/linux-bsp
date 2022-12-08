@@ -23,7 +23,7 @@ static void emc_ig_kthread_main(struct emc_ig_priv *priv)
 {
 	int			old_ig_det;
 
-	set_current_state(TASK_INTERRUPTIBLE);  
+	set_current_state(TASK_INTERRUPTIBLE);
 	schedule_timeout(msecs_to_jiffies(EMC_IG_INTERVAL_MS));
 
 	// get IG_DET value
@@ -80,7 +80,7 @@ static int emc_ig_probe(struct platform_device *pdev)
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
- 
+
 	// get gpio desc
 	priv->desc = devm_gpiod_get(&pdev->dev, NULL, GPIOD_IN);
 	if (IS_ERR(priv->desc))

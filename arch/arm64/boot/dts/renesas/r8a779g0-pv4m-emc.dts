@@ -59,18 +59,6 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
-	emc-bz {
-	      compatible = "emc-bz";
-	          gpios = <&gpio2 10 GPIO_ACTIVE_LOW>;
-	};
-	emc-ig {
-	      compatible = "emc-ig";
-	          gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
-	};
-	emc-ht {
-	      compatible = "emc-ht";
-	          gpios = <&gpio4 24 GPIO_ACTIVE_LOW>;
-	};
 };
 
 &canfd {
@@ -281,6 +269,25 @@
 		power-source = <1800>;
 	};
 
+	msiof5_pins: msiof5 {
+		mux {
+			groups = "msiof5_clk", "msiof5_rxd";
+			function = "msiof5";
+		};
+
+		clk {
+			groups = "msiof5_clk";
+			drive-strength = <21>;
+			power-source = <1800>;
+		};
+
+		rxd {
+			groups = "msiof5_rxd";
+			bias-pull-down;
+			power-source = <1800>;
+		};
+	};
+
 	pwm1_pins: pwm1 {
 		groups = "pwm1";
 		function = "pwm1";
@@ -417,6 +424,21 @@
 	};
 };
 
+&msiof5 {
+	pinctrl-0 = <&msiof5_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	assigned-clock-rates = <100000000>;
+
+	cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;
+
+	dummy_adc@0 {
+		compatible = "dummy,adc";
+		reg = <0>;
+	};
+};
+
 &pwm1 {
 	pinctrl-0 = <&pwm1_pins>;
 	pinctrl-names = "default";
@@ -550,3 +572,5 @@
 
 /* DMC Overlay */
 #include "pv4m-emc-gvif.dtsi"
+
+#include "r8a779g0-pv4m-emc-control.dtsi"
