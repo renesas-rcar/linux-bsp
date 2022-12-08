@@ -20,3 +20,14 @@
 		gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
 	};
 };
+
+&pwm1 {
+	status = "okay";
+};
+
+/ {
+	emc-dsm {
+		compatible = "emc-dsm";
+		pwms = <&pwm1 0 33333>;		/* 30kHz = 33333.333... (ns) */
+	};
+};
