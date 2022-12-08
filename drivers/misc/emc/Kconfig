@@ -3,3 +3,8 @@ config EMC_BZ
 	tristate "EMC Buzzer control driver"
 	depends on ARCH_RENESAS || COMPILE_TEST
 	default y
+
+config EMC_HT
+	tristate "EMC Heater control driver"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	default y

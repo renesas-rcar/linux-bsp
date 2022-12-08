@@ -6,3 +6,10 @@
 		gpios = <&gpio2 10 GPIO_ACTIVE_HIGH>;
 	};
 };
+
+/ {
+	emc-ht {
+		compatible = "emc-ht";
+		gpios = <&gpio4 24 GPIO_ACTIVE_HIGH>;
+	};
+};
