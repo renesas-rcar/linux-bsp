@@ -4,6 +4,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/kthread.h>
 #include <linux/sched.h>
+#include <linux/spi/spi-adconverter.h>
 
 #define EMC_HT_MODNAME			"emc-ht"
 
@@ -14,6 +15,10 @@
 
 #define OFF_PIN_VOL_THRESHOLD		3					// OFF異常:端子電圧条件の閾値(0.<OFF_PIN_VOL_THRESHOLD>)
 #define OFF_ERR_THRESHOLD_CNT		625					// OFF異常:判定の閾値(回数)
+
+										// adc_spi_getdata() 用ID定義
+#define ID_AD_BZ			9					// AD_BZ_A/D値
+#define ID_AD_PB			1					// AD_+B_A/D値
 
 
 struct emc_ht_priv {
@@ -39,11 +44,12 @@ static int get_in_now(void)
 {
 	int val = 0;
 
-	// 〔じか線ヒータ駆動制御」の値を取得する。
-	// 「じか線ヒータ駆動制御」＝〔じか線PCS_SW状態〕なので
+	// 〔じか線ヒータ駆動制御〕の値を取得する。
+	// 「じか線ヒータ駆動制御〕＝〔じか線PCS_SW状態〕なので
 	// 〔じか線PCS_SW状態〕を取得すれば良い。
 	// FIXME
 
+	pr_debug("%s: val = %d\n", __func__, val);
 	return val;
 }
 
@@ -54,6 +60,7 @@ static int get_htr_enable(void)
 	// 〔HTR_ENABLE〕を取得
 	// FIXME
 
+	pr_debug("%s: val = %d\n", __func__, val);
 	return val;
 }
 
@@ -62,8 +69,9 @@ static int get_ad_bz(void)
 	int val = 0;
 
 	// 〔AD_BZ_A/D値〕を取得
-	// FIXME
+	val = adc_spi_getdata(ID_AD_BZ);
 
+	pr_debug("%s: val = %d\n", __func__, val);
 	return val;
 }
 
@@ -72,8 +80,9 @@ static int get_ad_pb(void)
 	int val = 0;
 
 	// 〔AD_+B_A/D値〕を取得
-	// FIXME
+	val = adc_spi_getdata(ID_AD_PB);
 
+	pr_debug("%s: val = %d\n", __func__, val);
 	return val;
 }
 
@@ -86,8 +95,11 @@ static void update_pin_vol_condition(struct emc_ht_priv *priv)
 	// ＜メモ＞「* 10」は小数を無くすためにある
 	ad_bz = get_ad_bz() * 10;
 	ad_pb = get_ad_pb() * 10;
-	// remove calculating 0 / 0
-//	priv->pin_vol = ad_bz / ad_pb;
+	if (ad_pb != 0) {
+		priv->pin_vol = ad_bz / ad_pb;
+	} else {
+		priv->pin_vol = 0;
+	}
 }
 
 static void check_on_error(struct emc_ht_priv *priv)
@@ -167,7 +179,7 @@ static void check_error(struct emc_ht_priv *priv)
 static void in_kthread_main(struct emc_ht_priv *priv)
 {
 	// 少し待つ
-	set_current_state(TASK_INTERRUPTIBLE);  
+	set_current_state(TASK_INTERRUPTIBLE);
 	schedule_timeout(msecs_to_jiffies(INTERVAL_MS));
 
 	// 〔じか線ヒータ駆動制御〕を取得
