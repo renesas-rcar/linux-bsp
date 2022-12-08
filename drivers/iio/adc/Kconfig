@@ -1226,4 +1226,7 @@ config XILINX_XADC
 	  The driver can also be build as a module. If so, the module will be called
 	  xilinx-xadc.
 
+config DUMMY_ADC
+	tristate "Dummy ADC driver"
+
 endmenu
