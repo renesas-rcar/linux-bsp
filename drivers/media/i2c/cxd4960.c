@@ -100,7 +100,7 @@ static const struct cxd4960_reg init_des_set_regs_step2[] = {
 	{0xB0, 0x42},
 	{0xB1, 0xC0},
 	{0xB2, 0x41},
-	{0xB4, 0x01},
+	{0xB4, 0x41},
 };/* init_des_set_regs_step2 */
 
 static const struct cxd4960_reg init_des_set_regs_step3[] = {
@@ -690,10 +690,12 @@ static int cxd4960_probe(struct i2c_client *client)
 	msleep(25);
 
 	/* Request optional enable pin */
+#if 0
 	cxd4960->reset_gpio = devm_gpiod_get_optional(dev, NULL,
 						     GPIOD_OUT_LOW);
 	if (!cxd4960->reset_gpio)
 		return -ENOENT;
+#endif
 
 	ret = cxd4960_power_on(dev);
 	if (ret)
@@ -706,6 +708,8 @@ static int cxd4960_probe(struct i2c_client *client)
 
 
 	/* REFCLK */
+	/* set by msiof driver */
+#if 0
 	/* set parameter (addr should be aligned by MSIOF_PAGE_SIZE) */
 
 	mapped = ioremap(MSIOF3_BASE, MSIOF_PAGE_SIZE);
@@ -715,6 +719,7 @@ static int cxd4960_probe(struct i2c_client *client)
 	iowrite32(MSIOF_TSCKIZ | MSIOF_TSCKE, mapped + MSIOF_REG_SICTR);
 
 	iounmap(mapped);
+#endif
 
 	msleep(1);
 
