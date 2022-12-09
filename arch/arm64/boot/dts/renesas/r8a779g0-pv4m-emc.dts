@@ -243,6 +243,7 @@
 		groups = "mmc_data8", "mmc_ctrl", "mmc_ds";
 		function = "mmc";
 		power-source = <1800>;
+		drive-strength = <24>;
 	};
 
 	qspi0_pins: qspi0 {
