@@ -150,8 +150,8 @@ static int rpcif_spi_probe(struct platform_device *pdev)
 
 	/* DRV1CTRL3 3/4 -> 4/4 */
 	data = ioread32(reg + PFC_OFFSET_DRV1CTRL3);
-	data &= ~0x77777777;
-	data |=  0x32266666;
+	data &= ~0x70000000;
+	data |=  0x30000000;
 	iowrite32(~data, reg);
 	iowrite32(data, reg + PFC_OFFSET_DRV1CTRL3);
 
