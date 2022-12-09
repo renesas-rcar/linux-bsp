@@ -571,6 +571,11 @@ enum rcar_canfd_fcanclk {
 #define GPIO2_PUEN_LCANSTB_MON	0x00000200
 #define GPIO2_PUEN_GCANSTB		0x00001000
 #define GPIO2_PUD_LCANSTB_MON	0x00000200
+#define GPIO2_POC_LCANSTB_MON	0x00000200
+
+/* CAN(ch3,5,6) RX and TX */
+#define GPIO2_POC_CANTXRX    	0x0000C18C  
+
 
 /* GCANSTB_MON_CAN_V4M_3R3V, GCAN_EN_V4M_CAN_3R3V */
 #define GPIO45_BASE				0xE6060000
@@ -2118,7 +2123,7 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	mapped = ioremap(GPIO23_BASE, GPIO_PAGE_SIZE);
 
 	gpioreg = ioread32(mapped + GPIO2_REG_POC);
-	gpioreg |= GPIO2_POC_LCANSTB_MON | GPIO2_POC_GCANSTB;
+	gpioreg |= GPIO2_POC_LCANSTB_MON | GPIO2_POC_GCANSTB | GPIO2_POC_CANTXRX;
 	iowrite32(~gpioreg, mapped + GPIO2_REG_PMMC);
 	iowrite32(gpioreg, mapped + GPIO2_REG_POC);
 	gpioreg = ioread32(mapped + GPIO2_REG_PUD);
@@ -2131,6 +2136,12 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	iowrite32(~gpioreg, mapped + GPIO2_REG_PMMC);
 	iowrite32(gpioreg, mapped + GPIO2_REG_PUEN);
 
+	/* GPIO POC setting for CAN TX and RX */
+	gpioreg = ioread32(mapped + GPIO2_REG_POC);
+	gpioreg |= GPIO2_POC_CANTXRX;
+	iowrite32(~gpioreg, mapped + GPIO2_REG_PMMC);
+	
+	
 	iounmap(mapped);
 
 	/* GPIO setting GCANSTB_MON,GCAN_EN */
