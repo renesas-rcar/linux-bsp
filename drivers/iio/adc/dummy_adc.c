@@ -47,7 +47,7 @@ static u32 dummy_adc_read_u32(struct adc_priv *priv)
 		.len = 4,
 		.cs_change = 0,
 		.bits_per_word = 24,
-		.speed_hz = 500000,
+		.speed_hz = priv->speed_hz,
 	};
 	struct spi_message msg;
 	u32 read_data = 0;
