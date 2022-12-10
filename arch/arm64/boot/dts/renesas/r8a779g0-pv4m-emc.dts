@@ -379,13 +379,14 @@
 &rpc {
 	pinctrl-0 = <&qspi0_pins>, <&qspi1_pins>;
 	pinctrl-names = "default";
+	init-frequency = <160000000>;
 
 	status = "okay";
 
 	flash@0 {
 		compatible = "micron-st,mt35xu512aba", "jedec,spi-nor";
 		reg = <0>;
-		spi-max-frequency = <50000000>;
+		spi-max-frequency = <200000000>;
 		spi-rx-bus-width = <8>;
 		spi-tx-bus-width = <8>;
 	};
