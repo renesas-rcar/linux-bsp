@@ -719,12 +719,22 @@ static int rpcif_probe(struct platform_device *pdev)
 	struct platform_device *vdev;
 	struct device_node *flash;
 	const char *name;
+	struct clk *clk;
+	int ret;
+	u32 freq;
 
 	flash = of_get_next_child(pdev->dev.of_node, NULL);
 	if (!flash) {
 		dev_warn(&pdev->dev, "no flash node found\n");
 		return -ENODEV;
 	}
+
+	ret = of_property_read_u32(pdev->dev.of_node, "init-frequency", &freq);
+	if (ret)
+		return ret;
+
+	clk = devm_clk_get(&pdev->dev, "rpc");
+	clk_set_rate(clk, freq);
 
 	if (of_device_is_compatible(flash, "jedec,spi-nor")) {
 		name = "rpc-if-spi";
