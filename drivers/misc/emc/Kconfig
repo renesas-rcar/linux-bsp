@@ -18,3 +18,8 @@ config EMC_DSM
 	tristate "EMC DSM control driver"
 	depends on ARCH_RENESAS || COMPILE_TEST
 	default y
+
+config EMC_DATA
+	tristate "EMC DATA interface driver"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	default y
