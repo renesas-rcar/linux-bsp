@@ -40,7 +40,7 @@
 #define MSIOF_REG_SITMDR1	0x0000
 #define MSIOF_REG_SITSCR	0x0020
 #define MSIOF_REG_SICTR		0x0028
-#define MSIOF_BRPS			0x0000
+#define MSIOF_BRPS			0x0100
 #define MSIOF_BRDV			0x0000
 #define MSIOF_TRMD			0x80000000
 #define MSIOF_TSCKIZ		0x00000000
@@ -709,9 +709,8 @@ static int cxd4960_probe(struct i2c_client *client)
 
 	/* REFCLK */
 	/* set by msiof driver */
-#if 0
+#if 1
 	/* set parameter (addr should be aligned by MSIOF_PAGE_SIZE) */
-
 	mapped = ioremap(MSIOF3_BASE, MSIOF_PAGE_SIZE);
 
 	iowrite32(MSIOF_TRMD, mapped + MSIOF_REG_SITMDR1);
