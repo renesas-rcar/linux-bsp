@@ -430,6 +430,8 @@
 		compatible = "dummy,adc";
 		reg = <0>;
 		spi-max-frequency = <500000>;
+		spi-cpha;
+		spi-cpol;
 	};
 };
 
