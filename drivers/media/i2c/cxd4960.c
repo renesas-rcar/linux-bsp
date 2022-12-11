@@ -53,7 +53,8 @@
 #define PWM_CC0			0x00060000
 #define PWM_CCMD		0x00008000
 #define PWM_SYNC		0x00000800
-#define PWM_SS0			0x00000010
+#define PWM_SS0			0x00000000
+#define PWM_EN0			0x00000001
 #define PWM_CYC0		0x032E0000
 #define PWM_PH0			0x00000197
 
@@ -308,8 +309,8 @@ static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 	/* set parameter (addr should be aligned by PWM_PAGE_SIZE) */
 	mapped = ioremap(PWM_BASE, PWM_PAGE_SIZE);
 
-	iowrite32(PWM_CC0 | PWM_CCMD | PWM_CCMD | PWM_SYNC | PWM_SS0, mapped + PWM_REG_PWMCR);
 	iowrite32(PWM_CYC0 | PWM_PH0, mapped + PWM_REG_PWMCNT);
+	iowrite32(PWM_CC0 | PWM_CCMD | PWM_CCMD | PWM_SYNC | PWM_SS0 | PWM_EN0, mapped + PWM_REG_PWMCR);
 
 	iounmap(mapped);
 
