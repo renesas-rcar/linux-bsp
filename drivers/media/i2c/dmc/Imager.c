@@ -528,7 +528,7 @@ static int imager_strobe_led_control(struct imager *imager, u32 enable)
 		/* Strobe LED ON setting */
 		ret = imager_write_regs(imager, strobe_led_on_set_regs, ARRAY_SIZE(strobe_led_on_set_regs));
 
-		/* Stroe Enable */
+		/* Strobe Enable */
 		ret = imager_read_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, &val);
 		ret = imager_write_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, val | IMAGER_STROBE_ONOFF);
 	} else {
@@ -573,22 +573,11 @@ static int imager_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 c
 
 static int imager_start_streaming(struct imager *imager)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(&imager->sd);
 	int ret;
-
-	ret = pm_runtime_get_sync(&client->dev);
-	if (ret < 0) {
-		pm_runtime_put_noidle(&client->dev);
-		return ret;
-	}
-
-	/* Apply customized values from user */
-	ret =  __v4l2_ctrl_handler_setup(imager->sd.ctrl_handler);
-	if (ret)
-		goto err_rpm_put;
 
 	/* Imager Initialize */
 	ret = imager_write_regs(imager, init_dmc_imeger_set_regs_step1, ARRAY_SIZE(init_dmc_imeger_set_regs_step1));
+	if (ret) return ret;
 
 	msleep(5);
 
@@ -596,17 +585,6 @@ static int imager_start_streaming(struct imager *imager)
 
 	msleep(66);
 
-	if (ret)
-		goto err_rpm_put;
-
-	/* vflip and hflip cannot change during streaming */
-	__v4l2_ctrl_grab(imager->vflip, true);
-	__v4l2_ctrl_grab(imager->hflip, true);
-
-	return 0;
-
-err_rpm_put:
-	pm_runtime_put(&client->dev);
 	return ret;
 }
 
@@ -750,48 +728,7 @@ static const struct v4l2_subdev_ops imager_subdev_ops = {
 
 static void imager_free_controls(struct imager *imager)
 {
-	v4l2_ctrl_handler_free(imager->sd.ctrl_handler);
 	mutex_destroy(&imager->mutex);
-}
-
-static int imager_check_hwcfg(struct device *dev)
-{
-	struct fwnode_handle *endpoint;
-	struct v4l2_fwnode_endpoint ep_cfg = {
-		.bus_type = V4L2_MBUS_CSI2_DPHY
-	};
-	int ret = -EINVAL;
-
-	endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
-	if (!endpoint) {
-		dev_err(dev, "endpoint node not found\n");
-		return -EINVAL;
-	}
-
-	if (v4l2_fwnode_endpoint_alloc_parse(endpoint, &ep_cfg)) {
-		dev_err(dev, "could not parse endpoint\n");
-		goto error_out;
-	}
-
-	/* Check the number of MIPI CSI2 data lanes */
-	if (ep_cfg.bus.mipi_csi2.num_data_lanes != 2) {
-		dev_err(dev, "only 2 data lanes are currently supported\n");
-		goto error_out;
-	}
-
-	/* Check the link frequency set in device tree */
-	if (!ep_cfg.nr_of_link_frequencies) {
-		dev_err(dev, "link-frequency property not found in DT\n");
-		goto error_out;
-	}
-
-	ret = 0;
-
-error_out:
-	v4l2_fwnode_endpoint_free(&ep_cfg);
-	fwnode_handle_put(endpoint);
-
-	return ret;
 }
 
 static int imager_notify_bound(struct v4l2_async_notifier *notifier,
@@ -888,20 +825,35 @@ static int imager_probe(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	struct imager *imager;
 	int ret;
+	struct v4l2_subdev *sd;
 
 	imager = devm_kzalloc(&client->dev, sizeof(*imager), GFP_KERNEL);
 	if (!imager)
 		return -ENOMEM;
 
-	v4l2_i2c_subdev_init(&imager->sd, client, &imager_subdev_ops);
+	sd = &imager->sd;
 
-	/* Check the hardware configuration in device tree */
-	if (imager_check_hwcfg(dev))
-		return -EINVAL;
+	imager->sd.owner = THIS_MODULE;
+	imager->sd.dev = dev;
+	v4l2_i2c_subdev_init(&imager->sd, client, &imager_subdev_ops);
 
 	ret = imager_parse(imager);
 	if (ret)
 		return ret;
+
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
+
+	imager->pad.flags = MEDIA_PAD_FL_SOURCE;
+	sd->entity.function = MEDIA_ENT_F_ATV_DECODER;
+	ret = media_entity_pads_init(&sd->entity, 1, &imager->pad);
+	if (ret)
+		return ret;
+
+	ret = v4l2_async_register_subdev(sd);
+	if (ret < 0) {
+		dev_err(dev, "Failed to register subdevice.\n");
+		return ret;
+	}
 
 	dev_info(dev, "probed.\n");
 

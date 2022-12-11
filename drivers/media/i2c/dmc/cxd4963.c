@@ -76,9 +76,15 @@ static const char * const cxd4963_supply_name[] = {
 
 #define CXD4963_NUM_SUPPLIES ARRAY_SIZE(cxd4963_supply_name)
 
+enum cxd4963_pad {
+	CXD4963_PAD_SINK,
+	CXD4963_PAD_SOURCE,
+	CXD4963_PAD_MAX,
+};
+
 struct cxd4963 {
 	struct v4l2_subdev sd;
-	struct media_pad pad;
+	struct media_pad pad[CXD4963_PAD_MAX];
 
 	struct v4l2_async_notifier notifier;
 	struct v4l2_subdev *remote;
@@ -234,45 +240,26 @@ static int cxd4963_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 
 
 static int cxd4963_start_streaming(struct cxd4963 *cxd4963)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(&cxd4963->sd);
 	int ret;
-
-	ret = pm_runtime_get_sync(&client->dev);
-	if (ret < 0) {
-		pm_runtime_put_noidle(&client->dev);
-		return ret;
-	}
-
-	/* Apply customized values from user */
-	ret =  __v4l2_ctrl_handler_setup(cxd4963->sd.ctrl_handler);
-	if (ret)
-		goto err_rpm_put;
 
 	/* Serializer Initialize */
 	ret = cxd4963_write_regs(cxd4963, init_dmc_ser_set_regs, ARRAY_SIZE(init_dmc_ser_set_regs));
+	if (ret) return ret;
 
 	msleep(13);
 
-	v4l2_subdev_call(cxd4963->remote, video, s_stream, 1);
+	ret = v4l2_subdev_call(cxd4963->remote, video, s_stream, 1);
+	if (ret) return ret;
 
 	/* Sirializa Video Output Enable */
 	ret = cxd4963_write_reg(cxd4963, CXD4963_REG_VIDEO_SETUP, CXD4963_REG_VALUE_08BIT, CXD4963_VALUE_INPUT_ENABLE);
+	if (ret) return ret;
 
 	/* Srializa Error Status Clear */
 	ret = cxd4963_write_reg(cxd4963, CXD4963_REG_ERROR_CLEAR, CXD4963_REG_VALUE_08BIT, CXD4963_VALUE_ERROR_CLEAR);
+	if (ret) return ret;
 	ret = cxd4963_write_reg(cxd4963, CXD4963_REG_ERROR_CLEAR, CXD4963_REG_VALUE_08BIT, CXD4963_VALUE_ERROR_NOTCLEAR);
 
-	if (ret)
-		goto err_rpm_put;
-
-	/* vflip and hflip cannot change during streaming */
-	__v4l2_ctrl_grab(cxd4963->vflip, true);
-	__v4l2_ctrl_grab(cxd4963->hflip, true);
-
-	return 0;
-
-err_rpm_put:
-	pm_runtime_put(&client->dev);
 	return ret;
 }
 
@@ -416,48 +403,7 @@ static const struct v4l2_subdev_ops cxd4963_subdev_ops = {
 
 static void cxd4963_free_controls(struct cxd4963 *cxd4963)
 {
-	v4l2_ctrl_handler_free(cxd4963->sd.ctrl_handler);
 	mutex_destroy(&cxd4963->mutex);
-}
-
-static int cxd4963_check_hwcfg(struct device *dev)
-{
-	struct fwnode_handle *endpoint;
-	struct v4l2_fwnode_endpoint ep_cfg = {
-		.bus_type = V4L2_MBUS_CSI2_DPHY
-	};
-	int ret = -EINVAL;
-
-	endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(dev), NULL);
-	if (!endpoint) {
-		dev_err(dev, "endpoint node not found\n");
-		return -EINVAL;
-	}
-
-	if (v4l2_fwnode_endpoint_alloc_parse(endpoint, &ep_cfg)) {
-		dev_err(dev, "could not parse endpoint\n");
-		goto error_out;
-	}
-
-	/* Check the number of MIPI CSI2 data lanes */
-	if (ep_cfg.bus.mipi_csi2.num_data_lanes != 2) {
-		dev_err(dev, "only 2 data lanes are currently supported\n");
-		goto error_out;
-	}
-
-	/* Check the link frequency set in device tree */
-	if (!ep_cfg.nr_of_link_frequencies) {
-		dev_err(dev, "link-frequency property not found in DT\n");
-		goto error_out;
-	}
-
-	ret = 0;
-
-error_out:
-	v4l2_fwnode_endpoint_free(&ep_cfg);
-	fwnode_handle_put(endpoint);
-
-	return ret;
 }
 
 static int cxd4963_notify_bound(struct v4l2_async_notifier *notifier,
@@ -482,7 +428,7 @@ static int cxd4963_notify_bound(struct v4l2_async_notifier *notifier,
 	dev_dbg(&client->dev, "Bound %s pad: %d\n", subdev->name, pad);
 
 	return media_create_pad_link(&subdev->entity, pad,
-				     &priv->sd.entity, 0,
+				     &priv->sd.entity, CXD4963_PAD_SINK,
 				     MEDIA_LNK_FL_ENABLED |
 				     MEDIA_LNK_FL_IMMUTABLE);
 }
@@ -554,20 +500,36 @@ static int cxd4963_probe(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	struct cxd4963 *cxd4963;
 	int ret;
+	struct v4l2_subdev *sd;
 
 	cxd4963 = devm_kzalloc(&client->dev, sizeof(*cxd4963), GFP_KERNEL);
 	if (!cxd4963)
 		return -ENOMEM;
 
-	v4l2_i2c_subdev_init(&cxd4963->sd, client, &cxd4963_subdev_ops);
+	sd = &cxd4963->sd;
 
-	/* Check the hardware configuration in device tree */
-	if (cxd4963_check_hwcfg(dev))
-		return -EINVAL;
+	cxd4963->sd.owner = THIS_MODULE;
+	cxd4963->sd.dev = dev;
+	v4l2_i2c_subdev_init(&cxd4963->sd, client, &cxd4963_subdev_ops);
 
 	ret = cxd4963_parse(cxd4963);
 	if (ret)
 		return ret;
+
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
+
+	cxd4963->pad[CXD4963_PAD_SINK].flags = MEDIA_PAD_FL_SINK;
+	cxd4963->pad[CXD4963_PAD_SOURCE].flags = MEDIA_PAD_FL_SOURCE;
+	sd->entity.function = MEDIA_ENT_F_ATV_DECODER;
+	ret = media_entity_pads_init(&sd->entity, CXD4963_PAD_MAX, cxd4963->pad);
+	if (ret)
+		return ret;
+
+	ret = v4l2_async_register_subdev(sd);
+	if (ret < 0) {
+		dev_err(dev, "Failed to register subdevice.\n");
+		return ret;
+	}
 
 	dev_info(dev, "probed.\n");
 
