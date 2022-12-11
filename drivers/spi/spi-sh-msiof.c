@@ -1455,6 +1455,8 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 		info->dtdl = SIMDR1_DTDL_2CLK;
 	}
 
+	pm_runtime_get_sync(&p->pdev->dev);
+
 	return 0;
 
  err2:
