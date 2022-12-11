@@ -123,9 +123,15 @@ static const struct cxd4960_reg init_des_set_regs_step4[] = {
 	{0x90, 0x20},
 };/* init_des_set_regs_step4 */
 
+enum cxd4960_pad {
+	CXD4960_PAD_SINK,
+	CXD4960_PAD_SOURCE,
+	CXD4960_PAD_MAX,
+};
+
 struct cxd4960 {
 	struct v4l2_subdev sd;
-	struct media_pad pad;
+	struct media_pad pad[CXD4960_PAD_MAX];
 
 	struct v4l2_async_notifier notifier;
 	struct v4l2_subdev *remote;
@@ -293,22 +299,10 @@ static int cxd4960_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 
 
 static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
 	u32 val;
 	int ret;
 
 	void *mapped;
-
-	ret = pm_runtime_get_sync(&client->dev);
-	if (ret < 0) {
-		pm_runtime_put_noidle(&client->dev);
-		return ret;
-	}
-
-	/* Apply customized values from user */
-	ret =  __v4l2_ctrl_handler_setup(cxd4960->sd.ctrl_handler);
-	if (ret)
-		goto err_rpm_put;
 
 	/* FSYNC_1R8V */
 	/* set parameter (addr should be aligned by PWM_PAGE_SIZE) */
@@ -321,45 +315,43 @@ static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 
 	/* Deserializer Initialize */
 	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step1, ARRAY_SIZE(init_des_set_regs_step1));
+	if (ret) return ret;
 
 	while(1){
 		ret = cxd4960_read_reg(cxd4960, CXD4960_REG_SERDES_LINK, CXD4960_REG_VALUE_08BIT, &val);
 		if (val == CXD4960_VALUE_SERDES_LINK) break;
+		if (ret) return ret;
 	}
 
 	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step2, ARRAY_SIZE(init_des_set_regs_step2));
+	if (ret) return ret;
 
 	while(1){
 		ret = cxd4960_read_reg(cxd4960, CXD4960_REG_REMOTE_COMPLETE, CXD4960_REG_VALUE_08BIT, &val);
 		if (val == CXD4960_VALUE_REMOTE_COMPLETE) break;
+		if (ret) return ret;
 	}
 
 	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step3, ARRAY_SIZE(init_des_set_regs_step3));
+	if (ret) return ret;
 
 	usleep_range(30, 40);
 
 	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step4, ARRAY_SIZE(init_des_set_regs_step4));
+	if (ret) return ret;
 
-	v4l2_subdev_call(cxd4960->remote, video, s_stream, 1);
+	ret = v4l2_subdev_call(cxd4960->remote, video, s_stream, 1);
+	if (ret) return ret;
 
 	/* Desirializa Video Output Enable */
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_ENABLE);
+	if (ret) return ret;
 
 	/* Desrializa Error Status Clear */
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_CLEAR);
+	if (ret) return ret;
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_NOTCLEAR);
 
-	if (ret)
-		goto err_rpm_put;
-
-	/* vflip and hflip cannot change during streaming */
-	__v4l2_ctrl_grab(cxd4960->vflip, true);
-	__v4l2_ctrl_grab(cxd4960->hflip, true);
-
-	return 0;
-
-err_rpm_put:
-	pm_runtime_put(&client->dev);
 	return ret;
 }
 
@@ -504,7 +496,6 @@ static const struct v4l2_subdev_ops cxd4960_subdev_ops = {
 
 static void cxd4960_free_controls(struct cxd4960 *cxd4960)
 {
-	v4l2_ctrl_handler_free(cxd4960->sd.ctrl_handler);
 	mutex_destroy(&cxd4960->mutex);
 }
 
@@ -570,7 +561,7 @@ static int cxd4960_notify_bound(struct v4l2_async_notifier *notifier,
 	dev_dbg(&client->dev, "Bound %s pad: %d\n", subdev->name, pad);
 
 	return media_create_pad_link(&subdev->entity, pad,
-				     &priv->sd.entity, 0,
+				     &priv->sd.entity, CXD4960_PAD_SINK,
 				     MEDIA_LNK_FL_ENABLED |
 				     MEDIA_LNK_FL_IMMUTABLE);
 }
@@ -602,7 +593,7 @@ static int cxd4960_parse(struct cxd4960 *priv)
 
 	int ret;
 
-	ep = of_graph_get_endpoint_by_regs(client->dev.of_node, 1, -1);
+	ep = of_graph_get_endpoint_by_regs(client->dev.of_node, 0, -1);
 	if (!ep) {
 		dev_dbg(&client->dev, "Not connected to subdevice\n");
 		return 0;
@@ -643,6 +634,7 @@ static int cxd4960_probe(struct i2c_client *client)
 	struct cxd4960 *cxd4960;
 	int ret;
 	u32 gpioreg;
+	struct v4l2_subdev *sd;
 
 	void *mapped;
 
@@ -650,6 +642,10 @@ static int cxd4960_probe(struct i2c_client *client)
 	if (!cxd4960)
 		return -ENOMEM;
 
+	sd = &cxd4960->sd;
+
+	cxd4960->sd.owner = THIS_MODULE;
+	cxd4960->sd.dev = dev;
 	v4l2_i2c_subdev_init(&cxd4960->sd, client, &cxd4960_subdev_ops);
 
 	/* Check the hardware configuration in device tree */
@@ -659,6 +655,21 @@ static int cxd4960_probe(struct i2c_client *client)
 	ret = cxd4960_parse(cxd4960);
 	if (ret)
 		return ret;
+
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
+
+	cxd4960->pad[CXD4960_PAD_SINK].flags = MEDIA_PAD_FL_SINK;
+	cxd4960->pad[CXD4960_PAD_SOURCE].flags = MEDIA_PAD_FL_SOURCE;
+	sd->entity.function = MEDIA_ENT_F_ATV_DECODER;
+	ret = media_entity_pads_init(&sd->entity, CXD4960_PAD_MAX, cxd4960->pad);
+	if (ret)
+		return ret;
+
+	ret = v4l2_async_register_subdev(sd);
+	if (ret < 0) {
+		dev_err(dev, "Failed to register subdevice.\n");
+		return ret;
+	}
 
 	/* GPIO setting DES_CE */
 	/* set parameter (addr should be aligned by GPIO_PAGE_SIZE) */
