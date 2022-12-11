@@ -94,7 +94,8 @@ static bool crc_check_error(struct adc_priv *priv, u16 data, u8 crc) {
 
 static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 	u16 data;
-	u8 sensor_id, sensor_data, crc;
+	u8 sensor_id, crc;
+	u16 sensor_data;
 
 	/* Check Start bit */
 	if (!(rawdata & BIT(23)))
