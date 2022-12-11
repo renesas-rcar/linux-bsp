@@ -106,7 +106,7 @@
 
 	gvif0: gvif-deserializer@23 {
 		compatible = "sony,cxd4960";
-		reg = <0x23>, <0x01>;
+		reg = <0x23>;
 		gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>;
 
 		ports {
@@ -127,19 +127,6 @@
 					data-lanes = <1 2>;
 					remote-endpoint = <&csi41_in>;
 				};
-			};
-		};
-
-		i2c-mux {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			i2c@0 {
-				#address-cells = <1>;
-				#size-cells = <0>;
-				reg = <0>;
-
-				status = "disabled";
 			};
 		};
 	};
@@ -404,7 +391,7 @@
 		spi-max-frequency = <25000000>;
 	};
 
-	ad_device {
+	ad_device@0 {
 		compatible = "ad,converter";
 		reg = <0>;
 		spi-max-frequency = <500000>;
@@ -476,22 +463,6 @@
 				remote-endpoint = <&imx728_out>;
 			};
 		};
-
-		port@1 {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			reg = <1>;
-
-			csi40vin0: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&vin0csi40>;
-			};
-			csi40vin1: endpoint@1 {
-				reg = <1>;
-				remote-endpoint = <&vin1csi40>;
-			};
-		};
 	};
 };
 
@@ -512,18 +483,6 @@
 				clock-lanes = <0>;
 				data-lanes = <1 2>;
 				remote-endpoint = <&cxd4960_out>;
-			};
-		};
-
-		port@1 {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			reg = <1>;
-
-			csi41vin8: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&vin8csi41>;
 			};
 		};
 	};
@@ -550,11 +509,13 @@
 };
 
 &vin02 {
-	status = "disabled";
+	compatible = "renesas,vin-pv4m-emc", "generic-uio";
+	status = "okay";
 };
 
 &vin03 {
-	status = "disabled";
+	compatible = "renesas,vin-pv4m-emc", "generic-uio";
+	status = "okay";
 };
 
 &vin10 {
@@ -563,15 +524,18 @@
 };
 
 &vin11 {
-	status = "disabled";
+	compatible = "renesas,vin-pv4m-emc", "generic-uio";
+	status = "okay";
 };
 
 &vin12 {
-	status = "disabled";
+	compatible = "renesas,vin-pv4m-emc", "generic-uio";
+	status = "okay";
 };
 
 &vin13 {
-	status = "disabled";
+	compatible = "renesas,vin-pv4m-emc", "generic-uio";
+	status = "okay";
 };
 
 /* DMC Overlay */
