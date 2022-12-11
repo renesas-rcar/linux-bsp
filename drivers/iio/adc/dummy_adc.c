@@ -86,13 +86,10 @@ static u8 dummy_adc_calc_crc8(struct adc_priv *priv, u16 val) {
 	return ~(crc & 0xFF);
 }
 
-static bool crc_check(struct adc_priv *priv, u16 data, u8 crc) {
-	/* skip crc check temporary */
-#if 0
+static bool crc_check_error(struct adc_priv *priv, u16 data, u8 crc) {
 	if (crc != dummy_adc_calc_crc8(priv, data))
-		return false;
-#endif
-	return true;
+		return true;
+	return false;
 }
 
 static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
@@ -106,7 +103,7 @@ static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 	/* Check CRC */
 	data = (rawdata >> 8) & 0xFFFF;
 	crc = rawdata & 0xFF;
-	if (crc_check(priv, data, crc))
+	if (crc_check_error(priv, data, crc))
 		return -EIO;
 
 	/* Update data */
@@ -131,6 +128,8 @@ static int dummy_adc_reading_thread(void *pv)
 		for (i = 1; i <= NUM_CHAN; i++) {
 			val = dummy_adc_read_u32(priv);
 			udelay(20);
+
+			dummy_adc_rawdata_process(priv, val);
 		}
 		msleep(1);
 	}
