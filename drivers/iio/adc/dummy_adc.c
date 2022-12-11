@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 
 #define NUMBERS_CHANEL 18
+#define POLY	(0x11D << 7)/* polynomial x^8 + x^4 + x^3 + x^2 + 1 */
 
 static struct task_struct *read_thread;
 static struct mutex buf_lock;
@@ -46,7 +47,7 @@ static u32 dummy_adc_read_u32(struct adc_priv *priv)
 		.len = 4,
 		.cs_change = 0,
 		.bits_per_word = 24,
-		.speed_hz = 500000,
+		.speed_hz = priv->speed_hz,
 	};
 	struct spi_message msg;
 	u32 read_data = 0;
@@ -60,15 +61,20 @@ static u32 dummy_adc_read_u32(struct adc_priv *priv)
 	return read_data;
 }
 
-static u8 dummy_adc_calc_crc8(u16 val) {
-	u8 crc = 0;
+static u8 dummy_adc_calc_crc8(u16 data) {
+	int i;
 
-	while(val)
-	{
-		crc += val % 2;
-		val = val >> 1;
+	for (i = 0; i < 8; i++) {
+		if (data & 0x8000)
+			data = data ^ POLY;
+		data = data << 1;
 	}
-	return crc;
+	return (u8)(data >> 8);
+}
+
+static bool crc_check(u16 data, u8 crc) {
+	/* skip crc check temporary */
+	return true;
 }
 
 static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
@@ -82,7 +88,7 @@ static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 	/* Check CRC */
 	data = (rawdata >> 8) & 0xFFFF;
 	crc = rawdata & 0xFF;
-	if (crc != dummy_adc_calc_crc8(data))
+	if (crc_check(data, crc))
 		return -EIO;
 
 	/* Update data */
