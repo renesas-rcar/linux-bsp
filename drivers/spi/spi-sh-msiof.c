@@ -315,13 +315,9 @@ static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 	}
 
 	scr = sh_msiof_spi_div_array[div_pow] | SISCR_BRPS(brps);
-	scr &= 0xE0F8;
-	scr |= 0x0100;
-
 	sh_msiof_write(p, SITSCR, scr);
 	if (!(p->ctlr->flags & SPI_CONTROLLER_MUST_TX))
 		sh_msiof_write(p, SIRSCR, scr);
-
 }
 
 static u32 sh_msiof_get_delay_bit(u32 dtdl_or_syncdl)
@@ -1338,9 +1334,7 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	u32 clk_rate = 0;
 	int i;
 	int ret;
-	static char rx_buf[256];
 	const struct soc_device_attribute *attr;
-	memset(rx_buf, 0x00, sizeof(rx_buf));
 
 	chipdata = of_device_get_match_data(&pdev->dev);
 	if (chipdata) {
@@ -1460,15 +1454,6 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 				);
 		info->dtdl = SIMDR1_DTDL_2CLK;
 	}
-
-	// output
-	pm_runtime_get_sync(&p->pdev->dev);
-
-	// clock overwrite
-	sh_msiof_spi_set_clk_regs(p, clk_rate, 25000000);
-
-	// spi_start
-	sh_msiof_spi_start(p,rx_buf);
 
 	return 0;
 
