@@ -274,18 +274,17 @@
 		mux {
 			groups = "msiof5_clk", "msiof5_rxd";
 			function = "msiof5";
+			power-source = <3300>;
 		};
 
 		clk {
 			groups = "msiof5_clk";
 			drive-strength = <21>;
-			power-source = <1800>;
 		};
 
 		rxd {
 			groups = "msiof5_rxd";
 			bias-pull-down;
-			power-source = <1800>;
 		};
 	};
 
