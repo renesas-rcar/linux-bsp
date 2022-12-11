@@ -5712,28 +5712,18 @@ static int imx728_write_regs(struct imx728 *imx728,
 
 static int imx728_start_streaming(struct imx728 *imx728)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(&imx728->sd);
 	u32 val;
 	int i;
 	int ret;
 	void *mapped;
 
-	ret = pm_runtime_get_sync(&client->dev);
-	if (ret < 0) {
-		pm_runtime_put_noidle(&client->dev);
-		return ret;
-	}
-
-	/* Apply customized values from user */
-	ret =  __v4l2_ctrl_handler_setup(imx728->sd.ctrl_handler);
-	if (ret)
-		goto err_rpm_put;
-
 	/* set INCK */
 	ret = imx728_write_regs(imx728, inck_set_regs, ARRAY_SIZE(inck_set_regs));
+	if (ret) return ret;
 
 	/* set Standby */
 	ret = imx728_write_reg(imx728, IMX728_REG_STANDBY, 1, IMX728_MODE_STANDBY);
+	if (ret) return ret;
 	msleep(100);
 
 	i = 0;
@@ -5772,25 +5762,31 @@ static int imx728_start_streaming(struct imx728 *imx728)
 
 	/* IMX728 Register Setting */
 	ret = imx728_write_regs(imx728, init_ac_set_regs, ARRAY_SIZE(init_ac_set_regs));
+	if (ret) return ret;
 
 	ret = imx728_write_regs(imx728, init_sys_set_regs, ARRAY_SIZE(init_sys_set_regs));
+	if (ret) return ret;
 	msleep(1);
 
 	ret = imx728_write_regs(imx728, init_addparam_set_regs, ARRAY_SIZE(init_addparam_set_regs));
+	if (ret) return ret;
 
 	ret = imx728_write_regs(imx728, init_iqparam_set_regs, ARRAY_SIZE(init_iqparam_set_regs));
+	if (ret) return ret;
 
 	ret = imx728_write_regs(imx728, init_powersaving_set_regs, ARRAY_SIZE(init_powersaving_set_regs));
+	if (ret) return ret;
 
 	ret = imx728_write_regs(imx728, init_dn_set_regs, ARRAY_SIZE(init_dn_set_regs));
+	if (ret) return ret;
 
 	/* Streaming Setting */
 	ret = imx728_write_regs(imx728, streaming_set_regs_step1, ARRAY_SIZE(streaming_set_regs_step1));
-	//if (ret)
-	//	goto err_rpm_put;
+	if (ret) return ret;
 	msleep(35);
 
 	ret = imx728_write_regs(imx728, streaming_set_regs_step2, ARRAY_SIZE(streaming_set_regs_step2));
+	if (ret) return ret;
 	usleep_range(35000, 36000);
 
 	i = 0;
@@ -5814,14 +5810,6 @@ static int imx728_start_streaming(struct imx728 *imx728)
 
 	iounmap(mapped);
 
-	/* vflip and hflip cannot change during streaming */
-	__v4l2_ctrl_grab(imx728->vflip, true);
-	__v4l2_ctrl_grab(imx728->hflip, true);
-
-	return 0;
-
-err_rpm_put:
-	pm_runtime_put(&client->dev);
 	return ret;
 }
 
@@ -5835,11 +5823,6 @@ static void imx728_stop_streaming(struct imx728 *imx728)
 			       IMX728_REG_VALUE_08BIT, IMX728_MODE_STANDBY);
 	if (ret)
 		dev_err(&client->dev, "%s failed to set stream\n", __func__);
-
-	__v4l2_ctrl_grab(imx728->vflip, false);
-	__v4l2_ctrl_grab(imx728->hflip, false);
-
-	pm_runtime_put(&client->dev);
 }
 
 static int imx728_set_stream(struct v4l2_subdev *sd, int enable)
@@ -5972,7 +5955,6 @@ static const struct v4l2_subdev_ops imx728_subdev_ops = {
 
 static void imx728_free_controls(struct imx728 *imx728)
 {
-	v4l2_ctrl_handler_free(imx728->sd.ctrl_handler);
 	mutex_destroy(&imx728->mutex);
 }
 
@@ -6013,10 +5995,11 @@ error_out:
 static int imx728_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
+	struct v4l2_subdev *sd;
 	struct imx728 *imx728;
-	u32 val;
+//	u32 val;
 	u32 gpioreg;
-	int i;
+//	int i;
 	int ret;
 
 	void *mapped;
@@ -6025,7 +6008,26 @@ static int imx728_probe(struct i2c_client *client)
 	if (!imx728)
 		return -ENOMEM;
 
+	sd = &imx728->sd;
+
+	imx728->sd.owner = THIS_MODULE;
+	imx728->sd.dev = dev;
 	v4l2_i2c_subdev_init(&imx728->sd, client, &imx728_subdev_ops);
+
+	/* Initialize subdev */
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
+
+	imx728->pad.flags = MEDIA_PAD_FL_SOURCE;
+	sd->entity.function = MEDIA_ENT_F_ATV_DECODER;
+	ret = media_entity_pads_init(&sd->entity, 1, &imx728->pad);
+	if (ret)
+		return ret;
+
+	ret = v4l2_async_register_subdev(sd);
+	if (ret < 0) {
+		dev_err(dev, "Failed to register subdevice.\n");
+		return ret;
+	}
 
 	/* Check the hardware configuration in device tree */
 	if (imx728_check_hwcfg(dev))
@@ -6079,6 +6081,7 @@ static int imx728_probe(struct i2c_client *client)
 	if (ret)
 		return ret;
 
+#if 0 // TBD
 	i = 0;
 	while(i < 2){
 		ret = imx728_read_reg(imx728, IMX728_REG_DEVICE_STATE, IMX728_REG_VALUE_08BIT, &val);
@@ -6093,15 +6096,7 @@ static int imx728_probe(struct i2c_client *client)
 
 	//CK_DEVICE_STATE == 0x02;
 	//ImagerStatus = 0x02;
-
-	/* Initialize subdev */
-	imx728->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
-	imx728->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
-
-	/* Enable runtime PM and turn off the device */
-	pm_runtime_set_active(dev);
-	pm_runtime_enable(dev);
-	pm_runtime_idle(dev);
+#endif // TBD
 
 	dev_info(dev, "probed.\n");
 
