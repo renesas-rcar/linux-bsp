@@ -245,10 +245,10 @@ static bool
 v4l2_async_notifier_can_complete(struct v4l2_async_notifier *notifier)
 {
 	struct v4l2_subdev *sd;
-
+#if 0 // TBD hard coding
 	if (!list_empty(&notifier->waiting))
 		return false;
-
+#endif
 	list_for_each_entry(sd, &notifier->done, async_list) {
 		struct v4l2_async_notifier *subdev_notifier =
 			v4l2_async_find_subdev_notifier(sd);
