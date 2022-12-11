@@ -129,6 +129,26 @@ const struct rvin_video_format *rvin_format_from_pixel(struct rvin_dev *vin,
 		break;
 	}
 
+#if 1 // hard cording!! TBD
+	if (vin->info->model == RCAR_PV4M_EMC)
+		return rvin_formats_pv4m_emc;
+	else {
+		for (i = 0; i < ARRAY_SIZE(rvin_formats); i++)
+			if (rvin_formats[i].fourcc == pixelformat)
+				return rvin_formats + i;
+	}
+#else
+	if (vin->info->model == RCAR_PV4M_EMC) {
+		for (i = 0; i < ARRAY_SIZE(rvin_formats_pv4m_emc); i++)
+			if (rvin_formats_pv4m_emc[i].fourcc == pixelformat)
+				return rvin_formats_pv4m_emc + i;
+	} else {
+		for (i = 0; i < ARRAY_SIZE(rvin_formats); i++)
+			if (rvin_formats[i].fourcc == pixelformat)
+				return rvin_formats + i;
+	}
+#endif
+
 	if (vin->info->model == RCAR_PV4M_EMC) {
 		for (i = 0; i < ARRAY_SIZE(rvin_formats_pv4m_emc); i++)
 			if (rvin_formats_pv4m_emc[i].fourcc == pixelformat)
@@ -251,7 +271,7 @@ static int rvin_reset_format(struct rvin_dev *vin)
 	};
 	int ret;
 
-	ret = v4l2_subdev_call(vin_to_source(vin), pad, get_fmt, NULL, &fmt);
+	ret = v4l2_subdev_call(vin_to_source(vin), pad, get_fmt, NULL, &fmt); // TBD must create .get_fmt callback in camera driver
 	if (ret)
 		return ret;
 
