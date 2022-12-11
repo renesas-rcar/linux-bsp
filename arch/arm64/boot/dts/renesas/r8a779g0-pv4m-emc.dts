@@ -396,7 +396,7 @@
 	status = "okay";
 	assigned-clock-rates = <100000000>;
 
-	slavedev {
+	slavedev@0 {
 		compatible = "maker,slavedev";
 		reg = <0>;
 		spi-max-frequency = <25000000>;
@@ -410,7 +410,7 @@
 	status = "okay";
 	assigned-clock-rates = <100000000>;
 
-	slavedev {
+	slavedev@0 {
 		compatible = "maker,slavedev";
 		reg = <0>;
 		spi-max-frequency = <25000000>;
