@@ -119,9 +119,9 @@ static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 static int dummy_adc_reading_thread(void *pv)
 {
 	struct adc_priv	*priv = pv;
-	u32 val;
 	u32 raw_data[NUM_CHAN+1] = {0};
 	int i;
+
 	while(!kthread_should_stop())
 	{
 		for (i = 1; i <= NUM_CHAN; i++) {
@@ -134,7 +134,7 @@ static int dummy_adc_reading_thread(void *pv)
 			dummy_adc_rawdata_process(priv, raw_data[i]);
 		mutex_unlock(&buf_lock);
 
-		msleep(1);
+		msleep(5);
 	}
 	return 0;
 }
