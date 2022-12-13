@@ -152,6 +152,7 @@ int dummy_adc_getdata(int channel)
 
 	return output;
 }
+EXPORT_SYMBOL_GPL(dummy_adc_getdata);
 
 /*-------------------------------------------------------------------------*/
 static int dummy_adc_probe(struct spi_device *spi)
