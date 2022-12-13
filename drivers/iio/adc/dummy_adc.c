@@ -110,10 +110,7 @@ static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 	/* Update data */
 	sensor_id = (data >> 10) & 0x1F;
 	sensor_data = data & 0x3FF;
-
-	mutex_lock(&buf_lock);
 	adc_data[sensor_id] = sensor_data;
-	mutex_unlock(&buf_lock);
 
 	return 0;
 }
@@ -123,15 +120,20 @@ static int dummy_adc_reading_thread(void *pv)
 {
 	struct adc_priv	*priv = pv;
 	u32 val;
+	u32 raw_data[NUM_CHAN+1] = {0};
 	int i;
 	while(!kthread_should_stop())
 	{
 		for (i = 1; i <= NUM_CHAN; i++) {
-			val = dummy_adc_read_u32(priv);
+			raw_data[i] = dummy_adc_read_u32(priv);
 			udelay(20);
-
-			dummy_adc_rawdata_process(priv, val);
 		}
+
+		mutex_lock(&buf_lock);
+		for (i = 1; i <= NUM_CHAN; i++)
+			dummy_adc_rawdata_process(priv, raw_data[i]);
+		mutex_unlock(&buf_lock);
+
 		msleep(1);
 	}
 	return 0;
