@@ -390,6 +390,12 @@
 		reg = <0>;
 		spi-max-frequency = <25000000>;
 	};
+
+	ad_device@0 {
+		compatible = "ad,converter";
+		reg = <0>;
+		spi-max-frequency = <500000>;
+	};
 };
 
 &msiof3 {
