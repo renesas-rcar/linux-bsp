@@ -52,11 +52,14 @@
 #define PWM_REG_PWMCNT	0x3004
 #define PWM_CC0			0x00060000
 #define PWM_CCMD		0x00008000
-#define PWM_SYNC		0x00000800
+//#define PWM_SYNC		0x00000800
+#define PWM_SYNC		0x00000000
 #define PWM_SS0			0x00000000
 #define PWM_EN0			0x00000001
-#define PWM_CYC0		0x032E0000
-#define PWM_PH0			0x00000197
+//#define PWM_CYC0		0x032E0000
+#define PWM_CYC0		0x032D0000
+//#define PWM_PH0			0x00000197
+#define PWM_PH0			0x00000196
 
 /* DES_CE_1R8V */
 #define GPIO01_BASE		0xE6050000
@@ -74,8 +77,8 @@
 #define CXD4960_REG_SERDES_LINK		0x01
 #define CXD4960_REG_REMOTE_COMPLETE	0xB5
 
-#define CXD4960_VALUE_SERDES_LINK		1
-#define CXD4960_VALUE_REMOTE_COMPLETE	1
+#define CXD4960_VALUE_SERDES_LINK		0x10
+#define CXD4960_VALUE_REMOTE_COMPLETE	0x01
 
 #define CXD4960_REG_VIDEO_OUTPUT_ENABLE		0x76
 #define CXD4960_VALUE_VIDEO_OUTPUT_ENABLE	1
@@ -86,6 +89,28 @@
 #define CXD4960_VALUE_ERROR_CLEAR		0x01
 
 #define CXD4960_REG_SSCG_CONTROL		0x80
+
+#define CXD4960_REG_LINK_STATUS				0x01
+#define CXD4960_REG_ERROR_STATUS			0x10
+#define CXD4960_MASK_LINK_READY				0x10
+#define CXD4960_MASK_LINK_GVIF2RX_LOS		0x01
+#define CXD4960_MASK_LINK_STATUS_CHECK		(CXD4960_MASK_LINK_READY | CXD4960_MASK_LINK_GVIF2RX_LOS)
+#define CXD4960_MASK_ERROR_GVIF2RX_FAIL		0x80
+#define CXD4960_MASK_ERROR_VIDEOTX_FAIL		0x10
+#define CXD4960_MASK_ERROR_STATUS_CHECK		(CXD4960_MASK_ERROR_GVIF2RX_FAIL | CXD4960_MASK_ERROR_VIDEOTX_FAIL)
+#define CXD4960_VALUE_LINK_READY			0x10
+#define CXD4960_VALUE_LINK_GVIF2RX_LOS		0x00
+#define CXD4960_VALUE_LINK_STATUS_CHECK		(CXD4960_VALUE_LINK_READY | CXD4960_VALUE_LINK_GVIF2RX_LOS)
+#define CXD4960_VALUE_ERROR_GVIF2RX_FAIL	0x00
+#define CXD4960_VALUE_ERROR_VIDEOTX_FAIL	0x00
+#define CXD4960_VALUE_ERROR_STATUS_CHECK	(CXD4960_VALUE_ERROR_GVIF2RX_FAIL | CXD4960_VALUE_ERROR_VIDEOTX_FAIL)
+
+#define DEBUG_CXD4960  /* Debug print enable */
+#ifdef DEBUG_CXD4960
+#define cxd4960_dbg(dev, fmt, arg...)	dev_info(dev, "<CXD4960>"fmt, ##arg)
+#else
+#define cxd4960_dbg(dev, fmt, arg...)
+#endif
 
 struct cxd4960_reg {
 	u16 address;
@@ -175,31 +200,16 @@ static inline struct cxd4960 *notifier_to_cxd4960(struct v4l2_async_notifier *n)
 static int cxd4960_read_reg(struct cxd4960 *cxd4960, u16 reg, u32 len, u32 *val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
-	struct i2c_msg msgs[2];
-	u8 addr_buf[2] = { reg >> 8, reg & 0xff };
-	u8 data_buf[4] = { 0, };
 	int ret;
 
-	if (len > 4)
-		return -EINVAL;
-
-	/* Write register address */
-	msgs[0].addr = client->addr;
-	msgs[0].flags = 0;
-	msgs[0].len = ARRAY_SIZE(addr_buf);
-	msgs[0].buf = addr_buf;
-
-	/* Read data from register */
-	msgs[1].addr = client->addr;
-	msgs[1].flags = I2C_M_RD;
-	msgs[1].len = len;
-	msgs[1].buf = &data_buf[4 - len];
-
-	ret = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
-	if (ret != ARRAY_SIZE(msgs))
-		return -EIO;
-
-	*val = get_unaligned_be32(data_buf);
+	ret = i2c_smbus_read_byte_data(client, reg & 0xff);
+	if (ret < 0) {
+		dev_err(&client->dev,
+			"%s: read reg error %d: reg=%x, val=%x\n",
+			__func__, ret, reg, *val);
+		return ret;
+	}
+	*val = ret;
 
 	return 0;
 }
@@ -208,15 +218,15 @@ static int cxd4960_read_reg(struct cxd4960 *cxd4960, u16 reg, u32 len, u32 *val)
 static int cxd4960_write_reg(struct cxd4960 *cxd4960, u16 reg, u32 len, u32 val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
-	u8 buf[6];
+	int ret;
 
-	if (len > 4)
-		return -EINVAL;
-
-	put_unaligned_be16(reg, buf);
-	put_unaligned_be32(val << (8 * (4 - len)), buf + 2);
-	if (i2c_master_send(client, buf, len + 2) != len + 2)
-		return -EIO;
+	ret = i2c_smbus_write_byte_data(client, reg & 0xff, val);
+	if (ret) {
+		dev_err(&client->dev,
+			"%s: write reg error %d: reg=%x, val=%x\n",
+			__func__, ret, reg, val);
+		return ret;
+	}
 
 	return 0;
 }
@@ -300,58 +310,163 @@ static int cxd4960_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 
 
 static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 {
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
 	u32 val;
 	int ret;
+	int i;
 
 	void *mapped;
 
 	/* FSYNC_1R8V */
 	/* set parameter (addr should be aligned by PWM_PAGE_SIZE) */
+	cxd4960_dbg(&client->dev, "FSYNC Output start\n");
 	mapped = ioremap(PWM_BASE, PWM_PAGE_SIZE);
 
 	iowrite32(PWM_CYC0 | PWM_PH0, mapped + PWM_REG_PWMCNT);
 	iowrite32(PWM_CC0 | PWM_CCMD | PWM_CCMD | PWM_SYNC | PWM_SS0 | PWM_EN0, mapped + PWM_REG_PWMCR);
 
 	iounmap(mapped);
+	cxd4960_dbg(&client->dev, "FSYNC Output end\n");
 
 	/* Deserializer Initialize */
+	cxd4960_dbg(&client->dev, "Deserializer Initialize start\n");
 	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step1, ARRAY_SIZE(init_des_set_regs_step1));
-	if (ret) return ret;
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c write init_des_set_regs_step1: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " i2c write init_des_set_regs_step1: OK[%d]\n", ret);
 
-	while(1){
+	i = 0;
+	while(i < 10){
 		ret = cxd4960_read_reg(cxd4960, CXD4960_REG_SERDES_LINK, CXD4960_REG_VALUE_08BIT, &val);
-		if (val == CXD4960_VALUE_SERDES_LINK) break;
-		if (ret) return ret;
+		if (ret) {
+			cxd4960_dbg(&client->dev, " i2c read SERDES_LINK: NG[%d]\n", ret);
+			return ret;
+		}
+		if ((val & CXD4960_VALUE_SERDES_LINK) == CXD4960_VALUE_SERDES_LINK) break;
+		i++;
+	}
+	cxd4960_dbg(&client->dev, " i2c read SERDES_LINK: OK[%d]\n", ret);
+	if (i >= 10) {
+		cxd4960_dbg(&client->dev, " SERDES_LINK check, target bit is bit4: NG[%02X]\n", val);
+		return -EIO;
+	} else {
+		cxd4960_dbg(&client->dev, " SERDES_LINK check, target bit is bit4: OK[%02X]\n", val);
 	}
 
 	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step2, ARRAY_SIZE(init_des_set_regs_step2));
-	if (ret) return ret;
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c write init_des_set_regs_step2: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " i2c write init_des_set_regs_step2: OK[%d]\n", ret);
 
-	while(1){
+	i = 0;
+	while(i < 10){
 		ret = cxd4960_read_reg(cxd4960, CXD4960_REG_REMOTE_COMPLETE, CXD4960_REG_VALUE_08BIT, &val);
-		if (val == CXD4960_VALUE_REMOTE_COMPLETE) break;
-		if (ret) return ret;
+		if (ret) {
+			cxd4960_dbg(&client->dev, " i2c read REMOTE_COMPLETE: NG[%d]\n", ret);
+			return ret;
+		}
+		if ((val & CXD4960_VALUE_REMOTE_COMPLETE) == CXD4960_VALUE_REMOTE_COMPLETE) break;
+		i++;
+	}
+	cxd4960_dbg(&client->dev, " i2c read REMOTE_COMPLETE: OK[%d]\n", ret);
+	if (i >= 10) {
+		cxd4960_dbg(&client->dev, " REMOTE_COMPLETE check, target bit is bit0: NG[%02X]\n", val);
+		return -EIO;
+	} else {
+		cxd4960_dbg(&client->dev, " REMOTE_COMPLETE check, target bit is bit0: OK[%02X]\n", val);
 	}
 
 	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step3, ARRAY_SIZE(init_des_set_regs_step3));
-	if (ret) return ret;
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c write init_des_set_regs_step3: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " i2c write init_des_set_regs_step3: OK[%d]\n", ret);
 
 	usleep_range(30, 40);
 
 	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step4, ARRAY_SIZE(init_des_set_regs_step4));
-	if (ret) return ret;
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c write init_des_set_regs_step4: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " i2c write init_des_set_regs_step4: OK[%d]\n", ret);
+	cxd4960_dbg(&client->dev, "Deserializer Initialize end\n");
 
+	cxd4960_dbg(&client->dev, "DMC Initialize start\n");
+	cxd4960_dbg(&client->dev, " subdev_call video.s_stream\n");
 	ret = v4l2_subdev_call(cxd4960->remote, video, s_stream, 1);
-	if (ret) return ret;
+	if (ret) {
+		cxd4960_dbg(&client->dev, " subdev_call video.s_stream: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " subdev_call video.s_stream: OK[%d]\n", ret);
 
 	/* Desirializa Video Output Enable */
+	cxd4960_dbg(&client->dev, "Deserializer Video Output Enable start\n");
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_ENABLE);
-	if (ret) return ret;
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c write VIDEO_OUTPUT_ENABLE: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " i2c write VIDEO_OUTPUT_ENABLE: OK[%d]\n", ret);
+	cxd4960_dbg(&client->dev, "Deserializer Video Output Enable end\n");
 
 	/* Desrializa Error Status Clear */
+	cxd4960_dbg(&client->dev, "Deserializer Error Status Clear start\n");
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_CLEAR);
-	if (ret) return ret;
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c write ERROR_CLEAR CLEAR: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " i2c write ERROR_CLEAR CLEAR: OK[%d]\n", ret);
+
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_NOTCLEAR);
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c write ERROR_CLEAR NOTCLEAR: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " i2c write ERROR_CLEAR NOTCLEAR: OK[%d]\n", ret);
+	cxd4960_dbg(&client->dev, "Deserializer Error Status Clear end\n");
+
+	/* Startup check */
+	cxd4960_dbg(&client->dev, "Startup Check start\n");
+	ret = cxd4960_read_reg(cxd4960, CXD4960_REG_LINK_STATUS, CXD4960_REG_VALUE_08BIT, &val);
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c read LINK_STATUS: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " i2c read LINK_STATUS: OK[%d]\n", ret);
+	if (((u8)val & CXD4960_MASK_LINK_STATUS_CHECK) != CXD4960_VALUE_LINK_STATUS_CHECK) {
+		cxd4960_dbg(&client->dev, " LINK_STATUS check, target bit is bit4,0: NG[%02X]\n", val);
+		return -EIO;
+	} else {
+		cxd4960_dbg(&client->dev, " LINK_STATUS check, target bit is bit4,0: OK[%02X]\n", val);
+	}
+
+	ret = cxd4960_read_reg(cxd4960, CXD4960_REG_ERROR_STATUS, CXD4960_REG_VALUE_08BIT, &val);
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c read ERROR_STATUS: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " i2c read ERROR_STATUS: OK[%d]\n", ret);
+	if (((u8)val & CXD4960_MASK_ERROR_STATUS_CHECK) != CXD4960_VALUE_ERROR_STATUS_CHECK) {
+		cxd4960_dbg(&client->dev, " ERROR_STATUS check, target bit is bit7,4: NG[%02X]\n", val);
+		return -EIO;
+	} else {
+		cxd4960_dbg(&client->dev, " ERROR_STATUS check, target bit is bit7,4: OK[%02X]\n", val);
+	}
+	ret = v4l2_subdev_call(cxd4960->remote, video, s_routing, 0, 0, 2);
+	if (ret) {
+		cxd4960_dbg(&client->dev, " subdev_call video.s_routing: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4960_dbg(&client->dev, " subdev_call video.s_routing: OK[%d]\n", ret);
+	cxd4960_dbg(&client->dev, "Startup Check end\n");
 
 	return ret;
 }
@@ -712,6 +827,7 @@ static int cxd4960_probe(struct i2c_client *client)
 	ret = cxd4960_power_on(dev);
 	if (ret)
 		return ret;
+	cxd4960_dbg(&client->dev, "DES_CE Set High\n");
 
 	/* FCMイメージセンサ初期化(Streamingモードへ遷移)完了チェック */
 
@@ -723,6 +839,7 @@ static int cxd4960_probe(struct i2c_client *client)
 	/* set by msiof driver */
 #if 1
 	/* set parameter (addr should be aligned by MSIOF_PAGE_SIZE) */
+	cxd4960_dbg(&client->dev, "REFCLK Output start\n");
 	mapped = ioremap(MSIOF3_BASE, MSIOF_PAGE_SIZE);
 
 	iowrite32(MSIOF_TRMD, mapped + MSIOF_REG_SITMDR1);
@@ -730,6 +847,7 @@ static int cxd4960_probe(struct i2c_client *client)
 	iowrite32(MSIOF_TSCKIZ | MSIOF_TSCKE, mapped + MSIOF_REG_SICTR);
 
 	iounmap(mapped);
+	cxd4960_dbg(&client->dev, "REFCLK Output end\n");
 #endif
 
 	msleep(1);

@@ -41,12 +41,30 @@
 #define CXD4963_VALUE_ERROR_NOTCLEAR	0x00
 #define CXD4963_VALUE_ERROR_CLEAR		0x01
 
+#define CXD4963_REG_LINK_STATUS				0x01
+#define CXD4963_REG_ERROR_STATUS			0x10
+#define CXD4963_MASK_LINK_READY				0x10
+#define CXD4963_MASK_ERROR_GVIF2TX_FAIL		0x40
+#define CXD4963_MASK_ERROR_VIDEORX_FAIL		0x04
+#define CXD4963_MASK_ERROR_STATUS_CHECK		(CXD4963_MASK_ERROR_GVIF2TX_FAIL | CXD4963_MASK_ERROR_VIDEORX_FAIL)
+#define CXD4963_VALUE_LINK_READY			0x10
+#define CXD4963_VALUE_ERROR_GVIF2TX_FAIL	0x00
+#define CXD4963_VALUE_ERROR_VIDEORX_FAIL	0x00
+#define CXD4963_VALUE_ERROR_STATUS_CHECK	(CXD4963_VALUE_ERROR_GVIF2TX_FAIL | CXD4963_VALUE_ERROR_VIDEORX_FAIL)
+
+#define DEBUG_CXD4963  /* Debug print enable */
+#ifdef DEBUG_CXD4963
+#define cxd4963_dbg(dev, fmt, arg...)	dev_info(dev, "<CXD4963>"fmt, ##arg)
+#else
+#define cxd4963_dbg(dev, fmt, arg...)
+#endif
 
 struct cxd4963_reg {
 	u16 address;
 	u8 val;
 };
 
+//#define USE_DMC_001 (1)
 static const struct cxd4963_reg init_dmc_ser_set_regs[] = {
 	{0x50, 0x08},
 	{0x53, 0x00},
@@ -61,9 +79,15 @@ static const struct cxd4963_reg init_dmc_ser_set_regs[] = {
 	{0x69, 0x42},
 	{0x6B, 0x00},
 	{0x6C, 0x01},
+#ifdef USE_DMC_001
+	{0xBA, 0x08},
+	{0xBB, 0x07},
+	{0xBC, 0x08},
+#else
 	{0xBA, 0x01},
 	{0xBB, 0x1E},
 	{0xBC, 0x01},
+#endif
 };/* init_dmc_ser_set_regs */
 
 /* regulator supplies */
@@ -128,53 +152,36 @@ static inline struct cxd4963 *notifier_to_cxd4963(struct v4l2_async_notifier *n)
 }
 
 /* Read registers up to 2 at a time */
-#if 0
 static int cxd4963_read_reg(struct cxd4963 *cxd4963, u16 reg, u32 len, u32 *val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&cxd4963->sd);
-	struct i2c_msg msgs[2];
-	u8 addr_buf[2] = { reg >> 8, reg & 0xff };
-	u8 data_buf[4] = { 0, };
 	int ret;
 
-	if (len > 4)
-		return -EINVAL;
-
-	/* Write register address */
-	msgs[0].addr = client->addr;
-	msgs[0].flags = 0;
-	msgs[0].len = ARRAY_SIZE(addr_buf);
-	msgs[0].buf = addr_buf;
-
-	/* Read data from register */
-	msgs[1].addr = client->addr;
-	msgs[1].flags = I2C_M_RD;
-	msgs[1].len = len;
-	msgs[1].buf = &data_buf[4 - len];
-
-	ret = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
-	if (ret != ARRAY_SIZE(msgs))
-		return -EIO;
-
-	*val = get_unaligned_be32(data_buf);
+	ret = i2c_smbus_read_byte_data(client, reg & 0xff);
+	if (ret < 0) {
+		dev_err(&client->dev,
+			"%s: read reg error %d: reg=%x, val=%x\n",
+			__func__, ret, reg, *val);
+		return ret;
+	}
+	*val = ret;
 
 	return 0;
 }
-#endif
 
 /* Write registers up to 2 at a time */
 static int cxd4963_write_reg(struct cxd4963 *cxd4963, u16 reg, u32 len, u32 val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&cxd4963->sd);
-	u8 buf[6];
+	int ret;
 
-	if (len > 4)
-		return -EINVAL;
-
-	put_unaligned_be16(reg, buf);
-	put_unaligned_be32(val << (8 * (4 - len)), buf + 2);
-	if (i2c_master_send(client, buf, len + 2) != len + 2)
-		return -EIO;
+	ret = i2c_smbus_write_byte_data(client, reg & 0xff, val);
+	if (ret) {
+		dev_err(&client->dev,
+			"%s: write reg error %d: reg=%x, val=%x\n",
+			__func__, ret, reg, val);
+		return ret;
+	}
 
 	return 0;
 }
@@ -210,6 +217,41 @@ static int cxd4963_strobe_led_control(struct cxd4963 *cxd4963, u32 input, u32 ou
 	return ret;
 }
 
+static int cxd4963_startup_check(struct cxd4963 *cxd4963)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4963->sd);
+	int ret = 0;
+	u32 val;
+
+	ret = cxd4963_read_reg(cxd4963, CXD4963_REG_LINK_STATUS, CXD4963_REG_VALUE_08BIT, &val);
+	if (ret) {
+		cxd4963_dbg(&client->dev, " i2c read LINK_STATUS: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4963_dbg(&client->dev, " i2c read LINK_STATUS: OK[%d]\n", ret);
+	if (((u8)val & CXD4963_MASK_LINK_READY) != CXD4963_VALUE_LINK_READY) {
+		cxd4963_dbg(&client->dev, " LINK_STATUS check, target bit is bit4: NG[%02X]\n", val);
+		return -EIO;
+	} else {
+		cxd4963_dbg(&client->dev, " LINK_STATUS check, target bit is bit4: OK[%02X]\n", val);
+	}
+
+	ret = cxd4963_read_reg(cxd4963, CXD4963_REG_ERROR_STATUS, CXD4963_REG_VALUE_08BIT, &val);
+	if (ret) {
+		cxd4963_dbg(&client->dev, " i2c read ERROR_STATUS: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4963_dbg(&client->dev, " i2c read ERROR_STATUS: OK[%d]\n", ret);
+	if (((u8)val & CXD4963_MASK_ERROR_STATUS_CHECK) != CXD4963_VALUE_ERROR_STATUS_CHECK) {
+		cxd4963_dbg(&client->dev, " ERROR_STATUS check, target bit is bit6,2: NG[%02X]\n", val);
+		return -EIO;
+	} else {
+		cxd4963_dbg(&client->dev, " ERROR_STATUS check, target bit is bit6,2: OK[%02X]\n", val);
+	}
+
+	return ret;
+}
+
 static int cxd4963_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 config)
 {
 	struct cxd4963 *cxd4963 = to_cxd4963(sd);
@@ -227,6 +269,10 @@ static int cxd4963_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 
 		/* Strobe LED Control */
 		ret = cxd4963_strobe_led_control(cxd4963, input, output, config);
 		break;
+	case 2:
+		/* Startup Check */
+		ret = cxd4963_startup_check(cxd4963);
+		break;
 	default:
 		dev_err(&client->dev, "Not supported command[%d]\n", config);
 		ret = -EINVAL;
@@ -240,25 +286,56 @@ static int cxd4963_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 
 
 static int cxd4963_start_streaming(struct cxd4963 *cxd4963)
 {
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4963->sd);
 	int ret;
 
 	/* Serializer Initialize */
+	cxd4963_dbg(&client->dev, "Serializer Initialize start\n");
 	ret = cxd4963_write_regs(cxd4963, init_dmc_ser_set_regs, ARRAY_SIZE(init_dmc_ser_set_regs));
-	if (ret) return ret;
+	if (ret) {
+		cxd4963_dbg(&client->dev, " i2c write init_dmc_ser_set_regs: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4963_dbg(&client->dev, " i2c write init_dmc_ser_set_regs: OK[%d]\n", ret);
+	cxd4963_dbg(&client->dev, "Serializer Initialize end\n");
 
 	msleep(13);
 
+	cxd4963_dbg(&client->dev, " subdev_call video.s_stream\n");
 	ret = v4l2_subdev_call(cxd4963->remote, video, s_stream, 1);
-	if (ret) return ret;
+	if (ret) {
+		cxd4963_dbg(&client->dev, " subdev_call video.s_stream: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4963_dbg(&client->dev, " subdev_call video.s_stream: OK[%d]\n", ret);
+	cxd4963_dbg(&client->dev, "DMC Initialize end\n");
 
 	/* Sirializa Video Output Enable */
+	cxd4963_dbg(&client->dev, "Serializer Video Output Enable start\n");
 	ret = cxd4963_write_reg(cxd4963, CXD4963_REG_VIDEO_SETUP, CXD4963_REG_VALUE_08BIT, CXD4963_VALUE_INPUT_ENABLE);
-	if (ret) return ret;
+	if (ret) {
+		cxd4963_dbg(&client->dev, " i2c write VIDEO_SETUP: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4963_dbg(&client->dev, " i2c write VIDEO_SETUP: OK[%d]\n", ret);
+	cxd4963_dbg(&client->dev, "Serializer Video Output Enable end\n");
 
 	/* Srializa Error Status Clear */
+	cxd4963_dbg(&client->dev, "Serializer Error Status Clear start\n");
 	ret = cxd4963_write_reg(cxd4963, CXD4963_REG_ERROR_CLEAR, CXD4963_REG_VALUE_08BIT, CXD4963_VALUE_ERROR_CLEAR);
-	if (ret) return ret;
+	if (ret) {
+		cxd4963_dbg(&client->dev, " i2c write ERROR_CLEAR CLEAR: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4963_dbg(&client->dev, " i2c write ERROR_CLEAR CLEAR: OK[%d]\n", ret);
+
 	ret = cxd4963_write_reg(cxd4963, CXD4963_REG_ERROR_CLEAR, CXD4963_REG_VALUE_08BIT, CXD4963_VALUE_ERROR_NOTCLEAR);
+	if (ret) {
+		cxd4963_dbg(&client->dev, " i2c write ERROR_CLEAR NOTCLEAR: NG[%d]\n", ret);
+		return ret;
+	}
+	cxd4963_dbg(&client->dev, " i2c write ERROR_CLEAR NOTCLEAR: OK[%d]\n", ret);
+	cxd4963_dbg(&client->dev, "Serializer Error Status Clear end\n");
 
 	return ret;
 }
