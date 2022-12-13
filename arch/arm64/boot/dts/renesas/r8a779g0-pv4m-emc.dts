@@ -261,7 +261,7 @@
 		mux {
 			groups = "msiof5_clk", "msiof5_rxd";
 			function = "msiof5";
-			power-source = <3300>;
+			power-source = <1800>;
 		};
 
 		clk {
@@ -269,10 +269,6 @@
 			drive-strength = <21>;
 		};
 
-		rxd {
-			groups = "msiof5_rxd";
-			bias-pull-down;
-		};
 	};
 
 	pwm1_pins: pwm1 {
