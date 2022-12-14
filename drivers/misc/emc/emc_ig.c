@@ -3,6 +3,7 @@
 #include <linux/platform_device.h>
 #include <linux/gpio/consumer.h>
 #include <linux/kthread.h>
+#include <uapi/misc/emc_data.h>
 
 #define EMC_IG_MODNAME		"emc-ig"
 #define EMC_IG_INTERVAL_MS	5
@@ -18,6 +19,26 @@ struct emc_ig_priv {
 	int			ig_det;
 	int			ig_off;
 };
+
+static void set_ig_det(unsigned short val)
+{
+	int ret;
+
+	ret = emc_set_exp_info(IG_DET_DETECTION, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
+}
+
+static void set_ig_off(unsigned short val)
+{
+	int ret;
+
+	ret = emc_set_exp_info(IG_OFF_DETECTION, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
+}
 
 static void emc_ig_kthread_main(struct emc_ig_priv *priv)
 {
@@ -51,14 +72,12 @@ static void emc_ig_kthread_main(struct emc_ig_priv *priv)
 	// update variable IG_DET judgment
 	old_ig_det = priv->ig_det;
 	priv->ig_det = priv->now;
-	pr_debug("IG_DET = %d\n", priv->ig_det);
-	// FIXME : memory write
+	set_ig_det(priv->ig_det);
 
 	// IG_OFF detected? (IG_DET 1 -> 0)
 	if (old_ig_det == 1 && priv->ig_det == 0) {
 		priv->ig_off = 1;
-		pr_debug("IG_OFF = %d\n", priv->ig_off);
-		// FIXME : memory write
+		set_ig_off(priv->ig_off);
 	}
 }
 
