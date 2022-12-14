@@ -73,6 +73,21 @@ static unsigned long ImagerStatus;
 #define GPIO7_PUD_XERR	0x00040000
 #define GPIO7_OUTDT_XCLR	0x00000200
 
+/* BIST */
+#define BIST_LOCK_REG			0xB663
+#define CK_BIST_GO_H_REG		0x1B06
+#define ECM_UPDATE_FLAG_REG		0x95C1
+#define BIST_ACTIVATE_ERROR_REG	0x95C2
+#define BIST_STANDBY_REG		0x95C2
+#define BIST_COMP_REG			0x8DF0
+#define BIST_UNLOCK			0xA3
+#define CK_BIST_GO_H		0xA3
+#define BIST_GO				0x5C
+#define ECM_UPDATE_FLAG		0x01
+#define BIST_ACTIVATE_ERROR	0x01
+#define BIST_STANDBY		0x00
+#define BIST_COMP			0x01
+
 /* Standby Setting */
 #define IMX728_REG_STANDBY	0x1B05
 #define IMX728_MODE_STANDBY	0xFF
@@ -88,6 +103,7 @@ static unsigned long ImagerStatus;
 #define IMX728_REG_DEVICE_STATE	0x2CAC
 #define IMX728_STATE_SLEEP		0x02
 #define IMX728_STATE_STANDBY	0x04
+#define IMX728_STATE_BIST		0x08
 #define IMX728_STATE_STREAMING	0x10
 #define IMX728_STATE_SAFESTATE	0x20
 
@@ -5808,9 +5824,10 @@ static int imx728_start_streaming(struct imx728 *imx728)
 	imx728_dbg(&client->dev, " i2c write inck_set_regs: OK[%d]\n", ret);
 	imx728_dbg(&client->dev, "INCK Setting end\n");
 
+#ifndef BIST_FLAG
 	/* set Standby */
 	imx728_dbg(&client->dev, "CK_SLEEP_H Set Standby start\n");
-	ret = imx728_write_reg(imx728, IMX728_REG_STANDBY, 1, IMX728_MODE_STANDBY);
+	ret = imx728_write_reg(imx728, IMX728_REG_STANDBY, IMX728_REG_VALUE_08BIT, IMX728_MODE_STANDBY);
 	if (ret) {
 		imx728_dbg(&client->dev, " i2c write STANDBY: NG[%d]\n", ret);
 		return ret;
@@ -5843,46 +5860,77 @@ static int imx728_start_streaming(struct imx728 *imx728)
 	}
 	imx728_dbg(&client->dev, "Check CK_DEVICE_STATE Standby end\n");
 
-	/* BIST ↓ */
-
-
-
-	/* set Standby */
-	//imx728_dbg(&client->dev, "CK_SLEEP_H Set Standby start\n", ret);
-	//ret = imx728_write_reg(imx728, IMX728_REG_STANDBY, 1, IMX728_MODE_STANDBY);
-	//if (ret) {
-	//	imx728_dbg(&client->dev, " i2c write STANDBY: NG[%d]\n", ret);
-	//	return ret;
-	//}
-	//imx728_dbg(&client->dev, " i2c write STANDBY: OK[%d]\n", ret);
-	//msleep(100);
-	//imx728_dbg(&client->dev, "CK_SLEEP_H Set Standby end\n", ret);
-    //
-	//imx728_dbg(&client->dev, "Check CK_DEVICE_STATE Standby start\n", ret);
+	/* BIST */
+	dev_info(&client->dev, "BIST setting\n");
+	ret = imx728_write_reg(imx728, BIST_LOCK_REG, IMX728_REG_VALUE_08BIT, BIST_UNLOCK);
+	ret = imx728_write_reg(imx728, CK_BIST_GO_H_REG, IMX728_REG_VALUE_08BIT, CK_BIST_GO_H);
+	ret = imx728_write_reg(imx728, CK_BIST_GO_H_REG, IMX728_REG_VALUE_08BIT, BIST_GO);
+	ImagerStatus = IMX728_STATE_BIST;
+	dev_info(&client->dev, "ImagerStatus = %lx\n", ImagerStatus);
+	ret = imx728_write_reg(imx728, ECM_UPDATE_FLAG_REG, IMX728_REG_VALUE_08BIT, ECM_UPDATE_FLAG);
+	ret = imx728_write_reg(imx728, BIST_ACTIVATE_ERROR_REG, IMX728_REG_VALUE_08BIT, BIST_ACTIVATE_ERROR);
+	ret = imx728_write_reg(imx728, BIST_STANDBY_REG, IMX728_REG_VALUE_08BIT, BIST_STANDBY);
+	dev_info(&client->dev, "BIST start\n");
+	//imx728_error_bist_start_check(imx728);
+	//imx728_error_bist_xerr_check(imx728);
+	msleep(68);
+	//imx728_error_bist_complete_check(imx728);
 	//i = 0;
-	//while(i < 2){
+	//while(i < 2)
+	//{
 	//	ret = imx728_read_reg(imx728, IMX728_REG_DEVICE_STATE, IMX728_REG_VALUE_08BIT, &val);
-	//	if (ret) {
-	//		imx728_dbg(&client->dev, " i2c read DEVICE_STATE: NG[%d]\n", ret);
-	//		return ret;
-	//	}
-	//	if (val == IMX728_STATE_STANDBY){
+	//	if (val == IMX728_STATE_STANDBY)
+	//	{
 	//		ImagerStatus = val;
+	//		flg = STATE_MATCH;
+	//		dev_info(&client->dev, "ImagerStatus = %x\n", ImagerStatus);
+	//		imx728_dev_status_error_clear(imx728);
 	//		break;
 	//	}
+	//	flg = UNSTATE_MATCH;
 	//	i++;
 	//}
-	//imx728_dbg(&client->dev, " i2c read DEVICE_STATE: OK[%d]\n", ret);
-	//if (i >= 2) {
-	//	imx728_dbg(&client->dev, " DEVICE_STATE check STANDBY: NG[%02X]\n", val);
-	//	// {イメージセンサー内部仮異常フラグを1：判定24}
-	//	return -EIO;
-	//} else {
-	//	imx728_dbg(&client->dev, " DEVICE_STATE check STANDBY: OK[%02X]\n", val);
+	//if(flg == UNSTATE_MATCH)
+	//{
+	//	dev_info(&client->dev, "NG:ImagerStatus = %x\n", ImagerStatus);
+	//	imx728_error_dev_status_check(imx728);
 	//}
-	//imx728_dbg(&client->dev, "Check CK_DEVICE_STATE Standby end\n", ret);
+#endif //BIST_FLAG
 
-	/* BIST ↑ */
+	/* set Standby */
+	imx728_dbg(&client->dev, "CK_SLEEP_H Set Standby start\n");
+	ret = imx728_write_reg(imx728, IMX728_REG_STANDBY, IMX728_REG_VALUE_08BIT, IMX728_MODE_STANDBY);
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write STANDBY: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write STANDBY: OK[%d]\n", ret);
+	msleep(100);
+	imx728_dbg(&client->dev, "CK_SLEEP_H Set Standby end\n");
+
+	imx728_dbg(&client->dev, "Check CK_DEVICE_STATE Standby start\n");
+	i = 0;
+	while(i < 2){
+		ret = imx728_read_reg(imx728, IMX728_REG_DEVICE_STATE, IMX728_REG_VALUE_08BIT, &val);
+		if (ret) {
+			imx728_dbg(&client->dev, " i2c read DEVICE_STATE: NG[%d]\n", ret);
+			return ret;
+		}
+		if (val == IMX728_STATE_STANDBY){
+			ImagerStatus = val;
+			break;
+		}
+		i++;
+	}
+	imx728_dbg(&client->dev, " i2c read DEVICE_STATE: OK[%d]\n", ret);
+	if (i >= 2) {
+		imx728_dbg(&client->dev, " DEVICE_STATE check STANDBY: NG[%02X]\n", val);
+		// {イメージセンサー内部仮異常フラグを1：判定24}
+		return -EIO;
+	} else {
+		imx728_dbg(&client->dev, " DEVICE_STATE check STANDBY: OK[%02X]\n", val);
+	}
+	imx728_dbg(&client->dev, "Check CK_DEVICE_STATE Standby end\n");
 
 	/* IMX728 Register Setting */
 	imx728_dbg(&client->dev, "Register Setting start\n");
@@ -6250,6 +6298,7 @@ static int imx728_probe(struct i2c_client *client)
 		return -ENOENT;
 #endif
 
+	dev_info(dev, "XCLR High\n");
 	ret = imx728_power_on(dev);
 	if (ret)
 		return ret;
