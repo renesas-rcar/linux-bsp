@@ -77,6 +77,10 @@ static unsigned long ImagerStatus;
 #define IMX728_REG_STANDBY	0x1B05
 #define IMX728_MODE_STANDBY	0xFF
 
+/* Stop test pattern output */
+#define IMX728_REG_TEST_PTN		0xB58E
+#define IMX728_STOP_TEST_PTN	0x00
+
 #define IMX728_REG_VALUE_08BIT		1
 #define IMX728_REG_VALUE_16BIT		2
 
@@ -5614,6 +5618,17 @@ static const struct imx728_reg streaming_set_regs_step2[] = {
 	{0xFFFF,0x05},
 };/* streaming_set_regs_step2 */
 
+static const struct imx728_reg output_test_pattern[] = {
+	{0x1A2A,0x02},
+	{0x1A30,0x00},
+	{0x1A34,0x01},
+	{0x1A38,0x03},
+	{0xB58F,0x00},
+	{0xB6C5,0x00},
+	{0xB58E,0x01},
+	{0xB6C4,0x01},
+};/* output_test_pattern */
+
 struct imx728 {
 	struct v4l2_subdev sd;
 	struct media_pad pad;
@@ -5736,6 +5751,44 @@ static int imx728_write_regs(struct imx728 *imx728,
 	}
 
 	return 0;
+}
+
+static int imx728_stop_test_pattern(struct imx728 *imx728)
+{
+	int ret;
+
+	/* Output test pattern */
+	ret = imx728_write_reg(imx728, IMX728_REG_TEST_PTN, IMX728_REG_VALUE_08BIT, IMX728_STOP_TEST_PTN);
+
+	return ret;
+}
+
+static int imx728_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 config)
+{
+	struct imx728 *imx728 = to_imx728(sd);
+	struct i2c_client *client = v4l2_get_subdevdata(&imx728->sd);
+	int ret = 0;
+
+	mutex_lock(&imx728->mutex);
+	if (!imx728->streaming) {
+		mutex_unlock(&imx728->mutex);
+		return 0;
+	}
+
+	switch (config) {
+	case 0x1:
+		/* Stop test pattern output */
+		ret = imx728_stop_test_pattern(imx728);
+		break;
+	default:
+		dev_err(&client->dev, "Not supported command[%d]\n", config);
+		ret = -EINVAL;
+		break;
+	}
+
+	mutex_unlock(&imx728->mutex);
+
+	return ret;
 }
 
 static int imx728_start_streaming(struct imx728 *imx728)
@@ -5916,6 +5969,9 @@ static int imx728_start_streaming(struct imx728 *imx728)
 
 	iounmap(mapped);
 
+	/* Output test pattern */
+	ret = imx728_write_regs(imx728, output_test_pattern, ARRAY_SIZE(output_test_pattern));
+
 	imx728_dbg(&client->dev, "%s end\n", __func__);
 	return ret;
 }
@@ -6053,6 +6109,7 @@ static const struct v4l2_subdev_core_ops imx728_core_ops = {
 
 static const struct v4l2_subdev_video_ops imx728_video_ops = {
 	.s_stream = imx728_set_stream,
+	.s_routing = imx728_s_routing,
 };
 
 static const struct v4l2_subdev_ops imx728_subdev_ops = {
