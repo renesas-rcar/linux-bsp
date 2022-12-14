@@ -20,7 +20,11 @@
 										// dummy_adc_getdata() 用ID定義
 #define ID_AD_BZ			9					// AD_BZ_A/D値
 #define ID_AD_PB			1					// AD_+B_A/D値
+#define ID_AD_LDA_ACC_SW		2
+#define ID_AD_PCS_SW			3
 
+#define SW_THRESHOLD_UPPER		769
+#define SW_THRESHOLD_LOWER		401
 
 struct emc_ht_priv {
 	int			pin_vol;	// 端子電圧 (〔AD_BZ_A/D値(×10)〕÷〔AD_+B_A/D値(x10)〕)
@@ -47,14 +51,25 @@ static void set_ht_ctl_err(unsigned short val)
 
 static unsigned short get_in_now(void)
 {
-	int ret;
 	unsigned short val = 0;
+	int ret, ain3;
 
 	// 〔じか線ヒータ駆動制御〕の値を取得する。
 	// 「じか線ヒータ駆動制御〕＝〔じか線PCS_SW状態〕なので
 	// 〔じか線PCS_SW状態〕を取得すれば良い。
 	ret = emc_get_exp_info(PCS_SW_STAT, &val);
 	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	/*
+	 *  Just need to care only PCS_SW state
+	 *  PCS_SW = 1 --> Turn on heater
+	 *  PCS_SW = 0 --> Turn off heater
+	 */
+
+	ain3 = dummy_adc_getdata(ID_AD_PCS_SW);
+
+	if (ain3 <= SW_THRESHOLD_LOWER)
+		val = 1;
 
 	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
@@ -187,6 +202,8 @@ static void check_error(struct emc_ht_priv *priv)
 
 static void in_kthread_main(struct emc_ht_priv *priv)
 {
+	static int htr_enable_old = 0;
+
 	// 少し待つ
 	set_current_state(TASK_INTERRUPTIBLE);
 	schedule_timeout(msecs_to_jiffies(INTERVAL_MS));
@@ -206,34 +223,14 @@ static void in_kthread_main(struct emc_ht_priv *priv)
 		priv->on_err = 0;
 	}
 
-	// 〔じか線ヒータ駆動制御〕が 0 →  1 ？
-	if (priv->in_old == 0 && priv->in_now != 0) {
-		// OFF異常回数をリセット
-		priv->off_err = 0;
+	if (htr_enable_old != priv->htr_enable) {
+		gpiod_set_value(priv->out_desc, priv->htr_enable);
+		htr_enable_old = !!priv->htr_enable;
+		priv->out_now = !!priv->htr_enable;
+	} else if (priv->in_now != priv->out_now) {
+		gpiod_set_value(priv->out_desc, priv->in_now);
+		priv->out_now = priv->in_now;
 	}
-
-	// 〔じか線ヒータ駆動制御〕が 0、または、〔HTR_ENABLE〕が 0 ?
-	if (priv->in_now == 0 || priv->htr_enable == 0) {
-		// ヒータ制御がH？
-		if (priv->out_now != 0) {
-			// ヒータ制御をLにする
-			priv->out_now = 0;
-			gpiod_set_value(priv->out_desc, 0);
-		}
-	}
-
-	// 〔じか線ヒータ駆動制御〕が 1、かつ、〔HTR_ENABLE〕が 1 ?
-	if (priv->in_now != 0 && priv->htr_enable != 0) {
-		// ヒータ制御がL？
-		if (priv->out_now == 0) {
-			// ヒータ制御をHにする
-			priv->out_now = 1;
-			gpiod_set_value(priv->out_desc, 1);
-		}
-	}
-
-	// 〔じか線ヒータ駆動制御〕を保存
-	priv->in_old = priv->in_now;
 }
 
 // ヒータ制御(入力確認)スレッド
@@ -243,6 +240,7 @@ static int in_kthread(void *arg)
 
 	// 〔じか線ヒータ駆動制御〕を取得
 	priv->in_old = get_in_now();
+	priv->out_now = 0;
 
 	// 〔HTR_ENABLE〕を取得
 	priv->htr_enable = get_htr_enable();
