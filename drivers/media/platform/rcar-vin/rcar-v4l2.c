@@ -1014,6 +1014,29 @@ static int rvin_mc_s_fmt_vid_cap(struct file *file, void *priv,
 	return 0;
 }
 
+static int rvin_s_ext_ctrls(struct file *file, void *fh, struct v4l2_ext_controls *a)
+{
+	struct rvin_dev *vin = video_drvdata(file);
+	struct v4l2_subdev *sd = vin_to_source(vin);
+	struct v4l2_ext_control *control;
+	int ret = 0;
+	int i;
+
+	if (vin->info->model == RCAR_PV4M_EMC) {
+		if (!a->controls || !a->count)
+			return -EINVAL;
+
+		for (i = 0; i < a->count; i++) {
+			control = &a->controls[i];
+			ret = v4l2_subdev_call(sd, video, s_routing, 0, 0, control->id);
+			if (ret)
+				break;
+		}
+	}
+
+	return ret;
+}
+
 static const struct v4l2_ioctl_ops rvin_mc_ioctl_ops = {
 	.vidioc_querycap		= rvin_querycap,
 	.vidioc_try_fmt_vid_cap		= rvin_mc_try_fmt_vid_cap,
@@ -1037,6 +1060,7 @@ static const struct v4l2_ioctl_ops rvin_mc_ioctl_ops = {
 	.vidioc_log_status		= v4l2_ctrl_log_status,
 	.vidioc_subscribe_event		= rvin_subscribe_event,
 	.vidioc_unsubscribe_event	= v4l2_event_unsubscribe,
+	.vidioc_s_ext_ctrls		= rvin_s_ext_ctrls,
 };
 
 /* -----------------------------------------------------------------------------
