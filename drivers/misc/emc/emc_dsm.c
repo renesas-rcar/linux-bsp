@@ -5,6 +5,7 @@
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/iio/dummy_adc.h>
+#include <uapi/misc/emc_data.h>
 
 // 定数定義
 #define EMC_DSM_MODNAME		"emc-dsm"
@@ -72,7 +73,7 @@ static int get_ig_vol(void)
 	// 〔AD_+B_A/D値〕(IG電圧) の値を取得する。
 	val = dummy_adc_getdata(ID_AD_PB);
 
-	pr_debug("%s: IG_VOL = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
 	return val;
 }
 
@@ -83,50 +84,74 @@ static int get_dsm_vol(void)
 	// 〔DSM電源AD値〕(DSM電圧) の値を取得する。
 	val = dummy_adc_getdata(ID_DSM_VOL);
 
-	pr_debug("%s: DSM_VOL = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
 	return val;
 }
 
-static void set_htr_enable(int val)
+static void set_htr_enable(unsigned short val)
 {
+	int ret;
+
 	// 《HTR_ENABLE》= val
-	// FIXME
-	pr_debug("%s: HTR_ENABLE = %d\n", __func__, val);
+	ret = emc_set_exp_info(HTR_ENABLE, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 }
 
-static void set_dsm_power_enable(int val)
+static void set_dsm_power_enable(unsigned short val)
 {
+	int ret;
+
 	// 《DSM_POWER_ENABLE》= val
-	// FIXME
-	pr_debug("%s: DSM_POWER_ENABLE = %d\n", __func__, val);
+	ret = emc_set_exp_info(DSM_POWER_ENABLE, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 }
 
-static void set_dsm_sky_tmp_fail(int val)
+static void set_dsm_sky_tmp_fail(unsigned short val)
 {
+	int ret;
+
 	// 《DSM_天絡仮異常》= val
-	// FIXME
-	pr_debug("%s: DSM_SKY_TMP_FAIL = %d\n", __func__, val);
+	ret = emc_set_exp_info(DRM_SUPPLY_TEMPORARY_FAULT, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 }
 
-static void set_dsm_sky_fail(int val)
+static void set_dsm_sky_fail(unsigned short val)
 {
+	int ret;
+
 	// 《DSM_天絡異常》= val
-	// FIXME
-	pr_debug("%s: DSM_SKY_FAIL = %d\n", __func__, val);
+	ret = emc_set_exp_info(DRM_SUPPLY_FAULT, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 }
 
-static void set_dsm_gnd_tmp_fail(int val)
+static void set_dsm_gnd_tmp_fail(unsigned short val)
 {
+	int ret;
+
 	// 《DSM_地絡仮異常》= val
-	// FIXME
-	pr_debug("%s: DSM_GND_TMP_FAIL = %d\n", __func__, val);
+	ret = emc_set_exp_info(DRM_GROUND_TEMPORARY_FAULT, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 }
 
-static void set_dsm_gnd_fail(int val)
+static void set_dsm_gnd_fail(unsigned short val)
 {
+	int ret;
+
 	// 《DSM_地絡異常》= val
-	// FIXME
-	pr_debug("%s: DSM_GND_FAIL = %d\n", __func__, val);
+	ret = emc_set_exp_info(DRM_GROUND_FAULT, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 }
 
 static void check_sky_fail(struct emc_dsm_priv *priv)
@@ -169,7 +194,7 @@ static void check_sky_fail(struct emc_dsm_priv *priv)
 
 	// 《DSM_天絡仮異常》 = 1
 	if (priv->sky_fail_cnt == 1) {
-		set_dsm_sky_tmp_fail(1);
+		set_dsm_sky_tmp_fail(ABNORMAL);
 	}
 
 	// -- 異常判定 --
@@ -177,7 +202,7 @@ static void check_sky_fail(struct emc_dsm_priv *priv)
 	if (priv->sky_fail_cnt == DSM_SKY_FAIL_TIME) {
 		// -- 異常の成立 --
 		// 《DSM_天絡異常》 = 1
-		set_dsm_sky_fail(1);
+		set_dsm_sky_fail(ABNORMAL);
 	}
 
 	return;
@@ -186,7 +211,7 @@ L_release:
 	// -- 仮異常の解除 --
 	if (priv->sky_fail_cnt != 0) {
 		// 《DSM_天絡仮異常》 = 0
-		set_dsm_sky_tmp_fail(0);
+		set_dsm_sky_tmp_fail(NORMAL);
 
 		// DSM_天絡仮異常カウンタ = 0
 		priv->sky_fail_cnt = 0;
@@ -318,7 +343,7 @@ static void check_gnd_fail(struct emc_dsm_priv *priv)
 
 	// 《DSM_絡仮異常》 = 1
 	if (priv->gnd_fail_cnt == 1) {
-		set_dsm_gnd_tmp_fail(1);
+		set_dsm_gnd_tmp_fail(ABNORMAL);
 	}
 
 	// -- 異常判定 --
@@ -326,7 +351,7 @@ static void check_gnd_fail(struct emc_dsm_priv *priv)
 	if (priv->gnd_fail_cnt == DSM_GND_FAIL_TIME) {
 		// -- 異常の成立 --
 		// 《DSM_地絡異常》 = 1
-		set_dsm_gnd_fail(1);
+		set_dsm_gnd_fail(ABNORMAL);
 	}
 
 	return;
@@ -335,7 +360,7 @@ L_release:
 	// -- 仮異常の解除 --
 	if (priv->gnd_fail_cnt != 0) {
 		// 《DSM_地絡仮異常》 = 0
-		set_dsm_gnd_tmp_fail(0);
+		set_dsm_gnd_tmp_fail(NORMAL);
 
 		// DSM_地絡仮異常カウンタ = 0
 		priv->gnd_fail_cnt = 0;
