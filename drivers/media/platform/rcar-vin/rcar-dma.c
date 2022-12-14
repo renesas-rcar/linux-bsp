@@ -1062,6 +1062,29 @@ static int rvin_setup(struct rvin_dev *vin)
 	return 0;
 }
 
+static int rvin_s_routing0(struct rvin_dev *vin)
+{
+	struct v4l2_subdev *sd;
+	struct media_pad *pad;
+	int ret = 0;
+	static int first_flag = 1;
+
+	pad = media_entity_remote_pad(&vin->pad);
+	if (!pad)
+		return -EPIPE;
+
+	sd = media_entity_to_v4l2_subdev(pad->entity);
+
+	if (first_flag) {
+		ret = v4l2_subdev_call(sd, video, s_routing, 0, 0, 1);
+		if (ret)
+			return ret;
+		first_flag = 0;
+	}
+
+	return ret;
+}
+
 static int rvin_s_routing8(struct rvin_dev *vin)
 {
 	struct v4l2_subdev *sd;
@@ -1101,6 +1124,9 @@ static int rvin_s_routing(struct rvin_dev *vin)
 	int ret;
 
 	switch (vin->id) {
+	case 0:
+		ret = rvin_s_routing0(vin);
+		break;
 	case 8:
 		ret = rvin_s_routing8(vin);
 		break;
