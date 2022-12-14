@@ -534,10 +534,12 @@ static int imager_write_regs(struct imager *imager,
 
 static int imager_strobe_led_control(struct imager *imager, u32 enable)
 {
+	struct i2c_client *client = v4l2_get_subdevdata(&imager->sd);
 	int ret;
 	u32 val;
 
 	if (enable) {
+		dev_info(&client->dev, "Strobe LED ON\n");
 		/* Strobe LED ON setting */
 		ret = imager_write_regs(imager, strobe_led_on_set_regs, ARRAY_SIZE(strobe_led_on_set_regs));
 
@@ -545,6 +547,7 @@ static int imager_strobe_led_control(struct imager *imager, u32 enable)
 		ret = imager_read_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, &val);
 		ret = imager_write_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, val | IMAGER_STROBE_ONOFF);
 	} else {
+		dev_info(&client->dev, "Strobe LED OFF\n");
 		/* Strobe LED OFF setting */
 		ret = imager_write_regs(imager, strobe_led_off_set_regs, ARRAY_SIZE(strobe_led_off_set_regs));
 

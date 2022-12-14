@@ -29,6 +29,7 @@
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
 #include <asm/io.h>
+#include <uapi/misc/emc_data.h>
 
 /* Page Size */
 #define MSIOF_PAGE_SIZE	0x1000
@@ -105,12 +106,48 @@
 #define CXD4960_VALUE_ERROR_VIDEOTX_FAIL	0x00
 #define CXD4960_VALUE_ERROR_STATUS_CHECK	(CXD4960_VALUE_ERROR_GVIF2RX_FAIL | CXD4960_VALUE_ERROR_VIDEOTX_FAIL)
 
+#define PRE_ERROR_BOOT_INIT				0x44
+#define ERROR_BOOT_INIT					0x44
+#define PRE_ERROR_DES_GVIF_INIT			0x04
+#define ERROR_DES_GVIF_INIT				0x04
+#define PRE_ERROR_DES_VIDES_OUT_INIT	0x00
+#define ERROR_DES_VIDES_OUT_INIT		0x00
+#define PRE_ERROR_DMC_SER_INIT			0x04
+#define ERROR_DMC_SER_INIT				0x04
+#define PRE_ERROR_LVDS_I2C_INIT			0x00
+#define ERROR_LVDS_I2C_INIT				0x00
+
+#define NO_ERROR 0
+#define PRE_BOOT_ERROR 1
+#define BOOT_ERROR 2
+
+/* Power ON */
+#define POWER_ON 1
+#define POWER_OFF 0
+#define DES_POWER_ON 1
+#define DSM_POWER_ON 1
+
+/* FCM Streaming */
+#define FCM_STREAMING 1
+#define NG_FCM 0
+#define OK_FCM 1
+
 #define DEBUG_CXD4960  /* Debug print enable */
 #ifdef DEBUG_CXD4960
 #define cxd4960_dbg(dev, fmt, arg...)	dev_info(dev, "<CXD4960>"fmt, ##arg)
 #else
 #define cxd4960_dbg(dev, fmt, arg...)
 #endif
+
+int boot_ready_error;
+int boot_gvif2rx_los_error;
+int boot_gvif2rx_fail_error;
+int boot_videotx_fail;
+int des_ready_error;
+int des_gvif2rx_los_error;
+int des_gvif2rx_fail_error;
+int des_output_error;
+int lvds_i2c_com_error;
 
 struct cxd4960_reg {
 	u16 address;
@@ -186,6 +223,8 @@ struct cxd4960 {
 	bool streaming;
 };
 
+static int cxd4960_error_lvds_i2c_com_check(struct cxd4960 *cxd4960, int result);
+
 static inline struct cxd4960 *to_cxd4960(struct v4l2_subdev *_sd)
 {
 	return container_of(_sd, struct cxd4960, sd);
@@ -203,6 +242,7 @@ static int cxd4960_read_reg(struct cxd4960 *cxd4960, u16 reg, u32 len, u32 *val)
 	int ret;
 
 	ret = i2c_smbus_read_byte_data(client, reg & 0xff);
+	cxd4960_error_lvds_i2c_com_check(cxd4960, ret);
 	if (ret < 0) {
 		dev_err(&client->dev,
 			"%s: read reg error %d: reg=%x, val=%x\n",
@@ -221,6 +261,7 @@ static int cxd4960_write_reg(struct cxd4960 *cxd4960, u16 reg, u32 len, u32 val)
 	int ret;
 
 	ret = i2c_smbus_write_byte_data(client, reg & 0xff, val);
+	cxd4960_error_lvds_i2c_com_check(cxd4960, ret);
 	if (ret) {
 		dev_err(&client->dev,
 			"%s: write reg error %d: reg=%x, val=%x\n",
@@ -253,6 +294,702 @@ static int cxd4960_write_regs(struct cxd4960 *cxd4960,
 	return 0;
 }
 
+/* Power/clock management functions */
+static void cxd4960_control_ce(u32 io)
+{
+	u32 gpioreg;
+	void *mapped;
+
+	mapped = ioremap(GPIO01_BASE, GPIO_PAGE_SIZE);
+
+	gpioreg = ioread32(mapped + GPIO1_REG_OUTDT);
+	if (io)
+		gpioreg |= GPIO1_OUTDT_CE;
+	else
+		gpioreg &= ~GPIO1_OUTDT_CE;
+	iowrite32(gpioreg, mapped + GPIO1_REG_OUTDT);
+
+	iounmap(mapped);
+
+	return;
+}
+
+static int cxd4960_power_on(struct device *dev)
+{
+//	struct i2c_client *client = to_i2c_client(dev);
+//	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+//	struct cxd4960 *cxd4960 = to_cxd4960(sd);
+
+//	gpiod_set_value_cansleep(cxd4960->reset_gpio, 1);
+	cxd4960_control_ce(1);
+	msleep(10);
+
+	return 0;
+}
+
+static int cxd4960_power_off(struct device *dev)
+{
+//	struct i2c_client *client = to_i2c_client(dev);
+//	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+//	struct cxd4960 *cxd4960 = to_cxd4960(sd);
+
+//	gpiod_set_value_cansleep(cxd4960->reset_gpio, 0);
+	cxd4960_control_ce(0);
+
+	return 0;
+}
+
+static void cxd4960_dsm_power_control(u32 control)
+{
+	u16 data;
+
+	emc_get_exp_info(DSM_POWER_OFF_ON, &data);
+
+	if (control)
+	{
+		data |= 0x001;
+		emc_set_exp_info(DSM_POWER_OFF_ON, data);
+	}
+	else{
+		data &= ~0x001;
+		emc_set_exp_info(DSM_POWER_OFF_ON, data);
+	}
+
+	return;
+
+}
+
+
+static int cxd4960_error_status_clear(struct cxd4960 *cxd4960)
+{
+	int ret;
+
+	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_CLEAR);
+	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_NOTCLEAR);
+
+	/* Serializer error status clear */
+	ret = v4l2_subdev_call(cxd4960->remote, video, s_routing, 0, 0, 5);
+
+	return ret;
+}
+
+static int cxd4960_initial_setting(struct cxd4960 *cxd4960)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
+	u32 val;
+	int ret = 0;
+	int i = 0;
+
+	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step1, ARRAY_SIZE(init_des_set_regs_step1));
+	if (ret)
+		return ret;
+
+	while(1){
+		ret = cxd4960_read_reg(cxd4960, CXD4960_REG_SERDES_LINK, CXD4960_REG_VALUE_08BIT, &val);
+		if (ret)
+			return ret;
+		if(val == CXD4960_VALUE_SERDES_LINK)
+		{
+			dev_info(&client->dev, "SerDes link up\n");
+			break;
+		}
+		if(i >= 10)
+		{
+			dev_info(&client->dev, "NG:No SerDes connection\n");
+			break;
+		}
+		i++;
+	}
+
+	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step2, ARRAY_SIZE(init_des_set_regs_step2));
+	if (ret)
+		return ret;
+
+	i = 0;
+	while(1){
+		if (ret)
+			return ret;
+		ret = cxd4960_read_reg(cxd4960, CXD4960_REG_REMOTE_COMPLETE, CXD4960_REG_VALUE_08BIT, &val);
+		if(val == CXD4960_VALUE_REMOTE_COMPLETE)
+		{
+			dev_info(&client->dev, "remote register write complete\n");
+			break;
+		}
+		if(i >= 10)
+		{
+			dev_info(&client->dev, "NG:failed to write remote register\n");
+			break;
+		}
+		i++;
+	}
+
+	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step3, ARRAY_SIZE(init_des_set_regs_step3));
+	if (ret)
+		return ret;
+
+	usleep_range(30, 40);
+
+	ret = cxd4960_write_regs(cxd4960, init_des_set_regs_step4, ARRAY_SIZE(init_des_set_regs_step4));
+	if (ret)
+		return ret;
+
+	return ret;
+}
+
+#ifndef EYE_MAGIN_TEST
+static int cxd4960_reboot_initial_setting(struct cxd4960 *cxd4960)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
+	int ret = 0;
+
+	void *mapped;
+
+	/* Deserializer Reset Release */
+	dev_info(&client->dev, "GPIO Des_CE High\n");
+	cxd4960_control_ce(1);
+	msleep(10);
+
+	/* REFCLK */
+	/* set parameter (addr should be aligned by MSIOF_PAGE_SIZE) */
+	dev_info(&client->dev, "REFCLK Output\n");
+	mapped = ioremap(MSIOF3_BASE, MSIOF_PAGE_SIZE);
+
+	iowrite32(MSIOF_TRMD, mapped + MSIOF_REG_SITMDR1);
+	iowrite16(MSIOF_BRPS | MSIOF_BRDV, mapped + MSIOF_REG_SITSCR);
+	iowrite32(MSIOF_TSCKIZ | MSIOF_TSCKE, mapped + MSIOF_REG_SICTR);
+
+	iounmap(mapped);
+
+	/* Deserializer Initialize */
+	dev_info(&client->dev, "Deserializer Initialize\n");
+	ret = cxd4960_initial_setting(cxd4960);
+	if (ret)
+		return ret;
+
+	/* Serializer Initialize */
+	dev_info(&client->dev, "Serializer Initialize\n");
+	v4l2_subdev_call(cxd4960->remote, video, s_stream, 1);
+
+	/* Deserializer Video Output Enable */
+	dev_info(&client->dev, "Deserializa Video Output Enable\n");
+	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_ENABLE);
+	if (ret)
+		return ret;
+
+	/* Deserializer Error Status Clear */
+	dev_info(&client->dev, "Deserializer Error Status Clear\n");
+	ret = cxd4960_error_status_clear(cxd4960);
+	if (ret)
+		return ret;
+
+	return ret;
+}
+#endif //EYE_MAGIN_TEST
+
+static int cxd4960_error_boot_check(struct cxd4960 *cxd4960)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
+	int ret = NO_ERROR;
+	int retval = NO_ERROR;
+	u32 val;
+	u16 data;
+
+	/* Deserializer register address 0x01 */
+	ret = cxd4960_read_reg(cxd4960, CXD4960_REG_LINK_STATUS, CXD4960_REG_VALUE_08BIT, &val);
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c read LINK_STATUS: NG[%d]\n", ret);
+		retval= ret;
+	} else {
+		cxd4960_dbg(&client->dev, " i2c read LINK_STATUS: OK[%d]\n", ret);
+		if (((u8)val & CXD4960_MASK_LINK_STATUS_CHECK) != CXD4960_VALUE_LINK_STATUS_CHECK) {
+			cxd4960_dbg(&client->dev, " LINK_STATUS check, target bit is bit4,0: NG[%02X]\n", val);
+			retval = -EIO;
+			if ((val & CXD4960_MASK_LINK_READY) != CXD4960_VALUE_LINK_READY)
+			{
+				dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_READY);
+#ifndef EYE_MAGIN_TEST
+				boot_ready_error++;
+				dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x count:%d\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_READY, boot_ready_error);
+				//Write a pre_error_DSM_Boot bit6 = 0 to System RAM.
+				emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+				data &= ~0x40;
+				emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+				if(boot_ready_error >=10)
+				{
+					dev_info(&client->dev, "error_DSM_Boot [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_READY);
+					//Write a error_DSM_Boot bit6 = 0 to System RAM.
+					emc_get_exp_info(DSM_START_EXP_NVM, &data);
+					data &= ~0x40;
+					emc_set_exp_info(DSM_START_EXP_NVM, data);
+				}
+#endif //EYE_MAGIN_TEST
+			}
+			else{
+				dev_info(&client->dev, "No Error [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_READY);
+#ifndef EYE_MAGIN_TEST
+				//Write a pre_error_DSM_Boot bit6 = 1 to System RAM.
+				emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+				data |= 0x40;
+				emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+#endif //EYE_MAGIN_TEST
+			}
+			if ((val & CXD4960_MASK_LINK_GVIF2RX_LOS) != CXD4960_VALUE_LINK_GVIF2RX_LOS)
+			{
+				dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_GVIF2RX_LOS);
+#ifndef EYE_MAGIN_TEST
+				boot_gvif2rx_los_error++;
+				dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x count:%d\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_GVIF2RX_LOS, boot_gvif2rx_los_error);
+				//Write a pre_error_DSM_Boot bit5 = 1 to System RAM.
+				emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+				data |= 0x20;
+				emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+				if(boot_gvif2rx_los_error >=10)
+				{
+					dev_info(&client->dev, "error_DSM_Boot [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_GVIF2RX_LOS);
+					//Write a rror_DSM_Boot bit5 = 1 to System RAM.
+					emc_get_exp_info(DSM_START_EXP_NVM, &data);
+					data |= 0x20;
+					emc_set_exp_info(DSM_START_EXP_NVM, data);
+				}
+#endif //EYE_MAGIN_TEST
+			}
+			else{
+				dev_info(&client->dev, "No Error [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_GVIF2RX_LOS);
+#ifndef EYE_MAGIN_TEST
+				//Write a pre_error_DSM_Boot bit5 = 0 to System RAM.
+				emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+				data &= ~0x20;
+				emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+#endif //EYE_MAGIN_TEST
+			}
+		} else {
+			cxd4960_dbg(&client->dev, " LINK_STATUS check, target bit is bit4,0: OK[%02X]\n", val);
+#ifndef EYE_MAGIN_TEST
+				//Write a pre_error_DSM_Boot bit6 = 1,bit5 = 0 to System RAM.
+				emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+				data |= 0x40;
+				data &= ~0x20;
+				emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+#endif //EYE_MAGIN_TEST
+		}
+	}
+
+	/* Deserializer register address 0x10 */
+	ret = cxd4960_read_reg(cxd4960, CXD4960_REG_ERROR_STATUS, CXD4960_REG_VALUE_08BIT, &val);
+	if (ret) {
+		cxd4960_dbg(&client->dev, " i2c read ERROR_STATUS: NG[%d]\n", ret);
+		retval= ret;
+	} else {
+		cxd4960_dbg(&client->dev, " i2c read ERROR_STATUS: OK[%d]\n", ret);
+		if (((u8)val & CXD4960_MASK_ERROR_STATUS_CHECK) != CXD4960_VALUE_ERROR_STATUS_CHECK) {
+			cxd4960_dbg(&client->dev, " ERROR_STATUS check, target bit is bit7,4: NG[%02X]\n", val);
+			retval = -EIO;
+			if ((val & CXD4960_MASK_ERROR_GVIF2RX_FAIL) != CXD4960_VALUE_ERROR_GVIF2RX_FAIL)
+			{
+				dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x\n", CXD4960_REG_ERROR_STATUS, CXD4960_MASK_ERROR_GVIF2RX_FAIL);
+#ifndef EYE_MAGIN_TEST
+				boot_gvif2rx_fail_error++;
+				dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x count:%d\n", CXD4960_REG_ERROR_STATUS, CXD4960_MASK_ERROR_GVIF2RX_FAIL, boot_gvif2rx_fail_error);
+				//Write a pre_error_DSM_Boot bit4 = 1 to System RAM.
+				emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+				data |= 0x10;
+				emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+				if(boot_gvif2rx_fail_error >=10)
+				{
+					dev_info(&client->dev, "error_DSM_Boot [%x]:%x\n", CXD4960_REG_ERROR_STATUS, CXD4960_MASK_ERROR_GVIF2RX_FAIL);
+					//Write a error_DSM_Boot bit4 = 1 to System RAM.
+					emc_get_exp_info(DSM_START_EXP_NVM, &data);
+					data |= 0x10;
+					emc_set_exp_info(DSM_START_EXP_NVM, data);
+				}
+#endif //EYE_MAGIN_TEST
+			}
+			else{
+				dev_info(&client->dev, "No Error [%x]:%x\n", CXD4960_REG_ERROR_STATUS, CXD4960_MASK_ERROR_GVIF2RX_FAIL);
+#ifndef EYE_MAGIN_TEST
+				//Write a pre_error_DSM_Boot bit4 = 0 to System RAM.
+				emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+				data &= ~0x10;
+				emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+#endif //EYE_MAGIN_TEST
+			}
+			if ((val & CXD4960_MASK_ERROR_VIDEOTX_FAIL) != CXD4960_VALUE_ERROR_VIDEOTX_FAIL)
+			{
+				dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x\n", CXD4960_REG_ERROR_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL);
+#ifndef EYE_MAGIN_TEST
+				boot_videotx_fail++;
+				dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x count:%d\n", CXD4960_REG_ERROR_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL, boot_videotx_fail);
+				//Write a pre_error_DSM_Boot bit3 = 1 to System RAM.
+				emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+				data |= 0x08;
+				emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+				if(boot_videotx_fail >=10)
+				{
+					dev_info(&client->dev, "error_DSM_Boot [%x]:%x\n", CXD4960_REG_ERROR_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL);
+					//Write a error_DSM_Boot bit3 = 1 to System RAM.
+					emc_get_exp_info(DSM_START_EXP_NVM, &data);
+					data |= 0x08;
+					emc_set_exp_info(DSM_START_EXP_NVM, data);
+				}
+#endif //EYE_MAGIN_TEST
+			}
+			else{
+				dev_info(&client->dev, "No Error [%x]:%x\n", CXD4960_REG_ERROR_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL);
+#ifndef EYE_MAGIN_TEST
+				//Write a pre_error_DSM_Boot bit3 = 0 to System RAM.
+				emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+				data &= ~0x08;
+				emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+			}
+#endif //EYE_MAGIN_TEST
+		} else {
+			cxd4960_dbg(&client->dev, " ERROR_STATUS check, target bit is bit7,4: OK[%02X]\n", val);
+#ifndef EYE_MAGIN_TEST
+			//Write a pre_error_DSM_Boot bit4 = 0,bit3 = 0 to System RAM.
+			emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+			data &= ~0x10;
+			data &= ~0x08;
+			emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+#endif //EYE_MAGIN_TEST
+		}
+	}
+
+	/* Serializer register check */
+	ret = v4l2_subdev_call(cxd4960->remote, video, s_routing, 0, 0, 3);
+	if (ret) {
+		cxd4960_dbg(&client->dev, " subdev_call video.s_routing: NG[%d]\n", ret);
+		retval= ret;
+	} else {
+		cxd4960_dbg(&client->dev, " subdev_call video.s_routing: OK[%d]\n", ret);
+	}
+
+#ifndef EYE_MAGIN_TEST
+	emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+	if(data != PRE_ERROR_BOOT_INIT){
+
+		dev_info(&client->dev, "Des pre error boot\n");
+
+		/* Video Output Disable */
+		dev_info(&client->dev, "Video Output Disable\n");
+		ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_DISABLE);
+		if (ret)
+			return ret;
+
+		/* Deserializer Reset */
+		dev_info(&client->dev, "GPIO Des_CE Low\n");
+		cxd4960_control_ce(0);
+
+		/* Continue Deserializer Reset */
+		emc_get_exp_info(DSM_START_EXP_NVM, &data);
+		if(data != ERROR_BOOT_INIT)
+		{
+			dev_info(&client->dev, "Des error boot\n");
+			ret = BOOT_ERROR;
+			return ret;
+		}
+
+		/* Deserializer Initialize */
+		dev_info(&client->dev, "Deserializer Initialize\n");
+		cxd4960_reboot_initial_setting(cxd4960);
+		ret = PRE_BOOT_ERROR;
+
+	}
+#endif //EYE_MAGIN_TEST
+
+	return ret;
+}
+
+static int cxd4960_error_gvif2_check(struct cxd4960 *cxd4960)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
+	int ret = 0;
+	u32 val;
+	u16 data;
+
+	/* Deserializer register address 0x01 */
+	cxd4960_read_reg(cxd4960, CXD4960_REG_LINK_STATUS, CXD4960_REG_VALUE_08BIT, &val);
+	if ((val & CXD4960_MASK_LINK_READY) != CXD4960_VALUE_LINK_READY)
+	{
+		dev_info(&client->dev, "pre_error_Des_GVIF2 [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_READY);
+#ifndef EYE_MAGIN_TEST
+		des_ready_error++;
+		dev_info(&client->dev, "pre_error_Des_GVIF2 count:%d\n", des_ready_error);
+		//Write a pre_error_Des_GVIF2 bit2 = 0 to System RAM.
+		emc_get_exp_info(DES_GVIF2_DUMMY_EXP_NVM, &data);
+		data &= ~0x04;
+		emc_set_exp_info(DES_GVIF2_DUMMY_EXP_NVM, data);
+		if(des_ready_error >=10)
+		{
+			dev_info(&client->dev, "error_Des_GVIF2 [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_READY);
+			emc_get_exp_info(DES_GVIF2_EXP_NVM, &data);
+			data &= ~0x04;
+			emc_set_exp_info(DES_GVIF2_EXP_NVM, data);
+		}
+#endif //EYE_MAGIN_TEST
+	}
+	else{
+		dev_info(&client->dev, "No Error [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_READY);
+		emc_get_exp_info(DES_GVIF2_DUMMY_EXP_NVM, &data);
+		data |= 0x04;
+		emc_set_exp_info(DES_GVIF2_DUMMY_EXP_NVM, data);
+	}
+
+	if ((val & CXD4960_MASK_LINK_GVIF2RX_LOS) != CXD4960_VALUE_LINK_GVIF2RX_LOS)
+	{
+		dev_info(&client->dev, "pre_error_Des_GVIF2 [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_GVIF2RX_LOS);
+#ifndef EYE_MAGIN_TEST
+		des_gvif2rx_los_error++;
+		dev_info(&client->dev, "pre_error_Des_GVIF2 [%x]:%x count:%d\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_GVIF2RX_LOS, des_gvif2rx_los_error);
+		//Write a pre_error_Des_GVIF2 bit1 = 1 to System RAM.
+		emc_get_exp_info(DES_GVIF2_DUMMY_EXP_NVM, &data);
+		data |= 0x02;
+		emc_set_exp_info(DES_GVIF2_DUMMY_EXP_NVM, data);
+		if(des_gvif2rx_los_error >=10)
+		{
+			dev_info(&client->dev, "error_Des_GVIF2 [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_GVIF2RX_LOS);
+			emc_get_exp_info(DES_GVIF2_EXP_NVM, &data);
+			data |= 0x02;
+			emc_set_exp_info(DES_GVIF2_EXP_NVM, data);
+		}
+#endif //EYE_MAGIN_TEST
+	}
+	else{
+		dev_info(&client->dev, "No Error [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_LINK_GVIF2RX_LOS);
+		emc_get_exp_info(DES_GVIF2_DUMMY_EXP_NVM, &data);
+		data &= ~0x02;
+		emc_set_exp_info(DES_GVIF2_DUMMY_EXP_NVM, data);
+	}
+
+	/* Deserializer register address 0x10 */
+	cxd4960_read_reg(cxd4960, CXD4960_REG_ERROR_STATUS, CXD4960_REG_VALUE_08BIT, &val);
+	if ((val & CXD4960_MASK_ERROR_GVIF2RX_FAIL) != CXD4960_VALUE_ERROR_GVIF2RX_FAIL)
+	{
+		dev_info(&client->dev, "pre_error_Des_GVIF2 [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_GVIF2RX_FAIL);
+#ifndef EYE_MAGIN_TEST
+		des_gvif2rx_fail_error++;
+		dev_info(&client->dev, "pre_error_Des_GVIF2 [%x]:%x count:%d\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_GVIF2RX_FAIL, des_gvif2rx_fail_error);
+		//Write a pre_error_Des_GVIF2 bit0 = 1 to System RAM.
+		emc_get_exp_info(DES_GVIF2_DUMMY_EXP_NVM, &data);
+		data |= 0x01;
+		emc_set_exp_info(DES_GVIF2_DUMMY_EXP_NVM, data);
+		if(des_gvif2rx_fail_error >=10)
+		{
+			dev_info(&client->dev, "error_Des_GVIF2 [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_GVIF2RX_FAIL);
+			emc_get_exp_info(DES_GVIF2_EXP_NVM, &data);
+			data |= 0x01;
+			emc_set_exp_info(DES_GVIF2_EXP_NVM, data);
+		}
+#endif //EYE_MAGIN_TEST
+	}
+	else{
+		dev_info(&client->dev, "No Error [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_GVIF2RX_FAIL);
+		emc_get_exp_info(DES_GVIF2_DUMMY_EXP_NVM, &data);
+		data &= ~0x01;
+		emc_set_exp_info(DES_GVIF2_DUMMY_EXP_NVM, data);
+	}
+
+#ifndef EYE_MAGIN_TEST
+	emc_get_exp_info(DES_GVIF2_DUMMY_EXP_NVM, &data);
+	if(data != PRE_ERROR_DES_GVIF_INIT){
+
+		/* Video Output Disable */
+		dev_info(&client->dev, "Video Output Disable\n");
+		ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_DISABLE);
+
+		/* Deserializer Reset */
+		dev_info(&client->dev, "GPIO Des_CE Low\n");
+		cxd4960_control_ce(0);
+
+		/* Continue Deserializer Reset */
+		emc_get_exp_info(DES_GVIF2_EXP_NVM, &data);
+		if(data != ERROR_DES_GVIF_INIT)
+		{
+			return ret;
+		}
+
+		/* Deserializer Initialize */
+		dev_info(&client->dev, "Deserializer Initialize\n");
+		cxd4960_reboot_initial_setting(cxd4960);
+	}
+#endif //EYE_MAGIN_TEST
+	return ret;
+}
+
+static int cxd4960_error_video_check(struct cxd4960 *cxd4960)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
+	int ret = 0;
+	u32 val;
+	u16 data;
+
+	/* Deserializer register address 0x10 */
+	cxd4960_read_reg(cxd4960, CXD4960_REG_ERROR_STATUS, CXD4960_REG_VALUE_08BIT, &val);
+	if ((val & CXD4960_MASK_ERROR_VIDEOTX_FAIL) != CXD4960_VALUE_ERROR_VIDEOTX_FAIL)
+	{
+		dev_info(&client->dev, "pre_error_Des_Video [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL);
+#ifndef EYE_MAGIN_TEST
+		des_output_error++;
+		dev_info(&client->dev, "pre_error_Des_Video [%x]:%x count:%d\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL, des_output_error);
+		//Write a pre_error_Des_Video bit0 = 1 to System RAM.
+		emc_get_exp_info(DES_VIDES_OUTPUT_DUMMY_EXP_NVM, &data);
+		data |= 0x01;
+		emc_set_exp_info(DES_VIDES_OUTPUT_DUMMY_EXP_NVM, data);
+		if(des_output_error >=10)
+		{
+			dev_info(&client->dev, "error_Des_Video [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL);
+			emc_get_exp_info(DES_VIDES_OUTPUT_EXP_NVM, &data);
+			data |= 0x01;
+			emc_set_exp_info(DES_VIDES_OUTPUT_EXP_NVM, data);
+		}
+#endif //EYE_MAGIN_TEST
+	}
+	else{
+		dev_info(&client->dev, "No Error [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL);
+		emc_get_exp_info(DES_VIDES_OUTPUT_DUMMY_EXP_NVM, &data);
+		data &= ~0x01;
+		emc_set_exp_info(DES_VIDES_OUTPUT_DUMMY_EXP_NVM, data);
+	}
+
+	/* CHeck ECC error and Checksum error */
+	/* Check CSI2 ECC Check result and Checksum Check result */
+
+#ifndef EYE_MAGIN_TEST
+	emc_get_exp_info(DES_VIDES_OUTPUT_DUMMY_EXP_NVM, &data);
+	if(data != PRE_ERROR_DES_VIDES_OUT_INIT)
+	{
+		/* Video Output Disable */
+		dev_info(&client->dev, "Video Output Disable\n");
+		ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_DISABLE);
+
+		/* Deserializer Reset */
+		dev_info(&client->dev, "GPIO Des_CE Low\n");
+		cxd4960_control_ce(0);
+
+		/* Continue Deserializer Reset */
+		emc_get_exp_info(DES_VIDES_OUTPUT_EXP_NVM, &data);
+		if(data != ERROR_DES_VIDES_OUT_INIT)
+		{
+			return ret;
+		}
+
+		/* Deserializer Initialize */
+		dev_info(&client->dev, "Deserializer Initialize\n");
+		cxd4960_reboot_initial_setting(cxd4960);
+	}
+#endif //EYE_MAGIN_TEST
+	return ret;
+}
+
+static int cxd4960_error_dmc_ser_check(struct cxd4960 *cxd4960)
+{
+#ifndef EYE_MAGIN_TEST
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
+#endif //EYE_MAGIN_TEST
+	int ret = 0;
+	u16 data;
+	void *mapped;
+
+	ret = v4l2_subdev_call(cxd4960->remote, video, s_routing, 0, 0, 4);
+
+	emc_get_exp_info(DMC_SER_DUMMY_EXP_NVM, &data);
+
+#ifndef EYE_MAGIN_TEST
+	if(data != PRE_ERROR_DMC_SER_INIT)
+	{
+		/* Video Output Disable */
+		dev_info(&client->dev, "Video Output Disable\n");
+		ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_DISABLE);
+
+		/* Deserializer Reset */
+		dev_info(&client->dev, "GPIO Des_CE Low\n");
+		cxd4960_control_ce(0);
+
+		/* Continue Deserializer Reset */
+		emc_get_exp_info(DMC_SER_EXP_NVM, &data);
+		if(data != ERROR_DMC_SER_INIT)
+		{
+			return ret;
+		}
+
+		/* REFCLK */
+		/* set parameter (addr should be aligned by MSIOF_PAGE_SIZE) */
+
+		mapped = ioremap(MSIOF3_BASE, MSIOF_PAGE_SIZE);
+
+		iowrite32(MSIOF_TRMD, mapped + MSIOF_REG_SITMDR1);
+		iowrite16(MSIOF_BRPS | MSIOF_BRDV, mapped + MSIOF_REG_SITSCR);
+		iowrite32(MSIOF_TSCKE, mapped + MSIOF_REG_SICTR);
+
+		iounmap(mapped);
+
+		/* DSM power OFF/ON */
+		cxd4960_dsm_power_control(POWER_OFF);
+		cxd4960_dsm_power_control(POWER_ON);
+		msleep(25);
+
+		ret = cxd4960_reboot_initial_setting(cxd4960);
+	}
+#endif //EYE_MAGIN_TEST
+	iounmap(mapped);
+	return ret;
+}
+
+static int cxd4960_error_lvds_i2c_com_check(struct cxd4960 *cxd4960, int result)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
+	int ret = 0;
+	u16 data;
+
+	/* TBD: Clock Stretch 100ms over is -ETIMEDOUT? */
+	if (result == -ENXIO || result == -ETIMEDOUT)
+	{
+		dev_info(&client->dev, "pre_error_LVDS_I2C\n");
+#ifndef EYE_MAGIN_TEST
+		lvds_i2c_com_error++;
+		dev_info(&client->dev, "pre_error_LVDS_I2C count:%d\n", lvds_i2c_com_error);
+		//Write a pre_error_LVDS_I2C to System RAM.
+		emc_set_exp_info(LVDS_I2C_COM_DUMMY_EXP_NVM, 1);
+		if(lvds_i2c_com_error >= 10)
+		{
+			dev_info(&client->dev, "error_LVDS_I2C\n");
+			emc_set_exp_info(LVDS_I2C_COM_EXP_NVM, 1);
+		}
+#endif //EYE_MAGIN_TEST
+	}
+	else if (result >= 0){
+		dev_info(&client->dev, "No Error LVDS_I2C\n");
+#ifndef EYE_MAGIN_TEST
+		emc_set_exp_info(LVDS_I2C_COM_DUMMY_EXP_NVM, 0);
+#endif //EYE_MAGIN_TEST
+	}
+
+#ifndef EYE_MAGIN_TEST
+	emc_get_exp_info(LVDS_I2C_COM_DUMMY_EXP_NVM, &data);
+	if(data != PRE_ERROR_LVDS_I2C_INIT)
+	{
+		/* Video Output Disable */
+		dev_info(&client->dev, "Video Output Disable\n");
+		ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_DISABLE);
+
+		/* Deserializer Reset */
+		dev_info(&client->dev, "GPIO Des_CE Low\n");
+		cxd4960_control_ce(0);
+
+		/* Continue Deserializer Reset */
+		emc_get_exp_info(LVDS_I2C_COM_EXP_NVM, &data);
+		if(data != ERROR_LVDS_I2C_INIT)
+		{
+			return ret;
+		}
+
+		/* Deserializer Initialize */
+		dev_info(&client->dev, "Deserializer Initialize\n");
+		cxd4960_reboot_initial_setting(cxd4960);
+	}
+#endif //EYE_MAGIN_TEST
+	return ret;
+}
+
 static int cxd4960_strobe_led_control(struct cxd4960 *cxd4960, u32 input, u32 output, u32 config)
 {
 	int ret;
@@ -264,14 +1001,27 @@ static int cxd4960_strobe_led_control(struct cxd4960 *cxd4960, u32 input, u32 ou
 
 static int cxd4960_sscg_control(struct cxd4960 *cxd4960, u32 control)
 {
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
 	int ret;
 
-	/* Desrializa SSCG ON/OFF Control */
+	/* Deserializer SSCG ON/OFF Control */
+	dev_info(&client->dev, "Deserializer SSCG ON/OFF Control [control:%u]\n", control);
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_DISABLE);
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_SSCG_CONTROL, CXD4960_REG_VALUE_08BIT, control);
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_ENABLE);
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_CLEAR);
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_NOTCLEAR);
+
+	return ret;
+}
+
+static int cxd4960_error_check_control(struct cxd4960 *cxd4960 ,u32 input, u32 output, u32 config)
+{
+	int ret = 0;
+
+	ret = cxd4960_error_gvif2_check(cxd4960);
+	ret = cxd4960_error_video_check(cxd4960);
+	ret = cxd4960_error_dmc_ser_check(cxd4960);
 
 	return ret;
 }
@@ -296,6 +1046,14 @@ static int cxd4960_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 
 	case 2:
 		/* SSCG ON/OFF Control */
 		ret = cxd4960_sscg_control(cxd4960, input);
+		break;
+	case 4:
+		/* Error Check Control */
+		ret = cxd4960_error_check_control(cxd4960, input, output, config);
+		break;
+	case 5:
+		/* Error Status Clear */
+		ret = cxd4960_error_status_clear(cxd4960);
 		break;
 	default:
 		dev_err(&client->dev, "Not supported command[%d]\n", config);
@@ -323,7 +1081,7 @@ static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 	mapped = ioremap(PWM_BASE, PWM_PAGE_SIZE);
 
 	iowrite32(PWM_CYC0 | PWM_PH0, mapped + PWM_REG_PWMCNT);
-	iowrite32(PWM_CC0 | PWM_CCMD | PWM_CCMD | PWM_SYNC | PWM_SS0 | PWM_EN0, mapped + PWM_REG_PWMCR);
+	iowrite32(PWM_CC0 | PWM_CCMD | PWM_SYNC | PWM_SS0 | PWM_EN0, mapped + PWM_REG_PWMCR);
 
 	iounmap(mapped);
 	cxd4960_dbg(&client->dev, "FSYNC Output end\n");
@@ -406,7 +1164,7 @@ static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 	}
 	cxd4960_dbg(&client->dev, " subdev_call video.s_stream: OK[%d]\n", ret);
 
-	/* Desirializa Video Output Enable */
+	/* Deserializer Video Output Enable */
 	cxd4960_dbg(&client->dev, "Deserializer Video Output Enable start\n");
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_VIDEO_OUTPUT_ENABLE, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_VIDEO_OUTPUT_ENABLE);
 	if (ret) {
@@ -416,7 +1174,7 @@ static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 	cxd4960_dbg(&client->dev, " i2c write VIDEO_OUTPUT_ENABLE: OK[%d]\n", ret);
 	cxd4960_dbg(&client->dev, "Deserializer Video Output Enable end\n");
 
-	/* Desrializa Error Status Clear */
+	/* Deserializer Error Status Clear */
 	cxd4960_dbg(&client->dev, "Deserializer Error Status Clear start\n");
 	ret = cxd4960_write_reg(cxd4960, CXD4960_REG_ERROR_CLEAR, CXD4960_REG_VALUE_08BIT, CXD4960_VALUE_ERROR_CLEAR);
 	if (ret) {
@@ -435,37 +1193,7 @@ static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 
 	/* Startup check */
 	cxd4960_dbg(&client->dev, "Startup Check start\n");
-	ret = cxd4960_read_reg(cxd4960, CXD4960_REG_LINK_STATUS, CXD4960_REG_VALUE_08BIT, &val);
-	if (ret) {
-		cxd4960_dbg(&client->dev, " i2c read LINK_STATUS: NG[%d]\n", ret);
-		return ret;
-	}
-	cxd4960_dbg(&client->dev, " i2c read LINK_STATUS: OK[%d]\n", ret);
-	if (((u8)val & CXD4960_MASK_LINK_STATUS_CHECK) != CXD4960_VALUE_LINK_STATUS_CHECK) {
-		cxd4960_dbg(&client->dev, " LINK_STATUS check, target bit is bit4,0: NG[%02X]\n", val);
-		return -EIO;
-	} else {
-		cxd4960_dbg(&client->dev, " LINK_STATUS check, target bit is bit4,0: OK[%02X]\n", val);
-	}
-
-	ret = cxd4960_read_reg(cxd4960, CXD4960_REG_ERROR_STATUS, CXD4960_REG_VALUE_08BIT, &val);
-	if (ret) {
-		cxd4960_dbg(&client->dev, " i2c read ERROR_STATUS: NG[%d]\n", ret);
-		return ret;
-	}
-	cxd4960_dbg(&client->dev, " i2c read ERROR_STATUS: OK[%d]\n", ret);
-	if (((u8)val & CXD4960_MASK_ERROR_STATUS_CHECK) != CXD4960_VALUE_ERROR_STATUS_CHECK) {
-		cxd4960_dbg(&client->dev, " ERROR_STATUS check, target bit is bit7,4: NG[%02X]\n", val);
-		return -EIO;
-	} else {
-		cxd4960_dbg(&client->dev, " ERROR_STATUS check, target bit is bit7,4: OK[%02X]\n", val);
-	}
-	ret = v4l2_subdev_call(cxd4960->remote, video, s_routing, 0, 0, 2);
-	if (ret) {
-		cxd4960_dbg(&client->dev, " subdev_call video.s_routing: NG[%d]\n", ret);
-		return ret;
-	}
-	cxd4960_dbg(&client->dev, " subdev_call video.s_routing: OK[%d]\n", ret);
+	ret = cxd4960_error_boot_check(cxd4960);
 	cxd4960_dbg(&client->dev, "Startup Check end\n");
 
 	return ret;
@@ -514,51 +1242,6 @@ err_unlock:
 	mutex_unlock(&cxd4960->mutex);
 
 	return ret;
-}
-
-/* Power/clock management functions */
-static void cxd4960_control_ce(u32 io)
-{
-	u32 gpioreg;
-	void *mapped;
-
-	mapped = ioremap(GPIO01_BASE, GPIO_PAGE_SIZE);
-
-	gpioreg = ioread32(mapped + GPIO1_REG_OUTDT);
-	if (io)
-		gpioreg |= GPIO1_OUTDT_CE;
-	else
-		gpioreg &= ~GPIO1_OUTDT_CE;
-	iowrite32(gpioreg, mapped + GPIO1_REG_OUTDT);
-
-	iounmap(mapped);
-
-	return;
-}
-
-static int cxd4960_power_on(struct device *dev)
-{
-//	struct i2c_client *client = to_i2c_client(dev);
-//	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-//	struct cxd4960 *cxd4960 = to_cxd4960(sd);
-
-//	gpiod_set_value_cansleep(cxd4960->reset_gpio, 1);
-	cxd4960_control_ce(1);
-	msleep(10);
-
-	return 0;
-}
-
-static int cxd4960_power_off(struct device *dev)
-{
-//	struct i2c_client *client = to_i2c_client(dev);
-//	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-//	struct cxd4960 *cxd4960 = to_cxd4960(sd);
-
-//	gpiod_set_value_cansleep(cxd4960->reset_gpio, 0);
-	cxd4960_control_ce(0);
-
-	return 0;
 }
 
 static int __maybe_unused cxd4960_suspend(struct device *dev)
@@ -749,6 +1432,9 @@ static int cxd4960_probe(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	struct cxd4960 *cxd4960;
 	int ret;
+	int flg;
+	int i;
+	u16 data;
 	u32 gpioreg;
 	struct v4l2_subdev *sd;
 
@@ -789,6 +1475,7 @@ static int cxd4960_probe(struct i2c_client *client)
 
 	/* GPIO setting DES_CE */
 	/* set parameter (addr should be aligned by GPIO_PAGE_SIZE) */
+	dev_info(dev, "GPIO Setting DES_CE\n");
 	mapped = ioremap(GPIO01_BASE, GPIO_PAGE_SIZE);
 
 	gpioreg = ioread32(mapped + GPIO1_REG_POC);
@@ -802,18 +1489,43 @@ static int cxd4960_probe(struct i2c_client *client)
 
 	iounmap(mapped);
 
-	/* Des電源起動の判定はSystemRAMのTPS78412Vout_状態を確認。 */
+	/* Check TPS78412Vout_state of SystemRAM to determine Des power supply startup */
+	dev_info(dev, "Check TPS78412Vout_state\n");
+	i = 0;
+	while(i < 10)
+	{
+		emc_get_exp_info(TPS78412_VOUT_STATUS_NVM, &data);
+		if(data == 0)
+		{
+			dev_info(dev, "Des power supply completed\n");
+			flg = POWER_ON;
+			break;
+		}
+		flg = POWER_OFF;
+		i++;
+	}
+	if(flg == POWER_OFF)
+	{
+		dev_info(dev, "NG:Des power no supply\n");
+	}
 
-
-
-
-
-	/* DSM電源起動の判定はSystemRAMのDSM_POWER_ENABLEを確認。 */
-
-
-
-
-
+	/* Check DSM_POWER_ENABLE in SystemRAM to determine DSM power startup */
+	dev_info(dev, "Check DSM_POWER_ENABLE\n");
+	i = 0;
+	while(i < 10)
+	{
+		emc_get_exp_info(DSM_POWER_ENABLE, &data);
+		if(data == 1)
+		{
+			dev_info(dev, "DSM power supply completed\n");
+			break;
+		}
+		i++;
+	}
+	if(flg == POWER_OFF)
+	{
+		dev_info(dev, "NG:DSM power no supply\n");
+	}
 	msleep(25);
 
 	/* Request optional enable pin */
@@ -829,11 +1541,20 @@ static int cxd4960_probe(struct i2c_client *client)
 		return ret;
 	cxd4960_dbg(&client->dev, "DES_CE Set High\n");
 
-	/* FCMイメージセンサ初期化(Streamingモードへ遷移)完了チェック */
-
-
-
-
+	/* FCM image sensor initialization (transition to Streaming mode) completion check */
+	emc_get_exp_info(ASYNC_IMAGE_SENSOR_DSM, &data);
+	i = 0;
+	while(i < 10){
+		if(data == FCM_STREAMING){
+			dev_info(dev, "FCM Streaming Mode\n");
+			flg = OK_FCM;
+		}
+		flg = NG_FCM;
+		i++;
+	}
+	if(flg == NG_FCM){
+		dev_info(dev, "NG:FCM Streaming Mode\n");
+	}
 
 	/* REFCLK */
 	/* set by msiof driver */

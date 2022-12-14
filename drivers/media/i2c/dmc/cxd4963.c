@@ -28,6 +28,7 @@
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
+#include <uapi/misc/emc_data.h>
 
 #define CXD4963_REG_VALUE_08BIT	1
 #define CXD4963_REG_VALUE_16BIT	2
@@ -58,6 +59,14 @@
 #else
 #define cxd4963_dbg(dev, fmt, arg...)
 #endif
+
+int ser_boot_ready_error;
+int ser_gvif2tx_fail_error;
+int ser_videorx_fail_error;
+
+int dmc_ready_error;
+int dmc_gvif2tx_fail_error;
+int dmc_videorx_fail_error;
 
 struct cxd4963_reg {
 	u16 address;
@@ -208,6 +217,115 @@ static int cxd4963_write_regs(struct cxd4963 *cxd4963,
 	return 0;
 }
 
+static int cxd4963_error_status_clear(struct cxd4963 *cxd4963)
+{
+	int ret;
+
+	ret = cxd4963_write_reg(cxd4963, CXD4963_REG_ERROR_CLEAR, CXD4963_REG_VALUE_08BIT, CXD4963_VALUE_ERROR_CLEAR);
+	ret = cxd4963_write_reg(cxd4963, CXD4963_REG_ERROR_CLEAR, CXD4963_REG_VALUE_08BIT, CXD4963_VALUE_ERROR_NOTCLEAR);
+
+	return ret;
+}
+
+static int cxd4963_error_dmc_ser_check(struct cxd4963 *cxd4963)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&cxd4963->sd);
+	int ret = 0;
+	u32 val;
+	u16 data;
+
+	/* Serializer register address 0x01 */
+	ret = cxd4963_read_reg(cxd4963, CXD4963_REG_LINK_STATUS, CXD4963_REG_VALUE_08BIT, &val);
+	if (ret) {
+		dev_err(&client->dev, "failed to read register\n");
+	}
+	if ((val & CXD4963_MASK_LINK_READY) != CXD4963_VALUE_LINK_READY)
+	{
+		dev_info(&client->dev, "pre_error_DMC_ser [%x]:%x\n", CXD4963_REG_LINK_STATUS, CXD4963_MASK_LINK_READY);
+#ifndef EYE_MAGIN_TEST
+		dmc_ready_error++;
+		dev_info(&client->dev, "pre_error_DSM_Boot count:%d\n", dmc_ready_error);
+		//Write a pre_error_DMC_ser bit2 = 0 to System RAM.
+		emc_get_exp_info(DMC_SER_DUMMY_EXP_NVM, &data);
+		data &= ~0x04;
+		emc_set_exp_info(DMC_SER_DUMMY_EXP_NVM, data);
+		if(dmc_ready_error >=10)
+		{
+			dev_info(&client->dev, "error_DMC_ser [%x]:%x\n", CXD4963_REG_LINK_STATUS, CXD4963_MASK_LINK_READY);
+			emc_get_exp_info(DMC_SER_EXP_NVM, &data);
+			data &= ~0x04;
+			emc_set_exp_info(DMC_SER_EXP_NVM, data);
+		}
+#endif //EYE_MAGIN_TEST
+	}
+	else{
+		dev_info(&client->dev, "No Error [%x]:%x\n", CXD4963_REG_LINK_STATUS, CXD4963_MASK_LINK_READY);
+		emc_get_exp_info(DMC_SER_DUMMY_EXP_NVM, &data);
+		data |= 0x04;
+		emc_set_exp_info(DMC_SER_DUMMY_EXP_NVM, data);
+	}
+
+	/* Serializer register address 0x10 */
+	ret = cxd4963_read_reg(cxd4963, CXD4963_REG_ERROR_STATUS, CXD4963_REG_VALUE_08BIT, &val);
+	if (ret) {
+		dev_err(&client->dev, "failed to read register\n");
+	}
+
+	if ((val & CXD4963_MASK_ERROR_GVIF2TX_FAIL) != CXD4963_VALUE_ERROR_GVIF2TX_FAIL)
+	{
+		dev_info(&client->dev, "pre_error_DMC_ser [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_GVIF2TX_FAIL);
+#ifndef EYE_MAGIN_TEST
+		dmc_gvif2tx_fail_error++;
+		dev_info(&client->dev, "pre_error_DMC_ser count:%d\n", dmc_gvif2tx_fail_error);
+		//Write a pre_error_DMC_ser bit1 = 1 to System RAM.
+		emc_get_exp_info(DMC_SER_DUMMY_EXP_NVM, &data);
+		data |= 0x02;
+		emc_set_exp_info(DMC_SER_DUMMY_EXP_NVM, data);
+		if(dmc_gvif2tx_fail_error >=10)
+		{
+			dev_info(&client->dev, "error_DMC_ser [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_GVIF2TX_FAIL);
+			emc_get_exp_info(DMC_SER_EXP_NVM, &data);
+			data |= 0x02;
+			emc_set_exp_info(DMC_SER_EXP_NVM, data);
+		}
+#endif //EYE_MAGIN_TEST
+	}
+	else{
+		dev_info(&client->dev, "No Error [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_GVIF2TX_FAIL);
+		emc_get_exp_info(DMC_SER_DUMMY_EXP_NVM, &data);
+		data &= ~0x02;
+		emc_set_exp_info(DMC_SER_DUMMY_EXP_NVM, data);
+	}
+
+	if ((val & CXD4963_MASK_ERROR_VIDEORX_FAIL) != CXD4963_VALUE_ERROR_VIDEORX_FAIL)
+	{
+		dev_info(&client->dev, "pre_error_DMC_ser [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_VIDEORX_FAIL);
+#ifndef EYE_MAGIN_TEST
+		dmc_videorx_fail_error++;
+		dev_info(&client->dev, "pre_error_DMC_ser count:%d\n", dmc_videorx_fail_error);
+		//Write a pre_error_DMC_ser bit0 = 1 to System RAM.
+		emc_get_exp_info(DMC_SER_DUMMY_EXP_NVM, &data);
+		data |= 0x01;
+		emc_set_exp_info(DMC_SER_DUMMY_EXP_NVM, data);
+		if(dmc_videorx_fail_error >=10)
+		{
+			dev_info(&client->dev, "error_DMC_ser [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_VIDEORX_FAIL);
+			emc_get_exp_info(DMC_SER_EXP_NVM, &data);
+			data |= 0x01;
+			emc_set_exp_info(DMC_SER_EXP_NVM, data);
+		}
+#endif //EYE_MAGIN_TEST
+	}
+	else{
+		dev_info(&client->dev, "No Error [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_VIDEORX_FAIL);
+		emc_get_exp_info(DMC_SER_DUMMY_EXP_NVM, &data);
+		data &= ~0x01;
+		emc_set_exp_info(DMC_SER_DUMMY_EXP_NVM, data);
+	}
+
+	return ret;
+}
+
 static int cxd4963_strobe_led_control(struct cxd4963 *cxd4963, u32 input, u32 output, u32 config)
 {
 	int ret;
@@ -217,36 +335,132 @@ static int cxd4963_strobe_led_control(struct cxd4963 *cxd4963, u32 input, u32 ou
 	return ret;
 }
 
+static int cxd4963_error_check_control(struct cxd4963 *cxd4963)
+{
+	int ret;
+
+	ret = cxd4963_error_dmc_ser_check(cxd4963);
+
+	return ret;
+}
+
 static int cxd4963_startup_check(struct cxd4963 *cxd4963)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&cxd4963->sd);
 	int ret = 0;
+	int retval = 0;
 	u32 val;
+	u16 data;
 
+	/* Serializer register address 0x01 */
 	ret = cxd4963_read_reg(cxd4963, CXD4963_REG_LINK_STATUS, CXD4963_REG_VALUE_08BIT, &val);
 	if (ret) {
 		cxd4963_dbg(&client->dev, " i2c read LINK_STATUS: NG[%d]\n", ret);
-		return ret;
-	}
-	cxd4963_dbg(&client->dev, " i2c read LINK_STATUS: OK[%d]\n", ret);
-	if (((u8)val & CXD4963_MASK_LINK_READY) != CXD4963_VALUE_LINK_READY) {
-		cxd4963_dbg(&client->dev, " LINK_STATUS check, target bit is bit4: NG[%02X]\n", val);
-		return -EIO;
+		retval = ret;
 	} else {
-		cxd4963_dbg(&client->dev, " LINK_STATUS check, target bit is bit4: OK[%02X]\n", val);
+		cxd4963_dbg(&client->dev, " i2c read LINK_STATUS: OK[%d]\n", ret);
+		if (((u8)val & CXD4963_MASK_LINK_READY) != CXD4963_VALUE_LINK_READY) {
+			cxd4963_dbg(&client->dev, " LINK_STATUS check, target bit is bit4: NG[%02X]\n", val);
+			dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x\n", CXD4963_REG_LINK_STATUS, CXD4963_MASK_LINK_READY);
+#ifndef EYE_MAGIN_TEST
+			ser_boot_ready_error++;
+			dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x count:%d\n", CXD4963_REG_LINK_STATUS, CXD4963_MASK_LINK_READY, ser_boot_ready_error);
+			//Write a pre_error_DSM_Boot bit2 = 0 to System RAM.
+			emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+			data &= ~0x04;
+			emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+			if(ser_boot_ready_error >=10)
+			{
+				dev_info(&client->dev, "error_DSM_Boot [%x]:%x\n", CXD4963_REG_LINK_STATUS, CXD4963_MASK_LINK_READY);
+				emc_get_exp_info(DSM_START_EXP_NVM, &data);
+				data &= ~0x04;
+				emc_set_exp_info(DSM_START_EXP_NVM, data);
+			}
+#endif //EYE_MAGIN_TEST
+		} else {
+			cxd4963_dbg(&client->dev, " LINK_STATUS check, target bit is bit4: OK[%02X]\n", val);
+			dev_info(&client->dev, "No Error [%x]:%x\n", CXD4963_REG_LINK_STATUS, CXD4963_MASK_LINK_READY);
+#ifndef EYE_MAGIN_TEST
+			emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+			data |= 0x04;
+			emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+#endif //EYE_MAGIN_TEST
+		}
 	}
 
 	ret = cxd4963_read_reg(cxd4963, CXD4963_REG_ERROR_STATUS, CXD4963_REG_VALUE_08BIT, &val);
 	if (ret) {
 		cxd4963_dbg(&client->dev, " i2c read ERROR_STATUS: NG[%d]\n", ret);
-		return ret;
+		retval = ret;
+	} else {
+		cxd4963_dbg(&client->dev, " i2c read ERROR_STATUS: OK[%d]\n", ret);
 	}
-	cxd4963_dbg(&client->dev, " i2c read ERROR_STATUS: OK[%d]\n", ret);
 	if (((u8)val & CXD4963_MASK_ERROR_STATUS_CHECK) != CXD4963_VALUE_ERROR_STATUS_CHECK) {
 		cxd4963_dbg(&client->dev, " ERROR_STATUS check, target bit is bit6,2: NG[%02X]\n", val);
-		return -EIO;
+		retval = -EIO;
+		if ((val & CXD4963_MASK_ERROR_GVIF2TX_FAIL) != CXD4963_VALUE_ERROR_GVIF2TX_FAIL)
+		{
+			dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_GVIF2TX_FAIL);
+#ifndef EYE_MAGIN_TEST
+			ser_gvif2tx_fail_error++;
+			dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x count:%d\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_GVIF2TX_FAIL, ser_gvif2tx_fail_error);
+			//Write a pre_error_DSM_Boot bit1 = 1 to System RAM.
+			emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+			data |= 0x02;
+			emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+			if(ser_gvif2tx_fail_error >=10)
+			{
+				dev_info(&client->dev, "error_DSM_Boot [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_GVIF2TX_FAIL);
+				emc_get_exp_info(DSM_START_EXP_NVM, &data);
+				data |= 0x02;
+				emc_set_exp_info(DSM_START_EXP_NVM, data);
+			}
+#endif //EYE_MAGIN_TEST
+		}
+		else{
+			dev_info(&client->dev, "No Error [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_GVIF2TX_FAIL);
+#ifndef EYE_MAGIN_TEST
+			emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+			data &= ~0x02;
+			emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+#endif //EYE_MAGIN_TEST
+		}
+
+		if ((val & CXD4963_MASK_ERROR_VIDEORX_FAIL) != CXD4963_VALUE_ERROR_VIDEORX_FAIL)
+		{
+			dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_VIDEORX_FAIL);
+#ifndef EYE_MAGIN_TEST
+			ser_videorx_fail_error++;
+			dev_info(&client->dev, "pre_error_DSM_Boot [%x]:%x count:%d\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_VIDEORX_FAIL, ser_videorx_fail_error);
+			//Write a pre_error_DSM_Boot bit0 = 1 to System RAM.
+			emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+			data |= 0x01;
+			emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+			if(ser_videorx_fail_error >=10)
+			{
+				dev_info(&client->dev, "error_DSM_Boot [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_VIDEORX_FAIL);
+				emc_get_exp_info(DSM_START_EXP_NVM, &data);
+				data |= 0x01;
+				emc_set_exp_info(DSM_START_EXP_NVM, data);
+			}
+#endif //EYE_MAGIN_TEST
+		}
+		else{
+			dev_info(&client->dev, "No Error [%x]:%x\n", CXD4963_REG_ERROR_STATUS, CXD4963_MASK_ERROR_VIDEORX_FAIL);
+#ifndef EYE_MAGIN_TEST
+			emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+			data &= ~0x01;
+			emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+#endif //EYE_MAGIN_TEST
+		}
 	} else {
 		cxd4963_dbg(&client->dev, " ERROR_STATUS check, target bit is bit6,2: OK[%02X]\n", val);
+#ifndef EYE_MAGIN_TEST
+		emc_get_exp_info(DSM_START_DUMMY_EXP_NVM, &data);
+		data &= ~0x02;
+		data &= ~0x01;
+		emc_set_exp_info(DSM_START_DUMMY_EXP_NVM, data);
+#endif //EYE_MAGIN_TEST
 	}
 
 	return ret;
@@ -269,9 +483,17 @@ static int cxd4963_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 
 		/* Strobe LED Control */
 		ret = cxd4963_strobe_led_control(cxd4963, input, output, config);
 		break;
-	case 2:
+	case 3:
 		/* Startup Check */
 		ret = cxd4963_startup_check(cxd4963);
+		break;
+	case 4:
+		/* Error Check Control */
+		ret = cxd4963_error_check_control(cxd4963);
+		break;
+	case 5:
+		/* Error Status Clear */
+		ret = cxd4963_error_status_clear(cxd4963);
 		break;
 	default:
 		dev_err(&client->dev, "Not supported command[%d]\n", config);
