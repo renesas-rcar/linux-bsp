@@ -87,6 +87,13 @@ static unsigned long ImagerStatus;
 #define IMX728_STATE_STREAMING	0x10
 #define IMX728_STATE_SAFESTATE	0x20
 
+#define DEBUG_IMX728  /* Debug print enable */
+#ifdef DEBUG_IMX728
+#define imx728_dbg(dev, fmt, arg...)	dev_info(dev, "<IMX728>"fmt, ##arg)
+#else
+#define imx728_dbg(dev, fmt, arg...)
+#endif
+
 struct imx728_reg {
 	u16 address;
 	u8 val;
@@ -5676,6 +5683,7 @@ static int imx728_read_reg(struct imx728 *imx728, u16 reg, u32 len, u32 *val)
 static int imx728_write_reg(struct imx728 *imx728, u16 reg, u32 len, u32 val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&imx728->sd);
+#if 0
 	u8 buf[6];
 
 	if (len > 4)
@@ -5687,6 +5695,25 @@ static int imx728_write_reg(struct imx728 *imx728, u16 reg, u32 len, u32 val)
 		return -EIO;
 
 	return 0;
+#else
+	u8 regbuf[3];
+	int ret;
+
+	regbuf[0] = reg >> 8;
+	regbuf[1] = reg & 0xff;
+	regbuf[2] = (u8)val;
+
+	ret = i2c_master_send(client, regbuf, 3);
+	msleep(5);
+	if (ret < 0) {
+		dev_err(&client->dev,
+			"%s: write reg error %d: reg=%x, val=%x\n",
+			__func__, ret, reg, (u8)val);
+		return ret;
+	}
+
+	return 0;
+#endif
 }
 
 /* Write a list of registers */
@@ -5713,18 +5740,29 @@ static int imx728_write_regs(struct imx728 *imx728,
 
 static int imx728_start_streaming(struct imx728 *imx728)
 {
+	struct i2c_client *client = v4l2_get_subdevdata(&imx728->sd);
 	u32 val;
 	int i;
 	int ret;
 	void *mapped;
 
+	imx728_dbg(&client->dev, "%s start\n", __func__);
+
 	/* set INCK */
 	ret = imx728_write_regs(imx728, inck_set_regs, ARRAY_SIZE(inck_set_regs));
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write inck_set_regs: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write inck_set_regs: OK[%d]\n", ret);
 
 	/* set Standby */
 	ret = imx728_write_reg(imx728, IMX728_REG_STANDBY, 1, IMX728_MODE_STANDBY);
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write STANDBY: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write STANDBY: OK[%d]\n", ret);
 	msleep(100);
 
 	i = 0;
@@ -5736,8 +5774,18 @@ static int imx728_start_streaming(struct imx728 *imx728)
 		}
 		i++;
 	}
-	//if(i >= 2){イメージセンサー内部仮異常フラグを1：判定24}
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c read DEVICE_STATE: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c read DEVICE_STATE: OK[%d]\n", ret);
+	if (i >= 2) {
+		imx728_dbg(&client->dev, " DEVICE_STATE check STANDBY: NG[%02X]\n", val);
+		// {イメージセンサー内部仮異常フラグを1：判定24}
+		return -EIO;
+	} else {
+		imx728_dbg(&client->dev, " DEVICE_STATE check STANDBY: OK[%02X]\n", val);
+	}
 
 	/* BIST ↓ */
 
@@ -5745,6 +5793,11 @@ static int imx728_start_streaming(struct imx728 *imx728)
 
 	/* set Standby */
 	//ret = imx728_write_reg(imx728, IMX728_REG_STANDBY, 1, IMX728_MODE_STANDBY);
+	//if (ret) {
+	//	imx728_dbg(&client->dev, " i2c write STANDBY: NG[%d]\n", ret);
+	//	return ret;
+	//}
+	//imx728_dbg(&client->dev, " i2c write STANDBY: OK[%d]\n", ret);
 	//msleep(100);
     //
 	//i = 0;
@@ -5756,38 +5809,80 @@ static int imx728_start_streaming(struct imx728 *imx728)
 	//	}
 	//	i++;
 	//}
-	////if(i >= 2){イメージセンサー内部仮異常フラグを1：判定24}
-	//if (ret) return ret;
+	//if (ret) {
+	//	imx728_dbg(&client->dev, " i2c read DEVICE_STATE: NG[%d]\n", ret);
+	//	return ret;
+	//}
+	//imx728_dbg(&client->dev, " i2c read DEVICE_STATE: OK[%d]\n", ret);
+	//if (i >= 2) {
+	//	imx728_dbg(&client->dev, " DEVICE_STATE check STANDBY: NG[%02X]\n", val);
+	//	// {イメージセンサー内部仮異常フラグを1：判定24}
+	//	return -EIO;
+	//} else {
+	//	imx728_dbg(&client->dev, " DEVICE_STATE check STANDBY: OK[%02X]\n", val);
+	//}
 
 	/* BIST ↑ */
 
 	/* IMX728 Register Setting */
 	ret = imx728_write_regs(imx728, init_ac_set_regs, ARRAY_SIZE(init_ac_set_regs));
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write init_ac_set_regs: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write init_ac_set_regs: OK[%d]\n", ret);
 
 	ret = imx728_write_regs(imx728, init_sys_set_regs, ARRAY_SIZE(init_sys_set_regs));
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write init_sys_set_regs: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write init_sys_set_regs: OK[%d]\n", ret);
 	msleep(1);
 
 	ret = imx728_write_regs(imx728, init_addparam_set_regs, ARRAY_SIZE(init_addparam_set_regs));
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write init_addparam_set_regs: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write init_addparam_set_regs: OK[%d]\n", ret);
 
 	ret = imx728_write_regs(imx728, init_iqparam_set_regs, ARRAY_SIZE(init_iqparam_set_regs));
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write init_iqparam_set_regs: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write init_iqparam_set_regs: OK[%d]\n", ret);
 
 	ret = imx728_write_regs(imx728, init_powersaving_set_regs, ARRAY_SIZE(init_powersaving_set_regs));
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write init_powersaving_set_regs: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write init_powersaving_set_regs: OK[%d]\n", ret);
 
 	ret = imx728_write_regs(imx728, init_dn_set_regs, ARRAY_SIZE(init_dn_set_regs));
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write init_dn_set_regs: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write init_dn_set_regs: OK[%d]\n", ret);
 
 	/* Streaming Setting */
 	ret = imx728_write_regs(imx728, streaming_set_regs_step1, ARRAY_SIZE(streaming_set_regs_step1));
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write streaming_set_regs_step1: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write streaming_set_regs_step1: OK[%d]\n", ret);
 	msleep(35);
 
 	ret = imx728_write_regs(imx728, streaming_set_regs_step2, ARRAY_SIZE(streaming_set_regs_step2));
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c write streaming_set_regs_step2: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c write streaming_set_regs_step2: OK[%d]\n", ret);
 	usleep_range(35000, 36000);
 
 	i = 0;
@@ -5799,8 +5894,18 @@ static int imx728_start_streaming(struct imx728 *imx728)
 		}
 		i++;
 	}
-	//if(i >= 2){イメージセンサー内部仮異常フラグを1：判定24}
-	if (ret) return ret;
+	if (ret) {
+		imx728_dbg(&client->dev, " i2c read DEVICE_STATE: NG[%d]\n", ret);
+		return ret;
+	}
+	imx728_dbg(&client->dev, " i2c read DEVICE_STATE: OK[%d]\n", ret);
+	if (i >= 2) {
+		imx728_dbg(&client->dev, " DEVICE_STATE check STREAMING: NG[%02X]\n", val);
+		// {イメージセンサー内部仮異常フラグを1：判定24}
+		return -EIO;
+	} else {
+		imx728_dbg(&client->dev, " DEVICE_STATE check STREAMING: OK[%02X]\n", val);
+	}
 
 	/* FSYNC_1R8V */
 	/* set parameter (addr should be aligned by PWM_PAGE_SIZE) */
@@ -5811,6 +5916,7 @@ static int imx728_start_streaming(struct imx728 *imx728)
 
 	iounmap(mapped);
 
+	imx728_dbg(&client->dev, "%s end\n", __func__);
 	return ret;
 }
 
