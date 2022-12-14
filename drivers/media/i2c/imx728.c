@@ -5868,33 +5868,36 @@ static int imx728_start_streaming(struct imx728 *imx728)
 	ImagerStatus = IMX728_STATE_BIST;
 	dev_info(&client->dev, "ImagerStatus = %lx\n", ImagerStatus);
 	ret = imx728_write_reg(imx728, ECM_UPDATE_FLAG_REG, IMX728_REG_VALUE_08BIT, ECM_UPDATE_FLAG);
-	ret = imx728_write_reg(imx728, BIST_ACTIVATE_ERROR_REG, IMX728_REG_VALUE_08BIT, BIST_ACTIVATE_ERROR);
-	ret = imx728_write_reg(imx728, BIST_STANDBY_REG, IMX728_REG_VALUE_08BIT, BIST_STANDBY);
+	ret = imx728_write_reg(imx728, BIST_ACTIVATE_ERROR_REG, IMX728_REG_VALUE_08BIT, BIST_ACTIVATE_ERROR<<2);
+	ret = imx728_write_reg(imx728, BIST_STANDBY_REG, IMX728_REG_VALUE_08BIT, BIST_STANDBY<<1);
 	dev_info(&client->dev, "BIST start\n");
 	//imx728_error_bist_start_check(imx728);
 	//imx728_error_bist_xerr_check(imx728);
 	msleep(68);
+
 	//imx728_error_bist_complete_check(imx728);
-	//i = 0;
-	//while(i < 2)
-	//{
-	//	ret = imx728_read_reg(imx728, IMX728_REG_DEVICE_STATE, IMX728_REG_VALUE_08BIT, &val);
-	//	if (val == IMX728_STATE_STANDBY)
-	//	{
-	//		ImagerStatus = val;
-	//		flg = STATE_MATCH;
-	//		dev_info(&client->dev, "ImagerStatus = %x\n", ImagerStatus);
-	//		imx728_dev_status_error_clear(imx728);
-	//		break;
-	//	}
-	//	flg = UNSTATE_MATCH;
-	//	i++;
-	//}
-	//if(flg == UNSTATE_MATCH)
-	//{
-	//	dev_info(&client->dev, "NG:ImagerStatus = %x\n", ImagerStatus);
-	//	imx728_error_dev_status_check(imx728);
-	//}
+	ret = imx728_read_reg(imx728, BIST_COMP_REG, IMX728_REG_VALUE_08BIT, &val);
+	if(val == (BIST_COMP<<1))
+	{
+		i=0;
+		while(i < 2){
+			ret = imx728_read_reg(imx728, IMX728_REG_DEVICE_STATE, IMX728_REG_VALUE_08BIT, &val);
+			if (ret) {
+				imx728_dbg(&client->dev, " i2c read DEVICE_STATE: NG[%d]\n", ret);
+				return ret;
+			}
+			if (val == IMX728_STATE_SLEEP){
+				ImagerStatus = val;
+				dev_info(&client->dev, "ImagerStatus = %lx\n", ImagerStatus);
+				break;
+			}
+			i++;
+		}
+
+	}
+
+	//imx728_error_dev_status_check(imx728);
+	
 #endif //BIST_FLAG
 
 	/* set Standby */
