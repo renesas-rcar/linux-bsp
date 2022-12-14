@@ -3,7 +3,7 @@
 / {
 	emc-bz {
 		compatible = "emc-bz";
-		gpios = <&gpio2 10 GPIO_ACTIVE_HIGH>;
+		gpios = <&gpio2 10 GPIO_ACTIVE_LOW>;
 	};
 };
 

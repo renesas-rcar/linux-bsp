@@ -5,6 +5,7 @@
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/iio/dummy_adc.h>
+#include <uapi/misc/emc_data.h>
 
 #define EMC_BZ_MODNAME			"emc-bz"
 
@@ -27,7 +28,11 @@
 										// dummy_adc_getdata() 用ID定義
 #define ID_AD_BZ			9					// AD_BZ_A/D値
 #define ID_AD_PB			1					// AD_+B_A/D値
+#define ID_AD_LDA_ACC_SW		2
+#define ID_AD_PCS_SW			3
 
+#define SW_THRESHOLD_UPPER		769
+#define SW_THRESHOLD_LOWER		401
 
 struct emc_bz_priv {
 	int			ig_vol_old;	// IG電圧状態 (前回の値)
@@ -45,34 +50,53 @@ struct emc_bz_priv {
 	int			in_now;		// 〔じか線ブザー吹鳴制御〕(今回値)
 };
 
-static int get_bz_ctl_err(void)
+static unsigned short get_bz_ctl_err(void)
 {
-	int val = 0;
+	int ret;
+	unsigned short val = 0;
 
 	// 《じか線ブザー制御異常》を取得
-	// FIXME
+	ret = emc_get_exp_info(BZ_CONTROL_ERROR, &val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
 }
 
-static void set_bz_ctl_err(int val)
+static void set_bz_ctl_err(unsigned short val)
 {
+	int ret;
+
 	// 《じか線ブザー制御異常》= val
-	// FIXME
-	pr_debug("%s: val = %d\n", __func__, val);
+	ret = emc_set_exp_info(BZ_CONTROL_ERROR, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 }
 
-static int get_in_now(void)
+static unsigned short get_in_now(void)
 {
-	int val = 0;
+	unsigned short val = 0;
+	int ret, ain2;
 
 	// 〔じか線ブザー吹鳴制御〕の値を取得する。
 	// 〔じか線ブザー吹鳴制御〕＝〔じか線LDA_ACC_SW状態〕なので
 	// 〔じか線LDA_ACC_SW状態〕を取得すれば良い。
-	// FIXME
+	ret = emc_get_exp_info(LDA_ACC_SW_STAT, &val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	/*
+	 *  Just need to care only LDA_ACC_SW state
+	 *  LDA_ACC_SW = 1 --> Turn on buzzer
+	 *  LDA_ACC_SW = 0 --> Turn off buzzer
+	 */
+
+	ain2 = dummy_adc_getdata(ID_AD_LDA_ACC_SW);
+
+	if (ain2 < SW_THRESHOLD_UPPER && ain2 > SW_THRESHOLD_LOWER)
+		val = 1;
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
 }
 
@@ -98,7 +122,8 @@ static void out_kthread_main(struct emc_bz_priv *priv)
 	int ret;
 
 	// ブザー制御(パルス出力)の開始を待つ
-	ret = wait_event_interruptible(priv->out_wait, priv->out_now != 0);
+	ret = wait_event_interruptible(priv->out_wait,
+		priv->out_now != 0 || kthread_should_stop());
 	if (ret < 0) {
 		return;
 	}
@@ -125,25 +150,29 @@ static int out_kthread(void *arg)
 	return 0;
 }
 
-static int get_ig_vol_h(void)
+static unsigned short get_ig_vol_h(void)
 {
-	int val = 0;
+	int ret;
+	unsigned short val = 0;
 
 	// 〔+B高電圧状態〕を取得
-	// FIXME
+	ret = emc_get_exp_info(B_HIGH_VOLTAGE_CONDITION, &val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
 }
 
-static int get_ig_vol_l(void)
+static unsigned short get_ig_vol_l(void)
 {
-	int val = 0;
+	int ret;
+	unsigned short val = 0;
 
 	// 〔+B低電圧状態〕を取得
-	// FIXME
+	ret = emc_get_exp_info(B_LOW_VOLTAGE_STAT, &val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
 }
 
@@ -184,7 +213,7 @@ static int get_ad_bz(void)
 	// 〔AD_BZ_A/D値〕を取得
 	val = dummy_adc_getdata(ID_AD_BZ);
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
 	return val;
 }
 
@@ -195,7 +224,7 @@ static int get_ad_pb(void)
 	// 〔AD_+B_A/D値〕を取得
 	val = dummy_adc_getdata(ID_AD_PB);
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
 	return val;
 }
 
@@ -255,7 +284,7 @@ static void check_on_error(struct emc_bz_priv *priv)
 		// 回数条件を満たしている？
 		if (priv->on_err == ON_ERR_THRESHOLD_CNT) {
 			// 《じか線ブザー制御異常》= 1
-			set_bz_ctl_err(1);
+			set_bz_ctl_err(ABNORMAL);
 		}
 	}
 }
@@ -276,7 +305,7 @@ static void check_off_error(struct emc_bz_priv *priv)
 		// 回数条件を満たしている？
 		if (priv->off_err == OFF_ERR_THRESHOLD_CNT) {
 			// 《じか線ブザー制御異常》= 1
-			set_bz_ctl_err(1);
+			set_bz_ctl_err(ABNORMAL);
 		}
 
 	// 端子電圧条件 (〔AD_BZ_A/D値〕÷〔AD_+B_A/D値〕が閾値以下) を満たしていない？

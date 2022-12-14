@@ -5,6 +5,7 @@
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/iio/dummy_adc.h>
+#include <uapi/misc/emc_data.h>
 
 #define EMC_HT_MODNAME			"emc-ht"
 
@@ -19,7 +20,11 @@
 										// dummy_adc_getdata() 用ID定義
 #define ID_AD_BZ			9					// AD_BZ_A/D値
 #define ID_AD_PB			1					// AD_+B_A/D値
+#define ID_AD_LDA_ACC_SW		2
+#define ID_AD_PCS_SW			3
 
+#define SW_THRESHOLD_UPPER		769
+#define SW_THRESHOLD_LOWER		401
 
 struct emc_ht_priv {
 	int			pin_vol;	// 端子電圧 (〔AD_BZ_A/D値(×10)〕÷〔AD_+B_A/D値(x10)〕)
@@ -33,34 +38,53 @@ struct emc_ht_priv {
 	int			htr_enable;	// 〔HTR_ENABLE〕
 };
 
-static void set_ht_ctl_err(int val)
+static void set_ht_ctl_err(unsigned short val)
 {
+	int ret;
+
 	// 《じか線ヒータ制御異常》= val
-	// FIXME
-	pr_debug("%s: val = %d\n", __func__, val);
+	ret = emc_set_exp_info(HTR_CONTROL_ERROR, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 }
 
-static int get_in_now(void)
+static unsigned short get_in_now(void)
 {
-	int val = 0;
+	unsigned short val = 0;
+	int ret, ain3;
 
 	// 〔じか線ヒータ駆動制御〕の値を取得する。
 	// 「じか線ヒータ駆動制御〕＝〔じか線PCS_SW状態〕なので
 	// 〔じか線PCS_SW状態〕を取得すれば良い。
-	// FIXME
+	ret = emc_get_exp_info(PCS_SW_STAT, &val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	/*
+	 *  Just need to care only PCS_SW state
+	 *  PCS_SW = 1 --> Turn on heater
+	 *  PCS_SW = 0 --> Turn off heater
+	 */
+
+	ain3 = dummy_adc_getdata(ID_AD_PCS_SW);
+
+	if (ain3 <= SW_THRESHOLD_LOWER)
+		val = 1;
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
 }
 
-static int get_htr_enable(void)
+static unsigned short get_htr_enable(void)
 {
-	int val = 0;
+	int ret;
+	unsigned short val = 0;
 
 	// 〔HTR_ENABLE〕を取得
-	// FIXME
+	ret = emc_get_exp_info(HTR_ENABLE, &val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
 }
 
@@ -71,7 +95,7 @@ static int get_ad_bz(void)
 	// 〔AD_BZ_A/D値〕を取得
 	val = dummy_adc_getdata(ID_AD_BZ);
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
 	return val;
 }
 
@@ -82,7 +106,7 @@ static int get_ad_pb(void)
 	// 〔AD_+B_A/D値〕を取得
 	val = dummy_adc_getdata(ID_AD_PB);
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
 	return val;
 }
 
@@ -154,7 +178,7 @@ static void check_off_error(struct emc_ht_priv *priv)
 		// 回数条件を満たしている？
 		if (priv->off_err == OFF_ERR_THRESHOLD_CNT) {
 			// 《じか線ヒータ制御異常》= 1
-			set_ht_ctl_err(1);
+			set_ht_ctl_err(ABNORMAL);
 		}
 
 	// 端子電圧条件 (〔AD_BZ_A/D値〕÷〔AD_+B_A/D値〕が閾値以上) を満たしていない？
@@ -178,6 +202,8 @@ static void check_error(struct emc_ht_priv *priv)
 
 static void in_kthread_main(struct emc_ht_priv *priv)
 {
+	static int htr_enable_old = 0;
+
 	// 少し待つ
 	set_current_state(TASK_INTERRUPTIBLE);
 	schedule_timeout(msecs_to_jiffies(INTERVAL_MS));
@@ -197,34 +223,14 @@ static void in_kthread_main(struct emc_ht_priv *priv)
 		priv->on_err = 0;
 	}
 
-	// 〔じか線ヒータ駆動制御〕が 0 →  1 ？
-	if (priv->in_old == 0 && priv->in_now != 0) {
-		// OFF異常回数をリセット
-		priv->off_err = 0;
+	if (htr_enable_old != priv->htr_enable) {
+		gpiod_set_value(priv->out_desc, priv->htr_enable);
+		htr_enable_old = !!priv->htr_enable;
+		priv->out_now = !!priv->htr_enable;
+	} else if (priv->in_now != priv->out_now) {
+		gpiod_set_value(priv->out_desc, priv->in_now);
+		priv->out_now = priv->in_now;
 	}
-
-	// 〔じか線ヒータ駆動制御〕が 0、または、〔HTR_ENABLE〕が 0 ?
-	if (priv->in_now == 0 || priv->htr_enable == 0) {
-		// ヒータ制御がH？
-		if (priv->out_now != 0) {
-			// ヒータ制御をLにする
-			priv->out_now = 0;
-			gpiod_set_value(priv->out_desc, 0);
-		}
-	}
-
-	// 〔じか線ヒータ駆動制御〕が 1、かつ、〔HTR_ENABLE〕が 1 ?
-	if (priv->in_now != 0 && priv->htr_enable != 0) {
-		// ヒータ制御がL？
-		if (priv->out_now == 0) {
-			// ヒータ制御をHにする
-			priv->out_now = 1;
-			gpiod_set_value(priv->out_desc, 1);
-		}
-	}
-
-	// 〔じか線ヒータ駆動制御〕を保存
-	priv->in_old = priv->in_now;
 }
 
 // ヒータ制御(入力確認)スレッド
@@ -234,6 +240,7 @@ static int in_kthread(void *arg)
 
 	// 〔じか線ヒータ駆動制御〕を取得
 	priv->in_old = get_in_now();
+	priv->out_now = 0;
 
 	// 〔HTR_ENABLE〕を取得
 	priv->htr_enable = get_htr_enable();
