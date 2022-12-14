@@ -727,6 +727,7 @@ static void rvin_crop_scale_comp(struct rvin_dev *vin)
 	const struct rvin_video_format *fmt;
 	u32 stride;
 
+	printk("rvin_crop_scale_comp clip(%d x %d)\n", vin->crop.width, vin->crop.height);
 	/* Set Start/End Pixel/Line Pre-Clip */
 	rvin_write(vin, vin->crop.left, VNSPPRC_REG);
 
@@ -1676,6 +1677,7 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 	unsigned long flags;
 	int ret;
 
+	dev_info(vin->dev, "%s Start\n", __func__);
 	/* Allocate scratch buffer. */
 	vin->scratch = dma_alloc_coherent(vin->dev, vin->format.sizeimage,
 					  &vin->scratch_phys, GFP_KERNEL);

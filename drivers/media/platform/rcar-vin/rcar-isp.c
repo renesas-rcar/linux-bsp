@@ -237,6 +237,9 @@ EXPORT_SYMBOL_GPL(rcar_isp_disable);
 static inline int rcar_mbus_to_data_type(struct rcar_isp_device *isp,
 					 u32 mbus_code)
 {
+	dev_info(isp->dev, "%s Start\n", __func__);
+
+	printk("mbus_code: 0x%x\n", mbus_code);
 	switch (mbus_code) {
 	case MEDIA_BUS_FMT_Y8_1X8:
 		if(isp->info->features == RCAR_ISP_PV4M_EMC_FEATURE)

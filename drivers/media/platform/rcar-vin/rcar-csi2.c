@@ -1628,6 +1628,7 @@ static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
 	int ret = 0;
 
 	mutex_lock(&priv->lock);
+	dev_info(priv->dev, "%s Start\n", __func__);
 
 	if (!priv->remote) {
 		ret = -ENODEV;
