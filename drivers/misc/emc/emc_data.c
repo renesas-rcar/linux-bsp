@@ -43,6 +43,7 @@ int emc_get_exp_info(int emc_index, unsigned short *emc_data)
 	mutex_unlock(&lock);
 	return RESUTL_OK;
 }
+EXPORT_SYMBOL_GPL(emc_get_exp_info);
 
 /******************************/
 /*Para:   emc_index(input) ****/
@@ -60,4 +61,6 @@ int emc_set_exp_info(int emc_index, unsigned short emc_data)
 	mutex_unlock(&lock);
 	return RESUTL_OK;
 }
+EXPORT_SYMBOL_GPL(emc_set_exp_info);
 
+MODULE_LICENSE("GPL");
