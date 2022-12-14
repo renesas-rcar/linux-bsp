@@ -208,11 +208,37 @@ static const struct pwm_ops rcar_pwm_ops = {
 	.owner = THIS_MODULE,
 };
 
+/* Page Size = 4KB */
+#define MSIOF_PAGE_SIZE	0x1000
+
+/* INCK_V4IM_1R8V_MD14 */
+#define MSIOF1_BASE			0xE6EA0000
+#define MSIOF_REG_SITMDR1	0x0000
+#define MSIOF_REG_SITSCR	0x0020
+#define MSIOF_REG_SICTR		0x0028
+#define MSIOF_BRPS			0x0100
+#define MSIOF_BRDV			0x0000
+#define MSIOF_TRMD			0x80000000
+#define MSIOF_TSCKIZ		0x00000000
+#define MSIOF_TSCKE			0x00008000
+
 static int rcar_pwm_probe(struct platform_device *pdev)
 {
 	struct rcar_pwm_chip *rcar_pwm;
 	struct resource *res;
 	int ret;
+#if 1
+	void *mapped;
+
+	/* set parameter (addr should be aligned by MSIOF_PAGE_SIZE) */
+	mapped = ioremap(MSIOF1_BASE, MSIOF_PAGE_SIZE);
+
+	iowrite32(MSIOF_TRMD, mapped + MSIOF_REG_SITMDR1);
+	iowrite16(MSIOF_BRPS | MSIOF_BRDV, mapped + MSIOF_REG_SITSCR);
+	iowrite32(MSIOF_TSCKIZ | MSIOF_TSCKE, mapped + MSIOF_REG_SICTR);
+
+	iounmap(mapped);
+#endif
 
 	rcar_pwm = devm_kzalloc(&pdev->dev, sizeof(*rcar_pwm), GFP_KERNEL);
 	if (rcar_pwm == NULL)
