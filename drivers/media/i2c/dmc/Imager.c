@@ -34,6 +34,13 @@
 #define IMAGER_REG_VALUE_08BIT	1
 #define IMAGER_REG_VALUE_16BIT	2
 
+#define DEBUG_DMC_IMAGER  /* Debug print enable */
+#ifdef DEBUG_DMC_IMAGER
+#define imager_dbg(dev, fmt, arg...)	dev_info(dev, "<DMC_Imager>"fmt, ##arg)
+#else
+#define imager_dbg(dev, fmt, arg...)
+#endif
+
 struct imager_reg {
 	u16 address;
 	u8 val;
@@ -484,15 +491,21 @@ static int imager_read_reg(struct imager *imager, u16 reg, u32 len, u32 *val)
 static int imager_write_reg(struct imager *imager, u16 reg, u32 len, u32 val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&imager->sd);
-	u8 buf[6];
+	u8 regbuf[3];
+	int ret;
 
-	if (len > 4)
-		return -EINVAL;
+	regbuf[0] = reg >> 8;
+	regbuf[1] = reg & 0xff;
+	regbuf[2] = (u8)val;
 
-	put_unaligned_be16(reg, buf);
-	put_unaligned_be32(val << (8 * (4 - len)), buf + 2);
-	if (i2c_master_send(client, buf, len + 2) != len + 2)
-		return -EIO;
+	ret = i2c_master_send(client, regbuf, 3);
+	msleep(5);
+	if (ret < 0) {
+		dev_err(&client->dev,
+			"%s: write reg error %d: reg=%x, val=%x\n",
+			__func__, ret, reg, (u8)val);
+		return ret;
+	}
 
 	return 0;
 }
@@ -521,10 +534,12 @@ static int imager_write_regs(struct imager *imager,
 
 static int imager_strobe_led_control(struct imager *imager, u32 enable)
 {
+	struct i2c_client *client = v4l2_get_subdevdata(&imager->sd);
 	int ret;
 	u32 val;
 
 	if (enable) {
+		dev_info(&client->dev, "Strobe LED ON\n");
 		/* Strobe LED ON setting */
 		ret = imager_write_regs(imager, strobe_led_on_set_regs, ARRAY_SIZE(strobe_led_on_set_regs));
 
@@ -532,6 +547,7 @@ static int imager_strobe_led_control(struct imager *imager, u32 enable)
 		ret = imager_read_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, &val);
 		ret = imager_write_reg(imager, IMAGER_REG_STROBE_CONTROL, 1, val | IMAGER_STROBE_ONOFF);
 	} else {
+		dev_info(&client->dev, "Strobe LED OFF\n");
 		/* Strobe LED OFF setting */
 		ret = imager_write_regs(imager, strobe_led_off_set_regs, ARRAY_SIZE(strobe_led_off_set_regs));
 
@@ -573,17 +589,29 @@ static int imager_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 c
 
 static int imager_start_streaming(struct imager *imager)
 {
+	struct i2c_client *client = v4l2_get_subdevdata(&imager->sd);
 	int ret;
 
 	/* Imager Initialize */
+	imager_dbg(&client->dev, "Image Sensor Initialize start\n");
 	ret = imager_write_regs(imager, init_dmc_imeger_set_regs_step1, ARRAY_SIZE(init_dmc_imeger_set_regs_step1));
-	if (ret) return ret;
+	if (ret) {
+		imager_dbg(&client->dev, " i2c write init_dmc_imeger_set_regs_step1: NG[%d]\n", ret);
+		return ret;
+	}
+	imager_dbg(&client->dev, " i2c write init_dmc_imeger_set_regs_step1: OK[%d]\n", ret);
 
 	msleep(5);
 
 	ret = imager_write_regs(imager, init_dmc_imeger_set_regs_step2, ARRAY_SIZE(init_dmc_imeger_set_regs_step2));
+	if (ret) {
+		imager_dbg(&client->dev, " i2c write init_dmc_imeger_set_regs_step2: NG[%d]\n", ret);
+		return ret;
+	}
+	imager_dbg(&client->dev, " i2c write init_dmc_imeger_set_regs_step2: OK[%d]\n", ret);
 
 	msleep(66);
+	imager_dbg(&client->dev, "Image Sensor Initialize end\n");
 
 	return ret;
 }
