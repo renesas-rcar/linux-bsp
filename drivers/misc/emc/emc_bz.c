@@ -28,7 +28,11 @@
 										// dummy_adc_getdata() 用ID定義
 #define ID_AD_BZ			9					// AD_BZ_A/D値
 #define ID_AD_PB			1					// AD_+B_A/D値
+#define ID_AD_LDA_ACC_SW		2
+#define ID_AD_PCS_SW			3
 
+#define SW_THRESHOLD_UPPER		769
+#define SW_THRESHOLD_LOWER		401
 
 struct emc_bz_priv {
 	int			ig_vol_old;	// IG電圧状態 (前回の値)
@@ -72,14 +76,25 @@ static void set_bz_ctl_err(unsigned short val)
 
 static unsigned short get_in_now(void)
 {
-	int ret;
 	unsigned short val = 0;
+	int ret, ain2;
 
 	// 〔じか線ブザー吹鳴制御〕の値を取得する。
 	// 〔じか線ブザー吹鳴制御〕＝〔じか線LDA_ACC_SW状態〕なので
 	// 〔じか線LDA_ACC_SW状態〕を取得すれば良い。
 	ret = emc_get_exp_info(LDA_ACC_SW_STAT, &val);
 	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	/*
+	 *  Just need to care only LDA_ACC_SW state
+	 *  LDA_ACC_SW = 1 --> Turn on buzzer
+	 *  LDA_ACC_SW = 0 --> Turn off buzzer
+	 */
+
+	ain2 = dummy_adc_getdata(ID_AD_LDA_ACC_SW);
+
+	if (ain2 < SW_THRESHOLD_UPPER && ain2 > SW_THRESHOLD_LOWER)
+		val = 1;
 
 	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
