@@ -305,7 +305,14 @@ static inline int emc_set_exp_info(int emc_index, unsigned short emc_data) {retu
 #define B_LOW_VOLTAGE_STAT					301
 #define DIALOG_MASK_LOW_VOLTAGE_FLAG				302
 
-#define DATA_NAME_MAX						303
+#define IMAGE_SENSOR_ERROR_CLEAR			303
+#define DSM_ERROR_CLEAR						304
+#define DSM_STROBE_LED_CLEAR				305
+#define DSM_SSCG_CONTROL					306
+#define ASYNC_IMAGE_SENSOR_DSM				307
+#define DSM_POWER_OFF_ON					308
+
+#define DATA_NAME_MAX						309
 
 /* eMMC exception data size: DATA_NAME_MAX * 2(bytes) = 472(bytes) */
 #define EMMC_EXCEPTION_DATA_SIZE				DATA_NAME_MAX
