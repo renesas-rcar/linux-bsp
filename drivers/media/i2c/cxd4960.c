@@ -163,7 +163,7 @@ static const struct cxd4960_reg init_des_set_regs_step2[] = {
 	{0xB0, 0x42},
 	{0xB1, 0xC0},
 	{0xB2, 0x41},
-	{0xB4, 0x41},
+	{0xB4, 0x01},
 };/* init_des_set_regs_step2 */
 
 static const struct cxd4960_reg init_des_set_regs_step3[] = {
