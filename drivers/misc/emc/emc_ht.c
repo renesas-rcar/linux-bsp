@@ -5,6 +5,7 @@
 #include <linux/kthread.h>
 #include <linux/sched.h>
 #include <linux/iio/dummy_adc.h>
+#include <uapi/misc/emc_data.h>
 
 #define EMC_HT_MODNAME			"emc-ht"
 
@@ -33,34 +34,42 @@ struct emc_ht_priv {
 	int			htr_enable;	// 〔HTR_ENABLE〕
 };
 
-static void set_ht_ctl_err(int val)
+static void set_ht_ctl_err(unsigned short val)
 {
+	int ret;
+
 	// 《じか線ヒータ制御異常》= val
-	// FIXME
-	pr_debug("%s: val = %d\n", __func__, val);
+	ret = emc_set_exp_info(HTR_CONTROL_ERROR, val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 }
 
-static int get_in_now(void)
+static unsigned short get_in_now(void)
 {
-	int val = 0;
+	int ret;
+	unsigned short val = 0;
 
 	// 〔じか線ヒータ駆動制御〕の値を取得する。
 	// 「じか線ヒータ駆動制御〕＝〔じか線PCS_SW状態〕なので
 	// 〔じか線PCS_SW状態〕を取得すれば良い。
-	// FIXME
+	ret = emc_get_exp_info(PCS_SW_STAT, &val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
 }
 
-static int get_htr_enable(void)
+static unsigned short get_htr_enable(void)
 {
-	int val = 0;
+	int ret;
+	unsigned short val = 0;
 
 	// 〔HTR_ENABLE〕を取得
-	// FIXME
+	ret = emc_get_exp_info(HTR_ENABLE, &val);
+	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
 }
 
@@ -71,7 +80,7 @@ static int get_ad_bz(void)
 	// 〔AD_BZ_A/D値〕を取得
 	val = dummy_adc_getdata(ID_AD_BZ);
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
 	return val;
 }
 
@@ -82,7 +91,7 @@ static int get_ad_pb(void)
 	// 〔AD_+B_A/D値〕を取得
 	val = dummy_adc_getdata(ID_AD_PB);
 
-	pr_debug("%s: val = %d\n", __func__, val);
+	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
 	return val;
 }
 
@@ -154,7 +163,7 @@ static void check_off_error(struct emc_ht_priv *priv)
 		// 回数条件を満たしている？
 		if (priv->off_err == OFF_ERR_THRESHOLD_CNT) {
 			// 《じか線ヒータ制御異常》= 1
-			set_ht_ctl_err(1);
+			set_ht_ctl_err(ABNORMAL);
 		}
 
 	// 端子電圧条件 (〔AD_BZ_A/D値〕÷〔AD_+B_A/D値〕が閾値以上) を満たしていない？
