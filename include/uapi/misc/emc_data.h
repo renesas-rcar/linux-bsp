@@ -105,7 +105,7 @@ static inline int emc_set_exp_info(int emc_index, unsigned short emc_data) {retu
 #define EMMC_EXP_NVM						72
 #define V4M_ERROROUT_NVM					73
 #define V4M_MD_CHK_ERROR_NVM					74
-#define ECM ERR INT REG_NVM					75
+#define ECM_ERR_INT_REG_NVM					75
 #define EX_AD_SPI_COM_DUMMY_EXP_NVM				76
 #define EX_AD_TRAN_DUMMY_EXP_NVM				77
 #define EX_AD_SPI_COM_EXP_NVM					78
@@ -117,7 +117,7 @@ static inline int emc_set_exp_info(int emc_index, unsigned short emc_data) {retu
 #define MAX25328PV_OVUV_STATUS_NVM				84
 #define MAX20411_UV_STATUS_NVM					85
 #define MAX20411_OV_STATUS_NVM					86
-#define MAX20411_ RESET_STATUS_NVM				87
+#define MAX20411_RESET_STATUS_NVM				87
 #define MAX25328_STAT_ERROR_OVS_STATUS_NVM			88
 #define MAX25328_STAT_ERROR_UV_STATUS_NVM			89
 #define MAX25328_STAT_ERROR_OV_STATUS_NVM			90
@@ -196,31 +196,31 @@ static inline int emc_set_exp_info(int emc_index, unsigned short emc_data) {retu
 #define IMAGE_SENSOR_I2C_COM_EXP_2_NVM				163
 #define IMAGE_SENSOR_I2C_COM_EXP_3_NVM				164
 #define IMAGE_SENSOR_MIPI_COM_EXP_1_NVM			165
-#define IMAGE_SENSOR__IN_EXP_1_NVM				166
-#define IMAGE_SENSOR__IN_EXP_2_NVM				167
-#define IMAGE_SENSOR__IN_EXP_3_NVM				168
-#define IMAGE_SENSOR__IN_EXP_4_NVM				169
-#define IMAGE_SENSOR__IN_EXP_5_NVM				170
-#define IMAGE_SENSOR__IN_EXP_6_NVM				171
-#define IMAGE_SENSOR__IN_EXP_7_NVM				172
-#define IMAGE_SENSOR__IN_EXP_8_NVM				173
-#define IMAGE_SENSOR__IN_EXP_9_NVM				174
-#define IMAGE_SENSOR__IN_EXP_10_NVM				175
-#define IMAGE_SENSOR__IN_EXP_11_NVM				176
-#define IMAGE_SENSOR__IN_EXP_12_NVM				177
-#define IMAGE_SENSOR__IN_EXP_13_NVM				178
-#define IMAGE_SENSOR__IN_EXP_14_NVM				179
-#define IMAGE_SENSOR__IN_EXP_15_NVM				180
-#define IMAGE_SENSOR__IN_EXP_16_NVM				181
-#define IMAGE_SENSOR__IN_EXP_17_NVM				182
-#define IMAGE_SENSOR__IN_EXP_18_NVM				183
-#define IMAGE_SENSOR__IN_EXP_19_NVM				184
-#define IMAGE_SENSOR__IN_EXP_20_NVM				185
-#define IMAGE_SENSOR__IN_EXP_21_NVM				186
-#define IMAGE_SENSOR__IN_EXP_22_NVM				187
-#define IMAGE_SENSOR__IN_EXP_23_NVM				188
-#define IMAGE_SENSOR__IN_EXP_24_NVM				189
-#define IMAGE_SENSOR__IN_EXP_25_NVM				190
+#define IMAGE_SENSOR_IN_EXP_1_NVM				166
+#define IMAGE_SENSOR_IN_EXP_2_NVM				167
+#define IMAGE_SENSOR_IN_EXP_3_NVM				168
+#define IMAGE_SENSOR_IN_EXP_4_NVM				169
+#define IMAGE_SENSOR_IN_EXP_5_NVM				170
+#define IMAGE_SENSOR_IN_EXP_6_NVM				171
+#define IMAGE_SENSOR_IN_EXP_7_NVM				172
+#define IMAGE_SENSOR_IN_EXP_8_NVM				173
+#define IMAGE_SENSOR_IN_EXP_9_NVM				174
+#define IMAGE_SENSOR_IN_EXP_10_NVM				175
+#define IMAGE_SENSOR_IN_EXP_11_NVM				176
+#define IMAGE_SENSOR_IN_EXP_12_NVM				177
+#define IMAGE_SENSOR_IN_EXP_13_NVM				178
+#define IMAGE_SENSOR_IN_EXP_14_NVM				179
+#define IMAGE_SENSOR_IN_EXP_15_NVM				180
+#define IMAGE_SENSOR_IN_EXP_16_NVM				181
+#define IMAGE_SENSOR_IN_EXP_17_NVM				182
+#define IMAGE_SENSOR_IN_EXP_18_NVM				183
+#define IMAGE_SENSOR_IN_EXP_19_NVM				184
+#define IMAGE_SENSOR_IN_EXP_20_NVM				185
+#define IMAGE_SENSOR_IN_EXP_21_NVM				186
+#define IMAGE_SENSOR_IN_EXP_22_NVM				187
+#define IMAGE_SENSOR_IN_EXP_23_NVM				188
+#define IMAGE_SENSOR_IN_EXP_24_NVM				189
+#define IMAGE_SENSOR_IN_EXP_25_NVM				190
 #define FRAME_COUNTER_CHECK_EXP_1_NVM				191
 #define VIDEO_SIZE_CHECK_EXP_1_NVM				192
 #define DSM_START_DUMMY_EXP_NVM				193
@@ -296,8 +296,8 @@ static inline int emc_set_exp_info(int emc_index, unsigned short emc_data) {retu
 #define DRM_GROUND_FAULT					292
 #define DRM_SUPPLY_TEMPORARY_FAULT				293
 #define DRM_SUPPLY_FAULT					294
-#define LDA_ACC SW_STAT						295
-#define MODE_ACC SW_STAT					296
+#define LDA_ACC_SW_STAT						295
+#define MODE_ACC_SW_STAT					296
 #define PCS_SW_STAT						297
 #define INSTRUMENT_PANEL_LDA_SW_STAT				298
 #define B_VOLTAGE						299
