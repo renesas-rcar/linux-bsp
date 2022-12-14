@@ -5695,40 +5695,30 @@ static int imx728_read_reg(struct imx728 *imx728, u16 reg, u32 len, u32 *val)
 }
 
 /* Write registers up to 2 at a time */
-static int imx728_write_reg(struct imx728 *imx728, u16 reg, u32 len, u32 val)
+static int imx728_write_reg(struct imx728 *imx728, u16 reg, u32 len, u8 val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&imx728->sd);
-#if 0
-	u8 buf[6];
-
-	if (len > 4)
-		return -EINVAL;
-
-	put_unaligned_be16(reg, buf);
-	put_unaligned_be32(val << (8 * (4 - len)), buf + 2);
-	if (i2c_master_send(client, buf, len + 2) != len + 2)
-		return -EIO;
-
-	return 0;
-#else
-	u8 regbuf[3];
+	struct i2c_msg msg[1];
+	u8 wbuf[3];
 	int ret;
 
-	regbuf[0] = reg >> 8;
-	regbuf[1] = reg & 0xff;
-	regbuf[2] = (u8)val;
+	msg->addr = client->addr;
+	msg->flags = 0;
+	msg->len = 3;
+	msg->buf = wbuf;
+	wbuf[0] = reg >> 8;
+	wbuf[1] = reg & 0xff;
+	wbuf[2] = val;
 
-	ret = i2c_master_send(client, regbuf, 3);
-	msleep(5);
+	ret = i2c_transfer(client->adapter, msg, 1);
 	if (ret < 0) {
-		dev_err(&client->dev,
-			"%s: write reg error %d: reg=%x, val=%x\n",
-			__func__, ret, reg, (u8)val);
+		dev_dbg(&client->dev,
+			"i2c fail: chip 0x%02x wr 0x%04x (0x%02x): %d\n",
+			client->addr, reg, val, ret);
 		return ret;
 	}
 
 	return 0;
-#endif
 }
 
 /* Write a list of registers */
@@ -5797,7 +5787,6 @@ static int imx728_start_streaming(struct imx728 *imx728)
 	u32 val;
 	int i;
 	int ret;
-	void *mapped;
 
 	imx728_dbg(&client->dev, "%s start\n", __func__);
 
@@ -5960,14 +5949,16 @@ static int imx728_start_streaming(struct imx728 *imx728)
 		imx728_dbg(&client->dev, " DEVICE_STATE check STREAMING: OK[%02X]\n", val);
 	}
 
+#if 0
 	/* FSYNC_1R8V */
 	/* set parameter (addr should be aligned by PWM_PAGE_SIZE) */
 	mapped = ioremap(PWM_BASE, PWM_PAGE_SIZE);
 
 	iowrite32(PWM_CYC0 | PWM_PH0, mapped + PWM_REG_PWMCNT);
-	iowrite32(PWM_CC0 | PWM_CCMD | PWM_CCMD | PWM_SYNC | PWM_SS0 | PWM_EN0, mapped + PWM_REG_PWMCR);
+	iowrite32(PWM_CC0 | PWM_CCMD | PWM_SYNC | PWM_SS0 | PWM_EN0, mapped + PWM_REG_PWMCR);
 
 	iounmap(mapped);
+#endif
 
 	/* Output test pattern */
 	ret = imx728_write_regs(imx728, output_test_pattern, ARRAY_SIZE(output_test_pattern));
@@ -6162,11 +6153,11 @@ static int imx728_probe(struct i2c_client *client)
 	struct v4l2_subdev *sd;
 	struct imx728 *imx728;
 //	u32 val;
-	u32 gpioreg;
+//	u32 gpioreg;
 //	int i;
 	int ret;
 
-	void *mapped;
+//	void *mapped;
 
 	imx728 = devm_kzalloc(&client->dev, sizeof(*imx728), GFP_KERNEL);
 	if (!imx728)
@@ -6197,6 +6188,7 @@ static int imx728_probe(struct i2c_client *client)
 	if (imx728_check_hwcfg(dev))
 		return -EINVAL;
 
+#if 0 // this operation is executed by script
 	/* GPIO setting XCLR,XERR */
 	/* set parameter (addr should be aligned by GPIO_PAGE_SIZE) */
 	mapped = ioremap(GPIO67_BASE, GPIO_PAGE_SIZE);
@@ -6217,20 +6209,6 @@ static int imx728_probe(struct i2c_client *client)
 
 	iounmap(mapped);
 
-	/* INCK */
-	/* set by msiof driver */
-#if 1
-	/* set parameter (addr should be aligned by MSIOF_PAGE_SIZE) */
-	mapped = ioremap(MSIOF1_BASE, MSIOF_PAGE_SIZE);
-
-	iowrite32(MSIOF_TRMD, mapped + MSIOF_REG_SITMDR1);
-	iowrite16(MSIOF_BRPS | MSIOF_BRDV, mapped + MSIOF_REG_SITSCR);
-	iowrite32(MSIOF_TSCKIZ | MSIOF_TSCKE, mapped + MSIOF_REG_SICTR);
-
-	iounmap(mapped);
-#endif
-	msleep(1);
-
 	/* Request optional enable pin */
 #if 0
 	/* Get from device tree, I/O error is happened. */
@@ -6244,6 +6222,7 @@ static int imx728_probe(struct i2c_client *client)
 	ret = imx728_power_on(dev);
 	if (ret)
 		return ret;
+#endif // this operation is executed by script
 
 #if 0 // TBD
 	i = 0;
