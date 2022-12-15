@@ -31,3 +31,15 @@
 		pwms = <&pwm1 0 33333>;		/* 30kHz = 33333.333... (ns) */
 	};
 };
+
+&i2c3 {
+	pwctrl@38 {
+		compatible = "dummy,emc-pwctrl";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x38>, <0x39>;
+		status = "okay";
+		enable-gpios = <&gpio1 20 GPIO_ACTIVE_LOW>;	/* EN_V4M-DESLDO_1R8V 	 */
+		reset-gpios = <&gpio1 19 GPIO_ACTIVE_LOW>;	/* RESET_DESLDO-V4M_1R8V */
+	};
+};
