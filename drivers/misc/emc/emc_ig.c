@@ -10,8 +10,6 @@
 #define EMC_IG_INTERVAL_MS	5
 #define EMC_IG_CONSECUTIVE	3
 
-/* There is no AD_IGB A/D so we use AD_B_AD instead */
-#define ID_AD_B_AD 1
 #define B_HIGH_VOL 834
 #define B_LOW_VOL 237
 #define MASS_VOL 514
@@ -85,7 +83,8 @@ static void voltage_checking(struct emc_ig_priv *priv) {
 
 static void emc_ig_kthread_main(struct emc_ig_priv *priv)
 {
-	int			old_ig_det, val;
+	struct dummy_adc_data dat;
+	int old_ig_det, val;
 
 	set_current_state(TASK_INTERRUPTIBLE);
 	schedule_timeout(msecs_to_jiffies(EMC_IG_INTERVAL_MS));
@@ -123,7 +122,8 @@ static void emc_ig_kthread_main(struct emc_ig_priv *priv)
 		set_ig_off(priv->ig_off);
 	}
 
-	val = dummy_adc_getdata(ID_AD_B_AD);
+	dummy_adc_getdata(AD_B_AD, &dat);
+	val = dat.data;
 
 	emc_set_exp_info(B_VOLTAGE, b_voltage_calculation(val));
 

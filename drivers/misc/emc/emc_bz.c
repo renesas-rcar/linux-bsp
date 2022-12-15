@@ -25,12 +25,6 @@
 #define OFF_PIN_VOL_THRESHOLD		7					// OFF異常:端子電圧条件の閾値(0.<OFF_PIN_VOL_THRESHOLD>)
 #define OFF_ERR_THRESHOLD_CNT		625					// OFF異常:判定の閾値(回数)
 
-										// dummy_adc_getdata() 用ID定義
-#define ID_AD_BZ			9					// AD_BZ_A/D値
-#define ID_AD_PB			1					// AD_+B_A/D値
-#define ID_AD_LDA_ACC_SW		2
-#define ID_AD_PCS_SW			3
-
 #define SW_THRESHOLD_UPPER		769
 #define SW_THRESHOLD_LOWER		401
 
@@ -76,8 +70,9 @@ static void set_bz_ctl_err(unsigned short val)
 
 static unsigned short get_in_now(void)
 {
+	struct dummy_adc_data dat;
 	unsigned short val = 0;
-	int ret, ain2;
+	int ret;
 
 	// 〔じか線ブザー吹鳴制御〕の値を取得する。
 	// 〔じか線ブザー吹鳴制御〕＝〔じか線LDA_ACC_SW状態〕なので
@@ -91,9 +86,9 @@ static unsigned short get_in_now(void)
 	 *  LDA_ACC_SW = 0 --> Turn off buzzer
 	 */
 
-	ain2 = dummy_adc_getdata(ID_AD_LDA_ACC_SW);
+	dummy_adc_getdata(AD_LDA_ACC_SW_AD, &dat);
 
-	if (ain2 < SW_THRESHOLD_UPPER && ain2 > SW_THRESHOLD_LOWER)
+	if (dat.data < SW_THRESHOLD_UPPER && dat.data > SW_THRESHOLD_LOWER)
 		val = 1;
 
 	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
@@ -208,24 +203,28 @@ static void update_ig_vol_condition(struct emc_bz_priv *priv)
 
 static int get_ad_bz(void)
 {
-	int val = 0;
+	struct dummy_adc_data dat;
+	int ret;
 
 	// 〔AD_BZ_A/D値〕を取得
-	val = dummy_adc_getdata(ID_AD_BZ);
+	ret = dummy_adc_getdata(AD_BZ_AD, &dat);
+	if (ret)
+		return ret;
 
-	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
-	return val;
+	return dat.data;
 }
 
 static int get_ad_pb(void)
 {
-	int val = 0;
+	struct dummy_adc_data dat;
+	int ret;
 
 	// 〔AD_+B_A/D値〕を取得
-	val = dummy_adc_getdata(ID_AD_PB);
+	ret = dummy_adc_getdata(AD_BZ_AD, &dat);
+	if (ret)
+		return ret;
 
-	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
-	return val;
+	return dat.data;
 }
 
 static void update_pin_vol_condition(struct emc_bz_priv *priv)

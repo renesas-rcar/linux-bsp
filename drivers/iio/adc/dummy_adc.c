@@ -140,17 +140,17 @@ static int dummy_adc_reading_thread(void *pv)
 }
 
 /*-------------------------------------------------------------------------*/
-int dummy_adc_getdata(int channel)
+int dummy_adc_getdata(int channel, struct dummy_adc_data *dat)
 {
-	int output = 0;
+	int ret;
 
 	if (channel < 0 || channel > NUM_CHAN)
 		return -1;
 	mutex_lock(&buf_lock);
-	output = adc_data[channel];
+	dat->data = adc_data[channel];
 	mutex_unlock(&buf_lock);
 
-	return output;
+	return ret;
 }
 EXPORT_SYMBOL_GPL(dummy_adc_getdata);
 
