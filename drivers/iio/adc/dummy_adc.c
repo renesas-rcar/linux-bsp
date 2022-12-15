@@ -21,6 +21,7 @@
 
 #include <linux/spi/spi.h>
 #include <linux/iio/dummy_adc.h>
+#include <uapi/misc/emc_data.h>
 
 #include <linux/kthread.h>
 #include <linux/sched.h>
@@ -28,6 +29,15 @@
 
 #define NUM_CHAN 18
 #define POLY	0x1D	/* polynomial x^8 + x^4 + x^3 + x^2 + 1 */
+
+#define VREFR_1_AD_LOW		758
+#define VREFP_3_4_AD_HIGH	776
+#define VREFP_3_4_AD_LOW	503
+#define VREFP_1_2_AD_HIGH	648
+#define VREFP_1_2_AD_LOW	375
+#define VREFP_1_4_AD_HIGH	520
+#define VREFP_1_4_AD_LOW	247
+#define VREFP_0_AD_HIGH		264
 
 static struct task_struct *read_thread;
 static struct mutex buf_lock;
@@ -37,6 +47,9 @@ struct adc_priv {
 	struct spi_device	*spi;
 	u32			speed_hz;
 	u8			crc_table[256];
+	u8			ad_error;
+	u8			spi_error;
+	u8			self_check;
 };
 
 static int adc_data[NUM_CHAN + 1] = {0};
@@ -98,14 +111,20 @@ static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 	u16 sensor_data;
 
 	/* Check Start bit */
-	if (!(rawdata & BIT(23)))
+	if (rawdata == 0) {
+		priv->ad_error++;
+		emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
 		return -EIO;
+	}
 
 	/* Check CRC */
 	data = (rawdata >> 8) & 0xFFFF;
 	crc = rawdata & 0xFF;
-	if (crc_check_error(priv, data, crc))
+	if (crc_check_error(priv, data, crc)) {
+		priv->ad_error++;
+		emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
 		return -EIO;
+	}
 
 	/* Update data */
 	sensor_id = (data >> 10) & 0x1F;
@@ -113,6 +132,20 @@ static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 	adc_data[sensor_id] = sensor_data;
 
 	return 0;
+}
+
+static void error_checking(struct adc_priv *priv)
+{
+
+#if 0
+	/* Checking SPI trasnfer status error */
+	if (priv->spi_error >= 5)
+		emc_set_exp_info(EX_AD_TRAN_DUMMY_EXP_NVM, 1);
+#endif
+
+	/* Checking ADC data status error */
+	if (priv->ad_error >= 10)
+		emc_set_exp_info(EX_AD_TRAN_EXP_NVM, 1);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -126,15 +159,48 @@ static int dummy_adc_reading_thread(void *pv)
 	{
 		for (i = 1; i <= NUM_CHAN; i++) {
 			raw_data[i] = dummy_adc_read_u32(priv);
-			udelay(20);
+			udelay(100);
 		}
+		msleep(5);
 
 		mutex_lock(&buf_lock);
 		for (i = 1; i <= NUM_CHAN; i++)
 			dummy_adc_rawdata_process(priv, raw_data[i]);
+
+		if (priv->self_check++ >= 10) {
+			if (adc_data[VREFP_1_AD] < VREFR_1_AD_LOW) {
+				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
+				priv->ad_error++;
+			}
+
+			if (adc_data[VREFP_3_4_AD] < VREFP_3_4_AD_LOW ||
+				adc_data[VREFP_3_4_AD] > VREFP_3_4_AD_HIGH) {
+				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
+				priv->ad_error++;
+			}
+
+			if (adc_data[VREFP_1_2_AD] < VREFP_1_2_AD_LOW ||
+				adc_data[VREFP_1_2_AD] > VREFP_1_2_AD_HIGH) {
+				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
+				priv->ad_error++;
+			}
+
+			if (adc_data[VREFP_1_4_AD] < VREFP_1_4_AD_LOW ||
+				adc_data[VREFP_1_4_AD] > VREFP_1_4_AD_HIGH) {
+				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
+				priv->ad_error++;
+			}
+
+			if (adc_data[VREFP_0_AD] > VREFP_0_AD_HIGH) {
+				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
+				priv->ad_error++;
+			}
+
+			priv->self_check = 0;
+		}
 		mutex_unlock(&buf_lock);
 
-		msleep(5);
+		error_checking(priv);
 	}
 	return 0;
 }
