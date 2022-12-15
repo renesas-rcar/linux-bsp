@@ -184,6 +184,7 @@ static const struct cxd4960_reg init_des_set_regs_step4[] = {
 	{0xFE, 0x00},
 	{0xFF, 0x00},
 	{0x90, 0x20},
+	{0x71, 0x42},
 };/* init_des_set_regs_step4 */
 
 enum cxd4960_pad {
@@ -1073,8 +1074,8 @@ static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 	int ret;
 	int i;
 
+#if 0
 	void *mapped;
-
 	/* FSYNC_1R8V */
 	/* set parameter (addr should be aligned by PWM_PAGE_SIZE) */
 	cxd4960_dbg(&client->dev, "FSYNC Output start\n");
@@ -1085,6 +1086,7 @@ static int cxd4960_start_streaming(struct cxd4960 *cxd4960)
 
 	iounmap(mapped);
 	cxd4960_dbg(&client->dev, "FSYNC Output end\n");
+#endif 
 
 	/* Deserializer Initialize */
 	cxd4960_dbg(&client->dev, "Deserializer Initialize start\n");
@@ -1492,7 +1494,7 @@ static int cxd4960_probe(struct i2c_client *client)
 	/* Check TPS78412Vout_state of SystemRAM to determine Des power supply startup */
 	dev_info(dev, "Check TPS78412Vout_state\n");
 	i = 0;
-	while(i < 10)
+	while(i < 100)
 	{
 		emc_get_exp_info(TPS78412_VOUT_STATUS_NVM, &data);
 		if(data == 0)
@@ -1503,6 +1505,7 @@ static int cxd4960_probe(struct i2c_client *client)
 		}
 		flg = POWER_OFF;
 		i++;
+		msleep(1);
 	}
 	if(flg == POWER_OFF)
 	{
@@ -1512,7 +1515,7 @@ static int cxd4960_probe(struct i2c_client *client)
 	/* Check DSM_POWER_ENABLE in SystemRAM to determine DSM power startup */
 	dev_info(dev, "Check DSM_POWER_ENABLE\n");
 	i = 0;
-	while(i < 10)
+	while(i < 100)
 	{
 		emc_get_exp_info(DSM_POWER_ENABLE, &data);
 		if(data == 1)
@@ -1521,6 +1524,12 @@ static int cxd4960_probe(struct i2c_client *client)
 			break;
 		}
 		i++;
+		
+		if(i==100){
+			dev_info(dev, "Not supply DSM Power !!!!\n");
+		}
+		msleep(1);
+
 	}
 	if(flg == POWER_OFF)
 	{
