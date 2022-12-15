@@ -59,6 +59,14 @@ static unsigned long ImagerStatus;
 #define PWM_CYC0		0x032E0000
 #define PWM_PH0			0x00000197
 
+/* GPI01 22 pin */
+#define GPIO1_BASE	0xE6050800
+#define GPIO1_REG_PMMR	0x0000
+#define GPIO1_GPSR1	0x0040
+#define GPIO1_IP2SR1	0x0068
+#define GPIO1_PER_ON	0x00400000
+#define GPIO1_PWM_ON	0x01000000
+
 /* XCLR_V4MIMG_1R8V, XERR_IMGV4M_1R8V */
 #define GPIO67_BASE		0xE6061000
 #define GPIO7_REG_PMMR	0x0800
@@ -5811,6 +5819,8 @@ static int imx728_start_streaming(struct imx728 *imx728)
 	u32 val;
 	int i;
 	int ret;
+	u32 gpioreg;
+	void *mapped;
 
 	imx728_dbg(&client->dev, "%s start\n", __func__);
 
@@ -6022,7 +6032,22 @@ static int imx728_start_streaming(struct imx728 *imx728)
 	}
 	imx728_dbg(&client->dev, "Check CK_DEVICE_STATE Streaming end\n");
 
-#if 0
+
+	imx728_dbg(&client->dev, "Set Pin function for PWM3\n");
+	mapped = ioremap(GPIO1_BASE, GPIO_PAGE_SIZE);
+	gpioreg = ioread32(mapped + GPIO1_GPSR1);
+	gpioreg |= GPIO1_PER_ON;
+	iowrite32(~gpioreg, mapped + GPIO1_REG_PMMR);
+	iowrite32(gpioreg, mapped + GPIO1_GPSR1);
+	iounmap(mapped);
+
+	mapped = ioremap(GPIO1_BASE, GPIO_PAGE_SIZE);
+	gpioreg = ioread32(mapped + GPIO1_IP2SR1);
+	gpioreg |= GPIO1_PWM_ON;
+	iowrite32(~gpioreg, mapped + GPIO1_REG_PMMR);
+	iowrite32(gpioreg, mapped + GPIO1_IP2SR1);
+	iounmap(mapped);
+
 	/* FSYNC_1R8V */
 	/* set parameter (addr should be aligned by PWM_PAGE_SIZE) */
 	imx728_dbg(&client->dev, "FSYNC Output start\n");
@@ -6033,7 +6058,6 @@ static int imx728_start_streaming(struct imx728 *imx728)
 
 	iounmap(mapped);
 	imx728_dbg(&client->dev, "FSYNC Output start\n");
-#endif
 
 	/* Output test pattern */
 	imx728_dbg(&client->dev, "Output Test Pattern start\n");
