@@ -135,6 +135,12 @@ struct rcar_csi2;
 
 #define PHY_MODE		0x001c
 
+#define INT_ST_PKT_FATAL	0x00f0
+#define ERR_ECC_DOUBLE	BIT(0)
+
+#define INT_ST_PLD_CRC_FATAL	0x02b0
+#define ERR_CRC_VC	0x0000FFFF	/* bit0:vc0, bit15:vc15 */
+
 #define DPHY_RSTZ		0x0044
 
 #define FLDC			0x0804
@@ -1730,20 +1736,16 @@ static const struct v4l2_subdev_ops rcar_csi2_subdev_ops = {
 static irqreturn_t rcsi2_irq(int irq, void *data)
 {
 	struct rcar_csi2 *priv = data;
-	u32 status, err_status;
+	u32 pkt_ecc_err, pld_crc_error;
 
-	status = rcsi2_read(priv, INTSTATE_REG);
-	err_status = rcsi2_read(priv, INTERRSTATE_REG);
+	/* cleared on read register */
+	pkt_ecc_err   = rcsi2_read(priv, INT_ST_PKT_FATAL);
+	pld_crc_error = rcsi2_read(priv, INT_ST_PLD_CRC_FATAL);
 
-	if (!status)
+	if (((pkt_ecc_err   & ERR_ECC_DOUBLE) == 0) &&
+	    ((pld_crc_error & ERR_CRC_VC)     == 0))
+		/* not occored error */
 		return IRQ_HANDLED;
-
-	rcsi2_write(priv, INTSTATE_REG, status);
-
-	if (!err_status)
-		return IRQ_HANDLED;
-
-	rcsi2_write(priv, INTERRSTATE_REG, err_status);
 
 	dev_info(priv->dev, "Transfer error, restarting CSI-2 receiver\n");
 
