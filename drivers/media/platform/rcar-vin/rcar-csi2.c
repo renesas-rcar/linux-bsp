@@ -146,6 +146,7 @@ struct rcar_csi2;
 #define OVR1			0x0848
 
 #define PHY_EN			0x2000
+#define FRXM			0x2004
 
 #define ST_PHYST		0x2814
 #define ST_PHY_READY	BIT(31)
@@ -1611,8 +1612,12 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 	}
 
 	/* Confirmation of CSI PHY */
-	if (priv->info->features & RCAR_CSI2_R8A779G0_FEATURE)
+	if (priv->info->features & RCAR_CSI2_R8A779G0_FEATURE) {
 		rcsi2_wait_phy_start_v4h(priv);
+		/* T8: De-assert FRXM/FORCERXMODE_N (N=0, 1, 2, 3) and FRXM/FORCERXMODE_DCK.*/
+		rcsi2_write(priv, OVR1, 0);
+		rcsi2_write(priv, FRXM, 0);
+	}
 	return 0;
 }
 
