@@ -692,6 +692,9 @@ static const struct rcar_csi2_format rcar_csi2_formats[] = {
 	{ .code = MEDIA_BUS_FMT_Y12_1X12,	.datatype = 0x2c, .bpp = 12 },
 };
 
+extern void imx728_set_csi_err(void);
+extern void cxd4960_set_csi_err(void);
+
 static const struct rcar_csi2_format *rcsi2_code_to_fmt(unsigned int code)
 {
 	unsigned int i;
@@ -1749,14 +1752,12 @@ static irqreturn_t rcsi2_irq(int irq, void *data)
 
 static irqreturn_t rcsi2_irq_thread(int irq, void *data)
 {
-	struct rcar_csi2 *priv = data;
-
-	mutex_lock(&priv->lock);
-	rcsi2_stop(priv);
-	usleep_range(1000, 2000);
-	if (rcsi2_start(priv))
-		dev_warn(priv->dev, "Failed to restart CSI-2 receiver\n");
-	mutex_unlock(&priv->lock);
+	if (irq == (499 + 32))
+		/* Notify imx728 */
+		imx728_set_csi_err();
+	 else if (irq == (500 + 32))
+		/* Notify cx45960 */
+		cxd4960_set_csi_err();
 
 	return IRQ_HANDLED;
 }
