@@ -227,6 +227,7 @@ static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 	/* Check Start bit */
 	if (rawdata == 0) {
 		priv->ad_error++;
+		priv->spi_error++;
 		emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
 		return -EIO;
 	}
@@ -252,12 +253,9 @@ static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 
 static void error_checking(struct adc_priv *priv)
 {
-
-#if 0
 	/* Checking SPI trasnfer status error */
-	if (priv->spi_error >= 5)
+	if (priv->spi_error >= 40)
 		emc_set_exp_info(EX_AD_TRAN_DUMMY_EXP_NVM, 1);
-#endif
 
 	/* Checking ADC data status error */
 	if (priv->ad_error >= 10)
