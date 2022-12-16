@@ -28,13 +28,19 @@
 #define SW_THRESHOLD_UPPER		769
 #define SW_THRESHOLD_LOWER		401
 
+#define SW_STABLE_TIME                 32000000                                 // in nanoseconds
+
+#define GET_IN_STATE_TIME              4
+#define GET_IN_STATE_MASK              GENMASK(3, 0)
+#define GET_IN_STATE_HIGH              GENMASK(3, 0)
+#define GET_IN_STATE_LOW               0
+
 struct emc_bz_priv {
 	int			ig_vol_old;	// IG電圧状態 (前回の値)
 	int			ig_vol_cnt;	// IG電圧条件OK回数
 	int			pin_vol;	// 端子電圧 (〔AD_BZ_A/D値(×10)〕÷〔AD_+B_A/D値(x10)〕)
 	int			on_err;		// ON異常回数
 	int			off_err;	// OFF異常回数
-	int			out_cnt;	// ブザー制御端子H出力回数
 	struct gpio_desc	*out_desc;
 	struct task_struct	*out_task;
 	wait_queue_head_t	out_wait;
@@ -42,6 +48,7 @@ struct emc_bz_priv {
 	struct task_struct	*in_task;
 	int			in_old;		// 〔じか線ブザー吹鳴制御〕(前回値)
 	int			in_now;		// 〔じか線ブザー吹鳴制御〕(今回値)
+	struct timespec64       time_start_high; // Time point when control signal changes 0 to 1
 };
 
 static unsigned short get_bz_ctl_err(void)
@@ -71,7 +78,9 @@ static void set_bz_ctl_err(unsigned short val)
 static unsigned short get_in_now(void)
 {
 	struct dummy_adc_data dat;
-	unsigned short val = 0;
+	static unsigned short val = 0;
+	static unsigned short temp_val = 0;
+	static u8 sample;
 	int ret;
 
 	// 〔じか線ブザー吹鳴制御〕の値を取得する。
@@ -87,9 +96,20 @@ static unsigned short get_in_now(void)
 	 */
 
 	dummy_adc_getdata(AD_LDA_ACC_SW_AD, &dat);
+	if (dat.sample_count != sample) {
 
-	if (dat.data < SW_THRESHOLD_UPPER && dat.data > SW_THRESHOLD_LOWER)
-		val = 1;
+		if (dat.data < SW_THRESHOLD_UPPER && dat.data > SW_THRESHOLD_LOWER)
+			temp_val = (temp_val << 1) | 1;
+		else
+			temp_val = temp_val << 1;
+
+		if ((temp_val & GET_IN_STATE_MASK) == GET_IN_STATE_HIGH)
+			        val = 1;
+		else if ((temp_val & GET_IN_STATE_MASK) == GET_IN_STATE_LOW)
+			        val = 0;
+
+		sample = dat.sample_count;
+	}
 
 	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
@@ -220,7 +240,7 @@ static int get_ad_pb(void)
 	int ret;
 
 	// 〔AD_+B_A/D値〕を取得
-	ret = dummy_adc_getdata(AD_BZ_AD, &dat);
+	ret = dummy_adc_getdata(AD_B_AD, &dat);
 	if (ret)
 		return ret;
 
@@ -235,7 +255,7 @@ static void update_pin_vol_condition(struct emc_bz_priv *priv)
 	// 端子電圧の更新
 	// ＜メモ＞「* 10」は小数を無くすためにある
 	ad_bz = get_ad_bz() * 10;
-	ad_pb = get_ad_pb() * 10;
+	ad_pb = get_ad_pb();
 	if (ad_pb != 0) {
 		priv->pin_vol = ad_bz / ad_pb;
 	} else {
@@ -243,31 +263,22 @@ static void update_pin_vol_condition(struct emc_bz_priv *priv)
 	}
 }
 
-static void update_out_cnt(struct emc_bz_priv *priv)
-{
-	// ブザー制御端子H出力中？
-	if (priv->out_now) {
-		// ブザー制御端子H出力回数の更新
-		if (priv->out_cnt < INT_MAX) {
-			priv->out_cnt++;
-		}
-	} else {
-		// ブザー制御端子H出力回数のクリア
-		priv->out_cnt = 0;
-	}
-}
-
 static void check_on_error(struct emc_bz_priv *priv)
 {
+	struct timespec64 current_time, time_sub;
+
 	// 〔じか線ブザー吹鳴制御〕が 0(非吹鳴) ？
-	if (priv->in_now == 0) {
+	if (priv->out_now == 0) {
 		return;
 	}
 
-	// 時間条件 (ブザー制御端子H出力にしてから閾値以上経過) を満たしていない？
-	if (priv->out_cnt < OUT_H_THRESHOLD) {
+	/* If from the point that changing control signal 0->1 is lower
+	 * than 8ms, do not check on errors.
+	 */
+	ktime_get_ts64(&current_time);
+	time_sub = timespec64_sub(current_time, priv->time_start_high);
+	if (!time_sub.tv_sec && time_sub.tv_nsec < SW_STABLE_TIME)
 		return;
-	}
 
 	// IG電圧条件 (+B電圧状態が正常になってから閾値以上経過) を満たしていない？
 	if (priv->ig_vol_cnt < IG_VOL_THRESHOLD) {
@@ -291,9 +302,13 @@ static void check_on_error(struct emc_bz_priv *priv)
 static void check_off_error(struct emc_bz_priv *priv)
 {
 	// 〔じか線ブザー吹鳴制御〕が 0(非吹鳴) ？
-	if (priv->in_now == 0) {
+	if (priv->out_now != 0) {
 		return;
 	}
+
+	/* Reset ON error when it's OFF */
+	if (priv->on_err)
+		priv->on_err = 0;
 
 	// 端子電圧条件 (〔AD_BZ_A/D値〕÷〔AD_+B_A/D値〕が閾値以下) を満たしている？
 	if (priv->pin_vol <= OFF_PIN_VOL_THRESHOLD) {
@@ -321,9 +336,6 @@ static void check_error(struct emc_bz_priv *priv)
 
 	// 端子電圧条件の更新
 	update_pin_vol_condition(priv);
-
-	// ブザー制御端子H出力時間の更新
-	update_out_cnt(priv);
 
 	// ON異常判定
 	check_on_error(priv);
@@ -359,6 +371,7 @@ static void in_kthread_main(struct emc_bz_priv *priv)
 		if (get_bz_ctl_err() == 0) {
 			// ブザー制御(パルス出力)スレッドを起こす
 			priv->out_now = 1;
+			ktime_get_ts64(&priv->time_start_high);
 			wake_up_interruptible(&priv->out_wait);
 		}
 	}

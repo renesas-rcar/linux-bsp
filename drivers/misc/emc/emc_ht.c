@@ -20,6 +20,11 @@
 #define SW_THRESHOLD_UPPER		769
 #define SW_THRESHOLD_LOWER		401
 
+#define GET_IN_STATE_TIME		4
+#define GET_IN_STATE_MASK		GENMASK(3, 0)
+#define GET_IN_STATE_HIGH		GENMASK(3, 0)
+#define GET_IN_STATE_LOW		0
+
 struct emc_ht_priv {
 	int			pin_vol;	// 端子電圧 (〔AD_BZ_A/D値(×10)〕÷〔AD_+B_A/D値(x10)〕)
 	int			on_err;		// ON異常回数
@@ -46,7 +51,9 @@ static void set_ht_ctl_err(unsigned short val)
 static unsigned short get_in_now(void)
 {
 	struct dummy_adc_data dat;
-	unsigned short val = 0;
+	static unsigned short val = 0;
+	static unsigned short temp_val = 0;
+	static u8 sample;
 	int ret;
 
 	// 〔じか線ヒータ駆動制御〕の値を取得する。
@@ -62,9 +69,20 @@ static unsigned short get_in_now(void)
 	 */
 
 	dummy_adc_getdata(AD_PCS_SW_AD, &dat);
+	if (dat.sample_count != sample) {
 
-	if (dat.data <= SW_THRESHOLD_LOWER)
-		val = 1;
+		if (dat.data <= SW_THRESHOLD_LOWER)
+			temp_val = (temp_val << 1) | 1;
+		else
+			temp_val = temp_val << 1;
+
+		if ((temp_val & GET_IN_STATE_MASK) == GET_IN_STATE_HIGH)
+			val = 1;
+		else if ((temp_val & GET_IN_STATE_MASK) == GET_IN_STATE_LOW)
+			val = 0;
+
+		sample = dat.sample_count;
+	}
 
 	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
@@ -114,7 +132,7 @@ static void update_pin_vol_condition(struct emc_ht_priv *priv)
 	// 端子電圧の更新
 	// ＜メモ＞「* 10」は小数を無くすためにある
 	ad_ht = get_ad_ht() * 10;
-	ad_pb = get_ad_pb() * 10;
+	ad_pb = get_ad_pb();
 	if (ad_pb != 0) {
 		priv->pin_vol = ad_ht / ad_pb;
 	} else {
@@ -125,7 +143,7 @@ static void update_pin_vol_condition(struct emc_ht_priv *priv)
 static void check_on_error(struct emc_ht_priv *priv)
 {
 	// 〔じか線ヒータ駆動制御〕が 0(非駆動) ？
-	if (priv->in_now == 0) {
+	if (priv->out_now == 0) {
 		return;
 	}
 
@@ -156,7 +174,7 @@ static void check_on_error(struct emc_ht_priv *priv)
 static void check_off_error(struct emc_ht_priv *priv)
 {
 	// 〔じか線ヒータ駆動制御〕が 1(駆動) ？
-	if (priv->in_now != 0) {
+	if (priv->out_now != 0) {
 		return;
 	}
 
