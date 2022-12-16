@@ -1553,6 +1553,8 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		goto error_destroy_workqueue;
 	}
 
+	INIT_WORK(&vin->routing_work, rvin_s_routing);
+
 	return 0;
 
 error_destroy_workqueue:

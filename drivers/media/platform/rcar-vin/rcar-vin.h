@@ -315,6 +315,8 @@ struct rvin_dev {
 	wait_queue_head_t setup_wait;
 	bool suspend;
 	u32 chip_info;
+
+	struct work_struct routing_work;
 };
 
 #define vin_to_source(vin)		((vin)->parallel->subdev)
@@ -370,4 +372,5 @@ void rvin_set_alpha(struct rvin_dev *vin, unsigned int alpha);
 void rvin_resume_start_streaming(struct work_struct *work);
 void rvin_suspend_stop_streaming(struct rvin_dev *vin);
 
+void rvin_s_routing(struct work_struct *work);
 #endif

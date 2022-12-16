@@ -1063,7 +1063,6 @@ static int rvin_setup(struct rvin_dev *vin)
 	return 0;
 }
 
-#if 0	/* T.B.D. */
 static int rvin_s_routing0(struct rvin_dev *vin)
 {
 	struct v4l2_subdev *sd;
@@ -1121,9 +1120,12 @@ static int rvin_s_routing8(struct rvin_dev *vin)
 	return ret;
 }
 
-static int rvin_s_routing(struct rvin_dev *vin)
+void rvin_s_routing(struct work_struct *work)
 {
 	int ret;
+	struct rvin_dev *vin;
+
+	vin = container_of(work, struct rvin_dev, routing_work);
 
 	switch (vin->id) {
 	case 0:
@@ -1135,10 +1137,7 @@ static int rvin_s_routing(struct rvin_dev *vin)
 	default:
 		break;
 	}
-
-	return ret;
 }
-#endif
 
 static void rvin_disable_interrupts(struct rvin_dev *vin)
 {
@@ -1396,11 +1395,10 @@ static irqreturn_t rvin_irq(int irq, void *data)
 
 	/* Prepare for next frame */
 	rvin_fill_hw_slot(vin, slot);
-#if 0	/* T.B.D. */
+
 	/* Periodic process */
 	if (vin->info->model == RCAR_PV4M_EMC)
-		rvin_s_routing(vin);
-#endif
+		schedule_work(&vin->routing_work);
 done:
 	spin_unlock_irqrestore(&vin->qlock, flags);
 
