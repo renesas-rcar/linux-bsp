@@ -31,6 +31,9 @@
 
 static unsigned long ImagerStatus;
 
+struct mutex imx728_csi_err_lock;
+int imx728_csi_err_notify;
+
 /* Page Size = 4KB */
 #define MSIOF_PAGE_SIZE	0x1000
 #define PWM_PAGE_SIZE	0x4000
@@ -5691,6 +5694,13 @@ struct imx728 {
 	bool streaming;
 };
 
+void imx728_set_csi_err(void)
+{
+	mutex_lock(&imx728_csi_err_lock);
+	imx728_csi_err_notify = 1;
+	mutex_unlock(&imx728_csi_err_lock);
+}
+
 static inline struct imx728 *to_imx728(struct v4l2_subdev *_sd)
 {
 	return container_of(_sd, struct imx728, sd);
@@ -6297,6 +6307,11 @@ static int imx728_probe(struct i2c_client *client)
 //	u32 gpioreg;
 //	int i;
 	int ret;
+
+	mutex_init(&imx728_csi_err_lock);
+	mutex_lock(&imx728_csi_err_lock);
+	imx728_csi_err_notify = 0;
+	mutex_unlock(&imx728_csi_err_lock);
 
 	imx728 = devm_kzalloc(&client->dev, sizeof(*imx728), GFP_KERNEL);
 	if (!imx728)
