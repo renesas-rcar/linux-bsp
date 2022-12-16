@@ -10,24 +10,24 @@ struct dummy_adc_data {
 };
 
 enum dummy_adc_channel {
-	AD_B_AD = 1,
-	AD_LDA_ACC_SW_AD,
-	AD_PCS_SW_AD,
-	V4M_THER_AD,
-	DSM_VOL_AD,
-	AIN6_AD,
-	IMAGE_THER_AD,
-	AD_HEAT_AD,
-	AD_BZ_AD,
-	AD_3R3V_AD,
-	V4M_THER_AMP_AD,
-	AIN6_AMP_AD,
-	IMAGE_THER_AMP_AD,
-	VREFP_1_AD,
-	VREFP_3_4_AD,
-	VREFP_1_2_AD,
-	VREFP_1_4_AD,
-	VREFP_0_AD,
+	AD_B_AD = 1,		/* channel 1  */
+	AD_LDA_ACC_SW_AD,	/* channel 2  */
+	AD_PCS_SW_AD,		/* channel 3  */
+	V4M_THER_AD,		/* channel 4  */
+	DSM_VOL_AD,			/* channel 5  */
+	AIN6_AD,			/* channel 6  */
+	IMAGE_THER_AD,		/* channel 7  */
+	AD_HEAT_AD,			/* channel 8  */
+	AD_BZ_AD,			/* channel 9  */
+	AD_3R3V_AD,			/* channel 10 */
+	V4M_THER_AMP_AD,	/* channel 11 */
+	AIN6_AMP_AD,		/* channel 12 */
+	IMAGE_THER_AMP_AD,	/* channel 13 */
+	VREFP_1_AD,			/* channel 14 */
+	VREFP_3_4_AD,		/* channel 15 */
+	VREFP_1_2_AD,		/* channel 16 */
+	VREFP_1_4_AD,		/* channel 17 */
+	VREFP_0_AD,			/* channel 18 */
 };
 
 #if IS_ENABLED(CONFIG_DUMMY_ADC)

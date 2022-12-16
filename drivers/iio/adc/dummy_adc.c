@@ -41,6 +41,122 @@
 
 static struct task_struct *read_thread;
 static struct mutex buf_lock;
+struct dummy_adc_data adc_data[NUM_CHAN + 1] = {
+	/* 0 - maybe use for further purpose */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* channel 1 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 2 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 3 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 4 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 5 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 6 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 7 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 8 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 9 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 10 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 11 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 12 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 13 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 14 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 15 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 16 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 17 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+	/* 18 */
+	{
+		.data = 0,
+		.crc = 0,
+		.sample_count = 0,
+	},
+};
 
 struct adc_priv {
 	dev_t			devt;
@@ -51,8 +167,6 @@ struct adc_priv {
 	u8			spi_error;
 	u8			self_check;
 };
-
-static int adc_data[NUM_CHAN + 1] = {0};
 
 /*-------------------------------------------------------------------------*/
 static u32 dummy_adc_read_u32(struct adc_priv *priv)
@@ -129,7 +243,9 @@ static int dummy_adc_rawdata_process(struct adc_priv *priv, u32 rawdata) {
 	/* Update data */
 	sensor_id = (data >> 10) & 0x1F;
 	sensor_data = data & 0x3FF;
-	adc_data[sensor_id] = sensor_data;
+	adc_data[sensor_id].data = sensor_data;
+	adc_data[sensor_id].crc = crc;
+	adc_data[sensor_id].sample_count++;
 
 	return 0;
 }
@@ -168,30 +284,30 @@ static int dummy_adc_reading_thread(void *pv)
 			dummy_adc_rawdata_process(priv, raw_data[i]);
 
 		if (priv->self_check++ >= 10) {
-			if (adc_data[VREFP_1_AD] < VREFR_1_AD_LOW) {
+			if (adc_data[VREFP_1_AD].data < VREFR_1_AD_LOW) {
 				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
 				priv->ad_error++;
 			}
 
-			if (adc_data[VREFP_3_4_AD] < VREFP_3_4_AD_LOW ||
-				adc_data[VREFP_3_4_AD] > VREFP_3_4_AD_HIGH) {
+			if (adc_data[VREFP_3_4_AD].data < VREFP_3_4_AD_LOW ||
+				adc_data[VREFP_3_4_AD].data > VREFP_3_4_AD_HIGH) {
 				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
 				priv->ad_error++;
 			}
 
-			if (adc_data[VREFP_1_2_AD] < VREFP_1_2_AD_LOW ||
-				adc_data[VREFP_1_2_AD] > VREFP_1_2_AD_HIGH) {
+			if (adc_data[VREFP_1_2_AD].data < VREFP_1_2_AD_LOW ||
+				adc_data[VREFP_1_2_AD].data > VREFP_1_2_AD_HIGH) {
 				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
 				priv->ad_error++;
 			}
 
-			if (adc_data[VREFP_1_4_AD] < VREFP_1_4_AD_LOW ||
-				adc_data[VREFP_1_4_AD] > VREFP_1_4_AD_HIGH) {
+			if (adc_data[VREFP_1_4_AD].data < VREFP_1_4_AD_LOW ||
+				adc_data[VREFP_1_4_AD].data > VREFP_1_4_AD_HIGH) {
 				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
 				priv->ad_error++;
 			}
 
-			if (adc_data[VREFP_0_AD] > VREFP_0_AD_HIGH) {
+			if (adc_data[VREFP_0_AD].data > VREFP_0_AD_HIGH) {
 				emc_set_exp_info(EX_AD_SPI_COM_EXP_NVM, 1);
 				priv->ad_error++;
 			}
@@ -213,7 +329,7 @@ int dummy_adc_getdata(int channel, struct dummy_adc_data *dat)
 	if (channel < 0 || channel > NUM_CHAN)
 		return -1;
 	mutex_lock(&buf_lock);
-	dat->data = adc_data[channel];
+	*dat = adc_data[channel];
 	mutex_unlock(&buf_lock);
 
 	return ret;
