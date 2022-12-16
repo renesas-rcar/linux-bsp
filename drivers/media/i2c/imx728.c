@@ -37,15 +37,18 @@ static unsigned long ImagerStatus;
 #define GPIO_PAGE_SIZE	0x1000
 
 /* INCK_V4IM_1R8V_MD14 */
-#define MSIOF1_BASE			0xE6EA0000
+#define MSIOF1_BASE		0xE6EA0000
+#define MSIOF3_BASE		0xE6C10000
 #define MSIOF_REG_SITMDR1	0x0000
 #define MSIOF_REG_SITSCR	0x0020
 #define MSIOF_REG_SICTR		0x0028
-#define MSIOF_BRPS			0x0100
-#define MSIOF_BRDV			0x0000
-#define MSIOF_TRMD			0x80000000
+#define MSIOF_BRPS		0x0100
+#define MSIOF_BRDV		0x0000
+#define MSIOF_TRMD		0x80000000
+#define MSIOF_PCON		0x40000000
+#define MSIOF_TXSTP		0x00000001
 #define MSIOF_TSCKIZ		0x00000000
-#define MSIOF_TSCKE			0x00008000
+#define MSIOF_TSCKE		0x00008000
 
 /* FSYNC_1R8V */
 #define PWM_BASE		0xE6E30000
@@ -66,6 +69,14 @@ static unsigned long ImagerStatus;
 #define GPIO1_IP2SR1	0x0068
 #define GPIO1_PER_ON	0x00400000
 #define GPIO1_PWM_ON	0x01000000
+
+/* GPI00 3 pin */
+#define GPIO0_BASE	0xE6050000
+#define GPIO0_REG_PMMR	0x0000
+#define GPIO0_GPSR0	0x0040
+#define GPIO0_IP0SR0	0x0060
+#define GPIO0_PER_ON	0x00000008
+#define GPIO0_MSIOF3_ON	0x00001000
 
 /* XCLR_V4MIMG_1R8V, XERR_IMGV4M_1R8V */
 #define GPIO67_BASE		0xE6061000
@@ -6069,6 +6080,29 @@ static int imx728_start_streaming(struct imx728 *imx728)
 	imx728_dbg(&client->dev, " i2c write output_test_pattern: OK[%d]\n", ret);
 	imx728_dbg(&client->dev, "Output Test Pattern end\n");
 
+	imx728_dbg(&client->dev, "Set Pin function for MSIOF3\n");
+
+	mapped = ioremap(GPIO0_BASE, GPIO_PAGE_SIZE);
+	gpioreg = ioread32(mapped + GPIO0_GPSR0);
+	gpioreg |= GPIO0_PER_ON;
+	iowrite32(~gpioreg, mapped + GPIO0_REG_PMMR);
+	iowrite32(gpioreg, mapped + GPIO0_GPSR0);
+	iounmap(mapped);
+
+	mapped = ioremap(GPIO0_BASE, GPIO_PAGE_SIZE);
+	gpioreg = ioread32(mapped + GPIO0_IP0SR0);
+	gpioreg |= GPIO0_MSIOF3_ON;
+	iowrite32(~gpioreg, mapped + GPIO0_REG_PMMR);
+	iowrite32(gpioreg, mapped + GPIO0_IP0SR0);
+	iounmap(mapped);
+
+	/* Create Deserializer reference Clock by MSIOF3 */
+	mapped = ioremap(MSIOF3_BASE, MSIOF_PAGE_SIZE);
+	iowrite32(MSIOF_TRMD | MSIOF_PCON | MSIOF_TXSTP, mapped + MSIOF_REG_SITMDR1);
+	iowrite16(MSIOF_BRPS | MSIOF_BRDV, mapped + MSIOF_REG_SITSCR);
+	iowrite32(MSIOF_TSCKIZ | MSIOF_TSCKE, mapped + MSIOF_REG_SICTR);
+	iounmap(mapped);
+
 	imx728_dbg(&client->dev, "%s end\n", __func__);
 	return ret;
 }
@@ -6258,12 +6292,11 @@ static int imx728_probe(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	struct v4l2_subdev *sd;
 	struct imx728 *imx728;
+	void *mapped;
 //	u32 val;
 //	u32 gpioreg;
 //	int i;
 	int ret;
-
-//	void *mapped;
 
 	imx728 = devm_kzalloc(&client->dev, sizeof(*imx728), GFP_KERNEL);
 	if (!imx728)
@@ -6293,6 +6326,13 @@ static int imx728_probe(struct i2c_client *client)
 	/* Check the hardware configuration in device tree */
 	if (imx728_check_hwcfg(dev))
 		return -EINVAL;
+
+	/* Create INCK (Imager Clock) by MSIOF1 */
+	mapped = ioremap(MSIOF1_BASE, MSIOF_PAGE_SIZE);
+	iowrite32(MSIOF_TRMD | MSIOF_PCON | MSIOF_TXSTP, mapped + MSIOF_REG_SITMDR1);
+	iowrite16(MSIOF_BRPS | MSIOF_BRDV, mapped + MSIOF_REG_SITSCR);
+	iowrite32(MSIOF_TSCKIZ | MSIOF_TSCKE, mapped + MSIOF_REG_SICTR);
+	iounmap(mapped);
 
 #if 0 // this operation is executed by script
 	/* GPIO setting XCLR,XERR */
