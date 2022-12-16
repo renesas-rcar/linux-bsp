@@ -59,7 +59,7 @@ static unsigned short get_in_now(void)
 	// 〔じか線ヒータ駆動制御〕の値を取得する。
 	// 「じか線ヒータ駆動制御〕＝〔じか線PCS_SW状態〕なので
 	// 〔じか線PCS_SW状態〕を取得すれば良い。
-	ret = emc_get_exp_info(PCS_SW_STAT, &val);
+	//ret = emc_get_exp_info(PCS_SW_STAT, &val);
 	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
 	/*
