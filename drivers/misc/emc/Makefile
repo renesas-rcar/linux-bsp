@@ -3,4 +3,6 @@ obj-$(CONFIG_EMC_HT)	+= emc_ht.o
 obj-$(CONFIG_EMC_IG)	+= emc_ig.o
 obj-$(CONFIG_EMC_DSM)	+= emc_dsm.o
 obj-$(CONFIG_EMC_DATA)	+= emc_data.o
+obj-$(CONFIG_EMC_TEMP)	+= emc_temp.o
+
 obj-y			+= emc_pwctrl.o

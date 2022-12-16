@@ -312,7 +312,10 @@ static inline int emc_set_exp_info(int emc_index, unsigned short emc_data) {retu
 #define ASYNC_IMAGE_SENSOR_DSM				307
 #define DSM_POWER_OFF_ON					308
 
-#define DATA_NAME_MAX						309
+#define IG_DET_DETECTION					310
+#define IG_OFF_DETECTION					311
+
+#define DATA_NAME_MAX						312
 
 /* eMMC exception data size: DATA_NAME_MAX * 2(bytes) = 472(bytes) */
 #define EMMC_EXCEPTION_DATA_SIZE				DATA_NAME_MAX

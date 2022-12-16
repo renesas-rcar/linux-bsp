@@ -10,11 +10,10 @@
 #define EMC_IG_INTERVAL_MS	5
 #define EMC_IG_CONSECUTIVE	3
 
-/* There is no AD_IGB A/D so we use AD_B_AD instead */
-#define ID_AD_B_AD 1
-#define B_HIGH_VOL 834
-#define B_LOW_VOL 237
-#define MASS_VOL 514
+#define B_HIGH_VOL	834
+#define B_LOW_VOL	237
+#define MASK_VOL	514
+#define EXIT_DIALOG_MASK	600
 
 enum vol_state {
 	HIGH_VOL,
@@ -25,137 +24,114 @@ enum vol_state {
 struct emc_ig_priv {
 	struct gpio_desc	*desc;
 	struct task_struct	*task;
-	int			old;
-	int			now;
-	int			cnt;
-	int			ig_det;
-	int			ig_off;
-	int			high_on;
-	int			high_off;
-	int			low_on;
-	int			low_off;
-	int			mass_on;
-	int			mass_off;
-	int			exit_mass;
+	int			gpio_ig;
+	u32			high_count;
+	u32			low_count;
+	u32			dia_mask_count;
+	int			exit_mask;
+	int			b_voltage;
+	int			b_ad_voltage;
+	u8			sample_count;
+	u16			ig_det;
+	u16			ig_det_count;
 };
 
-static unsigned short b_voltage_calculation(int val) {
-	return 51.2 + 0.8;
-}
-
-static void set_ig_det(unsigned short val)
+static int voltage_update(struct emc_ig_priv *priv)
 {
-	int ret;
+	struct dummy_adc_data dat;
 
-	//ret = emc_set_exp_info(IG_DET_DETECTION, val);
-	// FIXME : 復帰値がエラー時はどうすれば良いか不明
+	dummy_adc_getdata(AD_B_AD, &dat);
 
-	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
+	if (priv->sample_count == dat.sample_count)
+		return -1;
+	priv->b_ad_voltage = dat.data;
+	priv->b_voltage = (((priv->b_ad_voltage * 10) / 512) + 8 ) / 10;
+
+	/* Regist +B Voltage */
+	emc_set_exp_info(B_VOLTAGE, priv->b_voltage);
+
+	return 0;
 }
 
-static void set_ig_off(unsigned short val)
+static void voltage_checking(struct emc_ig_priv *priv)
 {
-	int ret;
+	u32 high_vol_check = priv->high_count & 0xFFFFF;
+	u32 low_vol_check = priv->low_count & 0xFFFFF;
+	u32 dialog_mask_vol_check = priv->dia_mask_count & 0xFFFFF;
+	u16 ig_det_detect = priv->ig_det & 0x3FF;
 
-	//ret = emc_set_exp_info(IG_OFF_DETECTION, val);
-	// FIXME : 復帰値がエラー時はどうすれば良いか不明
-
-	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
-}
-
-static void voltage_checking(struct emc_ig_priv *priv) {
-	if (priv->high_on == 20)
+	if (high_vol_check == 0xFFFFF)
 		emc_set_exp_info(B_HIGH_VOLTAGE_CONDITION, 1);
-
-	if (priv->high_off == 20)
+	else if (high_vol_check == 0)
 		emc_set_exp_info(B_HIGH_VOLTAGE_CONDITION, 0);
 
-	if (priv->low_on == 20)
+	if (low_vol_check == 0xFFFFF)
 		emc_set_exp_info(B_LOW_VOLTAGE_STAT, 1);
-
-	if (priv->low_off == 20)
+	else if (low_vol_check == 0)
 		emc_set_exp_info(B_LOW_VOLTAGE_STAT, 0);
 
-	if (priv->mass_on == 20)
+	if (dialog_mask_vol_check == 0xFFFFF) {
 		emc_set_exp_info(DIALOG_MASK_LOW_VOLTAGE_FLAG, 1);
+	}
 
-	if (priv->mass_off == 600)
+	if(priv->exit_mask >= 600)
 		emc_set_exp_info(DIALOG_MASK_LOW_VOLTAGE_FLAG, 0);
+
+	if(ig_det_detect == 0x3FF)
+	{
+		priv->ig_det = 1;
+		emc_set_exp_info(IG_DET_DETECTION, 1);
+	}
+	else if (ig_det_detect == 0)
+	{
+		emc_set_exp_info(IG_DET_DETECTION, 0);
+		if (priv->ig_det == 1)
+		{
+			priv->ig_det = 0;
+			emc_set_exp_info(IG_OFF_DETECTION, 1);
+		}
+	}
 }
 
 static void emc_ig_kthread_main(struct emc_ig_priv *priv)
 {
-	int			old_ig_det, val;
+	int ret;
 
 	set_current_state(TASK_INTERRUPTIBLE);
 	schedule_timeout(msecs_to_jiffies(EMC_IG_INTERVAL_MS));
 
-	// get IG_DET value
-	priv->now = gpiod_get_value(priv->desc);
-
-	// IG_DET value changed?
-	if (priv->old != priv->now) {
-		// reset IG_DET detection counts
-		priv->cnt = 1;
-	} else {
-		// update IG_DET detection counts
-		if (priv->cnt < INT_MAX) {
-			priv->cnt++;
-		}
-	}
-
-	// update old IG_DET value
-	priv->old = priv->now;
-
-	// IG_DET detection condition not met?
-	if (priv->cnt != EMC_IG_CONSECUTIVE) {
+	ret = voltage_update(priv);
+	if (ret < 0)
 		return;
-	}
 
-	// update variable IG_DET judgment
-	old_ig_det = priv->ig_det;
-	priv->ig_det = priv->now;
-	set_ig_det(priv->ig_det);
-
-	// IG_OFF detected? (IG_DET 1 -> 0)
-	if (old_ig_det == 1 && priv->ig_det == 0) {
-		priv->ig_off = 1;
-		set_ig_off(priv->ig_off);
-	}
-
-	val = dummy_adc_getdata(ID_AD_B_AD);
-
-	emc_set_exp_info(B_VOLTAGE, b_voltage_calculation(val));
-
-	if (val > B_HIGH_VOL) {
-		if (priv->high_on < 20)
-			priv->high_on++;
-		priv->high_off = 0;
+	if (priv->b_ad_voltage > B_HIGH_VOL) {
+		priv->high_count = ( priv->high_count << 1 ) | 1;
 	}else {
-		if (priv->high_off < 20)
-			priv->high_off++;
-		priv->high_on = 0;
+		priv->high_count <<= 1;
 	}
 
-	if (val < B_LOW_VOL) {
-		if (priv->low_on < 20)
-			priv->low_on++;
-		priv->low_off = 0;
+	if (priv->b_ad_voltage < B_LOW_VOL) {
+		priv->low_count = ( priv->low_count << 1 ) | 1;
 	}else {
-		if (priv->low_off < 20)
-			priv->low_off++;
-		priv->low_on = 0;
+		priv->low_count <<= 1;
 	}
 
-	if (val <= MASS_VOL) {
-		if (priv->mass_on < 20)
-			priv->mass_on++;
-		priv->mass_off = 0;
+	if (priv->b_ad_voltage <= MASK_VOL) {
+		priv->dia_mask_count = ( priv->dia_mask_count << 1 ) | 1;
+		priv->exit_mask = 0;
 	}else {
-		if (priv->mass_off < 600)
-			priv->mass_off++;
-		priv->mass_on = 0;
+		priv->dia_mask_count <<= 1;
+		if (priv->exit_mask <= 600)
+			priv->exit_mask++;
 	}
+
+	/* get IG_DET value */
+	priv->gpio_ig = gpiod_get_value(priv->desc);
+
+	if (priv->gpio_ig)
+		priv->ig_det_count = ( priv->ig_det << 1 ) | 1;
+	else
+		priv->ig_det_count <<= 1;
 
 	voltage_checking(priv);
 }
@@ -184,15 +160,22 @@ static int emc_ig_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->desc))
 		return PTR_ERR(priv->desc);
 
-	// get 1st data
-	priv->old = gpiod_get_value(priv->desc);
-	priv->cnt	= 1;
-	priv->high_on	= 0;
-	priv->high_off	= 1;
-	priv->low_on	= 0;
-	priv->low_off	= 1;
-	priv->mass_on	= 1;
-	priv->mass_off	= 0;
+	/* Init data */
+	priv->gpio_ig = gpiod_get_value(priv->desc);
+	priv->high_count	= 0;
+	priv->low_count		= 0;
+	priv->dia_mask_count= 0;
+	priv->sample_count		= 0;
+	priv->ig_det = 0;
+	priv->ig_det_count = 0;
+
+	/* Init value */
+	emc_set_exp_info(B_VOLTAGE, 0);
+	emc_set_exp_info(B_HIGH_VOLTAGE_CONDITION, 0);
+	emc_set_exp_info(B_LOW_VOLTAGE_STAT, 0);
+	emc_set_exp_info(DIALOG_MASK_LOW_VOLTAGE_FLAG, 1);
+	emc_set_exp_info(IG_DET_DETECTION, 0);
+	emc_set_exp_info(IG_OFF_DETECTION, 0);
 
 	// start kthread
 	priv->task = kthread_run(emc_ig_kthread, (void *)priv, EMC_IG_MODNAME" kthread");

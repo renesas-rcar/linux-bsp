@@ -33,10 +33,6 @@
 #define DSM_GND_FAIL_VAL	99					// 〔DSM地絡異常判定条件値〕      DSM地絡異常判定条件 (LSB) (0〜65535)
 #define DSM_GND_FAIL_TIME	80					// 〔DSM地絡異常判定時間〕        DSM地絡異常判定時間 (回)  (0〜65535)
 
-									// dummy_adc_getdata() 用ID定義
-#define ID_AD_PB		1					// AD_+B_A/D値
-#define ID_DSM_VOL		5					// DSM電源A/D値
-
 // 定数チェック
 #if (CHK_INTERVAL_MS % RUN_INTERVAL_MS)
 	#error check CHK_INTERVAL_MS or RUN_INTERVAL_MS
@@ -68,24 +64,28 @@ struct emc_dsm_priv {
 
 static int get_ig_vol(void)
 {
-	int val = 0;
+	struct dummy_adc_data dat;
+	int ret;
 
 	// 〔AD_+B_A/D値〕(IG電圧) の値を取得する。
-	val = dummy_adc_getdata(ID_AD_PB);
+	ret = dummy_adc_getdata(AD_B_AD, &dat);
+	if (ret)
+		return ret;
 
-	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
-	return val;
+	return dat.data;
 }
 
 static int get_dsm_vol(void)
 {
-	int val = 0;
+	struct dummy_adc_data dat;
+	int ret;
 
 	// 〔DSM電源AD値〕(DSM電圧) の値を取得する。
-	val = dummy_adc_getdata(ID_DSM_VOL);
+	ret = dummy_adc_getdata(DSM_VOL_AD, &dat);
+	if (ret)
+		return ret;
 
-	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
-	return val;
+	return dat.data;
 }
 
 static void set_htr_enable(unsigned short val)

@@ -17,14 +17,13 @@
 #define OFF_PIN_VOL_THRESHOLD		3					// OFF異常:端子電圧条件の閾値(0.<OFF_PIN_VOL_THRESHOLD>)
 #define OFF_ERR_THRESHOLD_CNT		625					// OFF異常:判定の閾値(回数)
 
-										// dummy_adc_getdata() 用ID定義
-#define ID_AD_BZ			9					// AD_BZ_A/D値
-#define ID_AD_PB			1					// AD_+B_A/D値
-#define ID_AD_LDA_ACC_SW		2
-#define ID_AD_PCS_SW			3
-
 #define SW_THRESHOLD_UPPER		769
 #define SW_THRESHOLD_LOWER		401
+
+#define GET_IN_STATE_TIME		4
+#define GET_IN_STATE_MASK		GENMASK(3, 0)
+#define GET_IN_STATE_HIGH		GENMASK(3, 0)
+#define GET_IN_STATE_LOW		0
 
 struct emc_ht_priv {
 	int			pin_vol;	// 端子電圧 (〔AD_BZ_A/D値(×10)〕÷〔AD_+B_A/D値(x10)〕)
@@ -51,13 +50,16 @@ static void set_ht_ctl_err(unsigned short val)
 
 static unsigned short get_in_now(void)
 {
-	unsigned short val = 0;
-	int ret, ain3;
+	struct dummy_adc_data dat;
+	static unsigned short val = 0;
+	static unsigned short temp_val = 0;
+	static u8 sample;
+	int ret;
 
 	// 〔じか線ヒータ駆動制御〕の値を取得する。
 	// 「じか線ヒータ駆動制御〕＝〔じか線PCS_SW状態〕なので
 	// 〔じか線PCS_SW状態〕を取得すれば良い。
-	ret = emc_get_exp_info(PCS_SW_STAT, &val);
+	//ret = emc_get_exp_info(PCS_SW_STAT, &val);
 	// FIXME : 復帰値がエラー時はどうすれば良いか不明
 
 	/*
@@ -66,10 +68,21 @@ static unsigned short get_in_now(void)
 	 *  PCS_SW = 0 --> Turn off heater
 	 */
 
-	ain3 = dummy_adc_getdata(ID_AD_PCS_SW);
+	dummy_adc_getdata(AD_PCS_SW_AD, &dat);
+	if (dat.sample_count != sample) {
 
-	if (ain3 <= SW_THRESHOLD_LOWER)
-		val = 1;
+		if (dat.data <= SW_THRESHOLD_LOWER)
+			temp_val = (temp_val << 1) | 1;
+		else
+			temp_val = temp_val << 1;
+
+		if ((temp_val & GET_IN_STATE_MASK) == GET_IN_STATE_HIGH)
+			val = 1;
+		else if ((temp_val & GET_IN_STATE_MASK) == GET_IN_STATE_LOW)
+			val = 0;
+
+		sample = dat.sample_count;
+	}
 
 	pr_debug("%s:%d:%s: ret = %d, val = %u\n", __FILE__, __LINE__, __func__, ret, val);
 	return val;
@@ -88,39 +101,40 @@ static unsigned short get_htr_enable(void)
 	return val;
 }
 
-static int get_ad_bz(void)
+static int get_ad_ht(void)
 {
-	int val = 0;
+	struct dummy_adc_data dat;
+	int ret;
 
 	// 〔AD_BZ_A/D値〕を取得
-	val = dummy_adc_getdata(ID_AD_BZ);
+	ret = dummy_adc_getdata(AD_HEAT_AD, &dat);
+	if (ret)
+		return ret;
 
-	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
-	return val;
+	return dat.data;
 }
 
 static int get_ad_pb(void)
 {
-	int val = 0;
+	struct dummy_adc_data dat;
 
 	// 〔AD_+B_A/D値〕を取得
-	val = dummy_adc_getdata(ID_AD_PB);
+	dummy_adc_getdata(AD_B_AD, &dat);
 
-	pr_debug("%s:%d:%s: val = %d\n", __FILE__, __LINE__, __func__, val);
-	return val;
+	return dat.data;
 }
 
 static void update_pin_vol_condition(struct emc_ht_priv *priv)
 {
-	int ad_bz;
+	int ad_ht;
 	int ad_pb;
 
 	// 端子電圧の更新
 	// ＜メモ＞「* 10」は小数を無くすためにある
-	ad_bz = get_ad_bz() * 10;
-	ad_pb = get_ad_pb() * 10;
+	ad_ht = get_ad_ht() * 10;
+	ad_pb = get_ad_pb();
 	if (ad_pb != 0) {
-		priv->pin_vol = ad_bz / ad_pb;
+		priv->pin_vol = ad_ht / ad_pb;
 	} else {
 		priv->pin_vol = 0;
 	}
@@ -129,7 +143,7 @@ static void update_pin_vol_condition(struct emc_ht_priv *priv)
 static void check_on_error(struct emc_ht_priv *priv)
 {
 	// 〔じか線ヒータ駆動制御〕が 0(非駆動) ？
-	if (priv->in_now == 0) {
+	if (priv->out_now == 0) {
 		return;
 	}
 
@@ -160,7 +174,7 @@ static void check_on_error(struct emc_ht_priv *priv)
 static void check_off_error(struct emc_ht_priv *priv)
 {
 	// 〔じか線ヒータ駆動制御〕が 1(駆動) ？
-	if (priv->in_now != 0) {
+	if (priv->out_now != 0) {
 		return;
 	}
 
