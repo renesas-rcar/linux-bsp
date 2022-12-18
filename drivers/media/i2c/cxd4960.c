@@ -132,6 +132,9 @@
 #define NG_FCM 0
 #define OK_FCM 1
 
+/* Error Check Control */
+#define DMC_ERRORCHECK_ENABLE
+
 #define DEBUG_CXD4960  /* Debug print enable */
 #ifdef DEBUG_CXD4960
 #define cxd4960_dbg(dev, fmt, arg...)	dev_info(dev, "<CXD4960>"fmt, ##arg)
@@ -148,6 +151,9 @@ int des_gvif2rx_los_error;
 int des_gvif2rx_fail_error;
 int des_output_error;
 int lvds_i2c_com_error;
+
+struct mutex cxd4960_csi_err_lock;
+int cxd4960_csi_err_notify;
 
 struct cxd4960_reg {
 	u16 address;
@@ -225,6 +231,14 @@ struct cxd4960 {
 };
 
 static int cxd4960_error_lvds_i2c_com_check(struct cxd4960 *cxd4960, int result);
+
+
+void cxd4960_set_csi_err(void)
+{
+	mutex_lock(&cxd4960_csi_err_lock);
+	cxd4960_csi_err_notify = 1;
+	mutex_unlock(&cxd4960_csi_err_lock);
+}
 
 static inline struct cxd4960 *to_cxd4960(struct v4l2_subdev *_sd)
 {
@@ -340,6 +354,7 @@ static int cxd4960_power_off(struct device *dev)
 	return 0;
 }
 
+#ifdef DMC_ERRORCHECK_ENABLE
 static void cxd4960_dsm_power_control(u32 control)
 {
 	u16 data;
@@ -359,7 +374,7 @@ static void cxd4960_dsm_power_control(u32 control)
 	return;
 
 }
-
+#endif //DMC_ERRORCHECK_ENABLE
 
 static int cxd4960_error_status_clear(struct cxd4960 *cxd4960)
 {
@@ -700,6 +715,7 @@ static int cxd4960_error_boot_check(struct cxd4960 *cxd4960)
 	return ret;
 }
 
+#ifdef DMC_ERRORCHECK_ENABLE
 static int cxd4960_error_gvif2_check(struct cxd4960 *cxd4960)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
@@ -825,8 +841,15 @@ static int cxd4960_error_video_check(struct cxd4960 *cxd4960)
 
 	/* Deserializer register address 0x10 */
 	cxd4960_read_reg(cxd4960, CXD4960_REG_ERROR_STATUS, CXD4960_REG_VALUE_08BIT, &val);
-	if ((val & CXD4960_MASK_ERROR_VIDEOTX_FAIL) != CXD4960_VALUE_ERROR_VIDEOTX_FAIL)
+
+	mutex_lock(&cxd4960_csi_err_lock);
+
+	if (((val & CXD4960_MASK_ERROR_VIDEOTX_FAIL) != CXD4960_VALUE_ERROR_VIDEOTX_FAIL) ||
+	    (cxd4960_csi_err_notify != 0))
 	{
+		cxd4960_csi_err_notify = 0;
+		mutex_unlock(&cxd4960_csi_err_lock);
+
 		dev_info(&client->dev, "pre_error_Des_Video [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL);
 #ifndef EYE_MAGIN_TEST
 		des_output_error++;
@@ -845,6 +868,7 @@ static int cxd4960_error_video_check(struct cxd4960 *cxd4960)
 #endif //EYE_MAGIN_TEST
 	}
 	else{
+		mutex_unlock(&cxd4960_csi_err_lock);
 		dev_info(&client->dev, "No Error [%x]:%x\n", CXD4960_REG_LINK_STATUS, CXD4960_MASK_ERROR_VIDEOTX_FAIL);
 		emc_get_exp_info(DES_VIDES_OUTPUT_DUMMY_EXP_NVM, &data);
 		data &= ~0x01;
@@ -934,6 +958,7 @@ static int cxd4960_error_dmc_ser_check(struct cxd4960 *cxd4960)
 	iounmap(mapped);
 	return ret;
 }
+#endif //DMC_ERRORCHECK_ENABLE
 
 static int cxd4960_error_lvds_i2c_com_check(struct cxd4960 *cxd4960, int result)
 {
@@ -1020,9 +1045,11 @@ static int cxd4960_error_check_control(struct cxd4960 *cxd4960 ,u32 input, u32 o
 {
 	int ret = 0;
 
+#ifdef DMC_ERRORCHECK_ENABLE
 	ret = cxd4960_error_gvif2_check(cxd4960);
 	ret = cxd4960_error_video_check(cxd4960);
 	ret = cxd4960_error_dmc_ser_check(cxd4960);
+#endif //DMC_ERRORCHECK_ENABLE
 
 	return ret;
 }
@@ -1441,6 +1468,11 @@ static int cxd4960_probe(struct i2c_client *client)
 	struct v4l2_subdev *sd;
 
 	void *mapped;
+
+	mutex_init(&cxd4960_csi_err_lock);
+	mutex_lock(&cxd4960_csi_err_lock);
+	cxd4960_csi_err_notify = 0;
+	mutex_unlock(&cxd4960_csi_err_lock);
 
 	cxd4960 = devm_kzalloc(&client->dev, sizeof(*cxd4960), GFP_KERNEL);
 	if (!cxd4960)

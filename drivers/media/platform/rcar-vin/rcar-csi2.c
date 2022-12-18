@@ -135,6 +135,12 @@ struct rcar_csi2;
 
 #define PHY_MODE		0x001c
 
+#define INT_ST_PKT_FATAL	0x00f0
+#define ERR_ECC_DOUBLE	BIT(0)
+
+#define INT_ST_PLD_CRC_FATAL	0x02b0
+#define ERR_CRC_VC	0x0000FFFF	/* bit0:vc0, bit15:vc15 */
+
 #define DPHY_RSTZ		0x0044
 
 #define FLDC			0x0804
@@ -691,6 +697,9 @@ static const struct rcar_csi2_format rcar_csi2_formats[] = {
 	{ .code = MEDIA_BUS_FMT_Y8_1X8,		.datatype = 0x2a, .bpp = 8 },
 	{ .code = MEDIA_BUS_FMT_Y12_1X12,	.datatype = 0x2c, .bpp = 12 },
 };
+
+extern void imx728_set_csi_err(void);
+extern void cxd4960_set_csi_err(void);
 
 static const struct rcar_csi2_format *rcsi2_code_to_fmt(unsigned int code)
 {
@@ -1727,20 +1736,16 @@ static const struct v4l2_subdev_ops rcar_csi2_subdev_ops = {
 static irqreturn_t rcsi2_irq(int irq, void *data)
 {
 	struct rcar_csi2 *priv = data;
-	u32 status, err_status;
+	u32 pkt_ecc_err, pld_crc_error;
 
-	status = rcsi2_read(priv, INTSTATE_REG);
-	err_status = rcsi2_read(priv, INTERRSTATE_REG);
+	/* cleared on read register */
+	pkt_ecc_err   = rcsi2_read(priv, INT_ST_PKT_FATAL);
+	pld_crc_error = rcsi2_read(priv, INT_ST_PLD_CRC_FATAL);
 
-	if (!status)
+	if (((pkt_ecc_err   & ERR_ECC_DOUBLE) == 0) &&
+	    ((pld_crc_error & ERR_CRC_VC)     == 0))
+		/* not occored error */
 		return IRQ_HANDLED;
-
-	rcsi2_write(priv, INTSTATE_REG, status);
-
-	if (!err_status)
-		return IRQ_HANDLED;
-
-	rcsi2_write(priv, INTERRSTATE_REG, err_status);
 
 	dev_info(priv->dev, "Transfer error, restarting CSI-2 receiver\n");
 
@@ -1749,14 +1754,12 @@ static irqreturn_t rcsi2_irq(int irq, void *data)
 
 static irqreturn_t rcsi2_irq_thread(int irq, void *data)
 {
-	struct rcar_csi2 *priv = data;
-
-	mutex_lock(&priv->lock);
-	rcsi2_stop(priv);
-	usleep_range(1000, 2000);
-	if (rcsi2_start(priv))
-		dev_warn(priv->dev, "Failed to restart CSI-2 receiver\n");
-	mutex_unlock(&priv->lock);
+	if (irq == (499 + 32))
+		/* Notify imx728 */
+		imx728_set_csi_err();
+	 else if (irq == (500 + 32))
+		/* Notify cx45960 */
+		cxd4960_set_csi_err();
 
 	return IRQ_HANDLED;
 }
