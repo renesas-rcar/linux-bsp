@@ -132,6 +132,9 @@
 #define NG_FCM 0
 #define OK_FCM 1
 
+/* Error Check Control */
+#define DMC_ERRORCHECK_ENABLE
+
 #define DEBUG_CXD4960  /* Debug print enable */
 #ifdef DEBUG_CXD4960
 #define cxd4960_dbg(dev, fmt, arg...)	dev_info(dev, "<CXD4960>"fmt, ##arg)
@@ -351,6 +354,7 @@ static int cxd4960_power_off(struct device *dev)
 	return 0;
 }
 
+#ifdef DMC_ERRORCHECK_ENABLE
 static void cxd4960_dsm_power_control(u32 control)
 {
 	u16 data;
@@ -370,7 +374,7 @@ static void cxd4960_dsm_power_control(u32 control)
 	return;
 
 }
-
+#endif //DMC_ERRORCHECK_ENABLE
 
 static int cxd4960_error_status_clear(struct cxd4960 *cxd4960)
 {
@@ -711,6 +715,7 @@ static int cxd4960_error_boot_check(struct cxd4960 *cxd4960)
 	return ret;
 }
 
+#ifdef DMC_ERRORCHECK_ENABLE
 static int cxd4960_error_gvif2_check(struct cxd4960 *cxd4960)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&cxd4960->sd);
@@ -953,6 +958,7 @@ static int cxd4960_error_dmc_ser_check(struct cxd4960 *cxd4960)
 	iounmap(mapped);
 	return ret;
 }
+#endif //DMC_ERRORCHECK_ENABLE
 
 static int cxd4960_error_lvds_i2c_com_check(struct cxd4960 *cxd4960, int result)
 {
@@ -1039,9 +1045,11 @@ static int cxd4960_error_check_control(struct cxd4960 *cxd4960 ,u32 input, u32 o
 {
 	int ret = 0;
 
+#ifdef DMC_ERRORCHECK_ENABLE
 	ret = cxd4960_error_gvif2_check(cxd4960);
 	ret = cxd4960_error_video_check(cxd4960);
 	ret = cxd4960_error_dmc_ser_check(cxd4960);
+#endif //DMC_ERRORCHECK_ENABLE
 
 	return ret;
 }
