@@ -28,6 +28,7 @@
 #include <media/v4l2-mediabus.h>
 #include <asm/unaligned.h>
 #include <asm/io.h>
+#include <uapi/misc/emc_data.h>
 
 static unsigned long ImagerStatus;
 
@@ -128,6 +129,25 @@ int imx728_csi_err_notify;
 #define IMX728_STATE_BIST		0x08
 #define IMX728_STATE_STREAMING	0x10
 #define IMX728_STATE_SAFESTATE	0x20
+
+#define PRE_ERROR_IMG_FSYNC	0x10
+#define ERROR_IMG_FSYNC		0x11
+
+/* fsync */
+#define EC_ERR_STA_FSM_REG	0x2CED
+#define EC_ERR_STA_FSMRAE	0x20
+#define EC_ERR_STA_FSMTOE	0x40
+
+/* Error Status */
+#define ERROR			-1
+#define NO_ERROR		0
+#define PRE_ERROR		1
+#define CAMERA_ERROR	2
+
+int		fsync_xerr_low;
+int		fsync_reg_err;
+int		fsync_f_emb_err;
+int		fsync_error;
 
 #define DEBUG_IMX728  /* Debug print enable */
 #ifdef DEBUG_IMX728
@@ -5701,6 +5721,9 @@ void imx728_set_csi_err(void)
 	mutex_unlock(&imx728_csi_err_lock);
 }
 
+static void imx728_control_xclr(u32 io);
+static int imx728_start_streaming(struct imx728 *imx728);
+
 static inline struct imx728 *to_imx728(struct v4l2_subdev *_sd)
 {
 	return container_of(_sd, struct imx728, sd);
@@ -5806,6 +5829,29 @@ static int imx728_stop_test_pattern(struct imx728 *imx728)
 	return ret;
 }
 
+static int imx728_detect_pre_error(struct imx728 *imx728)
+{
+	int ret;
+
+	/* Set XCLR Low -> High */
+	imx728_control_xclr(0);
+	usleep_range(100, 110);
+	imx728_control_xclr(1);
+
+	/* re-initialize */
+	ret = imx728_start_streaming(imx728);
+
+	return ret;
+}
+
+static int imx728_detect_error(struct imx728 *imx728)
+{
+	/* Set XCLR Low */
+	imx728_control_xclr(0);
+
+	return 0;
+}
+
 static int imx728_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 config)
 {
 	struct imx728 *imx728 = to_imx728(sd);
@@ -5822,6 +5868,14 @@ static int imx728_s_routing(struct v4l2_subdev *sd, u32 input, u32 output, u32 c
 	case 0x1:
 		/* Stop test pattern output */
 		ret = imx728_stop_test_pattern(imx728);
+		break;
+	case 0xF0:
+		/* Detect pre-error */
+		ret = imx728_detect_pre_error(imx728);
+		break;
+	case 0xF1:
+		/* Detect error */
+		ret = imx728_detect_error(imx728);
 		break;
 	default:
 		dev_err(&client->dev, "Not supported command[%d]\n", config);
@@ -6295,6 +6349,59 @@ error_out:
 	fwnode_handle_put(endpoint);
 
 	return ret;
+}
+
+static int imx728_error_fsync_check(struct imx728 *imx728)
+{
+	u32		gpioreg, val;
+	void	*mapped;
+	int		ret = NO_ERROR;
+	u16	data;	
+
+	/* XERR */
+	mapped = ioremap(GPIO67_BASE, GPIO_PAGE_SIZE);
+	gpioreg = ioread32(mapped + GPIO7_REG_OUTDT);
+	iounmap(mapped);
+	if ((gpioreg & GPIO7_OUTDT_XCLR) == 0) {
+		fsync_xerr_low = ERROR;
+	}
+	else {
+		fsync_xerr_low = NO_ERROR;
+	}
+
+	/* REGISTER */
+	ret = imx728_read_reg(imx728, EC_ERR_STA_FSM_REG, IMX728_REG_VALUE_08BIT, &val);
+	if ((val & EC_ERR_STA_FSMRAE) == EC_ERR_STA_FSMRAE) {
+		fsync_reg_err = ERROR;
+	}
+	else if ((val & EC_ERR_STA_FSMTOE) == EC_ERR_STA_FSMTOE) {
+		fsync_reg_err = ERROR;
+	}
+	else {
+		fsync_reg_err = NO_ERROR;
+	}
+
+	/* F-EMB */
+	// capture process_image() f_emb_fsync_check()
+
+	/* PRE ERROR */
+	if ((fsync_xerr_low == ERROR) &&
+		(fsync_reg_err == ERROR) && (fsync_f_emb_err == ERROR)) {
+		ret = PRE_ERROR;
+		fsync_error++;
+		//Write a pre_error System RAM.
+		emc_get_exp_info(IMAGE_SENSOR_FSYNC_DUMMY_EXP_1_NVM, &data);
+		data |= 0x01;
+		emc_set_exp_info(IMAGE_SENSOR_FSYNC_DUMMY_EXP_1_NVM, data);
+
+		if (fsync_error >= 10) {
+			ret = CAMERA_ERROR;
+			emc_get_exp_info(IMAGE_SENSOR_FSYNC_EXP_1_NVM, &data);
+			data |= 0x01;
+			emc_set_exp_info(IMAGE_SENSOR_FSYNC_EXP_1_NVM, data);
+		}
+	}
+	return(ret);
 }
 
 static int imx728_probe(struct i2c_client *client)
