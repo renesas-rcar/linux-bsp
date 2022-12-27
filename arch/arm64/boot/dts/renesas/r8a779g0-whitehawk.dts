@@ -363,7 +363,7 @@
 	};
 
 	pcie1_pins: pcie1 {
-		groups = "pcie1_clkreq_n";
+		groups = "pcie0_clkreq_n", "pcie1_clkreq_n";
 		function = "pcie";
 	};
 
