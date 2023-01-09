@@ -33,9 +33,6 @@
 #define	PCI_EXP_LNKCAP_MLW_X2	BIT(5)
 #define	PCI_EXP_LNKCAP_MLW_X4	BIT(6)
 
-/* Link Status & Link Control */
-#define	EXPCAP4			0x0080
-
 /* ASPM L1 PM Substates */
 #define L1PSCAP(x)		(0x01BC + (x))
 
@@ -154,13 +151,24 @@ static void renesas_pcie_retrain_link(struct dw_pcie *pci)
 
 	/* Wait for link retrain */
 	for (retries = 0; retries <= MAX_RETRIES; retries++) {
-		val = dw_pcie_readl_dbi(pci, EXPCAP4);
-		lnksta = (val >> 16);
+		lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
 
-		/* Stop retraining link if current link speed achieved 16GB/s */
-		if ((lnksta & PCI_EXP_LNKSTA_CLS) == PCI_EXP_LNKSTA_CLS_16_0GB)
+		/* Check retrain flag */
+		if (!(lnksta & PCI_EXP_LNKSTA_LT))
 			break;
+		msleep(1);
 	}
+}
+
+static void renesas_pcie_check_speed(struct dw_pcie *pci)
+{
+	u32 lnkcap, lnksta;
+
+	lnkcap = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCAP));
+	lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
+
+	if ((lnksta & PCI_EXP_LNKSTA_CLS) != (lnkcap & PCI_EXP_LNKCAP_SLS))
+		renesas_pcie_retrain_link(pci);
 }
 
 static int renesas_pcie_link_up(struct dw_pcie *pci)
@@ -171,7 +179,7 @@ static int renesas_pcie_link_up(struct dw_pcie *pci)
 	val = renesas_pcie_readl(pcie, PCIEINTSTS0);
 	mask = RDLH_LINK_UP | SMLH_LINK_UP;
 
-	renesas_pcie_retrain_link(pci);
+	renesas_pcie_check_speed(pci);
 
 	return (val & mask) == mask;
 }
