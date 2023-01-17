@@ -506,6 +506,7 @@
 /* R-Car V3U Classical and CAN FD mode specific register map */
 #define RCANFD_V3U_CFDCFG		(0x1314)
 #define RCANFD_V3U_DCFG(m)		(0x1400 + (0x20 * (m)))
+#define RCANFD_V3U_FDCFG(m)		(0x1404 + (0x20 * (m)))
 
 #define RCANFD_V3U_GAFL_OFFSET		(0x1800)
 
@@ -736,11 +737,13 @@ static int rcar_canfd_reset_controller(struct rcar_canfd_global *gpriv)
 	/* Set the controller into appropriate mode */
 	if (gpriv->chip_id == R8A779A0 || gpriv->chip_id == R8A779G0) {
 		if (gpriv->fdmode)
-			rcar_canfd_set_bit(gpriv->base, RCANFD_V3U_CFDCFG,
-					   RCANFD_FDCFG_FDOE);
+			for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels)
+				rcar_canfd_set_bit(gpriv->base, RCANFD_V3U_FDCFG(ch),
+						   RCANFD_FDCFG_FDOE);
 		else
-			rcar_canfd_set_bit(gpriv->base, RCANFD_V3U_CFDCFG,
-					   RCANFD_FDCFG_CLOE);
+			for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels)
+				rcar_canfd_set_bit(gpriv->base, RCANFD_V3U_FDCFG(ch),
+						   RCANFD_FDCFG_CLOE);
 	} else {
 		if (gpriv->fdmode)
 			rcar_canfd_set_bit(gpriv->base, RCANFD_GRMCFG,
