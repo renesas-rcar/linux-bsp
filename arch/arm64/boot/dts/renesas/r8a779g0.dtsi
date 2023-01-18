@@ -2334,6 +2334,19 @@
 				 <&ipmmu_ir 30>, <&ipmmu_ir 31>;
 		};
 
+		impspmc1_mem: cnn-ram@ed600000 {
+			compatible = "generic-uio";
+			reg = <0 0xed600000 0 0x80000>;
+			clocks = <&cpg CPG_MOD 23>;
+			power-domains = <&sysc R8A779G0_PD_A1CNN0>;
+			linux,uio-name = "imp_spmc_01";
+			ipmmu-id = <RCAR_IPMMU_IR 24>;
+			iommus = <&ipmmu_ir 24>, <&ipmmu_ir 25>,
+				 <&ipmmu_ir 26>, <&ipmmu_ir 27>,
+				 <&ipmmu_ir 28>, <&ipmmu_ir 29>,
+				 <&ipmmu_ir 30>, <&ipmmu_ir 31>;
+		};
+
 		impvdsp00_00: vdsp@f1400000 {
 			compatible = "generic-uio";
 			reg = <0 0xf1400000 0 0x1a0000>;
