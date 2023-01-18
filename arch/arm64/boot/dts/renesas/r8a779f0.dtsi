@@ -1048,7 +1048,6 @@
 			renesas,ipmmu-main = <&ipmmu_mm 2>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
-			status = "disabled";
 		};
 
                 qos@e67e0000 {
@@ -1080,7 +1079,7 @@
 				 /* non-prefetchable memory */
 				  0x82000000 0 0x30000000 0 0x30000000 0 0x10000000>;
 				     /* Map all possible DDR as inbound ranges */
-			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+			dma-ranges = <0x42000000 0 0x00000000 0 0x00000000 1 0x00000000>;
 			interrupts = <GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 417 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 418 IRQ_TYPE_LEVEL_HIGH>,
@@ -1106,6 +1105,10 @@
 			snps,enable-cdm-check = "true";
 			max-link-speed = <4>;
 			status = "disabled";
+			iommus = <&ipmmu_hc 32>;
+			iommu-map = <0x000 &ipmmu_hc 32 0x10000>,
+				    <0x10000 &ipmmu_hc 33 0x10000>;
+			iommu-map-mask = <0x0>;
 		};
 
 		pciec0_ep: pciec0_ep@e65d0000 {
@@ -1138,6 +1141,9 @@
 			num-ib-windows = <16>;
 			num-ob-windows = <16>;
 			status = "disabled";
+			iommu-map = <0x000 &ipmmu_hc 32 0x10000>,
+				    <0x10000 &ipmmu_hc 33 0x10000>;
+			iommu-map-mask = <0x0>;
 		};
 
 		pciec1: pcie@e65d8000 {
