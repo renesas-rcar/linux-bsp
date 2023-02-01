@@ -5026,6 +5026,12 @@
 			iommus = <&ipmmu_vip1 16>;
 		};
 
+		ecm: ecm@e6250000 {
+			compatible = "generic-uio";
+			reg = <0 0xe6250000 0 0x1000>;
+			linux,uio-name = "ecm_00";
+		};
+
 		system_ram: systemram@e6300000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6300000 0 0x100000>;
