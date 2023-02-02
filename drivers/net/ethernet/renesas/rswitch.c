@@ -804,11 +804,13 @@ enum rswitch_gwca_mode {
 #define FWPC0_MACHMA	BIT(27)
 #define FWPC0_VLANSA	BIT(28)
 
+#define FWPC0(i)                (FWPC00 + (i) * 0x10)
 #define FWPC0_DEFAULT	(FWPC0_LTHTA | FWPC0_IP4UE | FWPC0_IP4TE | \
 			 FWPC0_IP4OE | FWPC0_L2SE | FWPC0_IP4EA | \
 			 FWPC0_IPDSA | FWPC0_IPHLA | FWPC0_MACSDA | \
 			 FWPC0_MACHLA |	FWPC0_MACHMA | FWPC0_VLANSA)
 
+#define FWPC1(i)                (FWPC10 + (i) * 0x10)
 #define FWPC1_DDE	BIT(0)
 
 #define	FWPBFC(i)		(FWPBFCi + (i) * 0x10)
@@ -2040,10 +2042,11 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	desc->dptrh = cpu_to_le32(upper_32_bits(dma_addr));
 	desc->info_ds = cpu_to_le16(skb->len);
 
+	desc->info1 = (BIT(rdev->etha->index) << 48) | BIT(2);
 	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
 		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
 		rdev->ts_tag++;
-		desc->info1 = (rdev->ts_tag << 8) | BIT(3);
+		desc->info1 |= (rdev->ts_tag << 8) | BIT(3);
 	}
 
 	skb_tx_timestamp(skb);
@@ -2817,6 +2820,11 @@ static void rswitch_fwd_init(struct rswitch_private *priv)
 		rs_write32(priv->rdev[i]->rx_chain->index, priv->addr + FWPBFCSDC(gwca_hw_idx, i));
 		rs_write32(BIT(priv->gwca.index), priv->addr + FWPBFC(i));
 	}
+
+	/* For GWCA */
+	rs_write32(FWPC0_DEFAULT, priv->addr + FWPC0(priv->gwca.index));
+	rs_write32(FWPC1_DDE, priv->addr + FWPC1(priv->gwca.index));
+	rs_write32(0, priv->addr + FWPBFC(priv->gwca.index));
 	rs_write32(GENMASK(num_etha_ports - 1, 0), priv->addr + FWPBFC(priv->gwca.index));
 
 	/* TODO: add chrdev for fwd */
