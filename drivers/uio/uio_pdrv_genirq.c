@@ -113,19 +113,11 @@ static void local_clk_disable(struct uio_pdrv_genirq_platdata *priv)
 
 static int uio_pdrv_genirq_open(struct uio_info *info, struct inode *inode)
 {
-	struct uio_pdrv_genirq_platdata *priv = info->priv;
-
-	/* Wait until the Runtime PM code has woken up the device */
-	local_pm_runtime_get_sync(priv);
 	return 0;
 }
 
 static int uio_pdrv_genirq_release(struct uio_info *info, struct inode *inode)
 {
-	struct uio_pdrv_genirq_platdata *priv = info->priv;
-
-	/* Tell the Runtime PM code that the device has become idle */
-	local_pm_runtime_put_sync(priv);
 	return 0;
 }
 
@@ -156,8 +148,9 @@ static int priv_set_pwr(struct uio_info *info, int value)
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
 	if (priv->pd) {
-		dev_err(&priv->pdev->dev, "device has not power-domains to set\n");
-		return -EOPNOTSUPP;
+		dev_dbg(&priv->pdev->dev, "device has not power-domains to set\n");
+		ret = -EOPNOTSUPP;
+		return ret;
 	}
 
 	if (((value == 0) && priv->pwr_cnt > 0) || ((value != 0)
@@ -182,13 +175,13 @@ static int priv_get_pwr(struct uio_info *info)
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
 	if (priv->pd) {
-		dev_err(&priv->pdev->dev, "device has not power-domains to get\n");
-		return -EOPNOTSUPP;
+		dev_dbg(&priv->pdev->dev, "device has not power-domains to get\n");
+		priv->pwr_cnt = -EOPNOTSUPP;
+		return priv->pwr_cnt;
 	}
 
 	dev_dbg(&priv->pdev->dev, "Get power state pwr_cnt=%d, clk_cnt=%d\n",
 		priv->pwr_cnt, priv->clk_cnt);
-
 	return priv->pwr_cnt;
 }
 
@@ -203,8 +196,9 @@ static int priv_set_clk(struct uio_info *info, int value)
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
 	if (!priv->clk) {
-		dev_err(&priv->pdev->dev, "device has not clk to set\n");
-		return -EOPNOTSUPP;
+		dev_dbg(&priv->pdev->dev, "device has not clk to set\n");
+		ret = -EOPNOTSUPP;
+		return ret;
 	}
 
 	if (value == 0)
@@ -227,8 +221,9 @@ static int priv_get_clk(struct uio_info *info)
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
 
 	if (!priv->clk) {
-		dev_err(&priv->pdev->dev, "device has not clk to get\n");
-		return -EOPNOTSUPP;
+		dev_dbg(&priv->pdev->dev, "device has not clk to get\n");
+		priv->clk_cnt = -EOPNOTSUPP;
+		return priv->clk_cnt;
 	}
 
 	dev_dbg(&priv->pdev->dev, "Get clock state - clk_cnt=%d\n",
@@ -244,6 +239,12 @@ static int priv_clk_get_div(struct uio_info *info)
 	struct clk *parent;
 
 	rate = clk_get_rate(priv->clk);
+	if (!priv->clk) {
+		dev_dbg(&priv->pdev->dev, "device has not clk to get div\n");
+		div = -EOPNOTSUPP;
+		return div;
+	}
+
 	if (!rate)
 		return 0;
 
@@ -290,8 +291,9 @@ static int priv_set_rst(struct uio_info *info, int value)
 	int status, ret;
 
 	if (!priv->rst) {
-		dev_err(&priv->pdev->dev, "device has not reset to set\n");
-		return -EOPNOTSUPP;
+		dev_dbg(&priv->pdev->dev, "device has not reset to set\n");
+		ret = -EOPNOTSUPP;
+		return ret;
 	}
 
 	status = reset_control_status(priv->rst);
@@ -321,8 +323,9 @@ static int priv_get_rst(struct uio_info *info)
 	int status;
 
 	if (!priv->rst) {
-		dev_err(&priv->pdev->dev, "device has not reset to get\n");
-		return -EOPNOTSUPP;
+		dev_dbg(&priv->pdev->dev, "device has not reset to get\n");
+		status = -EOPNOTSUPP;
+		return status;
 	}
 
 	status = reset_control_status(priv->rst);
@@ -344,6 +347,10 @@ static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
 		break;
 	case UIO_PDRV_GET_PWR:
 		value = priv_get_pwr(info);
+		if (value == -EOPNOTSUPP)
+			ret = value;
+		else
+			ret = 0;
 		if (copy_to_user((int __user *)arg, &value, sizeof(value)))
 			return -EFAULT;
 		arg = value;
@@ -355,12 +362,20 @@ static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
 		break;
 	case UIO_PDRV_GET_CLK:
 		value = priv_get_clk(info);
+		if (value == -EOPNOTSUPP)
+			ret = value;
+		else
+			ret = 0;
 		if (copy_to_user((int __user *)arg, &value, sizeof(value)))
 			return -EFAULT;
 		arg = value;
 		break;
 	case UIO_PDRV_CLK_GET_DIV:
 		value = priv_clk_get_div(info);
+		if (value == -EOPNOTSUPP)
+			ret = value;
+		else
+			ret = 0;
 		if (copy_to_user((int __user *)arg, &value, sizeof(value)))
 			return -EFAULT;
 		arg = value;
@@ -376,8 +391,13 @@ static int uio_pdrv_genirq_ioctl(struct uio_info *info, unsigned int cmd,
 		break;
 	case UIO_PDRV_GET_RESET:
 		value = priv_get_rst(info);
+		if (value == -EOPNOTSUPP)
+			ret = value;
+		else
+			ret = 0;
 		if (copy_to_user((int __user *)arg, &value, sizeof(value)))
 			return -EFAULT;
+		arg = value;
 		break;
 	}
 
