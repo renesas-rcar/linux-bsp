@@ -287,10 +287,6 @@ EXPORT_SYMBOL(xen_free_unpopulated_pages);
 int xen_alloc_unpopulated_contiguous_pages(struct device *dev,
 		unsigned int nr_pages, struct page **pages)
 {
-	/* XXX Handle devices which support 64-bit DMA address only for now */
-	if (dma_get_mask(dev) != DMA_BIT_MASK(64))
-		return -EINVAL;
-
 	return alloc_unpopulated_pages(nr_pages, pages, true);
 }
 EXPORT_SYMBOL(xen_alloc_unpopulated_contiguous_pages);
