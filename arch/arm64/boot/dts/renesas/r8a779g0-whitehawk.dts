@@ -21,6 +21,26 @@
 		#size-cells = <2>;
 		ranges;
 
+		vdsp0_region: linux,vdsp0_region@5e000000 {
+			no-map;
+			reg = <0x00000000 0x5e000000 0x0 0x00600000>;
+		};
+
+		vdsp1_region: linux,vdsp1_region@5e600000 {
+			no-map;
+			reg = <0x00000000 0x5e600000 0x0 0x00600000>;
+		};
+
+		vdsp2_region: linux,vdsp2_region@5eC00000 {
+			no-map;
+			reg = <0x00000000 0x5eC00000 0x0 0x00600000>;
+		};
+
+		vdsp3_region: linux,vdsp3_region@5f200000 {
+			no-map;
+			reg = <0x00000000 0x5f200000 0x0 0x00600000>;
+		};
+
 		/* region for cr core application */
 		cr_region: linux,cr_region@60000000 {
 			no-map;
@@ -54,6 +74,11 @@
 			remote-endpoint = <&sn65dsi86_out1>;
 			};
 		};
+	};
+
+	cmem {
+		memory-region = <&vdsp0_region>, <&vdsp1_region>,
+				<&vdsp2_region>, <&vdsp3_region>;
 	};
 };
 
