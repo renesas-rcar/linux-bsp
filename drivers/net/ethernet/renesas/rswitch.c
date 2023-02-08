@@ -970,8 +970,8 @@ struct rswitch_gwca_chain {
 	bool dir_tx;
 	bool gptp;
 	union {
-		struct rswitch_ext_desc *ring;
-		struct rswitch_ext_ts_desc *ts_ring;
+		struct rswitch_ext_desc *tx_ring;
+		struct rswitch_ext_ts_desc *rx_ring;
 	};
 	dma_addr_t ring_dma;
 	u32 num_ring;
@@ -1157,7 +1157,7 @@ static bool rswitch_is_chain_rxed(struct rswitch_gwca_chain *c, u8 unexpected)
 	struct rswitch_ext_ts_desc *desc;
 
 	entry = c->dirty % c->num_ring;
-	desc = &c->ts_ring[entry];
+	desc = &c->rx_ring[entry];
 
 	if ((desc->die_dt & DT_MASK) != unexpected)
 		return true;
@@ -1171,7 +1171,7 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 	struct rswitch_gwca_chain *c = rdev->rx_chain;
 	int boguscnt = c->dirty + c->num_ring - c->cur;
 	int entry = c->cur % c->num_ring;
-	struct rswitch_ext_ts_desc *desc = &c->ts_ring[entry];
+	struct rswitch_ext_ts_desc *desc = &c->rx_ring[entry];
 	int limit;
 	u16 pkt_len;
 	struct sk_buff *skb;
@@ -1208,13 +1208,13 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 		rdev->ndev->stats.rx_bytes += pkt_len;
 
 		entry = (++c->cur) % c->num_ring;
-		desc = &c->ts_ring[entry];
+		desc = &c->rx_ring[entry];
 	}
 
 	/* Refill the RX ring buffers */
 	for (; c->cur - c->dirty > 0; c->dirty++) {
 		entry = c->dirty % c->num_ring;
-		desc = &c->ts_ring[entry];
+		desc = &c->rx_ring[entry];
 		desc->info_ds = cpu_to_le16(PKT_BUF_SZ);
 
 		if (!c->skb[entry]) {
@@ -1261,7 +1261,7 @@ static int rswitch_tx_free(struct net_device *ndev, bool free_txed_only)
 
 	for (; c->cur - c->dirty > 0; c->dirty++) {
 		entry = c->dirty % c->num_ring;
-		desc = &c->ring[entry];
+		desc = &c->tx_ring[entry];
 		if (free_txed_only && (desc->die_dt & DT_MASK) != DT_FEMPTY)
 			break;
 
@@ -2037,7 +2037,7 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	entry = c->cur % c->num_ring;
 	c->skb[entry] = skb;
-	desc = &c->ring[entry];
+	desc = &c->tx_ring[entry];
 	desc->dptrl = cpu_to_le32(lower_32_bits(dma_addr));
 	desc->dptrh = cpu_to_le32(upper_32_bits(dma_addr));
 	desc->info_ds = cpu_to_le16(skb->len);
@@ -2329,13 +2329,13 @@ static void rswitch_gwca_chain_free(struct net_device *ndev,
 	if (c->gptp) {
 		dma_free_coherent(ndev->dev.parent,
 				  sizeof(struct rswitch_ext_ts_desc) *
-				  (c->num_ring + 1), c->ts_ring, c->ring_dma);
-		c->ts_ring = NULL;
+				  (c->num_ring + 1), c->rx_ring, c->ring_dma);
+		c->rx_ring = NULL;
 	} else {
 		dma_free_coherent(ndev->dev.parent,
 				  sizeof(struct rswitch_desc) *
-				  (c->num_ring + 1), c->ring, c->ring_dma);
-		c->ring = NULL;
+				  (c->num_ring + 1), c->tx_ring, c->ring_dma);
+		c->tx_ring = NULL;
 	}
 
 	if (!c->dir_tx) {
@@ -2378,14 +2378,14 @@ static int rswitch_gwca_chain_init(struct net_device *ndev,
 	}
 
 	if (gptp)
-		c->ts_ring = dma_alloc_coherent(ndev->dev.parent,
+		c->rx_ring = dma_alloc_coherent(ndev->dev.parent,
 				sizeof(struct rswitch_ext_ts_desc) *
 				(c->num_ring + 1), &c->ring_dma, GFP_KERNEL);
 	else
-		c->ring = dma_alloc_coherent(ndev->dev.parent,
+		c->tx_ring = dma_alloc_coherent(ndev->dev.parent,
 				sizeof(struct rswitch_ext_desc) *
 				(c->num_ring + 1), &c->ring_dma, GFP_KERNEL);
-	if (!c->ts_ring && !c->ring)
+	if (!c->rx_ring && !c->tx_ring)
 		goto out;
 
 	index = c->index / 32;
@@ -2413,8 +2413,8 @@ static int rswitch_gwca_chain_format(struct net_device *ndev,
 	int i;
 	dma_addr_t dma_addr;
 
-	memset(c->ring, 0, tx_ring_size);
-	for (i = 0, ring = c->ring; i < c->num_ring; i++, ring++) {
+	memset(c->tx_ring, 0, tx_ring_size);
+	for (i = 0, ring = c->tx_ring; i < c->num_ring; i++, ring++) {
 		if (!c->dir_tx) {
 			dma_addr = dma_map_single(ndev->dev.parent,
 					c->skb[i]->data, PKT_BUF_SZ,
@@ -2444,18 +2444,18 @@ static int rswitch_gwca_chain_format(struct net_device *ndev,
 	return 0;
 }
 
-static int rswitch_gwca_chain_ts_format(struct net_device *ndev,
-					struct rswitch_private *priv,
-					struct rswitch_gwca_chain *c)
+static int rswitch_gwca_chain_ext_ts_format(struct net_device *ndev,
+					    struct rswitch_private *priv,
+					    struct rswitch_gwca_chain *c)
 {
 	struct rswitch_ext_ts_desc *ring;
 	struct rswitch_desc *desc;
-	int tx_ts_ring_size = sizeof(*ring) * c->num_ring;
+	int ring_size = sizeof(*ring) * c->num_ring;
 	int i;
 	dma_addr_t dma_addr;
 
-	memset(c->ts_ring, 0, tx_ts_ring_size);
-	for (i = 0, ring = c->ts_ring; i < c->num_ring; i++, ring++) {
+	memset(c->rx_ring, 0, ring_size);
+	for (i = 0, ring = c->rx_ring; i < c->num_ring; i++, ring++) {
 		if (!c->dir_tx) {
 			dma_addr = dma_map_single(ndev->dev.parent,
 					c->skb[i]->data, PKT_BUF_SZ,
@@ -2582,7 +2582,7 @@ static int rswitch_rxdmac_init(struct net_device *ndev,
 	if (err < 0)
 		goto out_init;
 
-	err = rswitch_gwca_chain_ts_format(ndev, priv, rdev->rx_chain);
+	err = rswitch_gwca_chain_ext_ts_format(ndev, priv, rdev->rx_chain);
 	if (err < 0)
 		goto out_format;
 
