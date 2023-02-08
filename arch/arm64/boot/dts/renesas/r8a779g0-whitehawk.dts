@@ -41,6 +41,11 @@
 			reg = <0x00000000 0x5f200000 0x0 0x00600000>;
 		};
 
+		pap_region: linux,pap_region@5f800000 {
+			no-map;
+			reg = <0x00000000 0x5f800000 0x0 0x00300000>;
+		};
+
 		/* region for cr core application */
 		cr_region: linux,cr_region@60000000 {
 			no-map;
@@ -78,7 +83,8 @@
 
 	cmem {
 		memory-region = <&vdsp0_region>, <&vdsp1_region>,
-				<&vdsp2_region>, <&vdsp3_region>;
+				<&vdsp2_region>, <&vdsp3_region>,
+				<&pap_region>;
 	};
 };
 
