@@ -21,34 +21,34 @@
 		#size-cells = <2>;
 		ranges;
 
-		vdsp0_region: linux,vdsp0_region@5e000000 {
+		vdsp0_region: linux,vdsp0_region@5dc00000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x00000000 0x5e000000 0x0 0x00600000>;
+			reg = <0x00000000 0x5dc00000 0x0 0x00800000>;
 		};
 
-		vdsp1_region: linux,vdsp1_region@5e600000 {
+		vdsp1_region: linux,vdsp1_region@5e400000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x00000000 0x5e600000 0x0 0x00600000>;
+			reg = <0x00000000 0x5e400000 0x0 0x00800000>;
 		};
 
-		vdsp2_region: linux,vdsp2_region@5eC00000 {
+		vdsp2_region: linux,vdsp2_region@5ec00000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x00000000 0x5eC00000 0x0 0x00600000>;
+			reg = <0x00000000 0x5ec00000 0x0 0x00800000>;
 		};
 
-		vdsp3_region: linux,vdsp3_region@5f200000 {
+		vdsp3_region: linux,vdsp3_region@5f400000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x00000000 0x5f200000 0x0 0x00600000>;
+			reg = <0x00000000 0x5f400000 0x0 0x00800000>;
 		};
 
-		pap_region: linux,pap_region@5f800000 {
+		pap_region: linux,pap_region@5fc00000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x00000000 0x5f800000 0x0 0x00300000>;
+			reg = <0x00000000 0x5fc00000 0x0 0x00400000>;
 		};
 
 		/* region for cr core application */
