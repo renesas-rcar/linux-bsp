@@ -968,7 +968,6 @@ struct rswitch_etha {
 struct rswitch_gwca_chain {
 	int index;
 	bool dir_tx;
-	bool gptp;
 	union {
 		struct rswitch_ext_desc *tx_ring;
 		struct rswitch_ext_ts_desc *rx_ring;
@@ -999,7 +998,6 @@ struct rswitch_device {
 	struct net_device *ndev;
 	struct napi_struct napi;
 	void __iomem *addr;
-	bool gptp_master;
 	struct rswitch_gwca_chain *tx_chain;
 	struct rswitch_gwca_chain *rx_chain;
 	spinlock_t lock;
@@ -2326,11 +2324,14 @@ static void rswitch_gwca_chain_free(struct net_device *ndev,
 {
 	int i;
 
-	if (c->gptp) {
+	if (!c->dir_tx) {
 		dma_free_coherent(ndev->dev.parent,
 				  sizeof(struct rswitch_ext_ts_desc) *
 				  (c->num_ring + 1), c->rx_ring, c->ring_dma);
 		c->rx_ring = NULL;
+
+		for (i = 0; i < c->num_ring; i++)
+			dev_kfree_skb(c->skb[i]);
 	} else {
 		dma_free_coherent(ndev->dev.parent,
 				  sizeof(struct rswitch_desc) *
@@ -2338,19 +2339,14 @@ static void rswitch_gwca_chain_free(struct net_device *ndev,
 		c->tx_ring = NULL;
 	}
 
-	if (!c->dir_tx) {
-		for (i = 0; i < c->num_ring; i++)
-			dev_kfree_skb(c->skb[i]);
-	}
-
 	kfree(c->skb);
 	c->skb = NULL;
 }
 
 static int rswitch_gwca_chain_init(struct net_device *ndev,
-				struct rswitch_private *priv,
-				struct rswitch_gwca_chain *c,
-				bool dir_tx, bool gptp, int num_ring)
+				   struct rswitch_private *priv,
+				   struct rswitch_gwca_chain *c,
+				   bool dir_tx, int num_ring)
 {
 	int i, bit;
 	int index = c->index;	/* Keep the index before memset() */
@@ -2359,7 +2355,6 @@ static int rswitch_gwca_chain_init(struct net_device *ndev,
 	memset(c, 0, sizeof(*c));
 	c->index = index;
 	c->dir_tx = dir_tx;
-	c->gptp = gptp;
 	c->num_ring = num_ring;
 	c->ndev = ndev;
 
@@ -2375,16 +2370,14 @@ static int rswitch_gwca_chain_init(struct net_device *ndev,
 			skb_reserve(skb, NET_IP_ALIGN);
 			c->skb[i] = skb;
 		}
-	}
-
-	if (gptp)
 		c->rx_ring = dma_alloc_coherent(ndev->dev.parent,
 				sizeof(struct rswitch_ext_ts_desc) *
 				(c->num_ring + 1), &c->ring_dma, GFP_KERNEL);
-	else
+	} else {
 		c->tx_ring = dma_alloc_coherent(ndev->dev.parent,
 				sizeof(struct rswitch_ext_desc) *
 				(c->num_ring + 1), &c->ring_dma, GFP_KERNEL);
+	}
 	if (!c->rx_ring && !c->tx_ring)
 		goto out;
 
@@ -2538,8 +2531,7 @@ static int rswitch_txdmac_init(struct net_device *ndev,
 	if (!rdev->tx_chain)
 		return -EBUSY;
 
-	err = rswitch_gwca_chain_init(ndev, priv, rdev->tx_chain, true, false,
-				      TX_RING_SIZE);
+	err = rswitch_gwca_chain_init(ndev, priv, rdev->tx_chain, true, TX_RING_SIZE);
 	if (err < 0)
 		goto out_init;
 
@@ -2577,8 +2569,7 @@ static int rswitch_rxdmac_init(struct net_device *ndev,
 	if (!rdev->rx_chain)
 		return -EBUSY;
 
-	err = rswitch_gwca_chain_init(ndev, priv, rdev->rx_chain, false, true,
-				      RX_RING_SIZE);
+	err = rswitch_gwca_chain_init(ndev, priv, rdev->rx_chain, false, RX_RING_SIZE);
 	if (err < 0)
 		goto out_init;
 
