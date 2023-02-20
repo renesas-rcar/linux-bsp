@@ -1949,20 +1949,26 @@ static int rswitch_open(struct net_device *ndev)
 
 	if (!parallel_mode && rdev->etha) {
 		if (!rdev->etha->operated) {
-			phy = rswitch_get_phy_node(rdev);
-			if (!phy)
-				goto error;
+			if (!rdev->etha->mii) {
+				phy = rswitch_get_phy_node(rdev);
+				if (!phy)
+					goto error;
+			}
+
 			err = rswitch_etha_hw_init(rdev->etha, ndev->dev_addr);
 			if (err < 0)
 				goto error;
-			err = rswitch_mii_register(rdev);
-			if (err < 0)
-				goto error;
-			err = rswitch_phy_init(rdev, phy);
-			if (err < 0)
-				goto error;
 
-			of_node_put(phy);
+			if (!rdev->etha->mii) {
+				err = rswitch_mii_register(rdev);
+				if (err < 0)
+					goto error;
+				err = rswitch_phy_init(rdev, phy);
+				if (err < 0)
+					goto error;
+
+				of_node_put(phy);
+			}
 		}
 
 		ndev->phydev->speed = rdev->etha->speed;
@@ -3164,6 +3170,7 @@ static int renesas_eth_sw_remove(struct platform_device *pdev)
 		clk_disable(priv->phy_clk);
 	}
 
+	rtsn_ptp_unregister(priv->ptp_priv);
 	rswitch_desc_free(priv);
 
 	platform_set_drvdata(pdev, NULL);
@@ -3171,11 +3178,145 @@ static int renesas_eth_sw_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int __maybe_unused rswitch_suspend(struct device *dev)
+{
+	struct rswitch_private *priv = dev_get_drvdata(dev);
+	int i;
+
+	for (i = 0; i < num_ndev; i++) {
+		struct net_device *ndev = priv->rdev[i]->ndev;
+
+		if (priv->rdev[i]->tx_chain->index < 0)
+			continue;
+
+		if (netif_running(ndev)) {
+			netif_stop_subqueue(ndev, 0);
+			rswitch_stop(ndev);
+		}
+
+		rswitch_txdmac_free(ndev, priv);
+		rswitch_rxdmac_free(ndev, priv);
+		priv->rdev[i]->etha->operated = false;
+	}
+
+	rtsn_ptp_unregister(priv->ptp_priv);
+	rswitch_gwca_ts_queue_free(priv);
+	rswitch_desc_free(priv);
+
+	return 0;
+}
+
+static int rswitch_resume_chan(struct net_device *ndev)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	int ret;
+
+	ret = rswitch_rxdmac_init(ndev, rdev->priv);
+	if (ret)
+		goto out_dmac;
+
+	ret = rswitch_txdmac_init(ndev, rdev->priv);
+	if (ret) {
+		rswitch_rxdmac_free(ndev, rdev->priv);
+		goto out_dmac;
+	}
+
+	if (netif_running(ndev)) {
+		ret = rswitch_open(ndev);
+		if (ret)
+			goto error;
+	}
+
+	return 0;
+
+error:
+	rswitch_txdmac_free(ndev, rdev->priv);
+	rswitch_rxdmac_free(ndev, rdev->priv);
+out_dmac:
+	/* Workround that still gets two chains (rx, tx)
+	 * to allow the next channel, if any, to restore
+	 * the correct index of chains.
+	 */
+	rswitch_gwca_get(rdev->priv);
+	rswitch_gwca_get(rdev->priv);
+	rdev->tx_chain->index = -1;
+
+	return ret;
+}
+
+static int __maybe_unused rswitch_resume(struct device *dev)
+{
+	struct rswitch_private *priv = dev_get_drvdata(dev);
+	int i, ret, err = 0;
+
+	ret = rswitch_desc_alloc(priv);
+	if (ret)
+		return ret;
+
+	ret = rswitch_gwca_ts_queue_alloc(priv);
+	if (ret) {
+		rswitch_desc_free(priv);
+		return ret;
+	}
+
+	rswitch_gwca_ts_queue_fill(priv, 0, TS_RING_SIZE);
+	INIT_LIST_HEAD(&priv->gwca.ts_info_list);
+
+	if (!parallel_mode)
+		rswitch_clock_enable(priv);
+
+	ret = rswitch_gwca_hw_init(priv);
+	if (ret)
+		return ret;
+
+	if (!parallel_mode) {
+		ret = rswitch_bpool_config(priv);
+		if (ret)
+			return ret;
+
+		rswitch_fwd_init(priv);
+	}
+
+	for (i = 0; i < num_ndev; i++) {
+		struct net_device *ndev = priv->rdev[i]->ndev;
+
+		if (priv->rdev[i]->tx_chain->index >= 0) {
+			ret = rswitch_resume_chan(ndev);
+			if (ret) {
+				pr_info("Failed to resume %s", ndev->name);
+				err++;
+			}
+		} else {
+			err++;
+		}
+	}
+
+	if (err == num_ndev) {
+		rswitch_gwca_ts_queue_free(priv);
+		rswitch_desc_free(priv);
+
+		return -ENXIO;
+	}
+
+	return 0;
+}
+
+static int __maybe_unused rswitch_runtime_nop(struct device *dev)
+{
+	return 0;
+}
+
+static const struct dev_pm_ops rswitch_dev_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(rswitch_suspend, rswitch_resume)
+	SET_RUNTIME_PM_OPS(rswitch_runtime_nop, rswitch_runtime_nop, NULL)
+};
+
 static struct platform_driver renesas_eth_sw_driver_platform = {
 	.probe = renesas_eth_sw_probe,
 	.remove = renesas_eth_sw_remove,
 	.driver = {
-		.name = "renesas_eth_sw",
+		.name	= "renesas_eth_sw",
+		.pm	= &rswitch_dev_pm_ops,
 		.of_match_table = renesas_eth_sw_of_table,
 	}
 };

@@ -78,6 +78,7 @@ struct rtsn_ptp_private {
 };
 
 int rtsn_ptp_init(struct rtsn_ptp_private *ptp_priv, enum rtsn_ptp_reg_layout layout, u32 clock);
+int rtsn_ptp_unregister(struct rtsn_ptp_private *ptp_priv);
 struct rtsn_ptp_private *rtsn_ptp_alloc(struct platform_device *pdev);
 
 #endif
