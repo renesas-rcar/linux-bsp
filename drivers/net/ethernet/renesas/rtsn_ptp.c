@@ -164,6 +164,18 @@ int rtsn_ptp_init(struct rtsn_ptp_private *ptp_priv, enum rtsn_ptp_reg_layout la
 	return 0;
 }
 
+int rtsn_ptp_unregister(struct rtsn_ptp_private *ptp_priv)
+{
+	if (!ptp_priv->parallel_mode)
+		writel(0x01, ptp_priv->addr + ptp_priv->offs->disable);
+
+	ptp_clock_unregister(ptp_priv->clock);
+
+	ptp_priv->initialized = false;
+
+	return 0;
+}
+
 struct rtsn_ptp_private *rtsn_ptp_alloc(struct platform_device *pdev)
 {
 	struct rtsn_ptp_private *ptp;
