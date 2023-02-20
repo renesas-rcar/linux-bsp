@@ -2403,7 +2403,6 @@
 
 		impvdsp00_02 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2822>;
 			reset-names = "reg";
 			linux,uio-name = "vdsp00_02";
@@ -2411,7 +2410,6 @@
 
 		impvdsp00_03 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2823>;
 			reset-names = "global";
 			linux,uio-name = "vdsp00_03";
@@ -2419,7 +2417,6 @@
 
 		impvdsp00_04 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2824>;
 			reset-names = "sys";
 			linux,uio-name = "vdsp00_04";
@@ -2427,7 +2424,6 @@
 
 		impvdsp00_05 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2826>;
 			reset-names = "vdsp0_ocem";
 			linux,uio-name = "vdsp00_05";
@@ -2435,7 +2431,6 @@
 
 		impvdsp00_06 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2827>;
 			reset-names = "vdsp0_apbdbg";
 			linux,uio-name = "vdsp00_06";
@@ -2443,7 +2438,6 @@
 
 		impvdsp00_07 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2828>;
 			reset-names = "vdsp0_syspo";
 			linux,uio-name = "vdsp00_07";
@@ -2523,7 +2517,6 @@
 
 		impvdsp01_02 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2831>;
 			reset-names = "vdsp1_reg";
 			linux,uio-name = "vdsp01_02";
@@ -2531,7 +2524,6 @@
 
 		impvdsp01_03 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2900>;
 			reset-names = "vdsp1_global";
 			linux,uio-name = "vdsp01_03";
@@ -2539,7 +2531,6 @@
 
 		impvdsp01_04 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2901>;
 			reset-names = "vdsp1_sys";
 			linux,uio-name = "vdsp01_04";
@@ -2547,7 +2538,6 @@
 
 		impvdsp01_05 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2903>;
 			reset-names = "vdsp1_ocem";
 			linux,uio-name = "vdsp01_05";
@@ -2555,7 +2545,6 @@
 
 		impvdsp01_06 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2904>;
 			reset-names = "vdsp1_apbdbg";
 			linux,uio-name = "vdsp01_06";
@@ -2563,7 +2552,6 @@
 
 		impvdsp01_07 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2905>;
 			reset-names = "vdsp1_syspo";
 			linux,uio-name = "vdsp01_07";
@@ -2643,7 +2631,6 @@
 
 		impvdsp02_02 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2908>;
 			reset-names = "vdsp2_reg";
 			linux,uio-name = "vdsp02_02";
@@ -2651,7 +2638,6 @@
 
 		impvdsp02_03 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2909>;
 			reset-names = "vdsp2_global";
 			linux,uio-name = "vdsp02_03";
@@ -2659,7 +2645,6 @@
 
 		impvdsp02_04 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2910>;
 			reset-names = "vdsp2_sys";
 			linux,uio-name = "vdsp02_04";
@@ -2667,7 +2652,6 @@
 
 		impvdsp02_05 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2912>;
 			reset-names = "vdsp2_ocem";
 			linux,uio-name = "vdsp02_05";
@@ -2675,7 +2659,6 @@
 
 		impvdsp02_06 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2913>;
 			reset-names = "vdsp2_apbdbg";
 			linux,uio-name = "vdsp02_06";
@@ -2683,7 +2666,6 @@
 
 		impvdsp02_07 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2914>;
 			reset-names = "vdsp2_syspo";
 			linux,uio-name = "vdsp02_07";
@@ -2763,7 +2745,6 @@
 
 		impvdsp03_02 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2917>;
 			reset-names = "vdsp3_reg";
 			linux,uio-name = "vdsp03_02";
@@ -2771,7 +2752,6 @@
 
 		impvdsp03_03 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2918>;
 			reset-names = "vdsp3_global";
 			linux,uio-name = "vdsp03_03";
@@ -2779,7 +2759,6 @@
 
 		impvdsp03_04 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2919>;
 			reset-names = "vdsp3_sys";
 			linux,uio-name = "vdsp03_04";
@@ -2787,7 +2766,6 @@
 
 		impvdsp03_05 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2921>;
 			reset-names = "vdsp3_ocem";
 			linux,uio-name = "vdsp03_05";
@@ -2795,7 +2773,6 @@
 
 		impvdsp03_06 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2922>;
 			reset-names = "vdsp3_apbdbg";
 			linux,uio-name = "vdsp03_06";
@@ -2803,7 +2780,6 @@
 
 		impvdsp03_07 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2923>;
 			reset-names = "vdsp3_syspo";
 			linux,uio-name = "vdsp03_07";
