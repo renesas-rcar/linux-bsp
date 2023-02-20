@@ -1664,8 +1664,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfeb00000 0 0x40000>;
 			interrupts = <GIC_SPI 524 IRQ_TYPE_LEVEL_HIGH>;
-			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			clocks = <&cpg CPG_MOD 411>;
 			linux,uio-name = "irq_du_00_01";
 		};
 
@@ -1772,7 +1770,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 503 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_01";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1782,7 +1779,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 504 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_02";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1792,7 +1788,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 505 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_03";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1802,7 +1797,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 506 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_04";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1812,7 +1806,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 507 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_05";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1822,7 +1815,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 508 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_06";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1832,7 +1824,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 509 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_07";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1842,7 +1833,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 510 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_08";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1862,7 +1852,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 512 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_01";
 		};
 
@@ -1870,7 +1859,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 513 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_02";
 		};
 
@@ -1878,7 +1866,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 514 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_03";
 		};
 
@@ -1886,7 +1873,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 515 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_04";
 
 		};
@@ -1895,7 +1881,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 516 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_05";
 		};
 
@@ -1903,7 +1888,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 517 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_06";
 		};
 
@@ -1911,7 +1895,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 518 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_07";
 		};
 
@@ -1919,7 +1902,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 519 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_08";
 		};
 
@@ -1937,7 +1919,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfeba0000 0 0x11000>;
 			interrupts = <GIC_SPI 527 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 414>;
 			linux,uio-name = "irq_doc_00_01";
 		};
 
@@ -3125,7 +3106,6 @@
 		irq_ivcp1e_00_01 {
 			compatible = "generic-uio";
 			reg = <0 0xfea00000 0 0x10000>;
-			clocks = <&cpg CPG_MOD 616>;
 			interrupts = <GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "irq_ivcp1e_00_01";
 			ipmmu-id = <RCAR_IPMMU_VC 14>;
@@ -3146,7 +3126,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfe910000 0 0x10000>;
 			interrupts = <GIC_SPI 859 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 729>;
 			linux,uio-name = "irq_vcp4_00_01";
 		};
 
