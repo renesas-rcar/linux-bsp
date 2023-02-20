@@ -1061,6 +1061,8 @@ struct rswitch_private {
 	struct clk *phy_clk;
 
 	struct reset_control *sd_rst;
+
+	u8 chan_running;
 };
 
 static int num_ndev = 3;
@@ -1999,6 +2001,7 @@ static int rswitch_open(struct net_device *ndev)
 
 	rtsn_ptp_init(rdev->priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
 
+	rdev->priv->chan_running |= BIT(rdev->port);
 out:
 	return err;
 
@@ -2020,7 +2023,10 @@ static int rswitch_stop(struct net_device *ndev)
 		phy_stop(ndev->phydev);
 
 	napi_disable(&rdev->napi);
-	iowrite32(GWCA_TS_IRQ_BIT, rdev->priv->addr + GWTSDID);
+
+	rdev->priv->chan_running &= ~BIT(rdev->port);
+	if (!rdev->priv->chan_running)
+		iowrite32(GWCA_TS_IRQ_BIT, rdev->priv->addr + GWTSDID);
 
 	list_for_each_entry_safe(ts_info, ts_info2, &rdev->priv->gwca.ts_info_list, list) {
 		if (ts_info->port != rdev->port)
@@ -2452,6 +2458,7 @@ static int rswitch_gwca_ts_queue_alloc(struct rswitch_private *priv)
 {
 	struct rswitch_gwca_chain *gq = &priv->gwca.ts_queue;
 
+	memset(gq, 0, sizeof(*gq));
 	gq->num_ring = TS_RING_SIZE;
 	gq->ts_ring = dma_alloc_coherent(&priv->pdev->dev,
 					 sizeof(struct rswitch_ts_desc) *
