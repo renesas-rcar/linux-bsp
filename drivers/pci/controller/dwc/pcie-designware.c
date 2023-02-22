@@ -8,13 +8,13 @@
  * Author: Jingoo Han <jg1.han@samsung.com>
  */
 
-#include <linux/align.h>
 #include <linux/bitops.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/dma/edma.h>
 #include <linux/gpio/consumer.h>
 #include <linux/ioport.h>
+#include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/sizes.h>
