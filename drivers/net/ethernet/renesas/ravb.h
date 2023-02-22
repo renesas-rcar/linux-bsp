@@ -19,6 +19,7 @@
 #include <linux/phy.h>
 #include <linux/platform_device.h>
 #include <linux/ptp_clock_kernel.h>
+#include "rcar_gen4_ptp.h"
 
 #define BE_TX_RING_SIZE	64	/* TX ring size for Best Effort */
 #define BE_RX_RING_SIZE	1024	/* RX ring size for Best Effort */
@@ -1152,6 +1153,8 @@ struct ravb_private {
 	struct list_head ts_skb_list;
 	u32 ts_skb_tag;
 	struct ravb_ptp ptp;
+	struct rcar_gen4_ptp_private *ptp_priv;
+	bool use_ptp;
 	spinlock_t lock;		/* Register access lock */
 	u32 cur_rx[NUM_RX_QUEUE];	/* Consumer ring indices */
 	u32 dirty_rx[NUM_RX_QUEUE];	/* Producer ring indices */
