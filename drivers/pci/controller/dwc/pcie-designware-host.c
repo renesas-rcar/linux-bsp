@@ -243,6 +243,9 @@ int dw_pcie_allocate_domains(struct dw_pcie_rp *pp)
 
 	irq_domain_update_bus_token(pp->irq_domain, DOMAIN_BUS_NEXUS);
 
+	if (pp->no_msix)
+		dw_pcie_msi_domain_info.flags &= ~MSI_FLAG_PCI_MSIX;
+
 	pp->msi_domain = pci_msi_create_irq_domain(fwnode,
 						   &dw_pcie_msi_domain_info,
 						   pp->irq_domain);
