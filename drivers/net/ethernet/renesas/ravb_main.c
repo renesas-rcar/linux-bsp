@@ -420,10 +420,7 @@ static void ravb_emac_init(struct net_device *ndev)
 	ravb_write(ndev, ECSR_ICD | ECSR_MPD, ECSR);
 
 	/* E-MAC interrupt enable register */
-	if (!strcmp(ndev->name, "eth0"))
-		ravb_write(ndev, ECSIPR_ICDIP | ECSIPR_MPDIP | ECSIPR_LCHNGIP, ECSIPR);
-	else
-		ravb_write(ndev, ECSIPR_ICDIP | ECSIPR_MPDIP, ECSIPR);
+	ravb_write(ndev, ECSIPR_ICDIP | ECSIPR_MPDIP, ECSIPR);
 }
 
 /* Device init function for Ethernet AVB */
