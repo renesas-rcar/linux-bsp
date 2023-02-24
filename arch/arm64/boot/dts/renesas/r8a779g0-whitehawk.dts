@@ -23,31 +23,31 @@
 
 		vdsp0_region: linux,vdsp0_region@5dc00000 {
 			compatible = "shared-dma-pool";
-			no-map;
+			reusable;
 			reg = <0x00000000 0x5dc00000 0x0 0x00800000>;
 		};
 
 		vdsp1_region: linux,vdsp1_region@5e400000 {
 			compatible = "shared-dma-pool";
-			no-map;
+			reusable;
 			reg = <0x00000000 0x5e400000 0x0 0x00800000>;
 		};
 
 		vdsp2_region: linux,vdsp2_region@5ec00000 {
 			compatible = "shared-dma-pool";
-			no-map;
+			reusable;
 			reg = <0x00000000 0x5ec00000 0x0 0x00800000>;
 		};
 
 		vdsp3_region: linux,vdsp3_region@5f400000 {
 			compatible = "shared-dma-pool";
-			no-map;
+			reusable;
 			reg = <0x00000000 0x5f400000 0x0 0x00800000>;
 		};
 
 		pap_region: linux,pap_region@5fc00000 {
 			compatible = "shared-dma-pool";
-			no-map;
+			reusable;
 			reg = <0x00000000 0x5fc00000 0x0 0x00400000>;
 		};
 
