@@ -368,12 +368,32 @@ static int ufs_renesas_init(struct ufs_hba *hba)
 	return 0;
 }
 
+static int ufs_renesas_suspend(struct ufs_hba *hba, enum ufs_pm_op op)
+{
+	struct ufs_renesas_priv *priv = ufshcd_get_variant(hba);
+
+	/* it shuold be re-initialized again */
+	priv->initialized = false;
+
+	return 0;
+}
+
+static int ufs_renesas_resume(struct ufs_hba *hba, enum ufs_pm_op op)
+{
+	/* re-initialized again */
+	ufs_renesas_pre_init(hba);
+
+	return 0;
+}
+
 static const struct ufs_hba_variant_ops ufs_renesas_vops = {
 	.name		= "renesas",
 	.init		= ufs_renesas_init,
 	.setup_clocks	= ufs_renesas_setup_clocks,
 	.hce_enable_notify = ufs_renesas_hce_enable_notify,
 	.dbg_register_dump = ufs_renesas_dbg_register_dump,
+	.suspend	= ufs_renesas_suspend,
+	.resume		= ufs_renesas_resume,
 };
 
 static const struct of_device_id __maybe_unused ufs_renesas_of_match[] = {
