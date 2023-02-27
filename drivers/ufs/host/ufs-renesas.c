@@ -374,6 +374,25 @@ static int ufs_renesas_set_dma_mask(struct ufs_hba *hba)
 	return dma_set_mask_and_coherent(hba->dev, DMA_BIT_MASK(32));
 }
 
+static int ufs_renesas_suspend(struct ufs_hba *hba, enum ufs_pm_op op,
+				    enum ufs_notify_change_status status)
+{
+	struct ufs_renesas_priv *priv = ufshcd_get_variant(hba);
+
+	/* it should be re-initialized again */
+	priv->initialized = false;
+
+	return 0;
+}
+
+static int ufs_renesas_resume(struct ufs_hba *hba, enum ufs_pm_op op)
+{
+	/* re-initialized again */
+	ufs_renesas_pre_init(hba);
+
+	return 0;
+}
+
 static const struct ufs_hba_variant_ops ufs_renesas_vops = {
 	.name		= "renesas",
 	.init		= ufs_renesas_init,
@@ -381,6 +400,8 @@ static const struct ufs_hba_variant_ops ufs_renesas_vops = {
 	.setup_clocks	= ufs_renesas_setup_clocks,
 	.hce_enable_notify = ufs_renesas_hce_enable_notify,
 	.dbg_register_dump = ufs_renesas_dbg_register_dump,
+	.suspend	= ufs_renesas_suspend,
+	.resume		= ufs_renesas_resume,
 };
 
 static const struct of_device_id __maybe_unused ufs_renesas_of_match[] = {
