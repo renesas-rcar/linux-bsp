@@ -321,25 +321,24 @@ static void ufs_renesas_reg_control(struct ufs_hba *hba,
 
 static void ufs_renesas_pre_init(struct ufs_hba *hba)
 {
+	struct ufs_renesas_priv *priv = ufshcd_get_variant(hba);
 	const struct ufs_renesas_init_param *p = ufs_param;
 	unsigned int i;
 
+	if (priv->initialized)
+		return;
+
 	for (i = 0; i < ARRAY_SIZE(ufs_param); i++)
 		ufs_renesas_reg_control(hba, &p[i]);
+
+	priv->initialized = true;
 }
 
 static int ufs_renesas_hce_enable_notify(struct ufs_hba *hba,
 					 enum ufs_notify_change_status status)
 {
-	struct ufs_renesas_priv *priv = ufshcd_get_variant(hba);
-
-	if (priv->initialized)
-		return 0;
-
 	if (status == PRE_CHANGE)
 		ufs_renesas_pre_init(hba);
-
-	priv->initialized = true;
 
 	return 0;
 }
