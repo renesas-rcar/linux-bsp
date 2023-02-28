@@ -2322,7 +2322,7 @@ static int ravb_probe(struct platform_device *pdev)
 	}
 
 	/* De-assert PHY GPIO resets */
-	if (soc_device_match(r8a779g0) && priv->use_ptp) {
+	if (soc_device_match(r8a779g0)) {
 		error = ravb_reset_phy(ndev, pdev);
 		if (error)
 			goto out_release;
