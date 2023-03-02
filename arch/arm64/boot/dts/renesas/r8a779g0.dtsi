@@ -1664,8 +1664,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfeb00000 0 0x40000>;
 			interrupts = <GIC_SPI 524 IRQ_TYPE_LEVEL_HIGH>;
-			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
-			clocks = <&cpg CPG_MOD 411>;
 			linux,uio-name = "irq_du_00_01";
 		};
 
@@ -1772,7 +1770,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 503 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_01";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1782,7 +1779,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 504 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_02";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1792,7 +1788,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 505 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_03";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1802,7 +1797,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 506 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_04";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1812,7 +1806,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 507 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_05";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1822,7 +1815,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 508 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_06";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1832,7 +1824,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 509 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_07";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1842,7 +1833,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed80000 0 0x10000>;
 			interrupts = <GIC_SPI 510 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 415>;
 			linux,uio-name = "irq_dsi_00_08";
 			ipmmu-id = <RCAR_IPMMU_VI1 18>;
 			iommus = <&ipmmu_vi1 18>;
@@ -1862,7 +1852,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 512 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_01";
 		};
 
@@ -1870,7 +1859,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 513 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_02";
 		};
 
@@ -1878,7 +1866,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 514 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_03";
 		};
 
@@ -1886,7 +1873,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 515 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_04";
 
 		};
@@ -1895,7 +1881,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 516 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_05";
 		};
 
@@ -1903,7 +1888,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 517 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_06";
 		};
 
@@ -1911,7 +1895,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 518 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_07";
 		};
 
@@ -1919,7 +1902,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfed90000 0 0x10000>;
 			interrupts = <GIC_SPI 519 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 416>;
 			linux,uio-name = "irq_dsi_01_08";
 		};
 
@@ -1937,7 +1919,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfeba0000 0 0x11000>;
 			interrupts = <GIC_SPI 527 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 414>;
 			linux,uio-name = "irq_doc_00_01";
 		};
 
@@ -2422,7 +2403,6 @@
 
 		impvdsp00_02 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2822>;
 			reset-names = "reg";
 			linux,uio-name = "vdsp00_02";
@@ -2430,7 +2410,6 @@
 
 		impvdsp00_03 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2823>;
 			reset-names = "global";
 			linux,uio-name = "vdsp00_03";
@@ -2438,7 +2417,6 @@
 
 		impvdsp00_04 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2824>;
 			reset-names = "sys";
 			linux,uio-name = "vdsp00_04";
@@ -2446,7 +2424,6 @@
 
 		impvdsp00_05 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2826>;
 			reset-names = "vdsp0_ocem";
 			linux,uio-name = "vdsp00_05";
@@ -2454,7 +2431,6 @@
 
 		impvdsp00_06 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2827>;
 			reset-names = "vdsp0_apbdbg";
 			linux,uio-name = "vdsp00_06";
@@ -2462,7 +2438,6 @@
 
 		impvdsp00_07 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP0>;
 			resets = <&cpg 2828>;
 			reset-names = "vdsp0_syspo";
 			linux,uio-name = "vdsp00_07";
@@ -2542,7 +2517,6 @@
 
 		impvdsp01_02 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2831>;
 			reset-names = "vdsp1_reg";
 			linux,uio-name = "vdsp01_02";
@@ -2550,7 +2524,6 @@
 
 		impvdsp01_03 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2900>;
 			reset-names = "vdsp1_global";
 			linux,uio-name = "vdsp01_03";
@@ -2558,7 +2531,6 @@
 
 		impvdsp01_04 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2901>;
 			reset-names = "vdsp1_sys";
 			linux,uio-name = "vdsp01_04";
@@ -2566,7 +2538,6 @@
 
 		impvdsp01_05 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2903>;
 			reset-names = "vdsp1_ocem";
 			linux,uio-name = "vdsp01_05";
@@ -2574,7 +2545,6 @@
 
 		impvdsp01_06 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2904>;
 			reset-names = "vdsp1_apbdbg";
 			linux,uio-name = "vdsp01_06";
@@ -2582,7 +2552,6 @@
 
 		impvdsp01_07 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP1>;
 			resets = <&cpg 2905>;
 			reset-names = "vdsp1_syspo";
 			linux,uio-name = "vdsp01_07";
@@ -2662,7 +2631,6 @@
 
 		impvdsp02_02 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2908>;
 			reset-names = "vdsp2_reg";
 			linux,uio-name = "vdsp02_02";
@@ -2670,7 +2638,6 @@
 
 		impvdsp02_03 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2909>;
 			reset-names = "vdsp2_global";
 			linux,uio-name = "vdsp02_03";
@@ -2678,7 +2645,6 @@
 
 		impvdsp02_04 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2910>;
 			reset-names = "vdsp2_sys";
 			linux,uio-name = "vdsp02_04";
@@ -2686,7 +2652,6 @@
 
 		impvdsp02_05 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2912>;
 			reset-names = "vdsp2_ocem";
 			linux,uio-name = "vdsp02_05";
@@ -2694,7 +2659,6 @@
 
 		impvdsp02_06 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2913>;
 			reset-names = "vdsp2_apbdbg";
 			linux,uio-name = "vdsp02_06";
@@ -2702,7 +2666,6 @@
 
 		impvdsp02_07 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP2>;
 			resets = <&cpg 2914>;
 			reset-names = "vdsp2_syspo";
 			linux,uio-name = "vdsp02_07";
@@ -2782,7 +2745,6 @@
 
 		impvdsp03_02 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2917>;
 			reset-names = "vdsp3_reg";
 			linux,uio-name = "vdsp03_02";
@@ -2790,7 +2752,6 @@
 
 		impvdsp03_03 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2918>;
 			reset-names = "vdsp3_global";
 			linux,uio-name = "vdsp03_03";
@@ -2798,7 +2759,6 @@
 
 		impvdsp03_04 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2919>;
 			reset-names = "vdsp3_sys";
 			linux,uio-name = "vdsp03_04";
@@ -2806,7 +2766,6 @@
 
 		impvdsp03_05 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2921>;
 			reset-names = "vdsp3_ocem";
 			linux,uio-name = "vdsp03_05";
@@ -2814,7 +2773,6 @@
 
 		impvdsp03_06 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2922>;
 			reset-names = "vdsp3_apbdbg";
 			linux,uio-name = "vdsp03_06";
@@ -2822,7 +2780,6 @@
 
 		impvdsp03_07 {
 			compatible = "generic-uio";
-			power-domains = <&sysc R8A779G0_PD_A1DSP3>;
 			resets = <&cpg 2923>;
 			reset-names = "vdsp3_syspo";
 			linux,uio-name = "vdsp03_07";
@@ -3125,7 +3082,6 @@
 		irq_ivcp1e_00_01 {
 			compatible = "generic-uio";
 			reg = <0 0xfea00000 0 0x10000>;
-			clocks = <&cpg CPG_MOD 616>;
 			interrupts = <GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "irq_ivcp1e_00_01";
 			ipmmu-id = <RCAR_IPMMU_VC 14>;
@@ -3146,7 +3102,6 @@
 			compatible = "generic-uio";
 			reg = <0 0xfe910000 0 0x10000>;
 			interrupts = <GIC_SPI 859 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 729>;
 			linux,uio-name = "irq_vcp4_00_01";
 		};
 
@@ -5030,6 +4985,7 @@
 		ecm: ecm@e6250000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6250000 0 0x1000>;
+			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			linux,uio-name = "ecm_00";
 		};
 
