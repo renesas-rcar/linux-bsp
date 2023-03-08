@@ -54,6 +54,7 @@ int rcar_gen4_pcie_set_device_type(struct rcar_gen4_pcie *rcar, bool rc,
 				   int num_lanes);
 void rcar_gen4_pcie_disable_bar(struct dw_pcie *dw, u32 bar_mask_reg);
 void rcar_gen4_pcie_set_max_link_width(struct dw_pcie *pci, int num_lanes);
+void rcar_gen4_pcie_workaround_settings(struct dw_pcie *dw);
 int rcar_gen4_pcie_prepare(struct rcar_gen4_pcie *pcie);
 void rcar_gen4_pcie_unprepare(struct rcar_gen4_pcie *pcie);
 int rcar_gen4_pcie_devm_reset_get(struct rcar_gen4_pcie *pcie,

@@ -35,6 +35,7 @@ static void rcar_gen4_pcie_ep_pre_init(struct dw_pcie_ep *ep)
 	rcar_gen4_pcie_disable_bar(dw, BAR5MASKF);
 
 	rcar_gen4_pcie_set_max_link_width(dw, dw->num_lanes);
+	rcar_gen4_pcie_workaround_settings(dw);
 
 	dw_pcie_dbi_ro_wr_dis(dw);
 }

@@ -18,6 +18,9 @@
 #define  APP_HOLD_PHY_RST	BIT(16)
 #define  APP_LTSSM_ENABLE	BIT(0)
 
+#define	PRTLGC5			0x0714
+#define LANE_CONFIG_DUAL	BIT(6)
+
 static void rcar_gen4_pcie_ltssm_enable(struct rcar_gen4_pcie *rcar,
 					bool enable)
 {
@@ -105,6 +108,15 @@ void rcar_gen4_pcie_set_max_link_width(struct dw_pcie *dw, int num_lanes)
 		break;
 	}
 	dw_pcie_writel_dbi(dw, EXPCAP(PCI_EXP_LNKCAP), val);
+}
+
+void rcar_gen4_pcie_workaround_settings(struct dw_pcie *dw)
+{
+	/* workaround for V4H */
+	u32 val = dw_pcie_readl_dbi(dw, PRTLGC5);
+
+	val |= LANE_CONFIG_DUAL;
+	dw_pcie_writel_dbi(dw, PRTLGC5, val);
 }
 
 int rcar_gen4_pcie_prepare(struct rcar_gen4_pcie *rcar)
