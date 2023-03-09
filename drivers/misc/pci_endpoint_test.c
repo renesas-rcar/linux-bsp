@@ -67,6 +67,7 @@
 
 #define PCI_ENDPOINT_TEST_FLAGS			0x2c
 #define FLAG_USE_DMA				BIT(0)
+#define FLAG_USE_TIMER(time)			(((time) << 1) & GENMASK(3, 1))
 
 #define PCI_DEVICE_ID_TI_J721E			0xb00d
 #define PCI_DEVICE_ID_TI_AM654			0xb00c
@@ -361,6 +362,7 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 	void *dst_addr;
 	u32 flags = 0;
 	bool use_dma;
+	bool use_timer;
 	size_t size;
 	dma_addr_t src_phys_addr;
 	dma_addr_t dst_phys_addr;
@@ -392,6 +394,9 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 	use_dma = !!(param.flags & PCITEST_FLAGS_USE_DMA);
 	if (use_dma)
 		flags |= FLAG_USE_DMA;
+	use_timer = !!(param.flags & PCITEST_FLAGS_TIMER_MASK);
+	if (use_timer)
+		flags |= FLAG_USE_TIMER(PCITEST_FLAGS_TIMER_VAL(param.flags));
 
 	if (irq_type < IRQ_TYPE_LEGACY || irq_type > IRQ_TYPE_MSIX) {
 		dev_err(dev, "Invalid IRQ type option\n");
@@ -499,6 +504,7 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 	bool ret = false;
 	u32 flags = 0;
 	bool use_dma;
+	bool use_timer;
 	u32 reg;
 	void *addr;
 	dma_addr_t phys_addr;
@@ -528,6 +534,9 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 	use_dma = !!(param.flags & PCITEST_FLAGS_USE_DMA);
 	if (use_dma)
 		flags |= FLAG_USE_DMA;
+	use_timer = !!(param.flags & PCITEST_FLAGS_TIMER_MASK);
+	if (use_timer)
+		flags |= FLAG_USE_TIMER(PCITEST_FLAGS_TIMER_VAL(param.flags));
 
 	if (irq_type < IRQ_TYPE_LEGACY || irq_type > IRQ_TYPE_MSIX) {
 		dev_err(dev, "Invalid IRQ type option\n");
@@ -600,6 +609,7 @@ static bool pci_endpoint_test_read(struct pci_endpoint_test *test,
 	bool ret = false;
 	u32 flags = 0;
 	bool use_dma;
+	bool use_timer;
 	size_t size;
 	void *addr;
 	dma_addr_t phys_addr;
@@ -628,6 +638,9 @@ static bool pci_endpoint_test_read(struct pci_endpoint_test *test,
 	use_dma = !!(param.flags & PCITEST_FLAGS_USE_DMA);
 	if (use_dma)
 		flags |= FLAG_USE_DMA;
+	use_timer = !!(param.flags & PCITEST_FLAGS_TIMER_MASK);
+	if (use_timer)
+		flags |= FLAG_USE_TIMER(PCITEST_FLAGS_TIMER_VAL(param.flags));
 
 	if (irq_type < IRQ_TYPE_LEGACY || irq_type > IRQ_TYPE_MSIX) {
 		dev_err(dev, "Invalid IRQ type option\n");
