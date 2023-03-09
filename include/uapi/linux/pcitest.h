@@ -21,7 +21,12 @@
 #define PCITEST_GET_IRQTYPE	_IO('P', 0x9)
 #define PCITEST_CLEAR_IRQ	_IO('P', 0x10)
 
-#define PCITEST_FLAGS_USE_DMA	0x00000001
+#define PCITEST_FLAGS_USE_DMA		0x00000001
+#define PCITEST_FLAGS_TIMER_MASK	0x0000000e
+#define PCITEST_FLAGS_TIMER_SHIFT	1
+#define PCITEST_FLAGS_TIMER_VAL(flags)	((flags) >> PCITEST_FLAGS_TIMER_SHIFT)
+#define PCITEST_FLAGS_USE_TIMER(time)	(((time) << PCITEST_FLAGS_TIMER_SHIFT) & \
+					 PCITEST_FLAGS_TIMER_MASK)
 
 struct pci_endpoint_test_xfer_param {
 	unsigned long size;
