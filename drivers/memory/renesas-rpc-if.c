@@ -12,6 +12,8 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/spi/spi.h>
+#include <linux/spi/spi-mem.h>
 #include <linux/of_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
@@ -748,6 +750,24 @@ static int rpcif_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int rpcif_resume(struct device *dev)
+{
+	struct platform_device *vdev = dev_get_drvdata(dev);
+	struct spi_controller *ctlr = platform_get_drvdata(vdev);
+	struct rpcif *rpc = spi_controller_get_devdata(ctlr);
+
+	rpcif_hw_init(rpc, rpc->bus_size == 2);
+
+	return 0;
+}
+
+static int rpcif_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(rpcif_pm_ops, rpcif_suspend, rpcif_resume);
+
 static const struct of_device_id rpcif_of_match[] = {
 	{ .compatible = "renesas,rcar-gen3-rpc-if", .data = &rpcif_info_gen3},
 	{ .compatible = "renesas,rcar-gen4-rpc-if", .data = &rpcif_info_gen4 },
@@ -760,6 +780,7 @@ static struct platform_driver rpcif_driver = {
 	.remove	= rpcif_remove,
 	.driver = {
 		.name =	"rpc-if",
+		.pm = &rpcif_pm_ops,
 		.of_match_table = rpcif_of_match,
 	},
 };
