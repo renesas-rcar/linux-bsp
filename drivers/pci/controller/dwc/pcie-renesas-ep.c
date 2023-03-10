@@ -38,6 +38,13 @@
 #define	MLW_X4			BIT(6)
 #define EXPCAP12		0x00A0
 
+/* PCIEC PHY */
+#define	REFCLKCTRLP0		0x0B8
+#define	REFCLKCTRLP1		0x2B8
+#define	PHY_REF_CLKDET_EN	BIT(10)
+#define	PHY_REF_REPEAT_CLK_EN	BIT(9)
+#define	PHY_REF_USE_PAD		BIT(2)
+
 /* Renesas-specific */
 #define PCIEMSR0		0x0000
 #define	BIFUR_MOD_SET_ON	(0x1 << 0)
@@ -118,6 +125,16 @@ static u32 renesas_pcie_readl(struct renesas_pcie_ep *pcie, u32 reg)
 static void renesas_pcie_writel(struct renesas_pcie_ep *pcie, u32 reg, u32 val)
 {
 	writel(val, pcie->base + reg);
+}
+
+static u32 renesas_pcie_phy_readl(struct renesas_pcie_ep *pcie, u32 reg)
+{
+	return readl(pcie->phy_base + reg);
+}
+
+static void renesas_pcie_phy_writel(struct renesas_pcie_ep *pcie, u32 reg, u32 val)
+{
+	writel(val, pcie->phy_base + reg);
 }
 
 static u32 renesas_pcie_shared_readl(struct renesas_pcie_ep *pcie, u32 reg)
@@ -354,6 +371,15 @@ static void renesas_pcie_init_ep(struct renesas_pcie_ep *pcie)
 	val |= LTR_EN;
 	renesas_pcie_writel(pcie, PCIELTRMSGCTRL1, val);
 
+	/* PCIe PHY setting */
+	val = renesas_pcie_phy_readl(pcie, REFCLKCTRLP0);
+	val |= PHY_REF_CLKDET_EN | PHY_REF_REPEAT_CLK_EN;
+	renesas_pcie_phy_writel(pcie, REFCLKCTRLP0, val);
+
+	val = renesas_pcie_phy_readl(pcie, REFCLKCTRLP1);
+	val &= ~PHY_REF_USE_PAD;
+	val |= PHY_REF_CLKDET_EN | PHY_REF_REPEAT_CLK_EN;
+	renesas_pcie_phy_writel(pcie, REFCLKCTRLP1, val);
 }
 
 static int renesas_pcie_ep_enable(struct renesas_pcie_ep *pcie)
