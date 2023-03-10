@@ -2320,9 +2320,11 @@ static void rswitch_reset(struct rswitch_private *priv)
 		rs_write32(RRC_RR, priv->addr + RRC);
 		rs_write32(RRC_RR_CLR, priv->addr + RRC);
 
-		reset_control_assert(priv->sd_rst);
-		mdelay(1);
-		reset_control_deassert(priv->sd_rst);
+		if (!priv->vpf_mode) {
+			reset_control_assert(priv->sd_rst);
+			mdelay(1);
+			reset_control_deassert(priv->sd_rst);
+		}
 	} else {
 		int gwca_idx;
 		u32 gwro_offset;
