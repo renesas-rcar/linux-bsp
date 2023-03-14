@@ -540,6 +540,42 @@ err_pm_put:
 	return err;
 }
 
+static int renesas_pcie_resume_noirq(struct device *dev)
+{
+	struct renesas_pcie *pcie = dev_get_drvdata(dev);
+	struct dw_pcie *pci = pcie->pci;
+	struct pcie_port *pp = &pci->pp;
+	u32 err, val, ret;
+
+	err = reset_control_deassert(pcie->rst);
+	if (err)
+		return err;
+
+	/* Re-initialize Root Complex */
+	renesas_pcie_init_rc(pcie);
+
+	/* Re-enable MSI interrupt signal */
+	val = renesas_pcie_readl(pcie, PCIEINTSTS0EN);
+	val |= MSI_CTRL_INT;
+	renesas_pcie_writel(pcie, PCIEINTSTS0EN, val);
+
+	dw_pcie_setup_rc(pp);
+
+	if (!dw_pcie_link_up(pci)) {
+		ret = renesas_pcie_start_link(pci);
+		if (ret)
+			return ret;
+	}
+
+	dw_pcie_msi_init(pp);
+
+	return 0;
+}
+
+static const struct dev_pm_ops renesas_pcie_pm_ops = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(NULL, renesas_pcie_resume_noirq)
+};
+
 static const struct of_device_id renesas_pcie_of_match[] = {
 	{ .compatible = "renesas,r8a779a0-pcie", },
 	{ .compatible = "renesas,r8a779f0-pcie", },
@@ -551,6 +587,7 @@ static struct platform_driver renesas_pcie_driver = {
 	.driver = {
 		.name = "pcie-renesas",
 		.of_match_table = renesas_pcie_of_match,
+		.pm     = &renesas_pcie_pm_ops,
 	},
 	.probe = renesas_pcie_probe,
 };
