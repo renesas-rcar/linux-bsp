@@ -324,11 +324,15 @@ static int ti_sn_get_modes(struct ti_sn_bridge *pdata,
 			     struct drm_connector *connector)
 {
 	struct edid *edid;
-	unsigned int count;
+	int count = 0;
 
 	edid = drm_do_get_edid(connector, ti_sn_get_edid_block, pdata);
-	drm_connector_update_edid_property(connector, edid);
-	count = drm_add_edid_modes(connector, edid);
+	if (edid) {
+		drm_connector_update_edid_property(connector, edid);
+		count = drm_add_edid_modes(connector, edid);
+
+		kfree(edid);
+	}
 
 	return count;
 }
