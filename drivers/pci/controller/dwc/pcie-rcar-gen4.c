@@ -9,6 +9,8 @@
 #include <linux/pci.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
+#include <linux/delay.h>
+
 
 #include "pcie-rcar-gen4.h"
 #include "pcie-designware.h"
@@ -20,6 +22,8 @@
 
 #define	PRTLGC5			0x0714
 #define LANE_CONFIG_DUAL	BIT(6)
+
+#define	MAX_RETRIES		10
 
 static void rcar_gen4_pcie_ltssm_enable(struct rcar_gen4_pcie *rcar,
 					bool enable)
@@ -37,6 +41,36 @@ static void rcar_gen4_pcie_ltssm_enable(struct rcar_gen4_pcie *rcar,
 	writel(val, rcar->base + PCIERSTCTRL1);
 }
 
+static void rcar_gen4_pcie_retrain_link(struct dw_pcie *dw)
+{
+	u32 val, lnksta, retries;
+
+	val = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_LNKCTL));
+	val |= PCI_EXP_LNKCTL_RL;
+	dw_pcie_writel_dbi(dw, EXPCAP(PCI_EXP_LNKCTL), val);
+
+	/* Wait for link retrain */
+	for (retries = 0; retries <= MAX_RETRIES; retries++) {
+		lnksta = dw_pcie_readw_dbi(dw, EXPCAP(PCI_EXP_LNKSTA));
+
+		/* Check retrain flag */
+		if (!(lnksta & PCI_EXP_LNKSTA_LT))
+			break;
+		msleep(1);
+	}
+}
+
+static void rcar_gen4_pcie_check_speed(struct dw_pcie *dw)
+{
+	u32 lnkcap, lnksta;
+
+	lnkcap = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_LNKCAP));
+	lnksta = dw_pcie_readw_dbi(dw, EXPCAP(PCI_EXP_LNKSTA));
+
+	if ((lnksta & PCI_EXP_LNKSTA_CLS) != (lnkcap & PCI_EXP_LNKCAP_SLS))
+		rcar_gen4_pcie_retrain_link(dw);
+}
+
 static int rcar_gen4_pcie_link_up(struct dw_pcie *dw)
 {
 	struct rcar_gen4_pcie *rcar = to_rcar_gen4_pcie(dw);
@@ -44,6 +78,8 @@ static int rcar_gen4_pcie_link_up(struct dw_pcie *dw)
 
 	val = readl(rcar->base + PCIEINTSTS0);
 	mask = RDLH_LINK_UP | SMLH_LINK_UP;
+
+	rcar_gen4_pcie_check_speed(dw);
 
 	return (val & mask) == mask;
 }
