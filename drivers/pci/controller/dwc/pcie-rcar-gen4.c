@@ -115,7 +115,7 @@ int rcar_gen4_pcie_set_device_type(struct rcar_gen4_pcie *rcar, bool rc,
 		val |= BIFUR_MOD_SET_ON;
 	writel(val, rcar->base + PCIEMSR0);
 
-	return reset_control_deassert(rcar->rst);
+	return 0;
 }
 
 void rcar_gen4_pcie_disable_bar(struct dw_pcie *dw, u32 bar_mask_reg)
