@@ -20,6 +20,10 @@ static int rcar_gen4_pcie_host_init(struct dw_pcie_rp *pp)
 	int ret;
 	u32 val;
 
+	ret = reset_control_deassert(rcar->rst);
+	if (ret < 0)
+		return ret;
+
 	ret = rcar_gen4_pcie_set_device_type(rcar, true, dw->num_lanes);
 	if (ret < 0)
 		return ret;

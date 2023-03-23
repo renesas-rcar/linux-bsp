@@ -23,6 +23,8 @@ static void rcar_gen4_pcie_ep_pre_init(struct dw_pcie_ep *ep)
 	struct rcar_gen4_pcie *rcar = to_rcar_gen4_pcie(dw);
 	int val;
 
+	reset_control_deassert(rcar->rst);
+
 	rcar_gen4_pcie_set_device_type(rcar, false, dw->num_lanes);
 
 	dw_pcie_dbi_ro_wr_en(dw);
