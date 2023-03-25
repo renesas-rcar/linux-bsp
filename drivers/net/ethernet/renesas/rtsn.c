@@ -936,8 +936,6 @@ static int rtsn_open(struct net_device *ndev)
 
 	netif_start_queue(ndev);
 
-	rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK_V4H);
-
 	return 0;
 
 out_napi_off:
@@ -1209,6 +1207,8 @@ static int rtsn_probe(struct platform_device *pdev)
 
 	device_set_wakeup_capable(&pdev->dev, 1);
 
+	rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK_V4H);
+
 	netdev_info(ndev, "MAC address %pMn", ndev->dev_addr);
 
 	return 0;
@@ -1224,6 +1224,7 @@ static int rtsn_remove(struct platform_device *pdev)
 {
 	struct rtsn_private *priv = platform_get_drvdata(pdev);
 
+	rcar_gen4_ptp_unregister(priv->ptp_priv);
 	rtsn_change_mode(priv, OCR_OPC_DISABLE);
 	netif_napi_del(&priv->napi);
 	unregister_netdev(priv->ndev);
