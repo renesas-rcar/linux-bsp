@@ -152,6 +152,19 @@ int rcar_gen4_ptp_init(struct rcar_gen4_ptp_private *ptp_priv,
 }
 EXPORT_SYMBOL_GPL(rcar_gen4_ptp_init);
 
+int rcar_gen4_ptp_unregister(struct rcar_gen4_ptp_private *ptp_priv)
+{
+	if (!ptp_priv->parallel_mode)
+		writel(0x01, ptp_priv->addr + ptp_priv->offs->disable);
+
+	ptp_clock_unregister(ptp_priv->clock);
+
+	ptp_priv->initialized = false;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(rcar_gen4_ptp_unregister);
+
 struct rcar_gen4_ptp_private *rcar_gen4_ptp_alloc(struct platform_device *pdev)
 {
 	struct rcar_gen4_ptp_private *ptp;
