@@ -320,8 +320,7 @@ static int ti_sn_get_edid_block(void *data, u8 *buf, unsigned int block,
 	return 0;
 }
 
-static int ti_sn_get_modes(struct ti_sn_bridge *pdata,
-			     struct drm_connector *connector)
+static int ti_sn_get_edid(struct ti_sn_bridge *pdata, struct drm_connector *connector)
 {
 	struct edid *edid;
 	int count = 0;
@@ -335,6 +334,11 @@ static int ti_sn_get_modes(struct ti_sn_bridge *pdata,
 	}
 
 	return count;
+}
+
+static int ti_sn_get_modes(struct ti_sn_bridge *pdata, struct drm_connector *connector)
+{
+	return drm_add_edid_modes(connector, connector->edid_blob_ptr->data);
 }
 
 static struct ti_sn_bridge *
@@ -402,7 +406,7 @@ ti_sn_bridge_connector_detect(struct drm_connector *connector, bool force)
 
 	if (status == connector_status_connected
 		&& connector->status != status) {
-		ti_sn_get_modes(pdata, connector);
+		ti_sn_get_edid(pdata, connector);
 	}
 
 	return status;
