@@ -101,6 +101,8 @@ struct renesas_pcie {
 	struct gpio_desc		*clkreq;
 	void __iomem			*base_shared;
 	struct clk			*clk_shared;
+	u32				msi_irq_en[MAX_MSI_CTRLS];
+	u32				msi_irq_mask[MAX_MSI_CTRLS];
 };
 
 static const struct of_device_id renesas_pcie_of_match[];
@@ -540,6 +542,52 @@ err_pm_put:
 	return err;
 }
 
+static void renesas_pcie_msi_save_restore(struct renesas_pcie *pcie,
+					  bool restore)
+{
+	struct dw_pcie *pci = pcie->pci;
+	struct pcie_port *pp = &pci->pp;
+	u32 num_ctrl, ctrl;
+
+	num_ctrl = pp->num_vectors / MAX_MSI_IRQS_PER_CTRL;
+	dw_pcie_dbi_ro_wr_en(pci);
+
+	if (restore) {
+		/* Restore MSI state in resume */
+		for (ctrl = 0; ctrl < num_ctrl; ctrl++) {
+			dw_pcie_writel_dbi(pci, PCIE_MSI_INTR0_ENABLE +
+					   (ctrl * MSI_REG_CTRL_BLOCK_SIZE),
+					   pcie->msi_irq_en[ctrl]);
+
+			dw_pcie_writel_dbi(pci, PCIE_MSI_INTR0_MASK +
+					   (ctrl * MSI_REG_CTRL_BLOCK_SIZE),
+					   pcie->msi_irq_mask[ctrl]);
+		}
+	} else {
+		/* Save MSI state in suspend  */
+		for (ctrl = 0; ctrl < num_ctrl; ctrl++) {
+			pcie->msi_irq_en[ctrl] =
+			dw_pcie_readl_dbi(pci, PCIE_MSI_INTR0_ENABLE +
+					  (ctrl * MSI_REG_CTRL_BLOCK_SIZE));
+
+			pcie->msi_irq_mask[ctrl] =
+			dw_pcie_readl_dbi(pci, PCIE_MSI_INTR0_MASK +
+					  (ctrl * MSI_REG_CTRL_BLOCK_SIZE));
+		}
+	}
+
+	dw_pcie_dbi_ro_wr_dis(pci);
+}
+
+static int renesas_pcie_suspend_noirq(struct device *dev)
+{
+	struct renesas_pcie *pcie = dev_get_drvdata(dev);
+
+	renesas_pcie_msi_save_restore(pcie, false);
+
+	return 0;
+}
+
 static int renesas_pcie_resume_noirq(struct device *dev)
 {
 	struct renesas_pcie *pcie = dev_get_drvdata(dev);
@@ -555,9 +603,16 @@ static int renesas_pcie_resume_noirq(struct device *dev)
 	renesas_pcie_init_rc(pcie);
 
 	/* Re-enable MSI interrupt signal */
-	val = renesas_pcie_readl(pcie, PCIEINTSTS0EN);
-	val |= MSI_CTRL_INT;
-	renesas_pcie_writel(pcie, PCIEINTSTS0EN, val);
+	renesas_pcie_msi_save_restore(pcie, true);
+
+	/* Skip resetting MSI in framework */
+	pci_no_msi();
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		val = renesas_pcie_readl(pcie, PCIEINTSTS0EN);
+		val |= MSI_CTRL_INT;
+		renesas_pcie_writel(pcie, PCIEINTSTS0EN, val);
+	}
 
 	dw_pcie_setup_rc(pp);
 
@@ -572,8 +627,21 @@ static int renesas_pcie_resume_noirq(struct device *dev)
 	return 0;
 }
 
+static int renesas_pcie_resume(struct device *dev)
+{
+	struct renesas_pcie *pcie = dev_get_drvdata(dev);
+	struct dw_pcie *pci = pcie->pci;
+
+	if (dw_pcie_wait_for_link(pci))
+		return 0;
+
+	return 0;
+}
+
 static const struct dev_pm_ops renesas_pcie_pm_ops = {
-	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(NULL, renesas_pcie_resume_noirq)
+	.suspend_noirq = renesas_pcie_suspend_noirq,
+	.resume_noirq = renesas_pcie_resume_noirq,
+	.resume    = renesas_pcie_resume,
 };
 
 static const struct of_device_id renesas_pcie_of_match[] = {
