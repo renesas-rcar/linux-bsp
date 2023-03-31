@@ -2121,6 +2121,9 @@ static int ravb_reset_phy(struct net_device *ndev, struct platform_device *pdev)
 		mdelay(4);
 		gpiod_set_value_cansleep(gpiod, 0);
 		devm_gpiod_put(&pdev->dev, gpiod);
+
+		/* delay 2ms to wait phy ready */
+		mdelay(2);
 	}
 
 	return 0;
