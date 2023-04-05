@@ -51,6 +51,9 @@ static int rcar_gen4_pcie_host_init(struct dw_pcie_rp *pp)
 	rcar_gen4_pcie_workaround_settings(dw);
 	dw_pcie_dbi_ro_wr_dis(dw);
 
+	if (dw->num_lanes == 4)
+		rcar_gen4_pcie_phy_setting(rcar);
+
 	if (!dw_pcie_link_up(dw)) {
 		ret = dw->ops->start_link(dw);
 		if (ret)
@@ -98,11 +101,19 @@ static int rcar_gen4_pcie_get_resources(struct rcar_gen4_pcie *rcar,
 					struct platform_device *pdev)
 {
 	struct dw_pcie *dw = &rcar->dw;
+	struct resource *res;
 
 	/* Renesas-specific registers */
 	rcar->base = devm_platform_ioremap_resource_byname(pdev, "app");
 	if (IS_ERR(rcar->base))
 		return PTR_ERR(rcar->base);
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "phy");
+	if (res) {
+		rcar->phy_base = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(rcar->phy_base))
+			rcar->phy_base = NULL;
+	}
 
 	return rcar_gen4_pcie_devm_reset_get(rcar, dw->dev);
 }

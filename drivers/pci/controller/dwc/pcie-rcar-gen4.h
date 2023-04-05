@@ -27,6 +27,13 @@
 #define BAR4MASKF		0x0020
 #define BAR5MASKF		0x0024
 
+/* PCIEC PHY */
+#define	REFCLKCTRLP0		0x0B8
+#define	REFCLKCTRLP1		0x2B8
+#define	PHY_REF_CLKDET_EN	BIT(10)
+#define	PHY_REF_REPEAT_CLK_EN	BIT(9)
+#define	PHY_REF_USE_PAD		BIT(2)
+
 /* Renesas-specific */
 #define PCIEMSR0		0x0000
 #define  BIFUR_MOD_SET_ON	BIT(0)
@@ -44,6 +51,7 @@
 struct rcar_gen4_pcie {
 	struct dw_pcie		dw;
 	void __iomem		*base;
+	void __iomem		*phy_base;
 	struct reset_control	*rst;
 };
 #define to_rcar_gen4_pcie(x)	dev_get_drvdata((x)->dev)
@@ -60,5 +68,5 @@ void rcar_gen4_pcie_unprepare(struct rcar_gen4_pcie *pcie);
 int rcar_gen4_pcie_devm_reset_get(struct rcar_gen4_pcie *pcie,
 				  struct device *dev);
 struct rcar_gen4_pcie *rcar_gen4_pcie_devm_alloc(struct device *dev);
-
+void rcar_gen4_pcie_phy_setting(struct rcar_gen4_pcie *rcar);
 #endif /* _PCIE_RCAR_GEN4_H_ */
