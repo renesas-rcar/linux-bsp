@@ -212,3 +212,18 @@ struct rcar_gen4_pcie *rcar_gen4_pcie_devm_alloc(struct device *dev)
 
 	return rcar;
 }
+
+void rcar_gen4_pcie_phy_setting(struct rcar_gen4_pcie *rcar)
+{
+	u32 val;
+
+	/* PCIe PHY setting */
+	val = readl(rcar->phy_base + REFCLKCTRLP0);
+	val |= PHY_REF_CLKDET_EN | PHY_REF_REPEAT_CLK_EN;
+	writel(val, rcar->phy_base + REFCLKCTRLP0);
+
+	val = readl(rcar->phy_base + REFCLKCTRLP1);
+	val &= ~PHY_REF_USE_PAD;
+	val |= PHY_REF_CLKDET_EN | PHY_REF_REPEAT_CLK_EN;
+	writel(val, rcar->phy_base + REFCLKCTRLP1);
+}
