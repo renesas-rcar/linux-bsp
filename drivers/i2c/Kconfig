@@ -159,6 +159,12 @@ config I2C_DEBUG_BUS
 	  a problem with I2C support and want to see more of what is going
 	  on.
 
+config I2C_RC21
+	tristate "Driver for Renesas R21008a clock generator"
+	depends on I2C
+	depends on OF
+	select REGMAP_I2C
+
 endif # I2C
 
 endmenu
