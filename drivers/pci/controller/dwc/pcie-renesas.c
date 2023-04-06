@@ -621,6 +621,15 @@ static int renesas_pcie_resume_noirq(struct device *dev)
 	struct pcie_port *pp = &pci->pp;
 	u32 err, val, ret;
 
+	if (pcie->clkreq)
+		gpiod_set_value(pcie->clkreq, 1);
+
+	ret = clk_prepare_enable(pcie->bus_clk);
+	if (ret) {
+		dev_err(pci->dev,
+			"failed to enable bus clock: %d\n", ret);
+	}
+
 	err = reset_control_deassert(pcie->rst);
 	if (err)
 		return err;
@@ -641,6 +650,9 @@ static int renesas_pcie_resume_noirq(struct device *dev)
 	}
 
 	dw_pcie_setup_rc(pp);
+
+	/* Reset MSI flags */
+	pci_has_msi();
 
 	if (!dw_pcie_link_up(pci)) {
 		ret = renesas_pcie_start_link(pci);
