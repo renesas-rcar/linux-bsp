@@ -78,6 +78,11 @@
 	status = "okay";
 	clock-frequency = <400000>;
 
+	clk_pcie: clk-controller@6c {
+		compatible = "renesas,rc21008a";
+		reg = <0x6c>;
+	};
+
 	gpio_exp_20: gpio@20 {
 		compatible = "ti,tca9554";
 		reg = <0x20>;
