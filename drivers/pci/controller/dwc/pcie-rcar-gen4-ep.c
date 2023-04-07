@@ -34,6 +34,7 @@ static void rcar_gen4_pcie_ep_pre_init(struct dw_pcie_ep *ep)
 	val &= ~MULTI_FUNC;
 	dw_pcie_writel_dbi(dw, PCICONF3, val);
 
+	rcar_gen4_pcie_initial(rcar, false);
 	rcar_gen4_pcie_disable_bar(dw, BAR5MASKF);
 
 	rcar_gen4_pcie_set_max_link_width(dw, dw->num_lanes);

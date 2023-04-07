@@ -30,6 +30,7 @@ static int rcar_gen4_pcie_host_init(struct dw_pcie_rp *pp)
 
 	dw_pcie_dbi_ro_wr_en(dw);
 
+	rcar_gen4_pcie_initial(rcar, true);
 	rcar_gen4_pcie_disable_bar(dw, BAR0MASKF);
 	rcar_gen4_pcie_disable_bar(dw, BAR1MASKF);
 

@@ -227,3 +227,71 @@ void rcar_gen4_pcie_phy_setting(struct rcar_gen4_pcie *rcar)
 	val |= PHY_REF_CLKDET_EN | PHY_REF_REPEAT_CLK_EN;
 	writel(val, rcar->phy_base + REFCLKCTRLP1);
 }
+
+void rcar_gen4_pcie_initial(struct rcar_gen4_pcie *rcar, bool rc)
+{
+	struct dw_pcie *dw = &rcar->dw;
+	u32 val;
+
+	/* Error Status Enable */
+	val = readl(rcar->base + PCIEERRSTS0EN);
+	val |= CFG_SYS_ERR_RC | CFG_SAFETY_UNCORR_CORR;
+	writel(val, rcar->base + PCIEERRSTS0EN);
+
+	/* Error Status Clear */
+	val = readl(rcar->base + PCIEERRSTS0CLR);
+	val |= ERRSTS0_EN;
+	writel(val, rcar->base + PCIEERRSTS0CLR);
+
+	if (rc) {
+		/* Power Management */
+		val = readl(rcar->base + PCIEPWRMNGCTRL);
+		val |= CLK_REG | CLK_PM;
+		writel(val, rcar->base + PCIEPWRMNGCTRL);
+
+		/* MSI Enable */
+		val = dw_pcie_readl_dbi(dw, MSICAP0F0);
+		val |= MSIE;
+		dw_pcie_writel_dbi(dw, MSICAP0F0, val);
+
+		/* Set Max Payload Size */
+		val = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_DEVCTL));
+		val &= ~PCI_EXP_DEVCTL_PAYLOAD;
+		val |= PCI_EXP_DEVCTL_PAYLOAD_256B;
+		dw_pcie_writel_dbi(dw, EXPCAP(PCI_EXP_DEVCTL), val);
+
+		/* Set Root Control */
+		val = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_RTCTL));
+		val |= PCI_EXP_RTCTL_SECEE | PCI_EXP_RTCTL_SENFEE |
+			PCI_EXP_RTCTL_SEFEE | PCI_EXP_RTCTL_PMEIE |
+			PCI_EXP_RTCTL_CRSSVE;
+		dw_pcie_writel_dbi(dw, EXPCAP(PCI_EXP_RTCTL), val);
+
+		/* Enable SERR */
+		val = dw_pcie_readb_dbi(dw, PCI_BRIDGE_CONTROL);
+		val |= PCI_BRIDGE_CTL_SERR;
+		dw_pcie_writeb_dbi(dw, PCI_BRIDGE_CONTROL, val);
+
+		/* Device control */
+		val = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_DEVCTL));
+		val |= PCI_EXP_DEVCTL_CERE | PCI_EXP_DEVCTL_NFERE |
+			PCI_EXP_DEVCTL_FERE | PCI_EXP_DEVCTL_URRE;
+		dw_pcie_writel_dbi(dw, EXPCAP(PCI_EXP_DEVCTL), val);
+
+		/* Enable PME */
+		val = dw_pcie_readl_dbi(dw, PMCAP1F0);
+		val |= PMEE_EN;
+		dw_pcie_writel_dbi(dw, PMCAP1F0, val);
+
+	} else {
+		/* Power Management */
+		val = readl(rcar->base + PCIEPWRMNGCTRL);
+		val |= CLK_REG | CLK_PM | READY_ENTR;
+		writel(val, rcar->base + PCIEPWRMNGCTRL);
+
+		/* Enable LTR */
+		val = readl(rcar->base + PCIELTRMSGCTRL1);
+		val |= LTR_EN;
+		writel(val, rcar->base + PCIELTRMSGCTRL1);
+	}
+}

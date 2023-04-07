@@ -48,6 +48,32 @@
 #define PCIEDMAINTSTSEN		0x0314
 #define  PCIEDMAINTSTSEN_INIT	GENMASK(15, 0)
 
+#define	MSICAP0F0		0x0050
+#define	MSIE			BIT(16)
+
+#define	PCIELTRMSGCTRL1		0x0054
+#define	LTR_EN			BIT(31)
+
+/*Power Management*/
+#define	PCIEPWRMNGCTRL		0x0070
+#define	CLK_REG			BIT(11)
+#define	CLK_PM			BIT(10)
+#define	READY_ENTR		GENMASK(6, 5)
+#define	PMCAP1F0		0x0044
+#define	PMEE_EN			BIT(8)
+
+/* Error Status Clear */
+#define	PCIEERRSTS0CLR		0x033C
+#define	PCIEERRSTS1CLR		0x035C
+#define	PCIEERRSTS2CLR		0x0360
+#define	ERRSTS0_EN		GENMASK(10, 6)
+#define	ERRSTS1_EN		GENMASK(29, 0)
+#define	ERRSTS2_EN		GENMASK(5, 0)
+
+#define	PCIEERRSTS0EN		0x030C
+#define	CFG_SYS_ERR_RC		GENMASK(10, 9)
+#define	CFG_SAFETY_UNCORR_CORR	GENMASK(5, 4)
+
 struct rcar_gen4_pcie {
 	struct dw_pcie		dw;
 	void __iomem		*base;
@@ -69,4 +95,5 @@ int rcar_gen4_pcie_devm_reset_get(struct rcar_gen4_pcie *pcie,
 				  struct device *dev);
 struct rcar_gen4_pcie *rcar_gen4_pcie_devm_alloc(struct device *dev);
 void rcar_gen4_pcie_phy_setting(struct rcar_gen4_pcie *rcar);
+void rcar_gen4_pcie_initial(struct rcar_gen4_pcie *rcar, bool rc);
 #endif /* _PCIE_RCAR_GEN4_H_ */
