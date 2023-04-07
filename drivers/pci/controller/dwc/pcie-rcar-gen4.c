@@ -56,7 +56,7 @@ static void rcar_gen4_pcie_retrain_link(struct dw_pcie *dw)
 		/* Check retrain flag */
 		if (!(lnksta & PCI_EXP_LNKSTA_LT))
 			break;
-		msleep(1);
+		mdelay(1);
 	}
 }
 
