@@ -95,7 +95,7 @@
 };
 
 &avb0 {
-	pinctrl-0 = <&avb0_pins>;
+	pinctrl-0 = <&avb0_pins>, <&vddq_eth_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy0>;
 	tx-internal-delay-ps = <2000>;
@@ -113,7 +113,7 @@
 };
 
 &avb1 {
-	pinctrl-0 = <&avb1_pins>;
+	pinctrl-0 = <&avb1_pins>, <&vddq_eth_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy1>;
 	status = "okay";
@@ -129,7 +129,7 @@
 };
 
 &avb2 {
-	pinctrl-0 = <&avb2_pins>;
+	pinctrl-0 = <&avb2_pins>, <&vddq_eth_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy2>;
 	status = "okay";
@@ -145,7 +145,7 @@
 };
 
 &tsn0 {
-	pinctrl-0 = <&tsn0_pins>;
+	pinctrl-0 = <&tsn0_pins>, <&vddq_eth_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy3>;
 	tx-internal-delay;
@@ -247,6 +247,13 @@
 };
 
 &pfc {
+	vddq_eth_pins: vddq_eth {
+		pins_pwr {
+			pins = "GP_4_0", "GP_5_0", "GP_6_0","GP_7_0";
+			power-source = <3300>;
+		};
+	};
+
 	avb0_pins: avb0 {
 		mux {
 			groups = "avb0_link", "avb0_mdio", "avb0_rgmii",
