@@ -294,4 +294,13 @@ config QCOM_IPCC
 	  acts as an interrupt controller for receiving interrupts from clients.
 	  Say Y here if you want to build this driver.
 
+config RCAR_MFIS_MBOX
+	bool "Multifunctional Interface Mailbox Support"
+	depends on ARM_SCMI_PROTOCOL && ARCH_RENESAS
+	help
+	  This driver provides support for SCMI interface transport with
+	  MFIS(Multifunctional Interface).
+	  It is used to send short message between CPU cores and
+	  SCP(System Control Processor).
+
 endif
