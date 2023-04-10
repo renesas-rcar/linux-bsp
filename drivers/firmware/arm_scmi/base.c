@@ -33,6 +33,11 @@ struct scmi_msg_resp_base_attributes {
 	__le16 reserved;
 };
 
+struct scmi_msg_resp_base_discover_agent {
+	__le32 agent_id;
+	u8 name[SCMI_MAX_STR_SIZE];
+};
+
 struct scmi_msg_base_error_notify {
 	__le32 event_control;
 #define BASE_TP_NOTIFY_ALL	BIT(0)
@@ -222,19 +227,22 @@ static int scmi_base_discover_agent_get(const struct scmi_handle *handle,
 					int id, char *name)
 {
 	int ret;
+	struct scmi_msg_resp_base_discover_agent *agent_info;
 	struct scmi_xfer *t;
 
 	ret = scmi_xfer_get_init(handle, BASE_DISCOVER_AGENT,
 				 SCMI_PROTOCOL_BASE, sizeof(__le32),
-				 SCMI_MAX_STR_SIZE, &t);
+				 sizeof(*agent_info), &t);
 	if (ret)
 		return ret;
 
 	put_unaligned_le32(id, t->tx.buf);
 
 	ret = scmi_do_xfer(handle, t);
-	if (!ret)
-		strlcpy(name, t->rx.buf, SCMI_MAX_STR_SIZE);
+	if (!ret) {
+		agent_info = t->rx.buf;
+		strlcpy(name, agent_info->name, SCMI_MAX_STR_SIZE);
+	}
 
 	scmi_xfer_put(handle, t);
 
