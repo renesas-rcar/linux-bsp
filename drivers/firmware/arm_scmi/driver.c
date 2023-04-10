@@ -488,7 +488,7 @@ int scmi_xfer_get_init(const struct scmi_handle *handle, u8 msg_id, u8 prot_id,
 	xfer->rx.len = rx_size ? : info->desc->max_msg_size;
 	xfer->hdr.id = msg_id;
 	xfer->hdr.protocol_id = prot_id;
-	xfer->hdr.poll_completion = false;
+	xfer->hdr.poll_completion = true;
 
 	*p = xfer;
 
