@@ -18,6 +18,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
+#include <linux/sys_soc.h>
 
 #include <dt-bindings/power/r8a779g0-sysc.h>
 
@@ -27,6 +28,7 @@
 #define PD_CPU		BIT(0)	/* Area contains main CPU core */
 #define PD_SCU		BIT(1)	/* Area contains SCU and L2 cache */
 #define PD_NO_CR	BIT(2)	/* Area lacks PWR{ON,OFF}CR registers */
+#define PD_FORCE_ALWAYS_ON	BIT(3) /* Power-on at initialization and remain always-on area */
 
 #define PD_CPU_NOCR	(PD_CPU | PD_NO_CR) /* CPU area lacks CR */
 #define PD_ALWAYS_ON	PD_NO_CR	  /* Always-on area */
@@ -65,8 +67,8 @@ static struct r8a779g0_sysc_area r8a779g0_areas[] __initdata = {
 	{ "a3vip2",	R8A779G0_PD_A3VIP2, R8A779G0_PD_ALWAYS_ON },
 	{ "a3isp0",	R8A779G0_PD_A3ISP0, R8A779G0_PD_ALWAYS_ON },
 	{ "a3isp1",	R8A779G0_PD_A3ISP1, R8A779G0_PD_ALWAYS_ON },
-	{ "a3ir",	R8A779G0_PD_A3IR, R8A779G0_PD_ALWAYS_ON },
-	{ "a2cn0",	R8A779G0_PD_A2CN0, R8A779G0_PD_A3IR },
+	{ "a3ir",	R8A779G0_PD_A3IR, R8A779G0_PD_ALWAYS_ON, PD_FORCE_ALWAYS_ON },
+	{ "a2cn0",	R8A779G0_PD_A2CN0, R8A779G0_PD_A3IR, PD_FORCE_ALWAYS_ON },
 	{ "a2imp01",	R8A779G0_PD_A2IMP01, R8A779G0_PD_A3IR },
 	{ "a2imp23",	R8A779G0_PD_A2IMP23, R8A779G0_PD_A3IR },
 	{ "a2psc",	R8A779G0_PD_A2PSC, R8A779G0_PD_A3IR },
@@ -75,7 +77,7 @@ static struct r8a779g0_sysc_area r8a779g0_areas[] __initdata = {
 	{ "a2cv1",	R8A779G0_PD_A2CV1, R8A779G0_PD_A3IR },
 	{ "a2cv2",	R8A779G0_PD_A2CV2, R8A779G0_PD_A3IR },
 	{ "a2cv3",	R8A779G0_PD_A2CV3, R8A779G0_PD_A3IR },
-	{ "a1cnn0",	R8A779G0_PD_A1CNN0, R8A779G0_PD_A2CN0 },
+	{ "a1cnn0",	R8A779G0_PD_A1CNN0, R8A779G0_PD_A2CN0, PD_FORCE_ALWAYS_ON },
 	{ "a1dsp0",	R8A779G0_PD_A1DSP0, R8A779G0_PD_A2CN0 },
 	{ "a1dsp1",	R8A779G0_PD_A1DSP1, R8A779G0_PD_A2CN0 },
 	{ "a1dsp2",	R8A779G0_PD_A1DSP2, R8A779G0_PD_A2CN0 },
@@ -282,6 +284,16 @@ static int r8a779g0_sysc_pd_power_on(struct generic_pm_domain *genpd)
 	return r8a779g0_sysc_power(pd->pdr, true);
 }
 
+static const struct soc_device_attribute r8a779g0es1[] = {
+	{ .soc_id = "r8a779g0", .revision = "ES1.*",
+	  .data = (void *)(BIT(R8A779G0_PD_A3IR) | BIT(R8A779G0_PD_A2CN0)
+			| BIT(R8A779G0_PD_A1CNN0)),
+	},
+	{ /* sentinel */ }
+};
+
+static u64 rcar_sysc_quirks;
+
 static int __init r8a779g0_sysc_pd_setup(struct r8a779g0_sysc_pd *pd)
 {
 	struct generic_pm_domain *genpd = &pd->genpd;
@@ -303,7 +315,7 @@ static int __init r8a779g0_sysc_pd_setup(struct r8a779g0_sysc_pd *pd)
 		 */
 		pr_debug("PM domain %s contains %s\n", name, "SCU");
 		genpd->flags |= GENPD_FLAG_ALWAYS_ON;
-	} else if (pd->flags & PD_NO_CR) {
+	} else if (pd->flags & (PD_NO_CR | PD_FORCE_ALWAYS_ON)) {
 		/*
 		 * This domain cannot be turned off.
 		 */
@@ -362,6 +374,7 @@ static int __init r8a779g0_sysc_pd_init(void)
 	void __iomem *base;
 	unsigned int i;
 	int error;
+	const struct soc_device_attribute *attr;
 
 	np = of_find_matching_node_and_match(NULL, r8a779g0_sysc_matches, &match);
 	if (!np)
@@ -388,6 +401,10 @@ static int __init r8a779g0_sysc_pd_init(void)
 	domains->onecell_data.num_domains = ARRAY_SIZE(domains->domains);
 	r8a779g0_sysc_onecell_data = &domains->onecell_data;
 
+	attr = soc_device_match(r8a779g0es1);
+	if (attr)
+		rcar_sysc_quirks = (uintptr_t)attr->data;
+
 	for (i = 0; i < info->num_areas; i++) {
 		const struct r8a779g0_sysc_area *area = &info->areas[i];
 		struct r8a779g0_sysc_pd *pd;
@@ -407,6 +424,9 @@ static int __init r8a779g0_sysc_pd_init(void)
 		pd->genpd.name = pd->name;
 		pd->pdr = area->pdr;
 		pd->flags = area->flags;
+
+		if (rcar_sysc_quirks & BIT(pd->pdr))
+			pd->flags = 0;
 
 		error = r8a779g0_sysc_pd_setup(pd);
 		if (error)
