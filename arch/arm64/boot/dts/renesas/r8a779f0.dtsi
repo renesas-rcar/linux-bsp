@@ -265,6 +265,7 @@
 			shmem = <&cpu_scp_lpri0 &cpu_scp_hpri0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			status = "disabled";
 		};
 	};
 
@@ -280,6 +281,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0 0x0 0xe6358000 0x5000>;
+		status = "disabled";
 
 		cpu_scp_lpri0: scp-shmem@5800 {
 			compatible = "arm,rcar-scp-shmem";
@@ -1273,6 +1275,7 @@
 			reg = <0x0 0xe62684b8 0x0 0x4>,
 				  <0x0 0xe626a4bc 0x0 0x4>;
 			interrupts = <GIC_SPI 350 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
 		};
 
 		iccom_reg00: mfis@e6260000 {
