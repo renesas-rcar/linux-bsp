@@ -7,6 +7,7 @@
 
 /dts-v1/;
 #include "r8a779g0-whitehawk-cpu.dtsi"
+#include <dt-bindings/media/r8a779g0-csi2.h>
 
 / {
 	model = "Renesas White Hawk CPU boards based on r8a779g0";
@@ -793,6 +794,8 @@
 				bus-type = <1>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3>;
+				pin-swap-rx-order = <ABC BCA ABC>;
+				hs-receive-eq = <0x4 0x4 0x4>;
 				remote-endpoint = <&max96712_out0>;
 			};
 		};
@@ -814,6 +817,8 @@
 				bus-type = <1>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3>;
+				pin-swap-rx-order = <ABC BCA ABC>;
+				hs-receive-eq = <0x4 0x4 0x4>;
 				remote-endpoint = <&max96712_out1>;
 			};
 		};
