@@ -135,6 +135,18 @@
 	status = "okay";
 };
 
+&pciec0_ep {
+	status = "disabled";
+};
+
+&pciec1 {
+	status = "disabled";
+};
+
+&pciec1_ep {
+	status = "disabled";
+};
+
 &pfc {
 	pinctrl-0 = <&scif_clk_pins>;
 	pinctrl-names = "default";
