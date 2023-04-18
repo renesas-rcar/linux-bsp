@@ -670,9 +670,24 @@ static void rcsi2_write(struct rcar_csi2 *priv, unsigned int reg, u32 data)
 	iowrite32(data, priv->base + reg);
 }
 
+static u16 rcsi2_read16(struct rcar_csi2 *priv, unsigned int reg)
+{
+	return ioread16(priv->base + reg);
+}
+
 static void rcsi2_write16(struct rcar_csi2 *priv, unsigned int reg, u16 data)
 {
 	iowrite16(data, priv->base + reg);
+}
+
+static void rcsi2_modify16(struct rcar_csi2 *priv, unsigned int reg, u16 data, u16 mask)
+{
+	u16 val;
+
+	val = rcsi2_read16(priv, reg);
+	val &= ~mask;
+	val |= data;
+	rcsi2_write16(priv, reg, val);
 }
 
 static void rcsi2_enter_standby(struct rcar_csi2 *priv)
