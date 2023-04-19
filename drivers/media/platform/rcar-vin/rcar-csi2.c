@@ -274,42 +274,42 @@ struct rcsi2_cphy_setting {
 };
 
 static const struct rcsi2_cphy_setting cphy_setting_table_r8a779g0[] = {
-	{ CSI2_CPHY_SETTING(80, 0x0038, 0x0200, 0x0134, 0x006a, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(100, 0x0038, 0x0200, 0x00f5, 0x0055, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(200, 0x0038, 0x0200, 0x0077, 0x002b, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(300, 0x0038, 0x0200, 0x004d, 0x001d, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(400, 0x0038, 0x0200, 0x0038, 0x0016, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(500, 0x0038, 0x0200, 0x002c, 0x0012, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(600, 0x0038, 0x0200, 0x0023, 0x000f, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(700, 0x0038, 0x0200, 0x001d, 0x000d, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(800, 0x0038, 0x0200, 0x0019, 0x000c, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(900, 0x0038, 0x0200, 0x0015, 0x000b, 0x0004, 0x0000) },
-	{ CSI2_CPHY_SETTING(1000, 0x003e, 0x0200, 0x0013, 0x000a, 0x0004, 0x0400) },
-	{ CSI2_CPHY_SETTING(1100, 0x0044, 0x0200, 0x0010, 0x0009, 0x0004, 0x0800) },
-	{ CSI2_CPHY_SETTING(1200, 0x004a, 0x0200, 0x000e, 0x0008, 0x0004, 0x0c00) },
-	{ CSI2_CPHY_SETTING(1300, 0x0051, 0x0200, 0x000d, 0x0008, 0x0004, 0x0c00) },
-	{ CSI2_CPHY_SETTING(1400, 0x0057, 0x0200, 0x000b, 0x0007, 0x0004, 0x1000) },
-	{ CSI2_CPHY_SETTING(1500, 0x005d, 0x0400, 0x000a, 0x0007, 0x0004, 0x1000) },
-	{ CSI2_CPHY_SETTING(1600, 0x0063, 0x0400, 0x0009, 0x0007, 0x0004, 0x1400) },
-	{ CSI2_CPHY_SETTING(1700, 0x006a, 0x0400, 0x0008, 0x0006, 0x0004, 0x1400) },
-	{ CSI2_CPHY_SETTING(1800, 0x0070, 0x0400, 0x0007, 0x0006, 0x0004, 0x1400) },
-	{ CSI2_CPHY_SETTING(1900, 0x0076, 0x0400, 0x0007, 0x0006, 0x0004, 0x1400) },
-	{ CSI2_CPHY_SETTING(2000, 0x007c, 0x0400, 0x0006, 0x0006, 0x0004, 0x1800) },
-	{ CSI2_CPHY_SETTING(2100, 0x0083, 0x0400, 0x0005, 0x0005, 0x0004, 0x1800) },
-	{ CSI2_CPHY_SETTING(2200, 0x0089, 0x0600, 0x0005, 0x0005, 0x0004, 0x1800) },
-	{ CSI2_CPHY_SETTING(2300, 0x008f, 0x0600, 0x0004, 0x0005, 0x0004, 0x1800) },
-	{ CSI2_CPHY_SETTING(2400, 0x0095, 0x0600, 0x0004, 0x0005, 0x0004, 0x1800) },
-	{ CSI2_CPHY_SETTING(2500, 0x009c, 0x0600, 0x0004, 0x0005, 0x0004, 0x1c00) },
-	{ CSI2_CPHY_SETTING(2600, 0x00a2, 0x0600, 0x0003, 0x0005, 0x0014, 0x1c00) },
-	{ CSI2_CPHY_SETTING(2700, 0x00a8, 0x0600, 0x0003, 0x0005, 0x0014, 0x1c00) },
-	{ CSI2_CPHY_SETTING(2800, 0x00ae, 0x0600, 0x0002, 0x0004, 0x0014, 0x1c00) },
-	{ CSI2_CPHY_SETTING(2900, 0x00b5, 0x0800, 0x0002, 0x0004, 0x0014, 0x1c00) },
-	{ CSI2_CPHY_SETTING(3000, 0x00bb, 0x0800, 0x0002, 0x0004, 0x0014, 0x1c00) },
-	{ CSI2_CPHY_SETTING(3100, 0x00c1, 0x0800, 0x0002, 0x0004, 0x0014, 0x1c00) },
-	{ CSI2_CPHY_SETTING(3200, 0x00c7, 0x0800, 0x0001, 0x0004, 0x0014, 0x1c00) },
-	{ CSI2_CPHY_SETTING(3300, 0x00ce, 0x0800, 0x0001, 0x0004, 0x0014, 0x1c00) },
-	{ CSI2_CPHY_SETTING(3400, 0x00d4, 0x0800, 0x0001, 0x0004, 0x0014, 0x1c00) },
-	{ CSI2_CPHY_SETTING(3500, 0x00da, 0x0800, 0x0001, 0x0004, 0x0014, 0x1c00) },
+	{ CSI2_CPHY_SETTING(80, 0x0038, 0x0200, 0x0134, 0x006a, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(100, 0x0038, 0x0200, 0x00f5, 0x0055, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(200, 0x0038, 0x0200, 0x0077, 0x002b, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(300, 0x0038, 0x0200, 0x004d, 0x001d, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(400, 0x0038, 0x0200, 0x0038, 0x0016, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(500, 0x0038, 0x0200, 0x002c, 0x0012, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(600, 0x0038, 0x0200, 0x0023, 0x000f, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(700, 0x0038, 0x0200, 0x001d, 0x000d, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(800, 0x0038, 0x0200, 0x0019, 0x000c, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(900, 0x0038, 0x0200, 0x0015, 0x000b, 0x0000, 0x0000) },
+	{ CSI2_CPHY_SETTING(1000, 0x003e, 0x0200, 0x0013, 0x000a, 0x0000, 0x0400) },
+	{ CSI2_CPHY_SETTING(1100, 0x0044, 0x0200, 0x0010, 0x0009, 0x0000, 0x0800) },
+	{ CSI2_CPHY_SETTING(1200, 0x004a, 0x0200, 0x000e, 0x0008, 0x0000, 0x0c00) },
+	{ CSI2_CPHY_SETTING(1300, 0x0051, 0x0200, 0x000d, 0x0008, 0x0000, 0x0c00) },
+	{ CSI2_CPHY_SETTING(1400, 0x0057, 0x0200, 0x000b, 0x0007, 0x0000, 0x1000) },
+	{ CSI2_CPHY_SETTING(1500, 0x005d, 0x0400, 0x000a, 0x0007, 0x0000, 0x1000) },
+	{ CSI2_CPHY_SETTING(1600, 0x0063, 0x0400, 0x0009, 0x0007, 0x0000, 0x1400) },
+	{ CSI2_CPHY_SETTING(1700, 0x006a, 0x0400, 0x0008, 0x0006, 0x0000, 0x1400) },
+	{ CSI2_CPHY_SETTING(1800, 0x0070, 0x0400, 0x0007, 0x0006, 0x0000, 0x1400) },
+	{ CSI2_CPHY_SETTING(1900, 0x0076, 0x0400, 0x0007, 0x0006, 0x0000, 0x1400) },
+	{ CSI2_CPHY_SETTING(2000, 0x007c, 0x0400, 0x0006, 0x0006, 0x0000, 0x1800) },
+	{ CSI2_CPHY_SETTING(2100, 0x0083, 0x0400, 0x0005, 0x0005, 0x0000, 0x1800) },
+	{ CSI2_CPHY_SETTING(2200, 0x0089, 0x0600, 0x0005, 0x0005, 0x0000, 0x1800) },
+	{ CSI2_CPHY_SETTING(2300, 0x008f, 0x0600, 0x0004, 0x0005, 0x0000, 0x1800) },
+	{ CSI2_CPHY_SETTING(2400, 0x0095, 0x0600, 0x0004, 0x0005, 0x0000, 0x1800) },
+	{ CSI2_CPHY_SETTING(2500, 0x009c, 0x0600, 0x0004, 0x0005, 0x0000, 0x1c00) },
+	{ CSI2_CPHY_SETTING(2600, 0x00a2, 0x0600, 0x0003, 0x0005, 0x0010, 0x1c00) },
+	{ CSI2_CPHY_SETTING(2700, 0x00a8, 0x0600, 0x0003, 0x0005, 0x0010, 0x1c00) },
+	{ CSI2_CPHY_SETTING(2800, 0x00ae, 0x0600, 0x0002, 0x0004, 0x0010, 0x1c00) },
+	{ CSI2_CPHY_SETTING(2900, 0x00b5, 0x0800, 0x0002, 0x0004, 0x0010, 0x1c00) },
+	{ CSI2_CPHY_SETTING(3000, 0x00bb, 0x0800, 0x0002, 0x0004, 0x0010, 0x1c00) },
+	{ CSI2_CPHY_SETTING(3100, 0x00c1, 0x0800, 0x0002, 0x0004, 0x0010, 0x1c00) },
+	{ CSI2_CPHY_SETTING(3200, 0x00c7, 0x0800, 0x0001, 0x0004, 0x0010, 0x1c00) },
+	{ CSI2_CPHY_SETTING(3300, 0x00ce, 0x0800, 0x0001, 0x0004, 0x0010, 0x1c00) },
+	{ CSI2_CPHY_SETTING(3400, 0x00d4, 0x0800, 0x0001, 0x0004, 0x0010, 0x1c00) },
+	{ CSI2_CPHY_SETTING(3500, 0x00da, 0x0800, 0x0001, 0x0004, 0x0010, 0x1c00) },
 	{ /* sentinel */ },
 };
 
@@ -612,6 +612,28 @@ static const struct rcar_csi2_format rcar_csi2_formats[] = {
 	{ .code = MEDIA_BUS_FMT_Y8_1X8,		.datatype = 0x2a, .bpp = 8 },
 };
 
+struct rcar_csi2_cphy_specific {
+	u8 trio;
+	unsigned int hs_receive_reg;
+	unsigned int pin_swap_reg;
+	unsigned int ctrl27_reg;
+};
+
+static const struct rcar_csi2_cphy_specific rcar_csi2_cphy_specifices[] = {
+	{ .trio = 0,
+		.hs_receive_reg = CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(9),
+		.pin_swap_reg = CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(9),
+		.ctrl27_reg = CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(7) },
+	{ .trio = 1,
+		.hs_receive_reg = CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(9),
+		.pin_swap_reg = CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(9),
+		.ctrl27_reg = CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(7) },
+	{ .trio = 2,
+		.hs_receive_reg = CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(9),
+		.pin_swap_reg = CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(9),
+		.ctrl27_reg = CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(7) },
+};
+
 static const struct rcar_csi2_format *rcsi2_code_to_fmt(unsigned int code)
 {
 	unsigned int i;
@@ -667,6 +689,7 @@ struct rcar_csi2 {
 
 	bool cphy_connection;
 	bool pin_swap;
+	unsigned int hs_receive_eq[4];
 };
 
 static inline struct rcar_csi2 *sd_to_csi2(struct v4l2_subdev *sd)
@@ -997,8 +1020,9 @@ static int rcsi2_start_receiver(struct rcar_csi2 *priv)
 static int rcsi2_c_phy_setting(struct rcar_csi2 *priv, int data_rate)
 {
 	const struct rcsi2_cphy_setting *cphy_setting_value;
-	unsigned int timeout;
+	unsigned int timeout, i;
 	u32 status;
+	u16 val;
 
 	for ( cphy_setting_value = cphy_setting_table_r8a779g0;
 			cphy_setting_value->msps != 0; cphy_setting_value++ ) {
@@ -1098,19 +1122,14 @@ static int rcsi2_c_phy_setting(struct rcar_csi2 *priv, int data_rate)
 	}
 
 	/* Step T6: C-PHY setting - analog programing*/
-	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(9),
-		      cphy_setting_value->afe_lane0_29);
-	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(9),
-		      cphy_setting_value->afe_lane0_29);
-	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(9),
-		      cphy_setting_value->afe_lane0_29);
-
-	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(7),
-		      cphy_setting_value->afe_lane0_27);
-	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(7),
-		      cphy_setting_value->afe_lane0_27);
-	rcsi2_write16(priv, CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(7),
-		      cphy_setting_value->afe_lane0_27);
+	for (i = 0; i < ARRAY_SIZE(rcar_csi2_cphy_specifices); i++) {
+		val = cphy_setting_value->afe_lane0_29;
+		val |= priv->hs_receive_eq[i];
+		rcsi2_modify16(priv, rcar_csi2_cphy_specifices[i].hs_receive_reg, val,
+			       GENMASK(4, 0));
+		val = cphy_setting_value->afe_lane0_27;
+		rcsi2_modify16(priv, rcar_csi2_cphy_specifices[i].ctrl27_reg, val, GENMASK(12, 10));
+	}
 
 	return 0;
 }
@@ -1484,7 +1503,8 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 	struct fwnode_handle *fwnode;
 	struct device_node *ep;
 	struct v4l2_fwnode_endpoint v4l2_ep = { .bus_type = 0 };
-	int ret;
+	int ret, rval, i;
+	unsigned int hs_arr[4];
 
 	if (of_find_property(priv->dev->of_node, "pin-swap", NULL))
 		priv->pin_swap = true;
@@ -1508,6 +1528,20 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 	if (ret) {
 		of_node_put(ep);
 		return ret;
+	}
+
+	if (of_find_property(ep, "hs-receive-eq", NULL)) {
+		rval = of_property_read_u32_array(ep, "hs-receive-eq", hs_arr, priv->lanes);
+		if (rval) {
+			dev_err(priv->dev, "Failed to read hs-receive-eq\n");
+			return rval;
+		}
+		for (i = 0; i < priv->lanes; i++)
+			priv->hs_receive_eq[i] = hs_arr[i];
+	} else {
+		/* Witout pin-swap-rx-order, ABC is default order */
+		for (i = 0; i < priv->lanes; i++)
+			priv->hs_receive_eq[i] = 0x4;
 	}
 
 	fwnode = fwnode_graph_get_remote_endpoint(of_fwnode_handle(ep));
