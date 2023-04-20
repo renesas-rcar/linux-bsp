@@ -202,9 +202,13 @@ struct rcar_csi2;
 
 #define CORE_DIG_COMMON_RW_DESKEW_FINE_MEM		0x23FE0
 
+#define CORE_DIG_CLANE_0_RW_CFG_0				0x2A000
 #define CORE_DIG_CLANE_1_RW_CFG_0				0x2A400
+#define CORE_DIG_CLANE_2_RW_CFG_0				0x2A800
 
+#define CORE_DIG_CLANE_0_RW_HS_TX_6				0x2A20C
 #define CORE_DIG_CLANE_1_RW_HS_TX_6				0x2A60C
+#define CORE_DIG_CLANE_2_RW_HS_TX_6				0x2AA0C
 
 #define CORE_DIG_DLANE_0_RW_CFG(n)				(0x26000 + (n * 2))	/* n = 0 - 2 */
 
@@ -612,26 +616,54 @@ static const struct rcar_csi2_format rcar_csi2_formats[] = {
 	{ .code = MEDIA_BUS_FMT_Y8_1X8,		.datatype = 0x2a, .bpp = 8 },
 };
 
+#define	ABC		0x0
+#define	CBA		0x1
+#define	ACB		0x2
+#define	CAB		0x3
+#define	BAC		0x4
+#define	BCA		0x5
+
+/* RX ABC Order */
+struct rcar_csi2_pin_swap {
+	u8 code;
+	u32 rw_cfg0_b2_0;
+	u32 rw_cfg0_b3;
+	u32 afe_clane_29_b8;
+};
+
+static const struct rcar_csi2_pin_swap rcar_csi2_pin_swaps[] = {
+	{ .code = ABC, .rw_cfg0_b2_0 = 0x0, .rw_cfg0_b3 = 0x0, .afe_clane_29_b8 = 0x0 },
+	{ .code = CBA, .rw_cfg0_b2_0 = 0x1, .rw_cfg0_b3 = 0x1, .afe_clane_29_b8 = 0x1 },
+	{ .code = ACB, .rw_cfg0_b2_0 = 0x2, .rw_cfg0_b3 = 0x1, .afe_clane_29_b8 = 0x1 },
+	{ .code = CAB, .rw_cfg0_b2_0 = 0x3, .rw_cfg0_b3 = 0x0, .afe_clane_29_b8 = 0x0 },
+	{ .code = BAC, .rw_cfg0_b2_0 = 0x4, .rw_cfg0_b3 = 0x1, .afe_clane_29_b8 = 0x1 },
+	{ .code = BCA, .rw_cfg0_b2_0 = 0x5, .rw_cfg0_b3 = 0x0, .afe_clane_29_b8 = 0x0 },
+};
+
 struct rcar_csi2_cphy_specific {
 	u8 trio;
 	unsigned int hs_receive_reg;
 	unsigned int pin_swap_reg;
 	unsigned int ctrl27_reg;
+	unsigned int rwconf_reg;
 };
 
-static const struct rcar_csi2_cphy_specific rcar_csi2_cphy_specifices[] = {
+static const struct rcar_csi2_cphy_specific cphy_specific_reg[] = {
 	{ .trio = 0,
 		.hs_receive_reg = CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(9),
 		.pin_swap_reg = CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(9),
-		.ctrl27_reg = CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(7) },
+		.ctrl27_reg = CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2(7),
+		.rwconf_reg = CORE_DIG_CLANE_0_RW_CFG_0 },
 	{ .trio = 1,
 		.hs_receive_reg = CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(9),
 		.pin_swap_reg = CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(9),
-		.ctrl27_reg = CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(7) },
+		.ctrl27_reg = CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2(7),
+		.rwconf_reg = CORE_DIG_CLANE_1_RW_CFG_0 },
 	{ .trio = 2,
 		.hs_receive_reg = CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(9),
 		.pin_swap_reg = CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2(9),
-		.ctrl27_reg = CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(7) },
+		.ctrl27_reg = CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2(7),
+		.rwconf_reg = CORE_DIG_CLANE_2_RW_CFG_0 },
 };
 
 static const struct rcar_csi2_format *rcsi2_code_to_fmt(unsigned int code)
@@ -689,6 +721,7 @@ struct rcar_csi2 {
 
 	bool cphy_connection;
 	bool pin_swap;
+	unsigned int pin_swap_rx_order[4];
 	unsigned int hs_receive_eq[4];
 };
 
@@ -1020,7 +1053,7 @@ static int rcsi2_start_receiver(struct rcar_csi2 *priv)
 static int rcsi2_c_phy_setting(struct rcar_csi2 *priv, int data_rate)
 {
 	const struct rcsi2_cphy_setting *cphy_setting_value;
-	unsigned int timeout, i;
+	unsigned int timeout, i, j;
 	u32 status;
 	u16 val;
 
@@ -1098,10 +1131,31 @@ static int rcsi2_c_phy_setting(struct rcar_csi2 *priv, int data_rate)
 	rcsi2_write16(priv, CORE_DIG_CLANE_1_RW_LP_0, 0x163C);
 	rcsi2_write16(priv, CORE_DIG_CLANE_2_RW_LP_0, 0x163C);
 
+	for (i = 0; i < ARRAY_SIZE(cphy_specific_reg); i++) {
+		val = cphy_setting_value->afe_lane0_29;
+		val |= priv->hs_receive_eq[i];
+		rcsi2_modify16(priv, cphy_specific_reg[i].hs_receive_reg, val,
+			       GENMASK(4, 0));
+		val = cphy_setting_value->afe_lane0_27;
+		rcsi2_modify16(priv, cphy_specific_reg[i].ctrl27_reg, val, GENMASK(12, 10));
+	}
+
 	if (priv->pin_swap) {
 		/* For WhiteHawk board */
 		rcsi2_write16(priv, CORE_DIG_CLANE_1_RW_CFG_0, 0xf5);
 		rcsi2_write16(priv, CORE_DIG_CLANE_1_RW_HS_TX_6, 0x5000);
+		for (i = 0; i < ARRAY_SIZE(cphy_specific_reg); i++) {
+			val = rcar_csi2_pin_swaps[i].afe_clane_29_b8 << 8;
+			rcsi2_modify16(priv, cphy_specific_reg[i].pin_swap_reg, val, GENMASK(8, 8));
+			for (j = 0; j < ARRAY_SIZE(rcar_csi2_pin_swaps); j++) {
+				if (priv->pin_swap_rx_order[i] == rcar_csi2_pin_swaps[j].code) {
+					val = rcar_csi2_pin_swaps[j].rw_cfg0_b2_0;
+					val |= rcar_csi2_pin_swaps[j].rw_cfg0_b3 << 3;
+					rcsi2_modify16(priv, cphy_specific_reg[i].rwconf_reg, val,
+						       GENMASK(3, 0));
+				}
+			}
+		}
 	}
 
 	/* Step T4: Leave Shutdown mode */
@@ -1122,14 +1176,7 @@ static int rcsi2_c_phy_setting(struct rcar_csi2 *priv, int data_rate)
 	}
 
 	/* Step T6: C-PHY setting - analog programing*/
-	for (i = 0; i < ARRAY_SIZE(rcar_csi2_cphy_specifices); i++) {
-		val = cphy_setting_value->afe_lane0_29;
-		val |= priv->hs_receive_eq[i];
-		rcsi2_modify16(priv, rcar_csi2_cphy_specifices[i].hs_receive_reg, val,
-			       GENMASK(4, 0));
-		val = cphy_setting_value->afe_lane0_27;
-		rcsi2_modify16(priv, rcar_csi2_cphy_specifices[i].ctrl27_reg, val, GENMASK(12, 10));
-	}
+	/* Fix me */
 
 	return 0;
 }
@@ -1504,7 +1551,7 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 	struct device_node *ep;
 	struct v4l2_fwnode_endpoint v4l2_ep = { .bus_type = 0 };
 	int ret, rval, i;
-	unsigned int hs_arr[4];
+	unsigned int hs_arr[4], order_arr[4];
 
 	if (of_find_property(priv->dev->of_node, "pin-swap", NULL))
 		priv->pin_swap = true;
@@ -1542,6 +1589,20 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		/* Witout pin-swap-rx-order, ABC is default order */
 		for (i = 0; i < priv->lanes; i++)
 			priv->hs_receive_eq[i] = 0x4;
+	}
+
+	if (of_find_property(ep, "pin-swap-rx-order", NULL)) {
+		rval = of_property_read_u32_array(ep, "pin-swap-rx-order", order_arr, priv->lanes);
+		if (rval) {
+			dev_err(priv->dev, "Failed to read pin-swap-rx-order\n");
+			return rval;
+		}
+		for (i = 0; i < priv->lanes; i++)
+			priv->pin_swap_rx_order[i] = order_arr[i];
+	} else {
+		/* Without pin-swap-rx-order, ABC is default order */
+		for (i = 0; i < priv->lanes; i++)
+			priv->pin_swap_rx_order[i] = ABC;
 	}
 
 	fwnode = fwnode_graph_get_remote_endpoint(of_fwnode_handle(ep));
