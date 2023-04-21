@@ -38,10 +38,10 @@
 	PORT_GP_CFG_1(3, 27, fn, sfx, CFG_FLAGS),	\
 	PORT_GP_CFG_1(3, 28, fn, sfx, CFG_FLAGS),	\
 	PORT_GP_CFG_1(3, 29, fn, sfx, CFG_FLAGS),	\
-	PORT_GP_CFG_25(4, fn, sfx, CFG_FLAGS),	\
-	PORT_GP_CFG_21(5, fn, sfx, CFG_FLAGS),	\
-	PORT_GP_CFG_21(6, fn, sfx, CFG_FLAGS),	\
-	PORT_GP_CFG_21(7, fn, sfx, CFG_FLAGS),	\
+	PORT_GP_CFG_25(4, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE_18_33),	\
+	PORT_GP_CFG_21(5, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE_18_33),	\
+	PORT_GP_CFG_21(6, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE_18_33),	\
+	PORT_GP_CFG_21(7, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE_18_33),	\
 	PORT_GP_CFG_14(8, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE_18_33)
 
 #define CPU_ALL_NOGP(fn)								\
@@ -3962,19 +3962,19 @@ static int r8a779g0_pin_to_pocctrl(struct sh_pfc *pfc, unsigned int pin,
 		return bit;
 
 	*pocctrl = pinmux_ioctrl_regs[POC4].reg;
-	if (pin >= RCAR_GP_PIN(4, 0) && pin <= RCAR_GP_PIN(4, 0))
+	if (pin >= RCAR_GP_PIN(4, 0) && pin <= RCAR_GP_PIN(4, 24))
 		return bit;
 
 	*pocctrl = pinmux_ioctrl_regs[POC5].reg;
-	if (pin >= RCAR_GP_PIN(5, 0) && pin <= RCAR_GP_PIN(5, 0))
+	if (pin >= RCAR_GP_PIN(5, 0) && pin <= RCAR_GP_PIN(5, 20))
 		return bit;
 
 	*pocctrl = pinmux_ioctrl_regs[POC6].reg;
-	if (pin >= RCAR_GP_PIN(6, 0) && pin <= RCAR_GP_PIN(6, 0))
+	if (pin >= RCAR_GP_PIN(6, 0) && pin <= RCAR_GP_PIN(6, 20))
 		return bit;
 
 	*pocctrl = pinmux_ioctrl_regs[POC7].reg;
-	if (pin >= RCAR_GP_PIN(7, 0) && pin <= RCAR_GP_PIN(7, 0))
+	if (pin >= RCAR_GP_PIN(7, 0) && pin <= RCAR_GP_PIN(7, 20))
 		return bit;
 
 	*pocctrl = pinmux_ioctrl_regs[POC8].reg;
