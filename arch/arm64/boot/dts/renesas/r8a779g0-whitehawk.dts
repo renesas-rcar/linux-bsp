@@ -7,6 +7,7 @@
 
 /dts-v1/;
 #include "r8a779g0-whitehawk-cpu.dtsi"
+#include <dt-bindings/media/r8a779g0-csi2.h>
 
 / {
 	model = "Renesas White Hawk CPU boards based on r8a779g0";
@@ -21,34 +22,34 @@
 		#size-cells = <2>;
 		ranges;
 
-		vdsp0_region: linux,vdsp0_region@5dc00000 {
+		vdsp0_region: linux,vdsp0_region@5d000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5dc00000 0x0 0x00800000>;
+			reg = <0x00000000 0x5d000000 0x0 0x00800000>;
 		};
 
-		vdsp1_region: linux,vdsp1_region@5e400000 {
+		vdsp1_region: linux,vdsp1_region@5d800000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5e400000 0x0 0x00800000>;
+			reg = <0x00000000 0x5d800000 0x0 0x00800000>;
 		};
 
-		vdsp2_region: linux,vdsp2_region@5ec00000 {
+		vdsp2_region: linux,vdsp2_region@5e000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5ec00000 0x0 0x00800000>;
+			reg = <0x00000000 0x5e000000 0x0 0x00800000>;
 		};
 
-		vdsp3_region: linux,vdsp3_region@5f400000 {
+		vdsp3_region: linux,vdsp3_region@5e800000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5f400000 0x0 0x00800000>;
+			reg = <0x00000000 0x5e800000 0x0 0x00800000>;
 		};
 
-		pap_region: linux,pap_region@5fc00000 {
+		pap_region: linux,pap_region@5f000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5fc00000 0x0 0x00400000>;
+			reg = <0x00000000 0x5f000000 0x0 0x00400000>;
 		};
 
 		/* region for cr core application */
@@ -94,7 +95,7 @@
 };
 
 &avb0 {
-	pinctrl-0 = <&avb0_pins>;
+	pinctrl-0 = <&avb0_pins>, <&vddq_eth_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy0>;
 	tx-internal-delay-ps = <2000>;
@@ -112,7 +113,7 @@
 };
 
 &avb1 {
-	pinctrl-0 = <&avb1_pins>;
+	pinctrl-0 = <&avb1_pins>, <&vddq_eth_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy1>;
 	status = "okay";
@@ -128,7 +129,7 @@
 };
 
 &avb2 {
-	pinctrl-0 = <&avb2_pins>;
+	pinctrl-0 = <&avb2_pins>, <&vddq_eth_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy2>;
 	status = "okay";
@@ -144,7 +145,7 @@
 };
 
 &tsn0 {
-	pinctrl-0 = <&tsn0_pins>;
+	pinctrl-0 = <&tsn0_pins>, <&vddq_eth_pins>;
 	pinctrl-names = "default";
 	phy-handle = <&phy3>;
 	tx-internal-delay;
@@ -246,6 +247,13 @@
 };
 
 &pfc {
+	vddq_eth_pins: vddq_eth {
+		pins_pwr {
+			pins = "GP_4_0", "GP_5_0", "GP_6_0","GP_7_0";
+			power-source = <3300>;
+		};
+	};
+
 	avb0_pins: avb0 {
 		mux {
 			groups = "avb0_link", "avb0_mdio", "avb0_rgmii",
@@ -391,16 +399,6 @@
 	canfd7_pins: canfd7 {
 		groups = "canfd7_data";
 		function = "canfd7";
-	};
-
-	pcie0_pins: pcie0 {
-		groups = "pcie0_clkreq_n";
-		function = "pcie";
-	};
-
-	pcie1_pins: pcie1 {
-		groups = "pcie0_clkreq_n", "pcie1_clkreq_n";
-		function = "pcie";
 	};
 
 };
@@ -746,32 +744,6 @@
 	clock-frequency = <100000000>;
 };
 
-&pciec0 {
-	status = "okay";
-	pinctrl-0 = <&pcie0_pins>;
-	pinctrl-names = "default";
-};
-
-&pciec1 {
-	status = "disabled";
-	pinctrl-0 = <&pcie1_pins>;
-	pinctrl-names = "default";
-	clkreq-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
-};
-
-&pciec0_ep {
-	status = "disabled";
-	pinctrl-0 = <&pcie0_pins>;
-	pinctrl-names = "default";
-};
-
-&pciec1_ep {
-	status = "disabled";
-	pinctrl-0 = <&pcie1_pins>;
-	pinctrl-names = "default";
-	clkreq-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
-};
-
 &du {
 	status = "disabled";
 };
@@ -829,6 +801,8 @@
 				bus-type = <1>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3>;
+				pin-swap-rx-order = <ABC BCA ABC>;
+				hs-receive-eq = <0x4 0x4 0x4>;
 				remote-endpoint = <&max96712_out0>;
 			};
 		};
@@ -850,6 +824,8 @@
 				bus-type = <1>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3>;
+				pin-swap-rx-order = <ABC BCA ABC>;
+				hs-receive-eq = <0x4 0x4 0x4>;
 				remote-endpoint = <&max96712_out1>;
 			};
 		};

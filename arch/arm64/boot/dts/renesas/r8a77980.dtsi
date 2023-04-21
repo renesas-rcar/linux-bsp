@@ -1601,9 +1601,9 @@
 			interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 1002>;
 			power-domains = <&sysc R8A77980_PD_A3VIP2>;
-			ipmmu-id = <RCAR_IPMMU_VIP1 1>;
+			ipmmu-id = <RCAR_IPMMU_VIP1 2>;
 			resets = <&cpg 1002>;
-			iommus = <&ipmmu_vip1 1>;
+			iommus = <&ipmmu_vip1 2>;
 		};
 
 		irq_acf_02_01 {
@@ -1620,9 +1620,9 @@
 			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 1001>;
 			power-domains = <&sysc R8A77980_PD_A3VIP2>;
-			ipmmu-id = <RCAR_IPMMU_VIP1 1>;
+			ipmmu-id = <RCAR_IPMMU_VIP1 3>;
 			resets = <&cpg 1001>;
-			iommus = <&ipmmu_vip1 1>;
+			iommus = <&ipmmu_vip1 3>;
 		};
 
 		irq_acf_03_01 {
@@ -1639,9 +1639,9 @@
 			interrupts = <GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 1000>;
 			power-domains = <&sysc R8A77980_PD_A3VIP2>;
-			ipmmu-id = <RCAR_IPMMU_VIP1 1>;
+			ipmmu-id = <RCAR_IPMMU_VIP1 4>;
 			resets = <&cpg 1000>;
-			iommus = <&ipmmu_vip1 1>;
+			iommus = <&ipmmu_vip1 4>;
 		};
 
 		irq_acf_04_01 {

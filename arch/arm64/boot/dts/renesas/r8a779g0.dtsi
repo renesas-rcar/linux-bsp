@@ -977,28 +977,17 @@
 		};
 
 		pciec0: pcie@e65d0000 {
-			compatible = "renesas,r8a779g0-pcie";
-			reg = <0 0xe65d0000 0 0x3000>,
-			      <0 0xe65d3000 0 0x2000>,
-			      <0 0xe65d5000 0 0x1200>,
-			      <0 0xe65d6200 0 0x0e00>,
-			      <0 0xe65d7000 0 0x1000>,
-			      <0 0xfe000000 0 0x10000>;
-			reg-names = "dbi",
-				    "atu",
-				    "dma",
-				    "app",
-				    "phy",
-				    "config";
+			compatible = "renesas,r8a779g0-pcie",
+				     "renesas,rcar-gen4-pcie";
+			reg = <0 0xe65d0000 0 0x3000>, <0 0xe65d3000 0 0x2000>,
+			      <0 0xe65d5000 0 0x1200>, <0 0xe65d6200 0 0x0e00>,
+			      <0 0xe65d7000 0 0x1000>, <0 0xfe000000 0 0x400000>;
+			reg-names = "dbi", "atu", "dma", "app", "phy", "config";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			bus-range = <0x00 0xff>;
 			device_type = "pci";
-				 /* downstream IO */
-			ranges =  <0x81000000 0 0x00000000 0 0xfe000000 0 0x00010000
-				 /* non-prefetchable memory */
-				  0x82000000 0 0x30000000 0 0x30000000 0 0x10000000>;
-				     /* Map all possible DDR as inbound ranges */
+			ranges = <0x82000000 0 0x30000000 0 0x30000000 0 0x10000000>;
 			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
 			interrupts = <GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 450 IRQ_TYPE_LEVEL_HIGH>,
@@ -1007,50 +996,35 @@
 				     <GIC_SPI 453 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 454 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 455 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "msi", "dma", "err", "fatal",
-				          "nonfatal", "lp", "vndmsg";
+			interrupt-names = "others", "dma", "correctable",
+					  "fatal", "nonfatal", "lp", "vndmsg";
 			#interrupt-cells = <1>;
 			interrupt-map-mask = <0 0 0 7>;
 			interrupt-map = <0 0 0 1 &gic GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH
 				         0 0 0 2 &gic GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH
 				         0 0 0 3 &gic GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH
 				         0 0 0 4 &gic GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 624>,
-			         <&pcie_bus_clk>;
-			clock-names = "pcie",
-				      "pcie_bus";
+			clocks = <&cpg CPG_MOD 624>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 624>;
 			num-lanes = <2>;
+			snps,enable-cdm-check;
 			max-link-speed = <4>;
 			status = "disabled";
-	        };
+		};
 
 		pciec1: pcie@e65d8000 {
-			compatible = "renesas,r8a779g0-pcie";
-			reg = <0 0xe65d8000 0 0x3000>,
-			      <0 0xe65db000 0 0x2000>,
-			      <0 0xe65dd000 0 0x1200>,
-			      <0 0xe65de200 0 0x0e00>,
-			      <0 0xe65df000 0 0x1000>,
-			      <0 0xee900000 0 0x10000>,
-			      <0 0xe65d6200 0 0x0e00>;
-			reg-names = "dbi",
-				    "atu",
-				    "dma",
-				    "app",
-				    "phy",
-				    "config",
-				    "shared";
+			compatible = "renesas,r8a779g0-pcie",
+				     "renesas,rcar-gen4-pcie";
+			reg = <0 0xe65d8000 0 0x3000>, <0 0xe65db000 0 0x2000>,
+			      <0 0xe65dd000 0 0x1200>, <0 0xe65de200 0 0x1100>,
+			      <0 0xee900000 0 0x400000>;
+			reg-names = "dbi", "atu", "dma", "app", "config";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			bus-range = <0x00 0xff>;
 			device_type = "pci";
-				 /* downstream IO */
-			ranges = <0x81000000 0 0x00000000 0 0xee900000 0 0x00010000
-				 /* non-prefetchable memory */
-				 0x82000000 0 0xc0000000 0 0xc0000000 0 0x10000000>;
-				     /* Map all possible DDR as inbound ranges */
+			ranges = <0x82000000 0 0xc0000000 0 0xc0000000 0 0x10000000>;
 			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
 			interrupts = <GIC_SPI 456 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 457 IRQ_TYPE_LEVEL_HIGH>,
@@ -1059,37 +1033,30 @@
 				     <GIC_SPI 460 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 461 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 462 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "msi", "dma", "err", "fatal",
-				          "nonfatal", "lp", "vndmsg";
+			interrupt-names = "others", "dma", "correctable",
+					  "fatal", "nonfatal", "lp", "vndmsg";
 			#interrupt-cells = <1>;
 			interrupt-map-mask = <0 0 0 7>;
 			interrupt-map = <0 0 0 1 &gic GIC_SPI 456 IRQ_TYPE_LEVEL_HIGH
 				         0 0 0 2 &gic GIC_SPI 456 IRQ_TYPE_LEVEL_HIGH
 				         0 0 0 3 &gic GIC_SPI 456 IRQ_TYPE_LEVEL_HIGH
 				         0 0 0 4 &gic GIC_SPI 456 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 625>,
-				 <&pcie_bus_clk>,
-				 <&cpg CPG_MOD 624>;
-			clock-names = "pcie1",
-				      "pcie_bus",
-				      "shared";
+			clocks = <&cpg CPG_MOD 625>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 625>;
 			num-lanes = <2>;
+			snps,enable-cdm-check;
 			max-link-speed = <4>;
 			status = "disabled";
 		};
 
-		pciec0_ep: pciec0_ep@e65d0000 {
-			compatible = "renesas,r8a779g0-pcie-ep";
-			reg = <0 0xe65d0000 0 0x1000>, <0 0xe65d1000 0 0x1000>,
-			      <0 0xe65d2000 0 0x1000>, <0 0xe65d3000 0 0x2000>,
+		pciec0_ep: pcie-ep@e65d0000 {
+			compatible = "renesas,r8a779g0-pcie-ep",
+				     "renesas,rcar-gen4-pcie-ep";
+			reg = <0 0xe65d0000 0 0x3000>, <0 0xe65d3000 0 0x2000>,
 			      <0 0xe65d5000 0 0x1200>, <0 0xe65d6200 0 0x0e00>,
 			      <0 0xe65d7000 0 0x1000>, <0 0xfe000000 0 0x400000>;
-			reg-names = "dbi", "dbi2",
-				    "shadow", "atu",
-				    "dma", "app",
-				    "phy", "addr_space";
+			reg-names = "dbi", "atu", "dma", "appl", "phy", "addr_space";
 			interrupts = <GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 450 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 451 IRQ_TYPE_LEVEL_HIGH>,
@@ -1097,32 +1064,23 @@
 				     <GIC_SPI 453 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 454 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 455 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "msi", "dma", "err", "fatal",
-					  "nonfatal", "lp", "vndmsg";
-			clocks = <&cpg CPG_MOD 624>,
-				 <&pcie_bus_clk>;
-			clock-names = "pcie0", "pcie_bus";
+			interrupt-names = "others", "dma", "correctable",
+					  "fatal", "nonfatal", "lp", "vndmsg";
+			clocks = <&cpg CPG_MOD 624>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 624>;
 			num-lanes = <2>;
 			max-link-speed = <4>;
-			num-ib-windows = <16>;
-			num-ob-windows = <16>;
 			status = "disabled";
 		};
 
-		pciec1_ep: pciec1_ep@e65d8000 {
-			compatible = "renesas,r8a779g0-pcie-ep";
-			reg = <0 0xe65d8000 0 0x1000>, <0 0xe65d9000 0 0x1000>,
-			      <0 0xe65da000 0 0x1000>, <0 0xe65db000 0 0x2000>,
+		pciec1_ep: pcie-ep@e65d8000 {
+			compatible = "renesas,r8a779g0-pcie-ep",
+				     "renesas,rcar-gen4-pcie-ep";
+			reg = <0 0xe65d8000 0 0x3000>, <0 0xe65db000 0 0x2000>,
 			      <0 0xe65dd000 0 0x1200>, <0 0xe65de200 0 0x0e00>,
-			      <0 0xe65df000 0 0x1000>, <0 0xee900000 0 0x400000>,
-			      <0 0xe65d6200 0 0x0e00>;
-			reg-names = "dbi", "dbi2",
-				    "shadow", "atu",
-				    "dma", "app",
-				    "phy", "addr_space",
-				    "shared";
+			      <0 0xee900000 0 0x400000>;
+			reg-names = "dbi", "atu", "dma", "appl", "addr_space";
 			interrupts = <GIC_SPI 456 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 457 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 458 IRQ_TYPE_LEVEL_HIGH>,
@@ -1130,20 +1088,13 @@
 				     <GIC_SPI 460 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 461 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 462 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "msi", "dma", "err", "fatal",
-					  "nonfatal", "lp", "vndmsg";
-			clocks = <&cpg CPG_MOD 625>,
-				 <&pcie_bus_clk>,
-				 <&cpg CPG_MOD 624>;
-			clock-names = "pcie1",
-				      "pcie_bus",
-				      "shared";
+			interrupt-names = "others", "dma", "correctable",
+					  "fatal", "nonfatal", "lp", "vndmsg";
+			clocks = <&cpg CPG_MOD 625>;
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 625>;
 			num-lanes = <2>;
 			max-link-speed = <4>;
-			num-ib-windows = <16>;
-			num-ob-windows = <16>;
 			status = "disabled";
 		};
 
