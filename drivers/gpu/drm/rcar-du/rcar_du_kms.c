@@ -544,7 +544,11 @@ int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
 		goto err;
 	}
 
-	crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+    if (crtc->funcs->atomic_duplicate_state)
+        crtc_state = crtc->funcs->atomic_duplicate_state(crtc);
+    else
+        crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+
 	if (!crtc_state) {
 		ret = -ENOMEM;
 		goto err;
