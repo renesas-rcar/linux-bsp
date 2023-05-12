@@ -2013,8 +2013,6 @@ static int rswitch_open(struct net_device *ndev)
 	rswitch_enadis_data_irq(rdev->priv, rdev->rx_chain->index, true);
 	iowrite32(GWCA_TS_IRQ_BIT, rdev->priv->addr + GWTSDIE);
 
-	rtsn_ptp_init(rdev->priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
-
 	rdev->priv->chan_running |= BIT(rdev->port);
 out:
 	return err;
@@ -3035,6 +3033,9 @@ static int rswitch_init(struct rswitch_private *priv)
 			goto out;
 
 		rswitch_fwd_init(priv);
+		err = rtsn_ptp_init(priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
+		if (err < 0)
+			goto out;
 	}
 
 	err = rswitch_request_irqs(priv);
@@ -3296,6 +3297,10 @@ static int __maybe_unused rswitch_resume(struct device *dev)
 			return ret;
 
 		rswitch_fwd_init(priv);
+
+		ret = rtsn_ptp_init(priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
+		if (ret)
+			return ret;
 	}
 
 	for (i = 0; i < num_ndev; i++) {
