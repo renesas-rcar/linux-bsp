@@ -1449,7 +1449,7 @@ static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
 {
 	rswitch_etha_modify(etha, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
-			    MPIC_PSMCS(0x05) | MPIC_PSMHT(0x06));
+			    MPIC_PSMCS(0x3f) | MPIC_PSMHT(0x06));
 	rswitch_etha_modify(etha, MPSM, 0, MPSM_MFF_C45);
 }
 
