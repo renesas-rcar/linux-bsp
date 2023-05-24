@@ -767,7 +767,7 @@ static int max96712_gmsl2_reverse_channel_setup(struct max96712_priv *priv,
 {
 	struct max96712_link *link = priv->link[link_n];
 	int ser_addrs[] = {0x40, 0x42, 0x60, 0x62};
-	int timeout = 50;
+	int timeout = 100;
 	int ret = 0;
 	int val = 0, i, j = 0;
 
