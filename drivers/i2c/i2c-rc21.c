@@ -44,9 +44,38 @@ static int rc21_regmap_i2c_write(void *context,
 		return -EIO;
 }
 
+static int rc21_init(struct device *dev)
+{
+	struct rc21_driver_data *rc21 = dev_get_drvdata(dev);
+	int ret = 0;
+
+	rc21->addr_byte = 1;
+	ret = regmap_write(rc21->regmap, 0x26, 0x5);
+	if (ret < 0)
+		return ret;
+
+	rc21->addr_byte = 2;
+	ret = regmap_write(rc21->regmap, 0x254, 0x1e);
+	if (ret < 0)
+		return ret;
+
+	ret = regmap_write(rc21->regmap, 0x258, 0x1e);
+	if (ret < 0)
+		return ret;
+
+	ret = regmap_write(rc21->regmap, 0x0026, 0x1);
+	if (ret < 0)
+		return ret;
+
+	rc21->addr_byte = 1;
+
+	return 0;
+}
+
 static int rc21_probe(struct i2c_client *client)
 {
 	struct rc21_driver_data *rc21;
+	int ret = 0;
 
 	static const struct regmap_config config = {
 		.reg_bits = 8,
@@ -68,7 +97,9 @@ static int rc21_probe(struct i2c_client *client)
 		return dev_err_probe(&client->dev, PTR_ERR(rc21->regmap),
 				     "Failed to allocate register map\n");
 
-	return 0;
+	ret = rc21_init(&client->dev);
+
+	return ret;
 }
 
 static int __maybe_unused rc21_suspend(struct device *dev)
@@ -78,29 +109,11 @@ static int __maybe_unused rc21_suspend(struct device *dev)
 
 static int __maybe_unused rc21_resume(struct device *dev)
 {
-	struct rc21_driver_data *rc21 = dev_get_drvdata(dev);
 	int ret = 0;
 
-	rc21->addr_byte = 1;
-	ret = regmap_write(rc21->regmap, 0x26, 0x5);
-	if (ret < 0)
-		return ret;
-	rc21->addr_byte = 2;
+	ret = rc21_init(dev);
 
-	ret = regmap_write(rc21->regmap, 0x254, 0x1e);
-	if (ret < 0)
-		return ret;
-
-	ret = regmap_write(rc21->regmap, 0x258, 0x1e);
-	if (ret < 0)
-		return ret;
-
-	ret = regmap_write(rc21->regmap, 0x0026, 0x1);
-	if (ret < 0)
-		return ret;
-	rc21->addr_byte = 1;
-
-	return 0;
+	return ret;
 }
 
 static const struct of_device_id clk_rc21_of_match[] = {

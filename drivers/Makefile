@@ -15,7 +15,7 @@ obj-$(CONFIG_GENERIC_PHY)	+= phy/
 obj-$(CONFIG_PINCTRL)		+= pinctrl/
 obj-$(CONFIG_GPIOLIB)		+= gpio/
 obj-y				+= pwm/
-
+obj-y                           += i2c/
 obj-y				+= pci/
 
 obj-$(CONFIG_PARISC)		+= parisc/
@@ -111,7 +111,7 @@ obj-$(CONFIG_SERIO)		+= input/serio/
 obj-$(CONFIG_GAMEPORT)		+= input/gameport/
 obj-$(CONFIG_INPUT)		+= input/
 obj-$(CONFIG_RTC_LIB)		+= rtc/
-obj-y				+= i2c/ i3c/ media/
+obj-y				+= i3c/ media/
 obj-$(CONFIG_PPS)		+= pps/
 obj-y				+= ptp/
 obj-$(CONFIG_W1)		+= w1/
