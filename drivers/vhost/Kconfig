@@ -6,6 +6,11 @@ config VHOST_IOTLB
 	  This option is selected by any driver which needs to support
 	  an IOMMU in software.
 
+config VHOST_XEN
+	tristate
+	help
+	  Support of Xen grant mappings for accessing descriptors in virtio rings.
+
 config VHOST_RING
 	tristate
 	select VHOST_IOTLB
@@ -16,6 +21,7 @@ config VHOST_RING
 config VHOST
 	tristate
 	select VHOST_IOTLB
+	select VHOST_XEN if XEN
 	help
 	  This option is selected by any driver which needs to access
 	  the core of vhost.
