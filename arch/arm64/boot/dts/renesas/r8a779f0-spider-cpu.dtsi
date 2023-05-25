@@ -88,6 +88,13 @@
 		reg = <0x20>;
 		gpio-controller;
 		#gpio-cells = <2>;
+
+		pci_nvme_sel_hog {
+			gpio-hog;
+			gpios = <0 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "pci_nvme_sel";
+		};
 	};
 };
 
