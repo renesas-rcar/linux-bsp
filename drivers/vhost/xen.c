@@ -13,11 +13,11 @@
 #include <linux/vhost.h>
 #include <xen/grant_table.h>
 #include <xen/xen.h>
+#include <xen/xenbus.h>
 
 #include "vhost.h"
 
-/* TODO: Make it possible to get domid */
-static domid_t guest_domid = 2;
+static domid_t guest_domid = DOMID_INVALID;
 
 struct vhost_xen_grant_map {
 	struct list_head next;
@@ -261,10 +261,52 @@ void vhost_xen_unmap_desc(struct vhost_virtqueue *vq, void *ptr, u32 size)
 	}
 }
 
+static void vhost_xen_get_guest_domid(struct xenbus_watch *watch,
+		const char *path, const char *token)
+{
+	char *str, *p;
+
+	str = (char *)xenbus_read(XBT_NIL, "drivers/dom0-qemu-command-monitor",
+			"value", NULL);
+	if (XENBUS_IS_ERR_READ(str))
+		return;
+
+	p = strstr(str, "-xen-domid ");
+	if (p) {
+		guest_domid = simple_strtoul(p + strlen("-xen-domid "), NULL, 0);
+		pr_info("%s: Get new domid: %u\n", __func__, guest_domid);
+	}
+
+	kfree(str);
+}
+
+static struct xenbus_watch vhost_xen_qemu_args = {
+	.node = "drivers/dom0-qemu-command-monitor/value",
+	.callback = vhost_xen_get_guest_domid,
+};
+
+static int vhost_xen_watcher(struct notifier_block *notifier,
+		unsigned long event, void *data)
+{
+	int ret;
+
+	ret = register_xenbus_watch(&vhost_xen_qemu_args);
+	if (ret)
+		pr_err("%s: Failed to set watcher (ret=%d)\n", __func__, ret);
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block vhost_xen_notifier = {
+	.notifier_call = vhost_xen_watcher,
+};
+
 static int __init vhost_xen_init(void)
 {
 	if (!xen_domain())
 		return -ENODEV;
+
+	register_xenstore_notifier(&vhost_xen_notifier);
 
 	pr_info("%s: Initialize module for Xen grant mappings\n", __func__);
 
