@@ -137,7 +137,7 @@ struct vhost_virtqueue {
 
 #ifdef CONFIG_VHOST_XEN
 	/*
-	 * Contains virtio descriptors mapped by using Xen grant mappings
+	 * Contains virtio descriptors mapped by using Xen specific mappings
 	 * in order to handle current request. To be unmapped once the request
 	 * is processed.
 	 */
