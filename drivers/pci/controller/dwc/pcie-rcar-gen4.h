@@ -37,6 +37,10 @@
 #define  BIFUR_MOD_SET_ON	BIT(0)
 #define  DEVICE_TYPE_EP		0
 #define  DEVICE_TYPE_RC		BIT(4)
+#define  APP_SRIS_MODE		BIT(6)
+#define  NONSRIS_MODE		0
+#define  SRIS_MODE			BIT(6)
+
 
 #define PCIEINTSTS0		0x0084
 #define PCIEINTSTS0EN		0x0310
@@ -80,6 +84,7 @@ struct rcar_gen4_pcie {
 	void __iomem		*phy_base;
 	struct reset_control	*rst;
 	struct clk *clks[PCIE_LINKUP_WA_CLK_NUM];
+	bool				linkup_setting;
 };
 #define to_rcar_gen4_pcie(x)	dev_get_drvdata((x)->dev)
 

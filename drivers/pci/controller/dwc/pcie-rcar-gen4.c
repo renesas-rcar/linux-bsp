@@ -10,10 +10,13 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/delay.h>
+#include <linux/sys_soc.h>
 
 
 #include "pcie-rcar-gen4.h"
+#include "pcie-rcar-gen4-phy-firmware.h"
 #include "pcie-designware.h"
+
 
 /* Renesas-specific */
 #define PCIERSTCTRL1		0x0014
@@ -23,13 +26,337 @@
 #define	PRTLGC5			0x0714
 #define LANE_CONFIG_DUAL	BIT(6)
 
+#define MISCIFPHYP0		0x00F8	/* 0x70F8 */
+#define MISCIFPHYP1		0x02F8	/* 0x72F8 */
+#define  PHYn_SRAM_BYPASS		BIT(16)
+#define  PHYn_SRAM_EXT_LD_DONE	BIT(17)
+#define  PHYn_SRAM_INIT_DONE	BIT(18)
+#define RVCRCTRL2P0		0x0148	/* 0x7148 */
+#define RVCRCTRL2P1		0x0348	/* 0x7348 */
+#define PHY0OVRDEN8		0x01D4	/* 0x71D4 */
+#define PHY1OVRDEN8		0x03D4	/* 0x73D4 */
+#define OSCTSTCTRL5		0x0514	/* 0x7514 */
+#define  R_PARA_SEL		BIT(26)
+#define PCSCNT0			0x0700	/* 0x7700 */
+#define REFCLKCTRLP1	0x02B8 /* 0x72B8 */
+#define  PHY_REF_CLKDET_EN		BIT(10)
+#define  PHY_REF_USE_PAD		BIT(2)
+
+#define EXPCAP3F			0x007c /* 0x007c */
+#define  CLKPM				BIT(18)
+#define PRTLGC89			0x0B70
+#define  PHY_VIEWPORT_PENDING	BIT(31)
+#define  PHY_VIEWPORT_STATUS	BIT(30)
+#define   PHY_VIEWPORT_TIMEOUT	BIT(30)
+#define   PHY_VIEWPORT_NOERRORS	0
+#define  PHY_VIEWPORT_BCWR		BIT(21)
+#define  PHY_VIEWPORT_READ		BIT(20)
+#define PRTLGC90			0x0B74
+#define PRTLGC2				0x0708 /* 0x0708 */
+#define  DO_DESKEW_FOR_SRIS	BIT(23)
+
 #define	MAX_RETRIES		10
+#define	PHY_UPDATE_MAX_RETRIES		100
+#define SIZE_OF_ARRAY(array)    (sizeof(array)/sizeof(array[0]))
+
+static inline int rcar_gen4_pcie_phy_viewport_wait(struct rcar_gen4_pcie *rcar)
+{
+	struct dw_pcie *dw = &rcar->dw;
+	uint32_t data;
+	int retries;
+
+	for (retries = 0; retries < PHY_UPDATE_MAX_RETRIES; retries++)
+	{
+		data = dw_pcie_readl_dbi(dw, PRTLGC89);
+		if ((data & PHY_VIEWPORT_PENDING) == 0x00000000)
+		{
+			break;
+		}
+		usleep_range(100, 110);
+	}
+
+	if (retries >= PHY_UPDATE_MAX_RETRIES) {
+		dev_err(rcar->dw.dev, "Failed to wait phy viewport\n");
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+
+static int rcar_gen4_pcie_phy_viewport_write(struct rcar_gen4_pcie *rcar, uint32_t addr, uint32_t wr_data)
+{
+	uint32_t data;
+	struct dw_pcie *dw = &rcar->dw;
+
+	dw_pcie_writel_dbi(dw, PRTLGC89, 0x00000000);
+	rcar_gen4_pcie_phy_viewport_wait(rcar);
+	dw_pcie_writel_dbi(dw, PRTLGC90, 0x00000000);
+	rcar_gen4_pcie_phy_viewport_wait(rcar);
+	dw_pcie_writel_dbi(dw, PRTLGC89, addr);
+	rcar_gen4_pcie_phy_viewport_wait(rcar);
+	dw_pcie_writel_dbi(dw, PRTLGC90, wr_data);
+
+	data = dw_pcie_readl_dbi(dw, PRTLGC89);
+	if((data & PHY_VIEWPORT_STATUS) == PHY_VIEWPORT_TIMEOUT)
+	{
+		dev_err(rcar->dw.dev, "Failed to write phy viewport @%04x=%04x\n",addr,wr_data);
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+
+static int rcar_gen4_pcie_phy_viewport_read(struct rcar_gen4_pcie *rcar, uint32_t addr, uint32_t *rd_data){
+
+	uint32_t data;
+	struct dw_pcie *dw = &rcar->dw;
+
+	dw_pcie_writel_dbi(dw, PRTLGC89, 0x00000000);
+	rcar_gen4_pcie_phy_viewport_wait(rcar);
+	dw_pcie_writel_dbi(dw, PRTLGC90, 0x00000000);
+	rcar_gen4_pcie_phy_viewport_wait(rcar);
+	dw_pcie_writel_dbi(dw, PRTLGC89, PHY_VIEWPORT_READ | addr);
+	rcar_gen4_pcie_phy_viewport_wait(rcar);
+	*rd_data = dw_pcie_readl_dbi(dw, PRTLGC90);
+
+	data = dw_pcie_readl_dbi(dw, PRTLGC89);
+	if((data & PHY_VIEWPORT_STATUS) == PHY_VIEWPORT_TIMEOUT)
+	{
+		dev_err(rcar->dw.dev, "Failed to read phy viewport\n");
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+
+
+static int rcar_gen4_pcie_phy_viewport_ack_release(struct rcar_gen4_pcie *rcar, uint32_t addr)
+{
+	struct dw_pcie *dw = &rcar->dw;
+	uint32_t data_prtlgc89;
+	uint32_t data_prtlgc90;
+	int retries;
+
+	for (retries = 0; retries < PHY_UPDATE_MAX_RETRIES; retries++)
+	{
+		dw_pcie_writel_dbi(dw, PRTLGC89, PHY_VIEWPORT_READ | addr);
+		rcar_gen4_pcie_phy_viewport_wait(rcar);
+		data_prtlgc90 = dw_pcie_readl_dbi(dw, PRTLGC90);
+
+		data_prtlgc89 = dw_pcie_readl_dbi(dw, PRTLGC89);
+		if((data_prtlgc89 & PHY_VIEWPORT_STATUS) == PHY_VIEWPORT_TIMEOUT)
+		{
+			dev_err(rcar->dw.dev, "Failed to wait phy viewport ack release\n");
+			return -ETIMEDOUT;
+		}
+
+		if((data_prtlgc90 & BIT(0)) == 0)
+		{
+			break;
+		}
+
+		usleep_range(1000, 1100);
+	}
+
+	if (retries >= PHY_UPDATE_MAX_RETRIES) {
+		dev_err(rcar->dw.dev, "Failed to wait phy viewport ack release @0x%08x.\n", addr);
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+
+
+static void rcar_gen4_pcie_fw_update(struct rcar_gen4_pcie *rcar)
+{
+	uint32_t phy_addr;
+	uint32_t set_lane_bit;
+	int i;
+	struct dw_pcie *dw = &rcar->dw;
+
+	if (dw->num_lanes == 4)
+	{
+		set_lane_bit = PHY_VIEWPORT_BCWR;
+	}
+	else
+	{
+		set_lane_bit = 0;
+	}
+
+	phy_addr = 0xC000 | set_lane_bit;
+	for(i = 0;i < SIZE_OF_ARRAY(rcar_gen4_pcie_phy_firmware_data1); i++){
+		rcar_gen4_pcie_phy_viewport_write(rcar, phy_addr, rcar_gen4_pcie_phy_firmware_data1[i]);
+		phy_addr += 1;
+	}
+
+	phy_addr = 0xD000 | set_lane_bit;
+	for(i = 0; i < SIZE_OF_ARRAY(rcar_gen4_pcie_phy_firmware_data2); i++){
+		rcar_gen4_pcie_phy_viewport_write(rcar, phy_addr, rcar_gen4_pcie_phy_firmware_data2[i]);
+		phy_addr += 1;
+	}
+
+	phy_addr = 0xE000 | set_lane_bit;
+	for(i = 0; i < SIZE_OF_ARRAY(rcar_gen4_pcie_phy_firmware_data3); i++){
+		rcar_gen4_pcie_phy_viewport_write(rcar, phy_addr, rcar_gen4_pcie_phy_firmware_data3[i]);
+		phy_addr += 1;
+	}
+
+	phy_addr = 0xF000 | set_lane_bit;
+	for(i = 0; i < SIZE_OF_ARRAY(rcar_gen4_pcie_phy_firmware_data4); i++){
+		rcar_gen4_pcie_phy_viewport_write(rcar, phy_addr, rcar_gen4_pcie_phy_firmware_data4[i]);
+		phy_addr += 1;
+	}
+}
+
+
+static int rcar_gen4_pcie_wait_sram_ld_done(struct rcar_gen4_pcie *rcar)
+{
+	struct dw_pcie *dw = &rcar->dw;
+	int ret;
+	int i;
+	const uint32_t addr[] = {0x1018, 0x1118, 0x1021, 0x1121};
+
+	for (i = 0; i < SIZE_OF_ARRAY(addr); i++)
+	{
+		ret = rcar_gen4_pcie_phy_viewport_ack_release(rcar, addr[i]);
+		if (ret)
+		{
+			return ret;
+		}
+	}
+
+	if (dw->num_lanes == 4)
+	{
+		for (i = 0; i < SIZE_OF_ARRAY(addr); i++)
+		{
+			ret = rcar_gen4_pcie_phy_viewport_ack_release(rcar, addr[i] | BIT(16));
+			if (ret)
+			{
+				return ret;
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+static void inline rcar_gen4_pcie_reg_mask(void __iomem *addr, uint32_t offset, uint32_t mask, uint32_t val)
+{
+	u32 reg_val;
+
+	reg_val = readl(addr + offset);
+	reg_val &= ~mask;
+	reg_val |= val;
+	writel(reg_val, addr + offset);
+}
+
+static int rcar_gen4_pcie_linkup_wa(struct rcar_gen4_pcie *rcar)
+{
+	u32 val;
+	int retries;
+	struct device *dev = rcar->dw.dev;
+	struct dw_pcie *dw = &rcar->dw;
+
+	/* SRIS/SRNS(Separate Refclk) */
+	val = dw_pcie_readl_dbi(dw, PRTLGC2);
+	val |= DO_DESKEW_FOR_SRIS;
+	dw_pcie_writel_dbi(dw, PRTLGC2, val);
+
+	rcar_gen4_pcie_reg_mask(rcar->base,     PCIEMSR0, APP_SRIS_MODE, SRIS_MODE);
+
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, PCSCNT0, BIT(28), 0 << 28);
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, PCSCNT0, BIT(20), 0 << 20);
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, PCSCNT0, BIT(12), 0 << 12);
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, PCSCNT0, BIT(4),  0 << 4);
+
+	/* Fuse initial value */
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, RVCRCTRL2P0,  BIT(6),  1 << 6 );
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, RVCRCTRL2P0,  BIT(22), 1 << 22 );
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, PHY0OVRDEN8,  BIT(15), 1 << 15 );
+
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, RVCRCTRL2P0,  GENMASK(1, 0),   3 << 0 );
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, RVCRCTRL2P0,  GENMASK(17, 16), 3 << 16 );
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, PHY0OVRDEN8,  BIT(16),         1 << 16 );
+
+	if (dw->num_lanes == 4)
+	{
+		rcar_gen4_pcie_reg_mask(rcar->phy_base, RVCRCTRL2P1,  BIT(6), 1 << 6 );
+		rcar_gen4_pcie_reg_mask(rcar->phy_base, RVCRCTRL2P1,  BIT(22), 1 << 22 );
+		rcar_gen4_pcie_reg_mask(rcar->phy_base, PHY1OVRDEN8,  BIT(15), 1 << 15 );
+
+		rcar_gen4_pcie_reg_mask(rcar->phy_base, RVCRCTRL2P1,  GENMASK(1, 0), 3 << 0 );
+		rcar_gen4_pcie_reg_mask(rcar->phy_base, RVCRCTRL2P1,  GENMASK(17, 16), 3 << 16 );
+		rcar_gen4_pcie_reg_mask(rcar->phy_base, PHY1OVRDEN8,  BIT(16), 1 << 16 );
+	}
+
+	/* PHY FW update */
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, OSCTSTCTRL5,  R_PARA_SEL, R_PARA_SEL);
+
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, MISCIFPHYP0, PHYn_SRAM_BYPASS, 0 );
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, MISCIFPHYP0, BIT(19),          1 << 19 );
+	if (dw->num_lanes == 4)
+	{
+		rcar_gen4_pcie_reg_mask(rcar->phy_base, MISCIFPHYP1, PHYn_SRAM_BYPASS, 0);
+		rcar_gen4_pcie_reg_mask(rcar->phy_base, MISCIFPHYP1, BIT(19),          1 << 19 );
+	}
+
+	rcar_gen4_pcie_reg_mask(rcar->base, PCIERSTCTRL1, APP_HOLD_PHY_RST, 0);
+
+	for (retries = 0; retries < PHY_UPDATE_MAX_RETRIES; retries++) {
+		val = readl(rcar->phy_base + MISCIFPHYP0);
+		if((val & PHYn_SRAM_INIT_DONE) == PHYn_SRAM_INIT_DONE)
+			break;
+
+		usleep_range(100, 110);
+	}
+	if (retries >= PHY_UPDATE_MAX_RETRIES) {
+		dev_err(dev, "sram_init_done error.\n");
+		return -ETIMEDOUT;
+	}
+
+	if (dw->num_lanes == 4)
+	{
+		for (retries = 0; retries < PHY_UPDATE_MAX_RETRIES; retries++) {
+			val = readl(rcar->phy_base + MISCIFPHYP1);
+			if((val & PHYn_SRAM_INIT_DONE) == PHYn_SRAM_INIT_DONE)
+				break;
+
+			usleep_range(100, 110);
+		}
+		if (retries >= PHY_UPDATE_MAX_RETRIES) {
+			dev_err(dev, "sram_init_done error.\n");
+			return -ETIMEDOUT;
+		}
+	}
+
+	rcar_gen4_pcie_fw_update(rcar);
+
+	rcar_gen4_pcie_reg_mask(rcar->phy_base, MISCIFPHYP0, PHYn_SRAM_EXT_LD_DONE, PHYn_SRAM_EXT_LD_DONE);
+	if (dw->num_lanes == 4)
+	{
+		rcar_gen4_pcie_reg_mask(rcar->phy_base, MISCIFPHYP1, PHYn_SRAM_EXT_LD_DONE, PHYn_SRAM_EXT_LD_DONE);
+	}
+
+	rcar_gen4_pcie_wait_sram_ld_done(rcar);
+
+	{
+		uint32_t data;
+		/* check FW version */
+		rcar_gen4_pcie_phy_viewport_read(rcar,0x2058					,&data);
+		dev_info(dev, "FW version :0x%04x\n", data);
+		rcar_gen4_pcie_phy_viewport_read(rcar,0x2059					,&data);
+		dev_info(dev, "FW version :0x%04x\n", data);
+	}
+	rcar_gen4_pcie_reg_mask(rcar->base, PCIERSTCTRL1, APP_LTSSM_ENABLE, APP_LTSSM_ENABLE);
+
+	return 0;
+}
 
 static void rcar_gen4_pcie_ltssm_enable(struct rcar_gen4_pcie *rcar,
 					bool enable)
 {
 	u32 val;
-
 	val = readl(rcar->base + PCIERSTCTRL1);
 	if (enable) {
 		val |= APP_LTSSM_ENABLE;
@@ -87,10 +414,18 @@ static int rcar_gen4_pcie_link_up(struct dw_pcie *dw)
 static int rcar_gen4_pcie_start_link(struct dw_pcie *dw)
 {
 	struct rcar_gen4_pcie *rcar = to_rcar_gen4_pcie(dw);
+	int ret = 0;
 
-	rcar_gen4_pcie_ltssm_enable(rcar, true);
+	if (rcar->linkup_setting)
+	{
+		ret = rcar_gen4_pcie_linkup_wa(rcar);
+	}
+	else
+	{
+		rcar_gen4_pcie_ltssm_enable(rcar, true);
+	}
 
-	return 0;
+	return ret;
 }
 
 static void rcar_gen4_pcie_stop_link(struct dw_pcie *dw)
@@ -172,7 +507,7 @@ int rcar_gen4_pcie_prepare(struct rcar_gen4_pcie *rcar)
 		}
 		else
 		{
-			dev_warn(dev, "Failed to get Clock name.\n");
+			dev_err(dev, "Failed to get Clock name.\n");
 			return -EINVAL;
 		}
 	}
@@ -252,12 +587,28 @@ void rcar_gen4_pcie_phy_setting(struct rcar_gen4_pcie *rcar)
 	val = readl(rcar->phy_base + REFCLKCTRLP0);
 	val |= PHY_REF_REPEAT_CLK_EN;
 	writel(val, rcar->phy_base + REFCLKCTRLP0);
+
+	val = readl(rcar->phy_base + REFCLKCTRLP1);
+	val &= ~PHY_REF_USE_PAD; /* bit2 is default 0. */
+	writel(val, rcar->phy_base + REFCLKCTRLP1);
+	val |= PHY_REF_REPEAT_CLK_EN | PHY_REF_CLKDET_EN;
+	writel(val, rcar->phy_base + REFCLKCTRLP1);
 }
+
+static const struct soc_device_attribute r8a779g0[] = {
+	{ .soc_id = "r8a779g0" },
+	{ /* sentinel */ }
+};
 
 void rcar_gen4_pcie_initial(struct rcar_gen4_pcie *rcar, bool rc)
 {
 	struct dw_pcie *dw = &rcar->dw;
 	u32 val;
+
+	if (soc_device_match(r8a779g0))
+	{
+		rcar->linkup_setting = true;
+	}
 
 	/* Error Status Enable */
 	val = readl(rcar->base + PCIEERRSTS0EN);
@@ -314,6 +665,10 @@ void rcar_gen4_pcie_initial(struct rcar_gen4_pcie *rcar, bool rc)
 		val = readl(rcar->base + PCIEPWRMNGCTRL);
 		val |= CLK_REG | CLK_PM | READY_ENTR;
 		writel(val, rcar->base + PCIEPWRMNGCTRL);
+
+		val = dw_pcie_readl_dbi(dw, EXPCAP3F);
+		val |= CLKPM;
+		dw_pcie_writel_dbi(dw, EXPCAP3F, val);
 
 		/* Enable LTR */
 		val = readl(rcar->base + PCIELTRMSGCTRL1);
