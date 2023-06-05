@@ -47,12 +47,14 @@ static int rcar_gen4_pcie_host_init(struct dw_pcie_rp *pp)
 
 	dw_pcie_setup_rc(pp);
 
-	dw_pcie_dbi_ro_wr_en(dw);
-	rcar_gen4_pcie_workaround_settings(dw);
-	dw_pcie_dbi_ro_wr_dis(dw);
-
-	if (dw->num_lanes == 4)
+	if (dw->num_lanes != 4)
+	{
+		dw_pcie_dbi_ro_wr_en(dw);
+		rcar_gen4_pcie_workaround_settings(dw);
+		dw_pcie_dbi_ro_wr_dis(dw);
+	}else{
 		rcar_gen4_pcie_phy_setting(rcar);
+	}
 
 	if (!dw_pcie_link_up(dw)) {
 		ret = dw->ops->start_link(dw);
