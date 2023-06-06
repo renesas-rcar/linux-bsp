@@ -2531,6 +2531,11 @@ static void rswitch_gwca_ts_queue_fill(struct rswitch_private *priv,
 		desc = &gq->ts_ring[index];
 		desc->die_dt = DT_FEMPTY_ND | DIE;
 	}
+
+	desc = &gq->ts_ring[gq->num_ring];
+	desc->die_dt = DT_LINKFIX;
+	desc->dptrl = cpu_to_le32(lower_32_bits(gq->ring_dma));
+	desc->dptrh = cpu_to_le32(upper_32_bits(gq->ring_dma));
 }
 
 static int rswitch_gwca_chain_ext_ts_format(struct net_device *ndev,
