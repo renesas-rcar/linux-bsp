@@ -1070,6 +1070,7 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 624>;
 			num-lanes = <2>;
+			resize-bar = <0>;
 			max-link-speed = <4>;
 			status = "disabled";
 		};
