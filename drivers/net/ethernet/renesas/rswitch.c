@@ -57,6 +57,7 @@ static inline void rs_write32(u32 data, void *addr)
 #define GWCA_TS_IRQ_RESOURCE_NAME	"gwca1_rxts0"
 #define GWCA_TS_IRQ_NAME		"rswitch: gwca1_rxts0"
 #define GWCA_TS_IRQ_BIT			BIT(0)
+#define GWCA_IPV_NUM		0
 
 #define RSWITCH_COMA_OFFSET	0x00009000
 #define RSWITCH_ETHA_OFFSET	0x0000a000	/* with RMAC */
@@ -780,13 +781,15 @@ enum rswitch_gwca_mode {
 #define GWARIRM_ARR	BIT(1)
 
 #define GWDCC_BALR		BIT(24)
-#define GWDCC_DCP(q, idx)	((q + (idx * 2)) << 16)
+#define GWDCC_DCP_MASK		GENMASK(18, 16)
+#define GWDCC_DCP(prio)		FIELD_PREP(GWDCC_DCP_MASK, (prio))
 #define GWDCC_DQT		BIT(11)
 #define GWDCC_ETS		BIT(9)
 #define GWDCC_EDE		BIT(8)
 
 #define GWMDNC_TXDMN(val)	((val & 0x1f) << 8)
 
+#define GWTPC_PPPL(ipv)		BIT(ipv)
 #define GWDCC_OFFS(chain)	(GWDCC0 + (chain) * 4)
 /* COMA */
 #define RRC_RR		BIT(0)
@@ -796,6 +799,8 @@ enum rswitch_gwca_mode {
 
 #define CABPIRM_BPIOG	BIT(0)
 #define CABPIRM_BPR	BIT(1)
+
+#define CABPPFLC_INIT_VALUE	0x00800080
 
 /* MFWD */
 #define FWPC0_LTHTA	BIT(0)
@@ -958,10 +963,12 @@ struct rswitch_ext_ts_desc {
 	__le32 ts_sec;
 } __packed;
 
-#define DESC_INFO1_FMT		BIT(2)
-#define DESC_INFO1_CSD0_SHIFT	32
-#define DESC_INFO1_CSD1_SHIFT	40
-#define DESC_INFO1_DV_SHIFT	48
+#define INFO1_FMT               BIT(2)
+#define INFO1_TXC		BIT(3)
+
+#define INFO1_TSUN(val)		((u64)(val) << 8ULL)
+#define INFO1_IPV(prio)		((u64)(prio) << 28ULL)
+#define INFO1_DV(port_vector)	((u64)(port_vector) << 48ULL)
 
 struct rswitch_etha {
 	int index;
@@ -1014,7 +1021,6 @@ struct rswitch_gwca {
 	DECLARE_BITMAP(used, RSWITCH_MAX_NUM_CHAINS);
 	u32 tx_irq_bits[RSWITCH_NUM_IRQ_REGS];
 	u32 rx_irq_bits[RSWITCH_NUM_IRQ_REGS];
-	int speed;
 };
 
 #define NUM_CHAINS_PER_NDEV	2
@@ -1117,24 +1123,6 @@ static void rswitch_etha_modify(struct rswitch_etha *etha, enum rswitch_reg reg,
 static void rswitch_modify(void __iomem *addr, enum rswitch_reg reg, u32 clear, u32 set)
 {
 	rs_write32((rs_read32(addr + reg) & ~clear) | set, addr + reg);
-}
-
-static void rswitch_gwca_set_rate_limit(struct rswitch_private *priv, int rate)
-{
-	u32 gwgrlulc, gwgrlc;
-
-	switch (rate) {
-	case 1000:
-		gwgrlulc = 0x0000005f;
-		gwgrlc = 0x00010260;
-		break;
-	default:
-		dev_err(&priv->pdev->dev, "%s: This rate is not supported (%d)\n", __func__, rate);
-		return;
-	}
-
-	rs_write32(gwgrlulc, priv->addr + GWGRLULC);
-	rs_write32(gwgrlc, priv->addr + GWGRLC);
 }
 
 static bool __maybe_unused rswitch_is_any_data_irq(struct rswitch_private *priv, u32 *dis, bool tx)
@@ -2131,7 +2119,10 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	desc->info_ds = cpu_to_le16(skb->len);
 
 	if (!parallel_mode)
-		desc->info1 = (BIT(rdev->etha->index) << 48) | BIT(2);
+		desc->info1 = cpu_to_le64(INFO1_DV(BIT(rdev->etha->index)) |
+					  INFO1_IPV(GWCA_IPV_NUM) | INFO1_FMT);
+	else
+		desc->info1 = cpu_to_le64(INFO1_IPV(GWCA_IPV_NUM));
 
 	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
 		struct rswitch_gwca_ts_info *ts_info;
@@ -2144,10 +2135,7 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
 		rdev->ts_tag++;
-		if (!parallel_mode)
-			desc->info1 |= (rdev->ts_tag << 8) | BIT(3);
-		else
-			desc->info1 = (rdev->ts_tag << 8) | BIT(3);
+		desc->info1 |= cpu_to_le64(INFO1_TSUN(rdev->ts_tag) | INFO1_TXC);
 
 		ts_info->skb = skb_get(skb);
 		ts_info->port = rdev->port;
@@ -2417,8 +2405,7 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	iowrite32(upper_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr + GWTDCAC00);
 	iowrite32(GWCA_TS_IRQ_BIT, priv->addr + GWTSDCC0);
 
-	priv->gwca.speed = 1000;
-	rswitch_gwca_set_rate_limit(priv, priv->gwca.speed);
+	iowrite32(GWTPC_PPPL(GWCA_IPV_NUM), priv->addr + GWTPC0);
 
 	err = rswitch_gwca_change_mode(priv, GWMC_OPC_DISABLE);
 	if (err < 0)
@@ -2564,9 +2551,8 @@ static int rswitch_gwca_chain_format(struct net_device *ndev,
 	desc->dptrl = cpu_to_le32(lower_32_bits(c->ring_dma));
 	desc->dptrh = cpu_to_le32(upper_32_bits(c->ring_dma));
 
-	/* FIXME: GWDCC_DCP */
-	rs_write32(GWDCC_BALR | (c->dir_tx ? GWDCC_DQT : 0) | GWDCC_EDE,
-		   priv->addr + GWDCC_OFFS(c->index));
+	iowrite32(GWDCC_BALR | (c->dir_tx ? GWDCC_DCP(GWCA_IPV_NUM) | GWDCC_DQT : 0) | GWDCC_EDE,
+		  priv->addr + GWDCC_OFFS(c->index));
 
 	return 0;
 }
@@ -2624,8 +2610,8 @@ static int rswitch_gwca_chain_ext_ts_format(struct net_device *ndev,
 	desc->dptrl = cpu_to_le32(lower_32_bits(c->ring_dma));
 	desc->dptrh = cpu_to_le32(upper_32_bits(c->ring_dma));
 
-	/* FIXME: GWDCC_DCP */
-	rs_write32(GWDCC_BALR | (c->dir_tx ? GWDCC_DQT : 0) | GWDCC_ETS | GWDCC_EDE,
+	iowrite32(GWDCC_BALR | (c->dir_tx ? GWDCC_DCP(GWCA_IPV_NUM) | GWDCC_DQT : 0) |
+		  GWDCC_ETS | GWDCC_EDE,
 		  priv->addr + GWDCC_OFFS(c->index));
 
 	return 0;
@@ -2870,6 +2856,11 @@ static int rswitch_bpool_config(struct rswitch_private *priv)
 	return rswitch_reg_wait(priv->addr, CABPIRM, CABPIRM_BPR, CABPIRM_BPR);
 }
 
+static void rswitch_coma_init(struct rswitch_private *priv)
+{
+	iowrite32(CABPPFLC_INIT_VALUE, priv->addr + CABPPFLC0);
+}
+
 static void rswitch_queue_interrupt(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
@@ -3089,6 +3080,7 @@ static int rswitch_init(struct rswitch_private *priv)
 		if (err < 0)
 			goto out;
 
+		rswitch_coma_init(priv);
 		rswitch_fwd_init(priv);
 		err = rtsn_ptp_init(priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
 		if (err < 0)
