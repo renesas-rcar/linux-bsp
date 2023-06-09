@@ -10,6 +10,7 @@
 #include <linux/io.h>
 #include <linux/pci.h>
 #include <linux/reset.h>
+#include <linux/clk.h>
 
 #include "pcie-designware.h"
 
@@ -71,11 +72,14 @@
 #define	CFG_SYS_ERR_RC		GENMASK(10, 9)
 #define	CFG_SAFETY_UNCORR_CORR	GENMASK(5, 4)
 
+#define PCIE_LINKUP_WA_CLK_NUM (2)
+
 struct rcar_gen4_pcie {
 	struct dw_pcie		dw;
 	void __iomem		*base;
 	void __iomem		*phy_base;
 	struct reset_control	*rst;
+	struct clk *clks[PCIE_LINKUP_WA_CLK_NUM];
 };
 #define to_rcar_gen4_pcie(x)	dev_get_drvdata((x)->dev)
 
