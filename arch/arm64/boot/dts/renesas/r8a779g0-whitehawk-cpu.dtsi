@@ -130,6 +130,38 @@
 	status = "okay";
 };
 
+#if defined(PCIE_1CH_4LANE)
+/*** 1ch 4lane ***/
+&pciec0 {
+	reset-gpio = <&io_expander_a 0 GPIO_ACTIVE_LOW>;
+	num-lanes = <4>;
+	status = "okay";
+};
+
+&pciec0_ep {
+	num-lanes = <4>;
+	status = "disabled";
+};
+#elif defined(PCIE_2CH_2LANE)
+/*** 2ch 2lane ***/
+&pciec1 {
+	reset-gpio = <&io_expander_a 0 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&pciec0 {
+	status = "okay";
+};
+
+&pciec0_ep {
+	status = "disabled";
+};
+
+&pciec1_ep {
+	status = "disabled";
+};
+#else
+/*** 1ch 2lane ***/
 &pciec0 {
 	reset-gpio = <&io_expander_a 0 GPIO_ACTIVE_LOW>;
 	status = "okay";
@@ -138,14 +170,7 @@
 &pciec0_ep {
 	status = "disabled";
 };
-
-&pciec1 {
-	status = "disabled";
-};
-
-&pciec1_ep {
-	status = "disabled";
-};
+#endif
 
 &pfc {
 	pinctrl-0 = <&scif_clk_pins>;
