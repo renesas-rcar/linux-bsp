@@ -135,11 +135,15 @@
 &pciec0 {
 	reset-gpio = <&io_expander_a 0 GPIO_ACTIVE_LOW>;
 	num-lanes = <4>;
+	clocks = <&cpg CPG_MOD 624>, <&cpg CPG_MOD 625>;
+	clock-names = "pcie0_clk", "pcie1_clk";
 	status = "okay";
 };
 
 &pciec0_ep {
 	num-lanes = <4>;
+	clocks = <&cpg CPG_MOD 624>, <&cpg CPG_MOD 625>;
+	clock-names = "pcie0_clk", "pcie1_clk";
 	status = "disabled";
 };
 #elif defined(PCIE_2CH_2LANE)
