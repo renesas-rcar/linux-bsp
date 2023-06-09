@@ -136,12 +136,54 @@ int rcar_gen4_pcie_prepare(struct rcar_gen4_pcie *rcar)
 {
 	struct device *dev = rcar->dw.dev;
 	int err;
+	const char *clk_names[PCIE_LINKUP_WA_CLK_NUM] = {
+		[0] = "pcie0_clk",
+		[1] = "pcie1_clk",
+	};
+	struct clk *clk;
+	unsigned int i;
+	struct device_node *np = dev_of_node(dev);
+	int num_lanes;
 
-	pm_runtime_enable(dev);
-	err = pm_runtime_resume_and_get(dev);
-	if (err < 0) {
-		dev_err(dev, "Failed to resume/get Runtime PM\n");
-		pm_runtime_disable(dev);
+	/* "dw->num_lanes" have not yet been set. */
+	of_property_read_u32(np, "num-lanes", &num_lanes);
+
+	if (num_lanes == 4)
+	{
+		if (of_find_property(np, "clock-names", NULL) != NULL)
+		{
+			for (i = 0; i < PCIE_LINKUP_WA_CLK_NUM; i++) {
+				clk = devm_clk_get(dev, clk_names[i]);
+				if (PTR_ERR(clk) == -EPROBE_DEFER)
+				{
+					dev_err(dev, "Failed to get Clock\n");
+					return -EPROBE_DEFER;
+				}
+
+				rcar->clks[i] = clk;
+			}
+
+			err = 0;
+			pm_runtime_get_sync(dev);
+
+			for (i = 0; i < PCIE_LINKUP_WA_CLK_NUM; i++) {
+				clk_prepare_enable(rcar->clks[i]);
+			}
+		}
+		else
+		{
+			dev_warn(dev, "Failed to get Clock name.\n");
+			return -EINVAL;
+		}
+	}
+	else
+	{
+		pm_runtime_enable(dev);
+		err = pm_runtime_resume_and_get(dev);
+		if (err < 0) {
+			dev_err(dev, "Failed to resume/get Runtime PM\n");
+			pm_runtime_disable(dev);
+		}
 	}
 
 	return err;
@@ -150,11 +192,23 @@ int rcar_gen4_pcie_prepare(struct rcar_gen4_pcie *rcar)
 void rcar_gen4_pcie_unprepare(struct rcar_gen4_pcie *rcar)
 {
 	struct device *dev = rcar->dw.dev;
+	struct dw_pcie *dw = &rcar->dw;
+	unsigned int i;
 
-	if (!reset_control_status(rcar->rst))
-		reset_control_assert(rcar->rst);
-	pm_runtime_put(dev);
-	pm_runtime_disable(dev);
+	if (dw->num_lanes == 4)
+	{
+		for (i = PCIE_LINKUP_WA_CLK_NUM; i-- > 0; )
+			clk_disable_unprepare(rcar->clks[i]);
+
+		pm_runtime_put_sync(dev);
+	}
+	else
+	{
+		if (!reset_control_status(rcar->rst))
+			reset_control_assert(rcar->rst);
+		pm_runtime_put(dev);
+		pm_runtime_disable(dev);
+	}
 }
 
 int rcar_gen4_pcie_devm_reset_get(struct rcar_gen4_pcie *rcar,
