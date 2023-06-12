@@ -138,6 +138,39 @@ static int rcar_gen4_pcie_ep_get_resources(struct rcar_gen4_pcie *rcar,
 	return rcar_gen4_pcie_devm_reset_get(rcar, dev);
 }
 
+static void rcar_gen4_pcie_ep_resize_bar(struct rcar_gen4_pcie *rcar)
+{
+	struct dw_pcie *dw = &rcar->dw;
+	struct device_node *np = dw->dev->of_node;
+	enum pcie_bar_size res_bar = rcar->resbar_size;
+	int val, barsize;
+
+	/* Get specified BAR size from DT */
+	if(of_property_read_u32(np, "resize-bar", &res_bar) < 0) {
+		dev_err(dw->dev, "Specified BAR size has not been defined\n");
+		return;
+	}
+
+	dw_pcie_dbi_ro_wr_en(dw);
+
+	barsize = 1 << res_bar;
+	if (barsize >= 1 && barsize <= 256) {
+		if (barsize == 256) {
+			/* Disable BAR2/4 to save memory for only one 256MB BAR0 */
+			rcar_gen4_pcie_disable_bar(dw, BAR2MASKF);
+			rcar_gen4_pcie_disable_bar(dw, BAR4MASKF);
+		}
+		/* Resizing BAR0*/
+		val = dw_pcie_readl_dbi(dw, PCI_RESBAR_CTRL_BAR0);
+		val &= ~PCI_RESBAR_MASK;
+		val |= res_bar << PCI_REBAR_CTRL_BAR_SHIFT;
+		dw_pcie_writel_dbi(dw, PCI_RESBAR_CTRL_BAR0, val);
+	} else
+		dev_err(dw->dev, "Invalid size to resize\n");
+
+	dw_pcie_dbi_ro_wr_dis(dw);
+}
+
 static int rcar_gen4_pcie_ep_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -163,6 +196,8 @@ static int rcar_gen4_pcie_ep_probe(struct platform_device *pdev)
 	err = rcar_gen4_add_pcie_ep(rcar, pdev);
 	if (err < 0)
 		goto err_add;
+
+	rcar_gen4_pcie_ep_resize_bar(rcar);
 
 	return 0;
 
