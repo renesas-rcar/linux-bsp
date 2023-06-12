@@ -76,7 +76,23 @@
 #define	CFG_SYS_ERR_RC		GENMASK(10, 9)
 #define	CFG_SAFETY_UNCORR_CORR	GENMASK(5, 4)
 
+/* Resizable BAR */
+#define	PCI_RESBAR_MASK		0x3F00
+#define	PCI_RESBAR_CTRL_BAR0	0x03A4
+
 #define PCIE_LINKUP_WA_CLK_NUM (2)
+
+enum pcie_bar_size {
+	RESBAR_1M, 	/*0*/
+	RESBAR_2M,	/*1*/
+	RESBAR_4M,	/*2*/
+	RESBAR_8M,	/*3*/
+	RESBAR_16M,	/*4*/
+	RESBAR_32M,	/*5*/
+	RESBAR_64M,	/*6*/
+	RESBAR_128M,	/*7*/
+	RESBAR_256M,	/*8*/
+};
 
 struct rcar_gen4_pcie {
 	struct dw_pcie		dw;
@@ -85,6 +101,7 @@ struct rcar_gen4_pcie {
 	struct reset_control	*rst;
 	struct clk *clks[PCIE_LINKUP_WA_CLK_NUM];
 	bool				linkup_setting;
+	enum pcie_bar_size	resbar_size;
 };
 #define to_rcar_gen4_pcie(x)	dev_get_drvdata((x)->dev)
 
