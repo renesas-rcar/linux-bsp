@@ -70,6 +70,7 @@ static const struct pci_epc_features rcar_gen4_pcie_epc_features = {
 	.msi_capable = true,
 	.msix_capable = false,
 	.reserved_bar = 1 << BAR_5,
+	.bar_fixed_64bit = 1 << BAR_0 | 1 << BAR_2,
 	.align = SZ_1M,
 };
 
