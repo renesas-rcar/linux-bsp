@@ -148,6 +148,27 @@ struct vhost_net {
 
 static unsigned vhost_net_zcopy_mask __read_mostly;
 
+#ifdef CONFIG_VHOST_XEN
+static void vhost_net_unmap_desc(struct vhost_virtqueue *vq, int count)
+{
+	int i;
+
+	for (i = 0; i < count; i++) {
+		if (vq->iov[i].iov_base)
+			vhost_xen_unmap_desc(vq, vq->iov[i].iov_base, vq->iov[i].iov_len);
+	}
+
+	/*
+	 * Alternatively we could unmap *all* mapped at this point descriptors
+	 * (including indirect) in one go instead of unmapping one by one.
+	 * But we must be sure that doing that we won't end up unmapping
+	 * descriptors which are still in use. This depends on the place(s)
+	 * from which current function gets called.
+	 */
+	/*vhost_xen_unmap_desc_all(vq);*/
+}
+#endif
+
 static void *vhost_net_buf_get_ptr(struct vhost_net_buf *rxq)
 {
 	if (rxq->tail != rxq->head)
@@ -611,7 +632,11 @@ static size_t init_iov_iter(struct vhost_virtqueue *vq, struct iov_iter *iter,
 	/* Skip header. TODO: support TSO. */
 	size_t len = iov_length(vq->iov, out);
 
+#ifdef CONFIG_VHOST_XEN
+	iov_iter_kvec(iter, ITER_SOURCE, (struct kvec *)vq->iov, out, len);
+#else
 	iov_iter_init(iter, ITER_SOURCE, vq->iov, out, len);
+#endif
 	iov_iter_advance(iter, hdr_size);
 
 	return iov_iter_count(iter);
@@ -850,6 +875,11 @@ done:
 		vq->heads[nvq->done_idx].id = cpu_to_vhost32(vq, head);
 		vq->heads[nvq->done_idx].len = 0;
 		++nvq->done_idx;
+
+#ifdef CONFIG_VHOST_XEN
+		/* Descriptors must be unmapped as soon as they are not used */
+		vhost_net_unmap_desc(vq, out);
+#endif
 	} while (likely(!vhost_exceeds_weight(vq, ++sent_pkts, total_len)));
 
 	vhost_tx_batch(net, nvq, sock, &msg);
@@ -1189,14 +1219,22 @@ static void handle_rx(struct vhost_net *net)
 			msg.msg_control = vhost_net_buf_consume(&nvq->rxq);
 		/* On overrun, truncate and discard */
 		if (unlikely(headcount > UIO_MAXIOV)) {
+#ifdef CONFIG_VHOST_XEN
+			iov_iter_kvec(&msg.msg_iter, ITER_DEST, (struct kvec *)vq->iov, 1, 1);
+#else
 			iov_iter_init(&msg.msg_iter, ITER_DEST, vq->iov, 1, 1);
+#endif
 			err = sock->ops->recvmsg(sock, &msg,
 						 1, MSG_DONTWAIT | MSG_TRUNC);
 			pr_debug("Discarded rx packet: len %zd\n", sock_len);
 			continue;
 		}
 		/* We don't need to be notified again. */
+#ifdef CONFIG_VHOST_XEN
+		iov_iter_kvec(&msg.msg_iter, ITER_DEST, (struct kvec *)vq->iov, in, vhost_len);
+#else
 		iov_iter_init(&msg.msg_iter, ITER_DEST, vq->iov, in, vhost_len);
+#endif
 		fixup = msg.msg_iter;
 		if (unlikely((vhost_hlen))) {
 			/* We will supply the header ourselves
@@ -1240,6 +1278,10 @@ static void handle_rx(struct vhost_net *net)
 			goto out;
 		}
 		nvq->done_idx += headcount;
+#ifdef CONFIG_VHOST_XEN
+		/* Descriptors must be unmapped as soon as they are not used */
+		vhost_net_unmap_desc(vq, in);
+#endif
 		if (nvq->done_idx > VHOST_NET_BATCH)
 			vhost_net_signal_used(nvq);
 		if (unlikely(vq_log))
