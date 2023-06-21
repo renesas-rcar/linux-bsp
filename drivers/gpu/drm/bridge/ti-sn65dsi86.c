@@ -511,7 +511,10 @@ static int ti_sn_bridge_attach(struct drm_bridge *bridge,
 
 	/* check if continuous dsi clock is required or not */
 	pm_runtime_get_sync(pdata->dev);
-	regmap_read(pdata->regmap, SN_DPPLL_SRC_REG, &val);
+	ret = regmap_read(pdata->regmap, SN_DPPLL_SRC_REG, &val);
+	if (ret < 0)
+		goto err_dsi_attach;
+
 	pm_runtime_put(pdata->dev);
 	if (!(val & DPPLL_CLK_SRC_DSICLK))
 		dsi->mode_flags |= MIPI_DSI_CLOCK_NON_CONTINUOUS;
