@@ -1784,7 +1784,8 @@ static int rswitch_etha_set_access_c22(struct rswitch_etha *etha, bool read,
 static int rswitch_etha_mii_read(struct mii_bus *bus, int addr, int regnum)
 {
 	struct rswitch_etha *etha = bus->priv;
-	struct rswitch_private *priv = container_of(etha, struct rswitch_private, etha[0]);
+	struct rswitch_private *priv = container_of(etha,
+					struct rswitch_private, etha[etha->index]);
 	int mode, devad, regad;
 
 	mode = regnum & MII_ADDR_C45;
@@ -1805,7 +1806,8 @@ static int rswitch_etha_mii_read(struct mii_bus *bus, int addr, int regnum)
 static int rswitch_etha_mii_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 {
 	struct rswitch_etha *etha = bus->priv;
-	struct rswitch_private *priv = container_of(etha, struct rswitch_private, etha[0]);
+	struct rswitch_private *priv = container_of(etha,
+					struct rswitch_private, etha[etha->index]);
 	int mode, devad, regad;
 
 	mode = regnum & MII_ADDR_C45;
