@@ -2083,7 +2083,9 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	desc->dptrh = cpu_to_le32(upper_32_bits(dma_addr));
 	desc->info_ds = cpu_to_le16(skb->len);
 
-	desc->info1 = (BIT(rdev->etha->index) << 48) | BIT(2);
+	if (!parallel_mode)
+		desc->info1 = (BIT(rdev->etha->index) << 48) | BIT(2);
+
 	if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
 		struct rswitch_gwca_ts_info *ts_info;
 
@@ -2095,7 +2097,10 @@ static int rswitch_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 		skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
 		rdev->ts_tag++;
-		desc->info1 |= (rdev->ts_tag << 8) | BIT(3);
+		if (!parallel_mode)
+			desc->info1 |= (rdev->ts_tag << 8) | BIT(3);
+		else
+			desc->info1 = (rdev->ts_tag << 8) | BIT(3);
 
 		ts_info->skb = skb_get(skb);
 		ts_info->port = rdev->port;
