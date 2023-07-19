@@ -857,6 +857,9 @@ enum rswitch_gwca_mode {
 #define VR_XS_PMA_MP_12G_MPLLB_CTRL1            0x01d4
 #define VR_XS_PMA_MP_12G_16G_MPLLB_CTRL2        0x01d8
 #define VR_XS_PMA_MP_12G_MPLLB_CTRL3            0x01e0
+#define VR_XS_PMA_MP_12G_16G_25G_TX_GENCTRL0    0x00c0
+#define VR_XS_PMA_MP_12G_16G_25G_TX_STS         0x0100
+#define VR_XS_PMA_MP_12G_16G_25G_RX_STS         0x0180
 
 #define BANK_300                                0x0300
 #define SR_XS_PCS_CTRL1                         0x0000
@@ -1680,6 +1683,7 @@ static int rswitch_serdes_common_init(struct rswitch_etha *etha)
 static int rswitch_serdes_chan_init(struct rswitch_etha *etha)
 {
 	int ret;
+	u32 val;
 
 	/* Set channel settings*/
 	ret = rswitch_serdes_chan_setting(etha);
@@ -1693,6 +1697,42 @@ static int rswitch_serdes_chan_init(struct rswitch_etha *etha)
 
 	rswitch_serdes_write32(etha->serdes_addr, VR_XS_PCS_SFTY_UE_INTRO, BANK_380, 0);
 	rswitch_serdes_write32(etha->serdes_addr, VR_XS_PCS_SFTY_DISABLE, BANK_380, 0);
+
+	val = rswitch_serdes_read32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_TX_GENCTRL0,
+				    BANK_180);
+	rswitch_serdes_write32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_TX_GENCTRL0,
+			       BANK_180, val | BIT(8));
+
+	ret = rswitch_serdes_reg_wait(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_TX_STS,
+				      BANK_180, BIT(0), 1);
+	if (ret)
+		return ret;
+
+	rswitch_serdes_write32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_TX_GENCTRL0,
+			       BANK_180, val &= ~BIT(8));
+
+	ret = rswitch_serdes_reg_wait(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_TX_STS,
+				      BANK_180, BIT(0), 0);
+	if (ret)
+		return ret;
+
+	val = rswitch_serdes_read32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1,
+				    BANK_180);
+	rswitch_serdes_write32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1,
+			       BANK_180, val | BIT(4));
+
+	ret = rswitch_serdes_reg_wait(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_RX_STS,
+				      BANK_180, BIT(0), 1);
+	if (ret)
+		return ret;
+
+	rswitch_serdes_write32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1,
+			       BANK_180, val &= ~BIT(4));
+
+	ret = rswitch_serdes_reg_wait(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_RX_STS,
+				      BANK_180, BIT(0), 0);
+	if (ret)
+		return ret;
 
 	/* Check Link up restart */
 	return rswitch_serdes_monitor_linkup(etha);
