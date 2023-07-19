@@ -874,6 +874,8 @@ enum rswitch_serdes_mode {
 #define VR_XS_PCS_DIG_CTRL1                     0x0000
 #define VR_XS_PCS_DEBUG_CTRL                    0x0014
 #define VR_XS_PCS_KR_CTRL                       0x001c
+#define VR_XS_PCS_SFTY_UE_INTRO                 0x03c0
+#define VR_XS_PCS_SFTY_DISABLE                  0x03d0
 
 #define BANK_1F00                               0x1f00
 #define SR_MII_CTRL                             0x0000
@@ -1630,7 +1632,7 @@ static int rswitch_serdes_init(struct rswitch_etha *etha)
 		return ret;
 
 	for (i = 0; i < RSWITCH_MAX_NUM_ETHA; i++)
-		rswitch_serdes_write32(etha->serdes_addr, 0x03d0, BANK_380, 0x01);
+		rswitch_serdes_write32(etha->serdes_addr, VR_XS_PCS_SFTY_DISABLE, BANK_380, 0x01);
 
 	/* Assert softreset for PHY */
 	rswitch_serdes_write32(common_addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x8000);
@@ -1657,8 +1659,8 @@ static int rswitch_serdes_init(struct rswitch_etha *etha)
 	}
 
 	for (i = 0; i < RSWITCH_MAX_NUM_ETHA; i++) {
-		rswitch_serdes_write32(etha->serdes_addr, 0x03c0, BANK_380, 0);
-		rswitch_serdes_write32(etha->serdes_addr, 0x03d0, BANK_380, 0);
+		rswitch_serdes_write32(etha->serdes_addr, VR_XS_PCS_SFTY_UE_INTRO, BANK_380, 0);
+		rswitch_serdes_write32(etha->serdes_addr, VR_XS_PCS_SFTY_DISABLE, BANK_380, 0);
 
 		ret = rswitch_serdes_reg_wait(etha->serdes_addr, SR_XS_PCS_STS1, BANK_300,
 						 BIT(2), BIT(2));
