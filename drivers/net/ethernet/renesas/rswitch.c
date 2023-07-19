@@ -825,13 +825,6 @@ enum rswitch_gwca_mode {
 
 #define FWPBFCSDC(j, i)         (FWPBFCSDC00 + (i) * 0x10 + (j) * 0x04)
 
-/* SerDes */
-enum rswitch_serdes_mode {
-	USXGMII,
-	SGMII,
-	COMBINATION,
-};
-
 #define RSWITCH_SERDES_OFFSET                   0x0400
 #define RSWITCH_SERDES_BANK_SELECT              0x03fc
 
@@ -1502,12 +1495,12 @@ static int rswitch_serdes_common_init_ram(struct rswitch_etha *etha)
 	return 0;
 }
 
-static int rswitch_serdes_common_setting(struct rswitch_etha *etha, enum rswitch_serdes_mode mode)
+static int rswitch_serdes_common_setting(struct rswitch_etha *etha)
 {
 	void __iomem *addr = etha->serdes_addr - etha->index * RSWITCH_SERDES_OFFSET;
 
-	switch (mode) {
-	case SGMII:
+	switch (etha->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_REF_CLK_CTRL, BANK_180, 0x97);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL0, BANK_180, 0x60);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL2, BANK_180, 0x2200);
@@ -1522,13 +1515,13 @@ static int rswitch_serdes_common_setting(struct rswitch_etha *etha, enum rswitch
 	return 0;
 }
 
-static int rswitch_serdes_chan_setting(struct rswitch_etha *etha, enum rswitch_serdes_mode mode)
+static int rswitch_serdes_chan_setting(struct rswitch_etha *etha)
 {
 	void __iomem *addr = etha->serdes_addr;
 	int ret;
 
-	switch (mode) {
-	case SGMII:
+	switch (etha->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
 		rswitch_serdes_write32(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x2000);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_MPLL_CMN_CTRL,
 				       BANK_180, 0x11);
@@ -1575,13 +1568,12 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha, enum rswitch_s
 	return 0;
 }
 
-static int rswitch_serdes_set_speed(struct rswitch_etha *etha, enum rswitch_serdes_mode mode,
-				    int speed)
+static int rswitch_serdes_set_speed(struct rswitch_etha *etha, init speed)
 {
 	void __iomem *addr = etha->serdes_addr;
 
-	switch (mode) {
-	case SGMII:
+	switch (etha->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
 		if (speed == 1000)
 			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x140);
 		else if (speed == 100)
@@ -1598,19 +1590,7 @@ static int rswitch_serdes_set_speed(struct rswitch_etha *etha, enum rswitch_serd
 static int rswitch_serdes_init(struct rswitch_etha *etha)
 {
 	int ret, i, val;
-	enum rswitch_serdes_mode mode;
 	void __iomem *common_addr = etha->serdes_addr - etha->index * RSWITCH_SERDES_OFFSET;
-
-	/* TODO: Support more modes */
-
-	switch (etha->phy_interface) {
-	case PHY_INTERFACE_MODE_SGMII:
-		mode = SGMII;
-		break;
-	default:
-		pr_debug("%s: Don't support this interface", __func__);
-		return -EOPNOTSUPP;
-	}
 
 	/* Initialize SRAM */
 	ret = rswitch_serdes_common_init_ram(etha);
@@ -1627,7 +1607,7 @@ static int rswitch_serdes_init(struct rswitch_etha *etha)
 	}
 
 	/* Set common setting */
-	ret = rswitch_serdes_common_setting(etha, mode);
+	ret = rswitch_serdes_common_setting(etha);
 	if (ret)
 		return ret;
 
@@ -1647,13 +1627,13 @@ static int rswitch_serdes_init(struct rswitch_etha *etha)
 		return ret;
 
 	/* Set channel settings*/
-	ret = rswitch_serdes_chan_setting(etha, mode);
+	ret = rswitch_serdes_chan_setting(etha);
 	if (ret)
 		return ret;
 
 	/* Set speed (bps) */
 	for (i = 0; i < RSWITCH_MAX_NUM_ETHA; i++) {
-		ret = rswitch_serdes_set_speed(etha, mode, etha->speed);
+		ret = rswitch_serdes_set_speed(etha, etha->speed);
 		if (ret)
 			return ret;
 	}
