@@ -3153,6 +3153,8 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	}
 
 	priv->sd_rst = devm_reset_control_get(&pdev->dev, "eth-phy");
+	if (IS_ERR(priv->sd_rst))
+		return PTR_ERR(priv->sd_rst);
 
 	platform_set_drvdata(pdev, priv);
 	priv->pdev = pdev;
