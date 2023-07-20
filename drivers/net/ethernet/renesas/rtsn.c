@@ -689,13 +689,13 @@ static int rtsn_hw_init(struct rtsn_private *priv)
 	return ret;
 }
 
-static int rtsn_mii_access(struct mii_bus *bus, bool read, int devad, int regad, u16 data)
+static int rtsn_mii_access(struct mii_bus *bus, bool read, int phyad, int regad, u16 data)
 {
 	struct rtsn_private *priv = bus->priv;
 	u32 val;
 	int ret;
 
-	val = MPSM_PDA(devad) | MPSM_PRA(regad) | MPSM_PSME;
+	val = MPSM_PDA(phyad) | MPSM_PRA(regad) | MPSM_PSME;
 
 	if (!read)
 		val |= MPSM_PSMAD | MPSM_PRD_SET(data);
@@ -712,26 +712,27 @@ static int rtsn_mii_access(struct mii_bus *bus, bool read, int devad, int regad,
 	return ret;
 }
 
-static int rtsn_mii_access_indirect(struct mii_bus *bus, bool read, int devad, int regad, u16 data)
+static int rtsn_mii_access_indirect(struct mii_bus *bus, bool read, int phyad,
+				    int devad, int regad, u16 data)
 {
 	int ret;
 
-	ret = rtsn_mii_access(bus, false, 0, MII_MMD_CTRL, devad);
+	ret = rtsn_mii_access(bus, false, phyad, MII_MMD_CTRL, devad);
 	if (ret)
 		return ret;
 
-	ret = rtsn_mii_access(bus, false, 0, MII_MMD_DATA, regad);
+	ret = rtsn_mii_access(bus, false, phyad, MII_MMD_DATA, regad);
 	if (ret)
 		return ret;
 
-	ret = rtsn_mii_access(bus, false, 0, MII_MMD_CTRL, devad | MII_MMD_CTRL_NOINCR);
+	ret = rtsn_mii_access(bus, false, phyad, MII_MMD_CTRL, devad | MII_MMD_CTRL_NOINCR);
 	if (ret)
 		return ret;
 
 	if (read)
-		ret = rtsn_mii_access(bus, true, 0, MII_MMD_DATA, 0);
+		ret = rtsn_mii_access(bus, true, phyad, MII_MMD_DATA, 0);
 	else
-		ret = rtsn_mii_access(bus, false, 0, MII_MMD_DATA, data);
+		ret = rtsn_mii_access(bus, false, phyad, MII_MMD_DATA, data);
 
 	return ret;
 }
@@ -744,7 +745,7 @@ static int rtsn_mii_read(struct mii_bus *bus, int addr, int regnum)
 		int devad = (regnum >> MII_DEVADDR_C45_SHIFT) & 0x1f;
 		int regad = regnum & MII_REGADDR_C45_MASK;
 
-		ret = rtsn_mii_access_indirect(bus, true, devad, regad, 0);
+		ret = rtsn_mii_access_indirect(bus, true, addr, devad, regad, 0);
 	} else {
 		ret = rtsn_mii_access(bus, true, addr, regnum, 0);
 	}
@@ -760,7 +761,7 @@ static int rtsn_mii_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 		int devad = (regnum >> MII_DEVADDR_C45_SHIFT) & 0x1f;
 		int regad = regnum & MII_REGADDR_C45_MASK;
 
-		ret = rtsn_mii_access_indirect(bus, false, devad, regad, val);
+		ret = rtsn_mii_access_indirect(bus, false, addr, devad, regad, val);
 	} else {
 		ret = rtsn_mii_access(bus, false, addr, regnum, val);
 	}
