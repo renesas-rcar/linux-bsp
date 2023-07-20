@@ -642,7 +642,7 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	else
 		vclkset |= VCLKSET_DIV_3BIT(setup_info.clk_setting.div);
 
-	rcar_mipi_dsi_set(mipi_dsi, VCLKSET, vclkset);
+	rcar_mipi_dsi_write(mipi_dsi, VCLKSET, vclkset);
 
 	/* After setting VCLKSET register, enable VCLKEN */
 	rcar_mipi_dsi_set(mipi_dsi, VCLKEN, VCLKEN_CKEN);
