@@ -1395,18 +1395,23 @@ static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 	switch (etha->speed) {
 	case 10:
 		val = MPIC_LSC_10M;
+		rswitch_etha_write(etha, MPIC_PIS_GMII | val, MPIC);
 		break;
 	case 100:
 		val = MPIC_LSC_100M;
+		rswitch_etha_write(etha, MPIC_PIS_GMII | val, MPIC);
 		break;
 	case 1000:
 		val = MPIC_LSC_1G;
+		rswitch_etha_write(etha, MPIC_PIS_GMII | val, MPIC);
+		break;
+	case 2500:
+		val = MPIC_LSC_2_5G;
+		rswitch_etha_write(etha, MPIC_PIS_XGMII | val, MPIC);
 		break;
 	default:
 		return;
 	}
-
-	rswitch_etha_write(etha, MPIC_PIS_GMII | val, MPIC);
 
 #if 0
 	/* Set Interrupt enable */
@@ -1527,6 +1532,13 @@ static int rswitch_serdes_common_setting(struct rswitch_etha *etha)
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLB_CTRL3, BANK_180, 0x3d);
 
 		break;
+	case PHY_INTERFACE_MODE_USXGMII:
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_REF_CLK_CTRL, BANK_180, 0x57);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_10G_MPLLA_CTRL2, BANK_180, 0xc200);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLA_CTRL0, BANK_180, 0x42);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLA_CTRL1, BANK_180, 0);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLA_CTRL3, BANK_180, 0x2f);
+		break;
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -1580,6 +1592,45 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha)
 			return ret;
 
 		break;
+	case PHY_INTERFACE_MODE_USXGMII:
+		rswitch_serdes_write32(addr, SR_XS_PCS_CTRL2, BANK_300, 0x0);
+		rswitch_serdes_write32(addr, VR_XS_PCS_DEBUG_CTRL, BANK_380, 0x50);
+		rswitch_serdes_write32(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x2200);
+		rswitch_serdes_write32(addr, VR_XS_PCS_KR_CTRL, BANK_380, 0x400);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_MPLL_CMN_CTRL, BANK_180, 0x1);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_VCO_CAL_LD0, BANK_180, 0x56a);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_VCO_CAL_REF0, BANK_180, 0x15);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1,
+				       BANK_180, 0x1100);
+		rswitch_serdes_write32(addr, VR_XS_PMA_CONSUMER_10G_RX_GENCTRL4, BANK_180, 1);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_RATE_CTRL, BANK_180, 0x01);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_RX_RATE_CTRL, BANK_180, 0x01);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_TX_GENCTRL2, BANK_180, 0x300);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_RX_GENCTRL2, BANK_180, 0x300);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_AFE_DFE_EN_CTRL, BANK_180, 0);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_RX_EQ_CTRL0, BANK_180, 0x4);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_10G_RX_IQ_CTRL0, BANK_180, 0);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_GENCTRL1, BANK_180, 0x310);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_TX_GENCTRL2, BANK_180, 0x0301);
+		ret = rswitch_serdes_reg_wait(addr, VR_XS_PMA_MP_12G_16G_TX_GENCTRL2,
+					      BANK_180, BIT(0), 0);
+		if (ret)
+			return ret;
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_RX_GENCTRL2, BANK_180, 0x301);
+		ret = rswitch_serdes_reg_wait(addr, VR_XS_PMA_MP_12G_16G_RX_GENCTRL2,
+					      BANK_180, BIT(0), 0);
+		if (ret)
+			return ret;
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_GENCTRL1,
+				       BANK_180, 0x1310);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_EQ_CTRL0,
+				       BANK_180, 0x1800);
+		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_TX_EQ_CTRL1, BANK_180, 0);
+		rswitch_serdes_write32(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x2300);
+		ret = rswitch_serdes_reg_wait(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, BIT(8), 0);
+		if (ret)
+			return ret;
+		break;
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -1598,6 +1649,9 @@ static int rswitch_serdes_set_chan_speed(struct rswitch_etha *etha)
 		else if (etha->speed == 100)
 			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x2100);
 
+		break;
+	case PHY_INTERFACE_MODE_USXGMII:
+			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x2120);
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -1622,6 +1676,8 @@ static int rswitch_serdes_monitor_linkup(struct rswitch_etha *etha)
 		udelay(20);
 		rswitch_serdes_write32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1,
 				       BANK_180, val & (~BIT(4)));
+	} else {
+		pr_debug("\n%s: SerDes Link up successful", __func__);
 	}
 
 	return ret;
@@ -1839,8 +1895,13 @@ static struct device_node *rswitch_get_phy_node(struct rswitch_device *rdev)
 
 		phy = of_parse_phandle(port, "phy-handle", 0);
 		if (phy) {
-			rdev->etha->speed = 1000;
-			break;
+			if (rdev->etha->phy_interface == PHY_INTERFACE_MODE_SGMII) {
+				rdev->etha->speed = 1000;
+				break;
+			} else if (rdev->etha->phy_interface == PHY_INTERFACE_MODE_USXGMII) {
+				rdev->etha->speed = 2500;
+				break;
+			}
 		} else {
 			if (of_phy_is_fixed_link(port)) {
 				struct device_node *fixed_link;
