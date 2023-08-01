@@ -726,6 +726,8 @@ enum rswitch_etha_mode {
 
 #define MDIO_READ_C45		0x03
 #define MDIO_WRITE_C45		0x01
+#define MDIO_READ_C22		0x02
+#define MDIO_WRITE_C22		0x01
 
 #define REG_MASK		0xffff
 #define DEV_MASK		GENMASK(24, 16)
@@ -745,7 +747,7 @@ enum rswitch_etha_mode {
 #define MPSM_PRD_SHIFT		16
 #define MPSM_PRD_MASK		GENMASK(31, MPSM_PRD_SHIFT)
 #define MPSM_PRD_WRITE(val)	((val) << MPSM_PRD_SHIFT)
-#define MPSM_PRD_READ(val)	((val) & MPSM_PRD_MASK >> MPSM_PRD_SHIFT)
+#define MPSM_PRD_READ(val)	(((val) & MPSM_PRD_MASK) >> MPSM_PRD_SHIFT)
 
 /* Completion flags */
 #define MMIS1_PAACS             BIT(2) /* Address */
@@ -1444,7 +1446,6 @@ static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
 {
 	rswitch_etha_modify(etha, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
 			    MPIC_PSMCS(0x3f) | MPIC_PSMHT(0x06));
-	rswitch_etha_modify(etha, MPSM, 0, MPSM_MFF_C45);
 }
 
 static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
@@ -1782,8 +1783,8 @@ static int rswitch_serdes_chan_init(struct rswitch_etha *etha)
 	return rswitch_serdes_monitor_linkup(etha);
 }
 
-static int rswitch_etha_set_access(struct rswitch_etha *etha, bool read,
-				   int phyad, int devad, int regad, int data)
+static int rswitch_etha_set_access_c45(struct rswitch_etha *etha, bool read,
+				      int phyad, int devad, int regad, int data)
 {
 	int pop = read ? MDIO_READ_C45 : MDIO_WRITE_C45;
 	u32 val;
@@ -1830,20 +1831,42 @@ static int rswitch_etha_set_access(struct rswitch_etha *etha, bool read,
 	return ret;
 }
 
+static int rswitch_etha_set_access_c22(struct rswitch_etha *etha, bool read,
+				       int phyad, int regad, int data)
+{
+	int pop = read ? MDIO_READ_C22 : MDIO_WRITE_C22;
+	int ret;
+	u32 val;
+
+	val = MPSM_POP(pop) | MPSM_PDA(phyad) | MPSM_PRA(regad) | MPSM_PSME;
+
+	if (!read)
+		val |= MPSM_PRD_WRITE(data);
+
+	rs_write32(val, etha->addr + MPSM);
+
+	ret = rswitch_reg_wait(etha->addr, MPSM, MPSM_PSME, 0);
+	if (ret)
+		return ret;
+
+	return read ? MPSM_PRD_READ(rswitch_etha_read(etha, MPSM)) : 0;
+}
+
 static int rswitch_etha_mii_read(struct mii_bus *bus, int addr, int regnum)
 {
 	struct rswitch_etha *etha = bus->priv;
 	int mode, devad, regad;
 
 	mode = regnum & MII_ADDR_C45;
+
+	/* Clause 22 */
+	if (!mode)
+		return rswitch_etha_set_access_c22(etha, true, addr, regnum, 0);
+
 	devad = (regnum >> MII_DEVADDR_C45_SHIFT) & 0x1f;
 	regad = regnum & MII_REGADDR_C45_MASK;
 
-	/* Not support Clause 22 access method */
-	if (!mode)
-		return 0;
-
-	return rswitch_etha_set_access(etha, true, addr, devad, regad, 0);
+	return rswitch_etha_set_access_c45(etha, true, addr, devad, regad, 0);
 }
 
 static int rswitch_etha_mii_write(struct mii_bus *bus, int addr, int regnum, u16 val)
@@ -1852,14 +1875,15 @@ static int rswitch_etha_mii_write(struct mii_bus *bus, int addr, int regnum, u16
 	int mode, devad, regad;
 
 	mode = regnum & MII_ADDR_C45;
+
+	/* Clause 22 */
+	if (!mode)
+		return rswitch_etha_set_access_c22(etha, false, addr, regnum, val);
+
 	devad = (regnum >> MII_DEVADDR_C45_SHIFT) & 0x1f;
 	regad = regnum & MII_REGADDR_C45_MASK;
 
-	/* Not support Clause 22 access method */
-	if (!mode)
-		return 0;
-
-	return rswitch_etha_set_access(etha, false, addr, devad, regad, val);
+	return rswitch_etha_set_access_c45(etha, false, addr, devad, regad, val);
 }
 
 static int rswitch_etha_mii_reset(struct mii_bus *bus)
