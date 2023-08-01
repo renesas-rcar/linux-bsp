@@ -1217,7 +1217,7 @@ static irqreturn_t rcar_canfd_global_interrupt(int irq, void *dev_id)
 	struct rcar_canfd_global *gpriv = dev_id;
 	struct net_device *ndev;
 	struct rcar_canfd_channel *priv;
-	u32 sts, gerfl;
+	u32 sts, gerfl, cc;
 	u32 ch, ridx, addr1, addr2;
 
 	/* Global error interrupts still indicate a condition specific
@@ -1246,7 +1246,9 @@ static irqreturn_t rcar_canfd_global_interrupt(int irq, void *dev_id)
 			addr2 = RCANFD_RFCC(ridx);
 		}
 		sts = rcar_canfd_read(priv->base, addr1);
-		if (likely(sts & RCANFD_RFSTS_RFIF)) {
+		cc = rcar_canfd_read(priv->base, addr2);
+		if (likely(sts & RCANFD_RFSTS_RFIF &&
+			   cc & RCANFD_RFCC_RFIE)) {
 			if (napi_schedule_prep(&priv->napi)) {
 				/* Disable Rx FIFO interrupts */
 				rcar_canfd_clear_bit(priv->base, addr2,
