@@ -1520,32 +1520,20 @@ static int rswitch_serdes_common_init_ram(struct rswitch_etha *etha)
 	return 0;
 }
 
-static int rswitch_serdes_common_setting(struct rswitch_etha *etha)
+static void rswitch_serdes_common_setting(struct rswitch_etha *etha)
 {
 	void __iomem *addr = etha->serdes_addr - etha->index * RSWITCH_SERDES_OFFSET;
 
-	switch (etha->phy_interface) {
-	case PHY_INTERFACE_MODE_SGMII:
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_REF_CLK_CTRL, BANK_180, 0x97);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL0, BANK_180, 0x60);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL2, BANK_180, 0x2200);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLB_CTRL1, BANK_180, 0);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLB_CTRL3, BANK_180, 0x3d);
-
-		break;
-	case PHY_INTERFACE_MODE_USXGMII:
-	case PHY_INTERFACE_MODE_5GBASER:
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_REF_CLK_CTRL, BANK_180, 0x57);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_10G_MPLLA_CTRL2, BANK_180, 0xc200);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLA_CTRL0, BANK_180, 0x42);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLA_CTRL1, BANK_180, 0);
-		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLA_CTRL3, BANK_180, 0x2f);
-		break;
-	default:
-		return -EOPNOTSUPP;
-	}
-
-	return 0;
+	/* Set combination mode */
+	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_REF_CLK_CTRL, BANK_180, 0xd7);
+	rswitch_serdes_write32(addr, VR_XS_PMA_MP_10G_MPLLA_CTRL2, BANK_180, 0xc200);
+	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLA_CTRL0, BANK_180, 0x42);
+	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLA_CTRL1, BANK_180, 0);
+	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLA_CTRL3, BANK_180, 0x2f);
+	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL0, BANK_180, 0x60);
+	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL2, BANK_180, 0x2200);
+	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLB_CTRL1, BANK_180, 0);
+	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLB_CTRL3, BANK_180, 0x3d);
 }
 
 static int rswitch_serdes_chan_setting(struct rswitch_etha *etha)
@@ -1714,9 +1702,7 @@ static int rswitch_serdes_common_init(struct rswitch_etha *etha)
 				       0x03d4, BANK_380, 0x443);
 
 	/* Set common setting */
-	ret = rswitch_serdes_common_setting(etha);
-	if (ret)
-		return ret;
+	rswitch_serdes_common_setting(etha);
 
 	for (i = 0; i < RSWITCH_SERDES_NUM; i++)
 		rswitch_serdes_write32(common_addr + i * RSWITCH_SERDES_OFFSET,
