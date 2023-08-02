@@ -2714,7 +2714,8 @@
 
 		ufs: scsi@e6860000 {
 			compatible = "renesas,r8a779f0-ufs";
-			reg = <0 0xe6860000 0 0x100>;
+			reg = <0 0xe6860000 0 0x100>, <0 0xe6078944 0 0x08>;
+			reg-names = "main", "efuse";
 			interrupts = <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 1514>, <&ufs30_clk>;
 			clock-names = "fck", "ref_clk";
