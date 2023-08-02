@@ -1534,6 +1534,7 @@ static int rswitch_serdes_common_setting(struct rswitch_etha *etha)
 
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
+	case PHY_INTERFACE_MODE_5GBASER:
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_REF_CLK_CTRL, BANK_180, 0x57);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_10G_MPLLA_CTRL2, BANK_180, 0xc200);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLA_CTRL0, BANK_180, 0x42);
@@ -1594,6 +1595,7 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha)
 
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
+	case PHY_INTERFACE_MODE_5GBASER:
 		rswitch_serdes_write32(addr, SR_XS_PCS_CTRL2, BANK_300, 0x0);
 		rswitch_serdes_write32(addr, VR_XS_PCS_DEBUG_CTRL, BANK_380, 0x50);
 		rswitch_serdes_write32(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x2200);
@@ -1652,7 +1654,13 @@ static int rswitch_serdes_set_chan_speed(struct rswitch_etha *etha)
 
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
-			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x2120);
+		/* USXGMII - 2.5Gbps */
+		rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x120);
+
+		break;
+	case PHY_INTERFACE_MODE_5GBASER:
+		rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x2120);
+
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -1919,11 +1927,15 @@ static struct device_node *rswitch_get_phy_node(struct rswitch_device *rdev)
 
 		phy = of_parse_phandle(port, "phy-handle", 0);
 		if (phy) {
-			if (rdev->etha->phy_interface == PHY_INTERFACE_MODE_SGMII) {
+			switch (rdev->etha->phy_interface) {
+			case PHY_INTERFACE_MODE_SGMII:
 				rdev->etha->speed = 1000;
 				break;
-			} else if (rdev->etha->phy_interface == PHY_INTERFACE_MODE_USXGMII) {
+			case PHY_INTERFACE_MODE_USXGMII:
+			case PHY_INTERFACE_MODE_5GBASER:
 				rdev->etha->speed = 2500;
+				break;
+			default:
 				break;
 			}
 		} else {
