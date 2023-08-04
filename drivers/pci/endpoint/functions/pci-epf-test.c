@@ -398,8 +398,11 @@ again:
 			dev_err(dev, "Data transfer failed\n");
 	} else {
 		void *buf;
+		phys_addr_t tmp_phys_addr;
+		struct device *parent_dev = epf->epc->dev.parent;
 
-		buf = kzalloc(reg->size, GFP_KERNEL);
+		buf = dma_alloc_coherent(parent_dev, reg->size, &tmp_phys_addr,
+					 GFP_KERNEL);
 		if (!buf) {
 			ret = -ENOMEM;
 			goto err_map_addr;
@@ -407,7 +410,7 @@ again:
 
 		memcpy_fromio(buf, src_addr, reg->size);
 		memcpy_toio(dst_addr, buf, reg->size);
-		kfree(buf);
+		dma_free_coherent(parent_dev, reg->size, buf, tmp_phys_addr);
 	}
 	if (use_timer && !time_after(jiffies, timeout)) {
 		num_xfer++;
@@ -449,7 +452,7 @@ static int pci_epf_test_read(struct pci_epf_test *epf_test)
 	struct pci_epf *epf = epf_test->epf;
 	struct device *dev = &epf->dev;
 	struct pci_epc *epc = epf->epc;
-	struct device *dma_dev = epf->epc->dev.parent;
+	struct device *parent_dev = epf->epc->dev.parent;
 	enum pci_barno test_reg_bar = epf_test->test_reg_bar;
 	struct pci_epf_test_reg *reg = epf_test->reg[test_reg_bar];
 
@@ -469,7 +472,8 @@ static int pci_epf_test_read(struct pci_epf_test *epf_test)
 		goto err_addr;
 	}
 
-	buf = kzalloc(reg->size, GFP_KERNEL);
+	buf = dma_alloc_coherent(parent_dev, reg->size, &dst_phys_addr,
+				 GFP_KERNEL);
 	if (!buf) {
 		ret = -ENOMEM;
 		goto err_map_addr;
@@ -481,14 +485,6 @@ static int pci_epf_test_read(struct pci_epf_test *epf_test)
 		if (!epf_test->dma_supported) {
 			dev_err(dev, "Cannot transfer data using DMA\n");
 			ret = -EINVAL;
-			goto err_dma_map;
-		}
-
-		dst_phys_addr = dma_map_single(dma_dev, buf, reg->size,
-					       DMA_FROM_DEVICE);
-		if (dma_mapping_error(dma_dev, dst_phys_addr)) {
-			dev_err(dev, "Failed to map destination buffer addr\n");
-			ret = -ENOMEM;
 			goto err_dma_map;
 		}
 
@@ -508,8 +504,6 @@ again_dma:
 		}
 		ktime_get_ts64(&end);
 
-		dma_unmap_single(dma_dev, dst_phys_addr, reg->size,
-				 DMA_FROM_DEVICE);
 	} else {
 		if (use_timer)
 			timeout = pci_epf_test_get_timeout(reg->flags);
@@ -531,7 +525,7 @@ again:
 		ret = -EIO;
 
 err_dma_map:
-	kfree(buf);
+	dma_free_coherent(parent_dev, reg->size, buf, dst_phys_addr);
 
 err_map_addr:
 	pci_epc_unmap_addr(epc, epf->func_no, phys_addr);
@@ -558,7 +552,7 @@ static int pci_epf_test_write(struct pci_epf_test *epf_test)
 	struct pci_epf *epf = epf_test->epf;
 	struct device *dev = &epf->dev;
 	struct pci_epc *epc = epf->epc;
-	struct device *dma_dev = epf->epc->dev.parent;
+	struct device *parent_dev = epf->epc->dev.parent;
 	enum pci_barno test_reg_bar = epf_test->test_reg_bar;
 	struct pci_epf_test_reg *reg = epf_test->reg[test_reg_bar];
 
@@ -578,7 +572,8 @@ static int pci_epf_test_write(struct pci_epf_test *epf_test)
 		goto err_addr;
 	}
 
-	buf = kzalloc(reg->size, GFP_KERNEL);
+	buf = dma_alloc_coherent(parent_dev, reg->size, &src_phys_addr,
+				 GFP_KERNEL);
 	if (!buf) {
 		ret = -ENOMEM;
 		goto err_map_addr;
@@ -593,14 +588,6 @@ static int pci_epf_test_write(struct pci_epf_test *epf_test)
 		if (!epf_test->dma_supported) {
 			dev_err(dev, "Cannot transfer data using DMA\n");
 			ret = -EINVAL;
-			goto err_dma_map;
-		}
-
-		src_phys_addr = dma_map_single(dma_dev, buf, reg->size,
-					       DMA_TO_DEVICE);
-		if (dma_mapping_error(dma_dev, src_phys_addr)) {
-			dev_err(dev, "Failed to map source buffer addr\n");
-			ret = -ENOMEM;
 			goto err_dma_map;
 		}
 
@@ -620,8 +607,6 @@ again_dma:
 		}
 		ktime_get_ts64(&end);
 
-		dma_unmap_single(dma_dev, src_phys_addr, reg->size,
-				 DMA_TO_DEVICE);
 	} else {
 		if (use_timer)
 			timeout = pci_epf_test_get_timeout(reg->flags);
@@ -645,7 +630,7 @@ again:
 	usleep_range(1000, 2000);
 
 err_dma_map:
-	kfree(buf);
+	dma_free_coherent(parent_dev, reg->size, buf, src_phys_addr);
 
 err_map_addr:
 	pci_epc_unmap_addr(epc, epf->func_no, phys_addr);
