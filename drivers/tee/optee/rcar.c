@@ -35,7 +35,10 @@ static char *remaped_log_buffer;
 static struct optee *rcar_optee;
 static struct rcar_debug_log_info dlog_info;
 
-#define TEE_LOG_NS_BASE        (0x0407FEC000U)
+static struct task_struct *log_thread;
+static atomic_t thread_exit;
+
+#define TEE_LOG_NS_BASE        (0x0407FEC000UL)
 #define TEE_LOG_NS_SIZE        (81920U)
 #define LOG_NS_CPU_AREA_SIZE   (1024U)
 #define TEE_CORE_NB_CORE   (8U)
@@ -52,34 +55,45 @@ static int debug_log_kthread(void *arg)
 {
 	struct rcar_debug_log_info *dlog;
 	struct rcar_debug_log_node *node;
-	bool thread_exit = false;
 
 	dlog = (struct rcar_debug_log_info *)arg;
 
 	while (1) {
 		spin_lock(&dlog->q_lock);
-		while (!list_empty(&dlog->queue)) {
+		while (!list_empty(&dlog->queue) && !kthread_should_stop()) {
 			node = list_first_entry(&dlog->queue,
 				struct rcar_debug_log_node,
 				list);
+			list_del(&node->list);
+
 			spin_unlock(&dlog->q_lock);
 
 			if (node->logmsg)
 				pr_alert("%s", node->logmsg);
-			else
-				thread_exit = true;
 
-			spin_lock(&dlog->q_lock);
-			list_del(&node->list);
 			kfree(node);
+			spin_lock(&dlog->q_lock);
 		}
 		spin_unlock(&dlog->q_lock);
-		if (thread_exit)
+		if (kthread_should_stop())
 			break;
 		wait_event_interruptible(dlog->waitq,
-			!list_empty(&dlog->queue));
+			!list_empty(&dlog->queue) || kthread_should_stop());
 	}
 
+	/* Barrier to prevent additional log messages from being added */
+	spin_lock(&dlog->q_lock);
+	atomic_set(&thread_exit, 1);
+	spin_unlock(&dlog->q_lock);
+
+	/* Empty the list, thread marked exit, so no need spinlock here */
+	while (!list_empty(&dlog->queue)) {
+		node = list_first_entry(&dlog->queue,
+					struct rcar_debug_log_node,
+					list);
+		list_del(&node->list);
+		kfree(node);
+	}
 	pr_info("%s Exit\n", __func__);
 	return 0;
 }
@@ -92,6 +106,12 @@ void handle_rpc_func_cmd_debug_log(struct optee_msg_arg *arg)
 	char *p;
 	struct rcar_debug_log_node *node = NULL;
 	size_t alloc_size;
+
+	/* Stop processing as log thread is exiting */
+	if (atomic_read(&thread_exit)) {
+		arg->ret = TEEC_SUCCESS;
+		return;
+	}
 
 	dlog = (struct rcar_debug_log_info *)&dlog_info;
 
@@ -108,9 +128,14 @@ void handle_rpc_func_cmd_debug_log(struct optee_msg_arg *arg)
 				INIT_LIST_HEAD(&node->list);
 				strcpy(node->logmsg, p);
 				spin_lock(&dlog->q_lock);
-				list_add_tail(&node->list, &dlog->queue);
-				spin_unlock(&dlog->q_lock);
-				wake_up_interruptible(&dlog->waitq);
+				if (!atomic_read(&thread_exit)) {
+					list_add_tail(&node->list, &dlog->queue);
+					spin_unlock(&dlog->q_lock);
+					wake_up_interruptible(&dlog->waitq);
+				} else {
+					kfree(node);
+					spin_unlock(&dlog->q_lock);
+				}
 				arg->ret = TEEC_SUCCESS;
 			} else {
 				arg->ret = TEEC_ERROR_OUT_OF_MEMORY;
@@ -169,7 +194,6 @@ static void rcar_optee_del_suspend_callback(void)
 static int rcar_optee_init_debug_log(struct optee *optee)
 {
 	int ret = 0;
-	struct task_struct *thread;
 	struct arm_smccc_res smccc;
 
 	remaped_log_buffer = ioremap(TEE_LOG_NS_BASE, TEE_LOG_NS_SIZE);
@@ -182,9 +206,10 @@ static int rcar_optee_init_debug_log(struct optee *optee)
 		INIT_LIST_HEAD(&dlog_info.queue);
 		spin_lock_init(&dlog_info.q_lock);
 
-		thread = kthread_run(debug_log_kthread, &dlog_info,
-			"optee_debug_log");
-		if (IS_ERR(thread)) {
+		atomic_set(&thread_exit, 0);
+		log_thread = kthread_run(debug_log_kthread, &dlog_info,
+					 "optee_debug_log");
+		if (IS_ERR(log_thread)) {
 			pr_err("failed to kthread_run\n");
 			ret = -ENOMEM;
 			goto end;
@@ -202,18 +227,12 @@ end:
 
 static void rcar_optee_final_debug_log(void)
 {
-	struct rcar_debug_log_node *node;
-
-	node = kmalloc(sizeof(*node), GFP_KERNEL);
-	if (node) {
-		INIT_LIST_HEAD(&node->list);
-		node->logmsg = NULL; /* exit kthread */
-		spin_lock(&dlog_info.q_lock);
-		list_add_tail(&node->list, &dlog_info.queue);
-		spin_unlock(&dlog_info.q_lock);
-		wake_up(&dlog_info.waitq);
+	/* Try to stop log thread if it's not stopped yet*/
+	if (log_thread) {
+		kthread_stop(log_thread);
+		log_thread = NULL;
 	} else {
-		pr_err("failed to kmalloc(rcar_debug_log_node)\n");
+		pr_err("debug_log_kthread() unexpectedly not running\n");
 	}
 }
 
