@@ -3082,10 +3082,11 @@ static int rswitch_init(struct rswitch_private *priv)
 
 		rswitch_coma_init(priv);
 		rswitch_fwd_init(priv);
-		err = rtsn_ptp_init(priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
-		if (err < 0)
-			goto out;
 	}
+
+	err = rtsn_ptp_init(priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
+	if (err < 0)
+		goto out;
 
 	err = rswitch_request_irqs(priv);
 	if (err < 0)
@@ -3350,10 +3351,11 @@ static int __maybe_unused rswitch_resume(struct device *dev)
 
 		rswitch_fwd_init(priv);
 
-		ret = rtsn_ptp_init(priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
-		if (ret)
-			return ret;
 	}
+
+	ret = rtsn_ptp_init(priv->ptp_priv, RTSN_PTP_REG_LAYOUT_S4, RTSN_PTP_CLOCK_S4);
+	if (ret)
+		return ret;
 
 	for (i = 0; i < num_ndev; i++) {
 		struct net_device *ndev = priv->rdev[i]->ndev;
