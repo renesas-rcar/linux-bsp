@@ -407,24 +407,49 @@ static const struct vhost_xen_ops vhost_xen_foreign_ops = {
 static void vhost_xen_get_guest_domid(struct xenbus_watch *watch,
 		const char *path, const char *token)
 {
-	char *str, *p;
+	char **dm_dir;
+	unsigned int n = 0;
 
-	str = (char *)xenbus_read(XBT_NIL, "drivers/dom0-qemu-command-monitor",
-			"value", NULL);
-	if (XENBUS_IS_ERR_READ(str))
+	dm_dir = xenbus_directory(XBT_NIL, "device-model", "", &n);
+	if (IS_ERR(dm_dir))
 		return;
 
-	p = strstr(str, "-xen-domid ");
-	if (p) {
-		guest_domid = simple_strtoul(p + strlen("-xen-domid "), NULL, 0);
-		pr_info("%s: Get new domid: %u\n", __func__, guest_domid);
+	if (n == 0) {
+		if (guest_domid != DOMID_INVALID) {
+			guest_domid = DOMID_INVALID;
+			pr_info("%s: Reset current domid\n", __func__);
+		}
+	} else if (n == 1) {
+		char *dm_str, *dm_path;
+		domid_t domid;
+
+		domid = simple_strtoul(dm_dir[0], NULL, 0);
+
+		dm_path = kasprintf(GFP_KERNEL, "device-model/%d", domid);
+		if (!dm_path)
+			goto out;
+
+		dm_str = (char *)xenbus_read(XBT_NIL, dm_path, "state", NULL);
+		if (IS_ERR(dm_str)) {
+			kfree(dm_path);
+			goto out;
+		}
+
+		if (!strcmp(dm_str, "running")) {
+			guest_domid = domid;
+			pr_info("%s: Set new domid: %u\n", __func__, guest_domid);
+		}
+
+		kfree(dm_path);
+		kfree(dm_str);
 	}
 
-	kfree(str);
+out:
+	kfree(dm_dir);
 }
 
 static struct xenbus_watch vhost_xen_qemu_args = {
-	.node = "drivers/dom0-qemu-command-monitor/value",
+	.node = "device-model",
 	.callback = vhost_xen_get_guest_domid,
 };
 
