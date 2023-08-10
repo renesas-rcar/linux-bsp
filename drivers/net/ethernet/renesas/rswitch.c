@@ -832,6 +832,7 @@ enum rswitch_gwca_mode {
 
 #define FWPBFCSDC(j, i)         (FWPBFCSDC00 + (i) * 0x10 + (j) * 0x04)
 
+#define RSWITCH_SERDES_LOCAL_OFFSET             0x2600
 #define RSWITCH_SERDES_OFFSET                   0x0400
 #define RSWITCH_SERDES_BANK_SELECT              0x03fc
 
@@ -1659,25 +1660,32 @@ static int rswitch_serdes_set_chan_speed(struct rswitch_etha *etha)
 
 static int rswitch_serdes_monitor_linkup(struct rswitch_etha *etha)
 {
-	int ret;
+	int ret, retry = 5;
 	u32 val;
 
-	ret = rswitch_serdes_reg_wait(etha->serdes_addr, SR_XS_PCS_STS1,
-				      BANK_300, BIT(2), BIT(2));
+retry:
+	ret = rswitch_serdes_reg_wait(etha->serdes_addr,
+				      SR_XS_PCS_STS1, BANK_300, BIT(2), BIT(2));
 	if (ret) {
-		pr_debug("\n%s: SerDes Link up failed, restart linkup", __func__);
-		val = rswitch_serdes_read32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1,
-					    BANK_180);
+		pr_debug("\n%s: SerDes Link up failed, restart linkup\n", __func__);
+
+		if (retry < 0)
+			return -ETIMEDOUT;
+
+		retry--;
+
+		val = rswitch_serdes_read32(etha->serdes_addr,
+					    VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1, BANK_180);
 		rswitch_serdes_write32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1,
 				       BANK_180, val | BIT(4));
 		udelay(20);
 		rswitch_serdes_write32(etha->serdes_addr, VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1,
 				       BANK_180, val & (~BIT(4)));
-	} else {
-		pr_debug("\n%s: SerDes Link up successful", __func__);
+
+		goto retry;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int rswitch_serdes_common_init(struct rswitch_etha *etha)
@@ -2390,6 +2398,13 @@ static void rswitch_reset(struct rswitch_private *priv)
 		reset_control_assert(priv->sd_rst);
 		mdelay(1);
 		reset_control_deassert(priv->sd_rst);
+
+		/* There is a slight difference in SerDes hardware behavior between
+		 * each version after resetting. This step is to ensure the stable
+		 * condition of initialization, especially for R-Car S4 v1.1.
+		 */
+		mdelay(1);
+		rs_write32(0, priv->serdes_addr + RSWITCH_SERDES_LOCAL_OFFSET);
 	} else {
 		int gwca_idx;
 		u32 gwro_offset;
