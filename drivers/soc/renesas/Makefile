@@ -27,6 +27,7 @@ obj-$(CONFIG_SYSC_R8A77995)	+= r8a77995-sysc.o
 obj-$(CONFIG_SYSC_R8A779A0)	+= r8a779a0-sysc.o
 obj-$(CONFIG_SYSC_R8A779F0)	+= r8a779f0-sysc.o
 obj-$(CONFIG_SYSC_R8A779G0)     += r8a779g0-sysc.o
+obj-$(CONFIG_SYSC_R8A779H0)     += r8a779h0-sysc.o
 ifdef CONFIG_SMP
 obj-$(CONFIG_ARCH_R9A06G032)	+= r9a06g032-smp.o
 endif
