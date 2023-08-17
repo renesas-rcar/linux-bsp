@@ -1301,14 +1301,14 @@ static const struct rvin_group_route rcar_info_r8a779a0_routes[] = {
 };
 
 static const struct rvin_group_route rcar_info_r8a779g0_routes[] = {
-	{ .csi = RV4U_CSI40, .channel = 0, .vin = 0,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI40, .channel = 1, .vin = 1,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI40, .channel = 2, .vin = 2,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI40, .channel = 3, .vin = 3,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI41, .channel = 0, .vin = 8,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI41, .channel = 1, .vin = 9,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI41, .channel = 2, .vin = 10, .mask = 0xffffffff },
-	{ .csi = RV4U_CSI41, .channel = 3, .vin = 11, .mask = 0xffffffff },
+	{ .csi = RV4H_CSI40, .channel = 0, .vin = 0,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI40, .channel = 1, .vin = 1,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI40, .channel = 2, .vin = 2,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI40, .channel = 3, .vin = 3,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI41, .channel = 0, .vin = 8,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI41, .channel = 1, .vin = 9,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI41, .channel = 2, .vin = 10, .mask = 0xffffffff },
+	{ .csi = RV4H_CSI41, .channel = 3, .vin = 11, .mask = 0xffffffff },
 	{ /* Sentinel */ }
 };
 
