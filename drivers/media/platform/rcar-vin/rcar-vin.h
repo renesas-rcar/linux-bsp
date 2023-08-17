@@ -71,9 +71,9 @@ enum rvin_r8a779a0_csi_id {
 };
 
 enum rvin_r8a779g0_csi_id {
-	RV4U_CSI40,
-	RV4U_CSI41,
-	RV4U_CSI_MAX,
+	RV4H_CSI40,
+	RV4H_CSI41,
+	RV4H_CSI_MAX,
 };
 
 /**
