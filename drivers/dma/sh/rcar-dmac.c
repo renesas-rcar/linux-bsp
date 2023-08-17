@@ -89,6 +89,7 @@ struct rcar_dmac_desc {
 
 	unsigned int size;
 	bool cyclic;
+	bool repeat;
 };
 
 #define to_rcar_dmac_desc(d)	container_of(d, struct rcar_dmac_desc, async_tx)
@@ -385,8 +386,12 @@ static void rcar_dmac_chan_clear_all(struct rcar_dmac *dmac)
 static bool rcar_dmac_chan_is_busy(struct rcar_dmac_chan *chan)
 {
 	u32 chcr = rcar_dmac_chan_read(chan, RCAR_DMACHCR);
+	struct rcar_dmac_desc *desc = chan->desc.running;
 
-	return !!(chcr & (RCAR_DMACHCR_DE | RCAR_DMACHCR_TE));
+	if (desc->cyclic && desc->repeat)
+		return !!(chcr & RCAR_DMACHCR_TE);
+	else
+		return !!(chcr & (RCAR_DMACHCR_DE | RCAR_DMACHCR_TE));
 }
 
 static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
@@ -450,9 +455,11 @@ static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 			chcr |= RCAR_DMACHCR_DPM_ENABLED | RCAR_DMACHCR_IE;
 		/*
 		 * If the descriptor is cyclic and has a callback enable the
-		 * descriptor stage interrupt in infinite repeat mode.
+		 * descriptor stage interrupt in cyclic mode.
 		 */
-		else if (desc->async_tx.callback)
+		else if (desc->async_tx.callback && desc->repeat)
+			chcr |= RCAR_DMACHCR_DPM_REPEAT | RCAR_DMACHCR_DSIE | RCAR_DMACHCR_IE;
+		else if (desc->async_tx.callback && !desc->repeat)
 			chcr |= RCAR_DMACHCR_DPM_INFINITE | RCAR_DMACHCR_DSIE;
 		/*
 		 * Otherwise just select infinite repeat mode without any
@@ -984,6 +991,8 @@ rcar_dmac_chan_prep_sg(struct rcar_dmac_chan *chan, struct scatterlist *sgl,
 
 	desc->cyclic = cyclic;
 	desc->direction = dir;
+	if (dma_flags & DMA_PREP_REPEAT)
+		desc->repeat = true;
 
 	ret = rcar_dmac_chan_configure_desc(chan, desc);
 	if (ret) {
@@ -1590,6 +1599,12 @@ static irqreturn_t rcar_dmac_isr_transfer_end(struct rcar_dmac_chan *chan)
 						 node);
 			goto done;
 		}
+	} else if (desc->repeat) {
+		desc->running =
+			list_first_entry(&desc->chunks,
+					 struct rcar_dmac_xfer_chunk,
+					 node);
+		return ret;
 	}
 
 	/* The descriptor is complete, move it to the done list. */
@@ -1636,8 +1651,10 @@ static irqreturn_t rcar_dmac_isr_channel(int irq, void *dev)
 	}
 
 	if (chcr & RCAR_DMACHCR_TE)
-		mask |= RCAR_DMACHCR_DE;
+		if (!(chan->desc.running->cyclic && chan->desc.running->repeat))
+			mask |= RCAR_DMACHCR_DE;
 	rcar_dmac_chan_write(chan, RCAR_DMACHCR, chcr & ~mask);
+
 	if (mask & RCAR_DMACHCR_DE)
 		rcar_dmac_chcr_de_barrier(chan);
 
