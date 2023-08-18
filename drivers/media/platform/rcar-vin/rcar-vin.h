@@ -43,6 +43,7 @@
 
 #define RCAR_VIN_R8A779A0_FEATURE	BIT(0)
 #define RCAR_VIN_R8A779G0_FEATURE	BIT(1)
+#define RCAR_VIN_R8A779H0_FEATURE	BIT(2)
 
 struct rvin_group;
 
@@ -74,6 +75,12 @@ enum rvin_r8a779g0_csi_id {
 	RV4H_CSI40,
 	RV4H_CSI41,
 	RV4H_CSI_MAX,
+};
+
+enum rvin_r8a779h0_csi_id {
+	RV4M_CSI40,
+	RV4M_CSI41,
+	RV4M_CSI_MAX,
 };
 
 /**
