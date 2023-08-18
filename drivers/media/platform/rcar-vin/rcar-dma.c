@@ -665,7 +665,8 @@ static bool rvin_gen3_need_scaling(struct rvin_dev *vin)
 	if (vin->info->model != RCAR_GEN3 ||
 	    vin->format.pixelformat == V4L2_PIX_FMT_NV12 ||
 	    vin->chip_info == RCAR_VIN_R8A779A0_FEATURE ||
-	    vin->chip_info == RCAR_VIN_R8A779G0_FEATURE)
+	    vin->chip_info == RCAR_VIN_R8A779G0_FEATURE ||
+	    vin->chip_info == RCAR_VIN_R8A779H0_FEATURE)
 		return false;
 
 	return vin->crop.width != vin->compose.width ||
@@ -859,7 +860,8 @@ static int rvin_setup(struct rvin_dev *vin)
 	case MEDIA_BUS_FMT_Y10_1X10:
 		 /* RAW8/10/12/14/16/RGB565 in case of R8A779A0 */
 		if (vin->chip_info & RCAR_VIN_R8A779A0_FEATURE ||
-			vin->chip_info & RCAR_VIN_R8A779G0_FEATURE)
+			vin->chip_info & RCAR_VIN_R8A779G0_FEATURE ||
+			vin->chip_info & RCAR_VIN_R8A779H0_FEATURE)
 			vnmc |= VNMC_INF_RAWX_RGB565;
 		break;
 	default:
@@ -941,7 +943,8 @@ static int rvin_setup(struct rvin_dev *vin)
 		break;
 	case V4L2_PIX_FMT_Y10:
 		if (vin->chip_info & RCAR_VIN_R8A779A0_FEATURE ||
-			vin->chip_info & RCAR_VIN_R8A779G0_FEATURE)
+			vin->chip_info & RCAR_VIN_R8A779G0_FEATURE ||
+			vin->chip_info & RCAR_VIN_R8A779H0_FEATURE)
 			dmr = VNDMR_RMODE_RAW10 | VNDMR_YC_THR;
 		break;
 	case V4L2_PIX_FMT_GREY:
@@ -963,12 +966,14 @@ static int rvin_setup(struct rvin_dev *vin)
 	/* If input and output use the same colorspace, use bypass mode */
 	if (input_is_yuv == output_is_yuv &&
 	   !(vin->chip_info & RCAR_VIN_R8A779A0_FEATURE) &&
-	   !(vin->chip_info & RCAR_VIN_R8A779G0_FEATURE))
+	   !(vin->chip_info & RCAR_VIN_R8A779G0_FEATURE) &&
+	   !(vin->chip_info & RCAR_VIN_R8A779H0_FEATURE))
 		vnmc |= VNMC_BPS;
 
 	if (vin->info->model == RCAR_GEN3 &&
 		!(vin->chip_info & RCAR_VIN_R8A779A0_FEATURE) &&
-		!(vin->chip_info & RCAR_VIN_R8A779G0_FEATURE)) {
+		!(vin->chip_info & RCAR_VIN_R8A779G0_FEATURE) &&
+		!(vin->chip_info & RCAR_VIN_R8A779H0_FEATURE)) {
 		/* Select between CSI-2 and parallel input */
 		if (vin->is_csi)
 			vnmc &= ~VNMC_DPINE;
@@ -994,7 +999,8 @@ static int rvin_setup(struct rvin_dev *vin)
 	/* Check INF bit in VnMR register setting */
 	if ((vin->info->model == RCAR_GEN3) &&
 	    !(vin->chip_info & RCAR_VIN_R8A779A0_FEATURE) &&
-	    !(vin->chip_info & RCAR_VIN_R8A779G0_FEATURE)) {
+	    !(vin->chip_info & RCAR_VIN_R8A779G0_FEATURE) &&
+	    !(vin->chip_info & RCAR_VIN_R8A779H0_FEATURE)) {
 		if (vin->is_csi) {
 			if (((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV8_BT656) ||
 			    ((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV10_BT656) ||
@@ -1013,7 +1019,8 @@ static int rvin_setup(struct rvin_dev *vin)
 			}
 		}
 	} else if (vin->chip_info & RCAR_VIN_R8A779A0_FEATURE ||
-				vin->chip_info & RCAR_VIN_R8A779G0_FEATURE) {
+				vin->chip_info & RCAR_VIN_R8A779G0_FEATURE ||
+				vin->chip_info & RCAR_VIN_R8A779H0_FEATURE) {
 		if (((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV8_BT656) ||
 		    ((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV10_BT656) ||
 		    ((vnmc & VNMC_INF_MASK) == VNMC_INF_YUV16)) {
@@ -1870,7 +1877,8 @@ int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel)
 	int ret;
 
 	if (vin->chip_info & RCAR_VIN_R8A779A0_FEATURE ||
-		vin->chip_info & RCAR_VIN_R8A779G0_FEATURE)
+		vin->chip_info & RCAR_VIN_R8A779G0_FEATURE ||
+		vin->chip_info & RCAR_VIN_R8A779H0_FEATURE)
 		return 0;
 
 	ret = pm_runtime_get_sync(vin->dev);
