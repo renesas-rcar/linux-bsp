@@ -38,6 +38,13 @@
 	};
 };
 
+&hscif2 {
+	pinctrl-0 = <&hscif2_pins>;
+	pinctrl-names = "default";
+	uart-has-rtscts;
+	status = "okay";
+};
+
 &pfc {
 	canfd0_pins: canfd0 {
 		groups = "canfd0_data";
@@ -58,6 +65,16 @@
 		groups = "canfd3_data";
 		function = "canfd3";
 	};
+
+	hscif2_pins: hscif2 {
+		groups = "hscif2_data", "hscif2_ctrl";
+		function = "hscif2";
+	};
+
+	scif_clk2_pins: scif_clk2 {
+		groups = "scif_clk2";
+		function = "scif_clk2";
+	};
 };
 
 &i2c0 {
@@ -67,4 +84,8 @@
 		reg = <0x51>;
 		pagesize = <8>;
 	};
+};
+
+&scif_clk2 {
+	clock-frequency = <24000000>;
 };
