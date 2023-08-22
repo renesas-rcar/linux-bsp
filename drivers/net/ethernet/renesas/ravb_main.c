@@ -52,6 +52,7 @@ static const char *ravb_tx_irqs[NUM_TX_QUEUE] = {
 };
 
 static const struct soc_device_attribute r8a779g0[];
+static const struct soc_device_attribute r8a779h0[];
 
 void ravb_modify(struct net_device *ndev, enum ravb_reg reg, u32 clear,
 		 u32 set)
@@ -1008,6 +1009,11 @@ static const struct soc_device_attribute r8a7795es10[] = {
 
 static const struct soc_device_attribute r8a779g0[] = {
 	{ .soc_id = "r8a779g0" },
+	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute r8a779h0[] = {
+	{ .soc_id = "r8a779h0" },
 	{ /* sentinel */ }
 };
 
@@ -2307,7 +2313,7 @@ static int ravb_probe(struct platform_device *pdev)
 
 	/* Initialise PTP Clock driver */
 	if (chip_id != RCAR_GEN2){
-		if (soc_device_match(r8a779g0) && priv->use_ptp)
+		if ((soc_device_match(r8a779g0) || soc_device_match(r8a779h0)) && priv->use_ptp)
 			rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK_V4H);
 		else if (chip_id == RCAR_GEN3)
 			ravb_ptp_init(ndev, pdev);
@@ -2325,7 +2331,7 @@ static int ravb_probe(struct platform_device *pdev)
 	}
 
 	/* De-assert PHY GPIO resets */
-	if (soc_device_match(r8a779g0)) {
+	if (soc_device_match(r8a779g0) || soc_device_match(r8a779h0)) {
 		error = ravb_reset_phy(ndev, pdev);
 		if (error)
 			goto out_release;
