@@ -17,6 +17,7 @@
 	aliases {
 		serial0 = &hscif0;
 		ethernet0 = &avb0;
+		serial1 = &hscif2;
 	};
 
 	chosen {
@@ -81,6 +82,11 @@
 };
 
 &hscif0 {
+	pinctrl-0 = <&hscif0_pins>;
+	pinctrl-names = "default";
+
+	uart-has-rtscts;
+	/* Please use exclusively to the scif0 node */
 	status = "okay";
 };
 
@@ -138,6 +144,11 @@
 		};
 	};
 
+	scif0_pins: scif0 {
+		groups = "scif0_data", "scif0_ctrl";
+		function = "scif0";
+	};
+
 	hscif0_pins: hscif0 {
 		groups = "hscif0_data", "hscif0_ctrl";
 		function = "hscif0";
@@ -167,4 +178,13 @@
 
 &scif_clk {
 	clock-frequency = <24000000>;
+};
+
+&scif0 {
+	pinctrl-0 = <&scif0_pins>;
+	pinctrl-names = "default";
+
+	uart-has-rtscts;
+	/* Please use exclusively to the hscif0 node */
+	status = "disabled";
 };
