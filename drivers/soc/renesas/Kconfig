@@ -323,6 +323,9 @@ config RST_RCAR
 config SYSC_RCAR
 	bool "System Controller support for R-Car" if COMPILE_TEST
 
+config SYSC_RCAR_GEN4
+        bool "System Controller support for R-Car Gen4" if COMPILE_TEST
+
 config RCAR_POWER_AVS
 	bool "Renesas R-Car Gen3 AVS (Adaptive Voltage Scaling)"
 	depends on ARCH_R8A77951 || ARCH_R8A77960 || ARCH_R8A77961
@@ -390,6 +393,11 @@ config SYSC_R8A779F0
 
 config SYSC_R8A779G0
 	bool "System Controller support for R-Car V4H" if COMPILE_TEST
+	select SYSC_RCAR_GEN4
+
+config SYSC_R8A779H0
+	bool "System Controller support for R-Car V4M" if COMPILE_TEST
+	select SYSC_RCAR_GEN4
 
 config SYSC_RMOBILE
 	bool "System Controller support for R-Mobile" if COMPILE_TEST
