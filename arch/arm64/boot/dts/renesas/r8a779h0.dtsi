@@ -49,6 +49,7 @@
 			next-level-cache = <&L3_CA76_0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks = <&cpg CPG_CORE R8A779H0_CLK_ZC0>;
 		};
 
 		a76_1: cpu@100 {
@@ -59,6 +60,7 @@
 			next-level-cache = <&L3_CA76_0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks = <&cpg CPG_CORE R8A779H0_CLK_ZC1>;
 		};
 
 		a76_2: cpu@200 {
@@ -69,6 +71,7 @@
 			next-level-cache = <&L3_CA76_0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks = <&cpg CPG_CORE R8A779H0_CLK_ZC2>;
 		};
 
 		a76_3: cpu@300 {
@@ -79,6 +82,7 @@
 			next-level-cache = <&L3_CA76_0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0>;
+			clocks = <&cpg CPG_CORE R8A779H0_CLK_ZC3>;
 		};
 
 		idle-states {
