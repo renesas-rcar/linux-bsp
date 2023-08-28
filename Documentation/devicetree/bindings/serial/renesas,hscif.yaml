@@ -59,6 +59,7 @@ properties:
           - enum:
               - renesas,hscif-r8a779g0     # R-Car V4H
               - renesas,hscif-r8a779f0     # R-Car S4
+              - renesas,hscif-r8a779h0     # R-Car V4M
           - const: renesas,rcar-gen4-hscif # R-Car Gen4
           - const: renesas,hscif           # generic HSCIF compatible UART
 
