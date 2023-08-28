@@ -89,7 +89,7 @@
 #define MCELSIUS(temp)	((temp) * 1000)
 #define FUSE_MASK	0xFFF
 
-#define TSC_MAX_NUM	3
+#define TSC_MAX_NUM	4
 
 enum rcar_thermal_chip_id {
 	RCAR_THERMAL_GEN3 = 0,
@@ -99,30 +99,42 @@ enum rcar_thermal_chip_id {
 
 struct rcar_thermal_data {
 	enum rcar_thermal_chip_id chip_id;
+	int tsc_max_num;
 	int rcar_ths_tj_1;
 	unsigned int irq_num;
 	bool has_ecm;
 };
 
 static const struct rcar_thermal_data data_gen3 = {
-	.chip_id = RCAR_THERMAL_GEN3,
-	.rcar_ths_tj_1 = 126,
-	.irq_num = 2,
-	.has_ecm = false,
+	.chip_id	= RCAR_THERMAL_GEN3,
+	.tsc_max_num	= 3,
+	.rcar_ths_tj_1	= 126,
+	.irq_num	= 2,
+	.has_ecm	= false,
 };
 
 static const struct rcar_thermal_data data_m3_w = {
-	.chip_id = RCAR_THERMAL_GEN3,
-	.rcar_ths_tj_1 = 116,
-	.irq_num = 2,
-	.has_ecm = false,
+	.chip_id	= RCAR_THERMAL_GEN3,
+	.tsc_max_num	= 3,
+	.rcar_ths_tj_1	= 116,
+	.irq_num	= 2,
+	.has_ecm	= false,
 };
 
 static const struct rcar_thermal_data data_gen4 = {
-	.chip_id = RCAR_THERMAL_GEN4,
-	.rcar_ths_tj_1 = 126,
-	.irq_num = 1,
-	.has_ecm = true,
+	.chip_id	= RCAR_THERMAL_GEN4,
+	.tsc_max_num	= 3,
+	.rcar_ths_tj_1	= 126,
+	.irq_num	= 1,
+	.has_ecm	= true,
+};
+
+static const struct rcar_thermal_data data_v4h = {
+	.chip_id	= RCAR_THERMAL_GEN4,
+	.tsc_max_num	= 4,
+	.rcar_ths_tj_1	= 126,
+	.irq_num	= 1,
+	.has_ecm	= true,
 };
 
 /* ECM register base and offsets */
@@ -140,6 +152,7 @@ static int thcodes[TSC_MAX_NUM][3] = {
 	{ 3397, 2800, 2221 },
 	{ 3393, 2795, 2216 },
 	{ 3389, 2805, 2237 },
+	{ 3447, 2670, 2210 },
 };
 
 /* Structure for thermal temperature calculation */
@@ -441,6 +454,10 @@ static const struct of_device_id rcar_gen3_thermal_dt_ids[] = {
 		.compatible = "renesas,r8a779f0-thermal",
 		.data = &data_gen4,
 	},
+	{
+		.compatible = "renesas,r8a779g0-thermal",
+		.data = &data_v4h,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, rcar_gen3_thermal_dt_ids);
@@ -551,7 +568,7 @@ static int rcar_gen3_thermal_probe(struct platform_device *pdev)
 
 	iounmap(ptat_base);
 
-	for (i = 0; i < TSC_MAX_NUM; i++) {
+	for (i = 0; i < of_data->tsc_max_num; i++) {
 		struct rcar_gen3_thermal_tsc *tsc;
 
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
