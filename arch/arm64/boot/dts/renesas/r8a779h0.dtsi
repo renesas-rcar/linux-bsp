@@ -361,8 +361,8 @@
 		i2c2: i2c@e6510000 {
 			compatible = "renesas,i2c-r8a779h0",
 				     "renesas,rcar-gen4-i2c";
-			reg = <GIC_SPI 0xe6510000 0 0x40>;
-			interrupts = <0 612 IRQ_TYPE_LEVEL_HIGH>;
+			reg = <0 0xe6510000 0 0x40>;
+			interrupts = <GIC_SPI 612 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 520>;
 			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
 			resets = <&cpg 520>;
@@ -1212,16 +1212,6 @@
 			status = "disabled";
 		};
 
-		ipmmu_mm: iommu@eefc0000 {
-			compatible = "renesas,ipmmu-r8a779h0";
-			reg = <0 0xeefc0000 0 0x20000>;
-			interrupts = <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH
-				      GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH>;
-			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
-			#iommu-cells = <1>;
-			status = "disabled";
-		};
-
 		ipmmu_rt0: iommu@ee480000 {
 			compatible = "renesas,ipmmu-r8a779h0";
 			reg = <0 0xee480000 0 0x20000>;
@@ -1308,6 +1298,16 @@
 			reg = <0 0xeef00000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 5>;
 			power-domains = <&sysc R8A779H0_PD_C4>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		ipmmu_mm: iommu@eefc0000 {
+			compatible = "renesas,ipmmu-r8a779h0";
+			reg = <0 0xeefc0000 0 0x20000>;
+			interrupts = <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
 			status = "disabled";
 		};
