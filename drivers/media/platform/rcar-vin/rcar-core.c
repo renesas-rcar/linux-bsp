@@ -1301,14 +1301,26 @@ static const struct rvin_group_route rcar_info_r8a779a0_routes[] = {
 };
 
 static const struct rvin_group_route rcar_info_r8a779g0_routes[] = {
-	{ .csi = RV4U_CSI40, .channel = 0, .vin = 0,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI40, .channel = 1, .vin = 1,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI40, .channel = 2, .vin = 2,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI40, .channel = 3, .vin = 3,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI41, .channel = 0, .vin = 8,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI41, .channel = 1, .vin = 9,  .mask = 0xffffffff },
-	{ .csi = RV4U_CSI41, .channel = 2, .vin = 10, .mask = 0xffffffff },
-	{ .csi = RV4U_CSI41, .channel = 3, .vin = 11, .mask = 0xffffffff },
+	{ .csi = RV4H_CSI40, .channel = 0, .vin = 0,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI40, .channel = 1, .vin = 1,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI40, .channel = 2, .vin = 2,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI40, .channel = 3, .vin = 3,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI41, .channel = 0, .vin = 8,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI41, .channel = 1, .vin = 9,  .mask = 0xffffffff },
+	{ .csi = RV4H_CSI41, .channel = 2, .vin = 10, .mask = 0xffffffff },
+	{ .csi = RV4H_CSI41, .channel = 3, .vin = 11, .mask = 0xffffffff },
+	{ /* Sentinel */ }
+};
+
+static const struct rvin_group_route rcar_info_r8a779h0_routes[] = {
+	{ .csi = RV4M_CSI40, .channel = 0, .vin = 0,  .mask = 0xffffffff },
+	{ .csi = RV4M_CSI40, .channel = 1, .vin = 1,  .mask = 0xffffffff },
+	{ .csi = RV4M_CSI40, .channel = 2, .vin = 2,  .mask = 0xffffffff },
+	{ .csi = RV4M_CSI40, .channel = 3, .vin = 3,  .mask = 0xffffffff },
+	{ .csi = RV4M_CSI41, .channel = 0, .vin = 8,  .mask = 0xffffffff },
+	{ .csi = RV4M_CSI41, .channel = 1, .vin = 9,  .mask = 0xffffffff },
+	{ .csi = RV4M_CSI41, .channel = 2, .vin = 10, .mask = 0xffffffff },
+	{ .csi = RV4M_CSI41, .channel = 3, .vin = 11, .mask = 0xffffffff },
 	{ /* Sentinel */ }
 };
 
@@ -1326,6 +1338,14 @@ static const struct rvin_info rcar_info_r8a779g0 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a779g0_routes,
+};
+
+static const struct rvin_info rcar_info_r8a779h0 = {
+	.model = RCAR_GEN4,
+	.use_mc = true,
+	.max_width = 4096,
+	.max_height = 4096,
+	.routes = rcar_info_r8a779h0_routes,
 };
 
 static const struct of_device_id rvin_of_id_table[] = {
@@ -1413,6 +1433,10 @@ static const struct of_device_id rvin_of_id_table[] = {
 		.compatible = "renesas,vin-r8a779g0",
 		.data = &rcar_info_r8a779g0,
 	},
+	{
+		.compatible = "renesas,vin-r8a779h0",
+		.data = &rcar_info_r8a779h0,
+	},
 	{ /* Sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, rvin_of_id_table);
@@ -1433,6 +1457,10 @@ static const struct soc_device_attribute chip_info[] = {
 	{
 		.soc_id = "r8a779g0",
 		.data = (void *)RCAR_VIN_R8A779G0_FEATURE,
+	},
+	{
+		.soc_id = "r8a779h0",
+		.data = (void *)RCAR_VIN_R8A779H0_FEATURE,
 	},
 	{ /* sentinel */ }
 };
