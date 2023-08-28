@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for the Gray Hawk CPU and BreakOut boards
+ *
+ * Copyright (C) 2023 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a779h0-gray-hawk-cpu.dtsi"
+#include "r8a779h0-gray-hawk-csi-dsi.dtsi"
+#include "r8a779h0-gray-hawk-ethernet.dtsi"
+
+/ {
+	model = "Renesas Gray Hawk CPU and Breakout boards based on r8a779h0";
+	compatible = "renesas,gray-hawk-breakout", "renesas,gray-hawk-cpu", "renesas,r8a779h0";
+};
+
+&canfd {
+	pinctrl-0 = <&canfd0_pins>, <&canfd1_pins>,
+		<&canfd2_pins>, <&canfd3_pins>;
+		pinctrl-names = "default";
+	status = "okay";
+
+	channel0 {
+		status = "okay";
+	};
+
+	channel1 {
+		status = "okay";
+	};
+
+	channel2 {
+		status = "okay";
+	};
+
+	channel3 {
+		status = "okay";
+	};
+};
+
+&hscif2 {
+	pinctrl-0 = <&hscif2_pins>;
+	pinctrl-names = "default";
+	uart-has-rtscts;
+	status = "okay";
+};
+
+&pfc {
+	canfd0_pins: canfd0 {
+		groups = "canfd0_data";
+		function = "canfd0";
+	};
+
+	canfd1_pins: canfd1 {
+		groups = "canfd1_data";
+		function = "canfd1";
+	};
+
+	canfd2_pins: canfd2 {
+		groups = "canfd2_data";
+		function = "canfd2";
+	};
+
+	canfd3_pins: canfd3 {
+		groups = "canfd3_data";
+		function = "canfd3";
+	};
+
+	hscif2_pins: hscif2 {
+		groups = "hscif2_data", "hscif2_ctrl";
+		function = "hscif2";
+	};
+
+	scif_clk2_pins: scif_clk2 {
+		groups = "scif_clk2";
+		function = "scif_clk2";
+	};
+};
+
+&i2c0 {
+	eeprom@51 {
+		compatible = "rohm,br24g01", "atmel,24c01";
+		label = "breakout-board";
+		reg = <0x51>;
+		pagesize = <8>;
+	};
+};
+
+&scif_clk2 {
+	clock-frequency = <24000000>;
+};
