@@ -71,6 +71,9 @@ struct sh_pfc_pin {
 	BUILD_BUG_ON_ZERO(first + n > ARRAY_SIZE(data##_mux)),		\
 }
 
+#define BUS_DATA_PIN_GROUP(base, n, ...)				\
+	SH_PFC_PIN_GROUP_SUBSET(base##n##__VA_ARGS__, base##__VA_ARGS__, 0, n)
+
 struct sh_pfc_pin_group {
 	const char *name;
 	const unsigned int *pins;
