@@ -8,18 +8,22 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/err.h>
+#include <linux/firmware.h>
 #include <linux/iopoll.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/sys_soc.h>
 
 #include "ufshcd.h"
 #include "ufshcd-pltfrm.h"
 
 struct ufs_renesas_priv {
+	const struct firmware *fw;
 	bool initialized;	/* The hardware needs initialization once */
+	u32 efuse[2];
 };
 
 enum {
@@ -130,6 +134,17 @@ enum ufs_renesas_init_param_mode {
 		PARAM_POLL(0xd4, _expected, _mask),		\
 		PARAM_WRITE(0xf0, 0)
 
+#define PARAM_RESET_INDIRECT_WRITE(_gpio, _addr, _data_800)	\
+		PARAM_WRITE(0xf0, _gpio),			\
+		PARAM_WRITE_800_80C_POLL(_addr, _data_800)
+
+#define PARAM_RESET_INDIRECT_UPDATE()				\
+		PARAM_WRITE_D0_D4(0x0000082c, 0x0f000000),	\
+		PARAM_WRITE_D0_D4(0x00000828, 0x0f000000),	\
+		PARAM_WRITE(0xd0, 0x0000082c),			\
+		PARAM_POLL(0xd4, BIT(27) | BIT(26) | BIT(24), BIT(27) | BIT(26) | BIT(24)),	\
+		PARAM_WRITE(0xf0, 0)
+
 struct ufs_renesas_init_param {
 	enum ufs_renesas_init_param_mode mode;
 	u32 reg;
@@ -144,7 +159,7 @@ struct ufs_renesas_init_param {
 };
 
 /* This setting is for SERIES B */
-static const struct ufs_renesas_init_param ufs_param[] = {
+static const struct ufs_renesas_init_param ufs_param_old[] = {
 	PARAM_WRITE(0xc0, 0x49425308),
 	PARAM_WRITE_D0_D4(0x00000104, 0x00000002),
 	PARAM_WAIT(1),
@@ -272,6 +287,139 @@ static const struct ufs_renesas_init_param ufs_param[] = {
 	PARAM_RESTORE(0xd4, TIMER_INDEX),
 };
 
+static const struct ufs_renesas_init_param ufs_param_new1[] = {
+	PARAM_WRITE(0xc0, 0x49425308),
+	PARAM_WRITE_D0_D4(0x00000104, 0x00000002),
+	PARAM_WRITE_D0_D4(0x00000108, 0x00000002),
+	PARAM_WAIT(1),
+	PARAM_WRITE_D0_D4(0x00000828, 0x00000200),
+	PARAM_WAIT(1),
+	PARAM_WRITE_D0_D4(0x00000828, 0x00000000),
+	PARAM_WRITE_D0_D4(0x00000104, 0x00000001),
+	PARAM_WRITE_D0_D4(0x00000108, 0x00000001),
+	PARAM_WRITE_D0_D4(0x00000940, 0x00000001),
+	PARAM_WAIT(1),
+	PARAM_WRITE_D0_D4(0x00000940, 0x00000000),
+
+	PARAM_WRITE(0xc0, 0x49425308),
+	PARAM_WRITE(0xc0, 0x41584901),
+
+	PARAM_RESET_INDIRECT_WRITE(7, 0x20, 0x0001),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x4a, 0x0001),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x35, 0x0003),
+	PARAM_RESET_INDIRECT_UPDATE(),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x21, 0x0001),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x4b, 0x0001),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x36, 0x0003),
+	PARAM_RESET_INDIRECT_UPDATE(),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x5f, 0x0063),
+	PARAM_RESET_INDIRECT_UPDATE(),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x60, 0x0003),
+	PARAM_RESET_INDIRECT_UPDATE(),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x5b, 0x00a6),
+	PARAM_RESET_INDIRECT_UPDATE(),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x5c, 0x0003),
+	PARAM_RESET_INDIRECT_UPDATE(),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x20, 0x0000),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x4a, 0x0000),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x35, 0x0000),
+	PARAM_RESET_INDIRECT_UPDATE(),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x21, 0x0000),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x4b, 0x0000),
+	PARAM_RESET_INDIRECT_WRITE(7, 0x36, 0x0000),
+	PARAM_RESET_INDIRECT_UPDATE(),
+
+	PARAM_WRITE_D0_D4(0x0000080c, 0x00000100),
+	PARAM_WRITE_D0_D4(0x00000804, 0x00000000),
+	PARAM_WRITE(0xd0, 0x0000080c),
+	PARAM_POLL(0xd4, BIT(8), BIT(8)),
+
+	PARAM_WRITE(REG_CONTROLLER_ENABLE, 0x00000001),
+
+	PARAM_WRITE(0xd0, 0x00000804),
+	PARAM_POLL(0xd4, BIT(8) | BIT(6) | BIT(0), BIT(8) | BIT(6) | BIT(0)),
+
+	PARAM_WRITE(0xd0, 0x00000d00),
+	PARAM_SAVE(0xd4, 0x0000ffff, TIMER_INDEX),
+	PARAM_WRITE(0xd4, 0x00000000),
+	PARAM_WRITE_D0_D4(0x0000082c, 0x0f000000),
+	PARAM_WRITE_D0_D4(0x00000828, 0x08000000),
+	PARAM_WRITE(0xd0, 0x0000082c),
+	PARAM_POLL(0xd4, BIT(27), BIT(27)),
+	PARAM_WRITE(0xd0, 0x00000d2c),
+	PARAM_POLL(0xd4, BIT(0), BIT(0)),
+
+	/* phy setup */
+	PARAM_INDIRECT_WRITE(1, 0x01, 0x001f),
+	PARAM_INDIRECT_WRITE(7, 0x5d, 0x0014),
+	PARAM_INDIRECT_WRITE(7, 0x5e, 0x0014),
+	PARAM_INDIRECT_WRITE(7, 0x0d, 0x0007),
+	PARAM_INDIRECT_WRITE(7, 0x0e, 0x0007),
+
+	PARAM_INDIRECT_POLL(7, 0x3c, 0, BIT(7)),
+	PARAM_INDIRECT_POLL(7, 0x4c, 0, BIT(4)),
+
+	PARAM_INDIRECT_WRITE(1, 0x32, 0x0080),
+	PARAM_INDIRECT_WRITE(1, 0x1f, 0x0001),
+	PARAM_INDIRECT_WRITE(0, 0x2c, 0x0001),
+	PARAM_INDIRECT_WRITE(0, 0x32, 0x0087),
+};
+
+static const struct ufs_renesas_init_param ufs_param_new2[] = {
+	PARAM_SET_PHY(0x401c, BIT(2)),
+};
+
+static const struct ufs_renesas_init_param ufs_param_new3[] = {
+	PARAM_INDIRECT_WRITE(1, 0x14, 0x0001),
+
+	PARAM_WRITE_PHY(0x10ae, 0x0001),
+	PARAM_WRITE_PHY(0x10ad, 0x0000),
+	PARAM_WRITE_PHY(0x10af, 0x0001),
+	PARAM_WRITE_PHY(0x10b6, 0x0001),
+	PARAM_WRITE_PHY(0x10ae, 0x0000),
+
+	PARAM_WRITE_PHY(0x10ae, 0x0001),
+	PARAM_WRITE_PHY(0x10ad, 0x0000),
+	PARAM_WRITE_PHY(0x10af, 0x0002),
+	PARAM_WRITE_PHY(0x10b6, 0x0001),
+	PARAM_WRITE_PHY(0x10ae, 0x0000),
+
+	PARAM_WRITE_PHY(0x10ae, 0x0001),
+	PARAM_WRITE_PHY(0x10ad, 0x0080),
+	PARAM_WRITE_PHY(0x10af, 0x0000),
+	PARAM_WRITE_PHY(0x10b6, 0x0001),
+	PARAM_WRITE_PHY(0x10ae, 0x0000),
+
+	PARAM_WRITE_PHY(0x10ae, 0x0001),
+	PARAM_WRITE_PHY(0x10ad, 0x0080),
+	PARAM_WRITE_PHY(0x10af, 0x001a),
+	PARAM_WRITE_PHY(0x10b6, 0x0001),
+	PARAM_WRITE_PHY(0x10ae, 0x0000),
+
+	PARAM_INDIRECT_WRITE(7, 0x79, 0x0000),
+	PARAM_INDIRECT_WRITE(7, 0x24, 0x000c),
+	PARAM_INDIRECT_WRITE(7, 0x25, 0x000c),
+	PARAM_INDIRECT_WRITE(7, 0x62, 0x00c0),
+	PARAM_INDIRECT_WRITE(7, 0x63, 0x0001),
+};
+
+static const struct ufs_renesas_init_param ufs_param_new4[] = {
+	PARAM_INDIRECT_WRITE(7, 0x0d, 0x0002),
+	PARAM_INDIRECT_WRITE(7, 0x0e, 0x0007),
+
+	PARAM_INDIRECT_WRITE(7, 0x5d, 0x0014),
+	PARAM_INDIRECT_WRITE(7, 0x5e, 0x0017),
+	PARAM_INDIRECT_WRITE(7, 0x5d, 0x0004),
+	PARAM_INDIRECT_WRITE(7, 0x5e, 0x0017),
+	PARAM_INDIRECT_POLL(7, 0x55, 0, BIT(6)),
+	PARAM_INDIRECT_POLL(7, 0x41, 0, BIT(7)),
+
+	PARAM_WRITE(0xf0, 0),
+	PARAM_WRITE(0xd0, 0x00000d00),
+	PARAM_RESTORE(0xd4, TIMER_INDEX),
+};
+
+
 static void ufs_renesas_dbg_register_dump(struct ufs_hba *hba)
 {
 	ufshcd_dump_regs(hba, 0xc0, 0x40, "regs: 0xc0 + ");
@@ -319,17 +467,136 @@ static void ufs_renesas_reg_control(struct ufs_hba *hba,
 	}
 }
 
+static void ufs_renesas_param_write(struct ufs_hba *hba, u32 reg, u32 value)
+{
+	struct ufs_renesas_init_param param = { 0 };
+
+	param.mode = MODE_WRITE,
+	param.reg = reg;
+	param.u.val = value;
+
+	ufs_renesas_reg_control(hba, &param);
+}
+
+static void ufs_renesas_param_write_d0_d4(struct ufs_hba *hba, u32 d0, u32 d4)
+{
+	ufs_renesas_param_write(hba, 0xd0, d0);
+	ufs_renesas_param_write(hba, 0xd4, d4);
+}
+
+static void ufs_renesas_param_poll(struct ufs_hba *hba, u32 reg, u32 expected,
+				   u32 mask)
+{
+	struct ufs_renesas_init_param param = { 0 };
+
+	param.mode = MODE_POLL,
+	param.reg = reg;
+	param.u.expected = expected;
+	param.mask = mask;
+
+	ufs_renesas_reg_control(hba, &param);
+}
+
+static void ufs_renesas_param_write_800_80c_poll(struct ufs_hba *hba, u32 addr,
+						 u32 data_800)
+{
+	ufs_renesas_param_write_d0_d4(hba, 0x0000080c, 0x00000100);
+	ufs_renesas_param_write_d0_d4(hba, 0x00000800,
+				      (data_800 << 16) | BIT(8) | addr);
+	ufs_renesas_param_write(hba, 0xd0, 0x0000080c);
+	ufs_renesas_param_poll(hba, 0xd4, BIT(8), BIT(8));
+}
+
+static void ufs_renesas_param_write_828_82c_poll(struct ufs_hba *hba,
+						 u32 data_828)
+{
+	ufs_renesas_param_write_d0_d4(hba, 0x0000082c, 0x0f000000);
+	ufs_renesas_param_write_d0_d4(hba, 0x00000828, data_828);
+	ufs_renesas_param_write(hba, 0xd0, 0x0000082c);
+	ufs_renesas_param_poll(hba, 0xd4, data_828, data_828);
+}
+
+static void ufs_renesas_indirect_write(struct ufs_hba *hba, u32 gpio,
+				       u8 addr, u16 data)
+{
+	ufs_renesas_param_write(hba, 0xf0, gpio);
+	ufs_renesas_param_write_800_80c_poll(hba, addr, data);
+	ufs_renesas_param_write_828_82c_poll(hba, 0x0f000000);
+	ufs_renesas_param_write(hba, 0xf0, 0);
+}
+
+static void ufs_renesas_ibwrite_phy(struct ufs_hba *hba, u16 addr, u16 data)
+{
+	ufs_renesas_param_write(hba, 0xf0, 1);
+	ufs_renesas_param_write_800_80c_poll(hba, 0x16, addr & 0xff);
+	ufs_renesas_param_write_800_80c_poll(hba, 0x17, (addr >> 8) & 0xff);
+	ufs_renesas_param_write_800_80c_poll(hba, 0x18, data & 0xff);
+	ufs_renesas_param_write_800_80c_poll(hba, 0x19, (data >> 8) & 0xff);
+	ufs_renesas_param_write_800_80c_poll(hba, 0x1c, 0x01);
+	ufs_renesas_param_write_828_82c_poll(hba, 0x0f000000);
+	ufs_renesas_param_write(hba, 0xf0, 0);
+}
+
+static const struct soc_device_attribute ufs_soc_match[]  = {
+	{ .soc_id = "r8a779f0", .revision = "ES1.[01]" },
+	{ /* Sentinel */ },
+};
+
+static void ufs_renesas_pre_init_old(struct ufs_hba *hba)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(ufs_param_old); i++)
+		ufs_renesas_reg_control(hba, &ufs_param_old[i]);
+}
+
+static void ufs_renesas_pre_init_new(struct ufs_hba *hba)
+{
+	struct ufs_renesas_priv *priv = ufshcd_get_variant(hba);
+	unsigned int i;
+	u16 data;
+
+	for (i = 0; i < ARRAY_SIZE(ufs_param_new1); i++)
+		ufs_renesas_reg_control(hba, &ufs_param_new1[i]);
+
+	ufs_renesas_indirect_write(hba, 1, 0x4d, (priv->efuse[0] >> 16) & 0xff);
+	ufs_renesas_indirect_write(hba, 1, 0x4e, (priv->efuse[0] >> 24) & 0xff);
+	ufs_renesas_indirect_write(hba, 7, 0x0d, 0x0006);
+	ufs_renesas_indirect_write(hba, 7, 0x0e, 0x0007);
+	ufs_renesas_ibwrite_phy(hba, 0x0028, (priv->efuse[0] >> 24) & 0xff);
+	ufs_renesas_ibwrite_phy(hba, 0x4014, (priv->efuse[0] >> 24) & 0xff);
+
+	for (i = 0; i < ARRAY_SIZE(ufs_param_new2); i++)
+		ufs_renesas_reg_control(hba, &ufs_param_new2[i]);
+
+	ufs_renesas_ibwrite_phy(hba, 0x4000, (priv->efuse[1] >> 16) & 0xff);
+	ufs_renesas_ibwrite_phy(hba, 0x4001, (priv->efuse[1] >> 24) & 0xff);
+
+	for (i = 0; i < ARRAY_SIZE(ufs_param_new3); i++)
+		ufs_renesas_reg_control(hba, &ufs_param_new3[i]);
+
+	for (i = 0; i < priv->fw->size / 2; i++) {
+		data = priv->fw->data[i * 2] | (priv->fw->data[i * 2 + 1] << 8);
+		ufs_renesas_ibwrite_phy(hba, 0xc000 + i, data);
+	}
+
+	for (i = 0; i < ARRAY_SIZE(ufs_param_new4); i++)
+		ufs_renesas_reg_control(hba, &ufs_param_new4[i]);
+}
+
 static void ufs_renesas_pre_init(struct ufs_hba *hba)
 {
 	struct ufs_renesas_priv *priv = ufshcd_get_variant(hba);
-	const struct ufs_renesas_init_param *p = ufs_param;
-	unsigned int i;
+	const struct soc_device_attribute *attr;
 
 	if (priv->initialized)
 		return;
 
-	for (i = 0; i < ARRAY_SIZE(ufs_param); i++)
-		ufs_renesas_reg_control(hba, &p[i]);
+	attr = soc_device_match(ufs_soc_match);
+	if (attr)
+		ufs_renesas_pre_init_old(hba);
+	else
+		ufs_renesas_pre_init_new(hba);
 
 	priv->initialized = true;
 }
@@ -354,18 +621,50 @@ static int ufs_renesas_setup_clocks(struct ufs_hba *hba, bool on,
 	return 0;
 }
 
+static void ufs_renesas_read_efuse(struct ufs_hba *hba,
+				   struct ufs_renesas_priv *priv)
+{
+	struct platform_device *pdev = to_platform_device(hba->dev);
+	void __iomem *efuse;
+
+	efuse = devm_platform_ioremap_resource_byname(pdev, "efuse");
+	if (IS_ERR(efuse))
+		return;
+
+	priv->efuse[0] = readl(efuse);
+	priv->efuse[1] = readl(efuse + 4);
+}
+
 static int ufs_renesas_init(struct ufs_hba *hba)
 {
+	const struct soc_device_attribute *attr;
 	struct ufs_renesas_priv *priv;
+	int ret;
 
-	priv = devm_kmalloc(hba->dev, sizeof(*priv), GFP_KERNEL);
+	priv = devm_kzalloc(hba->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 	ufshcd_set_variant(hba, priv);
 
+	attr = soc_device_match(ufs_soc_match);
+	if (!attr) {
+		ret = request_firmware(&priv->fw, "r8a779f0_ufs.bin", hba->dev);
+		if (ret)
+			return ret;
+	}
+
+        ufs_renesas_read_efuse(hba, priv);
+
 	hba->quirks |= UFSHCD_QUIRK_BROKEN_64BIT_ADDRESS | UFSHCD_QUIRK_HIBERN_FASTAUTO;
 
 	return 0;
+}
+
+static void ufs_renesas_exit(struct ufs_hba *hba)
+{
+	struct ufs_renesas_priv *priv = ufshcd_get_variant(hba);
+
+	release_firmware(priv->fw);
 }
 
 static int ufs_renesas_suspend(struct ufs_hba *hba, enum ufs_pm_op op)
@@ -389,6 +688,7 @@ static int ufs_renesas_resume(struct ufs_hba *hba, enum ufs_pm_op op)
 static const struct ufs_hba_variant_ops ufs_renesas_vops = {
 	.name		= "renesas",
 	.init		= ufs_renesas_init,
+	.exit		= ufs_renesas_exit,
 	.setup_clocks	= ufs_renesas_setup_clocks,
 	.hce_enable_notify = ufs_renesas_hce_enable_notify,
 	.dbg_register_dump = ufs_renesas_dbg_register_dump,
