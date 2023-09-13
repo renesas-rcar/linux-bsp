@@ -1074,6 +1074,8 @@ struct rswitch_private {
 
 	u8 chan_running;
 	bool serdes_common_init;
+
+	spinlock_t lock;	/* lock interrupt registers' control */
 };
 
 static int num_ndev = 3;
@@ -1300,6 +1302,7 @@ static int rswitch_poll(struct napi_struct *napi, int budget)
 	struct net_device *ndev = napi->dev;
 	struct rswitch_device *rdev = netdev_priv(ndev);
 	struct rswitch_private *priv = rdev->priv;
+	unsigned long flags;
 	int quota = budget;
 
 retry:
@@ -1312,11 +1315,14 @@ retry:
 
 	netif_wake_subqueue(ndev, 0);
 
-	napi_complete(napi);
+	if (napi_complete_done(napi, budget - quota)) {
+		spin_lock_irqsave(&priv->lock, flags);
+		/* Re-enable RX/TX interrupts */
+		rswitch_enadis_data_irq(priv, rdev->tx_chain->index, true);
+		rswitch_enadis_data_irq(priv, rdev->rx_chain->index, true);
+		spin_unlock_irqrestore(&priv->lock, flags);
+	}
 
-	/* Re-enable RX/TX interrupts */
-	rswitch_enadis_data_irq(priv, rdev->tx_chain->index, true);
-	rswitch_enadis_data_irq(priv, rdev->rx_chain->index, true);
 	__iowmb();
 
 out:
@@ -2080,6 +2086,7 @@ static int rswitch_open(struct net_device *ndev)
 	struct device_node *phy;
 	int err = 0;
 	bool phy_started = false;
+	unsigned long flags;
 
 	napi_enable(&rdev->napi);
 
@@ -2139,8 +2146,12 @@ static int rswitch_open(struct net_device *ndev)
 
 	/* Enable interrupt */
 	pr_debug("%s: tx = %d, rx = %d\n", __func__, rdev->tx_chain->index, rdev->rx_chain->index);
+
+	spin_lock_irqsave(&rdev->priv->lock, flags);
 	rswitch_enadis_data_irq(rdev->priv, rdev->tx_chain->index, true);
 	rswitch_enadis_data_irq(rdev->priv, rdev->rx_chain->index, true);
+	spin_unlock_irqrestore(&rdev->priv->lock, flags);
+
 	iowrite32(GWCA_TS_IRQ_BIT, rdev->priv->addr + GWTSDIE);
 
 	rdev->priv->chan_running |= BIT(rdev->port);
@@ -2967,8 +2978,10 @@ static void rswitch_queue_interrupt(struct net_device *ndev)
 	struct rswitch_device *rdev = netdev_priv(ndev);
 
 	if (napi_schedule_prep(&rdev->napi)) {
+		spin_lock(&rdev->priv->lock);
 		rswitch_enadis_data_irq(rdev->priv, rdev->tx_chain->index, false);
 		rswitch_enadis_data_irq(rdev->priv, rdev->rx_chain->index, false);
+		spin_unlock(&rdev->priv->lock);
 		__napi_schedule(&rdev->napi);
 	}
 }
@@ -3255,6 +3268,8 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
+	spin_lock_init(&priv->lock);
 
 	priv->ptp_priv = rtsn_ptp_alloc(pdev);
 	if (!priv->ptp_priv)
