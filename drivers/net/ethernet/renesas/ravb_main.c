@@ -1423,8 +1423,6 @@ static int ravb_open(struct net_device *ndev)
 	/* Initialise PTP Clock driver */
 	if (priv->chip_id == RCAR_GEN2)
 		ravb_ptp_init(ndev, priv->pdev);
-	else if (priv->use_ptp)
-		rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK_V4H);
 
 	netif_tx_start_all_queues(ndev);
 
