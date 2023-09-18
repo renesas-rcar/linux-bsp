@@ -8,6 +8,7 @@
 #include <linux/err.h>
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
+#include <linux/if_vlan.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/module.h>
@@ -50,7 +51,7 @@ static inline void rs_write32(u32 data, void *addr)
 #define RX_RING_SIZE		1024
 #define TS_RING_SIZE		(TX_RING_SIZE * RSWITCH_MAX_NUM_ETHA)
 
-#define PKT_BUF_SZ		1584
+#define PKT_BUF_SZ		2048
 #define RSWITCH_ALIGN		128
 #define RSWITCH_MAX_CTAG_PCP	7
 
@@ -2128,6 +2129,9 @@ static int rswitch_open(struct net_device *ndev)
 		rdev->etha->operated = true;
 	}
 
+	ndev->max_mtu = PKT_BUF_SZ - (ETH_HLEN + VLAN_HLEN + ETH_FCS_LEN);
+	ndev->min_mtu = ETH_MIN_MTU;
+
 	netif_start_queue(ndev);
 
 	/* Enable RX */
@@ -2354,7 +2358,6 @@ static const struct net_device_ops rswitch_netdev_ops = {
 	.ndo_do_ioctl = rswitch_do_ioctl,
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_mac_address = eth_mac_addr,
-//	.ndo_change_mtu = eth_change_mtu,
 };
 
 static int rswitch_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *info)
