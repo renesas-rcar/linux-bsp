@@ -191,6 +191,7 @@ static const struct mssr_mod_clk r8a779h0_mod_clks[] = {
 	DEF_MOD("msi3",		621,	R8A779H0_CLK_MSO),
 	DEF_MOD("msi4",		622,	R8A779H0_CLK_MSO),
 	DEF_MOD("msi5",		623,	R8A779H0_CLK_MSO),
+	DEF_MOD("sdhi",		706,	R8A779H0_CLK_SD0),
 	DEF_MOD("sydm0",	709,	R8A779H0_CLK_S0D6_PER),
 	DEF_MOD("sydm1",	710,	R8A779H0_CLK_S0D6_PER),
 	DEF_MOD("wdt1:wdt0",	907,	R8A779H0_CLK_R),
