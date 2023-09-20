@@ -137,6 +137,14 @@ static const struct rcar_thermal_data data_v4h = {
 	.has_ecm	= true,
 };
 
+static const struct rcar_thermal_data data_v4m = {
+	.chip_id        = RCAR_THERMAL_GEN4,
+	.tsc_max_num    = 2,
+	.rcar_ths_tj_1  = 126,
+	.irq_num        = 1,
+	.has_ecm        = true,
+};
+
 /* ECM register base and offsets */
 #define ECM_TSC         16
 #define ECM_BASE        0xE6250000
@@ -457,6 +465,10 @@ static const struct of_device_id rcar_gen3_thermal_dt_ids[] = {
 	{
 		.compatible = "renesas,r8a779g0-thermal",
 		.data = &data_v4h,
+	},
+	{
+		.compatible = "renesas,r8a779h0-thermal",
+		.data = &data_v4m,
 	},
 	{},
 };
