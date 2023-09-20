@@ -28,6 +28,7 @@ properties:
       - renesas,r8a77980-thermal # R-Car V3H
       - renesas,r8a779f0-thermal # R-Car S4
       - renesas,r8a779g0-thermal # R-Car V4H
+      - renesas,r8a779h0-thermal # R-Car V4M
   reg:
     minItems: 2
     maxItems: 3
