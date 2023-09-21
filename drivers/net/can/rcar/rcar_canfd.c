@@ -2147,6 +2147,11 @@ static int __maybe_unused rcar_canfd_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(rcar_canfd_pm_ops, rcar_canfd_suspend,
 			 rcar_canfd_resume);
 
+static const struct rcar_canfd_of_data of_rcanfd_v4m_compatible = {
+	.chip_id = GEN4,
+	.max_channels = 4,
+};
+
 static const struct rcar_canfd_of_data of_rcanfd_v4h_compatible = {
 	.chip_id = GEN4,
 	.max_channels = 8,
@@ -2163,6 +2168,10 @@ static const struct rcar_canfd_of_data of_rcanfd_gen3_compatible = {
 };
 
 static const struct of_device_id rcar_canfd_of_table[] = {
+	{
+		.compatible = "renesas,r8a779h0-canfd",
+		.data = &of_rcanfd_v4m_compatible,
+	},
 	{
 		.compatible = "renesas,r8a779g0-canfd",
 		.data = &of_rcanfd_v4h_compatible,
