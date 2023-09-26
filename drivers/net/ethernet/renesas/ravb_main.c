@@ -1303,7 +1303,11 @@ static int ravb_get_ts_info(struct net_device *ndev,
 
 	if (priv->use_ptp)
 		info->phc_index = ptp_clock_index(priv->ptp_priv->clock);
-	else
+	else if (soc_device_match(r8a779g0) && !priv->use_ptp) {
+		pr_info("%s gPTP module isn't used \n", __func__);
+		return -ENODEV;
+	}
+	else if (priv->chip_id == RCAR_GEN3)
 		info->phc_index = ptp_clock_index(priv->ptp.clock);
 
 	return 0;
@@ -1419,8 +1423,6 @@ static int ravb_open(struct net_device *ndev)
 	/* Initialise PTP Clock driver */
 	if (priv->chip_id == RCAR_GEN2)
 		ravb_ptp_init(ndev, priv->pdev);
-	else if (priv->use_ptp)
-		rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK_V4H);
 
 	netif_tx_start_all_queues(ndev);
 
