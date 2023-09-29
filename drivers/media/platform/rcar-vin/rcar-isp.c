@@ -419,6 +419,11 @@ static const struct rcar_isp_info rcar_isp_info_r8a779h0 = {
 	.ch_end = 8,
 };
 
+static const struct rcar_isp_info rcar_isp_info_r8a78000 = {
+	.ch_start = 4,
+	.ch_end = 28,
+};
+
 static const struct of_device_id rcar_isp_of_match[] = {
 	{
 		.compatible = "renesas,isp-r8a779a0",
@@ -431,6 +436,10 @@ static const struct of_device_id rcar_isp_of_match[] = {
 	{
 		.compatible = "renesas,isp-r8a779h0",
 		.data = &rcar_isp_info_r8a779h0,
+	},
+	{
+		.compatible = "renesas,isp-r8a78000",
+		.data = &rcar_isp_info_r8a78000,
 	},
 	{ },
 };
