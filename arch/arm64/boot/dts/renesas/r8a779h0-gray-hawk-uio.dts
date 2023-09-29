@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for UIO on the Gray Hawk CPU and BreakOut boards
+ *
+ * Copyright (C) 2023 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a779h0-gray-hawk.dts"
+#include "r8a779h0-uio.dtsi"
