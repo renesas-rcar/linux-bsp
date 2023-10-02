@@ -726,6 +726,8 @@ enum rswitch_etha_mode {
 
 #define MDIO_READ_C45		0x03
 #define MDIO_WRITE_C45		0x01
+#define MDIO_READ_C22		0x02
+#define MDIO_WRITE_C22		0x01
 
 #define REG_MASK		0xffff
 #define DEV_MASK		GENMASK(24, 16)
@@ -1063,6 +1065,9 @@ struct rswitch_private {
 	struct clk *phy_clk;
 
 	struct reset_control *sd_rst;
+
+	/* Parameter for VPF mode which can config in dts file */
+	bool   vpf_mode;
 
 	u8 chan_running;
 	bool serdes_common_init;
@@ -1762,9 +1767,24 @@ static int rswitch_etha_set_access(struct rswitch_etha *etha, bool read,
 	return ret;
 }
 
+static int rswitch_etha_set_access_c22(struct rswitch_etha *etha, bool read,
+				       int phyad, int regad, int data)
+{
+	int pop = read ? MDIO_READ_C22 : MDIO_WRITE_C22;
+
+	rswitch_etha_modify(etha, MPSM, MPSM_POP_MASK, MPSM_POP(pop));
+	rswitch_etha_modify(etha, MPSM, MPSM_PDA_MASK, MPSM_PDA(phyad));
+	rswitch_etha_modify(etha, MPSM, MPSM_PRA_MASK, MPSM_PRA(regad));
+	if (!read)
+		rswitch_etha_modify(etha, MPSM, MPSM_PRD_MASK, MPSM_PRD_WRITE(data));
+	rswitch_reg_wait(etha->addr, MPSM, MPSM_PSME, 0);
+	return read ? MPSM_PRD_READ(rswitch_etha_read(etha, MPSM)) : 0;
+}
+
 static int rswitch_etha_mii_read(struct mii_bus *bus, int addr, int regnum)
 {
 	struct rswitch_etha *etha = bus->priv;
+	struct rswitch_private *priv = container_of(etha, struct rswitch_private, etha[0]);
 	int mode, devad, regad;
 
 	mode = regnum & MII_ADDR_C45;
@@ -1772,8 +1792,12 @@ static int rswitch_etha_mii_read(struct mii_bus *bus, int addr, int regnum)
 	regad = regnum & MII_REGADDR_C45_MASK;
 
 	/* Not support Clause 22 access method */
-	if (!mode)
-		return -EOPNOTSUPP;
+	if (!mode) {
+		if (!priv->vpf_mode)
+			return -EOPNOTSUPP;
+		else
+			return rswitch_etha_set_access_c22(etha, true, addr, regnum, 0);
+	}
 
 	return rswitch_etha_set_access(etha, true, addr, devad, regad, 0);
 }
@@ -1781,6 +1805,7 @@ static int rswitch_etha_mii_read(struct mii_bus *bus, int addr, int regnum)
 static int rswitch_etha_mii_write(struct mii_bus *bus, int addr, int regnum, u16 val)
 {
 	struct rswitch_etha *etha = bus->priv;
+	struct rswitch_private *priv = container_of(etha, struct rswitch_private, etha[0]);
 	int mode, devad, regad;
 
 	mode = regnum & MII_ADDR_C45;
@@ -1788,8 +1813,12 @@ static int rswitch_etha_mii_write(struct mii_bus *bus, int addr, int regnum, u16
 	regad = regnum & MII_REGADDR_C45_MASK;
 
 	/* Not support Clause 22 access method */
-	if (!mode)
-		return -EOPNOTSUPP;
+	if (!mode) {
+		if (!priv->vpf_mode)
+			return -EOPNOTSUPP;
+		else
+			return rswitch_etha_set_access_c22(etha, true, addr, regnum, 0);
+	}
 
 	return rswitch_etha_set_access(etha, false, addr, devad, regad, val);
 }
@@ -2016,7 +2045,7 @@ static int rswitch_open(struct net_device *ndev)
 			rdev->priv->serdes_common_init = true;
 		}
 
-		if (!rdev->etha->operated) {
+		if (!rdev->etha->operated && !rdev->priv->vpf_mode) {
 			err = rswitch_serdes_chan_init(rdev->etha);
 			if (err < 0)
 				goto error;
@@ -3135,6 +3164,12 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
+	/* Check whether if vpf_mode node exist in the dts file */
+	if (of_find_property(pdev->dev.of_node, "vpf_mode", NULL))
+		priv->vpf_mode = true;
+	else
+		priv->vpf_mode = false;
 
 	priv->ptp_priv = rcar_gen4_ptp_alloc(pdev);
 	if (!priv->ptp_priv)
