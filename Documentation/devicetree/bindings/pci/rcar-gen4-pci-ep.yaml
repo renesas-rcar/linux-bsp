@@ -18,6 +18,7 @@ properties:
     items:
       - const: renesas,r8a779f0-pcie-ep   # R-Car S4-8
       - const: renesas,rcar-gen4-pcie-ep  # R-Car Gen4
+      - const: renesas,rcar-gen5-pcie-ep  # R-Car X5H
 
   reg:
     maxItems: 4
