@@ -167,6 +167,7 @@ static int rcar_gen4_pcie_remove(struct platform_device *pdev)
 
 static const struct of_device_id rcar_gen4_pcie_of_match[] = {
 	{ .compatible = "renesas,rcar-gen4-pcie", },
+	{ .compatible = "renesas,rcar-gen5-pcie", },
 	{},
 };
 
