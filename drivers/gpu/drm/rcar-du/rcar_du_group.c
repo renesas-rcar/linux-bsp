@@ -136,6 +136,10 @@ static void rcar_du_group_setup_didsr(struct rcar_du_group *rgrp)
 		 */
 		rcrtc = &rcdu->crtcs[rgrp->index * 2];
 		num_crtcs = rgrp->num_crtcs;
+	} else if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779H0_REGS)) {
+		/* R-Car V4M (R8A779H0) has only one channel. */
+		rcrtc = rcdu->crtcs;
+		num_crtcs = rcdu->num_crtcs;
 	}
 
 	if (!num_crtcs)
@@ -171,7 +175,7 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	rcar_du_group_write(rgrp, DEFR5, DEFR5_CODE | DEFR5_DEFE5);
 
 	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) &&
-		!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
+		!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN4_REGS))
 		rcar_du_group_setup_pins(rgrp);
 
 	/*
@@ -185,7 +189,7 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 
 	if (rcdu->info->gen >= 2) {
 		if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) &&
-			!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS))
+			!rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN4_REGS))
 			rcar_du_group_setup_defr8(rgrp);
 		rcar_du_group_setup_didsr(rgrp);
 	}
@@ -199,11 +203,13 @@ static void rcar_du_group_setup(struct rcar_du_group *rgrp)
 	 */
 	rcar_du_group_write(rgrp, DORCR, DORCR_PG1D_DS1 | DORCR_DPRS);
 
-	/* Apply planes to CRTCs association. */
-	mutex_lock(&rgrp->lock);
-	rcar_du_group_write(rgrp, DPTSR, (rgrp->dptsr_planes << 16) |
-			    rgrp->dptsr_planes);
-	mutex_unlock(&rgrp->lock);
+	if (!rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779H0_REGS)) {
+		/* Apply planes to CRTCs association. */
+		mutex_lock(&rgrp->lock);
+		rcar_du_group_write(rgrp, DPTSR, (rgrp->dptsr_planes << 16) |
+				    rgrp->dptsr_planes);
+		mutex_unlock(&rgrp->lock);
+	}
 }
 
 void rcar_du_pre_group_set_routing(struct rcar_du_group *rgrp,
