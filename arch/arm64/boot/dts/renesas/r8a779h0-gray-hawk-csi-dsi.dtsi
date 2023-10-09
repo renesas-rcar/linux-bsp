@@ -7,6 +7,17 @@
 
 #include <dt-bindings/media/video-interfaces.h>
 
+/ {
+	dsi-con0 {
+		compatible = "dsi-connector";
+		port {
+			dsi_con_out0: endpoint {
+				remote-endpoint = <&sn65dsi86_out0>;
+			};
+		};
+	};
+};
+
 &i2c0 {
 	pinctrl-0 = <&i2c0_pins>;
 	pinctrl-names = "default";
@@ -49,6 +60,37 @@
 
 	status = "okay";
 	clock-frequency = <400000>;
+
+	sn65dsi86_0@2c {
+		compatible = "ti,sn65dsi86";
+		reg = <0x2c>;
+		dp-connector;
+		clocks = <&ref_clk>;
+		clock-names = "refclk";
+		no-use-gpio;
+		no-use-scramble;
+		hpd-poll;
+		status = "okay";
+
+		ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				sn65dsi86_in0: endpoint {
+					remote-endpoint = <&dsi0_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				sn65dsi86_out0: endpoint {
+					remote-endpoint = <&dsi_con_out0>;
+				};
+			};
+		};
+	};
 
 	gmsl0: gmsl-deserializer@49 {
 		compatible = "maxim,max96712";
@@ -260,6 +302,24 @@
 	};
 };
 
+&du {
+	status = "okay";
+};
+
+&dsi0 {
+	status = "okay";
+	use-extal-clk;
+
+	ports {
+		port@1 {
+			endpoint {
+				remote-endpoint = <&sn65dsi86_in0>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+};
+
 &isp0 {
 	status = "okay";
 };
@@ -298,6 +358,10 @@
 
 &vin11 {
 	status = "okay";
+};
+
+&ref_clk {
+	clock-frequency = <38400000>;
 };
 
 /* FAKRA Overlay */
