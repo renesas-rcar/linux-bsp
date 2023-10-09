@@ -169,6 +169,14 @@ static inline bool can_skb_headroom_valid(struct net_device *dev,
 		skb_reset_mac_header(skb);
 		skb_reset_network_header(skb);
 		skb_reset_transport_header(skb);
+
+		/* set CANFD_FDF flag for CAN FD frames */
+		if (can_is_canfd_skb(skb)) {
+			struct canfd_frame *cfd;
+
+			cfd = (struct canfd_frame *)skb->data;
+			cfd->flags |= CANFD_FDF;
+		}
 	}
 
 	return true;
