@@ -508,7 +508,7 @@ static void rcar_du_plane_setup_format_gen3_4(struct rcar_du_group *rgrp,
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS)) {
 		pnmr = PnMR_SPIM_TP_OFF | state->format->pnmr;
 	} else if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS) ||
-				rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779G0_REGS)) {
+				rcar_du_has(rcdu, RCAR_DU_FEATURE_GEN4_REGS)) {
 		pnmr = PnMR_SPIM_TP_OFF | (state->format->pnmr & ~PnMR_SPIM_ALP);
 	} else {
 		if (rgrp->index == 0)

@@ -35,7 +35,9 @@ struct rcar_du_device;
 #define RCAR_DU_FEATURE_R8A77990_REGS	BIT(7)	/* Use R8A77990 registers */
 #define RCAR_DU_FEATURE_R8A77995_REGS	BIT(8)	/* Use R8A77995 registers */
 #define RCAR_DU_FEATURE_R8A779A0_REGS	BIT(9)  /* Use R8A779A0 registers */
-#define RCAR_DU_FEATURE_R8A779G0_REGS	BIT(10)  /* Use R8A779A0 registers */
+#define RCAR_DU_FEATURE_GEN4_REGS	BIT(10) /* Use Gen4 (R8A779G0, R8A779H0) registers */
+#define RCAR_DU_FEATURE_R8A779G0_REGS	BIT(11) /* Use R8A779G0 registers */
+#define RCAR_DU_FEATURE_R8A779H0_REGS	BIT(12) /* Use R8A779H0 registers */
 
 #define RCAR_DU_QUIRK_ALIGN_128B	BIT(0)	/* Align pitches to 128 bytes */
 
