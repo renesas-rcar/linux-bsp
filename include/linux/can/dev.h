@@ -107,6 +107,22 @@ static inline unsigned int can_bit_time(const struct can_bittiming *bt)
 #define get_can_dlc(i)		(min_t(u8, (i), CAN_MAX_DLC))
 #define get_canfd_dlc(i)	(min_t(u8, (i), CANFD_MAX_DLC))
 
+static inline bool can_is_can_skb(const struct sk_buff *skb)
+{
+	struct can_frame *cf = (struct can_frame *)skb->data;
+
+	/* the CAN specific type of skb is identified by its data length */
+	return (skb->len == CAN_MTU && cf->len <= CAN_MAX_DLEN);
+}
+
+static inline bool can_is_canfd_skb(const struct sk_buff *skb)
+{
+	struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
+
+	/* the CAN specific type of skb is identified by its data length */
+	return (skb->len == CANFD_MTU && cfd->len <= CANFD_MAX_DLEN);
+}
+
 /* Check for outgoing skbs that have not been created by the CAN subsystem */
 static inline bool can_skb_headroom_valid(struct net_device *dev,
 					  struct sk_buff *skb)
@@ -141,18 +157,20 @@ static inline bool can_skb_headroom_valid(struct net_device *dev,
 static inline bool can_dropped_invalid_skb(struct net_device *dev,
 					  struct sk_buff *skb)
 {
-	const struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
+	switch (ntohs(skb->protocol)) {
+	case ETH_P_CAN:
+		if (!can_is_can_skb(skb))
+			goto inval_skb;
+		break;
 
-	if (skb->protocol == htons(ETH_P_CAN)) {
-		if (unlikely(skb->len != CAN_MTU ||
-			     cfd->len > CAN_MAX_DLEN))
+	case ETH_P_CANFD:
+		if (!can_is_canfd_skb(skb))
 			goto inval_skb;
-	} else if (skb->protocol == htons(ETH_P_CANFD)) {
-		if (unlikely(skb->len != CANFD_MTU ||
-			     cfd->len > CANFD_MAX_DLEN))
-			goto inval_skb;
-	} else
+		break;
+
+	default:
 		goto inval_skb;
+	}
 
 	if (!can_skb_headroom_valid(dev, skb))
 		goto inval_skb;
@@ -163,12 +181,6 @@ inval_skb:
 	kfree_skb(skb);
 	dev->stats.tx_dropped++;
 	return true;
-}
-
-static inline bool can_is_canfd_skb(const struct sk_buff *skb)
-{
-	/* the CAN specific type of skb is identified by its data length */
-	return skb->len == CANFD_MTU;
 }
 
 /* helper to define static CAN controller features at device creation time */
