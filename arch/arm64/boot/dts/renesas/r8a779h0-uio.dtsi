@@ -1541,7 +1541,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xfea00000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 616>;
-			power-domains = <&sysc R8A779H0_PD_C4>;
+			power-domains = <&sysc R8A779H0_PD_A3VC>;
 			resets = <&cpg 616>;
 			interrupts = <GIC_SPI 855 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "ivcp1e_00";
