@@ -274,6 +274,9 @@ static const struct mssr_mod_clk r8a779h0_mod_clks[] = {
 	DEF_MOD("cve2",		2708,	R8A779H0_CLK_SVD1_IR),
 	DEF_MOD("cve3",		2709,	R8A779H0_CLK_SVD1_IR),
 
+	DEF_MOD("impsdmac0",	2712,   R8A779H0_CLK_SVD1_VIP),
+	DEF_MOD("impsdmac1",	2713,   R8A779H0_CLK_SVD1_VIP),
+
 	DEF_MOD("vdsp0_bus",	2801,	R8A779H0_CLK_SVD1_IR),
 	DEF_MOD("vdsp1_bus",	2802,	R8A779H0_CLK_SVD1_IR),
 	DEF_MOD("papbus",		2805,	R8A779H0_CLK_S0D6_PER),
