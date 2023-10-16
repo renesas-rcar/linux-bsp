@@ -123,6 +123,27 @@ static inline bool can_is_canfd_skb(const struct sk_buff *skb)
 	return (skb->len == CANFD_MTU && cfd->len <= CANFD_MAX_DLEN);
 }
 
+/* get length element value from can[fd]_frame structure */
+static inline unsigned int can_skb_get_len_val(struct sk_buff *skb)
+{
+	const struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
+
+	return cfd->len;
+}
+
+/* get needed data length inside CAN frame for all frame types (RTR aware) */
+static inline unsigned int can_skb_get_data_len(struct sk_buff *skb)
+{
+	unsigned int len = can_skb_get_len_val(skb);
+	const struct can_frame *cf = (struct can_frame *)skb->data;
+
+	/* RTR frames have an actual length of zero */
+	if (can_is_can_skb(skb) && cf->can_id & CAN_RTR_FLAG)
+		return 0;
+
+	return len;
+}
+
 /* Check for outgoing skbs that have not been created by the CAN subsystem */
 static inline bool can_skb_headroom_valid(struct net_device *dev,
 					  struct sk_buff *skb)
@@ -231,8 +252,10 @@ void can_change_state(struct net_device *dev, struct can_frame *cf,
 int can_put_echo_skb(struct sk_buff *skb, struct net_device *dev,
 		     unsigned int idx);
 struct sk_buff *__can_get_echo_skb(struct net_device *dev, unsigned int idx,
-				   u8 *len_ptr);
-unsigned int can_get_echo_skb(struct net_device *dev, unsigned int idx);
+				   unsigned int *len_ptr, unsigned int *frame_len_ptr);
+unsigned int can_get_echo_skb(struct net_device *dev,
+			      unsigned int idx,
+			      unsigned int *frame_len_ptr);
 void can_free_echo_skb(struct net_device *dev, unsigned int idx);
 
 #ifdef CONFIG_OF
