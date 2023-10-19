@@ -1009,9 +1009,6 @@
 		impdmacslim00: imp-dmac-slim@ffa90000 {
 			compatible = "generic-uio";
 			reg = <0 0xffa90000 0 0x4000>;
-			clocks = <&cpg CPG_MOD 22>;
-			power-domains = <&sysc R8A779H0_PD_A2CN0>;
-			resets = <&cpg 2712>;
 			linux,uio-name = "imp_dma_slim_00";
 			ipmmu-id = <RCAR_IPMMU_IR 24>;
 			iommus = <&ipmmu_ir 24>, <&ipmmu_ir 25>,
@@ -1023,9 +1020,6 @@
 		impdmacslim01: imp-dmac-slim@ffa94000 {
 			compatible = "generic-uio";
 			reg = <0 0xffa94000 0 0x4000>;
-			clocks = <&cpg CPG_MOD 22>;
-			power-domains = <&sysc R8A779H0_PD_A2CN0>;
-			resets = <&cpg 2713>;
 			linux,uio-name = "imp_dma_slim_01";
 			ipmmu-id = <RCAR_IPMMU_IR 24>;
 			iommus = <&ipmmu_ir 24>, <&ipmmu_ir 25>,
@@ -1038,7 +1032,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xffaa0000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 22>;
-			power-domains = <&sysc R8A779H0_PD_A2CN0>;
+			power-domains = <&sysc R8A779H0_PD_A1CN0>;
 			resets = <&cpg 22>;
 			linux,uio-name = "imp_cnn_00";
 			ipmmu-id = <RCAR_IPMMU_IR 24>;
