@@ -3132,6 +3132,7 @@
 			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
+		/delete-node/prr;
 		chipid0: prr@fff00044 {
 			compatible = "generic-uio";
 			reg = <0 0xfff00044 0 0x1000>;
