@@ -110,7 +110,7 @@
 
 		/delete-node/vin03;
 		vin_03: video@e6ef3000 {
-			compatible = "renesas,vin-r8a779h0", "generic-uio";
+			compatible = "generic-uio";
 			reg = <0 0xe6ef3000 0 0x1000>;
 			interrupts = <GIC_SPI 532 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 801>;
@@ -537,7 +537,7 @@
 
 		/delete-node/csi41;
 		csi_01: csi2@fe540000 {
-			compatible = "renesas,r8a779h0-csi2", "generic-uio";
+			compatible = "generic-uio";
 			reg = <0 0xfe540000 0 0x40000>;
 			interrupts = <GIC_SPI 500 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 400>;
