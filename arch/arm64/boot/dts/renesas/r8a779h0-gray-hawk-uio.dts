@@ -16,3 +16,11 @@
 &isp1 {
         status = "disabled";
 };
+
+&csi40 {
+	status = "disabled";
+};
+
+&csi41 {
+	status = "disabled";
+};
