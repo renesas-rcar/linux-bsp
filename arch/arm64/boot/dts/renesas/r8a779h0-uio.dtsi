@@ -1580,6 +1580,19 @@
 			iommus = <&ipmmu_vc 14>;
 		};
 
+		fcpc_00 {
+			compatible = "generic-uio";
+			reg = <0 0xfe90f000 0 0x1000>;
+			/* No defination value in HW UM
+			 * clocks = <&cpg CPG_MOD 507>;
+			 */
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			/* No defination value in HW UM
+			 * resets = <&cpg 507>;
+			 */
+			linux,uio-name = "fcpc_00";
+		};
+
 		fba_ims0: fba@fe605000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe605000 0 0x1000>;
