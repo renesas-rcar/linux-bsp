@@ -13,6 +13,56 @@
 / {
 	model = "Renesas Gray Hawk CPU and Breakout boards based on r8a779h0";
 	compatible = "renesas,gray-hawk-breakout", "renesas,gray-hawk-cpu", "renesas,r8a779h0";
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		vdsp0_region: linux,vdsp0_region@5d000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x5d000000 0x0 0x00800000>;
+		};
+
+		vdsp1_region: linux,vdsp1_region@5d800000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x5d800000 0x0 0x00800000>;
+		};
+
+		vdsp2_region: linux,vdsp2_region@5e000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x5e000000 0x0 0x00800000>;
+		};
+
+		vdsp3_region: linux,vdsp3_region@5e800000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x5e800000 0x0 0x00800000>;
+		};
+
+		pap_region: linux,pap_region@5f800000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x5f000000 0x0 0x00400000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma@80000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x80000000 0x0 0x23000000>;
+			linux,cma-default;
+		};
+	};
+
+	cmem {
+		memory-region = <&vdsp0_region>, <&vdsp1_region>,
+				<&vdsp2_region>, <&vdsp3_region>,
+				<&pap_region>;
+	};
 };
 
 &canfd {
