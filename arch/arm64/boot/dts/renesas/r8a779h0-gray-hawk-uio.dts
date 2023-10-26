@@ -8,3 +8,19 @@
 /dts-v1/;
 #include "r8a779h0-gray-hawk.dts"
 #include "r8a779h0-uio.dtsi"
+
+&isp0 {
+        status = "disabled";
+};
+
+&isp1 {
+        status = "disabled";
+};
+
+&csi40 {
+	status = "disabled";
+};
+
+&csi41 {
+	status = "disabled";
+};
