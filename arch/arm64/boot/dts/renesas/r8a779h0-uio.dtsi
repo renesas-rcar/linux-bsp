@@ -1597,6 +1597,18 @@
 			linux,uio-name = "fcpc_00";
 		};
 
+		fbc0: fbc@ff830000 {
+			compatible = "renesas,uio-fbc";
+			reg = <0 0xff830000 0 0x2000>;
+			clocks = <&cpg CPG_CORE R8A779H0_CLK_POST>,
+				 <&cpg CPG_CORE R8A779H0_CLK_POST2>,
+				 <&cpg CPG_CORE R8A779H0_CLK_POST4>;
+			clock-names = "fbc_post", "fbc_post2", "fbc_post4";
+			interrupts = <GIC_SPI 852 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			linux,uio-name = "fbc_00";
+		};
+
 		fba_ims0: fba@fe605000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe605000 0 0x1000>;
