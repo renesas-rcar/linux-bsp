@@ -24,3 +24,11 @@
 &csi41 {
 	status = "disabled";
 };
+
+&rt_dmac0 {
+	status = "disabled";
+};
+
+&rt_dmac1 {
+	status = "disabled";
+};
