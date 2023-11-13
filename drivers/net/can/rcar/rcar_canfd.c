@@ -2177,7 +2177,7 @@ static const struct rcar_canfd_of_data of_rcanfd_gen3_compatible = {
 
 static const struct of_device_id rcar_canfd_of_table[] = {
 	{
-		.compatible = "renesas,x5h-canfd",
+		.compatible = "renesas,r8a78000-canfd",
 		.data = &of_rcanfd_x5h_compatible,
 	},
 	{
