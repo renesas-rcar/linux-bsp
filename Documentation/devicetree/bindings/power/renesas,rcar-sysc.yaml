@@ -44,7 +44,7 @@ properties:
       - renesas,r8a779f0-sysc # R-Car S4
       - renesas,r8a779g0-sysc # R-Car V4H
       - renesas,r8a779h0-sysc # R-Car V4M
-      - renesas,x5h-sysc # R-Car X5H
+      - renesas,r8a78000-sysc # R-Car X5H
 
   reg:
     maxItems: 1
