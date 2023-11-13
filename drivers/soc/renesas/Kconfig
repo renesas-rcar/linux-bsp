@@ -296,10 +296,10 @@ config ARCH_R8A779F0
 	help
 	  This enables support for the Renesas R-Car S4 SoC.
 
-config ARCH_X5H
+config ARCH_R8A78000
 	bool "ARM64 Platform support for R-Car X5H"
 	select ARCH_RCAR_GEN5
-	select SYSC_X5H
+	select SYSC_R8A78000
 	help
 	  This enables support for the Renesas R-Car X5H SoC.
 
