@@ -89,6 +89,8 @@ static const struct of_device_id rcar_rst_matches[] __initconst = {
 	{ .compatible = "renesas,r8a779g0-rst", .data = &rcar_rst_gen4 },
 	{ .compatible = "renesas,r8a779f0-rst", .data = &rcar_rst_gen4 },
 	{ .compatible = "renesas,r8a779h0-rst", .data = &rcar_rst_gen4 },
+	/* R-Car Gen5 */
+	{ .compatible = "renesas,r8a78000-rst", .data = &rcar_rst_gen4 },
 	{ /* sentinel */ }
 };
 
