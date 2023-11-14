@@ -175,7 +175,7 @@ static void renesas_pcie_retrain_link(struct dw_pcie *pci)
 		/* Check retrain flag */
 		if (!(lnksta & PCI_EXP_LNKSTA_LT))
 			break;
-		msleep(1);
+		mdelay(1);
 	}
 }
 
