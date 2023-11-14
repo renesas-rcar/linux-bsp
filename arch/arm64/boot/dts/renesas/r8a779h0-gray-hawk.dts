@@ -63,6 +63,13 @@
 				<&vdsp2_region>, <&vdsp3_region>,
 				<&pap_region>;
 	};
+
+	sound_card: sound {
+		compatible = "audio-graph-card";
+
+		label = "rcar-sound";
+		dais = <&rsnd_port0>;	/* AK4619 Audio Codec */
+	};
 };
 
 &canfd {
@@ -136,6 +143,52 @@
 	};
 };
 
+&i2c3 {
+	ak4619@10 {
+		compatible = "asahi-kasei,ak4619";
+
+		#sound-dai-cells = <0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg = <0x10>;
+
+		clocks = <&rcar_sound>;
+		clock-names = "mclk";
+		mode-gpios = <&gpio0 1 GPIO_ACTIVE_HIGH>;
+		pdn-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+
+		port@0 {
+			ak4619_endpoint: endpoint {
+				remote-endpoint = <&rsnd_endpoint>;
+			};
+		};
+	};
+};
+
 &scif_clk2 {
 	clock-frequency = <24000000>;
+};
+
+&audio_clkin {
+	clock-frequency = <24576000>;
+};
+
+&rcar_sound {
+	status = "okay";
+
+	ports {
+		rsnd_port0: port@0 {
+			rsnd_endpoint: endpoint {
+				remote-endpoint = <&ak4619_endpoint>;
+
+				dai-format = "i2s";
+				bitclock-master = <&rsnd_endpoint>;
+				frame-master = <&rsnd_endpoint>;
+
+				/* Please use exclusively to the 'capture' */
+				playback = <&ssi0>;
+			};
+		};
+	};
 };
