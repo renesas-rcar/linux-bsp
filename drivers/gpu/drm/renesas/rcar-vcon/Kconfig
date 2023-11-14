@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-2.0
+config DRM_RCAR_VCON
+	tristate "DRM Support for R-Car Video Interface Converter"
+	depends on DRM && OF
+	depends on ARM || ARM64
+	depends on ARCH_RENESAS || COMPILE_TEST
+	select DRM_KMS_HELPER
+	select DRM_GEM_DMA_HELPER
+	select VIDEOMODE_HELPERS
+	select VIDEO_RENESAS_FCP
+	select VIDEO_RENESAS_VSP1
+	help
+	  Enable support for the R-Car Video Interface Converter (VCON), the
+	  display controller found on the Renesas R-Car Gen5 SoC.
+
+	  Choose this option if you have an R-Car Gen5 SoC and want display
+	  output support. If M is selected the module will be called
+	  rcar_vcon_drm.
+
+config DRM_RCAR_DW_DP
+	tristate "R-Car DW DP Encoder Support"
+	depends on DRM && DRM_BRIDGE && OF
+	select DRM_DW_DP
+	help
+	  Enable support for the R-Car DisplayPort TX encoder, a wrapper
+	  around the Synopsys DesignWare DisplayPort (DW-DP) controller as
+	  integrated on the Renesas R-Car Gen5 SoC.
+
+	  Choose this option if you have an R-Car Gen5 SoC with DisplayPort
+	  outputs. If M is selected the module will be called rcar_dw_dp.
