@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: GPL-2.0
+config DRM_RCAR_VCON
+	tristate "DRM Support for R-Car Video Interface Converter"
+	depends on DRM && OF
+	depends on ARM || ARM64
+	depends on ARCH_RENESAS || COMPILE_TEST
+	select DRM_KMS_HELPER
+	select DRM_KMS_CMA_HELPER
+	select DRM_GEM_CMA_HELPER
+	select VIDEOMODE_HELPERS
+	help
+	  Choose this option if you have an R-Car X5H SoC.
+	  If M is selected the module will be called rcar-vcon-drm.
+
+config DRM_RCAR_DW_DP
+	tristate "R-Car DW DP Encoder Support"
+	depends on DRM && DRM_BRIDGE && OF
+	help
+	  Enable support for the R-Car DW DP.
