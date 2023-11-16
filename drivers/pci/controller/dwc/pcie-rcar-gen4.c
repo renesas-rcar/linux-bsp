@@ -458,6 +458,29 @@ void rcar_gen4_pcie_disable_bar(struct dw_pcie *dw, u32 bar_mask_reg)
 	dw_pcie_writel_dbi(dw, SHADOW_REG(bar_mask_reg), 0x0);
 }
 
+void rcar_gen4_pcie_set_max_link_width(struct dw_pcie *dw, int num_lanes)
+{
+	u32 val = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_LNKCAP));
+
+	val &= ~PCI_EXP_LNKCAP_MLW;
+	switch (num_lanes) {
+	case 1:
+		val |= PCI_EXP_LNKCAP_MLW_X1;
+		break;
+	case 2:
+		val |= PCI_EXP_LNKCAP_MLW_X2;
+		break;
+	case 4:
+		val |= PCI_EXP_LNKCAP_MLW_X4;
+		break;
+	default:
+		dev_info(dw->dev, "Invalid num-lanes %d\n", num_lanes);
+		val |= PCI_EXP_LNKCAP_MLW_X1;
+		break;
+	}
+	dw_pcie_writel_dbi(dw, EXPCAP(PCI_EXP_LNKCAP), val);
+}
+
 void rcar_gen4_pcie_workaround_settings(struct dw_pcie *dw)
 {
 	/* workaround for V4H */
@@ -585,7 +608,7 @@ void rcar_gen4_pcie_phy_setting(struct rcar_gen4_pcie *rcar)
 
 	/* PCIe PHY setting */
 	val = readl(rcar->phy_base + REFCLKCTRLP0);
-	val |= PHY_REF_REPEAT_CLK_EN;
+	val |= PHY_REF_CLKDET_EN | PHY_REF_REPEAT_CLK_EN;
 	writel(val, rcar->phy_base + REFCLKCTRLP0);
 
 	val = readl(rcar->phy_base + REFCLKCTRLP1);

@@ -50,6 +50,7 @@ static int rcar_gen4_pcie_host_init(struct dw_pcie_rp *pp)
 	if (dw->num_lanes != 4)
 	{
 		dw_pcie_dbi_ro_wr_en(dw);
+		rcar_gen4_pcie_set_max_link_width(dw, dw->num_lanes);
 		rcar_gen4_pcie_workaround_settings(dw);
 		dw_pcie_dbi_ro_wr_dis(dw);
 	}else{

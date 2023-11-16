@@ -30,7 +30,9 @@
 
 /* PCIEC PHY */
 #define	REFCLKCTRLP0		0x0B8
+#define	PHY_REF_CLKDET_EN	BIT(10)
 #define	PHY_REF_REPEAT_CLK_EN	BIT(9)
+#define	PHY_REF_USE_PAD		BIT(2)
 
 /* Renesas-specific */
 #define PCIEMSR0		0x0000
@@ -110,6 +112,7 @@ void rcar_gen4_pcie_writel(struct rcar_gen4_pcie *pcie, u32 reg, u32 val);
 int rcar_gen4_pcie_set_device_type(struct rcar_gen4_pcie *rcar, bool rc,
 				   int num_lanes);
 void rcar_gen4_pcie_disable_bar(struct dw_pcie *dw, u32 bar_mask_reg);
+void rcar_gen4_pcie_set_max_link_width(struct dw_pcie *pci, int num_lanes);
 void rcar_gen4_pcie_workaround_settings(struct dw_pcie *dw);
 int rcar_gen4_pcie_prepare(struct rcar_gen4_pcie *pcie);
 void rcar_gen4_pcie_unprepare(struct rcar_gen4_pcie *pcie);
