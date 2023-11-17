@@ -363,6 +363,7 @@ extern const struct sh_pfc_soc_info r8a779a0_pinmux_info;
 extern const struct sh_pfc_soc_info r8a779g0_pinmux_info;
 extern const struct sh_pfc_soc_info r8a779f0_pinmux_info;
 extern const struct sh_pfc_soc_info r8a779h0_pinmux_info;
+extern const struct sh_pfc_soc_info r8a78000_pinmux_info;
 extern const struct sh_pfc_soc_info sh7203_pinmux_info;
 extern const struct sh_pfc_soc_info sh7264_pinmux_info;
 extern const struct sh_pfc_soc_info sh7269_pinmux_info;
