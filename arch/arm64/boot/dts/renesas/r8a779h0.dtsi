@@ -714,9 +714,9 @@
 
 					reg = <1>;
 
-					vin00isp0: endpoint@0 {
+					vin00csi40: endpoint@0 {
 						reg = <0>;
-						remote-endpoint = <&isp0vin00>;
+						remote-endpoint = <&csi40vin00>;
 					};
 				};
 			};
@@ -746,9 +746,9 @@
 
 					reg = <1>;
 
-					vin01isp0: endpoint@0 {
+					vin01csi40: endpoint@0 {
 						reg = <0>;
-						remote-endpoint = <&isp0vin01>;
+						remote-endpoint = <&csi40vin01>;
 					};
 				};
 			};
@@ -778,9 +778,9 @@
 
 					reg = <1>;
 
-					vin02isp0: endpoint@0 {
+					vin02csi40: endpoint@0 {
 						reg = <0>;
-						remote-endpoint = <&isp0vin02>;
+						remote-endpoint = <&csi40vin02>;
 					};
 				};
 			};
@@ -810,9 +810,9 @@
 
 					reg = <1>;
 
-					vin03isp0: endpoint@0 {
+					vin03csi40: endpoint@0 {
 						reg = <0>;
-						remote-endpoint = <&isp0vin03>;
+						remote-endpoint = <&csi40vin03>;
 					};
 				};
 			};
@@ -826,27 +826,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 802>;
 			renesas,id = <4>;
+			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_04";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin04isp0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp0vin04>;
-					};
-				};
-			};
 		};
 
 		vin05: video@e6ef5000 {
@@ -857,27 +841,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 803>;
 			renesas,id = <5>;
+			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_05";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin05isp0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp0vin05>;
-					};
-				};
-			};
 		};
 
 		vin06: video@e6ef6000 {
@@ -888,27 +856,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 804>;
 			renesas,id = <6>;
+			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_06";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin06isp0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp0vin06>;
-					};
-				};
-			};
 		};
 
 		vin07: video@e6ef7000 {
@@ -919,27 +871,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 805>;
 			renesas,id = <7>;
+			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_07";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin07isp0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp0vin07>;
-					};
-				};
-			};
 		};
 
 		vin08: video@e6ef8000 {
@@ -950,6 +886,7 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 806>;
 			renesas,id = <8>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_08";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
@@ -965,9 +902,9 @@
 
 					reg = <1>;
 
-					vin08isp1: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp1vin08>;
+					vin08csi41: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&csi41vin08>;
 					};
 				};
 			};
@@ -981,6 +918,7 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 807>;
 			renesas,id = <9>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_09";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
@@ -996,9 +934,9 @@
 
 					reg = <1>;
 
-					vin09isp1: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp1vin09>;
+					vin09csi41: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&csi41vin09>;
 					};
 				};
 			};
@@ -1028,9 +966,9 @@
 
 					reg = <1>;
 
-					vin10isp1: endpoint@1 {
+					vin10csi41: endpoint@1 {
 						reg = <1>;
-						remote-endpoint = <&isp1vin10>;
+						remote-endpoint = <&csi41vin10>;
 					};
 				};
 			};
@@ -1060,9 +998,9 @@
 
 					reg = <1>;
 
-					vin11isp1: endpoint@1 {
+					vin11csi41: endpoint@1 {
 						reg = <1>;
-						remote-endpoint = <&isp1vin11>;
+						remote-endpoint = <&csi41vin11>;
 					};
 				};
 			};
@@ -1076,27 +1014,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 810>;
 			renesas,id = <12>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_12";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin12isp1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&isp1vin12>;
-					};
-				};
-			};
 		};
 
 		vin13: video@e6efd000 {
@@ -1107,27 +1029,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 811>;
 			renesas,id = <13>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_13";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin13isp1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&isp1vin13>;
-					};
-				};
-			};
 		};
 
 		vin14: video@e6efe000 {
@@ -1138,27 +1044,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 812>;
 			renesas,id = <14>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_14";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin14isp1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&isp1vin14>;
-					};
-				};
-			};
 		};
 
 		vin15: video@e6eff000 {
@@ -1169,27 +1059,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 813>;
 			renesas,id = <15>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_15";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin15isp1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&isp1vin15>;
-					};
-				};
-			};
 		};
 
 		dmac1: dma-controller@e7350000 {
@@ -1478,9 +1352,26 @@
 				};
 
 				port@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
 					reg = <1>;
-					csi40isp0: endpoint {
-						remote-endpoint = <&isp0csi40>;
+
+					csi40vin00: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&vin00csi40>;
+					};
+					csi40vin01: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&vin01csi40>;
+					};
+					csi40vin02: endpoint@2 {
+						reg = <2>;
+						remote-endpoint = <&vin02csi40>;
+					};
+					csi40vin03: endpoint@3 {
+						reg = <3>;
+						remote-endpoint = <&vin03csi40>;
 					};
 				};
 			};
@@ -1505,9 +1396,26 @@
 				};
 
 				port@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
 					reg = <1>;
-					csi41isp1: endpoint {
-						remote-endpoint = <&isp1csi41>;
+
+					csi41vin08: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&vin08csi41>;
+					};
+					csi41vin09: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&vin09csi41>;
+					};
+					csi41vin10: endpoint@2 {
+						reg = <2>;
+						remote-endpoint = <&vin10csi41>;
+					};
+					csi41vin11: endpoint@3 {
+						reg = <3>;
+						remote-endpoint = <&vin11csi41>;
 					};
 				};
 			};
@@ -1564,79 +1472,6 @@
 			resets = <&cpg 612>;
 			renesas,id = <0>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@0 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <0>;
-
-					isp0csi40: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi40isp0>;
-					};
-				};
-
-				port@1 {
-					reg = <1>;
-					isp0vin00: endpoint {
-						remote-endpoint = <&vin00isp0>;
-					};
-				};
-
-				port@2 {
-					reg = <2>;
-					isp0vin01: endpoint {
-						remote-endpoint = <&vin01isp0>;
-					};
-				};
-
-				port@3 {
-					reg = <3>;
-					isp0vin02: endpoint {
-						remote-endpoint = <&vin02isp0>;
-					};
-				};
-
-				port@4 {
-					reg = <4>;
-					isp0vin03: endpoint {
-						remote-endpoint = <&vin03isp0>;
-					};
-				};
-
-				port@5 {
-					reg = <5>;
-					isp0vin04: endpoint {
-						remote-endpoint = <&vin04isp0>;
-					};
-				};
-
-				port@6 {
-					reg = <6>;
-					isp0vin05: endpoint {
-						remote-endpoint = <&vin05isp0>;
-					};
-				};
-
-				port@7 {
-					reg = <7>;
-					isp0vin06: endpoint {
-						remote-endpoint = <&vin06isp0>;
-					};
-				};
-
-				port@8 {
-					reg = <8>;
-					isp0vin07: endpoint {
-						remote-endpoint = <&vin07isp0>;
-					};
-				};
-			};
 		};
 
 		isp1: isp@fed20000 {
@@ -1648,79 +1483,6 @@
 			resets = <&cpg 613>;
 			renesas,id = <1>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@0 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <0>;
-
-					isp1csi41: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&csi41isp1>;
-					};
-				};
-
-				port@1 {
-					reg = <1>;
-					isp1vin08: endpoint {
-						remote-endpoint = <&vin08isp1>;
-					};
-				};
-
-				port@2 {
-					reg = <2>;
-					isp1vin09: endpoint {
-						remote-endpoint = <&vin09isp1>;
-					};
-				};
-
-				port@3 {
-					reg = <3>;
-					isp1vin10: endpoint {
-						remote-endpoint = <&vin10isp1>;
-					};
-				};
-
-				port@4 {
-					reg = <4>;
-					isp1vin11: endpoint {
-						remote-endpoint = <&vin11isp1>;
-					};
-				};
-
-				port@5 {
-					reg = <5>;
-					isp1vin12: endpoint {
-						remote-endpoint = <&vin12isp1>;
-					};
-				};
-
-				port@6 {
-					reg = <6>;
-					isp1vin13: endpoint {
-						remote-endpoint = <&vin13isp1>;
-					};
-				};
-
-				port@7 {
-					reg = <7>;
-					isp1vin14: endpoint {
-						remote-endpoint = <&vin14isp1>;
-					};
-				};
-
-				port@8 {
-					reg = <8>;
-					isp1vin15: endpoint {
-						remote-endpoint = <&vin15isp1>;
-					};
-				};
-			};
 		};
 
 		rt_dmac0: dma-controller@ffd60000 {
