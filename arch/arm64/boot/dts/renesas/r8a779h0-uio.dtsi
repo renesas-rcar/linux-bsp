@@ -1445,7 +1445,7 @@
 			reg = <0 0xfed00000 0 0x10000>;
 			interrupts = <GIC_SPI 473 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 612>;
-			power-domains = <&sysc R8A779H0_PD_A3ISP0>;
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
 			resets = <&cpg 612>;
 			linux,uio-name = "tisp_00";
 		};
@@ -1456,7 +1456,7 @@
 			reg = <0 0xfed20000 0 0x10000>;
 			interrupts = <GIC_SPI 474 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 613>;
-			power-domains = <&sysc R8A779H0_PD_A3ISP0>;
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
 			resets = <&cpg 613>;
 			linux,uio-name = "tisp_01";
 		};
