@@ -170,7 +170,7 @@ struct rcar_csi2;
 #define V4M_CSI0CLKFREQRANGE(n)		(((n) & 0xff) << 16)
 #define V4M_PHTW		0x02060
 #define V4M_PHTW_DIN_DATA_PP(n)		((n) & 0xff)
-#define V4M_PHTW_DIN_DATA_D(n)		(((n) & 0xf00) >> 16)
+#define V4M_PHTW_DIN_DATA_Q(n)		(((n) & 0xf00) >> 8)
 #define V4M_PHTR		0x02064
 #define PHTR_TESTDOUT_CODE(n)		(((n) & 0xff) << 16)
 #define V4M_PHTC		0x02068
@@ -872,6 +872,7 @@ struct rcar_csi2 {
 	unsigned int hs_receive_eq[4];
 };
 
+static int rcsi2_phtw_write(struct rcar_csi2 *priv, u16 data, u16 code);
 static int rcsi2_phtw_write_array(struct rcar_csi2 *priv,
 				  const struct phtw_value *values);
 
@@ -917,7 +918,8 @@ static void rcsi2_modify16(struct rcar_csi2 *priv, unsigned int reg, u16 data, u
 
 static void rcsi2_enter_standby(struct rcar_csi2 *priv)
 {
-	if (!(priv->info->features & RCAR_CSI2_R8A779G0_FEATURE)) {
+	if (!((priv->info->features & RCAR_CSI2_R8A779G0_FEATURE) || 
+		  (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE))) {
 		rcsi2_write(priv, PHYCNT_REG, 0);
 		rcsi2_write(priv, PHTC_REG, PHTC_TESTCLR);
 	}
@@ -1368,8 +1370,9 @@ static int rcsi2_d_phy_setting(struct rcar_csi2 *priv, int data_rate)
 	u32 status;
 
 	static const struct phtw_value step5[] = {
-		{ .data = 0x00, .code = 0x00 },		/* H'0100_0100 */
-		{ .data = 0x00, .code = 0x1E },		/* H'0000_011E */
+		{ .data = 0x00, .code = 0x00 }, /* H'0100_0100 */
+		{ .data = 0x00, .code = 0x1E }, /* H'0000_011E */
+		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
 
@@ -1385,7 +1388,7 @@ static int rcsi2_d_phy_setting(struct rcar_csi2 *priv, int data_rate)
 	/* Wait for PHTR[19:16] = H'7 that POR is complete */
 	for (timeout = 10; timeout > 0; --timeout) {
 		status = rcsi2_read(priv, V4M_PHTR);
-		if ((status & 0xf0000) & 0x70000)
+		if ((status & 0xf0000) == 0x70000)
 			break;
 		usleep_range(1000, 2000);
 	}
@@ -1513,21 +1516,21 @@ static int rcsi2_start_receiver_v4m(struct rcar_csi2 *priv)
 	rcsi2_write(priv, CSI2_RESETN, 0);
 	rcsi2_write(priv, DPHY_RSTZ, 0);
 	rcsi2_write(priv, PHY_SHUTDOWNZ, 0);
-	rcsi2_write(priv, PHTC_REG, PHTC_TESTCLR);
+	rcsi2_write(priv, V4M_PHTC, PHTC_TESTCLR);
 
 	/* Step T1: PHY static setting */
 	read32 = rcsi2_read(priv, FRXM);
 	rcsi2_write(priv, FRXM, read32 | (FRXM_FORCERXMODE_0
-				| FRXM_FORCERXMODE_1 | FRXM_FORCERXMODE_2));
+				| FRXM_FORCERXMODE_1 | FRXM_FORCERXMODE_2 | FRXM_FORCERXMODE_3));
 	read32 = rcsi2_read(priv, OVR1);
 	rcsi2_write(priv, OVR1, read32 | (OVR1_forcerxmode_0
-				| OVR1_forcerxmode_1 | OVR1_forcerxmode_2));
+				| OVR1_forcerxmode_1 | OVR1_forcerxmode_2 | OVR1_forcerxmode_3));
 	rcsi2_write(priv, FLDC, 0);
 	rcsi2_write(priv, FLDD, 0);
 	rcsi2_write(priv, IDIC, 0);
 
 	/* Step T2: Reset CSI2 */
-	rcsi2_write(priv, PHTC_REG, 0);
+	rcsi2_write(priv, V4M_PHTC, 0);
 	rcsi2_write(priv, CSI2_RESETN, BIT(0));
 
 	/* Step T3: PHY register is programmed/read with PHY in reset. */
@@ -1561,6 +1564,7 @@ static int rcsi2_wait_phy_start_v4h(struct rcar_csi2 *priv)
 		if (status & ST_STOPSTATE_0 &&
 			status & ST_STOPSTATE_1 &&
 			status & ST_STOPSTATE_2 &&
+			status & ST_STOPSTATE_3 &&
 			status & ST_STOPSTATE_DCK)
 			return 0;
 		usleep_range(1000, 2000);
@@ -1577,6 +1581,13 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 	/* Start CSI PHY */
 	rcsi2_exit_standby(priv);
 
+	/* Start camera side device */
+	ret = v4l2_subdev_call(priv->remote, video, s_stream, 1);
+	if (ret) {
+		rcsi2_enter_standby(priv);
+		return ret;
+	}
+
 	if (priv->info->features & RCAR_CSI2_R8A779G0_FEATURE)
 		/* init V4H PHY */
 		ret = rcsi2_start_receiver_v4h(priv);
@@ -1589,13 +1600,6 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 	if (ret) {
 		rcsi2_enter_standby(priv);
 			return ret;
-	}
-
-	/* Start camera side device */
-	ret = v4l2_subdev_call(priv->remote, video, s_stream, 1);
-	if (ret) {
-		rcsi2_enter_standby(priv);
-		return ret;
 	}
 
 	/* Confirmation of CSI PHY */
@@ -1611,8 +1615,16 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 	} else if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE) {
 		read32 = rcsi2_read(priv, FRXM);
 		rcsi2_write(priv, FRXM, read32 & ~(FRXM_FORCERXMODE_0
-					| FRXM_FORCERXMODE_1 | FRXM_FORCERXMODE_2));
+					| FRXM_FORCERXMODE_1 | FRXM_FORCERXMODE_2 | FRXM_FORCERXMODE_3));
 	}
+
+	/* Start camera side device */
+	ret = v4l2_subdev_call(priv->remote, video, enable_link, 1);
+	if (ret) {
+		rcsi2_enter_standby(priv);
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -1918,14 +1930,27 @@ static int rcsi2_phtw_write(struct rcar_csi2 *priv, u16 data, u16 code)
 {
 	unsigned int timeout;
 
-	rcsi2_write(priv, PHTW_REG,
-		    PHTW_DWEN | PHTW_TESTDIN_DATA(data) |
-		    PHTW_CWEN | PHTW_TESTDIN_CODE(code));
+	if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE) {
+		rcsi2_write(priv, V4M_PHTW,
+				PHTW_DWEN | PHTW_TESTDIN_DATA(data) |
+				PHTW_CWEN | PHTW_TESTDIN_CODE(code));
+	} else {
+		rcsi2_write(priv, PHTW_REG,
+				PHTW_DWEN | PHTW_TESTDIN_DATA(data) |
+				PHTW_CWEN | PHTW_TESTDIN_CODE(code));
+	}
 
 	/* Wait for DWEN and CWEN to be cleared by hardware. */
 	for (timeout = 0; timeout <= 20; timeout++) {
-		if (!(rcsi2_read(priv, PHTW_REG) & (PHTW_DWEN | PHTW_CWEN)))
-			return 0;
+		if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE) {
+			if (!(rcsi2_read(priv, V4M_PHTW) & (PHTW_DWEN | PHTW_CWEN))) {
+				return 0;
+			}
+		} else {
+			if (!(rcsi2_read(priv, PHTW_REG) & (PHTW_DWEN | PHTW_CWEN))) {
+				return 0;
+			}
+		}
 
 		usleep_range(1000, 2000);
 	}
@@ -1941,7 +1966,7 @@ static int rcsi2_phtw_write_array(struct rcar_csi2 *priv,
 	const struct phtw_value *value;
 	int ret;
 
-	for (value = values; value->data || value->code; value++) {
+	for (value = values; ((value->data != 0xff) && (value->code != 0xff)); value++) {
 		ret = rcsi2_phtw_write(priv, value->data, value->code);
 		if (ret)
 			return ret;
@@ -1983,6 +2008,7 @@ static int __rcsi2_init_phtw_h3_v3h_m3n(struct rcar_csi2 *priv,
 		{ .data = 0x11, .code = 0xe4 },
 		{ .data = 0x01, .code = 0xe5 },
 		{ .data = 0x10, .code = 0x04 },
+		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
 
@@ -1992,6 +2018,7 @@ static int __rcsi2_init_phtw_h3_v3h_m3n(struct rcar_csi2 *priv,
 		{ .data = 0x4b, .code = 0xac },
 		{ .data = 0x03, .code = 0x00 },
 		{ .data = 0x80, .code = 0x07 },
+		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
 
@@ -2038,6 +2065,7 @@ static int rcsi2_phy_post_init_v3m_e3(struct rcar_csi2 *priv)
 		{ .data = 0xee, .code = 0x54 },
 		{ .data = 0xee, .code = 0x84 },
 		{ .data = 0xee, .code = 0x94 },
+		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
 
@@ -2050,6 +2078,7 @@ static int rcsi2_init_phtw_v3u(struct rcar_csi2 *priv,
 	/* In case of 1500Mbps or less */
 	static const struct phtw_value step1[] = {
 		{ .data = 0xcc, .code = 0xe2 },
+		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
 
@@ -2057,12 +2086,14 @@ static int rcsi2_init_phtw_v3u(struct rcar_csi2 *priv,
 		{ .data = 0x01, .code = 0xe3 },
 		{ .data = 0x11, .code = 0xe4 },
 		{ .data = 0x01, .code = 0xe5 },
+		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
 
 	/* In case of 1500Mbps or less */
 	static const struct phtw_value step3[] = {
 		{ .data = 0x38, .code = 0x08 },
+		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
 
@@ -2071,6 +2102,7 @@ static int rcsi2_init_phtw_v3u(struct rcar_csi2 *priv,
 		{ .data = 0x4b, .code = 0xac },
 		{ .data = 0x03, .code = 0x00 },
 		{ .data = 0x80, .code = 0x07 },
+		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
 
@@ -2103,22 +2135,6 @@ static int rcsi2_init_phtw_v3u(struct rcar_csi2 *priv,
 static int rcsi2_init_phtw_v4m(struct rcar_csi2 *priv,
 			       unsigned int mbps)
 {
-	/* pp = osc_freq_target[7:0], q = osc_freq_target[11:8]) */
-	static const struct phtw_value step32[] = {
-		{ .data = 0x00, .code = 0x00 },		/* H’0100_0100 */
-		{ .data = 0x00, .code = 0xE2 },		/* H’H’01_pp_01E2 */
-		{ .data = 0x00, .code = 0xE3 },		/* H’010_q_01E3 */
-		{ .data = 0x01, .code = 0xE4 },		/* H’0101_01E4 */
-		{ /* sentinel */ },
-	};
-
-	/* In case of 1500Mbps or less */
-	static const struct phtw_value step33[] = {
-		{ .data = 0x00, .code = 0x00 },		/* H'0100_0100 */
-		{ .data = 0x3C, .code = 0x08 },		/* H'013C_0108 */
-		{ /* sentinel */ },
-	};
-
 	/* In case of higher than 1500Mbps */
 	static const struct phtw_value step36[] = {
 		{ .data = 0x00, .code = 0x00 },		/* H’0100_0100 */
@@ -2142,12 +2158,19 @@ static int rcsi2_init_phtw_v4m(struct rcar_csi2 *priv,
 		{ .data = 0x05, .code = 0x09 },		/* H’0105_0109 */
 		{ .data = 0x0B, .code = 0x00 },		/* H’010B_0100 */
 		{ .data = 0x05, .code = 0x09 },		/* H’0105_0109 */
+		{ .data = 0xff, .code = 0xff },		/* H’0105_0109 */
+		{ /* sentinel */ },
+	};
+
+	static const struct phtw_value step33[] = {
+		{ .data = 0x00, .code = 0x00 },		/* H’0100_0100 */
+		{ .data = 0x3C, .code = 0x08 },		/* H’013C_0108 */
+		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
 
 	int ret;
 	u16 osc_freq;
-	const struct phtw_value *value;
 	u32 read32;
 
 	/* T3-1: Set PHYPLL/HSFREQRANGE[6:0] */
@@ -2163,16 +2186,16 @@ static int rcsi2_init_phtw_v4m(struct rcar_csi2 *priv,
 		if (!osc_freq)
 			return ret;
 	}
-	for (value = step32; value->data || value->code; value++) {
-		if (value->code == 0xE2)
-			ret = rcsi2_phtw_write(priv, V4M_PHTW_DIN_DATA_PP(osc_freq), value->code);
-		else if (value->code == 0xE3)
-			ret = rcsi2_phtw_write(priv, V4M_PHTW_DIN_DATA_D(osc_freq), value->code);
-		else
-			ret = rcsi2_phtw_write(priv, value->data, value->code);
-		if (ret)
+
+	/* pp = osc_freq_target[7:0], q = osc_freq_target[11:8]) */
+	ret = rcsi2_phtw_write(priv, 0x00, 0x00); /* H'0100_0100 */
+	 /* H’H’01_pp_01E2 */
+	ret = rcsi2_phtw_write(priv, V4M_PHTW_DIN_DATA_PP(osc_freq), 0xE2);
+	 /* H’010_q_01E3 */
+	ret = rcsi2_phtw_write(priv, V4M_PHTW_DIN_DATA_Q(osc_freq), 0xE3);
+	ret = rcsi2_phtw_write(priv, 0x01, 0xE4); /* H’0101_01E4 */
+	if (ret)
 			return ret;
-	}
 
 	/* T3-3: (Only used in case the speed is less than or equal to 1.5 Gbps)*/
 	if (mbps != 0 && mbps <= 1500) {
@@ -2189,7 +2212,7 @@ static int rcsi2_init_phtw_v4m(struct rcar_csi2 *priv,
 	/* T3-5: Set PHY_EN/ENABLE_N(N=0,1,2,3) and PHY_EN/ENABLECLK = 1'b1 */
 	read32 = rcsi2_read(priv, PHY_EN);
 	rcsi2_write(priv, PHY_EN, read32 | (PHY_ENABLE_DCK | PHY_ENABLE_0
-				| PHY_ENABLE_1 | PHY_ENABLE_2));
+				| PHY_ENABLE_1 | PHY_ENABLE_2 | PHY_ENABLE_3));
 
 	/* T3-6: (Only used in case the speed is higher than 1.5 Gbps) */
 	if (mbps != 0 && mbps > 1500) {
@@ -2365,6 +2388,10 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a779a0-csi2",
 		.data = &rcar_csi2_info_r8a779a0,
+	},
+	{
+		.compatible = "renesas,r8a779h0-csi2",
+		.data = &rcar_csi2_info_r8a779h0,
 	},
 	{ /* sentinel */ },
 };
