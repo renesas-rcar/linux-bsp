@@ -92,9 +92,9 @@
 		};
 	};
 
-	gmsl0: gmsl-deserializer@49 {
-		compatible = "maxim,max96712";
-		reg = <0x49>, <0x01>, <0x02>, <0x03>, <0x04>;
+	gmsl0: gmsl-deserializer@4e {
+		compatible = "maxim,max96724";
+		reg = <0x4e>, <0x01>, <0x02>, <0x03>, <0x04>;
 		gpios = <&pca9654_a 0 GPIO_ACTIVE_HIGH>;
 		gpio-controller;
 		#gpio-cells = <2>;
@@ -105,34 +105,34 @@
 
 			port@0 {
 				reg = <0>;
-				max96712_in0: endpoint {
+				max96724_in0: endpoint {
 				};
 			};
 
 			port@1 {
 				reg = <1>;
-				max96712_in1: endpoint {
+				max96724_in1: endpoint {
 				};
 			};
 
 			port@2 {
 				reg = <2>;
-				max96712_in2: endpoint {
+				max96724_in2: endpoint {
 				};
 			};
 
 			port@3 {
 				reg = <3>;
-				max96712_in3: endpoint {
+				max96724_in3: endpoint {
 				};
 			};
 
 			port@4 {
 				reg = <4>;
-				max96712_out0: endpoint {
+				max96724_out0: endpoint {
 					bus-type = <MEDIA_BUS_TYPE_CSI2_DPHY>;
 					clock-lanes = <0>;
-					data-lanes = <1 2 3>;
+					data-lanes = <1 2 3 4>;
 					remote-endpoint = <&csi40_in>;
 				};
 			};
@@ -176,9 +176,9 @@
 		};
 	};
 
-	gmsl1: gmsl-deserializer@4b {
-		compatible = "maxim,max96712";
-		reg = <0x4b>, <0x05>, <0x06>, <0x07>, <0x08>;
+	gmsl1: gmsl-deserializer@4f {
+		compatible = "maxim,max96724";
+		reg = <0x4f>, <0x05>, <0x06>, <0x07>, <0x08>;
 		gpios = <&pca9654_b 0 GPIO_ACTIVE_HIGH>;
 		maxim,invert_phy-pol;
 		gpio-controller;
@@ -190,34 +190,34 @@
 
 			port@0 {
 				reg = <0>;
-				max96712_in4: endpoint {
+				max96724_in4: endpoint {
 				};
 			};
 
 			port@1 {
 				reg = <1>;
-				max96712_in5: endpoint {
+				max96724_in5: endpoint {
 				};
 			};
 
 			port@2 {
 				reg = <2>;
-				max96712_in6: endpoint {
+				max96724_in6: endpoint {
 				};
 			};
 
 			port@3 {
 				reg = <3>;
-				max96712_in7: endpoint {
+				max96724_in7: endpoint {
 				};
 			};
 
 			port@4 {
 				reg = <4>;
-				max96712_out1: endpoint {
+				max96724_out1: endpoint {
 					bus-type = <MEDIA_BUS_TYPE_CSI2_DPHY>;
 					clock-lanes = <0>;
-					data-lanes = <1 2 3>;
+					data-lanes = <1 2 3 4>;
 					remote-endpoint = <&csi41_in>;
 				};
 			};
@@ -275,8 +275,8 @@
 			csi40_in: endpoint {
 				bus-type = <MEDIA_BUS_TYPE_CSI2_DPHY>;
 				clock-lanes = <0>;
-				data-lanes = <1 2 3>;
-				remote-endpoint = <&max96712_out0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96724_out0>;
 			};
 		};
 	};
@@ -295,8 +295,8 @@
 			csi41_in: endpoint {
 				bus-type = <MEDIA_BUS_TYPE_CSI2_DPHY>;
 				clock-lanes = <0>;
-				data-lanes = <1 2 3>;
-				remote-endpoint = <&max96712_out1>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max96724_out1>;
 			};
 		};
 	};
