@@ -390,6 +390,9 @@ struct v4l2_mbus_frame_desc {
  * @s_stream: used to notify the driver that a video stream will start or has
  *	stopped.
  *
+ * @enable_link: used to notify the driver that links will enabled or has
+ *	disabled.
+ *
  * @g_pixelaspect: callback to return the pixelaspect ratio.
  *
  * @g_frame_interval: callback for VIDIOC_SUBDEV_G_FRAME_INTERVAL()
@@ -422,6 +425,7 @@ struct v4l2_subdev_video_ops {
 	int (*g_tvnorms_output)(struct v4l2_subdev *sd, v4l2_std_id *std);
 	int (*g_input_status)(struct v4l2_subdev *sd, u32 *status);
 	int (*s_stream)(struct v4l2_subdev *sd, int enable);
+	int (*enable_link)(struct v4l2_subdev *sd, int enable);
 	int (*g_pixelaspect)(struct v4l2_subdev *sd, struct v4l2_fract *aspect);
 	int (*g_frame_interval)(struct v4l2_subdev *sd,
 				struct v4l2_subdev_frame_interval *interval);
