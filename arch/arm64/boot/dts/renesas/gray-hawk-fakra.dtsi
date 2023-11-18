@@ -24,49 +24,49 @@
 
 /* Define the endpoint links */
 #ifdef GRAYHAWK_CAMERA0
-&max96712_in0 {
+&max96724_in0 {
 	remote-endpoint = <&fakra_con0>;
 };
 #endif
 
 #ifdef GRAYHAWK_CAMERA1
-&max96712_in1 {
+&max96724_in1 {
 	remote-endpoint = <&fakra_con1>;
 };
 #endif
 
 #ifdef GRAYHAWK_CAMERA2
-&max96712_in2 {
+&max96724_in2 {
 	remote-endpoint = <&fakra_con2>;
 };
 #endif
 
 #ifdef GRAYHAWK_CAMERA3
-&max96712_in3 {
+&max96724_in3 {
 	remote-endpoint = <&fakra_con3>;
 };
 #endif
 
 #ifdef GRAYHAWK_CAMERA4
-&max96712_in4 {
+&max96724_in4 {
 	remote-endpoint = <&fakra_con4>;
 };
 #endif
 
 #ifdef GRAYHAWK_CAMERA5
-&max96712_in5 {
+&max96724_in5 {
 	remote-endpoint = <&fakra_con5>;
 };
 #endif
 
 #ifdef GRAYHAWK_CAMERA6
-&max96712_in6 {
+&max96724_in6 {
 	remote-endpoint = <&fakra_con6>;
 };
 #endif
 
 #ifdef GRAYHAWK_CAMERA7
-&max96712_in7 {
+&max96724_in7 {
 	remote-endpoint = <&fakra_con7>;
 };
 #endif
@@ -91,7 +91,7 @@
 
 				port {
 					fakra_con0: endpoint {
-						remote-endpoint = <&max96712_in0>;
+						remote-endpoint = <&max96724_in0>;
 					};
 				};
 			};
@@ -108,7 +108,7 @@
 
 				port {
 					fakra_con1: endpoint {
-						remote-endpoint = <&max96712_in1>;
+						remote-endpoint = <&max96724_in1>;
 					};
 				};
 			};
@@ -125,7 +125,7 @@
 
 				port {
 					fakra_con2: endpoint {
-						remote-endpoint = <&max96712_in2>;
+						remote-endpoint = <&max96724_in2>;
 					};
 				};
 			};
@@ -142,7 +142,7 @@
 
 				port {
 					fakra_con3: endpoint {
-						remote-endpoint = <&max96712_in3>;
+						remote-endpoint = <&max96724_in3>;
 					};
 				};
 			};
@@ -170,7 +170,7 @@
 
 				port {
 					fakra_con4: endpoint {
-						remote-endpoint = <&max96712_in4>;
+						remote-endpoint = <&max96724_in4>;
 					};
 				};
 			};
@@ -187,7 +187,7 @@
 
 				port {
 					fakra_con5: endpoint {
-						remote-endpoint = <&max96712_in5>;
+						remote-endpoint = <&max96724_in5>;
 					};
 				};
 			};
@@ -204,7 +204,7 @@
 
 				port {
 					fakra_con6: endpoint {
-						remote-endpoint = <&max96712_in6>;
+						remote-endpoint = <&max96724_in6>;
 					};
 				};
 			};
@@ -221,7 +221,7 @@
 
 				port {
 					fakra_con7: endpoint {
-						remote-endpoint = <&max96712_in7>;
+						remote-endpoint = <&max96724_in7>;
 					};
 				};
 			};
