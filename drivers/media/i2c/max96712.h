@@ -127,6 +127,7 @@
 #define MAX_RLMSC4(ch)			(0x14c4 + (0x100 * ch))
 #define MAX_RLMSC5(ch)			(0x14c5 + (0x100 * ch))
 
+// REG13(Add:0xD) Device Identifer[7:0]
 #define MAX9271_ID			0x09
 #define MAX9286_ID			0x40
 #define MAX9288_ID			0x2A
@@ -138,7 +139,10 @@
 #define MAX96706_ID			0x4A
 #define MAX96707_ID			0x45 /* MAX96715: same but lack of HS pin */
 #define MAX96708_ID			0x4C
-#define MAX96712_ID			0x20
+#define MAX96712_ID			0xA0
+#define MAX96724_ID			0xA2
+#define MAX96724F_ID		0xA3
+#define MAX96724R_ID		0xA4
 
 #define UB960_ID			0x00 /* strapped */
 

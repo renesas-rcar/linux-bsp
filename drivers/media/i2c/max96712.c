@@ -79,6 +79,7 @@ struct max96712_priv {
 	struct v4l2_async_notifier notifier;
 
 	bool cphy_connection;
+	int dev_id;
 };
 
 static struct max96712_source *next_source(struct max96712_priv *priv,
@@ -112,7 +113,68 @@ struct max96712_reg {
 	u8	val;
 };
 
-const struct max96712_reg max96712_color_pattern_init[] = {
+const struct max96712_reg max96712_color_pattern_dinit[] = {
+	{0x1050, 0xE3},        // Set VTG mode VRX_Patgen 0, Generate VS, HS, DE", Not Invert the VS
+	{0x1051, 0xA0},        // Set 1 (Checkboard mode), 2 (Grad Mode)
+	{0x1052, 0x00},        // Set VS_DLY = 0
+	{0x1053, 0x00},
+	{0x1054, 0x00},
+	{0x1055, 0x25},        // Set VS High
+	{0x1056, 0x99},
+	{0x1057, 0x00},
+	{0x1058, 0x00},        // Set VS Low
+	{0x1059, 0x2A},
+	{0x105A, 0xF8},
+	{0x105B, 0x00},        // Set HS Delay V2H
+	{0x105C, 0x00},
+	{0x105D, 0x00},
+	{0x105E, 0x08},        // Set HS_HIGH
+	{0x105F, 0x6C},
+	{0x1060, 0x00},        // Set HS_LOW
+	{0x1061, 0x2C},
+	{0x1062, 0x04},        // Set HS_CNT
+	{0x1063, 0x65},
+	{0x1064, 0x01},        // Set DE Delay
+	{0x1065, 0x61},
+	{0x1066, 0x18},
+	{0x1067, 0x07},        // Set DE_HIGH
+	{0x1068, 0x80},
+	{0x1069, 0x01},        // Set DE_LOW
+	{0x106A, 0x18},
+	{0x106B, 0x04},        // Set DE_CNT
+	{0x106C, 0x38},
+	{0x106D, 0x03},        // Set Grad_INCR_0_0
+
+// C{HECKERBOARD }SETUP - PATGEN MODE = 1
+	{0x106E, 0x88},        // Set CHKR_COLOR_A_L_0
+	{0x106F, 0xAA},        // Set CHKR_COLOR_A_M_0
+	{0x1070, 0x55},        // Set CHKR_COLOR_A_H_0
+	{0x1071, 0x00},        // Set CHKR_COLOR_B_L_0
+	{0x1072, 0x08},        // Set CHKR_COLOR_B_M_0
+	{0x1073, 0x80},        // Set CHKR_COLOR_B_H_0
+	{0x1074, 0x50},        // Set CHKR_RPT_A_0
+	{0x1075, 0xA0},        // Set CHKR_RPT_B_0
+	{0x1076, 0x50},        // Set CHKR_ALT_0
+
+// S{et Patgen Cl}k frequency 75MHz firstly
+	{0x01DC, 0x00},
+	{0x01FC, 0x00},
+	{0x021C, 0x00},
+	{0x023C, 0x00},
+
+// R{GB888 Softwa}re override VC/DT/BPP for Pipe 1,2,3 and 4; 0x24 = 6'b100100, 24 = 5'b11000; 0x2C = 6'b101100, 12 = 5'b01100
+	{0x040B, 0xC2},        // BPP override for 1
+	{0x040C, 0x10},        // VC override for 1/2/3/4
+	{0x040D, 0x32},
+	{0x040E, 0xA4},        // DT override for 1/2/3/4
+	{0x040F, 0x94},
+	{0x0410, 0x90},
+	{0x0411, 0xD8},        // BPP override for 2/3/4
+	{0x0412, 0x60},
+	{0xFFFF, 0xFF}	/* End Table */
+};
+
+const struct max96712_reg max96712_color_pattern_cinit[] = {
 	{0x1050, 0xE3},	/* VRX_Patgen 0, Generate VS, HS, DE", Invert the VS */
 	{0x1051, 0x20},	/* Set Patgen mode=2 (Color Gradient), Grad Mode=0 */
 	{0x1052, 0x00},
@@ -175,13 +237,13 @@ const struct max96712_reg max96712_color_pattern_init[] = {
 	{0x0412, 0x60},
 
 	{0x0006, 0x00},	/* Disable GMSL link */
-	{0x0415, 0xE9},	/* Set 1200M DPLL frequency,
-			 * Enable the software override for 1/2/3/4
-			 */
+	{0x0415, 0xEd},
 	{0x0418, 0xE9},
-	{0x094A, 0xC0},	/* Set Lane Count-4 for script (CSI_NUM_LANES),
-			 * DPHY ONLY
-			 */
+	{0x094A, 0xa0},
+	{0x098A, 0xa0},
+	{0x08ad, 0x3f},
+	{0x08ae, 0x7d},
+
 	{0x08A3, 0xE4},	/* Set Phy lane Map for all MIPI PHYs */
 	{0x090B, 0x07},	/* Set MAP_EN_L_0 for map 0 */
 	{0x094B, 0x07},	/* Set MAP_EN_L_0 for map 0 */
@@ -216,7 +278,57 @@ const struct max96712_reg max96712_color_pattern_init[] = {
 	{0x0992, 0x81},
 	{0x09d2, 0xc1},
 	{0xFFFF, 0xFF}	/* End Table */
+};
 
+const struct max96712_reg max96712_out_enable[] = {
+// ----------Deserializer Setup--------------------------------------------------------------------
+	{0x0006, 0xF0},        // Disable GMSL link
+	{0x0903, 0x07},
+	{0x0904, 0x01},
+	{0x1c00, 0xf4},
+	{0x0415, 0xEC},        // Set 1200M DPLL frequency, Enable the software override for 1/2/3/4
+	{0x1c00, 0xf5},
+	{0x0943, 0x07},
+	{0x0944, 0x01},
+	{0x1d00, 0xf4},
+	{0x0418, 0xEC},
+	{0x1d00, 0xf5},
+	{0x08A3, 0xE4},        // Set Phy lane Map for all MIPI PHYs
+	{0x08A4, 0xE4},
+	{0x0939, 0xd0},
+	{0x0936, 0x00},
+	{0x0979, 0xd0},
+	{0x0976, 0x00},
+	{0x09b9, 0xd0},
+	{0x09b6, 0x00},
+	{0x09f9, 0xd0},
+	{0x09f6, 0x00},
+	{0x090B, 0x07},        // Set MAP_EN_L_0 for map 0
+	{0x094B, 0x07},        // Set MAP_EN_L_0 for map 0
+	{0x098B, 0x07},        // Set MAP_EN_L_0 for map 0
+	{0x09CB, 0x07},        // Set MAP_EN_L_0 for map 0
+	{0x092D, 0x15},        // Set MAP_DPHY_DEST TO CTRL 1
+	{0x090D, 0x24},        // Set MAP_SRC AND DEST for data and FE/FS; [7:6]=VC, [5:0]=DT
+	{0x094D, 0x64},        // Set MAP_SRC AND DEST for data and FE/FS; [7:6]=VC, [5:0]=DT
+	{0x098D, 0xA4},        // Set MAP_SRC AND DEST for data and FE/FS; [7:6]=VC, [5:0]=DT
+	{0x09CD, 0xE4},        // Set MAP_SRC AND DEST for data and FE/FS; [7:6]=VC, [5:0]=DT
+	{0x090E, 0x24},
+	{0x090F, 0x00},
+	{0x0910, 0x00},
+	{0x0911, 0x01},
+	{0x0912, 0x01},
+	{0x08A0, 0x84},        // Enable CSI clock w/ MIPI PHY 2x4 configuration
+	{0x08A2, 0x30},        // Turn off unused PHYs
+
+// End of Setup Script - MUST ONE-SHOT RESET!!!! <=================================================
+    {0x0018, 0x0F},        // One shot reset for PHY A - HS86
+	{0xFFFF, 0xFF}	/* End Table */
+};
+
+const struct max96712_reg max96712_out_disable[] = {
+    {0x08A0, 0x04},         // Disable CSI clock w/ MIPI PHY 2x4 configuration,,
+    {0x08A2, 0x00},         // Stanby mode PHYs
+    {0xFFFF, 0xFF}    // End Table
 };
 
 /* -----------------------------------------------------------------------------
@@ -288,6 +400,45 @@ static inline int max96712_update_bits(struct max96712_priv *priv, u16 reg,
 	return ret;
 }
 
+static int max96712_power(struct max96712_priv *priv, int on)
+{
+	u16 en_reg;
+	u8 val;
+
+	max96712_read(priv, 0x000D, &val);
+	priv->dev_id = val;
+
+	switch (priv->dev_id) {
+		case MAX96712_ID:
+			en_reg = 0x30c;
+			break;
+		case MAX96724_ID:
+		case MAX96724F_ID:
+		case MAX96724R_ID:
+			en_reg = 0x303;
+			break;
+		default:
+			return -EINVAL;
+	}
+
+	if (on) {
+		max96712_read(priv, en_reg, &val);
+		if (priv->dev_id == MAX96724_ID || priv->dev_id == MAX96724F_ID || priv->dev_id == MAX96724R_ID)
+			val &= 0xFE;		// GPIO_DIS=0(GPIO enable)
+		val |= BIT(4);		// GPIO1=High=Camemra POC Protector ON
+		max96712_write_reg(priv, en_reg, val);
+	}
+
+	if(!on) {
+		max96712_read(priv, en_reg, &val);
+		val |= ~BIT(4);		// GPIO1=LOW=Camemra POC Protector OFF
+		max96712_write_reg(priv, en_reg, val);
+	}
+	mdelay(100);
+
+	return 0;
+}
+
 #if DEBUG_COLOR_PATTERN
 static int max96712_set_regs(struct max96712_priv *priv,
 			     const struct max96712_reg *regs,
@@ -309,17 +460,25 @@ static int max96712_color_pattern(struct max96712_priv *priv)
 {
 	int ret;
 
-	ret = max96712_set_regs(priv, max96712_color_pattern_init,
-			ARRAY_SIZE(max96712_color_pattern_init));
+	max96712_power(priv, 1);
+
+	if(priv->cphy_connection) {
+		ret = max96712_set_regs(priv, max96712_color_pattern_cinit,
+				ARRAY_SIZE(max96712_color_pattern_cinit));
+	} else {
+		ret = max96712_set_regs(priv, max96712_color_pattern_dinit,
+				ARRAY_SIZE(max96712_color_pattern_dinit));
+	}
 
 	max96712_write_reg(priv, 0x0006, 0xFF);
 	max96712_write_reg(priv, 0x0010, 0x22);
 	max96712_write_reg(priv, 0x0011, 0x22);
 	max96712_write_reg(priv, 0x0018, 0x0F);
 
-	msleep(100); /* Delay ~100ms */
+	msleep(300); /* Delay ~100ms */
 
-	max96712_write_reg(priv, 0x0009, 0x02);
+	if (priv->dev_id == MAX96712_ID)
+		max96712_write_reg(priv, 0x0009, 0x02);
 	max96712_write_reg(priv, 0x08A0, 0x84);
 	max96712_write_reg(priv, 0x08A2, 0x30);
 	max96712_write_reg(priv, 0x0018, 0x0F);
@@ -327,6 +486,46 @@ static int max96712_color_pattern(struct max96712_priv *priv)
 	return ret;
 }
 #endif
+
+static int max96712_enable(struct v4l2_subdev *sd, int enable)
+{
+	int ret = 0, i, pipes_mask;
+	struct max96712_priv *priv = sd_to_max96712(sd);
+
+	if(enable) {
+#if DEBUG_COLOR_PATTERN
+	ret = max96712_set_regs(priv, max96712_out_enable,
+			ARRAY_SIZE(max96712_out_enable));
+#else
+	for (i = 0; i < MAX96712_NUM_GMSL; i++) {
+		pipes_mask = priv->link[i]->pipes_mask;
+		/* Enable link pipes */
+		max96712_update_bits(priv, MAX96712_VIDEO_PIPE_EN, pipes_mask, pipes_mask);
+		/* CSI output enable */
+		max96712_update_bits(priv, MAX_BACKTOP12(0), 0x02, 0x02);
+		/* Enable Force all MIPI clocks running */
+		max96712_update_bits(priv, MAX_MIPI_PHY0, 0x80, 0x80);
+	}
+#endif
+	} else {
+#if DEBUG_COLOR_PATTERN
+	ret = max96712_set_regs(priv, max96712_out_disable,
+			ARRAY_SIZE(max96712_out_disable));
+#else
+	for (i = 0; i < MAX96712_NUM_GMSL; i++) {
+		pipes_mask = priv->link[i]->pipes_mask;
+		/* Disable Force all MIPI clocks running */
+		max96712_update_bits(priv, MAX_MIPI_PHY0, 0x80, 0x00);
+		/* CSI output disable */
+		max96712_update_bits(priv, MAX_BACKTOP12(0), 0x02, 0);
+		/* Disable link pipes */
+		max96712_update_bits(priv, MAX96712_VIDEO_PIPE_EN, pipes_mask, 0);
+	}
+#endif
+	}
+
+	return ret;
+}
 
 #if DEBUG_REG_DUMP
 static void max96712_debug_dump(struct max96712_priv *priv)
@@ -529,12 +728,9 @@ static void max96712_disable(struct max96712_priv *priv)
 			     priv->links_mask, 0);
 }
 
-static void max96712_enable(struct max96712_priv *priv)
+static void max96712_postinit(struct max96712_priv *priv)
 {
 	max96712_update_bits(priv, MAX96712_REG6, 0x0f, priv->links_mask);
-	max96712_update_bits(priv, MAX96712_VIDEO_PIPE_EN,
-			     priv->links_mask, priv->links_mask);
-	max96712_update_bits(priv, MAX_BACKTOP12(0), 0x02, 0x02);
 	max96712_reset_oneshot(priv, priv->links_mask);
 	msleep(100);
 }
@@ -546,10 +742,17 @@ static int max96712_preinit(struct max96712_priv *priv)
 	max96712_update_bits(priv, MAX96712_PWR1, BIT(6), BIT(6));
 	usleep_range(10000, 20000);
 
-	max96712_write_reg(priv, 0x0323, 0x84);
-	max96712_write_reg(priv, 0x0325, 0x0B);
-	max96712_write_reg(priv, 0x0326, 0x63);
-	max96712_write_reg(priv, 0x0327, 0x2C);
+	if (priv->dev_id == MAX96724_ID || priv->dev_id == MAX96724F_ID || priv->dev_id == MAX96724R_ID) {
+		max96712_write_reg(priv, 0x0309, 0x84);
+		max96712_write_reg(priv, 0x030B, 0x0B);
+		max96712_write_reg(priv, 0x030C, 0x63);
+		max96712_write_reg(priv, 0x030D, 0x0C);
+	} else {
+		max96712_write_reg(priv, 0x0323, 0x84);
+		max96712_write_reg(priv, 0x0325, 0x0B);
+		max96712_write_reg(priv, 0x0326, 0x63);
+		max96712_write_reg(priv, 0x0327, 0x2C);
+	}
 
 	max96712_write_reg(priv, MAX96712_REG5, 0x40);
 	usleep_range(10000, 20000);
@@ -579,7 +782,9 @@ static void max96712_gmsl2_initial_setup(struct max96712_priv *priv)
 
 static int max96712_mipi_setup(struct max96712_priv *priv)
 {
-	u32 csi_rate = 1800;
+	u32 csi_rate = 1000;
+
+	max96712_power(priv, 1);
 
 	max96712_write_reg(priv, MAX96712_VIDEO_PIPE_EN, 0);
 
@@ -852,7 +1057,7 @@ static int max96712_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (enable && priv->stream_count == 0) {
 		max96712_setup(priv);
-		max96712_enable(priv);
+		max96712_postinit(priv);
 
 		for_each_source(priv, source) {
 			if (!source->linkup) {
@@ -969,6 +1174,7 @@ static int max96712_get_fmt(struct v4l2_subdev *sd,
 
 static const struct v4l2_subdev_video_ops max96712_video_ops = {
 	.s_stream	= max96712_s_stream,
+	.enable_link	= max96712_enable,
 };
 
 static const struct v4l2_subdev_pad_ops max96712_pad_ops = {
@@ -1017,6 +1223,7 @@ static const struct v4l2_subdev_internal_ops max96712_subdev_internal_ops = {
 
 static const struct of_device_id max96712_dt_ids[] = {
 	{ .compatible = "maxim,max96712" },
+	{ .compatible = "maxim,max96724" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, max96712_dt_ids);
