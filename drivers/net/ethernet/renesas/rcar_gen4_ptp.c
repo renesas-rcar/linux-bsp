@@ -200,3 +200,7 @@ struct rcar_gen4_ptp_private *rcar_gen4_ptp_alloc(struct platform_device *pdev)
 	return ptp;
 }
 EXPORT_SYMBOL_GPL(rcar_gen4_ptp_alloc);
+
+MODULE_AUTHOR("Yoshihiro Shimoda");
+MODULE_DESCRIPTION("Renesas R-Car Gen4 gPTP driver");
+MODULE_LICENSE("GPL");
