@@ -28,7 +28,7 @@
 #include "rcar_mipi_dsi_regs.h"
 
 #define RCAR_DSI_R8A779A0_REGS	BIT(0)
-#define RCAR_DSI_R8A779G0_REGS	BIT(1)
+#define RCAR_DSI_GEN4_REGS	BIT(1)
 
 /* Clock setting definition */
 #define DSI_CLOCK_SETTING(mi, ma, vco, di, cpb, gmp, intc, pro, divi) \
@@ -69,7 +69,7 @@ static const struct clockset_values clockset_setting_table_r8a779a0[] = {
 	{ /* sentinel */ },
 };
 
-static const struct clockset_values clockset_setting_table_r8a779g0[] = {
+static const struct clockset_values clockset_setting_table_gen4[] = {
 	{ DSI_CLOCK_SETTING(   40,   45, 0x2b, 0x05, 0x00, 0x00, 0x08, 0x0a, 64 ) },
 	{ DSI_CLOCK_SETTING(   45,   55, 0x28, 0x05, 0x00, 0x00, 0x08, 0x0a, 64 ) },
 	{ DSI_CLOCK_SETTING(   55,   62, 0x28, 0x05, 0x00, 0x00, 0x08, 0x0a, 64 ) },
@@ -99,7 +99,7 @@ struct rcar_mipi_dsi_hsfeq {
 	u16 value;
 };
 
-static const struct rcar_mipi_dsi_hsfeq hsfreqrange_table_r8a779g0_r8a779a0[] = {
+static const struct rcar_mipi_dsi_hsfeq hsfreqrange_table_v3u_gen4[] = {
 	{ .mbps =   80, .value = 0x00},
 	{ .mbps =   90, .value = 0x10},
 	{ .mbps =  100, .value = 0x20},
@@ -606,7 +606,7 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	for (timeout = 10; timeout > 0; --timeout) {
 		if ((rcar_mipi_dsi_read(mipi_dsi, PPICLSR) & PPICLSR_STPST) &&
 		    (rcar_mipi_dsi_read(mipi_dsi, PPIDLSR) & PPIDLSR_STPST) &&
-		    (rcar_mipi_dsi_read(mipi_dsi, CLOCKSET1) & CLOCKSET1_LOCK))
+		    (rcar_mipi_dsi_read(mipi_dsi, CLOCKSET1) & CLOCKSET1_LOCK_PHY))
 			break;
 
 		usleep_range(1000, 2000);
@@ -642,7 +642,7 @@ static int rcar_mipi_dsi_startup(struct rcar_mipi_dsi *mipi_dsi)
 	else
 		vclkset |= VCLKSET_DIV_3BIT(setup_info.clk_setting.div);
 
-	rcar_mipi_dsi_set(mipi_dsi, VCLKSET, vclkset);
+	rcar_mipi_dsi_write(mipi_dsi, VCLKSET, vclkset);
 
 	/* After setting VCLKSET register, enable VCLKEN */
 	rcar_mipi_dsi_set(mipi_dsi, VCLKEN, VCLKEN_CKEN);
@@ -1075,7 +1075,7 @@ static int rcar_mipi_dsi_remove(struct platform_device *pdev)
 static const struct rcar_mipi_dsi_info rcar_mipi_dsi_info_r8a779a0 = {
 	.init_phtw = rcar_mipi_dsi_init_phtw_v3u,
 	.post_init_phtw = rcar_mipi_dsi_post_init_phtw_v3u,
-	.hsfeqrange_values = hsfreqrange_table_r8a779g0_r8a779a0,
+	.hsfeqrange_values = hsfreqrange_table_v3u_gen4,
 	.clkset_values = clockset_setting_table_r8a779a0,
 	.features = RCAR_DSI_R8A779A0_REGS,
 	.m_offset = 2,
@@ -1083,12 +1083,12 @@ static const struct rcar_mipi_dsi_info rcar_mipi_dsi_info_r8a779a0 = {
 	.freq_mul = 1,
 };
 
-static const struct rcar_mipi_dsi_info rcar_mipi_dsi_info_r8a779g0 = {
+static const struct rcar_mipi_dsi_info rcar_mipi_dsi_info_gen4 = {
 	.init_phtw = rcar_mipi_dsi_init_phtw_v4h,
 	.post_init_phtw = rcar_mipi_dsi_post_init_phtw_v4h,
-	.hsfeqrange_values = hsfreqrange_table_r8a779g0_r8a779a0,
-	.clkset_values = clockset_setting_table_r8a779g0,
-	.features = RCAR_DSI_R8A779G0_REGS,
+	.hsfeqrange_values = hsfreqrange_table_v3u_gen4,
+	.clkset_values = clockset_setting_table_gen4,
+	.features = RCAR_DSI_GEN4_REGS,
 	.m_offset = 0,
 	.n_offset = 1,
 	.freq_mul = 2,
@@ -1101,7 +1101,11 @@ static const struct of_device_id rcar_mipi_dsi_of_table[] = {
 	},
 	{
 		.compatible = "renesas,r8a779g0-mipi-dsi",
-		.data = &rcar_mipi_dsi_info_r8a779g0,
+		.data = &rcar_mipi_dsi_info_gen4,
+	},
+	{
+		.compatible = "renesas,r8a779h0-mipi-dsi",
+		.data = &rcar_mipi_dsi_info_gen4,
 	},
 	{ /* sentinel */ },
 };
