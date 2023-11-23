@@ -163,6 +163,15 @@
 		clock-frequency = <0>;
 	};
 
+	/*
+	 * The clock from AUDIO_CLKIN pin are configured as 0 Hz fixed frequency
+	 */
+	audio_clkin: audio_clkin {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -705,9 +714,9 @@
 
 					reg = <1>;
 
-					vin00isp0: endpoint@0 {
+					vin00csi40: endpoint@0 {
 						reg = <0>;
-						remote-endpoint = <&isp0vin00>;
+						remote-endpoint = <&csi40vin00>;
 					};
 				};
 			};
@@ -737,9 +746,9 @@
 
 					reg = <1>;
 
-					vin01isp0: endpoint@0 {
+					vin01csi40: endpoint@0 {
 						reg = <0>;
-						remote-endpoint = <&isp0vin01>;
+						remote-endpoint = <&csi40vin01>;
 					};
 				};
 			};
@@ -769,9 +778,9 @@
 
 					reg = <1>;
 
-					vin02isp0: endpoint@0 {
+					vin02csi40: endpoint@0 {
 						reg = <0>;
-						remote-endpoint = <&isp0vin02>;
+						remote-endpoint = <&csi40vin02>;
 					};
 				};
 			};
@@ -801,9 +810,9 @@
 
 					reg = <1>;
 
-					vin03isp0: endpoint@0 {
+					vin03csi40: endpoint@0 {
 						reg = <0>;
-						remote-endpoint = <&isp0vin03>;
+						remote-endpoint = <&csi40vin03>;
 					};
 				};
 			};
@@ -817,27 +826,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 802>;
 			renesas,id = <4>;
+			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_04";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin04isp0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp0vin04>;
-					};
-				};
-			};
 		};
 
 		vin05: video@e6ef5000 {
@@ -848,27 +841,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 803>;
 			renesas,id = <5>;
+			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_05";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin05isp0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp0vin05>;
-					};
-				};
-			};
 		};
 
 		vin06: video@e6ef6000 {
@@ -879,27 +856,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 804>;
 			renesas,id = <6>;
+			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_06";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin06isp0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp0vin06>;
-					};
-				};
-			};
 		};
 
 		vin07: video@e6ef7000 {
@@ -910,27 +871,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 805>;
 			renesas,id = <7>;
+			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_07";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin07isp0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp0vin07>;
-					};
-				};
-			};
 		};
 
 		vin08: video@e6ef8000 {
@@ -941,6 +886,7 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 806>;
 			renesas,id = <8>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_08";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
@@ -956,9 +902,9 @@
 
 					reg = <1>;
 
-					vin08isp1: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp1vin08>;
+					vin08csi41: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&csi41vin08>;
 					};
 				};
 			};
@@ -972,6 +918,7 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 807>;
 			renesas,id = <9>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_09";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
@@ -987,9 +934,9 @@
 
 					reg = <1>;
 
-					vin09isp1: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&isp1vin09>;
+					vin09csi41: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&csi41vin09>;
 					};
 				};
 			};
@@ -1019,9 +966,9 @@
 
 					reg = <1>;
 
-					vin10isp1: endpoint@1 {
+					vin10csi41: endpoint@1 {
 						reg = <1>;
-						remote-endpoint = <&isp1vin10>;
+						remote-endpoint = <&csi41vin10>;
 					};
 				};
 			};
@@ -1051,9 +998,9 @@
 
 					reg = <1>;
 
-					vin11isp1: endpoint@1 {
+					vin11csi41: endpoint@1 {
 						reg = <1>;
-						remote-endpoint = <&isp1vin11>;
+						remote-endpoint = <&csi41vin11>;
 					};
 				};
 			};
@@ -1067,27 +1014,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 810>;
 			renesas,id = <12>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_12";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin12isp1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&isp1vin12>;
-					};
-				};
-			};
 		};
 
 		vin13: video@e6efd000 {
@@ -1098,27 +1029,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 811>;
 			renesas,id = <13>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_13";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin13isp1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&isp1vin13>;
-					};
-				};
-			};
 		};
 
 		vin14: video@e6efe000 {
@@ -1129,27 +1044,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 812>;
 			renesas,id = <14>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_14";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin14isp1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&isp1vin14>;
-					};
-				};
-			};
 		};
 
 		vin15: video@e6eff000 {
@@ -1160,27 +1059,11 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 813>;
 			renesas,id = <15>;
+			renesas,isp = <&isp1>;
 			linux,uio-name = "vin_15";
 			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin15isp1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&isp1vin15>;
-					};
-				};
-			};
 		};
 
 		dmac1: dma-controller@e7350000 {
@@ -1239,6 +1122,75 @@
 			resets = <&cpg 710>;
 			#dma-cells = <1>;
 			dma-channels = <8>;
+		};
+
+		rcar_sound: sound@ec400000 {
+			/*
+			 * Single DAI : #sound-dai-cells = <0>;	<&rcar_sound>;
+			 * Multi  DAI : #sound-dai-cells = <1>;	<&rcar_sound N>;
+			 */
+			/*
+			 * #clock-cells is required
+			 *
+			 * clkout	: #clock-cells = <0>;	<&rcar_sound>;
+			 * audio_clkout0/1/2/3	: #clock-cells = <1>;	<&rcar_sound N>;
+			 */
+			compatible =  "renesas,rcar_sound-r8a779g0", "renesas,rcar_sound-gen4";
+			reg =	<0 0xec400000 0 0x40000>, /* SSI_SDMC */
+				<0 0xec540000 0 0x1000>, /* SSIU */
+				<0 0xec541000 0 0x050>,  /* SSI */
+				<0 0xec5a0000 0 0x020>;  /* ADG */
+			reg-names = "ssi_sdmc", "ssiu", "ssi", "adg" ;
+
+			clocks = <&cpg CPG_MOD 2926>, <&cpg CPG_MOD 2927>,
+				 <&audio_clkin>;
+			clock-names = "ssiu.0", "ssi.0",
+						"clk_a";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 2926>, <&cpg 2927>;
+			reset-names = "ssiu.0", "ssi.0";
+			status = "disabled";
+
+			rcar_sound,ssiu {
+				ssiu00: ssiu-0 {
+					dmas = <&dmac1 0x6e>, <&dmac1 0x6f>;
+					dma-names = "tx", "rx";
+				};
+				ssiu01: ssiu-1 {
+					dmas = <&dmac1 0x6c>, <&dmac1 0x6d>;
+					dma-names = "tx", "rx";
+				};
+				ssiu02: ssiu-2 {
+					dmas = <&dmac1 0x6a>, <&dmac1 0x6b>;
+					dma-names = "tx", "rx";
+				};
+				ssiu03: ssiu-3 {
+					dmas = <&dmac1 0x68>, <&dmac1 0x69>;
+					dma-names = "tx", "rx";
+				};
+				ssiu04: ssiu-4 {
+					dmas = <&dmac1 0x66>, <&dmac1 0x67>;
+					dma-names = "tx", "rx";
+				};
+				ssiu05: ssiu-5 {
+					dmas = <&dmac1 0x64>, <&dmac1 0x65>;
+					dma-names = "tx", "rx";
+				};
+				ssiu06: ssiu-6 {
+					dmas = <&dmac1 0x62>, <&dmac1 0x63>;
+					dma-names = "tx", "rx";
+				};
+				ssiu07: ssiu-7 {
+					dmas = <&dmac1 0x60>, <&dmac1 0x61>;
+					dma-names = "tx", "rx";
+				};
+			};
+
+			rcar_sound,ssi {
+				ssi0: ssi-0 {
+					interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>;
+				};
+			};
 		};
 
 		mmc0: mmc@ee140000 {
@@ -1400,9 +1352,26 @@
 				};
 
 				port@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
 					reg = <1>;
-					csi40isp0: endpoint {
-						remote-endpoint = <&isp0csi40>;
+
+					csi40vin00: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&vin00csi40>;
+					};
+					csi40vin01: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&vin01csi40>;
+					};
+					csi40vin02: endpoint@2 {
+						reg = <2>;
+						remote-endpoint = <&vin02csi40>;
+					};
+					csi40vin03: endpoint@3 {
+						reg = <3>;
+						remote-endpoint = <&vin03csi40>;
 					};
 				};
 			};
@@ -1427,9 +1396,68 @@
 				};
 
 				port@1 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
 					reg = <1>;
-					csi41isp1: endpoint {
-						remote-endpoint = <&isp1csi41>;
+
+					csi41vin08: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&vin08csi41>;
+					};
+					csi41vin09: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&vin09csi41>;
+					};
+					csi41vin10: endpoint@2 {
+						reg = <2>;
+						remote-endpoint = <&vin10csi41>;
+					};
+					csi41vin11: endpoint@3 {
+						reg = <3>;
+						remote-endpoint = <&vin11csi41>;
+					};
+				};
+			};
+		};
+
+		fcpvd0: fcp@fea10000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xfea10000 0 0x200>;
+			clocks = <&cpg CPG_MOD 508>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
+			resets = <&cpg 508>;
+		};
+
+		vspd0: vsp@fea20000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xfea20000 0 0x8000>;
+			interrupts = <GIC_SPI 546 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 830>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
+			resets = <&cpg 830>;
+			renesas,fcp = <&fcpvd0>;
+		};
+
+		du: display@feb00000 {
+			compatible = "renesas,du-r8a779h0";
+			reg = <0 0xfeb00000 0 0x40000>;
+			interrupts = <GIC_SPI 523 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 411>;
+			clock-names = "du.0";
+			power-domains = <&sysc R8A779H0_PD_C4>;
+			resets = <&cpg 411>;
+			vsps = <&vspd0 0>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					du_out_dsi0: endpoint {
+						remote-endpoint = <&dsi0_in>;
 					};
 				};
 			};
@@ -1444,79 +1472,6 @@
 			resets = <&cpg 612>;
 			renesas,id = <0>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@0 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <0>;
-
-					isp0csi40: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi40isp0>;
-					};
-				};
-
-				port@1 {
-					reg = <1>;
-					isp0vin00: endpoint {
-						remote-endpoint = <&vin00isp0>;
-					};
-				};
-
-				port@2 {
-					reg = <2>;
-					isp0vin01: endpoint {
-						remote-endpoint = <&vin01isp0>;
-					};
-				};
-
-				port@3 {
-					reg = <3>;
-					isp0vin02: endpoint {
-						remote-endpoint = <&vin02isp0>;
-					};
-				};
-
-				port@4 {
-					reg = <4>;
-					isp0vin03: endpoint {
-						remote-endpoint = <&vin03isp0>;
-					};
-				};
-
-				port@5 {
-					reg = <5>;
-					isp0vin04: endpoint {
-						remote-endpoint = <&vin04isp0>;
-					};
-				};
-
-				port@6 {
-					reg = <6>;
-					isp0vin05: endpoint {
-						remote-endpoint = <&vin05isp0>;
-					};
-				};
-
-				port@7 {
-					reg = <7>;
-					isp0vin06: endpoint {
-						remote-endpoint = <&vin06isp0>;
-					};
-				};
-
-				port@8 {
-					reg = <8>;
-					isp0vin07: endpoint {
-						remote-endpoint = <&vin07isp0>;
-					};
-				};
-			};
 		};
 
 		isp1: isp@fed20000 {
@@ -1528,79 +1483,6 @@
 			resets = <&cpg 613>;
 			renesas,id = <1>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@0 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <0>;
-
-					isp1csi41: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&csi41isp1>;
-					};
-				};
-
-				port@1 {
-					reg = <1>;
-					isp1vin08: endpoint {
-						remote-endpoint = <&vin08isp1>;
-					};
-				};
-
-				port@2 {
-					reg = <2>;
-					isp1vin09: endpoint {
-						remote-endpoint = <&vin09isp1>;
-					};
-				};
-
-				port@3 {
-					reg = <3>;
-					isp1vin10: endpoint {
-						remote-endpoint = <&vin10isp1>;
-					};
-				};
-
-				port@4 {
-					reg = <4>;
-					isp1vin11: endpoint {
-						remote-endpoint = <&vin11isp1>;
-					};
-				};
-
-				port@5 {
-					reg = <5>;
-					isp1vin12: endpoint {
-						remote-endpoint = <&vin12isp1>;
-					};
-				};
-
-				port@6 {
-					reg = <6>;
-					isp1vin13: endpoint {
-						remote-endpoint = <&vin13isp1>;
-					};
-				};
-
-				port@7 {
-					reg = <7>;
-					isp1vin14: endpoint {
-						remote-endpoint = <&vin14isp1>;
-					};
-				};
-
-				port@8 {
-					reg = <8>;
-					isp1vin15: endpoint {
-						remote-endpoint = <&vin15isp1>;
-					};
-				};
-			};
 		};
 
 		rt_dmac0: dma-controller@ffd60000 {
@@ -1671,11 +1553,47 @@
 			dma-channels = <16>;
 		};
 
+		dsi0: dsi-encoder@fed80000 {
+			compatible = "renesas,r8a779h0-mipi-dsi";
+			reg = <0 0xfed80000 0 0x10000>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
+			clocks = <&cpg CPG_MOD 415>,
+				 <&cpg CPG_CORE R8A779H0_CLK_DSIEXT>;
+			clock-names = "mod", "dsi";
+			resets = <&cpg 415>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dsi0_in: endpoint {
+						remote-endpoint = <&du_out_dsi0>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					dsi0_out: endpoint {
+					};
+				};
+			};
+		};
+
 		prr: chipid@fff00044 {
 			compatible = "renesas,prr";
 			reg = <0 0xfff00044 0 4>;
 		};
 	};
+
+	ref_clk: refclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* This value must be overridden by the board */
+		clock-frequency = <0>;
+        };
 
 	thermal-zones {
 		sensor_thermal_cr52: sensor1-thermal {
