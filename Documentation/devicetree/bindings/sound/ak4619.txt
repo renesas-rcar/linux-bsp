@@ -1,0 +1,24 @@
+AK4619 I2C transmitter
+
+This device supports I2C mode only.
+
+Required properties:
+
+- compatible : "asahi-kasei,ak4619"
+- reg : The I2C address of the device.
+
+Optional properties:
+
+- pdn-gpios: A GPIO specifier for the PDN pin.
+- mode-gpios: A GPIO specifier for playback/capture data path pin switch.
+
+Example:
+
+&i2c {
+       ak4619: ak4619@10 {
+               compatible = "asahi-kasei,ak4619";
+               reg = <0x10>;
+               mode-gpios = <&gpio0 1 GPIO_ACTIVE_HIGH>;
+               pdn-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+       };
+};
