@@ -32,3 +32,7 @@
 &rt_dmac1 {
 	status = "disabled";
 };
+
+&dsi0 {
+	status = "disabled";
+};
