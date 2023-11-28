@@ -36,3 +36,21 @@
 &dsi0 {
 	status = "disabled";
 };
+
+&i2c1 {
+	sn65dsi86_0@2c {
+		status = "disabled";
+	};
+
+	gmsl0: gmsl-deserializer@4e {
+		status = "disabled";
+	};
+
+	gmsl1: gmsl-deserializer@4f {
+		status = "disabled";
+	};
+};
+
+&du {
+	status = "disabled";
+};
