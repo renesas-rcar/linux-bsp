@@ -89,6 +89,26 @@
 	status = "okay";
 };
 
+&tmu0 {
+	status = "okay";
+};
+
+&tmu1 {
+	status = "okay";
+};
+
+&tmu2 {
+	status = "okay";
+};
+
+&tmu3 {
+	status = "okay";
+};
+
+&tmu4 {
+	 status = "okay";
+};
+
 &extal_clk {
 	clock-frequency = <16666666>;
 };
