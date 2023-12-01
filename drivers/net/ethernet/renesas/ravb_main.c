@@ -1303,7 +1303,7 @@ static int ravb_get_ts_info(struct net_device *ndev,
 
 	if (priv->use_ptp)
 		info->phc_index = ptp_clock_index(priv->ptp_priv->clock);
-	else if (soc_device_match(r8a779g0) && !priv->use_ptp) {
+	else if ((soc_device_match(r8a779g0) || soc_device_match(r8a779h0)) && !priv->use_ptp) {
 		pr_info("%s gPTP module isn't used \n", __func__);
 		return -ENODEV;
 	}
