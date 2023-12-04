@@ -62,6 +62,14 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		status = vsp1_read(vsp1, VI6_WPF_IRQ_STA(i));
 		vsp1_write(vsp1, VI6_WPF_IRQ_STA(i), ~status & mask);
 
+		if ((status & VI6_WPF_IRQ_STA_UND) && wpf->entity.pipe) {
+			wpf->entity.pipe->underrun_count++;
+
+			dev_warn_ratelimited(vsp1->dev,
+				"Underrun occurred at WPF%u (total underruns %u)\n",
+				i, wpf->entity.pipe->underrun_count);
+		}
+
 		if (vsp1->info->lif_count == 2 && (i == 0 || i == 1))
 			disp_access = true;
 		else if (vsp1->info->lif_count == 1 && i == 0)
