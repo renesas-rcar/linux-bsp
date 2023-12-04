@@ -159,6 +159,8 @@ struct vsp1_pipeline {
 	bool completed;
 	unsigned int dst_cnt;
 	wait_queue_head_t dst_wait;
+	
+	u32 underrun_count;
 };
 
 void vsp1_pipeline_reset(struct vsp1_pipeline *pipe);
