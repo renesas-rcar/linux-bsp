@@ -1132,6 +1132,13 @@
 			linux,uio-name = "vdsp00_07";
 		};
 
+		impvdsp00_08 {
+			compatible = "generic-uio";
+			resets = <&cpg 2801>;
+			reset-names = "vdsp0_bus";
+			linux,uio-name = "vdsp00_08";
+		};
+
 		impvdsp01_00: vdsp@f1600000 {
 			compatible = "generic-uio";
 			reg = <0 0xf1600000 0 0x1a0000>;
@@ -1244,6 +1251,13 @@
 			resets = <&cpg 2905>;
 			reset-names = "vdsp1_syspo";
 			linux,uio-name = "vdsp01_07";
+		};
+
+		impvdsp01_08 {
+			compatible = "generic-uio";
+			resets = <&cpg 2802>;
+			reset-names = "vdsp1_bus";
+			linux,uio-name = "vdsp01_08";
 		};
 
 		dof_sts_00 {
