@@ -720,7 +720,7 @@
 			reg = <0 0xff900000 0 0x6000>;
 			interrupts = <GIC_SPI 565 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
-			power-domains = <&sysc R8A779H0_PD_A2IMP01>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			resets = <&cpg 118>;
@@ -741,7 +741,7 @@
 			reg = <0 0xff900000 0 0x6000>;
 			interrupts = <GIC_SPI 566 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
-			power-domains = <&sysc R8A779H0_PD_A2IMP01>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			linux,uio-name = "irq_imp_top_00_01";
@@ -760,7 +760,7 @@
 			reg = <0 0xff900000 0 0x6000>;
 			interrupts = <GIC_SPI 567 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
-			power-domains = <&sysc R8A779H0_PD_A2IMP01>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			linux,uio-name = "irq_imp_top_00_02";
@@ -905,7 +905,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xffa88000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 116>;
-			power-domains = <&sysc R8A779H0_PD_A2IMP01>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 116>;
 			linux,uio-name = "imp_dta_00";
 			ipmmu-id = <RCAR_IPMMU_IR 16>;
@@ -955,7 +955,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xffa8c000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 120>;
-			power-domains = <&sysc R8A779H0_PD_A2CN0>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 120>;
 			linux,uio-name = "imp_reg_spmi_00";
 			ipmmu-id = <RCAR_IPMMU_IR 24>;
@@ -983,7 +983,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xed200000 0 0x100000>;
 			clocks = <&cpg CPG_MOD 120>;
-			power-domains = <&sysc R8A779H0_PD_A2CN0>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			linux,uio-name = "imp_spmi_00";
 			ipmmu-id = <RCAR_IPMMU_IR 24>;
 			iommus = <&ipmmu_ir 24>, <&ipmmu_ir 25>,
