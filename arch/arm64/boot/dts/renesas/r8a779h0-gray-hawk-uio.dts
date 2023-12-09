@@ -54,3 +54,79 @@
 &du {
 	status = "disabled";
 };
+
+&ipmmu_rt0 {
+	status = "disabled";
+};
+
+&ipmmu_rt1 {
+	status = "disabled";
+};
+
+&ipmmu_ds0 {
+	status = "disabled";
+};
+
+&ipmmu_hc {
+	status = "disabled";
+};
+
+&ipmmu_ir {
+	status = "disabled";
+};
+
+&ipmmu_vc {
+	status = "disabled";
+};
+
+&ipmmu_3dg {
+	status = "disabled";
+};
+
+&ipmmu_vi0 {
+	status = "disabled";
+};
+
+&ipmmu_vi1 {
+	status = "disabled";
+};
+
+&ipmmu_vip0 {
+	status = "disabled";
+};
+
+&ipmmu_mm {
+	status = "disabled";
+};
+
+&vin00 {
+	status = "disabled";
+};
+
+&vin01 {
+	status = "disabled";
+};
+
+&vin02 {
+	status = "disabled";
+};
+
+&vin03 {
+	status = "disabled";
+};
+
+&vin08 {
+	status = "disabled";
+};
+
+&vin09 {
+	status = "disabled";
+};
+
+&vin10 {
+	status = "disabled";
+};
+
+&vin11 {
+	status = "disabled";
+};
