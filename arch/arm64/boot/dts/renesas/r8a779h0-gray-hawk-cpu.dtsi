@@ -126,12 +126,31 @@
 	status = "okay";
 };
 
+&gpio4 {
+	pcie0-clkreq-hog {
+		gpio-hog;
+		gpios = <21 GPIO_ACTIVE_LOW>;
+		output-high;
+	};
+};
+
 &i2c0 {
 	pinctrl-0 = <&i2c0_pins>;
 	pinctrl-names = "default";
 
 	status = "okay";
 	clock-frequency = <400000>;
+
+	io_expander_a: gpio@20 {
+		compatible = "onnn,pca9654";
+		reg = <0x20>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+	};
 
 	eeprom@50 {
 		compatible = "rohm,br24g01", "atmel,24c01";
@@ -172,6 +191,15 @@
 	non-removable;
 	full-pwr-cycle-in-suspend;
 	status = "okay";
+};
+
+&pciec0 {
+	reset-gpio = <&io_expander_a 0 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&pciec0_ep {
+	status = "disabled";
 };
 
 &pfc {
