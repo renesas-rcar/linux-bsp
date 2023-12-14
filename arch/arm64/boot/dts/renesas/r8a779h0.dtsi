@@ -14,6 +14,13 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	aliases {
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		};
+
 	can_clk: can {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -187,6 +194,16 @@
 			      <0 0xe6061000 0 0x16c>, <0 0xe6061800 0 0x16c>;
 		};
 
+		rwdt: watchdog@e6020000 {
+                        compatible = "renesas,r8a779h0-wdt",
+                                     "renesas,rcar-gen4-wdt";
+                        reg = <0 0xe6020000 0 0x0c>;
+                        clocks = <&cpg CPG_MOD 907>;
+                        power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+                        resets = <&cpg 907>;
+                        status = "disabled";
+                };
+
 		gpio0: gpio@e6050180 {
 			compatible = "renesas,gpio-r8a779h0",
 				     "renesas,rcar-gen4-gpio";
@@ -307,6 +324,76 @@
 			resets = <&cpg 917>;
 		};
 
+		cmt0: timer@e60f0000 {
+			compatible = "renesas,r8a779h0-cmt0",
+				     "renesas,rcar-gen4-cmt0";
+			reg = <0 0xe60f0000 0 0x1004>;
+			interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 910>;
+			clock-names = "fck";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 910>;
+			status = "disabled";
+		};
+
+		cmt1: timer@e6130000 {
+			compatible = "renesas,r8a779h0-cmt1",
+				     "renesas,rcar-gen4-cmt1";
+			reg = <0 0xe6130000 0 0x1004>;
+			interrupts = <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 263 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 264 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 267 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 268 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 269 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 911>;
+			clock-names = "fck";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 911>;
+			status = "disabled";
+		};
+
+		cmt2: timer@e6140000 {
+			compatible = "renesas,r8a779h0-cmt1",
+				     "renesas,rcar-gen4-cmt1";
+			reg = <0 0xe6140000 0 0x1004>;
+			interrupts = <GIC_SPI 270 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 271 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 272 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 273 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 274 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 275 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 276 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 277 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 912>;
+			clock-names = "fck";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 912>;
+			status = "disabled";
+		};
+
+		cmt3: timer@e6148000 {
+			compatible = "renesas,r8a779h0-cmt1",
+				     "renesas,rcar-gen4-cmt1";
+			reg = <0 0xe6148000 0 0x1004>;
+			interrupts = <GIC_SPI 278 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 280 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 281 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 282 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 283 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 284 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 285 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 913>;
+			clock-names = "fck";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 913>;
+			status = "disabled";
+		};
+
 		cpg: clock-controller@e6150000 {
 			compatible = "renesas,r8a779h0-cpg-mssr";
 			reg = <0 0xe6150000 0 0x4000>;
@@ -339,6 +426,71 @@
 			#thermal-sensor-cells = <1>;
 		};
 
+		tmu0: timer@e61e0000 {
+			compatible = "renesas,tmu-r8a779h0", "renesas,tmu";
+			reg = <0 0xe61e0000 0 0x30>;
+			interrupts = <GIC_SPI 289 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 290 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 291 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 713>;
+			clock-names = "fck";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 713>;
+			status = "disabled";
+		};
+
+		tmu1: timer@e6fc0000 {
+			compatible = "renesas,tmu-r8a779h0", "renesas,tmu";
+			reg = <0 0xe6fc0000 0 0x30>;
+			interrupts = <GIC_SPI 292 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 293 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 294 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 714>;
+			clock-names = "fck";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 714>;
+			status = "disabled";
+		};
+
+		tmu2: timer@e6fd0000 {
+			compatible = "renesas,tmu-r8a779h0", "renesas,tmu";
+			reg = <0 0xe6fd0000 0 0x30>;
+			interrupts = <GIC_SPI 296 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 297 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 298 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 715>;
+			clock-names = "fck";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 715>;
+			status = "disabled";
+		};
+
+		tmu3: timer@e6fe0000 {
+			compatible = "renesas,tmu-r8a779h0", "renesas,tmu";
+			reg = <0 0xe6fe0000 0 0x30>;
+			interrupts = <GIC_SPI 300 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 301 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 302 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 716>;
+			clock-names = "fck";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 716>;
+			status = "disabled";
+		};
+
+		tmu4: timer@ffc00000 {
+			compatible = "renesas,tmu-r8a779h0", "renesas,tmu";
+			reg = <0 0xffc00000 0 0x30>;
+			interrupts = <GIC_SPI 304 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 305 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 306 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 717>;
+			clock-names = "fck";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 717>;
+			status = "disabled";
+		};
+
 		i2c0: i2c@e6500000 {
 			compatible = "renesas,i2c-r8a779h0",
 				     "renesas,rcar-gen4-i2c";
@@ -347,6 +499,9 @@
 			clocks = <&cpg CPG_MOD 518>;
 			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
 			resets = <&cpg 518>;
+			dmas = <&dmac1 0x91>, <&dmac1 0x90>,
+			       <&dmac2 0x91>, <&dmac2 0x90>;
+			dma-names = "tx", "rx", "tx", "rx";
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -361,6 +516,10 @@
 			clocks = <&cpg CPG_MOD 519>;
 			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
 			resets = <&cpg 519>;
+			dmas = <&dmac1 0x93>, <&dmac1 0x92>,
+			       <&dmac2 0x93>, <&dmac2 0x92>;
+			dma-names = "tx", "rx", "tx", "rx";
+
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -375,6 +534,10 @@
 			clocks = <&cpg CPG_MOD 520>;
 			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
 			resets = <&cpg 520>;
+			dmas = <&dmac1 0x95>, <&dmac1 0x94>,
+			       <&dmac2 0x95>, <&dmac2 0x94>;
+			dma-names = "tx", "rx", "tx", "rx";
+
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -389,6 +552,10 @@
 			clocks = <&cpg CPG_MOD 521>;
 			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
 			resets = <&cpg 521>;
+			dmas = <&dmac1 0x97>, <&dmac1 0x96>,
+			       <&dmac2 0x97>, <&dmac2 0x96>;
+			dma-names = "tx", "rx", "tx", "rx";
+
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -487,6 +654,11 @@
 			channel3 {
 				status = "disabled";
 			};
+		};
+
+		qos@e67e0000 {
+			compatible = "renesas,qos";
+			reg = <0 0xe67e0000 0 0x10090>;
 		};
 
 		avb0: ethernet@e6800000 {
@@ -630,6 +802,118 @@
 			status = "disabled";
 		};
 
+		pciec0: pcie@e65d0000 {
+			compatible = "renesas,r8a779h0-pcie",
+				     "renesas,rcar-gen4-pcie";
+			reg = <0 0xe65d0000 0 0x3000>, <0 0xe65d3000 0 0x2000>,
+			      <0 0xe65d5000 0 0x1200>, <0 0xe65d6200 0 0x0e00>,
+			      <0 0xe65d7000 0 0x1000>, <0 0xfe000000 0 0x400000>;
+			reg-names = "dbi", "atu", "dma", "app", "phy", "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+			ranges = <0x82000000 0 0x30000000 0 0x30000000 0 0x10000000>;
+			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+			interrupts = <GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 450 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 451 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 452 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 453 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 454 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 455 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "others", "dma", "correctable",
+					  "fatal", "nonfatal", "lp", "vndmsg";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH
+				         0 0 0 2 &gic GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH
+				         0 0 0 3 &gic GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH
+				         0 0 0 4 &gic GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 624>;
+			power-domains = <&sysc R8A779H0_PD_A2PCIPHY>;
+			resets = <&cpg 624>;
+			num-lanes = <2>;
+			snps,enable-cdm-check;
+			max-link-speed = <4>;
+			status = "disabled";
+		};
+
+		pciec0_ep: pcie-ep@e65d0000 {
+			compatible = "renesas,r8a779h0-pcie-ep",
+				     "renesas,rcar-gen4-pcie-ep";
+			reg = <0 0xe65d0000 0 0x3000>, <0 0xe65d3000 0 0x2000>,
+			      <0 0xe65d5000 0 0x1200>, <0 0xe65d6200 0 0x0e00>,
+			      <0 0xe65d7000 0 0x1000>, <0 0x30000000 0 0x10000000>;
+			reg-names = "dbi", "atu", "dma", "appl", "phy", "addr_space";
+			interrupts = <GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 450 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 451 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 452 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 453 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 454 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 455 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "others", "dma", "correctable",
+					  "fatal", "nonfatal", "lp", "vndmsg";
+			clocks = <&cpg CPG_MOD 624>;
+			power-domains = <&sysc R8A779H0_PD_A2PCIPHY>;
+			resets = <&cpg 624>;
+			num-lanes = <2>;
+			resize-bar = <0>;
+			max-link-speed = <4>;
+			status = "disabled";
+		};
+
+                pwm0: pwm@e6e30000 {
+                        compatible = "renesas,pwm-r8a779h0", "renesas,pwm-rcar";
+                        reg = <0 0xe6e30000 0 0x10>;
+                        #pwm-cells = <2>;
+                        clocks = <&cpg CPG_MOD 628>;
+                        power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+                        resets = <&cpg 628>;
+                        status = "disabled";
+                };
+
+                pwm1: pwm@e6e31000 {
+                        compatible = "renesas,pwm-r8a779h0", "renesas,pwm-rcar";
+                        reg = <0 0xe6e31000 0 0x10>;
+                        #pwm-cells = <2>;
+                        clocks = <&cpg CPG_MOD 628>;
+                        power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+                        resets = <&cpg 628>;
+                        status = "disabled";
+                };
+
+                pwm2: pwm@e6e32000 {
+                        compatible = "renesas,pwm-r8a779h0", "renesas,pwm-rcar";
+                        reg = <0 0xe6e32000 0 0x10>;
+                        #pwm-cells = <2>;
+                        clocks = <&cpg CPG_MOD 628>;
+                        power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+                        resets = <&cpg 628>;
+                        status = "disabled";
+                };
+
+                pwm3: pwm@e6e33000 {
+                        compatible = "renesas,pwm-r8a779h0", "renesas,pwm-rcar";
+                        reg = <0 0xe6e33000 0 0x10>;
+                        #pwm-cells = <2>;
+                        clocks = <&cpg CPG_MOD 628>;
+                        power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+                        resets = <&cpg 628>;
+                        status = "disabled";
+                };
+
+                pwm4: pwm@e6e34000 {
+                        compatible = "renesas,pwm-r8a779h0", "renesas,pwm-rcar";
+                        reg = <0 0xe6e34000 0 0x10>;
+                        #pwm-cells = <2>;
+                        clocks = <&cpg CPG_MOD 628>;
+                        power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+                        resets = <&cpg 628>;
+                        status = "disabled";
+                };
+
 		scif0: serial@e6e60000 {
 			compatible = "renesas,scif-r8a779h0",
 				     "renesas,rcar-gen4-scif", "renesas,scif";
@@ -687,6 +971,131 @@
 			/* dmas and dma-names placeholder */
 			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
 			resets = <&cpg 705>;
+			status = "disabled";
+		};
+
+                tpu: pwm@e6e80000 {
+                        compatible = "renesas,tpu-r8a779h0", "renesas,tpu";
+                        reg = <0 0xe6e80000 0 0x148>;
+                        interrupts = <GIC_SPI 308 IRQ_TYPE_LEVEL_HIGH>;
+                        clocks = <&cpg CPG_MOD 718>;
+                        power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+                        resets = <&cpg 718>;
+                        #pwm-cells = <3>;
+                        status = "disabled";
+                };
+
+		msiof0: spi@e6e90000 {
+			compatible = "renesas,msiof-r8a779h0",
+				     "renesas,rcar-gen4-msiof";
+			reg = <0 0xe6e90000 0 0x0064>;
+			interrupts = <GIC_SPI 239 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 618>, <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac1 0x41>, <&dmac1 0x40>,
+			       <&dmac2 0x41>, <&dmac2 0x40>;
+			dma-names = "tx", "rx", "tx", "rx";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 618>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof1: spi@e6ea0000 {
+			compatible = "renesas,msiof-r8a779h0",
+				     "renesas,rcar-gen4-msiof";
+			reg = <0 0xe6ea0000 0 0x0064>;
+			interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 619>, <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac1 0x43>, <&dmac1 0x42>,
+			       <&dmac2 0x43>, <&dmac2 0x42>;
+			dma-names = "tx", "rx", "tx", "rx";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 619>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof2: spi@e6c00000 {
+			compatible = "renesas,msiof-r8a779h0",
+				     "renesas,rcar-gen4-msiof";
+			reg = <0 0xe6c00000 0 0x0064>;
+			interrupts = <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 620>, <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac1 0x45>, <&dmac1 0x44>,
+			       <&dmac2 0x45>, <&dmac2 0x44>;
+			dma-names = "tx", "rx", "tx", "rx";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 620>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof3: spi@e6c10000 {
+			compatible = "renesas,msiof-r8a779h0",
+				     "renesas,rcar-gen4-msiof";
+			reg = <0 0xe6c10000 0 0x0064>;
+			interrupts = <GIC_SPI 242 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 621>, <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac1 0x47>, <&dmac1 0x46>,
+			       <&dmac2 0x47>, <&dmac2 0x46>;
+			dma-names = "tx", "rx", "tx", "rx";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 621>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof4: spi@e6c20000 {
+			compatible = "renesas,msiof-r8a779h0",
+				     "renesas,rcar-gen4-msiof";
+			reg = <0 0xe6c20000 0 0x0064>;
+			interrupts = <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 622>, <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac1 0x49>, <&dmac1 0x48>,
+			       <&dmac2 0x49>, <&dmac2 0x48>;
+			dma-names = "tx", "rx", "tx", "rx";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 622>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof5: spi@e6c28000 {
+			compatible = "renesas,msiof-r8a779h0",
+				     "renesas,rcar-gen4-msiof";
+			reg = <0 0xe6c28000 0 0x0064>;
+			interrupts = <GIC_SPI 244 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 623>, <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			clock-names = "msiof_clk", "mso";
+			assigned-clocks = <&cpg CPG_CORE R8A779H0_CLK_MSO>;
+			assigned-clock-rates = <20000000>;
+			dmas = <&dmac1 0x4B>, <&dmac1 0x4A>,
+			       <&dmac2 0x4B>, <&dmac2 0x4A>;
+			dma-names = "tx", "rx", "tx", "rx";
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 623>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "disabled";
 		};
 
@@ -1135,7 +1544,7 @@
 			 * clkout	: #clock-cells = <0>;	<&rcar_sound>;
 			 * audio_clkout0/1/2/3	: #clock-cells = <1>;	<&rcar_sound N>;
 			 */
-			compatible =  "renesas,rcar_sound-r8a779g0", "renesas,rcar_sound-gen4";
+			compatible =  "renesas,rcar_sound-r8a779h0", "renesas,rcar_sound-gen4";
 			reg =	<0 0xec400000 0 0x40000>, /* SSI_SDMC */
 				<0 0xec540000 0 0x1000>, /* SSIU */
 				<0 0xec541000 0 0x050>,  /* SSI */

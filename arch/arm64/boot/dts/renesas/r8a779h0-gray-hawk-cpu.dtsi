@@ -73,6 +73,42 @@
 	};
 };
 
+&cmt0 {
+	status = "okay";
+};
+
+&cmt1 {
+	status = "okay";
+};
+
+&cmt2 {
+	status = "okay";
+};
+
+&cmt3 {
+	status = "okay";
+};
+
+&tmu0 {
+	status = "okay";
+};
+
+&tmu1 {
+	status = "okay";
+};
+
+&tmu2 {
+	status = "okay";
+};
+
+&tmu3 {
+	status = "okay";
+};
+
+&tmu4 {
+	 status = "okay";
+};
+
 &extal_clk {
 	clock-frequency = <16666666>;
 };
@@ -90,12 +126,31 @@
 	status = "okay";
 };
 
+&gpio4 {
+	pcie0-clkreq-hog {
+		gpio-hog;
+		gpios = <21 GPIO_ACTIVE_LOW>;
+		output-high;
+	};
+};
+
 &i2c0 {
 	pinctrl-0 = <&i2c0_pins>;
 	pinctrl-names = "default";
 
 	status = "okay";
 	clock-frequency = <400000>;
+
+	io_expander_a: gpio@20 {
+		compatible = "onnn,pca9654";
+		reg = <0x20>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+	};
 
 	eeprom@50 {
 		compatible = "rohm,br24g01", "atmel,24c01";
@@ -136,6 +191,15 @@
 	non-removable;
 	full-pwr-cycle-in-suspend;
 	status = "okay";
+};
+
+&pciec0 {
+	reset-gpio = <&io_expander_a 0 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+&pciec0_ep {
+	status = "disabled";
 };
 
 &pfc {
@@ -196,6 +260,11 @@
 		power-source = <1800>;
 	};
 
+	qspi0_pins: qspi0 {
+		groups = "qspi0_ctrl", "qspi0_data4";
+		function = "qspi0";
+	};
+
 	scif_clk_pins: scif_clk {
 		groups = "scif_clk";
 		function = "scif_clk";
@@ -209,6 +278,32 @@
 	sound_clk_pins: sound_clk {
 		groups = "audio_clkin", "audio_clkout";
 		function = "audio_clk";
+	};
+};
+
+&rpc {
+	pinctrl-0 = <&qspi0_pins>;
+	pinctrl-names = "default";
+
+	flash@0 {
+		compatible = "spansion,s25fs512s", "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <40000000>;
+		spi-rx-bus-width = <4>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			boot@0 {
+				reg = <0x0 0x1200000>;
+				read-only;
+			};
+			user@1200000 {
+				reg = <0x1200000 0x2e00000>;
+			};
+		};
 	};
 };
 
