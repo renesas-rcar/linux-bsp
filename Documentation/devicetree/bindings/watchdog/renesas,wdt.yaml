@@ -57,6 +57,7 @@ properties:
           - enum:
               - renesas,r8a779f0-wdt     # R-Car S4-8
               - renesas,r8a779g0-wdt     # R-Car V4H
+              - renesas,r8a779h0-wdt     # R-Car V4M
           - const: renesas,rcar-gen4-wdt # R-Car Gen4
 
   reg:
