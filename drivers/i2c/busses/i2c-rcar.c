@@ -217,6 +217,7 @@ static int rcar_i2c_get_bus_free(struct i2c_adapter *adap)
 static const struct soc_device_attribute fm_plus_match[] = {
 	{ .soc_id = "r8a779a0" },
 	{ .soc_id = "r8a779g0" },
+	{ .soc_id = "r8a779h0" },
 	{ /* sentinel */ }
 };
 
@@ -282,7 +283,7 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 	/* Fall back to previously used values if not supplied */
 	i2c_parse_fw_timings(dev, &t, false);
 
-	/* Fast mode plus is only available on R-Car V3U/V4H */
+	/* Fast mode plus is only available on R-Car V3U/V4H/V4M */
 	if (t.bus_freq_hz == I2C_MAX_FAST_MODE_PLUS_FREQ && soc_device_match(fm_plus_match))
 		priv->fast_mode_plus = true;
 
@@ -1013,6 +1014,7 @@ static const struct of_device_id rcar_i2c_dt_ids[] = {
 	{ .compatible = "renesas,i2c-r8a77961", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-r8a779f0", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-r8a779g0", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,i2c-r8a779h0", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-rcar", .data = (void *)I2C_RCAR_GEN1 },	/* Deprecated */
 	{ .compatible = "renesas,rcar-gen1-i2c", .data = (void *)I2C_RCAR_GEN1 },
 	{ .compatible = "renesas,rcar-gen2-i2c", .data = (void *)I2C_RCAR_GEN2 },
