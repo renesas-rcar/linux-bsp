@@ -720,7 +720,7 @@
 			reg = <0 0xff900000 0 0x6000>;
 			interrupts = <GIC_SPI 565 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
-			power-domains = <&sysc R8A779H0_PD_A2IMP01>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			resets = <&cpg 118>;
@@ -741,7 +741,7 @@
 			reg = <0 0xff900000 0 0x6000>;
 			interrupts = <GIC_SPI 566 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
-			power-domains = <&sysc R8A779H0_PD_A2IMP01>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			linux,uio-name = "irq_imp_top_00_01";
@@ -760,7 +760,7 @@
 			reg = <0 0xff900000 0 0x6000>;
 			interrupts = <GIC_SPI 567 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 118>;
-			power-domains = <&sysc R8A779H0_PD_A2IMP01>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			linux,uio-name = "irq_imp_top_00_02";
@@ -905,7 +905,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xffa88000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 116>;
-			power-domains = <&sysc R8A779H0_PD_A2IMP01>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 116>;
 			linux,uio-name = "imp_dta_00";
 			ipmmu-id = <RCAR_IPMMU_IR 16>;
@@ -955,7 +955,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xffa8c000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 120>;
-			power-domains = <&sysc R8A779H0_PD_A2CN0>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 120>;
 			linux,uio-name = "imp_reg_spmi_00";
 			ipmmu-id = <RCAR_IPMMU_IR 24>;
@@ -983,7 +983,7 @@
 			compatible = "generic-uio";
 			reg = <0 0xed200000 0 0x100000>;
 			clocks = <&cpg CPG_MOD 120>;
-			power-domains = <&sysc R8A779H0_PD_A2CN0>;
+			power-domains = <&sysc R8A779H0_PD_C4>;
 			linux,uio-name = "imp_spmi_00";
 			ipmmu-id = <RCAR_IPMMU_IR 24>;
 			iommus = <&ipmmu_ir 24>, <&ipmmu_ir 25>,
@@ -1132,6 +1132,13 @@
 			linux,uio-name = "vdsp00_07";
 		};
 
+		impvdsp00_08 {
+			compatible = "generic-uio";
+			resets = <&cpg 2801>;
+			reset-names = "vdsp0_bus";
+			linux,uio-name = "vdsp00_08";
+		};
+
 		impvdsp01_00: vdsp@f1600000 {
 			compatible = "generic-uio";
 			reg = <0 0xf1600000 0 0x1a0000>;
@@ -1246,6 +1253,13 @@
 			linux,uio-name = "vdsp01_07";
 		};
 
+		impvdsp01_08 {
+			compatible = "generic-uio";
+			resets = <&cpg 2802>;
+			reset-names = "vdsp1_bus";
+			linux,uio-name = "vdsp01_08";
+		};
+
 		dof_sts_00 {
 			compatible = "generic-uio";
 			reg = <0 0xe7a10000 0 0x10000>;
@@ -1333,6 +1347,19 @@
 				<&ipmmu_vi0 1>;
 		};
 
+		gsx: gsx@fd000000 {
+				compatible = "renesas,gsx";
+				reg = <0 0xfd000000 0 0x800000>;
+				interrupts = <GIC_SPI 464 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&cpg CPG_MOD 0>;
+				power-domains = <&sysc R8A779H0_PD_A23DGB>;
+				resets = <&cpg 0>;
+				ipmmu-id = <RCAR_IPMMU_3DG 0>;
+				iommus = <&ipmmu_3dg 0>, <&ipmmu_3dg 1>,
+				 <&ipmmu_3dg 2>, <&ipmmu_3dg 3>,
+				 <&ipmmu_3dg 4>, <&ipmmu_3dg 5>,
+				 <&ipmmu_3dg 6>, <&ipmmu_3dg 7>;
+		};
 
 		cisp0: cisp@fec00000 {
 			compatible = "generic-uio";
@@ -3085,5 +3112,7 @@
 			reg = <0 0xe67a8000 0 0x3800>;
 			linux,uio-name = "rcarbusmoni_02";
 		};
+
+		/delete-node/qos@e67e0000;
 	};
 };
