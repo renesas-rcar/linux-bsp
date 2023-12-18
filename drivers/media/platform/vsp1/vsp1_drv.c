@@ -680,20 +680,34 @@ static int vsp1_device_init(struct vsp1_device *vsp1)
 	for (i = 0; i < vsp1->info->uif_count; ++i)
 		vsp1_write(vsp1, VI6_DPR_UIF_ROUTE(i), VI6_DPR_NODE_UNUSED);
 
-	vsp1_write(vsp1, VI6_DPR_SRU_ROUTE, VI6_DPR_NODE_UNUSED);
-	vsp1_write(vsp1, VI6_DPR_LUT_ROUTE, VI6_DPR_NODE_UNUSED);
-	vsp1_write(vsp1, VI6_DPR_CLU_ROUTE, VI6_DPR_NODE_UNUSED);
-	vsp1_write(vsp1, VI6_DPR_HST_ROUTE, VI6_DPR_NODE_UNUSED);
-	vsp1_write(vsp1, VI6_DPR_HSI_ROUTE, VI6_DPR_NODE_UNUSED);
-	vsp1_write(vsp1, VI6_DPR_BRU_ROUTE, VI6_DPR_NODE_UNUSED);
+	if (vsp1_feature(vsp1, VSP1_HAS_SRU))
+		vsp1_write(vsp1, VI6_DPR_SRU_ROUTE, VI6_DPR_NODE_UNUSED);
+
+	if (vsp1_feature(vsp1, VSP1_HAS_LUT))
+		vsp1_write(vsp1, VI6_DPR_LUT_ROUTE, VI6_DPR_NODE_UNUSED);
+
+	if (vsp1_feature(vsp1, VSP1_HAS_CLU))
+		vsp1_write(vsp1, VI6_DPR_CLU_ROUTE, VI6_DPR_NODE_UNUSED);
+
+	if (vsp1_feature(vsp1, VSP1_HAS_HST))
+		vsp1_write(vsp1, VI6_DPR_HST_ROUTE, VI6_DPR_NODE_UNUSED);
+
+	if (vsp1_feature(vsp1, VSP1_HAS_HSI))
+		vsp1_write(vsp1, VI6_DPR_HSI_ROUTE, VI6_DPR_NODE_UNUSED);
+
+	if (vsp1_feature(vsp1, VSP1_HAS_BRU))
+		vsp1_write(vsp1, VI6_DPR_BRU_ROUTE, VI6_DPR_NODE_UNUSED);
 
 	if (vsp1_feature(vsp1, VSP1_HAS_BRS))
 		vsp1_write(vsp1, VI6_DPR_ILV_BRS_ROUTE, VI6_DPR_NODE_UNUSED);
 
-	vsp1_write(vsp1, VI6_DPR_HGO_SMPPT, (7 << VI6_DPR_SMPPT_TGW_SHIFT) |
-		   (VI6_DPR_NODE_UNUSED << VI6_DPR_SMPPT_PT_SHIFT));
-	vsp1_write(vsp1, VI6_DPR_HGT_SMPPT, (7 << VI6_DPR_SMPPT_TGW_SHIFT) |
-		   (VI6_DPR_NODE_UNUSED << VI6_DPR_SMPPT_PT_SHIFT));
+	if (vsp1_feature(vsp1, VSP1_HAS_HGO))
+		vsp1_write(vsp1, VI6_DPR_HGO_SMPPT, (7 << VI6_DPR_SMPPT_TGW_SHIFT) |
+			   (VI6_DPR_NODE_UNUSED << VI6_DPR_SMPPT_PT_SHIFT));
+
+	if (vsp1_feature(vsp1, VSP1_HAS_HGT))
+		vsp1_write(vsp1, VI6_DPR_HGT_SMPPT, (7 << VI6_DPR_SMPPT_TGW_SHIFT) |
+			   (VI6_DPR_NODE_UNUSED << VI6_DPR_SMPPT_PT_SHIFT));
 
 	vsp1_dlm_setup(vsp1);
 
@@ -806,7 +820,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.gen = 2,
 		.features = VSP1_HAS_BRU | VSP1_HAS_CLU | VSP1_HAS_HGO
 			  | VSP1_HAS_HGT | VSP1_HAS_LUT | VSP1_HAS_SRU
-			  | VSP1_HAS_WPF_VFLIP,
+			  | VSP1_HAS_WPF_VFLIP | VSP1_HAS_HST | VSP1_HAS_HSI,
 		.rpf_count = 5,
 		.uds_count = 3,
 		.wpf_count = 4,
@@ -816,7 +830,8 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.version = VI6_IP_VERSION_MODEL_VSPR_H2,
 		.model = "VSP1-R",
 		.gen = 2,
-		.features = VSP1_HAS_BRU | VSP1_HAS_SRU | VSP1_HAS_WPF_VFLIP,
+		.features = VSP1_HAS_BRU | VSP1_HAS_SRU | VSP1_HAS_WPF_VFLIP
+			  | VSP1_HAS_HST | VSP1_HAS_HSI,
 		.rpf_count = 5,
 		.uds_count = 3,
 		.wpf_count = 4,
@@ -826,7 +841,8 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.version = VI6_IP_VERSION_MODEL_VSPD_GEN2,
 		.model = "VSP1-D",
 		.gen = 2,
-		.features = VSP1_HAS_BRU | VSP1_HAS_HGO | VSP1_HAS_LUT,
+		.features = VSP1_HAS_BRU | VSP1_HAS_HGO | VSP1_HAS_LUT
+			  | VSP1_HAS_HST | VSP1_HAS_HSI,
 		.lif_count = 1,
 		.rpf_count = 4,
 		.uds_count = 1,
@@ -839,7 +855,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.gen = 2,
 		.features = VSP1_HAS_BRU | VSP1_HAS_CLU | VSP1_HAS_HGO
 			  | VSP1_HAS_HGT | VSP1_HAS_LUT | VSP1_HAS_SRU
-			  | VSP1_HAS_WPF_VFLIP,
+			  | VSP1_HAS_WPF_VFLIP | VSP1_HAS_HST | VSP1_HAS_HSI,
 		.rpf_count = 5,
 		.uds_count = 1,
 		.wpf_count = 4,
@@ -850,7 +866,8 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.model = "VSP1V-S",
 		.gen = 2,
 		.features = VSP1_HAS_BRU | VSP1_HAS_CLU | VSP1_HAS_LUT
-			  | VSP1_HAS_SRU | VSP1_HAS_WPF_VFLIP,
+			  | VSP1_HAS_SRU | VSP1_HAS_WPF_VFLIP
+			  | VSP1_HAS_HST | VSP1_HAS_HSI,
 		.rpf_count = 4,
 		.uds_count = 1,
 		.wpf_count = 4,
@@ -860,7 +877,8 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.version = VI6_IP_VERSION_MODEL_VSPD_V2H,
 		.model = "VSP1V-D",
 		.gen = 2,
-		.features = VSP1_HAS_BRU | VSP1_HAS_CLU | VSP1_HAS_LUT,
+		.features = VSP1_HAS_BRU | VSP1_HAS_CLU | VSP1_HAS_LUT
+			  | VSP1_HAS_HST | VSP1_HAS_HSI,
 		.lif_count = 1,
 		.rpf_count = 4,
 		.uds_count = 1,
@@ -873,7 +891,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.gen = 3,
 		.features = VSP1_HAS_CLU | VSP1_HAS_HGO | VSP1_HAS_HGT
 			  | VSP1_HAS_LUT | VSP1_HAS_SRU | VSP1_HAS_WPF_HFLIP
-			  | VSP1_HAS_WPF_VFLIP,
+			  | VSP1_HAS_WPF_VFLIP | VSP1_HAS_HST | VSP1_HAS_HSI,
 		.rpf_count = 1,
 		.uds_count = 1,
 		.wpf_count = 1,
