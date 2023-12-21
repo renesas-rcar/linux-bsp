@@ -104,6 +104,7 @@ static const struct of_device_id rsnd_of_match[] = {
 	{ .compatible = "renesas,rcar_sound-gen2", .data = (void *)RSND_GEN2 },
 	{ .compatible = "renesas,rcar_sound-gen3", .data = (void *)RSND_GEN3 },
 	{ .compatible = "renesas,rcar_sound-gen4", .data = (void *)RSND_GEN4 },
+	{ .compatible = "renesas,rcar_sound-gen5", .data = (void *)RSND_GEN5 },
 	/* Special Handling */
 	{ .compatible = "renesas,rcar_sound-r8a77990", .data = (void *)(RSND_GEN3 | RSND_SOC_E) },
 	{},
