@@ -103,6 +103,7 @@ static const struct of_device_id rsnd_of_match[] = {
 	{ .compatible = "renesas,rcar_sound-gen2", .data = (void *)RSND_GEN2 },
 	{ .compatible = "renesas,rcar_sound-gen3", .data = (void *)RSND_GEN3 },
 	{ .compatible = "renesas,rcar_sound-gen4", .data = (void *)RSND_GEN4 },
+	{ .compatible = "renesas,rcar_sound-gen5", .data = (void *)RSND_GEN5 },
 	/* Special Handling */
 	{ .compatible = "renesas,rcar_sound-r8a77990", .data = (void *)(RSND_GEN3 | RSND_SOC_E) },
 	{},
@@ -1412,7 +1413,7 @@ static int rsnd_dai_probe(struct rsnd_priv *priv)
 	if (is_graph) {
 		for_each_endpoint_of_node(dai_node, dai_np) {
 			__rsnd_dai_probe(priv, dai_np, dai_i);
-			if (rsnd_is_gen3(priv) || rsnd_is_gen4(priv)) {
+			if (rsnd_is_gen3(priv) || rsnd_is_gen4(priv) || rsnd_is_gen5(priv)) {
 				rdai = rsnd_rdai_get(priv, dai_i);
 
 				rsnd_parse_connect_graph(priv, &rdai->playback, dai_np);
@@ -1423,7 +1424,7 @@ static int rsnd_dai_probe(struct rsnd_priv *priv)
 	} else {
 		for_each_child_of_node(dai_node, dai_np) {
 			__rsnd_dai_probe(priv, dai_np, dai_i);
-			if (rsnd_is_gen3(priv) || rsnd_is_gen4(priv)) {
+			if (rsnd_is_gen3(priv) || rsnd_is_gen4(priv) || rsnd_is_gen5(priv)) {
 				rdai = rsnd_rdai_get(priv, dai_i);
 
 				rsnd_parse_connect_simple(priv, &rdai->playback, dai_np);
