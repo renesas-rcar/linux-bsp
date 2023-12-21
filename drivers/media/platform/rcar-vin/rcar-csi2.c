@@ -25,6 +25,7 @@
 
 #define SKIPRESETCONTROL
 #define GENERICCIS2CAMERA
+#define NINTERRUPT
 
 struct rcar_csi2;
 
@@ -2247,6 +2248,7 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
 
+#ifndef NINTERRUPT
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
 		return irq;
@@ -2256,6 +2258,7 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 					KBUILD_MODNAME, priv);
 	if (ret)
 		return ret;
+#endif
 
 #ifndef SKIPRESETCONTROL
 	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
