@@ -26,6 +26,7 @@
 #define SKIPRESETCONTROL
 #define GENERICCIS2CAMERA
 #define NINTERRUPT
+#define VDKWORKAROUND
 
 struct rcar_csi2;
 
@@ -950,8 +951,10 @@ static int rcsi2_wait_phy_start(struct rcar_csi2 *priv,
 	for (timeout = 0; timeout <= 20; timeout++) {
 		const u32 lane_mask = (1 << lanes) - 1;
 
+#ifndef VDKWORKAROUND
 		if ((rcsi2_read(priv, PHCLM_REG) & PHCLM_STOPSTATECKL)  &&
 		    (rcsi2_read(priv, PHDLM_REG) & lane_mask) == lane_mask)
+#endif
 			return 0;
 
 		usleep_range(1000, 2000);
@@ -1952,7 +1955,9 @@ static int rcsi2_phtw_write(struct rcar_csi2 *priv, u16 data, u16 code)
 
 	/* Wait for DWEN and CWEN to be cleared by hardware. */
 	for (timeout = 0; timeout <= 20; timeout++) {
+#ifndef VDKWORKAROUND
 		if (!(rcsi2_read(priv, PHTW_REG) & (PHTW_DWEN | PHTW_CWEN)))
+#endif
 			return 0;
 
 		usleep_range(1000, 2000);
