@@ -28,6 +28,8 @@
 
 #include "rcar-vin.h"
 
+#define SKIPRESETCONTROL
+
 /*
  * The companion CSI-2 receiver driver (rcar-csi2) is known
  * and we know it has one source pad (pad 0) and four sink
@@ -1540,6 +1542,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	}
 	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
 
+#ifndef SKIPRESETCONTROL
 	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
 	if (IS_ERR(vin->rstc)) {
 		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
@@ -1555,6 +1558,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		ret = PTR_ERR(vin->clk);
 		goto error_destroy_workqueue;
 	}
+#endif
 
 	return 0;
 

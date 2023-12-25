@@ -23,6 +23,8 @@
 #include <media/v4l2-mc.h>
 #include <media/v4l2-subdev.h>
 
+#define SKIPRESETCONTROL
+
 struct rcar_csi2;
 
 /* Register offsets and bits */
@@ -922,14 +924,18 @@ static void rcsi2_enter_standby(struct rcar_csi2 *priv)
 		rcsi2_write(priv, PHTC_REG, PHTC_TESTCLR);
 	}
 
+#ifndef SKIPRESETCONTROL
 	reset_control_assert(priv->rstc);
+#endif
 	usleep_range(100, 150);
 	pm_runtime_put(priv->dev);
 }
 
 static void rcsi2_exit_standby(struct rcar_csi2 *priv)
 {
+#ifndef SKIPRESETCONTROL
 	pm_runtime_get_sync(priv->dev);
+#endif
 	reset_control_deassert(priv->rstc);
 }
 
@@ -2230,9 +2236,12 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 	if (ret)
 		return ret;
 
+#ifndef SKIPRESETCONTROL
 	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
 	return PTR_ERR_OR_ZERO(priv->rstc);
+#endif
+	return 0;
 }
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a7795 = {
