@@ -2964,9 +2964,11 @@ static int sci_init_single(struct platform_device *dev,
 				     : sci_port->params->sampling_rate_mask;
 
 	if (!early) {
+		/* temporarily sci_init_clocks due to clock is always ON on VDK gen5
 		ret = sci_init_clocks(sci_port, &dev->dev);
 		if (ret < 0)
 			return ret;
+		*/
 
 		port->dev = &dev->dev;
 
