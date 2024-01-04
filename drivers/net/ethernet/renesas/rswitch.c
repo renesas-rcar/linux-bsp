@@ -2213,10 +2213,11 @@ static void rswitch_reset(struct rswitch_private *priv)
 	if (!parallel_mode) {
 		rs_write32(RRC_RR, priv->addr + RRC);
 		rs_write32(RRC_RR_CLR, priv->addr + RRC);
-
-		reset_control_assert(priv->sd_rst);
-		mdelay(1);
-		reset_control_deassert(priv->sd_rst);
+		if (!priv->vpf_mode) {
+			reset_control_assert(priv->sd_rst);
+			mdelay(1);
+			reset_control_deassert(priv->sd_rst);
+		}
 	} else {
 		int gwca_idx;
 		u32 gwro_offset;
@@ -2953,7 +2954,7 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 
 	priv->ptp_priv->parallel_mode = parallel_mode;
 
-	if (!parallel_mode) {
+	if (parallel_mode) {
 		priv->rsw_clk = devm_clk_get(&pdev->dev, "rsw2");
 		if (IS_ERR(priv->rsw_clk)) {
 			dev_err(&pdev->dev, "Failed to get rsw2 clock: %ld\n",
