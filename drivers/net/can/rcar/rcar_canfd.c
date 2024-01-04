@@ -2210,6 +2210,7 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	int i;
 
 	info = of_device_get_match_data(dev);
+	int ch_irq_x5h[RCANFD_NUM_CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 	if (of_property_read_bool(dev->of_node, "renesas,no-can-fd"))
 		fdmode = false;			/* Classical CAN only mode */
@@ -2228,20 +2229,23 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	}
 
 	if (info->shared_global_irqs) {
-		ch_irq = platform_get_irq_byname_optional(pdev, "ch_int");
-		if (ch_irq < 0) {
-			/* For backward compatibility get irq by index */
-			ch_irq = platform_get_irq(pdev, 0);
-			if (ch_irq < 0)
-				return ch_irq;
+		for (i = 0; i < RCANFD_NUM_CHANNELS; i++) {
+			ch_irq_x5h[i] = platform_get_irq(pdev, i + 1);
+			if (ch_irq_x5h[i] < 0) {
+				err = ch_irq_x5h[i];
+				goto fail_dev;
+			}
 		}
 
-		g_irq = platform_get_irq_byname_optional(pdev, "g_int");
+		if (ch_irq < 0) {
+			err = ch_irq;
+			goto fail_dev;
+		}
+
+		g_irq = platform_get_irq(pdev, 0);
 		if (g_irq < 0) {
-			/* For backward compatibility get irq by index */
-			g_irq = platform_get_irq(pdev, 1);
-			if (g_irq < 0)
-				return g_irq;
+			err = g_irq;
+			goto fail_dev;
 		}
 	} else {
 		g_err_irq = platform_get_irq_byname(pdev, "g_err");
@@ -2323,13 +2327,15 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 
 	/* Request IRQ that's common for both channels */
 	if (info->shared_global_irqs) {
-		err = devm_request_irq(dev, ch_irq,
-				       rcar_canfd_channel_interrupt, 0,
-				       "canfd.ch_int", gpriv);
-		if (err) {
-			dev_err(dev, "devm_request_irq %d failed: %pe\n",
-				ch_irq, ERR_PTR(err));
-			goto fail_dev;
+		for (i = 0; i < RCANFD_NUM_CHANNELS; i++) {
+			err = devm_request_irq(&pdev->dev, ch_irq_x5h[i],
+					       rcar_canfd_channel_interrupt, 0,
+					       "canfd.ch_int", gpriv);
+			if (err) {
+				dev_err(&pdev->dev, "devm_request_irq(%d) failed, error %d\n",
+					ch_irq_x5h[i], err);
+				goto fail_dev;
+			}
 		}
 
 		err = devm_request_irq(dev, g_irq, rcar_canfd_global_interrupt,
