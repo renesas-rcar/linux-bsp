@@ -29,6 +29,7 @@
 #include "rcar-vin.h"
 
 #define SKIPRESETCONTROL
+#define SOCX5H
 
 /*
  * The companion CSI-2 receiver driver (rcar-csi2) is known
@@ -1557,6 +1558,11 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	dev_attr = soc_device_match(chip_info);
 	if (dev_attr)
 		vin->chip_info = (uintptr_t)dev_attr->data;
+
+#ifdef SOCX5H
+	/* hard-code for X5H on VDK - no PRR register support*/
+	vin->chip_info = RCAR_VIN_R8A78000_FEATURE;
+#endif
 
 	vin->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(vin->base))
