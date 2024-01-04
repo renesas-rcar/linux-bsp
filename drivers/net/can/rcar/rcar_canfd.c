@@ -534,7 +534,7 @@
 #define RCANFD_FIFO_DEPTH		8	/* Tx FIFO depth */
 #define RCANFD_NAPI_WEIGHT		8	/* Rx poll quota */
 
-#define RCANFD_NUM_CHANNELS		16	/* 16 channels max */
+#define RCANFD_NUM_CHANNELS		8	/* 8 channels max */
 #define RCANFD_CHANNELS_MASK		BIT((RCANFD_NUM_CHANNELS) - 1)
 
 #define RCANFD_GAFL_PAGENUM(entry)	((entry) / 16)
@@ -1948,13 +1948,12 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	struct device_node *of_child;
 	unsigned long channels_mask = 0;
 	int err, ch_irq, g_irq, i, num_ch_enabled = 0;
+	int ch_irq_x5h[RCANFD_NUM_CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0};
 	bool fdmode = true;			/* CAN FD only mode - default */
 	const struct rcar_canfd_of_data *of_data;
 	char *name[RCANFD_NUM_CHANNELS] = {
 		"channel0", "channel1", "channel2", "channel3",
 		"channel4", "channel5", "channel6", "channel7",
-		"channel8", "channel9", "channel10", "channel11",
-		"channel12", "channel13", "channel14", "channel15",
 		};
 
 	if (of_property_read_bool(pdev->dev.of_node, "renesas,no-can-fd"))
@@ -1970,13 +1969,28 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 			channels_mask |= BIT(i);	/* Channel i */
 	}
 
-	ch_irq = platform_get_irq(pdev, 0);
+	if (of_data->chip_id == GEN5) {
+		for (i = 0; i < RCANFD_NUM_CHANNELS; i++) {
+			ch_irq_x5h[i] = platform_get_irq(pdev, i + 1);
+			if (ch_irq_x5h[i] < 0) {
+				err = ch_irq_x5h[i];
+				goto fail_dev;
+			}
+		}
+	} else {
+		ch_irq = platform_get_irq(pdev, 0);
+	}
+
 	if (ch_irq < 0) {
 		err = ch_irq;
 		goto fail_dev;
 	}
 
-	g_irq = platform_get_irq(pdev, 1);
+	if (of_data->chip_id == GEN5)
+		g_irq = platform_get_irq(pdev, 0);
+	else
+		g_irq = platform_get_irq(pdev, 1);
+
 	if (g_irq < 0) {
 		err = g_irq;
 		goto fail_dev;
@@ -2034,14 +2048,28 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	gpriv->base = addr;
 
 	/* Request IRQ that's common for both channels */
-	err = devm_request_irq(&pdev->dev, ch_irq,
-			       rcar_canfd_channel_interrupt, 0,
-			       "canfd.chn", gpriv);
-	if (err) {
-		dev_err(&pdev->dev, "devm_request_irq(%d) failed, error %d\n",
-			ch_irq, err);
-		goto fail_dev;
+	if (of_data->chip_id == GEN5) {
+		for (i = 0; i < RCANFD_NUM_CHANNELS; i++) {
+			err = devm_request_irq(&pdev->dev, ch_irq_x5h[i],
+					       rcar_canfd_channel_interrupt, 0,
+					       "canfd.chn", gpriv);
+			if (err) {
+				dev_err(&pdev->dev, "devm_request_irq(%d) failed, error %d\n",
+					ch_irq_x5h[i], err);
+				goto fail_dev;
+			}
+		}
+	} else {
+		err = devm_request_irq(&pdev->dev, ch_irq,
+				       rcar_canfd_channel_interrupt, 0,
+				       "canfd.chn", gpriv);
+		if (err) {
+			dev_err(&pdev->dev, "devm_request_irq(%d) failed, error %d\n",
+				ch_irq, err);
+			goto fail_dev;
+		}
 	}
+
 	err = devm_request_irq(&pdev->dev, g_irq,
 			       rcar_canfd_global_interrupt, 0,
 			       "canfd.gbl", gpriv);
@@ -2152,7 +2180,7 @@ static SIMPLE_DEV_PM_OPS(rcar_canfd_pm_ops, rcar_canfd_suspend,
 
 static const struct rcar_canfd_of_data of_rcanfd_x5h_compatible = {
 	.chip_id = GEN5,
-	.max_channels = 16,
+	.max_channels = 8,
 };
 
 static const struct rcar_canfd_of_data of_rcanfd_v4m_compatible = {
