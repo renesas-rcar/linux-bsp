@@ -68,8 +68,10 @@ static struct drm_connector_helper_funcs rcar_dw_dp_connector_helper_funcs = {
 static enum drm_connector_status rcar_dw_dp_connector_detect(struct drm_connector *connector,
 							     bool force)
 {
-	if (con_status)
+	if (con_status) {
+		drm_add_modes_noedid(connector, 4096, 2160);
 		return connector_status_connected;
+	}
 
 	return connector_status_disconnected;
 }
