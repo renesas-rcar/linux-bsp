@@ -236,6 +236,7 @@ struct rcar_dmac_of_data {
 	u32 chan_offset_base;
 	u32 chan_offset_stride;
 	bool rate_control;
+	bool gen5;
 };
 
 /* -----------------------------------------------------------------------------
@@ -1973,7 +1974,7 @@ static int rcar_dmac_probe(struct platform_device *pdev)
 	 * level we can't disable it selectively, so ignore channel 0 for now if
 	 * the device is part of an IOMMU group.
 	 */
-	if (device_iommu_mapped(&pdev->dev))
+	if (device_iommu_mapped(&pdev->dev) && !data->gen5)
 		dmac->channels_mask &= ~BIT(0);
 
 	dmac->channels = devm_kcalloc(&pdev->dev, dmac->n_channels,
@@ -2097,18 +2098,28 @@ static const struct rcar_dmac_of_data rcar_dmac_data = {
 	.chan_offset_base	= 0x8000,
 	.chan_offset_stride	= 0x80,
 	.rate_control		= false,
+	.gen5			= false,
 };
 
 static const struct rcar_dmac_of_data rcar_v3u_dmac_data = {
 	.chan_offset_base	= 0x0,
 	.chan_offset_stride	= 0x1000,
 	.rate_control		= true,
+	.gen5			= false,
 };
 
 static const struct rcar_dmac_of_data rcar_gen4_dmac_data = {
 	.chan_offset_base       = 0x0,
 	.chan_offset_stride     = 0x1000,
 	.rate_control		= true,
+	.gen5			= false,
+};
+
+static const struct rcar_dmac_of_data rcar_gen5_dmac_data = {
+	.chan_offset_base	= 0x0,
+	.chan_offset_stride	= 0x1000,
+	.rate_control		= true,
+	.gen5			= true,
 };
 
 static const struct of_device_id rcar_dmac_of_ids[] = {
@@ -2126,7 +2137,7 @@ static const struct of_device_id rcar_dmac_of_ids[] = {
 		.data = &rcar_gen4_dmac_data,
 	}, {
                 .compatible = "renesas,rcar-gen5-dmac",
-                .data = &rcar_gen4_dmac_data,
+                .data = &rcar_gen5_dmac_data,
 	},
 	{ /* Sentinel */ }
 };
