@@ -29,18 +29,18 @@ struct rsnd_ssiu {
 	     i++)
 
 /*
- *	SSI	Gen2		Gen3		Gen4
- *	0	BUSIF0-3	BUSIF0-7	BUSIF0-7
- *	1	BUSIF0-3	BUSIF0-7
- *	2	BUSIF0-3	BUSIF0-7
- *	3	BUSIF0		BUSIF0-7
- *	4	BUSIF0		BUSIF0-7
- *	5	BUSIF0		BUSIF0
- *	6	BUSIF0		BUSIF0
- *	7	BUSIF0		BUSIF0
- *	8	BUSIF0		BUSIF0
- *	9	BUSIF0-3	BUSIF0-7
- *	total	22		52			8
+ *	SSI	Gen2		Gen3		Gen4		Gen5
+ *	0	BUSIF0-3	BUSIF0-7	BUSIF0-7	BUSIF0-7
+ *	1	BUSIF0-3	BUSIF0-7			BUSIF0-7
+ *	2	BUSIF0-3	BUSIF0-7			BUSIF0-7
+ *	3	BUSIF0		BUSIF0-7			BUSIF0-7
+ *	4	BUSIF0		BUSIF0-7			BUSIF0-7
+ *	5	BUSIF0		BUSIF0				BUSIF0
+ *	6	BUSIF0		BUSIF0				BUSIF0
+ *	7	BUSIF0		BUSIF0				BUSIF0
+ *	8	BUSIF0		BUSIF0				BUSIF0
+ *	9	BUSIF0-3	BUSIF0-7			BUSIF0-7
+ *	total	22		52			8	52
  */
 static const int gen2_id[] = { 0, 4,  8, 12, 13, 14, 15, 16, 17, 18 };
 static const int gen3_id[] = { 0, 8, 16, 24, 32, 40, 41, 42, 43, 44 };
@@ -642,7 +642,8 @@ int rsnd_ssiu_probe(struct rsnd_priv *priv)
 		if (rsnd_is_gen2(priv)) {
 			list	= gen2_id;
 			nr	= ARRAY_SIZE(gen2_id);
-		} else if (rsnd_is_gen3(priv)) {
+		} else if (rsnd_is_gen3(priv) ||
+			   rsnd_is_gen5(priv)) {
 			list	= gen3_id;
 			nr	= ARRAY_SIZE(gen3_id);
 		} else if (rsnd_is_gen4(priv)) {
