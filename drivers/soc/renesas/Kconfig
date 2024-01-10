@@ -415,7 +415,7 @@ config SYSC_R8A779H0
 	bool "System Controller support for R-Car V4M" if COMPILE_TEST
 	select SYSC_RCAR_GEN4
 
-config SYSC_X5H
+config SYSC_R8A78000
 	bool "System Controller support for R-Car X5H" if COMPILE_TEST
 	select SYSC_RCAR_GEN4
 
