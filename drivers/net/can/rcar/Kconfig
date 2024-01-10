@@ -20,3 +20,14 @@ config CAN_RCAR_CANFD
 
 	  To compile this driver as a module, choose M here: the module will
 	  be called rcar_canfd.
+
+config CAN_RCAR_CANXL
+	tristate "Renesas R-Car CAN XL controller"
+	depends on ARCH_RENESAS || ARM
+	help
+	  Say Y here if you want to use CAN XL controller found on
+	  Renesas R-Car SoCs. The driver puts the controller in CAN XL only
+	  mode.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called rcar_canxl.

@@ -107,6 +107,61 @@ static inline unsigned int can_bit_time(const struct can_bittiming *bt)
 #define get_can_dlc(i)		(min_t(u8, (i), CAN_MAX_DLC))
 #define get_canfd_dlc(i)	(min_t(u8, (i), CANFD_MAX_DLC))
 
+static inline bool can_is_can_skb(const struct sk_buff *skb)
+{
+	struct can_frame *cf = (struct can_frame *)skb->data;
+
+	/* the CAN specific type of skb is identified by its data length */
+	return (skb->len == CAN_MTU && cf->len <= CAN_MAX_DLEN);
+}
+
+static inline bool can_is_canfd_skb(const struct sk_buff *skb)
+{
+	struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
+
+	/* the CAN specific type of skb is identified by its data length */
+	return (skb->len == CANFD_MTU && cfd->len <= CANFD_MAX_DLEN);
+}
+
+static inline bool can_is_canxl_skb(const struct sk_buff *skb)
+{
+	const struct canxl_frame *cxl = (struct canxl_frame *)skb->data;
+
+	if (skb->len < CANXL_HDR_SIZE + CANXL_MIN_DLEN || skb->len > CANXL_MTU)
+		return false;
+
+	/* this also checks valid CAN XL data length boundaries */
+	if (skb->len != CANXL_HDR_SIZE + cxl->len)
+		return false;
+
+	return cxl->flags & CANXL_XLF;
+}
+
+/* get length element value from can[|fd|xl]_frame structure */
+static inline unsigned int can_skb_get_len_val(struct sk_buff *skb)
+{
+	const struct canxl_frame *cxl = (struct canxl_frame *)skb->data;
+	const struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
+
+	if (can_is_canxl_skb(skb))
+		return cxl->len;
+
+	return cfd->len;
+}
+
+/* get needed data length inside CAN frame for all frame types (RTR aware) */
+static inline unsigned int can_skb_get_data_len(struct sk_buff *skb)
+{
+	unsigned int len = can_skb_get_len_val(skb);
+	const struct can_frame *cf = (struct can_frame *)skb->data;
+
+	/* RTR frames have an actual length of zero */
+	if (can_is_can_skb(skb) && cf->can_id & CAN_RTR_FLAG)
+		return 0;
+
+	return len;
+}
+
 /* Check for outgoing skbs that have not been created by the CAN subsystem */
 static inline bool can_skb_headroom_valid(struct net_device *dev,
 					  struct sk_buff *skb)
@@ -132,6 +187,14 @@ static inline bool can_skb_headroom_valid(struct net_device *dev,
 		skb_reset_mac_header(skb);
 		skb_reset_network_header(skb);
 		skb_reset_transport_header(skb);
+
+		/* set CANFD_FDF flag for CAN FD frames */
+		if (can_is_canfd_skb(skb)) {
+			struct canfd_frame *cfd;
+
+			cfd = (struct canfd_frame *)skb->data;
+			cfd->flags |= CANFD_FDF;
+		}
 	}
 
 	return true;
@@ -141,18 +204,25 @@ static inline bool can_skb_headroom_valid(struct net_device *dev,
 static inline bool can_dropped_invalid_skb(struct net_device *dev,
 					  struct sk_buff *skb)
 {
-	const struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
+	switch (ntohs(skb->protocol)) {
+	case ETH_P_CAN:
+		if (!can_is_can_skb(skb))
+			goto inval_skb;
+		break;
 
-	if (skb->protocol == htons(ETH_P_CAN)) {
-		if (unlikely(skb->len != CAN_MTU ||
-			     cfd->len > CAN_MAX_DLEN))
+	case ETH_P_CANFD:
+		if (!can_is_canfd_skb(skb))
 			goto inval_skb;
-	} else if (skb->protocol == htons(ETH_P_CANFD)) {
-		if (unlikely(skb->len != CANFD_MTU ||
-			     cfd->len > CANFD_MAX_DLEN))
+		break;
+
+	case ETH_P_CANXL:
+		if (!can_is_canxl_skb(skb))
 			goto inval_skb;
-	} else
+		break;
+
+	default:
 		goto inval_skb;
+	}
 
 	if (!can_skb_headroom_valid(dev, skb))
 		goto inval_skb;
@@ -163,12 +233,6 @@ inval_skb:
 	kfree_skb(skb);
 	dev->stats.tx_dropped++;
 	return true;
-}
-
-static inline bool can_is_canfd_skb(const struct sk_buff *skb)
-{
-	/* the CAN specific type of skb is identified by its data length */
-	return skb->len == CANFD_MTU;
 }
 
 /* helper to define static CAN controller features at device creation time */
@@ -184,6 +248,11 @@ static inline void can_set_static_ctrlmode(struct net_device *dev,
 	/* override MTU which was set by default in can_setup()? */
 	if (static_mode & CAN_CTRLMODE_FD)
 		dev->mtu = CANFD_MTU;
+}
+
+static inline bool can_is_canxl_dev_mtu(unsigned int mtu)
+{
+	return (mtu >= CANXL_MIN_MTU && mtu <= CANXL_MAX_MTU);
 }
 
 /* get data length from can_dlc with sanitized can_dlc */
@@ -219,8 +288,10 @@ void can_change_state(struct net_device *dev, struct can_frame *cf,
 int can_put_echo_skb(struct sk_buff *skb, struct net_device *dev,
 		     unsigned int idx);
 struct sk_buff *__can_get_echo_skb(struct net_device *dev, unsigned int idx,
-				   u8 *len_ptr);
-unsigned int can_get_echo_skb(struct net_device *dev, unsigned int idx);
+				   unsigned int *len_ptr, unsigned int *frame_len_ptr);
+unsigned int can_get_echo_skb(struct net_device *dev,
+			      unsigned int idx,
+			      unsigned int *frame_len_ptr);
 void can_free_echo_skb(struct net_device *dev, unsigned int idx);
 
 #ifdef CONFIG_OF
@@ -232,6 +303,9 @@ static inline void of_can_transceiver(struct net_device *dev) { }
 struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf);
 struct sk_buff *alloc_canfd_skb(struct net_device *dev,
 				struct canfd_frame **cfd);
+struct sk_buff *alloc_canxl_skb(struct net_device *dev,
+				struct canxl_frame **cxl,
+				unsigned int data_len);
 struct sk_buff *alloc_can_err_skb(struct net_device *dev,
 				  struct can_frame **cf);
 
