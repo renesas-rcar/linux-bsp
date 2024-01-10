@@ -307,6 +307,7 @@ static const struct of_device_id rwdt_ids[] = {
 	{ .compatible = "renesas,rcar-gen2-wdt", },
 	{ .compatible = "renesas,rcar-gen3-wdt", },
 	{ .compatible = "renesas,rcar-gen4-wdt", },
+	{ .compatible = "renesas,rcar-gen5-wdt", },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, rwdt_ids);
