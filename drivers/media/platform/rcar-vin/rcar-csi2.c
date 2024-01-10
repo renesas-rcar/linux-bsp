@@ -23,6 +23,11 @@
 #include <media/v4l2-mc.h>
 #include <media/v4l2-subdev.h>
 
+#define SKIPRESETCONTROL
+#define GENERICCIS2CAMERA
+#define NINTERRUPT
+#define VDKWORKAROUND
+
 struct rcar_csi2;
 
 /* Register offsets and bits */
@@ -922,14 +927,18 @@ static void rcsi2_enter_standby(struct rcar_csi2 *priv)
 		rcsi2_write(priv, PHTC_REG, PHTC_TESTCLR);
 	}
 
+#ifndef SKIPRESETCONTROL
 	reset_control_assert(priv->rstc);
+#endif
 	usleep_range(100, 150);
 	pm_runtime_put(priv->dev);
 }
 
 static void rcsi2_exit_standby(struct rcar_csi2 *priv)
 {
+#ifndef SKIPRESETCONTROL
 	pm_runtime_get_sync(priv->dev);
+#endif
 	reset_control_deassert(priv->rstc);
 }
 
@@ -942,8 +951,10 @@ static int rcsi2_wait_phy_start(struct rcar_csi2 *priv,
 	for (timeout = 0; timeout <= 20; timeout++) {
 		const u32 lane_mask = (1 << lanes) - 1;
 
+#ifndef VDKWORKAROUND
 		if ((rcsi2_read(priv, PHCLM_REG) & PHCLM_STOPSTATECKL)  &&
 		    (rcsi2_read(priv, PHDLM_REG) & lane_mask) == lane_mask)
+#endif
 			return 0;
 
 		usleep_range(1000, 2000);
@@ -1020,6 +1031,7 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 	struct v4l2_ctrl *ctrl;
 	u64 mbps;
 
+#ifndef GENERICCIS2CAMERA
 	if (!priv->remote)
 		return -ENODEV;
 
@@ -1040,6 +1052,8 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 	 */
 	mbps = v4l2_ctrl_g_ctrl_int64(ctrl) * bpp;
 	do_div(mbps, lanes * 1000000);
+#endif
+	mbps = 2474;
 
 	return mbps;
 }
@@ -1053,6 +1067,7 @@ static int rcsi2_get_active_lanes(struct rcar_csi2 *priv,
 
 	*lanes = priv->lanes;
 
+#ifndef GENERICCIS2CAMERA
 	ret = v4l2_subdev_call(priv->remote, pad, get_mbus_config,
 			       priv->remote_pad, &mbus_config);
 	if (ret == -ENOIOCTLCMD) {
@@ -1089,6 +1104,7 @@ static int rcsi2_get_active_lanes(struct rcar_csi2 *priv,
 	}
 
 	*lanes = num_lanes;
+#endif
 
 	return 0;
 }
@@ -1591,12 +1607,14 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 			return ret;
 	}
 
+#ifndef GENERICCIS2CAMERA
 	/* Start camera side device */
 	ret = v4l2_subdev_call(priv->remote, video, s_stream, 1);
 	if (ret) {
 		rcsi2_enter_standby(priv);
 		return ret;
 	}
+#endif
 
 	/* Confirmation of CSI PHY */
 	if (priv->info->features & RCAR_CSI2_R8A779G0_FEATURE ||
@@ -1619,7 +1637,9 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 static void rcsi2_stop(struct rcar_csi2 *priv)
 {
 	rcsi2_enter_standby(priv);
+#ifndef GENERICCIS2CAMERA
 	v4l2_subdev_call(priv->remote, video, s_stream, 0);
+#endif
 }
 
 static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
@@ -1629,10 +1649,12 @@ static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
 
 	mutex_lock(&priv->lock);
 
+#ifndef GENERICCIS2CAMERA
 	if (!priv->remote) {
 		ret = -ENODEV;
 		goto out;
 	}
+#endif
 
 	if (enable && priv->stream_count == 0) {
 		ret = rcsi2_start(priv);
@@ -1734,6 +1756,7 @@ static irqreturn_t rcsi2_irq_thread(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+#ifndef GENERICCIS2CAMERA
 /* -----------------------------------------------------------------------------
  * Async handling and registration of subdevices and links.
  */
@@ -1778,6 +1801,7 @@ static const struct v4l2_async_notifier_operations rcar_csi2_notify_ops = {
 	.bound = rcsi2_notify_bound,
 	.unbind = rcsi2_notify_unbind,
 };
+#endif
 
 static int rcsi2_parse_v4l2(struct rcar_csi2 *priv,
 			    struct v4l2_fwnode_endpoint *vep)
@@ -1796,18 +1820,22 @@ static int rcsi2_parse_v4l2(struct rcar_csi2 *priv,
 
 	priv->lanes = vep->bus.mipi_csi2.num_data_lanes;
 	if (vep->bus_type == V4L2_MBUS_CSI2_DPHY) {
+#ifndef GENERICCIS2CAMERA
 		if (priv->lanes != 1 && priv->lanes != 2 && priv->lanes != 4) {
 			dev_err(priv->dev, "Unsupported number of data-lanes: %u\n",
 				priv->lanes);
 			return -EINVAL;
 		}
+#endif
 		priv->cphy_connection = false;
 	} else {
+#ifndef GENERICCIS2CAMERA
 		if (priv->lanes != 3) {
 			dev_err(priv->dev, "Unsupported number of data-lanes: %u\n",
 				priv->lanes);
 			return -EINVAL;
 		}
+#endif
 		priv->cphy_connection = true;
 	}
 
@@ -1886,6 +1914,7 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 			priv->pin_swap_rx_order[i] = ABC;
 	}
 
+#ifndef GENERICCIS2CAMERA
 	fwnode = fwnode_graph_get_remote_endpoint(of_fwnode_handle(ep));
 	of_node_put(ep);
 
@@ -1906,6 +1935,8 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		v4l2_async_notifier_cleanup(&priv->notifier);
 
 	return ret;
+#endif
+	return 0;
 }
 
 /* -----------------------------------------------------------------------------
@@ -1924,7 +1955,9 @@ static int rcsi2_phtw_write(struct rcar_csi2 *priv, u16 data, u16 code)
 
 	/* Wait for DWEN and CWEN to be cleared by hardware. */
 	for (timeout = 0; timeout <= 20; timeout++) {
+#ifndef VDKWORKAROUND
 		if (!(rcsi2_read(priv, PHTW_REG) & (PHTW_DWEN | PHTW_CWEN)))
+#endif
 			return 0;
 
 		usleep_range(1000, 2000);
@@ -2220,6 +2253,7 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
 
+#ifndef NINTERRUPT
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
 		return irq;
@@ -2229,10 +2263,14 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 					KBUILD_MODNAME, priv);
 	if (ret)
 		return ret;
+#endif
 
+#ifndef SKIPRESETCONTROL
 	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
 	return PTR_ERR_OR_ZERO(priv->rstc);
+#endif
+	return 0;
 }
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a7795 = {
@@ -2313,6 +2351,16 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a779h0 = {
 	.num_channels = 16,
 };
 
+static const struct rcar_csi2_info rcar_csi2_info_r8a78000 = {
+	.init_phtw = rcsi2_init_phtw_v3u,
+	.hsfreqrange = hsfreqrange_v3u,
+	.csi0clkfreqrange = 0x20,
+	.clear_ulps = true,
+	.num_channels = 4,
+	.no_use_vdt = true,
+	.has_phyfrx_reg = true,
+};
+
 static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a774a1-csi2",
@@ -2361,6 +2409,10 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a779g0-csi2",
 		.data = &rcar_csi2_info_r8a779g0,
+	},
+	{
+		.compatible = "renesas,r8a78000-csi2",
+		.data = &rcar_csi2_info_r8a78000,
 	},
 	{
 		.compatible = "renesas,r8a779a0-csi2",
@@ -2451,8 +2503,10 @@ static int rcsi2_probe(struct platform_device *pdev)
 	return 0;
 
 error:
+#ifndef GENERICCIS2CAMERA
 	v4l2_async_notifier_unregister(&priv->notifier);
 	v4l2_async_notifier_cleanup(&priv->notifier);
+#endif
 
 	return ret;
 }
@@ -2461,7 +2515,9 @@ static int rcsi2_remove(struct platform_device *pdev)
 {
 	struct rcar_csi2 *priv = platform_get_drvdata(pdev);
 
+#ifndef GENERICCIS2CAMERA
 	v4l2_async_notifier_unregister(&priv->notifier);
+#endif
 	v4l2_async_unregister_subdev(&priv->subdev);
 
 	pm_runtime_disable(&pdev->dev);

@@ -33,7 +33,7 @@
 #define HW_BUFFER_MASK 0x7f
 
 /* Max number on VIN instances that can be in a system */
-#define RCAR_VIN_NUM 32
+#define RCAR_VIN_MAX_NUM 96
 
 /* Time until source device reconnects */
 #define CONNECTION_TIME 2000
@@ -44,6 +44,7 @@
 #define RCAR_VIN_R8A779A0_FEATURE	BIT(0)
 #define RCAR_VIN_R8A779G0_FEATURE	BIT(1)
 #define RCAR_VIN_R8A779H0_FEATURE	BIT(2)
+#define RCAR_VIN_R8A78000_FEATURE	BIT(3)
 
 struct rvin_group;
 
@@ -53,6 +54,7 @@ enum model_id {
 	RCAR_GEN2,
 	RCAR_GEN3,
 	RCAR_GEN4,
+	RCAR_GEN5,
 };
 
 enum rvin_csi_id {
@@ -81,6 +83,14 @@ enum rvin_r8a779h0_csi_id {
 	RV4M_CSI40,
 	RV4M_CSI41,
 	RV4M_CSI_MAX,
+};
+
+enum rvin_r8a78000_csi_id {
+	RX5H_CSI40,
+	RX5H_CSI41,
+	RX5H_CSI42,
+	RX5H_CSI43,
+	RX5H_CSI_MAX,
 };
 
 /**
@@ -217,6 +227,7 @@ struct rvin_info {
 	unsigned int max_height;
 	const struct rvin_group_route *routes;
 	const struct rvin_group_scaler *scalers;
+	unsigned int num_channel;
 };
 
 /**
@@ -352,7 +363,7 @@ struct rvin_group {
 	struct mutex lock;
 	unsigned int count;
 	struct v4l2_async_notifier notifier;
-	struct rvin_dev *vin[RCAR_VIN_NUM];
+	struct rvin_dev *vin[RCAR_VIN_MAX_NUM];
 
 	struct {
 		struct fwnode_handle *fwnode;

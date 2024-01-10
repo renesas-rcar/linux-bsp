@@ -28,6 +28,9 @@
 
 #include "rcar-vin.h"
 
+#define SKIPRESETCONTROL
+#define SOCX5H
+
 /*
  * The companion CSI-2 receiver driver (rcar-csi2) is known
  * and we know it has one source pad (pad 0) and four sink
@@ -46,7 +49,16 @@
 #define rvin_group_id_to_master(vin) ((vin) < 4 ? 0 : (vin) < 8 ? 4 : \
 				     (vin) < 12 ? 8 : (vin) < 16 ? 12 : \
 				     (vin) < 20 ? 16 : (vin) < 24 ? 20 : \
-				     (vin) < 28 ? 24 : (vin) < 32 ? 28 : 32)
+					 (vin) < 28 ? 24 : (vin) < 32 ? 28 : \
+					 (vin) < 36 ? 32 : (vin) < 40 ? 36 : \
+					 (vin) < 44 ? 40 : (vin) < 48 ? 44 : \
+					 (vin) < 52 ? 48 : (vin) < 56 ? 52 : \
+					 (vin) < 60 ? 56 : (vin) < 64 ? 60 : \
+					 (vin) < 68 ? 64 : (vin) < 72 ? 68 : \
+					 (vin) < 76 ? 72 : (vin) < 80 ? 76 : \
+					 (vin) < 84 ? 80 : (vin) < 88 ? 84 : \
+					 (vin) < 92 ? 88 : 96)
+//				     (vin) < 28 ? 24 : (vin) < 32 ? 28 : 32)
 
 #define v4l2_dev_to_vin(d)	container_of(d, struct rvin_dev, v4l2_dev)
 
@@ -190,7 +202,7 @@ static int rvin_group_link_notify(struct media_link *link, u32 flags,
 		 * we can return here.
 		 */
 		sd = media_entity_to_v4l2_subdev(link->source->entity);
-		for (i = 0; i < RCAR_VIN_NUM; i++) {
+		for (i = 0; i < vin->info->num_channel; i++) {
 			if (group->vin[i] && group->vin[i]->parallel &&
 			    group->vin[i]->parallel->subdev == sd) {
 				group->vin[i]->is_csi = false;
@@ -315,7 +327,7 @@ static int rvin_group_get(struct rvin_dev *vin)
 		return -EINVAL;
 	}
 
-	if (id >= RCAR_VIN_NUM) {
+	if (id >= vin->info->num_channel) {
 		vin_err(vin, "%pOF: Invalid renesas,id '%u'\n",
 			vin->dev->of_node, id);
 		return -EINVAL;
@@ -693,7 +705,7 @@ static int rvin_group_notify_complete(struct v4l2_async_notifier *notifier)
 	}
 
 	/* Register all video nodes for the group. */
-	for (i = 0; i < RCAR_VIN_NUM; i++) {
+	for (i = 0; i < vin->info->num_channel; i++) {
 		if (vin->group->vin[i] &&
 		    !video_is_registered(&vin->group->vin[i]->vdev)) {
 			ret = rvin_v4l2_register(vin->group->vin[i]);
@@ -751,7 +763,7 @@ static void rvin_group_notify_unbind(struct v4l2_async_notifier *notifier,
 	struct rvin_dev *vin = v4l2_dev_to_vin(notifier->v4l2_dev);
 	unsigned int i;
 
-	for (i = 0; i < RCAR_VIN_NUM; i++)
+	for (i = 0; i < vin->info->num_channel; i++)
 		if (vin->group->vin[i])
 			rvin_v4l2_unregister(vin->group->vin[i]);
 
@@ -835,17 +847,18 @@ out:
 
 static int rvin_mc_parse_of_graph(struct rvin_dev *vin)
 {
-	unsigned int count = 0, vin_mask = 0;
+	unsigned int count = 0;
 	unsigned int i;
 	int ret;
+	bool vin_mask[RCAR_VIN_MAX_NUM] = {0};
 
 	mutex_lock(&vin->group->lock);
 
 	/* If not all VIN's are registered don't register the notifier. */
-	for (i = 0; i < RCAR_VIN_NUM; i++) {
+	for (i = 0; i < vin->info->num_channel; i++) {
 		if (vin->group->vin[i]) {
 			count++;
-			vin_mask |= BIT(i);
+			vin_mask[i] = 1;
 		}
 	}
 
@@ -863,8 +876,8 @@ static int rvin_mc_parse_of_graph(struct rvin_dev *vin)
 	 * overlap but the parser function can handle it, so each subdevice
 	 * will only be registered once with the group notifier.
 	 */
-	for (i = 0; i < RCAR_VIN_NUM; i++) {
-		if (!(vin_mask & BIT(i)))
+	for (i = 0; i < vin->info->num_channel; i++) {
+		if (!(vin_mask[i]))
 			continue;
 
 		ret = v4l2_async_notifier_parse_fwnode_endpoints_by_port(
@@ -1324,12 +1337,33 @@ static const struct rvin_group_route rcar_info_r8a779h0_routes[] = {
 	{ /* Sentinel */ }
 };
 
+static const struct rvin_group_route rcar_info_r8a78000_routes[] = {
+	{ .csi = RX5H_CSI40, .channel = 0, .vin = 0,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI40, .channel = 1, .vin = 1,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI40, .channel = 2, .vin = 8,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI40, .channel = 3, .vin = 16,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI41, .channel = 0, .vin = 24,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI41, .channel = 1, .vin = 25,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI41, .channel = 2, .vin = 32,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI41, .channel = 3, .vin = 40, .mask = 0xffffffff },
+	{ .csi = RX5H_CSI42, .channel = 0, .vin = 48,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI42, .channel = 1, .vin = 49,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI42, .channel = 2, .vin = 56,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI42, .channel = 3, .vin = 64, .mask = 0xffffffff },
+	{ .csi = RX5H_CSI43, .channel = 0, .vin = 72,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI43, .channel = 1, .vin = 73,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI43, .channel = 2, .vin = 80,  .mask = 0xffffffff },
+	{ .csi = RX5H_CSI43, .channel = 3, .vin = 88, .mask = 0xffffffff },
+	{ /* Sentinel */ }
+};
+
 static const struct rvin_info rcar_info_r8a779a0 = {
 	.model = RCAR_GEN3,
 	.use_mc = true,
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a779a0_routes,
+	.num_channel = 32,
 };
 
 static const struct rvin_info rcar_info_r8a779g0 = {
@@ -1338,6 +1372,7 @@ static const struct rvin_info rcar_info_r8a779g0 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a779g0_routes,
+	.num_channel = 32,
 };
 
 static const struct rvin_info rcar_info_r8a779h0 = {
@@ -1346,6 +1381,16 @@ static const struct rvin_info rcar_info_r8a779h0 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a779h0_routes,
+	.num_channel = 32,
+};
+
+static const struct rvin_info rcar_info_r8a78000 = {
+	.model = RCAR_GEN5,
+	.use_mc = true,
+	.max_width = 8192,
+	.max_height = 8192,
+	.routes = rcar_info_r8a78000_routes,
+	.num_channel = 96,
 };
 
 static const struct of_device_id rvin_of_id_table[] = {
@@ -1437,6 +1482,10 @@ static const struct of_device_id rvin_of_id_table[] = {
 		.compatible = "renesas,vin-r8a779h0",
 		.data = &rcar_info_r8a779h0,
 	},
+	{
+		.compatible = "renesas,vin-r8a78000",
+		.data = &rcar_info_r8a78000,
+	},
 	{ /* Sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, rvin_of_id_table);
@@ -1461,6 +1510,10 @@ static const struct soc_device_attribute chip_info[] = {
 	{
 		.soc_id = "r8a779h0",
 		.data = (void *)RCAR_VIN_R8A779H0_FEATURE,
+	},
+	{
+		.soc_id = "r8a78000",
+		.data = (void *)RCAR_VIN_R8A78000_FEATURE,
 	},
 	{ /* sentinel */ }
 };
@@ -1506,6 +1559,11 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (dev_attr)
 		vin->chip_info = (uintptr_t)dev_attr->data;
 
+#ifdef SOCX5H
+	/* hard-code for X5H on VDK - no PRR register support*/
+	vin->chip_info = RCAR_VIN_R8A78000_FEATURE;
+#endif
+
 	vin->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(vin->base))
 		return PTR_ERR(vin->base);
@@ -1540,6 +1598,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	}
 	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
 
+#ifndef SKIPRESETCONTROL
 	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
 	if (IS_ERR(vin->rstc)) {
 		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
@@ -1555,6 +1614,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		ret = PTR_ERR(vin->clk);
 		goto error_destroy_workqueue;
 	}
+#endif
 
 	return 0;
 
