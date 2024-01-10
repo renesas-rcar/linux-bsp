@@ -50,6 +50,7 @@ static int rcar_gen4_pcie_host_init(struct dw_pcie_rp *pp)
 	if (dw->num_lanes != 4)
 	{
 		dw_pcie_dbi_ro_wr_en(dw);
+		rcar_gen4_pcie_set_max_link_width(dw, dw->num_lanes);
 		rcar_gen4_pcie_workaround_settings(dw);
 		dw_pcie_dbi_ro_wr_dis(dw);
 	}else{
@@ -103,7 +104,6 @@ static void rcar_gen4_remove_dw_pcie_rp(struct rcar_gen4_pcie *rcar)
 static int rcar_gen4_pcie_get_resources(struct rcar_gen4_pcie *rcar,
 					struct platform_device *pdev)
 {
-	struct dw_pcie *dw = &rcar->dw;
 	struct resource *res;
 
 	/* Renesas-specific registers */
@@ -118,7 +118,10 @@ static int rcar_gen4_pcie_get_resources(struct rcar_gen4_pcie *rcar,
 			rcar->phy_base = NULL;
 	}
 
-	return rcar_gen4_pcie_devm_reset_get(rcar, dw->dev);
+	/* temporarily removed since PCIe on VDK Gen5 has not supported yet */
+	//return rcar_gen4_pcie_devm_reset_get(rcar, dw->dev);
+
+	return 0;
 }
 
 static int rcar_gen4_pcie_probe(struct platform_device *pdev)
