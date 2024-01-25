@@ -43,7 +43,7 @@
 			reg = <0x00000000 0x5e800000 0x0 0x00800000>;
 		};
 
-		pap_region: linux,pap_region@5f800000 {
+		pap_region: linux,pap_region@5f000000 {
 			compatible = "shared-dma-pool";
 			reusable;
 			reg = <0x00000000 0x5f000000 0x0 0x00400000>;
