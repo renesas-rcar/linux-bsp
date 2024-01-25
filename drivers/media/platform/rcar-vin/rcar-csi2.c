@@ -174,7 +174,6 @@ struct rcar_csi2;
 #define V4M_PHTR		0x02064
 #define PHTR_TESTDOUT_CODE(n)		(((n) & 0xff) << 16)
 #define V4M_PHTC		0x02068
-#define RCAR_CSI2_R8A779H0_FEATURE	BIT(1)
 
 #define ST_PHYST		0x2814
 #define ST_PHY_READY	BIT(31)
@@ -267,6 +266,8 @@ struct rcar_csi2;
 #define CORE_DIG_CLANE_2_RW_HS_RX(n)			(0x2A900 + (n * 2)) /* n = 0 ~ 6 */
 
 #define RCAR_CSI2_R8A779G0_FEATURE	BIT(0)
+#define RCAR_CSI2_R8A779H0_FEATURE      BIT(1)
+#define RCAR_CSI2_R8A779A0_FEATURE      BIT(2)
 
 #define CSI1300		1
 
@@ -1618,11 +1619,15 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 					| FRXM_FORCERXMODE_1 | FRXM_FORCERXMODE_2 | FRXM_FORCERXMODE_3));
 	}
 
-	/* Start camera side device */
-	ret = v4l2_subdev_call(priv->remote, video, enable_link, 1);
-	if (ret) {
-		rcsi2_enter_standby(priv);
-		return ret;
+	if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE ||
+		priv->info->features & RCAR_CSI2_R8A779G0_FEATURE ||
+		priv->info->features & RCAR_CSI2_R8A779A0_FEATURE) {
+		/* Start camera side device */
+		ret = v4l2_subdev_call(priv->remote, video, enable_link, 1);
+		if (ret) {
+			rcsi2_enter_standby(priv);
+			return ret;
+		}
 	}
 
 	return 0;
@@ -2318,6 +2323,7 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a779g0 = {
 };
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a779a0 = {
+	.features = RCAR_CSI2_R8A779A0_FEATURE,
 	.init_phtw = rcsi2_init_phtw_v3u,
 	.hsfreqrange = hsfreqrange_v3u,
 	.csi0clkfreqrange = 0x20,
