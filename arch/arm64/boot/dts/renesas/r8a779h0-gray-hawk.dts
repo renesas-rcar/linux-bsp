@@ -43,7 +43,7 @@
 			reg = <0x00000000 0x5e800000 0x0 0x00800000>;
 		};
 
-		pap_region: linux,pap_region@5f800000 {
+		pap_region: linux,pap_region@5f000000 {
 			compatible = "shared-dma-pool";
 			reusable;
 			reg = <0x00000000 0x5f000000 0x0 0x00400000>;
@@ -56,12 +56,18 @@
 			reg = <0x00000000 0x80000000 0x0 0x23000000>;
 			linux,cma-default;
 		};
+
+		region_40bit: linux,region_40bit@500000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x5 0x00000000 0x0 0x40000000>;
+		};
 	};
 
 	cmem {
 		memory-region = <&vdsp0_region>, <&vdsp1_region>,
 				<&vdsp2_region>, <&vdsp3_region>,
-				<&pap_region>;
+				<&pap_region>, <&region_40bit>;
 	};
 
 	sound_card: sound {
