@@ -936,10 +936,11 @@ static void rcsi2_enter_standby(struct rcar_csi2 *priv)
 
 static void rcsi2_exit_standby(struct rcar_csi2 *priv)
 {
-#ifndef SKIPRESETCONTROL
+
 	pm_runtime_get_sync(priv->dev);
-#endif
+#ifndef SKIPRESETCONTROL
 	reset_control_deassert(priv->rstc);
+#endif
 }
 
 static int rcsi2_wait_phy_start(struct rcar_csi2 *priv,
@@ -951,10 +952,8 @@ static int rcsi2_wait_phy_start(struct rcar_csi2 *priv,
 	for (timeout = 0; timeout <= 20; timeout++) {
 		const u32 lane_mask = (1 << lanes) - 1;
 
-#ifndef VDKWORKAROUND
 		if ((rcsi2_read(priv, PHCLM_REG) & PHCLM_STOPSTATECKL)  &&
 		    (rcsi2_read(priv, PHDLM_REG) & lane_mask) == lane_mask)
-#endif
 			return 0;
 
 		usleep_range(1000, 2000);
@@ -1031,6 +1030,7 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 	struct v4l2_ctrl *ctrl;
 	u64 mbps;
 
+	mbps = 7423000000;
 #ifndef GENERICCIS2CAMERA
 	if (!priv->remote)
 		return -ENODEV;
@@ -1051,9 +1051,8 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 	 * bps = link_freq * 2
 	 */
 	mbps = v4l2_ctrl_g_ctrl_int64(ctrl) * bpp;
-	do_div(mbps, lanes * 1000000);
 #endif
-	mbps = 2474;
+	do_div(mbps, lanes * 1000000);
 
 	return mbps;
 }
