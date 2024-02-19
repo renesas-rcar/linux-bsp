@@ -57,6 +57,7 @@ enum clk_ids {
 	CLK_SDSRC,
 	CLK_RPCSRC,
 	CLK_OCO,
+	CLK_VC,
 
 	/* Module Clocks */
 	MOD_CLK_BASE
@@ -94,6 +95,7 @@ static const struct cpg_core_clk r8a779g0_core_clks[] __initconst = {
 	DEF_BASE(".rpcsrc",	CLK_RPCSRC,		CLK_TYPE_GEN4_RPCSRC, CLK_PLL5),
 	DEF_BASE(".rpc",	R8A779G0_CLK_RPC,	CLK_TYPE_GEN4_RPC,    CLK_RPCSRC),
 	DEF_BASE("rpcd2",	R8A779G0_CLK_RPCD2,	CLK_TYPE_GEN4_RPCD2,  R8A779G0_CLK_RPC),
+	DEF_FIXED(".vc",        CLK_VC,         CLK_PLL5_DIV2,  3, 1),
 
 	/* Core Clock Outputs */
 	DEF_GEN4_Z("z0",	R8A779G0_CLK_Z0,	CLK_TYPE_GEN4_Z,	CLK_PLL2,	2, 0),
@@ -153,6 +155,8 @@ static const struct cpg_core_clk r8a779g0_core_clks[] __initconst = {
 	DEF_FIXED("sasyncperd4", R8A779G0_CLK_SASYNCPERD4, R8A779G0_CLK_SASYNCPER, 4, 1),
 	DEF_FIXED("viobus",	R8A779G0_CLK_VIOBUS,	CLK_PLL5_DIV2,	1, 1),
 	DEF_FIXED("viobusd2",	R8A779G0_CLK_VIOBUSD2,	CLK_PLL5_DIV2,	2, 1),
+	DEF_FIXED("vcbus",	R8A779G0_CLK_VCBUS,	CLK_VC,		1, 1),
+	DEF_FIXED("vcbusd2",	R8A779G0_CLK_VCBUSD2,	CLK_VC,		2, 1),
 	DEF_FIXED("cpex",	R8A779G0_CLK_CPEX,	CLK_EXTAL,	2, 1),
 	DEF_GEN4_OSC("osc",	R8A779G0_CLK_OSCCLK,	CLK_EXTAL,	8),
 	DEF_GEN4_MDSEL("r",	R8A779G0_CLK_RCLK, 29, CLK_EXTALR, 1, CLK_OCO, 1),
@@ -163,14 +167,14 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("smpo0",		5,	R8A779G0_CLK_S0D3),
 	DEF_MOD("smps0",		7,	R8A779G0_CLK_S0D3),
 	DEF_MOD("umfl0",		9,	R8A779G0_CLK_S0D3),
-	DEF_MOD("isp0",			16,	R8A779G0_CLK_S0D6_PER),
-	DEF_MOD("isp1",			17,	R8A779G0_CLK_S0D6_PER),
+	DEF_MOD("isp0",			16,	R8A779G0_CLK_S0D1_VIO),
+	DEF_MOD("isp1",			17,	R8A779G0_CLK_S0D1_VIO),
 	DEF_MOD("impcnn",		22,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("spmc",			23,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("imp0",			24,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("imp1",			25,	R8A779G0_CLK_S0D6_PER),
-	DEF_MOD("impdmac0",		26,	R8A779G0_CLK_MSO),
-	DEF_MOD("imppsc",		27,	R8A779G0_CLK_MSO),
+	DEF_MOD("impdmac0",		26,	R8A779G0_CLK_SVD1_IR),
+	DEF_MOD("imppsc",		27,	R8A779G0_CLK_SVD1_IR),
 
 	DEF_MOD("imp2",			103,	R8A779G0_CLK_S0D3),
 	DEF_MOD("imp3",			104,	R8A779G0_CLK_S0D3),
@@ -213,9 +217,9 @@ static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("ims0",			529,	R8A779G0_CLK_S0D6_PER),
 	DEF_MOD("ims1",			530,	R8A779G0_CLK_S0D6_PER),
 
-	DEF_MOD("ispcs0",		612,	R8A779G0_CLK_MSO),
-	DEF_MOD("ispcs1",		613,	R8A779G0_CLK_MSO),
-	DEF_MOD("ivcp1e",		616,	R8A779G0_CLK_MSO),
+	DEF_MOD("ispcs0",		612,	R8A779G0_CLK_S0D2_VIO),
+	DEF_MOD("ispcs1",		613,	R8A779G0_CLK_S0D2_VIO),
+	DEF_MOD("ivcp1e",		616,	R8A779G0_CLK_VCBUS),
 	DEF_MOD("msi0",			618,	R8A779G0_CLK_MSO),
 	DEF_MOD("msi1",			619,	R8A779G0_CLK_MSO),
 	DEF_MOD("msi2",			620,	R8A779G0_CLK_MSO),
