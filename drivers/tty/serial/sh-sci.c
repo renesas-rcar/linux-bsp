@@ -2996,6 +2996,8 @@ static int sci_init_single(struct platform_device *dev,
 	 */
 	port->irq		= sci_port->irqs[SCIx_RXI_IRQ];
 	port->irqflags		= 0;
+	// XXX: GEN5: Temporary workaround for single IRQ assigned to multi channel.
+	port->irqflags		= IRQF_SHARED;
 
 	port->serial_in		= sci_serial_in;
 	port->serial_out	= sci_serial_out;
