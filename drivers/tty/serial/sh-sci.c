@@ -821,6 +821,7 @@ static void sci_transmit_chars(struct uart_port *port)
 
 	count = sci_txroom(port);
 
+	sci_clear_SCxSR(port, SCxSR_TDxE_CLEAR(port));
 	do {
 		unsigned char c;
 
@@ -839,12 +840,12 @@ static void sci_transmit_chars(struct uart_port *port)
 		port->icount.tx++;
 	} while (--count > 0);
 
-	sci_clear_SCxSR(port, SCxSR_TDxE_CLEAR(port));
-
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(port);
-	if (uart_circ_empty(xmit))
+	if (uart_circ_empty(xmit)) {
+		sci_clear_SCxSR(port, SCxSR_TDxE_CLEAR(port));
 		sci_stop_tx(port);
+	}
 
 }
 
