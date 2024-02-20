@@ -2952,6 +2952,8 @@ static int sci_init_single(struct platform_device *dev,
 		sci_port->rx_trigger = 1;
 		break;
 	}
+	// XXX: GEN5: Temporary workaround for Receive-data-ready malfunction.
+	sci_port->rx_trigger = 1;
 
 	sci_port->rx_fifo_timeout = 0;
 	sci_port->hscif_tot = 0;
