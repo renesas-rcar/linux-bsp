@@ -552,7 +552,7 @@
 
 /* DMA Info Ctrl 2 for Tx Queue */
 #define CANXL_BIT_RESERVED4	(0X00 << 27)
-#define CANXL_BIT_PLSRC		(0x01 << 26)
+#define CANXL_BIT_PLSRC(x)	((x) << 26)
 #define CANXL_BIT_SIZE(x)	(x << 16)
 #define CANXL_BIT_IN(x)		(x << 13)
 #define CANXL_BIT_RESERVED5	(0x00 << 12)
@@ -564,17 +564,15 @@
 					 CANXL_BIT_PQ | CANXL_BIT_RESERVED1 | \
 					 CANXL_BIT_RESERVED3 | CANXL_BIT_STS)
 
-#define CANXL_DMA2_FIXED_PQ		(CANXL_BIT_RESERVED4 | CANXL_BIT_PLSRC | \
-					 CANXL_BIT_RESERVED5 | \
+#define CANXL_DMA2_FIXED_PQ		(CANXL_BIT_RESERVED4 | CANXL_BIT_RESERVED5 | \
 					 CANXL_BIT_TDO | CANXL_BIT_RESERVED6)
 
 #define CANXL_DMA1_FIXED_FQ		(CANXL_BIT_HD | CANXL_BIT_WRAP | CANXL_BIT_NEXT | \
 					 CANXL_BIT_FQ | CANXL_BIT_RESERVED1 | \
 					 CANXL_BIT_RESERVED2 | CANXL_BIT_RESERVED3 | CANXL_BIT_STS)
 
-#define CANXL_DMA2_FIXED_FQ		(CANXL_BIT_RESERVED4 | CANXL_BIT_PLSRC | \
-					 CANXL_BIT_RESERVED5 | CANXL_BIT_NHDO | \
-					 CANXL_BIT_RESERVED6)
+#define CANXL_DMA2_FIXED_FQ		(CANXL_BIT_RESERVED4 | CANXL_BIT_RESERVED5 | \
+					 CANXL_BIT_NHDO | CANXL_BIT_RESERVED6)
 
 /* T0 for Tx Queue */
 #define CANXL_BIT_FDF			(0x01 << 31)
@@ -589,6 +587,14 @@
 #define CANXL_T0_FIXED			(CANXL_BIT_FDF | CANXL_BIT_XTD | \
 					 CANXL_BIT_RRS | CANXL_BIT_VCID)
 
+#define CANFD_BIT_FDF			(0x01 << 31)
+#define CANFD_BIT_XLF(x)		((x) << 30)
+#define CANFD_BIT_XTD(x)		((x) << 29)
+#define CANFD_BIT_BAID(x)		((x) << 18)
+#define CANFD_BIT_EXTID(x)		((x))
+
+#define CANFD_T0_FIXED			(CANFD_BIT_FDF | CANFD_BIT_XLF(0))
+
 /* T1 for Tx Queue */
 #define CANXL_BIT_RESERVED7		(0x00 << 31)
 #define CANXL_BIT_FIR			(0x00 << 30)
@@ -598,6 +604,20 @@
 
 #define CANXL_T1_FIXED			(CANXL_BIT_RESERVED7 | CANXL_BIT_FIR | \
 					 CANXL_BIT_RESERVED8 | CANXL_BIT_RESERVED9)
+
+#define CANFD_BIT_RESERVED1		(0x00 << 31)
+#define CANFD_BIT_FIR			(0x00 << 30)
+#define CANFD_BIT_RESERVED2		(0x00 << 27)
+#define CANFD_BIT_RESERVED3		(0x00 << 26)
+#define CANFD_BIT_BRS(x)		((x) << 25)
+#define CANFD_BIT_RESERVED4		(0x00 << 21)
+#define CANFD_BIT_ESI(x)		((x) << 20)
+#define CANFD_BIT_DLC(x)		((x) << 16)
+#define CANFD_BIT_RESERVED5		(0x00)
+
+#define CANFD_T1_FIXED			(CANFD_BIT_RESERVED1 | CANFD_BIT_FIR | \
+					 CANFD_BIT_RESERVED2 | CANFD_BIT_RESERVED3 | \
+					 CANFD_BIT_RESERVED4 | CANFD_BIT_RESERVED5)
 
 /* DMA Info Ctrl 1 for Rx Queue */
 #define CANXL_RX_BIT_VALID(x)		(x << 31)
@@ -616,14 +636,22 @@
 					 CANXL_RX_BIT_RESERVED1 | CANXL_RX_BIT_NEXT | \
 					 CANXL_RX_BIT_RESERVED2 | CANXL_RX_BIT_STS)
 
-/* R0 for Tx Queue */
+/* R0 for Rx Queue */
 #define CANXL_RX_BIT_PRIO(x)	(x >> 18)
 #define CANXL_RX_BIT_SEC(x)	(x >> 16)
 #define CANXL_RX_BIT_VCID(x)	(x >> 8)
 #define CANXL_RX_BIT_SDT(x)	(x >> 0)
 
-/* R1 for Tx Queue */
+#define CANFD_RX_BIT_XTD(x)	((x) >> 29)
+#define CANFD_RX_BIT_BAID(x)	((x) >> 18)
+#define CANFD_RX_BIT_EXTID(x)	((x))
+
+/* R1 for Rx Queue */
 #define CANXL_RX_BIT_DLCXL(x)	(x >> 16)
+
+#define CANFD_RX_BIT_BRS(x)	((x) >> 25)
+#define CANFD_RX_BIT_ESI(x)	((x) >> 20)
+#define CANFD_RX_BIT_DLC(x)	((x) >> 16)
 
 /* Tx Descriptors m  */
 #define TXElement0(m)		(0x0 + (0x20 * m))	/* SW/MH: DMA Info Ctrl 1 */
@@ -691,7 +719,7 @@ struct rcar_canxl_global {
 	struct clk *clkp;		/* Peripheral clock */
 	struct clk *can_clk;		/* fCAN clock */
 	enum rcar_canxl_fcanclk fcan;	/* CANXL or Ext clock */
-	bool mode;			/* CANXL mode */
+	bool xlmode;			/* CANXL mode */
 	enum rcar_canxl_chip_id chip_id;
 	u32 channel;
 };
@@ -774,21 +802,46 @@ static void rcar_canxl_clear_bit(void __iomem *base, u32 reg, u32 val)
 	rcar_canxl_update(val, 0, base + (reg));
 }
 
-static void rcar_canxl_get_data(struct canxl_frame *cf, u32 container)
+static void rcar_canxl_get_data(struct canxl_frame *cxl, u32 container)
 {
 	u32 i;
 
-	for (i = 0; i < cf->len; i++)
-		*((u32 *)cf->data + i) =
+	for (i = 0; i < cxl->len; i++)
+		*((u32 *)cxl->data + i) =
 			rcar_canxl_read_desc(container, i * sizeof(u32));
 }
 
-static void rcar_canxl_put_data(struct canxl_frame *cf, u32 container)
+static void rcar_canxl_put_data(struct canxl_frame *cxl, u32 container)
 {
 	u32 i;
 
-	for (i = 0; i < cf->len; i++)
-		rcar_canxl_write_desc(container, i * sizeof(u32), *((u32 *)cf->data + i));
+	for (i = 0; i < cxl->len; i++)
+		rcar_canxl_write_desc(container, i * sizeof(u32), *((u32 *)cxl->data + i));
+}
+
+static void rcar_canfd_get_data(struct canfd_frame *cfd, u32 container)
+{
+	u32 i;
+
+	for (i = 0; i < cfd->len; i++)
+		*((u32 *)cfd->data + i) =
+			rcar_canxl_read_desc(container, i * sizeof(u32));
+}
+
+static void rcar_canfd_put_data(struct canfd_frame *cfd, u32 container)
+{
+	u32 i;
+
+	for (i = 0; i < cfd->len; i++)
+		rcar_canxl_write_desc(container, i * sizeof(u32), *((u32 *)cfd->data + i));
+}
+
+static void rcar_canfd_put_first_payload(struct canfd_frame *cfd, u32 container)
+{
+	u32 i;
+
+	for (i = 0; i < 4; i++)
+		rcar_canxl_write_desc(container, i * sizeof(u32), *((u32 *)cfd->data + i));
 }
 
 static void rcar_canxl_tx_failure_cleanup(struct net_device *ndev)
@@ -815,8 +868,13 @@ static void rcar_canxl_descriptor_init(struct rcar_canxl_global *gpriv)
 			desc_rc = (desc % 32);
 			ele0 = CANXL_DMA1_FIXED_FQ | CANXL_BIT_RC(desc_rc);
 			ele1 = CANXL_DMA2_FIXED_FQ | CANXL_BIT_IN(ch);
-			ele4_t0 = CANXL_T0_FIXED;
-			ele5_t1 = CANXL_T1_FIXED;
+			if (gpriv->xlmode) {
+				ele4_t0 = CANXL_T0_FIXED;
+				ele5_t1 = CANXL_T1_FIXED;
+			} else {
+				ele4_t0 = CANFD_T0_FIXED;
+				ele5_t1 = CANFD_T1_FIXED;
+			}
 
 			rcar_canxl_write_desc(TX_FQ_STADD(base, queue),
 					      TXElement0(desc), ele0);
@@ -835,8 +893,13 @@ static void rcar_canxl_descriptor_init(struct rcar_canxl_global *gpriv)
 
 		ele0 = CANXL_DMA1_FIXED_PQ | CANXL_BIT_RC(desc);
 		ele1 = CANXL_DMA2_FIXED_PQ | CANXL_BIT_IN(ch);
-		ele4_t0 = CANXL_T0_FIXED;
-		ele5_t1 = CANXL_T1_FIXED;
+		if (gpriv->xlmode) {
+			ele4_t0 = CANXL_T0_FIXED;
+			ele5_t1 = CANXL_T1_FIXED;
+		} else {
+			ele4_t0 = CANFD_T0_FIXED;
+			ele5_t1 = CANFD_T1_FIXED;
+		}
 
 		rcar_canxl_write_desc(TX_PQ_STADD(base),
 				      TXElement0(desc), ele0);
@@ -972,8 +1035,12 @@ static void rcar_canxl_reset_controller(struct rcar_canxl_global *gpriv)
 	/* Set the controller into CAN-XL only mode
 	 * MODE.FDOE = 1, MODE.XLOE = 1, MODE.XLTR = 0, MODE.EFDI = 0
 	 * MODE.SFS = 1: Timestamps captured at the start of a frame
+	 * or CAN-FD mode
 	 */
-	cfg = (MODE_FDOE | MODE_XLOE | MODE_SFS);
+	if (gpriv->xlmode)
+		cfg = (MODE_FDOE | MODE_XLOE | MODE_SFS);
+	else
+		cfg = (MODE_FDOE | MODE_SFS);
 	rcar_canxl_write(gpriv->base, MODE, cfg);
 }
 
@@ -986,9 +1053,14 @@ static void rcar_canxl_configure_tx_filter(struct rcar_canxl_global *gpriv)
 	 * EN set as 1 (Enable TX filter for all TX message)
 	 * IRQ_EN set as 1 (Enable interrupt tx_filter_irq)
 	 */
-	cfg = (TX_FILTER_CTRL0_MODE | TX_FILTER_CTRL0_CAN_FD |
-	       TX_FILTER_CTRL0_CC_CAN | TX_FILTER_CTRL0_EN |
-	       TX_FILTER_CTRL0_IRQ_EN);
+	if (gpriv->xlmode) {
+		cfg = (TX_FILTER_CTRL0_MODE | TX_FILTER_CTRL0_CAN_FD |
+		       TX_FILTER_CTRL0_CC_CAN | TX_FILTER_CTRL0_EN |
+		       TX_FILTER_CTRL0_IRQ_EN);
+	} else {
+		cfg = (TX_FILTER_CTRL0_MODE | TX_FILTER_CTRL0_CC_CAN |
+		       TX_FILTER_CTRL0_EN | TX_FILTER_CTRL0_IRQ_EN);
+	}
 	rcar_canxl_write(gpriv->base, TX_FILTER_CTRL(0), cfg);
 
 	/* Enable one of the 16 TX Filters and to select the right bit field
@@ -1018,11 +1090,9 @@ static void rcar_canxl_configure_rx_fifo_queue(struct rcar_canxl_global *gpriv)
 	dc_size = CANXL_MAXIMUM_RX_DC_SIZE;	/* Size = CANXL_MAXIMUM_RX_DC_SIZE * 32bytes */
 
 	/* Set MH as Normal mode */
-	if (gpriv->mode) {
-		cfg = rcar_canxl_read(gpriv->base, MH_CFG);
-		cfg &= ~MH_CFG_RX_CONT_DC;
-		rcar_canxl_write(gpriv->base, MH_CFG, cfg);
-	}
+	cfg = rcar_canxl_read(gpriv->base, MH_CFG);
+	cfg &= ~MH_CFG_RX_CONT_DC;
+	rcar_canxl_write(gpriv->base, MH_CFG, cfg);
 
 	/* Define base address of the RX Filter */
 	rcar_canxl_write(gpriv->base, RX_FILTER_MEM_ADD,
@@ -1689,10 +1759,11 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 					 struct net_device *ndev)
 {
 	struct rcar_canxl_channel *priv = netdev_priv(ndev);
-	struct canxl_frame *cf = (struct canxl_frame *)skb->data;
-	u16 id, sdt, dlcxl, rc, xlf = 1, sec = 0;
+	struct canxl_frame *cxl = (struct canxl_frame *)skb->data;
+	struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
+	u16 id, sdt, dlc, rc, xtd, xlf = 1, sec = 0, brs = 0, esi = 0, fdf = 0;
 	u32 af, pay_load_size, target_desc_index;
-	u32 ele0, ele1, ele4_t0, ele5_t1, ele6_t2, ele7_txap, cfg;
+	u32 ele0, ele1, ele4_t0, ele5_t1, ele6_td0t2, ele7_txap, cfg;
 	int ret;
 	unsigned long flags;
 	struct rcar_canxl_global *gpriv = priv->gpriv;
@@ -1705,39 +1776,80 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 	if (can_dropped_invalid_skb(ndev, skb))
 		return NETDEV_TX_OK;
 
-	id = cf->prio & CANXL_PRIO_MASK;
-	sdt = cf->sdt;
-	dlcxl = cf->len;
-	af = cf->af;
+	if (gpriv->xlmode) {
+		id = cxl->prio & CANXL_PRIO_MASK;
+		sdt = cxl->sdt;
+		dlc = cxl->len;
+		af = cxl->af;
 
-	if (can_is_canxl_skb(skb)) {
-		/* CAN XL frame format */
-		if (cf->flags & CANXL_XLF)
-			xlf = 1;
+		if (can_is_canxl_skb(skb)) {
+			/* CAN XL frame format */
+			if (cxl->flags & CANXL_XLF)
+				xlf = 1;
 
-		if (cf->flags & CANXL_SEC)
-			sec = 1;
+			if (cxl->flags & CANXL_SEC)
+				sec = 1;
+		}
+	} else {
+		if (can_is_canfd_skb(skb)) {
+			/* CAN FD frame format */
+			if (cfd->flags & CANFD_BRS)
+				brs = 1;
+
+			if (cfd->flags & CANFD_ESI)
+				esi = 1;
+
+			if (cfd->flags & CANFD_FDF)
+				fdf = 1;
+		}
+
+		if (cfd->can_id & CAN_EFF_FLAG) {
+			id = cfd->can_id & CAN_EFF_MASK;
+			xtd = 1;
+		} else {
+			id = cfd->can_id & CAN_SFF_MASK;
+			xtd = 0;
+		}
+		dlc = can_len2dlc(cfd->len);
 	}
 
-	/* SduType is expected
-	 * - 01h (content based CAN XL frames)
-	 * - 03h (tunneled CAN 2.0/FD frames)
-	 */
-	if (sdt == 3)
-		pay_load_size = ((dlcxl) / 4) + 1;
+	if (!gpriv->xlmode)
+		if (dlc)
+			pay_load_size = ((can_dlc2len(dlc) - 1) / 4) + 1;
+		else
+			pay_load_size = 0;
 	else
-		pay_load_size = ((dlcxl - 1) / 4) + 1;
+		pay_load_size = ((dlc - 1) / 4) + 1;
 
 	rc = target_desc_index % 32;
 	ele0 = (CANXL_DMA1_FIXED_FQ | CANXL_BIT_VALID(0x01) |
 		CANXL_BIT_CRC(0x00) | CANXL_BIT_FQN(0) |
 		CANXL_BIT_RC(rc) | CANXL_BIT_IRQ(0x1));
+
 	ele1 = (CANXL_DMA2_FIXED_FQ | CANXL_BIT_SIZE(pay_load_size) |
 		CANXL_BIT_IN(gpriv->channel));
-	ele4_t0 = (CANXL_T0_FIXED | CANXL_BIT_XLF(xlf) | CANXL_BIT_PRID(id) |
-		   CANXL_BIT_SEC(sec) | CANXL_BIT_SDT(sdt));
-	ele5_t1 = (CANXL_T1_FIXED | CANXL_BIT_DLCXL((dlcxl - 1)));
-	ele6_t2 = af;
+	if (gpriv->xlmode || (!gpriv->xlmode && can_dlc2len(dlc) > 4))
+		ele1 |= CANXL_BIT_PLSRC(1);
+	else if (!gpriv->xlmode && can_dlc2len(dlc) <= 4)
+		ele1 |= CANXL_BIT_PLSRC(0);
+
+	if (gpriv->xlmode) {
+		ele4_t0 = (CANXL_T0_FIXED | CANXL_BIT_XLF(xlf) | CANXL_BIT_PRID(id) |
+			   CANXL_BIT_SEC(sec) | CANXL_BIT_SDT(sdt));
+		ele5_t1 = (CANXL_T1_FIXED | CANXL_BIT_DLCXL((dlc - 1)));
+		ele6_td0t2 = af;
+	} else {
+		if (xtd == 1)
+			ele4_t0 = (CANFD_T0_FIXED | CANFD_BIT_XTD(xtd) |
+				   CANFD_BIT_EXTID(id));
+		else
+			ele4_t0 = (CANFD_T0_FIXED | CANFD_BIT_XTD(xtd) |
+				   CANFD_BIT_BAID(id));
+		ele5_t1 = (CANFD_T1_FIXED | CANFD_BIT_BRS(brs) |
+			   CANFD_BIT_ESI(esi) | CANFD_BIT_DLC(dlc));
+		ele6_td0t2 = TX_FQ_STADD(gpriv->phys_sys_base, 0)
+			     + TXElement6T2TD0(target_desc_index);
+	}
 	/* Size is 50 byte data container for each descriptor */
 	ele7_txap = TX_FQ_DC_STADD(gpriv->phys_sys_base, 0) +
 		    (target_desc_index * 50);
@@ -1754,15 +1866,25 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 			      TXElement4T0(target_desc_index), ele4_t0);
 	rcar_canxl_write_desc(TX_FQ_STADD(gpriv->phys_sys_base, 0),
 			      TXElement5T1(target_desc_index), ele5_t1);
-	rcar_canxl_write_desc(TX_FQ_STADD(gpriv->phys_sys_base, 0),
-			      TXElement6T2TD0(target_desc_index), ele6_t2);
+
+	if (gpriv->xlmode)
+		rcar_canxl_write_desc(TX_FQ_STADD(gpriv->phys_sys_base, 0),
+				      TXElement6T2TD0(target_desc_index), ele6_td0t2);
+	else
+		rcar_canfd_put_first_payload(cfd, ele6_td0t2);
+
 	rcar_canxl_write_desc(TX_FQ_STADD(gpriv->phys_sys_base, 0),
 			      TXElement7TX_APTD1(target_desc_index), ele7_txap);
 
 	/* Put data into TX container */
-	rcar_canxl_put_data(cf, ele7_txap);
+	if (gpriv->xlmode) {
+		rcar_canxl_put_data(cxl, ele7_txap);
+		priv->tx_len[priv->tx_head % RCANXL_FIFO_DEPTH] = cxl->len;
+	} else {
+		rcar_canfd_put_data(cfd, ele7_txap);
+		priv->tx_len[priv->tx_head % RCANXL_FIFO_DEPTH] = cfd->len;
+	}
 
-	priv->tx_len[priv->tx_head % RCANXL_FIFO_DEPTH] = cf->len;
 	can_put_echo_skb(skb, ndev, priv->tx_head % RCANXL_FIFO_DEPTH);
 
 	spin_lock_irqsave(&priv->tx_lock, flags);
@@ -1788,9 +1910,9 @@ static void rcar_canxl_rx_data(struct rcar_canxl_channel *priv,
 			       u32 start_desc, u32 desc)
 {
 	struct net_device_stats *stats = &priv->ndev->stats;
-	struct canxl_frame *cf;
+	struct canxl_frame *cxl;
 	struct sk_buff *skb;
-	u32 id, vcid, sdt, sec, af, dlcxl;
+	u32 id, vcid, sdt, sec, af, dlc;
 	u32 dc_addr, data_addr, r0, r1, r2;
 
 	/* Get base address of RX data container */
@@ -1803,27 +1925,70 @@ static void rcar_canxl_rx_data(struct rcar_canxl_channel *priv,
 	data_addr = dc_addr + 0xc;
 
 	id = CANXL_RX_BIT_PRIO(r0) & 0x7FF;
-	vcid = CANXL_RX_BIT_VCID(r0) & 0xF;
-	sdt = CANXL_RX_BIT_SDT(r0) & 0xF;
+	vcid = CANXL_RX_BIT_VCID(r0) & 0xFF;
+	sdt = CANXL_RX_BIT_SDT(r0) & 0xFF;
 	sec = CANXL_RX_BIT_SEC(r0) & 0x1;
 	af = r2;
-	dlcxl = (CANXL_RX_BIT_DLCXL(r1) & 0x7FF) + 1;
+	dlc = (CANXL_RX_BIT_DLCXL(r1) & 0x7FF) + 1;
 
-	skb = alloc_canxl_skb(priv->ndev, &cf, dlcxl);
+	skb = alloc_canxl_skb(priv->ndev, &cxl, dlc);
 	if (!skb) {
 		stats->rx_dropped++;
 		return;
 	}
 
-	cf->prio = id;
-	cf->sdt = sdt;
-	cf->len = dlcxl;
-	cf->af = af;
-	rcar_canxl_get_data(cf, data_addr);
+	cxl->prio = id;
+	cxl->sdt = sdt;
+	cxl->len = dlc;
+	cxl->af = af;
+	rcar_canxl_get_data(cxl, data_addr);
 
 	can_led_event(priv->ndev, CAN_LED_EVENT_RX);
 
-	stats->rx_bytes += cf->len;
+	stats->rx_bytes += cxl->len;
+	stats->rx_packets++;
+	netif_receive_skb(skb);
+}
+
+static void rcar_canfd_rx_data(struct rcar_canxl_channel *priv,
+			       u32 start_desc, u32 desc)
+{
+	struct net_device_stats *stats = &priv->ndev->stats;
+	struct canfd_frame *cfd;
+	struct sk_buff *skb;
+	u32 id, brs, esi, dlc, xtd;
+	u32 dc_addr, data_addr, r0, r1;
+
+	/* Get base address of RX data container */
+	dc_addr = rcar_canxl_read_desc(start_desc, RXElement1(desc));
+	r0 = rcar_canxl_read_desc(dc_addr, 0);
+	r1 = rcar_canxl_read_desc(dc_addr, 0x4);
+
+	/* Get address of stored data */
+	data_addr = dc_addr + 0x8;
+
+	xtd = CANFD_RX_BIT_XTD(r0) & 0x1;
+	if (xtd == 1)
+		id = CANFD_RX_BIT_EXTID(r0) & 0x3FFFF;
+	else
+		id = CANFD_RX_BIT_BAID(r0) & 0x7FF;
+	brs = CANFD_RX_BIT_BRS(r1) & 0x1;
+	esi = CANFD_RX_BIT_ESI(r1) & 0x1;
+	dlc = CANFD_RX_BIT_DLC(r1) & 0xF;
+
+	skb = alloc_canfd_skb(priv->ndev, &cfd);
+	if (!skb) {
+		stats->rx_dropped++;
+		return;
+	}
+
+	cfd->can_id = id;
+	cfd->len = can_dlc2len(dlc);
+	rcar_canfd_get_data(cfd, data_addr);
+
+	can_led_event(priv->ndev, CAN_LED_EVENT_RX);
+
+	stats->rx_bytes += cfd->len;
 	stats->rx_packets++;
 	netif_receive_skb(skb);
 }
@@ -1850,7 +2015,10 @@ static void rcar_canxl_rx_pkt(struct rcar_canxl_channel *priv)
 		desc = ((check_desc - start_desc) / 0x10);
 		ele0 = rcar_canxl_read_desc(start_desc, RXElement0(desc));
 		if (ele0 & CANXL_RX_BIT_VALID(0x1)) {
-			rcar_canxl_rx_data(priv, start_desc, desc);
+			if (gpriv->xlmode)
+				rcar_canxl_rx_data(priv, start_desc, desc);
+			else
+				rcar_canfd_rx_data(priv, start_desc, desc);
 			ele0 &= (CANXL_RX_BIT_VALID(0));
 			ele0 &= ~(0xF);
 			rcar_canxl_write_desc(start_desc, RXElement0(desc), ele0);
@@ -2002,13 +2170,16 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 	u32 ch, fcan_freq;
 	struct rcar_canxl_global *gpriv;
 	int err, func_irq, err_irq;
-	bool mode = true;	/* CAN XL normal mode - default */
+	bool xlmode = true;	/* CAN XL normal mode - default */
 	const struct rcar_canxl_of_data *of_data;
 
 	if (of_property_read_bool(pdev->dev.of_node, "channel0"))
 		ch = 0;
 	else
 		ch = 1;
+
+	if (of_property_read_bool(pdev->dev.of_node, "renesas,can-fd-frame"))
+		xlmode = false;
 
 	of_data = of_device_get_match_data(&pdev->dev);
 	if (!of_data)
@@ -2033,7 +2204,7 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 		goto fail_dev;
 	}
 	gpriv->pdev = pdev;
-	gpriv->mode = mode;
+	gpriv->xlmode = xlmode;
 	gpriv->chip_id = of_data->chip_id;
 	gpriv->channel = ch;
 
@@ -2145,7 +2316,7 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, gpriv);
 	dev_info(&pdev->dev, "Operational state (clk %d, mode %d)\n",
-		 gpriv->fcan, gpriv->mode);
+		 gpriv->fcan, gpriv->xlmode);
 	return 0;
 
 fail_channel:
