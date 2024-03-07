@@ -847,10 +847,14 @@ static struct snd_soc_dai_ops ak4619_dai_ops = {
 
 #define AK4619_RATES	SNDRV_PCM_RATE_8000_192000
 
-#define AK4619_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE |\
-			SNDRV_PCM_FMTBIT_S20_LE |\
-			SNDRV_PCM_FMTBIT_S24_LE |\
-			SNDRV_PCM_FMTBIT_S32_LE)
+#define AK4619_DAC_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE |\
+				 SNDRV_PCM_FMTBIT_S20_LE |\
+				 SNDRV_PCM_FMTBIT_S24_LE |\
+				 SNDRV_PCM_FMTBIT_S32_LE)
+
+#define AK4619_ADC_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE |\
+				 SNDRV_PCM_FMTBIT_S20_LE |\
+				 SNDRV_PCM_FMTBIT_S24_LE)
 
 static struct snd_soc_dai_driver ak4619_dai = {
 	.name = "ak4619-hifi",
@@ -859,14 +863,14 @@ static struct snd_soc_dai_driver ak4619_dai = {
 		.channels_min	=	1,
 		.channels_max	=	2,
 		.rates		=	AK4619_RATES,
-		.formats	=	AK4619_FORMATS,
+		.formats	=	AK4619_DAC_FORMATS,
 	},
 	.capture = {
 		.stream_name	=	"Capture",
 		.channels_min	=	1,
 		.channels_max	=	2,
 		.rates		=	AK4619_RATES,
-		.formats	=	AK4619_FORMATS,
+		.formats	=	AK4619_ADC_FORMATS,
 	},
 	.ops			=	&ak4619_dai_ops,
 	.symmetric_rates	=	1,
