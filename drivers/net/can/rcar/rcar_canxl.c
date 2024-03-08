@@ -533,28 +533,28 @@
 #define HDP		0xa40
 
 /* DMA Info Ctrl 1 for Tx Queue */
-#define CANXL_BIT_VALID(x)	(x << 31)
+#define CANXL_BIT_VALID(x)	((x) << 31)
 #define CANXL_BIT_HD		(0x01 << 30)
 #define CANXL_BIT_WRAP		(0x00 << 29)
 #define CANXL_BIT_NEXT		(0x00 << 28)
-#define CANXL_BIT_IRQ(x)	(x << 27)
+#define CANXL_BIT_IRQ(x)	((x) << 27)
 #define CANXL_BIT_PQ		(0x01 << 26)
 #define CANXL_BIT_FQ		(0x00 << 26)
 #define CANXL_BIT_RESERVED1	(0x00 << 25)
 #define CANXL_BIT_END		(0x01 << 25)
-#define CANXL_BIT_CRC(x)	(x << 16)
-#define CANXL_BIT_PQSN(x)	(x << 11)
-#define CANXL_BIT_FQN(x)	(x << 12)
+#define CANXL_BIT_CRC(x)	((x) << 16)
+#define CANXL_BIT_PQSN(x)	((x) << 11)
+#define CANXL_BIT_FQN(x)	((x) << 12)
 #define CANXL_BIT_RESERVED2	(0x00 << 11)
 #define CANXL_BIT_RESERVED3	(0x00 << 9)
-#define CANXL_BIT_RC(x)		((x & 0x1F) << 4)
+#define CANXL_BIT_RC(x)		(((x) & 0x1F) << 4)
 #define CANXL_BIT_STS		(0x00)
 
 /* DMA Info Ctrl 2 for Tx Queue */
 #define CANXL_BIT_RESERVED4	(0X00 << 27)
 #define CANXL_BIT_PLSRC(x)	((x) << 26)
-#define CANXL_BIT_SIZE(x)	(x << 16)
-#define CANXL_BIT_IN(x)		(x << 13)
+#define CANXL_BIT_SIZE(x)	((x) << 16)
+#define CANXL_BIT_IN(x)		((x) << 13)
 #define CANXL_BIT_RESERVED5	(0x00 << 12)
 #define CANXL_BIT_TDO		(0x000 << 2)
 #define CANXL_BIT_NHDO		(0x3FF << 2)
@@ -576,13 +576,13 @@
 
 /* T0 for Tx Queue */
 #define CANXL_BIT_FDF			(0x01 << 31)
-#define CANXL_BIT_XLF(x)		(x << 30)
+#define CANXL_BIT_XLF(x)		((x) << 30)
 #define CANXL_BIT_XTD			(0x00 << 29)
-#define CANXL_BIT_PRID(x)		(x << 18)
+#define CANXL_BIT_PRID(x)		((x) << 18)
 #define CANXL_BIT_RRS			(0x00 << 17)
-#define CANXL_BIT_SEC(x)		(x << 16)
+#define CANXL_BIT_SEC(x)		((x) << 16)
 #define CANXL_BIT_VCID			(0x00 << 8)
-#define CANXL_BIT_SDT(x)		(x)
+#define CANXL_BIT_SDT(x)		((x))
 
 #define CANXL_T0_FIXED			(CANXL_BIT_FDF | CANXL_BIT_XTD | \
 					 CANXL_BIT_RRS | CANXL_BIT_VCID)
@@ -599,7 +599,7 @@
 #define CANXL_BIT_RESERVED7		(0x00 << 31)
 #define CANXL_BIT_FIR			(0x00 << 30)
 #define CANXL_BIT_RESERVED8		(0x00 << 27)
-#define CANXL_BIT_DLCXL(x)		(x << 16)
+#define CANXL_BIT_DLCXL(x)		((x) << 16)
 #define CANXL_BIT_RESERVED9		(0x00)
 
 #define CANXL_T1_FIXED			(CANXL_BIT_RESERVED7 | CANXL_BIT_FIR | \
@@ -620,16 +620,16 @@
 					 CANFD_BIT_RESERVED4 | CANFD_BIT_RESERVED5)
 
 /* DMA Info Ctrl 1 for Rx Queue */
-#define CANXL_RX_BIT_VALID(x)		(x << 31)
+#define CANXL_RX_BIT_VALID(x)		((x) << 31)
 #define CANXL_RX_BIT_HD			(0x01 << 30)
 #define CANXL_RX_BIT_RESERVED1		(0x00 << 29)
 #define CANXL_RX_BIT_NEXT		(0x00 << 28)
-#define CANXL_RX_BIT_IRQ(x)		(x << 27)
+#define CANXL_RX_BIT_IRQ(x)		((x) << 27)
 #define CANXL_RX_BIT_RESERVED2		(0x00 << 25)
-#define CANXL_RX_BIT_CRC(x)		(x << 16)
-#define CANXL_RX_BIT_FQN(x)		(x << 12)
-#define CANXL_RX_BIT_IN(x)		(x << 9)
-#define CANXL_RX_BIT_RC(x)		((x & 0x1F) << 4)
+#define CANXL_RX_BIT_CRC(x)		((x) << 16)
+#define CANXL_RX_BIT_FQN(x)		((x) << 12)
+#define CANXL_RX_BIT_IN(x)		((x) << 9)
+#define CANXL_RX_BIT_RC(x)		(((x) & 0x1F) << 4)
 #define CANXL_RX_BIT_STS		(0x00 << 0)
 
 #define CANXL_RX_DMA1_FIXED		(CANXL_RX_BIT_VALID(0) | CANXL_RX_BIT_HD | \
@@ -637,17 +637,17 @@
 					 CANXL_RX_BIT_RESERVED2 | CANXL_RX_BIT_STS)
 
 /* R0 for Rx Queue */
-#define CANXL_RX_BIT_PRIO(x)	(x >> 18)
-#define CANXL_RX_BIT_SEC(x)	(x >> 16)
-#define CANXL_RX_BIT_VCID(x)	(x >> 8)
-#define CANXL_RX_BIT_SDT(x)	(x >> 0)
+#define CANXL_RX_BIT_PRIO(x)	((x) >> 18)
+#define CANXL_RX_BIT_SEC(x)	((x) >> 16)
+#define CANXL_RX_BIT_VCID(x)	((x) >> 8)
+#define CANXL_RX_BIT_SDT(x)	((x) >> 0)
 
 #define CANFD_RX_BIT_XTD(x)	((x) >> 29)
 #define CANFD_RX_BIT_BAID(x)	((x) >> 18)
 #define CANFD_RX_BIT_EXTID(x)	((x))
 
 /* R1 for Rx Queue */
-#define CANXL_RX_BIT_DLCXL(x)	(x >> 16)
+#define CANXL_RX_BIT_DLCXL(x)	((x) >> 16)
 
 #define CANFD_RX_BIT_BRS(x)	((x) >> 25)
 #define CANFD_RX_BIT_ESI(x)	((x) >> 20)
