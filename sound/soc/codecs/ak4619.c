@@ -720,35 +720,16 @@ static int ak4619_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	u8 dai_fmt2 = 0;
 
 	/* Set clock normal/inverted */
-	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
-	case SND_SOC_DAIFMT_I2S:
-	case SND_SOC_DAIFMT_LEFT_J:
-		switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
-		case SND_SOC_DAIFMT_NB_NF:
-			break;
-		case SND_SOC_DAIFMT_IB_NF:
-			dai_fmt1 |= BCKP;
-			break;
-		case SND_SOC_DAIFMT_NB_IF:
-		case SND_SOC_DAIFMT_IB_IF:
-		default:
-			return -EINVAL;
-		}
+	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
+	case SND_SOC_DAIFMT_NB_NF:
 		break;
-	case SND_SOC_DAI_FORMAT_DSP_A:
-	case SND_SOC_DAI_FORMAT_DSP_B:
-		switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
-		case SND_SOC_DAIFMT_NB_NF:
-			dai_fmt1 |= BCKP;
-			break;
-		case SND_SOC_DAIFMT_IB_NF:
-			break;
-		case SND_SOC_DAIFMT_NB_IF:
-		case SND_SOC_DAIFMT_IB_IF:
-		default:
-			return -EINVAL;
-		}
+	case SND_SOC_DAIFMT_IB_NF:
+		dai_fmt1 |= BCKP;
 		break;
+	case SND_SOC_DAIFMT_NB_IF:
+	case SND_SOC_DAIFMT_IB_IF:
+	default:
+		return -EINVAL;
 	}
 
 	/* Only Stereo modes are supported */
