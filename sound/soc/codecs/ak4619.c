@@ -683,15 +683,16 @@ static int ak4619_dai_hw_params(struct snd_pcm_substream *substream,
 			return -EINVAL;
 		}
 		break;
+	case 64000:
+	case 88200:
 	case 96000:
-		/* MCLK has to be 256 * 96000 = 24.576MHz */
 		if (fs == 256)
 			clk_mode |= (0x1 << 0);
 		else
 			return -EINVAL;
 		break;
+	case 176400:
 	case 192000:
-		/* MCLK has to be 128 * 192000 = 24.576MHz */
 		if (fs == 128)
 			clk_mode |= (0x4 << 0);
 		else
@@ -844,8 +845,7 @@ static struct snd_soc_dai_ops ak4619_dai_ops = {
 	.mute_stream 	=	ak4619_dai_mute,
 };
 
-#define AK4619_RATES (SNDRV_PCM_RATE_8000_48000 | SNDRV_PCM_RATE_96000 |\
-				SNDRV_PCM_RATE_192000)
+#define AK4619_RATES	SNDRV_PCM_RATE_8000_192000
 
 #define AK4619_FORMATS	(SNDRV_PCM_FMTBIT_S16_LE |\
 			SNDRV_PCM_FMTBIT_S20_LE |\
