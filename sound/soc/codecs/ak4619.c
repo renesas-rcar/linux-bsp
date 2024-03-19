@@ -23,12 +23,12 @@
 #include <sound/tlv.h>
 
 /*
- * Registes
+ * Registers
  */
 
 #define PWR_MGMT	0x00	/* Power Management */
-#define AU_IFF1		0x01	/* Audio I/F Format 1 */
-#define AU_IFF2		0x02	/* Audio I/F Format 1 */
+#define AU_IFF1		0x01	/* Audio I/F Format */
+#define AU_IFF2		0x02	/* Audio I/F Format (Extended) */
 #define SYS_CLK		0x03	/* System Clock Setting */
 #define MIC_AMP1	0x04	/* MIC AMP Gain 1 */
 #define MIC_AMP2	0x05	/* MIC AMP Gain 2 */
@@ -58,17 +58,17 @@
 #define PMDA1	BIT(1)
 #define RSTN	BIT(0)
 
-/* Audio_I/F Format 1 */
+/* Audio_I/F Format */
 #define DCF_STEREO_I2S	(0x0 << 4)
 #define DCF_STEREO_MSB	(0x5 << 4)
 #define DCF_PCM_SF	(0x6 << 4)
 #define DCF_PCM_LF	(0x7 << 4)
 #define DSL_32		(0x3 << 2)
-#define DCF_MASK 	(0x7 << 4)
+#define DCF_MASK	(0x7 << 4)
 #define DSL_MASK	(0x3 << 2)
 #define BCKP		BIT(1)
 
-/* Audio_I/F Format 2 */
+/* Audio_I/F Format (Extended) */
 #define DIDL_24		(0x0 << 2)
 #define DIDL_20		(0x1 << 2)
 #define DIDL_16		(0x2 << 2)
@@ -76,7 +76,7 @@
 #define DODL_24		(0x0 << 0)
 #define DODL_20		(0x1 << 0)
 #define DODL_16		(0x2 << 0)
-#define DIDL_MASK 	(0x3 << 2)
+#define DIDL_MASK	(0x3 << 2)
 #define DODL_MASK	(0x3 << 0)
 #define SLOT            BIT(4)
 
@@ -163,7 +163,7 @@ struct ak4619_priv {
  * DAC Volume
  *
  * max : 0x00 : +12.0 dB
- *       ( 0.5 dB step )
+ *	( 0.5 dB step )
  * min : 0xFE : -115.0 dB
  * mute: 0xFF
  */
@@ -173,7 +173,7 @@ static const DECLARE_TLV_DB_SCALE(dac_tlv, -11550, 50, 1);
  * MIC Volume
  *
  * max : 0x0B : +27.0 dB
- * 		( 3 dB step )
+ *	( 3 dB step )
  * min: 0x00 : -6.0 dB
  */
 static const DECLARE_TLV_DB_SCALE(mic_tlv, -600, 300, 0);
@@ -182,7 +182,7 @@ static const DECLARE_TLV_DB_SCALE(mic_tlv, -600, 300, 0);
  * ADC Volume
  *
  * max : 0x00 : +24.0 dB
- *		( 0.5 dB step )
+ *	( 0.5 dB step )
  * min : 0xFE : -103.0 dB
  * mute: 0xFF
  */
@@ -261,7 +261,7 @@ static void ak4619_set_deemph(struct snd_soc_component *component)
 	u8 dem = 0;
 
 	if (ak4619->deemph_en) {
-		switch(ak4619->playback_rate) {
+		switch (ak4619->playback_rate) {
 		case 32000:
 			dem |= DEM1_32000 | DEM2_32000;
 			break;
@@ -587,7 +587,7 @@ static int ak4619_set_bias_level(struct snd_soc_component *component,
 }
 
 static const struct snd_soc_component_driver soc_component_dev_ak4619 = {
-	.set_bias_level	= ak4619_set_bias_level,
+	.set_bias_level		= ak4619_set_bias_level,
 	.controls		= ak4619_snd_controls,
 	.num_controls		= ARRAY_SIZE(ak4619_snd_controls),
 	.dapm_widgets		= ak4619_dapm_widgets,
@@ -704,7 +704,8 @@ static int ak4619_dai_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	snd_soc_component_update_bits(component, SYS_CLK, FS_MASK, clk_mode);
-	snd_soc_component_update_bits(component, AU_IFF2, is_play ? DIDL_MASK : DODL_MASK, dai_ctrl);
+	snd_soc_component_update_bits(component, AU_IFF2,
+				      is_play ? DIDL_MASK : DODL_MASK, dai_ctrl);
 
 	if (is_play) {
 		ak4619->playback_rate = rate;
@@ -755,10 +756,10 @@ static int ak4619_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 
 	/* Only slave mode is support */
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
-		case SND_SOC_DAIFMT_CBS_CFS:
-			break;
-		default:
-			return -EINVAL;
+	case SND_SOC_DAIFMT_CBS_CFS:
+		break;
+	default:
+		return -EINVAL;
 	}
 
 	/* By default only 64 BICK per LRCLK is supported */
@@ -877,7 +878,8 @@ static int ak4619_dai_startup(struct snd_pcm_substream *substream,
 	 */
 
 	if (ak4619->mode_gpiod)
-		gpiod_set_value(ak4619->mode_gpiod, is_play ? PLAYBACK_MODE : CAPTURE_MODE);
+		gpiod_set_value(ak4619->mode_gpiod,
+				is_play ? PLAYBACK_MODE : CAPTURE_MODE);
 
 	ak4619_hw_constraints(ak4619, substream->runtime);
 
@@ -889,7 +891,7 @@ static struct snd_soc_dai_ops ak4619_dai_ops = {
 	.set_sysclk	=	ak4619_dai_set_sysclk,
 	.set_fmt	=	ak4619_dai_set_fmt,
 	.hw_params	=	ak4619_dai_hw_params,
-	.mute_stream 	=	ak4619_dai_mute,
+	.mute_stream	=	ak4619_dai_mute,
 };
 
 #define AK4619_RATES	SNDRV_PCM_RATE_8000_192000
@@ -929,6 +931,7 @@ static int ak4619_i2c_probe(struct i2c_client *i2c,
 	struct device *dev = &i2c->dev;
 	struct ak4619_priv *ak4619;
 	int ret;
+
 	ak4619 = devm_kzalloc(dev, sizeof(struct ak4619_priv), GFP_KERNEL);
 	if (!ak4619)
 		return -ENOMEM;
