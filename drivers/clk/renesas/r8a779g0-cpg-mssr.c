@@ -164,9 +164,9 @@ static const struct cpg_core_clk r8a779g0_core_clks[] __initconst = {
 
 static const struct mssr_mod_clk r8a779g0_mod_clks[] __initconst = {
 	DEF_MOD("rgx",			0,	R8A779G0_CLK_ZG),
-	DEF_MOD("smpo0",		5,	R8A779G0_CLK_S0D3),
-	DEF_MOD("smps0",		7,	R8A779G0_CLK_S0D3),
-	DEF_MOD("umfl0",		9,	R8A779G0_CLK_S0D3),
+	DEF_MOD("smpo0",		5,	R8A779G0_CLK_SVD1_VIP),
+	DEF_MOD("smps0",		7,	R8A779G0_CLK_SVD1_VIP),
+	DEF_MOD("umfl0",		9,	R8A779G0_CLK_SVD1_VIP),
 	DEF_MOD("isp0",			16,	R8A779G0_CLK_S0D1_VIO),
 	DEF_MOD("isp1",			17,	R8A779G0_CLK_S0D1_VIO),
 	DEF_MOD("impcnn",		22,	R8A779G0_CLK_S0D6_PER),
