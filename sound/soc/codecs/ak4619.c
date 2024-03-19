@@ -153,6 +153,7 @@ struct ak4619_priv {
 	struct regmap *regmap;
 	struct gpio_desc *pdn_gpiod;
 	struct gpio_desc *mode_gpiod;
+	struct snd_pcm_hw_constraint_list constraint;
 	int deemph_en;
 	unsigned int playback_rate;
 	unsigned int sysclk;
@@ -797,6 +798,69 @@ enum ak4619_operating_mode {
 	CAPTURE_MODE = 1,
 };
 
+static void ak4619_hw_constraints(struct ak4619_priv *ak4619,
+				  struct snd_pcm_runtime *runtime)
+{
+	static const unsigned int ak4619_sr[] = {
+		 8000,
+		 11025,
+		 12000,
+		 16000,
+		 22050,
+		 24000,
+		 32000,
+		 44100,
+		 48000,
+		 64000,
+		 88200,
+		 96000,
+		 176400,
+		 192000,
+	};
+
+	struct snd_pcm_hw_constraint_list *constraint = &ak4619->constraint;
+	int ak4619_rate_mask = 0;
+	unsigned int fs;
+	int i;
+
+	/*
+	 *	[8kHz - 48kHz]		: 256fs, 384fs or 512fs
+	 *	[64kHz - 96kHz]		: 256fs
+	 *	[176.4kHz, 192kHz]	: 128fs
+	 */
+
+	for (i = 0; i < ARRAY_SIZE(ak4619_sr); i++) {
+		fs = ak4619->sysclk / ak4619_sr[i];
+
+		switch (fs) {
+		case 512:
+		case 384:
+		case 256:
+			ak4619_rate_mask |= (1 << i);
+			break;
+		case 128:
+			switch (i) {
+			case (ARRAY_SIZE(ak4619_sr) - 1):
+			case (ARRAY_SIZE(ak4619_sr) - 2):
+				ak4619_rate_mask |= (1 << i);
+				break;
+			default:
+				break;
+			}
+			break;
+		default:
+			break;
+		}
+	};
+
+	constraint->list	= ak4619_sr;
+	constraint->mask	= ak4619_rate_mask;
+	constraint->count	= ARRAY_SIZE(ak4619_sr);
+
+	snd_pcm_hw_constraint_list(runtime, 0,
+				   SNDRV_PCM_HW_PARAM_RATE, constraint);
+};
+
 static int ak4619_dai_startup(struct snd_pcm_substream *substream,
 			      struct snd_soc_dai *dai)
 {
@@ -814,6 +878,8 @@ static int ak4619_dai_startup(struct snd_pcm_substream *substream,
 
 	if (ak4619->mode_gpiod)
 		gpiod_set_value(ak4619->mode_gpiod, is_play ? PLAYBACK_MODE : CAPTURE_MODE);
+
+	ak4619_hw_constraints(ak4619, substream->runtime);
 
 	return 0;
 }
