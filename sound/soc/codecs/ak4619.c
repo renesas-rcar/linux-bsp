@@ -759,12 +759,12 @@ static int ak4619_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_LEFT_J:
 		dai_fmt1 |= DCF_STEREO_MSB;
 		break;
-	case SND_SOC_DAI_FORMAT_DSP_A:
+	case SND_SOC_DAIFMT_DSP_A: /* L data MSB after FRM LRC */
 		dai_fmt1 |= DCF_PCM_SF;
 		dai_fmt2 |= SLOT;
 		break;
-	case SND_SOC_DAI_FORMAT_DSP_B:
-		dai_fmt1 |= DCF_PCM_SF;
+	case SND_SOC_DAIFMT_DSP_B: /* L data MSB during FRM LRC */
+		dai_fmt1 |= DCF_PCM_LF;
 		dai_fmt2 |= SLOT;
 		break;
 	default:
