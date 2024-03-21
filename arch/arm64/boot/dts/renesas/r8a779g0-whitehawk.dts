@@ -451,6 +451,8 @@
 };
 
 &i2c0 {
+	dma_transfer_size = <4>;
+
 	io_expander2: gpio@21 {
 		compatible = "onnn,pca9654";
 		reg = <0x21>;
