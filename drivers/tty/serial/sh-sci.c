@@ -821,6 +821,7 @@ static void sci_transmit_chars(struct uart_port *port)
 
 	count = sci_txroom(port);
 
+	sci_clear_SCxSR(port, SCxSR_TDxE_CLEAR(port));
 	do {
 		unsigned char c;
 
@@ -839,12 +840,12 @@ static void sci_transmit_chars(struct uart_port *port)
 		port->icount.tx++;
 	} while (--count > 0);
 
-	sci_clear_SCxSR(port, SCxSR_TDxE_CLEAR(port));
-
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(port);
-	if (uart_circ_empty(xmit))
+	if (uart_circ_empty(xmit)) {
+		sci_clear_SCxSR(port, SCxSR_TDxE_CLEAR(port));
 		sci_stop_tx(port);
+	}
 
 }
 
@@ -2951,6 +2952,8 @@ static int sci_init_single(struct platform_device *dev,
 		sci_port->rx_trigger = 1;
 		break;
 	}
+	// XXX: GEN5: Temporary workaround for Receive-data-ready malfunction.
+	sci_port->rx_trigger = 1;
 
 	sci_port->rx_fifo_timeout = 0;
 	sci_port->hscif_tot = 0;
@@ -2964,11 +2967,9 @@ static int sci_init_single(struct platform_device *dev,
 				     : sci_port->params->sampling_rate_mask;
 
 	if (!early) {
-		/* temporarily sci_init_clocks due to clock is always ON on VDK gen5
 		ret = sci_init_clocks(sci_port, &dev->dev);
 		if (ret < 0)
 			return ret;
-		*/
 
 		port->dev = &dev->dev;
 
@@ -2995,6 +2996,8 @@ static int sci_init_single(struct platform_device *dev,
 	 */
 	port->irq		= sci_port->irqs[SCIx_RXI_IRQ];
 	port->irqflags		= 0;
+	// XXX: GEN5: Temporary workaround for single IRQ assigned to multi channel.
+	port->irqflags		= IRQF_SHARED;
 
 	port->serial_in		= sci_serial_in;
 	port->serial_out	= sci_serial_out;
