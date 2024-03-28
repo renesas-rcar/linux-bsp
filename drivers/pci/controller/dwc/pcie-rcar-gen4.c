@@ -494,12 +494,13 @@ int rcar_gen4_pcie_prepare(struct rcar_gen4_pcie *rcar)
 {
 	struct device *dev = rcar->dw.dev;
 	int err;
-	const char *clk_names[PCIE_LINKUP_WA_CLK_NUM] = {
+/*	const char *clk_names[PCIE_LINKUP_WA_CLK_NUM] = {
 		[0] = "pcie0_clk",
 		[1] = "pcie1_clk",
 	};
 	struct clk *clk;
 	unsigned int i;
+*/
 	struct device_node *np = dev_of_node(dev);
 	int num_lanes;
 
@@ -508,7 +509,7 @@ int rcar_gen4_pcie_prepare(struct rcar_gen4_pcie *rcar)
 
 	if (num_lanes == 4)
 	{
-		if (of_find_property(np, "clock-names", NULL) != NULL)
+		/* if (of_find_property(np, "clock-names", NULL) != NULL)
 		{
 			for (i = 0; i < PCIE_LINKUP_WA_CLK_NUM; i++) {
 				clk = devm_clk_get(dev, clk_names[i]);
@@ -532,10 +533,11 @@ int rcar_gen4_pcie_prepare(struct rcar_gen4_pcie *rcar)
 		{
 			dev_err(dev, "Failed to get Clock name.\n");
 			return -EINVAL;
-		}
+		} */
 	}
 	else
 	{
+
 		pm_runtime_enable(dev);
 		err = pm_runtime_resume_and_get(dev);
 		if (err < 0) {
