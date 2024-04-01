@@ -1020,8 +1020,8 @@ static const struct sh_msiof_chipdata rcar_r8a7795_data = {
 static const struct sh_msiof_chipdata rcar_gen5_data = {
 	.bits_per_word_mask = SPI_BPW_MASK(8) | SPI_BPW_MASK(16) |
 			      SPI_BPW_MASK(24) | SPI_BPW_MASK(32),
-	.tx_fifo_size = 64,
-	.rx_fifo_size = 64,
+	.tx_fifo_size = 256,
+	.rx_fifo_size = 256,
 	.ctlr_flags = SPI_CONTROLLER_MUST_TX,
 	.min_div_pow = 1,
 };
