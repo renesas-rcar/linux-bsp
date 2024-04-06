@@ -156,7 +156,9 @@ SYM_FUNC_START(cpu_do_resume)
 	ubfx	x11, x11, #1, #1
 	msr	oslar_el1, x11
 	reset_pmuserenr_el0 x0			// Disable PMU access from EL0
+#ifndef CONFIG_ARCH_R8A78000
 	reset_amuserenr_el0 x0			// Disable AMU access from EL0
+#endif
 
 alternative_if ARM64_HAS_RAS_EXTN
 	msr_s	SYS_DISR_EL1, xzr
@@ -418,7 +420,9 @@ SYM_FUNC_START(__cpu_setup)
 	isb					// Unmask debug exceptions now,
 	enable_dbg				// since this is per-cpu
 	reset_pmuserenr_el0 x1			// Disable PMU access from EL0
+#ifndef CONFIG_ARCH_R8A78000
 	reset_amuserenr_el0 x1			// Disable AMU access from EL0
+#endif
 
 	/*
 	 * Default values for VMSA control registers. These will be adjusted
