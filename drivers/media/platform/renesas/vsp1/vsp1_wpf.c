@@ -340,9 +340,8 @@ static void wpf_configure_stream(struct vsp1_entity *entity,
 	vsp1_wpf_write(wpf, dlb, VI6_WPF_SRCRPF, srcrpf);
 
 	/* Enable interrupts. */
-	vsp1_dl_body_write(dlb, VI6_WPF_IRQ_STA(index), 0);
-	vsp1_dl_body_write(dlb, VI6_WPF_IRQ_ENB(index),
-			   VI6_WPF_IRQ_ENB_DFEE);
+	vsp1_write(vsp1, VI6_WPF_IRQ_STA(index), 0);
+	vsp1_write(vsp1, VI6_WPF_IRQ_ENB(index), VI6_WPF_IRQ_ENB_DFEE);
 
 	if (pipe->iif)
 		return;
