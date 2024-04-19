@@ -693,7 +693,7 @@
 #define RCANXL_NAPI_WEIGHT		8	/* Rx poll quota */
 #define CANXL_MAXIMUM_FQ_TX_DESCRIPTOR	1	/* Define maximum TX descriptors*/
 #define CANXL_MAXIMUM_PQ_TX_DESCRIPTOR	32	/* Define maximum Priority TX descriptors */
-#define CANXL_MAXIMUM_RX_DESCRIPTOR	1023	/* Define maximum RX descriptors*/
+#define CANXL_MAXIMUM_RX_DESCRIPTOR	32	/* Define maximum RX descriptors*/
 #define CANXL_MAXIMUM_RX_DC_SIZE	2	/* Define data container size of RX descriptors */
 #define CANXL_TX_PQ_SLOT_ENABLE		0xFFFFFFFF
 
@@ -2028,7 +2028,7 @@ static void rcar_canxl_rx_pkt(struct rcar_canxl_channel *priv)
 				rcar_canxl_rx_data(priv, start_desc, desc);
 			else
 				rcar_canfd_rx_data(priv, start_desc, desc);
-			ele0 &= (CANXL_RX_BIT_VALID(0));
+			ele0 &= ~CANXL_RX_BIT_VALID(0x1);
 			ele0 &= ~(0xF);
 			rcar_canxl_write_desc(start_desc, RXElement0(desc), ele0);
 		}
