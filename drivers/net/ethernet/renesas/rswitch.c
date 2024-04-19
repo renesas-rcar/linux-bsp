@@ -14,6 +14,7 @@
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/net_tstamp.h>
+#include <linux/nvmem-consumer.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
@@ -2965,6 +2966,30 @@ static void rswitch_set_mac_address(struct rswitch_device *rdev)
 	mac = of_get_mac_address(port);
 	if (!IS_ERR(mac))
 		ether_addr_copy(ndev->dev_addr, mac);
+
+	/*
+	 * Kernels before commit f10843e04a07 ("of: net: fix
+	 * of_get_mac_addr_nvmem() for non-platform devices") of 5.13 cycle
+	 * fail to get nvmem-stored mac address from port node because this
+	 * node does not correspond to a platform_device.
+	 *
+	 * Thus have to explicitly use nvmem API here.
+	 */
+	if (!is_valid_ether_addr(ndev->dev_addr)) {
+		struct nvmem_cell *cell;
+		size_t len;
+
+		cell = of_nvmem_cell_get(port, "mac-address");
+		if (!IS_ERR(cell)) {
+			mac = nvmem_cell_read(cell, &len);
+			if (!IS_ERR(mac)) {
+				if (len == ETH_ALEN)
+					ether_addr_copy(ndev->dev_addr, mac);
+				kfree(mac);
+			}
+			nvmem_cell_put(cell);
+		}
+	}
 
 	if (!is_valid_ether_addr(ndev->dev_addr))
 		ether_addr_copy(ndev->dev_addr, rdev->etha->mac_addr);
