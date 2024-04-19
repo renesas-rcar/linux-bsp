@@ -2964,6 +2964,23 @@ static void rswitch_set_mac_address(struct rswitch_device *rdev)
 	ret = of_get_mac_address(port, mac);
 	if (!ret)
 		eth_hw_addr_set(ndev, mac);
+		
+	if (!is_valid_ether_addr(ndev->dev_addr)) {
+		struct nvmem_cell *cell;
+		size_t len;
+		u8 *nvmem_mac;
+
+		cell = of_nvmem_cell_get(port, "mac-address");
+		if (!IS_ERR(cell)) {
+			nvmem_mac = nvmem_cell_read(cell, &len);
+			if (!IS_ERR(nvmem_mac)) {
+				if (len == ETH_ALEN)
+					eth_hw_addr_set(ndev, nvmem_mac);
+				kfree(nvmem_mac);
+			}
+			nvmem_cell_put(cell);
+		}
+	}
 
 	if (!is_valid_ether_addr(ndev->dev_addr))
 		eth_hw_addr_set(ndev, rdev->etha->mac_addr);
