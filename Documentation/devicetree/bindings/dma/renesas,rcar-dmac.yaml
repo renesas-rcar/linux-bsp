@@ -48,6 +48,8 @@ properties:
               - renesas,dmac-r8a779g0     # R-Car V4H
               - renesas,dmac-r8a779h0     # R-Car V4M
           - const: renesas,rcar-gen4-dmac # R-Car Gen4
+      - items:
+          - const: renesas,rcar-gen5-dmac # R-Car X5H
 
   reg: true
 
