@@ -808,6 +808,7 @@ enum rswitch_gwca_mode {
 #define CABPPFLC_INIT_VALUE	0x00800080
 
 /* MFWD */
+#define FWPC0(i)                (FWPC00 + (i) * 0x10)
 #define FWPC0_LTHTA	BIT(0)
 #define FWPC0_IP4UE	BIT(3)
 #define FWPC0_IP4TE	BIT(4)
@@ -821,17 +822,15 @@ enum rswitch_gwca_mode {
 #define FWPC0_MACHMA	BIT(27)
 #define FWPC0_VLANSA	BIT(28)
 
-#define FWPC0(i)                (FWPC00 + (i) * 0x10)
-#define FWPC0_DEFAULT	(FWPC0_LTHTA | FWPC0_IP4UE | FWPC0_IP4TE | \
-			 FWPC0_IP4OE | FWPC0_L2SE | FWPC0_IP4EA | \
-			 FWPC0_IPDSA | FWPC0_IPHLA | FWPC0_MACSDA | \
-			 FWPC0_MACHLA |	FWPC0_MACHMA | FWPC0_VLANSA)
-
 #define FWPC1(i)                (FWPC10 + (i) * 0x10)
-#define FWPC1_DDE	BIT(0)
+#define FWCP1_LTHFW_MASK	GENMASK(16 + (RSWITCH_NUM_HW - 1), 16)
+#define FWPC1_DDE		BIT(0)
+
+#define FWPC2(i)                (FWPC20 + (i) * 0x10)
+#define FWCP2_LTWFW_MASK	GENMASK(16 + (RSWITCH_NUM_HW - 1), 16)
 
 #define	FWPBFC(i)		(FWPBFCi + (i) * 0x10)
-#define	FWPBFC_PBDV_MASK	(GENMASK(RSWITCH_NUM_HW - 1, 0)
+#define	FWPBFC_PBDV_MASK	GENMASK(RSWITCH_NUM_HW - 1, 0)
 
 #define FWPBFCSDC(j, i)         (FWPBFCSDC00 + (i) * 0x10 + (j) * 0x04)
 
@@ -3258,26 +3257,35 @@ static void rswitch_fwd_init(struct rswitch_private *priv)
 {
 	int i;
 	int gwca_hw_idx = RSWITCH_HW_NUM_TO_GWCA_IDX(priv->gwca.index);
+	u32 all_ports = GENMASK(RSWITCH_NUM_HW - 1, 0);
 
+	/* Start with empty configuration, with all features disabled and
+	 * all forwarding disallowed */
 	for (i = 0; i < RSWITCH_NUM_HW; i++) {
-		rs_write32(FWPC0_DEFAULT, priv->addr + FWPC00 + (i * 0x10));
+		/* No features */
+		rs_write32(0, priv->addr + FWPC0(i));
+		/* All L3 forwarding disallowed, direct descriptor disabled */
+		rs_write32(FIELD_PREP(FWCP1_LTHFW_MASK, all_ports),
+				priv->addr + FWPC1(i));
+		/* All L2 forwarding disallowed */
+		rs_write32(FIELD_PREP(FWCP2_LTWFW_MASK, all_ports),
+				priv->addr + FWPC2(i));
+		/* Port based forwarding disallowed */
 		rs_write32(0, priv->addr + FWPBFC(i));
 	}
-	/*
-	 * FIXME: hardcoded setting. Make a macro about port vector calc.
-	 * ETHA0 = forward to GWCA0, GWCA0 = forward to ETHA0,...
-	 * Currently, always forward to GWCA1.
-	 */
+
+	/* For ETHA ports, set port based forwarding to per-port rx chains */
 	for (i = 0; i < num_etha_ports; i++) {
-		rs_write32(priv->rdev[i]->rx_chain->index, priv->addr + FWPBFCSDC(gwca_hw_idx, i));
-		rs_write32(BIT(priv->gwca.index), priv->addr + FWPBFC(i));
+		/* Port-based forwarding to GWCA port */
+		rs_write32(FIELD_PREP(FWPBFC_PBDV_MASK, BIT(priv->gwca.index)),
+				priv->addr + FWPBFC(i));
+		/* Subdestination within GWCA port */
+		rs_write32(priv->rdev[i]->rx_chain->index,
+				priv->addr + FWPBFCSDC(gwca_hw_idx, i));
 	}
 
-	/* For GWCA */
-	rs_write32(FWPC0_DEFAULT, priv->addr + FWPC0(priv->gwca.index));
-	rs_write32(FWPC1_DDE, priv->addr + FWPC1(priv->gwca.index));
-	rs_write32(0, priv->addr + FWPBFC(priv->gwca.index));
-	rs_write32(GENMASK(num_etha_ports - 1, 0), priv->addr + FWPBFC(priv->gwca.index));
+	/* For GWCA port, allow direct descriptors */
+	rswitch_modify(priv->addr, FWPC1(priv->gwca.index), 0, FWPC1_DDE);
 
 	/* TODO: add chrdev for fwd */
 	/* TODO: add proc for fwd */
