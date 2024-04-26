@@ -2466,10 +2466,11 @@ static int rswitch_do_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
 	case SIOCSHWTSTAMP:
 		return rswitch_hwstamp_set(ndev, req);
 	default:
-		break;
+		if (ndev->phydev)
+			return phy_mii_ioctl(ndev->phydev, req, cmd);
 	}
 
-	return 0;
+	return -EOPNOTSUPP;
 }
 
 static const struct net_device_ops rswitch_netdev_ops = {
@@ -2501,6 +2502,8 @@ static int rswitch_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *
 
 static const struct ethtool_ops rswitch_ethtool_ops = {
 	.get_ts_info = rswitch_get_ts_info,
+	.get_link_ksettings = phy_ethtool_get_link_ksettings,
+	.set_link_ksettings = phy_ethtool_set_link_ksettings,
 };
 
 static const struct of_device_id renesas_eth_sw_of_table[] = {
