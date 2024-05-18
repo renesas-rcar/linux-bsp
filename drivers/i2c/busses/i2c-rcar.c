@@ -213,6 +213,12 @@ static struct i2c_bus_recovery_info rcar_i2c_bri = {
 };
 static void rcar_i2c_init(struct rcar_i2c_priv *priv)
 {
+	if (!priv->suspended) {
+		/* reset master mode */
+		rcar_i2c_write(priv, ICMIER, 0);
+		rcar_i2c_write(priv, ICMCR, MDBS);
+		rcar_i2c_write(priv, ICMSR, 0);
+	}
 	/* start clock */
 	rcar_i2c_write(priv, ICCCR, priv->icccr);
 	/* 1st bit setup cycle */
@@ -1105,6 +1111,7 @@ static int rcar_i2c_remove(struct platform_device *pdev)
 		i2c_free_slave_host_notify_device(priv->host_notify_client);
 	i2c_del_adapter(&priv->adap);
 	rcar_i2c_release_dma(priv);
+	rcar_i2c_write(priv, ICMIER, 0);
 	if (priv->flags & ID_P_PM_BLOCKED)
 		pm_runtime_put(dev);
 	pm_runtime_disable(dev);
