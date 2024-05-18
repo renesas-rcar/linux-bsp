@@ -1068,7 +1068,7 @@
 
 		imp_dma_00 {
 			compatible = "generic-uio";
-			reg = <0 0xffa10000 0 0x1000>;
+			reg = <0 0xffa10000 0 0x4000>;
 			clocks = <&cpg CPG_MOD 825>;
 			power-domains = <&sysc R8A77970_PD_A2DP>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
@@ -1097,7 +1097,7 @@
 
 		imp_spmi_00 {
 			compatible = "generic-uio";
-			reg = <0 0xed000000 0 0xe0000>;
+			reg = <0 0xed000000 0 0x200000>;
 			clocks = <&cpg CPG_MOD 830>;
 			power-domains = <&sysc R8A77970_PD_A3IR>;
 			ipmmu-id = <RCAR_IPMMU_IR 0>;
