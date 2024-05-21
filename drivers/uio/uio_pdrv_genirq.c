@@ -408,6 +408,7 @@ static int uio_pdrv_genirq_irqcontrol(struct uio_info *dev_info, s32 irq_on)
 {
 	struct uio_pdrv_genirq_platdata *priv = dev_info->priv;
 	unsigned long flags;
+	static int irq_en[1000];
 
 	/* Allow user space to enable and disable the interrupt
 	 * in the interrupt controller, but keep track of the
@@ -419,11 +420,16 @@ static int uio_pdrv_genirq_irqcontrol(struct uio_info *dev_info, s32 irq_on)
 
 	spin_lock_irqsave(&priv->lock, flags);
 	if (irq_on) {
+		irq_en[dev_info->irq]++;
 		if (__test_and_clear_bit(UIO_IRQ_DISABLED, &priv->flags))
 			enable_irq(dev_info->irq);
 	} else {
-		if (!__test_and_set_bit(UIO_IRQ_DISABLED, &priv->flags))
-			disable_irq_nosync(dev_info->irq);
+		irq_en[dev_info->irq]--;
+		if (!irq_en[dev_info->irq]) {
+			if (!__test_and_set_bit(UIO_IRQ_DISABLED, &priv->flags)) {
+				disable_irq_nosync(dev_info->irq);
+			}
+		}
 	}
 	spin_unlock_irqrestore(&priv->lock, flags);
 
@@ -472,8 +478,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	if (uioinfo->handler || uioinfo->irqcontrol ||
-	    uioinfo->irq_flags & IRQF_SHARED) {
+	if (uioinfo->handler || uioinfo->irqcontrol) {
 		dev_err(&pdev->dev, "interrupt configuration error\n");
 		return ret;
 	}
@@ -570,6 +575,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 	 * Interrupt sharing is not supported.
 	 */
 
+	uioinfo->irq_flags = IRQF_SHARED;
 	uioinfo->handler = uio_pdrv_genirq_handler;
 	uioinfo->irqcontrol = uio_pdrv_genirq_irqcontrol;
 	uioinfo->open = uio_pdrv_genirq_open;
