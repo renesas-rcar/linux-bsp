@@ -105,9 +105,9 @@
 #define TCYC17	0x0f		/* 17*Tcyc delay 1st bit between SDA and SCL */
 
 #define RCAR_MIN_DMA_LEN	8
-#define DMA_DEF_XFER_SIZE	4
 #define RCAR_MIN_DMA_LEN_CONT	16
-
+#define MIN_DMA_CONT_SIZE		1 /* according to hardware manual */
+#define MAX_DMA_CONT_SIZE		256 /* according to hardware manual */
 
 #define RCAR_BUS_PHASE_START	(MDBS | MIE | ESG)
 #define RCAR_BUS_PHASE_DATA	(MDBS | MIE)
@@ -521,12 +521,10 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 	dma_cookie_t cookie;
 	unsigned char *buf;
 	int len, i, mode;
-
 	/* Do various checks to see if DMA is feasible at all */
 	if (IS_ERR(chan) || msg->len < RCAR_MIN_DMA_LEN ||
 	    !(msg->flags & I2C_M_DMA_SAFE) || (read && priv->flags & ID_P_NO_RXDMA))
 		return false;
-
 	if (msg->len > priv->dma_transfer_size && msg->len >= RCAR_MIN_DMA_LEN_CONT &&
 	    msg->len % priv->dma_transfer_size == 0) {
 		priv->dma_continuous = true;
@@ -1167,9 +1165,10 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 		irqhandler = rcar_i2c_gen2_irq;
 	}
 	ret = device_property_read_u32(dev, "dma_transfer_size", &priv->dma_transfer_size);
-	if (ret != 0 || priv->dma_transfer_size < 1 || priv->dma_transfer_size > 256) {
-	    dev_dbg(dev, "cannot find the suitable DMA transfer size, use default\n");
-	    priv->dma_transfer_size = DMA_DEF_XFER_SIZE;
+	if (ret || priv->dma_transfer_size < MIN_DMA_CONT_SIZE ||
+	    priv->dma_transfer_size > MAX_DMA_CONT_SIZE) {
+		dev_dbg(dev, "cannot find the suitable DMA transfer size, use default\n");
+		priv->dma_transfer_size = 0;
 	}
 
 	/* Stay always active when multi-master to keep arbitration working */
