@@ -470,6 +470,7 @@ static void rcar_rtc_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id rcar_rtc_of_table[] = {
+	{ .compatible = "renesas,rtc-r8a78000", },
 	{ .compatible = "renesas,rtc-rcar", },
 	{ },
 };
