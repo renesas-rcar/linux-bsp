@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+title: Renesas R-Car SoCs Real-Time Clock
+
+maintainers:
+  - Khanh Le <khanh.le.xr@renesas.com>
+
+allOf:
+  - $ref: rtc.yaml#
+
+properties:
+  compatible:
+    items:
+      - enum:
+          - renesas,rtc-r8a78000    # R-Car X5H
+      - const: renesas,rtc-rcar
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 3
+
+  interrupt-names:
+    items:
+      - const: update
+      - const: alarm
+      - const: period
+
+  clocks:
+    maxItems: 1
+
+  clock-names:
+    const: ref_clk
+
+required:
+  - compatible
+  - reg
+  - clocks
+  - clock-names
+
+examples:
+  - |
+    rtca@c1394000 {
+       compatible = "renesas,rtc-rcar";
+       reg = <0 0xc1394000 0 0x70>;
+       clocks = <&dummy_tcki>;
+       clock-names = "ref_clk";
+       interrupts = <GIC_SPI 464 IRQ_TYPE_LEVEL_HIGH>,
+		    <GIC_SPI 465 IRQ_TYPE_LEVEL_HIGH>,
+		    <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH>;
+       interrupt-names = "update", "alarm", "period";
+    };
