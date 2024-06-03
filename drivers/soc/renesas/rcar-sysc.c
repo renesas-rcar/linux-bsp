@@ -163,7 +163,7 @@ rcar_sysc_area r8a77980_fixup_areas[3][NUM_FIXUP_AREAS] __initdata = {
 };
 
 static u32 rcar_sysc_quirks;
-static bool has_clk_crl;
+static bool has_clk_ctrl;
 
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
@@ -371,7 +371,7 @@ static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 		return 0;
 
 	/* Disable IMP clock before power off A3IR */
-	if (has_clk_crl && (!strcmp("a3ir", genpd->name)))
+	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name)))
 		rcar_sysc_a3ir_clk_ctrl(false);
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
@@ -386,7 +386,7 @@ static int rcar_sysc_pd_power_on(struct generic_pm_domain *genpd)
 		return 0;
 
 	/* Enable IMP clock before power on A3IR */
-	if (has_clk_crl && (!strcmp("a3ir", genpd->name)))
+	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name)))
 		rcar_sysc_a3ir_clk_ctrl(true);
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
@@ -601,9 +601,9 @@ static int __init rcar_sysc_pd_init(void)
 
 	/* Implement for R-Car V3H only */
 	if (soc_device_match(r8a77980))
-		has_clk_crl = true;
+		has_clk_ctrl = true;
 	else
-		has_clk_crl = false;
+		has_clk_ctrl = false;
 
 	np = of_find_matching_node_and_match(NULL, rcar_sysc_matches, &match);
 	if (!np)
