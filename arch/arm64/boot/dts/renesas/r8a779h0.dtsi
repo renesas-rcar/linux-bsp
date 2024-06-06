@@ -1757,7 +1757,7 @@
 		};
 
 		csi40: csi2@fe500000 {
-			compatible = "renesas,r8a779h0-csi2", "generic-uio";
+			compatible = "renesas,r8a779h0-csi2";
 			reg = <0 0xfe500000 0 0x40000>;
 			interrupts = <GIC_SPI 499 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 331>;
@@ -1801,7 +1801,7 @@
 		};
 
 		csi41: csi2@fe540000 {
-			compatible = "renesas,r8a779h0-csi2", "generic-uio";
+			compatible = "renesas,r8a779h0-csi2";
 			reg = <0 0xfe540000 0 0x40000>;
 			interrupts = <GIC_SPI 500 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 400>;
