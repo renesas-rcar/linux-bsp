@@ -348,7 +348,6 @@
 			iommus = <&ipmmu_vi0 1>;
 		};
 
-		/delete-node/csi40;
 		csi_00: csi2@fe500000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe500000 0 0x40000>;
@@ -392,7 +391,6 @@
 			};
 		};
 
-		/delete-node/csi40;
 		csi_01: csi2@fe540000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe540000 0 0x40000>;
@@ -1340,7 +1338,6 @@
 				 <&ipmmu_vi0 26>;
 		};
 
-		/delete-node/isp1;
 		tisp0: tisp@fed00000 {
 			compatible = "generic-uio";
 			reg = <0 0xfed00000 0 0x10000>;
@@ -1351,7 +1348,6 @@
 			linux,uio-name = "tisp_00";
 		};
 
-		/delete-node/isp0;
 		tisp1: tisp@fed20000 {
 			compatible = "generic-uio";
 			reg = <0 0xfed20000 0 0x10000>;
@@ -3036,7 +3032,6 @@
 			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
-		/delete-node/prr;
 		chipid0: prr@fff00044 {
 			compatible = "generic-uio";
 			reg = <0 0xfff00044 0 0x1000>;
@@ -3066,7 +3061,5 @@
 			reg = <0 0xe67a8000 0 0x3800>;
 			linux,uio-name = "rcarbusmoni_02";
 		};
-
-		/delete-node/qos@e67e0000;
 	};
 };
