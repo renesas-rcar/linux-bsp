@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/reset.h>
+#include <linux/sys_soc.h>
 
 #include "rtsn_ptp.h"
 
@@ -985,6 +986,7 @@ struct rswitch_etha {
 	bool phy_node_is_fixed_link;
 	struct mii_bus *mii;
 	phy_interface_t phy_interface;
+	bool needs_stop_workaround;
 	enum rswitch_etha_mode mode;
 	u32 psmcs;
 	u8 mac_addr[MAX_ADDR_LEN];
@@ -1556,9 +1558,8 @@ static int rswitch_serdes_reg_wait(void __iomem *addr, u32 offs, u32 bank, u32 m
 	return -ETIMEDOUT;
 }
 
-static int rswitch_serdes_common_init_ram(struct rswitch_etha *etha)
+static int rswitch_serdes_common_init_ram(void __iomem *common_addr)
 {
-	void __iomem *common_addr = etha->serdes_addr - etha->index * RSWITCH_SERDES_OFFSET;
 	int ret, i;
 
 	for (i = 0; i < RSWITCH_SERDES_NUM; i++) {
@@ -1574,28 +1575,25 @@ static int rswitch_serdes_common_init_ram(struct rswitch_etha *etha)
 	return 0;
 }
 
-static void rswitch_serdes_common_setting(struct rswitch_etha *etha)
+static void rswitch_serdes_common_setting(void __iomem *common_addr)
 {
-	void __iomem *addr = etha->serdes_addr - etha->index * RSWITCH_SERDES_OFFSET;
-
 	/* Set combination mode */
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_REF_CLK_CTRL, BANK_180, 0xd7);
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_10G_MPLLA_CTRL2, BANK_180, 0xc200);
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLA_CTRL0, BANK_180, 0x42);
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLA_CTRL1, BANK_180, 0);
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLA_CTRL3, BANK_180, 0x2f);
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL0, BANK_180, 0x60);
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL2, BANK_180, 0x2200);
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLB_CTRL1, BANK_180, 0);
-	rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_MPLLB_CTRL3, BANK_180, 0x3d);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_16G_25G_REF_CLK_CTRL, BANK_180, 0xd7);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_10G_MPLLA_CTRL2, BANK_180, 0xc200);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_16G_MPLLA_CTRL0, BANK_180, 0x42);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_MPLLA_CTRL1, BANK_180, 0);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_MPLLA_CTRL3, BANK_180, 0x2f);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL0, BANK_180, 0x60);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_16G_MPLLB_CTRL2, BANK_180, 0x2200);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_MPLLB_CTRL1, BANK_180, 0);
+	rswitch_serdes_write32(common_addr, VR_XS_PMA_MP_12G_MPLLB_CTRL3, BANK_180, 0x3d);
 }
 
-static int rswitch_serdes_chan_setting(struct rswitch_etha *etha)
+static int rswitch_serdes_chan_setting(void __iomem *addr, phy_interface_t phy_interface)
 {
-	void __iomem *addr = etha->serdes_addr;
 	int ret;
 
-	switch (etha->phy_interface) {
+	switch (phy_interface) {
 	case PHY_INTERFACE_MODE_SGMII:
 		rswitch_serdes_write32(addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x2000);
 		rswitch_serdes_write32(addr, VR_XS_PMA_MP_12G_16G_25G_MPLL_CMN_CTRL,
@@ -1683,15 +1681,13 @@ static int rswitch_serdes_chan_setting(struct rswitch_etha *etha)
 	return 0;
 }
 
-static int rswitch_serdes_set_chan_speed(struct rswitch_etha *etha)
+static int rswitch_serdes_set_chan_speed(void __iomem *addr, phy_interface_t phy_interface, int speed)
 {
-	void __iomem *addr = etha->serdes_addr;
-
-	switch (etha->phy_interface) {
+	switch (phy_interface) {
 	case PHY_INTERFACE_MODE_SGMII:
-		if (etha->speed == 1000)
+		if (speed == 1000)
 			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x140);
-		else if (etha->speed == 100)
+		else if (speed == 100)
 			rswitch_serdes_write32(addr, SR_MII_CTRL, BANK_1F00, 0x2100);
 
 		break;
@@ -1747,7 +1743,7 @@ static int rswitch_serdes_common_init(struct rswitch_etha *etha)
 	int ret, i;
 
 	/* Initialize SRAM */
-	ret = rswitch_serdes_common_init_ram(etha);
+	ret = rswitch_serdes_common_init_ram(common_addr);
 	if (ret)
 		return ret;
 
@@ -1763,7 +1759,7 @@ static int rswitch_serdes_common_init(struct rswitch_etha *etha)
 				       0x03d4, BANK_380, 0x443);
 
 	/* Set common setting */
-	rswitch_serdes_common_setting(etha);
+	rswitch_serdes_common_setting(common_addr);
 
 	for (i = 0; i < RSWITCH_SERDES_NUM; i++)
 		rswitch_serdes_write32(common_addr + i * RSWITCH_SERDES_OFFSET,
@@ -1773,25 +1769,35 @@ static int rswitch_serdes_common_init(struct rswitch_etha *etha)
 	rswitch_serdes_write32(common_addr, VR_XS_PCS_DIG_CTRL1, BANK_380, 0x8000);
 
 	/* Initialize SRAM */
-	ret = rswitch_serdes_common_init_ram(etha);
+	ret = rswitch_serdes_common_init_ram(common_addr);
 	if (ret)
 		return ret;
 
 	return rswitch_serdes_reg_wait(common_addr, VR_XS_PCS_DIG_CTRL1, BANK_380, BIT(15), 0);
 }
 
-static int rswitch_serdes_chan_init(struct rswitch_etha *etha)
+static int rswitch_serdes_chan_init(struct rswitch_etha *etha, bool etha_stop_workaround)
 {
+	phy_interface_t phy_interface;
+	int speed;
 	int ret;
 	u32 val;
 
+	if (etha_stop_workaround) {
+		phy_interface = PHY_INTERFACE_MODE_USXGMII;
+		speed = 2500;
+	} else {
+		phy_interface = etha->phy_interface;
+		speed = etha->speed;
+	}
+
 	/* Set channel settings*/
-	ret = rswitch_serdes_chan_setting(etha);
+	ret = rswitch_serdes_chan_setting(etha->serdes_addr, phy_interface);
 	if (ret)
 		return ret;
 
 	/* Set speed (bps) */
-	ret = rswitch_serdes_set_chan_speed(etha);
+	ret = rswitch_serdes_set_chan_speed(etha->serdes_addr, phy_interface, speed);
 	if (ret)
 		return ret;
 
@@ -1835,7 +1841,7 @@ static int rswitch_serdes_chan_init(struct rswitch_etha *etha)
 		return ret;
 
 	/* Check Link up restart */
-	return rswitch_serdes_monitor_linkup(etha);
+	return etha_stop_workaround ? 0 : rswitch_serdes_monitor_linkup(etha);
 }
 
 static int rswitch_etha_set_access_c45(struct rswitch_etha *etha, bool read,
@@ -2033,7 +2039,7 @@ static void rswitch_etha_start(struct net_device *ndev)
 		rdev->priv->serdes_common_init = true;
 	}
 
-	err = rswitch_serdes_chan_init(etha);
+	err = rswitch_serdes_chan_init(etha, false);
 	if (err < 0) {
 		netdev_warn(ndev, "failed to configure serdes\n");
 		return;
@@ -2055,6 +2061,18 @@ static void rswitch_etha_stop(struct net_device *ndev)
 	if (etha->mode != EAMC_OPC_OPERATION) {
 		netdev_warn(ndev, "unexpected etha mode\n");
 		return;
+	}
+
+	if (etha->needs_stop_workaround) {
+		/* To unblock switching etha from OPERATION to DISABLE on S4 rev 1.0
+		 * in SGMII mode, need to:
+		 *   (1) write EAMC_OPC_DISABLE to EAMC,
+		 *   (2) run serdes configuration for USGMII mode
+		 */
+		rs_write32(EAMC_OPC_DISABLE, etha->addr + EAMC);
+		err = rswitch_serdes_chan_init(etha, true);
+		if (err)
+			netdev_warn(ndev, "failed to apply etha stop workaround\n");
 	}
 
 	err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
@@ -2462,6 +2480,11 @@ static void rswitch_reset(struct rswitch_private *priv)
 	}
 }
 
+static const struct soc_device_attribute rswitch_soc_needs_etha_stop_wa[]  = {
+	{ .soc_id = "r8a779f0", .revision = "ES1.0" },
+	{ /* Sentinel */ }
+};
+
 static void rswitch_etha_init(struct rswitch_private *priv, int index)
 {
 	struct rswitch_etha *etha = &priv->etha[index];
@@ -2521,6 +2544,10 @@ static void rswitch_etha_init(struct rswitch_private *priv, int index)
 		/* The default is SGMII interface */
 		etha->phy_interface = PHY_INTERFACE_MODE_SGMII;
 	}
+
+	if (etha->phy_interface == PHY_INTERFACE_MODE_SGMII &&
+	    soc_device_match(rswitch_soc_needs_etha_stop_wa))
+		etha->needs_stop_workaround = true;
 
 	/* MPIC.PSMCS = (clk [MHz] / (MDC frequency [MHz] * 2) - 1.
 	 * Calculating PSMCS value as MDC frequency = 2.5MHz. So, multiply
