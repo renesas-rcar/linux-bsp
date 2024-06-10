@@ -979,14 +979,17 @@ struct rswitch_etha {
 	int index;
 	void __iomem *addr;
 	void __iomem *serdes_addr;
-	bool external_phy;
+	bool enabled;
+	struct device_node *port_node;
+	struct device_node *phy_node;
+	bool phy_node_is_fixed_link;
 	struct mii_bus *mii;
 	phy_interface_t phy_interface;
+	enum rswitch_etha_mode mode;
 	u32 psmcs;
 	u8 mac_addr[MAX_ADDR_LEN];
 	int link;
 	int speed;
-	bool operated;
 };
 
 struct rswitch_gwca_chain {
@@ -1433,10 +1436,11 @@ static int rswitch_etha_change_mode(struct rswitch_etha *etha,
 	rs_write32(mode, etha->addr + EAMC);
 
 	ret = rswitch_reg_wait(etha->addr, EAMS, EAMS_OPS_MASK, mode);
+	if (ret == 0)
+		etha->mode = mode;
 
-	/* Disable clock */
-	if (mode == EAMC_OPC_DISABLE)
-		rswitch_agent_clock_ctrl(base_addr, etha->index, 0);
+	/* Do not disable clock when entering DISABLED mode, otherwise
+	 * MII stops working */
 
 	return ret;
 }
@@ -1506,7 +1510,7 @@ static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
 			    FIELD_PREP(MPIC_PSMHT_MASK, 0x06));
 }
 
-static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
+static int rswitch_etha_hw_init(struct rswitch_etha *etha)
 {
 	int err;
 
@@ -1519,17 +1523,9 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 		return err;
 
 	rs_write32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
-
-	rswitch_etha_pis_lsc_setting(etha);
 	rswitch_etha_enable_mii(etha);
 
-	/* Change to OPERATION Mode */
-	err = rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
-	if (err < 0)
-		return err;
-
-	/* Link Verification */
-	return rswitch_etha_wait_link_verification(etha);
+	return rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
 }
 
 void rswitch_serdes_write32(void __iomem *addr, u32 offs,  u32 bank, u32 data)
@@ -1951,94 +1947,9 @@ static int rswitch_etha_mii_reset(struct mii_bus *bus)
 	return 0;
 }
 
-/* Use of_node_put() on it when done */
-static struct device_node *rswitch_get_phy_node(struct rswitch_device *rdev)
-{
-	struct device_node *ports, *port, *phy = NULL;
-	int err = 0;
-	u32 index;
-
-	ports = of_get_child_by_name(rdev->ndev->dev.parent->of_node, "ports");
-	if (!ports)
-		return NULL;
-
-	for_each_child_of_node(ports, port) {
-		err = of_property_read_u32(port, "reg", &index);
-		if (err < 0)
-			return NULL;
-		if (index != rdev->etha->index)
-			continue;
-
-		/* The default is SGMII interface */
-		err = of_get_phy_mode(port, &rdev->etha->phy_interface);
-		if (err < 0)
-			rdev->etha->phy_interface = PHY_INTERFACE_MODE_SGMII;
-
-		pr_info("%s PHY interface = %s", __func__, phy_modes(rdev->etha->phy_interface));
-
-		phy = of_parse_phandle(port, "phy-handle", 0);
-		if (phy) {
-			switch (rdev->etha->phy_interface) {
-			case PHY_INTERFACE_MODE_SGMII:
-				rdev->etha->speed = 1000;
-				break;
-			case PHY_INTERFACE_MODE_USXGMII:
-			case PHY_INTERFACE_MODE_5GBASER:
-				rdev->etha->speed = 2500;
-				break;
-			default:
-				break;
-			}
-		} else {
-			if (of_phy_is_fixed_link(port)) {
-				struct device_node *fixed_link;
-
-				fixed_link = of_get_child_by_name(port, "fixed-link");
-				err = of_property_read_u32(fixed_link, "speed", &rdev->etha->speed);
-				if (err)
-					break;
-
-				err = of_phy_register_fixed_link(port);
-				if (err)
-					break;
-
-				phy = of_node_get(port);
-			}
-		}
-	}
-
-	of_node_put(ports);
-
-	return phy;
-}
-
-static struct device_node *rswitch_get_port_node(struct rswitch_device *rdev)
-{
-	struct device_node *ports, *port;
-	int err = 0;
-	u32 index;
-
-	ports = of_get_child_by_name(rdev->ndev->dev.parent->of_node, "ports");
-	if (!ports)
-		return NULL;
-
-	for_each_child_of_node(ports, port) {
-		err = of_property_read_u32(port, "reg", &index);
-		if (err < 0)
-			return NULL;
-		if (index == rdev->etha->index)
-			break;
-	}
-
-	of_node_put(ports);
-
-	return port;
-}
-
 static int rswitch_mii_register(struct rswitch_device *rdev)
 {
 	struct mii_bus *mii_bus;
-	struct device_node *port;
 	int err;
 
 	mii_bus = mdiobus_alloc();
@@ -2053,141 +1964,165 @@ static int rswitch_mii_register(struct rswitch_device *rdev)
 	mii_bus->reset = rswitch_etha_mii_reset;
 	mii_bus->parent = &rdev->ndev->dev;
 
-	port = rswitch_get_port_node(rdev);
-	of_node_get(port);
-	err = of_mdiobus_register(mii_bus, port);
+	err = of_mdiobus_register(mii_bus, rdev->etha->port_node);
 	if (err < 0) {
 		mdiobus_free(mii_bus);
-		goto out;
+		return err;
 	}
 
 	rdev->etha->mii = mii_bus;
-
-out:
-	of_node_put(port);
-
-	return err;
+	return 0;
 }
 
 static void rswitch_mii_unregister(struct rswitch_device *rdev)
 {
-	if (rdev->etha->mii) {
+	if (rdev->etha && rdev->etha->mii) {
 		mdiobus_unregister(rdev->etha->mii);
 		mdiobus_free(rdev->etha->mii);
 		rdev->etha->mii = NULL;
 	}
 }
 
+static void rswitch_etha_start(struct net_device *ndev)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_etha *etha = rdev->etha;
+	int err;
+
+	if (etha->speed != ndev->phydev->speed) {
+		if (etha->mode != EAMC_OPC_DISABLE) {
+			netdev_warn(ndev, "start: unexpected etha mode\n");
+			return;
+		}
+
+		err = rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
+		if (err) {
+			netdev_warn(ndev, "failed to change etha mode to CONFIG\n");
+			return;
+		}
+
+		etha->speed = ndev->phydev->speed;
+		rswitch_etha_pis_lsc_setting(etha);
+
+		err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
+		if (err) {
+			netdev_warn(ndev, "failed to change etha mode to DISABLE\n");
+			return;
+		}
+	}
+
+	if (etha->mode == EAMC_OPC_DISABLE) {
+		err = rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
+		if (err) {
+			netdev_warn(ndev, "failed to change etha mode to OPERATION\n");
+			return;
+		}
+	}
+
+	if (etha->mode != EAMC_OPC_OPERATION) {
+		netdev_warn(ndev, "unexpected etha mode\n");
+		return;
+	}
+
+	if (!rdev->priv->serdes_common_init) {
+		err = rswitch_serdes_common_init(etha);
+		if (err) {
+			netdev_warn(ndev, "failed to initialize serdes\n");
+			return;
+		}
+		rdev->priv->serdes_common_init = true;
+	}
+
+	err = rswitch_serdes_chan_init(etha);
+	if (err < 0) {
+		netdev_warn(ndev, "failed to configure serdes\n");
+		return;
+	}
+
+	etha->link = 1;
+
+	err = rswitch_etha_wait_link_verification(etha);
+	if (err < 0)
+		netdev_warn(ndev, "link verification failed\n");
+}
+
+static void rswitch_etha_stop(struct net_device *ndev)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_etha *etha = rdev->etha;
+	int err;
+
+	if (etha->mode != EAMC_OPC_OPERATION) {
+		netdev_warn(ndev, "unexpected etha mode\n");
+		return;
+	}
+
+	err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
+	if (err != 0) {
+		netdev_warn(ndev, "failed to change etha mode to DISABLE\n");
+		return;
+	}
+
+	etha->link = 0;
+}
+
 static void rswitch_adjust_link(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_etha *etha = rdev->etha;
 	struct phy_device *phydev = ndev->phydev;
 
-	if (phydev->link != rdev->etha->link) {
+	if (phydev->link && etha->link && phydev->speed != etha->speed)
+		rswitch_etha_stop(ndev);
+
+	if (phydev->link != etha->link) {
 		phy_print_status(phydev);
-		rdev->etha->link = phydev->link;
+		if (phydev->link)
+			rswitch_etha_start(ndev);
+		else
+			rswitch_etha_stop(ndev);
 	}
 }
 
-static int rswitch_phy_init(struct rswitch_device *rdev, struct device_node *phy)
+static int rswitch_phy_init(struct rswitch_device *rdev)
 {
+	struct rswitch_etha *etha = rdev->etha;
 	struct phy_device *phydev;
-	int err = 0;
 
-	phydev = of_phy_connect(rdev->ndev, phy, rswitch_adjust_link, 0,
+	phydev = of_phy_connect(rdev->ndev, rdev->etha->phy_node,
+				rswitch_adjust_link, 0,
 				rdev->etha->phy_interface);
-	if (!phydev) {
-		err = -ENOENT;
-		goto out;
-	}
+	if (!phydev)
+		return -ENOENT;
+
+	if (etha->phy_interface == PHY_INTERFACE_MODE_SGMII)
+		phy_set_max_speed(phydev, 1000);
+	else
+		phy_set_max_speed(phydev, 2500);
+	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10baseT_Half_BIT);
+	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10baseT_Full_BIT);
+	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Half_BIT);
+	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Half_BIT);
 
 	phy_attached_info(phydev);
-
-out:
-	return err;
+	return 0;
 }
 
 static void rswitch_phy_deinit(struct rswitch_device *rdev)
 {
-	if (rdev->ndev->phydev) {
-		struct device_node *ports, *port;
-		u32 index;
-
+	if (rdev->ndev && rdev->ndev->phydev)
 		phy_disconnect(rdev->ndev->phydev);
-		rdev->ndev->phydev = NULL;
-
-		ports = of_get_child_by_name(rdev->ndev->dev.parent->of_node, "ports");
-		for_each_child_of_node(ports, port) {
-			of_property_read_u32(port, "reg", &index);
-			if (index == rdev->etha->index)
-				break;
-		}
-
-		if (of_phy_is_fixed_link(port))
-			of_phy_deregister_fixed_link(port);
-
-		of_node_put(ports);
-	}
 }
 
 static int rswitch_open(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
-	struct device_node *phy;
-	int err = 0;
-	bool phy_started = false;
 	unsigned long flags;
 
 	napi_enable(&rdev->napi);
 
-	if (!parallel_mode && rdev->etha) {
-		if (!rdev->etha->operated) {
-			if (!rdev->etha->mii) {
-				phy = rswitch_get_phy_node(rdev);
-				if (!phy)
-					goto error;
-			}
-
-			err = rswitch_etha_hw_init(rdev->etha, ndev->dev_addr);
-			if (err < 0)
-				goto error;
-
-			if (!rdev->etha->mii) {
-				err = rswitch_mii_register(rdev);
-				if (err < 0)
-					goto error;
-				err = rswitch_phy_init(rdev, phy);
-				if (err < 0)
-					goto error;
-
-				of_node_put(phy);
-			}
-		}
-
-		ndev->phydev->speed = rdev->etha->speed;
-		phy_set_max_speed(ndev->phydev, rdev->etha->speed);
-
+	if (!parallel_mode && rdev->etha)
 		phy_start(ndev->phydev);
-		phy_started = true;
-
-		if (!rdev->priv->serdes_common_init) {
-			err = rswitch_serdes_common_init(rdev->etha);
-			if (err < 0)
-				goto error;
-			rdev->priv->serdes_common_init = true;
-		}
-
-		if (!rdev->etha->operated) {
-			err = rswitch_serdes_chan_init(rdev->etha);
-			if (err < 0)
-				goto error;
-		}
-
-		rdev->etha->operated = true;
-	}
-
-	ndev->max_mtu = MAX_MTU_SZ;
-	ndev->min_mtu = ETH_MIN_MTU;
 
 	netif_start_queue(ndev);
 
@@ -2205,16 +2140,7 @@ static int rswitch_open(struct net_device *ndev)
 	iowrite32(GWCA_TS_IRQ_BIT, rdev->priv->addr + GWTSDIE);
 
 	rdev->priv->chan_running |= BIT(rdev->port);
-out:
-	return err;
-
-error:
-	if (phy_started)
-		phy_stop(ndev->phydev);
-	rswitch_phy_deinit(rdev);
-	rswitch_mii_unregister(rdev);
-	napi_disable(&rdev->napi);
-	goto out;
+	return 0;
 };
 
 static int rswitch_stop(struct net_device *ndev)
@@ -2539,17 +2465,79 @@ static void rswitch_reset(struct rswitch_private *priv)
 static void rswitch_etha_init(struct rswitch_private *priv, int index)
 {
 	struct rswitch_etha *etha = &priv->etha[index];
+	struct device_node *ports, *port;
+	u32 reg;
+	int err;
 
 	memset(etha, 0, sizeof(*etha));
 	etha->index = index;
 	etha->addr = priv->addr + rswitch_etha_offs(index);
 	etha->serdes_addr = priv->serdes_addr + index * RSWITCH_SERDES_OFFSET;
 
+	ports = of_get_child_by_name(priv->pdev->dev.of_node, "ports");
+	if (!ports) {
+		dev_err(&priv->pdev->dev, "no ports subnode\n");
+		return;
+	}
+
+	for_each_child_of_node(ports, port) {
+		if (of_property_read_u32(port, "reg", &reg) == 0 && reg == index) {
+			etha->port_node = of_node_get(port);
+			break;
+		}
+	}
+
+	of_node_put(ports);
+
+	if (!etha->port_node) {
+		dev_info(&priv->pdev->dev, "no port subnode for port %d\n",
+			index);
+		return;
+	}
+
+	etha->phy_node = of_parse_phandle(etha->port_node, "phy-handle", 0);
+	if (!etha->phy_node && of_phy_is_fixed_link(etha->port_node)) {
+		err = of_phy_register_fixed_link(etha->port_node);
+		if (!err) {
+			dev_err(&priv->pdev->dev,
+				"could not register fixed_link for port %d\n",
+				index);
+			return;
+		}
+		etha->phy_node = of_node_get(etha->port_node);
+		etha->phy_node_is_fixed_link = true;
+	}
+	if (!etha->phy_node) {
+		dev_err(&priv->pdev->dev, "no phy for port %d\n", index);
+		if (etha->phy_node_is_fixed_link)
+			of_phy_deregister_fixed_link(etha->phy_node);
+		return;
+	}
+
+	etha->enabled = true;
+
+	err = of_get_phy_mode(etha->port_node, &etha->phy_interface);
+	if (err < 0) {
+		/* The default is SGMII interface */
+		etha->phy_interface = PHY_INTERFACE_MODE_SGMII;
+	}
+
 	/* MPIC.PSMCS = (clk [MHz] / (MDC frequency [MHz] * 2) - 1.
 	 * Calculating PSMCS value as MDC frequency = 2.5MHz. So, multiply
 	 * both the numerator and the denominator by 10.
 	 */
 	etha->psmcs = clk_get_rate(priv->clk) / 100000 / (25 * 2) - 1;
+}
+
+static void rswitch_etha_deinit(struct rswitch_private *priv, int index)
+{
+	struct rswitch_etha *etha = &priv->etha[index];
+
+	if (etha->phy_node_is_fixed_link)
+		of_phy_deregister_fixed_link(etha->phy_node);
+
+	of_node_put(etha->phy_node);
+	of_node_put(etha->port_node);
 }
 
 static int rswitch_gwca_change_mode(struct rswitch_private *priv,
@@ -2951,43 +2939,35 @@ static void rswitch_rxdmac_free(struct net_device *ndev,
 static void rswitch_set_mac_address(struct rswitch_device *rdev)
 {
 	struct net_device *ndev = rdev->ndev;
-	struct device_node *ports, *port;
-	u32 index;
 	const u8 *mac;
 
-	ports = of_get_child_by_name(ndev->dev.parent->of_node, "ports");
+	if (rdev->etha && rdev->etha->port_node) {
+		mac = of_get_mac_address(rdev->etha->port_node);
+		if (!IS_ERR(mac))
+			ether_addr_copy(ndev->dev_addr, mac);
 
-	for_each_child_of_node(ports, port) {
-		of_property_read_u32(port, "reg", &index);
-		if (index == rdev->etha->index)
-			break;
-	}
+		/*
+		 * Kernels before commit f10843e04a07 ("of: net: fix
+		 * of_get_mac_addr_nvmem() for non-platform devices") of 5.13 cycle
+		 * fail to get nvmem-stored mac address from port node because this
+		 * node does not correspond to a platform_device.
+		 *
+		 * Thus have to explicitly use nvmem API here.
+		 */
+		if (!is_valid_ether_addr(ndev->dev_addr)) {
+			struct nvmem_cell *cell;
+			size_t len;
 
-	mac = of_get_mac_address(port);
-	if (!IS_ERR(mac))
-		ether_addr_copy(ndev->dev_addr, mac);
-
-	/*
-	 * Kernels before commit f10843e04a07 ("of: net: fix
-	 * of_get_mac_addr_nvmem() for non-platform devices") of 5.13 cycle
-	 * fail to get nvmem-stored mac address from port node because this
-	 * node does not correspond to a platform_device.
-	 *
-	 * Thus have to explicitly use nvmem API here.
-	 */
-	if (!is_valid_ether_addr(ndev->dev_addr)) {
-		struct nvmem_cell *cell;
-		size_t len;
-
-		cell = of_nvmem_cell_get(port, "mac-address");
-		if (!IS_ERR(cell)) {
-			mac = nvmem_cell_read(cell, &len);
-			if (!IS_ERR(mac)) {
-				if (len == ETH_ALEN)
-					ether_addr_copy(ndev->dev_addr, mac);
-				kfree(mac);
+			cell = of_nvmem_cell_get(rdev->etha->port_node, "mac-address");
+			if (!IS_ERR(cell)) {
+				mac = nvmem_cell_read(cell, &len);
+				if (!IS_ERR(mac)) {
+					if (len == ETH_ALEN)
+						ether_addr_copy(ndev->dev_addr, mac);
+					kfree(mac);
+				}
+				nvmem_cell_put(cell);
 			}
-			nvmem_cell_put(cell);
 		}
 	}
 
@@ -2996,8 +2976,6 @@ static void rswitch_set_mac_address(struct rswitch_device *rdev)
 
 	if (!is_valid_ether_addr(ndev->dev_addr))
 		eth_hw_addr_random(ndev);
-
-	of_node_put(ports);
 }
 
 static int rswitch_ndev_create(struct rswitch_private *priv, int index)
@@ -3036,6 +3014,9 @@ static int rswitch_ndev_create(struct rswitch_private *priv, int index)
 	snprintf(ndev->name, IFNAMSIZ, "tsn%d", index);
 	ndev->netdev_ops = &rswitch_netdev_ops;
 	ndev->ethtool_ops = &rswitch_ethtool_ops;
+
+	ndev->max_mtu = MAX_MTU_SZ;
+	ndev->min_mtu = ETH_MIN_MTU;
 
 	netif_napi_add(ndev, &rdev->napi, rswitch_poll, 64);
 
@@ -3296,19 +3277,37 @@ static int rswitch_init(struct rswitch_private *priv)
 	INIT_LIST_HEAD(&priv->gwca.ts_info_list);
 
 	/* Hardware initializations */
+
 	if (!parallel_mode)
 		rswitch_clock_enable(priv);
-	for (i = 0; i < num_etha_ports; i++)
-		rswitch_etha_read_mac_address(&priv->etha[i]);
+
+	for (i = 0; i < num_etha_ports; i++) {
+		if (priv->etha[i].enabled)
+			rswitch_etha_read_mac_address(&priv->etha[i]);
+	}
+
 	rswitch_reset(priv);
+
 	err = rswitch_gwca_hw_init(priv);
 	if (err < 0)
 		goto out;
 
+	if (!parallel_mode) {
+		for (i = 0; i < num_etha_ports; i++) {
+			if (priv->etha[i].enabled) {
+				err = rswitch_etha_hw_init(&priv->etha[i]);
+				if (err < 0)
+					goto out;
+			}
+		}
+	}
+
 	for (i = 0; i < num_etha_ports; i++) {
-		err = rswitch_ndev_create(priv, i);
-		if (err < 0)
-			goto out;
+		if (priv->etha[i].enabled) {
+			err = rswitch_ndev_create(priv, i);
+			if (err < 0)
+				goto out;
+		}
 	}
 
 	/* TODO: chrdev register */
@@ -3332,22 +3331,40 @@ static int rswitch_init(struct rswitch_private *priv)
 	err = rswitch_gwca_ts_request_irqs(priv);
 	if (err < 0)
 		goto out;
+
 	/* Register devices so Linux network stack can access them now */
 
 	for (i = 0; i < num_etha_ports; i++) {
-		err = register_netdev(priv->rdev[i]->ndev);
-		if (err)
-			goto out;
+		if (priv->etha[i].enabled) {
+			err = register_netdev(priv->rdev[i]->ndev);
+			if (err)
+				goto out;
+
+			err = rswitch_mii_register(priv->rdev[i]);
+			if (err)
+				goto out;
+
+			err = rswitch_phy_init(priv->rdev[i]);
+			if (err)
+				goto out;
+		}
 	}
 
 	return 0;
 
 out:
-	for (i = 0; i < num_etha_ports; i++)
-		rswitch_ndev_unregister(priv, i);
+	for (i = 0; i < num_etha_ports; i++) {
+		if (priv->etha[i].enabled)
+			rswitch_ndev_unregister(priv, i);
+	}
 
 err_ts_queue_alloc:
 	rswitch_desc_free(priv);
+
+	for (i = 0; i < num_etha_ports; i++) {
+		if (priv->etha[i].enabled)
+			rswitch_etha_deinit(priv, i);
+	}
 
 	return err;
 }
@@ -3356,10 +3373,8 @@ static void rswitch_deinit_rdev(struct rswitch_private *priv, int index)
 {
 	struct rswitch_device *rdev = priv->rdev[index];
 
-	if (rdev->etha && rdev->etha->operated) {
-		rswitch_phy_deinit(rdev);
-		rswitch_mii_unregister(rdev);
-	}
+	rswitch_phy_deinit(rdev);
+	rswitch_mii_unregister(rdev);
 }
 
 static void rswitch_deinit(struct rswitch_private *priv)
@@ -3367,8 +3382,11 @@ static void rswitch_deinit(struct rswitch_private *priv)
 	int i;
 
 	for (i = 0; i < num_etha_ports; i++) {
+		if (!priv->etha[i].enabled)
+			continue;
 		rswitch_deinit_rdev(priv, i);
 		rswitch_ndev_unregister(priv, i);
+		rswitch_etha_deinit(priv, i);
 	}
 
 	rswitch_free_irqs(priv);
@@ -3502,7 +3520,7 @@ static int __maybe_unused rswitch_suspend(struct device *dev)
 	for (i = 0; i < num_etha_ports; i++) {
 		struct net_device *ndev = priv->rdev[i]->ndev;
 
-		if (priv->rdev[i]->tx_chain->index < 0)
+		if (!priv->etha[i].enabled)
 			continue;
 
 		if (netif_running(ndev)) {
@@ -3512,7 +3530,6 @@ static int __maybe_unused rswitch_suspend(struct device *dev)
 
 		rswitch_txdmac_free(ndev, priv);
 		rswitch_rxdmac_free(ndev, priv);
-		priv->rdev[i]->etha->operated = false;
 	}
 
 	priv->serdes_common_init = false;
@@ -3527,6 +3544,10 @@ static int rswitch_resume_chan(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
 	int ret;
+
+	ret = rswitch_etha_hw_init(rdev->etha);
+	if (ret)
+		return ret;
 
 	ret = rswitch_rxdmac_init(ndev, rdev->priv);
 	if (ret)
@@ -3587,6 +3608,14 @@ static int __maybe_unused rswitch_resume(struct device *dev)
 		return ret;
 
 	if (!parallel_mode) {
+		for (i = 0; i < num_etha_ports; i++) {
+			if (priv->etha[i].enabled) {
+				ret = rswitch_etha_hw_init(&priv->etha[i]);
+				if (ret < 0)
+					return ret;
+			}
+		}
+
 		ret = rswitch_bpool_config(priv);
 		if (ret)
 			return ret;
@@ -3602,7 +3631,7 @@ static int __maybe_unused rswitch_resume(struct device *dev)
 	for (i = 0; i < num_etha_ports; i++) {
 		struct net_device *ndev = priv->rdev[i]->ndev;
 
-		if (priv->rdev[i]->tx_chain->index >= 0) {
+		if (priv->etha[i].enabled) {
 			ret = rswitch_resume_chan(ndev);
 			if (ret) {
 				pr_info("Failed to resume %s", ndev->name);
