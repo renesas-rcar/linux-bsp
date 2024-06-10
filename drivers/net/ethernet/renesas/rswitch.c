@@ -722,16 +722,16 @@ enum rswitch_etha_mode {
 
 #define EAVCC_VEM_SC_TAG	(0x3 << 16)
 
-#define MPIC_PIS_MII	0x00
-#define MPIC_PIS_GMII	0x02
-#define MPIC_PIS_XGMII	0x04
-#define MPIC_LSC_SHIFT	3
-#define MPIC_LSC_10M	(0 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_100M	(1 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_1G	(2 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_2_5G	(3 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_5G	(4 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_10G	(5 << MPIC_LSC_SHIFT)
+#define MPIC_PIS_MASK		GENMASK(2, 0)
+#define MPIC_PIS_MII		0x00
+#define MPIC_PIS_GMII		0x02
+#define MPIC_PIS_XGMII		0x04
+#define MPIC_LSC_MASK		GENMASK(5, 3)
+#define MPIC_LSC_100M		1
+#define MPIC_LSC_1G		2
+#define MPIC_LSC_2_5G		3
+#define MPIC_PSMCS_MASK		GENMASK(22, 16)
+#define MPIC_PSMHT_MASK		GENMASK(26, 24)
 
 #define MDIO_READ_C45		0x03
 #define MDIO_WRITE_C45		0x01
@@ -763,14 +763,6 @@ enum rswitch_etha_mode {
 #define MMIS1_PWACS             BIT(1) /* Write */
 #define MMIS1_PRACS             BIT(0) /* Read */
 #define MMIS1_CLEAR_FLAGS       0xf
-
-#define MPIC_PSMCS_SHIFT	16
-#define MPIC_PSMCS_MASK		GENMASK(22, MPIC_PSMCS_SHIFT)
-#define MPIC_PSMCS(val)		((val) << MPIC_PSMCS_SHIFT)
-
-#define MPIC_PSMHT_SHIFT	24
-#define MPIC_PSMHT_MASK		GENMASK(26, MPIC_PSMHT_SHIFT)
-#define MPIC_PSMHT(val)		((val) << MPIC_PSMHT_SHIFT)
 
 #define MLVC_PLV	BIT(16)
 
@@ -1473,64 +1465,48 @@ static bool rswitch_etha_wait_link_verification(struct rswitch_etha *etha)
 	return rswitch_reg_wait(etha->addr, MLVC, MLVC_PLV, 0);
 }
 
-static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
+static void rswitch_etha_pis_lsc_setting(struct rswitch_etha *etha)
 {
-	u32 val;
+	u32 pis, lsc;
 
-	/* FIXME */
-	/* Set xMII type */
-	switch (etha->speed) {
-	case 10:
-		val = MPIC_LSC_10M;
-		rswitch_etha_write(etha, MPIC_PIS_GMII | val, MPIC);
+	switch (etha->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
+		pis = MPIC_PIS_GMII;
 		break;
-	case 100:
-		val = MPIC_LSC_100M;
-		rswitch_etha_write(etha, MPIC_PIS_GMII | val, MPIC);
-		break;
-	case 1000:
-		val = MPIC_LSC_1G;
-		rswitch_etha_write(etha, MPIC_PIS_GMII | val, MPIC);
-		break;
-	case 2500:
-		val = MPIC_LSC_2_5G;
-		rswitch_etha_write(etha, MPIC_PIS_XGMII | val, MPIC);
+	case PHY_INTERFACE_MODE_USXGMII:
+	case PHY_INTERFACE_MODE_5GBASER:
+		pis = MPIC_PIS_XGMII;
 		break;
 	default:
-		return;
+		pis = FIELD_GET(MPIC_PIS_MASK, rswitch_etha_read(etha, MPIC));
+		break;
 	}
 
-#if 0
-	/* Set Interrupt enable */
-	rswitch_etha_write(etha, 0, MEIE);
-	rswitch_etha_write(etha, 0, MMIE0);
-	rswitch_etha_write(etha, 0, MMIE1);
-	rswitch_etha_write(etha, 0, MMIE2);
-	rswitch_etha_write(etha, 0, MMIE2);
-	/* Set Tx function */
-	rswitch_etha_write(etha, 0, MTFFC);
-	rswitch_etha_write(etha, 0, MTPFC);
-	rswitch_etha_write(etha, 0, MTPFC2);
-	rswitch_etha_write(etha, 0, MTPFC30);
-	rswitch_etha_write(etha, 0, MTATC0);
-	/* Set Rx function */
-	rswitch_etha_write(etha, 0, MRGC);
-	rswitch_etha_write(etha, 0x00070007, MRAFC);
-	rswitch_etha_write(etha, 0, MRFSCE);
-	rswitch_etha_write(etha, 0, MRFSCP);
-	rswitch_etha_write(etha, 0, MTRC);
+	switch (etha->speed) {
+	case 100:
+		lsc = MPIC_LSC_100M;
+		break;
+	case 1000:
+		lsc = MPIC_LSC_1G;
+		break;
+	case 2500:
+		lsc = MPIC_LSC_2_5G;
+		break;
+	default:
+		lsc = FIELD_GET(MPIC_LSC_MASK, rswitch_etha_read(etha, MPIC));
+		break;
+	}
 
-	/* Set Address Filtering function */
-	/* Set XGMII function */
-	/* Set Half Duplex function */
-	/* Set PLCA function */
-#endif
+	rswitch_etha_modify(etha, MPIC, MPIC_PIS_MASK | MPIC_LSC_MASK,
+			    FIELD_PREP(MPIC_PIS_MASK, pis) |
+			    FIELD_PREP(MPIC_LSC_MASK, lsc));
 }
 
 static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
 {
 	rswitch_etha_modify(etha, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
-			    MPIC_PSMCS(etha->psmcs) | MPIC_PSMHT(0x06));
+			    FIELD_PREP(MPIC_PSMCS_MASK, etha->psmcs) |
+			    FIELD_PREP(MPIC_PSMHT_MASK, 0x06));
 }
 
 static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
@@ -1547,7 +1523,7 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 
 	rs_write32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
 
-	rswitch_rmac_setting(etha, mac);
+	rswitch_etha_pis_lsc_setting(etha);
 	rswitch_etha_enable_mii(etha);
 
 	/* Change to OPERATION Mode */
