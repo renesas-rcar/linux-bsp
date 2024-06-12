@@ -94,6 +94,34 @@ struct rcar_clk_ctrl {
 	const struct rcar_clk_ctrl_pd *pd;
 };
 
+/* M3W+ MSTP Registers List for PD clock control */
+static const struct rcar_clk_ctrl_reg m3wp_clk_ctrl_pd_3dge[] = {
+	{.id = 1, .mask = 0x00001000},
+};
+
+/* M3W+ PDs List for Clock Control */
+static const struct rcar_clk_ctrl_pd m3wp_clk_ctrl_pds[] = {
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(m3wp_clk_ctrl_pd_3dge),
+		.regs = m3wp_clk_ctrl_pd_3dge,
+	},
+};
+
+/* M3W MSTP Registers List for PD clock control */
+static const struct rcar_clk_ctrl_reg m3w_clk_ctrl_pd_3dge[] = {
+	{.id = 1, .mask = 0x00001000},
+};
+
+/* M3W PDs List for Clock Control */
+static const struct rcar_clk_ctrl_pd m3w_clk_ctrl_pds[] = {
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(m3w_clk_ctrl_pd_3dge),
+		.regs = m3w_clk_ctrl_pd_3dge,
+	},
+};
+
 /* V3H MSTP Registers List for PD clock control */
 static const struct rcar_clk_ctrl_reg v3h_clk_ctrl_pd_a3ir[] = {
 	{.id = 5, .mask = 0xbf200001},
@@ -115,10 +143,22 @@ static const struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
 		.pds_cnt = ARRAY_SIZE(v3h_clk_ctrl_pds),
 		.pd = v3h_clk_ctrl_pds,
 	},
+	/* M3W Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(m3w_clk_ctrl_pds),
+		.pd = m3w_clk_ctrl_pds,
+	},
+	/* M3W+ Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(m3wp_clk_ctrl_pds),
+		.pd = m3wp_clk_ctrl_pds,
+	},
 };
 
 static const struct soc_device_attribute rcar_clk_ctrl_socs[] __initconst = {
 	{.soc_id = "r8a77980"},		/* V3H SoC */
+	{.soc_id = "r8a77960"},		/* M3W SoC */
+	{.soc_id = "r8a77961"},		/* M3W+ SoC */
 	{ /* sentinel */ },
 };
 
