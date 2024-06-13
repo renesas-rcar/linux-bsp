@@ -83,6 +83,8 @@
 /* PORT LOGIC */
 #define PRTLGC2			0x708
 #define DO_DESKEW_FOR_SRIS	BIT(23)
+#define	PRTLGC5			0x0714
+#define	LANE_CONFIG		BIT(6)
 
 /* Shadow regs */
 #define BAR0MASKF0		0x10
@@ -363,6 +365,10 @@ static void renesas_pcie_init_ep(struct renesas_pcie_ep *pcie)
 	val = dw_pcie_readl_dbi(pci, PRTLGC2);
 	val |= DO_DESKEW_FOR_SRIS;
 	dw_pcie_writel_dbi(pci, PRTLGC2, val);
+
+	val = dw_pcie_readl_dbi(pci, PRTLGC5);
+	val |= LANE_CONFIG;
+	dw_pcie_writel_dbi(pci, PRTLGC5, val);
 
 	dw_pcie_dbi_ro_wr_dis(pci);
 
