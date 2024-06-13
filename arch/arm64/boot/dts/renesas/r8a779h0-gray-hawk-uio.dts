@@ -21,8 +21,16 @@
 	status = "disabled";
 };
 
+&csi_00 {
+	status = "okay";
+};
+
 &csi41 {
 	status = "disabled";
+};
+
+&csi_01 {
+	status = "okay";
 };
 
 &rt_dmac0 {
