@@ -10,11 +10,11 @@
 #include "r8a779h0-uio.dtsi"
 
 &isp0 {
-        status = "disabled";
+	status = "disabled";
 };
 
 &isp1 {
-        status = "disabled";
+	status = "disabled";
 };
 
 &csi40 {
@@ -99,34 +99,67 @@
 	status = "disabled";
 };
 
-&vin00 {
-	status = "disabled";
+&vin_00 {
+	status = "okay";
 };
 
-&vin01 {
-	status = "disabled";
+&vin_01 {
+	status = "okay";
 };
 
-&vin02 {
-	status = "disabled";
+&vin_02 {
+	status = "okay";
 };
 
-&vin03 {
-	status = "disabled";
+&vin_03 {
+	status = "okay";
 };
 
-&vin08 {
-	status = "disabled";
+&vin_04 {
+	status = "okay";
 };
 
-&vin09 {
-	status = "disabled";
+&vin_05 {
+	status = "okay";
 };
 
-&vin10 {
-	status = "disabled";
+&vin_06 {
+	status = "okay";
 };
 
-&vin11 {
-	status = "disabled";
+&vin_07 {
+	status = "okay";
+};
+
+&vin_10 {
+	status = "okay";
+};
+
+&vin_11 {
+	status = "okay";
+};
+
+&vin_12 {
+	status = "okay";
+};
+
+
+&vin_13 {
+	status = "okay";
+};
+
+&vin_14 {
+	status = "okay";
+};
+
+&vin_15 {
+	status = "okay";
+};
+
+&vin_16 {
+	status = "okay";
+};
+
+&vin_17 {
+	status = "okay";
 };
