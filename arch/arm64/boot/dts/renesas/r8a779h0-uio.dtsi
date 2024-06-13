@@ -446,6 +446,18 @@
 			iommus = <&ipmmu_vi1 6>;
 		};
 
+		vsp_01: vsp@fea28000 {
+			compatible = "generic-uio";
+			reg = <0 0xfea28000 0 0x8000>;
+			interrupts = <GIC_SPI 551 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 831>;
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 831>;
+			linux,uio-name = "vsp_01";
+			ipmmu-id = <RCAR_IPMMU_VI1 7>;
+			iommus = <&ipmmu_vi1 7>;
+		};
+
 		du0 {
 			compatible = "generic-uio";
 			reg = <0 0xfeb00000 0 0x40000>;
