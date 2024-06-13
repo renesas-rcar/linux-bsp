@@ -82,6 +82,8 @@
 /* PORT LOGIC */
 #define	PRTLGC2			0x0708
 #define	DO_DESKEW_FOR_SRIS	BIT(23)
+#define	PRTLGC5			0x0714
+#define	LANE_CONFIG		BIT(6)
 
 #define PCIEERRSTS0EN           0x030C
 #define CFG_SYS_ERR_RC          GENMASK(10, 9)
@@ -409,6 +411,10 @@ static void renesas_pcie_init_rc(struct renesas_pcie *pcie)
 	val = dw_pcie_readl_dbi(pci, PMCAP1F0);
 	val |= PMEE_EN;
 	dw_pcie_writel_dbi(pci, PMCAP1F0, val);
+
+	val = dw_pcie_readl_dbi(pci, PRTLGC5);
+	val |= LANE_CONFIG;
+	dw_pcie_writel_dbi(pci, PRTLGC5, val);
 
 	dw_pcie_dbi_ro_wr_dis(pci);
 
