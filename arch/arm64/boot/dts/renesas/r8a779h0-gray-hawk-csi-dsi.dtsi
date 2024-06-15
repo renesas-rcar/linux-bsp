@@ -180,7 +180,6 @@
 		compatible = "maxim,max96724";
 		reg = <0x4f>, <0x05>, <0x06>, <0x07>, <0x08>;
 		gpios = <&pca9654_b 0 GPIO_ACTIVE_HIGH>;
-		maxim,invert_phy-pol;
 		gpio-controller;
 		#gpio-cells = <2>;
 
