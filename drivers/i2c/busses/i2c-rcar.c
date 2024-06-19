@@ -106,8 +106,9 @@
 
 #define RCAR_MIN_DMA_LEN	8
 #define RCAR_MIN_DMA_LEN_CONT	16
-#define MIN_DMA_CONT_SIZE		1 /* according to hardware manual */
-#define MAX_DMA_CONT_SIZE		256 /* according to hardware manual */
+#define MIN_DMA_CONT_SIZE	1 /* according to hardware manual */
+#define MAX_DMA_CONT_SIZE	256 /* according to hardware manual */
+#define XFER_TIMEOUT		15000 /* us */
 
 #define RCAR_BUS_PHASE_START	(MDBS | MIE | ESG)
 #define RCAR_BUS_PHASE_DATA	(MDBS | MIE)
@@ -508,12 +509,15 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 	struct dma_async_tx_descriptor *txdesc;
 	dma_cookie_t cookie;
 	unsigned char *buf;
-	int len, i, mode;
+	int len, i, ret;
+	u8  trans_size;
+	u32 val;
+
 	/* Do various checks to see if DMA is feasible at all */
 	if (IS_ERR(chan) || msg->len < RCAR_MIN_DMA_LEN ||
 	    !(msg->flags & I2C_M_DMA_SAFE) || (read && priv->flags & ID_P_NO_RXDMA))
 		return false;
-	if (msg->len > priv->dma_transfer_size && msg->len >= RCAR_MIN_DMA_LEN_CONT &&
+	if (msg->len >= priv->dma_transfer_size && msg->len >= RCAR_MIN_DMA_LEN_CONT &&
 	    msg->len % priv->dma_transfer_size == 0) {
 		priv->dma_continuous = true;
 		if (read) {
@@ -582,25 +586,22 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 		return false;
 	}
 
+	trans_size = (priv->dma_transfer_size == MAX_DMA_CONT_SIZE) ? 0 : priv->dma_transfer_size;
 	/* Enable DMA Master Received/Transmitted */
 	if (read)
 		rcar_i2c_write(priv, ICDMAER, (priv->dma_continuous ? (MDMACTSZ(num_desc - 1) |
-			       RMDMATSZ(priv->dma_transfer_size) | RMDMACE | RMDMAE) : RMDMAE));
+			       RMDMATSZ(trans_size) | RMDMACE | RMDMAE) : RMDMAE));
 	else
 		rcar_i2c_write(priv, ICDMAER, (priv->dma_continuous ? (MDMACTSZ(num_desc - 1) |
-			       TMDMATSZ(priv->dma_transfer_size) | TMDMACE | TMDMAE) : TMDMAE));
-
+			       TMDMATSZ(trans_size) | TMDMACE | TMDMAE) : TMDMAE));
 	dma_async_issue_pending(chan);
 	if (priv->dma_continuous) {
-		mode = read ? 6 : 7;
-		for (i = 0; i < 5; i++) {
-			if (!((rcar_i2c_read(priv, ICDMAER) >> mode) & 1)) {
-				rcar_i2c_dma_callback(priv);
-				return true;
-			}
-			udelay(200);
-		}
-		return false;
+		ret = readl_relaxed_poll_timeout(priv->io + ICDMAER, val,
+						 !(val & RMDMACE), 0, XFER_TIMEOUT);
+		if (ret)
+			return false;
+		rcar_i2c_dma_callback(priv);
+		return true;
 	}
 
 	return true;
