@@ -991,7 +991,13 @@ struct rswitch_etha {
 	u8 mac_addr[MAX_ADDR_LEN];
 	int link;
 	int speed;
+	bool needs_usgmii_serdes_check;
+	struct delayed_work usgmii_serdes_check_work;
+	int usgmii_serdes_check_retries;
 };
+#define USGMII_SERDES_CHECK_MAX_RETRIES		5
+#define USGMII_SERDES_CHECK_FIRST_DELAY_MS	1500
+#define USGMII_SERDES_CHECK_NEXT_DELAY_MS	500
 
 struct rswitch_gwca_chain {
 	union {
@@ -1843,6 +1849,46 @@ static int rswitch_serdes_chan_init(struct rswitch_etha *etha, bool etha_stop_wo
 	return etha_stop_workaround ? 0 : rswitch_serdes_monitor_linkup(etha);
 }
 
+static void rswitch_usgmii_serdes_check(struct work_struct *work)
+{
+	struct rswitch_etha *etha = container_of(to_delayed_work(work),
+			typeof(*etha), usgmii_serdes_check_work);
+	u32 val;
+
+	/* Note on concurrency: other serdes access can only happen from
+	 * within rswitch_adjust_link, that explicitly cancels this work */
+
+	/* Link status is latched, for current status read twice */
+	rswitch_serdes_read32(etha->serdes_addr, SR_XS_PCS_STS1, BANK_300);
+	val = rswitch_serdes_read32(etha->serdes_addr, SR_XS_PCS_STS1, BANK_300);
+	if (val & 0x4) {
+		if (etha->usgmii_serdes_check_retries > 0)
+			printk(KERN_INFO "TSN%d: USGMII serdes ok\n",
+					etha->index);
+		return;
+	}
+
+	if (etha->usgmii_serdes_check_retries >= USGMII_SERDES_CHECK_MAX_RETRIES) {
+		printk(KERN_ERR "TSN%d USGMII serdes still not ok, aborting\n",
+				etha->index);
+		return;
+	}
+
+	printk(KERN_ERR "TSN%d USGMII serdes not ok, retrying\n", etha->index);
+
+	val = rswitch_serdes_read32(etha->serdes_addr,
+		VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1, BANK_180);
+	rswitch_serdes_write32(etha->serdes_addr,
+		VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1, BANK_180, val | 0x10);
+	udelay(10);
+	rswitch_serdes_write32(etha->serdes_addr,
+		VR_XS_PMA_MP_12G_16G_25G_RX_GENCTRL1, BANK_180, val);
+
+	etha->usgmii_serdes_check_retries++;
+	schedule_delayed_work(&etha->usgmii_serdes_check_work,
+			msecs_to_jiffies(USGMII_SERDES_CHECK_NEXT_DELAY_MS));
+}
+
 static int rswitch_etha_set_access_c45(struct rswitch_etha *etha, bool read,
 				      int phyad, int devad, int regad, int data)
 {
@@ -2049,6 +2095,10 @@ static void rswitch_etha_start(struct net_device *ndev)
 	err = rswitch_etha_wait_link_verification(etha);
 	if (err < 0)
 		netdev_warn(ndev, "link verification failed\n");
+
+	if (etha->needs_usgmii_serdes_check)
+		schedule_delayed_work(&etha->usgmii_serdes_check_work,
+			msecs_to_jiffies(USGMII_SERDES_CHECK_FIRST_DELAY_MS));
 }
 
 static void rswitch_etha_stop(struct net_device *ndev)
@@ -2088,6 +2138,9 @@ static void rswitch_adjust_link(struct net_device *ndev)
 	struct rswitch_device *rdev = netdev_priv(ndev);
 	struct rswitch_etha *etha = rdev->etha;
 	struct phy_device *phydev = ndev->phydev;
+
+	if (etha->needs_usgmii_serdes_check)
+		cancel_delayed_work_sync(&etha->usgmii_serdes_check_work);
 
 	if (phydev->link && etha->link && phydev->speed != etha->speed)
 		rswitch_etha_stop(ndev);
@@ -2484,6 +2537,11 @@ static const struct soc_device_attribute rswitch_soc_needs_etha_stop_wa[]  = {
 	{ /* Sentinel */ }
 };
 
+static const struct soc_device_attribute rswitch_soc_needs_usgmii_serdes_check[]  = {
+	{ .soc_id = "r8a779f0", .revision = "ES1.0" },
+	{ /* Sentinel */ }
+};
+
 static void rswitch_etha_init(struct rswitch_private *priv, int index)
 {
 	struct rswitch_etha *etha = &priv->etha[index];
@@ -2547,6 +2605,13 @@ static void rswitch_etha_init(struct rswitch_private *priv, int index)
 	if (etha->phy_interface == PHY_INTERFACE_MODE_SGMII &&
 	    soc_device_match(rswitch_soc_needs_etha_stop_wa))
 		etha->needs_stop_workaround = true;
+
+	if (etha->phy_interface == PHY_INTERFACE_MODE_USXGMII &&
+	    soc_device_match(rswitch_soc_needs_usgmii_serdes_check)) {
+		etha->needs_usgmii_serdes_check = true;
+		INIT_DELAYED_WORK(&etha->usgmii_serdes_check_work,
+				rswitch_usgmii_serdes_check);
+	}
 
 	/* MPIC.PSMCS = (clk [MHz] / (MDC frequency [MHz] * 2) - 1.
 	 * Calculating PSMCS value as MDC frequency = 2.5MHz. So, multiply
