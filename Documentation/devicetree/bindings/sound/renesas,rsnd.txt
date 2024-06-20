@@ -285,13 +285,14 @@ Required properties:
 				    - "renesas,rcar_sound-r8a77990" (R-Car E3)
 				    - "renesas,rcar_sound-r8a77995" (R-Car D3)
 				    - "renesas,rcar_sound-r8a779g0" (R-Car V4H)
+				    - "renesas,rcar_sound-r8a779h0" (R-Car V4M)
 - reg				: Should contain the register physical address.
 				  required register is
 				   SRU/ADG/SSI      if generation1
 				   SRU/ADG/SSIU/SSI/AUDIO-DMAC-periperi if generation2/generation3
 				   ADG/SSIU/SSI if generation4
 				   Select extended AUDIO-DMAC-periperi address if SoC has it,
-				   otherwise select normal AUDIO-DMAC-periperi address. R-Car V4H use SYS-DMA.
+				   otherwise select normal AUDIO-DMAC-periperi address. R-Car V4H/V4M use SYS-DMA.
 - reg-names			: Should contain the register names.
 				   scu/adg/ssi	if generation1
 				   scu/adg/ssiu/ssi/audmapp if generation2/generation3
