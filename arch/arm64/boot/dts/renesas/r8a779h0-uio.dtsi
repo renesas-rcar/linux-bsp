@@ -12,7 +12,6 @@
 
 / {
 	soc: soc {
-		/delete-node/vin00;
 		vin_00: video@e6ef0000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef0000 0 0x1000>;
@@ -29,13 +28,10 @@
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
-
 				port@1 {
 					#address-cells = <1>;
 					#size-cells = <0>;
-
 					reg = <1>;
-
 					vin00csi40: endpoint@0 {
 						reg = <0>;
 						remote-endpoint = <&csi40vin00>;
@@ -44,7 +40,6 @@
 			};
 		};
 
-		/delete-node/vin01;
 		vin_01: video@e6ef1000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef1000 0 0x1000>;
@@ -61,13 +56,10 @@
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
-
 				port@1 {
 					#address-cells = <1>;
 					#size-cells = <0>;
-
 					reg = <1>;
-
 					vin01csi40: endpoint@0 {
 						reg = <0>;
 						remote-endpoint = <&csi40vin01>;
@@ -76,7 +68,6 @@
 			};
 		};
 
-		/delete-node/vin01;
 		vin_02: video@e6ef2000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef2000 0 0x1000>;
@@ -88,18 +79,15 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_02";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
-			//iommus = <&ipmmu_vi0 0>;
+			iommus = <&ipmmu_vi0 0>;
 
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
-
 				port@1 {
 					#address-cells = <1>;
 					#size-cells = <0>;
-
 					reg = <1>;
-
 					vin02csi40: endpoint@0 {
 						reg = <0>;
 						remote-endpoint = <&csi40vin02>;
@@ -108,7 +96,6 @@
 			};
 		};
 
-		/delete-node/vin03;
 		vin_03: video@e6ef3000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef3000 0 0x1000>;
@@ -120,18 +107,15 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_03";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
-			//iommus = <&ipmmu_vi0 0>;
+			iommus = <&ipmmu_vi0 0>;
 
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
-
 				port@1 {
 					#address-cells = <1>;
 					#size-cells = <0>;
-
 					reg = <1>;
-
 					vin03csi40: endpoint@0 {
 						reg = <0>;
 						remote-endpoint = <&csi40vin03>;
@@ -139,7 +123,7 @@
 				};
 			};
 		};
-		/delete-node/vin04;
+
 		vin_04: video@e6ef4000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef4000 0 0x1000>;
@@ -151,10 +135,9 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_04";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
-			//iommus = <&ipmmu_vi0 0>;
+			iommus = <&ipmmu_vi0 0>;
 		};
 
-		/delete-node/vin05;
 		vin_05: video@e6ef5000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef5000 0 0x1000>;
@@ -166,10 +149,9 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_05";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
-			//iommus = <&ipmmu_vi0 0>;
+			iommus = <&ipmmu_vi0 0>;
 		};
 
-		/delete-node/vin06;
 		vin_06: video@e6ef6000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef6000 0 0x1000>;
@@ -181,10 +163,9 @@
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_06";
 			ipmmu-id = <RCAR_IPMMU_VI0 0>;
-			//iommus = <&ipmmu_vi0 0>;
+			iommus = <&ipmmu_vi0 0>;
 		};
 
-		/delete-node/vin08;
 		vin_07: video@e6ef7000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef7000 0 0x1000>;
@@ -195,12 +176,11 @@
 			renesas,id = <7>;
 			renesas,isp = <&isp0>;
 			linux,uio-name = "vin_07";
-			ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			iommus = <&ipmmu_vi0 0>;
 		};
 
-		/delete-node/vin08;
-		vin08: video@e6ef8000 {
+		vin_10: video@e6ef8000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef8000 0 0x1000>;
 			interrupts = <GIC_SPI 537 IRQ_TYPE_LEVEL_HIGH>;
@@ -209,19 +189,17 @@
 			resets = <&cpg 806>;
 			renesas,id = <8>;
 			renesas,isp = <&isp1>;
-			linux,uio-name = "vin_08";
+			linux,uio-name = "vin_10";
 			ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			iommus = <&ipmmu_vi0 1>;
+
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
-
 				port@1 {
 					#address-cells = <1>;
 					#size-cells = <0>;
-
 					reg = <1>;
-
 					vin08csi41: endpoint@1 {
 						reg = <1>;
 						remote-endpoint = <&csi41vin08>;
@@ -229,8 +207,8 @@
 				};
 			};
 		};
-		/delete-node/vin09;
-		vin_09: video@e6ef9000 {
+
+		vin_11: video@e6ef9000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6ef9000 0 0x1000>;
 			interrupts = <GIC_SPI 538 IRQ_TYPE_LEVEL_HIGH>;
@@ -239,19 +217,17 @@
 			resets = <&cpg 807>;
 			renesas,id = <9>;
 			renesas,isp = <&isp1>;
-			linux,uio-name = "vin_09";
+			linux,uio-name = "vin_11";
 			ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			iommus = <&ipmmu_vi0 1>;
+
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
-
 				port@1 {
 					#address-cells = <1>;
 					#size-cells = <0>;
-
 					reg = <1>;
-
 					vin09csi41: endpoint@1 {
 						reg = <1>;
 						remote-endpoint = <&csi41vin09>;
@@ -260,8 +236,7 @@
 			};
 		};
 
-		/delete-node/vin10;
-		vin_10: video@e6efa000 {
+		vin_12: video@e6efa000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6efa000 0 0x1000>;
 			interrupts = <GIC_SPI 539 IRQ_TYPE_LEVEL_HIGH>;
@@ -270,19 +245,17 @@
 			resets = <&cpg 808>;
 			renesas,id = <10>;
 			renesas,isp = <&isp1>;
-			linux,uio-name = "vin_10";
+			linux,uio-name = "vin_12";
 			ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			iommus = <&ipmmu_vi0 1>;
+
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
-
 				port@1 {
 					#address-cells = <1>;
 					#size-cells = <0>;
-
 					reg = <1>;
-
 					vin10csi41: endpoint@1 {
 						reg = <1>;
 						remote-endpoint = <&csi41vin10>;
@@ -291,8 +264,7 @@
 			};
 		};
 
-		/delete-node/vin11;
-		vin_11: video@e6efb000 {
+		vin_13: video@e6efb000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6efb000 0 0x1000>;
 			interrupts = <GIC_SPI 540 IRQ_TYPE_LEVEL_HIGH>;
@@ -301,20 +273,17 @@
 			resets = <&cpg 809>;
 			renesas,id = <11>;
 			renesas,isp = <&isp1>;
-			linux,uio-name = "vin_11";
+			linux,uio-name = "vin_13";
 			ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			iommus = <&ipmmu_vi0 1>;
 
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
-
 				port@1 {
 					#address-cells = <1>;
 					#size-cells = <0>;
-
 					reg = <1>;
-
 					vin11csi41: endpoint@1 {
 						reg = <1>;
 						remote-endpoint = <&csi41vin11>;
@@ -323,8 +292,7 @@
 			};
 		};
 
-		/delete-node/vin12;
-		vin_12: video@e6efc000 {
+		vin_14: video@e6efc000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6efc000 0 0x1000>;
 			interrupts = <GIC_SPI 541 IRQ_TYPE_LEVEL_HIGH>;
@@ -333,13 +301,12 @@
 			resets = <&cpg 810>;
 			renesas,id = <12>;
 			renesas,isp = <&isp1>;
-			linux,uio-name = "vin_12";
+			linux,uio-name = "vin_14";
 			ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			iommus = <&ipmmu_vi0 1>;
 		};
 
-		/delete-node/vin13;
-		vin_13: video@e6efd000 {
+		vin_15: video@e6efd000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6efd000 0 0x1000>;
 			interrupts = <GIC_SPI 542 IRQ_TYPE_LEVEL_HIGH>;
@@ -348,13 +315,12 @@
 			resets = <&cpg 811>;
 			renesas,id = <13>;
 			renesas,isp = <&isp1>;
-			linux,uio-name = "vin_13";
+			linux,uio-name = "vin_15";
 			ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			iommus = <&ipmmu_vi0 1>;
 		};
 
-		/delete-node/vin14;
-		vin14: video@e6efe000 {
+		vin_16: video@e6efe000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6efe000 0 0x1000>;
 			interrupts = <GIC_SPI 543 IRQ_TYPE_LEVEL_HIGH>;
@@ -363,13 +329,12 @@
 			resets = <&cpg 812>;
 			renesas,id = <14>;
 			renesas,isp = <&isp1>;
-			linux,uio-name = "vin_14";
+			linux,uio-name = "vin_16";
 			ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			iommus = <&ipmmu_vi0 1>;
 		};
 
-		/delete-node/vin15;
-		vin15: video@e6eff000 {
+		vin_17: video@e6eff000 {
 			compatible = "generic-uio";
 			reg = <0 0xe6eff000 0 0x1000>;
 			interrupts = <GIC_SPI 544 IRQ_TYPE_LEVEL_HIGH>;
@@ -378,12 +343,11 @@
 			resets = <&cpg 813>;
 			renesas,id = <15>;
 			renesas,isp = <&isp1>;
-			linux,uio-name = "vin_15";
+			linux,uio-name = "vin_17";
 			ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			iommus = <&ipmmu_vi0 1>;
 		};
 
-		/delete-node/csi40;
 		csi_00: csi2@fe500000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe500000 0 0x40000>;
@@ -427,7 +391,6 @@
 			};
 		};
 
-		/delete-node/csi41;
 		csi_01: csi2@fe540000 {
 			compatible = "generic-uio";
 			reg = <0 0xfe540000 0 0x40000>;
@@ -481,6 +444,18 @@
 			linux,uio-name = "vsp_00";
 			ipmmu-id = <RCAR_IPMMU_VI1 6>;
 			iommus = <&ipmmu_vi1 6>;
+		};
+
+		vsp_01: vsp@fea28000 {
+			compatible = "generic-uio";
+			reg = <0 0xfea28000 0 0x8000>;
+			interrupts = <GIC_SPI 551 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 831>;
+			power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			resets = <&cpg 831>;
+			linux,uio-name = "vsp_01";
+			ipmmu-id = <RCAR_IPMMU_VI1 7>;
+			iommus = <&ipmmu_vi1 7>;
 		};
 
 		du0 {
@@ -1375,7 +1350,6 @@
 				 <&ipmmu_vi0 26>;
 		};
 
-		/delete-node/isp1;
 		tisp0: tisp@fed00000 {
 			compatible = "generic-uio";
 			reg = <0 0xfed00000 0 0x10000>;
@@ -1386,7 +1360,6 @@
 			linux,uio-name = "tisp_00";
 		};
 
-		/delete-node/isp0;
 		tisp1: tisp@fed20000 {
 			compatible = "generic-uio";
 			reg = <0 0xfed20000 0 0x10000>;
@@ -2049,8 +2022,7 @@
 			linux,uio-name = "rfso_10";
 		};
 
-		/delete-node/ipmmu_rt0;
-		ipmmu_cache_rt0: iommu@ee480000 {
+		ipmmu_rt0: iommu@ee480000 {
 			compatible = "generic-uio";
 			reg = <0 0xee480000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 10>;
@@ -2058,8 +2030,7 @@
 			linux,uio-name = "ipmmu_cache_rt0";
 		};
 
-		/delete-node/ipmmu_rt1;
-		ipmmu_cache_rt1: iommu@ee4c0000 {
+		ipmmu_rt1: iommu@ee4c0000 {
 			compatible = "generic-uio";
 			reg = <0 0xee4c0000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 19>;
@@ -2067,8 +2038,7 @@
 			linux,uio-name = "ipmmu_cache_rt1";
 		};
 
-		/delete-node/ipmmu_ds0;
-		ipmmu_cache_ds0: iommu@eed00000 {
+		ipmmu_ds0: iommu@eed00000 {
 			compatible = "generic-uio";
 			reg = <0 0xeed00000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 0>;
@@ -2076,8 +2046,7 @@
 			linux,uio-name = "ipmmu_cache_ds0";
 		};
 
-		/delete-node/ipmmu_hc;
-		ipmmu_cache_hc: iommu@eed40000 {
+		ipmmu_hc: iommu@eed40000 {
 			compatible = "generic-uio";
 			reg = <0 0xeed40000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 2>;
@@ -2085,8 +2054,7 @@
 			linux,uio-name = "ipmmu_cache_hc";
 		};
 
-		/delete-node/ipmmu_ir;
-		ipmmu_cache_ir: iommu@eed80000 {
+		ipmmu_ir: iommu@eed80000 {
 			compatible = "generic-uio";
 			reg = <0 0xeed80000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 3>;
@@ -2094,8 +2062,7 @@
 			linux,uio-name = "ipmmu_cache_ir";
 		};
 
-		/delete-node/ipmmu_vc;
-		ipmmu_cache_vc: iommu@eedc0000 {
+		ipmmu_vc: iommu@eedc0000 {
 			compatible = "generic-uio";
 			reg = <0 0xeedc0000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 12>;
@@ -2103,8 +2070,7 @@
 			linux,uio-name = "ipmmu_cache_vc";
 		};
 
-		/delete-node/ipmmu_3dg;
-		ipmmu_cache_3dg: iommu@eee00000 {
+		ipmmu_3dg: iommu@eee00000 {
 			compatible = "generic-uio";
 			reg = <0 0xeee00000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 6>;
@@ -2112,8 +2078,7 @@
 			linux,uio-name = "ipmmu_cache_3dg";
 		};
 
-		/delete-node/ipmmu_vi0;
-		ipmmu_cache_vi0: iommu@eee80000 {
+		ipmmu_vi0: iommu@eee80000 {
 			compatible = "generic-uio";
 			reg = <0 0xeee80000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 14>;
@@ -2121,8 +2086,7 @@
 			linux,uio-name = "ipmmu_cache_vi0";
 		};
 
-		/delete-node/ipmmu_vi1;
-		ipmmu_cache_vi1: iommu@eeec0000 {
+		ipmmu_vi1: iommu@eeec0000 {
 			compatible = "generic-uio";
 			reg = <0 0xeeec0000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 15>;
@@ -2130,8 +2094,7 @@
 			linux,uio-name = "ipmmu_cache_vi1";
 		};
 
-		/delete-node/ipmmu_vip0;
-		ipmmu_cache_vip0: iommu@eef00000 {
+		ipmmu_vip0: iommu@eef00000 {
 			compatible = "generic-uio";
 			reg = <0 0xeef00000 0 0x20000>;
 			renesas,ipmmu-main = <&ipmmu_mm 5>;
@@ -2139,8 +2102,7 @@
 			linux,uio-name = "ipmmu_cache_vip0";
 		};
 
-		/delete-node/ipmmu_mm;
-		ipmmu_cache_mm: iommu@eefc0000 {
+		ipmmu_mm: iommu@eefc0000 {
 			compatible = "generic-uio";
 			reg = <0 0xeefc0000 0 0x20000>;
 			interrupts = <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH>,
@@ -3082,7 +3044,6 @@
 			iommus = <&ipmmu_rt0 1>, <&ipmmu_rt0 2>;
 		};
 
-		/delete-node/prr;
 		chipid0: prr@fff00044 {
 			compatible = "generic-uio";
 			reg = <0 0xfff00044 0 0x1000>;
@@ -3112,7 +3073,5 @@
 			reg = <0 0xe67a8000 0 0x3800>;
 			linux,uio-name = "rcarbusmoni_02";
 		};
-
-		/delete-node/qos@e67e0000;
 	};
 };
