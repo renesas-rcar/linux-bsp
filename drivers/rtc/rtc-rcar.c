@@ -15,8 +15,6 @@
 #include <linux/rtc.h>
 #include <linux/iopoll.h>
 
-#define VDK_WA 1
-
 #define RCAR_RTCA_CTL0		0x00
 #define RCAR_RTCA_CTL0_CE	BIT(7)
 #define RCAR_RTCA_CTL0_CEST	BIT(6)
@@ -78,19 +76,6 @@ struct rcar_rtc_priv {
 	int alarm_irq;
 };
 
-#ifdef VDK_WA
-static void rcar_rtc_get_time_snapshot(struct rcar_rtc_priv *rtc, struct rtc_time *tm)
-{
-	tm->tm_sec  = readb(rtc->base + RCAR_RTCA_SECC);
-	tm->tm_min  = readb(rtc->base + RCAR_RTCA_MINC);
-	tm->tm_hour = readb(rtc->base + RCAR_RTCA_HOURC);
-	tm->tm_mday = readb(rtc->base + RCAR_RTCA_DAYC);
-	tm->tm_mon  = readb(rtc->base + RCAR_RTCA_MONC);
-	tm->tm_year = readb(rtc->base + RCAR_RTCA_YEARC);
-	tm->tm_wday = readb(rtc->base + RCAR_RTCA_WEEKC);
-}
-#endif
-
 static unsigned int rcar_rtc_tm_to_wday(struct rtc_time *tm)
 {
 	time64_t time;
@@ -108,9 +93,7 @@ static int rcar_rtc_read_time(struct device *dev, struct rtc_time *tm)
 {
 	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev);
 	u8 val, secs;
-#ifndef VDK_WA
 	u32 time, cal;
-#endif
 
 	/*
 	 * The RTC was not started or is stopped and thus does not carry the
@@ -120,31 +103,6 @@ static int rcar_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	if (val & RCAR_RTCA_CTL2_STOPPED)
 		return -EINVAL;
 
-#ifdef VDK_WA
-	rcar_rtc_get_time_snapshot(rtc, tm);
-	secs = readb(rtc->base + RCAR_RTCA_SECC);
-	if (secs != tm->tm_sec)
-		rcar_rtc_get_time_snapshot(rtc, tm);
-
-	tm->tm_sec  = bcd2bin(tm->tm_sec);
-	tm->tm_min  = bcd2bin(tm->tm_min);
-	tm->tm_hour = bcd2bin(tm->tm_hour);
-	tm->tm_mday = bcd2bin(tm->tm_mday);
-
-	/*
-	 * This device returns months from 1 to 12.
-	 * But rtc_time.tm_mon expects a value in the range 0 to 11.
-	 */
-	tm->tm_mon  = bcd2bin(tm->tm_mon) - 1;
-
-	/*
-	 * This device's Epoch is 2000.
-	 * But rtc_time.tm_year expects years from Epoch 1900.
-	 */
-	tm->tm_year = bcd2bin(tm->tm_year) + 100;
-	tm->tm_wday = bcd2bin(tm->tm_wday);
-
-#else
 	tm->tm_sec = readb(rtc->base + RCAR_RTCA_SECC);
 	time = readl(rtc->base + RCAR_RTCA_TIMEC);
 	cal = readl(rtc->base + RCAR_RTCA_CALC);
@@ -172,7 +130,6 @@ static int rcar_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	 */
 	tm->tm_year = bcd2bin(FIELD_GET(RCAR_RTCA_CAL_Y, cal)) + 100;
 	tm->tm_wday = bcd2bin(FIELD_GET(RCAR_RTCA_CAL_WD, cal));
-#endif
 
 	return 0;
 }
