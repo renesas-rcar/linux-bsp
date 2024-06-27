@@ -73,8 +73,24 @@ struct rcar_rtc_priv {
 	struct rtc_device	*rtc_dev;
 	struct clk		*ref_clk;
 	unsigned int ref_clk_freq;
-	int alarm_irq;
+	int alarm_irq, update_irq, periodic_irq;
+	int irq_freq;
 };
+
+static void rcar_rtc_output_enable(struct device *dev, unsigned int enabled)
+{
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev);
+	u8 ctl1;
+
+	ctl1 = readb(rtc->base + RCAR_RTCA_CTL1);
+
+	if (enabled)
+		ctl1 |= RCAR_RTCA_CTL1_EN1HZ;
+	else
+		ctl1 &= ~RCAR_RTCA_CTL1_EN1HZ;
+
+	writeb(ctl1, rtc->base + RCAR_RTCA_CTL1);
+}
 
 static unsigned int rcar_rtc_tm_to_wday(struct rtc_time *tm)
 {
@@ -180,13 +196,80 @@ static int rcar_rtc_set_time(struct device *dev, struct rtc_time *tm)
 	return 0;
 }
 
-static irqreturn_t rcar_rtc_irq_handler(int irq, void *id)
+static irqreturn_t rcar_rtc_update_irq_handler(int irq, void *id)
+{
+	struct rcar_rtc_priv *rtc = id;
+
+	rtc_update_irq(rtc->rtc_dev, 1, RTC_IRQF | RTC_UF);
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t rcar_rtc_periodic_irq_handler(int irq, void *id)
+{
+	struct rcar_rtc_priv *rtc = id;
+
+	rtc_update_irq(rtc->rtc_dev, 1, RTC_IRQF | RTC_PF);
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t rcar_rtc_alarm_irq_handler(int irq, void *id)
 {
 	struct rcar_rtc_priv *rtc = id;
 
 	rtc_update_irq(rtc->rtc_dev, 1, RTC_IRQF | RTC_AF);
 
 	return IRQ_HANDLED;
+}
+
+static void rcar_rtc_update_irq_enable(struct device *dev, unsigned int enabled)
+{
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev);
+	u8 ctl1;
+
+	ctl1 = readb(rtc->base + RCAR_RTCA_CTL1);
+
+	if (enabled)
+		ctl1 |= RCAR_RTCA_CTL1_EN1S;
+	else
+		ctl1 &= ~RCAR_RTCA_CTL1_EN1S;
+
+	writeb(ctl1, rtc->base + RCAR_RTCA_CTL1);
+}
+
+static int rcar_rtc_periodic_irq_enable(struct device *dev, unsigned int enabled)
+{
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev);
+	u8 ctl1;
+
+	ctl1 = readb(rtc->base + RCAR_RTCA_CTL1);
+	ctl1 &= ~RCAR_RTCA_CTL1_CT_MASK;
+
+	if (enabled) {
+		/* Disable it before update new irq_freq */
+		writeb(ctl1, rtc->base + RCAR_RTCA_CTL1);
+
+		switch (rtc->irq_freq) {
+		case 1:
+			ctl1 |= RCAR_RTCA_CTL1_CT1HZ;
+			break;
+		case 2:
+			ctl1 |= RCAR_RTCA_CTL1_CT2HZ;
+			break;
+		case 4:
+			ctl1 |= RCAR_RTCA_CTL1_CT4HZ;
+			break;
+		default:
+			dev_err(dev, "unsupported interrupt frequency: %d\n",
+				rtc->irq_freq);
+			return -EINVAL;
+		}
+	}
+
+	writeb(ctl1, rtc->base + RCAR_RTCA_CTL1);
+
+	return 0;
 }
 
 static int rcar_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
@@ -281,6 +364,232 @@ static const struct rtc_class_ops rcar_rtc_ops = {
 	.alarm_irq_enable	= rcar_rtc_alarm_irq_enable,
 };
 
+/* SysFS interface */
+
+/*
+ * R-Car RTC can generate:
+ * Update interrupt (1Hz),
+ * Periodic interrupt (1Hz, 2Hz, 4Hz)
+ * 1Hz pulse output.
+ * Each function can be controlled separately.
+ */
+
+/*
+ * uie - sysfs file for update interrupt control.
+ */
+
+static ssize_t
+rcar_rtc_sysfs_uie_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev->parent);
+	u8 ctl1;
+
+	ctl1 = readb(rtc->base + RCAR_RTCA_CTL1);
+
+	return sprintf(buf, "%d\n", !!(ctl1 & RCAR_RTCA_CTL1_EN1S));
+}
+
+static ssize_t
+rcar_rtc_sysfs_uie_store(struct device *dev,
+			 struct device_attribute *attr,
+			 const char *buf, size_t n)
+{
+	int ret;
+	unsigned int val;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	switch (val) {
+	case 0:
+	case 1:
+		rcar_rtc_update_irq_enable(dev->parent, val);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return n;
+}
+
+static DEVICE_ATTR(uie, 0644,
+		   rcar_rtc_sysfs_uie_show,
+		   rcar_rtc_sysfs_uie_store);
+
+/*
+ * pie - sysfs file for periodic interrupt control.
+ */
+
+static ssize_t
+rcar_rtc_sysfs_pie_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev->parent);
+	u8 ctl1;
+
+	ctl1 = readb(rtc->base + RCAR_RTCA_CTL1);
+
+	return sprintf(buf, "%d\n", !!(ctl1 & RCAR_RTCA_CTL1_CT_MASK));
+}
+
+static ssize_t
+rcar_rtc_sysfs_pie_store(struct device *dev,
+			 struct device_attribute *attr,
+			 const char *buf, size_t n)
+{
+	int ret;
+	unsigned int val;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	switch (val) {
+	case 0:
+	case 1:
+		ret = rcar_rtc_periodic_irq_enable(dev->parent, val);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return ret ? ret : n;
+}
+static DEVICE_ATTR(pie, 0644,
+		   rcar_rtc_sysfs_pie_show,
+		   rcar_rtc_sysfs_pie_store);
+
+/*
+ * irq_freq - sysfs file for periodic interrupt frequency control.
+ */
+
+static ssize_t
+rcar_rtc_sysfs_irq_freq_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev->parent);
+
+	return sprintf(buf, "%d\n", rtc->irq_freq);
+}
+
+static ssize_t
+rcar_rtc_sysfs_irq_freq_store(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf, size_t n)
+{
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev->parent);
+	int val, ret;
+	u8 ctl1;
+	unsigned int pie;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	switch (val) {
+	case 1:
+	case 2:
+	case 4:
+		rtc->irq_freq = val;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	ctl1 = readb(rtc->base + RCAR_RTCA_CTL1);
+	pie = !!(ctl1 & RCAR_RTCA_CTL1_CT_MASK);
+	ret = rcar_rtc_periodic_irq_enable(dev->parent, pie);
+
+	return ret ? ret : n;
+}
+static DEVICE_ATTR(irq_freq, 0644,
+		   rcar_rtc_sysfs_irq_freq_show,
+		   rcar_rtc_sysfs_irq_freq_store);
+
+/*
+ * output - sysfs file for 1Hz pulse output control.
+ */
+
+static ssize_t
+rcar_rtc_sysfs_output_show(struct device *dev,
+			   struct device_attribute *attr, char *buf)
+{
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev->parent);
+	u8 ctl1;
+
+	ctl1 = readb(rtc->base + RCAR_RTCA_CTL1);
+
+	return sprintf(buf, "%d\n", !!(ctl1 & RCAR_RTCA_CTL1_EN1HZ));
+}
+
+static ssize_t
+rcar_rtc_sysfs_output_store(struct device *dev,
+			    struct device_attribute *attr,
+			    const char *buf, size_t n)
+{
+	int ret;
+	unsigned int val;
+
+	ret = kstrtoint(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	switch (val) {
+	case 0:
+	case 1:
+		rcar_rtc_output_enable(dev->parent, val);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return n;
+}
+static DEVICE_ATTR(output, 0644,
+		   rcar_rtc_sysfs_output_show,
+		   rcar_rtc_sysfs_output_store);
+
+/*
+ * struct rcar_rtc_sysfs_attrs - list for RTC features.
+ */
+static struct attribute *rcar_rtc_sysfs_attrs[] = {
+	&dev_attr_uie.attr,
+	&dev_attr_pie.attr,
+	&dev_attr_irq_freq.attr,
+	&dev_attr_output.attr,
+	NULL
+};
+
+static umode_t rcar_rtc_attr_is_visible(struct kobject *kobj,
+					struct attribute *attr, int n)
+{
+	struct device *dev = kobj_to_dev(kobj);
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev->parent);
+	umode_t mode = attr->mode;
+
+	if (attr == &dev_attr_uie.attr) {
+		if (rtc->update_irq <= 0)
+			mode = 0;
+	} else if (attr == &dev_attr_pie.attr ||
+		   attr == &dev_attr_irq_freq.attr) {
+		if (rtc->periodic_irq <= 0)
+			mode = 0;
+	}
+
+	return mode;
+}
+
+/*
+ * struct rcar_rtc_sysfs_grp - attr group for RTC features.
+ */
+static const struct attribute_group rcar_rtc_sysfs_grp = {
+	.name		= "rcar_hw_ctrl",
+	.is_visible	= rcar_rtc_attr_is_visible,
+	.attrs		= rcar_rtc_sysfs_attrs,
+};
+
 static int rcar_rtc_init(struct rcar_rtc_priv *rtc, struct device *dev, bool stopped)
 {
 	int ret;
@@ -337,17 +646,45 @@ static int rcar_rtc_probe(struct platform_device *pdev)
 	if (IS_ERR(rtc->base))
 		return PTR_ERR(rtc->base);
 
-	rtc->alarm_irq = platform_get_irq_optional(pdev, 0);
-	if (rtc->alarm_irq > 0) {
-		ret = devm_request_irq(&pdev->dev, rtc->alarm_irq,
-				       rcar_rtc_irq_handler, 0,
-				       dev_name(&pdev->dev), &pdev->dev);
+	rtc->update_irq = platform_get_irq_byname_optional(pdev, "update");
+	if (rtc->update_irq > 0) {
+		ret = devm_request_irq(&pdev->dev, rtc->update_irq,
+				       rcar_rtc_update_irq_handler, 0,
+				       "rcar-rtc update irq", &pdev->dev);
 
 		if (ret) {
 			dev_err(&pdev->dev,
-				"Failed to request interrupt for the device, %d\n",
+				"Failed to request update interrupt for the device, %d\n",
+				ret);
+			rtc->update_irq = 0;
+		}
+	}
+
+	rtc->alarm_irq = platform_get_irq_byname_optional(pdev, "alarm");
+	if (rtc->alarm_irq > 0) {
+		ret = devm_request_irq(&pdev->dev, rtc->alarm_irq,
+				       rcar_rtc_alarm_irq_handler, 0,
+				       "rcar-rtc alarm irq", &pdev->dev);
+
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to request alarm interrupt for the device, %d\n",
 				ret);
 			rtc->alarm_irq = 0;
+		}
+	}
+
+	rtc->periodic_irq = platform_get_irq_byname_optional(pdev, "period");
+	if (rtc->periodic_irq > 0) {
+		ret = devm_request_irq(&pdev->dev, rtc->periodic_irq,
+				       rcar_rtc_periodic_irq_handler, 0,
+				       "rcar-rtc periodic irq", &pdev->dev);
+
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to request periodic interrupt for the device, %d\n",
+				ret);
+			rtc->periodic_irq = 0;
 		}
 	}
 
@@ -393,9 +730,18 @@ static int rcar_rtc_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_disable_ref_clk;
 
+	/* Disable all interrupts and output pulse */
+	writeb(0, rtc->base + RCAR_RTCA_CTL1);
+
 	rtc->rtc_dev->range_min = RTC_TIMESTAMP_BEGIN_2000;
 	rtc->rtc_dev->range_max = RTC_TIMESTAMP_END_2099;
 	rtc->rtc_dev->ops = &rcar_rtc_ops;
+	rtc->irq_freq = 1;
+
+	/* Register sysfs attributes */
+	ret = rtc_add_group(rtc->rtc_dev, &rcar_rtc_sysfs_grp);
+	if (ret)
+		goto err_disable_wakeup;
 
 	if (rtc->alarm_irq > 0)
 		device_init_wakeup(&pdev->dev, true);
@@ -419,7 +765,8 @@ static void rcar_rtc_remove(struct platform_device *pdev)
 {
 	struct rcar_rtc_priv *rtc = dev_get_drvdata(&pdev->dev);
 
-	rcar_rtc_alarm_irq_enable(&pdev->dev, 0);
+	/* Disable all interrupts and output pulse */
+	writeb(0, rtc->base + RCAR_RTCA_CTL1);
 
 	device_init_wakeup(&pdev->dev, 0);
 
