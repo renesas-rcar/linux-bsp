@@ -356,12 +356,40 @@ static int rcar_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	return 0;
 }
 
+/*
+ * Provide additional RTC information in /proc/driver/rtc
+ */
+
+#ifdef CONFIG_PROC_FS
+static int rcar_rtc_proc(struct device *dev, struct seq_file *seq)
+{
+	struct rcar_rtc_priv *rtc = dev_get_drvdata(dev);
+	u8 ctl1;
+
+	ctl1 = readb(rtc->base + RCAR_RTCA_CTL1);
+
+	seq_printf(seq,
+		   "HW update IRQ enabled\t\t: %s\n"
+		   "HW periodic IRQ enabled\t\t: %s\n"
+		   "HW periodic IRQ frequency\t: %d\n"
+		   "HW 1Hz pulse output enabled\t: %s\n",
+		   (ctl1 & RCAR_RTCA_CTL1_EN1S) ? "yes" : "no",
+		   (ctl1 & RCAR_RTCA_CTL1_CT_MASK) ? "yes" : "no",
+		   rtc->irq_freq,
+		   (ctl1 & RCAR_RTCA_CTL1_EN1HZ) ? "yes" : "no");
+	return 0;
+}
+#else
+#define rcar_rtc_proc	NULL
+#endif
+
 static const struct rtc_class_ops rcar_rtc_ops = {
 	.read_time		= rcar_rtc_read_time,
 	.set_time		= rcar_rtc_set_time,
 	.read_alarm		= rcar_rtc_read_alarm,
 	.set_alarm		= rcar_rtc_set_alarm,
 	.alarm_irq_enable	= rcar_rtc_alarm_irq_enable,
+	.proc			= rcar_rtc_proc,
 };
 
 /* SysFS interface */
