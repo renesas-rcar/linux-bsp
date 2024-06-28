@@ -218,6 +218,13 @@ static void sh_tmu_set_next(struct sh_tmu_channel *ch, unsigned long delta,
 static irqreturn_t sh_tmu_interrupt(int irq, void *dev_id)
 {
 	struct sh_tmu_channel *ch = dev_id;
+	u32 value;
+
+	value = sh_tmu_read(ch, TCR);
+	value &= TCR_UNIE;
+
+	if (value != TCR_UNIE)
+		return IRQ_NONE;
 
 	/* disable or acknowledge interrupt */
 	if (clockevent_state_oneshot(&ch->ced))
@@ -391,6 +398,7 @@ static void sh_tmu_register_clockevent(struct sh_tmu_channel *ch,
 				       const char *name)
 {
 	struct clock_event_device *ced = &ch->ced;
+	struct device_node *np = ch->tmu->pdev->dev.of_node;
 	int ret;
 
 	ced->name = name;
@@ -410,9 +418,15 @@ static void sh_tmu_register_clockevent(struct sh_tmu_channel *ch,
 
 	clockevents_config_and_register(ced, ch->tmu->rate, 0x300, 0xffffffff);
 
-	ret = request_irq(ch->irq, sh_tmu_interrupt,
-			  IRQF_TIMER | IRQF_IRQPOLL | IRQF_NOBALANCING,
-			  dev_name(&ch->tmu->pdev->dev), ch);
+	if (of_find_property(np, "rcar_gen5", NULL)) {
+		ret = request_irq(ch->irq, sh_tmu_interrupt,
+				  IRQF_TIMER | IRQF_IRQPOLL | IRQF_NOBALANCING | IRQF_SHARED,
+				  dev_name(&ch->tmu->pdev->dev), ch);
+	} else {
+		ret = request_irq(ch->irq, sh_tmu_interrupt,
+				  IRQF_TIMER | IRQF_IRQPOLL | IRQF_NOBALANCING,
+				  dev_name(&ch->tmu->pdev->dev), ch);
+	}
 	if (ret) {
 		dev_err(&ch->tmu->pdev->dev, "ch%u: failed to request irq %d\n",
 			ch->index, ch->irq);
