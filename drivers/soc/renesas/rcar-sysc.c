@@ -129,6 +129,59 @@ static struct rcar_clk_ctrl_reg gen3_clk_ctrl_pd_3dg[] = {
 	{.id = 1, .mask = BIT(MSTP_BIT_3DGE), .no_off_mask = BIT(MSTP_BIT_3DGE)},
 };
 
+/* H3 MSTP Registers List for PD clock control */
+static struct rcar_clk_ctrl_reg h3_clk_ctrl_pd_a3vp[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_FDP1_1) | BIT(MSTP_BIT_FDP1_0)},
+	{.id = 6,
+	 .mask = BIT(MSTP_BIT_FCPVD2) | BIT(MSTP_BIT_FCPVD1) | BIT(MSTP_BIT_FCPVD0) |
+			 BIT(MSTP_BIT_FCPVB1) | BIT(MSTP_BIT_FCPVB0) | BIT(MSTP_BIT_FCPVI1) |
+			 BIT(MSTP_BIT_FCPVI0) | BIT(MSTP_BIT_FCPF1) | BIT(MSTP_BIT_FCPF0) |
+			 BIT(MSTP_BIT_VSPD2) | BIT(MSTP_BIT_VSPD1) | BIT(MSTP_BIT_VSPD0) |
+			 BIT(MSTP_BIT_VSPBC) | BIT(MSTP_BIT_VSPBD) | BIT(MSTP_BIT_VSPI1) |
+			 BIT(MSTP_BIT_VSPI0),
+	 .no_off_mask = BIT(MSTP_BIT_FCPVD2) | BIT(MSTP_BIT_FCPVD1) |
+					BIT(MSTP_BIT_FCPVD0) | BIT(MSTP_BIT_FCPVB1) |
+					BIT(MSTP_BIT_FCPVB0) | BIT(MSTP_BIT_FCPVI1) |
+					BIT(MSTP_BIT_FCPVI0) | BIT(MSTP_BIT_VSPD2) |
+					BIT(MSTP_BIT_VSPD1) | BIT(MSTP_BIT_VSPD0) |
+					BIT(MSTP_BIT_VSPBC) | BIT(MSTP_BIT_VSPBD) |
+					BIT(MSTP_BIT_VSPI1) | BIT(MSTP_BIT_VSPI0)},
+};
+
+static struct rcar_clk_ctrl_reg h3_clk_ctrl_pd_a3vc[] = {
+	{.id = 6, .mask = BIT(MSTP_BIT_FCPCS)},
+	{.id = 8, .mask = BIT(MSTP_BIT_IMR3) | BIT(MSTP_BIT_IMR2) |
+					  BIT(MSTP_BIT_IMR1) | BIT(MSTP_BIT_IMR0)},
+};
+
+static struct rcar_clk_ctrl_reg h3_clk_ctrl_pd_a2vc1[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_VCPLF_iVDP1C) | BIT(MSTP_BIT_VDPB)},
+};
+
+/* H3 PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd h3_clk_ctrl_pds[] = {
+	{
+		.pd_name = "a3vp",
+		.regs_cnt = ARRAY_SIZE(h3_clk_ctrl_pd_a3vp),
+		.regs = h3_clk_ctrl_pd_a3vp,
+	},
+	{
+		.pd_name = "a3vc",
+		.regs_cnt = ARRAY_SIZE(h3_clk_ctrl_pd_a3vc),
+		.regs = h3_clk_ctrl_pd_a3vc,
+	},
+	{
+		.pd_name = "a2vc1",
+		.regs_cnt = ARRAY_SIZE(h3_clk_ctrl_pd_a2vc1),
+		.regs = h3_clk_ctrl_pd_a2vc1,
+	},
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(gen3_clk_ctrl_pd_3dg),
+		.regs = gen3_clk_ctrl_pd_3dg,
+	},
+};
+
 /* M3W MSTP Registers List for PD clock control */
 static struct rcar_clk_ctrl_reg m3w_clk_ctrl_pd_a2vc0[] = {
 	{.id = 1, .mask = BIT(MSTP_BIT_iVDP1C) | BIT(MSTP_BIT_VDPB)},
@@ -239,6 +292,11 @@ static struct rcar_clk_ctrl_pd v3h_clk_ctrl_pds[] = {
 };
 
 static struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
+	/* H3 Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(h3_clk_ctrl_pds),
+		.pd = h3_clk_ctrl_pds,
+	},
 	/* M3W Clock Control */
 	{
 		.pds_cnt = ARRAY_SIZE(m3w_clk_ctrl_pds),
@@ -262,6 +320,7 @@ static struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
 };
 
 enum _rcar_clk_ctrl_soc_idx {
+	RCAR_H3_CLK_CTRL_IDX,
 	RCAR_M3W_CLK_CTRL_IDX,
 	RCAR_M3WP_CLK_CTRL_IDX,
 	RCAR_M3N_CLK_CTRL_IDX,
@@ -271,6 +330,12 @@ enum _rcar_clk_ctrl_soc_idx {
 static struct rcar_clk_ctrl *rcar_clk_ctrl;
 
 static const struct soc_device_attribute rcar_clk_ctrl_quirks_match[] __initconst = {
+	{.soc_id = "r8a7795", .revision = "ES1.1",	/* H3 v1.1 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_H3_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7795", .revision = "ES2.0",	/* H3 v2.0 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_H3_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7795", .revision = "ES3.0",	/* H3 v3.0 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_H3_CLK_CTRL_IDX]},
 	{.soc_id = "r8a7796", .revision = "ES1.0",  /* M3 v1.0 */
 		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3W_CLK_CTRL_IDX]},
 	{.soc_id = "r8a7796", .revision = "ES1.1",  /* M3 v1.1 */
