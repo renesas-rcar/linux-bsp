@@ -68,3 +68,19 @@ config MIPI_I3C_HCI_PCI
 
 	  This driver can also be built as a module. If so, the module will be
 	  called mipi-i3c-hci-pci.
+
+config I3C_RCAR_MASTER
+       tristate "Renesas R-Car I3C master driver"
+       depends on I3C
+       depends on HAS_IOMEM
+       depends on !(ALPHA || PARISC)
+       help
+	 This driver supports the I3C master controller found on
+	 Renesas R-Car Gen5 SoCs.
+
+	 It enables communication with I3C and legacy I2C devices
+	 connected to the R-Car I3C bus, providing support for
+	 dynamic address assignment and standard I3C transfers.
+
+         This driver can also be built as a module. If so, the module
+         will be called i3c-rcar-master.
