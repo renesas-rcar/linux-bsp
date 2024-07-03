@@ -3276,6 +3276,8 @@ static void rswitch_fwd_init(struct rswitch_private *priv)
 
 	/* For ETHA ports, set port based forwarding to per-port rx chains */
 	for (i = 0; i < num_etha_ports; i++) {
+		if (!priv->etha[i].enabled)
+			continue;
 		/* Port-based forwarding to GWCA port */
 		rs_write32(FIELD_PREP(FWPBFC_PBDV_MASK, BIT(priv->gwca.index)),
 				priv->addr + FWPBFC(i));
