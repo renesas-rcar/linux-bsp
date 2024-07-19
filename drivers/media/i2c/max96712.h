@@ -91,6 +91,7 @@
 
 #define MAX_MIPI_TX_BASE(n)		(0x900 + 0x40 * n)
 #define MAX_MIPI_TX2(n)			(MAX_MIPI_TX_BASE(n) + 0x02)
+#define MAX_MIPI_TX3(n)			(MAX_MIPI_TX_BASE(n) + 0x03)
 #define MAX_MIPI_TX10(n)		(MAX_MIPI_TX_BASE(n) + 0x0a)
 #define MAX_MIPI_TX11(n)		(MAX_MIPI_TX_BASE(n) + 0x0b)
 #define MAX_MIPI_TX12(n)		(MAX_MIPI_TX_BASE(n) + 0x0c)
