@@ -782,7 +782,7 @@ static void max96712_gmsl2_initial_setup(struct max96712_priv *priv)
 
 static int max96712_mipi_setup(struct max96712_priv *priv)
 {
-	u32 csi_rate = 1000;
+	u32 csi_rate = 1800;
 
 	max96712_power(priv, 1);
 
@@ -800,6 +800,8 @@ static int max96712_mipi_setup(struct max96712_priv *priv)
 	} else {
 		max96712_write_reg(priv, MAX_MIPI_TX10(1), 0xc0);
 		max96712_write_reg(priv, MAX_MIPI_TX10(2), 0xc0);
+		max96712_write_reg(priv, MAX_MIPI_TX3(1), 0x07);
+		max96712_write_reg(priv, MAX_MIPI_TX3(2), 0x07);
 	}
 
 	max96712_update_bits(priv, MAX_BACKTOP22(0), 0x3f,
@@ -1249,7 +1251,7 @@ static int max96712_init(struct device *dev)
 
 	v4l2_ctrl_handler_init(&priv->ctrls, 1);
 
-	mbps = 74230000 * bpp;	/* 1920x1020@30Hz, RAW10 bpp = 10 */
+	mbps = 52000000 * bpp;	/* 1920x1020@30Hz, RAW10 bpp = 10 */
 #if DEBUG_COLOR_PATTERN
 	mbps = DEBUG_MBPS;
 #endif
