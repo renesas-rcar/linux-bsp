@@ -53,6 +53,7 @@ properties:
           - enum:
               - renesas,gpio-r8a779f0     # R-Car S4
               - renesas,gpio-r8a779g0     # R-Car V4H
+              - renesas,gpio-r8a779h0     # R-Car V4M
           - const: renesas,rcar-gen4-gpio # R-Car Gen4
 
   reg:
