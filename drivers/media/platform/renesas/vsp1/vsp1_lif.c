@@ -114,6 +114,7 @@ static void lif_configure_stream(struct vsp1_entity *entity,
 
 	case VI6_IP_VERSION_MODEL_VSPD_GEN3:
 	case VI6_IP_VERSION_MODEL_VSPD_GEN4:
+	case VI6_IP_VERSION_MODEL_VSPDB_GEN5:
 	default:
 		hbth = 0;
 		obth = 3000;
