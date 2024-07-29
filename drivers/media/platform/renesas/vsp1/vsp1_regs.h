@@ -800,6 +800,7 @@
 #define VI6_IP_VERSION_MODEL_VSPBS_GEN3	(0x1a << 8)
 #define VI6_IP_VERSION_MODEL_VSPD_GEN4	(0x1c << 8)
 #define VI6_IP_VERSION_MODEL_VSPX_GEN4	(0x1d << 8)
+#define VI6_IP_VERSION_MODEL_VSPDB_GEN5 (0x20 << 8)
 /* RZ/G2L SoCs have no version register, So use 0x80 as the model version */
 #define VI6_IP_VERSION_MODEL_VSPD_RZG2L	(0x80 << 8)
 
@@ -816,6 +817,7 @@
 #define VI6_IP_VERSION_SOC_E3		(0x04 << 0)
 #define VI6_IP_VERSION_SOC_V3U		(0x05 << 0)
 #define VI6_IP_VERSION_SOC_V4H		(0x06 << 0)
+#define VI6_IP_VERSION_SOC_X5H		(0x07 << 0)
 /* RZ/G2L SoCs have no version register, So use 0x80 for SoC Identification */
 #define VI6_IP_VERSION_SOC_RZG2L	(0x80 << 0)
 

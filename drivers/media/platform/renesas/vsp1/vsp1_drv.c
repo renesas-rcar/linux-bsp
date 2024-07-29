@@ -883,6 +883,16 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.features = VSP1_HAS_IIF,
 		.rpf_count = 2,
 		.wpf_count = 1,
+	}, {
+		.version = VI6_IP_VERSION_MODEL_VSPDB_GEN5,
+		.model = "VSP2-DB",
+		.gen = 5,
+		.features = VSP1_HAS_BRU | VSP1_HAS_WPF_VFLIP | VSP1_HAS_EXT_DL,
+		.lif_count = 1,
+		.rpf_count = 5,
+		.uif_count = 2,
+		.wpf_count = 1,
+		.num_bru_inputs = 5,
 	},
 };
 
