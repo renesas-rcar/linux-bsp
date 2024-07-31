@@ -291,6 +291,15 @@ static struct rcar_clk_ctrl_pd v3h_clk_ctrl_pds[] = {
 	},
 };
 
+/* E3 PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd e3_clk_ctrl_pds[] = {
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(gen3_clk_ctrl_pd_3dg),
+		.regs = gen3_clk_ctrl_pd_3dg,
+	},
+};
+
 static struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
 	/* H3 Clock Control */
 	{
@@ -317,6 +326,11 @@ static struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
 		.pds_cnt = ARRAY_SIZE(v3h_clk_ctrl_pds),
 		.pd = v3h_clk_ctrl_pds,
 	},
+	/* E3 Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(e3_clk_ctrl_pds),
+		.pd = e3_clk_ctrl_pds,
+	},
 };
 
 enum _rcar_clk_ctrl_soc_idx {
@@ -325,6 +339,7 @@ enum _rcar_clk_ctrl_soc_idx {
 	RCAR_M3WP_CLK_CTRL_IDX,
 	RCAR_M3N_CLK_CTRL_IDX,
 	RCAR_V3H_CLK_CTRL_IDX,
+	RCAR_E3_CLK_CTRL_IDX,
 };
 
 static struct rcar_clk_ctrl *rcar_clk_ctrl;
@@ -352,6 +367,8 @@ static const struct soc_device_attribute rcar_clk_ctrl_quirks_match[] __initcons
 		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3N_CLK_CTRL_IDX]},
 	{.soc_id = "r8a77980",						/* V3H */
 		.data = (void *)&rcar_clk_ctrl_list[RCAR_V3H_CLK_CTRL_IDX]},
+	{.soc_id = "r8a77990",						/* E3 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_E3_CLK_CTRL_IDX]},
 	{ /* sentinel */ },
 };
 
