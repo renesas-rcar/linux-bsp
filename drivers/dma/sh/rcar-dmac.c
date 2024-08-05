@@ -296,6 +296,7 @@ struct rcar_dmac_of_data {
 #define RCAR_DMACHCRB_DPTR_MASK		(0xff << 16)
 #define RCAR_DMACHCRB_DPTR_SHIFT	16
 #define RCAR_DMACHCRB_DRST		(1 << 15)
+#define RCAR_DMACHCRB_DSIEEN		(1 << 10)
 #define RCAR_DMACHCRB_DTS		(1 << 8)
 #define RCAR_DMACHCRB_SLM_NORMAL	(0 << 4)
 #define RCAR_DMACHCRB_SLM_CLK(n)	((8 | (n)) << 4)
@@ -427,7 +428,7 @@ static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 				     RCAR_DMADPBASE_SEL);
 		rcar_dmac_chan_write(chan, RCAR_DMACHCRB,
 				     RCAR_DMACHCRB_DCNT(desc->nchunks - 1) |
-				     RCAR_DMACHCRB_DRST);
+				     RCAR_DMACHCRB_DRST | RCAR_DMACHCRB_DSIEEN);
 
 		/*
 		 * Errata: When descriptor memory is accessed through an IOMMU
