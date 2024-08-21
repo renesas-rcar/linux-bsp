@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/hwlock/rcar-hwspinlock.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Renesas R-Car Hardware spinlock
+
+maintainers:
+  - T.B.D
+
+description:
+  The hardware block provides mutexes utilized between different processors on
+  the SoC as part of the communication protocol used by these processors.
+
+properties:
+  compatible:
+    oneOf:
+      - enum:
+          - renesas,mfis-lock
+      - items:
+          - enum:
+              - renesas,mfis-lock-r8a77951
+              - renesas,mfis-lock-r8a77960
+              - renesas,mfis-lock-r8a77961
+              - renesas,mfis-lock-r8a77965
+              - renesas,mfis-lock-r8a77990
+              - renesas,mfis-lock-r8a77995
+              - renesas,mfis-lock-r8a78000
+          - const: renesas,mfis-lock
+
+  reg:
+    maxItems: 1
+
+  '#hwlock-cells':
+    const: 1
+
+required:
+  - compatible
+  - reg
+  - '#hwlock-cells'
+
+additionalProperties: false
+
+examples:
+  - |
+    mfis: mfis@e6260000 {
+        compatible = "renesas,mfis-lock-r8a77951",
+		     "renesas,mfis-lock";
+        reg = <0 0xe6260000 0 0x1000>;
+        #hwlock-cells = <1>;
+    };
+...
