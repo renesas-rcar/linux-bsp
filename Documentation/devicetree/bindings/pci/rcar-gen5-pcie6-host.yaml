@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+# Copyright (C) 2022 Renesas Electronics Corp.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pci/rcar-gen4-pci-host.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Renesas R-Car Gen5 PCIe 6.0 Host
+
+maintainers:
+  - Tin Tran <tin.tran.xk@renesas.com>
+
+allOf:
+  - $ref: snps,dw-pcie.yaml#
+
+properties:
+  compatible:
+    items:
+      - const: renesas,rcar-gen5-pcie6 # R-Car Gen5
+
+  interrupts:
+    maxItems: 9
+
+  clocks:
+    maxItems: 1
+
+  power-domains:
+    maxItems: 1
+
+  resets:
+    maxItems: 1
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - clocks
+  - power-domains
+
+unevaluatedProperties: false
+
+examples:
+
+        pcie6: pcie6@0xDC000000 {
+		compatible = "renesas,rcar-gen5-pcie6";
+		bus-range = <0 0xff>;
+		reg = <0x0 0xDC000000 0x0 0x1000000>, <0 0xDA000000 0 0x100000>;
+		reg-names = "dbi", "config";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		ranges = <0x02000000 0x0 0x90000000 0x0 0xDA100000 0x0 0xF00000>;
+		interrupts = <0 348 4>,
+			     <0 349 4>,
+			     <0 350 4>,
+			     <0 354 4>,
+			     <0 355 4>,
+			     <0 355 4>,
+			     <0 355 4>,
+			     <0 355 4>,
+			     <0 356 4>;
+		interrupt-map-mask = <0 0 0 7>;
+		interrupt-map = <0 0 0 1 &gic 0 0x38000000 0 348 4
+				 0 0 0 2 &gic 0 0x38000000 0 349 4
+				 0 0 0 3 &gic 0 0x38000000 0 350 4
+				 0 0 0 4 &gic 0 0x38000000 0 354 4
+				 0 0 0 4 &gic 0 0x38000000 0 355 4
+				 0 0 0 4 &gic 0 0x38000000 0 355 4
+				 0 0 0 4 &gic 0 0x38000000 0 355 4
+				 0 0 0 4 &gic 0 0x38000000 0 355 4
+				 0 0 0 4 &gic 0 0x38000000 0 356 4>;
+		clocks = <&pcie_bus>;
+		clock-names = "pcie_bus";
+		#interrupt-cells = <1>;
+		max-link-speed = <6>;
+		num-lanes = <2>;
+		#stream-id-cells = <1>;
+		status = "okay";
+        };
