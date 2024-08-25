@@ -989,10 +989,14 @@ static int vsp1_probe(struct platform_device *pdev)
 	if (irq < 0)
 		return irq;
 
+	/*
+	 * On the VDK, the reset has not been supported yet. Instead of
+	 * returning an error, assign the rstc to NULL, then reset core
+	 * will treat it as dummy reset line.
+	 */
 	vsp1->rstc = devm_reset_control_get_shared(&pdev->dev, NULL);
 	if (IS_ERR(vsp1->rstc))
-		return dev_err_probe(&pdev->dev, PTR_ERR(vsp1->rstc),
-				     "failed to get reset control\n");
+		vsp1->rstc = NULL;
 
 	/* FCP (optional). */
 	fcp_node = of_parse_phandle(pdev->dev.of_node, "renesas,fcp", 0);
