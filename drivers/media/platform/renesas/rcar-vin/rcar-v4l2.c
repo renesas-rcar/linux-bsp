@@ -670,7 +670,7 @@ static void rvin_notify(struct v4l2_subdev *sd,
 
 	group = vin->group;
 
-	for (i = 0; i < RCAR_VIN_NUM; i++) {
+	for (i = 0; i < vin->info->num_channel; i++) {
 		vin = group->vin[i];
 		if (!vin)
 			continue;

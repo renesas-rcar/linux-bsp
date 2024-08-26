@@ -41,7 +41,18 @@
  * routing for other VIN's. We can figure out which VIN is
  * master by looking at a VINs id.
  */
-#define rvin_group_id_to_master(vin) ((vin) < 4 ? 0 : 4)
+#define rvin_group_id_to_master(vin) ((vin) < 4 ? 0 : (vin) < 8 ? 4 : \
+				     (vin) < 12 ? 8 : (vin) < 16 ? 12 : \
+				     (vin) < 20 ? 16 : (vin) < 24 ? 20 : \
+					 (vin) < 28 ? 24 : (vin) < 32 ? 28 : \
+					 (vin) < 36 ? 32 : (vin) < 40 ? 36 : \
+					 (vin) < 44 ? 40 : (vin) < 48 ? 44 : \
+					 (vin) < 52 ? 48 : (vin) < 56 ? 52 : \
+					 (vin) < 60 ? 56 : (vin) < 64 ? 60 : \
+					 (vin) < 68 ? 64 : (vin) < 72 ? 68 : \
+					 (vin) < 76 ? 72 : (vin) < 80 ? 76 : \
+					 (vin) < 84 ? 80 : (vin) < 88 ? 84 : \
+					 (vin) < 92 ? 88 : 96)
 
 #define v4l2_dev_to_vin(d)	container_of(d, struct rvin_dev, v4l2_dev)
 
@@ -226,7 +237,7 @@ static int rvin_group_notify_complete(struct v4l2_async_notifier *notifier)
 	}
 
 	/* Register all video nodes for the group. */
-	for (i = 0; i < RCAR_VIN_NUM; i++) {
+	for (i = 0; i < vin->info->num_channel; i++) {
 		if (vin->group->vin[i] &&
 		    !video_is_registered(&vin->group->vin[i]->vdev)) {
 			ret = rvin_v4l2_register(vin->group->vin[i]);
@@ -245,14 +256,14 @@ static void rvin_group_notify_unbind(struct v4l2_async_notifier *notifier,
 	struct rvin_dev *vin = v4l2_dev_to_vin(notifier->v4l2_dev);
 	struct rvin_group *group = vin->group;
 
-	for (unsigned int i = 0; i < RCAR_VIN_NUM; i++) {
+	for (unsigned int i = 0; i < vin->info->num_channel; i++) {
 		if (group->vin[i])
 			rvin_v4l2_unregister(group->vin[i]);
 	}
 
 	mutex_lock(&vin->group->lock);
 
-	for (unsigned int i = 0; i < RCAR_VIN_NUM; i++) {
+	for (unsigned int i = 0; i < vin->info->num_channel; i++) {
 		if (!group->vin[i] || group->vin[i]->parallel.asc != asc)
 			continue;
 
@@ -285,7 +296,7 @@ static int rvin_group_notify_bound(struct v4l2_async_notifier *notifier,
 
 	guard(mutex)(&group->lock);
 
-	for (unsigned int i = 0; i < RCAR_VIN_NUM; i++) {
+	for (unsigned int i = 0; i < vin->info->num_channel; i++) {
 		struct rvin_dev *pvin = group->vin[i];
 
 		if (!pvin || pvin->parallel.asc != asc)
@@ -409,17 +420,19 @@ static int rvin_parallel_parse_of(struct rvin_dev *vin)
 static int rvin_group_notifier_init(struct rvin_dev *vin, unsigned int port,
 				    unsigned int max_id)
 {
-	unsigned int count = 0, vin_mask = 0;
+	unsigned int count = 0;
 	unsigned int i, id;
 	int ret;
+	DECLARE_BITMAP(vin_mask, RCAR_VIN_NUM);
+	bitmap_zero(vin_mask, RCAR_VIN_NUM);
 
 	mutex_lock(&vin->group->lock);
 
 	/* If not all VIN's are registered don't register the notifier. */
-	for (i = 0; i < RCAR_VIN_NUM; i++) {
+	for (i = 0; i < vin->info->num_channel; i++) {
 		if (vin->group->vin[i]) {
 			count++;
-			vin_mask |= BIT(i);
+			set_bit(i, vin_mask);
 		}
 	}
 
@@ -436,8 +449,8 @@ static int rvin_group_notifier_init(struct rvin_dev *vin, unsigned int port,
 	 * Some subdevices may overlap but the parser function can handle it and
 	 * each subdevice will only be registered once with the group notifier.
 	 */
-	for (i = 0; i < RCAR_VIN_NUM; i++) {
-		if (!(vin_mask & BIT(i)))
+	for (i = 0; i < vin->info->num_channel; i++) {
+		if (!test_bit(i, vin_mask))
 			continue;
 
 		/* Parse local subdevice. */
@@ -596,7 +609,7 @@ static int rvin_csi2_link_notify(struct media_link *link, u32 flags,
 		 * we can return here.
 		 */
 		sd = media_entity_to_v4l2_subdev(link->source->entity);
-		for (i = 0; i < RCAR_VIN_NUM; i++) {
+		for (i = 0; i < vin->info->num_channel; i++) {
 			if (group->vin[i] &&
 			    group->vin[i]->parallel.subdev == sd) {
 				group->vin[i]->is_csi = false;
@@ -697,6 +710,7 @@ static int rvin_csi2_create_link(struct rvin_group *group, unsigned int id,
 
 static int rvin_parallel_setup_links(struct rvin_group *group)
 {
+	int num_channel = group->vin[0]->info->num_channel;
 	u32 flags = MEDIA_LNK_FL_ENABLED | MEDIA_LNK_FL_IMMUTABLE;
 
 	guard(mutex)(&group->lock);
@@ -710,7 +724,7 @@ static int rvin_parallel_setup_links(struct rvin_group *group)
 	}
 
 	/* Create links. */
-	for (unsigned int i = 0; i < RCAR_VIN_NUM; i++) {
+	for (unsigned int i = 0; i < num_channel; i++) {
 		struct rvin_dev *vin = group->vin[i];
 		struct media_entity *source;
 		struct media_entity *sink;
@@ -792,15 +806,17 @@ static int rvin_isp_setup_links(struct rvin_group *group)
 {
 	unsigned int i;
 	int ret = -EINVAL;
+	int num_channel = group->vin[0]->info->num_channel;
 
 	/* Create all media device links between VINs and ISP's. */
 	mutex_lock(&group->lock);
-	for (i = 0; i < RCAR_VIN_NUM; i++) {
+	for (i = 0; i < num_channel; i++) {
 		struct media_pad *source_pad, *sink_pad;
 		struct media_entity *source, *sink;
-		unsigned int source_slot = i / 8;
-		unsigned int source_idx = i % 8 + 1;
 		struct rvin_dev *vin = group->vin[i];
+		unsigned int max_num_source = num_channel / RVIN_ISP_MAX;
+		unsigned int source_slot = i / max_num_source;
+		unsigned int source_idx = i % max_num_source + 1;
 
 		if (!vin)
 			continue;
@@ -931,6 +947,7 @@ static const struct rvin_info rcar_info_r8a774e1 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a774e1_routes,
+	.num_channel = 32,
 };
 
 static const struct rvin_group_route rcar_info_r8a7795_routes[] = {
@@ -948,6 +965,7 @@ static const struct rvin_info rcar_info_r8a7795 = {
 	.max_height = 4096,
 	.routes = rcar_info_r8a7795_routes,
 	.scaler = rvin_scaler_gen3,
+	.num_channel = 32,
 };
 
 static const struct rvin_group_route rcar_info_r8a7796_routes[] = {
@@ -965,6 +983,7 @@ static const struct rvin_info rcar_info_r8a7796 = {
 	.max_height = 4096,
 	.routes = rcar_info_r8a7796_routes,
 	.scaler = rvin_scaler_gen3,
+	.num_channel = 32,
 };
 
 static const struct rvin_group_route rcar_info_r8a77965_routes[] = {
@@ -982,6 +1001,7 @@ static const struct rvin_info rcar_info_r8a77965 = {
 	.max_height = 4096,
 	.routes = rcar_info_r8a77965_routes,
 	.scaler = rvin_scaler_gen3,
+	.num_channel = 32,
 };
 
 static const struct rvin_group_route rcar_info_r8a77970_routes[] = {
@@ -994,6 +1014,7 @@ static const struct rvin_info rcar_info_r8a77970 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a77970_routes,
+	.num_channel = 32,
 };
 
 static const struct rvin_group_route rcar_info_r8a77980_routes[] = {
@@ -1008,6 +1029,7 @@ static const struct rvin_info rcar_info_r8a77980 = {
 	.max_width = 4096,
 	.max_height = 4096,
 	.routes = rcar_info_r8a77980_routes,
+	.num_channel = 32,
 };
 
 static const struct rvin_group_route rcar_info_r8a77990_routes[] = {
@@ -1022,6 +1044,7 @@ static const struct rvin_info rcar_info_r8a77990 = {
 	.max_height = 4096,
 	.routes = rcar_info_r8a77990_routes,
 	.scaler = rvin_scaler_gen3,
+	.num_channel = 32,
 };
 
 static const struct rvin_group_route rcar_info_r8a77995_routes[] = {
@@ -1035,6 +1058,7 @@ static const struct rvin_info rcar_info_r8a77995 = {
 	.max_height = 4096,
 	.routes = rcar_info_r8a77995_routes,
 	.scaler = rvin_scaler_gen3,
+	.num_channel = 32,
 };
 
 static const struct rvin_info rcar_info_gen4 = {
@@ -1044,6 +1068,17 @@ static const struct rvin_info rcar_info_gen4 = {
 	.raw10 = true,
 	.max_width = 4096,
 	.max_height = 4096,
+	.num_channel = 32,
+};
+
+static const struct rvin_info rcar_info_gen5 = {
+	.model = RCAR_GEN5,
+	.use_isp = true,
+	.nv12 = true,
+	.raw10 = true,
+	.max_width = 8192,
+	.max_height = 8192,
+	.num_channel = 96,
 };
 
 static const struct of_device_id rvin_of_id_table[] = {
@@ -1121,6 +1156,10 @@ static const struct of_device_id rvin_of_id_table[] = {
 		.compatible = "renesas,rcar-gen4-vin",
 		.data = &rcar_info_gen4,
 	},
+	{
+		.compatible = "renesas,rcar-gen5-vin",
+		.data = &rcar_info_gen5,
+	},
 	{ /* Sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, rvin_of_id_table);
@@ -1133,13 +1172,14 @@ static int rvin_id_get(struct rvin_dev *vin)
 	switch (vin->info->model) {
 	case RCAR_GEN3:
 	case RCAR_GEN4:
+	case RCAR_GEN5:
 		if (of_property_read_u32(vin->dev->of_node, "renesas,id", &oid)) {
 			vin_err(vin, "%pOF: No renesas,id property found\n",
 				vin->dev->of_node);
 			return -EINVAL;
 		}
 
-		if (oid < 0 || oid >= RCAR_VIN_NUM) {
+		if (oid < 0 || oid >= vin->info->num_channel) {
 			vin_err(vin, "%pOF: Invalid renesas,id '%u'\n",
 				vin->dev->of_node, oid);
 			return -EINVAL;
@@ -1148,7 +1188,7 @@ static int rvin_id_get(struct rvin_dev *vin)
 		vin->id = oid;
 		break;
 	default:
-		id = ida_alloc_range(&rvin_ida, 0, RCAR_VIN_NUM - 1,
+		id = ida_alloc_range(&rvin_ida, 0, vin->info->num_channel - 1,
 				     GFP_KERNEL);
 		if (id < 0) {
 			vin_err(vin, "%pOF: Failed to allocate VIN group ID\n",
@@ -1168,6 +1208,7 @@ static void rvin_id_put(struct rvin_dev *vin)
 	switch (vin->info->model) {
 	case RCAR_GEN3:
 	case RCAR_GEN4:
+	case RCAR_GEN5:
 		break;
 	default:
 		ida_free(&rvin_ida, vin->id);
@@ -1235,6 +1276,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	switch (vin->info->model) {
 	case RCAR_GEN3:
 	case RCAR_GEN4:
+	case RCAR_GEN5:
 		if (vin->info->use_isp) {
 			ret = rvin_isp_init(vin);
 		} else {
