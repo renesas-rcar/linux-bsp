@@ -3,6 +3,8 @@
 # Makefile for the Renesas capture/playback device drivers.
 #
 
+ccflags-y += -I$(srctree)/rcar-vin
+
 obj-y += rcar-isp/
 obj-y += rcar-vin/
 obj-y += rzg2l-cru/

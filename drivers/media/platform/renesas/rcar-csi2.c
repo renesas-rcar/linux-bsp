@@ -17,6 +17,8 @@
 #include <linux/reset.h>
 #include <linux/sys_soc.h>
 #include <linux/units.h>
+#include <linux/clk.h>
+#include <linux/of_platform.h>
 
 #include <media/mipi-csi2.h>
 #include <media/v4l2-ctrls.h>
@@ -24,6 +26,8 @@
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-mc.h>
 #include <media/v4l2-subdev.h>
+
+#include "rcar-vin/snps-csi2camera.h"
 
 struct rcar_csi2;
 
@@ -782,6 +786,9 @@ struct rcar_csi2 {
 	unsigned short lanes;
 	unsigned char lane_swap[4];
 	enum v4l2_mbus_csi2_cphy_line_orders_type line_orders[3];
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	struct csi2cam *cam;
+#endif
 };
 
 static inline struct rcar_csi2 *sd_to_csi2(struct v4l2_subdev *sd)
@@ -1812,12 +1819,20 @@ static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev_state *state)
 		return ret;
 	}
 
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	const struct v4l2_mbus_framefmt *fmt;
+
+	/* Use the format on the sink pad to compute the receiver config. */
+	fmt = v4l2_subdev_state_get_format(state, RCAR_CSI2_SINK);
+	ret = csi2cam_start(priv->cam, fmt->width, fmt->height, fmt->code);
+#else
 	ret = v4l2_subdev_enable_streams(priv->remote, priv->remote_pad,
 					 BIT_ULL(0));
 	if (ret) {
 		rcsi2_enter_standby(priv);
 		return ret;
 	}
+#endif
 
 	return 0;
 }
@@ -1825,7 +1840,11 @@ static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev_state *state)
 static void rcsi2_stop(struct rcar_csi2 *priv)
 {
 	rcsi2_enter_standby(priv);
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	csi2cam_stop(priv->cam);
+#else
 	v4l2_subdev_disable_streams(priv->remote, priv->remote_pad, BIT_ULL(0));
+#endif
 }
 
 static int rcsi2_enable_streams(struct v4l2_subdev *sd,
@@ -2085,8 +2104,6 @@ static int rcsi2_parse_v4l2(struct rcar_csi2 *priv,
 
 static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 {
-	struct v4l2_async_connection *asc;
-	struct fwnode_handle *fwnode;
 	struct fwnode_handle *ep;
 	struct v4l2_fwnode_endpoint v4l2_ep = {
 		.bus_type = V4L2_MBUS_UNKNOWN,
@@ -2112,6 +2129,29 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		return ret;
 	}
 
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	struct device_node *remote_ep;
+	struct platform_device *pdev;
+
+	/* Synopsys CSI-2 Camera */
+	remote_ep = of_graph_get_remote_node(priv->dev->of_node, 0, 0);
+	if (!remote_ep) {
+		pr_err("Failed to find remote endpoint in the device tree\n");
+		return -ENODEV;
+	}
+	dev_dbg(priv->dev, "Found '%pOF'\n", remote_ep);
+
+	pdev = of_find_device_by_node(remote_ep);
+	of_node_put(remote_ep);
+	if (!pdev)
+		return -ENOMEM;
+
+	priv->cam = platform_get_drvdata(pdev);
+	platform_device_put(pdev);
+#else
+	struct v4l2_async_connection *asc;
+	struct fwnode_handle *fwnode;
+
 	fwnode = fwnode_graph_get_remote_endpoint(ep);
 	fwnode_handle_put(ep);
 
@@ -2129,6 +2169,7 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 	ret = v4l2_async_nf_register(&priv->notifier);
 	if (ret)
 		v4l2_async_nf_cleanup(&priv->notifier);
+#endif
 
 	return ret;
 }
