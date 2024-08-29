@@ -4,7 +4,6 @@
  *
  * Copyright (C) 2024 Renesas Electronics Inc.
  *
- * Author: huybui2 <huy.bui.wm@renesas.com>
  */
 
 #include <linux/module.h>
@@ -12,19 +11,57 @@
 #include <linux/io.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/clk.h>
 
-#include "usr_wcrc.h"
-#include "crc-wrapper.h"
-#include "crc-drv.h"
+#include <../drivers/soc/renesas/crc-wrapper.h>
 
-struct crc_device {
-	void __iomem *base[WCRC_DEVICES];
-	struct device *dev[WCRC_DEVICES];
-};
+/* Register offset */
+/* CRC[m] Input register */
+#define DCRA_CIN 0x0000
 
-static struct crc_device *crc;
+/* CRC[m] Data register */
+#define DCRA_COUT 0x0004
+#define COUT_DEF 0xFFFFFFFF //default; value for CRC calculation
+//initial value of each polynimial: CRC calulation method; polynomial
+#define COUT_32_ETHERNET 0xFFFFFFFF //default; CRC-32-IEEE 802.3; 04C11DB7
+#define COUT_16_CCITT_FALSE_CRC16 0xFFFF //CCITT_FALSE_CRC16; 1021
+#define COUT_8_SAE_J1850 0xFF //SAE_J1850; 1D
+#define COUT_8_0x2F 0xFF // 0x2F polynomial
+#define COUT_32_0xF4ACFB13 0xFFFFFFFF //0xF4ACFB13 polynomial
+#define COUT_32_0x1EDC6F41 0xFFFFFFFF //0x1EDC6F41 polynomial CRC-32 (Castagnoli)
+#define COUT_21_0x102899 0x1FFFFF //0x102899 polynomial CRC-21
+#define COUT_17_0x1685B 0x1FFFF //0x1685B polynomial CRC-17
+#define COUT_15_0x4599 0x7FFF //0x4599 polynomial CRC-15
 
-static int dev_chan;
+/* CRC[m] Control register */
+#define DCRA_CTL 0x0020
+#define ISZ_32 0 //default 32bit width DCRA_CIN_31:0
+#define ISZ_16 BIT(4) //16bit width DCRA_CIN_15:0
+#define ISZ_8 BIT(5) //8bit width DCRA_CIN_7:0
+#define POL_32_ETHERNET 0 //default CRC-32-IEEE 802.3
+#define POL_16_CCITT_FALSE_CRC16 BIT(0) //CCITT_FALSE_CRC16
+#define POL_8_SAE_J1850 BIT(1) //SAE_J1850
+#define POL_8_0x2F (3 << 0) // 0x2F polynomial
+#define POL_32_0xF4ACFB13 BIT(2) //0xF4ACFB13 polynomial
+#define POL_32_0x1EDC6F41 (5 << 0) //0x1EDC6F41 polynomial CRC-32 (Castagnoli)
+#define POL_21_0x102899 (6 << 0) //0x102899 polynomial CRC-21
+#define POL_17_0x1685B (7 << 0) //0x1685B polynomial CRC-17
+#define POL_15_0x4599 BIT(3) //0x4599 polynomial CRC-15
+
+/* CRC[m] Control register 2 */
+#define DCRA_CTL2 0x0040
+#define xorvalmode BIT(7) //EXOR ON of output data
+#define bitswapmode BIT(6) //bit swap of output data
+#define byteswapmode_00 0 //default no byte swap of output data
+#define byteswapmode_01 BIT(4)
+#define byteswapmode_10 BIT(5)
+#define byteswapmode_11 (3 << 3)
+#define xorvalinmode BIT(3) //EXOR ON of input data
+#define bitswapinmode BIT(2) //bit swap of input data
+#define byteswapinmode_00 0 //default no byte swap of input data
+#define byteswapinmode_01 BIT(0)
+#define byteswapinmode_10 BIT(1)
+#define byteswapinmode_11 (3 << 0)
 
 static u32 crc_read(void __iomem *base, unsigned int offset)
 {
@@ -36,7 +73,7 @@ static void crc_write(void __iomem *base, unsigned int offset, u32 data)
 	iowrite32(data, base + offset);
 }
 
-void crc_setting(struct wcrc_info *info)
+void crc_setting(struct crc_device *p, struct wcrc_info *info)
 {
 	unsigned int crc_size;
 	unsigned int poly_set;
@@ -47,108 +84,108 @@ void crc_setting(struct wcrc_info *info)
 	/* Checking the Polynomial mode */
 	switch (info->poly_mode) {
 	case POLY_32_ETHERNET:
-		poly_set = DCRAmCTL_POL_32_ETHERNET;
-		initial_set = DCRAmCOUT_32_ETHERNET;
+		poly_set = POL_32_ETHERNET;
+		initial_set = COUT_32_ETHERNET;
 		break;
 	case POLY_16_CCITT_FALSE_CRC16:
-		poly_set = DCRAmCTL_POL_16_CCITT_FALSE_CRC16;
-		initial_set = DCRAmCOUT_16_CCITT_FALSE_CRC16;
+		poly_set = POL_16_CCITT_FALSE_CRC16;
+		initial_set = COUT_16_CCITT_FALSE_CRC16;
 		break;
 	case POLY_8_SAE_J1850:
-		poly_set = DCRAmCTL_POL_8_SAE_J1850;
-		initial_set = DCRAmCOUT_8_SAE_J1850;
+		poly_set = POL_8_SAE_J1850;
+		initial_set = COUT_8_SAE_J1850;
 		break;
 	case POLY_8_0x2F:
-		poly_set = DCRAmCTL_POL_8_0x2F;
-		initial_set = DCRAmCOUT_8_0x2F;
+		poly_set = POL_8_0x2F;
+		initial_set = COUT_8_0x2F;
 		break;
 	case POLY_32_0xF4ACFB13:
-		poly_set = DCRAmCTL_POL_32_0xF4ACFB13;
-		initial_set = DCRAmCOUT_32_0xF4ACFB13;
+		poly_set = POL_32_0xF4ACFB13;
+		initial_set = COUT_32_0xF4ACFB13;
 		break;
 	case POLY_32_0x1EDC6F41:
-		poly_set = DCRAmCTL_POL_32_0x1EDC6F41;
-		initial_set = DCRAmCOUT_32_0x1EDC6F41;
+		poly_set = POL_32_0x1EDC6F41;
+		initial_set = COUT_32_0x1EDC6F41;
 		break;
 	case POLY_21_0x102899:
-		poly_set = DCRAmCTL_POL_21_0x102899;
-		initial_set = DCRAmCOUT_21_0x102899;
+		poly_set = POL_21_0x102899;
+		initial_set = COUT_21_0x102899;
 		break;
 	case POLY_17_0x1685B:
-		poly_set = DCRAmCTL_POL_17_0x1685B;
-		initial_set = DCRAmCOUT_17_0x1685B;
+		poly_set = POL_17_0x1685B;
+		initial_set = COUT_17_0x1685B;
 		break;
 	case POLY_15_0x4599:
-		poly_set = DCRAmCTL_POL_15_0x4599;
-		initial_set = DCRAmCOUT_15_0x4599;
+		poly_set = POL_15_0x4599;
+		initial_set = COUT_15_0x4599;
 		break;
 	default:
 		pr_err("ERROR: Polynomial mode NOT found\n");
 		return;
 	}
 
-	/* Checking DCRAmCIN data size setting */
+	/* Checking DCRA_CIN data size setting */
 	if (info->d_in_sz == 8)
-		crc_size = DCRAmCTL_ISZ_8;
+		crc_size = ISZ_8;
 	else if (info->d_in_sz == 16)
-		crc_size = DCRAmCTL_ISZ_16;
+		crc_size = ISZ_16;
 	else // default 32-bit
-		crc_size = DCRAmCTL_ISZ_32;
+		crc_size = ISZ_32;
 
-	/* Set DCRAmCTL registers. */
+	/* Set DCRA_CTL registers. */
 	reg = crc_size | poly_set;
-	crc_write(crc->base[info->wcrc_unit], DCRAmCTL, reg);
+	crc_write(p->base, DCRA_CTL, reg);
 
-	/* Checking DCRAmCTL2 setting */
-	crc_cmd = (info->out_exor_on ? DCRAmCTL2_xorvalmode : 0) |
-			(info->out_bit_swap ? DCRAmCTL2_bitswapmode : 0) |
-			(info->in_exor_on ? DCRAmCTL2_xorvalinmode : 0) |
-			(info->in_bit_swap ? DCRAmCTL2_bitswapinmode : 0);
+	/* Checking DCRA_CTL2 setting */
+	crc_cmd = (info->out_exor_on ? xorvalmode : 0) |
+			(info->out_bit_swap ? bitswapmode : 0) |
+			(info->in_exor_on ? xorvalinmode : 0) |
+			(info->in_bit_swap ? bitswapinmode : 0);
 
 	switch (info->out_byte_swap) {
 	case 01:
-		crc_cmd |= DCRAmCTL2_byteswapmode_01;
+		crc_cmd |= byteswapmode_01;
 		break;
 	case 10:
-		crc_cmd |= DCRAmCTL2_byteswapmode_10;
+		crc_cmd |= byteswapmode_10;
 		break;
 	case 11:
-		crc_cmd |= DCRAmCTL2_byteswapmode_11;
+		crc_cmd |= byteswapmode_11;
 		break;
 	default: // no swap
-		crc_cmd |= DCRAmCTL2_byteswapmode_00;
+		crc_cmd |= byteswapmode_00;
 		break;
 	}
 
 	switch (info->in_byte_swap) {
 	case 01:
-		crc_cmd |= DCRAmCTL2_byteswapinmode_01;
+		crc_cmd |= byteswapinmode_01;
 		break;
 	case 10:
-		crc_cmd |= DCRAmCTL2_byteswapinmode_10;
+		crc_cmd |= byteswapinmode_10;
 		break;
 	case 11:
-		crc_cmd |= DCRAmCTL2_byteswapinmode_11;
+		crc_cmd |= byteswapinmode_11;
 		break;
 	default: // no swap
-		crc_cmd |= DCRAmCTL2_byteswapinmode_00;
+		crc_cmd |= byteswapinmode_00;
 		break;
 	}
 
-	/* Set DCRAmCTL2 registers. */
-	crc_write(crc->base[info->wcrc_unit], DCRAmCTL2, crc_cmd);
+	/* Set DCRA_CTL2 registers. */
+	crc_write(p->base, DCRA_CTL2, crc_cmd);
 
-	/* Set initial value to DCRAmCOUT register. */
-	crc_write(crc->base[info->wcrc_unit], DCRAmCOUT, DCRAmCOUT_DEFAULT);
+	/* Set initial value to DCRA_COUT register. */
+	crc_write(p->base, DCRA_COUT, COUT_DEF);
 
-	/* Set polynomial initial value to DCRAmCOUT register. */
-	crc_write(crc->base[info->wcrc_unit], DCRAmCOUT, initial_set);
+	/* Set polynomial initial value to DCRA_COUT register. */
+	crc_write(p->base, DCRA_COUT, initial_set);
 }
 EXPORT_SYMBOL(crc_setting);
 
-int crc_calculate(struct wcrc_info *info)
+int crc_calculate(struct crc_device *p, struct wcrc_info *info)
 {
-	/* Skiping data input to DCRAmCIN */
+	/* Skiping data input to DCRA_CIN */
 	if (info->skip_data_in)
 		goto geting_output;
 
@@ -157,39 +194,20 @@ int crc_calculate(struct wcrc_info *info)
 		goto bypass_setting;
 
 	/* Setting CRC registers */
-	crc_setting(info);
+	crc_setting(p, info);
 
 bypass_setting:
-	/* Set input value to DCRAmCIN register. */
-	crc_write(crc->base[info->wcrc_unit], DCRAmCIN, info->data_input);
+	/* Set input value to DCRA_CIN register. */
+	crc_write(p->base, DCRA_CIN, info->data_input);
 
 geting_output:
-	/* Read out the operated data from DCRAmCOUT register. */
+	/* Read out the operated data from DCRA_COUT register. */
 	if (!info->during_conti_cal)
-		info->crc_data_out = crc_read(crc->base[info->wcrc_unit], DCRAmCOUT);
+		info->crc_data_out = crc_read(p->base, DCRA_COUT);
 
 	return 0;
 }
 EXPORT_SYMBOL(crc_calculate);
-
-void crc_return_reg(struct wcrc_info *info)
-{
-	u32 reg_addr;
-
-	reg_addr = 0xe6f00020;
-	// info->crc_data_out_8 |= crc_read(crc->base[info->wcrc_unit], DCRAmCTL);
-	// info->crc_data_out_8 = (info->crc_data_out_8 << 32) | reg_addr;
-}
-EXPORT_SYMBOL(crc_return_reg);
-
-void write_crc_in(struct wcrc_info *info)
-{
-	// crc_write(crc->base[info->wcrc_unit], DCRAmCIN, info->data_input);
-	// crc_write(crc->base[info->wcrc_unit], DCRAmCIN, 0x12345678);
-	pr_info("DCRAmCIN=0x%x\n", crc_read(crc->base[info->wcrc_unit], DCRAmCIN));
-	pr_info("DCRAmCOUT=0x%x\n", crc_read(crc->base[info->wcrc_unit], DCRAmCOUT));
-}
-EXPORT_SYMBOL(write_crc_in);
 
 static const struct of_device_id crc_of_ids[] = {
 	{
@@ -208,28 +226,53 @@ static const struct of_device_id crc_of_ids[] = {
 
 static int crc_probe(struct platform_device *pdev)
 {
+	struct crc_device *priv;
+	struct device *dev;
 	struct resource *res;
+	int ret;
 
-	dev_chan = 0;
-
-	if (dev_chan == 0) {
-		crc = devm_kzalloc(&pdev->dev, sizeof(*crc), GFP_KERNEL);
-		if (!crc)
-			return -ENOMEM;
-	}
-
-	crc->dev[dev_chan] = &pdev->dev;
+	dev = &pdev->dev;
+	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
 
 	/* Map I/O memory */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	crc->base[dev_chan] = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(crc->base[dev_chan]))
-		return PTR_ERR(crc->base[dev_chan]);
+	pr_info("Instance: crc_res=0x%llx", res->start);
+	priv->base = devm_ioremap_resource(dev, res);
+	if (IS_ERR(priv->base))
+		return PTR_ERR(priv->base);
 
-	dev_chan++;
+	///* Look up and obtains to a clock node */
+	//priv->clk = devm_clk_get(dev, "fck");
+	//if (IS_ERR(priv->clk)) {
+	//	dev_err(dev, "Failed to get crc clock: %ld\n",
+	//	PTR_ERR(priv->clk));
+	//	return PTR_ERR(priv->clk);
+	//}
+
+	///* Enable peripheral clock for register access */
+	//ret = clk_prepare_enable(priv->clk);
+	//if (ret) {
+	//	dev_err(dev, "failed to enable peripheral clock, error %d\n", ret);
+	//	return ret;
+	//}
+
+	platform_set_drvdata(pdev, priv);
 
 	return 0;
 }
+
+int rcar_crc_init(struct platform_device *pdev)
+{
+	struct crc_device *rcrc = platform_get_drvdata(pdev);
+
+	if (!rcrc)
+		return -EPROBE_DEFER;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(rcar_crc_init);
 
 static int crc_remove(struct platform_device *pdev)
 {
@@ -271,3 +314,8 @@ static void __exit crc_drv_exit(void)
 
 module_init(crc_drv_init);
 module_exit(crc_drv_exit);
+
+MODULE_LICENSE("GPL v2");
+MODULE_AUTHOR("huybui2 <huy.bui.wm@renesas.com>");
+MODULE_DESCRIPTION("R-Car Cyclic Redundancy Check Wrapper");
+

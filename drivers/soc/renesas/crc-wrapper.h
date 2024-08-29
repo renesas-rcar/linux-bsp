@@ -4,241 +4,116 @@
  *
  * Copyright (C) 2024 Renesas Electronics Inc.
  *
- * Author: huybui2 <huy.bui.wm@renesas.com>
  */
 
 #ifndef _RENESAS_CRC_WRAPPER_H_
 #define _RENESAS_CRC_WRAPPER_H_
 
-//Gen4: WCRC_DEVICES = 4
-//Gen5: WCRC_DEVICES = 11
+#include <../drivers/soc/renesas/usr_wcrc.h>
+#include <linux/cdev.h>
+#include <linux/dmaengine.h>
+#include <linux/dma-mapping.h>
+
 #define WCRC_DEVICES 11
 
-/* -----------------------------------------------------------------------------
- * Regrister Definition
+struct crc_device {
+	void __iomem *base;
+	struct device *dev;
+	struct clk *clk;
+};
+
+struct kcrc_device {
+	void __iomem *base;
+	struct device *dev;
+	struct clk *clk;
+};
+
+struct wcrc_device {
+	// WCRC part
+	void __iomem *base;
+	struct resource *res;
+	struct device *dev;
+	struct clk *clk;
+	struct cdev cdev;
+	dev_t devt;
+	int irq;
+	int module;
+	const struct wcrc_ops *ops;
+
+	// WCRC sub-module
+	struct crc_device *crc_dev;
+	struct kcrc_device *kcrc_dev;
+
+	// DMA part
+	struct resource *fifo_res;
+	enum dma_data_direction dma_data_dir;
+	unsigned int num_desc_tx;
+	unsigned int num_desc_rx;
+	unsigned int num_desc_rx_in;
+	wait_queue_head_t dma_in_wait;
+	bool ongoing;
+	bool ongoing_dma_rx;
+	bool ongoing_dma_tx;
+	bool ongoing_dma_rx_in;
+	void *buf_crc;
+	void *buf_data;
+	unsigned int num_crc;
+	// TX
+	struct scatterlist *sg_tx;
+	struct dma_chan *dma_tx;
+	enum dma_slave_buswidth tx_bus_width;
+	void *buf_tx;
+	unsigned int len_tx;
+	dma_addr_t tx_dma_addr;
+	// RX
+	struct scatterlist *sg_rx;
+	struct dma_chan *dma_rx;
+	enum dma_slave_buswidth rx_bus_width;
+	void *buf_rx;
+	unsigned int len_rx;
+	dma_addr_t rx_dma_addr;
+	// RX in
+	struct scatterlist *sg_rx_in;
+	struct dma_chan *dma_rx_in;
+	enum dma_slave_buswidth rx_in_bus_width;
+	void *buf_rx_in;
+	unsigned int len_rx_in;
+	dma_addr_t rx_in_dma_addr;
+};
+
+int kcrc_calculate(struct kcrc_device *p, struct wcrc_info *info);
+void kcrc_setting(struct kcrc_device *p, struct wcrc_info *info);
+int rcar_kcrc_init(struct platform_device *pdev);
+
+int crc_calculate(struct crc_device *p, struct wcrc_info *info);
+void crc_setting(struct crc_device *p, struct wcrc_info *info);
+int rcar_crc_init(struct platform_device *pdev);
+
+int rcar_wcrc_init(struct platform_device *pdev);
+
+/** struct wcrc_ops - The wcrc devices operations
+ *
+ * @owner:			The module owner.
+ * @start_e2e_crc:	The routine for starting the E2E CRC mode.
+ * @stop:			The routine for stopping the wcrc device.
+ * @set_e2e_crc: 	The routine for setting E2E CRC mode.
+ *
+ * The wcrc_ops structure contains a list of low-level operations
+ * that control a wcrc device. It also contains the module that owns
+ * these operations.
  */
-
-#define CRCm (2)
-#define KCRCm (3)
-
-/* Address assignment of FIFO */
-/* Data */
-#define PORT_DATA(mod) (		\
-	((CRCm) == (mod))  ? (0x800) :	\
-	((KCRCm) == (mod)) ? (0xC00) :	\
-	(0x800)				\
-)
-
-/* Command */
-#define PORT_CMD(mod) (			\
-	((CRCm) == (mod))  ? (0x900) :	\
-	((KCRCm) == (mod)) ? (0xD00) :	\
-	(0x900)				\
-)
-
-/* Expected data */
-#define PORT_EXPT_DATA(mod) (		\
-	((CRCm) == (mod))  ? (0xA00) :	\
-	((KCRCm) == (mod)) ? (0xE00) :	\
-	(0xA00)				\
-)
-
-/* Result */
-#define PORT_RES(mod) (			\
-	((CRCm) == (mod))  ? (0xB00) :	\
-	((KCRCm) == (mod)) ? (0xF00) :	\
-	(0xB00)				\
-)
-
-/* WCRC register (XXXX: CRCm or KCRCm) */
-
-/* WCRC_XXXX_EN transfer enable register */
-#define WCRCm_CRCm_EN 0x0800
-#define WCRCm_KCRCm_EN 0x0C00
-
-#define WCRCm_XXXX_EN(mod) (			\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_EN)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_EN) : \
-	(WCRCm_CRCm_EN)				\
-)
-
-#define OUT_EN BIT(16)
-#define RES_EN BIT(8)
-#define TRANS_EN BIT(1)
-#define IN_EN BIT(0)
-
-/* WCRCm_XXXX_STOP transfer stop register */
-#define WCRCm_CRCm_STOP 0x0820
-#define WCRCm_KCRCm_STOP 0x0C20
-
-#define WCRCm_XXXX_STOP(mod) (				\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_STOP)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_STOP) :	\
-	(WCRCm_CRCm_STOP)				\
-)
-
-#define STOP BIT(0)
-
-/* WCRCm_XXXX_CMDEN transfer command enable register */
-#define WCRCm_CRCm_CMDEN 0x0830
-#define WCRCm_KCRCm_CMDEN 0x0C30
-
-#define WCRCm_XXXX_CMDEN(mod) (				\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_CMDEN)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_CMDEN) :	\
-	(WCRCm_CRCm_CMDEN)				\
-)
-
-#define CMD_EN BIT(0)
-
-/* WCRC_XXXX_COMP compare setting register */
-#define WCRCm_CRCm_COMP 0x0840
-#define WCRCm_KCRCm_COMP 0x0C40
-
-#define WCRCm_XXXX_COMP(mod) (				\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_COMP)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_COMP) :	\
-	(WCRCm_CRCm_COMP)				\
-)
-
-#define COMP_FREQ_16 (0 << 16)
-#define COMP_FREQ_32 (1 << 16)
-#define COMP_FREQ_64 (3 << 16)
-#define EXP_REQSEL BIT(1)
-#define COMP_EN BIT(0)
-
-/* WCRC_XXXX_COMP_RES compare result register regrister */
-#define WCRCm_CRCm_COMP_RES 0x0850
-#define WCRCm_KCRCm_COMP_RES 0x0C50
-
-#define WCRCm_XXXX_COMP_RES(mod) (			\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_COMP_RES)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_COMP_RES) :	\
-	(WCRCm_CRCm_COMP_RES)				\
-)
-
-/* WCRC_XXXX_CONV conversion setting register */
-#define WCRCm_CRCm_CONV 0x0870
-#define WCRCm_KCRCm_CONV 0x0C70
-
-#define WCRCm_XXXX_CONV(mod) (				\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_CONV)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_CONV) :	\
-	(WCRCm_CRCm_CONV)				\
-)
-
-/* WCRC_XXXX_WAIT wait register */
-#define WCRCm_CRCm_WAIT 0x0880
-#define WCRCm_KCRCm_WAIT 0x0C80
-
-#define WCRCm_XXXX_WAIT(mod) (				\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_WAIT)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_WAIT) :	\
-	(WCRCm_CRCm_WAIT)				\
-)
-
-#define WAIT BIT(0)
-
-/* WCRC_XXXX_INIT_CRC initial CRC code register */
-#define WCRCm_CRCm_INIT_CRC 0x0910
-#define WCRCm_KCRCm_INIT_CRC 0x0D10
-
-#define WCRCm_XXXX_INIT_CRC(mod) (			\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_INIT_CRC)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_INIT_CRC) :	\
-	(WCRCm_CRCm_INIT_CRC)				\
-)
-
-#define INIT_CODE 0xFFFFFFFF
-
-/* WCRC_XXXX_STS status register */
-#define WCRCm_CRCm_STS 0x0A00
-#define WCRCm_KCRCm_STS 0x0E00
-
-#define WCRCm_XXXX_STS(mod) (				\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_STS)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_STS) :	\
-	(WCRCm_CRCm_STS)				\
-)
-
-#define STOP_DONE BIT(31)
-#define CMD_DONE BIT(24)
-#define RES_DONE BIT(20)
-#define COMP_ERR BIT(13)
-#define COMP_DONE BIT(12)
-#define TRANS_DONE BIT(0)
-
-/* WCRC_XXXX_INTEN interrupt enable register */
-#define WCRCm_CRCm_INTEN 0x0A40
-#define WCRCm_KCRCm_INTEN 0x0E40
-
-#define WCRCm_XXXX_INTEN(mod) (				\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_INTEN)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_INTEN) :	\
-	(WCRCm_CRCm_INTEN)				\
-)
-
-#define STOP_DONE_IE BIT(31)
-#define CMD_DONE_IE BIT(24)
-#define RES_DONE_IE BIT(20)
-#define COMP_ERR_IE BIT(13)
-#define COMP_DONE_IE BIT(12)
-#define TRANS_DONE_IE BIT(0)
-
-/* WCRC_XXXX_ECMEN ECM output enable register */
-#define WCRCm_CRCm_ECMEN 0x0A80
-#define WCRCm_KCRCm_ECMEN 0x0E80
-
-#define WCRCm_XXXX_ECMEN(mod) (				\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_ECMEN)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_ECMEN) :	\
-	(WCRCm_CRCm_ECMEN)				\
-)
-
-#define COMP_ERR_OE BIT(13)
-
-/* WCRC_XXXX_BUF_STS_RDEN Buffer state read enable register */
-#define WCRCm_CRCm_BUF_STS_RDEN 0x0AA0
-#define WCRCm_KCRCm_BUF_STS_RDEN 0x0EA0
-
-#define WCRCm_XXXX_BUF_STS_RDEN(mod) (				\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_BUF_STS_RDEN)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_BUF_STS_RDEN) :	\
-	(WCRCm_CRCm_BUF_STS_RDEN)				\
-)
-
-#define CODE_VALUE (0xA5A5 << 16)
-#define BUF_STS_RDEN BIT(0)
-
-/* WCRC_XXXX_BUF_STS Buffer state read register */
-#define WCRCm_CRCm_BUF_STS 0x0AA4
-#define WCRCm_KCRCm_BUF_STS 0x0EA4
-
-#define WCRCm_XXXX_BUF_STS(mod) (			\
-	((CRCm) == (mod))  ? (WCRCm_CRCm_BUF_STS)  :	\
-	((KCRCm) == (mod)) ? (WCRCm_KCRCm_BUF_STS) :	\
-	(WCRCm_CRCm_BUF_STS)				\
-)
-
-#define RES_COMP_ENDFLAG BIT(18)
-#define BUF_EMPTY BIT(8)
-
-/* WCRC common */
-
-/* WCRCm common status register */
-#define WCRCm_COMMON_STS 0x0F00
-#define EDC_ERR BIT(16)
-
-/* WCRCm common interrupt enable register */
-#define WCRCm_INTEN 0x0F00
-#define EDC_ERR_IE BIT(16)
-
-/* WCRCm common ECM output enable register */
-#define WCRCm_COMMON_ECMEN 0x0F80
-#define EDC_ERR_OE BIT(16)
-
-/* WCRCm error injection register */
-#define WCRCm_ERRINJ 0x0FC0
-#define CODE (0xA5A5 << 16)
+struct wcrc_ops {
+	struct module *owner;
+	int (*stop)(struct wcrc_info *, struct wcrc_device *);
+	int (*set_e2e_crc)(struct wcrc_info *, struct wcrc_device *);
+	int (*start_e2e_crc)(struct wcrc_info *, struct wcrc_device *,
+							void *, void *);
+	int (*set_data_thr)(struct wcrc_info *, struct wcrc_device *);
+	int (*start_data_thr)(struct wcrc_info *, struct wcrc_device *,
+							void *, void *);
+	int (*set_e2e_data_thr)(struct wcrc_info *, struct wcrc_device *);
+	int (*start_e2e_data_thr)(struct wcrc_info *, struct wcrc_device *,
+								void *, void *, void *);
+};
 
 #endif /* _RENESAS_CRC_WRAPPER_H_ */

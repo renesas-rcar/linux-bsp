@@ -78,4 +78,22 @@ struct wcrc_info {
 
 };
 
+/* Currently, only support 3 registers */
+enum reg_id {
+	CRC_CIN = 0,
+	CRC_COUT,
+	CRC_CTL,
+	CRC_CTL2,
+	KCRC_DIN,
+	KCRC_DOUT,
+	KCRC_CTL,
+	KCRC_POLY,
+	KCRC_XOR,
+};
+
+struct reg_acc_by_cmd {
+	uint32_t reg_id;
+	uint32_t write_val;
+};
+
 #endif /* _USER_RENESAS_CRC_WRAPPER_H_ */
