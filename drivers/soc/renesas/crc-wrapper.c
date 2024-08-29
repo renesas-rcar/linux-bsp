@@ -553,7 +553,6 @@ static void rcar_wcrc_dma_rx_callback(void *data)
 			priv->num_desc_rx, DMA_FROM_DEVICE);
 
 	dma_unmap_sg(chan->device->dev, priv->sg_rx, priv->num_desc_rx, DMA_FROM_DEVICE);
-
 	//pr_info("<<<<<<======%s: %d\n", __func__, __LINE__);
 }
 
@@ -856,7 +855,7 @@ end_mode:
 }
 
 static int wcrc_start_data_thr(struct wcrc_info *info, struct wcrc_device *priv,
-								void *p_u_data, void *p_drv_data)
+						void *p_u_data, void *p_drv_data)
 {
 	int ret;
 
@@ -980,7 +979,7 @@ end_mode:
 }
 
 static int wcrc_start_e2e_data_thr(struct wcrc_info *info, struct wcrc_device *priv,
-								void *p_u_data, void *p_drv_data, void *p_drv_crc)
+				void *p_u_data, void *p_drv_data, void *p_drv_crc)
 {
 	int ret;
 
@@ -1011,14 +1010,6 @@ static int wcrc_start_e2e_data_thr(struct wcrc_info *info, struct wcrc_device *p
 
 end_func:
 	return ret;
-}
-
-void return_reg(struct wcrc_info *info, int module)
-{
-	if (CRC_M == module)
-		crc_return_reg(info);
-	else if (KCRC_M == module)
-		kcrc_return_reg(info);
 }
 
 static int wcrc_open(struct inode *inode, struct file *filep)
@@ -1130,7 +1121,7 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 		//Run e2e crc mode
 		ret = priv->ops->start_e2e_crc(&u_features, priv,
-									u_data, priv->buf_crc);
+					u_data, priv->buf_crc);
 		if (ret) {
 			//pr_err("E2E_CRC_MODE: setting FAILED\n");
 			ret = -EFAULT;
@@ -1159,7 +1150,7 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 		//Run data through mode
 		ret = priv->ops->start_data_thr(&u_features, priv,
-									u_data, priv->buf_data);
+					u_data, priv->buf_data);
 		if (ret) {
 			//pr_err("DATA_THROUGH_MODE: setting FAILED\n");
 			ret = -EFAULT;
@@ -1187,7 +1178,7 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 		//Run data through mode
 		ret = priv->ops->start_e2e_data_thr(&u_features, priv,
-						u_data, priv->buf_data, priv->buf_crc);
+				u_data, priv->buf_data, priv->buf_crc);
 		if (ret) {
 			//pr_err("E2E_CRC_DATA_THROUGH_MODE: setting FAILED\n");
 			ret = -EFAULT;

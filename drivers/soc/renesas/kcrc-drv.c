@@ -166,7 +166,6 @@ static int kcrc_probe(struct platform_device *pdev)
 	struct kcrc_device *priv;
 	struct device *dev;
 	struct resource *res;
-	int ret;
 
 	dev = &pdev->dev;
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
