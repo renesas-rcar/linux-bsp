@@ -84,14 +84,14 @@ struct wcrc_device {
 int kcrc_calculate(struct kcrc_device *p, struct wcrc_info *info);
 void kcrc_setting(struct kcrc_device *p, struct wcrc_info *info);
 int rcar_kcrc_init(struct platform_device *pdev);
-extern int __init kcrc_drv_init(void);
-extern void __exit kcrc_drv_exit(void);
+int kcrc_drv_init(void);
+void kcrc_drv_exit(void);
 
 int crc_calculate(struct crc_device *p, struct wcrc_info *info);
 void crc_setting(struct crc_device *p, struct wcrc_info *info);
 int rcar_crc_init(struct platform_device *pdev);
-extern int __init crc_drv_init(void);
-extern void __exit crc_drv_exit(void);
+int crc_drv_init(void);
+void crc_drv_exit(void);
 
 int rcar_wcrc_init(struct platform_device *pdev);
 
@@ -100,7 +100,7 @@ int rcar_wcrc_init(struct platform_device *pdev);
  * @owner:			The module owner.
  * @start_e2e_crc:	The routine for starting the E2E CRC mode.
  * @stop:			The routine for stopping the wcrc device.
- * @set_e2e_crc: 	The routine for setting E2E CRC mode.
+ * @set_e2e_crc:	The routine for setting E2E CRC mode.
  *
  * The wcrc_ops structure contains a list of low-level operations
  * that control a wcrc device. It also contains the module that owns
@@ -108,16 +108,16 @@ int rcar_wcrc_init(struct platform_device *pdev);
  */
 struct wcrc_ops {
 	struct module *owner;
-	int (*stop)(struct wcrc_info *, struct wcrc_device *);
-	int (*set_e2e_crc)(struct wcrc_info *, struct wcrc_device *);
-	int (*start_e2e_crc)(struct wcrc_info *, struct wcrc_device *,
-							void *, void *);
-	int (*set_data_thr)(struct wcrc_info *, struct wcrc_device *);
-	int (*start_data_thr)(struct wcrc_info *, struct wcrc_device *,
-							void *, void *);
-	int (*set_e2e_data_thr)(struct wcrc_info *, struct wcrc_device *);
-	int (*start_e2e_data_thr)(struct wcrc_info *, struct wcrc_device *,
-								void *, void *, void *);
+	int (*stop)(struct wcrc_info *inf, struct wcrc_device *p);
+	int (*set_e2e_crc)(struct wcrc_info *inf, struct wcrc_device *p);
+	int (*start_e2e_crc)(struct wcrc_info *inf, struct wcrc_device *p,
+			     void *data_in, void *crc_out);
+	int (*set_data_thr)(struct wcrc_info *inf, struct wcrc_device *p);
+	int (*start_data_thr)(struct wcrc_info *inf, struct wcrc_device *p,
+			      void *data_in, void *crc_out);
+	int (*set_e2e_data_thr)(struct wcrc_info *inf, struct wcrc_device *p);
+	int (*start_e2e_data_thr)(struct wcrc_info *inf, struct wcrc_device *p,
+				  void *data_in, void *data_out, void *crc_out);
 };
 
 #endif /* _RENESAS_CRC_WRAPPER_H_ */

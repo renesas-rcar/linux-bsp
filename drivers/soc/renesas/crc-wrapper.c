@@ -32,60 +32,52 @@
 #define CLASS_NAME "wcrc"
 
 /* Register offset */
-#define AES_ACC_N   (0)
-#define AES_ACC_P   (1)
 #define CRC_M        (2)
 #define KCRC_M       (3)
 
 /* Address assignment of FIFO */
 /* Data */
-#define PORT_DATA(mod) (			\
-	((AES_ACC_N) == (mod))	? (0x000) :	\
-	((AES_ACC_P) == (mod))	? (0x400) :	\
-	((CRC_M)     == (mod))	? (0x800) :	\
-	((KCRC_M)    == (mod))	? (0xC00) :	\
-	(0x800)					\
-)
+#define PORT_DATA(mod) ({			\
+	int _mod = (mod);			\
+	((_mod) == (CRC_M))  ? (0x800) :	\
+	((_mod) == (KCRC_M)) ? (0xC00) :	\
+	(0x800);				\
+})
 
 /* Command */
-#define PORT_CMD(mod) (				\
-	((AES_ACC_N) == (mod))	? (0x100) :	\
-	((AES_ACC_P) == (mod))	? (0x500) :	\
-	((CRC_M)     == (mod))	? (0x900) :	\
-	((KCRC_M)    == (mod))	? (0xD00) :	\
-	(0x900)					\
-)
+#define PORT_CMD(mod) ({			\
+	int _mod = (mod);			\
+	((_mod) == (CRC_M))  ? (0x900) :	\
+	((_mod) == (KCRC_M)) ? (0xD00) :	\
+	(0x900);				\
+})
 
-/* Expected data:
- * NOTE:
- *      AES_ACC_N: 0x200 (Reserved)
- *      AES_ACC_P: 0x600 (Reserved)
- */
-#define PORT_EXPT_DATA(mod) (			\
-	((CRC_M)      == (mod))	? (0xA00) :	\
-	((KCRC_M)     == (mod))	? (0xE00) :	\
-	(0xA00)					\
-)
+#define PORT_EXPT_DATA(mod) ({			\
+	int _mod = (mod);			\
+	((_mod) == (CRC_M))  ? (0xA00) :	\
+	((_mod) == (KCRC_M)) ? (0xE00) :	\
+	(0xA00);				\
+})
 
 /* Result */
-#define PORT_RES(mod) (				\
-	((AES_ACC_N) == (mod))	? (0x300) :	\
-	((AES_ACC_P) == (mod))	? (0x700) :	\
-	((CRC_M)     == (mod))	? (0xB00) :	\
-	((KCRC_M)    == (mod))	? (0xF00) :	\
-	(0xB00)					\
-)
+#define PORT_RES(mod) ({			\
+	int _mod = (mod);			\
+	((_mod) == (CRC_M))  ? (0xB00) :	\
+	((_mod) == (KCRC_M)) ? (0xF00) :	\
+	(0xB00);				\
+})
 
 /* WCRC register (XXXX: CRC_M or KCRC_M) */
 
 /* WCRC_XXXX_EN transfer enable register */
 #define WCRC_CRC_EN 0x0800
 #define WCRC_KCRC_EN 0x0C00
-#define WCRC_XXXX_EN(mod) (			\
-	((CRC_M) == (mod))  ? (WCRC_CRC_EN)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_EN) : \
-	(WCRC_CRC_EN)				\
-)
+#define WCRC_XXXX_EN(mod) ({			\
+	int _mod = (mod);			\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_EN)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_EN) :	\
+	(WCRC_CRC_EN);				\
+})
 #define OUT_EN BIT(16)
 #define RES_EN BIT(8)
 #define TRANS_EN BIT(1)
@@ -94,33 +86,36 @@
 /* WCRC_XXXX_STOP transfer stop register */
 #define WCRC_CRC_STOP 0x0820
 #define WCRC_KCRC_STOP 0x0C20
-#define WCRC_XXXX_STOP(mod) (				\
-	((CRC_M) == (mod))  ? (WCRC_CRC_STOP)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_STOP) :	\
-	(WCRC_CRC_STOP)				\
-)
+#define WCRC_XXXX_STOP(mod) ({				\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_STOP)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_STOP) :	\
+	(WCRC_CRC_STOP);				\
+})
 #define STOP BIT(0)
 
 /* WCRC_XXXX_CMDEN transfer command enable register */
 #define WCRC_CRC_CMDEN 0x0830
 #define WCRC_KCRC_CMDEN 0x0C30
-#define WCRC_XXXX_CMDEN(mod) (				\
-	((CRC_M) == (mod))  ? (WCRC_CRC_CMDEN)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_CMDEN) :	\
-	(WCRC_CRC_CMDEN)				\
-)
+#define WCRC_XXXX_CMDEN(mod) ({				\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_CMDEN)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_CMDEN) :	\
+	(WCRC_CRC_CMDEN);				\
+})
 #define CMD_EN BIT(0)
 
 /* WCRC_XXXX_COMP compare setting register */
 #define WCRC_CRC_COMP 0x0840
 #define WCRC_KCRC_COMP 0x0C40
-#define WCRC_XXXX_COMP(mod) (				\
-	((CRC_M) == (mod))  ? (WCRC_CRC_COMP)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_COMP) :	\
-	(WCRC_CRC_COMP)				\
-)
+#define WCRC_XXXX_COMP(mod) ({				\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_COMP)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_COMP) :	\
+	(WCRC_CRC_COMP);				\
+})
 #define COMP_FREQ_16 (0 << 16)
-#define COMP_FREQ_32 (1 << 16)
+#define COMP_FREQ_32 BIT(16)
 #define COMP_FREQ_64 (3 << 16)
 #define EXP_REQSEL BIT(1)
 #define COMP_EN BIT(0)
@@ -128,49 +123,54 @@
 /* WCRC_XXXX_COMP_RES compare result register regrister */
 #define WCRC_CRC_COMP_RES 0x0850
 #define WCRC_KCRC_COMP_RES 0x0C50
-#define WCRC_XXXX_COMP_RES(mod) (			\
-	((CRC_M) == (mod))  ? (WCRC_CRC_COMP_RES)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_COMP_RES) :	\
-	(WCRC_CRC_COMP_RES)				\
-)
+#define WCRC_XXXX_COMP_RES(mod) ({			\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_COMP_RES)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_COMP_RES) :	\
+	(WCRC_CRC_COMP_RES);				\
+})
 
 /* WCRC_XXXX_CONV conversion setting register */
 #define WCRC_CRC_CONV 0x0870
 #define WCRC_KCRC_CONV 0x0C70
-#define WCRC_XXXX_CONV(mod) (				\
-	((CRC_M) == (mod))  ? (WCRC_CRC_CONV)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_CONV) :	\
-	(WCRC_CRC_CONV)				\
-)
+#define WCRC_XXXX_CONV(mod) ({				\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_CONV)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_CONV) :	\
+	(WCRC_CRC_CONV);				\
+})
 
 /* WCRC_XXXX_WAIT wait register */
 #define WCRC_CRC_WAIT 0x0880
 #define WCRC_KCRC_WAIT 0x0C80
-#define WCRC_XXXX_WAIT(mod) (				\
-	((CRC_M) == (mod))  ? (WCRC_CRC_WAIT)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_WAIT) :	\
-	(WCRC_CRC_WAIT)				\
-)
+#define WCRC_XXXX_WAIT(mod) ({				\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_WAIT)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_WAIT) :	\
+	(WCRC_CRC_WAIT);				\
+})
 #define WAIT BIT(0)
 
 /* WCRC_XXXX_INIT_CRC initial CRC code register */
 #define WCRC_CRC_INIT_CRC 0x0910
 #define WCRC_KCRC_INIT_CRC 0x0D10
-#define WCRC_XXXX_INIT_CRC(mod) (			\
-	((CRC_M) == (mod))  ? (WCRC_CRC_INIT_CRC)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_INIT_CRC) :	\
-	(WCRC_CRC_INIT_CRC)				\
-)
+#define WCRC_XXXX_INIT_CRC(mod) ({			\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_INIT_CRC)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_INIT_CRC) :	\
+	(WCRC_CRC_INIT_CRC);				\
+})
 #define INIT_CODE 0xFFFFFFFF
 
 /* WCRC_XXXX_STS status register */
 #define WCRC_CRC_STS 0x0A00
 #define WCRC_KCRC_STS 0x0E00
-#define WCRC_XXXX_STS(mod) (				\
-	((CRC_M) == (mod))  ? (WCRC_CRC_STS)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_STS) :	\
-	(WCRC_CRC_STS)				\
-)
+#define WCRC_XXXX_STS(mod) ({				\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_STS)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_STS) :	\
+	(WCRC_CRC_STS);					\
+})
 #define STOP_DONE BIT(31)
 #define CMD_DONE BIT(24)
 #define RES_DONE BIT(20)
@@ -181,11 +181,12 @@
 /* WCRC_XXXX_INTEN interrupt enable register */
 #define WCRC_CRC_INTEN 0x0A40
 #define WCRC_KCRC_INTEN 0x0E40
-#define WCRC_XXXX_INTEN(mod) (				\
-	((CRC_M) == (mod))  ? (WCRC_CRC_INTEN)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_INTEN) :	\
-	(WCRC_CRC_INTEN)				\
-)
+#define WCRC_XXXX_INTEN(mod) ({				\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_INTEN)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_INTEN) :	\
+	(WCRC_CRC_INTEN);				\
+})
 #define STOP_DONE_IE BIT(31)
 #define CMD_DONE_IE BIT(24)
 #define RES_DONE_IE BIT(20)
@@ -196,32 +197,35 @@
 /* WCRC_XXXX_ECMEN ECM output enable register */
 #define WCRC_CRC_ECMEN 0x0A80
 #define WCRC_KCRC_ECMEN 0x0E80
-#define WCRC_XXXX_ECMEN(mod) (				\
-	((CRC_M) == (mod))  ? (WCRC_CRC_ECMEN)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_ECMEN) :	\
-	(WCRC_CRC_ECMEN)				\
-)
+#define WCRC_XXXX_ECMEN(mod) ({				\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_ECMEN)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_ECMEN) :	\
+	(WCRC_CRC_ECMEN);				\
+})
 #define COMP_ERR_OE BIT(13)
 
 /* WCRC_XXXX_BUF_STS_RDEN Buffer state read enable register */
 #define WCRC_CRC_BUF_STS_RDEN 0x0AA0
 #define WCRC_KCRC_BUF_STS_RDEN 0x0EA0
-#define WCRC_XXXX_BUF_STS_RDEN(mod) (				\
-	((CRC_M) == (mod))  ? (WCRC_CRC_BUF_STS_RDEN)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_BUF_STS_RDEN) :	\
-	(WCRC_CRC_BUF_STS_RDEN)				\
-)
+#define WCRC_XXXX_BUF_STS_RDEN(mod) ({				\
+	int _mod = (mod);					\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_BUF_STS_RDEN)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_BUF_STS_RDEN) :	\
+	(WCRC_CRC_BUF_STS_RDEN);				\
+})
 #define CODE_VALUE (0xA5A5 << 16)
 #define BUF_STS_RDEN BIT(0)
 
 /* WCRC_XXXX_BUF_STS Buffer state read register */
 #define WCRC_CRC_BUF_STS 0x0AA4
 #define WCRC_KCRC_BUF_STS 0x0EA4
-#define WCRC_XXXX_BUF_STS(mod) (			\
-	((CRC_M) == (mod))  ? (WCRC_CRC_BUF_STS)  :	\
-	((KCRC_M) == (mod)) ? (WCRC_KCRC_BUF_STS) :	\
-	(WCRC_CRC_BUF_STS)				\
-)
+#define WCRC_XXXX_BUF_STS(mod) ({			\
+	int _mod = (mod);				\
+	((_mod) == (CRC_M))  ? (WCRC_CRC_BUF_STS)  :	\
+	((_mod) == (KCRC_M)) ? (WCRC_KCRC_BUF_STS) :	\
+	(WCRC_CRC_BUF_STS);				\
+})
 #define RES_COMP_ENDFLAG BIT(18)
 #define BUF_EMPTY BIT(8)
 
@@ -248,7 +252,7 @@ DEFINE_MUTEX(lock);
 
 static int dev_chan;
 static dev_t wcrc_devt;
-static struct class *wcrc_class = NULL;
+static struct class *wcrc_class;
 
 static void rcar_wcrc_dma_tx_callback(void *data);
 static void rcar_wcrc_dma_rx_callback(void *data);
@@ -266,9 +270,9 @@ static void wcrc_write(void __iomem *base, unsigned int offset, u32 data)
 
 /* DMA API */
 static struct dma_chan *wcrc_request_dma_chan(struct device *dev,
-					enum dma_transfer_direction dir,
-					dma_addr_t port_addr, char *chan_name,
-					enum dma_slave_buswidth bus_width)
+					      enum dma_transfer_direction dir,
+					      dma_addr_t port_addr, char *chan_name,
+					      enum dma_slave_buswidth bus_width)
 {
 	struct dma_chan *chan;
 	struct dma_slave_config cfg;
@@ -306,27 +310,28 @@ static struct dma_chan *wcrc_request_dma_chan(struct device *dev,
 }
 
 static struct dma_chan *wcrc_request_dma(struct wcrc_device *priv,
-					enum dma_transfer_direction dir,
-					dma_addr_t offs_port_addr, char *chan_name,
-					enum dma_slave_buswidth bus_width)
+					 enum dma_transfer_direction dir,
+					 dma_addr_t offs_port_addr, char *chan_name,
+					 enum dma_slave_buswidth bus_width)
 {
 	struct device *dev = priv->dev;
 	struct dma_chan *chan;
 
 	if (dir == DMA_DEV_TO_MEM) {
-		if ((offs_port_addr == PORT_RES(CRC_M)) | (offs_port_addr == PORT_RES(KCRC_M)))
+		if (offs_port_addr == PORT_RES(CRC_M) || offs_port_addr == PORT_RES(KCRC_M))
 			priv->rx_bus_width = bus_width;
-		if ((offs_port_addr == PORT_DATA(CRC_M)) | (offs_port_addr == PORT_DATA(KCRC_M)))
+		if (offs_port_addr == PORT_DATA(CRC_M) || offs_port_addr == PORT_DATA(KCRC_M))
 			priv->rx_in_bus_width = bus_width;
 	}
 
 	if (dir == DMA_MEM_TO_DEV)
 		priv->tx_bus_width = bus_width;
 
-	if ((dir == DMA_DEV_TO_MEM) || (dir == DMA_MEM_TO_DEV)) {
+	if (dir == DMA_DEV_TO_MEM || dir == DMA_MEM_TO_DEV) {
 		chan = wcrc_request_dma_chan(dev, dir, (priv->fifo_res->start + offs_port_addr),
-					chan_name, bus_width);
-		//pr_info(">>>%s: dma_addr=0x%llx\n", chan_name, priv->fifo_res->start + offs_port_addr);
+					     chan_name, bus_width);
+		//pr_info(">>>%s: dma_addr=0x%llx\n", chan_name,
+		//		priv->fifo_res->start + offs_port_addr);
 	} else {
 		dev_dbg(dev, "%s: FAILED for dir=%d\n, chan %s", __func__, dir, chan_name);
 		return ERR_PTR(-EPROBE_DEFER);
@@ -346,7 +351,7 @@ static void rcar_wcrc_cleanup_dma(struct wcrc_device *priv)
 }
 
 static bool rcar_wcrc_dma_tx(struct wcrc_device *priv,
-			void *data, unsigned int len)
+			     void *data, unsigned int len)
 {
 	struct device *dev = priv->dev;
 	struct dma_async_tx_descriptor *txdesc;
@@ -376,14 +381,14 @@ static bool rcar_wcrc_dma_tx(struct wcrc_device *priv,
 	sg_init_table(priv->sg_tx, num_desc);
 
 	for (i = 0; i < num_desc; i++) {
-		sg_dma_len(&priv->sg_tx[i]) = len/num_desc;
+		sg_dma_len(&priv->sg_tx[i]) = len / num_desc;
 		sg_dma_address(&priv->sg_tx[i]) = dma_map_single(chan->device->dev,
-								buf + i*(priv->tx_bus_width),
-								len/num_desc, data_dir);
+								 buf + i * priv->tx_bus_width,
+								 len / num_desc, data_dir);
 	}
 
 	txdesc = dmaengine_prep_slave_sg(chan, priv->sg_tx, num_desc,
-					trans_dir, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+					 trans_dir, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
 
 	txdesc->callback = rcar_wcrc_dma_tx_callback;
 	txdesc->callback_param = priv;
@@ -403,7 +408,7 @@ static bool rcar_wcrc_dma_tx(struct wcrc_device *priv,
 }
 
 static bool rcar_wcrc_dma_rx(struct wcrc_device *priv,
-			void *data, unsigned int len)
+			     void *data, unsigned int len)
 {
 	struct device *dev = priv->dev;
 	struct dma_async_tx_descriptor *rxdesc;
@@ -434,15 +439,14 @@ static bool rcar_wcrc_dma_rx(struct wcrc_device *priv,
 	sg_init_table(priv->sg_rx, num_desc);
 
 	for (i = 0; i < num_desc; i++) {
-		sg_dma_len(&priv->sg_rx[i]) = len/num_desc;
+		sg_dma_len(&priv->sg_rx[i]) = len / num_desc;
 		sg_dma_address(&priv->sg_rx[i]) = dma_map_single(chan->device->dev,
-								buf + i*(priv->rx_bus_width),
-								len/num_desc, data_dir);
+								 buf + i * priv->rx_bus_width,
+								 len / num_desc, data_dir);
 	}
 
 	rxdesc = dmaengine_prep_slave_sg(chan, priv->sg_rx, num_desc,
-					trans_dir, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-
+					 trans_dir, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
 
 	rxdesc->callback = rcar_wcrc_dma_rx_callback;
 	rxdesc->callback_param = priv;
@@ -460,7 +464,6 @@ static bool rcar_wcrc_dma_rx(struct wcrc_device *priv,
 	dma_async_issue_pending(chan);
 
 	return true;
-
 }
 
 static bool rcar_wcrc_dma_rx_in(struct wcrc_device *priv,
@@ -497,15 +500,14 @@ static bool rcar_wcrc_dma_rx_in(struct wcrc_device *priv,
 	sg_init_table(priv->sg_rx_in, num_desc);
 
 	for (i = 0; i < num_desc; i++) {
-		sg_dma_len(&priv->sg_rx_in[i]) = len/num_desc;
+		sg_dma_len(&priv->sg_rx_in[i]) = len / num_desc;
 		sg_dma_address(&priv->sg_rx_in[i]) = dma_map_single(chan->device->dev,
-								buf + i*(priv->rx_in_bus_width),
-								len/num_desc, data_dir);
+								    buf + i * priv->rx_in_bus_width,
+								    len / num_desc, data_dir);
 	}
 
 	rxdesc = dmaengine_prep_slave_sg(chan, priv->sg_rx_in, num_desc,
-					trans_dir, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
-
+					 trans_dir, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
 
 	rxdesc->callback = rcar_wcrc_dma_rx_in_callback;
 	rxdesc->callback_param = priv;
@@ -523,7 +525,6 @@ static bool rcar_wcrc_dma_rx_in(struct wcrc_device *priv,
 	dma_async_issue_pending(chan);
 
 	return true;
-
 }
 
 static void rcar_wcrc_dma_tx_callback(void *data)
@@ -550,7 +551,7 @@ static void rcar_wcrc_dma_rx_callback(void *data)
 	wake_up_interruptible(&priv->dma_in_wait);
 
 	dma_sync_sg_for_cpu(chan->device->dev, priv->sg_rx,
-			priv->num_desc_rx, DMA_FROM_DEVICE);
+			    priv->num_desc_rx, DMA_FROM_DEVICE);
 
 	dma_unmap_sg(chan->device->dev, priv->sg_rx, priv->num_desc_rx, DMA_FROM_DEVICE);
 	//pr_info("<<<<<<======%s: %d\n", __func__, __LINE__);
@@ -565,16 +566,17 @@ static void rcar_wcrc_dma_rx_in_callback(void *data)
 	wake_up_interruptible(&priv->dma_in_wait);
 
 	dma_sync_sg_for_cpu(chan->device->dev, priv->sg_rx_in,
-			priv->num_desc_rx_in, DMA_FROM_DEVICE);
+			    priv->num_desc_rx_in, DMA_FROM_DEVICE);
 
-	dma_unmap_sg(priv->dma_rx_in->device->dev, priv->sg_rx_in, priv->num_desc_rx_in, DMA_FROM_DEVICE);
+	dma_unmap_sg(priv->dma_rx_in->device->dev, priv->sg_rx_in,
+		     priv->num_desc_rx_in, DMA_FROM_DEVICE);
 	//pr_info("<<<<<<======%s: %d\n", __func__, __LINE__);
 }
 
 static irqreturn_t rcar_wcrc_irq(int irq_num, void *ptr)
 {
 	struct wcrc_device *priv = ptr;
-	uint32_t reg_val;
+	u32 reg_val;
 
 	reg_val = wcrc_read(priv->base, WCRC_XXXX_STS(priv->module));
 	//Clear trans_done in WCRC_XXXX_STS.
@@ -656,6 +658,7 @@ static int wcrc_setting_e2e_crc(struct wcrc_info *info, struct wcrc_device *priv
 	int module = 0;
 	unsigned int reg_val = 0;
 	char *dma_name[2];
+	unsigned int buf_len = 0;
 
 	mutex_lock(&lock);
 
@@ -673,7 +676,7 @@ static int wcrc_setting_e2e_crc(struct wcrc_info *info, struct wcrc_device *priv
 	}
 	priv->module = module;
 
-	//Enable interrupt for the complete of stop operation, command function and input data transfer.
+	//Enable interrupt.
 	reg_val = STOP_DONE_IE | RES_DONE_IE;
 	wcrc_write(priv->base, WCRC_XXXX_INTEN(module), reg_val);
 	//pr_info("WCRC_XXXX_INTEN = 0x%x\n", wcrc_read(priv->base, WCRC_XXXX_INTEN(module)));
@@ -690,11 +693,11 @@ static int wcrc_setting_e2e_crc(struct wcrc_info *info, struct wcrc_device *priv
 
 	//3. (For CRC) Set DCRAmCTL, DCRAmCTL2, DCRAmCOUT registers.
 	//	(For KCRC) Set KCRCmCTL, KCRCmPOLY, KCRCmXOR, KCRCmDOUT registers.
-	if (CRC_M == module)
+	if (module == CRC_M) {
 		crc_setting(priv->crc_dev, info);
-	else if (KCRC_M == module)
+	} else if (module == KCRC_M) {
 		kcrc_setting(priv->kcrc_dev, info);
-	else {
+	} else {
 		ret = -EINVAL;
 		goto end_mode;
 	}
@@ -717,8 +720,9 @@ static int wcrc_setting_e2e_crc(struct wcrc_info *info, struct wcrc_device *priv
 	priv->dma_rx = wcrc_request_dma(priv, DMA_DEV_TO_MEM, PORT_RES(module),
 					dma_name[1], DMA_SLAVE_BUSWIDTH_16_BYTES);
 
-	priv->num_crc = info->data_input_len/info->conv_size;
-	priv->buf_crc = kzalloc(priv->num_crc * sizeof(u32), GFP_KERNEL);
+	priv->num_crc = info->data_input_len / info->conv_size;
+	buf_len = sizeof(u32) * priv->num_crc;
+	priv->buf_crc = kzalloc(buf_len, GFP_KERNEL);
 	//pr_info("priv->buf_crc points to block mem %zu bytes\n", ksize(priv->buf_crc));
 
 end_mode:
@@ -728,10 +732,9 @@ end_mode:
 }
 
 static int wcrc_start_e2e_crc(struct wcrc_info *info, struct wcrc_device *priv,
-						void *p_u_data, void *p_drv_crc)
+			      void *p_u_data, void *p_drv_crc)
 {
 	int ret;
-	int i, loop;
 
 	//6. Transfer input data to data port of FIFO by DMAC.
 	ret = (int)rcar_wcrc_dma_tx(priv, p_u_data, info->data_input_len);
@@ -741,7 +744,7 @@ static int wcrc_start_e2e_crc(struct wcrc_info *info, struct wcrc_device *priv,
 	}
 
 	//7. Read out result data from result port of FIFO by DMAC.
-	ret = rcar_wcrc_dma_rx(priv, p_drv_crc, priv->num_crc*4);
+	ret = rcar_wcrc_dma_rx(priv, p_drv_crc, priv->num_crc * 4);
 	if (!ret) {
 		pr_err("E2E_CRC_MODE: run FAILED\n");
 		ret = -EFAULT;
@@ -759,11 +762,11 @@ static int wcrc_stop(struct wcrc_info *info, struct wcrc_device *priv)
 	unsigned int reg_val;
 
 	ret = 0;
-	if (info->crc_opt == 0)
+	if (info->crc_opt == 0) {
 		module = CRC_M;
-	else if (info->crc_opt == 1)
+	} else if (info->crc_opt == 1) {
 		module = KCRC_M;
-	else {
+	} else {
 		ret = -EINVAL;
 		goto end_stop;
 	}
@@ -826,7 +829,7 @@ static int wcrc_setting_data_thr(struct wcrc_info *info, struct wcrc_device *pri
 					dma_name[0], bus_width);
 
 	priv->dma_rx_in = wcrc_request_dma(priv, DMA_DEV_TO_MEM, PORT_DATA(module),
-					dma_name[1], bus_width);
+					   dma_name[1], bus_width);
 
 	priv->buf_data = kzalloc(info->data_input_len, GFP_KERNEL);
 	//pr_info("priv->buf_data points to block mem %zu bytes\n", ksize(priv->buf_data));
@@ -838,7 +841,7 @@ end_mode:
 }
 
 static int wcrc_start_data_thr(struct wcrc_info *info, struct wcrc_device *priv,
-						void *p_u_data, void *p_drv_data)
+			       void *p_u_data, void *p_drv_data)
 {
 	int ret;
 
@@ -869,6 +872,7 @@ static int wcrc_setting_e2e_data_thr(struct wcrc_info *info, struct wcrc_device 
 	unsigned int reg_val = 0;
 	char *dma_name[3];
 	enum dma_slave_buswidth bus_width;
+	unsigned int buf_len = 0;
 
 	mutex_lock(&lock);
 
@@ -890,7 +894,7 @@ static int wcrc_setting_e2e_data_thr(struct wcrc_info *info, struct wcrc_device 
 
 	bus_width = DMA_SLAVE_BUSWIDTH_64_BYTES;
 
-	//Enable interrupt for the complete of stop operation, command function and input data transfer.
+	//Enable interrupt.
 	reg_val = STOP_DONE_IE | RES_DONE_IE;
 	wcrc_write(priv->base, WCRC_XXXX_INTEN(module), reg_val);
 	//pr_info("WCRC_XXXX_INTEN = 0x%x\n", wcrc_read(priv->base, WCRC_XXXX_INTEN(module)));
@@ -907,11 +911,11 @@ static int wcrc_setting_e2e_data_thr(struct wcrc_info *info, struct wcrc_device 
 
 	//4. (For CRC) Set DCRAmCTL, DCRAmCTL2, DCRAmCOUT registers.
 	//	(For KCRC) Set KCRCmCTL, KCRCmPOLY, KCRCmXOR, KCRCmDOUT registers.
-	if (CRC_M == module)
+	if (module == CRC_M) {
 		crc_setting(priv->crc_dev, info);
-	else if (KCRC_M == module)
+	} else if (module == KCRC_M) {
 		kcrc_setting(priv->kcrc_dev, info);
-	else {
+	} else {
 		ret = -EINVAL;
 		goto end_mode;
 	}
@@ -928,20 +932,18 @@ static int wcrc_setting_e2e_data_thr(struct wcrc_info *info, struct wcrc_device 
 	wcrc_write(priv->base, WCRC_XXXX_CMDEN(module), reg_val);
 	//pr_info("WCRC_XXXX_CMDEN= 0x%x\n", wcrc_read(priv->base, WCRC_XXXX_CMDEN(module)));
 
-	priv->dma_tx = wcrc_request_dma(priv,
-					DMA_MEM_TO_DEV, PORT_DATA(module),
+	priv->dma_tx = wcrc_request_dma(priv, DMA_MEM_TO_DEV, PORT_DATA(module),
 					dma_name[0], bus_width);
 
-	priv->dma_rx_in = wcrc_request_dma(priv,
-					DMA_DEV_TO_MEM, PORT_DATA(module),
-					dma_name[1], bus_width);
+	priv->dma_rx_in = wcrc_request_dma(priv, DMA_DEV_TO_MEM, PORT_DATA(module),
+					   dma_name[1], bus_width);
 
-	priv->dma_rx = wcrc_request_dma(priv,
-					DMA_DEV_TO_MEM, PORT_RES(module),
+	priv->dma_rx = wcrc_request_dma(priv, DMA_DEV_TO_MEM, PORT_RES(module),
 					dma_name[2], DMA_SLAVE_BUSWIDTH_16_BYTES);
 
-	priv->num_crc = info->data_input_len/info->conv_size;
-	priv->buf_crc = kzalloc(priv->num_crc * sizeof(u32), GFP_KERNEL);
+	priv->num_crc = info->data_input_len / info->conv_size;
+	buf_len = sizeof(u32) * priv->num_crc;
+	priv->buf_crc = kzalloc(buf_len, GFP_KERNEL);
 	//pr_info("priv->buf_crc points to block mem %zu bytes\n", ksize(priv->buf_crc));
 
 	priv->buf_data = kzalloc(info->data_input_len, GFP_KERNEL);
@@ -954,7 +956,7 @@ end_mode:
 }
 
 static int wcrc_start_e2e_data_thr(struct wcrc_info *info, struct wcrc_device *priv,
-				void *p_u_data, void *p_drv_data, void *p_drv_crc)
+				   void *p_u_data, void *p_drv_data, void *p_drv_crc)
 {
 	int ret;
 
@@ -975,13 +977,12 @@ static int wcrc_start_e2e_data_thr(struct wcrc_info *info, struct wcrc_device *p
 	}
 
 	//9. Read out result data from result port of FIFO by DMAC.
-	ret = rcar_wcrc_dma_rx(priv, p_drv_crc, priv->num_crc*4);
+	ret = rcar_wcrc_dma_rx(priv, p_drv_crc, priv->num_crc * 4);
 	if (!ret) {
 		//pr_err("E2E_CRC_DATA_THROUGH_MODE: run FAILED\n");
 		ret = -EFAULT;
 		goto end_func;
 	}
-
 
 end_func:
 	return !ret;
@@ -1008,32 +1009,32 @@ static int wcrc_release(struct inode *inode, struct file *filep)
 	return 0;
 }
 
-static int extract_data(struct wcrc_info *u_features, struct wcrc_device *priv,
-						unsigned long arg, void **u_data)
+static int extract_data(struct wcrc_info *u_feat, struct wcrc_device *priv,
+			unsigned long arg, void **u_data)
 {
 	int ret = 0;
 	unsigned int u_len = 0;
 
 	//Read setting from user
-	ret = copy_from_user(u_features, (struct wcrc_info *)(arg), sizeof(struct wcrc_info));
+	ret = copy_from_user(u_feat, (struct wcrc_info *)(arg), sizeof(struct wcrc_info));
 	if (ret) {
 		ret = -EFAULT;
 		goto exit_func;
 	}
 
-	u_len = u_features->data_input_len;
-	if ((u_len < 4) || (u_len > 1048576*4)) {
+	u_len = u_feat->data_input_len;
+	if (u_len < 4 || u_len > 1048576) {
 		ret = -EINVAL;
 		goto exit_func;
 	}
 
 	*u_data = kzalloc(u_len, GFP_KERNEL);
-	if (*u_data == NULL) {
+	if (!(*u_data)) {
 		ret = -ENOMEM;
 		goto exit_func;
 	}
 
-	ret = copy_from_user(*u_data, u_features->pdata_input, u_len);
+	ret = copy_from_user(*u_data, u_feat->pdata_input, u_len);
 	if (ret) {
 		ret = -EFAULT;
 		goto exit_func;
@@ -1041,12 +1042,11 @@ static int extract_data(struct wcrc_info *u_features, struct wcrc_device *priv,
 
 exit_func:
 	return ret;
-
 }
 
 static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
-	struct wcrc_info u_features;
+	struct wcrc_info u_feat;
 	struct wcrc_device *priv;
 	int ret;
 	void *u_data;
@@ -1056,10 +1056,10 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 	u_data = NULL;
 
 	if (cmd == E2E_CRC_MODE ||
-		cmd == DATA_THROUGH_MODE ||
-		cmd == E2E_CRC_DATA_THROUGH_MODE) {
+	    cmd == DATA_THROUGH_MODE ||
+	    cmd == E2E_CRC_DATA_THROUGH_MODE) {
 		//Read setting from user
-		ret = extract_data(&u_features, priv, arg, &u_data);
+		ret = extract_data(&u_feat, priv, arg, &u_data);
 		if (ret) {
 			//pr_err("Read User Setting FAILED\n");
 			ret = -EFAULT;
@@ -1069,16 +1069,16 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case INDEPENDENT_CRC_MODE:
-		ret = copy_from_user(&u_features, (struct wcrc_info *)arg, sizeof(u_features));
+		ret = copy_from_user(&u_feat, (struct wcrc_info *)arg, sizeof(u_feat));
 		if (ret) {
 			//pr_err("INDEPENDENT_CRC_MODE: Error taking data from user\n");
 			ret = -EFAULT;
 			goto exit_func;
 		}
 
-		wcrc_independent_crc(priv, &u_features);
+		wcrc_independent_crc(priv, &u_feat);
 
-		ret = copy_to_user((struct wcrc_info *)arg, &u_features, sizeof(u_features));
+		ret = copy_to_user((struct wcrc_info *)arg, &u_feat, sizeof(u_feat));
 		if (ret) {
 			//pr_err("INDEPENDENT_CRC_MODE: Error sending data to user\n");
 			ret = -EFAULT;
@@ -1089,7 +1089,7 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 	case E2E_CRC_MODE:
 		//Setting mode
-		ret = priv->ops->set_e2e_crc(&u_features, priv);
+		ret = priv->ops->set_e2e_crc(&u_feat, priv);
 		if (ret) {
 			pr_err("E2E_CRC_MODE: setting FAILED\n");
 			ret = -EFAULT;
@@ -1097,7 +1097,7 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		}
 
 		//Run mode
-		ret = priv->ops->start_e2e_crc(&u_features, priv,
+		ret = priv->ops->start_e2e_crc(&u_feat, priv,
 					u_data, priv->buf_crc);
 		if (ret) {
 			pr_err("E2E_CRC_MODE: run FAILED\n");
@@ -1107,26 +1107,25 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 		//Wait mode to finish
 		ret = wait_event_interruptible(priv->dma_in_wait, !(priv->ongoing_dma_rx));
-		if (ret < 0) {
+		if (ret) {
 			pr_info("%s: wait_event_interruptible FAILED\n", __func__);
 			ret = -ERESTARTSYS;
 			goto exit_func;
 		}
 
 		//Return data to user
-		ret = copy_to_user(u_features.pcrc_data, priv->buf_crc, priv->num_crc*4);
+		ret = copy_to_user(u_feat.pcrc_data, priv->buf_crc, priv->num_crc * 4);
 		if (ret) {
 			pr_err("E2E_CRC_MODE: Error sending data to user\n");
 			ret = -EFAULT;
 			goto exit_func;
 		}
 
-
 		break;
 
 	case DATA_THROUGH_MODE:
 		//Setting mode
-		ret = priv->ops->set_data_thr(&u_features, priv);
+		ret = priv->ops->set_data_thr(&u_feat, priv);
 		if (ret) {
 			//pr_err("DATA_THROUGH_MODE: setting FAILED\n");
 			ret = -EFAULT;
@@ -1134,8 +1133,8 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		}
 
 		//Run mode
-		ret = priv->ops->start_data_thr(&u_features, priv,
-					u_data, priv->buf_data);
+		ret = priv->ops->start_data_thr(&u_feat, priv,
+						u_data, priv->buf_data);
 		if (ret) {
 			//pr_err("DATA_THROUGH_MODE: setting FAILED\n");
 			ret = -EFAULT;
@@ -1143,7 +1142,8 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		}
 
 		//Wait mode to finish
-		ret = wait_event_interruptible(priv->dma_in_wait, !(priv->ongoing_dma_tx | priv->ongoing_dma_rx_in));
+		ret = wait_event_interruptible(priv->dma_in_wait,
+					       !(priv->ongoing_dma_tx | priv->ongoing_dma_rx_in));
 		if (ret < 0) {
 			//pr_info("%s: wait_event_interruptible FAILED\n", __func__);
 			ret = -ERESTARTSYS;
@@ -1151,7 +1151,7 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		}
 
 		//Return data to user
-		ret = copy_to_user(u_features.pdata_output, priv->buf_data, u_features.data_input_len);
+		ret = copy_to_user(u_feat.pdata_output, priv->buf_data, u_feat.data_input_len);
 		if (ret) {
 			//pr_err("DATA_THROUGH_MODE: Error sending data to user\n");
 			ret = -EFAULT;
@@ -1162,7 +1162,7 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 	case E2E_CRC_DATA_THROUGH_MODE:
 		//Setting mode
-		ret = priv->ops->set_e2e_data_thr(&u_features, priv);
+		ret = priv->ops->set_e2e_data_thr(&u_feat, priv);
 		if (ret) {
 			//pr_err("E2E_CRC_DATA_THROUGH_MODE: setting FAILED\n");
 			ret = -EFAULT;
@@ -1170,8 +1170,8 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		}
 
 		//Run mode
-		ret = priv->ops->start_e2e_data_thr(&u_features, priv,
-				u_data, priv->buf_data, priv->buf_crc);
+		ret = priv->ops->start_e2e_data_thr(&u_feat, priv,
+						    u_data, priv->buf_data, priv->buf_crc);
 		if (ret) {
 			//pr_err("E2E_CRC_DATA_THROUGH_MODE: setting FAILED\n");
 			ret = -EFAULT;
@@ -1179,16 +1179,17 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		}
 
 		//Wait mode to finish
-		ret = wait_event_interruptible(priv->dma_in_wait, !(priv->ongoing_dma_rx | priv->ongoing_dma_rx_in));
-		if (ret < 0) {
+		ret = wait_event_interruptible(priv->dma_in_wait,
+					       !(priv->ongoing_dma_rx | priv->ongoing_dma_rx_in));
+		if (ret) {
 			//pr_info("%s: wait_event_interruptible FAILED\n", __func__);
 			ret = -ERESTARTSYS;
 			goto exit_func;
 		}
 
 		//Return data to user
-		ret  = copy_to_user(u_features.pdata_output, priv->buf_data, u_features.data_input_len);
-		ret |= copy_to_user(u_features.pcrc_data, priv->buf_crc, priv->num_crc*4);
+		ret  = copy_to_user(u_feat.pdata_output, priv->buf_data, u_feat.data_input_len);
+		ret |= copy_to_user(u_feat.pcrc_data, priv->buf_crc, priv->num_crc * 4);
 		if (ret) {
 			//pr_info("E2E_CRC_DATA_THROUGH_MODE: Error sending data to user\n");
 			ret = -EFAULT;
@@ -1203,13 +1204,13 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 	}
 
 	if (cmd == E2E_CRC_MODE ||
-		cmd == DATA_THROUGH_MODE ||
-		cmd == E2E_CRC_DATA_THROUGH_MODE) {
-		//Flush data which is copy from from user.
+	    cmd == DATA_THROUGH_MODE ||
+	    cmd == E2E_CRC_DATA_THROUGH_MODE) {
+		//Flush data which is copy from user.
 		kfree(u_data);
 
 		//Stop WCRC
-		ret = priv->ops->stop(&u_features, priv);
+		ret = priv->ops->stop(&u_feat, priv);
 		if (ret)
 			ret = -EFAULT;
 	}
@@ -1422,8 +1423,12 @@ static int wcrc_probe(struct platform_device *pdev)
 	priv->ops = &rwcrc_ops;
 
 	/* Init DMA */
-	priv->dma_rx_in = priv->dma_rx = priv->dma_tx = ERR_PTR(-EPROBE_DEFER);
-	priv->buf_rx_in = priv->buf_rx = priv->buf_tx = ERR_PTR(-EPROBE_DEFER);
+	priv->dma_tx = ERR_PTR(-EPROBE_DEFER);
+	priv->dma_rx = ERR_PTR(-EPROBE_DEFER);
+	priv->dma_rx_in = ERR_PTR(-EPROBE_DEFER);
+	priv->buf_tx = ERR_PTR(-EPROBE_DEFER);
+	priv->buf_rx = ERR_PTR(-EPROBE_DEFER);
+	priv->buf_rx_in = ERR_PTR(-EPROBE_DEFER);
 	init_waitqueue_head(&priv->dma_in_wait);
 	priv->ongoing_dma_rx = 0;
 	priv->ongoing_dma_tx = 0;
@@ -1452,7 +1457,7 @@ static int wcrc_probe(struct platform_device *pdev)
 	}
 
 	dev = device_create(wcrc_class, NULL, priv->devt,
-				NULL, "wcrc%d", dev_chan);
+			    NULL, "wcrc%d", dev_chan);
 
 	if (IS_ERR(dev)) {
 		dev_err(dev, "Unable to create device\n");
@@ -1552,7 +1557,7 @@ static void __exit wcrc_exit(void)
 	int i;
 
 	platform_driver_unregister(&wcrc_driver);
-	for(i = 0; i < 11; i++) {
+	for (i = 0; i < 11; i++) {
 		pr_info("%s: dev%d\n", __func__, i);
 		device_destroy(wcrc_class, MKDEV(MAJOR(wcrc_devt), i));
 	}

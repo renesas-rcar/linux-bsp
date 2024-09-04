@@ -40,7 +40,7 @@
 #define POL_32_ETHERNET 0x04C11DB7 //default 32-bit Ethernet CRC
 #define POL_16_CCITT 0x1021 //16-bit CCITT CRC
 #define POL_8_SAE_J1850 0x1D //8-bit SAE J1850 CRC
-#define POL_8_0x2F 0x2F //8-bit 0x2F CRC
+#define POL_8_0X2F 0x2F //8-bit 0x2F CRC
 #define POL_32_CRC32C 0x1EDC6F41 //32-bit CRC32C (Castagnoli)
 
 /* KCRC[m] XOR mask register */
@@ -79,11 +79,11 @@ void kcrc_setting(struct kcrc_device *p, struct wcrc_info *info)
 		p_size = PSIZE_8;
 		poly_set = POL_8_SAE_J1850;
 		break;
-	case POLY_8_0x2F:
+	case POLY_8_0X2F:
 		p_size = PSIZE_8;
-		poly_set = POL_8_0x2F;
+		poly_set = POL_8_0X2F;
 		break;
-	case POLY_32_0x1EDC6F41:
+	case POLY_32_0X1EDC6F41:
 		p_size = PSIZE_32;
 		poly_set = POL_32_CRC32C;
 		break;
@@ -224,7 +224,7 @@ static struct platform_driver kcrc_driver = {
 	.remove = kcrc_remove,
 };
 
-int __init kcrc_drv_init(void)
+int kcrc_drv_init(void)
 {
 	struct device_node *np;
 	int ret;
@@ -241,13 +241,13 @@ int __init kcrc_drv_init(void)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(kcrc_drv_init);
 
-void __exit kcrc_drv_exit(void)
+void kcrc_drv_exit(void)
 {
 	platform_driver_unregister(&kcrc_driver);
 }
-//module_init(kcrc_drv_init);
-//module_exit(kcrc_drv_exit);
+EXPORT_SYMBOL_GPL(kcrc_drv_exit);
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("huybui2 <huy.bui.wm@renesas.com>");

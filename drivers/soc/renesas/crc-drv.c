@@ -26,12 +26,12 @@
 #define COUT_32_ETHERNET 0xFFFFFFFF //default; CRC-32-IEEE 802.3; 04C11DB7
 #define COUT_16_CCITT_FALSE_CRC16 0xFFFF //CCITT_FALSE_CRC16; 1021
 #define COUT_8_SAE_J1850 0xFF //SAE_J1850; 1D
-#define COUT_8_0x2F 0xFF // 0x2F polynomial
-#define COUT_32_0xF4ACFB13 0xFFFFFFFF //0xF4ACFB13 polynomial
-#define COUT_32_0x1EDC6F41 0xFFFFFFFF //0x1EDC6F41 polynomial CRC-32 (Castagnoli)
-#define COUT_21_0x102899 0x1FFFFF //0x102899 polynomial CRC-21
-#define COUT_17_0x1685B 0x1FFFF //0x1685B polynomial CRC-17
-#define COUT_15_0x4599 0x7FFF //0x4599 polynomial CRC-15
+#define COUT_8_0X2F 0xFF // 0x2F polynomial
+#define COUT_32_0XF4ACFB13 0xFFFFFFFF //0xF4ACFB13 polynomial
+#define COUT_32_0X1EDC6F41 0xFFFFFFFF //0x1EDC6F41 polynomial CRC-32 (Castagnoli)
+#define COUT_21_0X102899 0x1FFFFF //0x102899 polynomial CRC-21
+#define COUT_17_0X1685B 0x1FFFF //0x1685B polynomial CRC-17
+#define COUT_15_0X4599 0x7FFF //0x4599 polynomial CRC-15
 
 /* CRC[m] Control register */
 #define DCRA_CTL 0x0020
@@ -41,12 +41,12 @@
 #define POL_32_ETHERNET 0 //default CRC-32-IEEE 802.3
 #define POL_16_CCITT_FALSE_CRC16 BIT(0) //CCITT_FALSE_CRC16
 #define POL_8_SAE_J1850 BIT(1) //SAE_J1850
-#define POL_8_0x2F (3 << 0) // 0x2F polynomial
-#define POL_32_0xF4ACFB13 BIT(2) //0xF4ACFB13 polynomial
-#define POL_32_0x1EDC6F41 (5 << 0) //0x1EDC6F41 polynomial CRC-32 (Castagnoli)
-#define POL_21_0x102899 (6 << 0) //0x102899 polynomial CRC-21
-#define POL_17_0x1685B (7 << 0) //0x1685B polynomial CRC-17
-#define POL_15_0x4599 BIT(3) //0x4599 polynomial CRC-15
+#define POL_8_0X2F (3 << 0) // 0x2F polynomial
+#define POL_32_0XF4ACFB13 BIT(2) //0xF4ACFB13 polynomial
+#define POL_32_0X1EDC6F41 (5 << 0) //0x1EDC6F41 polynomial CRC-32 (Castagnoli)
+#define POL_21_0X102899 (6 << 0) //0x102899 polynomial CRC-21
+#define POL_17_0X1685B (7 << 0) //0x1685B polynomial CRC-17
+#define POL_15_0X4599 BIT(3) //0x4599 polynomial CRC-15
 
 /* CRC[m] Control register 2 */
 #define DCRA_CTL2 0x0040
@@ -95,29 +95,29 @@ void crc_setting(struct crc_device *p, struct wcrc_info *info)
 		poly_set = POL_8_SAE_J1850;
 		initial_set = COUT_8_SAE_J1850;
 		break;
-	case POLY_8_0x2F:
-		poly_set = POL_8_0x2F;
-		initial_set = COUT_8_0x2F;
+	case POLY_8_0X2F:
+		poly_set = POL_8_0X2F;
+		initial_set = COUT_8_0X2F;
 		break;
-	case POLY_32_0xF4ACFB13:
-		poly_set = POL_32_0xF4ACFB13;
-		initial_set = COUT_32_0xF4ACFB13;
+	case POLY_32_0XF4ACFB13:
+		poly_set = POL_32_0XF4ACFB13;
+		initial_set = COUT_32_0XF4ACFB13;
 		break;
-	case POLY_32_0x1EDC6F41:
-		poly_set = POL_32_0x1EDC6F41;
-		initial_set = COUT_32_0x1EDC6F41;
+	case POLY_32_0X1EDC6F41:
+		poly_set = POL_32_0X1EDC6F41;
+		initial_set = COUT_32_0X1EDC6F41;
 		break;
-	case POLY_21_0x102899:
-		poly_set = POL_21_0x102899;
-		initial_set = COUT_21_0x102899;
+	case POLY_21_0X102899:
+		poly_set = POL_21_0X102899;
+		initial_set = COUT_21_0X102899;
 		break;
-	case POLY_17_0x1685B:
-		poly_set = POL_17_0x1685B;
-		initial_set = COUT_17_0x1685B;
+	case POLY_17_0X1685B:
+		poly_set = POL_17_0X1685B;
+		initial_set = COUT_17_0X1685B;
 		break;
-	case POLY_15_0x4599:
-		poly_set = POL_15_0x4599;
-		initial_set = COUT_15_0x4599;
+	case POLY_15_0X4599:
+		poly_set = POL_15_0X4599;
+		initial_set = COUT_15_0X4599;
 		break;
 	default:
 		pr_err("ERROR: Polynomial mode NOT found\n");
@@ -288,7 +288,7 @@ static struct platform_driver crc_driver = {
 	.remove = crc_remove,
 };
 
-int __init crc_drv_init(void)
+int crc_drv_init(void)
 {
 	struct device_node *np;
 	int ret;
@@ -305,13 +305,13 @@ int __init crc_drv_init(void)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(crc_drv_init);
 
-void __exit crc_drv_exit(void)
+void crc_drv_exit(void)
 {
 	platform_driver_unregister(&crc_driver);
 }
-//module_init(crc_drv_init);
-//module_exit(crc_drv_exit);
+EXPORT_SYMBOL_GPL(crc_drv_exit);
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("huybui2 <huy.bui.wm@renesas.com>");
