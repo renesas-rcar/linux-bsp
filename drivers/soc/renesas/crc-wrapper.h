@@ -84,10 +84,14 @@ struct wcrc_device {
 int kcrc_calculate(struct kcrc_device *p, struct wcrc_info *info);
 void kcrc_setting(struct kcrc_device *p, struct wcrc_info *info);
 int rcar_kcrc_init(struct platform_device *pdev);
+extern int __init kcrc_drv_init(void);
+extern void __exit kcrc_drv_exit(void);
 
 int crc_calculate(struct crc_device *p, struct wcrc_info *info);
 void crc_setting(struct crc_device *p, struct wcrc_info *info);
 int rcar_crc_init(struct platform_device *pdev);
+extern int __init crc_drv_init(void);
+extern void __exit crc_drv_exit(void);
 
 int rcar_wcrc_init(struct platform_device *pdev);
 

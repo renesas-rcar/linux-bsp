@@ -175,7 +175,7 @@ static int kcrc_probe(struct platform_device *pdev)
 
 	/* Map I/O memory */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	pr_info("Instance: kcrc_res=0x%llx", res->start);
+	pr_info("Instance: kcrc_res=0x%llx\n", res->start);
 	priv->base = devm_ioremap_resource(dev, res);
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
@@ -224,7 +224,7 @@ static struct platform_driver kcrc_driver = {
 	.remove = kcrc_remove,
 };
 
-static int __init kcrc_drv_init(void)
+int __init kcrc_drv_init(void)
 {
 	struct device_node *np;
 	int ret;
@@ -242,12 +242,12 @@ static int __init kcrc_drv_init(void)
 	return 0;
 }
 
-static void __exit kcrc_drv_exit(void)
+void __exit kcrc_drv_exit(void)
 {
 	platform_driver_unregister(&kcrc_driver);
 }
-module_init(kcrc_drv_init);
-module_exit(kcrc_drv_exit);
+//module_init(kcrc_drv_init);
+//module_exit(kcrc_drv_exit);
 
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("huybui2 <huy.bui.wm@renesas.com>");

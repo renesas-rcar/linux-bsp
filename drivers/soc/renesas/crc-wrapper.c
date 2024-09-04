@@ -248,7 +248,7 @@ DEFINE_MUTEX(lock);
 
 static int dev_chan;
 static dev_t wcrc_devt;
-static struct class *wcrc_class;
+static struct class *wcrc_class = NULL;
 
 static void rcar_wcrc_dma_tx_callback(void *data);
 static void rcar_wcrc_dma_rx_callback(void *data);
@@ -728,45 +728,28 @@ end_mode:
 }
 
 static int wcrc_start_e2e_crc(struct wcrc_info *info, struct wcrc_device *priv,
-				void *p_u_data, void *p_drv_crc)
+						void *p_u_data, void *p_drv_crc)
 {
 	int ret;
 	int i, loop;
 
-	////6. Transfer input data to data port of FIFO by DMAC.
-	//ret = (int)rcar_wcrc_dma_tx(priv, p_u_data, data_len);
-	//if (!ret) {
-	//	ret = -EFAULT;
-	//	goto end_func;
-	//}
+	//6. Transfer input data to data port of FIFO by DMAC.
+	ret = (int)rcar_wcrc_dma_tx(priv, p_u_data, info->data_input_len);
+	if (!ret) {
+		ret = -EFAULT;
+		goto end_func;
+	}
 
-	loop = (info->data_input_len)/(info->conv_size*4);
-	for (i = 0; i < loop; i++) {
-		//6. Transfer input data to data port of FIFO by DMAC.
-		ret = (int)rcar_wcrc_dma_tx(priv, p_u_data+i*info->conv_size*4, info->conv_size*4);
-		if (!ret) {
-			ret = -EFAULT;
-			goto end_func;
-		}
-		//7. Read out result data from result port of FIFO by DMAC.
-		ret = rcar_wcrc_dma_rx(priv, p_drv_crc+i*16, 16);
-		if (!ret) {
-			//pr_err("E2E_CRC_MODE: run FAILED\n");
-			ret = -EFAULT;
-			goto end_func;
-		}
-
-		//Wait e2e mode to finish
-		ret = wait_event_interruptible(priv->dma_in_wait, !(priv->ongoing_dma_rx));
-		if (ret < 0) {
-			//pr_info("%s: wait_event_interruptible FAILED\n", __func__);
-			ret = -ERESTARTSYS;
-			goto end_func;
-		}
+	//7. Read out result data from result port of FIFO by DMAC.
+	ret = rcar_wcrc_dma_rx(priv, p_drv_crc, priv->num_crc*4);
+	if (!ret) {
+		pr_err("E2E_CRC_MODE: run FAILED\n");
+		ret = -EFAULT;
+		goto end_func;
 	}
 
 end_func:
-	return ret;
+	return !ret;
 }
 
 static int wcrc_stop(struct wcrc_info *info, struct wcrc_device *priv)
@@ -875,16 +858,8 @@ static int wcrc_start_data_thr(struct wcrc_info *info, struct wcrc_device *priv,
 		goto end_func;
 	}
 
-	//Wait e2e mode to finish
-	ret = wait_event_interruptible(priv->dma_in_wait, !(priv->ongoing_dma_rx_in));
-	if (ret < 0) {
-		//pr_info("%s: wait_event_interruptible FAILED\n", __func__);
-		ret = -ERESTARTSYS;
-		goto end_func;
-	}
-
 end_func:
-	return ret;
+	return !ret;
 }
 
 static int wcrc_setting_e2e_data_thr(struct wcrc_info *info, struct wcrc_device *priv)
@@ -913,7 +888,7 @@ static int wcrc_setting_e2e_data_thr(struct wcrc_info *info, struct wcrc_device 
 	}
 	priv->module = module;
 
-	bus_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	bus_width = DMA_SLAVE_BUSWIDTH_64_BYTES;
 
 	//Enable interrupt for the complete of stop operation, command function and input data transfer.
 	reg_val = STOP_DONE_IE | RES_DONE_IE;
@@ -1000,7 +975,7 @@ static int wcrc_start_e2e_data_thr(struct wcrc_info *info, struct wcrc_device *p
 	}
 
 	//9. Read out result data from result port of FIFO by DMAC.
-	ret = rcar_wcrc_dma_rx(priv, p_drv_crc, 16);
+	ret = rcar_wcrc_dma_rx(priv, p_drv_crc, priv->num_crc*4);
 	if (!ret) {
 		//pr_err("E2E_CRC_DATA_THROUGH_MODE: run FAILED\n");
 		ret = -EFAULT;
@@ -1009,7 +984,7 @@ static int wcrc_start_e2e_data_thr(struct wcrc_info *info, struct wcrc_device *p
 
 
 end_func:
-	return ret;
+	return !ret;
 }
 
 static int wcrc_open(struct inode *inode, struct file *filep)
@@ -1080,7 +1055,9 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 	ret = 0;
 	u_data = NULL;
 
-	if (cmd != INDEPENDENT_CRC_MODE) {
+	if (cmd == E2E_CRC_MODE ||
+		cmd == DATA_THROUGH_MODE ||
+		cmd == E2E_CRC_DATA_THROUGH_MODE) {
 		//Read setting from user
 		ret = extract_data(&u_features, priv, arg, &u_data);
 		if (ret) {
@@ -1111,27 +1088,35 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		break;
 
 	case E2E_CRC_MODE:
-		//Setting e2e crc mode
+		//Setting mode
 		ret = priv->ops->set_e2e_crc(&u_features, priv);
 		if (ret) {
-			//pr_err("E2E_CRC_MODE: setting FAILED\n");
+			pr_err("E2E_CRC_MODE: setting FAILED\n");
 			ret = -EFAULT;
 			goto exit_func;
 		}
 
-		//Run e2e crc mode
+		//Run mode
 		ret = priv->ops->start_e2e_crc(&u_features, priv,
 					u_data, priv->buf_crc);
 		if (ret) {
-			//pr_err("E2E_CRC_MODE: setting FAILED\n");
+			pr_err("E2E_CRC_MODE: run FAILED\n");
 			ret = -EFAULT;
+			goto exit_func;
+		}
+
+		//Wait mode to finish
+		ret = wait_event_interruptible(priv->dma_in_wait, !(priv->ongoing_dma_rx));
+		if (ret < 0) {
+			pr_info("%s: wait_event_interruptible FAILED\n", __func__);
+			ret = -ERESTARTSYS;
 			goto exit_func;
 		}
 
 		//Return data to user
 		ret = copy_to_user(u_features.pcrc_data, priv->buf_crc, priv->num_crc*4);
 		if (ret) {
-			//pr_err("E2E_CRC_MODE: Error sending data to user\n");
+			pr_err("E2E_CRC_MODE: Error sending data to user\n");
 			ret = -EFAULT;
 			goto exit_func;
 		}
@@ -1140,7 +1125,7 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		break;
 
 	case DATA_THROUGH_MODE:
-		//Setting data through mode
+		//Setting mode
 		ret = priv->ops->set_data_thr(&u_features, priv);
 		if (ret) {
 			//pr_err("DATA_THROUGH_MODE: setting FAILED\n");
@@ -1148,12 +1133,20 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 			goto exit_func;
 		}
 
-		//Run data through mode
+		//Run mode
 		ret = priv->ops->start_data_thr(&u_features, priv,
 					u_data, priv->buf_data);
 		if (ret) {
 			//pr_err("DATA_THROUGH_MODE: setting FAILED\n");
 			ret = -EFAULT;
+			goto exit_func;
+		}
+
+		//Wait mode to finish
+		ret = wait_event_interruptible(priv->dma_in_wait, !(priv->ongoing_dma_tx | priv->ongoing_dma_rx_in));
+		if (ret < 0) {
+			//pr_info("%s: wait_event_interruptible FAILED\n", __func__);
+			ret = -ERESTARTSYS;
 			goto exit_func;
 		}
 
@@ -1168,7 +1161,7 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		break;
 
 	case E2E_CRC_DATA_THROUGH_MODE:
-		//Setting data through mode
+		//Setting mode
 		ret = priv->ops->set_e2e_data_thr(&u_features, priv);
 		if (ret) {
 			//pr_err("E2E_CRC_DATA_THROUGH_MODE: setting FAILED\n");
@@ -1176,12 +1169,20 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 			goto exit_func;
 		}
 
-		//Run data through mode
+		//Run mode
 		ret = priv->ops->start_e2e_data_thr(&u_features, priv,
 				u_data, priv->buf_data, priv->buf_crc);
 		if (ret) {
 			//pr_err("E2E_CRC_DATA_THROUGH_MODE: setting FAILED\n");
 			ret = -EFAULT;
+			goto exit_func;
+		}
+
+		//Wait mode to finish
+		ret = wait_event_interruptible(priv->dma_in_wait, !(priv->ongoing_dma_rx | priv->ongoing_dma_rx_in));
+		if (ret < 0) {
+			//pr_info("%s: wait_event_interruptible FAILED\n", __func__);
+			ret = -ERESTARTSYS;
 			goto exit_func;
 		}
 
@@ -1201,13 +1202,17 @@ static long dev_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		goto exit_func;
 	}
 
-	//Flush data which is copied from from user.
-	kfree(u_data);
+	if (cmd == E2E_CRC_MODE ||
+		cmd == DATA_THROUGH_MODE ||
+		cmd == E2E_CRC_DATA_THROUGH_MODE) {
+		//Flush data which is copy from from user.
+		kfree(u_data);
 
-	//Stop WCRC
-	ret = priv->ops->stop(&u_features, priv);
-	if (ret)
-		ret = -EFAULT;
+		//Stop WCRC
+		ret = priv->ops->stop(&u_features, priv);
+		if (ret)
+			ret = -EFAULT;
+	}
 
 exit_func:
 	return ret;
@@ -1379,7 +1384,7 @@ static int wcrc_probe(struct platform_device *pdev)
 
 	dev = &pdev->dev;
 	priv = devm_kzalloc(dev, sizeof(struct wcrc_device), GFP_KERNEL);
-	pr_info("Addr priv %d: 0x%llx", dev_chan, (long long unsigned int)priv);
+	//pr_info("Addr priv %d: 0x%llx\n", dev_chan, (long long unsigned int)priv);
 	if (!priv)
 		return -ENOMEM;
 
@@ -1388,7 +1393,7 @@ static int wcrc_probe(struct platform_device *pdev)
 	/* Map I/O memory */
 	priv->res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	res = priv->res;
-	pr_info("Instance %d: wcrc_res=0x%llx", dev_chan, res->start);
+	//pr_info("Instance %d: wcrc_res=0x%llx\n", dev_chan, res->start);
 	priv->base = devm_ioremap_resource(dev, res);
 	if (IS_ERR(priv->base)) {
 		dev_err(dev, "Unable to map I/O for device\n");
@@ -1396,7 +1401,7 @@ static int wcrc_probe(struct platform_device *pdev)
 	}
 
 	priv->fifo_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	pr_info("Instance %d: fifo_res=0x%llx", dev_chan, priv->fifo_res->start);
+	//pr_info("Instance %d: fifo_res=0x%llx\n", dev_chan, priv->fifo_res->start);
 
 	///* Look up and obtains to a clock node */
 	//priv->clk = devm_clk_get(dev, "fck");
@@ -1436,7 +1441,8 @@ static int wcrc_probe(struct platform_device *pdev)
 	}
 
 	/* Creating WCRC device */
-	priv->devt = MKDEV(MAJOR(wcrc_devt), MINOR(wcrc_devt) + dev_chan);
+	priv->devt = MKDEV(MAJOR(wcrc_devt), dev_chan);
+	//pr_info("%s: priv->devt=%d\n", __func__, priv->devt);
 	cdev_init(&priv->cdev, &fops);
 	priv->cdev.owner = THIS_MODULE;
 	ret = cdev_add(&priv->cdev, priv->devt, 1);
@@ -1472,8 +1478,8 @@ static int wcrc_remove(struct platform_device *pdev)
 	struct wcrc_device *priv = platform_get_drvdata(pdev);
 
 	rcar_wcrc_release_dma(priv);
-	device_destroy(wcrc_class, MKDEV(MAJOR(wcrc_devt), 0));
-	cdev_del(&priv->cdev);
+	pr_info("%s: priv->devt=%d\n", __func__, priv->devt);
+	//cdev_del(&priv->cdev);
 
 	return 0;
 }
@@ -1512,9 +1518,23 @@ static int __init wcrc_init(void)
 		goto class_err;
 	}
 
-	ret = platform_driver_register(&wcrc_driver);
-	if (ret < 0)
+	ret = crc_drv_init();
+	if (ret) {
+		pr_err("crc: Failed to register\n");
 		goto drv_reg_err;
+	}
+
+	ret = kcrc_drv_init();
+	if (ret) {
+		pr_err("kcrc: Failed to register\n");
+		goto drv_reg_err;
+	}
+
+	ret = platform_driver_register(&wcrc_driver);
+	if (ret) {
+		pr_err("wcrc: Failed to register\n");
+		goto drv_reg_err;
+	}
 
 	return 0;
 
@@ -1529,9 +1549,21 @@ class_err:
 
 static void __exit wcrc_exit(void)
 {
-	unregister_chrdev_region(wcrc_devt, WCRC_DEVICES);
-	class_destroy(wcrc_class);
+	int i;
+
 	platform_driver_unregister(&wcrc_driver);
+	for(i = 0; i < 11; i++) {
+		pr_info("%s: dev%d\n", __func__, i);
+		device_destroy(wcrc_class, MKDEV(MAJOR(wcrc_devt), i));
+	}
+	if (wcrc_class) {
+		pr_info("%s: wcrc_class\n", __func__);
+		class_destroy(wcrc_class);
+		wcrc_class = NULL;
+	}
+	unregister_chrdev_region(wcrc_devt, WCRC_DEVICES);
+	crc_drv_exit();
+	kcrc_drv_exit();
 }
 
 module_init(wcrc_init);
