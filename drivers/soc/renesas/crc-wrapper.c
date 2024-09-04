@@ -1225,8 +1225,6 @@ static const struct of_device_id wcrc_of_ids[] = {
 	}, {
 		.compatible = "renesas,wcrc-r8a78000",
 	}, {
-		.compatible = "renesas,wcrc-r8a779g0",
-	}, {
 		.compatible = "renesas,rcar-gen5-wcrc",
 	}, {
 		/* Terminator */
