@@ -706,26 +706,26 @@ static const struct rcsi2_mbps_reg osc_freq_target_v4m[] = {
 	{ .mbps = 1400, .reg = 0x1A9 },
 	{ .mbps = 1450, .reg = 0x1A9 },
 	{ .mbps = 1500, .reg = 0x1A9 },
-	{ .mbps = 1550, .reg = 0x108 },
-	{ .mbps = 1600, .reg = 0x110 },
-	{ .mbps = 1650, .reg = 0x119 },
-	{ .mbps = 1700, .reg = 0x121 },
-	{ .mbps = 1750, .reg = 0x12A },
-	{ .mbps = 1800, .reg = 0x132 },
-	{ .mbps = 1850, .reg = 0x13B },
-	{ .mbps = 1900, .reg = 0x143 },
-	{ .mbps = 1950, .reg = 0x14C },
-	{ .mbps = 2000, .reg = 0x154 },
-	{ .mbps = 2050, .reg = 0x15D },
-	{ .mbps = 2100, .reg = 0x165 },
-	{ .mbps = 2150, .reg = 0x16E },
-	{ .mbps = 2200, .reg = 0x176 },
-	{ .mbps = 2250, .reg = 0x17F },
-	{ .mbps = 2300, .reg = 0x187 },
-	{ .mbps = 2350, .reg = 0x190 },
-	{ .mbps = 2400, .reg = 0x198 },
-	{ .mbps = 2450, .reg = 0x1A1 },
-	{ .mbps = 2500, .reg = 0x1A9 },
+	{ .mbps = 1550, .reg = 0x0E5 },
+	{ .mbps = 1600, .reg = 0x0ED },
+	{ .mbps = 1650, .reg = 0x0F4 },
+	{ .mbps = 1700, .reg = 0x0FC },
+	{ .mbps = 1750, .reg = 0x103 },
+	{ .mbps = 1800, .reg = 0x10A },
+	{ .mbps = 1850, .reg = 0x112 },
+	{ .mbps = 1900, .reg = 0x119 },
+	{ .mbps = 1950, .reg = 0x121 },
+	{ .mbps = 2000, .reg = 0x128 },
+	{ .mbps = 2050, .reg = 0x12F },
+	{ .mbps = 2100, .reg = 0x137 },
+	{ .mbps = 2150, .reg = 0x13E },
+	{ .mbps = 2200, .reg = 0x145 },
+	{ .mbps = 2250, .reg = 0x14D },
+	{ .mbps = 2300, .reg = 0x154 },
+	{ .mbps = 2350, .reg = 0x15C },
+	{ .mbps = 2400, .reg = 0x163 },
+	{ .mbps = 2450, .reg = 0x16A },
+	{ .mbps = 2500, .reg = 0x172 },
 	{ /* sentinel */ },
 };
 
@@ -2144,15 +2144,15 @@ static int rcsi2_init_phtw_v4m(struct rcar_csi2 *priv,
 	static const struct phtw_value step36[] = {
 		{ .data = 0x00, .code = 0x00 },		/* H’0100_0100 */
 		{ .data = 0x80, .code = 0xE0 },		/* H’0180_01E0 */
-		{ .data = 0x01, .code = 0xE1 },		/* H’0101_01E1 */
+		{ .data = 0x31, .code = 0xE1 },		/* H’0131_01E1 */
 		{ .data = 0x06, .code = 0x00 },		/* H’0106_0100 */
-		{ .data = 0x0F, .code = 0x11 },		/* H’010F_0111 */
+		{ .data = 0x11, .code = 0x11 },		/* H’0111_0111 */
 		{ .data = 0x08, .code = 0x00 },		/* H’0108_0100 */
-		{ .data = 0x0F, .code = 0x11 },		/* H’010F_0111 */
+		{ .data = 0x11, .code = 0x11 },		/* H’0111_0111 */
 		{ .data = 0x0A, .code = 0x00 },		/* H’010A_0100 */
-		{ .data = 0x0F, .code = 0x11 },		/* H’010F_0111 */
+		{ .data = 0x11, .code = 0x11 },		/* H’0111_0111 */
 		{ .data = 0x0C, .code = 0x00 },		/* H’010C_0100 */
-		{ .data = 0x0F, .code = 0x11 },		/* H’010F_0111 */
+		{ .data = 0x11, .code = 0x11 },		/* H’0111_0111 */
 		{ .data = 0x01, .code = 0x00 },		/* H’0101_0100 */
 		{ .data = 0x31, .code = 0xAA },		/* H’0131_01AA */
 		{ .data = 0x05, .code = 0x00 },		/* H’0105_0100 */
@@ -2170,6 +2170,13 @@ static int rcsi2_init_phtw_v4m(struct rcar_csi2 *priv,
 	static const struct phtw_value step33[] = {
 		{ .data = 0x00, .code = 0x00 },		/* H’0100_0100 */
 		{ .data = 0x3C, .code = 0x08 },		/* H’013C_0108 */
+		{ .data = 0xff, .code = 0xff },
+		{ /* sentinel */ },
+	};
+
+	static const struct phtw_value step37[] = {
+		{ .data = 0x01, .code = 0x00 },		/* H’0101_0100 */
+		{ .data = 0x06, .code = 0xab },		/* H’0106_01ab */
 		{ .data = 0xff, .code = 0xff },
 		{ /* sentinel */ },
 	};
@@ -2225,6 +2232,11 @@ static int rcsi2_init_phtw_v4m(struct rcar_csi2 *priv,
 		if (ret)
 			return ret;
 	}
+
+	/* T3-7: */
+	ret = rcsi2_phtw_write_array(priv, step37);
+	if (ret)
+		return ret;
 
 	return ret;
 }
