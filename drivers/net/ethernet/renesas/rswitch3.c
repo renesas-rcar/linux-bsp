@@ -417,7 +417,7 @@ static void rswitch_etha_read_mac_address(struct rswitch_etha *etha)
 	mac[5] = (mrmac1 >>  0) & 0xFF;
 }
 
-static bool rswitch_etha_wait_link_verification(struct rswitch_etha *etha)
+static bool __maybe_unused rswitch_etha_wait_link_verification(struct rswitch_etha *etha)
 {
 	/* Request Link Verification */
 	rswitch_etha_write(etha, MLVC_PLV, MLVC);
@@ -515,8 +515,12 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 	if (err < 0)
 		return err;
 
-	/* Link Verification */
-	return rswitch_etha_wait_link_verification(etha);
+	return 0;
+
+	/* Link Verification
+	 * return rswitch_etha_wait_link_verification(etha);
+	 *
+	 */
 }
 
 void rswitch_serdes_write32(void __iomem *addr, u32 offs,  u32 bank, u32 data)
@@ -1175,18 +1179,23 @@ static int rswitch_open(struct net_device *ndev)
 				err = rswitch_mii_register(rdev);
 				if (err < 0)
 					goto error;
-				err = rswitch_phy_init(rdev, phy);
-				if (err < 0)
-					goto error;
+				if (!rdev->priv->vpf_mode) {
+					err = rswitch_phy_init(rdev, phy);
+					if (err < 0)
+						goto error;
+				}
 
 				of_node_put(phy);
 			}
 		}
 
-		ndev->phydev->speed = rdev->etha->speed;
-		phy_set_max_speed(ndev->phydev, rdev->etha->speed);
+		if (!rdev->priv->vpf_mode) {
+			ndev->phydev->speed = rdev->etha->speed;
+			phy_set_max_speed(ndev->phydev, rdev->etha->speed);
 
-		phy_start(ndev->phydev);
+			phy_start(ndev->phydev);
+		}
+
 		phy_started = true;
 
 		if (!rdev->priv->serdes_common_init && !rdev->priv->vpf_mode) {
