@@ -2315,7 +2315,7 @@ static int ravb_probe(struct platform_device *pdev)
 
 	/* Initialise PTP Clock driver */
 	if (chip_id != RCAR_GEN2){
-		if ((soc_device_match(r8a779g0) || soc_device_match(r8a779h0)) && priv->use_ptp)
+		if (priv->use_ptp)
 			rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT, RCAR_GEN4_PTP_CLOCK_V4H);
 		else if (chip_id == RCAR_GEN3)
 			ravb_ptp_init(ndev, pdev);
@@ -2463,8 +2463,12 @@ static int __maybe_unused ravb_suspend(struct device *dev)
 	else
 		ret = ravb_close(ndev);
 
-	if (priv->chip_id != RCAR_GEN2)
-		ravb_ptp_stop(ndev);
+	if (priv->chip_id != RCAR_GEN2) {
+		if (priv->use_ptp)
+			rcar_gen4_ptp_unregister(priv->ptp_priv);
+		else if (priv->chip_id == RCAR_GEN3)
+			ravb_ptp_stop(ndev);
+	}
 
 	return ret;
 }
@@ -2502,8 +2506,13 @@ static int __maybe_unused ravb_resume(struct device *dev)
 	/* Restore descriptor base address table */
 	ravb_write(ndev, priv->desc_bat_dma, DBAT);
 
-	if (priv->chip_id != RCAR_GEN2)
-		ravb_ptp_init(ndev, pdev);
+	if (priv->chip_id != RCAR_GEN2) {
+		if (priv->use_ptp)
+			rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
+					   RCAR_GEN4_PTP_CLOCK_V4H);
+		else if (priv->chip_id == RCAR_GEN3)
+			ravb_ptp_init(ndev, pdev);
+	}
 
 	if (netif_running(ndev)) {
 		if (priv->wol_enabled) {
