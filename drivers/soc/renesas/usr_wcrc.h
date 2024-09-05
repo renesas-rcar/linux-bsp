@@ -25,22 +25,22 @@
 #define POLY_32_ETHERNET	_IOWR(MM_IOC_MAGIC, 7, struct wcrc_info)
 #define POLY_16_CCITT_FALSE_CRC16	_IOWR(MM_IOC_MAGIC, 8, struct wcrc_info)
 #define POLY_8_SAE_J1850	_IOWR(MM_IOC_MAGIC, 9, struct wcrc_info)
-#define POLY_8_0x2F	_IOWR(MM_IOC_MAGIC, 10, struct wcrc_info)
-#define POLY_32_0xF4ACFB13	_IOWR(MM_IOC_MAGIC, 11, struct wcrc_info)
-#define POLY_32_0x1EDC6F41	_IOWR(MM_IOC_MAGIC, 12, struct wcrc_info)
-#define POLY_21_0x102899	_IOWR(MM_IOC_MAGIC, 13, struct wcrc_info)
-#define POLY_17_0x1685B	_IOWR(MM_IOC_MAGIC, 14, struct wcrc_info)
-#define POLY_15_0x4599	_IOWR(MM_IOC_MAGIC, 15, struct wcrc_info)
+#define POLY_8_0X2F	_IOWR(MM_IOC_MAGIC, 10, struct wcrc_info)
+#define POLY_32_0XF4ACFB13	_IOWR(MM_IOC_MAGIC, 11, struct wcrc_info)
+#define POLY_32_0X1EDC6F41	_IOWR(MM_IOC_MAGIC, 12, struct wcrc_info)
+#define POLY_21_0X102899	_IOWR(MM_IOC_MAGIC, 13, struct wcrc_info)
+#define POLY_17_0X1685B	_IOWR(MM_IOC_MAGIC, 14, struct wcrc_info)
+#define POLY_15_0X4599	_IOWR(MM_IOC_MAGIC, 15, struct wcrc_info)
 
 struct wcrc_info {
 	//Input data and output crc data
-	uint32_t data_input;
-	uint32_t crc_data_out;
-	uint32_t *pcrc_data;
-	uint32_t kcrc_data_out;
+	u32 data_input;
+	u32 crc_data_out;
+	u32 *pcrc_data;
+	u32 kcrc_data_out;
 	unsigned int data_input_len;
-	uint32_t *pdata_input;
-	uint32_t *pdata_output;
+	u32 *pdata_input;
+	u32 *pdata_output;
 
 	// Size of data input
 	int d_in_sz;
@@ -76,6 +76,24 @@ struct wcrc_info {
 	//WCRCm_CRCm_INIT_CRC
 	unsigned int init_crc_code;
 
+};
+
+/* Currently, only support 3 registers */
+enum reg_id {
+	CRC_CIN = 0,
+	CRC_COUT,
+	CRC_CTL,
+	CRC_CTL2,
+	KCRC_DIN,
+	KCRC_DOUT,
+	KCRC_CTL,
+	KCRC_POLY,
+	KCRC_XOR,
+};
+
+struct reg_acc_by_cmd {
+	u32 reg_id;
+	u32 write_val;
 };
 
 #endif /* _USER_RENESAS_CRC_WRAPPER_H_ */

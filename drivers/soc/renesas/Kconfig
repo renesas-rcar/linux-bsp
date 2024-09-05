@@ -466,3 +466,22 @@ config RCAR_THERMAL_EMS
 	  in R-Car Gen3.
 
 endif # SOC_RENESAS
+
+config RCAR_WCRC
+	tristate "Renesas R-Car Gen5 WCRC"
+	default y
+	help
+	  Enable this option to use WCRC in R-Car Gen5.
+
+#config RCAR_CRC
+#	tristate "Renesas R-Car Gen5 CRC"
+#	default y
+#	help
+#	  Enable this option to use CRC in R-Car Gen5.
+#
+#config RCAR_KCRC
+#	tristate "Renesas R-Car Gen5 KCRC"
+#	default y
+#	help
+#	  Enable this option to use KCRC in R-Car Gen5.
+
