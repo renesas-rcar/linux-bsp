@@ -76,56 +76,13 @@ static const u16 smstpcr_addr[] = {
 	0x990, 0x994, 0x998, 0x99C,
 };
 
-#define MSTP_BASE_ADDR		0xE6150000
+#define BASE_CLK		0xE6150000
 
-struct rcar_clk_ctrl_reg {
-	u8 id;
-	u32 mask;
-};
+/* Mask for IMP clock in Module Stop Control/Status Register 8 */
+#define IMPx8_MASK                     0xff000000
 
-struct rcar_clk_ctrl_pd {
-	const char *pd_name;
-	size_t regs_cnt;
-	const struct rcar_clk_ctrl_reg *regs;
-};
-
-struct rcar_clk_ctrl {
-	size_t pds_cnt;
-	const struct rcar_clk_ctrl_pd *pd;
-};
-
-/* V3H MSTP Registers List for PD clock control */
-static const struct rcar_clk_ctrl_reg v3h_clk_ctrl_pd_a3ir[] = {
-	{.id = 5, .mask = 0xbf200001},
-	{.id = 8, .mask = 0xff000000},
-};
-
-/* V3H PDs List for Clock Control */
-static const struct rcar_clk_ctrl_pd v3h_clk_ctrl_pds[] = {
-	{
-		.pd_name = "a3ir",
-		.regs_cnt = ARRAY_SIZE(v3h_clk_ctrl_pd_a3ir),
-		.regs = v3h_clk_ctrl_pd_a3ir,
-	},
-};
-
-static const struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
-	/* V3H Clock Control */
-	{
-		.pds_cnt = ARRAY_SIZE(v3h_clk_ctrl_pds),
-		.pd = v3h_clk_ctrl_pds,
-	},
-};
-
-static const struct soc_device_attribute rcar_clk_ctrl_socs[] __initconst = {
-	{.soc_id = "r8a77980"},		/* V3H SoC */
-	{ /* sentinel */ },
-};
-
-static int rcar_clk_ctrl_soc_idx = -1;
-#define IS_SOC_NEED_CLK_CTRL() \
-		((rcar_clk_ctrl_soc_idx >= 0) && \
-		 (rcar_clk_ctrl_soc_idx < ARRAY_SIZE(rcar_clk_ctrl_socs) - 1))
+/* Mask for IMP clock in Module Stop Control/Status Register 5 */
+#define IMPx5_MASK                     0xbf200001
 
 struct rcar_sysc_ch {
 	u16 chan_offs;
@@ -162,6 +119,12 @@ const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
 			| BIT(R8A7796_PD_3DG_B)),
 	},
 	{ /* sentinel */ }
+};
+
+/* Fixups for R-Car V3H revision */
+static const struct soc_device_attribute r8a77980[] __initconst = {
+		{ .soc_id = "r8a77980"},
+		{ /* sentinel */ }
 };
 
 static struct
@@ -207,6 +170,7 @@ rcar_sysc_area r8a77980_fixup_areas[3][NUM_FIXUP_AREAS] __initdata = {
 };
 
 static u32 rcar_sysc_quirks;
+static bool has_clk_ctrl;
 
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
@@ -352,7 +316,7 @@ static inline const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch)
 
 static u32 clk_addr(const u16 arr_addr[], u8 id)
 {
-	return (MSTP_BASE_ADDR + arr_addr[id]);
+	return (BASE_CLK + arr_addr[id]);
 }
 
 /* Necessary to enable/disable clock before power domain on/off */
@@ -400,24 +364,6 @@ static int  rcar_sysc_clk_ctrl(bool clk_en, u8 id, u32 mask)
 	return 0;
 }
 
-static void rcar_clk_ctrl_apply(bool enable, const char *pd_name)
-{
-	int i, j;
-	const struct rcar_clk_ctrl *ctrl = &rcar_clk_ctrl_list[rcar_clk_ctrl_soc_idx];
-	const struct rcar_clk_ctrl_pd *pd;
-
-	for (i = 0; i < ctrl->pds_cnt; ++i) {
-		pd = &ctrl->pd[i];
-		if (!strstr(pd_name, pd->pd_name))
-			continue;
-		for (j = 0; j < pd->regs_cnt; ++j) {
-			rcar_sysc_clk_ctrl(enable,
-							   pd->regs[j].id,
-							   pd->regs[j].mask);
-		}
-	}
-}
-
 static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 {
 	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
@@ -425,9 +371,11 @@ static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 	if (rcar_sysc_power_is_off(&pd->ch))
 		return 0;
 
-	/* Disable clock if need */
-	if (IS_SOC_NEED_CLK_CTRL())
-		rcar_clk_ctrl_apply(false, genpd->name);
+	/* Disable IMP clock before power off A3IR */
+	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name))) {
+		rcar_sysc_clk_ctrl(false, 5, IMPx5_MASK);
+		rcar_sysc_clk_ctrl(false, 8, IMPx8_MASK);
+	}
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, false);
@@ -440,9 +388,11 @@ static int rcar_sysc_pd_power_on(struct generic_pm_domain *genpd)
 	if (!rcar_sysc_power_is_off(&pd->ch))
 		return 0;
 
-	/* Enable clock if need */
-	if (IS_SOC_NEED_CLK_CTRL())
-		rcar_clk_ctrl_apply(true, genpd->name);
+	/* Enable IMP clock before power on A3IR */
+	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name))) {
+		rcar_sysc_clk_ctrl(true, 5, IMPx5_MASK);
+		rcar_sysc_clk_ctrl(true, 8, IMPx8_MASK);
+	}
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, true);
@@ -654,10 +604,11 @@ static int __init rcar_sysc_pd_init(void)
 	int error;
 	const struct soc_device_attribute *attr;
 
-	/* Get the index of SoC needs to control clock */
-	attr = soc_device_match(rcar_clk_ctrl_socs);
-	if (attr)
-		rcar_clk_ctrl_soc_idx = attr - rcar_clk_ctrl_socs;
+	/* Implement for R-Car V3H only */
+	if (soc_device_match(r8a77980))
+		has_clk_ctrl = true;
+	else
+		has_clk_ctrl = false;
 
 	np = of_find_matching_node_and_match(NULL, rcar_sysc_matches, &match);
 	if (!np)
