@@ -125,6 +125,58 @@ struct rcar_clk_ctrl {
 	struct rcar_clk_ctrl_pd *pd;
 };
 
+static struct rcar_clk_ctrl_reg gen3_clk_ctrl_pd_3dg[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_3DGE), .no_off_mask = BIT(MSTP_BIT_3DGE)},
+};
+
+/* M3W MSTP Registers List for PD clock control */
+static struct rcar_clk_ctrl_reg m3w_clk_ctrl_pd_a2vc0[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_iVDP1C) | BIT(MSTP_BIT_VDPB)},
+};
+
+static struct rcar_clk_ctrl_reg m3w_clk_ctrl_pd_a2vc1[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_VCPLF_iVDP1C)},
+};
+
+/* M3W PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd m3w_clk_ctrl_pds[] = {
+	{
+		.pd_name = "a2vc0",
+		.regs_cnt = ARRAY_SIZE(m3w_clk_ctrl_pd_a2vc0),
+		.regs = m3w_clk_ctrl_pd_a2vc0,
+	},
+	{
+		.pd_name = "a2vc1",
+		.regs_cnt = ARRAY_SIZE(m3w_clk_ctrl_pd_a2vc1),
+		.regs = m3w_clk_ctrl_pd_a2vc1,
+	},
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(gen3_clk_ctrl_pd_3dg),
+		.regs = gen3_clk_ctrl_pd_3dg,
+	},
+};
+
+/* M3W+ MSTP Registers List for PD clock control */
+static struct rcar_clk_ctrl_reg m3wp_clk_ctrl_pd_a2vc1[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_VCPLF_iVDP1C) | BIT(MSTP_BIT_VDPB)},
+	{.id = 6, .mask = BIT(MSTP_BIT_FCPCS)},
+};
+
+/* M3W+ PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd m3wp_clk_ctrl_pds[] = {
+	{
+		.pd_name = "a2vc1",
+		.regs_cnt = ARRAY_SIZE(m3wp_clk_ctrl_pd_a2vc1),
+		.regs = m3wp_clk_ctrl_pd_a2vc1,
+	},
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(gen3_clk_ctrl_pd_3dg),
+		.regs = gen3_clk_ctrl_pd_3dg,
+	},
+};
+
 /* V3H MSTP Registers List for PD clock control */
 static struct rcar_clk_ctrl_reg v3h_clk_ctrl_pd_a3ir[] = {
 	{.id = 5, .mask = 0xbf200001},
@@ -141,6 +193,16 @@ static struct rcar_clk_ctrl_pd v3h_clk_ctrl_pds[] = {
 };
 
 static struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
+	/* M3W Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(m3w_clk_ctrl_pds),
+		.pd = m3w_clk_ctrl_pds,
+	},
+	/* M3W+ Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(m3wp_clk_ctrl_pds),
+		.pd = m3wp_clk_ctrl_pds,
+	},
 	/* V3H Clock Control */
 	{
 		.pds_cnt = ARRAY_SIZE(v3h_clk_ctrl_pds),
@@ -149,12 +211,24 @@ static struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
 };
 
 enum _rcar_clk_ctrl_soc_idx {
+	RCAR_M3W_CLK_CTRL_IDX,
+	RCAR_M3WP_CLK_CTRL_IDX,
 	RCAR_V3H_CLK_CTRL_IDX,
 };
 
 static struct rcar_clk_ctrl *rcar_clk_ctrl;
 
 static const struct soc_device_attribute rcar_clk_ctrl_quirks_match[] __initconst = {
+	{.soc_id = "r8a7796", .revision = "ES1.0",  /* M3 v1.0 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3W_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7796", .revision = "ES1.1",  /* M3 v1.1 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3W_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7796", .revision = "ES1.2",  /* M3 v1.2 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3W_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7796", .revision = "ES1.3",  /* M3 v1.3 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3W_CLK_CTRL_IDX]},
+	{.soc_id = "r8a77961", .revision = "ES3.0", /* M3 v3.0 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3WP_CLK_CTRL_IDX]},
 	{.soc_id = "r8a77980",						/* V3H */
 		.data = (void *)&rcar_clk_ctrl_list[RCAR_V3H_CLK_CTRL_IDX]},
 	{ /* sentinel */ },
@@ -193,6 +267,10 @@ const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
 			| BIT(R8A7796_PD_A2VC0) | BIT(R8A7796_PD_A2VC1)
 			| BIT(R8A7796_PD_A3IR) | BIT(R8A7796_PD_3DG_A)
 			| BIT(R8A7796_PD_3DG_B)),
+	},
+	{
+		.soc_id = "r8a77961", .revision = "ES3.0",
+		.data = (void *)(BIT(R8A7796_PD_A3VC)),
 	},
 	{ /* sentinel */ }
 };
