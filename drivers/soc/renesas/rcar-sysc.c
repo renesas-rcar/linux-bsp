@@ -66,16 +66,99 @@
 #define NUM_FIXUP_AREAS		14
 
 /* Module Stop Control/Status Register */
-#define MSTPSR5_ADDR           0xE615003C
-#define MSTPSR8_ADDR           0xE61509A0
-#define SMSTPCR5_ADDR          0xE6150144
-#define SMSTPCR8_ADDR          0xE6150990
+static const u16 mstpsr_addr[] = {
+	0x030, 0x038, 0x040, 0x048, 0x04C, 0x03C, 0x1C0, 0x1C4,
+	0x9A0, 0x9A4, 0x9A8, 0x9AC,
+};
 
-/* Mask for IMP clock in Module Stop Control/Status Register 8 */
-#define IMPx8_MASK                     0xff000000
+static const u16 smstpcr_addr[] = {
+	0x130, 0x134, 0x138, 0x13C, 0x140, 0x144, 0x148, 0x14C,
+	0x990, 0x994, 0x998, 0x99C,
+};
 
-/* Mask for IMP clock in Module Stop Control/Status Register 5 */
-#define IMPx5_MASK                     0xbf200001
+#define MSTP_BASE_ADDR			0xE6150000
+/* MSTP Register 1 */
+#define MSTP_BIT_3DGE			12
+#define MSTP_BIT_FDP1_1			18
+#define MSTP_BIT_FDP1_0			19
+#define MSTP_BIT_iVDP1C			28
+#define MSTP_BIT_VCPLF_iVDP1C	30
+#define MSTP_BIT_VDPB			31
+/* MSTP Register 6 */
+#define MSTP_BIT_FCPVD2			1
+#define MSTP_BIT_FCPVD1			2
+#define MSTP_BIT_FCPVD0			3
+#define MSTP_BIT_FCPVB1			6
+#define MSTP_BIT_FCPVB0			7
+#define MSTP_BIT_FCPVI1			10
+#define MSTP_BIT_FCPVI0			11
+#define MSTP_BIT_FCPF1			14
+#define MSTP_BIT_FCPF0			15
+#define MSTP_BIT_FCPCS			19
+#define MSTP_BIT_VSPD2			21
+#define MSTP_BIT_VSPD1			22
+#define MSTP_BIT_VSPD0			23
+#define MSTP_BIT_VSPBC			24
+#define MSTP_BIT_VSPBD			26
+#define MSTP_BIT_VSPI1			30
+#define MSTP_BIT_VSPI0			31
+/* MSTP Register 8 */
+#define MSTP_BIT_IMR3			20
+#define MSTP_BIT_IMR2			21
+#define MSTP_BIT_IMR1			22
+#define MSTP_BIT_IMR0			23
+
+struct rcar_clk_ctrl_reg {
+	u8 id;
+	u32 mask;
+	u32 no_off_mask;
+};
+
+struct rcar_clk_ctrl_pd {
+	const char *pd_name;
+	size_t regs_cnt;
+	struct rcar_clk_ctrl_reg *regs;
+};
+
+struct rcar_clk_ctrl {
+	size_t pds_cnt;
+	struct rcar_clk_ctrl_pd *pd;
+};
+
+/* V3H MSTP Registers List for PD clock control */
+static struct rcar_clk_ctrl_reg v3h_clk_ctrl_pd_a3ir[] = {
+	{.id = 5, .mask = 0xbf200001},
+	{.id = 8, .mask = 0xff000000},
+};
+
+/* V3H PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd v3h_clk_ctrl_pds[] = {
+	{
+		.pd_name = "a3ir",
+		.regs_cnt = ARRAY_SIZE(v3h_clk_ctrl_pd_a3ir),
+		.regs = v3h_clk_ctrl_pd_a3ir,
+	},
+};
+
+static struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
+	/* V3H Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(v3h_clk_ctrl_pds),
+		.pd = v3h_clk_ctrl_pds,
+	},
+};
+
+enum _rcar_clk_ctrl_soc_idx {
+	RCAR_V3H_CLK_CTRL_IDX,
+};
+
+static struct rcar_clk_ctrl *rcar_clk_ctrl;
+
+static const struct soc_device_attribute rcar_clk_ctrl_quirks_match[] __initconst = {
+	{.soc_id = "r8a77980",						/* V3H */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_V3H_CLK_CTRL_IDX]},
+	{ /* sentinel */ },
+};
 
 struct rcar_sysc_ch {
 	u16 chan_offs;
@@ -112,12 +195,6 @@ const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
 			| BIT(R8A7796_PD_3DG_B)),
 	},
 	{ /* sentinel */ }
-};
-
-/* Fixups for R-Car V3H revision */
-static const struct soc_device_attribute r8a77980[] __initconst = {
-		{ .soc_id = "r8a77980"},
-		{ /* sentinel */ }
 };
 
 static struct
@@ -163,7 +240,6 @@ rcar_sysc_area r8a77980_fixup_areas[3][NUM_FIXUP_AREAS] __initdata = {
 };
 
 static u32 rcar_sysc_quirks;
-static bool has_clk_ctrl;
 
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
@@ -307,26 +383,26 @@ static inline const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch)
 	return container_of(sysc_ch, struct rcar_sysc_pd, ch)->genpd.name;
 }
 
-/* On V3H, necessary to enable/disable IMP clock before A3IR on/off */
-static int  rcar_sysc_a3ir_clk_ctrl(bool clk_en)
+/* Necessary to enable/disable clock before power domain on/off */
+static int  rcar_sysc_clk_ctrl(bool clk_en, u8 id, u32 mask, u32 *on_mask)
 {
-		void __iomem *mstpsr5, *mstpsr8;
-		void __iomem *smstpcr5, *smstpcr8;
+		void __iomem *mstpsr, *smstpcr;
 		u32 val, timeout = 0;
 
-		smstpcr5 = ioremap(SMSTPCR5_ADDR, 0x04);
-		smstpcr8 = ioremap(SMSTPCR8_ADDR, 0x04);
-		mstpsr5 = ioremap(MSTPSR5_ADDR, 0x04);
-		mstpsr8 = ioremap(MSTPSR8_ADDR, 0x04);
+		mstpsr = ioremap(MSTP_BASE_ADDR + mstpsr_addr[id], 0x04);
+		smstpcr = ioremap(MSTP_BASE_ADDR + smstpcr_addr[id], 0x04);
 
 		if (clk_en) {
-			val = readl(smstpcr5) & ~IMPx5_MASK;
-			writel(val, smstpcr5);
-			val = readl(smstpcr8) & ~IMPx8_MASK;
-			writel(val, smstpcr8);
+			val = readl(smstpcr);
+			/*
+			 * The *on_mask holds the bits which are 0 (ON) before
+			 * clock control ON.
+			 */
+			*on_mask = mask & ~val;
+			val &= ~mask;
+			writel(val, smstpcr);
 
-			while ((readl(mstpsr5) & IMPx5_MASK) |
-				   (readl(mstpsr8) & IMPx8_MASK)) {
+			while (readl(mstpsr) & mask) {
 				udelay(1);
 				timeout++;
 
@@ -334,13 +410,10 @@ static int  rcar_sysc_a3ir_clk_ctrl(bool clk_en)
 					break;
 			}
 		} else {
-			val = readl(smstpcr5) | IMPx5_MASK;
-			writel(val, smstpcr5);
-			val = readl(smstpcr8) | IMPx8_MASK;
-			writel(val, smstpcr8);
+			val = readl(smstpcr) | mask;
+			writel(val, smstpcr);
 
-			while (!((readl(mstpsr5) & IMPx5_MASK) &
-					(readl(mstpsr8) & IMPx8_MASK))) {
+			while (!(readl(mstpsr) & mask)) {
 				udelay(1);
 				timeout++;
 
@@ -350,17 +423,60 @@ static int  rcar_sysc_a3ir_clk_ctrl(bool clk_en)
 	}
 
 	if (timeout > 100) {
-		pr_debug("%s : Fail in %s IMP clock\n", __func__,
+		pr_debug("%s : Fail in %s clock\n", __func__,
 			 clk_en ? "enable" : "disable");
 		return -EBUSY;
 	}
 
-	iounmap(smstpcr5);
-	iounmap(smstpcr8);
-	iounmap(mstpsr5);
-	iounmap(mstpsr8);
+	iounmap(smstpcr);
+	iounmap(mstpsr);
 
 	return 0;
+}
+
+static void rcar_clk_ctrl_apply(bool enable, const char *pd_name)
+{
+	int i;
+	struct rcar_clk_ctrl_pd *pd;
+	u32 mask, on_mask;
+
+	if (!pd_name || !rcar_clk_ctrl)
+		return;
+
+	for (i = 0; i < rcar_clk_ctrl->pds_cnt; ++i) {
+		pd = &rcar_clk_ctrl->pd[i];
+		if (strstr(pd_name, pd->pd_name))
+			break;
+	}
+
+	if (i == rcar_clk_ctrl->pds_cnt)
+		return;
+
+	for (i = 0; i < pd->regs_cnt; ++i) {
+		/*
+		 * There are some devices use modules through clock framework directly
+		 * instead of PM frameworks, or some are set to another power domain for
+		 * their purpose use. It will causes conflicts with clock control.
+		 * A solution is provided which will not turn those modules OFF by the
+		 * no_off_mask field.
+		 */
+		if (!enable && pd->regs[i].no_off_mask)
+			mask = pd->regs[i].mask & ~pd->regs[i].no_off_mask;
+		else
+			mask = pd->regs[i].mask;
+
+		if (mask) {
+			rcar_sysc_clk_ctrl(enable,
+					pd->regs[i].id,
+					mask, &on_mask);
+			/*
+			 * There might be some unknown cases that modules in the need clock
+			 * control PDs are ON before clock control set. Those will be included
+			 * in the.no_off_mask field.
+			 */
+			pd->regs[i].no_off_mask |= on_mask;
+		}
+	}
 }
 
 static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
@@ -370,9 +486,10 @@ static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 	if (rcar_sysc_power_is_off(&pd->ch))
 		return 0;
 
-	/* Disable IMP clock before power off A3IR */
-	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name)))
-		rcar_sysc_a3ir_clk_ctrl(false);
+	/* Disable clock if need for V3H */
+	if (rcar_clk_ctrl &&
+		rcar_clk_ctrl == &rcar_clk_ctrl_list[RCAR_V3H_CLK_CTRL_IDX])
+		rcar_clk_ctrl_apply(false, genpd->name);
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, false);
@@ -385,9 +502,23 @@ static int rcar_sysc_pd_power_on(struct generic_pm_domain *genpd)
 	if (!rcar_sysc_power_is_off(&pd->ch))
 		return 0;
 
-	/* Enable IMP clock before power on A3IR */
-	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name)))
-		rcar_sysc_a3ir_clk_ctrl(true);
+	/* Enable clock if need */
+	if (rcar_clk_ctrl) {
+		rcar_clk_ctrl_apply(true, genpd->name);
+		/*
+		 * Originally, clock control refers the commit ff5b13e33576 which
+		 * fixed A3IR power on sequence for V3H. So leave it as original
+		 * fix.
+		 */
+		if (rcar_clk_ctrl != &rcar_clk_ctrl_list[RCAR_V3H_CLK_CTRL_IDX]) {
+			int ret;
+
+			ret = rcar_sysc_power(&pd->ch, true);
+			rcar_clk_ctrl_apply(false, genpd->name);
+
+			return ret;
+		}
+	}
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, true);
@@ -475,7 +606,12 @@ static void rcar_power_on_force(void)
 			if (!rcar_sysc_power_is_off(&pd->ch))
 				continue;
 
-			rcar_sysc_power(&pd->ch, true);
+			if (rcar_clk_ctrl) {
+				rcar_clk_ctrl_apply(true, pd->name);
+				rcar_sysc_power(&pd->ch, true);
+				rcar_clk_ctrl_apply(false, pd->name);
+			} else
+				rcar_sysc_power(&pd->ch, true);
 		}
 	}
 }
@@ -599,11 +735,10 @@ static int __init rcar_sysc_pd_init(void)
 	int error;
 	const struct soc_device_attribute *attr;
 
-	/* Implement for R-Car V3H only */
-	if (soc_device_match(r8a77980))
-		has_clk_ctrl = true;
-	else
-		has_clk_ctrl = false;
+	/* Get the index of SoC needs to control clock */
+	attr = soc_device_match(rcar_clk_ctrl_quirks_match);
+	if (attr)
+		rcar_clk_ctrl = (struct rcar_clk_ctrl *)attr->data;
 
 	np = of_find_matching_node_and_match(NULL, rcar_sysc_matches, &match);
 	if (!np)
