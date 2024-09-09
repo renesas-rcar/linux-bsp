@@ -66,17 +66,10 @@
 #define NUM_FIXUP_AREAS		14
 
 /* Module Stop Control/Status Register */
-static const u16 mstpsr_addr[] = {
-	0x030, 0x038, 0x040, 0x048, 0x04C, 0x03C, 0x1C0, 0x1C4,
-	0x9A0, 0x9A4, 0x9A8, 0x9AC,
-};
-
-static const u16 smstpcr_addr[] = {
-	0x130, 0x134, 0x138, 0x13C, 0x140, 0x144, 0x148, 0x14C,
-	0x990, 0x994, 0x998, 0x99C,
-};
-
-#define BASE_CLK		0xE6150000
+#define MSTPSR5_ADDR           0xE615003C
+#define MSTPSR8_ADDR           0xE61509A0
+#define SMSTPCR5_ADDR          0xE6150144
+#define SMSTPCR8_ADDR          0xE6150990
 
 /* Mask for IMP clock in Module Stop Control/Status Register 8 */
 #define IMPx8_MASK                     0xff000000
@@ -314,25 +307,26 @@ static inline const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch)
 	return container_of(sysc_ch, struct rcar_sysc_pd, ch)->genpd.name;
 }
 
-static u32 clk_addr(const u16 arr_addr[], u8 id)
+/* On V3H, necessary to enable/disable IMP clock before A3IR on/off */
+static int  rcar_sysc_a3ir_clk_ctrl(bool clk_en)
 {
-	return (BASE_CLK + arr_addr[id]);
-}
-
-/* Necessary to enable/disable clock before power domain on/off */
-static int  rcar_sysc_clk_ctrl(bool clk_en, u8 id, u32 mask)
-{
-		void __iomem *mstpsr, *smstpcr;
+		void __iomem *mstpsr5, *mstpsr8;
+		void __iomem *smstpcr5, *smstpcr8;
 		u32 val, timeout = 0;
 
-		mstpsr = ioremap(clk_addr(mstpsr_addr, id), 0x04);
-		smstpcr = ioremap(clk_addr(smstpcr_addr, id), 0x04);
+		smstpcr5 = ioremap(SMSTPCR5_ADDR, 0x04);
+		smstpcr8 = ioremap(SMSTPCR8_ADDR, 0x04);
+		mstpsr5 = ioremap(MSTPSR5_ADDR, 0x04);
+		mstpsr8 = ioremap(MSTPSR8_ADDR, 0x04);
 
 		if (clk_en) {
-			val = readl(smstpcr) & ~mask;
-			writel(val, smstpcr);
+			val = readl(smstpcr5) & ~IMPx5_MASK;
+			writel(val, smstpcr5);
+			val = readl(smstpcr8) & ~IMPx8_MASK;
+			writel(val, smstpcr8);
 
-			while (readl(mstpsr) & mask) {
+			while ((readl(mstpsr5) & IMPx5_MASK) |
+				   (readl(mstpsr8) & IMPx8_MASK)) {
 				udelay(1);
 				timeout++;
 
@@ -340,10 +334,13 @@ static int  rcar_sysc_clk_ctrl(bool clk_en, u8 id, u32 mask)
 					break;
 			}
 		} else {
-			val = readl(smstpcr) | mask;
-			writel(val, smstpcr);
+			val = readl(smstpcr5) | IMPx5_MASK;
+			writel(val, smstpcr5);
+			val = readl(smstpcr8) | IMPx8_MASK;
+			writel(val, smstpcr8);
 
-			while (!(readl(mstpsr) & mask)) {
+			while (!((readl(mstpsr5) & IMPx5_MASK) &
+					(readl(mstpsr8) & IMPx8_MASK))) {
 				udelay(1);
 				timeout++;
 
@@ -353,13 +350,15 @@ static int  rcar_sysc_clk_ctrl(bool clk_en, u8 id, u32 mask)
 	}
 
 	if (timeout > 100) {
-		pr_debug("%s : Fail in %s clock\n", __func__,
+		pr_debug("%s : Fail in %s IMP clock\n", __func__,
 			 clk_en ? "enable" : "disable");
 		return -EBUSY;
 	}
 
-	iounmap(smstpcr);
-	iounmap(mstpsr);
+	iounmap(smstpcr5);
+	iounmap(smstpcr8);
+	iounmap(mstpsr5);
+	iounmap(mstpsr8);
 
 	return 0;
 }
@@ -372,10 +371,8 @@ static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 		return 0;
 
 	/* Disable IMP clock before power off A3IR */
-	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name))) {
-		rcar_sysc_clk_ctrl(false, 5, IMPx5_MASK);
-		rcar_sysc_clk_ctrl(false, 8, IMPx8_MASK);
-	}
+	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name)))
+		rcar_sysc_a3ir_clk_ctrl(false);
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, false);
@@ -389,10 +386,8 @@ static int rcar_sysc_pd_power_on(struct generic_pm_domain *genpd)
 		return 0;
 
 	/* Enable IMP clock before power on A3IR */
-	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name))) {
-		rcar_sysc_clk_ctrl(true, 5, IMPx5_MASK);
-		rcar_sysc_clk_ctrl(true, 8, IMPx8_MASK);
-	}
+	if (has_clk_ctrl && (!strcmp("a3ir", genpd->name)))
+		rcar_sysc_a3ir_clk_ctrl(true);
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, true);
