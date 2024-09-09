@@ -95,11 +95,6 @@ struct rcar_clk_ctrl {
 };
 
 /* M3W+ MSTP Registers List for PD clock control */
-static const struct rcar_clk_ctrl_reg m3wp_clk_ctrl_pd_a3vc[] = {
-	{.id = 1, .mask = 0x000c0000},
-	{.id = 6, .mask = 0xc000ccce},
-};
-
 static const struct rcar_clk_ctrl_reg m3wp_clk_ctrl_pd_a2vc1[] = {
 	{.id = 1, .mask = 0xc0000000},
 	{.id = 6, .mask = 0x00080000},
@@ -111,11 +106,6 @@ static const struct rcar_clk_ctrl_reg m3wp_clk_ctrl_pd_3dge[] = {
 
 /* M3W+ PDs List for Clock Control */
 static const struct rcar_clk_ctrl_pd m3wp_clk_ctrl_pds[] = {
-	{
-		.pd_name = "a3vc",
-		.regs_cnt = ARRAY_SIZE(m3wp_clk_ctrl_pd_a3vc),
-		.regs = m3wp_clk_ctrl_pd_a3vc,
-	},
 	{
 		.pd_name = "a2vc1",
 		.regs_cnt = ARRAY_SIZE(m3wp_clk_ctrl_pd_a2vc1),
@@ -129,11 +119,6 @@ static const struct rcar_clk_ctrl_pd m3wp_clk_ctrl_pds[] = {
 };
 
 /* M3W MSTP Registers List for PD clock control */
-static const struct rcar_clk_ctrl_reg m3w_clk_ctrl_pd_a3vc[] = {
-	{.id = 1, .mask = 0x000c0000},
-	{.id = 6, .mask = 0xc5eaccce},
-};
-
 static const struct rcar_clk_ctrl_reg m3w_clk_ctrl_pd_a2vc0[] = {
 	{.id = 1, .mask = 0x90000000},
 };
@@ -148,11 +133,6 @@ static const struct rcar_clk_ctrl_reg m3w_clk_ctrl_pd_3dge[] = {
 
 /* M3W PDs List for Clock Control */
 static const struct rcar_clk_ctrl_pd m3w_clk_ctrl_pds[] = {
-	{
-		.pd_name = "a3vc",
-		.regs_cnt = ARRAY_SIZE(m3w_clk_ctrl_pd_a3vc),
-		.regs = m3w_clk_ctrl_pd_a3vc,
-	},
 	{
 		.pd_name = "a2vc0",
 		.regs_cnt = ARRAY_SIZE(m3w_clk_ctrl_pd_a2vc0),
