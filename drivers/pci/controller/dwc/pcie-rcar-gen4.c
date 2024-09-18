@@ -42,6 +42,7 @@
 #define  PHY_REF_CLKDET_EN		BIT(10)
 #define  PHY_REF_USE_PAD		BIT(2)
 
+#define	PRTLGC87		0x0B40
 #define EXPCAP3F			0x007c /* 0x007c */
 #define  CLKPM				BIT(18)
 #define PRTLGC89			0x0B70
@@ -584,14 +585,8 @@ void rcar_gen4_pcie_phy_setting(struct rcar_gen4_pcie *rcar)
 	u32 val;
 
 	/* PCIe PHY setting */
-	val = readl(rcar->phy_base + REFCLKCTRLP0);
-	val |= PHY_REF_REPEAT_CLK_EN;
-	writel(val, rcar->phy_base + REFCLKCTRLP0);
-
 	val = readl(rcar->phy_base + REFCLKCTRLP1);
-	val &= ~PHY_REF_USE_PAD; /* bit2 is default 0. */
-	writel(val, rcar->phy_base + REFCLKCTRLP1);
-	val |= PHY_REF_REPEAT_CLK_EN | PHY_REF_CLKDET_EN;
+	val |= PHY_REF_USE_PAD;
 	writel(val, rcar->phy_base + REFCLKCTRLP1);
 }
 
@@ -619,6 +614,11 @@ void rcar_gen4_pcie_initial(struct rcar_gen4_pcie *rcar, bool rc)
 	val = readl(rcar->base + PCIEERRSTS0CLR);
 	val |= ERRSTS0_EN;
 	writel(val, rcar->base + PCIEERRSTS0CLR);
+
+	/* Set AUX_CLK_FREQ to 200MHz */
+	val = dw_pcie_readl_dbi(dw, PRTLGC87);
+	val |= 0x0C8;
+	dw_pcie_writel_dbi(dw, PRTLGC87, val);
 
 	if (rc) {
 		/* Power Management */
