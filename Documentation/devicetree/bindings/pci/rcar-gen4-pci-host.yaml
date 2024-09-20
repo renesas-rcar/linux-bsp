@@ -17,7 +17,8 @@ properties:
   compatible:
     items:
       - const: renesas,r8a779f0-pcie   # R-Car S4-8
-      - const: renesas,rcar-gen4-pcie  # R-Car Gen4
+      - const: renesas,r8a779g0-pcie   # R-Car V4H
+      - const: renesas,r8a779h0-pcie   # R-Car V4M
 
   interrupts:
     maxItems: 4
