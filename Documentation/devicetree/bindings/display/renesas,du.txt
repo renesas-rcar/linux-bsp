@@ -26,6 +26,8 @@ Required Properties:
     - "renesas,du-r8a77980" for R8A77980 (R-Car V3H) compatible DU
     - "renesas,du-r8a77990" for R8A77990 (R-Car E3) compatible DU
     - "renesas,du-r8a77995" for R8A77995 (R-Car D3) compatible DU
+    - "renesas,du-r8a779g0" for R8A779G0 (R-Car V4H) compatible DU
+    - "renesas,du-r8a779h0" for R8A779H0 (R-Car V4M) compatible DU
 
   - reg: the memory-mapped I/O registers base address and length
 
@@ -94,6 +96,8 @@ corresponding to each DU output.
  R8A77980 (R-Car V3H)   DPAD 0         LVDS 0         -              -
  R8A77990 (R-Car E3)    DPAD 0         LVDS 0         LVDS 1         -
  R8A77995 (R-Car D3)    DPAD 0         LVDS 0         LVDS 1         -
+ R8A779G0 (R-Car V4H)   DSI  0         DSI  0         -              -
+ R8A779H0 (R-Car V4M)   DSI  0         -              -              -
 
 
 Example: R8A7795 (R-Car H3) ES2.0 DU
