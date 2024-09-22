@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for the R-Car V4H (R8A779G3) SoC
+ *
+ * Copyright (C) 2024 Renesas Electronics Corp.
+ */
+
+#include <dt-bindings/clock/r8a779g0-cpg-mssr.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/power/r8a779g0-sysc.h>
+#include <dt-bindings/ipmmu/rcar-ipmmu.h>
+
+/ {
+	compatible = "renesas,r8a779g3", "renesas,r8a779g0";
+};
