@@ -211,9 +211,15 @@ static void tmio_mmc_reset(struct tmio_mmc_host *host)
 {
 	/* FIXME - should we set stop clock reg here */
 	sd_ctrl_write16(host, CTL_RESET_SD, 0x0000);
-	usleep_range(10000, 11000);
+	if (in_interrupt())
+		mdelay(11);
+	else
+		usleep_range(10000, 11000);
 	sd_ctrl_write16(host, CTL_RESET_SD, 0x0001);
-	usleep_range(10000, 11000);
+	if (in_interrupt())
+		mdelay(11);
+	else
+		usleep_range(10000, 11000);
 
 	tmio_mmc_abort_dma(host);
 
@@ -878,6 +884,14 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	if (mrq->cmd->error || (mrq->data && mrq->data->error)) {
+		/*
+		 * Set clock if mmc_request data is error. This is one of
+		 * additional steps to be executed if an error is detected
+		 * in the renesas_sdhi_internal_dmac_complete() function.
+		 */
+		if (mrq->data)
+			host->set_clock(host, host->mmc->ios.clock);
+
 		tmio_mmc_ack_mmc_irqs(host, TMIO_MASK_IRQ); /* Clear all */
 		tmio_mmc_abort_dma(host);
 	}

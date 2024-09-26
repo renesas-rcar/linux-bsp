@@ -264,6 +264,22 @@ static bool renesas_sdhi_internal_dmac_complete(struct tmio_mmc_host *host)
 		dir = DMA_TO_DEVICE;
 
 	renesas_sdhi_internal_dmac_enable_dma(host, false);
+	/*
+	 * As updated in the H/W Errata for R-Car Series 3rd Generation,
+	 * before unmapping, if error occurs, execute the following steps:
+	 * - Reset SDHI controller
+	 * - Abort DMA
+	 * There are also additional steps to be executed but not required
+	 * before unmapping:
+	 * - Set bus width
+	 * - Set clock
+	 * Because setting clock requires mutex locking which is not
+	 * allowed in a tasklet. So this step will be called in the
+	 * tmio_mmc_finish_request() function.
+	 */
+	if (host->data && host->data->error)
+		host->reset(host);
+
 	dma_unmap_sg(&host->pdev->dev, host->sg_ptr, host->sg_len, dir);
 
 	if (dir == DMA_FROM_DEVICE)
