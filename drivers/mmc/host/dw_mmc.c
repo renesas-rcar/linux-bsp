@@ -1614,7 +1614,7 @@ static int dw_mci_get_ro(struct mmc_host *mmc)
 	return read_only;
 }
 
-static void dw_mci_hw_reset(struct mmc_host *mmc)
+static void dw_mci_hw_reset(struct mmc_host *mmc, bool preserve)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;

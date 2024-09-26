@@ -65,7 +65,7 @@ static const struct regmap_config meson_mx_sdhc_regmap_config = {
 	.max_register = MESON_SDHC_CLK2,
 };
 
-static void meson_mx_sdhc_hw_reset(struct mmc_host *mmc)
+static void meson_mx_sdhc_hw_reset(struct mmc_host *mmc, bool preserve)
 {
 	struct meson_mx_sdhc_host *host = mmc_priv(mmc);
 

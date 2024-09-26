@@ -497,6 +497,7 @@ static void renesas_sdhi_internal_dmac_end_dma(struct tmio_mmc_host *host)
 
 static bool renesas_sdhi_internal_dmac_dma_irq(struct tmio_mmc_host *host)
 {
+	struct renesas_sdhi *priv = host_to_priv(host);
 	unsigned int ireg, status;
 	u32 dma_dtranend1;
 
