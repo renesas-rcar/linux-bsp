@@ -217,8 +217,8 @@ static void tmio_mmc_reset(struct tmio_mmc_host *host)
 
 	tmio_mmc_abort_dma(host);
 
-	if (host->reset)
-		host->reset(host);
+	if (host->ops.hw_reset)
+		host->ops.hw_reset(host->mmc);
 
 	sd_ctrl_write32_as_16_and_16(host, CTL_IRQ_MASK, host->sdcard_irq_mask_all);
 	host->sdcard_irq_mask = host->sdcard_irq_mask_all;
@@ -1013,7 +1013,7 @@ static void tmio_mmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		tmio_mmc_power_off(host);
 		/* For R-Car Gen2+, we need to reset SDHI specific SCC */
 		if (host->pdata->flags & TMIO_MMC_MIN_RCAR2)
-			host->reset(host);
+			host->ops.hw_reset(mmc);
 		host->set_clock(host, 0);
 		break;
 	case MMC_POWER_UP:
@@ -1248,6 +1248,7 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host)
 		_host->sdcard_irq_mask_all = TMIO_MASK_ALL;
 
 	_host->set_clock(_host, 0);
+	_host->reset = tmio_mmc_reset;
 	tmio_mmc_reset(_host);
 
 	if (_host->native_hotplug)
