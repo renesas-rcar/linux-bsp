@@ -583,16 +583,6 @@ static struct rsnd_mod_ops rsnd_dmapp_ops = {
 #define RDMA_SSIU_I_S(addr, i)	(addr ##_reg + (0x8000 * i))
 #define RDMA_SSIU_O_S(addr, i)	RDMA_SSIU_I_S(addr, i)
 
-/* X5H on VDK */
-#define RDMA_SSI_I_N_VDK(addr, i)	(addr ##_reg + (0x40 * i) + 0x8)
-#define RDMA_SSI_O_N_VDK(addr, i)	(addr ##_reg + (0x40 * i) + 0xc)
-
-#define RDMA_SSIU_I_N_VDK(addr, i, j)	(addr ##_reg + (0x1000 * (i)) + (((j) / 4) * 0xA000) + (((j) % 4) * 0x400) - (0x4000 * ((i) / 9) * ((j) / 4)))
-#define RDMA_SSIU_O_N_VDK(addr, i, j)	RDMA_SSIU_I_N_VDK(addr, i, j)
-
-#define RDMA_SSIU_I_P_VDK(addr, i, j)	(addr ##_reg + (0x1000 * (i)) + (((j) / 4) * 0xA000) + (((j) % 4) * 0x400) - (0x4000 * ((i) / 9) * ((j) / 4)))
-#define RDMA_SSIU_O_P_VDK(addr, i, j)	RDMA_SSIU_I_P_VDK(addr, i, j)
-
 static dma_addr_t
 rsnd_gen2_dma_addr(struct rsnd_dai_stream *io,
 		   struct rsnd_mod *mod,
@@ -701,82 +691,6 @@ rsnd_gen4_dma_addr(struct rsnd_dai_stream *io,
 		dma_addrs[is_play].in_addr;
 }
 
-static dma_addr_t
-rsnd_gen5_dma_addr(struct rsnd_dai_stream *io,
-		   struct rsnd_mod *mod,
-		   int is_play, int is_from)
-{
-	struct rsnd_priv *priv = rsnd_io_to_priv(io);
-	struct device *dev = rsnd_priv_to_dev(priv);
-	phys_addr_t ssi_reg = rsnd_gen_get_phy_addr(priv, RSND_GEN2_SSI);
-	phys_addr_t ssiu_reg = rsnd_gen_get_phy_addr(priv, RSND_GEN2_SSIU);
-	phys_addr_t src_reg = rsnd_gen_get_phy_addr(priv, RSND_GEN2_SCU);
-	int is_ssi = !!(rsnd_io_to_mod_ssi(io) == mod) ||
-		     !!(rsnd_io_to_mod_ssiu(io) == mod);
-	int use_src = !!rsnd_io_to_mod_src(io);
-	int use_cmd = !!rsnd_io_to_mod_dvc(io) ||
-		      !!rsnd_io_to_mod_mix(io) ||
-		      !!rsnd_io_to_mod_ctu(io);
-	int id = rsnd_mod_id(mod);
-	int busif = rsnd_mod_id_sub(rsnd_io_to_mod_ssiu(io));
-	struct dma_addr {
-		dma_addr_t out_addr;
-		dma_addr_t in_addr;
-	} dma_addrs[3][2][3] = {
-		/* SRC */
-		/* Capture */
-		{{{ 0,				0 },
-		  { RDMA_SRC_O_N(src, id),	RDMA_SRC_I_P(src, id) },
-		  { RDMA_CMD_O_N(src, id),	RDMA_SRC_I_P(src, id) } },
-		 /* Playback */
-		 {{ 0,				0, },
-		  { RDMA_SRC_O_P(src, id),	RDMA_SRC_I_N(src, id) },
-		  { RDMA_CMD_O_P(src, id),	RDMA_SRC_I_N(src, id) } }
-		},
-		/* SSI */
-		/* Capture */
-		{{{ RDMA_SSI_O_N_VDK(ssi, id),		0 },
-		  { RDMA_SSIU_O_P_VDK(ssiu, id, busif),	0 },
-		  { RDMA_SSIU_O_P_VDK(ssiu, id, busif),	0 } },
-		 /* Playback */
-		 {{ 0,			RDMA_SSI_I_N_VDK(ssi, id) },
-		  { 0,			RDMA_SSIU_I_P_VDK(ssiu, id, busif) },
-		  { 0,			RDMA_SSIU_I_P_VDK(ssiu, id, busif) } }
-		},
-		/* SSIU */
-		/* Capture */
-		{{{ RDMA_SSIU_O_N_VDK(ssiu, id, busif),	0 },
-		  { RDMA_SSIU_O_P_VDK(ssiu, id, busif),	0 },
-		  { RDMA_SSIU_O_P_VDK(ssiu, id, busif),	0 } },
-		 /* Playback */
-		 {{ 0,			RDMA_SSIU_I_N_VDK(ssiu, id, busif) },
-		  { 0,			RDMA_SSIU_I_P_VDK(ssiu, id, busif) },
-		  { 0,			RDMA_SSIU_I_P_VDK(ssiu, id, busif) } } },
-	};
-
-	/*
-	 * FIXME
-	 *
-	 * We can't support SSI9-4/5/6/7, because its address is
-	 * out of calculation rule
-	 */
-	if ((id == 9) && (busif >= 4))
-		dev_err(dev, "This driver doesn't support SSI%d-%d, so far",
-			id, busif);
-
-	/* it shouldn't happen */
-	if (use_cmd && !use_src)
-		dev_err(dev, "DVC is selected without SRC\n");
-
-	/* use SSIU or SSI ? */
-	if (is_ssi && rsnd_ssi_use_busif(io))
-		is_ssi++;
-
-	return (is_from) ?
-		dma_addrs[is_ssi][is_play][use_src + use_cmd].out_addr :
-		dma_addrs[is_ssi][is_play][use_src + use_cmd].in_addr;
-}
-
 static dma_addr_t rsnd_dma_addr(struct rsnd_dai_stream *io,
 				struct rsnd_mod *mod,
 				int is_play, int is_from)
@@ -794,8 +708,6 @@ static dma_addr_t rsnd_dma_addr(struct rsnd_dai_stream *io,
 
 	if (rsnd_is_gen4(priv))
 		return rsnd_gen4_dma_addr(io, mod, is_play, is_from);
-	else if (rsnd_is_gen5(priv))
-		return rsnd_gen5_dma_addr(io, mod, is_play, is_from);
 	else
 		return rsnd_gen2_dma_addr(io, mod, is_play, is_from);
 }
