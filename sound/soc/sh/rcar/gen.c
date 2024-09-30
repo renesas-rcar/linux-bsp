@@ -216,6 +216,120 @@ static int _rsnd_gen_regmap_init(struct rsnd_priv *priv,
 }
 
 /*
+ *		Gen5
+ */
+static int rsnd_gen5_probe(struct rsnd_priv *priv)
+{
+	static const struct rsnd_regmap_field_conf conf_ssiu[] = {
+		RSND_GEN_S_REG(SSI0_MODE1,	0x8004),
+		RSND_GEN_S_REG(SSI3_MODE1,	0x38004),
+		RSND_GEN_S_REG(SSI0_MODE2,	0x8008),
+		RSND_GEN_S_REG(SSI3_MODE2,	0x8008),
+		RSND_GEN_S_REG(SSI0_CONTROL,	0x8018),
+		RSND_GEN_S_REG(SSI3_CONTROL,	0x38018),
+
+		/* FIXME: it needs SSI_MODE2/3 in the future */
+
+		RSND_GEN_M_REG(SSI_BUSIF0_MODE,		0x0,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF0_ADINR,	0x4,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF0_DALIGN,	0x20,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF1_MODE,		0x1000,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF1_ADINR,	0x1004,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF1_DALIGN,	0x1020,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF2_MODE,		0x2000,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF2_ADINR,	0x2004,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF2_DALIGN,	0x2020,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF3_MODE,		0x3000,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF3_ADINR,	0x3004,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF3_DALIGN,	0x3020,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF4_MODE,		0x4000,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF4_ADINR,	0x4004,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF4_DALIGN,	0x4020,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF5_MODE,		0x5000,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF5_ADINR,	0x5004,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF5_DALIGN,	0x5020,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF6_MODE,		0x6000,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF6_ADINR,	0x6004,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF6_DALIGN,	0x6020,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF7_MODE,		0x7000,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF7_ADINR,	0x7004,	0x10000),
+		RSND_GEN_M_REG(SSI_BUSIF7_DALIGN,	0x7020,	0x10000),
+
+		/* SSI_MODE4 was SSI_MODE on R-Car gen2/3/4 */
+		RSND_GEN_M_REG(SSI_MODE4,		0x8010,	0x10000),
+
+		RSND_GEN_M_REG(SSI_CTRL0,		0x10,	0x10000),
+		RSND_GEN_M_REG(SSI_CTRL1,		0x1010,	0x10000),
+		RSND_GEN_M_REG(SSI_CTRL2,		0x2010,	0x10000),
+		RSND_GEN_M_REG(SSI_CTRL3,		0x3010,	0x10000),
+		RSND_GEN_M_REG(SSI_CTRL4,		0x4010,	0x10000),
+		RSND_GEN_M_REG(SSI_CTRL5,		0x5010,	0x10000),
+		RSND_GEN_M_REG(SSI_CTRL6,		0x6010,	0x10000),
+		RSND_GEN_M_REG(SSI_CTRL7,		0x7010,	0x10000),
+
+		RSND_GEN_M_REG(SSI_STATUS,		0x8040,	0x10000),
+
+		RSND_GEN_M_REG(SSI_INT_ENABLE,		0x8090,	0x10000),
+
+		/* SSI registers are now here */
+		RSND_GEN_M_REG(SSICR,			0x9000,	0x10000),
+		RSND_GEN_M_REG(SSISR,			0x9004,	0x10000),
+		RSND_GEN_M_REG(SSITDR,			0x9008,	0x10000),
+		RSND_GEN_M_REG(SSIRDR,			0x900c,	0x10000),
+		RSND_GEN_M_REG(SSIWSR,			0x9020,	0x10000),
+
+		/* AUDIO_CLK_SEL register is now here */
+		RSND_GEN_M_REG(SSIU_AUDIO_CLK_SEL,	0xa000,	0x10000),
+
+		RSND_GEN_S_REG(SSI9_BUSIF0_MODE,	0x90000),
+		RSND_GEN_S_REG(SSI9_BUSIF0_ADINR,	0x90004),
+		RSND_GEN_S_REG(SSI9_BUSIF0_DALIGN,	0x90020),
+		RSND_GEN_S_REG(SSI9_BUSIF1_MODE,	0x91000),
+		RSND_GEN_S_REG(SSI9_BUSIF1_ADINR,	0x91004),
+		RSND_GEN_S_REG(SSI9_BUSIF1_DALIGN,	0x91020),
+		RSND_GEN_S_REG(SSI9_BUSIF2_MODE,	0x92000),
+		RSND_GEN_S_REG(SSI9_BUSIF2_ADINR,	0x92004),
+		RSND_GEN_S_REG(SSI9_BUSIF2_DALIGN,	0x92020),
+		RSND_GEN_S_REG(SSI9_BUSIF3_MODE,	0x93000),
+		RSND_GEN_S_REG(SSI9_BUSIF3_ADINR,	0x93004),
+		RSND_GEN_S_REG(SSI9_BUSIF3_DALIGN,	0x93020),
+		RSND_GEN_S_REG(SSI9_BUSIF4_MODE,	0x94000),
+		RSND_GEN_S_REG(SSI9_BUSIF4_ADINR,	0x94004),
+		RSND_GEN_S_REG(SSI9_BUSIF4_DALIGN,	0x94020),
+		RSND_GEN_S_REG(SSI9_BUSIF5_MODE,	0x95000),
+		RSND_GEN_S_REG(SSI9_BUSIF5_ADINR,	0x95004),
+		RSND_GEN_S_REG(SSI9_BUSIF5_DALIGN,	0x95020),
+		RSND_GEN_S_REG(SSI9_BUSIF6_MODE,	0x96000),
+		RSND_GEN_S_REG(SSI9_BUSIF6_ADINR,	0x96004),
+		RSND_GEN_S_REG(SSI9_BUSIF6_DALIGN,	0x96020),
+		RSND_GEN_S_REG(SSI9_BUSIF7_MODE,	0x97000),
+		RSND_GEN_S_REG(SSI9_BUSIF7_ADINR,	0x97004),
+		RSND_GEN_S_REG(SSI9_BUSIF7_DALIGN,	0x97020),
+	};
+	static const struct rsnd_regmap_field_conf conf_scu[] = {
+	};
+	static const struct rsnd_regmap_field_conf conf_adg[] = {
+		RSND_GEN_S_REG(BRRA,		0x00),
+		RSND_GEN_S_REG(BRRB,		0x04),
+		RSND_GEN_S_REG(BRGCKR,		0x08),
+		RSND_GEN_S_REG(DIV_EN,		0x30),
+	};
+	int ret_ssiu;
+	int ret_scu;
+	int ret_adg;
+
+	ret_ssiu = rsnd_gen_regmap_init(priv, 10, RSND_GEN5_SSIU, "ssiu", conf_ssiu);
+	ret_scu  = rsnd_gen_regmap_init(priv, 10, RSND_GEN5_SCU,  "scu",  conf_scu);
+	ret_adg  = rsnd_gen_regmap_init(priv, 10, RSND_GEN5_ADG,  "adg",  conf_adg);
+	if (ret_ssiu < 0 ||
+	    ret_scu  < 0 ||
+	    ret_adg  < 0)
+		return ret_ssiu | ret_scu | ret_adg;
+
+	return 0;
+}
+
+/*
  *		Gen4
  */
 static int rsnd_gen4_probe(struct rsnd_priv *priv)
@@ -564,11 +678,12 @@ int rsnd_gen_probe(struct rsnd_priv *priv)
 	if (rsnd_is_gen1(priv))
 		ret = rsnd_gen1_probe(priv);
 	else if (rsnd_is_gen2(priv) ||
-		 rsnd_is_gen3(priv) ||
-		 rsnd_is_gen5(priv))
+		 rsnd_is_gen3(priv))
 		ret = rsnd_gen2_probe(priv);
 	else if (rsnd_is_gen4(priv))
 		ret = rsnd_gen4_probe(priv);
+	else if (rsnd_is_gen5(priv))
+		ret = rsnd_gen5_probe(priv);
 
 	if (ret < 0)
 		dev_err(dev, "unknown generation R-Car sound device\n");
