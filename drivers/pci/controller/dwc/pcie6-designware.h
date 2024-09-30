@@ -35,6 +35,7 @@
 #include <linux/resource.h>
 #include <linux/types.h>
 #include <linux/regmap.h>
+#include <linux/module.h>
 
 #include "../../pci.h"
 #include <linux/pci-epc.h>

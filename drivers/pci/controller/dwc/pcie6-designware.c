@@ -33,9 +33,10 @@
 #include <linux/regmap.h>
 #include <linux/pci-epc.h>
 #include <linux/pci-epf.h>
+#include <linux/module.h>
 
 #include "../../pci.h"
-#include "pcie6-designware-gen5.h"
+#include "pcie6-designware.h"
 
 /*** PCIe Designware Core ***/
 
@@ -76,6 +77,7 @@ u8 dw_pcie6_find_capability(struct dw_pcie6 *pci, u8 cap)
 
 	return __dw_pcie6_find_next_cap(pci, next_cap_ptr, cap);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_find_capability);
 
 static u16 dw_pcie6_find_next_ext_capability(struct dw_pcie6 *pci, u16 start,
 					    u8 cap)
@@ -116,6 +118,7 @@ u16 dw_pcie6_find_ext_capability(struct dw_pcie6 *pci, u8 cap)
 {
 	return dw_pcie6_find_next_ext_capability(pci, 0, cap);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_find_ext_capability);
 
 int dw_pcie6_read(void __iomem *addr, int size, u32 *val)
 {
@@ -137,6 +140,7 @@ int dw_pcie6_read(void __iomem *addr, int size, u32 *val)
 
 	return PCIBIOS_SUCCESSFUL;
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_read);
 
 int dw_pcie6_write(void __iomem *addr, int size, u32 val)
 {
@@ -154,6 +158,7 @@ int dw_pcie6_write(void __iomem *addr, int size, u32 val)
 
 	return PCIBIOS_SUCCESSFUL;
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_write);
 
 u32 dw_pcie6_read_dbi(struct dw_pcie6 *pci, u32 reg, size_t size)
 {
@@ -169,6 +174,7 @@ u32 dw_pcie6_read_dbi(struct dw_pcie6 *pci, u32 reg, size_t size)
 
 	return val;
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_read_dbi);
 
 void dw_pcie6_write_dbi(struct dw_pcie6 *pci, u32 reg, size_t size, u32 val)
 {
@@ -183,6 +189,7 @@ void dw_pcie6_write_dbi(struct dw_pcie6 *pci, u32 reg, size_t size, u32 val)
 	if (ret)
 		dev_err(pci->dev, "Write DBI address failed\n");
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_write_dbi);
 
 void dw_pcie6_write_dbi2(struct dw_pcie6 *pci, u32 reg, size_t size, u32 val)
 {
@@ -500,6 +507,7 @@ int dw_pcie6_wait_for_link(struct dw_pcie6 *pci)
 
 	return -ETIMEDOUT;
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_wait_for_link);
 
 int dw_pcie6_link_up(struct dw_pcie6 *pci)
 {
@@ -512,6 +520,7 @@ int dw_pcie6_link_up(struct dw_pcie6 *pci)
 	return ((val & PCIE_PORT_DEBUG1_LINK_UP) &&
 		(!(val & PCIE_PORT_DEBUG1_LINK_IN_TRAINING)));
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_link_up);
 
 void dw_pcie6_upconfig_setup(struct dw_pcie6 *pci)
 {
@@ -521,6 +530,7 @@ void dw_pcie6_upconfig_setup(struct dw_pcie6 *pci)
 	val |= PORT_MLTI_UPCFG_SUPPORT;
 	dw_pcie6_writel_dbi(pci, PCIE_PORT_MULTI_LANE_CTRL, val);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_upconfig_setup);
 
 static void dw_pcie6_link_set_max_speed(struct dw_pcie6 *pci, u32 link_gen)
 {
@@ -588,7 +598,7 @@ void dw_pcie6_setup(struct dw_pcie6 *pci)
 		if (IS_ERR(pci->atu_base))
 			pci->atu_base = pci->dbi_base + DEFAULT_DBI_ATU_OFFSET;
 	}
-	dev_dbg(pci->dev, "iATU unroll: %s\n", pci->iatu_unroll_enabled ?
+	dev_info(pci->dev, "iATU unroll: %s\n", pci->iatu_unroll_enabled ?
 		"enabled" : "disabled");
 
 	if (pci->link_gen > 0)
@@ -941,6 +951,7 @@ void dw_pcie6_msi_init(struct pcie_port *pp)
 	dw_pcie6_writel_dbi(pci, PCIE_MSI_ADDR_LO, lower_32_bits(msi_target));
 	dw_pcie6_writel_dbi(pci, PCIE_MSI_ADDR_HI, upper_32_bits(msi_target));
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_msi_init);
 
 int rcar_gen5_pcie6_get_link_speed(struct device_node *node)
 {
@@ -1090,6 +1101,7 @@ err_free_msi:
 		dw_pcie6_free_msi(pp);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_host_init);
 
 void dw_pcie6_host_deinit(struct pcie_port *pp)
 {
@@ -1098,6 +1110,7 @@ void dw_pcie6_host_deinit(struct pcie_port *pp)
 	if (pci_msi_enabled() && !pp->ops->msi_host_init)
 		dw_pcie6_free_msi(pp);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_host_deinit);
 
 static void __iomem *dw_pcie6_other_conf_map_bus(struct pci_bus *bus,
 						unsigned int devfn, int where)
@@ -1133,6 +1146,7 @@ static void __iomem *dw_pcie6_other_conf_map_bus(struct pci_bus *bus,
 
 	return pp->va_cfg0_base + where;
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_own_conf_map_bus);
 
 static int dw_pcie6_rd_other_conf(struct pci_bus *bus, unsigned int devfn,
 				 int where, int size, u32 *val)
@@ -1276,6 +1290,7 @@ void dw_pcie6_setup_rc(struct pcie_port *pp)
 
 	dw_pcie6_dbi_ro_wr_dis(pci);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_setup_rc);
 
 /*** PCIe Designware Endpoint ***/
 
@@ -1285,6 +1300,7 @@ void dw_pcie6_ep_linkup(struct dw_pcie6_ep *ep)
 
 	pci_epc_linkup(epc);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_linkup);
 
 void dw_pcie6_ep_init_notify(struct dw_pcie6_ep *ep)
 {
@@ -1292,6 +1308,7 @@ void dw_pcie6_ep_init_notify(struct dw_pcie6_ep *ep)
 
 	pci_epc_init_notify(epc);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_init_notify);
 
 struct dw_pcie6_ep_func *
 dw_pcie6_ep_get_func_from_ep(struct dw_pcie6_ep *ep, u8 func_no)
@@ -1345,6 +1362,7 @@ void dw_pcie6_ep_reset_bar(struct dw_pcie6 *pci, enum pci_barno bar)
 	for (func_no = 0; func_no < funcs; func_no++)
 		__dw_pcie6_ep_reset_bar(pci, func_no, bar, 0);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_reset_bar);
 
 static u8 __dw_pcie6_ep_find_next_cap(struct dw_pcie6_ep *ep, u8 func_no,
 		u8 cap_ptr, u8 cap)
@@ -1748,6 +1766,7 @@ int dw_pcie6_ep_raise_legacy_irq(struct dw_pcie6_ep *ep, u8 func_no)
 
 	return -EINVAL;
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_raise_legacy_irq);
 
 int dw_pcie6_ep_raise_msi_irq(struct dw_pcie6_ep *ep, u8 func_no,
 			     u8 interrupt_num)
@@ -1799,6 +1818,7 @@ int dw_pcie6_ep_raise_msi_irq(struct dw_pcie6_ep *ep, u8 func_no,
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_raise_msi_irq);
 
 int dw_pcie6_ep_raise_msix_irq_doorbell(struct dw_pcie6_ep *ep, u8 func_no,
 				       u16 interrupt_num)
@@ -1877,6 +1897,7 @@ void dw_pcie6_ep_exit(struct dw_pcie6_ep *ep)
 
 	pci_epc_mem_exit(epc);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_exit);
 
 static unsigned int dw_pcie6_ep_find_ext_capability(struct dw_pcie6 *pci, int cap)
 {
@@ -1932,6 +1953,7 @@ int dw_pcie6_ep_init_complete(struct dw_pcie6_ep *ep)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_init_complete);
 
 int dw_pcie6_ep_init(struct dw_pcie6_ep *ep)
 {
@@ -2061,240 +2083,4 @@ err_exit_epc_mem:
 
 	return ret;
 }
-
-/*** PCIe Designware Platform ***/
-
-static const struct of_device_id dw_plat_pcie6_of_match[];
-
-static int dw_plat_pcie6_host_init(struct pcie_port *pp)
-{
-	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
-
-	dw_pcie6_setup_rc(pp);
-	dw_pcie6_wait_for_link(pci);
-	dw_pcie6_msi_init(pp);
-
-	return 0;
-}
-
-void dw_plat_set_num_vectors(struct pcie_port *pp)
-{
-	pp->num_vectors = MAX_MSI_IRQS;
-}
-
-static const struct dw_pcie6_host_ops dw_plat_pcie6_host_ops = {
-	.host_init = dw_plat_pcie6_host_init,
-	.set_num_vectors = dw_plat_set_num_vectors,
-};
-
-static int dw_plat_pcie6_establish_link(struct dw_pcie6 *pci)
-{
-	return 0;
-}
-
-static const struct dw_pcie6_ops dw_pcie6_ops = {
-	.start_link = dw_plat_pcie6_establish_link,
-};
-
-static void dw_plat_pcie6_ep_init(struct dw_pcie6_ep *ep)
-{
-	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-	enum pci_barno bar;
-
-	for (bar = 0; bar < PCI_STD_NUM_BARS; bar++)
-		dw_pcie6_ep_reset_bar(pci, bar);
-}
-
-static int dw_plat_pcie6_ep_raise_irq(struct dw_pcie6_ep *ep, u8 func_no,
-				     enum pci_epc_irq_type type,
-				     u16 interrupt_num)
-{
-	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-
-	switch (type) {
-	case PCI_EPC_IRQ_LEGACY:
-		return dw_pcie6_ep_raise_legacy_irq(ep, func_no);
-	case PCI_EPC_IRQ_MSI:
-		return dw_pcie6_ep_raise_msi_irq(ep, func_no, interrupt_num);
-	case PCI_EPC_IRQ_MSIX:
-		return dw_pcie6_ep_raise_msix_irq(ep, func_no, interrupt_num);
-	default:
-		dev_err(pci->dev, "UNKNOWN IRQ type\n");
-	}
-
-	return 0;
-}
-
-static const struct pci_epc_features dw_plat_pcie6_epc_features = {
-	.linkup_notifier = false,
-	.msi_capable = true,
-	.msix_capable = true,
-};
-
-static const struct pci_epc_features*
-dw_plat_pcie6_get_features(struct dw_pcie6_ep *ep)
-{
-	return &dw_plat_pcie6_epc_features;
-}
-
-static const struct dw_pcie6_ep_ops pcie_ep_ops = {
-	.ep_init = dw_plat_pcie6_ep_init,
-	.raise_irq = dw_plat_pcie6_ep_raise_irq,
-	.get_features = dw_plat_pcie6_get_features,
-};
-
-static int dw_plat_add_pcie_port(struct dw_plat_pcie6 *dw_plat_pcie6,
-				 struct platform_device *pdev)
-{
-	struct dw_pcie6 *pci = dw_plat_pcie6->pci;
-	struct pcie_port *pp = &pci->pp;
-	struct device *dev = &pdev->dev;
-	int ret;
-
-	pp->irq = platform_get_irq(pdev, 1);
-	if (pp->irq < 0)
-		return pp->irq;
-
-	if (IS_ENABLED(CONFIG_PCI_MSI)) {
-		pp->msi_irq = platform_get_irq(pdev, 0);
-		if (pp->msi_irq < 0)
-			return pp->msi_irq;
-	}
-
-	pp->ops = &dw_plat_pcie6_host_ops;
-
-	ret = dw_pcie6_host_init(pp);
-	if (ret) {
-		dev_err(dev, "Failed to initialize host\n");
-		return ret;
-	}
-
-	return 0;
-}
-
-int dw_plat_add_pcie_ep(struct dw_plat_pcie6 *dw_plat_pcie6,
-			struct platform_device *pdev)
-{
-	int ret;
-	struct dw_pcie6_ep *ep;
-	struct resource *res;
-	struct device *dev = &pdev->dev;
-	struct dw_pcie6 *pci = dw_plat_pcie6->pci;
-
-	ep = &pci->ep;
-	ep->ops = &pcie_ep_ops;
-
-	pci->dbi_base2 = devm_platform_ioremap_resource_byname(pdev, "dbi2");
-	if (IS_ERR(pci->dbi_base2))
-		return PTR_ERR(pci->dbi_base2);
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "addr_space");
-	if (!res)
-		return -EINVAL;
-
-	ep->phys_base = res->start;
-	ep->addr_size = resource_size(res);
-
-	ret = dw_pcie6_ep_init(ep);
-	if (ret) {
-		dev_err(dev, "Failed to initialize endpoint\n");
-		return ret;
-	}
-	return 0;
-}
-
-static int dw_plat_pcie6_probe(struct platform_device *pdev)
-{
-	struct device *dev = &pdev->dev;
-	struct dw_plat_pcie6 *dw_plat_pcie6;
-	struct dw_pcie6 *pci;
-	struct resource *res;  /* Resource from DT */
-	int ret;
-	const struct of_device_id *match;
-	const struct dw_plat_pcie6_of_data *data;
-	enum dw_pcie6_device_mode mode;
-
-	match = of_match_device(dw_plat_pcie6_of_match, dev);
-	if (!match)
-		return -EINVAL;
-
-	data = (struct dw_plat_pcie6_of_data *)match->data;
-	mode = (enum dw_pcie6_device_mode)data->mode;
-
-	dw_plat_pcie6 = devm_kzalloc(dev, sizeof(*dw_plat_pcie6), GFP_KERNEL);
-	if (!dw_plat_pcie6)
-		return -ENOMEM;
-
-	pci = devm_kzalloc(dev, sizeof(*pci), GFP_KERNEL);
-	if (!pci)
-		return -ENOMEM;
-
-	pci->dev = dev;
-	pci->ops = &dw_pcie6_ops;
-
-	dw_plat_pcie6->pci = pci;
-	dw_plat_pcie6->mode = mode;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
-	if (!res)
-		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-
-	pci->dbi_base = devm_ioremap_resource(dev, res);
-	if (IS_ERR(pci->dbi_base))
-		return PTR_ERR(pci->dbi_base);
-
-	platform_set_drvdata(pdev, dw_plat_pcie6);
-
-	switch (dw_plat_pcie6->mode) {
-	case DW_PCIE_RC_TYPE:
-		if (!IS_ENABLED(CONFIG_PCIE6_DW_HOST))
-			return -ENODEV;
-
-		ret = dw_plat_add_pcie_port(dw_plat_pcie6, pdev);
-		if (ret < 0)
-			return ret;
-		break;
-	case DW_PCIE_EP_TYPE:
-		if (!IS_ENABLED(CONFIG_PCIE6_DW_EP))
-			return -ENODEV;
-
-		ret = dw_plat_add_pcie_ep(dw_plat_pcie6, pdev);
-		if (ret < 0)
-			return ret;
-		break;
-	default:
-		dev_err(dev, "INVALID device type %d\n", dw_plat_pcie6->mode);
-	}
-
-	return 0;
-}
-
-static const struct dw_plat_pcie6_of_data dw_plat_pcie6_rc_of_data = {
-	.mode = DW_PCIE_RC_TYPE,
-};
-
-static const struct dw_plat_pcie6_of_data dw_plat_pcie6_ep_of_data = {
-	.mode = DW_PCIE_EP_TYPE,
-};
-
-static const struct of_device_id dw_plat_pcie6_of_match[] = {
-	{
-		.compatible = "renesas,rcar-gen5-pcie6",
-		.data = &dw_plat_pcie6_rc_of_data,
-	},
-	{
-		.compatible = "renesas,rcar-gen5-pcie6-ep",
-		.data = &dw_plat_pcie6_ep_of_data,
-	},
-	{},
-};
-
-static struct platform_driver dw_plat_pcie6_driver = {
-	.driver = {
-		.name	= "pcie6-rcar-gen5",
-		.of_match_table = dw_plat_pcie6_of_match,
-		.suppress_bind_attrs = true,
-	},
-	.probe = dw_plat_pcie6_probe,
-};
-builtin_platform_driver(dw_plat_pcie6_driver);
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_init);
