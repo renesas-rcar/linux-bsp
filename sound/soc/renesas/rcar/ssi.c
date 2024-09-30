@@ -459,6 +459,17 @@ init_end:
 static void rsnd_ssi_register_setup(struct rsnd_mod *mod)
 {
 	struct rsnd_ssi *ssi = rsnd_mod_to_ssi(mod);
+	struct rsnd_priv *priv = rsnd_mod_to_priv(mod);
+
+	/*
+	 *  Gen5: SSIWSR.CONT can only be set in master mode
+	 *  This step is to avoid warning on VPF env
+	 */
+	if (rsnd_is_gen5(priv))
+		rsnd_mod_bset(mod, SSICR, 0xc000,	ssi->cr_own	|
+							ssi->cr_clk	|
+							ssi->cr_mode	|
+							ssi->cr_en);
 
 	rsnd_mod_write(mod, SSIWSR,	ssi->wsr);
 	rsnd_mod_write(mod, SSICR,	ssi->cr_own	|
@@ -663,7 +674,10 @@ static int rsnd_ssi_irq(struct rsnd_mod *mod,
 		}
 	}
 
-	rsnd_mod_write(mod, SSI_INT_ENABLE, val);
+	if (rsnd_is_gen5(priv))
+		rsnd_mod_bset(mod, SSI_INT_ENABLE, 0x0f000000, val);
+	else
+		rsnd_mod_write(mod, SSI_INT_ENABLE, val);
 
 	return 0;
 }
@@ -700,7 +714,9 @@ static void __rsnd_ssi_interrupt(struct rsnd_mod *mod,
 		stop = true;
 	}
 
-	stop |= rsnd_ssiu_busif_err_status_clear(mod);
+	stop |= rsnd_is_gen5(priv) ?
+		rsnd_ssiu_busif_err_status_clear_gen5(mod) :
+		rsnd_ssiu_busif_err_status_clear(mod);
 
 	rsnd_ssi_status_clear(mod);
 rsnd_ssi_interrupt_out:
