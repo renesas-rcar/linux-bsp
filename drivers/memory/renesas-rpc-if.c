@@ -273,6 +273,11 @@ static const struct rpcif_info rpcif_info_gen4 = {
 	.strtim = 15,
 };
 
+static const struct rpcif_info rpcif_info_gen5 = {
+	.type = RPCIF_RCAR_GEN5,
+	.strtim = 15,
+};
+
 static const struct soc_device_attribute rpcif_quirks_match[]  = {
 	{ .soc_id = "r8a7795", .revision = "ES1.*", .data = &rpcif_info_r8a7795_es1 },
 	{ .soc_id = "r8a7796", .revision = "ES1.*", .data = &rpcif_info_r8a7796_es1 },
@@ -349,7 +354,7 @@ void rpcif_hw_init(struct rpcif *rpc, bool hyperflash)
 	if (rpc->type == RPCIF_RCAR_GEN3)
 		regmap_update_bits(rpc->regmap, RPCIF_PHYCNT,
 				   RPCIF_PHYCNT_STRTIM(7), RPCIF_PHYCNT_STRTIM(rpc->strtim));
-	else if (rpc->type == RPCIF_RCAR_GEN4)
+	else if ((rpc->type == RPCIF_RCAR_GEN4) || (rpc->type == RPCIF_RCAR_GEN5))
 		regmap_update_bits(rpc->regmap, RPCIF_PHYCNT,
 				   RPCIF_PHYCNT_STRTIM(15), RPCIF_PHYCNT_STRTIM(rpc->strtim));
 
@@ -751,6 +756,7 @@ static int rpcif_remove(struct platform_device *pdev)
 static const struct of_device_id rpcif_of_match[] = {
 	{ .compatible = "renesas,rcar-gen3-rpc-if", .data = &rpcif_info_gen3},
 	{ .compatible = "renesas,rcar-gen4-rpc-if", .data = &rpcif_info_gen4 },
+	{ .compatible = "renesas,rcar-gen5-rpc-if", .data = &rpcif_info_gen5 },
 	{},
 };
 MODULE_DEVICE_TABLE(of, rpcif_of_match);
