@@ -622,6 +622,92 @@ rsnd_gen4_dma_addr(struct rsnd_dai_stream *io, struct rsnd_mod *mod,
 	return RDMA_SSI_SDMC(addr, busif);
 }
 
+/*
+ *	Gen5 DMA read/write register offset
+ *
+ *	RSND_xxx_I_N_VDK	for Audio DMAC input
+ *	RSND_xxx_O_N_VDK	for Audio DMAC output
+ *	RSND_xxx_I_P_VDK	for Audio DMAC peri peri input
+ *	RSND_xxx_O_P_VDK	for Audio DMAC peri peri output
+ *
+ *	ex) R-Car X5H case
+ *	      mod        / DMAC in    / DMAC out   / DMAC PP in / DMAC pp out
+ *	SSI : 0xec549000
+ *	SSIU: 0xec540000 / 0xec100000 / 0xec100000 / 0xec400000 / 0xec400000
+ *	SCU : 0xec500000 / TBU
+ *	CMD : 0xec500000 / TBU
+ */
+#define RDMA_SSIU_I_N_VDK(addr, i, j)	(addr ##_reg - 0x00440000 + (0x8000 * (i)) + (0x1000 * (j)))
+#define RDMA_SSIU_O_N_VDK(addr, i, j)	RDMA_SSIU_I_N_VDK(addr, i, j)
+
+#define RDMA_SSIU_I_P_VDK(addr, i, j)	(addr ##_reg - 0x00441000 + (0x1000 * (i)) + (((j) / 4) * 0x9000) + (((j) % 4) * 0x400) - (0x4000 * ((i) / 9) * ((j) / 4)))
+#define RDMA_SSIU_O_P_VDK(addr, i, j)	RDMA_SSIU_I_P_VDK(addr, i, j)
+
+static dma_addr_t
+rsnd_gen5_dma_addr(struct rsnd_dai_stream *io,
+		   struct rsnd_mod *mod,
+		   int is_play, int is_from)
+{
+	struct rsnd_priv *priv = rsnd_io_to_priv(io);
+	struct device *dev = rsnd_priv_to_dev(priv);
+	phys_addr_t ssiu_reg = rsnd_gen_get_phy_addr(priv, RSND_BASE_SSIU);
+	phys_addr_t src_reg = rsnd_gen_get_phy_addr(priv, RSND_BASE_SCU);
+	int is_ssi = !!(rsnd_io_to_mod_ssi(io) == mod) ||
+		     !!(rsnd_io_to_mod_ssiu(io) == mod);
+	int use_src = !!rsnd_io_to_mod_src(io);
+	int use_cmd = !!rsnd_io_to_mod_dvc(io) ||
+		      !!rsnd_io_to_mod_mix(io) ||
+		      !!rsnd_io_to_mod_ctu(io);
+	int id = rsnd_mod_id(mod);
+	int busif = rsnd_mod_id_sub(rsnd_io_to_mod_ssiu(io));
+	struct dma_addr {
+		dma_addr_t out_addr;
+		dma_addr_t in_addr;
+	} dma_addrs[2][2][3] = {
+		/* SRC */
+		/* Capture */
+		{{{ 0,				0 },
+		  { RDMA_SRC_O_N(src, id),	RDMA_SRC_I_P(src, id) },
+		  { RDMA_CMD_O_N(src, id),	RDMA_SRC_I_P(src, id) } },
+		 /* Playback */
+		 {{ 0,				0, },
+		  { RDMA_SRC_O_P(src, id),	RDMA_SRC_I_N(src, id) },
+		  { RDMA_CMD_O_P(src, id),	RDMA_SRC_I_N(src, id) } }
+		},
+		/* SSIU */
+		/* Capture */
+		{{{ RDMA_SSIU_O_N_VDK(ssiu, id, busif),	0 },
+		  { RDMA_SSIU_O_P_VDK(ssiu, id, busif),	0 },
+		  { RDMA_SSIU_O_P_VDK(ssiu, id, busif),	0 } },
+		 /* Playback */
+		 {{ 0,			RDMA_SSIU_I_N_VDK(ssiu, id, busif) },
+		  { 0,			RDMA_SSIU_I_P_VDK(ssiu, id, busif) },
+		  { 0,			RDMA_SSIU_I_P_VDK(ssiu, id, busif) } } },
+	};
+
+	/*
+	 * FIXME
+	 *
+	 * We can't support SSI9-4/5/6/7, because its address is
+	 * out of calculation rule
+	 */
+	if ((id == 9) && (busif >= 4))
+		dev_err(dev, "This driver doesn't support SSI%d-%d, so far",
+			id, busif);
+
+	/* it shouldn't happen */
+	if (use_cmd && !use_src)
+		dev_err(dev, "DVC is selected without SRC\n");
+
+	/* it shouldn't happen either */
+	if (is_ssi && !rsnd_ssi_use_busif(io))
+		dev_err(dev, "SSI DMA without BUSIF is not supported\n");
+
+	return (is_from) ?
+		dma_addrs[is_ssi][is_play][use_src + use_cmd].out_addr :
+		dma_addrs[is_ssi][is_play][use_src + use_cmd].in_addr;
+}
+
 static dma_addr_t rsnd_dma_addr(struct rsnd_dai_stream *io,
 				struct rsnd_mod *mod,
 				int is_play, int is_from)
@@ -638,6 +724,8 @@ static dma_addr_t rsnd_dma_addr(struct rsnd_dai_stream *io,
 		return 0;
 	else if (rsnd_is_gen4(priv))
 		return rsnd_gen4_dma_addr(io, mod, is_play, is_from);
+	else if (rsnd_is_gen5(priv))
+		return rsnd_gen5_dma_addr(io, mod, is_play, is_from);
 	else
 		return rsnd_gen2_dma_addr(io, mod, is_play, is_from);
 }

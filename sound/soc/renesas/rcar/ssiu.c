@@ -49,11 +49,11 @@ static const int gen4_id[] = { 0 };
 /* enable busif buffer over/under run interrupt. */
 #define rsnd_ssiu_busif_err_irq_enable(mod)  rsnd_ssiu_busif_err_irq_ctrl(mod, 1)
 #define rsnd_ssiu_busif_err_irq_disable(mod) rsnd_ssiu_busif_err_irq_ctrl(mod, 0)
-static void rsnd_ssiu_busif_err_irq_ctrl(struct rsnd_mod *mod, int enable)
+
+static void rsnd_ssiu_busif_err_irq_ctrl_gen5(struct rsnd_mod *mod, int enable)
 {
 	int id = rsnd_mod_id(mod);
-	int shift, offset;
-	int i;
+	u32 val;
 
 	switch (id) {
 	case 0:
@@ -61,27 +61,64 @@ static void rsnd_ssiu_busif_err_irq_ctrl(struct rsnd_mod *mod, int enable)
 	case 2:
 	case 3:
 	case 4:
-		shift  = id;
-		offset = 0;
-		break;
 	case 9:
-		shift  = 1;
-		offset = 1;
+		val = 0xff00ff;
+		break;
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+		val = 0x10001;
 		break;
 	default:
 		return;
 	}
 
-	for (i = 0; i < 4; i++) {
-		enum rsnd_reg reg = SSI_SYS_INT_ENABLE((i * 2) + offset);
-		u32 val = 0xf << (shift * 4);
-		u32 sys_int_enable = rsnd_mod_read(mod, reg);
+	if (enable)
+		rsnd_mod_bset(mod, SSI_INT_ENABLE, val, val);
+	else
+		rsnd_mod_bset(mod, SSI_INT_ENABLE, val, 0);
+}
 
-		if (enable)
-			sys_int_enable |= val;
-		else
-			sys_int_enable &= ~val;
-		rsnd_mod_write(mod, reg, sys_int_enable);
+static void rsnd_ssiu_busif_err_irq_ctrl(struct rsnd_mod *mod, int enable)
+{
+	struct rsnd_priv *priv = rsnd_mod_to_priv(mod);
+
+	if (rsnd_is_gen5(priv)) {
+		rsnd_ssiu_busif_err_irq_ctrl_gen5(mod, enable);
+	} else {
+		int id = rsnd_mod_id(mod);
+		int shift, offset;
+		int i;
+
+		switch (id) {
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+		case 4:
+			shift  = id;
+			offset = 0;
+			break;
+		case 9:
+			shift  = 1;
+			offset = 1;
+			break;
+		default:
+			return;
+		}
+
+		for (i = 0; i < 4; i++) {
+			enum rsnd_reg reg = SSI_SYS_INT_ENABLE((i * 2) + offset);
+			u32 val = 0xf << (shift * 4);
+			u32 sys_int_enable = rsnd_mod_read(mod, reg);
+
+			if (enable)
+				sys_int_enable |= val;
+			else
+				sys_int_enable &= ~val;
+			rsnd_mod_write(mod, reg, sys_int_enable);
+		}
 	}
 }
 
@@ -129,6 +166,48 @@ out:
 	return error;
 }
 
+bool rsnd_ssiu_busif_err_status_clear_gen5(struct rsnd_mod *mod)
+{
+	bool error = false;
+	int id = rsnd_mod_id(mod);
+	u32 val, status;
+
+	switch (id) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 9:
+		val = 0xff00ff;
+		break;
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+		val = 0x10001;
+		break;
+	default:
+		goto out;
+	}
+
+	status = rsnd_mod_read(mod, SSI_STATUS);
+	status &= val;
+
+	if (status) {
+		struct rsnd_priv *priv = rsnd_mod_to_priv(mod);
+		struct device *dev = rsnd_priv_to_dev(priv);
+
+		rsnd_print_irq_status(dev, "%s err status : 0x%08x\n",
+				      rsnd_mod_name(mod), status);
+		error = true;
+	}
+	rsnd_mod_bset(mod, SSI_STATUS, val, val);
+
+out:
+	return error;
+}
+
 static u32 *rsnd_ssiu_get_status(struct rsnd_mod *mod,
 				 struct rsnd_dai_stream *io,
 				 enum rsnd_mod_type type)
@@ -151,16 +230,20 @@ static int rsnd_ssiu_init(struct rsnd_mod *mod,
 	u32 val1, val2;
 
 	/* clear status */
-	rsnd_ssiu_busif_err_status_clear(mod);
+
+	if (rsnd_is_gen5(priv))
+		rsnd_ssiu_busif_err_status_clear_gen5(mod);
+	else
+		rsnd_ssiu_busif_err_status_clear(mod);
 
 	/* Gen4 doesn't have SSI_MODE */
 	if (rsnd_is_gen4(priv))
 		goto ssi_mode_setting_end;
 
-	/*
-	 * SSI_MODE0
-	 */
-	rsnd_mod_bset(mod, SSI_MODE0, (1 << id), !use_busif << id);
+	if (!rsnd_is_gen4(priv)) {
+		/* SSI_MODE0 */
+		if (!rsnd_is_gen5(priv))
+			rsnd_mod_bset(mod, SSI_MODE0, (1 << id), !use_busif << id);
 
 	/*
 	 * SSI_MODE1 / SSI_MODE2
@@ -168,18 +251,34 @@ static int rsnd_ssiu_init(struct rsnd_mod *mod,
 	 * FIXME
 	 * sharing/multi with SSI0 are mainly supported
 	 */
-	val1 = rsnd_mod_read(mod, SSI_MODE1);
-	val2 = rsnd_mod_read(mod, SSI_MODE2);
-	if (rsnd_ssi_is_pin_sharing(io)) {
+		if (rsnd_is_gen5(priv)) {
+			val1 = rsnd_mod_read(mod, SSI0_MODE1);
+			val1 |= rsnd_mod_read(mod, SSI3_MODE1) << 16;
+			val2 = rsnd_mod_read(mod, SSI0_MODE2);
+		} else {
+			val1 = rsnd_mod_read(mod, SSI_MODE1);
+			val2 = rsnd_mod_read(mod, SSI_MODE2);
+		}
 
-		ssis |= (1 << id);
+		if (rsnd_ssi_is_pin_sharing(io)) {
+			ssis |= (1 << id);
+		} else if (ssis) {
+			/*
+			 * Multi SSI
+			 *
+			 * set synchronized bit here
+			 */
 
-	} else if (ssis) {
-		/*
-		 * Multi SSI
-		 *
-		 * set synchronized bit here
-		 */
+			/* SSI4 is synchronized with SSI3 */
+			if (ssis & (1 << 4))
+				val1 |= (1 << 20);
+			/* SSI012 are synchronized */
+			if (ssis == 0x0006)
+				val1 |= (1 << 4);
+			/* SSI0129 are synchronized */
+			if (ssis == 0x0206)
+				val2 |= (1 << 4);
+		}
 
 		/* SSI4 is synchronized with SSI3 */
 		if (ssis & (1 << 4))
@@ -208,8 +307,14 @@ static int rsnd_ssiu_init(struct rsnd_mod *mod,
 	if (ssis & (1 << 9))
 		val2 |= is_clk_master ? 0x2 : 0x1;
 
-	rsnd_mod_bset(mod, SSI_MODE1, 0x0013001f, val1);
-	rsnd_mod_bset(mod, SSI_MODE2, 0x00000017, val2);
+	if (rsnd_is_gen5(priv)) {
+		rsnd_mod_bset(mod, SSI0_MODE1, 0x0000001f, val1);
+		rsnd_mod_bset(mod, SSI3_MODE1, 0x00130000, val1);
+		rsnd_mod_bset(mod, SSI0_MODE2, 0x00000017, val2);
+	} else {
+		rsnd_mod_bset(mod, SSI_MODE1, 0x0013001f, val1);
+		rsnd_mod_bset(mod, SSI_MODE2, 0x00000017, val2);
+	}
 
 ssi_mode_setting_end:
 	/*
@@ -239,6 +344,99 @@ static struct rsnd_mod_ops rsnd_ssiu_ops_gen1 = {
 	.quit		= rsnd_ssiu_quit,
 	.get_status	= rsnd_ssiu_get_status,
 };
+
+static int rsnd_ssiu_init_gen5(struct rsnd_mod *mod,
+			       struct rsnd_dai_stream *io,
+			       struct rsnd_priv *priv)
+{
+	struct rsnd_ssiu *ssiu = rsnd_mod_to_ssiu(mod);
+	int ret;
+	u32 mode = 0;
+
+	ret = rsnd_ssiu_init(mod, io, priv);
+	if (ret < 0)
+		return ret;
+
+	ssiu->usrcnt++;
+
+	/*
+	 * TDM Extend/Split Mode
+	 * see
+	 *	rsnd_ssi_config_init()
+	 */
+	if (rsnd_runtime_is_tdm(io))
+		mode = TDM_EXT;
+	else if (rsnd_runtime_is_tdm_split(io))
+		mode = TDM_SPLIT;
+
+	rsnd_mod_write(mod, SSI_MODE4, mode);
+
+	if (rsnd_ssi_use_busif(io)) {
+		int id = rsnd_mod_id(mod);
+		int busif = rsnd_mod_id_sub(mod);
+		enum rsnd_reg adinr_reg, mode_reg, dalign_reg;
+
+		if ((id == 9) && (busif >= 4)) {
+			adinr_reg = SSI9_BUSIF_ADINR(busif);
+			mode_reg = SSI9_BUSIF_MODE(busif);
+			dalign_reg = SSI9_BUSIF_DALIGN(busif);
+		} else {
+			adinr_reg = SSI_BUSIF_ADINR(busif);
+			mode_reg = SSI_BUSIF_MODE(busif);
+			dalign_reg = SSI_BUSIF_DALIGN(busif);
+		}
+
+		rsnd_mod_write(mod, adinr_reg,
+			       rsnd_get_adinr_bit(mod, io) |
+			       (rsnd_io_is_play(io) ?
+				rsnd_runtime_channel_after_ctu(io) :
+				rsnd_runtime_channel_original(io)));
+		rsnd_mod_write(mod, mode_reg,
+			       rsnd_get_busif_shift(io, mod) | 1);
+		rsnd_mod_write(mod, dalign_reg,
+			       rsnd_get_dalign(mod, io));
+	}
+
+	return 0;
+}
+
+static int rsnd_ssiu_start_gen5(struct rsnd_mod *mod,
+				struct rsnd_dai_stream *io,
+				struct rsnd_priv *priv)
+{
+	int busif = rsnd_mod_id_sub(mod);
+
+	if (!rsnd_ssi_use_busif(io))
+		return 0;
+
+	rsnd_mod_write(mod, SSI_CTRL(busif), 0x1);
+
+	if (rsnd_ssi_multi_secondaries_runtime(io))
+		rsnd_mod_write(mod, SSI0_CONTROL, 0x1);
+
+	return 0;
+}
+
+static int rsnd_ssiu_stop_gen5(struct rsnd_mod *mod,
+			       struct rsnd_dai_stream *io,
+			       struct rsnd_priv *priv)
+{
+	struct rsnd_ssiu *ssiu = rsnd_mod_to_ssiu(mod);
+	int busif = rsnd_mod_id_sub(mod);
+
+	if (!rsnd_ssi_use_busif(io))
+		return 0;
+
+	rsnd_mod_write(mod, SSI_CTRL(busif), 0);
+
+	if (--ssiu->usrcnt)
+		return 0;
+
+	if (rsnd_ssi_multi_secondaries_runtime(io))
+		rsnd_mod_write(mod, SSI0_CONTROL, 0);
+
+	return 0;
+}
 
 static int rsnd_ssiu_init_gen2(struct rsnd_mod *mod,
 			       struct rsnd_dai_stream *io,
@@ -432,6 +630,16 @@ static struct rsnd_mod_ops rsnd_ssiu_ops_gen2 = {
 	DEBUG_INFO
 };
 
+static struct rsnd_mod_ops rsnd_ssiu_ops_gen5 = {
+	.name		= SSIU_NAME,
+	.dma_req	= rsnd_ssiu_dma_req,
+	.init		= rsnd_ssiu_init_gen5,
+	.start		= rsnd_ssiu_start_gen5,
+	.stop		= rsnd_ssiu_stop_gen5,
+	.get_status	= rsnd_ssiu_get_status,
+	DEBUG_INFO
+};
+
 static struct rsnd_mod *rsnd_ssiu_mod_get(struct rsnd_priv *priv, int id)
 {
 	if (WARN_ON(id < 0 || id >= rsnd_ssiu_nr(priv)))
@@ -543,13 +751,15 @@ int rsnd_ssiu_probe(struct rsnd_priv *priv)
 
 	if (rsnd_is_gen1(priv))
 		ops = &rsnd_ssiu_ops_gen1;
+	else if (rsnd_is_gen5(priv))
+		ops = &rsnd_ssiu_ops_gen5;
 	else
 		ops = &rsnd_ssiu_ops_gen2;
 
 	/* Keep compatibility */
 	nr = 0;
 	if ((node) &&
-	    (ops == &rsnd_ssiu_ops_gen2)) {
+		((ops == &rsnd_ssiu_ops_gen2) || (ops == &rsnd_ssiu_ops_gen5))) {
 		ops->id		= rsnd_ssiu_id;
 		ops->id_sub	= rsnd_ssiu_id_sub;
 
