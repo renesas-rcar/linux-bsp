@@ -211,6 +211,11 @@ static const struct rpcif_info rpcif_info_gen4 = {
 	.strtim = 15,
 };
 
+static const struct rpcif_info rpcif_info_gen5 = {
+	.type = RPCIF_RCAR_GEN5,
+	.strtim = 15,
+};
+
 /*
  * Custom accessor functions to ensure SM[RW]DR[01] are always accessed with
  * proper width.  Requires rpcif_priv.xfer_size to be correctly set before!
@@ -789,6 +794,7 @@ static const struct of_device_id rpcif_of_match[] = {
 	{ .compatible = "renesas,r8a7796-rpc-if", .data = &rpcif_info_r8a7796 },
 	{ .compatible = "renesas,rcar-gen3-rpc-if", .data = &rpcif_info_gen3 },
 	{ .compatible = "renesas,rcar-gen4-rpc-if", .data = &rpcif_info_gen4 },
+	{ .compatible = "renesas,rcar-gen5-rpc-if", .data = &rpcif_info_gen5 },
 	{ .compatible = "renesas,rzg2l-rpc-if", .data = &rpcif_info_rz_g2l },
 	{},
 };
