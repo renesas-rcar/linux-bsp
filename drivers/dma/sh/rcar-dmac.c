@@ -237,6 +237,7 @@ struct rcar_dmac_of_data {
 	u32 chan_offset_stride;
 	bool rate_control;
 	bool gen5;
+	bool audma_vdk;
 };
 
 /* -----------------------------------------------------------------------------
@@ -400,6 +401,7 @@ static bool rcar_dmac_chan_is_busy(struct rcar_dmac_chan *chan)
 static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 {
 	struct rcar_dmac_desc *desc = chan->desc.running;
+	const struct rcar_dmac_of_data *data;
 	u32 chcr = desc->chcr;
 
 	WARN_ON_ONCE(rcar_dmac_chan_is_busy(chan));
@@ -438,8 +440,10 @@ static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 		 * should. Initialize it manually with the destination address
 		 * of the first chunk.
 		 */
-		rcar_dmac_chan_write(chan, RCAR_DMADAR,
-				     chunk->dst_addr & 0xffffffff);
+		if (!data->gen5) {
+			rcar_dmac_chan_write(chan, RCAR_DMADAR,
+					     chunk->dst_addr & 0xffffffff);
+		}
 
 		/*
 		 * Program the descriptor stage interrupt to occur after the end
@@ -792,6 +796,7 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 {
 	struct rcar_dmac_xfer_chunk *chunk;
 	struct rcar_dmac_hw_desc *hwdesc;
+	const struct rcar_dmac_of_data *data;
 
 	rcar_dmac_realloc_hwdesc(chan, desc, desc->nchunks * sizeof(*hwdesc));
 
@@ -800,9 +805,15 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 		return -ENOMEM;
 
 	list_for_each_entry(chunk, &desc->chunks, node) {
-		hwdesc->sar = chunk->src_addr;
-		hwdesc->dar = chunk->dst_addr;
-		hwdesc->tcr = chunk->size >> desc->xfer_shift;
+		if (data->audma_vdk) {
+			hwdesc->sar = __builtin_bswap32(chunk->src_addr);
+			hwdesc->dar = __builtin_bswap32(chunk->dst_addr);
+			hwdesc->tcr = __builtin_bswap32(chunk->size >> desc->xfer_shift);
+		} else {
+			hwdesc->sar = chunk->src_addr;
+			hwdesc->dar = chunk->dst_addr;
+			hwdesc->tcr = chunk->size >> desc->xfer_shift;
+		}
 		hwdesc++;
 	}
 
@@ -2113,6 +2124,7 @@ static const struct rcar_dmac_of_data rcar_dmac_data = {
 	.chan_offset_stride	= 0x80,
 	.rate_control		= false,
 	.gen5			= false,
+	.audma_vdk		= false,
 };
 
 static const struct rcar_dmac_of_data rcar_v3u_dmac_data = {
@@ -2120,6 +2132,7 @@ static const struct rcar_dmac_of_data rcar_v3u_dmac_data = {
 	.chan_offset_stride	= 0x1000,
 	.rate_control		= true,
 	.gen5			= false,
+	.audma_vdk		= false,
 };
 
 static const struct rcar_dmac_of_data rcar_gen4_dmac_data = {
@@ -2127,6 +2140,7 @@ static const struct rcar_dmac_of_data rcar_gen4_dmac_data = {
 	.chan_offset_stride     = 0x1000,
 	.rate_control		= true,
 	.gen5			= false,
+	.audma_vdk		= false,
 };
 
 static const struct rcar_dmac_of_data rcar_gen5_dmac_data = {
@@ -2134,6 +2148,7 @@ static const struct rcar_dmac_of_data rcar_gen5_dmac_data = {
 	.chan_offset_stride	= 0x1000,
 	.rate_control		= true,
 	.gen5			= true,
+	.audma_vdk		= true,
 };
 
 static const struct of_device_id rcar_dmac_of_ids[] = {
