@@ -21,6 +21,7 @@ enum rpcif_data_dir {
 enum rpcif_type {
 	RPCIF_RCAR_GEN3,
 	RPCIF_RCAR_GEN4,
+	RPCIF_RCAR_GEN5,
 };
 
 struct rpcif_info {
