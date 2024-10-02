@@ -27,7 +27,9 @@ obj-$(CONFIG_PCIE_RCAR_GEN4) += pcie-rcar-gen4-host-drv.o
 pcie-rcar-gen4-ep-drv-objs := pcie-rcar-gen4.o pcie-rcar-gen4-ep.o
 obj-$(CONFIG_PCIE_RCAR_GEN4_EP) += pcie-rcar-gen4-ep-drv.o
 
-obj-$(CONFIG_PCIE6_DW_PLAT) += pcie6-designware-gen5.o
+obj-$(CONFIG_PCIE6_DW) += pcie6-designware.o
+obj-$(CONFIG_PCIE6_RCAR_HOST) += pcie6-rcar-host.o
+obj-$(CONFIG_PCIE6_RCAR_EP) += pcie6-rcar-ep.o
 
 # The following drivers are for devices that use the generic ACPI
 # pci_root.c driver but don't support standard ECAM config access.
