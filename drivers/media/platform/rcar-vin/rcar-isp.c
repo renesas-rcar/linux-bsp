@@ -329,6 +329,7 @@ int rcar_isp_init(struct rcar_isp_device *isp, u32 mbus_code)
 
 	isp_write(isp, FIFOCTRL_FIFO_PUSH_CSI, ISPFIFOCTRL);
 	isp_write(isp, ISPSTART_START_ISP, ISPSTART);
+	dev_dbg(isp->dev, "Set the ISP module registers\n");
 
 	return 0;
 }
