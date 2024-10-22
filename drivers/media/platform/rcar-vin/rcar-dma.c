@@ -1185,14 +1185,8 @@ static int rvin_capture_start(struct rvin_dev *vin)
 	if (ret)
 		return ret;
 
-	rcar_isp_init(vin->isp, vin->mbus_code);
-
-	vin_dbg(vin, "Starting to capture\n");
-
 	/* Continuous Frame Capture Mode */
 	rvin_write(vin, VNFC_C_FRAME, VNFC_REG);
-
-	vin->state = STARTING;
 
 	return 0;
 }
@@ -1517,6 +1511,7 @@ static int rvin_set_stream(struct rvin_dev *vin, int on)
 	struct v4l2_subdev *sd;
 	struct media_pad *pad;
 	int ret;
+	unsigned long flags;
 
 	/* No media controller used, simply pass operation to subdevice. */
 	if (!vin->info->use_mc) {
@@ -1537,8 +1532,8 @@ static int rvin_set_stream(struct rvin_dev *vin, int on)
 			return 0;
 
 		media_pipeline_stop(&vin->vdev.entity);
-		ret = v4l2_subdev_call(sd, video, s_stream, 0);
 		rcar_isp_disable(vin->isp);
+		ret = v4l2_subdev_call(sd, video, s_stream, 0);
 
 		return ret;
 	}
@@ -1561,13 +1556,29 @@ static int rvin_set_stream(struct rvin_dev *vin, int on)
 	if (ret)
 		return ret;
 
+	spin_lock_irqsave(&vin->qlock, flags);
+
+	vin->sequence = 0;
+
+	ret = rvin_capture_start(vin);
+	if (ret) {
+		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
+		return ret;
+	}
+
+	spin_unlock_irqrestore(&vin->qlock, flags);
+
 	rcar_isp_enable(vin->isp);
+	rcar_isp_init(vin->isp, vin->mbus_code);
 
 	ret = v4l2_subdev_call(sd, video, s_stream, 1);
 	if (ret == -ENOIOCTLCMD)
 		ret = 0;
 	if (ret)
 		media_pipeline_stop(&vin->vdev.entity);
+
+	vin_dbg(vin, "Starting to capture\n");
+	vin->state = STARTING;
 
 	return ret;
 }
@@ -1598,19 +1609,6 @@ static int rvin_start_streaming(struct vb2_queue *vq, unsigned int count)
 		spin_unlock_irqrestore(&vin->qlock, flags);
 		goto out;
 	}
-
-	spin_lock_irqsave(&vin->qlock, flags);
-
-	vin->sequence = 0;
-
-	ret = rvin_capture_start(vin);
-	if (ret) {
-		return_all_buffers(vin, VB2_BUF_STATE_QUEUED);
-		rvin_set_stream(vin, 0);
-		goto out;
-	}
-
-	spin_unlock_irqrestore(&vin->qlock, flags);
 
 	return 0;
 out:
