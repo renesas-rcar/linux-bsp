@@ -1578,7 +1578,7 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 	/* Start CSI PHY */
 	rcsi2_exit_standby(priv);
 
-	/* Start camera side device */
+	/* Setup camera side device */
 	ret = v4l2_subdev_call(priv->remote, video, s_stream, 1);
 	if (ret) {
 		rcsi2_enter_standby(priv);
@@ -1598,6 +1598,7 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 		rcsi2_enter_standby(priv);
 			return ret;
 	}
+	dev_dbg(priv->dev, "Set the Link and PHY of CSI-2 module registers\n");
 
 	/* Confirmation of CSI PHY */
 	if (priv->info->features & RCAR_VIN_R8A779G0_FEATURE ||
@@ -1614,6 +1615,7 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 		rcsi2_write(priv, FRXM, read32 & ~(FRXM_FORCERXMODE_0
 					| FRXM_FORCERXMODE_1 | FRXM_FORCERXMODE_2 | FRXM_FORCERXMODE_3));
 	}
+	dev_dbg(priv->dev, "Confirmed PHY of CSI-2 module starts.\n");
 
 	if (priv->info->features & RCAR_VIN_R8A779H0_FEATURE ||
 		priv->info->features & RCAR_VIN_R8A779G0_FEATURE ||
@@ -1632,6 +1634,7 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 static void rcsi2_stop(struct rcar_csi2 *priv)
 {
 	rcsi2_enter_standby(priv);
+	v4l2_subdev_call(priv->remote, video, enable_link, 0);
 	v4l2_subdev_call(priv->remote, video, s_stream, 0);
 }
 
