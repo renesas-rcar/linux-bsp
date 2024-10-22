@@ -831,6 +831,22 @@ static int adv748x_suspend(struct device *dev)
 	return 0;
 }
 
+static inline void __adv748x_resume_afe(struct adv748x_state *state)
+{
+	int ret = 0;
+	struct adv748x_csi2 *tx = state->afe.tx;
+
+	if (tx && is_txa(tx)) {
+		/* handle resume afe-txa */
+		ret = io_clrset(state, ADV748X_IO_10,
+				ADV748X_IO_10_CSI4_IN_SEL_AFE,
+				ADV748X_IO_10_CSI4_IN_SEL_AFE);
+		if (ret) {
+			adv_err(state, "Failed to resume afe");
+		}
+	}
+}
+
 static int adv748x_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -843,6 +859,9 @@ static int adv748x_resume(struct device *dev)
 	ret = adv748x_reset(state);
 	if (ret)
 		adv_err(state, "Failed to reset hardware");
+
+	/* Resume afe (rca) */
+	__adv748x_resume_afe(state);
 
 	/* Initialise the virtual channel */
 	tx_write(txa, ADV748X_CSI_VC_REF,
