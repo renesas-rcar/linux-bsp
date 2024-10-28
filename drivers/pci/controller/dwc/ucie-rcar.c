@@ -173,6 +173,9 @@ int rcar_ucie_link_up(struct dw_pcie6 *pcie)
 {
 	struct rcar_ucie *ucie = dev_get_drvdata(pcie->dev);
 
+	if (ucie->vdk_bypass)
+		return 0;
+
 	rcar_ucie_conf_modify32(ucie, DVSEC_UCIE_LINK_CONTROL, DVSEC_TARGET_LINK_SPEED, 0x1 << 6);
 	rcar_ucie_conf_modify32(ucie, DVSEC_UCIE_LINK_CONTROL, DVSEC_START_UCIE_LINK, 0x1 << 10);
 
@@ -195,6 +198,9 @@ int rcar_ucie_is_link_up(struct dw_pcie6 *pcie)
 {
 	struct rcar_ucie *ucie = dev_get_drvdata(pcie->dev);
 	u32 val;
+
+	if (ucie->vdk_bypass)
+		return 1;
 
 	val = rcar_ucie_phy_read32(ucie, DVSEC_UCIE_LINK_STATUS);
 

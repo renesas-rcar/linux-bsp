@@ -102,6 +102,8 @@ struct rcar_ucie {
 	void __iomem *base;
 
 	struct dw_plat_pcie6 *dw_plat;
+
+	bool vdk_bypass;
 };
 
 u32 rcar_ucie_mem_read32(struct rcar_ucie *ucie, u32 reg);

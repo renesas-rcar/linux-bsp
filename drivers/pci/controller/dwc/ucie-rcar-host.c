@@ -25,6 +25,8 @@ static int rcar_ucie_get_resources(struct rcar_ucie *ucie, struct platform_devic
 	if (IS_ERR(pci->dbi_base))
 		return PTR_ERR(pci->dbi_base);
 
+	ucie->vdk_bypass = of_property_read_bool(pdev->dev.of_node, "vdk-bypass-mode");
+
 	return 0;
 }
 
