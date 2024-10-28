@@ -1833,7 +1833,6 @@ static int rcar_dmac_chan_probe(struct rcar_dmac *dmac,
 {
 	struct platform_device *pdev = to_platform_device(dmac->dev);
 	struct dma_chan *chan = &rchan->chan;
-	const struct rcar_dmac_of_data *data;
 	char pdev_irqname[5];
 	char *irqname;
 	int ret;
@@ -1868,22 +1867,10 @@ static int rcar_dmac_chan_probe(struct rcar_dmac *dmac,
 
 	list_add_tail(&chan->device_node, &dmac->engine.channels);
 
-	data = of_device_get_match_data(&pdev->dev);
-	if (!data)
-		return -EINVAL;
-
-	if (data->gen5) {
-		ret = devm_request_threaded_irq(dmac->dev, rchan->irq,
-						rcar_dmac_isr_channel,
-						rcar_dmac_isr_channel_thread, IRQF_SHARED,
-						irqname, rchan);
-	} else {
-		ret = devm_request_threaded_irq(dmac->dev, rchan->irq,
-						rcar_dmac_isr_channel,
-						rcar_dmac_isr_channel_thread, 0,
-						irqname, rchan);
-	}
-
+	ret = devm_request_threaded_irq(dmac->dev, rchan->irq,
+					rcar_dmac_isr_channel,
+					rcar_dmac_isr_channel_thread, 0,
+					irqname, rchan);
 	if (ret) {
 		dev_err(dmac->dev, "failed to request IRQ %u (%d)\n",
 			rchan->irq, ret);
