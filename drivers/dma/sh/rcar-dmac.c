@@ -213,6 +213,7 @@ struct rcar_dmac {
 
 	bool fixed_source;
 	bool fixed_dest;
+	bool audma_vdk;
 
 	u32 rate_rd;
 	u32 rate_wr;
@@ -237,7 +238,6 @@ struct rcar_dmac_of_data {
 	u32 chan_offset_stride;
 	bool rate_control;
 	bool gen5;
-	bool audma_vdk;
 };
 
 /* -----------------------------------------------------------------------------
@@ -400,10 +400,9 @@ static bool rcar_dmac_chan_is_busy(struct rcar_dmac_chan *chan)
 
 static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 {
+	struct rcar_dmac *dmac = to_rcar_dmac(chan->chan.device);
 	struct rcar_dmac_desc *desc = chan->desc.running;
-	const struct rcar_dmac_of_data *data;
 	u32 chcr = desc->chcr;
-
 	WARN_ON_ONCE(rcar_dmac_chan_is_busy(chan));
 
 	if (chan->mid_rid >= 0)
@@ -440,7 +439,7 @@ static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 		 * should. Initialize it manually with the destination address
 		 * of the first chunk.
 		 */
-		if (!data->gen5) {
+		if (!dmac->audma_vdk) {
 			rcar_dmac_chan_write(chan, RCAR_DMADAR,
 					     chunk->dst_addr & 0xffffffff);
 		}
@@ -796,7 +795,7 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 {
 	struct rcar_dmac_xfer_chunk *chunk;
 	struct rcar_dmac_hw_desc *hwdesc;
-	const struct rcar_dmac_of_data *data;
+	struct rcar_dmac *dmac = to_rcar_dmac(chan->chan.device);
 
 	rcar_dmac_realloc_hwdesc(chan, desc, desc->nchunks * sizeof(*hwdesc));
 
@@ -805,7 +804,7 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 		return -ENOMEM;
 
 	list_for_each_entry(chunk, &desc->chunks, node) {
-		if (data->audma_vdk) {
+		if (dmac->audma_vdk) {
 			hwdesc->sar = __builtin_bswap32(chunk->src_addr);
 			hwdesc->dar = __builtin_bswap32(chunk->dst_addr);
 			hwdesc->tcr = __builtin_bswap32(chunk->size >> desc->xfer_shift);
@@ -1551,6 +1550,7 @@ static void rcar_dmac_device_synchronize(struct dma_chan *chan)
 static irqreturn_t rcar_dmac_isr_desc_stage_end(struct rcar_dmac_chan *chan)
 {
 	struct rcar_dmac_desc *desc = chan->desc.running;
+	struct rcar_dmac *dmac = to_rcar_dmac(chan->chan.device);
 	unsigned int stage;
 
 	if (WARN_ON(!desc || !desc->cyclic)) {
@@ -1565,6 +1565,9 @@ static irqreturn_t rcar_dmac_isr_desc_stage_end(struct rcar_dmac_chan *chan)
 	/* Program the interrupt pointer to the next stage. */
 	stage = (rcar_dmac_chan_read(chan, RCAR_DMACHCRB) &
 		 RCAR_DMACHCRB_DPTR_MASK) >> RCAR_DMACHCRB_DPTR_SHIFT;
+	if (dmac->audma_vdk)
+		stage = stage == (desc->nchunks - 1) ? 0 : (stage + 1);
+
 	rcar_dmac_chan_write(chan, RCAR_DMADPCR, RCAR_DMADPCR_DIPT(stage));
 
 	return IRQ_WAKE_THREAD;
@@ -1952,6 +1955,9 @@ static int rcar_dmac_parse_of(struct device *dev, struct rcar_dmac *dmac,
 		dmac->rate_wr = 0;
 	}
 
+	/* Checking audio dmac vdk optional property */
+	dmac->audma_vdk = of_property_read_bool(np, "audio-dmac-vdk");
+
 	return 0;
 }
 
@@ -2124,7 +2130,6 @@ static const struct rcar_dmac_of_data rcar_dmac_data = {
 	.chan_offset_stride	= 0x80,
 	.rate_control		= false,
 	.gen5			= false,
-	.audma_vdk		= false,
 };
 
 static const struct rcar_dmac_of_data rcar_v3u_dmac_data = {
@@ -2132,7 +2137,6 @@ static const struct rcar_dmac_of_data rcar_v3u_dmac_data = {
 	.chan_offset_stride	= 0x1000,
 	.rate_control		= true,
 	.gen5			= false,
-	.audma_vdk		= false,
 };
 
 static const struct rcar_dmac_of_data rcar_gen4_dmac_data = {
@@ -2140,7 +2144,6 @@ static const struct rcar_dmac_of_data rcar_gen4_dmac_data = {
 	.chan_offset_stride     = 0x1000,
 	.rate_control		= true,
 	.gen5			= false,
-	.audma_vdk		= false,
 };
 
 static const struct rcar_dmac_of_data rcar_gen5_dmac_data = {
@@ -2148,7 +2151,6 @@ static const struct rcar_dmac_of_data rcar_gen5_dmac_data = {
 	.chan_offset_stride	= 0x1000,
 	.rate_control		= true,
 	.gen5			= true,
-	.audma_vdk		= true,
 };
 
 static const struct of_device_id rcar_dmac_of_ids[] = {
