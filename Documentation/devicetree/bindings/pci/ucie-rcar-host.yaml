@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+# Copyright (C) 2024 Renesas Electronics Corp.
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/pci/rcar-gen4-pci-host.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Renesas R-Car UCIe Host
+
+maintainers:
+  - T.B.D
+
+properties:
+  compatible:
+    items:
+      - const: renesas,r8a78000-ucie   # R-Car X5H
+
+  reg:
+    maxItems: 4
+
+  reg-names:
+    items:
+      - const: dbi
+      - const: apb
+      - const: atu
+      - const: config
+
+  interrupts:
+    maxItems: 8
+
+  interrupt-names:
+    items:
+      - const: others
+      - const: dma
+      - const: vndmsg
+      - const: lperr
+      - const: misc
+      - const: coerr
+      - const: fatal
+      - const: nonfatal
+
+  clocks:
+    maxItems: 1
+
+  power-domains:
+    maxItems: 1
+
+  resets:
+    maxItems: 1
+
+required:
+  - compatible
+  - reg
+  - reg-names
+  - interrupts
+  - interrupts-names
+
+unevaluatedProperties: false
+
+examples:
+	T.B.D

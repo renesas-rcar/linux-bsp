@@ -13,12 +13,17 @@
 #include <linux/clk.h>
 #include <linux/iopoll.h>
 
+#include "pcie6-designware.h"
+
 /* Vendor IP message */
 #define OPCODE				GENMAKS(4, 0)
 #define OPCODE_MEM_READ32		0
 #define OPCODE_MEM_WRITE32		0x1
 #define OPCODE_CONF_READ32		0x4
 #define OPCODE_CONF_WRITE32		0x5
+
+#define BYTE_ENABLES			GENMASK(21, 14)
+#define BYTE_ENABLES_32			(0xf << 14)
 
 #define SRCID				GENMASK(31, 29)
 #define SRCID_PROTO_STACK0_ACCESS	(0 << 29)
@@ -29,6 +34,9 @@
 
 #define COMPL_STATUS			GENMASK(4, 0)
 #define COMPL_SUCCESS			0
+
+#define CONTROL_PARITY(n)		((n) << 30)
+#define DATA_PARITY(n)			((n) << 31)
 
 /* APB registers */
 #define APB_BRIDGE_CTL0			0x0100
@@ -89,13 +97,13 @@
 #define MM_TRK_CTRL			0x301100
 #define MM_TRK_EN			BIT(0)
 
-/* Settings */
-#define MAX_NR_INBOUND_MAPS		1
-#define MAX_NR_OUTBOUND_MAPS		1
-
 struct rcar_ucie {
 	struct device *dev;
 	void __iomem *base;
+
+	struct dw_plat_pcie6 *dw_plat;
+
+	bool vdk_bypass;
 };
 
 u32 rcar_ucie_mem_read32(struct rcar_ucie *ucie, u32 reg);
@@ -109,7 +117,11 @@ void rcar_ucie_phy_modify32(struct rcar_ucie *ucie, u32 reg, u32 mask, u32 val);
 int rcar_ucie_phy_reg_wait(struct rcar_ucie *ucie, u32 reg, u32 mask, u32 expected);
 void rcar_ucie_controller_enable(struct rcar_ucie *ucie);
 void rcar_ucie_phy_enable(struct rcar_ucie *ucie);
-void rcar_ucie_link_up(struct rcar_ucie *ucie);
-bool rcar_ucie_is_link_up(struct rcar_ucie *ucie);
+int rcar_ucie_link_up(struct dw_pcie6 *pcie);
+void rcar_ucie_link_down(struct dw_pcie6 *pcie);
+int rcar_ucie_is_link_up(struct dw_pcie6 *pcie);
+int rcar_ucie_wait_for_link(struct dw_pcie6 *pcie);
+
+extern const struct dw_pcie6_ops rcar_ucie_ops;
 
 #endif /* _UCIE_RCAR_H_ */
