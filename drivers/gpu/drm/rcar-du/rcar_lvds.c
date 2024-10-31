@@ -501,7 +501,10 @@ static void __rcar_lvds_atomic_enable(struct drm_bridge *bridge,
 	u32 lvdcr0;
 	int ret;
 
-	reset_control_deassert(lvds->rstc);
+	if (rcar_lvds_dual_link(bridge) == true)
+		reset_control_reset(lvds->rstc);
+	else
+		reset_control_deassert(lvds->rstc);
 
 	ret = clk_prepare_enable(lvds->clocks.mod);
 	if (ret < 0)
@@ -665,7 +668,8 @@ static void rcar_lvds_atomic_disable(struct drm_bridge *bridge,
 						       old_bridge_state);
 
 	clk_disable_unprepare(lvds->clocks.mod);
-	reset_control_assert(lvds->rstc);
+	if (rcar_lvds_dual_link(bridge) == false)
+		reset_control_assert(lvds->rstc);
 }
 
 static bool rcar_lvds_mode_fixup(struct drm_bridge *bridge,
