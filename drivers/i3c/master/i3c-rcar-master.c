@@ -790,11 +790,6 @@ static int rcar_i3c_master_daa(struct i3c_master_controller *m)
 	u8 last_addr = 0, pos;
 	int ret;
 
-	if (master->maxdevs == 8) {
-		/* Temporary skipping ENTDAA due to lack of slave device */
-		goto end;
-	}
-
 	/* Enable I3C bus. */
 	rcar_i3c_master_bus_enable(m, true);
 
@@ -853,7 +848,6 @@ static int rcar_i3c_master_daa(struct i3c_master_controller *m)
 
 	rcar_i3c_master_free_xfer(xfer);
 
-end:
 	return 0;
 }
 
@@ -956,6 +950,9 @@ static int rcar_i3c_master_send_ccc_cmd(struct i3c_master_controller *m,
 		rcar_i3c_master_dequeue_xfer(master, xfer);
 
 	ret = xfer->ret;
+	if (ret)
+		ccc->err = I3C_ERROR_M2;
+
 	rcar_i3c_master_free_xfer(xfer);
 
 	return ret;
