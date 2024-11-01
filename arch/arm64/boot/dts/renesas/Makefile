@@ -86,6 +86,8 @@ dtb-$(CONFIG_ARCH_R8A779G0) += r8a779g5-whitehawk-sound.dtb
 dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h0-gray-hawk.dtb
 dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h0-gray-hawk-uio.dtb
 
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h2-gray-hawk.dtb
+
 dtb-$(CONFIG_ARCH_R8A779F0) += r8a779f0-spider.dtb
 
 dtb-$(CONFIG_ARCH_R8A77970) += r8a77970-eagle-function.dtb
