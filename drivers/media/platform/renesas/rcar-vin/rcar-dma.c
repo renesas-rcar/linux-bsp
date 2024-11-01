@@ -1498,7 +1498,7 @@ static void rvin_stop_streaming_vq(struct vb2_queue *vq)
 	dma_free_coherent(vin->dev, vin->format.sizeimage, vin->scratch,
 			  vin->scratch_phys);
 
-	return_unused_buffers(vin, VB2_BUF_STATE_ERROR);
+	return_unused_buffers(vin, VB2_BUF_STATE_DONE);
 }
 
 static const struct vb2_ops rvin_qops = {
