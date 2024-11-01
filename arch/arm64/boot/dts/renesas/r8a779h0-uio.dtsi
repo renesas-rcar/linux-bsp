@@ -5,12 +5,12 @@
  * Copyright (C) 2023 Renesas Electronics Corp.
  */
 
-#include <dt-bindings/clock/r8a779h0-cpg-mssr.h>
-#include <dt-bindings/interrupt-controller/arm-gic.h>
-#include <dt-bindings/power/r8a779h0-sysc.h>
 #include <dt-bindings/ipmmu/rcar-ipmmu.h>
+#include "r8a779h0.dtsi"
 
 / {
+	compatible = "renesas,r8a779h0", "renesas,r8a779h0-uio";
+
 	soc: soc {
 		vin_00: video@e6ef0000 {
 			compatible = "generic-uio";
