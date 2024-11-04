@@ -839,6 +839,7 @@ static void rcar_du_crtc_atomic_disable(struct drm_crtc *crtc,
 	rcar_du_crtc_put(rcrtc);
 
 	if (rcdu->info->lvds_clk_mask & BIT(rcrtc->index) &&
+		rcar_lvds_dual_link(rcdu->lvds[rcrtc->index]) == false &&
 	    rstate->outputs == BIT(RCAR_DU_OUTPUT_DPAD0)) {
 		struct drm_bridge *bridge = rcdu->lvds[rcrtc->index];
 
