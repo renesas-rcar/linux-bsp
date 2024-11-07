@@ -61,7 +61,7 @@ config I3C_RCAR_MASTER
        depends on HAS_IOMEM
        depends on !(ALPHA || PARISC)
        help
-         Support for Renesas R-Car I3C Controller.
+         Support for Renesas R-Car I3C Master Controller.
 
          This driver can also be built as a module. If so, the module
          will be called i3c-rcar-master.
