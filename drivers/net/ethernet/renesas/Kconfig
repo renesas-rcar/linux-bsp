@@ -56,6 +56,7 @@ config RENESAS_ETHER_SWITCH3
 	select CRC32
 	select MII
 	select PHYLINK
+	select RENESAS_GEN4_PTP
 	help
 	  Renesas Ethernet Switch3 device driver.
 	  This driver supports the following SoCs:
