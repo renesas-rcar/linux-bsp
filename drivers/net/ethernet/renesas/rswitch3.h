@@ -1119,6 +1119,16 @@ struct rswitch_private {
 
 	/* Parameter for VPF environment which can config in dts file */
 	bool	vpf_mode;
+	struct clk *rsw_clk;
+	struct clk *phy_clk;
 };
+
+static int rswitch3_num_ports = 13;
+module_param(rswitch3_num_ports, int, 0644);
+MODULE_PARM_DESC(num_etha_ports, "Number of using Switch3 ports");
+
+static bool parallel_mode;
+module_param(parallel_mode, bool, 0644);
+MODULE_PARM_DESC(parallel_mode, "Operate simultaneously with Realtime core");
 
 #endif	/* #ifndef __RSWITCH3_H__ */
