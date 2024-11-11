@@ -2116,6 +2116,8 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->ptp_priv->addr))
 		return PTR_ERR(priv->ptp_priv->addr);
 
+	priv->ptp_priv->parallel_mode = parallel_mode;
+
 	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
 	if (ret < 0) {
 		ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
