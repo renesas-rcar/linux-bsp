@@ -63,6 +63,7 @@ struct rcar_gen4_ptp_private {
 	u32 tstamp_rx_ctrl;
 	s64 default_addend;
 	bool initialized;
+	bool parallel_mode;
 };
 
 int rcar_gen4_ptp_register(struct rcar_gen4_ptp_private *ptp_priv,

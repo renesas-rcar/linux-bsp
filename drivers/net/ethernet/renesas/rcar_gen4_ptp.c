@@ -33,6 +33,9 @@ static int rcar_gen4_ptp_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	s64 addend = ptp_priv->default_addend;
 	s64 diff;
 
+	if (ptp_priv->parallel_mode)
+		return -EOPNOTSUPP;
+
 	if (neg_adj)
 		scaled_ppm = -scaled_ppm;
 	diff = div_s64(addend * scaled_ppm_to_ppb(scaled_ppm), NSEC_PER_SEC);
@@ -73,14 +76,16 @@ static void _rcar_gen4_ptp_settime(struct ptp_clock_info *ptp,
 {
 	struct rcar_gen4_ptp_private *ptp_priv = ptp_to_priv(ptp);
 
-	iowrite32(1, ptp_priv->addr + ptp_priv->offs->disable);
-	iowrite32(0, ptp_priv->addr + ptp_priv->offs->config_t2);
-	iowrite32(0, ptp_priv->addr + ptp_priv->offs->config_t1);
-	iowrite32(0, ptp_priv->addr + ptp_priv->offs->config_t0);
-	iowrite32(1, ptp_priv->addr + ptp_priv->offs->enable);
-	iowrite32(ts->tv_sec >> 32, ptp_priv->addr + ptp_priv->offs->config_t2);
-	iowrite32(ts->tv_sec, ptp_priv->addr + ptp_priv->offs->config_t1);
-	iowrite32(ts->tv_nsec, ptp_priv->addr + ptp_priv->offs->config_t0);
+	if (!ptp_priv->parallel_mode) {
+		iowrite32(1, ptp_priv->addr + ptp_priv->offs->disable);
+		iowrite32(0, ptp_priv->addr + ptp_priv->offs->config_t2);
+		iowrite32(0, ptp_priv->addr + ptp_priv->offs->config_t1);
+		iowrite32(0, ptp_priv->addr + ptp_priv->offs->config_t0);
+		iowrite32(1, ptp_priv->addr + ptp_priv->offs->enable);
+		iowrite32(ts->tv_sec >> 32, ptp_priv->addr + ptp_priv->offs->config_t2);
+		iowrite32(ts->tv_sec, ptp_priv->addr + ptp_priv->offs->config_t1);
+		iowrite32(ts->tv_nsec, ptp_priv->addr + ptp_priv->offs->config_t0);
+	}
 }
 
 static int rcar_gen4_ptp_settime(struct ptp_clock_info *ptp,
@@ -102,6 +107,9 @@ static int rcar_gen4_ptp_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	struct timespec64 ts;
 	unsigned long flags;
 	s64 now;
+
+	if (ptp_priv->parallel_mode)
+		return -EOPNOTSUPP;
 
 	spin_lock_irqsave(&ptp_priv->lock, flags);
 	_rcar_gen4_ptp_gettime(ptp, &ts);
@@ -141,16 +149,6 @@ static int rcar_gen4_ptp_set_offs(struct rcar_gen4_ptp_private *ptp_priv,
 	return 0;
 }
 
-static s64 rcar_gen4_ptp_rate_to_increment(u32 rate)
-{
-	/* Timer increment in ns.
-	 * bit[31:27] - integer
-	 * bit[26:0]  - decimal
-	 * increment[ns] = perid[ns] * 2^27 => (1ns * 2^27) / rate[hz]
-	 */
-	return div_s64(1000000000LL << 27, rate);
-}
-
 int rcar_gen4_ptp_register(struct rcar_gen4_ptp_private *ptp_priv,
 			   enum rcar_gen4_ptp_reg_layout layout, u32 rate)
 {
@@ -165,13 +163,20 @@ int rcar_gen4_ptp_register(struct rcar_gen4_ptp_private *ptp_priv,
 	if (ret)
 		return ret;
 
-	ptp_priv->default_addend = rcar_gen4_ptp_rate_to_increment(rate);
-	iowrite32(ptp_priv->default_addend, ptp_priv->addr + ptp_priv->offs->increment);
+	if (ptp_priv->parallel_mode) {
+		ptp_priv->default_addend = ioread32(ptp_priv->addr + ptp_priv->offs->increment);
+	} else {
+		ptp_priv->default_addend = rate;
+		iowrite32(ptp_priv->default_addend, ptp_priv->addr + ptp_priv->offs->increment);
+	}
+
 	ptp_priv->clock = ptp_clock_register(&ptp_priv->info, NULL);
 	if (IS_ERR(ptp_priv->clock))
 		return PTR_ERR(ptp_priv->clock);
 
-	iowrite32(0x01, ptp_priv->addr + ptp_priv->offs->enable);
+	if (!ptp_priv->parallel_mode)
+		iowrite32(0x01, ptp_priv->addr + ptp_priv->offs->enable);
+
 	ptp_priv->initialized = true;
 
 	return 0;
