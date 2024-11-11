@@ -39,6 +39,15 @@ config RAVB
 	help
 	  Renesas Ethernet AVB device driver.
 
+config RENESAS_GEN4_PTP
+	tristate "Renesas R-Car Gen4 gPTP support" if COMPILE_TEST
+	depends on PTP_1588_CLOCK
+	select CRC32
+	select MII
+	select PHYLIB
+	help
+	  Renesas R-Car Gen4 gPTP device driver.
+
 config RENESAS_ETHER_SWITCH
 	tristate "Renesas Ethernet Switch support"
 	depends on ARCH_RENESAS || COMPILE_TEST
@@ -75,6 +84,7 @@ config RENESAS_ETHER_SWITCH3
 	select CRC32
 	select MII
 	select PHYLINK
+	select RENESAS_GEN4_PTP
 	help
 	  Renesas Ethernet Switch3 device driver.
 	  This driver supports the following SoCs:
