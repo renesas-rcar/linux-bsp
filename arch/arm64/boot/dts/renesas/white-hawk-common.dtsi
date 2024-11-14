@@ -2,17 +2,12 @@
 /*
  * Device Tree Source for the White Hawk CPU boards with R-Car V4H
  *
- * Copyright (C) 2021 Renesas Electronics Corp.
+ * Copyright (C) 2024 Renesas Electronics Corp.
  */
 
-/dts-v1/;
-#include "r8a779g0-whitehawk-cpu.dtsi"
-#include "white-hawk-common.dtsi"
+#include <dt-bindings/media/r8a779g0-csi2.h>
 
 / {
-	model = "Renesas White Hawk CPU boards based on r8a779g0";
-	compatible = "renesas,whitehawk-cpu", "renesas,r8a779g0";
-
 	aliases {
 		ethernet0 = &avb0;
 	};
