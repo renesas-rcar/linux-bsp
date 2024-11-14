@@ -81,6 +81,7 @@ dtb-$(CONFIG_ARCH_R8A779G0) += r8a779g4-white-hawk.dtb
 dtb-$(CONFIG_ARCH_R8A779G0) += r8a779g4-whitehawk-sound.dtb
 
 dtb-$(CONFIG_ARCH_R8A779G0) += r8a779g5-white-hawk.dtb
+dtb-$(CONFIG_ARCH_R8A779G0) += r8a779g5-whitehawk-sound.dtb
 
 dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h0-gray-hawk.dtb
 dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h0-gray-hawk-uio.dtb
