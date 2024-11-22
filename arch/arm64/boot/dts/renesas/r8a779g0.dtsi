@@ -2192,8 +2192,12 @@
 			power-domains = <&sysc R8A779G0_PD_A2CN0>;
 			resets = <&cpg 2712>;
 			linux,uio-name = "imp_dma_slim_00";
-			ipmmu-id = <RCAR_IPMMU_IR 24>;
-			iommus = <&ipmmu_ir 24>, <&ipmmu_ir 25>,
+			ipmmu-id = <RCAR_IPMMU_IR 16>;
+			iommus = <&ipmmu_ir 16>, <&ipmmu_ir 17>,
+				 <&ipmmu_ir 18>, <&ipmmu_ir 19>,
+				 <&ipmmu_ir 20>, <&ipmmu_ir 21>,
+				 <&ipmmu_ir 22>, <&ipmmu_ir 23>,
+				 <&ipmmu_ir 24>, <&ipmmu_ir 25>,
 				 <&ipmmu_ir 26>, <&ipmmu_ir 27>,
 				 <&ipmmu_ir 28>, <&ipmmu_ir 29>,
 				 <&ipmmu_ir 30>, <&ipmmu_ir 31>;
@@ -2206,8 +2210,12 @@
 			power-domains = <&sysc R8A779G0_PD_A2CN0>;
 			resets = <&cpg 2713>;
 			linux,uio-name = "imp_dma_slim_01";
-			ipmmu-id = <RCAR_IPMMU_IR 24>;
-			iommus = <&ipmmu_ir 24>, <&ipmmu_ir 25>,
+			ipmmu-id = <RCAR_IPMMU_IR 16>;
+			iommus = <&ipmmu_ir 16>, <&ipmmu_ir 17>,
+				 <&ipmmu_ir 18>, <&ipmmu_ir 19>,
+				 <&ipmmu_ir 20>, <&ipmmu_ir 21>,
+				 <&ipmmu_ir 22>, <&ipmmu_ir 23>,
+				 <&ipmmu_ir 24>, <&ipmmu_ir 25>,
 				 <&ipmmu_ir 26>, <&ipmmu_ir 27>,
 				 <&ipmmu_ir 28>, <&ipmmu_ir 29>,
 				 <&ipmmu_ir 30>, <&ipmmu_ir 31>;
@@ -2220,8 +2228,12 @@
 			power-domains = <&sysc R8A779G0_PD_A1CNN0>;
 			resets = <&cpg 22>;
 			linux,uio-name = "imp_cnn_00";
-			ipmmu-id = <RCAR_IPMMU_IR 24>;
-			iommus = <&ipmmu_ir 24>, <&ipmmu_ir 25>,
+			ipmmu-id = <RCAR_IPMMU_IR 16>;
+			iommus = <&ipmmu_ir 16>, <&ipmmu_ir 17>,
+				 <&ipmmu_ir 18>, <&ipmmu_ir 19>,
+				 <&ipmmu_ir 20>, <&ipmmu_ir 21>,
+				 <&ipmmu_ir 22>, <&ipmmu_ir 23>,
+				 <&ipmmu_ir 24>, <&ipmmu_ir 25>,
 				 <&ipmmu_ir 26>, <&ipmmu_ir 27>,
 				 <&ipmmu_ir 28>, <&ipmmu_ir 29>,
 				 <&ipmmu_ir 30>, <&ipmmu_ir 31>;
