@@ -459,4 +459,34 @@ config PCIE_VISCONTI_HOST
 	  Say Y here if you want PCIe controller support on Toshiba Visconti SoC.
 	  This driver supports TMPV7708 SoC.
 
+config PCIE6_DW
+	bool
+
+config PCIE6_RCAR_HOST
+	tristate "Renesas R-Car Gen5 PCIe 6.0 Controller - Host mode"
+	depends on PCI && PCI_MSI_IRQ_DOMAIN
+	select PCIE6_DW
+	help
+	  Enables support for the PCIe 6.0 controller in the Designware IP to
+	  work in host mode. There are two instances of PCIe 6.0 controller in
+	  Designware IP.
+	  This controller can work either as EP or RC. In order to enable
+	  host-specific features PCIE6_RCAR_HOST must be selected and in
+	  order to enable device-specific features PCIE6_RCAR_EP must be
+	  selected.
+
+config PCIE6_RCAR_EP
+	tristate "Renesas R-Car Gen5 PCIe 6.0 Controller - Endpoint mode"
+	depends on PCI && PCI_MSI_IRQ_DOMAIN
+	depends on PCI_ENDPOINT
+	select PCIE6_DW
+	help
+	  Enables support for the PCIe 6.0 controller in the Designware IP to
+	  work in endpoint mode. There are two instances of PCIe 6.0 controller
+	  in Designware IP.
+	  This controller can work either as EP or RC. In order to enable
+	  host-specific features PCIE6_RCAR_HOST must be selected and in
+	  order to enable device-specific features PCIE6_RCAR_EP must be
+	  selected.
+
 endmenu
