@@ -889,21 +889,21 @@ static void rcar_i2c_release_dma(struct rcar_i2c_priv *priv)
 }
 
 /* I2C is a special case, we need to poll the status of a reset */
-static int rcar_i2c_do_reset(struct rcar_i2c_priv *priv)
-{
-	int ret;
-
-	/* Don't reset if a slave instance is currently running */
-	if (priv->slave)
-		return -EISCONN;
-
-	ret = reset_control_reset(priv->rstc);
-	if (ret)
-		return ret;
-
-	return read_poll_timeout_atomic(reset_control_status, ret, ret == 0, 1,
-					100, false, priv->rstc);
-}
+/* static int rcar_i2c_do_reset(struct rcar_i2c_priv *priv)
+ *{
+ *	int ret;
+ *
+ *	if (priv->slave)
+ *		return -EISCONN;
+ *
+ *	ret = reset_control_reset(priv->rstc);
+ *	if (ret)
+ *		return ret;
+ *
+ *	return read_poll_timeout_atomic(reset_control_status, ret, ret == 0, 1,
+ *					100, false, priv->rstc);
+ *}
+ */
 
 static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 				struct i2c_msg *msgs,
@@ -925,7 +925,7 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 
 	/* Gen3+ needs a reset. That also allows RXDMA once */
 	if (priv->devtype >= I2C_RCAR_GEN3) {
-		ret = rcar_i2c_do_reset(priv);
+		ret = 0; /*rcar_i2c_do_reset(priv);*/
 		if (ret)
 			goto out;
 		priv->flags &= ~ID_P_NO_RXDMA;
@@ -1189,19 +1189,20 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 		irqflags |= IRQF_NO_THREAD;
 		irqhandler = rcar_i2c_gen2_irq;
 	} else {
-		/* R-Car Gen3+ needs a reset before every transfer */
-		priv->rstc = devm_reset_control_get_exclusive(&pdev->dev, NULL);
-		if (IS_ERR(priv->rstc)) {
-			ret = PTR_ERR(priv->rstc);
-			goto out_pm_put;
+		if (priv->devtype != I2C_RCAR_GEN5) {
+			priv->rstc = devm_reset_control_get_exclusive(&pdev->dev, NULL);
+			if (IS_ERR(priv->rstc)) {
+				ret = PTR_ERR(priv->rstc);
+				goto out_pm_put;
+			}
+
+			ret = reset_control_status(priv->rstc);
+			if (ret < 0)
+				goto out_pm_put;
+
+			/* hard reset disturbs HostNotify local target, so disable it */
+			priv->flags &= ~ID_P_HOST_NOTIFY;
 		}
-
-		ret = reset_control_status(priv->rstc);
-		if (ret < 0)
-			goto out_pm_put;
-
-		/* hard reset disturbs HostNotify local target, so disable it */
-		priv->flags &= ~ID_P_HOST_NOTIFY;
 	}
 
 	ret = platform_get_irq(pdev, 0);
