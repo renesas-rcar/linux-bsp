@@ -40,6 +40,9 @@ static int rcar_add_pcie6_port(struct dw_plat_pcie6 *dw_plat_pcie6,
 	pp->num_vectors = MAX_MSI_IRQS;
 	pp->ops = &pcie6_rcar_host_ops;
 
+	/* Get the PCIe Generation from DT */
+	pci->link_gen = pcie6_rcar_get_link_speed(np);
+
 	ret = dw_pcie6_host_init(pp);
 	if (ret) {
 		dev_err(dev, "Failed to initialize host\n");

@@ -89,6 +89,9 @@ static int pcie6_rcar_ep_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, dw_plat_pcie6);
 
+	/* Get the PCIe Generation from DT */
+	pci->link_gen = pcie6_rcar_get_link_speed(pci->dev->of_node);
+
 	pci->ep.ops = &pcie6_rcar_ep_ops;
 
 	ret = dw_pcie6_ep_init(&pci->ep);

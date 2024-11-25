@@ -135,6 +135,18 @@ u16 dw_pcie6_find_ext_capability(struct dw_pcie6 *pci, u8 cap)
 }
 EXPORT_SYMBOL_GPL(dw_pcie6_find_ext_capability);
 
+int pcie6_rcar_get_link_speed(struct device_node *node)
+{
+	u32 max_link_speed;
+
+	if (of_property_read_u32(node, "max-link-speed", &max_link_speed) ||
+	    max_link_speed == 0 || max_link_speed > 6)
+		return -EINVAL;
+
+	return max_link_speed;
+}
+EXPORT_SYMBOL_GPL(pcie6_rcar_get_link_speed);
+
 int dw_pcie6_read(void __iomem *addr, int size, u32 *val)
 {
 	if (!IS_ALIGNED((uintptr_t)addr, size)) {
@@ -519,6 +531,12 @@ static void dw_pcie6_link_set_max_speed(struct dw_pcie6 *pci, u32 link_gen)
 		break;
 	case PCIE_SPEED_16_0GT:
 		link_speed = PCI_EXP_LNKCTL2_TLS_16_0GT;
+		break;
+	case PCIE_SPEED_32_0GT:
+		link_speed = PCI_EXP_LNKCTL2_TLS_32_0GT;
+		break;
+	case PCIE_SPEED_64_0GT:
+		link_speed = PCI_EXP_LNKCTL2_TLS_64_0GT;
 		break;
 	default:
 		/* Use hardware capability */

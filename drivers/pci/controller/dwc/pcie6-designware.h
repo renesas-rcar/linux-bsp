@@ -357,6 +357,7 @@ int dw_pcie6_prog_inbound_atu(struct dw_pcie6 *pci, u8 func_no, int index,
 void dw_pcie6_disable_atu(struct dw_pcie6 *pci, u32 dir, int index);
 void dw_pcie6_setup(struct dw_pcie6 *pci);
 void dw_pcie6_iatu_detect(struct dw_pcie6 *pci);
+int pcie6_rcar_get_link_speed(struct device_node *node);
 
 static inline void dw_pcie6_writel_dbi(struct dw_pcie6 *pci, u32 reg, u32 val)
 {
