@@ -183,6 +183,13 @@
 		clock-frequency = <0>;
 	};
 
+	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
 	pmu_a76 {
 		compatible = "arm,cortex-a76-pmu";
 		interrupts-extended = <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_LOW>;
