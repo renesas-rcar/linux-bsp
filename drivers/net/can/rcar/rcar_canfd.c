@@ -208,7 +208,7 @@ enum rcanfd_chip_id {
 #define RCANFD_FDCFG_FDOE		BIT(28)
 #define RCANFD_FDCFG_TDCE		BIT(9)
 #define RCANFD_FDCFG_TDCOC		BIT(8)
-#define RCANFD_FDCFG_TDCO(x)		(((x) & 0x7f) >> 16)
+#define RCANFD_FDCFG_TDCO(x)		(((x) & 0xff) << 16)
 
 /* RSCFDnCFDRFCCx */
 #define RCANFD_RFCC_RFIM		BIT(12)
@@ -438,6 +438,7 @@ enum rcanfd_chip_id {
 /* R-Car V3U Classical and CAN FD mode specific register map */
 #define RCANFD_V3U_CFDCFG		(0x1314)
 #define RCANFD_V3U_DCFG(m)		(0x1400 + (0x20 * (m)))
+#define RCANFD_V3U_FDCFG(m)		(0x1404 + (0x20 * (m)))
 
 #define RCANFD_V3U_GAFL_OFFSET		(0x1800)
 
@@ -668,15 +669,17 @@ static void rcar_canfd_tx_failure_cleanup(struct net_device *ndev)
 		can_free_echo_skb(ndev, i, NULL);
 }
 
-static void rcar_canfd_set_mode(struct rcar_canfd_global *gpriv)
+static void rcar_canfd_set_mode(struct rcar_canfd_global *gpriv, u32 ch)
 {
-	if (is_v3u(gpriv) || gpriv->chip_id == GEN5) {
+	if (is_v3u(gpriv)) {
 		if (gpriv->fdmode)
-			rcar_canfd_set_bit(gpriv->base, RCANFD_V3U_CFDCFG,
-					   RCANFD_FDCFG_FDOE);
+			for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels)
+				rcar_canfd_set_bit(gpriv->base, RCANFD_V3U_FDCFG(ch),
+						   RCANFD_FDCFG_FDOE);
 		else
-			rcar_canfd_set_bit(gpriv->base, RCANFD_V3U_CFDCFG,
-					   RCANFD_FDCFG_CLOE);
+			for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels)
+				rcar_canfd_set_bit(gpriv->base, RCANFD_V3U_FDCFG(ch),
+						   RCANFD_FDCFG_CLOE);
 	} else {
 		if (gpriv->fdmode)
 			rcar_canfd_set_bit(gpriv->base, RCANFD_GRMCFG,
@@ -719,7 +722,7 @@ static int rcar_canfd_reset_controller(struct rcar_canfd_global *gpriv)
 	rcar_canfd_write(gpriv->base, RCANFD_GERFL, 0x0);
 
 	/* Set the controller into appropriate mode */
-	rcar_canfd_set_mode(gpriv);
+	rcar_canfd_set_mode(gpriv, ch);
 
 	/* Transition all Channels to reset mode */
 	for_each_set_bit(ch, &gpriv->channels_mask, gpriv->max_channels) {
@@ -784,7 +787,7 @@ static void rcar_canfd_configure_afl_rules(struct rcar_canfd_global *gpriv,
 	} else {
 		/* Get number of Channel 0 rules and adjust */
 		cfg = rcar_canfd_read(gpriv->base, RCANFD_GAFLCFG(ch));
-		if (gpriv->chip_id == GEN5)
+		if (gpriv->chip_id == RENESAS_R8A779A0 || gpriv->chip_id == GEN5)
 			start = ch * num_rules;
 		else
 			start = RCANFD_GAFLCFG_GETRNC(gpriv, 0, cfg);
@@ -1296,6 +1299,38 @@ static irqreturn_t rcar_canfd_channel_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static void rcar_canfd_set_samplepoint(struct net_device *dev)
+{
+	struct rcar_canfd_channel *priv = netdev_priv(dev);
+	u32 ch = priv->channel;
+	u16 tdco;
+	u32 cfg;
+	struct rcar_canfd_global *gpriv = priv->gpriv;
+
+	/* Sample point settings */
+	tdco = 2; /* TDCO = 2Tq */
+
+	/* Transceiver Delay Compensation Offset Configuration */
+	if (gpriv->chip_id == RENESAS_R8A779A0 || gpriv->chip_id == GEN5) {
+		cfg = (RCANFD_FDCFG_TDCE |
+			   RCANFD_FDCFG_TDCO(tdco));
+		rcar_canfd_set_bit(priv->base, RCANFD_V3U_FDCFG(ch), cfg);
+	}
+}
+
+static void rcar_canfd_unset_samplepoint(struct net_device *dev)
+{
+	struct rcar_canfd_channel *priv = netdev_priv(dev);
+	u32 ch = priv->channel;
+	u32 cfg;
+	struct rcar_canfd_global *gpriv = priv->gpriv;
+
+	if (gpriv->chip_id == RENESAS_R8A779A0 || gpriv->chip_id == GEN5) {
+		cfg = RCANFD_FDCFG_TDCE; /* Disable TDC */
+		rcar_canfd_clear_bit(priv->base, RCANFD_V3U_FDCFG(ch), cfg);
+	}
+}
+
 static void rcar_canfd_set_bittiming(struct net_device *dev)
 {
 	struct rcar_canfd_channel *priv = netdev_priv(dev);
@@ -1326,6 +1361,12 @@ static void rcar_canfd_set_bittiming(struct net_device *dev)
 		sjw = dbt->sjw - 1;
 		tseg1 = dbt->prop_seg + dbt->phase_seg1 - 1;
 		tseg2 = dbt->phase_seg2 - 1;
+
+		/* Set Secondary Sample Point for high baud rate */
+		if (brp == 0 && tseg1 <= 5 && tseg2 == 1)
+			rcar_canfd_set_samplepoint(dev);
+		else
+			rcar_canfd_unset_samplepoint(dev);
 
 		cfg = (RCANFD_DCFG_DTSEG1(gpriv, tseg1) | RCANFD_DCFG_DBRP(brp) |
 		       RCANFD_DCFG_DSJW(sjw) | RCANFD_DCFG_DTSEG2(gpriv, tseg2));
@@ -1837,6 +1878,7 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 
 	chip_id = (uintptr_t)of_device_get_match_data(&pdev->dev);
 	max_channels = (chip_id == RENESAS_R8A779A0 || chip_id == GEN5) ? 8 : 2;
+	int ch_irq_x5h[RCANFD_NUM_CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 	if (of_property_read_bool(pdev->dev.of_node, "renesas,no-can-fd"))
 		fdmode = false;			/* Classical CAN only mode */
@@ -1850,20 +1892,42 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 	}
 
 	if (chip_id != RENESAS_RZG2L) {
-		ch_irq = platform_get_irq_byname_optional(pdev, "ch_int");
-		if (ch_irq < 0) {
-			/* For backward compatibility get irq by index */
-			ch_irq = platform_get_irq(pdev, 0);
-			if (ch_irq < 0)
-				return ch_irq;
+		if (chip_id == GEN5) {
+			for (i = 0; i < RCANFD_NUM_CHANNELS; i++) {
+				ch_irq_x5h[i] = platform_get_irq(pdev, i + 1);
+				if (ch_irq_x5h[i] < 0) {
+					err = ch_irq_x5h[i];
+					goto fail_dev;
+				}
+			}
+			if (ch_irq < 0) {
+				err = ch_irq;
+				goto fail_dev;
+			}
+		} else {
+			ch_irq = platform_get_irq_byname_optional(pdev, "ch_int");
+			if (ch_irq < 0) {
+				/* For backward compatibility get irq by index */
+				ch_irq = platform_get_irq(pdev, 0);
+				if (ch_irq < 0)
+					return ch_irq;
+			}
 		}
 
-		g_irq = platform_get_irq_byname_optional(pdev, "g_int");
-		if (g_irq < 0) {
-			/* For backward compatibility get irq by index */
-			g_irq = platform_get_irq(pdev, 1);
-			if (g_irq < 0)
-				return g_irq;
+		if (chip_id == GEN5) {
+			g_irq = platform_get_irq(pdev, 0);
+			if (g_irq < 0) {
+				err = g_irq;
+				goto fail_dev;
+			}
+		}	else {
+			g_irq = platform_get_irq_byname_optional(pdev, "g_int");
+			if (g_irq < 0) {
+				/* For backward compatibility get irq by index */
+				g_irq = platform_get_irq(pdev, 1);
+				if (g_irq < 0)
+					return g_irq;
+			}
 		}
 	} else {
 		g_err_irq = platform_get_irq_byname(pdev, "g_err");
@@ -1934,13 +1998,26 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 
 	/* Request IRQ that's common for both channels */
 	if (gpriv->chip_id != RENESAS_RZG2L) {
-		err = devm_request_irq(&pdev->dev, ch_irq,
-				       rcar_canfd_channel_interrupt, 0,
-				       "canfd.ch_int", gpriv);
-		if (err) {
-			dev_err(&pdev->dev, "devm_request_irq(%d) failed, error %d\n",
-				ch_irq, err);
-			goto fail_dev;
+		if (gpriv->chip_id == GEN5) {
+			for (i = 0; i < RCANFD_NUM_CHANNELS; i++) {
+				err = devm_request_irq(&pdev->dev, ch_irq_x5h[i],
+						       rcar_canfd_channel_interrupt, 0,
+						       "canfd.ch_int", gpriv);
+				if (err) {
+					dev_err(&pdev->dev, "devm_request_irq(%d) failed, error %d\n",
+						ch_irq_x5h[i], err);
+					goto fail_dev;
+				}
+			}
+		} else {
+			err = devm_request_irq(&pdev->dev, ch_irq,
+					       rcar_canfd_channel_interrupt, 0,
+					       "canfd.ch_int", gpriv);
+			if (err) {
+				dev_err(&pdev->dev, "devm_request_irq(%d) failed, error %d\n",
+					ch_irq, err);
+				goto fail_dev;
+			}
 		}
 
 		err = devm_request_irq(&pdev->dev, g_irq,
