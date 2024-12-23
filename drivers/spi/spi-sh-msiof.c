@@ -152,7 +152,7 @@ struct sh_msiof_spi_priv {
 #define SIFCTR_TFWM_8		(5UL << 29)	/*  Transfer Request when 8 empty stages */
 #define SIFCTR_TFWM_4		(6UL << 29)	/*  Transfer Request when 4 empty stages */
 #define SIFCTR_TFWM_1		(7UL << 29)	/*  Transfer Request when 1 empty stage */
-#define SIFCTR_TFUA_MASK	GENMASK(26, 20) /* Transmit FIFO Usable Area */
+#define SIFCTR_TFUA_MASK	GENMASK(28, 20) /* Transmit FIFO Usable Area */
 #define SIFCTR_TFUA_SHIFT	20
 #define SIFCTR_TFUA(i)		((i) << SIFCTR_TFUA_SHIFT)
 #define SIFCTR_RFWM_MASK	GENMASK(15, 13)	/* Receive FIFO Watermark */
@@ -1159,6 +1159,8 @@ static const struct of_device_id sh_msiof_match[] = {
 	{ .compatible = "renesas,msiof-r8a7796",   .data = &rcar_gen3_data },
 	{ .compatible = "renesas,msiof-r8a77961",  .data = &rcar_gen3_data },
 	{ .compatible = "renesas,rcar-gen3-msiof", .data = &rcar_gen3_data },
+	{ .compatible = "renesas,msiof-r8a779g0",  .data = &rcar_gen3_data },
+	{ .compatible = "renesas,rcar-gen4-msiof", .data = &rcar_gen3_data },
 	{ .compatible = "renesas,sh-msiof",        .data = &sh_data }, /* Deprecated */
 	{},
 };
