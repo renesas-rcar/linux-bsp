@@ -33,6 +33,7 @@
 #include <linux/kmemleak.h>
 #define CREATE_TRACE_POINTS
 #include "optee_trace.h"
+#include "optee_rcar.h"
 
 /*
  * This file implement the SMC ABI used when communicating with secure world
@@ -1436,6 +1437,7 @@ static optee_invoke_fn *get_invoke_func(struct device *dev)
 static void optee_smc_remove(struct platform_device *pdev)
 {
 	struct optee *optee = platform_get_drvdata(pdev);
+	optee_rcar_remove();
 
 	/*
 	 * Ask OP-TEE to free all cached shared memory objects to decrease
@@ -1715,6 +1717,10 @@ static int optee_probe(struct platform_device *pdev)
 		goto err_unreg_supp_teedev;
 
 	optee_cq_init(&optee->call_queue, thread_count);
+	rc = optee_rcar_probe(optee);
+	if (rc)
+		goto err_rcar;
+
 	optee_supp_init(&optee->supp);
 	optee->smc.memremaped_shm = memremaped_shm;
 	optee->pool = pool;
@@ -1806,6 +1812,7 @@ err_free_pool:
 	tee_shm_pool_free(pool);
 	if (memremaped_shm)
 		memunmap(memremaped_shm);
+err_rcar:
 	return rc;
 }
 
