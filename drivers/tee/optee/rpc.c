@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015-2021, Linaro Limited
+ * Copyright (c) 2017-2024, Renesas Electronics Corporation
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -11,6 +22,7 @@
 #include <linux/tee_drv.h>
 #include "optee_private.h"
 #include "optee_rpc_cmd.h"
+#include "optee_rcar.h"
 
 static void handle_rpc_func_cmd_get_time(struct optee_msg_arg *arg)
 {
@@ -270,6 +282,9 @@ void optee_rpc_cmd(struct tee_context *ctx, struct optee *optee,
 		break;
 	case OPTEE_RPC_CMD_I2C_TRANSFER:
 		handle_rpc_func_cmd_i2c_transfer(ctx, arg);
+		break;
+	case OPTEE_RPC_CMD_DEBUG_LOG:
+		handle_rpc_func_cmd_debug_log(arg);
 		break;
 	default:
 		handle_rpc_supp_cmd(ctx, optee, arg);

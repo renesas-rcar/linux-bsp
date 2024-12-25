@@ -2,6 +2,17 @@
 /*
  * Copyright (c) 2015-2021, Linaro Limited
  * Copyright (c) 2016, EPAM Systems
+ * Copyright (c) 2017, Renesas Electronics Corporation
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -17,6 +28,7 @@
 #include <linux/types.h>
 #include <linux/workqueue.h>
 #include "optee_private.h"
+#include "optee_rcar.h"
 
 int optee_pool_op_alloc_helper(struct tee_shm_pool *pool, struct tee_shm *shm,
 			       size_t size, size_t align,
@@ -221,6 +233,6 @@ module_exit(optee_core_exit);
 
 MODULE_AUTHOR("Linaro");
 MODULE_DESCRIPTION("OP-TEE driver");
-MODULE_VERSION("1.0");
+MODULE_VERSION(VERSION_OF_RENESAS);
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:optee");
