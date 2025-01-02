@@ -299,6 +299,16 @@ config RCAR_REMOTEPROC
 	  This can be either built-in or a loadable module.
 	  If compiled as module (M), the module name is rcar_rproc.
 
+config RCAR_GEN5_REMOTEPROC
+	tristate "Renesas R-Car Gen5 remoteproc support"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	select RCAR_MFIS
+	help
+	  Say y here to support R-Car Gen5 realtime processor via the
+	  remote processor framework.
+	  This can be either built-in or a loadable module.
+	  If compiled as module (M), the module name is rcar_gen5_rproc.
+
 config ST_REMOTEPROC
 	tristate "ST remoteproc support"
 	depends on ARCH_STI
