@@ -7,8 +7,6 @@
 
 /dts-v1/;
 #include "r8a779h2-uio.dtsi"
-#include "gray-hawk-cpu-common.dtsi"
-#include "gray-hawk-common.dtsi"
 #include "gray-hawk-uio-common.dtsi"
 
 / {
