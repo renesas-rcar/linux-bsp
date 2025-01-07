@@ -6,6 +6,8 @@
  * Copyright (C) 2024 Renesas Electronics Corp.
  */
 
+#include "r8a779h0-gray-hawk-common.dtsi"
+
 &isp0 {
 	status = "disabled";
 };
