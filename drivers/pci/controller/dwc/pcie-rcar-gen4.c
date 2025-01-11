@@ -595,14 +595,23 @@ static const struct soc_device_attribute r8a779g0[] = {
 	{ /* sentinel */ }
 };
 
+static const struct soc_device_attribute r8a779h0[] = {
+	{ .soc_id = "r8a779h0" },
+	{ /* sentinel */ }
+};
+
 void rcar_gen4_pcie_initial(struct rcar_gen4_pcie *rcar, bool rc)
 {
 	struct dw_pcie *dw = &rcar->dw;
 	u32 val;
 
-	if (soc_device_match(r8a779g0))
-	{
+	if (soc_device_match(r8a779g0)) {
 		rcar->linkup_setting = true;
+
+		/* Error Status Clear */
+		val = readl(rcar->base + PCIEERRSTS0CLR);
+		val |= ERRSTS0CLR_WH_EN;
+		writel(val, rcar->base + PCIEERRSTS0CLR);
 	}
 
 	/* Error Status Enable */
@@ -612,7 +621,7 @@ void rcar_gen4_pcie_initial(struct rcar_gen4_pcie *rcar, bool rc)
 
 	/* Error Status Clear */
 	val = readl(rcar->base + PCIEERRSTS0CLR);
-	val |= ERRSTS0_EN;
+	val |= ERRSTS0CLR_GH_EN;
 	writel(val, rcar->base + PCIEERRSTS0CLR);
 
 	/* Set AUX_CLK_FREQ to 200MHz */
