@@ -1204,8 +1204,6 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 
 			/* hard reset disturbs HostNotify local target, so disable it */
 			priv->flags &= ~ID_P_HOST_NOTIFY;
-		} else {
-			irqflags |= IRQF_SHARED;
 		}
 	}
 
