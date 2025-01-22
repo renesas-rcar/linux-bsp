@@ -23,7 +23,7 @@
 #include <media/v4l2-mc.h>
 #include <media/v4l2-subdev.h>
 
-struct rcar_csi2;
+#include "rcar-vin.h"
 
 /* Register offsets and bits */
 
@@ -265,12 +265,6 @@ struct rcar_csi2;
 #define CORE_DIG_CLANE_2_RW_LP_0				0x2A880
 #define CORE_DIG_CLANE_2_RW_HS_RX(n)			(0x2A900 + (n * 2)) /* n = 0 ~ 6 */
 
-#define RCAR_CSI2_R8A779G0_FEATURE	BIT(0)
-#define RCAR_CSI2_R8A779H0_FEATURE      BIT(1)
-#define RCAR_CSI2_R8A779A0_FEATURE      BIT(2)
-
-#define CSI1300		1
-
 #define CSI2_CPHY_SETTING(ms, rx2, t0, t1, t2, a29, a27) \
 	.msps = (ms), \
 	.rw_hs_rx_2 = (rx2), \
@@ -279,6 +273,8 @@ struct rcar_csi2;
 	.rw_trio_2 = (t2), \
 	.afe_lane0_29 = (a29), \
 	.afe_lane0_27 = (a27)
+
+struct rcar_csi2;
 
 struct rcsi2_cphy_setting {
 	u16 msps;
@@ -919,8 +915,8 @@ static void rcsi2_modify16(struct rcar_csi2 *priv, unsigned int reg, u16 data, u
 
 static void rcsi2_enter_standby(struct rcar_csi2 *priv)
 {
-	if (!((priv->info->features & RCAR_CSI2_R8A779G0_FEATURE) || 
-		  (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE))) {
+	if (!((priv->info->features & RCAR_VIN_R8A779G0_FEATURE) ||
+		  (priv->info->features & RCAR_VIN_R8A779H0_FEATURE))) {
 		rcsi2_write(priv, PHYCNT_REG, 0);
 		rcsi2_write(priv, PHTC_REG, PHTC_TESTCLR);
 	}
@@ -981,7 +977,7 @@ static int rcsi2_set_phypll(struct rcar_csi2 *priv, unsigned int mbps)
 	    ((mbps - hsfreq_prev->mbps) <= (hsfreq->mbps - mbps)))
 		hsfreq = hsfreq_prev;
 
-	if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE)
+	if (priv->info->features & RCAR_VIN_R8A779H0_FEATURE)
 		rcsi2_write(priv, V4M_PHYPLL, PHYPLL_HSFREQRANGE(hsfreq->reg));
 	else
 		rcsi2_write(priv, PHYPLL_REG, PHYPLL_HSFREQRANGE(hsfreq->reg));
@@ -1582,17 +1578,17 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 	/* Start CSI PHY */
 	rcsi2_exit_standby(priv);
 
-	/* Start camera side device */
+	/* Setup camera side device */
 	ret = v4l2_subdev_call(priv->remote, video, s_stream, 1);
 	if (ret) {
 		rcsi2_enter_standby(priv);
 		return ret;
 	}
 
-	if (priv->info->features & RCAR_CSI2_R8A779G0_FEATURE)
+	if (priv->info->features & RCAR_VIN_R8A779G0_FEATURE)
 		/* init V4H PHY */
 		ret = rcsi2_start_receiver_v4h(priv);
-	else if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE)
+	else if (priv->info->features & RCAR_VIN_R8A779H0_FEATURE)
 		/* init V4M PHY */
 		ret = rcsi2_start_receiver_v4m(priv);
 	else
@@ -1602,26 +1598,28 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 		rcsi2_enter_standby(priv);
 			return ret;
 	}
+	dev_dbg(priv->dev, "Set the Link and PHY of CSI-2 module registers\n");
 
 	/* Confirmation of CSI PHY */
-	if (priv->info->features & RCAR_CSI2_R8A779G0_FEATURE ||
-	    priv->info->features & RCAR_CSI2_R8A779H0_FEATURE)
+	if (priv->info->features & RCAR_VIN_R8A779G0_FEATURE ||
+	    priv->info->features & RCAR_VIN_R8A779H0_FEATURE)
 		rcsi2_wait_phy_start_v4h(priv);
 
 	/* Step T8: De-assert FRXM */
-	if (priv->info->features & RCAR_CSI2_R8A779G0_FEATURE) {
+	if (priv->info->features & RCAR_VIN_R8A779G0_FEATURE) {
 		read32 = rcsi2_read(priv, FRXM);
 		rcsi2_write(priv, FRXM, read32 & ~(FRXM_FORCERXMODE_DCK | FRXM_FORCERXMODE_0
 					| FRXM_FORCERXMODE_1 | FRXM_FORCERXMODE_2));
-	} else if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE) {
+	} else if (priv->info->features & RCAR_VIN_R8A779H0_FEATURE) {
 		read32 = rcsi2_read(priv, FRXM);
 		rcsi2_write(priv, FRXM, read32 & ~(FRXM_FORCERXMODE_0
 					| FRXM_FORCERXMODE_1 | FRXM_FORCERXMODE_2 | FRXM_FORCERXMODE_3));
 	}
+	dev_dbg(priv->dev, "Confirmed PHY of CSI-2 module starts.\n");
 
-	if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE ||
-		priv->info->features & RCAR_CSI2_R8A779G0_FEATURE ||
-		priv->info->features & RCAR_CSI2_R8A779A0_FEATURE) {
+	if (priv->info->features & RCAR_VIN_R8A779H0_FEATURE ||
+		priv->info->features & RCAR_VIN_R8A779G0_FEATURE ||
+		priv->info->features & RCAR_VIN_R8A779A0_FEATURE) {
 		/* Start camera side device */
 		ret = v4l2_subdev_call(priv->remote, video, enable_link, 1);
 		if (ret) {
@@ -1636,6 +1634,7 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 static void rcsi2_stop(struct rcar_csi2 *priv)
 {
 	rcsi2_enter_standby(priv);
+	v4l2_subdev_call(priv->remote, video, enable_link, 0);
 	v4l2_subdev_call(priv->remote, video, s_stream, 0);
 }
 
@@ -1935,7 +1934,7 @@ static int rcsi2_phtw_write(struct rcar_csi2 *priv, u16 data, u16 code)
 {
 	unsigned int timeout;
 
-	if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE) {
+	if (priv->info->features & RCAR_VIN_R8A779H0_FEATURE) {
 		rcsi2_write(priv, V4M_PHTW,
 				PHTW_DWEN | PHTW_TESTDIN_DATA(data) |
 				PHTW_CWEN | PHTW_TESTDIN_CODE(code));
@@ -1947,7 +1946,7 @@ static int rcsi2_phtw_write(struct rcar_csi2 *priv, u16 data, u16 code)
 
 	/* Wait for DWEN and CWEN to be cleared by hardware. */
 	for (timeout = 0; timeout <= 20; timeout++) {
-		if (priv->info->features & RCAR_CSI2_R8A779H0_FEATURE) {
+		if (priv->info->features & RCAR_VIN_R8A779H0_FEATURE) {
 			if (!(rcsi2_read(priv, V4M_PHTW) & (PHTW_DWEN | PHTW_CWEN))) {
 				return 0;
 			}
@@ -2330,12 +2329,12 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a77990 = {
 };
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a779g0 = {
-	.features = RCAR_CSI2_R8A779G0_FEATURE,
+	.features = RCAR_VIN_R8A779G0_FEATURE,
 	.num_channels = 16,
 };
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a779a0 = {
-	.features = RCAR_CSI2_R8A779A0_FEATURE,
+	.features = RCAR_VIN_R8A779A0_FEATURE,
 	.init_phtw = rcsi2_init_phtw_v3u,
 	.hsfreqrange = hsfreqrange_v3u,
 	.csi0clkfreqrange = 0x20,
@@ -2346,7 +2345,7 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a779a0 = {
 };
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a779h0 = {
-	.features = RCAR_CSI2_R8A779H0_FEATURE,
+	.features = RCAR_VIN_R8A779H0_FEATURE,
 	.init_phtw = rcsi2_init_phtw_v4m,
 	.hsfreqrange = hsfreqrange_v4m,
 	.csi0clkfreqrange = 0x0C,
