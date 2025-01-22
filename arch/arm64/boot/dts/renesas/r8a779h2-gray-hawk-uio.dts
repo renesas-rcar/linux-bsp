@@ -7,9 +7,7 @@
 
 /dts-v1/;
 #include "r8a779h2-uio.dtsi"
-#include "gray-hawk-cpu-common.dtsi"
-#include "gray-hawk-common.dtsi"
-#include "gray-hawk-uio-common.dtsi"
+#include "r8a779h2-gray-hawk-uio-common.dtsi"
 
 / {
 	model = "Renesas Gray Hawk Single board based on r8a779h2";
