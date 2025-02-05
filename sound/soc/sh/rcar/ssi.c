@@ -305,7 +305,7 @@ static int rsnd_ssi_master_clk_start(struct rsnd_mod *mod,
 
 	main_rate = rsnd_ssi_clk_query(rdai, rate, chan, &idx);
 	if (!main_rate) {
-		dev_err(dev, "unsupported clock rate\n");
+		dev_err(dev, "unsupported clock rate (%d)\n", rate);
 		return -EIO;
 	}
 
