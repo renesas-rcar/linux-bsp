@@ -1,0 +1,172 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * UIO Device Tree Source for the common parts shared by the Gray Hawk BreakOut
+ * and Gray Hawk Single boards
+ *
+ * Copyright (C) 2025 Renesas Electronics Corp.
+ */
+
+#include "r8a779h4-gray-hawk-common.dtsi"
+
+&isp0 {
+	status = "disabled";
+};
+
+&isp1 {
+	status = "disabled";
+};
+
+&csi40 {
+	status = "disabled";
+};
+
+&csi_00 {
+	status = "okay";
+};
+
+&csi41 {
+	status = "disabled";
+};
+
+&csi_01 {
+	status = "okay";
+};
+
+&rt_dmac0 {
+	status = "disabled";
+};
+
+&rt_dmac1 {
+	status = "disabled";
+};
+
+&dsi0 {
+	status = "disabled";
+};
+
+&i2c1 {
+	sn65dsi86_0@2c {
+		status = "disabled";
+	};
+
+	gmsl0: gmsl-deserializer@4e {
+		status = "disabled";
+	};
+
+	gmsl1: gmsl-deserializer@4f {
+		status = "disabled";
+	};
+};
+
+&du {
+	status = "disabled";
+};
+
+&ipmmu_rt0 {
+	status = "disabled";
+};
+
+&ipmmu_rt1 {
+	status = "disabled";
+};
+
+&ipmmu_ds0 {
+	status = "disabled";
+};
+
+&ipmmu_hc {
+	status = "disabled";
+};
+
+&ipmmu_ir {
+	status = "disabled";
+};
+
+&ipmmu_vc {
+	status = "disabled";
+};
+
+&ipmmu_3dg {
+	status = "disabled";
+};
+
+&ipmmu_vi0 {
+	status = "disabled";
+};
+
+&ipmmu_vi1 {
+	status = "disabled";
+};
+
+&ipmmu_vip0 {
+	status = "disabled";
+};
+
+&ipmmu_mm {
+	status = "disabled";
+};
+
+&vin_00 {
+	status = "okay";
+};
+
+&vin_01 {
+	status = "okay";
+};
+
+&vin_02 {
+	status = "okay";
+};
+
+&vin_03 {
+	status = "okay";
+};
+
+&vin_04 {
+	status = "okay";
+};
+
+&vin_05 {
+	status = "okay";
+};
+
+&vin_06 {
+	status = "okay";
+};
+
+&vin_07 {
+	status = "okay";
+};
+
+&vin_10 {
+	status = "okay";
+};
+
+&vin_11 {
+	status = "okay";
+};
+
+&vin_12 {
+	status = "okay";
+};
+
+
+&vin_13 {
+	status = "okay";
+};
+
+&vin_14 {
+	status = "okay";
+};
+
+&vin_15 {
+	status = "okay";
+};
+
+&vin_16 {
+	status = "okay";
+};
+
+&vin_17 {
+	status = "okay";
+};
