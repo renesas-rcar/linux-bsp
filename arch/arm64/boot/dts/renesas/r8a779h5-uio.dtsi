@@ -16,6 +16,7 @@
 			opp-microvolt = <825000>;
 			clock-latency-ns = <500000>;
 		};
+		/delete-node/opp-1000000000;
 	};
 
 	cpus {
