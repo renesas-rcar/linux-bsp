@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for the R-Car V4M-5 (R8A779H2) SoC
+ *
+ * Copyright (C) 2025 Renesas Electronics Corp.
+ */
+
+#include "r8a779h0.dtsi"
+
+/ {
+	compatible = "renesas,r8a779h3", "renesas,r8a779h0";
+
+	cluster0_opp: opp-table-0 {
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <825000>;
+			clock-latency-ns = <500000>;
+		};
+
+		/delete-node/opp-1000000000;
+	};
+};
