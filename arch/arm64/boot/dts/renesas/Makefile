@@ -92,6 +92,9 @@ dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h2-gray-hawk-uio.dtb
 dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h3-gray-hawk.dtb
 dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h3-gray-hawk-uio.dtb
 
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h4-gray-hawk.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h4-gray-hawk-uio.dtb
+
 dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h5-gray-hawk.dtb
 dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h5-gray-hawk-uio.dtb
 

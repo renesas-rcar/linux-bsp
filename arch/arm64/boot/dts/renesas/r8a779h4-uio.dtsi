@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * UIO Device Tree Source for the R-Car V4M-3 (R8A779H4) SoC
+ *
+ * Copyright (C) 2025 Renesas Electronics Corp.
+ */
+
+#include "r8a779h0-uio.dtsi"
+
+/ {
+	compatible = "renesas,r8a779h4", "renesas,r8a779h0";
+
+	cluster0_opp: opp-table-0 {
+		opp-933000000 {
+			opp-hz = /bits/ 64 <933000000>;
+			opp-microvolt = <825000>;
+			clock-latency-ns = <500000>;
+		};
+	};
+
+	cpus {
+		cpu-map {
+			cluster0 {
+				/delete-node/core3;
+			};
+		};
+
+		/delete-node/cpu@300;
+	};
+
+	soc {
+		/delete-node/vdsp@f1600000;
+		/delete-node/impvdsp01_00_01;
+		/delete-node/impvdsp01_00_02;
+		/delete-node/impvdsp01_00_03;
+		/delete-node/impvdsp01_00_04;
+	};
+
+};
