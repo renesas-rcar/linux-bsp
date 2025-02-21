@@ -31,5 +31,10 @@
 	soc {
 		/delete-node/gsx@fd000000;
 		/delete-node/ethernet@e6820000;
+		/delete-node/vdsp@f1600000;
+		/delete-node/impvdsp01_00_01;
+		/delete-node/impvdsp01_00_02;
+		/delete-node/impvdsp01_00_03;
+		/delete-node/impvdsp01_00_04;
 	};
 };
