@@ -283,7 +283,6 @@ const struct rvin_video_format *rvin_format_from_pixel(struct rvin_dev *vin,
 /* Cropping, composing and scaling */
 void rvin_scaler_gen2(struct rvin_dev *vin);
 void rvin_scaler_gen3(struct rvin_dev *vin);
-void rvin_crop_scale_comp(struct rvin_dev *vin);
 
 int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel);
 void rvin_set_alpha(struct rvin_dev *vin, unsigned int alpha);
