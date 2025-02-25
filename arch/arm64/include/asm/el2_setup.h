@@ -129,6 +129,46 @@
 	msr	cptr_el2, x0			// Disable copro. traps to EL2
 .endm
 
+/* Disable any fine grained traps */
+.macro __init_el2_fgt
+	mrs	x1, id_aa64mmfr0_el1
+	ubfx	x1, x1, #ID_AA64MMFR0_EL1_FGT_SHIFT, #4
+	cbz	x1, .Lskip_fgt_\@
+
+	mov	x0, xzr
+	mrs	x1, id_aa64dfr0_el1
+	ubfx	x1, x1, #ID_AA64DFR0_EL1_PMSVer_SHIFT, #4
+	cmp	x1, #3
+	b.lt	.Lset_debug_fgt_\@
+	/* Disable PMSNEVFR_EL1 read and write traps */
+	orr	x0, x0, #(1 << 62)
+
+.Lset_debug_fgt_\@:
+	msr_s	SYS_HDFGRTR_EL2, x0
+	msr_s	SYS_HDFGWTR_EL2, x0
+
+	mov	x0, xzr
+	mrs	x1, id_aa64pfr1_el1
+	ubfx	x1, x1, #ID_AA64PFR1_EL1_SME_SHIFT, #4
+	cbz	x1, .Lset_fgt_\@
+
+	/* Disable nVHE traps of TPIDR2 and SMPRI */
+	orr	x0, x0, #HFGxTR_EL2_nSMPRI_EL1_MASK
+	orr	x0, x0, #HFGxTR_EL2_nTPIDR2_EL0_MASK
+
+.Lset_fgt_\@:
+	msr_s	SYS_HFGRTR_EL2, x0
+	msr_s	SYS_HFGWTR_EL2, x0
+	msr_s	SYS_HFGITR_EL2, xzr
+
+	mrs	x1, id_aa64pfr0_el1		// AMU traps UNDEF without AMU
+	ubfx	x1, x1, #ID_AA64PFR0_EL1_AMU_SHIFT, #4
+	cbz	x1, .Lskip_fgt_\@
+
+	msr_s	SYS_HAFGRTR_EL2, xzr
+.Lskip_fgt_\@:
+.endm
+
 .macro __init_el2_nvhe_prepare_eret
 	mov	x0, #INIT_PSTATE_EL1
 	msr	spsr_el2, x0
@@ -152,6 +192,7 @@
 	__init_el2_hstr
 	__init_el2_nvhe_idregs
 	__init_el2_nvhe_cptr
+	__init_el2_fgt
 	__init_el2_nvhe_prepare_eret
 .endm
 
