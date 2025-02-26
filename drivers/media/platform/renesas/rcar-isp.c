@@ -97,6 +97,134 @@ static const struct rcar_isp_format rcar_isp_formats[] = {
 		.code = MEDIA_BUS_FMT_YUYV10_2X10,
 		.datatype = MIPI_CSI2_DT_YUV422_8B,
 		.procmode = 0x0c,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR8_1X8,
+		.datatype = MIPI_CSI2_DT_RAW8,
+		.procmode = 0x00,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG8_1X8,
+		.datatype = MIPI_CSI2_DT_RAW8,
+		.procmode = 0x00,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
+		.datatype = MIPI_CSI2_DT_RAW8,
+		.procmode = 0x00,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
+		.datatype = MIPI_CSI2_DT_RAW8,
+		.procmode = 0x00,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR10_1X10,
+		.datatype = MIPI_CSI2_DT_RAW10,
+		.procmode = 0x01,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG10_1X10,
+		.datatype = MIPI_CSI2_DT_RAW10,
+		.procmode = 0x01,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
+		.datatype = MIPI_CSI2_DT_RAW10,
+		.procmode = 0x01,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB10_1X10,
+		.datatype = MIPI_CSI2_DT_RAW10,
+		.procmode = 0x01,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR12_1X12,
+		.datatype = MIPI_CSI2_DT_RAW12,
+		.procmode = 0x02,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG12_1X12,
+		.datatype = MIPI_CSI2_DT_RAW12,
+		.procmode = 0x02,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG12_1X12,
+		.datatype = MIPI_CSI2_DT_RAW12,
+		.procmode = 0x02,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
+		.datatype = MIPI_CSI2_DT_RAW12,
+		.procmode = 0x02,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR14_1X14,
+		.datatype = MIPI_CSI2_DT_RAW14,
+		.procmode = 0x03,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG14_1X14,
+		.datatype = MIPI_CSI2_DT_RAW14,
+		.procmode = 0x03,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG14_1X14,
+		.datatype = MIPI_CSI2_DT_RAW14,
+		.procmode = 0x03,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB14_1X14,
+		.datatype = MIPI_CSI2_DT_RAW14,
+		.procmode = 0x03,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR16_1X16,
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.procmode = 0x04,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG16_1X16,
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.procmode = 0x04,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG16_1X16,
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.procmode = 0x04,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB16_1X16,
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.procmode = 0x04,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR20_1X20,
+		.datatype = MIPI_CSI2_DT_RAW20,
+		.procmode = 0x05,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG20_1X20,
+		.datatype = MIPI_CSI2_DT_RAW20,
+		.procmode = 0x05,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG20_1X20,
+		.datatype = MIPI_CSI2_DT_RAW20,
+		.procmode = 0x05,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB20_1X20,
+		.datatype = MIPI_CSI2_DT_RAW20,
+		.procmode = 0x05,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR24_1X24,
+		.datatype = MIPI_CSI2_DT_RAW24,
+		.procmode = 0x06,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG24_1X24,
+		.datatype = MIPI_CSI2_DT_RAW24,
+		.procmode = 0x06,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG24_1X24,
+		.datatype = MIPI_CSI2_DT_RAW24,
+		.procmode = 0x06,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB24_1X24,
+		.datatype = MIPI_CSI2_DT_RAW24,
+		.procmode = 0x06,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR28_1X28,
+		.datatype = MIPI_CSI2_DT_RAW28,
+		.procmode = 0x08,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG28_1X28,
+		.datatype = MIPI_CSI2_DT_RAW28,
+		.procmode = 0x08,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG28_1X28,
+		.datatype = MIPI_CSI2_DT_RAW28,
+		.procmode = 0x08,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB28_1X28,
+		.datatype = MIPI_CSI2_DT_RAW28,
+		.procmode = 0x08,
 	},
 };
 
