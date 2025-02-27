@@ -597,7 +597,7 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 	dma_async_issue_pending(chan);
 	if (priv->dma_continuous) {
 		ret = readl_relaxed_poll_timeout(priv->io + ICDMAER, val,
-						 !(val & RMDMACE), 0, XFER_TIMEOUT);
+						 !(val & (read ? RMDMACE : TMDMACE)), 0, XFER_TIMEOUT);
 		if (ret)
 			return false;
 		rcar_i2c_dma_callback(priv);
