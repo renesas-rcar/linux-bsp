@@ -198,7 +198,7 @@ static int rcar_gen5_rproc_probe(struct platform_device *pdev)
 	INIT_WORK(&priv->workqueue, handle_event);
 
 	ret = of_property_read_u32(np, "renesas,mfis-channel", &priv->mfis_chan);
-	if (!ret) {
+	if (ret) {
 		/* Default is channel 0 */
 		priv->mfis_chan = 0;
 	}
