@@ -629,6 +629,18 @@ void rcar_gen4_pcie_initial(struct rcar_gen4_pcie *rcar, bool rc)
 	val |= 0x0C8;
 	dw_pcie_writel_dbi(dw, PRTLGC87, val);
 
+	/* Set Max Payload Size */
+	val = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_DEVCTL));
+	val &= ~PCI_EXP_DEVCTL_PAYLOAD;
+	val |= PCI_EXP_DEVCTL_PAYLOAD_256B;
+	dw_pcie_writel_dbi(dw, EXPCAP(PCI_EXP_DEVCTL), val);
+
+	/* Set Max Read Request Size */
+	val = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_DEVCTL));
+	val &= ~PCI_EXP_DEVCTL_READRQ;
+	val |= PCI_EXP_DEVCTL_READRQ_256B;
+	dw_pcie_writel_dbi(dw, EXPCAP(PCI_EXP_DEVCTL), val);
+
 	if (rc) {
 		/* Power Management */
 		val = readl(rcar->base + PCIEPWRMNGCTRL);
@@ -639,12 +651,6 @@ void rcar_gen4_pcie_initial(struct rcar_gen4_pcie *rcar, bool rc)
 		val = dw_pcie_readl_dbi(dw, MSICAP0F0);
 		val |= MSIE;
 		dw_pcie_writel_dbi(dw, MSICAP0F0, val);
-
-		/* Set Max Payload Size */
-		val = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_DEVCTL));
-		val &= ~PCI_EXP_DEVCTL_PAYLOAD;
-		val |= PCI_EXP_DEVCTL_PAYLOAD_256B;
-		dw_pcie_writel_dbi(dw, EXPCAP(PCI_EXP_DEVCTL), val);
 
 		/* Set Root Control */
 		val = dw_pcie_readl_dbi(dw, EXPCAP(PCI_EXP_RTCTL));
