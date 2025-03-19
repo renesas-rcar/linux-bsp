@@ -400,6 +400,8 @@ error:
 /* E-MAC init function */
 static void ravb_emac_init(struct net_device *ndev)
 {
+	struct ravb_private *priv = netdev_priv(ndev);
+
 	/* Receive frame limit set register */
 	ravb_write(ndev, ndev->mtu + ETH_HLEN + VLAN_HLEN + ETH_FCS_LEN, RFLR);
 
@@ -421,7 +423,10 @@ static void ravb_emac_init(struct net_device *ndev)
 	ravb_write(ndev, ECSR_ICD | ECSR_MPD, ECSR);
 
 	/* E-MAC interrupt enable register */
-	ravb_write(ndev, ECSIPR_ICDIP | ECSIPR_MPDIP, ECSIPR);
+	if (priv->speed == SPEED_1000)
+		ravb_write(ndev, ECSIPR_MPDIP, ECSIPR);
+	else
+		ravb_write(ndev, ECSIPR_ICDIP | ECSIPR_MPDIP, ECSIPR);
 }
 
 /* Device init function for Ethernet AVB */
@@ -748,7 +753,6 @@ static void ravb_error_interrupt(struct net_device *ndev)
 	u32 eis, ris2;
 
 	eis = ravb_read(ndev, EIS);
-	ravb_write(ndev, ~(EIS_QFS | EIS_RESERVED), EIS);
 	if (eis & EIS_QFS) {
 		ris2 = ravb_read(ndev, RIS2);
 		ravb_write(ndev, ~(RIS2_QFF0 | RIS2_QFF1 | RIS2_RFFF |
