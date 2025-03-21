@@ -84,7 +84,7 @@ static int sh_pfc_map_resources(struct sh_pfc *pfc,
 	return 0;
 }
 
-static void __iomem *sh_pfc_phys_to_virt(struct sh_pfc *pfc, u32 reg)
+static void __iomem *sh_pfc_phys_to_virt(struct sh_pfc *pfc, u64 reg)
 {
 	struct sh_pfc_window *window;
 	phys_addr_t address = reg;
@@ -169,14 +169,14 @@ void sh_pfc_write_raw_reg(void __iomem *mapped_reg, unsigned int reg_width,
 	BUG();
 }
 
-u32 sh_pfc_read(struct sh_pfc *pfc, u32 reg)
+u32 sh_pfc_read(struct sh_pfc *pfc, u64 reg)
 {
 	return sh_pfc_read_raw_reg(sh_pfc_phys_to_virt(pfc, reg), 32);
 }
 
-static void sh_pfc_unlock_reg(struct sh_pfc *pfc, u32 reg, u32 data)
+static void sh_pfc_unlock_reg(struct sh_pfc *pfc, u64 reg, u32 data)
 {
-	u32 unlock;
+	u64 unlock;
 
 	if (!pfc->info->unlock_reg)
 		return;
@@ -190,7 +190,7 @@ static void sh_pfc_unlock_reg(struct sh_pfc *pfc, u32 reg, u32 data)
 	sh_pfc_write_raw_reg(sh_pfc_phys_to_virt(pfc, unlock), 32, ~data);
 }
 
-void sh_pfc_write(struct sh_pfc *pfc, u32 reg, u32 data)
+void sh_pfc_write(struct sh_pfc *pfc, u64 reg, u32 data)
 {
 	sh_pfc_unlock_reg(pfc, reg, data);
 	sh_pfc_write_raw_reg(sh_pfc_phys_to_virt(pfc, reg), 32, data);
@@ -227,7 +227,7 @@ static void sh_pfc_write_config_reg(struct sh_pfc *pfc,
 
 	sh_pfc_config_reg_helper(pfc, crp, field, &mapped_reg, &mask, &pos);
 
-	dev_dbg(pfc->dev, "write_reg addr = %x, value = 0x%x, field = %u, "
+	dev_dbg(pfc->dev, "write_reg addr = %llx, value = 0x%x, field = %u, "
 		"r_width = %u, f_width = %u\n",
 		crp->reg, value, field, crp->reg_width, hweight32(mask));
 
@@ -660,22 +660,22 @@ static const struct of_device_id sh_pfc_of_table[] = {
 #endif
 
 #if defined(CONFIG_PM_SLEEP) && defined(CONFIG_ARM_PSCI_FW)
-static void sh_pfc_nop_reg(struct sh_pfc *pfc, u32 reg, unsigned int idx)
+static void sh_pfc_nop_reg(struct sh_pfc *pfc, u64 reg, unsigned int idx)
 {
 }
 
-static void sh_pfc_save_reg(struct sh_pfc *pfc, u32 reg, unsigned int idx)
+static void sh_pfc_save_reg(struct sh_pfc *pfc, u64 reg, unsigned int idx)
 {
 	pfc->saved_regs[idx] = sh_pfc_read(pfc, reg);
 }
 
-static void sh_pfc_restore_reg(struct sh_pfc *pfc, u32 reg, unsigned int idx)
+static void sh_pfc_restore_reg(struct sh_pfc *pfc, u64 reg, unsigned int idx)
 {
 	sh_pfc_write(pfc, reg, pfc->saved_regs[idx]);
 }
 
 static unsigned int sh_pfc_walk_regs(struct sh_pfc *pfc,
-	void (*do_reg)(struct sh_pfc *pfc, u32 reg, unsigned int idx))
+	void (*do_reg)(struct sh_pfc *pfc, u64 reg, unsigned int idx))
 {
 	unsigned int i, n = 0;
 
@@ -791,7 +791,7 @@ static bool __init same_name(const char *a, const char *b)
 	return !strcmp(a, b);
 }
 
-static void __init sh_pfc_check_reg(const char *drvname, u32 reg)
+static void __init sh_pfc_check_reg(const char *drvname, u64 reg)
 {
 	unsigned int i;
 
@@ -827,7 +827,7 @@ static int __init sh_pfc_check_enum(const char *drvname, u16 enum_id)
 	return 0;
 }
 
-static void __init sh_pfc_check_reg_enums(const char *drvname, u32 reg,
+static void __init sh_pfc_check_reg_enums(const char *drvname, u64 reg,
 					  const u16 *enums, unsigned int n)
 {
 	unsigned int i;
@@ -840,7 +840,7 @@ static void __init sh_pfc_check_reg_enums(const char *drvname, u32 reg,
 }
 
 static void __init sh_pfc_check_pin(const struct sh_pfc_soc_info *info,
-				    u32 reg, unsigned int pin)
+				    u64 reg, unsigned int pin)
 {
 	const char *drvname = info->name;
 	unsigned int i;
