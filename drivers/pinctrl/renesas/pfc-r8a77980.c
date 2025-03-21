@@ -2921,7 +2921,7 @@ static const struct pinmux_ioctrl_reg pinmux_ioctrl_regs[] = {
 };
 
 static int r8a77980_pin_to_pocctrl(struct sh_pfc *pfc, unsigned int pin,
-				   u32 *pocctrl)
+				   u64 *pocctrl)
 {
 	int bit = pin & 0x1f;
 
