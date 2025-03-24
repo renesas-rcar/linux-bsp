@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the White Hawk boards with R-Car V4H + ARD-AUDIO-DA7212 Board
+ *
+ * Copyright (C) 2022 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a779g0-whitehawk-rgid.dts"
+#include "white-hawk-sound-common.dtsi"
+
+/ {
+	model = "Renesas White Hawk Sound board based on r8a779g0";
+};
