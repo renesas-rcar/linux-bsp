@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * UIO Device Tree Source for the R-Car V4M-5 Gray Hawk Single board
+ *
+ * Copyright (C) 2025 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a779h3-uio-rgid.dtsi"
+#include "r8a779h3-gray-hawk-uio-common-rgid.dtsi"
+
+/ {
+	model = "Renesas Gray Hawk Single board based on r8a779h3";
+	compatible = "renesas,gray-hawk", "renesas,r8a779h3",
+		     "renesas,r8a779h0";
+};
