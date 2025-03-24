@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the White Hawk CPU boards with R-Car V4H
+ *
+ * Copyright (C) 2021 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a779g0-whitehawk-cpu-rgid.dtsi"
+#include "white-hawk-common-rgid.dtsi"
+
+/ {
+	model = "Renesas White Hawk CPU and Breakout boards based on r8a779g0";
+	compatible = "renesas,whitehawk-breakout", "renesas,whitehawk-cpu", "renesas,r8a779g0";
+};
