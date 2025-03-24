@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * UIO Device Tree Source for the common parts shared by the Gray Hawk BreakOut
+ * and Gray Hawk Single boards
+ *
+ * Copyright (C) 2025 Renesas Electronics Corp.
+ */
+
+#include "r8a779h0-gray-hawk-uio-common-rgid.dtsi"
+
+/ {
+	model = "Renesas Gray Hawk Single board based on r8a779h3";
+	compatible = "renesas,gray-hawk", "renesas,r8a779h3",
+		     "renesas,r8a779h0";
+};

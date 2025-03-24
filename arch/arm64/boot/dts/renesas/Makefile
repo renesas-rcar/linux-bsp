@@ -83,20 +83,20 @@ dtb-$(CONFIG_ARCH_R8A779G0) += r8a779g4-whitehawk-sound.dtb r8a779g4-whitehawk-s
 dtb-$(CONFIG_ARCH_R8A779G0) += r8a779g5-white-hawk.dtb r8a779g5-white-hawk-rgid.dtb
 dtb-$(CONFIG_ARCH_R8A779G0) += r8a779g5-whitehawk-sound.dtb r8a779g5-whitehawk-sound-rgid.dtb
 
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h0-gray-hawk.dtb
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h0-gray-hawk-uio.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h0-gray-hawk.dtb r8a779h0-gray-hawk-rgid.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h0-gray-hawk-uio.dtb r8a779h0-gray-hawk-uio-rgid.dtb
 
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h2-gray-hawk.dtb
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h2-gray-hawk-uio.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h2-gray-hawk.dtb r8a779h2-gray-hawk-rgid.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h2-gray-hawk-uio.dtb r8a779h2-gray-hawk-uio-rgid.dtb
 
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h3-gray-hawk.dtb
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h3-gray-hawk-uio.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h3-gray-hawk.dtb r8a779h3-gray-hawk-rgid.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h3-gray-hawk-uio.dtb r8a779h3-gray-hawk-uio-rgid.dtb
 
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h4-gray-hawk.dtb
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h4-gray-hawk-uio.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h4-gray-hawk.dtb r8a779h4-gray-hawk-rgid.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h4-gray-hawk-uio.dtb r8a779h4-gray-hawk-uio-rgid.dtb
 
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h5-gray-hawk.dtb
-dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h5-gray-hawk-uio.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h5-gray-hawk.dtb r8a779h5-gray-hawk-rgid.dtb
+dtb-$(CONFIG_ARCH_R8A779H0) += r8a779h5-gray-hawk-uio.dtb r8a779h5-gray-hawk-uio-rgid.dtb
 
 dtb-$(CONFIG_ARCH_R8A779F0) += r8a779f0-spider.dtb
 
