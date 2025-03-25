@@ -1925,6 +1925,10 @@ config DMI
 	  However, even with this option, the resultant kernel should
 	  continue to boot on existing non-UEFI platforms.
 
+config RCAR_RGID
+	int "RGID"
+	default 0
+
 endmenu
 
 config SYSVIPC_COMPAT
