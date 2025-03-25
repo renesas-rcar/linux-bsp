@@ -5165,6 +5165,12 @@
 			linux,uio-name = "rcarbusmoni_02";
 		};
 
+		otp_mem0: otp_mem@e61bf000 {
+			compatible = "generic-uio";
+			reg = <0 0xe61bf000 0 0x1000>;
+			linux,uio-name = "otp_mem_01";
+		};
+
 		isp0: isp@fed00000 {
 			compatible = "renesas,isp-r8a779g0";
 			reg = <0 0xfed00000 0 0x10000>;
