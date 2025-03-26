@@ -477,7 +477,7 @@ static const struct pinmux_ops sh_pfc_pinmux_ops = {
 	.gpio_set_direction	= sh_pfc_gpio_set_direction,
 };
 
-static u32 sh_pfc_pinconf_find_drive_strength_reg(struct sh_pfc *pfc,
+static u64 sh_pfc_pinconf_find_drive_strength_reg(struct sh_pfc *pfc,
 		unsigned int pin, unsigned int *offset, unsigned int *size)
 {
 	const struct pinmux_drive_reg_field *field;
@@ -506,7 +506,7 @@ static int sh_pfc_pinconf_get_drive_strength(struct sh_pfc *pfc,
 	unsigned long flags;
 	unsigned int offset;
 	unsigned int size;
-	u32 reg;
+	u64 reg;
 	u32 val;
 
 	reg = sh_pfc_pinconf_find_drive_strength_reg(pfc, pin, &offset, &size);
@@ -532,7 +532,7 @@ static int sh_pfc_pinconf_set_drive_strength(struct sh_pfc *pfc,
 	unsigned int offset;
 	unsigned int size;
 	unsigned int step;
-	u32 reg;
+	u64 reg;
 	u32 val;
 
 	reg = sh_pfc_pinconf_find_drive_strength_reg(pfc, pin, &offset, &size);
@@ -637,7 +637,8 @@ static int sh_pfc_pinconf_get(struct pinctrl_dev *pctldev, unsigned _pin,
 		int idx = sh_pfc_get_pin_index(pfc, _pin);
 		const struct sh_pfc_pin *pin = &pfc->info->pins[idx];
 		unsigned int mode, lo, hi;
-		u32 pocctrl, val;
+		u64 pocctrl;
+		u32 val;
 		int bit;
 
 		if (!pfc->info->ops || !pfc->info->ops->pin_to_pocctrl)
@@ -712,7 +713,8 @@ static int sh_pfc_pinconf_set(struct pinctrl_dev *pctldev, unsigned _pin,
 			int idx = sh_pfc_get_pin_index(pfc, _pin);
 			const struct sh_pfc_pin *pin = &pfc->info->pins[idx];
 			unsigned int mode, lo, hi;
-			u32 pocctrl, val;
+			u64 pocctrl;
+			u32 val;
 			int bit;
 
 			if (!pfc->info->ops || !pfc->info->ops->pin_to_pocctrl)

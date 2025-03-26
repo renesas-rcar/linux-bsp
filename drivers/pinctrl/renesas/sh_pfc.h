@@ -141,7 +141,7 @@ struct pinmux_func {
 };
 
 struct pinmux_cfg_reg {
-	u32 reg;
+	u64 reg;
 	u8 reg_width, field_width;
 #ifdef DEBUG
 	u16 nr_enum_ids;	/* for variable width regs only */
@@ -199,7 +199,7 @@ struct pinmux_drive_reg_field {
 };
 
 struct pinmux_drive_reg {
-	u32 reg;
+	u64 reg;
 	const struct pinmux_drive_reg_field fields[8];
 };
 
@@ -208,8 +208,8 @@ struct pinmux_drive_reg {
 	.fields =
 
 struct pinmux_bias_reg {
-	u32 puen;		/* Pull-enable or pull-up control register */
-	u32 pud;		/* Pull-up/down control register (optional) */
+	u64 puen;		/* Pull-enable or pull-up control register */
+	u64 pud;		/* Pull-up/down control register (optional) */
 	const u16 pins[32];
 };
 
@@ -219,11 +219,11 @@ struct pinmux_bias_reg {
 	.pins =
 
 struct pinmux_ioctrl_reg {
-	u32 reg;
+	u64 reg;
 };
 
 struct pinmux_data_reg {
-	u32 reg;
+	u64 reg;
 	u8 reg_width;
 	const u16 *enum_ids;
 };
@@ -291,7 +291,7 @@ struct sh_pfc_soc_operations {
 	unsigned int (*get_bias)(struct sh_pfc *pfc, unsigned int pin);
 	void (*set_bias)(struct sh_pfc *pfc, unsigned int pin,
 			 unsigned int bias);
-	int (*pin_to_pocctrl)(struct sh_pfc *pfc, unsigned int pin, u32 *pocctrl);
+	int (*pin_to_pocctrl)(struct sh_pfc *pfc, unsigned int pin, u64 *pocctrl);
 };
 
 struct sh_pfc_soc_info {
@@ -328,7 +328,7 @@ struct sh_pfc_soc_info {
 	const u16 *pinmux_data;
 	unsigned int pinmux_data_size;
 
-	u32 unlock_reg;		/* can be literal address or mask */
+	u64 unlock_reg;		/* can be literal address or mask */
 };
 
 extern const struct sh_pfc_soc_info emev2_pinmux_info;
