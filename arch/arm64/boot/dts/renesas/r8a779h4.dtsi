@@ -16,6 +16,12 @@
 			opp-microvolt = <825000>;
 			clock-latency-ns = <500000>;
 		};
+                opp-937499963 {
+                        opp-hz = /bits/ 64 <937499963>;
+                        opp-microvolt = <825000>;
+                        clock-latency-ns = <500000>;
+                };
+
 		/delete-node/opp-1000000000;
 	};
 
