@@ -10,6 +10,8 @@
 
 #include "snps-csi2camera.h"
 
+#define REN_CAMERA_SCRIPT
+
 static u32 csi2cam_read(struct csi2cam *priv, unsigned int reg)
 {
 	return ioread32(priv->base + reg);
@@ -86,7 +88,7 @@ int csi2cam_start(struct csi2cam *priv, unsigned int width, unsigned int height,
 	csi2cam_modify(priv, SIZE_REG, width, SIZE_WIDTH);
 	csi2cam_modify(priv, SIZE_REG, height, SIZE_HEIGHT);
 	csi2cam_write(priv, FRAMES_PER_SECOND, 0x1e); /* 30fps */
-	csi2cam_write(priv, MAX_FRAMES, 0x2);
+	csi2cam_write(priv, MAX_FRAMES, 0x46);			/* 70 frames */
 	csi2cam_modify(priv, DOL_CONFIG, 0x1, DOL_CONFIG_DOL);
 	csi2cam_modify(priv, DOL_CONFIG, 0x0, DOL_CONFIG_ENABLED);
 	switch (bus_fmt) {
@@ -251,7 +253,12 @@ int csi2cam_start(struct csi2cam *priv, unsigned int width, unsigned int height,
 	default:
 		return -EINVAL;
 	}
+
+#ifdef REN_CAMERA_SCRIPT
+	csi2cam_write(priv, RVC_CAM_CONTROL_REG, 0xFAFAFAFA);
+#else
 	csi2cam_modify(priv, CONTROL_REG, 0x1, CONTROL_EN); /* Start camera */
+#endif
 
 	for (timeout = 0; timeout <= 10; timeout++) {
 		usleep_range(1000, 2000);
@@ -276,7 +283,11 @@ EXPORT_SYMBOL_GPL(csi2cam_start);
 
 int csi2cam_stop(struct csi2cam *priv)
 {
+#ifdef REN_CAMERA_SCRIPT
+	csi2cam_write(priv, RVC_CAM_CONTROL_REG, 0x00000000);
+#else
 	csi2cam_modify(priv, CONTROL_REG, 0x0, CONTROL_EN);
+#endif
 	CSI2CAMERA_DBG("RVC CSI-2 Camera has been stopped");
 
 	return 0;
