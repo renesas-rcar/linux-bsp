@@ -1,0 +1,921 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for the R-Car X5H (R8A78000) SoC
+ *
+ * Copyright (C) 2025 Renesas Electronics Corp.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+#define GIC_MULTI_VIEW
+
+/ {
+	compatible = "renesas,r8a78000";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	cpus {
+		#address-cells = <2>;
+		#size-cells = <0>;
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&a720_0>;
+				};
+				core1 {
+					cpu = <&a720_1>;
+				};
+				core2 {
+					cpu = <&a720_2>;
+				};
+				core3 {
+					cpu = <&a720_3>;
+				};
+			};
+
+			cluster1 {
+				core0 {
+					cpu = <&a720_4>;
+				};
+				core1 {
+					cpu = <&a720_5>;
+				};
+				core2 {
+					cpu = <&a720_6>;
+				};
+				core3 {
+					cpu = <&a720_7>;
+				};
+			};
+
+			cluster2 {
+				core0 {
+					cpu = <&a720_8>;
+				};
+				core1 {
+					cpu = <&a720_9>;
+				};
+				core2 {
+					cpu = <&a720_10>;
+				};
+				core3 {
+					cpu = <&a720_11>;
+				};
+			};
+
+			cluster3 {
+				core0 {
+					cpu = <&a720_12>;
+				};
+				core1 {
+					cpu = <&a720_13>;
+				};
+				core2 {
+					cpu = <&a720_14>;
+				};
+				core3 {
+					cpu = <&a720_15>;
+				};
+			};
+
+			cluster4 {
+				core0 {
+					cpu = <&a720_16>;
+				};
+				core1 {
+					cpu = <&a720_17>;
+				};
+				core2 {
+					cpu = <&a720_18>;
+				};
+				core3 {
+					cpu = <&a720_19>;
+				};
+			};
+
+			cluster5 {
+				core0 {
+					cpu = <&a720_20>;
+				};
+				core1 {
+					cpu = <&a720_21>;
+				};
+				core2 {
+					cpu = <&a720_22>;
+				};
+				core3 {
+					cpu = <&a720_23>;
+				};
+			};
+
+			cluster6 {
+				core0 {
+					cpu = <&a720_24>;
+				};
+				core1 {
+					cpu = <&a720_25>;
+				};
+				core2 {
+					cpu = <&a720_26>;
+				};
+				core3 {
+					cpu = <&a720_27>;
+				};
+			};
+
+			cluster7 {
+				core0 {
+					cpu = <&a720_28>;
+				};
+				core1 {
+					cpu = <&a720_29>;
+				};
+				core2 {
+					cpu = <&a720_30>;
+				};
+				core3 {
+					cpu = <&a720_31>;
+				};
+			};
+		};
+
+		a720_0: cpu@0 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x0>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_0>;
+			enable-method = "psci";
+		};
+
+		a720_1: cpu@100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x100>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_0>;
+			enable-method = "psci";
+		};
+
+		a720_2: cpu@200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x200>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_0>;
+			enable-method = "psci";
+		};
+
+		a720_3: cpu@300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x300>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_0>;
+			enable-method = "psci";
+		};
+
+		a720_4: cpu@10000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x10000>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_1>;
+			enable-method = "psci";
+		};
+
+		a720_5: cpu@10100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x10100>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_1>;
+			enable-method = "psci";
+		};
+
+		a720_6: cpu@10200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x10200>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_1>;
+			enable-method = "psci";
+		};
+
+		a720_7: cpu@10300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x10300>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_1>;
+			enable-method = "psci";
+		};
+
+		a720_8: cpu@20000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x20000>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_2>;
+			enable-method = "psci";
+		};
+
+		a720_9: cpu@20100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x20100>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_2>;
+			enable-method = "psci";
+		};
+
+		a720_10: cpu@20200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x20200>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_2>;
+			enable-method = "psci";
+		};
+
+		a720_11: cpu@20300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x20300>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_2>;
+			enable-method = "psci";
+		};
+
+		a720_12: cpu@30000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x30000>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_3>;
+			enable-method = "psci";
+		};
+
+		a720_13: cpu@30100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x30100>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_3>;
+			enable-method = "psci";
+		};
+
+		a720_14: cpu@30200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x30200>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_3>;
+			enable-method = "psci";
+		};
+
+		a720_15: cpu@30300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x30300>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_3>;
+			enable-method = "psci";
+		};
+
+		a720_16: cpu@40000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x40000>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_4>;
+			enable-method = "psci";
+		};
+
+		a720_17: cpu@40100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x40100>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_4>;
+			enable-method = "psci";
+		};
+
+		a720_18: cpu@40200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x40200>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_4>;
+			enable-method = "psci";
+		};
+
+		a720_19: cpu@40300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x40300>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_4>;
+			enable-method = "psci";
+		};
+
+		a720_20: cpu@50000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x50000>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_5>;
+			enable-method = "psci";
+		};
+
+		a720_21: cpu@50100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x50100>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_5>;
+			enable-method = "psci";
+		};
+
+		a720_22: cpu@50200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x50200>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_5>;
+			enable-method = "psci";
+		};
+
+		a720_23: cpu@50300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x50300>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_5>;
+			enable-method = "psci";
+		};
+
+		a720_24: cpu@60000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x60000>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_6>;
+			enable-method = "psci";
+		};
+
+		a720_25: cpu@60100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x60100>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_6>;
+			enable-method = "psci";
+		};
+
+		a720_26: cpu@60200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x60200>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_6>;
+			enable-method = "psci";
+		};
+
+		a720_27: cpu@60300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x60300>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_6>;
+			enable-method = "psci";
+		};
+
+		a720_28: cpu@70000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x70000>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_7>;
+			enable-method = "psci";
+		};
+
+		a720_29: cpu@70100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x70100>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_7>;
+			enable-method = "psci";
+		};
+
+		a720_30: cpu@70200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x70200>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_7>;
+			enable-method = "psci";
+		};
+
+		a720_31: cpu@70300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x0 0x70300>;
+			device_type = "cpu";
+			next-level-cache = <&L3_CA720_7>;
+			enable-method = "psci";
+		};
+
+		L3_CA720_0: cache-controller-0 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <3>;
+		};
+
+		L3_CA720_1: cache-controller-1 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <3>;
+		};
+
+		L3_CA720_2: cache-controller-2 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <3>;
+		};
+
+		L3_CA720_3: cache-controller-3 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <3>;
+		};
+
+		L3_CA720_4: cache-controller-4 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <3>;
+		};
+
+		L3_CA720_5: cache-controller-5 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <3>;
+		};
+
+		L3_CA720_6: cache-controller-6 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <3>;
+		};
+
+		L3_CA720_7: cache-controller-7 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <3>;
+		};
+	};
+
+	extal_clk: extal {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* This value must be overridden by the board */
+		clock-frequency = <0>;
+	};
+
+	extalr_clk: extalr {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* This value must be overridden by the board */
+		clock-frequency = <0>;
+	};
+
+	firmware {
+		scmi {
+			compatible = "arm,scmi";
+			mbox-names = "tx","rx";
+			mboxes = <&mailbox 0 &mailbox 1>;
+			shmem = <&cpu_scp_lpri0 &cpu_scp_hpri0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			scmi_devpd: protocol@11 {
+				reg = <0x11>;
+				#power-domain-cells = <1>;
+			};
+
+			/* TODO: scmi_clk, scmi_reset */
+		};
+	};
+
+	pmu_a720 {
+		compatible = "arm,cortex-a720-pmu";
+		interrupts-extended = <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_LOW>;
+	};
+
+	psci {
+		compatible = "arm,psci-1.0", "arm,psci-0.2";
+		method = "smc";
+	};
+
+	/* In the early phase, there is no clock control support,
+	 * so assume that the clocks are enabled by default.
+	 * Therefore, dummy clocks are used.
+	 */
+	dummy_clk_sgasyncd4: dummy_clk_sgasyncd4 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <266660000>;
+	};
+
+	/* External SCIF clock - to be overridden by boards that provide it */
+	scif_clk: scif {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	soc: soc {
+		compatible = "simple-bus";
+		interrupt-parent = <&gic>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		mailbox: mfis_mbox@18842000 {
+			compatible = "renesas,mfis-mbox";
+			#mbox-cells = <1>;
+			reg = <0x0 0x18842004 0x0 0x4>,
+			      <0x0 0x18842000 0x0 0x4>;
+			interrupts = <GIC_SPI 4362 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+
+		prr: chipid@189e0044 {
+			compatible = "renesas,prr";
+			reg = <0 0x189e0044 0 4>;
+		};
+
+		/* The Arm GIC-700AE - View 1 */
+		gic: interrupt-controller@39000000 {
+			compatible = "arm,gic-v3";
+			#interrupt-cells = <3>;
+			#address-cells = <0>;
+			interrupt-controller;
+			redistributor-stride = <0x0 0x40000>;
+#ifndef GIC_MULTI_VIEW /* Single-view */
+			#redistributor-regions = <1>;
+			reg = <0x0 0x39000000 0 0x20000>,
+			      <0x0 0x39080000 0 0x810000>;
+#else	/* Multi-view */
+			#redistributor-regions = <32>;
+			reg = <0x0 0x39000000 0x0 0x20000>, // GICD
+			      <0x0 0x39080000 0x0 0x40000>, // GICR Core0
+			      <0x0 0x390C0000 0x0 0x40000>, // GICR Core1
+			      <0x0 0x39100000 0x0 0x40000>, // GICR Core2
+			      <0x0 0x39140000 0x0 0x40000>, // GICR Core3
+			      <0x0 0x39180000 0x0 0x40000>, // GICR Core4
+			      <0x0 0x391C0000 0x0 0x40000>, // GICR Core5
+			      <0x0 0x39200000 0x0 0x40000>, // GICR Core6
+			      <0x0 0x39240000 0x0 0x40000>, // GICR Core7
+			      <0x0 0x39280000 0x0 0x40000>, // GICR Core8
+			      <0x0 0x392C0000 0x0 0x40000>, // GICR Core9
+			      <0x0 0x39300000 0x0 0x40000>, // GICR Core10
+			      <0x0 0x39340000 0x0 0x40000>, // GICR Core11
+			      <0x0 0x39380000 0x0 0x40000>, // GICR Core12
+			      <0x0 0x393C0000 0x0 0x40000>, // GICR Core13
+			      <0x0 0x39400000 0x0 0x40000>, // GICR Core14
+			      <0x0 0x39440000 0x0 0x40000>, // GICR Core15
+			      <0x0 0x39480000 0x0 0x40000>, // GICR Core16
+			      <0x0 0x394C0000 0x0 0x40000>, // GICR Core17
+			      <0x0 0x39500000 0x0 0x40000>, // GICR Core18
+			      <0x0 0x39540000 0x0 0x40000>, // GICR Core19
+			      <0x0 0x39580000 0x0 0x40000>, // GICR Core20
+			      <0x0 0x395C0000 0x0 0x40000>, // GICR Core21
+			      <0x0 0x39600000 0x0 0x40000>, // GICR Core22
+			      <0x0 0x39640000 0x0 0x40000>, // GICR Core23
+			      <0x0 0x39680000 0x0 0x40000>, // GICR Core24
+			      <0x0 0x396C0000 0x0 0x40000>, // GICR Core25
+			      <0x0 0x39700000 0x0 0x40000>, // GICR Core26
+			      <0x0 0x39740000 0x0 0x40000>, // GICR Core27
+			      <0x0 0x39780000 0x0 0x40000>, // GICR Core28
+			      <0x0 0x397C0000 0x0 0x40000>, // GICR Core29
+			      <0x0 0x39800000 0x0 0x40000>, // GICR Core30
+			      <0x0 0x39840000 0x0 0x40000>; // GICR Core31
+#endif
+			interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
+		};
+
+		pfc: pinctrl@c0400000 {
+			compatible = "renesas,pfc-r8a78000";
+			reg = <0 0xc1080000 0 0x104>, <0 0xc1080800 0 0x104>,
+			      <0 0xc1081000 0 0x104>, <0 0xc0800000 0 0x104>,
+			      <0 0xc0800800 0 0x104>, <0 0xc0400000 0 0x104>,
+			      <0 0xc0400800 0 0x104>, <0 0xc0401000 0 0x104>,
+			      <0 0xc0401800 0 0x104>, <0 0xc9b00000 0 0x104>,
+			      <0 0xc9b00800 0 0x104>;
+		};
+
+		i2c0: i2c@c11d0000 {
+			compatible = "renesas,i2c-r8a78000",
+				     "renesas,rcar-gen5-i2c";
+			reg = <0 0xc11d0000 0 0x40>;
+			interrupts = <GIC_SPI 4807 IRQ_TYPE_LEVEL_HIGH>;
+			i2c-scl-internal-delay-ns = <110>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c1: i2c@c06c0000 {
+			compatible = "renesas,i2c-r8a78000",
+				     "renesas,rcar-gen5-i2c";
+			reg = <0 0xc06c0000 0 0x40>;
+			interrupts = <GIC_SPI 956 IRQ_TYPE_LEVEL_HIGH>;
+			i2c-scl-internal-delay-ns = <110>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c2: i2c@c06c8000 {
+			compatible = "renesas,i2c-r8a78000",
+				     "renesas,rcar-gen5-i2c";
+			reg = <0 0xc06c8000 0 0x40>;
+			interrupts = <GIC_SPI 957 IRQ_TYPE_LEVEL_HIGH>;
+			i2c-scl-internal-delay-ns = <110>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c3: i2c@c06d0000 {
+			compatible = "renesas,i2c-r8a78000",
+				     "renesas,rcar-gen5-i2c";
+			reg = <0 0xc06d0000 0 0x40>;
+			interrupts = <GIC_SPI 958 IRQ_TYPE_LEVEL_HIGH>;
+			i2c-scl-internal-delay-ns = <110>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c4: i2c@c06d8000 {
+			compatible = "renesas,i2c-r8a78000",
+				     "renesas,rcar-gen5-i2c";
+			reg = <0 0xc06d8000 0 0x40>;
+			interrupts = <GIC_SPI 959 IRQ_TYPE_LEVEL_HIGH>;
+			i2c-scl-internal-delay-ns = <110>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c5: i2c@c06e0000 {
+			compatible = "renesas,i2c-r8a78000",
+				     "renesas,rcar-gen5-i2c";
+			reg = <0 0xc06e0000 0 0x40>;
+			interrupts = <GIC_SPI 4064 IRQ_TYPE_LEVEL_HIGH>;
+			i2c-scl-internal-delay-ns = <110>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c6: i2c@c06e8000 {
+			compatible = "renesas,i2c-r8a78000",
+				     "renesas,rcar-gen5-i2c";
+			reg = <0 0xc06e8000 0 0x40>;
+			interrupts = <GIC_SPI 4065 IRQ_TYPE_LEVEL_HIGH>;
+			i2c-scl-internal-delay-ns = <110>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c7: i2c@c06f0000 {
+			compatible = "renesas,i2c-r8a78000",
+				     "renesas,rcar-gen5-i2c";
+			reg = <0 0xc06f0000 0 0x40>;
+			interrupts = <GIC_SPI 4066 IRQ_TYPE_LEVEL_HIGH>;
+			i2c-scl-internal-delay-ns = <110>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		i2c8: i2c@c06f8000 {
+			compatible = "renesas,i2c-r8a78000",
+				     "renesas,rcar-gen5-i2c";
+			reg = <0 0xc06f8000 0 0x40>;
+			interrupts = <GIC_SPI 4067 IRQ_TYPE_LEVEL_HIGH>;
+			i2c-scl-internal-delay-ns = <110>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		gpio0: gpio@c1080110 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc1080110 0 0xc0>;
+			interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 0 28>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio1: gpio@c1080910 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc1080910 0 0xc0>;
+			interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 32 22>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio2: gpio@c1081110 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc1081110 0 0xc0>;
+			interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 64 29>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio3: gpio@c0800110 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc0800110 0 0xc0>;
+			interrupts = <GIC_SPI 12 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 96 17>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio4: gpio@c0800910 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc0800910 0 0xc0>;
+			interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 128 16>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio5: gpio@c0400110 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc0400110 0 0xc0>;
+			interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 160 23>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio6: gpio@c0400910 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc0400910 0 0xc0>;
+			interrupts = <GIC_SPI 24 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 192 31>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio7: gpio@c0401110 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc0401110 0 0xc0>;
+			interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 224 31>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio8: gpio@c0401910 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc0401910 0 0xc0>;
+			interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 256 32>;
+			gpio-reserved-ranges = <16 10>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio9: gpio@c9b00110 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc9b00110 0 0xc0>;
+			interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 288 17>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		gpio10: gpio@c9b00910 {
+			compatible = "renesas,gpio-r8a78000",
+				     "renesas,rcar-gen5-gpio";
+			reg = <0 0xc9b00910 0 0xc0>;
+			interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
+			#gpio-cells = <2>;
+			gpio-controller;
+			gpio-ranges = <&pfc 0 320 14>;
+			#interrupt-cells = <2>;
+			interrupt-controller;
+		};
+
+		scif0: serial@c0700000 {
+			compatible = "renesas,rcar-gen5-scif", "renesas,scif";
+			reg = <0 0xc0700000 0 0x40>;
+			interrupts = <GIC_SPI 4074 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		scif1: serial@c0704000 {
+			compatible = "renesas,rcar-gen5-scif", "renesas,scif";
+			reg = <0 0xc0704000 0 0x40>;
+			interrupts = <GIC_SPI 4075 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		scif3: serial@c0708000 {
+			compatible = "renesas,rcar-gen5-scif", "renesas,scif";
+			reg = <0 0xc0708000 0 0x40>;
+			interrupts = <GIC_SPI 4076 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		scif4: serial@c070c000 {
+			compatible = "renesas,rcar-gen5-scif", "renesas,scif";
+			reg = <0 0xc070c000 0 0x40>;
+			interrupts = <GIC_SPI 4077 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		hscif0: serial@c0710000 {
+			compatible = "renesas,rcar-gen5-hscif", "renesas,hscif";
+			reg = <0 0xc0710000 0 0x60>;
+			interrupts = <GIC_SPI 4078 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		hscif1: serial@c0714000 {
+			compatible = "renesas,rcar-gen5-hscif", "renesas,hscif";
+			reg = <0 0xc0714000 0 0x60>;
+			interrupts = <GIC_SPI 4079 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		hscif2: serial@c0718000 {
+			compatible = "renesas,rcar-gen5-hscif", "renesas,hscif";
+			reg = <0 0xc0718000 0 0x60>;
+			interrupts = <GIC_SPI 4080 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		hscif3: serial@c071c000 {
+			compatible = "renesas,rcar-gen5-hscif", "renesas,hscif";
+			reg = <0 0xc071c000 0 0x60>;
+			interrupts = <GIC_SPI 4081 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		scp: scp@c1000000 {
+			compatible = "arm,rcar-sram-ns", "mmio-sram";
+			reg = <0x0 0xc1000000 0x0 0x80000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0x0 0xc1000000 0x80000>;
+
+			cpu_scp_lpri0: scp-shmem@60000 {
+				compatible = "arm,rcar-scp-shmem", "arm,scmi-shmem";
+				reg = <0x61200 0x0100>;
+			};
+
+			cpu_scp_hpri0: scp-shmem@60300 {
+				compatible = "arm,rcar-scp-shmem", "arm,scmi-shmem";
+				reg = <0x61300 0x100>;
+			};
+		};
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts-extended = <&gic GIC_PPI 13 IRQ_TYPE_LEVEL_LOW>,
+				      <&gic GIC_PPI 14 IRQ_TYPE_LEVEL_LOW>,
+				      <&gic GIC_PPI 11 IRQ_TYPE_LEVEL_LOW>,
+				      <&gic GIC_PPI 10 IRQ_TYPE_LEVEL_LOW>,
+				      <&gic GIC_PPI 12 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-names = "sec-phys", "phys", "virt", "hyp-phys",
+				  "hyp-virt";
+	};
+};
