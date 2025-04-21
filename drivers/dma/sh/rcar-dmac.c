@@ -795,7 +795,6 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 {
 	struct rcar_dmac_xfer_chunk *chunk;
 	struct rcar_dmac_hw_desc *hwdesc;
-	struct rcar_dmac *dmac = to_rcar_dmac(chan->chan.device);
 
 	rcar_dmac_realloc_hwdesc(chan, desc, desc->nchunks * sizeof(*hwdesc));
 
@@ -804,15 +803,9 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 		return -ENOMEM;
 
 	list_for_each_entry(chunk, &desc->chunks, node) {
-		if (dmac->audma_vdk) {
-			hwdesc->sar = __builtin_bswap32(chunk->src_addr);
-			hwdesc->dar = __builtin_bswap32(chunk->dst_addr);
-			hwdesc->tcr = __builtin_bswap32(chunk->size >> desc->xfer_shift);
-		} else {
-			hwdesc->sar = chunk->src_addr;
-			hwdesc->dar = chunk->dst_addr;
-			hwdesc->tcr = chunk->size >> desc->xfer_shift;
-		}
+		hwdesc->sar = chunk->src_addr;
+		hwdesc->dar = chunk->dst_addr;
+		hwdesc->tcr = chunk->size >> desc->xfer_shift;
 		hwdesc++;
 	}
 
