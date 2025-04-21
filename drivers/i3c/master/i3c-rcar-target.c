@@ -407,11 +407,8 @@ static int rcar_i3c_target_set_config(struct i3c_target_ctrl *ctrl,
 		      PID_VENDOR_ID(func->vendor_id));
 
 	/* Write the maxlength of read and write */
-	val = max_t(u32, func->max_write_len, 8);
-	i3c_reg_write(target->regs, CMWLG, CMWLG_MWLG(val));
-
-	val = max_t(u32, func->max_read_len, 16);
-	i3c_reg_write(target->regs, CMRLG, CMRLG_MRLG(val));
+	i3c_reg_write(target->regs, CMWLG, 0xFF);
+	i3c_reg_write(target->regs, CMRLG, 0xFF);
 
 	return 0;
 
