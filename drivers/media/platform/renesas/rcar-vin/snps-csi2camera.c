@@ -7,6 +7,8 @@
 
 #include "snps-csi2camera.h"
 
+#define REN_CAMERA_SCRIPT
+
 static u32 csi2cam_read(struct csi2cam *priv, unsigned int reg)
 {
 	return ioread32(priv->base + reg);
@@ -83,28 +85,189 @@ int csi2cam_start(struct csi2cam *priv, unsigned int width, unsigned int height,
 	csi2cam_modify(priv, SIZE_REG, width, SIZE_WIDTH);
 	csi2cam_modify(priv, SIZE_REG, height, SIZE_HEIGHT);
 	csi2cam_write(priv, FRAMES_PER_SECOND, 0x1e); /* 30fps */
-	csi2cam_write(priv, MAX_FRAMES, 0x2);
+	csi2cam_write(priv, MAX_FRAMES, 0x46);			/* 70 frames */
 	csi2cam_modify(priv, DOL_CONFIG, 0x1, DOL_CONFIG_DOL);
 	csi2cam_modify(priv, DOL_CONFIG, 0x0, DOL_CONFIG_ENABLED);
-	if (bus_fmt == MEDIA_BUS_FMT_RGB888_1X24) {
+	switch (bus_fmt) {
+	case MEDIA_BUS_FMT_RGB888_1X24:
 		/* RGB */
 		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
 		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x24, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
-	} else if (bus_fmt == MEDIA_BUS_FMT_Y10_1X10) {
+		break;
+	case MEDIA_BUS_FMT_Y10_1X10:
 		/* UYVY */
 		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0x5, IMAGE_CONFIG_INPUT_FORMAT);
 		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2b, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
 		/* ODD_RGRG_EVEN_GBGB (for RAW only) */
 		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x0, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
-	} else {
+		break;
+	case MEDIA_BUS_FMT_SBGGR8_1X8:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2a, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGBRG8_1X8:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2a, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x3, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2a, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x1, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SRGGB8_1X8:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2a, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x0, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SBGGR10_1X10:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2b, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGBRG10_1X10:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2b, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x3, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGRBG10_1X10:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2b, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x1, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SRGGB10_1X10:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2b, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x0, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2c, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGBRG12_1X12:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2c, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x3, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2c, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x1, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SRGGB12_1X12:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2c, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x0, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SBGGR14_1X14:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2d, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGBRG14_1X14:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2d, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x3, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGRBG14_1X14:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2d, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x1, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SRGGB14_1X14:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2d, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x0, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SBGGR16_1X16:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2e, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGBRG16_1X16:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2e, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x3, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGRBG16_1X16:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2e, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x1, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SRGGB16_1X16:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2e, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x0, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SBGGR20_1X20:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2f, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGBRG20_1X20:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2f, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x3, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGRBG20_1X20:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2f, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x1, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SRGGB20_1X20:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2f, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x0, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SBGGR24_1X24:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x27, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x2, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGBRG24_1X24:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x27, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x3, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SGRBG24_1X24:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x27, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x1, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SRGGB24_1X24:
+		csi2cam_modify(priv, IMAGE_CONFIG_INPUT, 0xf, IMAGE_CONFIG_INPUT_FORMAT);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x27, IMAGE_CONFIG_OUTPUT_DATA_TYPE);
+		csi2cam_modify(priv, IMAGE_CONFIG_OUTPUT, 0x0, IMAGE_CONFIG_OUTPUT_RAW_FORMAT);
+		break;
+	case MEDIA_BUS_FMT_SBGGR28_1X28:
+	case MEDIA_BUS_FMT_SGBRG28_1X28:
+	case MEDIA_BUS_FMT_SGRBG28_1X28:
+	case MEDIA_BUS_FMT_SRGGB28_1X28:
+		pr_err("Unspported format!\n");
+		return -EINVAL;
+	default:
 		return -EINVAL;
 	}
-	csi2cam_modify(priv, CONTROL_REG, 0x1, CONTROL_EN);	/* Start camera */
 
+#ifdef REN_CAMERA_SCRIPT
+	csi2cam_write(priv, RVC_CAM_CONTROL_REG, 0xFAFAFAFA);
+#else
+	csi2cam_modify(priv, CONTROL_REG, 0x1, CONTROL_EN); /* Start camera */
+#endif
+
+	for (timeout = 0; timeout <= 10; timeout++) {
+		usleep_range(1000, 2000);
+	}
+	CSI2CAMERA_DBG("RVC CSI-2 Camera has been started");
+	return 0;
+
+	/* Comment this code in case of RVC camera */
 	for (timeout = 0; timeout <= 10; timeout++) {
 		frame_count = csi2cam_read(priv, STATUS_REG) & STATUS_FRAME_COUNT;
 		if (frame_count) {
-			CSI2CAMERA_DBG("SNPS CSI-2 Camera has been started");
+			CSI2CAMERA_DBG("RVC CSI-2 Camera has been started");
 			return 0;
 		}
 		usleep_range(1000, 2000);
@@ -117,8 +280,12 @@ EXPORT_SYMBOL_GPL(csi2cam_start);
 
 int csi2cam_stop(struct csi2cam *priv)
 {
+#ifdef REN_CAMERA_SCRIPT
+	csi2cam_write(priv, RVC_CAM_CONTROL_REG, 0x00000000);
+#else
 	csi2cam_modify(priv, CONTROL_REG, 0x0, CONTROL_EN);
-	CSI2CAMERA_DBG("SNPS CSI-2 Camera has been stopped");
+#endif
+	CSI2CAMERA_DBG("RVC CSI-2 Camera has been stopped");
 
 	return 0;
 }

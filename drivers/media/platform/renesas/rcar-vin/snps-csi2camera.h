@@ -72,6 +72,8 @@
 #define PDAF_CONFIG_OUTPUT_BYTES_PER_TRANSFER	GENMASK(23, 8)
 #define PDAF_CONFIG_OUTPUT_DATA_TYPE			GENMASK(7, 0)
 
+#define RVC_CAM_CONTROL_REG						0xF0
+
 struct csi2cam {
 	struct device *dev;
 	void __iomem *base;
