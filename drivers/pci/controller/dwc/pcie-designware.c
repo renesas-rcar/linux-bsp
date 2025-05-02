@@ -19,6 +19,7 @@
 #include <linux/of_platform.h>
 #include <linux/sizes.h>
 #include <linux/types.h>
+#include <linux/soc/renesas/rcar-rgid.h>
 
 #include "../../pci.h"
 #include "pcie-designware.h"
@@ -535,6 +536,10 @@ static int __dw_pcie_prog_outbound_atu(struct dw_pcie *pci, u8 func_no,
 int dw_pcie_prog_outbound_atu(struct dw_pcie *pci, int index, int type,
 			      u64 cpu_addr, u64 pci_addr, u64 size)
 {
+	/* Remove RGID from descriptor base */
+	REMOVE_RGID(cpu_addr);
+	REMOVE_RGID(pci_addr);
+
 	return __dw_pcie_prog_outbound_atu(pci, 0, index, type, 0, 0,
 					   cpu_addr, pci_addr, size);
 }
@@ -543,6 +548,10 @@ int dw_pcie_prog_ep_outbound_atu(struct dw_pcie *pci, u8 func_no, int index,
 				 int type, u8 code, u8 routing, u64 cpu_addr,
 				 u64 pci_addr, u64 size)
 {
+	/* Remove RGID from descriptor base */
+	REMOVE_RGID(cpu_addr);
+	REMOVE_RGID(pci_addr);
+
 	return __dw_pcie_prog_outbound_atu(pci, func_no, index, type, code,
 					   routing, cpu_addr, pci_addr, size);
 }
@@ -922,13 +931,20 @@ static int dw_pcie_edma_ll_alloc(struct dw_pcie *pci)
 {
 	struct dw_edma_region *ll;
 	dma_addr_t paddr;
-	int i;
+	int i, ret;
+
+	ret = dma_set_coherent_mask(pci->dev, DMA_BIT_MASK(40));
+	if (ret)
+		dev_warn(pci->dev, "Failed to set DMA mask to 40-bit\n");
 
 	for (i = 0; i < pci->edma.ll_wr_cnt; i++) {
 		ll = &pci->edma.ll_region_wr[i];
 		ll->sz = DMA_LLP_MEM_SIZE;
 		ll->vaddr.mem = dmam_alloc_coherent(pci->dev, ll->sz,
 						    &paddr, GFP_KERNEL);
+
+		REMOVE_RGID(paddr);
+
 		if (!ll->vaddr.mem)
 			return -ENOMEM;
 
@@ -940,6 +956,9 @@ static int dw_pcie_edma_ll_alloc(struct dw_pcie *pci)
 		ll->sz = DMA_LLP_MEM_SIZE;
 		ll->vaddr.mem = dmam_alloc_coherent(pci->dev, ll->sz,
 						    &paddr, GFP_KERNEL);
+
+		REMOVE_RGID(paddr);
+
 		if (!ll->vaddr.mem)
 			return -ENOMEM;
 
