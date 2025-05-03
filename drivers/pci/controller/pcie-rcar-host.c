@@ -14,6 +14,7 @@
 #include <linux/bitops.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/regulator/consumer.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
@@ -54,6 +55,8 @@ struct rcar_pcie_host {
 	struct phy		*phy;
 	void __iomem		*base;
 	struct clk		*bus_clk;
+	struct regulator	*pcie3v3; /* 3.3V power supply */
+	struct regulator	*pcie1v8; /* 1.8V power supply */
 	struct			rcar_msi msi;
 	int			(*phy_init_fn)(struct rcar_pcie_host *host);
 };
@@ -72,7 +75,8 @@ static int rcar_pcie_config_access(struct rcar_pcie_host *host,
 		unsigned int devfn, int where, u32 *data)
 {
 	struct rcar_pcie *pcie = &host->pcie;
-	unsigned int dev, func, reg, index;
+	unsigned int dev, func, reg, index, ret;
+	u32 val;
 
 	dev = PCI_SLOT(devfn);
 	func = PCI_FUNC(devfn);
@@ -104,6 +108,32 @@ static int rcar_pcie_config_access(struct rcar_pcie_host *host,
 			rcar_pci_write_reg(pcie, *data, PCICONF(index));
 
 		return PCIBIOS_SUCCESSFUL;
+	}
+
+	/*
+	 * If we are not in L1 link state and we have received PM_ENTER_L1 DLLP,
+	 * transition to L1 link state. The HW will handle coming of L1.
+	 */
+	val = rcar_pci_read_reg(pcie, PMSR);
+
+	if (val == 0 || (rcar_pci_read_reg(pcie, PCIETCTLR) & DL_DOWN)) {
+		/* Wait PCI Express link is re-initialized */
+		dev_info(&bus->dev, "Wait PCI Express link is re-initialized\n");
+		rcar_pci_write_reg(pcie, CFINIT, PCIETCTLR);
+		ret = rcar_pcie_wait_for_dl(pcie);
+		if (ret)
+			return ret;
+	}
+
+	if ((val & PM_ENTER_L1RX) && ((val & PMSTATE) != PMSTATE_L1)) {
+		rcar_pci_write_reg(pcie, L1_INIT, PMCTLR);
+
+		/* Wait until we are in L1 */
+		while (!(val & L1FAEG))
+			val = rcar_pci_read_reg(pcie, PMSR);
+
+		/* Clear flags indicating link has transitioned to L1 */
+		rcar_pci_write_reg(pcie, L1FAEG | PM_ENTER_L1RX, PMSR);
 	}
 
 	/* Clear errors */
@@ -888,10 +918,43 @@ static const struct of_device_id rcar_pcie_of_match[] = {
 	  .data = rcar_pcie_phy_init_gen2 },
 	{ .compatible = "renesas,pcie-r8a7795",
 	  .data = rcar_pcie_phy_init_gen3 },
+	{ .compatible = "renesas,pcie-r8a77961",
+	  .data = rcar_pcie_phy_init_gen3 },
 	{ .compatible = "renesas,pcie-rcar-gen3",
 	  .data = rcar_pcie_phy_init_gen3 },
 	{},
 };
+
+static int rcar_pcie_set_vpcie(struct rcar_pcie_host *host)
+{
+	struct device *dev = host->pcie.dev;
+	int err;
+
+	if (!IS_ERR(host->pcie3v3)) {
+		err = regulator_enable(host->pcie3v3);
+		if (err) {
+			dev_err(dev, "fail to enable vpcie3v3 regulator\n");
+			goto err_out;
+		}
+	}
+
+	if (!IS_ERR(host->pcie1v8)) {
+		err = regulator_enable(host->pcie1v8);
+		if (err) {
+			dev_err(dev, "fail to enable vpcie1v8 regulator\n");
+			goto err_disable_3v3;
+		}
+	}
+
+	return 0;
+
+err_disable_3v3:
+	if (!IS_ERR(host->pcie3v3))
+		regulator_disable(host->pcie3v3);
+
+err_out:
+	return err;
+}
 
 static int rcar_pcie_probe(struct platform_device *pdev)
 {
@@ -910,6 +973,31 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 	pcie = &host->pcie;
 	pcie->dev = dev;
 	platform_set_drvdata(pdev, host);
+
+	host->pcie3v3 = devm_regulator_get_optional(dev, "pcie3v3");
+	if (IS_ERR(host->pcie3v3)) {
+		if (PTR_ERR(host->pcie3v3) == -EPROBE_DEFER) {
+			pci_free_host_bridge(bridge);
+			return -EPROBE_DEFER;
+		}
+		dev_info(dev, "no pcie3v3 regulator found\n");
+	}
+
+	host->pcie1v8 = devm_regulator_get_optional(dev, "pcie1v8");
+	if (IS_ERR(host->pcie1v8)) {
+		if (PTR_ERR(host->pcie1v8) == -EPROBE_DEFER) {
+			pci_free_host_bridge(bridge);
+			return -EPROBE_DEFER;
+		}
+		dev_info(dev, "no pcie1v8 regulator found\n");
+	}
+
+	err = rcar_pcie_set_vpcie(host);
+	if (err) {
+		dev_err(dev, "failed to set pcie regulators\n");
+		pci_free_host_bridge(bridge);
+		return err;
+	}
 
 	pm_runtime_enable(pcie->dev);
 	err = pm_runtime_get_sync(pcie->dev);
@@ -985,6 +1073,12 @@ err_unmap_msi_irqs:
 	irq_dispose_mapping(host->msi.irq1);
 
 err_pm_put:
+	if (!IS_ERR(host->pcie3v3))
+		if (regulator_is_enabled(host->pcie3v3))
+			regulator_disable(host->pcie3v3);
+	if (!IS_ERR(host->pcie1v8))
+		if (regulator_is_enabled(host->pcie1v8))
+			regulator_disable(host->pcie1v8);
 	pm_runtime_put(dev);
 	pm_runtime_disable(dev);
 
@@ -1051,3 +1145,31 @@ static struct platform_driver rcar_pcie_driver = {
 	.probe = rcar_pcie_probe,
 };
 builtin_platform_driver(rcar_pcie_driver);
+
+static int rcar_pcie_pci_notifier(struct notifier_block *nb,
+				  unsigned long action, void *data)
+{
+	struct device *dev = data;
+
+	switch (action) {
+	case BUS_NOTIFY_BOUND_DRIVER:
+		/* Force the DMA mask to lower 32-bits */
+		dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block device_nb = {
+	.notifier_call = rcar_pcie_pci_notifier,
+};
+
+static int __init register_rcar_pcie_pci_notifier(void)
+{
+	return bus_register_notifier(&pci_bus_type, &device_nb);
+}
+
+arch_initcall(register_rcar_pcie_pci_notifier);

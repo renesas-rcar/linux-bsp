@@ -909,8 +909,10 @@ static int pci_pm_resume_noirq(struct device *dev)
 	 * configuration here and attempting to put them into D0 again is
 	 * pointless, so avoid doing that.
 	 */
+	/*
 	if (!(skip_bus_pm && pm_suspend_no_platform()))
 		pci_pm_default_resume_early(pci_dev);
+	*/
 
 	pci_fixup_device(pci_fixup_resume_early, pci_dev);
 	pcie_pme_root_status_cleanup(pci_dev);
@@ -944,6 +946,9 @@ static int pci_pm_resume(struct device *dev)
 	 * This is necessary for the suspend error path in which resume is
 	 * called without restoring the standard config registers of the device.
 	 */
+	if (pci_dev->vendor != 0x1912)
+		pci_pm_default_resume_early(pci_dev);
+
 	if (pci_dev->state_saved)
 		pci_restore_standard_config(pci_dev);
 
