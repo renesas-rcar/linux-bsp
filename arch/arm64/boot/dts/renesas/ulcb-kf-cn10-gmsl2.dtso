@@ -1,0 +1,234 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Overlay for the H3ULCB Kingfisher board:
+ *  use GMSL2 card on CN10
+ *
+ * Copyright (C) 2017-2020 Renesas Electronics Corp.
+ * Copyright (C) 2017-2020 Cogent Embedded, Inc.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include "camera.dtsi"
+
+/ {
+	fragment@101 {
+		target-path = "/";
+
+		__overlay__ {
+
+			cs2300_ref_clk: cs2300_ref_clk {
+				compatible = "fixed-clock";
+				#clock-cells = <0>;
+				clock-frequency = <25000000>;
+			};
+
+			iio_hwmon_a: hwmon_a@0 {
+				compatible = "iio-hwmon";
+				io-channels = <&max2008x_a 0>, <&max2008x_a 2>, /* current */
+					      <&max2008x_a 4>, <&max2008x_a 6>, /* voltage */
+					      <&max2008x_a 8>, <&max2008x_a 9>; /* misc voltages */
+				io-channel-names = "camera-A-0-Iout", "camera-A-1-Iout",
+						   "camera-A-0-Vout", "camera-A-1-Vout",
+						   "cameras-A-Vregulator", "cameras-A-3v3";
+			};
+		};
+	};
+};
+
+&csi40 {
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi40_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&deser_out0>;
+			};
+		};
+	};
+};
+
+&i2cswitch4_i2c1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/* in uboot type:
+	 *  fdt rm /soc/i2c@e66d8000/i2c-switch@71/i2c@1/deser@2c
+	 */
+	deser@29 {
+		compatible = "maxim,max96712", "maxim,max9296";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x29 0x48>;
+		reg-names = "max96712", "max9296";
+		regs = <0x0c 0x0d 0x0e 0x0f>;
+		clocks = <&cs2300_a>;
+		clock-names = "ref_clk";
+		shutdown-gpios = <&gpio_exp_a_5c 13 GPIO_ACTIVE_LOW>;
+
+		poc0-supply = <&vdd_cam_a_0>;
+		poc1-supply = <&vdd_cam_a_1>;
+		poc2-supply = <&vdd_cam_a_2>;
+		poc3-supply = <&vdd_cam_a_3>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				deser_in0: endpoint {
+					remote-endpoint = <&camera_out0>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				deser_in1: endpoint {
+					remote-endpoint = <&camera_out1>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				deser_in2: endpoint {
+					remote-endpoint = <&camera_out2>;
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				deser_in3: endpoint {
+					remote-endpoint = <&camera_out3>;
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				deser_out0: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi40_in>;
+				};
+			};
+		};
+
+		i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+
+			camera@60 {
+				compatible = LVDS_CAMERA;
+				reg = <0x60 0x0c>;
+
+				port {
+					camera_out0: endpoint {
+						remote-endpoint = <&deser_in0>;
+					};
+				};
+			};
+		};
+
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+
+			camera@61 {
+				compatible = LVDS_CAMERA;
+				reg = <0x61 0x0d>;
+
+				port {
+					camera_out1: endpoint {
+						remote-endpoint = <&deser_in1>;
+					};
+				};
+			};
+		};
+
+		i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+
+			camera@62 {
+				compatible = LVDS_CAMERA;
+				reg = <0x62 0x0e>;
+
+				port {
+					camera_out2: endpoint {
+						remote-endpoint = <&deser_in2>;
+					};
+				};
+			};
+		};
+
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+
+			camera@63 {
+				compatible = LVDS_CAMERA;
+				reg = <0x63 0x0f>;
+
+				port {
+					camera_out3: endpoint {
+						remote-endpoint = <&deser_in3>;
+					};
+				};
+			};
+		};
+	};
+};
+
+&i2cswitch4_i2c7 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	cs2300_a: clk_multiplier_a@4e {
+		#clock-cells = <0>;
+		compatible = "cirrus,cs2300-cp";
+		reg = <0x4e>;
+		clocks = <&cs2300_ref_clk>;
+		clock-names = "clk_in";
+		assigned-clocks = <&cs2300_a>;
+		assigned-clock-rates = <25000000>;
+	};
+
+	max2008x_a: vcam_switch_a@28 {
+		compatible = "maxim,max2008x";
+		reg = <0x28>;
+		#io-channel-cells = <1>;
+
+		regulators {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			vdd_cam_a_0: SW0 {
+				reg = <0>;
+				regulator-name = "Camera-A-0";
+			};
+			vdd_cam_a_3: SW1 {
+				reg = <1>;
+				regulator-name = "Camera-A-3";
+			};
+			vdd_cam_a_1: SW2 {
+				reg = <2>;
+				regulator-name = "Camera-A-1";
+			};
+			vdd_cam_a_2: SW3 {
+				reg = <3>;
+				regulator-name = "Camera-A-2";
+			};
+		};
+	};
+};

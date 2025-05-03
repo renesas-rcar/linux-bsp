@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the Spider Ethernet 2.5G expansion
+ * sub-board
+ *
+ * Copyright (C) 2023 Renesas Electronics Corp.
+ */
+
+#include "r8a779f0-spider.dts"
+
+&rswitch {
+	status = "okay";
+	pinctrl-0 = <&tsn0_pins &tsn1_pins &tsn2_pins>;
+	pinctrl-names = "default";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			phy-mode = "5gbase-r";
+			phy-handle = <&etha0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			etha0: ethernet-phy@0 {
+				reg = <9>;
+				compatible = "ethernet-phy-id0000.b522",
+					     "ethernet-phy-ieee802.3-c22";
+			};
+		};
+		port@1 {
+			reg = <1>;
+			phy-mode = "5gbase-r";
+			phy-handle = <&etha1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			etha1: ethernet-phy@1 {
+				reg = <9>;
+				compatible = "ethernet-phy-id0000.b522",
+					     "ethernet-phy-ieee802.3-c22";
+			};
+		};
+		port@2 {
+			reg = <2>;
+			phy-mode = "5gbase-r";
+			phy-handle = <&etha2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			etha2: ethernet-phy@2 {
+				reg = <9>;
+				compatible = "ethernet-phy-id0000.b522",
+					     "ethernet-phy-ieee802.3-c22";
+			};
+		};
+	};
+};
