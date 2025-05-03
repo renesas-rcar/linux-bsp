@@ -333,7 +333,7 @@ void scmi_xfer_put(const struct scmi_handle *handle, struct scmi_xfer *xfer)
 	__scmi_xfer_put(&info->tx_minfo, xfer);
 }
 
-#define SCMI_MAX_POLL_TO_NS	(100 * NSEC_PER_USEC)
+#define SCMI_MAX_POLL_TO_NS	(100000000 * NSEC_PER_USEC)
 
 static bool scmi_xfer_done_no_timeout(struct scmi_chan_info *cinfo,
 				      struct scmi_xfer *xfer, ktime_t stop)
@@ -488,7 +488,7 @@ int scmi_xfer_get_init(const struct scmi_handle *handle, u8 msg_id, u8 prot_id,
 	xfer->rx.len = rx_size ? : info->desc->max_msg_size;
 	xfer->hdr.id = msg_id;
 	xfer->hdr.protocol_id = prot_id;
-	xfer->hdr.poll_completion = false;
+	xfer->hdr.poll_completion = true;
 
 	*p = xfer;
 
