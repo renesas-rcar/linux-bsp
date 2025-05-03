@@ -60,6 +60,10 @@ properties:
               - renesas,sdhi-r8a77990 # R-Car E3
               - renesas,sdhi-r8a77995 # R-Car D3
           - const: renesas,rcar-gen3-sdhi # R-Car Gen3 or RZ/G2
+      - items:
+          - enum:
+              - renesas,sdhi-r8a779g0 # R-Car V4H
+          - const: renesas,rcar-gen4-sdhi # R-Car Gen4
 
   reg:
     maxItems: 1
