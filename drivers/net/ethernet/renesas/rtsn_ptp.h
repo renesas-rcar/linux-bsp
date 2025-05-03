@@ -9,7 +9,8 @@
 
 #include <linux/ptp_clock_kernel.h>
 
-#define PTPTIVC_INIT	0x19000000	/* 320MHz */
+#define PTPTIVC_INIT_200MHZ	0x28000000	/* 200MHz */
+#define PTPTIVC_INIT_320MHZ	0x19000000	/* 320MHz */
 
 #define GTIVC_INIT	0x50000000	/* 100MHz */
 
@@ -19,8 +20,8 @@ enum rtsn_ptp_reg_layout {
 	RTSN_PTP_REG_LAYOUT_V4H,
 };
 
-#define RTSN_PTP_CLOCK_S4	PTPTIVC_INIT
-#define RTSN_PTP_CLOCK_V4H	GTIVC_INIT
+#define RTSN_PTP_CLOCK_S4	PTPTIVC_INIT_320MHZ
+#define RTSN_PTP_CLOCK_V4H	PTPTIVC_INIT_200MHZ
 
 /* driver's definitions */
 #define RTSN_RXTSTAMP_ENABLED		BIT(0)
