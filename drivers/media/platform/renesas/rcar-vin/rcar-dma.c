@@ -888,7 +888,7 @@ static int rvin_setup(struct rvin_dev *vin)
 		case VNMC_INF_RAW8:
 			if (!vin->is_csi) {
 				vin_err(vin, "Invalid setting in Digital Pins\n");
-#ifndef SIM_VDK
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 				return -EINVAL;
 #endif
 			}
@@ -1771,7 +1771,7 @@ void rvin_stop_streaming(struct rvin_dev *vin)
 		pm_runtime_put_sync(vin->dev);
 
 		while (1) {
-#ifndef SIM_VDK
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 			bool enable;
 
 			enable = __clk_is_enabled(vin->clk);

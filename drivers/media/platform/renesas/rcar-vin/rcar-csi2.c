@@ -1408,11 +1408,11 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 		return ret;
 	}
 
-	/* if (soc_device_match(r8a78000)) */
-	if (1)
-		ret = csi2cam_start(priv->cam, priv->mf.width, priv->mf.height, priv->mf.code);
-	else
-		ret = v4l2_subdev_call(priv->remote, video, s_stream, 1);
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	ret = csi2cam_start(priv->cam, priv->mf.width, priv->mf.height, priv->mf.code);
+#else
+	ret = v4l2_subdev_call(priv->remote, video, s_stream, 1);
+#endif
 
 	if (ret) {
 		rcsi2_enter_standby(priv);
@@ -1426,11 +1426,11 @@ static void rcsi2_stop(struct rcar_csi2 *priv)
 {
 	rcsi2_enter_standby(priv);
 
-	/* if (soc_device_match(r8a78000)) */
-	if (1)
-		csi2cam_stop(priv->cam);
-	else
-		v4l2_subdev_call(priv->remote, video, s_stream, 0);
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	csi2cam_stop(priv->cam);
+#else
+	v4l2_subdev_call(priv->remote, video, s_stream, 0);
+#endif
 }
 
 static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
@@ -1671,8 +1671,10 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		.bus_type = V4L2_MBUS_UNKNOWN,
 	};
 	int ret;
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	struct device_node *remote_ep;
 	struct platform_device *pdev;
+#endif
 
 
 	ep = fwnode_graph_get_endpoint_by_id(dev_fwnode(priv->dev), 0, 0, 0);
@@ -1694,42 +1696,41 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		return ret;
 	}
 
-	/* if (soc_device_match(r8a78000)) */
-	if (1) {
-		/* Synopsys CSI-2 Camera */
-		remote_ep = of_graph_get_remote_node(priv->dev->of_node, 0, 0);
-		if (!remote_ep) {
-			pr_err("Failed to find remote endpoint in the device tree\n");
-			return -ENODEV;
-		}
-		dev_dbg(priv->dev, "Found '%pOF'\n", remote_ep);
-
-		pdev = of_find_device_by_node(remote_ep);
-		of_node_put(remote_ep);
-		if (!pdev)
-			return -ENOMEM;
-
-		priv->cam = platform_get_drvdata(pdev);
-		platform_device_put(pdev);
-	} else {
-		fwnode = fwnode_graph_get_remote_endpoint(ep);
-		fwnode_handle_put(ep);
-
-		dev_dbg(priv->dev, "Found '%pOF'\n", to_of_node(fwnode));
-
-		v4l2_async_nf_init(&priv->notifier);
-		priv->notifier.ops = &rcar_csi2_notify_ops;
-
-		asd = v4l2_async_nf_add_fwnode(&priv->notifier, fwnode,
-						   struct v4l2_async_subdev);
-		fwnode_handle_put(fwnode);
-		if (IS_ERR(asd))
-			return PTR_ERR(asd);
-
-		ret = v4l2_async_subdev_nf_register(&priv->subdev, &priv->notifier);
-		if (ret)
-			v4l2_async_nf_cleanup(&priv->notifier);
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	/* Synopsys CSI-2 Camera */
+	remote_ep = of_graph_get_remote_node(priv->dev->of_node, 0, 0);
+	if (!remote_ep) {
+		pr_err("Failed to find remote endpoint in the device tree\n");
+		return -ENODEV;
 	}
+	dev_dbg(priv->dev, "Found '%pOF'\n", remote_ep);
+
+	pdev = of_find_device_by_node(remote_ep);
+	of_node_put(remote_ep);
+	if (!pdev)
+		return -ENOMEM;
+
+	priv->cam = platform_get_drvdata(pdev);
+	platform_device_put(pdev);
+#else
+	fwnode = fwnode_graph_get_remote_endpoint(ep);
+	fwnode_handle_put(ep);
+
+	dev_dbg(priv->dev, "Found '%pOF'\n", to_of_node(fwnode));
+
+	v4l2_async_nf_init(&priv->notifier);
+	priv->notifier.ops = &rcar_csi2_notify_ops;
+
+	asd = v4l2_async_nf_add_fwnode(&priv->notifier, fwnode,
+					   struct v4l2_async_subdev);
+	fwnode_handle_put(fwnode);
+	if (IS_ERR(asd))
+		return PTR_ERR(asd);
+
+	ret = v4l2_async_subdev_nf_register(&priv->subdev, &priv->notifier);
+	if (ret)
+		v4l2_async_nf_cleanup(&priv->notifier);
+#endif
 
 	return ret;
 }
