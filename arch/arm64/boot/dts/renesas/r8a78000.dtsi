@@ -2988,6 +2988,778 @@
 			status = "disabled";
 		};
 
+		vin000: video@c4900000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4900000 0 0x1000>;
+			interrupts = <0 510 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN000>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 730>;
+			renesas,id = <0>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin000isp0: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&isp0vin000>;
+					};
+				};
+			};
+		};
+
+		vin001: video@c4901000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4901000 0 0x1000>;
+			interrupts = <0 511 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN001>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 730>;
+			renesas,id = <1>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin001isp0: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&isp0vin001>;
+					};
+				};
+			};
+		};
+
+		vin010: video@c4908000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4908000 0 0x1000>;
+			interrupts = <0 518 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN010>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 731>;
+			renesas,id = <8>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin010isp0: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&isp0vin010>;
+					};
+				};
+			};
+		};
+
+		vin020: video@c4910000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4910000 0 0x1000>;
+			interrupts = <0 526 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN020>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 800>;
+			renesas,id = <16>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin020isp0: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&isp0vin020>;
+					};
+				};
+			};
+		};
+
+		vin030: video@c4918000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4918000 0 0x1000>;
+			interrupts = <0 534 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN030>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 801>;
+			renesas,id = <24>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin030isp1: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&isp1vin030>;
+					};
+				};
+			};
+		};
+
+		vin031: video@c4919000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4919000 0 0x1000>;
+			interrupts = <0 535 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN031>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 801>;
+			renesas,id = <25>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin031isp1: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&isp1vin031>;
+					};
+				};
+			};
+		};
+
+		vin040: video@c4920000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4920000 0 0x1000>;
+			interrupts = <0 542 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN040>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 802>;
+			renesas,id = <32>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin040isp1: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&isp1vin040>;
+					};
+				};
+			};
+		};
+
+		vin050: video@c4928000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4928000 0 0x1000>;
+			interrupts = <0 550 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN050>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 803>;
+			renesas,id = <40>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin050isp1: endpoint@1 {
+						reg = <1>;
+						remote-endpoint = <&isp1vin050>;
+					};
+				};
+			};
+		};
+
+		vin060: video@c4930000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4930000 0 0x1000>;
+			interrupts = <0 558 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN060>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 804>;
+			renesas,id = <48>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin060isp2: endpoint@2 {
+						reg = <2>;
+						remote-endpoint = <&isp2vin060>;
+					};
+				};
+			};
+		};
+
+		vin061: video@c4931000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4931000 0 0x1000>;
+			interrupts = <0 559 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN061>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 804>;
+			renesas,id = <49>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin061isp2: endpoint@2 {
+						reg = <2>;
+						remote-endpoint = <&isp2vin061>;
+					};
+				};
+			};
+		};
+
+		vin070: video@c4938000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4938000 0 0x1000>;
+			interrupts = <0 566 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN070>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 805>;
+			renesas,id = <56>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin070isp2: endpoint@2 {
+						reg = <2>;
+						remote-endpoint = <&isp2vin070>;
+					};
+				};
+			};
+		};
+
+		vin080: video@c4940000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4940000 0 0x1000>;
+			interrupts = <0 574 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN080>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 806>;
+			renesas,id = <64>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin080isp2: endpoint@2 {
+						reg = <2>;
+						remote-endpoint = <&isp2vin080>;
+					};
+				};
+			};
+		};
+
+		vin090: video@c4948000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4948000 0 0x1000>;
+			interrupts = <0 582 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN090>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 807>;
+			renesas,id = <72>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin090isp3: endpoint@3 {
+						reg = <3>;
+						remote-endpoint = <&isp3vin090>;
+					};
+				};
+			};
+		};
+
+		vin091: video@c4949000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4949000 0 0x1000>;
+			interrupts = <0 583 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN091>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 807>;
+			renesas,id = <73>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin091isp3: endpoint@3 {
+						reg = <3>;
+						remote-endpoint = <&isp3vin091>;
+					};
+				};
+			};
+		};
+
+		vin100: video@c4950000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4950000 0 0x1000>;
+			interrupts = <0 590 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN100>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 808>;
+			renesas,id = <80>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin100isp3: endpoint@3 {
+						reg = <3>;
+						remote-endpoint = <&isp3vin100>;
+					};
+				};
+			};
+		};
+
+		vin110: video@c4958000 {
+			compatible = "renesas,vin-r8a78000", "generic-uio";
+			reg = <0 0xc4958000 0 0x1000>;
+			interrupts = <0 598 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN110>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 809>;
+			renesas,id = <88>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@2 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <2>;
+
+					vin110isp3: endpoint@3 {
+						reg = <3>;
+						remote-endpoint = <&isp3vin110>;
+					};
+				};
+			};
+		};
+
+		csi40: csi2@c4400000 {
+			compatible = "renesas,r8a78000-csi2", "generic-uio";
+			reg = <0 0xc4400000 0 0x70000>;
+			interrupts = <0 498 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CSITOP0>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 331>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+				};
+
+				port@1 {
+					reg = <1>;
+					csi40isp0: endpoint {
+						remote-endpoint = <&isp0csi40>;
+					};
+				};
+			};
+		};
+
+		csi41: csi2@c4480000 {
+			compatible = "renesas,r8a78000-csi2", "generic-uio";
+			reg = <0 0xc4480000 0 0x70000>;
+			interrupts = <0 499 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CSITOP1>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 400>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+				};
+
+				port@1 {
+					reg = <1>;
+					csi41isp1: endpoint {
+						remote-endpoint = <&isp1csi41>;
+					};
+				};
+			};
+		};
+
+		csi42: csi2@c4500000 {
+			compatible = "renesas,r8a78000-csi2", "generic-uio";
+			reg = <0 0xc4500000 0 0x70000>;
+			interrupts = <0 500 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CSITOP2>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 401>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+				};
+
+				port@1 {
+					reg = <1>;
+					csi42isp2: endpoint {
+						remote-endpoint = <&isp2csi42>;
+					};
+				};
+			};
+		};
+
+		csi43: csi2@c4580000 {
+			compatible = "renesas,r8a78000-csi2", "generic-uio";
+			reg = <0 0xc4580000 0 0x70000>;
+			interrupts = <0 501 4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CSITOP3>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 402>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+				};
+
+				port@1 {
+					reg = <1>;
+					csi43isp3: endpoint {
+						remote-endpoint = <&isp3csi43>;
+					};
+				};
+			};
+		};
+
+		isp0: isp@c4700000 {
+			compatible = "renesas,r8a78000-isp";
+			reg = <0 0xc4700000 0 0x10000>;
+			interrupts = <0 506 8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS0>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 612>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <0>;
+
+					isp0csi40: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&csi40isp0>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					isp0vin000: endpoint {
+						remote-endpoint = <&vin000isp0>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					isp0vin001: endpoint {
+						remote-endpoint = <&vin001isp0>;
+					};
+				};
+
+				port@9 {
+					reg = <9>;
+					isp0vin010: endpoint {
+						remote-endpoint = <&vin010isp0>;
+					};
+				};
+
+				port@17 {
+					reg = <0x17>;
+					isp0vin020: endpoint {
+						remote-endpoint = <&vin020isp0>;
+					};
+				};
+			};
+		};
+
+		isp1: isp@c4720000 {
+			compatible = "renesas,r8a78000-isp";
+			reg = <0 0xc4720000 0 0x10000>;
+			interrupts = <0 507 8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS1>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 61>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <0>;
+
+					isp1csi41: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&csi41isp1>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					isp1vin030: endpoint {
+						remote-endpoint = <&vin030isp1>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					isp1vin031: endpoint {
+						remote-endpoint = <&vin031isp1>;
+					};
+				};
+
+				port@9 {
+					reg = <9>;
+					isp1vin040: endpoint {
+						remote-endpoint = <&vin040isp1>;
+					};
+				};
+
+				port@17 {
+					reg = <0x17>;
+					isp1vin050: endpoint {
+						remote-endpoint = <&vin050isp1>;
+					};
+				};
+			};
+		};
+
+		isp2: isp@c4740000 {
+			compatible = "renesas,r8a78000-isp";
+			reg = <0 0xc4740000 0 0x10000>;
+			interrupts = <0 508 8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS2>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 614>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <0>;
+
+					isp2csi42: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&csi42isp2>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					isp2vin060: endpoint {
+						remote-endpoint = <&vin060isp2>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					isp2vin061: endpoint {
+						remote-endpoint = <&vin061isp2>;
+					};
+				};
+
+				port@9 {
+					reg = <9>;
+					isp2vin070: endpoint {
+						remote-endpoint = <&vin070isp2>;
+					};
+				};
+
+				port@17 {
+					reg = <0x17>;
+					isp2vin080: endpoint {
+						remote-endpoint = <&vin080isp2>;
+					};
+				};
+			};
+		};
+
+		isp3: isp@c4760000 {
+			compatible = "renesas,r8a78000-isp";
+			reg = <0 0xc4760000 0 0x10000>;
+			interrupts = <0 509 8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS3>;
+			//power-domains = <&sysc 64>;
+			//resets = <&cpg 615>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					reg = <0>;
+
+					isp3csi43: endpoint@0 {
+						reg = <0>;
+						remote-endpoint = <&csi43isp3>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					isp3vin090: endpoint {
+						remote-endpoint = <&vin090isp3>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					isp3vin091: endpoint {
+						remote-endpoint = <&vin091isp3>;
+					};
+				};
+
+				port@9 {
+					reg = <9>;
+					isp3vin100: endpoint {
+						remote-endpoint = <&vin100isp3>;
+					};
+				};
+
+				port@17 {
+					reg = <0x17>;
+					isp3vin110: endpoint {
+						remote-endpoint = <&vin110isp3>;
+					};
+				};
+			};
+		};
+
 		mp_phy: mp_phy@c9a00000 {
 			compatible = "renesas,multi-protocol-phy";
 			reg = <0 0xc9a00000 0 0x100000>;

@@ -1,0 +1,436 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Device Tree Source (overlay) for the Ironhide X5H FAKRA connectors
+ *
+ * Copyright (C) 2023 Renesas Electronics Corp.
+ *
+ * This overlay allows you to define cameras connected to the FAKRA connectors
+ * on the IRONHIDE-X5H (or compatible) board.
+ *
+ * Enable the cameras by specifying the camera compatible on the appropriate
+ * line. Comment out the defines to disconnect the camera from the DTB.
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+
+#define IRONHIDE_CAMERA0  "dummy,camera"
+#define IRONHIDE_CAMERA1  "dummy,camera"
+#define IRONHIDE_CAMERA2  "dummy,camera"
+#define IRONHIDE_CAMERA3  "dummy,camera"
+#define IRONHIDE_CAMERA4  "dummy,camera"
+#define IRONHIDE_CAMERA5  "dummy,camera"
+#define IRONHIDE_CAMERA6  "dummy,camera"
+#define IRONHIDE_CAMERA7  "dummy,camera"
+
+/* Define the endpoint links */
+#ifdef IRONHIDE_CAMERA0
+&max96726_in0 {
+	remote-endpoint = <&fakra_con0>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA1
+&max96726_in1 {
+	remote-endpoint = <&fakra_con1>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA2
+&max96726_in2 {
+	remote-endpoint = <&fakra_con2>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA3
+&max96726_in3 {
+	remote-endpoint = <&fakra_con3>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA4
+&max96726_in4 {
+	remote-endpoint = <&fakra_con4>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA5
+&max96726_in5 {
+	remote-endpoint = <&fakra_con5>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA6
+&max96726_in6 {
+	remote-endpoint = <&fakra_con6>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA7
+&max96726_in7 {
+	remote-endpoint = <&fakra_con7>;
+};
+#endif
+#ifdef IRONHIDE_CAMERA8
+&max96726_in8 {
+	remote-endpoint = <&fakra_con8>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA9
+&max96726_in9 {
+	remote-endpoint = <&fakra_con9>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA10
+&max96726_in10 {
+	remote-endpoint = <&fakra_con10>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA11
+&max96726_in11 {
+	remote-endpoint = <&fakra_con11>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA12
+&max96726_in12 {
+	remote-endpoint = <&fakra_con12>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA13
+&max96726_in13 {
+	remote-endpoint = <&fakra_con13>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA14
+&max96726_in14 {
+	remote-endpoint = <&fakra_con14>;
+};
+#endif
+
+#ifdef IRONHIDE_CAMERA15
+&max96726_in15 {
+	remote-endpoint = <&fakra_con15>;
+};
+#endif
+
+/* Cameras are 'attached' to the GMSL I2C busses */
+&gmsl0 {
+
+#if defined(IRONHIDE_CAMERA0) || defined(IRONHIDE_CAMERA1) || \
+	defined(IRONHIDE_CAMERA2) || defined(IRONHIDE_CAMERA3)
+	status = "okay";
+
+#endif
+
+	i2c-mux {
+#ifdef IRONHIDE_CAMERA0
+		i2c@0 {
+			status = "okay";
+
+			camera@10 {
+				compatible = IRONHIDE_CAMERA0;
+				reg = <0x10>;
+
+				port {
+					fakra_con0: endpoint {
+						remote-endpoint = <&max96726_in0>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA1
+		i2c@1 {
+			status = "okay";
+
+			camera@11 {
+				compatible = IRONHIDE_CAMERA1;
+				reg = <0x11>;
+
+				port {
+					fakra_con1: endpoint {
+						remote-endpoint = <&max96726_in1>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA2
+		i2c@2 {
+			status = "okay";
+
+			camera@12 {
+				compatible = IRONHIDE_CAMERA2;
+				reg = <0x12>;
+
+				port {
+					fakra_con2: endpoint {
+						remote-endpoint = <&max96726_in2>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA3
+		i2c@3 {
+			status = "okay";
+
+			camera@13 {
+				compatible = IRONHIDE_CAMERA3;
+				reg = <0x13>;
+
+				port {
+					fakra_con3: endpoint {
+						remote-endpoint = <&max96726_in3>;
+					};
+				};
+			};
+		};
+#endif
+	};
+};
+
+&gmsl1 {
+
+#if defined(IRONHIDE_CAMERA4) || defined(IRONHIDE_CAMERA5) || \
+	defined(IRONHIDE_CAMERA6) || defined(IRONHIDE_CAMERA7)
+	status = "okay";
+
+#endif
+
+	i2c-mux {
+#ifdef IRONHIDE_CAMERA4
+		i2c@0 {
+			status = "okay";
+
+			camera@10 {
+				compatible = IRONHIDE_CAMERA4;
+				reg = <0x10>;
+
+				port {
+					fakra_con4: endpoint {
+						remote-endpoint = <&max96726_in4>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA5
+		i2c@1 {
+			status = "okay";
+
+			camera@11 {
+				compatible = IRONHIDE_CAMERA5;
+				reg = <0x11>;
+
+				port {
+					fakra_con5: endpoint {
+						remote-endpoint = <&max96726_in5>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA6
+		i2c@2 {
+			status = "okay";
+
+			camera@12 {
+				compatible = IRONHIDE_CAMERA6;
+				reg = <0x12>;
+
+				port {
+					fakra_con6: endpoint {
+						remote-endpoint = <&max96726_in6>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA7
+		i2c@3 {
+			status = "okay";
+
+			camera@13 {
+				compatible = IRONHIDE_CAMERA7;
+				reg = <0x13>;
+
+				port {
+					fakra_con7: endpoint {
+						remote-endpoint = <&max96726_in7>;
+					};
+				};
+			};
+		};
+#endif
+	};
+};
+
+&gmsl2 {
+
+#if defined(IRONHIDE_CAMERA8) || defined(IRONHIDE_CAMERA9) || \
+	defined(IRONHIDE_CAMERA10) || defined(IRONHIDE_CAMERA11)
+	status = "okay";
+
+#endif
+
+	i2c-mux {
+#ifdef IRONHIDE_CAMERA8
+		i2c@0 {
+			status = "okay";
+
+			camera@10 {
+				compatible = IRONHIDE_CAMERA8;
+				reg = <0x10>;
+
+				port {
+					fakra_con8: endpoint {
+						remote-endpoint = <&max96726_in8>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA9
+		i2c@1 {
+			status = "okay";
+
+			camera@11 {
+				compatible = IRONHIDE_CAMERA9;
+				reg = <0x11>;
+
+				port {
+					fakra_con9: endpoint {
+						remote-endpoint = <&max96726_in9>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA10
+		i2c@2 {
+			status = "okay";
+
+			camera@12 {
+				compatible = IRONHIDE_CAMERA10;
+				reg = <0x12>;
+
+				port {
+					fakra_con10: endpoint {
+						remote-endpoint = <&max96726_in10>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA11
+		i2c@3 {
+			status = "okay";
+
+			camera@13 {
+				compatible = IRONHIDE_CAMERA11;
+				reg = <0x13>;
+
+				port {
+					fakra_con11: endpoint {
+						remote-endpoint = <&max96726_in11>;
+					};
+				};
+			};
+		};
+#endif
+	};
+};
+
+&gmsl3 {
+
+#if defined(IRONHIDE_CAMERA12) || defined(IRONHIDE_CAMERA13) || \
+	defined(IRONHIDE_CAMERA14) || defined(IRONHIDE_CAMERA15)
+	status = "okay";
+
+#endif
+
+	i2c-mux {
+#ifdef IRONHIDE_CAMERA12
+		i2c@0 {
+			status = "okay";
+
+			camera@10 {
+				compatible = IRONHIDE_CAMERA12;
+				reg = <0x10>;
+
+				port {
+					fakra_con12: endpoint {
+						remote-endpoint = <&max96726_in12>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA13
+		i2c@1 {
+			status = "okay";
+
+			camera@11 {
+				compatible = IRONHIDE_CAMERA13;
+				reg = <0x11>;
+
+				port {
+					fakra_con13: endpoint {
+						remote-endpoint = <&max96726_in13>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA14
+		i2c@2 {
+			status = "okay";
+
+			camera@12 {
+				compatible = IRONHIDE_CAMERA14;
+				reg = <0x12>;
+
+				port {
+					fakra_con14: endpoint {
+						remote-endpoint = <&max96726_in14>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef IRONHIDE_CAMERA15
+		i2c@3 {
+			status = "okay";
+
+			camera@13 {
+				compatible = IRONHIDE_CAMERA15;
+				reg = <0x13>;
+
+				port {
+					fakra_con15: endpoint {
+						remote-endpoint = <&max96726_in15>;
+					};
+				};
+			};
+		};
+#endif
+	};
+};
