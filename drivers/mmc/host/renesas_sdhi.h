@@ -40,6 +40,8 @@ struct renesas_sdhi_quirks {
 	bool hs400_4taps;
 	u32 hs400_bad_taps;
 	const u8 (*hs400_calib_table)[SDHI_CALIB_TABLE_MAX];
+	bool hs400_ignore_dat;
+	bool hs400_calib_reg;
 };
 
 struct tmio_mmc_dma {
