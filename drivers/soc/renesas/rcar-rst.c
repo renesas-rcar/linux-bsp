@@ -12,6 +12,9 @@
 
 #define WDTRSTCR_RESET		0xA55A0002
 #define WDTRSTCR		0x0054
+#define GEN5_WDTRSTCR		0x0420
+#define RESFC			0x0460
+#define RESKCPROT0		0x04F0
 
 #define CR7BAR			0x0070
 #define CR7BAREN		BIT(4)
@@ -23,7 +26,21 @@ static int (*rcar_rst_set_rproc_boot_addr_func)(u64 boot_addr);
 
 static int rcar_rst_enable_wdt_reset(void __iomem *base)
 {
+#ifdef CONFIG_ARCH_R8A78000
+	u32 val;
+
+	val = ioread32(base + RESFC);
+	val &= ~(0x1 << 26);
+	iowrite32(val, base + RESFC);
+
+	iowrite32(0xA5A5A501, base + RESKCPROT0);
+
+	val = ioread32(base + GEN5_WDTRSTCR);
+	val &= ~(0x1 << 0);
+	iowrite32(val, base + GEN5_WDTRSTCR);
+#else
 	iowrite32(WDTRSTCR_RESET, base + WDTRSTCR);
+#endif
 	return 0;
 }
 
@@ -70,6 +87,11 @@ static const struct rst_config rcar_rst_gen4 __initconst = {
 	.modemr = 0x00,		/* MODEMR0 and it has CPG related bits */
 };
 
+static const struct rst_config rcar_rst_gen5 __initconst = {
+	.modemr = 0x1000,
+	.configure = rcar_rst_enable_wdt_reset,
+};
+
 static const struct of_device_id rcar_rst_matches[] __initconst = {
 	/* RZ/G1 is handled like R-Car Gen2 */
 	{ .compatible = "renesas,r8a7742-rst", .data = &rcar_rst_gen2 },
@@ -104,6 +126,7 @@ static const struct of_device_id rcar_rst_matches[] __initconst = {
 	{ .compatible = "renesas,r8a779a0-rst", .data = &rcar_rst_gen4 },
 	{ .compatible = "renesas,r8a779f0-rst", .data = &rcar_rst_gen4 },
 	{ .compatible = "renesas,r8a779g0-rst", .data = &rcar_rst_gen4 },
+	{ .compatible = "renesas,r8a78000-rst", .data = &rcar_rst_gen5 },
 	{ /* sentinel */ }
 };
 
