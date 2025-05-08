@@ -2,6 +2,7 @@
 /*
  * Copyright (C) 2015-2016 Free Electrons
  * Copyright (C) 2015-2016 NextThing Co
+ * Copyright (C) 2019 Renesas Electronics Corporation
  *
  * Maxime Ripard <maxime.ripard@free-electrons.com>
  */
@@ -32,6 +33,10 @@ struct simple_bridge {
 	struct drm_bridge	*next_bridge;
 	struct regulator	*vdd;
 	struct gpio_desc	*enable;
+	bool			ddc_flag;
+	u32			width;
+	u32			height;
+	u32			max_pixclk;
 };
 
 static inline struct simple_bridge *
@@ -67,7 +72,7 @@ static int simple_bridge_get_modes(struct drm_connector *connector)
 		 * prefer a mode pretty much anyone can handle.
 		 */
 		ret = drm_add_modes_noedid(connector, 1920, 1200);
-		drm_set_preferred_mode(connector, 1024, 768);
+		drm_set_preferred_mode(connector, sbridge->width, sbridge->height);
 		return ret;
 	}
 
@@ -78,14 +83,37 @@ static int simple_bridge_get_modes(struct drm_connector *connector)
 	return ret;
 }
 
+static enum drm_mode_status
+simple_bridge_mode_valid(struct drm_connector *connector,
+		    struct drm_display_mode *mode)
+{
+	struct simple_bridge *sbridge = drm_connector_to_simple_bridge(connector);
+
+	if (!sbridge->max_pixclk)
+		return MODE_OK;
+
+	if (mode->clock > sbridge->max_pixclk)
+		return MODE_BAD;
+
+	return MODE_OK;
+}
+
 static const struct drm_connector_helper_funcs simple_bridge_con_helper_funcs = {
 	.get_modes	= simple_bridge_get_modes,
+	.mode_valid	= simple_bridge_mode_valid,
 };
 
 static enum drm_connector_status
 simple_bridge_connector_detect(struct drm_connector *connector, bool force)
 {
 	struct simple_bridge *sbridge = drm_connector_to_simple_bridge(connector);
+
+	/*
+	 * Set connector_status_connected forcibly when EDID is not used
+	 * by option.
+	 */
+	if (!sbridge->ddc_flag)
+		return connector_status_connected;
 
 	return drm_bridge_detect(sbridge->next_bridge);
 }
@@ -180,6 +208,20 @@ static int simple_bridge_probe(struct platform_device *pdev)
 	remote = of_graph_get_remote_node(pdev->dev.of_node, 1, -1);
 	if (!remote)
 		return -EINVAL;
+
+	if (of_find_property(remote, "no-use-ddc", NULL))
+		sbridge->ddc_flag = false;
+	else
+		sbridge->ddc_flag = true;
+
+	of_property_read_u32(remote, "width", &sbridge->width);
+	of_property_read_u32(remote, "height", &sbridge->height);
+	if (sbridge->width == 0 || sbridge->height == 0) {
+		sbridge->width = 1024;
+		sbridge->height = 768;
+	}
+
+	of_property_read_u32(remote, "max-pixelclock", &sbridge->max_pixclk);
 
 	sbridge->next_bridge = of_drm_find_bridge(remote);
 	of_node_put(remote);

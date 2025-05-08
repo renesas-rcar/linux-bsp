@@ -248,4 +248,11 @@ source "drivers/gpu/drm/bridge/cadence/Kconfig"
 
 source "drivers/gpu/drm/bridge/synopsys/Kconfig"
 
+config DRM_MAX_96789
+	tristate "MAXIM MAX96789 bridge"
+	depends on OF
+	select DRM_KMS_HELPER
+	help
+	  Maxim Max96789 Serializer driver
+
 endmenu

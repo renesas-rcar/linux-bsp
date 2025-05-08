@@ -287,7 +287,8 @@
  * isn't implemented by other SoC in the Gen3 family it can safely be set
  * unconditionally.
  */
-#define DPLLCR_PLCS0		(3 << 20)
+#define DPLLCR_PLCS0		(1 << 21)
+#define DPLLCR_PLCS0_H3ES1X_WA	(1 << 20)
 #define DPLLCR_CLKE		(1 << 18)
 #define DPLLCR_FDPLL(n)		((n) << 12)
 #define DPLLCR_N(n)		((n) << 5)
@@ -385,6 +386,7 @@
 #define PnALPHAR_ABIT_1		(0 << 12)
 #define PnALPHAR_ABIT_0		(1 << 12)
 #define PnALPHAR_ABIT_X		(2 << 12)
+#define PnALPHAR_BRSL		(0 << 8)
 
 #define PnDSXR			0x00110
 #define PnDSYR			0x00114
