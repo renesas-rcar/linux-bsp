@@ -84,7 +84,7 @@ static int sh_pfc_map_resources(struct sh_pfc *pfc,
 	return 0;
 }
 
-static void __iomem *sh_pfc_phys_to_virt(struct sh_pfc *pfc, u32 reg)
+static void __iomem *sh_pfc_phys_to_virt(struct sh_pfc *pfc, u64 reg)
 {
 	struct sh_pfc_window *window;
 	phys_addr_t address = reg;
@@ -169,18 +169,30 @@ void sh_pfc_write_raw_reg(void __iomem *mapped_reg, unsigned int reg_width,
 	BUG();
 }
 
-u32 sh_pfc_read(struct sh_pfc *pfc, u32 reg)
+u32 sh_pfc_read(struct sh_pfc *pfc, u64 reg)
 {
 	return sh_pfc_read_raw_reg(sh_pfc_phys_to_virt(pfc, reg), 32);
 }
 
-void sh_pfc_write(struct sh_pfc *pfc, u32 reg, u32 data)
+static void sh_pfc_unlock_reg(struct sh_pfc *pfc, u64 reg, u32 data)
 {
-	if (pfc->info->unlock_reg)
-		sh_pfc_write_raw_reg(
-			sh_pfc_phys_to_virt(pfc, pfc->info->unlock_reg), 32,
-			~data);
+	u64 unlock;
 
+	if (!pfc->info->unlock_reg)
+		return;
+
+	if (pfc->info->unlock_reg >= 0x80000000UL)
+		unlock = pfc->info->unlock_reg;
+	else
+		/* unlock_reg is a mask */
+		unlock = reg & ~pfc->info->unlock_reg;
+
+	sh_pfc_write_raw_reg(sh_pfc_phys_to_virt(pfc, unlock), 32, ~data);
+}
+
+void sh_pfc_write(struct sh_pfc *pfc, u64 reg, u32 data)
+{
+	sh_pfc_unlock_reg(pfc, reg, data);
 	sh_pfc_write_raw_reg(sh_pfc_phys_to_virt(pfc, reg), 32, data);
 }
 
@@ -215,7 +227,7 @@ static void sh_pfc_write_config_reg(struct sh_pfc *pfc,
 
 	sh_pfc_config_reg_helper(pfc, crp, field, &mapped_reg, &mask, &pos);
 
-	dev_dbg(pfc->dev, "write_reg addr = %x, value = 0x%x, field = %u, "
+	dev_dbg(pfc->dev, "write_reg addr = %llx, value = 0x%x, field = %u, "
 		"r_width = %u, f_width = %u\n",
 		crp->reg, value, field, crp->reg_width, hweight32(mask));
 
@@ -226,11 +238,7 @@ static void sh_pfc_write_config_reg(struct sh_pfc *pfc,
 	data &= mask;
 	data |= value;
 
-	if (pfc->info->unlock_reg)
-		sh_pfc_write_raw_reg(
-			sh_pfc_phys_to_virt(pfc, pfc->info->unlock_reg), 32,
-			~data);
-
+	sh_pfc_unlock_reg(pfc, crp->reg, data);
 	sh_pfc_write_raw_reg(mapped_reg, crp->reg_width, data);
 }
 
@@ -314,6 +322,7 @@ int sh_pfc_config_mux(struct sh_pfc *pfc, unsigned mark, int pinmux_type)
 		range = NULL;
 		break;
 
+#ifdef CONFIG_PINCTRL_SH_PFC_GPIO
 	case PINMUX_TYPE_OUTPUT:
 		range = &pfc->info->output;
 		break;
@@ -321,6 +330,7 @@ int sh_pfc_config_mux(struct sh_pfc *pfc, unsigned mark, int pinmux_type)
 	case PINMUX_TYPE_INPUT:
 		range = &pfc->info->input;
 		break;
+#endif /* CONFIG_PINCTRL_SH_PFC_GPIO */
 
 	default:
 		return -EINVAL;
@@ -381,26 +391,6 @@ int sh_pfc_config_mux(struct sh_pfc *pfc, unsigned mark, int pinmux_type)
 	}
 
 	return 0;
-}
-
-const struct pinmux_bias_reg *
-sh_pfc_pin_to_bias_reg(const struct sh_pfc *pfc, unsigned int pin,
-		       unsigned int *bit)
-{
-	unsigned int i, j;
-
-	for (i = 0; pfc->info->bias_regs[i].puen; i++) {
-		for (j = 0; j < ARRAY_SIZE(pfc->info->bias_regs[i].pins); j++) {
-			if (pfc->info->bias_regs[i].pins[j] == pin) {
-				*bit = j;
-				return &pfc->info->bias_regs[i];
-			}
-		}
-	}
-
-	WARN_ONCE(1, "Pin %u is not in bias info list\n", pin);
-
-	return NULL;
 }
 
 static int sh_pfc_init_ranges(struct sh_pfc *pfc)
@@ -635,6 +625,30 @@ static const struct of_device_id sh_pfc_of_table[] = {
 		.data = &r8a77995_pinmux_info,
 	},
 #endif
+#ifdef CONFIG_PINCTRL_PFC_R8A779A0
+	{
+		.compatible = "renesas,pfc-r8a779a0",
+		.data = &r8a779a0_pinmux_info,
+	},
+#endif
+#ifdef CONFIG_PINCTRL_PFC_R8A779G0
+	{
+		.compatible = "renesas,pfc-r8a779g0",
+		.data = &r8a779g0_pinmux_info,
+	},
+#endif
+#ifdef CONFIG_PINCTRL_PFC_R8A779F0
+	{
+		.compatible = "renesas,pfc-r8a779f0",
+		.data = &r8a779f0_pinmux_info,
+	},
+#endif
+#ifdef CONFIG_PINCTRL_PFC_R8A779H0
+	{
+		.compatible = "renesas,pfc-r8a779h0",
+		.data = &r8a779h0_pinmux_info,
+	},
+#endif
 #ifdef CONFIG_PINCTRL_PFC_SH73A0
 	{
 		.compatible = "renesas,pfc-sh73a0",
@@ -646,22 +660,22 @@ static const struct of_device_id sh_pfc_of_table[] = {
 #endif
 
 #if defined(CONFIG_PM_SLEEP) && defined(CONFIG_ARM_PSCI_FW)
-static void sh_pfc_nop_reg(struct sh_pfc *pfc, u32 reg, unsigned int idx)
+static void sh_pfc_nop_reg(struct sh_pfc *pfc, u64 reg, unsigned int idx)
 {
 }
 
-static void sh_pfc_save_reg(struct sh_pfc *pfc, u32 reg, unsigned int idx)
+static void sh_pfc_save_reg(struct sh_pfc *pfc, u64 reg, unsigned int idx)
 {
 	pfc->saved_regs[idx] = sh_pfc_read(pfc, reg);
 }
 
-static void sh_pfc_restore_reg(struct sh_pfc *pfc, u32 reg, unsigned int idx)
+static void sh_pfc_restore_reg(struct sh_pfc *pfc, u64 reg, unsigned int idx)
 {
 	sh_pfc_write(pfc, reg, pfc->saved_regs[idx]);
 }
 
 static unsigned int sh_pfc_walk_regs(struct sh_pfc *pfc,
-	void (*do_reg)(struct sh_pfc *pfc, u32 reg, unsigned int idx))
+	void (*do_reg)(struct sh_pfc *pfc, u64 reg, unsigned int idx))
 {
 	unsigned int i, n = 0;
 
@@ -777,7 +791,7 @@ static bool __init same_name(const char *a, const char *b)
 	return !strcmp(a, b);
 }
 
-static void __init sh_pfc_check_reg(const char *drvname, u32 reg)
+static void __init sh_pfc_check_reg(const char *drvname, u64 reg)
 {
 	unsigned int i;
 
@@ -813,7 +827,7 @@ static int __init sh_pfc_check_enum(const char *drvname, u16 enum_id)
 	return 0;
 }
 
-static void __init sh_pfc_check_reg_enums(const char *drvname, u32 reg,
+static void __init sh_pfc_check_reg_enums(const char *drvname, u64 reg,
 					  const u16 *enums, unsigned int n)
 {
 	unsigned int i;
@@ -826,7 +840,7 @@ static void __init sh_pfc_check_reg_enums(const char *drvname, u32 reg,
 }
 
 static void __init sh_pfc_check_pin(const struct sh_pfc_soc_info *info,
-				    u32 reg, unsigned int pin)
+				    u64 reg, unsigned int pin)
 {
 	const char *drvname = info->name;
 	unsigned int i;
@@ -1051,6 +1065,10 @@ static void __init sh_pfc_check_info(const struct sh_pfc_soc_info *info)
 static void __init sh_pfc_check_driver(const struct platform_driver *pdrv)
 {
 	unsigned int i;
+
+	if (!IS_ENABLED(CONFIG_SUPERH) &&
+	    !of_find_matching_node(NULL, pdrv->driver.of_match_table))
+		return;
 
 	sh_pfc_regs = kcalloc(SH_PFC_MAX_REGS, sizeof(*sh_pfc_regs),
 			      GFP_KERNEL);
