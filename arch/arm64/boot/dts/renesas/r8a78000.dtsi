@@ -497,6 +497,13 @@
 		clock-frequency = <266660000>;
 	};
 
+	dummy_clk_wdt: dummy_clk_wdt {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <32800>;
+		clock-output-names = "watchdog";
+	};
+
 	/* External SCIF clock - to be overridden by boards that provide it */
 	scif_clk: scif {
 		compatible = "fixed-clock";
@@ -681,6 +688,14 @@
 			i2c-scl-internal-delay-ns = <110>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		rwdt: watchdog@1c040000 {
+			compatible = "renesas,r8a78000-wdt",
+				     "renesas,rcar-gen5-wdt";
+			reg = <0 0x1c040000 0 0x0c>;
+			clock = <&dummy_clk_wdt>;
 			status = "disabled";
 		};
 
