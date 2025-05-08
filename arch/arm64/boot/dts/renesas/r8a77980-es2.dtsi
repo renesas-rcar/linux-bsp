@@ -1,0 +1,44 @@
+/*
+ * Device Tree Source for the r8a7798 ES2.0 SoC
+ *   (append to r8a7798 SoC ES1.0 SoC)
+ *
+ * Copyright (C) 2018 Renesas Electronics Corp.
+ * Copyright (C) 2018 Cogent Embedded, Inc.
+ *
+ * This file is licensed under the terms of the GNU General Public License
+ * version 2.  This program is licensed "as is" without any warranty of any
+ * kind, whether express or implied.
+ */
+
+/ {
+	soc {
+		/delete-node/ims_03@fe890000;
+		/delete-node/fba_ims3;
+		/delete-node/post_fba_ims3;
+
+		/delete-node/imp_psc_01;
+
+		/delete-node/fcprw_vin_00_03;
+		/delete-node/fcprw_vin_04_07;
+		/delete-node/fcprr_rtdmac_00;
+		/delete-node/fcpra_rtdmac;
+
+		imp_dma_slim_00 {
+			compatible = "generic-uio";
+			reg = <0 0xffa18000 0 0x4000>;
+			clocks = <&cpg CPG_MOD 524>;
+			power-domains = <&sysc R8A77980_PD_A2DP1>;
+			ipmmu-id = <RCAR_IPMMU_IR 0>;
+			resets = <&cpg 524>;
+			iommus = <&ipmmu_ir 0>, <&ipmmu_ir 1>;
+		};
+
+		system_ram: systemram@e6300000 {
+			compatible = "generic-uio";
+			reg = <0 0xe6300000 0 0x60000>;
+			linux,uio-name = "system_ram_00";
+		};
+
+		/* TBD: can fd channel 3 */
+	};
+};
