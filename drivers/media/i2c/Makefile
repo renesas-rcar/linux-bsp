@@ -7,6 +7,10 @@ obj-$(CONFIG_VIDEO_ET8EK8)	+= et8ek8/
 obj-$(CONFIG_VIDEO_CX25840) += cx25840/
 obj-$(CONFIG_VIDEO_M5MOLS)	+= m5mols/
 
+obj-y				+= imagers/
+obj-y				+= gmsl/
+obj-y				+= fpdlink/
+
 obj-$(CONFIG_VIDEO_APTINA_PLL) += aptina-pll.o
 obj-$(CONFIG_VIDEO_TVAUDIO) += tvaudio.o
 obj-$(CONFIG_VIDEO_TDA7432) += tda7432.o
@@ -69,6 +73,7 @@ obj-$(CONFIG_VIDEO_OV2680) += ov2680.o
 obj-$(CONFIG_VIDEO_OV2685) += ov2685.o
 obj-$(CONFIG_VIDEO_OV2740) += ov2740.o
 obj-$(CONFIG_VIDEO_OV5640) += ov5640.o
+obj-$(CONFIG_VIDEO_OV5642) += ov5642.o
 obj-$(CONFIG_VIDEO_OV5645) += ov5645.o
 obj-$(CONFIG_VIDEO_OV5647) += ov5647.o
 obj-$(CONFIG_VIDEO_OV5670) += ov5670.o
@@ -123,5 +128,8 @@ obj-$(CONFIG_VIDEO_MAX9286)	+= max9286.o
 rdacm20-camera_module-objs	:= rdacm20.o max9271.o
 obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20-camera_module.o
 obj-$(CONFIG_VIDEO_ST_MIPID02) += st-mipid02.o
+obj-$(CONFIG_VIDEO_MAX96712_STAGING)	+= max96712.o
+dummy-camera_module-objs	:= dummy-camera.o
+obj-$(CONFIG_VIDEO_DUMMY_CAMERA)	+= dummy-camera_module.o
 
 obj-$(CONFIG_SDR_MAX2175) += max2175.o

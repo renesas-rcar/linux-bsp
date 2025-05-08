@@ -28,6 +28,7 @@
 #include <linux/of_graph.h>
 #include <linux/slab.h>
 #include <linux/videodev2.h>
+#include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-image-sizes.h>
@@ -85,13 +86,31 @@ struct ov5647 {
 	unsigned int			width;
 	unsigned int			height;
 	int				power_count;
+	int				test_pattern;
 	struct clk			*xclk;
+	struct v4l2_ctrl_handler	ctrls;
 };
 
 static inline struct ov5647 *to_state(struct v4l2_subdev *sd)
 {
 	return container_of(sd, struct ov5647, sd);
 }
+
+static const char * const ov5647_test_pattern_menu[] = {
+	"Disabled",
+	"Color Bars",
+	"Color Squares",
+	"Random Data",
+	"Input Data"
+};
+
+static u8 ov5647_test_pattern_val[] = {
+	0x00,	/* Disabled */
+	0x80,	/* Color Bars */
+	0x82,	/* Color Squares */
+	0x81,	/* Random Data */
+	0x83,	/* Input Data */
+};
 
 static struct regval_list sensor_oe_disable_regs[] = {
 	{0x3000, 0x00},
@@ -203,9 +222,18 @@ static int ov5647_write(struct v4l2_subdev *sd, u16 reg, u8 val)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	ret = i2c_master_send(client, data, 3);
-	if (ret < 0)
+	/*
+	 * Writing the wrong number of bytes also needs to be flagged as an
+	 * error. Success needs to produce a 0 return code.
+	 */
+	if (ret == 3) {
+		ret = 0;
+	} else {
 		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
 				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
 
 	return ret;
 }
@@ -217,16 +245,31 @@ static int ov5647_read(struct v4l2_subdev *sd, u16 reg, u8 *val)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	ret = i2c_master_send(client, data_w, 2);
-	if (ret < 0) {
+	/*
+	 * A negative return code, or sending the wrong number of bytes, both
+	 * count as an error.
+	 */
+	if (ret != 2) {
 		dev_dbg(&client->dev, "%s: i2c write error, reg: %x\n",
 			__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
 		return ret;
 	}
 
 	ret = i2c_master_recv(client, val, 1);
-	if (ret < 0)
+	/*
+	 * The only return value indicating success is 1. Anything else, even
+	 * a non-negative value, indicates something went wrong.
+	 */
+	if (ret == 1) {
+		ret = 0;
+	} else {
 		dev_dbg(&client->dev, "%s: i2c read error, reg: %x\n",
 				__func__, reg);
+		if (ret >= 0)
+			ret = -EINVAL;
+	}
 
 	return ret;
 }
@@ -261,6 +304,11 @@ static int ov5647_set_virtual_channel(struct v4l2_subdev *sd, int channel)
 static int ov5647_stream_on(struct v4l2_subdev *sd)
 {
 	int ret;
+
+	/* Apply customized values from user */
+	ret =  __v4l2_ctrl_handler_setup(sd->ctrl_handler);
+	if (ret)
+		return ret;
 
 	ret = ov5647_write(sd, OV5647_REG_MIPI_CTRL00, MIPI_CTRL00_BUS_IDLE);
 	if (ret < 0)
@@ -530,6 +578,29 @@ static const struct v4l2_subdev_internal_ops ov5647_subdev_internal_ops = {
 	.open = ov5647_open,
 };
 
+static int ov5647_set_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct ov5647 *ov5647 = container_of(ctrl->handler,
+					     struct ov5647, ctrls);
+	struct v4l2_subdev *sd = &ov5647->sd;
+	int ret = -EINVAL;
+
+	switch (ctrl->id) {
+	case V4L2_CID_TEST_PATTERN:
+		ret = ov5647_write(sd, 0x503d,
+				   ov5647_test_pattern_val[ctrl->val]);
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
+static const struct v4l2_ctrl_ops ov5647_ctrl_ops = {
+	.s_ctrl = ov5647_set_ctrl,
+};
+
 static int ov5647_parse_dt(struct device_node *np)
 {
 	struct v4l2_fwnode_endpoint bus_cfg = { .bus_type = 0 };
@@ -594,6 +665,22 @@ static int ov5647_probe(struct i2c_client *client)
 	if (ret < 0)
 		goto mutex_remove;
 
+	v4l2_ctrl_handler_init(&sensor->ctrls, 2);
+	sensor->ctrls.lock = &sensor->lock;
+
+	v4l2_ctrl_new_std(&sensor->ctrls, &ov5647_ctrl_ops, V4L2_CID_PIXEL_RATE,
+			  70000000, 70000000, 1, 70000000);
+
+	v4l2_ctrl_new_std_menu_items(&sensor->ctrls, &ov5647_ctrl_ops,
+				     V4L2_CID_TEST_PATTERN,
+				     ARRAY_SIZE(ov5647_test_pattern_menu) - 1,
+				     0, 0, ov5647_test_pattern_menu);
+
+	sensor->sd.ctrl_handler = &sensor->ctrls;
+	ret = sensor->ctrls.error;
+	if (ret)
+		goto error;
+
 	ret = ov5647_detect(sd);
 	if (ret < 0)
 		goto error;
@@ -607,6 +694,7 @@ static int ov5647_probe(struct i2c_client *client)
 error:
 	media_entity_cleanup(&sd->entity);
 mutex_remove:
+	v4l2_ctrl_handler_free(&sensor->ctrls);
 	mutex_destroy(&sensor->lock);
 	return ret;
 }
@@ -618,6 +706,7 @@ static int ov5647_remove(struct i2c_client *client)
 
 	v4l2_async_unregister_subdev(&ov5647->sd);
 	media_entity_cleanup(&ov5647->sd.entity);
+	v4l2_ctrl_handler_free(&ov5647->ctrls);
 	v4l2_device_unregister_subdev(sd);
 	mutex_destroy(&ov5647->lock);
 
