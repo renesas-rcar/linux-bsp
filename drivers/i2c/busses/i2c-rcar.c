@@ -29,6 +29,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
+#include <linux/sys_soc.h>
 
 /* register offsets */
 #define ICSCR	0x00	/* slave ctrl */
@@ -41,6 +42,10 @@
 #define ICSAR	0x1C	/* slave address */
 #define ICMAR	0x20	/* master address */
 #define ICRXTX	0x24	/* data port */
+#define ICCCR2	0x28	/* Clock control 2 */
+#define ICMPR	0x2C	/* SCL mask control */
+#define ICHPR	0x30	/* SCL HIGH control */
+#define ICLPR	0x34	/* SCL LOW control */
 #define ICFBSCR	0x38	/* first bit setup cycle (Gen3) */
 #define ICDMAER	0x3c	/* DMA enable (Gen3) */
 
@@ -83,11 +88,27 @@
 #define TSDMAE	(1 << 2)	/* DMA Slave Transmitted Enable */
 #define RMDMAE	(1 << 1)	/* DMA Master Received Enable */
 #define TMDMAE	(1 << 0)	/* DMA Master Transmitted Enable */
+#define TMDMATSZ(x)             (((x) << 8) & GENMASK(15, 8))
+#define TMDMACE                 BIT(7)
+#define MDMACTSZ(x)             (((x) << 24) & GENMASK(31, 24))
+#define RMDMATSZ(x)             (((x) << 16) & GENMASK(23, 16))
+#define RMDMACE                 BIT(6)
+
+
+/* ICCCR2 */
+#define FMPE	BIT(7)	/* Fast Mode Plus Enable */
+#define CDFD	BIT(2)	/* CDF Disable */
+#define HLSE	BIT(1)	/* HIGH/LOW Separate Control Enable */
+#define SME	BIT(0)	/* SCL Mask Enable */
 
 /* ICFBSCR */
 #define TCYC17	0x0f		/* 17*Tcyc delay 1st bit between SDA and SCL */
 
 #define RCAR_MIN_DMA_LEN	8
+#define RCAR_MIN_DMA_LEN_CONT	16
+#define MIN_DMA_CONT_SIZE	1 /* according to hardware manual */
+#define MAX_DMA_CONT_SIZE	256 /* according to hardware manual */
+#define XFER_TIMEOUT		15000 /* us */
 
 #define RCAR_BUS_PHASE_START	(MDBS | MIE | ESG)
 #define RCAR_BUS_PHASE_DATA	(MDBS | MIE)
@@ -133,23 +154,30 @@ struct rcar_i2c_priv {
 
 	int pos;
 	u32 icccr;
+	u32 icmpr;
+	u32 ichpr;
 	u8 recovery_icmcr;	/* protected by adapter lock */
 	enum rcar_i2c_type devtype;
 	struct i2c_client *slave;
+	bool fast_mode_plus;
+	bool dma_continuous;
+	u32 dma_transfer_size;
 
 	struct resource *res;
 	struct dma_chan *dma_tx;
 	struct dma_chan *dma_rx;
-	struct scatterlist sg;
+	struct scatterlist *sg;
 	enum dma_data_direction dma_direction;
 
 	struct reset_control *rstc;
 	int irq;
+	int suspended;
 
 	struct i2c_client *host_notify_client;
 	u8 slave_flags;
 };
 
+int num_desc;
 #define rcar_i2c_priv_to_dev(p)		((p)->adap.dev.parent)
 #define rcar_i2c_is_recv(p)		((p)->msg->flags & I2C_M_RD)
 
@@ -203,6 +231,13 @@ static int rcar_i2c_get_bus_free(struct i2c_adapter *adap)
 
 };
 
+static const struct soc_device_attribute fm_plus_match[] = {
+	{ .soc_id = "r8a779a0" },
+	{ .soc_id = "r8a779g0" },
+	{ .soc_id = "r8a779h0" },
+	{ /* sentinel */ }
+};
+
 static struct i2c_bus_recovery_info rcar_i2c_bri = {
 	.get_scl = rcar_i2c_get_scl,
 	.set_scl = rcar_i2c_set_scl,
@@ -216,9 +251,18 @@ static void rcar_i2c_init(struct rcar_i2c_priv *priv)
 	rcar_i2c_write(priv, ICMIER, 0);
 	rcar_i2c_write(priv, ICMCR, MDBS);
 	rcar_i2c_write(priv, ICMSR, 0);
+	/* fast mode plus support */
+	if (priv->fast_mode_plus) {
+		rcar_i2c_write(priv, ICMPR, rcar_i2c_read(priv, ICMPR) | priv->icmpr);
+		rcar_i2c_write(priv, ICHPR, rcar_i2c_read(priv, ICHPR) | priv->ichpr);
+		/* SCHD:SCLD ratio is 1:1 */
+		rcar_i2c_write(priv, ICLPR, rcar_i2c_read(priv, ICLPR) | priv->ichpr);
+		rcar_i2c_write(priv, ICCCR2,
+			       rcar_i2c_read(priv, ICCCR2) | FMPE | CDFD | HLSE | SME);
+	}
 	/* start clock */
 	rcar_i2c_write(priv, ICCCR, priv->icccr);
-
+	/* 1st bit setup cycle */
 	if (priv->devtype == I2C_RCAR_GEN3)
 		rcar_i2c_write(priv, ICFBSCR, TCYC17);
 
@@ -251,6 +295,7 @@ static int rcar_i2c_bus_barrier(struct rcar_i2c_priv *priv)
 static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 {
 	u32 scgd, cdf, round, ick, sum, scl, cdf_width;
+	u32 smd = 0, schd = 0;
 	unsigned long rate;
 	struct device *dev = rcar_i2c_priv_to_dev(priv);
 	struct i2c_timings t = {
@@ -262,6 +307,10 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 
 	/* Fall back to previously used values if not supplied */
 	i2c_parse_fw_timings(dev, &t, false);
+
+	/* Fast mode plus is only available on R-Car V3U/V4H/V4M */
+	if (t.bus_freq_hz == I2C_MAX_FAST_MODE_PLUS_FREQ && soc_device_match(fm_plus_match))
+		priv->fast_mode_plus = true;
 
 	switch (priv->devtype) {
 	case I2C_RCAR_GEN1:
@@ -290,13 +339,25 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 	 * intd : LSI internal delay
 	 * clkp : peripheral_clk
 	 * F[]  : integer up-valuation
+	 *
+	 * in case of fast mode plus, calculate the SCL high/low duty
+	 * see
+	 *	ICCCR2
+	 *
+	 * SCL	= clkp / (8 + SMD * 2 + SCLD + SCHD +F[(ticf + tr + intd) * clkp])
+	 *
 	 */
 	rate = clk_get_rate(priv->clk);
-	cdf = rate / 20000000;
-	if (cdf >= 1U << cdf_width) {
-		dev_err(dev, "Input clock %lu too high\n", rate);
-		return -EIO;
-	}
+
+	if (!priv->fast_mode_plus) {
+		cdf = rate / 20000000;
+		if (cdf >= 1U << cdf_width) {
+			dev_err(dev, "Input clock %lu too high\n", rate);
+			return -EIO;
+		}
+	} else
+		cdf = 0;
+
 	ick = rate / (cdf + 1);
 
 	/*
@@ -311,25 +372,42 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 	round = (ick + 500000) / 1000000 * sum;
 	round = (round + 500) / 1000;
 
-	/*
-	 * SCL	= ick / (20 + SCGD * 8 + F[(ticf + tr + intd) * ick])
-	 *
-	 * Calculation result (= SCL) should be less than
-	 * bus_speed for hardware safety
-	 *
-	 * We could use something along the lines of
-	 *	div = ick / (bus_speed + 1) + 1;
-	 *	scgd = (div - 20 - round + 7) / 8;
-	 *	scl = ick / (20 + (scgd * 8) + round);
-	 * (not fully verified) but that would get pretty involved
-	 */
-	for (scgd = 0; scgd < 0x40; scgd++) {
-		scl = ick / (20 + (scgd * 8) + round);
-		if (scl <= t.bus_freq_hz)
-			goto scgd_find;
+	if (!priv->fast_mode_plus) {
+		/*
+		 * SCL	= ick / (20 + SCGD * 8 + F[(ticf + tr + intd) * ick])
+		 *
+		 * Calculation result (= SCL) should be less than
+		 * bus_speed for hardware safety
+		 *
+		 * We could use something along the lines of
+		 *	div = ick / (bus_speed + 1) + 1;
+		 *	scgd = (div - 20 - round + 7) / 8;
+		 *	scl = ick / (20 + (scgd * 8) + round);
+		 * (not fully verified) but that would get pretty involved
+		 */
+		for (scgd = 0; scgd < 0x40; scgd++) {
+			scl = ick / (20 + (scgd * 8) + round);
+			if (scl <= t.bus_freq_hz)
+				goto scgd_find;
+		}
+	} else {
+		/*
+		 * SCL	= clkp / (8 + SMD * 2 + SCLD + SCHD + F[(ticf + tr + intd) * clkp])
+		 * SMD should be smaller than SCLD and SCHD
+		 * SCHD:SCLD ratio is 1:1
+		 */
+		for (schd = 2; schd < 0xffff; schd++)
+			for (smd = 1; smd < schd; smd++) {
+				scl = ick / (8 + (smd * 2) + (schd * 2)  + round);
+				if (scl <= t.bus_freq_hz)
+					goto schd_find;
+			}
 	}
 	dev_err(dev, "it is impossible to calculate best SCL\n");
 	return -EIO;
+schd_find:
+	scgd = 0;
+	dev_dbg(dev, "SMD:0x%x, SCHD:0x%x, SCLD: 0x%x\n", smd, schd, schd);
 
 scgd_find:
 	dev_dbg(dev, "clk %d/%d(%lu), round %u, CDF:0x%x, SCGD: 0x%x\n",
@@ -337,6 +415,8 @@ scgd_find:
 
 	/* keep icccr value */
 	priv->icccr = scgd << cdf_width | cdf;
+	priv->icmpr = smd;
+	priv->ichpr = schd;
 
 	return 0;
 }
@@ -344,18 +424,31 @@ scgd_find:
 static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 {
 	int read = !!rcar_i2c_is_recv(priv);
+	struct i2c_msg *next_msg;
 
+	next_msg = priv->msg++;
+	priv->msg -= 1;
 	priv->pos = 0;
 	if (priv->msgs_left == 1)
 		priv->flags |= ID_LAST_MSG;
 
 	rcar_i2c_write(priv, ICMAR, i2c_8bit_addr_from_msg(priv->msg));
+	rcar_i2c_write(priv, ICMIER, read ? RCAR_IRQ_RECV : RCAR_IRQ_SEND);
 	/*
 	 * We don't have a test case but the HW engineers say that the write order
 	 * of ICMSR and ICMCR depends on whether we issue START or REP_START. Since
 	 * it didn't cause a drawback for me, let's rather be safe than sorry.
 	 */
 	if (priv->flags & ID_FIRST_MSG) {
+		rcar_i2c_write(priv, ICMSR, 0);
+		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
+	} else if ((next_msg->len >= RCAR_MIN_DMA_LEN_CONT) &&
+		  (next_msg->len % priv->dma_transfer_size == 0)) {
+		if (priv->flags & ID_P_REP_AFTER_RD)
+			priv->flags &= ~ID_P_REP_AFTER_RD;
+		rcar_i2c_write(priv, ICMSR, 0);
+		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_STOP);
+		udelay(35);
 		rcar_i2c_write(priv, ICMSR, 0);
 		rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
 	} else {
@@ -365,7 +458,6 @@ static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 			rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
 		rcar_i2c_write(priv, ICMSR, 0);
 	}
-	rcar_i2c_write(priv, ICMIER, read ? RCAR_IRQ_RECV : RCAR_IRQ_SEND);
 }
 
 static void rcar_i2c_next_msg(struct rcar_i2c_priv *priv)
@@ -378,17 +470,19 @@ static void rcar_i2c_next_msg(struct rcar_i2c_priv *priv)
 
 static void rcar_i2c_dma_unmap(struct rcar_i2c_priv *priv)
 {
+	int i;
 	struct dma_chan *chan = priv->dma_direction == DMA_FROM_DEVICE
 		? priv->dma_rx : priv->dma_tx;
 
-	dma_unmap_single(chan->device->dev, sg_dma_address(&priv->sg),
-			 sg_dma_len(&priv->sg), priv->dma_direction);
+	for (i = 0; i < num_desc; i++) {
+			dma_unmap_single(chan->device->dev, sg_dma_address(&priv->sg[i]),
+				sg_dma_len(&priv->sg[i]), priv->dma_direction);
+	}
 
 	/* Gen3+ can only do one RXDMA per transfer and we just completed it */
 	if (priv->devtype >= I2C_RCAR_GEN3 &&
 	    priv->dma_direction == DMA_FROM_DEVICE)
 		priv->flags |= ID_P_NO_RXDMA;
-
 	priv->dma_direction = DMA_NONE;
 
 	/* Disable DMA Master Received/Transmitted, must be last! */
@@ -409,10 +503,11 @@ static void rcar_i2c_cleanup_dma(struct rcar_i2c_priv *priv)
 
 static void rcar_i2c_dma_callback(void *data)
 {
+	int i;
 	struct rcar_i2c_priv *priv = data;
 
-	priv->pos += sg_dma_len(&priv->sg);
-
+	for (i = 0; i < num_desc; i++)
+		priv->pos += sg_dma_len(&priv->sg[i]);
 	rcar_i2c_dma_unmap(priv);
 }
 
@@ -424,53 +519,77 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 	enum dma_data_direction dir = read ? DMA_FROM_DEVICE : DMA_TO_DEVICE;
 	struct dma_chan *chan = read ? priv->dma_rx : priv->dma_tx;
 	struct dma_async_tx_descriptor *txdesc;
-	dma_addr_t dma_addr;
 	dma_cookie_t cookie;
 	unsigned char *buf;
-	int len;
+	int len, i, ret;
+	u8  trans_size;
+	u32 val;
 
 	/* Do various checks to see if DMA is feasible at all */
 	if (IS_ERR(chan) || msg->len < RCAR_MIN_DMA_LEN ||
 	    !(msg->flags & I2C_M_DMA_SAFE) || (read && priv->flags & ID_P_NO_RXDMA))
 		return false;
-
-	if (read) {
-		/*
-		 * The last two bytes needs to be fetched using PIO in
-		 * order for the STOP phase to work.
-		 */
-		buf = priv->msg->buf;
-		len = priv->msg->len - 2;
+	if (msg->len >= priv->dma_transfer_size && msg->len >= RCAR_MIN_DMA_LEN_CONT &&
+	    msg->len % priv->dma_transfer_size == 0) {
+		priv->dma_continuous = true;
+		if (read) {
+			buf = priv->msg->buf;
+			len = priv->msg->len;
+		} else {
+			buf = priv->msg->buf + 1;
+			len = priv->msg->len - 1;
+		}
 	} else {
-		/*
-		 * First byte in message was sent using PIO.
-		 */
-		buf = priv->msg->buf + 1;
-		len = priv->msg->len - 1;
+		priv->dma_continuous = false;
+		if (read) {
+			/*
+			 * The last two bytes needs to be fetched using PIO in
+			 * order for the STOP phase to work.
+			 */
+			buf = priv->msg->buf;
+			len = priv->msg->len - 2;
+		} else {
+			/*
+			 * First byte in message was sent using PIO.
+			 */
+			buf = priv->msg->buf + 1;
+			len = priv->msg->len - 1;
+		}
 	}
-
-	dma_addr = dma_map_single(chan->device->dev, buf, len, dir);
-	if (dma_mapping_error(chan->device->dev, dma_addr)) {
-		dev_dbg(dev, "dma map failed, using PIO\n");
-		return false;
-	}
-
-	sg_dma_len(&priv->sg) = len;
-	sg_dma_address(&priv->sg) = dma_addr;
-
 	priv->dma_direction = dir;
+	num_desc = priv->dma_continuous ? DIV_ROUND_UP(len, priv->dma_transfer_size) : 1;
+	priv->sg = kmalloc_array(num_desc, sizeof(struct scatterlist), GFP_KERNEL);
+	if (!priv->sg)
+		return -ENOMEM;
 
-	txdesc = dmaengine_prep_slave_sg(chan, &priv->sg, 1,
+	sg_init_table(priv->sg, num_desc);
+	for (i = 0; i < num_desc; i++) {
+		if (num_desc != 1) {
+			sg_dma_len(&priv->sg[i]) = priv->dma_transfer_size;
+			sg_dma_address(&priv->sg[i]) = dma_map_single(chan->device->dev,
+								      buf + (i * priv->dma_transfer_size),
+								      priv->dma_transfer_size, dir);
+		} else {
+			sg_dma_len(&priv->sg[i]) = len;
+			sg_dma_address(&priv->sg[i]) = dma_map_single(chan->device->dev,
+								      buf, len, dir);
+		}
+	}
+	txdesc = dmaengine_prep_slave_sg(chan, priv->sg, num_desc,
 					 read ? DMA_DEV_TO_MEM : DMA_MEM_TO_DEV,
-					 DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+					 DMA_CTRL_ACK | DMA_PREP_INTERRUPT);
 	if (!txdesc) {
 		dev_dbg(dev, "dma prep slave sg failed, using PIO\n");
 		rcar_i2c_cleanup_dma(priv);
 		return false;
 	}
-
-	txdesc->callback = rcar_i2c_dma_callback;
-	txdesc->callback_param = priv;
+	if (!priv->dma_continuous) {
+		txdesc->callback = rcar_i2c_dma_callback;
+		txdesc->callback_param = priv;
+	} else {
+		txdesc->callback = NULL;
+		txdesc->callback_param = NULL;
+	}
 
 	cookie = dmaengine_submit(txdesc);
 	if (dma_submit_error(cookie)) {
@@ -479,13 +598,24 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 		return false;
 	}
 
+	trans_size = (priv->dma_transfer_size == MAX_DMA_CONT_SIZE) ? 0 : priv->dma_transfer_size;
 	/* Enable DMA Master Received/Transmitted */
 	if (read)
-		rcar_i2c_write(priv, ICDMAER, RMDMAE);
+		rcar_i2c_write(priv, ICDMAER, (priv->dma_continuous ? (MDMACTSZ(num_desc - 1) |
+			       RMDMATSZ(trans_size) | RMDMACE | RMDMAE) : RMDMAE));
 	else
-		rcar_i2c_write(priv, ICDMAER, TMDMAE);
-
+		rcar_i2c_write(priv, ICDMAER, (priv->dma_continuous ? (MDMACTSZ(num_desc - 1) |
+			       TMDMATSZ(trans_size) | TMDMACE | TMDMAE) : TMDMAE));
 	dma_async_issue_pending(chan);
+	if (priv->dma_continuous) {
+		ret = readl_relaxed_poll_timeout(priv->io + ICDMAER, val,
+						 !(val & (read ? RMDMACE : TMDMACE)), 0, XFER_TIMEOUT);
+		if (ret)
+			return false;
+		rcar_i2c_dma_callback(priv);
+		return true;
+	}
+
 	return true;
 }
 
@@ -498,8 +628,11 @@ static void rcar_i2c_irq_send(struct rcar_i2c_priv *priv, u32 msr)
 		return;
 
 	/* Check if DMA can be enabled and take over */
-	if (priv->pos == 1 && rcar_i2c_dma(priv))
-		return;
+	if (priv->pos == 1 && rcar_i2c_dma(priv)) {
+		if (!priv->dma_continuous) {
+			return;
+		}
+	}
 
 	if (priv->pos < msg->len) {
 		/*
@@ -565,7 +698,6 @@ static void rcar_i2c_irq_recv(struct rcar_i2c_priv *priv, u32 msr)
 			priv->flags |= ID_P_REP_AFTER_RD;
 		}
 	}
-
 	if (priv->pos == msg->len && !(priv->flags & ID_LAST_MSG))
 		rcar_i2c_next_msg(priv);
 	else
@@ -655,13 +787,11 @@ static irqreturn_t rcar_i2c_irq(int irq, struct rcar_i2c_priv *priv, u32 msr)
 
 		return IRQ_NONE;
 	}
-
 	/* Arbitration lost */
 	if (msr & MAL) {
 		priv->flags |= ID_DONE | ID_ARBLOST;
 		goto out;
 	}
-
 	/* Nack */
 	if (msr & MNR) {
 		/* HW automatically sends STOP after received NACK */
@@ -669,7 +799,6 @@ static irqreturn_t rcar_i2c_irq(int irq, struct rcar_i2c_priv *priv, u32 msr)
 		priv->flags |= ID_NACK;
 		goto out;
 	}
-
 	/* Stop */
 	if (msr & MST) {
 		priv->msgs_left--; /* The last message also made it */
@@ -827,6 +956,8 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 	int i, ret;
 	long time_left;
 
+	if (priv->suspended)
+		return -EBUSY;
 	pm_runtime_get_sync(dev);
 
 	/* Check bus state before init otherwise bus busy info will be lost */
@@ -959,6 +1090,10 @@ static const struct of_device_id rcar_i2c_dt_ids[] = {
 	{ .compatible = "renesas,i2c-r8a7794", .data = (void *)I2C_RCAR_GEN2 },
 	{ .compatible = "renesas,i2c-r8a7795", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-r8a7796", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,i2c-r8a77961", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,i2c-r8a779f0", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,i2c-r8a779g0", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,i2c-r8a779h0", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-rcar", .data = (void *)I2C_RCAR_GEN1 },	/* Deprecated */
 	{ .compatible = "renesas,rcar-gen1-i2c", .data = (void *)I2C_RCAR_GEN1 },
 	{ .compatible = "renesas,rcar-gen2-i2c", .data = (void *)I2C_RCAR_GEN2 },
@@ -1010,7 +1145,6 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	strlcpy(adap->name, pdev->name, sizeof(adap->name));
 
 	/* Init DMA */
-	sg_init_table(&priv->sg, 1);
 	priv->dma_direction = DMA_NONE;
 	priv->dma_rx = priv->dma_tx = ERR_PTR(-EPROBE_DEFER);
 
@@ -1030,6 +1164,12 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	if (priv->devtype < I2C_RCAR_GEN3) {
 		irqflags |= IRQF_NO_THREAD;
 		irqhandler = rcar_i2c_gen2_irq;
+	}
+	ret = device_property_read_u32(dev, "dma_transfer_size", &priv->dma_transfer_size);
+	if (ret || priv->dma_transfer_size < MIN_DMA_CONT_SIZE ||
+	    priv->dma_transfer_size > MAX_DMA_CONT_SIZE) {
+		dev_dbg(dev, "cannot find the suitable DMA transfer size, use default\n");
+		priv->dma_transfer_size = 0;
 	}
 
 	/* Stay always active when multi-master to keep arbitration working */
@@ -1116,16 +1256,29 @@ static int rcar_i2c_suspend(struct device *dev)
 {
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
 
+	priv->suspended = 1;
 	i2c_mark_adapter_suspended(&priv->adap);
 	return 0;
 }
 
 static int rcar_i2c_resume(struct device *dev)
 {
+	int ret = 0;
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
 
+	pm_runtime_get_sync(dev);
+	ret = rcar_i2c_clock_calculate(priv);
+	if (ret < 0)
+		dev_err(dev, "Could not calculate clock\n");
+
+	rcar_i2c_init(priv);
+	pm_runtime_put(dev);
+
+	priv->suspended = 0;
+
 	i2c_mark_adapter_resumed(&priv->adap);
-	return 0;
+
+	return ret;
 }
 
 static const struct dev_pm_ops rcar_i2c_pm_ops = {
