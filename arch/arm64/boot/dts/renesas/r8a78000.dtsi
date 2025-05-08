@@ -906,6 +906,11 @@
 				reg = <0x61300 0x100>;
 			};
 		};
+
+		rst: reset-controller@c1320000 {
+			compatible = "renesas,r8a78000-rst";
+			reg = <0 0xc1320000 0 0x4000>;
+		};
 	};
 
 	timer {
