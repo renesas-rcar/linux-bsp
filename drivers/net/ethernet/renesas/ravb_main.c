@@ -25,10 +25,12 @@
 #include <linux/of_irq.h>
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
+#include <linux/of_gpio.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/sys_soc.h>
+#include <linux/soc/renesas/rcar-rgid.h>
 
 #include <asm/div64.h>
 
@@ -49,6 +51,9 @@ static const char *ravb_tx_irqs[NUM_TX_QUEUE] = {
 	"ch18", /* RAVB_BE */
 	"ch19", /* RAVB_NC */
 };
+
+static const struct soc_device_attribute r8a779g0[];
+static const struct soc_device_attribute r8a779h0[];
 
 void ravb_modify(struct net_device *ndev, enum ravb_reg reg, u32 clear,
 		 u32 set)
@@ -195,7 +200,8 @@ static int ravb_tx_free(struct net_device *ndev, int q, bool free_txed_only)
 		size = le16_to_cpu(desc->ds_tagl) & TX_DS;
 		/* Free the original skb. */
 		if (priv->tx_skb[q][entry / num_tx_desc]) {
-			dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
+			dma_unmap_single(ndev->dev.parent,
+					 ADDR_ASSIGN_RGID(le32_to_cpu(desc->dptr), CONFIG_RCAR_RGID),
 					 size, DMA_TO_DEVICE);
 			/* Last packet descriptor? */
 			if (entry % num_tx_desc == num_tx_desc - 1) {
@@ -229,9 +235,9 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 			if (!dma_mapping_error(ndev->dev.parent,
 					       le32_to_cpu(desc->dptr)))
 				dma_unmap_single(ndev->dev.parent,
-						 le32_to_cpu(desc->dptr),
-						 RX_BUF_SZ,
-						 DMA_FROM_DEVICE);
+					ADDR_ASSIGN_RGID(le32_to_cpu(desc->dptr), CONFIG_RCAR_RGID),
+					RX_BUF_SZ,
+					DMA_FROM_DEVICE);
 		}
 		ring_size = sizeof(struct ravb_ex_rx_desc) *
 			    (priv->num_rx_ring[q] + 1);
@@ -297,6 +303,7 @@ static void ravb_ring_format(struct net_device *ndev, int q)
 		dma_addr = dma_map_single(ndev->dev.parent, priv->rx_skb[q][i]->data,
 					  RX_BUF_SZ,
 					  DMA_FROM_DEVICE);
+
 		/* We just set the data size to 0 for a failed mapping which
 		 * should prevent DMA from happening...
 		 */
@@ -396,6 +403,8 @@ error:
 /* E-MAC init function */
 static void ravb_emac_init(struct net_device *ndev)
 {
+	struct ravb_private *priv = netdev_priv(ndev);
+
 	/* Receive frame limit set register */
 	ravb_write(ndev, ndev->mtu + ETH_HLEN + VLAN_HLEN + ETH_FCS_LEN, RFLR);
 
@@ -417,7 +426,10 @@ static void ravb_emac_init(struct net_device *ndev)
 	ravb_write(ndev, ECSR_ICD | ECSR_MPD, ECSR);
 
 	/* E-MAC interrupt enable register */
-	ravb_write(ndev, ECSIPR_ICDIP | ECSIPR_MPDIP | ECSIPR_LCHNGIP, ECSIPR);
+	if (priv->speed == SPEED_1000)
+		ravb_write(ndev, ECSIPR_MPDIP, ECSIPR);
+	else
+		ravb_write(ndev, ECSIPR_ICDIP | ECSIPR_MPDIP, ECSIPR);
 }
 
 /* Device init function for Ethernet AVB */
@@ -455,7 +467,7 @@ static int ravb_dmac_init(struct net_device *ndev)
 	ravb_write(ndev, TCCR_TFEN, TCCR);
 
 	/* Interrupt init: */
-	if (priv->chip_id == RCAR_GEN3) {
+	if (priv->chip_id != RCAR_GEN2) {
 		/* Clear DIL.DPLx */
 		ravb_write(ndev, 0, DIL);
 		/* Set queue specific interrupt */
@@ -544,6 +556,7 @@ static bool ravb_rx(struct net_device *ndev, int *quota, int q)
 	u8  desc_status;
 	u16 pkt_len;
 	int limit;
+	u32 get_ts;
 
 	boguscnt = min(boguscnt, *quota);
 	limit = boguscnt;
@@ -576,16 +589,27 @@ static bool ravb_rx(struct net_device *ndev, int *quota, int q)
 			if (desc_status & MSC_CEEF)
 				stats->rx_missed_errors++;
 		} else {
-			u32 get_ts = priv->tstamp_rx_ctrl & RAVB_RXTSTAMP_TYPE;
+			if (priv->use_ptp)
+				get_ts = priv->ptp_priv->tstamp_rx_ctrl & RCAR_GEN4_RXTSTAMP_TYPE;
+			else
+				get_ts = priv->tstamp_rx_ctrl & RAVB_RXTSTAMP_TYPE;
 
 			skb = priv->rx_skb[q][entry];
 			priv->rx_skb[q][entry] = NULL;
-			dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
+			dma_unmap_single(ndev->dev.parent,
+					 ADDR_ASSIGN_RGID(le32_to_cpu(desc->dptr), CONFIG_RCAR_RGID),
 					 RX_BUF_SZ,
 					 DMA_FROM_DEVICE);
-			get_ts &= (q == RAVB_NC) ?
-					RAVB_RXTSTAMP_TYPE_V2_L2_EVENT :
-					~RAVB_RXTSTAMP_TYPE_V2_L2_EVENT;
+
+			if (priv->use_ptp) {
+				get_ts &= (q == RAVB_NC) ?
+						RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT :
+						~RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT;
+			} else {
+				get_ts &= (q == RAVB_NC) ?
+						RAVB_RXTSTAMP_TYPE_V2_L2_EVENT :
+						~RAVB_RXTSTAMP_TYPE_V2_L2_EVENT;
+			}
 			if (get_ts) {
 				struct skb_shared_hwtstamps *shhwtstamps;
 
@@ -733,7 +757,6 @@ static void ravb_error_interrupt(struct net_device *ndev)
 	u32 eis, ris2;
 
 	eis = ravb_read(ndev, EIS);
-	ravb_write(ndev, ~(EIS_QFS | EIS_RESERVED), EIS);
 	if (eis & EIS_QFS) {
 		ris2 = ravb_read(ndev, RIS2);
 		ravb_write(ndev, ~(RIS2_QFF0 | RIS2_QFF1 | RIS2_RFFF | RIS2_RESERVED),
@@ -836,10 +859,8 @@ static irqreturn_t ravb_interrupt(int irq, void *dev_id)
 	}
 
 	/* gPTP interrupt status summary */
-	if (iss & ISS_CGIS) {
-		ravb_ptp_interrupt(ndev);
+	if ((iss & ISS_CGIS) && ravb_ptp_interrupt(ndev))
 		result = IRQ_HANDLED;
-	}
 
 	spin_unlock(&priv->lock);
 	return result;
@@ -868,10 +889,8 @@ static irqreturn_t ravb_multi_interrupt(int irq, void *dev_id)
 	}
 
 	/* gPTP interrupt status summary */
-	if (iss & ISS_CGIS) {
-		ravb_ptp_interrupt(ndev);
+	if ((iss & ISS_CGIS) && ravb_ptp_interrupt(ndev))
 		result = IRQ_HANDLED;
-	}
 
 	spin_unlock(&priv->lock);
 	return result;
@@ -999,6 +1018,22 @@ static const struct soc_device_attribute r8a7795es10[] = {
 	{ /* sentinel */ }
 };
 
+static const struct soc_device_attribute r8a779g0[] = {
+	{ .soc_id = "r8a779g0" },
+	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute r8a779h0[] = {
+	{ .soc_id = "r8a779h0" },
+	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute ravb_quirks_match[] = {
+	{ .soc_id = "r8a77990", .revision = "ES1.*" },
+	{ .soc_id = "r8a77995", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 /* PHY init function */
 static int ravb_phy_init(struct net_device *ndev)
 {
@@ -1039,7 +1074,8 @@ static int ravb_phy_init(struct net_device *ndev)
 	/* This driver only support 10/100Mbit speeds on R-Car H3 ES1.0
 	 * at this time.
 	 */
-	if (soc_device_match(r8a7795es10)) {
+	if (soc_device_match(r8a7795es10) ||
+	    soc_device_match(ravb_quirks_match)) {
 		err = phy_set_max_speed(phydev, SPEED_100);
 		if (err) {
 			netdev_err(ndev, "failed to limit PHY to 100Mbit/s\n");
@@ -1058,6 +1094,9 @@ static int ravb_phy_init(struct net_device *ndev)
 	/* Half Duplex is not supported */
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Half_BIT);
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Half_BIT);
+
+	if (phydev->is_c45)
+		phydev->autoneg = 0;
 
 	phy_attached_info(phydev);
 
@@ -1246,6 +1285,9 @@ static int ravb_set_ringparam(struct net_device *ndev,
 		/* Initialise PTP Clock driver */
 		if (priv->chip_id == RCAR_GEN2)
 			ravb_ptp_init(ndev, priv->pdev);
+		else if (priv->use_ptp)
+			rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
+				RCAR_GEN4_PTP_CLOCK_V4H);
 
 		netif_device_attach(ndev);
 	}
@@ -1270,7 +1312,14 @@ static int ravb_get_ts_info(struct net_device *ndev,
 		(1 << HWTSTAMP_FILTER_NONE) |
 		(1 << HWTSTAMP_FILTER_PTP_V2_L2_EVENT) |
 		(1 << HWTSTAMP_FILTER_ALL);
-	info->phc_index = ptp_clock_index(priv->ptp.clock);
+
+	if (priv->use_ptp)
+		info->phc_index = ptp_clock_index(priv->ptp_priv->clock);
+	else if ((soc_device_match(r8a779g0) || soc_device_match(r8a779h0)) && !priv->use_ptp) {
+		pr_info("%s gPTP module isn't used\n", __func__);
+		return -ENODEV;
+	} else if (priv->chip_id == RCAR_GEN3)
+		info->phc_index = ptp_clock_index(priv->ptp.clock);
 
 	return 0;
 }
@@ -1315,8 +1364,8 @@ static const struct ethtool_ops ravb_ethtool_ops = {
 };
 
 static inline int ravb_hook_irq(unsigned int irq, irq_handler_t handler,
-				struct net_device *ndev, struct device *dev,
-				const char *ch)
+				unsigned long flags, struct net_device *ndev,
+				struct device *dev, const char *ch)
 {
 	char *name;
 	int error;
@@ -1324,7 +1373,7 @@ static inline int ravb_hook_irq(unsigned int irq, irq_handler_t handler,
 	name = devm_kasprintf(dev, GFP_KERNEL, "%s:%s", ndev->name, ch);
 	if (!name)
 		return -ENOMEM;
-	error = request_irq(irq, handler, 0, name, ndev);
+	error = request_irq(irq, handler, flags, name, ndev);
 	if (error)
 		netdev_err(ndev, "cannot request IRQ %s\n", name);
 
@@ -1350,28 +1399,28 @@ static int ravb_open(struct net_device *ndev)
 			goto out_napi_off;
 		}
 	} else {
-		error = ravb_hook_irq(ndev->irq, ravb_multi_interrupt, ndev,
-				      dev, "ch22:multi");
+		error = ravb_hook_irq(ndev->irq, ravb_multi_interrupt,
+				      IRQF_SHARED, ndev, dev, "ch22:multi");
 		if (error)
 			goto out_napi_off;
-		error = ravb_hook_irq(priv->emac_irq, ravb_emac_interrupt, ndev,
-				      dev, "ch24:emac");
+		error = ravb_hook_irq(priv->emac_irq, ravb_emac_interrupt,
+				      0, ndev, dev, "ch24:emac");
 		if (error)
 			goto out_free_irq;
 		error = ravb_hook_irq(priv->rx_irqs[RAVB_BE], ravb_be_interrupt,
-				      ndev, dev, "ch0:rx_be");
+				      0, ndev, dev, "ch0:rx_be");
 		if (error)
 			goto out_free_irq_emac;
 		error = ravb_hook_irq(priv->tx_irqs[RAVB_BE], ravb_be_interrupt,
-				      ndev, dev, "ch18:tx_be");
+				      0, ndev, dev, "ch18:tx_be");
 		if (error)
 			goto out_free_irq_be_rx;
 		error = ravb_hook_irq(priv->rx_irqs[RAVB_NC], ravb_nc_interrupt,
-				      ndev, dev, "ch1:rx_nc");
+				      0, ndev, dev, "ch1:rx_nc");
 		if (error)
 			goto out_free_irq_be_tx;
 		error = ravb_hook_irq(priv->tx_irqs[RAVB_NC], ravb_nc_interrupt,
-				      ndev, dev, "ch19:tx_nc");
+				      0, ndev, dev, "ch19:tx_nc");
 		if (error)
 			goto out_free_irq_nc_rx;
 	}
@@ -1385,6 +1434,9 @@ static int ravb_open(struct net_device *ndev)
 	/* Initialise PTP Clock driver */
 	if (priv->chip_id == RCAR_GEN2)
 		ravb_ptp_init(ndev, priv->pdev);
+	else if (priv->use_ptp)
+		rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
+			RCAR_GEN4_PTP_CLOCK_V4H);
 
 	/* PHY control start */
 	error = ravb_phy_start(ndev);
@@ -1618,7 +1670,8 @@ exit:
 	return NETDEV_TX_OK;
 
 unmap:
-	dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
+	dma_unmap_single(ndev->dev.parent,
+			 ADDR_ASSIGN_RGID(le32_to_cpu(desc->dptr), CONFIG_RCAR_RGID),
 			 le16_to_cpu(desc->ds_tagl), DMA_TO_DEVICE);
 drop:
 	dev_kfree_skb_any(skb);
@@ -1644,7 +1697,7 @@ static struct net_device_stats *ravb_get_stats(struct net_device *ndev)
 	stats0 = &priv->stats[RAVB_BE];
 	stats1 = &priv->stats[RAVB_NC];
 
-	if (priv->chip_id == RCAR_GEN3) {
+	if (priv->chip_id != RCAR_GEN2) {
 		nstats->tx_dropped += ravb_read(ndev, TROCR);
 		ravb_write(ndev, 0, TROCR);	/* (write clear) */
 	}
@@ -1742,20 +1795,35 @@ static int ravb_close(struct net_device *ndev)
 static int ravb_hwtstamp_get(struct net_device *ndev, struct ifreq *req)
 {
 	struct ravb_private *priv = netdev_priv(ndev);
+	struct rcar_gen4_ptp_private *ptp_priv = priv->ptp_priv;
 	struct hwtstamp_config config;
 
 	config.flags = 0;
 	config.tx_type = priv->tstamp_tx_ctrl ? HWTSTAMP_TX_ON :
 						HWTSTAMP_TX_OFF;
-	switch (priv->tstamp_rx_ctrl & RAVB_RXTSTAMP_TYPE) {
-	case RAVB_RXTSTAMP_TYPE_V2_L2_EVENT:
-		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L2_EVENT;
-		break;
-	case RAVB_RXTSTAMP_TYPE_ALL:
-		config.rx_filter = HWTSTAMP_FILTER_ALL;
-		break;
-	default:
-		config.rx_filter = HWTSTAMP_FILTER_NONE;
+	if (priv->use_ptp) {
+		config.tx_type = ptp_priv->tstamp_tx_ctrl ? HWTSTAMP_TX_ON : HWTSTAMP_TX_OFF;
+		switch (ptp_priv->tstamp_rx_ctrl & RCAR_GEN4_RXTSTAMP_TYPE) {
+		case RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT:
+			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L2_EVENT;
+			break;
+		case RCAR_GEN4_RXTSTAMP_TYPE_ALL:
+			config.rx_filter = HWTSTAMP_FILTER_ALL;
+			break;
+		default:
+			config.rx_filter = HWTSTAMP_FILTER_NONE;
+		}
+	} else {
+		switch (priv->tstamp_rx_ctrl & RAVB_RXTSTAMP_TYPE) {
+		case RAVB_RXTSTAMP_TYPE_V2_L2_EVENT:
+			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L2_EVENT;
+			break;
+		case RAVB_RXTSTAMP_TYPE_ALL:
+			config.rx_filter = HWTSTAMP_FILTER_ALL;
+			break;
+		default:
+			config.rx_filter = HWTSTAMP_FILTER_NONE;
+		}
 	}
 
 	return copy_to_user(req->ifr_data, &config, sizeof(config)) ?
@@ -1766,6 +1834,7 @@ static int ravb_hwtstamp_get(struct net_device *ndev, struct ifreq *req)
 static int ravb_hwtstamp_set(struct net_device *ndev, struct ifreq *req)
 {
 	struct ravb_private *priv = netdev_priv(ndev);
+	struct rcar_gen4_ptp_private *ptp_priv = priv->ptp_priv;
 	struct hwtstamp_config config;
 	u32 tstamp_rx_ctrl = RAVB_RXTSTAMP_ENABLED;
 	u32 tstamp_tx_ctrl;
@@ -1782,7 +1851,10 @@ static int ravb_hwtstamp_set(struct net_device *ndev, struct ifreq *req)
 		tstamp_tx_ctrl = 0;
 		break;
 	case HWTSTAMP_TX_ON:
-		tstamp_tx_ctrl = RAVB_TXTSTAMP_ENABLED;
+		if (priv->use_ptp)
+			tstamp_tx_ctrl = RCAR_GEN4_TXTSTAMP_ENABLED;
+		else
+			tstamp_tx_ctrl = RAVB_TXTSTAMP_ENABLED;
 		break;
 	default:
 		return -ERANGE;
@@ -1793,15 +1865,26 @@ static int ravb_hwtstamp_set(struct net_device *ndev, struct ifreq *req)
 		tstamp_rx_ctrl = 0;
 		break;
 	case HWTSTAMP_FILTER_PTP_V2_L2_EVENT:
-		tstamp_rx_ctrl |= RAVB_RXTSTAMP_TYPE_V2_L2_EVENT;
+		if (priv->use_ptp)
+			tstamp_rx_ctrl |= RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT;
+		else
+			tstamp_rx_ctrl |= RAVB_RXTSTAMP_TYPE_V2_L2_EVENT;
 		break;
 	default:
 		config.rx_filter = HWTSTAMP_FILTER_ALL;
-		tstamp_rx_ctrl |= RAVB_RXTSTAMP_TYPE_ALL;
+		if (priv->use_ptp)
+			tstamp_rx_ctrl |= RCAR_GEN4_RXTSTAMP_TYPE_ALL;
+		else
+			tstamp_rx_ctrl |= RAVB_RXTSTAMP_TYPE_ALL;
 	}
 
-	priv->tstamp_tx_ctrl = tstamp_tx_ctrl;
-	priv->tstamp_rx_ctrl = tstamp_rx_ctrl;
+	if (priv->use_ptp) {
+		ptp_priv->tstamp_tx_ctrl = tstamp_tx_ctrl;
+		ptp_priv->tstamp_rx_ctrl = tstamp_rx_ctrl;
+	} else {
+		priv->tstamp_tx_ctrl = tstamp_tx_ctrl;
+		priv->tstamp_rx_ctrl = tstamp_rx_ctrl;
+	}
 
 	return copy_to_user(req->ifr_data, &config, sizeof(config)) ?
 		-EFAULT : 0;
@@ -1941,7 +2024,10 @@ static const struct of_device_id ravb_match_table[] = {
 	{ .compatible = "renesas,etheravb-r8a7794", .data = (void *)RCAR_GEN2 },
 	{ .compatible = "renesas,etheravb-rcar-gen2", .data = (void *)RCAR_GEN2 },
 	{ .compatible = "renesas,etheravb-r8a7795", .data = (void *)RCAR_GEN3 },
+	{ .compatible = "renesas,etheravb-r8a7796", .data = (void *)RCAR_GEN3 },
+	{ .compatible = "renesas,etheravb-r8a77961", .data = (void *)RCAR_GEN3 },
 	{ .compatible = "renesas,etheravb-rcar-gen3", .data = (void *)RCAR_GEN3 },
+	{ .compatible = "renesas,etheravb-rcar-gen4", .data = (void *)RCAR_GEN4 },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, ravb_match_table);
@@ -2036,11 +2122,42 @@ static void ravb_set_delay_mode(struct net_device *ndev)
 	struct ravb_private *priv = netdev_priv(ndev);
 	u32 set = 0;
 
+	if (soc_device_match(ravb_quirks_match))
+		return;
+
 	if (priv->rxcidm)
 		set |= APSR_DM_RDM;
 	if (priv->txcidm)
 		set |= APSR_DM_TDM;
-	ravb_modify(ndev, APSR, APSR_DM, set);
+	if (priv->use_ptp)
+		ravb_modify(ndev, APSR, APSR_DM | BIT(25) | BIT(29), set | BIT(25) | BIT(29));
+	else
+		ravb_modify(ndev, APSR, APSR_DM, set);
+}
+
+static int ravb_reset_phy(struct net_device *ndev, struct platform_device *pdev)
+{
+	struct gpio_desc *gpiod;
+	int error;
+
+	gpiod = devm_gpiod_get_index(&pdev->dev, "phy-reset", 0, GPIOD_OUT_LOW);
+	if (IS_ERR(gpiod)) {
+		error = PTR_ERR(gpiod);
+		if (error != -ENOENT) {
+			dev_err(&pdev->dev, "ravb couldn't get GPIO phy reset\n");
+			return error;
+		}
+	} else {
+		gpiod_set_value_cansleep(gpiod, 1);
+		mdelay(4);
+		gpiod_set_value_cansleep(gpiod, 0);
+		devm_gpiod_put(&pdev->dev, gpiod);
+
+		/* delay 2ms to wait phy ready */
+		mdelay(2);
+	}
+
+	return 0;
 }
 
 static int ravb_probe(struct platform_device *pdev)
@@ -2084,7 +2201,7 @@ static int ravb_probe(struct platform_device *pdev)
 
 	chip_id = (enum ravb_chip_id)of_device_get_match_data(&pdev->dev);
 
-	if (chip_id == RCAR_GEN3)
+	if (chip_id != RCAR_GEN2)
 		irq = platform_get_irq_byname(pdev, "ch22");
 	else
 		irq = platform_get_irq(pdev, 0);
@@ -2109,6 +2226,20 @@ static int ravb_probe(struct platform_device *pdev)
 		goto out_release;
 	}
 
+	if (of_find_property(np, "use_ptp", NULL))
+		priv->use_ptp = true;
+
+	if (priv->use_ptp) {
+		struct resource *res_ptp;
+
+		res_ptp = platform_get_resource_byname(pdev, IORESOURCE_MEM, "gptp_gen4");
+		if (!res_ptp)
+			return -EINVAL;
+
+		priv->ptp_priv = rcar_gen4_ptp_alloc(pdev);
+		priv->ptp_priv->addr = devm_ioremap_resource(&pdev->dev, res_ptp);
+	}
+
 	spin_lock_init(&priv->lock);
 	INIT_WORK(&priv->work, ravb_tx_timeout_work);
 
@@ -2120,7 +2251,7 @@ static int ravb_probe(struct platform_device *pdev)
 	priv->avb_link_active_low =
 		of_property_read_bool(np, "renesas,ether-link-active-low");
 
-	if (chip_id == RCAR_GEN3) {
+	if (chip_id != RCAR_GEN2) {
 		irq = platform_get_irq_byname(pdev, "ch24");
 		if (irq < 0) {
 			error = irq;
@@ -2156,8 +2287,19 @@ static int ravb_probe(struct platform_device *pdev)
 	ndev->max_mtu = 2048 - (ETH_HLEN + VLAN_HLEN + ETH_FCS_LEN);
 	ndev->min_mtu = ETH_MIN_MTU;
 
-	priv->num_tx_desc = chip_id == RCAR_GEN2 ?
-		NUM_TX_DESC_GEN2 : NUM_TX_DESC_GEN3;
+	switch (chip_id) {
+	case RCAR_GEN2:
+		priv->num_tx_desc = NUM_TX_DESC_GEN2;
+		break;
+	case RCAR_GEN3:
+		priv->num_tx_desc = NUM_TX_DESC_GEN3;
+		break;
+	case RCAR_GEN4:
+		priv->num_tx_desc = NUM_TX_DESC_GEN4;
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	/* Set function */
 	ndev->netdev_ops = &ravb_netdev_ops;
@@ -2179,6 +2321,15 @@ static int ravb_probe(struct platform_device *pdev)
 		ravb_set_delay_mode(ndev);
 	}
 
+#if CONFIG_RCAR_RGID
+	// Set DMA mask to 40-bit
+	error = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
+	if (error) {
+		dev_err(&pdev->dev, "Failed to set 40-bit DMA mask\n");
+		goto out_release;
+	}
+#endif
+
 	/* Allocate descriptor base address table */
 	priv->desc_bat_size = sizeof(struct ravb_desc) * DBAT_ENTRY_NUM;
 	priv->desc_bat = dma_alloc_coherent(ndev->dev.parent, priv->desc_bat_size,
@@ -2198,8 +2349,13 @@ static int ravb_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&priv->ts_skb_list);
 
 	/* Initialise PTP Clock driver */
-	if (chip_id != RCAR_GEN2)
-		ravb_ptp_init(ndev, pdev);
+	if (chip_id != RCAR_GEN2) {
+		if (priv->use_ptp)
+			rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
+				RCAR_GEN4_PTP_CLOCK_V4H);
+		else if (chip_id == RCAR_GEN3)
+			ravb_ptp_init(ndev, pdev);
+	}
 
 	/* Debug message level */
 	priv->msg_enable = RAVB_DEF_MSG_ENABLE;
@@ -2210,6 +2366,13 @@ static int ravb_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev,
 			 "no valid MAC address supplied, using a random one\n");
 		eth_hw_addr_random(ndev);
+	}
+
+	/* De-assert PHY GPIO resets */
+	if (soc_device_match(r8a779g0) || soc_device_match(r8a779h0)) {
+		error = ravb_reset_phy(ndev, pdev);
+		if (error)
+			goto out_release;
 	}
 
 	/* MDIO bus init */
@@ -2337,6 +2500,13 @@ static int __maybe_unused ravb_suspend(struct device *dev)
 	else
 		ret = ravb_close(ndev);
 
+	if (priv->chip_id != RCAR_GEN2) {
+		if (priv->use_ptp)
+			rcar_gen4_ptp_unregister(priv->ptp_priv);
+		else if (priv->chip_id == RCAR_GEN3)
+			ravb_ptp_stop(ndev);
+	}
+
 	return ret;
 }
 
@@ -2344,6 +2514,7 @@ static int __maybe_unused ravb_resume(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct ravb_private *priv = netdev_priv(ndev);
+	struct platform_device *pdev = priv->pdev;
 	int ret = 0;
 
 	/* If WoL is enabled set reset mode to rearm the WoL logic */
@@ -2371,6 +2542,14 @@ static int __maybe_unused ravb_resume(struct device *dev)
 
 	/* Restore descriptor base address table */
 	ravb_write(ndev, priv->desc_bat_dma, DBAT);
+
+	if (priv->chip_id != RCAR_GEN2) {
+		if (priv->use_ptp)
+			rcar_gen4_ptp_init(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
+					   RCAR_GEN4_PTP_CLOCK_V4H);
+		else if (priv->chip_id == RCAR_GEN3)
+			ravb_ptp_init(ndev, pdev);
+	}
 
 	if (netif_running(ndev)) {
 		if (priv->wol_enabled) {

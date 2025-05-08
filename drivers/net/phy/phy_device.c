@@ -299,14 +299,30 @@ static __maybe_unused int mdio_bus_phy_resume(struct device *dev)
 
 	phydev->suspended_by_mdio_bus = 0;
 
+	ret = phy_resume(phydev);
+	if (ret < 0)
+		return ret;
+
+no_resume:
+	if (phydev->attached_dev && phydev->adjust_link)
+		phy_start_machine(phydev);
+
+	return 0;
+}
+
+static int mdio_bus_phy_restore(struct device *dev)
+{
+	struct phy_device *phydev = to_phy_device(dev);
+	struct net_device *netdev = phydev->attached_dev;
+	int ret;
+
+	if (!netdev)
+		return 0;
+
 	ret = phy_init_hw(phydev);
 	if (ret < 0)
 		return ret;
 
-	ret = phy_resume(phydev);
-	if (ret < 0)
-		return ret;
-no_resume:
 	if (phydev->attached_dev && phydev->adjust_link)
 		phy_start_machine(phydev);
 
@@ -1114,19 +1130,10 @@ int phy_init_hw(struct phy_device *phydev)
 	if (ret < 0)
 		return ret;
 
-	if (phydev->drv->config_init) {
+	if (phydev->drv->config_init)
 		ret = phydev->drv->config_init(phydev);
-		if (ret < 0)
-			return ret;
-	}
 
-	if (phydev->drv->config_intr) {
-		ret = phydev->drv->config_intr(phydev);
-		if (ret < 0)
-			return ret;
-	}
-
-	return 0;
+	return ret;
 }
 EXPORT_SYMBOL(phy_init_hw);
 
