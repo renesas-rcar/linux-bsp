@@ -365,7 +365,9 @@ struct dev_iommu {
 	void				*priv;
 };
 
-int  iommu_device_register(struct iommu_device *iommu);
+int iommu_device_register(struct iommu_device *iommu,
+			  const struct iommu_ops *ops,
+			  struct device *hwdev);
 void iommu_device_unregister(struct iommu_device *iommu);
 int  iommu_device_sysfs_add(struct iommu_device *iommu,
 			    struct device *parent,
@@ -374,25 +376,6 @@ int  iommu_device_sysfs_add(struct iommu_device *iommu,
 void iommu_device_sysfs_remove(struct iommu_device *iommu);
 int  iommu_device_link(struct iommu_device   *iommu, struct device *link);
 void iommu_device_unlink(struct iommu_device *iommu, struct device *link);
-
-static inline void __iommu_device_set_ops(struct iommu_device *iommu,
-					  const struct iommu_ops *ops)
-{
-	iommu->ops = ops;
-}
-
-#define iommu_device_set_ops(iommu, ops)				\
-do {									\
-	struct iommu_ops *__ops = (struct iommu_ops *)(ops);		\
-	__ops->owner = THIS_MODULE;					\
-	__iommu_device_set_ops(iommu, __ops);				\
-} while (0)
-
-static inline void iommu_device_set_fwnode(struct iommu_device *iommu,
-					   struct fwnode_handle *fwnode)
-{
-	iommu->fwnode = fwnode;
-}
 
 static inline struct iommu_device *dev_to_iommu_device(struct device *dev)
 {
@@ -904,19 +887,11 @@ static inline int iommu_domain_set_attr(struct iommu_domain *domain,
 	return -EINVAL;
 }
 
-static inline int  iommu_device_register(struct iommu_device *iommu)
+static inline int iommu_device_register(struct iommu_device *iommu,
+					const struct iommu_ops *ops,
+					struct device *hwdev)
 {
 	return -ENODEV;
-}
-
-static inline void iommu_device_set_ops(struct iommu_device *iommu,
-					const struct iommu_ops *ops)
-{
-}
-
-static inline void iommu_device_set_fwnode(struct iommu_device *iommu,
-					   struct fwnode_handle *fwnode)
-{
 }
 
 static inline struct iommu_device *dev_to_iommu_device(struct device *dev)
