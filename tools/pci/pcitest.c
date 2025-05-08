@@ -36,6 +36,7 @@ struct pci_test {
 	bool		copy;
 	unsigned long	size;
 	bool		use_dma;
+	int		time;
 };
 
 static int run_test(struct pci_test *test)
@@ -117,6 +118,8 @@ static int run_test(struct pci_test *test)
 		param.size = test->size;
 		if (test->use_dma)
 			param.flags = PCITEST_FLAGS_USE_DMA;
+		if (test->time)
+			param.flags |= PCITEST_FLAGS_USE_TIMER(test->time);
 		ret = ioctl(fd, PCITEST_WRITE, &param);
 		fprintf(stdout, "WRITE (%7ld bytes):\t\t", test->size);
 		if (ret < 0)
@@ -129,6 +132,8 @@ static int run_test(struct pci_test *test)
 		param.size = test->size;
 		if (test->use_dma)
 			param.flags = PCITEST_FLAGS_USE_DMA;
+		if (test->time)
+			param.flags |= PCITEST_FLAGS_USE_TIMER(test->time);
 		ret = ioctl(fd, PCITEST_READ, &param);
 		fprintf(stdout, "READ (%7ld bytes):\t\t", test->size);
 		if (ret < 0)
@@ -141,6 +146,8 @@ static int run_test(struct pci_test *test)
 		param.size = test->size;
 		if (test->use_dma)
 			param.flags = PCITEST_FLAGS_USE_DMA;
+		if (test->time)
+			param.flags |= PCITEST_FLAGS_USE_TIMER(test->time);
 		ret = ioctl(fd, PCITEST_COPY, &param);
 		fprintf(stdout, "COPY (%7ld bytes):\t\t", test->size);
 		if (ret < 0)
@@ -174,7 +181,7 @@ int main(int argc, char **argv)
 	/* set default endpoint device */
 	test->device = "/dev/pci-endpoint-test.0";
 
-	while ((c = getopt(argc, argv, "D:b:m:x:i:deIlhrwcs:")) != EOF)
+	while ((c = getopt(argc, argv, "D:b:m:x:i:deIlhrwcs:t:")) != EOF)
 	switch (c) {
 	case 'D':
 		test->device = optarg;
@@ -224,6 +231,11 @@ int main(int argc, char **argv)
 	case 'd':
 		test->use_dma = true;
 		continue;
+	case 't':
+		test->time = atoi(optarg);
+		if (test->time < 0 || test->time > 7)
+			goto usage;
+		continue;
 	case 'h':
 	default:
 usage:
@@ -238,6 +250,7 @@ usage:
 			"\t-e			Clear IRQ\n"
 			"\t-I			Get current IRQ type configured\n"
 			"\t-d			Use DMA\n"
+			"\t-t <time>		Use Timer\n"
 			"\t-l			Legacy IRQ test\n"
 			"\t-r			Read buffer test\n"
 			"\t-w			Write buffer test\n"

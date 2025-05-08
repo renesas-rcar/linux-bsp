@@ -41,6 +41,8 @@
 #define STATUS_DST_ADDR_INVALID		BIT(8)
 
 #define FLAG_USE_DMA			BIT(0)
+#define FLAG_USE_TIMER			GENMASK(3, 1)
+#define FLAG_TIMER_VAL(flags)		(((flags) & FLAG_USE_TIMER) >> 1)
 
 #define TIMER_RESOLUTION		1
 
@@ -52,9 +54,11 @@ struct pci_epf_test {
 	enum pci_barno		test_reg_bar;
 	size_t			msix_table_offset;
 	struct delayed_work	cmd_handler;
-	struct dma_chan		*dma_chan;
+	struct dma_chan		*dma_chan_tx;
+	struct dma_chan		*dma_chan_rx;
 	struct completion	transfer_complete;
 	bool			dma_supported;
+	bool			dma_private;
 	const struct pci_epc_features *epc_features;
 };
 
@@ -80,10 +84,14 @@ static struct pci_epf_header test_header = {
 
 static size_t bar_size[] = { 512, 512, 1024, 16384, 131072, 1048576 };
 
+static struct timespec64 g_dma_start, g_dma_end;
+static struct timespec64 g_total_ts;
+
 static void pci_epf_test_dma_callback(void *param)
 {
 	struct pci_epf_test *epf_test = param;
 
+	ktime_get_ts64(&g_dma_end);
 	complete(&epf_test->transfer_complete);
 }
 
@@ -96,6 +104,8 @@ static void pci_epf_test_dma_callback(void *param)
  * @dma_src: The source address of the data transfer. It can be a physical
  *	     address given by pci_epc_mem_alloc_addr or DMA mapping APIs.
  * @len: The size of the data transfer
+ * @dma_remote: remote RC physical address
+ * @dir: DMA transfer direction
  *
  * Function that uses dmaengine API to transfer data between PCIe EP and remote
  * PCIe RC. The source and destination address can be a physical address given
@@ -105,22 +115,44 @@ static void pci_epf_test_dma_callback(void *param)
  */
 static int pci_epf_test_data_transfer(struct pci_epf_test *epf_test,
 				      dma_addr_t dma_dst, dma_addr_t dma_src,
-				      size_t len)
+				      size_t len, dma_addr_t dma_remote,
+				      enum dma_transfer_direction dir)
 {
+	struct dma_chan *chan = (dir == DMA_MEM_TO_DEV) ?
+				 epf_test->dma_chan_tx : epf_test->dma_chan_rx;
+	dma_addr_t dma_local = (dir == DMA_MEM_TO_DEV) ? dma_src : dma_dst;
 	enum dma_ctrl_flags flags = DMA_CTRL_ACK | DMA_PREP_INTERRUPT;
-	struct dma_chan *chan = epf_test->dma_chan;
 	struct pci_epf *epf = epf_test->epf;
 	struct dma_async_tx_descriptor *tx;
+	struct dma_slave_config sconf = {};
 	struct device *dev = &epf->dev;
 	dma_cookie_t cookie;
 	int ret;
+	struct timespec64 ts;
 
 	if (IS_ERR_OR_NULL(chan)) {
 		dev_err(dev, "Invalid DMA memcpy channel\n");
 		return -EINVAL;
 	}
 
-	tx = dmaengine_prep_dma_memcpy(chan, dma_dst, dma_src, len, flags);
+	if (epf_test->dma_private) {
+		sconf.direction = dir;
+		if (dir == DMA_MEM_TO_DEV)
+			sconf.dst_addr = dma_remote;
+		else
+			sconf.src_addr = dma_remote;
+
+		if (dmaengine_slave_config(chan, &sconf)) {
+			dev_err(dev, "DMA slave config fail\n");
+			return -EIO;
+		}
+		tx = dmaengine_prep_slave_single(chan, dma_local, len, dir,
+						 flags);
+	} else {
+		tx = dmaengine_prep_dma_memcpy(chan, dma_dst, dma_src, len,
+					       flags);
+	}
+
 	if (!tx) {
 		dev_err(dev, "Failed to prepare DMA memcpy\n");
 		return -EIO;
@@ -137,6 +169,7 @@ static int pci_epf_test_data_transfer(struct pci_epf_test *epf_test,
 		return -EIO;
 	}
 
+	ktime_get_ts64(&g_dma_start);
 	dma_async_issue_pending(chan);
 	ret = wait_for_completion_interruptible(&epf_test->transfer_complete);
 	if (ret < 0) {
@@ -145,7 +178,27 @@ static int pci_epf_test_data_transfer(struct pci_epf_test *epf_test,
 		return -ETIMEDOUT;
 	}
 
+	ts = timespec64_sub(g_dma_end, g_dma_start);
+	g_total_ts = timespec64_add(g_total_ts, ts);
+
 	return 0;
+}
+
+struct epf_dma_filter {
+	struct device *dev;
+	u32 dma_mask;
+};
+
+static bool epf_dma_filter_fn(struct dma_chan *chan, void *node)
+{
+	struct epf_dma_filter *filter = node;
+	struct dma_slave_caps caps;
+
+	memset(&caps, 0, sizeof(caps));
+	dma_get_slave_caps(chan, &caps);
+
+	return chan->device->dev == filter->dev
+		&& (filter->dma_mask & caps.directions);
 }
 
 /**
@@ -158,10 +211,44 @@ static int pci_epf_test_init_dma_chan(struct pci_epf_test *epf_test)
 {
 	struct pci_epf *epf = epf_test->epf;
 	struct device *dev = &epf->dev;
+	struct epf_dma_filter filter;
 	struct dma_chan *dma_chan;
 	dma_cap_mask_t mask;
 	int ret;
 
+	filter.dev = epf->epc->dev.parent;
+	filter.dma_mask = BIT(DMA_DEV_TO_MEM);
+
+	dma_cap_zero(mask);
+	dma_cap_set(DMA_SLAVE, mask);
+	dma_chan = dma_request_channel(mask, epf_dma_filter_fn, &filter);
+	if (!dma_chan) {
+		dev_info(dev, "Failed to get private DMA rx channel. Falling back to generic one\n");
+		goto fail_back_tx;
+	}
+
+	epf_test->dma_chan_rx = dma_chan;
+
+	filter.dma_mask = BIT(DMA_MEM_TO_DEV);
+	dma_chan = dma_request_channel(mask, epf_dma_filter_fn, &filter);
+
+	if (!dma_chan) {
+		dev_info(dev, "Failed to get private DMA tx channel. Falling back to generic one\n");
+		goto fail_back_rx;
+	}
+
+	epf_test->dma_chan_tx = dma_chan;
+	epf_test->dma_private = true;
+
+	init_completion(&epf_test->transfer_complete);
+
+	return 0;
+
+fail_back_rx:
+	dma_release_channel(epf_test->dma_chan_rx);
+	epf_test->dma_chan_tx = NULL;
+
+fail_back_tx:
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_MEMCPY, mask);
 
@@ -174,7 +261,7 @@ static int pci_epf_test_init_dma_chan(struct pci_epf_test *epf_test)
 	}
 	init_completion(&epf_test->transfer_complete);
 
-	epf_test->dma_chan = dma_chan;
+	epf_test->dma_chan_tx = epf_test->dma_chan_rx = dma_chan;
 
 	return 0;
 }
@@ -190,21 +277,27 @@ static void pci_epf_test_clean_dma_chan(struct pci_epf_test *epf_test)
 	if (!epf_test->dma_supported)
 		return;
 
-	dma_release_channel(epf_test->dma_chan);
-	epf_test->dma_chan = NULL;
+	dma_release_channel(epf_test->dma_chan_tx);
+	if (epf_test->dma_chan_tx == epf_test->dma_chan_rx) {
+		epf_test->dma_chan_tx = NULL;
+		epf_test->dma_chan_rx = NULL;
+		return;
+	}
+
+	dma_release_channel(epf_test->dma_chan_rx);
+	epf_test->dma_chan_rx = NULL;
+
+	return;
 }
 
 static void pci_epf_test_print_rate(const char *ops, u64 size,
-				    struct timespec64 *start,
-				    struct timespec64 *end, bool dma)
+				    struct timespec64 *ts, bool dma,
+				    bool timer, u32 num_xfer)
 {
-	struct timespec64 ts;
 	u64 rate, ns;
 
-	ts = timespec64_sub(*end, *start);
-
 	/* convert both size (stored in 'rate') and time in terms of 'ns' */
-	ns = timespec64_to_ns(&ts);
+	ns = timespec64_to_ns(ts);
 	rate = size * NSEC_PER_SEC;
 
 	/* Divide both size (stored in 'rate') and ns by a common factor */
@@ -219,20 +312,32 @@ static void pci_epf_test_print_rate(const char *ops, u64 size,
 	/* calculate the rate */
 	do_div(rate, (uint32_t)ns);
 
-	pr_info("\n%s => Size: %llu bytes\t DMA: %s\t Time: %llu.%09u seconds\t"
-		"Rate: %llu KB/s\n", ops, size, dma ? "YES" : "NO",
-		(u64)ts.tv_sec, (u32)ts.tv_nsec, rate / 1024);
+	/* Multiply the number of transfers */
+	if (timer)
+		rate *= num_xfer;
+
+	pr_info("\n%s => Size: %llu bytes\t %u times DMA: %s\t Time: %llu.%09u seconds\t"
+		"Rate: %llu KB/s\n", ops, size, num_xfer, dma ? "YES" : "NO",
+		(u64)ts->tv_sec, (u32)ts->tv_nsec, rate / 1024);
+}
+
+static unsigned long pci_epf_test_get_timeout(u32 flags)
+{
+	return jiffies + msecs_to_jiffies((1 << FLAG_TIMER_VAL(flags)) * 1000);
 }
 
 static int pci_epf_test_copy(struct pci_epf_test *epf_test)
 {
 	int ret;
 	bool use_dma;
+	bool use_timer;
+	u32 num_xfer = 1;
+	unsigned long timeout;
 	void __iomem *src_addr;
 	void __iomem *dst_addr;
 	phys_addr_t src_phys_addr;
 	phys_addr_t dst_phys_addr;
-	struct timespec64 start, end;
+	struct timespec64 finish_time;
 	struct pci_epf *epf = epf_test->epf;
 	struct device *dev = &epf->dev;
 	struct pci_epc *epc = epf->epc;
@@ -271,8 +376,21 @@ static int pci_epf_test_copy(struct pci_epf_test *epf_test)
 		goto err_dst_addr;
 	}
 
-	ktime_get_ts64(&start);
+	use_timer = !!(reg->flags & FLAG_USE_TIMER);
+	if (use_timer)
+		timeout = pci_epf_test_get_timeout(reg->flags);
+
+	g_total_ts.tv_sec = 0;
+	g_total_ts.tv_nsec = 0;
 	use_dma = !!(reg->flags & FLAG_USE_DMA);
+
+	if (use_dma) {
+		finish_time.tv_sec = 1 << FLAG_TIMER_VAL(reg->flags);
+		finish_time.tv_nsec = 0;
+	} else {
+		ktime_get_ts64(&g_dma_start);
+	}
+again:
 	if (use_dma) {
 		if (!epf_test->dma_supported) {
 			dev_err(dev, "Cannot transfer data using DMA\n");
@@ -280,14 +398,30 @@ static int pci_epf_test_copy(struct pci_epf_test *epf_test)
 			goto err_map_addr;
 		}
 
+		if (epf_test->dma_private) {
+			dev_err(dev, "Cannot transfer data using DMA\n");
+			ret = -EINVAL;
+			goto err_map_addr;
+		}
+
 		ret = pci_epf_test_data_transfer(epf_test, dst_phys_addr,
-						 src_phys_addr, reg->size);
+						 src_phys_addr, reg->size, 0,
+						 DMA_MEM_TO_MEM);
 		if (ret)
 			dev_err(dev, "Data transfer failed\n");
+
+		if (use_timer && (timespec64_compare(&g_total_ts, &finish_time) < 0)) {
+			num_xfer++;
+			goto again;
+		}
+
 	} else {
 		void *buf;
+		phys_addr_t tmp_phys_addr;
+		struct device *parent_dev = epf->epc->dev.parent;
 
-		buf = kzalloc(reg->size, GFP_KERNEL);
+		buf = dma_alloc_coherent(parent_dev, reg->size, &tmp_phys_addr,
+					 GFP_KERNEL);
 		if (!buf) {
 			ret = -ENOMEM;
 			goto err_map_addr;
@@ -295,10 +429,21 @@ static int pci_epf_test_copy(struct pci_epf_test *epf_test)
 
 		memcpy_fromio(buf, src_addr, reg->size);
 		memcpy_toio(dst_addr, buf, reg->size);
-		kfree(buf);
+		dma_free_coherent(parent_dev, reg->size, buf, tmp_phys_addr);
+
+		if (use_timer && !time_after(jiffies, timeout)) {
+			num_xfer++;
+			goto again;
+		}
 	}
-	ktime_get_ts64(&end);
-	pci_epf_test_print_rate("COPY", reg->size, &start, &end, use_dma);
+
+	if (!use_dma) {
+		ktime_get_ts64(&g_dma_end);
+		g_total_ts = timespec64_sub(g_dma_end, g_dma_start);
+	}
+
+	pci_epf_test_print_rate("COPY", reg->size, &g_total_ts, use_dma,
+				use_timer, num_xfer);
 
 err_map_addr:
 	pci_epc_unmap_addr(epc, epf->func_no, dst_phys_addr);
@@ -323,13 +468,16 @@ static int pci_epf_test_read(struct pci_epf_test *epf_test)
 	void *buf;
 	u32 crc32;
 	bool use_dma;
+	bool use_timer;
+	u32 num_xfer = 1;
+	unsigned long timeout;
 	phys_addr_t phys_addr;
 	phys_addr_t dst_phys_addr;
-	struct timespec64 start, end;
+	struct timespec64 finish_time;
 	struct pci_epf *epf = epf_test->epf;
 	struct device *dev = &epf->dev;
 	struct pci_epc *epc = epf->epc;
-	struct device *dma_dev = epf->epc->dev.parent;
+	struct device *parent_dev = epf->epc->dev.parent;
 	enum pci_barno test_reg_bar = epf_test->test_reg_bar;
 	struct pci_epf_test_reg *reg = epf_test->reg[test_reg_bar];
 
@@ -349,12 +497,16 @@ static int pci_epf_test_read(struct pci_epf_test *epf_test)
 		goto err_addr;
 	}
 
-	buf = kzalloc(reg->size, GFP_KERNEL);
+	buf = dma_alloc_coherent(parent_dev, reg->size, &dst_phys_addr,
+				 GFP_KERNEL);
 	if (!buf) {
 		ret = -ENOMEM;
 		goto err_map_addr;
 	}
 
+	g_total_ts.tv_sec = 0;
+	g_total_ts.tv_nsec = 0;
+	use_timer = !!(reg->flags & FLAG_USE_TIMER);
 	use_dma = !!(reg->flags & FLAG_USE_DMA);
 	if (use_dma) {
 		if (!epf_test->dma_supported) {
@@ -363,37 +515,45 @@ static int pci_epf_test_read(struct pci_epf_test *epf_test)
 			goto err_dma_map;
 		}
 
-		dst_phys_addr = dma_map_single(dma_dev, buf, reg->size,
-					       DMA_FROM_DEVICE);
-		if (dma_mapping_error(dma_dev, dst_phys_addr)) {
-			dev_err(dev, "Failed to map destination buffer addr\n");
-			ret = -ENOMEM;
-			goto err_dma_map;
+		if (use_timer) {
+			finish_time.tv_sec = 1 << FLAG_TIMER_VAL(reg->flags);
+			finish_time.tv_nsec = 0;
 		}
-
-		ktime_get_ts64(&start);
+again_dma:
 		ret = pci_epf_test_data_transfer(epf_test, dst_phys_addr,
-						 phys_addr, reg->size);
+						 phys_addr, reg->size,
+						 reg->src_addr, DMA_DEV_TO_MEM);
 		if (ret)
 			dev_err(dev, "Data transfer failed\n");
-		ktime_get_ts64(&end);
+		if (use_timer && (timespec64_compare(&g_total_ts, &finish_time) < 0)) {
+			num_xfer++;
+			goto again_dma;
+		}
 
-		dma_unmap_single(dma_dev, dst_phys_addr, reg->size,
-				 DMA_FROM_DEVICE);
 	} else {
-		ktime_get_ts64(&start);
+		if (use_timer)
+			timeout = pci_epf_test_get_timeout(reg->flags);
+
+		ktime_get_ts64(&g_dma_start);
+again:
 		memcpy_fromio(buf, src_addr, reg->size);
-		ktime_get_ts64(&end);
+		if (use_timer && !time_after(jiffies, timeout)) {
+			num_xfer++;
+			goto again;
+		}
+		ktime_get_ts64(&g_dma_end);
+		g_total_ts = timespec64_sub(g_dma_end, g_dma_start);
 	}
 
-	pci_epf_test_print_rate("READ", reg->size, &start, &end, use_dma);
+	pci_epf_test_print_rate("READ", reg->size, &g_total_ts, use_dma,
+				use_timer, num_xfer);
 
 	crc32 = crc32_le(~0, buf, reg->size);
 	if (crc32 != reg->checksum)
 		ret = -EIO;
 
 err_dma_map:
-	kfree(buf);
+	dma_free_coherent(parent_dev, reg->size, buf, dst_phys_addr);
 
 err_map_addr:
 	pci_epc_unmap_addr(epc, epf->func_no, phys_addr);
@@ -411,13 +571,16 @@ static int pci_epf_test_write(struct pci_epf_test *epf_test)
 	void __iomem *dst_addr;
 	void *buf;
 	bool use_dma;
+	bool use_timer;
+	u32 num_xfer = 1;
+	unsigned long timeout;
 	phys_addr_t phys_addr;
 	phys_addr_t src_phys_addr;
-	struct timespec64 start, end;
+	struct timespec64 finish_time;
 	struct pci_epf *epf = epf_test->epf;
 	struct device *dev = &epf->dev;
 	struct pci_epc *epc = epf->epc;
-	struct device *dma_dev = epf->epc->dev.parent;
+	struct device *parent_dev = epf->epc->dev.parent;
 	enum pci_barno test_reg_bar = epf_test->test_reg_bar;
 	struct pci_epf_test_reg *reg = epf_test->reg[test_reg_bar];
 
@@ -437,7 +600,8 @@ static int pci_epf_test_write(struct pci_epf_test *epf_test)
 		goto err_addr;
 	}
 
-	buf = kzalloc(reg->size, GFP_KERNEL);
+	buf = dma_alloc_coherent(parent_dev, reg->size, &src_phys_addr,
+				 GFP_KERNEL);
 	if (!buf) {
 		ret = -ENOMEM;
 		goto err_map_addr;
@@ -446,6 +610,9 @@ static int pci_epf_test_write(struct pci_epf_test *epf_test)
 	get_random_bytes(buf, reg->size);
 	reg->checksum = crc32_le(~0, buf, reg->size);
 
+	g_total_ts.tv_sec = 0;
+	g_total_ts.tv_nsec = 0;
+	use_timer = !!(reg->flags & FLAG_USE_TIMER);
 	use_dma = !!(reg->flags & FLAG_USE_DMA);
 	if (use_dma) {
 		if (!epf_test->dma_supported) {
@@ -454,30 +621,40 @@ static int pci_epf_test_write(struct pci_epf_test *epf_test)
 			goto err_dma_map;
 		}
 
-		src_phys_addr = dma_map_single(dma_dev, buf, reg->size,
-					       DMA_TO_DEVICE);
-		if (dma_mapping_error(dma_dev, src_phys_addr)) {
-			dev_err(dev, "Failed to map source buffer addr\n");
-			ret = -ENOMEM;
-			goto err_dma_map;
+		if (use_timer) {
+			finish_time.tv_sec = 1 << FLAG_TIMER_VAL(reg->flags);
+			finish_time.tv_nsec = 0;
 		}
-
-		ktime_get_ts64(&start);
+again_dma:
 		ret = pci_epf_test_data_transfer(epf_test, phys_addr,
-						 src_phys_addr, reg->size);
+						 src_phys_addr, reg->size,
+						 reg->dst_addr,
+						 DMA_MEM_TO_DEV);
 		if (ret)
 			dev_err(dev, "Data transfer failed\n");
-		ktime_get_ts64(&end);
+		if (use_timer && (timespec64_compare(&g_total_ts, &finish_time) < 0)) {
+			num_xfer++;
+			goto again_dma;
+		}
 
-		dma_unmap_single(dma_dev, src_phys_addr, reg->size,
-				 DMA_TO_DEVICE);
 	} else {
-		ktime_get_ts64(&start);
+		if (use_timer)
+			timeout = pci_epf_test_get_timeout(reg->flags);
+
+		ktime_get_ts64(&g_dma_start);
+again:
 		memcpy_toio(dst_addr, buf, reg->size);
-		ktime_get_ts64(&end);
+		if (use_timer && !time_after(jiffies, timeout)) {
+			num_xfer++;
+			goto again;
+		}
+
+		ktime_get_ts64(&g_dma_end);
+		g_total_ts = timespec64_sub(g_dma_end, g_dma_start);
 	}
 
-	pci_epf_test_print_rate("WRITE", reg->size, &start, &end, use_dma);
+	pci_epf_test_print_rate("WRITE", reg->size, &g_total_ts, use_dma,
+				use_timer, num_xfer);
 
 	/*
 	 * wait 1ms inorder for the write to complete. Without this delay L3
@@ -486,7 +663,7 @@ static int pci_epf_test_write(struct pci_epf_test *epf_test)
 	usleep_range(1000, 2000);
 
 err_dma_map:
-	kfree(buf);
+	dma_free_coherent(parent_dev, reg->size, buf, src_phys_addr);
 
 err_map_addr:
 	pci_epc_unmap_addr(epc, epf->func_no, phys_addr);
@@ -923,7 +1100,7 @@ static int __init pci_epf_test_init(void)
 	int ret;
 
 	kpcitest_workqueue = alloc_workqueue("kpcitest",
-					     WQ_MEM_RECLAIM | WQ_HIGHPRI, 0);
+					     WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 0);
 	if (!kpcitest_workqueue) {
 		pr_err("Failed to allocate the kpcitest work queue\n");
 		return -ENOMEM;

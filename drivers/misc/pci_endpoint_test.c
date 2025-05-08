@@ -67,6 +67,7 @@
 
 #define PCI_ENDPOINT_TEST_FLAGS			0x2c
 #define FLAG_USE_DMA				BIT(0)
+#define FLAG_USE_TIMER(time)			(((time) << 1) & GENMASK(3, 1))
 
 #define PCI_DEVICE_ID_TI_J721E			0xb00d
 #define PCI_DEVICE_ID_TI_AM654			0xb00c
@@ -83,6 +84,7 @@
 #define PCI_DEVICE_ID_RENESAS_R8A774C0		0x002d
 #define PCI_DEVICE_ID_RENESAS_R8A774E1		0x0025
 #define PCI_DEVICE_ID_RENESAS_R8A779F0		0x0031
+#define PCI_DEVICE_ID_RENESAS_R8A779G0		0x0030
 
 static DEFINE_IDA(pci_endpoint_test_ida);
 
@@ -360,6 +362,7 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 	void *dst_addr;
 	u32 flags = 0;
 	bool use_dma;
+	bool use_timer;
 	size_t size;
 	dma_addr_t src_phys_addr;
 	dma_addr_t dst_phys_addr;
@@ -391,13 +394,17 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 	use_dma = !!(param.flags & PCITEST_FLAGS_USE_DMA);
 	if (use_dma)
 		flags |= FLAG_USE_DMA;
+	use_timer = !!(param.flags & PCITEST_FLAGS_TIMER_MASK);
+	if (use_timer)
+		flags |= FLAG_USE_TIMER(PCITEST_FLAGS_TIMER_VAL(param.flags));
 
 	if (irq_type < IRQ_TYPE_LEGACY || irq_type > IRQ_TYPE_MSIX) {
 		dev_err(dev, "Invalid IRQ type option\n");
 		goto err;
 	}
 
-	orig_src_addr = kzalloc(size + alignment, GFP_KERNEL);
+	orig_src_addr = dma_alloc_coherent(dev, size + alignment, &orig_src_phys_addr,
+				       GFP_KERNEL);
 	if (!orig_src_addr) {
 		dev_err(dev, "Failed to allocate source buffer\n");
 		ret = false;
@@ -405,13 +412,6 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 	}
 
 	get_random_bytes(orig_src_addr, size + alignment);
-	orig_src_phys_addr = dma_map_single(dev, orig_src_addr,
-					    size + alignment, DMA_TO_DEVICE);
-	if (dma_mapping_error(dev, orig_src_phys_addr)) {
-		dev_err(dev, "failed to map source buffer address\n");
-		ret = false;
-		goto err_src_phys_addr;
-	}
 
 	if (alignment && !IS_ALIGNED(orig_src_phys_addr, alignment)) {
 		src_phys_addr = PTR_ALIGN(orig_src_phys_addr, alignment);
@@ -430,19 +430,12 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 
 	src_crc32 = crc32_le(~0, src_addr, size);
 
-	orig_dst_addr = kzalloc(size + alignment, GFP_KERNEL);
+	orig_dst_addr = dma_alloc_coherent(dev, size + alignment, &orig_dst_phys_addr,
+				       GFP_KERNEL);
 	if (!orig_dst_addr) {
 		dev_err(dev, "Failed to allocate destination address\n");
 		ret = false;
 		goto err_dst_addr;
-	}
-
-	orig_dst_phys_addr = dma_map_single(dev, orig_dst_addr,
-					    size + alignment, DMA_FROM_DEVICE);
-	if (dma_mapping_error(dev, orig_dst_phys_addr)) {
-		dev_err(dev, "failed to map destination buffer address\n");
-		ret = false;
-		goto err_dst_phys_addr;
 	}
 
 	if (alignment && !IS_ALIGNED(orig_dst_phys_addr, alignment)) {
@@ -470,22 +463,14 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 
 	wait_for_completion(&test->irq_raised);
 
-	dma_unmap_single(dev, orig_dst_phys_addr, size + alignment,
-			 DMA_FROM_DEVICE);
-
 	dst_crc32 = crc32_le(~0, dst_addr, size);
 	if (dst_crc32 == src_crc32)
 		ret = true;
 
-err_dst_phys_addr:
-	kfree(orig_dst_addr);
+	dma_free_coherent(dev, size + alignment, orig_dst_addr, orig_dst_phys_addr);
 
 err_dst_addr:
-	dma_unmap_single(dev, orig_src_phys_addr, size + alignment,
-			 DMA_TO_DEVICE);
-
-err_src_phys_addr:
-	kfree(orig_src_addr);
+	dma_free_coherent(dev, size + alignment, orig_src_addr, orig_src_phys_addr);
 
 err:
 	return ret;
@@ -498,6 +483,7 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 	bool ret = false;
 	u32 flags = 0;
 	bool use_dma;
+	bool use_timer;
 	u32 reg;
 	void *addr;
 	dma_addr_t phys_addr;
@@ -527,13 +513,17 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 	use_dma = !!(param.flags & PCITEST_FLAGS_USE_DMA);
 	if (use_dma)
 		flags |= FLAG_USE_DMA;
+	use_timer = !!(param.flags & PCITEST_FLAGS_TIMER_MASK);
+	if (use_timer)
+		flags |= FLAG_USE_TIMER(PCITEST_FLAGS_TIMER_VAL(param.flags));
 
 	if (irq_type < IRQ_TYPE_LEGACY || irq_type > IRQ_TYPE_MSIX) {
 		dev_err(dev, "Invalid IRQ type option\n");
 		goto err;
 	}
 
-	orig_addr = kzalloc(size + alignment, GFP_KERNEL);
+	orig_addr = dma_alloc_coherent(dev, size + alignment, &orig_phys_addr,
+				       GFP_KERNEL);
 	if (!orig_addr) {
 		dev_err(dev, "Failed to allocate address\n");
 		ret = false;
@@ -541,14 +531,6 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 	}
 
 	get_random_bytes(orig_addr, size + alignment);
-
-	orig_phys_addr = dma_map_single(dev, orig_addr, size + alignment,
-					DMA_TO_DEVICE);
-	if (dma_mapping_error(dev, orig_phys_addr)) {
-		dev_err(dev, "failed to map source buffer address\n");
-		ret = false;
-		goto err_phys_addr;
-	}
 
 	if (alignment && !IS_ALIGNED(orig_phys_addr, alignment)) {
 		phys_addr =  PTR_ALIGN(orig_phys_addr, alignment);
@@ -582,11 +564,7 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 	if (reg & STATUS_READ_SUCCESS)
 		ret = true;
 
-	dma_unmap_single(dev, orig_phys_addr, size + alignment,
-			 DMA_TO_DEVICE);
-
-err_phys_addr:
-	kfree(orig_addr);
+	dma_free_coherent(dev, size + alignment, orig_addr, orig_phys_addr);
 
 err:
 	return ret;
@@ -599,6 +577,7 @@ static bool pci_endpoint_test_read(struct pci_endpoint_test *test,
 	bool ret = false;
 	u32 flags = 0;
 	bool use_dma;
+	bool use_timer;
 	size_t size;
 	void *addr;
 	dma_addr_t phys_addr;
@@ -627,25 +606,21 @@ static bool pci_endpoint_test_read(struct pci_endpoint_test *test,
 	use_dma = !!(param.flags & PCITEST_FLAGS_USE_DMA);
 	if (use_dma)
 		flags |= FLAG_USE_DMA;
+	use_timer = !!(param.flags & PCITEST_FLAGS_TIMER_MASK);
+	if (use_timer)
+		flags |= FLAG_USE_TIMER(PCITEST_FLAGS_TIMER_VAL(param.flags));
 
 	if (irq_type < IRQ_TYPE_LEGACY || irq_type > IRQ_TYPE_MSIX) {
 		dev_err(dev, "Invalid IRQ type option\n");
 		goto err;
 	}
 
-	orig_addr = kzalloc(size + alignment, GFP_KERNEL);
+	orig_addr = dma_alloc_coherent(dev, size + alignment, &orig_phys_addr,
+				       GFP_KERNEL);
 	if (!orig_addr) {
 		dev_err(dev, "Failed to allocate destination address\n");
 		ret = false;
 		goto err;
-	}
-
-	orig_phys_addr = dma_map_single(dev, orig_addr, size + alignment,
-					DMA_FROM_DEVICE);
-	if (dma_mapping_error(dev, orig_phys_addr)) {
-		dev_err(dev, "failed to map source buffer address\n");
-		ret = false;
-		goto err_phys_addr;
 	}
 
 	if (alignment && !IS_ALIGNED(orig_phys_addr, alignment)) {
@@ -672,15 +647,11 @@ static bool pci_endpoint_test_read(struct pci_endpoint_test *test,
 
 	wait_for_completion(&test->irq_raised);
 
-	dma_unmap_single(dev, orig_phys_addr, size + alignment,
-			 DMA_FROM_DEVICE);
-
 	crc32 = crc32_le(~0, addr, size);
 	if (crc32 == pci_endpoint_test_readl(test, PCI_ENDPOINT_TEST_CHECKSUM))
 		ret = true;
 
-err_phys_addr:
-	kfree(orig_addr);
+	dma_free_coherent(dev, size + alignment, orig_addr, orig_phys_addr);
 err:
 	return ret;
 }
@@ -997,6 +968,9 @@ static const struct pci_device_id pci_endpoint_test_tbl[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_R8A774B1),},
 	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_R8A774C0),},
 	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_R8A774E1),},
+	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_R8A779G0),
+		.driver_data = (kernel_ulong_t)&default_data,
+	},
 	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_R8A779F0),
 	  .driver_data = (kernel_ulong_t)&default_data,
 	},
