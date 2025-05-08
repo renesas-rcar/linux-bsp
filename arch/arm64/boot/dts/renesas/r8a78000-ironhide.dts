@@ -152,3 +152,8 @@
 		function = "i2c1";
 	};
 };
+
+&rwdt {
+	timeout-sec = <60>;
+	status = "okay";
+};
