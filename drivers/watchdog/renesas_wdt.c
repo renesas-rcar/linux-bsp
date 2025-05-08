@@ -87,7 +87,7 @@ static int rwdt_start(struct watchdog_device *wdev)
 	struct rwdt_priv *priv = watchdog_get_drvdata(wdev);
 	u8 val;
 
-	pm_runtime_get_sync(wdev->parent);
+	 /* pm_runtime_get_sync(wdev->parent); */
 
 	/* Stop the timer before we modify any register */
 	val = readb_relaxed(priv->base + RWTCSRA) & ~RWTCSRA_TME;
@@ -114,7 +114,7 @@ static int rwdt_stop(struct watchdog_device *wdev)
 	rwdt_write(priv, priv->cks, RWTCSRA);
 	/* Delay 3 cycles before disabling module clock */
 	rwdt_wait_cycles(priv, 3);
-	pm_runtime_put(wdev->parent);
+	/* pm_runtime_put(wdev->parent); */
 
 	return 0;
 }
@@ -232,12 +232,12 @@ static int rwdt_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->clk))
 		return PTR_ERR(priv->clk);
 
-	pm_runtime_enable(dev);
-	pm_runtime_get_sync(dev);
+	/* pm_runtime_enable(dev); */
+	/* pm_runtime_get_sync(dev); */
 	priv->clk_rate = clk_get_rate(priv->clk);
 	csra = readb_relaxed(priv->base + RWTCSRA);
 	priv->wdev.bootstatus = csra & RWTCSRA_WOVF ? WDIOF_CARDRESET : 0;
-	pm_runtime_put(dev);
+	/* pm_runtime_put(dev); */
 
 	if (!priv->clk_rate) {
 		ret = -ENOENT;
@@ -297,7 +297,7 @@ static int rwdt_remove(struct platform_device *pdev)
 	struct rwdt_priv *priv = platform_get_drvdata(pdev);
 
 	watchdog_unregister_device(&priv->wdev);
-	pm_runtime_disable(&pdev->dev);
+	/* pm_runtime_disable(&pdev->dev); */
 
 	return 0;
 }
@@ -322,7 +322,7 @@ static int __maybe_unused rwdt_resume(struct device *dev)
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(rwdt_pm_ops, rwdt_suspend, rwdt_resume);
+/* static SIMPLE_DEV_PM_OPS(rwdt_pm_ops, rwdt_suspend, rwdt_resume);*/
 
 static const struct of_device_id rwdt_ids[] = {
 	{ .compatible = "renesas,rcar-gen2-wdt", },
@@ -337,7 +337,7 @@ static struct platform_driver rwdt_driver = {
 	.driver = {
 		.name = "renesas_wdt",
 		.of_match_table = rwdt_ids,
-		.pm = &rwdt_pm_ops,
+		/* .pm = &rwdt_pm_ops, */
 	},
 	.probe = rwdt_probe,
 	.remove = rwdt_remove,
