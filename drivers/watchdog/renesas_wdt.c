@@ -27,6 +27,7 @@
 #define RWTCSRB		8
 
 #define RWDT_DEFAULT_TIMEOUT 60U
+#define CFG_CLK_IGNORE
 
 /*
  * In probe, clk_rate is checked to be not more than 16 bit * biggest clock
@@ -134,7 +135,9 @@ static int rwdt_restart(struct watchdog_device *wdev, unsigned long action,
 	struct rwdt_priv *priv = watchdog_get_drvdata(wdev);
 	u8 val;
 
+#if !defined(CFG_CLK_IGNORE)
 	clk_prepare_enable(priv->clk);
+#endif
 
 	/* Stop the timer before we modify any register */
 	val = readb_relaxed(priv->base + RWTCSRA) & ~RWTCSRA_TME;
@@ -228,6 +231,7 @@ static int rwdt_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
 
+#if !defined(CFG_CLK_IGNORE)
 	priv->clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(priv->clk))
 		return PTR_ERR(priv->clk);
@@ -235,6 +239,10 @@ static int rwdt_probe(struct platform_device *pdev)
 	/* pm_runtime_enable(dev); */
 	/* pm_runtime_get_sync(dev); */
 	priv->clk_rate = clk_get_rate(priv->clk);
+#else
+	priv->clk_rate = 32768;
+#endif
+
 	csra = readb_relaxed(priv->base + RWTCSRA);
 	priv->wdev.bootstatus = csra & RWTCSRA_WOVF ? WDIOF_CARDRESET : 0;
 	/* pm_runtime_put(dev); */
