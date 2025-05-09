@@ -907,21 +907,22 @@ static void rcar_i2c_release_dma(struct rcar_i2c_priv *priv)
 }
 
 /* I2C is a special case, we need to poll the status of a reset */
-static int rcar_i2c_do_reset(struct rcar_i2c_priv *priv)
-{
-	int ret;
-
+/*static int rcar_i2c_do_reset(struct rcar_i2c_priv *priv)
+ * {
+ *	int ret;
+ */
 	/* Don't reset if a slave instance is currently running */
-	if (priv->slave)
-		return -EISCONN;
-
-	ret = reset_control_reset(priv->rstc);
-	if (ret)
-		return ret;
-
-	return read_poll_timeout_atomic(reset_control_status, ret, ret == 0, 1,
-					100, false, priv->rstc);
-}
+/*	if (priv->slave)
+ *		return -EISCONN;
+ *
+ *	ret = reset_control_reset(priv->rstc);
+ *	if (ret)
+ *		return ret;
+ *
+ *	return read_poll_timeout_atomic(reset_control_status, ret, ret == 0, 1,
+ *					100, false, priv->rstc);
+ * }
+ */
 
 static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 				struct i2c_msg *msgs,
@@ -945,7 +946,7 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 
 	/* Gen3+ needs a reset. That also allows RXDMA once */
 	if (priv->devtype >= I2C_RCAR_GEN3) {
-		ret = rcar_i2c_do_reset(priv);
+		ret =  0; //rcar_i2c_do_reset(priv);
 		if (ret)
 			goto out;
 		priv->flags &= ~ID_P_NO_RXDMA;
@@ -978,7 +979,7 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 		ret = num - priv->msgs_left; /* The number of transfer */
 	}
 out:
-	pm_runtime_put(dev);
+	//pm_runtime_put(dev);
 
 	if (ret < 0 && ret != -ENXIO)
 		dev_err(dev, "error %d : %x\n", ret, priv->flags);
@@ -1037,7 +1038,7 @@ static int rcar_i2c_master_xfer_atomic(struct i2c_adapter *adap,
 		ret = num - priv->msgs_left; /* The number of transfer */
 	}
 out:
-	pm_runtime_put(dev);
+	//pm_runtime_put(dev);
 
 	if (ret < 0 && ret != -ENXIO)
 		dev_err(dev, "error %d : %x\n", ret, priv->flags);
@@ -1056,7 +1057,7 @@ static int rcar_reg_slave(struct i2c_client *slave)
 		return -EAFNOSUPPORT;
 
 	/* Keep device active for slave address detection logic */
-	pm_runtime_get_sync(rcar_i2c_priv_to_dev(priv));
+	//pm_runtime_get_sync(rcar_i2c_priv_to_dev(priv));
 
 	priv->slave = slave;
 	rcar_i2c_write(priv, ICSAR, slave->addr);
@@ -1080,7 +1081,7 @@ static int rcar_unreg_slave(struct i2c_client *slave)
 
 	priv->slave = NULL;
 
-	pm_runtime_put(rcar_i2c_priv_to_dev(priv));
+	//pm_runtime_put(rcar_i2c_priv_to_dev(priv));
 
 	return 0;
 }
@@ -1188,7 +1189,7 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	pm_runtime_get_sync(dev);
 	ret = rcar_i2c_clock_calculate(priv);
 	if (ret < 0) {
-		pm_runtime_put(dev);
+		//pm_runtime_put(dev);
 		goto out_pm_disable;
 	}
 
@@ -1204,8 +1205,8 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	/* Stay always active when multi-master to keep arbitration working */
 	if (of_property_read_bool(dev->of_node, "multi-master"))
 		priv->flags |= ID_P_PM_BLOCKED;
-	else
-		pm_runtime_put(dev);
+	//else
+	//	pm_runtime_put(dev);
 
 	if (of_property_read_bool(dev->of_node, "smbus"))
 		priv->flags |= ID_P_HOST_NOTIFY;
@@ -1260,72 +1261,80 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	i2c_del_adapter(&priv->adap);
  out_pm_put:
 	if (priv->flags & ID_P_PM_BLOCKED)
-		pm_runtime_put(dev);
+		//pm_runtime_put(dev);
+		return ret;
  out_pm_disable:
-	pm_runtime_disable(dev);
+	//pm_runtime_disable(dev);
 	return ret;
 }
 
 static int rcar_i2c_remove(struct platform_device *pdev)
 {
 	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
-	struct device *dev = &pdev->dev;
+	//struct device *dev = &pdev->dev;
 
 	if (priv->host_notify_client)
 		i2c_free_slave_host_notify_device(priv->host_notify_client);
 	i2c_del_adapter(&priv->adap);
 	rcar_i2c_release_dma(priv);
-	if (priv->flags & ID_P_PM_BLOCKED)
-		pm_runtime_put(dev);
-	pm_runtime_disable(dev);
+	/*
+	 * if (priv->flags & ID_P_PM_BLOCKED)
+	 *	pm_runtime_put(dev);
+	 * pm_runtime_disable(dev);
+	 */
 
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int rcar_i2c_suspend(struct device *dev)
-{
-	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
+/*
+ *#ifdef CONFIG_PM_SLEEP
+ * static int rcar_i2c_suspend(struct device *dev)
+ * {
+ *	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
+ *
+ *	priv->suspended = 1;
+ *	i2c_mark_adapter_suspended(&priv->adap);
+ *	return 0;
+ * }
+ */
 
-	priv->suspended = 1;
-	i2c_mark_adapter_suspended(&priv->adap);
-	return 0;
-}
+/* static int rcar_i2c_resume(struct device *dev)
+ * {
+ *	int ret = 0;
+ *	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
+ *
+ *	//pm_runtime_get_sync(dev);
+ *	ret = rcar_i2c_clock_calculate(priv);
+ *	if (ret < 0)
+ *		dev_err(dev, "Could not calculate clock\n");
+ *
+ *	rcar_i2c_init(priv);
+ *	//pm_runtime_put(dev);
+ *
+ *	priv->suspended = 0;
+ *
+ *	i2c_mark_adapter_resumed(&priv->adap);
+ *
+ *	return ret;
+ *}
+ */
 
-static int rcar_i2c_resume(struct device *dev)
-{
-	int ret = 0;
-	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
+/*
+ * static const struct dev_pm_ops rcar_i2c_pm_ops = {
+ *	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(rcar_i2c_suspend, rcar_i2c_resume)
+ * };
+ */
 
-	pm_runtime_get_sync(dev);
-	ret = rcar_i2c_clock_calculate(priv);
-	if (ret < 0)
-		dev_err(dev, "Could not calculate clock\n");
-
-	rcar_i2c_init(priv);
-	pm_runtime_put(dev);
-
-	priv->suspended = 0;
-
-	i2c_mark_adapter_resumed(&priv->adap);
-
-	return ret;
-}
-
-static const struct dev_pm_ops rcar_i2c_pm_ops = {
-	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(rcar_i2c_suspend, rcar_i2c_resume)
-};
-
-#define DEV_PM_OPS (&rcar_i2c_pm_ops)
-#else
-#define DEV_PM_OPS NULL
-#endif /* CONFIG_PM_SLEEP */
+//#define DEV_PM_OPS (&rcar_i2c_pm_ops)
+//#else
+//#define DEV_PM_OPS NULL
+//#endif /* CONFIG_PM_SLEEP */
 
 static struct platform_driver rcar_i2c_driver = {
 	.driver	= {
 		.name	= "i2c-rcar",
 		.of_match_table = rcar_i2c_dt_ids,
-		.pm	= DEV_PM_OPS,
+		//.pm	= DEV_PM_OPS,
 	},
 	.probe		= rcar_i2c_probe,
 	.remove		= rcar_i2c_remove,
