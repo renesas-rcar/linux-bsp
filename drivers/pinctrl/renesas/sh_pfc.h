@@ -253,6 +253,8 @@ struct sh_pfc_soc_operations {
 			 unsigned int bias);
 	int (*pin_to_pocctrl)(unsigned int pin, u32 *pocctrl);
 	int (*pin_to_portcr)(unsigned int pin);
+	int (*set_drive_strength)(struct sh_pfc *pfc, unsigned int pin,
+				  u16 strength);
 };
 
 struct sh_pfc_soc_info {
