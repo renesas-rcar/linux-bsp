@@ -973,11 +973,13 @@ static int rvin_setup(struct rvin_dev *vin)
 	case V4L2_PIX_FMT_SGBRG16:
 	case V4L2_PIX_FMT_SGRBG16:
 	case V4L2_PIX_FMT_SRGGB16:
+		dmr = 0;
+		break;
 	case V4L2_PIX_FMT_SBGGR24:
 	case V4L2_PIX_FMT_SGBRG24:
 	case V4L2_PIX_FMT_SGRBG24:
 	case V4L2_PIX_FMT_SRGGB24:
-		dmr = 0;
+		dmr = VNDMR_EXRGB;
 		break;
 	case V4L2_PIX_FMT_Y10:
 		dmr = VNDMR_RMODE_RAW10 | VNDMR_YC_THR;
@@ -1008,7 +1010,7 @@ static int rvin_setup(struct rvin_dev *vin)
 	case V4L2_PIX_FMT_SGBRG28:
 	case V4L2_PIX_FMT_SGRBG28:
 	case V4L2_PIX_FMT_SRGGB28:
-		dmr = VNDMR_RMODE_RAW20;
+		dmr = VNDMR_EXRGB | VNDMR_RMODE_RAW20;
 		break;
 	case V4L2_PIX_FMT_GREY:
 		if (input_is_yuv) {
