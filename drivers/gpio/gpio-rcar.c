@@ -135,6 +135,10 @@ static void gpio_rcar_config_interrupt_input_mode(struct gpio_rcar_priv *p,
 	if (p->info.has_both_edge_trigger)
 		gpio_rcar_modify_bit(p, BOTHEDGE, hwirq, both);
 
+	/* Select "Input Enable/Disable" in INEN */
+	if (p->info.has_inen)
+		gpio_rcar_modify_bit(p, INEN, hwirq, true);
+
 	/* Select "Interrupt Input Mode" in IOINTSEL */
 	gpio_rcar_modify_bit(p, IOINTSEL, hwirq, true);
 
@@ -250,6 +254,10 @@ static void gpio_rcar_config_general_input_output_mode(struct gpio_chip *chip,
 
 	/* Configure positive logic in POSNEG */
 	gpio_rcar_modify_bit(p, POSNEG, gpio, false);
+
+	/* Select "Input Enable/Disable" in INEN */
+	if (p->info.has_inen)
+		gpio_rcar_modify_bit(p, INEN, gpio, !output);
 
 	/* Select "General Input/Output Mode" in IOINTSEL */
 	gpio_rcar_modify_bit(p, IOINTSEL, gpio, false);
