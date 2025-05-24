@@ -327,10 +327,11 @@ static int gpio_rcar_get(struct gpio_chip *chip, unsigned offset)
 	u32 bit = BIT(offset);
 
 	/*
-	 * Before R-Car Gen3, INDT does not show correct pin state when
-	 * configured as output, so use OUTDT in case of output pins
+	 * Get pin state:
+	 * - Input:  read INDT.
+	 * - Output: read OUTDT.
 	 */
-	if (!p->info.has_always_in && (gpio_rcar_read(p, INOUTSEL) & bit))
+	if (gpio_rcar_read(p, INOUTSEL) & bit)
 		return !!(gpio_rcar_read(p, OUTDT) & bit);
 	else
 		return !!(gpio_rcar_read(p, INDT) & bit);
