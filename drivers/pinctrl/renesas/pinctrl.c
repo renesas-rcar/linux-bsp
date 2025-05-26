@@ -534,6 +534,45 @@ static int sh_pfc_pinconf_set_drive_strength(struct sh_pfc *pfc,
 	return 0;
 }
 
+static int rcar5_pinconf_write_bit(struct sh_pfc *pfc, unsigned int bit,
+					u16 value, u32 reg)
+{
+	u32 val;
+
+	val = sh_pfc_read(pfc, reg);
+	val &= ~BIT(bit);
+	val |= value << bit;
+
+	sh_pfc_write(pfc, reg, val);
+
+	return 0;
+}
+
+int rcar5_pinconf_set_drive_strength(struct sh_pfc *pfc,
+				    unsigned int pin, u16 strength)
+{
+	unsigned int bank = pin / 32;
+	unsigned int bit = pin % 32;
+	const struct rcar5_pinmux_drive_reg *reg = &pfc->info->drive_regs_rcar5[bank];
+
+	if (reg->pins[bit] != pin)
+		return -EINVAL;
+
+	if (strength < 3 || strength > 24)
+		return -EINVAL;
+
+	/* Convert the value from mA based on a full drive strength value of
+	 * 24mA. We can make the full value configurable later if needed.
+	 */
+	strength = strength / 3 - 1;
+
+	rcar5_pinconf_write_bit(pfc, bit, FIELD_GET(GENMASK(0, 0), strength), reg->drvctrl0);
+	rcar5_pinconf_write_bit(pfc, bit, FIELD_GET(GENMASK(1, 1), strength), reg->drvctrl1);
+	rcar5_pinconf_write_bit(pfc, bit, FIELD_GET(GENMASK(2, 2), strength), reg->drvctrl2);
+
+	return 0;
+}
+
 /* Check whether the requested parameter is supported for a pin. */
 static bool sh_pfc_pinconf_validate(struct sh_pfc *pfc, unsigned int _pin,
 				    enum pin_config_param param)

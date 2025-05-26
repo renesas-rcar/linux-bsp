@@ -187,6 +187,19 @@ struct pinmux_data_reg {
 	const u16 *enum_ids;
 };
 
+#define RCAR5_PINMUX_DRIVE_REG(name1, r1, name2, r2, name3, r3) \
+	.drvctrl0 = r1,	\
+	.drvctrl1 = r2,	\
+	.drvctrl2 = r3,	\
+	.pins =
+
+struct rcar5_pinmux_drive_reg {
+	u32 drvctrl0;
+	u32 drvctrl1;
+	u32 drvctrl2;
+	const u16 pins[32];
+};
+
 /*
  * Describe a data register
  *   - name: Register name (unused, for documentation purposes only)
@@ -284,6 +297,7 @@ struct sh_pfc_soc_info {
 
 	const struct pinmux_cfg_reg *cfg_regs;
 	const struct pinmux_drive_reg *drive_regs;
+	const struct rcar5_pinmux_drive_reg *drive_regs_rcar5;
 	const struct pinmux_bias_reg *bias_regs;
 	const struct pinmux_ioctrl_reg *ioctrl_regs;
 	const struct pinmux_data_reg *data_regs;
@@ -325,6 +339,7 @@ extern const struct sh_pfc_soc_info r8a779a0_pinmux_info;
 extern const struct sh_pfc_soc_info r8a779f0_pinmux_info;
 extern const struct sh_pfc_soc_info r8a779g0_pinmux_info;
 extern const struct sh_pfc_soc_info r8a779h0_pinmux_info;
+extern const struct sh_pfc_soc_info r8a78000_pinmux_info;
 extern const struct sh_pfc_soc_info sh7203_pinmux_info;
 extern const struct sh_pfc_soc_info sh7264_pinmux_info;
 extern const struct sh_pfc_soc_info sh7269_pinmux_info;
@@ -775,5 +790,8 @@ void rcar_pinmux_set_bias(struct sh_pfc *pfc, unsigned int pin,
 unsigned int rmobile_pinmux_get_bias(struct sh_pfc *pfc, unsigned int pin);
 void rmobile_pinmux_set_bias(struct sh_pfc *pfc, unsigned int pin,
 			     unsigned int bias);
+
+int rcar5_pinconf_set_drive_strength(struct sh_pfc *pfc,
+				    unsigned int pin, u16 strength);
 
 #endif /* __SH_PFC_H */
