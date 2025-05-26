@@ -136,10 +136,6 @@ static void gpio_rcar_config_interrupt_input_mode(struct gpio_rcar_priv *p,
 	if (p->info.has_both_edge_trigger)
 		gpio_rcar_modify_bit(p, BOTHEDGE, hwirq, both);
 
-	/* Select "Input Enable/Disable" in INEN */
-	if (p->info.has_inen)
-		gpio_rcar_modify_bit(p, INEN, hwirq, true);
-
 	/* Select "Interrupt Input Mode" in IOINTSEL */
 	gpio_rcar_modify_bit(p, IOINTSEL, hwirq, true);
 
@@ -256,10 +252,6 @@ static void gpio_rcar_config_general_input_output_mode(struct gpio_chip *chip,
 	/* Configure positive logic in POSNEG */
 	gpio_rcar_modify_bit(p, POSNEG, gpio, false);
 
-	/* Select "Input Enable/Disable" in INEN */
-	if (p->info.has_inen)
-		gpio_rcar_modify_bit(p, INEN, gpio, !output);
-
 	/* Select "General Input/Output Mode" in IOINTSEL */
 	gpio_rcar_modify_bit(p, IOINTSEL, gpio, false);
 
@@ -327,10 +319,11 @@ static int gpio_rcar_get(struct gpio_chip *chip, unsigned offset)
 	struct gpio_rcar_priv *p = gpiochip_get_data(chip);
 	u32 bit = BIT(offset);
 
-	/* testing on r8a7790 shows that INDT does not show correct pin state
-	 * when configured as output, so use OUTDT in case of output pins */
-
-	if (gpio_rcar_read(p, INOUTSEL) & bit)
+	/*
+	 * Before R-Car Gen3, INDT does not show correct pin state when
+	 * configured as output, so use OUTDT in case of output pins
+	 */
+	if (!p->info.has_always_in && (gpio_rcar_read(p, INOUTSEL) & bit))
 		return !!(gpio_rcar_read(p, OUTDT) & bit);
 	else
 		return !!(gpio_rcar_read(p, INDT) & bit);
@@ -490,6 +483,17 @@ static int gpio_rcar_parse_dt(struct gpio_rcar_priv *p, unsigned int *npins)
 	return 0;
 }
 
+static void gpio_rcar_enable_inputs(struct gpio_rcar_priv *p)
+{
+	u32 mask = GENMASK(p->gpio_chip.ngpio - 1, 0);
+
+	/* Select "Input Enable" in INEN */
+	if (p->gpio_chip.valid_mask)
+		mask &= p->gpio_chip.valid_mask[0];
+	if (mask)
+		gpio_rcar_write(p, INEN, gpio_rcar_read(p, INEN) | mask);
+}
+
 static int gpio_rcar_probe(struct platform_device *pdev)
 {
 	struct gpio_rcar_priv *p;
@@ -566,6 +570,12 @@ static int gpio_rcar_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
+	if (p->info.has_inen) {
+		pm_runtime_get_sync(dev);
+		gpio_rcar_enable_inputs(p);
+		pm_runtime_put(dev);
+	}
+
 	dev_info(dev, "driving %d GPIOs\n", npins);
 
 	return 0;
@@ -640,6 +650,9 @@ static int gpio_rcar_resume(struct device *dev)
 				gpio_rcar_write(p, MSKCLR, mask);
 		}
 	}
+
+	if (p->info.has_inen)
+		gpio_rcar_enable_inputs(p);
 
 	return 0;
 }
