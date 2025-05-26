@@ -21,12 +21,7 @@
 	memory@2048000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
-		reg = <0x20 0x48000000 0x0 0x15c00000>;
-	};
-
-	memory@2080000000 {
-		device_type = "memory";
-		reg = <0x20 0x80000000 0x0 0x20000000>;
+		reg = <0x20 0x48000000 0x0 0x18000000>;
 	};
 
 	memory@20a0000000 {
@@ -133,7 +128,7 @@
 	no-sdio;
 	non-removable;
 	full-pwr-cycle-in-suspend;
-	status = "disabled";
+	status = "okay";
 };
 
 #if defined(PCIE_1CH_4LANE)

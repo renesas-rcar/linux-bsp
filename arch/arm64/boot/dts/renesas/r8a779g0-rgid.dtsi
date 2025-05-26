@@ -1001,8 +1001,8 @@
 			#size-cells = <2>;
 			bus-range = <0x00 0xff>;
 			device_type = "pci";
-			ranges = <0x82000000 0 0x30000000 0 0x30000000 0 0x10000000>;
-			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+			ranges = <0x83000000 0 0x30000000 0x20 0x30000000 0 0x10000000>;
+			dma-ranges = <0x43000000 0 0x40000000 0x20 0x40000000 0 0x80000000>;
 			interrupts = <GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 450 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 451 IRQ_TYPE_LEVEL_HIGH>,
@@ -1038,8 +1038,8 @@
 			#size-cells = <2>;
 			bus-range = <0x00 0xff>;
 			device_type = "pci";
-			ranges = <0x82000000 0 0xc0000000 0 0xc0000000 0 0x10000000>;
-			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+			ranges = <0x83000000 0 0xc0000000 0x20 0xc0000000 0 0x10000000>;
+			dma-ranges = <0x43000000 0 0x40000000 0x20 0x40000000 0 0x80000000>;
 			interrupts = <GIC_SPI 456 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 457 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 458 IRQ_TYPE_LEVEL_HIGH>,

@@ -23,7 +23,9 @@
 	};
 
 	cmem {
-		memory-region = <&region_40bit>;
+		memory-region = <&vdsp0_region>, <&vdsp1_region>,
+				<&vdsp2_region>, <&vdsp3_region>,
+				<&pap_region>, <&region_40bit>;
 	};
 
 	dsi-con0 {
@@ -38,7 +40,7 @@
 	memory@2048000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
-		reg = <0x20 0x48000000 0x0 0x15c00000>;
+		reg = <0x20 0x48000000 0x0 0x18000000>;
 	};
 
 	memory@20a0000000 {
@@ -78,42 +80,37 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			reg = <0x00000020 0x5d000000 0x0 0x00800000>;
-			status = "disabled";
 		};
 
 		vdsp1_region: linux,vdsp1_region@205d800000 {
 			compatible = "shared-dma-pool";
-			no-map;
+			reusable;
 			reg = <0x00000020 0x5d800000 0x0 0x00800000>;
-			status = "disabled";
 		};
 
 		vdsp2_region: linux,vdsp2_region@205e000000 {
 			compatible = "shared-dma-pool";
-			no-map;
+			reusable;
 			reg = <0x00000020 0x5e000000 0x0 0x00800000>;
-			status = "disabled";
 		};
 
 		vdsp3_region: linux,vdsp3_region@205e800000 {
 			compatible = "shared-dma-pool";
-			no-map;
+			reusable;
 			reg = <0x00000020 0x5e800000 0x0 0x00800000>;
-			status = "disabled";
 		};
 
 		pap_region: linux,pap_region@205f000000 {
 			compatible = "shared-dma-pool";
-			no-map;
+			reusable;
 			reg = <0x00000020 0x5f000000 0x0 0x00400000>;
-			status = "disabled";
 		};
 
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma@20a0000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000020 0xa0000000 0x0 0x20000000>;
+			reg = <0x00000020 0xa0000000 0x0 0x10000000>;
 			linux,cma-default;
 		};
 
@@ -650,7 +647,7 @@
 	no-sdio;
 	non-removable;
 	full-pwr-cycle-in-suspend;
-	status = "disabled";
+	status = "okay";
 };
 
 &pciec0 {

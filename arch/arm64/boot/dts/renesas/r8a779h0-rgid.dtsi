@@ -814,8 +814,8 @@
 			#size-cells = <2>;
 			bus-range = <0x00 0xff>;
 			device_type = "pci";
-			ranges = <0x82000000 0 0x30000000 0 0x30000000 0 0x10000000>;
-			dma-ranges = <0x42000000 0 0x40000000 0 0x40000000 0 0x80000000>;
+			ranges = <0x83000000 0 0x30000000 0x20 0x30000000 0 0x10000000>;
+			dma-ranges = <0x43000000 0 0x40000000 0x20 0x40000000 0 0x80000000>;
 			interrupts = <GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 450 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 451 IRQ_TYPE_LEVEL_HIGH>,
@@ -862,7 +862,7 @@
 			num-lanes = <2>;
 			resize-bar = <0>;
 			max-link-speed = <4>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		pwm0: pwm@20e6e30000 {
