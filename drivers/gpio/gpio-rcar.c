@@ -36,6 +36,7 @@ struct gpio_rcar_info {
 	bool has_both_edge_trigger;
 	bool has_always_in;
 	bool has_inen;
+	const u32 *reg;
 };
 
 struct gpio_rcar_priv {
@@ -49,20 +50,39 @@ struct gpio_rcar_priv {
 	struct gpio_rcar_bank_info bank_info;
 };
 
-#define IOINTSEL	0x00	/* General IO/Interrupt Switching Register */
-#define INOUTSEL	0x04	/* General Input/Output Switching Register */
-#define OUTDT		0x08	/* General Output Register */
-#define INDT		0x0c	/* General Input Register */
-#define INTDT		0x10	/* Interrupt Display Register */
-#define INTCLR		0x14	/* Interrupt Clear Register */
-#define INTMSK		0x18	/* Interrupt Mask Register */
-#define MSKCLR		0x1c	/* Interrupt Mask Clear Register */
-#define POSNEG		0x20	/* Positive/Negative Logic Select Register */
-#define EDGLEVEL	0x24	/* Edge/level Select Register */
-#define FILONOFF	0x28	/* Chattering Prevention On/Off Register */
-#define OUTDTSEL	0x40	/* Output Data Select Register */
-#define BOTHEDGE	0x4c	/* One Edge/Both Edge Select Register */
-#define INEN		0x50	/* General Input Enable Register */
+enum gpio_reg_ids {
+	IOINTSEL = 0,
+	INOUTSEL,
+	OUTDT,
+	INDT,
+	INTDT,
+	INTCLR,
+	INTMSK,
+	MSKCLR,
+	POSNEG,
+	EDGLEVEL,
+	FILONOFF,
+	OUTDTSEL,
+	BOTHEDGE,
+	INEN,
+};
+
+static u32 rcar_reg[] = {
+	[IOINTSEL]	= 0x00,		/* General IO/Interrupt Switching Register */
+	[INOUTSEL]	= 0x04,		/* General Input/Output Switching Register */
+	[OUTDT]		= 0x08,		/* General Output Register */
+	[INDT]		= 0x0c,		/* General Input Register */
+	[INTDT]		= 0x10,		/* Interrupt Display Register */
+	[INTCLR]	= 0x14,		/* Interrupt Clear Register */
+	[INTMSK]	= 0x18,		/* Interrupt Mask Register */
+	[MSKCLR]	= 0x1c,		/* Interrupt Mask Clear Register */
+	[POSNEG]	= 0x20,		/* Positive/Negative Logic Select Register */
+	[EDGLEVEL]	= 0x24,		/* Edge/level Select Register */
+	[FILONOFF]	= 0x28,		/* Chattering Prevention On/Off Register */
+	[OUTDTSEL]	= 0x40,		/* Output Data Select Register */
+	[BOTHEDGE]	= 0x4c,		/* One Edge/Both Edge Select Register */
+	[INEN]		= 0x50,		/* General Input Enable Register */
+};
 
 #define RCAR_MAX_GPIO_PER_BANK		32
 
@@ -95,8 +115,9 @@ static void gpio_rcar_irq_disable(struct irq_data *d)
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
 	struct gpio_rcar_priv *p = gpiochip_get_data(gc);
 	irq_hw_number_t hwirq = irqd_to_hwirq(d);
+	const u32 *reg = p->info.reg;
 
-	gpio_rcar_write(p, INTMSK, ~BIT(hwirq));
+	gpio_rcar_write(p, reg[INTMSK], ~BIT(hwirq));
 	gpiochip_disable_irq(gc, hwirq);
 }
 
@@ -105,9 +126,10 @@ static void gpio_rcar_irq_enable(struct irq_data *d)
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
 	struct gpio_rcar_priv *p = gpiochip_get_data(gc);
 	irq_hw_number_t hwirq = irqd_to_hwirq(d);
+	const u32 *reg = p->info.reg;
 
 	gpiochip_enable_irq(gc, hwirq);
-	gpio_rcar_write(p, MSKCLR, BIT(hwirq));
+	gpio_rcar_write(p, reg[MSKCLR], BIT(hwirq));
 }
 
 static void gpio_rcar_config_interrupt_input_mode(struct gpio_rcar_priv *p,
@@ -117,6 +139,7 @@ static void gpio_rcar_config_interrupt_input_mode(struct gpio_rcar_priv *p,
 						  bool both)
 {
 	unsigned long flags;
+	const u32 *reg = p->info.reg;
 
 	/* follow steps in the GPIO documentation for
 	 * "Setting Edge-Sensitive Interrupt Input Mode" and
@@ -126,25 +149,25 @@ static void gpio_rcar_config_interrupt_input_mode(struct gpio_rcar_priv *p,
 	raw_spin_lock_irqsave(&p->lock, flags);
 
 	/* Configure positive or negative logic in POSNEG */
-	gpio_rcar_modify_bit(p, POSNEG, hwirq, !active_high_rising_edge);
+	gpio_rcar_modify_bit(p, reg[POSNEG], hwirq, !active_high_rising_edge);
 
 	/* Configure edge or level trigger in EDGLEVEL */
-	gpio_rcar_modify_bit(p, EDGLEVEL, hwirq, !level_trigger);
+	gpio_rcar_modify_bit(p, reg[EDGLEVEL], hwirq, !level_trigger);
 
 	/* Select one edge or both edges in BOTHEDGE */
 	if (p->info.has_both_edge_trigger)
-		gpio_rcar_modify_bit(p, BOTHEDGE, hwirq, both);
+		gpio_rcar_modify_bit(p, reg[BOTHEDGE], hwirq, both);
 
 	/* Select "Input Enable/Disable" in INEN */
 	if (p->info.has_inen)
-		gpio_rcar_modify_bit(p, INEN, hwirq, true);
+		gpio_rcar_modify_bit(p, reg[INEN], hwirq, true);
 
 	/* Select "Interrupt Input Mode" in IOINTSEL */
-	gpio_rcar_modify_bit(p, IOINTSEL, hwirq, true);
+	gpio_rcar_modify_bit(p, reg[IOINTSEL], hwirq, true);
 
 	/* Write INTCLR in case of edge trigger */
 	if (!level_trigger)
-		gpio_rcar_write(p, INTCLR, BIT(hwirq));
+		gpio_rcar_write(p, reg[INTCLR], BIT(hwirq));
 
 	raw_spin_unlock_irqrestore(&p->lock, flags);
 }
@@ -225,11 +248,12 @@ static irqreturn_t gpio_rcar_irq_handler(int irq, void *dev_id)
 	struct gpio_rcar_priv *p = dev_id;
 	u32 pending;
 	unsigned int offset, irqs_handled = 0;
+	const u32 *reg = p->info.reg;
 
-	while ((pending = gpio_rcar_read(p, INTDT) &
-			  gpio_rcar_read(p, INTMSK))) {
+	while ((pending = gpio_rcar_read(p, reg[INTDT]) &
+			  gpio_rcar_read(p, reg[INTMSK]))) {
 		offset = __ffs(pending);
-		gpio_rcar_write(p, INTCLR, BIT(offset));
+		gpio_rcar_write(p, reg[INTCLR], BIT(offset));
 		generic_handle_domain_irq(p->gpio_chip.irq.domain,
 					  offset);
 		irqs_handled++;
@@ -244,6 +268,7 @@ static void gpio_rcar_config_general_input_output_mode(struct gpio_chip *chip,
 {
 	struct gpio_rcar_priv *p = gpiochip_get_data(chip);
 	unsigned long flags;
+	const u32 *reg = p->info.reg;
 
 	/* follow steps in the GPIO documentation for
 	 * "Setting General Output Mode" and
@@ -253,21 +278,21 @@ static void gpio_rcar_config_general_input_output_mode(struct gpio_chip *chip,
 	raw_spin_lock_irqsave(&p->lock, flags);
 
 	/* Configure positive logic in POSNEG */
-	gpio_rcar_modify_bit(p, POSNEG, gpio, false);
+	gpio_rcar_modify_bit(p, reg[POSNEG], gpio, false);
 
 	/* Select "Input Enable/Disable" in INEN */
 	if (p->info.has_inen)
-		gpio_rcar_modify_bit(p, INEN, gpio, !output);
+		gpio_rcar_modify_bit(p, reg[INEN], gpio, !output);
 
 	/* Select "General Input/Output Mode" in IOINTSEL */
-	gpio_rcar_modify_bit(p, IOINTSEL, gpio, false);
+	gpio_rcar_modify_bit(p, reg[IOINTSEL], gpio, false);
 
 	/* Select Input Mode or Output Mode in INOUTSEL */
-	gpio_rcar_modify_bit(p, INOUTSEL, gpio, output);
+	gpio_rcar_modify_bit(p, reg[INOUTSEL], gpio, output);
 
 	/* Select General Output Register to output data in OUTDTSEL */
 	if (p->info.has_outdtsel && output)
-		gpio_rcar_modify_bit(p, OUTDTSEL, gpio, false);
+		gpio_rcar_modify_bit(p, reg[OUTDTSEL], gpio, false);
 
 	raw_spin_unlock_irqrestore(&p->lock, flags);
 }
@@ -308,8 +333,9 @@ static void gpio_rcar_free(struct gpio_chip *chip, unsigned offset)
 static int gpio_rcar_get_direction(struct gpio_chip *chip, unsigned int offset)
 {
 	struct gpio_rcar_priv *p = gpiochip_get_data(chip);
+	const u32 *reg = p->info.reg;
 
-	if (gpio_rcar_read(p, INOUTSEL) & BIT(offset))
+	if (gpio_rcar_read(p, reg[INOUTSEL]) & BIT(offset))
 		return GPIO_LINE_DIRECTION_OUT;
 
 	return GPIO_LINE_DIRECTION_IN;
@@ -325,16 +351,17 @@ static int gpio_rcar_get(struct gpio_chip *chip, unsigned offset)
 {
 	struct gpio_rcar_priv *p = gpiochip_get_data(chip);
 	u32 bit = BIT(offset);
+	const u32 *reg = p->info.reg;
 
 	/*
 	 * Get pin state:
 	 * - Input:  read INDT.
 	 * - Output: read OUTDT.
 	 */
-	if (gpio_rcar_read(p, INOUTSEL) & bit)
-		return !!(gpio_rcar_read(p, OUTDT) & bit);
+	if (gpio_rcar_read(p, reg[INOUTSEL]) & bit)
+		return !!(gpio_rcar_read(p, reg[OUTDT]) & bit);
 	else
-		return !!(gpio_rcar_read(p, INDT) & bit);
+		return !!(gpio_rcar_read(p, reg[INDT]) & bit);
 }
 
 static int gpio_rcar_get_multiple(struct gpio_chip *chip, unsigned long *mask,
@@ -343,6 +370,7 @@ static int gpio_rcar_get_multiple(struct gpio_chip *chip, unsigned long *mask,
 	struct gpio_rcar_priv *p = gpiochip_get_data(chip);
 	u32 bankmask, outputs, m, val = 0;
 	unsigned long flags;
+	const u32 *reg = p->info.reg;
 
 	bankmask = mask[0] & GENMASK(chip->ngpio - 1, 0);
 	if (chip->valid_mask)
@@ -352,19 +380,19 @@ static int gpio_rcar_get_multiple(struct gpio_chip *chip, unsigned long *mask,
 		return 0;
 
 	if (p->info.has_always_in) {
-		bits[0] = gpio_rcar_read(p, INDT) & bankmask;
+		bits[0] = gpio_rcar_read(p, reg[INDT]) & bankmask;
 		return 0;
 	}
 
 	raw_spin_lock_irqsave(&p->lock, flags);
-	outputs = gpio_rcar_read(p, INOUTSEL);
+	outputs = gpio_rcar_read(p, reg[INOUTSEL]);
 	m = outputs & bankmask;
 	if (m)
-		val |= gpio_rcar_read(p, OUTDT) & m;
+		val |= gpio_rcar_read(p, reg[OUTDT]) & m;
 
 	m = ~outputs & bankmask;
 	if (m)
-		val |= gpio_rcar_read(p, INDT) & m;
+		val |= gpio_rcar_read(p, reg[INDT]) & m;
 	raw_spin_unlock_irqrestore(&p->lock, flags);
 
 	bits[0] = val;
@@ -375,9 +403,10 @@ static void gpio_rcar_set(struct gpio_chip *chip, unsigned offset, int value)
 {
 	struct gpio_rcar_priv *p = gpiochip_get_data(chip);
 	unsigned long flags;
+	const u32 *reg = p->info.reg;
 
 	raw_spin_lock_irqsave(&p->lock, flags);
-	gpio_rcar_modify_bit(p, OUTDT, offset, value);
+	gpio_rcar_modify_bit(p, reg[OUTDT], offset, value);
 	raw_spin_unlock_irqrestore(&p->lock, flags);
 }
 
@@ -387,6 +416,7 @@ static void gpio_rcar_set_multiple(struct gpio_chip *chip, unsigned long *mask,
 	struct gpio_rcar_priv *p = gpiochip_get_data(chip);
 	unsigned long flags;
 	u32 val, bankmask;
+	const u32 *reg = p->info.reg;
 
 	bankmask = mask[0] & GENMASK(chip->ngpio - 1, 0);
 	if (chip->valid_mask)
@@ -396,10 +426,10 @@ static void gpio_rcar_set_multiple(struct gpio_chip *chip, unsigned long *mask,
 		return;
 
 	raw_spin_lock_irqsave(&p->lock, flags);
-	val = gpio_rcar_read(p, OUTDT);
+	val = gpio_rcar_read(p, reg[OUTDT]);
 	val &= ~bankmask;
 	val |= (bankmask & bits[0]);
-	gpio_rcar_write(p, OUTDT, val);
+	gpio_rcar_write(p, reg[OUTDT], val);
 	raw_spin_unlock_irqrestore(&p->lock, flags);
 }
 
@@ -417,6 +447,7 @@ static const struct gpio_rcar_info gpio_rcar_info_gen1 = {
 	.has_both_edge_trigger = false,
 	.has_always_in = false,
 	.has_inen = false,
+	.reg = rcar_reg,
 };
 
 static const struct gpio_rcar_info gpio_rcar_info_gen2 = {
@@ -424,6 +455,7 @@ static const struct gpio_rcar_info gpio_rcar_info_gen2 = {
 	.has_both_edge_trigger = true,
 	.has_always_in = false,
 	.has_inen = false,
+	.reg = rcar_reg,
 };
 
 static const struct gpio_rcar_info gpio_rcar_info_gen3 = {
@@ -431,6 +463,7 @@ static const struct gpio_rcar_info gpio_rcar_info_gen3 = {
 	.has_both_edge_trigger = true,
 	.has_always_in = true,
 	.has_inen = false,
+	.reg = rcar_reg,
 };
 
 static const struct gpio_rcar_info gpio_rcar_info_gen4 = {
@@ -438,6 +471,7 @@ static const struct gpio_rcar_info gpio_rcar_info_gen4 = {
 	.has_both_edge_trigger = true,
 	.has_always_in = true,
 	.has_inen = true,
+	.reg = rcar_reg,
 };
 
 static const struct of_device_id gpio_rcar_of_table[] = {
@@ -496,12 +530,13 @@ static int gpio_rcar_parse_dt(struct gpio_rcar_priv *p, unsigned int *npins)
 static void gpio_rcar_enable_inputs(struct gpio_rcar_priv *p)
 {
 	u32 mask = GENMASK(p->gpio_chip.ngpio - 1, 0);
+	const u32 *reg = p->info.reg;
 
 	/* Select "Input Enable" in INEN */
 	if (p->gpio_chip.valid_mask)
 		mask &= p->gpio_chip.valid_mask[0];
 	if (mask)
-		gpio_rcar_write(p, INEN, gpio_rcar_read(p, INEN) | mask);
+		gpio_rcar_write(p, reg[INEN], gpio_rcar_read(p, reg[INEN]) | mask);
 }
 
 static int gpio_rcar_probe(struct platform_device *pdev)
@@ -610,15 +645,16 @@ static void gpio_rcar_remove(struct platform_device *pdev)
 static int gpio_rcar_suspend(struct device *dev)
 {
 	struct gpio_rcar_priv *p = dev_get_drvdata(dev);
+	const u32 *reg = p->info.reg;
 
-	p->bank_info.iointsel = gpio_rcar_read(p, IOINTSEL);
-	p->bank_info.inoutsel = gpio_rcar_read(p, INOUTSEL);
-	p->bank_info.outdt = gpio_rcar_read(p, OUTDT);
-	p->bank_info.intmsk = gpio_rcar_read(p, INTMSK);
-	p->bank_info.posneg = gpio_rcar_read(p, POSNEG);
-	p->bank_info.edglevel = gpio_rcar_read(p, EDGLEVEL);
+	p->bank_info.iointsel = gpio_rcar_read(p, reg[IOINTSEL]);
+	p->bank_info.inoutsel = gpio_rcar_read(p, reg[INOUTSEL]);
+	p->bank_info.outdt = gpio_rcar_read(p, reg[OUTDT]);
+	p->bank_info.intmsk = gpio_rcar_read(p, reg[INTMSK]);
+	p->bank_info.posneg = gpio_rcar_read(p, reg[POSNEG]);
+	p->bank_info.edglevel = gpio_rcar_read(p, reg[EDGLEVEL]);
 	if (p->info.has_both_edge_trigger)
-		p->bank_info.bothedge = gpio_rcar_read(p, BOTHEDGE);
+		p->bank_info.bothedge = gpio_rcar_read(p, reg[BOTHEDGE]);
 
 	if (atomic_read(&p->wakeup_path))
 		device_set_wakeup_path(dev);
@@ -631,6 +667,7 @@ static int gpio_rcar_resume(struct device *dev)
 	struct gpio_rcar_priv *p = dev_get_drvdata(dev);
 	unsigned int offset;
 	u32 mask;
+	const u32 *reg = p->info.reg;
 
 	for (offset = 0; offset < p->gpio_chip.ngpio; offset++) {
 		if (!gpiochip_line_is_valid(&p->gpio_chip, offset))
@@ -656,7 +693,7 @@ static int gpio_rcar_resume(struct device *dev)
 				!!(p->bank_info.bothedge & mask));
 
 			if (p->bank_info.intmsk & mask)
-				gpio_rcar_write(p, MSKCLR, mask);
+				gpio_rcar_write(p, reg[MSKCLR], mask);
 		}
 	}
 
