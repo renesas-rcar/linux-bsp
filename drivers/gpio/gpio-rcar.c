@@ -67,6 +67,23 @@ enum gpio_reg_ids {
 	INEN,
 };
 
+static u32 r8a78000_reg[] = {
+	[IOINTSEL]	= 0x00,		/* General IO/Interrupt Switching Register */
+	[INOUTSEL]	= 0x04,		/* General Input/Output Switching Register */
+	[OUTDT]		= 0x08,		/* General Output Register */
+	[INDT]		= 0x1c,		/* General Input Register */
+	[INTDT]		= 0x80,		/* Interrupt Display Register */
+	[INTCLR]	= 0x84,		/* Interrupt Clear Register */
+	[INTMSK]	= 0x88,		/* Interrupt Mask Register */
+	[MSKCLR]	= 0x8c,		/* Interrupt Mask Clear Register */
+	[POSNEG]	= 0x90,		/* Positive/Negative Logic Select Register */
+	[EDGLEVEL]	= 0x94,		/* Edge/level Select Register */
+	[FILONOFF]	= 0x98,		/* Chattering Prevention On/Off Register */
+	[OUTDTSEL]	= 0x0c,		/* Output Data Select Register */
+	[BOTHEDGE]	= 0xbc,		/* One Edge/Both Edge Select Register */
+	[INEN]		= 0x18,		/* General Input Enable Register */
+};
+
 static u32 rcar_reg[] = {
 	[IOINTSEL]	= 0x00,		/* General IO/Interrupt Switching Register */
 	[INOUTSEL]	= 0x04,		/* General Input/Output Switching Register */
@@ -474,6 +491,14 @@ static const struct gpio_rcar_info gpio_rcar_info_gen4 = {
 	.reg = rcar_reg,
 };
 
+static const struct gpio_rcar_info gpio_rcar_info_gen5 = {
+	.has_outdtsel = true,
+	.has_both_edge_trigger = true,
+	.has_always_in = true,
+	.has_inen = true,
+	.reg = r8a78000_reg,
+};
+
 static const struct of_device_id gpio_rcar_of_table[] = {
 	{
 		.compatible = "renesas,gpio-r8a779a0",
@@ -490,6 +515,9 @@ static const struct of_device_id gpio_rcar_of_table[] = {
 	}, {
 		.compatible = "renesas,rcar-gen4-gpio",
 		.data = &gpio_rcar_info_gen4,
+	}, {
+		.compatible = "renesas,rcar-gen5-gpio",
+		.data = &gpio_rcar_info_gen5,
 	}, {
 		.compatible = "renesas,gpio-rcar",
 		.data = &gpio_rcar_info_gen1,
