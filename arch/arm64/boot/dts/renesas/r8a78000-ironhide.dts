@@ -7,6 +7,7 @@
 
 /dts-v1/;
 #include "r8a78000.dtsi"
+#include <dt-bindings/net/ti-dp83869.h>
 
 / {
 	model = "Renesas Ironhide board based on r8a78000";
@@ -146,6 +147,18 @@
 };
 
 &pfc {
+	eth25g2_pins: eth25g2 {
+		groups = "eth25g2_mdio", "eth25g2_link", "eth25g2_phyint";
+		function = "eth25g2";
+		drive-strength = <24>;
+	};
+
+	ethes0_pins: ethes0 {
+		groups = "ethes0_match", "ethes0_capture", "ethes0_pps";
+		function = "ethes0";
+		drive-strength = <24>;
+	};
+
 	hscif0_pins: hscif0 {
 		groups = "hscif0_data", "hscif0_ctrl";
 		function = "hscif0";
@@ -159,6 +172,59 @@
 	i2c1_pins: i2c1 {
 		groups = "i2c1";
 		function = "i2c1";
+	};
+
+	rsw3_pins: rsw3 {
+		groups = "rsw3_match", "rsw3_capture", "rsw3_pps";
+		function = "rsw3";
+		drive-strength = <24>;
+	};
+};
+
+&rsw3_clk {
+	clock-frequency = <66660000>;
+};
+
+&rswitch3 {
+	status = "okay";
+	pinctrl-0 = <&rsw3_pins>, <&eth25g2_pins>, <&ethes0_pins>;
+	pinctrl-names = "default";
+
+	ethernet-ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		// TODO: Add more ports (e.g., port@0, port@5) as needed
+		port@5 {
+			reg = <5>;
+			renesas,etha-mii-chan = <4>;
+			renesas,connect_to_xpcs;
+			phy-handle = <&dp83869_phy>;
+			phy-mode = "sgmii";
+			phys = <&eth_pcs 5>;
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				dp83869_phy: ethernet-phy@2 {
+					reg = <2>;
+					ti,sgmii-interface;
+					ti,max-output-impedance;
+					ti,refclk-output-enable;
+					ti,clk-output-sel = <DP83869_CLK_O_SEL_REF_CLK>;
+				};
+			};
+		};
+
+		/* Example stub for future ports */
+		//	port@5 {
+		//	reg = <5>;
+		//	phy-handle = <&mv_phy5>;
+		//	phy-mode = "usxgmii";
+		//	local-mac-address = [xx xx xx xx xx xx];
+		//	phys = <&eth_pcs X>;
+		//	...
+		// };
 	};
 };
 
