@@ -504,6 +504,12 @@
 		clock-output-names = "watchdog";
 	};
 
+	rsw3_clk: rsw3_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	/* External SCIF clock - to be overridden by boards that provide it */
 	scif_clk: scif {
 		compatible = "fixed-clock";
@@ -931,6 +937,151 @@
 			compatible = "renesas,multi-protocol-phy";
 			reg = <0 0xc9a00000 0 0x100000>;
 			#phy-cells = <2>;
+			status = "disabled";
+		};
+
+		rswitch3: ethernet@c9bc0000 {
+			compatible = "renesas,r8a78000-ether-switch";
+			reg = <0 0xc9bc0000 0 0x0040000>,  // base
+				  <0 0xc9b80000 0 0x00240000>; // secure_base
+			reg-names = "base", "secure_base";
+			interrupts = <GIC_SPI 799 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 800 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 801 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 802 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 803 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 804 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 805 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 806 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 807 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 808 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 809 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 810 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 811 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 812 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 813 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 814 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 815 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 816 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 817 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 818 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 819 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 820 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 821 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 822 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 823 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 824 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 825 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 826 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 827 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 828 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 829 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 830 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 831 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 832 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 833 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 834 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 835 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 836 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 837 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 838 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 839 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 840 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 841 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 842 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 843 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 844 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 845 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 846 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 847 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 848 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 849 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 850 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 851 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 852 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 853 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 854 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 855 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 857 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 858 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 859 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 860 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 861 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 862 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 863 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 864 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 865 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 866 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 867 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 868 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 869 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 870 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 871 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 872 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 873 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 874 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 875 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 876 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 877 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 878 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 879 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 880 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 881 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 882 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 883 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 884 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 885 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 886 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 887 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 888 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 889 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 890 IRQ_TYPE_LEVEL_HIGH>,
+				 <GIC_SPI 891 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names =
+				"race_wrap_mfwd_int", "race_wrap_race_int",
+				"race_wrap_coma_int", "race_wrap_gwca0_int",
+				"race_wrap_gwca1_int", "race_wrap_etha0_int",
+				"race_wrap_etha1_int", "race_wrap_etha2_int",
+				"race_wrap_etha3_int", "race_wrap_etha4_int",
+				"race_wrap_etha5_int", "race_wrap_etha6_int",
+				"race_wrap_etha7_int", "race_wrap_etha8_int",
+				"race_wrap_etha9_int", "race_wrap_etha10_int",
+				"race_wrap_etha11_int", "race_wrap_etha12_int",
+				"race_wrap_gwca0_gwdis_int0", "race_wrap_gwca0_gwdis_int1",
+				"race_wrap_gwca0_gwdis_int2", "race_wrap_gwca0_gwdis_int3",
+				"race_wrap_gwca0_gwdis_int4", "race_wrap_gwca0_gwdis_int5",
+				"race_wrap_gwca0_gwdis_int6", "race_wrap_gwca0_gwdis_int7",
+				"gwca1_gwdis0", "gwca1_gwdis1", "gwca1_gwdis2", "gwca1_gwdis3",
+				"gwca1_gwdis4", "gwca1_gwdis5", "gwca1_gwdis6", "gwca1_gwdis7",
+				"race_wrap_gwca0_gwtsdis_int0", "race_wrap_gwca0_gwtsdis_int1",
+				"race_wrap_gwca1_gwtsdis_int0", "race_wrap_gwca1_gwtsdis_int1",
+				"race_wrap_gptp_int",
+				"tes0_status_int", "tes0_tx_int", "tes0_rx_int", "tes0_ts_int",
+				"tes0_error_int", "tes1_status_int", "tes1_tx_int",
+				"tes1_rx_int", "tes1_ts_int", "tes1_error_int",
+				"tes2_status_int", "tes2_tx_int", "tes2_rx_int",
+				"tes2_ts_int", "tes2_error_int", "tes3_status_int",
+				"tes3_tx_int", "tes3_rx_int", "tes3_ts_int", "tes3_error_int",
+				"tes4_status_int", "tes4_tx_int", "tes4_rx_int", "tes4_ts_int",
+				"tes4_error_int", "tes5_status_int", "tes5_tx_int",
+				"tes5_rx_int", "tes5_ts_int", "tes5_error_int",
+				"tes6_status_int", "tes6_tx_int", "tes6_rx_int",
+				"tes6_ts_int", "tes6_error_int", "tes7_status_int",
+				"tes7_tx_int", "tes7_rx_int", "tes7_ts_int", "tes7_error_int",
+				"tes0_gptp_int", "tes1_gptp_int", "tes2_gptp_int",
+				"tes3_gptp_int", "tes4_gptp_int", "tes5_gptp_int",
+				"tes6_gptp_int", "tes7_gptp_int",
+				"race_wrap_msc0_error_int", "race_wrap_msc1_error_int",
+				"race_wrap_msc2_error_int", "race_wrap_msc3_error_int",
+				"race_wrap_msc4_error_int", "race_wrap_msc5_error_int",
+				"race_wrap_msc6_error_int", "race_wrap_msc7_error_int";
+
+			clocks = <&rsw3_clk>;
+			clock-names = "rsw3";
+			// TODO: Add reset reference if needed
+			// resets = <&cpg RSW3_RST>;
+
 			status = "disabled";
 		};
 
