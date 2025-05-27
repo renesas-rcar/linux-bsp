@@ -926,6 +926,13 @@
 			compatible = "renesas,r8a78000-rst";
 			reg = <0 0xc1320000 0 0x4000>;
 		};
+
+		mp_phy: mp_phy@c9a00000 {
+			compatible = "renesas,multi-protocol-phy";
+			reg = <0 0xc9a00000 0 0x100000>;
+			#phy-cells = <2>;
+			status = "disabled";
+		};
 	};
 
 	timer {
