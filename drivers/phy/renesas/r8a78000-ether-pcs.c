@@ -1,0 +1,569 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Renesas Ethernet PCS Device Driver
+ *
+ * Based on the Renesas Ethernet SERDES driver and updated for PCS support.
+ *
+ * Copyright (C) 2025 Renesas Electronics Corporation
+ */
+
+#include <linux/delay.h>
+#include <linux/err.h>
+#include <linux/iopoll.h>
+#include <linux/kernel.h>
+#include <linux/phy.h>
+#include <linux/phy/phy.h>
+#include <linux/platform_device.h>
+#include <linux/reset.h>
+
+/* Hardcoded for enable module clock */
+#define MDLC_BASE		0xc9c90000
+#define R8A78000_ETH_PCS_PDID		(0)
+#define R8A78000_ETH_PCS_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define R8A78000_ETH_PCS_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MPDG		_MDLC_MPDG(R8A78000_ETH_PCS_PDID)
+#define MDLC_MPDGS		_MDLC_MPDGS(R8A78000_ETH_PCS_PDID)
+
+#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
+
+static void r8a78000_eth_pcs_module_power_gating_set(u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
+	void __iomem *mpdg = ioremap(MDLC_MPDG, 4);
+	void __iomem *mpdgs = ioremap(MDLC_MPDGS, 4);
+	void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
+	void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(mpdgs) & 0x03) == mode)
+			goto unmap;
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(0, mpier0);
+	writel(0x1, mpimr0);
+
+	writel(0x1, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(mode, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(mpdg);
+	iounmap(mpdgs);
+	iounmap(mpier0);
+	iounmap(mpimr0);
+}
+
+static void r8a78000_eth_pcs_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(msress) & R8A78000_ETH_PCS_CLK_MASK(pos)) == (mode <<
+								 R8A78000_ETH_PCS_CLK_SHIFT(pos)))
+			goto unmap;
+
+	while ((readl(msress) & R8A78000_ETH_PCS_CLK_MASK(pos)) != (readl(msres) &
+								    R8A78000_ETH_PCS_CLK_MASK(pos)))
+			udelay(1000);
+
+	val = readl(msres);
+	val &= ~R8A78000_ETH_PCS_CLK_MASK(pos);
+	val |= mode << R8A78000_ETH_PCS_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & R8A78000_ETH_PCS_CLK_MASK(pos)) != (readl(msres) &
+								    R8A78000_ETH_PCS_CLK_MASK(pos)))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+static void r8a78000_eth_pcs_module_reset(void)
+{
+	int i;
+
+	for (i = 0; i < 8; i++)
+		r8a78000_eth_pcs_module_standy_set(3, i * 2, 0x01);
+}
+
+static void r8a78000_eth_pcs_module_run(void)
+{
+	int i;
+
+	for (i = 0; i < 8; i++)
+		r8a78000_eth_pcs_module_standy_set(3, i * 2, 0x03);
+}
+//----------------------------------------------------------------
+
+#define R8A78000_ETH_PCS_NUM				8
+#define R8A78000_ETH_PCS_OFFSET				0x0400
+#define R8A78000_ETH_PCS_BANK_SELECT		0x03fc
+#define R8A78000_ETH_PCS_TIMEOUT_US			100000000
+#define R8A78000_ETH_PCS_NUM_RETRY_LINKUP	8
+
+struct r8a78000_eth_pcs_drv_data;
+struct r8a78000_eth_pcs_channel {
+	struct r8a78000_eth_pcs_drv_data *dd;
+	struct phy *phy;
+	void __iomem *addr;
+	phy_interface_t phy_interface;
+	bool aneg_on;
+	int speed;
+	int index;
+	bool powered_on;
+};
+
+struct r8a78000_eth_pcs_drv_data {
+	void __iomem *addr;
+	struct platform_device *pdev;
+	struct reset_control *reset;
+	struct phy *mpphy;
+	struct r8a78000_eth_pcs_channel channel[R8A78000_ETH_PCS_NUM];
+};
+
+static void r8a78000_eth_pcs_write32(void __iomem *addr, u32 offs, u32 bank, u32 data)
+{
+	iowrite32(bank, addr + R8A78000_ETH_PCS_BANK_SELECT);
+	iowrite32(data, addr + offs);
+}
+
+static int
+r8a78000_eth_pcs_reg_wait(struct r8a78000_eth_pcs_channel *channel,
+			     u32 offs, u32 bank, u32 mask, u32 expected)
+{
+	u32 val = 0;
+	int ret;
+
+	iowrite32(bank, channel->addr + R8A78000_ETH_PCS_BANK_SELECT);
+
+	ret = readl_poll_timeout_atomic(channel->addr + offs, val,
+				(val & mask) == expected,
+				 1, R8A78000_ETH_PCS_TIMEOUT_US);
+	if (ret)
+		dev_dbg(&channel->phy->dev,
+			"%s: index %d, offs %x, bank %x, mask %x, expected %x\n",
+			 __func__, channel->index, offs, bank, mask, expected);
+
+	return ret;
+}
+
+static int
+r8a78000_eth_pcs_init_ram(struct r8a78000_eth_pcs_channel *channel, struct phy *mpphy)
+{
+	int ret;
+
+	ret = r8a78000_eth_pcs_reg_wait(channel, 0x026c, 0x180, BIT(0), 0x01);
+	if (ret)
+		return ret;
+
+	r8a78000_eth_pcs_write32(channel, 0x026c, 0x180, 0x03);
+
+	ret = phy_power_on(mpphy);
+	udelay(1000);
+
+	if (ret)
+		return ret;
+
+	ret = r8a78000_eth_pcs_reg_wait(channel, 0x0000, 0x300, BIT(15), 0);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+static int r8a78000_eth_pcs_common_setting(struct r8a78000_eth_pcs_channel *channel)
+{
+	int ret;
+
+	switch (channel->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
+		r8a78000_eth_pcs_write32(channel->addr, 0x001c, 0x300, 0x0001);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x380, 0x2000);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x1f00, 0x0140);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0258, 0x180, 0x0018);
+		r8a78000_eth_pcs_write32(channel->addr, 0x01dc, 0x180, 0x000d);
+		r8a78000_eth_pcs_write32(channel->addr, 0x00f8, 0x180, 0x0016);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0248, 0x180, 0x0016);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x300, 0x0c40);
+
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0040, 0x380, GENMASK(4, 2), 0x06 << 2);
+		if (ret)
+			return ret;
+
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x300, 0x0440);
+
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0040, 0x380, GENMASK(4, 2), 0x04 << 2);
+		if (ret)
+			return ret;
+
+		r8a78000_eth_pcs_write32(channel->addr, 0x0014, 0x380, 0x0050);
+		r8a78000_eth_pcs_write32(channel->addr, 0x00d8, 0x180, 0x3000);
+		r8a78000_eth_pcs_write32(channel->addr, 0x00dc, 0x180, 0x0000);
+
+		return 0;
+
+	case PHY_INTERFACE_MODE_USXGMII:
+		r8a78000_eth_pcs_write32(channel->addr, 0x001c, 0x300, 0x0000);
+		r8a78000_eth_pcs_write32(channel->addr, 0x001c, 0x380, 0x0000);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x380, 0x2200);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0258, 0x180, 0x0018);
+		r8a78000_eth_pcs_write32(channel->addr, 0x01dc, 0x180, 0x000d);
+		r8a78000_eth_pcs_write32(channel->addr, 0x00f8, 0x180, 0x001b);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0248, 0x180, 0x001b);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x300, 0x0c40);
+
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0040, 0x380, GENMASK(4, 2), 0x06 << 2);
+		if (ret)
+			return ret;
+
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x300, 0x0440);
+
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0040, 0x380, GENMASK(4, 2), 0x04 << 2);
+		if (ret)
+			return ret;
+
+		r8a78000_eth_pcs_write32(channel->addr, 0x0014, 0x380, 0x0050);
+		r8a78000_eth_pcs_write32(channel->addr, 0x00d8, 0x180, 0x1800);
+		r8a78000_eth_pcs_write32(channel->addr, 0x00dc, 0x180, 0x0012);
+
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0080, 0x180, BIT(12), BIT(12));
+		if (ret)
+			return ret;
+
+		r8a78000_eth_pcs_write32(channel->addr, 0x0170, 0x180, 0x1000);
+
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0260, 0x180, BIT(12), BIT(12));
+		if (ret)
+			return ret;
+
+		r8a78000_eth_pcs_write32(channel->addr, 0x0170, 0x180, 0x0000);
+
+		return 0;
+
+	default:
+		return -EOPNOTSUPP;
+	}
+}
+
+static int
+r8a78000_eth_pcs_chan_setting(struct r8a78000_eth_pcs_channel *channel)
+{
+	int ret;
+
+	switch (channel->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
+		if (!channel->aneg_on)
+			return 0;
+
+		/* For AN_ON */
+		r8a78000_eth_pcs_write32(channel->addr, 0x0004, 0x1f80, 0x0005);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x1f80, 0x2200);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x1f00, 0x3140);
+
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0008, 0x1f80, BIT(0), BIT(0));
+		if (ret)
+			return ret;
+
+		break;
+	case PHY_INTERFACE_MODE_USXGMII:
+		if (!channel->aneg_on)
+			return 0;
+		/* For AN_ON */
+		r8a78000_eth_pcs_write32(channel->addr, 0x0004, 0x1f80, 0x0001);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0028, 0x1f80, 0x0001);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x1f80, 0x2008);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x1f00, 0x3140);
+
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0008, 0x1f80, BIT(0), BIT(0));
+		if (ret)
+			return ret;
+
+		r8a78000_eth_pcs_write32(channel->addr, 0x0008, 0x1f80, 0x0000);
+
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+
+	return 0;
+}
+
+static int
+r8a78000_eth_pcs_chan_speed(struct r8a78000_eth_pcs_channel *channel)
+{
+	int ret;
+
+	switch (channel->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
+		/* Do nothing */
+		break;
+	case PHY_INTERFACE_MODE_USXGMII:
+		if (channel->speed == 10000)
+			r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x1f00, 0x2140);
+		else if (channel->speed == 2500)
+			r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x1f00, 0x0120);
+		else
+			return -EOPNOTSUPP;
+
+		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x380, 0x2600);
+
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0000, 0x380, BIT(10), 0);
+		if (ret)
+			return ret;
+
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+
+	return 0;
+}
+
+static int r8a78000_eth_pcs_monitor_linkup(struct r8a78000_eth_pcs_channel *channel)
+{
+	int i, ret;
+
+	for (i = 0; i < R8A78000_ETH_PCS_NUM_RETRY_LINKUP; i++) {
+		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0004, 0x300,
+						   BIT(2), BIT(2));
+		if (!ret)
+			break;
+
+		/* restart */
+		r8a78000_eth_pcs_write32(channel->addr, 0x0144, 0x180, 0x0010);
+		udelay(1);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0144, 0x180, 0x0000);
+	}
+
+	return ret;
+}
+
+static int r8a78000_eth_pcs_init(struct phy *p)
+{
+	struct r8a78000_eth_pcs_channel *channel = phy_get_drvdata(p);
+	int ret;
+
+	ret = phy_init(channel->dd->mpphy);
+	if (ret) {
+		pr_info("XPCS: Failed to init mphy\n");
+		return ret;
+	}
+
+	ret = r8a78000_eth_pcs_init_ram(channel, channel->dd->mpphy);
+	if (ret)
+		return ret;
+
+	ret = r8a78000_eth_pcs_common_setting(channel);
+
+	return ret;
+}
+
+
+static int r8a78000_eth_pcs_exit(struct phy *p)
+{
+	return 0;
+}
+
+static int r8a78000_eth_pcs_hw_init_late(struct r8a78000_eth_pcs_channel *channel)
+{
+	int ret;
+
+	ret = r8a78000_eth_pcs_chan_setting(channel);
+	if (ret)
+		return ret;
+
+	ret = r8a78000_eth_pcs_chan_speed(channel);
+	if (ret)
+		return ret;
+
+	r8a78000_eth_pcs_write32(channel->addr, 0x03c0, 0x380, 0x0000);
+	r8a78000_eth_pcs_write32(channel->addr, 0x03d0, 0x380, 0x0000);
+
+	return r8a78000_eth_pcs_monitor_linkup(channel);
+}
+
+static int r8a78000_eth_pcs_power_on(struct phy *p)
+{
+	struct r8a78000_eth_pcs_channel *channel = phy_get_drvdata(p);
+
+	if (channel->powered_on)
+		return 0;
+
+	int ret = r8a78000_eth_pcs_hw_init_late(channel);
+	if (ret)
+		return ret;
+
+	channel->powered_on = true;
+
+	return 0;
+}
+
+static int r8a78000_eth_pcs_power_off(struct phy *p)
+{
+	struct r8a78000_eth_pcs_channel *channel = phy_get_drvdata(p);
+	channel->powered_on = false;
+	return 0;
+}
+
+static int r8a78000_eth_pcs_set_mode(struct phy *p, enum phy_mode mode,
+					int submode)
+{
+	struct r8a78000_eth_pcs_channel *channel = phy_get_drvdata(p);
+
+	if (mode != PHY_MODE_ETHERNET)
+		return -EOPNOTSUPP;
+
+	switch (submode) {
+	case PHY_INTERFACE_MODE_GMII:
+	case PHY_INTERFACE_MODE_SGMII:
+	case PHY_INTERFACE_MODE_USXGMII:
+		channel->phy_interface = submode;
+		return 0;
+	default:
+		return -EOPNOTSUPP;
+	}
+}
+
+static int r8a78000_eth_pcs_set_speed(struct phy *p, int speed)
+{
+	struct r8a78000_eth_pcs_channel *channel = phy_get_drvdata(p);
+
+	channel->speed = speed;
+
+	return 0;
+}
+
+static const struct phy_ops r8a78000_eth_pcs_ops = {
+	.init		= r8a78000_eth_pcs_init,
+	.exit		= r8a78000_eth_pcs_exit,
+	.power_on	= r8a78000_eth_pcs_power_on,
+	.power_off  	= r8a78000_eth_pcs_power_off,
+	.set_mode	= r8a78000_eth_pcs_set_mode,
+	.set_speed	= r8a78000_eth_pcs_set_speed,
+};
+
+static struct phy *r8a78000_eth_pcs_xlate(struct device *dev,
+					     struct of_phandle_args *args)
+{
+	struct r8a78000_eth_pcs_drv_data *dd = dev_get_drvdata(dev);
+
+	if (args->args[0] >= R8A78000_ETH_PCS_NUM)
+		return ERR_PTR(-ENODEV);
+
+	return dd->channel[args->args[0]].phy;
+}
+
+static const struct of_device_id r8a78000_eth_pcs_of_table[] = {
+	{ .compatible = "renesas,r8a78000-ether-pcs", },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, r8a78000_eth_pcs_of_table);
+
+static int r8a78000_eth_pcs_probe(struct platform_device *pdev)
+{
+	struct r8a78000_eth_pcs_drv_data *dd;
+	struct resource *res;
+	struct phy_provider *provider;
+	int i, ret;
+
+	dd = devm_kzalloc(&pdev->dev, sizeof(*dd), GFP_KERNEL);
+	if (!dd)
+		return -ENOMEM;
+
+	platform_set_drvdata(pdev, dd);
+	dd->pdev = pdev;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res)
+		return -EINVAL;
+
+	dd->addr = devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!dd->addr)
+		return -ENOMEM;
+
+	/* Get Multi-Protocol PHY (mmphy) */
+	dd->mpphy = devm_of_phy_get_by_index(&pdev->dev, pdev->dev.of_node, 0);
+	if (IS_ERR(dd->mpphy)) {
+		ret = PTR_ERR(dd->mpphy);
+		if (ret == -EPROBE_DEFER)
+			dev_dbg(&pdev->dev, "PCS: mmphy not ready, defer probe\n");
+		else
+			dev_err(&pdev->dev, "PCS: Failed to get mmphy: %d\n", ret);
+		return ret;
+	}
+
+	/* Create PHY channels */
+	for (i = 0; i < R8A78000_ETH_PCS_NUM; i++) {
+		struct r8a78000_eth_pcs_channel *channel = &dd->channel[i];
+
+		channel->phy = devm_phy_create(&pdev->dev, NULL, &r8a78000_eth_pcs_ops);
+		if (IS_ERR(channel->phy))
+			return PTR_ERR(channel->phy);
+
+		channel->addr = dd->addr + R8A78000_ETH_PCS_OFFSET * i;
+		channel->dd = dd;
+		channel->index = i;
+		channel->aneg_on = true;
+		phy_set_drvdata(channel->phy, channel);
+	}
+
+	provider = devm_of_phy_provider_register(&pdev->dev, r8a78000_eth_pcs_xlate);
+	if (IS_ERR(provider))
+		return PTR_ERR(provider);
+
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
+
+	/* Module reset */
+	r8a78000_eth_pcs_module_power_gating_set(0x03);
+	r8a78000_eth_pcs_module_reset();
+	udelay(1000);
+	r8a78000_eth_pcs_module_run();
+
+	return 0;
+}
+
+static void r8a78000_eth_pcs_remove(struct platform_device *pdev)
+{
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+
+	platform_set_drvdata(pdev, NULL);
+}
+
+static struct platform_driver r8a78000_eth_pcs_driver_platform = {
+	.probe = r8a78000_eth_pcs_probe,
+	.remove_new = r8a78000_eth_pcs_remove,
+	.driver = {
+		.name = "r8a78000_eth_pcs",
+		.of_match_table = r8a78000_eth_pcs_of_table,
+	}
+};
+module_platform_driver(r8a78000_eth_pcs_driver_platform);
+MODULE_LICENSE("GPL v2");
