@@ -10,6 +10,13 @@ config PHY_R8A779F0_ETHERNET_SERDES
 	help
 	  Support for Ethernet SERDES found on Renesas R-Car S4-8 SoCs.
 
+config PHY_R8A78000_MP_PHY
+	tristate "Renesas R-Car X5H Multi-Protocol PHY driver"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	select GENERIC_PHY
+	help
+	  Support for Multi-Protocol PHY (MP-PHY) on Renesas R-Car X5H SoCs.
+
 config PHY_RCAR_GEN2
 	tristate "Renesas R-Car generation 2 USB PHY driver"
 	depends on ARCH_RENESAS
