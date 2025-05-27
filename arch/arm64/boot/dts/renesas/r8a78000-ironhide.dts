@@ -93,6 +93,11 @@
 	};
 };
 
+&eth_pcs {
+	phys = <&mp_phy 2 1>;
+	status = "okay";
+};
+
 &extal_clk {
 	clock-frequency = <16666666>;
 };
