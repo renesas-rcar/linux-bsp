@@ -119,7 +119,7 @@
 	pinctrl-names = "default";
 
 	status = "okay";
-	clock-frequency = <400000>;
+	clock-frequency = <100000>;
 
 	eeprom@50 {
 		compatible = "rohm,br24g01", "atmel,24c01";
