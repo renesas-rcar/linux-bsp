@@ -136,6 +136,10 @@
 	clock-frequency = <400000>;
 };
 
+&mp_phy {
+	status = "okay";
+};
+
 &pfc {
 	hscif0_pins: hscif0 {
 		groups = "hscif0_data", "hscif0_ctrl";
