@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015-2016, Linaro Limited
+ * Copyright (c) 2017, Renesas Electronics Corporation
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -10,8 +21,10 @@
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <linux/tee_drv.h>
+#include <linux/freezer.h>
 #include "optee_private.h"
 #include "optee_smc.h"
+#include "optee_rcar.h"
 
 struct wq_entry {
 	struct list_head link;
@@ -168,7 +181,13 @@ static void wq_sleep(struct optee_wait_queue *wq, u32 key)
 	struct wq_entry *w = wq_entry_get(wq, key);
 
 	if (w) {
-		wait_for_completion(&w->c);
+		/*
+		 * wait_for_completion but allow hibernation/suspend
+		 * to freeze the waiting task
+		 */
+		while (wait_for_completion_interruptible(&w->c))
+			try_to_freeze();
+
 		mutex_lock(&wq->mu);
 		list_del(&w->link);
 		mutex_unlock(&wq->mu);
@@ -476,6 +495,9 @@ static void handle_rpc_func_cmd(struct tee_context *ctx, struct optee *optee,
 		break;
 	case OPTEE_MSG_RPC_CMD_SHM_FREE:
 		handle_rpc_func_cmd_shm_free(ctx, arg);
+		break;
+	case OPTEE_MSG_RPC_CMD_DEBUG_LOG:
+		handle_rpc_func_cmd_debug_log(arg);
 		break;
 	case OPTEE_MSG_RPC_CMD_I2C_TRANSFER:
 		handle_rpc_func_cmd_i2c_transfer(ctx, arg);
