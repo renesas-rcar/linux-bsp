@@ -1,0 +1,541 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for the Ironhide board
+ *
+ * Copyright (C) 2025 Renesas Electronics Corp.
+ */
+
+#include <dt-bindings/net/ti-dp83869.h>
+
+/ {
+	model = "Renesas Ironhide board based on r8a78000";
+	compatible = "renesas,ironhide", "renesas,r8a78000";
+
+	aliases {
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		i2c4 = &i2c4;
+		i2c5 = &i2c5;
+		i2c6 = &i2c6;
+		i2c7 = &i2c7;
+		i2c8 = &i2c8;
+		serial0 = &hscif0;
+	};
+
+	chosen {
+		bootargs = "ignore_loglevel rw root=/dev/nfs ip=on";
+		stdout-path = "serial0:1843200n8";
+	};
+
+	memory@60600000 {
+		device_type = "memory";
+		/* first 518MB is reserved for other purposes. */
+		reg = <0x0 0x60600000 0x0 0x5fa00000>;
+	};
+
+	memory@1080000000 {
+		device_type = "memory";
+		reg = <0x10 0x80000000 0x0 0x80000000>;
+	};
+
+	memory@1200000000 {
+		device_type = "memory";
+		reg = <0x12 0x00000000 0x1 0x00000000>;
+	};
+
+	memory@1400000000 {
+		device_type = "memory";
+		reg = <0x14 0x00000000 0x1 0x00000000>;
+	};
+
+	memory@1600000000 {
+		device_type = "memory";
+		reg = <0x16 0x00000000 0x1 0x00000000>;
+	};
+
+	memory@1800000000 {
+		device_type = "memory";
+		reg = <0x18 0x00000000 0x1 0x00000000>;
+	};
+
+	memory@1a00000000 {
+		device_type = "memory";
+		reg = <0x1a 0x00000000 0x1 0x00000000>;
+	};
+
+	memory@1c00000000 {
+		device_type = "memory";
+		reg = <0x1c 0x00000000 0x1 0x00000000>;
+	};
+
+	memory@1e00000000 {
+		device_type = "memory";
+		reg = <0x1e 0x00000000 0x1 0x00000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		linux,cma@64000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x0 0x64000000 0x0 0x1c000000>;
+			linux,cma-default;
+		};
+
+		frtos_app0: frtos_app0@80000000 {
+			no-map;
+			reg = <0x00000000 0x80000000 0x0 0x01000000>;
+		};
+
+		cr52_ram0: cr52_ram0@81000000 {
+			no-map;
+			reg = <0x0 0x81000000 0x0 0x50000>;
+		};
+
+		cr52_ram1: cr52_ram1@81050000 {
+			no-map;
+			reg = <0x0 0x81050000 0x0 0x50000>;
+		};
+
+		cr52_ram2: cr52_ram2@810a0000 {
+			no-map;
+			reg = <0x0 0x810a0000 0x0 0x50000>;
+		};
+
+		frtos_app1: frtos_app1@810f0000 {
+			no-map;
+			reg = <0x00 0x810f0000 0x00 0x3ef10000>;
+		};
+
+		rt_vram: rt_vram@1200000000 {
+			no-map;
+			reg = <0x12 0x00000000 0x1 0x00000000>;
+		};
+	};
+};
+
+&mailbox {
+	status = "okay";
+};
+
+&eth_pcs {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@4 {
+			reg = <4>;
+			phys = <&mp_phy 2 0>;
+		};
+
+		port@5 {
+			reg = <5>;
+			phys = <&mp_phy 2 1>;
+		};
+	};
+};
+
+&extal_clk {
+	clock-frequency = <16666666>;
+};
+
+&extalr_clk {
+	clock-frequency = <32768>;
+};
+
+&hscif0 {
+	pinctrl-0 = <&hscif0_pins>;
+	pinctrl-names = "default";
+
+	uart-has-rtscts;
+	/* Please use exclusively to the scif0 node */
+	status = "okay";
+};
+
+&scif_clk {
+	clock-frequency = <26000000>;
+};
+
+&gpio10 {
+	pcie0_clkreq {
+		gpio-hog;
+		gpios = <12 1>;
+		output-high;
+	};
+};
+
+&gpio4 {
+	pcie60_clkreq {
+		gpio-hog;
+		gpios = <14 1>;
+		output-high;
+	};
+
+	pcie61_clkreq {
+		gpio-hog;
+		gpios = <15 1>;
+		output-high;
+	};
+
+};
+
+&i2c0 {
+	pinctrl-0 = <&i2c0_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	clock-frequency = <100000>;
+
+	eeprom@50 {
+		compatible = "rohm,br24g01", "atmel,24c01";
+		reg = <0x50>;
+		pagesize = <8>;
+	};
+};
+
+&mfis {
+	renesas,mfis-channels = <1>;
+	status = "okay";
+};
+
+&cr52_rproc1 {
+	memory-region = <&cr52_ram1>;
+	status = "okay";
+};
+
+&rpmsg_shm0 {
+	status = "okay";
+};
+
+&rpmsg_ipi0 {
+	status = "okay";
+};
+
+&i2c1 {
+	pinctrl-0 = <&i2c1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	clock-frequency = <400000>;
+};
+
+&mp_phy {
+	status = "okay";
+};
+
+&pfc {
+	eth25g2_pins: eth25g2 {
+		groups = "eth25g2_mdio", "eth25g2_link", "eth25g2_phyint";
+		function = "eth25g2";
+		drive-strength = <24>;
+	};
+
+	ethes0_pins: ethes0 {
+		groups = "ethes0_match", "ethes0_capture", "ethes0_pps";
+		function = "ethes0";
+		drive-strength = <24>;
+	};
+
+	hscif0_pins: hscif0 {
+		groups = "hscif0_data", "hscif0_ctrl";
+		function = "hscif0";
+	};
+
+	i2c0_pins: i2c0 {
+		groups = "i2c0";
+		function = "i2c0";
+	};
+
+	i2c1_pins: i2c1 {
+		groups = "i2c1";
+		function = "i2c1";
+	};
+
+	rsw3_pins: rsw3 {
+		groups = "rsw3_match", "rsw3_capture", "rsw3_pps";
+		function = "rsw3";
+		drive-strength = <24>;
+	};
+
+	pcie40_pins: pcie40 {
+		groups = "pcie40_clkreq_n";
+		function = "pcie4";
+	};
+
+	rpc_pins: rpc {
+		groups = "rpc_clk2", "rpc_ctrl", "rpc_data",
+			 "rpc_reset", "rpc_int";
+		function = "rpc";
+	};
+};
+
+&rpc {
+	pinctrl-0 = <&rpc_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+
+	flash@0 {
+		compatible = "cypress,hyperflash", "cfi-flash";
+		reg = <0>;
+		spi-max-frequency = <160000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			boot@0 {
+				reg = <0x0 0x1200000>;
+				read-only;
+			};
+
+			user@2780000 {
+				reg = <0x2780000 0x01880000>;
+			};
+		};
+	};
+};
+
+&pciec40 {
+	status = "okay";
+	phys = <&mp_phy 0 1>;
+};
+
+&pciec60 {
+	status = "okay";
+};
+
+&pciec60_ep {
+	status = "disabled";
+};
+
+&pciec61_ep {
+	status = "disabled";
+};
+
+&rsw3_clk {
+	clock-frequency = <66660000>;
+};
+
+&rswitch3 {
+	status = "okay";
+	pinctrl-0 = <&rsw3_pins>, <&eth25g2_pins>, <&ethes0_pins>;
+	pinctrl-names = "default";
+
+	ethernet-ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		// TODO: Add more ports (e.g., port@0, port@1) as needed
+		port@4 {
+			reg = <4>;
+			renesas,etha-mii-chan = <4>;
+			phy-handle = <&q32xx_phy>;
+			phy-mode = "usxgmii";
+			phys = <&eth_pcs 4>;
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				q32xx_phy: ethernet-phy@1 {
+					reg = <1>;
+					compatible = "ethernet-phy-ieee802.3-c45";
+				};
+			};
+		};
+
+		port@5 {
+			reg = <5>;
+			renesas,etha-mii-chan = <4>;
+			renesas,connect_to_xpcs;
+			phy-handle = <&dp83869_phy>;
+			phy-mode = "sgmii";
+			phys = <&eth_pcs 5>;
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				dp83869_phy: ethernet-phy@2 {
+					reg = <2>;
+					ti,sgmii-interface;
+					ti,max-output-impedance;
+					ti,refclk-output-enable;
+					ti,clk-output-sel = <DP83869_CLK_O_SEL_REF_CLK>;
+				};
+			};
+		};
+
+		/* Example stub for future ports */
+		//	port@5 {
+		//	reg = <5>;
+		//	phy-handle = <&mv_phy5>;
+		//	phy-mode = "usxgmii";
+		//	local-mac-address = [xx xx xx xx xx xx];
+		//	phys = <&eth_pcs X>;
+		//	...
+		// };
+	};
+};
+
+&rwdt {
+	timeout-sec = <60>;
+	status = "okay";
+};
+
+&crc0 {
+	status = "okay";
+};
+
+&crc1 {
+	status = "okay";
+};
+
+&crc2 {
+	status = "okay";
+};
+
+&crc3 {
+	status = "okay";
+};
+
+&crc4 {
+	status = "okay";
+};
+
+&crc5 {
+	status = "okay";
+};
+
+&crc6 {
+	status = "okay";
+};
+
+&crc7 {
+	status = "okay";
+};
+
+&crc8 {
+	status = "okay";
+};
+
+&crc9 {
+	status = "okay";
+};
+
+&crc10 {
+	status = "okay";
+};
+
+&kcrc0 {
+	status = "okay";
+};
+
+&kcrc1 {
+	status = "okay";
+};
+
+&kcrc2 {
+	status = "okay";
+};
+
+&kcrc3 {
+	status = "okay";
+};
+
+&kcrc4 {
+	status = "okay";
+};
+
+&kcrc5 {
+	status = "okay";
+};
+
+&kcrc6 {
+	status = "okay";
+};
+
+&kcrc7 {
+	status = "okay";
+};
+
+&kcrc8 {
+	status = "okay";
+};
+
+&kcrc9 {
+	status = "okay";
+};
+
+&kcrc10 {
+	status = "okay";
+};
+
+&wcrc0 {
+	status = "okay";
+};
+
+&wcrc1 {
+	status = "okay";
+};
+
+&wcrc2 {
+	status = "okay";
+};
+
+&wcrc3 {
+	status = "okay";
+};
+
+&wcrc4 {
+	status = "okay";
+};
+
+&wcrc5 {
+	status = "okay";
+};
+
+&wcrc6 {
+	status = "okay";
+};
+
+&wcrc7 {
+	status = "okay";
+};
+
+&wcrc8 {
+	status = "okay";
+};
+
+&wcrc9 {
+	status = "okay";
+};
+
+&wcrc10 {
+	status = "okay";
+};
+
+&ufs0 {
+	status = "okay";
+};
+
+&ufs1 {
+	status = "okay";
+};
+
+&ufs0_clk {
+	clock-frequency = <38400000>;
+};
+
+&ufs1_clk {
+	clock-frequency = <38400000>;
+};
