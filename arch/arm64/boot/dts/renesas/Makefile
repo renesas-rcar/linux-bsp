@@ -187,3 +187,4 @@ dtb-$(CONFIG_ARCH_RCAR_GEN3) += draak-ebisu-panel-aa104xd12.dtbo
 dtb-$(CONFIG_ARCH_RCAR_GEN3) += salvator-panel-aa104xd12.dtbo
 
 dtb-$(CONFIG_ARCH_R8A78000) += r8a78000-ironhide.dtb
+dtb-$(CONFIG_ARCH_R8A78000) += r8a78000-ironhide-uio.dtb
