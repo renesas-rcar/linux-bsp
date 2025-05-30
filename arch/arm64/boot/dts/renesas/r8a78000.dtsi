@@ -517,6 +517,13 @@
 		clock-frequency = <0>;
 	};
 
+	/* External PCIe clock - can be overridden by the board */
+	pcie4_bus_clk: pcie4_bus {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <100000000>;
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -1089,6 +1096,44 @@
 			compatible = "renesas,r8a78000-ether-pcs";
 			reg = <0 0xc9c50000 0 0x4000>;
 			#phy-cells = <1>;
+			status = "disabled";
+		};
+
+		pciec40: pcie@c9000000 {
+			compatible = "renesas,rcar-gen5-pcie";
+			reg = <0 0xc9000000 0 0x3000>,
+				<0 0xc9003000 0 0x2000>,
+				<0 0xc9c8e000 0	0x1000>,
+				<0x1 0x00000000 0 0x10000000>;
+			reg-names = "dbi",
+				    "atu",
+				    "apb",
+				    "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+			ranges =  <0x03000000 0 0x3000000 0x1 0x10000000 0 0x10000000>;
+			interrupts = <GIC_SPI 4300 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4291 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4299 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4297 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4298 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4292 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4293 IRQ_TYPE_LEVEL_HIGH>;
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 4300 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 2 &gic GIC_SPI 4291 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 4299 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 4297 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 4298 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 4292 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 4293 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&pcie4_bus_clk>;
+			clock-names = "pcie4_bus";
+			num-lanes = <2>;
+			max-link-speed = <4>;
 			status = "disabled";
 		};
 	};
