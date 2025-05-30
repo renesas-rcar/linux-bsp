@@ -18,6 +18,7 @@
 #include <linux/reset.h>
 #include <linux/gpio/consumer.h>
 #include <linux/pm_runtime.h>
+#include <linux/phy/phy.h>
 
 #include "pcie-designware.h"
 
@@ -71,6 +72,7 @@
 
 struct rcar_pcie4 {
 	struct dw_pcie			*pci;
+	struct phy			*phy;
 	enum dw_pcie_device_mode	mode;
 	void __iomem			*base;
 	void __iomem			*phy_base;
@@ -93,6 +95,8 @@ static void rcar_gen5_pcie_ltssm_enable(struct rcar_pcie4 *rcar_pcie4,
 		val |= BIT(16);
 	}
 	writel(val, rcar_pcie4->base + PCIERSTCTRL1);
+
+	phy_power_on(rcar_pcie4->phy);
 
 }
 
@@ -367,6 +371,13 @@ static int rcar_gen5_pcie_add_port(struct rcar_pcie4 *rcar_pcie4,
 	if (ret) {
 		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
 	}
+
+	ret = phy_init(rcar_pcie4->phy);
+	if (ret) {
+		dev_err(dev, "Failed to initialize MP-PHY\n");
+		return ret;
+	}
+
 /*
 	ret = reset_control_deassert(rcar_pcie4->rst);
 	if (ret)
@@ -435,6 +446,13 @@ static int rcar_gen5_pcie_get_resources(struct rcar_pcie4 *rcar_pcie4,
 		rcar_pcie4->phy_base = devm_ioremap_resource(&pdev->dev, res);
 		if (IS_ERR(rcar_pcie4->phy_base))
 			rcar_pcie4->phy_base = NULL;
+	}
+
+	/* Get PHY from device tree */
+	rcar_pcie4->phy = devm_of_phy_get_by_index(&pdev->dev, np, 0);
+	if (IS_ERR(rcar_pcie4->phy)) {
+		dev_err(&pdev->dev, "Failed to get PHY: %ld\n", PTR_ERR(rcar_pcie4->phy));
+		return PTR_ERR(rcar_pcie4->phy);
 	}
 
 	return rcar_gen5_pcie_devm_reset_get(rcar_pcie4, &pdev->dev);
