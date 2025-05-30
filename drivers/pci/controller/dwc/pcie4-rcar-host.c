@@ -78,7 +78,7 @@ struct rcar_pcie4 {
 	void __iomem			*phy_base;
 	struct reset_control		*rst;
 	struct clk			*bus_clk;
-	struct gpio_desc		*clkreq;
+	struct gpio_desc		*perst;
 };
 
 static void rcar_gen5_pcie_ltssm_enable(struct rcar_pcie4 *rcar_pcie4,
@@ -418,10 +418,10 @@ static int rcar_gen5_pcie_devm_reset_get(struct rcar_pcie4 *rcar_pcie4,
 		return PTR_ERR(rcar_pcie4->bus_clk);
 	}
 
-	rcar_pcie4->clkreq = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
-	if (IS_ERR(rcar_pcie4->clkreq)) {
+	rcar_pcie4->perst = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
+	if (IS_ERR(rcar_pcie4->perst)) {
 		dev_err(dev, "Failed to get PERST GPIO\n");
-		return PTR_ERR(rcar_pcie4->clkreq);
+		return PTR_ERR(rcar_pcie4->perst);
 	}
 
 	return 0;
