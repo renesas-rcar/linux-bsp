@@ -24,6 +24,8 @@
 
 #include "rcar-vin.h"
 
+#define MDL_CLK_WA
+
 /* -----------------------------------------------------------------------------
  * HW Functions
  */
@@ -1771,7 +1773,9 @@ void rvin_stop_streaming(struct rvin_dev *vin)
 		pm_runtime_put_sync(vin->dev);
 
 		while (1) {
-#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
+#ifdef MDL_CLK_WA
+			;
+#elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 			bool enable;
 
 			enable = __clk_is_enabled(vin->clk);
