@@ -120,6 +120,14 @@
 	clock-frequency = <26000000>;
 };
 
+&gpio10 {
+	pcie0_clkreq {
+		gpio-hog;
+		gpios = <12 1>;
+		output-high;
+	};
+};
+
 &i2c0 {
 	pinctrl-0 = <&i2c0_pins>;
 	pinctrl-names = "default";
@@ -132,6 +140,14 @@
 		reg = <0x50>;
 		pagesize = <8>;
 	};
+
+	io_expander_pcie: gpio@77 {
+		compatible = "ti,tca9539";
+		reg = <0x77>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
 };
 
 &i2c1 {
@@ -179,6 +195,18 @@
 		function = "rsw3";
 		drive-strength = <24>;
 	};
+
+	pcie40_pins: pcie40 {
+		groups = "pcie40_clkreq_n";
+		function = "pcie4";
+	};
+
+};
+
+&pciec40 {
+	status = "okay";
+	phys = <&mp_phy 0 1>;
+	reset-gpios = <&io_expander_pcie 0 1>;
 };
 
 &rsw3_clk {
