@@ -17,6 +17,29 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	/*
+	 * The external audio clocks are configured as 0 Hz fixed frequency
+	 * clocks by default.
+	 * Boards that provide audio clocks should override them.
+	 */
+	audio_clk_a: audio_clk_a {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	audio_clk_b: audio_clk_b {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	audio_clk_c: audio_clk_c {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	dummy_clk: dummy_clk {
 		compatible = "fixed-clock";
 		clock-frequency = <0>;
@@ -34,6 +57,21 @@
 		clock-frequency = <160000000>;
 		#clock-cells = <0>;
 	};
+
+	ssi_dummy_clk: ssi_dummy_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+		clock-output-names = "ssi";
+	};
+
+	scu_dummy_clk: scu_dummy_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+		clock-output-names = "scu";
+	};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
@@ -3763,6 +3801,380 @@
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB4>;
 			reset-names = "vsp", "fcp";
 			status = "disabled";
+		};
+
+		rcar_sound: sound@ec500000 {
+			/*
+			 * #sound-dai-cells is required
+			 *
+			 * Single DAI : #sound-dai-cells = <0>;	<&rcar_sound>;
+			 * Multi  DAI : #sound-dai-cells = <1>;	<&rcar_sound N>;
+			 */
+			/*
+			 * #clock-cells is required for audio_clkout0/1/2/3
+			 *
+			 * clkout	: #clock-cells = <0>;	<&rcar_sound>;
+			 * clkout0/1/2/3: #clock-cells = <1>;	<&rcar_sound N>;
+			 */
+			compatible =  "renesas,rcar_sound-r8a78000", "renesas,rcar_sound-gen5";
+			reg =	<0 0xec500000 0 0x21004>, /* SCU */
+				<0 0xec530000 0 0x140>,  /* ADG */
+				<0 0xec540000 0 0x9a004>, /* SSIU */
+				<0 0xec740000 0 0x200>;  /* Audio DMAC peri peri*/
+			reg-names = "scu", "adg", "ssiu", "audmapp";
+
+			clocks = <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>, // of SSI
+				 <&scu_dummy_clk>, <&scu_dummy_clk>,
+				 <&scu_dummy_clk>, <&scu_dummy_clk>,
+				 <&scu_dummy_clk>, <&scu_dummy_clk>,
+				 <&scu_dummy_clk>, <&scu_dummy_clk>,
+				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of SRC
+				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of MIX
+				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of CTU
+				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of DVC
+				 <&audio_clk_a>, <&audio_clk_b>,
+				 <&audio_clk_c>;
+			clock-names = "ssi-all",
+				      "ssi.9", "ssi.8", "ssi.7", "ssi.6",
+				      "ssi.5", "ssi.4", "ssi.3", "ssi.2",
+				      "ssi.1", "ssi.0",
+				      "src.9", "src.8", "src.7", "src.6",
+				      "src.5", "src.4", "src.3", "src.2",
+				      "src.1", "src.0",
+				      "mix.1", "mix.0",
+				      "ctu.1", "ctu.0",
+				      "dvc.0", "dvc.1",
+				      "clk_a", "clk_b", "clk_c";
+			status = "disabled";
+
+			rcar_sound,dvc {
+				dvc0: dvc-0 {
+					dmas = <&audio_dmac1 0x01>;
+					dma-names = "tx";
+				};
+				dvc1: dvc-1 {
+					dmas = <&audio_dmac1 0x0>;
+					dma-names = "tx";
+				};
+			};
+
+			rcar_sound,mix {
+				mix0: mix-0 { };
+				mix1: mix-1 { };
+			};
+
+			rcar_sound,ctu {
+				ctu00: ctu-0 { };
+				ctu01: ctu-1 { };
+				ctu02: ctu-2 { };
+				ctu03: ctu-3 { };
+				ctu10: ctu-4 { };
+				ctu11: ctu-5 { };
+				ctu12: ctu-6 { };
+				ctu13: ctu-7 { };
+			};
+
+			rcar_sound,src {
+				src0: src-0 {
+					interrupts = <GIC_SPI 916 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x14>, <&audio_dmac1 0x15>;
+					dma-names = "rx", "tx";
+				};
+				src1: src-1 {
+					interrupts = <GIC_SPI 917 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x12>, <&audio_dmac1 0x13>;
+					dma-names = "rx", "tx";
+				};
+				src2: src-2 {
+					interrupts = <GIC_SPI 918 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x10>, <&audio_dmac1 0x11>;
+					dma-names = "rx", "tx";
+				};
+				src3: src-3 {
+					interrupts = <GIC_SPI 919 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x0E>, <&audio_dmac1 0x0F>;
+					dma-names = "rx", "tx";
+				};
+				src4: src-4 {
+					interrupts = <GIC_SPI 920 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x0C>, <&audio_dmac1 0x0D>;
+					dma-names = "rx", "tx";
+				};
+				src5: src-5 {
+					interrupts = <GIC_SPI 921 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x0A>, <&audio_dmac1 0x0B>;
+					dma-names = "rx", "tx";
+				};
+				src6: src-6 {
+					interrupts = <GIC_SPI 922 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x08>, <&audio_dmac1 0x09>;
+					dma-names = "rx", "tx";
+				};
+				src7: src-7 {
+					interrupts = <GIC_SPI 923 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x06>, <&audio_dmac1 0x07>;
+					dma-names = "rx", "tx";
+				};
+				src8: src-8 {
+					interrupts = <GIC_SPI 924 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x04>, <&audio_dmac1 0x05>;
+					dma-names = "rx", "tx";
+				};
+				src9: src-9 {
+					interrupts = <GIC_SPI 925 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x02>, <&audio_dmac1 0x03>;
+					dma-names = "rx", "tx";
+				};
+			};
+
+			rcar_sound,ssiu {
+				ssiu00: ssiu-0 {
+					dmas = <&audio_dmac0 0x7D>, <&audio_dmac1 0x7C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu01: ssiu-1 {
+					dmas = <&audio_dmac0 0x7B>, <&audio_dmac1 0x7A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu02: ssiu-2 {
+					dmas = <&audio_dmac0 0x79>, <&audio_dmac1 0x78>;
+					dma-names = "rx", "tx";
+				};
+				ssiu03: ssiu-3 {
+					dmas = <&audio_dmac0 0x77>, <&audio_dmac1 0x76>;
+					dma-names = "rx", "tx";
+				};
+				ssiu04: ssiu-4 {
+					dmas = <&audio_dmac0 0x75>, <&audio_dmac1 0x74>;
+					dma-names = "rx", "tx";
+				};
+				ssiu05: ssiu-5 {
+					dmas = <&audio_dmac0 0x73>, <&audio_dmac1 0x72>;
+					dma-names = "rx", "tx";
+				};
+				ssiu06: ssiu-6 {
+					dmas = <&audio_dmac0 0x71>, <&audio_dmac1 0x70>;
+					dma-names = "rx", "tx";
+				};
+				ssiu07: ssiu-7 {
+					dmas = <&audio_dmac0 0x6F>, <&audio_dmac1 0x6E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu10: ssiu-8 {
+					dmas = <&audio_dmac0 0x6D>, <&audio_dmac1 0x6C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu11: ssiu-9 {
+					dmas = <&audio_dmac0 0x6B>, <&audio_dmac1 0x6A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu12: ssiu-10 {
+					dmas = <&audio_dmac0 0x69>, <&audio_dmac1 0x68>;
+					dma-names = "rx", "tx";
+				};
+				ssiu13: ssiu-11 {
+					dmas = <&audio_dmac0 0x67>, <&audio_dmac1 0x66>;
+					dma-names = "rx", "tx";
+				};
+				ssiu14: ssiu-12 {
+					dmas = <&audio_dmac0 0x65>, <&audio_dmac1 0x64>;
+					dma-names = "rx", "tx";
+				};
+				ssiu15: ssiu-13 {
+					dmas = <&audio_dmac0 0x63>, <&audio_dmac1 0x62>;
+					dma-names = "rx", "tx";
+				};
+				ssiu16: ssiu-14 {
+					dmas = <&audio_dmac0 0x61>, <&audio_dmac1 0x60>;
+					dma-names = "rx", "tx";
+				};
+				ssiu17: ssiu-15 {
+					dmas = <&audio_dmac0 0x5F>, <&audio_dmac1 0x5E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu20: ssiu-16 {
+					dmas = <&audio_dmac0 0x5D>, <&audio_dmac1 0x5C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu21: ssiu-17 {
+					dmas = <&audio_dmac0 0x5B>, <&audio_dmac1 0x5A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu22: ssiu-18 {
+					dmas = <&audio_dmac0 0x59>, <&audio_dmac1 0x58>;
+					dma-names = "rx", "tx";
+				};
+				ssiu23: ssiu-19 {
+					dmas = <&audio_dmac0 0x57>, <&audio_dmac1 0x56>;
+					dma-names = "rx", "tx";
+				};
+				ssiu24: ssiu-20 {
+					dmas = <&audio_dmac0 0x55>, <&audio_dmac1 0x54>;
+					dma-names = "rx", "tx";
+				};
+				ssiu25: ssiu-21 {
+					dmas = <&audio_dmac0 0x53>, <&audio_dmac1 0x52>;
+					dma-names = "rx", "tx";
+				};
+				ssiu26: ssiu-22 {
+					dmas = <&audio_dmac0 0x51>, <&audio_dmac1 0x50>;
+					dma-names = "rx", "tx";
+				};
+				ssiu27: ssiu-23 {
+					dmas = <&audio_dmac0 0x4F>, <&audio_dmac1 0x4E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu30: ssiu-24 {
+					dmas = <&audio_dmac0 0x4D>, <&audio_dmac1 0x4C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu31: ssiu-25 {
+					dmas = <&audio_dmac0 0x4B>, <&audio_dmac1 0x4A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu32: ssiu-26 {
+					dmas = <&audio_dmac0 0x49>, <&audio_dmac1 0x48>;
+					dma-names = "rx", "tx";
+				};
+				ssiu33: ssiu-27 {
+					dmas = <&audio_dmac0 0x47>, <&audio_dmac1 0x46>;
+					dma-names = "rx", "tx";
+				};
+				ssiu34: ssiu-28 {
+					dmas = <&audio_dmac0 0x45>, <&audio_dmac1 0x44>;
+					dma-names = "rx", "tx";
+				};
+				ssiu35: ssiu-29 {
+					dmas = <&audio_dmac0 0x43>, <&audio_dmac1 0x42>;
+					dma-names = "rx", "tx";
+				};
+				ssiu36: ssiu-30 {
+					dmas = <&audio_dmac0 0x41>, <&audio_dmac1 0x40>;
+					dma-names = "rx", "tx";
+				};
+				ssiu37: ssiu-31 {
+					dmas = <&audio_dmac0 0x3F>, <&audio_dmac1 0x3E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu40: ssiu-32 {
+					dmas = <&audio_dmac0 0x3D>, <&audio_dmac1 0x3C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu41: ssiu-33 {
+					dmas = <&audio_dmac0 0x3B>, <&audio_dmac1 0x3A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu42: ssiu-34 {
+					dmas = <&audio_dmac0 0x39>, <&audio_dmac1 0x38>;
+					dma-names = "rx", "tx";
+				};
+				ssiu43: ssiu-35 {
+					dmas = <&audio_dmac0 0x37>, <&audio_dmac1 0x36>;
+					dma-names = "rx", "tx";
+				};
+				ssiu44: ssiu-36 {
+					dmas = <&audio_dmac0 0x35>, <&audio_dmac1 0x34>;
+					dma-names = "rx", "tx";
+				};
+				ssiu45: ssiu-37 {
+					dmas = <&audio_dmac0 0x33>, <&audio_dmac1 0x32>;
+					dma-names = "rx", "tx";
+				};
+				ssiu46: ssiu-38 {
+					dmas = <&audio_dmac0 0x31>, <&audio_dmac1 0x30>;
+					dma-names = "rx", "tx";
+				};
+				ssiu47: ssiu-39 {
+					dmas = <&audio_dmac0 0x2F>, <&audio_dmac1 0x2E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu50: ssiu-40 {
+					dmas = <&audio_dmac0 0x2D>, <&audio_dmac1 0x2C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu60: ssiu-41 {
+					dmas = <&audio_dmac0 0x2B>, <&audio_dmac1 0x2A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu70: ssiu-42 {
+					dmas = <&audio_dmac0 0x29>, <&audio_dmac1 0x28>;
+					dma-names = "rx", "tx";
+				};
+				ssiu80: ssiu-43 {
+					dmas = <&audio_dmac0 0x27>, <&audio_dmac1 0x26>;
+					dma-names = "rx", "tx";
+				};
+				ssiu90: ssiu-44 {
+					dmas = <&audio_dmac0 0x25>, <&audio_dmac1 0x24>;
+					dma-names = "rx", "tx";
+				};
+				ssiu91: ssiu-45 {
+					dmas = <&audio_dmac0 0x23>, <&audio_dmac1 0x22>;
+					dma-names = "rx", "tx";
+				};
+				ssiu92: ssiu-46 {
+					dmas = <&audio_dmac0 0x21>, <&audio_dmac1 0x20>;
+					dma-names = "rx", "tx";
+				};
+				ssiu93: ssiu-47 {
+					dmas = <&audio_dmac0 0x1F>, <&audio_dmac1 0x1E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu94: ssiu-48 {
+					dmas = <&audio_dmac0 0x1D>, <&audio_dmac1 0x1C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu95: ssiu-49 {
+					dmas = <&audio_dmac0 0x1B>, <&audio_dmac1 0x1A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu96: ssiu-50 {
+					dmas = <&audio_dmac0 0x19>, <&audio_dmac1 0x18>;
+					dma-names = "rx", "tx";
+				};
+				ssiu97: ssiu-51 {
+					dmas = <&audio_dmac0 0x17>, <&audio_dmac1 0x16>;
+					dma-names = "rx", "tx";
+				};
+			};
+
+			rcar_sound,ssi {
+				ssi0: ssi-0 {
+					interrupts = <GIC_SPI 896 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi1: ssi-1 {
+					interrupts = <GIC_SPI 897 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi2: ssi-2 {
+					interrupts = <GIC_SPI 898 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi3: ssi-3 {
+					interrupts = <GIC_SPI 899 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi4: ssi-4 {
+					interrupts = <GIC_SPI 900 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi5: ssi-5 {
+					interrupts = <GIC_SPI 901 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi6: ssi-6 {
+					interrupts = <GIC_SPI 902 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi7: ssi-7 {
+					interrupts = <GIC_SPI 903 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi8: ssi-8 {
+					interrupts = <GIC_SPI 904 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi9: ssi-9 {
+					interrupts = <GIC_SPI 905 IRQ_TYPE_LEVEL_HIGH>;
+				};
+			};
 		};
 	};
 
