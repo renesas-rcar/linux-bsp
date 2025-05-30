@@ -3024,15 +3024,6 @@ static const unsigned int qspi0_ctrl_pins[] = {
 static const unsigned int qspi0_ctrl_mux[] = {
 	QSPI0_SPCLK_MARK, QSPI0_SSL_MARK,
 };
-static const unsigned int qspi0_data_pins[] = {
-	/* MOSI_IO0, MISO_IO1, IO2, IO3 */
-	RCAR_GP_PIN(3, 1), RCAR_GP_PIN(3, 2),
-	RCAR_GP_PIN(3, 3), RCAR_GP_PIN(3, 4),
-};
-static const unsigned int qspi0_data_mux[] = {
-	QSPI0_MOSI_IO0_MARK, QSPI0_MISO_IO1_MARK,
-	QSPI0_IO2_MARK, QSPI0_IO3_MARK,
-};
 
 /* - QSPI1 ------------------------------------------------------------------ */
 static const unsigned int qspi1_ctrl_pins[] = {
@@ -3042,14 +3033,50 @@ static const unsigned int qspi1_ctrl_pins[] = {
 static const unsigned int qspi1_ctrl_mux[] = {
 	QSPI1_SPCLK_MARK, QSPI1_SSL_MARK,
 };
-static const unsigned int qspi1_data_pins[] = {
-	/* MOSI_IO0, MISO_IO1, IO2, IO3 */
+
+/* - RPC -------------------------------------------------------------------- */
+static const unsigned int rpc_clk_pins[] = {
+	/* Octal-SPI flash: C/SCLK */
+	/* HyperFlash: CK, CK# */
+	RCAR_GP_PIN(3, 0), RCAR_GP_PIN(3, 9),
+};
+static const unsigned int rpc_clk_mux[] = {
+	QSPI0_SPCLK_MARK, QSPI1_SPCLK_MARK,
+};
+static const unsigned int rpc_ctrl_pins[] = {
+	/* Octal-SPI flash: S#/CS, DQS */
+	/* HyperFlash: CS#, RDS */
+	RCAR_GP_PIN(3, 5), RCAR_GP_PIN(3, 14),
+};
+static const unsigned int rpc_ctrl_mux[] = {
+	QSPI0_SSL_MARK, QSPI1_SSL_MARK,
+};
+static const unsigned int rpc_data_pins[] = {
+	/* DQ[0:7] */
+	RCAR_GP_PIN(3, 1), RCAR_GP_PIN(3, 2),
+	RCAR_GP_PIN(3, 3), RCAR_GP_PIN(3, 4),
 	RCAR_GP_PIN(3, 10), RCAR_GP_PIN(3, 11),
 	RCAR_GP_PIN(3, 12), RCAR_GP_PIN(3, 13),
 };
-static const unsigned int qspi1_data_mux[] = {
+static const unsigned int rpc_data_mux[] = {
+	QSPI0_MOSI_IO0_MARK, QSPI0_MISO_IO1_MARK,
+	QSPI0_IO2_MARK, QSPI0_IO3_MARK,
 	QSPI1_MOSI_IO0_MARK, QSPI1_MISO_IO1_MARK,
 	QSPI1_IO2_MARK, QSPI1_IO3_MARK,
+};
+static const unsigned int rpc_reset_pins[] = {
+	/* RPC_RESET# */
+	RCAR_GP_PIN(3, 6),
+};
+static const unsigned int rpc_reset_mux[] = {
+	RPC_RESET_N_MARK,
+};
+static const unsigned int rpc_int_pins[] = {
+	/* RPC_INT# */
+	RCAR_GP_PIN(3, 8),
+};
+static const unsigned int rpc_int_mux[] = {
+	RPC_INT_N_MARK,
 };
 
 /* - SDHI/MMC0 --------------------------------------------------------------- */
@@ -3464,11 +3491,17 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(pcie61_clkreq_n),
 
 	SH_PFC_PIN_GROUP(qspi0_ctrl),
-	BUS_DATA_PIN_GROUP(qspi0_data, 2),
-	BUS_DATA_PIN_GROUP(qspi0_data, 4),
+	SH_PFC_PIN_GROUP_SUBSET(qspi0_data2, rpc_data, 0, 2),
+	SH_PFC_PIN_GROUP_SUBSET(qspi0_data4, rpc_data, 0, 4),
 	SH_PFC_PIN_GROUP(qspi1_ctrl),
-	BUS_DATA_PIN_GROUP(qspi1_data, 2),
-	BUS_DATA_PIN_GROUP(qspi1_data, 4),
+	SH_PFC_PIN_GROUP_SUBSET(qspi1_data2, rpc_data, 4, 2),
+	SH_PFC_PIN_GROUP_SUBSET(qspi1_data4, rpc_data, 4, 4),
+	BUS_DATA_PIN_GROUP(rpc_clk, 1),
+	BUS_DATA_PIN_GROUP(rpc_clk, 2),
+	SH_PFC_PIN_GROUP(rpc_ctrl),
+	SH_PFC_PIN_GROUP(rpc_data),
+	SH_PFC_PIN_GROUP(rpc_reset),
+	SH_PFC_PIN_GROUP(rpc_int),
 
 	BUS_DATA_PIN_GROUP(mmc0_data, 1),
 	BUS_DATA_PIN_GROUP(mmc0_data, 4),
@@ -3649,6 +3682,15 @@ static const char * const qspi1_groups[] = {
 	"qspi1_data4",
 };
 
+static const char * const rpc_groups[] = {
+	"rpc_clk1",
+	"rpc_clk2",
+	"rpc_ctrl",
+	"rpc_data",
+	"rpc_reset",
+	"rpc_int",
+};
+
 static const char * const mmc0_groups[] = {
 	"mmc0_data1",
 	"mmc0_data4",
@@ -3772,6 +3814,7 @@ static const struct sh_pfc_function pinmux_functions[] = {
 
 	SH_PFC_FUNCTION(qspi0),
 	SH_PFC_FUNCTION(qspi1),
+	SH_PFC_FUNCTION(rpc),
 
 	SH_PFC_FUNCTION(mmc0),
 
