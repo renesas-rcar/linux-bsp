@@ -161,6 +161,7 @@ static int rcar_gen5_pcie_set_device_type(struct rcar_pcie4 *rcar_pcie4, bool rc
 		val |= DEVICE_TYPE_RC | 0x1;
 	else
 		val |= DEVICE_TYPE_EP | 0x1;
+	writel(val, rcar_pcie4->base + PCIEMSR0);
 
 	return 0;
 }
