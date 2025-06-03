@@ -2,12 +2,14 @@
 /*
  * Device Tree Source for the Condor board
  *
- * Copyright (C) 2018 Renesas Electronics Corp.
- * Copyright (C) 2018 Cogent Embedded, Inc.
+ * Copyright (C) 2018-2020 Renesas Electronics Corp.
+ * Copyright (C) 2018-2020 Cogent Embedded, Inc.
  */
 
 /dts-v1/;
 #include "r8a77980.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include "camera.dtsi"
 
 / {
 	model = "Renesas Condor board based on r8a77980";
@@ -59,8 +61,8 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			port@0 {
-				reg = <0>;
+			port@1 {
+				reg = <1>;
 				thc63lvd1024_in: endpoint {
 					remote-endpoint = <&lvds0_out>;
 				};
@@ -79,6 +81,48 @@
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
 		reg = <0 0x48000000 0 0x78000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* device specific region for Lossy Decompression */
+		lossy_decompress: linux,lossy_decompress {
+			no-map;
+			reg = <0x00000000 0x7c000000 0x0 0x03000000>;
+		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x7f000000 0x0 0x01000000>;
+		};
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma@58000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x18000000>;
+			linux,cma-default;
+		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
 	};
 
 	vddq_vin01: regulator-1 {
@@ -104,6 +148,44 @@
 
 	channel0 {
 		status = "okay";
+	};
+};
+
+&csi40 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi40_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max9286_out0>;
+			};
+		};
+	};
+};
+
+&csi41 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi41_in: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&max9286_out1>;
+			};
+		};
 	};
 };
 
@@ -196,6 +278,257 @@
 	};
 };
 
+&i2c1 {
+	pinctrl-0 = <&i2c1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	clock-frequency = <400000>;
+
+	max9286@48 {
+		compatible = "maxim,max9286";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x48>;
+		regs = <0x0c 0x0d 0x0e 0x0f>;
+		shutdown-gpios = <&io_expander0 0 GPIO_ACTIVE_LOW>;
+		maxim,fsync-mode = "automatic";
+		maxim,gpio0 = <0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max9286_in0: endpoint {
+					remote-endpoint = <&camera_out0>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max9286_in1: endpoint {
+					remote-endpoint = <&camera_out1>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max9286_in2: endpoint {
+					remote-endpoint = <&camera_out2>;
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max9286_in3: endpoint {
+					remote-endpoint = <&camera_out3>;
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max9286_out0: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi40_in>;
+				};
+			};
+		};
+
+		i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+
+			camera@60 {
+				compatible = LVDS_CAMERA;
+				reg = <0x60 0x0c>;
+
+				port {
+					camera_out0: endpoint {
+						remote-endpoint = <&max9286_in0>;
+					};
+				};
+			};
+		};
+
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+
+			camera@61 {
+				compatible = LVDS_CAMERA;
+				reg = <0x61 0x0d>;
+
+				port {
+					camera_out1: endpoint {
+						remote-endpoint = <&max9286_in1>;
+					};
+				};
+			};
+		};
+
+		i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+
+			camera@62 {
+				compatible = LVDS_CAMERA;
+				reg = <0x62 0x0e>;
+
+				port {
+					camera_out2: endpoint {
+						remote-endpoint = <&max9286_in2>;
+					};
+				};
+			};
+		};
+
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+
+			camera@63 {
+				compatible = LVDS_CAMERA;
+				reg = <0x63 0x0f>;
+
+				port {
+					camera_out3: endpoint {
+						remote-endpoint = <&max9286_in3>;
+					};
+				};
+			};
+		};
+	};
+
+	max9286@4a {
+		compatible = "maxim,max9286";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x4a>;
+		regs = <0x1c 0x1d 0x1e 0x1f>;
+		shutdown-gpios = <&io_expander1 0 GPIO_ACTIVE_LOW>;
+		maxim,fsync-mode = "automatic";
+		maxim,gpio0 = <0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max9286_in4: endpoint {
+					remote-endpoint = <&camera_out4>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max9286_in5: endpoint {
+					remote-endpoint = <&camera_out5>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max9286_in6: endpoint {
+					remote-endpoint = <&camera_out6>;
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max9286_in7: endpoint {
+					remote-endpoint = <&camera_out7>;
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max9286_out1: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi41_in>;
+				};
+			};
+		};
+
+		i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+
+			camera@64 {
+				compatible = LVDS_CAMERA;
+				reg = <0x64 0x1c>;
+
+				port {
+					camera_out4: endpoint {
+						remote-endpoint = <&max9286_in4>;
+					};
+				};
+			};
+		};
+
+		i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+
+			camera@65 {
+				compatible = LVDS_CAMERA;
+				reg = <0x65 0x1d>;
+
+				port {
+					camera_out5: endpoint {
+						remote-endpoint = <&max9286_in5>;
+					};
+				};
+			};
+		};
+
+		i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+
+			camera@66 {
+				compatible = LVDS_CAMERA;
+				reg = <0x66 0x1e>;
+
+				port {
+					camera_out6: endpoint {
+						remote-endpoint = <&max9286_in6>;
+					};
+				};
+			};
+		};
+
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+
+			camera@67 {
+				compatible = LVDS_CAMERA;
+				reg = <0x67 0x1f>;
+
+				port {
+					camera_out7: endpoint {
+						remote-endpoint = <&max9286_in7>;
+					};
+				};
+			};
+		};
+	};
+
+};
+
 &lvds0 {
 	status = "okay";
 
@@ -217,6 +550,8 @@
 	vqmmc-supply = <&vddq_vin01>;
 	mmc-hs200-1_8v;
 	bus-width = <8>;
+	no-sd;
+	no-sdio;
 	non-removable;
 	status = "okay";
 };
@@ -248,6 +583,11 @@
 	i2c0_pins: i2c0 {
 		groups = "i2c0";
 		function = "i2c0";
+	};
+
+	i2c1_pins: i2c1 {
+		groups = "i2c1";
+		function = "i2c1";
 	};
 
 	mmc_pins: mmc {
@@ -354,4 +694,72 @@
 
 &scif_clk {
 	clock-frequency = <14745600>;
+};
+
+&vin0 {
+	status = "okay";
+};
+
+&vin1 {
+	status = "okay";
+};
+
+&vin2 {
+	status = "okay";
+};
+
+&vin3 {
+	status = "okay";
+};
+
+&vin4 {
+	status = "okay";
+};
+
+&vin5 {
+	status = "okay";
+};
+
+&vin6 {
+	status = "okay";
+};
+
+&vin7 {
+	status = "okay";
+};
+
+&tmu0 {
+	status = "okay";
+};
+
+&tmu1 {
+	status = "okay";
+};
+
+&tmu2 {
+	status = "okay";
+};
+
+&tmu3 {
+	status = "okay";
+};
+
+&tmu4 {
+	status = "okay";
+};
+
+&cmt0 {
+	status = "okay";
+};
+
+&cmt1 {
+	status = "okay";
+};
+
+&cmt2 {
+	status = "okay";
+};
+
+&cmt3 {
+	status = "okay";
 };

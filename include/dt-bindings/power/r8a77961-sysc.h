@@ -24,6 +24,7 @@
 #define R8A77961_PD_3DG_B		18
 #define R8A77961_PD_CA53_SCU		21
 #define R8A77961_PD_A3IR		24
+#define R8A77961_PD_A2VC0		25
 #define R8A77961_PD_A2VC1		26
 
 /* Always-on power area */
