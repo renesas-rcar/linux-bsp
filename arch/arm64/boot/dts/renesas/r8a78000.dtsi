@@ -144,256 +144,576 @@
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x0>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_0>;
+			next-level-cache = <&L1_CA720_0>;
 			enable-method = "psci";
+
+			L1_CA720_0: l1-cache-controller-0 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_0>;
+			};
+
+			L2_CA720_0: l2-cache-controller-0 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_0>;
+			};
 		};
 
 		a720_1: cpu@100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x100>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_0>;
+			next-level-cache = <&L1_CA720_1>;
 			enable-method = "psci";
+
+			L1_CA720_1: l1-cache-controller-1 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_1>;
+			};
+
+			L2_CA720_1: l2-cache-controller-1 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_0>;
+			};
 		};
 
 		a720_2: cpu@200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x200>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_0>;
+			next-level-cache = <&L1_CA720_2>;
 			enable-method = "psci";
+
+			L1_CA720_2: l1-cache-controller-2 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_2>;
+			};
+
+			L2_CA720_2: l2-cache-controller-2 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_0>;
+			};
 		};
 
 		a720_3: cpu@300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x300>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_0>;
+			next-level-cache = <&L1_CA720_3>;
 			enable-method = "psci";
+
+			L1_CA720_3: l1-cache-controller-3 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_3>;
+			};
+
+			L2_CA720_3: l2-cache-controller-3 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_0>;
+			};
 		};
 
 		a720_4: cpu@10000 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x10000>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_1>;
+			next-level-cache = <&L1_CA720_4>;
 			enable-method = "psci";
+
+			L1_CA720_4: l1-cache-controller-4 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_4>;
+			};
+
+			L2_CA720_4: l2-cache-controller-4 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_1>;
+			};
 		};
 
 		a720_5: cpu@10100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x10100>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_1>;
+			next-level-cache = <&L1_CA720_5>;
 			enable-method = "psci";
+
+			L1_CA720_5: l1-cache-controller-5 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_5>;
+			};
+
+			L2_CA720_5: l2-cache-controller-5 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_1>;
+			};
 		};
 
 		a720_6: cpu@10200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x10200>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_1>;
+			next-level-cache = <&L1_CA720_6>;
 			enable-method = "psci";
+
+			L1_CA720_6: l1-cache-controller-6 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_6>;
+			};
+
+			L2_CA720_6: l2-cache-controller-6 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_1>;
+			};
 		};
 
 		a720_7: cpu@10300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x10300>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_1>;
+			next-level-cache = <&L1_CA720_7>;
 			enable-method = "psci";
+
+			L1_CA720_7: l1-cache-controller-7 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_7>;
+			};
+
+			L2_CA720_7: l2-cache-controller-7 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_1>;
+			};
 		};
 
 		a720_8: cpu@20000 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x20000>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_2>;
+			next-level-cache = <&L1_CA720_8>;
 			enable-method = "psci";
+
+			L1_CA720_8: l1-cache-controller-8 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_8>;
+			};
+
+			L2_CA720_8: l2-cache-controller-8 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_2>;
+			};
 		};
 
 		a720_9: cpu@20100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x20100>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_2>;
+			next-level-cache = <&L1_CA720_9>;
 			enable-method = "psci";
+
+			L1_CA720_9: l1-cache-controller-9 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_9>;
+			};
+
+			L2_CA720_9: l2-cache-controller-9 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_2>;
+			};
 		};
 
 		a720_10: cpu@20200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x20200>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_2>;
+			next-level-cache = <&L1_CA720_10>;
 			enable-method = "psci";
+
+			L1_CA720_10: l1-cache-controller-10 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_10>;
+			};
+
+			L2_CA720_10: l2-cache-controller-10 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_2>;
+			};
 		};
 
 		a720_11: cpu@20300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x20300>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_2>;
+			next-level-cache = <&L1_CA720_11>;
 			enable-method = "psci";
+
+			L1_CA720_11: l1-cache-controller-11 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_11>;
+			};
+
+			L2_CA720_11: l2-cache-controller-11 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_2>;
+			};
 		};
 
 		a720_12: cpu@30000 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x30000>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_3>;
+			next-level-cache = <&L1_CA720_12>;
 			enable-method = "psci";
+
+			L1_CA720_12: l1-cache-controller-12 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_12>;
+			};
+
+			L2_CA720_12: l2-cache-controller-12 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_3>;
+			};
 		};
 
 		a720_13: cpu@30100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x30100>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_3>;
+			next-level-cache = <&L1_CA720_13>;
 			enable-method = "psci";
+
+			L1_CA720_13: l1-cache-controller-13 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_13>;
+			};
+
+			L2_CA720_13: l2-cache-controller-13 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_3>;
+			};
 		};
 
 		a720_14: cpu@30200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x30200>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_3>;
+			next-level-cache = <&L1_CA720_14>;
 			enable-method = "psci";
+
+			L1_CA720_14: l1-cache-controller-14 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_14>;
+			};
+
+			L2_CA720_14: l2-cache-controller-14 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_3>;
+			};
 		};
 
 		a720_15: cpu@30300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x30300>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_3>;
+			next-level-cache = <&L1_CA720_15>;
 			enable-method = "psci";
+
+			L1_CA720_15: l1-cache-controller-15 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_15>;
+			};
+
+			L2_CA720_15: l2-cache-controller-15 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_3>;
+			};
 		};
 
 		a720_16: cpu@40000 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x40000>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_4>;
+			next-level-cache = <&L1_CA720_16>;
 			enable-method = "psci";
+
+			L1_CA720_16: l1-cache-controller-16 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_16>;
+			};
+
+			L2_CA720_16: l2-cache-controller-16 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_4>;
+			};
 		};
 
 		a720_17: cpu@40100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x40100>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_4>;
+			next-level-cache = <&L1_CA720_17>;
 			enable-method = "psci";
+
+			L1_CA720_17: l1-cache-controller-17 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_17>;
+			};
+
+			L2_CA720_17: l2-cache-controller-17 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_4>;
+			};
 		};
 
 		a720_18: cpu@40200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x40200>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_4>;
+			next-level-cache = <&L1_CA720_18>;
 			enable-method = "psci";
+
+			L1_CA720_18: l1-cache-controller-18 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_18>;
+			};
+
+			L2_CA720_18: l2-cache-controller-18 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_4>;
+			};
 		};
 
 		a720_19: cpu@40300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x40300>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_4>;
+			next-level-cache = <&L1_CA720_19>;
 			enable-method = "psci";
+
+			L1_CA720_19: l1-cache-controller-19 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_19>;
+			};
+
+			L2_CA720_19: l2-cache-controller-19 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_4>;
+			};
 		};
 
 		a720_20: cpu@50000 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x50000>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_5>;
+			next-level-cache = <&L1_CA720_20>;
 			enable-method = "psci";
+
+			L1_CA720_20: l1-cache-controller-20 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_20>;
+			};
+
+			L2_CA720_20: l2-cache-controller-20 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_5>;
+			};
 		};
 
 		a720_21: cpu@50100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x50100>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_5>;
+			next-level-cache = <&L1_CA720_21>;
 			enable-method = "psci";
+
+			L1_CA720_21: l1-cache-controller-21 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_21>;
+			};
+
+			L2_CA720_21: l2-cache-controller-21 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_5>;
+			};
 		};
 
 		a720_22: cpu@50200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x50200>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_5>;
+			next-level-cache = <&L1_CA720_22>;
 			enable-method = "psci";
+
+			L1_CA720_22: l1-cache-controller-22 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_22>;
+			};
+
+			L2_CA720_22: l2-cache-controller-22 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_5>;
+			};
 		};
 
 		a720_23: cpu@50300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x50300>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_5>;
+			next-level-cache = <&L1_CA720_23>;
 			enable-method = "psci";
+
+			L1_CA720_23: l1-cache-controller-23 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_23>;
+			};
+
+			L2_CA720_23: l2-cache-controller-23 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_5>;
+			};
 		};
 
 		a720_24: cpu@60000 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x60000>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_6>;
+			next-level-cache = <&L1_CA720_24>;
 			enable-method = "psci";
+
+			L1_CA720_24: l1-cache-controller-24 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_24>;
+			};
+
+			L2_CA720_24: l2-cache-controller-24 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_6>;
+			};
 		};
 
 		a720_25: cpu@60100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x60100>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_6>;
+			next-level-cache = <&L1_CA720_25>;
 			enable-method = "psci";
+
+			L1_CA720_25: l1-cache-controller-25 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_25>;
+			};
+
+			L2_CA720_25: l2-cache-controller-25 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_6>;
+			};
 		};
 
 		a720_26: cpu@60200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x60200>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_6>;
+			next-level-cache = <&L1_CA720_26>;
 			enable-method = "psci";
+
+			L1_CA720_26: l1-cache-controller-26 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_26>;
+			};
+
+			L2_CA720_26: l2-cache-controller-26 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_6>;
+			};
 		};
 
 		a720_27: cpu@60300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x60300>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_6>;
+			next-level-cache = <&L1_CA720_27>;
 			enable-method = "psci";
+
+			L1_CA720_27: l1-cache-controller-27 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_27>;
+			};
+
+			L2_CA720_27: l2-cache-controller-27 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_6>;
+			};
 		};
 
 		a720_28: cpu@70000 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x70000>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_7>;
+			next-level-cache = <&L1_CA720_28>;
 			enable-method = "psci";
+
+			L1_CA720_28: l1-cache-controller-28 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_28>;
+			};
+
+			L2_CA720_28: l2-cache-controller-28 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_7>;
+			};
 		};
 
 		a720_29: cpu@70100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x70100>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_7>;
+			next-level-cache = <&L1_CA720_29>;
 			enable-method = "psci";
+
+			L1_CA720_29: l1-cache-controller-29 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_29>;
+			};
+
+			L2_CA720_29: l2-cache-controller-29 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_7>;
+			};
 		};
 
 		a720_30: cpu@70200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x70200>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_7>;
+			next-level-cache = <&L1_CA720_30>;
 			enable-method = "psci";
+
+			L1_CA720_30: l1-cache-controller-30 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_30>;
+			};
+
+			L2_CA720_30: l2-cache-controller-30 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_7>;
+			};
 		};
 
 		a720_31: cpu@70300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0 0x70300>;
 			device_type = "cpu";
-			next-level-cache = <&L3_CA720_7>;
+			next-level-cache = <&L1_CA720_31>;
 			enable-method = "psci";
+
+			L1_CA720_31: l1-cache-controller-31 {
+				compatible = "cache";
+				next-level-cache = <&L2_CA720_31>;
+			};
+
+			L2_CA720_31: l2-cache-controller-31 {
+				compatible = "cache";
+				next-level-cache = <&L3_CA720_7>;
+			};
 		};
 
 		L3_CA720_0: cache-controller-0 {
