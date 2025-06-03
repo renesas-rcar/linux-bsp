@@ -145,6 +145,7 @@ struct rcar_i2c_priv {
 
 	struct reset_control *rstc;
 	int irq;
+	int suspended;
 
 	struct i2c_client *host_notify_client;
 	u8 slave_flags;
@@ -212,13 +213,15 @@ static struct i2c_bus_recovery_info rcar_i2c_bri = {
 };
 static void rcar_i2c_init(struct rcar_i2c_priv *priv)
 {
-	/* reset master mode */
-	rcar_i2c_write(priv, ICMIER, 0);
-	rcar_i2c_write(priv, ICMCR, MDBS);
-	rcar_i2c_write(priv, ICMSR, 0);
+	if (!priv->suspended) {
+		/* reset master mode */
+		rcar_i2c_write(priv, ICMIER, 0);
+		rcar_i2c_write(priv, ICMCR, MDBS);
+		rcar_i2c_write(priv, ICMSR, 0);
+	}
 	/* start clock */
 	rcar_i2c_write(priv, ICCCR, priv->icccr);
-
+	/* 1st bit setup cycle */
 	if (priv->devtype == I2C_RCAR_GEN3)
 		rcar_i2c_write(priv, ICFBSCR, TCYC17);
 
@@ -350,6 +353,7 @@ static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 		priv->flags |= ID_LAST_MSG;
 
 	rcar_i2c_write(priv, ICMAR, i2c_8bit_addr_from_msg(priv->msg));
+	rcar_i2c_write(priv, ICMIER, read ? RCAR_IRQ_RECV : RCAR_IRQ_SEND);
 	/*
 	 * We don't have a test case but the HW engineers say that the write order
 	 * of ICMSR and ICMCR depends on whether we issue START or REP_START. Since
@@ -365,7 +369,6 @@ static void rcar_i2c_prepare_msg(struct rcar_i2c_priv *priv)
 			rcar_i2c_write(priv, ICMCR, RCAR_BUS_PHASE_START);
 		rcar_i2c_write(priv, ICMSR, 0);
 	}
-	rcar_i2c_write(priv, ICMIER, read ? RCAR_IRQ_RECV : RCAR_IRQ_SEND);
 }
 
 static void rcar_i2c_next_msg(struct rcar_i2c_priv *priv)
@@ -827,6 +830,9 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 	int i, ret;
 	long time_left;
 
+	if (priv->suspended)
+		return -EBUSY;
+
 	pm_runtime_get_sync(dev);
 
 	/* Check bus state before init otherwise bus busy info will be lost */
@@ -959,6 +965,7 @@ static const struct of_device_id rcar_i2c_dt_ids[] = {
 	{ .compatible = "renesas,i2c-r8a7794", .data = (void *)I2C_RCAR_GEN2 },
 	{ .compatible = "renesas,i2c-r8a7795", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-r8a7796", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,i2c-r8a77961", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-rcar", .data = (void *)I2C_RCAR_GEN1 },	/* Deprecated */
 	{ .compatible = "renesas,rcar-gen1-i2c", .data = (void *)I2C_RCAR_GEN1 },
 	{ .compatible = "renesas,rcar-gen2-i2c", .data = (void *)I2C_RCAR_GEN2 },
@@ -1104,6 +1111,7 @@ static int rcar_i2c_remove(struct platform_device *pdev)
 		i2c_free_slave_host_notify_device(priv->host_notify_client);
 	i2c_del_adapter(&priv->adap);
 	rcar_i2c_release_dma(priv);
+	rcar_i2c_write(priv, ICMIER, 0);
 	if (priv->flags & ID_P_PM_BLOCKED)
 		pm_runtime_put(dev);
 	pm_runtime_disable(dev);
@@ -1116,16 +1124,29 @@ static int rcar_i2c_suspend(struct device *dev)
 {
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
 
+	priv->suspended = 1;
 	i2c_mark_adapter_suspended(&priv->adap);
 	return 0;
 }
 
 static int rcar_i2c_resume(struct device *dev)
 {
+	int ret = 0;
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
 
+	pm_runtime_get_sync(dev);
+	ret = rcar_i2c_clock_calculate(priv);
+	if (ret < 0)
+		dev_err(dev, "Could not calculate clock\n");
+
+	rcar_i2c_init(priv);
+	pm_runtime_put(dev);
+
+	priv->suspended = 0;
+
 	i2c_mark_adapter_resumed(&priv->adap);
-	return 0;
+
+	return ret;
 }
 
 static const struct dev_pm_ops rcar_i2c_pm_ops = {
