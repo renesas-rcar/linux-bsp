@@ -3,6 +3,12 @@ menuconfig SOC_RENESAS
 	bool "Renesas SoC driver support" if COMPILE_TEST && !ARCH_RENESAS
 	default y if ARCH_RENESAS
 	select SOC_BUS
+config RCAR_CPU_TOPOLOGY
+	depends on (ARCH_R8A77950 || ARCH_R8A77951 || ARCH_R8A77960 || ARCH_R8A77961)
+	bool "R-Car CPU Topology"
+	default y
+	help
+	  This enables the capacity awareness feature for R-Car series.
 
 if SOC_RENESAS
 
@@ -376,5 +382,23 @@ config SYSC_R8A774A1
 config SYSC_R8A774B1
 	bool "System Controller support for RZ/G2N" if COMPILE_TEST
 	select SYSC_RCAR
+
+#
+# Renesas SoC drivers
+#
+config RCAR_THERMAL_EMS
+	tristate "Renesas R-Car Gen3 Enable Emergency Shutdown"
+	depends on RCAR_GEN3_THERMAL
+	default y
+	help
+	  Enable this option if you want to have support for Emergency Shutdown
+	  in R-Car Gen3.
+
+config RCAR_POWER_AVS
+	bool "Renesas R-Car Gen3 AVS (Adaptive Voltage Scaling)"
+	depends on ARCH_R8A77951 || ARCH_R8A77960 || ARCH_R8A77961
+	default y
+	help
+	  Enable this option if you want to have support for AVS on R-Car Gen3.
 
 endif # SOC_RENESAS
