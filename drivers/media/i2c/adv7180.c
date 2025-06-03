@@ -703,10 +703,13 @@ static int adv7180_get_pad_format(struct v4l2_subdev *sd,
 				  struct v4l2_subdev_format *format)
 {
 	struct adv7180_state *state = to_state(sd);
+	v4l2_std_id std = 0;
 
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY) {
 		format->format = *v4l2_subdev_get_try_format(sd, cfg, 0);
 	} else {
+		adv7180_querystd(sd, &std);
+		state->curr_norm = std;
 		adv7180_mbus_fmt(sd, &format->format);
 		format->format.field = state->field;
 	}
