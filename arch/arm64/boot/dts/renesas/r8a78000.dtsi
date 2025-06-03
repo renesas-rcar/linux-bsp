@@ -510,6 +510,12 @@
 		clock-frequency = <0>;
 	};
 
+	dummy_clk_wcrc: dummy_clk_wcrc {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
 	/* External SCIF clock - to be overridden by boards that provide it */
 	scif_clk: scif {
 		compatible = "fixed-clock";
@@ -879,6 +885,589 @@
 			gpio-ranges = <&pfc 0 320 14>;
 			#interrupt-cells = <2>;
 			interrupt-controller;
+		};
+
+		crc0: crc@19000000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19000000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc1: crc@19010000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19010000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc2: crc@19020000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19020000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc3: crc@19030000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19030000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc4: crc@19040000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19040000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc5: crc@19050000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19050000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc6: crc@19060000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19060000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc7: crc@19070000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19070000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc8: crc@19080000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19080000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc9: crc@19090000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x19090000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		crc10: crc@190A0000 {
+			compatible = "renesas,rcar-gen5-crc";
+			reg = <0 0x190A0000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc0: kcrc@19100000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19100000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc1: kcrc@19110000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19110000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc2: kcrc@19120000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19120000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc3: kcrc@19130000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19130000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc4: kcrc@19140000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19140000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc5: kcrc@19150000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19150000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc6: kcrc@19160000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19160000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc7: kcrc@19170000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19170000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc8: kcrc@19180000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19180000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc9: kcrc@19190000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x19190000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		kcrc10: kcrc@191A0000 {
+			compatible = "renesas,rcar-gen5-kcrc";
+			reg = <0 0x191A0000 0 0x00010000>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		wcrc0: wcrc@19200000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19200000 0 0x00010000>,
+				<0 0x19400000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc0>;
+			sub-kcrc = <&kcrc0>;
+			interrupts = <0x00 0x106f 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0x18>, <&rt_dmac0 0x19>,
+				<&rt_dmac0 0x1A>, <&rt_dmac0 0x1B>,
+				<&rt_dmac0 0x1C>, <&rt_dmac0 0x1D>,
+				<&rt_dmac0 0x1E>, <&rt_dmac0 0x1F>,
+				<&rt_dmac1 0x18>, <&rt_dmac1 0x19>,
+				<&rt_dmac1 0x1A>, <&rt_dmac1 0x1B>,
+				<&rt_dmac1 0x1C>, <&rt_dmac1 0x1D>,
+				<&rt_dmac1 0x1E>, <&rt_dmac1 0x1F>,
+				<&rt_dmac2 0x18>, <&rt_dmac2 0x19>,
+				<&rt_dmac2 0x1A>, <&rt_dmac2 0x1B>,
+				<&rt_dmac2 0x1C>, <&rt_dmac2 0x1D>,
+				<&rt_dmac2 0x1E>, <&rt_dmac2 0x1F>,
+				<&rt_dmac3 0x18>, <&rt_dmac3 0x19>,
+				<&rt_dmac3 0x1A>, <&rt_dmac3 0x1B>,
+				<&rt_dmac3 0x1C>, <&rt_dmac3 0x1D>,
+				<&rt_dmac3 0x1E>, <&rt_dmac3 0x1F>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc1: wcrc@19210000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19210000 0 0x00010000>,
+				<0 0x19404000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc1>;
+			sub-kcrc = <&kcrc1>;
+			interrupts = <0x00 0x1070 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0x28>, <&rt_dmac0 0x29>,
+				<&rt_dmac0 0x2A>, <&rt_dmac0 0x2B>,
+				<&rt_dmac0 0x2C>, <&rt_dmac0 0x2D>,
+				<&rt_dmac0 0x2E>, <&rt_dmac0 0x2F>,
+				<&rt_dmac1 0x28>, <&rt_dmac1 0x29>,
+				<&rt_dmac1 0x2A>, <&rt_dmac1 0x2B>,
+				<&rt_dmac1 0x2C>, <&rt_dmac1 0x2D>,
+				<&rt_dmac1 0x2E>, <&rt_dmac1 0x2F>,
+				<&rt_dmac2 0x28>, <&rt_dmac2 0x29>,
+				<&rt_dmac2 0x2A>, <&rt_dmac2 0x2B>,
+				<&rt_dmac2 0x2C>, <&rt_dmac2 0x2D>,
+				<&rt_dmac2 0x2E>, <&rt_dmac2 0x2F>,
+				<&rt_dmac3 0x28>, <&rt_dmac3 0x29>,
+				<&rt_dmac3 0x2A>, <&rt_dmac3 0x2B>,
+				<&rt_dmac3 0x2C>, <&rt_dmac3 0x2D>,
+				<&rt_dmac3 0x2E>, <&rt_dmac3 0x2F>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc2: wcrc@19220000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19220000 0 0x00010000>,
+				<0 0x19408000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc2>;
+			sub-kcrc = <&kcrc2>;
+			interrupts = <0x00 0x1071 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0x38>, <&rt_dmac0 0x39>,
+				<&rt_dmac0 0x3A>, <&rt_dmac0 0x3B>,
+				<&rt_dmac0 0x3C>, <&rt_dmac0 0x3D>,
+				<&rt_dmac0 0x3E>, <&rt_dmac0 0x3F>,
+				<&rt_dmac1 0x38>, <&rt_dmac1 0x39>,
+				<&rt_dmac1 0x3A>, <&rt_dmac1 0x3B>,
+				<&rt_dmac1 0x3C>, <&rt_dmac1 0x3D>,
+				<&rt_dmac1 0x3E>, <&rt_dmac1 0x3F>,
+				<&rt_dmac2 0x38>, <&rt_dmac2 0x39>,
+				<&rt_dmac2 0x3A>, <&rt_dmac2 0x3B>,
+				<&rt_dmac2 0x3C>, <&rt_dmac2 0x3D>,
+				<&rt_dmac2 0x3E>, <&rt_dmac2 0x3F>,
+				<&rt_dmac3 0x38>, <&rt_dmac3 0x39>,
+				<&rt_dmac3 0x3A>, <&rt_dmac3 0x3B>,
+				<&rt_dmac3 0x3C>, <&rt_dmac3 0x3D>,
+				<&rt_dmac3 0x3E>, <&rt_dmac3 0x3F>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc3: wcrc@19230000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19230000 0 0x00010000>,
+				<0 0x1940C000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc3>;
+			sub-kcrc = <&kcrc3>;
+			interrupts = <0x00 0x1072 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0x48>, <&rt_dmac0 0x49>,
+				<&rt_dmac0 0x4A>, <&rt_dmac0 0x4B>,
+				<&rt_dmac0 0x4C>, <&rt_dmac0 0x4D>,
+				<&rt_dmac0 0x4E>, <&rt_dmac0 0x4F>,
+				<&rt_dmac1 0x48>, <&rt_dmac1 0x49>,
+				<&rt_dmac1 0x4A>, <&rt_dmac1 0x4B>,
+				<&rt_dmac1 0x4C>, <&rt_dmac1 0x4D>,
+				<&rt_dmac1 0x4E>, <&rt_dmac1 0x4F>,
+				<&rt_dmac2 0x48>, <&rt_dmac2 0x49>,
+				<&rt_dmac2 0x4A>, <&rt_dmac2 0x4B>,
+				<&rt_dmac2 0x4C>, <&rt_dmac2 0x4D>,
+				<&rt_dmac2 0x4E>, <&rt_dmac2 0x4F>,
+				<&rt_dmac3 0x48>, <&rt_dmac3 0x49>,
+				<&rt_dmac3 0x4A>, <&rt_dmac3 0x4B>,
+				<&rt_dmac3 0x4C>, <&rt_dmac3 0x4D>,
+				<&rt_dmac3 0x4E>, <&rt_dmac3 0x4F>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc4: wcrc@19240000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19240000 0 0x00010000>,
+				<0 0x19410000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc4>;
+			sub-kcrc = <&kcrc4>;
+			interrupts = <0x00 0x1073 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0x58>, <&rt_dmac0 0x59>,
+				<&rt_dmac0 0x5A>, <&rt_dmac0 0x5B>,
+				<&rt_dmac0 0x5C>, <&rt_dmac0 0x5D>,
+				<&rt_dmac0 0x5E>, <&rt_dmac0 0x5F>,
+				<&rt_dmac1 0x58>, <&rt_dmac1 0x59>,
+				<&rt_dmac1 0x5A>, <&rt_dmac1 0x5B>,
+				<&rt_dmac1 0x5C>, <&rt_dmac1 0x5D>,
+				<&rt_dmac1 0x5E>, <&rt_dmac1 0x5F>,
+				<&rt_dmac2 0x58>, <&rt_dmac2 0x59>,
+				<&rt_dmac2 0x5A>, <&rt_dmac2 0x5B>,
+				<&rt_dmac2 0x5C>, <&rt_dmac2 0x5D>,
+				<&rt_dmac2 0x5E>, <&rt_dmac2 0x5F>,
+				<&rt_dmac3 0x58>, <&rt_dmac3 0x59>,
+				<&rt_dmac3 0x5A>, <&rt_dmac3 0x5B>,
+				<&rt_dmac3 0x5C>, <&rt_dmac3 0x5D>,
+				<&rt_dmac3 0x5E>, <&rt_dmac3 0x5F>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc5: wcrc@19250000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19250000 0 0x00010000>,
+				<0 0x19414000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc5>;
+			sub-kcrc = <&kcrc5>;
+			interrupts = <0x00 0x1074 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0x68>, <&rt_dmac0 0x69>,
+				<&rt_dmac0 0x6A>, <&rt_dmac0 0x6B>,
+				<&rt_dmac0 0x6C>, <&rt_dmac0 0x6D>,
+				<&rt_dmac0 0x6E>, <&rt_dmac0 0x6F>,
+				<&rt_dmac1 0x68>, <&rt_dmac1 0x69>,
+				<&rt_dmac1 0x6A>, <&rt_dmac1 0x6B>,
+				<&rt_dmac1 0x6C>, <&rt_dmac1 0x6D>,
+				<&rt_dmac1 0x6E>, <&rt_dmac1 0x6F>,
+				<&rt_dmac2 0x68>, <&rt_dmac2 0x69>,
+				<&rt_dmac2 0x6A>, <&rt_dmac2 0x6B>,
+				<&rt_dmac2 0x6C>, <&rt_dmac2 0x6D>,
+				<&rt_dmac2 0x6E>, <&rt_dmac2 0x6F>,
+				<&rt_dmac3 0x68>, <&rt_dmac3 0x69>,
+				<&rt_dmac3 0x6A>, <&rt_dmac3 0x6B>,
+				<&rt_dmac3 0x6C>, <&rt_dmac3 0x6D>,
+				<&rt_dmac3 0x6E>, <&rt_dmac3 0x6F>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc6: wcrc@19260000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19260000 0 0x00010000>,
+				<0 0x19418000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc6>;
+			sub-kcrc = <&kcrc6>;
+			interrupts = <0x00 0x1075 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0x78>, <&rt_dmac0 0x79>,
+				<&rt_dmac0 0x7A>, <&rt_dmac0 0x7B>,
+				<&rt_dmac0 0x7C>, <&rt_dmac0 0x7D>,
+				<&rt_dmac0 0x7E>, <&rt_dmac0 0x7F>,
+				<&rt_dmac1 0x78>, <&rt_dmac1 0x79>,
+				<&rt_dmac1 0x7A>, <&rt_dmac1 0x7B>,
+				<&rt_dmac1 0x7C>, <&rt_dmac1 0x7D>,
+				<&rt_dmac1 0x7E>, <&rt_dmac1 0x7F>,
+				<&rt_dmac2 0x78>, <&rt_dmac2 0x79>,
+				<&rt_dmac2 0x7A>, <&rt_dmac2 0x7B>,
+				<&rt_dmac2 0x7C>, <&rt_dmac2 0x7D>,
+				<&rt_dmac2 0x7E>, <&rt_dmac2 0x7F>,
+				<&rt_dmac3 0x78>, <&rt_dmac3 0x79>,
+				<&rt_dmac3 0x7A>, <&rt_dmac3 0x7B>,
+				<&rt_dmac3 0x7C>, <&rt_dmac3 0x7D>,
+				<&rt_dmac3 0x7E>, <&rt_dmac3 0x7F>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc7: wcrc@19270000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19270000 0 0x00010000>,
+				<0 0x1941C000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc7>;
+			sub-kcrc = <&kcrc7>;
+			interrupts = <0x00 0x1076 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0x88>, <&rt_dmac0 0x89>,
+				<&rt_dmac0 0x8A>, <&rt_dmac0 0x8B>,
+				<&rt_dmac0 0x8C>, <&rt_dmac0 0x8D>,
+				<&rt_dmac0 0x8E>, <&rt_dmac0 0x8F>,
+				<&rt_dmac1 0x88>, <&rt_dmac1 0x89>,
+				<&rt_dmac1 0x8A>, <&rt_dmac1 0x8B>,
+				<&rt_dmac1 0x8C>, <&rt_dmac1 0x8D>,
+				<&rt_dmac1 0x8E>, <&rt_dmac1 0x8F>,
+				<&rt_dmac2 0x88>, <&rt_dmac2 0x89>,
+				<&rt_dmac2 0x8A>, <&rt_dmac2 0x8B>,
+				<&rt_dmac2 0x8C>, <&rt_dmac2 0x8D>,
+				<&rt_dmac2 0x8E>, <&rt_dmac2 0x8F>,
+				<&rt_dmac3 0x88>, <&rt_dmac3 0x89>,
+				<&rt_dmac3 0x8A>, <&rt_dmac3 0x8B>,
+				<&rt_dmac3 0x8C>, <&rt_dmac3 0x8D>,
+				<&rt_dmac3 0x8E>, <&rt_dmac3 0x8F>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc8: wcrc@19280000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19280000 0 0x00010000>,
+				<0 0x19420000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc8>;
+			sub-kcrc = <&kcrc8>;
+			interrupts = <0x00 0x1077 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0x98>, <&rt_dmac0 0x99>,
+				<&rt_dmac0 0x9A>, <&rt_dmac0 0x9B>,
+				<&rt_dmac0 0x9C>, <&rt_dmac0 0x9D>,
+				<&rt_dmac0 0x9E>, <&rt_dmac0 0x9F>,
+				<&rt_dmac1 0x98>, <&rt_dmac1 0x99>,
+				<&rt_dmac1 0x9A>, <&rt_dmac1 0x9B>,
+				<&rt_dmac1 0x9C>, <&rt_dmac1 0x9D>,
+				<&rt_dmac1 0x9E>, <&rt_dmac1 0x9F>,
+				<&rt_dmac2 0x98>, <&rt_dmac2 0x99>,
+				<&rt_dmac2 0x9A>, <&rt_dmac2 0x9B>,
+				<&rt_dmac2 0x9C>, <&rt_dmac2 0x9D>,
+				<&rt_dmac2 0x9E>, <&rt_dmac2 0x9F>,
+				<&rt_dmac3 0x98>, <&rt_dmac3 0x99>,
+				<&rt_dmac3 0x9A>, <&rt_dmac3 0x9B>,
+				<&rt_dmac3 0x9C>, <&rt_dmac3 0x9D>,
+				<&rt_dmac3 0x9E>, <&rt_dmac3 0x9F>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc9: wcrc@19290000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x19290000 0 0x00010000>,
+				<0 0x19424000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc9>;
+			sub-kcrc = <&kcrc9>;
+			interrupts = <0x00 0x1078 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0xA8>, <&rt_dmac0 0xA9>,
+				<&rt_dmac0 0xAA>, <&rt_dmac0 0xAB>,
+				<&rt_dmac0 0xAC>, <&rt_dmac0 0xAD>,
+				<&rt_dmac0 0xAE>, <&rt_dmac0 0xAF>,
+				<&rt_dmac1 0xA8>, <&rt_dmac1 0xA9>,
+				<&rt_dmac1 0xAA>, <&rt_dmac1 0xAB>,
+				<&rt_dmac1 0xAC>, <&rt_dmac1 0xAD>,
+				<&rt_dmac1 0xAE>, <&rt_dmac1 0xAF>,
+				<&rt_dmac2 0xA8>, <&rt_dmac2 0xA9>,
+				<&rt_dmac2 0xAA>, <&rt_dmac2 0xAB>,
+				<&rt_dmac2 0xAC>, <&rt_dmac2 0xAD>,
+				<&rt_dmac2 0xAE>, <&rt_dmac2 0xAF>,
+				<&rt_dmac3 0xA8>, <&rt_dmac3 0xA9>,
+				<&rt_dmac3 0xAA>, <&rt_dmac3 0xAB>,
+				<&rt_dmac3 0xAC>, <&rt_dmac3 0xAD>,
+				<&rt_dmac3 0xAE>, <&rt_dmac3 0xAF>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		wcrc10: wcrc@192A0000 {
+			compatible = "renesas,rcar-gen5-wcrc";
+			reg = <0 0x192A0000 0 0x00010000>,
+				<0 0x19428000 0 0x4000>;
+			reg-names = "wcrc", "fifo";
+			sub-crc = <&crc10>;
+			sub-kcrc = <&kcrc10>;
+			interrupts = <0x00 0x1079 0x04>;
+			clocks = <&dummy_clk_wcrc>;
+			clock-names = "fck";
+			dmas =  <&rt_dmac0 0xB8>, <&rt_dmac0 0xB9>,
+				<&rt_dmac0 0xBA>, <&rt_dmac0 0xBB>,
+				<&rt_dmac0 0xBC>, <&rt_dmac0 0xBD>,
+				<&rt_dmac0 0xBE>, <&rt_dmac0 0xBF>,
+				<&rt_dmac1 0xB8>, <&rt_dmac1 0xB9>,
+				<&rt_dmac1 0xBA>, <&rt_dmac1 0xBB>,
+				<&rt_dmac1 0xBC>, <&rt_dmac1 0xBD>,
+				<&rt_dmac1 0xBE>, <&rt_dmac1 0xBF>,
+				<&rt_dmac2 0xB8>, <&rt_dmac2 0xB9>,
+				<&rt_dmac2 0xBA>, <&rt_dmac2 0xBB>,
+				<&rt_dmac2 0xBC>, <&rt_dmac2 0xBD>,
+				<&rt_dmac2 0xBE>, <&rt_dmac2 0xBF>,
+				<&rt_dmac3 0xB8>, <&rt_dmac3 0xB9>,
+				<&rt_dmac3 0xBA>, <&rt_dmac3 0xBB>,
+				<&rt_dmac3 0xBC>, <&rt_dmac3 0xBD>,
+				<&rt_dmac3 0xBE>, <&rt_dmac3 0xBF>;
+			dma-names = "crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
+				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
+				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
 		};
 
 		scif0: serial@c0700000 {
