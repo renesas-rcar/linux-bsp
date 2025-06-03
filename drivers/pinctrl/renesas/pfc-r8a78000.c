@@ -2948,6 +2948,33 @@ static const unsigned int i2c8_mux[] = {
 	SDA8_MARK, SCL8_MARK,
 };
 
+/* - I3C0 ------------------------------------------------------------------- */
+static const unsigned int i3c0_pins[] = {
+	/* S3DA0, S3CL0 */
+	RCAR_GP_PIN(8, 27), RCAR_GP_PIN(8, 26),
+};
+static const unsigned int i3c0_mux[] = {
+	S3DA0_MARK, S3CL0_MARK,
+};
+
+/* - I3C1 ------------------------------------------------------------------- */
+static const unsigned int i3c1_pins[] = {
+	/* S3DA1, S3CL1 */
+	RCAR_GP_PIN(8, 29), RCAR_GP_PIN(8, 28),
+};
+static const unsigned int i3c1_mux[] = {
+	S3DA1_MARK, S3CL1_MARK,
+};
+
+/* - I3C2 ------------------------------------------------------------------- */
+static const unsigned int i3c2_pins[] = {
+	/* S3DA2, S3CL2 */
+	RCAR_GP_PIN(8, 31), RCAR_GP_PIN(8, 30),
+};
+static const unsigned int i3c2_mux[] = {
+	S3DA2_MARK, S3CL2_MARK,
+};
+
 /* - INTC-EX ---------------------------------------------------------------- */
 static const unsigned int intc_ex_irq0_pins[] = {
 	/* IRQ0_A, IRQ0_B */
@@ -3676,6 +3703,10 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(i2c7),
 	SH_PFC_PIN_GROUP(i2c8),
 
+	SH_PFC_PIN_GROUP(i3c0),
+	SH_PFC_PIN_GROUP(i3c1),
+	SH_PFC_PIN_GROUP(i3c2),
+
 	SH_PFC_PIN_GROUP(intc_ex_irq0),
 	SH_PFC_PIN_GROUP(intc_ex_irq1),
 	SH_PFC_PIN_GROUP(intc_ex_irq2),
@@ -3874,6 +3905,18 @@ static const char * const i2c8_groups[] = {
 	"i2c8",
 };
 
+static const char * const i3c0_groups[] = {
+	"i3c0",
+};
+
+static const char * const i3c1_groups[] = {
+	"i3c1",
+};
+
+static const char * const i3c2_groups[] = {
+	"i3c2",
+};
+
 static const char * const intc_ex_groups[] = {
 	"intc_ex_irq0",
 	"intc_ex_irq1",
@@ -4061,6 +4104,10 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(i2c6),
 	SH_PFC_FUNCTION(i2c7),
 	SH_PFC_FUNCTION(i2c8),
+
+	SH_PFC_FUNCTION(i3c0),
+	SH_PFC_FUNCTION(i3c1),
+	SH_PFC_FUNCTION(i3c2),
 
 	SH_PFC_FUNCTION(intc_ex),
 
