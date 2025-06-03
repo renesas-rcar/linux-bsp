@@ -463,7 +463,6 @@ MODULE_DEVICE_TABLE(of, sdhci_cdns_match);
 static struct platform_driver sdhci_cdns_driver = {
 	.driver = {
 		.name = "sdhci-cdns",
-		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 		.pm = &sdhci_cdns_pm_ops,
 		.of_match_table = sdhci_cdns_match,
 	},
