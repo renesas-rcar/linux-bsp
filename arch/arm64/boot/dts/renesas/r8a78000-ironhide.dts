@@ -298,3 +298,135 @@
 	timeout-sec = <60>;
 	status = "okay";
 };
+
+&crc0 {
+	status = "okay";
+};
+
+&crc1 {
+	status = "okay";
+};
+
+&crc2 {
+	status = "okay";
+};
+
+&crc3 {
+	status = "okay";
+};
+
+&crc4 {
+	status = "okay";
+};
+
+&crc5 {
+	status = "okay";
+};
+
+&crc6 {
+	status = "okay";
+};
+
+&crc7 {
+	status = "okay";
+};
+
+&crc8 {
+	status = "okay";
+};
+
+&crc9 {
+	status = "okay";
+};
+
+&crc10 {
+	status = "okay";
+};
+
+&kcrc0 {
+	status = "okay";
+};
+
+&kcrc1 {
+	status = "okay";
+};
+
+&kcrc2 {
+	status = "okay";
+};
+
+&kcrc3 {
+	status = "okay";
+};
+
+&kcrc4 {
+	status = "okay";
+};
+
+&kcrc5 {
+	status = "okay";
+};
+
+&kcrc6 {
+	status = "okay";
+};
+
+&kcrc7 {
+	status = "okay";
+};
+
+&kcrc8 {
+	status = "okay";
+};
+
+&kcrc9 {
+	status = "okay";
+};
+
+&kcrc10 {
+	status = "okay";
+};
+
+&wcrc0 {
+	status = "okay";
+};
+
+&wcrc1 {
+	status = "okay";
+};
+
+&wcrc2 {
+	status = "okay";
+};
+
+&wcrc3 {
+	status = "okay";
+};
+
+&wcrc4 {
+	status = "okay";
+};
+
+&wcrc5 {
+	status = "okay";
+};
+
+&wcrc6 {
+	status = "okay";
+};
+
+&wcrc7 {
+	status = "okay";
+};
+
+&wcrc8 {
+	status = "okay";
+};
+
+&wcrc9 {
+	status = "okay";
+};
+
+&wcrc10 {
+	status = "okay";
+};
