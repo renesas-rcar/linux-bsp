@@ -21,7 +21,7 @@
 
 /* KCRC[m] data output register */
 #define KCRC_DOUT 0x0080
-#define DOUT_DEF 0x0 //initialize value
+#define DOUT_DEF 0xFFFFFFFF //initialize value
 
 /* KCRC[m] control register */
 #define KCRC_CTL 0x0090
@@ -31,9 +31,9 @@
 #define CMD0 BIT(8) //0: Mode N (Normal), 1: Mode R (output reflect)
 #define CMD1 BIT(5) //0: Mode N (Normal), 1: Mode R (input reflect)
 #define CMD2 BIT(4) //0: Mode M (MSB shift), 1: Mode R (LSB shift)
-#define DW_32 0 //default 32-bit fix mode
-#define DW_16 BIT(0) //16-bit fix mode
-#define DW_8 (3 << 0) //8-bit fix mode
+#define DW_32   ((0x1F) << 16)  //default 32-bit fix mode
+#define DW_16   ((0xF)  << 16)  //16-bit fix mode
+#define DW_8    ((0x7)  << 16)  //8-bit fix mode
 
 /* KCRC[m] Polynomial register */
 #define KCRC_POLY 0x00A0
