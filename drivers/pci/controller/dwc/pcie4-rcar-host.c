@@ -102,6 +102,36 @@ static void rcar_gen5_pcie_ltssm_enable(struct rcar_pcie4 *rcar_pcie4,
 
 }
 
+static void rcar_gen5_pcie_retrain_link(struct dw_pcie *pci)
+{
+	u32 val, lnksta, retries;
+
+	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCTL));
+	val |= PCI_EXP_LNKCTL_RL;
+	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCTL), val);
+
+	/* Wait for link retrain */
+	for (retries = 0; retries <= 10; retries++) {
+		lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
+
+		/* Check retrain flag */
+		if (!(lnksta & PCI_EXP_LNKSTA_LT))
+			break;
+		mdelay(1);
+	}
+}
+
+static void rcar_gen5_pcie_check_speed(struct dw_pcie *pci)
+{
+	u32 lnkcap, lnksta;
+
+	lnkcap = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCAP));
+	lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
+
+	if ((lnksta & PCI_EXP_LNKSTA_CLS) != (lnkcap & PCI_EXP_LNKCAP_SLS))
+		rcar_gen5_pcie_retrain_link(pci);
+}
+
 static int rcar_gen5_pcie_link_up(struct dw_pcie *pci)
 {
 	struct rcar_pcie4 *rcar_pcie4 = to_rcar_gen5_pcie(pci);
@@ -109,6 +139,8 @@ static int rcar_gen5_pcie_link_up(struct dw_pcie *pci)
 
 	val = readl(rcar_pcie4->base + PCIEINTSTS0);
 	mask = GENMASK(7,6);
+
+	rcar_gen5_pcie_check_speed(pci);
 
 	return (val & mask) == mask;
 }
