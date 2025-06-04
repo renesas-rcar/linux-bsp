@@ -363,7 +363,7 @@ int rpcif_hw_init(struct rpcif *rpcif, bool hyperflash)
 				   RPCIF_PHYCNT_STRTIM(15), RPCIF_PHYCNT_STRTIM(rpc->strtim));
 
 	regmap_update_bits(rpc->regmap, RPCIF_PHYOFFSET1, RPCIF_PHYOFFSET1_DDRTMG(3),
-			   RPCIF_PHYOFFSET1_DDRTMG(3));
+			   RPCIF_PHYOFFSET1_DDRTMG(hyperflash ? 2 : 3));
 	regmap_update_bits(rpc->regmap, RPCIF_PHYOFFSET2, RPCIF_PHYOFFSET2_OCTTMG(7),
 			   RPCIF_PHYOFFSET2_OCTTMG(4));
 
@@ -688,8 +688,7 @@ ssize_t rpcif_dirmap_read(struct rpcif *rpcif, u64 offs, size_t len, void *buf)
 	pm_runtime_get_sync(rpc->dev);
 
 	regmap_update_bits(rpc->regmap, RPCIF_CMNCR, RPCIF_CMNCR_MD, 0);
-	regmap_write(rpc->regmap, RPCIF_DRCR,
-		     RPCIF_DRCR_RBURST(32) | RPCIF_DRCR_RBE);
+	regmap_write(rpc->regmap, RPCIF_DRCR, 0);
 	regmap_write(rpc->regmap, RPCIF_DRCMR, rpc->command);
 	regmap_write(rpc->regmap, RPCIF_DREAR,
 		     RPCIF_DREAR_EAV(offs >> 25) | RPCIF_DREAR_EAC(1));
