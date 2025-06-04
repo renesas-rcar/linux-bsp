@@ -530,6 +530,13 @@
 		clock-frequency = <100000000>;
 	};
 
+	rpc_ref_clk: rpc_ref_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <160000000>;
+		clock-output-names = "rpc";
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -1659,6 +1666,19 @@
 			interrupts = <GIC_SPI 4081 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		rpc: spi@c08c0000 {
+			compatible = "renesas,rcar-gen5-rpc-if";
+			reg =	<0 0xc08c0000 0 0x200>,
+				<0 0x34000000 0 0x04000000>,
+				<0 0xc08c8000 0 0x100>;
+			reg-names = "regs", "dirmap", "wbuf";
+			interrupts = <GIC_SPI 895 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&rpc_ref_clk>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "disabled";
 		};
 
