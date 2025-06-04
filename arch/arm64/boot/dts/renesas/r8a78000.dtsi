@@ -2239,8 +2239,8 @@
 					 0 0 0 4 &gic GIC_SPI 4293 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&pcie4_bus_clk>;
 			clock-names = "pcie4_bus";
-			num-lanes = <2>;
-			max-link-speed = <4>;
+			num-lanes = <1>;
+			max-link-speed = <1>;
 			status = "disabled";
 		};
 
