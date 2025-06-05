@@ -3659,6 +3659,24 @@ static const unsigned int ssi5_ctrl_mux[] = {
 	SSI5_SCK_MARK, SSI5_WS_MARK,
 };
 
+/* - CANXL0 -------------------------------------- */
+static const unsigned int canxl0_data_pins[] = {
+	/* CANXL0_TX, CANXL0_RX */
+	RCAR_GP_PIN(2, 9), RCAR_GP_PIN(2, 8),
+};
+static const unsigned int canxl0_data_mux[] = {
+	CANXL0_TX_MARK, CANXL0_RX_MARK,
+};
+
+/* - CANXL1 -------------------------------------- */
+static const unsigned int canxl1_data_pins[] = {
+	/* CANXL1_TX, CANXL1_RX */
+	RCAR_GP_PIN(2, 11), RCAR_GP_PIN(2, 10),
+};
+static const unsigned int canxl1_data_mux[] = {
+	CANXL1_TX_MARK, CANXL1_RX_MARK,
+};
+
 static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(hscif0_data),
 	SH_PFC_PIN_GROUP(hscif0_clk),
@@ -3809,6 +3827,9 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(audio0_clkout0),
 	SH_PFC_PIN_GROUP(ssi5_data),
 	SH_PFC_PIN_GROUP(ssi5_ctrl),
+
+	SH_PFC_PIN_GROUP(canxl0_data),
+	SH_PFC_PIN_GROUP(canxl1_data),
 };
 
 static const char * const hscif0_groups[] = {
@@ -4083,6 +4104,14 @@ static const char * const ssi5_groups[] = {
 	"ssi5_ctrl",
 };
 
+static const char * const canxl0_groups[] = {
+	"canxl0_data",
+};
+
+static const char * const canxl1_groups[] = {
+	"canxl1_data",
+};
+
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(hscif0),
 	SH_PFC_FUNCTION(hscif1),
@@ -4142,6 +4171,9 @@ static const struct sh_pfc_function pinmux_functions[] = {
 
 	SH_PFC_FUNCTION(audio_clk),
 	SH_PFC_FUNCTION(ssi5),
+
+	SH_PFC_FUNCTION(canxl0),
+	SH_PFC_FUNCTION(canxl1),
 };
 
 static const struct pinmux_cfg_reg pinmux_config_regs[] = {
