@@ -1219,6 +1219,45 @@
 			status = "disabled";
 		};
 
+		i3c0: i3c-master@c0788000 {
+			compatible = "renesas,rcar-i3c-master";
+			reg = <0 0xc0788000 0 0x1000>;
+			interrupts = <GIC_SPI 4068 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_I3C0>,
+				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
+			#address-cells = <3>;
+			#size-cells = <0>;
+			i2c-scl-hz = <400000>;
+			i3c-scl-hz = <12500000>;
+			status = "disabled";
+		};
+
+		i3c1: i3c-master@c0789000 {
+			compatible = "renesas,rcar-i3c-master";
+			reg = <0 0xc0789000 0 0x1000>;
+			interrupts = <GIC_SPI 4069 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_I3C1>,
+				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
+			#address-cells = <3>;
+			#size-cells = <0>;
+			i2c-scl-hz = <400000>;
+			i3c-scl-hz = <12500000>;
+			status = "disabled";
+		};
+
+		i3c2: i3c-master@c078a000 {
+			compatible = "renesas,rcar-i3c-master";
+			reg = <0 0xc078a000 0 0x1000>;
+			interrupts = <GIC_SPI 4070 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_I3C2>,
+				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
+			#address-cells = <3>;
+			#size-cells = <0>;
+			i2c-scl-hz = <400000>;
+			i3c-scl-hz = <12500000>;
+			status = "disabled";
+		};
+
 		rwdt: watchdog@1c040000 {
 			compatible = "renesas,r8a78000-wdt",
 				     "renesas,rcar-gen5-wdt";
