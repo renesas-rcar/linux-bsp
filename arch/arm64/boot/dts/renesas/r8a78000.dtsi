@@ -531,6 +531,34 @@
 		#size-cells = <2>;
 		ranges;
 
+		mfis: mfis@18800000 {
+			compatible = "renesas,mfis";
+			reg = <0x0 0x18800000 0x0 0x1000>,
+			      <0x0 0x18801000 0x0 0x1000>,
+			      <0x0 0x18802000 0x0 0x1000>,
+			      <0x0 0x18803000 0x0 0x1000>,
+			      <0x0 0x18804000 0x0 0x1000>,
+			      <0x0 0x18805000 0x0 0x1000>,
+			      <0x0 0x18806000 0x0 0x1000>,
+			      <0x0 0x18807000 0x0 0x1000>,
+			      <0x0 0x189e0900 0x0 0x4>;
+			reg-names = "ch0", "ch1", "ch2", "ch3",
+				    "ch4", "ch5", "ch6", "ch7",
+				     "unlock_reg";
+			interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "ch0", "ch1", "ch2", "ch3",
+					  "ch4", "ch5", "ch6", "ch7";
+			renesas,mfis-channels = <0 1 2>;
+			status = "disabled";
+		};
+
 		mailbox: mfis_mbox@18842000 {
 			compatible = "renesas,mfis-mbox";
 			#mbox-cells = <1>;
@@ -1142,6 +1170,69 @@
 			clock-names = "pcie4_bus";
 			num-lanes = <2>;
 			max-link-speed = <4>;
+			status = "disabled";
+		};
+
+		cr52_rproc0: cr52_0 {
+			compatible = "renesas,rcar-gen5-rproc";
+			renesas,mfis-channel = <0>;
+			status = "disabled";
+		};
+
+		cr52_rproc1: cr52_1 {
+			compatible = "renesas,rcar-gen5-rproc";
+			renesas,mfis-channel = <1>;
+			status = "disabled";
+		};
+
+		cr52_rproc2: cr52_2 {
+			compatible = "renesas,rcar-gen5-rproc";
+			renesas,mfis-channel = <2>;
+			status = "disabled";
+		};
+
+		rpmsg_shm0: rpmsg_shm@0 {
+			compatible = "generic-uio";
+			reg = <0x0 0x81000000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm0";
+			status = "disabled";
+		};
+
+		rpmsg_ipi0: rpmsg_ipi@0 {
+			compatible = "generic-uio";
+			reg = <0x0 0x18800000 0x0 0x1000>;
+			interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
+			linux,uio-name = "rpmsg_ipi0";
+			status = "disabled";
+		};
+
+		rpmsg_shm1: rpmsg_shm@1 {
+			compatible = "generic-uio";
+			reg = <0x0 0x81050000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm1";
+			status = "disabled";
+		};
+
+		rpmsg_ipi1: rpmsg_ipi@1 {
+			compatible = "generic-uio";
+			reg = <0x0 0x18801000 0x0 0x1000>;
+			interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
+			linux,uio-name = "rpmsg_ipi1";
+			status = "disabled";
+		};
+
+		rpmsg_shm2: rpmsg_shm@2 {
+			compatible = "generic-uio";
+			reg = <0x0 0x810a0000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm2";
+			status = "disabled";
+		};
+
+		rpmsg_ipi2: rpmsg_ipi@2 {
+			compatible = "generic-uio";
+			reg = <0x0 0x18802000 0x0 0x1000>;
+			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
+			linux,uio-name = "rpmsg_ipi2";
 			status = "disabled";
 		};
 	};
