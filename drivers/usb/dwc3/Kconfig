@@ -189,4 +189,16 @@ config USB_DWC3_RTK
 	  or dual-role mode.
 	  Say 'Y' or 'M' if you have such device.
 
+config USB_DWC3_RCAR
+	tristate "RCAR Platform"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	default USB_DWC3
+	help
+	  Enable support for Renesas R-Car Gen5 USB2/3 controllers.
+	  This driver provides the glue layer for USB3 and USB2 controllers
+	  on R-Car Gen5 platforms, handling Renesas-specific initialization
+	  and PHY management while integrating with the DesignWare USB3
+	  (DWC3) framework.
+	  Say 'Y' or 'M' if you have one such device.
+
 endif
