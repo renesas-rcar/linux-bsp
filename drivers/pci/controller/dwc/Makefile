@@ -31,8 +31,10 @@ ucie-rcar-ep-drv-objs := ucie-rcar.o ucie-rcar-ep.o
 obj-$(CONFIG_UCIE_RCAR_EP) += ucie-rcar-ep-drv.o
 
 obj-$(CONFIG_PCIE6_DW) += pcie6-designware.o
-obj-$(CONFIG_PCIE6_RCAR_HOST) += pcie6-rcar-host.o
-obj-$(CONFIG_PCIE6_RCAR_EP) += pcie6-rcar-ep.o
+pcie6-rcar-gen5-host-drv-objs := pcie6-rcar-gen5.o pcie6-rcar-host.o
+obj-$(CONFIG_PCIE6_RCAR_HOST) += pcie6-rcar-gen5-host-drv.o
+pcie6-rcar-gen5-ep-drv-objs := pcie6-rcar-gen5.o pcie6-rcar-ep.o
+obj-$(CONFIG_PCIE6_RCAR_EP) += pcie6-rcar-gen5-ep-drv.o
 
 obj-$(CONFIG_PCIE4_RCAR_HOST) += pcie4-rcar-host.o
 # The following drivers are for devices that use the generic ACPI

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * PCIe driver for Synopsys DesignWare Core
+ * PCIe 6.0 Host driver for Renesas R-Car Gen5 Series SoCs
  *
- * Copyright (C) 2015-2016 Synopsys, Inc. (www.synopsys.com)
- *
- * Authors: Joao Pinto <Joao.Pinto@synopsys.com>
+ * Authors: Tin Tran <tin.tran.xk@renesas.com>
  */
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -17,21 +15,132 @@
 #include <linux/platform_device.h>
 #include <linux/resource.h>
 #include <linux/types.h>
+#include <linux/pm_runtime.h>
 
+#include "pcie6-rcar-gen5.h"
 #include "pcie6-designware.h"
 
+static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
+{
+	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
+	struct rcar_pcie6 *rcar_pcie6 = to_rcar_gen5_pcie6(pci);
+	u32 val;
+
+	val = readl(rcar_pcie6->base + PCIEMSR0);
+	val |= BIT(6);
+	writel(val, rcar_pcie6->base + PCIEMSR0);
+
+	rcar_gen5_pcie6_module_reset(pci);
+	rcar_gen5_pcie6_module_run(pci);
+
+	/* Set device type - RootComplex */
+	rcar_gen5_pcie6_set_device_type(rcar_pcie6, true);
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		/* Enable MSI interrupt signal */
+		val = readl(rcar_pcie6->base + PCIEINTSTS0);
+		val |= MSI_CTRL_INT;
+		writel(val, rcar_pcie6->base + PCIEINTSTS0);
+	}
+
+	dw_pcie6_dbi_ro_wr_en(pci);
+
+	rcar_gen5_pcie6_set_max_link_width(rcar_pcie6, pci->num_lanes);
+
+	/* Sharing REFCLK setting in x8lanes */
+	if (pci->num_lanes == 8)
+		rcar_gen5_pcie6_refclk_phy1(rcar_pcie6);
+
+	/* Power Manegement Setting */
+	val = readl(rcar_pcie6->base + PCIEPWRMNGCTRL);
+	val |= GENMASK(11, 10);
+	writel(val, rcar_pcie6->base + PCIEPWRMNGCTRL);
+
+	/* Error Status Enable */
+	val = readl(rcar_pcie6->base + PCIEERRSTS0EN);
+	val |= BIT(9) | BIT(5) | BIT(4);
+	writel(val, rcar_pcie6->base + PCIEERRSTS0EN);
+
+	/* Clear hold phy reset */
+	val = readl(rcar_pcie6->base + PCIERSTCTRL1);
+	val &= ~BIT(16);
+	writel(val, rcar_pcie6->base + PCIERSTCTRL1);
+
+	rcar_gen5_pcie6_bootload(rcar_pcie6, pci->num_lanes, rcar_pcie6->ch);
+
+	/* Separate REFCLK */
+	val = readl(rcar_pcie6->base + PCIEMSR0);
+	val |= BIT(6);
+	writel(val, rcar_pcie6->base + PCIEMSR0);
+
+	val = dw_pcie6_readl_dbi(pci, PRTLGC2);
+	val |= BIT(23);
+	dw_pcie6_writel_dbi(pci, PRTLGC2, val);
+
+	/* ECRC */
+	val = dw_pcie6_readl_dbi(pci, PCIE_ADV_ERR_CTRL);
+	val |= BIT(8) | BIT(6);
+	dw_pcie6_writel_dbi(pci, PCIE_ADV_ERR_CTRL, val);
+
+	/* IDE Logic disable  */
+	val = dw_pcie6_readl_dbi(pci, PCIE_PF0_IDE_CTRL);
+	val |= BIT(0);
+	dw_pcie6_writel_dbi(pci, PCIE_PF0_IDE_CTRL, val);
+
+	/* Disable CXL Mode by default */
+	val = dw_pcie6_readl_dbi(pci, PCIE6_PL32G_CAP);
+	val &= ~GENMASK(10, 8);
+	dw_pcie6_writel_dbi(pci, PCIE6_PL32G_CAP, val);
+
+	/* Disable flit mode by default */
+	val = dw_pcie6_readw_dbi(pci, EXPCAP(PCI_EXP_LNKCTL));
+	val |= BIT(13);
+	dw_pcie6_writew_dbi(pci, EXPCAP(PCI_EXP_LNKCTL), val);
+
+	/* Monitor PMD */
+	if (!rcar_gen5_pcie6_monitor_pmd(rcar_pcie6))
+		dev_info(pci->dev, "All PMD check passed\n");
+
+	rcar_gen5_pcie6_txpreset_coef_mapping(pci);
+
+	/* lane0 Rx 10kohm change to 60ohm */
+	val = readl(rcar_pcie6->base + 0x8);
+	val |= BIT(9);
+	writel(val, rcar_pcie6->base + 0x8);
+
+	/* BAR0 resizing */
+	val = dw_pcie6_readl_dbi(pci, PCIEG6_PF0_RESBAR_CTRL_REG_0_REG);
+	val &= ~GENMASK(13, 8);
+	val |= BIT(11);
+	dw_pcie6_writel_dbi(pci, PCIEG6_PF0_RESBAR_CTRL_REG_0_REG, val);
+
+	val = dw_pcie6_readl_dbi(pci, PCIEG6_PF1_RESBAR_CTRL_REG_0_REG);
+	val &= ~GENMASK(13, 8);
+	val |= BIT(11);
+	dw_pcie6_writel_dbi(pci, PCIEG6_PF1_RESBAR_CTRL_REG_0_REG, val);
+
+	dw_pcie6_dbi_ro_wr_dis(pci);
+
+	return 0;
+}
 
 static const struct dw_pcie6_host_ops pcie6_rcar_host_ops = {
+	.host_init = rcar_gen5_pcie6_host_init,
 };
 
-static int rcar_add_pcie6_port(struct dw_plat_pcie6 *dw_plat_pcie6,
+static int rcar_add_pcie6_port(struct rcar_pcie6 *rcar_pcie6,
 				 struct platform_device *pdev)
 {
-	struct dw_pcie6 *pci = dw_plat_pcie6->pci;
+	struct dw_pcie6 *pci = rcar_pcie6->pci;
 	struct dw_pcie6_rp *pp = &pci->pp;
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
 	int ret;
+
+	rcar_gen5_pcie6_module_run(pci);
+
+	ret = clk_prepare_enable(rcar_pcie6->bus_clk);
+	if (ret)
+		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
 
 	pp->irq = platform_get_irq(pdev, 1);
 	if (pp->irq < 0)
@@ -39,9 +148,6 @@ static int rcar_add_pcie6_port(struct dw_plat_pcie6 *dw_plat_pcie6,
 
 	pp->num_vectors = MAX_MSI_IRQS;
 	pp->ops = &pcie6_rcar_host_ops;
-
-	/* Get the PCIe Generation from DT */
-	pci->link_gen = pcie6_rcar_get_link_speed(np);
 
 	ret = dw_pcie6_host_init(pp);
 	if (ret) {
@@ -55,12 +161,12 @@ static int rcar_add_pcie6_port(struct dw_plat_pcie6 *dw_plat_pcie6,
 static int pcie6_rcar_host_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct dw_plat_pcie6 *dw_plat_pcie6;
+	struct rcar_pcie6 *rcar_pcie6;
 	struct dw_pcie6 *pci;
 	int ret;
 
-	dw_plat_pcie6 = devm_kzalloc(dev, sizeof(*dw_plat_pcie6), GFP_KERNEL);
-	if (!dw_plat_pcie6)
+	rcar_pcie6 = devm_kzalloc(dev, sizeof(*rcar_pcie6), GFP_KERNEL);
+	if (!rcar_pcie6)
 		return -ENOMEM;
 
 	pci = devm_kzalloc(dev, sizeof(*pci), GFP_KERNEL);
@@ -69,13 +175,30 @@ static int pcie6_rcar_host_probe(struct platform_device *pdev)
 
 	pci->dev = dev;
 
-	dw_plat_pcie6->pci = pci;
+	rcar_pcie6->pci = pci;
 
-	platform_set_drvdata(pdev, dw_plat_pcie6);
+	pm_runtime_enable(dev);
+	ret = pm_runtime_get_sync(dev);
+	if (ret < 0) {
+		dev_err(dev, "pm_runtime_get_sync failed\n");
+		goto err_pm_put;
+	}
 
-	ret = rcar_add_pcie6_port(dw_plat_pcie6, pdev);
+	ret = rcar_gen5_pcie6_get_resources(rcar_pcie6, pdev);
+	if (ret < 0) {
+		dev_err(dev, "Failed to request resource: %d\n", ret);
+		return ret;
+	}
+
+	platform_set_drvdata(pdev, rcar_pcie6);
+
+	ret = rcar_add_pcie6_port(rcar_pcie6, pdev);
 	if (ret)
 		dev_err(dev, "failed to initialize host\n");
+
+err_pm_put:
+	pm_runtime_put(dev);
+	pm_runtime_disable(dev);
 
 	return ret;
 }
