@@ -82,9 +82,29 @@
 		#size-cells = <2>;
 		ranges;
 
-		frtos_app: frtos_app@80000000 {
+		frtos_app0: frtos_app0@80000000 {
+			compatible = "shared-dma-pool";
+			reg = <0x00000000 0x80000000 0x0 0x01000000>;
+		};
+
+		cr52_ram0: cr52_ram0@81000000 {
 			no-map;
-			reg = <0x00000000 0x80000000 0x0 0x40000000>;
+			reg = <0x0 0x81000000 0x0 0x50000>;
+		};
+
+		cr52_ram1: cr52_ram1@81050000 {
+			no-map;
+			reg = <0x0 0x81050000 0x0 0x50000>;
+		};
+
+		cr52_ram2: cr52_ram2@810a0000 {
+			no-map;
+			reg = <0x0 0x810a0000 0x0 0x50000>;
+		};
+
+		frtos_app1: frtos_app1@810f0000 {
+			no-map;
+			reg = <0x00 0x810f0000 0x00 0x3ef10000>;
 		};
 
 		rt_vram: rt_vram@1200000000 {
@@ -148,6 +168,24 @@
 		#gpio-cells = <2>;
 	};
 
+};
+
+&mfis {
+	renesas,mfis-channels = <1>;
+	status = "okay";
+};
+
+&cr52_rproc1 {
+	memory-region = <&cr52_ram1>;
+	status = "okay";
+};
+
+&rpmsg_shm0 {
+	status = "okay";
+};
+
+&rpmsg_ipi0 {
+	status = "okay";
 };
 
 &i2c1 {
