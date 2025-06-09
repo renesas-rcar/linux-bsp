@@ -135,18 +135,6 @@ u16 dw_pcie6_find_ext_capability(struct dw_pcie6 *pci, u8 cap)
 }
 EXPORT_SYMBOL_GPL(dw_pcie6_find_ext_capability);
 
-int pcie6_rcar_get_link_speed(struct device_node *node)
-{
-	u32 max_link_speed;
-
-	if (of_property_read_u32(node, "max-link-speed", &max_link_speed) ||
-	    max_link_speed == 0 || max_link_speed > 6)
-		return -EINVAL;
-
-	return max_link_speed;
-}
-EXPORT_SYMBOL_GPL(pcie6_rcar_get_link_speed);
-
 int dw_pcie6_read(void __iomem *addr, int size, u32 *val)
 {
 	if (!IS_ALIGNED((uintptr_t)addr, size)) {
