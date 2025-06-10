@@ -337,8 +337,12 @@ struct rcar_csi2;
 #define V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(n)	(0x23840 + ((n) * 2)) /* n = 0 - 11 */
 #define V4H_CORE_DIG_RW_COMMON_REG(n)			(0x23880 + ((n) * 2)) /* n = 0 - 15 */
 #define V4H_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(n)	(0x239e0 + ((n) * 2)) /* n = 0 - 3 */
+#define V4H_CORE_DIG_CLANE_0_RW_CFG_0_REG		0x2a000
 #define V4H_CORE_DIG_CLANE_1_RW_CFG_0_REG		0x2a400
+#define V4H_CORE_DIG_CLANE_2_RW_CFG_0_REG		0x2a800
+#define V4H_CORE_DIG_CLANE_0_RW_HS_TX_6_REG		0x2a20c
 #define V4H_CORE_DIG_CLANE_1_RW_HS_TX_6_REG		0x2a60c
+#define V4H_CORE_DIG_CLANE_2_RW_HS_TX_6_REG		0x2aa0c
 
 /* V4H C-PHY */
 #define V4H_CORE_DIG_RW_TRIO0_REG(n)			(0x22100 + ((n) * 2)) /* n = 0 - 3 */
@@ -909,26 +913,54 @@ static const struct rcar_csi2_format rcar_csi2_formats[] = {
 	},
 };
 
+#define	ABC		0x0
+#define	CBA		0x1
+#define	ACB		0x2
+#define	CAB		0x3
+#define	BAC		0x4
+#define	BCA		0x5
+
+/* RX ABC Order */
+struct rcar_csi2_pin_swap {
+	u8 code;
+	u32 rw_cfg0_b2_0;
+	u32 rw_cfg0_b3;
+	u32 afe_clane_29_b8;
+};
+
+static const struct rcar_csi2_pin_swap rcar_csi2_pin_swaps[] = {
+	{ .code = ABC, .rw_cfg0_b2_0 = 0x0, .rw_cfg0_b3 = 0x0, .afe_clane_29_b8 = 0x0 },
+	{ .code = CBA, .rw_cfg0_b2_0 = 0x1, .rw_cfg0_b3 = 0x1, .afe_clane_29_b8 = 0x1 },
+	{ .code = ACB, .rw_cfg0_b2_0 = 0x2, .rw_cfg0_b3 = 0x1, .afe_clane_29_b8 = 0x1 },
+	{ .code = CAB, .rw_cfg0_b2_0 = 0x3, .rw_cfg0_b3 = 0x0, .afe_clane_29_b8 = 0x0 },
+	{ .code = BAC, .rw_cfg0_b2_0 = 0x4, .rw_cfg0_b3 = 0x1, .afe_clane_29_b8 = 0x1 },
+	{ .code = BCA, .rw_cfg0_b2_0 = 0x5, .rw_cfg0_b3 = 0x0, .afe_clane_29_b8 = 0x0 },
+};
+
 struct rcar_csi2_cphy_specific {
 	u8 trio;
 	unsigned int hs_receive_reg;
 	unsigned int pin_swap_reg;
 	unsigned int ctrl27_reg;
+	unsigned int rwconf_reg;
 };
 
 static const struct rcar_csi2_cphy_specific cphy_spec_reg_v4h[] = {
 	{ .trio = 0,
 		.hs_receive_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(9),
 		.pin_swap_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(9),
-		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(7) },
+		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(7),
+		.rwconf_reg = V4H_CORE_DIG_CLANE_0_RW_CFG_0_REG },
 	{ .trio = 1,
 		.hs_receive_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_REG(9),
 		.pin_swap_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(9),
-		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_REG(7) },
+		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_REG(7),
+		.rwconf_reg = V4H_CORE_DIG_CLANE_1_RW_CFG_0_REG },
 	{ .trio = 2,
 		.hs_receive_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(9),
 		.pin_swap_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_REG(9),
-		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(7) },
+		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(7),
+		.rwconf_reg = V4H_CORE_DIG_CLANE_2_RW_CFG_0_REG },
 };
 
 static const struct rcar_csi2_format *rcsi2_code_to_fmt(unsigned int code)
@@ -989,6 +1021,7 @@ struct rcar_csi2 {
 	unsigned short lanes;
 	unsigned char lane_swap[4];
 	unsigned int hs_receive_eq[4];
+	unsigned int pin_swap_rx_order[4];
 #ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	struct csi2cam *cam;
 #endif
@@ -1392,7 +1425,7 @@ static int rcsi2_wait_phy_start_v4h(struct rcar_csi2 *priv, u32 match)
 static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 {
 	const struct rcsi2_cphy_setting *conf;
-	unsigned int i;
+	unsigned int i, j;
 	u16 val;
 
 	for (conf = cphy_setting_table_r8a779g0; conf->msps != 0; conf++) {
@@ -1462,6 +1495,15 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_LP_0_REG, 0x163c);
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_2_RW_LP_0_REG, 0x163c);
 
+	for (i = 0; i < ARRAY_SIZE(cphy_spec_reg_v4h); i++) {
+		val = conf->lane29;
+		val |= priv->hs_receive_eq[i];
+		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].hs_receive_reg, val,
+			       GENMASK(4, 0));
+		val = conf->lane27;
+		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].ctrl27_reg, val, GENMASK(12, 10));
+	}
+
 	/*
 	 * Configure pin-swap.
 	 * TODO: This registers is not documented yet, the values should depend
@@ -1469,6 +1511,18 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	 */
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_CFG_0_REG, 0xf5);
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_HS_TX_6_REG, 0x5000);
+	for (i = 0; i < ARRAY_SIZE(cphy_spec_reg_v4h); i++) {
+		val = rcar_csi2_pin_swaps[i].afe_clane_29_b8 << 8;
+		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].pin_swap_reg, val, GENMASK(8, 8));
+		for (j = 0; j < ARRAY_SIZE(rcar_csi2_pin_swaps); j++) {
+			if (priv->pin_swap_rx_order[i] == rcar_csi2_pin_swaps[j].code) {
+				val = rcar_csi2_pin_swaps[j].rw_cfg0_b2_0;
+				val |= rcar_csi2_pin_swaps[j].rw_cfg0_b3 << 3;
+				rcsi2_modify16(priv, cphy_spec_reg_v4h[i].rwconf_reg, val,
+					       GENMASK(3, 0));
+			}
+		}
+	}
 
 	/* Leave Shutdown mode */
 	rcsi2_write(priv, V4H_DPHY_RSTZ_REG, BIT(0));
@@ -1481,14 +1535,7 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	}
 
 	/* C-PHY setting - analog programing*/
-	for (i = 0; i < ARRAY_SIZE(cphy_spec_reg_v4h); i++) {
-		val = conf->lane29;
-		val |= priv->hs_receive_eq[i];
-		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].hs_receive_reg, val,
-			       GENMASK(4, 0));
-		val = conf->lane27;
-		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].ctrl27_reg, val, GENMASK(12, 10));
-	}
+	/* Fix me */
 
 	return 0;
 }
@@ -1932,7 +1979,7 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		.bus_type = V4L2_MBUS_UNKNOWN,
 	};
 	int ret, rval, i;
-	unsigned int hs_arr[4];
+	unsigned int hs_arr[4], order_arr[4];
 #ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	struct device_node *remote_ep;
 	struct platform_device *pdev;
@@ -1987,6 +2034,20 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		/* Witout pin-swap-rx-order, ABC is default order */
 		for (i = 0; i < priv->lanes; i++)
 			priv->hs_receive_eq[i] = 0x4;
+	}
+
+	if (fwnode_property_present(ep, "pin-swap-rx-order")) {
+		rval = fwnode_property_read_u32_array(ep, "pin-swap-rx-order", order_arr, priv->lanes);
+		if (rval) {
+			dev_err(priv->dev, "Failed to read pin-swap-rx-order\n");
+			return rval;
+		}
+		for (i = 0; i < priv->lanes; i++)
+			priv->pin_swap_rx_order[i] = order_arr[i];
+	} else {
+		/* Without pin-swap-rx-order, ABC is default order */
+		for (i = 0; i < priv->lanes; i++)
+			priv->pin_swap_rx_order[i] = ABC;
 	}
 
 	fwnode = fwnode_graph_get_remote_endpoint(ep);
