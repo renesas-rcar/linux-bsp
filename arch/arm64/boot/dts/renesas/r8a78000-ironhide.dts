@@ -82,8 +82,15 @@
 		#size-cells = <2>;
 		ranges;
 
-		frtos_app0: frtos_app0@80000000 {
+		linux,cma@64000000 {
 			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x0 0x64000000 0x0 0x1c000000>;
+			linux,cma-default;
+		};
+
+		frtos_app0: frtos_app0@80000000 {
+			no-map;
 			reg = <0x00000000 0x80000000 0x0 0x01000000>;
 		};
 
