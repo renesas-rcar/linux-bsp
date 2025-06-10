@@ -284,7 +284,27 @@ struct rcar_csi2;
 #define V4H_FLDC_REG					0x0804
 #define V4H_FLDD_REG					0x0808
 #define V4H_IDIC_REG					0x0810
+
+#define V4H_OVR1_REG					0x0848
+#define V4H_OVR1_forcerxmode_3			BIT(12)
+#define V4H_OVR1_forcerxmode_2			BIT(11)
+#define V4H_OVR1_forcerxmode_1			BIT(10)
+#define V4H_OVR1_forcerxmode_0			BIT(9)
+#define V4H_OVR1_forcerxmode_dck		BIT(8)
+
 #define V4H_PHY_EN_REG					0x2000
+#define V4H_PHY_ENABLE_3				BIT(7)
+#define V4H_PHY_ENABLE_2				BIT(6)
+#define V4H_PHY_ENABLE_1				BIT(5)
+#define V4H_PHY_ENABLE_0				BIT(4)
+#define V4H_PHY_ENABLE_DCK				BIT(0)
+
+#define V4H_FRXM_REG					0x2004
+#define V4H_FRXM_FORCERXMODE_DCK		BIT(4)
+#define V4H_FRXM_FORCERXMODE_3			BIT(3)
+#define V4H_FRXM_FORCERXMODE_2			BIT(2)
+#define V4H_FRXM_FORCERXMODE_1			BIT(1)
+#define V4H_FRXM_FORCERXMODE_0			BIT(0)
 
 #define V4H_ST_PHYST_REG				0x2814
 #define V4H_ST_PHYST_ST_PHY_READY			BIT(31)
@@ -292,6 +312,7 @@ struct rcar_csi2;
 #define V4H_ST_PHYST_ST_STOPSTATE_2			BIT(2)
 #define V4H_ST_PHYST_ST_STOPSTATE_1			BIT(1)
 #define V4H_ST_PHYST_ST_STOPSTATE_0			BIT(0)
+#define V4H_ST_PHYST_ST_STOPSTATE_DCK		BIT(7)
 
 /* V4H PPI registers */
 #define V4H_PPI_STARTUP_RW_COMMON_DPHY_REG(n)		(0x21800 + ((n) * 2)) /* n = 0 - 9 */
@@ -410,42 +431,42 @@ struct rcsi2_cphy_setting {
 };
 
 static const struct rcsi2_cphy_setting cphy_setting_table_r8a779g0[] = {
-	{ .msps =   80, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0134, .trio2 = 0x6a, .lane27 = 0x0000, .lane29 = 0x0a24 },
-	{ .msps =  100, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x00f5, .trio2 = 0x55, .lane27 = 0x0000, .lane29 = 0x0a24 },
-	{ .msps =  200, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0077, .trio2 = 0x2b, .lane27 = 0x0000, .lane29 = 0x0a44 },
-	{ .msps =  300, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x004d, .trio2 = 0x1d, .lane27 = 0x0000, .lane29 = 0x0a44 },
-	{ .msps =  400, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0038, .trio2 = 0x16, .lane27 = 0x0000, .lane29 = 0x0a64 },
-	{ .msps =  500, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x002b, .trio2 = 0x12, .lane27 = 0x0000, .lane29 = 0x0a64 },
-	{ .msps =  600, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0023, .trio2 = 0x0f, .lane27 = 0x0000, .lane29 = 0x0a64 },
-	{ .msps =  700, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x001d, .trio2 = 0x0d, .lane27 = 0x0000, .lane29 = 0x0a84 },
-	{ .msps =  800, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0018, .trio2 = 0x0c, .lane27 = 0x0000, .lane29 = 0x0a84 },
-	{ .msps =  900, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0015, .trio2 = 0x0b, .lane27 = 0x0000, .lane29 = 0x0a84 },
-	{ .msps = 1000, .rx2 = 0x3e, .trio0 = 0x024a, .trio1 = 0x0012, .trio2 = 0x0a, .lane27 = 0x0400, .lane29 = 0x0a84 },
-	{ .msps = 1100, .rx2 = 0x44, .trio0 = 0x024a, .trio1 = 0x000f, .trio2 = 0x09, .lane27 = 0x0800, .lane29 = 0x0a84 },
-	{ .msps = 1200, .rx2 = 0x4a, .trio0 = 0x024a, .trio1 = 0x000e, .trio2 = 0x08, .lane27 = 0x0c00, .lane29 = 0x0a84 },
-	{ .msps = 1300, .rx2 = 0x51, .trio0 = 0x024a, .trio1 = 0x000c, .trio2 = 0x08, .lane27 = 0x0c00, .lane29 = 0x0aa4 },
-	{ .msps = 1400, .rx2 = 0x57, .trio0 = 0x024a, .trio1 = 0x000b, .trio2 = 0x07, .lane27 = 0x1000, .lane29 = 0x0aa4 },
-	{ .msps = 1500, .rx2 = 0x5d, .trio0 = 0x044a, .trio1 = 0x0009, .trio2 = 0x07, .lane27 = 0x1000, .lane29 = 0x0aa4 },
-	{ .msps = 1600, .rx2 = 0x63, .trio0 = 0x044a, .trio1 = 0x0008, .trio2 = 0x07, .lane27 = 0x1400, .lane29 = 0x0aa4 },
-	{ .msps = 1700, .rx2 = 0x6a, .trio0 = 0x044a, .trio1 = 0x0007, .trio2 = 0x06, .lane27 = 0x1400, .lane29 = 0x0aa4 },
-	{ .msps = 1800, .rx2 = 0x70, .trio0 = 0x044a, .trio1 = 0x0007, .trio2 = 0x06, .lane27 = 0x1400, .lane29 = 0x0aa4 },
-	{ .msps = 1900, .rx2 = 0x76, .trio0 = 0x044a, .trio1 = 0x0006, .trio2 = 0x06, .lane27 = 0x1400, .lane29 = 0x0aa4 },
-	{ .msps = 2000, .rx2 = 0x7c, .trio0 = 0x044a, .trio1 = 0x0005, .trio2 = 0x06, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2100, .rx2 = 0x83, .trio0 = 0x044a, .trio1 = 0x0005, .trio2 = 0x05, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2200, .rx2 = 0x89, .trio0 = 0x064a, .trio1 = 0x0004, .trio2 = 0x05, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2300, .rx2 = 0x8f, .trio0 = 0x064a, .trio1 = 0x0003, .trio2 = 0x05, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2400, .rx2 = 0x95, .trio0 = 0x064a, .trio1 = 0x0003, .trio2 = 0x05, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2500, .rx2 = 0x9c, .trio0 = 0x064a, .trio1 = 0x0003, .trio2 = 0x05, .lane27 = 0x1c00, .lane29 = 0x0aa4 },
-	{ .msps = 2600, .rx2 = 0xa2, .trio0 = 0x064a, .trio1 = 0x0002, .trio2 = 0x05, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 2700, .rx2 = 0xa8, .trio0 = 0x064a, .trio1 = 0x0002, .trio2 = 0x05, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 2800, .rx2 = 0xae, .trio0 = 0x064a, .trio1 = 0x0002, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 2900, .rx2 = 0xb5, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3000, .rx2 = 0xbb, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3100, .rx2 = 0xc1, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3200, .rx2 = 0xc7, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3300, .rx2 = 0xce, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3400, .rx2 = 0xd4, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3500, .rx2 = 0xda, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
+	{ .msps =   80, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0134, .trio2 = 0x006a, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps =  100, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x00f5, .trio2 = 0x0055, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps =  200, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0077, .trio2 = 0x002b, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps =  300, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x004d, .trio2 = 0x001d, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps =  400, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0038, .trio2 = 0x0016, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps =  500, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x002c, .trio2 = 0x0012, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps =  600, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0023, .trio2 = 0x000f, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps =  700, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x001d, .trio2 = 0x000d, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps =  800, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0019, .trio2 = 0x000c, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps =  900, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0015, .trio2 = 0x000b, .lane27 = 0x0000, .lane29 = 0x0004 },
+	{ .msps = 1000, .rx2 = 0x003e, .trio0 = 0x0200, .trio1 = 0x0013, .trio2 = 0x000a, .lane27 = 0x0400, .lane29 = 0x0004 },
+	{ .msps = 1100, .rx2 = 0x0044, .trio0 = 0x0200, .trio1 = 0x0010, .trio2 = 0x0009, .lane27 = 0x0800, .lane29 = 0x0004 },
+	{ .msps = 1200, .rx2 = 0x004a, .trio0 = 0x0200, .trio1 = 0x000e, .trio2 = 0x0008, .lane27 = 0x0c00, .lane29 = 0x0004 },
+	{ .msps = 1300, .rx2 = 0x0051, .trio0 = 0x0200, .trio1 = 0x000d, .trio2 = 0x0008, .lane27 = 0x0c00, .lane29 = 0x0004 },
+	{ .msps = 1400, .rx2 = 0x0057, .trio0 = 0x0200, .trio1 = 0x000b, .trio2 = 0x0007, .lane27 = 0x1000, .lane29 = 0x0004 },
+	{ .msps = 1500, .rx2 = 0x005d, .trio0 = 0x0400, .trio1 = 0x000a, .trio2 = 0x0007, .lane27 = 0x1000, .lane29 = 0x0004 },
+	{ .msps = 1600, .rx2 = 0x0063, .trio0 = 0x0400, .trio1 = 0x0009, .trio2 = 0x0007, .lane27 = 0x1400, .lane29 = 0x0004 },
+	{ .msps = 1700, .rx2 = 0x006a, .trio0 = 0x0400, .trio1 = 0x0008, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0004 },
+	{ .msps = 1800, .rx2 = 0x0070, .trio0 = 0x0400, .trio1 = 0x0007, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0004 },
+	{ .msps = 1900, .rx2 = 0x0076, .trio0 = 0x0400, .trio1 = 0x0007, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0004 },
+	{ .msps = 2000, .rx2 = 0x007c, .trio0 = 0x0400, .trio1 = 0x0006, .trio2 = 0x0006, .lane27 = 0x1800, .lane29 = 0x0004 },
+	{ .msps = 2100, .rx2 = 0x0083, .trio0 = 0x0400, .trio1 = 0x0005, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0004 },
+	{ .msps = 2200, .rx2 = 0x0089, .trio0 = 0x0600, .trio1 = 0x0005, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0004 },
+	{ .msps = 2300, .rx2 = 0x008f, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0004 },
+	{ .msps = 2400, .rx2 = 0x0095, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0004 },
+	{ .msps = 2500, .rx2 = 0x009c, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0004 },
+	{ .msps = 2600, .rx2 = 0x00a2, .trio0 = 0x0600, .trio1 = 0x0003, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps = 2700, .rx2 = 0x00a8, .trio0 = 0x0600, .trio1 = 0x0003, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps = 2800, .rx2 = 0x00ae, .trio0 = 0x0600, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps = 2900, .rx2 = 0x00b5, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps = 3000, .rx2 = 0x00bb, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps = 3100, .rx2 = 0x00c1, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps = 3200, .rx2 = 0x00c7, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps = 3300, .rx2 = 0x00ce, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps = 3400, .rx2 = 0x00d4, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps = 3500, .rx2 = 0x00da, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
 	{ /* sentinel */ },
 };
 
@@ -1368,9 +1389,9 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_LP_0_REG, 0x463c);
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_2_RW_LP_0_REG, 0x463c);
 
-	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_0_RW_HS_RX_REG(0), 0x00d5);
-	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_HS_RX_REG(0), 0x00d5);
-	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_2_RW_HS_RX_REG(0), 0x00d5);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_0_RW_HS_RX_REG(0), 0x0195);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_HS_RX_REG(0), 0x0195);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_2_RW_HS_RX_REG(0), 0x0195);
 
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_0_RW_HS_RX_REG(1), 0x0013);
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_HS_RX_REG(1), 0x0013);
@@ -1394,17 +1415,27 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_REG(2), 0x0001);
 	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_REG(2), 0);
 
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO0_REG(0), conf->trio0);
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO1_REG(0), conf->trio0);
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO2_REG(0), conf->trio0);
+	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO0_REG(0), 0x44a);
+	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO1_REG(0), 0x44a);
+	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO2_REG(0), 0x44a);
 
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO0_REG(2), conf->trio2);
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO1_REG(2), conf->trio2);
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO2_REG(2), conf->trio2);
+	/* Write value from LUT to CORE_DIG_RW_TRIO[0-2]_2, [7:0] */
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO0_REG(2), conf->trio2, GENMASK(7, 0));
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO1_REG(2), conf->trio2, GENMASK(7, 0));
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO2_REG(2), conf->trio2, GENMASK(7, 0));
 
 	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO0_REG(1), conf->trio1);
 	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO1_REG(1), conf->trio1);
 	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO2_REG(1), conf->trio1);
+
+	/* Write value from LUT to CORE_DIG_RW_TRIO[0-2]_0, [11:9] */
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO0_REG(0), conf->trio0, GENMASK(11, 9));
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO1_REG(0), conf->trio0, GENMASK(11, 9));
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO2_REG(0), conf->trio0, GENMASK(11, 9));
+
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_0_RW_LP_0_REG, 0x163c);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_LP_0_REG, 0x163c);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_2_RW_LP_0_REG, 0x163c);
 
 	/*
 	 * Configure pin-swap.
@@ -1426,7 +1457,11 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 
 	/* C-PHY setting - analog programing*/
 	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(9), conf->lane29);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(9), conf->lane29);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_REG(9), conf->lane29);
 	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(7), conf->lane27);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(7), conf->lane27);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_REG(7), conf->lane27);
 
 	return 0;
 }
@@ -1437,6 +1472,7 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 	unsigned int lanes;
 	int msps;
 	int ret;
+	u32 read32;
 
 	/* Calculate parameters */
 	format = rcsi2_code_to_fmt(priv->mf.code);
@@ -1457,7 +1493,16 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 	rcsi2_write(priv, V4H_PHY_SHUTDOWNZ_REG, 0);
 
 	/* PHY static setting */
-	rcsi2_write(priv, V4H_PHY_EN_REG, BIT(0));
+	read32 = rcsi2_read(priv, V4H_PHY_EN_REG);
+	rcsi2_write(priv, V4H_PHY_EN_REG, read32 | (V4H_PHY_ENABLE_DCK | V4H_PHY_ENABLE_0
+				| V4H_PHY_ENABLE_1 | V4H_PHY_ENABLE_2));
+	read32 = rcsi2_read(priv, V4H_FRXM_REG);
+	rcsi2_write(priv, V4H_FRXM_REG, read32 | (V4H_FRXM_FORCERXMODE_DCK | V4H_FRXM_FORCERXMODE_0
+				| V4H_FRXM_FORCERXMODE_1 | V4H_FRXM_FORCERXMODE_2));
+	read32 = rcsi2_read(priv, V4H_OVR1_REG);
+	rcsi2_write(priv, V4H_OVR1_REG, read32 | (V4H_OVR1_forcerxmode_dck | V4H_OVR1_forcerxmode_0
+				| V4H_OVR1_forcerxmode_1 | V4H_OVR1_forcerxmode_2));
+
 	rcsi2_write(priv, V4H_FLDC_REG, 0);
 	rcsi2_write(priv, V4H_FLDD_REG, 0);
 	rcsi2_write(priv, V4H_IDIC_REG, 0);
@@ -1469,6 +1514,8 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 
 	/* Registers static setting through APB */
 	/* Common setting */
+	rcsi2_write16(priv, V4H_PPI_STARTUP_RW_COMMON_DPHY_REG(10), 0x0030);
+	rcsi2_write16(priv, V4H_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(2), 0x1444);
 	rcsi2_write16(priv, V4H_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(0), 0x1bfd);
 	rcsi2_write16(priv, V4H_PPI_STARTUP_RW_COMMON_STARTUP_1_1_REG, 0x0233);
 	rcsi2_write16(priv, V4H_PPI_STARTUP_RW_COMMON_DPHY_REG(6), 0x0027);
@@ -1483,6 +1530,18 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 	rcsi2_write16(priv, V4H_PPI_RW_LPDCOCAL_COARSE_CFG_REG, 0x0105);
 	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(6), 0x1000);
 	rcsi2_write16(priv, V4H_PPI_RW_COMMON_CFG_REG, 0x0003);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(0), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(1), 0x0400);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(3), 0x41F6);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(0), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(3), 0x43F6);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(6), 0x3000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(7), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(6), 0x3000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(7), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(6), 0x7000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(7), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(5), 0x4000);
 
 	/* C-PHY settings */
 	ret = rcsi2_c_phy_setting_v4h(priv, msps);
@@ -1491,7 +1550,12 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 
 	rcsi2_wait_phy_start_v4h(priv, V4H_ST_PHYST_ST_STOPSTATE_0 |
 				 V4H_ST_PHYST_ST_STOPSTATE_1 |
-				 V4H_ST_PHYST_ST_STOPSTATE_2);
+				 V4H_ST_PHYST_ST_STOPSTATE_2 |
+				 V4H_ST_PHYST_ST_STOPSTATE_DCK);
+
+	read32 = rcsi2_read(priv, V4H_FRXM_REG);
+	rcsi2_write(priv, V4H_FRXM_REG, read32 & ~(V4H_FRXM_FORCERXMODE_DCK | V4H_FRXM_FORCERXMODE_0
+				| V4H_FRXM_FORCERXMODE_1 | V4H_FRXM_FORCERXMODE_2));
 
 	return 0;
 }
