@@ -431,42 +431,42 @@ struct rcsi2_cphy_setting {
 };
 
 static const struct rcsi2_cphy_setting cphy_setting_table_r8a779g0[] = {
-	{ .msps =   80, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0134, .trio2 = 0x006a, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps =  100, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x00f5, .trio2 = 0x0055, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps =  200, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0077, .trio2 = 0x002b, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps =  300, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x004d, .trio2 = 0x001d, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps =  400, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0038, .trio2 = 0x0016, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps =  500, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x002c, .trio2 = 0x0012, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps =  600, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0023, .trio2 = 0x000f, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps =  700, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x001d, .trio2 = 0x000d, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps =  800, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0019, .trio2 = 0x000c, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps =  900, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0015, .trio2 = 0x000b, .lane27 = 0x0000, .lane29 = 0x0004 },
-	{ .msps = 1000, .rx2 = 0x003e, .trio0 = 0x0200, .trio1 = 0x0013, .trio2 = 0x000a, .lane27 = 0x0400, .lane29 = 0x0004 },
-	{ .msps = 1100, .rx2 = 0x0044, .trio0 = 0x0200, .trio1 = 0x0010, .trio2 = 0x0009, .lane27 = 0x0800, .lane29 = 0x0004 },
-	{ .msps = 1200, .rx2 = 0x004a, .trio0 = 0x0200, .trio1 = 0x000e, .trio2 = 0x0008, .lane27 = 0x0c00, .lane29 = 0x0004 },
-	{ .msps = 1300, .rx2 = 0x0051, .trio0 = 0x0200, .trio1 = 0x000d, .trio2 = 0x0008, .lane27 = 0x0c00, .lane29 = 0x0004 },
-	{ .msps = 1400, .rx2 = 0x0057, .trio0 = 0x0200, .trio1 = 0x000b, .trio2 = 0x0007, .lane27 = 0x1000, .lane29 = 0x0004 },
-	{ .msps = 1500, .rx2 = 0x005d, .trio0 = 0x0400, .trio1 = 0x000a, .trio2 = 0x0007, .lane27 = 0x1000, .lane29 = 0x0004 },
-	{ .msps = 1600, .rx2 = 0x0063, .trio0 = 0x0400, .trio1 = 0x0009, .trio2 = 0x0007, .lane27 = 0x1400, .lane29 = 0x0004 },
-	{ .msps = 1700, .rx2 = 0x006a, .trio0 = 0x0400, .trio1 = 0x0008, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0004 },
-	{ .msps = 1800, .rx2 = 0x0070, .trio0 = 0x0400, .trio1 = 0x0007, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0004 },
-	{ .msps = 1900, .rx2 = 0x0076, .trio0 = 0x0400, .trio1 = 0x0007, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0004 },
-	{ .msps = 2000, .rx2 = 0x007c, .trio0 = 0x0400, .trio1 = 0x0006, .trio2 = 0x0006, .lane27 = 0x1800, .lane29 = 0x0004 },
-	{ .msps = 2100, .rx2 = 0x0083, .trio0 = 0x0400, .trio1 = 0x0005, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0004 },
-	{ .msps = 2200, .rx2 = 0x0089, .trio0 = 0x0600, .trio1 = 0x0005, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0004 },
-	{ .msps = 2300, .rx2 = 0x008f, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0004 },
-	{ .msps = 2400, .rx2 = 0x0095, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0004 },
-	{ .msps = 2500, .rx2 = 0x009c, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0004 },
-	{ .msps = 2600, .rx2 = 0x00a2, .trio0 = 0x0600, .trio1 = 0x0003, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0014 },
-	{ .msps = 2700, .rx2 = 0x00a8, .trio0 = 0x0600, .trio1 = 0x0003, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0014 },
-	{ .msps = 2800, .rx2 = 0x00ae, .trio0 = 0x0600, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
-	{ .msps = 2900, .rx2 = 0x00b5, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
-	{ .msps = 3000, .rx2 = 0x00bb, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
-	{ .msps = 3100, .rx2 = 0x00c1, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
-	{ .msps = 3200, .rx2 = 0x00c7, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
-	{ .msps = 3300, .rx2 = 0x00ce, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
-	{ .msps = 3400, .rx2 = 0x00d4, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
-	{ .msps = 3500, .rx2 = 0x00da, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0014 },
+	{ .msps =   80, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0134, .trio2 = 0x006a, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  100, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x00f5, .trio2 = 0x0055, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  200, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0077, .trio2 = 0x002b, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  300, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x004d, .trio2 = 0x001d, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  400, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0038, .trio2 = 0x0016, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  500, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x002c, .trio2 = 0x0012, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  600, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0023, .trio2 = 0x000f, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  700, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x001d, .trio2 = 0x000d, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  800, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0019, .trio2 = 0x000c, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  900, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0015, .trio2 = 0x000b, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1000, .rx2 = 0x003e, .trio0 = 0x0200, .trio1 = 0x0013, .trio2 = 0x000a, .lane27 = 0x0400, .lane29 = 0x0000 },
+	{ .msps = 1100, .rx2 = 0x0044, .trio0 = 0x0200, .trio1 = 0x0010, .trio2 = 0x0009, .lane27 = 0x0800, .lane29 = 0x0000 },
+	{ .msps = 1200, .rx2 = 0x004a, .trio0 = 0x0200, .trio1 = 0x000e, .trio2 = 0x0008, .lane27 = 0x0c00, .lane29 = 0x0000 },
+	{ .msps = 1300, .rx2 = 0x0051, .trio0 = 0x0200, .trio1 = 0x000d, .trio2 = 0x0008, .lane27 = 0x0c00, .lane29 = 0x0000 },
+	{ .msps = 1400, .rx2 = 0x0057, .trio0 = 0x0200, .trio1 = 0x000b, .trio2 = 0x0007, .lane27 = 0x1000, .lane29 = 0x0000 },
+	{ .msps = 1500, .rx2 = 0x005d, .trio0 = 0x0400, .trio1 = 0x000a, .trio2 = 0x0007, .lane27 = 0x1000, .lane29 = 0x0000 },
+	{ .msps = 1600, .rx2 = 0x0063, .trio0 = 0x0400, .trio1 = 0x0009, .trio2 = 0x0007, .lane27 = 0x1400, .lane29 = 0x0000 },
+	{ .msps = 1700, .rx2 = 0x006a, .trio0 = 0x0400, .trio1 = 0x0008, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0000 },
+	{ .msps = 1800, .rx2 = 0x0070, .trio0 = 0x0400, .trio1 = 0x0007, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0000 },
+	{ .msps = 1900, .rx2 = 0x0076, .trio0 = 0x0400, .trio1 = 0x0007, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0000 },
+	{ .msps = 2000, .rx2 = 0x007c, .trio0 = 0x0400, .trio1 = 0x0006, .trio2 = 0x0006, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2100, .rx2 = 0x0083, .trio0 = 0x0400, .trio1 = 0x0005, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2200, .rx2 = 0x0089, .trio0 = 0x0600, .trio1 = 0x0005, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2300, .rx2 = 0x008f, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2400, .rx2 = 0x0095, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2500, .rx2 = 0x009c, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0000 },
+	{ .msps = 2600, .rx2 = 0x00a2, .trio0 = 0x0600, .trio1 = 0x0003, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 2700, .rx2 = 0x00a8, .trio0 = 0x0600, .trio1 = 0x0003, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 2800, .rx2 = 0x00ae, .trio0 = 0x0600, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 2900, .rx2 = 0x00b5, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3000, .rx2 = 0x00bb, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3100, .rx2 = 0x00c1, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3200, .rx2 = 0x00c7, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3300, .rx2 = 0x00ce, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3400, .rx2 = 0x00d4, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3500, .rx2 = 0x00da, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
 	{ /* sentinel */ },
 };
 
@@ -909,6 +909,28 @@ static const struct rcar_csi2_format rcar_csi2_formats[] = {
 	},
 };
 
+struct rcar_csi2_cphy_specific {
+	u8 trio;
+	unsigned int hs_receive_reg;
+	unsigned int pin_swap_reg;
+	unsigned int ctrl27_reg;
+};
+
+static const struct rcar_csi2_cphy_specific cphy_spec_reg_v4h[] = {
+	{ .trio = 0,
+		.hs_receive_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(9),
+		.pin_swap_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(9),
+		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(7) },
+	{ .trio = 1,
+		.hs_receive_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_REG(9),
+		.pin_swap_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(9),
+		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_REG(7) },
+	{ .trio = 2,
+		.hs_receive_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(9),
+		.pin_swap_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_REG(9),
+		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(7) },
+};
+
 static const struct rcar_csi2_format *rcsi2_code_to_fmt(unsigned int code)
 {
 	unsigned int i;
@@ -966,6 +988,7 @@ struct rcar_csi2 {
 	bool cphy;
 	unsigned short lanes;
 	unsigned char lane_swap[4];
+	unsigned int hs_receive_eq[4];
 #ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	struct csi2cam *cam;
 #endif
@@ -1369,6 +1392,8 @@ static int rcsi2_wait_phy_start_v4h(struct rcar_csi2 *priv, u32 match)
 static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 {
 	const struct rcsi2_cphy_setting *conf;
+	unsigned int i;
+	u16 val;
 
 	for (conf = cphy_setting_table_r8a779g0; conf->msps != 0; conf++) {
 		if (conf->msps > msps)
@@ -1456,12 +1481,14 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	}
 
 	/* C-PHY setting - analog programing*/
-	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(9), conf->lane29);
-	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(9), conf->lane29);
-	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_REG(9), conf->lane29);
-	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(7), conf->lane27);
-	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(7), conf->lane27);
-	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_REG(7), conf->lane27);
+	for (i = 0; i < ARRAY_SIZE(cphy_spec_reg_v4h); i++) {
+		val = conf->lane29;
+		val |= priv->hs_receive_eq[i];
+		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].hs_receive_reg, val,
+			       GENMASK(4, 0));
+		val = conf->lane27;
+		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].ctrl27_reg, val, GENMASK(12, 10));
+	}
 
 	return 0;
 }
@@ -1904,7 +1931,8 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 	struct v4l2_fwnode_endpoint v4l2_ep = {
 		.bus_type = V4L2_MBUS_UNKNOWN,
 	};
-	int ret;
+	int ret, rval, i;
+	unsigned int hs_arr[4];
 #ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	struct device_node *remote_ep;
 	struct platform_device *pdev;
@@ -1947,6 +1975,20 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 	priv->cam = platform_get_drvdata(pdev);
 	platform_device_put(pdev);
 #else
+	if (fwnode_property_present(ep, "hs-receive-eq")) {
+		rval = fwnode_property_read_u32_array(ep, "hs-receive-eq", hs_arr, priv->lanes);
+		if (rval) {
+			dev_err(priv->dev, "Failed to read hs-receive-eq\n");
+			return rval;
+		}
+		for (i = 0; i < priv->lanes; i++)
+			priv->hs_receive_eq[i] = hs_arr[i];
+	} else {
+		/* Witout pin-swap-rx-order, ABC is default order */
+		for (i = 0; i < priv->lanes; i++)
+			priv->hs_receive_eq[i] = 0x4;
+	}
+
 	fwnode = fwnode_graph_get_remote_endpoint(ep);
 	fwnode_handle_put(ep);
 
