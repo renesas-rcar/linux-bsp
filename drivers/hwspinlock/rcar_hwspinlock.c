@@ -27,23 +27,39 @@
 
 #include "hwspinlock_internal.h"
 
-#define MFISLCKR0_OFFSET	0x000000C0
-#define MFISLCKR8_OFFSET	0x00000724
 #define MFISLCKR_NUM_8		8	/* r8a7795 ES1.*, r8a7796 ES1.* */
 #define MFISLCKR_NUM_64		64
 
+#define UNLOCK_WRITE_VAL	0xacc00001
+
+struct rcar_hwspinlock_of_data {
+	u32 mfislckr0_offset;
+	u32 mfislckr8_offset;
+};
+
+struct rcar_hwspinlock_priv {
+	void __iomem *spinlock_reg;
+	void __iomem *write_prot_reg;
+};
+
 static int rcar_hwspinlock_trylock(struct hwspinlock *lock)
 {
-	void *addr = lock->priv;
+	struct rcar_hwspinlock_priv *priv = lock->priv;
 
-	return !ioread32((void __iomem *)addr);
+	if (priv->write_prot_reg)
+		iowrite32(UNLOCK_WRITE_VAL, priv->write_prot_reg);
+
+	return !ioread32(priv->spinlock_reg);
 }
 
 static void rcar_hwspinlock_unlock(struct hwspinlock *lock)
 {
-	void *addr = lock->priv;
+	struct rcar_hwspinlock_priv *priv = lock->priv;
 
-	iowrite32(0, (void __iomem *)addr);
+	if (priv->write_prot_reg)
+		iowrite32(UNLOCK_WRITE_VAL, priv->write_prot_reg);
+
+	iowrite32(0, priv->spinlock_reg);
 }
 
 static const struct hwspinlock_ops rcar_hwspinlock_ops = {
@@ -57,20 +73,43 @@ static const struct soc_device_attribute mfislock_quirks_match[] = {
 	{ /* sentinel */ }
 };
 
+static const struct rcar_hwspinlock_of_data rcar_hwspinlock_data = {
+	.mfislckr0_offset	= 0xc0,
+	.mfislckr8_offset	= 0x724,
+};
+
+static const struct rcar_hwspinlock_of_data rcar_hwspinlock_gen5_data = {
+	.mfislckr0_offset	= 0xc0,
+	.mfislckr8_offset	= 0x704,
+};
+
 static const struct of_device_id rcar_hwspinlock_of_match[] = {
-	{ .compatible = "renesas,mfis-lock" },
+	{
+		.compatible = "renesas,mfis-lock",
+		.data = &rcar_hwspinlock_data,
+	}, {
+		.compatible = "renesas,mfis-lock-gen5",
+		.data = &rcar_hwspinlock_gen5_data,
+	},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, rcar_hwspinlock_of_match);
 
 static int rcar_hwspinlock_probe(struct platform_device *pdev)
 {
-	int				ch;
-	int				num_locks = MFISLCKR_NUM_64;
-	int				ret = 0;
-	u32 __iomem			*addr;
-	struct resource			*res;
-	struct hwspinlock_device	*bank;
+	int					ch;
+	int					num_locks = MFISLCKR_NUM_64;
+	int					ret = 0;
+	u32 __iomem				*addr;
+	void __iomem				*write_prot_reg = NULL;
+	struct resource				*res;
+	struct hwspinlock_device		*bank;
+	struct rcar_hwspinlock_priv		*priv;
+	const struct rcar_hwspinlock_of_data	*data;
+
+	data = of_device_get_match_data(&pdev->dev);
+	if (!data)
+		return -EINVAL;
 
 	/* allocate hwspinlock control info */
 	bank = devm_kzalloc(&pdev->dev, sizeof(*bank)
@@ -94,15 +133,40 @@ static int rcar_hwspinlock_probe(struct platform_device *pdev)
 		goto out;
 	}
 
+	/* map write-protection register if present */
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "unlock_reg");
+	if (res) {
+		write_prot_reg = devm_ioremap(&pdev->dev, res->start, 4);
+		if (!write_prot_reg) {
+			ret = -ENOMEM;
+			goto out;
+		}
+	}
+
+	priv = devm_kcalloc(&pdev->dev, MFISLCKR_NUM_64,
+			    sizeof(*priv), GFP_KERNEL);
+	if (!priv) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
 	/* create lock for MFISLCKR0-7 */
-	for (ch = 0; ch < 8; ch++)
-		bank->lock[ch].priv = (void __force *)addr + MFISLCKR0_OFFSET
-				+ sizeof(u32) * ch;
+	for (ch = 0; ch < 8; ch++) {
+		priv[ch].spinlock_reg = (void __iomem *)((void __force *)addr
+				    + data->mfislckr0_offset
+				    + sizeof(u32) * ch);
+		priv[ch].write_prot_reg = write_prot_reg;
+		bank->lock[ch].priv = &priv[ch];
+	}
 
 	/* create lock for MFISLCKR8-63 */
-	for (ch = 8; ch < 64; ch++)
-		bank->lock[ch].priv = (void __force *)addr + MFISLCKR8_OFFSET
-				+ sizeof(u32) * (ch - 8);
+	for (ch = 8; ch < 64; ch++) {
+		priv[ch].spinlock_reg = (void __iomem *)((void __force *)addr
+				    + data->mfislckr8_offset
+				    + sizeof(u32) * (ch - 8));
+		priv[ch].write_prot_reg = write_prot_reg;
+		bank->lock[ch].priv = &priv[ch];
+	}
 
 	platform_set_drvdata(pdev, bank);
 
