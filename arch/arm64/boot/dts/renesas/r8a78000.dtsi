@@ -1682,6 +1682,28 @@
 			status = "disabled";
 		};
 
+		ufs0: ufs@c0a80000 {
+			compatible = "renesas,r8a78000-ufs", "renesas,rcar-gen5-ufs";
+			reg = <0 0xc0a80000 0 0x1100>, <0 0xc0a00000 0 0x40000>;
+			reg-names = "hcr", "phy";
+			interrupts = <GIC_SPI 4284 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&ufs0_clk>;
+			clock-names = "ref_clk";
+			freq-table-hz = <38400000 38400000>;
+			status = "disabled";
+		};
+
+		ufs1: ufs@c0a90000 {
+			compatible = "renesas,r8a78000-ufs", "renesas,rcar-gen5-ufs";
+			reg = <0 0xc0a90000 0 0x1100>, <0 0xc0a40000 0 0x40000>;
+			reg-names = "hcr", "phy";
+			interrupts = <GIC_SPI 4285 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&ufs1_clk>;
+			clock-names = "ref_clk";
+			freq-table-hz = <38400000 38400000>;
+			status = "disabled";
+		};
+
 		scp: scp@c1000000 {
 			compatible = "arm,rcar-sram-ns", "mmio-sram";
 			reg = <0x0 0xc1000000 0x0 0x80000>;
@@ -1975,5 +1997,19 @@
 				      <&gic GIC_PPI 12 IRQ_TYPE_LEVEL_LOW>;
 		interrupt-names = "sec-phys", "phys", "virt", "hyp-phys",
 				  "hyp-virt";
+	};
+
+	ufs0_clk: ufs0-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* This value must be overridden by the board */
+		clock-frequency = <0>;
+	};
+
+	ufs1_clk: ufs1-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* This value must be overridden by the board */
+		clock-frequency = <0>;
 	};
 };
