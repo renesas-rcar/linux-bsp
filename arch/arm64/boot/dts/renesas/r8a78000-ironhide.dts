@@ -169,6 +169,21 @@
 	};
 };
 
+&gpio4 {
+	pcie60_clkreq {
+		gpio-hog;
+		gpios = <14 1>;
+		output-high;
+	};
+
+	pcie61_clkreq {
+		gpio-hog;
+		gpios = <15 1>;
+		output-high;
+	};
+
+};
+
 &i2c0 {
 	pinctrl-0 = <&i2c0_pins>;
 	pinctrl-names = "default";
@@ -301,6 +316,18 @@
 	status = "okay";
 	phys = <&mp_phy 0 1>;
 	reset-gpios = <&io_expander_pcie 0 1>;
+};
+
+&pciec60 {
+	status = "okay";
+};
+
+&pciec60_ep {
+	status = "disabled";
+};
+
+&pciec61_ep {
+	status = "disabled";
 };
 
 &rsw3_clk {
