@@ -183,6 +183,13 @@
 		clock-frequency = <0>;
 	};
 
+	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
 	pmu_a76 {
 		compatible = "arm,cortex-a76-pmu";
 		interrupts-extended = <&gic GIC_PPI 7 IRQ_TYPE_LEVEL_LOW>;
@@ -237,7 +244,7 @@
 			status = "disabled";
 		};
 
-		gpio0: gpio@2020e6050180 {
+		gpio0: gpio@20e6050180 {
 			compatible = "renesas,gpio-r8a779g0",
 				     "renesas,rcar-gen4-gpio";
 			reg = <0x20 0xe6050180 0 0x54>;
@@ -5235,6 +5242,12 @@
 			compatible = "generic-uio";
 			reg = <0x20 0xe67a8000 0 0x3800>;
 			linux,uio-name = "rcarbusmoni_02";
+		};
+
+		otp_mem0: otp_mem@20e61bf000 {
+			compatible = "generic-uio";
+			reg = <0x20 0xe61bf000 0 0x1000>;
+			linux,uio-name = "otp_mem_01";
 		};
 
 		isp0: isp@20fed00000 {

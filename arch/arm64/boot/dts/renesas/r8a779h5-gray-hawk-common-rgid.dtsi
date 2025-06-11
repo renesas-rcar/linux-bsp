@@ -36,15 +36,20 @@
 		};
 	};
 
-	memory@48000000 {
+	memory@2048000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
-		reg = <0x0 0x48000000 0x0 0x78000000>;
+		reg = <0x20 0x48000000 0x0 0x18000000>;
 	};
 
-	memory@480000000 {
+	memory@20a0000000 {
 		device_type = "memory";
-		reg = <0x4 0x80000000 0x1 0x80000000>;
+		reg = <0x20 0xa0000000 0x0 0x20000000>;
+	};
+
+	memory@2480000000 {
+		device_type = "memory";
+		reg = <0x24 0x80000000 0x1 0x80000000>;
 	};
 
 	reg_1p8v: regulator-1p8v {
@@ -70,58 +75,58 @@
 		#size-cells = <2>;
 		ranges;
 
-		vdsp0_region: linux,vdsp0_region@5d000000 {
+		vdsp0_region: linux,vdsp0_region@205d000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5d000000 0x0 0x00800000>;
+			reg = <0x00000020 0x5d000000 0x0 0x00800000>;
 		};
 
-		vdsp1_region: linux,vdsp1_region@5d800000 {
+		vdsp1_region: linux,vdsp1_region@205d800000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5d800000 0x0 0x00800000>;
+			reg = <0x00000020 0x5d800000 0x0 0x00800000>;
 		};
 
-		vdsp2_region: linux,vdsp2_region@5e000000 {
+		vdsp2_region: linux,vdsp2_region@205e000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5e000000 0x0 0x00800000>;
+			reg = <0x00000020 0x5e000000 0x0 0x00800000>;
 		};
 
-		vdsp3_region: linux,vdsp3_region@5e800000 {
+		vdsp3_region: linux,vdsp3_region@205e800000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5e800000 0x0 0x00800000>;
+			reg = <0x00000020 0x5e800000 0x0 0x00800000>;
 		};
 
-		pap_region: linux,pap_region@5f000000 {
+		pap_region: linux,pap_region@205f000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x5f000000 0x0 0x00400000>;
+			reg = <0x00000020 0x5f000000 0x0 0x00400000>;
 		};
 
 		/* global autoconfigured region for contiguous allocations */
-		linux,cma@80000000 {
+		linux,cma@20a0000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x00000000 0x80000000 0x0 0x23000000>;
+			reg = <0x00000020 0xa0000000 0x0 0x10000000>;
 			linux,cma-default;
 		};
 
-		region_40bit: linux,region_40bit@500000000 {
+		region_40bit: linux,region_40bit@2500000000 {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x5 0x00000000 0x0 0x40000000>;
+			reg = <0x25 0x00000000 0x0 0x40000000>;
 		};
 
-		ecc_data_region@4cccc0000 {
+		ecc_data_region@24cccc0000 {
 			no-map;
-			reg = <0x4 0xcccc0000 0x0 0x33340000>;
+			reg = <0x24 0xcccc0000 0x0 0x33340000>;
 		};
 
-		ecc_data_region@5cccc0000 {
+		ecc_data_region@25cccc0000 {
 			no-map;
-			reg = <0x5 0xcccc0000 0x0 0x33340000>;
+			reg = <0x25 0xcccc0000 0x0 0x33340000>;
 		};
 	};
 
@@ -175,22 +180,17 @@
 	pinctrl-0 = <&canfd0_pins>, <&canfd1_pins>,
 		<&canfd2_pins>, <&canfd3_pins>;
 		pinctrl-names = "default";
-	status = "okay";
 
 	channel0 {
-		status = "okay";
 	};
 
 	channel1 {
-		status = "okay";
 	};
 
 	channel2 {
-		status = "okay";
 	};
 
 	channel3 {
-		status = "okay";
 	};
 };
 
@@ -265,7 +265,6 @@
 };
 
 &du {
-	status = "okay";
 };
 
 &extal_clk {
@@ -613,11 +612,9 @@
 };
 
 &isp0 {
-	status = "okay";
 };
 
 &isp1 {
-	status = "okay";
 };
 
 &mmc0 {
@@ -889,35 +886,27 @@
 };
 
 &vin00 {
-	status = "okay";
 };
 
 &vin01 {
-	status = "okay";
 };
 
 &vin02 {
-	status = "okay";
 };
 
 &vin03 {
-	status = "okay";
 };
 
 &vin08 {
-	status = "okay";
 };
 
 &vin09 {
-	status = "okay";
 };
 
 &vin10 {
-	status = "okay";
 };
 
 &vin11 {
-	status = "okay";
 };
 
 /* FAKRA Overlay */
