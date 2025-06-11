@@ -26,10 +26,15 @@
 
 #include "hwspinlock_internal.h"
 
-#define MFISLCKR0_OFFSET	0x000000C0
-#define MFISLCKR8_OFFSET	0x00000724
 #define MFISLCKR_NUM_8		8	/* r8a7795 ES1.*, r8a7796 ES1.* */
 #define MFISLCKR_NUM_64		64
+
+#define UNLOCK_WRITE_VAL	0xacc00001
+
+struct rcar_hwspinlock_of_data {
+	u32 mfislckr0_offset;
+	u32 mfislckr8_offset;
+};
 
 static int rcar_hwspinlock_trylock(struct hwspinlock *lock)
 {
@@ -56,20 +61,41 @@ static const struct soc_device_attribute mfislock_quirks_match[] = {
 	{ /* sentinel */ }
 };
 
+static const struct rcar_hwspinlock_of_data rcar_hwspinlock_data = {
+	.mfislckr0_offset	= 0xc0,
+	.mfislckr8_offset	= 0x724,
+};
+
+static const struct rcar_hwspinlock_of_data rcar_hwspinlock_gen5_data = {
+	.mfislckr0_offset	= 0xc0,
+	.mfislckr8_offset	= 0x704,
+};
+
 static const struct of_device_id rcar_hwspinlock_of_match[] = {
-	{ .compatible = "renesas,mfis-lock" },
+	{
+		.compatible = "renesas,mfis-lock",
+		.data = &rcar_hwspinlock_data,
+	}, {
+		.compatible = "renesas,mfis-lock-gen5",
+		.data = &rcar_hwspinlock_gen5_data,
+	},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, rcar_hwspinlock_of_match);
 
 static int rcar_hwspinlock_probe(struct platform_device *pdev)
 {
-	int				ch;
-	int				num_locks = MFISLCKR_NUM_64;
-	int				ret = 0;
-	u32 __iomem			*addr;
-	struct resource			*res;
-	struct hwspinlock_device	*bank;
+	int					ch;
+	int					num_locks = MFISLCKR_NUM_64;
+	int					ret = 0;
+	u32 __iomem				*addr;
+	struct resource				*res;
+	struct hwspinlock_device		*bank;
+	const struct rcar_hwspinlock_of_data	*data;
+
+	data = of_device_get_match_data(&pdev->dev);
+	if (!data)
+		return -EINVAL;
 
 	/* allocate hwspinlock control info */
 	bank = devm_kzalloc(&pdev->dev, sizeof(*bank)
@@ -95,12 +121,12 @@ static int rcar_hwspinlock_probe(struct platform_device *pdev)
 
 	/* create lock for MFISLCKR0-7 */
 	for (ch = 0; ch < 8; ch++)
-		bank->lock[ch].priv = (void __force *)addr + MFISLCKR0_OFFSET
+		bank->lock[ch].priv = (void __force *)addr + data->mfislckr0_offset
 				+ sizeof(u32) * ch;
 
 	/* create lock for MFISLCKR8-63 */
 	for (ch = 8; ch < 64; ch++)
-		bank->lock[ch].priv = (void __force *)addr + MFISLCKR8_OFFSET
+		bank->lock[ch].priv = (void __force *)addr + data->mfislckr8_offset
 				+ sizeof(u32) * (ch - 8);
 
 	platform_set_drvdata(pdev, bank);
@@ -110,6 +136,15 @@ static int rcar_hwspinlock_probe(struct platform_device *pdev)
 		goto out;
 
 	pm_runtime_enable(&pdev->dev);
+
+	/* Unlock write protection if any */
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "unlock_reg");
+	if (res) {
+		void __iomem *unlock = ioremap(res->start, 4);
+
+		iowrite32(UNLOCK_WRITE_VAL, unlock);
+		iounmap(unlock);
+	}
 
 	/* register hwspinlock */
 	if (soc_device_match(mfislock_quirks_match))
