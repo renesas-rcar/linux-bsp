@@ -4,9 +4,30 @@
  *
  * Copyright (C) 2025 Renesas Electronics Corp.
  */
+/*
+ * [How to use Sound]
+ *
+ * Because R-Car X5H has only 1 SSI connected to the codec,
+ * it cannot handle both Playback/Capture at the same time.
+ * You need to switch the direction which is controlled
+ * by the GP6_21 pin via amixer.
+ *
+ * Playback (Upper part of CN39)
+ *      > amixer set "MUX" "Playback"   // for GP6_21
+ *      > amixer set "DAC 1" 85%
+ *      > aplay xxx.wav
+ *
+ * Capture (Lower part of CN39)
+ *      > amixer set "MUX" "Capture"    // for GP6_21
+ *      > amixer set "Mic 1" 50%
+ *      > amixer set "ADC 1" on
+ *      > amixer set 'ADC 1' 80%
+ *      > arecord xxx hoge.wav
+ */
 
 /dts-v1/;
 #include "r8a78000.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/net/ti-dp83869.h>
 
 / {
@@ -141,6 +162,34 @@
 	vspm_if {
 		compatible = "renesas,vspm_if";
 	};
+
+	sound_mux: sound-mux {
+		compatible = "simple-audio-mux";
+		mux-gpios = <&gpio6 21 GPIO_ACTIVE_HIGH>;
+		state-labels = "Playback", "Capture";
+	};
+
+	sound_card: sound {
+		compatible = "simple-audio-card";
+
+		simple-audio-card,name = "rcar-sound";
+		simple-audio-card,aux-devs = <&sound_mux>; // for GP6_21
+		simple-audio-card,format = "i2s";
+		simple-audio-card,bitclock-master = <&sndcpu>;
+		simple-audio-card,frame-master = <&sndcpu>;
+
+		sndcodec: simple-audio-card,codec {
+			sound-dai = <&ak4619>;
+		};
+
+		sndcpu: simple-audio-card,cpu {
+			sound-dai = <&rcar_sound>;
+		};
+	};
+};
+
+&audio_clk_a {
+	clock-frequency = <24576000>;
 };
 
 &mailbox {
@@ -189,6 +238,15 @@
 
 &extalr_clk {
 	clock-frequency = <32768>;
+};
+
+&gpio6 {
+	audio-power-hog {
+		gpio-hog;
+		gpios = <20 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "Audio-Power";
+	};
 };
 
 &hscif0 {
@@ -303,6 +361,22 @@
 	clock-frequency = <400000>;
 };
 
+&i2c6 {
+	pinctrl-0 = <&i2c6_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	clock-frequency = <400000>;
+
+	ak4619: codec@10 {
+		compatible = "asahi-kasei,ak4619";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
+		clocks = <&rcar_sound>;
+		clock-names = "mclk";
+	};
+};
+
 &i3c0 {
 	pinctrl-0 = <&i3c0_pins>;
 	pinctrl-names = "default";
@@ -344,6 +418,11 @@
 	i2c1_pins: i2c1 {
 		groups = "i2c1";
 		function = "i2c1";
+	};
+
+	i2c6_pins: i2c6 {
+		groups = "i2c6";
+		function = "i2c6";
 	};
 
 	i3c0_pins: i3c0 {
@@ -485,6 +564,16 @@
 		groups = "canxl1_data";
 		function = "canxl1";
 	};
+
+	sound_pins: sound {
+		groups = "ssi5_ctrl", "ssi5_data";
+		function = "ssi5";
+	};
+
+	sound_clk_pins: sound_clk {
+		groups = "audio_clk_a_a", "audio0_clkout0";
+		function = "audio_clk";
+	};
 };
 
 &rpc {
@@ -536,6 +625,29 @@
 
 &pciec61_ep {
 	status = "disabled";
+};
+
+&rcar_sound {
+	pinctrl-0 = <&sound_clk_pins>, <&sound_pins>;
+	pinctrl-names = "default";
+
+	/* Single DAI */
+	#sound-dai-cells = <0>;
+
+	/* audio_clkout0/1/2/3 */
+	#clock-cells = <0>;
+
+	/* audio_clkout */
+	clock-frequency = <12288000>;
+
+	status = "okay";
+
+	rcar_sound,dai {
+		dai0 {
+			playback = <&ssi5>;
+			capture = <&ssi5>;
+		};
+	};
 };
 
 &rsw3_clk {
