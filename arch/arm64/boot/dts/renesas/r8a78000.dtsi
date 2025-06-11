@@ -540,6 +540,14 @@
 			status = "disabled";
 		};
 
+		mfis_lock@189e0000 {
+			compatible = "renesas,mfis-lock-r8a78000",
+				     "renesas,mfis-lock-gen5";
+			reg = <0 0x189e0000 0 0x900>, <0x0 0x189e0900 0x0 0x4>;
+			reg-names = "io_base", "unlock_reg";
+			#hwlock-cells = <1>;
+		};
+
 		prr: chipid@189e0044 {
 			compatible = "renesas,prr";
 			reg = <0 0x189e0044 0 4>;
