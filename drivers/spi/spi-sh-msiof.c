@@ -30,6 +30,68 @@
 
 #include <asm/unaligned.h>
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE		0xc1330000
+#define R8A78000_MSIOF_PDID		(0)
+#define R8A78000_MSIOF_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define R8A78000_MSIOF_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MPDG		_MDLC_MPDG(R8A78000_MSIOF_PDID)
+#define MDLC_MPDGS		_MDLC_MPDGS(R8A78000_MSIOF_PDID)
+
+#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
+
+static void sh_msiof_spi_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(msress) & R8A78000_MSIOF_CLK_MASK(pos)) ==
+	    (mode << R8A78000_MSIOF_CLK_SHIFT(pos)))
+		goto unmap;
+
+	while ((readl(msress) & R8A78000_MSIOF_CLK_MASK(pos)) !=
+	       (readl(msres) & R8A78000_MSIOF_CLK_MASK(pos)))
+		usleep_range(1000, 1100);
+
+	val = readl(msres);
+	val &= ~R8A78000_MSIOF_CLK_MASK(pos);
+	val |= mode << R8A78000_MSIOF_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & R8A78000_MSIOF_CLK_MASK(pos)) !=
+	       (readl(msres) & R8A78000_MSIOF_CLK_MASK(pos)))
+		usleep_range(1000, 1100);
+
+unmap:
+	iounmap(unlock);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+static void sh_msiof_spi_module_run(void)
+{
+	int i;
+
+	for (i = 0; i < 4; i++)
+		sh_msiof_spi_module_standy_set(5, i * 2, 0x03);
+}
+
+//----------------------------------------------------------------
+
 #define SH_MSIOF_FLAG_FIXED_DTDL_200	BIT(0)
 
 struct sh_msiof_chipdata {
@@ -39,7 +101,6 @@ struct sh_msiof_chipdata {
 	u16 ctlr_flags;
 	u16 min_div_pow;
 	u32 flags;
-	bool gen5;
 };
 
 #ifdef CONFIG_SPI_SH_MSIOF_TRANSFER_SYNC_DEBUG
@@ -269,7 +330,7 @@ static const u32 sh_msiof_spi_div_array[] = {
 static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 				      struct spi_transfer *t)
 {
-	unsigned long parent_rate = clk_get_rate(p->clk);
+	unsigned long parent_rate = 133333333;
 	unsigned int div_pow = p->min_div_pow;
 	u32 spi_hz = t->speed_hz;
 	unsigned long div;
@@ -1108,7 +1169,6 @@ static const struct sh_msiof_chipdata rcar_gen5_data = {
 	.rx_fifo_size = 256,
 	.ctlr_flags = SPI_CONTROLLER_MUST_TX,
 	.min_div_pow = 1,
-	.gen5 = true,
 };
 
 static const struct of_device_id sh_msiof_match[] = {
@@ -1304,7 +1364,7 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	struct sh_msiof_spi_info *info;
 	struct sh_msiof_spi_priv *p;
 	unsigned long clksrc;
-	struct clk *ref_clk;
+	//struct clk *ref_clk;
 	int i;
 	int ret;
 
@@ -1343,22 +1403,33 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	init_completion(&p->done);
 	init_completion(&p->done_txdma);
 
-	p->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(p->clk)) {
-		dev_err(&pdev->dev, "cannot get clock\n");
-		ret = PTR_ERR(p->clk);
-		goto err1;
-	}
+	/* p->clk = devm_clk_get(&pdev->dev, NULL);
+	 * if (IS_ERR(p->clk)) {
+	 *	dev_err(&pdev->dev, "cannot get clock\n");
+	 *	ret = PTR_ERR(p->clk);
+	 *	goto err1;
+	 * }
+	 */
+
+	sh_msiof_spi_module_run();
 
 	/* MSIOF module clock setup */
-	ref_clk = devm_clk_get(&pdev->dev, "mso");
-	if (!IS_ERR(ref_clk)) {
-		clksrc = clk_get_rate(ref_clk);
-		if (clksrc) {
-			clk_prepare_enable(p->clk);
-			clk_set_rate(p->clk, clksrc);
-			clk_disable_unprepare(p->clk);
-		}
+	/*ref_clk = devm_clk_get(&pdev->dev, "msiof_ref_clk");
+	 * if (!IS_ERR(ref_clk)) {
+	 *	clksrc = clk_get_rate(ref_clk);
+	 *	if (clksrc) {
+	 *		clk_prepare_enable(p->clk);
+	 *		clk_set_rate(p->clk, clksrc);
+	 *		clk_disable_unprepare(p->clk);
+	 *	}
+	 * }
+	 */
+
+	clksrc = 133333333;
+	if (clksrc) {
+		clk_prepare_enable(p->clk);
+		clk_set_rate(p->clk, clksrc);
+		clk_disable_unprepare(p->clk);
 	}
 
 	i = platform_get_irq(pdev, 0);
@@ -1373,13 +1444,9 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 		goto err1;
 	}
 
-	if (chipdata->gen5) {
-		ret = devm_request_irq(&pdev->dev, i, sh_msiof_spi_irq, IRQF_SHARED,
-				       dev_name(&pdev->dev), p);
-	} else {
-		ret = devm_request_irq(&pdev->dev, i, sh_msiof_spi_irq, 0,
-				       dev_name(&pdev->dev), p);
-	}
+	ret = devm_request_irq(&pdev->dev, i, sh_msiof_spi_irq, 0,
+			       dev_name(&pdev->dev), p);
+
 	if (ret) {
 		dev_err(&pdev->dev, "unable to request irq\n");
 		goto err1;
@@ -1399,7 +1466,7 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	/* init controller code */
 	ctlr->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
 	ctlr->mode_bits |= SPI_LSB_FIRST | SPI_3WIRE;
-	clksrc = clk_get_rate(p->clk);
+	clksrc = 133333333;
 	ctlr->min_speed_hz = DIV_ROUND_UP(clksrc, 1024);
 	ctlr->max_speed_hz = DIV_ROUND_UP(clksrc, 1 << p->min_div_pow);
 	ctlr->flags = chipdata->ctlr_flags;
