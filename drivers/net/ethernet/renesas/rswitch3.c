@@ -1119,11 +1119,27 @@ static int rsw3_etha_mii_hw_init(struct rsw3_etha *etha)
 	if (err < 0)
 		return err;
 
-	err = rsw3_etha_change_mode(etha, EAMC_OPC_OPERATION);
-	if (err < 0)
-		return err;
-
 	etha->operated = true;
+
+	return 0;
+}
+
+static int rsw3_etha_mii_hw_start(struct rsw3_etha *etha)
+{
+	u32 val;
+	int err;
+
+	val = ioread32(etha->addr + EAMS);
+
+	if ((val & EAMS_OPS_MASK) != EAMC_OPC_OPERATION) {
+		err = rsw3_etha_change_mode(etha, EAMC_OPC_DISABLE);
+		if (err < 0)
+			return err;
+
+		err = rsw3_etha_change_mode(etha, EAMC_OPC_OPERATION);
+		if (err < 0)
+			return err;
+	}
 
 	return 0;
 }
@@ -1542,9 +1558,20 @@ static int rsw3_ether_port_init_all(struct rsw3_private *priv)
 			goto err_init_one;
 	}
 
+	/* The HWUM states that if no PHY TX/RX clock is provided to RMAC, the transition from
+	 * OPERATION to DISABLED of ETHA may not be possible. Therefore, change the etha_mii
+	 * channels to OPERATION mode only after initializing all channels. This helps avoid
+	 * timeouts when changing modes for other ETHA settings when the same port is used for
+	 * both MDIO and data transfer.
+	 */
 	rsw3_for_each_enabled_port(priv, i) {
 		if (priv->rdev[i]->disabled)
 			continue;
+
+		err = rsw3_etha_mii_hw_start(priv->rdev[i]->etha_mii);
+		if (err)
+			goto err_pcs;
+
 		err = phy_init(priv->rdev[i]->pcs);
 		if (err)
 			goto err_pcs;
