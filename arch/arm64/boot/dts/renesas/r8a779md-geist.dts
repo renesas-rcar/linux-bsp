@@ -12,7 +12,7 @@
 
 / {
 	model = "Renesas Geist version board based on r8a779md";
-	compatible = "renesas,geist", "renesas,r8a779md";
+	compatible = "renesas,geist", "renesas,r8a779md", "renesas,r8a77965";
 
 	aliases {
 		serial0 = &scif2;
