@@ -749,6 +749,66 @@
 	};
 };
 
+&usb30 {
+	status = "okay";
+	pinctrl-0 = <&usb30_pins>;
+	pinctrl-names = "default";
+	phys = <&mp_phy 3 0>;
+	phy-names = "usb3-phy";
+
+	dwc3_usb30@c8800000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x0 0xc8800000 0x0 0x100000>;
+		interrupts = <GIC_SPI 795 IRQ_TYPE_LEVEL_HIGH>;
+		maximum-speed = "super-speed-plus";
+		dr_mode = "host";
+	};
+};
+
+&usb31 {
+	status = "okay";
+	pinctrl-0 = <&usb31_pins>;
+	pinctrl-names = "default";
+	phys = <&mp_phy 3 1>;
+	phy-names = "usb3-phy";
+
+	dwc3_usb31@c8a00000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x0 0xc8a00000 0x0 0x100000>;
+		interrupts = <GIC_SPI 797 IRQ_TYPE_LEVEL_HIGH>;
+		maximum-speed = "super-speed-plus";
+		dr_mode = "host";
+	};
+};
+
+&usb20 {
+	status = "okay";
+	pinctrl-0 = <&usb20_pins>;
+	pinctrl-names = "default";
+
+	dwc3_usb20@c8900000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x0 0xc8900000 0x0 0x100000>;
+		interrupts = <GIC_SPI 796 IRQ_TYPE_LEVEL_HIGH>;
+		maximum-speed = "high-speed";
+		dr_mode = "host";
+	};
+};
+
+&usb21 {
+	status = "okay";
+	pinctrl-0 = <&usb21_pins>;
+	pinctrl-names = "default";
+
+	dwc3_usb21@c8b00000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x0 0xc8b00000 0x0 0x100000>;
+		interrupts = <GIC_SPI 798 IRQ_TYPE_LEVEL_HIGH>;
+		maximum-speed = "high-speed";
+		dr_mode = "host";
+	};
+};
+
 &rwdt {
 	timeout-sec = <60>;
 	status = "okay";
