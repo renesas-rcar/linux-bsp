@@ -133,6 +133,7 @@ struct r8a78000_eth_pcs_channel {
 	struct r8a78000_eth_pcs_drv_data *dd;
 	struct phy *phy;
 	void __iomem *addr;
+	struct phy *mpphy;
 	phy_interface_t phy_interface;
 	bool aneg_on;
 	int speed;
@@ -144,7 +145,6 @@ struct r8a78000_eth_pcs_drv_data {
 	void __iomem *addr;
 	struct platform_device *pdev;
 	struct reset_control *reset;
-	struct phy *mpphy;
 	struct r8a78000_eth_pcs_channel channel[R8A78000_ETH_PCS_NUM];
 };
 
@@ -367,15 +367,28 @@ static int r8a78000_eth_pcs_monitor_linkup(struct r8a78000_eth_pcs_channel *chan
 static int r8a78000_eth_pcs_init(struct phy *p)
 {
 	struct r8a78000_eth_pcs_channel *channel = phy_get_drvdata(p);
+	struct device *dev = &channel->dd->pdev->dev;
 	int ret;
 
-	ret = phy_init(channel->dd->mpphy);
+	if (!channel->mpphy) {
+		dev_err(dev, "Failed to get mmphy\n");
+		return -EINVAL;
+	}
+
+	ret = phy_set_mode_ext(channel->mpphy, PHY_MODE_ETHERNET,
+			       channel->phy_interface);
 	if (ret) {
-		pr_info("XPCS: Failed to init mphy\n");
+		dev_err(dev, "Failed to set mode to mphy\n");
 		return ret;
 	}
 
-	ret = r8a78000_eth_pcs_init_ram(channel, channel->dd->mpphy);
+	ret = phy_init(channel->mpphy);
+	if (ret) {
+		dev_err(dev, "Failed to init mp-phy\n");
+		return ret;
+	}
+
+	ret = r8a78000_eth_pcs_init_ram(channel, channel->mpphy);
 	if (ret)
 		return ret;
 
@@ -463,10 +476,48 @@ static const struct phy_ops r8a78000_eth_pcs_ops = {
 	.init		= r8a78000_eth_pcs_init,
 	.exit		= r8a78000_eth_pcs_exit,
 	.power_on	= r8a78000_eth_pcs_power_on,
-	.power_off  	= r8a78000_eth_pcs_power_off,
+	.power_off	= r8a78000_eth_pcs_power_off,
 	.set_mode	= r8a78000_eth_pcs_set_mode,
 	.set_speed	= r8a78000_eth_pcs_set_speed,
 };
+
+static int rsw3_get_mpphy_nodes(struct r8a78000_eth_pcs_drv_data *dd)
+{
+	struct device *dev = &dd->pdev->dev;
+	struct device_node *ports, *port;
+	u32 index;
+	int err;
+
+	ports = of_get_child_by_name(dev->of_node, "ports");
+
+	if (!ports)
+		return -EINVAL;
+
+	for_each_child_of_node(ports, port) {
+		struct phy *mpphy;
+
+		err = of_property_read_u32(port, "reg", &index);
+		if (err < 0)
+			continue;
+
+		mpphy = devm_of_phy_get_by_index(dev, port, 0);
+		if (IS_ERR(mpphy)) {
+			err = PTR_ERR(mpphy);
+			if (err == -EPROBE_DEFER) {
+				dev_dbg(dev, "PCS: mmphy not ready, defer probe\n");
+				goto out;
+			}
+		} else {
+			dd->channel[index].mpphy = mpphy;
+		}
+	}
+
+	err = 0;
+out:
+	of_node_put(ports);
+
+	return err;
+}
 
 static struct phy *r8a78000_eth_pcs_xlate(struct device *dev,
 					     struct of_phandle_args *args)
@@ -478,6 +529,7 @@ static struct phy *r8a78000_eth_pcs_xlate(struct device *dev,
 
 	return dd->channel[args->args[0]].phy;
 }
+
 
 static const struct of_device_id r8a78000_eth_pcs_of_table[] = {
 	{ .compatible = "renesas,r8a78000-ether-pcs", },
@@ -507,17 +559,6 @@ static int r8a78000_eth_pcs_probe(struct platform_device *pdev)
 	if (!dd->addr)
 		return -ENOMEM;
 
-	/* Get Multi-Protocol PHY (mmphy) */
-	dd->mpphy = devm_of_phy_get_by_index(&pdev->dev, pdev->dev.of_node, 0);
-	if (IS_ERR(dd->mpphy)) {
-		ret = PTR_ERR(dd->mpphy);
-		if (ret == -EPROBE_DEFER)
-			dev_dbg(&pdev->dev, "PCS: mmphy not ready, defer probe\n");
-		else
-			dev_err(&pdev->dev, "PCS: Failed to get mmphy: %d\n", ret);
-		return ret;
-	}
-
 	/* Create PHY channels */
 	for (i = 0; i < R8A78000_ETH_PCS_NUM; i++) {
 		struct r8a78000_eth_pcs_channel *channel = &dd->channel[i];
@@ -532,6 +573,10 @@ static int r8a78000_eth_pcs_probe(struct platform_device *pdev)
 		channel->aneg_on = true;
 		phy_set_drvdata(channel->phy, channel);
 	}
+
+	ret = rsw3_get_mpphy_nodes(dd);
+	if (ret == -EPROBE_DEFER)
+		return ret;
 
 	provider = devm_of_phy_provider_register(&pdev->dev, r8a78000_eth_pcs_xlate);
 	if (IS_ERR(provider))
