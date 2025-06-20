@@ -6,6 +6,7 @@
  */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/power/r8a78000-power.h>
 #include <dt-bindings/clock/r8a78000-scmi-clock.h>
 
 #define GIC_MULTI_VIEW
@@ -994,6 +995,7 @@
 			reg = <0 0xc11d0000 0 0x40>;
 			interrupts = <GIC_SPI 4807 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_I2C0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -1005,6 +1007,7 @@
 			reg = <0 0xc06c0000 0 0x40>;
 			interrupts = <GIC_SPI 956 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_I2C1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -1231,7 +1234,7 @@
 		crc0: crc@19000000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19000000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC0>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1239,7 +1242,7 @@
 		crc1: crc@19010000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19010000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC1>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1247,7 +1250,7 @@
 		crc2: crc@19020000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19020000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC2>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1255,7 +1258,7 @@
 		crc3: crc@19030000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19030000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC3>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1263,7 +1266,7 @@
 		crc4: crc@19040000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19040000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC4>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1271,7 +1274,7 @@
 		crc5: crc@19050000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19050000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC5>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1279,7 +1282,7 @@
 		crc6: crc@19060000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19060000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC6>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1287,7 +1290,7 @@
 		crc7: crc@19070000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19070000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC7>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1295,7 +1298,7 @@
 		crc8: crc@19080000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19080000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC8>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1303,7 +1306,7 @@
 		crc9: crc@19090000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19090000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC9>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1311,7 +1314,7 @@
 		crc10: crc@190A0000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x190A0000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_CRC10>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1319,7 +1322,7 @@
 		kcrc0: kcrc@19100000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19100000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC0>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1327,7 +1330,7 @@
 		kcrc1: kcrc@19110000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19110000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC1>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1335,7 +1338,7 @@
 		kcrc2: kcrc@19120000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19120000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC2>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1343,7 +1346,7 @@
 		kcrc3: kcrc@19130000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19130000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC3>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1351,7 +1354,7 @@
 		kcrc4: kcrc@19140000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19140000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC4>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1359,7 +1362,7 @@
 		kcrc5: kcrc@19150000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19150000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC5>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1367,7 +1370,7 @@
 		kcrc6: kcrc@19160000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19160000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC6>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1375,7 +1378,7 @@
 		kcrc7: kcrc@19170000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19170000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC7>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1383,7 +1386,7 @@
 		kcrc8: kcrc@19180000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19180000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC8>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1391,7 +1394,7 @@
 		kcrc9: kcrc@19190000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x19190000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC9>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1399,7 +1402,7 @@
 		kcrc10: kcrc@191A0000 {
 			compatible = "renesas,rcar-gen5-kcrc";
 			reg = <0 0x191A0000 0 0x00010000>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_KCRC10>;
 			clock-names = "fck";
 			status = "disabled";
 		};
@@ -1412,7 +1415,7 @@
 			sub-crc = <&crc0>;
 			sub-kcrc = <&kcrc0>;
 			interrupts = <0x00 0x106f 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC0>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0x18>, <&rt_dmac0 0x19>,
 				<&rt_dmac0 0x1A>, <&rt_dmac0 0x1B>,
@@ -1449,7 +1452,7 @@
 			sub-crc = <&crc1>;
 			sub-kcrc = <&kcrc1>;
 			interrupts = <0x00 0x1070 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC1>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0x28>, <&rt_dmac0 0x29>,
 				<&rt_dmac0 0x2A>, <&rt_dmac0 0x2B>,
@@ -1486,7 +1489,7 @@
 			sub-crc = <&crc2>;
 			sub-kcrc = <&kcrc2>;
 			interrupts = <0x00 0x1071 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC2>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0x38>, <&rt_dmac0 0x39>,
 				<&rt_dmac0 0x3A>, <&rt_dmac0 0x3B>,
@@ -1523,7 +1526,7 @@
 			sub-crc = <&crc3>;
 			sub-kcrc = <&kcrc3>;
 			interrupts = <0x00 0x1072 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC3>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0x48>, <&rt_dmac0 0x49>,
 				<&rt_dmac0 0x4A>, <&rt_dmac0 0x4B>,
@@ -1560,7 +1563,7 @@
 			sub-crc = <&crc4>;
 			sub-kcrc = <&kcrc4>;
 			interrupts = <0x00 0x1073 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC4>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0x58>, <&rt_dmac0 0x59>,
 				<&rt_dmac0 0x5A>, <&rt_dmac0 0x5B>,
@@ -1597,7 +1600,7 @@
 			sub-crc = <&crc5>;
 			sub-kcrc = <&kcrc5>;
 			interrupts = <0x00 0x1074 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC5>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0x68>, <&rt_dmac0 0x69>,
 				<&rt_dmac0 0x6A>, <&rt_dmac0 0x6B>,
@@ -1634,7 +1637,7 @@
 			sub-crc = <&crc6>;
 			sub-kcrc = <&kcrc6>;
 			interrupts = <0x00 0x1075 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC6>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0x78>, <&rt_dmac0 0x79>,
 				<&rt_dmac0 0x7A>, <&rt_dmac0 0x7B>,
@@ -1671,7 +1674,7 @@
 			sub-crc = <&crc7>;
 			sub-kcrc = <&kcrc7>;
 			interrupts = <0x00 0x1076 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC7>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0x88>, <&rt_dmac0 0x89>,
 				<&rt_dmac0 0x8A>, <&rt_dmac0 0x8B>,
@@ -1708,7 +1711,7 @@
 			sub-crc = <&crc8>;
 			sub-kcrc = <&kcrc8>;
 			interrupts = <0x00 0x1077 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC8>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0x98>, <&rt_dmac0 0x99>,
 				<&rt_dmac0 0x9A>, <&rt_dmac0 0x9B>,
@@ -1745,7 +1748,7 @@
 			sub-crc = <&crc9>;
 			sub-kcrc = <&kcrc9>;
 			interrupts = <0x00 0x1078 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC9>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0xA8>, <&rt_dmac0 0xA9>,
 				<&rt_dmac0 0xAA>, <&rt_dmac0 0xAB>,
@@ -1782,7 +1785,7 @@
 			sub-crc = <&crc10>;
 			sub-kcrc = <&kcrc10>;
 			interrupts = <0x00 0x1079 0x04>;
-			clocks = <&dummy_clk_wcrc>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_WCRC10>;
 			clock-names = "fck";
 			dmas =  <&rt_dmac0 0xB8>, <&rt_dmac0 0xB9>,
 				<&rt_dmac0 0xBA>, <&rt_dmac0 0xBB>,
@@ -1971,7 +1974,8 @@
 			compatible = "renesas,rcar-gen5-hscif", "renesas,hscif";
 			reg = <0 0xc0710000 0 0x60>;
 			interrupts = <GIC_SPI 4078 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_HSCIF0>,
+					 <&dummy_clk_sgasyncd4>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
 			status = "disabled";
 		};
@@ -2021,9 +2025,10 @@
 			reg = <0 0xc0a80000 0 0x1100>, <0 0xc0a00000 0 0x40000>;
 			reg-names = "hcr", "phy";
 			interrupts = <GIC_SPI 4284 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&ufs0_clk>;
-			clock-names = "ref_clk";
-			freq-table-hz = <38400000 38400000>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_UFS0>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_UFS0>, <&ufs0_clk>;
+			clock-names = "fck", "ref_clk";
+			freq-table-hz = <200000000 200000000>, <38400000 38400000>;
 			status = "disabled";
 		};
 
@@ -2032,9 +2037,10 @@
 			reg = <0 0xc0a90000 0 0x1100>, <0 0xc0a40000 0 0x40000>;
 			reg-names = "hcr", "phy";
 			interrupts = <GIC_SPI 4285 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&ufs1_clk>;
-			clock-names = "ref_clk";
-			freq-table-hz = <38400000 38400000>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_UFS1>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_UFS1>, <&ufs1_clk>;
+			clock-names = "fck", "ref_clk";
+			freq-table-hz = <200000000 200000000>, <38400000 38400000>;
 			status = "disabled";
 		};
 
@@ -2065,6 +2071,13 @@
 			compatible = "renesas,multi-protocol-phy";
 			reg = <0 0xc9a00000 0 0x100000>;
 			#phy-cells = <2>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_MPPHY01>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_MPPHY11>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_MPPHY21>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_MPPHY31>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_MPPHY02>;
+			clock-names = "mpphy01", "mpphy11", "mpphy21",
+						  "mpphy31", "mpphy02";
 			status = "disabled";
 		};
 
@@ -2205,8 +2218,23 @@
 				"race_wrap_msc4_error_int", "race_wrap_msc5_error_int",
 				"race_wrap_msc6_error_int", "race_wrap_msc7_error_int";
 
-			clocks = <&rsw3_clk>;
-			clock-names = "rsw3";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3TSN>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3AES>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3TSNTES0>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3TSNTES1>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3TSNTES2>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3TSNTES3>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3TSNTES4>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3TSNTES5>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3TSNTES6>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3TSNTES7>,
+					 <&scmi_clk SCP_CLOCK_ID_MDLC_RSW3MFWD>;
+			clock-names = "rsw3", "rsw3tsn", "rsw3aes",
+						  "rsw3tsntes0", "rsw3tsntes1", "rsw3tsntes2",
+						  "rsw3tsntes3", "rsw3tsntes4", "rsw3tsntes5",
+						  "rsw3tsntes6", "rsw3tsntes7", "rsw3mfwd";
 			// TODO: Add reset reference if needed
 			// resets = <&cpg RSW3_RST>;
 
@@ -2217,6 +2245,17 @@
 			compatible = "renesas,r8a78000-ether-pcs";
 			reg = <0 0xc9c50000 0 0x4000>;
 			#phy-cells = <1>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_MPP2>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_XPCS0>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_XPCS1>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_XPCS2>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_XPCS3>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_XPCS4>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_XPCS5>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_XPCS6>,
+				     <&scmi_clk SCP_CLOCK_ID_MDLC_XPCS7>;
+			clock-names = "xpcs0", "xpcs1", "xpcs2", "xpcs3",
+						  "xpcs4", "xpcs5", "xpcs6", "xpcs7";
 			status = "disabled";
 		};
 
@@ -2251,8 +2290,12 @@
 					 0 0 0 4 &gic GIC_SPI 4298 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 4292 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 4293 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&pcie4_bus_clk>;
-			clock-names = "pcie4_bus";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PCI4>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_PCI401>,
+				 <&scmi_clk SCP_CLOCK_ID_MDLC_PCI411>,
+				 <&scmi_clk SCP_CLOCK_ID_MDLC_PCI402>,
+				 <&scmi_clk SCP_CLOCK_ID_MDLC_PCI412>, <&pcie4_bus_clk>;
+			clock-names = "pci401", "pci411", "pci402", "pci412", "pcie4_bus";
 			num-lanes = <1>;
 			max-link-speed = <1>;
 			status = "disabled";
