@@ -542,6 +542,9 @@ static void sci_port_enable(struct sci_port *sci_port)
 		clk_prepare_enable(sci_port->clks[i]);
 		sci_port->clk_rates[i] = clk_get_rate(sci_port->clks[i]);
 	}
+#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
+	sci_port->clk_rates[SCI_FCK] = 266660000;
+#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
 	sci_port->port.uartclk = sci_port->clk_rates[SCI_FCK];
 }
 
@@ -2780,12 +2783,21 @@ static int sci_init_clocks(struct sci_port *sci_port, struct device *dev)
 			return PTR_ERR(clk);
 
 		if (!clk && i == SCI_FCK) {
+#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
+           /*
+            * In the bringup stage, clock can't be retrieved from
+            * SCP. Hence if not found from devm_clk_get_optional(),
+            * "fck" should be got again with devm_clk_get().
+            */
+           clk = devm_clk_get(dev, "fck");
+#else
 			/*
 			 * Not all SH platforms declare a clock lookup entry
 			 * for SCI devices, in which case we need to get the
 			 * global "peripheral_clk" clock.
 			 */
 			clk = devm_clk_get(dev, "peripheral_clk");
+#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
 			if (IS_ERR(clk))
 				return dev_err_probe(dev, PTR_ERR(clk),
 						     "failed to get %s\n",
