@@ -302,7 +302,24 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		// TODO: Add more ports (e.g., port@0, port@5) as needed
+		// TODO: Add more ports (e.g., port@0, port@1) as needed
+		port@4 {
+			reg = <4>;
+			renesas,etha-mii-chan = <4>;
+			phy-handle = <&q32xx_phy>;
+			phy-mode = "usxgmii";
+			phys = <&eth_pcs 4>;
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				q32xx_phy: ethernet-phy@1 {
+					reg = <1>;
+					compatible = "ethernet-phy-ieee802.3-c45";
+				};
+			};
+		};
+
 		port@5 {
 			reg = <5>;
 			renesas,etha-mii-chan = <4>;
