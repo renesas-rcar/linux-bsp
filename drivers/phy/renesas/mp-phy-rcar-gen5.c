@@ -17,6 +17,7 @@
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/reset.h>
+#include <linux/types.h>
 
 /* Hardcoded for enable module clock */
 #define MDLC_BASE		0xc9c90000
@@ -133,7 +134,7 @@ static void mp_phy_module_power_run(void)
 }
 //--------------------------------------------------
 
-#define MPPHY_NUM_CHANNELS	3
+#define MPPHY_NUM_CHANNELS	4
 
 /* Common registers */
 #define MPPHY_CMNCNT1        0x80000
@@ -166,7 +167,11 @@ static void mp_phy_module_power_run(void)
 #define MPPHY_CMNCNT1_CH_MASK(ch)    (0xFF << ((ch) * 8))
 
 /* Channel enable bits for MPPHY_CMNCNT1 register */
-#define MPPHY_CMNCNT1_CH_EN(ch)      ((ch) == 0 ? BIT(1) : BIT((ch) * 8))
+#define MPPHY_CMNCNT1_ETH_EN(ch)      (BIT((ch) * 8))
+#define MPPHY_CMNCNT1_USB_EN(ch) \
+			((ch) == 2 ? (BIT(16) | BIT(17)) : \
+			(ch) == 3 ? (BIT(24) | BIT(25)): -1)
+#define MPPHY_CMNCNT1_PCIE_EN(ch)      (0x0 << ((ch) * 8))
 
 /* PCS0REG5 register mask and values for each channel */
 #define MPPHY_PCS0REG5_CH(ch)        (0x03 << (24 + (ch) * 2))
@@ -191,6 +196,11 @@ static void mp_phy_module_power_run(void)
 #define SRAM_CONTROL_SET_BIT	(BOOTLOAD_BYPASS_MODE | SRAM_BYPASS_MODE | \
 				 SRAM_EXT_LD_DONE | SRAM_INIT_DONE)
 
+#define PHY_MODE_USB(mode) \
+    ((mode) == PHY_MODE_USB_HOST ? PHY_MODE_USB_HOST : \
+     (mode) == PHY_MODE_USB_DEVICE ? PHY_MODE_USB_DEVICE : \
+     (mode) == PHY_MODE_USB_OTG ? PHY_MODE_USB_OTG : -1)
+
 /* CMNCNT1/2 clock settings */
 #define MPPHY_CMNCNT2_CLK_CH(ch)     (0x30003 << ((ch) * 4))
 
@@ -206,10 +216,13 @@ static void mp_phy_module_power_run(void)
 #define MPPHY_CNTXT2_CH0_VALUE	0x02020201  /* Special for channel 0 */
 #define MPPHY_TXREQ_VALUE	0x8
 
-
 struct mp_phy_chan_priv {
 	unsigned int channel_id;
 	unsigned int lane_id;
+	unsigned int protocol_id;
+	unsigned int num_lanes;
+	bool initialized;
+	enum phy_mode current_protocol;
 };
 
 struct mp_phy_priv {
@@ -236,13 +249,13 @@ static void mp_phy_update_bits(void __iomem *base, u32 offset, u32 mask, u32 val
 
 static int mp_phy_init_ethernet(struct mp_phy_priv *priv, u32 channel_id)
 {
-
 	u32 cntxt2_val;
 
 	cntxt2_val = (channel_id == 0) ? MPPHY_CNTXT2_CH0_VALUE : MPPHY_CNTXT2_VALUE;
 
 	mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, MPPHY_CMNCNT1_CH_MASK(channel_id),
-			   MPPHY_CMNCNT1_CH_EN(channel_id));
+			   MPPHY_CMNCNT1_ETH_EN(channel_id));
+
 	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, MPPHY_PCS0REG5_CH(channel_id),
 			   MPPHY_PCS0REG5_CH(channel_id));
 	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, MPPHY_PCS0REG1_VAL);
@@ -280,106 +293,51 @@ static int mp_phy_init_ethernet(struct mp_phy_priv *priv, u32 channel_id)
 static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 {
 	struct mp_phy_chan_priv *chan = &priv->chan[channel_id];
-	u32 lane_count = chan->lane_id ? chan->lane_id : 4; /* Default to 4 lanes */
+	u32 link_width;
 
-	dev_info(priv->dev, "PCIe4 PHY initialization on channel %d, lanes: %d\n",
-		 channel_id, lane_count);
+	link_width = chan->num_lanes;
+
+	dev_info(priv->dev, "PCIe4 PHY initialization on channel %d, link_width: %d\n",
+		 channel_id, link_width);
 
 	mp_phy_module_standy_set(6, 16, 0x03);
 
-	switch(lane_count) {
+	switch(link_width) {
 	case 1:
 	case 2:
 		if(channel_id == 0) {
-			printk("%s %d: Before: PCIEG4_MPPHY_P0CNTXT1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXCNTXT1(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(0), 0x2010002, 0x2010002);
-			printk("%s %d: After: PCIEG4_MPPHY_P0CNTXT1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXCNTXT1(0)));
-			printk("%s %d: Before: PCIEG4_MPPHY_P0CNTXT2: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXCNTXT2(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(0), 0x2020201, 0x2020201);
-			printk("%s %d: After: PCIEG4_MPPHY_P0CNTXT2: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXCNTXT2(0)));
-			printk("%s %d: Before: PCIEG4_MPPHY_P0TXREQ: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTXREQ(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(0), 0x80004, 0x80004);
-			printk("%s %d: After: PCIEG4_MPPHY_P0TXREQ: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTXREQ(0)));
-
-			printk("%s %d: Before: PCIEG4_MPPHY_CMNCNT1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_CMNCNT1));
-			mp_phy_write(priv->base, MPPHY_CMNCNT1, 0x02020200);
-			printk("%s %d: After: PCIEG4_MPPHY_CMNCNT1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_CMNCNT1));
-
-			printk("%s %d: Before: PCIEG4_MPPHY_CMNCNT2: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_CMNCNT2));
+			mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, MPPHY_CMNCNT1_CH_MASK(channel_id),
+					   MPPHY_CMNCNT1_PCIE_EN(channel_id));
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000, 0x30000);
-			printk("%s %d: After: PCIEG4_MPPHY_CMNCNT2: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_CMNCNT2));
-
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x1, 0x1);
-			printk("%s %d: After: PCIEG4_MPPHY_CMNCNT2: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_CMNCNT2));
-
-			printk("%s %d: Before: PCIEG4_MPPHY_P0REFCLK: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXREFCLK(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x1, 0x1);
-			printk("%s %d: Before: PCIEG4_MPPHY_P0REFCLK: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXREFCLK(0)));
-
-			printk("%s %d: Before: PCIEG4_MPPHY_P0TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(0), 0x1, 0x1);
-			printk("%s %d: After: PCIEG4_MPPHY_P0TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(0)));
-
 			mp_phy_module_standy_set(6, 8, 0x03);
 			mp_phy_module_standy_set(6, 10, 0x03);
-
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
-			printk("%s %d: Before: PCIEG4_MPPHY_P0SRAMCNT: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXSRAMCNT(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(0), 0xF, 0xF);
-			printk("%s %d: After: PCIEG4_MPPHY_P0SRAMCNT: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXSRAMCNT(0)));
-
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
-
-			printk("%s %d: Before: PCIEG4_MPPHY_P0TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(0), 0x1, 0x0);
-			printk("%s %d: After: PCIEG4_MPPHY_P0TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(0)));
-			printk("%s %d: Before: PCIEG4_MPPHY_PCS0REG1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PCS0REG1));
 			mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, 0x10000, 0x0);
-			printk("%s %d: After: PCIEG4_MPPHY_PCS0REG1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PCS0REG1));
-			printk("%s %d: Before: PCIEG4_MPPHY_PCS0REG5: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PCS0REG5));
 			mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0x3000000, 0x0);
-			printk("%s %d: After: PCIEG4_MPPHY_PCS0REG5: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PCS0REG5));
 		}
 		if(channel_id == 1) {
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(2), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(2), 0x2020202, 0x2020202);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(2), 0x8, 0x8);
-
-			mp_phy_write(priv->base, MPPHY_CMNCNT1, 0x01020000);
+			mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, MPPHY_CMNCNT1_CH_MASK(channel_id),
+					   MPPHY_CMNCNT1_PCIE_EN(channel_id));
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x3000000, 0x3000000);
-
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x100, 0x100);
-
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x1, 0x1);
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(2), 0x1, 0x1);
-
 			mp_phy_module_standy_set(6, 12, 0x03);
 			mp_phy_module_standy_set(6, 14, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
@@ -399,77 +357,31 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(1), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(1), 0x2020201, 0x2020202);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(1), 0x8, 0x8);
-
-			printk("%s %d: Before: PCIEG4_MPPHY_CMNCNT1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_CMNCNT1));
-			mp_phy_write(priv->base, MPPHY_CMNCNT1, 0x02020000);
-			printk("%s %d: After: PCIEG4_MPPHY_CMNCNT1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_CMNCNT1));
-
+			mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, MPPHY_CMNCNT1_CH_MASK(channel_id),
+					   MPPHY_CMNCNT1_PCIE_EN(channel_id));
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000, 0x30000);
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x300000, 0x300000);
-
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x11, 0x11);
-
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x1, 0x1);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x1, 0x1);
-
-			printk("%s %d: Before: PCIEG4_MPPHY_P0TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(0), 0x1, 0x1);
-			printk("%s %d: After: PCIEG4_MPPHY_P0TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(0)));
-			printk("%s %d: Before: PCIEG4_MPPHY_P1TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(1)));
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(1), 0x1, 0x1);
-			printk("%s %d: After: PCIEG4_MPPHY_P1TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(1)));
-
 			mp_phy_module_standy_set(6, 8, 0x03);
 			mp_phy_module_standy_set(6, 10, 0x03);
-
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x202);
-
-			printk("%s %d: Before: PCIEG4_MPPHY_P0SRAMCNT: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXSRAMCNT(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(0), 0xF, 0xF);
-			printk("%s %d: After: PCIEG4_MPPHY_P0SRAMCNT: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXSRAMCNT(0)));
-			printk("%s %d: Before: PCIEG4_MPPHY_P1SRAMCNT: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXSRAMCNT(1)));
 			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(1), 0xF, 0xF);
-			printk("%s %d: After: PCIEG4_MPPHY_P0SRAMCNT: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXSRAMCNT(1)));
-
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x0);
-
-			printk("%s %d: Before: PCIEG4_MPPHY_P0TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(0)));
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(0), 0x1, 0x0);
-			printk("%s %d: After: PCIEG4_MPPHY_P0TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(0)));
-			printk("%s %d: Before: PCIEG4_MPPHY_P1TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(1)));
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(1), 0x1, 0x0);
-			printk("%s %d: After: PCIEG4_MPPHY_P1TEST: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PXTEST(1)));
-			printk("%s %d: Before: PCIEG4_MPPHY_PCS0REG1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PCS0REG1));
 			mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, 0x10000, 0x0);
-			printk("%s %d: After: PCIEG4_MPPHY_PCS0REG1: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PCS0REG1));
-			printk("%s %d: Before: PCIEG4_MPPHY_PCS0REG5: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PCS0REG5));
 			mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0xF000000, 0x0);
-			printk("%s %d: After: PCIEG4_MPPHY_PCS0REG5: 0x%08x \n", __func__, __LINE__,
-			       readl(priv->base + MPPHY_PCS0REG5));
-
 		}
 		if(channel_id == 1) {
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(2), 0x2010002, 0x2010002);
@@ -478,31 +390,29 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(3), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(3), 0x2020202, 0x2020202);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(3), 0x8, 0x8);
-
-			mp_phy_write(priv->base, MPPHY_CMNCNT1, 0x02020000);
+			mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, MPPHY_CMNCNT1_CH_MASK(channel_id),
+					   MPPHY_CMNCNT1_PCIE_EN(channel_id));
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x3000000, 0x3000000);
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000000, 0x30000000);
-
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x100, 0x100);
-
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x1, 0x1);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x1, 0x1);
-
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(2), 0x1, 0x1);
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(3), 0x1, 0x1);
+
 			mp_phy_module_standy_set(6, 12, 0x03);
 			mp_phy_module_standy_set(6, 14, 0x03);
+
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(2), 0xF, 0xF);
 			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(3), 0xF, 0xF);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x0);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x0);
-
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(2), 0x1, 0x0);
 			mp_phy_update_bits(priv->base, MPPHY_PXTEST(3), 0x1, 0x0);
 			mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, 0x10000, 0x0);
@@ -572,8 +482,7 @@ static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 {
 	dev_info(priv->dev, "USB PHY initialization requested on channel %d\n", channel_id);
 	dev_info(priv->dev, "USB PHY settings not implemented yet - will be configured later\n");
-
-	/* TODO: Implement USB specific initialization here */
+        /* TODO: Implement USB specific initialization here */
 
 	return 0;
 }
@@ -581,7 +490,10 @@ static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 static int mp_phy_init(struct phy *phy)
 {
 	struct mp_phy_priv *priv = phy_get_drvdata(phy);
+	struct mp_phy_chan_priv *chan = &priv->chan[phy->id];
 	u32 channel_id = phy->id;
+	u32 protocol_id = phy->attrs.mode;
+	int ret = 0;
 
 	/*
 	 * Note: Current source code support for Ethernet, PCIe
@@ -594,22 +506,36 @@ static int mp_phy_init(struct phy *phy)
 		return -EINVAL;
 	}
 
-	switch(channel_id) {
-	case 0:
-	case 1:
-		mp_phy_init_pcie4(priv, channel_id);
+	/* Check if initialized with same protocol then skip */
+	if (chan->initialized && chan->current_protocol == protocol_id) {
+		dev_info(priv->dev, "Channel %d already initialized for protocol %d, skip settings\n",
+			 channel_id, protocol_id);
+		return 0;
+	}
+
+	switch(protocol_id) {
+	case PHY_MODE_PCIE:
+		ret = mp_phy_init_pcie4(priv, channel_id);
 		break;
-	case 2:
-		mp_phy_init_ethernet(priv, channel_id);
+	case PHY_MODE_ETHERNET:
+		ret = mp_phy_init_ethernet(priv, channel_id);
 		break;
-	case 3:
-		mp_phy_init_usb(priv, channel_id);
+	case PHY_MODE_USB_HOST:
+	case PHY_MODE_USB_DEVICE:
+	case PHY_MODE_USB_OTG:
+		ret = mp_phy_init_usb(priv, channel_id);
 		break;
 	}
 
-	return 0;
-}
+	if (!ret) {
+		chan->initialized = true;
+		chan->current_protocol = protocol_id;
+		dev_info(priv->dev, "Channel %d successfully initialized for protocol %d\n",
+			 channel_id, protocol_id);
+	}
 
+	return ret;
+}
 
 static int mp_phy_late_init(struct phy *phy)
 {
@@ -617,46 +543,33 @@ static int mp_phy_late_init(struct phy *phy)
 	struct mp_phy_chan_priv *chan = &priv->chan[phy->id];
 	u32 data;
 	u32 channel_id = phy->id;
-	u32 lane_count;
+	u32 link_width;
+
+	if (!chan->initialized) {
+		dev_err(priv->dev, "Channel %d not initialized\n", channel_id);
+		return -EINVAL;
+	}
 
 	/*
 	 * The datasheet describes initialization procedure without full
 	 * information about the registers. Therefore, the source code is based
 	 * on the bare metal code shared by the board team.
 	 */
-	if (channel_id == 0 || channel_id == 1) {
-		lane_count = chan->lane_id ? chan->lane_id : 4; /* Default to 4 lanes */
+	if (chan->protocol_id == PHY_MODE_PCIE) {
+		link_width = chan->num_lanes ? chan->num_lanes : 4; /* Default to 4 lanes */
 
-		switch(lane_count) {
+		switch(link_width) {
 		case 1:
 		case 2:
-			if(channel_id == 0) {
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(0));
-					if (data & BIT(5))
-						break;
-				}
-				printk("%s %d: MPPHY_P0SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(0)));
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(0));
-					if (!(data & BIT(1)))
-						break;
-				}
-				printk("%s %d: MPPHY_P0RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(0)));
+			while (1) {
+				data = readl(priv->base + MPPHY_PXSRAMCNT(channel_id));
+				if (data & BIT(5))
+					break;
 			}
-			if(channel_id == 1) {
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(2));
-					if (data & BIT(5))
-						break;
-				}
-				printk("%s %d: MPPHY_P2SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(2)));
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(2));
-					if (!(data & BIT(1)))
-						break;
-				}
-				printk("%s %d: MPPHY_P2RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(2)));
+			while (1) {
+				data = readl(priv->base + MPPHY_PXRXREQ1(channel_id));
+				if (!(data & BIT(1)))
+					break;
 			}
 			break;
 		case 4:
@@ -666,25 +579,21 @@ static int mp_phy_late_init(struct phy *phy)
 					if (data & BIT(5))
 						break;
 				}
-				printk("%s %d: MPPHY_P0SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(0)));
 				while (1) {
 					data = readl(priv->base + MPPHY_PXSRAMCNT(1));
 					if (data & BIT(5))
 						break;
 				}
-				printk("%s %d: MPPHY_P1SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(1)));
 				while (1) {
 					data = readl(priv->base + MPPHY_PXRXREQ1(0));
 					if (!(data & BIT(1)))
 						break;
 				}
-				printk("%s %d: MPPHY_P0RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(0)));
 				while (1) {
 					data = readl(priv->base + MPPHY_PXRXREQ1(1));
 					if (!(data & BIT(1)))
 						break;
 				}
-				printk("%s %d: MPPHY_P1RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(1)));
 			}
 			if(channel_id == 1) {
 				while (1) {
@@ -692,25 +601,21 @@ static int mp_phy_late_init(struct phy *phy)
 					if (data & BIT(5))
 						break;
 				}
-				printk("%s %d: MPPHY_P2SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(2)));
 				while (1) {
 					data = readl(priv->base + MPPHY_PXSRAMCNT(3));
 					if (data & BIT(5))
 						break;
 				}
-				printk("%s %d: MPPHY_P3SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(3)));
 				while (1) {
 					data = readl(priv->base + MPPHY_PXRXREQ1(2));
 					if (!(data & BIT(1)))
 						break;
 				}
-				printk("%s %d: MPPHY_P2RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(2)));
 				while (1) {
 					data = readl(priv->base + MPPHY_PXRXREQ1(3));
 					if (!(data & BIT(1)))
 						break;
 				}
-				printk("%s %d: MPPHY_P3RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(3)));
 			}
 			break;
 		case 8:
@@ -719,73 +624,90 @@ static int mp_phy_late_init(struct phy *phy)
 				if (data & BIT(5))
 					break;
 			}
-			printk("%s %d: MPPHY_P0SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(0)));
 			while (1) {
 				data = readl(priv->base + MPPHY_PXSRAMCNT(1));
 				if (data & BIT(5))
 					break;
 			}
-			printk("%s %d: MPPHY_P1SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(1)));
 			while (1) {
 				data = readl(priv->base + MPPHY_PXSRAMCNT(2));
 				if (data & BIT(5))
 					break;
 			}
-			printk("%s %d: MPPHY_P2SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(2)));
 			while (1) {
 				data = readl(priv->base + MPPHY_PXSRAMCNT(3));
 				if (data & BIT(5))
 					break;
 			}
-			printk("%s %d: MPPHY_P3SRAMCNT: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXSRAMCNT(3)));
 			while (1) {
 				data = readl(priv->base + MPPHY_PXRXREQ1(0));
 				if (!(data & BIT(1)))
 					break;
 			}
-			printk("%s %d: MPPHY_P0RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(0)));
 			while (1) {
 				data = readl(priv->base + MPPHY_PXRXREQ1(1));
 				if (!(data & BIT(1)))
 					break;
 			}
-			printk("%s %d: MPPHY_P1RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(1)));
 			while (1) {
 				data = readl(priv->base + MPPHY_PXRXREQ1(2));
 				if (!(data & BIT(1)))
 					break;
 			}
-			printk("%s %d: MPPHY_P2RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(2)));
 			while (1) {
 				data = readl(priv->base + MPPHY_PXRXREQ1(3));
 				if (!(data & BIT(1)))
 					break;
 			}
-			printk("%s %d: MPPHY_P3RXREQ1: 0x%x\n", __func__, __LINE__,readl(priv->base + MPPHY_PXRXREQ1(3)));
 			break;
 		}
-	} else if (channel_id == 2) {
+	} else if (chan->protocol_id == PHY_MODE_ETHERNET) {
 		mp_phy_write(priv->base, MPPHY_PXSRAMCNT(channel_id), SRAM_CONTROL_SET_BIT);
 	}
-
 	return 0;
 }
 
 static int mp_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 {
-	if (mode == PHY_MODE_PCIE) {
-		dev_info(&phy->dev, "Supported mode: %d\n", mode);
-		return 0;
-	} else if (mode == PHY_MODE_ETHERNET) {
-		dev_info(&phy->dev, "Supported mode: %d\n", mode);
-		return 0;
-	} else if (mode == PHY_MODE_USB_HOST || mode == PHY_MODE_USB_DEVICE || mode == PHY_MODE_USB_OTG) {
-		dev_info(&phy->dev, "Supported mode: %d\n", mode);
-		return 0;
-	} else {
-		dev_info(&phy->dev, "Unknown protocol for set_mode\n");
+	struct mp_phy_priv *priv = phy_get_drvdata(phy);
+	struct mp_phy_chan_priv *chan = &priv->chan[phy->id];
+	enum phy_mode new_protocol;
+
+	switch (mode) {
+	case PHY_MODE_PCIE:
+		new_protocol = PHY_MODE_PCIE;
+		break;
+	case PHY_MODE_ETHERNET:
+		new_protocol = PHY_MODE_ETHERNET;
+		break;
+	case PHY_MODE_USB_HOST:
+	case PHY_MODE_USB_DEVICE:
+	case PHY_MODE_USB_OTG:
+		new_protocol = PHY_MODE_USB(mode);
+		break;
+	default:
+		dev_err(&phy->dev, "Unsupported PHY mode: %d\n", mode);
 		return -EOPNOTSUPP;
 	}
+
+	/* Check for protocol conflicts if initialized with another protocol */
+	if (chan->initialized && chan->current_protocol != new_protocol) {
+		dev_err(&phy->dev, "Protocol conflict on channel %d: current=%d, requested=%d\n",
+			phy->id, chan->current_protocol, new_protocol);
+		return -EINVAL;
+	}
+
+	/* If same protocol and initialized then return success*/
+	if (chan->initialized && chan->current_protocol == new_protocol) {
+		dev_info(&phy->dev, "Channel %d already configured for protocol %d\n",
+			 phy->id, new_protocol);
+		return 0;
+	}
+
+	chan->current_protocol = new_protocol;
+	chan->protocol_id = new_protocol;
+
+	return 0;
 }
 
 static const struct phy_ops mp_phy_ops = {
@@ -800,6 +722,8 @@ static struct phy *mp_phy_xlate(struct device *dev, struct of_phandle_args *args
 	struct mp_phy_priv *priv = dev_get_drvdata(dev);
 	struct mp_phy_chan_priv *chan;
 	struct phy *phy;
+	struct device_node *pcie_np;
+	unsigned int num_lanes;
 
 	if (args->args_count > 2) {
 		dev_err(dev, "Invalid args_count: %d\n", args->args_count);
@@ -820,6 +744,17 @@ static struct phy *mp_phy_xlate(struct device *dev, struct of_phandle_args *args
 
 	chan = &priv->chan[phy->id];
 	chan->channel_id = phy->id;
+
+	pcie_np = of_find_compatible_node(NULL, NULL, "renesas,rcar-gen5-pcie");
+	if (pcie_np) {
+		if (of_property_read_u32(pcie_np, "num-lanes", &num_lanes))
+			dev_info(dev, "num-lanes not found in PCIe DT node, default 4");
+		of_node_put(pcie_np);
+	} else {
+		dev_warn(dev, "PCIe DT node not found");
+	}
+
+	chan->num_lanes = num_lanes;
 
 	/* Set lane ID from second argument if available */
 	if (args->args_count >= 2)
@@ -858,6 +793,11 @@ static int mp_phy_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->base);
 	}
 
+	for (int i = 0; i < MPPHY_NUM_CHANNELS; i++) {
+		priv->chan[i].initialized = false;
+		priv->chan[i].current_protocol = PHY_MODE_INVALID;
+		priv->chan[i].protocol_id = PHY_MODE_INVALID;
+	}
 	/* TODO: Enable reset control when DTS binding is ready */
 	/* Get reset control */
 	//priv->reset = devm_reset_control_get(dev, NULL);
