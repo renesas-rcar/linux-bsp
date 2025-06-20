@@ -1,8 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * PCIe RC driver for R-Car Gen5 Series
  *
- * Authors: Joao Pinto <Joao.Pinto@synopsys.com>
  */
 #include <linux/clk.h>
 #include <linux/delay.h>
