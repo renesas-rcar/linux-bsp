@@ -122,8 +122,22 @@
 };
 
 &eth_pcs {
-	phys = <&mp_phy 2 1>;
 	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@4 {
+			reg = <4>;
+			phys = <&mp_phy 2 0>;
+		};
+
+		port@5 {
+			reg = <5>;
+			phys = <&mp_phy 2 1>;
+		};
+	};
 };
 
 &extal_clk {
