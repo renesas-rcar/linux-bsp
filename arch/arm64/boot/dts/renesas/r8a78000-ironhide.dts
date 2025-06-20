@@ -121,6 +121,10 @@
 	};
 };
 
+&mailbox {
+	status = "okay";
+};
+
 &eth_pcs {
 	status = "okay";
 
