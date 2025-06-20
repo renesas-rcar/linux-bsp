@@ -357,6 +357,7 @@ config ARCH_R8A78000
 	default y if ARCH_RENESAS
 	default ARCH_RENESAS
 	select ARCH_RCAR_GEN5
+	select RCAR_SCP_FIXUP
 	help
 	  This enables support for the Renesas R-Car X5H SoC.
 
@@ -479,4 +480,6 @@ config SYS_R9A09G057
 	bool "Renesas System controller support for R9A09G057 (RZ/V2H)" if COMPILE_TEST
 	select SYSC_RZ
 
+config RCAR_SCP_FIXUP
+	bool "Reset Controller support for R-Car" if COMPILE_TEST
 endif # SOC_RENESAS
