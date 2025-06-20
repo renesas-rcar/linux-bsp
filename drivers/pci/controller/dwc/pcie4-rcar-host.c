@@ -19,6 +19,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/pm_runtime.h>
 #include <linux/phy/phy.h>
+#include <linux/phy.h>
 
 #include "pcie-designware.h"
 
@@ -73,6 +74,7 @@
 struct rcar_pcie4 {
 	struct dw_pcie			*pci;
 	struct phy			*phy;
+	phy_interface_t			phy_interface;
 	enum dw_pcie_device_mode	mode;
 	void __iomem			*base;
 	void __iomem			*phy_base;
@@ -370,6 +372,13 @@ static int rcar_gen5_pcie_add_port(struct rcar_pcie4 *rcar_pcie4,
 	ret = clk_prepare_enable(rcar_pcie4->bus_clk);
 	if (ret) {
 		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
+	}
+
+	ret = phy_set_mode_ext(rcar_pcie4->phy, PHY_MODE_PCIE,
+			       rcar_pcie4->phy_interface);
+	if (ret) {
+		pr_info("PCIe4: Failed to set mode to mp-phy\n");
+		return ret;
 	}
 
 	ret = phy_init(rcar_pcie4->phy);
