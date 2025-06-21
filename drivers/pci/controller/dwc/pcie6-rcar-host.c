@@ -104,9 +104,9 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	rcar_gen5_pcie6_txpreset_coef_mapping(pci);
 
 	/* lane0 Rx 10kohm change to 60ohm */
-	val = readl(rcar_pcie6->base + 0x8);
+	val = readl(rcar_pcie6->phy_base + 0x8);
 	val |= BIT(9);
-	writel(val, rcar_pcie6->base + 0x8);
+	writel(val, rcar_pcie6->phy_base + 0x8);
 
 	/* BAR0 resizing */
 	val = dw_pcie6_readl_dbi(pci, PCIEG6_PF0_RESBAR_CTRL_REG_0_REG);
