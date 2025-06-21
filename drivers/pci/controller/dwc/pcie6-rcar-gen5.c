@@ -230,9 +230,9 @@ int rcar_gen5_pcie6_monitor_pmd(struct rcar_pcie6 *rcar_pcie6)
 	for (int X = 0; X < 3; X++) {
 		ret = 0;
 		for (int i = 0; i < 1000; i++) {
-			val = readl(rcar_pcie6->base + PCIEG6_PMD_RX_OVRDVAL_3(X));
+			val = readl(rcar_pcie6->phy_base + PCIEG6_PMD_RX_OVRDVAL_3(X));
 			if ((val & BIT(23)) != BIT(23)) {
-				val = readl(rcar_pcie6->base + PCIEG6_PMD_TX_OVRDVAL_0(X));
+				val = readl(rcar_pcie6->phy_base + PCIEG6_PMD_TX_OVRDVAL_0(X));
 				if ((val & BIT(27)) != BIT(27)) {
 					ret = 1;
 					break;
@@ -599,6 +599,10 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 	rcar_pcie6->base = devm_platform_ioremap_resource_byname(pdev, "apb");
 	if (IS_ERR(rcar_pcie6->base))
 		return PTR_ERR(rcar_pcie6->base);
+
+	rcar_pcie6->phy_base = devm_platform_ioremap_resource_byname(pdev, "phy");
+	if (IS_ERR(rcar_pcie6->phy_base))
+		return PTR_ERR(rcar_pcie6->phy_base);
 
 	rcar_pcie6->bus_clk = devm_clk_get(&pdev->dev, "pcie6_bus");
 	if (IS_ERR(rcar_pcie6->bus_clk)) {

@@ -82,6 +82,7 @@
 struct rcar_pcie6 {
 	struct dw_pcie6		*pci;
 	void __iomem		*base;
+	void __iomem		*phy_base;
 	struct clk		*bus_clk;
 	u32			ch;
 };
