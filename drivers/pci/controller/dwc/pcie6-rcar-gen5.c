@@ -11,6 +11,7 @@
 #include <linux/delay.h>
 #include <linux/sys_soc.h>
 #include <linux/gpio/consumer.h>
+#include <linux/iopoll.h>
 
 #include "pcie6-rcar-gen5.h"
 #include "pcie6-designware.h"
@@ -228,21 +229,20 @@ int rcar_gen5_pcie6_monitor_pmd(struct rcar_pcie6 *rcar_pcie6)
 	int ret;
 
 	for (int X = 0; X < 3; X++) {
-		ret = 0;
-		for (int i = 0; i < 1000; i++) {
-			val = readl(rcar_pcie6->phy_base + PCIEG6_PMD_RX_OVRDVAL_3(X));
-			if ((val & BIT(23)) != BIT(23)) {
-				val = readl(rcar_pcie6->phy_base + PCIEG6_PMD_TX_OVRDVAL_0(X));
-				if ((val & BIT(27)) != BIT(27)) {
-					ret = 1;
-					break;
-				}
-			}
+		ret = readl_poll_timeout(rcar_pcie6->phy_base + PCIEG6_PMD_RX_OVRDVAL_3(X),
+					val, !(val & BIT(23)), 1, 10000);
+
+		if (ret) {
+			dev_err(pci->dev, "PMD RX_ACK timeout at lane %d\n", X);
+			return ret;
 		}
 
-		if (!ret) {
-			dev_err(pci->dev, "PMD check failed at lane %d\n", X);
-			return -ETIMEDOUT;
+		ret = readl_poll_timeout(rcar_pcie6->phy_base + PCIEG6_PMD_TX_OVRDVAL_0(X),
+					val, !(val & BIT(27)), 1, 10000);
+
+		if (ret) {
+			dev_err(pci->dev, "PMD TX_ACK timeout at lane %d\n", X);
+			return ret;
 		}
 	}
 
