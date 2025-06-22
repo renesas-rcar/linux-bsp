@@ -200,14 +200,6 @@
 		reg = <0x50>;
 		pagesize = <8>;
 	};
-
-	io_expander_pcie: gpio@77 {
-		compatible = "ti,tca9539";
-		reg = <0x77>;
-		gpio-controller;
-		#gpio-cells = <2>;
-	};
-
 };
 
 &mfis {
@@ -319,7 +311,6 @@
 &pciec40 {
 	status = "okay";
 	phys = <&mp_phy 0 1>;
-	reset-gpios = <&io_expander_pcie 0 1>;
 };
 
 &pciec60 {
