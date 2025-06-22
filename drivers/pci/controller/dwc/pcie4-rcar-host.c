@@ -459,12 +459,6 @@ static int rcar_gen5_pcie_devm_reset_get(struct rcar_pcie4 *rcar_pcie4,
 		return PTR_ERR(rcar_pcie4->bus_clk);
 	}
 
-	rcar_pcie4->perst = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
-	if (IS_ERR(rcar_pcie4->perst)) {
-		dev_err(dev, "Failed to get PERST GPIO\n");
-		//return PTR_ERR(rcar_pcie4->perst);
-	}
-
 	return 0;
 }
 
