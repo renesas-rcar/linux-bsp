@@ -465,3 +465,19 @@
 &wcrc10 {
 	status = "okay";
 };
+
+&ufs0 {
+	status = "okay";
+};
+
+&ufs1 {
+	status = "okay";
+};
+
+&ufs0_clk {
+	clock-frequency = <38400000>;
+};
+
+&ufs1_clk {
+	clock-frequency = <38400000>;
+};
