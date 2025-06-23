@@ -247,6 +247,25 @@
 #define WCRC_ERRINJ 0x0FC0
 #define CODE (0xA5A5 << 16)
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE_RT            (0x19440000U)
+#define MDLC_BASE		MDLC_BASE_RT
+#define MS_CLOCK		0x03
+#define R8A78000_WCRC_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define R8A78000_WCRC_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
+#define MDLC_TBL_END		(0xDEADBEEFU)
+
 /* Define global variable */
 DEFINE_MUTEX(lock);
 
@@ -257,6 +276,43 @@ static struct class *wcrc_class;
 static void rcar_wcrc_dma_tx_callback(void *data);
 static void rcar_wcrc_dma_rx_callback(void *data);
 static void rcar_wcrc_dma_rx_in_callback(void *data);
+
+struct ms_info {
+	u32 reg_no;
+	u32 reg_bit;
+};
+
+static void r8a78000_wcrc_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(msress) & R8A78000_WCRC_CLK_MASK(pos)) == (mode <<
+							     R8A78000_WCRC_CLK_SHIFT(pos)))
+			goto unmap;
+
+	while ((readl(msress) & R8A78000_WCRC_CLK_MASK(pos)) != (readl(msres) &
+								R8A78000_WCRC_CLK_MASK(pos)))
+			udelay(1000);
+
+	val = readl(msres);
+	val &= ~R8A78000_WCRC_CLK_MASK(pos);
+	val |= mode << R8A78000_WCRC_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & R8A78000_WCRC_CLK_MASK(pos)) != (readl(msres) &
+								    R8A78000_WCRC_CLK_MASK(pos)))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(msress);
+	iounmap(msres);
+}
 
 static u32 wcrc_read(void __iomem *base, unsigned int offset)
 {
@@ -1380,6 +1436,46 @@ static int wcrc_probe(struct platform_device *pdev)
 	int ret;
 	unsigned long irqflags = 0;
 	irqreturn_t (*irqhandler)(int irq_num, void *ptr) = rcar_wcrc_irq;
+	int index = 0;
+	struct ms_info ms_wcrc[] = {
+		/* wcrc0 to wcrc10 */
+		{ 12, 26 },
+		{ 12, 28 },
+		{ 12, 30 },
+		{ 13,  0 },
+		{ 13,  2 },
+		{ 13,  4 },
+		{ 13,  6 },
+		{ 13,  8 },
+		{ 13, 10 },
+		{ 13, 12 },
+		{ 13, 14 },
+		/* crc0 to crc10 */
+		{ 13, 16 },
+		{ 13, 18 },
+		{ 13, 20 },
+		{ 13, 22 },
+		{ 13, 24 },
+		{ 13, 26 },
+		{ 13, 28 },
+		{ 13, 30 },
+		{ 14,  0 },
+		{ 14,  2 },
+		{ 14,  4 },
+		/* kcrc0 to kcrc10 */
+		{ 14,  6 },
+		{ 14,  8 },
+		{ 14, 10 },
+		{ 14, 12 },
+		{ 14, 14 },
+		{ 14, 16 },
+		{ 14, 18 },
+		{ 14, 20 },
+		{ 14, 22 },
+		{ 14, 24 },
+		{ 14, 26 },
+		{ MDLC_TBL_END, 0 },
+	};
 
 	dev = &pdev->dev;
 	priv = devm_kzalloc(dev, sizeof(struct wcrc_device), GFP_KERNEL);
@@ -1417,6 +1513,14 @@ static int wcrc_probe(struct platform_device *pdev)
 	//	"failed to enable peripheral clock, error %d\n", ret);
 	//	return ret;
 	//}
+
+	for (index = 0;; index++) {
+		if (ms_wcrc[index].reg_no == MDLC_TBL_END)
+			break;
+
+		r8a78000_wcrc_module_standy_set(ms_wcrc[index].reg_no, ms_wcrc[index].reg_bit,
+						MS_CLOCK);
+	}
 
 	priv->ops = &rwcrc_ops;
 
