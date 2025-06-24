@@ -119,6 +119,24 @@
 			reg = <0x12 0x00000000 0x1 0x00000000>;
 		};
 	};
+
+	reg_1p8v: regulator-1p8v {
+		compatible = "regulator-fixed";
+		regulator-name = "fixed-1.8V";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	reg_3p3v: regulator-3p3v {
+		compatible = "regulator-fixed";
+		regulator-name = "fixed-3.3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
 };
 
 &mailbox {
@@ -142,6 +160,23 @@
 			phys = <&mp_phy 2 1>;
 		};
 	};
+};
+
+&mmc0 {
+	pinctrl-0 = <&mmc0_pins>;
+	pinctrl-1 = <&mmc0_pins>;
+	pinctrl-names = "default", "state_uhs";
+
+	vmmc-supply = <&reg_3p3v>;
+	vqmmc-supply = <&reg_1p8v>;
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
+	bus-width = <8>;
+	no-sd;
+	no-sdio;
+	non-removable;
+	full-pwr-cycle-in-suspend;
+	status = "okay";
 };
 
 &extal_clk {
@@ -287,6 +322,12 @@
 		groups = "rpc_clk2", "rpc_ctrl", "rpc_data",
 			 "rpc_reset", "rpc_int";
 		function = "rpc";
+	};
+
+	mmc0_pins: mmc0 {
+		groups = "mmc0_data8", "mmc0_ctrl", "mmc0_ds";
+		function = "mmc0";
+		drive-strength = <24>;
 	};
 };
 
