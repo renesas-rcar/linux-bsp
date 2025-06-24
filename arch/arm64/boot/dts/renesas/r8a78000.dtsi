@@ -2559,6 +2559,16 @@
 			linux,uio-name = "rpmsg_ipi2";
 			status = "disabled";
 		};
+
+		mmc0: mmc@c0880000 {
+			compatible = "renesas,rcar-gen5-sdhi";
+			reg = <0 0xc0880000 0 0x2000>;
+			interrupts = <GIC_SPI 894 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_SDHI0>;
+			clock-names = "core";
+			max-frequency = <200000000>;
+			status = "disabled";
+		};
 	};
 
 	timer {
