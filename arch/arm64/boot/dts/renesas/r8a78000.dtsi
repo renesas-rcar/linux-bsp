@@ -804,6 +804,11 @@
 				#clock-cells = <1>;
 			};
 		};
+
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
 	};
 
 	pmu_a720 {
