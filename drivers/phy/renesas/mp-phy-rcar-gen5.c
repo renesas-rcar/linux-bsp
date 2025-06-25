@@ -132,6 +132,17 @@ static void mp_phy_module_power_run(void)
 	mp_phy_module_standy_set(6, 14, 0x03);
 	mp_phy_module_standy_set(6, 16, 0x03);
 }
+
+static void mp_phy_usb_module_power_run(void)
+{
+	mp_phy_module_power_gating_set(0, 0x03);
+	mp_phy_module_power_gating_set(2, 0x03);
+
+	mp_phy_module_standy_set(6, 0, 0x03);
+	mp_phy_module_standy_set(6, 2, 0x03);
+	mp_phy_module_standy_set(6, 4, 0x03);
+	mp_phy_module_standy_set(6, 6, 0x03);
+}
 //--------------------------------------------------
 
 #define MPPHY_NUM_CHANNELS	4
@@ -196,6 +207,20 @@ static void mp_phy_module_power_run(void)
 #define SRAM_CONTROL_SET_BIT	(BOOTLOAD_BYPASS_MODE | SRAM_BYPASS_MODE | \
 				 SRAM_EXT_LD_DONE | SRAM_INIT_DONE)
 
+/*-------------------------------------- TCA define -------------------------------*/
+/* TCA (Type-C Adapter) Register Offsets within MP-PHY base */
+#define MPPHY_USB_BASE(ch)			(0x90000 + (ch) * 0x10000)
+
+/* Channel specific registers */
+#define TCA_INTR_OFFSET(ch)			(MPPHY_USB_BASE(ch) + 0x4)
+#define TCA_INTR_STS_OFFSET(ch)			(MPPHY_USB_BASE(ch) + 0x8)
+#define TCA_TCPC_OFFSET(ch)			(MPPHY_USB_BASE(ch) + 0x10)
+#define TCA_VBUS_CTRL_OFFSET(ch)		(MPPHY_USB_BASE(ch) + 0x0040)
+#define PSTATE_1_OFFSET(ch)			(MPPHY_USB_BASE(ch) + 0x0054)
+
+#define VBUS_VALID_OVERRD			0x2
+/*---------------------------------------------------------------------------------*/
+
 #define PHY_MODE_USB(mode) \
     ((mode) == PHY_MODE_USB_HOST ? PHY_MODE_USB_HOST : \
      (mode) == PHY_MODE_USB_DEVICE ? PHY_MODE_USB_DEVICE : \
@@ -216,6 +241,9 @@ static void mp_phy_module_power_run(void)
 #define MPPHY_CNTXT2_CH0_VALUE	0x02020201  /* Special for channel 0 */
 #define MPPHY_TXREQ_VALUE	0x8
 
+#define HIGH_SPEED		0
+#define SUPER_SPEED_PLUS	1
+
 struct mp_phy_chan_priv {
 	unsigned int channel_id;
 	unsigned int lane_id;
@@ -223,6 +251,7 @@ struct mp_phy_chan_priv {
 	unsigned int num_lanes;
 	bool initialized;
 	enum phy_mode current_protocol;
+	int speed;
 };
 
 struct mp_phy_priv {
@@ -481,8 +510,61 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 {
 	dev_info(priv->dev, "USB PHY initialization requested on channel %d\n", channel_id);
-	dev_info(priv->dev, "USB PHY settings not implemented yet - will be configured later\n");
-        /* TODO: Implement USB specific initialization here */
+
+	u32 cntxt2_val;
+
+	cntxt2_val = (channel_id == 0) ? MPPHY_CNTXT2_CH0_VALUE : MPPHY_CNTXT2_VALUE;
+
+	dev_info(priv->dev, "MP-PHY for USB initialization on channel %d\n", channel_id);
+	/* Step 1: Reset once and release the reset */
+	printk("%s %d: Before: MPPHY_PCS0REG5: 0x%08x , MPPHY_PCS0REG1: 0x%08x, MPPHY_P3TEST: 0x%08x\n", __func__, __LINE__,
+		readl(priv->base + MPPHY_PCS0REG5), readl(priv->base + MPPHY_PCS0REG1), readl(priv->base + MPPHY_PXTEST(channel_id)));
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, MPPHY_PCS0REG5_CH(channel_id),
+			   MPPHY_PCS0REG5_CH(channel_id));
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, MPPHY_PCS0REG1_VAL);
+	mp_phy_update_bits(priv->base, MPPHY_PXTEST(channel_id), MPPHY_PXTEST_BIT, MPPHY_PXTEST_BIT);
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, MPPHY_PCS0REG5_CH(channel_id), 0x0);
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, 0x0);
+	mp_phy_update_bits(priv->base, MPPHY_PXTEST(channel_id), MPPHY_PXTEST_BIT, 0x0);
+	printk("%s %d: After: MPPHY_PCS0REG5: 0x%08x , MPPHY_PCS0REG1: 0x%08x, MPPHY_P3TEST: 0x%08x\n", __func__, __LINE__,
+			readl(priv->base + MPPHY_PCS0REG5), readl(priv->base + MPPHY_PCS0REG1), readl(priv->base + MPPHY_PXTEST(channel_id)));
+
+	/* Step 2: Set PHY rx/tx reset and sram bypass mode. */
+	printk("%s %d: Before: MPPHY_P3RXCNT: 0x%08x , MPPHY_P3SRAMCNT: 0x%08x\n", __func__, __LINE__,
+			readl(priv->base + MPPHY_PXRXCNT(channel_id)), readl(priv->base + MPPHY_PXSRAMCNT(channel_id)));
+	mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(channel_id), MPPHY_PXRXCNT_RESET_VAL, MPPHY_PXRXCNT_RESET_VAL);
+	mp_phy_write(priv->base, MPPHY_PXSRAMCNT(channel_id), MPPHY_PXSRAMCNT_BYPASS);
+	mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id),
+			   MPPHY_PXSRAMCNT_BIT3, MPPHY_PXSRAMCNT_BIT3);
+
+	printk("%s %d: After: MPPHY_P3RXCNT: 0x%08x , MPPHY_P3SRAMCNT: 0x%08x\n", __func__, __LINE__,
+		readl(priv->base + MPPHY_PXRXCNT(channel_id)), readl(priv->base + MPPHY_PXSRAMCNT(channel_id)));
+
+	/* Step 3: Clock supply settings */
+	mp_phy_update_bits(priv->base, MPPHY_CMNCNT2,
+				MPPHY_CMNCNT2_CLK_CH(channel_id),
+				MPPHY_CMNCNT2_CLK_CH(channel_id));
+
+	mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(channel_id),
+				MPPHY_PXREFCLK_VAL, MPPHY_PXREFCLK_VAL);
+
+	/* Step 4: Release PHY rx/tx reset. */
+	mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(channel_id), MPPHY_PXRXCNT_RESET_VAL, 0x0);
+	printk("%s %d: After: MPPHY_P3RXCNT: 0x%08x\n", __func__, __LINE__,
+			readl(priv->base + MPPHY_PXRXCNT(channel_id)));
+
+	/* Step 5: Setting Context Restore Registers. */
+	printk("%s %d: Before: MPPHY_P3CNTXT1: 0x%08x , MPPHY_P3CNTXT2: 0x%08x, MPPHY_P3TXREQ: 0x%08x\n", __func__, __LINE__,
+			readl(priv->base + MPPHY_PXCNTXT1(channel_id)), readl(priv->base + MPPHY_PXCNTXT2(channel_id)), readl(priv->base + MPPHY_PXTXREQ(channel_id)));
+	mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(channel_id), 0x2010002, 0x2010002);
+	mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(channel_id), cntxt2_val, cntxt2_val);
+	mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(channel_id), 0x8, 0x8);
+	printk("%s %d: After: MPPHY_P3CNTXT1: 0x%08x , MPPHY_P3CNTXT2: 0x%08x, MPPHY_P3TXREQ: 0x%08x\n", __func__, __LINE__,
+			readl(priv->base + MPPHY_PXCNTXT1(channel_id)), readl(priv->base + MPPHY_PXCNTXT2(channel_id)), readl(priv->base + MPPHY_PXTXREQ(channel_id)));
+
+	mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, MPPHY_CMNCNT1_CH_MASK(channel_id),
+				MPPHY_CMNCNT1_USB_EN(channel_id));
+	printk("%s %d: MPPHY_CMNCNT1: 0x%08x\n", __func__, __LINE__, readl(priv->base + MPPHY_CMNCNT1));
 
 	return 0;
 }
@@ -710,10 +792,70 @@ static int mp_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 	return 0;
 }
 
+static int mp_phy_config_usb(struct phy *phy, int speed)
+{
+	struct mp_phy_priv *priv = phy_get_drvdata(phy);
+	struct mp_phy_chan_priv *chan = &priv->chan[phy->id];
+	u32 channel_id = phy->id;
+	u32 data;
+
+	switch(speed) {
+	case HIGH_SPEED:
+		/* Setting TCA VBUS CTRL registers. */
+		mp_phy_write(priv->base, TCA_VBUS_CTRL_OFFSET(chan->lane_id), 0x0000003E);
+		break;
+	case SUPER_SPEED_PLUS:
+		/* Setting TCA registers. */
+		if (chan->lane_id == 0) {
+			while (1) {
+				data = readl(priv->base + PSTATE_1_OFFSET(0));
+				if (((data >> 6) & 0x3) == 0 &&
+					((data >> 4) & 0x3) == 0 &&
+					(data & 0xF) == 0x3)
+					break;
+			}
+		} else if (chan->lane_id == 1) {
+			while (1) {
+				data = readl(priv->base + PSTATE_1_OFFSET(1));
+				if(((data >> 22) & 0x1) == 0 &&
+					((data >> 20) & 0x3) == 0 &&
+					((data >> 16) & 0xF) == 0x3)
+					break;
+			}
+		}
+		mp_phy_update_bits(priv->base, TCA_INTR_OFFSET(chan->lane_id), 0x3, 0x3);
+		printk("%s %d: TCA_INTR_OFFSET: 0x%x\n", __func__, __LINE__,
+		       readl(priv->base + TCA_INTR_OFFSET(chan->lane_id)));
+		while (1) {
+			data = readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id));
+			if ((data & BIT(0)))
+				break;
+		}
+		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(channel_id), 0x1503, 0x1503);
+		mp_phy_update_bits(priv->base, TCA_TCPC_OFFSET(channel_id), 0x11, 0x11);
+		printk("%s %d: TCA_INTR_STS_OFFSET: 0x%x\n", __func__, __LINE__,
+		       readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id)));
+		printk("%s %d: TCA_TCPC_OFFSET: 0x%x\n", __func__, __LINE__,
+		       readl(priv->base + TCA_TCPC_OFFSET(chan->lane_id)));
+		while (1) {
+			data = readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id));
+			if ((data & BIT(0)))
+				break;
+		}
+		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(channel_id), 0x1503, 0x1503);
+		printk("%s %d: TCA_INTR_STS_OFFSET: 0x%x\n", __func__, __LINE__,
+		       readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id)));
+		break;
+	}
+
+	return 0;
+}
+
 static const struct phy_ops mp_phy_ops = {
 	.init		= mp_phy_init,
 	.power_on	= mp_phy_late_init,
 	.set_mode	= mp_phy_set_mode,
+	.set_speed	= mp_phy_config_usb,
 	.owner		= THIS_MODULE,
 };
 
