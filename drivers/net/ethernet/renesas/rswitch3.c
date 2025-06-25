@@ -1080,7 +1080,20 @@ static void rsw3_rmac_setting(struct rsw3_etha *etha, const u8 *mac)
 		return;
 	}
 
-	iowrite32(MPIC_PIS_GMII | val, etha->addr + MPIC);
+	switch (etha->phy_interface) {
+	case PHY_INTERFACE_MODE_MII:
+	case PHY_INTERFACE_MODE_SGMII:
+		iowrite32(MPIC_PIS_GMII | val, etha->addr + MPIC);
+		break;
+	case PHY_INTERFACE_MODE_USXGMII:
+	case PHY_INTERFACE_MODE_5GBASER:
+	case PHY_INTERFACE_MODE_10GBASER:
+		iowrite32(MPIC_PIS_XGMII | val, etha->addr + MPIC);
+		break;
+	default:
+		iowrite32(MPIC_PIS_GMII | val, etha->addr + MPIC);
+		break;
+	}
 
 	/* Set MIOC Bit(3)*/
 	if (etha->connect_to_xpcs) {
