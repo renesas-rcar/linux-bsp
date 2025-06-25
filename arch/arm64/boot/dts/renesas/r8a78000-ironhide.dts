@@ -477,6 +477,26 @@
 		function = "msiof6";
 	};
 
+	usb30_pins: usb0 {
+		groups = "usb0_vbus", "usb0";
+		function = "usb0";
+	};
+
+	usb20_pins: usb1 {
+		groups = "usb1_vbus", "usb1";
+		function = "usb1";
+	};
+
+	usb31_pins: usb2 {
+		groups = "usb2_vbus", "usb2";
+		function = "usb2";
+	};
+
+	usb21_pins: usb3 {
+		groups = "usb3_vbus", "usb3";
+		function = "usb3";
+	};
+
 	rpc_pins: rpc {
 		groups = "rpc_clk2", "rpc_ctrl", "rpc_data",
 			 "rpc_reset", "rpc_int";
