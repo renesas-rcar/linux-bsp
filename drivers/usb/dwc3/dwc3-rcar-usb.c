@@ -19,6 +19,104 @@
 #include <linux/usb/ch9.h>
 #include <linux/usb/of.h>
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE              0xc9c90000
+#define USB_PDID               (0)
+#define USB_CLK_MASK(n)        GENMASK((n) + 1, n)
+#define USB_CLK_SHIFT(n)       (n)
+
+#define MDLC_PKCPROT0          (MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1          (MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)          (MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)         (MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0            (MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0            (MDLC_BASE + 0x0120)
+
+#define MDLC_MPDG              _MDLC_MPDG(USB_PDID)
+#define MDLC_MPDGS             _MDLC_MPDGS(USB_PDID)
+
+#define MDLC_MSRES(i)          (MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i) (       MDLC_BASE + 0x0960 + (i) * 4)
+
+static void usb_module_power_gating_set(u8 pdid, u8 mode)
+{
+       void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
+       void __iomem *mpdg = ioremap(_MDLC_MPDG(pdid), 4);
+       void __iomem *mpdgs = ioremap(_MDLC_MPDGS(pdid), 4);
+       void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
+       void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
+
+       writel(0xA5A5A501, unlock);
+
+       if ((readl(mpdgs) & 0x3) == mode)
+                       goto unmap;
+
+       while (readl(mpdgs) != readl(mpdg))
+                       udelay(1000);
+
+       writel(0, mpier0);
+       writel(0x1, mpimr0);
+
+       writel(0x1, mpdg);
+
+       while (readl(mpdgs) != readl(mpdg))
+                       udelay(1000);
+
+       writel(mode, mpdg);
+
+       while (readl(mpdgs) != readl(mpdg))
+                       udelay(1000);
+
+unmap:
+       iounmap(unlock);
+       iounmap(mpdg);
+       iounmap(mpdgs);
+       iounmap(mpier0);
+       iounmap(mpimr0);
+}
+
+static void usb_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+       void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+       void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+       void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+       u32 val;
+
+       writel(0xA5A5A501, unlock);
+
+       if ((readl(msress) & USB_CLK_MASK(pos)) == (mode << USB_CLK_SHIFT(pos)))
+                       goto unmap;
+
+       while ((readl(msress) & USB_CLK_MASK(pos)) != (readl(msres) & USB_CLK_MASK(pos)))
+                       udelay(1000);
+
+       val = readl(msres);
+       val &= ~USB_CLK_MASK(pos);
+       val |= mode << USB_CLK_SHIFT(pos);
+       writel(val, msres);
+
+       while ((readl(msress) & USB_CLK_MASK(pos)) != (readl(msres) & USB_CLK_MASK(pos)))
+                       udelay(1000);
+
+unmap:
+       iounmap(unlock);
+       iounmap(msress);
+       iounmap(msres);
+}
+
+static void usb_module_power_run(void)
+{
+       usb_module_power_gating_set(0, 0x03);
+       usb_module_power_gating_set(2, 0x03);
+
+       usb_module_standy_set(6, 0, 0x03);
+       usb_module_standy_set(6, 2, 0x03);
+       usb_module_standy_set(6, 4, 0x03);
+       usb_module_standy_set(6, 6, 0x03);
+}
+//--------------------------------------------------
+
 #define USB_CTRL_CONF19		0x26
 
 /* USB_CTRL_CONF19 register bits */
