@@ -132,17 +132,6 @@ static void mp_phy_module_power_run(void)
 	mp_phy_module_standy_set(6, 14, 0x03);
 	mp_phy_module_standy_set(6, 16, 0x03);
 }
-
-static void mp_phy_usb_module_power_run(void)
-{
-	mp_phy_module_power_gating_set(0, 0x03);
-	mp_phy_module_power_gating_set(2, 0x03);
-
-	mp_phy_module_standy_set(6, 0, 0x03);
-	mp_phy_module_standy_set(6, 2, 0x03);
-	mp_phy_module_standy_set(6, 4, 0x03);
-	mp_phy_module_standy_set(6, 6, 0x03);
-}
 //--------------------------------------------------
 
 #define MPPHY_NUM_CHANNELS	4
