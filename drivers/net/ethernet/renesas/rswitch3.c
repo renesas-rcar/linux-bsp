@@ -1879,9 +1879,6 @@ static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
 	if (err < 0)
 		goto out_get_params;
 
-	if (rdev->priv->gwca.speed < rdev->etha->speed)
-		rdev->priv->gwca.speed = rdev->etha->speed;
-
 	err = rsw3_rxdmac_alloc(ndev);
 	if (err < 0)
 		goto out_rxdmac;

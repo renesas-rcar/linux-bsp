@@ -1066,7 +1066,6 @@ struct rsw3_gwca {
 	DECLARE_BITMAP(used, RSWITCH3_MAX_NUM_QUEUES);
 	u32 tx_irq_bits[RSWITCH3_NUM_IRQ_REGS];
 	u32 rx_irq_bits[RSWITCH3_NUM_IRQ_REGS];
-	int speed;
 };
 
 #define NUM_QUEUES_PER_NDEV	2
