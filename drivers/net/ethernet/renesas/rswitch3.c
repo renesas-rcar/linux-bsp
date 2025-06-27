@@ -871,12 +871,8 @@ static void rsw3_tx_free(struct net_device *ndev)
 	struct rsw3_ext_desc *desc;
 	struct sk_buff *skb;
 
-	for (; rsw3_get_num_cur_queues(gq) > 0;
-	     gq->dirty = rsw3_next_queue_index(gq, false, 1)) {
-		desc = &gq->tx_ring[gq->dirty];
-		if ((desc->desc.die_dt & DT_MASK) != DT_FEMPTY)
-			break;
-
+	desc = &gq->tx_ring[gq->dirty];
+	while ((desc->desc.die_dt & DT_MASK) == DT_FEMPTY) {
 		dma_rmb();
 		skb = gq->skbs[gq->dirty];
 		if (skb) {
@@ -889,6 +885,8 @@ static void rsw3_tx_free(struct net_device *ndev)
 			gq->skbs[gq->dirty] = NULL;
 		}
 		desc->desc.die_dt = DT_EEMPTY;
+		gq->dirty = rsw3_next_queue_index(gq, false, 1);
+		desc = &gq->tx_ring[gq->dirty];
 	}
 }
 
@@ -1746,6 +1744,8 @@ static netdev_tx_t rsw3_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	gq->skbs[(gq->cur + nr_desc - 1) % gq->ring_size] = skb;
 	gq->unmap_addrs[(gq->cur + nr_desc - 1) % gq->ring_size] = dma_addr_orig;
 
+	dma_wmb();
+
 	/* DT_FSTART should be set at last. So, this is reverse order. */
 	for (i = nr_desc; i-- > 0; ) {
 		desc = &gq->tx_ring[rsw3_next_queue_index(gq, true, i)];
@@ -1755,8 +1755,6 @@ static netdev_tx_t rsw3_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		if (!rsw3_ext_desc_set(rdev, skb, desc, dma_addr, len, die_dt))
 			goto err_unmap;
 	}
-
-	wmb();	/* gq->cur must be incremented after die_dt was set */
 
 	gq->cur = rsw3_next_queue_index(gq, true, nr_desc);
 	rsw3_modify(rdev->addr, GWTRC(gq->index), 0, BIT(gq->index % 32));
