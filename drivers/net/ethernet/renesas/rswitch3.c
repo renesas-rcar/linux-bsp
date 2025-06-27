@@ -915,8 +915,10 @@ retry:
 
 	if (napi_complete_done(napi, budget - quota)) {
 		spin_lock_irqsave(&priv->lock, flags);
-		rsw3_enadis_data_irq(priv, rdev->tx_queue->index, true);
-		rsw3_enadis_data_irq(priv, rdev->rx_queue->index, true);
+		if (test_bit(rdev->port, priv->opened_ports)) {
+			rsw3_enadis_data_irq(priv, rdev->tx_queue->index, true);
+			rsw3_enadis_data_irq(priv, rdev->rx_queue->index, true);
+		}
 		spin_unlock_irqrestore(&priv->lock, flags);
 	}
 
@@ -1618,17 +1620,16 @@ static int rsw3_open(struct net_device *ndev)
 	struct rsw3_device *rdev = netdev_priv(ndev);
 	unsigned long flags;
 
-	phy_start(ndev->phydev);
-
 	napi_enable(&rdev->napi);
-	netif_start_queue(ndev);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
+	bitmap_set(rdev->priv->opened_ports, rdev->port, 1);
 	rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue->index, true);
 	rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue->index, true);
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
-	bitmap_set(rdev->priv->opened_ports, rdev->port, 1);
+	phy_start(ndev->phydev);
+	netif_start_queue(ndev);
 
 	return 0;
 };
@@ -1639,14 +1640,15 @@ static int rsw3_stop(struct net_device *ndev)
 	unsigned long flags;
 
 	netif_tx_stop_all_queues(ndev);
-	bitmap_clear(rdev->priv->opened_ports, rdev->port, 1);
+
+	phy_stop(ndev->phydev);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
 	rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue->index, false);
 	rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue->index, false);
+	bitmap_clear(rdev->priv->opened_ports, rdev->port, 1);
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
-	phy_stop(ndev->phydev);
 	napi_disable(&rdev->napi);
 
 	return 0;
