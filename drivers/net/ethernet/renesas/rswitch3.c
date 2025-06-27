@@ -1608,7 +1608,7 @@ static void rsw3_ether_port_deinit_all(struct rsw3_private *priv)
 {
 	unsigned int i;
 
-	for (i = 0; i < rswitch3_num_ports; i++) {
+	rsw3_for_each_enabled_port(priv, i) {
 		phy_exit(priv->rdev[i]->pcs);
 
 		rsw3_ether_port_deinit_one(priv->rdev[i]);
