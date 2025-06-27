@@ -1120,7 +1120,6 @@ static void rsw3_etha_enable_mii(struct rsw3_etha *etha)
 {
 	rsw3_modify(etha->addr, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
 		    MPIC_PSMCS(etha->psmcs) | MPIC_PSMHT(0x06));
-	rsw3_modify(etha->addr, MPSM, 0, MPSM_MMF_C45);
 }
 
 static int rsw3_etha_mii_hw_init(struct rsw3_etha *etha)
