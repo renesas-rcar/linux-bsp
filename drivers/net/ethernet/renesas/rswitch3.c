@@ -1066,45 +1066,47 @@ static int __maybe_unused rsw3_etha_wait_link_verification(struct rsw3_etha *eth
 
 static void rsw3_rmac_setting(struct rsw3_etha *etha, const u8 *mac)
 {
-	u32 val;
+	u32 pis, lsc;
 
 	rsw3_etha_write_mac_address(etha, mac);
 
-	switch (etha->speed) {
-	case 100:
-		val = MPIC_LSC_100M;
-		break;
-	case 1000:
-		val = MPIC_LSC_1G;
-		break;
-	case 2500:
-		val = MPIC_LSC_2_5G;
-		break;
-	case 5000:
-		val = MPIC_LSC_5G;
-		break;
-	case 10000:
-		val = MPIC_LSC_10G;
-		break;
-	default:
-		return;
-	}
-
 	switch (etha->phy_interface) {
-	case PHY_INTERFACE_MODE_MII:
 	case PHY_INTERFACE_MODE_SGMII:
-		iowrite32(MPIC_PIS_GMII | val, etha->addr + MPIC);
+		pis = MPIC_PIS_GMII;
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
 	case PHY_INTERFACE_MODE_5GBASER:
 	case PHY_INTERFACE_MODE_10GBASER:
-		iowrite32(MPIC_PIS_XGMII | val, etha->addr + MPIC);
+		pis = MPIC_PIS_XGMII;
 		break;
 	default:
-		iowrite32(MPIC_PIS_GMII | val, etha->addr + MPIC);
+		pis = FIELD_GET(MPIC_PIS, ioread32(etha->addr + MPIC));
 		break;
 	}
 
+	switch (etha->speed) {
+	case 100:
+		lsc = MPIC_LSC_100M;
+		break;
+	case 1000:
+		lsc = MPIC_LSC_1G;
+		break;
+	case 2500:
+		lsc = MPIC_LSC_2_5G;
+		break;
+	case 5000:
+		lsc = MPIC_LSC_5G;
+		break;
+	case 10000:
+		lsc = MPIC_LSC_10G;
+		break;
+	default:
+		lsc = FIELD_GET(MPIC_LSC, ioread32(etha->addr + MPIC));
+		break;
+	}
+
+	rsw3_modify(etha->addr, MPIC, MPIC_PIS | MPIC_LSC,
+		    FIELD_PREP(MPIC_PIS, pis) | FIELD_PREP(MPIC_LSC, lsc));
 	/* Set MIOC Bit(3)*/
 	if (etha->connect_to_xpcs) {
 		if (etha->index >= 5 && etha->index <= 7)
