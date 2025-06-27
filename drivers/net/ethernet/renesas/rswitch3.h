@@ -815,6 +815,9 @@ enum rsw3_etha_mode {
 #define MPIC_LSC_5G		4
 #define MPIC_LSC_10G		5
 
+#define MPIC_PSMCS		GENMASK(22, 16)
+#define MPIC_PSMHT		GENMASK(26, 24)
+
 #define MPSM_PSME		BIT(0)
 #define MPSM_MFF		BIT(2)
 #define MPSM_MMF_C22		0
@@ -833,14 +836,6 @@ enum rsw3_etha_mode {
 #define MMIS1_PWACS		BIT(1) /* Write */
 #define MMIS1_PRACS		BIT(0) /* Read */
 #define MMIS1_CLEAR_FLAGS	0xf
-
-#define MPIC_PSMCS_SHIFT	16
-#define MPIC_PSMCS_MASK		GENMASK(22, MPIC_PSMCS_SHIFT)
-#define MPIC_PSMCS(val)		((val) << MPIC_PSMCS_SHIFT)
-
-#define MPIC_PSMHT_SHIFT	24
-#define MPIC_PSMHT_MASK		GENMASK(26, MPIC_PSMHT_SHIFT)
-#define MPIC_PSMHT(val)		((val) << MPIC_PSMHT_SHIFT)
 
 #define MLVC_PLV		BIT(16)
 
