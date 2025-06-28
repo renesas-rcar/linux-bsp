@@ -36,7 +36,7 @@
 			continue;				\
 		else
 
-#define TX_RING_SIZE		1024
+#define TX_RING_SIZE		2048
 #define RX_RING_SIZE		4096
 
 #define RSWITCH3_MAX_MTU		9600
