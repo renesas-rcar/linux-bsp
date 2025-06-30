@@ -2259,6 +2259,118 @@
 			status = "disabled";
 		};
 
+		msiof0: spi@c1700000 {
+			compatible = "renesas,msiof-r8a78000",
+				     "renesas,rcar-gen5-msiof";
+			reg = <0 0xc1700000 0 0x0064>;
+			interrupts = <GIC_SPI 4808 IRQ_TYPE_LEVEL_HIGH>;
+			dmas = <&scp_dmac0 0x41>, <&scp_dmac0 0x40>,
+				<&scp_dmac1 0x41>, <&scp_dmac1 0x40>;
+			dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof1: spi@c1710000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc1710000 0 0x0064>;
+			interrupts = <GIC_SPI 4809 IRQ_TYPE_LEVEL_HIGH>;
+			dmas = <&scp_dmac0 0x43>, <&scp_dmac0 0x42>,
+				<&scp_dmac1 0x43>, <&scp_dmac1 0x42>;
+			dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof2: spi@c1720000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc1720000 0 0x0064>;
+			interrupts = <GIC_SPI 4810 IRQ_TYPE_LEVEL_HIGH>;
+			dmas = <&scp_dmac0 0x45>, <&scp_dmac0 0x44>,
+				<&scp_dmac1 0x45>, <&scp_dmac1 0x44>;
+			dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof3: spi@c1730000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc1730000 0 0x0064>;
+			interrupts = <GIC_SPI 4811 IRQ_TYPE_LEVEL_HIGH>;
+			dmas = <&scp_dmac0 0x47>, <&scp_dmac0 0x46>,
+				<&scp_dmac1 0x47>, <&scp_dmac1 0x46>;
+			dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof4: spi@c0600000 {
+			compatible = "renesas,msiof-r8a78000",
+				     "renesas,rcar-gen5-msiof";
+			reg = <0 0xc0600000 0 0x0064>;
+			interrupts = <GIC_SPI 4082 IRQ_TYPE_LEVEL_HIGH>;
+			dmas = <&sys_dmac10 0x49>, <&sys_dmac10 0x48>,
+				<&sys_dmac11 0x49>, <&sys_dmac11 0x48>,
+				<&sys_dmac12 0x49>, <&sys_dmac12 0x48>;
+			dma-names = "tx", "rx", "tx", "rx",
+				    "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof5: spi@c0608000 {
+			compatible = "renesas,msiof-r8a78000",
+				     "renesas,rcar-gen5-msiof";
+			reg = <0 0xc0608000 0 0x0064>;
+			interrupts = <GIC_SPI 4083 IRQ_TYPE_LEVEL_HIGH>;
+			dmas = <&sys_dmac10 0x4B>, <&sys_dmac10 0x4A>,
+				<&sys_dmac11 0x4B>, <&sys_dmac11 0x4A>,
+				<&sys_dmac12 0x4B>, <&sys_dmac12 0x4A>;
+			dma-names = "tx", "rx", "tx", "rx",
+				    "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof6: spi@c0610000 {
+			compatible = "renesas,msiof-r8a78000",
+				     "renesas,rcar-gen5-msiof";
+			reg = <0 0xc0610000 0 0x0064>;
+			interrupts = <GIC_SPI 4084 IRQ_TYPE_LEVEL_HIGH>;
+			dmas = <&sys_dmac10 0x4D>, <&sys_dmac10 0x4C>,
+				<&sys_dmac11 0x4D>, <&sys_dmac11 0x4C>,
+				<&sys_dmac12 0x4D>, <&sys_dmac12 0x4C>;
+			dma-names = "tx", "rx", "tx", "rx",
+				    "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof7: spi@c0618000 {
+			compatible = "renesas,msiof-r8a78000",
+				     "renesas,rcar-gen5-msiof";
+			reg = <0 0xc0618000 0 0x0064>;
+			interrupts = <GIC_SPI 4085 IRQ_TYPE_LEVEL_HIGH>;
+			dmas = <&sys_dmac10 0x4F>, <&sys_dmac10 0x4E>,
+				<&sys_dmac11 0x4F>, <&sys_dmac11 0x4E>,
+				<&sys_dmac12 0x4F>, <&sys_dmac12 0x4E>;
+			dma-names = "tx", "rx", "tx", "rx",
+				    "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
 		pciec40: pcie@c9000000 {
 			compatible = "renesas,rcar-gen5-pcie";
 			reg = <0 0xc9000000 0 0x3000>,
