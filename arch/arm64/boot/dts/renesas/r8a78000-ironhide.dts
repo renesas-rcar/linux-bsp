@@ -271,6 +271,18 @@
 		function = "pcie4";
 	};
 
+	msiof0_pins: msiof0 {
+		groups = "msiof0_clk", "msiof0_sync", "msiof0_txd", "msiof0_rxd",
+			"msiof0_ss1", "msiof0_ss2";
+		function = "msiof0";
+	};
+
+	msiof6_pins: msiof6 {
+		groups = "msiof6_clk_a", "msiof6_txd_a", "msiof6_rxd_a",
+			"msiof6_ss1_a", "msiof6_ss2_a";
+		function = "msiof6";
+	};
+
 	rpc_pins: rpc {
 		groups = "rpc_clk2", "rpc_ctrl", "rpc_data",
 			 "rpc_reset", "rpc_int";
