@@ -62,6 +62,10 @@ properties:
           - const: renesas,rcar-gen4-sdhi # R-Car Gen4
       - items:
           - enum:
+              - renesas,sdhi-r8a78000  # R-Car X5H
+          - const: renesas,rcar-gen5-sdhi # R-Car Gen5
+      - items:
+          - enum:
               - renesas,sdhi-r9a07g043 # RZ/G2UL and RZ/Five
               - renesas,sdhi-r9a07g044 # RZ/G2{L,LC}
               - renesas,sdhi-r9a07g054 # RZ/V2L
@@ -155,6 +159,7 @@ allOf:
                 - renesas,rcar-gen2-sdhi
                 - renesas,rcar-gen3-sdhi
                 - renesas,rcar-gen4-sdhi
+                - renesas,rcar-gen5-sdhi
       then:
         properties:
           clocks:
