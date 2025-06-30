@@ -40,14 +40,28 @@ struct rcar_dmac_xfer_chunk {
 };
 
 /*
- * struct rcar_dmac_hw_desc - Hardware descriptor for a transfer chunk
+ * struct rcar_dmac_hw_desc_32 - Hardware descriptor 32 bits address mode for a transfer chunk
+ * @sar: 32 bits value of the SAR register (source address)
+ * @dar: 32 bits value of the DAR register (destination address)
+ * @tcr: value of the TCR register (transfer count)
+ */
+
+struct rcar_dmac_hw_desc_32 {
+	u32 sar;
+	u32 dar;
+	u32 tcr;
+	u32 reserved;
+} __attribute__((__packed__));
+
+/*
+ * struct rcar_dmac_hw_desc_43 - Hardware descriptor 43 bits address mode for a transfer chunk
  * @sar_lower: lower 32 bits value of the SAR register (source address)
  * @sar_upper: upper 32 bits value of the SAR register (source address)
  * @dar_lower: lower 32 bits value of the DAR register (destination address)
  * @dar_upper: upper 32 bits value of the DAR register (destination address)
  * @tcr: value of the TCR register (transfer count)
  */
-struct rcar_dmac_hw_desc {
+struct rcar_dmac_hw_desc_43 {
 	u32 sar_lower;
 	u32 sar_upper;
 	u32 dar_lower;
@@ -88,7 +102,8 @@ struct rcar_dmac_desc {
 
 	struct {
 		bool use;
-		struct rcar_dmac_hw_desc *mem;
+		struct rcar_dmac_hw_desc_43 *mem43;
+		struct rcar_dmac_hw_desc_32 *mem32;
 		dma_addr_t dma;
 		size_t size;
 	} hwdescs;
@@ -96,6 +111,7 @@ struct rcar_dmac_desc {
 	unsigned int size;
 	bool cyclic;
 	bool repeat;
+	bool hw_desc_43;
 };
 
 #define to_rcar_dmac_desc(d)	container_of(d, struct rcar_dmac_desc, async_tx)
@@ -425,7 +441,8 @@ static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 			chan->index, desc, desc->nchunks, &desc->hwdescs.dma);
 
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-		rcar_dmac_chan_write(chan, RCAR_ADR43MODE, 1);
+		if (desc->hw_desc_43)
+			rcar_dmac_chan_write(chan, RCAR_ADR43MODE, 1);
 		rcar_dmac_chan_write(chan, RCAR_DMAFIXSAR,
 				     chunk->src_addr >> 32);
 		rcar_dmac_chan_write(chan, RCAR_DMAFIXDAR,
@@ -780,19 +797,34 @@ static void rcar_dmac_realloc_hwdesc(struct rcar_dmac_chan *chan,
 	if (desc->hwdescs.size == size)
 		return;
 
-	if (desc->hwdescs.mem) {
+	if (desc->hwdescs.mem32) {
 		dma_free_coherent(chan->chan.device->dev, desc->hwdescs.size,
-				  desc->hwdescs.mem, desc->hwdescs.dma);
-		desc->hwdescs.mem = NULL;
+				  desc->hwdescs.mem32, desc->hwdescs.dma);
+		desc->hwdescs.mem32 = NULL;
+		desc->hwdescs.size = 0;
+	}
+
+	if (desc->hwdescs.mem43) {
+		dma_free_coherent(chan->chan.device->dev, desc->hwdescs.size,
+				  desc->hwdescs.mem43, desc->hwdescs.dma);
+		desc->hwdescs.mem43 = NULL;
 		desc->hwdescs.size = 0;
 	}
 
 	if (!size)
 		return;
 
-	desc->hwdescs.mem = dma_alloc_coherent(chan->chan.device->dev, size,
-					       &desc->hwdescs.dma, GFP_NOWAIT);
-	if (!desc->hwdescs.mem)
+	if (desc->hw_desc_43)
+		desc->hwdescs.mem43 = dma_alloc_coherent(chan->chan.device->dev, size,
+						       &desc->hwdescs.dma, GFP_NOWAIT);
+	else
+		desc->hwdescs.mem32 = dma_alloc_coherent(chan->chan.device->dev, size,
+						       &desc->hwdescs.dma, GFP_NOWAIT);
+
+	if (desc->hw_desc_43 && !desc->hwdescs.mem43)
+		return;
+
+	if (!desc->hw_desc_43 && !desc->hwdescs.mem32)
 		return;
 
 	desc->hwdescs.size = size;
@@ -802,21 +834,35 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 				 struct rcar_dmac_desc *desc)
 {
 	struct rcar_dmac_xfer_chunk *chunk;
-	struct rcar_dmac_hw_desc *hwdesc;
+	struct rcar_dmac_hw_desc_43 *hwdesc43;
+	struct rcar_dmac_hw_desc_32 *hwdesc32;
 
-	rcar_dmac_realloc_hwdesc(chan, desc, desc->nchunks * sizeof(*hwdesc));
+	if (desc->hw_desc_43) {
+		rcar_dmac_realloc_hwdesc(chan, desc, desc->nchunks * sizeof(*hwdesc43));
+		hwdesc43 = desc->hwdescs.mem43;
+		if (!hwdesc43)
+			return -ENOMEM;
 
-	hwdesc = desc->hwdescs.mem;
-	if (!hwdesc)
-		return -ENOMEM;
+		list_for_each_entry(chunk, &desc->chunks, node) {
+			hwdesc43->sar_lower = lower_32_bits(chunk->src_addr);
+			hwdesc43->sar_upper = upper_32_bits(chunk->src_addr);
+			hwdesc43->dar_lower = lower_32_bits(chunk->dst_addr);
+			hwdesc43->dar_upper = upper_32_bits(chunk->dst_addr);
+			hwdesc43->tcr = chunk->size >> desc->xfer_shift;
+			hwdesc43++;
+		}
+	} else {
+		rcar_dmac_realloc_hwdesc(chan, desc, desc->nchunks * sizeof(*hwdesc32));
+		hwdesc32 = desc->hwdescs.mem32;
+		if (!hwdesc32)
+			return -ENOMEM;
 
-	list_for_each_entry(chunk, &desc->chunks, node) {
-		hwdesc->sar_lower = chunk->src_addr & 0xffffffff;
-		hwdesc->sar_upper = (chunk->src_addr & 0xffffffff00000000) >> 32;
-		hwdesc->dar_lower = chunk->dst_addr & 0xffffffff;
-		hwdesc->dar_upper = (chunk->dst_addr & 0xffffffff00000000) >> 32;
-		hwdesc->tcr = chunk->size >> desc->xfer_shift;
-		hwdesc++;
+		list_for_each_entry(chunk, &desc->chunks, node) {
+			hwdesc32->sar = chunk->src_addr;
+			hwdesc32->dar = chunk->dst_addr;
+			hwdesc32->tcr = chunk->size >> desc->xfer_shift;
+			hwdesc32++;
+		}
 	}
 
 	return 0;
@@ -1090,6 +1136,10 @@ rcar_dmac_chan_prep_sg(struct rcar_dmac_chan *chan, struct scatterlist *sgl,
 
 	desc->nchunks = nchunks;
 	desc->size = full_size;
+
+	if (upper_32_bits(chunk->src_addr) || upper_32_bits(chunk->dst_addr)) {
+		desc->hw_desc_43 = true;
+	}
 
 	/*
 	 * Use hardware descriptor lists if possible when more than one chunk
