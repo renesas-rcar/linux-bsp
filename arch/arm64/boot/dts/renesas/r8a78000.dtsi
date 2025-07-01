@@ -2497,6 +2497,132 @@
 			status = "disabled";
 		};
 
+		smmu_dsp: iommu@fa000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfa000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_hcn: iommu@f8800000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xf8800000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_hcs0: iommu@fcc00000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfcc00000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_hcs1: iommu@fce00000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfce00000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_imn: iommu@f8000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xf8000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_ims: iommu@fc000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfc000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_mp: iommu@fe000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfe000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_npu0: iommu@f8400000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xf8400000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_npu1: iommu@fc400000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfc400000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_pere: iommu@fd000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfd000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_perw: iommu@fd800000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfd800000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_pv: iommu@f8600000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xf8600000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_rt: iommu@fb000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfb000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_scp: iommu@fa800000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfa800000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_vi0: iommu@f9000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xf9000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_vi1: iommu@f9800000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xf9800000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_vipn: iommu@f8200000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xf8200000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_vips: iommu@fc200000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfc200000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
 		cr52_rproc0: cr52_0 {
 			compatible = "renesas,rcar-gen5-rproc";
 			renesas,mfis-channel = <0>;
