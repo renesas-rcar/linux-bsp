@@ -1153,7 +1153,10 @@ static int rtsn_probe(struct platform_device *pdev)
 
 	priv = netdev_priv(ndev);
 	priv->ndev = ndev;
+
 	priv->ptp_priv = rtsn_ptp_alloc(pdev);
+	if (!priv->ptp_priv)
+		ret = -ENOMEM;
 
 	priv->addr = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(priv->addr))
