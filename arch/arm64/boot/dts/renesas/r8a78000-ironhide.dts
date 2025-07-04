@@ -30,6 +30,7 @@
 #include <dt-bindings/net/ti-dp83869.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/media/video-interfaces.h>
+#include <dt-bindings/media/r8a78000-csi2.h>
 
 / {
 	model = "Renesas Ironhide board based on r8a78000";
@@ -1687,6 +1688,7 @@
 				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
+				pin-swap-rx-order = <ABC ACB ABC ACB>;
 				remote-endpoint = <&max96726_out0>;
 			};
 		};
@@ -1707,6 +1709,7 @@
 				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
+				pin-swap-rx-order = <ABC ACB ABC ACB>;
 				remote-endpoint = <&max96726_out1>;
 			};
 		};
@@ -1727,6 +1730,7 @@
 				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
+				pin-swap-rx-order = <ABC ACB ABC ACB>;
 				remote-endpoint = <&max96726_out2>;
 			};
 		};
@@ -1747,6 +1751,7 @@
 				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
+				pin-swap-rx-order = <ABC ACB ABC ACB>;
 				remote-endpoint = <&max96726_out3>;
 			};
 		};
