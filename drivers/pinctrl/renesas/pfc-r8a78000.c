@@ -3600,6 +3600,38 @@ static const unsigned int msiof6_rxd_b_mux[] = {
 	MSIOF6_RXD_B_MARK,
 };
 
+/* - AUDIO CLOCK ----------------------------------------- */
+static const unsigned int audio_clk_a_a_pins[] = {
+	/* AUDIO_CLKA */
+	RCAR_GP_PIN(7, 8),
+};
+static const unsigned int audio_clk_a_a_mux[] = {
+	AUDIO_CLKA_A_MARK,
+};
+static const unsigned int audio0_clkout0_pins[] = {
+	/* AUDIO0_CLKOUT0 */
+	RCAR_GP_PIN(6, 19),
+};
+static const unsigned int audio0_clkout0_mux[] = {
+	AUDIO0_CLKOUT0_MARK,
+};
+
+/* - SSI5 ------------------------------------------------- */
+static const unsigned int ssi5_data_pins[] = {
+	/* SSI5_SD */
+	RCAR_GP_PIN(7, 11),
+};
+static const unsigned int ssi5_data_mux[] = {
+	SSI5_SD_MARK,
+};
+static const unsigned int ssi5_ctrl_pins[] = {
+	/* SSI5_SCK,  SSI5_WS */
+	RCAR_GP_PIN(7, 9), RCAR_GP_PIN(7, 10),
+};
+static const unsigned int ssi5_ctrl_mux[] = {
+	SSI5_SCK_MARK, SSI5_WS_MARK,
+};
+
 static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(hscif0_data),
 	SH_PFC_PIN_GROUP(hscif0_clk),
@@ -3741,6 +3773,11 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(msiof6_ss2_b),
 	SH_PFC_PIN_GROUP(msiof6_txd_b),
 	SH_PFC_PIN_GROUP(msiof6_rxd_b),
+
+	SH_PFC_PIN_GROUP(audio_clk_a_a),
+	SH_PFC_PIN_GROUP(audio0_clkout0),
+	SH_PFC_PIN_GROUP(ssi5_data),
+	SH_PFC_PIN_GROUP(ssi5_ctrl),
 };
 
 static const char * const hscif0_groups[] = {
@@ -3993,6 +4030,16 @@ static const char * const msiof6_groups[] = {
 	"msiof6_rxd_b",
 };
 
+static const char * const audio_clk_groups[] = {
+	"audio_clk_a_a",
+	"audio0_clkout0",
+};
+
+static const char * const ssi5_groups[] = {
+	"ssi5_data",
+	"ssi5_ctrl",
+};
+
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(hscif0),
 	SH_PFC_FUNCTION(hscif1),
@@ -4045,6 +4092,9 @@ static const struct sh_pfc_function pinmux_functions[] = {
 
 	SH_PFC_FUNCTION(msiof0),
 	SH_PFC_FUNCTION(msiof6),
+
+	SH_PFC_FUNCTION(audio_clk),
+	SH_PFC_FUNCTION(ssi5),
 };
 
 static const struct pinmux_cfg_reg pinmux_config_regs[] = {
