@@ -791,16 +791,9 @@ static void vsp1_dl_list_fill_header(struct vsp1_dl_list *dl, bool is_last)
 	 * loop on the same list until a new one is queued. In singleshot mode
 	 * enable auto-start for all lists but the last to chain processing of
 	 * partitions without software intervention.
-	 *
-	 * In the VDK environment, when simulating both CPU and HW IP
-	 * simultaneously under highload, the simulation performance of
-	 * the CPU will decrease, as in the case of this auto-start mode.
-	 * Therefore, a temporary workaround is to use single shot.
 	 */
-
-	/* if (!dlm->singleshot || !is_last)
+	if (!dlm->singleshot || !is_last)
 		dl->header->flags |= VSP1_DLH_AUTO_START;
-	 */
 
 	if (!is_last) {
 		/*
@@ -944,9 +937,6 @@ void vsp1_dl_list_commit(struct vsp1_dl_list *dl, unsigned int dl_flags)
 		vsp1_dl_list_commit_singleshot(dl);
 	else
 		vsp1_dl_list_commit_continuous(dl);
-
-	/* Workaround for the VDK */
-	vsp1_write(dlm->vsp1, VI6_CMD(dlm->index), VI6_CMD_STRCMD);
 
 	spin_unlock_irqrestore(&dlm->lock, flags);
 }
