@@ -16,6 +16,7 @@
 #include <linux/pm.h>
 #include <linux/slab.h>
 #include <linux/wait.h>
+#include <linux/delay.h>
 
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_drv.h>
@@ -31,6 +32,215 @@
 #include "rcar_vcon_kms.h"
 #include "rcar_vcon_crtc.h"
 #include "rcar_vcon_vsp.h"
+
+/* Hardcoded for enable module clock */
+#define MDLC_BASE               0xC5000000
+#define MODULE_CLK_MASK(n)       GENMASK((n) + 1, (n))
+#define MODULE_CLK_SHIFT(n)      (n)
+
+#define MDLC_PKCPROT0           (MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1           (MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)           (MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)          (MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0             (MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0             (MDLC_BASE + 0x0120)
+
+#define MDLC_MSRES(i)           (MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
+
+static void rcar_vcon_module_clk_init(void)
+{
+	void __iomem *pll10_cr0 = ioremap(0xc6481204, 4);
+	void __iomem *pll10_cr1 = ioremap(0xc6481208, 4);
+	void __iomem *pll10_cr2 = ioremap(0xc648120c, 4);
+	void __iomem *pll10_scr = ioremap(0xc6481318, 4);
+	void __iomem *clk_dpckcr = ioremap(0xc6481010, 4);
+	void __iomem *clk_vconckcr = ioremap(0xc6481014, 4);
+	void __iomem *unlock = ioremap(0xc6481370, 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	while (1) {
+		val = readl(pll10_cr2);
+		if ((val & BIT(31)) == BIT(31))
+			break;
+	}
+
+	val = readl(pll10_scr);
+	val |= BIT(0);
+	writel(val, pll10_scr);
+
+	while (1) {
+		val = readl(pll10_scr);
+		if ((val & BIT(16)) == BIT(16))
+			break;
+	}
+
+	val = readl(pll10_cr2);
+	val |= BIT(29);
+	writel(val, pll10_cr2);
+
+	while (1) {
+		val = readl(pll10_cr2);
+		if ((val & BIT(31)) == 0)
+			break;
+	}
+
+	writel(0x08300000, pll10_cr0);
+	writel(0x04000000, pll10_cr1);
+
+	val = readl(pll10_cr2);
+	val |= BIT(28);
+	writel(val, pll10_cr2);
+
+	while (1) {
+		val = readl(pll10_cr2);
+		if ((val & BIT(31)) == BIT(31))
+			break;
+	}
+
+	val = readl(pll10_scr);
+	val &= ~BIT(0);
+	writel(val, pll10_scr);
+
+	while (1) {
+		val = readl(pll10_scr);
+		if ((val & BIT(16)) == 0)
+			break;
+	}
+
+	val = 0x100;
+	writel(val, clk_dpckcr);
+
+	val &= ~BIT(8);
+	writel(val, clk_dpckcr);
+
+	writel(0x1, clk_vconckcr);
+
+	iounmap(pll10_scr);
+	iounmap(clk_dpckcr);
+	iounmap(clk_vconckcr);
+	iounmap(unlock);
+}
+
+static void rcar_vcon_module_power_gating_set(u8 pdid, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
+	void __iomem *mpdg = ioremap(_MDLC_MPDG(pdid), 4);
+	void __iomem *mpdgs = ioremap(_MDLC_MPDGS(pdid), 4);
+	void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
+	void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(mpdgs) & 0x3) == mode)
+		goto unmap;
+
+	while (readl(mpdgs) != readl(mpdg))
+		usleep_range(1000, 1001);
+
+	writel(0, mpier0);
+	writel(0x1, mpimr0);
+
+	writel(0x1, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+		usleep_range(1000, 1001);
+
+	writel(mode, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+		usleep_range(1000, 1001);
+
+unmap:
+	iounmap(unlock);
+	iounmap(mpdg);
+	iounmap(mpdgs);
+	iounmap(mpier0);
+	iounmap(mpimr0);
+}
+
+static void rcar_vcon_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(msress) & MODULE_CLK_MASK(pos)) == (mode << MODULE_CLK_SHIFT(pos)))
+		goto unmap;
+
+	while ((readl(msress) & MODULE_CLK_MASK(pos)) != (readl(msres) & MODULE_CLK_MASK(pos)))
+		usleep_range(1000, 1001);
+
+	val = readl(msres);
+	val &= ~MODULE_CLK_MASK(pos);
+	val |= mode << MODULE_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & MODULE_CLK_MASK(pos)) != (readl(msres) & MODULE_CLK_MASK(pos)))
+		usleep_range(1000, 1001);
+
+unmap:
+	iounmap(unlock);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+static void rcar_vcon_module_power_run(void)
+{
+	rcar_vcon_module_clk_init();
+
+	rcar_vcon_module_power_gating_set(7, 0x03);
+	rcar_vcon_module_power_gating_set(4, 0x03);
+	rcar_vcon_module_power_gating_set(5, 0x03);
+	rcar_vcon_module_power_gating_set(6, 0x03);
+
+	/* VSPD */
+	rcar_vcon_module_standy_set(7, 0, 0x03);
+	rcar_vcon_module_standy_set(7, 2, 0x03);
+	rcar_vcon_module_standy_set(7, 4, 0x03);
+	rcar_vcon_module_standy_set(7, 6, 0x03);
+	rcar_vcon_module_standy_set(7, 8, 0x03);
+	rcar_vcon_module_standy_set(7, 10, 0x03);
+	rcar_vcon_module_standy_set(7, 12, 0x03);
+	rcar_vcon_module_standy_set(7, 14, 0x03);
+	rcar_vcon_module_standy_set(7, 16, 0x03);
+	rcar_vcon_module_standy_set(7, 18, 0x03);
+
+	/* FCPVD */
+	rcar_vcon_module_standy_set(7, 28, 0x03);
+	rcar_vcon_module_standy_set(7, 30, 0x03);
+	rcar_vcon_module_standy_set(8, 0, 0x03);
+	rcar_vcon_module_standy_set(8, 2, 0x03);
+	rcar_vcon_module_standy_set(8, 4, 0x03);
+	rcar_vcon_module_standy_set(8, 6, 0x03);
+	rcar_vcon_module_standy_set(8, 8, 0x03);
+	rcar_vcon_module_standy_set(8, 10, 0x03);
+	rcar_vcon_module_standy_set(8, 12, 0x03);
+	rcar_vcon_module_standy_set(8, 14, 0x03);
+
+	/* VCON */
+	rcar_vcon_module_standy_set(14, 30, 0x03);
+	rcar_vcon_module_standy_set(15, 0, 0x03);
+	rcar_vcon_module_standy_set(15, 2, 0x03);
+	rcar_vcon_module_standy_set(15, 4, 0x03);
+	rcar_vcon_module_standy_set(15, 6, 0x03);
+	rcar_vcon_module_standy_set(15, 8, 0x03);
+	rcar_vcon_module_standy_set(15, 10, 0x03);
+	rcar_vcon_module_standy_set(15, 12, 0x03);
+	rcar_vcon_module_standy_set(15, 14, 0x03);
+	rcar_vcon_module_standy_set(15, 16, 0x03);
+
+	/* DP-TX */
+	rcar_vcon_module_standy_set(6, 8, 0x03);
+	rcar_vcon_module_standy_set(6, 10, 0x03);
+	rcar_vcon_module_standy_set(6, 12, 0x03);
+}
 
 /* -----------------------------------------------------------------------------
  * DRM operations
@@ -140,6 +350,8 @@ static int rcar_vcon_probe(struct platform_device *pdev)
 {
 	struct rcar_vcon_device *rvcon;
 	int i, ret;
+
+	rcar_vcon_module_power_run();
 
 	/* Allocate and initialize the R-Car device structure. */
 	rvcon = devm_drm_dev_alloc(&pdev->dev, &rcar_vcon_driver, struct rcar_vcon_device, ddev);
