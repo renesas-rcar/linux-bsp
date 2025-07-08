@@ -16,6 +16,29 @@
 #include "pcie6-rcar-gen5.h"
 #include "pcie6-designware.h"
 
+#include "pcie6-rcar-phy-fw-iccm.h"
+#include "pcie6-rcar-phy-fw-dccm.h"
+
+void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6)
+{
+	u32 i;
+	void __iomem *sram_addr;
+
+	// Write ICCM firmware
+	sram_addr = rcar_pcie6->phy_base + ICCM_OFFSET;
+	for (i = 0; FW_DATA_iccm[i] != END_TABLE_ICCM; i++) {
+		writel(FW_DATA_iccm[i], sram_addr);
+		sram_addr += 4;
+	}
+
+	// Write DCCM firmware
+	sram_addr = rcar_pcie6->phy_base + DCCM_OFFSET;
+	for (i = 0; FW_DATA_dccm[i] != END_TABLE_DCCM; i++) {
+		writel(FW_DATA_dccm[i], sram_addr);
+		sram_addr += 4;
+	}
+}
+
 void __iomem *mdlc_hscs_base = NULL;
 
 inline u32 mdlc_readl(u32 offset)
@@ -343,6 +366,8 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 			val = readl(rcar_pcie6->base + PCIE6BOOTLC);
 			val &= ~BIT(1);
 			writel(val, rcar_pcie6->base + PCIE6BOOTLC);
+
+			rcar_gen5_pcie6_fwupdate(rcar_pcie6);
 
 			val = readl(rcar_pcie6->base + PCI6RESETC);
 			val |= GENMASK(3, 0);
