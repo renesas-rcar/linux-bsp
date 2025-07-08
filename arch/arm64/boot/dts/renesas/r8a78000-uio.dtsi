@@ -941,6 +941,8 @@
 			compatible = "generic-uio";
 			reg = <0 0xc3000000 0 0x10000>;
 			interrupts = <GIC_SPI 651 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_VCP5X0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCN>;
 			linux,uio-name = "vcp5_00";
 		};
 
@@ -948,6 +950,8 @@
 			compatible = "generic-uio";
 			reg = <0 0xc3000000 0 0x10000>;
 			interrupts = <GIC_SPI 655 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_VCP5X0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCN>;
 			linux,uio-name = "irq_vcp5_00_01";
 		};
 
@@ -955,6 +959,8 @@
 			compatible = "generic-uio";
 			reg = <0 0xc3002000 0 0x10000>;
 			interrupts = <GIC_SPI 652 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_VCP5X0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCN>;
 			linux,uio-name = "vcp5_01";
 		};
 
@@ -962,6 +968,8 @@
 			compatible = "generic-uio";
 			reg = <0 0xc3002000 0 0x10000>;
 			interrupts = <GIC_SPI 656 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_VCP5X0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCN>;
 			linux,uio-name = "irq_vcp5_01_01";
 		};
 
@@ -969,6 +977,8 @@
 			compatible = "generic-uio";
 			reg = <0 0xc3400000 0 0x10000>;
 			interrupts = <GIC_SPI 653 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_VCP5X1>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCS>;
 			linux,uio-name = "vcp5_02";
 		};
 
@@ -976,6 +986,8 @@
 			compatible = "generic-uio";
 			reg = <0 0xc3400000 0 0x10000>;
 			interrupts = <GIC_SPI 657 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_VCP5X1>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCS>;
 			linux,uio-name = "irq_vcp5_02_01";
 		};
 
@@ -983,6 +995,8 @@
 			compatible = "generic-uio";
 			reg = <0 0xc3402000 0 0x10000>;
 			interrupts = <GIC_SPI 654 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_VCP5X1>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCS>;
 			linux,uio-name = "vcp5_03";
 		};
 
@@ -990,30 +1004,40 @@
 			compatible = "generic-uio";
 			reg = <0 0xc3402000 0 0x10000>;
 			interrupts = <GIC_SPI 658 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_VCP5X1>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCS>;
 			linux,uio-name = "irq_vcp5_03_01";
 		};
 
 		fcpc0: fcpc@c3008000 {
 			compatible = "generic-uio";
 			reg = <0 0xc3008000 0 0x1000>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_FCPCS0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCN>;
 			linux,uio-name = "fcpc_00";
 		};
 
 		fcpc1: fcpc@c3009000 {
 			compatible = "generic-uio";
 			reg = <0 0xc3009000 0 0x1000>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_FCPCS0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCN>;
 			linux,uio-name = "fcpc_01";
 		};
 
 		fcpc2: fcpc@c3408000 {
 			compatible = "generic-uio";
 			reg = <0 0xc3408000 0 0x1000>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_FCPCS1>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCS>;
 			linux,uio-name = "fcpc_02";
 		};
 
 		fcpc3: fcpc@c3409000 {
 			compatible = "generic-uio";
 			reg = <0 0xc3409000 0 0x1000>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_VIPN_FCPCS1>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCS>;
 			linux,uio-name = "fcpc_03";
 		};
 
