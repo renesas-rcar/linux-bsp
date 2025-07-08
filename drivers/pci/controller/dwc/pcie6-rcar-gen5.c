@@ -342,13 +342,9 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 			val &= ~(BIT(2) | BIT(18));
 			writel(val, rcar_pcie6->base + PCI6CPUCTLSTS);
 		} else {
-			val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-			val |= GENMASK(1, 0);
-			writel(val, rcar_pcie6->base + PCIE6BOOTLC);
-
 			for (int i = 0; i < 1000; i++) {
 				val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-				if ((val & BIT(2)) == BIT(2)) {
+				if ((val & BIT(1)) == 0) {
 					boot_done = true;
 					break;
 				}
@@ -363,15 +359,14 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 					"BootLoader load complete on PCIe6_ch%d\n",
 					channel);
 
-			val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-			val &= ~BIT(1);
-			writel(val, rcar_pcie6->base + PCIE6BOOTLC);
-
 			rcar_gen5_pcie6_fwupdate(rcar_pcie6);
 
 			val = readl(rcar_pcie6->base + PCI6RESETC);
 			val |= GENMASK(3, 0);
 			writel(val, rcar_pcie6->base + PCI6RESETC);
+
+			dw_pcie6_writel_dbi(pci, PCIEG6_PF0_PHY_CONTROL_OFF, GENMASK(13, 12));
+			dw_pcie6_writel_dbi(pci, PCIEG6_PF0_GEN3_RELATED_OFF, BIT(9));
 
 			val = readl(rcar_pcie6->base + PCI6CPUCTLSTS);
 			val |= BIT(2);
@@ -398,6 +393,10 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 			val = readl(rcar_pcie6->base + PCI6CPUCTLSTS);
 			val &= ~BIT(2);
 			writel(val, rcar_pcie6->base + PCI6CPUCTLSTS);
+
+			val = readl(rcar_pcie6->base + PCI6RESETC);
+			val |= GENMASK(3, 0);
+			writel(val, rcar_pcie6->base + PCI6RESETC);
 		}
 	} else {
 		val = readl(rcar_pcie6->base + PCIE6BOOTLC);
