@@ -478,23 +478,99 @@
 	};
 
 	usb30_pins: usb0 {
-		groups = "usb0_vbus", "usb0";
-		function = "usb0";
+		//groups = "usb0_vbus", "usb0";
+		//function = "usb0";
+		mux {
+			groups = "usb0_vbus", "usb0";
+			function = "usb0";
+		};
+
+		ovc {
+			pins = "GP_10_1";
+			bias-pull-down;
+		};
+
+		pwen {
+			pins = "GP_10_0";
+			bias-pull-up;
+		};
+
+		vbus {
+			pins = "GP_10_2";
+			bias-pull-up;
+		};
 	};
 
 	usb20_pins: usb1 {
-		groups = "usb1_vbus", "usb1";
-		function = "usb1";
+		//groups = "usb1_vbus", "usb1";
+		//function = "usb1";
+		mux {
+			groups = "usb1_vbus", "usb1";
+			function = "usb1";
+		};
+
+		ovc {
+			pins = "GP_10_4";
+			bias-pull-down;
+		};
+
+		pwen {
+			pins = "GP_10_3";
+			bias-pull-up;
+		};
+
+		vbus {
+			pins = "GP_10_5";
+			bias-pull-up;
+		};
 	};
 
 	usb31_pins: usb2 {
-		groups = "usb2_vbus", "usb2";
-		function = "usb2";
+		//groups = "usb2_vbus", "usb2";
+		//function = "usb2";
+		mux {
+			groups = "usb2_vbus", "usb2";
+			function = "usb2";
+		};
+
+		ovc {
+			pins = "GP_10_7";
+			bias-pull-down;
+		};
+
+		pwen {
+			pins = "GP_10_6";
+			bias-pull-up;
+		};
+
+		vbus {
+			pins = "GP_10_8";
+			bias-pull-up;
+		};
 	};
 
 	usb21_pins: usb3 {
-		groups = "usb3_vbus", "usb3";
-		function = "usb3";
+		//groups = "usb3_vbus", "usb3";
+		//function = "usb3";
+		mux {
+			groups = "usb3_vbus", "usb3";
+			function = "usb3";
+		};
+
+		ovc {
+			pins = "GP_10_10";
+			bias-pull-down;
+		};
+
+		pwen {
+			pins = "GP_10_9";
+			bias-pull-up;
+		};
+
+		vbus {
+			pins = "GP_10_11";
+			bias-pull-up;
+		};
 	};
 
 	rpc_pins: rpc {
