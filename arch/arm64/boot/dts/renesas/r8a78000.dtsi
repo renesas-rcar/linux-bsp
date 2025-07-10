@@ -3198,6 +3198,232 @@
 			max-frequency = <200000000>;
 			status = "disabled";
 		};
+
+		vspi0: vspm@c5080000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xc5080000 0 0x8000>, <0 0xc5030000 0 0x200>;
+			interrupts = <GIC_SPI 643 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPI0>,
+					<&scmi_clk X5H_CLOCK_ID_FCPVI0>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <0>;
+			renesas,#rpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
+			renesas,#start_reservation = <2>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPI0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVI0>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
+
+		vspi1: vspm@c5088000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xc5088000 0 0x8000>, <0 0xc5031000 0 0x200>;
+			interrupts = <GIC_SPI 644 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPI1>,
+					<&scmi_clk X5H_CLOCK_ID_FCPVI1>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <1>;
+			renesas,#rpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
+			renesas,#start_reservation = <2>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPI1>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVI1>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
+
+		vspi2: vspm@c5090000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xc5090000 0 0x8000>, <0 0xc5032000 0 0x200>;
+			interrupts = <GIC_SPI 645 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPI2>,
+					<&scmi_clk X5H_CLOCK_ID_FCPVI2>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <2>;
+			renesas,#rpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
+			renesas,#start_reservation = <2>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPI2>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVI2>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
+
+		vspi3: vspm@c5098000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xc5098000 0 0x8000>, <0 0xc5033000 0 0x200>;
+			interrupts = <GIC_SPI 646 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPI3>,
+					<&scmi_clk X5H_CLOCK_ID_FCPVI3>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <3>;
+			renesas,#rpf = <1>;
+			renesas,#rpf_clut = <1>;
+			renesas,#wpf_rot = <1>;
+			renesas,has-sru;
+			renesas,has-uds;
+			renesas,has-lut;
+			renesas,has-clu;
+			renesas,has-hst;
+			renesas,has-hsi;
+			renesas,has-hgo;
+			renesas,has-hgt;
+			renesas,has-shp;
+			renesas,#read_outstanding = <2>;
+			renesas,#start_reservation = <2>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPI3>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVI3>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
+
+		vspb0: vspm@c50c0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xc50c0000 0 0x8000>, <0 0xc5038000 0 0x200>;
+			interrupts = <GIC_SPI 618 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPB0>,
+					<&scmi_clk X5H_CLOCK_ID_FCPVB0>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <4>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <6>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-bru;
+			renesas,#read_outstanding = <0>;
+			renesas,#start_reservation = <2>;
+			renesas,#burst_access = <0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB0>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
+
+		vspb1: vspm@c50c8000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xc50c8000 0 0x8000>, <0 0xc5039000 0 0x200>;
+			interrupts = <GIC_SPI 619 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPB1>,
+					<&scmi_clk X5H_CLOCK_ID_FCPVB1>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <5>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <6>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-bru;
+			renesas,#read_outstanding = <0>;
+			renesas,#start_reservation = <2>;
+			renesas,#burst_access = <0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB1>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB1>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
+
+		vspb2: vspm@c50d0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xc50d0000 0 0x8000>, <0 0xc503a000 0 0x200>;
+			interrupts = <GIC_SPI 620 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPB2>,
+					<&scmi_clk X5H_CLOCK_ID_FCPVB2>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <6>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <6>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-bru;
+			renesas,#read_outstanding = <0>;
+			renesas,#start_reservation = <2>;
+			renesas,#burst_access = <0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB2>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB2>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
+
+		vspb3: vspm@c50d8000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xc50d8000 0 0x8000>, <0 0xc503b000 0 0x200>;
+			interrupts = <GIC_SPI 621 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPB3>,
+					<&scmi_clk X5H_CLOCK_ID_FCPVB3>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <7>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <6>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-bru;
+			renesas,#read_outstanding = <0>;
+			renesas,#start_reservation = <2>;
+			renesas,#burst_access = <0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB3>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB3>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
+
+		vspb4: vspm@c50e0000 {
+			compatible = "renesas,vspm";
+			reg = <0 0xc50e0000 0 0x8000>, <0 0xc503c000 0 0x200>;
+			interrupts = <GIC_SPI 622 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPB4>,
+					<&scmi_clk X5H_CLOCK_ID_FCPVB4>;
+			clock-names = "vsp", "fcp";
+			renesas,#ch = <8>;
+			renesas,#rpf = <31>;
+			renesas,#rpf_clut = <6>;
+			renesas,#wpf_rot = <0>;
+			renesas,has-bru;
+			renesas,#read_outstanding = <0>;
+			renesas,#start_reservation = <2>;
+			renesas,#burst_access = <0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB4>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB4>;
+			reset-names = "vsp", "fcp";
+			status = "disabled";
+		};
 	};
 
 	timer {

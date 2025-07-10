@@ -137,6 +137,10 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 &mailbox {
@@ -630,4 +634,40 @@
 
 &ufs1_clk {
 	clock-frequency = <38400000>;
+};
+
+&vspi0 {
+	status = "okay";
+};
+
+&vspi1 {
+	status = "okay";
+};
+
+&vspi2 {
+	status = "okay";
+};
+
+&vspi3 {
+	status = "okay";
+};
+
+&vspb0 {
+	status = "okay";
+};
+
+&vspb1 {
+	status = "okay";
+};
+
+&vspb2 {
+	status = "okay";
+};
+
+&vspb3 {
+	status = "okay";
+};
+
+&vspb4 {
+	status = "okay";
 };
