@@ -1537,9 +1537,6 @@ static int rsw3_ether_port_init_one(struct rsw3_device *rdev)
 		err = rsw3_mii_register(rdev);
 		if (err < 0)
 			return err;
-		err = rsw3_phy_device_init(rdev);
-		if (err < 0)
-			goto err_phy_device_init;
 
 		rdev->pcs = devm_of_phy_get(&rdev->priv->pdev->dev, rdev->np_port, NULL);
 		if (IS_ERR(rdev->pcs)) {
@@ -1557,9 +1554,6 @@ static int rsw3_ether_port_init_one(struct rsw3_device *rdev)
 err_pcs_set_params:
 err_pcs_phy_get:
 	rsw3_phy_device_deinit(rdev);
-
-err_phy_device_init:
-	rsw3_mii_unregister(rdev);
 
 	return err;
 }
@@ -1631,6 +1625,27 @@ static int rsw3_open(struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
 	unsigned long flags;
+	int err;
+
+	/* Init PHY if not already connected */
+	if (!ndev->phydev) {
+		err = rsw3_phy_device_init(rdev);
+		if (err)
+			return err;
+
+		err = phy_init(rdev->pcs);
+		if (err) {
+			rsw3_phy_device_deinit(rdev);
+			return err;
+		}
+
+		err = rsw3_pcs_set_params(rdev);
+		if (err) {
+			phy_exit(rdev->pcs);
+			rsw3_phy_device_deinit(rdev);
+			return err;
+		}
+	}
 
 	napi_enable(&rdev->napi);
 
@@ -1644,7 +1659,7 @@ static int rsw3_open(struct net_device *ndev)
 	netif_start_queue(ndev);
 
 	return 0;
-};
+}
 
 static int rsw3_stop(struct net_device *ndev)
 {
@@ -1652,7 +1667,6 @@ static int rsw3_stop(struct net_device *ndev)
 	unsigned long flags;
 
 	netif_tx_stop_all_queues(ndev);
-
 	phy_stop(ndev->phydev);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
@@ -1664,7 +1678,7 @@ static int rsw3_stop(struct net_device *ndev)
 	napi_disable(&rdev->napi);
 
 	return 0;
-};
+}
 
 static bool rsw3_ext_desc_set_info1(struct rsw3_device *rdev,
 				    struct sk_buff *skb,
