@@ -2349,6 +2349,15 @@
 			status = "disabled";
 		};
 
+		tpu: pwm@c0720000 {
+			compatible = "renesas,tpu-r8a78000", "renesas,tpu";
+			reg = <0 0xc0720000 0 0x148>;
+			interrupts = <GIC_SPI 4087 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			#pwm-cells = <3>;
+			status = "disabled";
+		};
+
 		sys_dmac00: dma-controller@c0940000 {
 			compatible = "renesas,rcar-gen5-dmac";
 			reg = <0 0xc0940000 0 0x1000>,
