@@ -950,6 +950,13 @@
 		clock-frequency = <100000000>;
 	};
 
+	dummy_tcki: dummy_tcki {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <240000>;
+		clock-output-names = "rtcatcki";
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -2969,6 +2976,14 @@
 		rst: reset-controller@c1320000 {
 			compatible = "renesas,r8a78000-rst";
 			reg = <0 0xc1320000 0 0x4000>;
+		};
+
+		rtca: rtca@c1394000 {
+			compatible = "renesas,rtc-r8a78000", "renesas,rtc-rcar";
+			reg = <0 0xc1394000 0 0x70>;
+			clocks = <&dummy_tcki>;
+			clock-names = "ref_clk";
+			status = "disabled";
 		};
 
 		mp_phy: mp_phy@c9a00000 {
