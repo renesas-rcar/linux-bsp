@@ -18,6 +18,7 @@
 #include <linux/pwm.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/delay.h>
 
 #define TPU_CHANNEL_MAX		4
 
@@ -434,6 +435,61 @@ static const struct pwm_ops tpu_pwm_ops = {
 	.owner = THIS_MODULE,
 };
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE              0xc05d0000
+#define TPU_PDID               (0)
+#define TPU_CLK_MASK(n)        GENMASK((n) + 1, n)
+#define TPU_CLK_SHIFT(n)       (n)
+
+#define MDLC_PKCPROT0          (MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1          (MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)          (MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)         (MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0            (MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0            (MDLC_BASE + 0x0120)
+
+#define MDLC_MPDG              _MDLC_MPDG(TPU_PDID)
+#define MDLC_MPDGS             _MDLC_MPDGS(TPU_PDID)
+
+#define MDLC_MSRES(i)          (MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i) (       MDLC_BASE + 0x0960 + (i) * 4)
+
+static void tpu_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+       void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+       void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+       void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+       u32 val;
+
+       writel(0xA5A5A501, unlock);
+
+       if ((readl(msress) & TPU_CLK_MASK(pos)) == (mode << TPU_CLK_SHIFT(pos)))
+                       goto unmap;
+
+       while ((readl(msress) & TPU_CLK_MASK(pos)) != (readl(msres) & TPU_CLK_MASK(pos)))
+                       udelay(1000);
+
+       val = readl(msres);
+       val &= ~TPU_CLK_MASK(pos);
+       val |= mode << TPU_CLK_SHIFT(pos);
+       writel(val, msres);
+
+       while ((readl(msress) & TPU_CLK_MASK(pos)) != (readl(msres) & TPU_CLK_MASK(pos)))
+                       udelay(1000);
+
+unmap:
+       iounmap(unlock);
+       iounmap(msress);
+       iounmap(msres);
+}
+
+static void tpu_module_power_run(void)
+{
+       tpu_module_standby_set(7, 12, 0x03);
+}
+//--------------------------------------------------
+
 /* -----------------------------------------------------------------------------
  * Probe and remove
  */
@@ -473,6 +529,8 @@ static int tpu_probe(struct platform_device *pdev)
 	ret = devm_pwmchip_add(&pdev->dev, &tpu->chip);
 	if (ret < 0)
 		return dev_err_probe(&pdev->dev, ret, "Failed to register PWM chip\n");
+
+	tpu_module_power_run();
 
 	return 0;
 }
