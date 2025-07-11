@@ -938,6 +938,18 @@
 		clock-output-names = "rpc";
 	};
 
+	dummy_clk_sgasyncd16: dummy_clk_sgasyncd16 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <66666666>;
+	};
+
+	dummy_clk_s0asyncd8: dummy_clk_s0asyncd8 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <100000000>;
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -2254,6 +2266,86 @@
 				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
 				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
 				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		pwm0: pwm@c0740000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0740000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			status = "disabled";
+		};
+
+		pwm1: pwm@c0741000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0741000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			status = "disabled";
+		};
+
+		pwm2: pwm@c0742000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0742000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			status = "disabled";
+		};
+
+		pwm3: pwm@c0743000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0743000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			status = "disabled";
+		};
+
+		pwm4: pwm@c0780000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0780000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm5: pwm@c0781000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0781000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm6: pwm@c0782000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0782000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm7: pwm@c0783000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0783000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm8: pwm@c0784000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0784000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm9: pwm@c0785000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0785000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
 			status = "disabled";
 		};
 
