@@ -1058,6 +1058,66 @@
 			status = "disabled";
 		};
 
+		tmu0: timer@1c030000 {
+			compatible = "renesas,tmu";
+			reg = <0 0x1c030000 0 0x30>;
+			renesas,clk-rate-channel0;
+			interrupts = <GIC_SPI 4114 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4115 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4116 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_TMU0>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		tmu1: timer@c0680000 {
+			compatible = "renesas,tmu";
+			reg = <0 0xc0680000 0 0x30>;
+			interrupts = <GIC_SPI 4117 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4118 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4119 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4120 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_TMU1>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		tmu2: timer@c0690000 {
+			compatible = "renesas,tmu";
+			reg = <0 0xc0690000 0 0x30>;
+			interrupts = <GIC_SPI 4121 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4122 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4123 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4124 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_TMU2>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		tmu3: timer@c06a0000 {
+			compatible = "renesas,tmu";
+			reg = <0 0xc06a0000 0 0x30>;
+			interrupts = <GIC_SPI 4125 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4126 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4127 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4128 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_TMU3>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		tmu4: timer@c06b0000 {
+			compatible = "renesas,tmu";
+			reg = <0 0xc06b0000 0 0x30>;
+			interrupts = <GIC_SPI 4129 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4130 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4131 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4132 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_TMU4>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
 		i2c0: i2c@c11d0000 {
 			compatible = "renesas,i2c-r8a78000",
 				     "renesas,rcar-gen5-i2c";
