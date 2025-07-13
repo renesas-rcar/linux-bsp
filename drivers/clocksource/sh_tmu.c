@@ -28,6 +28,162 @@
 #include <asm/platform_early.h>
 #endif
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE_TMU_1234     0xc05d0000  /* TMU channels 1,2,3,4 */
+#define MDLC_BASE_TMU_0        0x19440000  /* TMU channel 0 */
+
+#define TMU_PDID               (0)
+#define TMU_CLK_MASK(n)        GENMASK((n) + 1, n)
+#define TMU_CLK_SHIFT(n)       (n)
+
+/* Common register offsets (same for both base addresses) */
+#define MDLC_PKCPROT1_OFFSET   0x0cf4
+#define MDLC_MSRES_OFFSET(i)   (0x0900 + (i) * 4)
+#define MDLC_MSRESS_OFFSET(i)  (0x0960 + (i) * 4)
+
+/* TMU Channel Configuration Structure */
+struct tmu_clk_config {
+	u32 base_addr;      /* MDLC base address */
+	u8  reg_num;        /* Register number */
+	u8  bit_pos;        /* Bit position in register */
+	const char *name;   /* Channel name for debugging */
+};
+
+/* TMU Clock Configuration Table */
+static const struct tmu_clk_config tmu_configs[] = {
+	/* TMU Channel 0 */
+	{
+		.base_addr = MDLC_BASE_TMU_0,
+		.reg_num = 10,
+		.bit_pos = 0,
+		.name = "TMU0"
+	},
+	/* TMU Channel 1 */
+	{
+		.base_addr = MDLC_BASE_TMU_1234,
+		.reg_num = 7,
+		.bit_pos = 4,
+		.name = "TMU1"
+	},
+	/* TMU Channel 2 */
+	{
+		.base_addr = MDLC_BASE_TMU_1234,
+		.reg_num = 7,
+		.bit_pos = 6,
+		.name = "TMU2"
+	},
+	/* TMU Channel 3 */
+	{
+		.base_addr = MDLC_BASE_TMU_1234,
+		.reg_num = 7,
+		.bit_pos = 8,
+		.name = "TMU3"
+	},
+	/* TMU Channel 4 */
+	{
+		.base_addr = MDLC_BASE_TMU_1234,
+		.reg_num = 7,
+		.bit_pos = 10,
+		.name = "TMU4"
+	}
+};
+
+#define TMU_CHANNEL_MAX  (ARRAY_SIZE(tmu_configs))
+
+static int tmu_module_standy_set_base(u32 base_addr, u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock, *msress, *msres;
+	u32 val;
+	int ret = 0;
+
+	/* Map registers with the specified base address */
+	unlock = ioremap(base_addr + MDLC_PKCPROT1_OFFSET, 4);
+	msress = ioremap(base_addr + MDLC_MSRESS_OFFSET(clk_reg_no), 4);
+	msres = ioremap(base_addr + MDLC_MSRES_OFFSET(clk_reg_no), 4);
+
+	if (!unlock || !msress || !msres) {
+		pr_err("TMU: Failed to map registers (base=0x%08x, reg=%d)\n",
+		base_addr, clk_reg_no);
+		ret = -ENOMEM;
+		goto unmap;
+	}
+
+	/* Unlock register access */
+	writel(0xA5A5A501, unlock);
+
+	/* Check if already in desired state */
+	if ((readl(msress) & TMU_CLK_MASK(pos)) == (mode << TMU_CLK_SHIFT(pos))) {
+		pr_debug("TMU: Clock already in desired state (base=0x%08x, reg=%d, pos=%d)\n",
+			base_addr, clk_reg_no, pos);
+		goto unmap;
+	}
+
+	/* Wait for register synchronization */
+	while ((readl(msress) & TMU_CLK_MASK(pos)) != (readl(msres) & TMU_CLK_MASK(pos))) {
+		udelay(1000);
+	}
+
+	/* Update clock setting */
+	val = readl(msres);
+	val &= ~TMU_CLK_MASK(pos);
+	val |= mode << TMU_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	/* Wait for setting to take effect */
+	while ((readl(msress) & TMU_CLK_MASK(pos)) != (readl(msres) & TMU_CLK_MASK(pos))) {
+		udelay(1000);
+	}
+
+	pr_debug("TMU: Clock %s (base=0x%08x, reg=%d, pos=%d, mode=0x%02x)\n",
+		(mode == 0x03) ? "enabled" : "disabled",
+		base_addr, clk_reg_no, pos, mode);
+
+unmap:
+	if (unlock) iounmap(unlock);
+	if (msress) iounmap(msress);
+	if (msres) iounmap(msres);
+
+	return ret;
+}
+
+static int tmu_channel_clock_control(unsigned int channel, bool enable)
+{
+	const struct tmu_clk_config *config;
+	u8 mode;
+
+	if (channel >= TMU_CHANNEL_MAX) {
+		//pr_err("TMU: Invalid channel %d (max=%d)\n", channel, TMU_CHANNEL_MAX - 1);
+		return -EINVAL;
+	}
+
+	config = &tmu_configs[channel];
+	mode = enable ? 0x03 : 0x01;
+
+	return tmu_module_standy_set_base(config->base_addr,
+					config->reg_num,
+					config->bit_pos,
+					mode);
+}
+
+static void tmu_module_clk_disable_all(void)
+{
+	int i;
+
+	for (i = 0; i < TMU_CHANNEL_MAX; i++) {
+		tmu_channel_clock_control(i, false);
+	}
+}
+
+static void tmu_module_clk_enable_all(void)
+{
+	int i;
+
+	for (i = 0; i < TMU_CHANNEL_MAX; i++) {
+		tmu_channel_clock_control(i, true);
+	}
+}
+/* --------------------------------------------------------------------------------------- */
+
 enum sh_tmu_model {
 	SH_TMU,
 	SH_TMU_SH3,
@@ -65,6 +221,7 @@ struct sh_tmu_device {
 
 	bool has_clockevent;
 	bool has_clocksource;
+	bool clk_rate_channel;
 };
 
 #define TSTR -1 /* shared register */
@@ -143,15 +300,16 @@ static void sh_tmu_start_stop_ch(struct sh_tmu_channel *ch, int start)
 
 static int __sh_tmu_enable(struct sh_tmu_channel *ch)
 {
-	int ret;
+	//int ret;
 
 	/* enable clock */
-	ret = clk_enable(ch->tmu->clk);
-	if (ret) {
-		dev_err(&ch->tmu->pdev->dev, "ch%u: cannot enable clock\n",
-			ch->index);
-		return ret;
-	}
+	//ret = clk_enable(ch->tmu->clk);
+	//if (ret) {
+	//	dev_err(&ch->tmu->pdev->dev, "ch%u: cannot enable clock\n",
+	//		ch->index);
+	//	return ret;
+	//}
+	tmu_module_clk_enable_all();
 
 	/* make sure channel is disabled */
 	sh_tmu_start_stop_ch(ch, 0);
@@ -189,7 +347,8 @@ static void __sh_tmu_disable(struct sh_tmu_channel *ch)
 	sh_tmu_write(ch, TCR, TCR_TPSC_CLK4);
 
 	/* stop clock */
-	clk_disable(ch->tmu->clk);
+	//clk_disable(ch->tmu->clk);
+	tmu_module_clk_disable_all();
 }
 
 static void sh_tmu_disable(struct sh_tmu_channel *ch)
@@ -550,23 +709,30 @@ static int sh_tmu_setup(struct sh_tmu_device *tmu, struct platform_device *pdev)
 	}
 
 	/* Get hold of clock. */
-	tmu->clk = clk_get(&tmu->pdev->dev, "fck");
-	if (IS_ERR(tmu->clk)) {
-		dev_err(&tmu->pdev->dev, "cannot get clock\n");
-		return PTR_ERR(tmu->clk);
-	}
+	//tmu->clk = clk_get(&tmu->pdev->dev, "fck");
+	//if (IS_ERR(tmu->clk)) {
+	//	dev_err(&tmu->pdev->dev, "cannot get clock\n");
+	//	return PTR_ERR(tmu->clk);
+	//}
 
-	ret = clk_prepare(tmu->clk);
-	if (ret < 0)
-		goto err_clk_put;
+	//ret = clk_prepare(tmu->clk);
+	//if (ret < 0)
+	//	goto err_clk_put;
 
 	/* Determine clock rate. */
-	ret = clk_enable(tmu->clk);
-	if (ret < 0)
-		goto err_clk_unprepare;
+	//ret = clk_enable(tmu->clk);
+	//if (ret < 0)
+	//	goto err_clk_unprepare;
 
-	tmu->rate = clk_get_rate(tmu->clk) / 4;
-	clk_disable(tmu->clk);
+	tmu_module_clk_enable_all();
+	//tmu->rate = clk_get_rate(tmu->clk) / 4;
+	if(tmu->clk_rate_channel) {
+		tmu->rate = 16666666 / 4;
+	} else {
+		tmu->rate = 133333333 / 4;
+	}
+	//clk_disable(tmu->clk);
+	tmu_module_clk_disable_all();
 
 	/* Map the memory resource. */
 	ret = sh_tmu_map_memory(tmu);
@@ -602,16 +768,19 @@ err_unmap:
 	kfree(tmu->channels);
 	iounmap(tmu->mapbase);
 err_clk_unprepare:
-	clk_unprepare(tmu->clk);
-err_clk_put:
-	clk_put(tmu->clk);
+	//clk_unprepare(tmu->clk);
+	tmu_module_clk_enable_all();
+//err_clk_put:
+//	clk_put(tmu->clk);
 	return ret;
 }
 
 static int sh_tmu_probe(struct platform_device *pdev)
 {
 	struct sh_tmu_device *tmu = platform_get_drvdata(pdev);
+	struct device_node *np = pdev->dev.of_node;
 	int ret;
+	int clk_channel;
 
 	if (!is_sh_early_platform_device(pdev)) {
 		pm_runtime_set_active(&pdev->dev);
@@ -626,6 +795,9 @@ static int sh_tmu_probe(struct platform_device *pdev)
 	tmu = kzalloc(sizeof(*tmu), GFP_KERNEL);
 	if (tmu == NULL)
 		return -ENOMEM;
+
+	clk_channel = of_property_read_bool(np, "renesas,clk-rate-channel0");
+	tmu->clk_rate_channel = clk_channel ? true : false;
 
 	ret = sh_tmu_setup(tmu, pdev);
 	if (ret) {
