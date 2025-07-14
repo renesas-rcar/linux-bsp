@@ -1814,11 +1814,131 @@
 			status = "disabled";
 		};
 
-		rt_dmac0: dma-controller@194380000 {
+		sys_dmac00: dma-controller@c0940000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xc0940000 0 0x1000>,
+			      <0 0xc0900000 0 0x10000>;
+			interrupts = <GIC_SPI 386 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 393 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 394 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 395 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 396 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 397 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 398 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 399 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 400 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 401 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 403 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 404 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 405 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 406 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 407 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					"ch0", "ch1", "ch2", "ch3",
+					"ch4", "ch5", "ch6", "ch7",
+					"ch8", "ch9", "ch10", "ch11",
+					"ch12", "ch13", "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		sys_dmac10: dma-controller@c05c4000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xc05c4000 0 0x1000>,
+			      <0 0xc0480000 0 0x10000>;
+			interrupts = <GIC_SPI 388 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 409 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 410 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 411 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 412 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 413 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 414 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 415 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 417 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 418 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 419 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 420 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 421 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 422 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		sys_dmac11: dma-controller@c05c5000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xc05c5000 0 0x1000>,
+			      <0 0xc0490000 0 0x10000>;
+			interrupts = <GIC_SPI 358 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 425 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 426 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 427 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 428 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 429 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 430 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 431 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 432 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 433 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 434 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 435 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 437 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 438 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 440 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		sys_dmac12: dma-controller@c05c6000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xc05c6000 0 0x1000>,
+			      <0 0xc04a0000 0 0x10000>;
+			interrupts = <GIC_SPI 360 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 441 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 442 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 443 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 445 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 446 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 447 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 448 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 450 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 451 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 452 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 453 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 454 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 455 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 456 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		rt_dmac0: dma-controller@19438000 {
 			compatible = "renesas,rcar-gen5-dmac";
 			reg = <0 0x19438000 0 0x1000>,
 			      <0 0x18900000 0 0x10000>;
-			interrupts = <GIC_SPI 313 IRQ_TYPE_LEVEL_HIGH>,
+			interrupts = <GIC_SPI 314 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 321 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 322 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 323 IRQ_TYPE_LEVEL_HIGH>,
@@ -1836,10 +1956,10 @@
 				     <GIC_SPI 335 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 336 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "error",
-					  "ch0", "ch1", "ch2", "ch3",
-					  "ch4", "ch5", "ch6", "ch7",
-					  "ch8", "ch9", "ch10", "ch11",
-					  "ch12", "ch13", "ch14", "ch15";
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
@@ -1848,7 +1968,7 @@
 			compatible = "renesas,rcar-gen5-dmac";
 			reg = <0 0x19439000 0 0x1000>,
 			      <0 0x18910000 0 0x10000>;
-			interrupts = <GIC_SPI 315 IRQ_TYPE_LEVEL_HIGH>,
+			interrupts = <GIC_SPI 316 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 337 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 338 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 339 IRQ_TYPE_LEVEL_HIGH>,
@@ -1866,10 +1986,10 @@
 				     <GIC_SPI 351 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 352 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "error",
-					  "ch0", "ch1", "ch2", "ch3",
-					  "ch4", "ch5", "ch6", "ch7",
-					  "ch8", "ch9", "ch10", "ch11",
-					  "ch12", "ch13", "ch14", "ch15";
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
@@ -1878,7 +1998,7 @@
 			compatible = "renesas,rcar-gen5-dmac";
 			reg = <0 0x1943a000 0 0x1000>,
 			      <0 0x18920000 0 0x10000>;
-			interrupts = <GIC_SPI 317 IRQ_TYPE_LEVEL_HIGH>,
+			interrupts = <GIC_SPI 318 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 353 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 354 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 355 IRQ_TYPE_LEVEL_HIGH>,
@@ -1896,10 +2016,10 @@
 				     <GIC_SPI 367 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 368 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "error",
-					  "ch0", "ch1", "ch2", "ch3",
-					  "ch4", "ch5", "ch6", "ch7",
-					  "ch8", "ch9", "ch10", "ch11",
-					  "ch12", "ch13", "ch14", "ch15";
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
@@ -1908,7 +2028,7 @@
 			compatible = "renesas,rcar-gen5-dmac";
 			reg = <0 0x1943b000 0 0x1000>,
 			      <0 0x18930000 0 0x10000>;
-			interrupts = <GIC_SPI 319 IRQ_TYPE_LEVEL_HIGH>,
+			interrupts = <GIC_SPI 320 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 369 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 370 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 371 IRQ_TYPE_LEVEL_HIGH>,
@@ -1926,10 +2046,250 @@
 				     <GIC_SPI 383 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 384 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "error",
-					  "ch0", "ch1", "ch2", "ch3",
-					  "ch4", "ch5", "ch6", "ch7",
-					  "ch8", "ch9", "ch10", "ch11",
-					  "ch12", "ch13", "ch14", "ch15";
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		audio_dmac0: dma-controller@ec720000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xec720000 0 0x1000>,
+			      <0 0xec700000 0 0x10000>;
+			interrupts = <GIC_SPI 242 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 249 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 251 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 252 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 253 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 254 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 256 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 257 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 259 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 263 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 264 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		audio_dmac1: dma-controller@ec721000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xec721000 0 0x1000>,
+			      <0 0xec710000 0 0x10000>;
+			interrupts = <GIC_SPI 244 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 267 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 268 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 269 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 270 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 271 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 272 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 273 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 274 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 275 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 276 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 277 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 278 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 280 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		audio_dmac2: dma-controller@ed720000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xed720000 0 0x1000>,
+			      <0 0xed700000 0 0x10000>;
+			interrupts = <GIC_SPI 246 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 281 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 282 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 283 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 284 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 285 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 286 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 287 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 288 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 289 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 290 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 291 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 292 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 293 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 294 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 295 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 296 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		audio_dmac3: dma-controller@ed721000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xed721000 0 0x1000>,
+			      <0 0xed710000 0 0x10000>;
+			interrupts = <GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 297 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 298 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 299 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 300 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 301 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 302 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 303 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 304 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 305 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 306 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 307 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 308 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 309 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 310 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 311 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 312 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		scp_dmac0: dma-controller@c11e8000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xc11e8000 0 0x1000>,
+			      <0 0xc11a0000 0 0x10000>;
+			interrupts = <GIC_SPI 4567 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4568 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4569 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4570 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4571 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4572 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4573 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4574 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4575 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4576 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4577 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4578 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4579 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4580 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4581 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4582 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4583 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		scp_dmac1: dma-controller@c11e9000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0xc11e9000 0 0x1000>,
+			      <0 0xc11b0000 0 0x10000>;
+			interrupts = <GIC_SPI 4585 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4586 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4587 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4588 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4589 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4590 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4591 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4592 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4593 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4594 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4595 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4596 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4597 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4598 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4599 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4600 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4601 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		rtt_dmac0: dma-controller@1943c000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0x1943c000 0 0x1000>,
+			      <0 0x189c0000 0 0x10000>;
+			interrupts = <GIC_SPI 4252 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4219 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4220 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4221 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4222 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4223 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4224 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4225 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4226 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4227 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4228 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4229 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4230 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4231 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4232 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4233 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4234 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
+			#dma-cells = <1>;
+			dma-channels = <16>;
+		};
+
+		rtt_dmac1: dma-controller@1943d000 {
+			compatible = "renesas,rcar-gen5-dmac";
+			reg = <0 0x1943d000 0 0x1000>,
+			      <0 0x189d0000 0 0x10000>;
+			interrupts = <GIC_SPI 4254 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4235 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4236 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4237 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4238 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4239 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4240 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4241 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4242 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4243 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4244 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4245 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4246 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4247 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4248 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4249 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4250 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "error",
+					  "ch0", "ch1", "ch2", "ch3", "ch4",
+					  "ch5", "ch6", "ch7", "ch8", "ch9",
+					  "ch10", "ch11", "ch12", "ch13",
+					  "ch14", "ch15";
 			#dma-cells = <1>;
 			dma-channels = <16>;
 		};
