@@ -18,6 +18,7 @@
  * Non-MACsec ports: 0 to 7
  * MACsec ports: 8 to 12
  */
+#define RSWITCH3_NUM_AGENTS	15
 #define RSWITCH3_NUM_PORTS	13
 
 #define RSWITCH3_GWCA_IDX_TO_HW_NUM(i)	((i) + RSWITCH3_NUM_PORTS)
@@ -35,7 +36,7 @@
 			continue;				\
 		else
 
-#define TX_RING_SIZE		1024
+#define TX_RING_SIZE		2048
 #define RX_RING_SIZE		4096
 
 #define RSWITCH3_MAX_MTU		9600
@@ -805,15 +806,18 @@ enum rsw3_etha_mode {
 
 #define EAVCC_VEM_SC_TAG	(0x3 << 16)
 
-#define MPIC_PIS_MII		0x00
-#define MPIC_PIS_GMII		0x02
-#define MPIC_PIS_XGMII		0x04
-#define MPIC_LSC_SHIFT		3
-#define MPIC_LSC_100M		(1 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_1G		(2 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_2_5G		(3 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_5G		(4 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_10G		(5 << MPIC_LSC_SHIFT)
+#define MPIC_PIS		GENMASK(2, 0)
+#define MPIC_PIS_GMII		2
+#define MPIC_PIS_XGMII		4
+#define MPIC_LSC		GENMASK(5, 3)
+#define MPIC_LSC_100M		1
+#define MPIC_LSC_1G		2
+#define MPIC_LSC_2_5G		3
+#define MPIC_LSC_5G		4
+#define MPIC_LSC_10G		5
+
+#define MPIC_PSMCS		GENMASK(22, 16)
+#define MPIC_PSMHT		GENMASK(26, 24)
 
 #define MPSM_PSME		BIT(0)
 #define MPSM_MFF		BIT(2)
@@ -833,14 +837,6 @@ enum rsw3_etha_mode {
 #define MMIS1_PWACS		BIT(1) /* Write */
 #define MMIS1_PRACS		BIT(0) /* Read */
 #define MMIS1_CLEAR_FLAGS 	0xf
-
-#define MPIC_PSMCS_SHIFT	16
-#define MPIC_PSMCS_MASK		GENMASK(22, MPIC_PSMCS_SHIFT)
-#define MPIC_PSMCS(val)		((val) << MPIC_PSMCS_SHIFT)
-
-#define MPIC_PSMHT_SHIFT	24
-#define MPIC_PSMHT_MASK		GENMASK(26, MPIC_PSMHT_SHIFT)
-#define MPIC_PSMHT(val)		((val) << MPIC_PSMHT_SHIFT)
 
 #define MLVC_PLV		BIT(16)
 
@@ -898,6 +894,7 @@ enum rsw3_gwca_mode {
 #define CABPPFLC_INIT_VALUE	0x00800080
 
 /* MFWD */
+#define FWPC0(i)		(FWPC00 + (i) * 0x10)
 #define FWPC0_LTHTA		BIT(0)
 #define FWPC0_IP4UE		BIT(3)
 #define FWPC0_IP4TE		BIT(4)
@@ -911,15 +908,15 @@ enum rsw3_gwca_mode {
 #define FWPC0_MACHMA		BIT(27)
 #define FWPC0_VLANSA		BIT(28)
 
-#define FWPC0(i)		(FWPC00 + (i) * 0x10)
-#define FWPC0_DEFAULT		(FWPC0_LTHTA | FWPC0_IP4UE | FWPC0_IP4TE | \
-				 FWPC0_IP4OE | FWPC0_L2SE | FWPC0_IP4EA | \
-				 FWPC0_IPDSA | FWPC0_IPHLA | FWPC0_MACSDA | \
-				 FWPC0_MACHLA |	FWPC0_MACHMA | FWPC0_VLANSA)
 #define FWPC1(i)		(FWPC10 + (i) * 0x10)
+#define FWCP1_LTHFW		GENMASK(16 + (RSWITCH3_NUM_AGENTS - 1), 16)
 #define FWPC1_DDE		BIT(0)
 
-#define	FWPBFC(i)		(FWPBFC00 + (i) * 0x10)
+#define FWPC2(i)		(FWPC20 + (i) * 0x10)
+#define FWCP2_LTWFW		GENMASK(16 + (RSWITCH3_NUM_AGENTS - 1), 16)
+
+#define FWPBFC(i)		(FWPBFC00 + (i) * 0x10)
+#define FWPBFC_PBDV		GENMASK(RSWITCH3_NUM_AGENTS - 1, 0)
 
 #define FWPBFCSDC(j, i)		(FWPBFCSDC00 + (i) * 0x20 + (j) * 0x04)
 
@@ -1067,7 +1064,6 @@ struct rsw3_gwca {
 	DECLARE_BITMAP(used, RSWITCH3_MAX_NUM_QUEUES);
 	u32 tx_irq_bits[RSWITCH3_NUM_IRQ_REGS];
 	u32 rx_irq_bits[RSWITCH3_NUM_IRQ_REGS];
-	int speed;
 };
 
 #define NUM_QUEUES_PER_NDEV	2

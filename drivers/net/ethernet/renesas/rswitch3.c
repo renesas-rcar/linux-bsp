@@ -170,28 +170,38 @@ static void rsw3_top_init(struct rsw3_private *priv)
 /* Forwarding engine block (MFWD) */
 static void rsw3_fwd_init(struct rsw3_private *priv)
 {
+	u32 all_ports_mask = GENMASK(RSWITCH3_NUM_AGENTS - 1, 0);
 	unsigned int i;
 
-	/* For ETHA */
-	for (i = 0; i < rswitch3_num_ports; i++) {
-		iowrite32(FWPC0_DEFAULT, priv->addr + FWPC0(i));
+	/* Start with empty configuration */
+	for (i = 0; i < RSWITCH3_NUM_AGENTS; i++) {
+		/* Disable all port features */
+		iowrite32(0, priv->addr + FWPC0(i));
+		/* Disallow L3 forwarding and direct descriptor forwarding */
+		iowrite32(FIELD_PREP(FWCP1_LTHFW, all_ports_mask),
+			 priv->addr + FWPC1(i));
+		/* Disallow L2 forwarding */
+		iowrite32(FIELD_PREP(FWCP2_LTWFW, all_ports_mask),
+			  priv->addr + FWPC2(i));
+		/* Disallow port based forwarding */
 		iowrite32(0, priv->addr + FWPBFC(i));
 	}
 
-	for (i = 0; i < rswitch3_num_ports; i++) {
+	/* For enabled ETHA ports, setup port based forwarding */
+	rsw3_for_each_enabled_port(priv, i) {
+		/* Port based forwarding from port i to GWCA port */
+		rsw3_modify(priv->addr, FWPBFC(i), FWPBFC_PBDV,
+			       FIELD_PREP(FWPBFC_PBDV, BIT(priv->gwca.index)));
+		/* Within GWCA port, forward to Rx queue for port i */
 		if (priv->rdev[i]->disabled)
 			continue;
 
 		iowrite32(priv->rdev[i]->rx_queue->index,
 			  priv->addr + FWPBFCSDC(GWCA_INDEX, i));
-		iowrite32(BIT(priv->gwca.index), priv->addr + FWPBFC(i));
 	}
 
-	/* For GWCA */
-	iowrite32(FWPC0_DEFAULT, priv->addr + FWPC0(priv->gwca.index));
-	iowrite32(FWPC1_DDE, priv->addr + FWPC1(priv->gwca.index));
-	iowrite32(0, priv->addr + FWPBFC(priv->gwca.index));
-	iowrite32(GENMASK(rswitch3_num_ports - 1, 0), priv->addr + FWPBFC(priv->gwca.index));
+	/* For GWCA port, allow direct descriptor forwarding */
+	rsw3_modify(priv->addr, FWPC1(priv->gwca.index), FWPC1_DDE, FWPC1_DDE);
 }
 
 /* Gateway CPU agent block (GWCA) */
@@ -871,24 +881,22 @@ static void rsw3_tx_free(struct net_device *ndev)
 	struct rsw3_ext_desc *desc;
 	struct sk_buff *skb;
 
-	for (; rsw3_get_num_cur_queues(gq) > 0;
-	     gq->dirty = rsw3_next_queue_index(gq, false, 1)) {
-		desc = &gq->tx_ring[gq->dirty];
-		if ((desc->desc.die_dt & DT_MASK) != DT_FEMPTY)
-			break;
-
+	desc = &gq->tx_ring[gq->dirty];
+	while ((desc->desc.die_dt & DT_MASK) == DT_FEMPTY) {
 		dma_rmb();
 		skb = gq->skbs[gq->dirty];
 		if (skb) {
+			rdev->ndev->stats.tx_packets++;
+			rdev->ndev->stats.tx_bytes += skb->len;
 			dma_unmap_single(ndev->dev.parent,
 					 gq->unmap_addrs[gq->dirty],
 					 skb->len, DMA_TO_DEVICE);
 			dev_kfree_skb_any(gq->skbs[gq->dirty]);
 			gq->skbs[gq->dirty] = NULL;
-			rdev->ndev->stats.tx_packets++;
-			rdev->ndev->stats.tx_bytes += skb->len;
 		}
 		desc->desc.die_dt = DT_EEMPTY;
+		gq->dirty = rsw3_next_queue_index(gq, false, 1);
+		desc = &gq->tx_ring[gq->dirty];
 	}
 }
 
@@ -917,8 +925,10 @@ retry:
 
 	if (napi_complete_done(napi, budget - quota)) {
 		spin_lock_irqsave(&priv->lock, flags);
-		rsw3_enadis_data_irq(priv, rdev->tx_queue->index, true);
-		rsw3_enadis_data_irq(priv, rdev->rx_queue->index, true);
+		if (test_bit(rdev->port, priv->opened_ports)) {
+			rsw3_enadis_data_irq(priv, rdev->tx_queue->index, true);
+			rsw3_enadis_data_irq(priv, rdev->rx_queue->index, true);
+		}
 		spin_unlock_irqrestore(&priv->lock, flags);
 	}
 
@@ -1056,32 +1066,47 @@ static int __maybe_unused rsw3_etha_wait_link_verification(struct rsw3_etha *eth
 
 static void rsw3_rmac_setting(struct rsw3_etha *etha, const u8 *mac)
 {
-	u32 val;
+	u32 pis, lsc;
 
 	rsw3_etha_write_mac_address(etha, mac);
 
-	switch (etha->speed) {
-	case 100:
-		val = MPIC_LSC_100M;
+	switch (etha->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
+		pis = MPIC_PIS_GMII;
 		break;
-	case 1000:
-		val = MPIC_LSC_1G;
-		break;
-	case 2500:
-		val = MPIC_LSC_2_5G;
-		break;
-	case 5000:
-		val = MPIC_LSC_5G;
-		break;
-	case 10000:
-		val = MPIC_LSC_10G;
+	case PHY_INTERFACE_MODE_USXGMII:
+	case PHY_INTERFACE_MODE_5GBASER:
+	case PHY_INTERFACE_MODE_10GBASER:
+		pis = MPIC_PIS_XGMII;
 		break;
 	default:
-		return;
+		pis = FIELD_GET(MPIC_PIS, ioread32(etha->addr + MPIC));
+		break;
 	}
 
-	iowrite32(MPIC_PIS_GMII | val, etha->addr + MPIC);
+	switch (etha->speed) {
+	case 100:
+		lsc = MPIC_LSC_100M;
+		break;
+	case 1000:
+		lsc = MPIC_LSC_1G;
+		break;
+	case 2500:
+		lsc = MPIC_LSC_2_5G;
+		break;
+	case 5000:
+		lsc = MPIC_LSC_5G;
+		break;
+	case 10000:
+		lsc = MPIC_LSC_10G;
+		break;
+	default:
+		lsc = FIELD_GET(MPIC_LSC, ioread32(etha->addr + MPIC));
+		break;
+	}
 
+	rsw3_modify(etha->addr, MPIC, MPIC_PIS | MPIC_LSC,
+		      FIELD_PREP(MPIC_PIS, pis) | FIELD_PREP(MPIC_LSC, lsc));
 	/* Set MIOC Bit(3)*/
 	if (etha->connect_to_xpcs) {
 		if (etha->index >= 5 && etha->index <= 7) {
@@ -1094,9 +1119,9 @@ static void rsw3_rmac_setting(struct rsw3_etha *etha, const u8 *mac)
 
 static void rsw3_etha_enable_mii(struct rsw3_etha *etha)
 {
-	rsw3_modify(etha->addr, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
-		       MPIC_PSMCS(etha->psmcs) | MPIC_PSMHT(0x06));
-	rsw3_modify(etha->addr, MPSM, 0, MPSM_MMF_C45);
+	rsw3_modify(etha->addr, MPIC, MPIC_PSMCS | MPIC_PSMHT,
+		      FIELD_PREP(MPIC_PSMCS, etha->psmcs) |
+		      FIELD_PREP(MPIC_PSMHT, 0x06));
 }
 
 static int rsw3_etha_mii_hw_init(struct rsw3_etha *etha)
@@ -1595,7 +1620,7 @@ static void rsw3_ether_port_deinit_all(struct rsw3_private *priv)
 {
 	unsigned int i;
 
-	for (i = 0; i < rswitch3_num_ports; i++) {
+	rsw3_for_each_enabled_port(priv, i) {
 		phy_exit(priv->rdev[i]->pcs);
 
 		rsw3_ether_port_deinit_one(priv->rdev[i]);
@@ -1607,17 +1632,16 @@ static int rsw3_open(struct net_device *ndev)
 	struct rsw3_device *rdev = netdev_priv(ndev);
 	unsigned long flags;
 
-	phy_start(ndev->phydev);
-
 	napi_enable(&rdev->napi);
-	netif_start_queue(ndev);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
+	bitmap_set(rdev->priv->opened_ports, rdev->port, 1);
 	rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue->index, true);
 	rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue->index, true);
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
-	bitmap_set(rdev->priv->opened_ports, rdev->port, 1);
+	phy_start(ndev->phydev);
+	netif_start_queue(ndev);
 
 	return 0;
 };
@@ -1628,14 +1652,15 @@ static int rsw3_stop(struct net_device *ndev)
 	unsigned long flags;
 
 	netif_tx_stop_all_queues(ndev);
-	bitmap_clear(rdev->priv->opened_ports, rdev->port, 1);
+
+	phy_stop(ndev->phydev);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
 	rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue->index, false);
 	rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue->index, false);
+	bitmap_clear(rdev->priv->opened_ports, rdev->port, 1);
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
-	phy_stop(ndev->phydev);
 	napi_disable(&rdev->napi);
 
 	return 0;
@@ -1731,8 +1756,11 @@ static netdev_tx_t rsw3_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (dma_mapping_error(ndev->dev.parent, dma_addr_orig))
 		goto err_kfree;
 
-	gq->skbs[gq->cur] = skb;
-	gq->unmap_addrs[gq->cur] = dma_addr_orig;
+	/* Stored the skb at the last descriptor to avoid skb free before hardware completes send */
+	gq->skbs[(gq->cur + nr_desc - 1) % gq->ring_size] = skb;
+	gq->unmap_addrs[(gq->cur + nr_desc - 1) % gq->ring_size] = dma_addr_orig;
+
+	dma_wmb();
 
 	/* DT_FSTART should be set at last. So, this is reverse order. */
 	for (i = nr_desc; i-- > 0; ) {
@@ -1744,14 +1772,13 @@ static netdev_tx_t rsw3_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 			goto err_unmap;
 	}
 
-	wmb();	/* gq->cur must be incremented after die_dt was set */
-
 	gq->cur = rsw3_next_queue_index(gq, true, nr_desc);
 	rsw3_modify(rdev->addr, GWTRC(gq->index), 0, BIT(gq->index % 32));
 
 	return ret;
 
 err_unmap:
+	gq->skbs[(gq->cur + nr_desc - 1) % gq->ring_size] = NULL;
 	dma_unmap_single(ndev->dev.parent, dma_addr_orig, skb->len, DMA_TO_DEVICE);
 
 err_kfree:
@@ -1853,7 +1880,6 @@ static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
 	rdev->np_port = rsw3_get_port_node(rdev);
 	rdev->disabled = !rdev->np_port;
 	err = of_get_ethdev_address(rdev->np_port, ndev);
-	of_node_put(rdev->np_port);
 
 	if (err) {
 		if (is_valid_ether_addr(rdev->etha->mac_addr))
@@ -1867,9 +1893,6 @@ static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
 	err = rsw3_etha_get_params(rdev);
 	if (err < 0)
 		goto out_get_params;
-
-	if (rdev->priv->gwca.speed < rdev->etha->speed)
-		rdev->priv->gwca.speed = rdev->etha->speed;
 
 	err = rsw3_rxdmac_alloc(ndev);
 	if (err < 0)
@@ -1886,6 +1909,7 @@ out_txdmac:
 
 out_rxdmac:
 out_get_params:
+	of_node_put(rdev->np_port);
 	netif_napi_del(&rdev->napi);
 	free_netdev(ndev);
 
@@ -1902,6 +1926,7 @@ static void rsw3_device_free(struct rsw3_private *priv, unsigned int index)
 		rsw3_rxdmac_free(ndev);
 	}
 
+	of_node_put(rdev->np_port);
 	netif_napi_del(&rdev->napi);
 	free_netdev(ndev);
 }
