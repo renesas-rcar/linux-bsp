@@ -281,6 +281,81 @@ out:
 }
 EXPORT_SYMBOL_GPL(phy_init);
 
+int phy_post_init(struct phy *phy)
+{
+	int ret;
+
+	if (!phy || !phy->ops->post_init)
+		return 0;
+
+	mutex_lock(&phy->mutex);
+	ret = phy->ops->post_init(phy);
+	mutex_unlock(&phy->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_post_init);
+
+int phy_post_init_1(struct phy *phy)
+{
+	int ret;
+
+	if (!phy || !phy->ops->post_init_1)
+		return 0;
+
+	mutex_lock(&phy->mutex);
+	ret = phy->ops->post_init_1(phy);
+	mutex_unlock(&phy->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_post_init_1);
+
+int phy_post_init_2(struct phy *phy)
+{
+	int ret;
+
+	if (!phy || !phy->ops->post_init_2)
+		return 0;
+
+	mutex_lock(&phy->mutex);
+	ret = phy->ops->post_init_2(phy);
+	mutex_unlock(&phy->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_post_init_2);
+
+int phy_post_init_3(struct phy *phy)
+{
+	int ret;
+
+	if (!phy || !phy->ops->post_init_3)
+		return 0;
+
+	mutex_lock(&phy->mutex);
+	ret = phy->ops->post_init_3(phy);
+	mutex_unlock(&phy->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_post_init_3);
+
+int phy_post_init_4(struct phy *phy)
+{
+	int ret;
+
+	if (!phy || !phy->ops->post_init_4)
+		return 0;
+
+	mutex_lock(&phy->mutex);
+	ret = phy->ops->post_init_4(phy);
+	mutex_unlock(&phy->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_post_init_4);
+
 /**
  * phy_exit - Phy internal un-initialization
  * @phy: the phy returned by phy_get()
