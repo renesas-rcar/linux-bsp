@@ -746,7 +746,7 @@ static void dw_msi_unmask_irq(struct irq_data *d)
 }
 
 static struct irq_chip dw_pcie6_msi_irq_chip = {
-	.name = "PCI-MSI",
+	.name = "RCAR-GEN5-PCI-MSI",
 	.irq_ack = dw_msi_ack_irq,
 	.irq_mask = dw_msi_mask_irq,
 	.irq_unmask = dw_msi_unmask_irq,
@@ -791,7 +791,7 @@ irqreturn_t dw_pcie6_handle_msi_irq(struct dw_pcie6_rp *pp)
 }
 
 /* Chained MSI interrupt service routine */
-static void dw_chained_msi_isr(struct irq_desc *desc)
+static void dw_chained_pcie6_msi_isr(struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	struct dw_pcie6_rp *pp;
@@ -804,7 +804,7 @@ static void dw_chained_msi_isr(struct irq_desc *desc)
 	chained_irq_exit(chip, desc);
 }
 
-static void dw_pci_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
+static void dw_pcie6_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
 {
 	struct dw_pcie6_rp *pp = irq_data_get_irq_chip_data(d);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
@@ -821,13 +821,13 @@ static void dw_pci_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
 		(int)d->hwirq, msg->address_hi, msg->address_lo);
 }
 
-static int dw_pci_msi_set_affinity(struct irq_data *d,
+static int dw_pcie6_msi_set_affinity(struct irq_data *d,
 				   const struct cpumask *mask, bool force)
 {
 	return -EINVAL;
 }
 
-static void dw_pci_bottom_mask(struct irq_data *d)
+static void dw_pcie6_bottom_mask(struct irq_data *d)
 {
 	struct dw_pcie6_rp *pp = irq_data_get_irq_chip_data(d);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
@@ -846,7 +846,7 @@ static void dw_pci_bottom_mask(struct irq_data *d)
 	raw_spin_unlock_irqrestore(&pp->lock, flags);
 }
 
-static void dw_pci_bottom_unmask(struct irq_data *d)
+static void dw_pcie6_bottom_unmask(struct irq_data *d)
 {
 	struct dw_pcie6_rp *pp = irq_data_get_irq_chip_data(d);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
@@ -865,7 +865,7 @@ static void dw_pci_bottom_unmask(struct irq_data *d)
 	raw_spin_unlock_irqrestore(&pp->lock, flags);
 }
 
-static void dw_pci_bottom_ack(struct irq_data *d)
+static void dw_pcie6_bottom_ack(struct irq_data *d)
 {
 	struct dw_pcie6_rp *pp  = irq_data_get_irq_chip_data(d);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
@@ -878,13 +878,13 @@ static void dw_pci_bottom_ack(struct irq_data *d)
 	dw_pcie6_writel_dbi(pci, PCIE_MSI_INTR0_STATUS + res, BIT(bit));
 }
 
-static struct irq_chip dw_pci_msi_bottom_irq_chip = {
-	.name = "DWPCI-MSI",
-	.irq_ack = dw_pci_bottom_ack,
-	.irq_compose_msi_msg = dw_pci_setup_msi_msg,
-	.irq_set_affinity = dw_pci_msi_set_affinity,
-	.irq_mask = dw_pci_bottom_mask,
-	.irq_unmask = dw_pci_bottom_unmask,
+static struct irq_chip dw_pcie6_msi_bottom_irq_chip = {
+	.name = "RCAR-GEN5-DWPCI-MSI",
+	.irq_ack = dw_pcie6_bottom_ack,
+	.irq_compose_msi_msg = dw_pcie6_setup_msi_msg,
+	.irq_set_affinity = dw_pcie6_msi_set_affinity,
+	.irq_mask = dw_pcie6_bottom_mask,
+	.irq_unmask = dw_pcie6_bottom_unmask,
 };
 
 static int dw_pcie6_irq_domain_alloc(struct irq_domain *domain,
@@ -1061,7 +1061,7 @@ static int dw_pcie6_msi_host_init(struct dw_pcie6_rp *pp)
 
 	dev_dbg(dev, "Using %d MSI vectors\n", pp->num_vectors);
 
-	pp->msi_irq_chip = &dw_pci_msi_bottom_irq_chip;
+	pp->msi_irq_chip = &dw_pcie6_msi_bottom_irq_chip;
 
 	ret = dw_pcie6_allocate_domains(pp);
 	if (ret)
@@ -1070,7 +1070,7 @@ static int dw_pcie6_msi_host_init(struct dw_pcie6_rp *pp)
 	for (ctrl = 0; ctrl < num_ctrls; ctrl++) {
 		if (pp->msi_irq[ctrl] > 0)
 			irq_set_chained_handler_and_data(pp->msi_irq[ctrl],
-						    dw_chained_msi_isr, pp);
+						    dw_chained_pcie6_msi_isr, pp);
 	}
 
 	ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
