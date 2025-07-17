@@ -838,6 +838,18 @@
 		interrupts = <GIC_SPI 795 IRQ_TYPE_LEVEL_HIGH>;
 		maximum-speed = "super-speed-plus";
 		dr_mode = "host";
+
+		snps,dis_enblslpm_quirk;
+		snps,quirk-frame-length-adjustment = <0x20>;
+		snps,gfladj-refclk-lpm-sel-quirk;
+		snps,parkmode-disable-hs-quirk;
+		snps,usb3_lpm_capable;
+		snps,usb2-lpm-disable;
+
+		snps,dis_tx_ipgap_linecheck_quirk;
+		snps,has-lpm-erratum;
+		snps,lpm-nyet-threshold = <0>;
+		snps,hird-threshold = <0x0>;
 	};
 };
 
@@ -854,6 +866,18 @@
 		interrupts = <GIC_SPI 797 IRQ_TYPE_LEVEL_HIGH>;
 		maximum-speed = "super-speed-plus";
 		dr_mode = "host";
+
+		snps,dis_enblslpm_quirk;
+		snps,quirk-frame-length-adjustment = <0x20>;
+		snps,gfladj-refclk-lpm-sel-quirk;
+		snps,parkmode-disable-hs-quirk;
+		snps,usb3_lpm_capable;
+		snps,usb2-lpm-disable;
+
+		snps,dis_tx_ipgap_linecheck_quirk;
+		snps,has-lpm-erratum;
+		snps,lpm-nyet-threshold = <0>;
+		snps,hird-threshold = <0x0>;
 	};
 };
 
@@ -868,6 +892,15 @@
 		interrupts = <GIC_SPI 796 IRQ_TYPE_LEVEL_HIGH>;
 		maximum-speed = "high-speed";
 		dr_mode = "host";
+
+		snps,dis_enblslpm_quirk;
+		snps,quirk-frame-length-adjustment = <0x20>;
+		snps,gfladj-refclk-lpm-sel-quirk;
+		snps,usb3_lpm_capable;
+
+		snps,dis_tx_ipgap_linecheck_quirk;
+		snps,has-lpm-erratum;
+		snps,lpm-nyet-threshold = <0>;
 	};
 };
 
@@ -882,6 +915,15 @@
 		interrupts = <GIC_SPI 798 IRQ_TYPE_LEVEL_HIGH>;
 		maximum-speed = "high-speed";
 		dr_mode = "host";
+
+		snps,dis_enblslpm_quirk;
+		snps,quirk-frame-length-adjustment = <0x20>;
+		snps,gfladj-refclk-lpm-sel-quirk;
+		snps,usb3_lpm_capable;
+
+		snps,dis_tx_ipgap_linecheck_quirk;
+		snps,has-lpm-erratum;
+		snps,lpm-nyet-threshold = <0>;
 	};
 };
 
