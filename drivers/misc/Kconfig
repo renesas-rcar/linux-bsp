@@ -610,6 +610,18 @@ config MARVELL_CN10K_DPI
 	  To compile this driver as a module, choose M here: the module
 	  will be called mrvl_cn10k_dpi.
 
+config TI_TDP2004
+	tristate "TI TDP2004 driver"
+	depends on I2C
+	help
+	  If you say yes here you get support for the TI TDP2004.
+
+	  This driver can also be built as a module. If so, the module
+	  will be called tdp2004.
+
+          To compile this driver as a module, choose M here.
+          The module will be called tdp2004.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

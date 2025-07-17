@@ -73,3 +73,4 @@ obj-$(CONFIG_NSM)		+= nsm.o
 obj-$(CONFIG_MARVELL_CN10K_DPI)	+= mrvl_cn10k_dpi.o
 obj-y				+= keba/
 obj-$(CONFIG_RCAR_MFIS)		+= rcar-mfis/
+obj-$(CONFIG_TI_TDP2004)	+= tdp2004.o
