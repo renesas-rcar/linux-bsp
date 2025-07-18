@@ -2930,7 +2930,7 @@
 			device_type = "pci";
 			ranges = <0x03000000 0x0 0x00100000 0x284 0x00000000 0x0 0x10000000>;
 			#interrupt-cells = <1>;
-			interrupts = <GIC_SPI 752 IRQ_TYPE_LEVEL_HIGH>,
+			interrupts = <GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 745 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 753 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 754 IRQ_TYPE_LEVEL_HIGH>,
