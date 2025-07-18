@@ -1399,6 +1399,100 @@
 			interrupt-controller;
 		};
 
+		canfd_0: can@c1420000 {
+			compatible = "renesas,r8a78000-canfd";
+			reg = <0 0xc1420000 0 0x8600>;
+			interrupts = <GIC_SPI 4675 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4677 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4681 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4684 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4687 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4690 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4693 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4696 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4699 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+
+			channel0 {
+				status = "disabled";
+			};
+
+			channel1 {
+				status = "disabled";
+			};
+
+			channel2 {
+				status = "disabled";
+			};
+
+			channel3 {
+				status = "disabled";
+			};
+
+			channel4 {
+				status = "disabled";
+			};
+
+			channel5 {
+				status = "disabled";
+			};
+
+			channel6 {
+				status = "disabled";
+			};
+
+			channel7 {
+				status = "disabled";
+			};
+		};
+
+		canfd_1: can@c1520000 {
+			compatible = "renesas,r8a78000-canfd";
+			reg = <0 0xc1520000 0 0x8600>;
+			interrupts = <GIC_SPI 4725 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4728 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4731 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4734 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4737 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4740 IRQ_TYPE_LEVEL_HIGH>, //can12
+				     <GIC_SPI 4743 IRQ_TYPE_LEVEL_HIGH>, //can13
+				     <GIC_SPI 4746 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4749 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+
+			channel0 {
+				status = "disabled";
+			};
+
+			channel1 {
+				status = "disabled";
+			};
+
+			channel2 {
+				status = "disabled";
+			};
+
+			channel3 {
+				status = "disabled";
+			};
+
+			channel4 {
+				status = "disabled";
+			};
+
+			channel5 {
+				status = "disabled";
+			};
+
+			channel6 {
+				status = "disabled";
+			};
+
+			channel7 {
+				status = "disabled";
+			};
+		};
+
 		crc0: crc@19000000 {
 			compatible = "renesas,rcar-gen5-crc";
 			reg = <0 0x19000000 0 0x00010000>;
