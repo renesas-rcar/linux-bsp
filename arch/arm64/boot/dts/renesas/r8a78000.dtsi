@@ -2928,7 +2928,7 @@
 			#size-cells = <2>;
 			bus-range = <0x00 0xff>;
 			device_type = "pci";
-			ranges = <0x03000000 0x0 0x50000000 0x280 0x10000000 0x0 0x10000000>;
+			ranges = <0x03000000 0x0 0x00100000 0x284 0x00000000 0x0 0x10000000>;
 			#interrupt-cells = <1>;
 			interrupts = <GIC_SPI 752 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 745 IRQ_TYPE_LEVEL_HIGH>,
