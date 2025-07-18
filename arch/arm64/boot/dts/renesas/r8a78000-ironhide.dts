@@ -930,3 +930,7 @@
 
 	status = "okay";
 };
+
+&rtca {
+	status = "okay";
+};
