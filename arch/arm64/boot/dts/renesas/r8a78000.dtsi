@@ -2957,7 +2957,7 @@
 			compatible = "renesas,rcar-gen5-pcie6-ep";
 			reg = <0 0xda000000 0 0x100000>, <0 0xda100000 0 0x200000>,
 			      <0 0xda300000 0 0xd00000>, <0x0 0xde000000 0 0x1000>,
-			      <0 0xde080000 0 0xf000>, <0x280 0x00000000 0x0 0x40000000>;
+			      <0 0xde080000 0 0x30000>, <0x280 0x10000000 0 0x10000000>;
 			reg-names = "dbi", "dbi2",
 				    "atu", "apb",
 				    "phy", "addr_space";
