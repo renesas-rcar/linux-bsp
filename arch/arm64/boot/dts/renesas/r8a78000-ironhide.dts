@@ -608,6 +608,15 @@
 	status = "okay";
 };
 
+&wwdt20 {
+	interval-time = <7>;
+	error-mode = <1>;
+	irq_75p = <0>;
+	wsize = <3>;
+
+	status = "okay";
+};
+
 &crc0 {
 	status = "okay";
 };
