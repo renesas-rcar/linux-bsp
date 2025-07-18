@@ -28,7 +28,7 @@
  */
 #define SMC_RCAR_CMD       (12345U)
 
-#define START_DLOG_OUTPUT  (1U)
+#define NORMAL_WORLD_COMPLETE_INIT  (1U)
 
 struct rcar_debug_log_info {
 	wait_queue_head_t waitq;
