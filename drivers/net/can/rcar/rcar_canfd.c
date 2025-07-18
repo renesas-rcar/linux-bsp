@@ -2195,6 +2195,14 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 		fcan_freq = clk_get_rate(gpriv->can_clk);
 		gpriv->extclk = gpriv->info->external_clk;
 	}
+	if (!fcan_freq) {
+		u32 clk_rate;
+
+		if (of_property_read_u32(dev->of_node,
+					 "renesas,canfd-clk", &clk_rate))
+			goto fail_clk;
+		fcan_freq = clk_rate;
+	}
 
 	clk_ram = devm_clk_get_optional_enabled(dev, "ram_clk");
 	if (IS_ERR(clk_ram))
@@ -2247,14 +2255,15 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 		}
 	}
 
-	err = reset_control_reset(gpriv->rstc1);
-	if (err)
-		goto fail_dev;
-	err = reset_control_reset(gpriv->rstc2);
-	if (err) {
-		reset_control_assert(gpriv->rstc1);
-		goto fail_dev;
-	}
+	 /* err = reset_control_reset(gpriv->rstc1);
+	  * if (err)
+	  *	goto fail_dev;
+	  * err = reset_control_reset(gpriv->rstc2);
+	  * if (err) {
+	  *	reset_control_assert(gpriv->rstc1);
+	  *	goto fail_dev;
+	  * }
+	  */
 
 	/* Enable peripheral clock for register access */
 	err = clk_prepare_enable(gpriv->clkp);
@@ -2344,8 +2353,11 @@ static void rcar_canfd_remove(struct platform_device *pdev)
 	/* Enter global sleep mode */
 	rcar_canfd_set_bit(gpriv->base, RCANFD_GCTR, RCANFD_GCTR_GSLPR);
 	clk_disable_unprepare(gpriv->clkp);
-	reset_control_assert(gpriv->rstc1);
-	reset_control_assert(gpriv->rstc2);
+
+	/*
+	 * reset_control_assert(gpriv->rstc1);
+	 * reset_control_assert(gpriv->rstc2);
+	 */
 }
 
 static int __maybe_unused rcar_canfd_suspend(struct device *dev)
@@ -2358,8 +2370,10 @@ static int __maybe_unused rcar_canfd_resume(struct device *dev)
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(rcar_canfd_pm_ops, rcar_canfd_suspend,
-			 rcar_canfd_resume);
+/*
+ * static SIMPLE_DEV_PM_OPS(rcar_canfd_pm_ops, rcar_canfd_suspend,
+ *			 rcar_canfd_resume);
+ */
 
 static const __maybe_unused struct of_device_id rcar_canfd_of_table[] = {
 	{ .compatible = "renesas,r8a779a0-canfd", .data = &rcar_gen4_hw_info },
@@ -2377,10 +2391,10 @@ static struct platform_driver rcar_canfd_driver = {
 	.driver = {
 		.name = RCANFD_DRV_NAME,
 		.of_match_table = of_match_ptr(rcar_canfd_of_table),
-		.pm = &rcar_canfd_pm_ops,
+		/* .pm = &rcar_canfd_pm_ops,*/
 	},
 	.probe = rcar_canfd_probe,
-	.remove = rcar_canfd_remove,
+	.remove_new = rcar_canfd_remove,
 };
 
 module_platform_driver(rcar_canfd_driver);
