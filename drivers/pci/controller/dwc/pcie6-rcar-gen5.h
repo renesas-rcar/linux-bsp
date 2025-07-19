@@ -14,6 +14,10 @@
 #include "pcie6-designware.h"
 
 /* PCI Express capability */
+#define	PCICONF3		0x000C
+#define	EP_MULTI_FUNC		BIT(23)
+
+#define	MSICAP0F0		0x50
 #define	EXPCAP(x)		(0x0070 + (x))
 #define	PCI_EXP_LNKCAP_MLW_X1	0x00000010 /* Maximum Link Width x1 */
 #define	PCI_EXP_LNKCAP_MLW_X2	0x00000020 /* Maximum Link Width x2 */
