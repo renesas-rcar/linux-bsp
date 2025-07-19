@@ -46,6 +46,16 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 
 	rcar_gen5_pcie6_set_max_link_width(rcar_pcie6, pci->num_lanes);
 
+	/* Set Device Control */
+	val = dw_pcie6_readl_dbi(pci, 0x70 + PCI_EXP_DEVCTL);
+	val &= ~0xFFFFFF1F;
+	val |= PCI_EXP_DEVCTL_CERE | PCI_EXP_DEVCTL_NFERE |
+		PCI_EXP_DEVCTL_FERE | PCI_EXP_DEVCTL_URRE;
+	dw_pcie6_writel_dbi(pci, 0x70 + PCI_EXP_DEVCTL, val);
+
+	/* Sharing REFCLK setting */
+	rcar_gen5_pcie6_refclk_phy1(rcar_pcie6, pci->num_lanes);
+
 	/* Power Manegement Setting */
 	val = readl(rcar_pcie6->base + PCIEPWRMNGCTRL);
 	val |= GENMASK(11, 10) | GENMASK(6, 5);
@@ -112,17 +122,6 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 	val |= BIT(9);
 	writel(val, rcar_pcie6->phy_base + 0x8);
 
-	/* BAR0 resizing */
-	val = dw_pcie6_readl_dbi(pci, PCIEG6_PF0_RESBAR_CTRL_REG_0_REG);
-	val &= ~GENMASK(13, 8);
-	val |= BIT(11);
-	dw_pcie6_writel_dbi(pci, PCIEG6_PF0_RESBAR_CTRL_REG_0_REG, val);
-
-	val = dw_pcie6_readl_dbi(pci, PCIEG6_PF1_RESBAR_CTRL_REG_0_REG);
-	val &= ~GENMASK(13, 8);
-	val |= BIT(11);
-	dw_pcie6_writel_dbi(pci, PCIEG6_PF1_RESBAR_CTRL_REG_0_REG, val);
-
 	dw_pcie6_dbi_ro_wr_dis(pci);
 }
 
@@ -159,7 +158,8 @@ static const struct pci_epc_features pcie6_rcar_epc_get_features = {
 	.linkup_notifier = false,
 	.msi_capable = true,
 	.msix_capable = false,
-	.reserved_bar = 1 << BAR_5,
+	.reserved_bar = 1 << BAR_5 | 1 << BAR_1 | 1 << BAR_3,
+	.align = SZ_1M,
 };
 
 static const struct pci_epc_features*

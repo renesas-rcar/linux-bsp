@@ -36,20 +36,23 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	/* Set device type - RootComplex */
 	rcar_gen5_pcie6_set_device_type(rcar_pcie6, true);
 
+	dw_pcie6_dbi_ro_wr_en(pci);
+
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
 		/* Enable MSI interrupt signal */
-		val = readl(rcar_pcie6->base + PCIEINTSTS0);
+		val = readl(rcar_pcie6->base + 0x2C0);
 		val |= MSI_CTRL_INT;
-		writel(val, rcar_pcie6->base + PCIEINTSTS0);
-	}
+		writel(val, rcar_pcie6->base + 0x2C0);
 
-	dw_pcie6_dbi_ro_wr_en(pci);
+		val = dw_pcie6_readl_dbi(pci, MSICAP0F0);
+		val |= BIT(16);
+		dw_pcie6_writel_dbi(pci, MSICAP0F0, val);
+	}
 
 	rcar_gen5_pcie6_set_max_link_width(rcar_pcie6, pci->num_lanes);
 
-	/* Sharing REFCLK setting in x8lanes */
-	if (pci->num_lanes == 8)
-		rcar_gen5_pcie6_refclk_phy1(rcar_pcie6);
+	/* Sharing REFCLK setting */
+	rcar_gen5_pcie6_refclk_phy1(rcar_pcie6, pci->num_lanes);
 
 	/* Power Manegement Setting */
 	val = readl(rcar_pcie6->base + PCIEPWRMNGCTRL);
@@ -107,17 +110,6 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	val = readl(rcar_pcie6->phy_base + 0x8);
 	val |= BIT(9);
 	writel(val, rcar_pcie6->phy_base + 0x8);
-
-	/* BAR0 resizing */
-	val = dw_pcie6_readl_dbi(pci, PCIEG6_PF0_RESBAR_CTRL_REG_0_REG);
-	val &= ~GENMASK(13, 8);
-	val |= BIT(11);
-	dw_pcie6_writel_dbi(pci, PCIEG6_PF0_RESBAR_CTRL_REG_0_REG, val);
-
-	val = dw_pcie6_readl_dbi(pci, PCIEG6_PF1_RESBAR_CTRL_REG_0_REG);
-	val &= ~GENMASK(13, 8);
-	val |= BIT(11);
-	dw_pcie6_writel_dbi(pci, PCIEG6_PF1_RESBAR_CTRL_REG_0_REG, val);
 
 	dw_pcie6_dbi_ro_wr_dis(pci);
 

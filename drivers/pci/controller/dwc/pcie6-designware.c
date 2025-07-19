@@ -1445,10 +1445,16 @@ int dw_pcie6_setup_rc(struct dw_pcie6_rp *pp)
 
 	/* Setup command register */
 	val = dw_pcie6_readl_dbi(pci, PCI_COMMAND);
-	val &= 0xffff0000;
+	val &= ~0xFFFF0000;
 	val |= PCI_COMMAND_IO | PCI_COMMAND_MEMORY |
 		PCI_COMMAND_MASTER | PCI_COMMAND_SERR;
 	dw_pcie6_writel_dbi(pci, PCI_COMMAND, val);
+
+	val = dw_pcie6_readl_dbi(pci, 0x70 + PCI_EXP_DEVCTL);
+	val &= ~0xFFFFFF1F;
+	val |= PCI_EXP_DEVCTL_CERE | PCI_EXP_DEVCTL_NFERE |
+		PCI_EXP_DEVCTL_FERE | PCI_EXP_DEVCTL_URRE;
+	dw_pcie6_writel_dbi(pci, 0x70 + PCI_EXP_DEVCTL, val);
 
 	/*
 	 * If the platform provides its own child bus config accesses, it means

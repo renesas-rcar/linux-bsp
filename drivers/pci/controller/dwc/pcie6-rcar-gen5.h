@@ -31,6 +31,9 @@
 #define	PCIEG6_PF0_RESBAR_CTRL_REG_0_REG	0x618
 #define	PCIEG6_PF1_RESBAR_CTRL_REG_0_REG	0x10618
 
+#define	PCIEG6_PF0_RESBAR_CTRL_REG_2_REG	0x620
+#define	PCIEG6_PF1_RESBAR_CTRL_REG_2_REG	0x10620
+
 #define	PCIEMSR0		0
 #define	DEVICE_TYPE_RC		BIT(4)
 #define	DEVICE_TYPE_EP		0
@@ -99,7 +102,7 @@ void rcar_gen5_pcie6_module_reset(struct dw_pcie6 *pci);
 void rcar_gen5_pcie6_module_run(struct dw_pcie6 *pci);
 int rcar_gen5_pcie6_get_link_speed(struct device_node *node);
 void rcar_gen5_pcie6_set_max_link_width(struct rcar_pcie6 *rcar_pcie6, int num_lanes);
-void rcar_gen5_pcie6_refclk_phy1(struct rcar_pcie6 *rcar_pcie6);
+void rcar_gen5_pcie6_refclk_phy1(struct rcar_pcie6 *rcar_pcie6, int num_lanes);
 void rcar_gen5_pcie6_ltssm_enable(struct rcar_pcie6 *rcar_pcie6, bool enable);
 void rcar_gen5_pcie6_retrain_link(struct dw_pcie6 *pci);
 void rcar_gen5_pcie6_check_speed(struct dw_pcie6 *pci);
