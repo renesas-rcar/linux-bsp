@@ -39,6 +39,11 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 
 	dw_pcie6_dbi_ro_wr_en(pci);
 
+	/* Disable Endpoint Multi function support */
+	val = dw_pcie6_readl_dbi(pci, PCICONF3);
+	val &= ~EP_MULTI_FUNC;
+	dw_pcie6_writel_dbi(pci, PCICONF3, val);
+
 	rcar_gen5_pcie6_set_max_link_width(rcar_pcie6, pci->num_lanes);
 
 	/* Power Manegement Setting */
