@@ -230,7 +230,7 @@ int rcar_gen5_pcie6_monitor_pmd(struct rcar_pcie6 *rcar_pcie6)
 
 	for (int X = 0; X < 3; X++) {
 		ret = readl_poll_timeout(rcar_pcie6->phy_base + PCIEG6_PMD_RX_OVRDVAL_3(X),
-					val, !(val & BIT(23)), 1, 10000);
+					val, !(val & BIT(23)), 1, 999999);
 
 		if (ret) {
 			dev_err(pci->dev, "PMD RX_ACK timeout at lane %d\n", X);
@@ -238,7 +238,7 @@ int rcar_gen5_pcie6_monitor_pmd(struct rcar_pcie6 *rcar_pcie6)
 		}
 
 		ret = readl_poll_timeout(rcar_pcie6->phy_base + PCIEG6_PMD_TX_OVRDVAL_0(X),
-					val, !(val & BIT(27)), 1, 10000);
+					val, !(val & BIT(27)), 1, 999999);
 
 		if (ret) {
 			dev_err(pci->dev, "PMD TX_ACK timeout at lane %d\n", X);
@@ -541,13 +541,19 @@ int rcar_gen5_pcie6_get_link_speed(struct device_node *node)
 	return max_link_speed;
 }
 
-void rcar_gen5_pcie6_refclk_phy1(struct rcar_pcie6 *rcar_pcie6)
+void rcar_gen5_pcie6_refclk_phy1(struct rcar_pcie6 *rcar_pcie6, int num_lanes)
 {
 	u32 val;
 
+	if (num_lanes == 8) {
+		val = readl(rcar_pcie6->base + PCI6PY0REFCLK);
+		val |= BIT(14);
+		val |= ~GENMASK(17, 16);
+		writel(val, rcar_pcie6->base + PCI6PY0REFCLK);
+	}
+
 	val = readl(rcar_pcie6->base + PCI6PY0REFCLK);
-	val |= BIT(14);
-	val |= ~GENMASK(17, 16);
+	val |= BIT(18) | BIT(2);
 	writel(val, rcar_pcie6->base + PCI6PY0REFCLK);
 }
 
