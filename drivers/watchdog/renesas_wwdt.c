@@ -37,6 +37,58 @@
 #define ECM_MAX_SIZE	(ECMWPCNTR + 0x04)
 #define ECM_SET	(0x81 << 22)
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE_SCP		0xC1330000
+#define WWDT_PDID		(0)
+#define WWDT_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define WWDT_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT1(x)	((x) + 0x0cf4)
+
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MSRES_SCP(i)		(MDLC_BASE_SCP + 0x0900 + (i) * 4)
+#define MDLC_MSRESS_SCP(i)	(	MDLC_BASE_SCP + 0x0960 + (i) * 4)
+
+static void wwdt_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	u32 val;
+	void __iomem *unlock_scp = ioremap(MDLC_PKCPROT1(MDLC_BASE_SCP), 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS_SCP(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES_SCP(clk_reg_no), 4);
+
+
+	writel(0xA5A5A501, unlock_scp);
+
+	while ((readl(msress) & WWDT_CLK_MASK(pos)) != (readl(msres) & WWDT_CLK_MASK(pos)))
+			udelay(1000);
+
+	val = readl(msres);
+	val &= ~WWDT_CLK_MASK(pos);
+	val |= mode << WWDT_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & WWDT_CLK_MASK(pos)) != (readl(msres) & WWDT_CLK_MASK(pos)))
+			udelay(1000);
+
+	writel(0xA5A5A500, unlock_scp);
+
+	iounmap(unlock_scp);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+static void wwdt_module_power_run(void)
+{
+		wwdt_module_standby_set(7, 14, 0x01);
+		wwdt_module_standby_set(7, 14, 0x03);
+		mdelay(100);
+		wwdt_module_standby_set(7, 16, 0x01);
+		wwdt_module_standby_set(7, 16, 0x03);
+		mdelay(100);
+}
+
 static bool nowayout = WATCHDOG_NOWAYOUT;
 module_param(nowayout, bool, 0);
 MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started (default="
@@ -154,6 +206,7 @@ static int wwdt_probe(struct platform_device *pdev)
 	u8 val;
 	int ret;
 
+	wwdt_module_power_run();
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
