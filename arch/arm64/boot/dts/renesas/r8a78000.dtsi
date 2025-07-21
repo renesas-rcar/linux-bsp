@@ -8,6 +8,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/r8a78000-power.h>
 #include <dt-bindings/clock/r8a78000-scmi-clock.h>
+#include <dt-bindings/clock/r8a78000-scmi-reset.h>
 
 #define GIC_MULTI_VIEW
 
@@ -802,6 +803,11 @@
 			scmi_clk: protocol@14 {
 				reg = <0x14>;
 				#clock-cells = <1>;
+			};
+
+			scmi_reset: protocol@16 {
+				reg = <0x16>;
+				#reset-cells = <1>;
 			};
 		};
 
