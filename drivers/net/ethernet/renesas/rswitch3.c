@@ -1561,6 +1561,12 @@ static int rsw3_ether_port_init_one(struct rsw3_device *rdev)
 	int err;
 
 	if (!parallel_mode) {
+		rdev->pcs = devm_of_phy_get(&rdev->priv->pdev->dev, rdev->np_port, NULL);
+		if (IS_ERR(rdev->pcs)) {
+			err = -EPROBE_DEFER;
+			goto err_pcs_phy_get;
+		}
+
 		err = rsw3_etha_mii_hw_init(rdev->etha_mii);
 		if (err < 0)
 			return err;
@@ -1572,12 +1578,6 @@ static int rsw3_ether_port_init_one(struct rsw3_device *rdev)
 		err = rsw3_mii_register(rdev);
 		if (err < 0)
 			return err;
-
-		rdev->pcs = devm_of_phy_get(&rdev->priv->pdev->dev, rdev->np_port, NULL);
-		if (IS_ERR(rdev->pcs)) {
-			err = -EPROBE_DEFER;
-			goto err_pcs_phy_get;
-		}
 
 		err = rsw3_pcs_set_params(rdev);
 		if (err < 0)
