@@ -17,6 +17,23 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	dummy_clk: dummy_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <0>;
+		#clock-cells = <0>;
+	};
+
+	can_clk: can {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	canxl_clk: canxl_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <160000000>;
+		#clock-cells = <0>;
+	};
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
@@ -3004,6 +3021,38 @@
 				    "tx", "rx";
 			#address-cells = <1>;
 			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		canxl0: can@c1200000 {
+			compatible = "renesas,r8a78000-canxl",
+				     "renesas,rcar-gen5-canxl";
+			reg = <0 0xc1200000 0 0x20104>;
+			interrupts = <GIC_SPI 4602 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4603 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_CLK_CANXL_SCP>,
+				 <&scmi_clk SCP_CLOCK_ID_MDLC_CANXL0>,
+				 <&can_clk>;
+			clock-names = "fck", "canxl", "can_clk";
+			assigned-clocks = <&canxl_clk>;
+			assigned-clock-rates = <160000000>;
+			channel0;
+			status = "disabled";
+		};
+
+		canxl1: can@c1240000 {
+			compatible = "renesas,r8a78000-canxl",
+				     "renesas,rcar-gen5-canxl";
+			reg = <0 0xc1240000 0 0x20104>;
+			interrupts = <GIC_SPI 4604 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4605 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_CLK_CANXL_SCP>,
+				 <&scmi_clk SCP_CLOCK_ID_MDLC_CANXL1>,
+				 <&can_clk>;
+			clock-names = "fck", "canxl", "can_clk";
+			assigned-clocks = <&canxl_clk>;
+			assigned-clock-rates = <160000000>;
+			channel1;
 			status = "disabled";
 		};
 
