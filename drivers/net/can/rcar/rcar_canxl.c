@@ -746,12 +746,14 @@ static void canxl_module_power_run(void)
 #define TXElement5T1(m)		(0x14 + (0x20 * (m)))	/* SW: TX Message Header Information */
 #define TXElement6T2TD0(m)	(0x18 + (0x20 * (m)))	/* SW: TX Message Header Information */
 #define TXElement7TX_APTD1(m)	(0x1c + (0x20 * (m)))	/* SW: TX Payload Data Address Pointer */
+#define CANXL_TX_DESC           1
 
 /* Rx Descriptors m */
 #define RXElement0(m)		(0x0 + (0x10 * (m)))	/* DMA info Ctrl 1 */
 #define RXElement1(m)		(0x4 + (0x10 * (m)))	/* RX Address Pointer */
 #define RXElement2TS0(m)	(0x8 + (0x10 * (m)))	/* TimeStamp 0 */
 #define RXElement3TS1(m)	(0xc + (0x10 * (m)))	/* TimeStamp 1 */
+#define CANXL_RX_DESC		0
 
 /* Constants */
 #define RCANXL_FIFO_DEPTH		8	/* Tx FIFO depth */
@@ -927,6 +929,56 @@ static void rcar_canxl_tx_failure_cleanup(struct net_device *ndev)
 		can_free_echo_skb(ndev, i, NULL);
 }
 
+static inline u16 rcar_canxl_compute_crc(uintptr_t desc_addr, u8 desc_type)
+{
+	u8 ele_idx, max_ele_idx, bit_idx, loop_idx, target_bit;
+	u16 rem9_old, rem9 = 0x1FF, poly = 0x167;
+	u32 desc_data;
+
+	/* Get number of descriptor element */
+	if (desc_type == CANXL_TX_DESC)
+		max_ele_idx = 8;
+	else
+		max_ele_idx = 2;
+
+	/* Loop all descriptor element */
+	for (ele_idx = 0; ele_idx < max_ele_idx; ele_idx++) {
+		/* Loop all element bit */
+		for (bit_idx = 32; bit_idx >= 1; bit_idx--) {
+			/* Save the current value */
+			rem9_old = rem9;
+			/* Shift out MSB of CRC */
+			rem9 = rem9 << 1;
+			rem9 &= 0x1FF;
+			desc_data = rcar_canxl_read_desc(desc_addr, 0);
+			target_bit = (u8)(desc_data >> (bit_idx - 1)) & 1;
+			/* Check the value of current bit of element and update current value*/
+			if (target_bit == 1)
+				rem9 |= 0x001;
+			else
+				rem9 &= 0x1FE;
+
+			if (((rem9_old >> 8) & 1) == 1) {
+				/* XOR with poly */
+				rem9 = rem9 ^ poly;
+			}
+		}
+		/* Move to next element */
+		desc_addr += 0x4;
+	}
+
+	/* Re-calculate the descriptor */
+	for (loop_idx = 0; loop_idx < 9; loop_idx++) {
+		rem9_old = rem9;
+		rem9 = rem9 << 1;
+		rem9 &= 0x1FE;
+		if (((rem9_old >> 8) & 1) == 1)
+			rem9 = rem9 ^ poly;
+	}
+
+	return (rem9);
+}
+
 static void rcar_canxl_descriptor_init(struct rcar_canxl_global *gpriv)
 {
 	u16 desc, queue, desc_rc, ch;
@@ -990,11 +1042,12 @@ static void rcar_canxl_descriptor_init(struct rcar_canxl_global *gpriv)
 	for (queue = 0 ; queue < 8; queue++) {
 		for (desc = 0; desc < CANXL_MAXIMUM_RX_DESCRIPTOR; desc++) {
 			u32 ele0, ele1, ele2_ts0, ele3_ts1;
+			u16 crc;
 
 			desc_rc = (desc % 32);
 			ele0 = CANXL_RX_DMA1_FIXED | CANXL_RX_BIT_IRQ(0x1) |
 			       CANXL_RX_BIT_RC(desc_rc) | CANXL_RX_BIT_IN(ch) |
-			       CANXL_RX_BIT_CRC(0) | CANXL_RX_BIT_FQN(0);
+			       CANXL_RX_BIT_FQN(0);
 			/* Size is 64 byte data container for each descriptor */
 			ele1 = RX_FQ_DC_STADD(gpriv->phys_sys_base, queue)
 			       + (desc * CANXL_MAXIMUM_RX_DC_SIZE * 32);
@@ -1009,6 +1062,11 @@ static void rcar_canxl_descriptor_init(struct rcar_canxl_global *gpriv)
 					      RXElement2TS0(desc), ele2_ts0);
 			rcar_canxl_write_desc(RX_FQ_STADD(base, queue),
 					      RXElement3TS1(desc), ele3_ts1);
+
+			crc = rcar_canxl_compute_crc(RX_FQ_STADD(base, queue), CANXL_RX_DESC);
+			ele0 |= CANXL_RX_BIT_CRC(crc);
+			rcar_canxl_write_desc(RX_FQ_STADD(base, queue),
+					      RXElement0(desc), ele0);
 		}
 	}
 }
@@ -1313,8 +1371,8 @@ static void rcar_canxl_configure_mh_global(struct rcar_canxl_global *gpriv, u32 
 
 	/* Initialize MH_SFTY register */
 	rcar_canxl_write(gpriv->base, MH_SFTY_CFG, 0xFFFFFFFF);
-	/* Enable all event except CRC checking */
-	rcar_canxl_write(gpriv->base, MH_SFTY_CTRL, 0x00FC);
+	/* Enable all event */
+	rcar_canxl_write(gpriv->base, MH_SFTY_CTRL, 0x00FF);
 
 	/* Initialize AXI register */
 	/* Define the MSB of the read/write AXI address bus used on the DMA_AXI interface
@@ -1832,7 +1890,7 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 	struct rcar_canxl_channel *priv = netdev_priv(ndev);
 	struct canxl_frame *cxl = (struct canxl_frame *)skb->data;
 	struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
-	u16 id, sdt, dlc, rc, xtd, xlf = 1, sec = 0, brs = 0, esi = 0, fdf = 0;
+	u16 id, sdt, dlc, rc, crc, xtd, xlf = 1, sec = 0, brs = 0, esi = 0, fdf = 0;
 	u32 af, pay_load_size, target_desc_index;
 	u32 ele0, ele1, ele4_t0, ele5_t1, ele6_td0t2, ele7_txap, cfg;
 	uintptr_t ele6_td0t2_virt, ele7_txap_virt;
@@ -1895,8 +1953,8 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 
 	rc = target_desc_index % 32;
 	ele0 = (CANXL_DMA1_FIXED_FQ | CANXL_BIT_VALID(0x01) |
-		CANXL_BIT_CRC(0x00) | CANXL_BIT_FQN(0) |
-		CANXL_BIT_RC(rc) | CANXL_BIT_IRQ(0x1));
+		CANXL_BIT_FQN(0) | CANXL_BIT_RC(rc) |
+		CANXL_BIT_IRQ(0x1));
 
 	ele1 = (CANXL_DMA2_FIXED_FQ | CANXL_BIT_SIZE(pay_load_size) |
 		CANXL_BIT_IN(gpriv->channel));
@@ -1952,6 +2010,11 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 
 	rcar_canxl_write_desc(TX_FQ_STADD(gpriv->sys_base, 0),
 			      TXElement7TX_APTD1(target_desc_index), ele7_txap);
+
+	crc = rcar_canxl_compute_crc(TX_FQ_STADD(gpriv->sys_base, 0), CANXL_TX_DESC);
+	ele0 |= CANXL_BIT_CRC(crc);
+	rcar_canxl_write_desc(TX_FQ_STADD(gpriv->sys_base, 0),
+			      TXElement0(target_desc_index), ele0);
 
 	/* Put data into TX container */
 	if (gpriv->xlmode) {
