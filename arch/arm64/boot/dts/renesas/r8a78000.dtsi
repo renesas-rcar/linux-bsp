@@ -2449,8 +2449,11 @@
 		rswitch3: ethernet@c9bc0000 {
 			compatible = "renesas,r8a78000-ether-switch";
 			reg = <0 0xc9bc0000 0 0x0040000>,  // base
-				  <0 0xc9b80000 0 0x00040000>; // secure_base
-			reg-names = "base", "secure_base";
+			      <0 0xc9b80000 0 0x00040000>, // secure_base
+			      <0 0xc9c88000 0x0 0x800>,
+			      <0 0xc9c89000 0 0x800>;
+			reg-names = "base", "secure_base",
+				    "gptp_base", "secure_ptp";
 			interrupts = <GIC_SPI 799 IRQ_TYPE_LEVEL_HIGH>,
 				 <GIC_SPI 800 IRQ_TYPE_LEVEL_HIGH>,
 				 <GIC_SPI 801 IRQ_TYPE_LEVEL_HIGH>,
