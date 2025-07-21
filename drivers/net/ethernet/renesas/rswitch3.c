@@ -204,6 +204,13 @@ static void rsw3_fwd_init(struct rsw3_private *priv)
 	rsw3_modify(priv->addr, FWPC1(priv->gwca.index), FWPC1_DDE, FWPC1_DDE);
 }
 
+/* gPTP timer (gPTP) */
+static void rsw3_get_timestamp(struct rsw3_private *priv,
+			       struct timespec64 *ts)
+{
+	priv->ptp_priv->info.gettime64(&priv->ptp_priv->info, ts);
+}
+
 /* Gateway CPU agent block (GWCA) */
 static int rsw3_gwca_change_mode(struct rsw3_private *priv,
 				 enum rsw3_gwca_mode mode)
@@ -508,6 +515,11 @@ static int rsw3_gwca_queue_ext_ts_fill(struct net_device *ndev,
 			desc->desc.die_dt = DT_EEMPTY | DIE;
 		}
 	}
+
+	desc = &gq->rx_ring[gq->ring_size];
+	desc->desc.die_dt = DT_LINKFIX;
+	desc->desc.dptrl = cpu_to_le32(lower_32_bits(gq->ring_dma));
+	desc->desc.dptrh = cpu_to_le32(upper_32_bits(gq->ring_dma));
 
 	return 0;
 
@@ -827,6 +839,7 @@ static bool rsw3_rx(struct net_device *ndev, int *quota)
 	int limit, boguscnt, ret;
 	struct sk_buff *skb;
 	unsigned int num;
+	u32 get_ts;
 
 	if (*quota <= 0)
 		return true;
@@ -840,6 +853,18 @@ static bool rsw3_rx(struct net_device *ndev, int *quota)
 		skb = rsw3_rx_handle_desc(ndev, gq, desc);
 		if (!skb)
 			goto out;
+
+		get_ts = rdev->priv->ptp_priv->tstamp_rx_ctrl & RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT;
+		if (get_ts) {
+			struct skb_shared_hwtstamps *shhwtstamps;
+			struct timespec64 ts;
+
+			shhwtstamps = skb_hwtstamps(skb);
+			memset(shhwtstamps, 0, sizeof(*shhwtstamps));
+			ts.tv_sec = __le32_to_cpu(desc->ts_sec);
+			ts.tv_nsec = __le32_to_cpu(desc->ts_nsec & cpu_to_le32(0x3fffffff));
+			shhwtstamps->hwtstamp = timespec64_to_ktime(ts);
+		}
 
 		skb->protocol = eth_type_trans(skb, ndev);
 		napi_gro_receive(&rdev->napi, skb);
@@ -886,6 +911,16 @@ static void rsw3_tx_free(struct net_device *ndev)
 		dma_rmb();
 		skb = gq->skbs[gq->dirty];
 		if (skb) {
+			if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+				struct skb_shared_hwtstamps shhwtstamps;
+				struct timespec64 ts;
+
+				rsw3_get_timestamp(rdev->priv, &ts);
+				memset(&shhwtstamps, 0, sizeof(shhwtstamps));
+				shhwtstamps.hwtstamp = timespec64_to_ktime(ts);
+				skb_tstamp_tx(skb, &shhwtstamps);
+			}
+
 			rdev->ndev->stats.tx_packets++;
 			rdev->ndev->stats.tx_bytes += skb->len;
 			dma_unmap_single(ndev->dev.parent,
@@ -1804,12 +1839,88 @@ static struct net_device_stats *rsw3_get_stats(struct net_device *ndev)
 	return &ndev->stats;
 }
 
+static int rsw3_hwstamp_get(struct net_device *ndev, struct ifreq *req)
+{
+	struct rsw3_device *rdev = netdev_priv(ndev);
+	struct rcar_gen4_ptp_private *ptp_priv;
+	struct hwtstamp_config config;
+
+	ptp_priv = rdev->priv->ptp_priv;
+
+	config.flags = 0;
+	config.tx_type = ptp_priv->tstamp_tx_ctrl ? HWTSTAMP_TX_ON :
+							  HWTSTAMP_TX_OFF;
+	switch (ptp_priv->tstamp_rx_ctrl & RCAR_GEN4_RXTSTAMP_TYPE) {
+	case RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT:
+		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L2_EVENT;
+		break;
+	case RCAR_GEN4_RXTSTAMP_TYPE_ALL:
+		config.rx_filter = HWTSTAMP_FILTER_ALL;
+		break;
+	default:
+		config.rx_filter = HWTSTAMP_FILTER_NONE;
+		break;
+	}
+
+	return copy_to_user(req->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
+}
+
+static int rsw3_hwstamp_set(struct net_device *ndev, struct ifreq *req)
+{
+	struct rsw3_device *rdev = netdev_priv(ndev);
+	u32 tstamp_rx_ctrl = RCAR_GEN4_RXTSTAMP_ENABLED;
+	struct hwtstamp_config config;
+	u32 tstamp_tx_ctrl;
+
+	if (copy_from_user(&config, req->ifr_data, sizeof(config)))
+		return -EFAULT;
+
+	if (config.flags)
+		return -EINVAL;
+
+	switch (config.tx_type) {
+	case HWTSTAMP_TX_OFF:
+		tstamp_tx_ctrl = 0;
+		break;
+	case HWTSTAMP_TX_ON:
+		tstamp_tx_ctrl = RCAR_GEN4_TXTSTAMP_ENABLED;
+		break;
+	default:
+		return -ERANGE;
+	}
+
+	switch (config.rx_filter) {
+	case HWTSTAMP_FILTER_NONE:
+		tstamp_rx_ctrl = 0;
+		break;
+	case HWTSTAMP_FILTER_PTP_V2_L2_EVENT:
+		tstamp_rx_ctrl |= RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT;
+		break;
+	default:
+		config.rx_filter = HWTSTAMP_FILTER_ALL;
+		tstamp_rx_ctrl |= RCAR_GEN4_RXTSTAMP_TYPE_ALL;
+		break;
+	}
+
+	rdev->priv->ptp_priv->tstamp_tx_ctrl = tstamp_tx_ctrl;
+	rdev->priv->ptp_priv->tstamp_rx_ctrl = tstamp_rx_ctrl;
+
+	return copy_to_user(req->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
+}
+
 static int rsw3_eth_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
 {
 	if (!netif_running(ndev))
 		return -EINVAL;
 
-	return phy_mii_ioctl(ndev->phydev, req, cmd);
+	switch (cmd) {
+	case SIOCGHWTSTAMP:
+		return rsw3_hwstamp_get(ndev, req);
+	case SIOCSHWTSTAMP:
+		return rsw3_hwstamp_set(ndev, req);
+	default:
+		return phy_mii_ioctl(ndev->phydev, req, cmd);
+	}
 }
 
 static const struct net_device_ops rsw3_netdev_ops = {
@@ -1822,7 +1933,25 @@ static const struct net_device_ops rsw3_netdev_ops = {
 	.ndo_set_mac_address = eth_mac_addr,
 };
 
+static int rsw3_get_ts_info(struct net_device *ndev, struct kernel_ethtool_ts_info *info)
+{
+	struct rsw3_device *rdev = netdev_priv(ndev);
+
+	info->phc_index = ptp_clock_index(rdev->priv->ptp_priv->clock);
+	info->so_timestamping = SOF_TIMESTAMPING_TX_SOFTWARE |
+				SOF_TIMESTAMPING_RX_SOFTWARE |
+				SOF_TIMESTAMPING_SOFTWARE |
+				SOF_TIMESTAMPING_TX_HARDWARE |
+				SOF_TIMESTAMPING_RX_HARDWARE |
+				SOF_TIMESTAMPING_RAW_HARDWARE;
+	info->tx_types = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
+	info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
+
+	return 0;
+}
+
 static const struct ethtool_ops rsw3_ethtool_ops = {
+	.get_ts_info = rsw3_get_ts_info,
 	.get_link_ksettings = phy_ethtool_get_link_ksettings,
 	.set_link_ksettings = phy_ethtool_set_link_ksettings,
 };
@@ -1884,6 +2013,7 @@ static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
 	ndev->base_addr = (unsigned long)rdev->addr;
 	snprintf(ndev->name, IFNAMSIZ, "tsn%d", index);
 	ndev->netdev_ops = &rsw3_netdev_ops;
+	ndev->ethtool_ops = &rsw3_ethtool_ops;
 	ndev->max_mtu = RSWITCH3_MAX_MTU;
 	ndev->min_mtu = ETH_MIN_MTU;
 
@@ -1985,6 +2115,11 @@ static int rsw3_init(struct rsw3_private *priv)
 	if (!parallel_mode)
 		rsw3_fwd_init(priv);
 
+	 err = rcar_gen4_ptp_register(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
+				      RCAR_GEN5_PTP_CLOCK_X5H);
+	if (err < 0)
+		goto err_ptp_register;
+
 	err = rsw3_gwca_request_irqs(priv);
 	if (err < 0)
 		goto err_gwca_request_irq;
@@ -2020,6 +2155,9 @@ err_ether_port_init_all:
 
 err_gwca_hw_init:
 err_gwca_request_irq:
+	rcar_gen4_ptp_unregister(priv->ptp_priv);
+
+err_ptp_register:
 	for (i = 0; i < rswitch3_num_ports; i++)
 		rsw3_device_free(priv, i);
 	return err;
@@ -2028,11 +2166,15 @@ err_gwca_request_irq:
 static int renesas_eth_sw_probe(struct platform_device *pdev)
 {
 	struct rsw3_private *priv;
-	struct resource *res;
+	struct resource *res, *res_ptp;
 	int ret;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_base");
 	if (!res)
+		return -EINVAL;
+
+	res_ptp = platform_get_resource_byname(pdev, IORESOURCE_MEM, "gptp_base");
+	if (!res_ptp)
 		return -EINVAL;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
@@ -2051,6 +2193,14 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	priv->addr = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(priv->addr))
 		return PTR_ERR(priv->addr);
+
+	priv->ptp_priv = rcar_gen4_ptp_alloc(pdev);
+	if (!priv->ptp_priv)
+		return -ENOMEM;
+
+	priv->ptp_priv->addr = devm_ioremap_resource(&pdev->dev, res_ptp);
+	if (IS_ERR(priv->ptp_priv->addr))
+		return PTR_ERR(priv->ptp_priv->addr);
 
 	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
 	if (ret < 0) {
@@ -2091,6 +2241,8 @@ static void rsw3_deinit(struct rsw3_private *priv)
 	unsigned int i;
 
 	rsw3_gwca_hw_deinit(priv);
+
+	rcar_gen4_ptp_unregister(priv->ptp_priv);
 
 	rsw3_for_each_enabled_port(priv, i) {
 		struct rsw3_device *rdev = priv->rdev[i];

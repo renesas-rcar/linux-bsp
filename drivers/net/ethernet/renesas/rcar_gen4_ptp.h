@@ -9,9 +9,13 @@
 
 #include <linux/ptp_clock_kernel.h>
 
+#define PTPTIVC_INIT			0x19000000	/* 320MHz */
+#define PTPTIVC_INIT_712MHZ		0x0B3A62CE	/* 712.5MHz */
+
+#define RCAR_GEN4_PTP_CLOCK_S4		PTPTIVC_INIT
 #define RCAR_GEN4_GPTP_OFFSET_S4	0x00018000
 
-#define RCAR_GEN5_PTP_CLOCK_X5H		PTPTIVC_INIT
+#define RCAR_GEN5_PTP_CLOCK_X5H		PTPTIVC_INIT_712MHZ
 #define RCAR_GEN5_GPTP_OFFSET_X5H	0x00018000
 
 /* for rcar_gen4_ptp_init */
