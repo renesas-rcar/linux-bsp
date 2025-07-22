@@ -2939,12 +2939,9 @@
 				     <GIC_SPI 746 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-map-mask = <0 0 0 7>;
 			interrupt-map = <0 0 0 1 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 2 &gic GIC_SPI 745 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 3 &gic GIC_SPI 753 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 754 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 755 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 747 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 746 IRQ_TYPE_LEVEL_HIGH>;
+					 0 0 0 2 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&pcie6_bus_clk>;
 			clock-names = "pcie6_bus";
 			max-link-speed = <1>;
@@ -2999,12 +2996,9 @@
 				     <GIC_SPI 749 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-map-mask = <0 0 0 7>;
 			interrupt-map = <0 0 0 1 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 2 &gic GIC_SPI 748 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 3 &gic GIC_SPI 760 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 761 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 762 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 750 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 749 IRQ_TYPE_LEVEL_HIGH>;
+					 0 0 0 2 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&pcie6_bus_clk>;
 			clock-names = "pcie6_bus";
 			max-link-speed = <1>;
