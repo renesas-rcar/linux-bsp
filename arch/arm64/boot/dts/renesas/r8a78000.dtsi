@@ -2976,25 +2976,63 @@
 			status = "disabled";
 		};
 
+		pciec61: pcie@db000000 {
+			compatible = "renesas,rcar-gen5-pcie6";
+			reg = <0x0 0xdb000000 0 0x300000>,
+			      <0x0 0xdb300000 0 0xd00000>,
+			      <0x0 0xde100000 0 0x1000>,
+			      <0x0 0xde180000 0 0x30000>,
+			      <0x2C0 0x00000000 0x0 0x00020000>;
+			reg-names = "dbi", "atu", "apb", "phy", "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+			ranges = <0x03000000 0x0 0x00100000 0x2C4 0x00000000 0x0 0x10000000>;
+			#interrupt-cells = <1>;
+			interrupts = <GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 748 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 760 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 761 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 762 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 750 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 749 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 2 &gic GIC_SPI 748 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 760 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 761 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 762 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 750 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 749 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&pcie6_bus_clk>;
+			clock-names = "pcie6_bus";
+			max-link-speed = <1>;
+			num-lanes = <1>;
+			channel-id = <1>;
+			status = "disabled";
+		};
+
 		pciec61_ep: pcie6-ep@db000000 {
 			compatible = "renesas,rcar-gen5-pcie6-ep";
 			reg = <0 0xdb000000 0 0x100000>, <0 0xdb100000 0 0x200000>,
 			      <0 0xdb300000 0 0xD00000>, <0x0 0xde100000 0 0x1000>,
-			      <0x2c0 0x00000000 0x0 0x40000000>;
+			      <0 0xde080000 0 0x30000>, <0x2C0 0x10000000 0x0 0x40000000>;
 			reg-names = "dbi", "dbi2",
 				    "atu", "apb",
-				    "addr_space";
-			interrupts = <GIC_SPI 752 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 745 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 753 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 754 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 755 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 747 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 746 IRQ_TYPE_LEVEL_HIGH>;
+				    "phy", "addr_space";
+			interrupts = <GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 748 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 760 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 761 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 762 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 750 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 749 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&pcie6_bus_clk>;
 			clock-names = "pcie6_bus";
 			max-link-speed = <2>;
 			num-lanes = <1>;
+			channel-id = <1>;
 			num-ib-windows = <16>;
 			num-ob-windows = <16>;
 			status = "disabled";
