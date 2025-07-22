@@ -414,6 +414,10 @@
 	status = "disabled";
 };
 
+&pciec61 {
+	status = "disabled";
+};
+
 &pciec61_ep {
 	status = "disabled";
 };
