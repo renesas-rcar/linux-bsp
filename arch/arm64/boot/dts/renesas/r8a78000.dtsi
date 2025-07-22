@@ -3524,7 +3524,7 @@
 
 		rpmsg_shm0: rpmsg_shm@0 {
 			compatible = "generic-uio";
-			reg = <0x0 0x81000000 0x0 0x50000>;
+			reg = <0x0 0x96600000 0x0 0x50000>;
 			linux,uio-name = "rpmsg_shm0";
 			status = "disabled";
 		};
@@ -3539,7 +3539,7 @@
 
 		rpmsg_shm1: rpmsg_shm@1 {
 			compatible = "generic-uio";
-			reg = <0x0 0x81050000 0x0 0x50000>;
+			reg = <0x0 0x96650000 0x0 0x50000>;
 			linux,uio-name = "rpmsg_shm1";
 			status = "disabled";
 		};
@@ -3554,7 +3554,7 @@
 
 		rpmsg_shm2: rpmsg_shm@2 {
 			compatible = "generic-uio";
-			reg = <0x0 0x810a0000 0x0 0x50000>;
+			reg = <0x0 0x966a0000 0x0 0x50000>;
 			linux,uio-name = "rpmsg_shm2";
 			status = "disabled";
 		};
