@@ -473,7 +473,7 @@ static void canxl_module_power_run(void)
 
 #define TX_FIFO_QUEUE_BASE_ADD  0
 #define TX_PR_QUEUE_BASE_ADD	0x200
-#define RX_FILTER_BASE_ADD	0x600
+#define RX_FILTER_BASE_ADD	0x400
 
 /* Define start address of queues and data containers */
 /* 1023(max descriptor in Queue)*8(element in TX descriptor)*4(byte) = H'7FE0 */
@@ -1955,6 +1955,8 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 	ele0 = (CANXL_DMA1_FIXED_FQ | CANXL_BIT_VALID(0x01) |
 		CANXL_BIT_FQN(0) | CANXL_BIT_RC(rc) |
 		CANXL_BIT_IRQ(0x1));
+	if (target_desc_index == (CANXL_MAXIMUM_FQ_TX_DESCRIPTOR - 1))
+		ele0 |= CANXL_BIT_END;
 
 	ele1 = (CANXL_DMA2_FIXED_FQ | CANXL_BIT_SIZE(pay_load_size) |
 		CANXL_BIT_IN(gpriv->channel));
