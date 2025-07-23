@@ -38,7 +38,7 @@ static struct rcar_debug_log_info dlog_info;
 static struct task_struct *log_thread;
 static atomic_t thread_exit;
 
-#define TEE_LOG_NS_BASE        (0x0407FEC000UL)
+#define TEE_LOG_NS_BASE		 (0x1050200000UL)
 #define TEE_LOG_NS_SIZE        (81920U)
 #define LOG_NS_CPU_AREA_SIZE   (1024U)
 #define TEE_CORE_NB_CORE   (8U)
