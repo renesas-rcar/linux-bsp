@@ -107,100 +107,6 @@ static enum scmi_clock_protocol_cmd evt_2_cmd[] = {
 	CLOCK_RATE_CHANGE_REQUESTED_NOTIFY,
 };
 
-#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
-enum scmi_clock_cmd {
-	DESCRIBE_RATES,
-	ATTRIBUTES,
-	RATE_GET,
-	RATE_SET,
-	CFG_GET_SET
-};
-
-static bool is_clkid_ng(int clkcase, int clkid)
-{
-	switch (clkcase) {
-		case ATTRIBUTES:
-			if ((0 <= clkid && 92 >= clkid) ||
-				(105 <= clkid && 120 >= clkid) ||
-				(133 <= clkid && 148 >= clkid) ||
-				(161 <= clkid && 176 >= clkid) ||
-				(189 <= clkid && 196 >= clkid) ||
-				(335 == clkid) ||
-				(340 <= clkid && 343 >= clkid) ||
-				(350 == clkid) ||
-				(532 <= clkid && 537 >= clkid) ||
-				(553 <= clkid && 579 >= clkid) ||
-				(688 <= clkid && 700 >= clkid) ||
-				(753 <= clkid && 754 >= clkid) ||
-				(819 <= clkid))
-				return true;
-			break;
-
-		case DESCRIBE_RATES:
-			if ((790 <= clkid && 940 >= clkid))
-				return true;
-			break;
-
-		case RATE_SET:
-            if ((927 <= clkid && 930 >= clkid) ||
-                (915 == clkid) || (917 == clkid) ||
-                (897 == clkid) ||
-                (923 == clkid) || (933 == clkid) ||
-                (830 <= clkid && 831 >= clkid) ||
-                (849 == clkid) ||
-                (864 <= clkid && 865 >= clkid) ||
-                (872 == clkid) ||
-                (874 == clkid) ||
-                (876 <= clkid && 878 >= clkid) ||
-                (881 <= clkid && 882 >= clkid) ||
-                (884 <= clkid && 887 >= clkid) ||
-                (888 == clkid) ||
-                (890 == clkid) ||
-                (893 == clkid) || (896 == clkid) ||
-                (898 == clkid) || (907 == clkid) ||
-                (909 == clkid) || (911 == clkid) ||
-                (913 == clkid) || (940 == clkid) ||
-                (919 <= clkid && 921 >= clkid) ||
-                (924 <= clkid && 925 >= clkid))
-
-				return true;
-			break;
-
-		case RATE_GET:
-			if ((0 <= clkid && 825 >= clkid) ||
-					(844 <= clkid && 848 >= clkid) ||
-					(873 == clkid) ||
-					(879 <= clkid && 880 >= clkid) ||
-					(883 == clkid) ||
-					(889 == clkid) ||
-					(894 <= clkid && 895 >= clkid) )
-				return true;
-			break;
-
-		case CFG_GET_SET:
-			if ((849 <= clkid && 872 >= clkid) ||
-					(874 <= clkid && 876 >= clkid) ||
-					(878 == clkid) ||
-					(881 == clkid) ||
-					(884 == clkid) ||
-					(899 <= clkid && 909 >= clkid) ||
-					(917 == clkid) ||
-					(921 == clkid) ||
-					(924 <= clkid && 925 >= clkid) ||
-					(928 == clkid) ||
-					(930 == clkid) ||
-					(933 <= clkid && 936 >= clkid))
-				return true;
-			break;
-
-		default:
-			break;
-	}
-
-	return false;
-}
-#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
-
 static int
 scmi_clock_protocol_attributes_get(const struct scmi_protocol_handle *ph,
 				   struct clock_info *ci)
@@ -427,11 +333,6 @@ scmi_clock_rate_get(const struct scmi_protocol_handle *ph,
 	int ret;
 	struct scmi_xfer *t;
 
-#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
-	if (is_clkid_ng(RATE_GET, clk_id))
-			return -1;
-#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
-
 	ret = ph->xops->xfer_get_init(ph, CLOCK_RATE_GET,
 				      sizeof(__le32), sizeof(u64), &t);
 	if (ret)
@@ -455,11 +356,6 @@ static int scmi_clock_rate_set(const struct scmi_protocol_handle *ph,
 	struct scmi_xfer *t;
 	struct scmi_clock_set_rate *cfg;
 	struct clock_info *ci = ph->get_priv(ph);
-
-#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
-	if (is_clkid_ng(RATE_SET, clk_id))
-			return -1;
-#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
 
 	ret = ph->xops->xfer_get_init(ph, CLOCK_RATE_SET, sizeof(*cfg), 0, &t);
 	if (ret)
@@ -506,11 +402,6 @@ scmi_clock_config_set(const struct scmi_protocol_handle *ph, u32 clk_id,
 	int ret;
 	struct scmi_xfer *t;
 	struct scmi_clock_set_config *cfg;
-
-#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
-	if (is_clkid_ng(CFG_GET_SET, clk_id))
-			return -1;
-#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
 
 	ret = ph->xops->xfer_get_init(ph, CLOCK_CONFIG_SET,
 				      sizeof(*cfg), 0, &t);

@@ -22,47 +22,11 @@ struct scmi_pm_domain {
 
 #define to_scmi_pd(gpd) container_of(gpd, struct scmi_pm_domain, genpd)
 
-#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
-enum scmi_powerdomain_cmd {
-	GET_SET,
-};
-
-static bool is_pwdomid_ng(int pwdomcmd, int pwdomid)
-{
-	switch (pwdomcmd) {
-		case GET_SET:
-             if ((8 <= pwdomid && 10 >= pwdomid) ||
-                 (26 == pwdomid) || (28 == pwdomid) ||
-                 (30 == pwdomid) || (32 == pwdomid) ||
-                 (34 == pwdomid) || (36 == pwdomid) ||
-                 (38 <= pwdomid && 39 >= pwdomid) ||
-                 (41 <= pwdomid && 59 >= pwdomid) ||
-                 (61 <= pwdomid && 75 >= pwdomid) ||
-                 (126 <= pwdomid && 168 >= pwdomid) ||
-				 (116 == pwdomid) || (76 == pwdomid) ||
-				 (92 == pwdomid))
-				return true;
-			break;
-
-		default:
-			break;
-	}
-
-	return false;
-}
-#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
-
 static int scmi_pd_power(struct generic_pm_domain *domain, bool power_on)
 {
 	int ret;
 	u32 state, ret_state;
 	struct scmi_pm_domain *pd = to_scmi_pd(domain);
-
-#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
-	if (is_pwdomid_ng(GET_SET, pd->domain)) {
-		return -1;
-	}
-#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
 
 	if (power_on)
 		state = SCMI_POWER_STATE_GENERIC_ON;
