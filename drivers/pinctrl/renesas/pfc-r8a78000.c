@@ -4176,8 +4176,8 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(canfd13_data_a),
 	SH_PFC_PIN_GROUP(canfd13_data_b),
 	SH_PFC_PIN_GROUP(canfd14_data_a),
-	SH_PFC_PIN_GROUP(canfd14_data_a),
-	SH_PFC_PIN_GROUP(canfd15_data_b),
+	SH_PFC_PIN_GROUP(canfd14_data_b),
+	SH_PFC_PIN_GROUP(canfd15_data_a),
 	SH_PFC_PIN_GROUP(canfd15_data_b),
 	SH_PFC_PIN_GROUP(can_clk),
 
