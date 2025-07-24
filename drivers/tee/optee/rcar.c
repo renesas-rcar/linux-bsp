@@ -38,7 +38,7 @@ static struct rcar_debug_log_info dlog_info;
 static struct task_struct *log_thread;
 static atomic_t thread_exit;
 
-#define TEE_LOG_NS_BASE		 (0x1010F00000UL)
+#define TEE_LOG_NS_BASE		 (0x1050200000UL)
 #define TEE_LOG_NS_SIZE        (81920U)
 #define LOG_NS_CPU_AREA_SIZE   (1024U)
 #define TEE_CORE_NB_CORE   (8U)
@@ -218,7 +218,7 @@ static int rcar_optee_init_debug_log(struct optee *optee)
 
 	/* Notify the start of debug log output to optee_os */
 	optee->smc.invoke_fn(OPTEE_SMC_GET_SHM_CONFIG, SMC_RCAR_CMD,
-			START_DLOG_OUTPUT, 0, 0, 0, 0, 0, &smccc);
+			NORMAL_WORLD_COMPLETE_INIT, 0, 0, 0, 0, 0, &smccc);
 
 end:
 
