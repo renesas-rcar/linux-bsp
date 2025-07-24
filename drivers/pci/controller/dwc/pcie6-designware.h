@@ -13,6 +13,7 @@
 
 #include <linux/bitfield.h>
 #include <linux/dma-mapping.h>
+#include <linux/dma/edma.h>
 #include <linux/irq.h>
 #include <linux/msi.h>
 #include <linux/pci.h>
@@ -27,6 +28,7 @@
 #define DW_PCIE_VER_480A		0x3438302a
 #define DW_PCIE_VER_490A		0x3439302a
 #define DW_PCIE_VER_520A		0x3532302a
+#define	DW_PCIE_VER_540A		0x3534302a
 
 #define __dw_pcie6_ver_cmp(_pci, _ver, _op) \
 	((_pci)->version _op DW_PCIE_VER_ ## _ver)
@@ -152,6 +154,18 @@
 #define PCIE_MSIX_DOORBELL		0x948
 #define PCIE_MSIX_DOORBELL_PF_SHIFT	24
 
+/*
+ * eDMA CSRs. DW PCIe IP-core v4.70a and older had the eDMA registers accessible
+ * over the Port Logic registers space. Afterwards the unrolled mapping was
+ * introduced so eDMA and iATU could be accessed via a dedicated registers
+ * space.
+ */
+#define PCIE_DMA_VIEWPORT_BASE		0x970
+#define PCIE_DMA_UNROLL_BASE		0x80000
+#define PCIE_DMA_CTRL			0x008
+#define PCIE_DMA_NUM_WR_CHAN		GENMASK(3, 0)
+#define PCIE_DMA_NUM_RD_CHAN		GENMASK(19, 16)
+
 #define PCIE_PL_CHK_REG_CONTROL_STATUS			0xB20
 #define PCIE_PL_CHK_REG_CHK_REG_START			BIT(0)
 #define PCIE_PL_CHK_REG_CHK_REG_CONTINUOUS		BIT(1)
@@ -201,6 +215,8 @@
  */
 #define DEFAULT_DBI_ATU_OFFSET (0x3 << 20)
 
+#define DEFAULT_DBI_DMA_OFFSET PCIE_DMA_UNROLL_BASE
+
 #define MAX_MSI_IRQS			256
 #define MAX_MSI_IRQS_PER_CTRL		32
 #define MAX_MSI_CTRLS			(MAX_MSI_IRQS / MAX_MSI_IRQS_PER_CTRL)
@@ -210,6 +226,9 @@
 /* Maximum number of inbound/outbound iATUs */
 #define MAX_IATU_IN			256
 #define MAX_IATU_OUT			256
+
+/* Default eDMA LLP memory size */
+#define DMA_LLP_MEM_SIZE		PAGE_SIZE
 
 struct dw_pcie6;
 struct dw_pcie6_rp;
@@ -321,6 +340,7 @@ struct dw_pcie6 {
 	int			link_gen;
 	u8			n_fts[2];
 	bool			iatu_unroll_enabled: 1;
+	struct dw_edma_chip		edma;
 };
 
 struct dw_plat_pcie6 {
@@ -357,6 +377,8 @@ int dw_pcie6_prog_inbound_atu(struct dw_pcie6 *pci, u8 func_no, int index,
 void dw_pcie6_disable_atu(struct dw_pcie6 *pci, u32 dir, int index);
 void dw_pcie6_setup(struct dw_pcie6 *pci);
 void dw_pcie6_iatu_detect(struct dw_pcie6 *pci);
+int dw_pcie6_edma_detect(struct dw_pcie6 *pci);
+void dw_pcie6_edma_remove(struct dw_pcie6 *pci);
 
 static inline void dw_pcie6_writel_dbi(struct dw_pcie6 *pci, u32 reg, u32 val)
 {

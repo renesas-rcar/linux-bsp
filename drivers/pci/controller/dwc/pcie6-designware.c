@@ -18,6 +18,7 @@
 #include <linux/align.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
+#include <linux/dma/edma.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/sizes.h>
@@ -1180,14 +1181,18 @@ int dw_pcie6_host_init(struct dw_pcie6_rp *pp)
 
 	dw_pcie6_iatu_detect(pci);
 
-	ret = dw_pcie6_setup_rc(pp);
+	ret = dw_pcie6_edma_detect(pci);
 	if (ret)
 		goto err_free_msi;
+
+	ret = dw_pcie6_setup_rc(pp);
+	if (ret)
+		goto err_remove_edma;
 
 	if (!dw_pcie6_link_up(pci)) {
 		ret = dw_pcie6_start_link(pci);
 		if (ret)
-			goto err_free_msi;
+			goto err_remove_edma;
 	}
 
 	/* Ignore errors, the link may come up later */
@@ -1212,6 +1217,9 @@ err_deinit_host:
 	if (pp->ops->host_deinit)
 		pp->ops->host_deinit(pp);
 
+err_remove_edma:
+	dw_pcie6_edma_remove(pci);
+
 	return ret;
 }
 EXPORT_SYMBOL_GPL(dw_pcie6_host_init);
@@ -1224,6 +1232,8 @@ void dw_pcie6_host_deinit(struct dw_pcie6_rp *pp)
 	pci_remove_root_bus(pp->bridge->bus);
 
 	dw_pcie6_stop_link(pci);
+
+	dw_pcie6_edma_remove(pci);
 
 	if (pp->has_msi_ctrl)
 		dw_pcie6_free_msi(pp);
@@ -1395,6 +1405,188 @@ static int dw_pcie6_iatu_setup(struct dw_pcie6_rp *pp)
 			 pci->num_ob_windows);
 
 	return 0;
+}
+
+static u32 dw_pcie6_readl_dma(struct dw_pcie6 *pci, u32 reg)
+{
+	u32 val = 0;
+	int ret;
+
+	if (pci->ops && pci->ops->read_dbi)
+		return pci->ops->read_dbi(pci, pci->edma.reg_base, reg, 4);
+
+	ret = dw_pcie6_read(pci->edma.reg_base + reg, 4, &val);
+	if (ret)
+		dev_err(pci->dev, "Read DMA address failed\n");
+
+	return val;
+}
+
+static int dw_pcie6_edma_irq_vector(struct device *dev, unsigned int nr)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	char name[6];
+	int ret;
+
+	if (nr >= EDMA_MAX_WR_CH + EDMA_MAX_RD_CH)
+		return -EINVAL;
+
+	ret = platform_get_irq_byname_optional(pdev, "dma");
+	if (ret > 0)
+		return ret;
+
+	snprintf(name, sizeof(name), "dma%u", nr);
+
+	return platform_get_irq_byname_optional(pdev, name);
+}
+
+static struct dw_edma_core_ops dw_pcie6_edma_ops = {
+	.irq_vector = dw_pcie6_edma_irq_vector,
+};
+
+static int dw_pcie6_edma_find_chip(struct dw_pcie6 *pci)
+{
+	u32 val;
+
+	/*
+	 * Indirect eDMA CSRs access has been completely removed since v5.40a
+	 * thus no space is now reserved for the eDMA channels viewport and
+	 * former DMA CTRL register is no longer fixed to FFs.
+	 */
+	if (dw_pcie6_ver_is_ge(pci, 540A))
+		val = 0xFFFFFFFF;
+	else
+		val = dw_pcie6_readl_dbi(pci, PCIE_DMA_VIEWPORT_BASE + PCIE_DMA_CTRL);
+
+	if (val == 0xFFFFFFFF && pci->edma.reg_base) {
+		pci->edma.mf = EDMA_MF_EDMA_UNROLL;
+
+		val = dw_pcie6_readl_dma(pci, PCIE_DMA_CTRL);
+	} else if (val != 0xFFFFFFFF) {
+		pci->edma.mf = EDMA_MF_EDMA_LEGACY;
+
+		pci->edma.reg_base = pci->dbi_base + PCIE_DMA_VIEWPORT_BASE;
+	} else {
+		return -ENODEV;
+	}
+
+	pci->edma.dev = pci->dev;
+
+	if (!pci->edma.ops)
+		pci->edma.ops = &dw_pcie6_edma_ops;
+
+	pci->edma.flags |= DW_EDMA_CHIP_LOCAL;
+
+	pci->edma.ll_wr_cnt = FIELD_GET(PCIE_DMA_NUM_WR_CHAN, val);
+	pci->edma.ll_rd_cnt = FIELD_GET(PCIE_DMA_NUM_RD_CHAN, val);
+
+	/* Sanity check the channels count if the mapping was incorrect */
+	if (!pci->edma.ll_wr_cnt || pci->edma.ll_wr_cnt > EDMA_MAX_WR_CH ||
+	    !pci->edma.ll_rd_cnt || pci->edma.ll_rd_cnt > EDMA_MAX_RD_CH)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int dw_pcie6_edma_irq_verify(struct dw_pcie6 *pci)
+{
+	struct platform_device *pdev = to_platform_device(pci->dev);
+	u16 ch_cnt = pci->edma.ll_wr_cnt + pci->edma.ll_rd_cnt;
+	char name[6];
+	int ret;
+
+	if (pci->edma.nr_irqs == 1)
+		return 0;
+	else if (pci->edma.nr_irqs > 1)
+		return pci->edma.nr_irqs != ch_cnt ? -EINVAL : 0;
+
+	ret = platform_get_irq_byname_optional(pdev, "dma");
+	if (ret > 0) {
+		pci->edma.nr_irqs = 1;
+		return 0;
+	}
+
+	for (; pci->edma.nr_irqs < ch_cnt; pci->edma.nr_irqs++) {
+		snprintf(name, sizeof(name), "dma%d", pci->edma.nr_irqs);
+
+		ret = platform_get_irq_byname_optional(pdev, name);
+		if (ret <= 0)
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int dw_pcie6_edma_ll_alloc(struct dw_pcie6 *pci)
+{
+	struct dw_edma_region *ll;
+	dma_addr_t paddr;
+	int i;
+
+	for (i = 0; i < pci->edma.ll_wr_cnt; i++) {
+		ll = &pci->edma.ll_region_wr[i];
+		ll->sz = DMA_LLP_MEM_SIZE;
+		ll->vaddr.mem = dmam_alloc_coherent(pci->dev, ll->sz,
+						    &paddr, GFP_KERNEL);
+		if (!ll->vaddr.mem)
+			return -ENOMEM;
+
+		ll->paddr = paddr;
+	}
+
+	for (i = 0; i < pci->edma.ll_rd_cnt; i++) {
+		ll = &pci->edma.ll_region_rd[i];
+		ll->sz = DMA_LLP_MEM_SIZE;
+		ll->vaddr.mem = dmam_alloc_coherent(pci->dev, ll->sz,
+						    &paddr, GFP_KERNEL);
+		if (!ll->vaddr.mem)
+			return -ENOMEM;
+
+		ll->paddr = paddr;
+	}
+
+	return 0;
+}
+
+int dw_pcie6_edma_detect(struct dw_pcie6 *pci)
+{
+	int ret;
+
+	/* Don't fail if no eDMA was found (for the backward compatibility) */
+	ret = dw_pcie6_edma_find_chip(pci);
+	if (ret)
+		return 0;
+
+	/* Don't fail on the IRQs verification (for the backward compatibility) */
+	ret = dw_pcie6_edma_irq_verify(pci);
+	if (ret) {
+		dev_err(pci->dev, "Invalid eDMA IRQs found\n");
+		return 0;
+	}
+
+	ret = dw_pcie6_edma_ll_alloc(pci);
+	if (ret) {
+		dev_err(pci->dev, "Couldn't allocate LLP memory\n");
+		return ret;
+	}
+
+	/* Don't fail if the DW eDMA driver can't find the device */
+	ret = dw_edma_probe(&pci->edma);
+	if (ret && ret != -ENODEV) {
+		dev_err(pci->dev, "Couldn't register eDMA device\n");
+		return ret;
+	}
+
+	dev_info(pci->dev, "eDMA: unroll %s, %hu wr, %hu rd\n",
+		 pci->edma.mf == EDMA_MF_EDMA_UNROLL ? "T" : "F",
+		 pci->edma.ll_wr_cnt, pci->edma.ll_rd_cnt);
+
+	return 0;
+}
+
+void dw_pcie6_edma_remove(struct dw_pcie6 *pci)
+{
+	dw_edma_remove(&pci->edma);
 }
 
 int dw_pcie6_setup_rc(struct dw_pcie6_rp *pp)
@@ -2085,10 +2277,13 @@ int dw_pcie6_ep_raise_msix_irq(struct dw_pcie6_ep *ep, u8 func_no,
 
 void dw_pcie6_ep_exit(struct dw_pcie6_ep *ep)
 {
+	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
 	struct pci_epc *epc = ep->epc;
 
 	pci_epc_mem_free_addr(epc, ep->msi_mem_phys, ep->msi_mem,
 			      epc->mem->window.page_size);
+
+	dw_pcie6_edma_remove(pci);
 
 	pci_epc_mem_exit(epc);
 }
@@ -2263,6 +2458,10 @@ int dw_pcie6_ep_init(struct dw_pcie6_ep *ep)
 		goto err_exit_epc_mem;
 	}
 
+	ret = dw_pcie6_edma_detect(pci);
+	if (ret)
+		goto err_free_epc_mem;
+
 	if (ep->ops->get_features) {
 		epc_features = ep->ops->get_features(ep);
 		if (epc_features->core_init_notifier)
@@ -2271,7 +2470,7 @@ int dw_pcie6_ep_init(struct dw_pcie6_ep *ep)
 
 	ret = dw_pcie6_ep_init_complete(ep);
 	if (ret)
-		goto err_free_epc_mem;
+		goto err_remove_edma;
 
 	return 0;
 
@@ -2281,6 +2480,9 @@ err_free_epc_mem:
 
 err_exit_epc_mem:
 	pci_epc_mem_exit(epc);
+
+err_remove_edma:
+	dw_pcie6_edma_remove(pci);
 
 	return ret;
 }
