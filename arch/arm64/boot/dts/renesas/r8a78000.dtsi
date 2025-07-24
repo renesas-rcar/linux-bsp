@@ -1297,7 +1297,7 @@
 			compatible = "renesas,rcar-i3c-master";
 			reg = <0 0xc0788000 0 0x1000>;
 			interrupts = <GIC_SPI 4068 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_I3C0>,
+			clocks = <&scmi_clk X5H_CLOCK_ID_I3C0>,
 				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
 			#address-cells = <3>;
 			#size-cells = <0>;
@@ -1310,7 +1310,7 @@
 			compatible = "renesas,rcar-i3c-master";
 			reg = <0 0xc0789000 0 0x1000>;
 			interrupts = <GIC_SPI 4069 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_I3C1>,
+			clocks = <&scmi_clk X5H_CLOCK_ID_I3C1>,
 				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
 			#address-cells = <3>;
 			#size-cells = <0>;
@@ -1323,7 +1323,7 @@
 			compatible = "renesas,rcar-i3c-master";
 			reg = <0 0xc078a000 0 0x1000>;
 			interrupts = <GIC_SPI 4070 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk SCP_CLOCK_ID_MDLC_I3C2>,
+			clocks = <&scmi_clk X5H_CLOCK_ID_I3C2>,
 				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
 			#address-cells = <3>;
 			#size-cells = <0>;
