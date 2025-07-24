@@ -665,16 +665,6 @@
 		function = "canfd15";
 	};
 
-	canxl0_pins: canxl0 {
-		groups = "canxl0_data";
-		function = "canxl0";
-	};
-
-	canxl1_pins: canxl1 {
-		groups = "canxl1_data";
-		function = "canxl1";
-	};
-
 	sound_pins: sound {
 		groups = "ssi5_ctrl", "ssi5_data";
 		function = "ssi5";
@@ -1206,16 +1196,10 @@
 };
 
 &canxl0 {
-	pinctrl-0 = <&canxl0_pins>;
-	pinctrl-names = "default";
-
 	status = "okay";
 };
 
 &canxl1 {
-	pinctrl-0 = <&canxl1_pins>;
-	pinctrl-names = "default";
-
 	status = "okay";
 };
 
