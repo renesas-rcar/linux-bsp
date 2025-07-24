@@ -106,7 +106,7 @@ unmap:
 	iounmap(msres);
 }
 
-static void mp_phy_module_power_reset(void)
+static void __maybe_unused mp_phy_module_power_reset(void)
 {
 	mp_phy_module_power_gating_set(3, 0x03);
 	mp_phy_module_power_gating_set(4, 0x03);
@@ -120,7 +120,7 @@ static void mp_phy_module_power_reset(void)
 	mp_phy_module_standy_set(6, 16, 0x01);
 }
 
-static void mp_phy_module_power_run(void)
+static void __maybe_unused mp_phy_module_power_run(void)
 {
 	mp_phy_module_power_gating_set(3, 0x03);
 	mp_phy_module_power_gating_set(4, 0x03);
