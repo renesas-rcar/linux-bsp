@@ -303,6 +303,17 @@
 	clock-frequency = <400000>;
 };
 
+&i3c0 {
+	pinctrl-0 = <&i3c0_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	sensor@72 {
+		compatible = "null";
+		reg = <0x72 0x0 0x10>;
+	};
+};
+
 &mp_phy {
 	status = "okay";
 };
@@ -333,6 +344,21 @@
 	i2c1_pins: i2c1 {
 		groups = "i2c1";
 		function = "i2c1";
+	};
+
+	i3c0_pins: i3c0 {
+		groups = "i3c0";
+		function = "i3c0";
+	};
+
+	i3c1_pins: i3c1 {
+		groups = "i3c1";
+		function = "i3c1";
+	};
+
+	i3c2_pins: i3c2 {
+		groups = "i3c2";
+		function = "i3c2";
 	};
 
 	rsw3_pins: rsw3 {
