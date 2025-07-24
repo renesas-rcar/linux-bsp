@@ -658,6 +658,61 @@ static int rcar_rtc_init(struct rcar_rtc_priv *rtc, struct device *dev, bool sto
 	return 0;
 }
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE              0xc1338000
+#define RTC_PDID               (0)
+#define RTC_CLK_MASK(n)        GENMASK((n) + 1, n)
+#define RTC_CLK_SHIFT(n)       (n)
+
+#define MDLC_PKCPROT0          (MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1          (MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)          (MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)         (MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0            (MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0            (MDLC_BASE + 0x0120)
+
+#define MDLC_MPDG              _MDLC_MPDG(RTC_PDID)
+#define MDLC_MPDGS             _MDLC_MPDGS(RTC_PDID)
+
+#define MDLC_MSRES(i)          (MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i) (       MDLC_BASE + 0x0960 + (i) * 4)
+
+static void rtc_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+       void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+       void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+       void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+       u32 val;
+
+       writel(0xA5A5A501, unlock);
+
+       if ((readl(msress) & RTC_CLK_MASK(pos)) == (mode << RTC_CLK_SHIFT(pos)))
+                       goto unmap;
+
+       while ((readl(msress) & RTC_CLK_MASK(pos)) != (readl(msres) & RTC_CLK_MASK(pos)))
+                       udelay(1000);
+
+       val = readl(msres);
+       val &= ~RTC_CLK_MASK(pos);
+       val |= mode << RTC_CLK_SHIFT(pos);
+       writel(val, msres);
+
+       while ((readl(msress) & RTC_CLK_MASK(pos)) != (readl(msres) & RTC_CLK_MASK(pos)))
+                       udelay(1000);
+
+unmap:
+       iounmap(unlock);
+       iounmap(msress);
+       iounmap(msres);
+}
+
+static void rtc_module_power_run(void)
+{
+       rtc_module_standby_set(1, 2, 0x03);
+}
+//--------------------------------------------------
+
 static int rcar_rtc_probe(struct platform_device *pdev)
 {
 	struct rcar_rtc_priv *rtc;
@@ -777,6 +832,8 @@ static int rcar_rtc_probe(struct platform_device *pdev)
 	ret = devm_rtc_register_device(rtc->rtc_dev);
 	if (ret)
 		goto err_disable_wakeup;
+
+	rtc_module_power_run();
 
 	return 0;
 
