@@ -168,4 +168,17 @@ config USB_DWC3_AM62
 	  The Designware Core USB3 IP is programmed to operate in
 	  in USB 2.0 mode only.
 	  Say 'Y' or 'M' here if you have one such device
+
+config USB_DWC3_RCAR
+	tristate "Qualcomm Platform"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	default USB_DWC3
+	help
+	  Enable support for Renesas R-Car Gen5 USB2/3 controllers.
+	  This driver provides the glue layer for USB3 and USB2 controllers
+	  on R-Car Gen5 platforms, handling Renesas-specific initialization
+	  and PHY management while integrating with the DesignWare USB3
+	  (DWC3) framework.
+	  Say 'Y' or 'M' if you have one such device.
+
 endif

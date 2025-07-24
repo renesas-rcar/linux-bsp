@@ -3620,6 +3620,48 @@
 			status = "disabled";
 		};
 
+		usb30: usb@c9c54000 {
+			compatible = "renesas,rcar-gen5-usb";
+			reg = <0 0xc9c54000 0 0x2000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* CRITICAL FIX: Proper address translation */
+			ranges = <0x0 0xc8800000 0x0 0xc8800000 0x0 0x100000>;
+			status = "disabled";
+		};
+
+		usb31: usb@c9c58000 {
+			compatible = "renesas,rcar-gen5-usb";
+			reg = <0 0xc9c58000 0 0x2000>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* CRITICAL FIX: Proper address translation */
+			ranges = <0x0 0xc8a00000 0x0 0xc8a00000 0x0 0x100000>;
+			status = "disabled";
+		};
+
+		usb20: usb@c9c56000 {
+			compatible = "renesas,rcar-gen5-usb";
+			reg = <0 0xc9c56000 0 0x2000>;
+			phy-names = "usb2-phy";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* CRITICAL FIX: Proper address translation */
+			ranges = <0x0 0xc8900000 0x0 0xc8900000 0x0 0x100000>;
+			status = "disabled";
+		};
+
+		usb21: usb@c9c5a000 {
+			compatible = "renesas,rcar-gen5-usb";
+			reg = <0 0xc9c5a000 0 0x2000>;
+			phy-names = "usb2-phy";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			/* CRITICAL FIX: Proper address translation */
+			ranges = <0x0 0xc8b00000 0x0 0xc8b00000 0x0 0x100000>;
+			status = "disabled";
+		};
+
 		cr52_rproc0: cr52_0 {
 			compatible = "renesas,rcar-gen5-rproc";
 			renesas,mfis-channel = <0>;
