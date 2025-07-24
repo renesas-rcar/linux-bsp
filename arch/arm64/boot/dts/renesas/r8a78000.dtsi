@@ -1074,6 +1074,124 @@
 			      <0 0xc9b00800 0 0x104>;
 		};
 
+		cmt0: timer@c64c0000 {
+			compatible = "renesas,rcar-gen5-cmt0";
+			reg = <0 0xc64c0000 0 0x1004>;
+			interrupts = <GIC_SPI 4088 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4089 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CMT0>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		cmt1: timer@c64d0000 {
+			compatible = "renesas,rcar-gen5-cmt1";
+			reg = <0 0xc64d0000 0 0x1004>;
+			interrupts = <GIC_SPI 4090 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4091 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4092 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4093 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4094 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4095 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4096 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4097 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CMT1>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		cmt2: timer@c64e0000 {
+			compatible = "renesas,rcar-gen5-cmt1";
+			reg = <0 0xc64e0000 0 0x1004>;
+			interrupts = <GIC_SPI 4098 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4099 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4100 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4101 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4102 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4103 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4104 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4105 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CMT2>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		cmt3: timer@c64e8000 {
+			compatible = "renesas,rcar-gen5-cmt1";
+			reg = <0 0xc64e8000 0 0x1004>;
+			interrupts = <GIC_SPI 4106 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4107 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4108 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4109 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4110 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4111 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4112 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4113 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CMT3>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		tmu0: timer@1c030000 {
+			compatible = "renesas,tmu";
+			reg = <0 0x1c030000 0 0x30>;
+			renesas,clk-rate-channel0;
+			interrupts = <GIC_SPI 4114 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4115 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4116 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU0>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		tmu1: timer@c0680000 {
+			compatible = "renesas,tmu";
+			reg = <0 0xc0680000 0 0x30>;
+			interrupts = <GIC_SPI 4117 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4118 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4119 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4120 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU1>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		tmu2: timer@c0690000 {
+			compatible = "renesas,tmu";
+			reg = <0 0xc0690000 0 0x30>;
+			interrupts = <GIC_SPI 4121 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4122 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4123 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4124 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU2>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		tmu3: timer@c06a0000 {
+			compatible = "renesas,tmu";
+			reg = <0 0xc06a0000 0 0x30>;
+			interrupts = <GIC_SPI 4125 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4126 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4127 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4128 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU3>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
+		tmu4: timer@c06b0000 {
+			compatible = "renesas,tmu";
+			reg = <0 0xc06b0000 0 0x30>;
+			interrupts = <GIC_SPI 4129 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4130 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4131 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4132 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU4>;
+			clock-names = "fck";
+			status = "disabled";
+		};
+
 		i2c0: i2c@c11d0000 {
 			compatible = "renesas,i2c-r8a78000",
 				     "renesas,rcar-gen5-i2c";
