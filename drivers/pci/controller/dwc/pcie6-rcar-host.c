@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * PCIe 6.0 Host driver for Renesas R-Car Gen5 Series SoCs
  *
