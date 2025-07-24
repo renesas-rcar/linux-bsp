@@ -48,6 +48,64 @@ enum rcanfd_chip_id {
 	GEN5,
 };
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE		0xC1330000
+#define R8A78000_CANFD_PDID		(0)
+#define R8A78000_CANFD_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define R8A78000_CANFD_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
+
+static void r8a78000_canfd_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(msress) & R8A78000_CANFD_CLK_MASK(pos)) == (mode <<
+								 R8A78000_CANFD_CLK_SHIFT(pos)))
+			goto unmap;
+
+	while ((readl(msress) & R8A78000_CANFD_CLK_MASK(pos)) != (readl(msres) &
+								    R8A78000_CANFD_CLK_MASK(pos)))
+			udelay(1000);
+
+	val = readl(msres);
+	val &= ~R8A78000_CANFD_CLK_MASK(pos);
+	val |= mode << R8A78000_CANFD_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & R8A78000_CANFD_CLK_MASK(pos)) != (readl(msres) &
+								    R8A78000_CANFD_CLK_MASK(pos)))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+static void r8a78000_canfd_module_run(void)
+{
+	r8a78000_canfd_module_standby_set(7, 4, 0x01);
+	r8a78000_canfd_module_standby_set(7, 6, 0x01);
+	udelay(1000);
+	r8a78000_canfd_module_standby_set(7, 4, 0x03);
+	r8a78000_canfd_module_standby_set(7, 6, 0x03);
+}
+
 /* Global register bits */
 
 /* RSCFDnCFDGRMCFG */
@@ -515,6 +573,8 @@ enum rcanfd_chip_id {
  * FIFOs dedicated to them. Use the first (index 0) FIFO out of the 3 for Tx.
  */
 #define RCANFD_CFFIFO_IDX		0
+
+#define CFG_CLK_IGNORE
 
 /* fCAN clock select register settings */
 enum rcar_canfd_fcanclk {
@@ -1438,20 +1498,25 @@ fail_mode_change:
 static int rcar_canfd_open(struct net_device *ndev)
 {
 	struct rcar_canfd_channel *priv = netdev_priv(ndev);
-	struct rcar_canfd_global *gpriv = priv->gpriv;
+	/* struct rcar_canfd_global *gpriv = priv->gpriv; */
 	int err;
 
+#if !defined(CFG_CLK_IGNORE)
 	/* Peripheral clock is already enabled in probe */
 	err = clk_prepare_enable(gpriv->can_clk);
 	if (err) {
 		netdev_err(ndev, "failed to enable CAN clock, error %d\n", err);
 		goto out_clock;
 	}
-
+#endif
 	err = open_candev(ndev);
 	if (err) {
 		netdev_err(ndev, "open_candev() failed, error %d\n", err);
+#if !defined(CFG_CLK_IGNORE)
 		goto out_can_clock;
+#else
+		goto out_clock;
+#endif
 	}
 
 	napi_enable(&priv->napi);
@@ -1463,8 +1528,10 @@ static int rcar_canfd_open(struct net_device *ndev)
 out_close:
 	napi_disable(&priv->napi);
 	close_candev(ndev);
+#if !defined(CFG_CLK_IGNORE)
 out_can_clock:
 	clk_disable_unprepare(gpriv->can_clk);
+#endif
 out_clock:
 	return err;
 }
@@ -1501,12 +1568,14 @@ static void rcar_canfd_stop(struct net_device *ndev)
 static int rcar_canfd_close(struct net_device *ndev)
 {
 	struct rcar_canfd_channel *priv = netdev_priv(ndev);
-	struct rcar_canfd_global *gpriv = priv->gpriv;
+	/* struct rcar_canfd_global *gpriv = priv->gpriv;*/
 
 	netif_stop_queue(ndev);
 	rcar_canfd_stop(ndev);
 	napi_disable(&priv->napi);
+#if !defined(CFG_CLK_IGNORE)
 	clk_disable_unprepare(gpriv->can_clk);
+#endif
 	close_candev(ndev);
 	return 0;
 }
@@ -1962,6 +2031,10 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 					     "failed to get rstc_n\n");
 	}
 
+	/* Enable module standby*/
+	r8a78000_canfd_module_run();
+
+#if !defined(CFG_CLK_IGNORE)
 	/* Peripheral clock */
 	gpriv->clkp = devm_clk_get(&pdev->dev, "fck");
 	if (IS_ERR(gpriv->clkp))
@@ -1984,10 +2057,11 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 		gpriv->fcan = RCANFD_EXTCLK;
 	}
 	fcan_freq = clk_get_rate(gpriv->can_clk);
+#else
+	gpriv->fcan = RCANFD_CANFDCLK;
+	fcan_freq = 80000000;
+#endif
 
-	if (gpriv->fcan == RCANFD_CANFDCLK && gpriv->chip_id != RENESAS_RZG2L)
-		/* CANFD clock is further divided by (1/2) within the IP */
-		fcan_freq /= 2;
 
 	addr = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(addr)) {
@@ -2049,15 +2123,17 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 		}
 	}
 
-	err = reset_control_reset(gpriv->rstc1);
-	if (err)
-		goto fail_dev;
-	err = reset_control_reset(gpriv->rstc2);
-	if (err) {
-		reset_control_assert(gpriv->rstc1);
-		goto fail_dev;
-	}
+	 /* err = reset_control_reset(gpriv->rstc1);
+	 * if (err)
+	 *	goto fail_dev;
+	 * err = reset_control_reset(gpriv->rstc2);
+	 * if (err) {
+	 *	reset_control_assert(gpriv->rstc1);
+	 *	goto fail_dev;
+	 * }
+	 */
 
+#if !defined(CFG_CLK_IGNORE)
 	/* Enable peripheral clock for register access */
 	err = clk_prepare_enable(gpriv->clkp);
 	if (err) {
@@ -2065,7 +2141,7 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 			"failed to enable peripheral clock, error %d\n", err);
 		goto fail_reset;
 	}
-
+#endif
 	err = rcar_canfd_reset_controller(gpriv);
 	if (err) {
 		dev_err(&pdev->dev, "reset controller failed\n");
@@ -2121,9 +2197,11 @@ fail_mode:
 	rcar_canfd_disable_global_interrupts(gpriv);
 fail_clk:
 	clk_disable_unprepare(gpriv->clkp);
-fail_reset:
-	reset_control_assert(gpriv->rstc1);
-	reset_control_assert(gpriv->rstc2);
+/*
+ * fail_reset:
+ * 	reset_control_assert(gpriv->rstc1);
+ * 	reset_control_assert(gpriv->rstc2);
+ */
 fail_dev:
 	return err;
 }
@@ -2143,9 +2221,13 @@ static int rcar_canfd_remove(struct platform_device *pdev)
 
 	/* Enter global sleep mode */
 	rcar_canfd_set_bit(gpriv->base, RCANFD_GCTR, RCANFD_GCTR_GSLPR);
+#if !defined(CFG_CLK_IGNORE)
 	clk_disable_unprepare(gpriv->clkp);
-	reset_control_assert(gpriv->rstc1);
-	reset_control_assert(gpriv->rstc2);
+#endif
+	/*
+	 * reset_control_assert(gpriv->rstc1);
+	 * reset_control_assert(gpriv->rstc2);
+	 */
 
 	return 0;
 }
@@ -2160,8 +2242,10 @@ static int __maybe_unused rcar_canfd_resume(struct device *dev)
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(rcar_canfd_pm_ops, rcar_canfd_suspend,
-			 rcar_canfd_resume);
+/*
+ * static SIMPLE_DEV_PM_OPS(rcar_canfd_pm_ops, rcar_canfd_suspend,
+ *			 rcar_canfd_resume);
+ */
 
 static const __maybe_unused struct of_device_id rcar_canfd_of_table[] = {
 	{ .compatible = "renesas,rcar-gen3-canfd", .data = (void *)RENESAS_RCAR_GEN3 },
@@ -2177,7 +2261,7 @@ static struct platform_driver rcar_canfd_driver = {
 	.driver = {
 		.name = RCANFD_DRV_NAME,
 		.of_match_table = of_match_ptr(rcar_canfd_of_table),
-		.pm = &rcar_canfd_pm_ops,
+		/* .pm = &rcar_canfd_pm_ops,*/
 	},
 	.probe = rcar_canfd_probe,
 	.remove = rcar_canfd_remove,
