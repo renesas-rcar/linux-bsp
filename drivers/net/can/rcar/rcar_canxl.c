@@ -34,21 +34,24 @@
 #define RCANXL_DRV_NAME		"rcar_canxl"
 
 /* Hardcoded for enable module clock */
-#define MDLC_BASE		0xc9c90000
-#define CANXL_PDID		(0)
-#define CANXL_CLK_MASK(n)	GENMASK((n) + 1, n)
-#define CANXL_CLK_SHIFT(n)	(n)
+#define MDLC_BASE		0xC1330000
+#define R8A78000_CANXL_PDID		(0)
+#define R8A78000_CANXL_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define R8A78000_CANXL_CLK_SHIFT(n)	(n)
 
 #define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
 #define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
 
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
 #define MDLC_MPIER0		(MDLC_BASE + 0x0110)
 #define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
 
 #define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
 #define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
 
-static void canxl_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
+static bool check = true;
+static void r8a78000_canxl_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
 {
 	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
 	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
@@ -56,38 +59,43 @@ static void canxl_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
 	u32 val;
 
 	writel(0xA5A5A501, unlock);
-
-	if ((readl(msress) & CANXL_CLK_MASK(pos)) == (mode << CANXL_CLK_SHIFT(pos)))
+	if ((readl(msress) & R8A78000_CANXL_CLK_MASK(pos)) == (mode <<
+								 R8A78000_CANXL_CLK_SHIFT(pos)))
 			goto unmap;
 
-	while ((readl(msress) & CANXL_CLK_MASK(pos)) != (readl(msres) & CANXL_CLK_MASK(pos)))
+	while ((readl(msress) & R8A78000_CANXL_CLK_MASK(pos)) != (readl(msres) &
+								    R8A78000_CANXL_CLK_MASK(pos)))
 			udelay(1000);
 
 	val = readl(msres);
-	val &= ~CANXL_CLK_MASK(pos);
-	val |= mode << CANXL_CLK_SHIFT(pos);
+	val &= ~R8A78000_CANXL_CLK_MASK(pos);
+	val |= mode << R8A78000_CANXL_CLK_SHIFT(pos);
 	writel(val, msres);
 
-	while ((readl(msress) & CANXL_CLK_MASK(pos)) != (readl(msres) & CANXL_CLK_MASK(pos)))
+	while ((readl(msress) & R8A78000_CANXL_CLK_MASK(pos)) != (readl(msres) &
+		   R8A78000_CANXL_CLK_MASK(pos)))
 			udelay(1000);
+
 	writel(0xA5A5A500, unlock);
+	check = false;
 unmap:
 	iounmap(unlock);
 	iounmap(msress);
 	iounmap(msres);
 }
 
-static void canxl_module_power_reset(void)
+static void r8a78000_canxl_module_run(void)
 {
-	canxl_module_standby_set(6, 0, 0x01);
-	canxl_module_standby_set(6, 2, 0x01);
+	if (check == true) {
+		r8a78000_canxl_module_standby_set(6, 0, 0x01);
+		r8a78000_canxl_module_standby_set(6, 2, 0x01);
+		mdelay(100);
+		r8a78000_canxl_module_standby_set(6, 0, 0x03);
+		r8a78000_canxl_module_standby_set(6, 2, 0x03);
+		mdelay(100);
+	}
 }
 
-static void canxl_module_power_run(void)
-{
-	canxl_module_standby_set(6, 0, 0x03);
-	canxl_module_standby_set(6, 2, 0x03);
-}
 //--------------------------------------------------
 
 /* CAN-XL register bits */
@@ -1041,7 +1049,8 @@ static void rcar_canxl_descriptor_init(struct rcar_canxl_global *gpriv)
 			rcar_canxl_write_desc(RX_FQ_STADD(base, queue),
 					      RXElement3TS1(desc), ele3_ts1);
 
-			crc = rcar_canxl_compute_crc(RX_FQ_STADD(base, queue), CANXL_RX_DESC);
+			crc = rcar_canxl_compute_crc(RX_FQ_STADD(base, queue)
+						     + RXElement0(desc), CANXL_RX_DESC);
 			ele0 |= CANXL_RX_BIT_CRC(crc);
 			rcar_canxl_write_desc(RX_FQ_STADD(base, queue),
 					      RXElement0(desc), ele0);
@@ -1762,6 +1771,7 @@ static int rcar_canxl_start(struct net_device *ndev)
 			 RX_FQ_CTRL0_START(QUEUE(0)));
 	err = readl_poll_timeout(gpriv->base + RX_FQ_STS(0), sts,
 				 (sts & RX_FQ_STS0_BUSY(QUEUE(0))), 2, 500000);
+
 	if (err) {
 		dev_err(&pdev->dev, "Start RX FIFO failed\n");
 		goto fail_mode_change;
@@ -1930,11 +1940,9 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 		pay_load_size = ((dlc - 1) / 4) + 1;
 
 	rc = target_desc_index % 32;
-	ele0 = (CANXL_DMA1_FIXED_FQ | CANXL_BIT_VALID(0x01) |
+	ele0 = (CANXL_DMA1_FIXED_FQ | CANXL_BIT_VALID(0x01) | CANXL_BIT_END |
 		CANXL_BIT_FQN(0) | CANXL_BIT_RC(rc) |
 		CANXL_BIT_IRQ(0x1));
-	if (target_desc_index == (CANXL_MAXIMUM_FQ_TX_DESCRIPTOR - 1))
-		ele0 |= CANXL_BIT_END;
 
 	ele1 = (CANXL_DMA2_FIXED_FQ | CANXL_BIT_SIZE(pay_load_size) |
 		CANXL_BIT_IN(gpriv->channel));
@@ -1991,7 +1999,8 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 	rcar_canxl_write_desc(TX_FQ_STADD(gpriv->sys_base, 0),
 			      TXElement7TX_APTD1(target_desc_index), ele7_txap);
 
-	crc = rcar_canxl_compute_crc(TX_FQ_STADD(gpriv->sys_base, 0), CANXL_TX_DESC);
+	crc = rcar_canxl_compute_crc(TX_FQ_STADD(gpriv->sys_base, 0)
+				     + TXElement0(target_desc_index), CANXL_TX_DESC);
 	ele0 |= CANXL_BIT_CRC(crc);
 	rcar_canxl_write_desc(TX_FQ_STADD(gpriv->sys_base, 0),
 			      TXElement0(target_desc_index), ele0);
@@ -2296,6 +2305,9 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 	bool xlmode = true;	/* CAN XL normal mode - default */
 	const struct rcar_canxl_of_data *of_data;
 
+	/* Clock enable */
+	r8a78000_canxl_module_run();
+
 	if (of_property_read_bool(pdev->dev.of_node, "channel0"))
 		ch = 0;
 	else
@@ -2319,9 +2331,6 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 		err = err_irq;
 		goto fail_dev;
 	}
-	canxl_module_power_reset();
-	udelay(1000);
-	canxl_module_power_run();
 
 	/* Global controller context */
 	gpriv = devm_kzalloc(&pdev->dev, sizeof(*gpriv), GFP_KERNEL);
@@ -2412,7 +2421,7 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 #endif
 	err = rcar_canxl_local_ram_init(gpriv);
 	if (err) {
-		dev_err(&pdev->dev, "Local RAM initialization failed\n");
+		dev_dbg(&pdev->dev, "Local RAM initialization failed\n");
 		goto fail_clk;
 	}
 
