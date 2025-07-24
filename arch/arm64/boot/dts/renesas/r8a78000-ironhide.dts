@@ -836,7 +836,7 @@
 		compatible = "synopsys,dwc3";
 		reg = <0x0 0xc8800000 0x0 0x100000>;
 		interrupts = <GIC_SPI 795 IRQ_TYPE_LEVEL_HIGH>;
-		maximum-speed = "super-speed-plus";
+		maximum-speed = "high-speed";
 		dr_mode = "host";
 
 		snps,dis_enblslpm_quirk;
@@ -864,7 +864,7 @@
 		compatible = "synopsys,dwc3";
 		reg = <0x0 0xc8a00000 0x0 0x100000>;
 		interrupts = <GIC_SPI 797 IRQ_TYPE_LEVEL_HIGH>;
-		maximum-speed = "super-speed-plus";
+		maximum-speed = "high-speed";
 		dr_mode = "host";
 
 		snps,dis_enblslpm_quirk;
