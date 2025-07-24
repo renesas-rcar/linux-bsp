@@ -17,6 +17,61 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	/*
+	 * The external audio clocks are configured as 0 Hz fixed frequency
+	 * clocks by default.
+	 * Boards that provide audio clocks should override them.
+	 */
+	audio_clk_a: audio_clk_a {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	audio_clk_b: audio_clk_b {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	audio_clk_c: audio_clk_c {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	dummy_clk: dummy_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <0>;
+		#clock-cells = <0>;
+	};
+
+	can_clk: can {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+	};
+
+	canxl_clk: canxl_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <160000000>;
+		#clock-cells = <0>;
+	};
+
+	ssi_dummy_clk: ssi_dummy_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+		clock-output-names = "ssi";
+	};
+
+	scu_dummy_clk: scu_dummy_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <0>;
+		clock-output-names = "scu";
+	};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
@@ -883,6 +938,25 @@
 		clock-output-names = "rpc";
 	};
 
+	dummy_clk_sgasyncd16: dummy_clk_sgasyncd16 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <66666666>;
+	};
+
+	dummy_clk_s0asyncd8: dummy_clk_s0asyncd8 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <100000000>;
+	};
+
+	dummy_tcki: dummy_tcki {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <240000>;
+		clock-output-names = "rtcatcki";
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -1101,11 +1175,176 @@
 			status = "disabled";
 		};
 
+		i3c0: i3c-master@c0788000 {
+			compatible = "renesas,rcar-i3c-master";
+			reg = <0 0xc0788000 0 0x1000>;
+			interrupts = <GIC_SPI 4068 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_I3C0>,
+				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
+			#address-cells = <3>;
+			#size-cells = <0>;
+			i2c-scl-hz = <400000>;
+			i3c-scl-hz = <12500000>;
+			status = "disabled";
+		};
+
+		i3c1: i3c-master@c0789000 {
+			compatible = "renesas,rcar-i3c-master";
+			reg = <0 0xc0789000 0 0x1000>;
+			interrupts = <GIC_SPI 4069 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_I3C1>,
+				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
+			#address-cells = <3>;
+			#size-cells = <0>;
+			i2c-scl-hz = <400000>;
+			i3c-scl-hz = <12500000>;
+			status = "disabled";
+		};
+
+		i3c2: i3c-master@c078a000 {
+			compatible = "renesas,rcar-i3c-master";
+			reg = <0 0xc078a000 0 0x1000>;
+			interrupts = <GIC_SPI 4070 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_I3C2>,
+				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
+			#address-cells = <3>;
+			#size-cells = <0>;
+			i2c-scl-hz = <400000>;
+			i3c-scl-hz = <12500000>;
+			status = "disabled";
+		};
+
 		rwdt: watchdog@1c040000 {
 			compatible = "renesas,r8a78000-wdt",
 				     "renesas,rcar-gen5-wdt";
 			reg = <0 0x1c040000 0 0x0c>;
 			clock = <&dummy_clk_wdt>;
+			status = "disabled";
+		};
+
+		wwdt0: watchdog@1c100000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c100000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt1: watchdog@1c110000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c110000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt2: watchdog@1c120000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c120000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt3: watchdog@1c130000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c130000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt4: watchdog@1c140000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c140000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt5: watchdog@1c150000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c150000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt6: watchdog@1c160000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c160000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt7: watchdog@1c170000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c170000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt8: watchdog@1c180000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c180000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt9: watchdog@1c190000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c190000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt10: watchdog@1c1a0000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c1a0000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt11: watchdog@1c1b0000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c1b0000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt12: watchdog@1c1c0000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c1c0000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt13: watchdog@1c1d0000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c1d0000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt14: watchdog@1c1e0000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c1e0000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt15: watchdog@1c1f0000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c1f0000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt16: watchdog@1c200000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c200000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt17: watchdog@1c210000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c210000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt18: watchdog@1c220000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c220000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt19: watchdog@1c230000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0x1c230000 0 0x10000>;
+			status = "disabled";
+		};
+
+		wwdt20: watchdog@c1380000 {
+			compatible = "renesas, rcar-gen5-wwdt";
+			reg = <0 0xc1380000 0 0x10000>;
 			status = "disabled";
 		};
 
@@ -1240,6 +1479,100 @@
 			gpio-ranges = <&pfc 0 320 14>;
 			#interrupt-cells = <2>;
 			interrupt-controller;
+		};
+
+		canfd_0: can@c1420000 {
+			compatible = "renesas,r8a78000-canfd";
+			reg = <0 0xc1420000 0 0x8600>;
+			interrupts = <GIC_SPI 4675 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4677 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4681 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4684 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4687 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4690 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4693 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4696 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4699 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+
+			channel0 {
+				status = "disabled";
+			};
+
+			channel1 {
+				status = "disabled";
+			};
+
+			channel2 {
+				status = "disabled";
+			};
+
+			channel3 {
+				status = "disabled";
+			};
+
+			channel4 {
+				status = "disabled";
+			};
+
+			channel5 {
+				status = "disabled";
+			};
+
+			channel6 {
+				status = "disabled";
+			};
+
+			channel7 {
+				status = "disabled";
+			};
+		};
+
+		canfd_1: can@c1520000 {
+			compatible = "renesas,r8a78000-canfd";
+			reg = <0 0xc1520000 0 0x8600>;
+			interrupts = <GIC_SPI 4725 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4728 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4731 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4734 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4737 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4740 IRQ_TYPE_LEVEL_HIGH>, //can12
+				     <GIC_SPI 4743 IRQ_TYPE_LEVEL_HIGH>, //can13
+				     <GIC_SPI 4746 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4749 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+
+			channel0 {
+				status = "disabled";
+			};
+
+			channel1 {
+				status = "disabled";
+			};
+
+			channel2 {
+				status = "disabled";
+			};
+
+			channel3 {
+				status = "disabled";
+			};
+
+			channel4 {
+				status = "disabled";
+			};
+
+			channel5 {
+				status = "disabled";
+			};
+
+			channel6 {
+				status = "disabled";
+			};
+
+			channel7 {
+				status = "disabled";
+			};
 		};
 
 		crc0: crc@19000000 {
@@ -1822,6 +2155,95 @@
 				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx",
 				"crc_rx", "crc_tx", "crc_rx_in", "crc_txrx",
 				"kcrc_rx", "kcrc_tx", "kcrc_rx_in", "kcrc_txrx";
+			status = "disabled";
+		};
+
+		pwm0: pwm@c0740000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0740000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			status = "disabled";
+		};
+
+		pwm1: pwm@c0741000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0741000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			status = "disabled";
+		};
+
+		pwm2: pwm@c0742000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0742000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			status = "disabled";
+		};
+
+		pwm3: pwm@c0743000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0743000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			status = "disabled";
+		};
+
+		pwm4: pwm@c0780000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0780000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm5: pwm@c0781000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0781000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm6: pwm@c0782000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0782000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm7: pwm@c0783000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0783000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm8: pwm@c0784000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0784000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		pwm9: pwm@c0785000 {
+			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
+			reg = <0 0xc0785000 0 0x10>;
+			#pwm-cells = <2>;
+			clocks = <&dummy_clk_s0asyncd8>;
+			status = "disabled";
+		};
+
+		tpu: pwm@c0720000 {
+			compatible = "renesas,tpu-r8a78000", "renesas,tpu";
+			reg = <0 0xc0720000 0 0x148>;
+			interrupts = <GIC_SPI 4087 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk_sgasyncd16>;
+			#pwm-cells = <3>;
 			status = "disabled";
 		};
 
@@ -2438,6 +2860,14 @@
 			reg = <0 0xc1320000 0 0x4000>;
 		};
 
+		rtca: rtca@c1394000 {
+			compatible = "renesas,rtc-r8a78000", "renesas,rtc-rcar";
+			reg = <0 0xc1394000 0 0x70>;
+			clocks = <&dummy_tcki>;
+			clock-names = "ref_clk";
+			status = "disabled";
+		};
+
 		mp_phy: mp_phy@c9a00000 {
 			compatible = "renesas,multi-protocol-phy";
 			reg = <0 0xc9a00000 0 0x100000>;
@@ -2466,8 +2896,11 @@
 		rswitch3: ethernet@c9bc0000 {
 			compatible = "renesas,r8a78000-ether-switch";
 			reg = <0 0xc9bc0000 0 0x0040000>,  // base
-				  <0 0xc9b80000 0 0x00040000>; // secure_base
-			reg-names = "base", "secure_base";
+			      <0 0xc9b80000 0 0x00040000>, // secure_base
+			      <0 0xc9c88000 0x0 0x800>,
+			      <0 0xc9c89000 0 0x800>;
+			reg-names = "base", "secure_base",
+				    "gptp_base", "secure_ptp";
 			interrupts = <GIC_SPI 799 IRQ_TYPE_LEVEL_HIGH>,
 				 <GIC_SPI 800 IRQ_TYPE_LEVEL_HIGH>,
 				 <GIC_SPI 801 IRQ_TYPE_LEVEL_HIGH>,
@@ -2753,6 +3186,38 @@
 			status = "disabled";
 		};
 
+		canxl0: can@c1200000 {
+			compatible = "renesas,r8a78000-canxl",
+				     "renesas,rcar-gen5-canxl";
+			reg = <0 0xc1200000 0 0x20104>;
+			interrupts = <GIC_SPI 4602 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4603 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_CLK_CANXL_SCP>,
+				 <&scmi_clk X5H_CLOCK_ID_CANXL0>,
+				 <&can_clk>;
+			clock-names = "fck", "canxl", "can_clk";
+			assigned-clocks = <&canxl_clk>;
+			assigned-clock-rates = <160000000>;
+			channel0;
+			status = "disabled";
+		};
+
+		canxl1: can@c1240000 {
+			compatible = "renesas,r8a78000-canxl",
+				     "renesas,rcar-gen5-canxl";
+			reg = <0 0xc1240000 0 0x20104>;
+			interrupts = <GIC_SPI 4604 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 4605 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SCP_CLOCK_ID_CLK_CANXL_SCP>,
+				 <&scmi_clk X5H_CLOCK_ID_CANXL1>,
+				 <&can_clk>;
+			clock-names = "fck", "canxl", "can_clk";
+			assigned-clocks = <&canxl_clk>;
+			assigned-clock-rates = <160000000>;
+			channel1;
+			status = "disabled";
+		};
+
 		pciec40: pcie@c9000000 {
 			compatible = "renesas,rcar-gen5-pcie";
 			reg = <0 0xc9000000 0 0x3000>,
@@ -2800,16 +3265,16 @@
 			reg = <0x0 0xda000000 0 0x300000>,
 			      <0x0 0xda300000 0 0xd00000>,
 			      <0x0 0xde000000 0 0x1000>,
-			      <0x0 0xde080000 0 0xf000>,
-			      <0x280 0x00000000 0x0 0x100000>;
+			      <0x0 0xde080000 0 0x30000>,
+			      <0x280 0x00000000 0x0 0x00020000>;
 			reg-names = "dbi", "atu", "apb", "phy", "config";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			bus-range = <0x00 0xff>;
 			device_type = "pci";
-			ranges = <0x03000000 0x0 0x50000000 0x280 0x10000000 0x0 0x10000000>;
+			ranges = <0x03000000 0x0 0x00100000 0x284 0x00000000 0x0 0x10000000>;
 			#interrupt-cells = <1>;
-			interrupts = <GIC_SPI 752 IRQ_TYPE_LEVEL_HIGH>,
+			interrupts = <GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 745 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 753 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 754 IRQ_TYPE_LEVEL_HIGH>,
@@ -2818,12 +3283,9 @@
 				     <GIC_SPI 746 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-map-mask = <0 0 0 7>;
 			interrupt-map = <0 0 0 1 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 2 &gic GIC_SPI 745 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 3 &gic GIC_SPI 753 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 754 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 755 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 747 IRQ_TYPE_LEVEL_HIGH
-					 0 0 0 4 &gic GIC_SPI 746 IRQ_TYPE_LEVEL_HIGH>;
+					 0 0 0 2 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&pcie6_bus_clk>;
 			clock-names = "pcie6_bus";
 			max-link-speed = <1>;
@@ -2836,7 +3298,7 @@
 			compatible = "renesas,rcar-gen5-pcie6-ep";
 			reg = <0 0xda000000 0 0x100000>, <0 0xda100000 0 0x200000>,
 			      <0 0xda300000 0 0xd00000>, <0x0 0xde000000 0 0x1000>,
-			      <0 0xde080000 0 0xf000>, <0x280 0x00000000 0x0 0x40000000>;
+			      <0 0xde080000 0 0x30000>, <0x280 0x10000000 0 0x10000000>;
 			reg-names = "dbi", "dbi2",
 				    "atu", "apb",
 				    "phy", "addr_space";
@@ -2855,25 +3317,60 @@
 			status = "disabled";
 		};
 
+		pciec61: pcie@db000000 {
+			compatible = "renesas,rcar-gen5-pcie6";
+			reg = <0x0 0xdb000000 0 0x300000>,
+			      <0x0 0xdb300000 0 0xd00000>,
+			      <0x0 0xde100000 0 0x1000>,
+			      <0x0 0xde180000 0 0x30000>,
+			      <0x2C0 0x00000000 0x0 0x00020000>;
+			reg-names = "dbi", "atu", "apb", "phy", "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			bus-range = <0x00 0xff>;
+			device_type = "pci";
+			ranges = <0x03000000 0x0 0x00100000 0x2C4 0x00000000 0x0 0x10000000>;
+			#interrupt-cells = <1>;
+			interrupts = <GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 748 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 760 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 761 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 762 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 750 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 749 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 2 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 3 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH
+					 0 0 0 4 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&pcie6_bus_clk>;
+			clock-names = "pcie6_bus";
+			max-link-speed = <1>;
+			num-lanes = <1>;
+			channel-id = <1>;
+			status = "disabled";
+		};
+
 		pciec61_ep: pcie6-ep@db000000 {
 			compatible = "renesas,rcar-gen5-pcie6-ep";
 			reg = <0 0xdb000000 0 0x100000>, <0 0xdb100000 0 0x200000>,
 			      <0 0xdb300000 0 0xD00000>, <0x0 0xde100000 0 0x1000>,
-			      <0x2c0 0x00000000 0x0 0x40000000>;
+			      <0 0xde080000 0 0x30000>, <0x2C0 0x10000000 0x0 0x40000000>;
 			reg-names = "dbi", "dbi2",
 				    "atu", "apb",
-				    "addr_space";
-			interrupts = <GIC_SPI 752 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 745 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 753 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 754 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 755 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 747 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 746 IRQ_TYPE_LEVEL_HIGH>;
+				    "phy", "addr_space";
+			interrupts = <GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 748 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 760 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 761 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 762 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 750 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 749 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&pcie6_bus_clk>;
 			clock-names = "pcie6_bus";
 			max-link-speed = <2>;
 			num-lanes = <1>;
+			channel-id = <1>;
 			num-ib-windows = <16>;
 			num-ob-windows = <16>;
 			status = "disabled";
@@ -3302,6 +3799,380 @@
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB4>;
 			reset-names = "vsp", "fcp";
 			status = "disabled";
+		};
+
+		rcar_sound: sound@ec500000 {
+			/*
+			 * #sound-dai-cells is required
+			 *
+			 * Single DAI : #sound-dai-cells = <0>;	<&rcar_sound>;
+			 * Multi  DAI : #sound-dai-cells = <1>;	<&rcar_sound N>;
+			 */
+			/*
+			 * #clock-cells is required for audio_clkout0/1/2/3
+			 *
+			 * clkout	: #clock-cells = <0>;	<&rcar_sound>;
+			 * clkout0/1/2/3: #clock-cells = <1>;	<&rcar_sound N>;
+			 */
+			compatible =  "renesas,rcar_sound-r8a78000", "renesas,rcar_sound-gen5";
+			reg =	<0 0xec500000 0 0x21004>, /* SCU */
+				<0 0xec530000 0 0x140>,  /* ADG */
+				<0 0xec540000 0 0x9a004>, /* SSIU */
+				<0 0xec740000 0 0x200>;  /* Audio DMAC peri peri*/
+			reg-names = "scu", "adg", "ssiu", "audmapp";
+
+			clocks = <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
+				 <&ssi_dummy_clk>, <&ssi_dummy_clk>, // of SSI
+				 <&scu_dummy_clk>, <&scu_dummy_clk>,
+				 <&scu_dummy_clk>, <&scu_dummy_clk>,
+				 <&scu_dummy_clk>, <&scu_dummy_clk>,
+				 <&scu_dummy_clk>, <&scu_dummy_clk>,
+				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of SRC
+				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of MIX
+				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of CTU
+				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of DVC
+				 <&audio_clk_a>, <&audio_clk_b>,
+				 <&audio_clk_c>;
+			clock-names = "ssi-all",
+				      "ssi.9", "ssi.8", "ssi.7", "ssi.6",
+				      "ssi.5", "ssi.4", "ssi.3", "ssi.2",
+				      "ssi.1", "ssi.0",
+				      "src.9", "src.8", "src.7", "src.6",
+				      "src.5", "src.4", "src.3", "src.2",
+				      "src.1", "src.0",
+				      "mix.1", "mix.0",
+				      "ctu.1", "ctu.0",
+				      "dvc.0", "dvc.1",
+				      "clk_a", "clk_b", "clk_c";
+			status = "disabled";
+
+			rcar_sound,dvc {
+				dvc0: dvc-0 {
+					dmas = <&audio_dmac1 0x01>;
+					dma-names = "tx";
+				};
+				dvc1: dvc-1 {
+					dmas = <&audio_dmac1 0x0>;
+					dma-names = "tx";
+				};
+			};
+
+			rcar_sound,mix {
+				mix0: mix-0 { };
+				mix1: mix-1 { };
+			};
+
+			rcar_sound,ctu {
+				ctu00: ctu-0 { };
+				ctu01: ctu-1 { };
+				ctu02: ctu-2 { };
+				ctu03: ctu-3 { };
+				ctu10: ctu-4 { };
+				ctu11: ctu-5 { };
+				ctu12: ctu-6 { };
+				ctu13: ctu-7 { };
+			};
+
+			rcar_sound,src {
+				src0: src-0 {
+					interrupts = <GIC_SPI 916 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x14>, <&audio_dmac1 0x15>;
+					dma-names = "rx", "tx";
+				};
+				src1: src-1 {
+					interrupts = <GIC_SPI 917 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x12>, <&audio_dmac1 0x13>;
+					dma-names = "rx", "tx";
+				};
+				src2: src-2 {
+					interrupts = <GIC_SPI 918 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x10>, <&audio_dmac1 0x11>;
+					dma-names = "rx", "tx";
+				};
+				src3: src-3 {
+					interrupts = <GIC_SPI 919 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x0E>, <&audio_dmac1 0x0F>;
+					dma-names = "rx", "tx";
+				};
+				src4: src-4 {
+					interrupts = <GIC_SPI 920 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x0C>, <&audio_dmac1 0x0D>;
+					dma-names = "rx", "tx";
+				};
+				src5: src-5 {
+					interrupts = <GIC_SPI 921 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x0A>, <&audio_dmac1 0x0B>;
+					dma-names = "rx", "tx";
+				};
+				src6: src-6 {
+					interrupts = <GIC_SPI 922 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x08>, <&audio_dmac1 0x09>;
+					dma-names = "rx", "tx";
+				};
+				src7: src-7 {
+					interrupts = <GIC_SPI 923 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x06>, <&audio_dmac1 0x07>;
+					dma-names = "rx", "tx";
+				};
+				src8: src-8 {
+					interrupts = <GIC_SPI 924 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x04>, <&audio_dmac1 0x05>;
+					dma-names = "rx", "tx";
+				};
+				src9: src-9 {
+					interrupts = <GIC_SPI 925 IRQ_TYPE_LEVEL_HIGH>;
+					dmas = <&audio_dmac0 0x02>, <&audio_dmac1 0x03>;
+					dma-names = "rx", "tx";
+				};
+			};
+
+			rcar_sound,ssiu {
+				ssiu00: ssiu-0 {
+					dmas = <&audio_dmac0 0x7D>, <&audio_dmac1 0x7C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu01: ssiu-1 {
+					dmas = <&audio_dmac0 0x7B>, <&audio_dmac1 0x7A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu02: ssiu-2 {
+					dmas = <&audio_dmac0 0x79>, <&audio_dmac1 0x78>;
+					dma-names = "rx", "tx";
+				};
+				ssiu03: ssiu-3 {
+					dmas = <&audio_dmac0 0x77>, <&audio_dmac1 0x76>;
+					dma-names = "rx", "tx";
+				};
+				ssiu04: ssiu-4 {
+					dmas = <&audio_dmac0 0x75>, <&audio_dmac1 0x74>;
+					dma-names = "rx", "tx";
+				};
+				ssiu05: ssiu-5 {
+					dmas = <&audio_dmac0 0x73>, <&audio_dmac1 0x72>;
+					dma-names = "rx", "tx";
+				};
+				ssiu06: ssiu-6 {
+					dmas = <&audio_dmac0 0x71>, <&audio_dmac1 0x70>;
+					dma-names = "rx", "tx";
+				};
+				ssiu07: ssiu-7 {
+					dmas = <&audio_dmac0 0x6F>, <&audio_dmac1 0x6E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu10: ssiu-8 {
+					dmas = <&audio_dmac0 0x6D>, <&audio_dmac1 0x6C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu11: ssiu-9 {
+					dmas = <&audio_dmac0 0x6B>, <&audio_dmac1 0x6A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu12: ssiu-10 {
+					dmas = <&audio_dmac0 0x69>, <&audio_dmac1 0x68>;
+					dma-names = "rx", "tx";
+				};
+				ssiu13: ssiu-11 {
+					dmas = <&audio_dmac0 0x67>, <&audio_dmac1 0x66>;
+					dma-names = "rx", "tx";
+				};
+				ssiu14: ssiu-12 {
+					dmas = <&audio_dmac0 0x65>, <&audio_dmac1 0x64>;
+					dma-names = "rx", "tx";
+				};
+				ssiu15: ssiu-13 {
+					dmas = <&audio_dmac0 0x63>, <&audio_dmac1 0x62>;
+					dma-names = "rx", "tx";
+				};
+				ssiu16: ssiu-14 {
+					dmas = <&audio_dmac0 0x61>, <&audio_dmac1 0x60>;
+					dma-names = "rx", "tx";
+				};
+				ssiu17: ssiu-15 {
+					dmas = <&audio_dmac0 0x5F>, <&audio_dmac1 0x5E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu20: ssiu-16 {
+					dmas = <&audio_dmac0 0x5D>, <&audio_dmac1 0x5C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu21: ssiu-17 {
+					dmas = <&audio_dmac0 0x5B>, <&audio_dmac1 0x5A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu22: ssiu-18 {
+					dmas = <&audio_dmac0 0x59>, <&audio_dmac1 0x58>;
+					dma-names = "rx", "tx";
+				};
+				ssiu23: ssiu-19 {
+					dmas = <&audio_dmac0 0x57>, <&audio_dmac1 0x56>;
+					dma-names = "rx", "tx";
+				};
+				ssiu24: ssiu-20 {
+					dmas = <&audio_dmac0 0x55>, <&audio_dmac1 0x54>;
+					dma-names = "rx", "tx";
+				};
+				ssiu25: ssiu-21 {
+					dmas = <&audio_dmac0 0x53>, <&audio_dmac1 0x52>;
+					dma-names = "rx", "tx";
+				};
+				ssiu26: ssiu-22 {
+					dmas = <&audio_dmac0 0x51>, <&audio_dmac1 0x50>;
+					dma-names = "rx", "tx";
+				};
+				ssiu27: ssiu-23 {
+					dmas = <&audio_dmac0 0x4F>, <&audio_dmac1 0x4E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu30: ssiu-24 {
+					dmas = <&audio_dmac0 0x4D>, <&audio_dmac1 0x4C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu31: ssiu-25 {
+					dmas = <&audio_dmac0 0x4B>, <&audio_dmac1 0x4A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu32: ssiu-26 {
+					dmas = <&audio_dmac0 0x49>, <&audio_dmac1 0x48>;
+					dma-names = "rx", "tx";
+				};
+				ssiu33: ssiu-27 {
+					dmas = <&audio_dmac0 0x47>, <&audio_dmac1 0x46>;
+					dma-names = "rx", "tx";
+				};
+				ssiu34: ssiu-28 {
+					dmas = <&audio_dmac0 0x45>, <&audio_dmac1 0x44>;
+					dma-names = "rx", "tx";
+				};
+				ssiu35: ssiu-29 {
+					dmas = <&audio_dmac0 0x43>, <&audio_dmac1 0x42>;
+					dma-names = "rx", "tx";
+				};
+				ssiu36: ssiu-30 {
+					dmas = <&audio_dmac0 0x41>, <&audio_dmac1 0x40>;
+					dma-names = "rx", "tx";
+				};
+				ssiu37: ssiu-31 {
+					dmas = <&audio_dmac0 0x3F>, <&audio_dmac1 0x3E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu40: ssiu-32 {
+					dmas = <&audio_dmac0 0x3D>, <&audio_dmac1 0x3C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu41: ssiu-33 {
+					dmas = <&audio_dmac0 0x3B>, <&audio_dmac1 0x3A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu42: ssiu-34 {
+					dmas = <&audio_dmac0 0x39>, <&audio_dmac1 0x38>;
+					dma-names = "rx", "tx";
+				};
+				ssiu43: ssiu-35 {
+					dmas = <&audio_dmac0 0x37>, <&audio_dmac1 0x36>;
+					dma-names = "rx", "tx";
+				};
+				ssiu44: ssiu-36 {
+					dmas = <&audio_dmac0 0x35>, <&audio_dmac1 0x34>;
+					dma-names = "rx", "tx";
+				};
+				ssiu45: ssiu-37 {
+					dmas = <&audio_dmac0 0x33>, <&audio_dmac1 0x32>;
+					dma-names = "rx", "tx";
+				};
+				ssiu46: ssiu-38 {
+					dmas = <&audio_dmac0 0x31>, <&audio_dmac1 0x30>;
+					dma-names = "rx", "tx";
+				};
+				ssiu47: ssiu-39 {
+					dmas = <&audio_dmac0 0x2F>, <&audio_dmac1 0x2E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu50: ssiu-40 {
+					dmas = <&audio_dmac0 0x2D>, <&audio_dmac1 0x2C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu60: ssiu-41 {
+					dmas = <&audio_dmac0 0x2B>, <&audio_dmac1 0x2A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu70: ssiu-42 {
+					dmas = <&audio_dmac0 0x29>, <&audio_dmac1 0x28>;
+					dma-names = "rx", "tx";
+				};
+				ssiu80: ssiu-43 {
+					dmas = <&audio_dmac0 0x27>, <&audio_dmac1 0x26>;
+					dma-names = "rx", "tx";
+				};
+				ssiu90: ssiu-44 {
+					dmas = <&audio_dmac0 0x25>, <&audio_dmac1 0x24>;
+					dma-names = "rx", "tx";
+				};
+				ssiu91: ssiu-45 {
+					dmas = <&audio_dmac0 0x23>, <&audio_dmac1 0x22>;
+					dma-names = "rx", "tx";
+				};
+				ssiu92: ssiu-46 {
+					dmas = <&audio_dmac0 0x21>, <&audio_dmac1 0x20>;
+					dma-names = "rx", "tx";
+				};
+				ssiu93: ssiu-47 {
+					dmas = <&audio_dmac0 0x1F>, <&audio_dmac1 0x1E>;
+					dma-names = "rx", "tx";
+				};
+				ssiu94: ssiu-48 {
+					dmas = <&audio_dmac0 0x1D>, <&audio_dmac1 0x1C>;
+					dma-names = "rx", "tx";
+				};
+				ssiu95: ssiu-49 {
+					dmas = <&audio_dmac0 0x1B>, <&audio_dmac1 0x1A>;
+					dma-names = "rx", "tx";
+				};
+				ssiu96: ssiu-50 {
+					dmas = <&audio_dmac0 0x19>, <&audio_dmac1 0x18>;
+					dma-names = "rx", "tx";
+				};
+				ssiu97: ssiu-51 {
+					dmas = <&audio_dmac0 0x17>, <&audio_dmac1 0x16>;
+					dma-names = "rx", "tx";
+				};
+			};
+
+			rcar_sound,ssi {
+				ssi0: ssi-0 {
+					interrupts = <GIC_SPI 896 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi1: ssi-1 {
+					interrupts = <GIC_SPI 897 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi2: ssi-2 {
+					interrupts = <GIC_SPI 898 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi3: ssi-3 {
+					interrupts = <GIC_SPI 899 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi4: ssi-4 {
+					interrupts = <GIC_SPI 900 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi5: ssi-5 {
+					interrupts = <GIC_SPI 901 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi6: ssi-6 {
+					interrupts = <GIC_SPI 902 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi7: ssi-7 {
+					interrupts = <GIC_SPI 903 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi8: ssi-8 {
+					interrupts = <GIC_SPI 904 IRQ_TYPE_LEVEL_HIGH>;
+				};
+				ssi9: ssi-9 {
+					interrupts = <GIC_SPI 905 IRQ_TYPE_LEVEL_HIGH>;
+				};
+			};
 		};
 	};
 

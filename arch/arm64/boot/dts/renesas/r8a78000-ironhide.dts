@@ -4,9 +4,30 @@
  *
  * Copyright (C) 2025 Renesas Electronics Corp.
  */
+/*
+ * [How to use Sound]
+ *
+ * Because R-Car X5H has only 1 SSI connected to the codec,
+ * it cannot handle both Playback/Capture at the same time.
+ * You need to switch the direction which is controlled
+ * by the GP6_21 pin via amixer.
+ *
+ * Playback (Upper part of CN39)
+ *      > amixer set "MUX" "Playback"   // for GP6_21
+ *      > amixer set "DAC 1" 85%
+ *      > aplay xxx.wav
+ *
+ * Capture (Lower part of CN39)
+ *      > amixer set "MUX" "Capture"    // for GP6_21
+ *      > amixer set "Mic 1" 50%
+ *      > amixer set "ADC 1" on
+ *      > amixer set 'ADC 1' 80%
+ *      > arecord xxx hoge.wav
+ */
 
 /dts-v1/;
 #include "r8a78000.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/net/ti-dp83869.h>
 
 / {
@@ -138,9 +159,37 @@
 		regulator-always-on;
 	};
 
-    vspm_if {
+	vspm_if {
 		compatible = "renesas,vspm_if";
 	};
+
+	sound_mux: sound-mux {
+		compatible = "simple-audio-mux";
+		mux-gpios = <&gpio6 21 GPIO_ACTIVE_HIGH>;
+		state-labels = "Playback", "Capture";
+	};
+
+	sound_card: sound {
+		compatible = "simple-audio-card";
+
+		simple-audio-card,name = "rcar-sound";
+		simple-audio-card,aux-devs = <&sound_mux>; // for GP6_21
+		simple-audio-card,format = "i2s";
+		simple-audio-card,bitclock-master = <&sndcpu>;
+		simple-audio-card,frame-master = <&sndcpu>;
+
+		sndcodec: simple-audio-card,codec {
+			sound-dai = <&ak4619>;
+		};
+
+		sndcpu: simple-audio-card,cpu {
+			sound-dai = <&rcar_sound>;
+		};
+	};
+};
+
+&audio_clk_a {
+	clock-frequency = <24576000>;
 };
 
 &mailbox {
@@ -189,6 +238,15 @@
 
 &extalr_clk {
 	clock-frequency = <32768>;
+};
+
+&gpio6 {
+	audio-power-hog {
+		gpio-hog;
+		gpios = <20 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "Audio-Power";
+	};
 };
 
 &hscif0 {
@@ -267,6 +325,33 @@
 	clock-frequency = <400000>;
 };
 
+&i2c6 {
+	pinctrl-0 = <&i2c6_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	clock-frequency = <400000>;
+
+	ak4619: codec@10 {
+		compatible = "asahi-kasei,ak4619";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
+		clocks = <&rcar_sound>;
+		clock-names = "mclk";
+	};
+};
+
+&i3c0 {
+	pinctrl-0 = <&i3c0_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	sensor@72 {
+		compatible = "null";
+		reg = <0x72 0x0 0x10>;
+	};
+};
+
 &mp_phy {
 	status = "okay";
 };
@@ -297,6 +382,26 @@
 	i2c1_pins: i2c1 {
 		groups = "i2c1";
 		function = "i2c1";
+	};
+
+	i2c6_pins: i2c6 {
+		groups = "i2c6";
+		function = "i2c6";
+	};
+
+	i3c0_pins: i3c0 {
+		groups = "i3c0";
+		function = "i3c0";
+	};
+
+	i3c1_pins: i3c1 {
+		groups = "i3c1";
+		function = "i3c1";
+	};
+
+	i3c2_pins: i3c2 {
+		groups = "i3c2";
+		function = "i3c2";
 	};
 
 	rsw3_pins: rsw3 {
@@ -332,6 +437,106 @@
 		groups = "mmc0_data8", "mmc0_ctrl", "mmc0_ds";
 		function = "mmc0";
 		drive-strength = <24>;
+	};
+
+	canfd0_pins: canfd0 {
+		groups = "canfd0_data";
+		function = "canfd0";
+	};
+
+	canfd1_pins: canfd1 {
+		groups = "canfd1_data";
+		function = "canfd1";
+	};
+
+	canfd2_pins: canfd2 {
+		groups = "canfd2_data";
+		function = "canfd2";
+	};
+
+	canfd3_pins: canfd3 {
+		groups = "canfd3_data";
+		function = "canfd3";
+	};
+
+	canfd4_pins: canfd4 {
+		groups = "canfd4_data";
+		function = "canfd4";
+	};
+
+	canfd5_pins: canfd5 {
+		groups = "canfd5_data";
+		function = "canfd5";
+	};
+
+	canfd6_pins: canfd6 {
+		groups = "canfd6_data";
+		function = "canfd6";
+	};
+
+	canfd7_pins: canfd7 {
+		groups = "canfd7_data";
+		function = "canfd7";
+	};
+
+	canfd8_pins: canfd8 {
+		groups = "canfd8_data";
+		function = "canfd8";
+	};
+
+	canfd9_pins: canfd9 {
+		groups = "canfd9_data";
+		function = "canfd9";
+	};
+
+	canfd10_pins: canfd10 {
+		groups = "canfd10_data";
+		function = "canfd10";
+	};
+
+	canfd11_pins: canfd11 {
+		groups = "canfd11_data";
+		function = "canfd11";
+	};
+
+	canfd12_pins: canfd12 {
+		groups = "canfd12_data_b";
+		function = "canfd12";
+	};
+
+	canfd13_pins: canfd13 {
+		groups = "canfd13_data_b";
+		function = "canfd13";
+	};
+
+	canfd14_pins: canfd14 {
+		groups = "canfd14_data_b";
+		function = "canfd14";
+	};
+
+	canfd15_pins: canfd15 {
+		groups = "canfd15_data_b";
+		function = "canfd15";
+	};
+
+	canxl0_pins: canxl0 {
+		groups = "canxl0_data";
+		function = "canxl0";
+	};
+
+	canxl1_pins: canxl1 {
+		groups = "canxl1_data";
+		function = "canxl1";
+	};
+
+	sound_pins: sound {
+		groups = "ssi5_ctrl", "ssi5_data";
+		function = "ssi5";
+	};
+
+	sound_clk_pins: sound_clk {
+		groups = "audio_clk_a_a", "audio0_clkout0";
+		function = "audio_clk";
 	};
 };
 
@@ -378,8 +583,35 @@
 	status = "disabled";
 };
 
+&pciec61 {
+	status = "disabled";
+};
+
 &pciec61_ep {
 	status = "disabled";
+};
+
+&rcar_sound {
+	pinctrl-0 = <&sound_clk_pins>, <&sound_pins>;
+	pinctrl-names = "default";
+
+	/* Single DAI */
+	#sound-dai-cells = <0>;
+
+	/* audio_clkout0/1/2/3 */
+	#clock-cells = <0>;
+
+	/* audio_clkout */
+	clock-frequency = <12288000>;
+
+	status = "okay";
+
+	rcar_sound,dai {
+		dai0 {
+			playback = <&ssi5>;
+			capture = <&ssi5>;
+		};
+	};
 };
 
 &rsw3_clk {
@@ -449,6 +681,15 @@
 
 &rwdt {
 	timeout-sec = <60>;
+	status = "okay";
+};
+
+&wwdt20 {
+	interval-time = <7>;
+	error-mode = <1>;
+	irq_75p = <0>;
+	wsize = <3>;
+
 	status = "okay";
 };
 
@@ -633,5 +874,103 @@
 };
 
 &vspb4 {
+	status = "okay";
+};
+
+&canfd_0 {
+	pinctrl-0 = <&canfd0_pins>, <&canfd1_pins>, <&canfd2_pins>,
+		    <&canfd3_pins>, <&canfd4_pins>, <&canfd5_pins>,
+		    <&canfd6_pins>, <&canfd7_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	channel0 {
+		status = "okay";
+	};
+
+	channel1 {
+		status = "okay";
+	};
+
+	channel2 {
+		status = "okay";
+	};
+
+	channel3 {
+		status = "okay";
+	};
+
+	channel4 {
+		status = "okay";
+	};
+
+	channel5 {
+		status = "okay";
+	};
+
+	channel6 {
+		status = "okay";
+	};
+
+	channel7 {
+		status = "okay";
+	};
+};
+
+&canfd_1 {
+	pinctrl-0 = <&canfd8_pins>, <&canfd9_pins>, <&canfd10_pins>,
+		    <&canfd11_pins>, <&canfd12_pins>, <&canfd13_pins>,
+		    <&canfd14_pins>, <&canfd15_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	channel0 {
+		status = "okay";
+	};
+
+	channel1 {
+		status = "okay";
+	};
+
+	channel2 {
+		status = "okay";
+	};
+
+	channel3 {
+		status = "okay";
+	};
+
+	channel4 {
+		status = "okay";
+	};
+
+	channel5 {
+		status = "okay";
+	};
+
+	channel6 {
+		status = "okay";
+	};
+
+	channel7 {
+		status = "okay";
+	};
+};
+
+&canxl0 {
+	pinctrl-0 = <&canxl0_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&canxl1 {
+	pinctrl-0 = <&canxl1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+};
+
+&rtca {
 	status = "okay";
 };
