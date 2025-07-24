@@ -18,6 +18,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/types.h>
+#include <linux/pm_domain.h>
 
 /* Hardcoded for enable module clock */
 #define MDLC_BASE		0xc9c90000
@@ -228,8 +229,10 @@ struct mp_phy_chan_priv {
 struct mp_phy_priv {
 	void __iomem *base;
 	struct device *dev;
-	struct reset_control *reset;
-	struct clk *clk;
+#define NUM_OF_MPPHY_RST 5
+	struct reset_control *resets[NUM_OF_MPPHY_RST];
+	struct clk_bulk_data *clks;
+	int num_clks;
 	struct mp_phy_chan_priv chan[MPPHY_NUM_CHANNELS];
 };
 
@@ -773,6 +776,11 @@ static int mp_phy_probe(struct platform_device *pdev)
 	struct mp_phy_priv *priv;
 	struct phy_provider *provider;
 	struct resource *res;
+	int ret;
+	static uint8_t rst_control_get_retries = 5;
+	struct device_node *np = dev->of_node;
+	int num_power_domains;
+	struct of_phandle_args pd_args;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -798,34 +806,95 @@ static int mp_phy_probe(struct platform_device *pdev)
 		priv->chan[i].current_protocol = PHY_MODE_INVALID;
 		priv->chan[i].protocol_id = PHY_MODE_INVALID;
 	}
+
 	/* TODO: Enable reset control when DTS binding is ready */
 	/* Get reset control */
-	//priv->reset = devm_reset_control_get(dev, NULL);
-	//if (IS_ERR(priv->reset)) {
-	//	dev_err(dev, "Failed to get reset control\n");
-	//	return PTR_ERR(priv->reset);
-	//}
+	for (int i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
+		char rst_name[16] = {0};
+		sprintf(rst_name, "mpphy%d1", i);
+		priv->resets[i] = devm_reset_control_get(dev, rst_name);
+		if (IS_ERR(priv->resets[i])) {
+			dev_err(dev, "Failed to get reset control mpphy%d1, retries: %d\n",
+					i, rst_control_get_retries);
+			if (rst_control_get_retries) {
+				--rst_control_get_retries;
+				return -EPROBE_DEFER;
+			} else {
+				rst_control_get_retries = 0;
+				return PTR_ERR(priv->resets[0]);
+			}
+		}
+	}
+	priv->resets[NUM_OF_MPPHY_RST - 1] = devm_reset_control_get(dev, "mpphy02");
+	if (IS_ERR(priv->resets[NUM_OF_MPPHY_RST - 1])) {
+		dev_err(dev, "Failed to get reset control mpphy02\n");
+		return PTR_ERR(priv->resets[NUM_OF_MPPHY_RST - 1]);
+	}
 
-	/* TODO: Enable clock control when clock is available */
 	/* Get clocks */
-	//priv->clk = devm_clk_get(dev, NULL);
-	//if (IS_ERR(priv->clk)) {
-	//	dev_err(dev, "Failed to get mp_phy clock\n");
-	//	return PTR_ERR(priv->clk);
-	//}
+	priv->num_clks = devm_clk_bulk_get_all(dev, &priv->clks);
+	if (priv->num_clks < 1) {
+		dev_err(dev, "Failed to get mp_phy clocks\n");
+		return -ENODEV;
+	}
 
-	/* Enable clock if available */
-	//if (priv->clk) {
-	//	int ret = clk_prepare_enable(priv->clk);
-	//	if (ret) {
-	//		dev_err(dev, "Failed to enable clock: %d\n", ret);
-	//		return ret;
-	//	}
-	//}
+	/* Get number of power domains */
+	num_power_domains = of_count_phandle_with_args(np, "power-domains", "#power-domain-cells");
+	if (num_power_domains <= 0) {
+		dev_err(dev, "Failed to get number of power domains (%d)\n", num_power_domains);
+		return num_power_domains;
+	}
 
-	mp_phy_module_power_reset();
-	udelay(1000);
-	mp_phy_module_power_run();
+	/* Attach MP-PHY to multi power domains */
+	for (int i = 0; i < num_power_domains; i++) {
+		ret = of_parse_phandle_with_args(np, "power-domains", "#power-domain-cells", i, &pd_args);
+        if (ret) {
+            dev_err(dev, "Failed to parse power domain index %d\n", i);
+            return ret;
+        }
+		if (IS_ERR(dev_pm_domain_attach_by_id(dev, pd_args.args[0]))) {
+            dev_err(dev, "Failed to attach to power domain %d (%d)\n",
+					pd_args.args[0], ret);
+            return -EINVAL;
+        }
+	}
+
+	/* TODO: Reset and enable clock control when clock is available */
+	for (int i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
+		char rst_name[16] = {0};
+		sprintf(rst_name, "mpphy%d1", i);
+		ret = reset_control_assert(priv->resets[i]);
+		if (ret) {
+			dev_err(dev, "Failed to assert mpphy%d1", i);
+			return ret;
+		}
+	}
+	ret = reset_control_assert(priv->resets[NUM_OF_MPPHY_RST - 1]);
+	if (ret) {
+		dev_err(dev, "Failed to assert mpphy02");
+		return ret;
+	}
+
+	for (int i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
+		char rst_name[16] = {0};
+		sprintf(rst_name, "mpphy%d1", i);
+		ret = reset_control_deassert(priv->resets[i]);
+		if (ret) {
+			dev_err(dev, "Failed to deassert mpphy%d1", i);
+			return ret;
+		}
+	}
+	ret = reset_control_deassert(priv->resets[NUM_OF_MPPHY_RST - 1]);
+	if (ret) {
+		dev_err(dev, "Failed to deassert mpphy02");
+		return ret;
+	}
+
+	ret = clk_bulk_prepare_enable(priv->num_clks, priv->clks);
+	if (ret) {
+		dev_err(dev, "Failed to enable bulk clocks: %d\n", ret);
+		return ret;
+	}
 
 	platform_set_drvdata(pdev, priv);
 
