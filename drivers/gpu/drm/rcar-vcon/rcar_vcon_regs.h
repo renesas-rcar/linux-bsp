@@ -11,6 +11,7 @@
 
 #define START			0x0000
 #define STOP			0x0004
+#define RESET			0x0008
 
 #define IRQ_ENB			0x0010
 #define IRQ_ENB_VSYNC		BIT(0)

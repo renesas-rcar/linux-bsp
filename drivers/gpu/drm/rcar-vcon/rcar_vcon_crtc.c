@@ -202,10 +202,7 @@ static void rcar_vcon_crtc_stop(struct rcar_vcon_crtc *rcrtc)
 	rcar_vcon_crtc_wait_page_flip(rcrtc);
 	drm_crtc_vblank_off(crtc);
 
-	/* The STOP/RESET operation was found to have an error within
-	 * the VDK. To avoid this problem, disable it temporarily.
-	 */
-	/* rcar_vcon_crtc_write(rcrtc, STOP, 0x01); */
+	rcar_vcon_crtc_write(rcrtc, RESET, 0x01);
 }
 
 /* -----------------------------------------------------------------------------
