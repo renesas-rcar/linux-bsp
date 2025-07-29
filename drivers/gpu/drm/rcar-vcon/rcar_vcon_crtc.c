@@ -82,9 +82,17 @@ done:
 static void rcar_vcon_crtc_set_display_timing(struct rcar_vcon_crtc *rcrtc)
 {
 	const struct drm_display_mode *mode = &rcrtc->crtc.state->adjusted_mode;
+	u32 phsync, pvsync;
 
 	/* Find divider */
 	rcar_vcon_dclk_divider(rcrtc);
+
+	/* Polarity settings */
+	phsync = (mode->flags & DRM_MODE_FLAG_PHSYNC) ? HSPOL0_HIGH : HSPOL0_LOW;
+	pvsync = (mode->flags & DRM_MODE_FLAG_PVSYNC) ? VSPOL0_HIGH : VSPOL0_LOW;
+
+	rcar_vcon_crtc_modify(rcrtc, SYNC_POL, HSPOL0, phsync);
+	rcar_vcon_crtc_modify(rcrtc, SYNC_POL, VSPOL0, pvsync);
 
 	/* Display timings */
 	rcar_vcon_crtc_write(rcrtc, HTOTAL, mode->htotal);

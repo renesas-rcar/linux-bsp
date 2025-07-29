@@ -31,6 +31,14 @@
 #define AVW			0x0048
 #define AVH			0x004c
 
+#define SYNC_POL		0x0050
+#define VSPOL0			BIT(0)
+#define VSPOL0_HIGH		(0)
+#define VSPOL0_LOW		BIT(0)
+#define HSPOL0			BIT(1)
+#define HSPOL0_HIGH		(0)
+#define HSPOL0_LOW		BIT(1)
+
 #define PIX_CLK_NUME		0x0084
 #define PIX_CLK_DENO		0x0088
 #define NUME_MIN		3
