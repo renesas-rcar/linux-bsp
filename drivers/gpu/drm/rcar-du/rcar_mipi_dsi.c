@@ -346,9 +346,15 @@ static int rcar_mipi_dsi_init_phtw_v4h(struct rcar_mipi_dsi *mipi_dsi)
 		case 1:
 			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x01070100);
 			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x010E010B);
+			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x01090100);
+			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x010E010B);
+			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x010B0100);
+			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x010E010B);
 			break;
 		case 2:
 			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x01090100);
+			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x010E010B);
+			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x010B0100);
 			rcar_mipi_dsi_write_phtw(mipi_dsi, 0x010E010B);
 			break;
 		case 3:
