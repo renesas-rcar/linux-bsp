@@ -20,24 +20,24 @@
 #include <linux/usb/of.h>
 
 /* Hardcoded for enable module clock */
-#define MDLC_BASE              0xc9c90000
-#define USB_PDID               (0)
-#define USB_CLK_MASK(n)        GENMASK((n) + 1, n)
-#define USB_CLK_SHIFT(n)       (n)
+#define MDLC_BASE		0xc9c90000
+#define USB_PDID		(0)
+#define USB_CLK_MASK(n)		GENMASK((n) + 1, n)
+#define USB_CLK_SHIFT(m)	(m)
 
-#define MDLC_PKCPROT0          (MDLC_BASE + 0x0cf0)
-#define MDLC_PKCPROT1          (MDLC_BASE + 0x0cf4)
+#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
 
-#define _MDLC_MPDG(k)          (MDLC_BASE + 0x0200 + (k) * 4)
-#define _MDLC_MPDGS(k)         (MDLC_BASE + 0x0300 + (k) * 4)
-#define MDLC_MPIER0            (MDLC_BASE + 0x0110)
-#define MDLC_MPIMR0            (MDLC_BASE + 0x0120)
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
 
-#define MDLC_MPDG              _MDLC_MPDG(USB_PDID)
-#define MDLC_MPDGS             _MDLC_MPDGS(USB_PDID)
+#define MDLC_MPDG		_MDLC_MPDG(USB_PDID)
+#define MDLC_MPDGS		_MDLC_MPDGS(USB_PDID)
 
-#define MDLC_MSRES(i)          (MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i) (       MDLC_BASE + 0x0960 + (i) * 4)
+#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
 
 static void usb_module_power_gating_set(u8 pdid, u8 mode)
 {
@@ -140,6 +140,7 @@ struct usb_priv {
 	struct device		*dev;
 	void __iomem		*base;
 	struct clk 		*clk;
+	struct device_node	*child;
 	struct reset_control	*resets;
 	struct phy		*usb3_phy;
 	struct platform_device	*dwc3;
@@ -202,66 +203,7 @@ static int init_usb3_phy(struct usb_priv *priv)
 static int rcar_gen5_usb_setup_dwc3(struct usb_priv *priv)
 {
 	struct device *dev = priv->dev;
-	struct device_node *child;
-	const char *maximum_speed;
-	const char *dr_mode_str;
 	int ret;
-
-	/* Find DWC3 child node to check properties - SINGLE DT TRAVERSE */
-	child = of_get_compatible_child(dev->of_node, "synopsys,dwc3");
-	if (!child) {
-		dev_err(dev, "Failed to find DWC3 child node\n");
-		return -ENODEV;
-	}
-
-	/* Parse dr_mode property from child node */
-	ret = of_property_read_string(child, "dr_mode", &dr_mode_str);
-	if (ret) {
-		dev_info(dev, "dr_mode not specified, defaulting to OTG\n");
-		priv->dr_mode = USB_DR_MODE_OTG;
-		dr_mode_str = "otg";
-	} else {
-		if (!strcmp(dr_mode_str, "host"))
-			priv->dr_mode = USB_DR_MODE_HOST;
-		else if (!strcmp(dr_mode_str, "peripheral") || !strcmp(dr_mode_str, "device"))
-			priv->dr_mode = USB_DR_MODE_PERIPHERAL;
-		else if (!strcmp(dr_mode_str, "otg"))
-			priv->dr_mode = USB_DR_MODE_OTG;
-		else {
-			dev_warn(dev, "Invalid dr_mode '%s', defaulting to OTG\n", dr_mode_str);
-			priv->dr_mode = USB_DR_MODE_OTG;
-			dr_mode_str = "otg";
-		}
-	}
-
-	/* Parse maximum-speed property to determine USB mode */
-	ret = of_property_read_string(child, "maximum-speed", &maximum_speed);
-	if (ret) {
-		/* Default to USB3 mode if not specified and USB3 PHY available */
-		priv->use_usb3_flow = priv->has_usb3;
-		priv->maximum_speed = USB_SPEED_SUPER_PLUS;
-		maximum_speed = "default";
-	} else {
-		if (!strcmp(maximum_speed, "super-speed-plus")) {
-			priv->maximum_speed = USB_SPEED_SUPER_PLUS;
-			priv->use_usb3_flow = true;
-		} else if (!strcmp(maximum_speed, "super-speed")) {
-			priv->maximum_speed = USB_SPEED_SUPER;
-			priv->use_usb3_flow = true;
-		} else if (!strcmp(maximum_speed, "high-speed")) {
-			priv->maximum_speed = USB_SPEED_HIGH;
-			priv->use_usb3_flow = false;
-		} else {
-			priv->maximum_speed = USB_SPEED_FULL;
-			priv->use_usb3_flow = false;
-		}
-	}
-
-	of_node_put(child);
-
-	dev_info(dev, "USB mode: %s (max-speed: %s)\n",
-		 priv->use_usb3_flow ? "USB3.1 SuperSpeed" : "USB2.0",
-		 maximum_speed);
 
 	/*
 	 * Create DWC3 platform devices from device tree
@@ -287,14 +229,20 @@ static int rcar_gen5_usb_init_usb31_flow(struct usb_priv *priv)
 	int ret;
 
 	ret = init_usb3_phy(priv);
-	if( ret) {
+	if(ret) {
 		dev_err(priv->dev, "Failed USB3 PHY initialization: %d\n", ret);
 		return ret;
 	}
 
-	usb_configure_registers(priv);
+	usleep_range(10000, 20000);
 
-	dev_info(priv->dev, "USB3.1 SuperSpeed flow completed\n");
+	ret = phy_set_speed(priv->usb3_phy, SUPER_SPEED_PLUS);
+	if (ret) {
+		dev_err(priv->dev, "Failed to set TCA register in Super-Speed-Plus: %d\n", ret);
+		return ret;
+	}
+
+	dev_info(priv->dev, "USB3.1 SuperSpeed flow completed initialization with MP-PHY\n");
 
 	return ret;
 }
@@ -314,12 +262,18 @@ static int rcar_gen5_usb_init_usb20_flow(struct usb_priv *priv)
 		dev_info(priv->dev, "USB3 controller in USB2 mode (Figure 94.11)\n");
 
 		ret = init_usb3_phy(priv);
-		if( ret) {
+		if(ret) {
 			dev_err(priv->dev, "Failed MP-PHY initialization: %d\n", ret);
 			return ret;
 		}
 
 		usb_configure_registers(priv);
+
+		ret = phy_set_speed(priv->usb3_phy, HIGH_SPEED);
+		if (ret) {
+			dev_err(priv->dev, "Failed to set TCA register in High-Speed: %d\n", ret);
+			return ret;
+		}
 	} else {
 		/* Native USB2 controller - Figure 94.12 */
 		dev_info(priv->dev, "Native USB2 controller (Figure 94.12)\n");
@@ -328,6 +282,20 @@ static int rcar_gen5_usb_init_usb20_flow(struct usb_priv *priv)
 		/* Step (2): Setting USB Register */
 		usb_configure_registers(priv);
 	}
+
+	/*
+	 * The datasheet describes initialization procedure without full
+	 * information about the registers. Therefore, the source code is based
+	 * on the bare metal code shared by the board team.
+	 */
+	writew(0x00000011, priv->base + USB_PHY_RESSHR_CTRL);
+	writew(0x00000000, priv->base + USB_PHY_CONF13);
+	writew(0x00000001, priv->base + USB_PHY_CONF1);
+	usleep_range(10000, 20000);
+	writew(0x00000000, priv->base + USB_PHY_CONF1);
+	writew(0x00000001, priv->base + USB_CTRL_CONF21);
+	writew(0x00000001, priv->base + USB_PHY_CONF13);
+	usleep_range(10000, 20000);
 
 	dev_info(priv->dev, "USB2.0 flow completed\n");
 	return 0;
@@ -338,49 +306,29 @@ static int rcar_gen5_usb_init_hardware(struct usb_priv *priv)
 	int ret;
 
 	usb_module_power_run();
-	msleep(20);
-
-	/*
-	 * The datasheet describes initialization procedure without full
-	 * information about the registers. Therefore, the source code is based
-	 * on the bare metal code shared by the board team.
-	 */
-	writew(0x00000011, priv->base + USB_PHY_RESSHR_CTRL);
-	writew(0x00000000, priv->base + USB_PHY_CONF13);
-	writew(0x00000001, priv->base + USB_PHY_CONF1);
-	msleep(10);
-	writew(0x00000000, priv->base + USB_PHY_CONF1);
-	writew(0x00000001, priv->base + USB_CTRL_CONF21);
-	writew(0x00000001, priv->base + USB_PHY_CONF13);
-	msleep(10);
+	usleep_range(10000, 20000);
 
 	/* Execute the appropriate initialization flow */
 	if (priv->use_usb3_flow) {
 		/* Chapter 94.3.1.1 Using USB3.1 */
 		ret = rcar_gen5_usb_init_usb31_flow(priv);
+		if (ret) {
+			dev_err(priv->dev, "Failed to initialize USB3.1 flow: %d\n", ret);
+			return ret;
+		}
 	} else {
 		/* Chapter 94.3.1.2 Using USB2.0 */
 		ret = rcar_gen5_usb_init_usb20_flow(priv);
+		if (ret) {
+			dev_err(priv->dev, "Failed to initialize USB2.0 flow: %d\n", ret);
+			return ret;
+		}
 	}
 
 	/* Parse DWC3 properties and determine USB mode */
 	ret = rcar_gen5_usb_setup_dwc3(priv);
 	if (ret)
 		return ret;
-
-	if (priv->use_usb3_flow) {
-		ret = phy_set_speed(priv->usb3_phy, SUPER_SPEED_PLUS);
-		if (ret) {
-			dev_err(priv->dev, "Failed to set TCA register in Super-Speed-Plus: %d\n", ret);
-			return ret;
-		}
-	} else {
-		ret = phy_set_speed(priv->usb3_phy, HIGH_SPEED);
-		if (ret) {
-			dev_err(priv->dev, "Failed to set TCA register in High-Speed: %d\n", ret);
-			return ret;
-		}
-	}
 
 	return ret;
 }
@@ -390,6 +338,8 @@ static int rcar_gen5_usb_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct usb_priv *priv;
 	struct resource *res;
+	const char *maximum_speed;
+	const char *dr_mode_str;
 	int ret;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
@@ -447,6 +397,62 @@ static int rcar_gen5_usb_probe(struct platform_device *pdev)
 	if (!priv->has_usb3) {
 		dev_info(dev, "Operating in USB2.0 mode (no USB3 MP-PHY)\n");
 	}
+
+	/* Find DWC3 child node to check properties - SINGLE DT TRAVERSE */
+	priv->child = of_get_compatible_child(dev->of_node, "synopsys,dwc3");
+	if (!priv->child) {
+		dev_err(dev, "Failed to find DWC3 child node\n");
+		return -ENODEV;
+	}
+
+	/* Parse maximum-speed property to determine USB mode */
+	ret = of_property_read_string(priv->child, "maximum-speed", &maximum_speed);
+	if (ret) {
+		/* Default to USB3 mode if not specified and USB3 PHY available */
+		priv->use_usb3_flow = priv->has_usb3;
+		priv->maximum_speed = USB_SPEED_SUPER_PLUS;
+		maximum_speed = "default";
+	} else {
+		if (!strcmp(maximum_speed, "super-speed-plus")) {
+			priv->maximum_speed = USB_SPEED_SUPER_PLUS;
+			priv->use_usb3_flow = true;
+		} else if (!strcmp(maximum_speed, "super-speed")) {
+			priv->maximum_speed = USB_SPEED_SUPER;
+			priv->use_usb3_flow = true;
+		} else if (!strcmp(maximum_speed, "high-speed")) {
+			priv->maximum_speed = USB_SPEED_HIGH;
+			priv->use_usb3_flow = false;
+		} else {
+			priv->maximum_speed = USB_SPEED_FULL;
+			priv->use_usb3_flow = false;
+		}
+	}
+
+	/* Parse dr_mode property from child node */
+	ret = of_property_read_string(priv->child, "dr_mode", &dr_mode_str);
+	if (ret) {
+		dev_info(dev, "dr_mode not specified, defaulting to OTG\n");
+		priv->dr_mode = USB_DR_MODE_OTG;
+		dr_mode_str = "otg";
+	} else {
+		if (!strcmp(dr_mode_str, "host"))
+			priv->dr_mode = USB_DR_MODE_HOST;
+		else if (!strcmp(dr_mode_str, "peripheral") || !strcmp(dr_mode_str, "device"))
+			priv->dr_mode = USB_DR_MODE_PERIPHERAL;
+		else if (!strcmp(dr_mode_str, "otg"))
+			priv->dr_mode = USB_DR_MODE_OTG;
+		else {
+			dev_warn(dev, "Invalid dr_mode '%s', defaulting to OTG\n", dr_mode_str);
+			priv->dr_mode = USB_DR_MODE_OTG;
+			dr_mode_str = "otg";
+		}
+	}
+
+	of_node_put(priv->child);
+
+	dev_info(dev, "USB mode: %s (max-speed: %s, dr_mode:%s)\n",
+		 priv->use_usb3_flow ? "USB3.1 SuperSpeed" : "USB2.0",
+		 maximum_speed, dr_mode_str);
 
 	/* Enable runtime PM early */
 	pm_runtime_set_active(dev);
