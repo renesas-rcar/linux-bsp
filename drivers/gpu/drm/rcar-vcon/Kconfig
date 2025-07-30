@@ -16,5 +16,6 @@ config DRM_RCAR_VCON
 config DRM_RCAR_DW_DP
 	tristate "R-Car DW DP Encoder Support"
 	depends on DRM && DRM_BRIDGE && OF
+	select DRM_DW_DP
 	help
 	  Enable support for the R-Car DW DP.
