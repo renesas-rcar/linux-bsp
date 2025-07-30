@@ -4005,6 +4005,35 @@ static const unsigned int usb3_mux[] = {
 	USB3_PWEN_MARK, USB3_OVC_MARK,
 };
 
+static const unsigned int dp0_hotplug_pins[] = {
+	/* DP0_HOTPLUG */
+	RCAR_GP_PIN(0, 25),
+};
+
+static const unsigned int dp0_hotplug_mux[] = {
+	DP0_HOTPLUG_MARK,
+};
+
+/* - DP1 ------------------------------------------------ */
+static const unsigned int dp1_hotplug_pins[] = {
+	/* DP1_HOTPLUG */
+	RCAR_GP_PIN(0, 26),
+};
+
+static const unsigned int dp1_hotplug_mux[] = {
+	DP1_HOTPLUG_MARK,
+};
+
+/* - DP2 ------------------------------------------------ */
+static const unsigned int dp2_hotplug_pins[] = {
+	/* DP2_HOTPLUG */
+	RCAR_GP_PIN(0, 27),
+};
+
+static const unsigned int dp2_hotplug_mux[] = {
+	DP2_HOTPLUG_MARK,
+};
+
 static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(hscif0_data),
 	SH_PFC_PIN_GROUP(hscif0_clk),
@@ -4199,6 +4228,10 @@ static const struct sh_pfc_pin_group pinmux_groups[] = {
 	SH_PFC_PIN_GROUP(usb2),
 	SH_PFC_PIN_GROUP(usb3_vbus),
 	SH_PFC_PIN_GROUP(usb3),
+
+	SH_PFC_PIN_GROUP(dp0_hotplug),
+	SH_PFC_PIN_GROUP(dp1_hotplug),
+	SH_PFC_PIN_GROUP(dp2_hotplug),
 };
 
 static const char * const hscif0_groups[] = {
