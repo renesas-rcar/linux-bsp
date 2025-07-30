@@ -959,6 +959,12 @@
 		clock-output-names = "rtcatcki";
 	};
 
+	vcon_dclk: vcon_dclk {
+		compatible = "fixed-clock";
+		clock-frequency = <550000000>;
+		#clock-cells = <0>;
+	};
+
 	soc: soc {
 		compatible = "simple-bus";
 		interrupt-parent = <&gic>;
@@ -3755,6 +3761,319 @@
 					reg = <0x17>;
 					isp3vin110: endpoint {
 						remote-endpoint = <&vin110isp3>;
+					};
+				};
+			};
+		};
+
+		fcpvd0: fcp@c5010000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5010000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		fcpvd1: fcp@c5011000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5011000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		fcpvd4: fcp@c5012000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5012000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		fcpvd5: fcp@c5013000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5013000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		fcpvd8: fcp@c5014000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5014000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		fcpvd2: fcp@c5015000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5015000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		fcpvd3: fcp@c5016000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5016000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		fcpvd6: fcp@c5017000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5017000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		fcpvd7: fcp@c5018000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5018000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		fcpvd9: fcp@c5019000 {
+			compatible = "renesas,fcpv";
+			reg = <0 0xc5019000 0 0x200>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+		};
+
+		vspd0: vsp@c4800000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4800000 0 0x8000>;
+			interrupts = <GIC_SPI 623 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd0>;
+		};
+
+		vspd1: vsp@c4808000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4808000 0 0x8000>;
+			interrupts = <GIC_SPI 624 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd1>;
+		};
+
+		vspd4: vsp@c4810000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4810000 0 0x8000>;
+			interrupts = <GIC_SPI 625 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd2>;
+		};
+
+		vspd5: vsp@c4818000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4818000 0 0x8000>;
+			interrupts = <GIC_SPI 626 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd3>;
+		};
+
+		vspd8: vsp@c4820000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4820000 0 0x8000>;
+			interrupts = <GIC_SPI 627 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd4>;
+		};
+
+		vspd2: vsp@c4828000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4828000 0 0x8000>;
+			interrupts = <GIC_SPI 628 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd5>;
+		};
+
+		vspd3: vsp@c4830000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4830000 0 0x8000>;
+			interrupts = <GIC_SPI 629 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd6>;
+		};
+
+		vspd6: vsp@c4838000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4838000 0 0x8000>;
+			interrupts = <GIC_SPI 630 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd7>;
+		};
+
+		vspd7: vsp@c4840000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4840000 0 0x8000>;
+			interrupts = <GIC_SPI 631 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd8>;
+		};
+
+		vspd9: vsp@c4848000 {
+			compatible = "renesas,vsp2";
+			reg = <0 0xc4848000 0 0x8000>;
+			interrupts = <GIC_SPI 632 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&dummy_clk>;
+			clock-name = "dummy_clk";
+			renesas,fcp = <&fcpvd9>;
+		};
+
+		vcon_group0: vcon@c5020000 {
+			compatible = "renesas,r8a78000-vcon";
+			reg = <0 0xc5020000 0 0x1000>,
+			      <0 0xc5021000 0 0x1000>,
+			      <0 0xc5022000 0 0x1000>,
+			      <0 0xc5023000 0 0x1000>;
+			interrupts = <GIC_SPI 665 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 666 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 667 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 668 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "ch0", "ch1", "ch2", "ch3";
+			clocks = <&vcon_dclk>, <&vcon_dclk>, <&vcon_dclk>, <&vcon_dclk>;
+			clock-names = "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
+			channels = <4>;
+			renesas,vsps = <&vspd0 0>, <&vspd1 0>, <&vspd2 0>, <&vspd3 0>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					vcon_out_dp0: endpoint {
+						remote-endpoint = <&dw_dp0_in>;
+					};
+				};
+			};
+		};
+
+		vcon_group1: vcon@c5024000 {
+			compatible = "renesas,r8a78000-vcon";
+			reg = <0 0xc5024000 0 0x1000>,
+			      <0 0xc5025000 0 0x1000>,
+			      <0 0xc5026000 0 0x1000>,
+			      <0 0xc5027000 0 0x1000>;
+			interrupts = <GIC_SPI 669 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 670 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 671 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 672 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "ch0", "ch1", "ch2", "ch3";
+			clocks = <&vcon_dclk>, <&vcon_dclk>, <&vcon_dclk>, <&vcon_dclk>;
+			clock-names = "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
+			channels = <4>;
+			renesas,vsps = <&vspd4 0>, <&vspd5 0>, <&vspd6 0>, <&vspd7 0>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					vcon_out_dp1: endpoint {
+						remote-endpoint = <&dw_dp1_in>;
+					};
+				};
+
+			};
+		};
+
+		vcon_group2: vcon@c5028000 {
+			compatible = "renesas,r8a78000-vcon";
+			reg = <0 0xc5028000 0 0x1000>,
+			      <0 0xc5029000 0 0x1000>;
+			interrupts = <GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 674 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "ch0", "ch1";
+			clocks = <&vcon_dclk>, <&vcon_dclk>;
+			clock-names = "dclkin.0", "dclkin.1";
+			channels = <2>;
+			renesas,vsps = <&vspd8 0>, <&vspd9 0>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					vcon_out_dp2: endpoint {
+						remote-endpoint = <&dw_dp2_in>;
+					};
+				};
+			};
+		};
+
+		dp0: dp@c5400000 {
+			compatible = "renesas,r8a78000-dw-dp";
+			reg = <0 0xc5400000 0 0x60000>,
+			      <0 0xc5460000 0 0x20000>,
+			      <0 0xc5480000 0 0x80000>;
+			reg-names = "io_base", "fw", "phy";
+			interrupts = <GIC_SPI 4309 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dw_dp0_in: endpoint {
+						remote-endpoint = <&vcon_out_dp0>;
+					};
+				};
+			};
+		};
+
+		dp1: dp@c5500000 {
+			compatible = "renesas,r8a78000-dw-dp";
+			reg = <0 0xc5500000 0 0x60000>,
+			      <0 0xc5560000 0 0x20000>,
+			      <0 0xc5580000 0 0x80000>;
+			reg-names = "io_base", "fw", "phy";
+			interrupts = <GIC_SPI 4310 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dw_dp1_in: endpoint {
+						remote-endpoint = <&vcon_out_dp1>;
+					};
+				};
+			};
+		};
+
+		dp2: dp@c5600000 {
+			compatible = "renesas,r8a78000-dw-dp";
+			reg = <0 0xc5600000 0 0x60000>,
+			      <0 0xc5660000 0 0x20000>,
+			      <0 0xc5680000 0 0x80000>;
+			reg-names = "io_base", "fw", "phy";
+			interrupts = <GIC_SPI 4311 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					dw_dp2_in: endpoint {
+						remote-endpoint = <&vcon_out_dp2>;
 					};
 				};
 			};
