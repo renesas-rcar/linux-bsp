@@ -13,8 +13,9 @@ struct dw_dp;
 
 struct dw_dp_plat_data {
 	u32 max_link_rate;
+	u8 pixel_mode;
 };
 
 struct dw_dp *dw_dp_bind(struct device *dev, struct drm_encoder *encoder,
-			 const struct dw_dp_plat_data *plat_data);
+			 struct phy *phy, const struct dw_dp_plat_data *plat_data);
 #endif /* __DW_DP__ */

@@ -16,7 +16,7 @@
 #include <linux/regmap.h>
 #include <linux/reset.h>
 #include <linux/phy/phy.h>
-#include <linux/unaligned.h>
+#include <asm-generic/unaligned.h>
 
 #include <drm/bridge/dw_dp.h>
 #include <drm/drm_atomic_helper.h>
@@ -102,6 +102,10 @@
 #define HBLANK_INTERVAL_EN			BIT(16)
 #define HBLANK_INTERVAL				GENMASK(15, 0)
 
+#define DW_DP_PM_CONFIG1			0x0350
+#define DW_DP_PM_CONFIG2			0x0354
+#define DW_DP_MSO_CONFIG0			0x03a0
+
 #define DW_DP_AUD_CONFIG1			0x0400
 #define AUDIO_TIMESTAMP_VERSION_NUM		GENMASK(29, 24)
 #define AUDIO_PACKET_ID				GENMASK(23, 16)
@@ -134,6 +138,7 @@
 #define PHY_LANES				GENMASK(7, 6)
 #define PHY_RATE				GENMASK(5, 4)
 #define TPS_SEL					GENMASK(3, 0)
+#define PHY_BUSY_LANES_MASK(n)			(((1 << (n)) - 1) << 12)
 
 #define DW_DP_PHY_TX_EQ				0x0a04
 #define DW_DP_CUSTOMPAT0			0x0a08
@@ -141,6 +146,7 @@
 #define DW_DP_CUSTOMPAT2			0x0a10
 #define DW_DP_HBR2_COMPLIANCE_SCRAMBLER_RESET	0x0a14
 #define DW_DP_PHYIF_PWRDOWN_CTRL		0x0a18
+#define PER_LANE_PWRDOWN_CTL_EN			BIT(16)
 
 #define DW_DP_AUX_CMD				0x0b00
 #define AUX_CMD_TYPE				GENMASK(31, 28)
@@ -157,6 +163,10 @@
 #define DW_DP_AUX_DATA1				0x0b0c
 #define DW_DP_AUX_DATA2				0x0b10
 #define DW_DP_AUX_DATA3				0x0b14
+
+#define DW_DP_AUX_250US_CNT_LIMIT		0x0b40
+#define DW_DP_AUX_2000US_CNT_LIMIT		0x0b44
+#define DW_DP_AUX_100000US_CNT_LIMIT		0x0b48
 
 #define DW_DP_GENERAL_INTERRUPT			0x0d00
 #define VIDEO_FIFO_OVERFLOW_STREAM0		BIT(6)
@@ -249,7 +259,12 @@
 #define DW_DP_HDCP22_GPIOCHNGSTS		0x362c
 #define DW_DP_HDCP_REG_DPK_CRC			0x3630
 
-#define DW_DP_MAX_REGISTER			DW_DP_HDCP_REG_DPK_CRC
+#define DW_DP_LANEN_DIG_ASIC_TX_ASIC_OUT	0x44038
+#define TX_ACK					BIT(0)
+#define DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0	0x44310
+#define RX_ACK					BIT(0)
+
+#define DW_DP_MAX_REGISTER			DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0
 
 #define SDP_REG_BANK_SIZE			16
 
@@ -506,7 +521,15 @@ static void dw_dp_link_reset(struct dw_dp_link *link)
 	memset(link->dpcd, 0, sizeof(link->dpcd));
 }
 
-static int dw_dp_link_parse(struct dw_dp *dp, struct drm_connector *connector)
+static bool dw_dp_has_sink_count(const u8 dpcd[DP_RECEIVER_CAP_SIZE],
+				 const struct drm_dp_desc *desc)
+{
+	return dpcd[DP_DPCD_REV] >= DP_DPCD_REV_11 &&
+	       dpcd[DP_DOWNSTREAMPORT_PRESENT] & DP_DWN_STRM_PORT_PRESENT &&
+	       !drm_dp_has_quirk(desc, DP_DPCD_QUIRK_NO_SINK_COUNT);
+}
+
+static int dw_dp_link_parse(struct dw_dp *dp)
 {
 	struct dw_dp_link *link = &dp->link;
 	int ret;
@@ -519,7 +542,7 @@ static int dw_dp_link_parse(struct dw_dp *dp, struct drm_connector *connector)
 
 	drm_dp_read_desc(&dp->aux, &link->desc, drm_dp_is_branch(link->dpcd));
 
-	if (drm_dp_read_sink_count_cap(connector, link->dpcd, &link->desc)) {
+	if (dw_dp_has_sink_count(link->dpcd, &link->desc)) {
 		ret = drm_dp_read_sink_count(&dp->aux);
 		if (ret < 0)
 			return ret;
@@ -568,6 +591,7 @@ static int dw_dp_link_train_update_vs_emph(struct dw_dp *dp)
 		phy_cfg.dp.pre[i] = pe[i];
 	}
 
+	phy_cfg.dp.lanes = link->lanes;
 	phy_cfg.dp.set_lanes = false;
 	phy_cfg.dp.set_rate = false;
 	phy_cfg.dp.set_voltages = true;
@@ -592,6 +616,30 @@ static int dw_dp_link_train_update_vs_emph(struct dw_dp *dp)
 	return 0;
 }
 
+static void dw_dp_phy_set_rate(struct dw_dp *dp, unsigned int rate)
+{
+	u32 val;
+
+	switch (rate) {
+	case 810000:
+		val = 0x03;
+		break;
+	case 540000:
+		val = 0x02;
+		break;
+	case 270000:
+		val = 0x01;
+		break;
+	case 162000:
+	default:
+		val = 0;
+		break;
+	}
+
+	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_RATE,
+			   FIELD_PREP(PHY_RATE, val));
+}
+
 static int dw_dp_phy_configure(struct dw_dp *dp, unsigned int rate,
 			       unsigned int lanes, bool ssc)
 {
@@ -601,6 +649,13 @@ static int dw_dp_phy_configure(struct dw_dp *dp, unsigned int rate,
 	/* Move PHY to P3 */
 	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_POWERDOWN,
 			   FIELD_PREP(PHY_POWERDOWN, 0x3));
+
+	if (ssc)
+		regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, SSC_DIS,
+				   FIELD_PREP(SSC_DIS, 0));
+	else
+		regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, SSC_DIS,
+				   FIELD_PREP(SSC_DIS, 1));
 
 	phy_cfg.dp.lanes = lanes;
 	phy_cfg.dp.link_rate = rate / 100;
@@ -612,12 +667,20 @@ static int dw_dp_phy_configure(struct dw_dp *dp, unsigned int rate,
 	if (ret)
 		return ret;
 
+	dw_dp_phy_set_rate(dp, rate);
+
+	phy_post_init_2(dp->phy);
+
 	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_LANES,
 			   FIELD_PREP(PHY_LANES, lanes / 2));
 
 	/* Move PHY to P0 */
 	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_POWERDOWN,
 			   FIELD_PREP(PHY_POWERDOWN, 0x0));
+
+	regmap_update_bits(dp->regmap, DW_DP_PHYIF_PWRDOWN_CTRL,
+			   PER_LANE_PWRDOWN_CTL_EN, PER_LANE_PWRDOWN_CTL_EN);
+	mdelay(100);
 
 	dw_dp_phy_xmit_enable(dp, lanes);
 
@@ -1647,9 +1710,110 @@ static int dw_dp_link_enable(struct dw_dp *dp)
 	return ret;
 }
 
-static void dw_dp_bridge_atomic_enable(struct drm_bridge *bridge,
-				       struct drm_atomic_state *state)
+static int dw_dp_phy_init(struct dw_dp *dp)
 {
+	u32 val;
+	int ret;
+	u8 num_lanes;
+
+	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, PHY_SOFT_RESET,
+			   FIELD_PREP(PHY_SOFT_RESET, 1));
+
+	ret = phy_init(dp->phy);
+	if (ret)
+		goto err;
+
+	/* FIXME: The PHY settings seems be fixed to HBR2 */
+	dw_dp_phy_set_rate(dp, 540000);
+
+	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_WIDTH,
+			   FIELD_PREP(PHY_WIDTH, 1));
+
+	ret = phy_post_init(dp->phy);
+	if (ret)
+		goto err;
+
+	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, PHY_SOFT_RESET,
+			   FIELD_PREP(PHY_SOFT_RESET, 0));
+
+	ret = phy_post_init_1(dp->phy);
+	if (ret)
+		goto err;
+
+	/* FIXME: User poll timedout */
+	do {
+		regmap_read(dp->regmap, DW_DP_LANEN_DIG_ASIC_TX_ASIC_OUT, &val);
+		usleep_range(1000, 1001);
+	} while ((val & TX_ACK) != 0);
+
+	do {
+		regmap_read(dp->regmap, DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0, &val);
+		usleep_range(1000, 1001);
+	} while ((val & RX_ACK) != 0);
+
+	ret = phy_post_init_2(dp->phy);
+	if (ret)
+		goto err;
+
+	num_lanes = dp->phy->attrs.bus_width;
+
+	ret = regmap_read_poll_timeout(dp->regmap, DW_DP_PHYIF_CTRL, val,
+				       !(val & PHY_BUSY_LANES_MASK(num_lanes)), 200, 200000);
+	if (ret)
+		goto err;
+
+	ret = phy_post_init_3(dp->phy);
+	if (ret)
+		goto err;
+
+	regmap_write(dp->regmap, DW_DP_AUX_250US_CNT_LIMIT, 0x102);
+	regmap_write(dp->regmap, DW_DP_AUX_2000US_CNT_LIMIT, 0x80c);
+	regmap_write(dp->regmap, DW_DP_AUX_100000US_CNT_LIMIT, 0x19258);
+
+	regmap_read(dp->regmap, DW_DP_PM_CONFIG1, &val);
+	val &=  ~(GENMASK(27, 20) | GENMASK(15, 0));
+	val |= 0x00400008;
+	regmap_write(dp->regmap, DW_DP_PM_CONFIG1, val);
+
+	regmap_read(dp->regmap, DW_DP_PM_CONFIG2, &val);
+	val &=  ~GENMASK(23, 16);
+	val |= 0x50000;
+	regmap_write(dp->regmap, DW_DP_PM_CONFIG2, val);
+
+	return 0;
+err:
+	dev_err_probe(dp->dev, ret, "phy init failed\n");
+	return ret;
+}
+
+static int dw_dp_bridge_attach(struct drm_bridge *bridge, enum drm_bridge_attach_flags flags)
+{
+	struct dw_dp *dp = bridge_to_dp(bridge);
+	struct drm_encoder *encoder = bridge->encoder;
+	int ret;
+
+	dp->aux.drm_dev = encoder->dev;
+	dp->aux.name = dev_name(dp->dev);
+	dp->aux.transfer = dw_dp_aux_transfer;
+	ret = drm_dp_aux_register(&dp->aux);
+	if (ret) {
+		dev_err_probe(dp->dev, ret, "Aux register failed\n");
+		return ret;
+	}
+
+	ret = dw_dp_phy_init(dp);
+	if (ret)
+		return ret;
+
+	dw_dp_init_hw(dp);
+
+	return 0;
+}
+
+static void dw_dp_bridge_atomic_enable(struct drm_bridge *bridge,
+				       struct drm_bridge_state *old_state)
+{
+	struct drm_atomic_state *state = old_state->base.state;
 	struct dw_dp *dp = bridge_to_dp(bridge);
 	struct drm_connector *connector;
 	struct drm_connector_state *conn_state;
@@ -1701,7 +1865,7 @@ static void dw_dp_reset(struct dw_dp *dp)
 }
 
 static void dw_dp_bridge_atomic_disable(struct drm_bridge *bridge,
-					struct drm_atomic_state *state)
+					struct drm_bridge_state *old_state)
 {
 	struct dw_dp *dp = bridge_to_dp(bridge);
 
@@ -1711,45 +1875,44 @@ static void dw_dp_bridge_atomic_disable(struct drm_bridge *bridge,
 	dw_dp_reset(dp);
 }
 
-static bool dw_dp_hpd_detect_link(struct dw_dp *dp, struct drm_connector *connector)
+static bool dw_dp_hpd_detect_link(struct dw_dp *dp)
 {
 	int ret;
 
 	ret = phy_power_on(dp->phy);
 	if (ret < 0)
 		return false;
-	ret = dw_dp_link_parse(dp, connector);
+	ret = dw_dp_link_parse(dp);
 	phy_power_off(dp->phy);
 
 	return !ret;
 }
 
-static enum drm_connector_status dw_dp_bridge_detect(struct drm_bridge *bridge,
-						     struct drm_connector *connector)
+static enum drm_connector_status dw_dp_bridge_detect(struct drm_bridge *bridge)
 {
 	struct dw_dp *dp = bridge_to_dp(bridge);
 
 	if (!dw_dp_hpd_detect(dp))
 		return connector_status_disconnected;
 
-	if (!dw_dp_hpd_detect_link(dp, connector))
+	if (!dw_dp_hpd_detect_link(dp))
 		return connector_status_disconnected;
 
 	return connector_status_connected;
 }
 
-static const struct drm_edid *dw_dp_bridge_edid_read(struct drm_bridge *bridge,
-						     struct drm_connector *connector)
+static struct edid *dw_dp_bridge_edid_read(struct drm_bridge *bridge,
+					   struct drm_connector *connector)
 {
 	struct dw_dp *dp = bridge_to_dp(bridge);
-	const struct drm_edid *edid;
+	struct edid *edid;
 	int ret;
 
 	ret = phy_power_on(dp->phy);
 	if (ret)
 		return NULL;
 
-	edid = drm_edid_read_ddc(connector, &dp->aux.ddc);
+	edid = drm_get_edid(connector, &dp->aux.ddc);
 
 	phy_power_off(dp->phy);
 
@@ -1825,10 +1988,11 @@ static const struct drm_bridge_funcs dw_dp_bridge_funcs = {
 	.atomic_get_output_bus_fmts = dw_dp_bridge_atomic_get_output_bus_fmts,
 	.atomic_check = dw_dp_bridge_atomic_check,
 	.mode_valid = dw_dp_bridge_mode_valid,
+	.attach = dw_dp_bridge_attach,
 	.atomic_enable = dw_dp_bridge_atomic_enable,
 	.atomic_disable = dw_dp_bridge_atomic_disable,
 	.detect = dw_dp_bridge_detect,
-	.edid_read = dw_dp_bridge_edid_read,
+	.get_edid = dw_dp_bridge_edid_read,
 };
 
 static int dw_dp_link_retrain(struct dw_dp *dp)
@@ -1966,11 +2130,12 @@ static void dw_dp_phy_exit(void *data)
 }
 
 struct dw_dp *dw_dp_bind(struct device *dev, struct drm_encoder *encoder,
-			 const struct dw_dp_plat_data *plat_data)
+			 struct phy *phy, const struct dw_dp_plat_data *plat_data)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct dw_dp *dp;
 	struct drm_bridge *bridge;
+	struct device_node *pnode;
 	void __iomem *res;
 	int ret;
 
@@ -1978,12 +2143,8 @@ struct dw_dp *dw_dp_bind(struct device *dev, struct drm_encoder *encoder,
 	if (!dp)
 		return ERR_PTR(-ENOMEM);
 
-	dp = devm_drm_bridge_alloc(dev, struct dw_dp, bridge, &dw_dp_bridge_funcs);
-	if (IS_ERR(dp))
-		return ERR_CAST(dp);
-
 	dp->dev = dev;
-	dp->pixel_mode = DW_DP_MP_QUAD_PIXEL;
+	dp->pixel_mode = plat_data->pixel_mode;
 
 	dp->plat_data.max_link_rate = plat_data->max_link_rate;
 	bridge = &dp->bridge;
@@ -2001,74 +2162,27 @@ struct dw_dp *dw_dp_bind(struct device *dev, struct drm_encoder *encoder,
 		return ERR_CAST(dp->regmap);
 	}
 
-	dp->phy = devm_of_phy_get(dev, dev->of_node, NULL);
-	if (IS_ERR(dp->phy)) {
-		dev_err_probe(dev, PTR_ERR(dp->phy), "failed to get phy\n");
-		return ERR_CAST(dp->phy);
+	if (!phy) {
+		dp->phy = devm_of_phy_get(dev, dev->of_node, NULL);
+		if (IS_ERR(dp->phy)) {
+			dev_err_probe(dev, PTR_ERR(dp->phy), "failed to get phy\n");
+			return ERR_CAST(dp->phy);
+		}
+	} else {
+		dp->phy = phy;
 	}
 
-	dp->apb_clk = devm_clk_get_enabled(dev, "apb");
-	if (IS_ERR(dp->apb_clk)) {
-		dev_err_probe(dev, PTR_ERR(dp->apb_clk), "failed to get apb clock\n");
-		return ERR_CAST(dp->apb_clk);
-	}
+	pnode = of_graph_get_port_by_id(pdev->dev.of_node, 0);
+	if (!pnode)
+		return ERR_PTR(-ENODEV);
 
-	dp->aux_clk = devm_clk_get_enabled(dev, "aux");
-	if (IS_ERR(dp->aux_clk)) {
-		dev_err_probe(dev, PTR_ERR(dp->aux_clk), "failed to get aux clock\n");
-		return ERR_CAST(dp->aux_clk);
-	}
-
-	dp->i2s_clk = devm_clk_get(dev, "i2s");
-	if (IS_ERR(dp->i2s_clk)) {
-		dev_err_probe(dev, PTR_ERR(dp->i2s_clk), "failed to get i2s clock\n");
-		return ERR_CAST(dp->i2s_clk);
-	}
-
-	dp->spdif_clk = devm_clk_get(dev, "spdif");
-	if (IS_ERR(dp->spdif_clk)) {
-		dev_err_probe(dev, PTR_ERR(dp->spdif_clk), "failed to get spdif clock\n");
-		return ERR_CAST(dp->spdif_clk);
-	}
-
-	dp->hdcp_clk = devm_clk_get(dev, "hdcp");
-	if (IS_ERR(dp->hdcp_clk)) {
-		dev_err_probe(dev, PTR_ERR(dp->hdcp_clk), "failed to get hdcp clock\n");
-		return ERR_CAST(dp->hdcp_clk);
-	}
-
-	dp->rstc = devm_reset_control_get(dev, NULL);
-	if (IS_ERR(dp->rstc)) {
-		dev_err_probe(dev, PTR_ERR(dp->rstc), "failed to get reset control\n");
-		return ERR_CAST(dp->rstc);
-	}
-
-	bridge->of_node = dev->of_node;
+	bridge->of_node = pnode;
+	bridge->funcs = &dw_dp_bridge_funcs;
 	bridge->ops = DRM_BRIDGE_OP_DETECT | DRM_BRIDGE_OP_EDID | DRM_BRIDGE_OP_HPD;
 	bridge->type = DRM_MODE_CONNECTOR_DisplayPort;
-	bridge->ycbcr_420_allowed = true;
 
-	dp->aux.dev = dev;
-	dp->aux.drm_dev = encoder->dev;
-	dp->aux.name = dev_name(dev);
-	dp->aux.transfer = dw_dp_aux_transfer;
-	ret = drm_dp_aux_register(&dp->aux);
-	if (ret) {
-		dev_err_probe(dev, ret, "Aux register failed\n");
-		return ERR_PTR(ret);
-	}
-
-	ret = drm_bridge_attach(encoder, bridge, NULL, DRM_BRIDGE_ATTACH_NO_CONNECTOR);
-	if (ret)
-		dev_err_probe(dev, ret, "Failed to attach bridge\n");
-
-	dw_dp_init_hw(dp);
-
-	ret = phy_init(dp->phy);
-	if (ret) {
-		dev_err_probe(dev, ret, "phy init failed\n");
-		return ERR_PTR(ret);
-	}
+	of_node_put(pnode);
+	drm_bridge_add(bridge);
 
 	ret = devm_add_action_or_reset(dev, dw_dp_phy_exit, dp);
 	if (ret)
