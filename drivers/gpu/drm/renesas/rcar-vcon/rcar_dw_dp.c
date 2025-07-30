@@ -563,14 +563,12 @@ static int rcar_dw_dp_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int rcar_dw_dp_remove(struct platform_device *pdev)
+static void rcar_dw_dp_remove(struct platform_device *pdev)
 {
 	struct rcar_dw_dp *dw_dp = platform_get_drvdata(pdev);
 
 	rcar_dw_dp_clk_disable(dw_dp);
 	pm_runtime_disable(&pdev->dev);
-
-	return 0;
 }
 
 static int __maybe_unused rcar_dw_dp_pm_suspend(struct device *dev)
@@ -613,7 +611,7 @@ MODULE_DEVICE_TABLE(of, rcar_dw_dp_of_table);
 
 static struct platform_driver rcar_dw_dp_platform_driver = {
 	.probe          = rcar_dw_dp_probe,
-	.remove         = rcar_dw_dp_remove,
+	.remove_new     = rcar_dw_dp_remove,
 	.driver         = {
 		.name		= "rcar-dw-dp",
 		.pm             = &rcar_dw_dp_pm_ops,
