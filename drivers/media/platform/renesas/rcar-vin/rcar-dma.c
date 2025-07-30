@@ -1144,6 +1144,9 @@ static void rvin_capture_stop(struct rvin_dev *vin)
 #define RVIN_TIMEOUT_MS 100
 #define RVIN_RETRIES 10
 
+static int frame_cnt;
+static ktime_t fps_start;
+
 static irqreturn_t rvin_irq(int irq, void *data)
 {
 	struct rvin_dev *vin = data;
@@ -1215,6 +1218,20 @@ static irqreturn_t rvin_irq(int irq, void *data)
 			rvin_get_active_field(vin, vnms);
 		vin->buf_hw[slot].buffer->sequence = vin->sequence;
 		vin->buf_hw[slot].buffer->vb2_buf.timestamp = ktime_get_ns();
+
+		/* FPS Measurement Starts */
+		ktime_t now = vin->buf_hw[slot].buffer->vb2_buf.timestamp;
+		frame_cnt++;
+		if (fps_start == 0)
+			fps_start = now;
+
+		if ((now - fps_start) > 1000000000ULL) {
+			vin_err(vin, "FPS: %d\n", frame_cnt);
+			fps_start = now;
+			frame_cnt = 0;
+		}
+		/* FPS Measurement Ends */
+
 		vb2_buffer_done(&vin->buf_hw[slot].buffer->vb2_buf,
 				VB2_BUF_STATE_DONE);
 		vin->buf_hw[slot].buffer = NULL;
