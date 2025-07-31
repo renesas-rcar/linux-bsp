@@ -25,7 +25,8 @@
 	cmem {
 		memory-region = <&vdsp0_region>, <&vdsp1_region>,
 				<&vdsp2_region>, <&vdsp3_region>,
-				<&pap_region>, <&region_40bit>;
+				<&pap_region>, <&region_40bit>,
+				<&qm_region>;
 	};
 
 	dsi-con0 {
@@ -51,6 +52,11 @@
 	memory@2480000000 {
 		device_type = "memory";
 		reg = <0x24 0x80000000 0x1 0x80000000>;
+	};
+
+	memory@5080000000 {
+		device_type = "memory";
+		reg = <0x50 0x80000000 0x0 0x20000000>;
 	};
 
 	reg_1p8v: regulator-1p8v {
@@ -128,6 +134,12 @@
 		ecc_data_region@25cccc0000 {
 			no-map;
 			reg = <0x25 0xcccc0000 0x0 0x33340000>;
+		};
+
+		qm_region: linux,qm_region@5080000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x50 0x80000000 0x0 0x20000000>;
 		};
 	};
 
