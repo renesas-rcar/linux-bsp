@@ -487,7 +487,7 @@ int rcar_gen5_pcie6_link_up(struct dw_pcie6 *pci)
 	val = readl(rcar_pcie6->base + PCIEINTSTS0);
 	mask = GENMASK(7, 6);
 
-	//rcar_gen5_pcie6_check_speed(pci);
+	rcar_gen5_pcie6_check_speed(pci);
 
 	return (val & mask) == mask;
 }
