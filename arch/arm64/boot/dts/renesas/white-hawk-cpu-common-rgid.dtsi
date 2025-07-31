@@ -39,6 +39,11 @@
 		reg = <0x26 0x00000000 0x1 0x00000000>;
 	};
 
+	memory@5080000000 {
+		device_type = "memory";
+		reg = <0x50 0x80000000 0x0 0x20000000>;
+	};
+
 	reg_1p8v: regulator-1p8v {
 			compatible = "regulator-fixed";
 			regulator-name = "fixed-1.8V";
