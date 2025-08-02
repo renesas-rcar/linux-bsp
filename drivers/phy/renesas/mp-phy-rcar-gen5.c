@@ -204,7 +204,7 @@ static void __maybe_unused mp_phy_module_power_run(void)
 /* Channel specific registers */
 #define TCA_INTR_OFFSET(ch)			(MPPHY_USB_BASE(ch) + 0x4)
 #define TCA_INTR_STS_OFFSET(ch)			(MPPHY_USB_BASE(ch) + 0x8)
-#define TCA_TCPC_OFFSET(ch)			(MPPHY_USB_BASE(ch) + 0x10)
+#define TCA_TCPC_OFFSET(ch)			(MPPHY_USB_BASE(ch) + 0x14)
 #define TCA_VBUS_CTRL_OFFSET(ch)		(MPPHY_USB_BASE(ch) + 0x0040)
 #define PSTATE_1_OFFSET(ch)			(MPPHY_USB_BASE(ch) + 0x0054)
 
@@ -266,6 +266,29 @@ static void mp_phy_update_bits(void __iomem *base, u32 offset, u32 mask, u32 val
 	tmp = readl(base + offset);
 	tmp = (tmp & ~mask) | (value & mask);
 	writel(tmp, base + offset);
+}
+
+static int mp_phy_reg_wait(void __iomem *base, u32 offs, u32 mask, u32 expected)
+{
+	u32 val;
+
+	if (!base) {
+		pr_err("mpphy_reg_wait: Invalid address\n");
+		return -EINVAL;
+	}
+
+	int ret = readl_poll_timeout_atomic(base + offs, val, (val & mask) == expected,
+										1, 10000000);
+
+	if (ret) {
+		pr_err("mpphy_reg_wait: Timeout waiting for addr: 0x%p, offset: 0x%x, mask: 0x%x, expected: 0x%x\n",
+			   base, offs, mask, expected);
+	} else {
+		pr_debug("mpphy_reg_wait: Success addr: 0x%p, offset: 0x%x, val: 0x%x\n",
+				base, offs, val);
+	}
+
+	return ret;
 }
 
 static int mp_phy_init_ethernet(struct mp_phy_priv *priv, u32 channel_id)
@@ -525,9 +548,7 @@ static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 	printk("%s %d: Before: MPPHY_P3RXCNT: 0x%08x , MPPHY_P3SRAMCNT: 0x%08x\n", __func__, __LINE__,
 			readl(priv->base + MPPHY_PXRXCNT(channel_id)), readl(priv->base + MPPHY_PXSRAMCNT(channel_id)));
 	mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(channel_id), MPPHY_PXRXCNT_RESET_VAL, MPPHY_PXRXCNT_RESET_VAL);
-	mp_phy_write(priv->base, MPPHY_PXSRAMCNT(channel_id), MPPHY_PXSRAMCNT_BYPASS);
-	mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id),
-			   MPPHY_PXSRAMCNT_BIT3, MPPHY_PXSRAMCNT_BIT3);
+	mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id), 0xF, 0xF);
 
 	printk("%s %d: After: MPPHY_P3RXCNT: 0x%08x , MPPHY_P3SRAMCNT: 0x%08x\n", __func__, __LINE__,
 		readl(priv->base + MPPHY_PXRXCNT(channel_id)), readl(priv->base + MPPHY_PXSRAMCNT(channel_id)));
@@ -797,46 +818,39 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 		mp_phy_write(priv->base, TCA_VBUS_CTRL_OFFSET(chan->lane_id), 0x0000003E);
 		break;
 	case SUPER_SPEED_PLUS:
-		/* Setting TCA registers. */
-		if (chan->lane_id == 0) {
-			while (1) {
-				data = readl(priv->base + PSTATE_1_OFFSET(0));
-				if (((data >> 6) & 0x3) == 0 &&
-					((data >> 4) & 0x3) == 0 &&
-					(data & 0xF) == 0x3)
-					break;
-			}
-		} else if (chan->lane_id == 1) {
-			while (1) {
-				data = readl(priv->base + PSTATE_1_OFFSET(1));
-				if(((data >> 22) & 0x1) == 0 &&
-					((data >> 20) & 0x3) == 0 &&
-					((data >> 16) & 0xF) == 0x3)
-					break;
-			}
+		data = mp_phy_reg_wait(priv->base, PSTATE_1_OFFSET(chan->lane_id), 0x00000003, 0x00000003);
+		if (data) {
+			pr_err("mp_phy_config_usb: Timeout waiting for PSTATE_1_OFFSET(%d) configuration\n",chan->lane_id);
+			return data;
 		}
+
+		printk("%s %d: PSTATE_1_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
+			readl(priv->base + PSTATE_1_OFFSET(chan->lane_id)));
+
 		mp_phy_update_bits(priv->base, TCA_INTR_OFFSET(chan->lane_id), 0x3, 0x3);
-		printk("%s %d: TCA_INTR_OFFSET: 0x%x\n", __func__, __LINE__,
-		       readl(priv->base + TCA_INTR_OFFSET(chan->lane_id)));
-		while (1) {
-			data = readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id));
-			if ((data & BIT(0)))
-				break;
+		printk("%s %d: TCA_INTR_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
+			readl(priv->base + TCA_INTR_OFFSET(chan->lane_id)));
+
+		data = mp_phy_reg_wait(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id), 0x00000001, 0x00000001);
+		if (data) {
+			pr_err("mp_phy_config_usb: Timeout waiting for TCA_INTR_STS_OFFSET(%d) configuration\n", chan->lane_id);
+			return data;
 		}
-		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(channel_id), 0x1503, 0x1503);
-		mp_phy_update_bits(priv->base, TCA_TCPC_OFFSET(channel_id), 0x11, 0x11);
-		printk("%s %d: TCA_INTR_STS_OFFSET: 0x%x\n", __func__, __LINE__,
+
+		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id), 0x1503, 0x1503);
+		mp_phy_update_bits(priv->base, TCA_TCPC_OFFSET(chan->lane_id), 0x11, 0x11);
+		printk("%s %d: TCA_INTR_STS_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
 		       readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id)));
-		printk("%s %d: TCA_TCPC_OFFSET: 0x%x\n", __func__, __LINE__,
+		printk("%s %d: TCA_TCPC_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
 		       readl(priv->base + TCA_TCPC_OFFSET(chan->lane_id)));
-		while (1) {
-			data = readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id));
-			if ((data & BIT(0)))
-				break;
+		data = mp_phy_reg_wait(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id), 0x00000001, 0x00000001);
+		if (data) {
+			pr_err("mp_phy_config_usb: Timeout waiting for TCA_INTR_STS_OFFSET(%d) configuration\n", chan->lane_id);
+			return data;
 		}
 		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(channel_id), 0x1503, 0x1503);
-		printk("%s %d: TCA_INTR_STS_OFFSET: 0x%x\n", __func__, __LINE__,
-		       readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id)));
+		printk("%s %d: TCA_INTR_STS_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
+			readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id)));
 		break;
 	}
 
@@ -945,7 +959,7 @@ static int mp_phy_probe(struct platform_device *pdev)
 		sprintf(rst_name, "mpphy%d1", i);
 		priv->resets[i] = devm_reset_control_get(dev, rst_name);
 		if (IS_ERR(priv->resets[i])) {
-			dev_err(dev, "Failed to get reset control mpphy%d1, retries: %d\n",
+			dev_dbg(dev, "Failed to get reset control mpphy%d1, retries: %d\n",
 					i, rst_control_get_retries);
 			if (rst_control_get_retries) {
 				--rst_control_get_retries;
