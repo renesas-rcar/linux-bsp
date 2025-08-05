@@ -112,6 +112,17 @@
 #define PCIE_VERSION_NUMBER		0x8F8
 #define PCIE_VERSION_TYPE		0x8FC
 
+/* DWC PCIe controller capabilities */
+#define DW_PCIE_CAP_REQ_RES             0
+#define DW_PCIE_CAP_EDMA_UNROLL         1
+#define DW_PCIE_CAP_IATU_UNROLL         2
+#define DW_PCIE_CAP_CDM_CHECK           3
+
+#define dw_pcie6_cap_is(_pci, _cap) \
+	test_bit(DW_PCIE_CAP_ ## _cap, &(_pci)->caps)
+
+#define dw_pcie6_cap_set(_pci, _cap) \
+	set_bit(DW_PCIE_CAP_ ## _cap, &(_pci)->caps)
 /*
  * iATU inbound and outbound windows CSRs. Before the IP-core v4.80a each
  * iATU region CSRs had been indirectly accessible by means of the dedicated
@@ -341,6 +352,7 @@ struct dw_pcie6 {
 	u8			n_fts[2];
 	bool			iatu_unroll_enabled: 1;
 	struct dw_edma_chip		edma;
+	unsigned long		caps;
 };
 
 struct dw_plat_pcie6 {
