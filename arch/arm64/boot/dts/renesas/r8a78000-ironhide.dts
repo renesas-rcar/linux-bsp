@@ -378,15 +378,25 @@
 
 	io_expander_u297: gpio@77 {
 		compatible = "ti,tca9539";
-	reg = <0x77>;
-	gpio-controller;
-	#gpio-cells = <2>;
-	interrupt-controller;
-	#interrupt-cells = <2>;
+		reg = <0x77>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
 
 		/*IRQ2: External Interrupts block diagram in HWMan is T.B.D */
-	interrupt-parent = <&gpio4>;
-	interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+	};
+
+	max20087_0: regulator@28 {
+		compatible = "maxim,max20087";
+		reg = <0x28>;
+	};
+
+	max20087_1: regulator@29 {
+		compatible = "maxim,max20087";
+		reg = <0x29>;
 	};
 };
 
@@ -399,15 +409,25 @@
 
 	io_expander_u299: gpio@77 {
 		compatible = "ti,tca9539";
-	reg = <0x77>;
-	gpio-controller;
-	#gpio-cells = <2>;
-	interrupt-controller;
-	#interrupt-cells = <2>;
+		reg = <0x77>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
 
 		/*IRQ3: External Interrupts block diagram in HWMan is T.B.D */
-	interrupt-parent = <&gpio4>;
-	interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+	};
+
+	max20087_2: regulator@2a {
+		compatible = "maxim,max20087";
+		reg = <0x2a>;
+	};
+
+	max20087_3: regulator@2b {
+		compatible = "maxim,max20087";
+		reg = <0x2b>;
 	};
 };
 
@@ -421,9 +441,10 @@
 	gmsl0: gmsl-deserializer@31 {
 		compatible = "maxim,max96726";
 		reg = <0x31>, <0x01>, <0x02>, <0x03>, <0x04>;
-		gpios = <&io_expander_u297 0 GPIO_ACTIVE_HIGH >;
+		gpios = <&io_expander_u297 0 GPIO_ACTIVE_HIGH>;
 		gpio-controller;
 		#gpio-cells = <2>;
+		power-supply = <&max20087_0>;
 
 		ports {
 			#address-cells = <1>;
@@ -505,9 +526,10 @@
 	gmsl1: gmsl-deserializer@33 {
 		compatible = "maxim,max96726";
 		reg = <0x33>, <0x05>, <0x06>, <0x07>, <0x08>;
-		gpios = <&io_expander_u297 0 GPIO_ACTIVE_HIGH >;
+		gpios = <&io_expander_u297 0 GPIO_ACTIVE_HIGH>;
 		gpio-controller;
 		#gpio-cells = <2>;
+		power-supply = <&max20087_1>;
 
 		ports {
 			#address-cells = <1>;
@@ -597,9 +619,10 @@
 	gmsl2: gmsl-deserializer@31 {
 		compatible = "maxim,max96726";
 		reg = <0x31>, <0x01>, <0x02>, <0x03>, <0x04>;
-		gpios = <&io_expander_u299 0 GPIO_ACTIVE_HIGH >;
+		gpios = <&io_expander_u299 0 GPIO_ACTIVE_HIGH>;
 		gpio-controller;
 		#gpio-cells = <2>;
+		power-supply = <&max20087_2>;
 
 		ports {
 			#address-cells = <1>;
@@ -681,9 +704,10 @@
 	gmsl3: gmsl-deserializer@33 {
 		compatible = "maxim,max96726";
 		reg = <0x33>, <0x05>, <0x06>, <0x07>, <0x08>;
-		gpios = <&io_expander_u299 0 GPIO_ACTIVE_HIGH >;
+		gpios = <&io_expander_u299 0 GPIO_ACTIVE_HIGH>;
 		gpio-controller;
 		#gpio-cells = <2>;
+		power-supply = <&max20087_3>;
 
 		ports {
 			#address-cells = <1>;
