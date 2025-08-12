@@ -19,7 +19,7 @@
 #include "pcie6-rcar-phy-fw-iccm.h"
 #include "pcie6-rcar-phy-fw-dccm.h"
 
-void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6)
+static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6)
 {
 	u32 i;
 	void __iomem *sram_addr;
@@ -457,8 +457,8 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 	}
 }
 
-void rcar_gen5_pcie6_ltssm_enable(struct rcar_pcie6 *rcar_pcie6,
-					bool enable)
+static void rcar_gen5_pcie6_ltssm_enable(struct rcar_pcie6 *rcar_pcie6,
+					 bool enable)
 {
 	u32 val;
 
@@ -473,7 +473,7 @@ void rcar_gen5_pcie6_ltssm_enable(struct rcar_pcie6 *rcar_pcie6,
 	writel(val, rcar_pcie6->base + PCIERSTCTRL1);
 }
 
-void rcar_gen5_pcie6_retrain_link(struct dw_pcie6 *pci)
+static void rcar_gen5_pcie6_retrain_link(struct dw_pcie6 *pci)
 {
 	u32 val, lnksta, retries;
 
@@ -492,7 +492,7 @@ void rcar_gen5_pcie6_retrain_link(struct dw_pcie6 *pci)
 	}	
 }
 
-void rcar_gen5_pcie6_check_speed(struct dw_pcie6 *pci)
+static void rcar_gen5_pcie6_check_speed(struct dw_pcie6 *pci)
 {
 	u32 lnkcap, lnksta;
 
@@ -503,7 +503,7 @@ void rcar_gen5_pcie6_check_speed(struct dw_pcie6 *pci)
 		rcar_gen5_pcie6_retrain_link(pci);
 }
 
-int rcar_gen5_pcie6_link_up(struct dw_pcie6 *pci)
+static int rcar_gen5_pcie6_link_up(struct dw_pcie6 *pci)
 {
 	struct rcar_pcie6 *rcar_pcie6 = to_rcar_gen5_pcie6(pci);
 	u32 val, mask;
@@ -516,7 +516,7 @@ int rcar_gen5_pcie6_link_up(struct dw_pcie6 *pci)
 	return (val & mask) == mask;
 }
 
-int rcar_gen5_pcie6_start_link(struct dw_pcie6 *pci)
+static int rcar_gen5_pcie6_start_link(struct dw_pcie6 *pci)
 {
 	struct rcar_pcie6 *rcar_pcie6 = to_rcar_gen5_pcie6(pci);
 
