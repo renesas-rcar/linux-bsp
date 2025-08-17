@@ -1463,7 +1463,7 @@ static int dw_pcie6_edma_find_chip(struct dw_pcie6 *pci)
 	 * thus no space is now reserved for the eDMA channels viewport and
 	 * former DMA CTRL register is no longer fixed to FFs.
 	 */
-	if (dw_pcie6_ver_is_ge(pci, 540A))
+	if (dw_pcie6_ver_is_ge(pci, 540A) || dw_pcie6_cap_is(pci, EDMA_UNROLL))
 		val = 0xFFFFFFFF;
 	else
 		val = dw_pcie6_readl_dbi(pci, PCIE_DMA_VIEWPORT_BASE + PCIE_DMA_CTRL);
@@ -1487,13 +1487,19 @@ static int dw_pcie6_edma_find_chip(struct dw_pcie6 *pci)
 
 	pci->edma.flags |= DW_EDMA_CHIP_LOCAL;
 
+	pci->edma.mf = EDMA_MF_HDMA_NATIVE;
+
 	pci->edma.ll_wr_cnt = FIELD_GET(PCIE_DMA_NUM_WR_CHAN, val);
 	pci->edma.ll_rd_cnt = FIELD_GET(PCIE_DMA_NUM_RD_CHAN, val);
 
 	/* Sanity check the channels count if the mapping was incorrect */
 	if (!pci->edma.ll_wr_cnt || pci->edma.ll_wr_cnt > EDMA_MAX_WR_CH ||
-	    !pci->edma.ll_rd_cnt || pci->edma.ll_rd_cnt > EDMA_MAX_RD_CH)
-		return -EINVAL;
+		!pci->edma.ll_rd_cnt || pci->edma.ll_rd_cnt > EDMA_MAX_RD_CH) {
+
+		/* If channel count is zero or unrealistic, fall back to default */
+		pci->edma.ll_wr_cnt = EDMA_MAX_WR_CH;
+		pci->edma.ll_rd_cnt = EDMA_MAX_RD_CH;
+	}
 
 	return 0;
 }
@@ -1573,7 +1579,6 @@ int dw_pcie6_edma_detect(struct dw_pcie6 *pci)
 		dev_err(pci->dev, "Invalid eDMA IRQs found\n");
 		return 0;
 	}
-
 	ret = dw_pcie6_edma_ll_alloc(pci);
 	if (ret) {
 		dev_err(pci->dev, "Couldn't allocate LLP memory\n");
