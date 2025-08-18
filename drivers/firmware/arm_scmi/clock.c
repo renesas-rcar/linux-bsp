@@ -80,6 +80,9 @@ struct scmi_msg_clock_set_parent {
 struct scmi_msg_clock_config_set {
 	__le32 id;
 	__le32 attributes;
+#if defined(CONFIG_ARCH_R8A78000)
+	__le32 oem_config_val;
+#endif /* CONFIG_ARCH_R8A78000 */
 };
 
 /* Valid only from SCMI clock v2.1 */
