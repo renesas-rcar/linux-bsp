@@ -1398,11 +1398,18 @@ static void rcar_canxl_configure_rx_filter(struct rcar_canxl_global *gpriv)
 
 static void rcar_canxl_enable_interrupts(struct rcar_canxl_global *gpriv)
 {
-	u32 cfg;
+	u32 cfg, val;
 
 	/* Clear interrupt flags of FUNC, ERR */
 	rcar_canxl_write(gpriv->base, FUNC_CLR, 0xFFFFFFFF);
 	rcar_canxl_write(gpriv->base, ERR_CLR, 0xFFFFFFFF);
+	val = rcar_canxl_read(gpriv->base, FUNC_RAW);
+	if (val != 0)
+		pr_err("FUNC_RAW register not cleared\n");
+
+	val = rcar_canxl_read(gpriv->base, ERR_RAW);
+	if (val != 0)
+		pr_err("ERR_RAW register not cleared\n");
 
 	/* FUNC interrupts setup */
 	cfg = (MH_TX_FQ0_IRQ | MH_RX_FQ0_IRQ |
@@ -1437,6 +1444,14 @@ static void rcar_canxl_disable_interrupts(struct rcar_canxl_global
 	/* Clear interrupt flags of FUNC, ERR */
 	rcar_canxl_write(gpriv->base, FUNC_CLR, 0xFFFFFFFF);
 	rcar_canxl_write(gpriv->base, ERR_CLR, 0xFFFFFFFF);
+	u32 val = rcar_canxl_read(gpriv->base, FUNC_RAW);
+
+	if (val != 0)
+		pr_err("FUNC_RAW register not cleared\n");
+
+	val = rcar_canxl_read(gpriv->base, ERR_RAW);
+	if (val != 0)
+		pr_err("ERR_RAW register not cleared\n");
 }
 
 static void rcar_canxl_func_raw(struct net_device *ndev)
@@ -1475,6 +1490,7 @@ static void rcar_canxl_error_raw(struct net_device *ndev, u32 err_raw,
 	struct net_device_stats *stats = &ndev->stats;
 	struct can_frame *cf;
 	struct sk_buff *skb;
+	u32 val;
 
 	netdev_dbg(ndev, "err_raw %x txerr %u rxerr %u\n", err_raw, txerr, rxerr);
 
@@ -1574,6 +1590,10 @@ static void rcar_canxl_error_raw(struct net_device *ndev, u32 err_raw,
 
 	/* Clear error interrupts that are handled */
 	rcar_canxl_write(priv->base, ERR_CLR, err_raw);
+	val = rcar_canxl_read(priv->base, ERR_RAW);
+	if (val != 0)
+		pr_err("ERR_RAW register not cleared\n");
+
 	stats->rx_packets++;
 	stats->rx_bytes += cf->can_dlc;
 	netif_rx(skb);
@@ -1606,7 +1626,7 @@ static irqreturn_t rcar_canxl_func_interrupt(int irq, void *dev_id)
 	struct rcar_canxl_global *gpriv = dev_id;
 	struct net_device *ndev;
 	struct rcar_canxl_channel *priv;
-	u32 sts, func_raw;
+	u32 sts, func_raw, val;
 
 	/* Function interrupts still indicate a condition specific
 	 * Tx/Rx FIFO interrupts is function interrupts.
@@ -1616,6 +1636,7 @@ static irqreturn_t rcar_canxl_func_interrupt(int irq, void *dev_id)
 
 	/* Function interrupts */
 	func_raw = rcar_canxl_read(gpriv->base, FUNC_RAW);
+
 	if (func_raw)
 		rcar_canxl_func_raw(ndev);
 
@@ -1637,6 +1658,9 @@ static irqreturn_t rcar_canxl_func_interrupt(int irq, void *dev_id)
 
 	/* Clear all function interrupts */
 	rcar_canxl_write(gpriv->base, FUNC_CLR, func_raw);
+	val = rcar_canxl_read(gpriv->base, FUNC_RAW);
+	if (val != 0)
+		pr_err("FUNC_RAW register not cleared\n");
 
 	return IRQ_HANDLED;
 }
@@ -1706,7 +1730,7 @@ static void rcar_canxl_set_bittiming(struct net_device *dev)
 {
 	struct rcar_canxl_channel *priv = netdev_priv(dev);
 	const struct can_bittiming *bt = &priv->can.bittiming;
-	const struct can_bittiming *xbt = &priv->can.data_bittiming;
+	const struct can_bittiming *dbt = &priv->can.data_bittiming;
 	u16 brp, sjw, tseg1, tseg2;
 	u32 cfg;
 
@@ -1725,14 +1749,21 @@ static void rcar_canxl_set_bittiming(struct net_device *dev)
 		   brp, sjw, tseg1, tseg2);
 
 	/* Data bit timing settings */
-	sjw = xbt->sjw - 1;
-	tseg1 = xbt->prop_seg + xbt->phase_seg1 - 1;
-	tseg2 = xbt->phase_seg2 - 1;
+	sjw = dbt->sjw - 1;
+	tseg1 = dbt->prop_seg + dbt->phase_seg1 - 1;
+	tseg2 = dbt->phase_seg2 - 1;
 
-	cfg = (XBTP_XTSEG1(tseg1) |
-	       XBTP_XSJW(sjw) |
-	       XBTP_XTSEG2(tseg2));
-	rcar_canxl_write(priv->base, XBTP, cfg);
+	if (priv->gpriv->xlmode) {
+		cfg = (XBTP_XTSEG1(tseg1) |
+		       XBTP_XSJW(sjw) |
+		       XBTP_XTSEG2(tseg2));
+		rcar_canxl_write(priv->base, XBTP, cfg);
+	} else {
+		cfg = (DBTP_DTSEG1(tseg1) |
+		       DBTP_DSJW(sjw) |
+		       DBTP_DTSEG2(tseg2));
+		rcar_canxl_write(priv->base, DBTP, cfg);
+	}
 	netdev_dbg(priv->ndev, "xrate: sjw %u, tseg1 %u, tseg2 %u\n",
 		   sjw, tseg1, tseg2);
 }
@@ -1747,9 +1778,6 @@ static int rcar_canxl_start(struct net_device *ndev)
 	struct platform_device *pdev = gpriv->pdev;
 
 	rcar_canxl_set_bittiming(ndev);
-
-	/* Configure common interrupts */
-	rcar_canxl_enable_interrupts(gpriv);
 
 	/* Enable RX FIFO Queue 0 */
 	cfg = RX_FQ_CTRL2_ENABLE(QUEUE(0));
@@ -1784,11 +1812,15 @@ static int rcar_canxl_start(struct net_device *ndev)
 	err = readl_poll_timeout(gpriv->base + MH_STS, sts,
 				 (sts & MH_STS_ENABLE), 2, 500000);
 	if (err) {
-		dev_err(&pdev->dev, "Start Message Handler failed\n");
+		dev_err(&pdev->dev, "Start PRT failed\n");
 		goto fail_mode_change;
 	}
 
+	/* Configure common interrupts */
+	rcar_canxl_enable_interrupts(gpriv);
+
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;
+
 	return 0;
 
 fail_mode_change:
@@ -1826,9 +1858,9 @@ static int rcar_canxl_open(struct net_device *ndev)
 out_close:
 	napi_disable(&priv->napi);
 	close_candev(ndev);
+	return err;
 out_can_clock:
 	clk_disable_unprepare(gpriv->can_clk);
-out_clock:
 	return err;
 }
 
@@ -1876,15 +1908,20 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 					 struct net_device *ndev)
 {
 	struct rcar_canxl_channel *priv = netdev_priv(ndev);
-	struct canxl_frame *cxl = (struct canxl_frame *)skb->data;
-	struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
+	struct canxl_frame *cxl = NULL;
+	struct canfd_frame *cfd = NULL;
 	u16 id, sdt, dlc, rc, crc, xtd, xlf = 1, sec = 0, brs = 0, esi = 0, fdf = 0;
 	u32 af, pay_load_size, target_desc_index;
-	u32 ele0, ele1, ele4_t0, ele5_t1, ele6_td0t2, ele7_txap, cfg;
-	uintptr_t ele6_td0t2_virt, ele7_txap_virt;
+	u32 ele0, ele1, ele4_t0, ele5_t1, ele7_txap, cfg;
+	uintptr_t ele7_txap_virt;
 	int ret;
 	unsigned long flags;
 	struct rcar_canxl_global *gpriv = priv->gpriv;
+
+	if (gpriv->xlmode)
+		cxl = (struct canxl_frame *)skb->data;
+	else
+		cfd = (struct canfd_frame *)skb->data;
 
 	/* Check vacancy place for descriptor at Queue 0 */
 	ret = rcar_canxl_check_queue(gpriv, 0, &target_desc_index);
@@ -1955,7 +1992,6 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 		ele4_t0 = (CANXL_T0_FIXED | CANXL_BIT_XLF(xlf) | CANXL_BIT_PRID(id) |
 			   CANXL_BIT_SEC(sec) | CANXL_BIT_SDT(sdt));
 		ele5_t1 = (CANXL_T1_FIXED | CANXL_BIT_DLCXL((dlc - 1)));
-		ele6_td0t2 = af;
 	} else {
 		if (xtd == 1)
 			ele4_t0 = (CANFD_T0_FIXED | CANFD_BIT_XTD(xtd) |
@@ -1965,11 +2001,6 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 				   CANFD_BIT_BAID(id));
 		ele5_t1 = (CANFD_T1_FIXED | CANFD_BIT_BRS(brs) |
 			   CANFD_BIT_ESI(esi) | CANFD_BIT_DLC(dlc));
-		ele6_td0t2 = TX_FQ_STADD(gpriv->sys_base, 0)
-			     + TXElement6T2TD0(target_desc_index);
-		ele6_td0t2_virt = TX_FQ_STADD(gpriv->sys_base, 0)
-			     + TXElement6T2TD0(target_desc_index);
-
 	}
 	/* Size is 50 byte data container for each descriptor */
 	ele7_txap = TX_FQ_DC_STADD(gpriv->phys_sys_base, 0) +
@@ -1989,16 +2020,18 @@ static netdev_tx_t rcar_canxl_start_xmit(struct sk_buff *skb,
 			      TXElement4T0(target_desc_index), ele4_t0);
 	rcar_canxl_write_desc(TX_FQ_STADD(gpriv->sys_base, 0),
 			      TXElement5T1(target_desc_index), ele5_t1);
-
-	if (gpriv->xlmode)
+	if (gpriv->xlmode) {
+		u32 ele6_td0t2 = af;
 		rcar_canxl_write_desc(TX_FQ_STADD(gpriv->sys_base, 0),
 				      TXElement6T2TD0(target_desc_index), ele6_td0t2);
-	else
-		rcar_canfd_put_first_payload(cfd, ele6_td0t2_virt);
+	} else {
+		uintptr_t ele6_td0t2 = TX_FQ_STADD(gpriv->sys_base, 0)
+				       + TXElement6T2TD0(target_desc_index);
+		rcar_canfd_put_first_payload(cfd, ele6_td0t2);
+	}
 
 	rcar_canxl_write_desc(TX_FQ_STADD(gpriv->sys_base, 0),
 			      TXElement7TX_APTD1(target_desc_index), ele7_txap);
-
 	crc = rcar_canxl_compute_crc(TX_FQ_STADD(gpriv->sys_base, 0)
 				     + TXElement0(target_desc_index), CANXL_TX_DESC);
 	ele0 |= CANXL_BIT_CRC(crc);
