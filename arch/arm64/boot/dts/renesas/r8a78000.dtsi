@@ -845,6 +845,8 @@
 			shmem = <&cpu_scp_lpri0 &cpu_scp_hpri0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			/* This is to ensure scmi clock ops is atomic */
+			atomic-threshold-us = <0xffffffff>;
 
 			scmi_devpd: protocol@11 {
 				reg = <0x11>;
