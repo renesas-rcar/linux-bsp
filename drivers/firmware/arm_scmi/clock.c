@@ -42,6 +42,9 @@ struct scmi_msg_resp_clock_attributes {
 struct scmi_clock_set_config {
 	__le32 id;
 	__le32 attributes;
+#if defined(CONFIG_ARCH_R8A78000)
+	__le32 oem_config_val;
+#endif /* CONFIG_ARCH_R8A78000 */
 };
 
 struct scmi_msg_clock_describe_rates {
