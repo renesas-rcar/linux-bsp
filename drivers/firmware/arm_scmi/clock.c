@@ -132,7 +132,6 @@ scmi_clock_protocol_attributes_get(const struct scmi_protocol_handle *ph,
 	return ret;
 }
 
-#if !defined(CONFIG_ARCH_R8A78000) && !defined(CONFIG_RCAR_SCP_FIXUP)
 static int scmi_clock_attributes_get(const struct scmi_protocol_handle *ph,
 				     u32 clk_id, struct scmi_clock_info *clk,
 				     u32 version)
@@ -324,7 +323,6 @@ scmi_clock_describe_rates_get(const struct scmi_protocol_handle *ph, u32 clk_id,
 
 	return ret;
 }
-#endif /* !CONFIG_ARCH_R8A78000 && !CONFIG_RCAR_SCP_FIXUP */
 
 static int
 scmi_clock_rate_get(const struct scmi_protocol_handle *ph,
@@ -575,11 +573,7 @@ static const struct scmi_protocol_events clk_protocol_events = {
 static int scmi_clock_protocol_init(const struct scmi_protocol_handle *ph)
 {
 	u32 version;
-#if !defined(CONFIG_ARCH_R8A78000) && !defined(CONFIG_RCAR_SCP_FIXUP)
 	int clkid, ret;
-#else
-	int ret;
-#endif /* !CONFIG_ARCH_R8A78000 && !CONFIG_RCAR_SCP_FIXUP */
 	struct clock_info *cinfo;
 
 	ret = ph->xops->version_get(ph, &version);
@@ -602,11 +596,6 @@ static int scmi_clock_protocol_init(const struct scmi_protocol_handle *ph)
 	if (!cinfo->clk)
 		return -ENOMEM;
 
-#if !defined(CONFIG_ARCH_R8A78000) && !defined(CONFIG_RCAR_SCP_FIXUP)
-	/*
-	 * Don't call these code to avoid SCP hang with current SCP
-	 * of R8A78000.
-	 */
 	for (clkid = 0; clkid < cinfo->num_clocks; clkid++) {
 		struct scmi_clock_info *clk = cinfo->clk + clkid;
 
@@ -614,7 +603,6 @@ static int scmi_clock_protocol_init(const struct scmi_protocol_handle *ph)
 		if (!ret)
 			scmi_clock_describe_rates_get(ph, clkid, clk);
 	}
-#endif /* !CONFIG_ARCH_R8A78000 && !CONFIG_RCAR_SCP_FIXUP */
 
 	cinfo->version = version;
 	return ph->set_priv(ph, cinfo);
