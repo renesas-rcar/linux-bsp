@@ -1300,7 +1300,7 @@
 			reg = <0 0xc0788000 0 0x1000>;
 			interrupts = <GIC_SPI 4068 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I3C0>,
-				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_SA_I3C_PERW_M>;
 			#address-cells = <3>;
 			#size-cells = <0>;
 			i2c-scl-hz = <400000>;
@@ -1313,7 +1313,7 @@
 			reg = <0 0xc0789000 0 0x1000>;
 			interrupts = <GIC_SPI 4069 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I3C1>,
-				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_SA_I3C_PERW_M>;
 			#address-cells = <3>;
 			#size-cells = <0>;
 			i2c-scl-hz = <400000>;
@@ -1326,7 +1326,7 @@
 			reg = <0 0xc078a000 0 0x1000>;
 			interrupts = <GIC_SPI 4070 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I3C2>,
-				 <&scmi_clk SCP_CLOCK_ID_CLK_SASYNCCK_I3C_PERW>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_SA_I3C_PERW_M>;
 			#address-cells = <3>;
 			#size-cells = <0>;
 			i2c-scl-hz = <400000>;
@@ -3312,7 +3312,7 @@
 			reg = <0 0xc1200000 0 0x20104>;
 			interrupts = <GIC_SPI 4602 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4603 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk SCP_CLOCK_ID_CLK_CANXL_SCP>,
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_CANXL_SCP_MAIN>,
 				 <&scmi_clk X5H_CLOCK_ID_CANXL0>,
 				 <&can_clk>;
 			clock-names = "fck", "canxl", "can_clk";
@@ -3328,7 +3328,7 @@
 			reg = <0 0xc1240000 0 0x20104>;
 			interrupts = <GIC_SPI 4604 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4605 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk SCP_CLOCK_ID_CLK_CANXL_SCP>,
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_CANXL_SCP_MAIN>,
 				 <&scmi_clk X5H_CLOCK_ID_CANXL1>,
 				 <&can_clk>;
 			clock-names = "fck", "canxl", "can_clk";
