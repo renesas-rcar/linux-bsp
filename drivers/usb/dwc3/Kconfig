@@ -170,7 +170,7 @@ config USB_DWC3_AM62
 	  Say 'Y' or 'M' here if you have one such device
 
 config USB_DWC3_RCAR
-	tristate "Qualcomm Platform"
+	tristate "RCAR Platform"
 	depends on ARCH_RENESAS || COMPILE_TEST
 	default USB_DWC3
 	help
