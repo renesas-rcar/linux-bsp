@@ -1307,6 +1307,7 @@
 			interrupts = <GIC_SPI 4068 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I3C0>,
 				 <&scmi_clk X5H_CLOCK_ID_CLK_SA_I3C_PERW_M>;
+			clock-names = "tclk", "pclk";
 			#address-cells = <3>;
 			#size-cells = <0>;
 			i2c-scl-hz = <400000>;
@@ -1320,6 +1321,7 @@
 			interrupts = <GIC_SPI 4069 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I3C1>,
 				 <&scmi_clk X5H_CLOCK_ID_CLK_SA_I3C_PERW_M>;
+			clock-names = "tclk", "pclk";
 			#address-cells = <3>;
 			#size-cells = <0>;
 			i2c-scl-hz = <400000>;
