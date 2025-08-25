@@ -1486,7 +1486,7 @@
 
 		ivcp1e_00 {
 			compatible = "generic-uio";
-			reg = <0x20 0xfea00000 0 0x10000>;
+			reg = <0x50 0xfea00000 0 0x10000>;
 			clocks = <&cpg CPG_MOD 616>;
 			power-domains = <&sysc R8A779H0_PD_A3VC>;
 			resets = <&cpg 616>;
@@ -1498,7 +1498,7 @@
 
 		irq_ivcp1e_00_01 {
 			compatible = "generic-uio";
-			reg = <0x20 0xfea00000 0 0x10000>;
+			reg = <0x50 0xfea00000 0 0x10000>;
 			interrupts = <GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "irq_ivcp1e_00_01";
 			ipmmu-id = <RCAR_IPMMU_VC 14>;
@@ -1507,7 +1507,7 @@
 
 		fcpc_00 {
 			compatible = "generic-uio";
-			reg = <0x20 0xfe90f000 0 0x1000>;
+			reg = <0x50 0xfe90f000 0 0x1000>;
 			/* No defination value in HW UM
 			 * clocks = <&cpg CPG_MOD 507>;
 			 */

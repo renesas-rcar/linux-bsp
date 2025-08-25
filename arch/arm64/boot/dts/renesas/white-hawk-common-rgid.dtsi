@@ -67,6 +67,11 @@
 			reg = <0x26 0x00000000 0x0 0x40000000>;
 		};
 
+		memory_reserved_region@2080000000 {
+			no-map;
+			reg = <0x20 0x80000000 0x0 0x20000000>;
+		};
+
 		ecc_data_region@24cccc0000 {
 			no-map;
 			reg = <0x24 0xcccc0000 0x0 0x33340000>;
@@ -75,6 +80,12 @@
 		ecc_data_region@26cccc0000 {
 			no-map;
 			reg = <0x26 0xcccc0000 0x0 0x33340000>;
+		};
+
+		qm_region: linux,qm_region@5080000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x50 0x80000000 0x0 0x20000000>;
 		};
 	};
 
@@ -101,7 +112,8 @@
 	cmem {
 		memory-region = <&vdsp0_region>, <&vdsp1_region>,
 				<&vdsp2_region>, <&vdsp3_region>,
-				<&pap_region>, <&region_40bit>;
+				<&pap_region>, <&region_40bit>,
+				<&qm_region>;
 	};
 };
 
