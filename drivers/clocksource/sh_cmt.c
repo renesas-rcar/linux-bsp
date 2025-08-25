@@ -66,6 +66,8 @@ enum sh_cmt_model {
 	SH_CMT_48BIT,
 	SH_CMT0_RCAR_GEN2,
 	SH_CMT1_RCAR_GEN2,
+	SH_CMT0_RCAR_GEN5,
+	SH_CMT1_RCAR_GEN5,
 };
 
 struct sh_cmt_info {
@@ -221,6 +223,28 @@ static const struct sh_cmt_info sh_cmt_info[] = {
 	},
 	[SH_CMT1_RCAR_GEN2] = {
 		.model = SH_CMT1_RCAR_GEN2,
+		.channels_mask = 0xff,
+		.width = 32,
+		.overflow_bit = SH_CMT32_CMCSR_CMF,
+		.clear_bits = ~(SH_CMT32_CMCSR_CMF | SH_CMT32_CMCSR_OVF),
+		.read_control = sh_cmt_read32,
+		.write_control = sh_cmt_write32,
+		.read_count = sh_cmt_read32,
+		.write_count = sh_cmt_write32,
+	},
+	[SH_CMT0_RCAR_GEN5] = {
+		.model = SH_CMT0_RCAR_GEN5,
+		.channels_mask = 0x60,
+		.width = 32,
+		.overflow_bit = SH_CMT32_CMCSR_CMF,
+		.clear_bits = ~(SH_CMT32_CMCSR_CMF | SH_CMT32_CMCSR_OVF),
+		.read_control = sh_cmt_read32,
+		.write_control = sh_cmt_write32,
+		.read_count = sh_cmt_read32,
+		.write_count = sh_cmt_write32,
+	},
+	[SH_CMT1_RCAR_GEN5] = {
+		.model = SH_CMT1_RCAR_GEN5,
 		.channels_mask = 0xff,
 		.width = 32,
 		.overflow_bit = SH_CMT32_CMCSR_CMF,
@@ -937,6 +961,12 @@ static int sh_cmt_setup_channel(struct sh_cmt_channel *ch, unsigned int index,
 		value |= BIT(hwidx);
 		iowrite32(value, cmt->mapbase + CMCLKE);
 		break;
+	case SH_CMT0_RCAR_GEN5:
+	case SH_CMT1_RCAR_GEN5:
+		ch->iostart = cmt->mapbase + ch->hwidx * 0x100;
+		ch->ioctrl = ch->iostart + 0x10;
+		ch->timer_bit = 0;
+		break;
 	}
 
 	if (cmt->info->width == (sizeof(ch->max_match_value) * 8))
@@ -1030,11 +1060,11 @@ static const struct of_device_id sh_cmt_of_table[] __maybe_unused = {
 	},
 	{
 		.compatible = "renesas,rcar-gen5-cmt0",
-		.data = &sh_cmt_info[SH_CMT0_RCAR_GEN2]
+		.data = &sh_cmt_info[SH_CMT0_RCAR_GEN5]
 	},
 	{
 		.compatible = "renesas,rcar-gen5-cmt1",
-		.data = &sh_cmt_info[SH_CMT1_RCAR_GEN2]
+		.data = &sh_cmt_info[SH_CMT1_RCAR_GEN5]
 	},
 	{ }
 };
