@@ -348,7 +348,6 @@ static void __sh_tmu_disable(struct sh_tmu_channel *ch)
 
 	/* stop clock */
 	//clk_disable(ch->tmu->clk);
-	tmu_module_clk_disable_all();
 }
 
 static void sh_tmu_disable(struct sh_tmu_channel *ch)
