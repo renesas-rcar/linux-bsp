@@ -140,9 +140,9 @@
 		i2c@0 {
 			status = "okay";
 
-			camera@10 {
+			camera@1a {
 				compatible = IRONHIDE_CAMERA0;
-				reg = <0x10>;
+				reg = <0x1a>;
 
 				port {
 					fakra_con0: endpoint {
@@ -157,9 +157,9 @@
 		i2c@1 {
 			status = "okay";
 
-			camera@11 {
+			camera@1b {
 				compatible = IRONHIDE_CAMERA1;
-				reg = <0x11>;
+				reg = <0x1b>;
 
 				port {
 					fakra_con1: endpoint {
@@ -174,9 +174,9 @@
 		i2c@2 {
 			status = "okay";
 
-			camera@12 {
+			camera@1c {
 				compatible = IRONHIDE_CAMERA2;
-				reg = <0x12>;
+				reg = <0x1c>;
 
 				port {
 					fakra_con2: endpoint {
@@ -191,9 +191,9 @@
 		i2c@3 {
 			status = "okay";
 
-			camera@13 {
+			camera@1d {
 				compatible = IRONHIDE_CAMERA3;
-				reg = <0x13>;
+				reg = <0x1d>;
 
 				port {
 					fakra_con3: endpoint {
@@ -219,9 +219,9 @@
 		i2c@0 {
 			status = "okay";
 
-			camera@10 {
+			camera@1a {
 				compatible = IRONHIDE_CAMERA4;
-				reg = <0x10>;
+				reg = <0x1a>;
 
 				port {
 					fakra_con4: endpoint {
@@ -236,9 +236,9 @@
 		i2c@1 {
 			status = "okay";
 
-			camera@11 {
+			camera@1b {
 				compatible = IRONHIDE_CAMERA5;
-				reg = <0x11>;
+				reg = <0x1b>;
 
 				port {
 					fakra_con5: endpoint {
@@ -253,9 +253,9 @@
 		i2c@2 {
 			status = "okay";
 
-			camera@12 {
+			camera@1c {
 				compatible = IRONHIDE_CAMERA6;
-				reg = <0x12>;
+				reg = <0x1c>;
 
 				port {
 					fakra_con6: endpoint {
@@ -270,9 +270,9 @@
 		i2c@3 {
 			status = "okay";
 
-			camera@13 {
+			camera@1d {
 				compatible = IRONHIDE_CAMERA7;
-				reg = <0x13>;
+				reg = <0x1d>;
 
 				port {
 					fakra_con7: endpoint {
@@ -298,9 +298,9 @@
 		i2c@0 {
 			status = "okay";
 
-			camera@10 {
+			camera@1a {
 				compatible = IRONHIDE_CAMERA8;
-				reg = <0x10>;
+				reg = <0x1a>;
 
 				port {
 					fakra_con8: endpoint {
@@ -315,9 +315,9 @@
 		i2c@1 {
 			status = "okay";
 
-			camera@11 {
+			camera@1b {
 				compatible = IRONHIDE_CAMERA9;
-				reg = <0x11>;
+				reg = <0x1b>;
 
 				port {
 					fakra_con9: endpoint {
@@ -332,9 +332,9 @@
 		i2c@2 {
 			status = "okay";
 
-			camera@12 {
+			camera@1c {
 				compatible = IRONHIDE_CAMERA10;
-				reg = <0x12>;
+				reg = <0x1c>;
 
 				port {
 					fakra_con10: endpoint {
@@ -349,9 +349,9 @@
 		i2c@3 {
 			status = "okay";
 
-			camera@13 {
+			camera@1d {
 				compatible = IRONHIDE_CAMERA11;
-				reg = <0x13>;
+				reg = <0x1d>;
 
 				port {
 					fakra_con11: endpoint {
@@ -377,9 +377,9 @@
 		i2c@0 {
 			status = "okay";
 
-			camera@10 {
+			camera@1a {
 				compatible = IRONHIDE_CAMERA12;
-				reg = <0x10>;
+				reg = <0x1a>;
 
 				port {
 					fakra_con12: endpoint {
@@ -394,9 +394,9 @@
 		i2c@1 {
 			status = "okay";
 
-			camera@11 {
+			camera@1b {
 				compatible = IRONHIDE_CAMERA13;
-				reg = <0x11>;
+				reg = <0x1b>;
 
 				port {
 					fakra_con13: endpoint {
@@ -411,9 +411,9 @@
 		i2c@2 {
 			status = "okay";
 
-			camera@12 {
+			camera@1c {
 				compatible = IRONHIDE_CAMERA14;
-				reg = <0x12>;
+				reg = <0x1c>;
 
 				port {
 					fakra_con14: endpoint {
@@ -428,9 +428,9 @@
 		i2c@3 {
 			status = "okay";
 
-			camera@13 {
+			camera@1d {
 				compatible = IRONHIDE_CAMERA15;
-				reg = <0x13>;
+				reg = <0x1d>;
 
 				port {
 					fakra_con15: endpoint {
