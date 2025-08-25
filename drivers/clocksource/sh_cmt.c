@@ -502,7 +502,6 @@ static void sh_cmt_disable(struct sh_cmt_channel *ch)
 
 	/* stop clock */
 	//clk_disable(ch->cmt->clk);
-	cmt_module_clk_disable();
 
 	dev_pm_syscore_device(&ch->cmt->pdev->dev, false);
 }
