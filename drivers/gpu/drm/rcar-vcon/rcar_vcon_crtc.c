@@ -299,11 +299,12 @@ static enum drm_mode_status rcar_vcon_crtc_mode_valid(struct drm_crtc *crtc,
 						      const struct drm_display_mode *mode)
 {
 	unsigned long mode_clock = mode->clock * 1000;
+	struct rcar_vcon_crtc *rcrtc = to_rcar_crtc(crtc);
 
 	if (mode_clock < VCON_DCLK_MIN)
 		return MODE_CLOCK_LOW;
 
-	if (mode_clock > VCON_DCLK_MAX)
+	if (mode_clock > VCON_DCLK_MAX || mode_clock > rcrtc->dclk_src)
 		return MODE_CLOCK_HIGH;
 
 	if (mode->flags & DRM_MODE_FLAG_INTERLACE)
