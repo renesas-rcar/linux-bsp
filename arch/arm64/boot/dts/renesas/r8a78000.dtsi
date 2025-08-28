@@ -3000,7 +3000,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4900000 0 0x1000>;
 			interrupts = <0 510 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN000>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 730>;
 			renesas,id = <0>;
@@ -3028,7 +3028,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4901000 0 0x1000>;
 			interrupts = <0 511 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN001>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 730>;
 			renesas,id = <1>;
@@ -3056,7 +3056,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4908000 0 0x1000>;
 			interrupts = <0 518 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN010>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 731>;
 			renesas,id = <8>;
@@ -3084,7 +3084,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4910000 0 0x1000>;
 			interrupts = <0 526 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN020>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 800>;
 			renesas,id = <16>;
@@ -3112,7 +3112,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4918000 0 0x1000>;
 			interrupts = <0 534 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN030>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 801>;
 			renesas,id = <24>;
@@ -3140,7 +3140,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4919000 0 0x1000>;
 			interrupts = <0 535 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN031>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 801>;
 			renesas,id = <25>;
@@ -3168,7 +3168,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4920000 0 0x1000>;
 			interrupts = <0 542 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN040>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 802>;
 			renesas,id = <32>;
@@ -3196,7 +3196,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4928000 0 0x1000>;
 			interrupts = <0 550 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN050>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 803>;
 			renesas,id = <40>;
@@ -3224,7 +3224,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4930000 0 0x1000>;
 			interrupts = <0 558 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN060>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 804>;
 			renesas,id = <48>;
@@ -3252,7 +3252,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4931000 0 0x1000>;
 			interrupts = <0 559 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN061>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 804>;
 			renesas,id = <49>;
@@ -3280,7 +3280,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4938000 0 0x1000>;
 			interrupts = <0 566 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN070>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 805>;
 			renesas,id = <56>;
@@ -3308,7 +3308,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4940000 0 0x1000>;
 			interrupts = <0 574 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN080>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 806>;
 			renesas,id = <64>;
@@ -3336,7 +3336,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4948000 0 0x1000>;
 			interrupts = <0 582 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN090>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 807>;
 			renesas,id = <72>;
@@ -3364,7 +3364,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4949000 0 0x1000>;
 			interrupts = <0 583 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN091>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 807>;
 			renesas,id = <73>;
@@ -3392,7 +3392,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4950000 0 0x1000>;
 			interrupts = <0 590 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN100>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 808>;
 			renesas,id = <80>;
@@ -3420,7 +3420,7 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4958000 0 0x1000>;
 			interrupts = <0 598 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_VIN110>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 809>;
 			renesas,id = <88>;
@@ -3448,7 +3448,7 @@
 			compatible = "renesas,r8a78000-csi2", "generic-uio";
 			reg = <0 0xc4400000 0 0x70000>;
 			interrupts = <0 498 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CSITOP0>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 331>;
 			status = "disabled";
@@ -3474,7 +3474,7 @@
 			compatible = "renesas,r8a78000-csi2", "generic-uio";
 			reg = <0 0xc4480000 0 0x70000>;
 			interrupts = <0 499 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CSITOP1>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 400>;
 			status = "disabled";
@@ -3500,7 +3500,7 @@
 			compatible = "renesas,r8a78000-csi2", "generic-uio";
 			reg = <0 0xc4500000 0 0x70000>;
 			interrupts = <0 500 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CSITOP2>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 401>;
 			status = "disabled";
@@ -3526,7 +3526,7 @@
 			compatible = "renesas,r8a78000-csi2", "generic-uio";
 			reg = <0 0xc4580000 0 0x70000>;
 			interrupts = <0 501 4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CSITOP3>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 402>;
 			status = "disabled";
@@ -3552,7 +3552,7 @@
 			compatible = "renesas,r8a78000-isp";
 			reg = <0 0xc4700000 0 0x10000>;
 			interrupts = <0 506 8>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS0>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 612>;
 			status = "disabled";
@@ -3607,7 +3607,7 @@
 			compatible = "renesas,r8a78000-isp";
 			reg = <0 0xc4720000 0 0x10000>;
 			interrupts = <0 507 8>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS1>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 61>;
 			status = "disabled";
@@ -3662,7 +3662,7 @@
 			compatible = "renesas,r8a78000-isp";
 			reg = <0 0xc4740000 0 0x10000>;
 			interrupts = <0 508 8>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS2>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 614>;
 			status = "disabled";
@@ -3717,7 +3717,7 @@
 			compatible = "renesas,r8a78000-isp";
 			reg = <0 0xc4760000 0 0x10000>;
 			interrupts = <0 509 8>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS3>;
+			clocks = <&dummy_clk>;
 			//power-domains = <&sysc 64>;
 			//resets = <&cpg 615>;
 			status = "disabled";
