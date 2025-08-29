@@ -27,8 +27,10 @@
 
 /dts-v1/;
 #include "r8a78000.dtsi"
-#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/net/ti-dp83869.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/media/video-interfaces.h>
+#include <dt-bindings/media/r8a78000-csi2.h>
 
 / {
 	model = "Renesas Ironhide board based on r8a78000";
@@ -149,9 +151,49 @@
 			linux,cma-default;
 		};
 
+		ecc_data_region@10cccc0000 {
+			no-map;
+			reg = <0x10 0xcccc0000 0x0 0x33340000>;
+		};
+
 		rt_vram: rt_vram@1200000000 {
 			no-map;
 			reg = <0x12 0x00000000 0x0 0x18000000>;
+		};
+
+		ecc_data_region@12cccc0000 {
+			no-map;
+			reg = <0x12 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@14cccc0000 {
+			no-map;
+			reg = <0x14 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@16cccc0000 {
+			no-map;
+			reg = <0x16 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@18cccc0000 {
+			no-map;
+			reg = <0x18 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@1acccc0000 {
+			no-map;
+			reg = <0x1a 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@1ccccc0000 {
+			no-map;
+			reg = <0x1c 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@1ecccc0000 {
+			no-map;
+			reg = <0x1e 0xcccc0000 0x0 0x33340000>;
 		};
 	};
 
@@ -198,6 +240,33 @@
 
 		sndcpu: simple-audio-card,cpu {
 			sound-dai = <&rcar_sound>;
+		};
+	};
+
+	dp-con0 {
+		compatible = "dp-connector";
+		port {
+			dp_con0_out: endpoint {
+				remote-endpoint = <&rcar_dw_dp0_out>;
+			};
+		};
+	};
+
+	dp-con1 {
+		compatible = "dp-connector";
+		port {
+			dp_con1_out: endpoint {
+				remote-endpoint = <&rcar_dw_dp1_out>;
+			};
+		};
+	};
+
+	dp-con2 {
+		compatible = "dp-connector";
+		port {
+			dp_con2_out: endpoint {
+				remote-endpoint = <&rcar_dw_dp2_out>;
+			};
 		};
 	};
 };
@@ -373,6 +442,416 @@
 
 	status = "okay";
 	clock-frequency = <400000>;
+
+	io_expander_u297: gpio@77 {
+		compatible = "ti,tca9539";
+        reg = <0x77>;
+        gpio-controller;
+        #gpio-cells = <2>;
+        interrupt-controller;
+        #interrupt-cells = <2>;
+
+		/*IRQ2: External Interrupts block diagram in HWMan is T.B.D */
+        interrupt-parent = <&gpio4>;
+        interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+	};
+
+    max20087_0: regulator@28 {
+        compatible = "maxim,max20087";
+        reg = <0x28>;
+    };
+
+    max20087_1: regulator@29 {
+        compatible = "maxim,max20087";
+        reg = <0x29>;
+    };
+};
+
+&i2c2 {
+	pinctrl-0 = <&i2c2_pins>;
+	pinctrl-names = "default";
+	clock-frequency = <400000>;
+
+	status = "okay";
+
+	io_expander_u299: gpio@77 {
+		compatible = "ti,tca9539";
+        reg = <0x77>;
+        gpio-controller;
+        #gpio-cells = <2>;
+        interrupt-controller;
+        #interrupt-cells = <2>;
+
+		/*IRQ3: External Interrupts block diagram in HWMan is T.B.D */
+        interrupt-parent = <&gpio4>;
+        interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+	};
+
+    max20087_2: regulator@2a {
+        compatible = "maxim,max20087";
+        reg = <0x2a>;
+    };
+
+    max20087_3: regulator@2b {
+        compatible = "maxim,max20087";
+        reg = <0x2b>;
+    };
+};
+
+&i2c3 {
+	pinctrl-0 = <&i2c3_pins>;
+	pinctrl-names = "default";
+	clock-frequency = <400000>;
+
+	status = "okay";
+
+	gmsl0: gmsl-deserializer@31 {
+		compatible = "maxim,max96726";
+		reg = <0x31>, <0x01>, <0x02>, <0x03>, <0x04>;
+		gpios = <&io_expander_u297 0 GPIO_ACTIVE_HIGH>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		power-supply = <&max20087_0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96726_in0: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96726_in1: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96726_in2: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96726_in3: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96726_out0: endpoint {
+					bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi40_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
+
+	gmsl1: gmsl-deserializer@33 {
+		compatible = "maxim,max96726";
+		reg = <0x33>, <0x05>, <0x06>, <0x07>, <0x08>;
+		gpios = <&io_expander_u297 0 GPIO_ACTIVE_HIGH>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		power-supply = <&max20087_1>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96726_in4: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96726_in5: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96726_in6: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96726_in7: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96726_out1: endpoint {
+					bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi41_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
+};
+
+&i2c4 {
+	pinctrl-0 = <&i2c4_pins>;
+	pinctrl-names = "default";
+	clock-frequency = <400000>;
+
+	status = "okay";
+
+	gmsl2: gmsl-deserializer@31 {
+		compatible = "maxim,max96726";
+		reg = <0x31>, <0x01>, <0x02>, <0x03>, <0x04>;
+		gpios = <&io_expander_u299 0 GPIO_ACTIVE_HIGH>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		power-supply = <&max20087_2>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96726_in8: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96726_in9: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96726_in10: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96726_in11: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96726_out2: endpoint {
+					bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi42_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
+
+	gmsl3: gmsl-deserializer@33 {
+		compatible = "maxim,max96726";
+		reg = <0x33>, <0x05>, <0x06>, <0x07>, <0x08>;
+		gpios = <&io_expander_u299 0 GPIO_ACTIVE_HIGH>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		power-supply = <&max20087_3>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96726_in12: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96726_in13: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96726_in14: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96726_in15: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96726_out3: endpoint {
+					bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi43_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
 };
 
 &i2c6 {
@@ -399,6 +878,31 @@
 	sensor@72 {
 		compatible = "null";
 		reg = <0x72 0x0 0x10>;
+	};
+};
+
+&i2c5 {
+	pinctrl-0 = <&i2c5_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+
+	ti-tdp2004@18 {
+		compatible = "ti,tdp2004";
+		reg = <0x18>;
+		enable-gpios = <&gpio9 14 GPIO_ACTIVE_LOW>;
+	};
+
+	ti-tdp2004@1c {
+		compatible = "ti,tdp2004";
+		reg = <0x1c>;
+		enable-gpios = <&gpio9 15 GPIO_ACTIVE_LOW>;
+	};
+
+	ti-tdp2004@28 {
+		compatible = "ti,tdp2004";
+		reg = <0x28>;
+		enable-gpios = <&gpio9 16 GPIO_ACTIVE_LOW>;
 	};
 };
 
@@ -432,6 +936,26 @@
 	i2c1_pins: i2c1 {
 		groups = "i2c1";
 		function = "i2c1";
+	};
+
+	i2c2_pins: i2c2 {
+		groups = "i2c2";
+		function = "i2c2";
+	};
+
+	i2c3_pins: i2c3 {
+		groups = "i2c3";
+		function = "i2c3";
+	};
+
+	i2c4_pins: i2c4 {
+		groups = "i2c4";
+		function = "i2c4";
+	};
+
+	i2c5_pins: i2c5 {
+		groups = "i2c5";
+		function = "i2c5";
 	};
 
 	i2c6_pins: i2c6 {
@@ -756,7 +1280,7 @@
 
 &rswitch3 {
 	status = "okay";
-	pinctrl-0 = <&rsw3_pins>, <&eth25g2_pins>, <&ethes0_pins>;
+	pinctrl-0 = <&eth25g2_pins>, <&ethes0_pins>;
 	pinctrl-names = "default";
 
 	ethernet-ports {
@@ -915,6 +1439,57 @@
 		snps,has-lpm-erratum;
 		snps,lpm-nyet-threshold = <0>;
 	};
+};
+
+&dp0 {
+	status = "okay";
+
+	ports {
+		port@1 {
+			reg = <1>;
+			rcar_dw_dp0_out: endpoint {
+				remote-endpoint = <&dp_con0_out>;
+			};
+		};
+	};
+};
+
+&dp1 {
+	status = "okay";
+
+	ports {
+		port@1 {
+			reg = <1>;
+			rcar_dw_dp1_out: endpoint {
+				remote-endpoint = <&dp_con1_out>;
+			};
+		};
+	};
+};
+
+&dp2 {
+	status = "okay";
+
+	ports {
+		port@1 {
+			reg = <1>;
+			rcar_dw_dp2_out: endpoint {
+				remote-endpoint = <&dp_con2_out>;
+			};
+		};
+	};
+};
+
+&vcon_group0 {
+	status = "okay";
+};
+
+&vcon_group1 {
+	status = "okay";
+};
+
+&vcon_group2 {
+	status = "okay";
 };
 
 &rwdt {
@@ -1206,3 +1781,170 @@
 &rtca {
 	status = "okay";
 };
+
+&vin000 {
+	status = "okay";
+};
+
+&vin001 {
+	status = "okay";
+};
+
+&vin010 {
+	status = "okay";
+};
+
+&vin020 {
+	status = "okay";
+};
+
+&vin030 {
+	status = "okay";
+};
+
+&vin031 {
+	status = "okay";
+};
+
+&vin040 {
+	status = "okay";
+};
+
+&vin050 {
+	status = "okay";
+};
+
+&vin060 {
+	status = "okay";
+};
+
+&vin061 {
+	status = "okay";
+};
+
+&vin070 {
+	status = "okay";
+};
+
+&vin080 {
+	status = "okay";
+};
+
+&vin090 {
+	status = "okay";
+};
+
+&vin091 {
+	status = "okay";
+};
+
+&vin100 {
+	status = "okay";
+};
+
+&vin110 {
+	status = "okay";
+};
+
+&csi40 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi40_in: endpoint {
+				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				pin-swap-rx-order = <ABC ACB ABC ACB>;
+				remote-endpoint = <&max96726_out0>;
+			};
+		};
+	};
+};
+
+&csi41 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi41_in: endpoint {
+				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				pin-swap-rx-order = <ABC ACB ABC ACB>;
+				remote-endpoint = <&max96726_out1>;
+			};
+		};
+	};
+};
+
+&csi42 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi42_in: endpoint {
+				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				pin-swap-rx-order = <ABC ACB ABC ACB>;
+				remote-endpoint = <&max96726_out2>;
+			};
+		};
+	};
+};
+
+&csi43 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			csi43_in: endpoint {
+				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				pin-swap-rx-order = <ABC ACB ABC ACB>;
+				remote-endpoint = <&max96726_out3>;
+			};
+		};
+	};
+};
+
+&isp0 {
+	status = "okay";
+};
+
+&isp1 {
+	status = "okay";
+};
+
+&isp2 {
+	status = "okay";
+};
+
+&isp3 {
+	status = "okay";
+};
+
+/* FAKRA Overlay */
+#include "ironhide-fakra.dtsi"
