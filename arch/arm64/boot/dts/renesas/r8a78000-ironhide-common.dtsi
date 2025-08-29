@@ -126,9 +126,48 @@
 			linux,cma-default;
 		};
 
+		ecc_data_region@10cccc0000 {
+			no-map;
+			reg = <0x10 0xcccc0000 0x0 0x33340000>;
+		};
+
 		rt_vram: rt_vram@1200000000 {
 			no-map;
 			reg = <0x12 0x00000000 0x0 0x18000000>;
+		};
+		ecc_data_region@12cccc0000 {
+			no-map;
+			reg = <0x12 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@14cccc0000 {
+			no-map;
+			reg = <0x14 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@16cccc0000 {
+			no-map;
+			reg = <0x16 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@18cccc0000 {
+			no-map;
+			reg = <0x18 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@1acccc0000 {
+			no-map;
+			reg = <0x1a 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@1ccccc0000 {
+			no-map;
+			reg = <0x1c 0xcccc0000 0x0 0x33340000>;
+		};
+
+		ecc_data_region@1ecccc0000 {
+			no-map;
+			reg = <0x1e 0xcccc0000 0x0 0x33340000>;
 		};
 	};
 
