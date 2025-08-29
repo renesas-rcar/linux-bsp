@@ -82,9 +82,17 @@ done:
 static void rcar_vcon_crtc_set_display_timing(struct rcar_vcon_crtc *rcrtc)
 {
 	const struct drm_display_mode *mode = &rcrtc->crtc.state->adjusted_mode;
+	u32 phsync, pvsync;
 
 	/* Find divider */
 	rcar_vcon_dclk_divider(rcrtc);
+
+	/* Polarity settings */
+	phsync = (mode->flags & DRM_MODE_FLAG_PHSYNC) ? HSPOL0_HIGH : HSPOL0_LOW;
+	pvsync = (mode->flags & DRM_MODE_FLAG_PVSYNC) ? VSPOL0_HIGH : VSPOL0_LOW;
+
+	rcar_vcon_crtc_modify(rcrtc, SYNC_POL, HSPOL0, phsync);
+	rcar_vcon_crtc_modify(rcrtc, SYNC_POL, VSPOL0, pvsync);
 
 	/* Display timings */
 	rcar_vcon_crtc_write(rcrtc, HTOTAL, mode->htotal);
@@ -202,10 +210,7 @@ static void rcar_vcon_crtc_stop(struct rcar_vcon_crtc *rcrtc)
 	rcar_vcon_crtc_wait_page_flip(rcrtc);
 	drm_crtc_vblank_off(crtc);
 
-	/* The STOP/RESET operation was found to have an error within
-	 * the VDK. To avoid this problem, disable it temporarily.
-	 */
-	/* rcar_vcon_crtc_write(rcrtc, STOP, 0x01); */
+	rcar_vcon_crtc_write(rcrtc, RESET, 0x01);
 }
 
 /* -----------------------------------------------------------------------------
@@ -294,11 +299,12 @@ static enum drm_mode_status rcar_vcon_crtc_mode_valid(struct drm_crtc *crtc,
 						      const struct drm_display_mode *mode)
 {
 	unsigned long mode_clock = mode->clock * 1000;
+	struct rcar_vcon_crtc *rcrtc = to_rcar_crtc(crtc);
 
 	if (mode_clock < VCON_DCLK_MIN)
 		return MODE_CLOCK_LOW;
 
-	if (mode_clock > VCON_DCLK_MAX)
+	if (mode_clock > VCON_DCLK_MAX || mode_clock > rcrtc->dclk_src)
 		return MODE_CLOCK_HIGH;
 
 	if (mode->flags & DRM_MODE_FLAG_INTERLACE)

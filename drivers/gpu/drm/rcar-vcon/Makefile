@@ -8,4 +8,4 @@ rcar-vcon-drm-y := rcar_vcon_drv.o \
 
 obj-$(CONFIG_DRM_RCAR_VCON)		+= rcar-vcon-drm.o
 
-obj-$(CONFIG_DRM_RCAR_DW_DP) += rcar_dw_dp_dummy.o
+obj-$(CONFIG_DRM_RCAR_DW_DP) += rcar_dw_dp.o
