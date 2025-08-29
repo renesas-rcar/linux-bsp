@@ -415,9 +415,6 @@ static int r8a78000_eth_pcs_hw_init_late(struct r8a78000_eth_pcs_channel *channe
 	if (ret)
 		return ret;
 
-	r8a78000_eth_pcs_write32(channel->addr, 0x03c0, 0x380, 0x0000);
-	r8a78000_eth_pcs_write32(channel->addr, 0x03d0, 0x380, 0x0000);
-
 	return r8a78000_eth_pcs_monitor_linkup(channel);
 }
 
