@@ -16,6 +16,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/sys_soc.h>
+#include <linux/clk.h>
 
 #include <media/mipi-csi2.h>
 #include <media/v4l2-ctrls.h>
@@ -25,6 +26,145 @@
 #include <media/v4l2-subdev.h>
 
 #include "snps-csi2camera.h"
+
+/* Hardcoded for enable module clock */
+#define MDLC_BASE		0xC5000000
+#define RCAR_VIN_PDID		(0)
+#define RCAR_VIN_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define RCAR_VIN_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MPDG		_MDLC_MPDG(RCAR_VIN_PDID)
+#define MDLC_MPDGS		_MDLC_MPDGS(RCAR_VIN_PDID)
+
+#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
+
+#define SYSSS_TOP_BASE                          0xC6480000
+#define CLK_CSICKCR                             (SYSSS_TOP_BASE + 0x100C)
+#define CLKTOPPKCPROT0                          (SYSSS_TOP_BASE + 0x1370)
+
+#define MDL_CLK_WA
+
+static void rcar_csi2_module_power_gating_set(u8 pdid, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
+	void __iomem *mpdg = ioremap(_MDLC_MPDG(pdid), 4);
+	void __iomem *mpdgs = ioremap(_MDLC_MPDGS(pdid), 4);
+	void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
+	void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(mpdgs) & 0x3) == mode)
+			goto unmap;
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(0, mpier0);
+	writel(0x1, mpimr0);
+
+	writel(0x1, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(mode, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(mpdg);
+	iounmap(mpdgs);
+	iounmap(mpier0);
+	iounmap(mpimr0);
+}
+
+static void rcar_csi2_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(msress) & RCAR_VIN_CLK_MASK(pos)) == (mode << RCAR_VIN_CLK_SHIFT(pos)))
+			goto unmap;
+
+	while ((readl(msress) & RCAR_VIN_CLK_MASK(pos)) != (readl(msres) & RCAR_VIN_CLK_MASK(pos)))
+			udelay(1000);
+
+	val = readl(msres);
+	val &= ~RCAR_VIN_CLK_MASK(pos);
+	val |= mode << RCAR_VIN_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & RCAR_VIN_CLK_MASK(pos)) != (readl(msres) & RCAR_VIN_CLK_MASK(pos)))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+static void InitClockCsi(void)
+{
+	void __iomem *unlock = ioremap(CLKTOPPKCPROT0, 4);
+	void __iomem *csi_clk = ioremap(CLK_CSICKCR, 4);
+	u32 val;
+
+	val = 0x00000100; // [8]:CKSTP (stop) + [5:0]:DIV = 0 (3200 MHz x 1/2 x 1/2 x 1/1 = 800 MHz)
+	writel(0xA5A5A501, unlock);
+	writel(val, csi_clk);
+
+	val &= ~BIT(8);	//[8]:CKSTP (supplies)
+
+	writel(0xA5A5A501, unlock);
+	writel(val, csi_clk);
+
+	iounmap(unlock);
+	iounmap(csi_clk);
+}
+
+void rcar_csi2_module_power_reset(void)
+{
+	InitClockCsi();
+
+	rcar_csi2_module_power_gating_set(0, 0x01);
+	rcar_csi2_module_power_gating_set(1, 0x01);
+	rcar_csi2_module_power_gating_set(2, 0x01);
+	rcar_csi2_module_power_gating_set(3, 0x01);
+
+	rcar_csi2_module_standy_set(6, 0, 0x01);
+	rcar_csi2_module_standy_set(6, 2, 0x01);
+	rcar_csi2_module_standy_set(6, 4, 0x01);
+	rcar_csi2_module_standy_set(6, 6, 0x01);
+}
+
+void rcar_csi2_module_power_run(void)
+{
+	rcar_csi2_module_power_gating_set(0, 0x03);
+	rcar_csi2_module_power_gating_set(1, 0x03);
+	rcar_csi2_module_power_gating_set(2, 0x03);
+	rcar_csi2_module_power_gating_set(3, 0x03);
+
+	rcar_csi2_module_standy_set(6, 0, 0x03);
+	rcar_csi2_module_standy_set(6, 2, 0x03);
+	rcar_csi2_module_standy_set(6, 4, 0x03);
+	rcar_csi2_module_standy_set(6, 6, 0x03);
+}
 
 struct rcar_csi2;
 
@@ -144,7 +284,27 @@ struct rcar_csi2;
 #define V4H_FLDC_REG					0x0804
 #define V4H_FLDD_REG					0x0808
 #define V4H_IDIC_REG					0x0810
+
+#define V4H_OVR1_REG					0x0848
+#define V4H_OVR1_forcerxmode_3			BIT(12)
+#define V4H_OVR1_forcerxmode_2			BIT(11)
+#define V4H_OVR1_forcerxmode_1			BIT(10)
+#define V4H_OVR1_forcerxmode_0			BIT(9)
+#define V4H_OVR1_forcerxmode_dck		BIT(8)
+
 #define V4H_PHY_EN_REG					0x2000
+#define V4H_PHY_ENABLE_3				BIT(7)
+#define V4H_PHY_ENABLE_2				BIT(6)
+#define V4H_PHY_ENABLE_1				BIT(5)
+#define V4H_PHY_ENABLE_0				BIT(4)
+#define V4H_PHY_ENABLE_DCK				BIT(0)
+
+#define V4H_FRXM_REG					0x2004
+#define V4H_FRXM_FORCERXMODE_DCK		BIT(4)
+#define V4H_FRXM_FORCERXMODE_3			BIT(3)
+#define V4H_FRXM_FORCERXMODE_2			BIT(2)
+#define V4H_FRXM_FORCERXMODE_1			BIT(1)
+#define V4H_FRXM_FORCERXMODE_0			BIT(0)
 
 #define V4H_ST_PHYST_REG				0x2814
 #define V4H_ST_PHYST_ST_PHY_READY			BIT(31)
@@ -152,6 +312,7 @@ struct rcar_csi2;
 #define V4H_ST_PHYST_ST_STOPSTATE_2			BIT(2)
 #define V4H_ST_PHYST_ST_STOPSTATE_1			BIT(1)
 #define V4H_ST_PHYST_ST_STOPSTATE_0			BIT(0)
+#define V4H_ST_PHYST_ST_STOPSTATE_DCK		BIT(7)
 
 /* V4H PPI registers */
 #define V4H_PPI_STARTUP_RW_COMMON_DPHY_REG(n)		(0x21800 + ((n) * 2)) /* n = 0 - 9 */
@@ -176,8 +337,12 @@ struct rcar_csi2;
 #define V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(n)	(0x23840 + ((n) * 2)) /* n = 0 - 11 */
 #define V4H_CORE_DIG_RW_COMMON_REG(n)			(0x23880 + ((n) * 2)) /* n = 0 - 15 */
 #define V4H_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(n)	(0x239e0 + ((n) * 2)) /* n = 0 - 3 */
+#define V4H_CORE_DIG_CLANE_0_RW_CFG_0_REG		0x2a000
 #define V4H_CORE_DIG_CLANE_1_RW_CFG_0_REG		0x2a400
+#define V4H_CORE_DIG_CLANE_2_RW_CFG_0_REG		0x2a800
+#define V4H_CORE_DIG_CLANE_0_RW_HS_TX_6_REG		0x2a20c
 #define V4H_CORE_DIG_CLANE_1_RW_HS_TX_6_REG		0x2a60c
+#define V4H_CORE_DIG_CLANE_2_RW_HS_TX_6_REG		0x2aa0c
 
 /* V4H C-PHY */
 #define V4H_CORE_DIG_RW_TRIO0_REG(n)			(0x22100 + ((n) * 2)) /* n = 0 - 3 */
@@ -218,7 +383,7 @@ struct rcar_csi2;
 #define CSI2_DESCRAMBLING_CFG				0x204
 #define CSI2_DESCRAMBLING_EN				BIT(0)
 
-#define CSI2_DESCRAMBLING0_CFG				0x208
+#define CSI2_DESCRAMBLING_CFG_REG(n)		(0x208 + ((n) * 4)) /* n = 0 - 7 */
 #define CSI2_DESCRAMBLING_L0_SEED1			GENMASK(31, 16)
 #define CSI2_DESCRAMBLING_L0_SEED0			GENMASK(15, 0)
 
@@ -257,6 +422,468 @@ struct rcar_csi2;
 #define INT_UNMASK_LINE						0x5a4
 #define UNMASK_LINE_SEQUENCE_ERR_IRQ		BIT(1)
 #define UNMASK_LINE_BOUNDARY_ERR_IRQ		BIT(0)
+
+/* CD-PHY registers */
+#define X5H_FLDC_REG				0x0804
+#define X5H_FLDD_REG				0x0808
+#define X5H_SDIC_REG				0x0810
+#define X5H_CFGCLKSET_REG			0x0814
+#define X5H_CFG_CLK_CKEN			BIT(8)
+#define X5H_CFG_CLK_PERIOD			GENMASK(5, 0)
+#define X5H_TXCLKESCSET_REG			0x0818
+#define X5H_PHY_CTRL_REG			0x2004
+#define X5H_PHY_ENABLE_DCK_PHY1		BIT(13)
+#define X5H_PHY_ENABLE_DCK			BIT(12)
+#define X5H_PHY_ENABLE_3			BIT(11)
+#define X5H_PHY_ENABLE_2			BIT(10)
+#define X5H_PHY_ENABLE_1			BIT(9)
+#define X5H_PHY_ENABLE_0			BIT(8)
+#define X5H_PHY_SHUTDOWNZ_PHY1		BIT(5)
+#define X5H_PHY_SHUTDOWNZ			BIT(4)
+#define X5H_PHY_RSTZ_PHY1			BIT(1)
+#define X5H_PHY_RSTZ				BIT(0)
+#define X5H_FORCEPHYMODE_REG		0x2008
+#define X5H_FORCERXMODE_DCK_PHY1	BIT(21)
+#define X5H_FORCERXMODE_DCK			BIT(20)
+#define X5H_FORCERXMODE_3			BIT(19)
+#define X5H_FORCERXMODE_2			BIT(18)
+#define X5H_FORCERXMODE_1			BIT(17)
+#define X5H_FORCERXMODE_0			BIT(16)
+#define X5H_PHYSET_REG				0x200C
+#define X5H_PHY_MODE_IP				BIT(6)
+#define X5H_PRESET_N_PHY1			BIT(3)
+#define X5H_PRESET_N				BIT(2)
+#define X5H_PHY_EN_REG				0x2010
+#define X5H_REG_RXDATAWIDTHHS_3_OVR_EN			BIT(11)
+#define X5H_REG_RXDATAWIDTHHS_2_OVR_EN			BIT(10)
+#define X5H_REG_RXDATAWIDTHHS_1_OVR_EN			BIT(9)
+#define X5H_REG_RXDATAWIDTHHS_0_OVR_EN			BIT(8)
+#define X5H_PHY_MODE_OVR_EN						BIT(6)
+#define X5H_PRESETN_PHY1_OVR_EN					BIT(3)
+#define X5H_PRESETN_OVR_EN						BIT(2)
+#define X5H_RDWIDTH_REG				0x201C
+#define X5H_PHY_REGMODE_REG			0x2100
+#define X5H_ST_PHYST_REG			0x2804
+#define X5H_ST_STOPSTATE_DCK_PHY1		BIT(13)
+#define X5H_ST_STOPSTATE_DCK			BIT(12)
+#define X5H_ST_STOPSTATE_3				BIT(11)
+#define X5H_ST_STOPSTATE_2				BIT(10)
+#define X5H_ST_STOPSTATE_1				BIT(9)
+#define X5H_ST_STOPSTATE_0				BIT(8)
+#define X5H_ST_PHY_READY				BIT(0)
+#define X5H_PHY_MODE_CFG_REG		0x00100
+#define X5H_PPI_WIDTH			GENMASK(17, 16)
+#define X5H_PHY_L3_DISABLE		BIT(11)
+#define X5H_PHY_L2_DISABLE		BIT(10)
+#define X5H_PHY_L1_DISABLE		BIT(9)
+#define X5H_PHY_L0_DISABLE		BIT(8)
+#define X5H_PHY_MODE			BIT(0)
+#define X5H_PHY_DESKEW_CFG_REG		0x00104
+#define X5H_CSI2_GENERAL_CFG_REG	0x00200
+
+#define X5H_SDI_CFG_REG				0x00400
+#define X5H_SDI_FILTER_CFG_REG		0x00404
+
+#define X5H_PHY0_PPI_STARTUP_RW_COMMON_STARTUP_1_1_REG		0x41822
+#define X5H_PHY_READY_DLY					GENMASK(11, 0)
+
+#define X5H_PHY0_PPI_STARTUP_RW_COMMON_STARTUP_1_2_REG		0x41824
+
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_0_REG		0x41840
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_1_REG		0x41842
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_2_REG		0x41844
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_3_REG		0x41846
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_4_REG		0x41848
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_5_REG		0x4184A
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_BG_0_REG				0x4184C
+#define X5H_BG_MAX_COUNTER										GENMASK(8, 0)
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_7_REG		0x4184E
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_1_REG		0x41856
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_6_REG		0x41858
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_2_REG		0x4185A
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_3_REG		0x4185C
+#define X5H_DDL_VT_CAL_EN										BIT(4)
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_7_REG		0x4185E
+
+#define X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(n)				(0x41860 + ((n) * 2)) /* n = 0 - 5 */
+#define X5H_HS_CDR_FEEDBACK_ENABLED_REG							BIT(1)
+#define X5H_HS_CDR_UPDATE_SETTINGS_REG							BIT(0)
+#define X5H_HS_CDR_TIMEBASE_TARGET_REG						GENMASK(15, 0)
+#define X5H_HS_CDR_COARSE_TARGET_REG						GENMASK(15, 0)
+#define X5H_HS_CDR_STUCK_THRESH_REG							GENMASK(15, 0)
+#define X5H_HS_CDR_INIT_WAIT_TARGET_REG						GENMASK(15, 0)
+
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(n)		(0x418A0 + ((n) * 2)) /* n = 0 - 3 */
+#define X5H_ARBT_CAL_PRIOTITY							GENMASK(7, 0)
+#define X5H_ARBT_CAL_LOCK								GENMASK(7, 0)
+#define X5H_ARBT_CALIB_OP_DELTA							GENMASK(15, 8)
+#define X5H_ARBT_CALIB_WRITE_DELTA						GENMASK(7, 4)
+#define X5H_ARBT_CALIB_READ_DELTA						GENMASK(3, 0)
+
+#define X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(n)		(0x41800 + ((n) * 2)) /* n (hex) = 0 - 16 */
+#define X5H_PHY1_PPI_STARTUP_RW_COMMON_DPHY_REG(n)		(0x61800 + ((n) * 2)) /* n (hex) = 0 - 16 */
+#define X5H_DPHY_DDL_CAL_addr							GENMASK(7, 0)
+#define X5H_CPHY_DDL_CAL_addr							GENMASK(7, 0)
+#define X5H_PHY_READY_addr								GENMASK(7, 0)
+#define X5H_RCAL_addr									GENMASK(7, 0)
+#define X5H_LP_DCO_CAL_addr								GENMASK(7, 0)
+#define X5H_HIBERNATE_addr								GENMASK(7, 0)
+
+#define X5H_PHY0_PPI_RW_LPDCOCAL_TIMEBASE_REG				0x41C02
+#define X5H_LPCDCOCAL_TIMEBASE								GENMASK(9, 0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_NREF_REG					0x41C04
+#define X5H_LPCDCOCAL_NREF									GENMASK(10, 0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_NREF_RANGE_REG				0x41C06
+#define X5H_LPCDCOCAL_NREF_RANGE							GENMASK(4, 0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_TWAIT_CONFIG_REG			0x41C0A
+#define X5H_LPCDCOCAL_TWAIT_PON								GENMASK(15, 9)
+#define X5H_LPCDCOCAL_TWAIT_COARSE							GENMASK(8, 0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_VT_CONFIG_REG				0x41C0C
+#define X5H_LPCDCOCAL_TWAIT_FINE			GENMASK(15, 7)
+#define X5H_LPCDCOCAL_VT_NREF_RANGE			GENMASK(6, 2)
+#define X5H_LPCDCOCAL_USE_IDEAL_NREF		BIT(1)
+#define X5H_LPCDCOCAL_VT_TRACKING_EN		BIT(0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_COARSE_CFG_REG				0x41C10
+#define X5H_NCOARSE_START						GENMASK(1, 0)
+#define X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(n)					(0x41C40 + ((n) * 2)) /* n (hex) = 0 - 9 */
+
+#define X5H_PHY0_PPI_RW_CDRCAL_CFG_0_REG					0x41C58
+#define X5H_CDRCAL_WAIT									  GENMASK(10, 7)
+#define X5H_CDRCAL_START_DELAY							  GENMASK(6, 0)
+
+#define X5H_PHY0_PPI_RW_COMMON_CFG_REG						0x41C6C
+#define X5H_GEN2_SEL										BIT(3)
+#define X5H_DPHY_HS_IDLE_EN									BIT(2)
+#define X5H_CFG_CLK_DIV_FACTOR								GENMASK(1, 0)
+#define X5H_PHY0_PPI_RW_TERMCAL_CFG_0_REG					0x41C80
+#define X5H_TERMCAL_TIMER									GENMASK(6, 0)
+#define X5H_PHY0_PPI_RW_OFFSETCAL_CFG_0_REG					0x41CA0
+#define X5H_OFFSETCAL_CALIB_MODE							BIT(5)
+#define X5H_OFFSETCAL_WAIT_THRESH							GENMASK(4, 0)
+
+#define X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(n)	(0x42080 + ((n) * 2)) /* n = 0 - 26 */
+#define X5H_OA_LANE0_HSTX_LOWCAP_EN_OVR_EN					BIT(12)
+#define X5H_OA_LANE0_SHORT_LB_EN							BIT(11)
+#define X5H_OA_LANE0_SPARE_IN								GENMASK(10, 0)
+#define X5H_OA_LANE0_HSRX_CDPHY_SEL_FAST_OVR_EN				BIT(12)
+#define X5H_OA_LANE0_HSRX_DPHY_DDL_EN_OVR_EN				BIT(11)
+#define X5H_OA_LANE0_HSTX_TERM_EN_OVR_VAL					GENMASK(10, 9)
+#define X5H_OA_LANE0_HSTX_DATA_CA_OVR_EN					BIT(8)
+#define X5H_OA_LANE0_HSTX_DATA_BC_OVR_EN					BIT(7)
+#define X5H_OA_LANE0_HSTX_DIV_EN_OVR_VAL					BIT(6)
+#define X5H_OA_LANE0_HSTX_LOWCAP_EN_OVR_VAL					GENMASK(5, 4)
+#define X5H_OA_LANE0_HSRX_DPHY_DDL_PON_OVR_VAL				BIT(3)
+#define X5H_OA_LANE0_HSRX_TERM_EN200OHMS					BIT(2)
+#define X5H_OA_LANE0_HSRX_CPHY_CDR_FBK_FAST_LOCK_EN_OVR_EN	BIT(1)
+#define X5H_OA_LANE0_SEL_LANE_CFG							BIT(0)
+#define X5H_A_LANE0_HSRX_CPHY_CDR_FBK_CAP_PROG					GENMASK(13, 10)
+#define X5H_A_LANE1_HSRX_CPHY_CDR_FBK_CAP_PROG					GENMASK(13, 10)
+#define X5H_A_LANE2_HSRX_CPHY_CDR_FBK_CAP_PROG					GENMASK(13, 10)
+#define X5H_A_LANE0_HSRX_GMODE									GENMASK(15, 14)
+#define X5H_A_LANE1_HSRX_GMODE									GENMASK(15, 14)
+#define X5H_A_LANE2_HSRX_GMODE									GENMASK(15, 14)
+#define X5H_OA_LANE0_HSRX_GMODE									GENMASK(15, 14)
+#define X5H_OA_LANE1_HSRX_GMODE									GENMASK(15, 14)
+#define X5H_OA_LANE2_HSRX_GMODE									GENMASK(15, 14)
+#define X5H_OA_LANE0_HSRX_CPHY_DELAY_OVR_VAL					GENMASK(14, 10)
+#define X5H_OA_LANE0_HSRX_CPHY_CDR_DIV							GENMASK(9, 7)
+#define X5H_OA_LANE0_HSRX_SEL_GATED_POLARITY					BIT(6)
+#define X5H_OA_LANE0_HSRX_HS_CLK_DIV							GENMASK(5, 3)
+#define X5H_OA_LANE0_HSRX_EQUALIZER_OVR_VAL						GENMASK(2, 0)
+#define X5H_OA_LANE0_HSRX_EQUALIZER_OVR_EN						BIT(14)
+#define X5H_OA_LANE0_HSRX_DPHY_DLL_FBK_OVR_EN					BIT(13)
+#define X5H_OA_LANE0_HSRX_DPHY_DDL_TUNE_MODE_OVR_EN				BIT(12)
+#define X5H_OA_LANE0_HSRX_DPHY_DDL_COARSE_BANK_OVR_EN			BIT(11)
+#define X5H_OA_LANE0_HSRX_DPHY_DDL_BIAS_OVR_EN					BIT(10)
+#define X5H_OA_LANE0_HSRX_DPHY_DATA_DELAY_OVR_VAL				GENMASK(9, 6)
+#define X5H_OA_LANE0_HSRX_DPHY_DDL_VT_COMP_EN_OVR_EN			BIT(5)
+#define X5H_OA_LANE0_HSRX_DPHY_PREAMBLE_CAL_EN_OVR_EN			BIT(4)
+#define X5H_OA_LANE0_HSRX_DPHY_DLL_EN_OVR_EN					BIT(3)
+#define X5H_OA_LANE0_HSRX_DPHY_DDL_PHASE_CHANGE_OVR_EN			BIT(2)
+#define X5H_OA_LANE0_HSRX_DPHY_DDL_BYPASS_EN_OVR_EN				BIT(1)
+#define X5H_OA_LANE0_HSRX_DPHY_DDL_BIAS_BYPASS_EN_OVR_EN		BIT(0)
+#define X5H_OA_LANE0_HSRX_CPHY_CDR_FBK_CAP_PROG					GENMASK(13, 10)
+#define X5H_OA_LANE1_HSRX_CPHY_CDR_FBK_CAP_PROG					GENMASK(13, 10)
+#define X5H_OA_LANE2_HSRX_CPHY_CDR_FBK_CAP_PROG					GENMASK(13, 10)
+
+#define X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(n)	(0x42480 + ((n) * 2)) /* n = 0 - 26 */
+#define X5H_OA_LANE1_HSTX_LOWCAP_EN_OVR_EN					BIT(12)
+#define X5H_OA_LANE1_SHORT_LB_EN							BIT(11)
+#define X5H_OA_LANE1_SPARE_IN								GENMASK(10, 0)
+#define X5H_OA_LANE1_HSRX_CDPHY_SEL_FAST_OVR_EN				BIT(12)
+#define X5H_OA_LANE1_HSRX_DPHY_DDL_EN_OVR_EN				BIT(11)
+#define X5H_OA_LANE1_HSTX_TERM_EN_OVR_VAL					GENMASK(10, 9)
+#define X5H_OA_LANE1_HSTX_DATA_CA_OVR_EN					BIT(8)
+#define X5H_OA_LANE1_HSTX_DATA_BC_OVR_EN					BIT(7)
+#define X5H_OA_LANE1_HSTX_DIV_EN_OVR_VAL					BIT(6)
+#define X5H_OA_LANE1_HSTX_LOWCAP_EN_OVR_VAL					GENMASK(5, 4)
+#define X5H_OA_LANE1_HSRX_DPHY_DDL_PON_OVR_VAL				BIT(3)
+#define X5H_OA_LANE1_HSRX_TERM_EN200OHMS					BIT(2)
+#define X5H_OA_LANE1_HSRX_CPHY_CDR_FBK_FAST_LOCK_EN_OVR_EN	BIT(1)
+#define X5H_OA_LANE1_SEL_LANE_CFG							BIT(0)
+#define X5H_OA_LANE1_HSRX_CPHY_DELAY_OVR_VAL					GENMASK(14, 10)
+#define X5H_OA_LANE1_HSRX_CPHY_CDR_DIV							GENMASK(9, 7)
+#define X5H_OA_LANE1_HSRX_SEL_GATED_POLARITY					BIT(6)
+#define X5H_OA_LANE1_HSRX_HS_CLK_DIV							GENMASK(5, 3)
+#define X5H_OA_LANE1_HSRX_EQUALIZER_OVR_VAL						GENMASK(2, 0)
+#define X5H_OA_LANE1_HSRX_EQUALIZER_OVR_EN						BIT(14)
+#define X5H_OA_LANE1_HSRX_DPHY_DLL_FBK_OVR_EN					BIT(13)
+#define X5H_OA_LANE1_HSRX_DPHY_DDL_TUNE_MODE_OVR_EN				BIT(12)
+#define X5H_OA_LANE1_HSRX_DPHY_DDL_COARSE_BANK_OVR_EN			BIT(11)
+#define X5H_OA_LANE1_HSRX_DPHY_DDL_BIAS_OVR_EN					BIT(10)
+#define X5H_OA_LANE1_HSRX_DPHY_DATA_DELAY_OVR_VAL				GENMASK(9, 6)
+#define X5H_OA_LANE1_HSRX_DPHY_DDL_VT_COMP_EN_OVR_EN			BIT(5)
+#define X5H_OA_LANE1_HSRX_DPHY_PREAMBLE_CAL_EN_OVR_EN			BIT(4)
+#define X5H_OA_LANE1_HSRX_DPHY_DLL_EN_OVR_EN					BIT(3)
+#define X5H_OA_LANE1_HSRX_DPHY_DDL_PHASE_CHANGE_OVR_EN			BIT(2)
+#define X5H_OA_LANE1_HSRX_DPHY_DDL_BYPASS_EN_OVR_EN				BIT(1)
+#define X5H_OA_LANE1_HSRX_DPHY_DDL_BIAS_BYPASS_EN_OVR_EN		BIT(0)
+
+#define X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(n)	(0x42880 + ((n) * 2)) /* n = 0 - 26 */
+#define X5H_OA_LANE2_HSTX_LOWCAP_EN_OVR_EN					BIT(12)
+#define X5H_OA_LANE2_SHORT_LB_EN							BIT(11)
+#define X5H_OA_LANE2_SPARE_IN								GENMASK(10, 0)
+#define X5H_OA_LANE2_HSRX_CDPHY_SEL_FAST_OVR_EN				BIT(12)
+#define X5H_OA_LANE2_HSRX_DPHY_DDL_EN_OVR_EN				BIT(11)
+#define X5H_OA_LANE2_HSTX_TERM_EN_OVR_VAL					GENMASK(10, 9)
+#define X5H_OA_LANE2_HSTX_DATA_CA_OVR_EN					BIT(8)
+#define X5H_OA_LANE2_HSTX_DATA_BC_OVR_EN					BIT(7)
+#define X5H_OA_LANE2_HSTX_DIV_EN_OVR_VAL					BIT(6)
+#define X5H_OA_LANE2_HSTX_LOWCAP_EN_OVR_VAL					GENMASK(5, 4)
+#define X5H_OA_LANE2_HSRX_DPHY_DDL_PON_OVR_VAL				BIT(3)
+#define X5H_OA_LANE2_HSRX_TERM_EN200OHMS					BIT(2)
+#define X5H_OA_LANE2_HSRX_CPHY_CDR_FBK_FAST_LOCK_EN_OVR_EN	BIT(1)
+#define X5H_OA_LANE2_SEL_LANE_CFG							BIT(0)
+#define X5H_OA_LANE2_HSRX_CPHY_DELAY_OVR_VAL					GENMASK(14, 10)
+#define X5H_OA_LANE2_HSRX_CPHY_CDR_DIV							GENMASK(9, 7)
+#define X5H_OA_LANE2_HSRX_SEL_GATED_POLARITY					BIT(6)
+#define X5H_OA_LANE2_HSRX_HS_CLK_DIV							GENMASK(5, 3)
+#define X5H_OA_LANE2_HSRX_EQUALIZER_OVR_VAL						GENMASK(2, 0)
+#define X5H_OA_LANE2_HSRX_EQUALIZER_OVR_EN						BIT(14)
+#define X5H_OA_LANE2_HSRX_DPHY_DLL_FBK_OVR_EN					BIT(13)
+#define X5H_OA_LANE2_HSRX_DPHY_DDL_TUNE_MODE_OVR_EN				BIT(12)
+#define X5H_OA_LANE2_HSRX_DPHY_DDL_COARSE_BANK_OVR_EN			BIT(11)
+#define X5H_OA_LANE2_HSRX_DPHY_DDL_BIAS_OVR_EN					BIT(10)
+#define X5H_OA_LANE2_HSRX_DPHY_DATA_DELAY_OVR_VAL				GENMASK(9, 6)
+#define X5H_OA_LANE2_HSRX_DPHY_DDL_VT_COMP_EN_OVR_EN			BIT(5)
+#define X5H_OA_LANE2_HSRX_DPHY_PREAMBLE_CAL_EN_OVR_EN			BIT(4)
+#define X5H_OA_LANE2_HSRX_DPHY_DLL_EN_OVR_EN					BIT(3)
+#define X5H_OA_LANE2_HSRX_DPHY_DDL_PHASE_CHANGE_OVR_EN			BIT(2)
+#define X5H_OA_LANE2_HSRX_DPHY_DDL_BYPASS_EN_OVR_EN				BIT(1)
+#define X5H_OA_LANE2_HSRX_DPHY_DDL_BIAS_BYPASS_EN_OVR_EN		BIT(0)
+
+#define X5H_PHY0_CORE_DIG_RW_TRIO0_REG(n)					(0x42100 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_POST_RECEIVED_RESET_THRESH							GENMASK(15, 9)
+#define X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH				GENMASK(8 ,6)
+#define X5H_DESERIALIZER_DIV_EN_DELAY_THRESH					GENMASK(5 ,3)
+#define X5H_DESERIALIZER_DATA_EN_DELAY_THRESH					GENMASK(2 ,0)
+#define X5H_POST_DET_DELAY_THRESH								GENMASK(15 ,0)
+#define X5H_DESERIALIZER_EN_DELAY_DEASS_THRESH					GENMASK(7 ,0)
+
+#define X5H_PHY0_CORE_DIG_RW_TRIO1_REG(n)					(0x42500 + ((n) * 2)) /* n = 0 - 2 */
+
+
+#define X5H_PHY1_CORE_DIG_RW_TRIO0_REG(n)					(0x62100 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_RW_TRIO1_REG(n)					(0x62500 + ((n) * 2)) /* n = 0 - 2 */
+
+#define X5H_PHY0_CORE_DIG_RW_COMMON_REG(n)					(0x43880 + ((n) * 2)) /* n = 0 - 15 */
+#define X5H_GEN2_SEL_CORE_DIG					BIT(14)
+#define X5H_HSRX_DPHY_DLL_EN_DLY				GENMASK(13, 2)
+#define X5H_DPHY_RX_CLK_AG_EN					BIT(1)
+#define X5H_DPHY_PREAMBLE_EN_REG				BIT(0)
+#define X5H_LANE2_CLK_EN_SYNC_BYPASS_REG			BIT(8)
+#define X5H_LANE1_CLK_EN_SYNC_BYPASS_REG			BIT(7)
+#define X5H_LANE0_CLK_EN_SYNC_BYPASS_REG			BIT(6)
+#define X5H_LANE2_HSRX_WORD_CLK_SEL_GATING_REG		GENMASK(5, 4)
+#define X5H_LANE1_HSRX_WORD_CLK_SEL_GATING_REG		GENMASK(3, 2)
+#define X5H_LANE0_HSRX_WORD_CLK_SEL_GATING_REG		GENMASK(1, 0)
+#define X5H_POST_DELAY_REG							BIT(7)
+#define X5H_HIGHDATARATE_POST_REG					BIT(6)
+#define X5H_DESERIALIZER_EN_DEASS_COUNT_THRESH_D	BIT(5, 3)
+#define X5H_DESERIALIZER_DIV_EN_DELAY_THRESH_D		BIT(2, 0)
+
+#define X5H_PHY1_CORE_DIG_RW_COMMON_REG(n)					(0x63880 + ((n) * 2)) /* n = 0 - 15 */
+
+#define X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(n)		(0x43840 + ((n) * 2)) /* n = 0 - 11 */
+#define X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_VAL				BIT(15)
+#define X5H_OA_CB_ATB_SEL_DAC_OVR_EN						BIT(14)
+#define X5H_OA_CB_VPCLK_REG_PON_OVR_VAL						BIT(13)
+#define X5H_OA_CB_AMP1200_PON_OVR_VAL						BIT(12)
+#define X5H_OA_CB_IBIAS_PON_OVR_VAL							BIT(11)
+#define X5H_OA_CB_HSTX_VCOMM_REG_PON_OVR_VAL				BIT(10)
+#define X5H_OA_CB_SEL_45OHM_50OHM						  BIT(8)
+#define X5H_OA_CB_REXT_IOCONT_EN_OVR_EN							BIT(15)
+#define X5H_OA_CB_HSTXLB_DCO_TUNE_CLKDIG_EN_OVR_EN				BIT(14)
+#define X5H_OA_CB_HSTXLB_DCO_EN_OVR_EN							BIT(13)
+#define X5H_OA_CB_HSTXLB_DCO_PON_OVR_EN							BIT(12)
+#define X5H_OA_CB_HSTXLB_DCO_FWORD_OVR_EN						BIT(11)
+#define X5H_OA_CB_LP_DCO_FWORD_OVR_VAL							GENMASK(10, 4)
+#define X5H_OA_CB_LP_DCO_FWORD_CHANGE_OVR_VAL					BIT(3)
+#define X5H_OA_CB_LP_DCO_CLK_EN_OVR_VAL							BIT(2)
+#define X5H_OA_CB_LP_DCO_EN_OVR_VAL								BIT(1)
+#define X5H_OA_CB_LP_DCO_PON_OVR_VAL							BIT(0)
+#define X5H_OA_CB_DSK_CLK_MODE_OVR_EN							BIT(15)
+#define X5H_OA_SETRB_OVR_EN										BIT(14)
+#define X5H_OA_SETRA_OVR_EN										BIT(13)
+#define X5H_OA_SETR_CALIB_OVR_EN								BIT(12)
+#define X5H_OA_SETR_OVR_EN										BIT(11)
+#define X5H_OA_CB_HSTXLB_DCO_TUNE_CLKDIG_EN_OVR_VAL				BIT(10)
+#define X5H_OA_CB_HSTXLB_DCO_EN_OVR_VAL							BIT(9)
+#define X5H_OA_CB_HSTXLB_DCO_PON_OVR_VAL						BIT(8)
+#define X5H_OA_CB_HSTXLB_DCO_FWORD_OVR_VAL						GENMASK(7, 5)
+#define X5H_OA_CB_LP_DCO_FWORD_OVR_EN							BIT(4)
+#define X5H_OA_CB_LP_DCO_FWORD_CHANGE_OVR_EN					BIT(3)
+#define X5H_OA_CB_LP_DCO_CLK_EN_OVR_EN							BIT(2)
+#define X5H_OA_CB_LP_DCO_EN_OVR_EN								BIT(1)
+#define X5H_OA_CB_LP_DCO_PON_OVR_EN								BIT(0)
+#define X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_EN				BIT(9)
+#define X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_EN					BIT(8)
+#define X5H_OA_CB_SEL_HSTXLB_DCO_VREF						BIT(7)
+#define X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_VAL					BIT(15)
+#define X5H_OA_CB_ATB_SEL_OVR_EN								BIT(14)
+#define X5H_OA_CB_VPCLK_REG_PON_OVR_EN							BIT(13)
+#define X5H_OA_CB_AMP1200_PON_OVR_EN							BIT(12)
+#define X5H_OA_CB_IBIAS_PON_OVR_EN								BIT(11)
+#define X5H_OA_CB_HSTX_VCOMM_REG_PON_OVR_EN						BIT(10)
+#define X5H_OA_CB_ATB_COMP_PON_OVR_EN							BIT(9)
+#define X5H_OA_CB_CAL_DOWN_EN_OVR_EN							BIT(8)
+#define X5H_OA_CB_CAL_UP_EN_OVR_EN								BIT(7)
+#define X5H_OA_CB_CAL_PON_OVR_EN								BIT(6)
+#define X5H_OA_CB_BG_PON_OVR_EN									BIT(5)
+#define X5H_OA_CB_PON_OVR_EN									BIT(4)
+#define X5H_OA_CB_CHOP_CLK_EN_OVR_EN							BIT(3)
+#define X5H_OA_CB_CHOP_CLK_OVR_EN								BIT(2)
+#define X5H_OA_CB_ATB_CLK_OVR_EN								BIT(1)
+#define X5H_OA_SEL_CPHY_DPHY_OVR_EN								BIT(0)
+#define X5H_OA_CB_ATB_COMP_PON_OVR_VAL						BIT(9)
+#define X5H_OA_CB_CAL_DOWN_EN_OVR_VAL						BIT(8)
+#define X5H_OA_CB_CAL_UP_EN_OVR_VAL							BIT(7)
+#define X5H_OA_CB_CAL_PON_OVR_VAL							BIT(6)
+#define X5H_OA_CB_BG_PON_OVR_VAL							BIT(5)
+#define X5H_OA_CB_PON_OVR_VAL								BIT(4)
+#define X5H_OA_CB_CHOP_CLK_EN_OVR_VAL						BIT(3)
+#define X5H_OA_CB_CHOP_CLK_OVR_VAL							BIT(2)
+#define X5H_OA_CB_ATB_CLK_OVR_VAL							BIT(1)
+#define X5H_OA_SEL_CPHY_DPHY_OVR_VAL						BIT(0)
+#define X5H_OA_A2D_16_BUS_EN							BIT(3)
+#define X5H_OA_CB_VP2_PROG								GENMASK(2, 0)
+#define X5H_OA_CB_CAL_SINK_EN_OVR_EN						BIT(15)
+#define X5H_OA_CB_SEL_EXT_INT_CHOP_CLK						BIT(14)
+#define X5H_OA_CB_DSK_CLK_CHANNEL							GENMASK(13, 12)
+#define X5H_OA_CB_VPCLK_REG_MODE							GENMASK(11, 10)
+#define X5H_OA_CB_REXT_IOCONT_EN_OVR_VAL					BIT(9)
+#define X5H_OA_CB_SEL_45OHM_50OHM							BIT(8)
+#define X5H_OA_SETR_CALIB_VT								GENMASK(7, 4)
+#define X5H_OA_CB_SPARE_IN									GENMASK(3, 0)
+#define X5H_OA_CB_HSTX_VCOMM_REG_STBON				BIT(15)
+#define X5H_OA_CB_HSTX_BOOST_PROG					GENMASK(14, 12)
+#define X5H_OA_CB_HSTXLB_DCO_SEL_DIV				GENMASK(11, 10)
+#define X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_EN		BIT(9)
+#define X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_EN			BIT(8)
+#define X5H_OA_CB_SEL_HSTXLB_DCO_VREF				BIT(7)
+#define X5H_OA_CB_SEL_MPLL_REG_VREF                 GENMASK(6, 4)
+#define X5H_OA_SEL_LPTX_PROG						GENMASK(3, 1)
+#define X5H_OA_CB_SEL_LPTX_VREF						BIT(0)
+#define X5H_OA_CB_CAL_SINK_EN_OVR_VAL				BIT(15)
+#define X5H_OA_CB_VCOMM_UNTERM_MODE					BIT(14)
+#define X5H_OA_CB_SEL_VCOMM_PROG					GENMASK(13, 11)
+#define X5H_OA_CB_SEL_HSRX_CM_DET_VREF				GENMASK(10, 9)
+#define X5H_OA_CB_SEL_TRIO2_ALP_VREF				GENMASK(8, 6)
+#define X5H_OA_CB_SEL_TRIO1_ALP_VREF				GENMASK(5, 3)
+#define X5H_OA_CB_SEL_TRIO0_ALP_VREF				GENMASK(2, 0)
+
+#define X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(n)		(0x63840 + ((n) * 2)) /* n = 0 - 11 */
+
+#define X5H_PHY0_CORE_DIG_CLANE_0_RW_CFG_REG(n)				(0x4A000 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_CLANE_1_RW_CFG_REG(n)				(0x4A400 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_CLANE_2_RW_CFG_REG(n)				(0x4A800 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_LOOPBACK_MODE_EN						BIT(10)
+#define X5H_CFG_0_SWAP_ENCODE_REG					BIT(9)
+#define X5H_CFG_0_ALP_ENABLE_REG					BIT(8)
+#define X5H_CFG_0_HS_SYNC_DET_SWAP_REG				BIT(7)
+#define X5H_CFG_0_HS_ALIGNER_SWAP_REG				BIT(6)
+#define X5H_CFG_0_HS_DECODE_SWAP_REG				BIT(5)
+#define X5H_CFG_0_HS_ORDER_SWAP_REG					BIT(4)
+#define X5H_CFG_0_HS_PIN_SWAP_REG					BIT(3)
+#define X5H_CFG_0_LP_PIN_SWAP_REG					GENMASK(2, 0)
+#define X5H_CFG_2_SPARE								GENMASK(15, 0)
+
+#define X5H_PHY1_CORE_DIG_CLANE_0_RW_CFG_REG(n)				(0x6A000 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_CLANE_1_RW_CFG_REG(n)				(0x6A400 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_CLANE_2_RW_CFG_REG(n)				(0x6A800 + ((n) * 2)) /* n = 0 - 2 */
+
+#define X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(n)				(0x4A080 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_LP_0_ITMINRX_REG						GENMASK(15, 12)
+#define X5H_LP_0_TTAGO_REG							GENMASK(11, 8)
+#define X5H_LP_0_TTASURE_REG						GENMASK(7, 4)
+#define X5H_LP_0_TTAGET_REG							GENMASK(3, 0)
+#define X5H_LP_2_FILTER_INPUT_SAMPLING_REG			BIT(0)
+
+#define X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(n)				(0x4A480 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_CLANE_0_RW_LP_REG(n)				(0x6A080 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_CLANE_1_RW_LP_REG(n)				(0x6A480 + ((n) * 2)) /* n = 0 - 2 */
+
+#define X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_RX_REG(n)			(0x4A100 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_RX_REG(n)			(0x4A500 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_CLANE_2_RW_HS_RX_REG(n)			(0x4A900 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_HSRX_CPHY_CDR_FBK_EN_DLY_REG			GENMASK(7, 5)
+#define X5H_HSACTIVERX_DLY_REG						GENMASK(4, 0)
+#define X5H_HSRX_CPHY_CDR_FBK_FAST_LOCK_EN_DLY_REG	GENMASK(6, 1)
+#define X5H_HSRX_CPHY_CDR_FBK_FAST_LOCK_EN_REG		BIT(0)
+
+#define X5H_PHY1_CORE_DIG_CLANE_0_RW_HS_RX_REG(n)			(0x6A100 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_CLANE_1_RW_HS_RX_REG(n)			(0x6A500 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_CLANE_2_RW_HS_RX_REG(n)			(0x6A900 + ((n) * 2)) /* n = 0 - 1 */
+
+#define X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_TX_REG(n)			(0x4A200 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_TX_REG(n)			(0x4A600 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_CLANE_2_RW_HS_TX_REG(n)			(0x4AA00 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_HS_TX_6_PIN_SWAP_REG							GENMASK(14, 12)
+#define X5H_HS_TX_6_PROGSEQSYMB13_REG						GENMASK(11, 9)
+#define X5H_HS_TX_6_PROGSEQSYMB12_REG						GENMASK(8, 6)
+#define X5H_HS_TX_6_PROGSEQSYMB11_REG						GENMASK(5, 3)
+#define X5H_HS_TX_6_PROGSEQSYMB10_REG						GENMASK(2, 0)
+
+#define X5H_PHY1_CORE_DIG_CLANE_0_RW_HS_TX_REG(n)			(0x6A200 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY1_CORE_DIG_CLANE_1_RW_HS_TX_REG(n)			(0x6A600 + ((n) * 2)) /* n = 0 - 13 */
+
+#define X5H_PHY0_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(n)	(0x439E0 + ((n) * 2)) /* n = 0 - 3 */
+#define X5H_CB_CHOP_CLK_DIV_SEL			GENMASK(15, 14)
+#define X5H_CB_LP_DCO_CLK_EN_DLY		GENMASK(13, 8)
+#define X5H_CB_LP_DCO_EN_DLY			GENMASK(7, 2)
+#define X5H_CB_DSK_CLK_MODE_CFG			GENMASK(1, 0)
+
+#define X5H_PHY1_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(n)	(0x639E0 + ((n) * 2)) /* n = 0 - 3 */
+
+#define X5H_PHY0_CORE_DIG_DLANE_0_RW_CFG_REG(n)				(0x46000 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_1_RW_CFG_REG(n)				(0x46400 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_2_RW_CFG_REG(n)				(0x46800 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_0_RW_CFG_REG(n)				(0x66000 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_1_RW_CFG_REG(n)				(0x66400 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_2_RW_CFG_REG(n)				(0x66800 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_0_RW_LP_REG(n)				(0x46080 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_1_RW_LP_REG(n)				(0x46480 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_0_RW_LP_REG(n)				(0x66080 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_1_RW_LP_REG(n)				(0x66480 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(n)			(0x46100 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(n)			(0x46500 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_DLANE_2_RW_HS_RX_REG(n)			(0x46900 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_DLANE_0_RW_HS_RX_REG(n)			(0x66100 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_DLANE_1_RW_HS_RX_REG(n)			(0x66500 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_DLANE_2_RW_HS_RX_REG(n)			(0x66900 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_TX_REG(n)			(0x46200 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_TX_REG(n)			(0x46600 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_DLANE_2_RW_HS_TX_REG(n)			(0x46A00 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_DLANE_CLK_RW_LP_REG(n)			(0x47080 + ((n) * 2)) /* n = 0 - 3 */
+#define X5H_PHY0_CORE_DIG_DLANE_CLK_RW_HS_RX_REG(n)			(0x47100 + ((n) * 2)) /* n = 0 - 12 */
+#define X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(n)	(0x62080 + ((n) * 2)) /* n = 0 - 26 */
+#define X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(n)	(0x62480 + ((n) * 2)) /* n = 0 - 26 */
+#define X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(n)	(0x62880 + ((n) * 2)) /* n = 0 - 26 */
+#define X5H_PHY1_CORE_DIG_DLANE_0_RW_HS_TX_REG(n)			(0x66200 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY1_CORE_DIG_DLANE_1_RW_HS_TX_REG(n)			(0x66600 + ((n) * 2)) /* n = 0 - 13 */
+
+#define X5H_INT_ST_CSEMC_REG								0x0054C
+#define X5H_INT_ST_TO_REG									0x00528
 /**  **/
 
 struct rcsi2_cphy_setting {
@@ -270,42 +897,130 @@ struct rcsi2_cphy_setting {
 };
 
 static const struct rcsi2_cphy_setting cphy_setting_table_r8a779g0[] = {
-	{ .msps =   80, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0134, .trio2 = 0x6a, .lane27 = 0x0000, .lane29 = 0x0a24 },
-	{ .msps =  100, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x00f5, .trio2 = 0x55, .lane27 = 0x0000, .lane29 = 0x0a24 },
-	{ .msps =  200, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0077, .trio2 = 0x2b, .lane27 = 0x0000, .lane29 = 0x0a44 },
-	{ .msps =  300, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x004d, .trio2 = 0x1d, .lane27 = 0x0000, .lane29 = 0x0a44 },
-	{ .msps =  400, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0038, .trio2 = 0x16, .lane27 = 0x0000, .lane29 = 0x0a64 },
-	{ .msps =  500, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x002b, .trio2 = 0x12, .lane27 = 0x0000, .lane29 = 0x0a64 },
-	{ .msps =  600, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0023, .trio2 = 0x0f, .lane27 = 0x0000, .lane29 = 0x0a64 },
-	{ .msps =  700, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x001d, .trio2 = 0x0d, .lane27 = 0x0000, .lane29 = 0x0a84 },
-	{ .msps =  800, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0018, .trio2 = 0x0c, .lane27 = 0x0000, .lane29 = 0x0a84 },
-	{ .msps =  900, .rx2 = 0x38, .trio0 = 0x024a, .trio1 = 0x0015, .trio2 = 0x0b, .lane27 = 0x0000, .lane29 = 0x0a84 },
-	{ .msps = 1000, .rx2 = 0x3e, .trio0 = 0x024a, .trio1 = 0x0012, .trio2 = 0x0a, .lane27 = 0x0400, .lane29 = 0x0a84 },
-	{ .msps = 1100, .rx2 = 0x44, .trio0 = 0x024a, .trio1 = 0x000f, .trio2 = 0x09, .lane27 = 0x0800, .lane29 = 0x0a84 },
-	{ .msps = 1200, .rx2 = 0x4a, .trio0 = 0x024a, .trio1 = 0x000e, .trio2 = 0x08, .lane27 = 0x0c00, .lane29 = 0x0a84 },
-	{ .msps = 1300, .rx2 = 0x51, .trio0 = 0x024a, .trio1 = 0x000c, .trio2 = 0x08, .lane27 = 0x0c00, .lane29 = 0x0aa4 },
-	{ .msps = 1400, .rx2 = 0x57, .trio0 = 0x024a, .trio1 = 0x000b, .trio2 = 0x07, .lane27 = 0x1000, .lane29 = 0x0aa4 },
-	{ .msps = 1500, .rx2 = 0x5d, .trio0 = 0x044a, .trio1 = 0x0009, .trio2 = 0x07, .lane27 = 0x1000, .lane29 = 0x0aa4 },
-	{ .msps = 1600, .rx2 = 0x63, .trio0 = 0x044a, .trio1 = 0x0008, .trio2 = 0x07, .lane27 = 0x1400, .lane29 = 0x0aa4 },
-	{ .msps = 1700, .rx2 = 0x6a, .trio0 = 0x044a, .trio1 = 0x0007, .trio2 = 0x06, .lane27 = 0x1400, .lane29 = 0x0aa4 },
-	{ .msps = 1800, .rx2 = 0x70, .trio0 = 0x044a, .trio1 = 0x0007, .trio2 = 0x06, .lane27 = 0x1400, .lane29 = 0x0aa4 },
-	{ .msps = 1900, .rx2 = 0x76, .trio0 = 0x044a, .trio1 = 0x0006, .trio2 = 0x06, .lane27 = 0x1400, .lane29 = 0x0aa4 },
-	{ .msps = 2000, .rx2 = 0x7c, .trio0 = 0x044a, .trio1 = 0x0005, .trio2 = 0x06, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2100, .rx2 = 0x83, .trio0 = 0x044a, .trio1 = 0x0005, .trio2 = 0x05, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2200, .rx2 = 0x89, .trio0 = 0x064a, .trio1 = 0x0004, .trio2 = 0x05, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2300, .rx2 = 0x8f, .trio0 = 0x064a, .trio1 = 0x0003, .trio2 = 0x05, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2400, .rx2 = 0x95, .trio0 = 0x064a, .trio1 = 0x0003, .trio2 = 0x05, .lane27 = 0x1800, .lane29 = 0x0aa4 },
-	{ .msps = 2500, .rx2 = 0x9c, .trio0 = 0x064a, .trio1 = 0x0003, .trio2 = 0x05, .lane27 = 0x1c00, .lane29 = 0x0aa4 },
-	{ .msps = 2600, .rx2 = 0xa2, .trio0 = 0x064a, .trio1 = 0x0002, .trio2 = 0x05, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 2700, .rx2 = 0xa8, .trio0 = 0x064a, .trio1 = 0x0002, .trio2 = 0x05, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 2800, .rx2 = 0xae, .trio0 = 0x064a, .trio1 = 0x0002, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 2900, .rx2 = 0xb5, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3000, .rx2 = 0xbb, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3100, .rx2 = 0xc1, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3200, .rx2 = 0xc7, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3300, .rx2 = 0xce, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3400, .rx2 = 0xd4, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
-	{ .msps = 3500, .rx2 = 0xda, .trio0 = 0x084a, .trio1 = 0x0001, .trio2 = 0x04, .lane27 = 0x1c00, .lane29 = 0x0ad4 },
+	{ .msps =   80, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0134, .trio2 = 0x006a, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  100, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x00f5, .trio2 = 0x0055, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  200, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0077, .trio2 = 0x002b, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  300, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x004d, .trio2 = 0x001d, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  400, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0038, .trio2 = 0x0016, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  500, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x002c, .trio2 = 0x0012, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  600, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0023, .trio2 = 0x000f, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  700, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x001d, .trio2 = 0x000d, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  800, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0019, .trio2 = 0x000c, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  900, .rx2 = 0x0038, .trio0 = 0x0200, .trio1 = 0x0015, .trio2 = 0x000b, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1000, .rx2 = 0x003e, .trio0 = 0x0200, .trio1 = 0x0013, .trio2 = 0x000a, .lane27 = 0x0400, .lane29 = 0x0000 },
+	{ .msps = 1100, .rx2 = 0x0044, .trio0 = 0x0200, .trio1 = 0x0010, .trio2 = 0x0009, .lane27 = 0x0800, .lane29 = 0x0000 },
+	{ .msps = 1200, .rx2 = 0x004a, .trio0 = 0x0200, .trio1 = 0x000e, .trio2 = 0x0008, .lane27 = 0x0c00, .lane29 = 0x0000 },
+	{ .msps = 1300, .rx2 = 0x0051, .trio0 = 0x0200, .trio1 = 0x000d, .trio2 = 0x0008, .lane27 = 0x0c00, .lane29 = 0x0000 },
+	{ .msps = 1400, .rx2 = 0x0057, .trio0 = 0x0200, .trio1 = 0x000b, .trio2 = 0x0007, .lane27 = 0x1000, .lane29 = 0x0000 },
+	{ .msps = 1500, .rx2 = 0x005d, .trio0 = 0x0400, .trio1 = 0x000a, .trio2 = 0x0007, .lane27 = 0x1000, .lane29 = 0x0000 },
+	{ .msps = 1600, .rx2 = 0x0063, .trio0 = 0x0400, .trio1 = 0x0009, .trio2 = 0x0007, .lane27 = 0x1400, .lane29 = 0x0000 },
+	{ .msps = 1700, .rx2 = 0x006a, .trio0 = 0x0400, .trio1 = 0x0008, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0000 },
+	{ .msps = 1800, .rx2 = 0x0070, .trio0 = 0x0400, .trio1 = 0x0007, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0000 },
+	{ .msps = 1900, .rx2 = 0x0076, .trio0 = 0x0400, .trio1 = 0x0007, .trio2 = 0x0006, .lane27 = 0x1400, .lane29 = 0x0000 },
+	{ .msps = 2000, .rx2 = 0x007c, .trio0 = 0x0400, .trio1 = 0x0006, .trio2 = 0x0006, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2100, .rx2 = 0x0083, .trio0 = 0x0400, .trio1 = 0x0005, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2200, .rx2 = 0x0089, .trio0 = 0x0600, .trio1 = 0x0005, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2300, .rx2 = 0x008f, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2400, .rx2 = 0x0095, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1800, .lane29 = 0x0000 },
+	{ .msps = 2500, .rx2 = 0x009c, .trio0 = 0x0600, .trio1 = 0x0004, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0000 },
+	{ .msps = 2600, .rx2 = 0x00a2, .trio0 = 0x0600, .trio1 = 0x0003, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 2700, .rx2 = 0x00a8, .trio0 = 0x0600, .trio1 = 0x0003, .trio2 = 0x0005, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 2800, .rx2 = 0x00ae, .trio0 = 0x0600, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 2900, .rx2 = 0x00b5, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3000, .rx2 = 0x00bb, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3100, .rx2 = 0x00c1, .trio0 = 0x0800, .trio1 = 0x0002, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3200, .rx2 = 0x00c7, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3300, .rx2 = 0x00ce, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3400, .rx2 = 0x00d4, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ .msps = 3500, .rx2 = 0x00da, .trio0 = 0x0800, .trio1 = 0x0001, .trio2 = 0x0004, .lane27 = 0x1c00, .lane29 = 0x0010 },
+	{ /* sentinel */ },
+};
+
+static const struct rcsi2_cphy_setting cphy_setting_table_r8a78000[] = {
+	{ .msps =   80, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  100, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  200, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  300, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  400, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  500, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  600, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  700, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  800, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps =  900, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1000, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1100, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1200, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1300, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1400, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1500, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1600, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1700, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1800, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 1900, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2000, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2100, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2200, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2300, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2400, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2500, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2600, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2700, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2800, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 2900, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 3000, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 3100, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 3200, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 3300, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 3400, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 3500, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 4500, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 5000, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 5500, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 6000, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ .msps = 6500, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+};
+
+struct rcsi2_msps_lut {
+	u16 msps;
+	u16 coarse;
+	u16 en_delay_deass;
+	u16 det_delay;
+	u16 equal_ovr;
+	u16 gmode;
+	u16 fbk_cap;
+};
+
+static const struct rcsi2_msps_lut rcsi2_msps_cphy_spec_lut_r8a78000[] = {
+	{ .msps = 6500,	.coarse = 406, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 4500,	.coarse = 404, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 3500,	.coarse = 218, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 2500,	.coarse = 156, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 2000,	.coarse = 124, .en_delay_deass = 4,   .det_delay = 7   },
+	{ .msps = 1500,	.coarse = 93 , .en_delay_deass = 4,   .det_delay = 7   },
+	{ .msps = 1000,	.coarse = 95 , .en_delay_deass = 10,  .det_delay = 22  },
+	{ .msps = 900 ,	.coarse = 56 , .en_delay_deass = 10,  .det_delay = 22  },
+	{ .msps = 400 ,	.coarse = 56 , .en_delay_deass = 22,  .det_delay = 66  },
+	{ .msps = 300 ,	.coarse = 56 , .en_delay_deass = 29,  .det_delay = 91  },
+	{ .msps = 200 ,	.coarse = 56 , .en_delay_deass = 43,  .det_delay = 140 },
+	{ .msps = 100 ,	.coarse = 56 , .en_delay_deass = 85,  .det_delay = 287 },
+	{ .msps = 80  ,	.coarse = 56 , .en_delay_deass = 106, .det_delay = 360 },
+	{ /* sentinel */ },
+};
+
+static const struct rcsi2_msps_lut rcsi2_msps_hsrx_lut_r8a78000[] = {
+	{ .msps = 6500,	.equal_ovr = 2, .gmode = 2, .fbk_cap = 15 },
+	{ .msps = 4500,	.equal_ovr = 2, .gmode = 2, .fbk_cap = 14 },
+	{ .msps = 3500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 11 },
+	{ .msps = 2500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
+	{ .msps = 2000,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
+	{ .msps = 1500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
+	{ .msps = 1000,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 900,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 400,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 300,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 200,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 100,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 80,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
 	{ /* sentinel */ },
 };
 
@@ -748,6 +1463,93 @@ static const struct rcar_csi2_format rcar_csi2_formats[] = {
 	},
 };
 
+#define	ABC		0x0
+#define	CBA		0x1
+#define	ACB		0x2
+#define	BCA		0x3
+#define	BAC		0x4
+#define	CAB		0x5
+
+/* RX ABC Order */
+struct rcar_csi2_pin_swap {
+	u8 code;
+	u32 rw_cfg0_b2_0;
+	u32 rw_cfg0_b3;
+	u32 afe_clane_29_b8;
+	// x5h
+	u32 lp;
+	u32 hs;
+	u32 sel_gate;
+	u32 tx6;
+};
+
+static const struct rcar_csi2_pin_swap rcar_csi2_pin_swaps[] = {
+	{ .code = ABC, .rw_cfg0_b2_0 = 0x0, .rw_cfg0_b3 = 0x0, .afe_clane_29_b8 = 0x0 },
+	{ .code = CBA, .rw_cfg0_b2_0 = 0x1, .rw_cfg0_b3 = 0x1, .afe_clane_29_b8 = 0x1 },
+	{ .code = ACB, .rw_cfg0_b2_0 = 0x2, .rw_cfg0_b3 = 0x1, .afe_clane_29_b8 = 0x1 },
+	{ .code = CAB, .rw_cfg0_b2_0 = 0x3, .rw_cfg0_b3 = 0x0, .afe_clane_29_b8 = 0x0 },
+	{ .code = BAC, .rw_cfg0_b2_0 = 0x4, .rw_cfg0_b3 = 0x1, .afe_clane_29_b8 = 0x1 },
+	{ .code = BCA, .rw_cfg0_b2_0 = 0x5, .rw_cfg0_b3 = 0x0, .afe_clane_29_b8 = 0x0 },
+};
+
+static const struct rcar_csi2_pin_swap rcar_csi2_pin_swaps_x5h[] = {
+	{ .code = ABC, .lp = 0x0, .hs = 0x0, .sel_gate = 0x0, .tx6 = 0x0,},
+	{ .code = CBA, .lp = 0x1, .hs = 0x1, .sel_gate = 0x1, .tx6 = 0x0,},
+	{ .code = ACB, .lp = 0x2, .hs = 0x0, .sel_gate = 0x1, .tx6 = 0x0,},
+	{ .code = BCA, .lp = 0x5, .hs = 0x0, .sel_gate = 0x0, .tx6 = 0x0,},
+	{ .code = BAC, .lp = 0x4, .hs = 0x1, .sel_gate = 0x1, .tx6 = 0x0,},
+	{ .code = CAB, .lp = 0x3, .hs = 0x0, .sel_gate = 0x0, .tx6 = 0x0,},
+};
+
+struct rcar_csi2_cphy_specific {
+	u8 trio;
+	unsigned int hs_receive_reg;
+	unsigned int pin_swap_reg;
+	unsigned int ctrl27_reg;
+	unsigned int rwconf_reg;
+	// x5h
+	unsigned int lp_reg;
+	unsigned int hs_reg;
+	unsigned int sel_gate_reg;
+	unsigned int tx6_reg;
+};
+
+static const struct rcar_csi2_cphy_specific cphy_spec_reg_v4h[] = {
+	{ .trio = 0,
+		.hs_receive_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(9),
+		.pin_swap_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(9),
+		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(7),
+		.rwconf_reg = V4H_CORE_DIG_CLANE_0_RW_CFG_0_REG },
+	{ .trio = 1,
+		.hs_receive_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_REG(9),
+		.pin_swap_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(9),
+		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2_REG(7),
+		.rwconf_reg = V4H_CORE_DIG_CLANE_1_RW_CFG_0_REG },
+	{ .trio = 2,
+		.hs_receive_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(9),
+		.pin_swap_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_REG(9),
+		.ctrl27_reg = V4H_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2_REG(7),
+		.rwconf_reg = V4H_CORE_DIG_CLANE_2_RW_CFG_0_REG },
+};
+
+static const struct rcar_csi2_cphy_specific cphy_pin_swap_reg_x5h[] = {
+	{ .trio = 0,
+		.lp_reg = X5H_PHY0_CORE_DIG_CLANE_0_RW_CFG_REG(0),
+		.hs_reg = X5H_PHY0_CORE_DIG_CLANE_0_RW_CFG_REG(0),
+		.sel_gate_reg = X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(10),
+		.tx6_reg = X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_TX_REG(6) },
+	{ .trio = 1,
+		.lp_reg = X5H_PHY0_CORE_DIG_CLANE_1_RW_CFG_REG(0),
+		.hs_reg = X5H_PHY0_CORE_DIG_CLANE_1_RW_CFG_REG(0),
+		.sel_gate_reg = X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(10),
+		.tx6_reg = X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_TX_REG(6) },
+	{ .trio = 2,
+		.lp_reg = X5H_PHY0_CORE_DIG_CLANE_2_RW_CFG_REG(0),
+		.hs_reg = X5H_PHY0_CORE_DIG_CLANE_2_RW_CFG_REG(0),
+		.sel_gate_reg = X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(10),
+		.tx6_reg = X5H_PHY0_CORE_DIG_CLANE_2_RW_HS_TX_REG(6) },
+};
+
 static const struct rcar_csi2_format *rcsi2_code_to_fmt(unsigned int code)
 {
 	unsigned int i;
@@ -787,6 +1589,7 @@ struct rcar_csi2 {
 	void __iomem *base;
 	const struct rcar_csi2_info *info;
 	struct reset_control *rstc;
+	struct clk *clk;
 
 	struct v4l2_subdev subdev;
 	struct media_pad pads[NR_OF_RCAR_CSI2_PAD];
@@ -804,6 +1607,8 @@ struct rcar_csi2 {
 	bool cphy;
 	unsigned short lanes;
 	unsigned char lane_swap[4];
+	unsigned int hs_receive_eq[4];
+	unsigned int pin_swap_rx_order[4];
 #ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	struct csi2cam *cam;
 #endif
@@ -839,10 +1644,240 @@ static void rcsi2_modify(struct rcar_csi2 *priv, unsigned int reg, u32 data, u32
 	rcsi2_write(priv, reg, val);
 }
 
+static u16 rcsi2_read16(struct rcar_csi2 *priv, unsigned int reg)
+{
+	return ioread16(priv->base + reg);
+}
+
 static void rcsi2_write16(struct rcar_csi2 *priv, unsigned int reg, u16 data)
 {
 	iowrite16(data, priv->base + reg);
 }
+
+static void rcsi2_modify16(struct rcar_csi2 *priv, unsigned int reg, u16 data, u16 mask)
+{
+	u16 val;
+
+	val = rcsi2_read16(priv, reg);
+	val &= ~mask;
+	val |= data;
+	rcsi2_write16(priv, reg, val);
+}
+
+#ifdef DEBUG_REG_DUMP
+/***************************************************************************************************
+	CSI REGISTER DUMP
+/**************************************************************************************************/
+void CSI2_REG_Dump(struct rcar_csi2 *priv)
+{
+	printk("\n\r");
+	printk("==========================================================================================\n\r");
+	printk("[DBG]%s(csiCh=0x%08x)\n", __func__, 0x00000000);
+	printk("==========================================================================================\n\r");
+
+	printk("CSI2LNKn_PHYSET                                     (0x%08x) = 0x%08x\n",X5H_PHYSET_REG,rcsi2_read(priv, X5H_PHYSET_REG));
+	printk("CSI2LNKn_PHY_CTRL                                   (0x%08x) = 0x%08x\n",X5H_PHY_CTRL_REG,rcsi2_read(priv, X5H_PHY_CTRL_REG));
+	printk("CSI2LNKn_PHY_EN_REG                                 (0x%08x) = 0x%08x\n",X5H_PHY_EN_REG,rcsi2_read(priv, X5H_PHY_EN_REG));
+//	printk("CSI2LNKn_PHY_AGSEL                                  (0x%08x) = 0x%08x\n",X5H_PHY_AGSEL_REG,rcsi2_read(priv, X5H_PHY_AGSEL_REG));
+	printk("CSI2LNKn_FORCEPHYMODE                               (0x%08x) = 0x%08x\n",X5H_FORCEPHYMODE_REG,rcsi2_read(priv, X5H_FORCEPHYMODE_REG));
+	printk("CSI2LNKn_PHY_MODE_CFG                               (0x%08x) = 0x%08x\n",X5H_PHY_MODE_CFG_REG,rcsi2_read(priv, X5H_PHY_MODE_CFG_REG));
+	printk("CSI2LNKn_INT_ST_CSEMC                               (0x%08x) = 0x%08x\n",X5H_INT_ST_CSEMC_REG,rcsi2_read(priv, X5H_INT_ST_CSEMC_REG));
+	printk("CSI2LNKn_INT_ST_TO                                  (0x%08x) = 0x%08x\n",X5H_INT_ST_TO_REG,rcsi2_read(priv, X5H_INT_ST_TO_REG));
+	printk("CSI2LNKn_SDI_CFG                                    (0x%08x) = 0x%08x\n",X5H_SDI_CFG_REG,rcsi2_read(priv, X5H_SDI_CFG_REG));
+	printk("CSI2LNKn_SDI_FILTER_CFG                             (0x%08x) = 0x%08x\n",X5H_SDI_FILTER_CFG_REG,rcsi2_read(priv, X5H_SDI_FILTER_CFG_REG));
+	printk("CSI2LNKn_PWR_UP                                     (0x%08x) = 0x%08x\n",PWR_UP,rcsi2_read(priv, PWR_UP));
+	printk("CSI2LNKn_RDWIDTH                                    (0x%08x) = 0x%08x\n",X5H_RDWIDTH_REG,rcsi2_read(priv, X5H_RDWIDTH_REG));
+	printk("CSI2LNKn_ST_PHYST                                   (0x%08x) = 0x%08x\n",X5H_ST_PHYST_REG,rcsi2_read(priv, X5H_ST_PHYST_REG));
+	printk("CSI2LNKn_PHY_REGMODE                                (0x%08x) = 0x%08x\n",X5H_PHY_REGMODE_REG,rcsi2_read(priv, X5H_PHY_REGMODE_REG));
+	printk("CSI2LNKn_CFGCLKSET                                  (0x%08x) = 0x%08x\n",X5H_CFGCLKSET_REG,rcsi2_read(priv, X5H_CFGCLKSET_REG));
+	printk("CSI2LNKn_CSI2_GENERAL_CFG                           (0x%08x) = 0x%08x\n",X5H_CSI2_GENERAL_CFG_REG,rcsi2_read(priv, X5H_CSI2_GENERAL_CFG_REG));
+	printk("CSI2LNKn_CSI2_DESCRAMBLING0_CFG                     (0x%08x) = 0x%08x\n",CSI2_DESCRAMBLING_CFG_REG(0), rcsi2_read(priv, CSI2_DESCRAMBLING_CFG_REG(0)));
+	printk("CSI2LNKn_CSI2_DESCRAMBLING1_CFG                     (0x%08x) = 0x%08x\n",CSI2_DESCRAMBLING_CFG_REG(1), rcsi2_read(priv, CSI2_DESCRAMBLING_CFG_REG(1)));
+	printk("CSI2LNKn_CSI2_DESCRAMBLING2_CFG                     (0x%08x) = 0x%08x\n",CSI2_DESCRAMBLING_CFG_REG(2), rcsi2_read(priv, CSI2_DESCRAMBLING_CFG_REG(2)));
+	printk("CSI2LNKn_CSI2_DESCRAMBLING3_CFG                     (0x%08x) = 0x%08x\n",CSI2_DESCRAMBLING_CFG_REG(3), rcsi2_read(priv, CSI2_DESCRAMBLING_CFG_REG(3)));
+	printk("CSI2LNKn_CSI2_DESCRAMBLING4_CFG                     (0x%08x) = 0x%08x\n",CSI2_DESCRAMBLING_CFG_REG(4), rcsi2_read(priv, CSI2_DESCRAMBLING_CFG_REG(4)));
+	printk("CSI2LNKn_CSI2_DESCRAMBLING5_CFG                     (0x%08x) = 0x%08x\n",CSI2_DESCRAMBLING_CFG_REG(5), rcsi2_read(priv, CSI2_DESCRAMBLING_CFG_REG(5)));
+	printk("CSI2LNKn_CSI2_DESCRAMBLING6_CFG                     (0x%08x) = 0x%08x\n",CSI2_DESCRAMBLING_CFG_REG(6), rcsi2_read(priv, CSI2_DESCRAMBLING_CFG_REG(6)));
+	printk("CSI2LNKn_CSI2_DESCRAMBLING7_CFG                     (0x%08x) = 0x%08x\n",CSI2_DESCRAMBLING_CFG_REG(7), rcsi2_read(priv, CSI2_DESCRAMBLING_CFG_REG(7)));
+	printk("CSI2LNKn_PHY_DESKEW_CFG                             (0x%08x) = 0x%08x\n",X5H_PHY_DESKEW_CFG_REG,rcsi2_read(priv, X5H_PHY_DESKEW_CFG_REG));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2   (0x%08x) = 0x%08x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(2),rcsi2_read(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2   (0x%08x) = 0x%08x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(2),rcsi2_read(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(2)));
+	printk("CSI2LNKn_TO_HSRX_CFG                                (0x%08x) = 0x%08x\n",TO_HSRX_CFG,rcsi2_read(priv, TO_HSRX_CFG));
+	printk("CSI2LNKn_PHY0_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_0  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_0_RW_CFG_0             (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_0_RW_CFG_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_CFG_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_0_RW_HS_RX_0           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_RX_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_RX_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_0_RW_LP_0              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_0_RW_LP_1              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_0_RW_LP_2              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_1_RW_CFG_0             (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_1_RW_CFG_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_CFG_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_1_RW_HS_RX_0           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_RX_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_RX_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_1_RW_LP_0              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_1_RW_LP_1              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_CLANE_1_RW_LP_2              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_CFG_1             (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_CFG_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_CFG_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_0           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_1           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_2           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_3           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(3),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(3)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_4           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(4),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(4)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_5           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(5),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(5)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_6           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(6),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(6)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_7           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(7),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(7)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_8           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(8),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(8)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_9           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(9),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(9)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_10          (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(10),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(10)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_11          (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(11),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(11)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_12          (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(12),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(12)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_LP_0              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_LP_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_LP_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_0_RW_LP_2              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_0_RW_LP_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_0_RW_LP_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_CFG_1             (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_CFG_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_CFG_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_0           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_1           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_2           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_3           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(3),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(3)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_4           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(4),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(4)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_5           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(5),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(5)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_6           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(6),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(6)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_7           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(7),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(7)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_8           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(8),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(8)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_9           (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(9),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(9)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_10          (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(10),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(10)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_11          (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(11),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(11)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_12          (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(12),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(12)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_LP_0              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_LP_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_LP_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_LP_1              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_LP_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_LP_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_1_RW_LP_2              (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_1_RW_LP_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_1_RW_LP_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_CLK_RW_HS_RX_0         (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_CLK_RW_HS_RX_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_CLK_RW_HS_RX_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_CLK_RW_HS_RX_7         (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_CLK_RW_HS_RX_REG(7),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_CLK_RW_HS_RX_REG(7)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_CLK_RW_LP_0            (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_CLK_RW_LP_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_CLK_RW_LP_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_CLK_RW_LP_1            (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_CLK_RW_LP_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_CLK_RW_LP_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_DLANE_CLK_RW_LP_2            (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_DLANE_CLK_RW_LP_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_DLANE_CLK_RW_LP_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_0      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_1      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_3      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(3),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(3)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_4      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(4),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(4)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_5      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(5),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(5)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_6      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(6),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(6)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_7      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(7),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(7)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_8      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(8),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(8)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_9      (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(9),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(9)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_10     (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(10),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(10)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_11     (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(11),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(11)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_0   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_1   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_3   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(3),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(3)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_4   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(4),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(4)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_5   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(5),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(5)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_6   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(6),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(6)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_7   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(7),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(7)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_8   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(8),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(8)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_9   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(9),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(9)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_10  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(10),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(10)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_11  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(11),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(11)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_12  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(12),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(12)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_13  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(13),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(13)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_14  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(14),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(14)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_15  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(15),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(15)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_16  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(16),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(16)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_0   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_1   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_2   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_3   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(3),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(3)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_4   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(4),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(4)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_5   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(5),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(5)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_6   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(6),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(6)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_7   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(7),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(7)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_8   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(8),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(8)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_9   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(9),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(9)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_10  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(10),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(10)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_11  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(11),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(11)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_12  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(12),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(12)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_13  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(13),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(13)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_14  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(14),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(14)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_15  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(15),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(15)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_16  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(16),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(16)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_0   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_1   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_2   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_3   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(3),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(3)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_4   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(4),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(4)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_5   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(5),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(5)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_6   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(6),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(6)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_7   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(7),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(7)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_8   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(8),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(8)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_9   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(9),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(9)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_10  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(10),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(10)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_11  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(11),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(11)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_12  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(12),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(12)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_13  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(13),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(13)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_14  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(14),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(14)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_15  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(15),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(15)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_16  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(16),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(16)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_0                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_1                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_2                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_3                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(3),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(3)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_4                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(4),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(4)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_5                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(5),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(5)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_6                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(6),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(6)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_7                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(7),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_8                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(8),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(8)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_COMMON_9                  (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_COMMON_REG(9),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(9)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_TRIO0_0                   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_TRIO0_1                   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_TRIO0_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_TRIO0_2                   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_TRIO0_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(2)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_TRIO1_0                   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_TRIO1_1                   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_TRIO1_REG(1),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(1)));
+	printk("CSI2LNKn_PHY0_CORE_DIG_RW_TRIO1_2                   (0x%08x) = 0x%04x\n",X5H_PHY0_CORE_DIG_RW_TRIO1_REG(2),rcsi2_read16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(2)));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_0        (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(0),rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(0)));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_1        (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(1),rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(1)));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_2        (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(2),rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(2)));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_COMMON_BG_0          (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_BG_0_REG,rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_BG_0_REG));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_1 (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_1_REG,rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_1_REG));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_3 (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_3_REG,rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_3_REG));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_HS_RX_0              (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(0),rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(0)));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_HS_RX_1              (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(1),rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(1)));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_HS_RX_2              (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(2),rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(2)));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_HS_RX_3              (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(3),rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(3)));
+	printk("CSI2LNKn_PHY0_PPI_CALIBCTRL_RW_HS_RX_5              (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(5),rcsi2_read16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(5)));
+	printk("CSI2LNKn_PHY0_PPI_RW_CDRCAL_CFG_0                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_CDRCAL_CFG_0_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_CDRCAL_CFG_0_REG));
+	printk("CSI2LNKn_PHY0_PPI_RW_COMMON_CFG                     (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_COMMON_CFG_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_0                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(0),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(0)));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_1                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(1),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(1)));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_2                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(2),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(2)));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_3                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(3),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(3)));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_4                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(4),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(4)));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_5                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(5),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(5)));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_6                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(6),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(6)));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_7                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(7),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(7)));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_8                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(8),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(8)));
+	printk("CSI2LNKn_PHY0_PPI_RW_DDLCAL_CFG_9                   (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(9),rcsi2_read16(priv, X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(9)));
+	printk("CSI2LNKn_PHY0_PPI_RW_LPDCOCAL_COARSE_CFG            (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_LPDCOCAL_COARSE_CFG_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_COARSE_CFG_REG));
+	printk("CSI2LNKn_PHY0_PPI_RW_LPDCOCAL_NREF                  (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_LPDCOCAL_NREF_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_NREF_REG));
+	printk("CSI2LNKn_PHY0_PPI_RW_LPDCOCAL_NREF_RANGE            (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_LPDCOCAL_NREF_RANGE_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_NREF_RANGE_REG));
+	printk("CSI2LNKn_PHY0_PPI_RW_LPDCOCAL_TIMEBASE              (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_LPDCOCAL_TIMEBASE_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_TIMEBASE_REG));
+	printk("CSI2LNKn_PHY0_PPI_RW_LPDCOCAL_TWAIT_CONFIG          (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_LPDCOCAL_TWAIT_CONFIG_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_TWAIT_CONFIG_REG));
+	printk("CSI2LNKn_PHY0_PPI_RW_LPDCOCAL_VT_CONFIG             (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_LPDCOCAL_VT_CONFIG_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_VT_CONFIG_REG));
+	printk("CSI2LNKn_PHY0_PPI_RW_OFFSETCAL_CFG_0                (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_OFFSETCAL_CFG_0_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_OFFSETCAL_CFG_0_REG));
+	printk("CSI2LNKn_PHY0_PPI_RW_TERMCAL_CFG_0                  (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_RW_TERMCAL_CFG_0_REG,rcsi2_read16(priv, X5H_PHY0_PPI_RW_TERMCAL_CFG_0_REG));
+	printk("CSI2LNKn_PHY0_PPI_STARTUP_RW_COMMON_DPHY_10         (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(16),rcsi2_read16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(16)));
+	printk("CSI2LNKn_PHY0_PPI_STARTUP_RW_COMMON_DPHY_2          (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(2),rcsi2_read16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(2)));
+	printk("CSI2LNKn_PHY0_PPI_STARTUP_RW_COMMON_DPHY_6          (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(6),rcsi2_read16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(6)));
+	printk("CSI2LNKn_PHY0_PPI_STARTUP_RW_COMMON_DPHY_7          (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(7),rcsi2_read16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(7)));
+	printk("CSI2LNKn_PHY0_PPI_STARTUP_RW_COMMON_DPHY_8          (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(8),rcsi2_read16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(8)));
+	printk("CSI2LNKn_PHY0_PPI_STARTUP_RW_COMMON_DPHY_A          (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(10),rcsi2_read16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(10)));
+	printk("CSI2LNKn_PHY0_PPI_STARTUP_RW_COMMON_STARTUP_1_1     (0x%08x) = 0x%04x\n",X5H_PHY0_PPI_STARTUP_RW_COMMON_STARTUP_1_1_REG,rcsi2_read16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_STARTUP_1_1_REG));
+	printk("CSI2LNKn_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_16  (0x%08x) = 0x%04x\n",X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(16),rcsi2_read16(priv, X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(16)));
+	printk("CSI2LNKn_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_16  (0x%08x) = 0x%04x\n",X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(16),rcsi2_read16(priv, X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(16)));
+	printk("CSI2LNKn_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_16  (0x%08x) = 0x%04x\n",X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(16),rcsi2_read16(priv, X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(16)));
+
+	printk("\n\r");
+
+	return;
+}
+#endif
 
 static void rcsi2_enter_standby_gen3(struct rcar_csi2 *priv)
 {
@@ -855,9 +1890,14 @@ static void rcsi2_enter_standby(struct rcar_csi2 *priv)
 	if (priv->info->enter_standby)
 		priv->info->enter_standby(priv);
 
-#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
+	clk_disable_unprepare(priv->clk);
+
+#ifdef MDL_CLK_WA
+	;
+#elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 	reset_control_assert(priv->rstc);
 #endif
+
 	usleep_range(100, 150);
 	pm_runtime_put(priv->dev);
 }
@@ -870,9 +1910,18 @@ static int rcsi2_exit_standby(struct rcar_csi2 *priv)
 	if (ret < 0)
 		return ret;
 
-#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
+#ifdef MDL_CLK_WA
+	;
+#elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 	reset_control_deassert(priv->rstc);
 #endif
+
+	ret = clk_prepare_enable(priv->clk);
+	if (ret) {
+		dev_err(priv->dev, "clock prepare failed for clock: %s\n",
+			dev_name(priv->dev));
+		return ret;
+	}
 
 	return 0;
 }
@@ -937,7 +1986,7 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 	u64 mbps;
 
 	/* if (soc_device_match(r8a78000)) */
-	if (1) {
+	if (0) {
 		mbps = 7423000000;
 		do_div(mbps, lanes * 1000000);
 	} else {
@@ -979,7 +2028,7 @@ static int rcsi2_get_active_lanes(struct rcar_csi2 *priv,
 	*lanes = priv->lanes;
 
 	/* if !(soc_device_match(r8a78000)) */
-	if (0) {
+	if (1) {
 		ret = v4l2_subdev_call(priv->remote, pad, get_mbus_config,
 					   priv->remote_pad, &mbus_config);
 		if (ret == -ENOIOCTLCMD) {
@@ -1175,9 +2224,27 @@ static int rcsi2_wait_phy_start_v4h(struct rcar_csi2 *priv, u32 match)
 	return -ETIMEDOUT;
 }
 
+static int rcsi2_wait_phy_start_x5h(struct rcar_csi2 *priv, u32 match)
+{
+	unsigned int timeout;
+	u32 status;
+
+	for (timeout = 0; timeout <= 100; timeout++) {
+		status = rcsi2_read(priv, X5H_ST_PHYST_REG);
+		if ((status & match) == match)
+			return 0;
+
+		usleep_range(1000, 2000);
+	}
+
+	return -ETIMEDOUT;
+}
+
 static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 {
 	const struct rcsi2_cphy_setting *conf;
+	unsigned int i, j;
+	u16 val;
 
 	for (conf = cphy_setting_table_r8a779g0; conf->msps != 0; conf++) {
 		if (conf->msps > msps)
@@ -1198,9 +2265,9 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_LP_0_REG, 0x463c);
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_2_RW_LP_0_REG, 0x463c);
 
-	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_0_RW_HS_RX_REG(0), 0x00d5);
-	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_HS_RX_REG(0), 0x00d5);
-	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_2_RW_HS_RX_REG(0), 0x00d5);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_0_RW_HS_RX_REG(0), 0x0195);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_HS_RX_REG(0), 0x0195);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_2_RW_HS_RX_REG(0), 0x0195);
 
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_0_RW_HS_RX_REG(1), 0x0013);
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_HS_RX_REG(1), 0x0013);
@@ -1224,17 +2291,36 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE3_CTRL_2_REG(2), 0x0001);
 	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE4_CTRL_2_REG(2), 0);
 
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO0_REG(0), conf->trio0);
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO1_REG(0), conf->trio0);
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO2_REG(0), conf->trio0);
+	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO0_REG(0), 0x44a);
+	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO1_REG(0), 0x44a);
+	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO2_REG(0), 0x44a);
 
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO0_REG(2), conf->trio2);
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO1_REG(2), conf->trio2);
-	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO2_REG(2), conf->trio2);
+	/* Write value from LUT to CORE_DIG_RW_TRIO[0-2]_2, [7:0] */
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO0_REG(2), conf->trio2, GENMASK(7, 0));
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO1_REG(2), conf->trio2, GENMASK(7, 0));
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO2_REG(2), conf->trio2, GENMASK(7, 0));
 
 	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO0_REG(1), conf->trio1);
 	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO1_REG(1), conf->trio1);
 	rcsi2_write16(priv, V4H_CORE_DIG_RW_TRIO2_REG(1), conf->trio1);
+
+	/* Write value from LUT to CORE_DIG_RW_TRIO[0-2]_0, [11:9] */
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO0_REG(0), conf->trio0, GENMASK(11, 9));
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO1_REG(0), conf->trio0, GENMASK(11, 9));
+	rcsi2_modify16(priv, V4H_CORE_DIG_RW_TRIO2_REG(0), conf->trio0, GENMASK(11, 9));
+
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_0_RW_LP_0_REG, 0x163c);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_LP_0_REG, 0x163c);
+	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_2_RW_LP_0_REG, 0x163c);
+
+	for (i = 0; i < ARRAY_SIZE(cphy_spec_reg_v4h); i++) {
+		val = conf->lane29;
+		val |= priv->hs_receive_eq[i];
+		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].hs_receive_reg, val,
+			       GENMASK(4, 0));
+		val = conf->lane27;
+		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].ctrl27_reg, val, GENMASK(12, 10));
+	}
 
 	/*
 	 * Configure pin-swap.
@@ -1243,6 +2329,18 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	 */
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_CFG_0_REG, 0xf5);
 	rcsi2_write16(priv, V4H_CORE_DIG_CLANE_1_RW_HS_TX_6_REG, 0x5000);
+	for (i = 0; i < ARRAY_SIZE(cphy_spec_reg_v4h); i++) {
+		val = rcar_csi2_pin_swaps[i].afe_clane_29_b8 << 8;
+		rcsi2_modify16(priv, cphy_spec_reg_v4h[i].pin_swap_reg, val, GENMASK(8, 8));
+		for (j = 0; j < ARRAY_SIZE(rcar_csi2_pin_swaps); j++) {
+			if (priv->pin_swap_rx_order[i] == rcar_csi2_pin_swaps[j].code) {
+				val = rcar_csi2_pin_swaps[j].rw_cfg0_b2_0;
+				val |= rcar_csi2_pin_swaps[j].rw_cfg0_b3 << 3;
+				rcsi2_modify16(priv, cphy_spec_reg_v4h[i].rwconf_reg, val,
+					       GENMASK(3, 0));
+			}
+		}
+	}
 
 	/* Leave Shutdown mode */
 	rcsi2_write(priv, V4H_DPHY_RSTZ_REG, BIT(0));
@@ -1255,8 +2353,7 @@ static int rcsi2_c_phy_setting_v4h(struct rcar_csi2 *priv, int msps)
 	}
 
 	/* C-PHY setting - analog programing*/
-	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(9), conf->lane29);
-	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_2_REG(7), conf->lane27);
+	/* Fix me */
 
 	return 0;
 }
@@ -1267,6 +2364,7 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 	unsigned int lanes;
 	int msps;
 	int ret;
+	u32 read32;
 
 	/* Calculate parameters */
 	format = rcsi2_code_to_fmt(priv->mf.code);
@@ -1287,7 +2385,16 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 	rcsi2_write(priv, V4H_PHY_SHUTDOWNZ_REG, 0);
 
 	/* PHY static setting */
-	rcsi2_write(priv, V4H_PHY_EN_REG, BIT(0));
+	read32 = rcsi2_read(priv, V4H_PHY_EN_REG);
+	rcsi2_write(priv, V4H_PHY_EN_REG, read32 | (V4H_PHY_ENABLE_DCK | V4H_PHY_ENABLE_0
+				| V4H_PHY_ENABLE_1 | V4H_PHY_ENABLE_2));
+	read32 = rcsi2_read(priv, V4H_FRXM_REG);
+	rcsi2_write(priv, V4H_FRXM_REG, read32 | (V4H_FRXM_FORCERXMODE_DCK | V4H_FRXM_FORCERXMODE_0
+				| V4H_FRXM_FORCERXMODE_1 | V4H_FRXM_FORCERXMODE_2));
+	read32 = rcsi2_read(priv, V4H_OVR1_REG);
+	rcsi2_write(priv, V4H_OVR1_REG, read32 | (V4H_OVR1_forcerxmode_dck | V4H_OVR1_forcerxmode_0
+				| V4H_OVR1_forcerxmode_1 | V4H_OVR1_forcerxmode_2));
+
 	rcsi2_write(priv, V4H_FLDC_REG, 0);
 	rcsi2_write(priv, V4H_FLDD_REG, 0);
 	rcsi2_write(priv, V4H_IDIC_REG, 0);
@@ -1299,6 +2406,8 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 
 	/* Registers static setting through APB */
 	/* Common setting */
+	rcsi2_write16(priv, V4H_PPI_STARTUP_RW_COMMON_DPHY_REG(10), 0x0030);
+	rcsi2_write16(priv, V4H_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(2), 0x1444);
 	rcsi2_write16(priv, V4H_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(0), 0x1bfd);
 	rcsi2_write16(priv, V4H_PPI_STARTUP_RW_COMMON_STARTUP_1_1_REG, 0x0233);
 	rcsi2_write16(priv, V4H_PPI_STARTUP_RW_COMMON_DPHY_REG(6), 0x0027);
@@ -1313,6 +2422,18 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 	rcsi2_write16(priv, V4H_PPI_RW_LPDCOCAL_COARSE_CFG_REG, 0x0105);
 	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(6), 0x1000);
 	rcsi2_write16(priv, V4H_PPI_RW_COMMON_CFG_REG, 0x0003);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(0), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(1), 0x0400);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(3), 0x41F6);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(0), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(3), 0x43F6);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(6), 0x3000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(7), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(6), 0x3000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(7), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(6), 0x7000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(7), 0x0000);
+	rcsi2_write16(priv, V4H_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_2_REG(5), 0x4000);
 
 	/* C-PHY settings */
 	ret = rcsi2_c_phy_setting_v4h(priv, msps);
@@ -1321,7 +2442,314 @@ static int rcsi2_start_receiver_v4h(struct rcar_csi2 *priv)
 
 	rcsi2_wait_phy_start_v4h(priv, V4H_ST_PHYST_ST_STOPSTATE_0 |
 				 V4H_ST_PHYST_ST_STOPSTATE_1 |
-				 V4H_ST_PHYST_ST_STOPSTATE_2);
+				 V4H_ST_PHYST_ST_STOPSTATE_2 |
+				 V4H_ST_PHYST_ST_STOPSTATE_DCK);
+
+	read32 = rcsi2_read(priv, V4H_FRXM_REG);
+	rcsi2_write(priv, V4H_FRXM_REG, read32 & ~(V4H_FRXM_FORCERXMODE_DCK | V4H_FRXM_FORCERXMODE_0
+				| V4H_FRXM_FORCERXMODE_1 | V4H_FRXM_FORCERXMODE_2));
+
+	return 0;
+}
+
+static int rcsi2_c_phy_setting_x5h(struct rcar_csi2 *priv, int msps)
+{
+	const struct rcsi2_msps_lut *conf;
+	for (conf = rcsi2_msps_cphy_spec_lut_r8a78000; conf->msps != 0; conf++) {
+		if (conf->msps > msps)
+			break;
+	}
+
+	/* C-PHY specific */
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), 0x15,
+		X5H_LANE2_HSRX_WORD_CLK_SEL_GATING_REG |
+		X5H_LANE1_HSRX_WORD_CLK_SEL_GATING_REG |
+		X5H_LANE0_HSRX_WORD_CLK_SEL_GATING_REG);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(7), 0x0068, X5H_DPHY_DDL_CAL_addr);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(8), 0x0010, X5H_CPHY_DDL_CAL_addr);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(0), (6 << 8), X5H_LP_0_TTAGO_REG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(0), (6 << 8), X5H_LP_0_TTAGO_REG);
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_CDRCAL_CFG_0_REG, (4 << 7), X5H_CDRCAL_WAIT);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_CDRCAL_CFG_0_REG, 9, X5H_CDRCAL_START_DELAY); // 20.0MHz
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(0), 1, X5H_HS_CDR_UPDATE_SETTINGS_REG);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(0), 0, X5H_HS_CDR_FEEDBACK_ENABLED_REG);
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(1), 0x0013, X5H_HS_CDR_TIMEBASE_TARGET_REG); // 20.0MHz
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(5), 0x0013, X5H_HS_CDR_INIT_WAIT_TARGET_REG); // 20.0MHz
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(3), 0x000A, X5H_HS_CDR_STUCK_THRESH_REG);
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(2), conf->coarse, X5H_HS_CDR_COARSE_TARGET_REG); // LUT
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(2), 1, X5H_OA_LANE0_SEL_LANE_CFG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(2), 0, X5H_OA_LANE1_SEL_LANE_CFG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(2), 1, X5H_OA_LANE2_SEL_LANE_CFG);
+
+	if ((rcsi2_read16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG) & X5H_GEN2_SEL) != 0) {
+		// gen2sel=1 set to 7
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (7 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (7 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+	} else {
+		if ((rcsi2_read16(priv, X5H_PHY_MODE_CFG_REG) & X5H_PPI_WIDTH) == BIT(17)) {
+			// gen2sel=0 and 32bit set to 7
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (7 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (7 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+		} else {
+			// Otherwise set to 3.
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (3 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (3 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+		}
+	}
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (1 << 3), X5H_DESERIALIZER_DIV_EN_DELAY_THRESH);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (1 << 3), X5H_DESERIALIZER_DIV_EN_DELAY_THRESH);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(2), conf->en_delay_deass, X5H_DESERIALIZER_EN_DELAY_DEASS_THRESH);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(2), conf->en_delay_deass, X5H_DESERIALIZER_EN_DELAY_DEASS_THRESH);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), 2, X5H_DESERIALIZER_DATA_EN_DELAY_THRESH);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), 2, X5H_DESERIALIZER_DATA_EN_DELAY_THRESH);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(1), conf->det_delay, X5H_POST_DET_DELAY_THRESH);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(1), conf->det_delay, X5H_POST_DET_DELAY_THRESH);
+
+	if ((rcsi2_read16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG) & X5H_GEN2_SEL) != 0) {
+		// gen2sel=1 set to 7
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (7 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (7 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+	} else {
+		if ((rcsi2_read16(priv, X5H_PHY_MODE_CFG_REG) & X5H_PPI_WIDTH) == BIT(17)) {
+			// gen2sel=0 and 32bit set to 7
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (6 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (6 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+		} else {
+			// Otherwise set to 1.
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (4 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (4 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+		}
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(0), (1 << 12), X5H_LP_0_ITMINRX_REG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(0), (1 << 12), X5H_LP_0_ITMINRX_REG);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(2), 0, X5H_LP_2_FILTER_INPUT_SAMPLING_REG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(2), 0, X5H_LP_2_FILTER_INPUT_SAMPLING_REG);
+
+	if (msps >= 3500) {
+		// Write 5'd6 if Gen2 Datarates
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_RX_REG(0), 6, X5H_HSACTIVERX_DLY_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_RX_REG(0), 6, X5H_HSACTIVERX_DLY_REG);
+	} else {
+		// Write 5'd12 if Gen1 Datarates
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_RX_REG(0), 12, X5H_HSACTIVERX_DLY_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_RX_REG(0), 12, X5H_HSACTIVERX_DLY_REG);
+	}
+
+	if (msps <= 3500) {
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(6), 0, X5H_HIGHDATARATE_POST_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), 0, X5H_LANE2_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), 0, X5H_LANE1_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), 0, X5H_LANE0_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(6), 0, X5H_POST_DELAY_REG);
+	} else {
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(6), (1 << 6), X5H_HIGHDATARATE_POST_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), (1 << 4), X5H_LANE2_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), (1 << 2), X5H_LANE1_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), (1 << 0), X5H_LANE0_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(6), (1 << 7), X5H_POST_DELAY_REG);
+	}
+
+	return 0;
+}
+
+static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
+{
+	const struct rcsi2_msps_lut *conf;
+	int ret, i, j;
+
+	// T0: preset_n = 1’b0; rst_n = 1’b0; shutdown_n = 1’b0.
+	rcsi2_write(priv, X5H_PHY_EN_REG, 0x0);
+	rcsi2_write(priv, X5H_PHYSET_REG, 0x0);
+	rcsi2_write(priv, X5H_PHY_CTRL_REG, 0x0);
+	rcsi2_modify(priv, X5H_CFGCLKSET_REG, 0x00000127, X5H_CFG_CLK_CKEN | X5H_CFG_CLK_PERIOD);
+
+	// T1: top level static inputs must be set to the desired configuration.
+	rcsi2_modify(priv, X5H_PHYSET_REG, 0x0000004c, X5H_PHY_MODE_IP |
+		X5H_PRESET_N_PHY1 | X5H_PRESET_N);
+	rcsi2_modify(priv, X5H_PHY_CTRL_REG, 0x00001f00, X5H_PHY_ENABLE_DCK_PHY1 |
+		X5H_PHY_ENABLE_DCK | X5H_PHY_ENABLE_3 | X5H_PHY_ENABLE_2 |
+		X5H_PHY_ENABLE_1 | X5H_PHY_ENABLE_0);
+	rcsi2_write(priv, X5H_FORCEPHYMODE_REG, 0x003f0000);
+
+	if(msps >= 3500){
+		rcsi2_write(priv, X5H_RDWIDTH_REG, 0x02020202); // divided by 6.25
+	} else {
+		// In order to accommodate instantaneous cycle to cycle clock jitter,
+		// CPHY max frequency clock is divided by 6.25 when HM is set to 16-bit, and divided by 12.5 when HM is set to 32-bit.
+		rcsi2_write(priv, X5H_RDWIDTH_REG, 0x01010101); // divided by 12.5
+		rcsi2_write(priv, X5H_RDWIDTH_REG, 0x02020202); // divided by 6.25
+	}
+
+	rcsi2_write(priv, X5H_PHY_REGMODE_REG, 0x00000001);
+
+	// T2 CSI2_RESETN/csi2_resetn = 1’b1.
+	rcsi2_modify(priv, X5H_PHY_EN_REG, 0x00000f4c, X5H_PHY_MODE_OVR_EN |
+		X5H_PRESETN_PHY1_OVR_EN | X5H_PRESETN_OVR_EN);
+
+	rcsi2_write(priv, X5H_PHY_MODE_CFG_REG, 0x00010001);
+
+	rcsi2_write(priv, X5H_PHY_DESKEW_CFG_REG, 0x00000002);
+	rcsi2_write(priv, X5H_CSI2_GENERAL_CFG_REG, 0x00000001);
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG, 0x00000000);
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(0), 0x00010810);		// Lane0 Sync Types 0/1
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(1), 0x10081818);		// Lane0 Sync Types 2/3
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(2), 0x01800990);		// Lane1 Sync Types 0/1
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(3), 0x11881998);		// Lane1 Sync Types 2/3
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(4), 0x02400a51);		// Lane2 Sync Types 0/1
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(5), 0x12481a59);		// Lane2 Sync Types 2/3
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(6), 0x03c00bd0);		// Lane3 Sync Types 0/1
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(7), 0x13c81bd8);		// Lane3 Sync Types 2/3
+
+	// T3: Static Register Access
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(16), 0x002F, X5H_PHY_READY_addr); // @Databook
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(0), (63 << 2), X5H_CB_LP_DCO_EN_DLY); // @Databook
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_STARTUP_1_1_REG, 0x0233, X5H_PHY_READY_DLY); // @Databook
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(2), 0x0005, X5H_RCAL_addr); // @Databook
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(6), 0x0027, X5H_LP_DCO_CAL_addr);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_BG_0_REG, 0x01F4, X5H_BG_MAX_COUNTER);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(10), 0x0030, X5H_HIBERNATE_addr);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(0), 0x0000, X5H_ARBT_CAL_PRIOTITY);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(1), 0x000C, X5H_ARBT_CAL_LOCK);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(2), (8 << 8), X5H_ARBT_CALIB_OP_DELTA);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(2), (3 << 4), X5H_ARBT_CALIB_WRITE_DELTA);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(2), (3 << 0), X5H_ARBT_CALIB_READ_DELTA);
+
+	// Data bus width select
+	if(msps >= 3500){
+		rcsi2_modify16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG, 0x000A, X5H_GEN2_SEL | X5H_CFG_CLK_DIV_FACTOR); // LUT
+	} else {
+		rcsi2_modify16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG, 0x0002, X5H_CFG_CLK_DIV_FACTOR); // LUT
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_3_REG, 0x0, X5H_DDL_VT_CAL_EN);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_TERMCAL_CFG_0_REG, 0x0013, X5H_TERMCAL_TIMER); // LUT
+	usleep_range(10, 20);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_OFFSETCAL_CFG_0_REG, 0x0003, X5H_OFFSETCAL_WAIT_THRESH); // LUT
+	usleep_range(10, 20);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_TIMEBASE_REG, 0x004F, X5H_LPCDCOCAL_TIMEBASE); // LUT
+	usleep_range(10, 20);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_NREF_REG, 0x0320, X5H_LPCDCOCAL_NREF);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_NREF_RANGE_REG, 0x001B, X5H_LPCDCOCAL_NREF_RANGE);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_TWAIT_CONFIG_REG, ((127 << 9) + 24),
+		X5H_LPCDCOCAL_TWAIT_PON | X5H_LPCDCOCAL_TWAIT_COARSE); // LUT
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_VT_CONFIG_REG, ((24 << 7) + (27 << 2) + (1 << 1) + 0),
+		X5H_LPCDCOCAL_TWAIT_FINE | X5H_LPCDCOCAL_VT_NREF_RANGE |
+		X5H_LPCDCOCAL_USE_IDEAL_NREF | X5H_LPCDCOCAL_VT_TRACKING_EN); // LUT
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_COARSE_CFG_REG, 1, X5H_NCOARSE_START);
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG, 3, X5H_CFG_CLK_DIV_FACTOR);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0), 0, X5H_OA_CB_HSTX_VCOMM_REG_PON_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1), (1 << 10), X5H_OA_CB_HSTX_VCOMM_REG_PON_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1), 0, X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(3), (1 << 8), X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0), 0, X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(3), (1 << 9), X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(6), (1 << 13), X5H_OA_CB_HSTXLB_DCO_EN_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(7), 0, X5H_OA_CB_HSTXLB_DCO_EN_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(6), (1 << 12), X5H_OA_CB_HSTXLB_DCO_PON_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(7), 0, X5H_OA_CB_HSTXLB_DCO_PON_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(6), (1 << 14), X5H_OA_CB_HSTXLB_DCO_TUNE_CLKDIG_EN_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(7), 0, X5H_OA_CB_HSTXLB_DCO_TUNE_CLKDIG_EN_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(5), 0, X5H_OA_CB_SEL_45OHM_50OHM);
+
+	// Table 4-3 Supported Frequency Ranges – CPHY Mode
+	if(msps >= 3500){
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(11), (1 << 3), X5H_OA_A2D_16_BUS_EN); //LUT
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(0), (1 << 14), X5H_GEN2_SEL_CORE_DIG); //LUT
+	} else {
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(11), 0, X5H_OA_A2D_16_BUS_EN); //LUT
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(0), 0, X5H_GEN2_SEL_CORE_DIG); //LUT
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(3), (3 << 4), X5H_OA_CB_SEL_MPLL_REG_VREF);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(4), (3 << 11), X5H_OA_CB_SEL_VCOMM_PROG);
+
+	/* C-PHY settings */
+	ret = rcsi2_c_phy_setting_x5h(priv, msps);
+	if (ret)
+		return ret;
+
+	// Optional features - Pin swap: ABC -> CAB
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < ARRAY_SIZE(rcar_csi2_pin_swaps_x5h); j++) {
+			if (priv->pin_swap_rx_order[i] == rcar_csi2_pin_swaps_x5h[j].code) {
+				rcsi2_modify16(priv, cphy_pin_swap_reg_x5h[i].lp_reg, rcar_csi2_pin_swaps_x5h[j].lp, X5H_CFG_0_LP_PIN_SWAP_REG);
+				rcsi2_modify16(priv, cphy_pin_swap_reg_x5h[i].hs_reg, (rcar_csi2_pin_swaps_x5h[j].hs << 3), X5H_CFG_0_HS_PIN_SWAP_REG);
+				rcsi2_modify16(priv, cphy_pin_swap_reg_x5h[i].sel_gate_reg, (rcar_csi2_pin_swaps_x5h[j].sel_gate << 6), X5H_CFG_0_LP_PIN_SWAP_REG);
+				rcsi2_modify16(priv, cphy_pin_swap_reg_x5h[i].tx6_reg, (rcar_csi2_pin_swaps_x5h[j].tx6 << 12), X5H_HS_TX_6_PIN_SWAP_REG);
+			}
+		}
+	}
+
+	// Aggregation specific
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0), (1 << 13), X5H_OA_CB_VPCLK_REG_PON_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1), (1 << 13), X5H_OA_CB_VPCLK_REG_PON_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(5), 0, X5H_OA_CB_VPCLK_REG_MODE);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0), (1 << 4), X5H_OA_CB_PON_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1), (1 << 4), X5H_OA_CB_PON_OVR_EN);
+
+	// C-PHY HS Receivers
+	for (conf = rcsi2_msps_hsrx_lut_r8a78000; conf->msps != 0; conf++) {
+		if (conf->msps > msps)
+			break;
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(14), (1 << 14), X5H_OA_LANE0_HSRX_EQUALIZER_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(14), (1 << 14), X5H_OA_LANE1_HSRX_EQUALIZER_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(14), (1 << 14), X5H_OA_LANE2_HSRX_EQUALIZER_OVR_EN);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(10), conf->equal_ovr, X5H_OA_LANE0_HSRX_EQUALIZER_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(10), conf->equal_ovr, X5H_OA_LANE1_HSRX_EQUALIZER_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(10), conf->equal_ovr, X5H_OA_LANE2_HSRX_EQUALIZER_OVR_VAL);
+
+	if (msps >= 3500) {
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(7), (conf->gmode << 14), X5H_OA_LANE0_HSRX_GMODE);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(7), (conf->gmode << 14), X5H_OA_LANE1_HSRX_GMODE);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(7), (conf->gmode << 14), X5H_OA_LANE2_HSRX_GMODE);
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(8), (conf->fbk_cap << 10), X5H_A_LANE0_HSRX_CPHY_CDR_FBK_CAP_PROG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(8), (conf->fbk_cap << 10), X5H_A_LANE1_HSRX_CPHY_CDR_FBK_CAP_PROG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(8), (conf->fbk_cap << 10), X5H_A_LANE2_HSRX_CPHY_CDR_FBK_CAP_PROG);
+
+	// T4: initial programming phase is over and PHY is ready to leave Shutdown Mode .
+	// (SHUTDOWNZ/phy_shutdownz = 1’b1 and DPHY_RSTZ/dphy_rstz = 1’b1).
+	rcsi2_modify(priv, X5H_PHY_CTRL_REG, 0x0033, X5H_PHY_SHUTDOWNZ_PHY1 |
+		X5H_PHY_SHUTDOWNZ | X5H_PHY_RSTZ_PHY1 | X5H_PHY_RSTZ); // [5]:PHY_SHUTDOWN_PHY1_N [4]:PHY_SHUTDOWN_N [1]:PHY_RSTZ_PHY1 [0]:PHY_RSTZ
+	usleep_range(1000, 2000);
+
+	// T5: internal calibrations ongoing. No configurations are accepted during power-on-reset (POR). phy_ready asserts to signal that POR is complete.
+	if (rcsi2_wait_phy_start_x5h(priv, X5H_ST_PHY_READY)) {
+		dev_err(priv->dev, "PHY calibration failed\n");
+		return -ETIMEDOUT;
+	}
+
+	// T6: T6: dynamic register fields can be programmed/read through APB (these register fields can be found in Chapter 10.3, “Dynamic Register Access”).
+	// No registers to program.
+
+	// T7: wait for stopstate_N assertion. (see register ST_PHYST)
+	if (rcsi2_wait_phy_start_x5h(priv, X5H_ST_STOPSTATE_0 |
+				 X5H_ST_STOPSTATE_1 |
+				 X5H_ST_STOPSTATE_2 |
+				 X5H_ST_STOPSTATE_3 |
+				 X5H_ST_STOPSTATE_DCK)) {
+		dev_err(priv->dev, "PHY stopstate_N assertion failed\n");
+		return -ETIMEDOUT;
+	}
+
+	// T8: de-assert forcerxmode_N. (see register CSI2LNKn_FORCEPHYMODE)
+	rcsi2_write(priv, X5H_FORCEPHYMODE_REG, 0x0);
 
 	return 0;
 }
@@ -1331,12 +2759,6 @@ static int rcsi2_start_receiver_x5h(struct rcar_csi2 *priv)
 	const struct rcar_csi2_format *format;
 	int msps, ret;
 	unsigned int lanes;
-	bool bBypassMode = true;
-	bool bExcludeSP = false;
-	bool bEnableVCFilter = false;
-	unsigned int nVCtoFilter = 0;
-	bool bEnableDTFilter = false;
-	unsigned int nDTtoFilter = 0;
 
 	/* Calculate parameters */
 	format = rcsi2_code_to_fmt(priv->mf.code);
@@ -1353,26 +2775,21 @@ static int rcsi2_start_receiver_x5h(struct rcar_csi2 *priv)
 	rcsi2_modify(priv, PWR_UP, 0x0, PWR_UP_BIT);
 
 	/* 2. PHY Programming */
-	rcsi2_modify(priv, PHY_MODE_CFG, priv->info->support_dphy ? 1 : 0, PHY_MODE_BIT);
-	rcsi2_modify(priv, PHY_MODE_CFG, format->bpp, PPI_WIDTH);
-
-	rcsi2_modify(priv, PHY_DESKEW_CFG, 0x0, DESKEW_SYS_CYCLES);
-
 	/* 3. CSI-2 Programming */
+	#ifndef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+		/* C-PHY settings */
+		ret = rcsi2_startup_sequence_x5h(priv, msps);
+		if (ret)
+			return ret;
+	#endif
 
 	/* 4. (Optional) CSE programming */
 
 	/* 5. (Optional) IPI Programming */
 
 	/* 6. SDI Programming */
-	rcsi2_modify(priv, SDI_CFG, 0x1, SDI_ENABLE);
-	rcsi2_modify(priv, SDI_CFG, bBypassMode ? 0 : 1, SDI_ENCODE_MODE);
-
-	rcsi2_modify(priv, SDI_FILTER_CFG, bEnableVCFilter ? 1 : 0, SDI_SELECT_VC_EN);
-	rcsi2_modify(priv, SDI_FILTER_CFG, nVCtoFilter, SDI_SELECT_VC);
-	rcsi2_modify(priv, SDI_FILTER_CFG, bEnableDTFilter ? 1 : 0, SDI_SELECT_DT_EN);
-	rcsi2_modify(priv, SDI_FILTER_CFG, nDTtoFilter, SDI_SELECT_DT);
-	rcsi2_modify(priv, SDI_FILTER_CFG, bExcludeSP ? 1 : 0, SDI_EXCLUDE_SP);
+	rcsi2_modify(priv, X5H_SDI_CFG_REG, 1, SDI_ENABLE);
+	rcsi2_write(priv, X5H_SDI_FILTER_CFG_REG, 0x00000000);
 
 	/* 7. Interrupt mask (INT_UNMASK_<group>) programming */
 	rcsi2_modify(priv, INT_UNMASK_CSI2, 0x1, UNMASK_HDR_FATAL_ERR_IRQ);
@@ -1402,22 +2819,40 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 	if (ret < 0)
 		return ret;
 
+#ifndef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	v4l2_subdev_call(priv->remote, video, enable_link, 0);
+#endif
+
 	ret = priv->info->start_receiver(priv);
 	if (ret) {
 		rcsi2_enter_standby(priv);
 		return ret;
 	}
 
-	/* if (soc_device_match(r8a78000)) */
-	if (1)
-		ret = csi2cam_start(priv->cam, priv->mf.width, priv->mf.height, priv->mf.code);
-	else
-		ret = v4l2_subdev_call(priv->remote, video, s_stream, 1);
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	ret = csi2cam_start(priv->cam, priv->mf.width, priv->mf.height, priv->mf.code);
+#else
+	ret = v4l2_subdev_call(priv->remote, video, s_stream, 1);
+	if (ret) {
+		rcsi2_enter_standby(priv);
+		return ret;
+	}
+
+	ret = v4l2_subdev_call(priv->remote, video, enable_link, 1);
+	if (ret) {
+		rcsi2_enter_standby(priv);
+		return ret;
+	}
+#endif
 
 	if (ret) {
 		rcsi2_enter_standby(priv);
 		return ret;
 	}
+
+#ifdef DEBUG_REG_DUMP
+	CSI2_REG_Dump(priv);
+#endif
 
 	return 0;
 }
@@ -1426,11 +2861,12 @@ static void rcsi2_stop(struct rcar_csi2 *priv)
 {
 	rcsi2_enter_standby(priv);
 
-	/* if (soc_device_match(r8a78000)) */
-	if (1)
-		csi2cam_stop(priv->cam);
-	else
-		v4l2_subdev_call(priv->remote, video, s_stream, 0);
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	csi2cam_stop(priv->cam);
+#else
+	v4l2_subdev_call(priv->remote, video, enable_link, 0);
+	v4l2_subdev_call(priv->remote, video, s_stream, 0);
+#endif
 }
 
 static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
@@ -1441,7 +2877,7 @@ static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
 	mutex_lock(&priv->lock);
 
 	/* if !(soc_device_match(r8a78000)) */
-	if (0) {
+	if (1) {
 		if (!priv->remote) {
 			ret = -ENODEV;
 			goto out;
@@ -1634,7 +3070,7 @@ static int rcsi2_parse_v4l2(struct rcar_csi2 *priv,
 			return -EINVAL;
 		}
 
-		if (priv->lanes != 3) {
+		if (priv->lanes < 3) {
 			dev_err(priv->dev,
 				"Unsupported number of data-lanes for C-PHY: %u\n",
 				priv->lanes);
@@ -1670,9 +3106,12 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 	struct v4l2_fwnode_endpoint v4l2_ep = {
 		.bus_type = V4L2_MBUS_UNKNOWN,
 	};
-	int ret;
+	int ret, rval, i;
+	unsigned int hs_arr[4], order_arr[4];
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	struct device_node *remote_ep;
 	struct platform_device *pdev;
+#endif
 
 
 	ep = fwnode_graph_get_endpoint_by_id(dev_fwnode(priv->dev), 0, 0, 0);
@@ -1694,42 +3133,69 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 		return ret;
 	}
 
-	/* if (soc_device_match(r8a78000)) */
-	if (1) {
-		/* Synopsys CSI-2 Camera */
-		remote_ep = of_graph_get_remote_node(priv->dev->of_node, 0, 0);
-		if (!remote_ep) {
-			pr_err("Failed to find remote endpoint in the device tree\n");
-			return -ENODEV;
-		}
-		dev_dbg(priv->dev, "Found '%pOF'\n", remote_ep);
-
-		pdev = of_find_device_by_node(remote_ep);
-		of_node_put(remote_ep);
-		if (!pdev)
-			return -ENOMEM;
-
-		priv->cam = platform_get_drvdata(pdev);
-		platform_device_put(pdev);
-	} else {
-		fwnode = fwnode_graph_get_remote_endpoint(ep);
-		fwnode_handle_put(ep);
-
-		dev_dbg(priv->dev, "Found '%pOF'\n", to_of_node(fwnode));
-
-		v4l2_async_nf_init(&priv->notifier);
-		priv->notifier.ops = &rcar_csi2_notify_ops;
-
-		asd = v4l2_async_nf_add_fwnode(&priv->notifier, fwnode,
-						   struct v4l2_async_subdev);
-		fwnode_handle_put(fwnode);
-		if (IS_ERR(asd))
-			return PTR_ERR(asd);
-
-		ret = v4l2_async_subdev_nf_register(&priv->subdev, &priv->notifier);
-		if (ret)
-			v4l2_async_nf_cleanup(&priv->notifier);
+#ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	/* Synopsys CSI-2 Camera */
+	remote_ep = of_graph_get_remote_node(priv->dev->of_node, 0, 0);
+	if (!remote_ep) {
+		pr_err("Failed to find remote endpoint in the device tree\n");
+		return -ENODEV;
 	}
+	dev_dbg(priv->dev, "Found '%pOF'\n", remote_ep);
+
+	pdev = of_find_device_by_node(remote_ep);
+	of_node_put(remote_ep);
+	if (!pdev)
+		return -ENOMEM;
+
+	priv->cam = platform_get_drvdata(pdev);
+	platform_device_put(pdev);
+#else
+	if (fwnode_property_present(ep, "hs-receive-eq")) {
+		rval = fwnode_property_read_u32_array(ep, "hs-receive-eq", hs_arr, priv->lanes);
+		if (rval) {
+			dev_err(priv->dev, "Failed to read hs-receive-eq\n");
+			return rval;
+		}
+		for (i = 0; i < priv->lanes; i++)
+			priv->hs_receive_eq[i] = hs_arr[i];
+	} else {
+		/* Witout pin-swap-rx-order, ABC is default order */
+		for (i = 0; i < priv->lanes; i++)
+			priv->hs_receive_eq[i] = 0x4;
+	}
+
+	if (fwnode_property_present(ep, "pin-swap-rx-order")) {
+		rval = fwnode_property_read_u32_array(ep, "pin-swap-rx-order", order_arr, priv->lanes);
+		if (rval) {
+			dev_err(priv->dev, "Failed to read pin-swap-rx-order\n");
+			return rval;
+		}
+		for (i = 0; i < priv->lanes; i++)
+			priv->pin_swap_rx_order[i] = order_arr[i];
+	} else {
+		/* Without pin-swap-rx-order, ABC is default order */
+		for (i = 0; i < priv->lanes; i++)
+			priv->pin_swap_rx_order[i] = ABC;
+	}
+
+	fwnode = fwnode_graph_get_remote_endpoint(ep);
+	fwnode_handle_put(ep);
+
+	dev_dbg(priv->dev, "Found '%pOF'\n", to_of_node(fwnode));
+
+	v4l2_async_nf_init(&priv->notifier);
+	priv->notifier.ops = &rcar_csi2_notify_ops;
+
+	asd = v4l2_async_nf_add_fwnode(&priv->notifier, fwnode,
+					   struct v4l2_async_subdev);
+	fwnode_handle_put(fwnode);
+	if (IS_ERR(asd))
+		return PTR_ERR(asd);
+
+	ret = v4l2_async_subdev_nf_register(&priv->subdev, &priv->notifier);
+	if (ret)
+		v4l2_async_nf_cleanup(&priv->notifier);
+#endif
 
 	return ret;
 }
@@ -2000,11 +3466,21 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 	if (ret)
 		return ret;
 
-#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
+#ifdef MDL_CLK_WA
+	rcar_csi2_module_power_reset();
+	rcar_csi2_module_power_run();
+#elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
 	return PTR_ERR_OR_ZERO(priv->rstc);
 #endif
+
+	priv->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(priv->clk)) {
+		dev_err(priv->dev, "failed to get clock: %s\n",
+			dev_name(priv->dev));
+		return -EPROBE_DEFER;
+	}
 
 	return 0;
 }
@@ -2104,9 +3580,13 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a779g0 = {
 };
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a78000 = {
+#ifdef CONFIG_VIDEO_RCAR_VIN_VDK
+	.start_receiver = rcsi2_start_receiver_x5h_vdk,
+#else
 	.start_receiver = rcsi2_start_receiver_x5h,
+#endif
 	.use_isp = true,
-	.support_dphy = true,
+	.support_cphy = true,
 };
 
 static const struct of_device_id rcar_csi2_of_table[] = {
