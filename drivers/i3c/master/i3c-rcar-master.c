@@ -320,23 +320,6 @@
 #define XFER_TIMEOUT		(msecs_to_jiffies(1000))
 #define NTDTBP0_DEPTH		32
 
-/* Hardcoded for enable module clock */
-#define MDLC_BASE		0xC05D0000
-#define R8A78000_I3C_PDID		(0)
-#define R8A78000_I3C_CLK_MASK(n)	GENMASK((n) + 1, n)
-#define R8A78000_I3C_CLK_SHIFT(n)	(n)
-
-#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
-#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
-
-#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
-#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
-#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
-#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
-
-#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
-
 enum i3c_internal_state {
 	I3C_INTERNAL_STATE_DISABLED,
 	I3C_INTERNAL_STATE_MASTER_IDLE,
@@ -1552,49 +1535,6 @@ static const struct i3c_master_controller_ops rcar_i3c_master_ops = {
 	.detach_i2c_dev = rcar_i3c_master_detach_i2c_dev,
 };
 
-static void r8a78000_i3c_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
-{
-	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
-	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
-	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
-	u32 val;
-
-	writel(0xA5A5A501, unlock);
-
-	if ((readl(msress) & R8A78000_I3C_CLK_MASK(pos)) == (mode <<
-								 R8A78000_I3C_CLK_SHIFT(pos)))
-			goto unmap;
-
-	while ((readl(msress) & R8A78000_I3C_CLK_MASK(pos)) != (readl(msres) &
-								    R8A78000_I3C_CLK_MASK(pos)))
-			udelay(1000);
-
-	val = readl(msres);
-	val &= ~R8A78000_I3C_CLK_MASK(pos);
-	val |= mode << R8A78000_I3C_CLK_SHIFT(pos);
-	writel(val, msres);
-
-	while ((readl(msress) & R8A78000_I3C_CLK_MASK(pos)) != (readl(msres) &
-								    R8A78000_I3C_CLK_MASK(pos)))
-			udelay(1000);
-
-unmap:
-	iounmap(unlock);
-	iounmap(msress);
-	iounmap(msres);
-}
-
-static void r8a78000_i3c_module_run(void)
-{
-	r8a78000_i3c_module_standby_set(4, 24, 0x1);
-	r8a78000_i3c_module_standby_set(4, 26, 0x1);
-	r8a78000_i3c_module_standby_set(4, 28, 0x1);
-	udelay(1000);
-	r8a78000_i3c_module_standby_set(4, 24, 0x3);
-	r8a78000_i3c_module_standby_set(4, 26, 0x3);
-	r8a78000_i3c_module_standby_set(4, 28, 0x3);
-}
-
 static int rcar_i3c_master_probe(struct platform_device *pdev)
 {
 	struct rcar_i3c_master *master;
@@ -1604,7 +1544,13 @@ static int rcar_i3c_master_probe(struct platform_device *pdev)
 	if (!master)
 		return -ENOMEM;
 
-	r8a78000_i3c_module_run();
+	master->pclk = devm_clk_get(&pdev->dev, "pclk");
+	if (IS_ERR(master->pclk))
+		return PTR_ERR(master->pclk);
+
+	master->tclk = devm_clk_get(&pdev->dev, "tclk");
+	if (IS_ERR(master->tclk))
+		return PTR_ERR(master->tclk);
 
 	master->regs = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(master->regs))
@@ -1616,6 +1562,14 @@ static int rcar_i3c_master_probe(struct platform_device *pdev)
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
 		return irq;
+
+	ret = clk_prepare_enable(master->pclk);
+	if (ret)
+		goto err_disable_pclk;
+
+	ret = clk_prepare_enable(master->tclk);
+	if (ret)
+		goto err_disable_tclk;
 
 	ret = devm_request_irq(&pdev->dev, irq, rcar_i3c_master_irq_handler, 0,
 			       dev_name(&pdev->dev), master);
@@ -1640,6 +1594,8 @@ static int rcar_i3c_master_probe(struct platform_device *pdev)
 
 err_disable_tclk:
 	clk_disable_unprepare(master->tclk);
+err_disable_pclk:
+	clk_disable_unprepare(master->pclk);
 
 	return ret;
 }
