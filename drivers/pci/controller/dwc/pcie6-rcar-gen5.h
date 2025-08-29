@@ -52,6 +52,7 @@
 #define	PCIEG6_PMD_RX_OVRDVAL_3(x)	(0xC400 + (x)*0x400 + 0x2CC)
 #define	PCIEG6_PMD_TX_OVRDVAL_0(x)	(0xE800 + (x)*0x200 + 0x0E0)
 
+#define	PCIEG6_PF0_PHY_CONTROL_OFF		0x814
 #define	PCIEG6_PF0_GEN3_RELATED_OFF		0x890
 #define	PCIEG6_PF0_GEN3_EQ_LOCAL_FS_LF_OFF	0x894
 #define	PCIEG6_PF0_GEN3_EQ_PSET_COEF_MAP_0	0x898
@@ -103,11 +104,6 @@ void rcar_gen5_pcie6_module_run(struct dw_pcie6 *pci);
 int rcar_gen5_pcie6_get_link_speed(struct device_node *node);
 void rcar_gen5_pcie6_set_max_link_width(struct rcar_pcie6 *rcar_pcie6, int num_lanes);
 void rcar_gen5_pcie6_refclk_phy1(struct rcar_pcie6 *rcar_pcie6, int num_lanes);
-void rcar_gen5_pcie6_ltssm_enable(struct rcar_pcie6 *rcar_pcie6, bool enable);
-void rcar_gen5_pcie6_retrain_link(struct dw_pcie6 *pci);
-void rcar_gen5_pcie6_check_speed(struct dw_pcie6 *pci);
-int rcar_gen5_pcie6_link_up(struct dw_pcie6 *pci);
-int rcar_gen5_pcie6_start_link(struct dw_pcie6 *pci);
 void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 channel);
 int rcar_gen5_pcie6_monitor_pmd(struct rcar_pcie6 *rcar_pcie6);
 void rcar_gen5_pcie6_txpreset_coef_mapping(struct dw_pcie6 *pci);

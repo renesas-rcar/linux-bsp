@@ -16,6 +16,29 @@
 #include "pcie6-rcar-gen5.h"
 #include "pcie6-designware.h"
 
+#include "pcie6-rcar-phy-fw-iccm.h"
+#include "pcie6-rcar-phy-fw-dccm.h"
+
+static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6)
+{
+	u32 i;
+	void __iomem *sram_addr;
+
+	// Write ICCM firmware
+	sram_addr = rcar_pcie6->phy_base + ICCM_OFFSET;
+	for (i = 0; FW_DATA_iccm[i] != END_TABLE_ICCM; i++) {
+		writel(FW_DATA_iccm[i], sram_addr);
+		sram_addr += 4;
+	}
+
+	// Write DCCM firmware
+	sram_addr = rcar_pcie6->phy_base + DCCM_OFFSET;
+	for (i = 0; FW_DATA_dccm[i] != END_TABLE_DCCM; i++) {
+		writel(FW_DATA_dccm[i], sram_addr);
+		sram_addr += 4;
+	}
+}
+
 void __iomem *mdlc_hscs_base = NULL;
 
 inline u32 mdlc_readl(u32 offset)
@@ -319,13 +342,9 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 			val &= ~(BIT(2) | BIT(18));
 			writel(val, rcar_pcie6->base + PCI6CPUCTLSTS);
 		} else {
-			val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-			val |= GENMASK(1, 0);
-			writel(val, rcar_pcie6->base + PCIE6BOOTLC);
-
 			for (int i = 0; i < 1000; i++) {
 				val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-				if ((val & BIT(2)) == BIT(2)) {
+				if ((val & BIT(1)) == 0) {
 					boot_done = true;
 					break;
 				}
@@ -340,13 +359,14 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 					"BootLoader load complete on PCIe6_ch%d\n",
 					channel);
 
-			val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-			val &= ~BIT(1);
-			writel(val, rcar_pcie6->base + PCIE6BOOTLC);
+			rcar_gen5_pcie6_fwupdate(rcar_pcie6);
 
 			val = readl(rcar_pcie6->base + PCI6RESETC);
 			val |= GENMASK(3, 0);
 			writel(val, rcar_pcie6->base + PCI6RESETC);
+
+			dw_pcie6_writel_dbi(pci, PCIEG6_PF0_PHY_CONTROL_OFF, GENMASK(13, 12));
+			dw_pcie6_writel_dbi(pci, PCIEG6_PF0_GEN3_RELATED_OFF, BIT(9));
 
 			val = readl(rcar_pcie6->base + PCI6CPUCTLSTS);
 			val |= BIT(2);
@@ -373,6 +393,10 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 			val = readl(rcar_pcie6->base + PCI6CPUCTLSTS);
 			val &= ~BIT(2);
 			writel(val, rcar_pcie6->base + PCI6CPUCTLSTS);
+
+			val = readl(rcar_pcie6->base + PCI6RESETC);
+			val |= GENMASK(3, 0);
+			writel(val, rcar_pcie6->base + PCI6RESETC);
 		}
 	} else {
 		val = readl(rcar_pcie6->base + PCIE6BOOTLC);
@@ -433,8 +457,8 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 	}
 }
 
-void rcar_gen5_pcie6_ltssm_enable(struct rcar_pcie6 *rcar_pcie6,
-					bool enable)
+static void rcar_gen5_pcie6_ltssm_enable(struct rcar_pcie6 *rcar_pcie6,
+					 bool enable)
 {
 	u32 val;
 
@@ -449,7 +473,7 @@ void rcar_gen5_pcie6_ltssm_enable(struct rcar_pcie6 *rcar_pcie6,
 	writel(val, rcar_pcie6->base + PCIERSTCTRL1);
 }
 
-void rcar_gen5_pcie6_retrain_link(struct dw_pcie6 *pci)
+static void rcar_gen5_pcie6_retrain_link(struct dw_pcie6 *pci)
 {
 	u32 val, lnksta, retries;
 
@@ -468,7 +492,7 @@ void rcar_gen5_pcie6_retrain_link(struct dw_pcie6 *pci)
 	}	
 }
 
-void rcar_gen5_pcie6_check_speed(struct dw_pcie6 *pci)
+static void rcar_gen5_pcie6_check_speed(struct dw_pcie6 *pci)
 {
 	u32 lnkcap, lnksta;
 
@@ -479,7 +503,7 @@ void rcar_gen5_pcie6_check_speed(struct dw_pcie6 *pci)
 		rcar_gen5_pcie6_retrain_link(pci);
 }
 
-int rcar_gen5_pcie6_link_up(struct dw_pcie6 *pci)
+static int rcar_gen5_pcie6_link_up(struct dw_pcie6 *pci)
 {
 	struct rcar_pcie6 *rcar_pcie6 = to_rcar_gen5_pcie6(pci);
 	u32 val, mask;
@@ -487,12 +511,12 @@ int rcar_gen5_pcie6_link_up(struct dw_pcie6 *pci)
 	val = readl(rcar_pcie6->base + PCIEINTSTS0);
 	mask = GENMASK(7, 6);
 
-	//rcar_gen5_pcie6_check_speed(pci);
+	rcar_gen5_pcie6_check_speed(pci);
 
 	return (val & mask) == mask;
 }
 
-int rcar_gen5_pcie6_start_link(struct dw_pcie6 *pci)
+static int rcar_gen5_pcie6_start_link(struct dw_pcie6 *pci)
 {
 	struct rcar_pcie6 *rcar_pcie6 = to_rcar_gen5_pcie6(pci);
 
