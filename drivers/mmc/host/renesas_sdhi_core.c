@@ -95,11 +95,18 @@ static int renesas_sdhi_clk_enable(struct tmio_mmc_host *host)
 	struct mmc_host *mmc = host->mmc;
 	struct renesas_sdhi *priv = host_to_priv(host);
 	int ret;
+	struct clk *clk;
 
 	ret = clk_prepare_enable(priv->clk_cd);
 	ret = clk_prepare_enable(priv->clk);
 	if (ret < 0)
 		return ret;
+
+	/* Use sd_clk when clk-scmi is applied */
+	if (priv->sd_clk)
+		clk = priv->sd_clk;
+	else
+		clk = priv->clk;
 
 	/*
 	 * The clock driver may not know what maximum frequency
@@ -108,13 +115,13 @@ static int renesas_sdhi_clk_enable(struct tmio_mmc_host *host)
 	 * was missing, assume the current frequency is the maximum.
 	 */
 	if (!mmc->f_max)
-		mmc->f_max = clk_get_rate(priv->clk);
+		mmc->f_max = clk_get_rate(clk);
 
 	/*
 	 * Minimum frequency is the minimum input clock frequency
 	 * divided by our maximum divider.
 	 */
-	mmc->f_min = max(clk_round_rate(priv->clk, 1) / 512, 1L);
+	mmc->f_min = max(clk_round_rate(clk, 1) / 512, 1L);
 
 	/* enable 16bit data access on SDBUF as default */
 	renesas_sdhi_sdbuf_width(host, 16);
@@ -131,14 +138,25 @@ static unsigned int renesas_sdhi_clk_update(struct tmio_mmc_host *host,
 	unsigned int new_clock, clkh_shift = 0;
 	unsigned int new_upper_limit;
 	int i;
+	struct clk *clk;
 
+	if (priv->sd_clk) {
+		clk = priv->sd_clk;
+		ref_clk = priv->sd_clk;
+	} else {
+		clk = priv->clk;
+	}
 	/*
 	 * We simply return the current rate if a) we are not on a R-Car Gen2+
 	 * SoC (may work for others, but untested) or b) if the SCC needs its
 	 * clock during tuning, so we don't change the external clock setup.
 	 */
 	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2) || mmc_doing_tune(host->mmc))
-		return clk_get_rate(priv->clk);
+		return clk_get_rate(clk);
+
+	/* Default, rate calculation will be applied for mstp clock.
+	 * In case, clk-scmi is applied, sd_clk will be used instead.
+	 */
 
 	if (priv->clkh) {
 		/* HS400 with 4TAP needs different clock settings */
@@ -182,9 +200,9 @@ static unsigned int renesas_sdhi_clk_update(struct tmio_mmc_host *host,
 	clk_set_rate(ref_clk, best_freq);
 
 	if (priv->clkh)
-		clk_set_rate(priv->clk, best_freq >> clkh_shift);
+		clk_set_rate(clk, best_freq >> clkh_shift);
 
-	return clk_get_rate(priv->clk);
+	return clk_get_rate(clk);
 }
 
 static void renesas_sdhi_set_clock(struct tmio_mmc_host *host,
@@ -947,6 +965,12 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(priv->clk))
 		return dev_err_probe(&pdev->dev, PTR_ERR(priv->clk), "cannot get clock");
+
+	priv->sd_clk = devm_clk_get(&pdev->dev, "sd_clk");
+	if (IS_ERR(priv->sd_clk)) {
+		dev_warn(&pdev->dev, "cannot get sd_clock.\n");
+		priv->sd_clk = NULL;
+	}
 
 	priv->clkh = devm_clk_get_optional(&pdev->dev, "clkh");
 	if (IS_ERR(priv->clkh))
