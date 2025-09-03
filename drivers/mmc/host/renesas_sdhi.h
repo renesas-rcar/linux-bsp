@@ -66,6 +66,7 @@ struct renesas_sdhi {
 	struct clk *clk;
 	struct clk *clkh;
 	struct clk *clk_cd;
+	struct clk *sd_clk;
 	struct tmio_mmc_data mmc_data;
 	struct tmio_mmc_dma dma_priv;
 	const struct renesas_sdhi_quirks *quirks;
