@@ -5056,6 +5056,45 @@
 			status = "disabled";
 		};
 
+		gsx: gsx@cb000000 {
+			compatible = "renesas,gsx";
+			reg = <0 0xcb000000 0 0x200000>;
+			interrupts = <GIC_SPI 482 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_RGX_JONES0>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_MERCER0>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_MERCER1>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_MERCER2>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_MERCER3>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_TEXAS0>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_TEXAS1>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_SWIFT0>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_SWIFT1>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_SWIFT2>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_SWIFT3>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_JONES1>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_MERCER4>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_MERCER5>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_MERCER6>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_MERCER7>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_TEXAS2>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_TEXAS3>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_SWIFT4>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_SWIFT5>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_SWIFT6>,
+				 <&scmi_clk X5H_CLOCK_ID_RGX_SWIFT7>;
+			clock-names = "rgx_jones0", "rgx_mercer0", "rgx_mercer1", "rgx_mercer2",
+				      "rgx_mercer3", "rgx_texas0", "rgx_texas1", "rgx_swift0",
+				      "rgx_swift1", "rgx_swift2", "rgx_swift3", "rgx_jones1",
+				      "rgx_mercer4", "rgx_mercer5", "rgx_mercer6", "rgx_mercer7",
+				      "rgx_texas2", "rgx_texas3", "rgx_swift4", "rgx_swift5",
+				      "rgx_swift6", "rgx_swift7";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_GPCA0>,
+					<&scmi_devpd X5H_POWER_DOMAIN_ID_GPCA1>,
+					<&scmi_devpd X5H_POWER_DOMAIN_ID_GPCB0>,
+					<&scmi_devpd X5H_POWER_DOMAIN_ID_GPCB1>;
+			status = "disabled";
+		};
+
 		rcar_sound: sound@ec500000 {
 			/*
 			 * #sound-dai-cells is required
