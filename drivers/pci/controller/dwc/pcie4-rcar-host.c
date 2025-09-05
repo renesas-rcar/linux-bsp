@@ -98,7 +98,6 @@ static void rcar_gen5_pcie_ltssm_enable(struct rcar_pcie4 *rcar_pcie4,
 	writel(val, rcar_pcie4->base + PCIERSTCTRL1);
 
 	phy_power_on(rcar_pcie4->phy);
-
 }
 
 static void rcar_gen5_pcie_retrain_link(struct dw_pcie *pci)
@@ -196,56 +195,6 @@ static int rcar_gen5_pcie_set_device_type(struct rcar_pcie4 *rcar_pcie4, bool rc
 
 	return 0;
 }
-
-static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
-{
-	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
-	struct rcar_pcie4 *rcar_pcie4 = to_rcar_gen5_pcie(pci);
-	int ret;
-	u32 val;
-
-	/* Set device type */
-	ret = rcar_gen5_pcie_set_device_type(rcar_pcie4, true);
-	if (ret < 0)
-		return ret;
-
-	dw_pcie_dbi_ro_wr_en(pci);
-
-	/* PCIe Lane Skew off */
-	if (pci->num_lanes < 8) {
-		val = dw_pcie_readl_dbi(pci, 0x714);
-		val |= 0x40;
-		dw_pcie_writel_dbi(pci, 0x714, val);
-	}
-
-	if (IS_ENABLED(CONFIG_PCI_MSI)) {
-		/* Enable MSI interrupt signal */
-		val = readl(rcar_pcie4->base + PCIEINTSTS0EN);
-		val |= MSI_CTRL_INT;
-		writel(val, rcar_pcie4->base + PCIEINTSTS0EN);
-	}
-
-	rcar_gen5_pcie_set_max_link_width(rcar_pcie4, pci->num_lanes);
-
-	val = dw_pcie_readl_dbi(pci, 0x40);
-	val |= BIT(19);
-	dw_pcie_writel_dbi(pci, 0x40, val);
-
-        dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCTL2), 0x30100004);
-
-	dw_pcie_dbi_ro_wr_dis(pci);
-
-	/* PM setting */
-	val = readl(rcar_pcie4->base + PCIEPWRMNGCTRL);
-	val |= GENMASK(11,10) | GENMASK(6,5);
-	writel(val, rcar_pcie4->base + PCIEPWRMNGCTRL);
-
-	return 0;
-}
-
-static const struct dw_pcie_host_ops rcar_gen5_pcie_host_ops = {
-	.host_init = rcar_gen5_pcie_host_init,
-};
 
 static void __iomem *mdlc_hscn_base = NULL;
 
@@ -391,13 +340,12 @@ void rcar_gen5_pcie_module_run(struct dw_pcie *pci)
 	dev_info(pci->dev,"[PCIE] HSCN module powered and running.\n");
 }
 
-static int rcar_gen5_pcie_add_port(struct rcar_pcie4 *rcar_pcie4,
-				 struct platform_device *pdev)
+static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 {
-	struct dw_pcie *pci = rcar_pcie4->pci;
-	struct dw_pcie_rp *pp = &pci->pp;
-	struct device *dev = &pdev->dev;
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct rcar_pcie4 *rcar_pcie4 = to_rcar_gen5_pcie(pci);
 	int ret;
+	u32 val;
 
 	rcar_gen5_pcie_module_run(pci);
 
@@ -415,7 +363,7 @@ static int rcar_gen5_pcie_add_port(struct rcar_pcie4 *rcar_pcie4,
 
 	ret = phy_init(rcar_pcie4->phy);
 	if (ret) {
-		dev_err(dev, "Failed to initialize MP-PHY\n");
+		dev_err(pci->dev, "Failed to initialize MP-PHY\n");
 		return ret;
 	}
 
@@ -424,25 +372,51 @@ static int rcar_gen5_pcie_add_port(struct rcar_pcie4 *rcar_pcie4,
 	if (ret)
 		goto err_clk_disable;
 */
-	pp->irq = platform_get_irq(pdev, 1);
-	if (pp->irq < 0)
-		return pp->irq;
 
-	pp->num_vectors = MAX_MSI_IRQS;
-	pp->ops = &rcar_gen5_pcie_host_ops;
 	pci->ops = &dw_pcie_ops;
 
-	ret = dw_pcie_host_init(pp);
-	if (ret) {
-		dev_err(dev, "Failed to initialize host\n");
+	/* Set device type */
+	ret = rcar_gen5_pcie_set_device_type(rcar_pcie4, true);
+	if (ret < 0)
 		return ret;
+
+	dw_pcie_dbi_ro_wr_en(pci);
+
+	/* PCIe Lane Skew off */
+	if (pci->num_lanes < 8) {
+		val = dw_pcie_readl_dbi(pci, 0x714);
+		val |= 0x40;
+		dw_pcie_writel_dbi(pci, 0x714, val);
 	}
-/*
-err_clk_disable:
-        clk_disable_unprepare(rcar_pcie4->bus_clk);
-*/
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		/* Enable MSI interrupt signal */
+		val = readl(rcar_pcie4->base + PCIEINTSTS0EN);
+		val |= MSI_CTRL_INT;
+		writel(val, rcar_pcie4->base + PCIEINTSTS0EN);
+	}
+
+	rcar_gen5_pcie_set_max_link_width(rcar_pcie4, pci->num_lanes);
+
+	val = dw_pcie_readl_dbi(pci, 0x40);
+	val |= BIT(19);
+	dw_pcie_writel_dbi(pci, 0x40, val);
+
+	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCTL2), 0x30100004);
+
+	dw_pcie_dbi_ro_wr_dis(pci);
+
+	/* PM setting */
+	val = readl(rcar_pcie4->base + PCIEPWRMNGCTRL);
+	val |= GENMASK(11, 10) | GENMASK(6, 5);
+	writel(val, rcar_pcie4->base + PCIEPWRMNGCTRL);
+
 	return 0;
 }
+
+static const struct dw_pcie_host_ops rcar_gen5_pcie_host_ops = {
+	.host_init = rcar_gen5_pcie_host_init,
+};
 
 static int rcar_gen5_pcie_devm_reset_get(struct rcar_pcie4 *rcar_pcie4,
 				  struct device *dev)
@@ -498,6 +472,7 @@ static int rcar_gen5_pcie_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct rcar_pcie4 *rcar_pcie4;
 	struct dw_pcie *pci;
+	struct dw_pcie_rp *pp;
 	int ret;
 
 	rcar_pcie4 = devm_kzalloc(dev, sizeof(*rcar_pcie4), GFP_KERNEL);
@@ -509,7 +484,9 @@ static int rcar_gen5_pcie_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	pci->dev = dev;
-
+	pp = &pci->pp;
+	pp->num_vectors = MAX_MSI_IRQS;
+	pp->ops = &rcar_gen5_pcie_host_ops;
 	rcar_pcie4->pci = pci;
 
 	pm_runtime_enable(pci->dev);
@@ -527,7 +504,13 @@ static int rcar_gen5_pcie_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, rcar_pcie4);
 
-	ret = rcar_gen5_pcie_add_port(rcar_pcie4, pdev);
+	ret = dw_pcie_host_init(pp);
+	if (ret) {
+		dev_err(dev, "Failed to initialize host\n");
+		return ret;
+	}
+
+	return 0;
 
 err_pm_put:
 	pm_runtime_put(dev);
@@ -536,9 +519,56 @@ err_pm_put:
 	return ret;
 }
 
+static int rcar_gen5_pcie_suspend_noirq(struct device *dev)
+{
+	struct rcar_pcie4 *rcar_pcie4 = dev_get_drvdata(dev);
+
+	if (rcar_pcie4->phy) {
+		phy_power_off(rcar_pcie4->phy);
+		phy_exit(rcar_pcie4->phy);
+	}
+
+	clk_disable_unprepare(rcar_pcie4->bus_clk);
+	dev_info(dev, "Renesas PCIe4 glue layer suspended.\n");
+
+	return 0;
+}
+
+static int rcar_gen5_pcie_resume_noirq(struct device *dev)
+{
+	struct rcar_pcie4 *rcar_pcie4 = dev_get_drvdata(dev);
+	struct dw_pcie *pci = rcar_pcie4->pci;
+	struct dw_pcie_rp *pp = &pci->pp;
+	int ret;
+
+	ret = rcar_gen5_pcie_host_init(pp);
+	if (ret)
+		return ret;
+
+	ret = dw_pcie_setup_rc(pp);
+	if (ret)
+		return ret;
+
+	if (!dw_pcie_link_up(pci)) {
+		ret = dw_pcie_start_link(pci);
+		if (ret)
+			return ret;
+	}
+
+	dw_pcie_wait_for_link(pci);
+
+	dev_info(dev, "Renesas PCIe4 glue layer resumed.\n");
+	return 0;
+}
+
 static const struct of_device_id rcar_gen5_pcie_of_match[] = {
 	{ .compatible = "renesas,rcar-gen5-pcie", },
 	{},
+};
+
+static const struct dev_pm_ops rcar_gen5_pcie_dw_pm_ops = {
+	.suspend_noirq = rcar_gen5_pcie_suspend_noirq,
+	.resume_noirq = rcar_gen5_pcie_resume_noirq,
 };
 
 static struct platform_driver pcie4_rcar_gen5_driver = {
@@ -546,6 +576,7 @@ static struct platform_driver pcie4_rcar_gen5_driver = {
 		.name	= "pcie4-rcar",
 		.of_match_table = rcar_gen5_pcie_of_match,
 		.suppress_bind_attrs = true,
+		.pm = &rcar_gen5_pcie_dw_pm_ops,
 	},
 	.probe = rcar_gen5_pcie_probe,
 };
