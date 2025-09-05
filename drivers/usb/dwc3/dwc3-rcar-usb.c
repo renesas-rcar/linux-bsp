@@ -503,10 +503,10 @@ static int __maybe_unused rcar_gen5_usb_suspend(struct device *dev)
 {
 	struct usb_priv *priv = dev_get_drvdata(dev);
 
-	/* Let DWC3 handle suspend first */
-	/* Then handle Renesas-specific suspend */
-	if (priv->usb3_phy)
+	if (priv->usb3_phy) {
 		phy_power_off(priv->usb3_phy);
+		phy_exit(priv->usb3_phy);
+	}
 
 	dev_info(dev, "Renesas USB glue layer suspended\n");
 	return 0;
@@ -517,25 +517,23 @@ static int __maybe_unused rcar_gen5_usb_resume(struct device *dev)
 	struct usb_priv *priv = dev_get_drvdata(dev);
 	int ret;
 
-	/* Handle Renesas-specific resume */
-	if (priv->usb3_phy) {
-		ret = phy_power_on(priv->usb3_phy);
+	usb_module_power_run();
+	usleep_range(10000, 20000);
+
+	if (priv->use_usb3_flow) {
+		/* Chapter 94.3.1.1 Using USB3.1 */
+		ret = rcar_gen5_usb_init_usb31_flow(priv);
 		if (ret) {
-			dev_err(dev, "Failed to power on USB3 PHY: %d\n", ret);
+			dev_err(priv->dev, "Failed to initialize USB3.1 flow: %d\n", ret);
 			return ret;
 		}
-	}
-
-	/* Re-configure registers after resume */
-	if (priv->use_usb3_flow) {
-		ret = rcar_gen5_usb_init_usb31_flow(priv);
 	} else {
+		/* Chapter 94.3.1.2 Using USB2.0 */
 		ret = rcar_gen5_usb_init_usb20_flow(priv);
-	}
-
-	if (ret) {
-		dev_err(dev, "Failed to reinitialize hardware: %d\n", ret);
-		return ret;
+		if (ret) {
+			dev_err(priv->dev, "Failed to initialize USB2.0 flow: %d\n", ret);
+			return ret;
+		}
 	}
 
 	dev_info(dev, "Renesas USB glue layer resumed\n");
