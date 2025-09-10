@@ -24,6 +24,116 @@ struct ufs_rcar_gen5_priv {
 	bool initialized;	/* The hardware needs initialization once */
 };
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE		0xC08F0000
+#define UFS_PDID		(0)
+#define UFS_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define UFS_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MPDG		_MDLC_MPDG(UFS_PDID)
+#define MDLC_MPDGS		_MDLC_MPDGS(UFS_PDID)
+
+#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
+
+static void ufs_module_power_gating_set(u8 pdid, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
+	void __iomem *mpdg = ioremap(_MDLC_MPDG(pdid), 4);
+	void __iomem *mpdgs = ioremap(_MDLC_MPDGS(pdid), 4);
+	void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
+	void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(mpdgs) & 0x3) == mode)
+			goto unmap;
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(0, mpier0);
+	writel(0x1, mpimr0);
+
+	writel(0x1, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(mode, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(mpdg);
+	iounmap(mpdgs);
+	iounmap(mpier0);
+	iounmap(mpimr0);
+}
+
+static void ufs_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(msress) & UFS_CLK_MASK(pos)) == (mode << UFS_CLK_SHIFT(pos)))
+			goto unmap;
+
+	while ((readl(msress) & UFS_CLK_MASK(pos)) != (readl(msres) & UFS_CLK_MASK(pos)))
+			udelay(1000);
+
+	val = readl(msres);
+	val &= ~UFS_CLK_MASK(pos);
+	val |= mode << UFS_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & UFS_CLK_MASK(pos)) != (readl(msres) & UFS_CLK_MASK(pos)))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+static void __maybe_unused ufs0_module_power_reset(void)
+{
+	ufs_module_power_gating_set(0, 0x03);
+	ufs_module_standy_set(6, 0, 0x01);
+}
+
+static void __maybe_unused ufs0_module_power_run(void)
+{
+	ufs_module_power_gating_set(0, 0x03);
+	ufs_module_standy_set(6, 0, 0x03);
+}
+
+static void __maybe_unused ufs1_module_power_reset(void)
+{
+	ufs_module_power_gating_set(1, 0x03);
+	ufs_module_standy_set(6, 2, 0x01);
+}
+
+static void __maybe_unused ufs1_module_power_run(void)
+{
+	ufs_module_power_gating_set(1, 0x03);
+	ufs_module_standy_set(6, 2, 0x03);
+}
+
 static void ufs_rcar_gen5_send_dme_command(struct ufs_hba *hba, u32 cmd,
 					   u32 arg1, u32 arg2, u32 arg3)
 {
@@ -231,6 +341,26 @@ static int ufs_rcar_gen5_suspend(struct ufs_hba *hba, enum ufs_pm_op op,
 
 static int ufs_rcar_gen5_resume(struct ufs_hba *hba, enum ufs_pm_op op)
 {
+
+	struct platform_device *pdev = to_platform_device(hba->dev);
+
+	struct resource *res;
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "phy");
+
+	if (res->start == 0xc0a00000) {
+		ufs0_module_power_reset();
+		udelay(1000);
+		ufs0_module_power_run();
+		udelay(1000);
+	}
+	else {
+		ufs1_module_power_reset();
+		udelay(1000);
+		ufs1_module_power_run();
+		udelay(1000);
+	}
+
 	/* re-initialized again */
 	ufs_rcar_gen5_pre_init(hba);
 
