@@ -188,11 +188,68 @@ static int pcie6_rcar_host_probe(struct platform_device *pdev)
 	if (ret)
 		dev_err(dev, "failed to initialize host\n");
 
+	return 0;
+
 err_pm_put:
 	pm_runtime_put(dev);
 	pm_runtime_disable(dev);
 
 	return ret;
+}
+
+static int rcar_gen5_pcie6_suspend_noirq(struct device *dev)
+{
+	struct rcar_pcie6 *rcar_pcie6 = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(rcar_pcie6->bus_clk);
+	dev_info(dev, "Renesas PCIe6 glue layer suspended.\n");
+
+	return 0;
+}
+
+static int rcar_gen5_pcie6_resume_noirq(struct device *dev)
+{
+	struct rcar_pcie6 *rcar_pcie6 = dev_get_drvdata(dev);
+	struct dw_pcie6 *pci = rcar_pcie6->pci;
+	struct dw_pcie6_rp *pp = &pci->pp;
+	u32 val, ret;
+
+	rcar_gen5_pcie6_module_run(pci);
+
+	ret = clk_prepare_enable(rcar_pcie6->bus_clk);
+	if (ret) {
+		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
+	}
+
+	/* Re-initialize Root Complex */
+	ret = rcar_gen5_pcie6_host_init(pp);
+	if (ret < 0) {
+		dev_err(dev, "Failed to init host: %d\n", ret);
+		return ret;
+	}
+
+	ret = dw_pcie6_setup_rc(pp);
+        if (ret < 0) {
+                dev_err(dev, "Failed to init RC: %d\n", ret);
+                return ret;
+        }
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		val = readl(rcar_pcie6->base + 0x2C0);
+		val |= MSI_CTRL_INT;
+		writel(val, rcar_pcie6->base + 0x2C0);
+	}
+
+	if (!dw_pcie6_link_up(pci)) {
+		ret = dw_pcie6_start_link(pci);
+		if (ret)
+			return ret;
+	}
+
+	dw_pcie6_wait_for_link(pci);
+
+	dev_info(dev, "Renesas PCIe6 glue layer resumed.\n");
+	return 0;
 }
 
 static const struct of_device_id pcie6_rcar_host_of_match[] = {
@@ -202,11 +259,17 @@ static const struct of_device_id pcie6_rcar_host_of_match[] = {
 	{},
 };
 
+static const struct dev_pm_ops rcar_gen5_pcie6_dw_pm_ops = {
+	.suspend_noirq = rcar_gen5_pcie6_suspend_noirq,
+	.resume_noirq = rcar_gen5_pcie6_resume_noirq,
+};
+
 static struct platform_driver pcie6_rcar_host_driver = {
 	.driver = {
 		.name	= "pcie6-rcar",
 		.of_match_table = pcie6_rcar_host_of_match,
 		.suppress_bind_attrs = true,
+		.pm = &rcar_gen5_pcie6_dw_pm_ops,
 	},
 	.probe = pcie6_rcar_host_probe,
 };
