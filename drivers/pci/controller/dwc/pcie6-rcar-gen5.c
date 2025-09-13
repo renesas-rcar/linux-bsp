@@ -361,11 +361,16 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 
 			rcar_gen5_pcie6_fwupdate(rcar_pcie6);
 
+			writel(0x00181FE6, rcar_pcie6->phy_base + 0x20174);
+			writel(0x00181FE6, rcar_pcie6->phy_base + 0x201B4);
+			writel(0x00181FE6, rcar_pcie6->phy_base + 0x201F4);
+			writel(0x00181FE6, rcar_pcie6->phy_base + 0x20234);
+
 			val = readl(rcar_pcie6->base + PCI6RESETC);
 			val |= GENMASK(3, 0);
 			writel(val, rcar_pcie6->base + PCI6RESETC);
 
-			dw_pcie6_writel_dbi(pci, PCIEG6_PF0_PHY_CONTROL_OFF, GENMASK(13, 12));
+			dw_pcie6_writel_dbi(pci, PCIEG6_PF0_PHY_CONTROL_OFF, BIT(15) | GENMASK(13, 12) | BIT(6));
 			dw_pcie6_writel_dbi(pci, PCIEG6_PF0_GEN3_RELATED_OFF, BIT(9));
 
 			val = readl(rcar_pcie6->base + PCI6CPUCTLSTS);
