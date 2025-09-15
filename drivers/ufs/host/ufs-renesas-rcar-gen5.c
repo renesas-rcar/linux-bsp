@@ -222,6 +222,9 @@ static int ufs_rcar_gen5_suspend(struct ufs_hba *hba, enum ufs_pm_op op,
 {
 	struct ufs_rcar_gen5_priv *priv = ufshcd_get_variant(hba);
 
+	if (op == UFS_SYSTEM_PM)
+		ufshcd_set_link_off(hba);
+
 	if (status == PRE_CHANGE)
 		return 0;
 
