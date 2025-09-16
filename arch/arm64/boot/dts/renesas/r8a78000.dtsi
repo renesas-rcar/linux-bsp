@@ -4821,7 +4821,7 @@
 					 0 0 0 4 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&pcie6_bus_clk>;
 			clock-names = "pcie6_bus";
-			max-link-speed = <3>;
+			max-link-speed = <4>;
 			num-lanes = <2>;
 			channel-id = <0>;
 			status = "disabled";
@@ -4844,7 +4844,7 @@
 				     <GIC_SPI 746 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&pcie6_bus_clk>;
 			clock-names = "pcie6_bus";
-			max-link-speed = <3>;
+			max-link-speed = <4>;
 			num-lanes = <2>;
 			channel-id = <0>;
 			status = "disabled";
