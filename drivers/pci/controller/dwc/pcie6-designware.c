@@ -1468,16 +1468,17 @@ static int dw_pcie6_edma_find_chip(struct dw_pcie6 *pci)
 	else
 		val = dw_pcie6_readl_dbi(pci, PCIE_DMA_VIEWPORT_BASE + PCIE_DMA_CTRL);
 
-	if (val == 0xFFFFFFFF && pci->edma.reg_base) {
+	if (val == 0xFFFFFFFF) {
 		pci->edma.mf = EDMA_MF_EDMA_UNROLL;
 
+		if (!pci->edma.reg_base)
+			pci->edma.reg_base = pci->atu_base + PCIE_DMA_UNROLL_BASE;
+
 		val = dw_pcie6_readl_dma(pci, PCIE_DMA_CTRL);
-	} else if (val != 0xFFFFFFFF) {
+	} else {
 		pci->edma.mf = EDMA_MF_EDMA_LEGACY;
 
 		pci->edma.reg_base = pci->dbi_base + PCIE_DMA_VIEWPORT_BASE;
-	} else {
-		return -ENODEV;
 	}
 
 	pci->edma.dev = pci->dev;
