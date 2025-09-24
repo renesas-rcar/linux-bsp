@@ -9,6 +9,7 @@
 #include <linux/bitops.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/firmware.h>
 #include <linux/io.h>
 #include <linux/iopoll.h>
 #include <linux/module.h>
@@ -102,10 +103,11 @@
 	(mode) == PHY_MODE_USB_OTG ? PHY_MODE_USB_OTG : -1)
 
 /* CMNCNT1/2 clock settings */
-#define MPPHY_CMNCNT2_CLK_CH(ch)     (0x30003 << ((ch) * 4))
+#define MPPHY_CMNCNT2_CLK_CH(ch)     (0x30001 << ((ch) * 4))
 
 /* PXREFCLK register value */
-#define MPPHY_PXREFCLK_VAL          0x35
+#define MPPHY_PXREFCLK_VAL		0x35
+#define MPPHY_PXREFCLK_VAL_ETH		0x55
 
 /* PXTXREQ register value */
 #define MPPHY_PXTXREQ_VAL           0x8
@@ -118,6 +120,11 @@
 
 #define HIGH_SPEED		0
 #define SUPER_SPEED_PLUS	1
+
+/* Firmware update */
+#define MPPHY_FW_BASE		0x10000
+#define MPPHY_FW_CH_OFFSET	0x20000
+#define MPPHY_FW_NAME		"rcar_gen5_mp_phy.bin"
 
 struct mp_phy_chan_priv {
 	unsigned int channel_id;
@@ -136,6 +143,7 @@ struct mp_phy_priv {
 	struct reset_control *resets[NUM_OF_MPPHY_RST];
 	struct clk_bulk_data *clks;
 	int num_clks;
+	const struct firmware *fw;
 	struct mp_phy_chan_priv chan[MPPHY_NUM_CHANNELS];
 };
 
@@ -176,45 +184,31 @@ static int mp_phy_reg_wait(void __iomem *base, u32 offs, u32 mask, u32 expected)
 	return ret;
 }
 
+static void mp_phy_update_firmware(struct mp_phy_priv *priv, u32 channel_id)
+{
+	u32 offset = MPPHY_FW_BASE + MPPHY_FW_CH_OFFSET * channel_id;
+	u16 data;
+	int i;
+
+	for (i = 0; i < priv->fw->size; i += 2) {
+		data = priv->fw->data[i];
+		data |= priv->fw->data[i + 1] << 8;
+		writew(data, priv->base + offset + i);
+	}
+}
+
 static int mp_phy_init_ethernet(struct mp_phy_priv *priv, u32 channel_id)
 {
-	u32 cntxt2_val;
+	mp_phy_update_firmware(priv, channel_id);
 
-	cntxt2_val = (channel_id == 0) ? MPPHY_CNTXT2_CH0_VALUE : MPPHY_CNTXT2_VALUE;
-
-	mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, MPPHY_CMNCNT1_CH_MASK(channel_id),
-			   MPPHY_CMNCNT1_ETH_EN(channel_id));
-
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, MPPHY_PCS0REG5_CH(channel_id),
-			   MPPHY_PCS0REG5_CH(channel_id));
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, MPPHY_PCS0REG1_VAL);
-	mp_phy_update_bits(priv->base, MPPHY_PXTEST(channel_id), MPPHY_PXTEST_BIT,
-			   MPPHY_PXTEST_BIT);
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, MPPHY_PCS0REG5_CH(channel_id), 0x0);
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, 0x0);
-	mp_phy_update_bits(priv->base, MPPHY_PXTEST(channel_id), MPPHY_PXTEST_BIT, 0x0);
-
-	/* Set PHY rx/tx reset and sram bypass mode */
 	mp_phy_write(priv->base, MPPHY_PXRXCNT(channel_id), MPPHY_PXRXCNT_RESET_VAL);
-	mp_phy_write(priv->base, MPPHY_PXSRAMCNT(channel_id), MPPHY_PXSRAMCNT_BYPASS);
-	mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id),
-			   MPPHY_PXSRAMCNT_BIT3, MPPHY_PXSRAMCNT_BIT3);
-
-	/* Clock supply settings */
-	mp_phy_update_bits(priv->base, MPPHY_CMNCNT2,
-			   MPPHY_CMNCNT2_CLK_CH(channel_id),
+	mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, MPPHY_CMNCNT2_CLK_CH(channel_id),
 			   MPPHY_CMNCNT2_CLK_CH(channel_id));
-
-	mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(channel_id),
-			   MPPHY_PXREFCLK_VAL, MPPHY_PXREFCLK_VAL);
-
-	/* Release PHY rx/tx reset */
-	mp_phy_write(priv->base, MPPHY_PXRXCNT(channel_id), 0x0);
-
-	/* Setting Context Restore Registers and select PHY2/PHY3 protocol */
-	mp_phy_write(priv->base, MPPHY_PXCNTXT1(channel_id), MPPHY_CNTXT1_VALUE);
-	mp_phy_write(priv->base, MPPHY_PXCNTXT2(channel_id), cntxt2_val);
-	mp_phy_write(priv->base, MPPHY_PXTXREQ(channel_id), MPPHY_PXTXREQ_VAL);
+	mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(channel_id), MPPHY_PXREFCLK_VAL_ETH,
+			   MPPHY_PXREFCLK_VAL_ETH);
+	mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(channel_id), (BIT(9) | BIT(1)), 0);
+	mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(channel_id), (BIT(19) | BIT(3)),
+			   (BIT(19) | BIT(3)));
 
 	return 0;
 }
@@ -238,45 +232,29 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(0), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(0), 0x2020201, 0x2020201);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(0), 0x80004, 0x80004);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT1,
-					   MPPHY_CMNCNT1_CH_MASK(channel_id),
-					   MPPHY_CMNCNT1_PCIE_EN(channel_id));
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000, 0x30000);
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x1, 0x1);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x1, 0x1);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(0), 0x1, 0x1);
 			mp_phy_module_standy_set(6, 8, 0x03);
 			mp_phy_module_standy_set(6, 10, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
-			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(0), 0xF, 0xF);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(0), 0x1, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, 0x10000, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0x3000000, 0x0);
 		}
 		if (channel_id == 1) {
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(2), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(2), 0x2020202, 0x2020202);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(2), 0x8, 0x8);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT1,
-					   MPPHY_CMNCNT1_CH_MASK(channel_id),
-					   MPPHY_CMNCNT1_PCIE_EN(channel_id));
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x3000000, 0x3000000);
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x100, 0x100);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x1, 0x1);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(2), 0x1, 0x1);
 			mp_phy_module_standy_set(6, 12, 0x03);
 			mp_phy_module_standy_set(6, 14, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
-			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(2), 0xF, 0xF);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(2), 0x1, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, 0x10000, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0x3000000, 0x0);
 		}
 		break;
 	case 4:
@@ -287,9 +265,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(1), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(1), 0x2020201, 0x2020202);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(1), 0x8, 0x8);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT1,
-					   MPPHY_CMNCNT1_CH_MASK(channel_id),
-					   MPPHY_CMNCNT1_PCIE_EN(channel_id));
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000, 0x30000);
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x300000, 0x300000);
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x11, 0x11);
@@ -299,20 +274,12 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x1, 0x1);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(0), 0x1, 0x1);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(1), 0x1, 0x1);
 			mp_phy_module_standy_set(6, 8, 0x03);
 			mp_phy_module_standy_set(6, 10, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x202);
-			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(0), 0xF, 0xF);
-			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(1), 0xF, 0xF);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(0), 0x1, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(1), 0x1, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, 0x10000, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0xF000000, 0x0);
 		}
 		if (channel_id == 1) {
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(2), 0x2010002, 0x2010002);
@@ -321,9 +288,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(3), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(3), 0x2020202, 0x2020202);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(3), 0x8, 0x8);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT1,
-					   MPPHY_CMNCNT1_CH_MASK(channel_id),
-					   MPPHY_CMNCNT1_PCIE_EN(channel_id));
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x3000000, 0x3000000);
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000000, 0x30000000);
 			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x100, 0x100);
@@ -333,22 +297,13 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x1, 0x1);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(2), 0x1, 0x1);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(3), 0x1, 0x1);
-
 			mp_phy_module_standy_set(6, 12, 0x03);
 			mp_phy_module_standy_set(6, 14, 0x03);
 
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x202);
-			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(2), 0xF, 0xF);
-			mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(3), 0xF, 0xF);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x0);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(2), 0x1, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PXTEST(3), 0x1, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, 0x10000, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0xF000000, 0x0);
 		}
 		break;
 	case 8:
@@ -365,7 +320,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 		mp_phy_write(priv->base, MPPHY_PXCNTXT2(3), 0x2020202);
 		mp_phy_write(priv->base, MPPHY_PXTXREQ(3), 0x8);
 
-		mp_phy_write(priv->base, MPPHY_CMNCNT1, 0x00000000);
 		mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000, 0x30000);
 		mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x300000, 0x300000);
 		mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x3000000, 0x3000000);
@@ -388,22 +342,10 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x202);
 
-		mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(0), 0xF, 0xF);
-		mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(1), 0xF, 0xF);
-		mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(2), 0xF, 0xF);
-		mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(3), 0xF, 0xF);
-
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x0);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x0);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x0);
-
-		mp_phy_update_bits(priv->base, MPPHY_PXTEST(0), 0x1, 0x0);
-		mp_phy_update_bits(priv->base, MPPHY_PXTEST(1), 0x1, 0x0);
-		mp_phy_update_bits(priv->base, MPPHY_PXTEST(2), 0x1, 0x0);
-		mp_phy_update_bits(priv->base, MPPHY_PXTEST(3), 0x1, 0x0);
-		mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, 0x10000, 0x0);
-		mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0xFF000000, 0x0);
 
 		break;
 	}
@@ -420,20 +362,6 @@ static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 
 	dev_info(priv->dev, "MP-PHY for USB initialization on channel %d\n", channel_id);
 	/* Step 1: Reset once and release the reset */
-	pr_info("%s %d: Before: MPPHY_PCS0REG5: 0x%08x , MPPHY_PCS0REG1: 0x%08x,
-	       MPPHY_P3TEST: 0x%08x\n", __func__, __LINE__, readl(priv->base + MPPHY_PCS0REG5),
-	       readl(priv->base + MPPHY_PCS0REG1), readl(priv->base + MPPHY_PXTEST(channel_id)));
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, MPPHY_PCS0REG5_CH(channel_id),
-			   MPPHY_PCS0REG5_CH(channel_id));
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, MPPHY_PCS0REG1_VAL);
-	mp_phy_update_bits(priv->base, MPPHY_PXTEST(channel_id), MPPHY_PXTEST_BIT,
-			   MPPHY_PXTEST_BIT);
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, MPPHY_PCS0REG5_CH(channel_id), 0x0);
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, 0x0);
-	mp_phy_update_bits(priv->base, MPPHY_PXTEST(channel_id), MPPHY_PXTEST_BIT, 0x0);
-	pr_info("%s %d: After: MPPHY_PCS0REG5:0x%08x,MPPHY_PCS0REG1:0x%08x,
-	       MPPHY_P3TEST:0x%08x\n", __func__, __LINE__, readl(priv->base + MPPHY_PCS0REG5),
-	       readl(priv->base + MPPHY_PCS0REG1), readl(priv->base + MPPHY_PXTEST(channel_id)));
 
 	/* Step 2: Set PHY rx/tx reset and sram bypass mode. */
 	pr_info("%s %d: Before: MPPHY_P3RXCNT:0x%08x,MPPHY_P3SRAMCNT:0x%08x\n",
@@ -474,11 +402,6 @@ static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 	       readl(priv->base + MPPHY_PXCNTXT1(channel_id)),
 	       readl(priv->base + MPPHY_PXCNTXT2(channel_id)),
 	       readl(priv->base + MPPHY_PXTXREQ(channel_id)));
-
-	mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, MPPHY_CMNCNT1_CH_MASK(channel_id),
-			   MPPHY_CMNCNT1_USB_EN(channel_id));
-	pr_info("%s %d: MPPHY_CMNCNT1: 0x%08x\n", __func__, __LINE__,
-		readl(priv->base + MPPHY_CMNCNT1));
 
 	return 0;
 }
@@ -658,7 +581,13 @@ static int mp_phy_late_init(struct phy *phy)
 			break;
 		}
 	} else if (chan->protocol_id == PHY_MODE_ETHERNET) {
-		mp_phy_write(priv->base, MPPHY_PXSRAMCNT(channel_id), SRAM_CONTROL_SET_BIT);
+		mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id), SRAM_EXT_LD_DONE,
+				   SRAM_EXT_LD_DONE);
+		while (1) {
+			data = readl(priv->base + MPPHY_PXRXREQ1(channel_id));
+			if (!(data & BIT(1)))
+				break;
+		}
 	}
 	return 0;
 }
@@ -822,6 +751,61 @@ static struct phy *mp_phy_xlate(struct device *dev, const struct of_phandle_args
 	return phy;
 }
 
+static int mp_phy_pre_init(struct mp_phy_priv *priv)
+{
+	const char *interface_names[MPPHY_NUM_CHANNELS];
+	bool write_cntxt1[MPPHY_NUM_CHANNELS] = { 0 };
+	u32 sramcnt[MPPHY_NUM_CHANNELS];
+	u32 cmncnt1 = 0;
+	int num, i;
+
+	num = of_property_read_string_array(priv->dev->of_node,
+					    "renesas,interface-names",
+					    interface_names,
+					    ARRAY_SIZE(interface_names));
+	if (num < 0)
+		return -EINVAL;
+
+	for (i = 0; i < MPPHY_NUM_CHANNELS; i++) {
+		if (!strcmp(interface_names[i], "pci.0")) {
+			sramcnt[i] = 0x0f;
+		} else if (!strcmp(interface_names[i], "pci.1")) {
+			sramcnt[i] = 0x0f;
+			cmncnt1 |= 0x02 << (i * 8);
+		} else if (!strcmp(interface_names[i], "ethernet")) {
+			sramcnt[i] = 0x00;
+			write_cntxt1[i] = true;
+			cmncnt1 |= 0x01 << (i * 8);
+		} else if (!strcmp(interface_names[i], "usb")) {
+			sramcnt[i] = 0x09;
+			cmncnt1 |= 0x03 << (i * 8);
+		} else {
+			return -EINVAL;
+		}
+	}
+
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0xff000000, 0xffff0000);
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, MPPHY_PCS0REG1_VAL);
+
+	for (i = 0; i < MPPHY_NUM_CHANNELS; i++) {
+		mp_phy_update_bits(priv->base, MPPHY_PXTEST(i),
+				   MPPHY_PXTEST_BIT, MPPHY_PXTEST_BIT);
+		mp_phy_write(priv->base, MPPHY_PXSRAMCNT(i), sramcnt[i]);
+
+		if (write_cntxt1[i]) {
+			mp_phy_write(priv->base, MPPHY_CHAN_BASE(i) + 0x10c, 0x000ff0ff);
+			mp_phy_write(priv->base, MPPHY_PXCNTXT1(i), 0x00180023);
+		}
+		mp_phy_update_bits(priv->base, MPPHY_PXTEST(i), MPPHY_PXTEST_BIT, 0x0);
+	}
+
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, 0x0);
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0xff000000, 0x0);
+	mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, cmncnt1, cmncnt1);
+
+	return 0;
+}
+
 static int mp_phy_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -839,6 +823,10 @@ static int mp_phy_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	priv->dev = dev;
+
+	ret = request_firmware(&priv->fw, MPPHY_FW_NAME, dev);
+	if (ret < 0)
+		return ret;
 
 	/* Get base address from device tree */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -960,6 +948,10 @@ static int mp_phy_probe(struct platform_device *pdev)
 		return PTR_ERR(provider);
 	}
 
+	ret = mp_phy_pre_init(priv);
+	if (ret < 0)
+		return 0;
+
 	dev_info(dev, "Multi-Protocol PHY driver probed successfully\n");
 	return 0;
 }
@@ -992,3 +984,4 @@ module_platform_driver(mp_phy_driver);
 MODULE_AUTHOR("Thanh Quan");
 MODULE_DESCRIPTION("Renesas Multi-Protocol PHY driver");
 MODULE_LICENSE("GPL");
+MODULE_FIRMWARE(MPPHY_FW_NAME);
