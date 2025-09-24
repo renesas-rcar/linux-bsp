@@ -163,7 +163,12 @@ static int c_show(struct seq_file *m, void *v)
 	for_each_online_cpu(i) {
 		struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, i);
 		u32 midr = cpuinfo->reg_midr;
+		u64 mmfr0 = cpuinfo->reg_id_aa64mmfr0;
+		int parange, pa_max;
 
+		parange = cpuid_feature_extract_unsigned_field(mmfr0,
+					ID_AA64MMFR0_EL1_PARANGE_SHIFT);
+		pa_max = id_aa64mmfr0_parange_to_phys_shift(parange);
 		/*
 		 * glibc reads /proc/cpuinfo to determine the number of
 		 * online processors, looking for lines beginning with
@@ -216,7 +221,9 @@ static int c_show(struct seq_file *m, void *v)
 		seq_printf(m, "CPU architecture: 8\n");
 		seq_printf(m, "CPU variant\t: 0x%x\n", MIDR_VARIANT(midr));
 		seq_printf(m, "CPU part\t: 0x%03x\n", MIDR_PARTNUM(midr));
-		seq_printf(m, "CPU revision\t: %d\n\n", MIDR_REVISION(midr));
+		seq_printf(m, "CPU revision\t: %d\n", MIDR_REVISION(midr));
+		seq_printf(m, "address sizes\t: %d bits physical, %llu bits virtual\n\n",
+			   pa_max, vabits_actual);
 	}
 
 	return 0;
