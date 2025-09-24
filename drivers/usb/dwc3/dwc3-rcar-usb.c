@@ -235,6 +235,9 @@ static int rcar_gen5_usb_init_usb31_flow(struct usb_priv *priv)
 	}
 
 	usleep_range(10000, 20000);
+	ret = rcar_gen5_usb_setup_dwc3(priv);
+	if (ret)
+		return ret;
 
 	ret = phy_set_speed(priv->usb3_phy, SUPER_SPEED_PLUS);
 	if (ret) {
@@ -283,6 +286,10 @@ static int rcar_gen5_usb_init_usb20_flow(struct usb_priv *priv)
 		usb_configure_registers(priv);
 	}
 
+	ret = rcar_gen5_usb_setup_dwc3(priv);
+	if (ret)
+		return ret;
+
 	/*
 	 * The datasheet describes initialization procedure without full
 	 * information about the registers. Therefore, the source code is based
@@ -324,11 +331,6 @@ static int rcar_gen5_usb_init_hardware(struct usb_priv *priv)
 			return ret;
 		}
 	}
-
-	/* Parse DWC3 properties and determine USB mode */
-	ret = rcar_gen5_usb_setup_dwc3(priv);
-	if (ret)
-		return ret;
 
 	return ret;
 }
