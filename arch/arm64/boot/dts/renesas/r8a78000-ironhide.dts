@@ -1396,6 +1396,8 @@
 		interrupts = <GIC_SPI 797 IRQ_TYPE_LEVEL_HIGH>;
 		maximum-speed = "super-speed-plus";
 		dr_mode = "host";
+
+		snps,host-vbus-glitches-quirk;
 	};
 };
 
