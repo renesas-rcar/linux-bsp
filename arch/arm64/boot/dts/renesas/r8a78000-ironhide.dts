@@ -936,6 +936,10 @@
 
 &mp_phy {
 	status = "okay";
+
+	renesas,interface-names = "pci.0", "pci.0", "ethernet", "usb";
+	renesas,ref_use_pad = <0x0f>;
+	renesas,ref_repeat_clk_en = <0x00>;
 };
 
 &pfc {
