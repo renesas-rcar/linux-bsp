@@ -183,7 +183,7 @@ r8a78000_eth_pcs_init_ram(struct r8a78000_eth_pcs_channel *channel, struct phy *
 	if (ret)
 		return ret;
 
-	r8a78000_eth_pcs_write32(channel, 0x026c, 0x180, 0x03);
+	r8a78000_eth_pcs_write32(channel->addr, 0x026c, 0x180, 0x03);
 
 	ret = phy_power_on(mpphy);
 	udelay(1000);
@@ -206,10 +206,9 @@ static int r8a78000_eth_pcs_common_setting(struct r8a78000_eth_pcs_channel *chan
 		r8a78000_eth_pcs_write32(channel->addr, 0x001c, 0x300, 0x0001);
 		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x380, 0x2000);
 		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x1f00, 0x0140);
-		r8a78000_eth_pcs_write32(channel->addr, 0x0258, 0x180, 0x0018);
-		r8a78000_eth_pcs_write32(channel->addr, 0x01dc, 0x180, 0x000d);
-		r8a78000_eth_pcs_write32(channel->addr, 0x00f8, 0x180, 0x0016);
-		r8a78000_eth_pcs_write32(channel->addr, 0x0248, 0x180, 0x0016);
+		r8a78000_eth_pcs_write32(channel->addr, 0x00f8, 0x180, 0x0019);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0248, 0x180, 0x001e);
+
 		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x300, 0x0c40);
 
 		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0040, 0x380, GENMASK(4, 2), 0x06 << 2);
@@ -232,10 +231,8 @@ static int r8a78000_eth_pcs_common_setting(struct r8a78000_eth_pcs_channel *chan
 		r8a78000_eth_pcs_write32(channel->addr, 0x001c, 0x300, 0x0000);
 		r8a78000_eth_pcs_write32(channel->addr, 0x001c, 0x380, 0x0000);
 		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x380, 0x2200);
-		r8a78000_eth_pcs_write32(channel->addr, 0x0258, 0x180, 0x0018);
-		r8a78000_eth_pcs_write32(channel->addr, 0x01dc, 0x180, 0x000d);
-		r8a78000_eth_pcs_write32(channel->addr, 0x00f8, 0x180, 0x001b);
-		r8a78000_eth_pcs_write32(channel->addr, 0x0248, 0x180, 0x001b);
+		r8a78000_eth_pcs_write32(channel->addr, 0x00f8, 0x180, 0x0022);
+		r8a78000_eth_pcs_write32(channel->addr, 0x0248, 0x180, 0x0028);
 		r8a78000_eth_pcs_write32(channel->addr, 0x0000, 0x300, 0x0c40);
 
 		ret = r8a78000_eth_pcs_reg_wait(channel, 0x0040, 0x380, GENMASK(4, 2), 0x06 << 2);
