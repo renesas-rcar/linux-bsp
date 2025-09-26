@@ -201,9 +201,19 @@
 /* RSCFDnCFDCmFDCFG */
 #define RCANFD_FDCFG_CLOE		BIT(30)
 #define RCANFD_FDCFG_FDOE		BIT(28)
+#define RCANFD_FDCFG_TDCO		GENMASK(23, 16)
 #define RCANFD_FDCFG_TDCE		BIT(9)
 #define RCANFD_FDCFG_TDCOC		BIT(8)
-#define RCANFD_FDCFG_TDCO(x)		(((x) & 0xff) << 16)
+
+/* RSCFDnCFDCmFDSTS */
+#define RCANFD_FDSTS_SOC		GENMASK(31, 24)
+#define RCANFD_FDSTS_EOC		GENMASK(23, 16)
+#define RCANFD_GEN4_FDSTS_TDCVF		BIT(15)
+#define RCANFD_GEN4_FDSTS_PNSTS		GENMASK(13, 12)
+#define RCANFD_FDSTS_SOCO		BIT(9)
+#define RCANFD_FDSTS_EOCO		BIT(8)
+#define RCANFD_FDSTS_TDCVF		BIT(7)
+#define RCANFD_FDSTS_TDCR		GENMASK(7, 0)
 
 /* RSCFDnCFDRFCCx */
 #define RCANFD_RFCC_RFIM		BIT(12)
@@ -551,6 +561,8 @@
  */
 #define RCANFD_CFFIFO_IDX		0
 
+#define MBIT		1000000U
+
 /* fCAN clock select register settings */
 enum rcar_canfd_fcanclk {
 	RCANFD_CANFDCLK = 0,		/* CANFD clock */
@@ -595,6 +607,7 @@ struct rcar_canfd_global {
 	bool fdmode;			/* CAN FD or Classical CAN only mode */
 	enum rcar_canfd_chip_id chip_id;
 	unsigned long max_channels;
+	const struct can_tdc_const *tdc_const;
 };
 
 /* CAN FD mode nominal rate constants */
@@ -634,6 +647,25 @@ static const struct can_bittiming_const rcar_canfd_bittiming_const = {
 	.brp_min = 1,
 	.brp_max = 1024,
 	.brp_inc = 1,
+};
+
+/* CAN FD Transmission Delay Compensation constants */
+static const struct can_tdc_const rcar_canfd_gen3_tdc_const = {
+	.tdcv_min = 1,
+	.tdcv_max = 128,
+	.tdco_min = 1,
+	.tdco_max = 128,
+	.tdcf_min = 0,	/* Filter window not supported */
+	.tdcf_max = 0,
+};
+
+static const struct can_tdc_const rcar_canfd_gen4_tdc_const = {
+	.tdcv_min = 1,
+	.tdcv_max = 256,
+	.tdco_min = 1,
+	.tdco_max = 256,
+	.tdcf_min = 0,	/* Filter window not supported */
+	.tdcf_max = 0,
 };
 
 /* Helper functions */
@@ -1332,46 +1364,18 @@ static irqreturn_t rcar_canfd_channel_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void rcar_canfd_set_samplepoint(struct net_device *dev)
-{
-	struct rcar_canfd_channel *priv = netdev_priv(dev);
-	u32 ch = priv->channel;
-	u16 tdco;
-	u32 cfg;
-	struct rcar_canfd_global *gpriv = priv->gpriv;
-
-	/* Sample point settings */
-	tdco = 2; /* TDCO = 2Tq */
-
-	/* Transceiver Delay Compensation Offset Configuration */
-	if (gpriv->chip_id == GEN4) {
-		cfg = (RCANFD_FDCFG_TDCE |
-			   RCANFD_FDCFG_TDCO(tdco));
-		rcar_canfd_set_bit(priv->base, RCANFD_V3U_FDCFG(ch), cfg);
-	}
-}
-
-static void rcar_canfd_unset_samplepoint(struct net_device *dev)
-{
-	struct rcar_canfd_channel *priv = netdev_priv(dev);
-	u32 ch = priv->channel;
-	u32 cfg;
-	struct rcar_canfd_global *gpriv = priv->gpriv;
-
-	if (gpriv->chip_id == GEN4) {
-		cfg = RCANFD_FDCFG_TDCE; /* Disable TDC */
-		rcar_canfd_clear_bit(priv->base, RCANFD_V3U_FDCFG(ch), cfg);
-	}
-}
-
 static void rcar_canfd_set_bittiming(struct net_device *dev)
 {
+	u32 mask = RCANFD_FDCFG_TDCO | RCANFD_FDCFG_TDCE | RCANFD_FDCFG_TDCOC;
 	struct rcar_canfd_channel *priv = netdev_priv(dev);
 	const struct can_bittiming *bt = &priv->can.bittiming;
 	const struct can_bittiming *dbt = &priv->can.data_bittiming;
+	const struct can_tdc_const *tdc_const = priv->can.tdc_const;
+	const struct can_tdc *tdc = &priv->can.tdc;
+	u32 cfg, tdcmode = 0, dbitrate;
 	u16 brp, sjw, tseg1, tseg2;
-	u32 cfg;
 	u32 ch = priv->channel;
+	u8 tdco = 0;
 	struct rcar_canfd_global *gpriv = priv->gpriv;
 
 	/* Nominal bit timing settings */
@@ -1403,12 +1407,6 @@ static void rcar_canfd_set_bittiming(struct net_device *dev)
 		tseg1 = dbt->prop_seg + dbt->phase_seg1 - 1;
 		tseg2 = dbt->phase_seg2 - 1;
 
-		/* Set Secondary Sample Point for high baud rate */
-		if (brp == 0 && tseg1 <= 5 && tseg2 == 1)
-			rcar_canfd_set_samplepoint(dev);
-		else
-			rcar_canfd_unset_samplepoint(dev);
-
 		if (gpriv->chip_id == GEN4) {
 			cfg = (RCANFD_V3U_DCFG_DTSEG1(tseg1) |
 			       RCANFD_V3U_DCFG_DBRP(brp) |
@@ -1422,6 +1420,23 @@ static void rcar_canfd_set_bittiming(struct net_device *dev)
 			       RCANFD_DCFG_DSJW(sjw) |
 			       RCANFD_DCFG_DTSEG2(tseg2));
 			rcar_canfd_write(priv->base, RCANFD_F_DCFG(ch), cfg);
+		}
+
+		dbitrate = DIV_ROUND_CLOSEST(dbt->bitrate, MBIT) * MBIT;
+
+		/* Transceiver Delay Compensation */
+		if (dbitrate >= 5000000) {
+			if (priv->can.ctrlmode & CAN_CTRLMODE_TDC_AUTO) {
+				/* TDC enabled, measured + offset */
+				tdcmode = RCANFD_FDCFG_TDCE;
+				tdco = tdc->tdco - 1;
+			} else if (priv->can.ctrlmode & CAN_CTRLMODE_TDC_MANUAL) {
+				/* TDC enabled, offset only */
+				tdcmode = RCANFD_FDCFG_TDCE | RCANFD_FDCFG_TDCOC;
+				tdco = min(tdc->tdcv + tdc->tdco, tdc_const->tdco_max) - 1;
+			}
+			rcar_canfd_update_bit(gpriv->base, RCANFD_V3U_FDCFG(ch), mask,
+					      tdcmode | FIELD_PREP(RCANFD_FDCFG_TDCO, tdco));
 		}
 
 		netdev_dbg(priv->ndev, "drate: brp %u, sjw %u, tseg1 %u, tseg2 %u\n",
@@ -1827,6 +1842,28 @@ static int rcar_canfd_rx_poll(struct napi_struct *napi, int quota)
 	return num_pkts;
 }
 
+static unsigned int rcar_canfd_get_tdcr(struct rcar_canfd_global *gpriv,
+					unsigned int ch)
+{
+	u32 sts = rcar_canfd_read(gpriv->base, RCANFD_F_CFDSTS(ch));
+	u32 tdcr = FIELD_GET(RCANFD_FDSTS_TDCR, sts);
+
+	return tdcr & (gpriv->tdc_const->tdcv_max - 1);
+}
+
+static int rcar_canfd_get_auto_tdcv(const struct net_device *ndev, u32 *tdcv)
+{
+	struct rcar_canfd_channel *priv = netdev_priv(ndev);
+	u32 tdco = priv->can.tdc.tdco;
+	u32 tdcr;
+
+	/* Transceiver Delay Compensation Result */
+	tdcr = rcar_canfd_get_tdcr(priv->gpriv, priv->channel) + 1;
+	*tdcv = tdcr < tdco ? 0 : tdcr - tdco;
+
+	return 0;
+}
+
 static int rcar_canfd_do_set_mode(struct net_device *ndev, enum can_mode mode)
 {
 	int err;
@@ -1891,10 +1928,15 @@ static int rcar_canfd_channel_probe(struct rcar_canfd_global *gpriv, u32 ch,
 		priv->can.bittiming_const = &rcar_canfd_nom_bittiming_const;
 		priv->can.data_bittiming_const =
 			&rcar_canfd_data_bittiming_const;
+		priv->can.tdc_const = &rcar_canfd_gen4_tdc_const;
+		gpriv->tdc_const = &rcar_canfd_gen4_tdc_const;
 
 		/* Controller starts in CAN FD only mode */
 		can_set_static_ctrlmode(ndev, CAN_CTRLMODE_FD);
-		priv->can.ctrlmode_supported = CAN_CTRLMODE_BERR_REPORTING;
+		priv->can.ctrlmode_supported = CAN_CTRLMODE_BERR_REPORTING |
+					       CAN_CTRLMODE_TDC_AUTO |
+					       CAN_CTRLMODE_TDC_MANUAL;
+		priv->can.do_get_auto_tdcv = rcar_canfd_get_auto_tdcv;
 	} else {
 		/* Controller starts in Classical CAN only mode */
 		priv->can.bittiming_const = &rcar_canfd_bittiming_const;

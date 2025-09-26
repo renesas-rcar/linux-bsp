@@ -2,6 +2,7 @@
 /* Copyright (C) 2005 Marc Kleine-Budde, Pengutronix
  * Copyright (C) 2006 Andrey Volkov, Varma Electronics
  * Copyright (C) 2008-2009 Wolfgang Grandegger <wg@grandegger.com>
+ * Copyright (C) 2021 Vincent Mailhol <mailhol.vincent@wanadoo.fr>
  */
 
 #include <linux/module.h>
@@ -57,267 +58,6 @@ u8 can_len2dlc(u8 len)
 	return len2dlc[len];
 }
 EXPORT_SYMBOL_GPL(can_len2dlc);
-
-#ifdef CONFIG_CAN_CALC_BITTIMING
-#define CAN_CALC_MAX_ERROR 50 /* in one-tenth of a percent */
-
-/* Bit-timing calculation derived from:
- *
- * Code based on LinCAN sources and H8S2638 project
- * Copyright 2004-2006 Pavel Pisa - DCE FELK CVUT cz
- * Copyright 2005      Stanislav Marek
- * email: pisa@cmp.felk.cvut.cz
- *
- * Calculates proper bit-timing parameters for a specified bit-rate
- * and sample-point, which can then be used to set the bit-timing
- * registers of the CAN controller. You can find more information
- * in the header file linux/can/netlink.h.
- */
-static int
-can_update_sample_point(const struct can_bittiming_const *btc,
-			unsigned int sample_point_nominal, unsigned int tseg,
-			unsigned int *tseg1_ptr, unsigned int *tseg2_ptr,
-			unsigned int *sample_point_error_ptr)
-{
-	unsigned int sample_point_error, best_sample_point_error = UINT_MAX;
-	unsigned int sample_point, best_sample_point = 0;
-	unsigned int tseg1, tseg2;
-	int i;
-
-	for (i = 0; i <= 1; i++) {
-		tseg2 = tseg + CAN_SYNC_SEG -
-			(sample_point_nominal * (tseg + CAN_SYNC_SEG)) /
-			1000 - i;
-		tseg2 = clamp(tseg2, btc->tseg2_min, btc->tseg2_max);
-		tseg1 = tseg - tseg2;
-		if (tseg1 > btc->tseg1_max) {
-			tseg1 = btc->tseg1_max;
-			tseg2 = tseg - tseg1;
-		}
-
-		sample_point = 1000 * (tseg + CAN_SYNC_SEG - tseg2) /
-			(tseg + CAN_SYNC_SEG);
-		sample_point_error = abs(sample_point_nominal - sample_point);
-
-		if (sample_point <= sample_point_nominal &&
-		    sample_point_error < best_sample_point_error) {
-			best_sample_point = sample_point;
-			best_sample_point_error = sample_point_error;
-			*tseg1_ptr = tseg1;
-			*tseg2_ptr = tseg2;
-		}
-	}
-
-	if (sample_point_error_ptr)
-		*sample_point_error_ptr = best_sample_point_error;
-
-	return best_sample_point;
-}
-
-static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
-			      const struct can_bittiming_const *btc)
-{
-	struct can_priv *priv = netdev_priv(dev);
-	unsigned int bitrate;			/* current bitrate */
-	unsigned int bitrate_error;		/* difference between current and nominal value */
-	unsigned int best_bitrate_error = UINT_MAX;
-	unsigned int sample_point_error;	/* difference between current and nominal value */
-	unsigned int best_sample_point_error = UINT_MAX;
-	unsigned int sample_point_nominal;	/* nominal sample point */
-	unsigned int best_tseg = 0;		/* current best value for tseg */
-	unsigned int best_brp = 0;		/* current best value for brp */
-	unsigned int brp, tsegall, tseg, tseg1 = 0, tseg2 = 0;
-	u64 v64;
-
-	/* Use CiA recommended sample points */
-	if (bt->sample_point) {
-		sample_point_nominal = bt->sample_point;
-	} else {
-		if (bt->bitrate > 800000)
-			sample_point_nominal = 750;
-		else if (bt->bitrate > 500000)
-			sample_point_nominal = 800;
-		else
-			sample_point_nominal = 875;
-	}
-
-	/* tseg even = round down, odd = round up */
-	for (tseg = (btc->tseg1_max + btc->tseg2_max) * 2 + 1;
-	     tseg >= (btc->tseg1_min + btc->tseg2_min) * 2; tseg--) {
-		tsegall = CAN_SYNC_SEG + tseg / 2;
-
-		/* Compute all possible tseg choices (tseg=tseg1+tseg2) */
-		brp = priv->clock.freq / (tsegall * bt->bitrate) + tseg % 2;
-
-		/* choose brp step which is possible in system */
-		brp = (brp / btc->brp_inc) * btc->brp_inc;
-		if (brp < btc->brp_min || brp > btc->brp_max)
-			continue;
-
-		bitrate = priv->clock.freq / (brp * tsegall);
-		bitrate_error = abs(bt->bitrate - bitrate);
-
-		/* tseg brp biterror */
-		if (bitrate_error > best_bitrate_error)
-			continue;
-
-		/* reset sample point error if we have a better bitrate */
-		if (bitrate_error < best_bitrate_error)
-			best_sample_point_error = UINT_MAX;
-
-		can_update_sample_point(btc, sample_point_nominal, tseg / 2,
-					&tseg1, &tseg2, &sample_point_error);
-		if (sample_point_error > best_sample_point_error)
-			continue;
-
-		best_sample_point_error = sample_point_error;
-		best_bitrate_error = bitrate_error;
-		best_tseg = tseg / 2;
-		best_brp = brp;
-
-		if (bitrate_error == 0 && sample_point_error == 0)
-			break;
-	}
-
-	if (best_bitrate_error) {
-		/* Error in one-tenth of a percent */
-		v64 = (u64)best_bitrate_error * 1000;
-		do_div(v64, bt->bitrate);
-		bitrate_error = (u32)v64;
-		if (bitrate_error > CAN_CALC_MAX_ERROR) {
-			netdev_err(dev,
-				   "bitrate error %d.%d%% too high\n",
-				   bitrate_error / 10, bitrate_error % 10);
-			return -EDOM;
-		}
-		netdev_warn(dev, "bitrate error %d.%d%%\n",
-			    bitrate_error / 10, bitrate_error % 10);
-	}
-
-	/* real sample point */
-	bt->sample_point = can_update_sample_point(btc, sample_point_nominal,
-						   best_tseg, &tseg1, &tseg2,
-						   NULL);
-
-	v64 = (u64)best_brp * 1000 * 1000 * 1000;
-	do_div(v64, priv->clock.freq);
-	bt->tq = (u32)v64;
-	bt->prop_seg = tseg1 / 2;
-	bt->phase_seg1 = tseg1 - bt->prop_seg;
-	bt->phase_seg2 = tseg2;
-
-	/* check for sjw user settings */
-	if (!bt->sjw || !btc->sjw_max) {
-		bt->sjw = 1;
-	} else {
-		/* bt->sjw is at least 1 -> sanitize upper bound to sjw_max */
-		if (bt->sjw > btc->sjw_max)
-			bt->sjw = btc->sjw_max;
-		/* bt->sjw must not be higher than tseg2 */
-		if (tseg2 < bt->sjw)
-			bt->sjw = tseg2;
-	}
-
-	bt->brp = best_brp;
-
-	/* real bitrate */
-	bt->bitrate = priv->clock.freq /
-		(bt->brp * (CAN_SYNC_SEG + tseg1 + tseg2));
-
-	return 0;
-}
-#else /* !CONFIG_CAN_CALC_BITTIMING */
-static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
-			      const struct can_bittiming_const *btc)
-{
-	netdev_err(dev, "bit-timing calculation not available\n");
-	return -EINVAL;
-}
-#endif /* CONFIG_CAN_CALC_BITTIMING */
-
-/* Checks the validity of the specified bit-timing parameters prop_seg,
- * phase_seg1, phase_seg2 and sjw and tries to determine the bitrate
- * prescaler value brp. You can find more information in the header
- * file linux/can/netlink.h.
- */
-static int can_fixup_bittiming(struct net_device *dev, struct can_bittiming *bt,
-			       const struct can_bittiming_const *btc)
-{
-	struct can_priv *priv = netdev_priv(dev);
-	int tseg1, alltseg;
-	u64 brp64;
-
-	tseg1 = bt->prop_seg + bt->phase_seg1;
-	if (!bt->sjw)
-		bt->sjw = 1;
-	if (bt->sjw > btc->sjw_max ||
-	    tseg1 < btc->tseg1_min || tseg1 > btc->tseg1_max ||
-	    bt->phase_seg2 < btc->tseg2_min || bt->phase_seg2 > btc->tseg2_max)
-		return -ERANGE;
-
-	brp64 = (u64)priv->clock.freq * (u64)bt->tq;
-	if (btc->brp_inc > 1)
-		do_div(brp64, btc->brp_inc);
-	brp64 += 500000000UL - 1;
-	do_div(brp64, 1000000000UL); /* the practicable BRP */
-	if (btc->brp_inc > 1)
-		brp64 *= btc->brp_inc;
-	bt->brp = (u32)brp64;
-
-	if (bt->brp < btc->brp_min || bt->brp > btc->brp_max)
-		return -EINVAL;
-
-	alltseg = bt->prop_seg + bt->phase_seg1 + bt->phase_seg2 + 1;
-	bt->bitrate = priv->clock.freq / (bt->brp * alltseg);
-	bt->sample_point = ((tseg1 + 1) * 1000) / alltseg;
-
-	return 0;
-}
-
-/* Checks the validity of predefined bitrate settings */
-static int
-can_validate_bitrate(struct net_device *dev, struct can_bittiming *bt,
-		     const u32 *bitrate_const,
-		     const unsigned int bitrate_const_cnt)
-{
-	struct can_priv *priv = netdev_priv(dev);
-	unsigned int i;
-
-	for (i = 0; i < bitrate_const_cnt; i++) {
-		if (bt->bitrate == bitrate_const[i])
-			break;
-	}
-
-	if (i >= priv->bitrate_const_cnt)
-		return -EINVAL;
-
-	return 0;
-}
-
-static int can_get_bittiming(struct net_device *dev, struct can_bittiming *bt,
-			     const struct can_bittiming_const *btc,
-			     const u32 *bitrate_const,
-			     const unsigned int bitrate_const_cnt)
-{
-	int err;
-
-	/* Depending on the given can_bittiming parameter structure the CAN
-	 * timing parameters are calculated based on the provided bitrate OR
-	 * alternatively the CAN timing parameters (tq, prop_seg, etc.) are
-	 * provided directly which are then checked and fixed up.
-	 */
-	if (!bt->tq && bt->bitrate && btc)
-		err = can_calc_bittiming(dev, bt, btc);
-	else if (bt->tq && !bt->bitrate && btc)
-		err = can_fixup_bittiming(dev, bt, btc);
-	else if (!bt->tq && bt->bitrate && bitrate_const)
-		err = can_validate_bitrate(dev, bt, bitrate_const,
-					   bitrate_const_cnt);
-	else
-		err = -EINVAL;
-
-	return err;
-}
 
 static void can_update_state_error_stats(struct net_device *dev,
 					 enum can_state new_state)
@@ -662,7 +402,7 @@ void can_bus_off(struct net_device *dev)
 }
 EXPORT_SYMBOL_GPL(can_bus_off);
 
-static void can_setup(struct net_device *dev)
+void can_setup(struct net_device *dev)
 {
 	dev->type = ARPHRD_CAN;
 	dev->mtu = CAN_MTU;
@@ -809,6 +549,7 @@ EXPORT_SYMBOL_GPL(free_candev);
 int can_change_mtu(struct net_device *dev, int new_mtu)
 {
 	struct can_priv *priv = netdev_priv(dev);
+	u32 ctrlmode_static = can_get_static_ctrlmode(priv);
 
 	/* Do not allow changing the MTU while running */
 	if (dev->flags & IFF_UP)
@@ -818,7 +559,7 @@ int can_change_mtu(struct net_device *dev, int new_mtu)
 	switch (new_mtu) {
 	case CAN_MTU:
 		/* 'CANFD-only' controllers can not switch to CAN_MTU */
-		if (priv->ctrlmode_static & CAN_CTRLMODE_FD)
+		if (ctrlmode_static & CAN_CTRLMODE_FD)
 			return -EINVAL;
 
 		priv->ctrlmode &= ~CAN_CTRLMODE_FD;
@@ -827,7 +568,7 @@ int can_change_mtu(struct net_device *dev, int new_mtu)
 	case CANFD_MTU:
 		/* check for potential CANFD ability */
 		if (!(priv->ctrlmode_supported & CAN_CTRLMODE_FD) &&
-		    !(priv->ctrlmode_static & CAN_CTRLMODE_FD))
+		    !(ctrlmode_static & CAN_CTRLMODE_FD))
 			return -EINVAL;
 
 		priv->ctrlmode |= CAN_CTRLMODE_FD;
@@ -926,6 +667,20 @@ static const struct nla_policy can_policy[IFLA_CAN_MAX + 1] = {
 	[IFLA_CAN_DATA_BITTIMING_CONST]
 				= { .len = sizeof(struct can_bittiming_const) },
 	[IFLA_CAN_TERMINATION]	= { .type = NLA_U16 },
+	[IFLA_CAN_TDC] = { .type = NLA_NESTED },
+	[IFLA_CAN_CTRLMODE_EXT] = { .type = NLA_NESTED },
+};
+
+static const struct nla_policy can_tdc_policy[IFLA_CAN_TDC_MAX + 1] = {
+	[IFLA_CAN_TDC_TDCV_MIN] = { .type = NLA_U32 },
+	[IFLA_CAN_TDC_TDCV_MAX] = { .type = NLA_U32 },
+	[IFLA_CAN_TDC_TDCO_MIN] = { .type = NLA_U32 },
+	[IFLA_CAN_TDC_TDCO_MAX] = { .type = NLA_U32 },
+	[IFLA_CAN_TDC_TDCF_MIN] = { .type = NLA_U32 },
+	[IFLA_CAN_TDC_TDCF_MAX] = { .type = NLA_U32 },
+	[IFLA_CAN_TDC_TDCV] = { .type = NLA_U32 },
+	[IFLA_CAN_TDC_TDCO] = { .type = NLA_U32 },
+	[IFLA_CAN_TDC_TDCF] = { .type = NLA_U32 },
 };
 
 static int can_validate(struct nlattr *tb[], struct nlattr *data[],
@@ -937,6 +692,7 @@ static int can_validate(struct nlattr *tb[], struct nlattr *data[],
 	 * - nominal/arbitration bittiming
 	 * - data bittiming
 	 * - control mode with CAN_CTRLMODE_FD set
+	 * - TDC parameters are coherent (details below)
 	 */
 
 	if (!data)
@@ -944,8 +700,43 @@ static int can_validate(struct nlattr *tb[], struct nlattr *data[],
 
 	if (data[IFLA_CAN_CTRLMODE]) {
 		struct can_ctrlmode *cm = nla_data(data[IFLA_CAN_CTRLMODE]);
+		u32 tdc_flags = cm->flags & CAN_CTRLMODE_TDC_MASK;
 
 		is_can_fd = cm->flags & cm->mask & CAN_CTRLMODE_FD;
+
+		/* CAN_CTRLMODE_TDC_{AUTO,MANUAL} are mutually exclusive */
+		if (tdc_flags == CAN_CTRLMODE_TDC_MASK)
+			return -EOPNOTSUPP;
+		/* If one of the CAN_CTRLMODE_TDC_* flag is set then
+		 * TDC must be set and vice-versa
+		 */
+		if (!!tdc_flags != !!data[IFLA_CAN_TDC])
+			return -EOPNOTSUPP;
+		/* If providing TDC parameters, at least TDCO is
+		 * needed. TDCV is needed if and only if
+		 * CAN_CTRLMODE_TDC_MANUAL is set
+		 */
+		if (data[IFLA_CAN_TDC]) {
+			struct nlattr *tb_tdc[IFLA_CAN_TDC_MAX + 1];
+			int err;
+
+			err = nla_parse_nested(tb_tdc, IFLA_CAN_TDC_MAX,
+					       data[IFLA_CAN_TDC],
+						can_tdc_policy, extack);
+			if (err)
+				return err;
+
+			if (tb_tdc[IFLA_CAN_TDC_TDCV]) {
+				if (tdc_flags & CAN_CTRLMODE_TDC_AUTO)
+					return -EOPNOTSUPP;
+			} else {
+				if (tdc_flags & CAN_CTRLMODE_TDC_MANUAL)
+					return -EOPNOTSUPP;
+			}
+
+			if (!tb_tdc[IFLA_CAN_TDC_TDCO])
+				return -EOPNOTSUPP;
+		}
 	}
 
 	if (is_can_fd) {
@@ -953,10 +744,58 @@ static int can_validate(struct nlattr *tb[], struct nlattr *data[],
 			return -EOPNOTSUPP;
 	}
 
-	if (data[IFLA_CAN_DATA_BITTIMING]) {
+	if (data[IFLA_CAN_DATA_BITTIMING] || data[IFLA_CAN_TDC]) {
 		if (!is_can_fd || !data[IFLA_CAN_BITTIMING])
 			return -EOPNOTSUPP;
 	}
+
+	return 0;
+}
+
+static int can_tdc_changelink(struct can_priv *priv, const struct nlattr *nla,
+			      struct netlink_ext_ack *extack)
+{
+	struct nlattr *tb_tdc[IFLA_CAN_TDC_MAX + 1];
+	struct can_tdc tdc = { 0 };
+	const struct can_tdc_const *tdc_const = priv->tdc_const;
+	int err;
+
+	if (!tdc_const || !can_tdc_is_enabled(priv))
+		return -EOPNOTSUPP;
+
+	err = nla_parse_nested(tb_tdc, IFLA_CAN_TDC_MAX, nla,
+			       can_tdc_policy, extack);
+	if (err)
+		return err;
+
+	if (tb_tdc[IFLA_CAN_TDC_TDCV]) {
+		u32 tdcv = nla_get_u32(tb_tdc[IFLA_CAN_TDC_TDCV]);
+
+		if (tdcv < tdc_const->tdcv_min || tdcv > tdc_const->tdcv_max)
+			return -EINVAL;
+
+		tdc.tdcv = tdcv;
+	}
+
+	if (tb_tdc[IFLA_CAN_TDC_TDCO]) {
+		u32 tdco = nla_get_u32(tb_tdc[IFLA_CAN_TDC_TDCO]);
+
+		if (tdco < tdc_const->tdco_min || tdco > tdc_const->tdco_max)
+			return -EINVAL;
+
+		tdc.tdco = tdco;
+	}
+
+	if (tb_tdc[IFLA_CAN_TDC_TDCF]) {
+		u32 tdcf = nla_get_u32(tb_tdc[IFLA_CAN_TDC_TDCF]);
+
+		if (tdcf < tdc_const->tdcf_min || tdcf > tdc_const->tdcf_max)
+			return -EINVAL;
+
+		tdc.tdcf = tdcf;
+	}
+
+	priv->tdc = tdc;
 
 	return 0;
 }
@@ -966,6 +805,7 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 			  struct netlink_ext_ack *extack)
 {
 	struct can_priv *priv = netdev_priv(dev);
+	u32 tdc_mask = 0;
 	int err;
 
 	/* We need synchronization with dev->stop() */
@@ -983,7 +823,8 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 		 * directly via do_set_bitrate(). Bail out if neither
 		 * is given.
 		 */
-		if (!priv->bittiming_const && !priv->do_set_bittiming)
+		if (!priv->bittiming_const && !priv->do_set_bittiming &&
+		    !priv->bitrate_const)
 			return -EOPNOTSUPP;
 
 		memcpy(&bt, nla_data(data[IFLA_CAN_BITTIMING]), sizeof(bt));
@@ -1019,7 +860,7 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 		if (dev->flags & IFF_UP)
 			return -EBUSY;
 		cm = nla_data(data[IFLA_CAN_CTRLMODE]);
-		ctrlstatic = priv->ctrlmode_static;
+		ctrlstatic = can_get_static_ctrlmode(priv);
 		maskedflags = cm->flags & cm->mask;
 
 		/* check whether provided bits are allowed to be passed */
@@ -1039,10 +880,22 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 		priv->ctrlmode |= maskedflags;
 
 		/* CAN_CTRLMODE_FD can only be set when driver supports FD */
-		if (priv->ctrlmode & CAN_CTRLMODE_FD)
+		if (priv->ctrlmode & CAN_CTRLMODE_FD) {
 			dev->mtu = CANFD_MTU;
-		else
+		} else {
 			dev->mtu = CAN_MTU;
+			memset(&priv->data_bittiming, 0,
+			       sizeof(priv->data_bittiming));
+			priv->ctrlmode &= ~CAN_CTRLMODE_TDC_MASK;
+			memset(&priv->tdc, 0, sizeof(priv->tdc));
+		}
+
+		tdc_mask = cm->mask & CAN_CTRLMODE_TDC_MASK;
+		/* CAN_CTRLMODE_TDC_{AUTO,MANUAL} are mutually
+		 * exclusive: make sure to turn the other one off
+		 */
+		if (tdc_mask)
+			priv->ctrlmode &= cm->flags | ~CAN_CTRLMODE_TDC_MASK;
 	}
 
 	if (data[IFLA_CAN_RESTART_MS]) {
@@ -1073,7 +926,8 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 		 * directly via do_set_bitrate(). Bail out if neither
 		 * is given.
 		 */
-		if (!priv->data_bittiming_const && !priv->do_set_data_bittiming)
+		if (!priv->data_bittiming_const && !priv->do_set_data_bittiming &&
+		    !priv->data_bitrate_const)
 			return -EOPNOTSUPP;
 
 		memcpy(&dbt, nla_data(data[IFLA_CAN_DATA_BITTIMING]),
@@ -1091,6 +945,25 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 			return -EINVAL;
 		}
 
+		memset(&priv->tdc, 0, sizeof(priv->tdc));
+		if (data[IFLA_CAN_TDC]) {
+			/* TDC parameters are provided: use them */
+			err = can_tdc_changelink(priv, data[IFLA_CAN_TDC],
+						 extack);
+			if (err) {
+				priv->ctrlmode &= ~CAN_CTRLMODE_TDC_MASK;
+				return err;
+			}
+		} else if (!tdc_mask) {
+			/* Neither of TDC parameters nor TDC flags are
+			 * provided: do calculation
+			 */
+			can_calc_tdco(&priv->tdc, priv->tdc_const, &dbt,
+				      &priv->ctrlmode, priv->ctrlmode_supported);
+		}
+		/* else: both CAN_CTRLMODE_TDC_{AUTO,MANUAL} are explicitly
+		 * turned off. TDC is disabled: do nothing
+		 */
 		memcpy(&priv->data_bittiming, &dbt, sizeof(dbt));
 
 		if (priv->do_set_data_bittiming) {
@@ -1128,6 +1001,44 @@ static int can_changelink(struct net_device *dev, struct nlattr *tb[],
 	return 0;
 }
 
+static size_t can_tdc_get_size(const struct net_device *dev)
+{
+	struct can_priv *priv = netdev_priv(dev);
+	size_t size;
+
+	if (!priv->tdc_const)
+		return 0;
+
+	size = nla_total_size(0);					/* nest IFLA_CAN_TDC */
+	if (priv->ctrlmode_supported & CAN_CTRLMODE_TDC_MANUAL) {
+		size += nla_total_size(sizeof(u32));	/* IFLA_CAN_TDCV_MIN */
+		size += nla_total_size(sizeof(u32));	/* IFLA_CAN_TDCV_MAX */
+	}
+	size += nla_total_size(sizeof(u32));		/* IFLA_CAN_TDCO_MIN */
+	size += nla_total_size(sizeof(u32));		/* IFLA_CAN_TDCO_MAX */
+	if (priv->tdc_const->tdcf_max) {
+		size += nla_total_size(sizeof(u32));	/* IFLA_CAN_TDCF_MIN */
+		size += nla_total_size(sizeof(u32));	/* IFLA_CAN_TDCF_MAX */
+	}
+
+	if (can_tdc_is_enabled(priv)) {
+		if (priv->ctrlmode & CAN_CTRLMODE_TDC_MANUAL ||
+		    priv->do_get_auto_tdcv)
+			size += nla_total_size(sizeof(u32));	/* IFLA_CAN_TDCV */
+		size += nla_total_size(sizeof(u32));		/* IFLA_CAN_TDCO */
+		if (priv->tdc_const->tdcf_max)
+			size += nla_total_size(sizeof(u32));	/* IFLA_CAN_TDCF */
+	}
+
+	return size;
+}
+
+static size_t can_ctrlmode_ext_get_size(void)
+{
+	return nla_total_size(0) +			/* nest IFLA_CAN_CTRLMODE_EXT */
+		nla_total_size(sizeof(u32));	/* IFLA_CAN_CTRLMODE_SUPPORTED */
+}
+
 static size_t can_get_size(const struct net_device *dev)
 {
 	struct can_priv *priv = netdev_priv(dev);
@@ -1159,8 +1070,82 @@ static size_t can_get_size(const struct net_device *dev)
 		size += nla_total_size(sizeof(*priv->data_bitrate_const) *
 				       priv->data_bitrate_const_cnt);
 	size += sizeof(priv->bitrate_max);			/* IFLA_CAN_BITRATE_MAX */
+	size += can_tdc_get_size(dev);				/* IFLA_CAN_TDC */
+	size += can_ctrlmode_ext_get_size();		/* IFLA_CAN_CTRLMODE_EXT */
 
 	return size;
+}
+
+static int can_tdc_fill_info(struct sk_buff *skb, const struct net_device *dev)
+{
+	struct nlattr *nest;
+	struct can_priv *priv = netdev_priv(dev);
+	struct can_tdc *tdc = &priv->tdc;
+	const struct can_tdc_const *tdc_const = priv->tdc_const;
+
+	if (!tdc_const)
+		return 0;
+
+	nest = nla_nest_start(skb, IFLA_CAN_TDC);
+	if (!nest)
+		return -EMSGSIZE;
+
+	if (priv->ctrlmode_supported & CAN_CTRLMODE_TDC_MANUAL &&
+	    (nla_put_u32(skb, IFLA_CAN_TDC_TDCV_MIN, tdc_const->tdcv_min) ||
+			nla_put_u32(skb, IFLA_CAN_TDC_TDCV_MAX, tdc_const->tdcv_max)))
+		goto err_cancel;
+	if (nla_put_u32(skb, IFLA_CAN_TDC_TDCO_MIN, tdc_const->tdco_min) ||
+	    nla_put_u32(skb, IFLA_CAN_TDC_TDCO_MAX, tdc_const->tdco_max))
+		goto err_cancel;
+	if (tdc_const->tdcf_max &&
+	    (nla_put_u32(skb, IFLA_CAN_TDC_TDCF_MIN, tdc_const->tdcf_min) ||
+			nla_put_u32(skb, IFLA_CAN_TDC_TDCF_MAX, tdc_const->tdcf_max)))
+		goto err_cancel;
+
+	if (can_tdc_is_enabled(priv)) {
+		u32 tdcv;
+		int err = -EINVAL;
+
+		if (priv->ctrlmode & CAN_CTRLMODE_TDC_MANUAL) {
+			tdcv = tdc->tdcv;
+			err = 0;
+		} else if (priv->do_get_auto_tdcv) {
+			err = priv->do_get_auto_tdcv(dev, &tdcv);
+		}
+		if (!err && nla_put_u32(skb, IFLA_CAN_TDC_TDCV, tdcv))
+			goto err_cancel;
+		if (nla_put_u32(skb, IFLA_CAN_TDC_TDCO, tdc->tdco))
+			goto err_cancel;
+		if (tdc_const->tdcf_max &&
+		    nla_put_u32(skb, IFLA_CAN_TDC_TDCF, tdc->tdcf))
+			goto err_cancel;
+	}
+
+	nla_nest_end(skb, nest);
+	return 0;
+
+err_cancel:
+	nla_nest_cancel(skb, nest);
+	return -EMSGSIZE;
+}
+
+static int can_ctrlmode_ext_fill_info(struct sk_buff *skb,
+				      const struct can_priv *priv)
+{
+	struct nlattr *nest;
+
+	nest = nla_nest_start(skb, IFLA_CAN_CTRLMODE_EXT);
+	if (!nest)
+		return -EMSGSIZE;
+
+	if (nla_put_u32(skb, IFLA_CAN_CTRLMODE_SUPPORTED,
+			priv->ctrlmode_supported)) {
+		nla_nest_cancel(skb, nest);
+		return -EMSGSIZE;
+	}
+
+	nla_nest_end(skb, nest);
+	return 0;
 }
 
 static int can_fill_info(struct sk_buff *skb, const struct net_device *dev)
@@ -1173,7 +1158,8 @@ static int can_fill_info(struct sk_buff *skb, const struct net_device *dev)
 	if (priv->do_get_state)
 		priv->do_get_state(dev, &state);
 
-	if ((priv->bittiming.bitrate &&
+	if ((priv->bittiming.bitrate != CAN_BITRATE_UNSET &&
+	     priv->bittiming.bitrate != CAN_BITRATE_UNKNOWN &&
 	     nla_put(skb, IFLA_CAN_BITTIMING,
 		     sizeof(priv->bittiming), &priv->bittiming)) ||
 
@@ -1220,7 +1206,11 @@ static int can_fill_info(struct sk_buff *skb, const struct net_device *dev)
 
 	    (nla_put(skb, IFLA_CAN_BITRATE_MAX,
 		     sizeof(priv->bitrate_max),
-		     &priv->bitrate_max))
+		     &priv->bitrate_max)) ||
+
+		can_tdc_fill_info(skb, dev) ||
+
+		can_ctrlmode_ext_fill_info(skb, priv)
 	    )
 
 		return -EMSGSIZE;

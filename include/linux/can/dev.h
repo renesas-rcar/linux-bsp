@@ -15,6 +15,7 @@
 #define _CAN_DEV_H
 
 #include <linux/can.h>
+#include <linux/can/bittiming.h>
 #include <linux/can/error.h>
 #include <linux/can/led.h>
 #include <linux/can/netlink.h>
@@ -40,6 +41,9 @@ struct can_priv {
 	struct can_bittiming bittiming, data_bittiming;
 	const struct can_bittiming_const *bittiming_const,
 		*data_bittiming_const;
+	struct can_tdc tdc;
+	const struct can_tdc_const *tdc_const;
+
 	const u16 *termination_const;
 	unsigned int termination_const_cnt;
 	u16 termination;
@@ -55,7 +59,6 @@ struct can_priv {
 	/* CAN controller features - see include/uapi/linux/can/netlink.h */
 	u32 ctrlmode;		/* current options setting */
 	u32 ctrlmode_supported;	/* options that can be modified by netlink */
-	u32 ctrlmode_static;	/* static enabled options for driver/hardware */
 
 	int restart_ms;
 	struct delayed_work restart_work;
@@ -68,6 +71,7 @@ struct can_priv {
 			    enum can_state *state);
 	int (*do_get_berr_counter)(const struct net_device *dev,
 				   struct can_berr_counter *bec);
+	int (*do_get_auto_tdcv)(const struct net_device *dev, u32 *tdcv);
 
 	unsigned int echo_skb_max;
 	struct sk_buff **echo_skb;
@@ -81,21 +85,6 @@ struct can_priv {
 	char rxtx_led_trig_name[CAN_LED_NAME_SZ];
 #endif
 };
-
-#define CAN_SYNC_SEG 1
-
-/*
- * can_bit_time() - Duration of one bit
- *
- * Please refer to ISO 11898-1:2015, section 11.3.1.1 "Bit time" for
- * additional information.
- *
- * Return: the number of time quanta in one bit.
- */
-static inline unsigned int can_bit_time(const struct can_bittiming *bt)
-{
-	return CAN_SYNC_SEG + bt->prop_seg + bt->phase_seg1 + bt->phase_seg2;
-}
 
 /*
  * get_can_dlc(value) - helper macro to cast a given data length code (dlc)
@@ -171,6 +160,11 @@ static inline bool can_is_canfd_skb(const struct sk_buff *skb)
 	return skb->len == CANFD_MTU;
 }
 
+static inline bool can_tdc_is_enabled(const struct can_priv *priv)
+{
+	return !!(priv->ctrlmode & CAN_CTRLMODE_TDC_MASK);
+}
+
 /* helper to define static CAN controller features at device creation time */
 static inline void can_set_static_ctrlmode(struct net_device *dev,
 					   u32 static_mode)
@@ -179,7 +173,6 @@ static inline void can_set_static_ctrlmode(struct net_device *dev,
 
 	/* alloc_candev() succeeded => netdev_priv() is valid at this point */
 	priv->ctrlmode = static_mode;
-	priv->ctrlmode_static = static_mode;
 
 	/* override MTU which was set by default in can_setup()? */
 	if (static_mode & CAN_CTRLMODE_FD)
@@ -191,6 +184,13 @@ u8 can_dlc2len(u8 can_dlc);
 
 /* map the sanitized data length to an appropriate data length code */
 u8 can_len2dlc(u8 len);
+
+static inline u32 can_get_static_ctrlmode(struct can_priv *priv)
+{
+	return priv->ctrlmode & ~priv->ctrlmode_supported;
+}
+
+void can_setup(struct net_device *dev);
 
 struct net_device *alloc_candev_mqs(int sizeof_priv, unsigned int echo_skb_max,
 				    unsigned int txqs, unsigned int rxqs);
