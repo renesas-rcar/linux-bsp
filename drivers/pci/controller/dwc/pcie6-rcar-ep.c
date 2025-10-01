@@ -122,6 +122,12 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 	val |= BIT(9);
 	writel(val, rcar_pcie6->phy_base + 0x8);
 
+	/* HW Workaround */
+	val = dw_pcie6_readl_dbi(pci, 0x5b8);
+	val &= GENMASK(19, 0);
+	val |= 0x610 << 20;
+	dw_pcie6_writel_dbi(pci, 0x5b8, val);
+
 	dw_pcie6_dbi_ro_wr_dis(pci);
 }
 

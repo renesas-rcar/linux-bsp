@@ -2131,9 +2131,6 @@ int dw_pcie6_ep_init_complete(struct dw_pcie6_ep *ep)
 
 	offset = dw_pcie6_ep_find_ext_capability(pci, PCI_EXT_CAP_ID_REBAR);
 
-	/* Override offset due to hardware issue — hardcoded REBAR capability offset */
-	offset = 0x610;
-
 	dw_pcie6_dbi_ro_wr_en(pci);
 
 	if (offset) {
