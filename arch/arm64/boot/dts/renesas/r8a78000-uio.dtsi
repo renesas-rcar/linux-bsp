@@ -362,5 +362,11 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VCS>;
 			linux,uio-name = "fcpc_03";
 		};
+
+		rsipe00: rsipe@19440000 {
+			compatible = "generic-uio";
+			reg = <0 0x19440000 0 0x1000>;
+			linux,uio-name = "rsip_e_stb";
+		};
 	};
 };
