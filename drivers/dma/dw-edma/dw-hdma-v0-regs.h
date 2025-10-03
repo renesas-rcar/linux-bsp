@@ -83,7 +83,10 @@ struct dw_hdma_v0_ch_regs {
 		};
 	} msi_abort;
 	u32 msi_msgdata;			/* 0x00a8 */
-	u32 padding_2[21];			/* 0x00ac..0x00fc */
+
+	/* FIXME: Padding size temporarily set to 213 for PCIe6 offset.
+	* This should be handled dynamically based on detected hardware version. */
+	u32 padding_2[213];			/* 0x00ac..0x00fc */
 } __packed;
 
 struct dw_hdma_v0_ch {
