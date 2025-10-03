@@ -1402,21 +1402,18 @@ static int wcrc_probe(struct platform_device *pdev)
 	priv->fifo_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	//pr_info("Instance %d: fifo_res=0x%llx\n", dev_chan, priv->fifo_res->start);
 
-	///* Look up and obtains to a clock node */
-	//priv->clk = devm_clk_get(dev, "fck");
-	//if (IS_ERR(priv->clk)) {
-	//	dev_err(dev, "Failed to get wcrc clock: %ld\n",
-	//	PTR_ERR(priv->clk));
-	//	return PTR_ERR(priv->clk);
-	//}
+	/* Look up and obtains to a clock node */
+	priv->clk = devm_clk_get(dev, "fck");
+	if (IS_ERR(priv->clk))
+		return PTR_ERR(priv->clk);
 
-	///* Enable peripheral clock for register access */
-	//ret = clk_prepare_enable(priv->clk);
-	//if (ret) {
-	//	dev_err(dev,
-	//	"failed to enable peripheral clock, error %d\n", ret);
-	//	return ret;
-	//}
+	/* Enable peripheral clock for register access */
+	ret = clk_prepare_enable(priv->clk);
+	if (ret) {
+		dev_err(dev,
+		"Failed to enable peripheral clock, error %d\n", ret);
+		return ret;
+	}
 
 	priv->ops = &rwcrc_ops;
 
