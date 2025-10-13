@@ -33,6 +33,9 @@
 
 #include "rswitch3.h"
 
+static u8 cached_mac_addresses[RSWITCH3_NUM_PORTS][ETH_ALEN];
+static bool mac_cache_valid[RSWITCH3_NUM_PORTS];
+
 static int rsw3_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
 {
 	u32 val;
@@ -1083,6 +1086,17 @@ static void rsw3_etha_read_mac_address(struct rsw3_etha *etha)
 	mac[3] = (mrmac1 >> 16) & 0xFF;
 	mac[4] = (mrmac1 >>  8) & 0xFF;
 	mac[5] = (mrmac1 >>  0) & 0xFF;
+
+	/* Cache valid MAC addresses for deferred probe scenarios */
+	if (is_valid_ether_addr(mac) && etha->index < RSWITCH3_NUM_PORTS) {
+		memcpy(cached_mac_addresses[etha->index], mac, ETH_ALEN);
+		mac_cache_valid[etha->index] = true;
+	}
+	/* Restore from cache if current read is invalid but cache has valid MAC */
+	else if (!is_valid_ether_addr(mac) && etha->index < RSWITCH3_NUM_PORTS &&
+		 mac_cache_valid[etha->index]) {
+		memcpy(mac, cached_mac_addresses[etha->index], ETH_ALEN);
+	}
 }
 
 static void rsw3_etha_write_mac_address(struct rsw3_etha *etha, const u8 *mac)
