@@ -1,0 +1,540 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Device Tree Source for the RFS2X board based on R8A78000
+ *
+ * Copyright (C) 2025 Renesas Electronics Corp.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+/ {
+	model = "Renesas RFS2X for X5H based on r8a78000";
+	compatible = "renesas,rfs2x", "renesas,r8a78000";
+
+	aliases {
+		serial0 = &scif0;
+		serial1 = &pl011;
+	};
+
+	chosen {
+		bootargs = "console=ttySC0,115200 root=/dev/vda rw uio_pdrv_genirq.of_id=generic-uio rootwait cma=560M";
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory_00@1080000000 {
+		device_type = "memory";
+		reg = <0x10 0x80000000 0x0 0x80000000>;
+	};
+
+	memory_01@1200000000 {
+		device_type = "memory";
+		reg = <0x12 0x00000000 0x1 0x00000000>;
+	};
+
+	memory_02@1400000000 {
+		device_type = "memory";
+		reg = <0x14 0x00000000 0x1 0x00000000>;
+	};
+
+	memory_03@1600000000 {
+		device_type = "memory";
+		reg = <0x16 0x00000000 0x1 0x00000000>;
+	};
+
+	memory_04@1800000000 {
+		device_type = "memory";
+		reg = <0x18 0x00000000 0x1 0x00000000>;
+	};
+
+	memory_05@1a00000000 {
+		device_type = "memory";
+		reg = <0x1a 0x00000000 0x1 0x00000000>;
+	};
+
+	memory_06@1c00000000 {
+		device_type = "memory";
+		reg = <0x1c 0x00000000 0x1 0x00000000>;
+	};
+
+	memory_07@1e00000000 {
+		device_type = "memory";
+		reg = <0x1e 0x00000000 0x1 0x00000000>;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		poweroff {
+			label = "GPIO Key Poweroff";
+			linux,code = <0x74>;
+			gpios = <&gpio 3 0>;
+		};
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		cr52_ram0: cr52_ram0@96600000 {
+			no-map;
+			reg = <0x0 0x96600000 0x0 0x50000>;
+		};
+
+		cr52_ram1: cr52_ram1@96650000 {
+			no-map;
+			reg = <0x0 0x96650000 0x0 0x50000>;
+		};
+
+		cr52_ram2: cr52_ram2@966a0000 {
+			no-map;
+			reg = <0x0 0x966a0000 0x0 0x50000>;
+		};
+
+        };
+
+	sound_card: sound {
+		compatible = "audio-graph-card";
+		label = "rcar-sound";
+		dais = <&rsnd_port0>;
+	};
+
+	ak4554-adc-dac {
+		compatible = "asahi-kasei,ak4554";
+		#sound-dai-cells = <0>;
+		port {
+			ak4554_endpoint: endpoint {
+				remote-endpoint = <&rsnd_endpoint0>;
+			};
+		};
+	};
+};
+
+/* Enable serial console */
+&scif0 {
+	status = "okay";
+};
+&scif1 {
+	status = "okay";
+};
+&scif3 {
+	status = "okay";
+};
+&scif4 {
+	status = "okay";
+};
+&hscif0 {
+	status = "okay";
+};
+&hscif1 {
+	status = "okay";
+};
+&hscif2 {
+	status = "okay";
+};
+&hscif3 {
+	status = "okay";
+};
+
+&vin000 {
+	status = "okay";
+};
+&vin001 {
+	status = "okay";
+};
+&vin010 {
+	status = "okay";
+};
+&vin020 {
+	status = "okay";
+};
+&vin030 {
+	status = "okay";
+};
+&vin031 {
+	status = "okay";
+};
+&vin040 {
+	status = "okay";
+};
+&vin050 {
+	status = "okay";
+};
+&vin060 {
+	status = "okay";
+};
+&vin061 {
+	status = "okay";
+};
+&vin070 {
+	status = "okay";
+};
+&vin080 {
+	status = "okay";
+};
+&vin090 {
+	status = "okay";
+};
+&vin091 {
+	status = "okay";
+};
+&vin100 {
+	status = "okay";
+};
+&vin110 {
+	status = "okay";
+};
+&csi40 {
+	status = "okay";
+};
+&csi41 {
+	status = "okay";
+};
+&csi42 {
+	status = "okay";
+};
+&csi43 {
+	status = "okay";
+};
+&isp0 {
+	status = "okay";
+};
+&isp1 {
+	status = "okay";
+};
+&isp2 {
+	status = "okay";
+};
+&isp3 {
+	status = "okay";
+};
+
+&dp0 {
+	status = "okay";
+	#address-cells = <1>;
+        #size-cells = <0>;
+
+	port@4 {
+		reg = <4>;
+
+		rcar_dw_dp0_out: endpoint {
+			remote-endpoint = <&dp_con0_out>;
+		};
+	};
+};
+
+&dp1 {
+	status = "okay";
+	#address-cells = <1>;
+        #size-cells = <0>;
+
+	port@4 {
+		reg = <4>;
+
+		rcar_dw_dp1_out: endpoint {
+			remote-endpoint = <&dp_con1_out>;
+		};
+	};
+
+	dp-con0 {
+                compatible = "dp-connector";
+
+		port {
+			dp_con0_out: endpoint {
+				remote-endpoint = <&rcar_dw_dp0_out>;
+                        };
+                };
+        };
+
+        dp-con1 {
+                compatible = "dp-connector";
+
+                port {
+                        dp_con1_out: endpoint {
+                                remote-endpoint = <&rcar_dw_dp1_out>;
+                        };
+                };
+        };
+
+        dp-con2 {
+                compatible = "dp-connector";
+
+                port {
+                        dp_con2_out: endpoint {
+                                remote-endpoint = <&rcar_dw_dp2_out>;
+                        };
+                };
+        };
+
+};
+
+&dp2 {
+	status = "okay";
+	#address-cells = <1>;
+        #size-cells = <0>;
+
+	port@2 {
+		reg = <2>;
+
+		rcar_dw_dp2_out: endpoint {
+			remote-endpoint = <&dp_con2_out>;
+		};
+	};
+};
+
+&vcon_group0 {
+        status = "okay";
+};
+
+&vcon_group1 {
+        status = "okay";
+};
+
+&vcon_group2 {
+        status = "okay";
+};
+
+&rswitch3 {
+	status = "okay";
+
+	ethernet-ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			phy-handle = <&u101>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u101: ethernet-phy@0 {
+					reg = <0>;
+				};
+			};
+		};
+		port@1 {
+			reg = <1>;
+			phy-handle = <&u102>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u102: ethernet-phy@1 {
+					reg = <1>;
+				};
+			};
+		};
+		port@2 {
+			reg = <2>;
+			phy-handle = <&u103>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u103: ethernet-phy@2 {
+					reg = <2>;
+				};
+			};
+		};
+		port@3 {
+			reg = <3>;
+			phy-handle = <&u104>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u104: ethernet-phy@3 {
+					reg = <3>;
+				};
+			};
+		};
+		port@4 {
+			reg = <4>;
+			phy-handle = <&u105>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u105: ethernet-phy@4 {
+					reg = <4>;
+				};
+			};
+		};
+		port@5 {
+			reg = <5>;
+			phy-handle = <&u106>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u106: ethernet-phy@5 {
+					reg = <5>;
+				};
+			};
+		};
+		port@6 {
+			reg = <6>;
+			phy-handle = <&u107>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u107: ethernet-phy@6 {
+					reg = <6>;
+				};
+			};
+		};
+		port@7 {
+			reg = <7>;
+			phy-handle = <&u108>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u108: ethernet-phy@7 {
+					reg = <7>;
+				};
+			};
+		};
+		port@8 {
+			reg = <8>;
+			phy-handle = <&u109>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u109: ethernet-phy@8 {
+					reg = <8>;
+				};
+			};
+		};
+		port@9 {
+			reg = <9>;
+			phy-handle = <&u110>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u110: ethernet-phy@9 {
+					reg = <9>;
+				};
+			};
+		};
+		port@10 {
+			reg = <10>;
+			phy-handle = <&u111>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u111: ethernet-phy@10 {
+					reg = <10>;
+				};
+			};
+		};
+		port@11 {
+			reg = <11>;
+			phy-handle = <&u112>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u112: ethernet-phy@11 {
+					reg = <11>;
+				};
+			};
+		};
+		port@12 {
+			reg = <12>;
+			phy-handle = <&u113>;
+			phy-mode = "sgmii";
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				u113: ethernet-phy@12 {
+					reg = <12>;
+				};
+			};
+		};
+    };
+};
+
+&audio_clk_a {
+	clock-frequency = <22579200>;
+};
+
+&rcar_sound {
+	/* Single DAI */
+	#sound-dai-cells = <0>;
+
+	/* audio_clkout0/1/2/3 */
+	#clock-cells = <0>;
+
+	/* audio_clkout */
+	clock-frequency = <11289600>;
+
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		rsnd_port0: port@0 {
+			reg = <0>;
+			rsnd_endpoint0: endpoint {
+				remote-endpoint = <&ak4554_endpoint>;
+
+				dai-format = "i2s";
+				bitclock-master = <&rsnd_endpoint0>;
+				frame-master = <&rsnd_endpoint0>;
+
+				playback = <&ssi0>;
+				capture = <&ssi1>;
+			};
+		};
+	};
+};
+
+&mfis {
+	renesas,mfis-channels = <1>;
+	status = "okay";
+};
+
+&cr52_rproc1 {
+	memory-region = <&cr52_ram1>;
+	status = "okay";
+};
+
+&rpmsg_shm0 {
+	status = "okay";
+};
+
+&rpmsg_ipi0 {
+	status = "okay";
+};
