@@ -227,6 +227,7 @@ static int rcar_i2c_get_bus_free(struct i2c_adapter *adap)
 static const struct soc_device_attribute fm_plus_match[] = {
 	{ .soc_id = "r8a779a0" },
 	{ .soc_id = "r8a779g0" },
+	{ .soc_id = "r8a78000" },
 	{ /* sentinel */ }
 };
 
