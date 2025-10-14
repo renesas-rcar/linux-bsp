@@ -123,9 +123,6 @@
 
 #define CFG_CLK_IGNORE
 
-/* VDK-only: Apply DMA workarounds for R-Car X5H */
-#define VDK	1
-
 enum rcar_i2c_type {
 	I2C_RCAR_GEN1,
 	I2C_RCAR_GEN2,
@@ -556,15 +553,6 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 		return false;
 	}
 
-#ifdef VDK
-	dma_async_issue_pending(chan);
-
-	/* Enable DMA Master Received/Transmitted */
-	if (read)
-		rcar_i2c_write(priv, ICDMAER, RMDMAE);
-	else
-		rcar_i2c_write(priv, ICDMAER, TMDMAE);
-#else
 	/* Enable DMA Master Received/Transmitted */
 	if (read)
 		rcar_i2c_write(priv, ICDMAER, RMDMAE);
@@ -572,7 +560,6 @@ static bool rcar_i2c_dma(struct rcar_i2c_priv *priv)
 		rcar_i2c_write(priv, ICDMAER, TMDMAE);
 
 	dma_async_issue_pending(chan);
-#endif
 	return true;
 }
 
