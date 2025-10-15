@@ -23,9 +23,6 @@
 #define PRTS			0x00
 #define PRTS_PRTMD		BIT(0)
 
-#define CECTL			0x10
-#define CECTL_CLKE		BIT(0)
-
 #define BCTL			0x14
 #define BCTL_INCBA		BIT(0)
 #define BAEXITMD		BIT(1)
@@ -386,6 +383,7 @@ struct rcar_i3c_master {
 	void __iomem *regs;
 	struct clk *tclk;
 	struct clk *pclk;
+	int irq;
 
 };
 
@@ -489,6 +487,11 @@ static void rcar_i3c_master_free_xfer(struct rcar_i3c_xfer *xfer)
 static void rcar_i3c_master_write_to_tx_fifo(struct rcar_i3c_master *master,
 					     const u8 *data, int nbytes)
 {
+	if (data == NULL) {
+		pr_warn("i3c: cmd->tx_buf is NULL, aborting operation\n");
+		return;
+	}
+
 	writesl(master->regs + NTDTBP0, data, nbytes / 4);
 	if (nbytes & 3) {
 		u32 tmp = 0;
@@ -501,14 +504,13 @@ static void rcar_i3c_master_write_to_tx_fifo(struct rcar_i3c_master *master,
 }
 
 static void rcar_i3c_master_read_from_rx_fifo(struct rcar_i3c_master *master,
-					      u8 *data, int nbytes)
+					      u8 *bytes, int nbytes)
 {
-	readsl(master->regs + NTDTBP0, data, nbytes / 4);
+	readsl(master->regs + NTDTBP0, bytes, nbytes / 4);
 	if (nbytes & 3) {
 		u32 tmp;
-
 		readsl(master->regs + NTDTBP0, &tmp, 1);
-		memcpy(data + (nbytes & ~3), &tmp, nbytes & 3);
+		memcpy(bytes + (nbytes & ~3), &tmp, nbytes & 3);
 	}
 }
 
@@ -527,6 +529,8 @@ static void rcar_i3c_master_start_xfer_locked(struct rcar_i3c_master *master)
 	{
 		i3c_reg_write(master->regs, NCMDQP, cmd->cmd0);
 		i3c_reg_write(master->regs, NCMDQP, 0);
+
+		udelay(1000);
 		break;
 	}
 	case I3C_INTERNAL_STATE_MASTER_SETDASA:
@@ -544,13 +548,14 @@ static void rcar_i3c_master_start_xfer_locked(struct rcar_i3c_master *master)
 			cmd->cmd0 |= NCMDQP_CMD_ATTR(NCMDQP_IMMED_XFER);
 			cmd->cmd0 |= NCMDQP_BYTE_CNT(cmd->len);
 			cmd->tx_count = cmd->len;
-			cmd1 = cmd->len == 0 ? 0 : *(u32 *)cmd->tx_buf;
+			cmd1 = (cmd->len == 0) ? 0 : *(u32 *)cmd->tx_buf;
 		} else {
 			cmd1 = NCMDQP_DATA_LENGTH(cmd->len);
 		}
 
 		i3c_reg_write(master->regs, NCMDQP, cmd->cmd0);
 		i3c_reg_write(master->regs, NCMDQP, cmd1);
+
 		break;
 	}
 	case I3C_INTERNAL_STATE_MASTER_READ:
@@ -560,8 +565,10 @@ static void rcar_i3c_master_start_xfer_locked(struct rcar_i3c_master *master)
 		cmd1 = NCMDQP_DATA_LENGTH(cmd->len);
 		i3c_reg_write(master->regs, NCMDQP, cmd->cmd0);
 		i3c_reg_write(master->regs, NCMDQP, cmd1);
+
 		break;
 	}
+
 	default:
 		break;
 	}
@@ -615,6 +622,17 @@ static void rcar_i3c_master_enqueue_xfer(struct rcar_i3c_master *master,
 			rcar_i3c_master_start_xfer_locked(master);
 	}
 	spin_unlock_irqrestore(&master->xferqueue.lock, flags);
+}
+
+static void rcar_i3c_master_wait_xfer(struct rcar_i3c_master *master, struct rcar_i3c_xfer *xfer)
+{
+	unsigned long time_left;
+
+	rcar_i3c_master_enqueue_xfer(master, xfer);
+
+	time_left = wait_for_completion_timeout(&xfer->comp, msecs_to_jiffies(1000));
+	if (!time_left)
+		rcar_i3c_master_dequeue_xfer(master, xfer);
 }
 
 static int rcar_i2c_master_bus_init(struct i3c_master_controller *m)
@@ -849,10 +867,6 @@ static int rcar_i3c_master_daa(struct i3c_master_controller *m)
 	u8 last_addr = 0, pos;
 	int ret;
 
-	/* Temporary skipping I3C mode */
-	if (master->maxdevs == 8)
-		return 0;
-
 	/* Enable I3C bus. */
 	rcar_i3c_master_bus_enable(m, true);
 
@@ -897,9 +911,8 @@ static int rcar_i3c_master_daa(struct i3c_master_controller *m)
 		    NCMDQP_TID(I3C_COMMAND_ADDRESS_ASSIGNMENT) |
 		    NCMDQP_CMD(I3C_CCC_ENTDAA) | NCMDQP_DEV_INDEX(pos) |
 		    NCMDQP_DEV_COUNT(master->maxdevs - pos) | NCMDQP_TOC;
-	rcar_i3c_master_enqueue_xfer(master, xfer);
-	if (!wait_for_completion_timeout(&xfer->comp, msecs_to_jiffies(1000)))
-		rcar_i3c_master_dequeue_xfer(master, xfer);
+
+	rcar_i3c_master_wait_xfer(master, xfer);
 
 	newdevs = GENMASK(master->maxdevs - cmd->rx_count - 1, 0);
 	newdevs &= ~olddevs;
@@ -1009,11 +1022,7 @@ static int rcar_i3c_master_send_ccc_cmd(struct i3c_master_controller *m,
 		}
 	}
 
-	rcar_i3c_master_enqueue_xfer(master, xfer);
-
-	if (!wait_for_completion_timeout(&xfer->comp, msecs_to_jiffies(1000)))
-		rcar_i3c_master_dequeue_xfer(master, xfer);
-
+	rcar_i3c_master_wait_xfer(master, xfer);
 	ret = xfer->ret;
 	if (ret)
 		ccc->err = I3C_ERROR_M2;
@@ -1036,14 +1045,14 @@ static int rcar_i3c_master_priv_xfers(struct i3c_dev_desc *dev,
 	/* Enable I3C bus. */
 	rcar_i3c_master_bus_enable(m, true);
 	xfer = rcar_i3c_master_alloc_xfer(master, 1);
+
 	if (!xfer)
 		return -ENOMEM;
 
 	init_completion(&xfer->comp);
 
 	for (i = 0; i < i3c_nxfers; i++) {
-		struct rcar_i3c_cmd *cmd = &xfer->cmds[i];
-
+		struct rcar_i3c_cmd *cmd = xfer->cmds;
 		/* Calculate the Transfer Command Descriptor */
 		cmd->rnw = i3c_xfers[i].rnw;
 		cmd->cmd0 = NCMDQP_DEV_INDEX(data->index) | NCMDQP_MODE(0) |
@@ -1062,15 +1071,13 @@ static int rcar_i3c_master_priv_xfers(struct i3c_dev_desc *dev,
 			cmd->cmd0 |= NCMDQP_TID(I3C_WRITE);
 			master->internal_state = I3C_INTERNAL_STATE_MASTER_WRITE;
 		}
-
 		if (!i3c_xfers[i].rnw && i3c_xfers[i].len > 4) {
 			rcar_i3c_master_write_to_tx_fifo(master, cmd->tx_buf, cmd->len);
 			if (cmd->len > NTDTBP0_DEPTH * sizeof(u32))
 				i3c_reg_set_bit(master->regs, NTIE, NTIE_TDBEIE0);
 		}
-		rcar_i3c_master_enqueue_xfer(master, xfer);
-		if (!wait_for_completion_timeout(&xfer->comp, msecs_to_jiffies(1000)))
-			rcar_i3c_master_dequeue_xfer(master, xfer);
+
+		rcar_i3c_master_wait_xfer(master, xfer);
 	}
 
 	return 0;
@@ -1094,7 +1101,6 @@ static int rcar_i3c_master_attach_i3c_dev(struct i3c_dev_desc *dev)
 	data->index = pos;
 	master->addrs[pos] = dev->info.dyn_addr ? : dev->info.static_addr;
 	master->free_pos &= ~BIT(pos);
-
 	i3c_reg_write(master->regs, DATBAS(pos),
 		      DATBAS_DVSTAD(dev->info.static_addr) |
 		      DATBAS_DVDYAD(i3c_address_parity_cal(master->addrs[pos])));
@@ -1228,10 +1234,11 @@ static irqreturn_t rcar_i3c_master_resp_isr(struct rcar_i3c_master *master, u32 
 	struct rcar_i3c_cmd *cmd = xfer->cmds;
 	int ret = 0;
 	u32 bytes_remaining = 0;
-	u32 resp, data_len;
+	u32 resp, data_len, read_bytes;
 
 	/* Get the response status from the Respone status Queue */
 	resp = i3c_reg_read(master->regs, NRSPQP);
+
 	/* Clear the Respone Queue Full status flag*/
 	i3c_reg_clear_bit(master->regs, NTST, NTST_RSPQFF);
 
@@ -1239,7 +1246,14 @@ static irqreturn_t rcar_i3c_master_resp_isr(struct rcar_i3c_master *master, u32 
 	data_len = NRSPQP_DATA_LEN(resp);
 	switch (master->internal_state) {
 	case I3C_INTERNAL_STATE_MASTER_ENTDAA:
-		cmd->rx_count = data_len;
+		read_bytes = NDBSTLV0_RDBLV(i3c_reg_read(master->regs, NDBSTLV0)) * sizeof(u32);
+		if (read_bytes == 8) {
+			i3c_reg_set_bit(master->regs, NTIE, NTIE_RSPQFIE);
+			/* Read PID, BCR, DCR data */
+			i3c_reg_read(master->regs, NTDTBP0);
+			i3c_reg_read(master->regs, NTDTBP0);
+			cmd->rx_count++;
+		}
 		break;
 	case I3C_INTERNAL_STATE_MASTER_WRITE:
 	case I3C_INTERNAL_STATE_MASTER_COMMAND_WRITE:
@@ -1248,7 +1262,7 @@ static irqreturn_t rcar_i3c_master_resp_isr(struct rcar_i3c_master *master, u32 
 		break;
 	case I3C_INTERNAL_STATE_MASTER_READ:
 	case I3C_INTERNAL_STATE_MASTER_COMMAND_READ:
-		if ((NDBSTLV0_RDBLV(i3c_reg_read(master->regs, NDBSTLV0))) && !cmd->err)
+		if ((NDBSTLV0_RDBLV(i3c_reg_read(master->regs, NDBSTLV0))))
 			bytes_remaining = data_len - cmd->rx_count;
 		rcar_i3c_master_read_from_rx_fifo(master, cmd->rx_buf, bytes_remaining);
 		i3c_reg_clear_bit(master->regs, NTIE, NTIE_RDBFIE0);
@@ -1259,7 +1273,7 @@ static irqreturn_t rcar_i3c_master_resp_isr(struct rcar_i3c_master *master, u32 
 
 	switch (NRSPQP_ERR_STATUS(resp)) {
 	case NRSPQP_NO_ERROR:
-			break;
+		break;
 	case NRSPQP_ERROR_PARITY:
 	case NRSPQP_ERROR_ADDR_HEADER:
 	case NRSPQP_ERROR_CRC:
@@ -1340,23 +1354,22 @@ static irqreturn_t rcar_i3c_master_rx_isr(struct rcar_i3c_master *master, u32 is
 		cmd->i2c_buf++;
 		cmd->i2c_bytes_left--;
 	} else {
-		u32 resp_descriptor;
-
-		resp_descriptor = i3c_reg_read(master->regs, NRSPQP);
 		read_bytes = NDBSTLV0_RDBLV(i3c_reg_read(master->regs, NDBSTLV0)) * sizeof(u32);
-		if (master->internal_state == I3C_INTERNAL_STATE_MASTER_ENTDAA && read_bytes == 8) {
-			i3c_reg_set_bit(master->regs, NTIE, NTIE_RSPQFIE);
-			i3c_reg_read(master->regs, NTDTBP0);
-			i3c_reg_read(master->regs, NTDTBP0);
-			cmd->rx_count++;
+		if (master->internal_state == I3C_INTERNAL_STATE_MASTER_ENTDAA) {
+			if(read_bytes >= 8) {
+				i3c_reg_set_bit(master->regs, NTIE, NTIE_RSPQFIE);
+				i3c_reg_read(master->regs, NTDTBP0);
+				i3c_reg_read(master->regs, NTDTBP0);
+				cmd->rx_count++;
+			}
 		} else {
 			rcar_i3c_master_read_from_rx_fifo(master, cmd->rx_buf, read_bytes);
 			cmd->rx_count = read_bytes;
 		}
 	}
+
 	/* Clear the Read Buffer Full status flag. */
 	i3c_reg_clear_bit(master->regs, NTST, NTST_RDBFF0);
-	i3c_reg_clear_bit(master->regs, NTST, NTST_TDBEF0);
 
 	return IRQ_HANDLED;
 }
@@ -1476,6 +1489,7 @@ static irqreturn_t i3c_stop_isr(struct rcar_i3c_master *master, u32 isr)
 static irqreturn_t rcar_i3c_master_irq_handler(int irq, void *data)
 {
 	struct rcar_i3c_master *master = data;
+
 	u32 ntst, bst;
 	u32 ntst_flt, bst_flt;
 	irqreturn_t ret = IRQ_NONE;
@@ -1485,40 +1499,41 @@ static irqreturn_t rcar_i3c_master_irq_handler(int irq, void *data)
 		return IRQ_NONE;
 	}
 
-	ntst = i3c_reg_read(master->regs, NTST);
-	ntst_flt = ntst & i3c_reg_read(master->regs, NTIE);
+	scoped_guard(spinlock, &master->xferqueue.lock) {
+		ntst = i3c_reg_read(master->regs, NTST);
+		ntst_flt = ntst & i3c_reg_read(master->regs, NTIE);
+		bst = i3c_reg_read(master->regs, BST);
+		bst_flt = bst & i3c_reg_read(master->regs, BIE);
 
-	bst = i3c_reg_read(master->regs, BST);
-	bst_flt = bst & i3c_reg_read(master->regs, BIE);
+		if (ntst_flt & NTST_TDBEF0) {
+			ret = rcar_i3c_master_tx_isr(master, ntst_flt);
+			i3c_reg_clear_bit(master->regs, INTCLR, INTCLR_INTTX0);
+		}
+		if (ntst_flt & NTST_RDBFF0) {
+			ret = rcar_i3c_master_rx_isr(master, ntst_flt);
+			i3c_reg_clear_bit(master->regs, INTCLR, INTCLR_INTRX0);
+		}
+		if (ntst_flt & NTST_RSPQFF) {
+			ret = rcar_i3c_master_resp_isr(master, ntst_flt);
+			i3c_reg_clear_bit(master->regs, INTCLR, INTCLR_INTRESP);
+		} else {
+			i3c_reg_write(master->regs, INTCLR, INTCLR_ALL);
+			ret = IRQ_HANDLED;
+		}
 
-	if (ntst_flt & NTST_RSPQFF) {
-		ret = rcar_i3c_master_resp_isr(master, ntst_flt);
-		i3c_reg_clear_bit(master->regs, INTCLR, INTCLR_INTRESP);
-	} else if (ntst_flt & NTST_RDBFF0) {
-		ret = rcar_i3c_master_rx_isr(master, ntst_flt);
-		i3c_reg_clear_bit(master->regs, INTCLR, INTCLR_INTRX0);
-	} else if (ntst_flt & NTST_TDBEF0) {
-		ret = rcar_i3c_master_tx_isr(master, ntst_flt);
-		i3c_reg_clear_bit(master->regs, INTCLR, INTCLR_INTTX0);
-	} else {
-		i3c_reg_write(master->regs, INTCLR, INTCLR_ALL);
-		ret = IRQ_HANDLED;
+		if (bst_flt & BST_STCNDDF) {
+			ret = i3c_start_isr(master, bst_flt);
+		} else if (bst_flt & BST_SPCNDDF) {
+			ret = i3c_stop_isr(master, bst_flt);
+		} else if (bst_flt & BST_TENDF || bst_flt & BST_NACKDF) {
+			ret = i3c_tend_isr(master, bst_flt);
+		} else {
+			i3c_reg_clear_bit(master->regs, BST, bst);
+			ret = IRQ_HANDLED;
+		}
 	}
-
-	if (bst_flt & BST_STCNDDF) {
-		ret = i3c_start_isr(master, bst_flt);
-	} else if (bst_flt & BST_SPCNDDF) {
-		ret = i3c_stop_isr(master, bst_flt);
-	} else if (bst_flt & BST_TENDF || bst_flt & BST_NACKDF) {
-		ret = i3c_tend_isr(master, bst_flt);
-	} else {
-		i3c_reg_clear_bit(master->regs, BST, bst);
-		ret = IRQ_HANDLED;
-	}
-
 	return ret;
 }
-
 
 static const struct i3c_master_controller_ops rcar_i3c_master_ops = {
 	.bus_init = rcar_i3c_master_bus_init,
@@ -1538,6 +1553,7 @@ static const struct i3c_master_controller_ops rcar_i3c_master_ops = {
 static int rcar_i3c_master_probe(struct platform_device *pdev)
 {
 	struct rcar_i3c_master *master;
+	irqreturn_t (*irqhandler)(int irq, void *ptr)  = rcar_i3c_master_irq_handler;
 	int ret, irq;
 
 	master = devm_kzalloc(&pdev->dev, sizeof(*master), GFP_KERNEL);
@@ -1571,17 +1587,22 @@ static int rcar_i3c_master_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_disable_tclk;
 
-	ret = devm_request_irq(&pdev->dev, irq, rcar_i3c_master_irq_handler, 0,
+	platform_set_drvdata(pdev, master);
+
+	master->maxdevs = RCAR_I3C_MAX_DEVS;
+	master->free_pos = GENMASK(master->maxdevs - 1, 0);
+
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0)
+		return irq;
+	master->irq = irq;
+	ret = devm_request_irq(&pdev->dev, master->irq, irqhandler, 0,
 			       dev_name(&pdev->dev), master);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to request irq %d\n", ret);
 		return ret;
 	}
 
-	platform_set_drvdata(pdev, master);
-
-	master->maxdevs = RCAR_I3C_MAX_DEVS;
-	master->free_pos = GENMASK(master->maxdevs - 1, 0);
 	ret = i3c_master_register(&master->base, &pdev->dev,
 				  &rcar_i3c_master_ops, false);
 	if (ret)
