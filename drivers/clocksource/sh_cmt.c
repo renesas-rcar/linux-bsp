@@ -319,18 +319,9 @@ static void sh_cmt_start_stop_ch(struct sh_cmt_channel *ch, int start)
 
 static int sh_cmt_enable(struct sh_cmt_channel *ch)
 {
-	int k, ret;
+	int k;
 
-	pm_runtime_get_sync(&ch->cmt->pdev->dev);
 	dev_pm_syscore_device(&ch->cmt->pdev->dev, true);
-
-	/* enable clock */
-	ret = clk_enable(ch->cmt->clk);
-	if (ret) {
-		dev_err(&ch->cmt->pdev->dev, "ch%u: cannot enable clock\n",
-			ch->index);
-		goto err0;
-	}
 
 	/* make sure channel is disabled */
 	sh_cmt_start_stop_ch(ch, 0);
@@ -370,19 +361,12 @@ static int sh_cmt_enable(struct sh_cmt_channel *ch)
 	if (sh_cmt_read_cmcnt(ch)) {
 		dev_err(&ch->cmt->pdev->dev, "ch%u: cannot clear CMCNT\n",
 			ch->index);
-		ret = -ETIMEDOUT;
-		goto err1;
+		return -ETIMEDOUT;
 	}
 
 	/* enable channel */
 	sh_cmt_start_stop_ch(ch, 1);
 	return 0;
- err1:
-	/* stop clock */
-	clk_disable(ch->cmt->clk);
-
- err0:
-	return ret;
 }
 
 static void sh_cmt_disable(struct sh_cmt_channel *ch)
@@ -393,11 +377,7 @@ static void sh_cmt_disable(struct sh_cmt_channel *ch)
 	/* disable interrupts in CMT block */
 	sh_cmt_write_cmcsr(ch, 0);
 
-	/* stop clock */
-	clk_disable(ch->cmt->clk);
-
 	dev_pm_syscore_device(&ch->cmt->pdev->dev, false);
-	pm_runtime_put(&ch->cmt->pdev->dev);
 }
 
 /* private flags */
@@ -1069,8 +1049,6 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 		mask &= ~(1 << hwidx);
 	}
 
-	clk_disable(cmt->clk);
-
 	platform_set_drvdata(pdev, cmt);
 
 	return 0;
@@ -1118,8 +1096,6 @@ static int sh_cmt_probe(struct platform_device *pdev)
  out:
 	if (cmt->has_clockevent || cmt->has_clocksource)
 		pm_runtime_irq_safe(&pdev->dev);
-	else
-		pm_runtime_idle(&pdev->dev);
 
 	return 0;
 }
