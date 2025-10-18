@@ -21,6 +21,7 @@
 #include <asm/barrier.h>
 
 #include "io-pgtable-arm.h"
+#include <linux/soc/renesas/rcar-rgid.h>
 
 #define ARM_LPAE_MAX_ADDR_BITS		52
 #define ARM_LPAE_S2_MAX_CONCAT_PAGES	16
@@ -159,7 +160,11 @@ static inline bool iopte_leaf(arm_lpae_iopte pte, int lvl,
 static arm_lpae_iopte paddr_to_iopte(phys_addr_t paddr,
 				     struct arm_lpae_io_pgtable *data)
 {
+#if CONFIG_RCAR_RGID
+	arm_lpae_iopte pte = REMOVE_RGID(paddr);
+#else
 	arm_lpae_iopte pte = paddr;
+#endif /* CONFIG_RCAR_RGID */
 
 	/* Of the bits which overlap, either 51:48 or 15:12 are always RES0 */
 	return (pte | (pte >> (48 - 12))) & ARM_LPAE_PTE_ADDR_MASK;
@@ -171,10 +176,19 @@ static phys_addr_t iopte_to_paddr(arm_lpae_iopte pte,
 	u64 paddr = pte & ARM_LPAE_PTE_ADDR_MASK;
 
 	if (ARM_LPAE_GRANULE(data) < SZ_64K)
+#if CONFIG_RCAR_RGID
+		return ADDR_ASSIGN_RGID(paddr, CONFIG_RCAR_RGID);
+#else
 		return paddr;
+#endif /* CONFIG_RCAR_RGID */
 
+#if CONFIG_RCAR_RGID
 	/* Rotate the packed high-order bits back to the top */
+	paddr = (paddr | (paddr << (48 - 12))) & (ARM_LPAE_PTE_ADDR_MASK << 4);
+	return ADDR_ASSIGN_RGID(paddr, CONFIG_RCAR_RGID);
+#else
 	return (paddr | (paddr << (48 - 12))) & (ARM_LPAE_PTE_ADDR_MASK << 4);
+#endif /* CONFIG_RCAR_RGID */
 }
 
 static bool selftest_running = false;
@@ -192,6 +206,7 @@ static void *__arm_lpae_alloc_pages(size_t size, gfp_t gfp,
 	struct page *p;
 	dma_addr_t dma;
 	void *pages;
+	phys_addr_t phys;
 
 	VM_BUG_ON((gfp & __GFP_HIGHMEM));
 	p = alloc_pages_node(dev ? dev_to_node(dev) : NUMA_NO_NODE,
@@ -209,7 +224,11 @@ static void *__arm_lpae_alloc_pages(size_t size, gfp_t gfp,
 		 * address directly, so if the DMA layer suggests otherwise by
 		 * translating or truncating them, that bodes very badly...
 		 */
-		if (dma != virt_to_phys(pages))
+		phys = virt_to_phys(pages);
+#if CONFIG_RCAR_RGID
+		REMOVE_RGID(phys);
+#endif
+		if (dma != phys)
 			goto out_unmap;
 	}
 
