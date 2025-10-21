@@ -349,7 +349,6 @@ static void rsw3_gwca_queue_free(struct net_device *ndev,
 {
 	unsigned int i;
 
-	return;
 	if (!gq->dir_tx) {
 		dma_free_coherent(ndev->dev.parent,
 				  sizeof(struct rsw3_ext_ts_desc) *
