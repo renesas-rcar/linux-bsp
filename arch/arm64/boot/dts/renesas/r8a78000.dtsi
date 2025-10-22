@@ -5486,7 +5486,7 @@
 			reg =	<0 0xec500000 0 0x21004>, /* SCU */
 				<0 0xec530000 0 0x140>,  /* ADG */
 				<0 0xec540000 0 0x9a004>, /* SSIU */
-				<0 0xec740000 0 0x200>;  /* Audio DMAC peri peri*/
+				<0 0xec740000 0 0x1c030>;  /* Audio DMAC peri peri*/
 			reg-names = "scu", "adg", "ssiu", "audmapp";
 
 			clocks = <&ssi_dummy_clk>,
@@ -5520,11 +5520,11 @@
 
 			rcar_sound,dvc {
 				dvc0: dvc-0 {
-					dmas = <&audio_dmac1 0x01>;
+					dmas = <&audio_dmac1 0x94>;
 					dma-names = "tx";
 				};
 				dvc1: dvc-1 {
-					dmas = <&audio_dmac1 0x0>;
+					dmas = <&audio_dmac1 0x92>;
 					dma-names = "tx";
 				};
 			};
@@ -5548,52 +5548,52 @@
 			rcar_sound,src {
 				src0: src-0 {
 					interrupts = <GIC_SPI 916 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x14>, <&audio_dmac1 0x15>;
+					dmas = <&audio_dmac0 0x13>, <&audio_dmac1 0x14>;
 					dma-names = "rx", "tx";
 				};
 				src1: src-1 {
 					interrupts = <GIC_SPI 917 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x12>, <&audio_dmac1 0x13>;
+					dmas = <&audio_dmac0 0x11>, <&audio_dmac1 0x12>;
 					dma-names = "rx", "tx";
 				};
 				src2: src-2 {
 					interrupts = <GIC_SPI 918 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x10>, <&audio_dmac1 0x11>;
+					dmas = <&audio_dmac0 0x0F>, <&audio_dmac1 0x10>;
 					dma-names = "rx", "tx";
 				};
 				src3: src-3 {
 					interrupts = <GIC_SPI 919 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x0E>, <&audio_dmac1 0x0F>;
+					dmas = <&audio_dmac0 0x0D>, <&audio_dmac1 0x0E>;
 					dma-names = "rx", "tx";
 				};
 				src4: src-4 {
 					interrupts = <GIC_SPI 920 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x0C>, <&audio_dmac1 0x0D>;
+					dmas = <&audio_dmac0 0x0B>, <&audio_dmac1 0x0C>;
 					dma-names = "rx", "tx";
 				};
 				src5: src-5 {
 					interrupts = <GIC_SPI 921 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x0A>, <&audio_dmac1 0x0B>;
+					dmas = <&audio_dmac0 0x09>, <&audio_dmac1 0x0A>;
 					dma-names = "rx", "tx";
 				};
 				src6: src-6 {
 					interrupts = <GIC_SPI 922 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x08>, <&audio_dmac1 0x09>;
+					dmas = <&audio_dmac0 0x07>, <&audio_dmac1 0x08>;
 					dma-names = "rx", "tx";
 				};
 				src7: src-7 {
 					interrupts = <GIC_SPI 923 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x06>, <&audio_dmac1 0x07>;
+					dmas = <&audio_dmac0 0x05>, <&audio_dmac1 0x06>;
 					dma-names = "rx", "tx";
 				};
 				src8: src-8 {
 					interrupts = <GIC_SPI 924 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x04>, <&audio_dmac1 0x05>;
+					dmas = <&audio_dmac0 0x03>, <&audio_dmac1 0x04>;
 					dma-names = "rx", "tx";
 				};
 				src9: src-9 {
 					interrupts = <GIC_SPI 925 IRQ_TYPE_LEVEL_HIGH>;
-					dmas = <&audio_dmac0 0x02>, <&audio_dmac1 0x03>;
+					dmas = <&audio_dmac0 0x01>, <&audio_dmac1 0x02>;
 					dma-names = "rx", "tx";
 				};
 			};
