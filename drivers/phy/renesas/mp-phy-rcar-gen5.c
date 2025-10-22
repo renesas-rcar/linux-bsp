@@ -202,8 +202,6 @@ static int mp_phy_init_ethernet(struct mp_phy_priv *priv, u32 channel_id)
 	mp_phy_update_firmware(priv, channel_id);
 
 	mp_phy_write(priv->base, MPPHY_PXRXCNT(channel_id), MPPHY_PXRXCNT_RESET_VAL);
-	mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, MPPHY_CMNCNT2_CLK_CH(channel_id),
-			   MPPHY_CMNCNT2_CLK_CH(channel_id));
 	mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(channel_id), MPPHY_PXREFCLK_VAL_ETH,
 			   MPPHY_PXREFCLK_VAL_ETH);
 	mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(channel_id), (BIT(9) | BIT(1)), 0);
@@ -755,9 +753,11 @@ static int mp_phy_pre_init(struct mp_phy_priv *priv)
 {
 	const char *interface_names[MPPHY_NUM_CHANNELS];
 	bool write_cntxt1[MPPHY_NUM_CHANNELS] = { 0 };
+	u32 ref_use_pad, ref_repeat_clk_en;
 	u32 sramcnt[MPPHY_NUM_CHANNELS];
+	u32 cmncnt2 = 0x33330000;	/* All res_{ack,req}_in_sel are 1 */
 	u32 cmncnt1 = 0;
-	int num, i;
+	int num, i, ret;
 
 	num = of_property_read_string_array(priv->dev->of_node,
 					    "renesas,interface-names",
@@ -765,6 +765,16 @@ static int mp_phy_pre_init(struct mp_phy_priv *priv)
 					    ARRAY_SIZE(interface_names));
 	if (num < 0)
 		return -EINVAL;
+
+	/* These properties are bitfiled : bit0 = MP-PHY channel 0 */
+	ret = of_property_read_u32(priv->dev->of_node, "renesas,ref_use_pad",
+				   &ref_use_pad);
+	if (ret < 0)
+		return ret;
+	ret = of_property_read_u32(priv->dev->of_node, "renesas,ref_repeat_clk_en",
+				   &ref_repeat_clk_en);
+	if (ret < 0)
+		return ret;
 
 	for (i = 0; i < MPPHY_NUM_CHANNELS; i++) {
 		if (!strcmp(interface_names[i], "pci.0")) {
@@ -782,10 +792,14 @@ static int mp_phy_pre_init(struct mp_phy_priv *priv)
 		} else {
 			return -EINVAL;
 		}
+		if (ref_use_pad & BIT(i))
+			cmncnt2 |= 1 << (i * 4);
+		if (ref_repeat_clk_en & BIT(i))
+			cmncnt2 |= 2 << (i * 4);
 	}
 
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0xff000000, 0xffff0000);
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, MPPHY_PCS0REG1_VAL);
+	mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, cmncnt1, cmncnt1);
+	mp_phy_write(priv->base, MPPHY_CMNCNT2, cmncnt2);
 
 	for (i = 0; i < MPPHY_NUM_CHANNELS; i++) {
 		mp_phy_update_bits(priv->base, MPPHY_PXTEST(i),
@@ -801,7 +815,6 @@ static int mp_phy_pre_init(struct mp_phy_priv *priv)
 
 	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, 0x0);
 	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0xff000000, 0x0);
-	mp_phy_update_bits(priv->base, MPPHY_CMNCNT1, cmncnt1, cmncnt1);
 
 	return 0;
 }
