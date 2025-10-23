@@ -217,9 +217,6 @@ static void __maybe_unused mp_phy_module_power_run(void)
      (mode) == PHY_MODE_USB_DEVICE ? PHY_MODE_USB_DEVICE : \
      (mode) == PHY_MODE_USB_OTG ? PHY_MODE_USB_OTG : -1)
 
-/* CMNCNT1/2 clock settings */
-#define MPPHY_CMNCNT2_CLK_CH(ch)     (0x30001 << ((ch) * 4))
-
 /* PXREFCLK register value */
 #define MPPHY_PXREFCLK_VAL		0x35
 #define MPPHY_PXREFCLK_VAL_ETH		0x55
@@ -343,8 +340,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(0), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(0), 0x2020201, 0x2020201);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(0), 0x80004, 0x80004);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000, 0x30000);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x1, 0x1);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x1, 0x1);
@@ -357,8 +352,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(2), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(2), 0x2020202, 0x2020202);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(2), 0x8, 0x8);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x3000000, 0x3000000);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x100, 0x100);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x1, 0x1);
@@ -376,9 +369,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(1), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(1), 0x2020201, 0x2020202);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(1), 0x8, 0x8);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000, 0x30000);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x300000, 0x300000);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x11, 0x11);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x1, 0x1);
@@ -399,9 +389,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(3), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(3), 0x2020202, 0x2020202);
 			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(3), 0x8, 0x8);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x3000000, 0x3000000);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000000, 0x30000000);
-			mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x100, 0x100);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x1, 0x1);
@@ -430,13 +417,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 		mp_phy_write(priv->base, MPPHY_PXCNTXT1(3), 0x2010002);
 		mp_phy_write(priv->base, MPPHY_PXCNTXT2(3), 0x2020202);
 		mp_phy_write(priv->base, MPPHY_PXTXREQ(3), 0x8);
-
-		mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000, 0x30000);
-		mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x300000, 0x300000);
-		mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x3000000, 0x3000000);
-		mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x30000000, 0x30000000);
-
-		mp_phy_update_bits(priv->base, MPPHY_CMNCNT2, 0x111, 0x111);
 
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x202);
@@ -484,10 +464,6 @@ static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 		readl(priv->base + MPPHY_PXRXCNT(channel_id)), readl(priv->base + MPPHY_PXSRAMCNT(channel_id)));
 
 	/* Step 3: Clock supply settings */
-	mp_phy_update_bits(priv->base, MPPHY_CMNCNT2,
-				MPPHY_CMNCNT2_CLK_CH(channel_id),
-				MPPHY_CMNCNT2_CLK_CH(channel_id));
-
 	mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(channel_id),
 				MPPHY_PXREFCLK_VAL, MPPHY_PXREFCLK_VAL);
 
