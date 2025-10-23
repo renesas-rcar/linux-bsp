@@ -1974,6 +1974,12 @@
 		canfd_0: can@c1420000 {
 			compatible = "renesas,r8a78000-canfd";
 			reg = <0 0xc1420000 0 0x8600>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CANFD0>,
+				 <&scmi_clk X5H_CLOCK_ID_CLK_CANFD_SCP_MAIN>,
+				 <&can_clk>;
+			clock-names = "fck", "canfd", "can_clk";
+			assigned-clocks = <&can_clk>;
+			assigned-clock-rates = <80000000>;
 			interrupts = <GIC_SPI 4675 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4677 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4681 IRQ_TYPE_LEVEL_HIGH>,
@@ -2021,6 +2027,12 @@
 		canfd_1: can@c1520000 {
 			compatible = "renesas,r8a78000-canfd";
 			reg = <0 0xc1520000 0 0x8600>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CANFD1>,
+				 <&scmi_clk X5H_CLOCK_ID_CLK_CANFD_SCP_MAIN>,
+				 <&can_clk>;
+			clock-names = "fck", "canfd", "can_clk";
+			assigned-clocks = <&can_clk>;
+			assigned-clock-rates = <80000000>;
 			interrupts = <GIC_SPI 4725 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4728 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4731 IRQ_TYPE_LEVEL_HIGH>,
