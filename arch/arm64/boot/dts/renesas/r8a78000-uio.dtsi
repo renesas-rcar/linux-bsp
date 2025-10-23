@@ -366,116 +366,200 @@
 		rsipe0: rsipe@19300000 {
 			compatible = "generic-uio";
 			reg = <0 0x19300000 0 0x8000>;
+			interrupts = <GIC_SPI 4187 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC0>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC0>;
 			linux,uio-name = "rsip_e_00";
 		};
 
 		rsipe1: rsipe@19308000 {
 			compatible = "generic-uio";
 			reg = <0 0x19308000 0 0x8000>;
+			interrupts = <GIC_SPI 4188 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC1>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC1>;
 			linux,uio-name = "rsip_e_01";
 		};
 
 		rsipe2: rsipe@19310000 {
 			compatible = "generic-uio";
 			reg = <0 0x19310000 0 0x8000>;
+			interrupts = <GIC_SPI 4189 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC2>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC2>;
 			linux,uio-name = "rsip_e_02";
 		};
 
 		rsipe3: rsipe@19318000 {
 			compatible = "generic-uio";
 			reg = <0 0x19318000 0 0x8000>;
+			interrupts = <GIC_SPI 4190 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC3>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC3>;
 			linux,uio-name = "rsip_e_03";
 		};
+
 		rsipe4: rsipe@19320000 {
 			compatible = "generic-uio";
 			reg = <0 0x19320000 0 0x8000>;
+			interrupts = <GIC_SPI 4191 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC4>;
 			linux,uio-name = "rsip_e_04";
 		};
 
 		rsipe5: rsipe@19328000 {
 			compatible = "generic-uio";
 			reg = <0 0x19328000 0 0x8000>;
+			interrupts = <GIC_SPI 4192 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC5>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC5>;
 			linux,uio-name = "rsip_e_05";
 		};
 
 		rsipe6: rsipe@19330000 {
 			compatible = "generic-uio";
 			reg = <0 0x19330000 0 0x8000>;
+			interrupts = <GIC_SPI 4193 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC6>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC6>;
 			linux,uio-name = "rsip_e_06";
 		};
 
 		rsipe7: rsipe@19338000 {
 			compatible = "generic-uio";
 			reg = <0 0x19338000 0 0x8000>;
+			interrupts = <GIC_SPI 4194 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC7>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC7>;
 			linux,uio-name = "rsip_e_07";
 		};
 
 		rsipe8: rsipe@19340000 {
 			compatible = "generic-uio";
 			reg = <0 0x19340000 0 0x8000>;
+			interrupts = <GIC_SPI 4195 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC8>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC8>;
 			linux,uio-name = "rsip_e_08";
 		};
+
 		rsipe9: rsipe@19348000 {
 			compatible = "generic-uio";
 			reg = <0 0x19348000 0 0x8000>;
+			interrupts = <GIC_SPI 4196 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC9>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC9>;
 			linux,uio-name = "rsip_e_09";
 		};
+
 		rsipe10: rsipe@19350000 {
 			compatible = "generic-uio";
 			reg = <0 0x19350000 0 0x8000>;
+			interrupts = <GIC_SPI 4197 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC10>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC10>;
 			linux,uio-name = "rsip_e_10";
 		};
 
 		rsipe11: rsipe@19358000 {
 			compatible = "generic-uio";
 			reg = <0 0x19358000 0 0x8000>;
+			interrupts = <GIC_SPI 4198 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC11>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC11>;
 			linux,uio-name = "rsip_e_11";
 		};
 
 		rsipe12: rsipe@19360000 {
 			compatible = "generic-uio";
 			reg = <0 0x19360000 0 0x8000>;
+			interrupts = <GIC_SPI 4199 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC12>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC12>;
 			linux,uio-name = "rsip_e_12";
 		};
 
 		rsipe13: rsipe@19368000 {
 			compatible = "generic-uio";
 			reg = <0 0x19368000 0 0x8000>;
+			interrupts = <GIC_SPI 4200 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC13>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC13>;
 			linux,uio-name = "rsip_e_13";
 		};
+
 		rsipe14: rsipe@19370000 {
 			compatible = "generic-uio";
 			reg = <0 0x19370000 0 0x8000>;
+			interrupts = <GIC_SPI 4201 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC14>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC14>;
 			linux,uio-name = "rsip_e_14";
 		};
 
 		rsipe15: rsipe@19378000 {
 			compatible = "generic-uio";
 			reg = <0 0x19378000 0 0x8000>;
+			interrupts = <GIC_SPI 4202 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC15>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC15>;
 			linux,uio-name = "rsip_e_15";
 		};
 
 		rsipe16: rsipe@19380000 {
 			compatible = "generic-uio";
 			reg = <0 0x19380000 0 0x8000>;
+			interrupts = <GIC_SPI 4203 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC16>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC16>;
 			linux,uio-name = "rsip_e_16";
 		};
 
 		rsipe17: rsipe@19388000 {
 			compatible = "generic-uio";
 			reg = <0 0x19388000 0 0x8000>;
+			interrupts = <GIC_SPI 4204 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC17>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC17>;
 			linux,uio-name = "rsip_e_17";
 		};
 
 		rsipe18: rsipe@19390000 {
 			compatible = "generic-uio";
 			reg = <0 0x19390000 0 0x8000>;
+			interrupts = <GIC_SPI 4205 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC18>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC18>;
 			linux,uio-name = "rsip_e_18";
 		};
 
 		rsipe19: rsipe@19398000 {
 			compatible = "generic-uio";
 			reg = <0 0x19398000 0 0x8000>;
+			interrupts = <GIC_SPI 4206 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CRAC19>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CRAC19>;
 			linux,uio-name = "rsip_e_19";
 		};
 
