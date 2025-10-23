@@ -363,6 +363,146 @@
 			linux,uio-name = "fcpc_03";
 		};
 
+		rsipe0: rsipe@19300000 {
+			compatible = "generic-uio";
+			reg = <0 0x19300000 0 0x8000>;
+			linux,uio-name = "rsip_e_00";
+		};
+
+		rsipe1: rsipe@19308000 {
+			compatible = "generic-uio";
+			reg = <0 0x19308000 0 0x8000>;
+			linux,uio-name = "rsip_e_01";
+		};
+
+		rsipe2: rsipe@19310000 {
+			compatible = "generic-uio";
+			reg = <0 0x19310000 0 0x8000>;
+			linux,uio-name = "rsip_e_02";
+		};
+
+		rsipe3: rsipe@19318000 {
+			compatible = "generic-uio";
+			reg = <0 0x19318000 0 0x8000>;
+			linux,uio-name = "rsip_e_03";
+		};
+		rsipe4: rsipe@19320000 {
+			compatible = "generic-uio";
+			reg = <0 0x19320000 0 0x8000>;
+			linux,uio-name = "rsip_e_04";
+		};
+
+		rsipe5: rsipe@19328000 {
+			compatible = "generic-uio";
+			reg = <0 0x19328000 0 0x8000>;
+			linux,uio-name = "rsip_e_05";
+		};
+
+		rsipe6: rsipe@19330000 {
+			compatible = "generic-uio";
+			reg = <0 0x19330000 0 0x8000>;
+			linux,uio-name = "rsip_e_06";
+		};
+
+		rsipe7: rsipe@19338000 {
+			compatible = "generic-uio";
+			reg = <0 0x19338000 0 0x8000>;
+			linux,uio-name = "rsip_e_07";
+		};
+
+		rsipe8: rsipe@19340000 {
+			compatible = "generic-uio";
+			reg = <0 0x19340000 0 0x8000>;
+			linux,uio-name = "rsip_e_08";
+		};
+		rsipe9: rsipe@19348000 {
+			compatible = "generic-uio";
+			reg = <0 0x19348000 0 0x8000>;
+			linux,uio-name = "rsip_e_09";
+		};
+		rsipe10: rsipe@19350000 {
+			compatible = "generic-uio";
+			reg = <0 0x19350000 0 0x8000>;
+			linux,uio-name = "rsip_e_10";
+		};
+
+		rsipe11: rsipe@19358000 {
+			compatible = "generic-uio";
+			reg = <0 0x19358000 0 0x8000>;
+			linux,uio-name = "rsip_e_11";
+		};
+
+		rsipe12: rsipe@19360000 {
+			compatible = "generic-uio";
+			reg = <0 0x19360000 0 0x8000>;
+			linux,uio-name = "rsip_e_12";
+		};
+
+		rsipe13: rsipe@19368000 {
+			compatible = "generic-uio";
+			reg = <0 0x19368000 0 0x8000>;
+			linux,uio-name = "rsip_e_13";
+		};
+		rsipe14: rsipe@19370000 {
+			compatible = "generic-uio";
+			reg = <0 0x19370000 0 0x8000>;
+			linux,uio-name = "rsip_e_14";
+		};
+
+		rsipe15: rsipe@19378000 {
+			compatible = "generic-uio";
+			reg = <0 0x19378000 0 0x8000>;
+			linux,uio-name = "rsip_e_15";
+		};
+
+		rsipe16: rsipe@19380000 {
+			compatible = "generic-uio";
+			reg = <0 0x19380000 0 0x8000>;
+			linux,uio-name = "rsip_e_16";
+		};
+
+		rsipe17: rsipe@19388000 {
+			compatible = "generic-uio";
+			reg = <0 0x19388000 0 0x8000>;
+			linux,uio-name = "rsip_e_17";
+		};
+
+		rsipe18: rsipe@19390000 {
+			compatible = "generic-uio";
+			reg = <0 0x19390000 0 0x8000>;
+			linux,uio-name = "rsip_e_18";
+		};
+
+		rsipe19: rsipe@19398000 {
+			compatible = "generic-uio";
+			reg = <0 0x19398000 0 0x8000>;
+			linux,uio-name = "rsip_e_19";
+		};
+
+		rsipm: rsipm@18980000 {
+			compatible = "generic-uio";
+			reg = <0 0x18980000 0 0x10000>;
+			linux,uio-name = "rsip_m_ts_cmd_00";
+		};
+
+		rsipm_reserved_mem3: rsipm@4d000000 {
+			compatible = "generic-uio";
+			reg = <0 0x4d000000 0 0x600000>;
+			linux,uio-name = "rsip_m_shared_03";
+		};
+
+		rsipm_reserved_mem1: rsipm@185c0000 {
+			compatible = "generic-uio";
+			reg = <0 0x185c0000 0 0x40000>;
+			linux,uio-name = "rsip_m_shared_01";
+		};
+
+		rsipm_reserved_mem2: rsipm@10100000 {
+			compatible = "generic-uio";
+			reg = <0 0x10100000 0 0x100000>;
+			linux,uio-name = "rsip_m_shared_02";
+		};
+
 		rsipe00: rsipe@19440000 {
 			compatible = "generic-uio";
 			reg = <0 0x19440000 0 0x1000>;
