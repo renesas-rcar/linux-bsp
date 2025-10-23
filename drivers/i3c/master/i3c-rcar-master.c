@@ -389,6 +389,7 @@ struct rcar_i3c_master {
 	struct clk *pclk;
 	struct reset_control *rstc;
 	int irq;
+	bool force_i2c;
 
 };
 
@@ -872,6 +873,9 @@ static int rcar_i3c_master_daa(struct i3c_master_controller *m)
 	u32 olddevs, newdevs;
 	u8 last_addr = 0, pos;
 	int ret;
+
+	if (master->force_i2c)
+		return 0;
 
 	/* Enable I3C bus. */
 	rcar_i3c_master_bus_enable(m, true);
@@ -1694,6 +1698,12 @@ static int rcar_i3c_master_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "failed to request irq %d\n", ret);
 		return ret;
+	}
+
+	/* Check if "force-i2c" property exists in the device tree */
+	if (of_property_read_bool(pdev->dev.of_node, "force-i2c")) {
+		dev_dbg(&pdev->dev, "force-i2c property found, skipping probe.\n");
+		master->force_i2c = true;
 	}
 
 	ret = i3c_master_register(&master->base, &pdev->dev,
