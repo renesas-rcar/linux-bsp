@@ -1517,9 +1517,16 @@ static int rsw3_phy_device_init(struct rsw3_device *rdev)
 	if (!rdev->np_port)
 		return -ENODEV;
 
-	phy = of_parse_phandle(rdev->np_port, "phy-handle", 0);
-	if (!phy)
-		return -ENODEV;
+	if (of_phy_is_fixed_link(rdev->np_port)) {
+		err = of_phy_register_fixed_link(rdev->np_port);
+		if (err && err != -EEXIST)
+			return err;
+		phy = rdev->np_port;
+	} else {
+		phy = of_parse_phandle(rdev->np_port, "phy-handle", 0);
+		if (!phy)
+			return -ENODEV;
+	}
 
 	/* Set phydev->host_interfaces before calling of_phy_connect() to
 	 * configure the PHY with the information of host_interfaces.
@@ -1546,7 +1553,8 @@ static int rsw3_phy_device_init(struct rsw3_device *rdev)
 
 	err = 0;
 out:
-	of_node_put(phy);
+	if (phy != rdev->np_port)
+		of_node_put(phy);
 
 	return err;
 }
