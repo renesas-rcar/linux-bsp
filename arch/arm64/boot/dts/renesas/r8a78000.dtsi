@@ -4779,8 +4779,8 @@
 			reg = <0 0xc1200000 0 0x20104>;
 			interrupts = <GIC_SPI 4602 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4603 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_CANXL_SCP_MAIN>,
-				 <&scmi_clk X5H_CLOCK_ID_CANXL0>,
+			clocks = <&scmi_clk X5H_CLOCK_ID_CANXL0>,
+				 <&scmi_clk X5H_CLOCK_ID_CLK_CANXL_SCP_MAIN>,
 				 <&can_clk>;
 			clock-names = "fck", "canxl", "can_clk";
 			assigned-clocks = <&canxl_clk>;
@@ -4795,8 +4795,8 @@
 			reg = <0 0xc1240000 0 0x20104>;
 			interrupts = <GIC_SPI 4604 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4605 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_CANXL_SCP_MAIN>,
-				 <&scmi_clk X5H_CLOCK_ID_CANXL1>,
+			clocks = <&scmi_clk X5H_CLOCK_ID_CANXL1>,
+				 <&scmi_clk X5H_CLOCK_ID_CLK_CANXL_SCP_MAIN>,
 				 <&can_clk>;
 			clock-names = "fck", "canxl", "can_clk";
 			assigned-clocks = <&canxl_clk>;
