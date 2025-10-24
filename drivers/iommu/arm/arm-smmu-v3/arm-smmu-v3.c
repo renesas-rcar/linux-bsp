@@ -745,7 +745,7 @@ static int arm_smmu_cmdq_issue_cmdlist(struct arm_smmu_device *smmu,
 				       u64 *cmds, int n, bool sync)
 {
 	u64 cmd_sync[CMDQ_ENT_DWORDS];
-	u32 prod;
+	u32 prod, gerror, gerrorn, active;
 	unsigned long flags;
 	bool owner;
 	struct arm_smmu_cmdq *cmdq = arm_smmu_get_cmdq(smmu);
@@ -845,6 +845,15 @@ static int arm_smmu_cmdq_issue_cmdlist(struct arm_smmu_device *smmu,
 					    llq.prod,
 					    readl_relaxed(cmdq->q.prod_reg),
 					    readl_relaxed(cmdq->q.cons_reg));
+
+			gerror = readl_relaxed(smmu->base + ARM_SMMU_GERROR);
+			gerrorn = readl_relaxed(smmu->base + ARM_SMMU_GERRORN);
+
+			active = gerror ^ gerrorn;
+			if (active & GERROR_CMDQ_ERR)
+				arm_smmu_cmdq_skip_err(smmu);
+
+			writel(gerror, smmu->base + ARM_SMMU_GERRORN);
 		}
 
 		/*
