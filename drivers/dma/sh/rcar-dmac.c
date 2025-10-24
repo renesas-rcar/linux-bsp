@@ -21,7 +21,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
-#include <linux/soc/renesas/rcar-rgid.h>
 
 #include "../dmaengine.h"
 
@@ -780,10 +779,6 @@ static void rcar_dmac_realloc_hwdesc(struct rcar_dmac_chan *chan,
 
 	desc->hwdescs.mem = dma_alloc_coherent(chan->chan.device->dev, size,
 					       &desc->hwdescs.dma, GFP_NOWAIT);
-
-	/* Remove RGID from descriptor base  */
-	REMOVE_RGID(desc->hwdescs.dma);
-
 	if (!desc->hwdescs.mem)
 		return;
 
@@ -1077,10 +1072,6 @@ rcar_dmac_chan_prep_sg(struct rcar_dmac_chan *chan, struct scatterlist *sgl,
 			nchunks++;
 		}
 	}
-
-	/* Remove RGID from Src/Dst address */
-	REMOVE_RGID(chunk->src_addr);
-	REMOVE_RGID(chunk->dst_addr);
 
 	desc->nchunks = nchunks;
 	desc->size = full_size;
